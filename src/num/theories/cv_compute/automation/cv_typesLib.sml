@@ -142,7 +142,7 @@ fun list_dest_conj tm =
 
 exception Missing_from_to of hol_type;
 
-fun from_to_for ty =
+fun from_to_for tyvars_alist ty =
   if ty = “:unit” then from_to_unit else
   if ty = “:bool” then from_to_bool else
   if ty = “:num” then from_to_num else
@@ -153,21 +153,24 @@ fun from_to_for ty =
     in INST_TYPE [alpha|->ty] from_to_word end
   else if can pairSyntax.dest_prod ty then let
     val (a,b) = pairSyntax.dest_prod ty
-    val a = from_to_for a
-    val b = from_to_for b
+    val a = from_to_for tyvars_alist a
+    val b = from_to_for tyvars_alist b
     in MATCH_MP from_to_pair (CONJ a b) end
   else if can sumSyntax.dest_sum ty then let
     val (a,b) = sumSyntax.dest_sum ty
-    val a = from_to_for a
-    val b = from_to_for b
+    val a = from_to_for tyvars_alist a
+    val b = from_to_for tyvars_alist b
     in MATCH_MP from_to_sum (CONJ a b) end
   else if can optionSyntax.dest_option ty then let
-    val a = from_to_for (optionSyntax.dest_option ty)
+    val a = from_to_for tyvars_alist (optionSyntax.dest_option ty)
     in MATCH_MP from_to_option a end
   else if listSyntax.is_list_type ty then
-    let val a = from_to_for (listSyntax.dest_list_type ty)
+    let val a = from_to_for tyvars_alist (listSyntax.dest_list_type ty)
     in MATCH_MP from_to_list a end
-  else (* look through memory *)
+  else
+    case alookup ty tyvars_alist of
+      SOME tyvar_assum => ASSUME tyvar_assum
+    | NONE => (* look through memory *)
     let
       val thms = from_to_thms ()
       fun match_from_to_thm th =
@@ -184,7 +187,7 @@ fun from_to_for ty =
               fun prove_from_to_thm tm =
                 let
                   val ty1 = tm |> rand |> type_of |> dest_fun_type |> snd
-                in from_to_for ty1 end
+                in from_to_for tyvars_alist ty1 end
               val th4 = LIST_CONJ (map prove_from_to_thm tms)
             in MATCH_MP th3 th4 end
         end
@@ -196,8 +199,8 @@ fun from_to_for ty =
       | NONE => raise Missing_from_to ty
     end
 
-fun from_for ty = from_to_for ty |> concl |> rator |> rand;
-fun to_for ty = from_to_for ty |> concl |> rand;
+fun from_for tyvars_alist ty = from_to_for tyvars_alist ty |> concl |> rator |> rand;
+fun to_for tyvars_alist ty = from_to_for tyvars_alist ty |> concl |> rand;
 
 (* --------------------------------------------------- *
     Defining new from/to functions for a datatype
@@ -239,9 +242,16 @@ fun define_from_to_aux ignore_tyvars ty = let
         val non_nil = filter (fn t => can dest_fun_type (type_of t)) others
         in null non_nil end
     in 1 < length args andalso all_other_patterns_are_nil () end
-  (* define encoding into cv type, i.e. "from function" *)
+  (* tyvar assumptions *)
   val tyvar_encoders = mapi (fn i => fn ty =>
     mk_var("f" ^ int_to_string i,mk_type("fun",[ty,cvSyntax.cv]))) tyvars
+  val tyvar_decoders = mapi (fn i => fn ty =>
+    mk_var("t" ^ int_to_string i,mk_type("fun",[cvSyntax.cv,ty]))) tyvars
+  val tyvar_assums =
+    map2 (fn f => fn t => ISPECL [f,t] from_to_def |> concl |> dest_eq |> fst)
+     (tyvar_encoders) (tyvar_decoders)
+  val tyvars_alist = zip tyvars tyvar_assums
+  (* define encoding into cv type, i.e. "from function" *)
   val from_names = names |>
     map (fn (fname,ty) =>
       make_stem ("from_" ^ fname) tyvar_encoders (mk_funtype [ty] cvSyntax.cv))
@@ -265,7 +275,7 @@ fun define_from_to_aux ignore_tyvars ty = let
       fun process_arg v =
         case alookup (type_of v) lookups of
           SOME tm => mk_comb(tm,v)
-        | NONE => mk_comb(from_for (type_of v),v)
+        | NONE => mk_comb(from_for tyvars_alist (type_of v),v)
       val args = map process_arg pat_args
       val special = should_be_headless pat
       val smart_mk_pairs = (if special then mk_pairs o tl else mk_pairs)
@@ -285,8 +295,6 @@ fun define_from_to_aux ignore_tyvars ty = let
        else () end
   val from_def = zDefine [ANTIQUOTE tm]
   (* define decoding from cv type, i.e. "to function" *)
-  val tyvar_decoders = mapi (fn i => fn ty =>
-    mk_var("t" ^ int_to_string i,mk_type("fun",[cvSyntax.cv,ty]))) tyvars
   val to_names = names |>
     map (fn (fname,ty) =>
       make_stem ("to_" ^ fname) tyvar_decoders (mk_funtype [cvSyntax.cv] ty))
@@ -318,12 +326,12 @@ fun define_from_to_aux ignore_tyvars ty = let
       fun process_arg (ty,v) =
         case alookup ty lookups of
           SOME tm => mk_comb(tm,v)
-        | NONE => mk_comb(to_for ty,v)
+        | NONE => mk_comb(to_for tyvars_alist ty,v)
       val xs = map process_arg args
       fun lemmas_for_arg (ty,v) =
         case alookup ty lookups of
           SOME tm => []
-        | NONE => [from_to_for ty]
+        | NONE => [from_to_for tyvars_alist ty]
       val ys = map lemmas_for_arg args |> flatten
       val build = list_mk_comb (cons_tm,xs)
       val test = if null tys then TagNil i else
@@ -371,7 +379,7 @@ fun define_from_to_aux ignore_tyvars ty = let
       | mk_rhs ((t,x)::xs) = mk_cond(t,x,mk_rhs xs)
     in (mk_eq(lhs_tm,mk_rhs lines),lemmas) end
   val (all_lines,lemmas1) = unzip (map to_lines to_names)
-  val lemmas = lemmas1 |> flatten
+  val lemmas = lemmas1 |> flatten |> map DISCH_ALL
   val tm = list_mk_conj all_lines
   val cv_size =
     cv_size_def |> CONJUNCTS |> hd |> SPEC_ALL |> concl |> dest_eq |> fst |> rator
@@ -402,10 +410,7 @@ fun define_from_to_aux ignore_tyvars ty = let
                    \\ rpt strip_tac \\ gvs [cv_size_def])
            end
   (* from from_to theorems *)
-  val assums =
-    map2 (fn f => fn t => ISPECL [f,t] from_to_def |> concl |> dest_eq |> fst)
-     (tyvar_encoders) (tyvar_decoders)
-  val assum = if null assums then T else list_mk_conj assums
+  val assum = if null tyvar_assums then T else list_mk_conj tyvar_assums
   val to_cs = to_def |> CONJUNCTS |> map (rator o fst o dest_eq o concl o SPEC_ALL)
   val from_cs = from_def |> CONJUNCTS |> map (rator o fst o dest_eq o concl o SPEC_ALL)
                                       |> term_all_distinct
@@ -431,7 +436,7 @@ fun define_from_to_aux ignore_tyvars ty = let
     \\ once_rewrite_tac [to_def]
     \\ rewrite_tac [cv_has_shape_def,cv_fst_def,cv_snd_def]
     \\ EVERY (map assume_tac lemmas)
-    \\ fs [from_to_def])
+    \\ gs [from_to_def])
   val from_to_thms =
     from_to_thm |> REWRITE_RULE [GSYM from_to_def]
                 |> UNDISCH_ALL |> CONJUNCTS
