@@ -130,9 +130,17 @@ fun list_dest_comb tm =
 fun term_all_distinct [] = []
   | term_all_distinct (x::xs) = x :: term_all_distinct (filter (fn c => not (aconv c x)) xs)
 
+fun list_dest_conj tm =
+  let
+    val (x,y) = dest_conj tm
+  in x :: list_dest_conj y end
+  handle HOL_ERR e => [tm];
+
 (* --------------------------------------------------- *
     Loading from_to theorems
  * --------------------------------------------------- *)
+
+exception Missing_from_to of hol_type;
 
 fun from_to_for ty =
   if ty = “:unit” then from_to_unit else
@@ -159,7 +167,34 @@ fun from_to_for ty =
   else if listSyntax.is_list_type ty then
     let val a = from_to_for (listSyntax.dest_list_type ty)
     in MATCH_MP from_to_list a end
-  else failwith ("from_to_for: " ^ type_to_string ty)
+  else (* look through memory *)
+    let
+      val thms = from_to_thms ()
+      fun match_from_to_thm th =
+        let
+          val th1 = th |> UNDISCH_ALL
+          val ty1 = th1 |> concl |> rand |> type_of |> dest_fun_type |> snd
+          val i = match_type ty1 ty
+          val th2 = th |> INST_TYPE i |> DISCH_ALL
+        in
+          if not (is_imp (concl th2)) then th2 else
+            let
+              val th3 = th2 |> REWRITE_RULE [AND_IMP_INTRO,GSYM CONJ_ASSOC]
+              val tms = th3 |> concl |> dest_imp |> fst |> list_dest_conj
+              fun prove_from_to_thm tm =
+                let
+                  val ty1 = tm |> rand |> type_of |> dest_fun_type |> snd
+                in from_to_for ty1 end
+              val th4 = LIST_CONJ (map prove_from_to_thm tms)
+            in MATCH_MP th3 th4 end
+        end
+      fun find_first f [] = NONE
+        | find_first f (x::xs) = SOME (f x) handle HOL_ERR e => find_first f xs
+    in
+      case find_first match_from_to_thm thms of
+        SOME th => th
+      | NONE => raise Missing_from_to ty
+    end
 
 fun from_for ty = from_to_for ty |> concl |> rator |> rand;
 fun to_for ty = from_to_for ty |> concl |> rand;
@@ -192,7 +227,7 @@ fun define_from_to_aux ignore_tyvars ty = let
     if i < mutrec_count then
       (name_prefix ^ (v |> type_of |> dest_type |> fst), type_of v)
     else
-      (name_prefix ^ first_name ^ int_to_string (i - mutrec_count + 1), type_of v))
+      (name_prefix ^ first_name ^ "___" ^ int_to_string (i - mutrec_count + 1), type_of v))
   fun should_be_headless pat =
     (* should return true if pat has at least two variables and belongs
        to a type where all other constructors take no arguments *)
@@ -486,8 +521,10 @@ fun define_from_to_aux ignore_tyvars ty = let
   val th2 = save_thm("to_" ^ first_name ^ "_def[compute]", to_def)
   fun save_from_to_thms th = let
     val to_name = th |> UNDISCH_ALL |> concl |> rand |> repeat rator |> dest_const |> fst
-    in save_thm("from_" ^ to_name ^ "_thm", th) end
-  val thms = List.map save_from_to_thms from_to_thms
+    val _ = save_thm("from_" ^ to_name ^ "_thm", th)
+    val _ = add_from_to_thm th
+    in () end
+  val _ = List.app save_from_to_thms from_to_thms
   in (from_def,to_def,from_to_thms) end
   handle UnusedTypeVars ignore_tyvars => define_from_to_aux ignore_tyvars ty;
 
