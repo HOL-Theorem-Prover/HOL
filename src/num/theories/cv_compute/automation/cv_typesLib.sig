@@ -10,5 +10,9 @@ sig
 
   (* automatically define new from/to functions for a user-defined datatype *)
   val define_from_to     : hol_type -> thm * thm * thm list
+  val rec_define_from_to : hol_type -> thm list
+
+  (* define_from_to can raise this: *)
+  exception Missing_from_to of hol_type
 
 end
