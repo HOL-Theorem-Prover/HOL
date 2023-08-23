@@ -361,6 +361,12 @@ Proof
   simp[UPAIR_def, pairTheory.FORALL_PROD, FUN_REL_def]
 QED
 
+Theorem pair_CASE_CONG:
+  ((AB ### CD) |==> (AB |==> CD |==> EF) |==> EF) pair_CASE pair_CASE
+Proof
+  simp[FUN_REL_def, pairTheory.FORALL_PROD]
+QED
+
 (* ----------------------------------------------------------------------
     Unit
    ---------------------------------------------------------------------- *)
@@ -406,6 +412,12 @@ Proof
   simp[right_unique_def, optionTheory.OPTREL_def, optionTheory.FORALL_OPTION]
 QED
 
+Theorem option_CASE_CONG:
+  (OPTREL AB |==> CD |==> (AB |==> CD) |==> CD) option_CASE option_CASE
+Proof
+  simp[FUN_REL_def, optionTheory.FORALL_OPTION]
+QED
+
 
 (* ----------------------------------------------------------------------
     Lists
@@ -434,6 +446,14 @@ Theorem LIST_REL_total:
   total AB ==> total (LIST_REL AB)
 Proof
   simp[total_def] >> strip_tac >> Induct >> simp[] >> metis_tac[]
+QED
+
+Theorem list_CASE_CONG:
+  (LIST_REL AB |==> CD |==> (AB |==> LIST_REL AB |==> CD) |==> CD)
+    list_CASE
+    list_CASE
+Proof
+  simp[FUN_REL_def, Once listTheory.FORALL_LIST, PULL_EXISTS]
 QED
 
 val _ = export_theory();
