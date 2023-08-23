@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open finite_mapTheory transferTheory transferLib
+open pred_setTheory finite_mapTheory transferTheory transferLib
 
 val _ = new_theory "nfmbst";
 
@@ -181,7 +181,50 @@ Definition NFMBST_def:
                            AB (fm ' k) (THE (bstlookup bst k))
 End
 
-Theorem NFMBST_left_unique:
+Theorem FDOM_bst_to_fm[simp]:
+  FDOM (bst_to_fm b) = bstdom b
+Proof
+  Induct_on ‘b’ >> simp[]
+QED
+
+Theorem FAPPLY_bst_to_fm:
+  !b k lo hi.
+    bstOK lo hi b /\ k IN bstdom b ==> bst_to_fm b ' k = THE (bstlookup b k)
+Proof
+  Induct >> simp[] >> rw[] >>
+  simp[FAPPLY_FUPDATE_THM, FUNION_DEF]
+  >- metis_tac[]
+  >- (drule_all_then assume_tac bstOK_bstdom >>
+      drule optrange_LB >> simp[])
+  >- (drule_all_then assume_tac bstOK_bstdom >>
+      drule optrange_UB >> simp[]) >>
+  ‘k NOTIN bstdom b’ suffices_by metis_tac[] >> strip_tac >>
+  pop_assum (mp_then (Pos last) (drule_then assume_tac) bstOK_bstdom) >>
+  drule optrange_UB >> simp[]
+QED
+
+Theorem bst_to_fm_correct:
+  !b fm. NFMBST (=) fm b ==> bst_to_fm b = fm
+Proof
+  Induct >> simp[NFMBST_def]
+  >- metis_tac[finite_mapTheory.FDOM_EQ_EMPTY] >>
+  rw[] >>
+  simp[fmap_EXT, DISJ_IMP_THM, FORALL_AND_THM] >>
+  rw[] >> simp[FAPPLY_FUPDATE_THM, FUNION_DEF, AllCaseEqs()]
+  >- (‘x IN bstdom b’ suffices_by metis_tac[FAPPLY_bst_to_fm] >>
+      ‘x NOTIN bstdom b'’ suffices_by metis_tac[IN_INSERT, IN_UNION] >>
+      strip_tac >>
+      pop_assum (mp_then (Pos last) (drule_then assume_tac) bstOK_bstdom) >>
+      drule optrange_LB >> simp[])
+  >- (‘x NOTIN bstdom b’
+        suffices_by metis_tac[IN_INSERT, IN_UNION, FAPPLY_bst_to_fm] >>
+      strip_tac >>
+      pop_assum (mp_then (Pos last) (drule_then assume_tac) bstOK_bstdom) >>
+      drule optrange_UB >> simp[])
+QED
+
+
+Theorem NFMBST_left_unique[transfer_safe]:
   left_unique AB ==> left_unique (NFMBST AB)
 Proof
   simp[left_unique_def, NFMBST_def] >> rw[] >>
@@ -191,7 +234,7 @@ Proof
   rw[] >> metis_tac[]
 QED
 
-Theorem NFMBST_total:
+Theorem NFMBST_total[transfer_safe]:
   total AB ==> total (NFMBST AB)
 Proof
   simp[total_def, NFMBST_def] >> strip_tac >>
@@ -203,6 +246,14 @@ Proof
   simp[wfBST_bstinsert] >> rpt strip_tac >> simp[] >>
   rename [‘bstlookup (bstinsert b (k1, _)) k2’] >>
   Cases_on ‘k1 = k2’ >> simp[bstlookup_bstinsert_neq, FAPPLY_FUPDATE_THM]
+QED
+
+Theorem RRANGE_NFMBST[transfer_simp]:
+  RRANGE (NFMBST (=)) b <=> wfBST b
+Proof
+  simp[NFMBST_def, relationTheory.RRANGE, EQ_IMP_THM, PULL_EXISTS] >>
+  strip_tac >> qexists ‘bst_to_fm b’ >>
+  drule_then assume_tac FAPPLY_bst_to_fm >> simp[]
 QED
 
 Theorem NFMBST_FEMPTY[transfer_rule]:
