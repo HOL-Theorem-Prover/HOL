@@ -1,5 +1,13 @@
 all: $(DEFAULT_TARGETS) selftest.exe
-.PHONY: all
+
+.PHONY: all link-to-sigobj
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
