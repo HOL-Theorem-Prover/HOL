@@ -2,35 +2,31 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "tailcalls";
 
-
-(* ----------------------------------------------------------------------
-    tailcall experiments
-   ---------------------------------------------------------------------- *)
-
-(* has an enabled "call" guard *)
 Definition hascgd_def[simp]:
   (hascgd et [] x <=> F) /\
-  (hascgd et (gcsum :: rest) x <=>
-   case gcsum of
-     INL (g, c) => g x \/ hascgd et rest x
-   | INR (g, _) => ~g x /\ hascgd et rest x)
+  (hascgd et ((pat,gd,rhs) :: rows) x <=>
+   case PMATCH_ROW pat gd rhs x of
+     SOME (INL cv) => T
+   | SOME (INR tv) => F
+   | _ => hascgd et rows x)
 End
 
-(* execute an enabled call guard *)
 Definition execcgd_def[simp]:
-  (execcgd et [] x = x) /\
-  (execcgd et (gcsum :: rest) x =
-   case gcsum of
-     INL (g, c) => if g x then c x else execcgd et rest x
-   | INR _ => execcgd et rest x)
+  execcgd et [] x = x /\
+  execcgd et ((pat,gd,rhs) :: rows) x =
+  case PMATCH_ROW pat gd rhs x of
+    SOME (INL cv) => cv
+  | SOME (INR _) => x
+  | NONE => execcgd et rows x
 End
 
 Definition exectmgd_def[simp]:
-  (exectmgd et [] x = et x) /\
-  (exectmgd e (gcsum :: rest) x =
-   case gcsum of
-   | INL _ => exectmgd e rest x
-   | INR (g, tm) => if g x then tm x else exectmgd e rest x)
+  exectmgd et [] x = et x /\
+  exectmgd et ((pat,gd,rhs) :: rows) x =
+  case PMATCH_ROW pat gd rhs x of
+    SOME (INR tv) => tv
+  | SOME (INL _) => et x
+  | NONE => exectmgd et rows x
 End
 
 Definition trec_def:
@@ -39,12 +35,11 @@ End
 
 Definition tcall_def[simp]:
   tcall et [] f x = et x /\
-  (tcall et (INL (g, c) :: rest) f x =
-   if g x then f (c x)
-   else tcall et rest f x) /\
-  (tcall et (INR (g, tm) :: rest) f x =
-   if g x then tm x
-   else tcall et rest f x)
+  (tcall et ((pat,gd,rhs) :: rest) f x =
+   case PMATCH_ROW pat gd rhs x of
+     SOME (INL cv) => f cv
+   | SOME (INR tv) => tv
+   | NONE => tcall et rest f x)
 End
 
 Theorem tcall_calls:
@@ -52,14 +47,14 @@ Theorem tcall_calls:
              tcall e opts f x = f (execcgd e opts x)
 Proof
   Induct_on ‘opts’ >> simp[sumTheory.FORALL_SUM, pairTheory.FORALL_PROD] >>
-  rw[]
+  rpt gen_tac >> BasicProvers.EVERY_CASE_TAC >> simp[]
 QED
 
 Theorem tcall_terms:
   !e opts x. ~hascgd e opts x ==> tcall e opts f x = exectmgd e opts x
 Proof
   Induct_on ‘opts’ >> simp[sumTheory.FORALL_SUM, pairTheory.FORALL_PROD] >>
-  rw[]
+  rpt gen_tac >> BasicProvers.EVERY_CASE_TAC >> simp[]
 QED
 
 Theorem tcall_EQN:
@@ -93,33 +88,6 @@ Proof
   >- (drule tcall_calls >> simp[]) >>
   drule tcall_terms >> simp[]
 QED
-
-Definition callsites_def[simp]:
-  (callsites P [] <=> T) /\
-  (callsites P (INR (g, tm) :: rest) <=>
-   callsites (λx. P x /\ ~g x) rest) /\
-  (callsites P (INL (g, c) :: rest) <=>
-   (!x. P x /\ g x ==> P (c x)) /\
-   callsites (λx. P x /\ ~g x) rest)
-End
-
-Theorem callsites_exec0:
-  !P Q. callsites P opts /\ (!x. P x ==> Q x) ==>
-        !x. P x /\ hascgd e opts x ==> Q (execcgd e opts x)
-Proof
-  Induct_on ‘opts’
-  >- simp[] >>
-  simp_tac (srw_ss())[sumTheory.FORALL_SUM, pairTheory.FORALL_PROD] >>
-  rpt strip_tac
-  >- (COND_CASES_TAC >- metis_tac[] >> fs[])
-  >- (COND_CASES_TAC >- metis_tac[] >> last_x_assum irule >> simp[] >>
-      first_assum $ irule_at (Pat ‘callsites _ _’) >> simp[]) >>
-  last_x_assum irule >> simp[] >>
-  first_assum $ irule_at (Pat ‘callsites _ _’) >> simp[]
-QED
-
-Theorem callsites_exec = callsites_exec0 |> Q.SPECL[‘P’, ‘P’] |> SRULE[]
-
 
 Theorem guard_elimination:
   (!x. P x /\ hascgd e opts x ==> P (execcgd e opts x)) /\
