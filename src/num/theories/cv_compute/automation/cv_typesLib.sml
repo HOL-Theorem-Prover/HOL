@@ -560,4 +560,18 @@ fun rec_define_from_to ty = let
     in loop acc ty end
   in loop [] ty end
 
+(* --------------------------------------------------- *
+    Smart functions for retrieving/creating from_to
+ * --------------------------------------------------- *)
+
+fun from_to_thm_for ty =
+  from_to_for [] ty
+  handle Missing_from_to needs_ty =>
+  let
+    val th = rec_define_from_to needs_ty
+  in from_to_thm_for ty end
+
+fun from_term_for ty = from_to_thm_for ty |> concl |> rator |> rand;
+fun to_term_for ty = from_to_thm_for ty |> concl |> rand;
+
 end
