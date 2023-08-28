@@ -231,18 +231,14 @@ Theorem ocwl_thm =
                                         DECIDE “p \/ q <=> if p then T else q”]
 
 val oc_code = rand “
-               tcall (K F)
-          [
-            (I,
-             K T,
-             (λ(s,k). case k of
+               tcall
+               (λ(s,k). case k of
                     ocIDk => INR F
                   | ock1 t k =>
                       case walk_alt s t of
                         Var n => if v = n then INR T else INL (s,k)
                       | Pair t1 t2 => INL (s, ock1 t1 (ock1 t2 k))
-                      | Const _ => INL (s,k)))
-          ]
+                      | Const _ => INL (s,k))
 ”
 
 Theorem sum_CASE_term_CASE:
@@ -262,20 +258,25 @@ Proof
   Cases_on ‘p’ >> simp[]
 QED
 
+Theorem sum_CASE_ockont_CASE:
+  sum_CASE (ockont_CASE k i tkf) lf rf =
+  ockont_CASE k (sum_CASE i lf rf)
+              (λt k. sum_CASE (tkf t k) lf rf)
+Proof
+  Cases_on ‘k’ >> simp[]
+QED
+
 Theorem ocwl_tcallish:
   !x.
     (λ(s,sm). wfs s) x ==>
     (λ(s,k). ocwl s v k) x =
-    tcall (K F) ^oc_code (λ(s,k). ocwl s v k) x
+    tcall ^oc_code (λ(s,k). ocwl s v k) x
 Proof
-  simp[FUN_EQ_THM, sumTheory.FORALL_SUM, FORALL_PROD,
-      patternMatchesTheory.PMATCH_ROW_def,
-      patternMatchesTheory.PMATCH_ROW_COND_def
-      ] >>
-  rpt gen_tac >> rename [‘ocwl s v k ⇔ _’] >> Cases_on ‘k’ >>
-  simp[sum_CASE_term_CASE, sum_CASE_COND]
-  >- simp[ocwl_thm] >>
-  simp[SimpLHS, Once ocwl_thm]
+  simp[tcall_def, FORALL_PROD, sum_CASE_ockont_CASE, sum_CASE_term_CASE,
+       sum_CASE_COND] >> rw[] >>
+  rename [‘ocwl s v k ⇔ _’] >> Cases_on ‘k’
+  >- (simp[cj 1 ocwl_thm]) >>
+  simp[SimpLHS, Once ocwl_thm] >> simp[]
 QED
 
 Definition ocklist_def:
@@ -334,28 +335,16 @@ Proof
   simp[FORALL_PROD, LEX_DEF] >> metis_tac[]
 QED
 
-
 Theorem ocwl_cleaned0:
-  !x. (λ(s,sm). wfs s) x ==> (λ(s,k). ocwl s v k) x = trec (K F) ^oc_code x
+  !x. (λ(s,sm). wfs s) x ==> (λ(s,k). ocwl s v k) x = trec ^oc_code x
 Proof
   match_mp_tac guard_elimination >> rpt conj_tac
-  >- (simp[FORALL_PROD, sumTheory.FORALL_SUM] >>
-      rw[patternMatchesTheory.PMATCH_ROW_def,
-         patternMatchesTheory.PMATCH_ROW_COND_def] >>
-      rename [‘ockont_CASE k’]>>
-      Cases_on ‘k’ >> gvs[sum_CASE_term_CASE, sum_CASE_COND] >>
-      rename [‘walk_alt s t’] >> Cases_on ‘walk_alt s t’ >> gvs[])
-  >- (simp[FORALL_PROD] >> rw[] >>
+  >- (simp[FORALL_PROD, AllCaseEqs()] >> rw[] >> simp[])
+  >- (simp[FORALL_PROD, AllCaseEqs()] >> rw[] >>
       rename [‘wfs th’] >>
       qexists ‘ocR th’ >> simp[] >> conj_tac
       >- (irule $ iffLR relationTheory.WF_EQ_WFP >> simp[WF_ocR]) >>
-      simp[sumTheory.FORALL_SUM, FORALL_PROD,
-           patternMatchesTheory.PMATCH_ROW_COND_def,
-           patternMatchesTheory.PMATCH_ROW_def] >>
-      rpt gen_tac >> rename [‘ockont_CASE k’] >> Cases_on ‘k’ >>
-      simp[sum_CASE_term_CASE, sum_CASE_COND] >>
-      rename [‘walk_alt s t’] >> Cases_on ‘walk_alt s t’ >> simp[] >>
-      strip_tac >>
+      rw[] >>
       simp[ocR_def, ocklist_def, PAIR_REL, LEX_DEF, mlt1_BAG_INSERT] >>
       simp[bagTheory.mlt1_def] >>
       rename [‘walk_alt s t = Pair t1 t2’] >>
@@ -369,37 +358,17 @@ Proof
 QED
 
 Definition ocwl'_def:
-  ocwl' s v k = trec (K F) ^oc_code (s, k)
+  ocwl' s v k = trec ^oc_code (s, k)
 End
-
-Theorem trec_term_case:
-  trec e opts (term_CASE t vf pf cf) =
-  case t of
-    Var v => trec e opts (vf v)
-  | Pair t1 t2 => trec e opts (pf t1 t2)
-  | Const cn => trec e opts (cf cn)
-Proof
-  Cases_on ‘t’ >> simp[]
-QED
-
-Theorem sum_CASE_ockont_CASE:
-  sum_CASE (ockont_CASE k i tkf) lf rf =
-  ockont_CASE k (sum_CASE i lf rf)
-              (λt k. sum_CASE (tkf t k) lf rf)
-Proof
-  Cases_on ‘k’ >> simp[]
-QED
 
 (* CV-translatable:
      refers to itself, walk_alt and apply_kont'
      apply_kont' refers to dfkoc_alt only
 *)
 Theorem ocwl'_thm =
-        ocwl'_def |> SRULE[Once trec_thm, tcall_EQN]
-                  |> SRULE [patternMatchesTheory.PMATCH_ROW_def,
-                            patternMatchesTheory.PMATCH_ROW_COND_def,
-                            sum_CASE_ockont_CASE, sum_CASE_term_CASE,
-                            sum_CASE_COND]
+        ocwl'_def |> SRULE[trec_thm]
+                  |> SRULE[tcall_def, sum_CASE_ockont_CASE, sum_CASE_term_CASE,
+                           sum_CASE_COND]
                   |> SRULE[GSYM ocwl'_def]
 
 Theorem ocwl'_alt_oc:

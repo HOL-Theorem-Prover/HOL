@@ -27,33 +27,32 @@ fun strip_cond t =
     end
   else ([], t)
 
+
 val th1 = cISPRIME_AUX
             |> concl
             |> rhs
             |> Term.subst[“isprime_auxc” |-> “f:cv -> cv -> cv”]
-            |> SCONV [cvTheory.cv_if_def0,COND_moveright,LET_THM]
+            |> SCONV [cvTheory.cv_if_def0,LET_THM]
 
 
 val t = “
-  tcall (λ(x:cv,y:cv). Num 1)
-  [(I, (λ(x,y). cv$c2b (cv_lt x y) /\
-                cv$c2b (cv_not (cv_eq (cv_mod y x) (Num 0)))),
-    (λ(x,y). INL (cv_add x (Num 2), y)));
-   (I, (λ(x,y). cv$c2b (cv_lt x y)), (λ(x,y). INR (Num 0)));
-   (I, K T, K (INR (Num 1)))
-  ] (UNCURRY f) (a,b)”
+  tcall (λ(uv3:cv, uv1:cv).
+           if cv$c2b $ cv_lt uv3 uv1 then
+             if cv$c2b (cv_not (cv_eq (cv_mod uv1 uv3) (Num 0)))
+             then
+               INL (cv_add uv3 (Num 2), uv1)
+             else
+               INR (Num 0)
+           else
+             INR (Num 1))
+  (UNCURRY f) (a, b)
+”
 
 fun UNPBETA_CONV tup t =
   let val t' = mk_comb(pairSyntax.mk_pabs(tup,t), tup)
   in
     SYM (pairLib.PAIRED_BETA_CONV t')
   end
-
-Theorem some_EQl:
-  (some v. v = e /\ P v) = if P e then SOME e else NONE
-Proof
-  DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >> simp[]
-QED
 
 Theorem option_CASE_OPTION_MAP:
   option_CASE (OPTION_MAP f v) n sf =
@@ -75,12 +74,22 @@ Proof
   simp[]
 QED
 
-val th2 =    SIMP_CONV std_ss [tcall_EQN, hascgd_def, execcgd_def, exectmgd_def,
-                               pairTheory.pair_CASE_def, some_EQl,
-                               patternMatchesTheory.PMATCH_ROW_def,
-                               patternMatchesTheory.PMATCH_ROW_COND_def,
-                               option_CASE_OPTION_MAP, option_CASE_COND,
-                               dumb_COND
+Theorem sum_CASE_COND:
+  sum_CASE (COND p t e) l r = if p then sum_CASE t l r
+                              else sum_CASE e l r
+Proof
+  Cases_on ‘p’ >> simp[]
+QED
+
+Theorem COND_CONJ:
+  (if p /\ q then t else e) = if p then if q then t else e else e
+Proof
+  rpt COND_CASES_TAC >> gs[]
+QED
+
+val th2 =    SIMP_CONV std_ss [tcall_def,
+                               pairTheory.pair_CASE_def, sum_CASE_COND,
+                               COND_CONJ
                                ] t;
 
 val th3 = CONV_RULE (RAND_CONV (REWR_CONV (GSYM th2))) th1
@@ -103,9 +112,7 @@ val th5 =
    |> SIMP_RULE std_ss []
    |> CONV_RULE (LAND_CONV
                  (RAND_CONV (SCONV[pairTheory.FORALL_PROD, PULL_EXISTS])))
-   |> SRULE[patternMatchesTheory.PMATCH_ROW_def, option_CASE_OPTION_MAP,
-            patternMatchesTheory.PMATCH_ROW_COND_def, some_EQl,
-            option_CASE_COND, pairTheory.FORALL_PROD]
+   |> SRULE[pairTheory.FORALL_PROD, sum_CASE_COND, AllCaseEqs()]
 
 val termination_t =
   lhand (concl th5)
@@ -115,9 +122,7 @@ val termination_t =
 Theorem termination_thm:
   ^termination_t
 Proof
-  simp[pairTheory.FORALL_PROD, patternMatchesTheory.PMATCH_ROW_COND_def,
-       patternMatchesTheory.PMATCH_ROW_def, option_CASE_OPTION_MAP,
-       some_EQl, option_CASE_COND] >>
+  simp[pairTheory.FORALL_PROD, PULL_EXISTS] >>
   Cases >> Cases >> simp[cvTheory.c2b_def]
 QED
 
