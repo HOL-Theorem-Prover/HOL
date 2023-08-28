@@ -2040,21 +2040,18 @@ val RAT_LES_0SUB = store_thm("RAT_LES_0SUB", ``!r1 r2. rat_les 0q (rat_sub r1 r2
         (0q < rat_minv r1 = 0q < r1)
  *--------------------------------------------------------------------------*)
 
-val RAT_MINV_LES = store_thm("RAT_MINV_LES", ``!r1. 0q < r1 ==> (rat_minv r1 < 0q = r1 < 0q) /\ (0q < rat_minv r1 = 0q < r1)``,
-        GEN_TAC THEN
-        DISCH_TAC THEN
-        REWRITE_TAC[rat_les_def] THEN
-        REWRITE_TAC[RAT_SUB_LID, RAT_SUB_RID] THEN
-        ASSUME_TAC (UNDISCH (SPECL[``0q``,``r1:rat``] (prove(``!r1 r2. rat_les r1 r2 ==> ~(r1=r2)``,
-        PROVE_TAC[RAT_LES_REF])))) THEN
-        UNDISCH_HD_TAC THEN
-        ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-        DISCH_TAC THEN
-        ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-        RW_TAC bool_ss [RAT_SGN_MINV] THEN
-        ONCE_REWRITE_TAC[GSYM INT_EQ_NEG] THEN
-        ONCE_REWRITE_TAC[RAT_SGN_AINV] THEN
-        RW_TAC bool_ss [RAT_SGN_MINV] );
+Theorem RAT_SGN_AINV' = RAT_SGN_AINV |> Q.SPEC ‘-r’
+                                     |> REWRITE_RULE [RAT_AINV_AINV]
+                                     |> GSYM
+
+Theorem RAT_MINV_LES:
+  !r1. r1 <> 0q ==>
+       (rat_minv r1 < 0q = r1 < 0q) /\ (0q < rat_minv r1 = 0q < r1)
+Proof
+  GEN_TAC THEN
+  DISCH_TAC THEN
+  simp[RAT_SGN_MINV, RAT_SGN_AINV', RAT_SUB_LID, RAT_SUB_RID, rat_les_def]
+QED
 
 
 (*==========================================================================
