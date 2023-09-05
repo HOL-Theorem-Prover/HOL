@@ -272,7 +272,7 @@ fun fact_thm (s, (th, _)) = th
 
 type segment =
      {thid    : thyid,                                         (* unique id  *)
-      facts   : (string * (thmkind * {private:bool})) list,   (* stored thms *)
+      facts   : (thmkind * {private:bool}) Symtab.table,      (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
       adjoin  : thy_addon list,                        (*  extras for export *)
       adjoinpc: (unit -> PP.pretty) list,
@@ -309,7 +309,7 @@ end (* local *)
  *---------------------------------------------------------------------------*)
 
 fun empty_segment_value thid =
-    {adjoin=[], adjoinpc = [], facts=[],thid=thid, thydata = empty_datamap,
+    {adjoin=[], adjoinpc = [], facts=Symtab.empty, thid=thid, thydata = empty_datamap,
      mldeps = HOLset.empty String.compare}
 
 fun fresh_segment s :segment = empty_segment_value (new_thyid s)
@@ -327,7 +327,9 @@ val current_theory = CTname;
 (*---------------------------------------------------------------------------*
  *                  READING FROM THE SEGMENT                                 *
  *---------------------------------------------------------------------------*)
-
+local
+  fun filter P tab = Symtab.fold (fn nmv => fn A => if P nmv then nmv :: A else A) tab []
+in
 fun thy_types thyname               = Type.thy_types thyname
 fun thy_constants thyname           = Term.thy_consts thyname
 fun thy_parents thyname             = snd (Graph.first
@@ -336,6 +338,7 @@ fun thy_axioms (th:segment)         = filter (is_axiom o fact_thm)   (#facts th)
 fun thy_theorems (th:segment)       = filter (is_theorem o fact_thm) (#facts th)
 fun thy_defns (th:segment)          = filter (is_defn o fact_thm)    (#facts th)
 fun thy_addons (th:segment)         = #adjoin th
+end
 
 fun stamp thyname =
   let val (_,sec,usec) = dest_thyid (fst (Graph.first
@@ -373,7 +376,7 @@ fun empty_segment ({thid,facts, ...}:segment) =
   let val thyname = thyid_name thid
   in null (thy_types thyname) andalso
      null (thy_constants thyname) andalso
-     null facts
+     Symtab.is_empty facts
   end;
 
 (*---------------------------------------------------------------------------*
@@ -386,20 +389,8 @@ fun add_type {name,theory,arity} thy =
 fun add_term {name,theory,htype} thy =
     (Term.prim_new_const {Thy = theory, Name = name} htype; thy)
 
-local fun pluck1 x L =
-        let fun get [] A = NONE
-              | get (p::rst) A =
-                if x = #1 p then SOME (p,rst@A) else get rst (p::A)
-        in get L []
-        end
-      fun overwrite (p as (s,_)) l =
-       case pluck1 s l of
-         NONE => p::l
-       | SOME (_,l') => p::l'
-in
 fun add_fact th (seg : segment) =
-    update_seg seg (U #facts (overwrite th (#facts seg))) $$
-end;
+    update_seg seg (U #facts (Symtab.update th (#facts seg))) $$
 
 fun new_addon a (s as {adjoin, ...} : segment) =
   update_seg s (U #adjoin (a::adjoin)) $$
@@ -410,19 +401,18 @@ fun new_addonpc a (s as {adjoinpc, ...} : segment) =
 fun add_ML_dep s (seg as {mldeps, ...} : segment) =
   update_seg seg (U #mldeps (HOLset.add(mldeps, s))) $$
 
-local fun plucky x L =
-       let fun get [] A = NONE
-             | get (p::rst) A =
-                if x = #1 p then SOME (rev A, p, rst) else get rst (p::A)
-       in get L []
-       end
+local fun plucky k tab =
+          case Symtab.lookup tab k of
+              NONE => NONE
+            | SOME v => SOME(v,Symtab.delete k tab)
 in
 fun set_MLbind (s1,s2) (seg as {facts, ...} : segment) =
+
     case plucky s1 facts of
       NONE => (WARN "set_MLbind" (Lib.quote s1^" not found in current theory");
                seg)
-    | SOME (X,(_,data),Y) =>
-      update_seg seg (U #facts (X @ (s2,data)::Y)) $$
+    | SOME (data, f0) =>
+      update_seg seg (U #facts (Symtab.update(s2,data) f0)) $$
 end;
 
 (*---------------------------------------------------------------------------
@@ -440,7 +430,7 @@ fun del_const (name,thyname) thy =
     (Term.prim_delete_const {Thy = thyname, Name = name} ; thy)
 
 fun del_binding name (s as {facts,...} : segment) =
-  update_seg s (U #facts (filter (fn (s, _) => not(s=name)) facts)) $$;
+  update_seg s (U #facts (Symtab.delete_safe name facts)) $$;
 
 (*---------------------------------------------------------------------------
    Clean out the segment. Note: this clears out the segment, and the
@@ -575,12 +565,16 @@ and uptodate_axioms [] = true
       Lib.all (uptodate_term o Thm.concl o Lib.C Lib.assoc axs) rlist
     end handle HOL_ERR _ => false
 
+fun tabfilter P tab =
+    Symtab.fold (fn nmv => fn A => if P nmv then Symtab.update nmv A else A)
+                tab
+                Symtab.empty
 fun scrub_ax (s as {facts,...} : segment) =
    let fun check (Thm _) = true
          | check (Defn _) = true
          | check (Axiom(_,th)) = uptodate_term (Thm.concl th)
    in
-      update_seg s (U #facts (List.filter (check o fact_thm) facts)) $$
+      update_seg s (U #facts (tabfilter (check o fact_thm) facts)) $$
    end
 
 fun scrub_thms (s as {facts,...}: segment) =
@@ -588,7 +582,7 @@ fun scrub_thms (s as {facts,...}: segment) =
          | check (Thm th ) = uptodate_thm th
          | check (Defn th) = uptodate_thm th
    in
-     update_seg s (U #facts (List.filter (check o fact_thm) facts)) $$
+     update_seg s (U #facts (tabfilter (check o fact_thm) facts)) $$
    end
 
 fun scrub () = makeCT (scrub_thms (scrub_ax (theCT())))
@@ -915,10 +909,12 @@ fun theory_out p ostrm =
  end;
 
 fun unkind facts =
-  List.foldl (fn ((s,(Axiom (_,th), _)), (A,D,T)) => ((s,th)::A,D,T)
-               | ((s,(Defn th, v)), (A,D,T))      => (A,(s,th,v)::D,T)
-               | ((s,(Thm th, v)), (A,D,T))       => (A,D,(s,th,v)::T))
-             ([],[],[]) facts
+    let fun foldthis (s,(Axiom (_,th), _)) (A,D,T) = ((s,th)::A,D,T)
+          | foldthis (s,(Defn th, v))      (A,D,T) = (A,(s,th,v)::D,T)
+          | foldthis (s,(Thm th, v))       (A,D,T) = (A,D,(s,th,v)::T)
+    in
+      Symtab.fold foldthis facts ([],[],[])
+    end
 
 (* automatically reverses the list, which is what is needed. *)
 
