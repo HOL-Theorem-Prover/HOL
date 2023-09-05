@@ -787,7 +787,7 @@ Proof
   metis_tac[strip_tau_rules,itree_wbisim_rules]
 QED
 
-Theorem itree_wbisim_tau:
+Theorem itree_wbisim_tau_eq:
   itree_wbisim (Tau t) t
 Proof
   ‘!t t'. t = Tau t' \/ t = t' ==> itree_wbisim t t'’ suffices_by metis_tac[] \\
