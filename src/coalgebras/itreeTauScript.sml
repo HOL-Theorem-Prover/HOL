@@ -828,6 +828,21 @@ Proof
   metis_tac[itree_wbisim_cases]
 QED
 
+Theorem itree_wbisim_tau_eqn0[local]:
+  !t t'. (?t0. t = Tau t0 /\ itree_wbisim t0 t') ==> itree_wbisim t t'
+Proof
+  ho_match_mp_tac itree_wbisim_strong_coind >> rw[] >>
+  pop_assum (strip_assume_tac o ONCE_REWRITE_RULE [itree_wbisim_cases]) >>
+  gvs[] >> metis_tac[]
+QED
+
+Theorem itree_wbisim_tau_eqn[simp]:
+  (itree_wbisim (Tau t1) t2 <=> itree_wbisim t1 t2) /\
+  (itree_wbisim t1 (Tau t2) <=> itree_wbisim t1 t2)
+Proof
+  metis_tac[itree_wbisim_sym, itree_wbisim_tau_eqn0, itree_wbisim_tau]
+QED
+
 Theorem itree_wbisim_strip_tau:
   !t t' t''. itree_wbisim t t' /\ strip_tau t t'' ==> itree_wbisim t'' t'
 Proof
