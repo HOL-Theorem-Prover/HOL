@@ -610,10 +610,10 @@ fun derive_existence th = itlist EXISTS_EQUATION (filter is_eq (hyp th)) th
 
 fun make_definitions stem th = let
   val defs = filter is_eq (hyp th)
-  fun mkdef i tm =
-      new_definition(stem ^ Int.toString i ^ !boolLib.def_suffix, tm)
+  fun def(s,t) = new_definition(Theory.temp_binding s, t)
+  fun mkdef i tm = def(stem ^ Int.toString i ^ !boolLib.def_suffix, tm)
   val dths = if length defs = 1 then
-               [new_definition(stem ^ !boolLib.def_suffix, hd defs)]
+               [def(stem ^ !boolLib.def_suffix, hd defs)]
              else
                mapi mkdef defs
   val insts = map2 (curry op |->) (map lhs defs) (map (lhs o concl) dths)
