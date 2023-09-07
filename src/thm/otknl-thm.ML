@@ -1203,6 +1203,9 @@ fun check_tyvars body_tyvars ty f =
          ("Unbound type variable(s) in definition: "
            :: commafy (map (Lib.quote o Type.dest_vartype) extras)));
 
+fun okConstName cnm =
+    CharVector.all (fn c => Char.isGraph c) cnm
+
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val (bv,Body) = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
   val (P,v)     = with_exn dest_comb Body TYDEF_FORM_ERR
@@ -1214,6 +1217,9 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val checked   =
       assert_exn null (free_vars P)
                  (TYDEF_ERR "subset predicate must be a closed term")
+  val checked   = assert_exn okConstName Tyop
+                             (TYDEF_ERR ("Type operator name: \"" ^ Tyop ^
+                                         "\" invalid"))
   val checked   = assert_exn (op=) (rng,bool)
                              (TYDEF_ERR "subset predicate has the wrong type")
   val   _       = Type.prim_new_type name (List.length tyvars)
@@ -1261,6 +1267,10 @@ fun prim_specification thyname cnames th = let
   val checked   =
       assert_exn (op=) (length(mk_set cnames),length cnames)
                  (SPEC_ERR "duplicate constant names in specification")
+  val checked   =
+      case List.find (not o okConstName) cnames of
+          NONE => ()
+        | SOME n => raise SPEC_ERR ("Constant name: \""^n^"\" invalid")
   val (V,body)  =
       with_exn (nstrip_exists (length cnames)) con
                (SPEC_ERR "too few existentially quantified variables")
@@ -1294,6 +1304,10 @@ fun gen_prim_specification thyname th = let
   val checked     =
       assert_exn (op=) (length(mk_set cnames),length cnames)
                  (SPEC_ERR "duplicate constant names in specification")
+  val checked   =
+      case List.find (not o okConstName) cnames of
+          NONE => ()
+        | SOME n => raise SPEC_ERR ("Constant name: \""^n^"\" invalid")
   val body        = concl th
   val checked     = check_vars body (List.map mk_var stys) SPEC_ERR
   fun addc (s,ty) = (mk_var (s,ty)) |-> bind thyname s ty

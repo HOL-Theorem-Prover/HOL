@@ -5,14 +5,8 @@ open testutils
 fun checkhyps th = if null (hyp th) then ()
                    else die "FAILED - Hyps in theorem!"
 fun f $ x = f x
-fun make_quiet f =
-    let open Feedback
-    in
-      with_flag (emit_MESG, false) $
-        with_flag (emit_WARNING, false) $ with_flag (emit_ERR, false) f
-    end
 
-val Hol_reln = make_quiet Hol_reln
+val Hol_reln = quietly Hol_reln
 
 (* set up a fake arithmetic theory *)
 val _ = new_type ("num", 0)
@@ -90,12 +84,12 @@ val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
         else die ""
 
 
-val _ = tprint "With Unicode should fail"
-val _ = if (make_quiet (xHol_reln "tr") `
-                      (!x. ▷ x Z) /\
-                      (!x y. ▷ (SUC x) (SUC y) ==> ▷ x y)
-           ` ; false) handle HOL_ERR _ => true then OK()
-        else die "FAILED"
+val _ = shouldfail {testfn = quietly (xHol_reln "tr"),
+                    printresult = (fn (th,_,_) => thm_to_string th),
+                    printarg = K "With Unicode should fail",
+                    checkexn = is_struct_HOL_ERR "IndDefLib"}
+                   ‘(!x. ▷ x Z) /\
+                    (!x y. ▷ (SUC x) (SUC y) ==> ▷ x y)’
 
 val _ = tprint "Vacuous clause failure"
 val _ = if (Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)

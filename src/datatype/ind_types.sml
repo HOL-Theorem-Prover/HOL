@@ -306,7 +306,7 @@ end
 (* Makes a type definition for one of the defined subsets.                   *)
 (* ------------------------------------------------------------------------- *)
 
-val safepfx = " @ind_type"
+val safepfx = "@ind_type"
 local
   val count = ref 0
   fun vary_to_avoid_constants () = let
