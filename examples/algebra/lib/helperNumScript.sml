@@ -1955,7 +1955,7 @@ val EXP_ODD = store_thm(
   rw[]);
 
 (* An exponentiation identity *)
-val EXP_THM = save_thm("EXP_THM", CONJ EXP_EVEN EXP_ODD);
+(* val EXP_THM = save_thm("EXP_THM", CONJ EXP_EVEN EXP_ODD); *)
 (*
 val EXP_THM = |- (!n. EVEN n ==> !m. m ** n = SQ m ** HALF n) /\
                   !n. ODD n ==> !m. m ** n = m * SQ m ** HALF n: thm
@@ -1965,11 +1965,13 @@ val EXP_THM = |- (!n. EVEN n ==> !m. m ** n = SQ m ** HALF n) /\
 (* Theorem: m ** n = if n = 0 then 1 else if n = 1 then m else
             if EVEN n then (m * m) ** HALF n else m * ((m * m) ** (HALF n)) *)
 (* Proof: mainly by EXP_EVEN, EXP_ODD. *)
-val EXP_THM = store_thm(
-  "EXP_THM",
-  ``!m n. m ** n = if n = 0 then 1 else if n = 1 then m else
-      if EVEN n then (m * m) ** HALF n else m * ((m * m) ** (HALF n))``,
-  metis_tac[EXP_0, EXP_1, EXP_EVEN, EXP_ODD, EVEN_ODD]);
+Theorem EXP_THM:
+  !m n. m ** n = if n = 0 then 1 else if n = 1 then m
+                 else if EVEN n then (m * m) ** HALF n
+                 else m * ((m * m) ** (HALF n))
+Proof
+  metis_tac[EXP_0, EXP_1, EXP_EVEN, EXP_ODD, EVEN_ODD]
+QED
 
 (* Theorem: m ** n =
             if n = 0 then 1
@@ -3662,15 +3664,15 @@ val power_parity = store_thm(
    <=> 0 = 0                       by ZERO_MOD
    <=> T
 *)
-val EXP_2_EVEN = store_thm(
-  "EXP_2_EVEN",
-  ``!n. 0 < n ==> EVEN (2 ** n)``,
-  rw[EVEN_MOD2, ZERO_EXP]);
-(* Michael's proof by induction *)
+Theorem EXP_2_EVEN:  !n. 0 < n ==> EVEN (2 ** n)
+Proof rw[EVEN_MOD2, ZERO_EXP]
+QED
+(* Michael's proof by induction
 val EXP_2_EVEN = store_thm(
   "EXP_2_EVEN",
   ``!n. 0 < n ==> EVEN (2 ** n)``,
   Induct >> rw[EXP, EVEN_DOUBLE]);
+ *)
 
 (* Theorem: 0 < n ==> ODD (2 ** n - 1) *)
 (* Proof:
@@ -4618,40 +4620,11 @@ val ONE_LT_HALF_SQ = store_thm(
   `(2 ** 2) DIV 2 = 2` by EVAL_TAC >>
   decide_tac);
 
-(* Theorem: 0 < n ==> (HALF (2 ** n) = 2 ** (n - 1)) *)
-(* Proof:
-   Since 2 ** n = (2 ** n) DIV 2 * 2 + (2 ** n) MOD 2   by DIVISION
-   But  (2 ** n) MOD 2
-      = ((2 MOD 2) ** n) MOD 2     by EXP_MOD
-      = (0 ** n) MOD 2             by DIVMOD_ID
-      = 0 MOD 2                    by ZERO_EXP, n <> 0
-      = 0                          by ZERO_MOD, 0 < n
-   Now  2 ** n
-      = 2 ** SUC (n - 1)
-      = 2 * 2 ** (n - 1)                by EXP
-      = 2 * (2 ** n DIV 2)              by MULT_COMM, above
-   Hence 2 ** (n - 1) = (2 ** n) DIV 2  by MULT_LEFT_CANCEL
-*)
-val EXP_2_HALF = store_thm(
-  "EXP_2_HALF",
-  ``!n. 0 < n ==> (HALF (2 ** n) = 2 ** (n - 1))``,
-  rpt strip_tac >>
-  `2 ** n = (2 ** n) DIV 2 * 2 + (2 ** n) MOD 2` by rw[DIVISION] >>
-  `(2 ** n) MOD 2 = ((2 MOD 2) ** n) MOD 2` by rw[] >>
-  `2 MOD 2 = 0` by rw[] >>
-  `n <> 0` by decide_tac >>
-  `0 ** n = 0` by rw[] >>
-  `(2 ** n) MOD 2 = 0` by rw[] >>
-  `2 ** n = 2 ** n DIV 2 * 2` by decide_tac >>
-  `n = SUC (n - 1)` by decide_tac >>
-  `2 * 2 ** (n - 1) = 2 * (2 ** n DIV 2)` by metis_tac[EXP, MULT_COMM] >>
-  decide_tac);
-(* Michael's proof by induction *)
-val EXP_2_HALF = store_thm(
-  "EXP_2_HALF",
-  ``!n. 0 < n ==> (HALF (2 ** n) = 2 ** (n - 1))``,
-  Induct >>
-  simp[EXP, MULT_TO_DIV]);
+Theorem EXP_2_HALF:
+  !n. 0 < n ==> (HALF (2 ** n) = 2 ** (n - 1))
+Proof
+  Induct >> simp[EXP, MULT_TO_DIV]
+QED
 
 (*
 There is EVEN_MULT    |- !m n. EVEN (m * n) <=> EVEN m \/ EVEN n

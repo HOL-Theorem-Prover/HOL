@@ -829,18 +829,20 @@ val PTREE_OF_NUMSET_INSERT = store_thm("PTREE_OF_NUMSET_INSERT",
 val PTREE_OF_NUMSET_INSERT_EMPTY = save_thm("PTREE_OF_NUMSET_INSERT_EMPTY",
   (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_INSERT);
 
-val PTREE_OF_NUMSET_DELETE = store_thm("PTREE_OF_NUMSET_DELETE",
-  `!t s x. IS_PTREE t /\ FINITE s ==>
-      (PTREE_OF_NUMSET t (s DELETE x) =
-       if x IN_PTREE t then
-         PTREE_OF_NUMSET t s
-       else
-         REMOVE (PTREE_OF_NUMSET t s) x)`,
+Theorem PTREE_OF_NUMSET_DELETE:
+  !t s x. IS_PTREE t /\ FINITE s ==>
+          (PTREE_OF_NUMSET t (s DELETE x) =
+           if x IN_PTREE t then
+             PTREE_OF_NUMSET t s
+           else
+             REMOVE (PTREE_OF_NUMSET t s) x)
+Proof
   SRW_TAC [] [PTREE_EXTENSION, IN_PTREE_OF_NUMSET, IN_PTREE_REMOVE]
-    \\ METIS_TAC []);
+    \\ METIS_TAC []
+QED
 
-val PTREE_OF_NUMSET_DELETE = save_thm("PTREE_OF_NUMSET_DELETE",
-  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_DELETE);
+Theorem PTREE_OF_NUMSET_DELETE[allow_rebind] =
+  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_DELETE
 
 (* ------------------------------------------------------------------------- *)
 

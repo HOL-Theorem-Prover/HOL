@@ -1407,11 +1407,6 @@ val DROP_LENGTH_NIL = Q.store_thm ("DROP_LENGTH_NIL",
    `!l. DROP (LENGTH l) l = []`,
    BasicProvers.Induct THEN ASM_REWRITE_TAC [LENGTH, DROP]);
 
-val BUTLASTN_LENGTH_NIL = Q.store_thm ("BUTLASTN_LENGTH_NIL",
-   `!l. BUTLASTN (LENGTH l) l = []`,
-   SNOC_INDUCT_TAC
-   THEN ASM_REWRITE_TAC [LENGTH, LENGTH_SNOC, BUTLASTN]);
-
 val DROP_APPEND = Q.store_thm ("DROP_APPEND",
    `!n l1 l2. DROP n (APPEND l1 l2) = DROP n l1 ++ DROP (n - LENGTH l1) l2`,
    Induct THEN1 SIMP_TAC list_ss [DROP, DROP_def]

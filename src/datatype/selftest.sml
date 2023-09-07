@@ -4,6 +4,7 @@ open HolKernel Parse
 open testutils
 
 val _ = Feedback.set_trace "Theory.save_thm_reporting" 0;
+val _ = Feedback.set_trace "Theory.allow_rebinds" 1;
 
 fun Hol_datatype q = let
   open TextIO Feedback

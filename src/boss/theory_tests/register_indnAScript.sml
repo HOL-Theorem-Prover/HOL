@@ -8,7 +8,7 @@ Definition foo_def:
   foo (h::t) = (h + 1) :: foo t
 End
 
-Definition foo_def:
+Definition foo_def[allow_rebind]:
   foo x 0 = x /\
   foo x (SUC n) = SUC (foo x n)
 End

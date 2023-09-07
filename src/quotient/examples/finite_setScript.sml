@@ -606,7 +606,6 @@ val _ = map save_thm
      ("Card_Insert_GT_0",Card_Insert_GT_0),
      ("In_Card_NOT_0",In_Card_NOT_0),
      ("NOT_Empty_Insert",NOT_Empty_Insert),
-     ("Delete_def",Delete_def),
      ("In_Delete",In_Delete),
      ("Card_Delete",Card_Delete),
      ("Insert_Delete",Insert_Delete),

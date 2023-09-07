@@ -253,7 +253,7 @@ Inductive tc:
   (!x y. (?z. tc r (x, z) /\ tc r (z, y)) ==> tc r (x, y))
 End
 
-Theorem tc_rules:
+Theorem tc_rules[allow_rebind]:
   !r.
     (!x y. (x ,y) IN r ==> (x, y) IN tc r) /\
     (!x y. (?z. (x, z) IN tc r /\ (z, y) IN tc r) ==> (x, y) IN tc r)
@@ -261,14 +261,14 @@ Proof
   SRW_TAC [] [SPECIFICATION, tc_rules]
 QED
 
-Theorem tc_cases:
+Theorem tc_cases[allow_rebind]:
   !r x y. (x, y) IN tc r <=> (x, y) IN r \/ ?z. (x, z) IN tc r /\ (z, y) IN tc r
 Proof
   SRW_TAC [] [SPECIFICATION]
   THEN SRW_TAC [] [Once (Q.SPECL [`r`, `(x, y)`] tc_cases)]
 QED
 
-Theorem tc_ind:
+Theorem tc_ind[allow_rebind]:
   !r tc'.
     (!x y. (x, y) IN r ==> tc' x y) /\
     (!x y. (?z. tc' x z /\ tc' z y) ==> tc' x y) ==>
@@ -319,7 +319,7 @@ Proof
   THEN ASM_REWRITE_TAC [subset_tc]
 QED
 
-Theorem tc_strongind:
+Theorem tc_strongind[allow_rebind]:
   !r tc'.
     (!x y. (x, y) IN r ==> tc' x y) /\
     (!x y. (?z. (x, z) IN tc r /\ tc' x z /\ (z, y) IN tc r /\ tc' z y) ==>
@@ -329,7 +329,7 @@ Proof
   SRW_TAC [] [SPECIFICATION]
   THEN IMP_RES_TAC
          (SIMP_RULE (srw_ss()) [LAMBDA_PROD, GSYM PFORALL_THM]
-            (Q.SPECL [`r`, `\(x, y). tc' x y`] (fetch "-" "tc_strongind")))
+            (Q.SPECL [`r`, `\(x, y). tc' x y`] tc_strongind))
 QED
 
 Triviality tc_cases_lem:
@@ -555,7 +555,7 @@ Proof
   THEN METIS_TAC [tc_implication_lem]
 QED
 
-Theorem acyclic_union:
+Theorem acyclic_union_E:
   !r1 r2. acyclic (r1 UNION r2) ==> acyclic r1 /\ acyclic r2
 Proof
   SRW_TAC [] [acyclic_def]
@@ -568,7 +568,7 @@ Proof
   SRW_TAC [] [rrestrict_def]
   THEN `r = {(x, y) | (x ,y) IN r /\ x IN s /\ y IN s} UNION r`
     by SRW_TAC [] [UNION_DEF, rextension, EQ_IMP_THM]
-  THEN METIS_TAC [acyclic_union]
+  THEN METIS_TAC [acyclic_union_E]
 QED
 
 Theorem acyclic_irreflexive:
@@ -618,7 +618,7 @@ Proof
   THEN METIS_TAC []
 QED
 
-Theorem acyclic_union:
+Theorem acyclic_union_I:
   !r r'.
     DISJOINT (domain r UNION range r) (domain r' UNION range r') /\
     acyclic r /\

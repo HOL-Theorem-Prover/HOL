@@ -2567,7 +2567,7 @@ Proof
   ‘preds x INTER IMAGE (λy. x + y) (preds y) = {}’
     by (simp[EXTENSION] >> qx_gen_tac ‘a’ >> Cases_on ‘x <= a’ >> simp[] >>
         qx_gen_tac ‘b’ >> rpt strip_tac >> gvs[]) >>
-  dxrule_then assume_tac CARD_DISJOINT_UNION >>
+  dxrule_then assume_tac CARDEQ_DISJOINT_UNION >>
   drule_then irule cardeq_TRANS >>
   resolve_then (Pos hd) irule CARD_ADD_SYM cardeq_TRANS >>
   irule CARD_ADD_ABSORB >> conj_tac

@@ -2,6 +2,8 @@ open HolKernel Parse boolLib
 
 val _ = new_theory "addDB";
 
+val _ = set_trace "Theory.allow_rebinds" 1
+
 val foo_def = new_definition("foo_def", “foo x <=> ~x”);
 
 val th1 = DB.fetch "-" "foo_def"

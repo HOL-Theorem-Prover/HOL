@@ -117,23 +117,27 @@ fun prove_local privp (n,th) =
     else ();
     DB.store_local {private=privp} n th;
     th)
-fun extract_localpriv (loc,priv,acc) attrs =
+fun extract_localpriv (loc,priv,rebindok,acc) attrs =
     case attrs of
-        [] => (loc,priv,List.rev acc)
-      | "unlisted" :: rest => extract_localpriv (loc,true,acc) rest
-      | "local" :: rest => extract_localpriv (true,priv,acc) rest
-      | a :: rest => extract_localpriv (loc,priv,a::acc) rest
+        [] => (loc,priv,rebindok,List.rev acc)
+      | "unlisted" :: rest => extract_localpriv (loc,true,rebindok,acc) rest
+      | "local" :: rest => extract_localpriv (true,priv,rebindok,acc) rest
+      | "allow_rebind" :: rest => extract_localpriv (loc,priv,true,acc) rest
+      | a :: rest => extract_localpriv (loc,priv,rebindok,a::acc) rest
 in
 fun save_thm_attrs fname (n, attrs, th) = let
-  val (localp,privp,attrs) = extract_localpriv (false,false,[]) attrs
+  val (localp,privp,rebindok,attrs) =
+      extract_localpriv (false,false,false,[]) attrs
   val save = if localp then prove_local privp
              else if privp then Theory.save_private_thm
              else Theory.save_thm
   val attrf = if localp then ThmAttribute.local_attribute
               else ThmAttribute.store_at_attribute
+  val storemod = if rebindok then trace("Theory.allow_rebinds", 1)
+                 else (fn f => f)
   fun do_attr a = attrf {thm = th, name = n, attrname = a}
 in
-  save(n,th) before app do_attr attrs
+  storemod save(n,th) before app do_attr attrs
 end
 fun store_thm(n0,t,tac) = let
   val (n, attrs) = ThmAttribute.extract_attributes n0

@@ -603,10 +603,11 @@ val SUBMAP_TRANS = store_thm(
   ``!f g h. f SUBMAP g /\ g SUBMAP h ==> f SUBMAP h``,
   SRW_TAC [][SUBMAP_DEF]);
 
-val SUBMAP_FUPDATE = store_thm(
-  "SUBMAP_FUPDATE",
-  ``k NOTIN FDOM f ==> f SUBMAP f |+ (k,v)``,
-  SRW_TAC [][SUBMAP_DEF] THEN METIS_TAC [FAPPLY_FUPDATE_THM]);
+Theorem SUBMAP_FUPDATE_EXTENDED:
+  k NOTIN FDOM f ==> f SUBMAP f |+ (k,v)
+Proof
+  SRW_TAC [][SUBMAP_DEF] THEN METIS_TAC [FAPPLY_FUPDATE_THM]
+QED
 
 val EQ_FDOM_SUBMAP = Q.store_thm(
 "EQ_FDOM_SUBMAP",
@@ -816,13 +817,6 @@ val FUNION_FUPDATE_2 = Q.store_thm
         else FUPDATE (FUNION f g) (x,y)`,
  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, FUNION_DEF, FAPPLY_FUPDATE_THM,
             EXTENSION] THEN PROVE_TAC []);
-
-val DRESTRICT_FUNION = Q.store_thm
-("DRESTRICT_FUNION",
- `!^fmap r q.
-     DRESTRICT f (r UNION q) = FUNION (DRESTRICT f r) (DRESTRICT f q)`,
- SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, FUNION_DEF, FAPPLY_FUPDATE_THM,
-            EXTENSION, DRESTRICT_DEF] THEN PROVE_TAC []);
 
 val FUNION_IDEMPOT = store_thm("FUNION_IDEMPOT",
 ``FUNION fm fm = fm``,
@@ -1045,7 +1039,8 @@ Proof
   rw[FLOOKUP_DEF, FMERGE_DEF] >> gvs[]
 QED
 
-Theorem FLOOKUP_FMERGE = FLOOKUP_FMERGE |> SIMP_RULE (srw_ss()) [];
+Theorem FLOOKUP_FMERGE[allow_rebind] =
+        FLOOKUP_FMERGE |> SIMP_RULE (srw_ss()) [];
 
 
 (*---------------------------------------------------------------------------
@@ -2312,12 +2307,14 @@ val FUNION_ASSOC = store_thm ("FUNION_ASSOC",
    SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, IN_UNION, EXTENSION] THEN
    METIS_TAC[]);
 
-val DRESTRICT_FUNION = store_thm ("DRESTRICT_FUNION",
-   ``!h s1 s2. FUNION (DRESTRICT h s1) (DRESTRICT h s2) =
-               DRESTRICT h (s1 UNION s2)``,
-    SIMP_TAC std_ss [DRESTRICT_DEF, GSYM fmap_EQ_THM, EXTENSION,
-      FUNION_DEF, IN_INTER, IN_UNION, DISJ_IMP_THM,
-      LEFT_AND_OVER_OR]);
+Theorem DRESTRICT_FUNION:
+   !h s1 s2. FUNION (DRESTRICT h s1) (DRESTRICT h s2) =
+             DRESTRICT h (s1 UNION s2)
+Proof
+  SIMP_TAC std_ss [DRESTRICT_DEF, GSYM fmap_EQ_THM, EXTENSION,
+                   FUNION_DEF, IN_INTER, IN_UNION, DISJ_IMP_THM,
+                   LEFT_AND_OVER_OR]
+QED
 
 
 val DRESTRICT_EQ_FUNION = store_thm ("DRESTRICT_EQ_FUNION",
@@ -2708,8 +2705,10 @@ val FUPDATE_LIST_APPEND_COMMUTES = store_thm("FUPDATE_LIST_APPEND_COMMUTES",
   Cases >> rw[FUPDATE_LIST_THM] >>
   metis_tac[FUPDATE_FUPDATE_LIST_COMMUTES]);
 
-val FUPDATE_LIST_ALL_DISTINCT_PERM = store_thm("FUPDATE_LIST_ALL_DISTINCT_PERM",
-  ``!ls ls' fm. ALL_DISTINCT (MAP FST ls) /\ PERM ls ls' ==> (fm |++ ls = fm |++ ls')``,
+Theorem FUPDATE_LIST_ALL_DISTINCT_PERM:
+  !ls ls' fm.
+    ALL_DISTINCT (MAP FST ls) /\ PERM ls ls' ==> (fm |++ ls = fm |++ ls')
+Proof
   Induct >> rw[] >>
   fs[sortingTheory.PERM_CONS_EQ_APPEND] >>
   rw[FUPDATE_LIST_THM] >>
@@ -2717,12 +2716,14 @@ val FUPDATE_LIST_ALL_DISTINCT_PERM = store_thm("FUPDATE_LIST_ALL_DISTINCT_PERM",
   imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
   match_mp_tac EQ_TRANS >>
   qexists_tac `(fm |++ (M ++ N)) |+ (h0,h1)` >>
-  conj_tac >- metis_tac[sortingTheory.ALL_DISTINCT_PERM,sortingTheory.PERM_MAP] >>
+  conj_tac
+  >- metis_tac[sortingTheory.ALL_DISTINCT_PERM,sortingTheory.PERM_MAP] >>
   rw[FUPDATE_LIST_APPEND] >>
   `h0 NOTIN set (MAP FST N)`
   by metis_tac[sortingTheory.PERM_MEM_EQ,MEM_MAP,MEM_APPEND] >>
   imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
-  rw[FUPDATE_LIST_THM]);
+  rw[FUPDATE_LIST_THM]
+QED
 
 val IMAGE_FRANGE = store_thm("IMAGE_FRANGE",
   ``!f fm. IMAGE f (FRANGE fm) = FRANGE (f o_f fm)``,
@@ -2914,11 +2915,11 @@ rw[] >>
 imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_DOMSUB_SUBSET) >>
 PROVE_TAC[])
 
-val FRANGE_DRESTRICT_SUBSET = store_thm(
-"FRANGE_DRESTRICT_SUBSET",
-``FRANGE (DRESTRICT fm s) SUBSET FRANGE fm``,
-srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,DRESTRICT_DEF] >>
-PROVE_TAC[])
+Theorem FRANGE_DRESTRICT_SUBSET:
+  FRANGE (DRESTRICT fm s) SUBSET FRANGE fm
+Proof
+  srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,DRESTRICT_DEF] >> PROVE_TAC[]
+QED
 
 val IN_FRANGE_DRESTRICT_suff = store_thm(
 "IN_FRANGE_DRESTRICT_suff",
@@ -2963,12 +2964,6 @@ val DRESTRICTED_FUNION = store_thm(
 ``!f1 f2 s. DRESTRICT (FUNION f1 f2) s = FUNION (DRESTRICT f1 s) (DRESTRICT f2 (s DIFF FDOM f1))``,
 rw[GSYM fmap_EQ_THM,DRESTRICT_DEF,FUNION_DEF] >> rw[] >>
 rw[EXTENSION] >> PROVE_TAC[])
-
-val FRANGE_DRESTRICT_SUBSET = store_thm(
-"FRANGE_DRESTRICT_SUBSET",
-``FRANGE (DRESTRICT fm s) SUBSET FRANGE fm``,
-SRW_TAC[][FRANGE_DEF,SUBSET_DEF,DRESTRICT_DEF] THEN
-SRW_TAC[][] THEN PROVE_TAC[])
 
 val DRESTRICT_FDOM = store_thm(
 "DRESTRICT_FDOM",
@@ -3101,24 +3096,6 @@ Proof
   \\ fs[FLOOKUP_DEF]
   \\ metis_tac[]
 QED
-
- (* Sorting stuff *)
-
-val FUPDATE_LIST_ALL_DISTINCT_PERM = store_thm("FUPDATE_LIST_ALL_DISTINCT_PERM",
-  ``!ls ls' fm. ALL_DISTINCT (MAP FST ls) /\ PERM ls ls' ==> (fm |++ ls = fm |++ ls')``,
-  Induct >> rw[] >>
-  fs[PERM_CONS_EQ_APPEND] >>
-  rw[FUPDATE_LIST_THM] >>
-  PairCases_on`h` >> fs[] >>
-  imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
-  match_mp_tac EQ_TRANS >>
-  qexists_tac `(fm |++ (M ++ N)) |+ (h0,h1)` >>
-  conj_tac >- metis_tac[ALL_DISTINCT_PERM,PERM_MAP] >>
-  rw[FUPDATE_LIST_APPEND] >>
-  `h0 NOTIN set (MAP FST N)` by metis_tac[PERM_MEM_EQ,MEM_MAP,MEM_APPEND] >>
-  imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
-  rw[FUPDATE_LIST_THM]);
-
 
 end
 (* end CakeML lemmas *)

@@ -20,7 +20,7 @@ val _ =
 (* now replace "foo_def" binding with something else; the old binding
    should drop out of the compset
 *)
-Theorem foo_def = REFL ``x:num``
+Theorem foo_def[allow_rebind] = REFL ``x:num``
 
 val _ = null (ThmSetData.current_data{settype="compute"}) orelse
         raise Fail "compute data not empty!"

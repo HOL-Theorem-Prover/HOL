@@ -71,12 +71,6 @@ Proof
     RW_TAC std_ss []
 QED
 
-Theorem extreal_11[simp] :
-    !a a'. (Normal a = Normal a') <=> (a = a')
-Proof
-    RW_TAC std_ss []
-QED
-
 val extreal_distinct = DB.fetch "-" "extreal_distinct";
 
 Theorem extreal_eq_zero[simp] :
@@ -1137,18 +1131,15 @@ QED
 Theorem sub_0 :
     !x y :extreal. (x - y = 0) ==> (x = y)
 Proof
-    rpt Cases
- >> RW_TAC std_ss [extreal_sub_def, num_not_infty, extreal_of_num_def, extreal_11,
-                   REAL_SUB_0]
+    rpt Cases >> simp[extreal_sub_def]
 QED
 
 Theorem sub_eq_0 :
     !x y. x <> PosInf /\ x <> NegInf /\ (x = y) ==> (x - y = 0)
 Proof
-    RW_TAC std_ss []
- >> `?a. x = Normal a` by METIS_TAC [extreal_cases]
- >> ASM_SIMP_TAC std_ss [extreal_of_num_def, extreal_sub_def,
-                         extreal_11, REAL_SUB_REFL]
+  RW_TAC std_ss []
+  >> `?a. x = Normal a` by METIS_TAC [extreal_cases]
+  >> simp[extreal_of_num_def, extreal_sub_def, REAL_SUB_REFL]
 QED
 
 Theorem sub_not_infty :
@@ -1383,11 +1374,9 @@ Proof
 QED
 
 Theorem entire[simp] : (* was: mul2_zero *)
-    !x y :extreal. (x * y = 0) <=> (x = 0) \/ (y = 0)
+  !x y :extreal. (x * y = 0) <=> (x = 0) \/ (y = 0)
 Proof
-    rpt Cases
- >> RW_TAC std_ss [extreal_mul_def, num_not_infty, extreal_of_num_def,
-                   extreal_11, REAL_ENTIRE]
+  rpt Cases >> rw[extreal_mul_def]
 QED
 
 Theorem le_mul :
@@ -1798,7 +1787,7 @@ QED
 Theorem abs_0[simp] :
     extreal_abs 0 = 0
 Proof
-    METIS_TAC [extreal_abs_def, extreal_of_num_def, extreal_11, ABS_0]
+    simp[extreal_abs_def, extreal_of_num_def]
 QED
 
 Theorem abs_pos[simp] :
@@ -2405,7 +2394,7 @@ Proof
     rpt strip_tac
  >> `x <> 0 /\ y <> 0` by PROVE_TAC [lt_le]
  >> Cases_on `x`
- >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
+ >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl,
         extreal_lt_eq]
  >- (fs [GSYM extreal_of_num_def] \\
      reverse EQ_TAC >> DISCH_TAC >| (* 2 subgoals *)
@@ -2416,7 +2405,7 @@ Proof
        CCONTR_TAC >> fs [extreal_inv_def] \\
        fs [GSYM extreal_of_num_def, lt_refl] ])
  >> Cases_on `y`
- >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
+ >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl,
         extreal_lt_eq]
  >> ASM_REWRITE_TAC [real_lt, REAL_LE_LT]
 QED
@@ -2427,7 +2416,7 @@ Proof
     rpt STRIP_TAC
  >> `x <> 0 /\ y <> 0` by PROVE_TAC [lt_le]
  >> Cases_on `x` >> Cases_on `y`
- >> fs [extreal_inv_def, extreal_of_num_def, extreal_11, extreal_not_infty,
+ >> fs [extreal_inv_def, extreal_of_num_def, extreal_not_infty,
         lt_infty, extreal_lt_eq]
 QED
 
@@ -2454,12 +2443,9 @@ Proof
 QED
 
 Theorem inv_not_infty :
-    !x :extreal. x <> 0 ==> inv x <> PosInf /\ inv x <> NegInf
+  !x :extreal. x <> 0 ==> inv x <> PosInf /\ inv x <> NegInf
 Proof
-    GEN_TAC
- >> Cases_on `x`
- >> RW_TAC std_ss [extreal_inv_def, extreal_not_infty,
-                   extreal_of_num_def, extreal_11]
+  Cases >> rw[extreal_inv_def]
 QED
 
 Theorem inv_infty :
@@ -2469,20 +2455,21 @@ Proof
 QED
 
 Theorem div_not_infty :
-    !x y:extreal. y <> 0 ==> Normal x / y <> PosInf /\ Normal x / y <> NegInf
+  !x y:extreal. y <> 0 ==> Normal x / y <> PosInf /\ Normal x / y <> NegInf
 Proof
-    rpt GEN_TAC
- >> Cases_on `y`
- >> RW_TAC std_ss [extreal_div_def, extreal_inv_def, extreal_not_infty,
-                   extreal_of_num_def, extreal_11]
- >> METIS_TAC [mul_not_infty2, extreal_not_infty]
+  rpt GEN_TAC
+  >> Cases_on `y`
+  >> rw[extreal_div_def, extreal_inv_def, extreal_not_infty,
+        extreal_of_num_def]
+  >> simp[extreal_mul_def]
 QED
 
 Theorem div_mul_refl :
     !(x :extreal) r. r <> 0 ==> x = x / Normal r * Normal r
 Proof
-    RW_TAC std_ss [extreal_div_def, extreal_inv_def, GSYM mul_assoc, extreal_mul_def]
- >> RW_TAC real_ss [REAL_MUL_LINV, GSYM extreal_of_num_def, mul_rone]
+  RW_TAC std_ss [extreal_div_def, extreal_inv_def, GSYM mul_assoc,
+                 extreal_mul_def]
+  >> RW_TAC real_ss [REAL_MUL_LINV, GSYM extreal_of_num_def, mul_rone]
 QED
 
 (* NOTE: removed ‘x <> PosInf /\ x <> NegInf’; changed ‘0 < r’ to ‘r <> 0’ *)
@@ -2523,9 +2510,8 @@ Proof
  >> `?r. x = Normal r` by METIS_TAC [extreal_cases]
  >> POP_ORW >> KILL_TAC
  >> Cases_on `y` >> Cases_on `z`
- >> RW_TAC std_ss [extreal_mul_def, extreal_not_infty, extreal_of_num_def,
-                   extreal_11, extreal_distinct,
-                   REAL_MUL_LZERO, REAL_MUL_RZERO]
+ >> rw[extreal_mul_def, extreal_not_infty, extreal_of_num_def,
+       REAL_MUL_LZERO, REAL_MUL_RZERO]
  >> REWRITE_TAC [REAL_EQ_MUL_LCANCEL]
 QED
 
@@ -2535,27 +2521,23 @@ Theorem mul_rcancel = ONCE_REWRITE_RULE [mul_comm] mul_lcancel
 Theorem inv_mul :
     !x y. x <> 0 /\ y <> 0 ==> (inv (x * y) = inv x * inv y)
 Proof
-    rpt STRIP_TAC
- >> Cases_on `x` >> Cases_on `y`
- >> FULL_SIMP_TAC real_ss [extreal_mul_def, extreal_inv_def, extreal_not_infty,
-                           extreal_of_num_def, extreal_11]
- >> TRY (Cases_on `0 < r` >> rw [extreal_inv_def])
- >> `r * r' <> 0` by METIS_TAC [REAL_ENTIRE]
- >> ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_11]
- >> MATCH_MP_TAC REAL_INV_MUL >> art []
+  rpt STRIP_TAC
+  >> Cases_on `x` >> Cases_on `y`
+  >> fs[extreal_mul_def, extreal_inv_def, extreal_not_infty,
+        extreal_of_num_def]
+  >> rw[extreal_inv_def]
 QED
 
 Theorem abs_div :
-    !x y. x <> PosInf /\ x <> NegInf /\ y <> 0 ==> (abs (x / y) = abs x / abs y)
+  !x y. x <> PosInf /\ x <> NegInf /\ y <> 0 ==> (abs (x / y) = abs x / abs y)
 Proof
-    rpt STRIP_TAC
- >> Cases_on `x` >> Cases_on `y`
- >> FULL_SIMP_TAC real_ss [extreal_div_def, extreal_inv_def, extreal_not_infty,
-                           extreal_of_num_def, extreal_11, extreal_abs_def,
-                           extreal_mul_def]
- >> rename1 `s <> 0`
- >> `abs s <> 0` by PROVE_TAC [ABS_ZERO]
- >> ASM_SIMP_TAC real_ss [extreal_div_eq, ABS_MUL, extreal_11, real_div, ABS_INV]
+  rpt STRIP_TAC
+  >> Cases_on `x` >> Cases_on `y`
+  >> fs[extreal_div_def, extreal_inv_def, extreal_not_infty,
+       extreal_of_num_def, extreal_abs_def, extreal_mul_def]
+  >> rename1 `s <> 0`
+  >> `abs s <> 0` by PROVE_TAC [ABS_ZERO]
+  >> simp[extreal_div_eq, ABS_MUL, real_div, ABS_INV]
 QED
 
 Theorem abs_div_normal :
@@ -2598,9 +2580,7 @@ QED
 Theorem zero_pow : (* POW_0 *)
     !n. 0 < n ==> (extreal_pow 0 n = 0)
 Proof
-    RW_TAC real_ss [extreal_of_num_def, extreal_pow_def, extreal_11]
- >> Cases_on `n` >- fs [LESS_REFL]
- >> REWRITE_TAC [POW_0]
+    rw[extreal_of_num_def, extreal_pow_def]
 QED
 
 Theorem pow_1[simp] :
@@ -2612,7 +2592,7 @@ QED
 Theorem one_pow[simp] : (* POW_ONE *)
     !n. extreal_pow 1 n = 1
 Proof
-    RW_TAC real_ss [extreal_of_num_def, extreal_pow_def, extreal_11, POW_ONE]
+  rw[extreal_of_num_def, extreal_pow_def, POW_ONE]
 QED
 
 Theorem pow_2 :
@@ -2862,10 +2842,9 @@ Proof
  >> `0 < n` by RW_TAC arith_ss []
  >> `0 pow n = (0 :real)` by (Cases_on `n` >> rw [POW_0])
  >> Cases_on `y` >> RW_TAC std_ss [extreal_pow_def, extreal_inv_def]
- >> `r <> 0` by METIS_TAC [extreal_of_num_def, extreal_11]
+ >> `r <> 0` by (strip_tac >> gvs[])
  >> `r pow n <> 0` by PROVE_TAC [POW_NZ]
- >> ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_pow_def, extreal_11]
- >> REWRITE_TAC [REAL_POW_INV]
+ >> simp[extreal_inv_eq, extreal_pow_def]
 QED
 
 Theorem pow_div : (* cf. REAL_POW_DIV *)

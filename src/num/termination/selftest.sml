@@ -96,9 +96,9 @@ val _ = require_msg (check_result lhs_has_two_args)
                     thm_to_string
                     (fn q => quiet_messages
                                (quietDefn
-                                  (TotalDefn.qDefine "foo[schematic]" q))
+                                  (TotalDefn.qDefine "foo1[schematic]" q))
                                NONE)
-                    ‘foo x = if x = 0 then y else foo(x - 1)*2’;
+                    ‘foo1 x = if x = 0 then y else foo1(x - 1)*2’;
 
 fun allquiet f x =
     quiet_messages (quiet_warnings (quietDefn f)) x
@@ -107,6 +107,6 @@ val _ = tprint "qDefine/schematic, termination"
 val _ = require_msg (check_result lhs_has_two_args)
                     thm_to_string
                     (fn q => allquiet
-                               (TotalDefn.qDefine "foo[schematic]" q)
+                               (TotalDefn.qDefine "foo2[schematic]" q)
                                (SOME (WF_REL_TAC ‘$<’)))
-                    ‘foo x = if x = 0 then y else foo(x - 1)*2’;
+                    ‘foo2 x = if x = 0 then y else foo2(x - 1)*2’;

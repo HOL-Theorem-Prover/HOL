@@ -748,6 +748,7 @@ fun qDefine stem q tacopt =
       val (nocomp, attrs) = test_remove "nocompute" attrs
       val (svarsok, attrs) = test_remove "schematic" attrs
       val (notuserdef, attrs) = test_remove "notuserdef" attrs
+      val (rebindok, attrs) = test_remove "allow_rebind" attrs
       val (indopt,attrs) = find_indoption attrs
       fun fmod f =
           f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
@@ -757,6 +758,8 @@ fun qDefine stem q tacopt =
             |> with_flag(Defn.def_suffix, "")
             |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
                              | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
+            |> (if rebindok then trace ("Theory.allow_rebinds", 1)
+                else (fn f => f))
       val (thm,indopt) =
           case tacopt of
               NONE => fmod (xDefine corename) q

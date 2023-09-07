@@ -1537,14 +1537,6 @@ Proof
   Induct_on ‘FINITE’ >> simp[] >> rw[] >> gvs[CARD1_SING]
 QED
 
-
-
-(* bijections modelled as functions  options so that they can be everywhere
-   NONE outside of their domains *)
-val bijns_def = Define‘
-  bijns A = { f | BIJ (THE o f) A A /\ !a. a IN A <=> ?b. f a = SOME b}
-’;
-
 Definition bijns_def:
   bijns A = { f | BIJ f A A /\ !a. a NOTIN A ==> f a = a }
 End
@@ -2079,13 +2071,8 @@ val LE_SUC_LT = store_thm ("LE_SUC_LT",
 val lemma = METIS [] ``(!x. x IN s ==> (g(f(x)) = x)) <=>
                      (!y x. x IN s /\ (y = f x) ==> (g y = x))``;
 
-val INJECTIVE_ON_LEFT_INVERSE = store_thm ("INJECTIVE_ON_LEFT_INVERSE",
- ``!f s. (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)) <=>
-       (?g. !x. x IN s ==> (g(f(x)) = x))``,
-  ONCE_REWRITE_TAC [lemma] THEN
-  SIMP_TAC std_ss [GSYM SKOLEM_THM] THEN METIS_TAC[]);
-
-val th = REWRITE_RULE[IN_UNIV] (ISPECL [``f:'a->'b``, ``UNIV:'a->bool``] INJECTIVE_ON_LEFT_INVERSE);
+val th = REWRITE_RULE[IN_UNIV]
+            (ISPECL [“f:'a->'b”, “UNIV:'a->bool”] INJECTIVE_ON_LEFT_INVERSE);
 
 val INJECTIVE_LEFT_INVERSE = store_thm ("INJECTIVE_LEFT_INVERSE",
  ``(!x y. (f x = f y) ==> (x = y)) <=> (?g. !x. g(f(x)) = x)``,
@@ -2509,11 +2496,6 @@ val CARD_EQ_CARD = store_thm ("CARD_EQ_CARD",
   MESON_TAC[CARD_FINITE_CONG, ARITH_PROVE ``m <= n /\ n <= m <=> (m = n:num)``,
             CARD_LE_ANTISYM, CARD_LE_CARD]);
 
-val CARD_LT_CARD = store_thm ("CARD_LT_CARD",
- ``!s:'a->bool t:'b->bool.
-        FINITE s /\ FINITE t ==> (s <_c t <=> CARD s < CARD t)``,
-  SIMP_TAC std_ss [CARD_LE_CARD, GSYM NOT_LESS_EQUAL]);
-
 val CARD_HAS_SIZE_CONG = store_thm ("CARD_HAS_SIZE_CONG",
  ``!s:'a->bool t:'b->bool n. s HAS_SIZE n /\ s =_c t ==> t HAS_SIZE n``,
   REWRITE_TAC[HAS_SIZE] THEN
@@ -2720,8 +2702,9 @@ val CARD_ADD_LE_MUL_INFINITE = store_thm ("CARD_ADD_LE_MUL_INFINITE",
 (* Relate cardinal addition to the simple union operation.                   *)
 (* ------------------------------------------------------------------------- *)
 
-val CARD_DISJOINT_UNION = store_thm ("CARD_DISJOINT_UNION",
- ``!s:'a->bool t. (s INTER t = EMPTY) ==> (s UNION t =_c (s +_c t))``,
+Theorem CARDEQ_DISJOINT_UNION:
+  !s:'a->bool t. (s INTER t = EMPTY) ==> (s UNION t =_c (s +_c t))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[EXTENSION, IN_INTER, NOT_IN_EMPTY] THEN
   STRIP_TAC THEN REWRITE_TAC[eq_c, IN_UNION] THEN
   EXISTS_TAC ``\x:'a. if x IN s then INL x else INR x`` THEN
@@ -2729,7 +2712,8 @@ val CARD_DISJOINT_UNION = store_thm ("CARD_DISJOINT_UNION",
   REWRITE_TAC[COND_RAND, COND_RATOR] THEN
   REWRITE_TAC[TAUT `(if b then x else y) <=> b /\ x \/ ~b /\ y`] THEN
   SIMP_TAC std_ss [sum_distinct, INL_11, INR_11, IN_CARD_ADD] THEN
-  ASM_MESON_TAC[]);
+  ASM_MESON_TAC[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The key to arithmetic on infinite cardinals: k^2 = k.                     *)
@@ -2760,15 +2744,6 @@ val CARD_MUL_FINITE = store_thm ("CARD_MUL_FINITE",
 (* ------------------------------------------------------------------------- *)
 (* Hence the "absorption laws" for arithmetic with an infinite cardinal.     *)
 (* ------------------------------------------------------------------------- *)
-
-val CARD_MUL_ABSORB_LE = store_thm ("CARD_MUL_ABSORB_LE",
- ``!s:'a->bool t:'b->bool. INFINITE(t) /\ s <=_c t ==> (s *_c t) <=_c t``,
-  REPEAT STRIP_TAC THEN
-  KNOW_TAC ``(s *_c t) <=_c ((t:'b->bool) *_c t) /\
-             ((t:'b->bool) *_c t) <=_c t`` THENL
-  [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
-  ASM_SIMP_TAC std_ss [CARD_LE_MUL, CARD_LE_REFL,
-               CARD_SQUARE_INFINITE, CARD_EQ_IMP_LE]);
 
 val CARD_MUL2_ABSORB_LE = store_thm ("CARD_MUL2_ABSORB_LE",
  ``!s:'a->bool t:'b->bool u:'c->bool.
@@ -2862,28 +2837,6 @@ val CARD_LT_ADD = store_thm ("CARD_LT_ADD",
     CONJ_TAC THENL
      [METIS_TAC [CARD_LTE_TRANS, CARD_LE_ADDR],
       METIS_TAC [CARD_LTE_TRANS, CARD_LE_ADDL]]]);
-
-(* ------------------------------------------------------------------------- *)
-(* Some more ad-hoc but useful theorems.                                     *)
-(* ------------------------------------------------------------------------- *)
-
-val CARD_MUL_LT_LEMMA = store_thm ("CARD_MUL_LT_LEMMA",
- ``!s t:'b->bool u. s <=_c t /\ t <_c u /\ INFINITE u ==> (s *_c t) <_c u``,
-  REPEAT GEN_TAC THEN ASM_CASES_TAC ``FINITE(t:'b->bool)`` THENL
-   [REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN REWRITE_TAC[CARD_NOT_LT] THEN
-    ASM_MESON_TAC[CARD_LE_FINITE, CARD_MUL_FINITE],
-    ASM_MESON_TAC[CARD_MUL_ABSORB_LE, CARD_LET_TRANS]]);
-
-val CARD_MUL_LT_INFINITE = store_thm ("CARD_MUL_LT_INFINITE",
- ``!s:'a->bool t:'b->bool u. s <_c u /\ t <_c u /\ INFINITE u ==> (s *_c t) <_c u``,
-  REPEAT GEN_TAC THEN
-  DISJ_CASES_TAC(ISPECL [``s:'a->bool``, ``t:'b->bool``] CARD_LE_TOTAL) THENL
-   [ASM_MESON_TAC[CARD_MUL_SYM, CARD_MUL_LT_LEMMA],
-    STRIP_TAC THEN KNOW_TAC ``(s *_c t) <=_c (t:'b->bool *_c s:'a->bool) /\
-                              (t:'b->bool *_c s:'a->bool) <_c u`` THENL
-    [ALL_TAC, METIS_TAC [CARD_LET_TRANS]] THEN
-    ASM_MESON_TAC[CARD_EQ_IMP_LE, CARD_MUL_SYM, CARD_MUL_LT_LEMMA]]);
 
 (* ------------------------------------------------------------------------- *)
 (* Cantor's theorem.                                                         *)

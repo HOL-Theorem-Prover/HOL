@@ -4409,17 +4409,13 @@ Proof
 QED
 
 (* CEILING_DIV and CEILING_MOD *)
+Theorem CEILING_DIV_def[compute,allow_rebind] =
+  curry new_definition "CEILING_DIV_def"
+   “CEILING_DIV m n = (m + (n - 1)) DIV n”;
 
-val CEILING_DIV_def = curry new_definition
-   "CEILING_DIV_def"
-   “CEILING_DIV m n = (m + (n - 1)) DIV n”
-
-val CEILING_MOD_def = curry new_definition
-   "CEILING_MOD_def"
+Theorem CEILING_MOD_def[compute,allow_rebind] =
+  curry new_definition "CEILING_MOD_def"
    “CEILING_MOD m n = (n - m MOD n) MOD n”
-
-Theorem CEILING_DIV_def[compute] = CEILING_DIV_def;
-Theorem CEILING_MOD_def[compute] = CEILING_MOD_def;
 
 Overload "\\\\" = “CEILING_DIV”;  (* prints as \\ *)
 Overload "%%" = “CEILING_MOD”;

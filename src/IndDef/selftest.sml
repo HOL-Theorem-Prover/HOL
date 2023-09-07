@@ -2,6 +2,8 @@ open HolKernel Parse boolLib IndDefLib
 
 open testutils
 
+val _ = Feedback.set_trace "Theory.allow_rebinds" 1
+
 fun checkhyps th = if null (hyp th) then ()
                    else die "FAILED - Hyps in theorem!"
 fun f $ x = f x

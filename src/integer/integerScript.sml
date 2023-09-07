@@ -508,8 +508,6 @@ val _ = Theory.save_thm ("INT_LT_REFL",INT_LT_REFL)
 val _ = Theory.save_thm ("INT_LT_TRANS",INT_LT_TRANS)
 val _ = Theory.save_thm ("INT_LT_LADD_IMP",INT_LT_LADD_IMP)
 val _ = Theory.save_thm ("INT_LT_MUL",INT_LT_MUL)
-val _ = Theory.save_thm ("int_of_num",int_of_num)
-val _ = Theory.save_thm ("INT_INJ",INT_INJ)
 val _ = Theory.save_thm ("NUM_POSINT_EX",NUM_POSINT_EX)
 ;
 

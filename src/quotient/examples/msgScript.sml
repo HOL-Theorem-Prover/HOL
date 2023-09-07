@@ -320,10 +320,6 @@ val _ = map save_thm
     [("msg_cases",msg_cases),
      ("msgCD",msgCD),
      ("msgDC",msgDC),
-     ("nonces_def",nonces_def),
-     ("left_def",left_def),
-     ("right_def",right_def),
-     ("is_nonce_def",is_nonce_def),
      ("msg_induction",msg_induction)
     ];
 

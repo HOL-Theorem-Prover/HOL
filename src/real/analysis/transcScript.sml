@@ -2113,21 +2113,6 @@ val SIN_COS_SQRT = store_thm("SIN_COS_SQRT",
 (* Derivatives of the inverse functions, starting with natural log           *)
 (*---------------------------------------------------------------------------*)
 
-val DIFF_LN = store_thm("DIFF_LN",
-  “!x. &0 < x ==> (ln diffl (inv x))(x)”,
-  GEN_TAC THEN DISCH_TAC THEN
-  SUBGOAL_THEN “(ln diffl (inv x))(exp(ln(x)))” MP_TAC THENL
-   [MATCH_MP_TAC DIFF_INVERSE_OPEN,
-    MATCH_MP_TAC(TAUT_CONV “(a <=> b) ==> a ==> b”) THEN AP_TERM_TAC THEN
-    ASM_REWRITE_TAC[EXP_LN]] THEN
-  MAP_EVERY EXISTS_TAC [“ln(x) - &1”, “ln(x) + &1”] THEN
-  REWRITE_TAC[REAL_LT_SUB_RADD, REAL_LT_ADDR, REAL_LT_01, LN_EXP,
-    MATCH_MP DIFF_CONT (SPEC_ALL DIFF_EXP)] THEN
-  CONJ_TAC THENL
-   [MP_TAC(SPEC “ln(x)” DIFF_EXP) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[GSYM EXP_LN]), MATCH_MP_TAC REAL_POS_NZ] THEN
-  ASM_REWRITE_TAC[]);
-
 (* Known as DIFF_ASN_COS in GTT *)
 val DIFF_ASN_LEMMA = store_thm("DIFF_ASN_LEMMA",
   “!x. ~(&1) < x /\ x < &1 ==> (asn diffl (inv(cos(asn x))))(x)”,

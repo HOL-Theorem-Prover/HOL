@@ -243,7 +243,7 @@ Definition ltree_CASE[nocompute]:
       f a (LMAP ltree_abs ts)
 End
 
-Theorem ltree_CASE[compute]:
+Theorem ltree_CASE[compute,allow_rebind]:
   ltree_CASE (Branch a ts) f = f a ts
 Proof
   fs [ltree_CASE,Branch]
@@ -359,7 +359,7 @@ Definition ltree_unfold:
     gen_ltree (make_unfold f seed)
 End
 
-Theorem ltree_unfold:
+Theorem ltree_unfold[allow_rebind]:
   ltree_unfold f seed =
     let (a,seeds) = f seed in
       Branch a (LMAP (ltree_unfold f) seeds)
@@ -395,7 +395,7 @@ Definition ltree_el_def:
        | SOME t => ltree_el t ns)
 End
 
-Theorem ltree_el_def:
+Theorem ltree_el_def[allow_rebind]:
   ltree_el (Branch a ts) [] = SOME (a, LLENGTH ts) /\
   ltree_el (Branch a ts) (n::ns) =
     case LNTH n ts of
@@ -518,7 +518,7 @@ Definition ltree_lookup_def:
        | SOME t => ltree_lookup t ns)
 End
 
-Theorem ltree_lookup_def:
+Theorem ltree_lookup_def[allow_rebind]:
   ltree_lookup t [] = SOME t /\
   ltree_lookup (Branch a ts) (n::ns) =
     case LNTH n ts of
@@ -670,8 +670,8 @@ End
 fun tidy_up ind = ind
   |> Q.SPEC `P` |> UNDISCH |> Q.SPEC `t` |> Q.GEN `t` |> DISCH_ALL |> Q.GEN `P`;
 
-Theorem ltree_finite_ind = tidy_up ltree_finite_ind;
-Theorem ltree_finite_strongind = tidy_up ltree_finite_strongind;
+Theorem ltree_finite_ind[allow_rebind] = tidy_up ltree_finite_ind;
+Theorem ltree_finite_strongind[allow_rebind] = tidy_up ltree_finite_strongind;
 
 Theorem ltree_finite:
   ltree_finite (Branch a ts) <=>
@@ -692,7 +692,7 @@ Termination
   WF_REL_TAC `measure (rose_tree_size (K 0))` \\ rw []
 End
 
-Theorem rose_tree_induction = from_rose_ind;
+Theorem rose_tree_induction[allow_rebind] = from_rose_ind;
 
 Theorem ltree_finite_from_rose:
   ltree_finite t <=> ?r. from_rose r = t

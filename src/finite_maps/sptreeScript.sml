@@ -1738,32 +1738,6 @@ val lemmas = Q.prove(
   \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0 < 2:num``)]
   \\ EVAL_TAC \\ fs[MOD_EQ_0,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
 
-val IN_domain = Q.store_thm("IN_domain",
-  `!n x t1 t2.
-      (n IN domain LN <=> F) /\
-      (n IN domain (LS x) <=> (n = 0)) /\
-      (n IN domain (BN t1 t2) <=>
-        (n <> 0 /\ (if EVEN n then ((n-1) DIV 2) IN domain t1
-                              else ((n-1) DIV 2) IN domain t2))) /\
-      (n IN domain (BS t1 x t2) <=>
-        ((n = 0) \/ (if EVEN n then ((n-1) DIV 2) IN domain t1
-                             else ((n-1) DIV 2) IN domain t2)))`,
-  full_simp_tac(srw_ss())[domain_def] \\ REPEAT STRIP_TAC
-  \\ Cases_on `n = 0` \\ full_simp_tac(srw_ss())[]
-  \\ Cases_on `EVEN n` \\ full_simp_tac(srw_ss())[]
-  \\ full_simp_tac(srw_ss())[GSYM ODD_EVEN]
-  \\ IMP_RES_TAC EVEN_ODD_EXISTS
-  \\ full_simp_tac(srw_ss())[ADD1] \\ full_simp_tac(srw_ss())[lemmas]
-  \\ Cases_on `m` \\ full_simp_tac(srw_ss())[MULT_CLAUSES]
-  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-  \\ full_simp_tac(srw_ss())[lemmas])
-
-val lookup_map_K = Q.store_thm("lookup_map_K",
-  `!t n. lookup n (map (K x) t) = if n IN domain t then SOME x else NONE`,
-  Induct \\ full_simp_tac(srw_ss())[IN_domain,map_def,lookup_def]
-  \\ REPEAT STRIP_TAC \\ Cases_on `n = 0` \\ full_simp_tac(srw_ss())[]
-  \\ Cases_on `EVEN n` \\ full_simp_tac(srw_ss())[]);
-
 val spt_fold_def = Define `
   (spt_fold f acc LN = acc) /\
   (spt_fold f acc (LS a) = f a acc) /\

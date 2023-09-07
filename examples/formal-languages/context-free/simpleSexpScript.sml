@@ -99,7 +99,7 @@ val sxMEM_def = Define`
   sxMEM e s ⇔ ∃l. strip_sxcons s = SOME l ∧ MEM e l
 `;
 
-Theorem sexp_size_def[simp] = definition"sexp_size_def";
+Theorem sexp_size_def[simp,allow_rebind] = definition"sexp_size_def";
 
 Theorem sxMEM_sizelt:
   ∀s1 s2. sxMEM s1 s2 ⇒ sexp_size s1 < sexp_size s2

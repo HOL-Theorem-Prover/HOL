@@ -383,6 +383,9 @@ fun empty_segment ({thid,facts, ...}:segment) =
  *              ADDING TO THE SEGMENT                                        *
  *---------------------------------------------------------------------------*)
 
+val allow_rebinds = ref false
+val _ = Feedback.register_btrace("Theory.allow_rebinds", allow_rebinds)
+
 fun add_type {name,theory,arity} thy =
     (Type.prim_new_type {Thy = theory, Tyop = name} arity; thy)
 
@@ -390,7 +393,12 @@ fun add_term {name,theory,htype} thy =
     (Term.prim_new_const {Thy = theory, Name = name} htype; thy)
 
 fun add_fact th (seg : segment) =
-    update_seg seg (U #facts (Symtab.update th (#facts seg))) $$
+    let val updator = if !Globals.interactive orelse !allow_rebinds then
+                        Symtab.update
+                      else Symtab.update_new
+    in
+      update_seg seg (U #facts (updator th (#facts seg))) $$
+    end
 
 fun new_addon a (s as {adjoin, ...} : segment) =
   update_seg s (U #adjoin (a::adjoin)) $$

@@ -168,19 +168,19 @@ val _ = export_rewrites ["OPTION_MAP_DEF"]
 val _ = computeLib.add_persistent_funs ["OPTION_MAP_DEF"]
 val _ = ot0 "OPTION_MAP" "map"
 
-Theorem IS_SOME_DEF[compute,simp] = new_recursive_definition
+Theorem IS_SOME_DEF[compute,simp,allow_rebind] = new_recursive_definition
   {name="IS_SOME_DEF",
    rec_axiom=option_Axiom,
    def = “(IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)”};
 val _ = ot0 "IS_SOME" "isSome"
 
-Theorem IS_NONE_DEF[compute,simp] = new_recursive_definition {
+Theorem IS_NONE_DEF[compute,simp,allow_rebind] = new_recursive_definition {
   name = "IS_NONE_DEF",
   rec_axiom = option_Axiom,
   def = Term`(IS_NONE (SOME x) = F) /\ (IS_NONE NONE = T)`};
 val _ = ot0 "IS_NONE" "isNone"
 
-Theorem THE_DEF[compute,simp] = new_recursive_definition
+Theorem THE_DEF[compute,simp,allow_rebind] = new_recursive_definition
   {name="THE_DEF",
    rec_axiom=option_Axiom,
    def = Term `THE (SOME x) = x`};
@@ -193,7 +193,7 @@ val OPTION_MAP2_DEF = Q.new_definition(
      then SOME (f (THE x) (THE y))
      else NONE`);
 
-Theorem OPTION_JOIN_DEF[compute,simp] = new_recursive_definition
+Theorem OPTION_JOIN_DEF[compute,simp,allow_rebind] = new_recursive_definition
   {name = "OPTION_JOIN_DEF",
    rec_axiom = option_Axiom,
    def = Term`(OPTION_JOIN NONE = NONE) /\

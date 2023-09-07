@@ -64,7 +64,7 @@ val _ = define_quotient_types
            types = [{equiv = fsequiv_equiv, name = "fset"}]}
 
 (* map from list to set is fset_ABS, in other direction it's fset_REP *)
-Theorem fset_ABS_REP_CLASS = theorem "fset_ABS_REP_CLASS"
+val fset_ABS_REP_CLASS = theorem "fset_ABS_REP_CLASS"
 Theorem bijection2 = fset_ABS_REP_CLASS
                        |> CONJUNCT2 |> SPEC_ALL |> EQ_IMP_RULE |> #1
                        |> GEN_ALL

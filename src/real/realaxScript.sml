@@ -272,15 +272,17 @@ val real_min = new_definition
   ("real_min", “min (x :real) y = if x <= y then x else y”);
 
 (* |- !y x. x < y <=> ~(y <= x) *)
-val real_lt = store_thm ("real_lt",
-    “!y x. x < y <=> ~(y <= x)”,
+Theorem real_lt[allow_rebind]:
+  !y x. x < y <=> ~(y <= x)
+Proof
   let
     val th1 = TAUT_PROVE (“!t u:bool. (t = ~u) ==> (u = ~t)”)
     val th2 = SPECL [``y <= x``,``x < y``] th1
     val th3 = SPECL [``y:real``,``x:real``] real_lte
   in
     ACCEPT_TAC (GENL [``y:real``, ``x:real``] (MP th2 th3))
-  end);
+  end
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Some elementary "bootstrapping" lemmas needed by RealArith.sml            *)

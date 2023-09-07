@@ -40,15 +40,6 @@ val _ = Hol_datatype `bt = nt | node of bt => 'a => bt`;
 val _ = Hol_datatype `bl = nbl | zerbl of bl
                                | onebl of 'a => 'a bt => bl`;
 
-val bt_11 = save_thm ("bt_11", theorem "bt_11");
-(* |- !a0 a1 a2 a0' a1' a2'. (node a0 a1 a2 = node a0' a1' a2') <=>
-                             (a0 = a0') /\ (a1 = a1') /\ (a2 = a2') *)
-
-val bt_distinct = save_thm ("bt_distinct", theorem "bt_distinct");
-(* |- !a2 a1 a0. nt <> node a0 a1 a2 *)
-
-val bt_case_def = save_thm ("bt_case_def", definition "bt_case_def");
-
 val bt_size_def = definition "bt_size_def";
 (* |- (!f. bt_size f nt = 0) /\
        !f a0 a1 a2. bt_size f (node a0 a1 a2) =

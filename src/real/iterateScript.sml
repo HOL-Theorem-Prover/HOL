@@ -1060,29 +1060,12 @@ val REAL_INF_ASCLOSE = store_thm ("REAL_INF_ASCLOSE",
   SIMP_TAC std_ss [REAL_ARITH ``abs(x - l):real <= e <=> l - e <= x /\ x <= l + e``] THEN
   METIS_TAC[REAL_INF_BOUNDS]);
 
-val SUP_UNIQUE_FINITE = store_thm ("SUP_UNIQUE_FINITE",
- ``!s:real->bool a. FINITE s /\ ~(s = {})
-       ==> ((sup s = a) <=> a IN s /\ !y. y IN s ==> y <= a)``,
-   ASM_SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, REAL_LE_SUP_FINITE, REAL_SUP_LE_FINITE,
-               NOT_INSERT_EMPTY, FINITE_INSERT, FINITE_EMPTY] THEN
-   METIS_TAC[REAL_LE_REFL, REAL_LE_TRANS, REAL_LE_ANTISYM]);
-
 val INF_UNIQUE_FINITE = store_thm ("INF_UNIQUE_FINITE",
  ``!s a. FINITE s /\ ~(s = {})
        ==> ((inf s = a) <=> a IN s /\ !y. y IN s ==> a <= y)``,
    ASM_SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, REAL_LE_INF_FINITE, REAL_INF_LE_FINITE,
                NOT_INSERT_EMPTY, FINITE_INSERT, FINITE_EMPTY] THEN
    MESON_TAC[REAL_LE_REFL, REAL_LE_TRANS, REAL_LE_ANTISYM]);
-
-val SUP_INSERT_FINITE = store_thm ("SUP_INSERT_FINITE",
- ``!x:real s. FINITE s ==> (sup(x INSERT s) = if s = {} then x else max x (sup s))``,
-  REPEAT STRIP_TAC THEN COND_CASES_TAC THEN
-  ASM_SIMP_TAC std_ss [SUP_UNIQUE_FINITE,  FINITE_INSERT, FINITE_EMPTY,
-               NOT_INSERT_EMPTY, FORALL_IN_INSERT, NOT_IN_EMPTY] THEN
-  REWRITE_TAC[IN_SING, REAL_LE_REFL] THEN
-  REWRITE_TAC[max_def] THEN COND_CASES_TAC THEN
-  ASM_SIMP_TAC std_ss [SUP_FINITE, IN_INSERT, REAL_LE_REFL] THEN
-  METIS_TAC[SUP_FINITE, REAL_LE_TOTAL, REAL_LE_TRANS]);
 
 val INF_INSERT_FINITE = store_thm ("INF_INSERT_FINITE",
  ``!x s:real->bool. FINITE s ==> (inf(x INSERT s) = if s = {} then x else min x (inf s))``,

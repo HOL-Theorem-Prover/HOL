@@ -43,15 +43,13 @@ val xor_assoc = store_thm
    ``!x y z. (x xor y) xor z <=> x xor (y xor z)``,
    RW_TAC bool_ss [xor_def] THEN DECIDE_TAC);
 
-val xor_F = store_thm
-  ("xor_F",
-   ``!x. x xor F <=> x``,
-   RW_TAC bool_ss [xor_def]);
+Theorem xor_F: !x. x xor F <=> x
+Proof RW_TAC bool_ss [xor_def]
+QED
 
-val xor_F = store_thm
-  ("xor_F",
-   ``!x. F xor x <=> x``,
-   RW_TAC bool_ss [xor_def]);
+Theorem F_xor: !x. F xor x <=> x
+Proof RW_TAC bool_ss [xor_def]
+QED
 
 val xor_T = store_thm
   ("xor_T",

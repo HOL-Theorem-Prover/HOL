@@ -402,11 +402,6 @@ val EXTRACT_def = Define`
   (EXTRACT (s,i,NONE) = SUBSTRING(s,i,STRLEN s - i)) /\
   (EXTRACT (s,i,SOME n) = SUBSTRING(s,i,n))`;
 
-val STRLEN_EQ_0 = Q.store_thm
-("STRLEN_EQ_0",
- `!x. (STRLEN x = 0) = (x="")`,
- Cases THEN SRW_TAC [][STRLEN_DEF]);
-
 val STRLEN_EXPLODE_THM = store_thm(
   "STRLEN_EXPLODE_THM",
   ``STRLEN s = LENGTH (EXPLODE s)``,
@@ -484,9 +479,9 @@ val IMPLODE_STRING = Q.store_thm
 
 val stringinst = INST_TYPE [alpha |-> ``:char``]
 
-val STRLEN_EQ_0 = save_thm("STRLEN_EQ_0", stringinst LENGTH_NIL)
-val STRLEN_THM = save_thm("STRLEN_THM", stringinst LENGTH)
-val STRLEN_DEF = save_thm("STRLEN_DEF",  STRLEN_THM)
+Theorem STRLEN_EQ_0 = stringinst LENGTH_NIL
+Theorem STRLEN_THM = stringinst LENGTH
+Theorem STRLEN_DEF = STRLEN_THM
 
 (*---------------------------------------------------------------------------
                       String concatenation

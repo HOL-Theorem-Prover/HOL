@@ -2,6 +2,8 @@ open HolKernel Parse boolLib bossLib
 
 val _ = new_theory "theory1"
 
+val _ = set_trace "Theory.allow_rebinds" 1
+
 val _ = register_hook("magnus_bug",
                       (fn TheoryDelta.ExportTheory _ => delete_const "h"
                         | _ => ()))

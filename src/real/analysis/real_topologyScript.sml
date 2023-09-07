@@ -1275,11 +1275,6 @@ QED
 (*  MISC                                                                    *)
 (* ------------------------------------------------------------------------ *)
 
-val INDEPENDENT_MONO = store_thm ("INDEPENDENT_MONO",
- ``!s t. independent t /\ s SUBSET t ==> independent s``,
- SIMP_TAC std_ss [independent, dependent] THEN
- ASM_MESON_TAC[SPAN_MONO, SUBSET_DEF, IN_DELETE]);
-
 val SPAN_BREAKDOWN = store_thm ("SPAN_BREAKDOWN",
  ``!b s a:real. b IN s /\ a IN span s ==> ?k. (a - k * b) IN span(s DELETE b)``,
   SIMP_TAC std_ss [CONJ_EQ_IMP, RIGHT_FORALL_IMP_THM] THEN
@@ -1354,10 +1349,6 @@ val INDEPENDENT_INSERT = store_thm ("INDEPENDENT_INSERT",
      ==> ((a INSERT s) DELETE b = a INSERT (s DELETE b))``] THEN
   ASM_MESON_TAC[IN_SPAN_INSERT, SET_RULE
     ``b IN s ==> (b INSERT (s DELETE b) = s)``]);
-
-val INDEPENDENT_EMPTY = store_thm ("INDEPENDENT_EMPTY",
- ``independent {}``,
-  REWRITE_TAC[independent, dependent, NOT_IN_EMPTY]);
 
 val INDEPENDENT_SING = store_thm ("INDEPENDENT_SING",
  ``!x. independent {x} <=> ~(x = 0)``,
@@ -1952,10 +1943,6 @@ val LINEAR_INJECTIVE_BOUNDED_BELOW_POS = store_thm ("LINEAR_INJECTIVE_BOUNDED_BE
 (* ------------------------------------------------------------------------- *)
 (* Consequences of independence or spanning for cardinality.                 *)
 (* ------------------------------------------------------------------------- *)
-
-val INDEPENDENT_CARD_LE_DIM = store_thm ("INDEPENDENT_CARD_LE_DIM",
- ``!v b:real->bool. b SUBSET v /\ independent b ==> FINITE b /\ CARD(b) <= dim v``,
-  METIS_TAC[BASIS_EXISTS, INDEPENDENT_SPAN_BOUND, HAS_SIZE, SUBSET_TRANS]);
 
 val SPAN_CARD_GE_DIM = store_thm ("SPAN_CARD_GE_DIM",
  ``!v b:real->bool. v SUBSET (span b) /\ FINITE b ==> dim(v) <= CARD(b)``,
@@ -4873,11 +4860,13 @@ val net_ty_bij = define_new_type_bijections
     {name="net_tybij",
      ABS="mk_net", REP="netord",tyax=net_tydef};
 
-val net_tybij = store_thm ("net_tybij",
-  ``(!a. mk_net (netord a) = a) /\
-    (!r. (!x y. (!z. r z x ==> r z y) \/ (!z. r z y ==> r z x)) <=>
-          (netord (mk_net r) = r))``,
-  SIMP_TAC std_ss [net_ty_bij, GSYM isnet]);
+Theorem net_tybij[allow_rebind]:
+  (!a. mk_net (netord a) = a) /\
+  (!r. (!x y. (!z. r z x ==> r z y) \/ (!z. r z y ==> r z x)) <=>
+       (netord (mk_net r) = r))
+Proof
+  SIMP_TAC std_ss [net_ty_bij, GSYM isnet]
+QED
 
 val NET = store_thm ("NET",
  ``!n x y. (!z. netord n z x ==> netord n z y) \/
@@ -22104,7 +22093,7 @@ Proof
     SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_NE_EMPTY]
 QED
 
-Theorem INTERVAL_BOUNDS_EMPTY :
+Theorem INTERVAL_BOUNDS_EMPTY[simp] :
     (interval_upperbound {} = 0) /\
     (interval_lowerbound {} = 0)
 Proof
@@ -22252,11 +22241,6 @@ Proof
       ASM_SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_LOWERBOUND] \\
       REWRITE_TAC [CONTENT_EQ_0] >> ASM_REAL_ARITH_TAC ]
 QED
-
-val INTERVAL_BOUNDS_EMPTY = store_thm ("INTERVAL_BOUNDS_EMPTY",
- ``interval_upperbound({}:real->bool) =
-   interval_lowerbound({}:real->bool)``,
-  METIS_TAC [INTERVAL_BOUNDS_NULL, CONTENT_EMPTY, EMPTY_AS_INTERVAL]);
 
 val _ = export_theory();
 

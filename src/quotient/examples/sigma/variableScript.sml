@@ -485,19 +485,6 @@ val variant_minimum_DEF = store_thm
     THEN IMP_RES_TAC variant_DEF
    );
 
-
-val variant_is_variant = store_thm
-   ("variant_is_variant",
-    “!x s. FINITE s ==> (variant x s) is_variant x”,
-    REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC_ALL)
-            (REWRITE_RULE[IN_variant_set] variant_in_variant_set)
-    THEN ASM_REWRITE_TAC[mk_variant_is_variant]
-   );
-
-
-
 (* =============================================================== *)
 (* Now we need to prove that the variant function as defined above *)
 (* satisfies the three properties that we require:                 *)

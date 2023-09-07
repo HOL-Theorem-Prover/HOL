@@ -399,18 +399,8 @@ val list_INDUCT = Q.store_thm
  REWRITE_TAC [list_INDUCT0]);  (* must use REWRITE_TAC, ACCEPT_TAC refuses
                                    to respect bound variable names *)
 
-val list_induction  = save_thm("list_induction", list_INDUCT);
+Theorem list_induction[allow_rebind] = list_INDUCT
 val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
-
-(*---------------------------------------------------------------------------*)
-(* List induction as a rewrite rule.                                         *)
-(* |- (!l. P l) = P [] /\ !h t. P t ==> P (h::t)                             *)
-(*---------------------------------------------------------------------------*)
-
-val FORALL_LIST = Q.store_thm
- ("FORALL_LIST",
-  ‘(!l. P l) <=> P [] /\ !h t. P t ==> P (h::t)’,
-  METIS_TAC [list_INDUCT]);
 
 (*---------------------------------------------------------------------------*)
 (* Cases theorem: |- !l. (l = []) \/ (?t h. l = h::t)                        *)
@@ -424,7 +414,7 @@ val list_CASES = store_thm
  “!l. (l = []) \/ (?h t. l = h::t)”,
  mesonLib.MESON_TAC [list_cases]);
 
-val list_nchotomy = save_thm("list_nchotomy", list_CASES);
+Theorem list_nchotomy[allow_rebind] = list_CASES
 
 (*---------------------------------------------------------------------------*)
 (* Definition of list_case more suitable to call-by-value computations       *)

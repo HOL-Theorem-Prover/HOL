@@ -571,7 +571,8 @@ Theorem peg_eval_tok_SOME:
 Proof simp[Once peg_eval_cases, pairTheory.EXISTS_PROD] >> metis_tac[]
 QED
 
-Theorem peg_eval_empty[simp]: peg_eval G (i, empty r) x ⇔ x = Success i r NONE
+Theorem peg_eval_empty[simp,allow_rebind]:
+  peg_eval G (i, empty r) x ⇔ x = Success i r NONE
 Proof simp[Once peg_eval_cases]
 QED
 
@@ -625,7 +626,7 @@ Proof
   metis_tac[]
 QED
 
-Theorem peg_eval_rpt:
+Theorem peg_eval_rpt[allow_rebind]:
   peg_eval G (i0, rpt s f) x ⇔
     ∃i l err. peg_eval_list G (i0,s) (i,l,err) ∧ x = Success i (f l) (SOME err)
 Proof simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]

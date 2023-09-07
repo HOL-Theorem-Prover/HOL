@@ -577,9 +577,7 @@ val gtpm_raw = store_thm(
   ``gtpm = raw_gtpm``,
   srw_tac [][GSYM pmact_bijections,is_pmact_def,is_pmact_raw_gtpm]);
 
-val gtpm_thm = save_thm(
-"gtpm_thm",
-raw_gtpm_thm |> SUBS [GSYM gtpm_raw]);
+Theorem gtpm_thm = raw_gtpm_thm |> SUBS [GSYM gtpm_raw]
 
 val GFV_support = prove(
   ``support gt_pmact t (GFV t)``,
@@ -632,7 +630,7 @@ val gtmsize_gtpm = CONJ (SUBS [GSYM gtpm_raw] gtmsize_raw_gtpm) (GEN_ALL gtmsize
    working with this type *)
 val GFV_thm = save_thm("GFV_thm", rmGFV GFV_thm0)
 val GFV_gtpm = save_thm("GFV_gtpm", rmGFV (SUBS [GSYM gtpm_raw] GFV_raw_gtpm))
-val gtpm_thm = save_thm("gtpm_thm", REWRITE_RULE [MAP_gtpm] gtpm_thm)
+Theorem gtpm_thm[allow_rebind] = REWRITE_RULE [MAP_gtpm] gtpm_thm
 val gterm_distinct = save_thm("gterm_distinct", gterm_distinct)
 val gterm_11 = save_thm("gterm_11", gterm_11)
 val GLAM_eq_thm = save_thm("GLAM_eq_thm", rmGFV GLAM_eq_thm1)

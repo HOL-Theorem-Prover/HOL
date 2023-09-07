@@ -327,7 +327,7 @@ Definition itree_CASE[nocompute]:
     | Event e => vis e (\a. (itree_abs (\path. itree_rep t (SOME a::path))))
 End
 
-Theorem itree_CASE[compute]:
+Theorem itree_CASE[compute,allow_rebind]:
   itree_CASE (Ret r) ret tau vis = ret r /\
   itree_CASE (Tau t) ret tau vis = tau t /\
   itree_CASE (Vis a g) ret tau vis = vis a g
@@ -416,7 +416,7 @@ Proof
   \\ fs [itree_unfold_path_def] \\ metis_tac []
 QED
 
-Theorem itree_unfold:
+Theorem itree_unfold[allow_rebind]:
   itree_unfold f seed =
     case f seed of
     | Ret' r   => Ret r
@@ -904,7 +904,7 @@ Definition spin:
   spin = itree_unfold (K (Tau' ())) ()
 End
 
-Theorem spin:
+Theorem spin[allow_rebind]:
   spin = Tau spin  (* an infinite sequence of silent actions *)
 Proof
   fs [spin] \\ simp [Once itree_unfold]

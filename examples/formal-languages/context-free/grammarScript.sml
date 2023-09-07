@@ -68,7 +68,7 @@ Termination
    WF_REL_TAC `measure ptree_size`
 End
 
-Theorem ptree_fringe_def[simp,compute] =
+Theorem ptree_fringe_def[simp,compute,allow_rebind] =
   CONV_RULE (DEPTH_CONV ETA_CONV) ptree_fringe_def
 
 Definition complete_ptree_def:

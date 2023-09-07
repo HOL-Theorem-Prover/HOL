@@ -265,12 +265,6 @@ Proof
  >> MATCH_MP_TAC TS_IMP_ETS >> ASM_REWRITE_TAC []
 QED
 
-Theorem WBISIM_INV :
-    !ts tau R. WBISIM ts tau R ==> WBISIM ts tau (inv R)
-Proof
-    SRW_TAC[][WBISIM_def, inv_DEF] >> METIS_TAC []
-QED
-
 Theorem WBISIM_O :
     !ts tau R R'. WBISIM ts tau R /\ WBISIM ts tau R' ==>
                   WBISIM ts tau (R' O R)

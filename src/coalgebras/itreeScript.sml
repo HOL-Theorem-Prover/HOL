@@ -288,7 +288,7 @@ Definition itree_CASE[nocompute]:
     | Event e  => vis e (\a. (itree_abs (\path. itree_rep t (a::path))))
 End
 
-Theorem itree_CASE[compute]:
+Theorem itree_CASE[compute,allow_rebind]:
   itree_CASE (Ret r)   ret div vis = ret r /\
   itree_CASE Div       ret div vis = div /\
   itree_CASE (Vis a g) ret div vis = vis a g
@@ -362,7 +362,7 @@ Proof
   \\ fs [itree_unfold_path_def] \\ metis_tac []
 QED
 
-Theorem itree_unfold:
+Theorem itree_unfold[allow_rebind]:
   itree_unfold f seed =
     case f seed of
     | Ret' r   => Ret r
@@ -428,7 +428,7 @@ Proof
   metis_tac []
 QED
 
-Theorem itree_unfold_err:
+Theorem itree_unfold_err[allow_rebind]:
   itree_unfold_err f (rel, err_f, err) seed =
     case f seed of
     | Ret' r   => Ret r
@@ -464,7 +464,7 @@ Definition itree_el_def:
     itree_CASE t (\r. Return ARB) (Return ARB) (\e g. itree_el (g a) ns)
 End
 
-Theorem itree_el_def:
+Theorem itree_el_def[allow_rebind]:
   itree_el (Ret r) []   = Return r /\
   itree_el Div []       = Stuck /\
   itree_el (Vis e g) [] = Event e /\

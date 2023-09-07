@@ -605,16 +605,15 @@ val FUN_REL_MP = store_thm
     THEN RES_TAC
    );
 
-val FUN_REL_IMP = store_thm
-   ("FUN_REL_IMP",
-    (“!(R1:'a->'a->bool) (R2:'b->'b->bool) f g x y.
-         (R1 ===> R2) f g /\ (R1 x y)
-         ==> (R2 (f x) (g y))”),
-    REPEAT GEN_TAC
-    THEN REWRITE_TAC[FUN_REL]
-    THEN STRIP_TAC
-    THEN RES_TAC
-   );
+Theorem FUN_REL_IMP:
+  !(R1:'a->'a->bool) (R2:'b->'b->bool) f g x y.
+    (R1 ===> R2) f g /\ (R1 x y) ==> (R2 (f x) (g y))
+Proof
+  REPEAT GEN_TAC
+  THEN REWRITE_TAC[FUN_REL]
+  THEN STRIP_TAC
+  THEN RES_TAC
+QED
 
 
 val FUN_REL_EQUALS = store_thm
@@ -636,16 +635,17 @@ val FUN_REL_EQUALS = store_thm
    );
 
 
-val FUN_REL_IMP = store_thm
-   ("FUN_REL_IMP",
-    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
-        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !f g. respects(R1 ===> R2) f /\ respects(R1 ===> R2) g /\
-               ((rep1 --> abs2) f = (rep1 --> abs2) g)
-               ==> !x y. R1 x y ==> R2 (f x) (g y)”),
-    REPEAT STRIP_TAC
-    THEN IMP_RES_TAC FUN_REL_EQUALS
-   );
+Theorem QT_FUN_REL_IMP:
+  !R1 (abs1:'a -> 'c) rep1.
+    QUOTIENT R1 abs1 rep1 ==>
+    !R2 (abs2:'b -> 'd) rep2.
+      QUOTIENT R2 abs2 rep2 ==>
+      !f g. respects(R1 ===> R2) f /\ respects(R1 ===> R2) g /\
+            ((rep1 --> abs2) f = (rep1 --> abs2) g) ==>
+            !x y. R1 x y ==> R2 (f x) (g y)
+Proof
+  REPEAT STRIP_TAC THEN IMP_RES_TAC FUN_REL_EQUALS
+QED
 
 
 

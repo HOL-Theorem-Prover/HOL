@@ -491,13 +491,12 @@ Proof
   rewrite_tac [EVEN_ODD,ODD_to_cv]
 QED
 
-val c2n_def = Prim_rec.new_recursive_definition {
+Theorem c2n_def[simp,allow_rebind] = Prim_rec.new_recursive_definition {
   name = "c2n_def",
   rec_axiom = cv_Axiom,
   def = “c2n (Num n) = n /\
-         c2n (Pair c d) = 0”};
-
-val _ = save_thm("c2n_def[simp]",c2n_def);
+         c2n (Pair c d) = 0”
+};
 
 Theorem add_to_cv:
   m + n = c2n (cv_add (Num m) (Num n))

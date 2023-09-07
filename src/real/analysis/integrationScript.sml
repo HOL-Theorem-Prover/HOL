@@ -9073,12 +9073,14 @@ val HAS_BOUNDED_SETVARIATION_COMPARISON = store_thm ("HAS_BOUNDED_SETVARIATION_C
   CONJ_TAC THENL [ASM_MESON_TAC[division_of], ALL_TAC] THEN
   SIMP_TAC std_ss [] THEN METIS_TAC[division_of, SUBSET_TRANS]);
 
-val HAS_BOUNDED_SETVARIATION_ON_ABS = store_thm ("HAS_BOUNDED_SETVARIATION_ON_ABS",
- ``!f:(real->bool)->real s.
-        (\x. (abs(f x))) has_bounded_setvariation_on s <=>
-        (\x. (f x)) has_bounded_setvariation_on s``,
+Theorem HAS_BOUNDED_SETVARIATION_ON_ABS:
+  !f:(real->bool)->real s.
+    (\x. (abs(f x))) has_bounded_setvariation_on s <=>
+    f has_bounded_setvariation_on s
+Proof
   REWRITE_TAC[has_bounded_setvariation_on] THEN
-  SIMP_TAC std_ss [ABS_ABS]);
+  SIMP_TAC std_ss [ABS_ABS]
+QED
 
 val SETVARIATION_EQUAL_LEMMA = store_thm ("SETVARIATION_EQUAL_LEMMA",
  ``!mf:((real->bool)->real)->((real->bool)->real) ms ms'.
@@ -9219,13 +9221,6 @@ Proof
  >> MATCH_MP_TAC REAL_LE_TRANS
  >> Q.EXISTS_TAC `abs B` >> art [ABS_LE]
 QED
-
-val HAS_BOUNDED_SETVARIATION_ON_ABS = store_thm ("HAS_BOUNDED_SETVARIATION_ON_ABS",
- ``!f:(real->bool)->real s.
-        (\x. (abs(f x))) has_bounded_setvariation_on s <=>
-        f has_bounded_setvariation_on s``,
-  REWRITE_TAC[has_bounded_setvariation_on] THEN
-  SIMP_TAC std_ss [ABS_ABS]);
 
 val HAS_BOUNDED_SETVARIATION_ON_COMPOSE_LINEAR = store_thm ("HAS_BOUNDED_SETVARIATION_ON_COMPOSE_LINEAR",
  ``!f:(real->bool)->real g:real->real s.
@@ -17716,15 +17711,6 @@ val HAS_BOUNDED_VARIATION_COMPARISON = store_thm ("HAS_BOUNDED_VARIATION_COMPARI
     ASM_SIMP_TAC std_ss [INTERVAL_LOWERBOUND_NONEMPTY,
                          INTERVAL_UPPERBOUND_NONEMPTY] THEN
     ASM_MESON_TAC[ENDS_IN_INTERVAL, SUBSET_DEF]]);
-
-val HAS_BOUNDED_VARIATION_ON_ABS = store_thm ("HAS_BOUNDED_VARIATION_ON_ABS",
- ``!f:real->real.
-        (\x. (f x)) has_bounded_variation_on s
-        ==> (\x. (abs(f x))) has_bounded_variation_on s``,
-  REPEAT GEN_TAC THEN
-  MATCH_MP_TAC(ONCE_REWRITE_RULE[IMP_CONJ_ALT]
-    HAS_BOUNDED_VARIATION_COMPARISON) THEN
- SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
 
 val VECTOR_VARIATION_COMPARISON = store_thm ("VECTOR_VARIATION_COMPARISON",
  ``!f:real->real g:real->real s.
