@@ -18860,12 +18860,6 @@ val HAS_BOUNDED_VARIATION_ON_REFLECT_INTERVAL = store_thm ("HAS_BOUNDED_VARIATIO
   REPEAT STRIP_TAC THEN MATCH_MP_TAC HAS_BOUNDED_VARIATION_ON_REFLECT THEN
   ASM_REWRITE_TAC[REFLECT_INTERVAL]);
 
-val VECTOR_VARIATION_REFLECT_INTERVAL = store_thm ("VECTOR_VARIATION_REFLECT_INTERVAL",
- ``!f:real->real a b.
-        vector_variation (interval[a,b]) (\x. f(-x)) =
-        vector_variation (interval[-b,-a]) f``,
-  REWRITE_TAC[VECTOR_VARIATION_REFLECT, REFLECT_INTERVAL]);
-
 val HAS_BOUNDED_VARIATION_COMPOSE_DECREASING = store_thm ("HAS_BOUNDED_VARIATION_COMPOSE_DECREASING",
  ``!f g:real->real a b.
         (!x y. x IN interval[a,b] /\ y IN interval[a,b] /\ x <= y
