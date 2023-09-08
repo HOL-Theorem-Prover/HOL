@@ -5446,7 +5446,7 @@ val _ = reveal "C";
 
 (*** measure_space Theorems ***)
 
-Theorem measure_space_eq' : (* was: measure_space_measure_eq *)
+Theorem measure_space_measure_eq :
     !sp sts u v. measure_space (sp,sts,u) /\ (!s. s IN sts ==> u s = v s) ==>
                  measure_space (sp,sts,v)
 Proof
@@ -5460,10 +5460,10 @@ Theorem measure_space_cong:
                  (measure_space (sp,sts,u) <=> measure_space (sp,sts,v))
 Proof
     rw[] >> eq_tac >> rw[]
- >> dxrule_at_then (Pos $ el 1) irule measure_space_eq' >> simp[]
+ >> dxrule_at_then (Pos $ el 1) irule measure_space_measure_eq >> simp[]
 QED
 
-Theorem measure_space_add:
+Theorem measure_space_add':
     !a mu nu p. measure_space (space a,subsets a,mu) /\
                 measure_space (space a,subsets a,nu) /\
                (!s. s IN subsets a ==> p s = mu s + nu s) ==>
@@ -5489,11 +5489,12 @@ Proof
         measure_space (space a,subsets a,m)’ suffices_by (rw[] >>
         last_x_assum $ drule_then assume_tac >> pop_assum $ drule_all_then assume_tac >> simp[]) >>
     Induct_on ‘s’ >> rw[]
-    >- (fs[EXTREAL_SUM_IMAGE_EMPTY] >> irule measure_space_eq' \\
+    >- (fs[EXTREAL_SUM_IMAGE_EMPTY] >> irule measure_space_measure_eq \\
         qexists_tac ‘K 0’ >> simp[] >> dxrule_then assume_tac measure_space_trivial >>
         fs[sigma_finite_measure_space_def,K_DEF]) >>
     last_x_assum $ qspecl_then [‘a’,‘f’,‘\t. EXTREAL_SUM_IMAGE (C f t) s’] assume_tac >> rfs[] >>
-    irule measure_space_add >> qexistsl_tac [‘f e’,‘(\t. EXTREAL_SUM_IMAGE (C f t) s)’] >>
+    irule measure_space_add' >>
+    qexistsl_tac [‘f e’,‘(\t. EXTREAL_SUM_IMAGE (C f t) s)’] >>
     simp[] >> qx_gen_tac ‘t’ >> rw[] >>
     qspecl_then [‘C f t’,‘s’,‘e’]
         (fn th => assume_tac th >> rfs[DELETE_NON_ELEMENT_RWT] >> pop_assum irule) $

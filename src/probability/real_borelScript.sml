@@ -1489,8 +1489,11 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-(* cf. borelTheory.in_borel_measurable_imp' for measure_space version *)
-Theorem in_borel_measurable_open :
+(* cf. borelTheory.in_borel_measurable_imp' for measure_space version
+
+   NOTE: theorem renamed due to name conflicts with HVG's work.
+ *)
+Theorem in_borel_measurable_open_imp : (* was: in_borel_measurable_open *)
     !a f. sigma_algebra a /\
          (!s. open s ==> (PREIMAGE f s) INTER space a IN subsets a) ==>
           f IN measurable a borel
@@ -1506,7 +1509,7 @@ Theorem in_borel_measurable_continuous_on : (* was: borel_measurable_continuous_
     !f. f continuous_on UNIV ==> f IN measurable borel borel
 Proof
     rpt STRIP_TAC
- >> MATCH_MP_TAC in_borel_measurable_open
+ >> MATCH_MP_TAC in_borel_measurable_open_imp
  >> rw [sigma_algebra_borel]
  >> Know `open {x | x IN UNIV /\ f x IN s}`
  >- (MATCH_MP_TAC CONTINUOUS_OPEN_PREIMAGE (* key lemma *) \\
