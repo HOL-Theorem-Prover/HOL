@@ -297,11 +297,6 @@ val tm_recursion = save_thm(
       |> SIMP_RULE (srw_ss() ++ CONJ_ss) [supp_unitfn]
       |> Q.INST [`apu` |-> `ap`, `lmu` |-> `lm`, `vru` |-> `vr`])
 
-val tm_recursion_nosideset = save_thm(
-  "tm_recursion_nosideset",
-  tm_recursion |> Q.INST [`A` |-> `{}`]
-               |> REWRITE_RULE [NOT_IN_EMPTY, FINITE_EMPTY]);
-
 val FV_tpm = Save_thm("FV_tpm",
                       ``x ∈ FV (tpm p t)``
                       |> REWRITE_CONV [perm_supp,pmact_IN]
@@ -310,14 +305,14 @@ val FV_tpm = Save_thm("FV_tpm",
 val _ = set_mapped_fixity { term_name = "APP", tok = "@@",
                             fixity = Infixl 901}
 
-val FRESH_APP = Store_thm(
-  "FRESH_APP",
-  ``v NOTIN FV (M @@ N) <=> v NOTIN FV M /\ v NOTIN FV N``,
-  SRW_TAC [][]);
-val FRESH_LAM = Store_thm(
-  "FRESH_LAM",
-  ``u NOTIN FV (LAM v M) <=> (u <> v ==> u NOTIN FV M)``,
-  SRW_TAC [][] THEN METIS_TAC []);
+Theorem FRESH_APP[simp]: v NOTIN FV (M @@ N) <=> v NOTIN FV M /\ v NOTIN FV N
+Proof SRW_TAC [][]
+QED
+
+Theorem FRESH_LAM[simp]:
+  u NOTIN FV (LAM v M) <=> (u <> v ==> u NOTIN FV M)
+Proof SRW_TAC [][] THEN METIS_TAC []
+QED
 val FV_EMPTY = store_thm(
   "FV_EMPTY",
   ``(FV t = {}) <=> !v. v NOTIN FV t``,
@@ -354,19 +349,21 @@ val term_CASES = store_thm(
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN METIS_TAC []);
 
 (* should derive automatically *)
-val term_distinct = Store_thm(
-  "term_distinct",
-  ``VAR s ≠ APP t1 t2 ∧ VAR s ≠ LAM v t ∧ APP t1 t2 ≠ LAM v t``,
+Theorem term_distinct[simp]:
+  VAR s ≠ APP t1 t2 ∧ VAR s ≠ LAM v t ∧ APP t1 t2 ≠ LAM v t
+Proof
   srw_tac [][VAR_def, APP_def, LAM_def, LAM_termP, VAR_termP, APP_termP,
-             term_ABS_pseudo11, gterm_distinct, GLAM_eq_thm]);
+             term_ABS_pseudo11, gterm_distinct, GLAM_eq_thm]
+QED
 
-val term_11 = Store_thm(
-  "term_11",
-  ``((VAR s1 = VAR s2) <=> (s1 = s2)) ∧
-    ((t11 @@ t12 = t21 @@ t22) <=> (t11 = t21) ∧ (t12 = t22)) ∧
-    ((LAM v t1 = LAM v t2) <=> (t1 = t2))``,
+Theorem term_11[simp]:
+  (VAR s1 = VAR s2 <=> s1 = s2) ∧
+  (t11 @@ t12 = t21 @@ t22 <=> t11 = t21 ∧ t12 = t22) ∧
+  (LAM v t1 = LAM v t2 <=> t1 = t2)
+Proof
   srw_tac [][VAR_def, APP_def, LAM_def, LAM_termP, VAR_termP, APP_termP,
-             term_ABS_pseudo11, gterm_11, term_REP_11]);
+             term_ABS_pseudo11, gterm_11, term_REP_11]
+QED
 
 (* "acyclicity" *)
 val APP_acyclic = store_thm(
@@ -549,7 +546,7 @@ val size_exists =
              `lm` |-> `\m v t. m + 1`]
         |> SIMP_RULE (srw_ss()) []
 
-val size_def = new_specification("size_thm", ["size"], size_exists)
+val size_def = new_specification("size_def", ["size"], size_exists)
 Theorem size_thm[simp] = CONJUNCT1 size_def
 
 Theorem size_tpm[simp] = GSYM (CONJUNCT2 size_def)

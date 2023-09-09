@@ -215,11 +215,12 @@ val sem_t_def_with_stop = store_thm ("sem_t_def_with_stop",
  fs [] >>
  `F` by decide_tac);
 
-Theorem sem_t_def[compute] = REWRITE_RULE [STOP_def] sem_t_def_with_stop;
+Theorem sem_t_def[compute,allow_rebind] =
+  REWRITE_RULE [STOP_def] sem_t_def_with_stop;
 
 (* We also remove the redundant checks from the induction theorem. *)
 
-val sem_t_ind = store_thm("sem_t_ind",
+val sem_t_ind = store_thm("sem_t_ind[allow_rebind]",
   fetch "-" "sem_t_ind"
     |> concl |> term_rewrite [``check_clock s3 s = s3``,
     ``s.clock <> 0 /\ s3.clock <> 0 <=> s3.clock <> 0``],
@@ -1449,11 +1450,11 @@ val _ = Parse.add_infix("DOWNARROWt",450,Parse.NONASSOC)
 val DOWNARROWe_def = Define `$DOWNARROWe (y,x) z = sem_e_reln x y z`;
 val DOWNARROWt_def = Define `$DOWNARROWt (y,x) z = simple_sem_t_reln x y z`;
 
-val simple_sem_t_reln_rules = save_thm("simple_sem_t_reln_rules",
-  simple_sem_t_reln_rules |> REWRITE_RULE [GSYM DOWNARROWe_def,
-                                           GSYM DOWNARROWt_def]);
+Theorem simple_sem_t_reln_rules[allow_rebind] =
+  simple_sem_t_reln_rules
+    |> REWRITE_RULE [GSYM DOWNARROWe_def, GSYM DOWNARROWt_def];
 
-val simple_sem_t_reln_ind = save_thm("simple_sem_t_reln_ind",
+Theorem simple_sem_t_reln_ind[allow_rebind] =
   simple_sem_t_reln_ind
     |> REWRITE_RULE [GSYM DOWNARROWe_def, GSYM DOWNARROWt_def]
     |> Q.SPEC `P` |> UNDISCH_ALL
@@ -1478,7 +1479,7 @@ val simple_sem_t_reln_ind = save_thm("simple_sem_t_reln_ind",
     |> SIMP_RULE std_ss []
     |> DISCH_ALL
     |> Q.GEN `P`
-    |> REWRITE_RULE [GSYM CONJ_ASSOC]);
+    |> REWRITE_RULE [GSYM CONJ_ASSOC];
 
 val lemma = prove(
   ``b1 \/ b2 \/ b3 \/ b4 \/ b5 \/ b6 <=>

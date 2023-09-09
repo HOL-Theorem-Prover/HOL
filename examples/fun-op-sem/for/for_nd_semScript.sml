@@ -231,15 +231,15 @@ val sem_t_def_with_stop = store_thm ("sem_t_def_with_stop",
  imp_res_tac sem_e_clock >>
  fs [] >> `F` by decide_tac);
 
-val sem_t_def =
-  save_thm("sem_t_def",REWRITE_RULE [STOP_def] sem_t_def_with_stop);
+Theorem sem_t_def[allow_rebind] = REWRITE_RULE [STOP_def] sem_t_def_with_stop
 
 (* We also remove the redundant checks from the induction theorem. *)
 
-val sem_t_ind = store_thm ("sem_t_ind",
-  fetch "-" "sem_t_ind"
-    |> concl |> term_rewrite [``check_clock s3 s = s3``,
-    ``s.clock <> 0 /\ s3.clock <> 0 <=> s3.clock <> 0``],
+Theorem sem_t_ind[allow_rebind]:
+  ^(fetch "-" "sem_t_ind"
+    |> concl |> term_rewrite [“check_clock s3 s = s3”,
+    “s.clock <> 0 /\ s3.clock <> 0 <=> s3.clock <> 0”])
+Proof
  ntac 2 strip_tac >>
  ho_match_mp_tac (fetch "-" "sem_t_ind") >> rw [] >>
  first_x_assum match_mp_tac >>
@@ -248,7 +248,8 @@ val sem_t_ind = store_thm ("sem_t_ind",
  imp_res_tac sem_e_clock >>
  fs [dec_clock_def, check_clock_id, LET_THM] >>
  first_x_assum match_mp_tac >>
- decide_tac);
+ decide_tac
+QED
 
 (* The top-level semantics defines what is externally observable. *)
 

@@ -3110,9 +3110,9 @@ val ARM_WRITE_REG_MODE = save_thm("ARM_WRITE_REG_MODE",
   SIMP_RULE (srw_ss()) [ARM_WRITE_REG_FROM_MODE]
     (arm_reg_rule ARM_WRITE_REG_MODE_def));
 
-val ARM_WRITE_REG_o = save_thm("ARM_WRITE_REG_o",
+Theorem ARM_WRITE_REG_o[allow_rebind] =
   SIMP_RULE (srw_ss()) [ARM_WRITE_REG_FROM_MODE]
-    (arm_reg_rule ARM_WRITE_REG_o));
+            (arm_reg_rule ARM_WRITE_REG_o);
 
 (* ------------------------------------------------------------------------- *)
 

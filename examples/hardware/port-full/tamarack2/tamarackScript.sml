@@ -869,7 +869,8 @@ ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def,
 (* - Proofs 3                - *)
 (* --------------------------- *)
 
-val MicroCycles_def = Define ‘MicroCycles n (mem,pc,acc) =
+Definition MicroCycles_def[allow_rebind]:
+  MicroCycles n (mem,pc,acc) =
   let opc = Opc n (Inst n (mem,pc)) in
   (if (opc = 0) then (if (acc = 0) then 5 else 6) else
    if (opc = 1) then 4 else
@@ -878,13 +879,15 @@ val MicroCycles_def = Define ‘MicroCycles n (mem,pc,acc) =
    if (opc = 4) then 6 else
    if (opc = 5) then 6 else
    if (opc = 6) then 6 else
-                     5)’;
+                     5)
+End
 
-val TimeOfCycle_def = Define ‘
+Definition TimeOfCycle_def[allow_rebind]:
   (TimeOfCycle n (mem,pc,acc) 0 = 0) /\
   (TimeOfCycle n (mem,pc,acc) (SUC t) =
      let prev = TimeOfCycle n (mem, pc, acc) t in
-     (prev + (MicroCycles n (mem prev,pc prev,acc prev))))’;
+     (prev + (MicroCycles n (mem prev,pc prev,acc prev))))
+End
 
 
 Theorem EVERY_INST_THM:

@@ -592,25 +592,6 @@ val STRONG_IMP_OBS_CONGR = store_thm (
                    |    \/       \/   \/
                    |    E1'  ~~    ?E2'
  *)
-val OBS_CONGR_EPS = store_thm ((* NEW *)
-   "OBS_CONGR_EPS",
-  ``!E E'. OBS_CONGR E E' ==>
-           !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ WEAK_EQUIV E1 E2``,
-    REPEAT STRIP_TAC
- >> PAT_X_ASSUM ``OBS_CONGR E E'`` MP_TAC
- >> POP_ASSUM MP_TAC
- >> Q.SPEC_TAC (`E1`, `E1`)
- >> Q.SPEC_TAC (`E`, `E`)
- >> HO_MATCH_MP_TAC EPS_ind_right (* must use right induct here! *)
- >> REPEAT STRIP_TAC (* 2 sub-goals here *)
- >| [ (* goal 1 (of 2) *)
-      Q.EXISTS_TAC `E'` >> RW_TAC std_ss [EPS_REFL] \\
-      IMP_RES_TAC OBS_CONGR_IMP_WEAK_EQUIV,
-      (* goal 2 (of 2) *)
-      RES_TAC \\
-      IMP_RES_TAC WEAK_EQUIV_TRANS_tau \\
-      Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
-      IMP_RES_TAC EPS_TRANS ]);
 
 val OBS_CONGR_EPS' = store_thm ((* NEW *)
    "OBS_CONGR_EPS'",
@@ -624,28 +605,6 @@ val OBS_CONGR_EPS' = store_thm ((* NEW *)
  >> RES_TAC
  >> Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC []
  >> IMP_RES_TAC WEAK_EQUIV_SYM);
-
-val OBS_CONGR_WEAK_TRANS = store_thm ((* NEW *)
-   "OBS_CONGR_WEAK_TRANS",
-  ``!E E'. OBS_CONGR E E' ==>
-           !u E1. WEAK_TRANS E u E1 ==> ?E2. WEAK_TRANS E' u E2 /\ WEAK_EQUIV E1 E2``,
-    REPEAT STRIP_TAC
- >> Cases_on `u` (* 2 sub-goals here *)
- >| [ (* goal 1 (of 2) *)
-      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [WEAK_TRANS_TAU])) \\
-      IMP_RES_TAC OBS_CONGR_TRANS_LEFT \\
-      IMP_RES_TAC WEAK_EQUIV_EPS \\
-      Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
-      MATCH_MP_TAC EPS_WEAK_EPS \\
-      take [`E'`, `E2`] >> ASM_REWRITE_TAC [EPS_REFL],
-      (* goal 2 (of 2) *)
-      POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [WEAK_TRANS])) \\
-      IMP_RES_TAC OBS_CONGR_EPS \\
-      IMP_RES_TAC WEAK_EQUIV_TRANS_label \\
-      IMP_RES_TAC WEAK_EQUIV_EPS \\
-      Q.EXISTS_TAC `E2'''` >> ASM_REWRITE_TAC [] \\
-      MATCH_MP_TAC EPS_WEAK_EPS \\
-      take [`E2'`, `E2''`] >> ASM_REWRITE_TAC [] ]);
 
 val OBS_CONGR_WEAK_TRANS' = store_thm ((* NEW *)
    "OBS_CONGR_WEAK_TRANS'",

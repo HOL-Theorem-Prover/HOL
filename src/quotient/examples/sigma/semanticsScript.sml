@@ -1,7 +1,4 @@
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
-
 
 (* --------------------------------------------------------------------- *)
 (* Embedding the semantaics of objects as a foundational layer,          *)
@@ -171,10 +168,9 @@ val TC_DIAMOND = store_thm
 
 val invoke_method = invoke_method_def;
 
-val FV_invoke_method = store_thm
-   ("FV_invoke_method",
-    “!m o'. FV_obj (invoke_method m o') SUBSET
-               (FV_method m UNION FV_obj o')”,
+Theorem FV_invoke_method:
+  !m o'. FV_obj (invoke_method m o') SUBSET (FV_method m UNION FV_obj o')
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[invoke_method]
@@ -200,7 +196,7 @@ val FV_invoke_method = store_thm
         THEN DISCH_THEN REWRITE_THM
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 val SUB_invoke_method = store_thm
    ("SUB_invoke_method",

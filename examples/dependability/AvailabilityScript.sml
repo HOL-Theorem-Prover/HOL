@@ -1181,7 +1181,7 @@ RW_TAC std_ss[]
 QED
 
 (*-------------------*)
-Theorem lim_inst_OR_tend_steady :
+Theorem lim_inst_OR_tend_steady0 :
 !p L M. prob_space p /\
             (!z. MEM z M ==> (0 < FST z /\ 0 < SND z)) /\
             (LENGTH L = LENGTH M) /\
@@ -1289,7 +1289,7 @@ RW_TAC std_ss[]
    >> POP_ORW
    >> MATCH_MP_TAC SEQ_SUB
    >> RW_TAC std_ss[SEQ_CONST]
-   >> MATCH_MP_TAC lim_inst_OR_tend_steady
+   >> MATCH_MP_TAC lim_inst_OR_tend_steady0
    >> RW_TAC std_ss[])
 >> (`(\t.
    1 −
@@ -1303,7 +1303,7 @@ RW_TAC std_ss[]
    >> POP_ORW
    >> MATCH_MP_TAC SEQ_SUB
    >> RW_TAC std_ss[SEQ_CONST]
->> MATCH_MP_TAC lim_inst_OR_tend_steady
+>> MATCH_MP_TAC lim_inst_OR_tend_steady0
 >> RW_TAC std_ss[]
 QED
 (*------------------------------------*)
@@ -1342,9 +1342,9 @@ RW_TAC std_ss[NOR_unavail_FT_gate_def]
          (one_minus_list (list_prob p (union_unavail_event_list p L (&t)))))``)
 >> RW_TAC std_ss[GSYM SEQ_LIM,convergent]
 >- (EXISTS_TAC (``list_prod (one_minus_list (steady_state_unavail_list M))``)
-   >> MATCH_MP_TAC lim_inst_OR_tend_steady
+   >> MATCH_MP_TAC lim_inst_OR_tend_steady0
    >> RW_TAC std_ss[])
->> MATCH_MP_TAC lim_inst_OR_tend_steady
+>> MATCH_MP_TAC lim_inst_OR_tend_steady0
 >> RW_TAC std_ss[]
 QED
 (*------------------------*)

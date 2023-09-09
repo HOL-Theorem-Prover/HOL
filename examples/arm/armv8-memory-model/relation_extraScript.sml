@@ -157,27 +157,6 @@ Proof
   xsimp []
 QED
 
-Theorem dom_dom:
-  r = diag r1 ⨾ r ⨾ diag r2 ==> !x y. r x y ==> r1 x /\ r2 y
-Proof
-  xsimp []
-  \\ metis_tac []
-QED
-
-Theorem dom_l:
-  r = diag r1 ⨾ r ⨾ diag r2 ==> r = diag r1 ⨾ r
-Proof
-  xsimp []
-  \\ metis_tac []
-QED
-
-Theorem dom_r:
-  r = diag r1 ⨾ r ⨾ diag r2 ==> r = r ⨾ diag r2
-Proof
-  xsimp []
-  \\ metis_tac []
-QED
-
 (* - seq ------------------------------------------------------------------- *)
 
 Theorem seq_assoc:
@@ -204,20 +183,6 @@ Theorem seq_empty_r:
   r ⨾ REMPTY = REMPTY
 Proof
   xsimp []
-QED
-
-Theorem seq_runion_l:
-  r1 ⨾ (r2 RUNION r3) = r1 ⨾ r2 RUNION r1 ⨾ r3
-Proof
-  xsimp []
-  \\ metis_tac []
-QED
-
-Theorem seq_runion_r:
-  (r1 RUNION r2) ⨾ r3 = r1 ⨾ r3 RUNION r2 ⨾ r3
-Proof
-  xsimp []
-  \\ metis_tac []
 QED
 
 Theorem irreflexive_seq:

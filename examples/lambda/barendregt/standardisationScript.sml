@@ -1016,32 +1016,6 @@ val i1_reduces_i_reduces = prove(
   ``M i1_reduces N ==> M i_reduces N``,
   SRW_TAC [][i1_reduces_def, i_reduces_def] THEN PROVE_TAC []);
 
-val i_reduces_RTC_i_reduce1 = store_thm(
-  "i_reduces_RTC_i_reduce1",
-  ``(i_reduces) = RTC (i_reduce1)``,
-  SIMP_TAC (srw_ss()) [FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM,
-                       FUN_EQ_THM, i_reduces_def, EQ_IMP_THM] THEN
-  CONJ_TAC THENL [
-    Q_TAC SUFF_TAC
-       `!s. okpath (labelled_redn beta) s /\ finite s ==>
-            (!i. i + 1 IN PL s ==> nth_label i s is_internal_redex el i s) ==>
-            RTC (i_reduce1) (first s) (last s)` THEN1 PROVE_TAC [] THEN
-    HO_MATCH_MP_TAC pathTheory.finite_okpath_ind THEN
-    SRW_TAC [][GSYM ADD1, relationTheory.RTC_RULES] THEN
-    MATCH_MP_TAC (CONJUNCT2 (SPEC_ALL relationTheory.RTC_RULES)) THEN
-    POP_ASSUM (fn th =>
-               MAP_EVERY (MP_TAC o GEN_ALL o C SPEC th)
-                         [``0``,``SUC i``]) THEN
-    SRW_TAC [][i_reduce1_def] THEN PROVE_TAC [],
-    HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-    SRW_TAC [][i_reduce1_def, GSYM ADD1] THENL [
-      Q.EXISTS_TAC `stopped_at x` THEN SRW_TAC [][],
-      Q.EXISTS_TAC `pcons x r s` THEN
-      SRW_TAC [][] THEN Cases_on `i` THEN SRW_TAC [][]
-    ]
-  ]);
-
-
 val _ = augment_srw_ss [rewrites [REWRITE_CONV [EMPTY_SUBSET,
                                                 redex_occurrences_SUBSET]
                                   ``{} SUBSET (M:term)``]]

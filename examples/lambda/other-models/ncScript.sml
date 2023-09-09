@@ -837,11 +837,13 @@ val lemma14b = Q.store_thm(
     force an unnecessary case split.
    ---------------------------------------------------------------------- *)
 
-val lemma14b = Q.store_thm("lemma14b",
-  `!t u x. ~(x IN FV u) ==> ([t/x]u = u)`,
+Theorem lemma14b[allow_rebind]:
+  !t u x. ~(x IN FV u) ==> ([t/x]u = u)
+Proof
   GEN_TAC THEN nc_INDUCT_TAC2 `FV t` THEN
   SRW_TAC [][SUB_THM, SUB_VAR] THEN SRW_TAC [][SUB_THM] THEN
-  Cases_on `x = y` THEN SRW_TAC [][SUB_THM]);
+  Cases_on `x = y` THEN SRW_TAC [][SUB_THM]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* The remaining Hindley and Seldin theorems.                            *)

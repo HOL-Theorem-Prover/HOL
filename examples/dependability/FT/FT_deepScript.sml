@@ -1174,75 +1174,7 @@ Induct_on `n`
 >> RW_TAC arith_ss [binomial_def]
 >> RW_TAC arith_ss [binomial_def]
 QED
-(* --------------------------------------------------- *)
-(*      BINOMIAL_FACT                                  *)
-(* --------------------------------------------------- *)
-Theorem BINOMIAL_FACT :
-!a b. binomial (a+b) b * (FACT a * FACT b) = FACT (a+b)
-Proof
-Induct_on `b`
- >- (REWRITE_TAC[BINOMIAL_DEF1,FACT,ADD_CLAUSES,MULT_CLAUSES])
->> Induct_on `a`
->- (REWRITE_TAC[BINOMIAL_DEF3,FACT,ADD_CLAUSES,MULT_CLAUSES])
->> `SUC a + SUC b = SUC (SUC a + b)` by RW_TAC arith_ss [ADD_CLAUSES]
->> ASM_REWRITE_TAC[BINOMIAL_DEF4,RIGHT_ADD_DISTRIB]
->> POP_ORW
->> `binomial (SUC a + b) (SUC b) * (FACT (SUC a) * FACT (SUC b)) =
-                   (binomial (a + SUC b) (SUC b) * (FACT a * FACT (SUC b))) * SUC a`
-by REWRITE_TAC[FACT,ADD_CLAUSES]
->- (PROVE_TAC[MULT_ASSOC,MULT_SYM])
->> ASM_REWRITE_TAC[]
->> POP_ORW
->> `binomial (SUC a + b) b * (FACT (SUC a) * FACT (SUC b)) =
-                       (binomial (SUC a + b) b * (FACT (SUC a) * FACT b)) * SUC b`
-by REWRITE_TAC[FACT,ADD_CLAUSES]
->- (PROVE_TAC[MULT_ASSOC,MULT_SYM])
->> ASM_REWRITE_TAC [ADD_CLAUSES, FACT]
->> REWRITE_TAC[GSYM LEFT_ADD_DISTRIB]
->> `SUC a + SUC b = SUC (SUC (a + b))` by RW_TAC arith_ss [ADD_CLAUSES]
->> ASM_REWRITE_TAC[]
->> RW_TAC arith_ss []
-QED
-(* -----------------BINOMIAL_DEF2--------------------------- *)
-Theorem BINOMIAL_DEF2 :
-!n k. n < k ==> (binomial n k = 0)
-Proof
-Induct_on `n`
->- (Cases_on `k`
-   >- (RW_TAC real_ss [])
-   >> REWRITE_TAC [binomial_def])
->> Cases_on `k`
->- (RW_TAC real_ss [])
->> RW_TAC arith_ss [binomial_def]
-QED
-(* -----------------BINOMIAL_DEF3--------------------------- *)
-Theorem BINOMIAL_DEF3 :
-!n. (binomial n n = 1)
-Proof
-Induct_on `n` THEN REWRITE_TAC [binomial_def] THEN RW_TAC arith_ss [BINOMIAL_DEF2]
-QED
-(* -----------------BINOMIAL_DEF4--------------------------- *)
-Theorem BINOMIAL_DEF4 :
-!n k. (binomial (SUC n) (SUC k) = binomial n (SUC k) + binomial n k)
-Proof
-REWRITE_TAC [binomial_def]
-QED
-(* -----------------BINOMIAL_DEF6--------------------------- *)
-Theorem BINOMIAL_DEF6 :
-!n. (binomial (SUC n) 1 = SUC n)
-Proof
-RW_TAC std_ss []
->> ONCE_REWRITE_TAC[ONE]
->> (MP_TAC o Q.SPECL [`n`,`SUC 0`]) BINOMIAL_FACT
->> ONCE_REWRITE_TAC[FACT]
->> ONCE_REWRITE_TAC[GSYM ONE]
->> ONCE_REWRITE_TAC[ADD_COMM]
->> ONCE_REWRITE_TAC[GSYM SUC_ONE_ADD]
->> ONCE_REWRITE_TAC[FACT]
->> STRIP_TAC
->> FULL_SIMP_TAC real_ss [EQ_MULT_LCANCEL]
->> METIS_TAC [FACT_LESS, NOT_ZERO_LT_ZERO]
-QED
+
 (* --------------------------------------------------------- *)
 (*      EXP_PASCAL_REAL                                      *)
 (* --------------------------------------------------------- *)

@@ -477,12 +477,13 @@ val lift_path_exists = prove(
 val lift_path_def = new_specification (
   "lift_path_def", ["lift_path"], lift_path_exists);
 
-val first_lift_path = store_thm(
-  "first_lift_path",
-  ``!M' p. first (lift_path M' p) = M'``,
+Theorem first_lift_path:
+  !M p. first (lift_path M p) = M
+Proof
   REPEAT GEN_TAC THEN
   Q.ISPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
-  SRW_TAC [][lift_path_def]);
+  SRW_TAC [][lift_path_def]
+QED
 
 val strip_path_label_lift_path = store_thm(
   "strip_path_label_lift_path",
@@ -1674,11 +1675,6 @@ val term_development_thm = store_thm(
   ``sigma IN development M <=> sigma IN development M (redex_posns M)``,
   SRW_TAC [][SPECIFICATION, term_development_def]);
 
-val first_lift_path = store_thm(
-  "first_lift_path",
-  ``!p M. first (lift_path M p) = M``,
-  SIMP_TAC (srw_ss()) [Once FORALL_path, lift_path_def]);
-
 val lrcc_RUNION = store_thm(
   "lrcc_RUNION",
   ``!R M r N. lrcc R M r N ==> lrcc (R RUNION R') M r N``,
@@ -1865,28 +1861,29 @@ val (update_weighing_def, update_weighing_swap) =
         \rp w p. update_weighing t (TL rp) (\p. w (In::p)) (TL p))
 `;
 
-val update_weighing_thm = store_thm(
-  "update_weighing_thm",
-  ``(update_weighing (t @@ u) [] w =
-       let vps = IMAGE TL (bv_posns t)
-       in
-           \p. if ?vp l. vp IN vps /\ (APPEND vp l = p) then
-                 w (Rt :: @l. ?vp. vp IN vps /\ (APPEND vp l = p))
-               else
-                 w (Lt::In::p)) /\
-    (update_weighing (LAM v t) (In::pos0) w =
-       let w0 = update_weighing t pos0 (\p. w (In::p))
-       in
-         \p. w0 (TL p)) /\
-    (update_weighing (t @@ u) (Lt::pos0) w =
-       let w0 = update_weighing t pos0 (\p. w (Lt::p))
-       in
-         \p. if HD p = Lt then w0 (TL p) else w p) /\
-    (update_weighing (t @@ u) (Rt::pos0) w =
-       let w0 = update_weighing u pos0 (\p. w (Rt::p))
-       in
-         \p. if HD p = Rt then w0 (TL p) else w p)``,
-  SRW_TAC [][update_weighing_def]);
+Theorem update_weighing_thm[allow_rebind]:
+  (update_weighing (t @@ u) [] w =
+     let vps = IMAGE TL (bv_posns t)
+     in
+       \p. if ?vp l. vp IN vps /\ (APPEND vp l = p) then
+             w (Rt :: @l. ?vp. vp IN vps /\ (APPEND vp l = p))
+           else
+             w (Lt::In::p)) /\
+  (update_weighing (LAM v t) (In::pos0) w =
+     let w0 = update_weighing t pos0 (\p. w (In::p))
+     in
+       \p. w0 (TL p)) /\
+  (update_weighing (t @@ u) (Lt::pos0) w =
+     let w0 = update_weighing t pos0 (\p. w (Lt::p))
+     in
+       \p. if HD p = Lt then w0 (TL p) else w p) /\
+  (update_weighing (t @@ u) (Rt::pos0) w =
+     let w0 = update_weighing u pos0 (\p. w (Rt::p))
+     in
+       \p. if HD p = Rt then w0 (TL p) else w p)
+Proof
+  SRW_TAC [][update_weighing_def]
+QED
 
 val update_weighing_vsubst = store_thm(
   "update_weighing_vsubst",
@@ -1903,10 +1900,6 @@ val beta0_redex_posn = store_thm(
   HO_MATCH_MP_TAC lrcc_ind THEN
   SIMP_TAC (srw_ss() ++ DNF_ss)
            [redex_posns_thm, strip_label_thm, beta0_def]);
-
-val nonzero_def = Define`
-  nonzero (t:lterm) w = !p. p IN lvar_posns t ==> 0 < w p
-`;
 
 val term_weight_def = Define`
   term_weight (t:term) w = SUM_IMAGE w (var_posns t)

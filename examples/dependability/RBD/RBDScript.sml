@@ -1236,7 +1236,7 @@ RW_TAC std_ss[mutual_indep_def]
 >> FULL_SIMP_TAC std_ss[]
 QED
 (*------------mutual_indep_flat_cons3-----------------*)
-Theorem mutual_indep_flat_cons3 :
+Theorem mutual_indep_flat_cons3_0 :
 !L L1 L2 p.  mutual_indep p (FLAT (L1::L2::L)) ==>  mutual_indep p ((L1))
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1265,7 +1265,7 @@ QED
 
 (*-------mutual_indep_flat_cons3---*)
 Theorem mutual_indep_flat_cons3 :
-!L1 h L p.  mutual_indep p (FLAT (L1::h::L)) ==> mutual_indep p (FLAT (L1::L))
+  !L1 h L p. mutual_indep p (FLAT (L1::h::L)) ==> mutual_indep p (FLAT (L1::L))
 Proof
 RW_TAC std_ss[mutual_indep_def]
 >> NTAC 3 (POP_ASSUM MP_TAC)

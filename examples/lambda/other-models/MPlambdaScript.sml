@@ -50,10 +50,11 @@ val FINITE_allvars = Store_thm(
   ``!t. FINITE (allvars t)``,
   Induct THEN SRW_TAC [][]);
 
-val vsub_14a = Store_thm(
-  "vsub_14a",
-  ``~(v IN allvars t) ==> (vsub N v t = t)``,
-  Induct_on `t` THEN SRW_TAC [][]);
+Theorem vsub_14a_allvars[simp]:
+  v NOTIN allvars t ==> (vsub N v t = t)
+Proof
+  Induct_on `t` THEN SRW_TAC [][]
+QED
 
 val pvsub_vsub_collapse = store_thm(
   "pvsub_vsub_collapse",
@@ -732,7 +733,7 @@ val vsub_vclosed = store_thm(
   "vsub_vclosed",
   ``!t. vclosed t ==> (vsub t' v t = t)``,
   REPEAT STRIP_TAC THEN IMP_RES_TAC vclosed_empty_vars THEN
-  SRW_TAC [][vsub_14a]);
+  SRW_TAC [][]);
 
 val general_vsub_commute = store_thm(
   "general_vsub_commute",

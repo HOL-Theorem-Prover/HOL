@@ -1545,7 +1545,7 @@ val [HEIGHT,
      old_thms = old_thms};
 
 
-val _ = map save_thm
+val _ = map (Feedback.trace ("Theory.allow_rebinds", 1) save_thm)
     [("HEIGHT",HEIGHT),
      ("HEIGHT_LESS_EQ_ZERO",HEIGHT_LESS_EQ_ZERO),
      ("FV_object",FV_object), (* AXIOM 1 of Gordon and Melham *)
@@ -1626,12 +1626,12 @@ val method = ty_antiq( ==`:method`== );
 
 (* Now test the lifted induction principle: *)
 
-val HEIGHT_LESS_EQ_ZERO = store_thm
-   ("HEIGHT_LESS_EQ_ZERO",
-    “(!o'. (HEIGHT_obj o' <= 0) = (?x. o' = OVAR x)) /\
-        (!d. (HEIGHT_dict d <= 0) = (d = NIL)) /\
-        (!e. (HEIGHT_entry e <= 0) = F) /\
-        (!m. (HEIGHT_method m <= 0) = F)”,
+Theorem HEIGHT_LESS_EQ_ZERO[allow_rebind]:
+  (!o'. (HEIGHT_obj o' <= 0) = (?x. o' = OVAR x)) /\
+  (!d. (HEIGHT_dict d <= 0) = (d = NIL)) /\
+  (!e. (HEIGHT_entry e <= 0) = F) /\
+  (!m. (HEIGHT_method m <= 0) = F)
+Proof
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[HEIGHT]
@@ -1640,7 +1640,7 @@ val HEIGHT_LESS_EQ_ZERO = store_thm
     THEN REWRITE_TAC[object_one_one]
     THEN EXISTS_TAC “v:var”
     THEN REWRITE_TAC[]
-   );
+QED
 
 
 (* We will sometimes wish to induct on the height of an object. *)
