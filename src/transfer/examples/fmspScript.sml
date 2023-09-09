@@ -2,15 +2,18 @@ open HolKernel Parse boolLib bossLib;
 
 open finite_mapTheory sptreeTheory transferTheory pred_setTheory
 
+open transferLib
+
 val _ = new_theory "fmsp";
 
-val FMSP_def = Define‘
+Definition FMSP_def:
   FMSP AN BC fm sp <=>
-    (* wf sp /\ *) !a n. AN a n ==> OPTREL BC (FLOOKUP fm a) (lookup n sp)’;
+    wf sp /\ !a n. AN a n ==> OPTREL BC (FLOOKUP fm a) (lookup n sp)
+End
 
-val FMSP_FDOM = Q.store_thm(
-  "FMSP_FDOM",
-  ‘(FMSP AN BC |==> (AN |==> (<=>))) FDOM domain’,
+Theorem FMSP_FDOM[transfer_rule]:
+  (FMSP AN BC |==> (AN |==> (<=>))) FDOM domain
+Proof
   simp[FMSP_def, FUN_REL_def] >> rpt strip_tac >> res_tac >>
   rename [‘OPTREL BC (FLOOKUP fm a) (lookup n sp)’] >> pop_assum mp_tac >>
   map_every Cases_on [‘FLOOKUP fm a’, ‘lookup n sp’] >>
@@ -18,19 +21,21 @@ val FMSP_FDOM = Q.store_thm(
   >- (fs[sptreeTheory.lookup_NONE_domain, finite_mapTheory.flookup_thm] >>
       fs[IN_DEF]) >>
   ‘n IN domain sp’ by metis_tac[sptreeTheory.domain_lookup] >>
-  fs[IN_DEF, finite_mapTheory.flookup_thm])
+  fs[IN_DEF, flookup_thm]
+QED
 
-val FMSP_FEMPTY = Q.store_thm(
-  "FMSP_FEMPTY",
-  ‘FMSP AN BC FEMPTY LN’,
-  simp[FMSP_def, lookup_def, optionTheory.OPTREL_def, wf_def]);
+Theorem FMSP_FEMPTY[transfer_rule]:
+  FMSP AN BC FEMPTY LN
+Proof
+  simp[FMSP_def, lookup_def, optionTheory.OPTREL_def, wf_def]
+QED
 
-val FMSP_FUPDATE = Q.store_thm(
-  "FMSP_FUPDATE",
-  ‘bi_unique AN ==>
-     (FMSP AN BC |==> (AN ### BC) |==> FMSP AN BC)
+Theorem FMSP_FUPDATE[transfer_rule]:
+  bi_unique AN ==>
+  (FMSP AN BC |==> (AN ### BC) |==> FMSP AN BC)
        FUPDATE
-       (\sp (n,v). insert n v sp)’,
+       (λsp (n,v). insert n v sp)
+Proof
   simp[FMSP_def, FUN_REL_def, PAIR_REL_def, pairTheory.FORALL_PROD,
        wf_insert] >>
   rpt strip_tac >>
@@ -40,64 +45,27 @@ val FMSP_FUPDATE = Q.store_thm(
       fs[optionTheory.OPTREL_def]) >>
   simp[FAPPLY_FUPDATE_THM] >>
   ‘m <> n’ by metis_tac[bi_unique_def, left_unique_def] >>
-  simp[lookup_insert]);
-
-Theorem FMSP_surj :
-  bi_unique AN /\ surj BC ==> surj (FMSP AN BC)
-Proof
-  rw[surj_def, FMSP_def, left_unique_def, bi_unique_def, right_unique_def] >>
-  rename [‘lookup _ sp’] >>
-  qexists_tac ‘
-    FUN_FMAP (\a. @b. BC b (THE (lookup (@n. AN a n) sp)))
-             { a | ?n. AN a n /\ n IN domain sp }’ >>
-  rw[optionTheory.OPTREL_def, finite_mapTheory.FLOOKUP_DEF] >>
-  qmatch_abbrev_tac ‘_ NOTIN FDOM (FUN_FMAP FF FD) /\ _ \/ _’ >>
-  qabbrev_tac ‘n2a = \n. @a. AN a n’ >>
-  ‘!a n. AN a n ==> n2a n = a’
-     by (rw[Abbr‘n2a’] >> SELECT_ELIM_TAC >> metis_tac[]) >>
-  ‘FINITE FD’
-    by (‘FD = IMAGE n2a { n | n IN domain sp /\ ?a. AN a n}’
-          by (simp[Abbr‘FD’, EXTENSION, PULL_EXISTS] >> metis_tac[]) >>
-        ‘FINITE { n | n IN domain sp /\ ?a. AN a n}’
-          suffices_by simp[IMAGE_FINITE] >>
-        irule SUBSET_FINITE_I >> qexists_tac ‘domain sp’ >>
-        simp[SUBSET_DEF]) >>
-  csimp[FUN_FMAP_DEF] >>
-  ‘!a. a IN FD <=> ?n. AN a n /\ n IN domain sp’ by simp[Abbr‘FD’] >>
-  simp[] >> ‘!m. AN a m <=> m = n’ by metis_tac[] >>
-  simp[lookup_NONE_domain] >> Cases_on ‘n IN domain sp’ >> simp[] >>
-  pop_assum mp_tac >> simp[domain_lookup, PULL_EXISTS] >>
-  simp[Abbr‘FF’] >> rw[] >> SELECT_ELIM_TAC >> metis_tac[]
+  simp[lookup_insert]
 QED
 
-Theorem FMSP_bitotal:
-  bitotal BC /\ bi_unique AN ==> bitotal (FMSP AN BC)
+Theorem FMSP_total[transfer_simp]:
+  total AN /\ total BC /\ bi_unique AN ==> total (FMSP AN BC)
 Proof
-  simp[bitotal_def, FMSP_surj] >>
-  simp[total_def, surj_def] >> strip_tac >>
-  ho_match_mp_tac fmap_INDUCT >> conj_tac >- metis_tac[FMSP_FEMPTY] >>
-  rw[] >> rename [‘FMSP AN BC fm sp’, ‘fm |+ (k,v)’] >>
-  fs[FMSP_def] >>
-  reverse (Cases_on ‘?n. AN k n’)
-  >- (fs[FAPPLY_FUPDATE_THM, FLOOKUP_DEF] >>
-      ‘!a n. AN a n ==> a <> k’ by metis_tac[] >>
-      asm_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss) [] >>
-      metis_tac[]) >>
-  fs[] >>
-  ‘(?v'. BC v v')’
-     by metis_tac[bitotal_def, total_def] >>
-  fs[GSYM FMSP_def] >>
-  qexists_tac ‘(\sp (n,v). insert n v sp) sp (n,v')’ >>
-  irule FUN_REL_COMB >> qexists_tac ‘AN ### BC’ >>
-  conj_tac >- simp[PAIR_REL_def] >>
-  irule FUN_REL_COMB >> qexists_tac ‘FMSP AN BC’ >>
-  simp[FMSP_FUPDATE]
+  simp[total_def, FMSP_def, bi_unique_def, left_unique_def, right_unique_def] >>
+  strip_tac >> Induct >>
+  rpt strip_tac
+  >- (qexists ‘LN’ >> simp[]) >>
+  rename [‘fm |+ (k,v)’, ‘wf sp’] >>
+  ‘?n c. AN k n /\ BC v c’ by metis_tac[] >>
+  qexists ‘insert n c sp’ >> rw[wf_insert] >>
+  rw[lookup_insert, FLOOKUP_SIMP] >> metis_tac[]
 QED
 
-val FMSP_FUNION = Q.store_thm(
-  "FMSP_FUNION",
-  ‘(FMSP AN BC |==> FMSP AN BC |==> FMSP AN BC) FUNION union’,
-  simp[FUN_REL_def, FMSP_def, FLOOKUP_DEF, lookup_union, FUNION_DEF] >>
+Theorem FMSP_FUNION[transfer_rule]:
+  (FMSP AN BC |==> FMSP AN BC |==> FMSP AN BC) FUNION union
+Proof
+  simp[FUN_REL_def, FMSP_def, FLOOKUP_DEF, lookup_union, FUNION_DEF,
+       wf_union] >>
   rpt strip_tac >>
   rename [‘k IN FDOM fm1 \/ k IN FDOM fm2’, ‘AN k n’,
           ‘option_CASE (lookup n sp1)’] >>
@@ -109,18 +77,83 @@ val FMSP_FUNION = Q.store_thm(
                                 assert (free_in t o concl))) `fm1` >>
   dsimp[optionTheory.OPTREL_def] >>
   first_x_assum (qspecl_then [‘k’, ‘n’] mp_tac) >>
-  dsimp[optionTheory.OPTREL_def])
+  dsimp[optionTheory.OPTREL_def]
+QED
 
-val FMSP_FDOMSUB = Q.store_thm(
-  "FMSP_FDOMSUB",
-  ‘bi_unique AN ==>
-   (FMSP AN BC |==> AN |==> FMSP AN BC) (\\) (combin$C delete)’,
-  simp[FUN_REL_def, FMSP_def] >> rpt strip_tac >>
+Theorem FMSP_FDOMSUB[transfer_rule]:
+  bi_unique AN ==>
+  (FMSP AN BC |==> AN |==> FMSP AN BC) (\\) (flip delete)
+Proof
+  simp[FUN_REL_def, FMSP_def, wf_delete] >> rpt strip_tac >>
   rename [‘FLOOKUP (fm \\ k1) k2’, ‘lookup m (delete n sp)’] >>
   Cases_on ‘k1 = k2’ >> simp[FLOOKUP_DEF, lookup_delete]
   >- (‘m = n’ by metis_tac[bi_unique_def, right_unique_def] >>
       simp[optionTheory.OPTREL_def]) >>
   ‘m <> n’ by metis_tac[bi_unique_def, left_unique_def] >>
-  simp[DOMSUB_FAPPLY_THM] >> fs[FLOOKUP_DEF]);
+  simp[DOMSUB_FAPPLY_THM] >> fs[FLOOKUP_DEF]
+QED
+
+Theorem FMSP_LOOKUP[transfer_rule]:
+  (FMSP AN BC |==> AN |==> OPTREL BC) FLOOKUP (flip lookup)
+Proof
+  simp[FUN_REL_def, FMSP_def]
+QED
+
+Theorem FMSP_EQ[transfer_rule]:
+  bi_unique AN /\ bitotal AN /\ bi_unique BC ==>
+  (FMSP AN BC |==> FMSP AN BC |==> (<=>)) $= $=
+Proof
+  simp[FUN_REL_def, FMSP_def, EQ_IMP_THM] >>
+  rpt strip_tac >> gvs[]
+  >- (simp[spt_eq_thm] >>
+      gvs[bi_unique_def, left_unique_def, right_unique_def, bitotal_def,
+          surj_def] >>
+      qx_gen_tac ‘n’ >>
+      ‘?k. AN k n’ by metis_tac[] >> ntac 2 (first_x_assum drule) >>
+      Cases_on ‘FLOOKUP a k’ >> simp[optionTheory.OPTREL_def] >>
+      metis_tac[]) >>
+  simp[FLOOKUP_EXT, FUN_EQ_THM] >> qx_gen_tac ‘k’ >>
+  ‘?n. AN k n’ by metis_tac[bitotal_def, total_def] >>
+  ntac 2 (first_x_assum drule) >> Cases_on ‘lookup n b’ >>
+  simp[optionTheory.OPTREL_def] >>
+  metis_tac[bi_unique_def, left_unique_def]
+QED
+
+Theorem RRANGE_FMSP:
+  total AN /\ bi_unique AN /\ surj BC ==>
+  RRANGE (FMSP AN BC) = wf
+Proof
+  simp[relationTheory.RRANGE, FMSP_def, FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM,
+       PULL_EXISTS, bi_unique_def, right_unique_def, left_unique_def,
+       surj_def] >>
+  rpt strip_tac >>
+  rename [‘wf sp’] >>
+  qexists ‘FUN_FMAP (λa. @b. OPTREL BC (SOME b) (lookup (@n. AN a n) sp))
+                    { a | ?n. AN a n /\ n IN domain sp}’ >>
+  rw[] >>
+  qabbrev_tac ‘D = { m | m IN domain sp /\ ?a. AN a m}’ >>
+  ‘FINITE D’ by (irule SUBSET_FINITE >> qexists ‘domain sp’ >>
+                 simp[SUBSET_DEF, Abbr‘D’]) >>
+  ‘FINITE { a | ?n. AN a n /\ n IN domain sp}’
+    by (‘?f. {a | ?n. AN a n /\ n IN domain sp } = IMAGE f D’
+          suffices_by simp[PULL_EXISTS] >>
+        qexists ‘λm. @a. AN a m’ >> simp[EXTENSION] >>
+        simp[EQ_IMP_THM, FORALL_AND_THM, PULL_EXISTS] >> rpt strip_tac
+        >- (simp[Abbr‘D’, PULL_EXISTS] >>
+            first_assum $ irule_at (Pat ‘_ IN domain sp’) >>
+            first_assum $ irule_at Any >> SELECT_ELIM_TAC >> metis_tac[]) >>
+        gvs[Abbr‘D’] >> first_assum $ irule_at Any >> SELECT_ELIM_TAC >>
+        metis_tac[]) >>
+  Cases_on ‘lookup n sp’ >>
+  simp[optionTheory.OPTREL_def, FLOOKUP_SIMP]
+  >- (qx_gen_tac ‘m’ >> Cases_on ‘AN a m’ >> simp[] >>
+      metis_tac[lookup_NONE_domain]) >>
+  conj_tac
+  >- metis_tac[domain_lookup] >>
+  SELECT_ELIM_TAC >> rw[PULL_EXISTS]
+  >- (‘(@n. AN a n) = n’ by (SELECT_ELIM_TAC >> metis_tac[]) >>
+      simp[]) >>
+  ‘(@n. AN a n) = n’ by (SELECT_ELIM_TAC >> metis_tac[]) >> gvs[]
+QED
 
 val _ = export_theory();
