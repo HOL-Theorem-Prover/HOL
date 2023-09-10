@@ -293,7 +293,7 @@ fun define_from_to_aux ignore_tyvars ty = let
     in if null ignore_tyvars andalso not (null unused) then
          raise UnusedTypeVars (map (fst o dest_fun_type o type_of) unused)
        else () end
-  val from_def = zDefine [ANTIQUOTE tm]
+  val from_def = Feedback.trace ("Theory.allow_rebinds", 1) zDefine [ANTIQUOTE tm]
   (* define decoding from cv type, i.e. "to function" *)
   val to_names = names |>
     map (fn (fname,ty) =>
@@ -401,7 +401,7 @@ fun define_from_to_aux ignore_tyvars ty = let
   val measure_tm = mk_cases all_lines
   val full_measure_tm = ISPEC measure_tm prim_recTheory.WF_measure |> concl |> rand
   val to_def_name = (to_names |> hd |> repeat rator |> dest_var |> fst)
-  val (to_def, to_ind) =
+  fun make_def () =
     (new_definition(to_def_name,tm),TRUTH) handle HOL_ERR _ =>
     let
       val to_defn = Hol_defn to_def_name [ANTIQUOTE tm]
@@ -410,6 +410,7 @@ fun define_from_to_aux ignore_tyvars ty = let
                    \\ rewrite_tac [cv_has_shape_expand]
                    \\ rpt strip_tac \\ gvs [cv_size_def])
     end
+  val (to_def, to_ind) = Feedback.trace ("Theory.allow_rebinds", 1) make_def ()
   (* from from_to theorems *)
   val assum = if null tyvar_assums then T else list_mk_conj tyvar_assums
   val to_cs = to_def |> CONJUNCTS |> map (rator o fst o dest_eq o concl o SPEC_ALL)
@@ -523,11 +524,14 @@ fun define_from_to_aux ignore_tyvars ty = let
   val to_simps = map simp_one ts1
   val to_def = ts0 |> map SPEC_ALL |> LIST_CONJ |> REWRITE_RULE to_simps
   (* save all results *)
-  val th1 = save_thm("from_" ^ first_name ^ "_def[compute]", from_def)
-  val th2 = save_thm("to_" ^ first_name ^ "_def[compute]", to_def)
+  val th1 = Feedback.trace ("Theory.allow_rebinds", 1)
+            save_thm ("from_" ^ first_name ^ "_def[compute]", from_def)
+  val th2 = Feedback.trace ("Theory.allow_rebinds", 1)
+            save_thm ("to_" ^ first_name ^ "_def[compute]", to_def)
   fun save_from_to_thms th = let
     val to_name = th |> UNDISCH_ALL |> concl |> rand |> repeat rator |> dest_const |> fst
-    val _ = save_thm("from_" ^ to_name ^ "_thm", th)
+    val _ = Feedback.trace ("Theory.allow_rebinds", 1)
+            save_thm("from_" ^ to_name ^ "_thm", th)
     val _ = add_from_to_thm th
     in () end
   val _ = List.app save_from_to_thms from_to_thms
