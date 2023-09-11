@@ -1703,19 +1703,6 @@ val OBS_contracts_WEAK_TRANS_label' = store_thm (
       MATCH_MP_TAC WEAK_TRANS_AND_EPS \\
       Q.EXISTS_TAC `E1` >> art [] ]);
 
-val OBS_contracts_EPS' = store_thm (
-   "OBS_contracts_EPS'",
-  ``!E E'. OBS_contracts E E' ==> !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
-    rpt STRIP_TAC
- >> IMP_RES_TAC EPS_cases1 (* 2 sub-goals here *)
- >- ( Q.EXISTS_TAC `E` >> fs [EPS_REFL] \\
-      IMP_RES_TAC OBS_contracts_IMP_WEAK_EQUIV )
- >> IMP_RES_TAC OBS_contracts_TRANS_RIGHT
- >> IMP_RES_TAC WEAK_EQUIV_EPS'
- >> Q.EXISTS_TAC `E1'` >> art []
- >> IMP_RES_TAC WEAK_TRANS_IMP_EPS
- >> IMP_RES_TAC EPS_TRANS);
-
 (******************************************************************************)
 (*                                                                            *)
 (*      Is OBS_contracts coarsest precongruence contained in `contracts`?     *)

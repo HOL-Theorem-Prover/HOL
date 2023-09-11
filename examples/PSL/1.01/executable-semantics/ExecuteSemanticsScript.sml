@@ -1057,13 +1057,6 @@ val LENGTH_IS_INFINITE = store_thm
    ``!p. IS_INFINITE p ==> (LENGTH p = INFINITY)``,
    METIS_TAC [LENGTH_def, IS_INFINITE_EXISTS]);
 
-val CAT_SEL_REC_RESTN = store_thm
-  ("CAT_SEL_REC_RESTN",
-   ``!n p. IS_INFINITE p ==> (CAT (SEL_REC n 0 p, RESTN p n) = p)``,
-   Induct
-   >> RW_TAC std_ss [SEL_REC_def, RESTN_def, CAT_def, IS_INFINITE_REST]
-   >> PROVE_TAC [CONS_HEAD_REST, LENGTH_IS_INFINITE, GT]);
-
 (* Safety violations *)
 
 val safety_violation_def = Define

@@ -1526,10 +1526,9 @@ val CONCAT_APPEND =
 * Idempotency  of r[*]: r[*];r[*] = [*]
 ******************************************************************************)
 
-val S_REPEAT_IDEMPOTENT =
- store_thm
-  ("S_REPEAT_IDEMPOTENT",
-   ``!w r. US_SEM w (S_CAT(S_REPEAT r,S_REPEAT r)) = US_SEM w (S_REPEAT r)``,
+Theorem S_REPEAT_IDEMPOTENT:
+  !w r. US_SEM w (S_CAT(S_REPEAT r,S_REPEAT r)) = US_SEM w (S_REPEAT r)
+Proof
    RW_TAC simp_list_ss [US_SEM_def,B_SEM]
     THEN EQ_TAC
     THEN RW_TAC simp_list_ss []
@@ -1541,28 +1540,7 @@ val S_REPEAT_IDEMPOTENT =
        THENL
         [Q.EXISTS_TAC `[]`
           THEN RW_TAC simp_list_ss [CONCAT_def],
-         PROVE_TAC[]]]);
-
-(******************************************************************************
-* Idempotency  of r[*]: r[*];r[*] = r[*]
-******************************************************************************)
-
-val S_REPEAT_IDEMPOTENT =
- store_thm
-  ("S_REPEAT_IDEMPOTENT",
-   ``!w r. US_SEM w (S_CAT(S_REPEAT r,S_REPEAT r)) = US_SEM w (S_REPEAT r)``,
-   RW_TAC simp_list_ss [US_SEM_def,B_SEM]
-    THEN EQ_TAC
-    THEN RW_TAC simp_list_ss []
-    THENL
-     [Q.EXISTS_TAC `wlist<>wlist'`
-       THEN RW_TAC simp_list_ss [ALL_EL_APPEND,CONCAT_APPEND],
-      Q.EXISTS_TAC `[]` THEN Q.EXISTS_TAC `CONCAT wlist`
-       THEN RW_TAC simp_list_ss []
-       THENL
-        [Q.EXISTS_TAC `[]`
-          THEN RW_TAC simp_list_ss [CONCAT_def],
-         PROVE_TAC[]]]);
-
+         PROVE_TAC[]]]
+QED
 
 val _ = export_theory();

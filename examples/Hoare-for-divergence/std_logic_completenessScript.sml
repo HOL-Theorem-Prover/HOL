@@ -88,7 +88,7 @@ Proof
   \\ fs [PULL_EXISTS]
   \\ rpt (goal_assum (first_assum o mp_then Any mp_tac))
   \\ ‘∃n. NRC (λs t. guard f s ∧ terminates s c t) n m t ∧ ¬guard f t’ by
-        (match_mp_tac teramintes_While_NRC \\ fs [])
+        (match_mp_tac terminates_While_NRC \\ fs [])
   \\ ‘∀k t1. NRC (λs t. guard f s ∧ terminates s c t) k m t1 ∧ ¬guard f t1 ⇔
              t1 = t ∧ n = k’ by
    (rw [] \\ eq_tac \\ fs [] \\ rw [] \\ fs []

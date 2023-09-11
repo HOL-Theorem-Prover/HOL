@@ -1475,7 +1475,7 @@ val ONE_STEP_THMa = save_thm("ONE_STEP_THMa",
 
 (* ------------------------------------------------------------------------- *)
 
-val TCON_IMMERSION = store_thm("TCON_IMMERSION",
+val TCON_IMMERSION_THM = store_thm("TCON_IMMERSION_THM",
   `!f imm strm.
          TCON_IMMERSION f imm strm =
            (let g = \t x. <|state:= (f t x).state; inp := ADVANCE t x.inp|> in

@@ -305,20 +305,16 @@ Proof
   \\ simp [Once exec_cases]
 QED
 
-Theorem teramintes_While_NRC:
-  ∀m p t. terminates m p t ⇒
-    ∀c. p = While f c ⇒
-    ∃n. NRC (λs t. guard f s ∧ terminates s c t) n m t ∧ ¬guard f t
+Theorem terminates_While_NRC:
+  ∀m f c t. terminates m (While f c) t ⇒
+            ∃n. NRC (λs t. guard f s ∧ terminates s c t) n m t ∧ ¬guard f t
 Proof
   rewrite_tac [terminates_eq_exec]
-  \\ ho_match_mp_tac exec_strongind \\ rw []
+  \\ Induct_on ‘exec’ \\ rw []
   THEN1 (qexists_tac ‘0’ \\ fs [])
   \\ qexists_tac ‘SUC n’ \\ fs [NRC]
   \\ goal_assum (first_x_assum o mp_then Any mp_tac) \\ fs []
 QED
-
-Theorem teramintes_While_NRC = teramintes_While_NRC
-  |> SIMP_RULE std_ss [PULL_FORALL] |> GEN_ALL;
 
 Theorem not_diverges[simp]:
   ~diverges s Skip l ∧

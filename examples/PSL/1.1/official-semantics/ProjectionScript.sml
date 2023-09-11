@@ -408,15 +408,15 @@ val TAKE_FIRST_NIL =
    Induct
     THEN RW_TAC list_ss [TAKE_FIRST_def,FILTER_APPEND]);
 
-val TAKE_FIRSTN_NIL =
- store_thm
-  ("TAKE_FIRSTN_NIL",
-   ``!P n l. 0 < n ==> (TAKE_FIRSTN P n l = []) ==> (l = [])``,
+Theorem TAKE_FIRSTN_EQ_NIL_E:
+  !P n l. 0 < n ==> (TAKE_FIRSTN P n l = []) ==> (l = [])
+Proof
    GEN_TAC
     THEN Induct
     THEN RW_TAC list_ss []
     THEN FULL_SIMP_TAC list_ss [TAKE_FIRSTN_def]
-    THEN PROVE_TAC[TAKE_FIRST_NIL]);
+    THEN PROVE_TAC[TAKE_FIRST_NIL]
+QED
 
 val HD_TAKE_FIRST =
  store_thm
@@ -1376,7 +1376,8 @@ val S_PROJ_S_FUSION =
        THEN RW_TAC list_ss []
        THEN FULL_SIMP_TAC list_ss []
        THEN `0 < SUC(LENGTH v1)` by DECIDE_TAC
-       THEN `~(TAKE_FIRSTN (CLOCK c) (SUC(LENGTH v1)) l = [])` by PROVE_TAC[TAKE_FIRSTN_NIL]
+       THEN `~(TAKE_FIRSTN (CLOCK c) (SUC(LENGTH v1)) l = [])`
+         by PROVE_TAC[TAKE_FIRSTN_EQ_NIL_E]
        THEN Q.EXISTS_TAC `BUTLAST(TAKE_FIRSTN (CLOCK c) (SUC(LENGTH v1)) l)`
        THEN Q.EXISTS_TAC `LASTN (LENGTH l - LENGTH(TAKE_FIRSTN (CLOCK c) (SUC(LENGTH v1)) l)) l`
        THEN Q.EXISTS_TAC `LAST(TAKE_FIRSTN (CLOCK c) (SUC(LENGTH v1)) l)`
@@ -2094,27 +2095,15 @@ val LEAST_TAKE_FIRST =
                  LEAST_SUC))
        THEN RW_TAC list_ss []]);
 
-val HD_FILTER_LEAST =
- store_thm
-  ("HD_FILTER_LEAST",
-   ``!P l. (?n. n < LENGTH l /\ P(EL n l))
-           ==>
-           (HD (FILTER P l) = EL (LEAST n. P (EL n l)) l)``,
+Theorem HD_FILTER_LEAST:
+  !P l n. n < LENGTH l /\ P(EL n l) ==>
+          (HD (FILTER P l) = EL (LEAST n. P (EL n l)) l)
+Proof
    RW_TAC std_ss []
     THEN IMP_RES_TAC HD_TAKE_FIRST
     THEN IMP_RES_TAC  LEAST_TAKE_FIRST
-    THEN RW_TAC list_ss []);
-
-val HD_FILTER_LEAST =
- store_thm
-  ("HD_FILTER_LEAST",
-   ``!P l n. n < LENGTH l /\ P(EL n l)
-             ==>
-             (HD (FILTER P l) = EL (LEAST n. P (EL n l)) l)``,
-   RW_TAC std_ss []
-    THEN IMP_RES_TAC HD_TAKE_FIRST
-    THEN IMP_RES_TAC  LEAST_TAKE_FIRST
-    THEN RW_TAC list_ss []);
+    THEN RW_TAC list_ss []
+QED
 
 val IS_LEAST_MIN =
  store_thm
@@ -2866,13 +2855,11 @@ val SEL_BUTFIRSTN =
                   by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``n>(p:num) ==> ~(n=0)``,CONS]
             THEN PROVE_TAC[BUTFIRSTN]]]);
 
-val SEL_TAKE_FIRSTN =
- store_thm
-  ("SEL_TAKE_FIRSTN",
-   ``!P n l.
-      LENGTH l > 0
-      ==>
-      (SEL l (0, LENGTH(TAKE_FIRSTN P (SUC n) l)-1) = TAKE_FIRSTN P (SUC n) l)``,
+Theorem SEL_TAKE_FIRSTN:
+  !P n l.
+    LENGTH l > 0 ==>
+    (SEL l (0, LENGTH(TAKE_FIRSTN P (SUC n) l)-1) = TAKE_FIRSTN P (SUC n) l)
+Proof
    GEN_TAC
     THEN Induct
     THEN RW_TAC list_ss [REWRITE_RULE[ONE]TAKE_FIRSTN_1,SEL_TAKE_FIRST]
@@ -2881,35 +2868,44 @@ val SEL_TAKE_FIRSTN =
     THEN `LENGTH (TAKE_FIRST P l) > 0` by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
     THEN Cases_on `BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l = []`
     THEN RW_TAC list_ss [TAKE_FIRSTN_NIL,SEL_TAKE_FIRST]
-    THEN `~(LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)=0)` by PROVE_TAC[LENGTH_NIL]
+    THEN `~(LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)=0)`
+      by PROVE_TAC[LENGTH_NIL]
     THEN `LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l) > 0` by DECIDE_TAC
     THEN `LENGTH(TAKE_FIRST P (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0`
           by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
-    THEN `LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0`
+    THEN `LENGTH(TAKE_FIRSTN P (SUC n)
+                             (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0`
           by PROVE_TAC
-              [LENGTH_TAKE_FIRST_TAKE_FIRSTN,DECIDE``m:num > 0 /\ m <= n:num ==> n > 0``]
+              [LENGTH_TAKE_FIRST_TAKE_FIRSTN,
+               DECIDE``m:num > 0 /\ m <= n:num ==> n > 0``]
     THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) > 0`
           by PROVE_TAC
               [LENGTH_TAKE_FIRST_TAKE_FIRSTN,LENGTH_TAKE_FIRST_SUC,
                DECIDE``m:num > 0 /\ m <= n:num /\ n <= p:num ==> p > 0``]
-    THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) <= LENGTH l` by PROVE_TAC[LENGTH_TAKE_FIRSTN]
+    THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) <= LENGTH l`
+      by PROVE_TAC[LENGTH_TAKE_FIRSTN]
     THEN `LENGTH l > LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) - 1` by DECIDE_TAC
     THEN `LENGTH l > LENGTH (TAKE_FIRST P l)
                      +
-                     LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1`
+                     LENGTH(TAKE_FIRSTN P (SUC n)
+                                   (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1`
           by PROVE_TAC[LENGTH_TAKE_FIRSTN_LEMMA]
     THEN `LENGTH l > (LENGTH (TAKE_FIRST P l) - 1)
                      +
-                     LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l))`
+                     LENGTH(TAKE_FIRSTN P (SUC n)
+                                   (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l))`
           by DECIDE_TAC
     THEN RW_TAC std_ss [DECIDE ``m > 0 ==> (m + n - 1 = (m - 1) + n)``]
     THEN RW_TAC list_ss [SEL_BUTFIRSTN,SEL_TAKE_FIRST]
     THEN `SEL (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)
-              (0,LENGTH (TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1) =
-          TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)`
-          by PROVE_TAC[]
-    THEN `SUC(LENGTH (TAKE_FIRST P l) - 1) = LENGTH(TAKE_FIRST P l)` by DECIDE_TAC
-    THEN RW_TAC list_ss []);
+              (0,LENGTH (TAKE_FIRSTN P (SUC n)
+                               (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1) =
+         TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)`
+      by PROVE_TAC[]
+    THEN `SUC(LENGTH (TAKE_FIRST P l) - 1) = LENGTH(TAKE_FIRST P l)`
+      by DECIDE_TAC
+    THEN RW_TAC list_ss []
+QED
 
 val FIRSTN_SEL =
  store_thm
@@ -2943,52 +2939,6 @@ val FIRSTN_SEL =
     THEN FULL_SIMP_TAC list_ss
           [FIRSTN,ADD1,FinitePSLPathTheory.SEL_def,FinitePSLPathTheory.SEL_REC_def,
            FinitePSLPathTheory.HEAD_def,FinitePSLPathTheory.REST_def]);
-
-
-val SEL_TAKE_FIRSTN =
- store_thm
-  ("SEL_TAKE_FIRSTN",
-   ``!P n l.
-      LENGTH l > 0
-      ==>
-      (SEL l (0, LENGTH(TAKE_FIRSTN P (SUC n) l)-1) = TAKE_FIRSTN P (SUC n) l)``,
-   GEN_TAC
-    THEN Induct
-    THEN RW_TAC list_ss [REWRITE_RULE[ONE]TAKE_FIRSTN_1,SEL_TAKE_FIRST]
-    THEN ONCE_REWRITE_TAC[TAKE_FIRSTN_def]
-    THEN RW_TAC list_ss []
-    THEN `LENGTH (TAKE_FIRST P l) > 0` by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
-    THEN Cases_on `BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l = []`
-    THEN RW_TAC list_ss [TAKE_FIRSTN_NIL,SEL_TAKE_FIRST]
-    THEN `~(LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)=0)` by PROVE_TAC[LENGTH_NIL]
-    THEN `LENGTH(BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l) > 0` by DECIDE_TAC
-    THEN `LENGTH(TAKE_FIRST P (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0`
-          by PROVE_TAC[LENGTH_TAKE_FIRST_NON_EMPTY]
-    THEN `LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) > 0`
-          by PROVE_TAC
-              [LENGTH_TAKE_FIRST_TAKE_FIRSTN,DECIDE``m:num > 0 /\ m <= n:num ==> n > 0``]
-    THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) > 0`
-          by PROVE_TAC
-              [LENGTH_TAKE_FIRST_TAKE_FIRSTN,LENGTH_TAKE_FIRST_SUC,
-               DECIDE``m:num > 0 /\ m <= n:num /\ n <= p:num ==> p > 0``]
-    THEN `LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) <= LENGTH l` by PROVE_TAC[LENGTH_TAKE_FIRSTN]
-    THEN `LENGTH l > LENGTH(TAKE_FIRSTN P (SUC(SUC n)) l) - 1` by DECIDE_TAC
-    THEN `LENGTH l > LENGTH (TAKE_FIRST P l)
-                     +
-                     LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1`
-          by PROVE_TAC[LENGTH_TAKE_FIRSTN_LEMMA]
-    THEN `LENGTH l > (LENGTH (TAKE_FIRST P l) - 1)
-                     +
-                     LENGTH(TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l))`
-          by DECIDE_TAC
-    THEN RW_TAC std_ss [DECIDE ``m > 0 ==> (m + n - 1 = (m - 1) + n)``]
-    THEN RW_TAC list_ss [SEL_BUTFIRSTN,SEL_TAKE_FIRST]
-    THEN `SEL (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)
-              (0,LENGTH (TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)) - 1) =
-          TAKE_FIRSTN P (SUC n) (BUTFIRSTN (LENGTH (TAKE_FIRST P l)) l)`
-          by PROVE_TAC[]
-    THEN `SUC(LENGTH (TAKE_FIRST P l) - 1) = LENGTH(TAKE_FIRST P l)` by DECIDE_TAC
-    THEN RW_TAC list_ss []);
 
 val FILTER_SEL =
  store_thm

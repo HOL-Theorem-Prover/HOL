@@ -279,14 +279,12 @@ val _ = overload_on("<=", ``LE_xnum_xnum``);
 (******************************************************************************
 * Extend greater-than predicate (>) to extended numbers
 ******************************************************************************)
-val GT_num_xnum_def =
- Define `$GT_num_xnum (m:num) (XNUM (n:num)) = (m:num) > (n:num)`;
 
-val GT_num_xnum_def =
- Define
-  `($GT_num_xnum (m:num) (XNUM (n:num)) = (m:num) > (n:num))
+Definition GT_num_xnum_def:
+  ($GT_num_xnum (m:num) (XNUM (n:num)) <=> (m:num) > (n:num))
    /\
-   ($GT_num_xnum (m:num) INFINITY = F)`;
+  ($GT_num_xnum (m:num) INFINITY <=> F)
+End
 
 val GT_xnum_num_def =
  Define
@@ -312,14 +310,12 @@ val _ = overload_on(">", ``GT_xnum_xnum``);
 (******************************************************************************
 * Extend greater-than-or-equal predicate (>=) to extended numbers
 ******************************************************************************)
-val GE_num_xnum_def =
- Define `$GE_num_xnum (m:num) (XNUM (n:num)) = (m:num) >= (n:num)`;
 
-val GE_num_xnum_def =
- Define
-  `($GE_num_xnum (m:num) (XNUM (n:num)) = (m:num) >= (n:num))
+Definition GE_num_xnum_def:
+  ($GE_num_xnum (m:num) (XNUM (n:num)) = (m:num) >= (n:num))
    /\
-   ($GE_num_xnum (m:num) INFINITY = F)`;
+  ($GE_num_xnum (m:num) INFINITY = F)
+End
 
 val GE_xnum_num_def =
  Define
