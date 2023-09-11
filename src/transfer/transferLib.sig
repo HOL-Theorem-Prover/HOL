@@ -18,6 +18,8 @@ sig
   val resolve_relhyps : string list -> bool -> ruledb.t -> thm -> thm seq.seq
   val resolveN : int -> string list -> bool -> ruledb.t -> term -> thm seq.seq
   val check_constraints : bool -> ruledb.t -> thm -> thm seq.seq
+  val mkrelsyms_eq : bool -> thm -> thm
+  val eliminate_domrng : bool -> ruledb.t -> thm -> thm
 
   val build_skeleton : term -> term
   val transfer_skeleton : bool -> term -> thm

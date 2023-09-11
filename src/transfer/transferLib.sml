@@ -545,6 +545,13 @@ fun transfer_phase1 hints cleftp ruledb t =
                   (check{cleftp=cleftp,forceprogress=true} ruledb)
     end
 
+fun eliminate_domrng cleftp ruledb =
+    let
+      val argsel = if cleftp then RAND_CONV else LAND_CONV
+    in
+      CONV_RULE (argsel $ SIMP_CONV transfer_ss (#DOMRNG_ss ruledb))
+    end
+
 fun base_transfer hints cleftp ruledb t =
     let
       open simpLib boolSimps
@@ -553,7 +560,7 @@ fun base_transfer hints cleftp ruledb t =
       transfer_phase1 hints cleftp ruledb t |>
       seq.map (mkrelsyms_eq cleftp) ~>
       check {cleftp=cleftp,forceprogress=false} ruledb |>
-      seq.map (CONV_RULE (argsel $ SIMP_CONV transfer_ss (#DOMRNG_ss ruledb)))|>
+      seq.map (eliminate_domrng cleftp ruledb) |>
       seq.filter (not o const_occurs RRANGE_tm o concl) |>
       seq.filter (not o const_occurs RDOM_tm o concl)
     end

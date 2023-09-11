@@ -1,20 +1,20 @@
 open HolKernel Parse boolLib bossLib;
 
-open transferTheory tcallUnifTheory nfmbstTheory
+open transferTheory tcallUnifTheory fmspTheory
 open pred_setTheory finite_mapTheory transferLib
 
 val _ = new_theory "rmfmap";
 
 Definition rcorevwalk_def:
-  rcorevwalk b v = corevwalk (bst_to_fm b) v
+  rcorevwalk sp v = corevwalk (sp2fm sp) v
 End
 
 
-Theorem NFMBST_corewalk[transfer_rule]:
-  (NFMBST (=) |==> (=) |==> (=)) corevwalk rcorevwalk
+Theorem FMSP_corewalk[transfer_rule]:
+  (FMSP (=) (=) |==> (=) |==> (=)) corevwalk rcorevwalk
 Proof
   simp[FUN_REL_def, rcorevwalk_def] >> rpt strip_tac >>
-  drule bst_to_fm_correct >> simp[]
+  gs[sp2fm_correct]
 QED
 
 Definition TERMREL_def:
@@ -39,6 +39,7 @@ Proof
 QED
 
 (*
+val th = GEN_ALL corevwalk_thm
 val _ = show_assums := true
 val base = transfer_skeleton true (concl th)
 val th = base
@@ -46,10 +47,13 @@ val th = base
 val rdb = global_ruledb()
 val cleftp = true
 
-val th0 = last (seq.take 3 (resolve_relhyps ["EXP"] true (global_ruledb()) th))
-val th = seq.hd (resolve_relhyps ["vR"] true (global_ruledb()) th)
+fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
 
-val th = th0
+val F = seq.hd o resolve_relhyps ["vR"] true (global_ruledb())
+val th = fpow F 8 th
+
+th |> mkrelsyms_eq true |> eliminate_domrng true (global_ruledb())
+
 *)
 
 
@@ -57,14 +61,14 @@ Theorem rcorevwalk_thm =
   transfer_thm 5 ["corevwalk"] true (global_ruledb()) (GEN_ALL corevwalk_thm)
 
 Definition rvR_def:
-  rvR b u v = vR (bst_to_fm b) u v
+  rvR sp u v = vR (sp2fm sp) u v
 End
 
-Theorem NFMBST_rvR[transfer_rule]:
-  (NFMBST (=) |==> (=) |==> (=) |==> (=)) vR rvR
+Theorem FMSP_rvR[transfer_rule]:
+  (FMSP (=) (=) |==> (=) |==> (=) |==> (=)) vR rvR
 Proof
   simp[FUN_REL_def, rvR_def] >> rpt strip_tac >>
-  drule bst_to_fm_correct >> simp[]
+  gs[sp2fm_correct]
 QED
 
 Theorem rvR_thm =

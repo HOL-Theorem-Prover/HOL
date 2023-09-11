@@ -119,7 +119,25 @@ Proof
   metis_tac[bi_unique_def, left_unique_def]
 QED
 
-Theorem RRANGE_FMSP:
+Theorem total_eq[transfer_simp]:
+  total $=
+Proof
+  simp[total_def]
+QED
+
+Theorem bi_unique_eq[transfer_simp]:
+  bi_unique $=
+Proof
+  simp[bi_unique_def]
+QED
+
+Theorem surj_eq[transfer_simp]:
+  surj $=
+Proof
+  simp[surj_def]
+QED
+
+Theorem RRANGE_FMSP[transfer_simp]:
   total AN /\ bi_unique AN /\ surj BC ==>
   RRANGE (FMSP AN BC) = wf
 Proof
@@ -154,6 +172,21 @@ Proof
   >- (‘(@n. AN a n) = n’ by (SELECT_ELIM_TAC >> metis_tac[]) >>
       simp[]) >>
   ‘(@n. AN a n) = n’ by (SELECT_ELIM_TAC >> metis_tac[]) >> gvs[]
+QED
+
+Definition sp2fm_def:
+  sp2fm sp = FUN_FMAP (λk. THE (lookup k sp)) (domain sp)
+End
+
+Theorem sp2fm_correct:
+  FMSP (=) (=) fm sp ⇔ wf sp /\ fm = sp2fm sp
+Proof
+  simp[FMSP_def, sp2fm_def, EQ_IMP_THM, FLOOKUP_SIMP, AllCaseEqs()] >>
+  rpt conj_tac
+  >- (simp[FLOOKUP_EXT, FLOOKUP_SIMP, FUN_EQ_THM] >> rpt strip_tac >> rw[] >>
+      simp[lookup_NONE_domain] >> gs[domain_lookup]) >>
+  rpt strip_tac >> Cases_on ‘lookup n sp’ >>
+  simp[lookup_NONE_domain, domain_lookup]
 QED
 
 val _ = export_theory();
