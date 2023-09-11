@@ -179,7 +179,7 @@ Definition sp2fm_def:
 End
 
 Theorem sp2fm_correct:
-  FMSP (=) (=) fm sp ⇔ wf sp /\ fm = sp2fm sp
+  FMSP (=) (=) fm sp <=> wf sp /\ fm = sp2fm sp
 Proof
   simp[FMSP_def, sp2fm_def, EQ_IMP_THM, FLOOKUP_SIMP, AllCaseEqs()] >>
   rpt conj_tac
