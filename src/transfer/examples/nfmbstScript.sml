@@ -290,9 +290,91 @@ Proof
   simp[optionTheory.OPTREL_def, notin_bstdom_bstlookup]
 QED
 
-Definition itbst_def[simp]:
-  itbst f Lf A = A /\
-  itbst f (Nd l k v r) A = itbst f l (f k v (itbst f r A))
+Theorem optrange_use_NONE:
+  n IN optrange lo hi ==> n IN optrange NONE hi /\ n IN optrange lo NONE
+Proof
+  Cases_on ‘lo’ >> Cases_on ‘hi’ >> simp[]
+QED
+
+Theorem bstOK_use_NONE:
+  !lo hi. bstOK lo hi b ==> bstOK NONE hi b /\ bstOK lo NONE b
+Proof
+  Induct_on ‘b’ >> simp[] >> rw[] >> metis_tac[optrange_use_NONE]
+QED
+
+Theorem bstOK_wfBST:
+  !lo hi. bstOK lo hi b ==> wfBST b
+Proof
+  metis_tac[bstOK_use_NONE]
+QED
+
+Theorem bst_to_fm_bstinsert[simp]:
+  wfBST b ==>
+  bst_to_fm (bstinsert b (k,v)) = bst_to_fm b |+ (k,v)
+Proof
+  Induct_on ‘b’ >> simp[] >> rw[]
+  >- (simp[fmap_EXT] >> conj_tac >- SET_TAC[] >>
+      rw[] >> simp[FAPPLY_FUPDATE_THM, FUNION_DEF]
+      >- (rpt $ dxrule bstOK_wfBST >> simp[])
+      >- (rename [‘k2 IN bstdom b’] >>
+          ‘wfBST b’ by metis_tac[bstOK_wfBST] >>
+          simp[FAPPLY_FUPDATE_THM] >> rw[])
+      >- (rename [‘bstinsert b (k,v)’] >>
+          ‘wfBST b’ by metis_tac[bstOK_wfBST] >>
+          simp[FAPPLY_FUPDATE_THM] >> rw[] >> gvs[])) >>
+  simp[fmap_EXT] >> conj_tac >- SET_TAC[] >>
+  rw[FAPPLY_FUPDATE_THM, FUNION_DEF]
+  >- (drule_all_then assume_tac bstOK_bstdom >> gs[])
+  >- (rename [‘bstinsert b (k,v)’] >> ‘wfBST b’ by metis_tac[bstOK_wfBST] >>
+      simp[])
+  >- (rename [‘bstinsert b (k,v)’] >> ‘wfBST b’ by metis_tac[bstOK_wfBST] >>
+      simp[FAPPLY_FUPDATE_THM])
+QED
+
+Theorem bst_to_fm_surj:
+  !fm. ?b. wfBST b /\ bst_to_fm b = fm
+Proof
+  Induct >> rw[] >- (qexists‘Lf’ >> simp[]) >>
+  rename [‘bst_to_fm b |+ (k,v)’] >>
+  qexists ‘bstinsert b (k,v)’ >>
+  simp[bst_to_fm_bstinsert, wfBST_bstinsert]
+QED
+
+Theorem NFM_bst_to_fm:
+  NFMBST (=) x y <=> x = bst_to_fm y /\ wfBST y
+Proof
+  iff_tac >> rw[]
+  >- metis_tac[bst_to_fm_correct]
+  >- gs[NFMBST_def] >>
+  simp[NFMBST_def] >> metis_tac[FAPPLY_bst_to_fm]
+QED
+
+Theorem NFMfoo[transfer_rule]:
+  ((=) |==> NFMBST (=)) foo foo'
+Proof
+  simp[FUN_REL_def, foo'_def] >> gen_tac >> SELECT_ELIM_TAC >> conj_tac
+  >- metis_tac[bst_to_fm_surj] >>
+  simp[NFM_bst_to_fm]
+QED
+
+Theorem NFMEQ[transfer_rule]:
+  (NFMBST (=) |==> NFMBST (=) |==> flip (==>)) (=) (=)
+Proof
+  simp[FUN_REL_def] >> simp[NFM_bst_to_fm]
+QED
+
+(* hard example
+
+Definition foo_def:
+  foo 0 = FEMPTY /\
+  foo (SUC n) = foo n |+ (n, n)
 End
+
+Definition foo'_def:
+  foo' n = @bst. bst_to_fm bst = foo n /\ wfBST bst
+End
+
+*)
+
 
 val _ = export_theory();
