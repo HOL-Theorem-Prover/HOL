@@ -1,3 +1,5 @@
+INCLUDES = $(HOLDIR)/src/integer
+
 all: $(DEFAULT_TARGETS) selftest.exe
 
 .PHONY: all link-to-sigobj
