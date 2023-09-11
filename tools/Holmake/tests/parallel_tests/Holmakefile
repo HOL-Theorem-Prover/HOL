@@ -1,0 +1,38 @@
+CLINE_OPTIONS = -r
+DIRNAMES = \
+  altquote1 \
+  brokenstrings \
+  clinevars \
+  holpathdb/proj2 \
+  holpathdb/proj2/proj2A \
+  depchain1/dir3 \
+  depchain2/dir1 \
+  holdep \
+  nullary_tgt \
+  phony_tgt \
+  quote-filter \
+  theorytarget \
+  commandmacros \
+  doublecrnl \
+  coproduct \
+  noprereqs/dir1 \
+  noprereqs/dir2 \
+  noprereqs/dir3 \
+  noprereqs/dir4 \
+  indepchildren \
+  empty_script \
+  deps_of_depthys \
+  gh604 \
+  ignore_errors/j1 \
+  qfreadTheoremsyntax
+
+ifdef POLY
+DIRNAMES += cheatspotting \
+            depchain_heap/ \
+            depchain_heap/dir2 \
+            ignore_errors/j4 \
+            hollogs
+endif
+
+
+INCLUDES = $(patsubst %,../%,$(DIRNAMES))
