@@ -3666,15 +3666,16 @@ val gcd_coprime_cancel = store_thm(
    Simple proof of GCD_CANCEL_MULT:
    (a*c, b) = (a*c , b*1) = (a * c, b * (c, 1)) = (a * c, b * c, b) = ((a, b) * c, b) = (c, b) since (a,b) = 1.
 *)
-val gcd_coprime_cancel = store_thm(
-  "gcd_coprime_cancel",
-  ``!m n p. coprime p n ==> (gcd (p * m) n = gcd m n)``,
+Theorem gcd_coprime_cancel[allow_rebind]:
+  !m n p. coprime p n ==> (gcd (p * m) n = gcd m n)
+Proof
   rpt strip_tac >>
-  `gcd (p * m) n = gcd (p * m) (n * (gcd m 1))` by rw[GCD_1] >>
-  `_ = gcd (p * m) (gcd (n * m) n)` by rw[GSYM GCD_COMMON_FACTOR] >>
-  `_ = gcd (gcd (p * m) (n * m)) n` by rw[GCD_ASSOC] >>
-  `_ = gcd m n` by rw[GCD_COMMON_FACTOR, MULT_COMM] >>
-  rw[]);
+  ‘gcd (p * m) n = gcd (p * m) (n * (gcd m 1))’ by rw[GCD_1] >>
+  ‘_ = gcd (p * m) (gcd (n * m) n)’ by rw[GSYM GCD_COMMON_FACTOR] >>
+  ‘_ = gcd (gcd (p * m) (n * m)) n’ by rw[GCD_ASSOC] >>
+  ‘_ = gcd m n’ by rw[GCD_COMMON_FACTOR, MULT_COMM] >>
+  rw[]
+QED
 
 (* Theorem: prime p /\ prime q /\ p <> q ==> coprime p q *)
 (* Proof:
@@ -4062,16 +4063,6 @@ val power_predecessor_divisibility = store_thm(
   `_ = (gcd n m = n)` by rw[EXP_BASE_INJECTIVE] >>
   rw[divides_iff_gcd_fix]);
 
-(* This is numerical version of:
-poly_unity_1_divides  |- !r. Ring r /\ #1 <> #0 ==> !n. X - |1| pdivides unity n
-*)
-val power_predecessor_divisor = save_thm("power_predecessor_divisor",
-    power_predecessor_divisibility
-       |> SPEC ``t:num`` |> SPEC ``1:num`` |> SPEC ``n:num``
-       |> SIMP_RULE (srw_ss()) [] |> GEN_ALL);
-(* val power_predecessor_divisor = |- !t n. 1 < t ==> t - 1 divides t ** n - 1: thm *)
-(* However, this is too restrictive. *)
-
 (* Theorem: t - 1 divides t ** n - 1 *)
 (* Proof:
    If t = 0,
@@ -4087,19 +4078,20 @@ val power_predecessor_divisor = save_thm("power_predecessor_divisor",
        ==> t ** 1 - 1 divides t ** n - 1   by power_predecessor_divisibility
         or      t - 1 divides t ** n - 1   by EXP_1
 *)
-val power_predecessor_divisor = store_thm(
-  "power_predecessor_divisor",
-  ``!t n. t - 1 divides t ** n - 1``,
+Theorem power_predecessor_divisor:
+  !t n. t - 1 divides t ** n - 1
+Proof
   rpt strip_tac >>
   Cases_on `t = 0` >-
   simp[ZERO_EXP] >>
   Cases_on `t = 1` >-
   simp[] >>
   `1 < t` by decide_tac >>
-  metis_tac[power_predecessor_divisibility, EXP_1, ONE_DIVIDES_ALL]);
+  metis_tac[power_predecessor_divisibility, EXP_1, ONE_DIVIDES_ALL]
+QED
 
 (* Overload power predecessor *)
-val _ = overload_on("tops", ``\b:num n. b ** n - 1``);
+Overload tops = “\b:num n. b ** n - 1”
 
 (*
    power_predecessor_division_eqn

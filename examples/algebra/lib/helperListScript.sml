@@ -758,10 +758,6 @@ val LAST_EL_CONS = store_thm(
 val FRONT_LENGTH = save_thm ("FRONT_LENGTH", LENGTH_FRONT);
 (* val FRONT_LENGTH = |- !l. l <> [] ==> (LENGTH (FRONT l) = PRE (LENGTH l)): thm *)
 
-val FRONT_EL = save_thm ("FRONT_EL", EL_FRONT);
-(* val FRONT_EL = |- !l n. n < LENGTH (FRONT l) /\ ~NULL l ==> (EL n (FRONT l) = EL n l) *)
-(* This is not convenient. *)
-
 (* Theorem: l <> [] /\ n < LENGTH (FRONT l) ==> (EL n (FRONT l) = EL n l) *)
 (* Proof: by EL_FRONT, NULL *)
 val FRONT_EL = store_thm(
@@ -2657,16 +2653,16 @@ val rotate_shift_element = store_thm(
   `j < LENGTH l` by decide_tac >>
   `SUC j - 1 = j` by decide_tac >>
   rw[DROP_def, TAKE_def]);
-(* Michael's proof *)
-val rotate_shift_element = store_thm(
-  "rotate_shift_element",
-  ``!l n. n < LENGTH l ==> (rotate n l = EL n l::(DROP (SUC n) l ++ TAKE n l))``,
+
+Theorem rotate_shift_element[allow_rebind]:
+  !l n. n < LENGTH l ==> (rotate n l = EL n l::(DROP (SUC n) l ++ TAKE n l))
+Proof
   rw[rotate_def] >>
   pop_assum mp_tac >>
   qid_spec_tac `n` >>
-  Induct_on `l` >-
-  rw[] >>
-  rw[DROP_def] >> Cases_on `n` >> fs[]);
+  Induct_on `l` >- rw[] >>
+  rw[DROP_def] >> Cases_on `n` >> fs[]
+QED
 
 (* Theorem: rotate 0 l = l *)
 (* Proof:
@@ -3145,19 +3141,21 @@ val MONOLIST_EQ = store_thm(
     `set l2 = set t` by rw[] >>
     metis_tac[IN_SING]
   ]);
-(* Michael's Proof *)
-val MONOLIST_EQ = store_thm(
-  "MONOLIST_EQ",
-  ``!l1 l2. SING (set l1) /\ SING (set l2) ==>
-              ((l1 = l2) <=> (LENGTH l1 = LENGTH l2) /\ (set l1 = set l2))``,
+
+Theorem MONOLIST_EQ[allow_rebind]:
+  !l1 l2. SING (set l1) /\ SING (set l2) ==>
+          ((l1 = l2) <=> (LENGTH l1 = LENGTH l2) /\ (set l1 = set l2))
+Proof
   Induct >> rw[NOT_SING_EMPTY, SING_INSERT] >| [
     Cases_on `l2` >> rw[] >>
     full_simp_tac (srw_ss()) [SING_INSERT, EQUAL_SING] >>
     rw[LENGTH_NIL, NOT_SING_EMPTY, EQUAL_SING] >> metis_tac[],
     Cases_on `l2` >> rw[] >>
-    full_simp_tac (srw_ss()) [SING_INSERT, LENGTH_NIL, NOT_SING_EMPTY, EQUAL_SING] >>
+    full_simp_tac (srw_ss()) [SING_INSERT, LENGTH_NIL, NOT_SING_EMPTY,
+                              EQUAL_SING] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: A non-mono-list has at least one element in tail that is distinct from its head.
            ~SING (set (h::t)) ==> ?h'. h' IN set t /\ h' <> h *)
@@ -4869,10 +4867,6 @@ val PROD_eq_1 = store_thm(
   Induct >>
   rw[] >>
   metis_tac[]);
-(* proof like SUM_eq_0 *)
-val PROD_eq_1 = store_thm("PROD_eq_1",
-  ``!ls. (PROD ls = 1) = !x. MEM x ls ==> (x = 1)``,
-  INDUCT_THEN list_INDUCT ASSUME_TAC THEN SRW_TAC[] [PROD, MEM] THEN METIS_TAC[]);
 
 (* Theorem: PROD (SNOC x l) = (PROD l) * x *)
 (* Proof:
@@ -4898,10 +4892,13 @@ val PROD_SNOC = store_thm(
   Induct >>
   rw[]);
 (* proof like SUM_SNOC *)
-val PROD_SNOC = store_thm("PROD_SNOC",
-    (``!x l. PROD (SNOC x l) = (PROD l) * x``),
-    GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN REWRITE_TAC[PROD, SNOC, MULT, MULT_CLAUSES]
-    THEN GEN_TAC THEN ASM_REWRITE_TAC[MULT_ASSOC]);
+Theorem PROD_SNOC[allow_rebind]:
+  !x l. PROD (SNOC x l) = (PROD l) * x
+Proof
+  GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN
+  REWRITE_TAC[PROD, SNOC, MULT, MULT_CLAUSES] THEN
+  GEN_TAC THEN ASM_REWRITE_TAC[MULT_ASSOC]
+QED
 
 (* Theorem: PROD (APPEND l1 l2) = PROD l1 * PROD l2 *)
 (* Proof:
@@ -4922,12 +4919,7 @@ val PROD_SNOC = store_thm("PROD_SNOC",
 val PROD_APPEND = store_thm(
   "PROD_APPEND",
   ``!l1 l2. PROD (APPEND l1 l2) = PROD l1 * PROD l2``,
-  Induct >>
-  rw[]);
-(* proof like SUM_APPEND *)
-val PROD_APPEND = store_thm("PROD_APPEND",
-    (``!l1 l2. PROD (APPEND l1 l2) = PROD l1 * PROD l2``),
-    INDUCT_THEN list_INDUCT ASSUME_TAC THEN ASM_REWRITE_TAC[PROD, APPEND, MULT_LEFT_1, MULT_ASSOC]);
+  Induct >> rw[]);
 
 (* Theorem: PROD (MAP f ls) = FOLDL (\a e. a * f e) 1 ls *)
 (* Proof:
@@ -4953,11 +4945,6 @@ val PROD_MAP_FOLDL = store_thm(
   rpt strip_tac >-
   rw[] >>
   rw[MAP_SNOC, PROD_SNOC, FOLDL_SNOC]);
-(* proof like SUM_MAP_FOLDL *)
-val PROD_MAP_FOLDL = Q.store_thm("PROD_MAP_FOLDL",
-    `!ls f. PROD (MAP f ls) = FOLDL (\a e. a * f e) 1 ls`,
-    HO_MATCH_MP_TAC SNOC_INDUCT THEN
-    SRW_TAC [] [FOLDL_SNOC, MAP_SNOC, PROD_SNOC, MAP, PROD, FOLDL]);
 
 (* Theorem: FINITE s ==> !f. PI f s = PROD (MAP f (SET_TO_LIST s)) *)
 (* Proof:
@@ -4975,14 +4962,6 @@ val PROD_IMAGE_eq_PROD_MAP_SET_TO_LIST = store_thm(
   rpt AP_THM_TAC >>
   AP_TERM_TAC >>
   rw[FUN_EQ_THM]);
-(* proof like SUM_IMAGE_eq_SUM_MAP_SET_TO_LIST *)
-val PROD_IMAGE_eq_PROD_MAP_SET_TO_LIST = Q.store_thm(
-   "PROD_IMAGE_eq_PROD_MAP_SET_TO_LIST",
-   `!s. FINITE s ==> !f. PI f s = PROD (MAP f (SET_TO_LIST s))`,
-    SRW_TAC [] [PROD_IMAGE_DEF] THEN
-    SRW_TAC [] [ITSET_eq_FOLDL_SET_TO_LIST, PROD_MAP_FOLDL] THEN
-    AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-    SRW_TAC [] [FUN_EQ_THM, arithmeticTheory.MULT_COMM]);
 
 (* Define PROD using accumulator *)
 val PROD_ACC_DEF = Lib.with_flag (Defn.def_suffix, "_DEF") Define
@@ -5019,17 +4998,9 @@ val PROD_ACC_PROD_LEM = store_thm
 (* Theorem: PROD L = PROD_ACC L 1 *)
 (* Proof: Put n = 1 in PROD_ACC_PROD_LEM *)
 val PROD_PROD_ACC = store_thm(
-  "PROD_PROD_ACC",
+  "PROD_PROD_ACC[compute]",
   ``!L. PROD L = PROD_ACC L 1``,
   rw[PROD_ACC_PROD_LEM]);
-(* proof like SUM_SUM_ACC *)
-val PROD_PROD_ACC = store_thm
-("PROD_PROD_ACC",
-  ``!L. PROD L = PROD_ACC L 1``,
-  PROVE_TAC [PROD_ACC_PROD_LEM, MULT_RIGHT_1]);
-
-(* Put in computeLib *)
-val _ = computeLib.add_funs [PROD_PROD_ACC];
 
 (* EVAL ``PROD [1; 2; 3; 4]``; --> 24 *)
 
@@ -5783,13 +5754,6 @@ QED
 (* Theorem alias *)
 val listRangeLHI_LEN = save_thm("listRangeLHI_LEN",  LENGTH_listRangeLHI |> GEN_ALL);
 (* val listRangeLHI_LEN = |- !lo hi. LENGTH [lo ..< hi] = hi - lo: thm *)
-
-(* Theorem: LENGTH [m ..< n] = n - m *)
-(* Proof: by LENGTH_listRangeLHI *)
-val listRangeLHI_LEN = store_thm(
-  "listRangeLHI_LEN",
-  ``!m n. LENGTH [m ..< n] = n - m``,
-  rw[LENGTH_listRangeLHI]);
 
 (* Theorem: ([m ..< n] = []) <=> n <= m *)
 (* Proof:

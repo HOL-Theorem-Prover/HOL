@@ -147,7 +147,8 @@ val _ = qtest_conv "simp+WORD_CANCEL" c
 val _ = let
   val _ = tprint "Word factorial termination with good simp"
   val fact_defn =
-      trace ("auto Defn.tgoal", 0) $ quietly $
+      trace ("auto Defn.tgoal", 0) $ trace ("Theory.allow_rebinds", 1) $
+      quietly $
           TotalDefn.qDefine "wfact"
              ‘wfact w = if w = 0w then 1 else w2n w * wfact (w - 1w)’
 in

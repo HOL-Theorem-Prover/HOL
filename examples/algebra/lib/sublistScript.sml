@@ -232,19 +232,6 @@ val sublist_length = store_thm(
   `LENGTH t < LENGTH (h'::t)` by rw[LENGTH_TL_LT] >>
   decide_tac);
 
-(* Theorem: [Reflexive] p <= p *)
-(* Proof:
-   By induction on p.
-   Base: [] <= [], true                      by sublist_nil
-   Step: p <= p ==> !h. h::p <= h::p, true   by sublist_cons
-*)
-val sublist_refl = store_thm(
-  "sublist_refl",
-  ``!p:'a list. p <= p``,
-  Induct >-
-  rw[sublist_nil] >>
-  rw[GSYM sublist_cons]);
-(* Faster just by definition *)
 val sublist_refl = store_thm(
   "sublist_refl",
   ``!p:'a list. p <= p``,
@@ -783,43 +770,11 @@ val sublist_prefix_nil = store_thm(
     metis_tac[]
   ]);
 
-(* Theorem: [tail append - if] p <= q ==> (p ++ [h]) <= (q ++ [h]) *)
-(* Proof:
-   By sublist induction, this is to show:
-   (1) [h] <= q ++ [h]
-       Note [h] <= [h]         by sublist_refl
-        ==> [h] <= q ++ [h]    by sublist_append_prefix
-   (2) h::(p ++ [h']) <= h::(q ++ [h'])
-       Note      p ++ [h'] <= q ++ [h']        by induction hypothesis
-        ==> h::(p ++ [h']) <= h::(q ++ [h'])   by sublist_cons
-   (3) p ++ [h'] <= h::(q ++ [h'])
-       Note   p ++ [h'] <= q ++ [h']           by induction hypothesis
-        ==>   p ++ [h'] <= h::(q + [h'])       by sublist_cons_include
-*)
-(* First method *)
-val sublist_append_if = store_thm(
-  "sublist_append_if",
-  ``!p q h. p <= q ==> (p ++ [h]) <= (q ++ [h])``,
-  Induct_on `q` >-
-  rw[sublist_of_nil, sublist_refl] >>
-  rpt strip_tac >>
-  (Cases_on `p` >> fs[sublist_def]) >-
-  (Cases_on `h' = h` >> rw[sublist_append_prefix]) >>
-  metis_tac[APPEND]);
-(* Second method -- change goal to match *)
-val sublist_append_if = store_thm(
-  "sublist_append_if",
-  ``!p q. p <= q ==> !h. (p ++ [h]) <= (q ++ [h])``,
-  ho_match_mp_tac sublist_induct >>
-  rw[] >-
-  rw[sublist_refl, sublist_append_prefix] >-
-  metis_tac[sublist_cons] >>
-  rw[sublist_cons_include]);
-(* Third method *)
-val sublist_append_if = store_thm(
-  "sublist_append_if",
-  ``!p q h. p <= q ==> (p ++ [h]) <= (q ++ [h])``,
-  rw[sublist_snoc, GSYM SNOC_APPEND]);
+Theorem sublist_append_if:
+  !p q h. p <= q ==> (p ++ [h]) <= (q ++ [h])
+Proof
+  rw[sublist_snoc, GSYM SNOC_APPEND]
+QED
 
 (* Theorem: [tail append - only if] p ++ [h] <= q ++ [h] ==> p <= q *)
 (* Proof:

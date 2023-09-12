@@ -364,14 +364,6 @@ Proof
   \\ metis_tac []
 QED
 
-Theorem wf_ctrlE:
-  WellFormed G ==> (G.ctrl = diag (E G) ⨾ G.ctrl ⨾ diag (E G))
-Proof
-  wf_tac [ctrl_in_po_def]
-  \\ xfs [Once wf_poE]
-  \\ metis_tac []
-QED
-
 Theorem wf_amoE:
   WellFormed G ==> (G.amo = diag (E G) ⨾ G.amo ⨾ diag (E G))
 Proof
@@ -600,7 +592,7 @@ QED
 
 (* - Acyclic relations ----------------------------------------------------- *)
 
-Theorem po_acyclic:
+Theorem po_acyclic0:
   acyclic (po G)
 Proof
   metis_tac [po_irr, po_trans, relation_extraTheory.acyclic,

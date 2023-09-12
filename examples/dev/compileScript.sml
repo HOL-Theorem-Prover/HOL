@@ -648,12 +648,11 @@ val COMB_CONSTANT_3 =
     THEN GEN_BETA_TAC
     THEN PROVE_TAC[]);
 
-val DEL_CONCAT =
- store_thm
-  ("DEL_CONCAT",
-   ``DEL(inp1 <> inp2, out1 <> out2) = DEL(inp1,out1) /\ DEL(inp2,out2)``,
-   RW_TAC std_ss [DEL_def,BUS_CONCAT_def]
-    THEN PROVE_TAC[]);
+Theorem DEL_CONCAT:
+   DEL(inp1 <> inp2, out1 <> out2) = DEL(inp1,out1) /\ DEL(inp2,out2)
+Proof
+  RW_TAC std_ss [DEL_def,BUS_CONCAT_def] THEN PROVE_TAC[]
+QED
 
 val DFF_CONCAT =
  store_thm
@@ -1074,13 +1073,6 @@ val DELF_IMP =
     THEN IMP_RES_TAC Dtype0
     THEN RW_TAC std_ss [GSYM Timeof]
     THEN METIS_TAC[IstimeofTimeof0,DECIDE``t <= t``]);
-
-val DEL_CONCAT =
- store_thm
-  ("DEL_CONCAT",
-   ``DEL(in1<>in2,out1<>out2) = DEL(in1,out1) /\ DEL(in2,out2)``,
-   RW_TAC std_ss [DEL_def,BUS_CONCAT_def]
-    THEN PROVE_TAC[]);
 
 val TRUE_at =
  store_thm

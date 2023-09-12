@@ -320,7 +320,7 @@ QED
          Note SING (set ls)           by cycle_1_iff_set_sing, cycle 1 ls = ls
          thus ls IN monocoloured n a  by monocoloured_element
 *)
-Theorem monocoloured_iff_cycle_1:
+Theorem monocoloured_iff_cycle_1[allow_rebind]:
   !n a ls. ls IN necklace n a ==>
            (ls IN monocoloured n a <=> cycle 1 ls = ls)
 Proof
@@ -796,7 +796,7 @@ QED
      = order ls                    by associate_card_eq_order, ls <> []
      = p                           by multicoloured_prime_order
 *)
-Theorem multicoloured_associate_card_prime:
+Theorem multicoloured_partition_card_prime:
   !p a e. prime p /\ e IN multicoloured_partition p a ==> CARD e = p
 Proof
   rpt strip_tac >>
@@ -836,7 +836,7 @@ Proof
   `FINITE (multicoloured_partition p a)` by rw[multicoloured_partition_finite] >>
   `similar equiv_on (multicoloured p a)` by rw[similar_equiv_on_multicoloured] >>
   `CARD (multicoloured p a) = SIGMA CARD (multicoloured_partition p a)` by rw[multicoloured_partition_def, partition_CARD] >>
-  metis_tac[multicoloured_associate_card_prime, SIGMA_CARD_CONSTANT]
+  metis_tac[multicoloured_partition_card_prime, SIGMA_CARD_CONSTANT]
 QED
 
 (* ------------------------------------------------------------------------- *)
