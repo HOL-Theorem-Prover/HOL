@@ -349,14 +349,6 @@ Proof
   simp[NFMBST_def] >> metis_tac[FAPPLY_bst_to_fm]
 QED
 
-Theorem NFMfoo[transfer_rule]:
-  ((=) |==> NFMBST (=)) foo foo'
-Proof
-  simp[FUN_REL_def, foo'_def] >> gen_tac >> SELECT_ELIM_TAC >> conj_tac
-  >- metis_tac[bst_to_fm_surj] >>
-  simp[NFM_bst_to_fm]
-QED
-
 Theorem NFMEQ[transfer_rule]:
   (NFMBST (=) |==> NFMBST (=) |==> flip (==>)) (=) (=)
 Proof
@@ -373,6 +365,14 @@ End
 Definition foo'_def:
   foo' n = @bst. bst_to_fm bst = foo n /\ wfBST bst
 End
+
+Theorem NFMfoo[transfer_rule]:
+  ((=) |==> NFMBST (=)) foo foo'
+Proof
+  simp[FUN_REL_def, foo'_def] >> gen_tac >> SELECT_ELIM_TAC >> conj_tac
+  >- metis_tac[bst_to_fm_surj] >>
+  simp[NFM_bst_to_fm]
+QED
 
 *)
 
