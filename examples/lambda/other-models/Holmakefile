@@ -1,2 +1,2 @@
-INCLUDES = ../basics ../barendregt
+INCLUDES = ../basics ../barendregt $(protect $(HOLDIR)/src/integer)
 OPTIONS = QUIT_ON_FAILURE
