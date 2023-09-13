@@ -940,7 +940,7 @@ QED
 
    Therefore, BIGUNION eb = b             by SUBSET_ANTISYM
 *)
-Theorem equiv_pairs_bigunion:
+Theorem equiv_pairs_bigunion[allow_rebind]:
   !f s. f involute s ==> BIGUNION (equiv_pairs f s) = pairs f s
 Proof
   rpt strip_tac >>
@@ -1167,7 +1167,7 @@ QED
     and EVEN b              by mates_card_even
    Thus EVEN a <=> EVEN c   by EVEN_ADD
 *)
-Theorem involute_set_fixes_both_even:
+Theorem involute_set_fixes_both_even[allow_rebind]:
   !f s. FINITE s /\ f involute s ==> (EVEN (CARD s) <=> EVEN (CARD (fixes f s)))
 Proof
   rpt strip_tac >>

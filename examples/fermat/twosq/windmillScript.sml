@@ -1807,7 +1807,7 @@ QED
 
 (* Theorem: x * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z) *)
 (* Proof: by MULT_EQ_0, zagier_involute. *)
-Theorem zagier_involute_alt:
+Theorem zagier_involute_alt0:
   !x y z. x * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z)
 Proof
   rw[zagier_involute]

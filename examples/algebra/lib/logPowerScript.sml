@@ -1255,11 +1255,6 @@ val LOG2_PROPERTY = store_thm(
   ``!n. 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n)``,
   rw[LOG]);
 
-(* Obtain the same theorem *)
-val LOG2_PROPERTY = save_thm("LOG2_PROPERTY",
-    LOG |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
-(* val LOG2_PROPERTY = |- !n. 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n): thm *)
-
 (* Theorem: 0 < n ==> 2 ** LOG2 n <= n) *)
 (* Proof: by LOG2_PROPERTY *)
 val TWO_EXP_LOG2_LE = store_thm(
@@ -2653,19 +2648,13 @@ val ulog_thm = store_thm(
   ``!n. 0 < n ==> !m. (ulog n = m) <=> (2 ** m < 2 * n /\ n <= 2 ** m)``,
   metis_tac[ulog_property, ulog_unique]);
 
-(* Have an equation to present the definition *)
-val ulog_def_alt = save_thm("ulog_def_alt", CONJ ulog_0 ulog_thm);
-(* val ulog_def_alt =
-|- (ulog 0 = 0) /\ !n. 0 < n ==> !m. ulog n = m <=> 2 ** m < TWICE n /\ n <= 2 ** m: thm *)
-
-(* This is OK, but the followig is better *)
-
 (* Theorem: (ulog 0 = 0) /\ !n. 0 < n ==> !m. (ulog n = m) <=> (n <= 2 ** m /\ 2 ** m < 2 * n) *)
 (* Proof: by ulog_0 ulog_thm *)
-val ulog_def_alt = store_thm(
-  "ulog_def_alt",
-  ``(ulog 0 = 0) /\ !n. 0 < n ==> !m. (ulog n = m) <=> (n <= 2 ** m /\ 2 ** m < 2 * n)``,
-  rw[ulog_0, ulog_thm]);
+Theorem ulog_def_alt:
+  (ulog 0 = 0) /\
+  !n. 0 < n ==> !m. (ulog n = m) <=> (n <= 2 ** m /\ 2 ** m < 2 * n)
+Proof rw[ulog_0, ulog_thm]
+QED
 
 (* Theorem: (ulog n = 0) <=> ((n = 0) \/ (n = 1)) *)
 (* Proof:
@@ -3226,72 +3215,6 @@ val power_free_upto_suc = store_thm(
   rw[power_free_upto_def] >>
   rw[EQ_IMP_THM] >>
   metis_tac[LESS_OR_EQ, DECIDE``k < n + 1 ==> k <= n``]);
-
-(* Theorem: ower_free n <=> 1 < n /\ n power_free_upto (LOG2 n) *)
-(* Proof:
-   By power_free_check_all and power_free_upto_def,
-   this result is true if we can show that:
-      1 < n /\ (!j. 1 < j ==> (ROOT j n) ** j <> n) <=>
-      1 < n /\ (!j. 1 < j /\ j <= LOG2 n ==> (ROOT j n) ** j <> n)
-   That is, to show that:
-        1 < n /\ 1 < j /\ (!j. 1 < j /\ j <= LOG2 n ==> ROOT j n ** j <> n) ==> (ROOT j n) ** j <> n
-   By contradiction, suppose (ROOT j n) ** j = n.
-   Let m = ROOT j n.
-   Then m ** j = n                       by above
-   Thus perfect_power n m                by perfect_power_def
-    ==> ?k. k <= LOG2 n /\ n = m ** k    by perfect_power_bound_LOG2
-    But 1 < m                            by ONE_LT_EXP, 1 < n
-   Thus j = k                            by EXP_BASE_INJECTIVE, 1 < m
-   The implication gives m ** j <> n, a contradiction.
-*)
-val power_free_check_upto_LOG2 = store_thm(
-  "power_free_check_upto_LOG2",
-  ``!n. power_free n <=> 1 < n /\ n power_free_upto (LOG2 n)``,
-  rw[power_free_check_all, power_free_upto_def] >>
-  rw[EQ_IMP_THM] >>
-  spose_not_then strip_assume_tac >>
-  qabbrev_tac `m = ROOT j n` >>
-  `perfect_power n m` by metis_tac[perfect_power_def] >>
-  `?k. k <= LOG2 n /\ (n = m ** k)` by fs[GSYM perfect_power_bound_LOG2] >>
-  `1 < m` by metis_tac[ONE_LT_EXP] >>
-  `j = k` by fs[ ] >>
-  metis_tac[]);
-
-(* Theorem: power_free n <=> 1 < n /\ (!j. 1 < j /\ j <= ulog n ==> (ROOT j n) ** j <> n) *)
-(* Proof:
-   By power_free_check_all and power_free_upto_def,
-   this result is true if we can show that:
-        1 < n /\ (!j. 1 < j ==> (ROOT j n) ** j <> n) <=>
-        1 < n /\ (!j. 1 < j /\ j <= ulog n ==> (ROOT j n) ** j <> n)
-   That is, to show that:
-        1 < n /\ 1 < j /\ (!j. 1 < j /\ j <= ulog n ==> ROOT j n ** j <> n) ==> (ROOT j n) ** j <> n
-   By contradiction, suppose (ROOT j n) ** j = n.
-   Let m = ROOT j n.
-   Then m ** j = n                      by above
-   Thus perfect_power n m               by perfect_power_def
-    ==> ?k. k <= LOG2 n /\ n = m ** k   by perfect_power_bound_LOG2
-    But 1 < m                           by ONE_LT_EXP, 1 < n
-   Thus j = k                           by EXP_BASE_INJECTIVE, 1 < m
-   Note LOG2 n <= ulog n                by ulog_LOG2, 0 < n
-   Thus j <= ulog n                     by j = k, k <= LOG2 n, LOG2 n <= ulog n
-   The implication gives m ** j <> n, a contradiction.
-*)
-val power_free_check_upto_ulog = store_thm(
-  "power_free_check_upto_ulog",
-  ``!n. power_free n <=> 1 < n /\ n power_free_upto (ulog n)``,
-  rw[power_free_check_all, power_free_upto_def] >>
-  rw[EQ_IMP_THM] >>
-  spose_not_then strip_assume_tac >>
-  qabbrev_tac `m = ROOT j n` >>
-  `perfect_power n m` by metis_tac[perfect_power_def] >>
-  `?k. k <= LOG2 n /\ (n = m ** k)` by fs[GSYM perfect_power_bound_LOG2] >>
-  `1 < m` by metis_tac[ONE_LT_EXP] >>
-  `j = k` by fs[EXP_BASE_INJECTIVE] >>
-  `LOG2 n <= ulog n` by rw[ulog_LOG2] >>
-  `j <= ulog n` by decide_tac >>
-  metis_tac[]);
-
-(* More general proof of the above assertions *)
 
 (* Theorem: LOG2 n <= b ==> (power_free n <=> (1 < n /\ n power_free_upto b)) *)
 (* Proof:

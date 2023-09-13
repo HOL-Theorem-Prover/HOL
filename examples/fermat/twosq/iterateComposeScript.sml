@@ -484,7 +484,7 @@ QED
    <=> FUNPOW (f o g) (i + j) x = x    by above
    <=> (i + j) MOD p = 0               by iterate_period_mod, 0 < p
 *)
-Theorem iterate_involute_mod_period:
+Theorem iterate_involute_mod_period[allow_rebind]:
   !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
                   x IN s /\ p = iterate_period (f o g) x ==>
                  (FUNPOW (f o g) i x = FUNPOW (g o f) j x <=> (i + j) MOD p = 0)

@@ -948,26 +948,28 @@ http://www.math.wm.edu/~vinroot/430S13MultFiniteField.pdf
     ==> lcm n m = m                         by EQ_LESS_EQ
      or n divides m                         by divides_iff_lcm_fix
 *)
-val monoid_order_divides_maximal = store_thm(
-  "monoid_order_divides_maximal",
-  ``!g:'a monoid. FiniteAbelianMonoid g ==>
-   !x. x IN G /\ 0 < ord x ==> (ord x) divides (maximal_order g)``,
+Theorem monoid_order_divides_maximal[allow_rebind]:
+  !g:'a monoid.
+    FiniteAbelianMonoid g ==>
+    !x. x IN G /\ 0 < ord x ==> (ord x) divides (maximal_order g)
+Proof
   rw[FiniteAbelianMonoid_def] >>
-  `Monoid g` by metis_tac[AbelianMonoid_def] >>
-  qabbrev_tac `s = IMAGE ord G` >>
-  qabbrev_tac `m = MAX_SET s` >>
-  qabbrev_tac `n = ord x` >>
-  `#e IN G /\ (ord #e = 1)` by rw[] >>
-  `s <> {}` by metis_tac[IN_IMAGE, MEMBER_NOT_EMPTY] >>
-  `FINITE s` by rw[Abbr`s`] >>
-  `m IN s /\ !y. y IN s ==> y <= m` by rw[MAX_SET_DEF, Abbr`m`] >>
-  `?z. z IN G /\ (ord z = m)` by metis_tac[IN_IMAGE] >>
-  `?y. y IN G /\ (ord y = lcm n m)` by metis_tac[abelian_monoid_order_lcm] >>
-  `n IN s /\ ord y IN s` by rw[Abbr`s`, Abbr`n`] >>
-  `n <= m /\ lcm n m <= m` by metis_tac[] >>
-  `0 < m` by decide_tac >>
-  `m <= lcm n m` by rw[LCM_LE] >>
-  rw[divides_iff_lcm_fix]);
+  ‘Monoid g’ by metis_tac[AbelianMonoid_def] >>
+  qabbrev_tac ‘s = IMAGE ord G’ >>
+  qabbrev_tac ‘m = MAX_SET s’ >>
+  qabbrev_tac ‘n = ord x’ >>
+  ‘#e IN G /\ (ord #e = 1)’ by rw[] >>
+  ‘s <> {}’ by metis_tac[IN_IMAGE, MEMBER_NOT_EMPTY] >>
+  ‘FINITE s’ by rw[Abbr‘s’] >>
+  ‘m IN s /\ !y. y IN s ==> y <= m’ by rw[MAX_SET_DEF, Abbr‘m’] >>
+  ‘?z. z IN G /\ (ord z = m)’ by metis_tac[IN_IMAGE] >>
+  ‘?y. y IN G /\ (ord y = lcm n m)’ by metis_tac[abelian_monoid_order_lcm] >>
+  ‘n IN s /\ ord y IN s’ by rw[Abbr‘s’, Abbr‘n’] >>
+  ‘n <= m /\ lcm n m <= m’ by metis_tac[] >>
+  ‘0 < m’ by decide_tac >>
+  ‘m <= lcm n m’ by rw[LCM_LE] >>
+  rw[divides_iff_lcm_fix]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Invertibles                                                        *)

@@ -2522,7 +2522,7 @@ QED
      and CARD (set ls) = LENGTH ls       by ALL_DISTINCT_CARD_LIST_TO_SET
       so set ls IN (sub_count n k)       by sub_count_element_alt
 *)
-Theorem list_count_set_map_element:
+Theorem list_count_set_map_element[allow_rebind]:
   !s n k. s IN (partition (feq set) (list_count n k)) ==>
           (set o CHOICE) s IN (sub_count n k)
 Proof
@@ -2788,7 +2788,7 @@ QED
    = 1 * FACT n                by binomial_n_n
    = perm n                    by perm_eq_fact
 *)
-Theorem arrange_n_n:
+Theorem arrange_n_n[allow_rebind]:
   !n. n arrange n = perm n
 Proof
   simp[arrange_formula, binomial_n_n, perm_eq_fact]

@@ -431,20 +431,21 @@ Theorem iterate_period_mod_eq:
                 (FUNPOW f i x = FUNPOW f j x <=> i MOD p = j MOD p)
 Proof
   rpt strip_tac >>
-  `0 < p` by metis_tac[iterate_period_pos] >>
-  `(i = j) \/ (i < j) \/ (j < i)` by decide_tac >-
-  fs[] >-
- (`i <= j` by decide_tac >>
-  `FUNPOW f j x IN s` by rw[FUNPOW_closure] >>
-  `FUNPOW f i x = FUNPOW f j x <=> (x = FUNPOW (LINV f s) i (FUNPOW f j x))` by metis_tac[FUNPOW_LINV_INV] >>
-  `_ = (x = FUNPOW f (j - i) x)` by fs[GSYM FUNPOW_SUB_LINV2] >>
-  `_ = ((j - i) MOD p = 0)` by metis_tac[iterate_period_mod] >>
-  fs[MOD_EQ]) >>
-  `j <= i` by decide_tac >>
-  `FUNPOW f i x IN s` by rw[FUNPOW_closure] >>
-  `FUNPOW f i x = FUNPOW f j x <=> (x = FUNPOW (LINV f s) j (FUNPOW f i x))` by metis_tac[FUNPOW_LINV_INV] >>
-  `_ = (x = FUNPOW f (i - j) x)` by fs[GSYM FUNPOW_SUB_LINV2] >>
-  `_ = ((i - j) MOD p = 0)` by metis_tac[iterate_period_mod] >>
+  ‘0 < p’ by metis_tac[iterate_period_pos] >>
+  ‘(i = j) \/ (i < j) \/ (j < i)’ by decide_tac >-
+  fs[]
+  >- (‘i <= j’ by decide_tac >>
+      ‘FUNPOW f j x IN s’ by rw[FUNPOW_closure] >>
+      ‘FUNPOW f i x = FUNPOW f j x <=> (x = FUNPOW (LINV f s) i (FUNPOW f j x))’
+        by metis_tac[FUNPOW_LINV_INV] >>
+      ‘_ = (x = FUNPOW f (j - i) x)’ by fs[GSYM FUNPOW_SUB_LINV2] >>
+      ‘_ = ((j - i) MOD p = 0)’ by metis_tac[iterate_period_mod] >>
+      fs[MOD_EQ]) >>
+  ‘j <= i’ by decide_tac >>
+  ‘FUNPOW f i x IN s’ by rw[FUNPOW_closure] >>
+  ‘FUNPOW f i x = FUNPOW f j x <=> (x = FUNPOW (LINV f s) j (FUNPOW f i x))’ by metis_tac[FUNPOW_LINV_INV] >>
+  ‘_ = (x = FUNPOW f (i - j) x)’ by fs[GSYM FUNPOW_SUB_LINV2] >>
+  ‘_ = ((i - j) MOD p = 0)’ by metis_tac[iterate_period_mod] >>
   fs[MOD_EQ]
 QED
 
@@ -476,28 +477,28 @@ QED
     ==> d + k = p                       by MULTIPLE_INTERVAL
      so k = p - d = h                   by arithmetic
 *)
-Theorem iterate_period_mod_eq:
+Theorem iterate_period_mod_eq[allow_rebind]:
   !f s p x i j. FINITE s /\ f PERMUTES s /\ x IN s /\
                 p = iterate_period f x ==>
                 (FUNPOW f i x = FUNPOW f j x <=> i MOD p = j MOD p)
 Proof
   rpt strip_tac >>
-  `0 < p` by metis_tac[iterate_period_pos] >>
-  qabbrev_tac `h = i MOD p` >>
-  qabbrev_tac `k = j MOD p` >>
-  `FUNPOW f h x = FUNPOW f k x <=> (h = k)` suffices_by metis_tac[iterate_mod_period] >>
+  ‘0 < p’ by metis_tac[iterate_period_pos] >>
+  qabbrev_tac ‘h = i MOD p’ >>
+  qabbrev_tac ‘k = j MOD p’ >>
+  ‘FUNPOW f h x = FUNPOW f k x <=> (h = k)’ suffices_by metis_tac[iterate_mod_period] >>
   simp[EQ_IMP_THM] >>
   strip_tac >>
-  `h < p /\ k < p` by rw[Abbr`h`, Abbr`k`] >>
-  `p = p - h + h` by decide_tac >>
-  qabbrev_tac `d = p - h` >>
-  `x = FUNPOW f p x` by metis_tac[iterate_period_property] >>
-  `_ = FUNPOW f (d + k) x` by rfs[FUNPOW_ADD] >>
-  `p divides (d + k)` by metis_tac[iterate_period_multiple, divides_def] >>
-  `d + k < p + p` by decide_tac >>
-  `p - p < d + k` by decide_tac >>
-  `p divides p` by fs[] >>
-  `d + k = p` by metis_tac[MULTIPLE_INTERVAL] >>
+  ‘h < p /\ k < p’ by rw[Abbr‘h’, Abbr‘k’] >>
+  ‘p = p - h + h’ by decide_tac >>
+  qabbrev_tac ‘d = p - h’ >>
+  ‘x = FUNPOW f p x’ by metis_tac[iterate_period_property] >>
+  ‘_ = FUNPOW f (d + k) x’ by rfs[FUNPOW_ADD] >>
+  ‘p divides (d + k)’ by metis_tac[iterate_period_multiple, divides_def] >>
+  ‘d + k < p + p’ by decide_tac >>
+  ‘p - p < d + k’ by decide_tac >>
+  ‘p divides p’ by fs[] >>
+  ‘d + k = p’ by metis_tac[MULTIPLE_INTERVAL] >>
   decide_tac
 QED
 

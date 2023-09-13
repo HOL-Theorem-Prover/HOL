@@ -1304,19 +1304,9 @@ val prime_divisors_finite = store_thm(
 
 (* Note: prime: num -> bool is also a set, so prime = {p | prime p} *)
 
-(* Theorem: prime_divisors 0 = prime *)
-(* Proof: by prime_divisors_def, ALL_DIVIDES_0 *)
-val prime_divisors_0 = store_thm(
-  "prime_divisors_0",
-  ``prime_divisors 0 = prime``,
-  rw[prime_divisors_def, EXTENSION, IN_DEF]);
-
-(* Theorem: prime_divisors 0 = {p | prime p} *)
-(* Proof: by prime_divisors_def, ALL_DIVIDES_0 *)
-val prime_divisors_0 = store_thm(
-  "prime_divisors_0",
-  ``prime_divisors 0 = {p | prime p}``,
-  rw[prime_divisors_def]);
+Theorem prime_divisors_0: prime_divisors 0 = {p | prime p}
+Proof rw[prime_divisors_def]
+QED
 
 (* Theorem: prime_divisors n = {} *)
 (* Proof: by prime_divisors_def, DIVIDES_ONE, NOT_PRIME_1 *)

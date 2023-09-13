@@ -345,10 +345,6 @@ Proof
 QED
 (* Note: this is the same as iterate_trace_sing. *)
 
-(* Theorem alias *)
-Theorem iterate_trace_0 = iterate_trace_sing;
-(* val iterate_trace_0 = |- !a b. iterate_trace a b 0 = [a]: thm *)
-
 (* Theorem: iterate_trace a b (SUC c) = SNOC (iterate a b (SUC c)) (iterate_trace a b c) *)
 (* Proof:
    Let f = \j. FUNPOW b j a.
@@ -825,12 +821,6 @@ Proof
   rw[Once WHILE]
 QED
 (* This is the same as iterate_while_thm_0. *)
-
-(* Theorem alias *)
-Theorem iterate_while_none = iterate_while_thm_0
-                             |> CONV_RULE (RENAME_VARS_CONV ["x"]) |> SPEC_ALL
-                             |> GEN ``x:'a`` |> GEN ``b:'a -> 'a`` |> GEN ``g:'a -> bool``;
-(* val iterate_while_none = |- !g b x. ~g x ==> WHILE g b x = x: thm *)
 
 (*
 It is not possible to prove the following, which would be nice;

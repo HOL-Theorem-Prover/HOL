@@ -2408,21 +2408,22 @@ val leibniz_triplet_property = store_thm(
 
       Since k + 1 <> 0, the result follows                by MULT_LEFT_CANCEL
 *)
-val leibniz_triplet_property = store_thm(
-  "leibniz_triplet_property",
-  ``!(n k):num. ta * tb = tc * (tb - ta)``,
+Theorem leibniz_triplet_property[allow_rebind]:
+  !n k:num. ta * tb = tc * (tb - ta)
+Proof
   rpt strip_tac >>
-  Cases_on `n < k` >-
+  Cases_on ‘n < k’ >-
   rw[triplet_def, leibniz_less_0] >>
-  `(n + 2) - (n + 1 - k) = k + 1` by decide_tac >>
-  `(k + 1) * ta * tb = (n + 2 - (n + 1 - k)) * ta * tb` by rw[] >>
-  `_ = (n + 2) * ta * tb - (n + 1 - k) * ta * tb` by rw_tac std_ss[RIGHT_SUB_DISTRIB] >>
-  `_ = (n + 1 - k) * tb * tb - (n + 1 - k) * ta * tb` by rw_tac std_ss[leibniz_up_entry] >>
-  `_ = (n + 1 - k) * tb * tb - (n + 1 - k) * tb * ta` by metis_tac[MULT_ASSOC, MULT_COMM] >>
-  `_ = (n + 1 - k) * tb * (tb - ta)` by rw_tac std_ss[LEFT_SUB_DISTRIB] >>
-  `_ = (k + 1) * tc * (tb - ta)` by rw_tac std_ss[leibniz_right_entry] >>
-  `k + 1 <> 0` by decide_tac >>
-  metis_tac[MULT_LEFT_CANCEL, MULT_ASSOC]);
+  ‘(n + 2) - (n + 1 - k) = k + 1’ by decide_tac >>
+  ‘(k + 1) * ta * tb = (n + 2 - (n + 1 - k)) * ta * tb’ by rw[] >>
+  ‘_ = (n + 2) * ta * tb - (n + 1 - k) * ta * tb’ by rw_tac std_ss[RIGHT_SUB_DISTRIB] >>
+  ‘_ = (n + 1 - k) * tb * tb - (n + 1 - k) * ta * tb’ by rw_tac std_ss[leibniz_up_entry] >>
+  ‘_ = (n + 1 - k) * tb * tb - (n + 1 - k) * tb * ta’ by metis_tac[MULT_ASSOC, MULT_COMM] >>
+  ‘_ = (n + 1 - k) * tb * (tb - ta)’ by rw_tac std_ss[LEFT_SUB_DISTRIB] >>
+  ‘_ = (k + 1) * tc * (tb - ta)’ by rw_tac std_ss[leibniz_right_entry] >>
+  ‘k + 1 <> 0’ by decide_tac >>
+  metis_tac[MULT_LEFT_CANCEL, MULT_ASSOC]
+QED
 
 (* Theorem: lcm tb ta = lcm tb tc *)
 (* Proof:
@@ -4494,10 +4495,10 @@ val lcm_run_monotone = store_thm(
     and 0 < lcm_run (n + 1)  ]              by lcm_run_pos
      so lcm_run n <= lcm_run (n + 1)        by DIVIDES_LE
 *)
-val lcm_run_monotone = store_thm(
-  "lcm_run_monotone",
-  ``!n. lcm_run n <= lcm_run (n + 1)``,
-  rw[lcm_run_divisors, lcm_run_pos, DIVIDES_LE]);
+Theorem lcm_run_monotone[allow_rebind]:
+  !n. lcm_run n <= lcm_run (n + 1)
+Proof rw[lcm_run_divisors, lcm_run_pos, DIVIDES_LE]
+QED
 
 (* Theorem: 2 ** n <= lcm_run (n + 1) *)
 (* Proof:
@@ -4591,64 +4592,6 @@ val lcm_run_lower_even = store_thm(
   `2 * (n + 1) = 2 * n + 1 + 1` by decide_tac >>
   metis_tac[lcm_run_monotone, lcm_run_lower_odd, LESS_EQ_TRANS]);
 
-(* Theorem: 7 <= n ==> 2 ** n <= lcm_run n *)
-(* Proof:
-   If ODD n, ?k. n = SUC (2 * k)       by ODD_EXISTS,
-      When 5 <= 7 <= n = 2 * k + 1     by ADD1
-           2 <= k                      by arithmetic
-       and lcm_run n
-         = lcm_run (2 * k + 1)         by notation
-         >= k * 4 ** k                 by lcm_run_lower_odd
-         >= 2 * 4 ** k                 by k >= 2, LESS_MONO_MULT
-          = 2 * 2 ** (2 * k)           by EXP_EXP_MULT
-          = 2 ** SUC (2 * k)           by EXP
-          = 2 ** n                     by n = SUC (2 * k)
-   If EVEN n, ?m. n = 2 * m            by EVEN_EXISTS
-      Note ODD 7 /\ ODD 9              by arithmetic
-      If n = 8,
-         LHS = 2 ** 8 = 256,
-         RHS = lcm_run 8 = 840         by lcm_run_small
-         Hence true.
-      Otherwise, 10 <= n               by 7 <= n, n <> 7, n <> 8, n <> 9
-      Since 0 < n, 0 < m               by MULT_EQ_0
-         so ?k. m = SUC k              by num_CASES
-       When 10 <= n = 2 * (k + 1)      by ADD1
-             4 <= k                    by arithmetic
-       and lcm_run n
-         = lcm_run (2 * (k + 1))       by notation
-         >= k * 4 ** k                 by lcm_run_lower_even
-         >= 4 * 4 ** k                 by k >= 4, LESS_MONO_MULT
-          = 4 ** SUC k                 by EXP
-          = 4 ** m                     by notation
-          = 2 ** (2 * m)               by EXP_EXP_MULT
-          = 2 ** n                     by n = 2 * m
-*)
-val lcm_run_lower_better = store_thm(
-  "lcm_run_lower_better",
-  ``!n. 7 <= n ==> 2 ** n <= lcm_run n``,
-  rpt strip_tac >>
-  Cases_on `ODD n` >| [
-    `?k. n = SUC (2 * k)` by rw[GSYM ODD_EXISTS] >>
-    `2 <= k` by decide_tac >>
-    `2 * 4 ** k <= k * 4 ** k` by rw[LESS_MONO_MULT] >>
-    `lcm_run n = lcm_run (2 * k + 1)` by rw[ADD1] >>
-    `2 ** n = 2 * 2 ** (2 * k)` by rw[EXP] >>
-    `_ = 2 * 4 ** k` by rw[EXP_EXP_MULT] >>
-    metis_tac[lcm_run_lower_odd, LESS_EQ_TRANS],
-    `ODD 7 /\ ODD 9` by rw[] >>
-    `EVEN n /\ n <> 7 /\ n <> 9` by metis_tac[ODD_EVEN] >>
-    `?m. n = 2 * m` by rw[GSYM EVEN_EXISTS] >>
-    `m <> 0` by decide_tac >>
-    `?k. m = SUC k` by metis_tac[num_CASES] >>
-    Cases_on `n = 8` >-
-    rw[lcm_run_small] >>
-    `4 <= k` by decide_tac >>
-    `4 * 4 ** k <= k * 4 ** k` by rw[LESS_MONO_MULT] >>
-    `lcm_run n = lcm_run (2 * (k + 1))` by rw[ADD1] >>
-    `2 ** n = 4 ** m` by rw[EXP_EXP_MULT] >>
-    `_ = 4 * 4 ** k` by rw[EXP] >>
-    metis_tac[lcm_run_lower_even, LESS_EQ_TRANS]
-  ]);
 
 (* A very good result, another major theorem. *)
 
@@ -4909,9 +4852,9 @@ val lcm_run_odd_factor = store_thm(
      so             k <= lcm_run (2 * n + 1)   by DIVIDES_LE
    Overall n * 4 ** n <= lcm_run (2 * n + 1)   by LESS_EQ_TRANS
 *)
-val lcm_run_lower_odd = store_thm(
-  "lcm_run_lower_odd",
-  ``!n. n * 4 ** n <= lcm_run (2 * n + 1)``,
+Theorem lcm_run_lower_odd[allow_rebind]:
+  !n. n * 4 ** n <= lcm_run (2 * n + 1)
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
@@ -4919,7 +4862,8 @@ val lcm_run_lower_odd = store_thm(
   `4 ** n <= leibniz (2 * n) n` by rw[leibniz_middle_lower] >>
   `n * 4 ** n <= n * leibniz (2 * n) n` by rw[LESS_MONO_MULT, MULT_COMM] >>
   `n * leibniz (2 * n) n <= lcm_run (2 * n + 1)` by rw[lcm_run_odd_factor, lcm_run_pos, DIVIDES_LE] >>
-  rw[LESS_EQ_TRANS]);
+  rw[LESS_EQ_TRANS]
+QED
 
 (* Another direct proof of the same theorem *)
 
@@ -4959,34 +4903,35 @@ val lcm_run_lower_odd = store_thm(
         so n * 4 ** n <= n * leibniz m n      by LESS_MONO_MULT, MULT_COMM
    Overall n * 4 ** n <= lcm_run (2 * n + 1)  by LESS_EQ_TRANS
 *)
-val lcm_run_lower_odd = store_thm(
-  "lcm_run_lower_odd",
-  ``!n. n * 4 ** n <= lcm_run (2 * n + 1)``,
+Theorem lcm_run_lower_odd[allow_rebind]:
+  !n. n * 4 ** n <= lcm_run (2 * n + 1)
+Proof
   rpt strip_tac >>
-  Cases_on `n = 0` >-
+  Cases_on ‘n = 0’ >-
   rw[] >>
-  qabbrev_tac `m = 2 * n` >>
-  `n <= m /\ n + 1 <= m` by rw[Abbr`m`] >>
-  `coprime n (m + 1)` by rw[GCD_EUCLID, Abbr`m`] >>
-  qabbrev_tac `t = triplet (m - 1) n` >>
-  `t.a = leibniz (m - 1) n` by rw[triplet_def, Abbr`t`] >>
-  `t.b = leibniz m n` by rw[triplet_def, Abbr`t`] >>
-  `t.c = leibniz m (n + 1)` by rw[triplet_def, Abbr`t`] >>
-  `MEM t.b (leibniz_horizontal m)` by metis_tac[leibniz_horizontal_mem] >>
-  `MEM t.c (leibniz_horizontal m)` by metis_tac[leibniz_horizontal_mem] >>
-  `POSITIVE (leibniz_horizontal m)` by metis_tac[leibniz_horizontal_pos_alt] >>
-  `lcm t.b t.c <= lcm_run (m + 1)` by metis_tac[leibniz_lcm_property, list_lcm_lower_by_lcm_pair] >>
-  `lcm t.b t.c = n * leibniz m n` by
-  (qabbrev_tac `k = binomial m n` >>
-  `lcm t.b t.c = lcm t.b t.a` by rw[leibniz_triplet_lcm, Abbr`t`] >>
-  `_ = lcm ((m + 1) * k) ((m - n) * k)` by rw[leibniz_def, leibniz_up_alt, Abbr`k`] >>
-  `_ = lcm ((m + 1) * k) (n * k)` by rw[Abbr`m`] >>
-  `_ = n * (m + 1) * k` by rw[LCM_COMMON_COPRIME, LCM_SYM] >>
-  `_ = n * leibniz m n` by rw[leibniz_def, Abbr`k`] >>
+  qabbrev_tac ‘m = 2 * n’ >>
+  ‘n <= m /\ n + 1 <= m’ by rw[Abbr‘m’] >>
+  ‘coprime n (m + 1)’ by rw[GCD_EUCLID, Abbr‘m’] >>
+  qabbrev_tac ‘t = triplet (m - 1) n’ >>
+  ‘t.a = leibniz (m - 1) n’ by rw[triplet_def, Abbr‘t’] >>
+  ‘t.b = leibniz m n’ by rw[triplet_def, Abbr‘t’] >>
+  ‘t.c = leibniz m (n + 1)’ by rw[triplet_def, Abbr‘t’] >>
+  ‘MEM t.b (leibniz_horizontal m)’ by metis_tac[leibniz_horizontal_mem] >>
+  ‘MEM t.c (leibniz_horizontal m)’ by metis_tac[leibniz_horizontal_mem] >>
+  ‘POSITIVE (leibniz_horizontal m)’ by metis_tac[leibniz_horizontal_pos_alt] >>
+  ‘lcm t.b t.c <= lcm_run (m + 1)’ by metis_tac[leibniz_lcm_property, list_lcm_lower_by_lcm_pair] >>
+  ‘lcm t.b t.c = n * leibniz m n’ by
+  (qabbrev_tac ‘k = binomial m n’ >>
+  ‘lcm t.b t.c = lcm t.b t.a’ by rw[leibniz_triplet_lcm, Abbr‘t’] >>
+  ‘_ = lcm ((m + 1) * k) ((m - n) * k)’ by rw[leibniz_def, leibniz_up_alt, Abbr‘k’] >>
+  ‘_ = lcm ((m + 1) * k) (n * k)’ by rw[Abbr‘m’] >>
+  ‘_ = n * (m + 1) * k’ by rw[LCM_COMMON_COPRIME, LCM_SYM] >>
+  ‘_ = n * leibniz m n’ by rw[leibniz_def, Abbr‘k’] >>
   rw[]) >>
-  `4 ** n <= leibniz m n` by rw[leibniz_middle_lower, Abbr`m`] >>
-  `n * 4 ** n <= n * leibniz m n` by rw[LESS_MONO_MULT] >>
-  metis_tac[LESS_EQ_TRANS]);
+  ‘4 ** n <= leibniz m n’ by rw[leibniz_middle_lower, Abbr‘m’] >>
+  ‘n * 4 ** n <= n * leibniz m n’ by rw[LESS_MONO_MULT] >>
+  metis_tac[LESS_EQ_TRANS]
+QED
 
 (* Theorem: ODD n ==> (2 ** n <= lcm_run n <=> 5 <= n) *)
 (* Proof:
@@ -6251,9 +6196,9 @@ val lcm_run_divides_property_alt = store_thm(
             = 4 ** n                       by n = 2 * m + 1
          Hence lcm_run n <= 4 ** n.
 *)
-val lcm_run_upper_bound = store_thm(
-  "lcm_run_upper_bound",
-  ``!n. lcm_run n <= 4 ** n``,
+Theorem lcm_run_upper_bound[allow_rebind]:
+  !n. lcm_run n <= 4 ** n
+Proof
   completeInduct_on `n` >>
   Cases_on `EVEN n` >| [
     Cases_on `n = 0` >-
@@ -6285,7 +6230,8 @@ val lcm_run_upper_bound = store_thm(
     `c <= 4 ** m * 4 ** (m + 1)` by rw[LESS_MONO_MULT2, Abbr`c`] >>
     `4 ** m * 4 ** (m + 1) = 4 ** n` by metis_tac[EXP_ADD, ADD_ASSOC, TIMES2] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* This is the original proof of the upper bound. *)
 
