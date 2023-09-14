@@ -1169,17 +1169,16 @@ val monoid_inv_op_invertible = store_thm(
 
 (* Theorem: [Closure for Invertibles] x, y IN G* ==> x * y IN G* *)
 (* Proof: inverse of (x * y) = (inverse of y) * (inverse of x)  *)
-val monoid_inv_op_invertible = store_thm(
-  "monoid_inv_op_invertible",
-  ``!g:'a monoid. Monoid g ==> !x y. x IN G* /\ y IN G* ==> x * y IN G*``,
+Theorem monoid_inv_op_invertible[allow_rebind,simp]:
+  !g:'a monoid. Monoid g ==> !x y. x IN G* /\ y IN G* ==> x * y IN G*
+Proof
   rw[monoid_invertibles_def] >>
   qexists_tac `y'' * y'` >>
   rw_tac std_ss[monoid_op_element] >| [
     `x * y * (y'' * y') = x * ((y * y'') * y')` by rw[monoid_assoc],
     `y'' * y' * (x * y) = y'' * ((y' * x) * y)` by rw[monoid_assoc]
-  ] >> rw_tac std_ss[monoid_lid]);
-
-val _ = export_rewrites ["monoid_inv_op_invertible"];
+  ] >> rw_tac std_ss[monoid_lid]
+QED
 
 (* Theorem: x IN G* ==> |/ x IN G* *)
 (* Proof: by monoid_inv_def. *)

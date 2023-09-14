@@ -1622,17 +1622,20 @@ val finite_cyclic_group_add_mod_iso = store_thm(
                                                       by group_iso_sym
      or ?f. GroupIso f g1 g2                          by group_iso_trans
 *)
-val finite_cyclic_group_uniqueness = store_thm(
-  "finite_cyclic_group_uniqueness",
-  ``!g1:'a group g2:'b group. cyclic g1 /\ cyclic g2 /\ FINITE g1.carrier /\ FINITE g2.carrier /\
-        (CARD g1.carrier = CARD g2.carrier) ==> ?f. GroupIso f g1 g2``,
+Theorem finite_cyclic_group_uniqueness[allow_rebind]:
+  !g1:'a group g2:'b group.
+    cyclic g1 /\ cyclic g2 /\ FINITE g1.carrier /\ FINITE g2.carrier /\
+    (CARD g1.carrier = CARD g2.carrier) ==>
+    ?f. GroupIso f g1 g2
+Proof
   rpt strip_tac >>
-  `Group g1 /\ FiniteGroup g1` by rw[cyclic_group, FiniteGroup_def] >>
-  `0 < CARD g1.carrier` by rw[finite_group_card_pos] >>
-  `Group (add_mod (CARD g1.carrier))` by rw[add_mod_group] >>
-  `GroupIso (\n. g1.exp (cyclic_gen g1) n) (add_mod (CARD g1.carrier)) g1` by rw[finite_cyclic_group_add_mod_iso] >>
-  `GroupIso (\n. g2.exp (cyclic_gen g2) n) (add_mod (CARD g2.carrier)) g2` by rw[finite_cyclic_group_add_mod_iso] >>
-  metis_tac[group_iso_sym, group_iso_trans]);
+  ‘Group g1 /\ FiniteGroup g1’ by rw[cyclic_group, FiniteGroup_def] >>
+  ‘0 < CARD g1.carrier’ by rw[finite_group_card_pos] >>
+  ‘Group (add_mod (CARD g1.carrier))’ by rw[add_mod_group] >>
+  ‘GroupIso (\n. g1.exp (cyclic_gen g1) n) (add_mod (CARD g1.carrier)) g1’ by rw[finite_cyclic_group_add_mod_iso] >>
+  ‘GroupIso (\n. g2.exp (cyclic_gen g2) n) (add_mod (CARD g2.carrier)) g2’ by rw[finite_cyclic_group_add_mod_iso] >>
+  metis_tac[group_iso_sym, group_iso_trans]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Isomorphism between Cyclic Groups                                         *)

@@ -898,9 +898,6 @@ val ring_num_suc = store_thm(
   rw[ring_add_comm]);
 
 (* Theorem: ##0 = #0 *)
-(* Proof: by group_exp_0. *)
-val ring_num_0 = lift_group_exp_def "0" "0";
-(* > val ring_num_0 = |- !r. Ring r ==> (##0 = #0) : thm *)
 
 (*
 ringTheory.ring_num_0   has Ring r ==> ##0 = #0   by lifting.
@@ -914,9 +911,9 @@ val it = |- ##c = FUNPOW ($+ #1) c #0: thm
 *)
 
 (* Obtain a better theorem *)
-val ring_num_0 = save_thm("ring_num_0",
-    monoid_exp_def |> ISPEC ``(r:'a ring).sum`` |> ISPEC ``#1`` |> ISPEC ``0``
-                   |> SIMP_RULE bool_ss [FUNPOW_0] |> GEN ``r:'a ring``);
+Theorem ring_num_0[simp] =
+    monoid_exp_def |> ISPEC “(r:'a ring).sum” |> ISPEC “#1” |> ISPEC “0”
+                   |> SIMP_RULE bool_ss [FUNPOW_0] |> GEN “r:'a ring”
 (* val ring_num_0 = |- !r. ##0 = #0: thm *)
 
 (* Obtain another theorem *)
@@ -931,7 +928,7 @@ val ring_num_one = save_thm("ring_num_one",
 val ring_num_1 = lift_group_exp "1" "1";
 (* > val ring_num_1 = |- !r. Ring r ==> (##1 = #1) : thm *)
 
-val _ = export_rewrites ["ring_num_0", "ring_num_1"];
+val _ = export_rewrites ["ring_num_1"];
 
 (* Theorem: ##2 = #1 + #1 *)
 (* Proof:
@@ -1006,26 +1003,17 @@ val ring_exp_element = lift_monoid_thm "exp_element" "exp_element";
 val _ = export_rewrites ["ring_exp_element"];
 
 (* Theorem: x ** 0 = #1 *)
-(* Proof: by monoid_exp_0. *)
-val ring_exp_0 = lift_monoid_def "exp_0" "exp_0";
-(* > val ring_exp_0 = |- !r. Ring r ==> !x. x IN R ==> (x ** 0 = #1) : thm *)
 (* Note: monoid_exp_0 |- !g x. x ** 0 = #e *)
-val ring_exp_0 = store_thm(
-  "ring_exp_0",
-  ``!x:'a. x ** 0 = #1``,
-  rw[]);
+Theorem ring_exp_0[simp]: !x:'a. x ** 0 = #1
+Proof rw[]
+QED
 
 (* Theorem: x ** (SUC n) = x * x ** n  *)
 (* Proof: by monoid_exp_SUC. *)
-val ring_exp_SUC = lift_monoid_def "exp_SUC" "exp_SUC";
-(* > val ring_exp_SUC = |- !r n. Ring r ==> !x. x IN R ==> (x ** SUC n = x * x ** n) : thm *)
 (* Note: monoid_exp_SUC |- !g x n. x ** SUC n = x * x ** n *)
-val ring_exp_SUC = store_thm(
-  "ring_exp_SUC",
-  ``!x n. x ** SUC n = x * x ** n``,
-  rw[]);
-
-val _ = export_rewrites ["ring_exp_0", "ring_exp_SUC"];
+Theorem ring_exp_SUC[simp]: !x n. x ** SUC n = x * x ** n
+Proof rw[]
+QED
 
 (* Theorem: x ** SUC n = x ** n * x *)
 (* Proof: by ring_exp_SUC and ring_mult_comm. *)
@@ -1119,11 +1107,6 @@ val _ = export_rewrites ["ring_mult_ladd"];
 
 (* Theorem: x * (y + z) = x * y + x * z /\ (y + z) * x = y * x + z * x *)
 (* Proof: by ring_mult_ladd and ring_mult_radd. *)
-val ring_mult_add = save_thm("ring_mult_add", CONJ ring_mult_radd ring_mult_ladd);
-(* > val ring_mult_add =
-    |- (!r. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y + z) = x * y + x * z)) /\
-        !r. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y + z) * x = y * x + z * x) : thm  *)
-(* How to combine the Ring r part ? *)
 val ring_mult_add = save_thm("ring_mult_add",
     CONJ (ring_mult_radd |> SPEC_ALL |> UNDISCH |> SPEC_ALL |> UNDISCH)
          (ring_mult_ladd |> SPEC_ALL |> UNDISCH |> SPEC_ALL |> UNDISCH)

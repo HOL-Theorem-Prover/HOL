@@ -806,16 +806,6 @@ val ring_homo_inv = store_thm(
   `unit_ (f x)` by metis_tac[ring_homo_unit] >>
   rw[ring_unit_rinv_unique]);
 
-(* Theorem: (r ~r~ r_) f ==> !x. unit x ==> |/_ (f x) IN R_ *)
-(* Proof:
-   Note unit_ (f x)        by ring_homo_unit
-   Thus |/_ (f x) IN R_    by ring_unit_inv_element
-*)
-val ring_homo_unit_inv_element = store_thm(
-  "ring_homo_unit_inv_element",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !x. unit x ==> |/_ (f x) IN R_``,
-  metis_tac[ring_homo_unit, ring_unit_inv_element]);
-
 (* ------------------------------------------------------------------------- *)
 (* Ring Isomorphisms.                                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -1578,35 +1568,11 @@ val subring_unit_inv_nonzero = store_thm(
       = #1                    by subring_one
    Hence z = |/x              by ring_unit_rinv_unique
 *)
-val subring_unit_inv = store_thm(
-  "subring_unit_inv",
-  ``!(r s):'a ring. s <= r ==> !x. Unit s x ==> (Inv s x = |/ x)``,
-  rpt strip_tac >>
-  qabbrev_tac `z = Inv s x` >>
-  `x IN B` by rw[ring_unit_element] >>
-  `z IN B` by rw[ring_unit_inv_element, Abbr`z`] >>
-  `x IN R /\ z IN R` by metis_tac[subring_element] >>
-  `s.prod.op x z = s.prod.id` by rw[ring_unit_rinv, Abbr`z`] >>
-  `x * z = #1` by metis_tac[subring_mult, subring_one] >>
-  metis_tac[subring_unit, ring_unit_rinv_unique]);
-
-(* Better proof of the same theorem *)
-
-(* Theorem: s <= r ==> !x. Unit s x ==> (Inv s x = |/ x) *)
-(* Proof:
-   Note s <= r ==> RingHomo I s r   by subring_def
-   Thus |/ (I x) = I (Inv s x)      by ring_homo_unit_inv
-     or     |/ x = Inv s x          by I_THM
-
-> ring_homo_unit_inv |> ISPEC ``s:'a ring`` |> ISPEC ``r:'a ring``;
-val it = |- !f. (s ~r~ r) f ==> !x. Unit s x ==> |/ (f x) = f (Inv s x): thm
-> ring_homo_inv |> ISPEC ``s:'a ring`` |> ISPEC ``r:'a ring``;
-val it = |- !f. (s ~r~ r) f ==> !x. Unit s x ==> f (Inv s x) = |/ (f x): thm
-*)
-val subring_unit_inv = store_thm(
-  "subring_unit_inv",
-  ``!(r s):'a ring. s <= r ==> !x. Unit s x ==> (Inv s x = |/ x)``,
-  metis_tac[ring_homo_unit_inv, subring_def, combinTheory.I_THM]);
+Theorem subring_unit_inv:
+  !(r s):'a ring. s <= r ==> !x. Unit s x ==> (Inv s x = |/ x)
+Proof
+  metis_tac[ring_homo_unit_inv, subring_def, combinTheory.I_THM]
+QED
 
 (* Theorem: subring s r /\ RingIso f r r_ ==> RingHomo f s r_ *)
 (* Proof:
@@ -2136,7 +2102,8 @@ QED
            = LHS
 *)
 Theorem ring_inj_image_ring:
-  !(r:'a ring) (f:'a -> 'b). Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f)
+  !(r:'a ring) (f:'a -> 'b).
+    Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f)
 Proof
   rpt strip_tac >>
   rw_tac std_ss[Ring_def, ring_inj_image_alt] >-
@@ -2364,58 +2331,6 @@ Proof
   rw[ring_mult_comm]
 QED
 
-(* Theorem: Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f) *)
-(* Proof:
-   Let s = IMAGE f R.
-   Then BIJ f R s                              by INJ_IMAGE_BIJ_ALT
-     so INJ f R s                              by BIJ_DEF
-   Note !x. x IN R ==> f x IN s                by INJ_DEF
-    and !x. x IN s ==> LINV f R x IN R         by BIJ_LINV_ELEMENT
-   also !x. x IN R ==> (LINV f R (f x) = x)    by BIJ_LINV_THM
-    and !x. x IN s ==> (f (LINV f R x) = x)    by BIJ_LINV_THM
-
-   Let xx = LINV f R x, yy = LINV f R y, zz = LINV f R z.
-   By Ring_def, this is to show:
-   (1) AbelianGroup (ring_inj_image r f).sum, true by ring_inj_image_sum_abelian_group
-   (2) AbelianMonoid (ring_inj_image r f).prod, true by ring_inj_image_prod_abelian_monoid
-   (3) (ring_inj_image r f).sum.carrier = (ring_inj_image r f).carrier, true by ring_inj_image_def
-   (4) (ring_inj_image r f).prod.carrier = (ring_inj_image r f).carrier, true by ring_inj_image_def
-   (5) x IN s /\ y IN s /\ z IN s ==>
-       f (xx * LINV f R (f (yy + zz))) = f (LINV f R (f (xx * yy)) + LINV f R (f (xx * zz)))
-       Note LINV f R (f (yy + zz)) = yy + zz   by ring_add_element
-        and LINV f R (f (xx * yy)) = xx * yy   by ring_mult_element
-        and LINV f R (f (xx * zz)) = xx * zz   by ring_mult_element
-       The result follows                      by ring_mult_radd
-*)
-Theorem ring_inj_image_ring:
-  !(r:'a ring) f. Ring r /\ INJ f R univ(:'b) ==> Ring (ring_inj_image r f)
-Proof
-  rpt strip_tac >>
-  rw_tac std_ss[Ring_def] >-
-  rw[ring_inj_image_sum_abelian_group] >-
-  rw[ring_inj_image_prod_abelian_monoid] >-
-  rw[ring_inj_image_def] >-
-  rw[ring_inj_image_def] >>
-  pop_assum mp_tac >>
-  pop_assum mp_tac >>
-  pop_assum mp_tac >>
-  rw_tac std_ss[ring_inj_image_def, GSPECIFICATION] >>
-  qabbrev_tac `s = IMAGE f R` >>
-  qabbrev_tac `xx = LINV f R x` >>
-  qabbrev_tac `yy = LINV f R y` >>
-  qabbrev_tac `zz = LINV f R z` >>
-  `BIJ f R s` by rw[INJ_IMAGE_BIJ_ALT, Abbr`s`] >>
-  `INJ f R s` by metis_tac[BIJ_DEF] >>
-  `!x. x IN R ==> f x IN s` by metis_tac[INJ_DEF] >>
-  `!x. x IN s ==> LINV f R x IN R` by metis_tac[BIJ_LINV_ELEMENT] >>
-  `!x. x IN R ==> (LINV f R (f x) = x)` by metis_tac[BIJ_LINV_THM] >>
-  `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
-  `LINV f R (f (yy + zz)) = yy + zz` by metis_tac[ring_add_element] >>
-  `LINV f R (f (xx * yy)) = xx * yy` by metis_tac[ring_mult_element] >>
-  `LINV f R (f (xx * zz)) = xx * zz` by metis_tac[ring_mult_element] >>
-  metis_tac[ring_mult_radd]
-QED
-(* Another proof of a previous theorem. *)
 
 (* Theorem: Ring r /\ INJ f R univ(:'b) ==> GroupHomo f r.sum (ring_inj_image r f).sum *)
 (* Proof:

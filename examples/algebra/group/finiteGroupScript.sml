@@ -943,11 +943,11 @@ val subgroup_cross_card_eqn = store_thm(
     = CARD (s1 o s2) * CARD (s1 INTER s2)              by MULT_COMM
     = CARD (h1 o h2).carrier * CARD (s1 INTER s2)      by subgroup_cross_property
 *)
-val subgroup_cross_card_eqn = store_thm(
-  "subgroup_cross_card_eqn",
-  ``!(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
+Theorem subgroup_cross_card_eqn[allow_rebind]:
+  !(g h1 h2):'a group. h1 <= g /\ h2 <= g /\ FINITE G ==>
    let (s1 = h1.carrier) in let (s2 = h2.carrier) in
-    (CARD (h1 o h2).carrier * CARD (s1 INTER s2) = (CARD s1) * (CARD s2))``,
+    (CARD (h1 o h2).carrier * CARD (s1 INTER s2) = (CARD s1) * (CARD s2))
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `s = s1 CROSS s2` >>
   `FINITE s1 /\ FINITE s2` by metis_tac[subgroup_carrier_subset, SUBSET_FINITE] >>
@@ -963,7 +963,8 @@ val subgroup_cross_card_eqn = store_thm(
   `_ = SIGMA (CARD o t) (s1 o s2)` by metis_tac[SUM_IMAGE_INJ_o, subset_cross_preimage_inj] >>
   `_ = SIGMA (\z. CARD (s1 INTER s2)) (s1 o s2)` by rw[SUM_IMAGE_CONG] >>
   `_ = CARD (s1 INTER s2) * CARD (s1 o s2)` by rw[SIGMA_CONSTANT] >>
-  rw[subgroup_cross_property]);
+  rw[subgroup_cross_property]
+QED
 
 (* Theorem: h1 <= g /\ h2 <= g /\ FINITE G ==>
             let (s1 = h1.carrier) in let (s2 = h2.carrier) in

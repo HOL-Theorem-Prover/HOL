@@ -571,25 +571,6 @@ val weak_every_mem = store_thm(
   ``!r:'a ring. !p. weak p <=> (!x. MEM x p ==> x IN R)``,
   rw[weak_every_element, EVERY_MEM]);
 
-(* Theorem: weak p /\ p <> |0| ==> last p IN R *)
-(* Proof: by induction on p, with p <> [] by poly_zero.
-   Base: weak [] /\ [] <> [] ==> LAST [] IN R
-      true by contradiction: [] <> [].
-   Step: weak p /\ p <> [] ==> LAST p IN R ==>
-              weak (h::p) /\ h::p <> [] ==> LAST (h::p) IN R
-      weak (h::p) means h IN R and weak p   by weak_cons
-      If p = [], LAST (h::p) = LAST [h] = h IN R  by LAST_CONS
-      If p <> [], induction hypothesis gives LAST p IN R
-      and LAST (h::p) = LAST p IN R         by LAST_CONS.
-*)
-val weak_last_element = store_thm(
-  "weak_last_element",
-  ``!p. weak p /\ p <> |0| ==> LAST p IN R``,
-  rw_tac std_ss[poly_zero] >>
-  Induct_on `p` >-
-  rw_tac std_ss[] >>
-  metis_tac[weak_cons, LAST_CONS, list_CASES]);
-
 (* A better proof without induction. *)
 
 (* Theorem: weak p /\ p <> |0| ==> (LAST p) IN R *)
@@ -598,12 +579,14 @@ val weak_last_element = store_thm(
    Thus ?h t. h IN R /\ weak t /\ (p = h::t)   by weak_cons, list_CASES
     and (LAST p) IN R                          by MEM_LAST, weak_every_mem
 *)
-val weak_last_element = store_thm(
-  "weak_last_element",
-  ``!p. weak p /\ p <> |0| ==> (LAST p) IN R``,
+Theorem weak_last_element:
+  !p. weak p /\ p <> |0| ==> (LAST p) IN R
+Proof
   rpt strip_tac >>
-  `?h t. h IN R /\ weak t /\ (p = h::t)` by metis_tac[list_CASES, weak_cons, poly_zero] >>
-  metis_tac[MEM_LAST, weak_every_mem]);
+  ‘?h t. h IN R /\ weak t /\ (p = h::t)’
+    by metis_tac[list_CASES, weak_cons, poly_zero] >>
+  metis_tac[MEM_LAST, weak_every_mem]
+QED
 
 (* Theorem: weak p /\ p <> |0| ==> weak (FRONT p) /\ weak [LAST p] *)
 (* Proof:

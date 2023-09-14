@@ -157,22 +157,13 @@ val _ = ParseExtras.tight_equality();
      <=>  x IN s iff x IN s                                                  FOL
      <=>  T                                                                  FOL
 *)
-val SURJ_IMAGE_PREIMAGE = store_thm(
-  "SURJ_IMAGE_PREIMAGE",
-  ``!f a b s. s SUBSET b /\ SURJ f a b ==> (IMAGE f (PREIMAGE f s INTER a) = s)``,
-  rpt strip_tac >>
-  simp[EXTENSION, PREIMAGE_def] >>
-  strip_tac >>
-  fs[SURJ_DEF] >>
-  eq_tac >-
-  metis_tac[] >>
-  metis_tac[SUBSET_DEF]);
-(* original *)
-val SURJ_IMAGE_PREIMAGE = store_thm(
-    "SURJ_IMAGE_PREIMAGE",
-    ``!f a b. s SUBSET b /\  SURJ f a b ==> (IMAGE f(PREIMAGE f s INTER a) = s)``,
-    rpt strip_tac >> simp[EXTENSION, PREIMAGE_def] >> strip_tac >> fs[SURJ_DEF] >>
-    eq_tac >> rpt strip_tac >> metis_tac[SUBSET_DEF]);
+
+Theorem SURJ_IMAGE_PREIMAGE:
+  !f a b. s SUBSET b /\  SURJ f a b ==> (IMAGE f(PREIMAGE f s INTER a) = s)
+Proof
+  rpt strip_tac >> simp[EXTENSION, PREIMAGE_def] >> strip_tac >> fs[SURJ_DEF] >>
+  eq_tac >> rpt strip_tac >> metis_tac[SUBSET_DEF]
+QED
 
 (* Add some facts about cardinal arithmetic of groups. *)
 
@@ -337,22 +328,15 @@ val preimage_group_group = store_thm(
         SUBSET g1.carrier, true                              by preimage_group_def
    (3) (preimage_group f g1 g2 h.carrier).op = g1.op, true   by preimage_group_def
 *)
-val preimage_subgroup_subgroup = store_thm(
-  "preimage_subgroup_subgroup",
-  ``!f g1:'a group g2:'b group h. Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g2 ==>
-            preimage_group f g1 g2 h.carrier <= g1``,
-  rpt strip_tac >>
-  simp[Subgroup_def] >>
-  rpt strip_tac >-
-  metis_tac[preimage_group_group] >-
-  rw[preimage_group_def] >>
-  rw[preimage_group_def]);
-val preimage_subgroup_subgroup = store_thm(
-    "preimage_subgroup_subgroup",
-    ``!f g1:'a group g2:'b group h. Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g2 ==>
-               preimage_group f g1 g2 h.carrier <= g1``,
-    rpt strip_tac >> simp[Subgroup_def] >> rpt strip_tac >- metis_tac[preimage_group_group] >>
-    rw[preimage_group_def]);
+Theorem preimage_subgroup_subgroup:
+  !f g1:'a group g2:'b group h.
+    Group g1 /\ Group g2 /\ GroupHomo f g1 g2 /\ h <= g2 ==>
+    preimage_group f g1 g2 h.carrier <= g1
+Proof
+  rpt strip_tac >> simp[Subgroup_def] >> rpt strip_tac
+  >- metis_tac[preimage_group_group] >>
+  rw[preimage_group_def]
+QED
 
 (* This is Lemma 2 *)
 
@@ -595,31 +579,19 @@ val preimage_image_subset = store_thm(
        (2) h1.carrier SUBSET PREIMAGE f (IMAGE f h1.carrier) INTER g1.carrier
            This is true                   by subset_preimage_image
 *)
-val bij_corres = store_thm(
-  "bij_corres",
-  ``!f g1:'a group g2 h1 h2.
-         Group g1 /\ Group g2 /\ h1 <= g1 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\
-            SURJ f g1.carrier g2.carrier /\ kernel f g1 g2 SUBSET h1.carrier ==>
-            IMAGE f (PREIMAGE f h2.carrier INTER g1.carrier) = h2.carrier /\
-            PREIMAGE f (IMAGE f h1.carrier) INTER g1.carrier = h1.carrier``,
-  rpt strip_tac >-
-  metis_tac[image_preimage_group] >>
-  (irule SUBSET_ANTISYM >> rpt conj_tac) >-
-  metis_tac[preimage_image_subset] >>
-  metis_tac[subset_preimage_image]);
-(* original *)
-val bij_corres = store_thm(
-    "bij_corres",
-    ``!f g1:'a group g2 h1 h2. Group g1 /\ Group g2 /\ h1 <= g1 /\ h2 <= g2 /\
-         GroupHomo f g1 g2 /\ SURJ f g1.carrier g2.carrier /\ kernel f g1 g2 SUBSET h1.carrier ==>
-            IMAGE f (PREIMAGE f h2.carrier INTER g1.carrier) = h2.carrier /\
-            PREIMAGE f (IMAGE f h1.carrier) INTER g1.carrier = h1.carrier``,
-    rpt strip_tac >- metis_tac[image_preimage_group] >>
-    `PREIMAGE f (IMAGE f h1.carrier) INTER g1.carrier SUBSET h1.carrier /\
-     h1.carrier SUBSET PREIMAGE f (IMAGE f h1.carrier) INTER g1.carrier` suffices_by metis_tac[SET_EQ_SUBSET] >>
-    strip_tac >-
-    metis_tac[preimage_image_subset] >-
-    metis_tac[subset_preimage_image]);
+Theorem bij_corres:
+  !f g1:'a group g2 h1 h2.
+    Group g1 /\ Group g2 /\ h1 <= g1 /\ h2 <= g2 /\ GroupHomo f g1 g2 /\
+    SURJ f g1.carrier g2.carrier /\ kernel f g1 g2 SUBSET h1.carrier ==>
+    IMAGE f (PREIMAGE f h2.carrier INTER g1.carrier) = h2.carrier /\
+    PREIMAGE f (IMAGE f h1.carrier) INTER g1.carrier = h1.carrier
+Proof
+  rpt strip_tac
+  >- metis_tac[image_preimage_group] >>
+  irule SUBSET_ANTISYM >> rpt conj_tac
+  >- metis_tac[preimage_image_subset] >>
+  metis_tac[subset_preimage_image]
+QED
 
 (* This is Lemma 5 *)
 
@@ -710,26 +682,18 @@ val image_iso_preimage_quotient = store_thm(
     ==> FINITE (IMAGE f (preimage_group f g1 g2 h.carrier).carrier)          by IMAGE_FINITE
       = FINITE (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier  by homo_image_def
 *)
-val finite_homo_image = store_thm(
-  "finite_homo_image",
-  ``!f g1:'a group g2 h.FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
-          FINITE (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier``,
+Theorem finite_homo_image:
+  !f g1:'a group g2 h.
+    FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
+    FINITE (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier
+Proof
   rpt strip_tac >>
   fs[homo_image_def] >>
   irule IMAGE_FINITE >>
   fs[preimage_group_def] >>
   irule FINITE_INTER >>
-  metis_tac[FiniteGroup_def]);
-(* original *)
-val finite_homo_image = store_thm(
-    "finite_homo_image",
-    ``!f g1:'a group g2 h.FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==> FINITE (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier``,
-    rpt strip_tac >> fs[homo_image_def] >>
-    `FINITE (preimage_group f g1 g2 h.carrier).carrier` suffices_by fs[IMAGE_FINITE] >>
-    fs[preimage_group_def] >>
-    `(PREIMAGE f h.carrier ∩ g1.carrier) SUBSET g1.carrier` by fs[INTER_SUBSET] >>
-    `FINITE g1.carrier` by metis_tac[FiniteGroup_def] >>
-    metis_tac[SUBSET_FINITE]);
+  metis_tac[FiniteGroup_def]
+QED
 
 (* Theorem: FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
     CARD (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier =
@@ -744,32 +708,20 @@ val finite_homo_image = store_thm(
    Note FINITE t1.carrier                    by finite_homo_image, FiniteGroup g1
    Thus CARD t1.carrier = CARD t2.carrier    by iso_group_same_card
 *)
-val image_preimage_quotient_same_card = store_thm(
-  "image_preimage_quotient_same_card",
-  ``!f g1:'a group g2 h.FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
+Theorem image_preimage_quotient_same_card:
+  !f g1:'a group g2 h.
+    FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
     CARD (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier =
-    CARD (preimage_group f g1 g2 h.carrier / kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier``,
+    CARD
+      (preimage_group f g1 g2 h.carrier /
+       kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier
+Proof
   rpt strip_tac >>
   `Group g1` by metis_tac[finite_group_is_group] >>
   imp_res_tac image_iso_preimage_quotient >>
   `FINITE (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier` by metis_tac[finite_homo_image] >>
-  metis_tac[iso_group_same_card]);
-(* original *)
-val image_preimage_quotient_same_card = store_thm(
-    "image_preimage_quotient_same_card",
-    ``!f g1:'a group g2 h.FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>
-    CARD (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier =
-    CARD (preimage_group f g1 g2 h.carrier / kernel_group f (preimage_group f g1 g2 h.carrier) g2).carrier``,
-    rpt strip_tac >> `Group g1` by metis_tac[finite_group_is_group] >>
-    ` GroupIso
-         (\z. coset (preimage_group f g1 g2 h.carrier)
-                    (CHOICE (preimage f (preimage_group f g1 g2 h.carrier).carrier z))
-                    (kernel f (preimage_group f g1 g2 h.carrier) g2))
-         (homo_image f (preimage_group f g1 g2 h.carrier) g2)
-         (preimage_group f g1 g2 h.carrier /
-          kernel_group f (preimage_group f g1 g2 h.carrier) g2)` by metis_tac[image_iso_preimage_quotient] >>
-    `FINITE (homo_image f (preimage_group f g1 g2 h.carrier) g2).carrier` by metis_tac[finite_homo_image] >>
-    metis_tac[iso_group_same_card]);
+  metis_tac[iso_group_same_card]
+QED
 
 (* Theorem: H SUBSET g1.carrier /\
             GroupHomo f g1 g2 /\ (kernel f g1 g2) SUBSET H ==> kernel f g1 g2 = kernel f h g2 *)

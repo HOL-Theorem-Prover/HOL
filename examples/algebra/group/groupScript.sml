@@ -458,27 +458,21 @@ val group_exp_mult = lift_monoid_thm "exp_mult";
 
 (* Theorem: [Group inverse element] |/ x IN G *)
 (* Proof: by Group_def and monoid_inv_def. *)
-val group_inv_element = store_thm(
-  "group_inv_element",
-  ``!g:'a group. Group g ==> !x. x IN G ==> |/x IN G``,
-  rw[monoid_inv_def]);
+Theorem group_inv_element[simp]:
+  !g:'a group. Group g ==> !x. x IN G ==> |/x IN G
+Proof rw[monoid_inv_def]
+QED
 (* Below is too much effort for a simple theorem. *)
 
 
 val gim = Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT1;
 val ginv = Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT2;
 
-(* Theorem: Group inverse is an element. *)
-val group_inv_element = save_thm("group_inv_element",
-  monoid_inv_def |> SPEC_ALL |> REWRITE_RULE [gim, ginv] |> SPEC_ALL |> UNDISCH_ALL
-                 |> CONJUNCT1 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL);
-(* > val group_inv_element = |- !g. Group g ==> !x. x IN G ==> |/ x IN G : thm *)
-
 (* Theorem: [Group left inverse] |/ x * x = #e *)
 (* Proof: by Group_def and monoid_inv_def. *)
-val group_linv = save_thm("group_linv",
+Theorem group_linv[simp] =
   monoid_inv_def |> SPEC_ALL |> REWRITE_RULE [gim, ginv] |> SPEC_ALL |> UNDISCH_ALL
-                 |> CONJUNCT2 |> CONJUNCT2 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL);
+                 |> CONJUNCT2 |> CONJUNCT2 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL
 (* > val group_linv = |- !g. Group g ==> !x. x IN G ==> ( |/ x * x = #e) : thm *)
 
 (* Theorem: [Group right inverse] x * |/ x = #e *)
@@ -1116,16 +1110,17 @@ val group_including_excluding_eqn = store_thm(
     metis_tac[]
   ]);
 (* better -- Michael's solution *)
-val group_including_excluding_eqn = store_thm(
-  "group_including_excluding_eqn",
-  ``!g:'a group. !z:'a. g including z excluding z =
-      if z IN G then <| carrier := G DELETE z;
-                             op := g.op;
-                             id := g.id |>
-      else g``,
+Theorem group_including_excluding_eqn[allow_rebind]:
+  !g:'a group. !z:'a. g including z excluding z =
+                      if z IN G then <| carrier := G DELETE z;
+                                        op := g.op;
+                                        id := g.id |>
+                      else g
+Proof
   rw[including_def, excluding_def] >>
   rw[monoid_component_equality] >>
-  rw[EXTENSION] >> metis_tac[]);
+  rw[EXTENSION] >> metis_tac[]
+QED
 
 (* Theorem: (g excluding z).op = g.op *)
 (* Proof: by definition. *)

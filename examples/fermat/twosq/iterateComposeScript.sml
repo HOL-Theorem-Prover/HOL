@@ -668,7 +668,7 @@ QED
    <=> FUNPOW (g o f) i x = FUNPOW (f o g) j x          by BIJ_DEF, INJ_EQ_11
    <=> (i + j) MOD p = 0                                by iterate_involute_mod_period, 0 < p
 *)
-Theorem involute_involute_fix_orbit_1:
+Theorem involute_involute_fix_orbit_1[allow_rebind]:
   !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
                   x IN fixes f s /\ p = iterate_period (f o g) x ==>
                  (FUNPOW (f o g) i x = f (FUNPOW (f o g) j x) <=>
@@ -778,7 +778,7 @@ QED
    <=> FUNPOW (f o g) i x = FUNPOW (g o f) (j + 1) x     by FUNPOW
    <=> (i + j + 1) MOD p = 0                             by iterate_involute_mod_period, 0 < p
 *)
-Theorem involute_involute_fix_orbit_2:
+Theorem involute_involute_fix_orbit_2[allow_rebind]:
   !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
                   x IN fixes f s /\ p = iterate_period (f o g) x ==>
                  (FUNPOW (f o g) i x = g (FUNPOW (f o g) j x) <=>

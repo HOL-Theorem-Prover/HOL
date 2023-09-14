@@ -1142,34 +1142,40 @@ val coset_partition_eq_coset_image = store_thm(
    = IMAGE (\z. z) H        by group_lid, subgroup_id
    = H                      by IMAGE_ID
 *)
-val coset_id_eq_subgroup = store_thm(
-  "coset_id_eq_subgroup",
-  ``!(g:'a group) h. h <= g ==> (#e * H = H)``,
+Theorem coset_id_eq_subgroup:
+  !(g:'a group) h. h <= g ==> (#e * H = H)
+Proof
   rw[coset_def, EXTENSION] >>
-  metis_tac[subgroup_property, subgroup_id, group_lid, group_id_element]);
+  metis_tac[subgroup_property, subgroup_id, group_lid, group_id_element]
+QED
 
 (* Michael's proof *)
-val IMAGE_ID_lemma = prove(
-  ``(!x. x IN s ==> (f x = x)) ==> (IMAGE f s = s)``,
-  rw[EXTENSION] >> metis_tac[]);
+Theorem IMAGE_ID_lemma[local]:
+  (!x. x IN s ==> (f x = x)) ==> (IMAGE f s = s)
+Proof rw[EXTENSION] >> metis_tac[]
+QED
 
-val coset_id_eq_subgroup = store_thm(
-  "coset_id_eq_subgroup",
-  ``!(g:'a group) h. h <= g ==> (#e * H = H)``,
+Theorem coset_id_eq_subgroup[allow_rebind]:
+  !(g:'a group) h. h <= g ==> (#e * H = H)
+Proof
   srw_tac[SatisfySimps.SATISFY_ss]
-    [subgroup_property, subgroup_element, IMAGE_ID_lemma, coset_def]);
+         [subgroup_property, subgroup_element, IMAGE_ID_lemma, coset_def]
+QED
 
 (* Rework of proof from outline:
    For the in-line IMAGE_ID', universally qualify all parameters :
    !f s. (!x. x IN s ==> (f x = x)) ==> (IMAGE f s = s)
 *)
-val coset_id_eq_subgroup = store_thm(
-  "coset_id_eq_subgroup",
-  ``!(g:'a group) h. h <= g ==> (#e * H = H)``,
+Theorem coset_id_eq_subgroup[allow_rebind]:
+  !(g:'a group) h. h <= g ==> (#e * H = H)
+Proof
   rpt strip_tac >>
-  (`!f s. (!x. x IN s ==> (f x = x)) ==> (IMAGE f s = s)` by (rw[EXTENSION] >> metis_tac[])) >>
-  `!x. x IN H ==> ((\z. #e * z) x = x)` by metis_tac[subgroup_property, subgroup_element, group_lid] >>
-  full_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss)[coset_def]);
+  ‘!f s. (!x. x IN s ==> (f x = x)) ==> (IMAGE f s = s)’
+    by (rw[EXTENSION] >> metis_tac[]) >>
+  ‘!x. x IN H ==> ((\z. #e * z) x = x)’
+    by metis_tac[subgroup_property, subgroup_element, group_lid] >>
+  full_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss)[coset_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Conjugate of sets and subgroups                                           *)
