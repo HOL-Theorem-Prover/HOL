@@ -972,32 +972,35 @@ val exp_mod_binary_eqn = store_thm(
          = (a ** (2 * HALF n + 1)) MOD m                            by arithmetic
          = (a ** n) MOD m                                           by ODD_HALF
 *)
-val exp_mod_binary_eqn = store_thm(
-  "exp_mod_binary_eqn",
-  ``!m n a. exp_mod_binary a n m = (a ** n) MOD m``,
+Theorem exp_mod_binary_eqn[allow_rebind]:
+  !m n a. exp_mod_binary a n m = (a ** n) MOD m
+Proof
   ntac 2 strip_tac >>
-  Cases_on `m = 0` >-
+  Cases_on ‘m = 0’ >-
   rw[Once exp_mod_binary_def] >>
-  Cases_on `m = 1` >-
+  Cases_on ‘m = 1’ >-
   rw[Once exp_mod_binary_def] >>
-  `1 < m /\ 0 < m` by decide_tac >>
-  completeInduct_on `n` >>
+  ‘1 < m /\ 0 < m’ by decide_tac >>
+  completeInduct_on ‘n’ >>
   rpt strip_tac >>
-  Cases_on `n = 0` >-
+  Cases_on ‘n = 0’ >-
   rw[exp_mod_binary_0, EXP] >>
-  `0 < m` by decide_tac >>
-  `HALF n < n` by rw[HALF_LT] >>
+  ‘0 < m’ by decide_tac >>
+  ‘HALF n < n’ by rw[HALF_LT] >>
   rw[Once exp_mod_binary_def] >| [
-    `((a ** 2) ** HALF n) MOD m = (a ** (2 * HALF n)) MOD m` by rw[EXP_EXP_MULT] >>
-    `_ = (a ** n) MOD m` by rw[GSYM EVEN_HALF, EVEN_MOD2] >>
+    ‘((a ** 2) ** HALF n) MOD m = (a ** (2 * HALF n)) MOD m’
+     by rw[EXP_EXP_MULT] >>
+    ‘_ = (a ** n) MOD m’ by rw[GSYM EVEN_HALF, EVEN_MOD2] >>
     rw[],
-    `ODD n` by rw[ODD_EVEN] >>
-    `(a * (a ** 2) ** HALF n) MOD m = (a * (a ** (2 * HALF n) MOD m)) MOD m` by rw[EXP_EXP_MULT] >>
-    `_ = (a * a ** (2 * HALF n)) MOD m` by metis_tac[MOD_TIMES2, MOD_MOD] >>
-    `_ = (a ** (2 * HALF n + 1)) MOD m` by rw[EXP_ADD] >>
-    `_ = a ** n MOD m` by metis_tac[ODD_HALF] >>
+    ‘ODD n’ by rw[ODD_EVEN] >>
+    ‘(a * (a ** 2) ** HALF n) MOD m = (a * (a ** (2 * HALF n) MOD m)) MOD m’
+      by rw[EXP_EXP_MULT] >>
+    ‘_ = (a * a ** (2 * HALF n)) MOD m’ by metis_tac[MOD_TIMES2, MOD_MOD] >>
+    ‘_ = (a ** (2 * HALF n + 1)) MOD m’ by rw[EXP_ADD] >>
+    ‘_ = a ** n MOD m’ by metis_tac[ODD_HALF] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m *)
 (* Proof:
