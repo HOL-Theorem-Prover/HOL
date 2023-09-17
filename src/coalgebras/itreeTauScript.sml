@@ -973,14 +973,9 @@ Proof
   rpt strip_tac >>
   fs[Once itree_wbisim_cases, itree_bind_thm] >>
   fs[Once $ GSYM itree_wbisim_cases] >>
-  Cases_on ‘u’ >-
-   fs[Once strip_tau_cases] >-
-   (rw[itree_bind_thm] >>
-    qexists_tac ‘(λx. itree_bind (k' x) k)’ >>
-    CONJ_TAC >-
-     (fs[] >> irule itree_bind_vis_strip_tau >> metis_tac[]) >-
-     metis_tac[]) >-
-   (fs[itree_bind_thm] >> metis_tac[])
+  qexists_tac ‘(λx. itree_bind (k' x) k)’ >>
+  rw[itree_bind_vis_strip_tau] >>
+  metis_tac[]
 QED
 
 Theorem itree_bind_resp_t_wbisim:
