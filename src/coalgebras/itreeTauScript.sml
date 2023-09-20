@@ -511,7 +511,7 @@ Theorem itree_bisimulation:
     ?R. R t1 t2 /\
         (!x t. R (Ret x) t ==> t = Ret x) /\
         (!u t. R (Tau u) t ==> ?v. t = Tau v /\ R u v) /\
-        (!a f t. R (Vis a f) t ==> ?b g. t = Vis a g /\ !s. R (f s) (g s))
+        (!a f t. R (Vis a f) t ==> ?g. t = Vis a g /\ !s. R (f s) (g s))
 Proof
   rw [] \\ eq_tac \\ rw []
   THEN1 (qexists_tac ‘(=)’ \\ fs [itree_11])
@@ -580,7 +580,7 @@ Definition itree_bind_def:
                   Ret s =>
                     Ret' s
                 | Tau t =>
-                    Tau'(INR t)
+                    Tau' (INR t)
                 | Vis e g =>
                      Vis' e (INR o g))
            | INL(Vis e g) => Vis' e (INL o g)
@@ -1024,7 +1024,7 @@ Proof
 QED
 
 Theorem itree_bind_resp_wbisim:
-  !a b k1 k2. (itree_wbisim a b) ==> (!r. itree_wbisim (k1 r) (k2 r)) ==>
+  !a b k1 k2. (itree_wbisim a b) /\ (!r. itree_wbisim (k1 r) (k2 r)) ==>
               (itree_wbisim (itree_bind a k1) (itree_bind b k2))
 Proof
   metis_tac[itree_bind_resp_t_wbisim, itree_bind_resp_k_wbisim, itree_wbisim_trans]
