@@ -638,12 +638,6 @@ Proof
   rw[Once itree_unfold,FUN_EQ_THM]
 QED
 
-Theorem itree_bind_left_identity:
-  itree_bind (Ret x) k = k x
-Proof
-  rw[itree_bind_thm]
-QED
-
 Theorem itree_bind_right_identity:
   itree_bind t Ret = t
 Proof
@@ -831,7 +825,7 @@ Triviality itree_wbisim_coind_upto_equiv:
     (?e k k'.
        strip_tau t (Vis e k) /\ strip_tau t' (Vis e k') /\
        !r. R (k r) (k' r) \/ itree_wbisim (k r) (k' r)) \/
-    (?r. strip_tau t (Ret r) /\ strip_tau t' (Ret r))
+    ?r. strip_tau t (Ret r) /\ strip_tau t' (Ret r)
 Proof
   metis_tac[itree_wbisim_cases]
 QED
@@ -963,27 +957,27 @@ QED
 
 Triviality itree_bind_vis_tau_wbisim:
   itree_wbisim (Vis a g) (Tau u) ==>
-  (?e k' k''.
-     strip_tau (itree_bind (Vis a g) k) (Vis e k') /\
-     strip_tau (itree_bind (Tau u) k) (Vis e k'') /\
-     !r. (?t1 t2. itree_wbisim t1 t2 /\
-                  k' r = itree_bind t1 k /\ k'' r = itree_bind t2 k) \/
-         itree_wbisim (k' r) (k'' r))
+  ?e k' k''.
+    strip_tau (itree_bind (Vis a g) k) (Vis e k') /\
+    strip_tau (itree_bind (Tau u) k) (Vis e k'') /\
+    !r. (?t1 t2. itree_wbisim t1 t2 /\
+                 k' r = itree_bind t1 k /\ k'' r = itree_bind t2 k) \/
+        itree_wbisim (k' r) (k'' r)
 Proof
   rpt strip_tac >>
   fs[Once itree_wbisim_cases, itree_bind_thm] >>
   fs[Once $ GSYM itree_wbisim_cases] >>
-  qexists_tac ‘(λx. itree_bind (k' x) k)’ >>
+  qexists_tac ‘λx. itree_bind (k' x) k’ >>
   rw[itree_bind_vis_strip_tau] >>
   metis_tac[]
 QED
 
 Theorem itree_bind_resp_t_wbisim:
-  !a b k. (itree_wbisim a b) ==> (itree_wbisim (itree_bind a k) (itree_bind b k))
+  !a b k. itree_wbisim a b ==> itree_wbisim (itree_bind a k) (itree_bind b k)
 Proof
   rpt strip_tac >>
-  qspecl_then [‘λa b. ?t1 t2. (itree_wbisim t1 t2) /\
-                              a = (itree_bind t1 k) /\ b = (itree_bind t2 k)’]
+  qspecl_then [‘λa b. ?t1 t2. itree_wbisim t1 t2 /\
+                              a = itree_bind t1 k /\ b = itree_bind t2 k’]
               strip_assume_tac itree_wbisim_coind_upto >>
   pop_assum irule >>
   rw[] >-
@@ -1012,10 +1006,10 @@ QED
 
 Theorem itree_bind_resp_k_wbisim:
   !t k1 k2. (!r. itree_wbisim (k1 r) (k2 r)) ==>
-            (itree_wbisim (itree_bind t k1) (itree_bind t k2))
+            itree_wbisim (itree_bind t k1) (itree_bind t k2)
 Proof
   rpt strip_tac >>
-  qspecl_then [‘λa b. ?t. a = (itree_bind t k1) /\ b = (itree_bind t k2)’]
+  qspecl_then [‘λa b. ?t. a = itree_bind t k1 /\ b = itree_bind t k2’]
               strip_assume_tac itree_wbisim_coind_upto >>
   pop_assum irule >>
   rw[] >-
@@ -1024,8 +1018,8 @@ Proof
 QED
 
 Theorem itree_bind_resp_wbisim:
-  !a b k1 k2. (itree_wbisim a b) /\ (!r. itree_wbisim (k1 r) (k2 r)) ==>
-              (itree_wbisim (itree_bind a k1) (itree_bind b k2))
+  !a b k1 k2. itree_wbisim a b /\ (!r. itree_wbisim (k1 r) (k2 r)) ==>
+              itree_wbisim (itree_bind a k1) (itree_bind b k2)
 Proof
   metis_tac[itree_bind_resp_t_wbisim, itree_bind_resp_k_wbisim, itree_wbisim_trans]
 QED
