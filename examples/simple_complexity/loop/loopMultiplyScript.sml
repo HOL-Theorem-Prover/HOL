@@ -1864,29 +1864,6 @@ val multiply_by_length = store_thm(
   ``!b m x. LENGTH (multiply_by b m x) = mop b m x``,
   rw[multiply_by_eqn]);
 
-(* This is the shortest proof. Others are much worse. *)
-
-(* Theorem: LENGTH (multiply_by b m x) = mop b m x *)
-(* Proof:
-   By induction from multiply_by_def.
-   If b <= 1 \/ x = 0 \/ m <= x,
-        LENGTH (multiply_by b m x)
-      = LENGTH []                      by multiply_by_nil
-      = 0 = mop b m x                  by mop_0
-   If 1 < b /\ x <> 0 /\ ~(m <= x)
-        LENGTH (multiply_by b m x)
-      = LENGTH (x::multiply_by b m (b * x))   by multiply_by_cons
-      = SUC (LENGTH multiply_by b m (b * x))  by LENGTH
-      = SUC (mop b m (b * x))                 by induction hypothesis
-      = mop b m x                             by mop_suc
-*)
-val multiply_by_length = store_thm(
-  "multiply_by_length",
-  ``!b m x. LENGTH (multiply_by b m x) = mop b m x``,
-  ho_match_mp_tac (theorem "multiply_by_ind") >>
-  rw[] >>
-  rw[Once multiply_by_def, Once mop_def]);
-
 (* Theorem: 1 < m ==> (LENGTH (doubling m 1) = LOG2 m + if m = 2 ** LOG2 m then 0 else 1) *)
 (* Proof:
      LENGTH (doubling m 1)
@@ -2022,59 +1999,6 @@ val iterating_multiply_eq_loop2_arg = store_thm(
     `_ = MAP (UNCURRY body) ((x,y)::loop2_arg guard modify f (f x) (modify y))` by rw[Abbr`modify`] >>
     metis_tac[loop2_arg_cons]
   ]);
-
-(* ------------------------------------------------------------------------- *)
-
-(* Obtain theorems from general theory *)
-
-(*
-loop_arg_length |> SPEC_ALL |> INST_TYPE [alpha |-> ``:num``]
-                |> Q.INST [`modify` |-> `(\x. b * x)`, `guard` |-> `(\x. x = 0 \/ m <= x)`, `R` |-> `measure (\x. m - x)`]
-               |>  ADD_ASSUM ``1 < b`` |> DISCH_ALL
-               |> SIMP_RULE (srw_ss()) [GSYM mop_eq_loop_count, GSYM multiply_by_eq_loop_arg];
-val it =
-   |- 1 < b ==>
-      (!x. x <> 0 /\ ~(m <= x) ==> m < b * x + (m - x) /\ 0 < m - x) ==>
-      !x. LENGTH (multiply_by b m x) = mop b m x: thm
-*)
-
-(* Theorem: LENGTH (multiply_by b m x) = mop b m x *)
-(* Proof:
-   If b <= 1,
-        LENGTH (multiply_by 0 m x)
-      = LENGTH []                      by multiply_by_nil
-      = 0 = mop 0 m x                  by mop_0
-   If 1 < b,
-   Let guard = (\x. x = 0 \/ m <= x),
-       modify = (\x. b * x),
-       R = measure (\x. m - x).
-   Then WF R                               by WF_measure
-    and !x. ~guard x ==> R (modify x) x    by m - (b * x) < m - x, b <> 0
-     LENGTH (multiply_by b m x)
-   = LENGTH (loop_arg guard modify x)      by multiply_by_eq_loop_arg
-   = loop_count guard modify x             by loop_arg_length
-   = mop b m x                             by mop_eq_loop_count
-*)
-val multiply_by_length = store_thm(
-  "multiply_by_length",
-  ``!b m x. LENGTH (multiply_by b m x) = mop b m x``,
-  rpt strip_tac >>
-  Cases_on `b <= 1` >-
-  rw[multiply_by_nil, mop_0] >>
-  qabbrev_tac `guard = \x. x = 0 \/ m <= x` >>
-  qabbrev_tac `modify = \x. b * x` >>
-  qabbrev_tac `R = measure (\x. m - x)` >>
-  `WF R` by rw[Abbr`R`] >>
-  `!x. ~guard x ==> R (modify x) x` by
-  (rw[Abbr`guard`, Abbr`R`, Abbr`modify`] >>
-  `x < b * x` by rw[] >>
-  decide_tac) >>
-  `LENGTH (multiply_by b m x) = LENGTH (loop_arg guard modify x)` by rw[multiply_by_eq_loop_arg] >>
-  `_ = loop_count guard modify x` by metis_tac[loop_arg_length] >>
-  `_ = mop b m x` by rw[mop_eq_loop_count] >>
-  decide_tac);
-
-(* This just verifieds the previous direct proof by definition. *)
 
 (* ------------------------------------------------------------------------- *)
 (* Multiplying Loop -- original                                              *)

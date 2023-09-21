@@ -159,7 +159,7 @@ open GaussTheory; (* for divisors_has_factor *)
                                     if x < 2 * y then (2 * y - x,y,x) else (x - 2 * y,x,y)
    zagier_x_x_z            |- !x z. x <> 0 ==> zagier (x,x,z) = (x,x,z)
    zagier_involute         |- !x y z. x <> 0 /\ z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
-   zagier_involute_alt     |- !x y z. x * z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
+   zagier_involute_xyz     |- !x y z. x * z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
    zagier_involute_thm     |- !t. FST t <> 0 /\ SND (SND t) <> 0 ==> zagier (zagier t) = t
 
    doublet_def             |- !x y z. doublet (x,y,z) = x * z
@@ -1807,7 +1807,7 @@ QED
 
 (* Theorem: x * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z) *)
 (* Proof: by MULT_EQ_0, zagier_involute. *)
-Theorem zagier_involute_alt0:
+Theorem zagier_involute_xyz:
   !x y z. x * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z)
 Proof
   rw[zagier_involute]

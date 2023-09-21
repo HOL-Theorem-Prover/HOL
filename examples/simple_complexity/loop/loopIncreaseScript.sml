@@ -1741,29 +1741,6 @@ val increase_by_length = store_thm(
   ``!b m x. LENGTH (increase_by b m x) = bop b m x``,
   rw[increase_by_eqn]);
 
-(* This is the shortest proof. Others are much worse. *)
-
-(* Theorem: LENGTH (increase_by b m x) = bop b m x *)
-(* Proof:
-   By induction from increase_by_def.
-   If b = 0 \/ m <= x,
-        LENGTH (increase_by b m x)
-      = LENGTH []                      by increase_by_nil
-      = 0 = bop b m x                  by bop_0
-   If b <> 0 /\ ~(m <= x)
-        LENGTH (increase_by b m x)
-      = LENGTH (x::increase_by b m (x + b))   by increase_by_cons
-      = SUC (LENGTH increase_by b m (x + b))  by LENGTH
-      = SUC (bop b m (x + b))                 by induction hypothesis
-      = bop b m x                             by bop_suc
-*)
-val increase_by_length = store_thm(
-  "increase_by_length",
-  ``!b m x. LENGTH (increase_by b m x) = bop b m x``,
-  ho_match_mp_tac (theorem "increase_by_ind") >>
-  rw[] >>
-  rw[Once increase_by_def, Once bop_def]);
-
 (* Theorem: LENGTH (increasing m c) = m - c *)
 (* Proof:
      LENGTH (increasing m c)
@@ -1890,58 +1867,6 @@ val iterating_increase_eq_loop2_arg = store_thm(
     `_ = MAP (UNCURRY body) ((x,y)::loop2_arg guard modify f (f x) (modify y))` by rw[Abbr`modify`] >>
     metis_tac[loop2_arg_cons]
   ]);
-
-(* ------------------------------------------------------------------------- *)
-
-(* Obtain theorems from general theory *)
-
-(*
-loop_arg_length |> SPEC_ALL |> INST_TYPE [alpha |-> ``:num``]
-                |> Q.INST [`modify` |-> `(\x. x + b)`, `guard` |-> `(\x. m <= x)`, `R` |-> `measure (\x. m - x)`]
-               |>  ADD_ASSUM ``0 < b`` |> DISCH_ALL
-               |> SIMP_RULE (srw_ss()) [GSYM bop_eq_loop_count, GSYM increase_by_eq_loop_arg];
-val it =
-   |- 0 < b ==>
-      (!x. ~(m <= x) ==> m < x + b + (m - x) /\ 0 < m - x) ==>
-      !x.
-          LENGTH (loop_arg (\x. m <= x) (\x. x + b) x) =
-          loop_count (\x. m <= x) (\x. x + b) x: thm
-*)
-
-(* Theorem: LENGTH (increase_by b m x) = bop b m x *)
-(* Proof:
-   If b = 0,
-        LENGTH (increase_by 0 m x)
-      = LENGTH []                      by increase_by_nil
-      = 0 = bop 0 m x                  by bop_0
-   If 0 < b,
-   Let guard = (\x. m <= x),
-       modify = (\x. x + b),
-       R = measure (\x. m - x).
-   Then WF R                               by WF_measure
-    and !x. ~guard x ==> R (modify x) x    by m - (x + b) < m - x, b <> 0
-     LENGTH (increase_by b m x)
-   = LENGTH (loop_arg guard modify x)      by increase_by_eq_loop_arg
-   = loop_count guard modify x             by loop_arg_length
-   = bop b m x                             by bop_eq_loop_count
-*)
-val increase_by_length = store_thm(
-  "increase_by_length",
-  ``!b m x. LENGTH (increase_by b m x) = bop b m x``,
-  rpt strip_tac >>
-  Cases_on `b = 0` >-
-  rw[increase_by_nil, bop_0] >>
-  qabbrev_tac `guard = \x. m <= x` >>
-  qabbrev_tac `modify = \x. x + b` >>
-  qabbrev_tac `R = measure (\x. m - x)` >>
-  `WF R` by rw[Abbr`R`] >>
-  `!x. ~guard x ==> R (modify x) x` by fs[Abbr`guard`, Abbr`R`, Abbr`modify`] >>
-  `LENGTH (increase_by b m x) = LENGTH (loop_arg guard modify x)` by rw[increase_by_eq_loop_arg] >>
-  `_ = loop_count guard modify x` by metis_tac[loop_arg_length] >>
-  `_ = bop b m x` by rw[bop_eq_loop_count] >>
-  decide_tac);
-
-(* This just verifieds the previous direct proof by definition. *)
 
 (* ------------------------------------------------------------------------- *)
 (* Increase Loop -- original                                                 *)

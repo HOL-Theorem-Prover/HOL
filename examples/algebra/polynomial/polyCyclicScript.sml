@@ -779,7 +779,7 @@ val poly_cyclic_cofactor = store_thm(
        or ~((cyclic n) % (X - |1|) = |0|)     by poly_factor_one
     Since pmonic (X - |1|),                   by poly_pmonic_X_sub_c
       and poly (cyclic n)                     by poly_cyclic_poly
-    hence ~ ((X - |1|) pdivides (cyclic n))   by poly_ulead_divides_alt
+    hence ~ ((X - |1|) pdivides (cyclic n))   by poly_divides_alt
 *)
 val poly_cyclic_has_no_factor_unity_1 = store_thm(
   "poly_cyclic_has_no_factor_unity_1",
@@ -794,7 +794,7 @@ val poly_cyclic_has_no_factor_unity_1 = store_thm(
   `~((cyclic n) % (unity 1) = |0|)` by metis_tac[poly_factor_one, poly_unity_1] >>
   `pmonic (unity 1)` by rw_tac std_ss[poly_unity_pmonic, DECIDE ``0 < 1``] >>
   `poly (cyclic n)` by rw[poly_cyclic_poly] >>
-  metis_tac[poly_ulead_divides_alt]);
+  metis_tac[poly_divides_alt]);
 
 (* Theorem: Field r ==> !n. 1 < n ==> ?h. ipoly h /\ h pdivides (cyclic n) *)
 (* Proof:

@@ -936,17 +936,6 @@ val poly_deg_X = store_thm(
   rw[]);
 
 (* Theorem: lead X = #1 *)
-(* Proof: by poly_X_def. *)
-val poly_lead_X = store_thm(
-  "poly_lead_X",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> (lead X = #1)``,
-  rw[]);
-
-(* better than: above poly_lead_X
-   |- !r. Ring r /\ #1 <> #0 ==> (lead X = #1)
-*)
-
-(* Theorem: lead X = #1 *)
 (* Proof:
     lead X
   = lead ( |1| >> 1)   by notation

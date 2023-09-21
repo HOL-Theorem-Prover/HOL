@@ -408,62 +408,6 @@ QED
 
 (* Theorem: FINITE s /\ f involute s /\ g involute s /\
             x IN s /\ p = iterate_period (f o g) x ==>
-            (FUNPOW (f o g) i x = FUNPOW (g o f) j x <=> (i + j) MOD p = 0) *)
-(* Proof:
-   Note f o g PERMUTES s         by involute_involute_permutes
-    and 0 < p                    by iterate_period_pos, FINITE s
-
-   If part: FUNPOW (f o g) i x = FUNPOW (g o f) j x ==> (i + j) MOD p = 0
-        FUNPOW (f o g) (i + j) x
-      = FUNPOW (f o g) (j + i) x               by arithmetic
-      = FUNPOW (f o g) j (FUNPOW (f o g) i x)  by FUNPOW_ADD
-      = FUNPOW (f o g) j (FUNPOW (g o f) j x)  by given
-      = x                                      by involute_funpow_inv, x IN s
-      Thus (i + j) MOD p = 0                   by iterate_period_mod
-
-   Only-if part: (i + j) MOD p = 0 ==> FUNPOW (f o g) i x = FUNPOW (g o f) j x
-      Note FUNPOW (f o g) p x = x      by iterate_period_property, [1]
-        so ?k. (i + j) = k * p         by MOD_EQ_0_DIVISOR, (i + j) MOD p = 0
-      Let y = FUNPOW (f o g) i x.
-      Then y IN s                      by FUNPOW_closure, f o g PERMUTES s
-        FUNPOW (f o g) i x = y
-      = FUNPOW (g o f) j (FUNPOW (f o g) j y)        by involute_funpow_inv, y IN s
-      = FUNPOW (g o f) j (FUNPOW (f o g) (j + i) x)  by FUNPOW_ADD
-      = FUNPOW (g o f) j (FUNPOW (f o g) p x)        by FUNPOW_MULTIPLE, 0 < p
-      = FUNPOW (g o f) j x                           by [1]
-*)
-Theorem iterate_involute_mod_period:
-  !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
-                  x IN s /\ p = iterate_period (f o g) x ==>
-                  (FUNPOW (f o g) i x = FUNPOW (g o f) j x <=> (i + j) MOD p = 0)
-Proof
-  rpt strip_tac >>
-  qabbrev_tac `y = FUNPOW (f o g) i x` >>
-  qabbrev_tac `z = FUNPOW (g o f) j x` >>
-  `f o g PERMUTES s` by rw[involute_involute_permutes] >>
-  `0 < p` by metis_tac[iterate_period_pos] >>
-  (rewrite_tac[EQ_IMP_THM] >> rpt strip_tac) >| [
-    assume_tac involute_funpow_inv >>
-    last_x_assum (qspecl_then [`f`, `g`, `s`, `x`, `j`] strip_assume_tac) >>
-    `FUNPOW (f o g) (i + j) x = FUNPOW (f o g) (j + i) x` by simp[] >>
-    `_ = FUNPOW (f o g) j z` by rw[FUNPOW_ADD] >>
-    `_ = x` by fs[Abbr`z`] >>
-    metis_tac[iterate_period_mod],
-    `?k. (i + j) = k * p` by rfs[MOD_EQ_0_DIVISOR] >>
-    `y IN s` by rw[FUNPOW_closure, Abbr`y`] >>
-    `FUNPOW (f o g) p x = x` by rw[iterate_period_property] >>
-    assume_tac involute_funpow_inv >>
-    last_x_assum (qspecl_then [`g`, `f`, `s`, `y`, `j`] strip_assume_tac) >>
-    `y = FUNPOW (g o f) j (FUNPOW (f o g) j y)` by fs[] >>
-    `_ = FUNPOW (g o f) j (FUNPOW (f o g) (j + i) x)` by metis_tac[FUNPOW_ADD] >>
-    rfs[FUNPOW_MULTIPLE]
-  ]
-QED
-
-(* Better proof of the same theorem. *)
-
-(* Theorem: FINITE s /\ f involute s /\ g involute s /\
-            x IN s /\ p = iterate_period (f o g) x ==>
            (FUNPOW (f o g) i x = FUNPOW (g o f) j x <=> (i + j) MOD p = 0) *)
 (* Proof:
    Let y = FUNPOW (f o g) i x,
@@ -484,7 +428,7 @@ QED
    <=> FUNPOW (f o g) (i + j) x = x    by above
    <=> (i + j) MOD p = 0               by iterate_period_mod, 0 < p
 *)
-Theorem iterate_involute_mod_period[allow_rebind]:
+Theorem iterate_involute_mod_period:
   !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
                   x IN s /\ p = iterate_period (f o g) x ==>
                  (FUNPOW (f o g) i x = FUNPOW (g o f) j x <=> (i + j) MOD p = 0)
@@ -590,69 +534,6 @@ QED
 
 (* Theorem: FINITE s /\ f involute s /\ g involute s /\
             x IN fixes f s /\ p = iterate_period (f o g) x ==>
-           (FUNPOW (f o g) i x = f (FUNPOW (f o g) j x) <=> (i + j) MOD p = 0) *)
-(* Proof:
-   Note x IN s /\ f x = x              by fixes_element
-
-   If part: FUNPOW (f o g) i x = f (FUNPOW (f o g) j x) ==> (i + j) MOD p = 0
-      Note f o g PERMUTES s            by involute_involute_permutes
-        so 0 < p                       by iterate_period_pos, FINITE s
-        FUNPOW (f o g) (i + j) x
-      = FUNPOW (f o g) i (FUNPOW (f o g) j x)         by FUNPOW_ADD
-      = FUNPOW (f o g) i (f (f (FUNPOW (f o g) j x))) by FUNPOW_closure, f o g involute s
-      = FUNPOW (f o g) i (f (FUNPOW (f o g) i x))     by given
-      = f (FUNPOW (g o f) i (FUNPOW (f o g) i x))     by iterate_involute_compose_shift
-      = f x                                           by involute_funpow_inv
-      = x                                             by involute_fixed_points
-      Thus (i + j) MOD p = 0                          by iterate_period_mod, 0 < p
-
-   Only-if part: (i + j) MOD p = 0 ==> FUNPOW (f o g) i x = f (FUNPOW (f o g) j x)
-        f (FUNPOW (f o g) j x)
-      = f (FUNPOW (g o f) i x)         by iterate_involute_mod_period
-      = FUNPOW (f o g) i (f x)         by iterate_involute_compose_shift
-      = FUNPOW (f o g) i x             by involute_fixed_points, f x = x
-*)
-Theorem involute_involute_fix_orbit_1:
-  !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
-                  x IN fixes f s /\ p = iterate_period (f o g) x ==>
-                 (FUNPOW (f o g) i x = f (FUNPOW (f o g) j x) <=>
-                  (i + j) MOD p = 0)
-Proof
-  rpt strip_tac >>
-  qabbrev_tac `y = FUNPOW (f o g) i x` >>
-  qabbrev_tac `z = FUNPOW (f o g) j x` >>
-  `x IN s /\ f x = x` by fs[fixes_element] >>
-  (simp[EQ_IMP_THM] >> rpt strip_tac) >| [
-    `f o g PERMUTES s` by rw[involute_involute_permutes] >>
-    `0 < p` by metis_tac[iterate_period_pos] >>
-    `y IN s /\ z IN s` by fs[FUNPOW_closure, Abbr`y`, Abbr`z`] >>
-    imp_res_tac iterate_involute_compose_shift >>
-    `f (FUNPOW (g o f) i y) = FUNPOW (f o g) i (f y)` by fs[] >>
-    assume_tac involute_funpow_inv >>
-    last_x_assum (qspecl_then [`g`, `f`, `s`, `x`, `i`] strip_assume_tac) >>
-    `FUNPOW (g o f) i y = x` by rfs[] >>
-    `FUNPOW (f o g) (i + j) x = FUNPOW (f o g) i z` by rw[FUNPOW_ADD, Abbr`z`] >>
-    `_ = FUNPOW (f o g) i (f (f z))` by rw[] >>
-    `_ = FUNPOW (f o g) i (f y)` by rw[] >>
-    `_ = f (FUNPOW (g o f) i y)` by fs[] >>
-    `_ = f x` by fs[Abbr`y`] >>
-    `_ = x` by rfs[] >>
-    metis_tac[iterate_period_mod],
-    drule_then strip_assume_tac iterate_involute_mod_period >>
-    `z = FUNPOW (g o f) i x` by fs[Abbr`z`] >>
-    imp_res_tac iterate_involute_compose_shift >>
-    `f (FUNPOW (g o f) i x) = FUNPOW (f o g) i (f x)` by fs[] >>
-    `f z = f (FUNPOW (g o f) i x)` by fs[] >>
-    `_ = FUNPOW (f o g) i (f x)` by fs[] >>
-    `_ = y` by fs[Abbr`y`] >>
-    simp[]
-  ]
-QED
-
-(* Better proof of the same theorem. *)
-
-(* Theorem: FINITE s /\ f involute s /\ g involute s /\
-            x IN fixes f s /\ p = iterate_period (f o g) x ==>
             (FUNPOW (f o g) i x = f (FUNPOW (f o g) j x) <=> (i + j) MOD p = 0) *)
 (* Proof:
    Note x IN s /\ f x = x         by fixes_element
@@ -668,7 +549,7 @@ QED
    <=> FUNPOW (g o f) i x = FUNPOW (f o g) j x          by BIJ_DEF, INJ_EQ_11
    <=> (i + j) MOD p = 0                                by iterate_involute_mod_period, 0 < p
 *)
-Theorem involute_involute_fix_orbit_1[allow_rebind]:
+Theorem involute_involute_fix_orbit_1:
   !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
                   x IN fixes f s /\ p = iterate_period (f o g) x ==>
                  (FUNPOW (f o g) i x = f (FUNPOW (f o g) j x) <=>
@@ -698,75 +579,6 @@ QED
             x IN fixes f s /\ p = iterate_period (f o g) x ==>
            (FUNPOW (f o g) i x = g (FUNPOW (f o g) j x) <=> (i + j + 1) MOD p = 0) *)
 (* Proof:
-   Note x IN s /\ f x = x              by fixes_element
-
-   If part: FUNPOW (f o g) i x = g (FUNPOW (f o g) j x) ==> (i + j + 1) MOD p = 0
-      Note f o g PERMUTES s            by involute_involute_permutes
-        so 0 < p                       by iterate_period_pos, FINITE s
-        FUNPOW (f o g) (i + j + 1) x
-      = (f o g) (FUNPOW (f o g) (i + j) x)               by FUNPOW_SUC
-      = (f o g) (FUNPOW (f o g) i (FUNPOW (f o g) j x))  by FUNPOW_ADD
-      = f (g (FUNPOW (f o g) i (FUNPOW (f o g) j x)))    by o_THM
-      = f (FUNPOW (g o f) i (g (FUNPOW (f o g) j x)))    by iterate_involute_compose_shift
-      = f (FUNPOW (g o f) i (FUNPOW (f o g) i x))        by given
-      = f x                                              by involute_funpow_inv
-      = x                                                by involute_fixed_points
-      Thus (i + j + 1) MOD p = 0                         by iterate_period_mod, 0 < p
-
-   Only-if part: (i + j + 1) MOD p = 0 ==> FUNPOW (f o g) i x = g (FUNPOW (f o g) j x)
-        FUNPOW (f o g) i x
-      = FUNPOW (g o f) (j + 1) x       by iterate_involute_mod_period
-      = FUNPOW (g o f) j ((g o f) x)   by FUNPOW
-      = FUNPOW (g o f) j (g (f x))     by o_THM
-      = FUNPOW (g o f) j (g x)         by f x = x
-      = g (FUNPOW (f o g) j x)         by iterate_involute_compose_shift
-*)
-Theorem involute_involute_fix_orbit_2:
-  !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
-                  x IN fixes f s /\ p = iterate_period (f o g) x ==>
-                 (FUNPOW (f o g) i x = g (FUNPOW (f o g) j x) <=>
-                  (i + j + 1) MOD p = 0)
-Proof
-  rpt strip_tac >>
-  qabbrev_tac `y = FUNPOW (f o g) j x` >>
-  qabbrev_tac `z = FUNPOW (f o g) i x` >>
-  `x IN s /\ f x = x` by fs[fixes_element] >>
-  (rewrite_tac[EQ_IMP_THM] >> rpt strip_tac) >| [
-    `f o g PERMUTES s` by rw[involute_involute_permutes] >>
-    `0 < p` by metis_tac[iterate_period_pos] >>
-    `y IN s /\ z IN s` by rw[FUNPOW_closure, Abbr`y`, Abbr`z`] >>
-    imp_res_tac iterate_involute_compose_shift >>
-    `g (FUNPOW (f o g) i y) = FUNPOW (g o f) i (g y)` by fs[] >>
-    imp_res_tac involute_funpow_inv >>
-    `FUNPOW (g o f) i z = x` by fs[Abbr`z`] >>
-    `i + j + 1 = SUC (i + j)` by decide_tac >>
-    `FUNPOW (f o g) (i + j + 1) x = FUNPOW (f o g) (SUC (i + j)) x` by rw[] >>
-    `_ = (f o g) (FUNPOW (f o g) (i + j) x)` by fs[FUNPOW_SUC] >>
-    `_ = (f o g) (FUNPOW (f o g) i y)` by fs[FUNPOW_ADD, Abbr`y`] >>
-    `_ = f (g (FUNPOW (f o g) i y))` by rw[] >>
-    `_ = f (FUNPOW (g o f) i (g y))` by fs[] >>
-    `_ = f (FUNPOW (g o f) i z)` by metis_tac[] >>
-    `_ = f x` by rfs[] >>
-    `_ = x` by fs[] >>
-    metis_tac[iterate_period_mod],
-    drule_then strip_assume_tac iterate_involute_mod_period >>
-    last_x_assum (qspecl_then [`f`, `g`, `x`, `p`, `i`, `j+1`] strip_assume_tac) >>
-    `FUNPOW (g o f) (j + 1) x = z` by rfs[Abbr`z`] >>
-    drule_then strip_assume_tac iterate_involute_compose_shift >>
-    `g y = FUNPOW (g o f) j (g x)` by fs[Abbr`y`] >>
-    `_ = FUNPOW (g o f) j ((g o f) x)` by fs[] >>
-    `_ = FUNPOW (g o f) (j + 1) x` by rw[GSYM FUNPOW, ADD1] >>
-    `_ = z` by fs[] >>
-    simp[]
-  ]
-QED
-
-(* Better proof of the same theorem. *)
-
-(* Theorem: FINITE s /\ f involute s /\ g involute s /\
-            x IN fixes f s /\ p = iterate_period (f o g) x ==>
-           (FUNPOW (f o g) i x = g (FUNPOW (f o g) j x) <=> (i + j + 1) MOD p = 0) *)
-(* Proof:
    Note x IN s /\ f x = x         by fixes_element
     and f o g PERMUTES s          by involute_involute_permutes
    also 0 < p                     by iterate_period_pos
@@ -778,7 +590,7 @@ QED
    <=> FUNPOW (f o g) i x = FUNPOW (g o f) (j + 1) x     by FUNPOW
    <=> (i + j + 1) MOD p = 0                             by iterate_involute_mod_period, 0 < p
 *)
-Theorem involute_involute_fix_orbit_2[allow_rebind]:
+Theorem involute_involute_fix_orbit_2:
   !f g s x p i j. FINITE s /\ f involute s /\ g involute s /\
                   x IN fixes f s /\ p = iterate_period (f o g) x ==>
                  (FUNPOW (f o g) i x = g (FUNPOW (f o g) j x) <=>

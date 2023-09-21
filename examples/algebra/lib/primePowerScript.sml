@@ -1301,12 +1301,13 @@ val prime_divisors_finite = store_thm(
   ``!n. 0 < n ==> FINITE (prime_divisors n)``,
   metis_tac[prime_divisors_subset_natural, natural_finite, SUBSET_FINITE]);
 
-
-(* Note: prime: num -> bool is also a set, so prime = {p | prime p} *)
-
+(* Theorem: prime_divisors 0 = {p | prime p} *)
+(* Proof: by prime_divisors_def, ALL_DIVIDES_0 *)
 Theorem prime_divisors_0: prime_divisors 0 = {p | prime p}
 Proof rw[prime_divisors_def]
 QED
+
+(* Note: prime: num -> bool is also a set, so prime = {p | prime p} *)
 
 (* Theorem: prime_divisors n = {} *)
 (* Proof: by prime_divisors_def, DIVIDES_ONE, NOT_PRIME_1 *)

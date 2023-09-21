@@ -1276,13 +1276,6 @@ val poly_field_ideal_cogen_property = store_thm("poly_field_ideal_cogen_property
                (coset (PolyRing r).sum p (principal_ideal (PolyRing r) z).carrier)) ==> (p == q) (pm z))``,
   rw[poly_ideal_cogen_property]);
 
-val poly_field_mod_ring_homo_quotient_ring = store_thm("poly_field_mod_ring_homo_quotient_ring",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-    RingHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
-               (PolyModRing r z)
-               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))``,
-  rw[poly_mod_ring_homo_quotient_ring]);
-
 val poly_field_mod_sum_group_homo_quotient_ring = store_thm("poly_field_mod_sum_group_homo_quotient_ring",
   ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
     GroupHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)

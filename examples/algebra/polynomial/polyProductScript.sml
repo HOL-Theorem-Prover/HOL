@@ -508,21 +508,6 @@ val poly_prod_set_mult_eqn = store_thm(
 
 (* Theorem: Ring r ==> !p. poly p ==> (PPROD {p} = p) *)
 (* Proof:
-   Since Monoid (PolyRing r).prod             by poly_mult_monoid
-     and p IN (PolyRing r).carrier            by poly_ring_element
-      so GPROD_SET (PolyRing r).prod {p} = p  by GPROD_SET_SING
-      or PPROD {p} = p                        by poly_prod_set_def
-*)
-val poly_prod_set_sing = store_thm(
-  "poly_prod_set_sing",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (PPROD {p} = p)``,
-  rw[poly_prod_set_def, poly_mult_monoid, GPROD_SET_SING, poly_ring_element]);
-
-(* Better proof of above theorem *)
-
-(* Theorem: Ring r ==> !p. poly p ==> (PPROD {p} = p) *)
-(* Proof:
-   Or,
    Since FINITE {}            by FINITE_EMPTY
      and pset {}              by NOT_IN_EMPTY
 

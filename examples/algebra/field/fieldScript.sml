@@ -1907,18 +1907,6 @@ val field_inv_mult = store_thm(
 val _ = export_rewrites ["field_inv_mult"];
 
 (* Theorem: Field r ==> |/ #1 = #1 *)
-(* Proof: by group_inv_id and r.prod group. *)
-val field_inv_one = store_thm(
-  "field_inv_one",
-  ``!r:'a field. Field r ==> ( |/ #1 = #1)``,
-  metis_tac[group_inv_id |> SPEC ``f*`` |> UNDISCH_ALL
-   |> PROVE_HYP (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1) |> DISCH_ALL,
-   field_mult_group, field_nonzero_mult_property, group_id_element, field_mult_inv]);
-(* > val field_inv_one = |- !r:'a field. Field r ==> ( |/ #1 = #1) : thm *)
-
-(* Same theorem, simple proof. *)
-
-(* Theorem: Field r ==> |/ #1 = #1 *)
 (* Proof: by ring_inv_one, field_is_ring. *)
 val field_inv_one = store_thm(
   "field_inv_one",
@@ -3261,14 +3249,6 @@ val finite_field_fermat_thm = store_thm(
       = x ** (m ** n)           by finite_field_fermat_thm
       = x                       by induction hypothesis
 *)
-val finite_field_fermat_all = store_thm(
-  "finite_field_fermat_all",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> !n. x ** (CARD R ** n) = x``,
-  rpt (stripDup[FiniteField_def]) >>
-  qabbrev_tac `m = CARD R` >>
-  Induct_on `n` >-
-  rw[EXP] >>
-  rw[EXP, field_exp_mult, finite_field_fermat_thm, Abbr`m`]);
 val finite_field_fermat_all = store_thm(
   "finite_field_fermat_all",
   ``!r:'a field. FiniteField r ==> !x. x IN R ==> !n. x ** (CARD R ** n) = x``,

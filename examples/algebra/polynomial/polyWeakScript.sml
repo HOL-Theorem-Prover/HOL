@@ -3289,6 +3289,8 @@ val weak_mult_ladd = store_thm(
 
 val _ = export_rewrites ["weak_mult_radd", "weak_mult_ladd"];
 
+(* Theorem: p o (q || t) = p o q || p o t /\ (p || q) o t = p o t || q o t *)
+(* Proof: by weak_mult_radd and weak_mult_ladd. *)
 Theorem weak_mult_add =
     CONJ (weak_mult_radd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL)
          (weak_mult_ladd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL)
@@ -4620,38 +4622,6 @@ val poly_deg_weak_eq_zero = store_thm(
   metis_tac[poly_deg_def, weak_cons, LENGTH, LENGTH_NIL, list_CASES, poly_zero]);
 
 (* Theorem: deg (neg p) = deg p *)
-(* Proof: by induction on p, the lists are of the same length.
-   Base: weak [] ==> (deg (neg []) = deg [])
-      true since -[] = []  by weak_neg_of_zero.
-   Step: weak p ==> (deg (neg p) = deg p) ==> !h. weak (h::p) ==> (deg (neg (h::p)) = deg (h::p))
-   If p = [], deg - [h] = deg [-h] = 0 = deg [h],  by poly_deg_const
-   If P <> [],
-     deg (neg (h::p))
-   = PRE (LENGTH(-h::neg p))   by poly_deg_def, weak_neg_def
-   = PRE (SUC (LENGTH(neg p))  by LENGTH definition
-   = SUC (PRE (LENGTH(neg p))  by 0 < LENGTH p
-   = SUC (deg (neg p))         by poly_deg_def if p <> []
-   = SUC (deg p)               by induction hypothesis
-   = SUC (PRE (LENGTH p))
-   = PRE (SUC (LENGTH p))
-   = PRE (LENGTH (h::p))
-   = deg (h::p)
-*)
-val poly_deg_weak_neg = store_thm(
-  "poly_deg_weak_neg",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> (deg (neg p) = deg p)``,
-  strip_tac >>
-  strip_tac >>
-  Induct >-
-  rw[] >>
-  rw_tac std_ss[weak_cons, weak_neg_cons] >>
-  Cases_on `p = []` >>
-  rw[weak_neg_eq_of_zero, poly_deg_cons]);
-(* Q: why the last rw[weak_neg_eq_of_zero, poly_deg_cons] when poly_deg_cons is exported? *)
-
-(* Try to prove using bijection of list, or list MAP. *)
-
-(* Theorem: deg (neg p) = deg p *)
 (* Proof: due to lists are of the same length.
    If p = [], deg (neg []) = deg []
       true since neg [] = []  by weak_neg_of_zero.
@@ -4660,7 +4630,7 @@ val poly_deg_weak_neg = store_thm(
       deg (neg (h::t)) = LENGTH (-t)
       By weak_neg_map and LENGTH_MAP, they are equal.
 *)
-Theorem poly_deg_weak_neg[allow_rebind]:
+Theorem poly_deg_weak_neg:
   !r:'a ring. Ring r ==> !p. weak p ==> (deg (neg p) = deg p)
 Proof
   metis_tac[poly_deg_cons_length, weak_neg_map, LENGTH_MAP,
