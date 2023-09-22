@@ -637,12 +637,13 @@ Theorem ZN_finite_field[allow_rebind]:
   !p. prime p ==> FiniteField (ZN p)
 Proof
   rpt strip_tac >>
-  (REVERSE (irule finite_field_from_finite_ring >> rpt conj_tac) >> simp[ZN_property]) >-
-  metis_tac[NOT_PRIME_1, ONE_NOT_ZERO] >-
-  rw[ZN_finite_ring, PRIME_POS] >>
-  rw[EQ_IMP_THM] >-
-  metis_tac[EUCLID_LEMMA, LESS_MOD] >-
-  rw[] >>
+  (REVERSE (irule finite_field_from_finite_ring >> rpt conj_tac) >>
+   simp[ZN_property])
+  >- metis_tac[NOT_PRIME_1, ONE_NOT_ZERO]
+  >- rw[ZN_finite_ring, PRIME_POS] >>
+  rw[EQ_IMP_THM]
+  >- metis_tac[EUCLID_LEMMA, LESS_MOD]
+  >- rw[] >>
   rw[]
 QED
 
