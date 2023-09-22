@@ -1908,26 +1908,24 @@ val _ = export_rewrites ["field_inv_mult"];
 
 (* Theorem: Field r ==> |/ #1 = #1 *)
 (* Proof: by ring_inv_one, field_is_ring. *)
-val field_inv_one = store_thm(
-  "field_inv_one",
-  ``!r:'a field. Field r ==> ( |/ #1 = #1)``,
-  metis_tac[ring_inv_one, field_is_ring]);
-
-(* export simple theorem *)
-val _ = export_rewrites ["field_inv_one"];
+Theorem field_inv_one[simp]:
+  !r:'a field. Field r ==> ( |/ #1 = #1)
+Proof metis_tac[ring_inv_one, field_is_ring]
+QED
 
 (* Theorem: |/ ( |/ x) = x *)
 (* Proof: by group_inv_inv and r.prod group. *)
-val field_inv_inv = store_thm(
-  "field_inv_inv",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> ( |/ ( |/ x) = x)``,
-  metis_tac[group_inv_inv |> SPEC ``f*`` |> UNDISCH_ALL
-   |> PROVE_HYP (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1) |> DISCH_ALL,
-   field_mult_group, field_nonzero_mult_property, group_inv_element, field_mult_inv]);
-(* > val field_inv_inv = |- !r:'a field. Field r ==> !x. x IN R+ ==> ( |/ ( |/ x) = x) : thm *)
-
-(* export simple theorem *)
-val _ = export_rewrites ["field_inv_inv"];
+Theorem field_inv_inv[simp]:
+  !r:'a field. Field r ==> !x. x IN R+ ==> ( |/ ( |/ x) = x)
+Proof
+  metis_tac[group_inv_inv
+              |> SPEC ``f*`` |> UNDISCH_ALL
+              |> PROVE_HYP
+                 (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1)
+              |> DISCH_ALL,
+            field_mult_group, field_nonzero_mult_property, group_inv_element,
+            field_mult_inv]
+QED
 
 (* Theorem: x IN R+ ==> - x IN R+ *)
 (* Proof: by contradiction.

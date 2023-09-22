@@ -942,13 +942,11 @@ val poly_deg_X = store_thm(
   = lead |1|          by poly_lead_shift
   = #1                by poly_lead_one
 *)
-val poly_lead_X = store_thm(
-  "poly_lead_X",
-  ``!r:'a ring. Ring r ==> (lead X = #1)``,
-  rw_tac std_ss[poly_lead_shift, poly_lead_one]);
-
-(* export simple result *)
-val _ = export_rewrites ["poly_lead_X"];
+Theorem poly_lead_X[simp]:
+  !r:'a ring. Ring r ==> (lead X = #1)
+Proof
+  rw_tac std_ss[poly_lead_shift, poly_lead_one]
+QED
 
 (* Theorem: monic X *)
 (* Proof:
