@@ -323,6 +323,16 @@ open twoSquaresTheory; (* for loop test found *)
                                         m + 1 + j < step (SQRT n) t ==> is_ping (hop (m + 1 + j) t)
    hop_step_sqrt_not_ping  |- !n t. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t ==>
                                     ~is_ping (hop (step (SQRT n) t) t)
+   hop_step_type           |- !n t m. (let p = step 0 t;
+                                           q = step (SQRT n) t
+                                        in tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m < q ==>
+                                           if m < p then is_pung (hop m t)
+                                           else if m = p then is_pong (hop m t)
+                                           else is_ping (hop m t))
+   Focus of Hopping:
+   focus_def               |- !x y z. focus (x,y,z) = if is_ping (x,y,z) then y else z
+   hopping_focus_thm       |- !n t m. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\
+                                      m < step (SQRT n) t ==> focus (hop m t) = focus t
 
    Skipping by Triples:
    skip_ping_def           |- !t. skip_ping t = WHILE is_ping ping t
@@ -4488,6 +4498,116 @@ Proof
 QED
 
 (* Excellent! *)
+
+(*
+hop_step_0_before_pong_is_pung
+|- !n m t. ~square n /\ n = windmill t /\ m < step 0 t ==> is_pung (hop m t)
+hop_step_0_at_pong_is_pong
+|- !n m t. tik n /\ ~square n /\ n = windmill t /\ m = step 0 t /\ ~is_ping t ==> is_pong (hop m t)
+hop_step_0_beyond_pong_is_ping
+|- !n m j t. tik n /\ ~square n /\ n = windmill t /\ m = step 0 t /\  m + 1 + j < step (SQRT n) t ==> is_ping (hop (m + 1 + j) t)
+hop_step_sqrt_not_ping
+|- !n t. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t ==> ~is_ping (hop (step (SQRT n) t) t)
+*)
+
+(* Idea: determine the type of (hop m t) for m from 0 to (step 0 t) up to (step (SQRT n) t). *)
+
+(* Theorem: let p = step 0 t; q = step (SQRT n) t in
+            tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m < q ==>
+            if m < p then is_pung (hop m t)
+            else if m = p then is_pong (hop m t)
+            else is_ping (hop m t)  *)
+(* Proof:
+   Let p = step 0 t,
+       q = step (SQRT n) t.
+   If m < p,
+      Then is_pung (hop m t)       by hop_step_0_before_pong_is_pung
+   Otherwise, if m = p,
+      Then is_pong (hop m t)       by hop_step_0_at_pong_is_pong, ~is_ping t
+   Otherwise, p < m /\ m < q.
+        so m = p + 1 + j           by arithmetic, j = m - p - 1
+        so is_ping (hop m t)       by hop_step_0_beyond_pong_is_ping
+*)
+Theorem hop_step_type:
+  !n t m. let p = step 0 t; q = step (SQRT n) t in
+          tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m < q ==>
+          if m < p then is_pung (hop m t)
+          else if m = p then is_pong (hop m t)
+          else is_ping (hop m t)
+Proof
+  rw_tac std_ss[] >>
+  qabbrev_tac `n = windmill t` >>
+  rw[] >-
+  metis_tac[hop_step_0_before_pong_is_pung] >-
+  metis_tac[hop_step_0_at_pong_is_pong] >>
+  `m = p + 1 + (m - p - 1)` by decide_tac >>
+  metis_tac[hop_step_0_beyond_pong_is_ping]
+QED
+
+(* This is a very clean statement. *)
+
+(* ------------------------------------------------------------------------- *)
+(* Focus of Hopping                                                          *)
+(* ------------------------------------------------------------------------- *)
+
+(* The focus of a windmill *)
+Definition focus_def:
+   focus (x,y,z) = if is_ping (x,y,z) then y else z
+End
+
+(*
+> EVAL ``path 61 6``; = [(1,15,1); (1,1,15); (3,1,13); (5,1,9); (7,1,3); (1,5,3); (5,3,3)]: thm
+> EVAL ``MAP focus (path 61 6)``; = [1; 1; 1; 1; 3; 3; 3]: thm
+*)
+
+(* Idea: all (hop m t) nodes from a non-ping t have the same focus. *)
+
+(* Theorem: tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\
+            m < step (SQRT n) t ==> focus (hop m t) = focus t *)
+(* Proof:
+   Let t = (x,y,z),
+       p = step 0 t,
+       q = step (SQRT n) t.
+   Then focus t = z                            by focus_def, ~is_ping t
+    and p = x DIV (2 * z)                      by step_0
+    and 0 < z                                  by windmill_with_arms, ~square n
+
+   If p < m,
+      Then is_ping (hop m (x,y,z))             by hop_step_type, m < q
+        so focus (hop m (x,y,z))
+         = focus (2 * m * z - x,z,y + m * x - m ** 2 * z)
+         = z                                   by hop_alt, focus_def, 0 < z
+   Otherwise, m <= p.
+      Then ~is_ping (hop m (x,y,z))            by hop_step_type, pung_not_ping, pong_not_ping
+        so focus (hop m (x,y,z))
+         = focus (x - 2 * m * z,y + m * x - m ** 2 * z,z)
+         = z                                   by hop_alt, focus_def, 0 < z
+*)
+Theorem hopping_focus_thm:
+  !n t m. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\
+          m < step (SQRT n) t ==> focus (hop m t) = focus t
+Proof
+  rpt strip_tac >>
+  `?x y z. t = (x,y,z)` by metis_tac[triple_parts] >>
+  `focus t = z` by fs[focus_def] >>
+  qabbrev_tac `p = step 0 t` >>
+  qabbrev_tac `q = step (SQRT n) t` >>
+  `p = x DIV (2 * z)` by fs[step_0, Abbr`p`] >>
+  `0 < z` by metis_tac[windmill_with_arms] >>
+  Cases_on `p < m` >| [
+    `~(m < p) /\ ~(m = p)` by decide_tac >>
+    `is_ping (hop m (x,y,z))` by metis_tac[hop_step_type] >>
+    metis_tac[hop_alt, focus_def],
+    `m < p \/ m = p` by decide_tac >| [
+      `~is_ping (hop m (x,y,z))` by metis_tac[hop_step_type, pung_not_ping] >>
+      metis_tac[hop_alt, focus_def],
+      `~is_ping (hop m (x,y,z))` by metis_tac[hop_step_type, pong_not_ping] >>
+      metis_tac[hop_alt, focus_def]
+    ]
+  ]
+QED
+
+(* This is very good! *)
 
 (* ------------------------------------------------------------------------- *)
 (* Skipping by Triples.                                                      *)
