@@ -325,10 +325,12 @@ open twoSquaresTheory; (* for loop test found *)
                                     ~is_ping (hop (step (SQRT n) t) t)
    hop_step_type           |- !n t m. (let p = step 0 t;
                                            q = step (SQRT n) t
-                                        in tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m < q ==>
+                                        in tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m <= q ==>
+                                           p < q /\
                                            if m < p then is_pung (hop m t)
                                            else if m = p then is_pong (hop m t)
-                                           else is_ping (hop m t))
+                                           else if m < q then is_ping (hop m t)
+                                           else ~is_ping (hop m t))
    Focus of Hopping:
    focus_def               |- !x y z. focus (x,y,z) = if is_ping (x,y,z) then y else z
    hopping_focus_thm       |- !n t m. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\
@@ -4513,38 +4515,49 @@ hop_step_sqrt_not_ping
 (* Idea: determine the type of (hop m t) for m from 0 to (step 0 t) up to (step (SQRT n) t). *)
 
 (* Theorem: let p = step 0 t; q = step (SQRT n) t in
-            tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m < q ==>
+            tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m <= q ==>
+            p < q /\
             if m < p then is_pung (hop m t)
             else if m = p then is_pong (hop m t)
-            else is_ping (hop m t)  *)
+            else if m < q then is_ping (hop m t)
+            else ~is_ping (hop m t)  *)
 (* Proof:
    Let p = step 0 t,
        q = step (SQRT n) t.
+   Note p < q                      by step_0_lt_step_sqrt
    If m < p,
       Then is_pung (hop m t)       by hop_step_0_before_pong_is_pung
    Otherwise, if m = p,
       Then is_pong (hop m t)       by hop_step_0_at_pong_is_pong, ~is_ping t
-   Otherwise, p < m /\ m < q.
-        so m = p + 1 + j           by arithmetic, j = m - p - 1
-        so is_ping (hop m t)       by hop_step_0_beyond_pong_is_ping
+   Otherwise, p < m.
+      If m < q.
+         Then m = p + 1 + j        by arithmetic, j = m - p - 1
+           so is_ping (hop m t)    by hop_step_0_beyond_pong_is_ping
+      Otherwise m = q.
+         Then ~is_ping (hop m t)   by hop_step_sqrt_not_ping
 *)
 Theorem hop_step_type:
   !n t m. let p = step 0 t; q = step (SQRT n) t in
-          tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m < q ==>
+          tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m <= q ==>
+          p < q /\
           if m < p then is_pung (hop m t)
           else if m = p then is_pong (hop m t)
-          else is_ping (hop m t)
+          else if m < q then is_ping (hop m t)
+          else ~is_ping (hop m t)
 Proof
-  rw_tac std_ss[] >>
+  rw_tac std_ss[] >-
+  metis_tac[step_0_lt_step_sqrt] >>
   qabbrev_tac `n = windmill t` >>
   rw[] >-
   metis_tac[hop_step_0_before_pong_is_pung] >-
-  metis_tac[hop_step_0_at_pong_is_pong] >>
-  `m = p + 1 + (m - p - 1)` by decide_tac >>
-  metis_tac[hop_step_0_beyond_pong_is_ping]
+  metis_tac[hop_step_0_at_pong_is_pong] >-
+ (`m = p + 1 + (m - p - 1)` by decide_tac >>
+  metis_tac[hop_step_0_beyond_pong_is_ping]) >>
+  `m = q` by decide_tac >>
+  metis_tac[hop_step_sqrt_not_ping]
 QED
 
-(* This is a very clean statement. *)
+(* This is a very clean statement for (hop m t). *)
 
 (* ------------------------------------------------------------------------- *)
 (* Focus of Hopping                                                          *)
@@ -4573,7 +4586,7 @@ End
     and 0 < z                                  by windmill_with_arms, ~square n
 
    If p < m,
-      Then is_ping (hop m (x,y,z))             by hop_step_type, m < q
+      Then is_ping (hop m (x,y,z))             by hop_step_type, m <= q
         so focus (hop m (x,y,z))
          = focus (2 * m * z - x,z,y + m * x - m ** 2 * z)
          = z                                   by hop_alt, focus_def, 0 < z
@@ -4594,6 +4607,7 @@ Proof
   qabbrev_tac `q = step (SQRT n) t` >>
   `p = x DIV (2 * z)` by fs[step_0, Abbr`p`] >>
   `0 < z` by metis_tac[windmill_with_arms] >>
+  `m <= q` by decide_tac >>
   Cases_on `p < m` >| [
     `~(m < p) /\ ~(m = p)` by decide_tac >>
     `is_ping (hop m (x,y,z))` by metis_tac[hop_step_type] >>
