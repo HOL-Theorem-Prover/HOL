@@ -2273,7 +2273,7 @@ QED
        Since (ring_inj_image r f).sum.id = f #0    by ring_inj_image_def
        The result follows                          by field_inj_image_prod_nonzero_group
 *)
-Theorem field_inj_image_field:
+Theorem field_inj_image_field[allow_rebind]:
   !(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f)
 Proof
   rpt strip_tac >>
