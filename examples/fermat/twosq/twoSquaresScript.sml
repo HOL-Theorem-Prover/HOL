@@ -1241,27 +1241,27 @@ QED
    Then p = u ** 2 + v ** 2            by mills_element, windmill_by_squares
 *)
 Theorem fermat_two_squares_exists_alt:
-  !p. prime p /\ p MOD 4 = 1 ==> ?(u,v). p = u ** 2 + v ** 2
+  !p. prime p /\ p MOD 4 = 1 ==> ?u v. p = u ** 2 + v ** 2
 Proof
-  rw[ELIM_UNCURRY] >>
-  qabbrev_tac `X = mills p` >>
-  `~square p` by metis_tac[prime_non_square] >>
-  `FINITE X` by fs[mills_non_square_finite, Abbr`X`] >>
-  `zagier involute X` by metis_tac[zagier_involute_mills_prime] >>
-  `flip involute X` by metis_tac[flip_involute_mills] >>
-  qabbrev_tac `a = fixed_points (FUNPOW zagier) Z2 X` >>
-  qabbrev_tac `b = fixed_points (FUNPOW flip) Z2 X` >>
-  `ODD (CARD a) <=> ODD (CARD b)` by rw[involute_two_fixed_points_both_odd, Abbr`a`, Abbr`b`] >>
-  qabbrev_tac `k = p DIV 4` >>
-  `a = {(1,1,k)}` by rw[zagier_fixed_points_sing, Abbr`a`, Abbr`X`, Abbr`k`] >>
-  `CARD a = 1` by rw[] >>
-  `CARD b <> 0` by metis_tac[ODD_1, EVEN_0, ODD_EVEN] >>
-  `b <> EMPTY` by metis_tac[CARD_EMPTY] >>
-  `?x y z. (x,y,z) IN b` by metis_tac[MEMBER_NOT_EMPTY, triple_parts] >>
-  `flip (x, y, z) = (x, y, z)` by metis_tac[involute_fixed_points] >>
-  `y = z` by fs[flip_fix] >>
-  `(x,y,z) IN X` by fs[fixed_points_element, Abbr`b`] >>
-  qexists_tac `(x, 2 * y)` >>
+  rw[] >>
+  qabbrev_tac ‘X = mills p’ >>
+  ‘~square p’ by metis_tac[prime_non_square] >>
+  ‘FINITE X’ by fs[mills_non_square_finite, Abbr‘X’] >>
+  ‘zagier involute X’ by metis_tac[zagier_involute_mills_prime] >>
+  ‘flip involute X’ by metis_tac[flip_involute_mills] >>
+  qabbrev_tac ‘a = fixed_points (FUNPOW zagier) Z2 X’ >>
+  qabbrev_tac ‘b = fixed_points (FUNPOW flip) Z2 X’ >>
+  ‘ODD (CARD a) <=> ODD (CARD b)’ by rw[involute_two_fixed_points_both_odd, Abbr‘a’, Abbr‘b’] >>
+  qabbrev_tac ‘k = p DIV 4’ >>
+  ‘a = {(1,1,k)}’ by rw[zagier_fixed_points_sing, Abbr‘a’, Abbr‘X’, Abbr‘k’] >>
+  ‘CARD a = 1’ by rw[] >>
+  ‘CARD b <> 0’ by metis_tac[ODD_1, EVEN_0, ODD_EVEN] >>
+  ‘b <> EMPTY’ by metis_tac[CARD_EMPTY] >>
+  ‘?x y z. (x,y,z) IN b’ by metis_tac[MEMBER_NOT_EMPTY, triple_parts] >>
+  ‘flip (x, y, z) = (x, y, z)’ by metis_tac[involute_fixed_points] >>
+  ‘y = z’ by fs[flip_fix] >>
+  ‘(x,y,z) IN X’ by fs[fixed_points_element, Abbr‘b’] >>
+  qexistsl_tac [‘x’, ‘2 * y’] >>
   simp[] >>
   metis_tac[mills_element, windmill_by_squares]
 QED
