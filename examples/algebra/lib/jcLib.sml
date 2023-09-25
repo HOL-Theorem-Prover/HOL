@@ -19,6 +19,7 @@ fun stripDup ths =
            disch_then (fn th => strip_assume_tac th >>
                                 strip_assume_tac (REWRITE_RULE ths th))]
 
+val _ = Feedback.set_trace "Theory.allow_rebinds" 1
 
 
 end
