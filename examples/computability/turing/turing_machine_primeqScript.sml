@@ -467,9 +467,12 @@ val ENCODE_ONE_TL_ZERO = Q.store_thm("ENCODE_ONE_TL_ZERO",
 Cases_on ` t` >> fs[] >- (EVAL_TAC) >- (fs[ENCODE_def] >> Cases_on `h` >> fs[]) )
 
 
-val HD_DECODE_DOUBLED = Q.store_thm("HD_DECODE_DOUBLED[simp]",
-`(x <> 0) ==> (HD (DECODE (2 * x)) = Z)`,
-Cases_on `x` >> fs[] >> `2*(SUC n) =SUC (SUC (2* n))` by simp[] >> simp[DECODE_def,ODD,ODD_MULT] )
+Theorem HD_DECODE_DOUBLED_EVEN[simp]:
+  (x <> 0) ==> (HD (DECODE (2 * x)) = Z)
+Proof
+  Cases_on `x` >> fs[] >> `2*(SUC n) =SUC (SUC (2* n))` by simp[] >>
+  simp[DECODE_def,ODD,ODD_MULT]
+QED
 
 
 val TL_DECODE_DOUBLED = Q.store_thm("TL_DECODE_DOUBLED[simp]",
@@ -477,9 +480,11 @@ val TL_DECODE_DOUBLED = Q.store_thm("TL_DECODE_DOUBLED[simp]",
 Cases_on `x` >> fs[] >> `2 * (SUC n) =SUC (SUC (2* n))` by simp[] >>
          simp[DECODE_def,SimpLHS,ODD,ODD_MULT] >> pop_assum(SUBST1_TAC o SYM) >> fs[TWO_TIMES_DIV_TWO_thm] )
 
-val HD_DECODE_DOUBLED = Q.store_thm("HD_DECODE_DOUBLED[simp]",
-`(HD (DECODE (2 * x + 1)) = O)`,
-simp[GSYM(ADD1),DECODE_def,ODD,ODD_MULT]  )
+Theorem HD_DECODE_DOUBLED_ODD[simp]:
+  (HD (DECODE (2 * x + 1)) = O)
+Proof
+  simp[GSYM(ADD1),DECODE_def,ODD,ODD_MULT]
+QED
 
 
 val TL_DECODE_DOUBLED = Q.store_thm("TL_DECODE_DOUBLED[simp]",

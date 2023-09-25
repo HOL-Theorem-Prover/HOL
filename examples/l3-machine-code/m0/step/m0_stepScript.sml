@@ -710,38 +710,36 @@ val Decode_simp_extra = Q.prove(
    \\ blastLib.BBLAST_TAC
    )
 
-val Decode_simps = Q.store_thm("Decode_simps",
-   `(v2w [b3; b2; b1; b0] <+ (8w: word4) = ~b3) /\
-    (w2w (v2w [b2; b1; b0] : word3) = v2w [F; b2; b1; b0] : word4) /\
-    ((v2w [b3] : word1) @@ v2w [b2; b1; b0] : word3 =
-     v2w [b3; b2; b1; b0] : word4) /\
-    (w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8) =
-     v2w [F; b7; b6; b5; b4; b3; b2; b1; b0] : word9) /\
-    (v2w [b4; b3; b2; b1; b0] : word5 @@ (0w: word1) =
-     v2w [b4; b3; b2; b1; b0; F] : word6) /\
-    (v2w [b4; b3; b2; b1; b0] : word5 @@ (0w: word2) =
-     v2w [b4; b3; b2; b1; b0; F; F] : word7) /\
-    (v2w [b6; b5; b4; b3; b2; b1; b0] : word7 @@ (0w: word2) =
-     v2w [b6; b5; b4; b3; b2; b1; b0; F; F] : word9) /\
-    (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8 @@ (0w: word1) =
-     v2w [b7; b6; b5; b4; b3; b2; b1; b0; F] : word9) /\
-    (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8 @@ (0w: word2) =
-     v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10) /\
-    (v2w [b10; b9; b8; b7; b6; b5; b4; b3; b2; b1; b0] : word11 @@ (0w: word1) =
-     v2w [b10; b9; b8; b7; b6; b5; b4; b3; b2; b1; b0; F] : word12)
-   `,
-   lrw []
-   \\ blastLib.BBLAST_TAC
-   )
+Theorem Decode_simps[local]:
+  (v2w [b3; b2; b1; b0] <+ (8w: word4) = ~b3) /\
+  (w2w (v2w [b2; b1; b0] : word3) = v2w [F; b2; b1; b0] : word4) /\
+  ((v2w [b3] : word1) @@ v2w [b2; b1; b0] : word3 =
+   v2w [b3; b2; b1; b0] : word4) /\
+  (w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8) =
+   v2w [F; b7; b6; b5; b4; b3; b2; b1; b0] : word9) /\
+  (v2w [b4; b3; b2; b1; b0] : word5 @@ (0w: word1) =
+   v2w [b4; b3; b2; b1; b0; F] : word6) /\
+  (v2w [b4; b3; b2; b1; b0] : word5 @@ (0w: word2) =
+   v2w [b4; b3; b2; b1; b0; F; F] : word7) /\
+  (v2w [b6; b5; b4; b3; b2; b1; b0] : word7 @@ (0w: word2) =
+   v2w [b6; b5; b4; b3; b2; b1; b0; F; F] : word9) /\
+  (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8 @@ (0w: word1) =
+   v2w [b7; b6; b5; b4; b3; b2; b1; b0; F] : word9) /\
+  (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8 @@ (0w: word2) =
+   v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10) /\
+  (v2w [b10; b9; b8; b7; b6; b5; b4; b3; b2; b1; b0] : word11 @@ (0w: word1) =
+   v2w [b10; b9; b8; b7; b6; b5; b4; b3; b2; b1; b0; F] : word12)
+Proof   lrw [] \\ blastLib.BBLAST_TAC
+QED
 
-val Decode_simps = Theory.save_thm ("Decode_simps",
+Theorem Decode_simps =
    ([Decode_simp_extra, Decode_simps] @
     List.tabulate
       (8, fn i => let
                      val w = wordsSyntax.mk_wordii (i, 3)
                   in
                      blastLib.BBLAST_CONV ``v2w [a; b; c] = ^w``
-                  end)) |> Drule.LIST_CONJ)
+                  end)) |> Drule.LIST_CONJ;
 
 val Shift_C_LSL_rwt = Q.store_thm("Shift_C_LSL_rwt",
    `!imm2 w C s.

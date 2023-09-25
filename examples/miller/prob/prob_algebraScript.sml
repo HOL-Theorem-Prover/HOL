@@ -761,11 +761,6 @@ val PROB_ALGEBRA_COMPL = store_thm
    >> PSET_TAC [PROB_EMBED_APPEND, PROB_EMBED_TLS, EXTENSION]
    >> PROVE_TAC []);
 
-val PROB_ALGEBRA_UNIV = store_thm
-  ("PROB_ALGEBRA_UNIV", ``UNIV IN (subsets prob_algebra)``,
-    REWRITE_TAC [GSYM COMPL_EMPTY]
- >> PROVE_TAC [PROB_ALGEBRA_COMPL, PROB_ALGEBRA_EMPTY, subsets_def]);
-
 val PROB_ALGEBRA_ALGEBRA = store_thm
   ("PROB_ALGEBRA_ALGEBRA", ``algebra prob_algebra``,
     RW_TAC std_ss [algebra_def, subset_class_def, prob_algebra_def, space_def, subsets_def,

@@ -1050,7 +1050,7 @@ QED
           = x ** 2 + (y + z) ** 2        by y = z
           = u ** 2 + v ** 2              by two_squares_def
 *)
-Theorem two_squares_thm:
+Theorem two_squares_thm[allow_rebind]:
   !p. prime p /\ (p MOD 4 = 1) ==>
           let (u,v) = two_squares p in (p = u ** 2 + v ** 2)
 Proof
@@ -1192,7 +1192,7 @@ QED
           = zagier (1,1,p DIV 4)    by zagier_1_1_z
          so (1,1,p DIV 4) IN a      by involute_fixed_points_iff
 *)
-Theorem zagier_fixed_points_sing:
+Theorem zagier_fixed_points_sing[allow_rebind]:
   !p. prime p /\ p MOD 4 = 1 ==>
       fixed_points (FUNPOW zagier) Z2 (mills p) = {(1,1,p DIV 4)}
 Proof
