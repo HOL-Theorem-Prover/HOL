@@ -930,18 +930,18 @@ Proof
             itree_wbisim_sym]
 QED
 
+Theorem itree_bind_wbisim_tau_eq[simp]:
+  !x k y. itree_wbisim (itree_bind (Tau x) k) y <=> itree_wbisim (itree_bind x k) y
+Proof
+  metis_tac[itree_bind_thm, itree_wbisim_tau_eq,
+            itree_wbisim_sym, itree_wbisim_trans]
+QED
+
 Theorem itree_bind_strip_tau_wbisim:
   !u u' k. strip_tau u u' ==> itree_wbisim (itree_bind u k) (itree_bind u' k)
 Proof
   Induct_on ‘strip_tau’ >>
-  rpt strip_tac >-
-   (CONV_TAC $ RATOR_CONV $ ONCE_REWRITE_CONV[itree_bind_thm] >>
-    ‘itree_wbisim (itree_bind u k) (itree_bind u' k)’
-      suffices_by metis_tac[itree_wbisim_trans, itree_wbisim_sym,
-                            itree_wbisim_tau_eq] >>
-    rw[]) >-
-   rw[itree_wbisim_refl] >>
-   rw[itree_wbisim_refl]
+  rpt strip_tac >> rw[itree_wbisim_refl]
 QED
 
 (* note a similar theorem does NOT hold for Ret because bind expands to (k x) *)
