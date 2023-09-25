@@ -8407,15 +8407,14 @@ val DILATE_0_LENGTH_UPPER = store_thm(
            = e                                       by induction hypothesis, (k - m) MOD n <> 0
 *)
 Theorem DILATE_0_EL:
-  !l e n k.
-     k < LENGTH (DILATE e 0 n l) ==>
-     EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l
-                             else e
+  !l e n k. k < LENGTH (DILATE e 0 n l) ==>
+     (EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l else e)
 Proof
   ntac 3 strip_tac >>
   `0 < SUC n` by decide_tac >>
   qabbrev_tac `m = SUC n` >>
-  Induct_on `l` >- rw[] >>
+  Induct_on `l` >-
+  rw[] >>
   rpt strip_tac >>
   `LENGTH (DILATE e 0 n [h]) = 1` by rw[DILATE_SING] >>
   `LENGTH (DILATE e 0 n (h::l)) = SUC (m * LENGTH l)` by rw[DILATE_0_LENGTH, Abbr`m`] >>
@@ -8440,10 +8439,8 @@ Proof
         rw[]
       ],
       `m <= k` by decide_tac >>
-      `EL k (t ++ DILATE e 0 n l) = EL (k - m) (DILATE e 0 n l)`
-        by simp[EL_APPEND] >>
-      `k - m < LENGTH (DILATE e 0 n l)`
-        by (trace ("BasicProvers.var_eq_old", 1)(rw[DILATE_0_LENGTH])) >>
+      `EL k (t ++ DILATE e 0 n l) = EL (k - m) (DILATE e 0 n l)` by simp[EL_APPEND] >>
+      `k - m < LENGTH (DILATE e 0 n l)` by rw[DILATE_0_LENGTH] >>
       `(k - m) MOD m = k MOD m` by simp[SUB_MOD] >>
       `(k - m) DIV m = k DIV m - 1` by simp[SUB_DIV] >>
       Cases_on `k MOD m = 0` >| [
@@ -8452,8 +8449,7 @@ Proof
         `_ = EL (PRE (k DIV m)) l` by rw[PRE_SUB1] >>
         `_ = EL (k DIV m) (h::l)` by rw[EL_CONS] >>
         rw[],
-        `EL (k - m) (DILATE e 0 n l)  = e`
-          by trace ("BasicProvers.var_eq_old", 1)(rw[]) >>
+        `EL (k - m) (DILATE e 0 n l)  = e` by rw[] >>
         rw[]
       ]
     ]
