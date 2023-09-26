@@ -1223,7 +1223,7 @@ val aksM_steps_base = store_thm(
      so 1 < size n                       by size n <> 0, size n <> 1
     ==> 1 < size n ** 5                  by ONE_LT_EXP
    Thus 1 + HALF (size n ** 5)
-     <= size n ** 5                      by SUC_HALF_LE
+     <= size n ** 5                      by HALF_ADD1_LE
      or c <= size n ** 5                 by above
     and size c <= size (size n ** 5)     by size_monotone_le
                <= 5 * size (size n)      by size_exp_upper_alt
@@ -1282,7 +1282,7 @@ val aksM_steps_upper = store_thm(
   `size n <> 1` by fs[size_eq_1] >>
   `1 < size n` by decide_tac >>
   `1 < size n ** 5` by rw[ONE_LT_EXP] >>
-  `1 + HALF (size n ** 5) <= size n ** 5` by rw[SUC_HALF_LE] >>
+  `1 + HALF (size n ** 5) <= size n ** 5` by rw[HALF_ADD1_LE] >>
   decide_tac) >>
   `size c <= 5 * size n` by
     (`size c <= size (size n ** 5)` by rw[size_monotone_le] >>

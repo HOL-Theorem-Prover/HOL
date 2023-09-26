@@ -529,56 +529,6 @@ val GF_4_mult_b_a = store_thm(
 
 (* Theorem: Group ((GF_4).prod excluding [] *)
 (* Proof:
-   By Group_def, this is to show:
-   (1) Monoid ((GF_4).prod excluding [])
-       Field (GF 2)                     by GF_2_field
-       poly_monic (GF 2) h              by GF_2_monic_h
-       irreducible (PolyRing (GF 2)) h  by GF_2_irreducible_h
-       (PolyRing (GF 2)).sum.id = []    by poly_ring_ids
-       Hence true                       by poly_mod_ring_prod_monoid
-   (2) monoid_invertibles ((GF_4).prod excluding []) = ((GF_4).prod excluding []).carrier
-       This is to show:
-       x <> [] /\ x IN (GF_4).prod.carrier ==>
-       ?y. (y IN (GF_4).prod.carrier /\ y <> []) /\
-           ((GF_4).prod.op x y = (GF_4).prod.id) /\
-           ((GF_4).prod.op y x = (GF_4).prod.id)
-       Now,  Ring (GF_4)                                          by GF_4_ring
-       Hence GF_4).prod.carrier = (GF_4).carrier  by ring_carriers
-         and GF_4).prod.id = [1]                                  by GF_4_prod_id
-       Expand by GF_4_carrier, this is to show:
-       x IN {[]; [1]; [0; 1]; [1; 1]} /\ x <> [] ==>
-       ?y. (y IN {[]; [1]; [0; 1]; [1; 1]} /\ y <> []) /\
-             ((GF_4).prod.op x y = [1]) /\
-             ((GF_4).prod.op y x = [1])
-       We have
-       (GF_4).prod.op [1] [1] = [1]      by GF_4_mult_1_1
-       (GF_4).prod.op [0;1] [1;1] = [1]  by GF_4_mult_a_b
-       (GF_4).prod.op [1;1] [0;1] = [1]  by GF_4_mult_b_a
-       Hence all x have inverse y.
-*)
-val GF_4_prod_group = store_thm(
-  "GF_4_prod_group",
-  ``Group ((GF_4).prod excluding [])``,
-  rw_tac std_ss[Group_def] >| [
-    `Field (GF 2)` by rw[GF_2_field] >>
-    `poly_monic (GF 2) h` by rw[GF_2_monic_h] >>
-    `irreducible (PolyRing (GF 2)) h` by rw[GF_2_irreducible_h] >>
-    `(PolyRing (GF 2)).sum.id = []` by rw[] >>
-    metis_tac[poly_mod_ring_prod_monoid],
-    rw_tac std_ss[monoid_invertibles_def, excluding_def, IN_DIFF, IN_SING, EXTENSION, GSPECIFICATION] >>
-    rw[EQ_IMP_THM] >>
-    `Ring (GF_4)` by rw[GF_4_ring] >>
-    `(GF_4).prod.carrier = (GF_4).carrier` by rw[ring_carriers] >>
-    `(GF_4).prod.id = [1]` by rw[GF_4_prod_id] >>
-    full_simp_tac std_ss[GF_4_carrier] >>
-    `!z. z IN {[]; [1]; [0; 1]; [1; 1]} <=> (z = []) \/ (z = [1]) \/ (z = [0;1]) \/ (z = [1;1])` by rw[] >>
-    `(GF_4).prod.op [1] [1] = [1]` by rw[GF_4_mult_1_1] >>
-    `(GF_4).prod.op [0;1] [1;1] = [1]` by rw[GF_4_mult_a_b] >>
-    `(GF_4).prod.op [1;1] [0;1] = [1]` by rw[GF_4_mult_b_a] >>
-    metis_tac[NOT_CONS_NIL]
-  ]);
-
-(* Another Proof:
    Since Field (GF 2)                by GF_2_field
    poly_monic (GF 2) h               by GF_2_monic_h
    irreducible (PolyRing (GF 2)) h   by GF_2_irreducible_h
@@ -594,24 +544,6 @@ val GF_4_prod_group = store_thm(
 
 (* Theorem: Field (GF_4) *)
 (* Proof:
-   By Field_def, this is to show:
-   (1) Ring (GF_4)
-       True by GF_4_ring.
-   (2) Group ((GF_4).prod excluding (GF_4).sum.id)
-       Ring (GF_4)         by GF_4_ring
-       (GF_4).sum.id = []  by GF_4_sum_id
-       Hence true          by GF_4_prod_group
-*)
-val GF_4_field = store_thm(
-  "GF_4_field",
-  ``Field (GF_4)``,
-  rw_tac std_ss[Field_def] >-
-  rw[GF_4_ring] >>
-  `Ring (GF_4)` by rw_tac std_ss[GF_4_ring] >>
-  `(GF_4).sum.id = []` by rw_tac std_ss[GF_4_sum_id] >>
-  rw_tac std_ss[GF_4_prod_group]);
-
-(* Another Proof:
    Since Field (GF 2)                by GF_2_field
    poly_monic (GF 2) h               by GF_2_monic_h
    irreducible (PolyRing (GF 2)) h   by GF_2_irreducible_h

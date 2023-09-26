@@ -2265,25 +2265,6 @@ Proof
   rw[field_nonzero_eq, field_mult_rinv, field_mult_linv]
 QED
 
-(* Theorem: Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f) *)
-(* Proof:
-   By Field_def, this is to show:
-   (1) Ring (ring_inj_image r f), true             by ring_inj_image_ring
-   (2) Group ((ring_inj_image r f).prod excluding (ring_inj_image r f).sum.id)
-       Since (ring_inj_image r f).sum.id = f #0    by ring_inj_image_def
-       The result follows                          by field_inj_image_prod_nonzero_group
-*)
-Theorem field_inj_image_field[allow_rebind]:
-  !(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f)
-Proof
-  rpt strip_tac >>
-  rw[Field_def] >-
-  rw[ring_inj_image_ring] >>
-  `(ring_inj_image r f).sum.id = f #0` by rw[ring_inj_image_def] >>
-  rw[field_inj_image_prod_nonzero_group]
-QED
-(* Another proof of a previous theorem. *)
-
 (* Theorem: Field r /\ INJ f R univ(:'b) ==> FieldHomo f r (ring_inj_image r f) *)
 (* Proof: by ring_inj_image_ring_homo, field_is_ring *)
 Theorem field_inj_image_field_homo:

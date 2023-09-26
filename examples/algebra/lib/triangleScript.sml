@@ -329,7 +329,6 @@ open relationTheory; (* for RTC *)
    lcm_run_leibniz_divisor   |- !n k. k <= n ==> leibniz n k divides lcm_run (n + 1)
    lcm_run_lower_odd         |- !n. n * 4 ** n <= lcm_run (TWICE n + 1)
    lcm_run_lower_even        |- !n. n * 4 ** n <= lcm_run (TWICE (n + 1))
-   lcm_run_lower_better      |- !n. 7 <= n ==> 2 ** n <= lcm_run n
 
    lcm_run_odd_lower         |- !n. ODD n ==> HALF n * HALF (2 ** n) <= lcm_run n
    lcm_run_even_lower        |- !n. EVEN n ==> HALF (n - 2) * HALF (HALF (2 ** n)) <= lcm_run n
@@ -4475,22 +4474,6 @@ val lcm_run_divisors = store_thm(
 
 (* Theorem: lcm_run n <= lcm_run (n + 1) *)
 (* Proof:
-   Note 0 < lcm_run n                  by lcm_run_pos
-      lcm_run (n + 1)
-    = list_lcm [1 .. (n + 1)]          by notation
-    = list_lcm (SNOC (n + 1) [1 .. n]) by listRangeINC_SNOC, 1 <= n + 1
-    = lcm (n + 1) (lcm_run n)          by list_lcm_snoc
-    >= lcm_run n                       by LCM_LE, 0 < n + 1
-*)
-val lcm_run_monotone = store_thm(
-  "lcm_run_monotone",
-  ``!n. lcm_run n <= lcm_run (n + 1)``,
-  rw[lcm_run_pos, listRangeINC_SNOC, list_lcm_snoc, LCM_LE]);
-
-(* Another proof of same theorem *)
-
-(* Theorem: lcm_run n <= lcm_run (n + 1) *)
-(* Proof:
    Note lcm_run n divides lcm_run (n + 1)   by lcm_run_divisors
     and 0 < lcm_run (n + 1)  ]              by lcm_run_pos
      so lcm_run n <= lcm_run (n + 1)        by DIVIDES_LE
@@ -4591,9 +4574,6 @@ val lcm_run_lower_even = store_thm(
   rpt strip_tac >>
   `2 * (n + 1) = 2 * n + 1 + 1` by decide_tac >>
   metis_tac[lcm_run_monotone, lcm_run_lower_odd, LESS_EQ_TRANS]);
-
-
-(* A very good result, another major theorem. *)
 
 (* Theorem: ODD n ==> (HALF n) * HALF (2 ** n) <= lcm_run n *)
 (* Proof:
@@ -4761,7 +4741,6 @@ val lcm_run_lower_better = store_thm(
     rw[lcm_run_odd_lower_alt]
   ]);
 
-(* Another way to prove this result of Nair. *)
 
 (* ------------------------------------------------------------------------- *)
 (* Nair's Trick -- rework                                                    *)

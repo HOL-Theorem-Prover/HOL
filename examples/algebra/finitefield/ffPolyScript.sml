@@ -937,68 +937,6 @@ val subring_poly_division_eqn = store_thm(
   `?u v. Poly s u /\ Poly s v /\ (p = poly_add s (poly_mult s u q) v) /\ poly_deg s v < poly_deg s q ` by rw[poly_division_eqn] >>
   metis_tac[subring_poly_add, subring_poly_mult, poly_mult_poly, subring_poly_deg]);
 
-(* STOP; HERE; *)
-
-(* Theorem: s <= r ==> !p q. Poly s p /\ Ulead s q ==>
-            (poly_div s p q = p / q) /\ (poly_mod s p q = p % q) *)
-(* Proof:
-   Note ulead q           by subring_poly_ulead
-    and poly p            by subring_poly_poly
-    and Deg s q = deg q   by subring_poly_deg
-
-   If deg q = 0,
-      Then (p / q = |/(lead q) * p) /\ (p % q = |0|)   by poly_div_mod_by_const
-       and poly_div s p q = poly_cmult s (Inv s (Lead s q)) p /\
-           poly_mod s p q = poly_zero s                by poly_div_mod_by_const
-       but Inv s (Lead s q) = |/ (lead q)              by subring_unit_inv, subring_poly_lead
-       Now lead q  IN R                                by poly_lead_element
-      Thus poly_div s p q = p / q                      by subring_poly_cmult, ring_unit_inv_element
-       and poly_mod s p q = p % q                      by subring_poly_zero
-
-   If deg q <> 0,
-      Then Deg q <> 0, or Pmonic s q.
-   Note pmonic q                               by subring_poly_pmonic
-    ==> ?u v. Poly s u /\ Poly s v /\ (p = u * q + v) /\ deg v < deg q
-                                               by subring_poly_division_eqn
-
-   Step 1: show u = p / q,  v = p % q
-   Note poly p /\ poly q /\ poly u /\ poly v   by subring_poly_poly
-    ==> (u = p / q) /\ (v = p % q)             by poly_div_unique, poly_mod_unique
-
-   Step 2: show u = poly_div s p q, v = poly_mod s p q
-   Note Deg s v < Deg s q                      by subring_poly_deg
-    and Poly s (poly_mult s u q)               by poly_mult_poly
-   thus p = poly_add s (poly_mult s u q) v     by subring_poly_add, subring_poly_mult
-    ==> (u = poly_div s p q) /\ (v = poly_mod s p q)
-                                               by poly_div_unique, poly_mod_unique
-
-   Hence (poly_div s p q = u = p / q) /\ (poly_mod s p q = v = p % q)
-*)
-val subring_poly_div_mod = store_thm(
-  "subring_poly_div_mod",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Ulead s q ==>
-      (poly_div s p q = p / q) /\ (poly_mod s p q = p % q)``,
-  ntac 6 strip_tac >>
-  `ulead q` by metis_tac[subring_poly_ulead] >>
-  `poly p` by metis_tac[subring_poly_poly] >>
-  `Deg s q = deg q` by rw[subring_poly_deg] >>
-  Cases_on `deg q = 0` >| [
-    `(p / q = |/(lead q) * p) /\ (p % q = |0|)` by rw[poly_div_mod_by_const] >>
-    `(poly_div s p q = poly_cmult s (Inv s (Lead s q)) p) /\
-    (poly_mod s p q = poly_zero s)` by rw[poly_div_mod_by_const] >>
-    `Inv s (Lead s q) = |/ (lead q)` by metis_tac[subring_unit_inv, subring_poly_lead] >>
-    metis_tac[poly_lead_element, ring_unit_inv_element, subring_poly_cmult, subring_poly_zero],
-    `?u v. Poly s u /\ Poly s v /\ (p = u * q + v) /\ deg v < deg q` by rw[subring_poly_division_eqn] >>
-    `pmonic q` by metis_tac[subring_poly_pmonic, NOT_ZERO] >>
-    `poly u /\ poly v` by metis_tac[subring_poly_poly] >>
-    `Deg s v < Deg s q` by metis_tac[subring_poly_deg] >>
-    `Poly s (poly_mult s u q)` by rw[poly_mult_poly] >>
-    `p = poly_add s (poly_mult s u q) v` by metis_tac[subring_poly_add, subring_poly_mult] >>
-    metis_tac[poly_div_unique, poly_mod_unique]
-  ]);
-
-(* Better proof of the same theorem. *)
-
 (* Theorem: s <= r ==> !p q. Poly s p /\ Ulead s q ==>
             (poly_div s p q = p / q) /\ (poly_mod s p q = p % q) *)
 (* Proof:
@@ -1056,10 +994,10 @@ val subring_poly_divides = store_thm(
     and Pmonic s q ==> pmonic q     by subring_poly_pmonic
 
         poly_divides s q p
-    <=> poly_mod s p q = poly_zero s     by poly_divides_mod_zero
+    <=> poly_mod s p q = poly_zero s     by poly_divides_alt
     <=> poly_mod s p q = |0|             by subring_poly_zero
     <=> (p % q) = |0|                    by subring_poly_div_mod
-    <=> q pdivides p                     by poly_divides_mod_zero
+    <=> q pdivides p                     by poly_divides_alt
 *)
 val subring_poly_divides_iff = store_thm(
   "subring_poly_divides_iff",
@@ -1068,7 +1006,7 @@ val subring_poly_divides_iff = store_thm(
   rpt strip_tac >>
   `poly p /\ ulead q` by metis_tac[subring_poly_poly, subring_poly_ulead] >>
   `poly_zero s = |0|` by rw[subring_poly_zero] >>
-  metis_tac[poly_divides_mod_zero, subring_poly_div_mod]);
+  metis_tac[poly_divides_alt, subring_poly_div_mod]);
 
 (* This is a generalisation of subring_poly_mult *)
 

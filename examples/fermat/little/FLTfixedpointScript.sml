@@ -404,7 +404,7 @@ fixedpoint_prime_congruence |> ISPEC ``p:num`` |> ISPEC ``cycle``;
 |- !X. prime p /\ (Zadd p act X) cycle /\ FINITE X ==>
        CARD X MOD p = CARD (fixed_points cycle (Zadd p) X) MOD p
 *)
-Theorem fermat_little_thm:
+Theorem fermat_little_thm[allow_rebind]:
   !p a. prime p ==> a ** p MOD p = a MOD p
 Proof
   rpt strip_tac >>

@@ -945,7 +945,7 @@ val poly_minimal_divides_subfield_poly_iff = store_thm(
     <=> eval h x = #0             by above
     <=> root h x                  by poly_root_def
     <=> m pdivides h              by poly_minimal_divides_subfield_poly_iff
-    <=> h % m = |0|               by poly_divides_mod_zero, ulead m
+    <=> h % m = |0|               by poly_divides_alt, ulead m
     <=> p % m = q % m             by poly_mod_eq, ulead m
 *)
 val poly_minimal_eval_congruence = store_thm(
@@ -964,7 +964,7 @@ val poly_minimal_eval_congruence = store_thm(
   `_ = (eval h x = #0)` by rw[Abbr`h`] >>
   `_ = root h x` by rw[poly_root_def] >>
   `_ = (m pdivides h)` by rw[poly_minimal_divides_subfield_poly_iff, Abbr`m`] >>
-  `_ = (h % m = |0|)` by rw[poly_divides_mod_zero] >>
+  `_ = (h % m = |0|)` by rw[poly_divides_alt] >>
   `_ = (p % m = q % m)` by rw[poly_mod_eq, Abbr`h`] >>
   rw[]);
 

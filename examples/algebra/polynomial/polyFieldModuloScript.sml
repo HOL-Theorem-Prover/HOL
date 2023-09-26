@@ -831,12 +831,12 @@ val poly_field_mod_prime_product = store_thm(
   rw_tac std_ss[poly_mod_prime_product, poly_field_poly_ulead, field_is_ring]);
 
 (* Theorem: (pprime z <=> !x y. poly x /\ poly y /\ z pdivides (x * y) ==> z pdivides x \/ z pdivides y) *)
-(* Proof: by poly_mod_prime_product, poly_ulead_divides_alt. *)
+(* Proof: by poly_mod_prime_product, poly_divides_alt. *)
 val poly_prime_divides = store_thm(
   "poly_prime_divides",
   ``!r:'a ring z. Ring r /\ ulead z ==>
    (pprime z <=> !x y. poly x /\ poly y /\ z pdivides (x * y) ==> z pdivides x \/ z pdivides y)``,
-  metis_tac[poly_mod_prime_product, poly_ulead_divides_alt, poly_mult_poly]);
+  metis_tac[poly_mod_prime_product, poly_divides_alt, poly_mult_poly]);
 
 (* Theorem: poly t /\ pprime t /\ t pdivides (p * q) ==> (t pdivides p) \/ (t pdivides q) *)
 (* Proof: by ring_prime_def, poly_divides_is_ring_divides. *)
@@ -1701,39 +1701,6 @@ val poly_mod_irreducible_finite_field = store_thm(
   rw[FiniteField_def] >-
   rw[poly_mod_irreducible_field] >>
   rw[poly_mod_ring_finite, poly_irreducible_pmonic, FiniteRing_def]);
-
-(* Another proof, not based on inverse. *)
-
-(* Theorem: FiniteField r ==> !p. ipoly p ==> FiniteField (PolyModRing r p) *)
-(* Proof:
-   Note unit (lead p) /\ 0 < deg p           by poly_irreducible_pmonic
-   By finite_field_from_finite_ring, this is to show:
-   (1) (PolyModRing r p).prod.id <> (PolyModRing r p).sum.id
-       That is to show: |1| <> |0|            by poly_mod_ring_property, deg p <> 0
-       This is true                           by poly_one_ne_poly_zero
-   (2) FiniteRing (PolyModRing r p)
-       Note FiniteField (PolyModRing r p)     by poly_mod_irreducible_finite_field
-        ==> FiniteRing (PolyModRing r p)      by finite_field_is_finite_ring
-   (3) After simplifying by poly_mod_ring_property,
-       poly x /\ poly y /\ deg x < deg p /\ deg y < deg p ==>
-       ((x * y) % p = |0|) <=> (x = |0|) \/ (y = |0|)
-       Note unit (lead p)                     by poly_irreducible_pmonic
-        ==> x % p = x  and y % p = y          by poly_mod_less,
-       Thus (x = |0|) \/ (y = |0|)            by poly_mod_mult_eq_zero
-*)
-val poly_mod_irreducible_finite_field = store_thm(
-  "poly_mod_irreducible_finite_field",
-  ``!r:'a field. FiniteField r ==> !p. ipoly p ==> FiniteField (PolyModRing r p)``,
-  rpt (stripDup[FiniteField_def]) >>
-  `pmonic p` by rw[poly_irreducible_pmonic] >>
-  `deg p <> 0` by decide_tac >>
-  (REVERSE (irule finite_field_from_finite_ring >> rpt conj_tac)) >| [
-    `|1| <> |0|` by rw[poly_one_ne_poly_zero] >>
-    rw_tac std_ss[poly_mod_ring_property],
-    rw_tac std_ss[poly_mod_irreducible_finite_field, finite_field_is_finite_ring],
-    rw_tac std_ss[poly_mod_ring_property] >>
-    metis_tac[poly_mod_mult_eq_zero, poly_mod_less, field_is_ring]
-  ]);
 
 (* Theorem: FiniteField r /\ ipoly z ==> (CARD Rz = CARD R ** deg z) *)
 (* Proof:
@@ -3777,91 +3744,6 @@ val poly_mod_eval_lift_by_poly_eval_lift = store_thm(
 
 (* Another version with evalz (lift p) (q % z) rather than evalz (lift p) q *)
 
-(* Theorem: Ring r /\ pmonic z ==> !p q. poly p /\ poly q ==>
-            (evalz (lift p) (q % z) = poly_eval (PolyRing r) (lift p) q % z) *)
-(* Proof:
-   First, #0z = |0|            by poly_mod_ring_property
-   By induction on p.
-   Base case: poly [] ==> (evalz (lift []) (q % z) = poly_eval (PolyRing r) (lift []) q % z)
-   LHS = evalz (lift []) (q % z)
-       = evalz [] (q % z)     by poly_lift_of_zero
-       = #0z                  by poly_eval_of_zero
-       = |0|                  by poly_mod_ring_property
-   RHS = poly_eval (PolyRing r) (lift []) q % z
-       = poly_eval (PolyRing r) [] q % z            by poly_lift_of_zero
-       = (PolyRing r).sum.id % z                    by poly_eval_of_zero
-       = |0| % z                                    by poly_ring_property
-       = |0| = LHS                                  by poly_zero_mod
-   Step case: !h. poly (h::p) ==> (evalz (lift (h::p)) (q % z) = poly_eval (PolyRing r) (lift (h::p)) q % z)
-     poly (h::p) ==> h IN R /\ poly p                     by poly_cons_poly
-     lift (h::p) = (if h = #0 then |0| else [h])::lift p  by poly_lift_cons
-
-     Let t = poly_eval (PolyRing r) (lift p) q
-     The induction hypothesis is: evalz (lift p) (q % z) = t % z
-     and   (t % z) *z (q % z)
-         = ((t % z) * (q % z)) % z                     by poly_mod_ring_property
-         = (t * q) % z                                 by poly_mod_mult
-
-     If h = #0,
-    LHS = evalz (lift (#0::p)) (q % z
-        = evalz ( |0|::lift p) (q % z)                 by poly_lift_cons
-        = |0| +z ((evalz (lift p) (q % z)) *z (q % z)) by poly_eval_cons
-        = |0| +z ((t % z) *z (q % z))                  by induction hypothesis
-        = |0| +z ((t * q) % z)                         by above
-        = ( |0| + (t * q) % z) % z                     by poly_mod_ring_property
-        = ( |0| % z + (t * q) % z) % z                 by poly_zero_mod
-        = ( |0| + t * q) % z                           by poly_mod_add
-    RHS = poly_eval (PolyRing r) (lift (#0::p)) q % z
-        = poly_eval (PolyRing r) ( |0|::lift p) q % z         by poly_lift_cons
-        = ( |0| + poly_eval (PolyRing r) (lift p) q * q) % z  by poly_eval_cons
-        = ( |0| + t * q) % z                                  by t above
-        = LHS
-
-     If h <> #0,
-    LHS = evalz (lift (h::p)) (q % z)
-        = evalz ([h]::lift p) (q % z)                  by poly_lift_cons
-        = [h] +z ((evalz (lift p) (q % z)) *z (q % z)) by poly_eval_cons
-        = [h] +z ((t % z) *z (q % z))                  by induction hypothesis
-        = [h] +z ((t * q) % z)                         by above
-        = ([h] + (t * q) % z) % z                      by poly_mod_ring_property
-        = ([h] % z + (t * q) % z) % z                  by poly_mod_const
-        = ([h] + t * q) % z                            by poly_mod_add
-    RHS = poly_eval (PolyRing r) (lift (h::p)) q % z
-        = poly_eval (PolyRing r) ([h]::lift p) q % z         by poly_lift_cons
-        = ([h] + poly_eval (PolyRing r) (lift p) q * q) % z  by poly_eval_cons
-        = ([h] + t * q) % z                                  by t above
-        = LHS
-*)
-val poly_mod_eval_lift_by_poly_eval_lift_alt = store_thm(
-  "poly_mod_eval_lift_by_poly_eval_lift_alt",
-  ``!r:'a ring z. Ring r /\ pmonic z ==> !p q. poly p /\ poly q ==>
-         (evalz (lift p) (q % z) = poly_eval (PolyRing r) (lift p) q % z)``,
-  rpt strip_tac >>
-  `#0z = |0|` by rw[poly_mod_ring_ids] >>
-  Induct_on `p` >-
-  rw_tac std_ss[poly_lift_of_zero, poly_eval_of_zero, poly_zero_mod] >>
-  rw_tac std_ss[poly_cons_poly] >>
-  qabbrev_tac `t = poly_eval (PolyRing r) (lift p) q` >>
-  `poly t` by rw[poly_eval_lift_poly_poly, Abbr`t`] >>
-  `poly (t % z) /\ deg (t % z) < deg z` by rw[poly_deg_mod_less] >>
-  `poly (q % z) /\ deg (q % z) < deg z` by rw[poly_deg_mod_less] >>
-  `poly (t * q) /\ poly ((t * q) % z) /\ deg ((t * q) % z) < deg z` by rw[poly_deg_mod_less] >>
-  `(t % z) *z (q % z) = (t * q) % z` by rw[poly_mod_ring_property, poly_mod_mult] >>
-  rw_tac std_ss[poly_eval_cons, poly_mod_ring_property, poly_lift_cons] >| [
-    rw_tac std_ss[GSYM poly_mod_mult] >>
-    `poly |0| /\ deg |0| < deg z` by rw[] >>
-    `|0| +z (t * q) % z = ( |0| + (t * q) % z) % z` by rw[poly_mod_ring_property] >>
-    `_ = ( |0| % z + (t * q) % z) % z` by rw[poly_zero_mod] >>
-    rw_tac std_ss[poly_mod_add],
-    rw_tac std_ss[GSYM poly_mod_mult] >>
-    `poly [h] /\ deg [h] < deg z` by rw[] >>
-    `[h] +z (t * q) % z = ([h] + (t * q) % z) % z` by rw[poly_mod_ring_property] >>
-    `_ = ([h] % z + (t * q) % z) % z` by rw[poly_mod_const] >>
-    rw_tac std_ss[poly_mod_add]
-  ]);
-
-(* Another proof of the same result. *)
-
 (*
 poly_mod_eval_lift_by_poly_eval_lift;
 val it = |- !r z. Ring r /\ pmonic z ==> !p q. poly p /\ poly q /\ deg q < deg z ==>
@@ -3909,26 +3791,6 @@ val poly_mod_lift_root_by_mod_peval = store_thm(
   rw[GSYM poly_peval_alt]);
 
 (* Another version with q % z rather than q *)
-
-(* Theorem: Ring r ==> !p q z. poly p /\ poly q /\ pmonic z ==>
-            (rootz (lift p) (q % z) <=> (peval p q % z = |0|)) *)
-(* Proof:
-       rootz (lift p) (q % z)
-   <=> evalz (lift p) (q % z) = |0|                   by poly_root_def
-   <=> poly_eval (PolyRing r) (lift p) q % z = |0|    by poly_mod_eval_lift_by_poly_eval_lift_alt
-   <=> (peval p q) % z = |0|                          by poly_peval_alt
-*)
-val poly_mod_lift_root_by_mod_peval_alt = store_thm(
-  "poly_mod_lift_root_by_mod_peval_alt",
-  ``!r:'a ring z. Ring r /\ pmonic z ==> !p q. poly p /\ poly q ==>
-               (rootz (lift p) (q % z) <=> (peval p q % z = |0|))``,
-  rpt strip_tac >>
-  `|0| = #0z` by rw[poly_mod_ring_ids] >>
-  `rootz (lift p) (q % z) <=> (evalz (lift p) (q % z) = |0|)` by rw[GSYM poly_root_def] >>
-  `_ = ((poly_eval (PolyRing r) (lift p) q) % z = |0|)` by rw[poly_mod_eval_lift_by_poly_eval_lift_alt] >>
-  rw[GSYM poly_peval_alt]);
-
-(* Another proof of the same result. *)
 
 (*
 poly_mod_lift_root_by_mod_peval;

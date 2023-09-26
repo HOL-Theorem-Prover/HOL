@@ -462,8 +462,6 @@ Theorem group_inv_element[simp]:
   !g:'a group. Group g ==> !x. x IN G ==> |/x IN G
 Proof rw[monoid_inv_def]
 QED
-(* Below is too much effort for a simple theorem. *)
-
 
 val gim = Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT1;
 val ginv = Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT2;

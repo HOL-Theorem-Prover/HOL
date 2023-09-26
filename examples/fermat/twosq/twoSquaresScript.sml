@@ -205,7 +205,6 @@ QED
 (* Fermat Two-Squares Uniqueness.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-
 (* Theorem: prime p /\ (p = a ** 2 + b ** 2) /\ (p = c ** 2 + d ** 2) ==>
           ({a; b} = {c; d}) *)
 (* Proof:
@@ -303,7 +302,6 @@ Proof
   ]
 QED
 
-
 (* Theorem: prime p /\ ODD a /\ EVEN b /\ (p = a ** 2 + b ** 2) /\
             ODD c /\ EVEN d /\ (p = c ** 2 + d ** 2) ==> ((a = c) /\ (b = d)) *)
 (* Proof:
@@ -384,7 +382,6 @@ QED
 (* Fermat Two-Squares Existence.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-
 (* Theorem: prime p /\ (p MOD 4 = 1) ==> ?x y. p = windmill (x, y, y) *)
 (* Proof:
    Let m = mills p, the solutions (x,y,z) of p = x ** 2 + 4 * y * z.
@@ -435,7 +432,6 @@ Proof
   `y = z` by fs[flip_fix] >>
   metis_tac[mills_element]
 QED
-
 
 (* Theorem: prime p /\ (p MOD 4 = 1) ==>
             ?(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) *)
@@ -591,7 +587,6 @@ Proof
   metis_tac[flip_fixes_prime]
 QED
 
-
 (* Theorem: !p. prime p /\ (p MOD 4 = 1) ==>
             ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2) *)
 (* Proof:
@@ -611,7 +606,6 @@ Proof
     metis_tac[fermat_two_squares_unique_odd_even, PAIR_FST_SND_EQ]
   ]
 QED
-
 
 (* Theorem: prime p ==>
             ((p MOD 4 = 1) <=> ?!(u,v). ODD u /\ EVEN v /\ (p = u ** 2 + v ** 2)) *)
@@ -775,12 +769,6 @@ Proof
     decide_tac
   ]
 QED
-
-(* This proof is using:
-   involute_involute_fix_odd_period_fix.
-   In part4, there is another proof using:
-   flip_fixes_prime, which depends on fermat_two_squares_unique_odd_even.
-*)
 
 (* ------------------------------------------------------------------------- *)
 (* Computation by WHILE loop.                                                *)
@@ -1036,33 +1024,6 @@ Proof
   fs[]
 QED
 
-(* Another proof of the same theorem, using two_sq_thm. *)
-
-(* Theorem: prime p /\ (p MOD 4 = 1) ==>
-            let (u,v) = two_squares p in (p = u ** 2 + v ** 2) *)
-(* Proof:
-   Let t = two_sq p.
-   Then t IN fixes flip (mills p)        by two_sq_thm
-    and ?x y z. t = (x,y,z)              by triple_parts
-    ==> (x,y,z) IN mills p /\ (y = z)    by fixes_element, flip_fix
-     so p = windmill (x, y, y)           by mills_element
-          = x ** 2 + (2 * y) ** 2        by windmill_by_squares
-          = x ** 2 + (y + z) ** 2        by y = z
-          = u ** 2 + v ** 2              by two_squares_def
-*)
-Theorem two_squares_thm:
-  !p. prime p /\ (p MOD 4 = 1) ==>
-          let (u,v) = two_squares p in (p = u ** 2 + v ** 2)
-Proof
-  rw[two_squares_def] >>
-  qabbrev_tac `t = two_sq p` >>
-  `t IN fixes flip (mills p)` by rw[two_sq_thm, Abbr`t`] >>
-  `?x y z. t = (x,y,z)` by rw[triple_parts] >>
-  `(x,y,z) IN mills p /\ (y = z)` by fs[fixes_element, flip_fix] >>
-  `p = windmill (x, y, y)` by fs[mills_element] >>
-  simp[windmill_by_squares]
-QED
-
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Two Squares Theorem by Group Action.                             *)
 (* ------------------------------------------------------------------------- *)
@@ -1129,43 +1090,6 @@ QED
    this implies flip has at least a fixed point,
    giving the existence of Fermat's two squares.
 *)
-
-(* Proof based on involute_two_fixed_points_both_odd *)
-
-(* Theorem: prime p /\ p MOD 4 = 1 ==>
-            fixed_points (FUNPOW zagier) Z2 (mills p) = {(1,1,p DIV 4)} *)
-(* Proof:
-   By fixes_def, mills_def, this is to show:
-   (1) p = windmill (x, y, z) /\ zagier (x,y,z) = (x,y,z) ==> (x,y,z) = (1,1,p DIV 4)
-       Note ~square p                 by prime_non_square
-        and x <> 0                    by mills_element, mills_triple_nonzero
-         so x = y                     by zagier_fix
-        ==> (x,y,z) = (1,1,p DIV 4)   by windmill_trivial_prime
-   (2) p MOD 4 = 1 ==> p = windmill (1, 1, p DIV 4)
-       This is true                   by windmill_trivial_prime
-   (3) a < 2 ==> FUNPOW zagier p (1,1,p DIV 4) = (1,1,p DIV 4)
-       When a = 0, true               by FUNPOW_0
-       When a = 1, true               by FUNPOW_1, zagier_fix
-*)
-Theorem zagier_fixed_points_sing:
-  !p. prime p /\ p MOD 4 = 1 ==>
-      fixed_points (FUNPOW zagier) Z2 (mills p) = {(1,1,p DIV 4)}
-Proof
-  rw[fixed_points_def, mills_def, Zadd_element, EXTENSION] >>
-  simp[EQ_IMP_THM] >>
-  rpt strip_tac >| [
-    rename1 ‘x = (x',y,z)’ >>
-    `~square p` by metis_tac[prime_non_square] >>
-    `p MOD 4 <> 0` by decide_tac >>
-    `zagier x = x` by metis_tac[FUNPOW_1, DECIDE``1 < 2``] >>
-    `x' = y` by metis_tac[zagier_fix, mills_element, mills_triple_nonzero] >>
-    metis_tac[windmill_trivial_prime],
-    metis_tac[windmill_trivial_prime],
-    (`a = 0 \/ a = 1` by decide_tac >> fs[zagier_fix])
-  ]
-QED
-
-(* A better proof of the same theorem *)
 
 (* Theorem: prime p /\ p MOD 4 = 1 ==>
             fixed_points (FUNPOW zagier) Z2 (mills p) = {(1,1,p DIV 4)} *)

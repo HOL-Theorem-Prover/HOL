@@ -3251,10 +3251,8 @@ val finite_field_fermat_all = store_thm(
   "finite_field_fermat_all",
   ``!r:'a field. FiniteField r ==> !x. x IN R ==> !n. x ** (CARD R ** n) = x``,
   rpt (stripDup[FiniteField_def]) >>
-  qabbrev_tac `m = CARD R` >>
-  Induct_on `n` >-
-  rw[EXP] >>
-  rw[EXP, field_exp_mult, finite_field_fermat_thm, Abbr`m`]);
+  Induct_on `n` >>
+  rw[EXP, field_exp_mult, finite_field_fermat_thm]);
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> !n. x ** n = x ** (n MOD (CARD R)) *)
 (* Proof:

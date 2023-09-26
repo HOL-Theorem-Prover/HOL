@@ -1771,63 +1771,6 @@ val poly_minimal_deg_eqn = store_thm(
   `x IN R` by rw[field_nonzero_element] >>
   rw[poly_minimal_deg, finite_field_conjugates_card]);
 
-(* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> degree x divides (r <:> s) *)
-(* Proof:
-   Let d = (r <:> s), om = order (ZN (forder x)).prod (CARD B).
-   If x = #0,
-        deg (minimal #0)
-      = deg X              by poly_minimal_zero
-      = 1                  by poly_deg_X
-      and 1 divides d      by ONE_DIVIDES_ALL
-   If x <> #0,
-      Note x IN R+         by field_nonzero_eq
-        degree x
-      = deg (minimal x)    by notation
-      = om                 by poly_minimal_deg_eqn
-      and om divides d     by subfield_card_order_divides_dim
-*)
-val poly_minimal_deg_divides_dim = store_thm(
-  "poly_minimal_deg_divides_dim",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> degree x divides (r <:> s)``,
-  rpt (stripDup[FiniteField_def]) >>
-  Cases_on `x = #0` >| [
-    `deg (minimal #0) = 1` by rw[poly_minimal_zero] >>
-    rw[ONE_DIVIDES_ALL],
-    `x IN R+` by rw[field_nonzero_eq] >>
-    rw[poly_minimal_deg_eqn, subfield_card_order_divides_dim]
-  ]);
-
-(* Another proof of the same theorem. *)
-
-(* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> degree x divides (r <:> s) *)
-(* Proof:
-   Let d = (r <:> s), om = order (ZN (forder x)).prod (CARD B).
-   If x = #0,
-        deg (minimal #0)
-      = CARD (Conj #0)     by poly_minimal_deg
-      = CARD {#0}          by ring_conjugates_zero
-      = 1                  by CARD_SING
-      and 1 divides d      by ONE_DIVIDES_ALL
-   If x <> #0,
-      Note x IN R+         by field_nonzero_eq
-        degree x
-      = deg (minimal x)    by notation
-      = CARD (Conj x)      by poly_minimal_deg
-      = om                 by finite_field_conjugates_card, x IN R+
-      and om divides d     by subfield_card_order_divides_dim
-*)
-val poly_minimal_deg_divides_dim = store_thm(
-  "poly_minimal_deg_divides_dim",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> degree x divides (r <:> s)``,
-  rpt (stripDup[FiniteField_def]) >>
-  `degree x = CARD (Conj x)` by rw[poly_minimal_deg] >>
-  Cases_on `x = #0` >-
-  rw[finite_field_conjugates_zero] >>
-  `x IN R+` by rw[field_nonzero_eq] >>
-  rw[finite_field_conjugates_card, subfield_card_order_divides_dim]);
-
-(* Third proof of the same theorem, without counting conjugates. *)
-
 (*
 > poly_minimal_subfield_irreducible
 val it = |- !r. FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> IPoly s (minimal x)
@@ -2794,49 +2737,6 @@ val poly_unity_special_subfield_factor = store_thm(
 (* ------------------------------------------------------------------------- *)
 (* Cyclo and Unity polynomials by Irreducible Factors                        *)
 (* ------------------------------------------------------------------------- *)
-
-(* Theorem: FiniteField r ==> !n. n divides CARD R+ ==>
-            ?s. FINITE s /\ miset s /\ s <> {} /\ (cyclo n = PPROD s) *)
-(* Proof:
-   Let s = IMAGE factor (orders f* n).
-   Then cyclo n = PPROD s               by poly_cyclo_def
-   Note (orders f* n) SUBSET R          by field_orders_subset_carrier
-    and FINITE (orders f* n)            by field_orders_finite
-    and (orders f* n) <> {}             by finite_field_orders_nonempty_iff, n divides CARD R+
-   Thus FINITE s                        by IMAGE_FINITE
-    and miset s                         by poly_factor_image_monic_irreducibles_set
-    and s <> {}                         by IMAGE_EMPTY
-   Take this s, and the result follows.
-*)
-val poly_cyclo_by_distinct_irreducibles = store_thm(
-  "poly_cyclo_by_distinct_irreducibles",
-  ``!r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
-   ?s. FINITE s /\ miset s /\ s <> {} /\ (cyclo n = PPROD s)``,
-  rpt (stripDup[FiniteField_def]) >>
-  qabbrev_tac `s = IMAGE factor (orders f* n)` >>
-  `(orders f* n) SUBSET R` by rw[field_orders_subset_carrier] >>
-  `FINITE (orders f* n)` by rw[field_orders_finite] >>
-  `(orders f* n) <> {}` by metis_tac[finite_field_orders_nonempty_iff] >>
-  `FINITE s` by rw[Abbr`s`] >>
-  `miset s` by metis_tac[poly_factor_image_monic_irreducibles_set] >>
-  `s <> {}` by rw[Abbr`s`] >>
-  metis_tac[poly_cyclo_def]);
-
-(* Another proof of the same result *)
-
-(* Check this out:
-> poly_cyclo_eq_poly_minimal_product |> ISPEC ``r:'a field`` |> ISPEC ``r:'a field``;
-val it = |- FiniteField r /\ r <<= r ==> !n. cyclo n = PPIMAGE (poly_minimal r r) (orders f* n): thm
-> poly_minimal_monic |> ISPEC ``r:'a field`` |> ISPEC ``r:'a field``;
-val it = |- FiniteField r /\ r <<= r ==> !x. x IN R ==> monic (poly_minimal r r x): thm
-> poly_minimal_subfield_irreducible |> ISPEC ``r:'a field`` |> ISPEC ``r:'a field``;
-val it = |- FiniteField r /\ r <<= r ==> !x. x IN R ==> ipoly (poly_minimal r r x): thm
-
-However, what does (poly_minimal r r x) look like?
-> poly_minimal_deg_eqn |> ISPEC ``r:'a field`` |> ISPEC ``r:'a field``;
-val it = |- FiniteField r /\ r <<= r ==> !x. x IN R+ /\ x <> #1 ==>
-            (deg (poly_minimal r r x) = ordz (forder x) (CARD R)): thm
-*)
 
 (* Theorem: FiniteField r ==> !n. n divides CARD R+ ==>
             ?s. FINITE s /\ miset s /\ s <> {} /\ (cyclo n = PPROD s) *)
