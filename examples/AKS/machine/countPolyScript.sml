@@ -2797,36 +2797,6 @@ suitable for: loop_list_count_cover_exit_le
 (* Theorem: stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p *)
 (* Proof:
    Let body = (\p. 4 + if (TL p = []) then 0 else 1),
-       cover = (\p. 5),
-       exit = (\p. TL p = []),
-       loop = (\p. stepsOf (poly_frontM p)).
-   Then !p. loop p = if (p = []) then 1 else body p + if exit p then 0 else loop (TL p)
-                                                by poly_frontM_steps_thm
-    Now !x. body x <= cover x                   by cases on TL p,
-    and !x y. x <= y ==> cover x <= cover y     by cover being a constant
-   Thus loop p <= 1 + cover p * LENGTH p        by loop_list_count_cover_exit_le
-                = 1 + 5 * LENGTH p
-*)
-val poly_frontM_steps_upper = store_thm(
-  "poly_frontM_steps_upper",
-  ``!p. stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p``,
-  rpt strip_tac >>
-  qabbrev_tac `body = \p. 4 + if (TL p = []) then 0 else 1` >>
-  qabbrev_tac `cover = \p:'a list. 5` >>
-  qabbrev_tac `exit = \p. TL p = []` >>
-  qabbrev_tac `loop = \p. stepsOf (poly_frontM p)` >>
-  `loop p <= 1 + 5 * LENGTH p` suffices_by rw[] >>
-  `!x. loop x = if x = [] then 1 else body x + if exit x then 0 else loop (TL x)` by metis_tac[poly_frontM_steps_thm] >>
-  `!x. body x <= cover x` by rw[Abbr`body`, Abbr`cover`] >>
-  `!x y. x <= y ==> cover x <= cover y` by rw[Abbr`cover`] >>
-  imp_res_tac loop_list_count_cover_exit_le >>
-  metis_tac[]);
-
-(* Michael's proof of the same theorem. *)
-
-(* Theorem: stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p *)
-(* Proof:
-   Let body = (\p. 4 + if (TL p = []) then 0 else 1),
        exit = (\p. TL p = []),
        loop = (\p. stepsOf (poly_frontM p)).
    Then !p. loop p = if (p = []) then 1 else body p + if exit p then 0 else loop (TL p)

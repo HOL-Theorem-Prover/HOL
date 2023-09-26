@@ -1017,17 +1017,6 @@ val field_order_equal_card_choices = store_thm(
   `FINITE (forder_eq n)` by rw[field_order_equal_finite] >>
   metis_tac[FINITE_BIJ_CARD_EQ, phi_def]);
 
-(* Theorem: FiniteField r ==>
-            !n. 0 < n ==> (CARD (orders f* n) = if (n divides CARD R+ ) then phi n else 0) *)
-(* Proof: field_order_equal_eq_orders, field_order_equal_card *)
-val field_orders_card = store_thm(
-  "field_orders_card",
-  ``!r:'a field. FiniteField r ==>
-   !n. 0 < n ==> (CARD (orders f* n) = if (n divides CARD R+ ) then phi n else 0)``,
-  metis_tac[finite_field_is_field, field_order_equal_eq_orders, field_order_equal_card]);
-
-(* This one is better than the previous one! *)
-
 (* Theorem: FiniteField r ==> !n. CARD (orders f* n) = if (n divides CARD R+ ) then phi n else 0 *)
 (* Proof:
    Note cyclic f*            by finite_field_mult_group_cyclic

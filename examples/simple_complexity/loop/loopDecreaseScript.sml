@@ -855,8 +855,8 @@ val loop_dec_count_cover_le = store_thm(
        (!x. loop x = if x = 0 then c else body x + loop (x - b)) ==>
         !x. loop x <= c + hop b x * body x *)
 (* Proof: by loop_dec_count_cover_le with cover = body. *)
-val loop_dec_count_cover_le = store_thm(
-  "loop_dec_count_cover_le",
+val loop_dec_count_le = store_thm(
+  "loop_dec_count_le",
   ``!loop body cover b c. 0 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + loop (x - b)) ==>
         !x. loop x <= c + hop b x * cover x``,
@@ -1904,42 +1904,6 @@ val loop_dec_count_exit_by_sum = store_thm(
   imp_res_tac loop_modify_count_exit_by_sum >>
   `loop_arg guard modify x = decrease_by b x` by rw[decrease_by_eq_loop_arg, Abbr`guard`, Abbr`modify`] >>
   metis_tac[]);
-
-(* Theorem: 0 < b /\ (!x. body x <= cover x) /\ MONO cover /\
-       (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x - b)) ==>
-        !x. loop x <= c + cover x * hop b x *)
-(* Proof:
-   Let guard = (\x. x = 0),
-       modify = (\x. x - b),
-       R = measure (\x. x),
-   Then WF R                                  by WF_measure
-    and !x. ~guard x ==> R (modify x) x       by x - b < x, 0 < b
-    and !x y. R x y ==> cover x <= cover y    by R, LESS_IMP_LESS_OR_EQ, MONO cover
-   Also !x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)
-                                              by given
-        loop x
-     <= c + cover x * loop_count guard modify x      by loop_modify_count_cover_exit_upper
-      = c + cover x * hop b x                        by hop_eq_loop_count
-*)
-val loop_dec_count_cover_exit_upper = store_thm(
-  "loop_dec_count_cover_exit_upper",
-  ``!loop body cover exit b c. 0 < b /\ (!x. body x <= cover x) /\ MONO cover /\
-       (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x - b)) ==>
-        !x. loop x <= c + cover x * hop b x``,
-  rpt strip_tac >>
-  qabbrev_tac `guard = \x. x = 0` >>
-  qabbrev_tac `modify = \x. x - b` >>
-  qabbrev_tac `R = measure (\x. x)` >>
-  `WF R` by rw[Abbr`R`] >>
-  `!x. ~guard x ==> R (modify x) x` by rw[Abbr`guard`, Abbr`R`, Abbr`modify`] >>
-  `!x y. R x y ==> cover x <= cover y` by rw[Abbr`R`] >>
-  `!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)` by metis_tac[] >>
-  assume_tac (loop_modify_count_cover_exit_upper |> ISPEC ``loop:num -> num``) >>
-  last_x_assum (qspecl_then [`guard`, `body`, `c`, `cover`, `exit`, `modify`, `R`] strip_assume_tac) >>
-  `loop_count guard modify x = hop b x` by rw[hop_eq_loop_count, Abbr`guard`, Abbr`modify`] >>
-  metis_tac[]);
-
-(* This is the same, but directly from the SUM *)
 
 (* Theorem: 0 < b /\ (!x. body x <= cover x) /\ MONO cover /\
             (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x - b)) ==>

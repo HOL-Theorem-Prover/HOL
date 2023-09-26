@@ -145,7 +145,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    HALF_MULT         |- !m n. n * HALF m <= HALF (n * m)
    TWO_HALF_LE_THM   |- !n. 2 * HALF n <= n /\ n <= SUC (2 * HALF n)
    TWO_HALF_TIMES_LE |- !m n. TWICE (HALF n * m) <= n * m
-   SUC_HALF_LE       |- !n. 0 < n ==> 1 + HALF n <= n
+   HALF_ADD1_LE      |- !n. 0 < n ==> 1 + HALF n <= n
    HALF_SQ_LE        |- !n. HALF n ** 2 <= n ** 2 DIV 4
    HALF_LE           |- !n. HALF n <= n
    HALF_LE_MONO      |- !x y. x <= y ==> HALF x <= HALF y
@@ -411,11 +411,11 @@ Theorem num_nchotomy = arithmeticTheory.LESS_LESS_CASES;
 (* val num_nchotomy = |- !m n. m = n \/ m < n \/ n < m: thm *)
 
 (* Theorem alias *)
-val ZERO_LE_ALL = save_thm("ZERO_LE_ALL", ZERO_LESS_EQ);
+Theorem ZERO_LE_ALL = arithmeticTheory.ZERO_LESS_EQ;
 (* val ZERO_LE_ALL = |- !n. 0 <= n: thm *)
 
 (* Theorem alias *)
-val NOT_ZERO = save_thm("NOT_ZERO", NOT_ZERO_LT_ZERO);
+Theorem NOT_ZERO = arithmeticTheory.NOT_ZERO_LT_ZERO;
 (* val NOT_ZERO = |- !n. n <> 0 <=> 0 < n: thm *)
 
 (* Extract theorem *)
@@ -458,6 +458,7 @@ val LE_ONE = store_thm(
   decide_tac);
 
 (* arithmeticTheory.LESS_EQ_SUC_REFL |- !m. m <= SUC m *)
+
 (* Theorem: n < SUC n *)
 (* Proof: by arithmetic. *)
 val LESS_SUC = store_thm(
@@ -938,7 +939,7 @@ val MULT_RIGHT_ID = store_thm(
   metis_tac[MULT_EQ_ID, MULT_COMM, NOT_ZERO_LT_ZERO]);
 
 (* Theorem alias *)
-val MULT_EQ_SELF = save_thm("MULT_EQ_SELF", MULT_RIGHT_ID);
+Theorem MULT_EQ_SELF = MULT_RIGHT_ID;
 (* val MULT_EQ_SELF = |- !n. 0 < n ==> !m. (n * m = n) <=> (m = 1): thm *)
 
 (* Theorem: (n * n = n) <=> ((n = 0) \/ (n = 1)) *)
@@ -1367,17 +1368,9 @@ Proof
   ]
 QED
 
-(* Theorem: HALF (2 * n) = n *)
-(* Proof:
-   Let m = 2 * n.
-   Then EVEN m                 by EVEN_DOUBLE
-     so 2 * HALF m = m = 2 * n by EVEN_HALF
-     or     HALF m = n         by MULT_LEFT_CANCEL
-*)
-val HALF_TWICE = store_thm(
-  "HALF_TWICE",
-  ``!n. HALF (2 * n) = n``,
-  metis_tac[EVEN_DOUBLE, EVEN_HALF, MULT_LEFT_CANCEL, DECIDE``2 <> 0``]);
+(* Theorem alias *)
+Theorem HALF_TWICE = arithmeticTheory.MULT_DIV_2;
+(* val HALF_TWICE = |- !n. HALF (2 * n) = n: thm *)
 
 (* Theorem: n * HALF m <= HALF (n * m) *)
 (* Proof:
@@ -1462,8 +1455,8 @@ val TWO_HALF_TIMES_LE = store_thm(
          = 2 * HALF n
         <= n                 by TWO_HALF_LE_THM
 *)
-val SUC_HALF_LE = store_thm(
-  "SUC_HALF_LE",
+val HALF_ADD1_LE = store_thm(
+  "HALF_ADD1_LE",
   ``!n. 0 < n ==> 1 + HALF n <= n``,
   rpt strip_tac >>
   (Cases_on `n = 1` >> simp[]) >>
@@ -3140,11 +3133,11 @@ Proof
 QED
 
 (* Theorem alias *)
-val euclid_prime = save_thm("euclid_prime", P_EUCLIDES);
+Theorem euclid_prime = gcdTheory.P_EUCLIDES;
 (* |- !p a b. prime p /\ p divides a * b ==> p divides a \/ p divides b *)
 
 (* Theorem alias *)
-val euclid_coprime = save_thm("euclid_coprime", L_EUCLIDES);
+Theorem euclid_coprime = gcdTheory.L_EUCLIDES;
 (* |- !a b c. coprime a b /\ b divides a * c ==> b divides c *)
 
 (* ------------------------------------------------------------------------- *)
@@ -4620,6 +4613,18 @@ val ONE_LT_HALF_SQ = store_thm(
   `(2 ** 2) DIV 2 = 2` by EVAL_TAC >>
   decide_tac);
 
+(* Theorem: 0 < n ==> (HALF (2 ** n) = 2 ** (n - 1)) *)
+(* Proof
+   By induction on n.
+   Base: 0 < 0 ==> 2 ** 0 DIV 2 = 2 ** (0 - 1)
+      This is trivially true as 0 < 0 = F.
+   Step:  0 < n ==> HALF (2 ** n) = 2 ** (n - 1)
+      ==> 0 < SUC n ==> HALF (2 ** SUC n) = 2 ** (SUC n - 1)
+        HALF (2 ** SUC n)
+      = HALF (2 * 2 ** n)          by EXP
+      = 2 ** n                     by MULT_TO_DIV
+      = 2 ** (SUC n - 1)           by SUC_SUB1
+*)
 Theorem EXP_2_HALF:
   !n. 0 < n ==> (HALF (2 ** n) = 2 ** (n - 1))
 Proof

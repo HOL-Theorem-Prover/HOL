@@ -102,6 +102,7 @@ open logrootTheory; (* for ROOT *)
    prime_non_square |- !p. prime p ==> ~square p
    SQ_SQRT_LT       |- !n. ~square n ==> SQRT n * SQRT n < n
    SQ_SQRT_LT_alt   |- !n. ~square n ==> SQRT n ** 2 < n
+   odd_square_lt    |- !n m. ~square n ==> ((2 * m + 1) ** 2 < n <=> m < HALF (1 + SQRT n))
 
    Logarithm:
    LOG_EXACT_EXP    |- !a. 1 < a ==> !n. LOG a (a ** n) = n
@@ -259,9 +260,9 @@ open logrootTheory; (* for ROOT *)
    power_free_upto_1   |- !n. n power_free_upto 1 <=> T
    power_free_upto_suc |- !n k. 0 < k /\ n power_free_upto k ==>
                                (n power_free_upto k + 1 <=> ROOT (k + 1) n ** (k + 1) <> n)
+   power_free_check_upto       |- !n b. LOG2 n <= b ==> (power_free n <=> 1 < n /\ n power_free_upto b)
    power_free_check_upto_LOG2  |- !n. power_free n <=> 1 < n /\ n power_free_upto LOG2 n
    power_free_check_upto_ulog  |- !n. power_free n <=> 1 < n /\ n power_free_upto ulog n
-   power_free_check_upto       |- !n b. LOG2 n <= b ==> (power_free n <=> 1 < n /\ n power_free_upto b)
    power_free_2        |- power_free 2
    power_free_3        |- power_free 3
    power_free_test_def |- !n. power_free_test n <=> 1 < n /\ n power_free_upto ulog n
@@ -1067,6 +1068,38 @@ Proof
   metis_tac[SQ_SQRT_LT, EXP_2]
 QED
 
+(* Theorem: ~square n ==> ((2 * m + 1) ** 2 < n <=> m < HALF (1 + SQRT n)) *)
+(* Proof:
+   If part: (2 * m + 1) ** 2 < n ==> m < HALF (1 + SQRT n)
+          (2 * m + 1) ** 2 < n
+      ==> 2 * m + 1 <= SQRT n                  by SQRT_LT, SQRT_OF_SQ
+      ==> 2 * (m + 1) <= 1 + SQRT n            by arithmetic
+      ==>           m < HALF (1 + SQRT n)      by X_LT_DIV
+   Only-if part: m < HALF (1 + SQRT n) ==> (2 * m + 1) ** 2 < n
+        m < HALF (1 + SQRT n)
+    <=> 2 * (m + 1) <= 1 + SQRT n              by X_LT_DIV
+    <=>   2 * m + 1 <= SQRT n                  by arithmetic
+    <=>  (2 * m + 1) ** 2 <= (SQRT n) ** 2     by EXP_EXP_LE_MONO
+    ==>  (2 * m + 1) ** 2 <= n                 by SQ_SQRT_LE_alt
+    But  n <> (2 * m + 1) ** 2                 by ~square n
+     so  (2 * m + 1) ** 2 < n
+*)
+Theorem odd_square_lt:
+  !n m. ~square n ==> ((2 * m + 1) ** 2 < n <=> m < HALF (1 + SQRT n))
+Proof
+  rw[EQ_IMP_THM] >| [
+    `2 * m + 1 <= SQRT n` by metis_tac[SQRT_LT, SQRT_OF_SQ] >>
+    `2 * (m + 1) <= 1 + SQRT n` by decide_tac >>
+    fs[X_LT_DIV],
+    `2 * (m + 1) <= 1 + SQRT n` by fs[X_LT_DIV] >>
+    `2 * m + 1 <= SQRT n` by decide_tac >>
+    `(2 * m + 1) ** 2 <= (SQRT n) ** 2` by simp[] >>
+    `(SQRT n) ** 2 <= n` by fs[SQ_SQRT_LE_alt] >>
+    `n <> (2 * m + 1) ** 2` by metis_tac[square_alt] >>
+    decide_tac
+  ]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Logarithm                                                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -1245,15 +1278,9 @@ val LOG2_THM = save_thm("LOG2_THM",
     LOG_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
 (* val LOG2_THM = |- !n. 0 < n ==> !p. (LOG2 n = p) <=> 2 ** p <= n /\ n < 2 ** SUC p: thm *)
 
-(* Theorem: 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n) *)
-(* Proof:
-   LOG |> SPEC ``2``;
-   val it = |- !n. 1 < 2 /\ 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n): thm
-*)
-val LOG2_PROPERTY = store_thm(
-  "LOG2_PROPERTY",
-  ``!n. 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n)``,
-  rw[LOG]);
+(* Obtain a theorem *)
+Theorem LOG2_PROPERTY = logrootTheory.LOG |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
+(* val LOG2_PROPERTY =  |- !n. 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n): thm *)
 
 (* Theorem: 0 < n ==> 2 ** LOG2 n <= n) *)
 (* Proof: by LOG2_PROPERTY *)

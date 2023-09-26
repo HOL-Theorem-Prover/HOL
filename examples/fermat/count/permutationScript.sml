@@ -394,20 +394,6 @@ QED
 
 (* Theorem: ls IN perm_count n ==> list_to_bij ls PERMUTES count n *)
 (* Proof:
-   Note  INJ (list_to_bij ls) (count n) (count n)  by list_to_bij_count_inj
-    and SURJ (list_to_bij ls) (count n) (count n)  by list_to_bij_count_surj
-  Hence  BIJ (list_to_bij ls) (count n) (count n)  by BIJ_DEF
-*)
-Theorem list_to_bij_count_bij:
-  !ls n. ls IN perm_count n ==> list_to_bij ls PERMUTES count n
-Proof
-  simp[BIJ_DEF, list_to_bij_count_inj, list_to_bij_count_surj]
-QED
-
-(* Another proof of the same theorem. *)
-
-(* Theorem: ls IN perm_count n ==> list_to_bij ls PERMUTES count n *)
-(* Proof:
    Note INJ (list_to_bij ls) (count n) (count n)   by list_to_bij_count_inj
     and FINITE (count n)                           by FINITE_COUNT
      so BIJ (list_to_bij ls) (count n) (count n)   by FINITE_INJ_IS_BIJ
@@ -1199,7 +1185,7 @@ QED
 
 (* Theorem: GroupIso list_to_bij (permutation_group n) (symmetric_group (count n)) *)
 (* Proof: by list_to_bij_map_iso, group_iso_monoid_iso. *)
-Theorem permutation_group_iso_symmetric_group:
+Theorem permutation_group_iso_symmetric_group[allow_rebind]:
   !n. GroupIso list_to_bij (permutation_group n) (symmetric_group (count n))
 Proof
   metis_tac[list_to_bij_map_iso, group_iso_monoid_iso]
@@ -1253,36 +1239,6 @@ Proof
   `EL x ls < n` by fs[set_list_eq_count] >>
   simp[perm_count_list_op_el, listRangeLHI_EL, Abbr`t`]
 QED
-
-(* Theorem: ls IN perm_count n ==> (ls oo [0 ..< n]) n = ls *)
-(* Proof:
-   Let t = [0 ..< n].
-   Then t IN perm_count n                by perm_count_has_id
-    and (ls oo t) n IN perm_count n      by perm_count_list_op_closure
-     so LENGTH ls = n                    by perm_count_element_length
-     so LENGTH ((ls oo t) n) = n         by perm_count_element_length
-   By LIST_EQ, it remains to show:
-     !x. x < n ==> EL x ((ls oo t) n) = EL x ls
-
-     EL x ((ls oo t) n)
-   = EL (EL x t) ls                      by perm_count_list_op_el
-   = EL x ls                             by listRangeLHI_EL
-*)
-Theorem perm_count_list_op_rid:
-  !ls n. ls IN perm_count n ==> (ls oo [0 ..< n]) n = ls
-Proof
-  rpt strip_tac >>
-  qabbrev_tac `t = [0 ..< n]` >>
-  `t IN perm_count n` by rw[perm_count_has_id, Abbr`t`] >>
-  `(ls oo t) n IN perm_count n` by rw[perm_count_list_op_closure] >>
-  imp_res_tac perm_count_element_length >>
-  irule LIST_EQ >>
-  simp[] >>
-  rpt strip_tac >>
-  simp[perm_count_list_op_el, listRangeLHI_EL, Abbr`t`]
-QED
-
-(* A slightly better proof using map_list_to_bij_id. *)
 
 (* Theorem: ls IN perm_count n ==> (ls oo [0 ..< n]) n = ls *)
 (* Proof:
@@ -1520,7 +1476,7 @@ QED
    (6) x IN perm_count n ==> ((permutation_group n).inv x oo x) n = [0 ..< n]
        This is true by permutation_group_inv, perm_count_list_op_inv
 *)
-Theorem permutation_group_group:
+Theorem permutation_group_group[allow_rebind]:
   !n. Group (permutation_group n)
 Proof
   rw_tac bool_ss[group_alt, permutation_group_property, RES_FORALL_THM] >-

@@ -127,6 +127,8 @@ open GaussTheory; (* for divisors_has_factor *)
                                       if x < y - z then (x + 2 * z,z,y - z - x)
                                       else if x < 2 * y then (2 * y - x,y,x + z - y)
                                       else (x - 2 * y,x + z - y,y)
+   zagier_boundary_case_1  |- !n x y z. n = windmill (x,y,z) /\ n MOD 4 <> 0 /\ x = y - z ==> square n
+   zagier_boundary_case_2  |- !n x y z. n = windmill (x,y,z) /\ x = 2 * y ==> n MOD 4 = 0
    zagier_fix              |- !x y z. x <> 0 ==> (zagier (x,y,z) = (x,y,z) <=> x = y)
    zagier_fixes            |- !n. n MOD 4 <> 0 ==> fixes zagier (mills n) = {(x,x,z) | n = windmill (x,x,z)}
    zagier_fixes_element    |- !n x y z. n MOD 4 <> 0 ==>
@@ -159,7 +161,7 @@ open GaussTheory; (* for divisors_has_factor *)
                                     if x < 2 * y then (2 * y - x,y,x) else (x - 2 * y,x,y)
    zagier_x_x_z            |- !x z. x <> 0 ==> zagier (x,x,z) = (x,x,z)
    zagier_involute         |- !x y z. x <> 0 /\ z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
-   zagier_involute_alt     |- !x y z. x * z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
+   zagier_involute_xyz     |- !x y z. x * z <> 0 ==> zagier (zagier (x,y,z)) = (x,y,z)
    zagier_involute_thm     |- !t. FST t <> 0 /\ SND (SND t) <> 0 ==> zagier (zagier t) = t
 
    doublet_def             |- !x y z. doublet (x,y,z) = x * z
@@ -196,6 +198,10 @@ open GaussTheory; (* for divisors_has_factor *)
                                   if x < z - y then (x + 2 * y,y,z - y - x)
                                   else if x < 2 * z then (2 * z - x,z,x + y - z)
                                   else (x - 2 * z,x + y - z,z)
+   zagier_flip_boundary_case_1
+                       |- !n x y z. n = windmill (x,y,z) /\ n MOD 4 <> 0 /\ x = z - y ==> square n
+   zagier_flip_boundary_case_2
+                       |- !n x y z. n = windmill (x,y,z) /\ x = 2 * z ==> n MOD 4 = 0
    zagier_flip_1_1_z   |- !z. (zagier o flip) (1,1,z) =
                               if z = 0 then (1,2,0)
                               else if z = 1 then (1,1,1)
@@ -1289,10 +1295,57 @@ Definition zagier_def:
 End
 (*
 At the two boundaries:
-x = y - z, windmill (x, y, z) = (y - z) ** 2 + 4 * y * z = (y + z) ** 2, not a windmill.
+x = y - z, windmill (x, y, z) = (y - z) ** 2 + 4 * y * z = (y + z) ** 2, not a proper windmill.
 x = 2 * y, windmill (x, y, z) = (2 * y) ** 2 + 4 * y * z = 4 * y * (y + z), not for a prime.
 *)
 
+(* Idea: for proper windmill n, x <> y - z. *)
+
+(* Theorem: n = windmill (x,y,z) /\ n MOD 4 <> 0 /\ x = y - z ==> square n *)
+(* Proof:
+   If y < z,
+      Then x = y - z = 0                       by arithmetic
+       and n = 0 ** 2 + 4 * y * z              by windmill_def
+             = 4 * y * z                       by arithmetic
+        so n MOD 4 = 0                         by MOD_EQ_0
+       but this contradicts n MOD 4 <> 0.
+   Otherwise z <= y.
+      Then n = (y - z) ** 2 + 4 * y * z        by windmill_def
+             = (y + z) ** 2                    by binomial_sub_add, z <= y
+        so square n                            by square_alt
+*)
+Theorem zagier_boundary_case_1:
+  !n x y z. n = windmill (x,y,z) /\ n MOD 4 <> 0 /\ x = y - z ==> square n
+Proof
+  rpt strip_tac >>
+  `y < z \/ z <= y` by decide_tac >| [
+    `x = 0` by decide_tac >>
+    `n = y * z * 4` by fs[windmill_def] >>
+    fs[MOD_EQ_0],
+    `n = (y - z) ** 2 + 4 * y * z` by fs[windmill_def] >>
+    `_ = (y + z) ** 2` by simp[binomial_sub_add] >>
+    metis_tac[square_alt]
+  ]
+QED
+
+(* Idea: for proper windmill n, x <> 2 * y. *)
+
+(* Theorem: n = windmill (x,y,z) /\ x = 2 * y ==> n MOD 4 = 0 *)
+(* Proof:
+   Note n = x ** 2 + 4 * y * z                 by windmill_def
+          = (2 * y) ** 2 + 4 * y * z           by x = 2 * y
+          = 4 * y ** 2 + 4 * y * z             by EXP_BASE_MULT
+          = 4 * (y ** 2 + y * z)               by LEFT_ADD_DISTRIB
+   Thus n MOD 4 = 0                            by MOD_EQ_0
+*)
+Theorem zagier_boundary_case_2:
+  !n x y z. n = windmill (x,y,z) /\ x = 2 * y ==> n MOD 4 = 0
+Proof
+  rpt strip_tac >>
+  `n = (2 * y) ** 2 + 4 * y * z` by fs[windmill_def] >>
+  `_ = 4 * (y ** 2 + y * z)` by simp[EXP_BASE_MULT] >>
+  rfs[MOD_EQ_0]
+QED
 
 (*
 For p = 41 = 4 * 10 + 1, k = 10.
@@ -1807,7 +1860,7 @@ QED
 
 (* Theorem: x * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z) *)
 (* Proof: by MULT_EQ_0, zagier_involute. *)
-Theorem zagier_involute_alt0:
+Theorem zagier_involute_xyz:
   !x y z. x * z <> 0 ==> zagier (zagier (x, y, z)) = (x, y, z)
 Proof
   rw[zagier_involute]
@@ -2148,6 +2201,32 @@ Theorem zagier_flip_eqn:
            else (x - 2 * z, x + y - z, z)
 Proof
   rw[zagier_def, flip_def]
+QED
+
+(* Idea: for proper windmill n, x <> z - y. *)
+
+(* Theorem: n = windmill (x,y,z) /\ n MOD 4 <> 0 /\ x = z - y ==> square n *)
+(* Proof:
+   Note n = windmill (x,z,y)                   by windmill_flip
+   Thus x = z - y ==> square n                 by zagier_boundary_case_1
+*)
+Theorem zagier_flip_boundary_case_1:
+  !n x y z. n = windmill (x,y,z) /\ n MOD 4 <> 0 /\ x = z - y ==> square n
+Proof
+  metis_tac[windmill_flip, zagier_boundary_case_1]
+QED
+
+(* Idea: for proper windmill n, x <> 2 * z. *)
+
+(* Theorem: n = windmill (x,y,z) /\ x = 2 * z ==> n MOD 4 = 0 *)
+(* Proof:
+   Note n = windmill (x,z,y)                   by windmill_flip
+   Thus x = 2 * z ==> n MOD 4 = 0              by zagier_boundary_case_2
+*)
+Theorem zagier_flip_boundary_case_2:
+  !n x y z. n = windmill (x,y,z) /\ x = 2 * z ==> n MOD 4 = 0
+Proof
+  metis_tac[windmill_flip, zagier_boundary_case_2]
 QED
 
 (*

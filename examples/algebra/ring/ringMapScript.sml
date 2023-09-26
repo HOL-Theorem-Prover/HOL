@@ -1557,16 +1557,14 @@ val subring_unit_inv_nonzero = store_thm(
 
 (* Theorem: s <= r ==> !x. Unit s x ==> (Inv s x = |/ x) *)
 (* Proof:
-   Let z = Inv s x.
-   Note x IN s.carrier        by ring_unit_element
-    and z IN s.carrier        by ring_unit_inv_element
-   Thus x IN R /\ z IN R      by subring_element
-   Also unit x                by subring_unit
-        x * z
-      = s.prod.op x z         by subring_mult
-      = s.prod.id             by ring_unit_rinv
-      = #1                    by subring_one
-   Hence z = |/x              by ring_unit_rinv_unique
+   Note s <= r ==> RingHomo I s r   by subring_def
+   Thus |/ (I x) = I (Inv s x)      by ring_homo_unit_inv
+     or     |/ x = Inv s x          by I_THM
+
+> ring_homo_unit_inv |> ISPEC ``s:'a ring`` |> ISPEC ``r:'a ring``;
+val it = |- !f. (s ~r~ r) f ==> !x. Unit s x ==> |/ (f x) = f (Inv s x): thm
+> ring_homo_inv |> ISPEC ``s:'a ring`` |> ISPEC ``r:'a ring``;
+val it = |- !f. (s ~r~ r) f ==> !x. Unit s x ==> f (Inv s x) = |/ (f x): thm
 *)
 Theorem subring_unit_inv:
   !(r s):'a ring. s <= r ==> !x. Unit s x ==> (Inv s x = |/ x)
@@ -2330,7 +2328,6 @@ Proof
   `!x. x IN s ==> (f (LINV f R x) = x)` by metis_tac[BIJ_LINV_THM] >>
   rw[ring_mult_comm]
 QED
-
 
 (* Theorem: Ring r /\ INJ f R univ(:'b) ==> GroupHomo f r.sum (ring_inj_image r f).sum *)
 (* Proof:

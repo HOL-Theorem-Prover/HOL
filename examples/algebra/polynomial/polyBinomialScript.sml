@@ -271,7 +271,7 @@ open ringInstancesTheory;
                                  (poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) = GENLIST f (SUC n))
 
    Investigation of Symbolic Polynomial:
-   poly_binomial_2    |- !r p. Ring r /\ poly p ==> ((p + |1|) ** 2 = p ** 2 + ### 2 * p + |1|)
+   poly_binomial_2_p  |- !r p. Ring r /\ poly p ==> ((p + |1|) ** 2 = p ** 2 + ### 2 * p + |1|)
    poly_binomial_2_X  |- !r. Ring r /\ #1 <> #0 ==> ((X + |1|) ** 2 = X ** 2 + ### 2 * X + |1|)
 
    Polynomial Dilation:
@@ -1015,31 +1015,6 @@ val poly_genlist = store_thm(
   ``!r:'a ring. !f. rfun f ==> !n. f n <> #0 ==> poly (GENLIST f (SUC n))``,
   rw[poly_def_alt, weak_genlist, GENLIST_LAST]);
 
-(* Theorem: !n. plist (GENLIST (\k. f k o X ** k) n) *)
-(* Proof: by induction on n.
-   Base case: plist (GENLIST (\k. f k o (X ** k)) 0)
-     GENLIST (\k. f k o X ** k) 0 = []    by GENLIST
-     hence true by weak_of_zero.
-   Step case: plist (GENLIST (\k. f k o (X ** k)) n) ==> plist (GENLIST (\k. f k o (X ** k)) (SUC n))
-       GENLIST (\k. f k o (X ** k)) (SUC n)
-     = SNOC ((f n) o (X ** n)) (GENLIST (\k. f k o (X ** k)) n)
-     hence tue by poly_weak_list_SNOC.
-*)
-val poly_weak_list_genlist = store_thm(
-  "poly_weak_list_genlist",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !n. plist (GENLIST (\k. (f k) o (X ** k)) n)``,
-  rpt strip_tac >>
-  `!x. f x IN R` by metis_tac [ring_fun_def] >>
-  Induct_on `n` >-
-  rw[] >>
-  `GENLIST (\k. f k o (X ** k)) (SUC n) = SNOC ((f n) o (X ** n)) (GENLIST (\k. f k o (X ** k)) n)` by rw_tac std_ss[GENLIST] >>
-  `poly X` by rw[] >>
-  `poly (X ** n)` by rw[] >>
-  `weak ((f n) o (X ** n))` by rw[] >>
-  rw_tac std_ss[poly_weak_list_SNOC]);
-
-(* Another proof of the same theorem. *)
-
 (* Theorem: !n. plist (GENLIST (\k. (f k) o (X ** k)) n) *)
 (* Proof: by induction on n.
    Base case: plist (GENLIST (\k. f k o (X ** k)) 0)
@@ -1507,65 +1482,6 @@ val poly_coeff_factor_exp = store_thm(
    = x^3 + 3 x^2 + 3 x + 0  mod 9
 
 *)
-
-(* Theorem: [Two-Way Freshman's Theorem]
-            Ring r /\ #1 <> #0 ==> !c. coprime c (char r) ==>
-            prime (char r) <=> 1 < (char r) /\ (X + |c|) ** (char r) = X ** (char r) + |c| *)
-(* Proof:
-   Let n = char r.
-   If (char r) = n = 0,
-   LHS  prime 0 = F      by PRIME_POS
-   RHS  1 < 0 = F        hence true by default.
-   If (char r) = n <> 0, 0 < n.
-   ##c <> #0             by ring_num_char_coprime_nonzero
-   poly X                by poly_X
-   poly |c|              by poly_sum_num_poly
-
-   If part: to show prime n ==> 1 < n /\ ((X + |c|) ** n = X ** n + |c|)
-     prime n ==> 1 < n   by ONE_LT_PRIME
-     (X + |c|) ** n
-   = X ** n + |c| ** n   by poly_freshman_thm
-   = X ** n + |c|        by poly_fermat_thm
-
-   Only-if part: to show 1 < n /\ (X + |c|) ** n = X ** n + |c| ==> prime n
-     Given (X + |c|) ** n = X ** n + |c|
-     they have equal coefficients:
-     !k. ((X + |c|) ** n) ' k = (X ** n + |c|) ' k
-
-     !k. k < SUC n ==> (((X + |c|) ** n) ' k = ## (binomial n k) * ##c ** (n - k))  by poly_coeff_X_add_c_exp_n, or
-     !k. k < SUC n ==> (((X + |c|) ** n) ' k = ## ((binomial n k) * c ** (n - k)))  by ring_num_mult_exp
-
-     !k. 0 < k /\ k < n ==> ((X ** n + |c|) ' k = #0                                by poly_coeff_X_exp_n_add_c
-
-     Since !k. 0 < k /\ k < n ==> k < SUC n, we have
-     !k. 0 < k /\ k < n ==> n divides ((binomial n k) * c ** (n - k)    by ring_char_divides
-
-     coprime c n ==> !j. coprime (c ** j) n  by coprime_exp
-     hence
-     !k. 0 < k /\ k < n ==> n divides (binomial n k)    by L_EUCLIDES (Euclid's Lemma)
-     With 1 < n, prime n                                by prime_iff_divides_binomials
-*)
-val poly_ring_prime_identity = store_thm(
-  "poly_ring_prime_identity",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. coprime c (char r) ==>
-       (prime (char r) <=> 1 < char r /\ ((X + |c|) ** (char r) = X ** (char r) + |c|))``,
-  rpt strip_tac >>
-  qabbrev_tac `n = char r` >>
-  `##c <> #0` by rw[ring_num_char_coprime_nonzero] >>
-  `##c IN R /\ ( |c| = [##c])` by rw[poly_one_sum_n] >>
-  rw_tac std_ss[EQ_IMP_THM, ONE_LT_PRIME] >| [
-    `poly X` by rw[] >>
-    `poly |c|` by rw[poly_sum_num_poly] >>
-    metis_tac [poly_freshman_thm, poly_fermat_thm],
-    `!k. ((X + |c|) ** n) ' k = (X ** n + |c|) ' k` by rw_tac std_ss[] >>
-    `!k. 0 < k /\ k < n ==> ((X ** n + |c|) ' k = #0)` by rw[poly_coeff_X_exp_n_add_c] >>
-    `!k. k < SUC n ==> (((X + |c|) ** n) ' k = ## ((binomial n k) * c ** (n - k)))`
-      by metis_tac[poly_coeff_X_add_c_exp_n, ring_num_mult_exp] >>
-    `!k. 0 < k /\ k < n ==> k < SUC n` by decide_tac >>
-    metis_tac [ring_char_divides, coprime_exp, L_EUCLIDES, MULT_COMM, prime_iff_divides_binomials]
-  ]);
-
-(* Better version *)
 
 (* Theorem: [Two-Way Freshman's Theorem]
             Ring r ==> !c. coprime c (char r) ==>
@@ -3206,21 +3122,21 @@ but that is not used now as we have above: poly_sum_gen_is_genlist
    = p ** 2 + ###2 * p + |1| ** 2           by poly_mult_rone
    = p ** 2 + ###2 * p + |1|                by poly_one_exp
 *)
-val poly_binomial_2 = store_thm(
-  "poly_binomial_2",
+val poly_binomial_2_p = store_thm(
+  "poly_binomial_2_p",
   ``!(r:'a ring) p. Ring r /\ poly p ==> ((p + |1|) ** 2 = p ** 2 + ###2 * p + |1|)``,
   rw[poly_add_mult_ring, ring_binomial_2, GSYM poly_ring_property]);
 
 (* Theorem: Ring r /\ #1 <> #0 ==> (X + |1|) ** 2 = X ** 2 + ###2 * X + |1| *)
-(* Proof: by poly_binomial_2, poly_X. *)
+(* Proof: by poly_binomial_2_p, poly_X. *)
 val poly_binomial_2_X = store_thm(
   "poly_binomial_2_X",
   ``!r:'a ring. Ring r /\ #1 <> #0 ==> ((X + |1|) ** 2 = X ** 2 + ###2 * X + |1|)``,
-  rw_tac std_ss[poly_binomial_2, poly_X]);
+  rw_tac std_ss[poly_binomial_2_p, poly_X]);
 
 (*
-Surely, poly_binomial_2 ==> poly_binomial_2_X
-But how to show: poly_binomial_2_X ==> poly_binomial_2, in General?
+Surely, poly_binomial_2_p ==> poly_binomial_2_X
+But how to show: poly_binomial_2_X ==> poly_binomial_2_p, in General?
 Something like:  P |X| ==> !x. poly x ==> P x ?
 This old investigation is solved in this proper script.
 *)

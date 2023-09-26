@@ -784,10 +784,6 @@ val power_twoM_steps_1 = store_thm(
   rw[Once power_twoM_steps_thm]);
 
 (* Derive theorems *)
-val power_twoM_steps_upper = save_thm("power_twoM_steps_upper",
-   power_ofM_steps_upper |> SPEC ``2`` |> SIMP_RULE (srw_ss()) [GSYM power_twoM_def]);
-val power_twoM_steps_bound = save_thm("power_twoM_steps_bound",
-   power_ofM_steps_bound |> SPEC ``2`` |> SIMP_RULE (srw_ss()) [GSYM power_twoM_def]);
 val power_twoM_steps_O_poly = save_thm("power_twoM_steps_O_poly",
    power_ofM_steps_O_poly |> SPEC ``2`` |> SIMP_RULE (srw_ss()) [GSYM power_twoM_def]);
 val power_twoM_steps_big_O = save_thm("power_twoM_steps_big_O",

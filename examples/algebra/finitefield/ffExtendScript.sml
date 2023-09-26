@@ -284,82 +284,6 @@ val finite_subset_exists = store_thm(
 (* Theorem: FINITE t /\ s SUBSET t /\ INJ f s univ(:'b) /\ INFINITE univ(:'b) ==>
             ?g. INJ g t univ(:'b) /\ !x. x IN s ==> (g x = f x) *)
 (* Proof:
-   Let d = t DIFF s.
-   Then t = s UNION d        by UNION_DIFF
-    and FINITE d             by FINITE_DIFF, FINITE t
-   By finite induction on d.
-   Base case: INJ f s univ(:'b) ==> ?g. INJ g (s UNION {}) univ(:'b) /\ !x. x IN s ==> (g x = f x)
-      Since s UNION {} = s   by UNION_EMPTY
-      Take g = f, and f(x) = g(x) for x IN s.
-   Step case: FINITE s /\ INJ f s univ(:'b) /\ INFINITE univ(:'b) ==>
-              ?g. INJ g (s UNION d) univ(:'b) /\ !x. x IN s ==> (g x = f x) ==>
-               e NOTIN d /\ INJ f s univ(:'b) ==>
-              ?g. INJ g (s UNION (e INSERT d)) univ(:'b) /\ !x. x IN s ==> (g x = f x)
-      Let t = s UNION d.
-      Then ?g. INJ g t univ(:'b) /\ !x. x IN s ==> (g x = f x)    by induction hypothesis
-      If e IN s,
-         Then s UNION (e INSERT d) = t    by EXTENSION
-           so take this g, and the result follows.
-      If e NOTIN s,
-         Then e NOTIN t                            by IN_UNION
-          and s UNION (e INSERT d) = e INSERT t    by EXTENSION
-          and !x. x IN t <=> x IN s \/ x IN d      by IN_UNION
-          Now FINITE t                             by FINITE_UNION
-           so FINITE (IMAGE g t)                   by IMAGE_FINITE
-          ==> ?y. y NOTIN (IMAGE g t)              by NOT_IN_FINITE, INFINITE univ(:'b)
-          Let g' = \x. if x = e then y else g x.
-          Then INJ g' t univ(:'b)                  by INJ_DEF, IN_IMAGE
-           and !x. x IN s ==> x <> e               by given, e NOTIN s
-          thus !x. x IN s ==> (g' x = f x)         by notation, g' x = g x when e NOTIN s.
-*)
-val subset_inj_extension_exists = store_thm(
-  "subset_inj_extension_exists",
-  ``!s t f. FINITE t /\ s SUBSET t /\ INJ f s univ(:'b) /\ INFINITE univ(:'b) ==>
-   ?g. INJ g t univ(:'b) /\ !x. x IN s ==> (g x = f x)``,
-  rpt strip_tac >>
-  qabbrev_tac `d = t DIFF s` >>
-  `t = s UNION d` by rw[UNION_DIFF, Abbr`d`] >>
-  fs[] >>
-  `FINITE d` by rw[Abbr`d`] >>
-  rpt (pop_assum mp_tac) >>
-  `FINITE d ==> FINITE s /\ INJ f s univ(:'b)  /\ INFINITE univ(:'b) ==>
-    ?g. INJ g (s UNION d) univ(:'b) /\ !x. x IN s ==> (g x = f x)` suffices_by metis_tac[] >>
-  qid_spec_tac `d` >>
-  Induct_on `FINITE` >>
-  fs[] >>
-  rpt strip_tac >-
-  metis_tac[] >>
-  `?g. INJ g (s UNION d) univ(:'b) /\ !x. x IN s ==> (g x = f x)` by rw[] >>
-  qabbrev_tac `t = s UNION d` >>
-  Cases_on `e IN s` >| [
-    (`s UNION (e INSERT d) = t` by (rw[EXTENSION, Abbr`t`] >> metis_tac[])) >>
-    metis_tac[],
-    `e NOTIN t` by rw[Abbr`t`] >>
-    (`s UNION (e INSERT d) = e INSERT t` by (rw[EXTENSION, Abbr`t`] >> metis_tac[])) >>
-    `!x. x IN t <=> x IN s \/ x IN d` by rw[Abbr`t`] >>
-    `FINITE t` by rw[Abbr`t`] >>
-    `FINITE (IMAGE g t)` by rw[] >>
-    `?y. y NOTIN (IMAGE g t)` by metis_tac[NOT_IN_FINITE] >>
-    qexists_tac `\x. if x = e then y else g x` >>
-    rpt strip_tac >| [
-      rw[INJ_DEF, IN_INSERT] >-
-      metis_tac[INJ_DEF] >-
-      metis_tac[IN_IMAGE] >-
-      metis_tac[INJ_DEF] >-
-      metis_tac[IN_IMAGE] >-
-      metis_tac[IN_IMAGE] >-
-      metis_tac[INJ_DEF] >-
-      metis_tac[IN_IMAGE] >>
-      metis_tac[INJ_DEF],
-      metis_tac[]
-    ]
-  ]);
-
-(* The above proof is clumsy. Next is better without FINITE induction. *)
-
-(* Theorem: FINITE t /\ s SUBSET t /\ INJ f s univ(:'b) /\ INFINITE univ(:'b) ==>
-            ?g. INJ g t univ(:'b) /\ !x. x IN s ==> (g x = f x) *)
-(* Proof:
    Let d = t DIFF s, m = IMAGE f s.
    Then FINITE d                           by FINITE_DIFF
     and FINITE s                           by SUBSET_FINITE
@@ -593,12 +517,6 @@ val finite_field_clone_extension_exists = store_thm(
             !n. 0 < n ==> ?(t:'a field) (s:'a field) f. FiniteField t /\ FiniteField s /\
                           FieldIso f r s /\ s <<= t /\ (CARD C = (CARD R) ** n) *)
 (* Proof: by finite_field_clone_extension_exists, matching types. *)
-val finite_field_self_extension_exists = store_thm(
-  "finite_field_self_extension_exists",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'a) ==>
-   !n. 0 < n ==> ?(t:'a field) (s:'a field) f. FiniteField t /\ FiniteField s /\
-      FieldIso f r s /\ s <<= t /\ (CARD C = (CARD R) ** n)``,
-  rw[finite_field_clone_extension_exists]);
 (* Better use theorem type transform *)
 val finite_field_self_extension_exists =
     save_thm("finite_field_self_extension_exists",
