@@ -1477,6 +1477,17 @@ val FLOOKUP_FUN_FMAP = Q.store_thm(
    (FLOOKUP (FUN_FMAP f P) k = if k IN P then SOME (f k) else NONE)`,
   SRW_TAC [][FUN_FMAP_DEF,FLOOKUP_DEF]);
 
+Theorem FUN_FMAP_INSERT :
+    !f e s. FINITE s /\ e NOTIN s ==>
+            FUN_FMAP f (e INSERT s) = FUN_FMAP f s |+ (e,f e)
+Proof
+    rw [fmap_EXT]
+ >- rw [FUN_FMAP_DEF]
+ >> ‘x IN e INSERT s’ by ASM_SET_TAC []
+ >> ‘x <> e’ by METIS_TAC []
+ >> rw [FAPPLY_FUPDATE_THM, FUN_FMAP_DEF]
+QED
+
 (*---------------------------------------------------------------------------
          Composition of finite map and function
  ---------------------------------------------------------------------------*)
