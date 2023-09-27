@@ -482,13 +482,6 @@ Proof
  >> Q.EXISTS_TAC ‘Ns'’ >> rw []
 QED
 
-(* Theorem 8.3.3 (ii) *)
-Theorem solvable_iff_solvable_LAM :
-    !M x. solvable M <=> solvable (LAM x M)
-Proof
-    cheat
-QED
-
 val _ = export_theory ();
 val _ = html_theory "solvable";
 
