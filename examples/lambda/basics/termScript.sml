@@ -3,7 +3,7 @@ open HolKernel boolLib Parse bossLib generic_termsTheory
 open boolSimps
 
 open nomsetTheory
-open pred_setTheory
+open pred_setTheory finite_mapTheory hurdUtils
 open binderLib
 open nomdatatype
 val _ = new_theory "term";
@@ -713,6 +713,63 @@ val ssub_FEMPTY = store_thm(
   ``∀t. (FEMPTY:string|->term) ' t = t``,
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
 val _ = export_rewrites ["ssub_FEMPTY"]
+
+Theorem FV_ssub :
+    !fm N. (!y. y IN FDOM fm ==> FV (fm ' y) = {}) ==>
+           FV (fm ' N) = FV N DIFF FDOM fm
+Proof
+    rpt STRIP_TAC
+ >> Q.ID_SPEC_TAC ‘N’
+ >> HO_MATCH_MP_TAC nc_INDUCTION2
+ >> Q.EXISTS_TAC ‘FDOM fm’
+ >> rw [SUB_VAR, SUB_THM, ssub_thm]
+ >> SET_TAC []
+QED
+
+Theorem ssub_LAM[local] = List.nth(CONJUNCTS ssub_thm, 2)
+
+(* FIXME: can ‘(!y. y IN FDOM fm ==> FV (fm ' y) = {})’ be removed? *)
+Theorem ssub_update_apply :
+    !fm. s NOTIN FDOM fm /\ (!y. y IN FDOM fm ==> FV (fm ' y) = {}) ==>
+         (fm |+ (s,M)) ' N = [M/s] (fm ' (N :term))
+Proof
+    rpt STRIP_TAC
+ >> Q.ID_SPEC_TAC ‘N’
+ >> HO_MATCH_MP_TAC nc_INDUCTION2
+ >> Q.EXISTS_TAC ‘s INSERT (FDOM fm UNION FV M)’
+ >> rw [SUB_VAR, SUB_THM, ssub_thm, FAPPLY_FUPDATE_THM]
+ >> TRY (METIS_TAC [])
+ >- (MATCH_MP_TAC (GSYM lemma14b) \\
+     METIS_TAC [NOT_IN_EMPTY])
+ >> Suff ‘(fm |+ (s,M)) ' (LAM y N) = LAM y ((fm |+ (s,M)) ' N)’ >- rw []
+ >> MATCH_MP_TAC ssub_LAM >> rw [FAPPLY_FUPDATE_THM]
+QED
+
+(* NOTE: ‘FV M = {}’ is additionally required *)
+Theorem ssub_update_apply' :
+    !fm. s NOTIN FDOM fm /\ (!y. y IN FDOM fm ==> FV (fm ' y) = {}) /\
+         FV M = {} ==> (fm |+ (s,M)) ' N = fm ' ([M/s] N)
+Proof
+    rpt STRIP_TAC
+ >> Q.ID_SPEC_TAC ‘N’
+ >> HO_MATCH_MP_TAC nc_INDUCTION2
+ >> Q.EXISTS_TAC ‘s INSERT (FDOM fm)’
+ >> rw [SUB_VAR, SUB_THM, ssub_thm, FAPPLY_FUPDATE_THM]
+ >> TRY (METIS_TAC [])
+ >- (MATCH_MP_TAC (GSYM ssub_value) >> art [])
+ >> Know ‘(fm |+ (s,M)) ' (LAM y N) = LAM y ((fm |+ (s,M)) ' N)’
+ >- (MATCH_MP_TAC ssub_LAM >> rw [FAPPLY_FUPDATE_THM])
+ >> Rewr'
+ >> rw []
+QED
+
+(* A term is "closed" if it's FV is empty (otherwise the term is open).
+
+   NOTE: the set of all closed terms forms $\Lambda_0$ found in textbooks.
+ *)
+Definition closed_def :
+    closed (M :term) <=> FV M = {}
+End
 
 (* ----------------------------------------------------------------------
     Set up the recursion functionality in binderLib

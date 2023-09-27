@@ -1,9 +1,12 @@
-open HolKernel Parse boolLib
+(*---------------------------------------------------------------------------*
+ * Beta-equivalence and combinators (Chapter 2 of Hankin [2])
+ *---------------------------------------------------------------------------*)
 
-open bossLib binderLib
+open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory pred_setLib
-open termTheory BasicProvers nomsetTheory
+open pred_setTheory pred_setLib listTheory finite_mapTheory hurdUtils;
+
+open termTheory BasicProvers nomsetTheory binderLib appFOLDLTheory;
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
@@ -11,8 +14,8 @@ val std_ss = std_ss ++ rewrites [LET_THM]
 fun Store_thm(s, t, tac) = (store_thm(s,t,tac) before
                             export_rewrites [s])
 
+structure NewQ = Q
 structure Q = struct open Q open OldAbbrevTactics end;
-
 
 val _ = new_theory "chap2";
 
@@ -254,6 +257,34 @@ val FV_K = Store_thm(
 val I_def = Define`I = LAM "x" (VAR "x")`;
 val FV_I = Store_thm("FV_I", ``FV I = {}``, SRW_TAC [][I_def]);
 
+Theorem I_alt :
+    !s. I = LAM s (VAR s)
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> REWRITE_TAC [I_def, Once EQ_SYM_EQ]
+ >> Cases_on ‘x = "x"’ >- rw []
+ >> NewQ.ABBREV_TAC ‘u :term = VAR x’
+ >> NewQ.ABBREV_TAC ‘y = "x"’
+ >> ‘y NOTIN FV u’ by rw [Abbr ‘u’]
+ >> Know ‘LAM x u = LAM y ([VAR y/x] u)’
+ >- (MATCH_MP_TAC SIMPLE_ALPHA >> art [])
+ >> Rewr'
+ >> Suff ‘[VAR y/x] u = VAR y’ >- rw []
+ >> rw [Abbr ‘u’]
+QED
+
+Theorem SUB_I[simp] :
+    [N/v] I = I
+Proof
+    rw [lemma14b]
+QED
+
+Theorem ssub_I :
+    ssub fm I = I
+Proof
+    rw [ssub_value]
+QED
+
 val Omega_def =
     Define`Omega = (LAM "x" (VAR "x" @@ VAR "x")) @@
                      (LAM "x" (VAR "x" @@ VAR "x"))`
@@ -308,6 +339,21 @@ val lameq_I = store_thm(
   "lameq_I",
   ``I @@ A == A``,
   PROVE_TAC [lameq_rules, I_def, SUB_THM]);
+
+Theorem I_appstar' :
+    !Is. (!e. MEM e Is ==> e = I) ==> I @* Is == I
+Proof
+    HO_MATCH_MP_TAC SNOC_INDUCT >> rw []
+ >> ASM_SIMP_TAC (betafy (srw_ss())) [SNOC_APPEND, SYM appstar_SNOC, lameq_I]
+QED
+
+Theorem I_appstar :
+    I @* (GENLIST (\i. I) n) == I
+Proof
+    NewQ.ABBREV_TAC ‘Is = GENLIST (\i. I) n’
+ >> MATCH_MP_TAC I_appstar'
+ >> rw [Abbr ‘Is’, MEM_GENLIST]
+QED
 
 val B_def = Define`B = S @@ (K @@ S) @@ K`;
 val FV_B = Store_thm(
@@ -626,6 +672,42 @@ val has_bnf_def = Define`has_bnf t = ?t'. t == t' /\ bnf t'`;
 
 val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
 
+(* FIXME: can ‘(!y. y IN FDOM fm ==> FV (fm ' y) = {})’ be removed? *)
+Theorem lameq_ssub_cong :
+    !fm. (!y. y IN FDOM fm ==> FV (fm ' y) = {}) /\
+          M == N ==> fm ' M == fm ' N
+Proof
+    HO_MATCH_MP_TAC fmap_INDUCT >> rw [FAPPLY_FUPDATE_THM]
+ >> Know ‘!y. y IN FDOM fm ==> FV (fm ' y) = {}’
+ >- (Q.X_GEN_TAC ‘z’ >> DISCH_TAC \\
+    ‘z <> x’ by PROVE_TAC [] \\
+     Q.PAT_X_ASSUM ‘!y. y = x \/ y IN FDOM fm ==> P’ (MP_TAC o (Q.SPEC ‘z’)) \\
+     RW_TAC std_ss [])
+ >> DISCH_TAC
+ >> ‘fm ' M == fm ' N’ by PROVE_TAC []
+ >> Know ‘(fm |+ (x,y)) ' M = [y/x] (fm ' M)’
+ >- (MATCH_MP_TAC ssub_update_apply >> art [])
+ >> Rewr'
+ >> Know ‘(fm |+ (x,y)) ' N = [y/x] (fm ' N)’
+ >- (MATCH_MP_TAC ssub_update_apply >> art [])
+ >> Rewr'
+ >> ASM_SIMP_TAC (betafy (srw_ss())) []
+QED
+
+Theorem lameq_appstar_cong :
+    !M N Ns. M == N ==> M @* Ns == N @* Ns
+Proof
+    NTAC 2 GEN_TAC
+ >> HO_MATCH_MP_TAC SNOC_INDUCT >> rw []
+ >> ASM_SIMP_TAC (betafy (srw_ss())) [SNOC_APPEND, SYM appstar_SNOC]
+QED
+
 val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
 
 val _ = export_theory()
+
+(* References:
+
+   [2] Hankin, C.: Lambda Calculi: A Guide for Computer Scientists.
+       Clarendon Press, Oxford (1994).
+ *)

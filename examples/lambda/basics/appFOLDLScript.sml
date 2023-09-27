@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib
 
-open arithmeticTheory
+open arithmeticTheory listTheory
 open termTheory
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
@@ -161,6 +161,14 @@ Theorem appstar_EQ_LAM[simp]:
   x ·· Ms = LAM v M ⇔ Ms = [] ∧ x = LAM v M
 Proof
   qid_spec_tac ‘x’ >> Induct_on ‘Ms’ >> simp[]
+QED
+
+Theorem ssub_appstar :
+    fm ' (M @* Ns) = (fm ' M) @* MAP (ssub fm) Ns
+Proof
+    Q.ID_SPEC_TAC ‘Ns’
+ >> HO_MATCH_MP_TAC SNOC_INDUCT
+ >> rw [SNOC_APPEND, SYM appstar_SNOC]
 QED
 
 val _ = export_theory ()
