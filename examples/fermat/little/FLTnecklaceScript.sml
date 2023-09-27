@@ -120,8 +120,8 @@ open gcdTheory; (* for PRIME_GCD *)
                                      ls IN e ==> ls IN multicoloured n a
    multicoloured_prime_order
                        |- !p a ls. prime p /\ ls IN multicoloured p a ==> order ls = p
-   multicoloured_associate_card_prime
-                       |- !p a ls. prime p /\ ls IN multicoloured p a ==> CARD (associate ls) = p
+   multicoloured_partition_card_prime
+                       |- !p a e. prime p /\ e IN multicoloured_partition p a ==> CARD e = p
    multicoloured_card_prime
                        |- !p a. prime p ==>
                                 CARD (multicoloured p a) = p * CARD (multicoloured_partition p a)
@@ -824,7 +824,7 @@ QED
    = SIGMA (order l)       by associate_card_eq_order
    = SIGMA (p)             by order of a multicoloured necklace <> 1
                            and for prime length, order = 1 or p.
-   = p * CARD (multicoloured_partition p a)  by SIGMA_CARD_CONSTANT
+   = p * CARD (multicoloured_partition p a)  by multicoloured_partition_card_prime, SIGMA_CARD_CONSTANT
 *)
 Theorem multicoloured_card_prime:
   !p a. prime p ==>

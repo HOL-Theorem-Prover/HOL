@@ -2473,41 +2473,6 @@ QED
             (set o CHOICE) s IN (sub_count n k) *)
 (* Proof:
         s IN (partition (feq set) (list_count n k))
-    <=> ?x. x IN list_count n k /\
-            s = equiv_class (feq set) (list_count n k) x   by partition_element
-    ==> ?x. x IN list_count n k /\ s = perm_set (set x)    by list_count_set_eq_class
-   Thus ALL_DISTINCT x /\ set x SUBSET count n /\ LENGTH x = k
-                                               by list_count_element
-    and (set o CHOICE) s
-      = set (CHOICE (perm_set (set x)))        by o_THM
-   Note perm_set (set x) <> {}                 by perm_set_list_not_empty
-   Let ls = CHOICE (perm_set (set x)).
-   Then ls IN perm_set (set x)                 by CHOICE_DEF
-     so ALL_DISTINCT ls /\ set ls = set x      by perm_set_element
-   Thus (set o CHOICE) s = set x
-   With set x SUBSET count n                   by above
-    and CARD (set x) = LENGTH x = k            by ALL_DISTINCT_CARD_LIST_TO_SET
-     so (set x) IN (sub_count n k)             by sub_count_element
-*)
-Theorem list_count_set_map_element:
-  !s n k. s IN (partition (feq set) (list_count n k)) ==>
-          (set o CHOICE) s IN (sub_count n k)
-Proof
-  rw_tac bool_ss [partition_element] >>
-  simp[list_count_set_eq_class] >>
-  qabbrev_tac `ls = CHOICE (perm_set (set x))` >>
-  `perm_set (set x) <> {}` by metis_tac[perm_set_list_not_empty] >>
-  `ls IN perm_set (set x)` by fs[CHOICE_DEF, Abbr`ls`] >>
-  fs[list_count_element, perm_set_element, sub_count_element] >>
-  simp[ALL_DISTINCT_CARD_LIST_TO_SET]
-QED
-
-(* Another proof of the same theorem, slightly better. *)
-
-(* Theorem: s IN (partition (feq set) (list_count n k)) ==>
-            (set o CHOICE) s IN (sub_count n k) *)
-(* Proof:
-        s IN (partition (feq set) (list_count n k))
     <=> ?z. z IN list_count n k /\
         !x. x IN s <=> x IN list_count n k /\ set x = set z
                                          by feq_partition_element
@@ -2522,7 +2487,7 @@ QED
      and CARD (set ls) = LENGTH ls       by ALL_DISTINCT_CARD_LIST_TO_SET
       so set ls IN (sub_count n k)       by sub_count_element_alt
 *)
-Theorem list_count_set_map_element[allow_rebind]:
+Theorem list_count_set_map_element:
   !s n k. s IN (partition (feq set) (list_count n k)) ==>
           (set o CHOICE) s IN (sub_count n k)
 Proof
@@ -2769,26 +2734,11 @@ QED
 (* Theorem: n arrange n = perm n *)
 (* Proof:
      n arrange n
-   = CARD (list_count n n)     by arrange_def
-   = CARD (perm_count n)       by list_count_n_n
-   = perm n                    by perm_def
-*)
-Theorem arrange_n_n:
-  !n. n arrange n = perm n
-Proof
-  simp[arrange_def, perm_def, list_count_n_n]
-QED
-
-(* Another proof of the same theorem. *)
-
-(* Theorem: n arrange n = perm n *)
-(* Proof:
-     n arrange n
    = (binomial n n) * FACT n   by arrange_formula
    = 1 * FACT n                by binomial_n_n
    = perm n                    by perm_eq_fact
 *)
-Theorem arrange_n_n[allow_rebind]:
+Theorem arrange_n_n:
   !n. n arrange n = perm n
 Proof
   simp[arrange_formula, binomial_n_n, perm_eq_fact]

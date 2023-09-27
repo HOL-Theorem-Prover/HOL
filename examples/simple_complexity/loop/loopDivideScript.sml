@@ -1773,13 +1773,6 @@ val divide_by_member = store_thm(
   rw[MEM_GENLIST] >>
   metis_tac[pop_property]);
 
-(* Derive a theorem: put j = 0 in divide_by_member *)
-val divide_by_head = save_thm("divide_by_head",
-    divide_by_member |> SPEC ``b:num`` |> SPEC ``n:num`` |> SPEC ``0``
-      |> SIMP_RULE (srw_ss()) [EXP_0, DIV_1] |> GEN ``n:num`` |> GEN ``b:num``);
-(* val divide_by_head = |- !b n. 1 < b /\ 0 < n /\ 1 <= n ==> MEM n (divide_by b n): thm *)
-(* Not compact enough *)
-
 (* Theorem: 1 < b /\ 0 < n ==> MEM n (divide_by b n) *)
 (* Proof: by divide_by_member, EXP_0, DIV_1 *)
 val divide_by_head = store_thm(
@@ -1992,42 +1985,6 @@ val loop_div_count_exit_by_sum = store_thm(
   imp_res_tac loop_modify_count_exit_by_sum >>
   `loop_arg guard modify x = divide_by b x` by rw[divide_by_eq_loop_arg, Abbr`guard`, Abbr`modify`] >>
   metis_tac[]);
-
-(* Theorem: 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
-       (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + cover x * pop b x *)
-(* Proof:
-   Let guard = (\x. x = 0),
-       modify = (\x. x DIV b),
-       R = measure (\x. x),
-   Then WF R                                  by WF_measure
-    and !x. ~guard x ==> R (modify x) x       by DIV_LESS, x DIV b < x, 1 < b
-    and !x y. R x y ==> cover x <= cover y    by R, LESS_IMP_LESS_OR_EQ, MONO cover
-   Also !x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)
-                                              by given
-        loop x
-     <= c + cover x * loop_count guard modify x      by loop_modify_count_cover_exit_upper
-      = c + cover x * pop b x                        by pop_eq_loop_count
-*)
-val loop_div_count_cover_exit_upper = store_thm(
-  "loop_div_count_cover_exit_upper",
-  ``!loop body cover exit b c. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
-       (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + cover x * pop b x``,
-  rpt strip_tac >>
-  qabbrev_tac `guard = \x. x = 0` >>
-  qabbrev_tac `modify = \x. x DIV b` >>
-  qabbrev_tac `R = measure (\x. x)` >>
-  `WF R` by rw[Abbr`R`] >>
-  `!x. ~guard x ==> R (modify x) x` by rw[Abbr`guard`, Abbr`R`, Abbr`modify`] >>
-  `!x y. R x y ==> cover x <= cover y` by rw[Abbr`R`] >>
-  `!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)` by metis_tac[] >>
-  assume_tac (loop_modify_count_cover_exit_upper |> ISPEC ``loop:num -> num``) >>
-  last_x_assum (qspecl_then [`guard`, `body`, `c`, `cover`, `exit`, `modify`, `R`] strip_assume_tac) >>
-  `loop_count guard modify x = pop b x` by rw[pop_eq_loop_count, Abbr`guard`, Abbr`modify`] >>
-  metis_tac[]);
-
-(* This is the same, but directly from the SUM *)
 
 (* Theorem:  1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>

@@ -1004,11 +1004,6 @@ val poly_O_sum = store_thm(
   ``!n. (poly_O n) |+| (poly_O n) = poly_O n``,
   rw[big_O_sum_self]);
 
-(* Derive this theorem *)
-val poly_O_sum = save_thm("poly_O_sum",
-    big_O_sum_self |> SPEC ``POLY n`` |> GEN_ALL);
-(* val poly_O_sum = |- !n. poly_O n |+| poly_O n = poly_O n: thm *)
-
 (* Theorem: poly_O n |+| poly_O m SUBSET poly_O (MAX n m) *)
 (* Proof:
    Note poly_O n |+| poly_O m SUBSET big_O (POLY n .+. POLY m)    by big_O_sum_subset

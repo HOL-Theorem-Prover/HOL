@@ -80,6 +80,7 @@ open indexedListsTheory; (* for findi_def *)
    HEAD_MEM         |- !ls. ls <> [] ==> MEM (HD ls) ls
    LAST_MEM         |- !ls. ls <> [] ==> MEM (LAST ls) ls
    LAST_EQ_HD       |- !h t. ~MEM h t /\ LAST (h::t) = h <=> t = []
+   MEM_FRONT_NOT_LAST|- !ls. ls <> [] /\ ALL_DISTINCT ls ==> ~MEM (LAST ls) (FRONT ls)
    NIL_NO_MEM       |- !ls. ls = [] <=> !x. ~MEM x ls
    MEM_APPEND_3     |- !l1 x l2 h. MEM h (l1 ++ [x] ++ l2) <=> MEM h (x::(l1 ++ l2))
    DROP_1           |- !h t. DROP 1 (h::t) = t
@@ -858,6 +859,33 @@ Proof
   rw[EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   metis_tac[LAST_CONS_cond, LAST_MEM]
+QED
+
+(* Theorem: ls <> [] /\ ALL_DISTINCT ls ==> ~MEM (LAST ls) (FRONT ls) *)
+(* Proof:
+   Let k = LENGTH ls.
+   Then 0 < k                                  by LENGTH_EQ_0, NOT_ZERO
+    and LENGTH (FRONT ls) = PRE k              by LENGTH_FRONT, ls <> []
+     so ?n. n < PRE k /\
+        LAST ls = EL n (FRONT ls)              by MEM_EL
+                = EL n ls                      by FRONT_EL, ls <> []
+    but LAST ls = EL (PRE k) ls                by LAST_EL, ls <> []
+   Thus n = PRE k                              by ALL_DISTINCT_EL_IMP
+   This contradicts n < PRE k                  by arithmetic
+*)
+Theorem MEM_FRONT_NOT_LAST:
+  !ls. ls <> [] /\ ALL_DISTINCT ls ==> ~MEM (LAST ls) (FRONT ls)
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `k = LENGTH ls` >>
+  `0 < k` by metis_tac[LENGTH_EQ_0, NOT_ZERO] >>
+  `LENGTH (FRONT ls) = PRE k` by fs[LENGTH_FRONT, Abbr`k`] >>
+  fs[MEM_EL] >>
+  `LAST ls = EL n ls` by fs[FRONT_EL] >>
+  `LAST ls = EL (PRE k) ls` by rfs[LAST_EL, Abbr`k`] >>
+  `n < k /\ PRE k < k` by decide_tac >>
+  `n = PRE k` by metis_tac[ALL_DISTINCT_EL_IMP] >>
+  decide_tac
 QED
 
 (* Theorem: ls = [] <=> !x. ~MEM x ls *)
@@ -2639,22 +2667,7 @@ val rotate_def = Define `
          = EL j l :: DROP (SUC j) l    by EL, DROP_def
          = LHS
 *)
-val rotate_shift_element = store_thm(
-  "rotate_shift_element",
-  ``!l n. n < LENGTH l ==> (rotate n l = EL n l::(DROP (SUC n) l ++ TAKE n l))``,
-  rw[rotate_def] >>
-  pop_assum mp_tac >>
-  qid_spec_tac `n` >>
-  Induct_on `l` >-
-  rw[] >>
-  rw[DROP_def] >-
-  rw[EL_CONS, PRE_SUB1] >>
-  `?j. n = SUC j` by metis_tac[num_CASES] >>
-  `j < LENGTH l` by decide_tac >>
-  `SUC j - 1 = j` by decide_tac >>
-  rw[DROP_def, TAKE_def]);
-
-Theorem rotate_shift_element[allow_rebind]:
+Theorem rotate_shift_element:
   !l n. n < LENGTH l ==> (rotate n l = EL n l::(DROP (SUC n) l ++ TAKE n l))
 Proof
   rw[rotate_def] >>
@@ -3115,34 +3128,7 @@ val LIST_TO_SET_SING = store_thm(
                  so l1 = t              by induction hypothesis
              giving l2 = h::l1
 *)
-val MONOLIST_EQ = store_thm(
-  "MONOLIST_EQ",
-  ``!l1 l2. SING (set l1) /\ SING (set l2) ==>
-    ((l1 = l2) <=> (LENGTH l1 = LENGTH l2) /\ (set l1 = set l2))``,
-  Induct >-
-  rw[] >>
-  rw[] >| [
-    rw[EQ_IMP_THM] >-
-    rw[] >-
-    rw[] >>
-    `?x. l2 = [x]` by rw[GSYM LENGTH_EQ_1] >>
-    `set l2 = {x}` by rw[] >>
-    metis_tac[EQUAL_SING],
-    rw[EQ_IMP_THM] >-
-    rw[] >-
-    rw[] >>
-    `0 < LENGTH l2` by decide_tac >>
-    `?k t. l2 = k::t` by metis_tac[LENGTH_NON_NIL, list_CASES] >>
-    `LENGTH l2 = SUC (LENGTH t)` by rw[] >>
-    `LENGTH l1 = LENGTH t` by decide_tac >>
-    `set l2 = k INSERT set t` by rw[] >>
-    `(set t = {}) \/ (set t = {k})` by metis_tac[SING_INSERT] >-
-    metis_tac[LIST_TO_SET_EQ_EMPTY, LENGTH_NIL, NOT_SING_EMPTY] >>
-    `set l2 = set t` by rw[] >>
-    metis_tac[IN_SING]
-  ]);
-
-Theorem MONOLIST_EQ[allow_rebind]:
+Theorem MONOLIST_EQ:
   !l1 l2. SING (set l1) /\ SING (set l2) ==>
           ((l1 = l2) <=> (LENGTH l1 = LENGTH l2) /\ (set l1 = set l2))
 Proof
@@ -4891,14 +4877,6 @@ val PROD_SNOC = store_thm(
   strip_tac >>
   Induct >>
   rw[]);
-(* proof like SUM_SNOC *)
-Theorem PROD_SNOC[allow_rebind]:
-  !x l. PROD (SNOC x l) = (PROD l) * x
-Proof
-  GEN_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC THEN
-  REWRITE_TAC[PROD, SNOC, MULT, MULT_CLAUSES] THEN
-  GEN_TAC THEN ASM_REWRITE_TAC[MULT_ASSOC]
-QED
 
 (* Theorem: PROD (APPEND l1 l2) = PROD l1 * PROD l2 *)
 (* Proof:
@@ -4997,10 +4975,11 @@ val PROD_ACC_PROD_LEM = store_thm
 
 (* Theorem: PROD L = PROD_ACC L 1 *)
 (* Proof: Put n = 1 in PROD_ACC_PROD_LEM *)
-val PROD_PROD_ACC = store_thm(
-  "PROD_PROD_ACC[compute]",
-  ``!L. PROD L = PROD_ACC L 1``,
-  rw[PROD_ACC_PROD_LEM]);
+Theorem PROD_PROD_ACC[compute]:
+  !L. PROD L = PROD_ACC L 1
+Proof
+  rw[PROD_ACC_PROD_LEM]
+QED
 
 (* EVAL ``PROD [1; 2; 3; 4]``; --> 24 *)
 
@@ -5752,8 +5731,8 @@ Proof
 QED
 
 (* Theorem alias *)
-val listRangeLHI_LEN = save_thm("listRangeLHI_LEN",  LENGTH_listRangeLHI |> GEN_ALL);
-(* val listRangeLHI_LEN = |- !lo hi. LENGTH [lo ..< hi] = hi - lo: thm *)
+Theorem  listRangeLHI_LEN = LENGTH_listRangeLHI |> GEN_ALL |> SPEC ``m:num`` |> SPEC ``n:num`` |> GEN_ALL;
+(* val listRangeLHI_LEN = |- !n m. LENGTH [m ..< n] = n - m: thm *)
 
 (* Theorem: ([m ..< n] = []) <=> n <= m *)
 (* Proof:
@@ -8428,15 +8407,14 @@ val DILATE_0_LENGTH_UPPER = store_thm(
            = e                                       by induction hypothesis, (k - m) MOD n <> 0
 *)
 Theorem DILATE_0_EL:
-  !l e n k.
-     k < LENGTH (DILATE e 0 n l) ==>
-     EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l
-                             else e
+  !l e n k. k < LENGTH (DILATE e 0 n l) ==>
+     (EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l else e)
 Proof
   ntac 3 strip_tac >>
   `0 < SUC n` by decide_tac >>
   qabbrev_tac `m = SUC n` >>
-  Induct_on `l` >- rw[] >>
+  Induct_on `l` >-
+  rw[] >>
   rpt strip_tac >>
   `LENGTH (DILATE e 0 n [h]) = 1` by rw[DILATE_SING] >>
   `LENGTH (DILATE e 0 n (h::l)) = SUC (m * LENGTH l)` by rw[DILATE_0_LENGTH, Abbr`m`] >>
@@ -8461,10 +8439,8 @@ Proof
         rw[]
       ],
       `m <= k` by decide_tac >>
-      `EL k (t ++ DILATE e 0 n l) = EL (k - m) (DILATE e 0 n l)`
-        by simp[EL_APPEND] >>
-      `k - m < LENGTH (DILATE e 0 n l)`
-        by (trace ("BasicProvers.var_eq_old", 1)(rw[DILATE_0_LENGTH])) >>
+      `EL k (t ++ DILATE e 0 n l) = EL (k - m) (DILATE e 0 n l)` by simp[EL_APPEND] >>
+      `k - m < LENGTH (DILATE e 0 n l)` by rw[DILATE_0_LENGTH] >>
       `(k - m) MOD m = k MOD m` by simp[SUB_MOD] >>
       `(k - m) DIV m = k DIV m - 1` by simp[SUB_DIV] >>
       Cases_on `k MOD m = 0` >| [
@@ -8473,8 +8449,7 @@ Proof
         `_ = EL (PRE (k DIV m)) l` by rw[PRE_SUB1] >>
         `_ = EL (k DIV m) (h::l)` by rw[EL_CONS] >>
         rw[],
-        `EL (k - m) (DILATE e 0 n l)  = e`
-          by trace ("BasicProvers.var_eq_old", 1)(rw[]) >>
+        `EL (k - m) (DILATE e 0 n l)  = e` by rw[] >>
         rw[]
       ]
     ]

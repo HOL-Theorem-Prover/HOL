@@ -900,20 +900,6 @@ val poly_roots_factor = save_thm("poly_roots_factor", poly_factor_roots);
 val poly_roots_factor = |- !r. Ring r ==> !c. c IN R ==> (roots (factor c) = {c}): thm
 *)
 
-(* Theorem: Ring r ==> !c. c IN R ==> (roots (factor c) = {c}) *)
-(* Proof:
-   !x. x IN roots (factor c)
-   <=> root (factor c) x          by poly_roots_def, or poly_roots_member
-   <=> eval (factor c) x = #0     by poly_root_def
-   <=> x - c = #0                 by poly_factor_eval
-   <=> x = c                      by ring_sub_eq_zero
-*)
-val poly_roots_factor = store_thm(
-  "poly_roots_factor",
-  ``!r:'a ring. Ring r ==> !c. c IN R ==> (roots (factor c) = {c})``,
-  rw[poly_roots_def, poly_root_def, EXTENSION] >>
-  metis_tac[poly_factor_eval, ring_sub_eq_zero]);
-
 (* Example:
 In Z_6, (x - 2)(x - 3) = x^2 - 5x + 0 = x^2 - 5x = x(x - 5)
 so roots (x - 2)(x - 3) = {2, 3, 0, 5}
@@ -971,29 +957,6 @@ val poly_roots_X = store_thm(
    <=> root (p * q) x                  by poly_roots_member
    <=> (p * q)(x) = #0                 by poly_root_def
    <=> p(x) * q(x) = #0                by poly_eval_mult
-   <=> p(x) = #0  or q(x) = #0         by field_zero_product
-   <=> root p x   or  root q x         by poly_root_def
-   <=> x IN roots p or x IN roots q    by poly_roots_member
-   <=> x IN (roots p UNION roots q)    by IN_UNION
-*)
-val poly_roots_mult = store_thm(
-  "poly_roots_mult",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (roots (p * q) = roots p UNION roots q)``,
-  rw_tac std_ss[poly_roots_member, poly_root_def, EXTENSION, GSPECIFICATION, IN_UNION, EQ_IMP_THM] >-
-  rw_tac std_ss[GSYM field_zero_product, poly_eval_element, GSYM poly_eval_mult, field_is_ring] >-
-  rw_tac std_ss[] >-
-  rw_tac std_ss[field_mult_lzero, poly_eval_element, poly_eval_mult, field_is_ring] >-
-  rw_tac std_ss[] >>
-  rw_tac std_ss[field_mult_rzero, poly_eval_element, poly_eval_mult, field_is_ring]);
-
-(* A better proof of the same result. *)
-
-(* Theorem: roots (p * q) = roots p UNION roots q *)
-(* Proof: by p * q = |0| iff p = |0| or q = |0|.
-   !x. x IN roots (p * q)
-   <=> root (p * q) x                  by poly_roots_member
-   <=> (p * q)(x) = #0                 by poly_root_def
-   <=> p(x) * q(x) = #0                by poly_eval_mult
    <=> p(x) = #0  or q(x) = #0         by field_zero_product -- must be in Field, not Ring.
    <=> root p x   or  root q x         by poly_root_def
    <=> x IN roots p or x IN roots q    by poly_roots_member
@@ -1005,8 +968,7 @@ val poly_roots_mult = store_thm(
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw[poly_roots_member, poly_root_def, EXTENSION, EQ_IMP_THM] >-
-  rw[GSYM field_zero_product, GSYM poly_eval_mult] >>
-  rw[]);
+  rw[GSYM field_zero_product, GSYM poly_eval_mult] >> rw[]);
 
 (* Theorem: Field r ==> !p n. poly p /\ 0 < n ==> (roots (p ** n) = roots p) *)
 (* Proof:

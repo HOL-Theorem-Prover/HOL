@@ -1128,13 +1128,15 @@ Proof
             poly_chop_mult_comm, weak_mult_rone, poly_chop_poly]
 QED
 
+(* val poly_mult_one = save_thm("poly_mult_one", CONJ poly_mult_lone poly_mult_rone); *)
+(* > val poly_mult_one = |- (!r. Ring r ==> !p. poly p ==> ( |1| * p = p)) /\ !r. Ring r ==> !p. poly p ==> (p * |1| = p) : thm *)
+
 (* Theorem: |1| * p = p  and  p * |1| = p *)
 (* Proof: combine poly_mult_lone and poly_mult_rone. *)
 Theorem poly_mult_one:
   !r:'a ring. Ring r ==> !p. poly p ==> ( |1| * p = p) /\ (p * |1| = p)
 Proof rw[]
 QED
-
 
 (* To show closure for Monoid (PolyRing r).prod. *)
 
@@ -1357,23 +1359,26 @@ val poly_mult_one_one = lift_ring_thm "mult_one_one" "mult_one_one";
 
 val _ = export_rewrites ["poly_mult_one_one"];
 
-(* Theorem: Ring r ==> ( |1| = |0|  <=> !p. poly p ==> p = |0| *)
-val poly_one_eq_zero = lift_ring_thm "one_eq_zero" "one_eq_zero";
-(* > val poly_one_eq_zero = |- !r. Ring r ==> (( |1| = |0|) <=> ((PolyRing r).carrier = {|0|})) : thm *)
+(* Theorem: Ring r ==> ( |1| = |0| <=> !p. poly p ==> p = |0| *)
 (* Proof:
-   by above poly_one_eq_zero, and improve by ONE_ELEMENT_SING and IN_SING.
+   val poly_one_eq_zero = lift_ring_thm "one_eq_zero" "one_eq_zero";
+   > val poly_one_eq_zero = |- !r. Ring r ==> (( |1| = |0|) <=> ((PolyRing r).carrier = {|0|})) : thm
+   by above and improve:
+   If part: |1| = |0| <=> !p. poly p ==> p = |0|
+          (PolyRing r).carrier = {|0|})
+      <=> !p. poly p ==> p = |0|               by poly_ring_property, IN_SING
+   Only-if part: !p. poly p ==> p = |0| ==> |1| = |0|
+      Put p = |1| and note that poly |1| = T   by poly_one_poly
 *)
+(* Need rebind as lift_ring_thm stores the name poly_one_eq_zero. *)
 Theorem poly_one_eq_zero[allow_rebind]:
   !r:'a ring. Ring r ==> (( |1| = |0|) <=> !p. poly p ==> (p = |0|))
 Proof
-  rw_tac std_ss[EQ_IMP_THM] >| [
-    ‘(PolyRing r).carrier = { |0| }’ by rw_tac std_ss[GSYM poly_one_eq_zero] >>
-    metis_tac [poly_ring_property, IN_SING],
-    ‘(PolyRing r).carrier = { |0| }’
-      by metis_tac [poly_ring_property, poly_zero_poly, MEMBER_NOT_EMPTY,
-                    ONE_ELEMENT_SING] >>
-    metis_tac [poly_one_eq_zero]
-  ]
+  rpt strip_tac >>
+  assume_tac (lift_ring_thm "one_eq_zero" "one_eq_zero") >>
+  rw_tac std_ss[EQ_IMP_THM] >-
+  metis_tac[poly_ring_property, IN_SING] >>
+  metis_tac[poly_one_poly]
 QED
 
 (* Theorem: Ring r ==> ( |0| = |1|) <=> (#0 = #1) *)
@@ -2553,26 +2558,61 @@ val poly_mult_cmult = store_thm(
 (* Theorems on polynomial multiplication with negation.                      *)
 (* ------------------------------------------------------------------------- *)
 
-(* by lifting *)
+(* Theorem: (- p) * q = - (p * q)  *)
+(* Proof:
+   Since
+     (-p) * q + (p * q)
+   = (- p + p) * q           by poly_mult_ladd
+   = |0| * p                 by poly_add_lneg
+   = |0|                     by poly_mult_lzero
+   Hence
+     (- p) * q = - (p * q)   by poly_add_eq_zero
+*)
+(* better by lifting *)
 val poly_mult_lneg = lift_ring_thm_with_goal "mult_lneg" "mult_lneg"
    ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> ((- p) * q = - (p * q))``;
+(* > val poly_mult_lneg =
+|- !r. Ring r ==> !p q. poly p /\ poly q ==> (-p * q = -(p * q)): thm
+*)
 
 (* Theorem: p * (- q) = - (p * q)  *)
-(* by lifting *)
+(* Proof:
+     p * (-q)
+   = (-q) * p    by poly_mult_comm
+   = - (q * p)   by poly_mult_lneg
+   = - (p * q)   by poly_mult_comm
+*)
+(* better by lifting *)
 val poly_mult_rneg = lift_ring_thm_with_goal "mult_rneg" "mult_rneg"
    ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (p * (- q) = - (p * q))``;
+(* > val poly_mult_rneg =
+|- !r. Ring r ==> !p q. poly p /\ poly q ==> (p * -q = -(p * q)): thm
+*)
 
 val _ = export_rewrites ["poly_mult_lneg", "poly_mult_rneg"];
 
 (* Theorem: poly p /\ poly q ==> (-(p * q) = -p * q) /\ (-(p * q) = p * -q) *)
-(* by lifting *)
+(* Proof:
+   Since Ring r ==> Ring (PolyRing r)          by poly_add_mult_ring
+     and poly p <=> p IN (PolyRing r).carrier  by poly_ring_element
+     Hence   -(p * q) = -p * q                 by ring_neg_mult
+       and   -(p * q) = p * -q                 by ring_neg_mult
+*)
+(* better by lifting *)
 val poly_neg_mult = lift_ring_thm_with_goal "neg_mult" "neg_mult"
    ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (-(p * q) = -p * q) /\ (-(p * q) = p * -q)``;
+(* > val poly_neg_mult =
+|- !r. Ring r ==> !p q. poly p /\ poly q ==> (-(p * q) = -p * q) /\ (-(p * q) = p * -q): thm
+*)
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q ==> (-p * -q = p * q) *)
-(* by lifting *)
+(* Proof: by poly_ring_ring, ring_mult_neg_neg *)
+(* better by lifting *)
 val poly_mult_neg_neg = lift_ring_thm_with_goal "mult_neg_neg" "mult_neg_neg"
    ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (-p * -q = p * q)``;
+(* > val poly_mult_neg_neg =
+|- !r. Ring r ==> !p q. poly p /\ poly q ==> (-p * -q = p * q): thm
+*)
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems on polynomial distribution with subtraction.                     *)
@@ -3700,8 +3740,10 @@ val poly_exp_add = store_thm(
   ``!r:'a ring. Ring r ==> !p. poly p ==> !n m. p ** (n + m) = p ** n * p ** m``,
   metis_tac[poly_add_mult_ring, ring_exp_add, poly_ring_property]);
 
+(* Theorem: Ring r /\ poly p ==> !m n. (p ** (n * m) = (p ** n) ** m) *)
 val poly_exp_mult = lift_ring_thm_with_goal "exp_mult" "exp_mult"
    ``!r:'a ring. Ring r ==> !p. poly p ==> !m n. p ** (n * m) = (p ** n) ** m``;
+(* > val poly_exp_mult = |- !r. Ring r ==> !p. poly p ==> !m n. p ** (n * m) = (p ** n) ** m : thm *)
 
 (* Theorem: Ring r ==> !p. poly p ==> !m n. (p ** m) ** n = (p ** n) ** m *)
 (* Proof:
@@ -3712,6 +3754,7 @@ val poly_exp_mult = lift_ring_thm_with_goal "exp_mult" "exp_mult"
 *)
 val poly_exp_mult_comm = lift_ring_thm_with_goal "exp_mult_comm" "exp_mult_comm"
     ``!r:'a ring. Ring r ==> !p. poly p ==> !m n. (p ** m) ** n = (p ** n) ** m``;
+(* > val poly_exp_mult_comm = |- !r. Ring r ==> !p. poly p ==> !m n. (p ** m) ** n = (p ** n) ** m: thm *)
 
 (* Theorem: Ring r /\ poly p /\ poly q ==> !n. (p ** n) * (q ** n) = (p * q) ** n *)
 val poly_mult_exp = lift_ring_thm_with_goal "mult_exp" "mult_exp"
@@ -4913,36 +4956,6 @@ val poly_cmult_unit = store_thm(
 
 (* Theorem: Ring r /\ poly p /\ c IN R /\ unit c ==> (p = (( |/c) * p) * [c]) *)
 (* Proof:
-   If #1 = #0,
-      Then |1| = |0|             by poly_one_eq_poly_zero
-        so p = |0|               by poly_one_eq_zero
-       and   (( |/c) * p) * [c]
-           = |0| * [c]           by poly_cmult_zero
-           = |0| = p             by poly_mult_lzero
-   Otherwise #1 <> #0,
-   Note |/c IN R                 by ring_unit_inv_element
-    and c <> #0                  by ring_unit_nonzero, #1 <> #0
-     so poly [c]                 by poly_nonzero_element_poly
-   Thus p = [c] * (( |/c) * p)   by poly_cmult_unit
-          = (( |/c) * p) * [c]   by poly_mult_comm
-*)
-val poly_cmult_unit_comm = store_thm(
-  "poly_cmult_unit_comm",
-  ``!r:'a ring p c. Ring r /\ poly p /\ c IN R /\ unit c ==> (p = (( |/c) * p) * [c])``,
-  rpt strip_tac >>
-  Cases_on `#1 = #0` >| [
-    `|1| = |0|` by rw[poly_one_eq_poly_zero] >>
-    `p = |0|` by metis_tac[poly_one_eq_zero] >>
-    metis_tac[poly_cmult_zero, poly_mult_lzero],
-    `|/c IN R /\ c <> #0` by rw[ring_unit_inv_element, ring_unit_nonzero] >>
-    `poly [c]` by rw[poly_nonzero_element_poly] >>
-    metis_tac[poly_cmult_unit, poly_mult_comm, poly_cmult_poly]
-  ]);
-
-(* Another proof of the same theorem *)
-
-(* Theorem: Ring r /\ poly p /\ c IN R /\ unit c ==> (p = (( |/c) * p) * [c]) *)
-(* Proof:
    Note |/c IN R                 by ring_unit_inv_element
    Then  (( |/c) * p) * [c]
         = c * (( |/c) * p)       by poly_mult_rconst
@@ -4950,18 +4963,16 @@ val poly_cmult_unit_comm = store_thm(
         = #1 * p                 by ring_unit_rinv
         = p                      by poly_cmult_lone
 *)
-Theorem poly_cmult_unit_comm[allow_rebind]:
-  !r:'a ring p c. Ring r /\ poly p /\ c IN R /\ unit c ==>
-                  (p = (( |/c) * p) * [c])
-Proof
+val poly_cmult_unit_comm = store_thm(
+  "poly_cmult_unit_comm",
+  ``!r:'a ring p c. Ring r /\ poly p /\ c IN R /\ unit c ==> (p = (( |/c) * p) * [c])``,
   rpt strip_tac >>
   `|/c IN R` by rw[ring_unit_inv_element] >>
   `(( |/c) * p) * [c] = c * (( |/c) * p)` by rw[poly_mult_rconst] >>
   `_ = (c * |/c) * p` by rw[poly_cmult_cmult] >>
   `_ = #1 * p` by rw[ring_unit_rinv] >>
   `_ = p` by rw[] >>
-  simp[]
-QED
+  simp[]);
 
 (* Theorem: Ring r /\ poly p /\ c IN R /\ unit c ==>
             (p = (( |/c) * p) * [c] + |0|) *)
