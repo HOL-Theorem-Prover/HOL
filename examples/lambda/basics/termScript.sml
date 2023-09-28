@@ -318,6 +318,14 @@ val FV_EMPTY = store_thm(
   ``(FV t = {}) <=> !v. v NOTIN FV t``,
   SIMP_TAC (srw_ss()) [EXTENSION]);
 
+(* A term is "closed" if it's FV is empty (otherwise the term is open).
+
+   NOTE: the set of all closed terms forms $\Lambda_0$ found in textbooks.
+ *)
+Definition closed_def :
+    closed (M :term) <=> FV M = {}
+End
+
 (* quote the term in order to get the variable names specified *)
 val simple_induction = store_thm(
   "simple_induction",
@@ -728,12 +736,12 @@ QED
 
 Theorem ssub_LAM[local] = List.nth(CONJUNCTS ssub_thm, 2)
 
-(* FIXME: can ‘(!y. y IN FDOM fm ==> FV (fm ' y) = {})’ be removed? *)
+(* FIXME: can ‘(!y. y IN FDOM fm ==> closed (fm ' y))’ be removed? *)
 Theorem ssub_update_apply :
-    !fm. s NOTIN FDOM fm /\ (!y. y IN FDOM fm ==> FV (fm ' y) = {}) ==>
+    !fm. s NOTIN FDOM fm /\ (!y. y IN FDOM fm ==> closed (fm ' y)) ==>
          (fm |+ (s,M)) ' N = [M/s] (fm ' (N :term))
 Proof
-    rpt STRIP_TAC
+    rw [closed_def]
  >> Q.ID_SPEC_TAC ‘N’
  >> HO_MATCH_MP_TAC nc_INDUCTION2
  >> Q.EXISTS_TAC ‘s INSERT (FDOM fm UNION FV M)’
@@ -745,12 +753,12 @@ Proof
  >> MATCH_MP_TAC ssub_LAM >> rw [FAPPLY_FUPDATE_THM]
 QED
 
-(* NOTE: ‘FV M = {}’ is additionally required *)
+(* NOTE: ‘closed M’ is additionally required *)
 Theorem ssub_update_apply' :
-    !fm. s NOTIN FDOM fm /\ (!y. y IN FDOM fm ==> FV (fm ' y) = {}) /\
-         FV M = {} ==> (fm |+ (s,M)) ' N = fm ' ([M/s] N)
+    !fm. s NOTIN FDOM fm /\ (!y. y IN FDOM fm ==> closed (fm ' y)) /\ closed M ==>
+         (fm |+ (s,M)) ' N = fm ' ([M/s] N)
 Proof
-    rpt STRIP_TAC
+    rw [closed_def]
  >> Q.ID_SPEC_TAC ‘N’
  >> HO_MATCH_MP_TAC nc_INDUCTION2
  >> Q.EXISTS_TAC ‘s INSERT (FDOM fm)’
@@ -759,17 +767,8 @@ Proof
  >- (MATCH_MP_TAC (GSYM ssub_value) >> art [])
  >> Know ‘(fm |+ (s,M)) ' (LAM y N) = LAM y ((fm |+ (s,M)) ' N)’
  >- (MATCH_MP_TAC ssub_LAM >> rw [FAPPLY_FUPDATE_THM])
- >> Rewr'
  >> rw []
 QED
-
-(* A term is "closed" if it's FV is empty (otherwise the term is open).
-
-   NOTE: the set of all closed terms forms $\Lambda_0$ found in textbooks.
- *)
-Definition closed_def :
-    closed (M :term) <=> FV M = {}
-End
 
 (* ----------------------------------------------------------------------
     Set up the recursion functionality in binderLib
@@ -808,3 +807,4 @@ val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
 
 
 val _ = export_theory()
+val _ = html_theory "term";

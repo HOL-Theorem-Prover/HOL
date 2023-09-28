@@ -157,6 +157,14 @@ Proof
   simp[appstar_APPEND]
 QED
 
+Theorem appstar_CONS :
+    M @@ N @* Ns = M @* (N::Ns)
+Proof
+    ‘N::Ns = [N] ++ Ns’ by rw []
+ >> ‘M @* [N] = M @@ N’ by rw []
+ >> rw [appstar_APPEND]
+QED
+
 Theorem appstar_EQ_LAM[simp]:
   x ·· Ms = LAM v M ⇔ Ms = [] ∧ x = LAM v M
 Proof
