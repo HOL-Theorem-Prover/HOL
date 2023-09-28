@@ -1589,39 +1589,6 @@ Proof
   rw[]
 QED
 
-(* Another Proof: *)
-(* Theorem: MAX_SET (IMAGE SUC (count n)) = n *)
-(* Proof:
-   By induction on n.
-   Base case: MAX_SET (IMAGE SUC (count 0)) = 0
-      LHS = MAX_SET (IMAGE SUC (count 0))
-          = MAX_SET (IMAGE SUC {})         by COUNT_ZERO
-          = MAX_SET {}                     by IMAGE_EMPTY
-          = 0                              by MAX_SET_DEF
-          = RHS
-   Step case: MAX_SET (IMAGE SUC (count n)) = n ==>
-              MAX_SET (IMAGE SUC (count (SUC n))) = SUC n
-      Note: FINITE (IMAGE SUC (count n))                    by FINITE_COUNT, IMAGE_FINITE
-      LHS = MAX_SET (IMAGE SUC (count (SUC n)))
-          = MAX_SET (IMAGE SUC (n INSERT (count n)))        by COUNT_SUC
-          = MAX_SET ((SUC n) INSERT (IMAGE SUC (count n)))  by IMAGE_INSERT
-          = MAX (SUC n) (MAX_SET (IMAGE SUC (count n)))     by MAX_SET_THM
-          = MAX (SUC n) n                                   by induction hypothesis
-          = SUC n                                           by LESS_SUC, MAX_DEF
-          = RHS
-*)
-Theorem MAX_SET_IMAGE_SUC_COUNT[allow_rebind]:
-  !n. MAX_SET (IMAGE SUC (count n)) = n
-Proof
-  Induct_on `n` >-
-  rw[MAX_SET_DEF] >>
-  ‘MAX_SET (IMAGE SUC (count (SUC n))) =
-   MAX (SUC n) (MAX_SET (IMAGE SUC (count n)))’
-    by rw[COUNT_SUC, MAX_SET_THM] >>
-  metis_tac[MAX_SET_THM, LESS_SUC, MAX_DEF, MAX_COMM, FINITE_COUNT,
-            IMAGE_FINITE]
-QED
-
 (* Theorem: HALF x <= c ==> f x <= MAX_SET {f x | HALF x <= c} *)
 (* Proof:
    Let s = {f x | HALF x <= c}
@@ -1822,6 +1789,18 @@ val FINITE_BIJ_PROPERTY = store_thm(
 val it = |- !s. FINITE s ==> CARD (IMAGE f s) <= CARD s: thm
 *)
 
+(* Theorem: For a 1-1 map f: s -> s, s and (IMAGE f s) are of the same size. *)
+(* Proof:
+   By finite induction on the set s:
+   Base case: CARD (IMAGE f {}) = CARD {}
+     True by IMAGE f {} = {}            by IMAGE_EMPTY
+   Step case: !s. FINITE s /\ (CARD (IMAGE f s) = CARD s) ==> !e. e NOTIN s ==> (CARD (IMAGE f (e INSERT s)) = CARD (e INSERT s))
+       CARD (IMAGE f (e INSERT s))
+     = CARD (f e INSERT IMAGE f s)      by IMAGE_INSERT
+     = SUC (CARD (IMAGE f s))           by CARD_INSERT: e NOTIN s, f e NOTIN s, for 1-1 map
+     = SUC (CARD s)                     by induction hypothesis
+     = CARD (e INSERT s)                by CARD_INSERT: e NOTIN s.
+*)
 Theorem FINITE_CARD_IMAGE:
   !s f. (!x y. (f x = f y) <=> (x = y)) /\ FINITE s ==>
         (CARD (IMAGE f s) = CARD s)
@@ -3055,21 +3034,6 @@ val PROD_IMAGE_CONG = store_thm(
     rw[PROD_IMAGE_EMPTY] >>
     metis_tac[PROD_IMAGE_INSERT, IN_INSERT]
   ]);
-
-Theorem PROD_IMAGE_CONG[allow_rebind]:
-   !s f1 f2. (!x. x IN s ==> (f1 x = f2 x)) ==> (PI f1 s = PI f2 s)
-Proof
-   SRW_TAC [][] THEN
-   REVERSE (Cases_on `FINITE s`) THEN1 (
-       SRW_TAC [][PROD_IMAGE_DEF, Once ITSET_def] THEN
-       SRW_TAC [][Once ITSET_def]
-   ) THEN
-   Q.PAT_ASSUM `!x. P` MP_TAC THEN
-   POP_ASSUM MP_TAC THEN
-   Q.ID_SPEC_TAC `s` THEN
-   HO_MATCH_MP_TAC FINITE_INDUCT THEN
-   METIS_TAC [PROD_IMAGE_THM, DELETE_NON_ELEMENT, IN_INSERT]
-QED
 
 (* Theorem: FINITE s ==> !f k. (!x. x IN s ==> (f x = k)) ==> (PI f s = k ** CARD s) *)
 (* Proof:

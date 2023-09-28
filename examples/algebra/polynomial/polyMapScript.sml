@@ -591,29 +591,6 @@ val poly_deg_map = store_thm(
 
 (* Theorem: (r ~r~ r_) f ==> !p. zerop p ==> zerop_ p_ *)
 (* Proof:
-   Note f #0 = #0_                   by ring_homo_zero
-    Now zerop p
-    <=> EVERY (\c. c = #0) p         by zero_poly_every_zero
-    ==> EVERY (\c. c = #0_) p_       by EVERY_MONOTONIC_MAP
-    <=> zerop_ p_                    by zero_poly_every_zero
-*)
-val ring_homo_zero_poly = store_thm(
-  "ring_homo_zero_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. zerop p ==> zerop_ p_``,
-  rpt strip_tac >>
-  `f #0 = #0_` by rw[ring_homo_zero] >>
-  `EVERY (\c. c = #0) p` by rw[GSYM zero_poly_every_zero] >>
-  `!x. (\c. c = #0) x ==> ((\c. c = #0_) o f) x` by rw[] >>
-  qabbrev_tac `P = \c. c = #0` >>
-  qabbrev_tac `Q = \c. c = #0_` >>
-  `EVERY Q p_` by metis_tac[EVERY_MONOTONIC_MAP] >>
-  `EVERY (\c. c = #0_) p_` by rw[] >>
-  rw[zero_poly_every_zero]);
-
-(* Induction proof of previous theorem *)
-
-(* Theorem: (r ~r~ r_) f ==> !p. zerop p ==> zerop_ p_ *)
-(* Proof:
    By induction on p.
    Base: zerop [] ==> zerop_ (MAP f [])
         zerop_ (MAP f [])
@@ -635,61 +612,6 @@ val ring_homo_zero_poly = store_thm(
   rpt strip_tac >>
   Induct_on `p` >>
   rw[]);
-
-(* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (zerop p <=> zerop_ p_) *)
-(* Proof:
-   If part: zerop p ==> zerop_ p_
-      True by ring_homo_zero_poly.
-   Only-if part: zerop_ p_ ==> zerop p
-   Note f #0 = #0_                     by ring_homo_zero
-        zerop_ p_
-    ==> EVERY (\x. x = #0_) p_         by zero_poly_every_zero
-    ==> EVERY (\x. f x = #0_) p        by EVERY_MAP
-    ==> EVERY (\x. f x = f #0) p       by ring_homo_zero, [1]
-   Also weak p
-    ==> EVERY (\x. x IN R) p           by weak_def_alt, [2]
-
-   By contradiction, suppose ~zerop p.
-        ~zerop p
-    ==> ~(EVERY (\x. x = #0) p)        by zero_poly_every_zero
-    ==> EXISTS ($~ o (\x. x = #0)) p   by NOT_EVERY
-    ==> ?x. MEM x p /\ x <> #0         by EXISTS_MEM [3]
-    Since MEM x p,
-      ==> x IN R                       by EVERY_MEM and [2]
-      ==> f x = f #0                   by EVERY_MEM and [1]
-    But #0 IN R                        by ring_zero_element
-     so f x <> f #0                    by INJ_DEF and [3]
-    This contradicts f x = f #0.
-*)
-val ring_homo_eq_zero_poly = store_thm(
-  "ring_homo_eq_zero_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (zerop p <=> zerop_ p_)``,
-  rw[EQ_IMP_THM] >-
-  metis_tac[ring_homo_zero_poly] >>
-  `EVERY (\x. x = #0_) p_` by rw[GSYM zero_poly_every_zero] >>
-  qabbrev_tac `P = \x. x = #0_` >>
-  qabbrev_tac `Q = \x. f x = #0_` >>
-  `(\x. P (f x)) = Q` by rw[Abbr`P`, Abbr`Q`] >>
-  `EVERY (\x. P (f x)) p` by metis_tac[EVERY_MAP] >>
-  `EVERY Q p` by rw[] >>
-  `EVERY (\x. f x = #0_) p` by rw[Abbr`Q`] >>
-  `EVERY (\x. f x = f #0) p` by metis_tac[ring_homo_zero] >>
-  `EVERY (\x. x IN R) p` by rw[GSYM weak_def_alt] >>
-  spose_not_then strip_assume_tac >>
-  `~(EVERY (\x. x = #0) p)` by metis_tac[zero_poly_every_zero] >>
-  qabbrev_tac `PP = (\x. x = #0)` >>
-  `EXISTS ($~ o PP) p` by metis_tac[NOT_EVERY] >>
-  `!x. ($~ o PP) x <=> (x <> #0)` by rw[Abbr`PP`] >>
-  `?x. MEM x p /\ x <> #0` by metis_tac[EXISTS_MEM] >>
-  qabbrev_tac `QQ = \x. x IN R` >>
-  `QQ x` by metis_tac[EVERY_MEM] >>
-  `x IN R` by fs[Abbr`QQ`] >>
-  qabbrev_tac `PQ = (\x. f x = f #0)` >>
-  `PQ x` by metis_tac[EVERY_MEM] >>
-  `f x = f #0` by fs[Abbr`PQ`] >>
-  metis_tac[INJ_DEF, ring_zero_element]);
-
-(* An inductive proof of the previous result. *)
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (zerop p <=> zerop_ p_) *)
 (* Proof:
@@ -717,26 +639,6 @@ val ring_homo_eq_zero_poly = store_thm(
   rw[] >>
   rw[] >>
   metis_tac[ring_homo_eq_zero]);
-
-(* Theorem: RingHomo f r r_ ==> !p. weak p ==> weak_ p_ *)
-(* Proof:
-   Note !x. x IN R ==> f x IN R_      by ring_homo_element
-       weak p
-   <=> EVERY (\x. x IN R) p           by weak_def_alt
-   ==> EVERY (\x. f x IN R_) p_       by EVERY_MONOTONIC_MAP
-   <=> weak_ p_                       by weak_def_alt
-*)
-val ring_homo_weak = store_thm(
-  "ring_homo_weak",
-  ``!(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !p. weak p ==> weak_ p_``,
-  rw[weak_def_alt] >>
-  `!x. x IN R ==> f x IN R_` by metis_tac[ring_homo_element] >>
-  qabbrev_tac `P = \x. x IN R` >>
-  qabbrev_tac `Q = \x. x IN R_` >>
-  `!x. P x ==> (Q o f) x` by rw[Abbr`P`, Abbr`Q`] >>
-  metis_tac[EVERY_MONOTONIC_MAP]);
-
-(* An induction proof of the same theorem. *)
 
 (* Theorem: RingHomo f r r_ ==> !p. weak p ==> weak_ p_ *)
 (* Proof:
@@ -964,56 +866,6 @@ val ring_homo_poly_chop_of_chop = store_thm(
   rw[] >-
   metis_tac[ring_homo_zero_poly] >>
   metis_tac[zero_poly_eq_zero_poly_chop]);
-
-(* Theorem: (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_) *)
-(* Proof:
-   By induction on p.
-   Base: !q. weak [] /\ weak q ==> (MAP f ([] || q) = MAP f [] ||_ q_)
-       LHS = MAP f ([] || q)
-           = MAP f q              by weak_add_of_lzero
-       RHS = (MAP f []) ||_ q_
-           = [] ||_ q_            by MAP
-           = q_                   by weak_add_of_lzero
-   Step: !q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_) ==>
-         !h. weak (h::p) /\ weak q ==> (MAP f ((h::p) || q) = MAP f (h::p) ||_ q_)
-        By induction on q.
-        Base: weak [] ==> (MAP f ((h::p) || []) = MAP f (h::p) ||_ MAP f [])
-           LHS = MAP f ((h::p) || [])
-               = MAP f (h::p)                     by weak_add_of_rzero
-           RHS = (MAP f (h::p)) ||_ (MAP f [])
-               = (MAP f (h::p)) ||_ []            by MAP
-               = (MAP f (h::p)                    by weak_add_of_rzero
-        Step: !q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_) ==>
-              !h'. weak (h'::q) ==> (MAP f ((h::p) || (h'::q)) = MAP f (h::p) ||_ MAP f (h'::q))
-           Note weak (h::p) ==> h IN R /\ weak p      by weak_cons
-            and weak (h'::q) ==> h' IN R /\ weak q    by weak_cons
-             MAP f ((h::p) || (h'::q))
-           = MAP f (h + h' :: (p || q))           by weak_add_cons
-           = f (h + h') :: MAP f (p || q)         by MAP
-           = f (h + h') :: p_ ||_ q_              by induction hypothesis
-           = (f h) +_ (f h') :: p_ ||_ q_         by ring_homo_property
-           = (f h:: p_) ||_ (f h':: q_)           by weak_add_cons
-           = MAP f (h::p) ||_ MAP f (h'::q)       by MAP
-*)
-val ring_homo_weak_add = store_thm(
-  "ring_homo_weak_add",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_)``,
-  ntac 4 strip_tac >>
-  Induct_on `p` >-
-  rw[] >>
-  rw_tac std_ss[weak_cons] >>
-  Induct_on `q` >-
-  rw[] >>
-  rw_tac std_ss[weak_cons] >>
-  `MAP f ((h::p) || (h'::q)) = MAP f (h + h' :: (p || q))` by rw_tac std_ss[weak_add_cons] >>
-  `_ = f (h + h') :: MAP f (p || q)` by rw_tac std_ss[MAP] >>
-  `_ = f (h + h') :: p_ ||_ q_` by rw[] >>
-  `_ = (f h) +_ (f h') :: p_ ||_ q_` by rw[ring_homo_property] >>
-  `_ = (f h:: p_) ||_ (f h':: q_)` by rw_tac std_ss[weak_add_cons] >>
-  `_ = MAP f (h::p) ||_ MAP f (h'::q)` by rw_tac std_ss[MAP] >>
-  rw[]);
-
-(* Short proof of the same theorem. *)
 
 (* Theorem: (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_) *)
 (* Proof:

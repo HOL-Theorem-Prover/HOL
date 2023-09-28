@@ -568,6 +568,8 @@ val _ = TypeBase.export
       destructors = [],
       recognizers = [] } ]
 
+Overload "case" = “itree_CASE”
+
 (* itree combinators *)
 
 Definition itree_bind_def:

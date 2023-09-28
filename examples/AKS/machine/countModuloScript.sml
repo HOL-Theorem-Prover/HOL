@@ -388,13 +388,6 @@ val msqM_def = Define`
     msqM m x = mmulM m x x
 `;
 
-(* Theorem: valueOf(msqM m x) = (x * x) MOD m *)
-(* Proof: by msqM_def *)
-val msqM_value = store_thm(
-  "msqM_value[simp]",
-  ``!m x. valueOf(msqM m x) = (x * x) MOD m``,
-  simp[msqM_def]);
-
 (* Obtain theorems *)
 val msqM_value = save_thm("msqM_value[simp]",
     mmulM_value |> SPEC ``m:num`` |> SPEC ``x:num`` |> SPEC ``x:num``

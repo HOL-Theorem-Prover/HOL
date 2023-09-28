@@ -1126,42 +1126,6 @@ val AKS_main_ulog_2b = store_thm(
 
       This leads to a contradiction, as [1], [2] and [3] are incompatible.
 *)
-val AKS_main_ulog_2b = store_thm(
-  "AKS_main_ulog_2b",
-  ``!(r:'a field). FiniteField r /\ (CARD R = char r) ==> (* condition on r *)
-   !n k. 0 < n /\ 0 < k /\ 1 < ordz k (char r) /\
-         char r divides n /\ (* conditions on n *)
-         k < char r /\ (ulog n) ** 2 <= ordz k n /\ (* conditions on k *)
-         poly_intro_range r k n (SQRT (phi k) * (ulog n)) (* AKS tests *)
-     ==> perfect_power n (char r)``,
-  rpt (stripDup[FiniteField_def]) >>
-  qabbrev_tac `p = char r` >>
-  qabbrev_tac `a = (ulog n) ** 2` >>
-  qabbrev_tac `s = SQRT (phi k) * ulog n` >>
-  `prime p` by rw[finite_field_char, Abbr`p`] >>
-  `1 < p` by rw[ONE_LT_PRIME] >>
-  `n <> 1` by metis_tac[DIVIDES_ONE, LESS_NOT_EQ] >>
-  `k <> 1` by metis_tac[ZN_order_mod_1, LESS_NOT_EQ] >>
-  `1 < n /\ 1 < k` by decide_tac >>
-  Cases_on `perfect_power n 2` >-
-  metis_tac[prime_divides_prime_power, perfect_power_def, PRIME_2] >>
-  `coprime n k` by
-  (`0 < a` by rw[ulog_pos, Abbr`a`] >>
-  `ordz k n <> 0` by decide_tac >>
-  metis_tac[ZN_order_eq_0, GCD_SYM]) >>
-  qabbrev_tac `t = CARD M` >>
-  `n IN N` by fs[setN_element] >>
-  `n ** SQRT t < 2 ** MIN s t` by rw[modN_card_in_exp_lt_bound_3, Abbr`t`, Abbr`s`] >>
-  `?z. (forderz X = k) /\ mifactor z (unity k)` by metis_tac[poly_unity_special_factor_exists] >>
-  `0 < s` by rw[sqrt_phi_times_ulog, Abbr`s`] >>
-  `s <= phi k` by metis_tac[ZN_order_condition_property_2, GCD_SYM] >>
-  `phi k < k` by rw[phi_lt] >>
-  `s < p` by decide_tac >>
-  `2 ** MIN s t <= CARD (Q z)` by rw[modP_card_lower_1, Abbr`t`] >>
-  `coprime k p` by metis_tac[coprime_prime_factor_coprime, GCD_SYM] >>
-  spose_not_then strip_assume_tac >>
-  `CARD (Q z) <= n ** SQRT t` by rw[modP_card_upper_better, Abbr`t`] >>
-  decide_tac);
 
 (* This is a much shorter proof of the AKS main theorem! *)
 
@@ -1232,44 +1196,6 @@ val AKS_main_ulog_2b = store_thm(
 
       This leads to a contradiction, as [A] and [B] are incompatible.
 *)
-val AKS_main_ulog_2b = store_thm(
-  "AKS_main_ulog_2b",
-  ``!(r:'a field). FiniteField r /\ (CARD R = char r) ==> (* condition on r *)
-   !n k. 0 < n /\ 0 < k /\ 1 < ordz k (char r) /\
-         char r divides n /\ (* conditions on n *)
-         k < char r /\ (ulog n) ** 2 <= ordz k n /\ (* conditions on k *)
-         poly_intro_range r k n (SQRT (phi k) * (ulog n)) (* AKS tests *)
-     ==> perfect_power n (char r)``,
-  rpt (stripDup[FiniteField_def]) >>
-  qabbrev_tac `p = char r` >>
-  qabbrev_tac `a = (ulog n) ** 2` >>
-  qabbrev_tac `s = SQRT (phi k) * ulog n` >>
-  `prime p` by rw[finite_field_char, Abbr`p`] >>
-  `1 < p` by rw[ONE_LT_PRIME] >>
-  `n <> 1` by metis_tac[DIVIDES_ONE, LESS_NOT_EQ] >>
-  `k <> 1` by metis_tac[ZN_order_mod_1, LESS_NOT_EQ] >>
-  `1 < n /\ 1 < k` by decide_tac >>
-  Cases_on `perfect_power n 2` >-
-  metis_tac[prime_divides_prime_power, perfect_power_def, PRIME_2] >>
-  spose_not_then strip_assume_tac >>
-  `coprime n k` by
-  (`0 < a` by rw[ulog_pos, Abbr`a`] >>
-  `ordz k n <> 0` by decide_tac >>
-  metis_tac[ZN_order_eq_0, GCD_SYM]) >>
-  qabbrev_tac `t = CARD M` >>
-  `n IN N` by fs[setN_element] >>
-  `2 ** MIN s t <= n ** SQRT t` by
-    (`?z. (forderz X = k) /\ mifactor z (unity k)` by metis_tac[poly_unity_special_factor_exists] >>
-  `0 < s` by rw[sqrt_phi_times_ulog, Abbr`s`] >>
-  `s <= phi k` by metis_tac[ZN_order_condition_property_2, GCD_SYM] >>
-  `phi k < k` by rw[phi_lt] >>
-  `s < p` by decide_tac >>
-  `2 ** MIN s t <= CARD (Q z)` by rw[modP_card_lower_1, Abbr`t`] >>
-  `coprime k p` by metis_tac[coprime_prime_factor_coprime, GCD_SYM] >>
-  `CARD (Q z) <= n ** SQRT t` by rw[modP_card_upper_better, Abbr`t`] >>
-  decide_tac) >>
-  `n ** SQRT t < 2 ** MIN s t` by rw[modN_card_in_exp_lt_bound_3, Abbr`t`, Abbr`s`] >>
-  decide_tac);
 
 (* Idea:
    The third proof derives a contradiction by:
@@ -1346,50 +1272,6 @@ val AKS_main_ulog_2b = store_thm(
 
       Since [A] and [B] are contradictory, the proof is complete.
 *)
-val AKS_main_ulog_2b = store_thm(
-  "AKS_main_ulog_2b",
-  ``!(r:'a field). FiniteField r /\ (CARD R = char r) ==> (* condition on r *)
-   !n k. 0 < n /\ 0 < k /\ 1 < ordz k (char r) /\
-         char r divides n /\ (* conditions on n *)
-         k < char r /\ (ulog n) ** 2 <= ordz k n /\ (* conditions on k *)
-         poly_intro_range r k n (SQRT (phi k) * (ulog n)) (* AKS tests *)
-     ==> perfect_power n (char r)``,
-  rpt (stripDup[FiniteField_def]) >>
-  qabbrev_tac `p = char r` >>
-  qabbrev_tac `a = (ulog n) ** 2` >>
-  qabbrev_tac `s = SQRT (phi k) * ulog n` >>
-  `prime p` by rw[finite_field_char, Abbr`p`] >>
-  `1 < p` by rw[ONE_LT_PRIME] >>
-  `n <> 1` by metis_tac[DIVIDES_ONE, LESS_NOT_EQ] >>
-  `k <> 1` by metis_tac[ZN_order_mod_1, LESS_NOT_EQ] >>
-  `1 < n /\ 1 < k` by decide_tac >>
-  Cases_on `perfect_power n 2` >-
-  metis_tac[prime_divides_prime_power, perfect_power_def, PRIME_2] >>
-  `coprime n k` by
-  (`0 < a` by rw[ulog_pos, Abbr`a`] >>
-  `ordz k n <> 0` by decide_tac >>
-  metis_tac[ZN_order_eq_0, GCD_SYM]) >>
-  `n IN N` by metis_tac[setN_element] >>
-  `?z. mifactor z (unity k) /\ (deg z = ordz k p) /\ (forderz X = k)` by metis_tac[poly_unity_special_factor_exists] >>
-  `2 ** MIN s (CARD M) < CARD (Q z)` by
-    ((irule modP_card_lower_better >> simp[]) >>
-  rpt strip_tac >| [
-    `s <= phi k` by metis_tac[ZN_order_condition_property_2, GCD_SYM] >>
-    `phi k < k` by rw[phi_lt] >>
-    decide_tac,
-    rw[sqrt_phi_times_ulog, Abbr`s`],
-    `n <> 2` by metis_tac[perfect_power_self] >>
-    `1 < a` by rw[ulog_sq_gt_1, Abbr`a`] >>
-    `1 < ordz k n` by decide_tac >>
-    `ordz k n <= CARD M` by rw[modN_card_lower] >>
-    decide_tac
-  ]) >>
-  spose_not_then strip_assume_tac >>
-  `CARD (Q z) <= 2 ** MIN s (CARD M)` by
-      (`CARD (Q z) <= 2 ** MIN (SQRT (phi k) * ulog n) (CARD M)` suffices_by rw[Abbr`s`] >>
-  (irule modP_card_upper_better_3 >> simp[]) >>
-  metis_tac[coprime_prime_factor_coprime, GCD_SYM]) >>
-  decide_tac);
 
 (* Theorem: The AKS Main Theorem (no mention of FiniteField, but mentions (ZN n))
    Given a number n > 1,

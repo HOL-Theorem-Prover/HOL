@@ -2461,6 +2461,22 @@ val ITSET_eq_FOLDL_SET_TO_LIST = Q.store_thm(
 HO_MATCH_MP_TAC pred_setTheory.FINITE_COMPLETE_INDUCTION THEN
 SRW_TAC [] [pred_setTheory.ITSET_THM, SET_TO_LIST_THM, FOLDL]);
 
+Theorem LIST_TO_SET_SING :
+    !vs x. ALL_DISTINCT vs /\ set vs = {x} <=> vs = [x]
+Proof
+    rpt GEN_TAC >> reverse EQ_TAC >- rw []
+ (* necessary case analysis, to use ALL_DISTINCT *)
+ >> Cases_on ‘vs’ >> rw []
+ >- (fs [Once EXTENSION] >> METIS_TAC [])
+ >> Q_TAC KNOW_TAC ‘a = x’
+ >- (fs [Once EXTENSION] >> METIS_TAC [])
+ >> DISCH_THEN (fn th => fs [th])
+ >> Cases_on ‘set l = {}’ >- fs []
+ >> ‘?y. y IN set l’ by METIS_TAC [MEMBER_NOT_EMPTY]
+ >> Cases_on ‘x = y’ >- PROVE_TAC []
+ >> fs [Once EXTENSION]
+ >> METIS_TAC []
+QED
 
 (* ----------------------------------------------------------------------
     FINITE set of lists

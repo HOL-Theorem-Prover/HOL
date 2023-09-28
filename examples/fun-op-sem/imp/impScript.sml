@@ -86,13 +86,13 @@ val cval_def_with_stop = store_thm("cval_def_with_stop",
   REPEAT STRIP_TAC \\ SIMP_TAC std_ss [Once cval_def]
   \\ ect \\ imp_res_tac clock_bound \\ `r = t` by DECIDE_TAC \\ fs []);
 
-val cval_def =
-  save_thm("cval_def",REWRITE_RULE [STOP_def] cval_def_with_stop);
+Theorem cval_def[allow_rebind] =
+        REWRITE_RULE [STOP_def] cval_def_with_stop
 
 (* We also remove the redundant if-statement from the induction theorem. *)
 
 val cval_ind = prove(
-  theorem "cval_ind" |> concl |> r,
+  cval_ind |> concl |> r,
   NTAC 2 STRIP_TAC \\ HO_MATCH_MP_TAC (theorem "cval_ind")
   \\ REPEAT STRIP_TAC \\ fs []
   \\ FIRST_X_ASSUM MATCH_MP_TAC \\ fs []
@@ -101,6 +101,6 @@ val cval_ind = prove(
   \\ Cases_on `t < t2` \\ fs []
   \\ `t = t2` by DECIDE_TAC \\ fs []) |> REWRITE_RULE [STOP_def];
 
-val _ = save_thm("cval_ind",cval_ind);
+Theorem cval_ind[allow_rebind] = cval_ind
 
 val _ = export_theory();

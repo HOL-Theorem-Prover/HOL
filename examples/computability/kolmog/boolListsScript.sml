@@ -1243,7 +1243,7 @@ Proof
        rw[primrec_rules, primrec_pr_nblsnd0, primrec_ell])
 QED
 
-Theorem checkpair_i_def[simp] = new_specification(
+Theorem checkpair_i_def[simp,allow_rebind] = new_specification(
   "checkpair_i_def", ["checkpair_i"],
   MATCH_MP unary_rec_fns_phi recfn_checkpair)
 

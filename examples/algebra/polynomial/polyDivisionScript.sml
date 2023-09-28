@@ -964,33 +964,18 @@ val poly_mod_add_assoc = store_thm(
 (* Theorem: (p - q) % z = (p % z - q % z) % z *)
 (* Proof:
      (p - q) % z
-   = (p + -q) % z                by poly_sub_def
-   = (p % z + (-q) % z) % z      by poly_mod_add
-   = (p % z + - (q % z)) % z     by poly_mod_neg
-   = (p % z - q % z) % z         by poly_sub_def
-*)
-val poly_mod_sub = store_thm(
-  "poly_mod_sub",
-  ``!r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ ulead z ==> ((p - q) % z = (p % z - q % z) % z)``,
-  rw[] >>
-  `poly (p % z) /\ poly (q % z) /\ poly (-q)` by rw[] >>
-  metis_tac[poly_mod_add, poly_mod_neg]);
-
-(* Another proof of same result. *)
-
-(* Theorem: (p - q) % z = (p % z - q % z) % z *)
-(* Proof:
-     (p - q) % z
    = (p + -q) % z             by poly_sub_def
    = (p % z + (-q) % z) % z   by poly_mod_add
    = (p % z + -(q % z)) % z   by poly_mod_neg
    = (p % z - q % z) % z      by poly_sub_def
 *)
-val poly_mod_sub = store_thm(
-  "poly_mod_sub",
-  ``!r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ ulead z ==>
-                ((p - q) % z = (p % z - q % z) % z)``,
-  rw[poly_sub_def, poly_mod_add, poly_mod_neg]);
+Theorem poly_mod_sub:
+  !r:'a ring. Ring r ==>
+              !p q z. poly p /\ poly q /\ ulead z ==>
+                      ((p - q) % z = (p % z - q % z) % z)
+Proof
+  rw[poly_sub_def, poly_mod_add, poly_mod_neg]
+QED
 
 (* Theorem: (p * q) % z = (p % z * q % z) % z *)
 (* Proof:

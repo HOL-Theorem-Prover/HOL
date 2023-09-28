@@ -53,6 +53,16 @@ open twoSquaresTheory; (* for loop test found *)
 *)
 (* Definitions and Theorems (# are exported, ! are in compute):
 
+   The zagier-flip iteration period:
+   tik_non_square_property
+                       |- !n. tik n /\ ~square n ==> FINITE (mills n) /\ zagier o flip PERMUTES mills n /\
+                              0 < iterate_period (zagier o flip) (1,1,n DIV 4)
+   zagier_flip_iterate_period_eq_1
+                       |- !k. iterate_period (zagier o flip) (1,1,k) = 1 <=> k = 1
+   zagier_flip_iterate_period_ne_2
+                       |- !k. iterate_period (zagier o flip) (1,1,k) <> 2
+   tik_iterate_period_eq_1 |- !n. tik n ==> (iterate_period (zagier o flip) (1,1,n DIV 4) = 1 <=> n = 5)
+
    The zagier-flip permutation:
    ping_def            |- !x y z. ping (x,y,z) = (x + 2 * y,y,z - y - x)
    pong_def            |- !x y z. pong (x,y,z) = (2 * z - x,z,x + y - z)
@@ -73,6 +83,7 @@ open twoSquaresTheory; (* for loop test found *)
    is_pung_alt         |- !x y z. is_pung (x,y,z) <=> 2 * z - x = 0
    is_ping_x_x_z       |- !x z. 2 * x < z ==> is_ping (x,x,z)
    is_ping_1_1_k       |- !k. 2 < k ==> is_ping (1,1,k)
+   is_pong_1_k_1       |- !k. is_pong (1,k,1)
    not_ping_x_y_y      |- !x y. ~is_ping (x,y,y)
    is_pong_x_y_x       |- !x y. 0 < x ==> is_pong (x,y,x)
    is_ping_by_ping     |- !t. (let (x,y,z) = ping t in is_ping t <=> 0 < z)
@@ -106,8 +117,11 @@ open twoSquaresTheory; (* for loop test found *)
                               !n k. path n (SUC k) = SNOC ((zagier o flip) (LAST (path n k))) (path n k)
    path_0                  |- !n. path n 0 = [(1,n DIV 4,1)]
    path_suc                |- !n k. path n (SUC k) = SNOC ((zagier o flip) (LAST (path n k))) (path n k)
+   path_alt                |- (!n. path n 0 = [(1,n DIV 4,1)]) /\
+                               !n k. path n (SUC k) = path n k ++ [(zagier o flip) (LAST (path n k))]
    path_1                  |- !n. path n 1 = [(1,n DIV 4,1); (1,1,n DIV 4)]
    path_not_nil            |- !n k. path n k <> []
+   path_5_1                |- path 5 1 = [(1,1,1); (1,1,1)]
    path_length             |- !n k. LENGTH (path n k) = k + 1
    path_head               |- !n k. HD (path n k) = (1,n DIV 4,1)
    path_last               |- !n k. LAST (path n k) = FUNPOW (zagier o flip) k (1,n DIV 4,1)
@@ -118,6 +132,7 @@ open twoSquaresTheory; (* for loop test found *)
                                     k = 1 + HALF (iterate_period (zagier o flip) (1,1,n DIV 4)) ==>
                                     ALL_DISTINCT (TL (path n k))
    path_eq_sing            |- !n k. path n k = [(1,n DIV 4,1)] <=> k = 0
+   path_head_flip_fix      |- !n k. (let ls = path n k in tik n ==> (flip (HD ls) = HD ls <=> n = 5))
    path_front_length       |- !n k. LENGTH (FRONT (path n k)) = k
    path_front_head         |- !n k. 0 < k ==> HD (FRONT (path n k)) = (1,n DIV 4,1)
    path_element_eqn        |- !n k j. j <= k ==> EL j (path n k) = FUNPOW (zagier o flip) j (1,n DIV 4,1)
@@ -135,8 +150,10 @@ open twoSquaresTheory; (* for loop test found *)
                                                    else is_ping t)
    path_last_not_ping      |- !n k. (let ls = path n k
                                       in flip (LAST ls) = LAST ls ==> ~is_ping (LAST ls))
-   path_last_not_ping_thm  |- !n p. prime n /\ tik n /\ p = iterate_period (zagier o flip) (1,1,n DIV 4) ==>
-                                    ~is_ping (LAST (path n (1 + HALF p)))
+   path_last_at_half_period|- !n k. (let ls = path n k;
+                                          u = (1,1,n DIV 4);
+                                          p = iterate_period (zagier o flip) u
+                                       in k = 1 + HALF p ==> LAST ls = FUNPOW (zagier o flip) (HALF p) u)
    path_element_ping_funpow|- !n k u m. (let ls = path n k
                                           in m + u <= k /\ (!j. j < m ==> is_ping (EL (u + j) ls)) ==>
                                              !j. j <= m ==> EL (u + j) ls = FUNPOW ping j (EL u ls))
@@ -207,30 +224,30 @@ open twoSquaresTheory; (* for loop test found *)
 
    Hopping:
    hop_def             |- !m x y z. hop m (x,y,z) = if x < 2 * m * z
-                                                    then (2 * m * z - x,z,y + m * x - m * m * z)
-                                                    else (x - 2 * m * z,y + m * x - m * m * z,z)
+                                                    then (2 * m * z - x,z,y + m * x - m ** 2 * z)
+                                                    else (x - 2 * m * z,y + m * x - m ** 2 * z,z)
    hop_alt             |- !m x y z. 0 < z ==>
                                     hop m (x,y,z) =
                                     if x DIV (2 * z) < m
-                                    then (2 * m * z - x,z,y + m * x - m * m * z)
-                                    else (x - 2 * m * z,y + m * x - m * m * z,z)
+                                    then (2 * m * z - x,z,y + m * x - m ** 2 * z)
+                                    else (x - 2 * m * z,y + m * x - m ** 2 * z,z)
    hop_0               |- !t. hop 0 t = t
    hop_1               |- !t. ~is_ping t ==> hop 1 t = (zagier o flip) t
    hop_mind            |- !m x z. 0 < z ==> (x DIV (2 * z) < m <=> 0 < 2 * m * z - x)
    hop_arm             |- !m n x y z. ~square n /\ n = windmill (x,y,z) ==>
-                                      (m <= (x + SQRT n) DIV (2 * z) <=> 0 < y + m * x - m * m * z)
+                                      (m <= (x + SQRT n) DIV (2 * z) <=> 0 < y + m * x - m ** 2 * z)
    hop_triple_first    |- !n m t. tik n /\ n = windmill t ==> 0 < FST (hop m t)
    hop_windmill        |- !m n x y z. ~square n /\ n = windmill (x,y,z) /\ m <= (x + SQRT n) DIV (2 * z) ==>
                                       n = windmill (hop m (x,y,z))
    hop_range           |- !m n x y z. n = windmill (x,y,z) /\ 0 < 2 * m * z - x /\
-                                      0 < y + m * x - m * m * z ==>
+                                      0 < y + m * x - m ** 2 * z ==>
                                       x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z)
    hop_range_iff       |- !m n x y z. ~square n /\ n = windmill (x,y,z) ==>
-                                      (0 < 2 * m * z - x /\ 0 < y + m * x - m * m * z <=>
+                                      (0 < 2 * m * z - x /\ 0 < y + m * x - m ** 2 * z <=>
                                        0 < z /\ x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z))
 
    Matrices of ping, pong, pung and hop:
-   ping_funpow         |- !m x y z. FUNPOW ping m (x,y,z) = (x + 2 * m * y,y,z - m * x - m * m * y)
+   ping_funpow         |- !m x y z. FUNPOW ping m (x,y,z) = (x + 2 * m * y,y,z - m * x - m ** 2 * y)
    ping_windmill       |- !t. is_ping t ==> windmill t = windmill (ping t)
    pong_windmill       |- !t. is_pong t ==> windmill t = windmill (pong t)
    pung_windmill       |- !t. is_pung t ==> windmill t = windmill (pung t)
@@ -240,7 +257,7 @@ open twoSquaresTheory; (* for loop test found *)
                                 windmill t = windmill (FUNPOW pung m t)
    pung_funpow         |- !n x y z m. tik n /\ ~square n /\ n = windmill (x,y,z) /\
                                       (!j. j < m ==> is_pung (FUNPOW pung j (x,y,z))) ==>
-                                      FUNPOW pung m (x,y,z) = (x - 2 * m * z,y + m * x - m * m * z,z)
+                                      FUNPOW pung m (x,y,z) = (x - 2 * m * z,y + m * x - m ** 2 * z,z)
    pung_funpow_by_hop  |- !n m t. tik n /\ ~square n /\ n = windmill t /\
                                   (!j. j < m ==> is_pung (FUNPOW pung j t)) ==> FUNPOW pung m t = hop m t
    pung_to_ping_by_hop |- !n t p q. tik n /\ ~square n /\ n = windmill t /\ is_pong (FUNPOW pung q t) /\
@@ -250,8 +267,8 @@ open twoSquaresTheory; (* for loop test found *)
    hop_beyond_pung     |- !m x y z. 0 < z /\ m = x DIV (2 * z) ==> ~is_pung (hop m (x,y,z))
 
    Hopping Algorithm:
-   step_def            |- !k x y z. step k (x,y,z) = (x + k) DIV (2 * z)
-   hopping_def         |- !k t. hopping k t = hop (step k t) t
+   step_def            |- !c x y z. step c (x,y,z) = (x + c) DIV (2 * z)
+   hopping_def         |- !c t. hopping c t = hop (step c t) t
    two_sq_hop_def      |- !n. two_sq_hop n = WHILE ($~ o found) (hopping (SQRT n)) (1,n DIV 4,1)
 
    step_0              |- !x y z. step 0 (x,y,z) = x DIV (2 * z)
@@ -306,6 +323,18 @@ open twoSquaresTheory; (* for loop test found *)
                                         m + 1 + j < step (SQRT n) t ==> is_ping (hop (m + 1 + j) t)
    hop_step_sqrt_not_ping  |- !n t. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t ==>
                                     ~is_ping (hop (step (SQRT n) t) t)
+   hop_step_type           |- !n t m. (let p = step 0 t;
+                                           q = step (SQRT n) t
+                                        in tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m <= q ==>
+                                           p < q /\
+                                           if m < p then is_pung (hop m t)
+                                           else if m = p then is_pong (hop m t)
+                                           else if m < q then is_ping (hop m t)
+                                           else ~is_ping (hop m t))
+   Focus of Hopping:
+   focus_def               |- !x y z. focus (x,y,z) = if is_ping (x,y,z) then y else z
+   hopping_focus_thm       |- !n t m. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\
+                                      m < step (SQRT n) t ==> focus (hop m t) = focus t
 
    Skipping by Triples:
    skip_ping_def           |- !t. skip_ping t = WHILE is_ping ping t
@@ -324,28 +353,20 @@ open twoSquaresTheory; (* for loop test found *)
                                     hopping (SQRT n) t = (skip_ping o pong o skip_pung) t
 
    Picking Pongs along a Path:
-   pong_list_def           |- !ls. pong_list ls = FILTER is_pong ls
-   pong_list_nil           |- pong_list [] = []
-   pong_list_length        |- !ls. LENGTH (pong_list ls) <= LENGTH ls
-   pong_list_element       |- !ls j. (let  ps = pong_list ls
+   pong_nodes_def          |- !ls. pong_nodes ls = FILTER is_pong ls
+   pong_nodes_nil          |- pong_nodes [] = []
+   pong_nodes_length       |- !ls. LENGTH (pong_nodes ls) <= LENGTH ls
+   pong_nodes_element      |- !ls j. (let  ps = pong_nodes ls
                                        in j < LENGTH ps ==> is_pong (EL j ps) /\ MEM (EL j ps) ls)
-   pong_list_all_distinct  |- !ls. ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (pong_list (FRONT ls))
-   pong_list_path_element  |- !n k j. (let ls = path n k;
-                                           ps = pong_list (FRONT ls)
+   pong_nodes_all_distinct |- !ls. ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (pong_nodes (FRONT ls))
+   pong_nodes_path_element |- !n k j. (let ls = path n k;
+                                           ps = pong_nodes (FRONT ls)
                                         in j < LENGTH ps ==> ?h. h < k /\ EL j ps = EL h ls /\ is_pong (EL h ls))
-   pong_list_path_head     |- !n k. 0 < k ==> HD (pong_list (FRONT (path n k))) = (1,n DIV 4,1)
-   pong_list_path_head_alt |- !n k. (let ls = path n k
-                                      in 0 < k ==> HD (pong_list (FRONT ls)) = HD ls)
-   pong_list_path_eq_nil   |- !n k. pong_list (FRONT (path n k)) = [] <=> k = 0
+   pong_nodes_path_head    |- !n k. 0 < k ==> HD (pong_nodes (FRONT (path n k))) = (1,n DIV 4,1)
+   pong_nodes_path_head_alt|- !n k. (let ls = path n k
+                                      in 0 < k ==> HD (pong_nodes (FRONT ls)) = HD ls)
+   pong_nodes_path_eq_nil  |- !n k. pong_nodes (FRONT (path n k)) = [] <=> k = 0
 
-   tik_non_square_property |- !n. tik n /\ ~square n ==> FINITE (mills n) /\ zagier o flip PERMUTES mills n /\
-                                  0 < iterate_period (zagier o flip) (1,1,n DIV 4)
-   zagier_flip_iterate_period_eq_1
-                           |- !k. iterate_period (zagier o flip) (1,1,k) = 1 <=> k = 1
-   zagier_flip_iterate_period_ne_2
-                           |- !k. iterate_period (zagier o flip) (1,1,k) <> 2
-   tik_iterate_period_eq_1 |- !n. tik n ==> (iterate_period (zagier o flip) (1,1,n DIV 4) = 1 <=> n = 5)
-   tik_path_head_flip_fix  |- !n k. (let ls = path n k in tik n ==> (flip (HD ls) = HD ls <=> n = 5))
    path_all_distinct       |- !n k. tik n /\ ~square n /\
                                     k = 1 + HALF (iterate_period (zagier o flip) (1,1,n DIV 4)) ==>
                                     (ALL_DISTINCT (path n k) <=> n <> 5)
@@ -357,41 +378,51 @@ open twoSquaresTheory; (* for loop test found *)
                                           in p <= q /\ q <= k /\ ~is_pung (EL q ls) /\
                                              (!j. p <= j /\ j < q ==> is_pung (EL j ls)) ==>
                                              EL q ls = skip_pung (EL p ls))
+   path_skip_ping_member   |- !n k t. (let ls = path n k
+                                        in ~is_ping (LAST ls) /\ MEM t ls ==> MEM (skip_ping t) ls)
+   path_skip_pung_member   |- !n k t. (let ls = path n k
+                                        in ~is_pung (LAST ls) /\ MEM t ls ==> MEM (skip_pung t) ls)
    pong_interval_next_pong |- !n k p q. (let ls = path n k
                                           in p < q /\ q <= k /\ is_pong (EL p ls) /\ is_pong (EL q ls) /\
                                              (!j. p < j /\ j < q ==> ~is_pong (EL j ls)) ==>
                                              EL q ls = (skip_pung o skip_ping o pong) (EL p ls))
-   pong_list_pair_in_path  |- !n k j. (let ls = path n k;
-                                           ps = pong_list (FRONT ls)
+   pong_nodes_pair_in_path |- !n k j. (let ls = path n k;
+                                           ps = pong_nodes (FRONT ls)
                                         in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
                                            ?p q. p < q /\ q < k /\ EL p ls = EL j ps /\
                                                  EL q ls = EL (j + 1) ps /\ is_pong (EL p ls) /\ is_pong (EL q ls) /\
                                                  !h. p < h /\ h < q ==> ~is_pong (EL h ls))
-   pong_list_path_element_suc
+   pong_nodes_path_element_suc
                            |- !n k j. (let ls = path n k;
-                                           ps = pong_list (FRONT ls)
+                                           ps = pong_nodes (FRONT ls)
                                         in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
                                            EL (j + 1) ps = (skip_pung o skip_ping o pong) (EL j ps))
-   pong_list_path_element_eqn
+   pong_nodes_path_element_eqn
                            |- !n k j. (let ls = path n k;
-                                           ps = pong_list (FRONT ls)
+                                           ps = pong_nodes (FRONT ls)
                                         in ALL_DISTINCT ls /\ j < LENGTH ps ==>
                                            EL j ps = FUNPOW (skip_pung o skip_ping o pong) j (HD ps))
 
    Hopping nodes:
    beyond_pong_def         |- !t. beyond_pong t = (skip_ping o pong) t
    beyond_pong_eqn         |- !n t. tik n /\ ~square n /\ n = windmill t /\ is_pong t ==> beyond_pong t = hopping (SQRT n) t
+   beyond_pong_path_member |- !n k t. (let ls = path n k
+                                        in ~is_ping (LAST ls) /\ is_pong t /\ MEM t (FRONT ls) ==> MEM (beyond_pong t) ls)
    pong_interval_beyond_pong
                            |- !n k p q. (let ls = path n k
                                           in p < q /\ q <= k /\ is_pong (EL p ls) /\ is_pong (EL q ls) /\
                                              (!j. p < j /\ j < q ==> ~is_pong (EL j ls)) ==>
                                              beyond_pong (EL q ls) = (skip_ping o pong o skip_pung) (beyond_pong (EL p ls)))
-   hop_nodes_def           |- !ls. hop_nodes ls = MAP beyond_pong (pong_list (FRONT ls))
-   hop_nodes_length        |- !ls. LENGTH (hop_nodes ls) = LENGTH (pong_list (FRONT ls))
-   hop_nodes_element       |- !ls j. j < LENGTH (hop_nodes ls) ==> EL j (hop_nodes ls) = beyond_pong (EL j (pong_list (FRONT ls)))
+   hop_nodes_def           |- !ls. hop_nodes ls = MAP beyond_pong (pong_nodes (FRONT ls))
+   hop_nodes_alt           |- !ls. hop_nodes ls = MAP (skip_ping o pong) (pong_nodes (FRONT ls))
+   hop_nodes_path_5_1      |- hop_nodes (path 5 1) = [(1,1,1)]:
+   hop_nodes_length        |- !ls. LENGTH (hop_nodes ls) = LENGTH (pong_nodes (FRONT ls))
+   hop_nodes_element       |- !ls j. j < LENGTH (hop_nodes ls) ==> EL j (hop_nodes ls) = beyond_pong (EL j (pong_nodes (FRONT ls)))
    hop_nodes_path_eq_nil   |- !n k. hop_nodes (path n k) = [] <=> k = 0
    hop_nodes_path_head     |- !n k. (let ls = path n k
                                       in tik n /\ ~square n /\ 0 < k ==> HD (hop_nodes ls) = hopping (SQRT n) (HD ls))
+   hop_nodes_path_member   |- !n k t. (let ls = path n k
+                                        in ~is_ping (LAST ls) /\ MEM t (hop_nodes ls) ==> MEM t ls)
    hop_nodes_path_element_less
                            |- !n k j. (let ls = path n k;
                                         ns = hop_nodes ls;
@@ -424,6 +455,31 @@ open twoSquaresTheory; (* for loop test found *)
                                          flip (LAST ls) = LAST ls /\ 0 < k ==>
                                          LAST ns = LAST ls /\
                                          LAST ls = FUNPOW (hopping (SQRT n)) (LENGTH ns) (HD ls))
+   hop_nodes_path_element_findi_range
+                       |- !n k j. (let ls = path n k;
+                                       ns = hop_nodes ls;
+                                       ps = pong_nodes (FRONT ls)
+                                    in ALL_DISTINCT ls /\ j + 1 < LENGTH ns ==>
+                                       findi (EL j ps) ls < findi (EL j ns) ls /\
+                                       findi (EL j ns) ls <= findi (EL (j + 1) ps) ls)
+   hop_nodes_path_element_findi_thm
+                       |- !n k j h. (let ls = path n k;
+                                         ns = hop_nodes ls;
+                                         ps = pong_nodes (FRONT ls)
+                                      in ALL_DISTINCT ls /\ j + 1 + h < LENGTH ns ==>
+                                         findi (EL j ps) ls < findi (EL j ns) ls /\
+                                         findi (EL j ns) ls <= findi (EL (j + 1 + h) ps) ls)
+   hop_nodes_path_element_findi_last
+                       |- !n k. (let ls = path n k;
+                                     ns = hop_nodes ls;
+                                     ps = pong_nodes (FRONT ls)
+                                  in tik n /\ ~square n /\ ALL_DISTINCT ls /\
+                                     flip (LAST ls) = LAST ls /\ 0 < k ==>
+                                     findi (LAST ns) ls = k /\ findi (LAST ps) ls < k)
+   hop_nodes_path_all_distinct
+                       |- !n k. (let ls = path n k
+                                  in tik n /\ ~square n /\ ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls ==>
+                                     ALL_DISTINCT (hop_nodes ls))
 
    Hopping for tik primes:
    tik_prime_property  |- !n. (let s = mills n;
@@ -433,11 +489,9 @@ open twoSquaresTheory; (* for loop test found *)
                                    fixes zagier s = {u} /\ ODD (iterate_period (zagier o flip) u))
    tik_prime_iterate_period_odd
                        |- !n. tik n /\ prime n ==> ODD (iterate_period (zagier o flip) (1,1,n DIV 4))
-   path_last_at_half_period
-                       |- !n k. (let ls = path n k;
-                                      u = (1,1,n DIV 4);
-                                      p = iterate_period (zagier o flip) u
-                                  in k = 1 + HALF p ==> LAST ls = FUNPOW (zagier o flip) (HALF p) u)
+   tik_prime_path_last_not_ping
+                       |- !n p. prime n /\ tik n /\ p = iterate_period (zagier o flip) (1,1,n DIV 4) ==>
+                                ~is_ping (LAST (path n (1 + HALF p)))
    tik_prime_path_last_flip_fix
                        |- !n k. (let ls = path n k
                                   in tik n /\ prime n /\
@@ -457,6 +511,12 @@ open twoSquaresTheory; (* for loop test found *)
                        |- !n k t. (let ls = path n k
                                     in tik n /\ prime n /\ k = 1 + HALF (iterate_period (zagier o flip) (1,1,n DIV 4)) /\
                                        MEM t ls /\ flip (HD ls) <> HD ls ==> (flip t = t <=> t = LAST ls))
+   tik_prime_hop_nodes_member_flip_fix
+                       |- !n k t. (let ls = path n k;
+                                       ns = hop_nodes ls
+                                    in tik n /\ prime n /\
+                                       k = 1 + HALF (iterate_period (zagier o flip) (1,1,n DIV 4)) /\
+                                       MEM t ns /\ flip (HD ls) <> HD ls ==> (flip t = t <=> t = LAST ns))
    tik_prime_path_hopping_while_thm
                        |- !n k. (let ls = path n k
                                   in tik n /\ prime n /\ k = 1 + HALF (iterate_period (zagier o flip) (1,1,n DIV 4)) ==>
@@ -466,8 +526,8 @@ open twoSquaresTheory; (* for loop test found *)
    two_squares_hop_thm |- !n. tik n /\ prime n ==> (let (u,v) = two_squares_hop n in n = u ** 2 + v ** 2)
 
    Popping as direct hop:
-   pop_def             |- !m x y z. pop m (x,y,z) = (2 * m * z - x,z,y + m * x - m * m * z)
-   popping_def         |- !k t. popping k t = pop (step k t) t
+   pop_def             |- !m x y z. pop m (x,y,z) = (2 * m * z - x,z,y + m * x - m ** 2 * z)
+   popping_def         |- !c t. popping c t = pop (step c t) t
    popping_sqrt_eq_hopping_sqrt
                        |- !n t. ~square n /\ n = windmill t /\ ~is_ping t ==>
                                 popping (SQRT n) t = hopping (SQRT n) t
@@ -519,6 +579,10 @@ open twoSquaresTheory; (* for loop test found *)
                                        node n (j + 1) = EL j ns /\ (node n (j + 1) = LAST ls <=> j + 1 = LENGTH ns))
 
    Hopping along Path (useful theorems):
+   ping_funpow_1_1_k       |- !m k. FUNPOW ping m (1,1,k) = (1 + 2 * m,1,k - m - m ** 2)
+   ping_funpow_1_1_k_range |- !n m. tik n /\ ~square n ==>
+                                    (let (x,y,z) = FUNPOW ping m (1,1,n DIV 4)
+                                      in 0 < z <=> m < HALF (1 + SQRT n))
    path_start_over_ping    |- !n k. (let h = HALF (1 + SQRT n)
                                       in tik n /\ ~square n /\ h <= k ==>
                                          !j. 0 < j /\ j < h ==> is_ping (EL j (path n k)))
@@ -557,47 +621,128 @@ open twoSquaresTheory; (* for loop test found *)
    hopping_path_step_0     |- !n k u. (let ls = path n k
                                         in tik n /\ ~square n /\ flip (LAST ls) = LAST ls /\
                                            u < k ==> hopping 0 (EL u ls) = skip_pung (EL u ls))
-   pong_list_path_element_suc_by_hop
+   pong_nodes_path_element_suc_by_hop
                            |- !n k j. (let ls = path n k;
-                                           ps = pong_list (FRONT ls)
+                                           ps = pong_nodes (FRONT ls)
                                         in tik n /\ ~square n /\ ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
                                            EL (j + 1) ps = (hopping 0 o beyond_pong) (EL j ps))
-   pong_list_path_element_eqn_by_hop
+   pong_nodes_path_element_eqn_by_hop
                            |- !n k j. (let ls = path n k;
-                                           ps = pong_list (FRONT ls)
+                                           ps = pong_nodes (FRONT ls)
                                         in tik n /\ ~square n /\ ALL_DISTINCT ls /\ j < LENGTH ps ==>
                                            EL j ps = FUNPOW (hopping 0 o beyond_pong) j (HD ps))
-   hop_nodes_path_element_findi_range
-                       |- !n k j. (let ls = path n k;
-                                       ns = hop_nodes ls;
-                                       ps = pong_list (FRONT ls)
-                                    in ALL_DISTINCT ls /\ j + 1 < LENGTH ns ==>
-                                       findi (EL j ps) ls < findi (EL j ns) ls /\
-                                       findi (EL j ns) ls <= findi (EL (j + 1) ps) ls)
-   hop_nodes_path_element_findi_thm
-                       |- !n k j h. (let ls = path n k;
-                                         ns = hop_nodes ls;
-                                         ps = pong_list (FRONT ls)
-                                      in ALL_DISTINCT ls /\ j + 1 + h < LENGTH ns ==>
-                                         findi (EL j ps) ls < findi (EL j ns) ls /\
-                                         findi (EL j ns) ls <= findi (EL (j + 1 + h) ps) ls)
-   hop_nodes_path_element_findi_last
-                       |- !n k. (let ls = path n k;
-                                     ns = hop_nodes ls;
-                                     ps = pong_list (FRONT ls)
-                                  in tik n /\ ~square n /\ ALL_DISTINCT ls /\
-                                     flip (LAST ls) = LAST ls /\ 0 < k ==>
-                                     findi (LAST ns) ls = k /\ findi (LAST ps) ls < k)
-   hop_nodes_path_all_distinct
-                       |- !n k. (let ls = path n k
-                                  in tik n /\ ~square n /\ ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls ==>
-                                     ALL_DISTINCT (hop_nodes ls))
-
 *)
 
 (* ------------------------------------------------------------------------- *)
 (* Helper Theorems                                                           *)
 (* ------------------------------------------------------------------------- *)
+
+(* ------------------------------------------------------------------------- *)
+(* The zagier-flip iteration period.                                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: tik n /\ ~square n ==>
+            FINITE (mills n) /\ (zagier o flip) PERMUTES (mills n) /\ 0 < iterate_period (zagier o flip) (1,1,n DIV 4) *)
+(* Proof:
+   Let s = mills n,
+       u = (1,1,n DIV 4).
+   Then FINITE s                               by mills_finite_non_square, ~square n
+    and u IN s                                 by mills_element_trivial, tik n
+   Also zagier involute s                      by zagier_involute_mills, tik n /\ ~square n
+    and flip involute s                        by flip_involute_mills
+   Thus (zagier o flip) PERMUTES s             by involute_involute_permutes
+    and 0 < iterate_period (zagier o flip) u   by iterate_period_pos
+*)
+Theorem tik_non_square_property:
+  !n. tik n /\ ~square n ==>
+      FINITE (mills n) /\ (zagier o flip) PERMUTES (mills n) /\ 0 < iterate_period (zagier o flip) (1,1,n DIV 4)
+Proof
+  ntac 2 strip_tac >>
+  qabbrev_tac `s = mills n` >>
+  qabbrev_tac `u = (1,1,n DIV 4)` >>
+  qabbrev_tac `p = iterate_period (zagier o flip) u` >>
+  `FINITE s` by fs[mills_finite_non_square, Abbr`s`] >>
+  `u IN s` by simp[mills_element_trivial, Abbr`u`, Abbr`s`] >>
+  `zagier involute s` by metis_tac[zagier_involute_mills, ONE_NOT_0] >>
+  `flip involute s` by metis_tac[flip_involute_mills] >>
+  `zagier o flip PERMUTES s` by fs[involute_involute_permutes] >>
+  metis_tac[iterate_period_pos]
+QED
+
+(* Theorem: iterate_period (zagier o flip) (1,1,k) = 1 <=> k = 1 *)
+(* Proof:
+   Let u = (1,1,k),
+       f = zagier o flip,
+       p = iterate_period f u.
+   Then p = 1 <=> f u = u                      by iterate_period_eq_1
+   If 2 < k,
+      f u = (3,1,k - 2) <> u                   by zagier_def, flip_def
+   Otherwise k = 0 or 1 or 2.
+      If k = 0, f u = (1,2,0) <> u             by zagier_def, flip_def
+      If k = 1, f u = (1,1,1) = u              by zagier_def, flip_def
+      If k = 2, f u = (3,2,0) <> u             by zagier_def, flip_def
+
+     Hence the period p = 1 iff k = 1.
+*)
+Theorem zagier_flip_iterate_period_eq_1:
+  !k. iterate_period (zagier o flip) (1,1,k) = 1 <=> k = 1
+Proof
+  rw[iterate_period_eq_1] >>
+  Cases_on `2 < k` >-
+  fs[zagier_def, flip_def] >>
+  (`k = 0 \/ k = 1 \/ k = 2` by decide_tac >> fs[zagier_def, flip_def])
+QED
+
+(* Theorem: iterate_period (zagier o flip) (1,1,n DIV 4) <> 2 *)
+(* Proof:
+   Let u = (1,1,k),
+       f = zagier o flip,
+       p = iterate_period f u.
+   By contradiction, suppose p = 2.
+   Then f u <> u /\ f (f u) = u                by iterate_period_eq_2
+
+   If 6 < k,
+      f u = (3,1,k-2)                          by zagier_def, flip_def
+      f (f u) = (5,1,k-5)                      by zagier_def, flip_def
+      This contradicts f (f u) = u             by PAIR_EQ
+
+   Otherwise, if 3 < k,
+      f u = (3,1,k-2)                          by zagier_def, flip_def
+      f (f u) = (2 * k - 7,k - 2,6 - k)        by zagier_def, flip_def
+      This contradicts f (f u) = u             by 1 < k - 2, not 1.
+
+   Otherwise, k = 0 or 1 or 2 or 3.
+      If k = 0, f (f u) = (1,3,0) <> u, a contradiction.
+      If k = 1, f u = (1,1,1) = u     , a contradiction.
+      If k = 2, f (f u) = (3,5,0) <> u, a contradiction.
+      If k = 3, f (f u) = (1,3,1) <> u, a contradiction.
+
+     Hence the period p is never 2.
+*)
+Theorem zagier_flip_iterate_period_ne_2:
+  !k. iterate_period (zagier o flip) (1,1,k) <> 2
+Proof
+  rw[iterate_period_eq_2] >>
+  Cases_on `6 < k` >-
+  fs[zagier_def, flip_def] >>
+  Cases_on `3 < k` >-
+  fs[zagier_def, flip_def] >>
+  (`k = 0 \/ k = 1 \/ k = 2 \/ k = 3` by decide_tac >> fs[zagier_def, flip_def])
+QED
+
+(* Theorem: tik n ==> (iterate_period (zagier o flip) (1,1,n DIV 4) = 1 <=> n = 5) *)
+(* Proof:
+   Note iterate_period f u = 1 <=> n DIV 4 = 1 by zagier_flip_1_1_z_period
+   Then n = (n DIV 4) * 4 + (n MOD 4)          by DIVISION
+          = 1 * 4 + 1 = 5                      by tik n
+*)
+Theorem tik_iterate_period_eq_1:
+  !n. tik n ==> (iterate_period (zagier o flip) (1,1,n DIV 4) = 1 <=> n = 5)
+Proof
+  rpt strip_tac >>
+  `n = (n DIV 4) * 4 + 1` by metis_tac[DIVISION, DECIDE``0 < 4``] >>
+  simp[zagier_flip_1_1_z_period]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The zagier-flip permutation.                                              *)
@@ -768,7 +913,7 @@ QED
       ==> (2 * z - x) ** 2 <= (SQRT n) ** 2    by EXP_EXP_LE_MONO_IMP
       ==> (2 * z - x) ** 2 <= n                by SQ_SQRT_LE_alt, LESS_EQ_TRANS
       ==> 4 * z ** 2 + x ** 2 - 4 * z * x <= n                     by binomial_sub, x < 2 * z
-      ==> x ** 2 + 4 * z * z - 4 * z * x <= x ** 2 + 4 * y * z     by EXP_2
+      ==> x ** 2 + 4 * z * z - 4 * z * x <= x ** 2 + 4 * y * z     by above
       ==> 4 * z * (z - x) <= 4 * z * y         by LEFT_SUB_DISTRIB
       ==> z - x <= y                           by LT_MULT_LCANCEL, 0 < z
       ==> z - y <= x                           by inequaltiy
@@ -900,6 +1045,21 @@ Theorem is_ping_1_1_k:
   !k. 2 < k ==> is_ping (1,1,k)
 Proof
   simp[is_ping_x_x_z]
+QED
+
+(*
+> EVAL ``is_pong (1,k,1)``;
+val it = |- is_pong (1,k,1) <=> ~(1 < 1 - k): thm
+> EVAL ``is_pong (1,k,1)`` |> SIMP_RULE bool_ss [DECIDE ``~(1 < 1 - k)``];
+val it = |- is_pong (1,k,1): thm
+*)
+
+(* Theorem: is_pong (1,k,1) *)
+(* Proof: by is_pong_def. *)
+Theorem is_pong_1_k_1:
+  !k. is_pong (1,k,1)
+Proof
+  simp[is_pong_def]
 QED
 
 (* Theorem: ~is_ping (x,y,y) *)
@@ -1326,6 +1486,15 @@ val it = |- path 89 11 = [(1,22,1); (1,1,22); (3,1,20); (5,1,16); (7,1,10); (9,1
                           (1,11,2); (3,2,10); (7,2,5); (3,5,4); (5,4,4)]: thm
 *)
 
+(* Theorem: (!n. path n 0 = [(1,n DIV 4,1)]) /\
+             !n k. path n (SUC k) = (path n k) ++ [(zagier o flip) (LAST (path n k))] *)
+(* Proof: by path_def *)
+Theorem path_alt:
+  (!n. path n 0 = [(1,n DIV 4,1)]) /\
+   !n k. path n (SUC k) = (path n k) ++ [(zagier o flip) (LAST (path n k))]
+Proof
+  simp[path_def]
+QED
 
 (* Theorem: path n 1 = [(1,n DIV 4,1); (1,1,n DIV 4)] *)
 (* Proof:
@@ -1366,6 +1535,10 @@ Theorem path_not_nil:
 Proof
   metis_tac[num_CASES, path_def, NOT_NIL_CONS, NOT_SNOC_NIL]
 QED
+
+(* Get theorem by evaluation. *)
+Theorem path_5_1 = EVAL ``path 5 1``;
+(* val path_5_1 = |- path 5 1 = [(1,1,1); (1,1,1)]: thm *)
 
 (* Theorem: LENGTH (path n k) = k + 1 *)
 (* Proof:
@@ -1592,6 +1765,26 @@ Proof
   `LENGTH t = k` by decide_tac >>
   `h::t = [h] <=> t = []` by simp[] >>
   metis_tac[LENGTH_EQ_0]
+QED
+
+(* Theorem: let ls = path n k in tik n ==> (flip (HD ls) = HD ls <=> n = 5) *)
+(* Proof:
+   Let ls = path n k.
+   Then HD ls = (1,n DIV 4,1)                  by path_head
+       flip (HD ls) = HD ls
+   <=> n DIV 4 = 1                             by flip_fix
+   <=> n = 1 * 4 + n MOD 1                     by DIVISION
+   <=> n = 1 * 4 + 1                           by tik n
+   <=> n = 5
+*)
+Theorem path_head_flip_fix:
+  !n k. let ls = path n k in tik n ==> (flip (HD ls) = HD ls <=> n = 5)
+Proof
+  rw_tac std_ss[] >>
+  `HD ls = (1, n DIV 4, 1)` by fs[path_head, Abbr`ls`] >>
+  `flip (HD ls) = HD ls <=> n DIV 4 = 1` by simp[flip_fix] >>
+  `n = (n DIV 4) * 4 + 1` by metis_tac[DIVISION, DECIDE``0 < 4``] >>
+  fs[]
 QED
 
 (* Theorem: LENGTH (FRONT (path n k)) = k *)
@@ -1881,86 +2074,35 @@ Proof
   metis_tac[triple_parts, flip_fix, not_ping_x_y_y]
 QED
 
-(* This is the short version. See the long version below. *)
+(* This is the short version. See the long version in tik_prime_path_last_not_ping. *)
 
-(*
-involute_involute_fix_orbit_fix_odd_inv |> ISPEC ``zagier`` |> ISPEC ``flip`` |> ISPEC ``mills n`` |> SPEC ``p:num`` |> ISPEC ``(1,1,n DIV 4)``;
-val it = |- FINITE (mills n) /\ zagier involute mills n /\ flip involute mills n /\
-      (1,1,n DIV 4) IN fixes zagier (mills n) /\
-      p = iterate_period (zagier o flip) (1,1,n DIV 4) /\ ODD p ==>
-      FUNPOW (zagier o flip) (1 + HALF p) (1,1,n DIV 4) IN
-      fixes flip (mills n): thm
+(* Idea: for ls = path n k, LAST ls is iterate (zagier o flip) of zagier-fix to half period. *)
 
-path_last  |- !n k. LAST (path n k) = FUNPOW (zagier o flip) k (1,1,n DIV 4)
-path_last |> SPEC ``n:num`` |> SPEC ``1 + HALF p``;
-val it = |- LAST (path n (1 + HALF p)) = FUNPOW (zagier o flip) (1 + HALF p) (1,1,n DIV 4): thm
-*)
-
-(* Idea: the last element of path is not a ping. *)
-
-(* Theorem: prime n /\ tik n /\ p = iterate_period (zagier o flip) (1,1,n DIV 4) ==>
-            ~is_ping (LAST (path n (1 + HALF p))) *)
+(* Theorem: let ls = path n k; u = (1,1,n DIV 4); p = iterate_period (zagier o flip) u in
+            k = 1 + HALF p ==> LAST ls = FUNPOW (zagier o flip) (HALF p) u *)
 (* Proof:
-   Let u = (1,1,n DIV 4),
-       k = 1 + HALF p,
-       v = FUNPOW (zagier o flip) k u.
-   Note prime n ==> ~square n                  by prime_non_square
-     so FINITE (mills n)                       by mills_finite_non_square
-    and zagier involute (mills n)              by zagier_involute_mills_prime, prime n
-    and flip involute (mills n)                by flip_involute_mills
-    and fixes zagier (mills n) = {u}           by zagier_fixes_prime
-     so u IN fixes zagier (mills n)            by IN_SING
+   Note ls <> []                   by path_not_nil
+    and 0 < k                      by k = 1 + HALF p
 
-    Now u IN s                                 by mills_element_trivial, tik n
-     so ODD p                                  by involute_involute_fix_sing_period_odd
-    ==> v IN fixes flip (mills n)              by involute_involute_fix_orbit_fix_odd
-
-    Claim: v = LAST (path n (1 + k))
-    Proof: Let ls = path n (1 + k).
-           Then ls <> []                       by path_not_nil
-            and LENGTH ls = k + 2              by path_length
-                LAST ls
-              = EL (PRE (LENGTH ls)) ls        by LAST_EL
-              = EL (1 + k) ls                  by above
-              = FUNPOW (f o g) k (EL 1 ls)     by path_element_thm
-              = FUNPOW (f o g) k u             by path_element_1
-              = v
-
-    Thus v = LAST (path n k)                   by path_last
-     and ~is_ping v                            by flip_fixes_element, not_ping_x_y_y
+     LAST ls
+   = EL k ls                       by path_last_alt
+   = EL (1 + HALF p) ls            by k = 1 + HALF p
+   = EL (SUC (HALF p)) ls          by ADD1
+   = EL (HALF p) (TL ls)           by EL
+   = FUNPOW (zagier o flip) (HALF p) u
+                                   by path_tail_element, HALF p < k
 *)
-Theorem path_last_not_ping_thm:
-  !n p. prime n /\ tik n /\ p = iterate_period (zagier o flip) (1,1,n DIV 4) ==>
-        ~is_ping (LAST (path n (1 + HALF p)))
+Theorem path_last_at_half_period:
+  !n k. let ls = path n k; u = (1,1,n DIV 4); p = iterate_period (zagier o flip) u in
+        k = 1 + HALF p ==> LAST ls = FUNPOW (zagier o flip) (HALF p) u
 Proof
-  rpt strip_tac >>
-  qabbrev_tac `u = (1,1,n DIV 4)` >>
-  qabbrev_tac `k = HALF p` >>
-  qabbrev_tac `v = FUNPOW (zagier o flip) k u` >>
-  qabbrev_tac `s = mills n` >>
-  `~square n` by simp[prime_non_square] >>
-  `FINITE s` by fs[mills_finite_non_square, Abbr`s`] >>
-  `zagier involute s` by metis_tac[zagier_involute_mills_prime] >>
-  `flip involute s` by metis_tac[flip_involute_mills] >>
-  `fixes zagier s = {u}` by fs[zagier_fixes_prime, Abbr`s`, Abbr`u`] >>
-  `u IN fixes zagier s` by simp[] >>
-  `u IN s` by metis_tac[mills_element_trivial] >>
-  qabbrev_tac `f = zagier` >>
-  qabbrev_tac `g = flip` >>
-  drule_then strip_assume_tac involute_involute_fix_sing_period_odd >>
-  first_x_assum (qspecl_then [`f`, `g`, `p`, `u`] strip_assume_tac) >>
-  `ODD p` by metis_tac[] >>
-  drule_then strip_assume_tac involute_involute_fix_orbit_fix_odd >>
-  first_x_assum (qspecl_then [`f`, `g`, `p`, `u`] strip_assume_tac) >>
-  `v IN fixes g s` by metis_tac[] >>
-  `v = LAST (path n (1 + k))` by
-  (qabbrev_tac `ls = path n (1 + k)` >>
-  `ls <> [] /\ LENGTH ls = k + 2` by simp[path_not_nil, path_length, Abbr`ls`] >>
-  `PRE (k + 2) = k + 1` by decide_tac >>
-  `LAST ls = EL (1 + k) ls` by simp[LAST_EL] >>
-  `_ = FUNPOW (f o g) k (EL 1 ls)` by fs[path_element_thm, Abbr`ls`] >>
-  simp[path_element_1, Abbr`ls`, Abbr`u`, Abbr`v`]) >>
-  metis_tac[triple_parts, flip_fixes_element, not_ping_x_y_y]
+  rw_tac std_ss[] >>
+  qabbrev_tac `k = 1 + HALF p` >>
+  `ls <> []` by fs[path_not_nil, Abbr`ls`] >>
+  `0 < k /\ HALF p < k` by fs[Abbr`k`] >>
+  `LAST ls = EL (SUC (HALF p)) ls` by fs[path_last_alt, ADD1, Abbr`ls`, Abbr`k`] >>
+  `_ = EL (HALF p) (TL ls)` by simp[EL] >>
+  fs[path_tail_element, Abbr`ls`, Abbr`u`]
 QED
 
 (* Theorem: let ls = path n k in m + u <= k /\
@@ -2638,17 +2780,36 @@ QED
 (* Hopping                                                                   *)
 (* ------------------------------------------------------------------------- *)
 
+(* Iterations of ping has a simple form:
+
+   ping = [[1,2,0],[0,1,0],[-1,-1,1]]           from ping (x,y,z) = (x + 2 * y,y,z - y - x)
+   ping ^ m = [[1,2,0],[0,1,0],[-1,-1,1]] ^ m
+            = [[1,2m,0],[0,1,0],[-m,-m^2,1]]    from WolframAlpha
+
+   When (x,y,z) is non-ping, (-x,z,y) is ping, a virtual windmill.
+   invert = [[-1,0,0],[0,0,1],[0,1,0]]     so that invert (x,y,z) = (-x,z,y)
+
+   hop = ping ^ m o invert
+       = [[1,2m,0],[0,1,0],[-m,-m^2,1]] . [[-1,0,0],[0,0,1],[0,1,0]]
+       = [[-1,0,2m],[0,0,1],[m,1,-m^2]]
+   If this is still virtual, invert result:
+   hop = invert o ping ^ m o invert
+       = [[-1,0,0],[0,0,1],[0,1,0]] . [[-1,0,2m],[0,0,1],[m,1,-m^2]]
+       = [[1,0,-2m],[m,1,-m^2],[0,0,1]]
+
+*)
+
 (* Define the hop map *)
 Definition hop_def:
    hop m (x,y,z) = if x < 2 * m * z
-                   then (2 * m * z - x, z, y + m * x - m * m * z)
-                   else (x - 2 * m * z, y + m * x - m * m * z, z)
+                   then (2 * m * z - x, z, y + m * x - m ** 2 * z)
+                   else (x - 2 * m * z, y + m * x - m ** 2 * z, z)
 End
 (* Note: x <> 2 * m * z for a windmill, see windmill_mind_odd. *)
 (* The condition x < 2 * m * z matches is_pong when m = 1. *)
 (* first Hop Matrix: H = [[-1,0,2*m],[0,0,1],[m,1,-m*m]]
 This has a diagonalisation: H = P D P^(-1), where D is diagonal. *)
-(* second Hop Matrix: H = [[1,0,-2*m],[m,1,-m*m],[0,0,1]]
+(* second Hop Matrix: H = [[1,0,-2*m],[m,1,-m^2],[0,0,1]]
 This has a Jordan form: H = S J S^(-1), where J is not diagonal. *)
 
 (* Example for n = 61:
@@ -2672,8 +2833,8 @@ X_LT_DIV  |- !x y z. 0 < z ==> (x < y DIV z <=> (x + 1) * z <= y)
 
 (* Theorem: 0 < z ==>
             hop m (x,y,z) = if x DIV (2 * z) < m
-                            then (2 * m * z - x, z, y + m * x - m * m * z)
-                            else (x - 2 * m * z, y + m * x - m * m * z, z) *)
+                            then (2 * m * z - x, z, y + m * x - m ** 2 * z)
+                            else (x - 2 * m * z, y + m * x - m ** 2 * z, z) *)
 (* Proof:
    Note x DIV (2 * z) < m
     <=> x < 2 * m * z              by DIV_LT_X, 0 < z
@@ -2682,13 +2843,14 @@ X_LT_DIV  |- !x y z. 0 < z ==> (x < y DIV z <=> (x + 1) * z <= y)
 Theorem hop_alt:
   !m x y z. 0 < z ==>
             hop m (x,y,z) = if x DIV (2 * z) < m
-                            then (2 * m * z - x, z, y + m * x - m * m * z)
-                            else (x - 2 * m * z, y + m * x - m * m * z, z)
+                            then (2 * m * z - x, z, y + m * x - m ** 2 * z)
+                            else (x - 2 * m * z, y + m * x - m ** 2 * z, z)
 Proof
   rpt strip_tac >>
   `x DIV (2 * z) < m <=> x < 2 * m * z` by simp[DIV_LT_X] >>
   simp[hop_def]
 QED
+
 
 (* Theorem: hop 0 t = t *)
 (* Proof: by hop_def, as x < 0 is false. *)
@@ -2757,10 +2919,10 @@ QED
 (* Idea: condition for hop m (x,y,z) to have arms. *)
 
 (* Theorem: ~square n /\ n = windmill (x,y,z) ==>
-            (m <= (x + SQRT n) DIV (2 * z) <=> 0 < y + m * x - m * m * z) *)
+            (m <= (x + SQRT n) DIV (2 * z) <=> 0 < y + m * x - m ** 2 * z) *)
 (* Proof:
    Note 0 < y /\ 0 < z                         by windmill_with_arms, ~square n
-   For the expression (y + m * x - m * m * z),
+   For the expression (y + m * x - m ** 2 * z),
    with a quadratic dependence on m, surely m cannot be too large.
 
    If part: m <= (x + SQRT n) DIV (2 * z) ==> 0 < y + m * x - m ** 2 * z
@@ -2774,17 +2936,17 @@ QED
        ==> (2 * m * z - x) ** 2 + 4 * m * x * z < x ** 2 + 4 * y * z + 4 * m * x * z
        ==> (2 * m * z) ** 2 + x ** 2 < x ** 2 + 4 * z * y + 4 * m * x * z          by binomial_sub_sum, x < 2 * m * z
        <=>          (2 * m * z) ** 2 < 4 * z * y + 4 * m * x * z                   by inequality
-       <=>             m * m * z * z < y * z + m * x * z                           by EXP_2
-       <=>           (m * m * z) * z < (y + m * x) * z                             by LEFT_ADD_DISTRIB
-       <=>                 m * m * z < y + m * x                                   by LT_MULT_LCANCEL, 0 < z
-       <=>                         0 < y + m * x - m * m * z                       by inequality
+       <=>            m ** 2 * z * z < y * z + m * x * z                           by EXP_2
+       <=>          (m ** 2 * z) * z < (y + m * x) * z                             by LEFT_ADD_DISTRIB
+       <=>                m ** 2 * z < y + m * x                                   by LT_MULT_LCANCEL, 0 < z
+       <=>                         0 < y + m * x - m ** 2 * z                      by inequality
 
-   Otherwise, 2 * m * z <= x.
+      Otherwise, 2 * m * z <= x.
        Thus   m * (2 * m * z) <= m * x             by LE_MULT_LCANCEL
        ==>     2 * m ** 2 * z <= m * x             by EXP_2
-      2 * m ** 2 * z + y - m ** 2 * z <= m * x + y - m ** 2 * z
-      y + m ** 2 * z <= y + m * x - m ** 2 * z
-      LHS is > 0.
+               2 * m ** 2 * z + y - m ** 2 * z <= m * x + y - m ** 2 * z
+                                y + m ** 2 * z <= y + m * x - m ** 2 * z
+       so LHS is > 0.
 
    Only-if part: 0 < y + m * x - m ** 2 * z ==> m <= (x + SQRT n) DIV (2 * z)
       If x < 2 * m * z
@@ -2804,7 +2966,7 @@ QED
 *)
 Theorem hop_arm:
   !m n x y z. ~square n /\ n = windmill (x,y,z) ==>
-              (m <= (x + SQRT n) DIV (2 * z) <=> 0 < y + m * x - m * m * z)
+              (m <= (x + SQRT n) DIV (2 * z) <=> 0 < y + m * x - m ** 2 * z)
 Proof
   rpt strip_tac >>
   `0 < y /\ 0 < z` by metis_tac[windmill_with_arms] >>
@@ -2821,8 +2983,8 @@ Proof
     (`n = x ** 2 + 4 * y * z` by fs[windmill_def] >>
       `2 * zz * x = 4 * m * x * z` by simp[Abbr`zz`] >>
       `zz ** 2 + x ** 2 < 4 * (z * y) + x ** 2 + 4 * m * x * z` by simp[GSYM binomial_sub_sum] >>
-      `zz ** 2 = 4 * z * (m * m * z)` by simp[Abbr`zz`, EXP_BASE_MULT] >>
-      `4 * z * (m * m * z) < 4 * z * (y + m * x)` by decide_tac >>
+      `zz ** 2 = 4 * z * (m ** 2 * z)` by simp[Abbr`zz`, EXP_BASE_MULT] >>
+      `4 * z * (m ** 2 * z) < 4 * z * (y + m * x)` by decide_tac >>
       fs[]) >>
       decide_tac,
       `m * (2 * m * z) <= m * x` by simp[] >>
@@ -2830,8 +2992,8 @@ Proof
       decide_tac
     ],
     `x < 2 * m * z \/ 2 * m * z <= x` by decide_tac >| [
-      `4 * z * (m * m * z) < 4 * z * (y + m * x)` by fs[] >>
-      `4 * z * (m * m * z) = (2 * m * z) ** 2` by simp[EXP_BASE_MULT] >>
+      `4 * z * (m ** 2 * z) < 4 * z * (y + m * x)` by fs[] >>
+      `4 * z * (m ** 2 * z) = (2 * m * z) ** 2` by simp[EXP_BASE_MULT] >>
       `4 * z * (y + m * x) = 4 * z * y + 4 * m * x * z` by simp[] >>
       `n = x ** 2 + 4 * y * z` by fs[windmill_def] >>
       `(2 * m * z) ** 2 + x ** 2 < n + 4 * m * x * z` by decide_tac >>
@@ -2853,12 +3015,12 @@ QED
 (* Proof:
    Let (x,y,z) = t                                                 by FORALL_PROD
    If x < 2 * (m * z),
-   Then hop m (x,y,z) = (2 * m * z - x,z,y + m * x - m * m * z)    by hop_def
+   Then hop m (x,y,z) = (2 * m * z - x,z,y + m * x - m ** 2 * z)   by hop_def
      so FST (hop m (x,y,z)) = 2 * m * z - x                        by FST
     and 0 < 2 * m * z - x                                          by x < 2 * (m * z)
 
    If ~(x < 2 * (m * z)),
-   Then hop m (x,y,z) = (x - 2 * m * z,y + m * x - m * m * z,z)    by hop_def
+   Then hop m (x,y,z) = (x - 2 * m * z,y + m * x - m ** 2 * z,z)   by hop_def
      so FST (hop m (x,y,z)) = x - 2 * m * z                        by FST
     but ODD x                                                      by windmill_mind_odd, tik n
      so x <> 2 * (m * z)                                           by EVEN_DOUBLE, EVEN_ODD
@@ -2884,34 +3046,34 @@ QED
             n = windmill (hop m (x,y,z)) *)
 (* Proof:
    Note 0 < y /\ 0 < z                         by windmill_with_arms, ~square n
-    and 0 < y + m * x - m * m * z              by hop_arm, ~square n
-    ==> m * m * z < y + m * x                                      by inequality
-    ==> 4 * z * (m * m * z) < 4 * z * (y + m * x)                  by 0 < z
-    ==> 4 * z * (m * m * z) < 4 * z * y + 4 * z * m * x            by LEFT_ADD_DISTRIB
-    ==>   4 * z * m * m * z < 4 * z * y + 4 * m * x * z            by arithmetic, [1]
+    and 0 < y + m * x - m ** 2 * z             by hop_arm, ~square n
+    ==> m ** 2 * z < y + m * x                                     by inequality
+    ==> 4 * z * (m ** 2 * z) < 4 * z * (y + m * x)                 by 0 < z
+    ==> 4 * z * (m ** 2 * z) < 4 * z * y + 4 * z * m * x           by LEFT_ADD_DISTRIB
+    ==>   4 * z * m ** 2 * z < 4 * z * y + 4 * m * x * z           by arithmetic, [1]
 
    If x < 2 * (m * z),
-   Then hop m (x,y,z) = (2 * m * z - x,z,y + m * x - m * m * z)    by hop_def
+   Then hop m (x,y,z) = (2 * m * z - x,z,y + m * x - m ** 2 * z)   by hop_def
         windmill (hop m (x,y,z))
-      = (2 * m * z - x) ** 2 + 4 * z * (y + m * x - m * m * z)     by windmill_def
-      = (2 * m * z - x) ** 2 + (4 * z * (y + m * x) - 4 * z * m * m * z)        by LEFT_SUB_DISTRIB
-      = (2 * m * z - x) ** 2 + (4 * z * y + 4 * m * z * x - 4 * z * m * m * z)  by LEFT_ADD_DISTRIB
-      = (2 * m * z - x) ** 2 + 4 * z * y + 4 * m * z * x - 4 * z * m * m * z    by [1]
-      = (2 * m * z - x) ** 2 + 2 * (2 * m * z) * x + 4 * y * z - 4 * z * m * m * z
-      = (2 * m * z) ** 2 + x ** 2 + 4 * z * y - 4 * z * m * m * z  by binomial_sub_sum, x < 2 * (m * z)
+      = (2 * m * z - x) ** 2 + 4 * z * (y + m * x - m ** 2 * z)    by windmill_def
+      = (2 * m * z - x) ** 2 + (4 * z * (y + m * x) - 4 * z * m ** 2 * z)        by LEFT_SUB_DISTRIB
+      = (2 * m * z - x) ** 2 + (4 * z * y + 4 * m * z * x - 4 * z * m ** 2 * z)  by LEFT_ADD_DISTRIB
+      = (2 * m * z - x) ** 2 + 4 * z * y + 4 * m * z * x - 4 * z * m ** 2 * z    by [1]
+      = (2 * m * z - x) ** 2 + 2 * (2 * m * z) * x + 4 * y * z - 4 * z * m ** 2 * z
+      = (2 * m * z) ** 2 + x ** 2 + 4 * z * y - 4 * z * m ** 2 * z  by binomial_sub_sum, x < 2 * (m * z)
       = 4 * m ** 2 * z ** 2 + x ** 2 + 4 * z * y - 4 * m ** 2 * z ** 2          by EXP_2, EXP_BASE_MULT
       = x ** 2 + 4 * z * y                                         by arithmetic
       = n                                                          by windmill_def
 
    If ~(x < 2 * (m * z)),
-   Then hop m (x,y,z) = (x - 2 * m * z,y + m * x - m * m * z,z)    by hop_def
+   Then hop m (x,y,z) = (x - 2 * m * z,y + m * x - m ** 2 * z,z)   by hop_def
         windmill (hop m (x,y,z))
-      = (x - 2 * m * z) ** 2 + 4 * (y + m * x - m * m * z) * z     by windmill_def
-      = (x - 2 * m * z) ** 2 + (4 * z * (y + m * x) - 4 * z * m * m * z)        by LEFT_SUB_DISTRIB
-      = (x - 2 * m * z) ** 2 + (4 * z * y + 4 * m * z * x - 4 * z * m * m * z)  by LEFT_ADD_DISTRIB
-      = (x - 2 * m * z) ** 2 + 4 * z * y + 4 * m * z * x - 4 * z * m * m * z    by [1]
-      = (x - 2 * m * z) ** 2 + 2 * (2 * m * z) * x + 4 * y * z - 4 * z * m * m * z
-      = (2 * m * z) ** 2 + x ** 2 + 4 * z * y - 4 * z * m * m * z  by binomial_sub_sum, 2 * (m * z) <= x
+      = (x - 2 * m * z) ** 2 + 4 * (y + m * x - m ** 2 * z) * z    by windmill_def
+      = (x - 2 * m * z) ** 2 + (4 * z * (y + m * x) - 4 * z * m ** 2 * z)        by LEFT_SUB_DISTRIB
+      = (x - 2 * m * z) ** 2 + (4 * z * y + 4 * m * z * x - 4 * z * m ** 2 * z)  by LEFT_ADD_DISTRIB
+      = (x - 2 * m * z) ** 2 + 4 * z * y + 4 * m * z * x - 4 * z * m ** 2 * z    by [1]
+      = (x - 2 * m * z) ** 2 + 2 * (2 * m * z) * x + 4 * y * z - 4 * z * m ** 2 * z
+      = (2 * m * z) ** 2 + x ** 2 + 4 * z * y - 4 * z * m ** 2 * z  by binomial_sub_sum, 2 * (m * z) <= x
       = 4 * m ** 2 * z ** 2 + x ** 2 + 4 * z * y - 4 * m ** 2 * z ** 2          by EXP_2, EXP_BASE_MULT
       = x ** 2 + 4 * z * y                                         by arithmetic
       = n                                                          by windmill_def
@@ -2922,9 +3084,9 @@ Theorem hop_windmill:
 Proof
   rpt strip_tac >>
   `0 < y /\ 0 < z` by metis_tac[windmill_with_arms] >>
-  `0 < y + m * x - m * m * z` by metis_tac[hop_arm] >>
+  `0 < y + m * x - m ** 2 * z` by metis_tac[hop_arm] >>
   `4 * (m ** 2 * z ** 2) < 4 * (z * y) + 4 * (m * x * z)` by
-  (`m * m * z < y + m * x` by decide_tac >>
+  (`m ** 2 * z < y + m * x` by decide_tac >>
   `4 * z * (m ** 2 * z) < 4 * z * (y + m * x)` by fs[] >>
   `4 * z * (m ** 2 * z) = 4 * (m ** 2 * z ** 2)` by simp[] >>
   decide_tac) >>
@@ -2949,7 +3111,7 @@ QED
 (* Idea: windmill defines the range of hopping. *)
 
 (* Theorem: n = windmill (x,y,z) /\
-            0 < 2 * m * z - x /\ 0 < y + m * x - m * m * z ==>
+            0 < 2 * m * z - x /\ 0 < y + m * x - m ** 2 * z ==>
             x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z) *)
 (* Proof:
    Note 0 < 2 * m * z - x
@@ -2957,10 +3119,10 @@ QED
     and x < m * (2 * z)            by inequality
     ==> x DIV (2 * z) < m          by DIV_LT_X, 0 < z
 
-   Also 0 < y + m * x - m * m * z  (without ~square n)
-    ==> m * m * z < y + m * x                              by inequality
-    ==> 4 * z * (m * m * z) < 4 * z * (y + m * x)          by LT_MULT_LCANCEL, 0 < z
-    ==> 4 * z * (m * m * z) < 4 * z * y + 4 * z * m * x    by LEFT_ADD_DISTRIB
+   Also 0 < y + m * x - m ** 2 * z  (without ~square n)
+    ==> m ** 2 * z < y + m * x                             by inequality
+    ==> 4 * z * (m ** 2 * z) < 4 * z * (y + m * x)         by LT_MULT_LCANCEL, 0 < z
+    ==> 4 * z * (m ** 2 * z) < 4 * z * y + 4 * z * m * x   by LEFT_ADD_DISTRIB
     ==>    (2 * m * z) ** 2 < 4 * z * y + 4 * z * m * x    by EXP_BASE_MULT
     ==> x ** 2 + (2 * m * z) ** 2 < x ** 2 + 4 * z * y + 4 * z * m * x   by inequality
     ==> (2 * m * z) ** 2 + x ** 2 < n + 4 * z * m * x      by windmill_def
@@ -2972,16 +3134,16 @@ QED
 *)
 Theorem hop_range:
   !m n x y z. n = windmill (x,y,z) /\
-              0 < 2 * m * z - x /\ 0 < y + m * x - m * m * z ==>
+              0 < 2 * m * z - x /\ 0 < y + m * x - m ** 2 * z ==>
               x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z)
 Proof
   ntac 6 strip_tac >>
   `0 < z` by metis_tac[NOT_ZERO, MULT_0, SUB_0, DECIDE``~(0 < 0)``] >>
   strip_tac >-
   fs[DIV_LT_X] >>
-  `m * m * z < y + m * x` by decide_tac >>
-  `4 * z * (m * m * z) < 4 * z * (y + m * x)` by fs[] >>
-  `4 * z * (m * m * z) = (2 * m * z) ** 2` by simp[EXP_BASE_MULT] >>
+  `m ** 2 * z < y + m * x` by decide_tac >>
+  `4 * z * (m ** 2 * z) < 4 * z * (y + m * x)` by fs[] >>
+  `4 * z * (m ** 2 * z) = (2 * m * z) ** 2` by simp[EXP_BASE_MULT] >>
   `4 * z * (y + m * x) = 4 * z * y + 4 * m * x * z` by simp[] >>
   `n = x ** 2 + 4 * y * z` by simp[windmill_def] >>
   `(2 * m * z) ** 2 + x ** 2 < n + 4 * m * x * z` by decide_tac >>
@@ -2995,25 +3157,25 @@ QED
 (* Idea: the range of hopping is defined by being a windmill. *)
 
 (* Theorem: ~square n /\ n = windmill (x,y,z) ==>
-            (0 < 2 * m * z - x /\ 0 < y + m * x - m * m * z <=>
+            (0 < 2 * m * z - x /\ 0 < y + m * x - m ** 2 * z <=>
              0 < z /\ x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z)) *)
 (* Proof:
-   If part: 0 < 2 * m * z - x /\ 0 < y + m * x - m * m * z ==>
+   If part: 0 < 2 * m * z - x /\ 0 < y + m * x - m ** 2 * z ==>
             0 < z /\ x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z)
       Note 0 < 2 * m * z - x ==> 0 < z         by MULT_0, SUB_0
        and x DIV (2 * z) < m                   by hop_range
        and m <= (x + SQRT n) DIV (2 * z)       by hop_range
 
    Only-if part: 0 < z /\ x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z) ==>
-                 0 < 2 * m * z - x /\ 0 < y + m * x - m * m * z
+                 0 < 2 * m * z - x /\ 0 < y + m * x - m ** 2 * z
       Note x DIV (2 * z) < m
        ==> 0 < 2 * (m * z) - x                 by hop_mind
        and m <= (x + SQRT n) DIV (2 * z)
-       ==> 0 < y + m * x - m * m * z           by hop_arm
+       ==> 0 < y + m * x - m ** 2 * z          by hop_arm
 *)
 Theorem hop_range_iff:
   !m n x y z. ~square n /\ n = windmill (x,y,z) ==>
-              (0 < 2 * m * z - x /\ 0 < y + m * x - m * m * z <=>
+              (0 < 2 * m * z - x /\ 0 < y + m * x - m ** 2 * z <=>
               0 < z /\ x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z))
 Proof
   ntac 6 strip_tac >>
@@ -3042,7 +3204,7 @@ pung  R = [[1,0,-2],[1,1,-1],[0,0,1]]  R^2 = [[1,0,-4],[2,1,-4],[0,0,1]]  same f
 Both P and R have Jordan forms (check in WolframAlpha), Q has diagonal form.
 *)
 
-(* Theorem: FUNPOW ping m (x,y,z) = (x + 2 * m * y, y, z - m * x - m * m * y) *)
+(* Theorem: FUNPOW ping m (x,y,z) = (x + 2 * m * y, y, z - m * x - m ** 2 * y) *)
 (* Proof:
    By induction on m.
    Base: FUNPOW ping 0 (x,y,z) = (x + 2 * 0 * y,y,z - 0 * x - 0 * 0 * y)
@@ -3050,21 +3212,21 @@ Both P and R have Jordan forms (check in WolframAlpha), Q has diagonal form.
       = (x,y,z)                                by FUNPOW_0
       = (x + 0, y, z - 0)                      by ADD_0, SUB_0
       = (x + 2 * 0 * y, y, z - 0 * x - 0 * 0 * y)
-   Step: FUNPOW ping m (x,y,z) = (x + 2 * m * y,y,z - m * x - m * m * y) ==>
-         FUNPOW ping (SUC m) (x,y,z) = (x + 2 * SUC m * y,y,z - SUC m * x - SUC m * SUC m * y)
+   Step: FUNPOW ping m (x,y,z) = (x + 2 * m * y,y,z - m * x - m ** 2 * y) ==>
+         FUNPOW ping (SUC m) (x,y,z) = (x + 2 * SUC m * y,y,z - SUC m * x - SUC m ** 2 * y)
 
         FUNPOW ping (SUC m) (x,y,z)
       = ping (FUNPOW ping m (x,y,z))                     by FUNPOW_SUC
-      = ping (x + 2 * m * y,y,z - m * x - m * m * y)     by induction hypothesis
-      = (x + 2 * m * y + 2 * y,y,z - m * x - m * m * y - y - (x + 2 * m * y))
+      = ping (x + 2 * m * y,y,z - m * x - m ** 2 * y)    by induction hypothesis
+      = (x + 2 * m * y + 2 * y,y,z - m * x - m ** 2 * y - y - (x + 2 * m * y))
                                                          by ping_def
       = (x + 2 * (m + 1) * y), y,                        by LEFT_ADD_DISTRIB
          z - (x * (m + 1) + y * (m + 1) ** 2))           by SUM_SQUARED
-      = (x + 2 * SUC m * y, y, z - SUC m * x - SUC m * SUC m * y)
-                                                         by ADD1, EXP_2
+      = (x + 2 * SUC m * y, y, z - SUC m * x - SUC m ** 2 * y)
+                                                         by ADD1
 *)
 Theorem ping_funpow:
-  !m x y z. FUNPOW ping m (x,y,z) = (x + 2 * m * y, y, z - m * x - m * m * y)
+  !m x y z. FUNPOW ping m (x,y,z) = (x + 2 * m * y, y, z - m * x - m ** 2 * y)
 Proof
   rpt strip_tac >>
   Induct_on `m` >-
@@ -3172,7 +3334,7 @@ QED
 
 (* Theorem: tik n /\ ~square n /\ n = windmill (x,y,z) /\
             (!j. j < m ==> is_pung (FUNPOW pung j (x,y,z))) ==>
-            FUNPOW pung m (x,y,z) = (x - 2 * m * z, y + m * x - m * m * z, z) *)
+            FUNPOW pung m (x,y,z) = (x - 2 * m * z, y + m * x - m ** 2 * z, z) *)
 (* Proof:
    By induction on m.
    Base: (!j. j < 0 ==> is_pung (FUNPOW pung j (x,y,z))) ==>
@@ -3182,9 +3344,9 @@ QED
       = (x - 0, y + 0, z)                      by ADD_0, SUB_0
       = (x - 2 * 0 * z,y + 0 * x - 0 * 0 * z, z)
    Step: (!j. j < m ==> is_pung (FUNPOW pung j (x,y,z))) ==>
-         FUNPOW pung m (x,y,z) = (x - 2 * m * z,y + m * x - m * m * z,z) ==>
+         FUNPOW pung m (x,y,z) = (x - 2 * m * z,y + m * x - m ** 2 * z,z) ==>
          (!j. j < SUC m ==> is_pung (FUNPOW pung j (x,y,z))) ==>
-         FUNPOW pung (SUC m) (x,y,z) = (x - 2 * SUC m * z,y + SUC m * x - SUC m * SUC m * z,z)
+         FUNPOW pung (SUC m) (x,y,z) = (x - 2 * SUC m * z,y + SUC m * x - SUC m ** 2 * z,z)
       Note !j. j < SUC m ==> is_pung (FUNPOW pung j (x,y,z))
        <=> !j. (j < m \/ j = m) ==> is_pung (FUNPOW pung j (x,y,z))    by arithmetic
        <=> is_pung (FUNPOW pung m (x,y,z)) /\
@@ -3196,17 +3358,17 @@ QED
 
         FUNPOW pung (SUC m) (x,y,z)
       = pung (FUNPOW pung m (x,y,z))                     by FUNPOW_SUC
-      = pung (x - 2 * m * z,y + m * x - m * m * z,z)     by induction hypothesis
-      = (x - 2 * m * z - 2 * z,x - 2 * m * z + (y + m * x - m * m * z) - z,z)
+      = pung (x - 2 * m * z,y + m * x - m ** 2 * z,z)    by induction hypothesis
+      = (x - 2 * m * z - 2 * z,x - 2 * m * z + (y + m * x - m ** 2 * z) - z,z)
                                                          by pung_def
       = (x - 2 * (m + 1) * z),                           by LEFT_ADD_DISTRIB, by conditions
          y + (m + 1) * x - (m + 1) ** 2 * z, z)          by SUM_SQUARED
-      = (x - 2 * SUC m * z,y + SUC m * x - SUC m * SUC m * z,z)    by ADD1, EXP_2
+      = (x - 2 * SUC m * z,y + SUC m * x - SUC m ** 2 * z,z)    by ADD1
 *)
 Theorem pung_funpow:
   !n x y z m. tik n /\ ~square n /\ n = windmill (x,y,z) /\
               (!j. j < m ==> is_pung (FUNPOW pung j (x,y,z))) ==>
-              FUNPOW pung m (x,y,z) = (x - 2 * m * z, y + m * x - m * m * z, z)
+              FUNPOW pung m (x,y,z) = (x - 2 * m * z, y + m * x - m ** 2 * z, z)
 Proof
   rpt strip_tac >>
   Induct_on `m` >-
@@ -3215,7 +3377,7 @@ Proof
   `!j. j < SUC m <=> (j < m \/ j = m)` by decide_tac >>
   `is_pung (FUNPOW pung m (x,y,z)) /\ !j. j < m ==> is_pung (FUNPOW pung j (x,y,z))` by metis_tac[] >>
   `n = windmill (FUNPOW pung m (x,y,z))` by simp[GSYM pung_funpow_windmill] >>
-  `0 < x - 2 * m * z /\ 0 < y + m * x - m ** 2 * z` by metis_tac[windmill_mind_and_arms, ONE_NOT_0, EXP_2] >>
+  `0 < x - 2 * m * z /\ 0 < y + m * x - m ** 2 * z` by metis_tac[windmill_mind_and_arms, ONE_NOT_0] >>
   simp[FUNPOW_SUC, pung_def, ADD1] >>
   `x - 2 * (m * z) + (y + m * x - m ** 2 * z) - z = (y + m * x - m ** 2 * z) + (x - 2 * (m * z)) - z` by decide_tac >>
   `_ = y + m * x + x - (m ** 2 * z + 2 * m * z + z)` by fs[] >>
@@ -3230,7 +3392,7 @@ QED
 (* Proof:
    Let (x,y,z) = t,
        xx = x - 2 * m * z,
-       yy = y + m * x - m * m * z.
+       yy = y + m * x - m ** 2 * z.
    Then FUNPOW pung m (x,y,z)
       = (xx, yy, z)                            by pung_funpow
     and n = windmill (xx,yy,z)                 by pung_funpow_windmill
@@ -3249,7 +3411,7 @@ Proof
   rpt strip_tac >>
   rename1 `windmill (x,y,z)` >>
   qabbrev_tac `n = windmill (x,y,z)` >>
-  `FUNPOW pung m (x,y,z) = (x - 2 * m * z,y + m * x - m * m * z,z)` by fs[pung_funpow] >>
+  `FUNPOW pung m (x,y,z) = (x - 2 * m * z,y + m * x - m ** 2 * z,z)` by fs[pung_funpow] >>
   `n = windmill (FUNPOW pung m (x,y,z))` by metis_tac[pung_funpow_windmill] >>
   `0 < x - 2 * m * z` by metis_tac[windmill_with_mind, ONE_NOT_0] >>
   simp[hop_def]
@@ -3369,7 +3531,7 @@ QED
 (* Theorem: 0 < z /\ m < x DIV (2 * z) ==> is_pung (hop m (x,y,z)) *)
 (* Proof:
    With m < x DIV (2 * z),
-        hop m (x,y,z) = (x - 2 * m * z,y + m * x - m * m * z,z)
+        hop m (x,y,z) = (x - 2 * m * z,y + m * x - m ** 2 * z,z)
                                                by hop_alt
    Note m < x DIV (2 * z)
     <=> 2 * (m + 1) * z <= x                   by X_LT_DIV, 0 < z
@@ -3391,7 +3553,7 @@ QED
 (* Theorem: 0 < z /\ m = x DIV (2 * z) ==> ~is_pung (hop m (x,y,z) *)
 (* Proof:
    With m = x DIV (2 * z),
-        hop m (x,y,z) = (x - 2 * m * z,y + m * x - m * m * z,z)
+        hop m (x,y,z) = (x - 2 * m * z,y + m * x - m ** 2 * z,z)
                                                by hop_alt
    Note 2 * m * z
       = (x DIV (2 * z)) * (2 * z) <= x         by DIV_MULT_LE
@@ -3429,20 +3591,20 @@ QED
 (* To ensure hop with stay as a windmill, the conditions from hop_range are:
    x DIV (2 * z) < m /\ m <= (x + SQRT n) DIV (2 * z)
    which can be taken as (x + k) DIV (2 * z)
-   with 0 < k <= SQRT n, seems integer 0 <= k <= SQRT n is good.
+   with 0 < c <= SQRT n, seems integer 0 <= c <= SQRT n is good.
 *)
 
 (* Define the step function *)
 Definition step_def:
-   step k (x,y,z) = (x + k) DIV (2 * z)  (* depends on only x, z, not y *)
+   step c (x,y,z) = (x + c) DIV (2 * z)  (* depends on only x, z, not y *)
 End
-(* the parameter k is taken from the caller, the hopping. *)
+(* the parameter c is taken from the caller, the hopping. *)
 
 (* Define the hopping function *)
 Definition hopping_def:
-   hopping k t = hop (step k t) t
+   hopping c t = hop (step c t) t
 End
-(* the parameter k = SQRT n is taken from the caller, two_sq_hop. *)
+(* the parameter c = SQRT n is taken from the caller, two_sq_hop. *)
 
 (* Define two_squares algorithm with hopping *)
 Definition two_sq_hop_def:
@@ -3466,9 +3628,9 @@ Thus, when  mind t = mind (flip t), the triple t is a node, and the pair (t, fli
 These nodes in (mill n) are close to the hopping points of the improved algorithm.
 
 Part of the reason is due to the map   phi_m = F_1^{m} H = H F_3^{m}, with m = (x + SQRT n) DIV (2 * y) when applied to t = (x,y,z).
-hop_def         |- !m x y z. hop m (x,y,z) = (2 * m * y - x,z + m * x - m * m * y,y)
-step_def        |- !k x y. step k (x,y) = (x + k) DIV (2 * y)
-hopping_def     |- !k x y z. hopping k (x,y,z) = hop (step k (x,y)) (x,y,z)
+hop_def         |- !m x y z. hop m (x,y,z) = (2 * m * y - x,z + m * x - m ** 2 * y,y)
+step_def        |- !c x y. step c (x,y) = (x + c) DIV (2 * y)
+hopping_def     |- !c x y z. hopping c (x,y,z) = hop (step c (x,y)) (x,y,z)
 two_sq_hop_def  |- !n. two_sq_hop n = WHILE ($~ o found) (hopping (SQRT n)) (1,1,n DIV 4)
 
 > EVAL ``two_sq_hop 5``; = (1,1,1): thm
@@ -3607,7 +3769,7 @@ QED
 (*
 For this range, m <= step 0 (x,y,z) = x DIV (2 * z),
 which is ~(x DIV (2 * z) < m),
-hop m (x,y,z) = (x - 2 * m * z,y + m * x - m * m * z,z) = (xx,yy,zz)
+hop m (x,y,z) = (x - 2 * m * z,y + m * x - m ** 2 * z,z) = (xx,yy,zz)
 that is,
 xx decreases with m linearly, starting from x.
 yy varies with m quadratically, first increases, then decreases, starting from y.
@@ -4202,7 +4364,7 @@ QED
 (*
 For this range, x DIV (2 * z) = step 0 (x,y,z) < m <= step (SQRT n) (x,y,z) = (x + SQRT n) DIV (2 * z),
 which is DIV (2 * z) < m,
-hop m (x,y,z) = (2 * m * z - x,z,y + m * x - m * m * z) = (xx,yy,zz)
+hop m (x,y,z) = (2 * m * z - x,z,y + m * x - m ** 2 * z) = (xx,yy,zz)
 that is,
 xx increases with m linearly, starting from x - 2 * (step 0 (x,y,z)) * z, the "x" of the pong from ~is_ping.
 yy is always kept at original z, which is the focus.
@@ -4210,9 +4372,9 @@ zz varies with m quadratically, first increases, then decreases, starting from "
 
 Therefore, the discriminant (2 * zz - xx) for subsequent ping/pong/pung
 has two variations:
-2 * zz - xx = 2 * (y + m * x - m * m * z) - (2 * m * z - x)
-= x + 2 * y + 2 * m * x - 2 * m * m * z - 2 * m * z
-= (x + 2 * y) + 2 * m * (x - z) - 2 * m * m * z
+2 * zz - xx = 2 * (y + m * x - m ** 2 * z) - (2 * m * z - x)
+= x + 2 * y + 2 * m * x - 2 * m ** 2 * z - 2 * m * z
+= (x + 2 * y) + 2 * m * (x - z) - 2 * m ** 2 * z
 
 This is hard to handle, from the initial ~is_ping (x,y,z).
 This is handled by:
@@ -4294,7 +4456,7 @@ QED
     and m = x DIV (2 * z)                      by step_0
     and k = (x + SQRT n) DIV (2 * z)           by step_sqrt
    Let xx = 2 * (k + 1) * z - x,
-       yy = y + (k + 1) * x - (k + 1) * (k + 1) * z.
+       yy = y + (k + 1) * x - (k + 1) ** 2 * z.
    Then hop (k + 1) (x,y,z) = (xx,z,yy)        by hop_alt, 0 < z /\ x DIV (2 * z) = m < k + 1
     and n = windmill (hop k (x,y,z))           by hop_windmill k <= (x + SQRT n) DIV (2 * z)
           = windmill (xx,z,yy)                 by ping_windmill, is_ping (hop k (x,y,z))
@@ -4326,7 +4488,7 @@ Proof
   `k = (x + SQRT n) DIV (2 * z)` by fs[step_sqrt, Abbr`k`] >>
   `~(k + 1 <= (x + SQRT n) DIV (2 * z)) /\ m < k + 1` by decide_tac >>
   qabbrev_tac `xx = 2 * (k + 1) * z - x` >>
-  qabbrev_tac `yy = y + (k + 1) * x - (k + 1) * (k + 1) * z` >>
+  qabbrev_tac `yy = y + (k + 1) * x - (k + 1) ** 2 * z` >>
   `0 < z` by metis_tac[windmill_with_arms] >>
   `hop (k + 1) (x,y,z) = (xx,z,yy)` by metis_tac[hop_alt, step_0] >>
   `n = windmill (hop k (x,y,z))` by metis_tac[hop_windmill, LESS_OR_EQ] >>
@@ -4338,6 +4500,128 @@ Proof
 QED
 
 (* Excellent! *)
+
+(*
+hop_step_0_before_pong_is_pung
+|- !n m t. ~square n /\ n = windmill t /\ m < step 0 t ==> is_pung (hop m t)
+hop_step_0_at_pong_is_pong
+|- !n m t. tik n /\ ~square n /\ n = windmill t /\ m = step 0 t /\ ~is_ping t ==> is_pong (hop m t)
+hop_step_0_beyond_pong_is_ping
+|- !n m j t. tik n /\ ~square n /\ n = windmill t /\ m = step 0 t /\  m + 1 + j < step (SQRT n) t ==> is_ping (hop (m + 1 + j) t)
+hop_step_sqrt_not_ping
+|- !n t. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t ==> ~is_ping (hop (step (SQRT n) t) t)
+*)
+
+(* Idea: determine the type of (hop m t) for m from 0 to (step 0 t) up to (step (SQRT n) t). *)
+
+(* Theorem: let p = step 0 t; q = step (SQRT n) t in
+            tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m <= q ==>
+            p < q /\
+            if m < p then is_pung (hop m t)
+            else if m = p then is_pong (hop m t)
+            else if m < q then is_ping (hop m t)
+            else ~is_ping (hop m t)  *)
+(* Proof:
+   Let p = step 0 t,
+       q = step (SQRT n) t.
+   Note p < q                      by step_0_lt_step_sqrt
+   If m < p,
+      Then is_pung (hop m t)       by hop_step_0_before_pong_is_pung
+   Otherwise, if m = p,
+      Then is_pong (hop m t)       by hop_step_0_at_pong_is_pong, ~is_ping t
+   Otherwise, p < m.
+      If m < q.
+         Then m = p + 1 + j        by arithmetic, j = m - p - 1
+           so is_ping (hop m t)    by hop_step_0_beyond_pong_is_ping
+      Otherwise m = q.
+         Then ~is_ping (hop m t)   by hop_step_sqrt_not_ping
+*)
+Theorem hop_step_type:
+  !n t m. let p = step 0 t; q = step (SQRT n) t in
+          tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\ m <= q ==>
+          p < q /\
+          if m < p then is_pung (hop m t)
+          else if m = p then is_pong (hop m t)
+          else if m < q then is_ping (hop m t)
+          else ~is_ping (hop m t)
+Proof
+  rw_tac std_ss[] >-
+  metis_tac[step_0_lt_step_sqrt] >>
+  qabbrev_tac `n = windmill t` >>
+  rw[] >-
+  metis_tac[hop_step_0_before_pong_is_pung] >-
+  metis_tac[hop_step_0_at_pong_is_pong] >-
+ (`m = p + 1 + (m - p - 1)` by decide_tac >>
+  metis_tac[hop_step_0_beyond_pong_is_ping]) >>
+  `m = q` by decide_tac >>
+  metis_tac[hop_step_sqrt_not_ping]
+QED
+
+(* This is a very clean statement for (hop m t). *)
+
+(* ------------------------------------------------------------------------- *)
+(* Focus of Hopping                                                          *)
+(* ------------------------------------------------------------------------- *)
+
+(* The focus of a windmill *)
+Definition focus_def:
+   focus (x,y,z) = if is_ping (x,y,z) then y else z
+End
+
+(*
+> EVAL ``path 61 6``; = [(1,15,1); (1,1,15); (3,1,13); (5,1,9); (7,1,3); (1,5,3); (5,3,3)]: thm
+> EVAL ``MAP focus (path 61 6)``; = [1; 1; 1; 1; 3; 3; 3]: thm
+*)
+
+(* Idea: all (hop m t) nodes from a non-ping t have the same focus. *)
+
+(* Theorem: tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\
+            m < step (SQRT n) t ==> focus (hop m t) = focus t *)
+(* Proof:
+   Let t = (x,y,z),
+       p = step 0 t,
+       q = step (SQRT n) t.
+   Then focus t = z                            by focus_def, ~is_ping t
+    and p = x DIV (2 * z)                      by step_0
+    and 0 < z                                  by windmill_with_arms, ~square n
+
+   If p < m,
+      Then is_ping (hop m (x,y,z))             by hop_step_type, m <= q
+        so focus (hop m (x,y,z))
+         = focus (2 * m * z - x,z,y + m * x - m ** 2 * z)
+         = z                                   by hop_alt, focus_def, 0 < z
+   Otherwise, m <= p.
+      Then ~is_ping (hop m (x,y,z))            by hop_step_type, pung_not_ping, pong_not_ping
+        so focus (hop m (x,y,z))
+         = focus (x - 2 * m * z,y + m * x - m ** 2 * z,z)
+         = z                                   by hop_alt, focus_def, 0 < z
+*)
+Theorem hopping_focus_thm:
+  !n t m. tik n /\ ~square n /\ n = windmill t /\ ~is_ping t /\
+          m < step (SQRT n) t ==> focus (hop m t) = focus t
+Proof
+  rpt strip_tac >>
+  `?x y z. t = (x,y,z)` by metis_tac[triple_parts] >>
+  `focus t = z` by fs[focus_def] >>
+  qabbrev_tac `p = step 0 t` >>
+  qabbrev_tac `q = step (SQRT n) t` >>
+  `p = x DIV (2 * z)` by fs[step_0, Abbr`p`] >>
+  `0 < z` by metis_tac[windmill_with_arms] >>
+  `m <= q` by decide_tac >>
+  Cases_on `p < m` >| [
+    `~(m < p) /\ ~(m = p)` by decide_tac >>
+    `is_ping (hop m (x,y,z))` by metis_tac[hop_step_type] >>
+    metis_tac[hop_alt, focus_def],
+    `m < p \/ m = p` by decide_tac >| [
+      `~is_ping (hop m (x,y,z))` by metis_tac[hop_step_type, pung_not_ping] >>
+      metis_tac[hop_alt, focus_def],
+      `~is_ping (hop m (x,y,z))` by metis_tac[hop_step_type, pong_not_ping] >>
+      metis_tac[hop_alt, focus_def]
+    ]
+  ]
+QED
+
+(* This is very good! *)
 
 (* ------------------------------------------------------------------------- *)
 (* Skipping by Triples.                                                      *)
@@ -4530,102 +4814,102 @@ For n = 97, SQRT n = 9, k = n DIV 4 = 24.
 (* ------------------------------------------------------------------------- *)
 
 (* Extract the pong elements in a list. *)
-Definition pong_list_def:
-    pong_list ls = FILTER is_pong ls
+Definition pong_nodes_def:
+    pong_nodes ls = FILTER is_pong ls
 End
 
 (*
-> EVAL ``pong_list (FRONT (path 41 6))``; = [(1,10,1); (5,1,4); (3,4,2)]
-> EVAL ``pong_list (FRONT (path 61 6))``; = [(1,15,1); (1,5,3)]
-> EVAL ``pong_list (FRONT (path 97 14))``; = [(1,24,1); (1,6,4); (1,8,3); (5,3,6); (3,11,2)]
+> EVAL ``pong_nodes (FRONT (path 41 6))``; = [(1,10,1); (5,1,4); (3,4,2)]
+> EVAL ``pong_nodes (FRONT (path 61 6))``; = [(1,15,1); (1,5,3)]
+> EVAL ``pong_nodes (FRONT (path 97 14))``; = [(1,24,1); (1,6,4); (1,8,3); (5,3,6); (3,11,2)]
 *)
 
-(* Theorem: LENGTH (pong_list ls) <= LENGTH ls *)
+(* Theorem: LENGTH (pong_nodes ls) <= LENGTH ls *)
 (* Proof:
-      pong_list []
-    = FILTER is_pong []        by pong_indices_def
+      pong_nodes []
+    = FILTER is_pong []        by pong_nodes_def
     = []]                      by FILTER
 *)
-Theorem pong_list_nil:
-  pong_list [] = []
+Theorem pong_nodes_nil:
+  pong_nodes [] = []
 Proof
-  simp[pong_list_def]
+  simp[pong_nodes_def]
 QED
 
-(* Theorem: LENGTH (pong_list ls) <= LENGTH ls *)
+(* Theorem: LENGTH (pong_nodes ls) <= LENGTH ls *)
 (* Proof:
-      LENGTH (pong_list ls)
-    = LENGTH (FILTER is_pong ls)   by pong_indices_def
+      LENGTH (pong_nodes ls)
+    = LENGTH (FILTER is_pong ls)   by pong_nodes_def
    <= LENGTH ls                    by LENGTH_FILTER_LEQ
 *)
-Theorem pong_list_length:
-  !ls. LENGTH (pong_list ls) <= LENGTH ls
+Theorem pong_nodes_length:
+  !ls. LENGTH (pong_nodes ls) <= LENGTH ls
 Proof
-  simp[pong_list_def, LENGTH_FILTER_LEQ]
+  simp[pong_nodes_def, LENGTH_FILTER_LEQ]
 QED
 
-(* Theorem: let ps = pong_list ls in j < LENGTH ps ==> is_pong (EL j ps) /\ MEM (EL j ps) ls *)
+(* Theorem: let ps = pong_nodes ls in j < LENGTH ps ==> is_pong (EL j ps) /\ MEM (EL j ps) ls *)
 (* Proof:
-   Let ps = pong_list ls,
+   Let ps = pong_nodes ls,
         x = EL j ps.
    Then MEM x ps                   by EL_MEM, j < LENGTH ps
-    <=> MEM x (FILTER is_pong ls)  by pong_list_def
+    <=> MEM x (FILTER is_pong ls)  by pong_nodes_def
     <=> is_pong x /\ MEM x ls      by MEM_FILTER
 *)
-Theorem pong_list_element:
-  !ls j. let ps = pong_list ls in j < LENGTH ps ==> is_pong (EL j ps) /\ MEM (EL j ps) ls
+Theorem pong_nodes_element:
+  !ls j. let ps = pong_nodes ls in j < LENGTH ps ==> is_pong (EL j ps) /\ MEM (EL j ps) ls
 Proof
   simp[] >>
   ntac 3 strip_tac >>
-  qabbrev_tac `ps = pong_list ls` >>
+  qabbrev_tac `ps = pong_nodes ls` >>
   `MEM (EL j ps) ps` by fs[EL_MEM] >>
-  fs[pong_list_def, MEM_FILTER, Abbr`ps`]
+  fs[pong_nodes_def, MEM_FILTER, Abbr`ps`]
 QED
 
-(* Theorem: let ls = path n k; ps = pong_list (FRONT ls) in j < LENGTH ps ==>
+(* Theorem: let ls = path n k; ps = pong_nodes (FRONT ls) in j < LENGTH ps ==>
             ?h. h < k /\ EL j ps = EL h ls /\ is_pong (EL h ls) *)
 (* Proof:
    Let ls = path n k,
        fs = FRONT ls,
-       ps = pong_list fs,
+       ps = pong_nodes fs,
        t = EL j ps.
-   Then is_pong t /\ MEM t fs                  by pong_list_element
+   Then is_pong t /\ MEM t fs                  by pong_nodes_element
    Note LENGTH fs = k                          by path_front_length
     and ls <> []                               by path_not_nil
    Thus ?h. h < k /\ t = EL h fs               by MEM_EL
      or              t = EL h ls               by FRONT_EL, ls <> []
    Take this h.
 *)
-(* Theorem: ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (pong_list (FRONT ls)) *)
+(* Theorem: ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (pong_nodes (FRONT ls)) *)
 (* Proof:
        ALL_DISTINCT ls
    ==> ALL_DISTINCT (FRONT ls)                     by ALL_DISTINCT_FRONT, ls <> []
    ==> ALL_DISTINCT (FILTER is_pong (FRONT ls))    by FILTER_ALL_DISTINCT
-   ==> ALL_DISTINCT (pong_list (FRONT ls))         by pong_list_def
+   ==> ALL_DISTINCT (pong_nodes (FRONT ls))        by pong_nodes_def
 *)
-Theorem pong_list_all_distinct:
-  !ls. ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (pong_list (FRONT ls))
+Theorem pong_nodes_all_distinct:
+  !ls. ls <> [] /\ ALL_DISTINCT ls ==> ALL_DISTINCT (pong_nodes (FRONT ls))
 Proof
-  rw[pong_list_def] >>
+  rw[pong_nodes_def] >>
   simp[ALL_DISTINCT_FRONT, FILTER_ALL_DISTINCT]
 QED
 
-Theorem pong_list_path_element:
-  !n k j. let ls = path n k; ps = pong_list (FRONT ls) in j < LENGTH ps ==>
+Theorem pong_nodes_path_element:
+  !n k j. let ls = path n k; ps = pong_nodes (FRONT ls) in j < LENGTH ps ==>
            ?h. h < k /\ EL j ps = EL h ls /\ is_pong (EL h ls)
 Proof
   simp[] >>
   ntac 4 strip_tac >>
   qabbrev_tac `ls = path n k` >>
   qabbrev_tac `fs = FRONT ls` >>
-  qabbrev_tac `ps = pong_list fs` >>
+  qabbrev_tac `ps = pong_nodes fs` >>
   qabbrev_tac `t = EL j ps` >>
   `LENGTH fs = k` by fs[path_front_length, Abbr`fs`, Abbr`ls`] >>
-  `is_pong t /\ MEM t fs` by metis_tac[pong_list_element] >>
+  `is_pong t /\ MEM t fs` by metis_tac[pong_nodes_element] >>
   metis_tac[path_not_nil, MEM_EL, FRONT_EL]
 QED
 
-(* Theorem: 0 < k ==> HD (pong_list (FRONT (path n k))) = (1, n DIV 4, 1) *)
+(* Theorem: 0 < k ==> HD (pong_nodes (FRONT (path n k))) = (1, n DIV 4, 1) *)
 (* Proof:
    Let ls = FRONT (path n k),
         u = (1,n DIV 4,1).
@@ -4633,14 +4917,14 @@ QED
     and HD ls = u                              by path_front_head, 0 < k
     and is_pong u                              by is_pong_x_y_x
    Thus ls = [] ++ u::(TL ls)
-        HD (pong_list ls)
-      = HD (FILTER is_pong ls)                 by pong_list_def
+        HD (pong_nodes ls)
+      = HD (FILTER is_pong ls)                 by pong_nodes_def
       = u                                      by FILTER_HD, FILTER
 *)
-Theorem pong_list_path_head:
-  !n k. 0 < k ==> HD (pong_list (FRONT (path n k))) = (1, n DIV 4, 1)
+Theorem pong_nodes_path_head:
+  !n k. 0 < k ==> HD (pong_nodes (FRONT (path n k))) = (1, n DIV 4, 1)
 Proof
-  rw[pong_list_def] >>
+  rw[pong_nodes_def] >>
   qabbrev_tac `ls = FRONT (path n k)` >>
   qabbrev_tac `u = (1,n DIV 4,1)` >>
   `LENGTH ls = k` by fs[path_front_length, Abbr`ls`] >>
@@ -4648,26 +4932,26 @@ Proof
   fs[FILTER_HD, is_pong_x_y_x, Abbr`u`]
 QED
 
-(* Theorem: let ls = path n k; ps = pong_list (FRONT ls) in 0 < k ==> HD ps = HD ls *)
+(* Theorem: let ls = path n k; ps = pong_nodes (FRONT ls) in 0 < k ==> HD ps = HD ls *)
 (* Proof:
      HD ps
-   = (1,n DIV 4,1)             by pong_list_path_head, 0 < k
+   = (1,n DIV 4,1)             by pong_nodes_path_head, 0 < k
    = HD ls                     by path_head
 *)
-Theorem pong_list_path_head_alt:
-  !n k. let ls = path n k in 0 < k ==> HD (pong_list (FRONT ls)) = HD ls
+Theorem pong_nodes_path_head_alt:
+  !n k. let ls = path n k in 0 < k ==> HD (pong_nodes (FRONT ls)) = HD ls
 Proof
-  simp[pong_list_path_head, path_head]
+  simp[pong_nodes_path_head, path_head]
 QED
 
-(* Theorem: pong_list (FRONT (path n k)) = [] <=> k = 0 *)
+(* Theorem: pong_nodes (FRONT (path n k)) = [] <=> k = 0 *)
 (* Proof:
    Let ls = FRONT (path n k),
         u = (1, n DIV 4, 1)
    Then LENGTH ls = k                          by path_front_length
 
-       pong_list ls = []
-   <=> FILTER is_pong ls = []                  by pong_list_def
+       pong_nodes ls = []
+   <=> FILTER is_pong ls = []                  by pong_nodes_def
    <=> EVERY ~is_pong ls                       by FILTER_EQ_NIL
 
    If ls = [],
@@ -4681,10 +4965,10 @@ QED
       Thus EVERY ~is_pong ls = F               by EVERY_MEM
        and k = 0 is F                          by 0 < k
 *)
-Theorem pong_list_path_eq_nil:
-  !n k. pong_list (FRONT (path n k)) = [] <=> k = 0
+Theorem pong_nodes_path_eq_nil:
+  !n k. pong_nodes (FRONT (path n k)) = [] <=> k = 0
 Proof
-  rw[pong_list_def] >>
+  rw[pong_nodes_def] >>
   qabbrev_tac `ls = FRONT (path n k)` >>
   qabbrev_tac `u = (1,n DIV 4,1)` >>
   `LENGTH ls = k` by fs[path_front_length, Abbr`ls`] >>
@@ -4706,140 +4990,17 @@ n = 61 is an example of a pong at the end.
 > EVAL ``SQRT 61``; = 7
 > EVAL ``61 DIV 4``; = 15
 > EVAL ``MAP (\t. (t, is_pong t)) (path 61 6)``; = [((1,15,1),T); ((1,1,15),F); ((3,1,13),F); ((5,1,9),F); ((7,1,3),F); ((1,5,3),T); ((5,3,3),T)]
-> EVAL ``pong_list (FRONT (path 61 6))``; = [(1,15,1); (1,5,3)]
+> EVAL ``pong_nodes (FRONT (path 61 6))``; = [(1,15,1); (1,5,3)]
 > EVAL ``FUNPOW (skip_pung o skip_ping o pong) 0 (1,15,1)``; = (1,15,1)
 > EVAL ``FUNPOW (skip_pung o skip_ping o pong) 1 (1,15,1)``; = (1,5,3)
 
-> EVAL ``MAP (skip_ping o pong) (pong_list (FRONT (path 61 6)))``; = [(7,1,3); (5,3,3)]
+> EVAL ``MAP (skip_ping o pong) (pong_nodes (FRONT (path 61 6)))``; = [(7,1,3); (5,3,3)]
 > EVAL ``FUNPOW (hopping 7) 0 (1,15,1)``; = (1,15,1)
 > EVAL ``FUNPOW (hopping 7) 1 (1,15,1)``; = (7,1,3)
 > EVAL ``FUNPOW (hopping 7) 2 (1,15,1)``; = (5,3,3)
 
 > EVAL ``(skip_pung o skip_ping o pong) (1,15,1)``; = (1,5,3)
 *)
-
-(* Theorem: tik n /\ ~square n ==>
-            FINITE (mills n) /\ (zagier o flip) PERMUTES (mills n) /\ 0 < iterate_period (zagier o flip) (1,1,n DIV 4) *)
-(* Proof:
-   Let s = mills n,
-       u = (1,1,n DIV 4).
-   Then FINITE s                               by mills_finite_non_square, ~square n
-    and u IN s                                 by mills_element_trivial, tik n
-   Also zagier involute s                      by zagier_involute_mills, tik n /\ ~square n
-    and flip involute s                        by flip_involute_mills
-   Thus (zagier o flip) PERMUTES s             by involute_involute_permutes
-    and 0 < iterate_period (zagier o flip) u   by iterate_period_pos
-*)
-Theorem tik_non_square_property:
-  !n. tik n /\ ~square n ==>
-      FINITE (mills n) /\ (zagier o flip) PERMUTES (mills n) /\ 0 < iterate_period (zagier o flip) (1,1,n DIV 4)
-Proof
-  ntac 2 strip_tac >>
-  qabbrev_tac `s = mills n` >>
-  qabbrev_tac `u = (1,1,n DIV 4)` >>
-  qabbrev_tac `p = iterate_period (zagier o flip) u` >>
-  `FINITE s` by fs[mills_finite_non_square, Abbr`s`] >>
-  `u IN s` by simp[mills_element_trivial, Abbr`u`, Abbr`s`] >>
-  `zagier involute s` by metis_tac[zagier_involute_mills, ONE_NOT_0] >>
-  `flip involute s` by metis_tac[flip_involute_mills] >>
-  `zagier o flip PERMUTES s` by fs[involute_involute_permutes] >>
-  metis_tac[iterate_period_pos]
-QED
-
-(* Theorem: iterate_period (zagier o flip) (1,1,k) = 1 <=> k = 1 *)
-(* Proof:
-   Let u = (1,1,k),
-       f = zagier o flip,
-       p = iterate_period f u.
-   Then p = 1 <=> f u = u                      by iterate_period_eq_1
-   If 2 < k,
-      f u = (3,1,k - 2) <> u                   by zagier_def, flip_def
-   Otherwise k = 0 or 1 or 2.
-      If k = 0, f u = (1,2,0) <> u             by zagier_def, flip_def
-      If k = 1, f u = (1,1,1) = u              by zagier_def, flip_def
-      If k = 2, f u = (3,2,0) <> u             by zagier_def, flip_def
-
-     Hence the period p = 1 iff k = 1.
-*)
-Theorem zagier_flip_iterate_period_eq_1:
-  !k. iterate_period (zagier o flip) (1,1,k) = 1 <=> k = 1
-Proof
-  rw[iterate_period_eq_1] >>
-  Cases_on `2 < k` >-
-  fs[zagier_def, flip_def] >>
-  (`k = 0 \/ k = 1 \/ k = 2` by decide_tac >> fs[zagier_def, flip_def])
-QED
-
-(* Theorem: tik n ==> iterate_period (zagier o flip) (1,1,n DIV 4) <> 2 *)
-(* Proof:
-   Let u = (1,1,k),
-       f = zagier o flip,
-       p = iterate_period f u.
-   By contradiction, suppose p = 2.
-   Then f u <> u /\ f (f u) = u                by iterate_period_eq_2
-
-   If 6 < k,
-      f u = (3,1,k-2)                          by zagier_def, flip_def
-      f (f u) = (5,1,k-5)                      by zagier_def, flip_def
-      This contradicts f (f u) = u             by PAIR_EQ
-
-   Otherwise, if 3 < k,
-      f u = (3,1,k-2)                          by zagier_def, flip_def
-      f (f u) = (2 * k - 7,k - 2,6 - k)        by zagier_def, flip_def
-      This contradicts f (f u) = u             by 1 < k - 2, not 1.
-
-   Otherwise, k = 0 or 1 or 2 or 3.
-      If k = 0, f (f u) = (1,3,0) <> u, a contradiction.
-      If k = 1, f u = (1,1,1) = u     , a contradiction.
-      If k = 2, f (f u) = (3,5,0) <> u, a contradiction.
-      If k = 3, f (f u) = (1,3,1) <> u, a contradiction.
-
-     Hence the period p is never 2.
-*)
-Theorem zagier_flip_iterate_period_ne_2:
-  !k. iterate_period (zagier o flip) (1,1,k) <> 2
-Proof
-  rw[iterate_period_eq_2] >>
-  Cases_on `6 < k` >-
-  fs[zagier_def, flip_def] >>
-  Cases_on `3 < k` >-
-  fs[zagier_def, flip_def] >>
-  (`k = 0 \/ k = 1 \/ k = 2 \/ k = 3` by decide_tac >> fs[zagier_def, flip_def])
-QED
-
-(* Theorem: tik n ==> (iterate_period (zagier o flip) (1,1,n DIV 4) = 1 <=> n = 5) *)
-(* Proof:
-   Note iterate_period f u = 1 <=> n DIV 4 = 1 by zagier_flip_1_1_z_period
-   Then n = (n DIV 4) * 4 + (n MOD 4)          by DIVISION
-          = 1 * 4 + 1 = 5                      by tik n
-*)
-Theorem tik_iterate_period_eq_1:
-  !n. tik n ==> (iterate_period (zagier o flip) (1,1,n DIV 4) = 1 <=> n = 5)
-Proof
-  rpt strip_tac >>
-  `n = (n DIV 4) * 4 + 1` by metis_tac[DIVISION, DECIDE``0 < 4``] >>
-  simp[zagier_flip_1_1_z_period]
-QED
-
-(* Theorem: let ls = path n k in tik n ==> (flip (HD ls) = HD ls <=> n = 5) *)
-(* Proof:
-   Let ls = path n k.
-   Then HD ls = (1,n DIV 4,1)                  by path_head
-       flip (HD ls) = HD ls
-   <=> n DIV 4 = 1                             by flip_fix
-   <=> n = 1 * 4 + n MOD 1                     by DIVISION
-   <=> n = 1 * 4 + 1                           by tik n
-   <=> n = 5
-*)
-Theorem tik_path_head_flip_fix:
-  !n k. let ls = path n k in tik n ==> (flip (HD ls) = HD ls <=> n = 5)
-Proof
-  rw_tac std_ss[] >>
-  `HD ls = (1, n DIV 4, 1)` by fs[path_head, Abbr`ls`] >>
-  `flip (HD ls) = HD ls <=> n DIV 4 = 1` by simp[flip_fix] >>
-  `n = (n DIV 4) * 4 + 1` by metis_tac[DIVISION, DECIDE``0 < 4``] >>
-  fs[]
-QED
 
 (* Idea: the list (path n k) is all distinct unless n = 5. *)
 
@@ -4991,6 +5152,132 @@ Proof
   fs[skip_pung_thm]
 QED
 
+(* Idea: as long as the LAST is not a ping, skip_ping will remain within a (path n k). *)
+
+(* Theorem: let ls = path n k in ~is_ping (LAST ls) /\ MEM t ls ==> MEM (skip_ping t) ls *)
+(* Proof:
+   Let ls = path n k.
+   Then LENGTH ls = k + 1                      by path_length
+    and ?j. j < k + 1 /\ t = EL j ls           by MEM_EL
+   Let s = {q | j <= q /\ q <= k /\ !p. j <= p /\ p < q ==> is_ping (EL p ls)}
+   Then j IN s                                 by SPECIFICATION
+     so s <> {}                                by MEMBER_NOT_EMPTY
+   Alsp s SUBSET count (SUC k)                 by q <= k
+     so FINITE s                               by SUBSET_FINITE, FINITE_COUNT
+
+   Let q = MAX_SET s,
+   Then q IN s                                 by MAX_SET_IN_SET
+   and j <= q /\ q <= k /\ !p. j <= p /\ p < q ==> is_ping (EL p ls)
+                                               by SPECIFICATION
+
+   Claim: ~is_ping (EL q ls)
+   Proof: If q = k,
+               ~is_ping (LAST ls)
+           ==> ~is_ping EL k ls)               by path_last_alt
+            so ~is_ping (EL q ls)              by q = k
+
+          Otherwise q < k                      by q <= k
+          By contradiction, suppose is_ping (EL q ls).
+          Then q + 1 <= k                      by q < k
+            so !p. j <= p /\ p < q + 1 ==> is_ping (EL p ls)
+           ==> q + 1 IN s                      by SPECIFICATION
+          Thus q + 1 <= q                      by MAX_SET_PROPERTY
+          which is a contradiction.
+
+   Thus skip_ping t = EL q ls                  by path_skip_ping_thm
+     so MEM (EL q ls) ls                       by MEM_EL, q < k + 1 by q <= k
+*)
+Theorem path_skip_ping_member:
+  !n k t. let ls = path n k in ~is_ping (LAST ls) /\ MEM t ls ==> MEM (skip_ping t) ls
+Proof
+  rw_tac std_ss[] >>
+  fs[MEM_EL] >>
+  rename1 `j < LENGTH ls` >>
+  `LENGTH ls = k + 1` by fs[path_length, Abbr`ls`] >>
+  qabbrev_tac `s = {q | j <= q /\ q <= k /\ !p. j <= p /\ p < q ==> is_ping (EL p ls)}` >>
+  `j IN s` by fs[Abbr`s`] >>
+  `s SUBSET (count (SUC k))` by fs[SUBSET_DEF, Abbr`s`] >>
+  `FINITE s` by metis_tac[SUBSET_FINITE, FINITE_COUNT] >>
+  qabbrev_tac `q = MAX_SET s` >>
+  `q IN s` by metis_tac[MAX_SET_IN_SET, MEMBER_NOT_EMPTY] >>
+  `j <= q /\ q <= k /\ !p. j <= p /\ p < q ==> is_ping (EL p ls)` by fs[Abbr`s`] >>
+  qexists_tac `q` >>
+  simp[] >>
+  `~is_ping (EL q ls)` by
+  (`q = k \/ q < k` by decide_tac >-
+  fs[path_last_alt, Abbr`ls`] >>
+  spose_not_then strip_assume_tac >>
+  `!p. j <= p /\ p < q + 1 <=> (j <= p /\ p < q) \/ p = q` by decide_tac >>
+  `!p. j <= p /\ p < q + 1 ==> is_ping (EL p ls)` by metis_tac[] >>
+  `q + 1 IN s` by fs[Abbr`s`] >>
+  `q + 1 <= q` by metis_tac[MAX_SET_PROPERTY] >>
+  decide_tac
+  ) >>
+  metis_tac[path_skip_ping_thm]
+QED
+
+(* Theorem: let ls = path n k in ~is_pung (LAST ls) /\ MEM t ls ==> MEM (skip_pung t) ls *)
+(* Proof:
+   Let ls = path n k.
+   Then LENGTH ls = k + 1                      by path_length
+    and ?j. j < k + 1 /\ t = EL j ls           by MEM_EL
+   Let s = {q | j <= q /\ q <= k /\ !p. j <= p /\ p < q ==> is_pung (EL p ls)}
+   Then j IN s                                 by SPECIFICATION
+     so s <> {}                                by MEMBER_NOT_EMPTY
+   Alsp s SUBSET count (SUC k)                 by q <= k
+     so FINITE s                               by SUBSET_FINITE, FINITE_COUNT
+
+   Let q = MAX_SET s,
+   Then q IN s                                 by MAX_SET_IN_SET
+   and j <= q /\ q <= k /\ !p. j <= p /\ p < q ==> is_pung (EL p ls)
+                                               by SPECIFICATION
+
+   Claim: ~is_pung (EL q ls)
+   Proof: If q = k,
+               ~is_pung (LAST ls)
+           ==> ~is_pung EL k ls)               by path_last_alt
+            so ~is_pung (EL q ls)              by q = k
+
+          Otherwise q < k                      by q <= k
+          By contradiction, suppose is_pung (EL q ls).
+          Then q + 1 <= k                      by q < k
+            so !p. j <= p /\ p < q + 1 ==> is_pung (EL p ls)
+           ==> q + 1 IN s                      by SPECIFICATION
+          Thus q + 1 <= q                      by MAX_SET_PROPERTY
+          which is a contradiction.
+
+   Thus skip_pung t = EL q ls                  by path_skip_pung_thm
+     so MEM (EL q ls) ls                       by MEM_EL, q < k + 1 by q <= k
+*)
+Theorem path_skip_pung_member:
+  !n k t. let ls = path n k in ~is_pung (LAST ls) /\ MEM t ls ==> MEM (skip_pung t) ls
+Proof
+  rw_tac std_ss[] >>
+  fs[MEM_EL] >>
+  rename1 `j < LENGTH ls` >>
+  `LENGTH ls = k + 1` by fs[path_length, Abbr`ls`] >>
+  qabbrev_tac `s = {q | j <= q /\ q <= k /\ !p. j <= p /\ p < q ==> is_pung (EL p ls)}` >>
+  `j IN s` by fs[Abbr`s`] >>
+  `s SUBSET (count (SUC k))` by fs[SUBSET_DEF, Abbr`s`] >>
+  `FINITE s` by metis_tac[SUBSET_FINITE, FINITE_COUNT] >>
+  qabbrev_tac `q = MAX_SET s` >>
+  `q IN s` by metis_tac[MAX_SET_IN_SET, MEMBER_NOT_EMPTY] >>
+  `j <= q /\ q <= k /\ !p. j <= p /\ p < q ==> is_pung (EL p ls)` by fs[Abbr`s`] >>
+  qexists_tac `q` >>
+  simp[] >>
+  `~is_pung (EL q ls)` by
+  (`q = k \/ q < k` by decide_tac >-
+  fs[path_last_alt, Abbr`ls`] >>
+  spose_not_then strip_assume_tac >>
+  `!p. j <= p /\ p < q + 1 <=> (j <= p /\ p < q) \/ p = q` by decide_tac >>
+  `!p. j <= p /\ p < q + 1 ==> is_pung (EL p ls)` by metis_tac[] >>
+  `q + 1 IN s` by fs[Abbr`s`] >>
+  `q + 1 <= q` by metis_tac[MAX_SET_PROPERTY] >>
+  decide_tac
+  ) >>
+  metis_tac[path_skip_pung_thm]
+QED
+
 (* Theorem: let ls = path n k in p < q /\ q <= k /\ is_pong (EL p ls) /\ is_pong (EL q ls) /\
             (!j. p < j /\ j < q ==> ~is_pong (EL j ls)) ==> EL q ls = (skip_pung o skip_ping o pong) (EL p ls) *)
 (* Proof:
@@ -5022,23 +5309,23 @@ Proof
   rfs[pong_not_pung]
 QED
 
-(* Theorem: let ls = path n k; ps = pong_list (FRONT ls) in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
+(* Theorem: let ls = path n k; ps = pong_nodes (FRONT ls) in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
             ?p q. p < q /\ q < k /\ EL p ls = EL j ps /\ EL q ls = EL (j + 1) ps /\
             is_pong (EL p ls) /\ is_pong (EL q ls) /\ !h. p < h /\ h < q ==> ~is_pong (EL h ls) *)
 (* Proof:
    Let ls = path n k,
        fs = FRONT ls,
-       ps = pong_list fs,
+       ps = pong_nodes fs,
         t = beyond_pong (EL j ps).
    The goal is to show: n = windmill t /\ ~is_ping t /\ t <> LAST ls
 
    Note LENGTH fs = k                          by path_front_length
-    and ps = FILTER is_pong fs                 by pong_list_def
+    and ps = FILTER is_pong fs                 by pong_nodes_def
 
    Let x = EL j ps,
        y = EL (j + 1) ps.
-   Then ?p. p < k /\ x = EL p ls /\ is_pong x  by pong_list_path_element
-    and ?q. q < k /\ y = EL q ls /\ is_pong y  by pong_list_path_element
+   Then ?p. p < k /\ x = EL p ls /\ is_pong x  by pong_nodes_path_element
+    and ?q. q < k /\ y = EL q ls /\ is_pong y  by pong_nodes_path_element
    Pick these p and q.
 
    Note ls <> []                               by path_not_nil
@@ -5065,8 +5352,8 @@ QED
                                                by EVERY_EL
           Giving ~is_pong (EL h ls), a contradiction.
 *)
-Theorem pong_list_pair_in_path:
-  !n k j. let ls = path n k; ps = pong_list (FRONT ls) in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
+Theorem pong_nodes_pair_in_path:
+  !n k j. let ls = path n k; ps = pong_nodes (FRONT ls) in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
           ?p q. p < q /\ q < k /\ EL p ls = EL j ps /\ EL q ls = EL (j + 1) ps /\
           is_pong (EL p ls) /\ is_pong (EL q ls) /\ !h. p < h /\ h < q ==> ~is_pong (EL h ls)
 Proof
@@ -5074,14 +5361,14 @@ Proof
   ntac 4 strip_tac >>
   qabbrev_tac `ls = path n k` >>
   qabbrev_tac `fs = FRONT ls` >>
-  qabbrev_tac `ps = pong_list fs` >>
+  qabbrev_tac `ps = pong_nodes fs` >>
   qabbrev_tac `x = EL j ps` >>
   qabbrev_tac `y = EL (j + 1) ps` >>
   `LENGTH fs = k` by fs[path_front_length, Abbr`ls`, Abbr`fs`] >>
-  `ps = FILTER is_pong fs` by fs[pong_list_def, Abbr`ps`, Abbr`fs`] >>
+  `ps = FILTER is_pong fs` by fs[pong_nodes_def, Abbr`ps`, Abbr`fs`] >>
   `j < LENGTH ps /\ j < j + 1` by decide_tac >>
-  `?p. p < k /\ x = EL p ls /\ is_pong x` by metis_tac[pong_list_path_element] >>
-  `?q. q < k /\ y = EL q ls /\ is_pong y` by metis_tac[pong_list_path_element] >>
+  `?p. p < k /\ x = EL p ls /\ is_pong x` by metis_tac[pong_nodes_path_element] >>
+  `?q. q < k /\ y = EL q ls /\ is_pong y` by metis_tac[pong_nodes_path_element] >>
   map_every qexists_tac [`p`, `q`] >>
   `ls <> []` by fs[path_not_nil, Abbr`ls`] >>
   `ALL_DISTINCT fs` by fs[ALL_DISTINCT_FRONT, Abbr`fs`] >>
@@ -5107,27 +5394,27 @@ Proof
   rfs[]
 QED
 
-(* Theorem: let ls = path n k; ps = pong_list (FRONT ls) in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
+(* Theorem: let ls = path n k; ps = pong_nodes (FRONT ls) in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
             EL (j + 1) ps = (skip_pung o skip_ping o pong) (EL j ps) *)
 (* Proof:
    Let ls = path n k,
        fs = FRONT ls,
-       ps = pong_list fs.
+       ps = pong_nodes fs.
    The goal is to show: EL (j + 1) ps = skip_pung o skip_ping o pong (EL j ps)
 
    Note ?p q. p < q /\ q < k /\ EL p ls = EL j ps /\ EL q ls = EL (j + 1) ps /\
               is_pong (EL p ls) /\ is_pong (EL q ls) /\
               !h. p < h /\ h < q ==> ~is_pong (EL h ls)
-                                                   by pong_list_pair_in_path
+                                                   by pong_nodes_pair_in_path
    Thus EL (j + 1) ps
       = (skip_pung o skip_ping o pong) (EL j ps)   by pong_interval_next_pong
 *)
-Theorem pong_list_path_element_suc:
-  !n k j. let ls = path n k; ps = pong_list (FRONT ls) in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
+Theorem pong_nodes_path_element_suc:
+  !n k j. let ls = path n k; ps = pong_nodes (FRONT ls) in ALL_DISTINCT ls /\ j + 1 < LENGTH ps ==>
           EL (j + 1) ps = (skip_pung o skip_ping o pong) (EL j ps)
 Proof
   rw_tac std_ss[] >>
-  assume_tac pong_list_pair_in_path >>
+  assume_tac pong_nodes_pair_in_path >>
   last_x_assum (qspecl_then [`n`, `k`, `j`] strip_assume_tac) >>
   rfs[] >>
   `EL (j + 1) ps = (skip_pung o skip_ping o pong) (EL j ps)` suffices_by simp[] >>
@@ -5137,11 +5424,11 @@ QED
 
 (* Well done! *)
 
-(* Theorem: let ls = path n k; ps = pong_list (FRONT ls) in ALL_DISTINCT ls /\ j < LENGTH ps ==>
+(* Theorem: let ls = path n k; ps = pong_nodes (FRONT ls) in ALL_DISTINCT ls /\ j < LENGTH ps ==>
             EL j ps = FUNPOW (skip_pung o skip_ping o pong) j (HD ps) *)
 (* Proof:
    Let ls = path n k,
-       ps = pong_list (FRONT ls),
+       ps = pong_nodes (FRONT ls),
         f = skip_pung o skip_ping o pong.
    The goal is to show: EL j ps = FUNPOW f j (HD ps)
 
@@ -5154,12 +5441,12 @@ QED
      ==> SUC j < LENGTH ps ==> EL (SUC j) ps = FUNPOW f (SUC j) (HD ps)
      Note j < LENGTH ps                        by SUC j < LENGTH ps
        EL (SUC j) ps
-     = f (EL j ps)                             by pong_list_path_element_suc
+     = f (EL j ps)                             by pong_nodes_path_element_suc
      = f (FUNPOW f j (HD ps))                  by induction hypothesis
      = FUNPOW f (SUC j) (HD ps)                by FUNPOW_SUC
 *)
-Theorem pong_list_path_element_eqn:
-  !n k j. let ls = path n k; ps = pong_list (FRONT ls) in ALL_DISTINCT ls /\ j < LENGTH ps ==>
+Theorem pong_nodes_path_element_eqn:
+  !n k j. let ls = path n k; ps = pong_nodes (FRONT ls) in ALL_DISTINCT ls /\ j < LENGTH ps ==>
           EL j ps = FUNPOW (skip_pung o skip_ping o pong) j (HD ps)
 Proof
   rw_tac std_ss[] >>
@@ -5169,7 +5456,7 @@ Proof
   Induct_on `j` >-
   simp[] >>
   rpt strip_tac >>
-  `EL (SUC j) ps = f (EL j ps)` by metis_tac[pong_list_path_element_suc, ADD1] >>
+  `EL (SUC j) ps = f (EL j ps)` by metis_tac[pong_nodes_path_element_suc, ADD1] >>
   simp[FUNPOW_SUC]
 QED
 
@@ -5202,6 +5489,47 @@ Proof
   simp[beyond_pong_def, hopping_sqrt_eqn]
 QED
 
+(* Idea: if a pong t is in FRONT of path, then (beyond_pong t) is in path provided LAST is not a ping. *)
+
+(* Theorem: let ls = path n k in ~is_ping (LAST ls) /\
+            is_pong t /\ MEM t (FRONT ls) ==> MEM (beyond_pong t) ls *)
+(* Proof:
+   Let ls = path n k.
+   Then ls <> []                               by path_not_nil
+    and LENGTH ls = k + 1                      by path_length
+    and LENGTH (FRONT ls) = k                  by path_front_length
+     so ?j. j < k /\ t = EL j (FRONT ls)       by MEM_EL
+     or t = EL j ls                            by FRONT_EL, ls <> []
+
+        EL (SUC j) ls
+      = (zagier o flip) (EL j ls)              by path_element_suc, j < k
+      = pong t                                 by zagier_flip_pong
+    Now SUC j < k + 1                          by j < k
+     so MEM (pong t) ls                        by MEM_EL
+
+        beyond_pong t
+      = (skip_ping o pong) t                   by beyond_pong_def
+      = skip_ping (pong t)                     by o_THM
+   Thus MEM (skip_ping (pong t))               by path_skip_ping_member
+*)
+Theorem beyond_pong_path_member:
+  !n k t. let ls = path n k in ~is_ping (LAST ls) /\
+          is_pong t /\ MEM t (FRONT ls) ==> MEM (beyond_pong t) ls
+Proof
+  rw_tac std_ss[] >>
+  `ls <> []` by fs[path_not_nil, Abbr`ls`] >>
+  `LENGTH ls = k + 1` by fs[path_length, Abbr`ls`] >>
+  `LENGTH (FRONT ls) = k` by fs[path_front_length, Abbr`ls`] >>
+  `?j. j < k /\ t = EL j (FRONT ls)` by metis_tac[MEM_EL] >>
+  `_ = EL j ls` by fs[FRONT_EL] >>
+  `EL (SUC j) ls = (zagier o flip) (EL j ls)` by fs[path_element_suc, Abbr`ls`] >>
+  `_ = pong (EL j ls)` by fs[zagier_flip_pong] >>
+  `SUC j < k + 1` by decide_tac >>
+  `MEM (pong t) ls` by metis_tac[MEM_EL] >>
+  simp[beyond_pong_def] >>
+  metis_tac[path_skip_ping_member]
+QED
+
 (* Theorem: let ls = path n k in p < q /\ q <= k /\ is_pong (EL p ls) /\ is_pong (EL q ls) /\
             (!j. p < j /\ j < q ==> ~is_pong (EL j ls)) ==>
             beyond_pong (EL q ls) = (skip_ping o pong o skip_pung) (beyond_pong (EL p ls) *)
@@ -5226,7 +5554,7 @@ QED
 
 (* Define the hopping nodes. *)
 Definition hop_nodes_def:
-   hop_nodes ls = MAP beyond_pong (pong_list (FRONT ls))
+   hop_nodes ls = MAP beyond_pong (pong_nodes (FRONT ls))
 End
 
 (*
@@ -5235,30 +5563,42 @@ End
 > EVAL ``hop_nodes (path 97 14)``; = [(9,1,4); (7,4,3); (5,3,6); (7,6,2); (9,2,2)]
 *)
 
-(* Theorem: LENGTH (hop_nodes ls) = LENGTH (pong_list (FRONT ls)) *)
+(* Theorem: hop_nodes ls = MAP (skip_ping o pong) (pong_nodes (FRONT ls)) *)
+(* Proof: by hop_nodes_def, beyond_pong_def, MAP_CONG. *)
+Theorem hop_nodes_alt:
+  !ls. hop_nodes ls = MAP (skip_ping o pong) (pong_nodes (FRONT ls))
+Proof
+  simp[hop_nodes_def, beyond_pong_def, MAP_CONG]
+QED
+
+(* Get theorem by evaluation. *)
+Theorem hop_nodes_path_5_1 = EVAL ``hop_nodes (path 5 1)``;
+(* val hop_nodes_path_5_1 = |- hop_nodes (path 5 1) = [(1,1,1)]: thm *)
+
+(* Theorem: LENGTH (hop_nodes ls) = LENGTH (pong_nodes (FRONT ls)) *)
 (* Proof:
    Let f = beyond_pong.
      LENGTH (hop_nodes ls)
-   = LENGTH (MAP f (pong_list (FRONT ls)))     by hop_nodes_def
-   = LENGTH (pong_list (FRONT ls))             by LENGTH_MAP
+   = LENGTH (MAP f (pong_nodes (FRONT ls)))    by hop_nodes_def
+   = LENGTH (pong_nodes (FRONT ls))            by LENGTH_MAP
 *)
 Theorem hop_nodes_length:
-  !ls. LENGTH (hop_nodes ls) = LENGTH (pong_list (FRONT ls))
+  !ls. LENGTH (hop_nodes ls) = LENGTH (pong_nodes (FRONT ls))
 Proof
   simp[hop_nodes_def]
 QED
 
 (* Theorem: j < LENGTH (hop_nodes ls) ==>
-            EL j (hop_nodes ls) = beyond_pong (EL j (pong_list (FRONT ls))) *)
+            EL j (hop_nodes ls) = beyond_pong (EL j (pong_nodes (FRONT ls))) *)
 (* Proof:
    Let f = beyond_pong.
      EL j (hop_nodes ls)
-   = EL j (MAP f (pong_list (FRONT ls)))       by hop_nodes_def
-   = f (EL j (pong_list (FRONT ls)))           by EL_MAP
+   = EL j (MAP f (pong_nodes (FRONT ls)))      by hop_nodes_def
+   = f (EL j (pong_nodes (FRONT ls)))          by EL_MAP
 *)
 Theorem hop_nodes_element:
   !ls j. j < LENGTH (hop_nodes ls) ==>
-         EL j (hop_nodes ls) = beyond_pong (EL j (pong_list (FRONT ls)))
+         EL j (hop_nodes ls) = beyond_pong (EL j (pong_nodes (FRONT ls)))
 Proof
   simp[hop_nodes_def, EL_MAP]
 QED
@@ -5268,33 +5608,33 @@ QED
    Let ls = path n k,
         f = beyond_pong.
        hop_nodes ls = []
-   <=> MAP f (pong_list (FRONT ls)) = []       by hop_nodes_def
-   <=> pong_list (FRONT ls) = []               by MAP_EQ_NIL
-   <=> k = 0                                   by pong_list_path_eq_nil
+   <=> MAP f (pong_nodes (FRONT ls)) = []      by hop_nodes_def
+   <=> pong_nodes (FRONT ls) = []              by MAP_EQ_NIL
+   <=> k = 0                                   by pong_nodes_path_eq_nil
 *)
 Theorem hop_nodes_path_eq_nil:
   !n k. hop_nodes (path n k) = [] <=> k = 0
 Proof
-  simp[hop_nodes_def, pong_list_path_eq_nil]
+  simp[hop_nodes_def, pong_nodes_path_eq_nil]
 QED
 
 (* Theorem: let ls = path n k in tik n /\ ~square n /\ 0 < k ==>
             HD (hop_nodes ls) = hopping (SQRT n) (HD ls) *)
 (* Proof:
    Let ls = path n k,
-       ps = pong_list (FRONT ls).
+       ps = pong_nodes (FRONT ls).
    Note is_pong (HD ls)                        by path_head_is_pong, EL
      so ~is_ping (HD ls)                       by pong_not_ping
      or ~is_pung (HD ls)                       by pong_not_pung
    Thus skip_pung (HD ls) = HD ls              by skip_pung_none
     Now HD ls IN (mills n)                     by path_head, mills_element_trivial_flip, tik n
     and n = windmill (HD ls)                   by mills_element_alt
-   Also ps <> []                               by pong_list_path_eq_nil, 0 < k
+   Also ps <> []                               by pong_nodes_path_eq_nil, 0 < k
 
      HD (hop_nodes ls)
    = HD (MAP beyond_pong ps)                   by hop_nodes_def
    = beyond_pong (HD ps)                       by MAP_HD, ps <> []
-   = beyond_pong (HD ls)                       by pong_list_path_head_alt, 0 < k
+   = beyond_pong (HD ls)                       by pong_nodes_path_head_alt, 0 < k
    = (skip_ping o pong) (HD ls)                by beyond_pong_def
    = (skip_ping o pong) (skip_pung (HD ls))    by above
    = (skip_pong o pong o skip_pung) (HD ls)    by o_THM
@@ -5305,13 +5645,13 @@ Theorem hop_nodes_path_head:
         HD (hop_nodes ls) = hopping (SQRT n) (HD ls)
 Proof
   rw_tac std_ss[] >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
   `is_pong (HD ls)` by metis_tac[path_head_is_pong, EL] >>
   `skip_pung (HD ls) = HD ls` by fs[skip_pung_none, pong_not_pung] >>
-  `ps <> []` by fs[pong_list_path_eq_nil, Abbr`ps`, Abbr`ls`] >>
+  `ps <> []` by fs[pong_nodes_path_eq_nil, Abbr`ps`, Abbr`ls`] >>
   `HD (hop_nodes ls) = HD (MAP beyond_pong ps)` by simp[hop_nodes_def, Abbr`ps`] >>
   `_ = beyond_pong (HD ps)` by fs[MAP_HD] >>
-  `_ = beyond_pong (HD ls)`  by metis_tac[pong_list_path_head_alt] >>
+  `_ = beyond_pong (HD ls)`  by metis_tac[pong_nodes_path_head_alt] >>
   `_ = (skip_ping o pong) (HD ls) ` by simp[beyond_pong_def] >>
   `_ = (skip_ping o pong) (skip_pung (HD ls))` by fs[] >>
   `HD ls IN (mills n)` by fs[path_head, mills_element_trivial_flip, Abbr`ls`] >>
@@ -5320,7 +5660,29 @@ Proof
   fs[hopping_sqrt_eqn]
 QED
 
-(* Idea: Let ps = pong_list (FRONT (path n k)).
+(* Theorem: let ls = path n k in ~is_ping (LAST ls) /\ MEM t (hop_nodes ls) ==> MEM t ls *)
+(* Proof:
+   Let ls = path n k,
+       ps = pong_nodes (FRONT ls).
+        MEM t (hop_nodes ls)
+    <=> MEM t (MAP beyond_pong ps)             by hop_nodes_def
+    ==> ?y. t = beyond_pong y /\
+            MEM y (pong_nodes (FRONT ls))      by MEM_MAP
+   Thus MEM y (FRONT ls) /\ is_pong y          by pong_nodes_def, MEM_FILTER
+    ==> MEM (beyond_pong y) ls                 by beyond_pong_path_member
+     or MEM t ls                               by t = beyond_pong y
+*)
+Theorem hop_nodes_path_member:
+  !n k t. let ls = path n k in ~is_ping (LAST ls) /\ MEM t (hop_nodes ls) ==> MEM t ls
+Proof
+  rw_tac std_ss[] >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
+  fs[hop_nodes_def, MEM_MAP] >>
+  fs[pong_nodes_def, MEM_FILTER, Abbr`ps`] >>
+  metis_tac[beyond_pong_path_member]
+QED
+
+(* Idea: Let ps = pong_nodes (FRONT (path n k)).
    Note is_pong (EL j ps)           by MEM_FILTER
    If (EL j ps) is not the LAST pong,
       there is the next pong, and cut exists, and cut = beyond_pong (EL j ps)
@@ -5339,7 +5701,7 @@ QED
             ALL_DISTINCT ls /\ j + 1 < LENGTH ns ==> n = windmill t /\ ~is_ping t /\ MEM t ls /\ t <> LAST ls *)
 (* Proof:
    Let ls = path n k,
-       ps = pong_list (FRONT ls),
+       ps = pong_nodes (FRONT ls),
        ns = hop_nodes ls,
         t = EL j ns.
    The goal is to show: n = windmill t /\ ~is_ping t /\ MEM t ls /\ t <> LAST ls.
@@ -5348,7 +5710,7 @@ QED
      so ?p q. p < q /\ q < k /\ EL p ls = EL j ps /\ EL q ls = EL (j + 1) ps /\
               is_pong (EL p ls) /\ is_pong (EL q ls) /\
               !h. p < h /\ h < q ==> ~is_pong (EL h ls)
-                                               by pong_list_pair_in_path
+                                               by pong_nodes_pair_in_path
    Thus ?c. p < c /\ c <= q /\ ~is_ping (EL c ls) /\
         !p. c <= p /\ p < q ==> is_pung (EL p ls) /\
         !q. p < q /\ q < c ==> is_ping (EL q ls)
@@ -5379,11 +5741,11 @@ Proof
   simp[] >>
   ntac 4 strip_tac >>
   qabbrev_tac `ls = path n k` >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
   qabbrev_tac `ns = hop_nodes ls` >>
   qabbrev_tac `t = EL j ns` >>
   `LENGTH ns = LENGTH ps` by fs[hop_nodes_length, Abbr`ns`, Abbr`ps`] >>
-  assume_tac pong_list_pair_in_path >>
+  assume_tac pong_nodes_pair_in_path >>
   last_x_assum (qspecl_then [`n`, `k`, `j`] strip_assume_tac) >>
   rfs[] >>
   assume_tac pong_interval_cut_exists >>
@@ -5406,7 +5768,7 @@ QED
              ALL_DISTINCT ls /\ j + 1 = LENGTH ns /\ flip (LAST ls) = LAST ls *)
 (* Proof:
    Let ls = path n k,
-       ps = pong_list (FRONT ls),
+       ps = pong_nodes (FRONT ls),
        ns = hop_nodes ls,
         t = EL j ns.
    The goal is to show: n = windmill t /\ ~is_ping t /\ MEM t ls /\ t <> LAST ls.
@@ -5419,13 +5781,13 @@ QED
 
    Note LENGTH ns = LENGTH ps                  by hop_nodes_length
      so ?p. p < k /\ EL j ps = EL p ls /\ is_pong (EL p ls)
-                                               by pong_list_path_element, [1]
+                                               by pong_nodes_path_element, [1]
    Claim: !h. p < h /\ h < k ==> ~is_pong (EL h ls)
    Proof: By contradiction, suppose is_pong (EL h ls).
           Note 0 < LENGTH ps                   by j + 1 = LENGTH ps
             so ps <> []                        by LENGTH_EQ_0
           Thus EL j ps = LAST ps               by LAST_EL
-          Note ps = FILTER is_pong fs          by pong_list_def
+          Note ps = FILTER is_pong fs          by pong_nodes_def
            and ls <> []                        by path_not_nil
            ==> ALL_DISTINCT fs                 by ALL_DISTINCT_FRONT
           Note LENGTH fs = k                   by path_front_length
@@ -5467,7 +5829,7 @@ Proof
   simp[] >>
   ntac 4 strip_tac >>
   qabbrev_tac `ls = path n k` >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
   qabbrev_tac `ns = hop_nodes ls` >>
   qabbrev_tac `t = EL j ns` >>
   `EL k ls = LAST ls` by fs[path_last_alt, Abbr`ls`] >>
@@ -5477,13 +5839,13 @@ Proof
   `MEM (LAST ls) ls` by simp[LAST_MEM] >>
   `LENGTH ns = LENGTH ps` by fs[hop_nodes_length, Abbr`ns`, Abbr`ps`] >>
   `j < LENGTH ps` by decide_tac >>
-  `?p. p < k /\ EL j ps = EL p ls /\ is_pong (EL p ls)` by metis_tac[pong_list_path_element] >>
+  `?p. p < k /\ EL j ps = EL p ls /\ is_pong (EL p ls)` by metis_tac[pong_nodes_path_element] >>
   `!h. p < h /\ h < k ==> ~is_pong (EL h ls)` by
   (rpt strip_tac >>
   qabbrev_tac `fs = FRONT ls` >>
   `0 < LENGTH ps /\ j = PRE (LENGTH ps)` by decide_tac >>
   `ps <> [] /\ EL j ps = LAST ps` by metis_tac[LAST_EL, LENGTH_EQ_0, NOT_ZERO] >>
-  `ps = FILTER is_pong fs` by simp[pong_list_def, Abbr`ps`, Abbr`fs`] >>
+  `ps = FILTER is_pong fs` by simp[pong_nodes_def, Abbr`ps`, Abbr`fs`] >>
   `ls <> []` by fs[path_not_nil, Abbr`ls`] >>
   `ALL_DISTINCT fs` by fs[ALL_DISTINCT_FRONT, Abbr`fs`] >>
   `LENGTH fs = k` by fs[path_front_length, Abbr`ls`, Abbr`fs`] >>
@@ -5549,7 +5911,7 @@ QED
             EL j ns = FUNPOW (hopping (SQRT n)) (j + 1) (HD ls) *)
 (* Proof:
    Let ls = path n k,
-       ps = pong_list (FRONT ls),
+       ps = pong_nodes (FRONT ls),
         f = hopping (SQRT n).
    The goal is to show: EL j ns = FUNPOW f (j + 1) (HD ls)
 
@@ -5573,7 +5935,7 @@ QED
           EL (SUC j) ns
         = beyond_pong (EL (SUC j) ps)          by hop_nodes_element
         = beyond_pong ((skip_pung o skip_ping o pong) (EL j ps))
-                                               by pong_list_path_element_suc, SUC j < LENGTH ps
+                                               by pong_nodes_path_element_suc, SUC j < LENGTH ps
         = beyond_pong (skip_pung (beyond_pong (EL j ps)))
                                                by beyond_pong_def
         = beyond_pong (skip_pung (EL j ns))    by hop_nodes_element
@@ -5591,7 +5953,7 @@ Theorem hop_nodes_path_element_eqn:
           EL j ns = FUNPOW (hopping (SQRT n)) (j + 1) (HD ls)
 Proof
   rw_tac std_ss[] >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
   qabbrev_tac `f = hopping (SQRT n)` >>
   `0 < LENGTH ns` by decide_tac >>
   `ns <> [] /\ 0 < k` by metis_tac[hop_nodes_path_eq_nil, LENGTH_EQ_0, NOT_ZERO] >>
@@ -5603,7 +5965,7 @@ Proof
     `j < LENGTH ns` by decide_tac >>
     `n = windmill (EL j ns) /\ ~is_ping (EL j ns)` by metis_tac[hop_nodes_path_element_thm] >>
     `EL (SUC j) ns = beyond_pong (EL (SUC j) ps) ` by fs[hop_nodes_element, Abbr`ns`, Abbr`ps`] >>
-    `_ = beyond_pong ((skip_pung o skip_ping o pong) (EL j ps))` by metis_tac[pong_list_path_element_suc, ADD1] >>
+    `_ = beyond_pong ((skip_pung o skip_ping o pong) (EL j ps))` by metis_tac[pong_nodes_path_element_suc, ADD1] >>
     `_ = beyond_pong (skip_pung (EL j ns))` by simp[GSYM beyond_pong_def, GSYM hop_nodes_element, Abbr`ns`, Abbr`ps`] >>
     `_ = (skip_ping o pong) (skip_pung (EL j ns))` by simp[beyond_pong_def] >>
     `_ = (skip_ping o pong o skip_pung) (EL j ns)` by simp[] >>
@@ -5649,6 +6011,267 @@ Proof
 QED
 
 (* A very clean result. *)
+
+(* Theorem: let ls = path n k; ns = hop_nodes ls; ps = pong_nodes (FRONT ls) in
+            ALL_DISTINCT ls /\ j + 1 < LENGTH ns ==>
+            findi (EL j ps) ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi (EL (j+1) ps) ls *)
+(* Proof:
+   Let ls = path n k,
+       ps = pong_nodes (FRONT ls),
+       ns = hop_nodes ls,
+       t1 = EL j ps,
+       t2 = EL (j + 1) ps.
+   The goal is to show: findi t1 ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi t2 ls.
+
+   Note LENGTH ns = LENGTH ps                  by hop_nodes_length
+     so ?p q. p < q /\ q < k /\ EL p ls = t1 /\ EL q ls = t2 /\
+              is_pong (EL p ls) /\ is_pong (EL q ls) /\
+              !h. p < h /\ h < q ==> ~is_pong (EL h ls)
+                                               by pong_nodes_pair_in_path
+   Thus ?c. p < c /\ c <= q /\ ~is_ping (EL c ls) /\
+        !p. c <= p /\ p < q ==> is_pung (EL p ls) /\
+        !q. p < q /\ q < c ==> is_ping (EL q ls)
+                                               by pong_interval_cut_exists
+   Claim: EL j ns = EL c ls
+   Proof: Note EL (p + 1) ls
+             = (zagier o flip) (EL p ls)       by path_element_suc, ADD1
+             = pong (EL p ls)                  by zagier_flip_pong
+          Also EL c ls
+             = skip_ping (EL (p + 1) ls)       by path_skip_ping_thm
+             = skip_ping (pong (EL p ls))      by above
+             = (skip_pong o pong) (EL p ls)    by o_THM
+             = beyond_pong (EL p ls)           by beyond_pong_def
+             = beyond_pong (EL j ps)           by above
+             = EL j ns                         by hop_nodes_element
+
+    Note LENGTH ls = k + 1                     by path_length
+      so p = findi t1 ls                       by findi_EL, p < q, q < k
+     and q = findi t2 ls                       by findi_EL, q < k
+     and c = findi (EL j ns) ls                by findi_EL, c <= q, q < k
+    Thus p < c /\ c <= q                       by above
+*)
+Theorem hop_nodes_path_element_findi_range:
+  !n k j. let ls = path n k; ns = hop_nodes ls; ps = pong_nodes (FRONT ls) in
+          ALL_DISTINCT ls /\ j + 1 < LENGTH ns ==>
+          findi (EL j ps) ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi (EL (j+1) ps) ls
+Proof
+  simp[] >>
+  ntac 4 strip_tac >>
+  qabbrev_tac `ls = path n k` >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
+  qabbrev_tac `ns = hop_nodes ls` >>
+  qabbrev_tac `t1 = EL j ps` >>
+  qabbrev_tac `t2 = EL (j + 1) ps` >>
+  `LENGTH ns = LENGTH ps` by fs[hop_nodes_length, Abbr`ns`, Abbr`ps`] >>
+  assume_tac pong_nodes_pair_in_path >>
+  last_x_assum (qspecl_then [`n`, `k`, `j`] strip_assume_tac) >>
+  rfs[] >>
+  assume_tac pong_interval_cut_exists >>
+  last_x_assum (qspecl_then [`n`, `k`, `p`, `q`] strip_assume_tac) >>
+  rfs[] >>
+  `EL j ns = EL c ls` by
+  (simp[hop_nodes_element, beyond_pong_def, Abbr`ns`] >>
+  `EL (p + 1) ls = (zagier o flip) (EL p ls)` by fs[path_element_suc, GSYM ADD1, Abbr`ls`] >>
+  `_ = pong (EL p ls)` by simp[zagier_flip_pong] >>
+  assume_tac path_skip_ping_thm >>
+  last_x_assum (qspecl_then [`n`, `k`, `p+1`, `c`] strip_assume_tac) >>
+  rfs[]) >>
+  `LENGTH ls = k + 1` by fs[path_length, Abbr`ls`] >>
+  `p < LENGTH ls /\ q < LENGTH ls /\ c < LENGTH ls` by decide_tac >>
+  metis_tac[findi_EL]
+QED
+
+(* Theorem: let ls = path n k; ns = hop_nodes ls; ps = pong_nodes (FRONT ls) in
+            ALL_DISTINCT ls /\ j + 1 + h < LENGTH ns ==>
+            findi (EL j ps) ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi (EL (j+1+h) ps) ls *)
+(* Proof:
+   Let ls = path n k,
+       ps = pong_nodes (FRONT ls),
+       ns = hop_nodes ls.
+
+   By induction on h.
+   Base: 0 + (j + 1) < LENGTH ns ==>
+         findi (EL j ps) ls < findi (EL j ns) ls /\
+         findi (EL j ns) ls <= findi (EL (0 + (j + 1)) ps) ls
+         This is true                          by hop_nodes_path_element_findi_range
+   Step: h + (j + 1) < LENGTH ns ==> findi (EL j ps) ls < findi (EL j ns) ls /\
+                                     findi (EL j ns) ls <= findi (EL (h + (j + 1)) ps) ls
+    ==> SUC h + (j + 1) < LENGTH ns ==> findi (EL j ps) ls < findi (EL j ns) ls /\
+                                        findi (EL j ns) ls <= findi (EL (SUC h + (j + 1)) ps) ls
+        Note h + (j + 1) < LENGTH ns           by SUC h + (j + 1) < LENGTH ns
+        Thus findi (EL j ps) ls < findi (EL j ns) ls
+                                               by induction hypothesis
+        Also findi (EL (h + j + 1) ps) ls < findi (EL (h + j + 1) ns) ls /\
+             findi (EL (h + j + 1) ns) ls <= findi (EL (h + (j + 2)) ps) ls
+                                               by hop_nodes_path_element_findi_range
+             findi (EL j ns) ls
+          <= findi (EL (h + (j + 1)) ps) ls    by induction hypothesis
+           < findi (EL (h + (j + 2)) ps) ls    by above
+           = findi (EL (SUC h + (j + 1)) ps) ls
+*)
+Theorem hop_nodes_path_element_findi_thm:
+  !n k j h. let ls = path n k; ns = hop_nodes ls; ps = pong_nodes (FRONT ls) in
+            ALL_DISTINCT ls /\ j + 1 + h < LENGTH ns ==>
+            findi (EL j ps) ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi (EL (j+1+h) ps) ls
+Proof
+  simp[] >>
+  ntac 5 strip_tac >>
+  qabbrev_tac `ls = path n k` >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
+  qabbrev_tac `ns = hop_nodes ls` >>
+  Induct_on `h` >| [
+    strip_tac >>
+    assume_tac hop_nodes_path_element_findi_range >>
+    last_x_assum (qspecl_then [`n`, `k`, `j`] strip_assume_tac) >>
+    rfs[],
+    strip_tac >>
+    assume_tac hop_nodes_path_element_findi_range >>
+    last_x_assum (qspecl_then [`n`, `k`, `h + (j + 1)`] strip_assume_tac) >>
+    rfs[] >>
+    `h + (j + 1) < LENGTH ns /\ j + (SUC h + 1) = h + (j + 2)` by decide_tac >>
+    `findi (EL j ps) ls <= findi (EL (h + (j + 1)) ps) ls` by fs[] >>
+    `findi (EL (h + (j + 1)) ps) ls < findi (EL (j + (SUC h + 1)) ps) ls` by metis_tac[LESS_LESS_EQ_TRANS] >>
+    decide_tac
+  ]
+QED
+
+(* Theorem: let ls = path n k; ns = hop_nodes ls; ps = pong_nodes (FRONT ls) in tik n /\ ~square n /\
+            ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls /\ 0 < k ==>
+            findi (LAST ns) ls = k /\ findi (LAST ps) ls < k *)
+(* Proof:
+   Let ls = path n k,
+       ps = pong_nodes (FRONT ls),
+       ns = hop_nodes ls.
+   Note LENGTH ls = k + 1                      by path_length
+
+   Note LAST ns = LAST ls                      by hop_nodes_path_last
+    and LAST ls = EL k ls                      by path_last_alt
+     so findi (LAST ns) ls = k                 by findi_EL
+
+   Also ps <> []                               by pong_nodes_path_eq_nil, 0 < k
+     so LAST ps = EL (PRE (LENGTH ps)) ps      by LAST_EL, ps <> []
+   Thus ?p. p < k /\ LAST ps = EL p ls         by pong_nodes_path_element
+    and findi (LAST ps) ls = p < k             by findi_EL
+*)
+Theorem hop_nodes_path_element_findi_last:
+  !n k. let ls = path n k; ns = hop_nodes ls; ps = pong_nodes (FRONT ls) in tik n /\ ~square n /\
+        ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls /\ 0 < k ==>
+        findi (LAST ns) ls = k /\ findi (LAST ps) ls < k
+Proof
+  simp[] >>
+  ntac 3 strip_tac >>
+  qabbrev_tac `ls = path n k` >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
+  qabbrev_tac `ns = hop_nodes ls` >>
+  `LENGTH ls = k + 1` by fs[path_length, Abbr`ls`] >>
+  strip_tac >| [
+    `LAST ns = LAST ls` by metis_tac[hop_nodes_path_last] >>
+    `_ = EL k ls` by fs[path_last_alt, Abbr`ls`] >>
+    fs[findi_EL],
+    `ps <> []` by fs[pong_nodes_path_eq_nil, Abbr`ps`, Abbr`ls`] >>
+    `0 < LENGTH ps` by metis_tac[LENGTH_EQ_0, NOT_ZERO] >>
+    `PRE (LENGTH ps) < LENGTH ps` by decide_tac >>
+    `?p. p < k /\ LAST ps = EL p ls` by metis_tac[LAST_EL, pong_nodes_path_element] >>
+    fs[findi_EL]
+  ]
+QED
+
+(* Theorem: let ls = path n k in tik n /\ ~square n /\
+            ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls ==> ALL_DISTINCT (hop_nodes ls) *)
+(* Proof:
+   Let ls = path n k,
+       ps = pong_nodes (FRONT ls),
+       ns = hop_nodes ls,
+        f = beyond_pong.
+   Note LENGTH ns = LENGTH ps                  by hop_nodes_length
+    and ls <> []                               by path_not_nil
+   Thus ALL_DISTINCT ps                        by pong_nodes_all_distinct, ls <> []
+
+   Claim: !x y. MEM x ps /\ MEM y ps /\ f x = f y ==> x = y
+   Proof: Let h = LENGTH ps.
+          Then ?j1. j1 < h /\ x = EL j1 ps     by MEM_EL
+           and ?j2. j2 < h /\ y = EL j2 ps     by MEM_EL
+          Also f x = EL j1 ns                  by hop_nodes_element, h = LENGTH ns
+           and f y = EL j2 ns                  by hop_nodes_element, h = LENGTH ns
+          Note 0 < h                           by j1 < h
+          Thus ps <> [] /\ ns <> []            by LENGTH_EQ_0, h = LENGTH ns
+            so 0 < k                           by hop_nodes_path_eq_nil
+
+          By contradiction, suppose x <> y.
+          That is, j1 ps <> EL j2 ps           by above
+            so j1 <> j2                        by ALL_DISTINCT_EL_IMP
+
+          If j1 < j2, i.e,. j1 + 1 <= j2.
+             Let d = j2 - j1 - 1,
+             Then findi x ls < findi (f x) ls /\ findi (f x) ls <= findi y ls
+                                               by hop_nodes_path_element_findi_thm
+              and if j2 + 1 < h,
+             then findi y ls < findi (f y) ls /\ findi (f y) ls <= findi (EL (j2 + 1) ps) ls
+                                               by hop_nodes_path_element_findi_range
+              But f x = f y                    by assumption
+               so findi y ls < findi (f y) ls = findi (f x) ls <= findi y ls
+               or findi y ls < findi y ls, a contradiction
+             Thus ~(j2 + 1 < h),
+               or h <= j2 + 1 < h + 1          by j2 < h
+              ==> h = j2 + 1                   by arithmetic
+             Then f x = LAST ls                by hop_nodes_path_element_thm
+               or f y = LAST ls                by f x = f y
+               so h = j1 + 1                   by hop_nodes_path_element_thm
+              ==> j1 = j2                      by h = j1 + 1 = j2 + 1
+              which contradicts j1 < j2.
+          If j2 < j1, the proof is similar.
+
+       ALL_DISTINCT ls
+   ==> ALL_DISTINCT ps                         by pong_nodes_all_distinct
+   ==> ALL_DISTINCT (MAP f ps)                 by ALL_DISTINCT_MAP_INJ, claim
+   <=> ALL_DISTINCT (hop_nodes ls)             by hop_nodes_def
+*)
+Theorem hop_nodes_path_all_distinct:
+  !n k. let ls = path n k in tik n /\ ~square n /\
+        ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls ==> ALL_DISTINCT (hop_nodes ls)
+Proof
+  rw_tac std_ss[hop_nodes_def] >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
+  qabbrev_tac `ns = hop_nodes ls` >>
+  `LENGTH ns = LENGTH ps` by fs[hop_nodes_length, Abbr`ns`, Abbr`ps`] >>
+  `ls <> []` by fs[path_not_nil, Abbr`ls`] >>
+  `ALL_DISTINCT ps` by fs[pong_nodes_all_distinct, Abbr`ps`] >>
+  irule ALL_DISTINCT_MAP_INJ >>
+  rw[MEM_EL] >>
+  rename1 `EL j1 ps = EL j2 ps` >>
+  `EL j1 ns = EL j2 ns` by fs[hop_nodes_element, Abbr`ns`, Abbr`ps`] >>
+  `0 < LENGTH ps` by decide_tac >>
+  `ps <> [] /\ ns <> []` by metis_tac[LENGTH_EQ_0, NOT_ZERO] >>
+  `0 < k` by fs[hop_nodes_path_eq_nil, Abbr`ns`, Abbr`ls`] >>
+  spose_not_then strip_assume_tac >>
+  `j1 <> j2` by metis_tac[ALL_DISTINCT_EL_IMP] >>
+  `j1 < j2 \/ j2 < j1` by decide_tac >| [
+    `j2 = j1 + 1 + (j2 - j1 - 1)` by decide_tac >>
+    qabbrev_tac `d = j2 - j1 - 1` >>
+    assume_tac hop_nodes_path_element_findi_thm >>
+    last_x_assum (qspecl_then [`n`, `k`, `j1`, `d`] strip_assume_tac) >>
+    rfs[] >>
+    assume_tac hop_nodes_path_element_findi_range >>
+    last_x_assum (qspecl_then [`n`, `k`, `j2`] strip_assume_tac) >>
+    rfs[] >>
+    `LENGTH ps = j2 + 1` by decide_tac >>
+    `j1 + 1 = LENGTH ns` by metis_tac[hop_nodes_path_element_thm] >>
+    decide_tac,
+    `j1 = j2 + 1 + (j1 - j2 - 1)` by decide_tac >>
+    qabbrev_tac `d = j1 - j2 - 1` >>
+    assume_tac hop_nodes_path_element_findi_thm >>
+    last_x_assum (qspecl_then [`n`, `k`, `j2`, `d`] strip_assume_tac) >>
+    rfs[] >>
+    assume_tac hop_nodes_path_element_findi_range >>
+    last_x_assum (qspecl_then [`n`, `k`, `j1`] strip_assume_tac) >>
+    rfs[] >>
+    `LENGTH ps = j1 + 1` by decide_tac >>
+    `j2 + 1 = LENGTH ns` by metis_tac[hop_nodes_path_element_thm] >>
+    decide_tac
+  ]
+QED
+
+(* A very good result. *)
 
 (* ------------------------------------------------------------------------- *)
 (* Hopping for tik primes.                                                   *)
@@ -5696,33 +6319,67 @@ Proof
   metis_tac[tik_prime_property]
 QED
 
-(* Idea: for ls = path n k, LAST ls is iterate (zagier o flip) of zagier-fix to half period. *)
+(*
+involute_involute_fix_orbit_fix_odd_inv |> ISPEC ``zagier`` |> ISPEC ``flip`` |> ISPEC ``mills n`` |> SPEC ``p:num`` |> ISPEC ``(1,1,n DIV 4)``;
+val it = |- FINITE (mills n) /\ zagier involute mills n /\ flip involute mills n /\
+      (1,1,n DIV 4) IN fixes zagier (mills n) /\
+      p = iterate_period (zagier o flip) (1,1,n DIV 4) /\ ODD p ==>
+      FUNPOW (zagier o flip) (1 + HALF p) (1,1,n DIV 4) IN
+      fixes flip (mills n): thm
 
-(* Theorem: let ls = path n k; u = (1,1,n DIV 4); p = iterate_period (zagier o flip) u in
-            k = 1 + HALF p ==> LAST ls = FUNPOW (zagier o flip) (HALF p) u *)
-(* Proof:
-   Note ls <> []                   by path_not_nil
-    and 0 < k                      by k = 1 + HALF p
-
-     LAST ls
-   = EL k ls                       by path_last_alt
-   = EL (1 + HALF p) ls            by k = 1 + HALF p
-   = EL (SUC (HALF p)) ls          by ADD1
-   = EL (HALF p) (TL ls)           by EL
-   = FUNPOW (zagier o flip) (HALF p) u
-                                   by path_tail_element, HALF p < k
+path_last  |- !n k. LAST (path n k) = FUNPOW (zagier o flip) k (1,1,n DIV 4)
+path_last |> SPEC ``n:num`` |> SPEC ``1 + HALF p``;
+val it = |- LAST (path n (1 + HALF p)) = FUNPOW (zagier o flip) (1 + HALF p) (1,1,n DIV 4): thm
 *)
-Theorem path_last_at_half_period:
-  !n k. let ls = path n k; u = (1,1,n DIV 4); p = iterate_period (zagier o flip) u in
-        k = 1 + HALF p ==> LAST ls = FUNPOW (zagier o flip) (HALF p) u
+
+(* Idea: the last element of path is not a ping. *)
+
+(* Theorem: prime n /\ tik n /\ p = iterate_period (zagier o flip) (1,1,n DIV 4) ==>
+            ~is_ping (LAST (path n (1 + HALF p))) *)
+(* Proof:
+   Let s = mills n,
+       u = (1,1,n DIV 4),
+       k = 1 + HALF p,
+       v = FUNPOW (zagier o flip) k u,
+       ls = path n (1 + k).
+   Note ~square n /\ FINITE s /\
+        zagier involute s /\ flip involute s /\
+        fixes zagier s = {u} /\ ODD p          by tik_prime_property
+   Thus u IN fixes zagier s                    by IN_SING
+    and u IN s                                 by mills_element_trivial, tik n
+    and v IN fixes flip s                      by involute_involute_fix_orbit_fix_odd
+     so ~is_ping v                             by flip_fixes_element, not_ping_x_y_y
+
+    Claim: v = LAST ls
+    Proof: LAST ls
+         = EL (1 + k) ls                       by path_last_alt
+         = FUNPOW (zagier o flip) k (EL 1 ls)  by path_element_thm
+         = FUNPOW (zagier o flip) k u = v      by path_element_1
+
+    Thus ~is_ping (LAST ls)                    by ~is_ping v
+*)
+Theorem tik_prime_path_last_not_ping:
+  !n p. prime n /\ tik n /\ p = iterate_period (zagier o flip) (1,1,n DIV 4) ==>
+        ~is_ping (LAST (path n (1 + HALF p)))
 Proof
-  rw_tac std_ss[] >>
-  qabbrev_tac `k = 1 + HALF p` >>
-  `ls <> []` by fs[path_not_nil, Abbr`ls`] >>
-  `0 < k /\ HALF p < k` by fs[Abbr`k`] >>
-  `LAST ls = EL (SUC (HALF p)) ls` by fs[path_last_alt, ADD1, Abbr`ls`, Abbr`k`] >>
-  `_ = EL (HALF p) (TL ls)` by simp[EL] >>
-  fs[path_tail_element, Abbr`ls`, Abbr`u`]
+  rpt strip_tac >>
+  qabbrev_tac `s = mills n` >>
+  qabbrev_tac `u = (1,1,n DIV 4)` >>
+  qabbrev_tac `k = HALF p` >>
+  qabbrev_tac `v = FUNPOW (zagier o flip) k u` >>
+  qabbrev_tac `ls = path n (1 + k)` >>
+  `~square n /\ FINITE s /\ zagier involute s /\ flip involute s /\ fixes zagier s = {u} /\ ODD p` by metis_tac[tik_prime_property] >>
+  `u IN fixes zagier s` by simp[] >>
+  `u IN s` by metis_tac[mills_element_trivial] >>
+  drule_then strip_assume_tac involute_involute_fix_orbit_fix_odd >>
+  last_x_assum (qspecl_then [`zagier`, `flip`, `p`, `u`] strip_assume_tac) >>
+  rfs[] >>
+  `~is_ping v` by metis_tac[triple_parts, flip_fixes_element, not_ping_x_y_y] >>
+  `v = LAST ls` by
+  (`LAST ls = EL (1 + k) ls` by fs[path_last_alt, Abbr`ls`] >>
+  `_ = FUNPOW (zagier o flip) k (EL 1 ls)` by fs[path_element_thm, Abbr`ls`] >>
+  simp[path_element_1, Abbr`ls`, Abbr`u`, Abbr`v`]) >>
+  fs[]
 QED
 
 (* Idea: for ls = path n k of a tik prime, flip (LAST ls) = (LAST ls) when k = 1 + HALF (iterate period). *)
@@ -5899,6 +6556,86 @@ Proof
   ]
 QED
 
+(* Idea: for the hop nodes, only the LAST one is a flip fix. *)
+
+(* Theorem: let ls = path n k; ns = hop_nodes ls in tik n /\ prime n /\
+            k = 1 + HALF (iterate_period (zagier o flip) (1,1,n DIV 4)) /\
+            MEM t ns /\ flip (HD ls) <> HD ls ==> (flip t = t <=> t = LAST ns) *)
+(* Proof:
+   Let  s = mills n,
+        u = (1,1,n DIV 4),
+        p = iterate_period (zagier o flip) u,
+        k = 1 + HALF p,
+       ls = path n k,
+       ns = hop_nodes ls.
+   The goal is to show: MEM t ns ==> flip t = t <=> t = LAST ns
+
+   Note 0 < k                                  by k = 1 + HALF p
+    and flip (LAST ls) = LAST ls               by tik_prime_path_last_flip_fix
+    and ~square n /\ FINITE s /\
+        zagier involute s /\ flip involute s /\
+        fixes zagier s = {u} /\ ODD p          by tik_prime_property
+   Also n <> 5                                 by path_head_flip_fix
+     so ALL_DISTINCT ls                        by path_all_distinct, ~square n
+    and LAST ns = LAST ls                      by hop_nodes_path_last, ~square n
+
+   It remains to show: MEM t ns /\ flip t = t ==> t = LAST ls.
+
+   Note LENGTH ls = k + 1                      by path_length
+    and ~is_ping (LAST ls)                     by path_last_not_ping
+     so MEM t ls                               by hop_nodes_path_member
+    ==> ?h. h < k + 1 /\ t = EL h ls           by MEM_EL
+     and h <> 0 < h                            by EL, flip (HD ls) <> HD ls
+
+    Let j = h - 1, so h = 1 + j and h <= k     by h < k + 1
+        EL h ls
+      = FUNPOW (zagier o flip) j (EL 1 ls)     by path_element_thm
+      = FUNPOW (zagier o flip) j u             by path_element_1
+   Note 0 < p                                  by ODD_POS
+     so k <= p                                 by HALF_ADD1_LE
+     or j < p                                  by 1 + j < k + 1, k <= p
+   Thus t IN s                                 by path_element_in_mills
+    and t IN fixes flip s                      by flip_fixes_alt
+    ==> j = HALF p                             by involute_involute_fix_odd_period_fix
+     so h = 1 + j = 1 + HALF p = k             by arithmetic
+     or t = EL k ls = LAST ls                  by path_last_alt
+*)
+Theorem tik_prime_hop_nodes_member_flip_fix:
+  !n k t. let ls = path n k; ns = hop_nodes ls in tik n /\ prime n /\
+          k = 1 + HALF (iterate_period (zagier o flip) (1,1,n DIV 4)) /\
+          MEM t ns /\ flip (HD ls) <> HD ls ==> (flip t = t <=> t = LAST ns)
+Proof
+  rw_tac std_ss[] >>
+  qabbrev_tac `s = mills n` >>
+  qabbrev_tac `u = (1,1,n DIV 4)` >>
+  qabbrev_tac `p = iterate_period (zagier o flip) u` >>
+  qabbrev_tac `k = 1 + HALF p` >>
+  `0 < k` by simp[Abbr`k`] >>
+  `flip (LAST ls) = LAST ls` by metis_tac[tik_prime_path_last_flip_fix] >>
+  `~square n /\ FINITE s /\ zagier involute s /\ flip involute s /\ fixes zagier s = {u} /\ ODD p` by metis_tac[tik_prime_property] >>
+  `n <> 5` by metis_tac[path_head_flip_fix] >>
+  `ALL_DISTINCT ls` by fs[path_all_distinct, Abbr`ls`, Abbr`k`] >>
+  `LAST ns = LAST ls` by metis_tac[hop_nodes_path_last] >>
+  rw[EQ_IMP_THM] >>
+  `~is_ping (LAST ls)` by metis_tac[path_last_not_ping] >>
+  `MEM t ls` by metis_tac[hop_nodes_path_member] >>
+  `?h. h < k + 1 /\ t = EL h ls` by metis_tac[path_length, MEM_EL] >>
+  `h <> 0` by metis_tac[EL] >>
+  `h = 1 + (h - 1) /\ h <= k` by decide_tac >>
+  qabbrev_tac `j = h - 1` >>
+  `EL h ls = FUNPOW (zagier o flip) j u` by metis_tac[path_element_thm, path_element_1] >>
+  `k <= p` by fs[ODD_POS, HALF_ADD1_LE, Abbr`k`] >>
+  `j < p` by decide_tac >>
+  `t IN s` by metis_tac[path_element_in_mills] >>
+  `t IN fixes flip s` by fs[flip_fixes_alt] >>
+  drule_then strip_assume_tac involute_involute_fix_odd_period_fix >>
+  last_x_assum (qspecl_then [`zagier`, `flip`, `p`, `u`, `j`] strip_assume_tac) >>
+  rfs[] >>
+  simp[path_last_alt, Abbr`ls`]
+QED
+
+(* This is similar to tik_prime_path_flip_fix_iff_alt, but for ns = hop_nodes ls, instead of ls. *)
+
 (* Theorem: let ls = path n k in tik n /\ prime n /\
             k = 1 + HALF (iterate_period (zagier o flip) (1,1,n DIV 4)) ==>
             WHILE (\t. flip t <> t) (hopping (SQRT n)) (HD ls) = LAST ls *)
@@ -5925,7 +6662,7 @@ QED
            h = LENGTH ns.
       Note ~square n                           by prime_non_square
        and flip (LAST ls) = LAST ls            by tik_prime_path_last_flip_fix
-       and flip (HD ls) <> HD ls               by tik_path_head_flip_fix, n <> 5
+       and flip (HD ls) <> HD ls               by path_head_flip_fix, n <> 5
        and ALL_DISTINCT ls                     by path_all_distinct, n <> 5
       Also 0 < k                               by k = 1 + HALF p
       Thus LAST ns = LAST ls /\ LAST ls = FUNPOW b h (HD ls)
@@ -5971,7 +6708,7 @@ Proof
     qabbrev_tac `h = LENGTH ns` >>
     `~square n` by simp[prime_non_square] >>
     `flip (LAST ls) = LAST ls` by metis_tac[tik_prime_path_last_flip_fix] >>
-    `flip (HD ls) <> HD ls` by metis_tac[tik_path_head_flip_fix] >>
+    `flip (HD ls) <> HD ls` by metis_tac[path_head_flip_fix] >>
     `ALL_DISTINCT ls` by fs[path_all_distinct, Abbr`ls`] >>
     `0 < k` by fs[Abbr`k`] >>
     `LAST ns = LAST ls /\ LAST ls = FUNPOW b h (HD ls)` by metis_tac[hop_nodes_path_last] >>
@@ -6045,6 +6782,113 @@ QED
 
 (* Finally!! This shows the correctness of the hopping algorithm.  *)
 
+(* Idea: rework the proof in accordance with the paper, based on hop nodes. *)
+
+(* Theorem: tik n /\ prime n ==> two_sq_hop n IN fixes flip (mills n) *)
+(* Proof:
+   Let s = mills n,
+       f = hopping (SQRT n),
+       u = (1,1,n DIV 4),
+       v = (1,n DIV 4,1),
+       g = (~) o found.
+   By two_sq_hop_def, this is to show: WHILE ($~ o found) f v IN fixes flip s
+
+   Note g = (~) o found = (\t. flip t <> t)    by found_def, flip_def, FUN_EQ_THM
+   Thus the goal is: WHILE g f v IN fixes flip s
+
+   If n = 5,
+      Then v = (1,1,1) IN s                    by mills_element_trivial_flip, tik n
+       and flip v = v                          by flip_fix
+        so WHILE (\t. flip t <> t) f v = v     by iterate_while_none
+       and v IN fixes flip s                   by flip_fixes_alt
+
+   Otherwise, n <> 5,
+       so ALL_DISTINCT ls                      by path_all_distinct
+      Let p = iterate_period (zagier o flip) u,
+          k = 1 + HALF p,
+         ls = path n k,
+         ns = hop_nodes ls,
+          h = LENGTH ns.
+      Then HD ls = v                           by path_head
+      Note ~square n                           by prime_non_square, prime n
+       and 0 < k                               by k = 1 + HALF p
+       and flip (LAST ls) = LAST ls            by tik_prime_path_last_flip_fix
+      Thus LAST ns = LAST ls /\
+           LAST ls = FUNPOW f h v              by hop_nodes_path_last
+        or ~g (FUNPOW f h v)                   by ~g t <=> flip t = t, [1]
+
+     Claim: !j. j < h ==> g (FUNPOW f j v)
+     Proof: Note flip v <> v                   by path_head_flip_fix, n <> 5
+            Let t = FUNPOW f j v.
+            If j = 0,
+            Then t = v                         by FUNPOW_0
+             and flip t <> t                   by above
+              so g t                           by g t <=> flip t <> t
+            Otherwise, 0 < j.
+             Then t = EL (PRE j) ns            by hop_nodes_path_element_eqn
+              and MEM t ns                     by MEM_EL, PRE j < h
+              ==> ns <> []                     by NIL_NO_MEM
+              and ALL_DISTINCT ns              by hop_nodes_path_all_distinct
+               so t <> LAST ns                 by ALL_DISTINCT_LAST_EL_IFF
+              ==> flip t <> t                  by tik_prime_hop_nodes_member_flip_fix, [2]
+
+      Thus WHILE g f v = LAST ls               by iterate_while_thm, [1] [2]
+       Now LAST ls = EL k ls                   by path_last_alt
+        so LAST ls IN s                        by path_element_in_mills
+       ==> LAST ls IN fixes flip s             by flip_fixes_alt, flip (LAST ls) = LAST ls
+*)
+Theorem two_sq_hop_thm[allow_rebind]:
+  !n. tik n /\ prime n ==> two_sq_hop n IN fixes flip (mills n)
+Proof
+  rw[two_sq_hop_def] >>
+  qabbrev_tac `s = mills n` >>
+  qabbrev_tac `f = hopping (SQRT n)` >>
+  qabbrev_tac `u = (1,1,n DIV 4)` >>
+  qabbrev_tac `v = (1,n DIV 4,1)` >>
+  qabbrev_tac `g = $~ o found` >>
+  `g = \t. flip t <> t` by
+  (rw[FUN_EQ_THM, Abbr`g`] >>
+  `?x y z. t = (x,y,z)` by rw[triple_parts] >>
+  simp[found_def, flip_def]) >>
+  Cases_on `n = 5` >| [
+    `v IN s` by fs[mills_element_trivial_flip, Abbr`v`, Abbr`s`] >>
+    `flip v = v` by fs[flip_fix, Abbr`v`] >>
+    `v IN fixes flip s` by fs[flip_fixes_alt] >>
+    rfs[iterate_while_none],
+    qabbrev_tac `p = iterate_period (zagier o flip) u` >>
+    qabbrev_tac `k = 1 + HALF p` >>
+    qabbrev_tac `ls = path n k` >>
+    qabbrev_tac `ns = hop_nodes ls` >>
+    qabbrev_tac `h = LENGTH ns` >>
+    `0 < k` by simp[Abbr`k`] >>
+    `~square n` by simp[prime_non_square] >>
+    `ALL_DISTINCT ls` by fs[path_all_distinct, Abbr`ls`] >>
+    `HD ls = v` by fs[path_head, Abbr`ls`, Abbr`v`] >>
+    `flip (LAST ls) = LAST ls` by metis_tac[tik_prime_path_last_flip_fix] >>
+    `LAST ns = LAST ls /\ LAST ls = FUNPOW f h v` by metis_tac[hop_nodes_path_last] >>
+    `~g (FUNPOW f h v)` by metis_tac[] >>
+    `!j. j < h ==> g (FUNPOW f j v)` by
+  (rpt strip_tac >>
+    qabbrev_tac `t = FUNPOW f j v` >>
+    `flip v <> v` by metis_tac[path_head_flip_fix] >>
+    `j = 0 \/ 0 < j` by decide_tac >-
+    metis_tac[FUNPOW_0] >>
+    `j = (PRE j) + 1 /\ PRE j < h` by decide_tac >>
+    `t = EL (PRE j) ns` by metis_tac[hop_nodes_path_element_eqn] >>
+    `MEM t ns` by metis_tac[MEM_EL] >>
+    `ns <> []` by metis_tac[NIL_NO_MEM] >>
+    `ALL_DISTINCT ns` by metis_tac[hop_nodes_path_all_distinct] >>
+    `j <> h` by decide_tac >>
+    `t <> LAST ns` by metis_tac[ALL_DISTINCT_LAST_EL_IFF] >>
+    metis_tac[tik_prime_hop_nodes_member_flip_fix]
+    ) >>
+    `WHILE g f v = LAST ls` by metis_tac[iterate_while_thm] >>
+    `LAST ls = EL k ls` by fs[path_last_alt, Abbr`ls`] >>
+    `LAST ls IN s` by rfs[path_element_in_mills, Abbr`ls`, Abbr`s`] >>
+    metis_tac[flip_fixes_alt]
+  ]
+QED
+
 (* Extract the two squares of hopping algorithm. *)
 Definition two_squares_hop_def:
     two_squares_hop n = let (x,y,z) = two_sq_hop n in (x, y + z)
@@ -6100,12 +6944,12 @@ These have more than one zagier-fix, each corresponds to a flip-fix.
 
 (* Define direct hop as pop. *)
 Definition pop_def:
-   pop m (x,y,z) = (2 * m * z - x,z,y + m * x - m * m * z)
+   pop m (x,y,z) = (2 * m * z - x,z,y + m * x - m ** 2 * z)
 End
 
 (* Define direct hopping. *)
 Definition popping_def:
-   popping k t = pop (step k t) t
+   popping c t = pop (step c t) t
 End
 
 (* Idea: the hop in hopping (SQRT n) can be simplifed for non-ping. *)
@@ -6123,7 +6967,7 @@ End
      hopping (SQRT n) (x,y,z)
    = hop (step (SQRT n) (x,y,z)) (x,y,z)       by hopping_def
    = hop m (x,y,z)                             by step_sqrt
-   = (2 * m * z - x,z,y + m * x - m * m * z)   by hop_def, [1]
+   = (2 * m * z - x,z,y + m * x - m ** 2 * z)  by hop_def, [1]
    = pop m (x,y,z)                             by pop_def
    = popping (SQRT n) (x,y,z)                  by popping_def
 *)
@@ -6201,7 +7045,7 @@ QED
             EL j ns = FUNPOW (popping (SQRT n)) (j + 1) (HD ls) *)
 (* Proof:
    Let ls = path n k,
-       ps = pong_list (FRONT ls),
+       ps = pong_nodes (FRONT ls),
         g = popping (SQRT n.
    The goal is to show: EL j ns = FUNPOW g (j + 1) (HD ls)
 
@@ -6214,7 +7058,7 @@ QED
          beyond_pong (EL 0 ps)
        = beyond_pong (HD ps)                   by EL
        = g (HD ls)                             by hop_nodes_path_head_by_pop, 0 < k
-       = g (HD ps)                             by pong_list_path_head_alt, 0 < k
+       = g (HD ps)                             by pong_nodes_path_head_alt, 0 < k
        = FUNPOW g 1 (HD ps)                    by FUNPOW_1
    Step: j < LENGTH ns ==> EL j ns = FUNPOW g (j + 1) (HD ls)
      ==> SUC j < LENGTH ns ==> EL (SUC j) ns = FUNPOW g (SUC j + 1) (HD ls)
@@ -6226,7 +7070,7 @@ QED
           EL (SUC j) ns
         = beyond_pong (EL (SUC j) ps)          by hop_nodes_element
         = beyond_pong ((skip_pung o skip_ping o pong) (EL j ps))
-                                               by pong_list_path_element_suc, SUC j < LENGTH ps
+                                               by pong_nodes_path_element_suc, SUC j < LENGTH ps
         = beyond_pong (skip_pung (beyond_pong (EL j ps)))
                                                by beyond_pong_def
         = beyond_pong (skip_pung (EL j ns))    by hop_nodes_element
@@ -6244,19 +7088,19 @@ Theorem hop_nodes_path_element_eqn_by_pop:
           EL j ns = FUNPOW (popping (SQRT n)) (j + 1) (HD ls)
 Proof
   rw_tac std_ss[] >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
+  qabbrev_tac `ps = pong_nodes (FRONT ls)` >>
   qabbrev_tac `g = popping (SQRT n)` >>
   `0 < LENGTH ns` by decide_tac >>
   `ns <> [] /\ 0 < k` by metis_tac[hop_nodes_path_eq_nil, LENGTH_EQ_0, NOT_ZERO] >>
   Induct_on `j` >| [
     rw[] >>
-    metis_tac[hop_nodes_path_head_by_pop, pong_list_path_head_alt, FUNPOW_1],
+    metis_tac[hop_nodes_path_head_by_pop, pong_nodes_path_head_alt, FUNPOW_1],
     rpt strip_tac >>
     `LENGTH ns = LENGTH ps` by fs[hop_nodes_length, Abbr`ns`, Abbr`ps`] >>
     `j < LENGTH ns` by decide_tac >>
     `n = windmill (EL j ns) /\ ~is_ping (EL j ns)` by metis_tac[hop_nodes_path_element_thm] >>
     `EL (SUC j) ns = beyond_pong (EL (SUC j) ps) ` by fs[hop_nodes_element, Abbr`ns`, Abbr`ps`] >>
-    `_ = beyond_pong ((skip_pung o skip_ping o pong) (EL j ps))` by metis_tac[pong_list_path_element_suc, ADD1] >>
+    `_ = beyond_pong ((skip_pung o skip_ping o pong) (EL j ps))` by metis_tac[pong_nodes_path_element_suc, ADD1] >>
     `_ = beyond_pong (skip_pung (EL j ns))` by simp[GSYM beyond_pong_def, GSYM hop_nodes_element, Abbr`ns`, Abbr`ps`] >>
     `_ = (skip_ping o pong) (skip_pung (EL j ns))` by simp[beyond_pong_def] >>
     `_ = (skip_ping o pong o skip_pung) (EL j ns)` by simp[] >>
@@ -6327,7 +7171,7 @@ QED
            h = LENGTH ns.
       Note ~square n                           by prime_non_square
        and flip (LAST ls) = LAST ls            by tik_prime_path_last_flip_fix
-       and flip (HD ls) <> HD ls               by tik_path_head_flip_fix, n <> 5
+       and flip (HD ls) <> HD ls               by path_head_flip_fix, n <> 5
        and ALL_DISTINCT ls                     by path_all_distinct, n <> 5
       Also 0 < k                               by k = 1 + HALF p
       Thus LAST ns = LAST ls /\ LAST ls = FUNPOW b h (HD ls)
@@ -6373,7 +7217,7 @@ Proof
     qabbrev_tac `h = LENGTH ns` >>
     `~square n` by simp[prime_non_square] >>
     `flip (LAST ls) = LAST ls` by metis_tac[tik_prime_path_last_flip_fix] >>
-    `flip (HD ls) <> HD ls` by metis_tac[tik_path_head_flip_fix] >>
+    `flip (HD ls) <> HD ls` by metis_tac[path_head_flip_fix] >>
     `ALL_DISTINCT ls` by fs[path_all_distinct, Abbr`ls`] >>
     `0 < k` by fs[Abbr`k`] >>
     `LAST ns = LAST ls /\ LAST ls = FUNPOW b h (HD ls)` by metis_tac[hop_nodes_path_last_by_pop] >>
@@ -6504,8 +7348,8 @@ Theorem node_suc = node_def |> CONJUNCT2;
 (* Proof:
    Let u = (1,n DIV 4,1).
      node n 1
-   = popping (SQRT n) (hop_node n 0)       by node_suc, ONE
-   = popping (SQRT n) u                    by node_0
+   = popping (SQRT n) (hop_node n 0)           by node_suc, ONE
+   = popping (SQRT n) u                        by node_0
 *)
 Theorem node_1:
   !n. node n 1 = popping (SQRT n) (1,n DIV 4,1)
@@ -6656,6 +7500,63 @@ End
 > EVAL ``EL 6 (path 61 6)``; = (5,3,3)
 
 *)
+
+(* Theorem: FUNPOW ping m (1,1,k) = (1 + 2 * m, 1, k - m - m ** 2) *)
+(* Proof:
+   By induction on m.
+   Base: FUNPOW ping 0 (1,1,k) = (1 + 2 * 0,1,k - 0 - 0 ** 2)
+      LHS = FUNPOW ping 0 (1,1,k)
+          = (1,1,k)                by FUNPOW_0
+          = RHS                    by arithmetic
+   Step: FUNPOW ping m (1,1,k) = (1 + 2 * m,1,k - m - m ** 2)
+     ==> FUNPOW ping (SUC m) (1,1,k) = (1 + 2 * SUC m,1,k - SUC m - SUC m ** 2)
+         FUNPOW ping (SUC m) (1,1,k)
+       = ping (FUNPOW ping m (1,1,k))          by FUNPOW_SUC
+       = ping (1 + 2 * m,1,k - m - m ** 2)     by induction hypothesis
+       = (1 + 2 * m + 2,1,k - m - m ** 2 - 1 - (1 + 2 * m))
+                                               by ping_def
+       = (1 + 2 * SUC m,1,k - SUC m - SUC m ** 2)
+                                               by arithmetic, ADD1
+*)
+Theorem ping_funpow_1_1_k:
+  !m k. FUNPOW ping m (1,1,k) = (1 + 2 * m, 1, k - m - m ** 2)
+Proof
+  rpt strip_tac >>
+  Induct_on `m` >-
+  simp[] >>
+  simp[FUNPOW_SUC, ping_def] >>
+  simp[ADD1, SUM_SQUARED]
+QED
+
+(* Theorem: tik n ==> let (x,y,z) = FUNPOW ping m (1,1,n DIV 4) in m < HALF (SQRT n) ==> 0 < z *)
+(* Proof:
+   Note 0 < n                                  by tik n
+   Let k = n DIV 4,
+   Then n = 4 * k + 1                          by DIVISION, tik n
+    and FUNPOW ping m (1,1,k)
+      = (1 + 2 * m, 1, k - m - m ** 2)         by ping_funpow_1_1_k
+   Thus z = k - m - m ** 2                     by PAIR
+        0 < z
+    <=> 0 < k - m - m ** 2                     by EXP_2
+    <=> m ** 2 + m < k                         by SUB_LEFT_LESS
+    <=> 4 * m ** 2 + 4 * m + 1 < 4 * k + 1     by LT_MULT_LCANCEL, LT_ADD_RCANCEL
+    <=>       (2 * m + 1) ** 2 < n             by SUM_SQUARED
+    <=>            m < HALF (SQRT n)           by odd_square_lt
+*)
+Theorem ping_funpow_1_1_k_range:
+  !n m. tik n /\ ~square n ==> let (x,y,z) = FUNPOW ping m (1,1,n DIV 4) in 0 < z <=> m < HALF (1 + SQRT n)
+Proof
+  rw_tac std_ss[] >>
+  qabbrev_tac `k = n DIV 4` >>
+  `n = 4 * k + 1` by metis_tac[DIVISION, MULT_COMM, DECIDE``0 < 4``] >>
+  fs[ping_funpow_1_1_k] >>
+  `0 < z <=> m ** 2 + m < k` by simp[] >>
+  `_ = (4 * (m ** 2 + m) + 1 < n)` by fs[] >>
+  `_ = (4 * m ** 2 + 4 * m + 1 < n)` by decide_tac >>
+  `_ = ((2 * m) ** 2 + 4 * m + 1 < n)` by simp[EXP_BASE_MULT] >>
+  `_ = ((2 * m + 1) ** 2 < n)` by simp[SUM_SQUARED] >>
+  fs[odd_square_lt]
+QED
 
 (* Theorem: let h = HALF (1 + SQRT n) in tik n /\ ~square n /\ h <= k ==>
             !j. 0 < j /\ j < h ==> is_ping (EL j (path n k)) *)
@@ -6973,7 +7874,7 @@ QED
            = (xx - 2 * z,xx + yy - z,z)        by pung_def
            = (x - 2 * z * (j + 1),             by hop_identity_1
               y + (j + 1) * x - (j + 1) ** 2 * z, z)  by hop_identity_3, 0 < xx, 0 < yy
-           = (x - 2 * m * z,y + m * x - m * m * z,z)  by m = j + 1
+           = (x - 2 * m * z,y + m * x - m ** 2 * z,z)  by m = j + 1
            = hop m (x,y,z)                     by hop_alt, m <= x DIV (2 * z)
 *)
 Theorem hop_step_0_path_element:
@@ -7116,26 +8017,26 @@ Proof
   simp[hopping_def]
 QED
 
-(* Theorem: let ls = path n k; ps = pong_list (FRONT ls) in tik n /\ ~square n /\ ALL_DISTINCT ls /\
+(* Theorem: let ls = path n k; ps = pong_nodes (FRONT ls) in tik n /\ ~square n /\ ALL_DISTINCT ls /\
             j + 1 < LENGTH ps ==> EL (j + 1) ps = ((hopping 0) o beyond_pong) (EL j ps) *)
 (* Proof:
    Let ls = path n k,
        ns = hop_nodes ls,
-       ps = pong_list (FRONT ls),
+       ps = pong_nodes (FRONT ls),
         t = EL j ps.
    Note LENGTH ns = LENGTH ps                  by hop_nodes_length
      so EL j ns = beyond_pong t                by hop_nodes_element
    Then n = windmill (beyond_pong t)           by hop_nodes_path_element_less, tik n
 
    Note EL (j + 1) ps
-      = (skip_pung o skip_ping o pong) t       by pong_list_path_element_suc
+      = (skip_pung o skip_ping o pong) t       by pong_nodes_path_element_suc
       = skip_pung ((skip_ping o pong) t)       by o_THM
       = skip_pung (beyond_pong t)              by beyond_pong_def
       = hopping 0 (beyond_pong t)              by hopping_0, tik n /\ ~square n
       = ((hopping 0) o beyond_pong) t          by o_THM
 *)
-Theorem pong_list_path_element_suc_by_hop:
-  !n k j. let ls = path n k; ps = pong_list (FRONT ls) in tik n /\ ~square n /\ ALL_DISTINCT ls /\
+Theorem pong_nodes_path_element_suc_by_hop:
+  !n k j. let ls = path n k; ps = pong_nodes (FRONT ls) in tik n /\ ~square n /\ ALL_DISTINCT ls /\
           j + 1 < LENGTH ps ==> EL (j + 1) ps = ((hopping 0) o beyond_pong) (EL j ps)
 Proof
   rw_tac std_ss[] >>
@@ -7144,17 +8045,17 @@ Proof
   `LENGTH ns = LENGTH ps` by fs[hop_nodes_length, Abbr`ns`, Abbr`ps`] >>
   `EL j ns = beyond_pong t` by fs[hop_nodes_element, Abbr`ns`, Abbr`t`] >>
   `n = windmill (beyond_pong t)` by metis_tac[hop_nodes_path_element_less] >>
-  assume_tac pong_list_path_element_suc >>
+  assume_tac pong_nodes_path_element_suc >>
   last_x_assum (qspecl_then [`n`, `k`, `j`] strip_assume_tac) >>
   rfs[] >>
   fs[hopping_0, beyond_pong_def]
 QED
 
-(* Theorem: let ls = path n k; ps = pong_list (FRONT ls) in tik n /\ ~square n /\ ALL_DISTINCT ls /\
+(* Theorem: let ls = path n k; ps = pong_nodes (FRONT ls) in tik n /\ ~square n /\ ALL_DISTINCT ls /\
             j < LENGTH ps ==> EL j ps = FUNPOW ((hopping 0) o beyond_pong) j (HD ps) *)
 (* Proof:
    Let ls = path n k,
-       ps = pong_list (FRONT ls),
+       ps = pong_nodes (FRONT ls),
         f = (hopping 0) o beyond_pong.
    The goal is to show: EL j ps = FUNPOW f j (HD ps)
 
@@ -7167,12 +8068,12 @@ QED
      ==> SUC j < LENGTH ps ==> EL (SUC j) ps = FUNPOW f (SUC j) (HD ps)
      Note j < LENGTH ps                        by SUC j < LENGTH ps
        EL (SUC j) ps
-     = f (EL j ps)                             by pong_list_path_element_suc_by_hop
+     = f (EL j ps)                             by pong_nodes_path_element_suc_by_hop
      = f (FUNPOW f j (HD ps))                  by induction hypothesis
      = FUNPOW f (SUC j) (HD ps)                by FUNPOW_SUC
 *)
-Theorem pong_list_path_element_eqn_by_hop:
-  !n k j. let ls = path n k; ps = pong_list (FRONT ls) in tik n /\ ~square n /\ ALL_DISTINCT ls /\
+Theorem pong_nodes_path_element_eqn_by_hop:
+  !n k j. let ls = path n k; ps = pong_nodes (FRONT ls) in tik n /\ ~square n /\ ALL_DISTINCT ls /\
           j < LENGTH ps ==> EL j ps = FUNPOW ((hopping 0) o beyond_pong) j (HD ps)
 Proof
   rw_tac std_ss[] >>
@@ -7182,270 +8083,9 @@ Proof
   Induct_on `j` >-
   simp[] >>
   rpt strip_tac >>
-  `EL (SUC j) ps = f (EL j ps)` by metis_tac[pong_list_path_element_suc_by_hop, ADD1] >>
+  `EL (SUC j) ps = f (EL j ps)` by metis_tac[pong_nodes_path_element_suc_by_hop, ADD1] >>
   simp[FUNPOW_SUC]
 QED
-
-(* Theorem: let ls = path n k; ns = hop_nodes ls; ps = pong_list (FRONT ls) in
-            ALL_DISTINCT ls /\ j + 1 < LENGTH ns ==>
-            findi (EL j ps) ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi (EL (j+1) ps) ls *)
-(* Proof:
-   Let ls = path n k,
-       ps = pong_list (FRONT ls),
-       ns = hop_nodes ls,
-       t1 = EL j ps,
-       t2 = EL (j + 1) ps.
-   The goal is to show: findi t1 ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi t2 ls.
-
-   Note LENGTH ns = LENGTH ps                  by hop_nodes_length
-     so ?p q. p < q /\ q < k /\ EL p ls = t1 /\ EL q ls = t2 /\
-              is_pong (EL p ls) /\ is_pong (EL q ls) /\
-              !h. p < h /\ h < q ==> ~is_pong (EL h ls)
-                                               by pong_list_pair_in_path
-   Thus ?c. p < c /\ c <= q /\ ~is_ping (EL c ls) /\
-        !p. c <= p /\ p < q ==> is_pung (EL p ls) /\
-        !q. p < q /\ q < c ==> is_ping (EL q ls)
-                                               by pong_interval_cut_exists
-   Claim: EL j ns = EL c ls
-   Proof: Note EL (p + 1) ls
-             = (zagier o flip) (EL p ls)       by path_element_suc, ADD1
-             = pong (EL p ls)                  by zagier_flip_pong
-          Also EL c ls
-             = skip_ping (EL (p + 1) ls)       by path_skip_ping_thm
-             = skip_ping (pong (EL p ls))      by above
-             = (skip_pong o pong) (EL p ls)    by o_THM
-             = beyond_pong (EL p ls)           by beyond_pong_def
-             = beyond_pong (EL j ps)           by above
-             = EL j ns                         by hop_nodes_element
-
-    Note LENGTH ls = k + 1                     by path_length
-      so p = findi t1 ls                       by findi_EL, p < q, q < k
-     and q = findi t2 ls                       by findi_EL, q < k
-     and c = findi (EL j ns) ls                by findi_EL, c <= q, q < k
-    Thus p < c /\ c <= q                       by above
-*)
-Theorem hop_nodes_path_element_findi_range:
-  !n k j. let ls = path n k; ns = hop_nodes ls; ps = pong_list (FRONT ls) in
-          ALL_DISTINCT ls /\ j + 1 < LENGTH ns ==>
-          findi (EL j ps) ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi (EL (j+1) ps) ls
-Proof
-  simp[] >>
-  ntac 4 strip_tac >>
-  qabbrev_tac `ls = path n k` >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
-  qabbrev_tac `ns = hop_nodes ls` >>
-  qabbrev_tac `t1 = EL j ps` >>
-  qabbrev_tac `t2 = EL (j + 1) ps` >>
-  `LENGTH ns = LENGTH ps` by fs[hop_nodes_length, Abbr`ns`, Abbr`ps`] >>
-  assume_tac pong_list_pair_in_path >>
-  last_x_assum (qspecl_then [`n`, `k`, `j`] strip_assume_tac) >>
-  rfs[] >>
-  assume_tac pong_interval_cut_exists >>
-  last_x_assum (qspecl_then [`n`, `k`, `p`, `q`] strip_assume_tac) >>
-  rfs[] >>
-  `EL j ns = EL c ls` by
-  (simp[hop_nodes_element, beyond_pong_def, Abbr`ns`] >>
-  `EL (p + 1) ls = (zagier o flip) (EL p ls)` by fs[path_element_suc, GSYM ADD1, Abbr`ls`] >>
-  `_ = pong (EL p ls)` by simp[zagier_flip_pong] >>
-  assume_tac path_skip_ping_thm >>
-  last_x_assum (qspecl_then [`n`, `k`, `p+1`, `c`] strip_assume_tac) >>
-  rfs[]) >>
-  `LENGTH ls = k + 1` by fs[path_length, Abbr`ls`] >>
-  `p < LENGTH ls /\ q < LENGTH ls /\ c < LENGTH ls` by decide_tac >>
-  metis_tac[findi_EL]
-QED
-
-(* Theorem: let ls = path n k; ns = hop_nodes ls; ps = pong_list (FRONT ls) in
-            ALL_DISTINCT ls /\ j + 1 + h < LENGTH ns ==>
-            findi (EL j ps) ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi (EL (j+1+h) ps) ls *)
-(* Proof:
-   Let ls = path n k,
-       ps = pong_list (FRONT ls),
-       ns = hop_nodes ls.
-
-   By induction on h.
-   Base: 0 + (j + 1) < LENGTH ns ==>
-         findi (EL j ps) ls < findi (EL j ns) ls /\
-         findi (EL j ns) ls <= findi (EL (0 + (j + 1)) ps) ls
-         This is true                          by hop_nodes_path_element_findi_range
-   Step: h + (j + 1) < LENGTH ns ==> findi (EL j ps) ls < findi (EL j ns) ls /\
-                                     findi (EL j ns) ls <= findi (EL (h + (j + 1)) ps) ls
-    ==> SUC h + (j + 1) < LENGTH ns ==> findi (EL j ps) ls < findi (EL j ns) ls /\
-                                        findi (EL j ns) ls <= findi (EL (SUC h + (j + 1)) ps) ls
-        Note h + (j + 1) < LENGTH ns           by SUC h + (j + 1) < LENGTH ns
-        Thus findi (EL j ps) ls < findi (EL j ns) ls
-                                               by induction hypothesis
-        Also findi (EL (h + j + 1) ps) ls < findi (EL (h + j + 1) ns) ls /\
-             findi (EL (h + j + 1) ns) ls <= findi (EL (h + (j + 2)) ps) ls
-                                               by hop_nodes_path_element_findi_range
-             findi (EL j ns) ls
-          <= findi (EL (h + (j + 1)) ps) ls    by induction hypothesis
-           < findi (EL (h + (j + 2)) ps) ls    by above
-           = findi (EL (SUC h + (j + 1)) ps) ls
-*)
-Theorem hop_nodes_path_element_findi_thm:
-  !n k j h. let ls = path n k; ns = hop_nodes ls; ps = pong_list (FRONT ls) in
-            ALL_DISTINCT ls /\ j + 1 + h < LENGTH ns ==>
-            findi (EL j ps) ls < findi (EL j ns) ls /\ findi (EL j ns) ls <= findi (EL (j+1+h) ps) ls
-Proof
-  simp[] >>
-  ntac 5 strip_tac >>
-  qabbrev_tac `ls = path n k` >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
-  qabbrev_tac `ns = hop_nodes ls` >>
-  Induct_on `h` >| [
-    strip_tac >>
-    assume_tac hop_nodes_path_element_findi_range >>
-    last_x_assum (qspecl_then [`n`, `k`, `j`] strip_assume_tac) >>
-    rfs[],
-    strip_tac >>
-    assume_tac hop_nodes_path_element_findi_range >>
-    last_x_assum (qspecl_then [`n`, `k`, `h + (j + 1)`] strip_assume_tac) >>
-    rfs[] >>
-    `h + (j + 1) < LENGTH ns /\ j + (SUC h + 1) = h + (j + 2)` by decide_tac >>
-    `findi (EL j ps) ls <= findi (EL (h + (j + 1)) ps) ls` by fs[] >>
-    `findi (EL (h + (j + 1)) ps) ls < findi (EL (j + (SUC h + 1)) ps) ls` by metis_tac[LESS_LESS_EQ_TRANS] >>
-    decide_tac
-  ]
-QED
-
-(* Theorem: let ls = path n k; ns = hop_nodes ls; ps = pong_list (FRONT ls) in tik n /\ ~square n /\
-            ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls /\ 0 < k ==>
-            findi (LAST ns) ls = k /\ findi (LAST ps) ls < k *)
-(* Proof:
-   Let ls = path n k,
-       ps = pong_list (FRONT ls),
-       ns = hop_nodes ls.
-   Note LENGTH ls = k + 1                      by path_length
-
-   Note LAST ns = LAST ls                      by hop_nodes_path_last
-    and LAST ls = EL k ls                      by path_last_alt
-     so findi (LAST ns) ls = k                 by findi_EL
-
-   Also ps <> []                               by pong_list_path_eq_nil, 0 < k
-     so LAST ps = EL (PRE (LENGTH ps)) ps      by LAST_EL, ps <> []
-   Thus ?p. p < k /\ LAST ps = EL p ls         by pong_list_path_element
-    and findi (LAST ps) ls = p < k             by findi_EL
-*)
-Theorem hop_nodes_path_element_findi_last:
-  !n k. let ls = path n k; ns = hop_nodes ls; ps = pong_list (FRONT ls) in tik n /\ ~square n /\
-        ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls /\ 0 < k ==>
-        findi (LAST ns) ls = k /\ findi (LAST ps) ls < k
-Proof
-  simp[] >>
-  ntac 3 strip_tac >>
-  qabbrev_tac `ls = path n k` >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
-  qabbrev_tac `ns = hop_nodes ls` >>
-  `LENGTH ls = k + 1` by fs[path_length, Abbr`ls`] >>
-  strip_tac >| [
-    `LAST ns = LAST ls` by metis_tac[hop_nodes_path_last] >>
-    `_ = EL k ls` by fs[path_last_alt, Abbr`ls`] >>
-    fs[findi_EL],
-    `ps <> []` by fs[pong_list_path_eq_nil, Abbr`ps`, Abbr`ls`] >>
-    `0 < LENGTH ps` by metis_tac[LENGTH_EQ_0, NOT_ZERO] >>
-    `PRE (LENGTH ps) < LENGTH ps` by decide_tac >>
-    `?p. p < k /\ LAST ps = EL p ls` by metis_tac[LAST_EL, pong_list_path_element] >>
-    fs[findi_EL]
-  ]
-QED
-
-(* Theorem: let ls = path n k in tik n /\ ~square n /\
-            ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls ==> ALL_DISTINCT (hop_nodes ls) *)
-(* Proof:
-   Let ls = path n k,
-       ps = pong_list (FRONT ls),
-       ns = hop_nodes ls,
-        f = beyond_pong.
-   Note LENGTH ns = LENGTH ps                  by hop_nodes_length
-    and ls <> []                               by path_not_nil
-   Thus ALL_DISTINCT ps                        by pong_list_all_distinct, ls <> []
-
-   Claim: !x y. MEM x ps /\ MEM y ps /\ f x = f y ==> x = y
-   Proof: Let h = LENGTH ps.
-          Then ?j1. j1 < h /\ x = EL j1 ps     by MEM_EL
-           and ?j2. j2 < h /\ y = EL j2 ps     by MEM_EL
-          Also f x = EL j1 ns                  by hop_nodes_element, h = LENGTH ns
-           and f y = EL j2 ns                  by hop_nodes_element, h = LENGTH ns
-          Note 0 < h                           by j1 < h
-          Thus ps <> [] /\ ns <> []            by LENGTH_EQ_0, h = LENGTH ns
-            so 0 < k                           by hop_nodes_path_eq_nil
-
-          By contradiction, suppose x <> y.
-          That is, j1 ps <> EL j2 ps           by above
-            so j1 <> j2                        by ALL_DISTINCT_EL_IMP
-
-          If j1 < j2, i.e,. j1 + 1 <= j2.
-             Let d = j2 - j1 - 1,
-             Then findi x ls < findi (f x) ls /\ findi (f x) ls <= findi y ls
-                                               by hop_nodes_path_element_findi_thm
-              and if j2 + 1 < h,
-             then findi y ls < findi (f y) ls /\ findi (f y) ls <= findi (EL (j2 + 1) ps) ls
-                                               by hop_nodes_path_element_findi_range
-              But f x = f y                    by assumption
-               so findi y ls < findi (f y) ls = findi (f x) ls <= findi y ls
-               or findi y ls < findi y ls, a contradiction
-             Thus ~(j2 + 1 < h),
-               or h <= j2 + 1 < h + 1          by j2 < h
-              ==> h = j2 + 1                   by arithmetic
-             Then f x = LAST ls                by hop_nodes_path_element_thm
-               or f y = LAST ls                by f x = f y
-               so h = j1 + 1                   by hop_nodes_path_element_thm
-              ==> j1 = j2                      by h = j1 + 1 = j2 + 1
-              which contradicts j1 < j2.
-          If j2 < j1, the proof is similar.
-
-       ALL_DISTINCT ls
-   ==> ALL_DISTINCT ps                         by pong_list_all_distinct
-   ==> ALL_DISTINCT (MAP f ps)                 by ALL_DISTINCT_MAP_INJ, claim
-   <=> ALL_DISTINCT (hop_nodes ls)             by hop_nodes_def
-*)
-Theorem hop_nodes_path_all_distinct:
-  !n k. let ls = path n k in tik n /\ ~square n /\
-        ALL_DISTINCT ls /\ flip (LAST ls) = LAST ls ==> ALL_DISTINCT (hop_nodes ls)
-Proof
-  rw_tac std_ss[hop_nodes_def] >>
-  qabbrev_tac `ps = pong_list (FRONT ls)` >>
-  qabbrev_tac `ns = hop_nodes ls` >>
-  `LENGTH ns = LENGTH ps` by fs[hop_nodes_length, Abbr`ns`, Abbr`ps`] >>
-  `ls <> []` by fs[path_not_nil, Abbr`ls`] >>
-  `ALL_DISTINCT ps` by fs[pong_list_all_distinct, Abbr`ps`] >>
-  irule ALL_DISTINCT_MAP_INJ >>
-  rw[MEM_EL] >>
-  rename1 `EL j1 ps = EL j2 ps` >>
-  `EL j1 ns = EL j2 ns` by fs[hop_nodes_element, Abbr`ns`, Abbr`ps`] >>
-  `0 < LENGTH ps` by decide_tac >>
-  `ps <> [] /\ ns <> []` by metis_tac[LENGTH_EQ_0, NOT_ZERO] >>
-  `0 < k` by fs[hop_nodes_path_eq_nil, Abbr`ns`, Abbr`ls`] >>
-  spose_not_then strip_assume_tac >>
-  `j1 <> j2` by metis_tac[ALL_DISTINCT_EL_IMP] >>
-  `j1 < j2 \/ j2 < j1` by decide_tac >| [
-    `j2 = j1 + 1 + (j2 - j1 - 1)` by decide_tac >>
-    qabbrev_tac `d = j2 - j1 - 1` >>
-    assume_tac hop_nodes_path_element_findi_thm >>
-    last_x_assum (qspecl_then [`n`, `k`, `j1`, `d`] strip_assume_tac) >>
-    rfs[] >>
-    assume_tac hop_nodes_path_element_findi_range >>
-    last_x_assum (qspecl_then [`n`, `k`, `j2`] strip_assume_tac) >>
-    rfs[] >>
-    `LENGTH ps = j2 + 1` by decide_tac >>
-    `j1 + 1 = LENGTH ns` by metis_tac[hop_nodes_path_element_thm] >>
-    decide_tac,
-    `j1 = j2 + 1 + (j1 - j2 - 1)` by decide_tac >>
-    qabbrev_tac `d = j1 - j2 - 1` >>
-    assume_tac hop_nodes_path_element_findi_thm >>
-    last_x_assum (qspecl_then [`n`, `k`, `j2`, `d`] strip_assume_tac) >>
-    rfs[] >>
-    assume_tac hop_nodes_path_element_findi_range >>
-    last_x_assum (qspecl_then [`n`, `k`, `j1`] strip_assume_tac) >>
-    rfs[] >>
-    `LENGTH ps = j1 + 1` by decide_tac >>
-    `j2 + 1 = LENGTH ns` by metis_tac[hop_nodes_path_element_thm] >>
-    decide_tac
-  ]
-QED
-
-(* A very good result. *)
 
 (*
 Example of a path with two flip-fixes.
@@ -7537,6 +8177,7 @@ End
 > EVAL ``zf_pop 1933``; = [(1,483,1); (43,1,21); (41,21,3); (43,3,7); (41,7,9); (31,9,27);
                            (23,27,13); (29,13,21); (13,21,21)]
 *)
+
 
 
 (* ------------------------------------------------------------------------- *)

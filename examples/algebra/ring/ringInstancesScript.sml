@@ -449,27 +449,28 @@ QED
    But m MOD n = 0 means n divides m  by DIVIDES_MOD_0
    Therefore m = n                    by DIVIDES_ANTISYM
 *)
-val ZN_char = store_thm(
-  "ZN_char",
-  ``!n. 0 < n ==> (char (ZN n) = n)``,
+Theorem ZN_char[allow_rebind]:
+  !n. 0 < n ==> (char (ZN n) = n)
+Proof
   rpt strip_tac >>
-  `Ring (ZN n)` by rw_tac std_ss [ZN_ring] >>
-  `(ZN n).sum.id = 0` by rw[ZN_def, add_mod_def] >>
-  `(ZN n).sum.exp 1 n = 0` by rw[ZN_lemma2, ZN_def, add_mod_def, times_mod_def, monoid_exp_def, ADD_COMM] >>
-  Cases_on `n = 1` >| [
-    `(ZN n).prod.id = 0` by rw[ZN_def, times_mod_def] >>
-    `(char (ZN n)) divides n` by rw[GSYM ring_char_divides] >>
+  ‘Ring (ZN n)’ by rw_tac std_ss [ZN_ring] >>
+  ‘(ZN n).sum.id = 0’ by rw[ZN_def, add_mod_def] >>
+  ‘(ZN n).sum.exp 1 n = 0’ by rw[ZN_lemma2, ZN_def, add_mod_def, times_mod_def, monoid_exp_def, ADD_COMM] >>
+  Cases_on ‘n = 1’ >| [
+    ‘(ZN n).prod.id = 0’ by rw[ZN_def, times_mod_def] >>
+    ‘(char (ZN n)) divides n’ by rw[GSYM ring_char_divides] >>
     metis_tac[DIVIDES_ONE],
-    `(ZN n).prod.id = 1` by rw[ZN_def, times_mod_def] >>
-    `(ZN n).sum.exp 1 n = 0` by rw[ZN_lemma2, ZN_def, add_mod_def, times_mod_def, monoid_exp_def, ADD_COMM] >>
-    `(char (ZN n)) divides n` by rw[GSYM ring_char_divides] >>
-    `(char (ZN n)) <= n` by rw[DIVIDES_LE] >>
-    qabbrev_tac `m = char (ZN n)` >>
-    `(ZN n).sum.exp 1 m = FUNPOW (\j. (j + 1) MOD n) m 0` by rw[ZN_def, add_mod_def, times_mod_def, monoid_exp_def, ADD_COMM] >>
-    `_ = m MOD n` by rw[ZN_lemma1] >>
-    `n divides m` by metis_tac[char_property, DIVIDES_MOD_0] >>
+    ‘(ZN n).prod.id = 1’ by rw[ZN_def, times_mod_def] >>
+    ‘(ZN n).sum.exp 1 n = 0’ by rw[ZN_lemma2, ZN_def, add_mod_def, times_mod_def, monoid_exp_def, ADD_COMM] >>
+    ‘(char (ZN n)) divides n’ by rw[GSYM ring_char_divides] >>
+    ‘(char (ZN n)) <= n’ by rw[DIVIDES_LE] >>
+    qabbrev_tac ‘m = char (ZN n)’ >>
+    ‘(ZN n).sum.exp 1 m = FUNPOW (\j. (j + 1) MOD n) m 0’ by rw[ZN_def, add_mod_def, times_mod_def, monoid_exp_def, ADD_COMM] >>
+    ‘_ = m MOD n’ by rw[ZN_lemma1] >>
+    ‘n divides m’ by metis_tac[char_property, DIVIDES_MOD_0] >>
     metis_tac [DIVIDES_ANTISYM]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> !x k. (ZN n).prod.exp x k = (x ** k) MOD n *)
 (* Proof:
@@ -683,14 +684,16 @@ QED
            (y * (n MOD m)) MOD m = 1  by GCD_MOD_MULT_INV
        and ((n MOD m) * y) MOD m = 1  by MULT_COMM
 *)
-val ZN_coprime_invertible = store_thm(
-  "ZN_coprime_invertible",
-  ``!m n. 1 < m /\ coprime m n ==> (n MOD m) IN (Invertibles (ZN m).prod).carrier``,
-  rw_tac std_ss[Invertibles_def, monoid_invertibles_def, ZN_def, times_mod_def, GSPECIFICATION, IN_COUNT] >-
-  rw[] >>
-  `0 < m` by decide_tac >>
-  `(n MOD m) < m` by rw[] >>
-  metis_tac[MOD_NONZERO_WHEN_GCD_ONE, GCD_MOD_MULT_INV, coprime_mod, MULT_COMM]);
+Theorem ZN_coprime_invertible[allow_rebind]:
+  !m n. 1 < m /\ coprime m n ==> (n MOD m) IN (Invertibles (ZN m).prod).carrier
+Proof
+  rw_tac std_ss[Invertibles_def, monoid_invertibles_def, ZN_def, times_mod_def,
+                GSPECIFICATION, IN_COUNT]
+  >- rw[] >>
+  ‘0 < m’ by decide_tac >>
+  ‘(n MOD m) < m’ by rw[] >>
+  metis_tac[MOD_NONZERO_WHEN_GCD_ONE, GCD_MOD_MULT_INV, coprime_mod, MULT_COMM]
+QED
 
 (* Theorem: 1 < n ==> (Invertibles (ZN n).prod = Estar n) *)
 (* Proof:
@@ -1257,43 +1260,6 @@ val ZN_not_coprime = store_thm(
 (* Proof:
    By contradiction, suppose !p. prime p /\ p divides n /\ ~(1 < ordz m p).
    Note ordz m n <> 0          by 1 < ordz m n
-   Thus coprime m n            by ZN_order_eq_0, 0 < m
-   Note ordz m n <> 1          by 1 < ordz m n
-     so m <> 1                 by ZN_order_mod_1
-    Now n <> 0                 by GCD_0R, m <> 1
-    and n <> 1                 by ZN_order_1, ordz m n <> 1
-    ==> 1 < n
-   Note coprime m n            by above
-    ==> !p. prime p /\ p divides n
-        ==> coprime m p        by coprime_prime_factor_coprime, GCD_SYM, 1 < n
-        ==> 0 < ordz m p       by ZN_coprime_order, 0 < m
-        ==> (ordz m p = 1)     by ~(1 < ordz m p), NOT_LT_ONE, NOT_ZERO_LT_ZERO
-   Thus ordz m n = 1           by ZN_order_eq_1_by_prime_factors
-   This contradicts 1 < ordz m n in the premise.
-*)
-val ZN_order_gt_1_property = store_thm(
-  "ZN_order_gt_1_property",
-  ``!m n. 0 < m /\ 1 < ordz m n ==> ?p. prime p /\ p divides n /\ 1 < ordz m p``,
-  spose_not_then strip_assume_tac >>
-  `ordz m n <> 0 /\ ordz m n <> 1` by decide_tac >>
-  `coprime m n` by metis_tac[ZN_order_eq_0] >>
-  `m <> 1` by metis_tac[ZN_order_mod_1] >>
-  `n <> 0` by metis_tac[GCD_0R] >>
-  `n <> 1` by metis_tac[ZN_order_1] >>
-  `1 < n` by decide_tac >>
-  `!p. prime p /\ p divides n ==> (ordz m p = 1)` by
-  (rpt strip_tac >>
-  `coprime m p` by metis_tac[coprime_prime_factor_coprime, GCD_SYM] >>
-  `0 < ordz m p` by metis_tac[ZN_coprime_order] >>
-  metis_tac[NOT_LT_ONE, NOT_ZERO_LT_ZERO]) >>
-  metis_tac[ZN_order_eq_1_by_prime_factors]);
-
-(* A better proof of the same theorem. *)
-
-(* Theorem: 0 < m /\ 1 < ordz m n ==> ?p. prime p /\ p divides n /\ 1 < ordz m p *)
-(* Proof:
-   By contradiction, suppose !p. prime p /\ p divides n /\ ~(1 < ordz m p).
-   Note ordz m n <> 0          by 1 < ordz m n
     ==> coprime m n            by ZN_order_eq_0, 0 < m
     ==> ?p. prime p /\ p divides n /\ (ordz m p <> 1)
                                by ZN_order_eq_1_by_prime_factors, ordz m n <> 1
@@ -1796,24 +1762,14 @@ val symdiff_set_inter_def = Define`
    x INTER (y SYM z) = (x INTER y) SYM (x INTER z)
    first verify by Venn Diagram.
 *)
-val symdiff_set_inter_ring = store_thm(
-  "symdiff_set_inter_ring",
-  ``Ring symdiff_set_inter``,
-  rw_tac std_ss[Ring_def, symdiff_set_inter_def] >-
-  rw[symdiff_set_abelian_group] >-
-  rw[set_inter_abelian_monoid] >-
-  rw[symdiff_set_def] >-
-  rw[set_inter_def] >>
-  rw[symdiff_set_def, set_inter_def, symdiff_def, EXTENSION] >>
-  metis_tac[]);
-(* Michael's proof *)
-val symdiff_set_inter_ring = store_thm(
-  "symdiff_set_inter_ring",
-  ``Ring symdiff_set_inter``,
+Theorem symdiff_set_inter_ring:
+  Ring symdiff_set_inter
+Proof
   rw_tac std_ss[Ring_def, symdiff_set_inter_def] >>
   rw[symdiff_set_def, set_inter_def] >>
   rw[EXTENSION, symdiff_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: symdiff UNIV UNIV = EMPTY` *)
 (* Proof: by definition. *)

@@ -1276,40 +1276,52 @@ val poly_field_ideal_cogen_property = store_thm("poly_field_ideal_cogen_property
                (coset (PolyRing r).sum p (principal_ideal (PolyRing r) z).carrier)) ==> (p == q) (pm z))``,
   rw[poly_ideal_cogen_property]);
 
-val poly_field_mod_ring_homo_quotient_ring = store_thm("poly_field_mod_ring_homo_quotient_ring",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-    RingHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
-               (PolyModRing r z)
-               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))``,
-  rw[poly_mod_ring_homo_quotient_ring]);
+Theorem poly_field_mod_sum_group_homo_quotient_ring:
+  !r:'a field.
+    Field r ==> !z. poly z /\ z <> |0| ==>
+    GroupHomo
+      (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
+      (PolyModRing r z).sum
+      (PolyRing r / principal_ideal (PolyRing r) z).sum
+Proof
+  rw[poly_mod_sum_group_homo_quotient_ring]
+QED
 
-val poly_field_mod_sum_group_homo_quotient_ring = store_thm("poly_field_mod_sum_group_homo_quotient_ring",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-    GroupHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
-              (PolyModRing r z).sum
-              (PolyRing r / principal_ideal (PolyRing r) z).sum``,
-  rw[poly_mod_sum_group_homo_quotient_ring]);
+Theorem poly_field_mod_prod_monoid_homo_quotient_ring:
+  !r:'a field.
+    Field r ==>
+    !z. poly z /\ z <> |0| ==>
+        MonoidHomo
+         (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
+         (PolyModRing r z).prod
+         (PolyRing r / principal_ideal (PolyRing r) z).prod
+Proof
+  rw[poly_mod_prod_monoid_homo_quotient_ring]
+QED
 
-val poly_field_mod_prod_monoid_homo_quotient_ring = store_thm("poly_field_mod_prod_monoid_homo_quotient_ring",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-    MonoidHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
-               (PolyModRing r z).prod
-               (PolyRing r / principal_ideal (PolyRing r) z).prod``,
-  rw[poly_mod_prod_monoid_homo_quotient_ring]);
+Theorem poly_field_mod_ring_homo_quotient_ring:
+  !r:'a field.
+    Field r ==>
+    !z. poly z /\ z <> |0| ==>
+        RingHomo
+         (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
+         (PolyModRing r z)
+         (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))
+Proof
+  rw[poly_mod_ring_homo_quotient_ring]
+QED
 
-val poly_field_mod_ring_homo_quotient_ring = store_thm("poly_field_mod_ring_homo_quotient_ring",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-    RingHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
-               (PolyModRing r z)
-               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))``,
-  rw[poly_mod_ring_homo_quotient_ring]);
-
-val poly_field_mod_ring_iso_quotient_ring = store_thm("poly_field_mod_ring_iso_quotient_ring",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-    RingIso (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
-               (PolyModRing r z)
-               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))``,
-  rw[poly_mod_ring_iso_quotient_ring]);
+Theorem poly_field_mod_ring_iso_quotient_ring:
+  !r:'a field.
+    Field r ==>
+    !z. poly z /\ z <> |0| ==>
+        RingIso
+         (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
+         (PolyModRing r z)
+         (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))
+Proof
+  rw[poly_mod_ring_iso_quotient_ring]
+QED
 
 val poly_field_mod_exp_alt = store_thm("poly_field_mod_exp_alt",
   ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>

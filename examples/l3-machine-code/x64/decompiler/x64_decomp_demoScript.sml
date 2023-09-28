@@ -38,7 +38,10 @@ val _ = save_thm("decomp_cert",decomp_cert);
 
 val () = Feedback.set_trace "x64 spec" 2
 
-val (decomp1_cert,decomp1_def) = x64_decompLib.x64_decompile "decomp1" `
+val (decomp1_cert,decomp1_def) =
+  Feedback.trace ("Theory.allow_rebinds", 1)
+     (x64_decompLib.x64_decompile "decomp1")
+  ‘
   (*  0: *) 55              (* push   %rbp *)
   (*  1: *) 4889e5          (* mov    %rsp,%rbp *)
   (*  4: *) 4883ec20        (* sub    $0x20,%rsp *)
@@ -62,7 +65,7 @@ val (decomp1_cert,decomp1_def) = x64_decompLib.x64_decompile "decomp1" `
   (* 3b: *) 84c0            (* test   %al,%al *)
   (* 3d: *) 75d7            (* jne    16 <transform+0x16> *)
   (* 3f: *) 488b45e8        (* mov    -0x18(%rbp),%rax *)
-  (* 43: *) c9              (* leaveq  *) `
+  (* 43: *) c9              (* leaveq  *) ’
 
 val _ = save_thm("decomp1_cert",decomp1_cert);
 

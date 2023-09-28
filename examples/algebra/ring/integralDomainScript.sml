@@ -252,11 +252,13 @@ val integral_domain_nonzero_monoid = store_thm(
    (4) x IN R+ ==> #1 * x = x, true         by ring_mult_lone, ring_nonzero_eq
    (5) x IN R+ ==> x * #1 = x, true         by ring_mult_rone, ring_nonzero_eq
 *)
-val integral_domain_nonzero_monoid = store_thm(
-  "integral_domain_nonzero_monoid",
-  ``!r:'a ring. IntegralDomain r ==> Monoid f*``,
-  rw_tac std_ss[IntegralDomain_def, Monoid_def, integral_domain_nonzero_mult_property] >>
-  fs[ring_nonzero_eq, ring_mult_assoc]);
+Theorem integral_domain_nonzero_monoid[allow_rebind]:
+  !r:'a ring. IntegralDomain r ==> Monoid f*
+Proof
+  rw_tac std_ss[IntegralDomain_def, Monoid_def,
+                integral_domain_nonzero_mult_property] >>
+  fs[ring_nonzero_eq, ring_mult_assoc]
+QED
 
 (* ring isomorphisms preserve domain properties *)
 

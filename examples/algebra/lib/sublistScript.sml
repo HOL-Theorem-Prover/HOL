@@ -232,6 +232,12 @@ val sublist_length = store_thm(
   `LENGTH t < LENGTH (h'::t)` by rw[LENGTH_TL_LT] >>
   decide_tac);
 
+(* Theorem: [Reflexive] p <= p *)
+(* Proof:
+   By induction on p.
+   Base: [] <= [], true                      by sublist_nil
+   Step: p <= p ==> !h. h::p <= h::p, true   by sublist_cons
+*)
 val sublist_refl = store_thm(
   "sublist_refl",
   ``!p:'a list. p <= p``,
@@ -770,6 +776,12 @@ val sublist_prefix_nil = store_thm(
     metis_tac[]
   ]);
 
+(* Theorem: [tail append - if] p <= q ==> (p ++ [h]) <= (q ++ [h]) *)
+(* Proof:
+                p <= q
+   ==>   SNOC h p <= SNOC h q      by sublist_snoc
+   ==> (p ++ [h]) <= (q ++ [h])    by SNOC_APPEND
+*)
 Theorem sublist_append_if:
   !p q h. p <= q ==> (p ++ [h]) <= (q ++ [h])
 Proof

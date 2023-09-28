@@ -467,24 +467,34 @@ val ENCODE_ONE_TL_ZERO = Q.store_thm("ENCODE_ONE_TL_ZERO",
 Cases_on ` t` >> fs[] >- (EVAL_TAC) >- (fs[ENCODE_def] >> Cases_on `h` >> fs[]) )
 
 
-val HD_DECODE_DOUBLED = Q.store_thm("HD_DECODE_DOUBLED[simp]",
-`(x <> 0) ==> (HD (DECODE (2 * x)) = Z)`,
-Cases_on `x` >> fs[] >> `2*(SUC n) =SUC (SUC (2* n))` by simp[] >> simp[DECODE_def,ODD,ODD_MULT] )
+Theorem HD_DECODE_DOUBLED_EVEN[simp]:
+  (x <> 0) ==> (HD (DECODE (2 * x)) = Z)
+Proof
+  Cases_on `x` >> fs[] >> `2*(SUC n) =SUC (SUC (2* n))` by simp[] >>
+  simp[DECODE_def,ODD,ODD_MULT]
+QED
 
 
-val TL_DECODE_DOUBLED = Q.store_thm("TL_DECODE_DOUBLED[simp]",
-`(x <> 0) ==> (TL (DECODE (2 * x)) = DECODE x)`,
-Cases_on `x` >> fs[] >> `2 * (SUC n) =SUC (SUC (2* n))` by simp[] >>
-         simp[DECODE_def,SimpLHS,ODD,ODD_MULT] >> pop_assum(SUBST1_TAC o SYM) >> fs[TWO_TIMES_DIV_TWO_thm] )
+Theorem TL_DECODE_DOUBLED_EVEN[simp]:
+  (x <> 0) ==> (TL (DECODE (2 * x)) = DECODE x)
+Proof
+  Cases_on `x` >> fs[] >> `2 * (SUC n) =SUC (SUC (2* n))` by simp[] >>
+  simp[DECODE_def,SimpLHS,ODD,ODD_MULT] >> pop_assum(SUBST1_TAC o SYM) >>
+  fs[TWO_TIMES_DIV_TWO_thm]
+QED
 
-val HD_DECODE_DOUBLED = Q.store_thm("HD_DECODE_DOUBLED[simp]",
-`(HD (DECODE (2 * x + 1)) = O)`,
-simp[GSYM(ADD1),DECODE_def,ODD,ODD_MULT]  )
+Theorem HD_DECODE_DOUBLED_ODD[simp]:
+  (HD (DECODE (2 * x + 1)) = O)
+Proof
+  simp[GSYM(ADD1),DECODE_def,ODD,ODD_MULT]
+QED
 
 
-val TL_DECODE_DOUBLED = Q.store_thm("TL_DECODE_DOUBLED[simp]",
-`(TL (DECODE (2 * x + 1)) = DECODE x)`,
-simp[GSYM(ADD1),DECODE_def,ODD,ODD_MULT]  )
+Theorem TL_DECODE_DOUBLED_ODD[simp]:
+  TL (DECODE (2 * x + 1)) = DECODE x
+Proof
+  simp[GSYM ADD1,DECODE_def,ODD,ODD_MULT]
+QED
 
 
 
@@ -1190,10 +1200,6 @@ rpt strip_tac >> qexists_tac`Cn (pr2 nel) [proj 0;Cn (pr1 (list_rec_comb c n)) [
 rpt conj_tac >- (rpt (irule primrec_cn >> rw[primrec_rules,primrec_nel,primrec_list_rec_comb]))>>
  simp[list_rec_comb_def] >> simp[list_rec_comb_corr,nel_nlist_of,LIST_REC_def] )
 
-val nleng_thm = new_specification("nleng_def", ["nleng"],
-list_num_rec_thm |> SPECL[``0n``,``Cn succ [proj 2]``]
-                 |> SIMP_RULE (srw_ss())[primrec_cn, primrec_rules])
-
 val nrev_thm = new_specification("nrev_def", ["nrev"],
 list_num_rec_thm |> SPECL[``0n``,``Cn (pr2 napp) [proj 2;Cn (pr2 ncons) [proj 0;zerof] ]``]
                  |> SIMP_RULE (srw_ss())[primrec_cn, primrec_rules])
@@ -1259,12 +1265,6 @@ val primrec_pr_INITIAL_TAPE_TM_NUM = Q.store_thm(
   rpt (irule primrec_cn >>
        rw[primrec_rules,primrec_pr_eq,primrec_nsnd,primrec_nfst]) >>
   fs[primrec_proj]);
-
-val pr_INITIAL_TM_NUM_def = Define`
-pr_INITIAL_TM_NUM = Cn (pr2 npair) [zerof;Cn tape_encode
- [Cn (pr1 nfst) [Cn pr_INITIAL_TAPE_TM_NUM [zerof;Cn concatWith_Z [proj 0]]];
-  Cn (pr1 nfst) [Cn (pr1 nsnd) [Cn pr_INITIAL_TAPE_TM_NUM [zerof;Cn concatWith_Z [proj 0]]]];
-  Cn (pr1 nsnd) [Cn (pr1 nsnd) [Cn pr_INITIAL_TAPE_TM_NUM [zerof;Cn concatWith_Z [proj 0]]]]]]`;
 
 val pr_ODD_def = Define`pr_ODD = pr_cond (Cn pr_eq [Cn pr_mod [proj 0;twof];onef]) onef zerof`
 
@@ -1480,7 +1480,6 @@ Cases_on `A` >> fs[])
 val recfn_rulesl = CONJUNCTS recfn_rules
 val recfnCn = save_thm("recfnCn", List.nth(recfn_rulesl, 3))
 val recfnPr = save_thm("recfnPr", List.nth(recfn_rulesl, 4))
-val recfnMin = save_thm("recfnMin", List.nth(recfn_rulesl, 5))
 
 (* Probably need to include a 'tape reset' type function, ie tm_return_num *)
 val recfn_tm_def = Define`

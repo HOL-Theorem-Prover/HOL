@@ -403,35 +403,6 @@ val BEFORE_ON_PATH_STRONG___BEFORE_ON_PATH =
    EXISTS_TAC ``u:num`` THEN
    FULL_SIMP_TAC arith_ss []);
 
-
-val BEFORE_ON_PATH___SUC =
- store_thm
-  ("BEFORE_ON_PATH___SUC",
-   ``!v t a b. ((BEFORE_ON_PATH_RESTN t v a b) /\ ~(P_SEM (v t) a)) ==> (BEFORE_ON_PATH_RESTN (SUC t) v a b)``,
-   REWRITE_TAC [BEFORE_ON_PATH_RESTN_def] THEN
-   REPEAT STRIP_TAC THEN
-   `t <= t'` by DECIDE_TAC THEN
-   RES_TAC THEN
-   EXISTS_TAC ``u:num`` THEN
-   ASM_REWRITE_TAC[] THEN
-   `~(u = t)` by METIS_TAC[] THEN
-   DECIDE_TAC);
-
-
-val BEFORE_ON_PATH_STRONG___SUC =
- store_thm
-  ("BEFORE_ON_PATH_STRONG___SUC",
-   ``!v t a b. ((BEFORE_ON_PATH_RESTN_STRONG t v a b) /\ ~(P_SEM (v t) a)) ==> (BEFORE_ON_PATH_RESTN_STRONG (SUC t) v a b)``,
-   REWRITE_TAC [BEFORE_ON_PATH_RESTN_STRONG_def] THEN
-   REPEAT STRIP_TAC THEN
-   `t <= t'` by DECIDE_TAC THEN
-   RES_TAC THEN
-   EXISTS_TAC ``u:num`` THEN
-   ASM_REWRITE_TAC[] THEN
-   `~(u = t)` by METIS_TAC[] THEN
-   DECIDE_TAC);
-
-
 val NOT_ON_PATH___IMP_ON_PATH =
  store_thm
   ("NOT_ON_PATH___IMP_ON_PATH",

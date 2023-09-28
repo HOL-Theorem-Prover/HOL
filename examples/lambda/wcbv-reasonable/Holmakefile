@@ -1,1 +1,1 @@
-INCLUDES = $(HOLDIR)/examples/lambda/other-models
+INCLUDES = ../other-models

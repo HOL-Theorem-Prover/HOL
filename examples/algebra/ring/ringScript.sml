@@ -897,8 +897,6 @@ val ring_num_suc = store_thm(
   ``!r:'a ring. Ring r ==> !n. ##(SUC n) = ##n + #1``,
   rw[ring_add_comm]);
 
-(* Theorem: ##0 = #0 *)
-
 (*
 ringTheory.ring_num_0   has Ring r ==> ##0 = #0   by lifting.
 but:
@@ -917,9 +915,9 @@ Theorem ring_num_0[simp] =
 (* val ring_num_0 = |- !r. ##0 = #0: thm *)
 
 (* Obtain another theorem *)
-val ring_num_one = save_thm("ring_num_one",
+Theorem ring_num_one =
     monoid_exp_def |> ISPEC ``(r:'a ring).sum`` |> ISPEC ``#1`` |> ISPEC ``1``
-                   |> SIMP_RULE bool_ss [FUNPOW_1] |> GEN ``r:'a ring``);
+                   |> SIMP_RULE bool_ss [FUNPOW_1] |> GEN ``r:'a ring``
 (* val ring_num_one = |- !r. ##1 = #1 + #0: thm *)
 (* Do not export this one: an expansion. *)
 
@@ -1003,6 +1001,7 @@ val ring_exp_element = lift_monoid_thm "exp_element" "exp_element";
 val _ = export_rewrites ["ring_exp_element"];
 
 (* Theorem: x ** 0 = #1 *)
+(* Proof: by monoid_exp_0. *)
 (* Note: monoid_exp_0 |- !g x. x ** 0 = #e *)
 Theorem ring_exp_0[simp]: !x:'a. x ** 0 = #1
 Proof rw[]

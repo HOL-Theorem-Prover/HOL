@@ -68,7 +68,7 @@ Proof
 QED
 
 Theorem eval_set_clock = CONJUNCT1 evals_set_clock;
-Theorem evals_set_clock = CONJUNCT2 evals_set_clock;
+Theorem evals_set_clock[allow_rebind] = CONJUNCT2 evals_set_clock;
 
 
 Theorem Eval_imp_evals:

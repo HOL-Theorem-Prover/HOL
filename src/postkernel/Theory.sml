@@ -393,9 +393,12 @@ fun add_term {name,theory,htype} thy =
     (Term.prim_new_const {Thy = theory, Name = name} htype; thy)
 
 fun add_fact th (seg : segment) =
-    let val updator = if !Globals.interactive orelse !allow_rebinds then
-                        Symtab.update
-                      else Symtab.update_new
+    let val updator =
+            if !Globals.interactive orelse !allow_rebinds orelse
+               is_temp_binding (#1 th)
+            then
+              Symtab.update
+            else Symtab.update_new
     in
       update_seg seg (U #facts (updator th (#facts seg))) $$
     end

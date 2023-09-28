@@ -119,7 +119,7 @@ val state_rel_rw =
 Theorem state_rel_rw = state_rel_rw
 
 (* Convert the if-then-else to ⇒ *)
-Theorem val_rel_def = SIMP_RULE (srw_ss()) [] val_rel_def
+Theorem val_rel_def[allow_rebind] = SIMP_RULE (srw_ss()) [] val_rel_def
 
 (* Package up exec_rel nicely in terms of res_rel. *)
 Theorem exec_rel_rw:

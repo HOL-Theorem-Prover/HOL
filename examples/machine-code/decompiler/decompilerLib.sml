@@ -1642,7 +1642,7 @@ fun extract_function name th entry exit function_in_out = let
   val main_thm = finalise main_thm
   val pre_thm = finalise pre_thm
   (* define temporary abbreviation *)
-  val silly_string = Theory.temp_binding "(( step ))"
+  val silly_string = Theory.temp_binding "((step))"
   val step_def =
      new_definition
         (silly_string,mk_eq(mk_var(silly_string,type_of step_fun),step_fun))

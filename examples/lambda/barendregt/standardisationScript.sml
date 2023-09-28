@@ -4,10 +4,11 @@ open boolSimps
 
 open nomsetTheory binderLib
 
-open pred_setTheory
+open pred_setTheory listTheory finite_mapTheory hurdUtils
+
 open finite_developmentsTheory
 open labelledTermsTheory
-open termTheory chap2Theory chap3Theory
+open termTheory chap2Theory chap3Theory appFOLDLTheory
 open term_posnsTheory
 open pathTheory
 open chap11_1Theory
@@ -1441,10 +1442,12 @@ val i1_reduce_to_LAMl = prove(
     PROVE_TAC [i_reduce1_under_lam]
   ]);
 
-val SUBSET_DISJOINT = store_thm(
-  "SUBSET_DISJOINT",
-  ``!X Y Z. X SUBSET Y /\ DISJOINT Y Z ==> DISJOINT X Z``,
-  SRW_TAC [][SUBSET_DEF, DISJOINT_DEF, EXTENSION] THEN PROVE_TAC []);
+(* NOTE: renamed due to conflicts with pred_setTheory.SUBSET_DISJOINT *)
+Theorem SUBSET_DISJOINT_L[local] :
+    !X Y Z. X SUBSET Y /\ DISJOINT Y Z ==> DISJOINT X Z
+Proof
+  SRW_TAC [][SUBSET_DEF, DISJOINT_DEF, EXTENSION] THEN PROVE_TAC []
+QED
 
 val i_reduces_to_LAMl = prove(
   ``!vs M N. DISJOINT (LIST_TO_SET vs) (FV M) /\ ALL_DISTINCT vs ==>
@@ -1465,7 +1468,7 @@ val i_reduces_to_LAMl = prove(
     SRW_TAC [][] THEN
     `DISJOINT (LIST_TO_SET vs) (FV N1)`
         by (Q_TAC SUFF_TAC `FV N1 SUBSET FV M` THEN1
-                  PROVE_TAC [DISJOINT_SYM, SUBSET_DISJOINT] THEN
+                  PROVE_TAC [DISJOINT_SYM, SUBSET_DISJOINT_L] THEN
             Q_TAC SUFF_TAC
                   `!M N. RTC (i_reduce1) M N ==> FV N SUBSET FV M` THEN1
                   PROVE_TAC [] THEN
@@ -2411,4 +2414,95 @@ val has_bnf_whnf = store_thm(
   ``has_bnf M ⇒ has_whnf M``,
   METIS_TAC [has_bnf_hnf, has_hnf_whnf]);
 
+(*---------------------------------------------------------------------------*
+ * More results about LAMl (added by Chun Tian)
+ *---------------------------------------------------------------------------*)
+
+(* copied from chap2Script.sml *)
+fun betafy ss =
+    simpLib.add_relsimp {refl = GEN_ALL lameq_refl,
+                         trans = List.nth(CONJUNCTS lameq_rules, 3),
+                         weakenings = [lameq_weaken_cong],
+                         subsets = [],
+                         rewrs = [hd (CONJUNCTS lameq_rules)]} ss ++
+    simpLib.SSFRAG {rewrs = [],
+                    ac = [],  convs = [],
+                    congs = [lameq_app_cong,
+                             SPEC_ALL (last (CONJUNCTS lameq_rules)),
+                             lameq_sub_cong],
+                    dprocs = [], filter = NONE, name = NONE};
+
+Theorem LAMl_SUB :
+    !M N v vs. ALL_DISTINCT vs /\ ~MEM v vs /\ (FV N = {}) ==>
+               [N/v] (LAMl vs M) == LAMl vs ([N/v] M)
+Proof
+    rpt STRIP_TAC
+ >> Induct_on ‘vs’ >> rw []
+ >> ASM_SIMP_TAC (betafy (srw_ss())) []
+QED
+
+Theorem lameq_trans[local] = List.nth(CONJUNCTS lameq_rules, 3)
+
+Theorem LAMl_appstar :
+    !vs M Ns. ALL_DISTINCT vs /\ (LENGTH vs = LENGTH Ns) /\ EVERY closed Ns ==>
+              LAMl vs M @* Ns == (FEMPTY |++ ZIP (vs,Ns)) ' M
+Proof
+    rpt STRIP_TAC
+ >> NewQ.ABBREV_TAC ‘L = ZIP (vs,Ns)’
+ >> ‘(Ns = MAP SND L) /\ (vs = MAP FST L)’ by rw [Abbr ‘L’, MAP_ZIP]
+ >> FULL_SIMP_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘EVERY closed (MAP SND L)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘ALL_DISTINCT (MAP FST L)’ MP_TAC
+ >> KILL_TAC
+ >> Q.ID_SPEC_TAC ‘M’
+ >> Induct_on ‘L’ >> rw []
+ >- (Suff ‘FEMPTY |++ [] = FEMPTY :string |-> term’ >- rw [] \\
+     rw [FUPDATE_LIST_EQ_FEMPTY])
+ >> NewQ.ABBREV_TAC ‘v = FST h’
+ >> NewQ.ABBREV_TAC ‘vs = MAP FST L’
+ >> NewQ.ABBREV_TAC ‘N = SND h’
+ >> NewQ.ABBREV_TAC ‘Ns = MAP SND L’
+ (* RHS rewriting *)
+ >> ‘h :: L = [h] ++ L’ by rw [] >> POP_ORW
+ >> rw [FUPDATE_LIST_APPEND]
+ >> Know ‘FEMPTY |++ [h] |++ L = FEMPTY |++ L |++ [h]’
+ >- (MATCH_MP_TAC FUPDATE_LIST_APPEND_COMMUTES \\
+     rw [DISJOINT_ALT])
+ >> Rewr'
+ >> rw [GSYM FUPDATE_EQ_FUPDATE_LIST]
+ >> NewQ.ABBREV_TAC ‘fm = FEMPTY |++ L’
+ >> FULL_SIMP_TAC std_ss []
+ >> ‘h = (v,N)’ by rw [Abbr ‘v’, Abbr ‘N’] >> POP_ORW
+ >> Know ‘(fm |+ (v,N)) ' M = fm ' ([N/v] M)’
+ >- (MATCH_MP_TAC ssub_update_apply' \\
+     Q.PAT_X_ASSUM ‘closed N’ MP_TAC \\
+     rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, closed_def] \\
+     Cases_on ‘INDEX_OF y vs’ >- fs [INDEX_OF_eq_NONE] \\
+     rename1 ‘INDEX_OF y vs = SOME n’ \\
+     fs [INDEX_OF_eq_SOME] \\
+     Q.PAT_X_ASSUM ‘EL n vs = y’ (ONCE_REWRITE_TAC o wrap o SYM) \\
+    ‘LENGTH L = LENGTH vs’ by rw [Abbr ‘vs’, LENGTH_MAP] \\
+     Know ‘(FEMPTY |++ L) ' (EL n vs) = EL n Ns’
+     >- (MATCH_MP_TAC FUPDATE_LIST_APPLY_MEM \\
+         Q.EXISTS_TAC ‘n’ >> rw [] \\
+        ‘m <> n’ by rw [] \\
+         METIS_TAC [EL_ALL_DISTINCT_EL_EQ]) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘EVERY closed Ns’ MP_TAC \\
+     rw [EVERY_MEM, closed_def] \\
+     POP_ASSUM MATCH_MP_TAC >> rw [MEM_EL] \\
+    ‘LENGTH L = LENGTH Ns’ by rw [Abbr ‘Ns’, LENGTH_MAP] \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> Rewr'
+ (* LHS rewriting *)
+ >> Know ‘LAM v (LAMl vs M) @@ N == LAMl vs ([N/v] M)’
+ >- (SIMP_TAC (betafy (srw_ss())) [] \\
+     MATCH_MP_TAC LAMl_SUB \\
+     Q.PAT_X_ASSUM ‘closed N’ MP_TAC >> rw [closed_def])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC lameq_trans
+ >> Q.EXISTS_TAC ‘LAMl vs ([N/v] M) @* Ns’ >> art []
+ >> MATCH_MP_TAC lameq_appstar_cong >> art []
+QED
+
 val _ = export_theory()
+val _ = html_theory "standardisation";

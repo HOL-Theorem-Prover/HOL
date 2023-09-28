@@ -465,12 +465,15 @@ val LTL_EX5_def = Define`
                        )
                        ((LTL_F (F_CONJ (F_VAR 3) (LTL_G (F_NEG (F_VAR 4)) 0)) 0)))`;
 
-val LTL_EX5_def = Define`
-LTL_EX5 = NNF (F_CONJ (F_CONJ (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
-                                      (LTL_G (LTL_F (F_VAR 2) 0) 0)
-                              )
-                              (LTL_G (LTL_F (F_VAR 3) 0) 0)
-                      )
-                      ((LTL_F (F_CONJ (F_VAR 4) (LTL_G (F_NEG (F_VAR 5)) 0)) 0)))`;
+Definition LTL_EX6_def:
+  LTL_EX6 = NNF (F_CONJ (F_CONJ (F_CONJ (LTL_G (LTL_F (F_VAR 1) 0) 0)
+                                        (LTL_G (LTL_F (F_VAR 2) 0) 0)
+                                )
+                                (LTL_G (LTL_F (F_VAR 3) 0) 0)
+                        )
+                        ((LTL_F (F_CONJ (F_VAR 4) (LTL_G (F_NEG (F_VAR 5)) 0)
+                                )
+                                0)))
+End
 
 val _ = export_theory();
