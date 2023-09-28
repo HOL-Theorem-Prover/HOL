@@ -475,10 +475,13 @@ Proof
 QED
 
 
-val TL_DECODE_DOUBLED = Q.store_thm("TL_DECODE_DOUBLED[simp]",
-`(x <> 0) ==> (TL (DECODE (2 * x)) = DECODE x)`,
-Cases_on `x` >> fs[] >> `2 * (SUC n) =SUC (SUC (2* n))` by simp[] >>
-         simp[DECODE_def,SimpLHS,ODD,ODD_MULT] >> pop_assum(SUBST1_TAC o SYM) >> fs[TWO_TIMES_DIV_TWO_thm] )
+Theorem TL_DECODE_DOUBLED_EVEN[simp]:
+  (x <> 0) ==> (TL (DECODE (2 * x)) = DECODE x)
+Proof
+  Cases_on `x` >> fs[] >> `2 * (SUC n) =SUC (SUC (2* n))` by simp[] >>
+  simp[DECODE_def,SimpLHS,ODD,ODD_MULT] >> pop_assum(SUBST1_TAC o SYM) >>
+  fs[TWO_TIMES_DIV_TWO_thm]
+QED
 
 Theorem HD_DECODE_DOUBLED_ODD[simp]:
   (HD (DECODE (2 * x + 1)) = O)
@@ -487,9 +490,11 @@ Proof
 QED
 
 
-val TL_DECODE_DOUBLED = Q.store_thm("TL_DECODE_DOUBLED[simp]",
-`(TL (DECODE (2 * x + 1)) = DECODE x)`,
-simp[GSYM(ADD1),DECODE_def,ODD,ODD_MULT]  )
+Theorem TL_DECODE_DOUBLED_ODD[simp]:
+  TL (DECODE (2 * x + 1)) = DECODE x
+Proof
+  simp[GSYM ADD1,DECODE_def,ODD,ODD_MULT]
+QED
 
 
 

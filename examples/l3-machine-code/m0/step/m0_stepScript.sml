@@ -732,14 +732,14 @@ Theorem Decode_simps[local]:
 Proof   lrw [] \\ blastLib.BBLAST_TAC
 QED
 
-Theorem Decode_simps =
+val Decode_simps = save_thm("Decode_simps",
    ([Decode_simp_extra, Decode_simps] @
     List.tabulate
       (8, fn i => let
                      val w = wordsSyntax.mk_wordii (i, 3)
                   in
                      blastLib.BBLAST_CONV ``v2w [a; b; c] = ^w``
-                  end)) |> Drule.LIST_CONJ;
+                  end)) |> Drule.LIST_CONJ);
 
 val Shift_C_LSL_rwt = Q.store_thm("Shift_C_LSL_rwt",
    `!imm2 w C s.

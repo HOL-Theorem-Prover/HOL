@@ -140,8 +140,9 @@ val sem_clock = store_thm("sem_clock",
 val r = term_rewrite [``check_clock s1 s = s1``,
     ``s.clock <> 0 /\ s1.clock <> 0 <=> s1.clock <> 0``];
 
-val sem_def = store_thm("sem_def",
-  sem_def |> concl |> r,
+Theorem sem_def[allow_rebind]:
+  ^(sem_def |> concl |> r)
+Proof
   rpt strip_tac >>
   rw[Once sem_def] >>
   BasicProvers.CASE_TAC >>
@@ -154,10 +155,12 @@ val sem_def = store_thm("sem_def",
   imp_res_tac sem_clock >>
   simp[check_clock_id] >>
   `F` suffices_by rw[] >>
-  DECIDE_TAC);
+  DECIDE_TAC
+QED
 
-val sem_ind = store_thm("sem_ind",
-  sem_ind |> concl |> r,
+Theorem sem_ind[allow_rebind]:
+  ^(sem_ind |> concl |> r)
+Proof
   ntac 2 strip_tac >>
   ho_match_mp_tac sem_ind >>
   rw[] >>
@@ -166,7 +169,8 @@ val sem_ind = store_thm("sem_ind",
   res_tac >>
   imp_res_tac sem_clock >>
   fsrw_tac[ARITH_ss][check_clock_id] >> rfs[] >>
-  fsrw_tac[ARITH_ss][check_clock_id])
+  fsrw_tac[ARITH_ss][check_clock_id]
+QED
 
 (* Misc lemmas stating that the clock acts like a clock. These could probably be
  * unified and simplified *)
