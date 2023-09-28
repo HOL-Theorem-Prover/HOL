@@ -672,13 +672,14 @@ val has_bnf_def = Define`has_bnf t = ?t'. t == t' /\ bnf t'`;
 
 val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
 
-(* FIXME: can ‘(!y. y IN FDOM fm ==> FV (fm ' y) = {})’ be removed? *)
+(* FIXME: can ‘(!y. y IN FDOM fm ==> closed (fm ' y))’ be removed? *)
 Theorem lameq_ssub_cong :
-    !fm. (!y. y IN FDOM fm ==> FV (fm ' y) = {}) /\
+    !fm. (!y. y IN FDOM fm ==> closed (fm ' y)) /\
           M == N ==> fm ' M == fm ' N
 Proof
-    HO_MATCH_MP_TAC fmap_INDUCT >> rw [FAPPLY_FUPDATE_THM]
- >> Know ‘!y. y IN FDOM fm ==> FV (fm ' y) = {}’
+    HO_MATCH_MP_TAC fmap_INDUCT
+ >> rw [FAPPLY_FUPDATE_THM]
+ >> Know ‘!y. y IN FDOM fm ==> closed (fm ' y)’
  >- (Q.X_GEN_TAC ‘z’ >> DISCH_TAC \\
     ‘z <> x’ by PROVE_TAC [] \\
      Q.PAT_X_ASSUM ‘!y. y = x \/ y IN FDOM fm ==> P’ (MP_TAC o (Q.SPEC ‘z’)) \\
