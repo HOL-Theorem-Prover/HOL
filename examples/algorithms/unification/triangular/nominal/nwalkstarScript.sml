@@ -461,15 +461,6 @@ val nwalkstar_FEMPTY = RWstore_thm(
 `nwalk* (FEMPTY) t = t`,
 Induct_on `t` THEN ASM_SIMP_TAC (psrw_ss()) [])
 
-val NOT_FDOM_nwalkstar = Q.store_thm(
-"NOT_FDOM_nwalkstar",
-`nwfs s ==> !t. v NOTIN FDOM s ==> v IN nvars t ==> v IN nvars (nwalk* s t)`,
-DISCH_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN
-SRW_TAC [][] THEN Cases_on `t` THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
-FULL_SIMP_TAC (srw_ss()) [Once nvwalk_def, nvars_def, FLOOKUP_DEF])
-
 val nwalkstar_nwalk = Q.store_thm(
 "nwalkstar_nwalk",
 `nwfs s ==> (nwalk* s (nwalk s t) = nwalk* s t)`,
