@@ -360,12 +360,12 @@ Proof
   Cases_on‘y=e’>> fsr[] >> RES_TAC >> fsr[]
 QED
 
-Theorem maxr_set_def = new_specification(
+val maxr_set_def = new_specification(
   "maxr_set_def",["maxr_set"],
   SIMP_RULE(srw_ss() )[SKOLEM_THM,GSYM RIGHT_EXISTS_IMP_THM] max_rs_lemma
   );
 
-Theorem minr_set_def = new_specification(
+val minr_set_def = new_specification(
   "minr_set_def",["minr_set"],
   SIMP_RULE(srw_ss() )[SKOLEM_THM,GSYM RIGHT_EXISTS_IMP_THM] min_rs_lemma);
 

@@ -130,7 +130,7 @@ Datatype
     | Neg regexp`
 ;
 
-Theorem regexp_induction :
+Theorem regexp_induction[allow_rebind] :
  !P Q.
      (!cs. P (Chset cs)) /\
      (!r r0. P r /\ P r0 ==> P (Cat r r0)) /\
@@ -138,7 +138,7 @@ Theorem regexp_induction :
      (!r. P r ==> P (Neg r)) /\ Q [] /\ (!r l. P r /\ Q l ==> Q (r::l)) ==>
      (!r. P r) /\ !l. Q l
 Proof
- ACCEPT_TAC (fetch "-" "regexp_induction")
+  ACCEPT_TAC (fetch "-" "regexp_induction")
 QED
 
 Triviality regexp_distinct = fetch "-" "regexp_distinct";

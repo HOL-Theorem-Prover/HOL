@@ -1341,47 +1341,23 @@ REPEAT STRIP_TAC THEN (
 
 
 
-val INFERENCE_STAR_INTRODUCTION___EVAL1 = store_thm ("INFERENCE_STAR_INTRODUCTION___EVAL1",
- ``!sfL'' c1 c2 pfL sfL pfL' sfL'.
-         (LIST_DS_ENTAILS (c1,c2) (pfL,sfL) (pfL',sfL') ==>
-         LIST_DS_ENTAILS (c1,c2) (pfL,sfL++sfL'') (pfL',sfL'++sfL''))``,
-
-
-REPEAT STRIP_TAC THEN
-`LIST_DS_ENTAILS (c1, c2) (pfL,sfL++sfL'') (pfL',sfL'++sfL'') =
- LIST_DS_ENTAILS (c1, c2) (pfL,sfL''++sfL) (pfL',sfL''++sfL')` by (
-   MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
-   SIMP_TAC std_ss [PERM_REFL, PERM_APPEND]
-) THEN
-ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
-
-Induct_on `sfL''` THENL [
+Theorem INFERENCE_STAR_INTRODUCTION___EVAL1:
+ !sfL'' c1 c2 pfL sfL pfL' sfL'.
+   LIST_DS_ENTAILS (c1,c2) (pfL,sfL) (pfL',sfL') ==>
+   LIST_DS_ENTAILS (c1,c2) (pfL,sfL++sfL'') (pfL',sfL'++sfL'')
+Proof
+  REPEAT STRIP_TAC THEN
+  ‘LIST_DS_ENTAILS (c1, c2) (pfL,sfL++sfL'') (pfL',sfL'++sfL'') =
+   LIST_DS_ENTAILS (c1, c2) (pfL,sfL''++sfL) (pfL',sfL''++sfL')’
+    by (MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
+        SIMP_TAC std_ss [PERM_REFL, PERM_APPEND]
+       ) THEN
+  ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
+  Induct_on ‘sfL''’ THENL [
    ASM_SIMP_TAC list_ss [],
    ASM_SIMP_TAC list_ss [INFERENCE_STAR_INTRODUCTION___IMPL]
-])
-
-
-
-
-val INFERENCE_STAR_INTRODUCTION___EVAL1 = store_thm ("INFERENCE_STAR_INTRODUCTION___EVAL1",
- ``!sfL'' c1 c2 pfL sfL pfL' sfL'.
-         (LIST_DS_ENTAILS (c1,c2) (pfL,sfL) (pfL',sfL') ==>
-         LIST_DS_ENTAILS (c1,c2) (pfL,sfL++sfL'') (pfL',sfL'++sfL''))``,
-
-
-REPEAT STRIP_TAC THEN
-`LIST_DS_ENTAILS (c1, c2) (pfL,sfL++sfL'') (pfL',sfL'++sfL'') =
- LIST_DS_ENTAILS (c1, c2) (pfL,sfL''++sfL) (pfL',sfL''++sfL')` by (
-   MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
-   SIMP_TAC std_ss [PERM_REFL, PERM_APPEND]
-) THEN
-ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
-
-Induct_on `sfL''` THENL [
-   ASM_SIMP_TAC list_ss [],
-   ASM_SIMP_TAC list_ss [INFERENCE_STAR_INTRODUCTION___IMPL]
-])
-
+  ]
+QED
 
 val INFERENCE_STAR_INTRODUCTION___EVAL2 = store_thm ("INFERENCE_STAR_INTRODUCTION___EVAL2",
  ``!x n1 n2 c1 c2 pfL sfL pfL' sfL'.

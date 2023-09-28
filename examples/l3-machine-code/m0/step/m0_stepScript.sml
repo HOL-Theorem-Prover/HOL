@@ -741,13 +741,6 @@ val Decode_simps = save_thm("Decode_simps",
                      blastLib.BBLAST_CONV ``v2w [a; b; c] = ^w``
                   end)) |> Drule.LIST_CONJ);
 
-val Shift_C_LSL_rwt = Q.store_thm("Shift_C_LSL_rwt",
-   `!imm2 w C s.
-        Shift_C (w: word32, SRType_LSL, imm2, C) s =
-        ((w << imm2, if imm2 = 0 then C else testbit 32 (shiftl (w2v w) imm2)),
-         s)`,
-   lrw [Shift_C_def, LSL_C_def, bitstringTheory.shiftl_replicate_F])
-
 local
    val lem =
     (SIMP_RULE (srw_ss()) [] o Q.SPECL [`v`, `32`] o
