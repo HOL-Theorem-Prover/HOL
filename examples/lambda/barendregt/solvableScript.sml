@@ -489,12 +489,12 @@ QED
 Theorem ssub_LAM[local] = List.nth(CONJUNCTS ssub_thm, 2)
 
 (* Lemma 8.3.3 (ii) *)
-Theorem solvable_iff_solvable_LAM :
-    !M x. solvable M <=> solvable (LAM x M)
+Theorem solvable_iff_solvable_LAM[simp] :
+    !M x. solvable (LAM x M) <=> solvable M
 Proof
     rpt STRIP_TAC
- >> EQ_TAC >> rw [solvable_alt_closed_substitution_instance,
-                  closed_substitution_instances_def]
+ >> reverse EQ_TAC
+ >> rw [solvable_alt_closed_substitution_instance, closed_substitution_instances_def]
  >| [ (* goal 1 (of 2) *)
       Cases_on ‘x IN FV M’ >| (* 2 subgoals *)
       [ (* goal 1.1 (of 2) *)
