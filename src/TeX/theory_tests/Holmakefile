@@ -57,4 +57,6 @@ dupop20171208: dupop20171208_input dupop20171208_expected munge_d20171208.exe
 
 .PHONY: all check_output check_utyabb_output check_tyabb_output check_gh242 dupop20171208
 
-EXTRA_CLEANS = munge.exe tymunge.exe utymunge.exe output utyabb_output tyabb_output gh242_output dupop20171208_output
+EXTRA_CLEANS = \
+  munge.exe tymunge.exe utymunge.exe munge_d20171208.exe munge248.exe \
+  output utyabb_output tyabb_output gh242_output dupop20171208_output
