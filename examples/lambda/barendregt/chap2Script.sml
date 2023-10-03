@@ -106,6 +106,7 @@ val lameq_weaken_cong = store_thm(
   METIS_TAC [lameq_rules]);
 
 Theorem lameq_SYM = List.nth(CONJUNCTS lameq_rules, 2)
+Theorem lameq_TRANS = List.nth(CONJUNCTS lameq_rules, 3)
 
 val fixed_point_thm = store_thm(  (* p. 14 *)
   "fixed_point_thm",
@@ -537,6 +538,15 @@ val is_abs_vsubst_invariant = Store_thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
+Theorem is_abs_cases :
+    !t. is_abs t <=> ?v t0. t = LAM v t0
+Proof
+    Q.X_GEN_TAC ‘t’
+ >> Q.SPEC_THEN ‘t’ STRUCT_CASES_TAC term_CASES
+ >> SRW_TAC [][]
+ >> qexistsl_tac [‘v’, ‘t0’] >> REWRITE_TAC []
+QED
+
 val (is_comb_thm, _) = define_recursive_term_function
   `(is_comb (VAR s) = F) /\
    (is_comb (t1 @@ t2) = T) /\
@@ -560,6 +570,22 @@ val is_var_vsubst_invariant = Store_thm(
   ``!t. is_var ([VAR v/u] t) = is_var t``,
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
+
+Theorem is_var_cases :
+    !t. is_var t <=> ?y. t = VAR y
+Proof
+    Q.X_GEN_TAC ‘t’
+ >> Q.SPEC_THEN ‘t’ STRUCT_CASES_TAC term_CASES
+ >> SRW_TAC [][]
+QED
+
+Theorem term_cases :
+    !t. is_var t \/ is_comb t \/ is_abs t
+Proof
+    Q.X_GEN_TAC ‘t’
+ >> Q.SPEC_THEN ‘t’ STRUCT_CASES_TAC term_CASES
+ >> SRW_TAC [][]
+QED
 
 val (bnf_thm, _) = define_recursive_term_function
   `(bnf (VAR s) <=> T) /\
@@ -706,6 +732,7 @@ QED
 val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
 
 val _ = export_theory()
+val _ = html_theory "chap2";
 
 (* References:
 

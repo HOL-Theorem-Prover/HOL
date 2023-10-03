@@ -1,12 +1,12 @@
-open HolKernel Parse boolLib bossLib metisLib basic_swapTheory
-     relationTheory
+open HolKernel Parse boolLib bossLib;
 
-val _ = new_theory "chap3";
+open metisLib basic_swapTheory relationTheory hurdUtils;
 
 local open pred_setLib in end;
 
-open binderLib BasicProvers
-open nomsetTheory termTheory chap2Theory
+open binderLib BasicProvers nomsetTheory termTheory chap2Theory;
+
+val _ = new_theory "chap3";
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -525,7 +525,7 @@ val diamond_property_def = save_thm("diamond_property_def", diamond_def)
 end
 val _ = overload_on("diamond_property", ``relation$diamond``)
 
-(* This is not the same CR as appears in   There
+(* This is not the same CR as appears in relationTheory. There
      CR R = diamond (RTC R)
    Here,
      CR R = diamond (RTC (compat_closure R))
@@ -893,6 +893,10 @@ val lameq_betaconversion = store_thm(
 
 val prop3_18 = save_thm("prop3_18", lameq_betaconversion);
 
+(* |- !M N. M == N ==> ?Z. M -b->* Z /\ N -b->* Z *)
+Theorem lameq_CR = REWRITE_RULE [GSYM lameq_betaconversion, beta_CR]
+                                (Q.SPEC ‘beta’ theorem3_13)
+
 val ccbeta_lameq = store_thm(
   "ccbeta_lameq",
   ``!M N. M -b-> N ==> M == N``,
@@ -907,6 +911,39 @@ val betastar_lameq_bnf = store_thm(
   ``bnf N ==> (M -b->* N <=> M == N)``,
   METIS_TAC [theorem3_13, beta_CR, betastar_lameq, bnf_reduction_to_self,
              lameq_betaconversion]);
+
+(* |- !M N. M =b=> N ==> M -b->* N *)
+Theorem grandbeta_imp_betastar =
+    (REWRITE_RULE [theorem3_17] (Q.ISPEC ‘grandbeta’ TC_SUBSET))
+ |> (Q.SPECL [‘M’, ‘N’]) |> (Q.GENL [‘M’, ‘N’])
+
+Theorem grandbeta_imp_lameq :
+    !M N. M =b=> N ==> M == N
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC betastar_lameq
+ >> MATCH_MP_TAC grandbeta_imp_betastar >> art []
+QED
+
+(* cf. abs_grandbeta, added by Chun Tian *)
+Theorem abs_betastar :
+    !x M Z. LAM x M -b->* Z ==> ?N'. (Z = LAM x N') /\ M == N'
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [SYM theorem3_17]
+ >> Q.ID_SPEC_TAC ‘Z’
+ >> HO_MATCH_MP_TAC (Q.ISPEC ‘grandbeta’ TC_INDUCT_ALT_RIGHT)
+ >> rpt STRIP_TAC
+ >- (FULL_SIMP_TAC std_ss [abs_grandbeta] \\
+     Q.EXISTS_TAC ‘N0’ >> art [] \\
+     MATCH_MP_TAC grandbeta_imp_lameq >> art [])
+ >> Q.PAT_X_ASSUM ‘Z = LAM x N'’ (FULL_SIMP_TAC std_ss o wrap)
+ >> FULL_SIMP_TAC std_ss [abs_grandbeta]
+ >> Q.EXISTS_TAC ‘N0’ >> art []
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘N'’ >> art []
+ >> MATCH_MP_TAC grandbeta_imp_lameq >> art []
+QED
 
 val lameq_consistent = store_thm(
   "lameq_consistent",
@@ -1474,4 +1511,4 @@ val betastar_eq_cong = store_thm(
   METIS_TAC [bnf_triangle, RTC_CASES_RTC_TWICE]);
 
 val _ = export_theory();
-
+val _ = html_theory "chap3";
