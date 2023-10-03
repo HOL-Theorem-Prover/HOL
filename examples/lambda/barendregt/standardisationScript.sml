@@ -2523,7 +2523,7 @@ Proof
  >> qexistsl_tac [‘vs’, ‘args’, ‘y’] >> art []
 QED
 
-(* Proposition 8.3.13 (i) *)
+(* Proposition 8.3.13 (i) [1, p.174] *)
 Theorem has_hnf_iff_LAM[simp] :
     !x M. has_hnf (LAM x M) <=> has_hnf M
 Proof
@@ -2536,11 +2536,13 @@ Proof
      rw [hnf_cases])
  (* stage work *)
  >> ‘?Z. LAM x M -b->* Z /\ N -b->* Z’ by METIS_TAC [lameq_CR]
- >> Suff ‘?N'. (Z = LAM x N') /\ M == N'’
- >- (STRIP_TAC \\
-    ‘hnf Z’ by PROVE_TAC [hnf_preserved] \\
-     Q.EXISTS_TAC ‘N'’ >> gs [hnf_thm])
- >> MATCH_MP_TAC abs_betastar >> art []
+ >> Know ‘?N'. (Z = LAM x N') /\ M -b->* N'’
+ >- (MATCH_MP_TAC abs_betastar >> art [])
+ >> STRIP_TAC
+ >> Q.EXISTS_TAC ‘N'’
+ >> ‘hnf Z’ by PROVE_TAC [hnf_preserved]
+ >> gs [hnf_thm]
+ >> MATCH_MP_TAC betastar_lameq >> art []
 QED
 
 val _ = export_theory()

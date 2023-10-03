@@ -925,9 +925,11 @@ Proof
  >> MATCH_MP_TAC grandbeta_imp_betastar >> art []
 QED
 
-(* cf. abs_grandbeta, added by Chun Tian *)
+(* |- !R x y z. R^+ x y /\ R^+ y z ==> R^+ x z *)
+Theorem TC_TRANS[local] = REWRITE_RULE [transitive_def] TC_TRANSITIVE
+
 Theorem abs_betastar :
-    !x M Z. LAM x M -b->* Z ==> ?N'. (Z = LAM x N') /\ M == N'
+    !x M Z. LAM x M -b->* Z ==> ?N'. (Z = LAM x N') /\ M -b->* N'
 Proof
     rpt GEN_TAC
  >> REWRITE_TAC [SYM theorem3_17]
@@ -936,13 +938,13 @@ Proof
  >> rpt STRIP_TAC
  >- (FULL_SIMP_TAC std_ss [abs_grandbeta] \\
      Q.EXISTS_TAC ‘N0’ >> art [] \\
-     MATCH_MP_TAC grandbeta_imp_lameq >> art [])
+     MATCH_MP_TAC TC_SUBSET >> art [])
  >> Q.PAT_X_ASSUM ‘Z = LAM x N'’ (FULL_SIMP_TAC std_ss o wrap)
  >> FULL_SIMP_TAC std_ss [abs_grandbeta]
  >> Q.EXISTS_TAC ‘N0’ >> art []
- >> MATCH_MP_TAC lameq_TRANS
+ >> MATCH_MP_TAC TC_TRANS
  >> Q.EXISTS_TAC ‘N'’ >> art []
- >> MATCH_MP_TAC grandbeta_imp_lameq >> art []
+ >> MATCH_MP_TAC TC_SUBSET >> art []
 QED
 
 val lameq_consistent = store_thm(
