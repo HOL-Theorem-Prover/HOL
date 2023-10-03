@@ -1057,3 +1057,4 @@ val normstar_to_vheadbinary_wstar = save_thm(
                  [leneq2, DECIDE ``x < 2 ⇔ (x = 0) ∨ (x = 1)``]);
 
 val _ = export_theory()
+val _ = html_theory "normal_order";

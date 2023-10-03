@@ -1,6 +1,6 @@
 open HolKernel boolLib Parse bossLib generic_termsTheory
 
-open boolSimps
+open boolSimps arithmeticTheory;
 
 open nomsetTheory
 open pred_setTheory finite_mapTheory hurdUtils
@@ -558,6 +558,24 @@ val size_def = new_specification("size_def", ["size"], size_exists)
 Theorem size_thm[simp] = CONJUNCT1 size_def
 
 Theorem size_tpm[simp] = GSYM (CONJUNCT2 size_def)
+
+Theorem size_nonzero :
+    !t:term. 0 < size t
+Proof
+    HO_MATCH_MP_TAC simple_induction
+ >> SRW_TAC [ARITH_ss][]
+QED
+
+(* |- !t. size t <> 0 *)
+Theorem size_nz =
+    REWRITE_RULE [GSYM arithmeticTheory.NOT_ZERO_LT_ZERO] size_nonzero
+
+Theorem size_1 :
+    (size M = 1) <=> ?y. (M = VAR y)
+Proof
+    Q.SPEC_THEN `M` STRUCT_CASES_TAC term_CASES
+ >> SRW_TAC [][size_thm, size_nz]
+QED
 
 (* ----------------------------------------------------------------------
     iterated substitutions (ugh)

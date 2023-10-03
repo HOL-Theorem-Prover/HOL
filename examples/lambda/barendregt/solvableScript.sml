@@ -9,7 +9,8 @@ open arithmeticTheory pred_setTheory listTheory sortingTheory finite_mapTheory
      hurdUtils;
 
 (* lambda theories *)
-open termTheory appFOLDLTheory chap2Theory standardisationTheory reductionEval;
+open termTheory appFOLDLTheory chap2Theory chap3Theory standardisationTheory
+     reductionEval;
 
 val _ = new_theory "solvable";
 
@@ -104,9 +105,6 @@ Proof
  >> rw [lameq_K]
 QED
 
-Theorem lameq_symm[local]  = List.nth(CONJUNCTS lameq_rules, 2)
-Theorem lameq_trans[local] = List.nth(CONJUNCTS lameq_rules, 3)
-
 Theorem solvable_xIO :
     solvable (VAR x @@ I @@ Omega)
 Proof
@@ -186,7 +184,7 @@ Proof
      MATCH_MP_TAC FV_ssub \\
      rw [Abbr ‘fm’, FUN_FMAP_DEF, FAPPLY_FUPDATE_THM])
  (* stage work *)
- >> MATCH_MP_TAC lameq_trans
+ >> MATCH_MP_TAC lameq_TRANS
  >> Q.EXISTS_TAC ‘fm ' (M @* Ns)’
  >> reverse CONJ_TAC
  >- (ONCE_REWRITE_TAC [SYM ssub_I] \\
@@ -243,7 +241,7 @@ Proof
      MATCH_MP_TAC LAMl_appstar >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs M @* Ns0 @* Ns1 == fm ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
- >> ‘fm ' M @* Ns1 == I’ by PROVE_TAC [lameq_trans, lameq_symm]
+ >> ‘fm ' M @* Ns1 == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM]
  >> qexistsl_tac [‘fm ' M’, ‘Ns1’]
  >> rw [closed_substitution_instances_def]
  >> Q.EXISTS_TAC ‘fm’ >> rw [Abbr ‘fm’]
@@ -281,7 +279,7 @@ Proof
      FULL_SIMP_TAC std_ss [GSYM appstar_APPEND] \\
      Q.ABBREV_TAC ‘Ns' = Ns ++ Is’ \\
     ‘LENGTH Ns' = n’ by (rw [Abbr ‘Ns'’, Abbr ‘Is’]) \\
-    ‘LAMl vs M @* Ns' == I’ by PROVE_TAC [lameq_trans] \\
+    ‘LAMl vs M @* Ns' == I’ by PROVE_TAC [lameq_TRANS] \\
      Know ‘EVERY closed Ns'’
      >- (rw [EVERY_APPEND, Abbr ‘Ns'’] \\
          rw [EVERY_MEM, Abbr ‘Is’, closed_def, MEM_GENLIST] \\
@@ -327,7 +325,7 @@ Proof
  >> Know ‘LAMl vs M @* Ps @* Ns == (FEMPTY |++ ZIP (vs,Ps)) ' M @* Ns’
  >- (MATCH_MP_TAC lameq_appstar_cong >> art [])
  >> DISCH_TAC
- >> ‘LAMl vs M @* Ps @* Ns == I’ by PROVE_TAC [lameq_trans]
+ >> ‘LAMl vs M @* Ps @* Ns == I’ by PROVE_TAC [lameq_TRANS]
  >> qexistsl_tac [‘LAMl vs M’, ‘Ps ++ Ns’]
  >> rw [appstar_APPEND, closures_def]
  >> Q.EXISTS_TAC ‘vs’ >> art []
@@ -369,7 +367,7 @@ Proof
      MATCH_MP_TAC LAMl_appstar >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs M @* Ns0 @* Ns1 == fm ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
- >> ‘fm ' M @* Ns1 == I’ by PROVE_TAC [lameq_trans, lameq_symm]
+ >> ‘fm ' M @* Ns1 == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM]
  (* Ns0' is the permuted version of Ns0 *)
  >> Q.ABBREV_TAC ‘Ns0' = GENLIST (\i. EL (f i) Ns0) n’
  >> ‘LENGTH Ns0' = n’ by rw [Abbr ‘Ns0'’, LENGTH_GENLIST]
@@ -392,9 +390,9 @@ Proof
      MATCH_MP_TAC LAMl_appstar >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs' M @* Ns0' @* Ns1 == fm' ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
- >> MATCH_MP_TAC lameq_trans
+ >> MATCH_MP_TAC lameq_TRANS
  >> Q.EXISTS_TAC ‘fm' ' M @* Ns1’ >> art []
- >> MATCH_MP_TAC lameq_trans
+ >> MATCH_MP_TAC lameq_TRANS
  >> Q.EXISTS_TAC ‘fm ' M @* Ns1’ >> art []
  >> Suff ‘fm = fm'’ >- rw []
  (* cleanup uncessary assumptions *)
@@ -476,7 +474,7 @@ Proof
  >> ‘LAMl vs M @* (Ns ++ Is) == I @* Is’ by rw [appstar_APPEND]
  >> Q.ABBREV_TAC ‘Ns' = Ns ++ Is’
  >> ‘LENGTH Ns' = n’ by (rw [Abbr ‘Ns'’, Abbr ‘Is’])
- >> ‘LAMl vs M @* Ns' == I’ by PROVE_TAC [lameq_trans]
+ >> ‘LAMl vs M @* Ns' == I’ by PROVE_TAC [lameq_TRANS]
  >> Know ‘EVERY closed Ns'’
  >- (rw [EVERY_APPEND, Abbr ‘Ns'’] \\
      rw [EVERY_MEM, Abbr ‘Is’, closed_def, MEM_GENLIST] \\
@@ -489,8 +487,8 @@ QED
 Theorem ssub_LAM[local] = List.nth(CONJUNCTS ssub_thm, 2)
 
 (* Lemma 8.3.3 (ii) *)
-Theorem solvable_iff_solvable_LAM[simp] :
-    !M x. solvable (LAM x M) <=> solvable M
+Theorem solvable_iff_LAM[simp] :
+    !x M. solvable (LAM x M) <=> solvable M
 Proof
     rpt STRIP_TAC
  >> reverse EQ_TAC
@@ -509,7 +507,7 @@ Proof
             rw [Abbr ‘fm0’, Abbr ‘N’, DOMSUB_FAPPLY_THM, closed_def]) >> Rewr' \\
         DISCH_TAC \\
         Know ‘fm0 ' (LAM x M @@ N) @* Ns == I’
-        >- (MATCH_MP_TAC lameq_trans \\
+        >- (MATCH_MP_TAC lameq_TRANS \\
             Q.EXISTS_TAC ‘fm0 ' ([N/x] M) @* Ns’ \\
             POP_ASSUM (REWRITE_TAC o wrap) \\
             MATCH_MP_TAC lameq_appstar_cong \\
@@ -525,7 +523,7 @@ Proof
         Q.EXISTS_TAC ‘fm0’ >> rw [Abbr ‘fm0’, DOMSUB_FAPPLY_THM],
         (* goal 1.2 (of 2) *)
         Know ‘fm ' (LAM x M @@ I) @* Ns == I’
-        >- (MATCH_MP_TAC lameq_trans \\
+        >- (MATCH_MP_TAC lameq_TRANS \\
             Q.EXISTS_TAC ‘fm ' M @* Ns’ >> art [] \\
             MATCH_MP_TAC lameq_appstar_cong \\
             MATCH_MP_TAC lameq_ssub_cong >> art [] \\
@@ -561,7 +559,7 @@ Proof
         simp [appstar_APPEND] \\
         DISCH_TAC \\
         Know ‘[h/x] (fm ' M) @* t == I’
-        >- (MATCH_MP_TAC lameq_trans \\
+        >- (MATCH_MP_TAC lameq_TRANS \\
             Q.EXISTS_TAC ‘LAM x (fm ' M) @@ h @* t’ >> art [] \\
             MATCH_MP_TAC lameq_appstar_cong \\
             rw [lameq_rules]) \\
@@ -596,7 +594,7 @@ Proof
         simp [appstar_APPEND] \\
         DISCH_TAC \\
         Know ‘[h/x] (fm ' M) @* t == I’
-        >- (MATCH_MP_TAC lameq_trans \\
+        >- (MATCH_MP_TAC lameq_TRANS \\
             Q.EXISTS_TAC ‘LAM x (fm ' M) @@ h @* t’ >> art [] \\
             MATCH_MP_TAC lameq_appstar_cong \\
             rw [lameq_rules]) \\

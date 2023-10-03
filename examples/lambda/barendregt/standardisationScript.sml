@@ -1,16 +1,13 @@
-open HolKernel Parse boolLib bossLib BasicProvers metisLib
+open HolKernel Parse boolLib bossLib;
 
-open boolSimps
+open BasicProvers metisLib boolSimps relationTheory pathTheory pred_setTheory
+     listTheory finite_mapTheory hurdUtils;
 
 open nomsetTheory binderLib
-
-open pred_setTheory listTheory finite_mapTheory hurdUtils
-
 open finite_developmentsTheory
 open labelledTermsTheory
 open termTheory chap2Theory chap3Theory appFOLDLTheory
 open term_posnsTheory
-open pathTheory
 open chap11_1Theory
 open head_reductionTheory
 
@@ -1176,13 +1173,6 @@ val lemma11_4_6 = store_thm(
 val foldl_snoc = prove(
   ``!l f x y. FOLDL f x (APPEND l [y]) = f (FOLDL f x l) y``,
   Induct THEN SRW_TAC [][]);
-
-val size_nonzero = prove(``!t:term. 0 < size t``,
-                         HO_MATCH_MP_TAC simple_induction THEN
-                         SRW_TAC [ARITH_ss][])
-
-val size_nz =
-    REWRITE_RULE [GSYM arithmeticTheory.NOT_ZERO_LT_ZERO] size_nonzero
 
 val combs_not_size_1 = prove(
   ``(size M = 1) ==> ~is_comb M``,
@@ -2365,6 +2355,7 @@ val hnf_reflected_over_ireduction = store_thm(
   SRW_TAC [][hnf_no_head_redex, i_reduce1_def] THEN
   METIS_TAC [lemma11_4_3ii]);
 
+(* NOTE: this is also Theorem 8.3.11 [1, p. 174] *)
 val corollary11_4_8 = store_thm(
   "corollary11_4_8",
   ``!M. has_hnf M = finite (head_reduction_path M)``,
@@ -2441,8 +2432,6 @@ Proof
  >> ASM_SIMP_TAC (betafy (srw_ss())) []
 QED
 
-Theorem lameq_trans[local] = List.nth(CONJUNCTS lameq_rules, 3)
-
 Theorem LAMl_appstar :
     !vs M Ns. ALL_DISTINCT vs /\ (LENGTH vs = LENGTH Ns) /\ EVERY closed Ns ==>
               LAMl vs M @* Ns == (FEMPTY |++ ZIP (vs,Ns)) ' M
@@ -2499,10 +2488,66 @@ Proof
      MATCH_MP_TAC LAMl_SUB \\
      Q.PAT_X_ASSUM ‘closed N’ MP_TAC >> rw [closed_def])
  >> DISCH_TAC
- >> MATCH_MP_TAC lameq_trans
+ >> MATCH_MP_TAC lameq_TRANS
  >> Q.EXISTS_TAC ‘LAMl vs ([N/v] M) @* Ns’ >> art []
  >> MATCH_MP_TAC lameq_appstar_cong >> art []
 QED
 
+Theorem hnf_LAMl[simp] :
+    hnf (LAMl vs M) <=> hnf M
+Proof
+    Induct_on ‘vs’ >> rw []
+QED
+
+Theorem hnf_appstar :
+    !M Ns. hnf (M @* Ns) /\ Ns <> [] ==> hnf M /\ ~is_abs M
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> HO_MATCH_MP_TAC SNOC_INDUCT
+ >> rw [SNOC_APPEND, SYM appstar_SNOC]
+ >> Cases_on ‘Ns = []’ >> fs []
+QED
+
+Theorem hnf_cases :
+    !M : term. hnf M ==> ?vs args y. M = LAMl vs (VAR y @* args)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPEC ‘M’ strange_cases)
+ >> RW_TAC std_ss []
+ >- (FULL_SIMP_TAC std_ss [size_1] \\
+     qexistsl_tac [‘vs’, ‘[]’, ‘y’] >> rw [])
+ >> FULL_SIMP_TAC std_ss [hnf_LAMl]
+ >> ‘hnf t /\ ~is_abs t’ by PROVE_TAC [hnf_appstar]
+ >> ‘is_var t’ by METIS_TAC [term_cases]
+ >> FULL_SIMP_TAC std_ss [is_var_cases]
+ >> qexistsl_tac [‘vs’, ‘args’, ‘y’] >> art []
+QED
+
+(* Proposition 8.3.13 (i) *)
+Theorem has_hnf_iff_LAM[simp] :
+    !x M. has_hnf (LAM x M) <=> has_hnf M
+Proof
+    RW_TAC std_ss [has_hnf_def]
+ >> reverse EQ_TAC (* easy goal first *)
+ >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC ‘LAM x N’ \\
+     CONJ_TAC >- PROVE_TAC [lameq_rules] \\
+    ‘?vs args y. N = LAMl vs (VAR y @* args)’ by METIS_TAC [hnf_cases] \\
+     rw [hnf_cases])
+ (* stage work *)
+ >> ‘?Z. LAM x M -b->* Z /\ N -b->* Z’ by METIS_TAC [lameq_CR]
+ >> Suff ‘?N'. (Z = LAM x N') /\ M == N'’
+ >- (STRIP_TAC \\
+    ‘hnf Z’ by PROVE_TAC [hnf_preserved] \\
+     Q.EXISTS_TAC ‘N'’ >> gs [hnf_thm])
+ >> MATCH_MP_TAC abs_betastar >> art []
+QED
+
 val _ = export_theory()
 val _ = html_theory "standardisation";
+
+(* References:
+
+   [1] Barendregt, H.P.: The Lambda Calculus, Its Syntax and Semantics.
+       College Publications, London (1984).
+ *)
