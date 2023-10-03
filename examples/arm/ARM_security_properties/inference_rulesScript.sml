@@ -856,8 +856,6 @@ val preserve_relation_comb_abs_thm =
          THEN RW_TAC (srw_ss()) []);
 
 
-val comb_mode_def = Define `comb_mode m n k s = (assert_mode m s \/ assert_mode n s \/ assert_mode k s)`;
-
 val comb_mode_def = Define `comb_mode m n s = (assert_mode m s \/ assert_mode n s)`;
 
 val comb_mode_thm =

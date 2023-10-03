@@ -446,11 +446,11 @@ fun prove_const a pred expr cm postfix thms =
                                                          THEN RES_TAC)
 
                 val proved_preserve_unbeta_a =
-                    store_thm ("proved_preserve_unbeta_a",
-                               `` ( priv_cpsr_flags_constraints ^unbeta_a ^expr_elm)``,
-                               (ASSUME_TAC (proved_unbeta_lemma))
-                                   THEN (ASSUME_TAC proved_a)
-                                   THEN (FULL_SIMP_TAC (srw_ss()) []))
+                    TAC_PROOF(
+                      ([], “priv_cpsr_flags_constraints ^unbeta_a ^expr_elm”),
+                      (ASSUME_TAC (proved_unbeta_lemma))
+                        THEN (ASSUME_TAC proved_a)
+                        THEN (FULL_SIMP_TAC (srw_ss()) []))
 
                 val abs_type = type_of a_abs
                 val (abs_args, abs_body)  = generate_uncurry_abs a
@@ -586,11 +586,10 @@ fun get_first_cpc_lemmma abody expr_elm unbeta_a unbeta_thm thms =
 
 
 fun get_second_lemmma proved_a expr_elm unbeta_a proved_unbeta_lemma =
-    store_thm ("proved_preserve_unbeta_a",
-               `` ( priv_cpsr_flags_constraints ^unbeta_a ^expr_elm)``,
+    TAC_PROOF(([], `` ( priv_cpsr_flags_constraints ^unbeta_a ^expr_elm)``),
                (ASSUME_TAC (proved_unbeta_lemma))
                    THEN (ASSUME_TAC proved_a)
-                   THEN (FULL_SIMP_TAC (srw_ss()) []));
+                   THEN (FULL_SIMP_TAC (srw_ss()) []))
 
 
 fun get_first_spc_lemma abody expr unbeta_a unbeta_thm thms =
@@ -616,11 +615,9 @@ fun get_second_spc_lemma proved_a expr unbeta_a proved_unbeta_lemma =
     let val mode = List.nth(expr,0)
         val bvt = List.nth(expr,1)
     in
-        store_thm ("proved_preserve_unbeta_a",
-                   `` (set_pc_to ^unbeta_a ^mode ^bvt)``,
-               (ASSUME_TAC (proved_unbeta_lemma))
-                   THEN (ASSUME_TAC proved_a)
-                   THEN (FULL_SIMP_TAC (srw_ss()) []))
+        TAC_PROOF (([], “set_pc_to ^unbeta_a ^mode ^bvt”),
+                   ASSUME_TAC (proved_unbeta_lemma) THEN
+                   ASSUME_TAC proved_a THEN FULL_SIMP_TAC (srw_ss()) [])
     end;
 
  fun prove_abs_action (a, pred ,expr ,proved_a,thms, unbetaf1, unbetaf2) =
