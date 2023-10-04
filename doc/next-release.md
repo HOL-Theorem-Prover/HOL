@@ -209,6 +209,39 @@ Incompatibilities:
     This frees up the name `ring` to be used only by the material under `examples/algebra`.
     (In the absence of this change, theories that depended on what was in `src/ring/src` could not be used in a development alongside what is in `examples/algebra`.)
 
+*   It is now an error to bind the same name twice in a theory.
+    Binding names is what happens when theorems are saved or stored, or when definitions are made.
+    These names appear in the exported *thy*`Theory.sig` files.
+    Previously, rebound values would replace old ones with only a warning interactively.
+    Now an exception is raised.
+    In some circumstances when rebinding is appropriate, the `allow_rebind` annotation can be used to permit the behaviour.
+    For example:
+
+           Theorem foo: p /\ q <=> q /\ p
+           Proof DECIDE_TAC
+           QED
+
+           Theorem foo[allow_rebind]: p \/ q <=> q \/ p
+           Proof DECIDE_TAC
+           QED
+
+    The content of the theorem is irrelevant; any attempt to rebind will cause an error.
+    Programmatically, the trace variable `Theory.allow_rebinds` can be set to `1` to allow the old behaviour.
+    Thus, the following could be done at the head of a script file to completely turn off checking for the whole file
+
+           val _ = set_trace "Theory.allow_rebinds" 1
+
+    Rebinding is permitted dynamically when the `Globals.interactive` flag is true so that interactive development of theories is not hindered.
+
+*   One error detected by the above change was in `examples/miller/`’s `extra_bool` theory.
+    This defines an `xor` operator and included two successive theorems:
+
+           [xor_F] : !p. p xor F = p
+           [xor_F] : !p. F xor p = p
+
+    The failure to flag the second as an error meant that the theorem called `xor_F` completely masked the rewrite in the opposite direction.
+    The fix was to rename the second `xor_F` to now be `F_xor`, which is an incompatibility if your theory depends on `extra_boolTheory`.
+
 * * * * *
 
 <div class="footer">
