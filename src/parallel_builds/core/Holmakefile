@@ -39,7 +39,7 @@ EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
          hardware hfs \
          imperative ind_def \
          l3-machine-code/common \
-         lambda/barendregt lambda/wcbv-reasonable \
+         lambda \
 #         lassie \
          logic logic/folcompactness logic/modal-models logic/modal-tableaux \
          logic/ncfolproofs logic/propositional_logic logic/relevant-logic \
