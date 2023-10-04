@@ -80,15 +80,17 @@ val one_hole_is_normal = store_thm(
                                   MP_TAC (MATCH_MP imp (CONJ cth th))))) THEN
   SIMP_TAC std_ss []);
 
-val (lameq_rules, lameq_indn, lameq_cases) = (* p. 13 *)
-  IndDefLib.xHol_reln "lameq"
-    `(!x M N. (LAM x M) @@ N == [N/x]M) /\
+Inductive lameq :
+     (!x M N. (LAM x M) @@ N == [N/x]M) /\
      (!M. M == M) /\
+[~SYM:]
      (!M N. M == N ==> N == M) /\
+[~TRANS:]
      (!M N L. M == N /\ N == L ==> M == L) /\
      (!M N Z. M == N ==> M @@ Z == N @@ Z) /\
      (!M N Z. M == N ==> Z @@ M == Z @@ N) /\
-     (!M N x. M == N ==> LAM x M == LAM x N)`;
+     (!M N x. M == N ==> LAM x M == LAM x N)
+End
 
 val lameq_refl = Store_thm(
   "lameq_refl",
@@ -104,9 +106,6 @@ val lameq_weaken_cong = store_thm(
   "lameq_weaken_cong",
   ``(M1:term) == M2 ==> N1 == N2 ==> (M1 == N1 <=> M2 == N2)``,
   METIS_TAC [lameq_rules]);
-
-Theorem lameq_SYM = List.nth(CONJUNCTS lameq_rules, 2)
-Theorem lameq_TRANS = List.nth(CONJUNCTS lameq_rules, 3)
 
 val fixed_point_thm = store_thm(  (* p. 14 *)
   "fixed_point_thm",
@@ -309,7 +308,7 @@ val SUB_LAM_RWT = store_thm(
 val lameq_asmlam = store_thm(
   "lameq_asmlam",
   ``!M N. M == N ==> asmlam eqns M N``,
-  HO_MATCH_MP_TAC lameq_indn THEN METIS_TAC [asmlam_rules]);
+  HO_MATCH_MP_TAC lameq_ind THEN METIS_TAC [asmlam_rules]);
 
 fun betafy ss =
     simpLib.add_relsimp {refl = GEN_ALL lameq_refl,

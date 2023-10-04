@@ -2500,12 +2500,22 @@ Proof
 QED
 
 Theorem hnf_appstar :
-    !M Ns. hnf (M @* Ns) /\ Ns <> [] ==> hnf M /\ ~is_abs M
+    !M Ns. Ns <> [] ==> (hnf (M @* Ns) <=> hnf M /\ ~is_abs M)
 Proof
-    Q.X_GEN_TAC ‘M’
+    rpt STRIP_TAC
+ >> EQ_TAC
+ >- (POP_ASSUM MP_TAC \\
+     Q.ID_SPEC_TAC ‘Ns’ >> HO_MATCH_MP_TAC SNOC_INDUCT \\
+     rw [SNOC_APPEND, SYM appstar_SNOC] \\
+     Cases_on ‘Ns = []’ >> fs [])
+ >> STRIP_TAC
+ >> Q.ID_SPEC_TAC ‘Ns’
  >> HO_MATCH_MP_TAC SNOC_INDUCT
  >> rw [SNOC_APPEND, SYM appstar_SNOC]
- >> Cases_on ‘Ns = []’ >> fs []
+ >> Q.PAT_X_ASSUM ‘~is_abs M’ MP_TAC >> KILL_TAC >> DISCH_TAC
+ >> Q.SPEC_TAC (‘Ns'’, ‘Ns’)
+ >> HO_MATCH_MP_TAC SNOC_INDUCT
+ >> rw [SNOC_APPEND, SYM appstar_SNOC]
 QED
 
 Theorem hnf_cases :
@@ -2536,9 +2546,7 @@ Proof
      rw [hnf_cases])
  (* stage work *)
  >> ‘?Z. LAM x M -b->* Z /\ N -b->* Z’ by METIS_TAC [lameq_CR]
- >> Know ‘?N'. (Z = LAM x N') /\ M -b->* N'’
- >- (MATCH_MP_TAC abs_betastar >> art [])
- >> STRIP_TAC
+ >> ‘?N'. (Z = LAM x N') /\ M -b->* N'’ by rw [GSYM abs_betastar]
  >> Q.EXISTS_TAC ‘N'’
  >> ‘hnf Z’ by PROVE_TAC [hnf_preserved]
  >> gs [hnf_thm]

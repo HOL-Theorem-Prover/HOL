@@ -929,9 +929,12 @@ QED
 Theorem TC_TRANS[local] = REWRITE_RULE [transitive_def] TC_TRANSITIVE
 
 Theorem abs_betastar :
-    !x M Z. LAM x M -b->* Z ==> ?N'. (Z = LAM x N') /\ M -b->* N'
+    !x M Z. LAM x M -b->* Z <=> ?N'. (Z = LAM x N') /\ M -b->* N'
 Proof
     rpt GEN_TAC
+ >> reverse EQ_TAC
+ >- (rw [] >> PROVE_TAC [reduction_rules])
+ (* stage work *)
  >> REWRITE_TAC [SYM theorem3_17]
  >> Q.ID_SPEC_TAC ‘Z’
  >> HO_MATCH_MP_TAC (Q.ISPEC ‘grandbeta’ TC_INDUCT_ALT_RIGHT)
