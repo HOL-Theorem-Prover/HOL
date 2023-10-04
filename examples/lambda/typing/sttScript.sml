@@ -378,12 +378,12 @@ Theorem bnf_characterisation:
                 (∀M. MEM M Ms ⇒ bnf M)
 Proof
   ho_match_mp_tac nc_INDUCTION2 >> qexists ‘∅’ >> rw[] >~
-  [‘VAR s = LAMl _ (VAR _ ·· _)’]
-  >- (qexistsl  [‘[]’, ‘s’, ‘[]’] >> simp[]) >~
   [‘VAR _ ·· _ = M1 @@ M2’]
   >- (simp[] >> eq_tac >> rpt strip_tac >~
       [‘M1 = LAMl vs1 _’, ‘M1 @@ M2’]
-      >- (‘vs1 = []’ by (Cases_on ‘vs1’ >> gvs[]) >> gvs[appstar_SNOC] >>
+      >- (gvs[app_eq_appstar] >>
+          Q.REFINE_EXISTS_TAC ‘SNOC M Mt’ >>
+          simp[DISJ_IMP_THM, rich_listTheory.FRONT_APPEND] >>
           metis_tac[]) >>
       Cases_on ‘Ms’ using rich_listTheory.SNOC_CASES >>
       gvs[rich_listTheory.SNOC_APPEND, appstar_APPEND] >>
@@ -403,7 +403,6 @@ Proof
   simp[tpm_LAMl, tpm_appstar] >> irule_at Any EQ_REFL >>
   simp[MEM_listpm] >> rpt strip_tac >> first_assum drule >> simp[]
 QED
-
 
 (*
 

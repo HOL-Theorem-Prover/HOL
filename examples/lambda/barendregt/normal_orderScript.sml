@@ -864,23 +864,15 @@ val normwhnf_is_abs_rpreserved = store_thm(
   HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][]);
 
 
-val whnf_is_abs_appstr = store_thm(
-  "whnf_is_abs_appstr",
-  ``∀t. whnf t ⇔ is_abs t ∨ ∃v args. t = VAR v ·· args``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THENL [
-    MAP_EVERY Q.EXISTS_TAC [`s`, `[]`] THEN SRW_TAC [][],
-    SRW_TAC [][EQ_IMP_THM] THENL [
-      MAP_EVERY Q.EXISTS_TAC [`v`, `args ++ [t']`] THEN
-      SRW_TAC [][rich_listTheory.FOLDL_APPEND],
-
-      FULL_SIMP_TAC (srw_ss()) [app_eq_varappstar] THEN
-      Q.SPEC_THEN `VAR v ·· FRONT args` MP_TAC term_CASES THEN
-      STRIP_TAC THEN SRW_TAC [][] THEN
-      FULL_SIMP_TAC (srw_ss()) [lam_eq_appstar],
-
-      FULL_SIMP_TAC (srw_ss()) [app_eq_varappstar] THEN METIS_TAC []
-    ]
-  ]);
+Theorem whnf_is_abs_appstr:
+  ∀t. whnf t ⇔ is_abs t ∨ ∃v args. t = VAR v ·· args
+Proof
+  HO_MATCH_MP_TAC simple_induction >> rw[SF CONJ_ss] >>
+  simp[app_eq_varappstar, PULL_EXISTS] >> iff_tac >> rw[] >>
+  gvs[] >>
+  rename [‘Ns = FRONT _’, ‘M = LAST _’] >>
+  qexists ‘SNOC M Ns’ >> simp[rich_listTheory.FRONT_APPEND]
+QED
 
 val normorder_strong_ind =
     IndDefLib.derive_strong_induction (normorder_rules,normorder_ind)

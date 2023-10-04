@@ -13,14 +13,11 @@ val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
 val _ = overload_on ("@*", ``λf (args:term list). FOLDL APP f args``)
 
-val var_eq_appstar = store_thm(
-  "var_eq_appstar",
-  ``(VAR s = f ·· args) ⇔ (args = []) ∧ (f = VAR s)``,
-  Induct_on `args` THEN SRW_TAC [][] THENL [
-    METIS_TAC [],
-    MAP_EVERY Q.ID_SPEC_TAC [`f`,`h`] THEN POP_ASSUM (K ALL_TAC) THEN
-    Induct_on `args` THEN SRW_TAC [][]
-  ]);
+Theorem var_eq_appstar[simp]:
+  VAR s = f ·· args ⇔ args = [] ∧ f = VAR s
+Proof
+  Cases_on `args` using SNOC_CASES >> simp[FOLDL_SNOC] >> metis_tac[]
+QED
 
 val app_eq_appstar = store_thm(
   "app_eq_appstar",

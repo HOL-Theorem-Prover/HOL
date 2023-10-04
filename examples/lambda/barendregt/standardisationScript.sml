@@ -1212,25 +1212,53 @@ val i_reduce_to_LAM_underneath = prove(
     PROVE_TAC [labelled_redn_rules]
   ]);
 
-val LAMl_def = Define`
+Definition LAMl_def:
   LAMl vs (t : term) = FOLDR LAM t vs
-`;
+End
 
-val LAMl_thm = Store_Thm(
-  "LAMl_thm",
-  ``(LAMl [] M = M) /\
-    (LAMl (h::t) M = LAM h (LAMl t M))``,
-  SRW_TAC [][LAMl_def]);
+Theorem LAMl_thm[simp]:
+  (LAMl [] M = M) /\
+  (LAMl (h::t) M = LAM h (LAMl t M))
+Proof SRW_TAC [][LAMl_def]
+QED
 
-val LAMl_11 = Store_Thm(
-  "LAMl_11",
-  ``!vs. (LAMl vs x = LAMl vs y) = (x = y)``,
-  Induct THEN SRW_TAC [][]);
+Theorem LAMl_11[simp]:
+  !vs. (LAMl vs x = LAMl vs y) = (x = y)
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
-val size_LAMl = Store_Thm(
-  "size_LAMl",
-  ``!vs. size (LAMl vs M) = LENGTH vs + size M``,
-  Induct THEN SRW_TAC [numSimps.ARITH_ss][size_thm]);
+Theorem size_LAMl[simp]:
+  !vs. size (LAMl vs M) = LENGTH vs + size M
+Proof
+  Induct THEN SRW_TAC [numSimps.ARITH_ss][size_thm]
+QED
+
+Theorem LAMl_eq_VAR[simp]:
+  (LAMl vs M = VAR v) ⇔ (vs = []) ∧ (M = VAR v)
+Proof
+  Cases_on ‘vs’ >> simp[]
+QED
+
+Theorem LAMl_eq_APP[simp]:
+  (LAMl vs M = N @@ P) ⇔ (vs = []) ∧ (M = N @@ P)
+Proof
+  Cases_on ‘vs’ >> simp[]
+QED
+
+Theorem LAMl_eq_appstar:
+  (LAMl vs M = N ·· Ns) ⇔
+    (vs = []) ∧ (M = N ·· Ns) ∨ (Ns = []) ∧ (N = LAMl vs M)
+Proof
+  Cases_on ‘vs’ >> simp[] >> Cases_on ‘Ns’ >> simp[] >>
+  metis_tac[]
+QED
+
+Theorem is_abs_LAMl[simp]:
+  is_abs (LAMl vs M) ⇔ vs ≠ [] ∨ is_abs M
+Proof
+  Cases_on ‘vs’ >> simp[]
+QED
 
 val LAMl_vsub = store_thm(
   "LAMl_vsub",
