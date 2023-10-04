@@ -628,7 +628,7 @@ Proof
   gvs[]
 QED
 
-Theorem itree_bind_thm:
+Theorem itree_bind_thm[simp]:
   itree_bind (Ret r) k = k r /\
   itree_bind (Tau t) k = Tau (itree_bind t k) /\
   itree_bind (Vis e k') k = Vis e (λx. itree_bind (k' x) k)
@@ -640,7 +640,7 @@ Proof
   rw[Once itree_unfold,FUN_EQ_THM]
 QED
 
-Theorem itree_bind_right_identity:
+Theorem itree_bind_right_identity[simp]:
   itree_bind t Ret = t
 Proof
   rw[Once itree_bisimulation] >>
@@ -932,18 +932,12 @@ Proof
             itree_wbisim_sym]
 QED
 
-Theorem itree_bind_wbisim_tau_eq[simp]:
-  !x k y. itree_wbisim (itree_bind (Tau x) k) y <=> itree_wbisim (itree_bind x k) y
-Proof
-  metis_tac[itree_bind_thm, itree_wbisim_tau_eq,
-            itree_wbisim_sym, itree_wbisim_trans]
-QED
-
 Theorem itree_bind_strip_tau_wbisim:
   !u u' k. strip_tau u u' ==> itree_wbisim (itree_bind u k) (itree_bind u' k)
 Proof
   Induct_on ‘strip_tau’ >>
-  rpt strip_tac >> rw[itree_wbisim_refl]
+  rw[] >>
+  metis_tac[itree_wbisim_refl, itree_wbisim_tau_eq, itree_wbisim_trans]
 QED
 
 (* note a similar theorem does NOT hold for Ret because bind expands to (k x) *)
@@ -951,7 +945,8 @@ Theorem itree_bind_vis_strip_tau:
   !u k k' e. strip_tau u (Vis e k') ==>
              strip_tau (itree_bind u k) (Vis e (λx. itree_bind (k' x) k))
 Proof
-  strip_tac >> strip_tac >> strip_tac >> strip_tac >>
+  rpt strip_tac >>
+  pop_assum mp_tac >>
   Induct_on ‘strip_tau’ >>
   rpt strip_tac >>
   rw[itree_bind_thm]
