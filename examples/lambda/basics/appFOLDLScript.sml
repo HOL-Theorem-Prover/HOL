@@ -151,10 +151,10 @@ Proof
   qid_spec_tac ‘x’ >> Induct_on ‘Ms1’ >> simp[]
 QED
 
-Theorem appstar_SNOC:
-  x ·· Ms @@ M = x ·· (Ms ++ [M])
+Theorem appstar_SNOC[simp]:
+  x ·· (SNOC M Ms) = (x ·· Ms) @@ M
 Proof
-  simp[appstar_APPEND]
+  simp[appstar_APPEND, SNOC_APPEND]
 QED
 
 Theorem appstar_CONS :
@@ -174,9 +174,7 @@ QED
 Theorem ssub_appstar :
     fm ' (M @* Ns) = (fm ' M) @* MAP (ssub fm) Ns
 Proof
-    Q.ID_SPEC_TAC ‘Ns’
- >> HO_MATCH_MP_TAC SNOC_INDUCT
- >> rw [SNOC_APPEND, SYM appstar_SNOC]
+    Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC, MAP_SNOC]
 QED
 
 val _ = export_theory ()
