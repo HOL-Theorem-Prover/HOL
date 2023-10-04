@@ -477,20 +477,25 @@ val dc_set_announcements_result6 = store_thm
 
 (* ------------------------------------------------------------------------- *)
 
-val dc_XOR_announces_result1 = store_thm
-  ("dc_XOR_announces_result1",
-   ``!high low random n i. i <= SUC (SUC n) /\ (high (STRCAT "pays" (toString i))) /\ (!j. (~(j = i)) ==> ~(high (STRCAT "pays" (toString j)))) ==>
-        !k. k < i ==>
-                (XOR_announces (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) k =
-                 ((random (STRCAT "coin" (toString k))) xor (random (STRCAT "coin" (toString (SUC (SUC n)))))))``,
+Theorem dc_XOR_announces_result1:
+  !high low random n i.
+    i <= SUC (SUC n) /\ (high (STRCAT "pays" (toString i))) /\
+    (!j. (~(j = i)) ==> ~(high (STRCAT "pays" (toString j)))) ==>
+    !k. k < i ==>
+        (XOR_announces
+         (set_announcements high low random (SUC (SUC n)) (SUC (SUC n))) k =
+         ((random (STRCAT "coin" (toString k))) xor
+          (random (STRCAT "coin" (toString (SUC (SUC n)))))))
+Proof
    NTAC 6 (STRIP_TAC)
    >> Induct
    >- (SIMP_TAC bool_ss [XOR_announces_def, dc_set_announcements_result2]
        >> POP_ASSUM (ASSUME_TAC o Q.SPEC `0`)
-       >> RW_TAC arith_ss [DECIDE ``!n:num. 0 < n <=> ~(n = 0)``, xor_F])
+       >> RW_TAC arith_ss [DECIDE ``!n:num. 0 < n <=> ~(n = 0)``, F_xor])
    >> STRIP_TAC >> FULL_SIMP_TAC arith_ss []
-   >> RW_TAC arith_ss [XOR_announces_def, dc_set_announcements_result4, xor_F]
-   >> METIS_TAC [DECIDE ``!(n:num) m. n < m ==> ~(n = m)``, xor_def]);
+   >> RW_TAC arith_ss [XOR_announces_def, dc_set_announcements_result4, F_xor]
+   >> METIS_TAC [DECIDE ``!(n:num) m. n < m ==> ~(n = m)``, xor_def]
+QED
 
 val dc_XOR_announces_result2 = store_thm
   ("dc_XOR_announces_result2",
@@ -521,11 +526,11 @@ val dc_XOR_announces_result3 = store_thm
    >> Cases_on `k = SUC n`
    >- (ONCE_REWRITE_TAC [XOR_announces_def]
        >> `i <= SUC n /\ SUC n <= SUC (SUC n)` by FULL_SIMP_TAC arith_ss [] >> FULL_SIMP_TAC bool_ss []
-       >> ASM_SIMP_TAC arith_ss [dc_set_announcements_result6, xor_F]
+       >> ASM_SIMP_TAC arith_ss [dc_set_announcements_result6, F_xor]
        >> RW_TAC bool_ss [xor_def] >> DECIDE_TAC)
    >> STRIP_TAC >> ONCE_REWRITE_TAC [XOR_announces_def]
    >> `i <= k /\ k <= SUC (SUC n)` by FULL_SIMP_TAC arith_ss [] >> FULL_SIMP_TAC bool_ss []
-   >> ASM_SIMP_TAC arith_ss [dc_set_announcements_result4, xor_F]
+   >> ASM_SIMP_TAC arith_ss [dc_set_announcements_result4, F_xor]
    >> RW_TAC bool_ss [xor_def] >> DECIDE_TAC);
 
 val dc_XOR_announces_result4 = store_thm
@@ -648,11 +653,11 @@ val dc_random_witness_result = prove
                 (STRCAT "announces" (toString i)) =
               x (STRCAT "announces" (toString i)))``,
    REPEAT STRIP_TAC >> Cases_on `i`
-   >- RW_TAC arith_ss [dcprog_result6, dc_set_announcements_result2, dc_random_witness_lem1, T_xor, xor_F, dc_random_witness_lem2, xor_comm]
-   >> RW_TAC arith_ss [dcprog_result6, dc_set_announcements_result4, STRCAT_toString_inj, xor_F, dc_random_witness_lem3]
+   >- RW_TAC arith_ss [dcprog_result6, dc_set_announcements_result2, dc_random_witness_lem1, T_xor, F_xor, dc_random_witness_lem2, xor_comm]
+   >> RW_TAC arith_ss [dcprog_result6, dc_set_announcements_result4, STRCAT_toString_inj, F_xor, dc_random_witness_lem3]
    >> (ASSUME_TAC o Q.SPECL [`x`, `SUC n`, `SUC n'`]) dc_random_witness_lem3
    >> Cases_on `n' = SUC n`
-   >- (FULL_SIMP_TAC arith_ss [dc_random_witness_lem1, xor_F] >> METIS_TAC [XOR_announces_def, xor_def])
+   >- (FULL_SIMP_TAC arith_ss [dc_random_witness_lem1, F_xor] >> METIS_TAC [XOR_announces_def, xor_def])
    >> FULL_SIMP_TAC arith_ss [] >> ONCE_REWRITE_TAC [XOR_announces_def]
    >> RW_TAC bool_ss [xor_def] >> DECIDE_TAC);
 
@@ -897,7 +902,7 @@ val valid_coin_set_eq_valid_coin_assignment = store_thm
        >> FULL_SIMP_TAC std_ss [] >> Induct
        >- (RW_TAC std_ss [valid_coin_assignment, XOR_announces_def, dcprog_result6, dc_set_announcements_result2,
                           STRCAT_toString_inj]
-           >> Cases_on `p = 0` >> RW_TAC arith_ss [T_xor, xor_F, xor_def] >> DECIDE_TAC)
+           >> Cases_on `p = 0` >> RW_TAC arith_ss [T_xor, F_xor, xor_def] >> DECIDE_TAC)
        >> STRIP_TAC >> FULL_SIMP_TAC arith_ss [] >> ONCE_REWRITE_TAC [valid_coin_assignment]
        >> ASM_REWRITE_TAC [] >> ONCE_REWRITE_TAC [XOR_announces_def]
        >> `SUC i < SUC (SUC (SUC n))` by FULL_SIMP_TAC arith_ss []
@@ -905,12 +910,12 @@ val valid_coin_set_eq_valid_coin_assignment = store_thm
        >> RW_TAC bool_ss [dcprog_result6, dc_set_announcements_result4, STRCAT_toString_inj]
        >> Cases_on `i`
        >- (RW_TAC std_ss [valid_coin_assignment, XOR_announces_def, dcprog_result6, dc_set_announcements_result2,
-                          STRCAT_toString_inj, xor_F]
+                          STRCAT_toString_inj, F_xor]
            >> Cases_on `p = 0` >- (RW_TAC arith_ss [xor_def] >> DECIDE_TAC)
            >> Cases_on `p = 1` >- (RW_TAC arith_ss [xor_def] >> DECIDE_TAC)
            >> FULL_SIMP_TAC arith_ss [xor_def] >> DECIDE_TAC)
        >> FULL_SIMP_TAC bool_ss [valid_coin_assignment]
-       >> RW_TAC bool_ss [xor_F, xor_def] >> Cases_on `p = SUC (SUC n')` >- (FULL_SIMP_TAC arith_ss [] >> DECIDE_TAC)
+       >> RW_TAC bool_ss [F_xor, xor_def] >> Cases_on `p = SUC (SUC n')` >- (FULL_SIMP_TAC arith_ss [] >> DECIDE_TAC)
        >> FULL_SIMP_TAC arith_ss [] >> Cases_on `SUC (SUC n') < p` >> FULL_SIMP_TAC arith_ss [] >> DECIDE_TAC)
    >> STRIP_TAC >> RW_TAC std_ss [FUN_EQ_THM] >> Cases_on `x' = "result"`
    >- (ASM_SIMP_TAC std_ss [dcprog_result5] >> FULL_SIMP_TAC std_ss [dc_valid_outputs_eq_outputs, dc_valid_outputs_def, GSPECIFICATION])
@@ -1060,24 +1065,24 @@ val valid_coin_assignment_eq_2_element_set = store_thm
        >> FULL_SIMP_TAC arith_ss [STRCAT_toString_inj, T_xor, xor_T]
        >> CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [XOR_announces_def]))
        >> REPEAT (POP_ASSUM MP_TAC)
-       >> RW_TAC std_ss [dc_valid_outputs_eq_outputs, dc_valid_outputs_def, GSPECIFICATION, T_xor, xor_F, xor_comm])
+       >> RW_TAC std_ss [dc_valid_outputs_eq_outputs, dc_valid_outputs_def, GSPECIFICATION, T_xor, F_xor, xor_comm])
    >> STRIP_TAC >> FULL_SIMP_TAC arith_ss []
    >> ONCE_REWRITE_TAC [valid_coin_assignment] >> ASM_REWRITE_TAC []
    >> RW_TAC arith_ss [coin_assignment_result2]
    >> ONCE_REWRITE_TAC [coin_assignment]
    >> FULL_SIMP_TAC arith_ss [STRCAT_toString_inj, T_xor, xor_T]
    >> REPEAT (POP_ASSUM MP_TAC)
-   >> RW_TAC std_ss [dc_valid_outputs_eq_outputs, dc_valid_outputs_def, GSPECIFICATION, T_xor, xor_F, xor_comm]);
+   >> RW_TAC std_ss [dc_valid_outputs_eq_outputs, dc_valid_outputs_def, GSPECIFICATION, T_xor, F_xor, xor_comm]);
 
 val coin_assignment_result3 = prove
   (``!out p n i. i <= SUC (SUC n) ==>
         ~(coin_assignment out p n T i = coin_assignment out p n F i)``,
 
-   NTAC 3 STRIP_TAC >> Induct >- (RW_TAC bool_ss [coin_assignment, xor_F, xor_comm, T_xor, xor_def] >> METIS_TAC [])
+   NTAC 3 STRIP_TAC >> Induct >- (RW_TAC bool_ss [coin_assignment, F_xor, xor_comm, T_xor, xor_def] >> METIS_TAC [])
    >> STRIP_TAC >> FULL_SIMP_TAC arith_ss []
    >> ONCE_REWRITE_TAC [coin_assignment]
    >> RW_TAC std_ss [FUN_EQ_THM] >> Q.EXISTS_TAC `STRCAT "coin" (toString (SUC i))`
-   >> RW_TAC std_ss [T_xor, xor_F, xor_comm, xor_def] >> DECIDE_TAC);
+   >> RW_TAC std_ss [T_xor, F_xor, xor_comm, xor_def] >> DECIDE_TAC);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1219,7 +1224,7 @@ val dc_leakage_result = store_thm
                                         (s' :(bool, bool, bool) prog_state)`])
                    valid_coin_set_eq_valid_coin_assignment
                >> RW_TAC std_ss [valid_coin_assignment_eq_2_element_set, coin_assignment_set]
-               >> RW_TAC set_ss [coin_assignment, FUN_EQ_THM, T_xor, xor_T, xor_F]
+               >> RW_TAC set_ss [coin_assignment, FUN_EQ_THM, T_xor, xor_T, F_xor]
                >> METIS_TAC [])
    >> DISCH_TAC
    >> `!x. (\x.
