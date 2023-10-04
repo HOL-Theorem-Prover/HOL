@@ -8,8 +8,6 @@ open binderLib BasicProvers nomsetTheory termTheory chap2Theory;
 
 val _ = new_theory "chap3";
 
-fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-
 val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
 val compatible_def =
@@ -860,13 +858,13 @@ val bnf_triangle = store_thm(
   ``M -b->* N /\ M -b->* N' /\ bnf N ==> N' -b->* N``,
   METIS_TAC [betaCR_square, bnf_reduction_to_self]);
 
-val Omega_starloops = Store_thm(
-  "Omega_starloops",
-  ``Omega -b->* N <=> (N = Omega)``,
+Theorem Omega_starloops[simp]: Omega -b->* N <=> N = Omega
+Proof
   Q_TAC SUFF_TAC `!M N. M -b->* N ==> (M = Omega) ==> (N = Omega)`
      THEN1 METIS_TAC [RTC_RULES] THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
-  FULL_SIMP_TAC (srw_ss()) [ccbeta_rwt, Omega_def]);
+  FULL_SIMP_TAC (srw_ss()) [ccbeta_rwt, Omega_def]
+QED
 
 val lameq_betaconversion = store_thm(
   "lameq_betaconversion",
