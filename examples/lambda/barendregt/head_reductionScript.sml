@@ -1,8 +1,9 @@
 open HolKernel Parse boolLib bossLib
 
-open pred_setTheory boolSimps;
+open pred_setTheory boolSimps listTheory finite_mapTheory hurdUtils;
 
-open termTheory chap2Theory chap3Theory nomsetTheory binderLib;
+open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
+     term_posnsTheory;
 
 val _ = new_theory "head_reduction"
 
@@ -127,6 +128,10 @@ val hnf_ccbeta_preserved = store_thm(
     FULL_SIMP_TAC (srw_ss()) [cc_beta_thm] THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
+
+(* ----------------------------------------------------------------------
+    Weak head reductions (weak_head)
+   ---------------------------------------------------------------------- *)
 
 val (weak_head_rules, weak_head_ind, weak_head_cases) = Hol_reln`
   (∀v M N. weak_head (LAM v M @@ N) ([N/v]M)) ∧
@@ -353,7 +358,111 @@ val head_reductions_have_weak_prefixes = store_thm(
    metis_tac [relationTheory.RTC_RULES, hreduce_weak_or_strong]);
 
 (* ----------------------------------------------------------------------
-    HNF and Combinators
+    Head redex
+   ---------------------------------------------------------------------- *)
+
+val _ = add_infix ("is_head_redex", 760, NONASSOC)
+
+Inductive is_head_redex :
+    (!v (t:term) u. [] is_head_redex (LAM v t @@ u)) /\
+    (!v t p. p is_head_redex t ==> (In::p) is_head_redex (LAM v t)) /\
+    (!t u v p. p is_head_redex (t @@ u) ==>
+               (Lt::p) is_head_redex (t @@ u) @@ v)
+End
+
+val ihr_bvc_ind = store_thm(
+  "ihr_bvc_ind",
+  ``!P X. FINITE X /\
+          (!v M N. ~(v IN X) /\ ~(v IN FV N) ==> P [] (LAM v M @@ N)) /\
+          (!v M p. ~(v IN X) /\ P p M ==> P (In::p) (LAM v M)) /\
+          (!M N L p. P p (M @@ N) ==> P (Lt::p) ((M @@ N) @@ L)) ==>
+          !p M. p is_head_redex M ==> P p M``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!p M. p is_head_redex M ==> !pi. P p (tpm pi M)`
+        THEN1 METIS_TAC [pmact_nil] THEN
+  HO_MATCH_MP_TAC is_head_redex_ind THEN
+  SRW_TAC [][is_head_redex_rules] THENL [
+    Q.MATCH_ABBREV_TAC `P [] (LAM vv MM @@ NN)` THEN
+    markerLib.RM_ALL_ABBREVS_TAC THEN
+    Q_TAC (NEW_TAC "z") `FV MM UNION FV NN UNION X` THEN
+    `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
+    SRW_TAC [][],
+    Q.MATCH_ABBREV_TAC `P (In::p) (LAM vv MM)` THEN
+    Q_TAC (NEW_TAC "z") `FV MM UNION X` THEN
+    `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
+    SRW_TAC [][GSYM pmact_decompose, Abbr`MM`]
+  ]);
+
+val is_head_redex_subst_invariant = store_thm(
+  "is_head_redex_subst_invariant",
+  ``!p t u v. p is_head_redex t ==> p is_head_redex [u/v] t``,
+  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`t`, `p`] THEN
+  HO_MATCH_MP_TAC ihr_bvc_ind THEN Q.EXISTS_TAC `v INSERT FV u` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR, is_head_redex_rules]);
+
+Theorem is_head_redex_tpm_invariant[simp] :
+    p is_head_redex (tpm pi t) = p is_head_redex t
+Proof
+  Q_TAC SUFF_TAC `!p t. p is_head_redex t ==> !pi. p is_head_redex (tpm pi t)`
+        THEN1 METIS_TAC [pmact_inverse] THEN
+  HO_MATCH_MP_TAC is_head_redex_ind THEN SRW_TAC [][is_head_redex_rules]
+QED
+
+val is_head_redex_unique = store_thm(
+  "is_head_redex_unique",
+  ``!t p1 p2. p1 is_head_redex t /\ p2 is_head_redex t ==> (p1 = p2)``,
+  Q_TAC SUFF_TAC
+        `!p1 t. p1 is_head_redex t ==> !p2. p2 is_head_redex t ==> (p1 = p2)`
+        THEN1 PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC is_head_redex_ind THEN REPEAT STRIP_TAC THEN
+  POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [is_head_redex_cases] THEN
+  SRW_TAC [][LAM_eq_thm]);
+
+val is_head_redex_thm = store_thm(
+  "is_head_redex_thm",
+  ``(p is_head_redex (LAM v t) = ?p0. (p = In::p0) /\ p0 is_head_redex t) /\
+    (p is_head_redex (t @@ u) = (p = []) /\ is_abs t \/
+                                ?p0. (p = Lt::p0) /\ is_comb t /\
+                                          p0 is_head_redex t) /\
+    (p is_head_redex (VAR v) = F)``,
+  REPEAT CONJ_TAC THEN
+  SRW_TAC [][Once is_head_redex_cases, SimpLHS, LAM_eq_thm] THEN
+  SRW_TAC [][EQ_IMP_THM] THENL [
+    PROVE_TAC [],
+    PROVE_TAC [is_abs_thm, term_CASES],
+    METIS_TAC [is_comb_thm, term_CASES]
+  ]);
+
+val head_redex_leftmost = store_thm(
+  "head_redex_leftmost",
+  ``!p t. p is_head_redex t ==>
+          !p'. p' IN redex_posns t ==> (p = p') \/ p < p'``,
+  HO_MATCH_MP_TAC is_head_redex_ind THEN
+  SRW_TAC [][redex_posns_thm, DISJ_IMP_THM]);
+
+val hnf_no_head_redex = store_thm(
+  "hnf_no_head_redex",
+  ``!t. hnf t = !p. ~(p is_head_redex t)``,
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][hnf_thm, is_head_redex_thm] THEN
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
+  SRW_TAC [][is_head_redex_thm]);
+
+val head_redex_is_redex = store_thm(
+  "head_redex_is_redex",
+  ``!p t. p is_head_redex t ==> p IN redex_posns t``,
+  HO_MATCH_MP_TAC is_head_redex_ind THEN
+  SRW_TAC [][redex_posns_thm]);
+
+val is_head_redex_vsubst_invariant = store_thm(
+  "is_head_redex_vsubst_invariant",
+  ``!t v x p. p is_head_redex ([VAR v/x] t) = p is_head_redex t``,
+  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `t`] THEN
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;v}` THEN
+  SRW_TAC [][is_head_redex_thm, SUB_THM, SUB_VAR]);
+
+(* ----------------------------------------------------------------------
+    HNF and Combinators, etc.
    ---------------------------------------------------------------------- *)
 
 Theorem hnf_I :
@@ -362,4 +471,105 @@ Proof
     RW_TAC std_ss [hnf_thm, I_def]
 QED
 
+Theorem hnf_LAMl[simp] :
+    hnf (LAMl vs M) <=> hnf M
+Proof
+    Induct_on ‘vs’ >> rw []
+QED
+
+Theorem hnf_appstar :
+    !M Ns. Ns <> [] ==> (hnf (M @* Ns) <=> hnf M /\ ~is_abs M)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC
+ >- (POP_ASSUM MP_TAC \\
+     Q.ID_SPEC_TAC ‘Ns’ >> HO_MATCH_MP_TAC SNOC_INDUCT \\
+     rw [SNOC_APPEND, SYM appstar_SNOC] \\
+     Cases_on ‘Ns = []’ >> fs [])
+ >> STRIP_TAC
+ >> Q.ID_SPEC_TAC ‘Ns’
+ >> HO_MATCH_MP_TAC SNOC_INDUCT
+ >> rw [SNOC_APPEND, SYM appstar_SNOC]
+ >> Q.PAT_X_ASSUM ‘~is_abs M’ MP_TAC >> KILL_TAC >> DISCH_TAC
+ >> Q.SPEC_TAC (‘Ns'’, ‘Ns’)
+ >> HO_MATCH_MP_TAC SNOC_INDUCT
+ >> rw [SNOC_APPEND, SYM appstar_SNOC]
+QED
+
+val foldl_snoc = prove(
+  ``!l f x y. FOLDL f x (APPEND l [y]) = f (FOLDL f x l) y``,
+  Induct THEN SRW_TAC [][]);
+
+val combs_not_size_1 = prove(
+  ``(size M = 1) ==> ~is_comb M``,
+  Q.SPEC_THEN `M` STRUCT_CASES_TAC term_CASES THEN
+  SRW_TAC [][size_thm, size_nz]);
+
+Theorem strange_cases :
+    !M : term. (?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
+               (?vs args t.
+                         (M = LAMl vs (FOLDL APP t args)) /\
+                         ~(args = []) /\ ~is_comb t)
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN REPEAT CONJ_TAC THENL [
+    (* VAR *) GEN_TAC THEN DISJ1_TAC THEN
+              MAP_EVERY Q.EXISTS_TAC [`[]`, `VAR s`] THEN SRW_TAC [][size_thm],
+    (* app *) MAP_EVERY Q.X_GEN_TAC [`M`,`N`] THEN
+              DISCH_THEN (CONJUNCTS_THEN ASSUME_TAC) THEN
+              DISJ2_TAC THEN Q.EXISTS_TAC `[]` THEN
+              SIMP_TAC (srw_ss()) [] THEN
+              `(?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
+               (?vs args t.
+                        (M = LAMl vs (FOLDL APP t args)) /\ ~(args = []) /\
+                        ~is_comb t)` by PROVE_TAC []
+              THENL [
+                MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
+                ASM_SIMP_TAC (srw_ss()) [] THEN
+                PROVE_TAC [combs_not_size_1],
+                ASM_SIMP_TAC (srw_ss()) [] THEN
+                Cases_on `vs` THENL [
+                  MAP_EVERY Q.EXISTS_TAC [`APPEND args [N]`, `t`] THEN
+                  ASM_SIMP_TAC (srw_ss()) [foldl_snoc],
+                  MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
+                  ASM_SIMP_TAC (srw_ss()) []
+                ]
+              ],
+    (* LAM *) MAP_EVERY Q.X_GEN_TAC [`x`,`M`] THEN STRIP_TAC THENL [
+                DISJ1_TAC THEN
+                MAP_EVERY Q.EXISTS_TAC [`x::vs`, `M'`] THEN
+                ASM_SIMP_TAC (srw_ss()) [],
+                DISJ2_TAC THEN
+                MAP_EVERY Q.EXISTS_TAC [`x::vs`, `args`, `t`] THEN
+                ASM_SIMP_TAC (srw_ss()) []
+              ]
+  ]
+QED
+
+Theorem hnf_cases :
+    !M : term. hnf M <=> ?vs args y. M = LAMl vs (VAR y @* args)
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ >- (rw [hnf_no_head_redex] \\
+     Q.ID_SPEC_TAC ‘p’ \\
+     Q.SPEC_TAC (‘args’, ‘Ns’) \\
+     HO_MATCH_MP_TAC SNOC_INDUCT >> rw [SNOC_APPEND, SYM appstar_SNOC]
+     >- rw [is_head_redex_thm] \\
+     Q.ABBREV_TAC ‘M = VAR y @* Ns’ \\
+     Know ‘~is_abs M’
+     >- (Q.UNABBREV_TAC ‘M’ >> MATCH_MP_TAC not_is_abs_appstar >> rw []) \\
+     rw [is_head_redex_thm])
+ (* stage work *)
+ >> MP_TAC (Q.SPEC ‘M’ strange_cases)
+ >> RW_TAC std_ss []
+ >- (FULL_SIMP_TAC std_ss [size_1] \\
+     qexistsl_tac [‘vs’, ‘[]’, ‘y’] >> rw [])
+ >> FULL_SIMP_TAC std_ss [hnf_LAMl]
+ >> ‘hnf t /\ ~is_abs t’ by PROVE_TAC [hnf_appstar]
+ >> ‘is_var t’ by METIS_TAC [term_cases]
+ >> FULL_SIMP_TAC std_ss [is_var_cases]
+ >> qexistsl_tac [‘vs’, ‘args’, ‘y’] >> art []
+QED
+
 val _ = export_theory()
+val _ = html_theory "head_reduction";

@@ -620,6 +620,17 @@ val ISUB_LAM = store_thm(
   ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD,
                            DOM_DEF, FVS_DEF, SUB_THM]);
 
+val SUB_ISUB_SINGLETON = store_thm(
+  "SUB_ISUB_SINGLETON",
+  ``!t x u. [t/x]u:term = u ISUB [(t,x)]``,
+  SRW_TAC [][ISUB_def]);
+
+val ISUB_APPEND = store_thm(
+  "ISUB_APPEND",
+  ``!R1 R2 t:term. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)``,
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]);
+
 (* ----------------------------------------------------------------------
     Simultaneous substitution (using a finite map) - much more interesting
    ---------------------------------------------------------------------- *)
