@@ -1,7 +1,8 @@
 open HolKernel Parse boolLib bossLib
 
-open chap3Theory pred_setTheory termTheory boolSimps
-open nomsetTheory binderLib
+open pred_setTheory boolSimps;
+
+open termTheory chap2Theory chap3Theory nomsetTheory binderLib;
 
 val _ = new_theory "head_reduction"
 
@@ -350,5 +351,15 @@ val head_reductions_have_weak_prefixes = store_thm(
    ho_match_mp_tac relationTheory.RTC_STRONG_INDUCT >> conj_tac
      >- metis_tac [hnf_whnf, relationTheory.RTC_RULES] >>
    metis_tac [relationTheory.RTC_RULES, hreduce_weak_or_strong]);
+
+(* ----------------------------------------------------------------------
+    HNF and Combinators
+   ---------------------------------------------------------------------- *)
+
+Theorem hnf_I :
+    hnf I
+Proof
+    RW_TAC std_ss [hnf_thm, I_def]
+QED
 
 val _ = export_theory()
