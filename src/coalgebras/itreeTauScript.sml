@@ -1022,22 +1022,23 @@ Proof
 QED
 
 Theorem itree_iter_ret_tau_wbisim:
-    itcb1 = (λx. case x of INL a => Tau (itree_iter k1 a) | INR b => Ret b)
-  ⇒ itcb2 = (λx. case x of INL a => Tau (itree_iter k2 a) | INR b => Ret b)
-  ⇒ itree_wbisim (Ret x) (Tau u) ⇒ (∀r. itree_wbisim (k1 r) (k2 r))
-  ⇒ (∃t2 t3.
-      itree_bind (Ret x) itcb1 = Tau t2 ∧ itree_bind (Tau u) itcb2 = Tau t3 ∧
-      ((∃sa sb. itree_wbisim sa sb ∧
-                t2 = itree_bind sa itcb1 ∧ t3 = itree_bind sb itcb2)
-       ∨ itree_wbisim t2 t3)) ∨
-    (∃e k k'.
-      strip_tau (itree_bind (Ret x) itcb1) (Vis e k) ∧
-      strip_tau (itree_bind (Tau u) itcb2) (Vis e k') ∧
-      ∀r. (∃sa sb. itree_wbisim sa sb ∧
-                   k r = itree_bind sa itcb1 ∧ k' r = itree_bind sb itcb2)
-         ∨ itree_wbisim (k r) (k' r)) ∨
-    ∃r. strip_tau (itree_bind (Ret x) itcb1) (Ret r) ∧
-        strip_tau (itree_bind (Tau u) itcb2) (Ret r)
+  itcb1 = (λx. case x of INL a => Tau (itree_iter k1 a) | INR b => Ret b) /\
+  itcb2 = (λx. case x of INL a => Tau (itree_iter k2 a) | INR b => Ret b) /\
+  itree_wbisim (Ret x) (Tau u) /\ (!r. itree_wbisim (k1 r) (k2 r))
+  ==>
+  (?t2 t3.
+     itree_bind (Ret x) itcb1 = Tau t2 /\ itree_bind (Tau u) itcb2 = Tau t3 /\
+     ((?sa sb. itree_wbisim sa sb /\
+               t2 = itree_bind sa itcb1 /\ t3 = itree_bind sb itcb2)
+      \/ itree_wbisim t2 t3)) \/
+  (?e k k'.
+     strip_tau (itree_bind (Ret x) itcb1) (Vis e k) /\
+     strip_tau (itree_bind (Tau u) itcb2) (Vis e k') /\
+     !r. (?sa sb. itree_wbisim sa sb /\
+                  k r = itree_bind sa itcb1 /\ k' r = itree_bind sb itcb2)
+         \/ itree_wbisim (k r) (k' r)) \/
+  ?r. strip_tau (itree_bind (Ret x) itcb1) (Ret r) /\
+      strip_tau (itree_bind (Tau u) itcb2) (Ret r)
 Proof
   rpt strip_tac >>
   rw[itree_bind_thm] >>
@@ -1069,7 +1070,7 @@ Proof
 QED
 
 Theorem itree_iter_resp_wbisim:
-  ∀t k1 k2. (∀r. itree_wbisim (k1 r) (k2 r)) ⇒
+  !t k1 k2. (!r. itree_wbisim (k1 r) (k2 r)) ==>
             itree_wbisim (itree_iter k1 t) (itree_iter k2 t)
 Proof
   rpt strip_tac >>
@@ -1077,9 +1078,9 @@ Proof
                                    | INR b => Ret b)’ >>
   qabbrev_tac ‘itcb2 = (λx. case x of INL a => Tau (itree_iter k2 a)
                                    | INR b => Ret b)’ >>
-  qspecl_then [‘λia ib.∃sa sb x. itree_wbisim sa sb ∧
-                                 ia = itree_bind sa itcb1 ∧
-                                 ib = itree_bind sb itcb2’]
+  qspecl_then [‘λia ib. ?sa sb x. itree_wbisim sa sb /\
+                                  ia = itree_bind sa itcb1 /\
+                                  ib = itree_bind sb itcb2’]
               strip_assume_tac itree_wbisim_strong_coind >>
   pop_assum irule >>
   rw[] >-
