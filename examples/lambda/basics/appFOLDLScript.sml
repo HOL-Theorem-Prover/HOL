@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory listTheory
-open termTheory
+open arithmeticTheory listTheory pred_setTheory hurdUtils;
 
-fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+open termTheory binderLib;
 
 val _ = new_theory "appFOLDL"
 
@@ -174,4 +173,134 @@ Proof
     Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC, MAP_SNOC]
 QED
 
+(*---------------------------------------------------------------------------*
+ *  LAMl (was in standardisationTheory)
+ *---------------------------------------------------------------------------*)
+
+Definition LAMl_def:
+  LAMl vs (t : term) = FOLDR LAM t vs
+End
+
+Theorem LAMl_thm[simp]:
+  (LAMl [] M = M) /\
+  (LAMl (h::t) M = LAM h (LAMl t M))
+Proof SRW_TAC [][LAMl_def]
+QED
+
+Theorem LAMl_11[simp]:
+  !vs. (LAMl vs x = LAMl vs y) = (x = y)
+Proof
+  Induct THEN SRW_TAC [][]
+QED
+
+Theorem size_LAMl[simp]:
+  !vs. size (LAMl vs M) = LENGTH vs + size M
+Proof
+  Induct THEN SRW_TAC [numSimps.ARITH_ss][size_thm]
+QED
+
+Theorem FV_LAMl :
+    !vs M. FV (LAMl vs M) = FV M DIFF LIST_TO_SET vs
+Proof
+  Induct THEN SRW_TAC [][] THEN
+  SIMP_TAC (srw_ss()) [EXTENSION] THEN PROVE_TAC []
+QED
+
+Theorem LAMl_eq_VAR[simp]:
+  (LAMl vs M = VAR v) ⇔ (vs = []) ∧ (M = VAR v)
+Proof
+  Cases_on ‘vs’ >> simp[]
+QED
+
+Theorem LAMl_eq_APP[simp]:
+  (LAMl vs M = N @@ P) ⇔ (vs = []) ∧ (M = N @@ P)
+Proof
+  Cases_on ‘vs’ >> simp[]
+QED
+
+Theorem LAMl_eq_appstar:
+  (LAMl vs M = N ·· Ns) ⇔
+    (vs = []) ∧ (M = N ·· Ns) ∨ (Ns = []) ∧ (N = LAMl vs M)
+Proof
+  Cases_on ‘vs’ >> simp[] >> Cases_on ‘Ns’ >> simp[] >>
+  metis_tac[]
+QED
+
+Theorem LAMl_SUB :
+    !M N v vs. ALL_DISTINCT vs /\ ~MEM v vs /\ (FV N = {}) ==>
+              ([N/v] (LAMl vs M) = LAMl vs ([N/v] M))
+Proof
+    rpt STRIP_TAC
+ >> Induct_on ‘vs’ >> rw []
+QED
+
+Theorem tpm_LAMl:
+  tpm π (LAMl vs M) = LAMl (listpm string_pmact π vs) (tpm π M)
+Proof
+  Induct_on ‘vs’ >> simp[]
+QED
+
+Theorem tpm_appstar:
+  tpm π (M ·· Ms) = tpm π M ·· listpm term_pmact π Ms
+Proof
+  qid_spec_tac ‘M’ >> Induct_on ‘Ms’ >> simp[]
+QED
+
+Theorem LAMl_vsub :
+    !vs u v M.
+        ~MEM u vs /\ ~MEM v vs ==>
+        ([VAR v/u] (LAMl vs M) = LAMl vs ([VAR v/u] M))
+Proof
+  Induct THEN SRW_TAC [][] THEN
+  Q_TAC (NEW_TAC "z") `LIST_TO_SET vs UNION {h;v;u} UNION FV (LAMl vs M) UNION
+                       FV (LAMl vs ([VAR v/u] M))` THEN
+  `LAM h (LAMl vs M) = LAM z ([VAR z/h] (LAMl vs M))`
+     by SRW_TAC [][SIMPLE_ALPHA] THEN
+  `LAM h (LAMl vs ([VAR v/u] M)) = LAM z ([VAR z/h] (LAMl vs ([VAR v/u] M)))`
+     by SRW_TAC [][SIMPLE_ALPHA] THEN
+  SRW_TAC [][SUB_THM]
+QED
+
+Theorem LAMl_vsub_disappears :
+   !vs u v M. MEM u vs ==> ([VAR v/u] (LAMl vs M) = LAMl vs M)
+Proof
+  Induct THEN SRW_TAC [][] THENL [
+    SRW_TAC [][SUB_THM, lemma14b],
+    `~(u IN FV (LAMl vs M))` by SRW_TAC [][FV_LAMl] THEN
+    `LAM h (LAMl vs M) = LAM u ([VAR u/h] (LAMl vs M))`
+       by SRW_TAC [][SIMPLE_ALPHA] THEN
+    SRW_TAC [][SUB_THM, lemma14b]
+  ]
+QED
+
+Theorem LAMl_ALPHA :
+    !vs vs' M.
+       (LENGTH vs = LENGTH vs') /\ ALL_DISTINCT vs' /\
+       DISJOINT (LIST_TO_SET vs') (LIST_TO_SET vs UNION FV M) ==>
+       (LAMl vs M = LAMl vs' (M ISUB REVERSE (ZIP(MAP VAR vs', vs))))
+Proof
+  Induct THENL [
+    SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) [ISUB_def],
+    SRW_TAC [][] THEN
+    Cases_on `vs'` THEN
+    FULL_SIMP_TAC (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM] THEN
+    `~(h' IN LIST_TO_SET vs) /\ ~(h' IN FV M) /\
+     DISJOINT (LIST_TO_SET vs) (LIST_TO_SET t) /\
+     DISJOINT (FV M) (LIST_TO_SET t)`
+        by PROVE_TAC [DISJOINT_INSERT, DISJOINT_SYM] THEN
+    Q_TAC SUFF_TAC `~(h' IN FV (LAMl vs M)) /\
+                    (LAMl t (M ISUB APPEND (REVERSE (ZIP (MAP VAR t, vs)))
+                                           [(VAR h',h)]) =
+                     [VAR h'/h] (LAMl vs M))` THEN1
+       SRW_TAC [][SIMPLE_ALPHA] THEN
+    ASM_SIMP_TAC (srw_ss()) [FV_LAMl] THEN
+    FIRST_X_ASSUM (Q.SPECL_THEN [`t`, `M`] MP_TAC) THEN
+    ASM_SIMP_TAC (srw_ss()) [] THEN
+    DISCH_THEN (K ALL_TAC) THEN
+    SRW_TAC [][LAMl_vsub, SUB_ISUB_SINGLETON, ISUB_APPEND]
+  ]
+QED
+
 val _ = export_theory ()
+val _ = html_theory "appFOLDL";

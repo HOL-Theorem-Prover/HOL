@@ -305,6 +305,14 @@ val FV_tpm = Save_thm("FV_tpm",
 val _ = set_mapped_fixity { term_name = "APP", tok = "@@",
                             fixity = Infixl 901}
 
+(* NOTE: The following overload "incompatible" was in sttScript.sml.
+
+   The current "incompatibility" is between a (string) variable and a term.
+   See chap2Theory for the incompatibility bwtween two terms.
+ *)
+val _ = set_fixity "#" (Infix(NONASSOC, 450))
+Overload "#" = “λv M:term. v ∉ FV M”
+
 Theorem FRESH_APP[simp]: v NOTIN FV (M @@ N) <=> v NOTIN FV M /\ v NOTIN FV N
 Proof SRW_TAC [][]
 QED
@@ -570,7 +578,7 @@ QED
 Theorem size_nz =
     REWRITE_RULE [GSYM arithmeticTheory.NOT_ZERO_LT_ZERO] size_nonzero
 
-Theorem size_1 :
+Theorem size_1_cases :
     (size M = 1) <=> ?y. (M = VAR y)
 Proof
     Q.SPEC_THEN `M` STRUCT_CASES_TAC term_CASES
@@ -619,6 +627,17 @@ val ISUB_LAM = store_thm(
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD,
                            DOM_DEF, FVS_DEF, SUB_THM]);
+
+val SUB_ISUB_SINGLETON = store_thm(
+  "SUB_ISUB_SINGLETON",
+  ``!t x u. [t/x]u:term = u ISUB [(t,x)]``,
+  SRW_TAC [][ISUB_def]);
+
+val ISUB_APPEND = store_thm(
+  "ISUB_APPEND",
+  ``!R1 R2 t:term. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)``,
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]);
 
 (* ----------------------------------------------------------------------
     Simultaneous substitution (using a finite map) - much more interesting

@@ -557,6 +557,13 @@ val MEM_listpm_EXISTS = store_thm(
 val _ = overload_on("cpm_pmact", ``list_pmact (pair_pmact string_pmact string_pmact)``);
 val _ = overload_on ("cpmpm", ``pmact cpm_pmact``);
 
+(* moved here from sttScript.sml *)
+Theorem ALL_DISTINCT_listpm[simp]:
+  ALL_DISTINCT (listpm act π xs) = ALL_DISTINCT xs
+Proof
+  Induct_on ‘xs’ >> simp[MEM_listpm]
+QED
+
 (* ----------------------------------------------------------------------
     Notion of support, and calculating the smallest set of support
    ---------------------------------------------------------------------- *)

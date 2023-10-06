@@ -235,8 +235,11 @@ val (asmlam_rules, asmlam_ind, asmlam_cases) = Hol_reln`
   (!x M M'. asmlam eqns M M' ==> asmlam eqns (LAM x M) (LAM x M'))
 `;
 
+(* This is also Definition 2.1.32 [1, p.33] *)
 val incompatible_def =
     Define`incompatible x y = ~consistent (asmlam {(x,y)})`
+
+Overload "#" = “incompatible”
 
 val S_def =
     Define`S = LAM "x" (LAM "y" (LAM "z"
@@ -550,11 +553,30 @@ Proof
  >> qexistsl_tac [‘v’, ‘t0’] >> REWRITE_TAC []
 QED
 
+Theorem is_abs_appstar[simp]:
+  is_abs (M @* Ns) ⇔ is_abs M ∧ (Ns = [])
+Proof
+  Induct_on ‘Ns’ using SNOC_INDUCT >>
+  simp[appstar_SNOC]
+QED
+
+Theorem is_abs_LAMl[simp]:
+  is_abs (LAMl vs M) ⇔ vs ≠ [] ∨ is_abs M
+Proof
+  Cases_on ‘vs’ >> simp[]
+QED
+
 val (is_comb_thm, _) = define_recursive_term_function
   `(is_comb (VAR s) = F) /\
    (is_comb (t1 @@ t2) = T) /\
    (is_comb (LAM v t) = F)`;
 val _ = export_rewrites ["is_comb_thm"]
+
+Theorem is_comb_LAMl[simp] :
+    is_comb (LAMl vs M) <=> (vs = []) /\ is_comb M
+Proof
+  Cases_on `vs` THEN SRW_TAC [][]
+QED
 
 Theorem is_comb_vsubst_invariant[simp]:
   !t. is_comb ([VAR v/u] t) = is_comb t
@@ -626,6 +648,39 @@ Theorem bnf_vsubst_invariant[simp]:
 Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]
+QED
+
+Theorem bnf_characterisation:
+  ∀M.
+    bnf M ⇔
+      ∃vs v Ms. ALL_DISTINCT vs ∧ M = LAMl vs (VAR v ·· Ms) ∧
+                (∀M. MEM M Ms ⇒ bnf M)
+Proof
+  ho_match_mp_tac nc_INDUCTION2 >> qexists ‘∅’ >> rw[] >~
+  [‘VAR _ ·· _ = M1 @@ M2’]
+  >- (simp[] >> eq_tac >> rpt strip_tac >~
+      [‘M1 = LAMl vs1 _’, ‘M1 @@ M2’]
+      >- (gvs[app_eq_appstar] >>
+          Q.REFINE_EXISTS_TAC ‘SNOC M Mt’ >>
+          simp[DISJ_IMP_THM, rich_listTheory.FRONT_APPEND] >>
+          metis_tac[]) >>
+      Cases_on ‘Ms’ using rich_listTheory.SNOC_CASES >>
+      gvs[rich_listTheory.SNOC_APPEND, appstar_APPEND] >>
+      dsimp[LAMl_eq_appstar] >> irule_at Any EQ_REFL >> simp[]) >>
+  pop_assum SUBST_ALL_TAC >> eq_tac >> rpt strip_tac >> gvs[] >~
+  [‘LAM y (LAMl vs _)’]
+  >- (reverse (Cases_on ‘MEM y vs’)
+      >- (qexists ‘y::vs’ >> simp[]) >>
+      ‘y # LAMl vs (VAR v ·· Ms)’ by simp[FV_LAMl] >>
+      Q_TAC (NEW_TAC "z") ‘y INSERT set vs ∪ FV (VAR v ·· Ms)’ >>
+      ‘z # LAMl vs (VAR v ·· Ms)’ by simp[FV_LAMl] >>
+      dxrule_then (qspec_then ‘y’ mp_tac) tpm_ALPHA >>
+      simp[tpm_fresh, FV_LAMl] >> strip_tac >> qexists ‘z::vs’ >> simp[]) >>
+  rename [‘LAM y M = LAMl vs (VAR v ·· Ms)’] >>
+  Cases_on ‘vs’ >> gvs[] >> gvs[LAM_eq_thm]
+  >- metis_tac[] >>
+  simp[tpm_LAMl, tpm_appstar] >> irule_at Any EQ_REFL >>
+  simp[MEM_listpm] >> rpt strip_tac >> first_assum drule >> simp[]
 QED
 
 val _ = augment_srw_ss [rewrites [LAM_eq_thm]]
@@ -737,6 +792,117 @@ Theorem lameq_appstar_cong :
     !M N Ns. M == N ==> M @* Ns == N @* Ns
 Proof
   Induct_on ‘Ns’ using SNOC_INDUCT >> rw [appstar_SNOC, lameq_APPL]
+QED
+
+Theorem lameq_LAMl_appstar :
+    !vs M Ns. ALL_DISTINCT vs /\ (LENGTH vs = LENGTH Ns) /\ EVERY closed Ns ==>
+              LAMl vs M @* Ns == (FEMPTY |++ ZIP (vs,Ns)) ' M
+Proof
+    rpt STRIP_TAC
+ >> NewQ.ABBREV_TAC ‘L = ZIP (vs,Ns)’
+ >> ‘(Ns = MAP SND L) /\ (vs = MAP FST L)’ by rw [Abbr ‘L’, MAP_ZIP]
+ >> FULL_SIMP_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘EVERY closed (MAP SND L)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘ALL_DISTINCT (MAP FST L)’ MP_TAC
+ >> KILL_TAC
+ >> Q.ID_SPEC_TAC ‘M’
+ >> Induct_on ‘L’ >> rw []
+ >- (Suff ‘FEMPTY |++ [] = FEMPTY :string |-> term’ >- rw [] \\
+     rw [FUPDATE_LIST_EQ_FEMPTY])
+ >> NewQ.ABBREV_TAC ‘v = FST h’
+ >> NewQ.ABBREV_TAC ‘vs = MAP FST L’
+ >> NewQ.ABBREV_TAC ‘N = SND h’
+ >> NewQ.ABBREV_TAC ‘Ns = MAP SND L’
+ (* RHS rewriting *)
+ >> ‘h :: L = [h] ++ L’ by rw [] >> POP_ORW
+ >> rw [FUPDATE_LIST_APPEND]
+ >> Know ‘FEMPTY |++ [h] |++ L = FEMPTY |++ L |++ [h]’
+ >- (MATCH_MP_TAC FUPDATE_LIST_APPEND_COMMUTES \\
+     rw [DISJOINT_ALT])
+ >> Rewr'
+ >> rw [GSYM FUPDATE_EQ_FUPDATE_LIST]
+ >> NewQ.ABBREV_TAC ‘fm = FEMPTY |++ L’
+ >> FULL_SIMP_TAC std_ss []
+ >> ‘h = (v,N)’ by rw [Abbr ‘v’, Abbr ‘N’] >> POP_ORW
+ >> Know ‘(fm |+ (v,N)) ' M = fm ' ([N/v] M)’
+ >- (MATCH_MP_TAC ssub_update_apply' \\
+     Q.PAT_X_ASSUM ‘closed N’ MP_TAC \\
+     rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, closed_def] \\
+     Cases_on ‘INDEX_OF y vs’ >- fs [INDEX_OF_eq_NONE] \\
+     rename1 ‘INDEX_OF y vs = SOME n’ \\
+     fs [INDEX_OF_eq_SOME] \\
+     Q.PAT_X_ASSUM ‘EL n vs = y’ (ONCE_REWRITE_TAC o wrap o SYM) \\
+    ‘LENGTH L = LENGTH vs’ by rw [Abbr ‘vs’, LENGTH_MAP] \\
+     Know ‘(FEMPTY |++ L) ' (EL n vs) = EL n Ns’
+     >- (MATCH_MP_TAC FUPDATE_LIST_APPLY_MEM \\
+         Q.EXISTS_TAC ‘n’ >> rw [] \\
+        ‘m <> n’ by rw [] \\
+         METIS_TAC [EL_ALL_DISTINCT_EL_EQ]) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘EVERY closed Ns’ MP_TAC \\
+     rw [EVERY_MEM, closed_def] \\
+     POP_ASSUM MATCH_MP_TAC >> rw [MEM_EL] \\
+    ‘LENGTH L = LENGTH Ns’ by rw [Abbr ‘Ns’, LENGTH_MAP] \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> Rewr'
+ (* LHS rewriting *)
+ >> Know ‘LAM v (LAMl vs M) @@ N == LAMl vs ([N/v] M)’
+ >- (SIMP_TAC (betafy (srw_ss())) [] \\
+     Suff ‘[N/v] (LAMl vs M) = LAMl vs ([N/v] M)’ >- rw [lameq_rules] \\
+     MATCH_MP_TAC LAMl_SUB \\
+     Q.PAT_X_ASSUM ‘closed N’ MP_TAC >> rw [closed_def])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘LAMl vs ([N/v] M) @* Ns’ >> art []
+ >> MATCH_MP_TAC lameq_appstar_cong >> art []
+QED
+
+val foldl_snoc = prove(
+  ``!l f x y. FOLDL f x (APPEND l [y]) = f (FOLDL f x l) y``,
+  Induct THEN SRW_TAC [][]);
+
+val combs_not_size_1 = prove(
+  ``(size M = 1) ==> ~is_comb M``,
+  Q.SPEC_THEN `M` STRUCT_CASES_TAC term_CASES THEN
+  SRW_TAC [][size_thm, size_nz]);
+
+Theorem strange_cases :
+    !M : term. (?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
+               (?vs args t.
+                         (M = LAMl vs (FOLDL APP t args)) /\
+                         ~(args = []) /\ ~is_comb t)
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN REPEAT CONJ_TAC THENL [
+    (* VAR *) GEN_TAC THEN DISJ1_TAC THEN
+              MAP_EVERY Q.EXISTS_TAC [`[]`, `VAR s`] THEN SRW_TAC [][size_thm],
+    (* app *) MAP_EVERY Q.X_GEN_TAC [`M`,`N`] THEN
+              DISCH_THEN (CONJUNCTS_THEN ASSUME_TAC) THEN
+              DISJ2_TAC THEN Q.EXISTS_TAC `[]` THEN
+              SIMP_TAC (srw_ss()) [] THEN
+              `(?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
+               (?vs args t.
+                        (M = LAMl vs (FOLDL APP t args)) /\ ~(args = []) /\
+                        ~is_comb t)` by PROVE_TAC []
+              THENL [
+                MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
+                ASM_SIMP_TAC (srw_ss()) [] THEN
+                PROVE_TAC [combs_not_size_1],
+                ASM_SIMP_TAC (srw_ss()) [] THEN
+                Cases_on `vs` THENL [
+                  MAP_EVERY Q.EXISTS_TAC [`APPEND args [N]`, `t`] THEN
+                  ASM_SIMP_TAC (srw_ss()) [foldl_snoc],
+                  MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
+                  ASM_SIMP_TAC (srw_ss()) []
+                ]
+              ],
+    (* LAM *) MAP_EVERY Q.X_GEN_TAC [`x`,`M`] THEN STRIP_TAC THENL [
+                DISJ1_TAC THEN
+                MAP_EVERY Q.EXISTS_TAC [`x::vs`, `M'`] THEN
+                ASM_SIMP_TAC (srw_ss()) [],
+                DISJ2_TAC THEN
+                MAP_EVERY Q.EXISTS_TAC [`x::vs`, `args`, `t`] THEN
+                ASM_SIMP_TAC (srw_ss()) []
+              ]
+  ]
 QED
 
 val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
