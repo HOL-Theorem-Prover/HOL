@@ -525,6 +525,23 @@ Proof
   \\ Cases_on ‘h’ \\ fs []
 QED
 
+Theorem itree_strong_bisimulation:
+  !t1 t2.
+    t1 = t2 <=>
+    ?R. R t1 t2 /\
+        (!x t. R (Ret x) t ==> t = Ret x) /\
+        (!u t. R (Tau u) t ==> ?v. t = Tau v /\ (R u v \/ u = v)) /\
+        (!a f t. R (Vis a f) t ==> ?g. t = Vis a g /\
+                                       !s. R (f s) (g s) \/ f s = g s)
+Proof
+  rpt strip_tac >>
+  EQ_TAC
+  >- (strip_tac >> first_x_assum $ irule_at $ Pos hd >> metis_tac[]) >>
+  strip_tac >>
+  ONCE_REWRITE_TAC[itree_bisimulation] >>
+  qexists_tac ‘\x y. R x y \/ x = y’ >>
+  metis_tac[]
+QED
 
 (* register with TypeBase *)
 
