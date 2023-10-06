@@ -10,7 +10,7 @@ open arithmeticTheory pred_setTheory listTheory sortingTheory finite_mapTheory
 
 (* lambda theories *)
 open termTheory appFOLDLTheory chap2Theory chap3Theory standardisationTheory
-     reductionEval;
+     head_reductionTheory reductionEval;
 
 val _ = new_theory "solvable";
 
@@ -238,7 +238,7 @@ Proof
  >> Q.ABBREV_TAC ‘fm = FEMPTY |++ ZIP (vs,Ns0)’
  >> Know ‘LAMl vs M @* Ns0 == fm ' M’
  >- (Q.UNABBREV_TAC ‘fm’ \\
-     MATCH_MP_TAC LAMl_appstar >> rw [])
+     MATCH_MP_TAC lameq_LAMl_appstar >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs M @* Ns0 @* Ns1 == fm ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
  >> ‘fm ' M @* Ns1 == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM]
@@ -290,7 +290,7 @@ Proof
  >> rw [solvable_def, closed_substitution_instances_def]
  >> Q.ABBREV_TAC ‘vss = FDOM fm’
  >> ‘FINITE vss’ by rw [FDOM_FINITE, Abbr ‘vss’]
- (* preparing for LAMl_appstar *)
+ (* preparing for lameq_LAMl_appstar *)
  >> Q.ABBREV_TAC ‘vs = SET_TO_LIST vss’
  >> ‘ALL_DISTINCT vs’ by PROVE_TAC [Abbr ‘vs’, ALL_DISTINCT_SET_TO_LIST]
  >> Q.ABBREV_TAC ‘Ps = MAP (\v. fm ' v) vs’
@@ -316,7 +316,7 @@ Proof
  >> Rewr'
  >> DISCH_TAC
  >> Know ‘LAMl vs M @* Ps == (FEMPTY |++ ZIP (vs,Ps)) ' M’
- >- (MATCH_MP_TAC LAMl_appstar >> art [] \\
+ >- (MATCH_MP_TAC lameq_LAMl_appstar >> art [] \\
      rw [Abbr ‘Ps’, EVERY_MEM, MEM_MAP] \\
      FIRST_X_ASSUM MATCH_MP_TAC \\
      POP_ASSUM MP_TAC \\
@@ -364,7 +364,7 @@ Proof
  >> Q.ABBREV_TAC ‘fm = FEMPTY |++ ZIP (vs,Ns0)’
  >> Know ‘LAMl vs M @* Ns0 == fm ' M’
  >- (Q.UNABBREV_TAC ‘fm’ \\
-     MATCH_MP_TAC LAMl_appstar >> rw [])
+     MATCH_MP_TAC lameq_LAMl_appstar >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs M @* Ns0 @* Ns1 == fm ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
  >> ‘fm ' M @* Ns1 == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM]
@@ -387,7 +387,7 @@ Proof
  >> Q.ABBREV_TAC ‘fm' = FEMPTY |++ ZIP (vs',Ns0')’
  >> Know ‘LAMl vs' M @* Ns0' == fm' ' M’
  >- (Q.UNABBREV_TAC ‘fm'’ \\
-     MATCH_MP_TAC LAMl_appstar >> rw [])
+     MATCH_MP_TAC lameq_LAMl_appstar >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs' M @* Ns0' @* Ns1 == fm' ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
  >> MATCH_MP_TAC lameq_TRANS
@@ -486,7 +486,7 @@ QED
 
 Theorem ssub_LAM[local] = List.nth(CONJUNCTS ssub_thm, 2)
 
-(* Lemma 8.3.3 (ii) *)
+(* Lemma 8.3.3 (ii) [1, p.172] *)
 Theorem solvable_iff_LAM[simp] :
     !x M. solvable (LAM x M) <=> solvable M
 Proof

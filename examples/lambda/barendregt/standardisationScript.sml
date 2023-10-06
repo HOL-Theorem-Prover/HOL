@@ -61,106 +61,6 @@ val better_standard_reduction = store_thm(
     SRW_TAC [][]
   ]);
 
-val _ = add_infix ("is_head_redex", 760, NONASSOC)
-
-val (is_head_redex_rules, is_head_redex_ind, is_head_redex_cases) =
-    IndDefLib.Hol_reln`
-      (!v (t:term) u. [] is_head_redex (LAM v t @@ u)) /\
-      (!v t p. p is_head_redex t ==> (In::p) is_head_redex (LAM v t)) /\
-      (!t u v p. p is_head_redex (t @@ u) ==>
-                 (Lt::p) is_head_redex (t @@ u) @@ v)
-    `;
-
-val ihr_bvc_ind = store_thm(
-  "ihr_bvc_ind",
-  ``!P X. FINITE X /\
-          (!v M N. ~(v IN X) /\ ~(v IN FV N) ==> P [] (LAM v M @@ N)) /\
-          (!v M p. ~(v IN X) /\ P p M ==> P (In::p) (LAM v M)) /\
-          (!M N L p. P p (M @@ N) ==> P (Lt::p) ((M @@ N) @@ L)) ==>
-          !p M. p is_head_redex M ==> P p M``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Q_TAC SUFF_TAC `!p M. p is_head_redex M ==> !pi. P p (tpm pi M)`
-        THEN1 METIS_TAC [pmact_nil] THEN
-  HO_MATCH_MP_TAC is_head_redex_ind THEN
-  SRW_TAC [][is_head_redex_rules] THENL [
-    Q.MATCH_ABBREV_TAC `P [] (LAM vv MM @@ NN)` THEN
-    markerLib.RM_ALL_ABBREVS_TAC THEN
-    Q_TAC (NEW_TAC "z") `FV MM UNION FV NN UNION X` THEN
-    `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
-    SRW_TAC [][],
-    Q.MATCH_ABBREV_TAC `P (In::p) (LAM vv MM)` THEN
-    Q_TAC (NEW_TAC "z") `FV MM UNION X` THEN
-    `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
-    SRW_TAC [][GSYM pmact_decompose, Abbr`MM`]
-  ]);
-
-val is_head_redex_subst_invariant = store_thm(
-  "is_head_redex_subst_invariant",
-  ``!p t u v. p is_head_redex t ==> p is_head_redex [u/v] t``,
-  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`t`, `p`] THEN
-  HO_MATCH_MP_TAC ihr_bvc_ind THEN Q.EXISTS_TAC `v INSERT FV u` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR, is_head_redex_rules]);
-
-val is_head_redex_tpm_invariant = Store_Thm(
-  "is_head_redex_tpm_invariant",
-  ``p is_head_redex (tpm pi t) = p is_head_redex t``,
-  Q_TAC SUFF_TAC `!p t. p is_head_redex t ==> !pi. p is_head_redex (tpm pi t)`
-        THEN1 METIS_TAC [pmact_inverse] THEN
-  HO_MATCH_MP_TAC is_head_redex_ind THEN SRW_TAC [][is_head_redex_rules]);
-
-val is_head_redex_unique = store_thm(
-  "is_head_redex_unique",
-  ``!t p1 p2. p1 is_head_redex t /\ p2 is_head_redex t ==> (p1 = p2)``,
-  Q_TAC SUFF_TAC
-        `!p1 t. p1 is_head_redex t ==> !p2. p2 is_head_redex t ==> (p1 = p2)`
-        THEN1 PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC is_head_redex_ind THEN REPEAT STRIP_TAC THEN
-  POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [is_head_redex_cases] THEN
-  SRW_TAC [][LAM_eq_thm]);
-
-val is_head_redex_thm = store_thm(
-  "is_head_redex_thm",
-  ``(p is_head_redex (LAM v t) = ?p0. (p = In::p0) /\ p0 is_head_redex t) /\
-    (p is_head_redex (t @@ u) = (p = []) /\ is_abs t \/
-                                ?p0. (p = Lt::p0) /\ is_comb t /\
-                                          p0 is_head_redex t) /\
-    (p is_head_redex (VAR v) = F)``,
-  REPEAT CONJ_TAC THEN
-  SRW_TAC [][Once is_head_redex_cases, SimpLHS, LAM_eq_thm] THEN
-  SRW_TAC [][EQ_IMP_THM] THENL [
-    PROVE_TAC [],
-    PROVE_TAC [is_abs_thm, term_CASES],
-    METIS_TAC [is_comb_thm, term_CASES]
-  ]);
-
-val head_redex_leftmost = store_thm(
-  "head_redex_leftmost",
-  ``!p t. p is_head_redex t ==>
-          !p'. p' IN redex_posns t ==> (p = p') \/ p < p'``,
-  HO_MATCH_MP_TAC is_head_redex_ind THEN
-  SRW_TAC [][redex_posns_thm, DISJ_IMP_THM]);
-
-val hnf_no_head_redex = store_thm(
-  "hnf_no_head_redex",
-  ``!t. hnf t = !p. ~(p is_head_redex t)``,
-  HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][hnf_thm, is_head_redex_thm] THEN
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][is_head_redex_thm]);
-
-val head_redex_is_redex = store_thm(
-  "head_redex_is_redex",
-  ``!p t. p is_head_redex t ==> p IN redex_posns t``,
-  HO_MATCH_MP_TAC is_head_redex_ind THEN
-  SRW_TAC [][redex_posns_thm]);
-
-val is_head_redex_vsubst_invariant = store_thm(
-  "is_head_redex_vsubst_invariant",
-  ``!t v x p. p is_head_redex ([VAR v/x] t) = p is_head_redex t``,
-  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `t`] THEN
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;v}` THEN
-  SRW_TAC [][is_head_redex_thm, SUB_THM, SUB_VAR]);
-
 val _ = add_infix("is_internal_redex", 760, NONASSOC)
 (* definition 11.4.2 (i) *)
 val is_internal_redex_def = Define`
@@ -1170,15 +1070,6 @@ val lemma11_4_6 = store_thm(
     ]
   ]);
 
-val foldl_snoc = prove(
-  ``!l f x y. FOLDL f x (APPEND l [y]) = f (FOLDL f x l) y``,
-  Induct THEN SRW_TAC [][]);
-
-val combs_not_size_1 = prove(
-  ``(size M = 1) ==> ~is_comb M``,
-  Q.SPEC_THEN `M` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][size_thm, size_nz]);
-
 val cant_ireduce_to_atom = prove(
   ``!M N. (size N = 1) ==> ~(M i_reduce1 N)``,
   Q_TAC SUFF_TAC `!M r N. labelled_redn beta M r N ==>
@@ -1210,124 +1101,6 @@ val i_reduce_to_LAM_underneath = prove(
     Q.EXISTS_TAC `In :: r` THEN
     ASM_SIMP_TAC (srw_ss()) [is_head_redex_thm, redex_posns_thm] THEN
     PROVE_TAC [labelled_redn_rules]
-  ]);
-
-Definition LAMl_def:
-  LAMl vs (t : term) = FOLDR LAM t vs
-End
-
-Theorem LAMl_thm[simp]:
-  (LAMl [] M = M) /\
-  (LAMl (h::t) M = LAM h (LAMl t M))
-Proof SRW_TAC [][LAMl_def]
-QED
-
-Theorem LAMl_11[simp]:
-  !vs. (LAMl vs x = LAMl vs y) = (x = y)
-Proof
-  Induct THEN SRW_TAC [][]
-QED
-
-Theorem size_LAMl[simp]:
-  !vs. size (LAMl vs M) = LENGTH vs + size M
-Proof
-  Induct THEN SRW_TAC [numSimps.ARITH_ss][size_thm]
-QED
-
-Theorem LAMl_eq_VAR[simp]:
-  (LAMl vs M = VAR v) ⇔ (vs = []) ∧ (M = VAR v)
-Proof
-  Cases_on ‘vs’ >> simp[]
-QED
-
-Theorem LAMl_eq_APP[simp]:
-  (LAMl vs M = N @@ P) ⇔ (vs = []) ∧ (M = N @@ P)
-Proof
-  Cases_on ‘vs’ >> simp[]
-QED
-
-Theorem LAMl_eq_appstar:
-  (LAMl vs M = N ·· Ns) ⇔
-    (vs = []) ∧ (M = N ·· Ns) ∨ (Ns = []) ∧ (N = LAMl vs M)
-Proof
-  Cases_on ‘vs’ >> simp[] >> Cases_on ‘Ns’ >> simp[] >>
-  metis_tac[]
-QED
-
-Theorem is_abs_LAMl[simp]:
-  is_abs (LAMl vs M) ⇔ vs ≠ [] ∨ is_abs M
-Proof
-  Cases_on ‘vs’ >> simp[]
-QED
-
-val LAMl_vsub = store_thm(
-  "LAMl_vsub",
-  ``!vs u v M.
-        ~MEM u vs /\ ~MEM v vs ==>
-        ([VAR v/u] (LAMl vs M) = LAMl vs ([VAR v/u] M))``,
-  Induct THEN SRW_TAC [][] THEN
-  Q_TAC (NEW_TAC "z") `LIST_TO_SET vs UNION {h;v;u} UNION FV (LAMl vs M) UNION
-                       FV (LAMl vs ([VAR v/u] M))` THEN
-  `LAM h (LAMl vs M) = LAM z ([VAR z/h] (LAMl vs M))`
-     by SRW_TAC [][SIMPLE_ALPHA] THEN
-  `LAM h (LAMl vs ([VAR v/u] M)) = LAM z ([VAR z/h] (LAMl vs ([VAR v/u] M)))`
-     by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][SUB_THM]);
-
-val FV_LAMl = store_thm(
-  "FV_LAMl",
-  ``!vs M. FV (LAMl vs M) = FV M DIFF LIST_TO_SET vs``,
-  Induct THEN SRW_TAC [][] THEN
-  SIMP_TAC (srw_ss()) [EXTENSION] THEN PROVE_TAC []);
-
-val LAMl_vsub_disappears = store_thm(
-  "LAMl_vsub_disappears",
- ``!vs u v M. MEM u vs ==> ([VAR v/u] (LAMl vs M) = LAMl vs M)``,
-  Induct THEN SRW_TAC [][] THENL [
-    SRW_TAC [][SUB_THM, lemma14b],
-    `~(u IN FV (LAMl vs M))` by SRW_TAC [][FV_LAMl] THEN
-    `LAM h (LAMl vs M) = LAM u ([VAR u/h] (LAMl vs M))`
-       by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [][SUB_THM, lemma14b]
-  ]);
-
-val SUB_ISUB_SINGLETON = store_thm(
-  "SUB_ISUB_SINGLETON",
-  ``!t x u. [t/x]u:term = u ISUB [(t,x)]``,
-  SRW_TAC [][ISUB_def]);
-
-val ISUB_APPEND = store_thm(
-  "ISUB_APPEND",
-  ``!R1 R2 t:term. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)``,
-  Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]);
-
-val LAMl_ALPHA = store_thm(
-  "LAMl_ALPHA",
-  ``!vs vs' M.
-       (LENGTH vs = LENGTH vs') /\ ALL_DISTINCT vs' /\
-       DISJOINT (LIST_TO_SET vs') (LIST_TO_SET vs UNION FV M) ==>
-       (LAMl vs M = LAMl vs' (M ISUB REVERSE (ZIP(MAP VAR vs', vs))))``,
-  Induct THENL [
-    SRW_TAC [][] THEN
-    FULL_SIMP_TAC (srw_ss()) [ISUB_def],
-    SRW_TAC [][] THEN
-    Cases_on `vs'` THEN
-    FULL_SIMP_TAC (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM] THEN
-    `~(h' IN LIST_TO_SET vs) /\ ~(h' IN FV M) /\
-     DISJOINT (LIST_TO_SET vs) (LIST_TO_SET t) /\
-     DISJOINT (FV M) (LIST_TO_SET t)`
-        by PROVE_TAC [DISJOINT_INSERT, DISJOINT_SYM] THEN
-    Q_TAC SUFF_TAC `~(h' IN FV (LAMl vs M)) /\
-                    (LAMl t (M ISUB APPEND (REVERSE (ZIP (MAP VAR t, vs)))
-                                           [(VAR h',h)]) =
-                     [VAR h'/h] (LAMl vs M))` THEN1
-       SRW_TAC [][SIMPLE_ALPHA] THEN
-    ASM_SIMP_TAC (srw_ss()) [FV_LAMl] THEN
-    FIRST_X_ASSUM (Q.SPECL_THEN [`t`, `M`] MP_TAC) THEN
-    ASM_SIMP_TAC (srw_ss()) [] THEN
-    DISCH_THEN (K ALL_TAC) THEN
-    SRW_TAC [][LAMl_vsub, SUB_ISUB_SINGLETON, ISUB_APPEND]
   ]);
 
 val FRESH_lists = store_thm(
@@ -1375,50 +1148,6 @@ val RENAMING_ZIP_MAP_VAR = store_thm(
   SRW_TAC [][]);
 
 val _ = augment_srw_ss [rewrites [RENAMING_REVERSE, RENAMING_ZIP_MAP_VAR]]
-
-val is_comb_LAMl = store_thm(
-  "is_comb_LAMl",
-  ``is_comb (LAMl vs M) = (vs = []) /\ is_comb M``,
-  Cases_on `vs` THEN SRW_TAC [][]);
-val _ = export_rewrites ["is_comb_LAMl"]
-
-val strange_cases = prove(
-  ``!M : term. (?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
-                (?vs args t.
-                         (M = LAMl vs (FOLDL APP t args)) /\
-                         ~(args = []) /\ ~is_comb t)``,
-  HO_MATCH_MP_TAC simple_induction THEN REPEAT CONJ_TAC THENL [
-    (* VAR *) GEN_TAC THEN DISJ1_TAC THEN
-              MAP_EVERY Q.EXISTS_TAC [`[]`, `VAR s`] THEN SRW_TAC [][size_thm],
-    (* app *) MAP_EVERY Q.X_GEN_TAC [`M`,`N`] THEN
-              DISCH_THEN (CONJUNCTS_THEN ASSUME_TAC) THEN
-              DISJ2_TAC THEN Q.EXISTS_TAC `[]` THEN
-              SIMP_TAC (srw_ss()) [] THEN
-              `(?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
-               (?vs args t.
-                        (M = LAMl vs (FOLDL APP t args)) /\ ~(args = []) /\
-                        ~is_comb t)` by PROVE_TAC []
-              THENL [
-                MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
-                ASM_SIMP_TAC (srw_ss()) [] THEN
-                PROVE_TAC [combs_not_size_1],
-                ASM_SIMP_TAC (srw_ss()) [] THEN
-                Cases_on `vs` THENL [
-                  MAP_EVERY Q.EXISTS_TAC [`APPEND args [N]`, `t`] THEN
-                  ASM_SIMP_TAC (srw_ss()) [foldl_snoc],
-                  MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
-                  ASM_SIMP_TAC (srw_ss()) []
-                ]
-              ],
-    (* LAM *) MAP_EVERY Q.X_GEN_TAC [`x`,`M`] THEN STRIP_TAC THENL [
-                DISJ1_TAC THEN
-                MAP_EVERY Q.EXISTS_TAC [`x::vs`, `M'`] THEN
-                ASM_SIMP_TAC (srw_ss()) [],
-                DISJ2_TAC THEN
-                MAP_EVERY Q.EXISTS_TAC [`x::vs`, `args`, `t`] THEN
-                ASM_SIMP_TAC (srw_ss()) []
-              ]
-  ]);
 
 val head_reduction_standard = store_thm(
   "head_reduction_standard",
@@ -2383,7 +2112,7 @@ val hnf_reflected_over_ireduction = store_thm(
   SRW_TAC [][hnf_no_head_redex, i_reduce1_def] THEN
   METIS_TAC [lemma11_4_3ii]);
 
-(* NOTE: this is also Theorem 8.3.11 [1, p. 174] *)
+(* NOTE: This is also Theorem 8.3.11 [1, p.174] *)
 val corollary11_4_8 = store_thm(
   "corollary11_4_8",
   ``!M. has_hnf M = finite (head_reduction_path M)``,
@@ -2433,130 +2162,6 @@ val has_bnf_whnf = store_thm(
   ``has_bnf M ⇒ has_whnf M``,
   METIS_TAC [has_bnf_hnf, has_hnf_whnf]);
 
-(*---------------------------------------------------------------------------*
- * More results about LAMl (added by Chun Tian)
- *---------------------------------------------------------------------------*)
-
-(* copied from chap2Script.sml *)
-fun betafy ss =
-    simpLib.add_relsimp {refl = GEN_ALL lameq_refl,
-                         trans = List.nth(CONJUNCTS lameq_rules, 3),
-                         weakenings = [lameq_weaken_cong],
-                         subsets = [],
-                         rewrs = [hd (CONJUNCTS lameq_rules)]} ss ++
-    simpLib.SSFRAG {rewrs = [],
-                    ac = [],  convs = [],
-                    congs = [lameq_app_cong,
-                             SPEC_ALL (last (CONJUNCTS lameq_rules)),
-                             lameq_sub_cong],
-                    dprocs = [], filter = NONE, name = NONE};
-
-Theorem LAMl_SUB :
-    !M N v vs. ALL_DISTINCT vs /\ ~MEM v vs /\ (FV N = {}) ==>
-               [N/v] (LAMl vs M) == LAMl vs ([N/v] M)
-Proof
-    rpt STRIP_TAC
- >> Induct_on ‘vs’ >> rw []
- >> ASM_SIMP_TAC (betafy (srw_ss())) []
-QED
-
-Theorem LAMl_appstar :
-    !vs M Ns. ALL_DISTINCT vs /\ (LENGTH vs = LENGTH Ns) /\ EVERY closed Ns ==>
-              LAMl vs M @* Ns == (FEMPTY |++ ZIP (vs,Ns)) ' M
-Proof
-    rpt STRIP_TAC
- >> NewQ.ABBREV_TAC ‘L = ZIP (vs,Ns)’
- >> ‘(Ns = MAP SND L) /\ (vs = MAP FST L)’ by rw [Abbr ‘L’, MAP_ZIP]
- >> FULL_SIMP_TAC std_ss []
- >> Q.PAT_X_ASSUM ‘EVERY closed (MAP SND L)’ MP_TAC
- >> Q.PAT_X_ASSUM ‘ALL_DISTINCT (MAP FST L)’ MP_TAC
- >> KILL_TAC
- >> Q.ID_SPEC_TAC ‘M’
- >> Induct_on ‘L’ >> rw []
- >- (Suff ‘FEMPTY |++ [] = FEMPTY :string |-> term’ >- rw [] \\
-     rw [FUPDATE_LIST_EQ_FEMPTY])
- >> NewQ.ABBREV_TAC ‘v = FST h’
- >> NewQ.ABBREV_TAC ‘vs = MAP FST L’
- >> NewQ.ABBREV_TAC ‘N = SND h’
- >> NewQ.ABBREV_TAC ‘Ns = MAP SND L’
- (* RHS rewriting *)
- >> ‘h :: L = [h] ++ L’ by rw [] >> POP_ORW
- >> rw [FUPDATE_LIST_APPEND]
- >> Know ‘FEMPTY |++ [h] |++ L = FEMPTY |++ L |++ [h]’
- >- (MATCH_MP_TAC FUPDATE_LIST_APPEND_COMMUTES \\
-     rw [DISJOINT_ALT])
- >> Rewr'
- >> rw [GSYM FUPDATE_EQ_FUPDATE_LIST]
- >> NewQ.ABBREV_TAC ‘fm = FEMPTY |++ L’
- >> FULL_SIMP_TAC std_ss []
- >> ‘h = (v,N)’ by rw [Abbr ‘v’, Abbr ‘N’] >> POP_ORW
- >> Know ‘(fm |+ (v,N)) ' M = fm ' ([N/v] M)’
- >- (MATCH_MP_TAC ssub_update_apply' \\
-     Q.PAT_X_ASSUM ‘closed N’ MP_TAC \\
-     rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, closed_def] \\
-     Cases_on ‘INDEX_OF y vs’ >- fs [INDEX_OF_eq_NONE] \\
-     rename1 ‘INDEX_OF y vs = SOME n’ \\
-     fs [INDEX_OF_eq_SOME] \\
-     Q.PAT_X_ASSUM ‘EL n vs = y’ (ONCE_REWRITE_TAC o wrap o SYM) \\
-    ‘LENGTH L = LENGTH vs’ by rw [Abbr ‘vs’, LENGTH_MAP] \\
-     Know ‘(FEMPTY |++ L) ' (EL n vs) = EL n Ns’
-     >- (MATCH_MP_TAC FUPDATE_LIST_APPLY_MEM \\
-         Q.EXISTS_TAC ‘n’ >> rw [] \\
-        ‘m <> n’ by rw [] \\
-         METIS_TAC [EL_ALL_DISTINCT_EL_EQ]) >> Rewr' \\
-     Q.PAT_X_ASSUM ‘EVERY closed Ns’ MP_TAC \\
-     rw [EVERY_MEM, closed_def] \\
-     POP_ASSUM MATCH_MP_TAC >> rw [MEM_EL] \\
-    ‘LENGTH L = LENGTH Ns’ by rw [Abbr ‘Ns’, LENGTH_MAP] \\
-     Q.EXISTS_TAC ‘n’ >> rw [])
- >> Rewr'
- (* LHS rewriting *)
- >> Know ‘LAM v (LAMl vs M) @@ N == LAMl vs ([N/v] M)’
- >- (SIMP_TAC (betafy (srw_ss())) [] \\
-     MATCH_MP_TAC LAMl_SUB \\
-     Q.PAT_X_ASSUM ‘closed N’ MP_TAC >> rw [closed_def])
- >> DISCH_TAC
- >> MATCH_MP_TAC lameq_TRANS
- >> Q.EXISTS_TAC ‘LAMl vs ([N/v] M) @* Ns’ >> art []
- >> MATCH_MP_TAC lameq_appstar_cong >> art []
-QED
-
-Theorem hnf_LAMl[simp] :
-    hnf (LAMl vs M) <=> hnf M
-Proof
-    Induct_on ‘vs’ >> rw []
-QED
-
-Theorem is_abs_appstar[simp]:
-  is_abs (M @* Ns) ⇔ is_abs M ∧ (Ns = [])
-Proof
-  Induct_on ‘Ns’ using SNOC_INDUCT >>
-  simp[appstar_SNOC]
-QED
-
-Theorem hnf_appstar :
-    !M Ns. hnf (M @* Ns) <=> hnf M /\ (is_abs M ⇒ (Ns = []))
-Proof
-  Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC] >>
-  dsimp[SF CONJ_ss] >> metis_tac[]
-QED
-
-Theorem hnf_cases :
-  !M : term. hnf M <=> ?vs args y. M = LAMl vs (VAR y @* args)
-Proof
-  simp[FORALL_AND_THM, EQ_IMP_THM] >> conj_tac
-  >- (gen_tac >> MP_TAC (Q.SPEC ‘M’ strange_cases)
-      >> RW_TAC std_ss []
-      >- (FULL_SIMP_TAC std_ss [size_1] \\
-          qexistsl_tac [‘vs’, ‘[]’, ‘y’] >> rw [])
-      >> FULL_SIMP_TAC std_ss [hnf_LAMl]
-      >> ‘hnf t /\ ~is_abs t’ by PROVE_TAC [hnf_appstar]
-      >> ‘is_var t’ by METIS_TAC [term_cases]
-      >> FULL_SIMP_TAC std_ss [is_var_cases]
-      >> qexistsl_tac [‘vs’, ‘args’, ‘y’] >> art []) >>
-  simp[PULL_EXISTS, hnf_appstar]
-QED
-
 (* Proposition 8.3.13 (i) [1, p.174] *)
 Theorem has_hnf_iff_LAM[simp] :
     !x M. has_hnf (LAM x M) <=> has_hnf M
@@ -2566,7 +2171,6 @@ Proof
  >> rpt STRIP_TAC
  >- (Q.EXISTS_TAC ‘LAM x N’ \\
      CONJ_TAC >- PROVE_TAC [lameq_rules] \\
-    ‘?vs args y. N = LAMl vs (VAR y @* args)’ by METIS_TAC [hnf_cases] \\
      rw [hnf_cases])
  (* stage work *)
  >> ‘?Z. LAM x M -b->* Z /\ N -b->* Z’ by METIS_TAC [lameq_CR]
