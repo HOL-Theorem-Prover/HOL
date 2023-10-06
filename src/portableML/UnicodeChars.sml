@@ -45,6 +45,7 @@ val imp =     U 0x21D2
 val neg =     U 0x00AC
 val iff =     U 0x21D4
 val not_iff = U 0x21CE
+val fwAmpersand = U 0xFF06
 
 (* not constants, but might be useful *)
 val neq =       U 0x2260
