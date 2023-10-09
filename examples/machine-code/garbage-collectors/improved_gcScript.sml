@@ -397,27 +397,25 @@ val gc_def = Define `
 val EMP_RANGE_def = Define `
   EMP_RANGE (b,e) m = !k. k IN RANGE(b,e) ==> (m k = H_EMP)`;
 
-val (full_heap_rules,full_heap_ind,full_heap_cases) =
-  Hol_reln
-  `(!b m. full_heap b b m) /\
-   (!b e m n xs d.
-      (m b = H_BLOCK (xs,n,d)) /\ EMP_RANGE (b+1,b+n+1) m /\
-      full_heap (b+n+1) e m ==> full_heap b e m)`;
+Inductive full_heap:
+  (!b m. full_heap b b m) /\
+  (!b e m n xs d.
+     (m b = H_BLOCK (xs,n,d)) /\ EMP_RANGE (b+1,b+n+1) m /\
+     full_heap (b+n+1) e m ==> full_heap b e m)
+End
 
-val full_heap_ind = IndDefLib.derive_strong_induction(full_heap_rules,full_heap_ind);
-val _ = save_thm("full_heap_ind",full_heap_ind);
+Theorem full_heap_ind[allow_rebind] = full_heap_strongind
 
-val (part_heap_rules,part_heap_ind,part_heap_cases) =
-  Hol_reln
-  `(!b m. part_heap b b m 0) /\
-   (!b e m k.
-      ~(isBLOCK (m b)) /\ part_heap (b+1) e m k ==> part_heap b e m k) /\
-   (!b e m n xs d k.
-      (m b = H_BLOCK (xs,n,d)) /\ EMP_RANGE (b+1,b+n+1) m /\
-      part_heap (b+n+1) e m k ==> part_heap b e m (k+n+1))`;
+Inductive part_heap:
+  (!b m. part_heap b b m 0) /\
+  (!b e m k.
+     ~(isBLOCK (m b)) /\ part_heap (b+1) e m k ==> part_heap b e m k) /\
+  (!b e m n xs d k.
+     (m b = H_BLOCK (xs,n,d)) /\ EMP_RANGE (b+1,b+n+1) m /\
+     part_heap (b+n+1) e m k ==> part_heap b e m (k+n+1))
+End
 
-val part_heap_ind = IndDefLib.derive_strong_induction(part_heap_rules,part_heap_ind);
-val _ = save_thm("part_heap_ind",part_heap_ind);
+Theorem part_heap_ind[allow_rebind] = part_heap_strongind
 
 val ref_mem_def = Define `
   ref_mem (h,f) m =
