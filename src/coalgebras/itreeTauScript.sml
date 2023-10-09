@@ -1038,7 +1038,7 @@ Proof
   metis_tac[itree_bind_resp_t_wbisim, itree_bind_resp_k_wbisim, itree_wbisim_trans]
 QED
 
-Theorem itree_iter_ret_tau_wbisim:
+Theorem itree_iter_ret_tau_wbisim[local]:
   itcb1 = (λx. case x of INL a => Tau (itree_iter k1 a) | INR b => Ret b) /\
   itcb2 = (λx. case x of INL a => Tau (itree_iter k2 a) | INR b => Ret b) /\
   itree_wbisim (Ret x) (Tau u) /\ (!r. itree_wbisim (k1 r) (k2 r))
