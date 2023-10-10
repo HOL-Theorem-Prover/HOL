@@ -196,7 +196,7 @@ Incompatibilities:
     (With the `Definition` syntax, this is done by using the `schematic` attribute.)
     This brings this flavour of definition into line with the others, where the presence of extra free variables on the RHS of a definition’s equation is usually flagged as an error.
 
-*   In `real_topologyTheory`, some definitions (only the theorem names but the
+*   In `real_topologyTheory`, some definitions (only the theorem names but not the
     underlying logical constants) have been renamed to avoid conflicts with
     similar definitions in `seqTheory`: from `sums` to `sums_def`, from
     `summable` to `summable_def`. Besides, `infsum` has been renamed to
