@@ -12,7 +12,11 @@ struct
    val (Type, Term) = parse_from_grammars addressTheory.address_grammars
 end
 
-val new_definition = Definition.new_definition (* not boolSyntax! *)
+fun allow_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
+val new_definition =
+    allow_rebinds Definition.new_definition (* not boolSyntax! *)
+val save_thm = allow_rebinds save_thm
+
 
 (* -------------------------------------------------------------------------- *)
 (* Decompilation stages:                                                      *)
