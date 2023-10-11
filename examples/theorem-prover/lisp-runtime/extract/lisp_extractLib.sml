@@ -13,6 +13,7 @@ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+fun allowing_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
 
 (* definitions *)
 
@@ -41,6 +42,7 @@ fun new_def def_tm term_tac = let
             handle HOL_ERR _ => NONE)
   in (def,ind) end
 
+val new_def = allowing_rebinds new_def
 
 (* ML equivalent of term datatype defined in lisp_semanticsTheory *)
 
@@ -443,6 +445,8 @@ fun pure_extract name term_tac = let
   val _ = save_thm(good_name ^ "_def[compute]",def)
   val _ = save_thm("R_ev_" ^ good_name,result)
   in def end;
+
+val pure_extract = fn n => fn tac => allowing_rebinds (pure_extract n) tac
 
 fun pure_extract_mutual_rec names term_tac = let
   val _ = print "extracting:"
@@ -857,6 +861,9 @@ fun impure_extract_aux name term_tac use_short_cut = let
   val _ = save_thm(good_name ^ "_def",def)
   val _ = save_thm("R_ev_" ^ good_name,result)
   in def end;
+
+val impure_extract_aux =
+    fn n => fn tac => fn b => allowing_rebinds (impure_extract_aux n tac) b
 
 fun impure_extract name term_tac =
   impure_extract_aux name term_tac false

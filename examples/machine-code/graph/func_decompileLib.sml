@@ -10,6 +10,8 @@ open writerLib cond_cleanLib;
 val _ = max_print_depth := ~1;
 val _ = set_trace "Unicode" 0;
 
+val new_definition = Feedback.trace ("Theory.allow_rebinds", 1) new_definition
+
 local
   val export_fails = ref ([]:string list)
 in

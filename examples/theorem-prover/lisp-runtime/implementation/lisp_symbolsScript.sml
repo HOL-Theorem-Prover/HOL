@@ -406,12 +406,6 @@ val IO_WRITE_APPEND = store_thm("IO_WRITE_APPEND",
   ``!io x1 x2. IO_WRITE (IO_WRITE io x1) x2 = IO_WRITE io (x1 ++ x2)``,
   Cases \\ ASM_SIMP_TAC std_ss [IO_WRITE_def,APPEND_ASSOC,MAP_APPEND]);
 
-val zIO_def = Define `
-  zIO (iow:word64,ior:word64,iod:word64,ioi:word64) (io:io_streams) = zR 2w 3w`;
-
-val zIO_R_def = Define `
-  zIO_R (iow,ior,iod) io = SEP_EXISTS ioi. zR 1w ioi * zIO (iow,ior,iod,ioi) io`;
-
 val null_term_str_def = Define `
   null_term_str a df f str =
     ?p. (one_string a (str ++ [CHR 0]) * p) (fun2set (f,df)) /\

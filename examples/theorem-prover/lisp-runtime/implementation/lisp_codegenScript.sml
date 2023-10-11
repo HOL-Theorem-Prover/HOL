@@ -374,14 +374,6 @@ val (mc_xbp_load_spec,mc_xbp_load_def) = basic_decompile_strings x64_tools "mc_x
 
 val BLAST_LEMMA = prove(``w << 2 !! 1w = w << 2 + 1w:word32``,blastLib.BBLAST_TAC);
 
-val EL_UPDATE_NTH = store_thm("EL_UPDATE_NTH",
-  ``!xs n k x. EL n (UPDATE_NTH k x xs) =
-               if (k = n) /\ k < LENGTH xs then x else EL n xs``,
-  Induct \\ Cases_on `k` \\ SIMP_TAC std_ss [LENGTH,UPDATE_NTH_def]
-  THEN1 (Cases_on `n` \\ FULL_SIMP_TAC std_ss [EL,HD,TL] \\ FULL_SIMP_TAC std_ss [ADD1])
-  \\ Cases_on `n'` \\ FULL_SIMP_TAC std_ss [EL,HD,TL]
-  \\ FULL_SIMP_TAC std_ss [ADD1]);
-
 val UPDATE_NTH_1 = prove(``UPDATE_NTH 1 x (y1::y2::ys) = y1::x::ys``, EVAL_TAC);
 
 val mc_xbp_load_blast = blastLib.BBLAST_PROVE
