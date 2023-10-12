@@ -267,8 +267,8 @@ Proof
     Q.X_GEN_TAC ‘x’
  >> REWRITE_TAC [I_def, Once EQ_SYM_EQ]
  >> Cases_on ‘x = "x"’ >- rw []
- >> NewQ.ABBREV_TAC ‘u :term = VAR x’
- >> NewQ.ABBREV_TAC ‘y = "x"’
+ >> qabbrev_tac ‘u :term = VAR x’
+ >> qabbrev_tac ‘y = "x"’
  >> ‘y NOTIN FV u’ by rw [Abbr ‘u’]
  >> Know ‘LAM x u = LAM y ([VAR y/x] u)’
  >- (MATCH_MP_TAC SIMPLE_ALPHA >> art [])
@@ -354,7 +354,7 @@ QED
 Theorem I_appstar :
     I @* (GENLIST (\i. I) n) == I
 Proof
-    NewQ.ABBREV_TAC ‘Is = GENLIST (\i. I) n’
+    qabbrev_tac ‘Is = GENLIST (\i. I) n’
  >> MATCH_MP_TAC I_appstar'
  >> rw [Abbr ‘Is’, MEM_GENLIST]
 QED
@@ -799,7 +799,7 @@ Theorem lameq_LAMl_appstar :
               LAMl vs M @* Ns == (FEMPTY |++ ZIP (vs,Ns)) ' M
 Proof
     rpt STRIP_TAC
- >> NewQ.ABBREV_TAC ‘L = ZIP (vs,Ns)’
+ >> qabbrev_tac ‘L = ZIP (vs,Ns)’
  >> ‘(Ns = MAP SND L) /\ (vs = MAP FST L)’ by rw [Abbr ‘L’, MAP_ZIP]
  >> FULL_SIMP_TAC std_ss []
  >> Q.PAT_X_ASSUM ‘EVERY closed (MAP SND L)’ MP_TAC
@@ -809,10 +809,10 @@ Proof
  >> Induct_on ‘L’ >> rw []
  >- (Suff ‘FEMPTY |++ [] = FEMPTY :string |-> term’ >- rw [] \\
      rw [FUPDATE_LIST_EQ_FEMPTY])
- >> NewQ.ABBREV_TAC ‘v = FST h’
- >> NewQ.ABBREV_TAC ‘vs = MAP FST L’
- >> NewQ.ABBREV_TAC ‘N = SND h’
- >> NewQ.ABBREV_TAC ‘Ns = MAP SND L’
+ >> qabbrev_tac ‘v = FST h’
+ >> qabbrev_tac ‘vs = MAP FST L’
+ >> qabbrev_tac ‘N = SND h’
+ >> qabbrev_tac ‘Ns = MAP SND L’
  (* RHS rewriting *)
  >> ‘h :: L = [h] ++ L’ by rw [] >> POP_ORW
  >> rw [FUPDATE_LIST_APPEND]
@@ -821,7 +821,7 @@ Proof
      rw [DISJOINT_ALT])
  >> Rewr'
  >> rw [GSYM FUPDATE_EQ_FUPDATE_LIST]
- >> NewQ.ABBREV_TAC ‘fm = FEMPTY |++ L’
+ >> qabbrev_tac ‘fm = FEMPTY |++ L’
  >> FULL_SIMP_TAC std_ss []
  >> ‘h = (v,N)’ by rw [Abbr ‘v’, Abbr ‘N’] >> POP_ORW
  >> Know ‘(fm |+ (v,N)) ' M = fm ' ([N/v] M)’
