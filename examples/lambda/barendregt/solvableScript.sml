@@ -606,6 +606,61 @@ Proof
         Q.EXISTS_TAC ‘fm’ >> simp [] ] ]
 QED
 
+(* Theorem 8.3.14 (Wadsworth) [1, p.175] *)
+Theorem solvable_iff_has_hnf :
+    !M. solvable M <=> has_hnf M
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> Q.ABBREV_TAC ‘vs = SET_TO_LIST (FV M)’
+ >> Q.ABBREV_TAC ‘M0 = LAMl vs M’
+ >> ‘closed M0’
+      by (rw [closed_def, Abbr ‘M0’, Abbr ‘vs’, FV_LAMl, SET_TO_LIST_INV])
+ >> Suff ‘solvable M0 <=> has_hnf M0’
+ >- (Q.UNABBREV_TAC ‘M0’ \\
+     KILL_TAC >> Induct_on ‘vs’ >- rw [] \\
+     rw [solvable_iff_LAM, has_hnf_LAM_E])
+ >> POP_ASSUM MP_TAC
+ >> KILL_TAC
+ >> Q.SPEC_TAC (‘M0’, ‘M’)
+ (* stage work, now M is closed *)
+ >> rpt STRIP_TAC
+ >> EQ_TAC
+ >- (rw [solvable_alt_closed] \\
+     Know ‘has_hnf (M @* Ns)’
+     >- (rw [has_hnf_def] \\
+         Q.EXISTS_TAC ‘I’ >> rw [hnf_I]) \\
+     Q.ID_SPEC_TAC ‘Ns’ >> KILL_TAC \\
+     HO_MATCH_MP_TAC SNOC_INDUCT >> rw [SNOC_APPEND, appstar_SNOC] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     rename1 ‘has_hnf (M @* Ns @@ N)’ \\
+     MATCH_MP_TAC has_hnf_APP_E >> art [])
+ (* stage work *)
+ >> rw [has_hnf_thm, solvable_alt_closed]
+ >> Know ‘FV N = {}’
+ >- (fs [closed_def] \\
+     Suff ‘FV N SUBSET FV M’ >- ASM_SET_TAC [] \\
+     MP_TAC (Q.GEN ‘v’ (Q.SPECL [‘M’, ‘N’] hreduces_FV)) >> rw [SUBSET_DEF])
+ >> DISCH_TAC
+ >> ‘?vs y Ns. ALL_DISTINCT vs /\ N = LAMl vs (VAR y @* Ns)’
+       by METIS_TAC [hnf_cases]
+ >> Know ‘MEM y vs’
+ >- (CCONTR_TAC \\
+     Q.PAT_X_ASSUM ‘FV N = {}’ MP_TAC \\
+     rw [Once EXTENSION, FV_LAMl, FV_appstar] \\
+     Q.EXISTS_TAC ‘y’ >> rw [])
+ >> DISCH_TAC
+ >> Suff ‘?Ms. N @* Ms == I’
+ >- (STRIP_TAC \\
+     Q.EXISTS_TAC ‘Ms’ \\
+    ‘M == N’ by PROVE_TAC [hreduces_lameq] \\
+    ‘M @* Ms == N @* Ms’ by PROVE_TAC [lameq_appstar_cong] \\
+     MATCH_MP_TAC lameq_TRANS \\
+     Q.EXISTS_TAC ‘N @* Ms’ >> art [])
+ >> Q.PAT_X_ASSUM ‘N = LAMl vs (VAR y @* Ns)’ (ONCE_REWRITE_TAC o wrap)
+ (* applying lameq_LAMl_appstar and ssub_appstar *)
+ >> cheat
+QED
+
 val _ = export_theory ();
 val _ = html_theory "solvable";
 

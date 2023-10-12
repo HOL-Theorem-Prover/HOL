@@ -308,7 +308,7 @@ val _ = set_mapped_fixity { term_name = "APP", tok = "@@",
 (* NOTE: The following overload "incompatible" was in sttScript.sml.
 
    The current "incompatibility" is between a (string) variable and a term.
-   See chap2Theory for the incompatibility bwtween two terms.
+   See chap2Theory for the incompatibility between two terms.
  *)
 val _ = set_fixity "#" (Infix(NONASSOC, 450))
 Overload "#" = “λv M:term. v ∉ FV M”

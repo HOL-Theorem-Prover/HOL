@@ -173,6 +173,15 @@ Proof
     Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC, MAP_SNOC]
 QED
 
+Theorem FV_appstar :
+    !M Ns. FV (M @* Ns) = FV M UNION (BIGUNION (IMAGE FV (set Ns)))
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC, MAP_SNOC]
+ >> Q.X_GEN_TAC ‘N’
+ >> simp [LIST_TO_SET_SNOC] >> SET_TAC []
+QED
+
 (*---------------------------------------------------------------------------*
  *  LAMl (was in standardisationTheory)
  *---------------------------------------------------------------------------*)
