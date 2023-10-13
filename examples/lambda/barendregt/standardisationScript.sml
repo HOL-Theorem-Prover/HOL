@@ -1007,38 +1007,6 @@ val FRESH_lists = store_thm(
     FULL_SIMP_TAC (srw_ss()) []
   ]);
 
-val RENAMING_def = Define`
-  (RENAMING [] = T) /\
-  (RENAMING (h::t) = (?y x:string. h = (VAR y:term,x)) /\ RENAMING t)
-`;
-val _ = export_rewrites ["RENAMING_def"]
-
-val RENAMING_APPEND = store_thm(
-  "RENAMING_APPEND",
-  ``!l1 l2. RENAMING (APPEND l1 l2) = RENAMING l1 /\ RENAMING l2``,
-  Induct THEN SRW_TAC [][] THEN METIS_TAC []);
-
-val RENAMING_THM = CONJ RENAMING_def RENAMING_APPEND
-
-val RENAMING_REVERSE = store_thm(
-  "RENAMING_REVERSE",
-  ``!R. RENAMING (REVERSE R) = RENAMING R``,
-  Induct THEN SRW_TAC [][RENAMING_APPEND, RENAMING_THM] THEN METIS_TAC []);
-
-val RENAMING_ZIP = store_thm(
-  "RENAMING_ZIP",
-  ``!l1 l2. (LENGTH l1 = LENGTH l2) ==>
-            (RENAMING (ZIP (l1, l2)) = !e. MEM e l1 ==> ?s. e = VAR s)``,
-  Induct THEN Cases_on `l2` THEN
-  SRW_TAC [][RENAMING_THM] THEN PROVE_TAC []);
-
-val RENAMING_ZIP_MAP_VAR = store_thm(
-  "RENAMING_ZIP_MAP_VAR",
-  ``!l1 l2. (LENGTH l1 = LENGTH l2) ==> RENAMING (ZIP (MAP VAR l1, l2))``,
-  Induct THEN Cases_on `l2` THEN
-  SRW_TAC [][RENAMING_ZIP, listTheory.MEM_MAP] THEN
-  SRW_TAC [][]);
-
 val _ = augment_srw_ss [rewrites [RENAMING_REVERSE, RENAMING_ZIP_MAP_VAR]]
 
 val head_reduction_standard = store_thm(
@@ -1130,21 +1098,7 @@ val i_reduces_to_LAMl = prove(
     PROVE_TAC [relationTheory.RTC_RULES, i_reduce1_under_LAMl]
   ]);
 
-Theorem size_vsubst[simp] :
-    !M:term. size ([VAR v/u] M) = size M
-Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
-  SRW_TAC [][SUB_VAR, SUB_THM]
-QED
-
-val size_ISUB = prove(
-  ``!R N:term. RENAMING R ==> (size (N ISUB R) = size N)``,
-  Induct THEN
-  ASM_SIMP_TAC (srw_ss())[ISUB_def, pairTheory.FORALL_PROD,
-                          RENAMING_THM] THEN
-  SRW_TAC [][] THEN SRW_TAC [][]);
-
-val _ = augment_srw_ss [rewrites [size_ISUB]]
+val _ = augment_srw_ss [rewrites [size_vsubst, size_ISUB]]
 
 val cant_ireduce_to_lam_atom = prove(
   ``!vs M N. (size N = 1) ==> ~(M i_reduce1 LAMl vs N)``,
@@ -1643,42 +1597,6 @@ val standard_reductions_join_over_comb = store_thm(
   `last s1' = first s2'` by SRW_TAC [][] THEN
   SRW_TAC [][] THEN
   METIS_TAC [standard_reductions_join_over_comb]);
-
-val ISUB_APP = prove(
-  ``!sub M N. (M @@ N) ISUB sub = (M ISUB sub) @@ (N ISUB sub)``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def,
-                                       SUB_THM]);
-
-val FOLDL_APP_ISUB = prove(
-  ``!args (t:term) sub.
-         FOLDL APP t args ISUB sub =
-         FOLDL APP (t ISUB sub) (MAP (\t. t ISUB sub) args)``,
-  Induct THEN SRW_TAC [][ISUB_APP]);
-
-val size_foldl_app = prove(
-  ``!args t : term.
-       size (FOLDL APP t args) = FOLDL (\n t. n + size t + 1) (size t) args``,
-  Induct THEN SRW_TAC [][size_thm]);
-
-val size_foldl_app_lt = prove(
-  ``!(args : term list) x. x <= FOLDL (\n t. n + size t + 1) x args``,
-  Induct THEN SRW_TAC [][] THEN
-  `x + size h + 1 <= FOLDL (\n t. n + size t + 1) (x + size h + 1) args`
-     by METIS_TAC [] THEN
-  DECIDE_TAC);
-
-val size_args_foldl_app = prove(
-  ``!args n (t : term) x. n < LENGTH args ==>
-                size (EL n args) < x + size (FOLDL APP t args)``,
-  Induct THEN SRW_TAC [][] THEN
-  Cases_on `n` THEN SRW_TAC [][] THENL [
-    SRW_TAC [][size_foldl_app, size_thm] THEN
-    `size t + size h + 1 <=
-       FOLDL (\n t. n + size t + 1) (size t + size h + 1) args`
-       by SRW_TAC [][size_foldl_app_lt] THEN
-    DECIDE_TAC,
-    FULL_SIMP_TAC (srw_ss()) []
-  ]);
 
 val head_standard_is_standard = store_thm(
   "head_standard_is_standard",

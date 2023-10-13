@@ -4090,4 +4090,3 @@ val corollary11_2_29 = store_thm(
              relationTheory.diamond_TC_diamond]);
 
 val _ = export_theory();
-val _ = html_theory "finite_developments";
