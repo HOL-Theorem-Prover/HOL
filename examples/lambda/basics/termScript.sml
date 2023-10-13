@@ -585,6 +585,44 @@ Proof
  >> SRW_TAC [][size_thm, size_nz]
 QED
 
+Theorem size_vsubst :
+    !M:term. size ([VAR v/u] M) = size M
+Proof
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][SUB_VAR, SUB_THM]
+QED
+
+Theorem size_foldl_app :
+    !args t : term.
+       size (FOLDL APP t args) = FOLDL (\n t. n + size t + 1) (size t) args
+Proof
+  Induct THEN SRW_TAC [][size_thm]
+QED
+
+Theorem size_foldl_app_lt :
+    !(args : term list) x. x <= FOLDL (\n t. n + size t + 1) x args
+Proof
+  Induct THEN SRW_TAC [][] THEN
+  `x + size h + 1 <= FOLDL (\n t. n + size t + 1) (x + size h + 1) args`
+     by METIS_TAC [] THEN
+  DECIDE_TAC
+QED
+
+Theorem size_args_foldl_app :
+    !args n (t : term) x. n < LENGTH args ==>
+                size (EL n args) < x + size (FOLDL APP t args)
+Proof
+  Induct THEN SRW_TAC [][] THEN
+  Cases_on `n` THEN SRW_TAC [][] THENL [
+    SRW_TAC [][size_foldl_app, size_thm] THEN
+    `size t + size h + 1 <=
+       FOLDL (\n t. n + size t + 1) (size t + size h + 1) args`
+       by SRW_TAC [][size_foldl_app_lt] THEN
+    DECIDE_TAC,
+    FULL_SIMP_TAC (srw_ss()) []
+  ]
+QED
+
 (* ----------------------------------------------------------------------
     iterated substitutions (ugh)
    ---------------------------------------------------------------------- *)
@@ -596,48 +634,131 @@ End
 
 val _ = set_fixity "ISUB" (Infixr 501);
 
-val DOM_DEF =
- Define
-     `(DOM [] = {})
-  /\  (DOM ((x,y)::rst) = {y} UNION DOM rst)`;
+Definition DOM_DEF :
+   (DOM [] = {}) /\
+   (DOM ((x,y)::rst) = {y} UNION DOM rst)
+End
 
-val FVS_DEF =
- Define
-    `(FVS [] = {})
- /\  (FVS ((t,x)::rst) = FV t UNION FVS rst)`;
+Definition FVS_DEF :
+   (FVS [] = {}) /\
+   (FVS ((t,x)::rst) = FV t UNION FVS rst)
+End
 
+Theorem FINITE_DOM[simp] :
+    !ss. FINITE (DOM ss)
+Proof
+    Induct >| [ALL_TAC, Cases]
+ >> RW_TAC std_ss [DOM_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_SING]
+QED
 
-val FINITE_DOM = Q.store_thm("FINITE_DOM",
- `!ss. FINITE (DOM ss)`,
-Induct THENL [ALL_TAC, Cases]
-   THEN RW_TAC std_ss [DOM_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_SING]);
-val _ = export_rewrites ["FINITE_DOM"]
+Theorem FINITE_FVS[simp] :
+    !ss. FINITE (FVS ss)
+Proof
+    Induct >| [ALL_TAC, Cases]
+ >> RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]
+QED
 
+Theorem ISUB_LAM :
+    !R x. ~(x IN (DOM R UNION FVS R)) ==>
+          !t. (LAM x t) ISUB R = LAM x (t ISUB R)
+Proof
+    Induct
+ >> ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD,
+                             DOM_DEF, FVS_DEF, SUB_THM]
+QED
 
-val FINITE_FVS = Q.store_thm("FINITE_FVS",
-`!ss. FINITE (FVS ss)`,
-Induct THENL [ALL_TAC, Cases]
-   THEN RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]);
-val _ = export_rewrites ["FINITE_FVS"]
+Theorem SUB_ISUB_SINGLETON :
+    !t x u. [t/x]u:term = u ISUB [(t,x)]
+Proof
+    SRW_TAC [][ISUB_def]
+QED
 
-val ISUB_LAM = store_thm(
-  "ISUB_LAM",
-  ``!R x. ~(x IN (DOM R UNION FVS R)) ==>
-          !t. (LAM x t) ISUB R = LAM x (t ISUB R)``,
+Theorem ISUB_APPEND :
+    !R1 R2 t:term. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)
+Proof
+    Induct
+ >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]
+QED
+
+Theorem ISUB_APP :
+    !sub M N. (M @@ N) ISUB sub = (M ISUB sub) @@ (N ISUB sub)
+Proof
+    Induct
+ >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def, SUB_THM]
+QED
+
+Theorem FOLDL_APP_ISUB :
+    !args (t:term) sub.
+         FOLDL APP t args ISUB sub =
+         FOLDL APP (t ISUB sub) (MAP (\t. t ISUB sub) args)
+Proof
+    Induct >> SRW_TAC [][ISUB_APP]
+QED
+
+Theorem ISUB_appstar = FOLDL_APP_ISUB
+
+Theorem ISUB_VAR_FRESH :
+    !y sub. ~MEM y (MAP SND sub) ==> (VAR y ISUB sub = VAR y)
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Induct_on ‘sub’ >> rw [ISUB_def]
+ >> Cases_on ‘h’ >> fs []
+ >> rw [ISUB_def, SUB_VAR]
+QED
+
+(* ----------------------------------------------------------------------
+    RENAMING: a special iterated substitutions like tpm
+   ---------------------------------------------------------------------- *)
+
+Definition RENAMING_def :
+  (RENAMING []     <=> T) /\
+  (RENAMING (h::t) <=> (?y x:string. (h = (VAR y:term,x))) /\ RENAMING t)
+End
+
+val _ = export_rewrites ["RENAMING_def"]
+
+Theorem RENAMING_APPEND :
+    !l1 l2. RENAMING (APPEND l1 l2) <=> RENAMING l1 /\ RENAMING l2
+Proof
+    Induct >> SRW_TAC [][] >> METIS_TAC []
+QED
+
+(* |- ((RENAMING [] <=> T) /\
+       !h t. RENAMING (h::t) <=> (?y x. h = (VAR y,x)) /\ RENAMING t) /\
+      !l1 l2. RENAMING (l1 ++ l2) <=> RENAMING l1 /\ RENAMING l2
+ *)
+Theorem RENAMING_THM = CONJ RENAMING_def RENAMING_APPEND
+
+Theorem RENAMING_REVERSE[simp] :
+    !R. RENAMING (REVERSE R) = RENAMING R
+Proof
+    Induct >> SRW_TAC [][RENAMING_APPEND, RENAMING_THM] >> METIS_TAC []
+QED
+
+Theorem RENAMING_ZIP :
+    !l1 l2. (LENGTH l1 = LENGTH l2) ==>
+            (RENAMING (ZIP (l1, l2)) = !e. MEM e l1 ==> ?s. e = VAR s)
+Proof
+    Induct >> Cases_on `l2`
+ >> SRW_TAC [][RENAMING_THM] >> PROVE_TAC []
+QED
+
+Theorem RENAMING_ZIP_MAP_VAR[simp] :
+    !l1 l2. (LENGTH l1 = LENGTH l2) ==> RENAMING (ZIP (MAP VAR l1, l2))
+Proof
+    Induct >> Cases_on `l2`
+ >> SRW_TAC [][RENAMING_ZIP, listTheory.MEM_MAP]
+ >> SRW_TAC [][]
+QED
+
+Theorem size_ISUB :
+    !R N:term. RENAMING R ==> (size (N ISUB R) = size N)
+Proof
   Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD,
-                           DOM_DEF, FVS_DEF, SUB_THM]);
-
-val SUB_ISUB_SINGLETON = store_thm(
-  "SUB_ISUB_SINGLETON",
-  ``!t x u. [t/x]u:term = u ISUB [(t,x)]``,
-  SRW_TAC [][ISUB_def]);
-
-val ISUB_APPEND = store_thm(
-  "ISUB_APPEND",
-  ``!R1 R2 t:term. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)``,
-  Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]);
+  ASM_SIMP_TAC (srw_ss())[ISUB_def, pairTheory.FORALL_PROD,
+                          RENAMING_THM] THEN
+  SRW_TAC [][] THEN SRW_TAC [][size_vsubst]
+QED
 
 (* ----------------------------------------------------------------------
     Simultaneous substitution (using a finite map) - much more interesting

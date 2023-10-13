@@ -614,17 +614,15 @@ Proof
  >> Q.ABBREV_TAC ‘vs = SET_TO_LIST (FV M)’
  >> Q.ABBREV_TAC ‘M0 = LAMl vs M’
  >> ‘closed M0’
-      by (rw [closed_def, Abbr ‘M0’, Abbr ‘vs’, FV_LAMl, SET_TO_LIST_INV])
+       by (rw [closed_def, Abbr ‘M0’, Abbr ‘vs’, FV_LAMl, SET_TO_LIST_INV])
  >> Suff ‘solvable M0 <=> has_hnf M0’
  >- (Q.UNABBREV_TAC ‘M0’ \\
      KILL_TAC >> Induct_on ‘vs’ >- rw [] \\
      rw [solvable_iff_LAM, has_hnf_LAM_E])
- >> POP_ASSUM MP_TAC
- >> KILL_TAC
+ >> POP_ASSUM MP_TAC >> KILL_TAC
  >> Q.SPEC_TAC (‘M0’, ‘M’)
  (* stage work, now M is closed *)
- >> rpt STRIP_TAC
- >> EQ_TAC
+ >> rpt STRIP_TAC >> EQ_TAC
  >- (rw [solvable_alt_closed] \\
      Know ‘has_hnf (M @* Ns)’
      >- (rw [has_hnf_def] \\
@@ -636,17 +634,17 @@ Proof
      MATCH_MP_TAC has_hnf_APP_E >> art [])
  (* stage work *)
  >> rw [has_hnf_thm, solvable_alt_closed]
- >> Know ‘FV N = {}’
+ >> Know ‘closed N’
  >- (fs [closed_def] \\
      Suff ‘FV N SUBSET FV M’ >- ASM_SET_TAC [] \\
      MP_TAC (Q.GEN ‘v’ (Q.SPECL [‘M’, ‘N’] hreduces_FV)) >> rw [SUBSET_DEF])
  >> DISCH_TAC
  >> ‘?vs y Ns. ALL_DISTINCT vs /\ N = LAMl vs (VAR y @* Ns)’
-       by METIS_TAC [hnf_cases]
+       by METIS_TAC [hnf_cases] (* new version with ALL_DISTINCT *)
  >> Know ‘MEM y vs’
  >- (CCONTR_TAC \\
-     Q.PAT_X_ASSUM ‘FV N = {}’ MP_TAC \\
-     rw [Once EXTENSION, FV_LAMl, FV_appstar] \\
+     Q.PAT_X_ASSUM ‘closed N’ MP_TAC \\
+     rw [Once EXTENSION, FV_LAMl, FV_appstar, closed_def] \\
      Q.EXISTS_TAC ‘y’ >> rw [])
  >> DISCH_TAC
  >> Suff ‘?Ms. N @* Ms == I’
@@ -656,9 +654,47 @@ Proof
     ‘M @* Ms == N @* Ms’ by PROVE_TAC [lameq_appstar_cong] \\
      MATCH_MP_TAC lameq_TRANS \\
      Q.EXISTS_TAC ‘N @* Ms’ >> art [])
+ >> qabbrev_tac ‘n = LENGTH vs’
+ >> qabbrev_tac ‘m = LENGTH Ns’
  >> Q.PAT_X_ASSUM ‘N = LAMl vs (VAR y @* Ns)’ (ONCE_REWRITE_TAC o wrap)
+ >> qabbrev_tac ‘Ms = GENLIST (\i. funpow K m I) n’
+ >> Q.EXISTS_TAC ‘Ms’
  (* applying lameq_LAMl_appstar and ssub_appstar *)
- >> cheat
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘(FEMPTY |++ ZIP (vs,Ms)) ' (VAR y @* Ns)’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC lameq_LAMl_appstar >> art [] \\
+     CONJ_TAC >- rw [Abbr ‘Ms’] \\
+     rw [EVERY_EL, Abbr ‘Ms’, closed_def, FV_funpow])
+ >> REWRITE_TAC [ssub_appstar]
+ >> Q.PAT_ASSUM ‘MEM y vs’ ((Q.X_CHOOSE_THEN ‘i’ STRIP_ASSUME_TAC) o
+                            (REWRITE_RULE [MEM_EL]))
+ >> Know ‘(FEMPTY |++ ZIP (vs,Ms)) ' (VAR y) = EL i Ms’
+ >- (‘LENGTH Ms = n’ by rw [Abbr ‘Ms’, LENGTH_GENLIST] \\
+     Know ‘y IN FDOM (FEMPTY |++ ZIP (vs,Ms))’
+     >- rw [FDOM_FUPDATE_LIST, MAP_ZIP] \\
+     rw [ssub_thm] \\
+     MATCH_MP_TAC FUPDATE_LIST_APPLY_MEM >> simp [MAP_ZIP] \\
+     Q.EXISTS_TAC ‘i’ >> rw [] \\
+     rename1 ‘EL j vs <> EL i vs’ \\
+     ‘j <> i’ by rw [] \\
+     METIS_TAC [EL_ALL_DISTINCT_EL_EQ])
+ >> Rewr'
+ >> Know ‘EL i Ms = funpow K m I’
+ >- (‘i < n’ by rw [Abbr ‘n’] \\
+     rw [Abbr ‘Ms’, EL_GENLIST])
+ >> Rewr'
+ (* final stage *)
+ >> qabbrev_tac ‘Ps = MAP ($' (FEMPTY |++ ZIP (vs,Ms))) Ns’
+ >> Know ‘LENGTH Ps = m’ >- (rw [Abbr ‘m’, Abbr ‘Ps’])
+ >> KILL_TAC
+ >> Q.ID_SPEC_TAC ‘Ps’
+ >> Induct_on ‘m’ >- ASM_SIMP_TAC (betafy(srw_ss())) [LENGTH_NIL, funpow_def]
+ >> rw [funpow_SUC]
+ >> Cases_on ‘Ps’ >> fs []
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘funpow K m I @* t’ >> rw []
+ >> MATCH_MP_TAC lameq_appstar_cong >> rw [lameq_K]
 QED
 
 val _ = export_theory ();
