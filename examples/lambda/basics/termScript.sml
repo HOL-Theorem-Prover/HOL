@@ -585,6 +585,7 @@ Proof
  >> SRW_TAC [][size_thm, size_nz]
 QED
 
+(* moved here from standardisationScript.sml *)
 Theorem size_vsubst :
     !M:term. size ([VAR v/u] M) = size M
 Proof
@@ -680,6 +681,7 @@ Proof
  >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]
 QED
 
+(* moved here from standardisationScript.sml *)
 Theorem ISUB_APP :
     !sub M N. (M @@ N) ISUB sub = (M ISUB sub) @@ (N ISUB sub)
 Proof
@@ -695,8 +697,6 @@ Proof
     Induct >> SRW_TAC [][ISUB_APP]
 QED
 
-Theorem ISUB_appstar = FOLDL_APP_ISUB
-
 Theorem ISUB_VAR_FRESH :
     !y sub. ~MEM y (MAP SND sub) ==> (VAR y ISUB sub = VAR y)
 Proof
@@ -710,6 +710,7 @@ QED
     RENAMING: a special iterated substitutions like tpm
    ---------------------------------------------------------------------- *)
 
+(* moved here from standardisationScript.sml *)
 Definition RENAMING_def :
   (RENAMING []     <=> T) /\
   (RENAMING (h::t) <=> (?y x:string. (h = (VAR y:term,x))) /\ RENAMING t)
