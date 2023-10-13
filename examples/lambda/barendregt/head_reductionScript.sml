@@ -605,6 +605,7 @@ val head_redex_preserved = store_thm(
     PROVE_TAC [is_comb_thm]
   ]);
 
+(* moved here from standardisationScript.sml *)
 Definition is_head_reduction_def :
   is_head_reduction s = okpath (labelled_redn beta) s /\
                         !i. i + 1 IN PL s ==>
