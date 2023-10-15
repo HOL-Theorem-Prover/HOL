@@ -1683,6 +1683,31 @@ Proof
   Cases_on ‘l2’ THEN FULL_SIMP_TAC(srw_ss())[EVERY_DEF, ZIP]
 QED
 
+Theorem NOT_EVERY_EXISTS_FIRST :
+    !P l. ~EVERY P l <=> ?i. i < LENGTH l /\ ~P (EL i l) /\ !j. j < i ==> P (EL j l)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC
+ >- (rw [NOT_EVERY, EXISTS_MEM] \\
+     Q.EXISTS_TAC ‘EL i l’ >> rw [MEM_EL] \\
+     Q.EXISTS_TAC ‘i’ >> rw [])
+ >> rw [EVERY_EL, EXISTS_MEM, MEM_EL]
+ >> Q.EXISTS_TAC ‘LEAST n. n < LENGTH l /\ ~P (EL n l)’
+ >> numLib.LEAST_ELIM_TAC
+ >> CONJ_TAC >- (Q.EXISTS_TAC ‘n’ >> rw [])
+ >> Q.X_GEN_TAC ‘i’ >> rw []
+ >> Q.PAT_X_ASSUM ‘!m. m < i ==> _’ (MP_TAC o (Q.SPEC ‘j’))
+ >> ‘j < LENGTH l’ by RW_TAC arith_ss []
+ >> RW_TAC bool_ss []
+QED
+
+Theorem EXISTS_FIRST :
+    !P l. EXISTS P l <=> ?i. i < LENGTH l /\ P (EL i l) /\ !j. j < i ==> ~P (EL j l)
+Proof
+    rw [EXISTS_NOT_EVERY]
+ >> MP_TAC (Q.SPEC ‘\x. ~P x’ NOT_EVERY_EXISTS_FIRST) >> rw []
+QED
+
 (* --------------------------------------------------------------------- *)
 (* REVERSE                                                               *)
 (* --------------------------------------------------------------------- *)
@@ -1945,6 +1970,18 @@ Proof
   Cases_on‘m’ >> Cases_on‘n’ >>
   SRW_TAC[numSimps.ARITH_ss][arithmeticTheory.MIN_DEF, arithmeticTheory.ADD1] >>
   FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
+QED
+
+Theorem FRONT_TAKE :
+    !l n. 0 < n /\ n <= LENGTH l ==> (FRONT (TAKE n l) = TAKE (n - 1) l)
+Proof
+  Induct THEN SRW_TAC [numSimps.ARITH_ss][TAKE_def, DROP_def] >>
+  `0 < n - 1 /\ n - 1 <= LENGTH l` by numLib.DECIDE_TAC THEN
+  SRW_TAC [][FRONT_DEF] THENL [
+    fs [],
+    `(n - 1) - 1 = n - 2` by numLib.DECIDE_TAC THEN
+    SRW_TAC [][]
+  ]
 QED
 
 val LENGTH_DROP = store_thm(
