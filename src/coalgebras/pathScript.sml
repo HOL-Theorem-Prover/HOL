@@ -108,6 +108,9 @@ val first_thm = store_thm(
 
 val finite_def =
   Define`finite (sigma : ('a,'b) path) = LFINITE (SND (fromPath sigma))`;
+
+Overload "infinite" = “\p. ~finite p”
+
 val finite_thm = store_thm(
   "finite_thm",
   ``(!x. finite (stopped_at x : ('a,'b) path) = T) /\
@@ -336,6 +339,17 @@ val finite_length = store_thm(
   PROVE_TAC [finite_length_lemma, optionTheory.option_CASES,
              optionTheory.NOT_NONE_SOME]);
 
+Theorem length_cases :
+    !p. (finite p <=> (?n. length p = SOME (SUC n))) /\
+        (~finite p <=> (length p = NONE))
+Proof
+    rw [finite_length]
+ >> reverse EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘SUC n’ >> rw [])
+ >> Cases_on ‘n’ >- fs [length_never_zero]
+ >> rename1 ‘length p = SOME (SUC n1)’
+ >> Q.EXISTS_TAC ‘n1’ >> rw []
+QED
 
 val length_pmap = store_thm(
   "length_pmap",
@@ -755,6 +769,23 @@ val tail_drop = store_thm(
   SRW_TAC [][CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV drop_def] THEN
   FULL_SIMP_TAC (srw_ss()) [DECIDE ``SUC x + y = SUC (x + y)``]);
 val _ = export_rewrites ["tail_drop"]
+
+(* from examples/lambda/barengregt/head_reductionScript.sml *)
+Theorem drop_tail_commute :
+    !i p. SUC i IN PL p ==> (drop i (tail p) = tail (drop i p))
+Proof
+  Induct THEN SIMP_TAC (srw_ss()) [Once FORALL_path] THEN
+  SRW_TAC [][]
+QED
+
+(* from examples/lambda/barengregt/head_reductionScript.sml *)
+Theorem drop_not_stopped :
+    !i p. SUC i IN PL p ==> ?v r q. drop i p = pcons v r q
+Proof
+  Induct THEN GEN_TAC THEN
+  Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN
+  SRW_TAC [][]
+QED
 
 val el_drop = store_thm(
   "el_drop",
@@ -1811,5 +1842,40 @@ SRW_TAC [] [] THENL
      SRW_TAC [] [],
  SRW_TAC [] [Once unfold_def, first_def, path_rep_bijections_thm]]);
 
+Theorem infinite_path_cases :
+    !p. infinite p ==> ?x r q. (p = pcons x r q) /\ infinite q
+Proof
+    rpt STRIP_TAC
+ >> STRIP_ASSUME_TAC (Q.SPEC ‘p’ path_cases)
+ >- (‘length p = NONE’ by PROVE_TAC [length_def] \\
+     ‘length p = SOME 1’ by PROVE_TAC [alt_length_thm] \\
+      fs [])
+ >> qexistsl_tac [‘x’, ‘r’, ‘q’]
+ >> ASM_REWRITE_TAC []
+ >> CCONTR_TAC >> fs []
+QED
+
+Theorem finite_take_all :
+    !p. finite p ==> (take (PRE (THE (length p))) p = p)
+Proof
+    HO_MATCH_MP_TAC finite_path_ind
+ >> rw [length_thm]
+ >> POP_ASSUM MP_TAC
+ >> ‘?n. length p = SOME (SUC n)’ by METIS_TAC [length_cases]
+ >> rw [arithmeticTheory.PRE_SUB1, take_def]
+QED
+
+Theorem finite_last_el :
+    !p. finite p ==> (last p = el (PRE (THE (length p))) p)
+Proof
+    rpt STRIP_TAC
+ >> ‘last p = last (take (PRE (THE (length p))) p)’
+      by PROVE_TAC [finite_take_all]
+ >> POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
+ >> MATCH_MP_TAC last_take
+ >> rw [PL_def]
+ >> ‘?n. length p = SOME (SUC n)’ by METIS_TAC [length_cases]
+ >> rw []
+QED
 
 val _ = export_theory();
