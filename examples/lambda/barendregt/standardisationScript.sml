@@ -1856,6 +1856,79 @@ Proof
  >> MATCH_MP_TAC hreduce1_substitutive >> art []
 QED
 
+(* additionally, each list element has hnf: ‘EVERY has_hnf l’ *)
+Theorem finite_head_reduction_path_to_list_every_has_hnf :
+    !M. finite (head_reduction_path M) <=>
+        ?l. l <> [] /\ (HD l = M) /\ hnf (LAST l) /\ EVERY has_hnf l /\
+            !i. SUC i < LENGTH l ==> EL i l -h-> EL (SUC i) l
+Proof
+    rw [finite_head_reduction_path_to_list]
+ >> reverse EQ_TAC >> rw []
+ >> Q.EXISTS_TAC ‘l’ >> rw []
+ >> rfs [LAST_EL]
+ >> rw [EVERY_EL, corollary11_4_8, finite_head_reduction_path_to_list]
+ >> Q.EXISTS_TAC ‘DROP n l’ >> rw [HD_DROP, LAST_EL, EL_DROP]
+ >- (Know ‘n + PRE (LENGTH l - n) = PRE (LENGTH l)’
+     >- (POP_ASSUM MP_TAC \\
+         numLib.ARITH_TAC) >> DISCH_THEN (art o wrap))
+ >> ‘n + SUC i = SUC (i + n)’ by rw [] >> POP_ORW
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> POP_ASSUM MP_TAC >> numLib.ARITH_TAC
+QED
+
+(* alternatively, the list is incomplete but the last element has hnf *)
+Theorem finite_head_reduction_path_to_list_last_has_hnf :
+    !M. finite (head_reduction_path M) <=>
+        ?l. l <> [] /\ (HD l = M) /\ has_hnf (LAST l) /\
+            !i. SUC i < LENGTH l ==> EL i l -h-> EL (SUC i) l
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> EQ_TAC
+ >- (rw [finite_head_reduction_path_to_list_every_has_hnf] \\
+    ‘0 < LENGTH l’ by rw [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\
+     Q.EXISTS_TAC ‘l’ >> rw [LAST_EL] \\
+     Q.PAT_X_ASSUM ‘EVERY has_hnf l’ MP_TAC >> rw [EVERY_EL])
+ >> rw [finite_head_reduction_path_to_list]
+ >> qabbrev_tac ‘M0 = LAST l’
+ >> fs [corollary11_4_8, finite_head_reduction_path_to_list]
+ >> ‘0 < LENGTH l /\ 0 < LENGTH l'’ by rw [GSYM NOT_NIL_EQ_LENGTH_NOT_0]
+ >> ‘(LENGTH l' = 1) \/ 1 < LENGTH l'’ by rw []
+ >- (‘LAST l' = HD l'’ by RW_TAC std_ss [GSYM EL, LAST_EL] \\
+     Q.EXISTS_TAC ‘l’ >> rw [Abbr ‘M0’] >> PROVE_TAC [])
+ (* stage work *)
+ >> Q.EXISTS_TAC ‘l ++ TL l'’ >> rw []
+ >| [ (* goal 1 (of 3) *)
+      RW_TAC std_ss [GSYM EL, EL_APPEND_EQN],
+      (* goal 2 (of 3) *)
+      Suff ‘LAST (l ++ TL l') = LAST l'’ >- rw [] \\
+     ‘l ++ TL l' <> []’ by rw [] \\
+      Know ‘TL l' <> []’
+      >- (CCONTR_TAC \\
+         ‘LENGTH (TL l') = LENGTH ([] :term list)’ by PROVE_TAC [] \\
+          REV_FULL_SIMP_TAC std_ss [LENGTH_TL] >> fs []) \\
+      DISCH_TAC \\
+      Know ‘LAST (l ++ TL l') = LAST (TL l')’
+      >- (qabbrev_tac ‘l0 = TL l'’ \\
+          Cases_on ‘l0’ >> rw [LAST_APPEND_CONS]) >> Rewr' \\
+      rw [LAST_EL, LENGTH_TL] \\
+      Cases_on ‘l'’ >> fs [] \\
+      Induct_on ‘t’ >> fs [],
+      (* goal 3 (of 3) *)
+      Cases_on ‘SUC i < LENGTH l’ >> rw [EL_APPEND_EQN]
+      >- (‘SUC i = LENGTH l’ by rw [] \\
+          Know ‘EL i l = LAST l’
+          >- (Q.PAT_X_ASSUM ‘LAST l = HD l'’ K_TAC \\
+              rw [LAST_EL] \\
+              Suff ‘PRE (LENGTH l) = i’ >- Rewr \\
+              rw []) >> Rewr' \\
+          rw [] \\
+          REWRITE_TAC [GSYM EL] \\
+          FIRST_X_ASSUM MATCH_MP_TAC >> rw []) \\
+      REWRITE_TAC [GSYM EL] \\
+     ‘SUC (SUC i - LENGTH l) = SUC (SUC (i - LENGTH l))’ by rw [] >> POP_ORW \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> gs [LENGTH_TL] ]
+QED
+
 (* Proposition 8.3.13 (iii) [1, p.174], cf. has_whnf_APP_E *)
 Theorem has_hnf_APP_E :
     has_hnf (M @@ N) ==> has_hnf M
@@ -1863,13 +1936,27 @@ Proof
     rpt STRIP_TAC
  >> ‘finite (head_reduction_path (M @@ N))’ by rw [GSYM corollary11_4_8]
  (* this asserts a list ‘l’ *)
- >> fs [finite_head_reduction_path_to_list]
- >> ‘0 < LENGTH l’ by rw [GSYM NOT_NIL_EQ_LENGTH_NOT_0]
- (* case 1 *)
- >> Cases_on ‘EVERY (\e. is_comb e /\ ~is_abs (rator e)) l’
- >- (POP_ASSUM MP_TAC >> rw [EVERY_MEM] \\
-     Suff ‘!i. SUC i < LENGTH l ==> rator (EL i l) -h-> rator (EL (SUC i) l)’
-     >- (DISCH_TAC \\
+ >> FULL_SIMP_TAC std_ss [finite_head_reduction_path_to_list_every_has_hnf]
+ (* Case 1: all APPs *)
+ >> Cases_on ‘EVERY is_comb l’
+ >- ((* Case 1.1: all non-LAM: M @@ N -h-> M1 @@ N -h-> M2 @@ N -h->* hnf @@ N *)
+     Cases_on ‘EVERY (\e. ~is_abs (rator e)) l’
+     >- (NTAC 2 (POP_ASSUM MP_TAC) >> rw [EVERY_MEM] \\
+        ‘0 < LENGTH l’ by rw [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\
+         Know ‘!i. SUC i < LENGTH l ==> rator (EL i l) -h-> rator (EL (SUC i) l)’
+         >- (rpt STRIP_TAC \\
+            ‘i < LENGTH l’ by rw [] \\
+             qabbrev_tac ‘a = EL i l’ >> qabbrev_tac ‘b = EL (SUC i) l’ \\
+             Know ‘a -h-> b’ >- PROVE_TAC [] \\
+            ‘MEM a l /\ MEM b l’ by METIS_TAC [MEM_EL] \\
+            ‘is_comb a /\ ~is_abs (rator a) /\ is_comb b’ by PROVE_TAC [] \\
+            ‘?a1 a2 v. a = a1 @@ a2’ by METIS_TAC [is_comb_APP_EXISTS] \\
+            ‘?b1 b2. b = b1 @@ b2’ by METIS_TAC [is_comb_APP_EXISTS] \\
+             FULL_SIMP_TAC std_ss [rator_def] \\
+             simp [Once hreduce1_cases] >> rw [] \\
+             FULL_SIMP_TAC std_ss [is_abs_thm]) \\
+         DISCH_TAC \\
+      (* constructing a new head reduction list *)
          rw [corollary11_4_8, finite_head_reduction_path_to_list] \\
          qabbrev_tac ‘l0 = MAP rator l’ \\
         ‘(LENGTH l0 = LENGTH l) /\ l0 <> []’ by rw [Abbr ‘l0’] \\
@@ -1884,27 +1971,160 @@ Proof
            qabbrev_tac ‘e = LAST l’ \\
           ‘is_comb e /\ ~is_abs (rator e)’ by PROVE_TAC [] \\
           ‘?u v. e = u @@ v’ by METIS_TAC [is_comb_APP_EXISTS] \\
-           fs [] (* hnf_thm is used *),
+           fs [], (* NOTE: ‘hnf (LAST l)’ is only used here *)
            (* goal 3 (of 3) *)
           ‘i < LENGTH l’ by rw [] \\
            rw [Abbr ‘l0’, EL_MAP] ]) \\
-     (* stage work *)
-     rpt STRIP_TAC \\
-    ‘i < LENGTH l’ by rw [] \\
-     qabbrev_tac ‘a = EL i l’ >> qabbrev_tac ‘b = EL (SUC i) l’ \\
-     Know ‘a -h-> b’ >- PROVE_TAC [] \\
-    ‘MEM a l /\ MEM b l’ by METIS_TAC [MEM_EL] \\
-    ‘is_comb a /\ ~is_abs (rator a) /\
-     is_comb b /\ ~is_abs (rator b)’ by PROVE_TAC [] \\
-    ‘?u v. a = u @@ v’ by METIS_TAC [is_comb_APP_EXISTS] \\
-    ‘?t w. b = t @@ w’ by METIS_TAC [is_comb_APP_EXISTS] \\
+     (* Case 1.2: all APP, some LAM:
+
+        M @@ N -h-> M1 @@ N -h->* (M2 = LAM v M') @@ N [EL n l] -h-> [N/v] M2' -h->* hnf
+      *)
+     FULL_SIMP_TAC std_ss [NOT_EVERY_EXISTS_FIRST] \\
+     Q.PAT_X_ASSUM ‘EVERY is_comb l’ (STRIP_ASSUME_TAC o (REWRITE_RULE [EVERY_EL])) \\
+    ‘?M2 N2. EL i l = M2 @@ N2’ by METIS_TAC [is_comb_APP_EXISTS] \\
      FULL_SIMP_TAC std_ss [rator_def] \\
+     rename1 ‘EL n l = M2 @@ N2’ \\
+     Know ‘!i. i < n ==> rator (EL i l) -h-> rator (EL (SUC i) l)’
+     >- (rpt STRIP_TAC \\
+        ‘SUC i < LENGTH l’ by rw [] \\
+         qabbrev_tac ‘a = EL i l’ >> qabbrev_tac ‘b = EL (SUC i) l’ \\
+         Know ‘a -h-> b’ >- PROVE_TAC [] \\
+        ‘i < LENGTH l’ by rw [] \\
+        ‘MEM a l /\ MEM b l’ by METIS_TAC [MEM_EL] \\
+        ‘is_comb a /\ ~is_abs (rator a) /\ is_comb b’ by PROVE_TAC [] \\
+        ‘?a1 a2. a = a1 @@ a2’ by METIS_TAC [is_comb_APP_EXISTS] \\
+        ‘?b1 b2. b = b1 @@ b2’ by METIS_TAC [is_comb_APP_EXISTS] \\
+         FULL_SIMP_TAC std_ss [rator_def] \\
+         simp [Once hreduce1_cases] >> rw [] \\
+         FULL_SIMP_TAC std_ss [is_abs_thm]) \\
+     DISCH_TAC \\
+     (* Case 1.2.1: first LAM is last element in the list *)
+    ‘(n = PRE (LENGTH l)) \/ n < PRE (LENGTH l)’ by rw [] (* cf. LAST_EL *)
+     >- (‘LAST l = EL n l’ by rw [LAST_EL] \\
+         ‘hnf (M2 @@ N2)’ by PROVE_TAC [] \\
+         ‘hnf M2’ by PROVE_TAC [hnf_thm] \\
+      (* constructing a new head reduction list *)
+         rw [corollary11_4_8, finite_head_reduction_path_to_list] \\
+         qabbrev_tac ‘l0 = MAP rator l’ \\
+        ‘(LENGTH l0 = LENGTH l) /\ l0 <> []’ by rw [Abbr ‘l0’] \\
+         Q.EXISTS_TAC ‘l0’ >> RW_TAC std_ss [] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
+           ASM_SIMP_TAC arith_ss [GSYM EL, EL_MAP, Abbr ‘l0’] >> rw [],
+           (* goal 2 (of 3) *)
+           rw [LAST_MAP, Abbr ‘l0’],
+           (* goal 3 (of 3) *)
+          ‘i < LENGTH l’ by rw [] \\
+           rw [Abbr ‘l0’, EL_MAP] ]) \\
+    ‘SUC n < LENGTH l’ by rw [] \\
+     qabbrev_tac ‘a = EL n l’ >> qabbrev_tac ‘b = EL (SUC n) l’ \\
+     Know ‘a -h-> b’ >- PROVE_TAC [] \\
      DISCH_THEN (MP_TAC o (ONCE_REWRITE_RULE [hreduce1_cases])) >> rw [] \\
-     FULL_SIMP_TAC std_ss [is_abs_thm] (* a leftover *))
- (* case 2 *)
- >> POP_ASSUM MP_TAC
- >> simp [NOT_EVERY, EXISTS_MEM] (* TODO: how to find the smallest one? *)
- >> cheat
+     Know ‘has_hnf ([N2/v] M')’
+     >- (POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+         Q.PAT_X_ASSUM ‘EVERY has_hnf l’ MP_TAC \\
+         rw [EVERY_EL]) >> DISCH_TAC \\
+    ‘has_hnf M'’ by PROVE_TAC [has_hnf_SUB_E] \\
+     qabbrev_tac ‘M2 = LAM v M'’ \\
+    ‘has_hnf M2’ by METIS_TAC [has_hnf_LAM_E] \\
+     Cases_on ‘n = 0’ >- gs [] \\
+  (* constructing a new head reduction list *)
+     rw [Once corollary11_4_8, Once finite_head_reduction_path_to_list_last_has_hnf] \\
+     qabbrev_tac ‘l0 = MAP rator l’ \\
+    ‘(LENGTH l0 = LENGTH l) /\ l0 <> []’ by rw [Abbr ‘l0’] \\
+    ‘0 < LENGTH l /\ 0 < LENGTH l0’ by rw [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\
+     Q.EXISTS_TAC ‘TAKE (SUC n) l0’ \\
+     Know ‘LENGTH (TAKE (SUC n) l0) = SUC n’
+     >- (MATCH_MP_TAC LENGTH_TAKE >> rw []) >> DISCH_TAC \\
+    ‘0 < LENGTH (TAKE (SUC n) l0)’ by rw [] \\
+     rw [NOT_NIL_EQ_LENGTH_NOT_0] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       RW_TAC arith_ss [GSYM EL, EL_TAKE, Abbr ‘l0’, EL_MAP] \\
+       fs [EL],
+       (* goal 2 (of 3) *)
+       rw [LAST_EL, EL_TAKE, Abbr ‘l0’, EL_MAP],
+       (* goal 3 (of 3) *)
+       rw [EL_TAKE, Abbr ‘l0’, EL_MAP] ])
+ (* case 2: some non-APP (LAM or VAR)
+
+    NOTE: 1) the first one (M @@ N) is always APP; 2) All but the last one can
+    be VAR (because any VAR is already hnf).
+
+    1. M @@ N -h-> M1 @@ N1 -h->* M2 @@ N2 -h-> VAR (is hnf, the last element)
+    2. M @@ N -h-> M1 @@ N1 -h->* M2 @@ N2 -h-> LAM v P -h->* hnf
+
+    Now there must be at last one LAM in M, M1, M2, ... before reaching VAR/LAM.
+  *)
+ >> FULL_SIMP_TAC std_ss [NOT_EVERY_EXISTS_FIRST]
+ >> rename1 ‘n < LENGTH l’
+ >> ‘(n = 0) \/ 0 < n’ by rw [] >- gs [EL] (* NOTE: ‘TAKE 0 n = []’ *)
+ (* impossible case *)
+ >> Cases_on ‘EVERY (\e. ~is_abs (rator e)) (TAKE n l)’
+ >- (POP_ASSUM MP_TAC >> rw [EVERY_EL, EL_TAKE] \\
+    ‘0 < LENGTH l’ by rw [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\
+    ‘n - 1 < LENGTH l’ by rw [] \\
+     qabbrev_tac ‘a = EL (n - 1) l’ \\
+     qabbrev_tac ‘b = EL n l’ \\
+     Know ‘a -h-> b’
+     >- (rw [Abbr ‘a’, Abbr ‘b’] \\
+         qabbrev_tac ‘j = n - 1’ >> ‘n = SUC j’ by rw [Abbr ‘j’] >> POP_ORW \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> rw [Abbr ‘j’]) \\
+    ‘is_comb a’ by rw [Abbr ‘a’] \\
+    ‘n - 1 < n’ by rw [] \\
+    ‘~is_abs (rator a)’ by PROVE_TAC [] \\
+    ‘?a1 a2. a = a1 @@ a2’ by METIS_TAC [is_comb_APP_EXISTS] \\
+     FULL_SIMP_TAC std_ss [rator_def] \\
+     simp [Once hreduce1_cases] >> rw [] >> fs [])
+ (* stage work *)
+ >> ‘LENGTH (TAKE n l) = n’ by rw [LENGTH_TAKE]
+ >> gs [NOT_EVERY_EXISTS_FIRST, EL_TAKE]
+ >> Know ‘!j. j < i ==> rator (EL j l) -h-> rator (EL (SUC j) l)’
+ >- (rpt STRIP_TAC \\
+    ‘SUC j < LENGTH l’ by rw [] \\
+     qabbrev_tac ‘a = EL j l’ >> qabbrev_tac ‘b = EL (SUC j) l’ \\
+     Know ‘a -h-> b’ >- PROVE_TAC [] \\
+    ‘j < LENGTH l’ by rw [] \\
+    ‘j < n /\ SUC j < n’ by rw [] \\
+    ‘is_comb a /\ ~is_abs (rator a) /\ is_comb b’ by PROVE_TAC [] \\
+    ‘?a1 a2. a = a1 @@ a2’ by METIS_TAC [is_comb_APP_EXISTS] \\
+    ‘?b1 b2. b = b1 @@ b2’ by METIS_TAC [is_comb_APP_EXISTS] \\
+     FULL_SIMP_TAC std_ss [rator_def] \\
+     simp [Once hreduce1_cases] >> rw [] \\
+     FULL_SIMP_TAC std_ss [is_abs_thm])
+ >> DISCH_TAC
+ >> ‘SUC i < LENGTH l’ by rw []
+ >> qabbrev_tac ‘a = EL i l’ >> qabbrev_tac ‘b = EL (SUC i) l’
+ >> Know ‘a -h-> b’ >- PROVE_TAC []
+ >> ‘is_comb a’ by METIS_TAC []
+ >> ‘?a1 a2. a = a1 @@ a2’ by METIS_TAC [is_comb_APP_EXISTS]
+ >> FULL_SIMP_TAC std_ss [rator_def]
+ >> simp [Once hreduce1_cases] >> rw []
+ >> rename1 ‘EL (SUC i) l = [N2/v] M'’
+ >> Know ‘has_hnf ([N2/v] M')’
+ >- (Q.PAT_X_ASSUM ‘_ = [N2/v] M'’ (ONCE_REWRITE_TAC o wrap o SYM) \\
+     Q.PAT_X_ASSUM ‘EVERY has_hnf l’ MP_TAC \\
+     rw [EVERY_EL])
+ >> DISCH_TAC
+ >> ‘has_hnf M'’ by PROVE_TAC [has_hnf_SUB_E]
+ >> qabbrev_tac ‘M2 = LAM v M'’
+ >> ‘has_hnf M2’ by METIS_TAC [has_hnf_LAM_E]
+ >> Cases_on ‘i = 0’ >- gs []
+ (* constructing a new head reduction list *)
+ >> rw [Once corollary11_4_8, Once finite_head_reduction_path_to_list_last_has_hnf]
+ >> qabbrev_tac ‘l0 = MAP rator l’
+ >> ‘(LENGTH l0 = LENGTH l) /\ l0 <> []’ by rw [Abbr ‘l0’]
+ >> ‘0 < LENGTH l /\ 0 < LENGTH l0’ by rw [GSYM NOT_NIL_EQ_LENGTH_NOT_0]
+ >> Q.EXISTS_TAC ‘TAKE (SUC i) l0’
+ >> Know ‘LENGTH (TAKE (SUC i) l0) = SUC i’
+ >- (MATCH_MP_TAC LENGTH_TAKE >> rw [])
+ >> DISCH_TAC
+ >> ‘0 < LENGTH (TAKE (SUC i) l0)’ by rw []
+ >> rw [NOT_NIL_EQ_LENGTH_NOT_0] (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      RW_TAC arith_ss [GSYM EL, EL_TAKE, Abbr ‘l0’, EL_MAP] >> fs [EL],
+      (* goal 2 (of 3) *)
+      rw [LAST_EL, EL_TAKE, Abbr ‘l0’, EL_MAP],
+      (* goal 3 (of 3) *)
+      rw [EL_TAKE, Abbr ‘l0’, EL_MAP] ]
 QED
 
 val _ = export_theory()
