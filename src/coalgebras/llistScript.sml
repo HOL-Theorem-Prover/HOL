@@ -778,8 +778,12 @@ val LAPPEND = new_specification
 val _ = export_rewrites ["LAPPEND"]
 val _ = computeLib.add_persistent_funs ["LAPPEND"]
 
+(* NOTE: The last char is Latin Subscript Small Letter L (U+2097) *)
 val _ = set_mapped_fixity{fixity = Infixl 480, term_name = "LAPPEND",
                           tok = "++ₗ"};                               (* UOK *)
+
+val _ = TeX_notation { hol = "LAPPEND",
+                       TeX = ("\\HOLTokenDoublePlusL", 1) };
 
 (* properties of map and append *)
 
@@ -2182,6 +2186,18 @@ val LNTH_NONE_MONO = Q.store_thm ("LNTH_NONE_MONO",
   imp_res_tac LTAKE_LENGTH >>
   `~(m < z)` by metis_tac[LTAKE_LNTH_EL,optionTheory.NOT_SOME_NONE] >>
   rw[] >> decide_tac);
+
+(* cf. This is just another version of lnth_some_down_closed *)
+Theorem LNTH_IS_SOME_MONO :
+   !m n l.
+     IS_SOME (LNTH n l) /\ m <= n
+   ==>
+     IS_SOME (LNTH m l)
+Proof
+    rw [IS_SOME_EXISTS]
+ >> MATCH_MP_TAC lnth_some_down_closed
+ >> qexistsl_tac [‘x’, ‘n’] >> rw []
+QED
 
 (* ------------------------------------------------------------------------ *)
 (* Turning a stream-like linear order into a lazy list                      *)
