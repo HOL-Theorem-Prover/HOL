@@ -657,7 +657,8 @@ Proof
  >> qabbrev_tac ‘n = LENGTH vs’
  >> qabbrev_tac ‘m = LENGTH Ns’
  >> Q.PAT_X_ASSUM ‘N = LAMl vs (VAR y @* Ns)’ (ONCE_REWRITE_TAC o wrap)
- >> qabbrev_tac ‘Ms = GENLIST (\i. funpow K m I) n’
+ (* now we use arithmeticTheory.FUNPOW instead of locally defined one *)
+ >> qabbrev_tac ‘Ms = GENLIST (\i. FUNPOW (APP K) m I) n’
  >> Q.EXISTS_TAC ‘Ms’
  (* applying lameq_LAMl_appstar and ssub_appstar *)
  >> MATCH_MP_TAC lameq_TRANS
@@ -665,7 +666,7 @@ Proof
  >> CONJ_TAC
  >- (MATCH_MP_TAC lameq_LAMl_appstar >> art [] \\
      CONJ_TAC >- rw [Abbr ‘Ms’] \\
-     rw [EVERY_EL, Abbr ‘Ms’, closed_def, FV_funpow])
+     rw [EVERY_EL, Abbr ‘Ms’, closed_def, FV_FUNPOW])
  >> REWRITE_TAC [ssub_appstar]
  >> Q.PAT_ASSUM ‘MEM y vs’ ((Q.X_CHOOSE_THEN ‘i’ STRIP_ASSUME_TAC) o
                             (REWRITE_RULE [MEM_EL]))
@@ -680,7 +681,7 @@ Proof
      ‘j <> i’ by rw [] \\
      METIS_TAC [EL_ALL_DISTINCT_EL_EQ])
  >> Rewr'
- >> Know ‘EL i Ms = funpow K m I’
+ >> Know ‘EL i Ms = FUNPOW (APP K) m I’
  >- (‘i < n’ by rw [Abbr ‘n’] \\
      rw [Abbr ‘Ms’, EL_GENLIST])
  >> Rewr'
@@ -689,11 +690,11 @@ Proof
  >> Know ‘LENGTH Ps = m’ >- (rw [Abbr ‘m’, Abbr ‘Ps’])
  >> KILL_TAC
  >> Q.ID_SPEC_TAC ‘Ps’
- >> Induct_on ‘m’ >- ASM_SIMP_TAC (betafy(srw_ss())) [LENGTH_NIL, funpow_def]
- >> rw [funpow_SUC]
+ >> Induct_on ‘m’ >- ASM_SIMP_TAC (betafy(srw_ss())) [LENGTH_NIL, FUNPOW]
+ >> rw [FUNPOW_SUC]
  >> Cases_on ‘Ps’ >> fs []
  >> MATCH_MP_TAC lameq_TRANS
- >> Q.EXISTS_TAC ‘funpow K m I @* t’ >> rw []
+ >> Q.EXISTS_TAC ‘FUNPOW (APP K) m I @* t’ >> rw []
  >> MATCH_MP_TAC lameq_appstar_cong >> rw [lameq_K]
 QED
 

@@ -6,8 +6,6 @@ open termTheory binderLib;
 
 val _ = new_theory "appFOLDL"
 
-val _ = set_trace "Unicode" 1
-
 val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
 val _ = overload_on ("@*", ``λf (args:term list). FOLDL APP f args``)
@@ -301,38 +299,20 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*
- *  funpow for lambda terms (cf. arithmeticTheory.FUNPOW)
+ *  funpow for lambda terms (using arithmeticTheory.FUNPOW)
  *---------------------------------------------------------------------------*)
 
-Definition funpow :
-    funpow f n (x :term) =
-        if n = 0 then x else funpow f (n - 1) (f @@ x)
-End
+Overload funpow = “\f. FUNPOW (APP (f :term))”
 
-Theorem funpow_def :
-    (!f   x. funpow f       0 x = x) /\
-    (!f n x. funpow f (SUC n) x = funpow f n (f @@ x))
-Proof
-    NTAC 2 (rw [Once funpow])
-QED
-
-Theorem funpow_SUC :
-    !f n x. funpow f (SUC n) x = f @@ (funpow f n x)
-Proof
-    Q.X_GEN_TAC ‘f’
- >> Induct_on ‘n’ >> rw [funpow_def]
- >> fs [funpow_def]
-QED
-
-Theorem FV_funpow :
-    !f x n. FV (funpow f n x) = if n = 0 then FV x else FV f UNION FV x
+Theorem FV_FUNPOW :
+    !(f :term) x n. FV (FUNPOW (APP f) n x) = if n = 0 then FV x else FV f UNION FV x
 Proof
     rpt STRIP_TAC
  >> Q.SPEC_TAC (‘n’, ‘i’)
- >> Cases_on ‘i’ >- rw [funpow_def]
+ >> Cases_on ‘i’ >- rw [FUNPOW]
  >> simp []
- >> Induct_on ‘n’ >- rw [funpow_def]
- >> fs [funpow_SUC]
+ >> Induct_on ‘n’ >- rw [FUNPOW]
+ >> fs [FUNPOW_SUC]
  >> SET_TAC []
 QED
 
