@@ -48,6 +48,8 @@ New features:
 Bugs fixed:
 -----------
 
+- Fix [a failure to define a polymorphic datatype with name `a`](https://github.com/HOL-Theorem-Prover/HOL/issues/1140).
+
 New theories:
 -------------
 

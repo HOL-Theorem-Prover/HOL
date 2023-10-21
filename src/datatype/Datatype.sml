@@ -174,23 +174,30 @@ in
   app warn common
 end
 
+fun ast_tyvar_strings (dAQ ty) = map dest_vartype $ type_vars ty
+  | ast_tyvar_strings (dVartype s) = [s]
+  | ast_tyvar_strings (dTyop {Args, ...}) =
+      List.concat (map ast_tyvar_strings Args)
 
-local fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
-      fun stage1 (s,Constructors l) = (s,l)
-        | stage1 (s,Record fields)  = (s,[(mk_recordtype_constructor s,
-                                           map snd fields)])
-      fun check_fields (s,Record fields) =
-          (case duplicate_names (map fst fields)
-           of NONE => ()
-            | SOME n => raise ERR "check_fields" ("Duplicate field name: "^n))
-        | check_fields _ = ()
-      fun cnames (s,Record _) A = s::A
-        | cnames (_,Constructors l) A = map fst l @ A
-      fun check_constrs asts =
-            case duplicate_names (itlist cnames asts [])
-             of NONE => ()
-              | SOME n => raise ERR "check_constrs"
-                                    ("Duplicate constructor name: "^n)
+local
+  fun strvariant avoids s = if mem s avoids then strvariant avoids (s ^ "a")
+                            else s
+  fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
+  fun stage1 (s,Constructors l) = (s,l)
+    | stage1 (s,Record fields)  = (s,[(mk_recordtype_constructor s,
+                                       map snd fields)])
+  fun check_fields (s,Record fields) =
+      (case duplicate_names (map fst fields) of
+           NONE => ()
+         | SOME n => raise ERR "check_fields" ("Duplicate field name: "^n))
+    | check_fields _ = ()
+  fun cnames (s,Record _) A = s::A
+    | cnames (_,Constructors l) A = map fst l @ A
+  fun check_constrs asts =
+      case duplicate_names (itlist cnames asts []) of
+          NONE => ()
+        | SOME n => raise ERR "check_constrs"
+                          ("Duplicate constructor name: "^n)
 in
 fun to_tyspecs ASTs =
  let val _ = List.app check_fields ASTs
@@ -198,9 +205,10 @@ fun to_tyspecs ASTs =
      val _ = check_constrs_unique_in_theory ASTs
      val asts = map stage1 ASTs
      val new_type_names = map #1 asts
-     fun mk_hol_ty (dAQ ty) = ty
-       | mk_hol_ty (dVartype s) = mk_vartype s
-       | mk_hol_ty (dTyop{Tyop=s, Args, Thy}) =
+
+     fun mk_hol_ty d (dAQ ty) = ty
+       | mk_hol_ty d (dVartype s) = mk_vartype (valOf $ Symtab.lookup d s)
+       | mk_hol_ty d (dTyop{Tyop=s, Args, Thy}) =
             if Lib.mem s new_type_names andalso
                (Thy = NONE orelse Thy = SOME (current_theory()))
             then if null Args then tyname_as_tyvar s
@@ -208,21 +216,36 @@ fun to_tyspecs ASTs =
                      ("Omit arguments to new type:"^Lib.quote s)
             else
               case Thy of
-                NONE => mk_type(s, map mk_hol_ty Args)
+                NONE => mk_type(s, map (mk_hol_ty d) Args)
               | SOME t => mk_thy_type {Tyop = s, Thy = t,
-                                       Args = map mk_hol_ty Args}
-     fun mk_hol_type pty = let
-       val ty = mk_hol_ty pty
+                                       Args = map (mk_hol_ty d) Args}
+     fun mk_hol_type d pty = let
+       val ty = mk_hol_ty d pty
      in
        if Theory.uptodate_type ty then ty
        else let val tyname = #1 (dest_type ty)
             in raise ERR "to_tyspecs" (tyname^" not up-to-date")
             end
      end
-
-     fun constructor (cname, ptys) = (cname, map mk_hol_type ptys)
+     val allvars = let
+       fun perc ((cnm, ptys), A) =
+           List.foldl
+             (fn (pt,A) => HOLset.addList(A,ast_tyvar_strings pt)) A ptys
+       fun perty ((nm, cs), A) = List.foldl perc A cs
+     in
+       HOLset.listItems (List.foldl perty (HOLset.empty String.compare) asts)
+     end
+     val (dict,_) = List.foldl
+                  (fn (nm, (d,avds)) =>
+                      let val nm' = strvariant avds nm
+                      in
+                        (Symtab.update(nm,nm') d, nm'::avds)
+                      end)
+                  (Symtab.empty, map (fn (s,_) => "'" ^ s) asts)
+                  allvars
+     fun constructor (cname, ptys) = (cname, map (mk_hol_type dict) ptys)
   in
-     map (tyname_as_tyvar##map constructor) asts
+    map (tyname_as_tyvar ## map constructor) asts
   end
 end;
 

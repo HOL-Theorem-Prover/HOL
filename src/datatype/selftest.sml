@@ -234,6 +234,31 @@ val _ = Datatype.Datatype`
   uvmhol3 = <| uvmfld1 : num # (num -> bool); uvmfld2 : bool |>
 `;
 
+(* github issue #1140 *)
+val _ = tprint "a = aCtr ('a # bool)"
+val _ = testutils.quietly Datatype.Datatype‘
+  a = aCtr ('a # bool)
+’;
+val aCtr_t =
+    prim_mk_const{Thy = "scratch", Name = "aCtr"}
+    handle HOL_ERR _ => (die "constant aCtr doesn't exist"; boolSyntax.T)
+val (cty_d,cty_r) = dom_rng $ type_of aCtr_t
+val _ = let val {Thy,Tyop,Args} = dest_thy_type cty_d
+        in
+          if Thy = "pair" andalso Tyop = "prod" andalso length Args = 2 andalso
+             is_vartype (hd Args)
+          then
+            let val {Thy,Tyop,Args} = dest_thy_type cty_r
+            in
+              if Thy = "scratch" andalso Tyop = "a" andalso
+                 length Args = 1 andalso is_vartype (hd Args)
+              then
+                OK()
+              else die "New type has wrong name/type"
+            end
+          else die ("Argument to aCtr is wrong type: "^type_to_string cty_d)
+        end
+
 val _ = tprint "Testing independence of case variables"
 val t = Lib.total Parse.Term `case (x:valbind) of
                                 bind p e => 3
@@ -469,5 +494,6 @@ val _ = quiet_warnings (fn () =>
 val _ = quiet_warnings (fn () =>
            (Datatype`a_rec = A ((a_rec # unit # num option # (unit + num)) list) | B unit`)
            ) () handle _ => die "FAILED!"
+val _ = OK()
 
 val _ = Process.exit Process.success;
