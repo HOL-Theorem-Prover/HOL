@@ -189,6 +189,8 @@ val UPDATE_APPLY = Q.store_thm("UPDATE_APPLY",
    THEN REPEAT STRIP_TAC
    THEN ASM_REWRITE_TAC [])
 
+Theorem UPDATE_APPLY1 = cj 1 UPDATE_APPLY
+
 val APPLY_UPDATE_THM = Q.store_thm("APPLY_UPDATE_THM",
   `!f a b c. (a =+ b) f c = (if a = c then b else f c)`,
   PURE_REWRITE_TAC [UPDATE_def]

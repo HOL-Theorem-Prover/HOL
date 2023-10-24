@@ -7,7 +7,7 @@ val COMBIN_ss = SSFRAG {
       dprocs = [],
       rewrs = map (fn s => (SOME{Thy="combin",Name= s}, DB.fetch "combin" s)) [
         "I_THM","I_o_ID","K_THM","S_THM","o_ASSOC'","o_THM","W_THM","C_THM",
-        "K_o_THM", "UPDATE_EQ", "UPDATE_APPLY_ID_RWT"
+        "K_o_THM", "UPDATE_EQ", "UPDATE_APPLY_ID_RWT", "UPDATE_APPLY1"
       ]
     }
 
