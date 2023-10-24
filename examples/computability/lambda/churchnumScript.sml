@@ -1,8 +1,8 @@
 open HolKernel boolLib bossLib Parse binderLib
 
 open chap3Theory
-open pred_setTheory
-open termTheory
+open arithmeticTheory pred_setTheory
+open termTheory appFOLDLTheory;
 open boolSimps
 open normal_orderTheory
 open churchboolTheory
@@ -14,20 +14,9 @@ fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
 val _ = new_theory "churchnum"
 
-val _ = set_trace "Unicode" 1
-
 val church_def = Define`
   church n = LAM "z" (LAM "s" (FUNPOW (APP (VAR "s")) n (VAR "z")))
 `
-
-val FUNPOW_SUC = arithmeticTheory.FUNPOW_SUC
-
-val size_funpow = store_thm(
-  "size_funpow",
-  ``size (FUNPOW (APP f) n x) = (size f + 1) * n + size x``,
-  Induct_on `n` THEN
-  SRW_TAC [ARITH_ss][FUNPOW_SUC, arithmeticTheory.LEFT_ADD_DISTRIB,
-                     arithmeticTheory.MULT_CLAUSES]);
 
 val church_11 = store_thm(
   "church_11",
@@ -872,12 +861,6 @@ val cfindbody_11 = Store_thm(
       by SRW_TAC [][fresh_cfindbody] THEN
   SRW_TAC [][AC CONJ_ASSOC CONJ_COMM]);
 
-val lameq_triangle = store_thm(
-  "lameq_triangle",
-  ``M == N ∧ M == P ∧ bnf N ∧ bnf P ⇒ (N = P)``,
-  METIS_TAC [chap3Theory.betastar_lameq_bnf, chap2Theory.lameq_rules,
-             chap3Theory.bnf_reduction_to_self]);
-
 val cfindleast_bnfE = store_thm(
   "cfindleast_bnfE",
   ``(∀n. ∃b. P @@ church n == cB b) ∧
@@ -952,3 +935,4 @@ Proof
 QED
 
 val _ = export_theory()
+val _ = html_theory "churchnum";
