@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib
+open HolKernel Parse boolLib bossLib;
 
-open relationTheory bossLib boolSimps
-
-open pred_setTheory
+open boolSimps relationTheory pred_setTheory chap3Theory;
 
 val _ = new_theory "diags"
 
@@ -386,7 +384,7 @@ val note_lemma9 = store_thm(
        by METIS_TAC [] THEN
     `RTC s a1 a1' /\ RTC s a2' a2` by METIS_TAC [] THEN
     `RTC (x RUNION s) a1 a1' /\ RTC (x RUNION s) a2' a2`
-       by METIS_TAC [chap3Theory.RUNION_RTC_MONOTONE, RUNION_COMM] THEN
+       by METIS_TAC [RUNION_RTC_MONOTONE, RUNION_COMM] THEN
     METIS_TAC [RTC_RTC],
     METIS_TAC []
   ]);
@@ -401,13 +399,13 @@ val note_prop10_1 = store_thm(
   SIMP_TAC (srw_ss()) [sRefl_def, onto_def, ofree_def, kCompl_def] THEN
   STRIP_TAC THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN CONJ_TAC THENL [
-    METIS_TAC [chap3Theory.RUNION_RTC_MONOTONE, RUNION_COMM],
+    METIS_TAC [RUNION_RTC_MONOTONE, RUNION_COMM],
     REPEAT STRIP_TAC THEN
     `?a0 a1'. x a0 a1' /\ (b1 = f a0) /\ (b1' = f a1')` by METIS_TAC [] THEN
     `RTC s a1' a1` by METIS_TAC [] THEN
     `RTC (x RUNION s) a1' a1`
-      by METIS_TAC [chap3Theory.RUNION_RTC_MONOTONE, RUNION_COMM] THEN
-    `RTC (x RUNION s) a0 a1'` by METIS_TAC [chap3Theory.RUNION_RTC_MONOTONE,
+      by METIS_TAC [RUNION_RTC_MONOTONE, RUNION_COMM] THEN
+    `RTC (x RUNION s) a0 a1'` by METIS_TAC [RUNION_RTC_MONOTONE,
                                             RTC_RULES] THEN
     METIS_TAC [RTC_RTC]
   ]);

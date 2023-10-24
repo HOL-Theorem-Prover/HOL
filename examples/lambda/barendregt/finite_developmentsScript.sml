@@ -1,10 +1,9 @@
-open HolKernel Parse boolLib
+open HolKernel Parse bossLib boolLib;
 
-open bossLib metisLib boolSimps
+open BasicProvers metisLib boolSimps pred_setTheory pathTheory relationTheory;
 
 open chap3Theory chap2Theory labelledTermsTheory termTheory binderLib
-open term_posnsTheory chap11_1Theory
-open pathTheory BasicProvers nomsetTheory pred_setTheory
+     term_posnsTheory chap11_1Theory nomsetTheory;
 
 local open pred_setLib in end
 val _ = augment_srw_ss [boolSimps.LET_ss]
@@ -18,6 +17,8 @@ val _ = hide "set"
 
 val RUNION_COMM = relationTheory.RUNION_COMM
 val RUNION = relationTheory.RUNION
+
+val SN_def = pathTheory.SN_def; (* cf. chap3Theory.SN_def, relationTheory.SN_def *)
 
 (* finiteness of developments : section 11.2 of Barendregt *)
 

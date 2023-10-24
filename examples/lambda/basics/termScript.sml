@@ -1,17 +1,12 @@
-open HolKernel boolLib Parse bossLib generic_termsTheory
+open HolKernel Parse boolLib bossLib;
 
-open boolSimps arithmeticTheory;
+open boolSimps arithmeticTheory pred_setTheory finite_mapTheory hurdUtils;
 
-open nomsetTheory
-open pred_setTheory finite_mapTheory hurdUtils
-open binderLib
-open nomdatatype
+open generic_termsTheory binderLib nomsetTheory nomdatatype;
+
 val _ = new_theory "term";
 
 val _ = set_fixity "=" (Infix(NONASSOC, 450))
-
-fun Save_thm (nm, th) = save_thm(nm,th) before export_rewrites [nm]
-fun Store_thm(nm,t,tac) = store_thm(nm,t,tac) before export_rewrites [nm]
 
 val tyname = "term"
 
@@ -120,11 +115,10 @@ in
     |> GEN_ALL
 end
 
-val FV_thm = Save_thm(
-  "FV_thm",
-  LIST_CONJ (map supp_clause cons_info))
-
-
+(* |- (!s. FV (VAR s) = {s}) /\ (!t2 t1. FV (t1 @@ t2) = FV t1 UNION FV t2) /\
+      !v t. FV (LAM v t) = FV t DELETE v
+ *)
+Theorem FV_thm[simp] = LIST_CONJ (map supp_clause cons_info)
 
 fun genit th = let
   val (_, args) = strip_comb (concl th)
@@ -297,10 +291,10 @@ val tm_recursion = save_thm(
       |> SIMP_RULE (srw_ss() ++ CONJ_ss) [supp_unitfn]
       |> Q.INST [`apu` |-> `ap`, `lmu` |-> `lm`, `vru` |-> `vr`])
 
-val FV_tpm = Save_thm("FV_tpm",
-                      ``x ∈ FV (tpm p t)``
+(* |- !x t p. x IN FV (tpm p t) <=> lswapstr (REVERSE p) x IN FV t *)
+Theorem FV_tpm[simp] = ``x ∈ FV (tpm p t)``
                       |> REWRITE_CONV [perm_supp,pmact_IN]
-                      |> GEN_ALL);
+                      |> GEN_ALL
 
 val _ = set_mapped_fixity { term_name = "APP", tok = "@@",
                             fixity = Infixl 901}
@@ -537,6 +531,15 @@ Theorem lemma15b:
 Proof SRW_TAC [][lemma15a]
 QED
 
+Theorem SUB_TWICE_ONE_VAR :
+    !body. [x/v] ([y/v] body) = [[x/v]y / v] body
+Proof
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN SRW_TAC [][SUB_THM, SUB_VAR] THEN
+  Q.EXISTS_TAC `v INSERT FV x UNION FV y` THEN
+  SRW_TAC [][SUB_THM] THEN
+  Cases_on `v IN FV y` THEN SRW_TAC [][SUB_THM, lemma14c, lemma14b]
+QED
+
 (* ----------------------------------------------------------------------
     alpha-convertibility results
    ---------------------------------------------------------------------- *)
@@ -640,6 +643,15 @@ Definition DOM_DEF :
    (DOM ((x,y)::rst) = {y} UNION DOM rst)
 End
 
+Theorem DOM_ALT_MAP_SND :
+    !phi. DOM phi = set (MAP SND phi)
+Proof
+    Induct_on ‘phi’ >- rw [DOM_DEF]
+ >> Q.X_GEN_TAC ‘h’
+ >> Cases_on ‘h’
+ >> rw [DOM_DEF] >> SET_TAC []
+QED
+
 Definition FVS_DEF :
    (FVS [] = {}) /\
    (FVS ((t,x)::rst) = FV t UNION FVS rst)
@@ -659,8 +671,8 @@ Proof
  >> RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]
 QED
 
-Theorem ISUB_LAM :
-    !R x. ~(x IN (DOM R UNION FVS R)) ==>
+Theorem ISUB_LAM[simp] :
+    !R x. x NOTIN DOM R /\ x NOTIN FVS R ==>
           !t. (LAM x t) ISUB R = LAM x (t ISUB R)
 Proof
     Induct
@@ -836,7 +848,14 @@ val ssub_exists =
                                alphas = [tpm_ALPHA]}
 
 val ssub_def = new_specification ("ssub_def", ["ssub"], ssub_exists)
-val ssub_thm = Save_thm("ssub_thm", CONJUNCT1 ssub_def)
+
+(* |- (!s fm. fm ' (VAR s) = if s IN FDOM fm then fm ' s else VAR s) /\
+      (!fm t t'. fm ' (t' @@ t) = fm ' t' @@ fm ' t) /\
+      !v fm t.
+        v NOTIN FDOM fm /\ (!y. y IN FDOM fm ==> v # fm ' y) ==>
+        (fm ' (LAM v t) = LAM v (fm ' t))
+ *)
+Theorem ssub_thm[simp] = CONJUNCT1 ssub_def
 
 val _ = overload_on ("'", ``ssub``)
 

@@ -118,14 +118,6 @@ val fixed_point_thm = store_thm(  (* p. 14 *)
 
 (* properties of substitution - p19 *)
 
-val SUB_TWICE_ONE_VAR = store_thm(
-  "SUB_TWICE_ONE_VAR",
-  ``!body. [x/v] ([y/v] body) = [[x/v]y / v] body``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN SRW_TAC [][SUB_THM, SUB_VAR] THEN
-  Q.EXISTS_TAC `v INSERT FV x UNION FV y` THEN
-  SRW_TAC [][SUB_THM] THEN
-  Cases_on `v IN FV y` THEN SRW_TAC [][SUB_THM, lemma14c, lemma14b]);
-
 val lemma2_11 = store_thm(
   "lemma2_11",
   ``!t. ~(v = u)  /\ ~(v IN FV M) ==>
@@ -166,6 +158,7 @@ val lemma2_12 = store_thm( (* p. 19 *)
     PROVE_TAC [lameq_rules]
   ]);
 
+(* |- M == M' ==> N == N' ==> [N/x] M == [N'/x] M' *)
 val lameq_sub_cong = save_thm(
   "lameq_sub_cong",
   REWRITE_RULE [GSYM AND_IMP_INTRO] (last (CONJUNCTS lemma2_12)));
@@ -221,24 +214,54 @@ val lemma2_14 = store_thm(
     PROVE_TAC [lameta_rules]
   ]);
 
-val consistent_def =
-    Define`consistent (thy:term -> term -> bool) = ?M N. ~thy M N`;
+(* Definition 2.1.30 [1, p.33]: "Let tt be a formal theory with equations as
+   formulas. Then tt is consistent (notation Con(tt)) if tt does not prove every
+   closed equation. In the opposite case tt is consistent.
+ *)
+Definition consistent_def :
+    consistent (thy:term -> term -> bool) = ?M N. ~thy M N
+End
 
-val (asmlam_rules, asmlam_ind, asmlam_cases) = Hol_reln`
+(* This is lambda theories (only having beta equivalence, no eta equivalence)
+   extended with extra equations as formulas.
+
+   cf. Definition 4.1.1 [1, p.76]. If ‘eqns’ is a set of closed equations,
+   then ‘{(M,N) | asmlam eqns M N}’ is the set of closed equations provable
+   in lambda + eqns, denoted by ‘eqns^+’ in [1], or ‘asmlam eqns’ here.
+ *)
+Inductive asmlam :
+[~eqn:]
   (!M N. (M,N) IN eqns ==> asmlam eqns M N) /\
+[~beta:]
   (!x M N. asmlam eqns (LAM x M @@ N) ([N/x]M)) /\
+[~refl:]
   (!M. asmlam eqns M M) /\
+[~sym:]
   (!M N. asmlam eqns M N ==> asmlam eqns N M) /\
+[~trans:]
   (!M N P. asmlam eqns M N /\ asmlam eqns N P ==> asmlam eqns M P) /\
+[~lcong:]
   (!M M' N. asmlam eqns M M' ==> asmlam eqns (M @@ N) (M' @@ N)) /\
+[~rcong:]
   (!M N N'. asmlam eqns N N' ==> asmlam eqns (M @@ N) (M @@ N')) /\
+[~abscong:]
   (!x M M'. asmlam eqns M M' ==> asmlam eqns (LAM x M) (LAM x M'))
-`;
+End
 
-(* This is also Definition 2.1.32 [1, p.33] *)
-val incompatible_def =
-    Define`incompatible x y = ~consistent (asmlam {(x,y)})`
+(* Definition 2.1.32 [1, p.33]
 
+   cf. also Definition 2.1.30 (iii): If t is a set of equations, then lambda + t
+   is the theory obtained from lambda by adding the equations of t as axioms.
+   t is called consistent (notation Con(t)) if Con(lambda + t), or in our words,
+  ‘consistent (asmlam T)’.
+
+   This explains why ‘asmlam’ is involved in the definition of ‘incompatible’.
+*)
+Definition incompatible_def :
+    incompatible x y = ~consistent (asmlam {(x,y)})
+End
+
+(* NOTE: in termTheory, ‘v # M’ also denotes ‘v NOTIN FV M’ *)
 Overload "#" = “incompatible”
 
 val S_def =
@@ -465,9 +488,10 @@ val Yf_cong = store_thm(
   STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [] THEN
   METIS_TAC [lameq_rules]);
 
-val SK_incompatible = store_thm( (* example 2.18, p23 *)
-  "SK_incompatible",
-  ``incompatible S K``,
+(* This is Example 2.1.33 [1, p.33] and Example 2.18 [2, p23] *)
+Theorem SK_incompatible :
+    incompatible S K
+Proof
   Q_TAC SUFF_TAC `!M N. asmlam {(S,K)} M N`
         THEN1 SRW_TAC [][incompatible_def, consistent_def] THEN
   REPEAT GEN_TAC THEN
@@ -480,11 +504,8 @@ val SK_incompatible = store_thm( (* example 2.18, p23 *)
       by PROVE_TAC [lameq_S, asmlam_rules, lameq_asmlam] THEN
   `!D. asmlam {(S,K)} D I`
       by PROVE_TAC [lameq_I, lameq_K, asmlam_rules, lameq_asmlam] THEN
-  PROVE_TAC [asmlam_rules]);
-
-val [asmlam_eqn, asmlam_beta, asmlam_refl, asmlam_sym, asmlam_trans,
-     asmlam_lcong, asmlam_rcong, asmlam_abscong] =
-    CONJUNCTS (SPEC_ALL asmlam_rules)
+  PROVE_TAC [asmlam_rules]
+QED
 
 val xx_xy_incompatible = store_thm( (* example 2.20, p24 *)
   "xx_xy_incompatible",
@@ -856,15 +877,6 @@ Proof
  >> MATCH_MP_TAC lameq_appstar_cong >> art []
 QED
 
-val foldl_snoc = prove(
-  ``!l f x y. FOLDL f x (APPEND l [y]) = f (FOLDL f x l) y``,
-  Induct THEN SRW_TAC [][]);
-
-val combs_not_size_1 = prove(
-  ``(size M = 1) ==> ~is_comb M``,
-  Q.SPEC_THEN `M` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][size_thm, size_nz]);
-
 Theorem strange_cases :
     !M : term. (?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
                (?vs args t.
@@ -885,11 +897,11 @@ Proof
               THENL [
                 MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
                 ASM_SIMP_TAC (srw_ss()) [] THEN
-                PROVE_TAC [combs_not_size_1],
+                fs [size_1_cases],
                 ASM_SIMP_TAC (srw_ss()) [] THEN
                 Cases_on `vs` THENL [
-                  MAP_EVERY Q.EXISTS_TAC [`APPEND args [N]`, `t`] THEN
-                  ASM_SIMP_TAC (srw_ss()) [foldl_snoc],
+                  MAP_EVERY Q.EXISTS_TAC [`SNOC N args`, `t`] THEN
+                  ASM_SIMP_TAC (srw_ss()) [FOLDL_SNOC],
                   MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
                   ASM_SIMP_TAC (srw_ss()) []
                 ]
@@ -912,6 +924,8 @@ val _ = html_theory "chap2";
 
 (* References:
 
+   [1] Barendregt, H.P.: The Lambda Calculus, Its Syntax and Semantics.
+       College Publications, London (1984).
    [2] Hankin, C.: Lambda Calculi: A Guide for Computer Scientists.
        Clarendon Press, Oxford (1994).
  *)
