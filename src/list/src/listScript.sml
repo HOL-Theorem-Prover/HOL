@@ -1821,6 +1821,13 @@ val LENGTH_FRONT_CONS = store_thm ("LENGTH_FRONT_CONS",
 Induct_on ‘xs’ THEN ASM_SIMP_TAC bool_ss [FRONT_CONS, LENGTH])
 val _ = export_rewrites ["LENGTH_FRONT_CONS"]
 
+Theorem LENGTH_FRONT :
+    !l. l <> [] ==> LENGTH (FRONT l) = PRE (LENGTH l)
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘l’ >> fs [LENGTH_FRONT_CONS]
+QED
+
 val FRONT_CONS_EQ_NIL = store_thm ("FRONT_CONS_EQ_NIL",
 “(!x:'a xs. (FRONT (x::xs) = []) = (xs = [])) /\
   (!x:'a xs. ([] = FRONT (x::xs)) = (xs = [])) /\
@@ -2758,6 +2765,23 @@ val SNOC_Axiom = store_thm(
 
 val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
 val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
+
+Theorem ZIP_SNOC_lemma[local] :
+    ZIP (SNOC x1 (MAP FST l),SNOC x2 (MAP SND l)) = SNOC (x1,x2) l
+Proof
+    Induct_on ‘l’ >> rw [ZIP_def]
+QED
+
+Theorem ZIP_SNOC :
+    !x1 l1 x2 l2. (LENGTH l1 = LENGTH l2) ==>
+                  (ZIP (SNOC x1 l1,SNOC x2 l2) = SNOC (x1,x2) (ZIP (l1,l2)))
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘l = ZIP (l1,l2)’
+ >> ‘l1 = MAP FST l’ by rw [Abbr ‘l’, MAP_ZIP]
+ >> ‘l2 = MAP SND l’ by rw [Abbr ‘l’, MAP_ZIP]
+ >> rw [ZIP_SNOC_lemma]
+QED
 
 (*--------------------------------------------------------------*)
 (* List generator                                               *)

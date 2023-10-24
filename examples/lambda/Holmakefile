@@ -1,2 +1,4 @@
 CLINE_OPTIONS = -r
-INCLUDES = barendregt basics other-models typing wcbv-reasonable examples
+
+INCLUDES = barendregt basics other-models typing wcbv-reasonable examples \
+	   completeness

@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open metisLib basic_swapTheory relationTheory hurdUtils;
+open boolSimps metisLib basic_swapTheory relationTheory hurdUtils;
 
 local open pred_setLib in end;
 
@@ -910,6 +910,13 @@ val betastar_lameq_bnf = store_thm(
   METIS_TAC [theorem3_13, beta_CR, betastar_lameq, bnf_reduction_to_self,
              lameq_betaconversion]);
 
+(* moved here from churchnumScript.sml *)
+Theorem lameq_triangle :
+    M == N ∧ M == P ∧ bnf N ∧ bnf P ⇒ (N = P)
+Proof
+  METIS_TAC [betastar_lameq_bnf, lameq_rules, bnf_reduction_to_self]
+QED
+
 (* |- !M N. M =b=> N ==> M -b->* N *)
 Theorem grandbeta_imp_betastar =
     (REWRITE_RULE [theorem3_17] (Q.ISPEC ‘grandbeta’ TC_SUBSET))
@@ -1028,37 +1035,6 @@ val hr_lemma0 = prove(
                             RUNION] THEN
   PROVE_TAC []);
 
-val RUNION_RTC_MONOTONE = store_thm(
-  "RUNION_RTC_MONOTONE",
-  ``!R1 x y. RTC R1 x y ==> !R2. RTC (R1 RUNION R2) x y``,
-  GEN_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN
-  PROVE_TAC [RTC_RULES, RUNION]);
-
-val RTC_OUT = store_thm(
-  "RTC_OUT",
-  ``!R1 R2. RTC (RTC R1 RUNION RTC R2) = RTC (R1 RUNION R2)``,
-  REPEAT GEN_TAC THEN
-  Q_TAC SUFF_TAC
-    `(!x y. RTC (RTC R1 RUNION RTC R2) x y ==> RTC (R1 RUNION R2) x y) /\
-     (!x y. RTC (R1 RUNION R2) x y ==> RTC (RTC R1 RUNION RTC R2) x y)` THEN1
-    (SIMP_TAC (srw_ss()) [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] THEN
-     PROVE_TAC []) THEN CONJ_TAC
-  THEN HO_MATCH_MP_TAC RTC_INDUCT THENL [
-    CONJ_TAC THENL [
-      PROVE_TAC [RTC_RULES],
-      MAP_EVERY Q.X_GEN_TAC [`x`,`y`,`z`] THEN REPEAT STRIP_TAC THEN
-      `RTC R1 x y \/ RTC R2 x y` by PROVE_TAC [RUNION] THEN
-      PROVE_TAC [RUNION_RTC_MONOTONE, RTC_RTC, RUNION_COMM]
-    ],
-    CONJ_TAC THENL [
-      PROVE_TAC [RTC_RULES],
-      MAP_EVERY Q.X_GEN_TAC [`x`,`y`,`z`] THEN REPEAT STRIP_TAC THEN
-      `R1 x y \/ R2 x y` by PROVE_TAC [RUNION] THEN
-      PROVE_TAC [RTC_RULES, RUNION]
-    ]
-  ]);
-
-
 val CC_RUNION_MONOTONE = store_thm(
   "CC_RUNION_MONOTONE",
   ``!R1 x y. compat_closure R1 x y ==> compat_closure (R1 RUNION R2) x y``,
@@ -1095,7 +1071,7 @@ val hindley_rosen_lemma = store_thm( (* p43 *)
     `diamond_property (RTC (RTC (compat_closure R1) RUNION
                             RTC (compat_closure R2)))`
         by PROVE_TAC [hr_lemma0] THEN
-    FULL_SIMP_TAC (srw_ss()) [RTC_OUT, CC_RUNION_DISTRIB]
+    FULL_SIMP_TAC (srw_ss()) [RTC_RUNION, CC_RUNION_DISTRIB]
   ]);
 
 val eta_def =
@@ -1461,7 +1437,6 @@ val rator_isub_commutes = store_thm(
     Congruence and rewrite rules for -b-> and -b->*
    ---------------------------------------------------------------------- *)
 
-open boolSimps
 val RTC1_step = CONJUNCT2 (SPEC_ALL RTC_RULES)
 
 val betastar_LAM = store_thm(
@@ -1515,3 +1490,11 @@ val betastar_eq_cong = store_thm(
 
 val _ = export_theory();
 val _ = html_theory "chap3";
+
+(* References:
+
+   [1] Barendregt, H.P.: The Lambda Calculus, Its Syntax and Semantics.
+       College Publications, London (1984).
+   [2] Hankin, C.: Lambda Calculi: A Guide for Computer Scientists.
+       Clarendon Press, Oxford (1994).
+ *)

@@ -8,7 +8,8 @@ val _ = new_theory "appFOLDL"
 
 val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
-val _ = overload_on ("@*", ``λf (args:term list). FOLDL APP f args``)
+
+Overload "@*" = “\f (args:term list). FOLDL APP f args”
 
 Theorem var_eq_appstar[simp]:
   VAR s = f ·· args ⇔ args = [] ∧ f = VAR s
@@ -173,9 +174,13 @@ QED
  *  LAMl (was in standardisationTheory)
  *---------------------------------------------------------------------------*)
 
-Definition LAMl_def:
+Overload "LAMl" = “\vs (t :term). FOLDR LAM t vs”
+
+Theorem LAMl_def :
   LAMl vs (t : term) = FOLDR LAM t vs
-End
+Proof
+    rw []
+QED
 
 Theorem LAMl_thm[simp]:
   (LAMl [] M = M) /\
@@ -314,6 +319,14 @@ Proof
  >> Induct_on ‘n’ >- rw [FUNPOW]
  >> fs [FUNPOW_SUC]
  >> SET_TAC []
+QED
+
+(* moved here from churchnumScript.sml *)
+Theorem size_funpow :
+    size (FUNPOW (APP f) n x) = (size f + 1) * n + size x
+Proof
+  Induct_on `n` THEN
+  SRW_TAC [ARITH_ss][FUNPOW_SUC, LEFT_ADD_DISTRIB, MULT_CLAUSES]
 QED
 
 val _ = export_theory ()
