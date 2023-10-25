@@ -4,7 +4,8 @@ OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
 HOLHEAP = computability-heap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o \
+	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
 
 BARE_THYS = ../../lambda/barendregt/normal_orderTheory \
             ../../lambda/other-models/pure_dBTheory
