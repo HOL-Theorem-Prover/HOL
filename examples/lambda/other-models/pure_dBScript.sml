@@ -1277,7 +1277,7 @@ val eta_eq_lam_eta = store_thm(
  *---------------------------------------------------------------------------*)
 
 Overload "@*" = “\f args. FOLDL dAPP f args”
-Overload "LAMl" = “\vs t. FOLDR dLAM t vs”
+Overload "dLAMl" = “\vs t. FOLDR dLAM t vs”
 
 Theorem dappstar_APPEND :
     (x :pdb) @* (Ms1 ++ Ms2) = (x @* Ms1) @* Ms2
@@ -1299,7 +1299,7 @@ Proof
 QED
 
 Theorem fromTerm_LAMl :
-    !vs. fromTerm (LAMl vs t) = LAMl (MAP s2n vs) (fromTerm t)
+    !vs. fromTerm (LAMl vs t) = dLAMl (MAP s2n vs) (fromTerm t)
 Proof
     Induct_on ‘vs’ >> rw []
 QED
