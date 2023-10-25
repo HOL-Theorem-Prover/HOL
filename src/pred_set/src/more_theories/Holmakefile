@@ -1,4 +1,5 @@
-INCLUDES = ../../../transfer
+INCLUDES = ../../../transfer ../../../res_quan/src
+# res_quan needed for hurdUtils
 
 EXTRA_CLEANS = ordinalML.sig ordinalML.sml selftest.exe more-set-selftest.log
 
