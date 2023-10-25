@@ -878,37 +878,23 @@ QED
 val normorder_strong_ind =
     IndDefLib.derive_strong_induction (normorder_rules,normorder_ind)
 
-Theorem bnf_appstar[simp]:
-    ∀args f.
-      bnf (f ·· args) ⇔ bnf f ∧ EVERY bnf args ∧ (is_abs f ⇒ (args = []))
-Proof Induct THEN SRW_TAC [][] THEN METIS_TAC []
+Theorem norm_varhead0[local]:
+  ∀M N. M -n-> N ⇒
+        ∀v Ms. (M = VAR v ·· Ms) ⇒
+               ∃p s M0 N0.
+                 (Ms = p ++ [M0] ++ s) ∧
+                 (N = VAR v ·· (p ++ [N0] ++ s)) ∧
+                 EVERY bnf p ∧
+                 M0 -n-> N0
+Proof
+  HO_MATCH_MP_TAC normorder_strong_ind >>
+  rw[lam_eq_appstar, app_eq_appstar_SNOC] >>
+  gvs[]
+  >- (REWRITE_TAC [GSYM listTheory.APPEND_ASSOC] >>
+      rpt $ irule_at Any EQ_REFL >> simp[]) >>
+  first_assum $ irule_at (Pat ‘_ -n-> _’) >>
+  simp[listTheory.EVERY_MEM] >> qexists ‘[]’ >> simp[]
 QED
-
-val norm_varhead0 = prove(
-  ``∀M N. M -n-> N ⇒
-          ∀v Ms. (M = VAR v ·· Ms) ⇒
-                 ∃p s M0 N0.
-                    (Ms = p ++ [M0] ++ s) ∧
-                    (N = VAR v ·· (p ++ [N0] ++ s)) ∧
-                    EVERY bnf p ∧
-                    M0 -n-> N0``,
-  HO_MATCH_MP_TAC normorder_strong_ind THEN
-  SRW_TAC [][lam_eq_appstar, app_eq_varappstar] THENL [
-    FIRST_X_ASSUM (Q.SPECL_THEN [`v`, `FRONT Ms`] MP_TAC) THEN
-    SRW_TAC [][] THEN
-    MAP_EVERY Q.EXISTS_TAC [`p`, `s ++ [LAST Ms]`, `M0`, `N0`] THEN
-    SRW_TAC [][rich_listTheory.FRONT_APPEND, listTheory.FRONT_DEF,
-               rich_listTheory.LAST_APPEND, listTheory.LAST_DEF] THEN
-    IMP_RES_TAC listTheory.APPEND_FRONT_LAST THEN
-    POP_ASSUM (fn th => REWRITE_TAC [Once (GSYM th)]) THEN
-    SRW_TAC [][] THEN
-    REWRITE_TAC [GSYM listTheory.APPEND_ASSOC, listTheory.APPEND],
-
-    MAP_EVERY Q.EXISTS_TAC [`FRONT Ms`, `[]`, `LAST Ms`, `N`] THEN
-    SRW_TAC [][listTheory.APPEND_FRONT_LAST, rich_listTheory.FRONT_APPEND,
-               rich_listTheory.LAST_APPEND] THEN
-    FULL_SIMP_TAC (srw_ss()) []
-  ]);
 
 val norm_varhead = save_thm(
   "norm_varhead",

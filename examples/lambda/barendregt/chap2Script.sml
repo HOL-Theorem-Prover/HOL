@@ -606,6 +606,22 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+Theorem EQ_LAML_bodies_permute:
+  ∀us vs M N. (LAMl us M = LAMl vs N) ∧ ¬is_abs M ∧ ¬is_abs N ⇒
+              ∃pi. N = tpm pi M
+Proof
+  Induct >> simp[]
+  >- metis_tac[pmact_nil] >>
+  simp[] >> rpt gen_tac >> rename [‘LAM x (LAMl xs _) = LAMl ys _’] >>
+  Cases_on ‘ys’ >> simp[] >- (rw[] >> gvs[]) >>
+  rename [‘LAM x (LAMl xs M) = LAM y (LAMl ys N)’] >>
+  simp[LAM_eq_thm] >> rw[] >> gvs[tpm_LAMl]
+  >- metis_tac[] >>
+  first_x_assum drule >> simp[] >> rename [‘tpm [(a,b)] N = _’] >>
+  rw[] >> pop_assum (mp_tac o Q.AP_TERM ‘tpm [(a,b)]’) >>
+  REWRITE_TAC [pmact_sing_inv] >> metis_tac[pmact_decompose]
+QED
+
 val (is_var_thm, _) = define_recursive_term_function
   `(is_var (VAR s) = T) /\
    (is_var (t1 @@ t2) = F) /\
@@ -633,6 +649,41 @@ Proof
     Q.X_GEN_TAC ‘t’
  >> Q.SPEC_THEN ‘t’ STRUCT_CASES_TAC term_CASES
  >> SRW_TAC [][]
+QED
+
+Theorem term_laml_cases:
+  ∀X. FINITE X ⇒
+      ∀t. (∃s. t = VAR s) ∨ (∃M1 M2. t = M1 @@ M2) ∨
+          ∃v vs Body. t = LAM v (LAMl vs Body) ∧ ¬is_abs Body ∧ v ∉ X ∧
+                      ¬MEM v vs ∧ ALL_DISTINCT vs ∧ DISJOINT (set vs) X
+Proof
+  gen_tac >> strip_tac >> ho_match_mp_tac nc_INDUCTION2 >> simp[] >>
+  qexists ‘X’ >> simp[] >> rw[] >~
+  [‘LAM v (VAR u)’, ‘v ∉ X’]
+  >- (qexistsl [‘v’, ‘[]’, ‘VAR u’] >> simp[]) >~
+  [‘LAM v (M1 @@ M2)’, ‘v ∉ X’]
+  >- (qexistsl [‘v’, ‘[]’, ‘M1 @@ M2’] >> simp[]) >~
+  [‘LAM u (LAM v (LAMl vs Body))’, ‘u ∉ X’, ‘v ∉ X’] >>
+  Cases_on ‘u = v’ >> gvs[]
+  >- (Q_TAC (NEW_TAC "z") ‘u INSERT set vs ∪ FV Body ∪ X’ >>
+      ‘z # LAM u (LAMl vs Body)’ by simp[FV_LAMl] >>
+      drule_then (qspec_then ‘u’ assume_tac) SIMPLE_ALPHA >> simp[lemma14b] >>
+      qexistsl [‘z’, ‘u::vs’, ‘Body’] >> simp[]) >>
+  Cases_on ‘MEM u vs’
+  >- (Q_TAC (NEW_TAC "z") ‘{u;v} ∪ set vs ∪ FV Body ∪ X’ >>
+      ‘z # LAM v (LAMl vs Body)’ by simp[FV_LAMl] >>
+      drule_then (qspec_then ‘u’ assume_tac) SIMPLE_ALPHA >>
+      simp[lemma14b, FV_LAMl] >>
+      qexistsl [‘z’, ‘v::vs’, ‘Body’] >> simp[]) >>
+  Q_TAC (NEW_TAC "z") ‘{u;v} ∪ set vs ∪ X ∪ FV Body’ >>
+  ‘z # LAM v (LAMl vs Body)’ by simp[FV_LAMl] >>
+  drule_then (qspec_then ‘u’ assume_tac) tpm_ALPHA >> simp[] >>
+  qexists ‘z’ >> Q.REFINE_EXISTS_TAC ‘x::xs’ >> simp[tpm_LAMl] >>
+  irule_at Any EQ_REFL >> simp[DISJOINT_DEF, EXTENSION, MEM_listpm] >>
+  qx_gen_tac ‘a’ >> Cases_on ‘a ∈ X’ >> simp[] >>
+  Cases_on ‘a = u’ >> gvs[] >>
+  Cases_on ‘a = z’ >> gvs[] >>
+  gvs[DISJOINT_DEF, EXTENSION] >> metis_tac[]
 QED
 
 val (bnf_thm, _) = define_recursive_term_function
@@ -671,38 +722,54 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
-Theorem bnf_characterisation:
-  ∀M.
-    bnf M ⇔
-      ∃vs v Ms. ALL_DISTINCT vs ∧ M = LAMl vs (VAR v ·· Ms) ∧
-                (∀M. MEM M Ms ⇒ bnf M)
+Theorem bnf_LAMl[simp]:
+  bnf (LAMl vs M) = bnf M
 Proof
-  ho_match_mp_tac nc_INDUCTION2 >> qexists ‘∅’ >> rw[] >~
-  [‘VAR _ ·· _ = M1 @@ M2’]
-  >- (simp[] >> eq_tac >> rpt strip_tac >~
-      [‘M1 = LAMl vs1 _’, ‘M1 @@ M2’]
-      >- (gvs[app_eq_appstar] >>
-          Q.REFINE_EXISTS_TAC ‘SNOC M Mt’ >>
-          simp[DISJ_IMP_THM, rich_listTheory.FRONT_APPEND] >>
-          metis_tac[]) >>
-      Cases_on ‘Ms’ using rich_listTheory.SNOC_CASES >>
-      gvs[rich_listTheory.SNOC_APPEND, appstar_APPEND] >>
-      dsimp[LAMl_eq_appstar] >> irule_at Any EQ_REFL >> simp[]) >>
-  pop_assum SUBST_ALL_TAC >> eq_tac >> rpt strip_tac >> gvs[] >~
-  [‘LAM y (LAMl vs _)’]
-  >- (reverse (Cases_on ‘MEM y vs’)
-      >- (qexists ‘y::vs’ >> simp[]) >>
-      ‘y # LAMl vs (VAR v ·· Ms)’ by simp[FV_LAMl] >>
-      Q_TAC (NEW_TAC "z") ‘y INSERT set vs ∪ FV (VAR v ·· Ms)’ >>
-      ‘z # LAMl vs (VAR v ·· Ms)’ by simp[FV_LAMl] >>
-      dxrule_then (qspec_then ‘y’ mp_tac) tpm_ALPHA >>
-      simp[tpm_fresh, FV_LAMl] >> strip_tac >> qexists ‘z::vs’ >> simp[]) >>
-  rename [‘LAM y M = LAMl vs (VAR v ·· Ms)’] >>
-  Cases_on ‘vs’ >> gvs[] >> gvs[LAM_eq_thm]
-  >- metis_tac[] >>
-  simp[tpm_LAMl, tpm_appstar] >> irule_at Any EQ_REFL >>
-  simp[MEM_listpm] >> rpt strip_tac >> first_assum drule >> simp[]
+  Induct_on ‘vs’ >> simp[]
 QED
+
+Theorem bnf_appstar[simp]:
+  ∀M Ns. bnf (M @* Ns) ⇔ bnf M ∧ (∀N. MEM N Ns ⇒ bnf N) ∧ (is_abs M ⇒ Ns = [])
+Proof
+  Induct_on ‘Ns’ using listTheory.SNOC_INDUCT >>
+  simp[DISJ_IMP_THM, FORALL_AND_THM] >> metis_tac[]
+QED
+
+Theorem bnf_characterisation_X:
+  ∀M X. FINITE X ⇒
+        (bnf M ⇔
+           ∃vs v Ms. DISJOINT (set vs) X ∧ M = LAMl vs (VAR v @* Ms) ∧
+                     ALL_DISTINCT vs ∧ ∀M. MEM M Ms ⇒ bnf M)
+Proof
+  completeInduct_on ‘size M’ >> rw[] >> gvs[GSYM RIGHT_FORALL_IMP_THM] >>
+  drule_then (qspec_then ‘M’ strip_assume_tac) term_laml_cases >> simp[] >~
+  [‘M1 @@ M2’]
+  >- (first_assum $ qspec_then ‘M1’ assume_tac >>
+      first_x_assum $ qspec_then ‘M2’ assume_tac >> gs[]>>
+      rpt (first_x_assum $ drule_then assume_tac) >>
+      simp[] >> iff_tac >> rw[] >>
+      gvs[app_eq_appstar_SNOC, LAMl_eq_appstar, DISJ_IMP_THM, FORALL_AND_THM] >>
+      dsimp[PULL_EXISTS] >> metis_tac[]) >~
+  [‘LAM u $ LAMl us Body’]
+  >- (gvs[] >>
+      first_x_assum $ qspec_then ‘Body’ mp_tac >> simp[]>>
+      disch_then $ qspec_then ‘∅’ mp_tac >> simp[] >>
+      disch_then kall_tac >>
+      ‘∀xs M. Body = LAMl xs M ⇔ xs = [] ∧ M = Body’
+        by (rpt gen_tac >> Cases_on ‘xs’ >> simp[] >- metis_tac[] >>
+            strip_tac >> gvs[]) >>
+      simp[] >> iff_tac >> rw[]
+      >- (qexistsl [‘u::us’, ‘v’, ‘Ms’] >> simp[]) >>
+      rename [‘LAM u (LAMl us Body) = LAMl vs (VAR v @* Ms)’] >>
+      ‘LAMl vs (VAR v @* Ms) = LAMl (u::us) Body’ by simp[] >>
+      drule EQ_LAML_bodies_permute >>
+      simp[PULL_EXISTS, tpm_appstar, MEM_listpm_EXISTS])
+QED
+
+Theorem bnf_characterisation =
+        MATCH_MP bnf_characterisation_X
+                 (INST_TYPE [“:α” |-> “:string”] FINITE_EMPTY)
+          |> REWRITE_RULE [DISJOINT_EMPTY]
 
 val _ = augment_srw_ss [rewrites [LAM_eq_thm]]
 val (rand_thm, _) = define_recursive_term_function `rand (t1 @@ t2) = t2`;
