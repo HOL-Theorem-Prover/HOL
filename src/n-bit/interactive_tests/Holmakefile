@@ -4,7 +4,7 @@ INCLUDES = ..
 
 all: test1 $(DEFAULT_TARGETS)
 
-test1: script1.ML
+test1: script1.ML ../wordsTheory.uo
 	$(protect $(HOLDIR)/bin/hol) $<
 
 
