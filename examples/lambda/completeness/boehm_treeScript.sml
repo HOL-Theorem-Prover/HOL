@@ -24,7 +24,7 @@ Proof
     rw [o_DEF]
 QED
 
-(* Translations from LAMl to dABSi.
+(* Translations from dLAMl to dABSi.
 
    Some samples for guessing out the statements of this theorem:
 
@@ -45,12 +45,12 @@ QED
                        ([dV 0/v0 + 3]
                           (lift (lift (lift t 0) 1) 2)))))): thm
  *)
-Theorem LAMl_to_dABSi :
+Theorem dLAMl_to_dABSi :
     !vs. ALL_DISTINCT (vs :num list) ==>
          let n = LENGTH vs;
              body = FOLDL lift t (GENLIST I n);
              phi = ZIP (GENLIST dV n, MAP (\i. i + n) (REVERSE vs))
-         in LAMl vs t = dABSi n (body ISUB phi)
+         in dLAMl vs t = dABSi n (body ISUB phi)
 Proof
     Induct_on ‘vs’ >- rw [isub_def]
  >> rw [isub_def, GSYM SNOC_APPEND, MAP_SNOC, FUNPOW_SUC, GENLIST, FOLDL_SNOC,
@@ -58,7 +58,7 @@ Proof
  >> fs []
  >> qabbrev_tac ‘n = LENGTH vs’
  >> rw [lift_dABSi]
- >> Q.PAT_X_ASSUM ‘LAMl vs t = _’ K_TAC
+ >> Q.PAT_X_ASSUM ‘dLAMl vs t = _’ K_TAC
  >> qabbrev_tac ‘N = FOLDL lift t (GENLIST I n)’
  >> qabbrev_tac ‘Ms = GENLIST dV n’
  >> qabbrev_tac ‘Vs = MAP (\i. i + n) (REVERSE vs)’
@@ -92,13 +92,13 @@ QED
 
 (* |- !t vs.
         ALL_DISTINCT vs ==>
-        LAMl vs t =
+        dLAMl vs t =
         dABSi (LENGTH vs)
           (FOLDL lift t (GENLIST I (LENGTH vs)) ISUB
            ZIP (GENLIST dV (LENGTH vs),MAP (\i. i + LENGTH vs) (REVERSE vs)))
  *)
-Theorem LAMl_to_dABSi_applied[local] =
-    GEN_ALL (SIMP_RULE std_ss [LET_DEF] LAMl_to_dABSi)
+Theorem dLAMl_to_dABSi_applied[local] =
+    GEN_ALL (SIMP_RULE std_ss [LET_DEF] dLAMl_to_dABSi)
 
 (* dB version of hnf_cases (only the ==> direction) *)
 Theorem dhnf_cases :
@@ -114,12 +114,12 @@ Proof
  >> qabbrev_tac ‘vs' = MAP s2n vs’
  >> qabbrev_tac ‘Ms = MAP fromTerm args’
  >> qabbrev_tac ‘y' = s2n y’
- >> Know ‘LAMl vs' (dV y' @* Ms) =
+ >> Know ‘dLAMl vs' (dV y' @* Ms) =
           dABSi (LENGTH vs')
             (FOLDL lift (dV y' @* Ms) (GENLIST I (LENGTH vs')) ISUB
              ZIP (GENLIST dV (LENGTH vs'),
                   MAP (\i. i + LENGTH vs') (REVERSE vs')))’
- >- (MATCH_MP_TAC LAMl_to_dABSi_applied \\
+ >- (MATCH_MP_TAC dLAMl_to_dABSi_applied \\
      qunabbrev_tac ‘vs'’ \\
      MATCH_MP_TAC ALL_DISTINCT_MAP_INJ >> rw [])
  >> ‘LENGTH vs' = n’ by rw [Abbr ‘vs'’] >> POP_ORW
