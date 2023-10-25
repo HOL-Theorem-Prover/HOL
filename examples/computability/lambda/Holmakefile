@@ -1,11 +1,12 @@
 INCLUDES = ../../lambda/barendregt ../../lambda/basics \
            ../../lambda/other-models ../
-OPTIONS = QUIT_ON_FAILURE
+
+EXTRA_CLEANS = $(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
 
 ifdef POLY
 HOLHEAP = computability-heap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o \
-	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
+EXTRA_CLEANS += $(HOLHEAP)
+
 
 BARE_THYS = ../../lambda/barendregt/normal_orderTheory \
             ../../lambda/other-models/pure_dBTheory
