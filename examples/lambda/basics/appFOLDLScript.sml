@@ -26,10 +26,11 @@ val app_eq_appstar = store_thm(
   Induct THEN SRW_TAC [][] THEN1 METIS_TAC [] THEN
   Cases_on `args` THEN SRW_TAC [][] THEN1 METIS_TAC []);
 
-val lam_eq_appstar = store_thm(
-  "lam_eq_appstar",
-  ``∀args f. (LAM v t = f ·· args) ⇔ (args = []) ∧ (f = LAM v t)``,
-  Induct THEN SRW_TAC [][] THEN METIS_TAC []);
+Theorem lam_eq_appstar[simp]:
+  ∀args f. (LAM v t = f ·· args) ⇔ (args = []) ∧ (f = LAM v t)
+Proof
+  Induct THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
 val app_eq_varappstar = store_thm(
   "app_eq_varappstar",
@@ -141,18 +142,19 @@ Proof
   simp[appstar_APPEND, SNOC_APPEND]
 QED
 
+Theorem app_eq_appstar_SNOC:
+    t @* Ms = M1 @@ M2 ⇔
+    (∃Ms0. Ms = SNOC M2 Ms0 ∧ t @* Ms0 = M1) ∨ Ms = [] ∧ t = M1 @@ M2
+Proof
+  Cases_on ‘Ms’ using listTheory.SNOC_CASES >> simp[] >> metis_tac[]
+QED
+
 Theorem appstar_CONS :
     M @@ N @* Ns = M @* (N::Ns)
 Proof
     ‘N::Ns = [N] ++ Ns’ by rw []
  >> ‘M @* [N] = M @@ N’ by rw []
  >> rw [appstar_APPEND]
-QED
-
-Theorem appstar_EQ_LAM[simp]:
-  x ·· Ms = LAM v M ⇔ Ms = [] ∧ x = LAM v M
-Proof
-  qid_spec_tac ‘x’ >> Induct_on ‘Ms’ >> simp[]
 QED
 
 Theorem ssub_appstar :

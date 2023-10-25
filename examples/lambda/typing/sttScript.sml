@@ -443,22 +443,6 @@ Proof
   Induct_on ‘subterm’ >> simp[]
 QED
 
-Theorem appstar_EQ_LAMl:
-  t @* Ms = LAMl vs M ⇔
-    Ms = [] ∧ t = LAMl vs M ∨
-    vs = [] ∧ M = t @* Ms
-Proof
-  Cases_on ‘Ms’ using listTheory.SNOC_CASES >> simp[] >>
-  Cases_on ‘vs’ >> simp[] >> metis_tac[]
-QED
-
-Theorem appstar_EQ_APP:
-  t @* Ms = M1 @@ M2 ⇔
-    (∃Ms0. Ms = SNOC M2 Ms0 ∧ t @* Ms0 = M1) ∨ Ms = [] ∧ t = M1 @@ M2
-Proof
-  Cases_on ‘Ms’ using listTheory.SNOC_CASES >> simp[] >> metis_tac[]
-QED
-
 Theorem term_laml_cases:
   ∀X. FINITE X ⇒
       ∀t. (∃s. t = VAR s) ∨ (∃M1 M2. t = M1 @@ M2) ∨
@@ -529,7 +513,7 @@ Proof
       first_x_assum $ qspec_then ‘M2’ assume_tac >> gs[]>>
       rpt (first_x_assum $ drule_then assume_tac) >>
       simp[] >> iff_tac >> rw[] >>
-      gvs[appstar_EQ_APP, appstar_EQ_LAMl, DISJ_IMP_THM, FORALL_AND_THM] >>
+      gvs[app_eq_appstar_SNOC, LAMl_eq_appstar, DISJ_IMP_THM, FORALL_AND_THM] >>
       dsimp[PULL_EXISTS] >> metis_tac[]) >~
   [‘LAM u $ LAMl us Body’]
   >- (gvs[] >>
