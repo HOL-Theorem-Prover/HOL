@@ -303,7 +303,7 @@ fun optverdict (prompt, optvalue) =
 
 fun dfltverdict (prompt, (value, dflt)) =
     if dflt then value
-    else (print (StringCvt.padRight #" " 20 (prompt ^ ":") ^ value); value);
+    else (print (StringCvt.padRight #" " 20 (prompt ^ ":") ^ value ^ "\n"); value);
 
 verdict ("OS", OS);
 verdict ("poly", poly);
