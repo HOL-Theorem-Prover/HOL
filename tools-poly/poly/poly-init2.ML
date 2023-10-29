@@ -32,7 +32,7 @@ local
   val meta_debug = ref false
 
   fun MDBG s = if !meta_debug then
-                 TextIO.output(TextIO.stdOut, "META_DEBUG: " ^ s() ^ "\n")
+                 TextIO.print("META_DEBUG: " ^ s() ^ "\n")
                else ()
 
   infix ++
