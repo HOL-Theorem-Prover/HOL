@@ -97,13 +97,11 @@ val supp_tpm = prove(
   match_mp_tac (GEN_ALL supp_unique_apart) >>
   srw_tac [][supptpm_support, supptpm_apart, FINITE_GFV])
 
-val _ = overload_on ("FV", ``supp ^t_pmact_t``)
+Overload FV = “supp ^t_pmact_t”
 
-val FINITE_FV = store_thm(
-  "FINITE_FV",
-  ``FINITE (FV t)``,
-  srw_tac [][supp_tpm, FINITE_GFV]);
-val _ = export_rewrites ["FINITE_FV"]
+Theorem FINITE_FV[simp]: FINITE (FV t)
+Proof srw_tac [][supp_tpm, FINITE_GFV]
+QED
 
 fun supp_clause {con_termP, con_def} = let
   val t = mk_comb(``supp ^t_pmact_t``, lhand (concl (SPEC_ALL con_def)))
@@ -777,18 +775,20 @@ QED
     Simultaneous substitution (using a finite map) - much more interesting
    ---------------------------------------------------------------------- *)
 
-val strterm_fmap_supp = store_thm(
-  "strterm_fmap_supp",
-  ``supp (fm_pmact string_pmact ^t_pmact_t) fmap =
-      FDOM fmap ∪
-      supp (set_pmact ^t_pmact_t) (FRANGE fmap)``,
-  SRW_TAC [][fmap_supp]);
+Overload fmFV = “supp (fm_pmact string_pmact ^t_pmact_t)”
+Overload tmsFV = “supp (set_pmact ^t_pmact_t)”
+Overload fmtpm = “fmpm string_pmact term_pmact”
 
-val FINITE_strterm_fmap_supp = store_thm(
-  "FINITE_strterm_fmap_supp",
-  ``FINITE (supp (fm_pmact string_pmact ^t_pmact_t) fmap)``,
-  SRW_TAC [][strterm_fmap_supp, supp_setpm] THEN SRW_TAC [][]);
-val _ = export_rewrites ["FINITE_strterm_fmap_supp"]
+Theorem strterm_fmap_supp:
+  fmFV fmap = FDOM fmap ∪ tmsFV (FRANGE fmap)
+Proof SRW_TAC [][fmap_supp]
+QED
+
+Theorem FINITE_strterm_fmap_supp[simp]:
+  FINITE (fmFV fmap)
+Proof
+  SRW_TAC [][strterm_fmap_supp, supp_setpm] THEN SRW_TAC [][]
+QED
 
 val lem1 = prove(
   ``∃a. ~(a ∈ supp (fm_pmact string_pmact ^t_pmact_t) fm)``,
@@ -814,9 +814,10 @@ val supp_EMPTY = prove(
   qexists_tac `{}` >> srw_tac [][support_def]);
 
 
-val lem2 = prove(
-  ``∀fm. FINITE (supp (set_pmact ^t_pmact_t) (FRANGE fm))``,
-  srw_tac [][supp_setpm] >> srw_tac [][]);
+Theorem lem2[local]: ∀fm. FINITE (tmsFV (FRANGE fm))
+Proof
+  srw_tac [][supp_setpm] >> srw_tac [][]
+QED
 
 val ordering = prove(
   ``(∃f. P f) <=> (∃f. P (combin$C f))``,
@@ -824,10 +825,12 @@ val ordering = prove(
     (qexists_tac `λx y. f y x` >> srw_tac [ETA_ss][combinTheory.C_DEF]) >>
   metis_tac [])
 
-val notin_frange = prove(
-  ``v ∉ supp (set_pmact ^t_pmact_t) (FRANGE p) <=> ∀y. y ∈ FDOM p ==> v ∉ FV (p ' y)``,
+Theorem notin_frange:
+  v ∉ tmsFV (FRANGE p) <=> ∀y. y ∈ FDOM p ==> v ∉ FV (p ' y)
+Proof
   srw_tac [][supp_setpm, EQ_IMP_THM, finite_mapTheory.FRANGE_DEF] >>
-  metis_tac []);
+  metis_tac []
+QED
 
 val ssub_exists =
     parameter_tm_recursion
@@ -867,38 +870,37 @@ val single_ssub = store_thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `s INSERT FV M` THEN
   SRW_TAC [][SUB_VAR, SUB_THM]);
 
-val in_fmap_supp = store_thm(
-  "in_fmap_supp",
-  ``x ∈ supp (fm_pmact string_pmact ^t_pmact_t) fm <=>
-      x ∈ FDOM fm ∨
-      ∃y. y ∈ FDOM fm ∧ x ∈ FV (fm ' y)``,
+Theorem in_fmap_supp:
+  x ∈ fmFV fm ⇔ x ∈ FDOM fm ∨ ∃y. y ∈ FDOM fm ∧ x ∈ FV (fm ' y)
+Proof
   SRW_TAC [][strterm_fmap_supp, nomsetTheory.supp_setpm] THEN
-  SRW_TAC [boolSimps.DNF_ss][finite_mapTheory.FRANGE_DEF] THEN METIS_TAC []);
+  SRW_TAC [boolSimps.DNF_ss][finite_mapTheory.FRANGE_DEF] THEN METIS_TAC []
+QED
 
-val not_in_fmap_supp = store_thm(
-  "not_in_fmap_supp",
-  ``x ∉ supp (fm_pmact string_pmact ^t_pmact_t) fm <=>
-      x ∉ FDOM fm ∧ ∀y. y ∈ FDOM fm ==> x ∉ FV (fm ' y)``,
-  METIS_TAC [in_fmap_supp]);
-val _ = export_rewrites ["not_in_fmap_supp"]
+Theorem not_in_fmap_supp[simp]:
+  x ∉ fmFV fm <=> x ∉ FDOM fm ∧ ∀y. y ∈ FDOM fm ==> x ∉ FV (fm ' y)
+Proof
+  METIS_TAC [in_fmap_supp]
+QED
 
-val ssub_14b = store_thm(
-  "ssub_14b",
-  ``∀t. (FV t ∩ FDOM phi = EMPTY) ==> ((phi : string |-> term) ' t = t)``,
+Theorem ssub_14b:
+  ∀t. (FV t ∩ FDOM phi = EMPTY) ==> ((phi : string |-> term) ' t = t)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
-  Q.EXISTS_TAC `supp (fm_pmact string_pmact ^t_pmact_t) phi` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR, pred_setTheory.EXTENSION] THEN METIS_TAC []);
+  Q.EXISTS_TAC `fmFV phi` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR, pred_setTheory.EXTENSION] THEN METIS_TAC []
+QED
 
 val ssub_value = store_thm(
   "ssub_value",
   ``(FV t = EMPTY) ==> ((phi : string |-> term) ' t = t)``,
   SRW_TAC [][ssub_14b]);
 
-val ssub_FEMPTY = store_thm(
-  "ssub_FEMPTY",
-  ``∀t. (FEMPTY:string|->term) ' t = t``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
-val _ = export_rewrites ["ssub_FEMPTY"]
+Theorem ssub_FEMPTY[simp]:
+  ∀t. (FEMPTY:string|->term) ' t = t
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
 Theorem FV_ssub :
     !fm N. (!y. y IN FDOM fm ==> FV (fm ' y) = {}) ==>

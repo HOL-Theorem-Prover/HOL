@@ -78,7 +78,9 @@ val one_hole_is_normal = store_thm(
   SIMP_TAC std_ss []);
 
 Inductive lameq :
+[~BETA:]
      (!x M N. (LAM x M) @@ N == [N/x]M) /\
+[~REFL:]
      (!M. M == M) /\
 [~SYM:]
      (!M N. M == N ==> N == M) /\
@@ -88,13 +90,58 @@ Inductive lameq :
      (!M N Z. M == N ==> M @@ Z == N @@ Z) /\
 [~APPR:]
      (!M N Z. M == N ==> Z @@ M == Z @@ N) /\
+[~ABS:]
      (!M N x. M == N ==> LAM x M == LAM x N)
 End
 
-Theorem lameq_refl[simp]: M:term == M
+Theorem lameq_refl[simp] = lameq_REFL
+
+Theorem lameq_tpm:
+  ∀M N. M == N ⇒ ∀π. tpm π M == tpm π N
 Proof
-  SRW_TAC [][lameq_rules]
+  Induct_on ‘M == N’ >> simp[tpm_thm, tpm_subst, lameq_BETA] >>
+  metis_tac[lameq_rules]
 QED
+
+Theorem lameq_ind_genX:
+  ∀P f.
+    (∀x:α. FINITE (f x)) ∧
+    (∀v M N x. v ∉ f x ⇒ P (LAM v M @@ N) ([N/v]M) x) ∧
+    (∀M x. P M M x) ∧
+    (∀M N x. N == M ∧ (∀y. P N M y) ⇒ P M N x) ∧
+    (∀L M N x. L == M ∧ M == N ∧ (∀w. P L M w) ∧ (∀y. P M N y) ⇒ P L N x) ∧
+    (∀M N Z x. M == N ∧ (∀y. P M N y) ⇒ P (M @@ Z) (N @@ Z) x) ∧
+    (∀M N Z x. M == N ∧ (∀y. P M N y) ⇒ P (Z @@ M) (Z @@ N) x) ∧
+    (∀v M N x. M == N ∧ v ∉ f x ∧ (∀y. P M N y) ⇒ P (LAM v M) (LAM v N) x) ⇒
+    ∀M N. M == N ⇒ ∀x. P M N x
+Proof
+  rpt gen_tac >> strip_tac >>
+  ‘∀M N. M == N ⇒ ∀π x. P (tpm π M) (tpm π N) x’
+    suffices_by metis_tac[pmact_nil] >>
+  Induct_on ‘M == N’ >> rw[tpm_subst] >~
+  [‘P (LAM (lswapstr π v) _) (LAM _ _) x’]
+  >- (Q_TAC (NEW_TAC "z") ‘FV (tpm π M) ∪ FV (tpm π N) ∪ f x’ >>
+      ‘LAM (lswapstr π v) (tpm π M) = LAM z (tpm [(z,lswapstr π v)] (tpm π M)) ∧
+       LAM (lswapstr π v) (tpm π N) = LAM z (tpm [(z,lswapstr π v)] (tpm π N))’
+        by simp[tpm_ALPHA] >>
+      simp[] >> first_x_assum irule >> simp[GSYM tpm_CONS, lameq_tpm]) >~
+  [‘P (LAM (lswapstr π v) (tpm π M) @@ tpm π N) _ x’]
+  >- (Q_TAC (NEW_TAC "z") ‘FV (tpm π M) ∪ FV (tpm π N) ∪ f x’ >>
+      ‘LAM (lswapstr π v) (tpm π M) = LAM z (tpm [(z,lswapstr π v)] (tpm π M))’
+        by simp[tpm_ALPHA] >>
+      simp[] >>
+      ‘[tpm π N/z] (tpm [(z,lswapstr π v)] (tpm π M)) =
+       [tpm π N/lswapstr π v] (tpm π M)’ suffices_by metis_tac[] >>
+      simp[fresh_tpm_subst, lemma15a]) >>
+  metis_tac[lameq_tpm]
+QED
+
+Theorem lameq_ind_X =
+        lameq_ind_genX |> INST_TYPE [alpha |-> “:unit”]
+                       |> Q.SPECL [‘λM N u. Q M N’, ‘K X’]
+                       |> SRULE[]
+                       |> Q.INST[‘Q’ |-> ‘P’]
+                       |> Q.GENL [‘P’, ‘X’]
 
 val lameq_app_cong = store_thm(
   "lameq_app_cong",
@@ -846,34 +893,42 @@ Proof
   SRW_TAC [][GSYM rator_subst_commutes, FV_SUB]
 QED
 
-val benf_def = Define`benf t <=> bnf t /\ enf t`;
+Definition benf_def:  benf t <=> bnf t /\ enf t
+End
 
+Definition has_bnf_def: has_bnf t = ?t'. t == t' /\ bnf t'
+End
 
-val has_bnf_def = Define`has_bnf t = ?t'. t == t' /\ bnf t'`;
-
+(* wrong? shouldn't this be ==_eta rather than == ? *)
 val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
 
-(* FIXME: can ‘(!y. y IN FDOM fm ==> closed (fm ' y))’ be removed? *)
-Theorem lameq_ssub_cong :
-    !fm. (!y. y IN FDOM fm ==> closed (fm ' y)) /\
-          M == N ==> fm ' M == fm ' N
+Theorem fresh_ssub:
+  ∀N. y ∉ FV N ∧ (∀k:string. k ∈ FDOM fm ⇒ y # fm ' k) ⇒ y # fm ' N
 Proof
-    HO_MATCH_MP_TAC fmap_INDUCT
- >> rw [FAPPLY_FUPDATE_THM]
- >> Know ‘!y. y IN FDOM fm ==> closed (fm ' y)’
- >- (Q.X_GEN_TAC ‘z’ >> DISCH_TAC \\
-    ‘z <> x’ by PROVE_TAC [] \\
-     Q.PAT_X_ASSUM ‘!y. y = x \/ y IN FDOM fm ==> P’ (MP_TAC o (Q.SPEC ‘z’)) \\
-     RW_TAC std_ss [])
- >> DISCH_TAC
- >> ‘fm ' M == fm ' N’ by PROVE_TAC []
- >> Know ‘(fm |+ (x,y)) ' M = [y/x] (fm ' M)’
- >- (MATCH_MP_TAC ssub_update_apply >> art [])
- >> Rewr'
- >> Know ‘(fm |+ (x,y)) ' N = [y/x] (fm ' N)’
- >- (MATCH_MP_TAC ssub_update_apply >> art [])
- >> Rewr'
- >> ASM_SIMP_TAC (betafy (srw_ss())) []
+  ho_match_mp_tac nc_INDUCTION2 >>
+  qexists ‘fmFV fm’ >>
+  rw[] >> metis_tac[]
+QED
+
+Theorem ssub_SUBST:
+  ∀M.
+    (∀k. k ∈ FDOM fm ⇒ v # fm ' k) ∧ v ∉ FDOM fm ⇒
+    fm ' ([N/v]M) = [fm ' N / v] (fm ' M)
+Proof
+  ho_match_mp_tac nc_INDUCTION2 >>
+  qexists ‘fmFV fm ∪ {v} ∪ FV N’ >>
+  rw[] >> rw[lemma14b, SUB_VAR] >>
+  gvs[DECIDE “~p ∨ q ⇔ p ⇒ q”, PULL_FORALL] >>
+  ‘y # fm ' N’ suffices_by simp[SUB_THM] >>
+  irule fresh_ssub >> simp[]
+QED
+
+Theorem lameq_ssub_cong :
+  !M N. M == N ==> ∀fm. fm ' M == fm ' N
+Proof
+  HO_MATCH_MP_TAC lameq_ind_genX >> qexists ‘fmFV’ >>
+  simp[PULL_EXISTS] >> rw[] >>
+  simp[ssub_SUBST, lameq_BETA] >> metis_tac[lameq_rules]
 QED
 
 Theorem lameq_appstar_cong :
