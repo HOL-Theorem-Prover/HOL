@@ -830,6 +830,16 @@ val is_comb_APP_EXISTS = store_thm(
   ``!t. is_comb t = (?u v. t = u @@ v)``,
   PROVE_TAC [term_CASES, is_comb_thm]);
 
+Theorem is_comb_appstar_exists :
+    !M. is_comb M ==> ?t args. (M = t @* args) /\ args <> [] /\ ~is_comb t
+Proof
+    HO_MATCH_MP_TAC simple_induction >> rw []
+ >> reverse (Cases_on ‘is_comb M’)
+ >- (qexistsl_tac [‘M’, ‘[M']’] >> rw [])
+ >> FULL_SIMP_TAC std_ss [GSYM appstar_SNOC]
+ >> qexistsl_tac [‘t’, ‘SNOC M' args’] >> rw []
+QED
+
 val is_comb_rator_rand = store_thm(
   "is_comb_rator_rand",
   ``!t. is_comb t ==> (rator t @@ rand t = t)``,
