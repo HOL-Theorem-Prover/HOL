@@ -6,7 +6,7 @@
 (Released: xxxxxx)
 
 We are pleased to announce the Trindemossen 1 release of HOL4.
-We have changed the name (from Kananaskis) because of the kernel change reflected by the new efficient compute tool (see below).
+We have changed the name (from Kananaskis) because of the kernel change reflected by the new efficient compute tool (see [below](#verified-comp)).
 
 Contents
 --------
@@ -96,7 +96,7 @@ New tools:
     To use the library, it has to be loaded before the functions that should be
     evaluated are **defined**.
 
-- **Fast in-logic computation primitive**:
+- <a name="verified-comp">**Fast in-logic computation primitive**:</a>
   A port of the Candle theorem prover's primitive rule for computation, described in the paper *"Fast, Verified Computation for Candle"* (ITP 2023), has been added to the kernel.
   The new compute primitive works on certain operations on a lisp-like datatype of pairs of numbers:
 
@@ -243,6 +243,54 @@ Incompatibilities:
 
     The failure to flag the second as an error meant that the theorem called `xor_F` completely masked the rewrite in the opposite direction.
     The fix was to rename the second `xor_F` to now be `F_xor`, which is an incompatibility if your theory depends on `extra_boolTheory`.
+
+*   The labels for clauses/rules in the “modern” `Inductive` syntax are now syntactically equivalent to conjunctions, so what used to be written as something like
+
+           Inductive reln:
+           [~name1:] (!x y. x < y ==> reln (x + 1) y) /\
+           [~sym:]
+              (!x y. reln x y ==> reln y x) /\
+           [~zero:]
+              (!x. reln x 0)
+           End
+
+    should now be written
+
+           Inductive reln:
+           [~name1:] (!x y. x < y ==> reln (x + 1) y)
+           [~sym:]
+              (!x y. reln x y ==> reln y x)
+           [~zero:]
+              (!x. reln x 0)
+           End
+
+     where all of the trailing/separating conjunctions have been removed.
+     The parentheses around each clause above can also be removed, if desired.
+
+     Attempting to mix labels and top-level conjunctions will lead to very confusing results: it’s best to only use one or the other.
+     If you do not wish to name rules, you can use any of the following as “nullary” labels: `[]`, `[/\]`, or `[∧]`.
+     As with normal labels, these need to occur in column zero.
+
+     The first rule need not have a label at all, so that
+
+           Inductive reln:
+              !x y. x < y ==> reln (x + 1) y
+           [/\]
+              !x y. reln x y ==> reln y x
+           [~zero:]
+              !x. reln x 0
+           End
+
+     will work.
+     It will also work to switch to conjunctions for trailing rules:
+
+           Inductive reln:
+           [~name1:] !x y. x < y ==> reln (x + 1) y
+           [~sym:]
+              (!x y. reln x y ==> reln y x) /\
+              (!x. reln x 0) /\
+              (!y. reln 100 y)
+           End
 
 * * * * *
 

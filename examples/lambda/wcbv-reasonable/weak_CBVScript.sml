@@ -205,9 +205,9 @@ QED
 
 Inductive step:
 [~App:]
-        (∀s t. step (dAPP (dABS s) (dABS t)) (subst s 0 (dABS t))) ∧
+        (∀s t. step (dAPP (dABS s) (dABS t)) (subst s 0 (dABS t)))
 [~AppR:]
-        (∀s t t'. step t t' ⇒ step (dAPP (dABS s) t) (dAPP (dABS s) t')) ∧
+        (∀s t t'. step t t' ⇒ step (dAPP (dABS s) t) (dAPP (dABS s) t'))
 [~AppL:]
         (∀s s' t. step s s' ⇒ step (dAPP s t) (dAPP s' t))
 End
@@ -307,7 +307,7 @@ QED
 
 Inductive timeBS:
 [~Val:]
-  (∀s. timeBS (0:num) (dABS s) (dABS s)) ∧
+  (∀s. timeBS (0:num) (dABS s) (dABS s))
 [~Beta:]
   (∀s s' t t' u i j k l.
     timeBS i s (dABS s') ∧
@@ -392,7 +392,7 @@ QED
 
 Inductive spaceBS:
 [~Val:]
-  (∀s. spaceBS (size (dABS s)) (dABS s) (dABS s)) ∧
+  (∀s. spaceBS (size (dABS s)) (dABS s) (dABS s))
 [~Beta:]
   (∀s s' t t' u m1 m2 m3 m.
     spaceBS m1 s (dABS s') ∧

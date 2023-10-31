@@ -356,11 +356,11 @@ QED
 Inductive gentype:
 [~VAR:]
   (∀Γ s τ.
-     valid_ctxt Γ ∧ MEM (s,τ) Γ ⇒ gentype Γ (VAR s : term) τ {(Γ,VAR s,τ)}) ∧
+     valid_ctxt Γ ∧ MEM (s,τ) Γ ⇒ gentype Γ (VAR s : term) τ {(Γ,VAR s,τ)})
 [~APP:]
   (∀Γ M N A B fs xs.
      gentype Γ M (A → B) fs ∧ gentype Γ N A xs ⇒
-     gentype Γ (M @@ N) B ({(Γ,M @@ N,B)} ∪ fs ∪ xs)) ∧
+     gentype Γ (M @@ N) B ({(Γ,M @@ N,B)} ∪ fs ∪ xs))
 [~LAM:]
   (∀Γ v M A B bs.
      gentype ((v,A) :: Γ) M B bs ⇒
@@ -394,13 +394,13 @@ QED
 
 Inductive subterm:
 [~refl:]
-  (∀M:term Γ. FINITE Γ ∧ FV M ⊆ Γ ⇒ (subterm (Γ, M) (Γ, M))) ∧
+  (∀M:term Γ. FINITE Γ ∧ FV M ⊆ Γ ⇒ (subterm (Γ, M) (Γ, M)))
 [~appL:]
   (∀Γ Γ₀ M0 M N.
-     FV N ⊆ Γ ∧ subterm (Γ₀, M0) (Γ, M) ⇒ subterm (Γ₀, M0) (Γ, M @@ N)) ∧
+     FV N ⊆ Γ ∧ subterm (Γ₀, M0) (Γ, M) ⇒ subterm (Γ₀, M0) (Γ, M @@ N))
 [~appR:]
   (∀Γ₀ Γ N0 M N.
-     FV M ⊆ Γ ∧ subterm (Γ₀, N0) (Γ, N) ⇒ subterm (Γ₀, N0) (Γ, M @@ N)) ∧
+     FV M ⊆ Γ ∧ subterm (Γ₀, N0) (Γ, N) ⇒ subterm (Γ₀, N0) (Γ, M @@ N))
 [~lam:]
   (∀Γ₀ Γ v M N.
      v ∉ Γ ∧

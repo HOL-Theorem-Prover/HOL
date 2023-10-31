@@ -113,12 +113,12 @@ QED
 
 Inductive aeq:
 [~var:]
-  (!v. aeq (rhvar v) (rhvar v)) /\
+  (!v. aeq (rhvar v) (rhvar v))
 [~const:]
-  (!v. aeq (rhconst v) (rhconst v)) /\
+  (!v. aeq (rhconst v) (rhconst v))
 [~app:]
   (!t1 t2 u1 u2. aeq t1 u1 /\ aeq t2 u2 ==>
-                 aeq (rhapp t1 t2) (rhapp u1 u2)) /\
+                 aeq (rhapp t1 t2) (rhapp u1 u2))
 [~lam:]
   (!v1 v2 u t z ty.
       ~(z IN allvars ty t) /\ ~(z IN allvars ty u) /\ ~(z = v1) /\

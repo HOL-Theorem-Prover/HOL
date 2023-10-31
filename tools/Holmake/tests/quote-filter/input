@@ -25,8 +25,8 @@ s2`
 (* (*  *) `;*)
 
 Inductive even:
-[~0[simp]:] even 0 /\
-(!n. even n ==> odd (n + 1)) /\
+[~0[simp]:] even 0
+[/\] (!n. even n ==> odd (n + 1))
 [even_suc:]
   (!m. odd m ==> even (m + 1))
 End
@@ -38,7 +38,7 @@ End
 Inductive compile_rel:
   (* (*  *) *)
 [~Var:]
-  compile_rel foo bar /\
+  compile_rel foo bar
 [~Ret:]
   compile_rel foo bar
 End
@@ -61,3 +61,18 @@ Theorem sexpPEG_start[simp] = SIMP_CONV(srw_ss())[sexpPEG_def]â€œsexpPEG.startâ€
 Datatype : foo = bar
 End
 
+Inductive reln:
+   !x y. x < y ==> reln (x + 1) y
+[/\]
+   !x y. reln x y ==> reln y x
+[~zero:]
+   !x. reln x 0
+End
+
+Inductive reln:
+[~name1:] !x y. x < y ==> reln (x + 1) y
+[~sym:]
+   (!x y. reln x y ==> reln y x) /\
+   (!x. reln x 0) /\
+   (!y. reln 100 y)
+End

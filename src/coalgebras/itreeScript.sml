@@ -760,9 +760,9 @@ QED
 
 Inductive iset:
 [~ret:]
-  (!e. iset (Ret e) e) /\
+  !e. iset (Ret e) e
 [~vis:]
-  (iset (f i) e  ==> iset (Vis ov f) e)
+  iset (f i) e  ==> iset (Vis ov f) e
 End
 
 Theorem iset_thm[simp]:
@@ -775,11 +775,11 @@ QED
 
 Inductive ifinite:
 [~ret:]
-  ifinite (Ret e) /\
+  ifinite (Ret e)
 [~div:]
-  ifinite Div /\
+  ifinite Div
 [~vis:]
-  ((! iv. ifinite (f iv)) ==> ifinite (Vis ov f))
+  (! iv. ifinite (f iv)) ==> ifinite (Vis ov f)
 End
 
 Definition itruncate_def:
@@ -849,7 +849,7 @@ QED
 
 Inductive at_path:
 [~ret:]
-  at_path (Ret e) [] e /\
+  at_path (Ret e) [] e
 [~vis:]
   (at_path (f i) p e ==> at_path (Vis ov f) ((ov,i)::p) e)
 End
@@ -877,9 +877,9 @@ QED
 
 CoInductive ievery:
 [~div:]
-  (ievery P Div) /\
+  (ievery P Div)
 [~ret:]
-  (P e ==> ievery P (Ret e)) /\
+  (P e ==> ievery P (Ret e))
 [~vis:]
   ((! iv. ievery P (f iv)) ==> ievery P (Vis ov f))
 End
@@ -894,9 +894,9 @@ QED
 
 Inductive iexists:
 [~ret:]
-  (P e ==> iexists P (Ret e)) /\
+  (P e ==> iexists P (Ret e))
 [~vis:]
-  ((? iv. iexists P (f iv)) ==> iexists P (Vis ov f))
+  (? iv. iexists P (f iv)) ==> iexists P (Vis ov f)
 End
 
 Theorem iexists_thm[simp]:

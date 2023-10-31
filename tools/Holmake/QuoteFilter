@@ -33,6 +33,7 @@ datatype qfs = QFS of {comdepth : int ref,
                        strlitstart : string option ref,
                        induction_thm : string ref,
                        labelidxs : (string * int) list ref,
+                       inddefp : bool ref,
                        conjcount : int ref,
                        row      : int ref,
                        rowstart : int ref,
@@ -53,6 +54,7 @@ fun newstate {inscriptp,quotefixp}  =
        row = ref 0,
        rowstart = ref 0,
        inscript = inscriptp,
+       inddefp = ref false,
        quotefix = quotefixp,
        labelidxs = ref [],
        conjcount = ref 0,
@@ -64,9 +66,11 @@ fun newstate {inscriptp,quotefixp}  =
 fun linenum (QFS{row,...}) = !row + 1
 
 fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,
+                    inddefp,
                     labelidxs, conjcount, stem, strlitstart, ...}) =
     (comdepth := 0; pardepth := 0; antiquote_stack := []; mltype_stack := [];
-     conjcount := 0; labelidxs := []; stem := ""; strlitstart := NONE);
+     conjcount := 0; labelidxs := []; stem := ""; strlitstart := NONE;
+     inddefp := false);
 
 
 fun ECHO (QFS _) s = s
@@ -99,14 +103,21 @@ fun extra_binds stem (s,i) =
       "\", Drule.cj " ^ Int.toString i ^ " " ^ stem ^ "_rules);"
     end
 
-fun process_defnlabel labref i s =
+fun process_defnlabel (QFS{labelidxs,conjcount,row,inddefp,...}) s =
     let
+      (* 2 because the yytext (s here) includes the leading newline, and then
+         the left bracket, -3 because of the right bracket *)
       val s' = Substring.extract (s, 2, SOME (size s - 3))
                  |> Substring.dropl Char.isSpace
                  |> Substring.dropr (fn c => Char.isSpace c orelse c = #":")
                  |> Substring.string
+      val addition =
+        if s' = "/\092" orelse s' = "\226\136\167" orelse s' = "" then []
+        else [(s',!conjcount + 1)]
     in
-      labref := !labref @ [(s',i)]
+      inc conjcount;
+      inddefp := true;
+      labelidxs := !labelidxs @ addition
     end
 
 
@@ -118,7 +129,8 @@ fun indthm_munge s =
     else s ^ "_ind"
 
 fun makesafe c =
-    if not (Char.isPrint c) then "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
+    if not (Char.isPrint c) then
+      "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
     else str c
 
 fun safeprint x s = ECHO x (String.translate makesafe s)
@@ -189,8 +201,8 @@ fun eof (QFS {mltype_stack,...}) =
       | _ => (~1, "")
 %%
 %structure QuoteFilter
-%s string comment qcomment tmcomment tycomment defncomment datatypecomment tyquote tmquote quote defnquote datatypequote ANTIQ thmval TERMINATION_VAL holstrlit holstrlitlbrk;
-%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm, labelidxs, conjcount, stem,strlitstart});
+%s string comment qcomment tmcomment tycomment defncomment defncomment0 datatypecomment tyquote tmquote quote defnquote0 defnquote datatypequote ANTIQ thmval TERMINATION_VAL holstrlit holstrlitlbrk;
+%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm, inddefp, labelidxs, conjcount, stem,strlitstart});
 %full
 
 letter = [A-Za-z];
@@ -218,13 +230,13 @@ fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
 Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{alphaMLid_list}"]")?;
-DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+;
-DefinitionLabel = "["{ws}*{DefinitionLabelID}("["{alphaMLid_list}"]")?{ws}*":"{ws}*"]";
+HOLconjunction = "/\092" | "\226\136\167";
+DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ | {HOLconjunction};
+DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]";
 Definitionpfx =
   "Definition"{ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
-HOLconjunction = "/\092" | "\226\136\167";
 HOLSTRLITstart = "\"" | "\226\128\185" | "\194\171";
 HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
 ProofLine =
@@ -280,7 +292,7 @@ ProofLine =
   (yypos,
    if inscript andalso not quotefix then
      let
-       infix |> fun x |> f = f x
+       infix |> 
        fun extract (s,p) l =
            if List.exists (fn (a,_) => a = s) l then
              (p, List.filter (fn (a,_) => a <> s) l)
@@ -312,7 +324,7 @@ ProofLine =
 (
   if inscript andalso not quotefix then
     let
-      infix |> fun x |> f = f x
+      infix |> 
       val pfx = mlswitch (!mltype_stack) "" "" ");"
       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
@@ -336,7 +348,7 @@ ProofLine =
   (yypos,
    if inscript andalso not quotefix then
      let
-       infix |> fun x |> f = f x
+       infix |>
        val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
        val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
@@ -352,6 +364,8 @@ ProofLine =
      in
        mltype_stack := [];
        induction_thm := ind_thm;
+       inddefp := false;
+       labelidxs := [];
        YYBEGIN defnquote;
        ECHO yyarg (pfx ^
                    "val " ^ thname ^ " = TotalDefn.qDefine \"" ^
@@ -365,7 +379,7 @@ ProofLine =
   (yypos,
    if inscript andalso not quotefix then
      let
-       infix |> fun x |> f = f x
+       infix |>
        val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
        val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop = *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
@@ -385,7 +399,7 @@ ProofLine =
   (yypos,
    if inscript andalso not quotefix then
      let
-       infix |> fun x |> f = f x
+       infix |>
        val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
        val s0 = String.substring(yytext,0,size yytext - 1) (* drop : *)
        val s =
@@ -403,12 +417,13 @@ ProofLine =
        conjcount := 0;
        pardepth := 0;
        stem := s;
-       YYBEGIN defnquote;
+       inddefp := true;
+       YYBEGIN defnquote0;
        induction_thm := s ^ "_strongind";
        ECHO yyarg
             (pfx ^ "val (" ^ s ^ "_rules," ^ s ^ indsfx ^ "," ^
              s ^ "_cases) = (fn q => fn _ => " ^ entrypoint ^ " \"" ^
-             String.toString s ^ "\" q) [QUOTE \"" ^
+             String.toString s ^ "\" q) [QUOTE \"(" ^
              locpragma yyarg (yytext, yypos) 0)
      end
    else yytext)
@@ -518,7 +533,9 @@ ProofLine =
                                 else bslash_escape_s yytext));
 <string>[^\\"\n\015\128-\255]{1,100} => ((yypos, (ECHO yyarg yytext)));
 <string>. => ((yypos, (ECHO yyarg yytext)));
-<comment,tmcomment,tycomment,qcomment,defncomment>"(*" => ((yypos, (inc comdepth; ECHO yyarg yytext)));
+<comment,tmcomment,tycomment,qcomment,defncomment,defncomment0>"(*" => (
+  (yypos, (inc comdepth; yytext))
+);
 <comment>"*)" => (
  (yypos, (
     dec comdepth;
@@ -540,7 +557,12 @@ ProofLine =
 <defncomment>"*)" => (
   dec comdepth;
   if !comdepth < 1 then YYBEGIN defnquote else ();
-  (yypos, ECHO yyarg yytext)
+  (yypos, yytext)
+);
+<defncomment0>"*)" => (
+  dec comdepth;
+  if !comdepth < 1 then YYBEGIN defnquote0 else ();
+  (yypos, yytext)
 );
 <datatypecomment>"*)" => (
   (yypos, (
@@ -551,20 +573,20 @@ ProofLine =
   )
 );
 <comment>{newline} => ((yypos, (newline yyarg (yypos,yytext))));
-<tmcomment,tycomment,qcomment,defncomment,datatypecomment>{newline} => (
+<tmcomment,tycomment,qcomment,defncomment,defncomment0,datatypecomment>{newline} => (
   (yypos,
    if quotefix then yytext else qnewline yyarg (yypos,yytext))
 );
-<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\\" => (
+<tmcomment,tycomment,qcomment,defncomment,defncomment0,datatypecomment>"\\" => (
   (yypos, if quotefix then yytext else ECHO yyarg "\\\\")
 );
-<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\"" => (
+<tmcomment,tycomment,qcomment,defncomment,defncomment0,datatypecomment>"\"" => (
   (yypos, if quotefix then yytext else ECHO yyarg "\\\"")
 );
-<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\t" => (
+<tmcomment,tycomment,qcomment,defncomment,defncomment0,datatypecomment>"\t" => (
   (yypos, if quotefix then yytext else ECHO yyarg "\\t")
 );
-<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"^`" => (
+<tmcomment,tycomment,qcomment,defncomment,defncomment0,datatypecomment>"^`" => (
   (yypos, if quotefix then yytext else ECHO yyarg "`")
 );
 <tmcomment,tycomment>{fullquoteend} => (
@@ -587,7 +609,7 @@ ProofLine =
         case attr_alist of
           [] => ECHO yyarg ("\"],(" ^ goalabs ^ nls)
         | _ => ECHO yyarg
-                  ("\"]," ^ 
+                  ("\"]," ^
                    mk_tacmodifier_string attr_alist ^ "(" ^ goalabs ^ nls)
       end
    )
@@ -600,7 +622,7 @@ ProofLine =
     if quotefix then pfx_replace "`" rsquo yytext else ECHO yyarg "\"]")
   )
 );
-<tmcomment,tycomment,qcomment,defncomment,datatypecomment>[\128-\255] => (
+<tmcomment,tycomment,qcomment,defncomment,defncomment0,datatypecomment>[\128-\255] => (
   (yypos, if quotefix then yytext else ECHO yyarg (bslash_escape_s yytext))
 );
 <datatypecomment>{newline}"End" => (
@@ -613,7 +635,7 @@ ProofLine =
    )
   )
 );
-<comment,tmcomment,tycomment,qcomment,defncomment,datatypecomment>. => ((yypos, (ECHO yyarg yytext)));
+<comment,tmcomment,tycomment,qcomment,defncomment,defncomment0,datatypecomment>. => ((yypos, (ECHO yyarg yytext)));
 
 <quote>{HOLSTRLITstart} => (
   antiquote_stack := inQUOTE :: !antiquote_stack ;
@@ -693,41 +715,45 @@ ProofLine =
 <quote,tmquote,tyquote,defnquote,datatypequote>"^`" => (
   (yypos, if quotefix then yytext else ECHO yyarg "`")
 );
-<defnquote>{HOLconjunction} => (
-  (* warn row ("Saw conjunction at depth " ^ Int.toString (!pardepth) ^ "!");*)
-  (if !pardepth = 0 then (inc conjcount) else ());
-  (yypos, if Char.isPrint (String.sub(yytext,0)) then String.toString yytext
-          else mk_strsafe yytext)
-);
-<defnquote>{newline}{DefinitionLabel} => (
+<defnquote,defnquote0>{newline}{DefinitionLabel} => (
   (yypos,
    if quotefix then yytext
-   else (
-     (* warn row
-      ("Saw label with pd = " ^ Int.toString (!pardepth) ^ ", cc = " ^
-       Int.toString (!conjcount)); *)
-    process_defnlabel labelidxs (!conjcount + 1) yytext;
-    qnewline yyarg (yypos, yytext)
-   )
+   else
+     let
+     (* val _ = warn row
+          ("Saw label with pd = " ^ Int.toString (!pardepth) ^ ", cc = " ^
+           Int.toString (!conjcount)); *)
+        val pfx_s =
+          case !conjcount > 0 of
+            false => ""
+          | true => ") /\\\\ ("
+     in
+       YYBEGIN defnquote;
+       process_defnlabel yyarg yytext;
+       pfx_s ^ qnewline yyarg (yypos, yytext)
+     end
   )
 );
 <defnquote>"(*" => (
-  (yypos, (inc comdepth; YYBEGIN defncomment; ECHO yyarg yytext))
+  (yypos, (inc comdepth; YYBEGIN defncomment; yytext))
 );
-<defnquote>"(" => (inc pardepth; (yypos, ECHO yyarg yytext));
-<defnquote>")" => (
-  dec pardepth;
-  (* if !pardepth < 0 then warn row "Decremented pardepth below zero" else ();*)
-  (yypos, ECHO yyarg yytext));
+<defnquote0>"(*" => (
+  (yypos, (inc comdepth; YYBEGIN defncomment0; yytext))
+);
+
 <quote,tmquote,tyquote,defnquote,datatypequote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
-<quote,tmquote,tyquote,defnquote,datatypequote>{newline} => (
+<defnquote0>"^"{symbol} => (
+  (yypos, if quotefix then yytext 
+          else (inc conjcount; YYBEGIN defnquote; yytext))
+);
+<quote,tmquote,tyquote,defnquote0,defnquote,datatypequote>{newline} => (
   (yypos, if quotefix then yytext else qnewline yyarg (yypos,yytext))
 );
 
 <quote>{quoteend} => (
    (yypos,
     (YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
-     if quotefix then pfx_replace "`" rsquo yytext else ECHO yyarg "\"]"
+     if quotefix then pfx_replace "`" rsquo yytext else "\"]"
     )
    )
 );
@@ -740,15 +766,14 @@ ProofLine =
     )
   )
 );
-<defnquote>{newline}"End" => (
+<defnquote,defnquote0,defncomment0,defncomment>{newline}"End" => (
   (yypos, (
      YYBEGIN INITIAL;
      nextline yyarg (yypos + size yytext);
      if quotefix then yytext
-     else (ECHO yyarg ("\"\n] NONE; " ^ magic_bind yyarg ^
-                       String.concat (List.map (extra_binds (!stem))
-                                               (!labelidxs))) before
-           labelidxs := [])
+     else 
+       (if !inddefp then ")" else "") ^ "\"\n] NONE; " ^ magic_bind yyarg ^
+       String.concat (List.map (extra_binds (!stem)) (!labelidxs))
     )
   )
 );
@@ -786,6 +811,15 @@ ProofLine =
 <defnquote>"^" => ((yypos, (YYBEGIN ANTIQ;
                    antiquote_stack := inDFQUOTE :: !antiquote_stack;
                    if quotefix then yytext else ECHO yyarg "\", ANTIQUOTE (")));
+<defnquote0>"^" => (
+  (yypos, (
+     YYBEGIN ANTIQ;
+     antiquote_stack := inDFQUOTE :: !antiquote_stack;
+     inc conjcount;
+     if quotefix then yytext else "(\", ANTIQUOTE ("
+   )
+  )
+);
 <datatypequote>"^" => (
   (yypos, (
     YYBEGIN ANTIQ;
@@ -794,11 +828,25 @@ ProofLine =
    )
   )
 );
+<defnquote0>{ws}+ => ((yypos, yytext));
+<defnquote0>[\128-\255] => (
+  (yypos,
+   (inc conjcount;
+    YYBEGIN defnquote;
+    if quotefix then yytext else bslash_escape_s yytext)
+  )
+);
 <quote,tmquote,tyquote,defnquote,datatypequote>[\128-\255] => (
   (yypos, if quotefix then yytext else ECHO yyarg (bslash_escape_s yytext))
 );
 <quote,tmquote,tyquote,defnquote,datatypequote>. => (
   (yypos, if quotefix then yytext else ECHO yyarg (String.toString yytext))
+);
+<defnquote0>. => (
+  (yypos,
+   (YYBEGIN defnquote;
+    inc conjcount;
+    if quotefix then yytext else String.toString yytext))
 );
 
 <ANTIQ>{MLid} => ((yypos, (case !antiquote_stack of

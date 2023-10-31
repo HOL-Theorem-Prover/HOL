@@ -55,7 +55,7 @@ Proof
 QED
 
 Inductive iscv:
-[~num:] (!m. iscv (N0 m)) /\
+[~num:] (!m. iscv (N0 m))
 [~pair:] (!c d. iscv c /\ iscv d ==> iscv (P0 c d))
 End
 
@@ -107,7 +107,7 @@ Theorem cv_induction =
 
 Inductive cvrel:
 [~num:]
-  (!n. cvrel f g (Num n) (f n)) /\
+  (!n. cvrel f g (Num n) (f n))
 [~pair:]
   (!c d rc rd. cvrel f g c rc /\ cvrel f g d rd ==>
                cvrel f g (Pair c d) (g c d rc rd))
@@ -254,7 +254,7 @@ Proof
 QED
 
 Inductive isnseq:
-[~nil:] isnseq (Num 0) /\
+[~nil:] isnseq (Num 0)
 [~cons:] (!n c. isnseq c ==> isnseq (Pair n c))
 End
 

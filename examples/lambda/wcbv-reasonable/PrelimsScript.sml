@@ -278,13 +278,13 @@ QED
 (* reduce while keeping track of the maximum size of terms *)
 Inductive redWithMaxSize:
 [~R:]
-        (∀size step (m: num) s. m = size s ⇒ redWithMaxSize size step m s s) ∧
+  ∀size step (m: num) s. m = size s ⇒ redWithMaxSize size step m s s
 [~C:]
-        (∀size step (s: 'a) (s': 'a) (t: 'a) (m: num) (m':num).
-                step s s' ∧
-                redWithMaxSize size step m' s' t ∧
-                m = MAX (size s) m' ⇒
-                redWithMaxSize size step m s t)
+  ∀size step (s: 'a) (s': 'a) (t: 'a) (m: num) (m':num).
+    step s s' ∧
+    redWithMaxSize size step m' s' t ∧
+    m = MAX (size s) m' ⇒
+    redWithMaxSize size step m s t
 End
 
 Theorem redWithMaxSize_ge:

@@ -79,19 +79,19 @@ val one_hole_is_normal = store_thm(
 
 Inductive lameq :
 [~BETA:]
-     (!x M N. (LAM x M) @@ N == [N/x]M) /\
+  !x M N. (LAM x M) @@ N == [N/x]M
 [~REFL:]
-     (!M. M == M) /\
+  !M. M == M
 [~SYM:]
-     (!M N. M == N ==> N == M) /\
+  !M N. M == N ==> N == M
 [~TRANS:]
-     (!M N L. M == N /\ N == L ==> M == L) /\
+  !M N L. M == N /\ N == L ==> M == L
 [~APPL:]
-     (!M N Z. M == N ==> M @@ Z == N @@ Z) /\
+  !M N Z. M == N ==> M @@ Z == N @@ Z
 [~APPR:]
-     (!M N Z. M == N ==> Z @@ M == Z @@ N) /\
+  !M N Z. M == N ==> Z @@ M == Z @@ N
 [~ABS:]
-     (!M N x. M == N ==> LAM x M == LAM x N)
+  !M N x. M == N ==> LAM x M == LAM x N
 End
 
 Theorem lameq_refl[simp] = lameq_REFL
@@ -278,21 +278,21 @@ End
  *)
 Inductive asmlam :
 [~eqn:]
-  (!M N. (M,N) IN eqns ==> asmlam eqns M N) /\
+  !M N. (M,N) IN eqns ==> asmlam eqns M N
 [~beta:]
-  (!x M N. asmlam eqns (LAM x M @@ N) ([N/x]M)) /\
+  !x M N. asmlam eqns (LAM x M @@ N) ([N/x]M)
 [~refl:]
-  (!M. asmlam eqns M M) /\
+  !M. asmlam eqns M M
 [~sym:]
-  (!M N. asmlam eqns M N ==> asmlam eqns N M) /\
+  !M N. asmlam eqns M N ==> asmlam eqns N M
 [~trans:]
-  (!M N P. asmlam eqns M N /\ asmlam eqns N P ==> asmlam eqns M P) /\
+  !M N P. asmlam eqns M N /\ asmlam eqns N P ==> asmlam eqns M P
 [~lcong:]
-  (!M M' N. asmlam eqns M M' ==> asmlam eqns (M @@ N) (M' @@ N)) /\
+  !M M' N. asmlam eqns M M' ==> asmlam eqns (M @@ N) (M' @@ N)
 [~rcong:]
-  (!M N N'. asmlam eqns N N' ==> asmlam eqns (M @@ N) (M @@ N')) /\
+  !M N N'. asmlam eqns N N' ==> asmlam eqns (M @@ N) (M @@ N')
 [~abscong:]
-  (!x M M'. asmlam eqns M M' ==> asmlam eqns (LAM x M) (LAM x M'))
+  !x M M'. asmlam eqns M M' ==> asmlam eqns (LAM x M) (LAM x M')
 End
 
 (* Definition 2.1.32 [1, p.33]

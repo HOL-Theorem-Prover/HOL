@@ -42,11 +42,11 @@ End
 
 Inductive step:
 [~pushVal:]
-  (∀P P' Q T V.
-    jumpTarget 0 [] P = SOME (Q,P') ⇒ step ((lamT::P)::T,V) (tc P' T,Q::V)) ∧
+  ∀P P' Q T V.
+    jumpTarget 0 [] P = SOME (Q,P') ⇒ step ((lamT::P)::T,V) (tc P' T,Q::V)
 [~beta:]
-  (∀P Q R T V.
-    step ((appT::P)::T,Q::R::V) (substP R 0 (lamT::Q++[retT])::tc P T,V))
+  ∀P Q R T V.
+    step ((appT::P)::T,Q::R::V) (substP R 0 (lamT::Q++[retT])::tc P T,V)
 End
 
 Definition init:
