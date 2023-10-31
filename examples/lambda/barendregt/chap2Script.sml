@@ -999,44 +999,33 @@ Proof
  >> MATCH_MP_TAC lameq_appstar_cong >> art []
 QED
 
+(* NOTE: added ‘DISTINCT vs’ in all cases.
+
+   This proof is now based on the newly added "term_laml_cases".
+ *)
 Theorem strange_cases :
-    !M : term. (?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
+    !M : term. (?vs M'. (M = LAMl vs M') /\ (size M' = 1) /\ ALL_DISTINCT vs) \/
                (?vs args t.
-                         (M = LAMl vs (FOLDL APP t args)) /\
-                         ~(args = []) /\ ~is_comb t)
+                         (M = LAMl vs (t @* args)) /\
+                         ~(args = []) /\ ~is_comb t /\ ALL_DISTINCT vs)
 Proof
-  HO_MATCH_MP_TAC simple_induction THEN REPEAT CONJ_TAC THENL [
-    (* VAR *) GEN_TAC THEN DISJ1_TAC THEN
-              MAP_EVERY Q.EXISTS_TAC [`[]`, `VAR s`] THEN SRW_TAC [][size_thm],
-    (* app *) MAP_EVERY Q.X_GEN_TAC [`M`,`N`] THEN
-              DISCH_THEN (CONJUNCTS_THEN ASSUME_TAC) THEN
-              DISJ2_TAC THEN Q.EXISTS_TAC `[]` THEN
-              SIMP_TAC (srw_ss()) [] THEN
-              `(?vs M'. (M = LAMl vs M') /\ (size M' = 1)) \/
-               (?vs args t.
-                        (M = LAMl vs (FOLDL APP t args)) /\ ~(args = []) /\
-                        ~is_comb t)` by PROVE_TAC []
-              THENL [
-                MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
-                ASM_SIMP_TAC (srw_ss()) [] THEN
-                fs [size_1_cases],
-                ASM_SIMP_TAC (srw_ss()) [] THEN
-                Cases_on `vs` THENL [
-                  MAP_EVERY Q.EXISTS_TAC [`SNOC N args`, `t`] THEN
-                  ASM_SIMP_TAC (srw_ss()) [FOLDL_SNOC],
-                  MAP_EVERY Q.EXISTS_TAC [`[N]`, `M`] THEN
-                  ASM_SIMP_TAC (srw_ss()) []
-                ]
-              ],
-    (* LAM *) MAP_EVERY Q.X_GEN_TAC [`x`,`M`] THEN STRIP_TAC THENL [
-                DISJ1_TAC THEN
-                MAP_EVERY Q.EXISTS_TAC [`x::vs`, `M'`] THEN
-                ASM_SIMP_TAC (srw_ss()) [],
-                DISJ2_TAC THEN
-                MAP_EVERY Q.EXISTS_TAC [`x::vs`, `args`, `t`] THEN
-                ASM_SIMP_TAC (srw_ss()) []
-              ]
-  ]
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPEC ‘M’ (MATCH_MP term_laml_cases
+                                (INST_TYPE [“:α” |-> “:string”] FINITE_EMPTY)))
+ >> RW_TAC std_ss [DISJOINT_EMPTY]
+ >| [ (* goal 1 (of 3) *)
+      DISJ1_TAC >> qexistsl_tac [‘[]’, ‘VAR s’] >> rw [],
+      (* goal 2 (of 3) *)
+      DISJ2_TAC >> reverse (Cases_on ‘is_comb M1’)
+      >- (qexistsl_tac [‘[]’, ‘[M2]’, ‘M1’] >> rw []) \\
+      IMP_RES_TAC is_comb_appstar_exists \\
+      qexistsl_tac [‘[]’, ‘SNOC M2 args’, ‘t’] >> rw [],
+      (* goal 3 (of 3) *)
+     ‘is_var Body \/ is_comb Body’ by METIS_TAC [term_cases]
+      >- (DISJ1_TAC >> qexistsl_tac [‘v::vs’, ‘Body’] >> rw [] \\
+          fs [is_var_cases]) \\
+      IMP_RES_TAC is_comb_appstar_exists \\
+      DISJ2_TAC >> qexistsl_tac [‘v::vs’, ‘args’, ‘t’] >> rw [] ]
 QED
 
 val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
