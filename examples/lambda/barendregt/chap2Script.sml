@@ -831,7 +831,7 @@ val is_comb_APP_EXISTS = store_thm(
   PROVE_TAC [term_CASES, is_comb_thm]);
 
 Theorem is_comb_appstar_exists :
-    !M. is_comb M ==> ?t args. (M = t @* args) /\ args <> [] /\ ~is_comb t
+    !M. is_comb M <=> ?t args. (M = t @* args) /\ args <> [] /\ ~is_comb t
 Proof
     HO_MATCH_MP_TAC simple_induction >> rw []
  >> reverse (Cases_on ‘is_comb M’)
@@ -1028,13 +1028,15 @@ Proof
       (* goal 2 (of 3) *)
       DISJ2_TAC >> reverse (Cases_on ‘is_comb M1’)
       >- (qexistsl_tac [‘[]’, ‘[M2]’, ‘M1’] >> rw []) \\
-      IMP_RES_TAC is_comb_appstar_exists \\
+     ‘?t args. (M1 = t @* args) /\ args <> [] /\ ~is_comb t’
+         by METIS_TAC [is_comb_appstar_exists] \\
       qexistsl_tac [‘[]’, ‘SNOC M2 args’, ‘t’] >> rw [],
       (* goal 3 (of 3) *)
      ‘is_var Body \/ is_comb Body’ by METIS_TAC [term_cases]
       >- (DISJ1_TAC >> qexistsl_tac [‘v::vs’, ‘Body’] >> rw [] \\
           fs [is_var_cases]) \\
-      IMP_RES_TAC is_comb_appstar_exists \\
+     ‘?t args. (Body = t @* args) /\ args <> [] /\ ~is_comb t’
+         by METIS_TAC [is_comb_appstar_exists] \\
       DISJ2_TAC >> qexistsl_tac [‘v::vs’, ‘args’, ‘t’] >> rw [] ]
 QED
 
