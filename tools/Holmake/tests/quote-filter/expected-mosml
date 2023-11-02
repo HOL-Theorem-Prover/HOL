@@ -29,7 +29,7 @@ val (even_rules,even_ind,even_cases) = (fn q => fn _ => IndDefLib.xHol_reln "eve
 \ (!n. even n ==> odd (n + 1))) /\\ (\n\
 \\n\
 \  (!m. odd m ==> even (m + 1)))"
-] NONE; val even_strongind = DB.fetch "-" "even_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val even_0 = boolLib.save_thm("even_0[simp]", Drule.cj 1 even_rules);val even_suc = boolLib.save_thm("even_suc", Drule.cj 3 even_rules);
+] NONE; val even_strongind = DB.fetch "-" "even_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val even_0 = boolLib.save_thm("even_0[simp]", Drule.cj 1 even_rules handle HOL_ERR _ => boolTheory.TRUTH);val even_suc = boolLib.save_thm("even_suc", Drule.cj 3 even_rules handle HOL_ERR _ => boolTheory.TRUTH);
 
 val foo = TotalDefn.qDefine "foo" [QUOTE " (*#loc 34 16*)\n\
 \  foo x = if x < 2 then 1 else x * foo (x - 1)"
@@ -41,7 +41,7 @@ val (compile_rel_rules,compile_rel_ind,compile_rel_cases) = (fn q => fn _ => Ind
 \  compile_rel foo bar) /\\ (\n\
 \\n\
 \  compile_rel foo bar)"
-] NONE; val compile_rel_strongind = DB.fetch "-" "compile_rel_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val compile_rel_Var = boolLib.save_thm("compile_rel_Var", Drule.cj 1 compile_rel_rules);val compile_rel_Ret = boolLib.save_thm("compile_rel_Ret", Drule.cj 2 compile_rel_rules);
+] NONE; val compile_rel_strongind = DB.fetch "-" "compile_rel_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val compile_rel_Var = boolLib.save_thm("compile_rel_Var", Drule.cj 1 compile_rel_rules handle HOL_ERR _ => boolTheory.TRUTH);val compile_rel_Ret = boolLib.save_thm("compile_rel_Ret", Drule.cj 2 compile_rel_rules handle HOL_ERR _ => boolTheory.TRUTH);
 
 (* next_sym reads the next symbol from a string, returning NONE if at eof *)
 val next_sym_def = TotalDefn.qDefine "next_sym_def" [QUOTE " (*#loc 47 25*)\n\
@@ -66,7 +66,7 @@ val (reln_rules,reln_ind,reln_cases) = (fn q => fn _ => IndDefLib.xHol_reln "rel
 \   !x y. reln x y ==> reln y x) /\\ (\n\
 \\n\
 \   !x. reln x 0)"
-] NONE; val reln_strongind = DB.fetch "-" "reln_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val reln_zero = boolLib.save_thm("reln_zero", Drule.cj 3 reln_rules);
+] NONE; val reln_strongind = DB.fetch "-" "reln_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val reln_zero = boolLib.save_thm("reln_zero", Drule.cj 3 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);
 
 val (reln_rules,reln_ind,reln_cases) = (fn q => fn _ => IndDefLib.xHol_reln "reln" q) [QUOTE "( (*#loc 71 16*)\n\
 \ !x y. x < y ==> reln (x + 1) y) /\\ (\n\
@@ -74,4 +74,4 @@ val (reln_rules,reln_ind,reln_cases) = (fn q => fn _ => IndDefLib.xHol_reln "rel
 \   (!x y. reln x y ==> reln y x) /\\\n\
 \   (!x. reln x 0) /\\\n\
 \   (!y. reln 100 y))"
-] NONE; val reln_strongind = DB.fetch "-" "reln_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val reln_name1 = boolLib.save_thm("reln_name1", Drule.cj 1 reln_rules);val reln_sym = boolLib.save_thm("reln_sym", Drule.cj 2 reln_rules);
+] NONE; val reln_strongind = DB.fetch "-" "reln_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;;val reln_name1 = boolLib.save_thm("reln_name1", Drule.cj 1 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);val reln_sym = boolLib.save_thm("reln_sym", Drule.cj 2 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);

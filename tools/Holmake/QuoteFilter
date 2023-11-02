@@ -100,7 +100,8 @@ fun extra_binds stem (s,i) =
               else fn s => s
     in
       "val " ^ f mlname ^ " = boolLib.save_thm(\"" ^ f s ^
-      "\", Drule.cj " ^ Int.toString i ^ " " ^ stem ^ "_rules);"
+      "\", Drule.cj " ^ Int.toString i ^ " " ^ stem ^
+      "_rules handle HOL_ERR _ => boolTheory.TRUTH);"
     end
 
 fun process_defnlabel (QFS{labelidxs,conjcount,row,inddefp,...}) s =
