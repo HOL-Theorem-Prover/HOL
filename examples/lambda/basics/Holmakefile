@@ -1,3 +1,5 @@
 SRCDIRS = string finite_maps 
 
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/src/%),$(SRCDIRS))
+
+EXTRA_CLEANS = $(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
