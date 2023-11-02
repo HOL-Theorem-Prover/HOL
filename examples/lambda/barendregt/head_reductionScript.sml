@@ -262,6 +262,35 @@ Proof
   simp[PULL_EXISTS, hnf_appstar]
 QED
 
+(* A more general version of ‘hnf_cases’ directly based on term_laml_cases *)
+Theorem hnf_cases_genX :
+    !X. FINITE X ==>
+        !M. hnf M <=> ?vs args y. ALL_DISTINCT vs /\ (M = LAMl vs (VAR y @* args)) /\
+                                  DISJOINT (set vs) X
+Proof
+    reverse (rw [FORALL_AND_THM, EQ_IMP_THM])
+ >- rw [hnf_appstar]
+ >> MP_TAC (Q.SPEC ‘M’ (MATCH_MP term_laml_cases (ASSUME “FINITE (X :string -> bool)”)))
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 3) *)
+      qexistsl_tac [‘[]’, ‘[]’, ‘s’] >> rw [],
+      (* goal 2 (of 3) *)
+      Know ‘is_comb (M1 @@ M2)’ >- rw [] \\
+      ONCE_REWRITE_TAC [is_comb_appstar_exists] >> rw [] \\
+      Q.PAT_X_ASSUM ‘M1 @@ M2 = t @* args’ (FULL_SIMP_TAC std_ss o wrap) \\
+      fs [hnf_appstar] \\
+     ‘is_var t’ by METIS_TAC [term_cases] >> fs [is_var_cases],
+      (* goal 3 (of 3) *)
+      fs [hnf_LAMl] >> rename1 ‘hnf M’ \\
+     ‘is_var M \/ is_comb M’ by METIS_TAC [term_cases]
+      >- (fs [is_var_cases] \\
+          qexistsl_tac [‘v::vs’, ‘[]’, ‘y’] >> rw []) \\
+      FULL_SIMP_TAC std_ss [Once is_comb_appstar_exists] \\
+      gs [hnf_appstar] \\
+     ‘is_var t’ by METIS_TAC [term_cases] >> fs [is_var_cases] \\
+      qexistsl_tac [‘v::vs’, ‘args’, ‘y’] >> rw [] ]
+QED
+
 (* ----------------------------------------------------------------------
     Weak head reductions (weak_head or -w->)
    ---------------------------------------------------------------------- *)
