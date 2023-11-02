@@ -5,12 +5,12 @@
 open HolKernel Parse boolLib bossLib;
 
 (* core theories *)
-open arithmeticTheory pred_setTheory listTheory sortingTheory finite_mapTheory
-     hurdUtils;
+open arithmeticTheory pred_setTheory listTheory rich_listTheory sortingTheory
+     finite_mapTheory pathTheory hurdUtils;
 
 (* lambda theories *)
-open termTheory appFOLDLTheory chap2Theory chap3Theory standardisationTheory
-     head_reductionTheory reductionEval;
+open binderLib nomsetTheory termTheory appFOLDLTheory chap2Theory chap3Theory
+     reductionEval standardisationTheory head_reductionTheory;
 
 val _ = new_theory "solvable";
 
@@ -94,7 +94,7 @@ Theorem solvable_alt_closed'[local] =
     REWRITE_RULE [closed_def] solvable_alt_closed
 
 (* 8.3.1 (iii) [1, p.171] *)
-Overload unsolvable = “$~ o solvable”
+Overload unsolvable = “\M. ~(solvable M)”
 
 (* 8.3.2 Examples of solvable terms [1, p.171] *)
 Theorem solvable_K :
@@ -697,6 +697,218 @@ Proof
  >> Q.EXISTS_TAC ‘FUNPOW (APP K) m I @* t’ >> rw []
  >> MATCH_MP_TAC lameq_appstar_cong >> rw [lameq_K]
 QED
+
+(* Definition 8.3.20 [1, p.177]
+
+   A term may have several hnf's, e.g. if any of its hnf can still do beta
+   reductions, after such reductions the term is still an hnf by definition.
+   The (unique) terminating term of head reduction path is called "principle"
+   hnf, which is used for defining Boehm trees.
+ *)
+Definition principle_hnf_def :
+    principle_hnf = last o head_reduction_path
+End
+
+Theorem hnf_principle_hnf :
+    !M. has_hnf M ==> hnf (principle_hnf M)
+Proof
+    rw [corollary11_4_8, principle_hnf_def]
+ >> MP_TAC (Q.SPEC ‘M’ head_reduction_path_def)
+ >> RW_TAC std_ss []
+QED
+
+(* |- !M. solvable M ==> hnf (principle_hnf M) *)
+Theorem hnf_principle_hnf' =
+   REWRITE_RULE [GSYM solvable_iff_has_hnf] hnf_principle_hnf
+
+Theorem principle_hnf_eq_self :
+    !M. hnf M ==> principle_hnf M = M
+Proof
+    rw [principle_hnf_def]
+ >> ‘finite (head_reduction_path M)’ by PROVE_TAC [hnf_has_hnf, corollary11_4_8]
+ >> MP_TAC (Q.SPEC ‘M’ head_reduction_path_def)
+ >> RW_TAC std_ss []
+ (* applying is_head_reduction_thm *)
+ >> qabbrev_tac ‘p = head_reduction_path M’
+ >> STRIP_ASSUME_TAC (ISPEC “p :(term, redpos list) path” path_cases)
+ >- fs []
+ >> gs [is_head_reduction_thm, hnf_no_head_redex]
+QED
+
+Theorem principle_hnf_stable :
+    !M. has_hnf M ==> principle_hnf (principle_hnf M) = principle_hnf M
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC principle_hnf_eq_self
+ >> MATCH_MP_TAC hnf_principle_hnf >> art []
+QED
+
+(* |- !M. solvable M ==> principle_hnf (principle_hnf M) = principle_hnf M *)
+Theorem principle_hnf_stable' =
+    REWRITE_RULE [GSYM solvable_iff_has_hnf] principle_hnf_stable
+
+Theorem principle_hnf_beta :
+    !v t. hnf t /\ y # t ==> principle_hnf (LAM v t @@ VAR y) = [VAR y/v] t
+Proof
+    rw [principle_hnf_def]
+ >> qabbrev_tac ‘M = LAM v t @@ VAR y’
+ >> qabbrev_tac ‘N = [VAR y/v] t’
+ >> ‘hnf N’ by rw [Abbr ‘N’, GSYM fresh_tpm_subst]
+ >> Know ‘M -h-> N’
+ >- (qunabbrevl_tac [‘M’, ‘N’] \\
+     rw [Once hreduce1_cases] \\
+     qexistsl_tac [‘v’, ‘t’] >> rw [])
+ >> rw [head_reduce1_def]
+ >> qabbrev_tac ‘p = pcons M r (stopped_at N)’
+ >> Suff ‘head_reduction_path M = p’ >- rw [Abbr ‘p’]
+ >> MATCH_MP_TAC head_reduction_path_unique
+ >> rw [Abbr ‘p’]
+QED
+
+(* NOTE: this shows that ‘principle_hnf’ is the normal_form of hreduce1 *)
+Theorem principle_hnf_hreduce1 :
+    !M N. M -h-> N ==> principle_hnf M = principle_hnf N
+Proof
+    rw [principle_hnf_def]
+ >> qabbrev_tac ‘p = head_reduction_path N’
+ >> ‘?r. r is_head_redex M /\ labelled_redn beta M r N’
+        by METIS_TAC [head_reduce1_def]
+ >> qabbrev_tac ‘q = pcons M r p’
+ >> Suff ‘head_reduction_path M = q’ >- rw [Abbr ‘q’]
+ >> MATCH_MP_TAC head_reduction_path_unique
+ >> STRIP_ASSUME_TAC (Q.SPEC ‘N’ head_reduction_path_def)
+ >> rw [Abbr ‘q’, Abbr ‘p’, Once is_head_reduction_thm]
+QED
+
+Theorem principle_hnf_LAMl_appstar_lemma[local] :
+    !t. hnf t /\
+        ALL_DISTINCT (MAP FST pi) /\
+        ALL_DISTINCT (MAP SND pi) /\
+        DISJOINT (set (MAP FST pi)) (set (MAP SND pi)) /\
+       (!y. MEM y (MAP SND pi) ==> y # t) ==>
+        principle_hnf (LAMl (MAP FST pi) t @* MAP VAR (MAP SND pi)) = tpm pi t
+Proof
+    Induct_on ‘pi’ (* using SNOC_INDUCT *)
+ >- rw [principle_hnf_eq_self]
+ >> rw [] (* rw [FOLDR_SNOC, MAP_SNOC] *)
+ >> Cases_on ‘h’ (* ‘x’ *) >> fs []
+ >> qabbrev_tac ‘M = LAMl (MAP FST pi) t’
+ >> ‘hnf M’ by rw [Abbr ‘M’, hnf_LAMl]
+ >> qabbrev_tac ‘args :term list = MAP VAR (MAP SND pi)’
+ >> Know ‘principle_hnf (LAM q M @@ VAR r @* args) =
+          principle_hnf ([VAR r/q] M @* args)’
+ >- (MATCH_MP_TAC principle_hnf_hreduce1 \\
+     MATCH_MP_TAC hreduce1_rules_appstar >> simp [] \\
+     rw [Once hreduce1_cases] \\
+     qexistsl_tac [‘q’, ‘M’] >> rw [])
+ >> Rewr'
+ >> Know ‘[VAR r/q] M = LAMl (MAP FST pi) ([VAR r/q] t)’
+ >- (qunabbrev_tac ‘M’ \\
+     MATCH_MP_TAC LAMl_SUB \\
+     rw [DISJOINT_ALT])
+ >> Rewr'
+ >> qabbrev_tac ‘N = [VAR r/q] t’
+ >> Know ‘N = tpm [(q,r)] t’
+ >- (rw [Abbr ‘N’, Once EQ_SYM_EQ, Once pmact_flip_args] \\
+     MATCH_MP_TAC fresh_tpm_subst >> rw [])
+ >> Rewr'
+ >> qabbrev_tac ‘N' = tpm [(q,r)] t’
+ >> ‘hnf N'’ by rw [Abbr ‘N'’, hnf_tpm]
+ >> Know ‘principle_hnf (LAMl (MAP FST pi) N' @* args) = tpm pi N'’
+ >- (FIRST_X_ASSUM MATCH_MP_TAC >> rw [Abbr ‘N'’] \\
+    ‘r <> y’ by PROVE_TAC [] \\
+     Cases_on ‘q = y’ >> rw [])
+ >> POP_ASSUM K_TAC >> qunabbrev_tac ‘N'’
+ >> Know ‘tpm [(q,r)] t = N’
+ >- (rw [Abbr ‘N’, Once pmact_flip_args] \\
+     MATCH_MP_TAC fresh_tpm_subst >> rw [])
+ >> Rewr'
+ >> rw [Abbr ‘N’, tpm_subst]
+ (* applying lswapstr_unchanged *)
+ >> Know ‘lswapstr pi r = r’
+ >- (MATCH_MP_TAC lswapstr_unchanged \\
+     rw [IN_patoms_MEM] \\
+     CCONTR_TAC >> fs [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Q.PAT_X_ASSUM ‘~MEM r (MAP FST pi)’ MP_TAC >> rw [MEM_MAP] \\
+       Q.EXISTS_TAC ‘(r,b)’ >> rw [],
+       (* goal 2 (of 2) *)
+       Q.PAT_X_ASSUM ‘~MEM r (MAP SND pi)’ MP_TAC >> rw [MEM_MAP] \\
+       Q.EXISTS_TAC ‘(b,r)’ >> rw [] ])
+ >> Rewr'
+ >> Know ‘lswapstr pi q = q’
+ >- (MATCH_MP_TAC lswapstr_unchanged \\
+     rw [IN_patoms_MEM] \\
+     CCONTR_TAC >> fs [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Q.PAT_X_ASSUM ‘~MEM q (MAP FST pi)’ MP_TAC >> rw [MEM_MAP] \\
+       Q.EXISTS_TAC ‘(q,b)’ >> rw [],
+       (* goal 2 (of 2) *)
+       Q.PAT_X_ASSUM ‘~MEM q (MAP SND pi)’ MP_TAC >> rw [MEM_MAP] \\
+       Q.EXISTS_TAC ‘(b,q)’ >> rw [] ])
+ >> Rewr'
+ >> REWRITE_TAC [Once tpm_CONS, Once pmact_flip_args, Once EQ_SYM_EQ]
+ >> MATCH_MP_TAC fresh_tpm_subst
+ >> rw [FV_tpm]
+ >> Know ‘lswapstr (REVERSE pi) r = r’
+ >- (MATCH_MP_TAC lswapstr_unchanged \\
+     rw [IN_patoms_MEM] \\
+     CCONTR_TAC >> fs [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Q.PAT_X_ASSUM ‘~MEM r (MAP FST pi)’ MP_TAC >> rw [MEM_MAP] \\
+       Q.EXISTS_TAC ‘(r,b)’ >> rw [],
+       (* goal 2 (of 2) *)
+       Q.PAT_X_ASSUM ‘~MEM r (MAP SND pi)’ MP_TAC >> rw [MEM_MAP] \\
+       Q.EXISTS_TAC ‘(b,r)’ >> rw [] ])
+ >> Rewr'
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
+QED
+
+(* ‘principle_hnf’ can be used to do final beta-reductions to make a hnf abs-free
+
+   NOTE: to satisfy ‘DISJOINT (set xs) (set ys)’, one first get ‘LENGTH xs’
+         without knowing ‘xs’ (e.g. by ‘LAMl_size’), then generate ‘ys’ by
+        ‘FRESH_list’, and then call ‘hnf_cases’ (more general version) using ‘ys’
+         as the excluded list.
+ *)
+Theorem principle_hnf_LAMl_appstar :
+    !t xs ys. hnf t /\
+              ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+              LENGTH xs = LENGTH ys /\
+              DISJOINT (set xs) (set ys) /\
+              DISJOINT (set ys) (FV t)
+          ==> principle_hnf (LAMl xs t @* (MAP VAR ys)) = tpm (ZIP (xs,ys)) t
+Proof
+    RW_TAC std_ss []
+ >> qabbrev_tac ‘n = LENGTH xs’
+ >> qabbrev_tac ‘pi = ZIP (xs,ys)’
+ >> ‘xs = MAP FST pi’ by rw [Abbr ‘pi’, MAP_ZIP]
+ >> ‘ys = MAP SND pi’ by rw [Abbr ‘pi’, MAP_ZIP]
+ >> Know ‘!y. MEM y (MAP SND pi) ==> y # t’
+ >- (Q.PAT_X_ASSUM ‘DISJOINT (set vs) (FV t)’ MP_TAC \\
+     rw [DISJOINT_ALT, Abbr ‘pi’, MEM_MAP, MEM_ZIP, MEM_EL] \\
+     simp [] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘n’ >> art [])
+ >> DISCH_TAC
+ >> simp []
+ >> MATCH_MP_TAC principle_hnf_LAMl_appstar_lemma >> rw []
+QED
+
+(* FIXME: how to leverage Omega_starloops and prove this theorem?
+Theorem unsolvable_Omega :
+    unsolvable Omega
+Proof
+   ‘closed Omega’ by rw [closed_def]
+ >> rw [solvable_alt_closed]
+ >> CCONTR_TAC
+ >> ‘?Z. Omega @* Ns -b->* Z /\ I -b->* Z’ by METIS_TAC [lameq_CR]
+ >> fs [bnf_reduction_to_self]
+ >> Q.PAT_X_ASSUM ‘closed Omega’ K_TAC
+ >> POP_ASSUM K_TAC (* Z = I *)
+ >> cheat
+QED
+ *)
 
 val _ = export_theory ();
 val _ = html_theory "solvable";

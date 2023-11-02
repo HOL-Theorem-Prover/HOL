@@ -101,6 +101,14 @@ val hreduce1_unique = store_thm(
   HO_MATCH_MP_TAC hreduce1_ind THEN
   SIMP_TAC (srw_ss() ++ DNF_ss) [hreduce1_rwts]);
 
+Theorem hreduce1_rules_appstar :
+    !Ns. M1 -h-> M2 /\ ~is_abs M1 ==> M1 @* Ns -h-> M2 @* Ns
+Proof
+    Induct_on ‘Ns’ using SNOC_INDUCT
+ >> rw [appstar_SNOC]
+ >> fs [hreduce1_rules]
+QED
+
 Theorem hreduce1_gen_bvc_ind :
   !P f. (!x. FINITE (f x)) /\
         (!v M N x. v NOTIN f x ==> P (LAM v M @@ N) ([N/v] M) x) /\
@@ -182,20 +190,23 @@ QED
    ---------------------------------------------------------------------- *)
 
 val hnf_def = Define`hnf M = ∀N. ¬(M -h-> N)`;
-val hnf_thm = Store_thm(
-  "hnf_thm",
-  ``(hnf (VAR s) ⇔ T) ∧
+
+Theorem hnf_thm[simp] :
+    (hnf (VAR s) ⇔ T) ∧
     (hnf (M @@ N) ⇔ hnf M ∧ ¬is_abs M) ∧
-    (hnf (LAM v M) ⇔ hnf M)``,
+    (hnf (LAM v M) ⇔ hnf M)
+Proof
   SRW_TAC [][hnf_def, hreduce1_rwts] THEN
   Cases_on `is_abs M` THEN SRW_TAC [][hreduce1_rwts] THEN
   Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
-  FULL_SIMP_TAC (srw_ss()) [hreduce1_rwts]);
+  FULL_SIMP_TAC (srw_ss()) [hreduce1_rwts]
+QED
 
-val hnf_tpm = Store_thm(
-  "hnf_tpm",
-  ``∀M π. hnf (π·M) = hnf M``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem hnf_tpm[simp] :
+    ∀M π. hnf (π·M) = hnf M
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
 val strong_cc_ind = IndDefLib.derive_strong_induction (compat_closure_rules,
                                                        compat_closure_ind)
@@ -698,6 +709,13 @@ val has_hnf_def = Define`
   has_hnf M = ?N. M == N /\ hnf N
 `;
 
+Theorem hnf_has_hnf :
+    !M. hnf M ==> has_hnf M
+Proof
+    rw [has_hnf_def]
+ >> Q.EXISTS_TAC ‘M’ >> rw []
+QED
+
 val has_bnf_hnf = store_thm(
   "has_bnf_hnf",
   ``has_bnf M ⇒ has_hnf M``,
@@ -1116,3 +1134,9 @@ QED
 
 val _ = export_theory()
 val _ = html_theory "head_reduction";
+
+(* References:
+
+   [1] Barendregt, H.P.: The Lambda Calculus, Its Syntax and Semantics.
+       College Publications, London (1984).
+ *)

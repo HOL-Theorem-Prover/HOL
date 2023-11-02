@@ -6,7 +6,7 @@ open HolKernel boolLib Parse bossLib;
 
 (* core theories *)
 open optionTheory arithmeticTheory pred_setTheory listTheory llistTheory
-     ltreeTheory pathTheory posetTheory hurdUtils;
+     ltreeTheory pathTheory posetTheory hurdUtils rich_listTheory;
 
 open binderLib termTheory appFOLDLTheory chap2Theory chap3Theory
      head_reductionTheory standardisationTheory solvableTheory pure_dBTheory;

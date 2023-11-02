@@ -230,7 +230,7 @@ Proof
 QED
 
 Theorem LAMl_SUB :
-    !M N v vs. ALL_DISTINCT vs /\ ~MEM v vs /\ (FV N = {}) ==>
+    !M N v vs. ~MEM v vs /\ DISJOINT (set vs) (FV N) ==>
               ([N/v] (LAMl vs M) = LAMl vs ([N/v] M))
 Proof
     rpt STRIP_TAC
