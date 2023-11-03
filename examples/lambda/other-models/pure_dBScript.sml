@@ -524,12 +524,13 @@ val fromTerm_eqn = save_thm(
   CONJ fromTerm_eq0 fromTerm_eqlam)
 
 (* fromTerm is injective *)
-val fromTerm_11 = store_thm(
-  "fromTerm_11",
-  ``!t1 t2. (fromTerm t1 = fromTerm t2) = (t1 = t2)``,
+Theorem fromTerm_11[simp]:
+  !t1 t2. (fromTerm t1 = fromTerm t2) = (t1 = t2)
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][fromTerm_def] THEN SRW_TAC [][fromTerm_eqn] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 (* an alternative reduction relation that is a stepping stone between
    dbeta and beta-reduction on quotiented terms *)
@@ -981,11 +982,11 @@ val fromtoTerm = save_thm("fromtoTerm", GSYM toTerm_def)
 val _ = export_rewrites ["fromtoTerm"]
 
 Theorem toTerm_11[simp] :
-    (toTerm d1 = toTerm d2) <=> (d1 = d2)
+  (toTerm d1 = toTerm d2) <=> (d1 = d2)
 Proof
   SRW_TAC [][EQ_IMP_THM] THEN
   POP_ASSUM (MP_TAC o Q.AP_TERM `fromTerm`) THEN
-  SRW_TAC [][]
+  SRW_TAC [][Excl "fromTerm_11"]
 QED
 
 val toTerm_onto = store_thm(

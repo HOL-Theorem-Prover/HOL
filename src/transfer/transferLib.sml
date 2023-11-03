@@ -195,7 +195,7 @@ fun fupd_DOMRNG_ss f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
 
 fun addrule0 (th, r) =
     let
-      val th = UNDISCH th handle HOL_ERR _ => th
+      val th = UNDISCH_ALL th handle HOL_ERR _ => th
     in
       r |> fupd_left (Net.enter (lhand (concl th), th))
         |> fupd_right(Net.enter (rand (concl th), th))
