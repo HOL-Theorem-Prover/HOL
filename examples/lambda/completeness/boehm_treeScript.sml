@@ -110,7 +110,7 @@ Proof
  >> Know ‘fromTerm (toTerm M) = fromTerm (LAMl vs (VAR y @* args))’
  >- (art [fromTerm_11])
  >> Q.PAT_X_ASSUM ‘toTerm M = LAMl vs (VAR y @* args)’ K_TAC
- >> rw [fromTerm_LAMl, fromTerm_appstar]
+ >> rw [fromTerm_LAMl, fromTerm_appstar, Excl "fromTerm_11"]
  >> qabbrev_tac ‘vs' = MAP s2n vs’
  >> qabbrev_tac ‘Ms = MAP fromTerm args’
  >> qabbrev_tac ‘y' = s2n y’
