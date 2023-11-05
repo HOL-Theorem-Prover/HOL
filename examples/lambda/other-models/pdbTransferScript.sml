@@ -152,7 +152,7 @@ val xfer = transfer_thm 10 [] true (global_ruledb()) o GEN_ALL
 
 Theorem dhreduce1_APP = xfer hreduce1_APP
 Theorem dhreduce1_BETA = xfer $ cj 1 hreduce1_rules
-Theorem dhreduce1_APP = xfer hreduce1_APP
+Theorem dhreduce1_LAM = xfer hreduce1_LAM
 Theorem dhreduce1_substitutive = xfer hreduce1_substitutive
 Theorem dhreduce1_rwts = xfer hreduce1_rwts
 Theorem dhreduce_substitutive = xfer hreduce_substitutive
