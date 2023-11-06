@@ -4000,6 +4000,11 @@ Theorem LIST_REL_MEM_IMP:
 Proof  simp[LIST_REL_EL_EQN] >> metis_tac[MEM_EL]
 QED
 
+Theorem LIST_REL_MEM_IMP_R:
+  !xs ys P y. LIST_REL P xs ys /\ MEM y ys ==> ?x. MEM x xs /\ P x y
+Proof  simp[LIST_REL_EL_EQN] >> metis_tac[MEM_EL]
+QED
+
 Theorem LIST_REL_SNOC:
   (LIST_REL R (SNOC x xs) yys <=>
       ?y ys. (yys = SNOC y ys) /\ LIST_REL R xs ys /\ R x y) /\
