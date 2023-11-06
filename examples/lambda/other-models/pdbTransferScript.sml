@@ -37,10 +37,28 @@ Proof
   simp[right_unique_def, TPDB_def]
 QED
 
+Theorem left_unique_StNm[transfer_simp]:
+  left_unique StNm
+Proof
+  simp[left_unique_def, StNm_def]
+QED
+
+Theorem right_unique_StNm[transfer_simp]:
+  right_unique StNm
+Proof
+  simp[right_unique_def, StNm_def]
+QED
+
 Theorem surj_TPDB[transfer_simp]:
   surj TPDB
 Proof
   simp[surj_def, TPDB_def] >> metis_tac[fromTerm_onto]
+QED
+
+Theorem surj_StNm[transfer_simp]:
+  surj StNm
+Proof
+  simp[surj_def, StNm_def] >> metis_tac[string_numTheory.s2n_onto]
 QED
 
 Theorem RRANGE_TPDB[transfer_simp]:
@@ -147,7 +165,7 @@ Proof
   simp[dhreduce1_def, TPDB_def, FUN_REL_def]
 QED
 
-val xfer = transfer_thm 10 [] true (global_ruledb()) o GEN_ALL
+fun xfer th = transfer_thm 10 [] true (global_ruledb()) $ GEN_ALL th
 
 
 Theorem dhreduce1_APP = xfer hreduce1_APP
@@ -157,6 +175,20 @@ Theorem dhreduce1_substitutive = xfer hreduce1_substitutive
 Theorem dhreduce1_rwts = xfer hreduce1_rwts
 Theorem dhreduce_substitutive = xfer hreduce_substitutive
 
+(*
+Definition dhnf_def:
+  dhnf pd = hnf (toTerm pd)
+End
+
+Theorem dhnf_rule[transfer_rule]:
+  (TPDB |==> (=)) hnf dhnf
+Proof
+  simp[FUN_REL_def, TPDB_def, dhnf_def]
+QED
+
+Theorem dhnf_dLAM_cases = xfer hnf_cases
+*)
+
 (* BUG: FV transfer rule is ignored because the skeleton reduces through it
    to the underlying supp (pm_act ...) stuff *)
 (* Theorem dhreduce1_FV = xfer hreduce1_FV
@@ -164,7 +196,7 @@ Theorem dhreduce_substitutive = xfer hreduce_substitutive
 
 (*
 val _ = show_assums := true
-val th = GEN_ALL hreduce_substitutive
+val th = hnf_cases
 val base = transfer_skeleton true (concl th)
 val th = base
 
@@ -173,10 +205,10 @@ val cleftp = true
 
 fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
 
-val F = seq.hd o resolve_relhyps [] true (global_ruledb())
+fun F x = seq.hd (resolve_relhyps [] true (global_ruledb()) x)
 val th7 = fpow F 7 th
 
-    F th7
+    fpow F 14 th
 
 *)
 
