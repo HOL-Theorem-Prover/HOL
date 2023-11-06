@@ -65,7 +65,7 @@ val pol_flag = ref false
 
 fun select_bigstep mctsobj tree =
   if !pol_flag then select_in_distrib (mk_dis2 tree) else
-  let val (dis,_) = mk_dis tree in  
+  let val (dis,_) = mk_dis tree in
     if !temp_flag then select_in_distrib dis else best_in_distrib dis
   end
 

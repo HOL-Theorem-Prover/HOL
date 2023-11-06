@@ -53,7 +53,7 @@ sig
   val clean_dir : string -> unit
 
   (* set shortcuts *)
-  type 'a set = 'a Redblackset.set 
+  type 'a set = 'a Redblackset.set
   val emin : 'a set -> 'a
   val erem : 'a -> 'a set -> 'a set
   val emem : 'a -> 'a set -> bool
@@ -67,7 +67,7 @@ sig
   val efoldl : ('a * 'b -> 'b) -> 'b -> 'a set -> 'b
 
   (* dictionnary *)
-  type ('a,'b) dict = ('a,'b) Redblackmap.dict 
+  type ('a,'b) dict = ('a,'b) Redblackmap.dict
   exception NotFound
   val dfind  : 'a -> ('a, 'b) dict -> 'b
   val dmem   : 'a -> ('a, 'b) dict -> bool

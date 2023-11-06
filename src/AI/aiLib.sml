@@ -107,7 +107,7 @@ fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
    Set shortcuts
    ------------------------------------------------------------------------- *)
 
-type 'a set = 'a Redblackset.set 
+type 'a set = 'a Redblackset.set
 
 local open Redblackset in
   fun emin m     = valOf (find (fn _ => true) m)
@@ -127,7 +127,7 @@ end
     Dictionary shortcuts + utils
    ------------------------------------------------------------------------- *)
 
-type ('a,'b) dict = ('a,'b) Redblackmap.dict 
+type ('a,'b) dict = ('a,'b) Redblackmap.dict
 exception NotFound = Redblackmap.NotFound
 
 fun dfind k m  = Redblackmap.find (m,k)
@@ -177,15 +177,15 @@ fun dconcat cmp dictl =
     dappendl l1 (dempty cmp)
   end
 
-fun dsum cmp l = 
-  let 
-    val d = ref (dempty cmp) 
-    fun f (a,i) = 
+fun dsum cmp l =
+  let
+    val d = ref (dempty cmp)
+    fun f (a,i) =
       let val oldi = dfind a (!d) handle NotFound => 0 in
         d := dadd a (oldi + i) (!d)
       end
   in
-    app f l; !d  
+    app f l; !d
   end;
 
 (* sets *)

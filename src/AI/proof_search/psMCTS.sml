@@ -42,12 +42,12 @@ fun dest_node x = case x of Node y => y | _ => raise ERR "dest_node" ""
 fun is_node x = case x of Node y => true | _ => false
 fun is_leaf x = case x of Leaf => true | _ => false
 
-fun is_treewin x = case x of Node ({status,...},_) => is_win status 
+fun is_treewin x = case x of Node ({status,...},_) => is_win status
                          | _ => false
-fun is_treelose x = case x of Node ({status,...},_) => is_lose status 
+fun is_treelose x = case x of Node ({status,...},_) => is_lose status
                          | _ => false
-fun is_treeundecided x = case x of 
-    Node ({status,...},_) => is_undecided status 
+fun is_treeundecided x = case x of
+    Node ({status,...},_) => is_undecided status
   | _ => false
 
 (* -------------------------------------------------------------------------
@@ -140,7 +140,7 @@ fun score_puct param sqvtot (move,polv,ctree) =
   let
     val (sum,vis) = case ctree of
       Leaf => (0.0,0.0)
-    | Node (cnode,_) =>  
+    | Node (cnode,_) =>
       if !avoid_lose andalso is_lose (#status cnode)
       then (Real.negInf, 0.0)
       else (#sum cnode, #vis cnode)
@@ -161,17 +161,17 @@ fun select_child obj buildl (node,cv) =
   let
     val (stati,param) = (#stati node, #mctsparam obj)
     fun update_node_bare reward {stati,status,board,sum,vis} =
-      {stati=stati, status=status, 
+      {stati=stati, status=status,
        board=board, sum=sum+reward, vis=vis+1.0}
     fun update_node cfuture ctreev reward {stati,status,board,sum,vis} =
       let val newstatus = case status of Undecided =>
         (if is_treeundecided cfuture then status
-         else if is_treewin cfuture then Win 
-         else if Vector.all (is_treelose o #3) ctreev then Lose 
+         else if is_treewin cfuture then Win
+         else if Vector.all (is_treelose o #3) ctreev then Lose
          else status)
         | _ => status
       in
-       {stati=stati, status=newstatus, 
+       {stati=stati, status=newstatus,
         board=board, sum=sum+reward, vis=vis+1.0}
       end
   in

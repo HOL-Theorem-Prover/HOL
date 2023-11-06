@@ -8,7 +8,7 @@
 structure mlTreeNeuralNetworkAlt :> mlTreeNeuralNetworkAlt =
 struct
 
-open HolKernel boolLib Abbrev aiLib 
+open HolKernel boolLib Abbrev aiLib
 mlMatrix mlNeuralNetwork smlParallel
 smlParser mlTacticData
 
@@ -310,7 +310,7 @@ fun upd_tnn lr wud tnn = app (upd_oper lr tnn) (dlist wud)
    ------------------------------------------------------------------------- *)
 
 fun deref_weight m = mat_map ! m
-fun deref_layer {aref,daref,wref} = 
+fun deref_layer {aref,daref,wref} =
   {a = aref, da = daref, w = deref_weight wref}
 fun deref_nn nn = map deref_layer nn
 fun deref_tnn tnn = Vector.map deref_nn tnn
@@ -340,8 +340,8 @@ fun fp_loss tnn (graph,ievl) = mse_of (fp_tnn tnn graph) ievl
 
 (* -------------------------------------------------------------------------
    Training
-   many threads might be executing this and other instructions in paralllel, 
-   we do not care if we omit some examples 
+   many threads might be executing this and other instructions in paralllel,
+   we do not care if we omit some examples
    maybe add random delay at the start of the tread
    ------------------------------------------------------------------------- *)
 
@@ -356,7 +356,7 @@ fun train_tnn_loop lr (tnn,exl,mse) () =
   in
     upd_tnn lr wud tnn;
     train_tnn_loop lr (tnn,exl,mse) ()
-  end 
+  end
   handle Empty => ()
 
 fun train_tnn_para param (tnn,exl,mse) =
@@ -364,7 +364,7 @@ fun train_tnn_para param (tnn,exl,mse) =
     val lr = #learning_rate param / Real.fromInt (#batch_size param)
     val l = List.tabulate (#ncore param, fn _ => ())
     val n = length (!exl)
-    val _ = ignore (parmap_exact (#ncore param) 
+    val _ = ignore (parmap_exact (#ncore param)
       (train_tnn_loop lr (tnn,exl,mse)) l)
   in
     (deref_tnn tnn, !mse / (Real.fromInt n))
@@ -520,7 +520,7 @@ val vhead = mk_var ("head_", ``:'a -> 'a``);
 val varl = [vx,vy,vz,vf,vg];
 fun contain_x tm = can (find_term (fn x => term_eq x vx)) tm;
 
-fun gen_dataset () = 
+fun gen_dataset () =
   let
     fun mk_dataset n =
       let
@@ -531,7 +531,7 @@ fun gen_dataset () =
       end
     val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
     val (l1',l2') = (List.concat l1, List.concat l2);
-    val (pos,neg) = 
+    val (pos,neg) =
       (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
     val ex0 = shuffle (pos @ neg)
   in
@@ -541,7 +541,7 @@ fun gen_dataset () =
 val ncore_example = ref 16
 
 fun toy_example () =
-  let 
+  let
     val ex = gen_dataset ()
     val (trainex,testex) = part_pct 0.9 ex
     val trainparam =
@@ -561,16 +561,16 @@ load "mlTreeNeuralNetworkAlt"; open mlTreeNeuralNetworkAlt;
 
 val dir = HOLDIR ^ "/src/AI/machine_learning/test";
 val _ = mkDir_err dir;
-val script = dir ^ "/test.sml"; 
-val makefile = dir ^ "/Holmakefile"; 
+val script = dir ^ "/test.sml";
+val makefile = dir ^ "/Holmakefile";
 
 writel script
-  ["load \"mlTreeNeuralNetworkAlt\";", 
+  ["load \"mlTreeNeuralNetworkAlt\";",
    "open mlTreeNeuralNetworkAlt;",
    "ncore_example := 4;",
    "toy_example ();"
    ];
-writel makefile ["INCLUDES = " ^ HOLDIR ^ "/src/AI/machine_learning"]; 
+writel makefile ["INCLUDES = " ^ HOLDIR ^ "/src/AI/machine_learning"];
 
 load "smlExecScripts"; open smlExecScripts;
 buildheap_dir := dir;

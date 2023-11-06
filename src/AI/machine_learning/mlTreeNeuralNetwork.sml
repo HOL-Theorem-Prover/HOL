@@ -237,7 +237,7 @@ fun bp_tnn_loop fpv gradv wud revgraph = case revgraph of
     end
 
 fun zero_vect n = Vector.tabulate (n, fn _ => 0.0)
-    
+
 fun bp_tnn fpv (graph,ievl) =
   let
     val gradv0 =
