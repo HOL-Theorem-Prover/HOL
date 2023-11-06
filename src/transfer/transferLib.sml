@@ -451,11 +451,20 @@ val ruledb =
         |> addrule PAIRU_COMMA
         |> addrule pair_CASE_CONG
         |> addrule LET_rule
+        |> addrule FUNPOW_rule
         |> addrule FST_CORRECT
         |> addrule SND_CORRECT
         |> addrule COMMA_CORRECT
         |> addrule option_CASE_CONG
         |> addrule list_CASE_CONG
+        |> addrule NIL_rule
+        |> addrule CONS_rule
+        |> addrule TL_rule
+        |> addrule LENGTH_rule
+        |> addrule FOLDL_rule
+        |> addrule FOLDR_rule
+        |> addrule MAP_rule
+        |> addrule ALL_DISTINCT_rule
         |> addrule cimp_imp
         |> addrule (equalityp_applied
                       |> INST_TYPE [alpha |-> (bool --> bool --> bool)]
@@ -484,9 +493,10 @@ val ruledb =
         |> addsafe right_unique_EQ
         |> addsafe surj_EQ
         |> addsafe (SPEC_ALL EQ_REFL)
-        |> addsafe LIST_REL_surj
-        |> addsafe LIST_REL_total
-        |> addsafe LIST_REL_right_unique
+        |> addsafe (UNDISCH_ALL LIST_REL_surj)
+        |> addsafe (UNDISCH_ALL LIST_REL_total)
+        |> addsafe (UNDISCH_ALL LIST_REL_left_unique)
+        |> addsafe (UNDISCH_ALL LIST_REL_right_unique)
         |> addbad (mk_icomb(equalityp_tm, boolSyntax.implication))
         |> addbad (mk_icomb(equalityp_tm, cimp_tm))
         |> addbad (mk_icomb(right_unique_tm, boolSyntax.implication))

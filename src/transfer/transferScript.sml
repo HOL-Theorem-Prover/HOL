@@ -302,7 +302,7 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
-    LET
+    Combinators: LET, FUNPOW, ...
    ---------------------------------------------------------------------- *)
 
 Theorem LET_rule:
@@ -311,6 +311,14 @@ Proof
   simp[FUN_REL_def]
 QED
 
+Theorem FUNPOW_rule:
+  ((AB |==> AB) |==> (=) |==> AB |==> AB) FUNPOW FUNPOW
+Proof
+  simp[FUN_REL_def] >> rw[] >> rename [‘AB (FUNPOW f n a) (FUNPOW g n b)’] >>
+  qpat_x_assum ‘AB a b’ mp_tac >>
+  map_every qid_spec_tac [‘a’, ‘b’, ‘n’] >> Induct >>
+  simp[arithmeticTheory.FUNPOW_SUC]
+QED
 
 (* ----------------------------------------------------------------------
     Pairs
@@ -436,6 +444,13 @@ Proof
   metis_tac[]
 QED
 
+Theorem LIST_REL_left_unique:
+  left_unique AB ==> left_unique (LIST_REL AB)
+Proof
+  simp[left_unique_def] >> strip_tac >> Induct_on ‘LIST_REL’ >>
+  simp[PULL_EXISTS] >> metis_tac[]
+QED
+
 Theorem LIST_REL_surj:
   surj AB ==> surj (LIST_REL AB)
 Proof
@@ -454,6 +469,66 @@ Theorem list_CASE_CONG:
     list_CASE
 Proof
   simp[FUN_REL_def, Once listTheory.FORALL_LIST, PULL_EXISTS]
+QED
+
+Theorem NIL_rule:
+  LIST_REL AB [] []
+Proof
+  simp[]
+QED
+
+Theorem CONS_rule:
+  (AB |==> LIST_REL AB |==> LIST_REL AB) CONS CONS
+Proof
+  simp[FUN_REL_def]
+QED
+
+Theorem TL_rule:
+  (LIST_REL AB |==> LIST_REL AB) TL TL
+Proof
+  simp[FUN_REL_def] >> Cases >> Cases >> simp[]
+QED
+
+Theorem LENGTH_rule:
+  (LIST_REL AB |==> (=)) LENGTH LENGTH
+Proof
+  simp[FUN_REL_def, SF SFY_ss, listTheory.EVERY2_LENGTH]
+QED
+
+Theorem FOLDL_rule:
+  ((CD |==> AB |==> CD) |==> CD |==> LIST_REL AB |==> CD) FOLDL FOLDL
+Proof
+  simp[FUN_REL_def] >> rw[] >> rename [‘CD (FOLDL f A xs) (FOLDL g B ys)’] >>
+  map_every (C qpat_x_assum mp_tac) [‘CD A B’, ‘LIST_REL _ _ _’] >>
+  map_every qid_spec_tac [‘xs’, ‘ys’, ‘A’, ‘B’] >>
+  Induct_on ‘LIST_REL’ >> simp[]
+QED
+
+Theorem FOLDR_rule:
+  ((AB |==> CD |==> CD) |==> CD |==> LIST_REL AB |==> CD) FOLDR FOLDR
+Proof
+  simp[FUN_REL_def] >> rw[] >> rename [‘CD (FOLDR f A xs) (FOLDR g B ys)’] >>
+  map_every (C qpat_x_assum mp_tac) [‘CD A B’, ‘LIST_REL _ _ _’] >>
+  map_every qid_spec_tac [‘xs’, ‘ys’, ‘A’, ‘B’] >>
+  Induct_on ‘LIST_REL’ >> simp[]
+QED
+
+Theorem MAP_rule:
+  ((AB |==> CD) |==> LIST_REL AB |==> LIST_REL CD) MAP MAP
+Proof
+  simp[FUN_REL_def] >> rw[] >> rename [‘LIST_REL CD (MAP f xs) (MAP g ys)’] >>
+  qpat_x_assum ‘LIST_REL _ _ _ ’ mp_tac >>
+  Induct_on ‘LIST_REL’ >> simp[]
+QED
+
+Theorem ALL_DISTINCT_rule:
+  left_unique AB ==> right_unique AB ==>
+  (LIST_REL AB |==> (=)) ALL_DISTINCT ALL_DISTINCT
+Proof
+  rw[left_unique_def, right_unique_def, FUN_REL_def] >>
+  qpat_x_assum ‘LIST_REL _ _ _ ’ mp_tac >> Induct_on ‘LIST_REL’ >>
+  simp[] >> rw[] >> iff_tac >> rw[] >>
+  metis_tac[listTheory.LIST_REL_MEM_IMP_R, listTheory.LIST_REL_MEM_IMP]
 QED
 
 val _ = export_theory();
