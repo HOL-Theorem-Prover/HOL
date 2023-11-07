@@ -555,7 +555,7 @@ fun transfer_phase1 hints cleftp ruledb t =
                   (check{cleftp=cleftp,forceprogress=true} ruledb)
     end
 
-fun eliminate_domrng cleftp ruledb =
+fun eliminate_domrng cleftp (ruledb:ruledb.t) =
     let
       val argsel = if cleftp then RAND_CONV else LAND_CONV
     in
