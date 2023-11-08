@@ -1111,20 +1111,22 @@ val ring_homo_poly_lead = store_thm(
         = f (EL k p)         by EL_MAP, poly_deg_nonzero
         = f (p ' k)          by poly_coeff_nonzero
 *)
-val ring_homo_poly_coeff = store_thm(
-  "ring_homo_poly_coeff",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p k. poly_coeff r_ p_ k = f (p ' k)``,
+Theorem ring_homo_poly_coeff:
+  !(r:'a ring) (r_:'b ring) f.
+    (r ~r~ r_) f ==> !p:'a list k. poly_coeff r_ p_ k = f (p ' k)
+Proof
   rpt strip_tac >>
-  Cases_on `p = |0|` >-
+  Cases_on ‘p = |0|’ >-
   rw[] >>
-  `p_ <> []` by metis_tac[MAP_EQ_NIL, poly_zero] >>
-  `deg_ p_ = deg p` by rw[ring_homo_poly_deg] >>
-  Cases_on `deg p < k` >-
+  ‘p_ <> []’ by metis_tac[MAP_EQ_NIL, poly_zero] >>
+  ‘deg_ p_ = deg p’ by rw[ring_homo_poly_deg] >>
+  Cases_on ‘deg p < k’ >-
   rw[poly_coeff_nonzero] >>
-  `~(PRE (LENGTH p) < k)` by metis_tac[poly_deg_nonzero] >>
-  `LENGTH p <> 0` by metis_tac[LENGTH_NIL, poly_zero] >>
-  `k < LENGTH p` by decide_tac >>
-  rw[poly_coeff_nonzero, EL_MAP]);
+  ‘~(PRE (LENGTH p) < k)’ by metis_tac[poly_deg_nonzero] >>
+  ‘LENGTH p <> 0’ by metis_tac[LENGTH_NIL, poly_zero] >>
+  ‘k < LENGTH p’ by decide_tac >>
+  rw[poly_coeff_nonzero, EL_MAP]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_) *)
 (* Proof:
@@ -2568,10 +2570,12 @@ val ring_iso_poly_lead = store_thm(
 
 (* Theorem: (r =r= r_) f ==> !p k. p_ '_ k = f (p ' k) *)
 (* Proof: by RingIso_def, ring_homo_poly_coeff *)
-val ring_iso_poly_coeff = store_thm(
-  "ring_iso_poly_coeff",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p k. poly_coeff r_ p_ k = f (p ' k)``,
-  rw[RingIso_def, ring_homo_poly_coeff]);
+Theorem ring_iso_poly_coeff:
+  !(r:'a ring) (r_:'b ring) f.
+    (r =r= r_) f ==> !(p:'a list) k. poly_coeff r_ p_ k = f (p ' k)
+Proof
+  rw[RingIso_def, ring_homo_poly_coeff]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_) *)
 (* Proof: by RingIso_def, ring_homo_weak_cmult *)
@@ -3345,10 +3349,12 @@ val field_iso_poly_lead = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> p_ '_ k = f (p ' k)                     by ring_iso_poly_coeff
 *)
-val field_iso_poly_coeff = store_thm(
-  "field_iso_poly_coeff",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p k. poly_coeff r_ p_ k = f (p ' k)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_coeff]);
+Theorem field_iso_poly_coeff:
+  !(r:'a field) (r_:'b field) f.
+    (r === r_) f ==> !(p:'a list) k. poly_coeff r_ p_ k = f (p ' k)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_coeff]
+QED
 
 (* Theorem: (r === r_) f ==> !y. y IN R_ ==> !q. weak_ q ==>
             weak (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q) *)
