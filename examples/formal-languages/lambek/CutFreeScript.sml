@@ -44,7 +44,7 @@ end;
 
 val _ = new_theory "CutFree";
 
-hide "S";
+val _ = hide "S";
 
 (*** Module: CutSequent ***)
 

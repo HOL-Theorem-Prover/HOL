@@ -68,11 +68,7 @@ fun copyDep name =
 
 
 
-copyDep "combin";
-copyDep "pair";
-copyDep "num";
-copyDep "list";
-copyDep "rich_list";
+val _ = List.app copyDep ["combin","pair" ,"num" ,"list" ,"rich_list"]
 
 
 
