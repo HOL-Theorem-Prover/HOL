@@ -14,7 +14,6 @@ val _ = new_theory "iterateCompute";
 
 
 (* open dependent theories *)
-val _ = load("iterationTheory");
 open helperFunctionTheory;
 open helperSetTheory;
 open helperNumTheory;

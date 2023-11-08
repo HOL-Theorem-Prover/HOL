@@ -30,7 +30,6 @@ open helperListTheory;
 open listRangeTheory; (* for listRangeLHI_ALL_DISTINCT *)
 open indexedListsTheory; (* for findi_EL and EL_findi *)
 
-load "sublistTheory";
 open sublistTheory;
 
 open quarityTheory;

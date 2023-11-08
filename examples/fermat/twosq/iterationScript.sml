@@ -14,7 +14,6 @@ val _ = new_theory "iteration";
 
 
 (* open dependent theories *)
-val _ = load("helperFunctionTheory");
 (* open helperTwosqTheory; *)
 open helperFunctionTheory;
 open helperSetTheory;

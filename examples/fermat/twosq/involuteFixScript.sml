@@ -14,7 +14,6 @@ val _ = new_theory "involuteFix";
 
 
 (* open dependent theories *)
-val _ = load("involuteTheory");
 open helperFunctionTheory; (* for FUNPOW_2 *)
 open helperSetTheory; (* for BIJ_ELEMENT *)
 open helperNumTheory; (* for MOD_EQ *)
