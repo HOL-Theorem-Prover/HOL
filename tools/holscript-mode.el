@@ -2,6 +2,10 @@
 
 ;; font-locking and syntax
 
+(defvar holscript-definitionlabel-re
+  "\\(\\[~?[A-Za-z0-9_']+\\(\\[[A-Za-z0-9_',]+\\]\\)?[[:space:]]*:[[:space:]]*\\]\\)\\|\\[\\(/\\\\\\|∧\\)\\]\\|^\\[\\]"
+  "Regular expression for case-labels occurring within HOL definitions,
+ignoring fact that it should really only occur at the beginning of the line.")
 
 (defconst holscript-font-lock-keywords
   (list '("^\\(Theorem\\|Triviality\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
@@ -27,8 +31,9 @@
         '("\\<cheat\\>" . 'holscript-cheat-face)
         '(holscript-find-syntax-error 0 'holscript-syntax-error-face prepend)
         '(hol-find-quoted-material 0 'holscript-quoted-material prepend)
-        '("^\\[[[:space:]]*~?\\([A-Za-z0-9'_]+\\)\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:\\]" 0
-          'holscript-definition-label-face prepend)))
+        (list
+         holscript-definitionlabel-re 0
+          (quote 'holscript-definition-label-face) 'prepend)))
 
 (defconst holscript-font-lock-defaults '(holscript-font-lock-keywords))
 
@@ -830,10 +835,6 @@ a store_thm equivalent.")
   "Regular expression for quantifiers that are (treated as) single punctuation
 class characters.")
 
-(defvar holscript-definitionlabel-re
-  "\\[~?[A-Za-z0-9_']+\\(\\[[A-Za-z0-9_',]+\\]\\)?[[:space:]]*:[[:space:]]*\\]"
-  "Regular expression for case-labels occurring within HOL definitions,
-ignoring fact that it should really only occur at the beginning of the line.")
 
 
 
