@@ -2946,7 +2946,7 @@ Proof
 QED
 
 Theorem LLIST_CASE_ELIM:
-  ∀f'. f'(llist_CASE (x:'a llist) v f) <=>
+  !f'. f'(llist_CASE (x:'a llist) v f) <=>
   x = [||] /\ f' v \/ ?a l. x = a:::l /\ f'(f a l)
 Proof
   llist_CASE_TAC ``x:'a llist`` >> rw[FUN_EQ_THM]
