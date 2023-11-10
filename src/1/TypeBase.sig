@@ -65,6 +65,10 @@ sig
    val CaseEqs            : string list -> thm
    val AllCaseEqs         : unit -> thm
 
+   val CasePred           : string -> thm
+   val CasePreds          : string list -> thm
+   val AllCasePreds       : unit -> thm
+
    (* f (case x of ...) <=> (case x of ..) *)
    val case_rand_of       : hol_type -> thm
    (* f (case x of ...) <=> disjunction of possibilities *)
