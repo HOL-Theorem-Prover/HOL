@@ -264,6 +264,12 @@ Proof
   \\ fs [Branch_11,ltree_CASE]
 QED
 
+Theorem ltree_CASE_elim:
+  ∀f'. f'(ltree_CASE t f) <=> ?a ts. t = Branch a ts /\ f'(f a ts)
+Proof
+  qspec_then `t` strip_assume_tac ltree_cases \\ rw []
+  \\ fs [Branch_11,ltree_CASE]
+QED
 
 (* ltree generator *)
 
@@ -642,6 +648,7 @@ val _ = TypeBase.export
       case_def = ltree_CASE,
       case_cong = ltree_CASE_cong,
       case_eq = ltree_CASE_eq,
+      case_elim = ltree_CASE_elim,
       nchotomy = ltree_cases,
       size = NONE,
       encode = NONE,
