@@ -70,6 +70,11 @@ val bool_info =
            case_def = boolTheory.bool_case_thm,
            nchotomy = boolTheory.BOOL_CASES_AX
          },
+       case_elim =
+         Prim_rec.prove_case_ho_elim_thm{
+           case_def = boolTheory.bool_case_thm,
+           nchotomy = boolTheory.BOOL_CASES_AX
+         },
        case_cong = boolTheory.COND_CONG,
        distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
        nchotomy = boolTheory.BOOL_CASES_AX,
@@ -239,9 +244,7 @@ fun CasePred' tyinfo =
     let
       val id = mk_abs(mk_var ("x", bool), mk_var ("x", bool))
     in
-      {case_def = TypeBasePure.case_def_of tyinfo,
-       nchotomy = TypeBasePure.nchotomy_of tyinfo}
-      |> Prim_rec.prove_case_ho_elim_thm
+      case_elim_of tyinfo
       |> Drule.ISPEC id
       |> Conv.CONV_RULE (Conv.LHS_CONV Thm.BETA_CONV)
     end

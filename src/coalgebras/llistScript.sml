@@ -2945,6 +2945,13 @@ Proof
   llist_CASE_TAC ``x:'a llist`` >> rw[]
 QED
 
+Theorem LLIST_CASE_ELIM:
+  ∀f'. f'(llist_CASE (x:'a llist) v f) <=>
+  x = [||] /\ f' v \/ ?a l. x = a:::l /\ f'(f a l)
+Proof
+  llist_CASE_TAC ``x:'a llist`` >> rw[FUN_EQ_THM]
+QED
+
 Theorem LLIST_DISTINCT:
   !a1 a0. [||] <> a0:::a1
 Proof
@@ -2985,6 +2992,7 @@ val _ = TypeBase.export
      case_def = llist_CASE_compute,
      case_cong = LLIST_CASE_CONG,
      case_eq = LLIST_CASE_EQ,
+     case_elim = LLIST_CASE_ELIM,
      nchotomy = llist_CASES,
      size = NONE,
      encode = NONE,

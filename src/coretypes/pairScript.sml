@@ -569,12 +569,20 @@ val pair_case_eq = Q.store_thm(
   Q.ISPEC_THEN ‘p’ STRUCT_CASES_TAC pair_CASES THEN
   SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
 
+val pair_case_ho_elim = Q.store_thm(
+  "pair_case_ho_elim",
+  ‘!f'. f'(pair_CASE p f) = (?x y. p = (x,y) /\ f'(f x y))’,
+  strip_tac THEN
+  Q.ISPEC_THEN ‘p’ STRUCT_CASES_TAC pair_CASES THEN
+  SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
+
 val _ = TypeBase.export [
       TypeBasePure.mk_datatype_info_no_simpls {
         ax=TypeBasePure.ORIG pair_Axiom,
         case_def=pair_case_thm,
         case_cong=pair_case_cong,
         case_eq = pair_case_eq,
+        case_elim = pair_case_ho_elim,
         induction=TypeBasePure.ORIG pair_induction,
         nchotomy=ABS_PAIR_THM,
         size=NONE,

@@ -322,6 +322,16 @@ Proof
   \\ fs [itree_CASE,itree_11,itree_distinct]
 QED
 
+Theorem itree_CASE_elim:
+  ∀f.
+  f(itree_CASE t ret div vis) <=>
+    (?r. t = Ret r /\ f(ret r)) \/
+    (t = Div /\ f(div)) \/
+    (?a g. t = Vis a g /\ f(vis a g))
+Proof
+  qspec_then `t` strip_assume_tac itree_cases \\ rw []
+  \\ fs [itree_CASE,itree_11,itree_distinct]
+QED
 
 (* itree unfold *)
 
@@ -559,6 +569,7 @@ val _ = TypeBase.export
       case_def = itree_CASE,
       case_cong = itree_CASE_cong,
       case_eq = itree_CASE_eq,
+      case_elim = itree_CASE_elim,
       nchotomy = itree_cases,
       size = NONE,
       encode = NONE,
