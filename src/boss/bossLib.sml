@@ -158,6 +158,9 @@ val split_pair_case_tac = pairLib.split_pair_case_tac
 val CaseEq            = TypeBase.CaseEq
 val CaseEqs           = TypeBase.CaseEqs
 val AllCaseEqs        = TypeBase.AllCaseEqs
+val CasePred          = TypeBase.CasePred
+val CasePreds         = TypeBase.CasePreds
+val AllCasePreds      = TypeBase.AllCasePreds
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
