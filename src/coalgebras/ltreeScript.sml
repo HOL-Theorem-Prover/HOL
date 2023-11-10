@@ -265,7 +265,7 @@ Proof
 QED
 
 Theorem ltree_CASE_elim:
-  ∀f'. f'(ltree_CASE t f) <=> ?a ts. t = Branch a ts /\ f'(f a ts)
+  !f'. f'(ltree_CASE t f) <=> ?a ts. t = Branch a ts /\ f'(f a ts)
 Proof
   qspec_then `t` strip_assume_tac ltree_cases \\ rw []
   \\ fs [Branch_11,ltree_CASE]
