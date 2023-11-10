@@ -323,7 +323,7 @@ Proof
 QED
 
 Theorem itree_CASE_elim:
-  ∀f.
+  !f.
   f(itree_CASE t ret div vis) <=>
     (?r. t = Ret r /\ f(ret r)) \/
     (t = Div /\ f(div)) \/
