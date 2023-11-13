@@ -22,7 +22,9 @@
   \index{#1 Theory@\textbf{#1 Theory}!Theorems!#2}}
 
 \newcommand{\HOLinline}[1]{\mbox{\textup{\texttt{#1}}}}
-\newenvironment{HOLblock}{\begin{alltt}}{\end{alltt}}
+\newenvironment{HOLblock}{%
+\begin{alltt}}{%
+\end{alltt}}
 \newenvironment{HOLmath}{\begin{displaymath}\begin{array}{l}}{\end{array}\end{displaymath}\ignorespacesafterend}
 \newenvironment{HOLarray}{\begin{array}[t]{l}}{\end{array}}
 
@@ -130,3 +132,4 @@
 \newcommand{\HOLTokenOne}{\ensuremath{\mathbbm{1}}}
 \newcommand{\HOLTokenIntegral}{\ensuremath{\int}}
 \newcommand{\HOLTokenIntegralPlus}{\ensuremath{\int^{+}}}
+\newcommand{\HOLTokenFUNION}{\ensuremath{\uplus}} % not ideal; the real symbol is available in unicode-math if you use xelatex...

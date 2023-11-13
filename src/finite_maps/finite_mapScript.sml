@@ -789,6 +789,8 @@ val FUNION_DEF = new_specification
    CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) union_lemma);
 val _ = set_mapped_fixity {term_name = "FUNION", tok = UTF8.chr 0x228C,
                            fixity = Infixl 500}
+val _ = TeX_notation {hol = UTF8.chr 0x228C, TeX = ("\\HOLTokenFUNION{}", 1)}
+
 
 Theorem FDOM_FUNION[simp] = FUNION_DEF |> SPEC_ALL |> CONJUNCT1
 
