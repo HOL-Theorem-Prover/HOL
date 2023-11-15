@@ -447,6 +447,7 @@ val ruledb =
         |> addrule EXISTS_IFF_RDOM
         |> addrule EXISTS_IFF_RRANGE
         |> addrule EXISTS_bitotal
+        |> addrule COND_rule
         |> addrule UREL_EQ
         |> addrule PAIRU_COMMA
         |> addrule pair_CASE_CONG
@@ -456,6 +457,9 @@ val ruledb =
         |> addrule SND_CORRECT
         |> addrule COMMA_CORRECT
         |> addrule option_CASE_CONG
+        |> addrule SOME_rule
+        |> addrule NONE_rule
+        |> addrule OPTION_BIND_rule
         |> addrule list_CASE_CONG
         |> addrule NIL_rule
         |> addrule CONS_rule
@@ -497,6 +501,10 @@ val ruledb =
         |> addsafe (UNDISCH_ALL LIST_REL_total)
         |> addsafe (UNDISCH_ALL LIST_REL_left_unique)
         |> addsafe (UNDISCH_ALL LIST_REL_right_unique)
+        |> addsafe (UNDISCH_ALL OPTREL_left_unique)
+        |> addsafe (UNDISCH_ALL OPTREL_right_unique)
+        |> addsafe (UNDISCH_ALL OPTREL_total)
+        |> addsafe (UNDISCH_ALL OPTREL_surj)
         |> addbad (mk_icomb(equalityp_tm, boolSyntax.implication))
         |> addbad (mk_icomb(equalityp_tm, cimp_tm))
         |> addbad (mk_icomb(right_unique_tm, boolSyntax.implication))

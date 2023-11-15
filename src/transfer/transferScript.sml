@@ -271,6 +271,10 @@ Proof
   metis_tac[]
 QED
 
+(* ----------------------------------------------------------------------
+    Implications
+   ---------------------------------------------------------------------- *)
+
 Theorem cimp_imp:
   ((==>) |==> flip (==>) |==> flip (==>)) (==>) (==>)
 Proof
@@ -299,6 +303,16 @@ Theorem cimp_disj:
   (flip (==>) |==> flip (==>) |==> flip (==>)) (\/) (\/)
 Proof
   simp[FUN_REL_def] >> metis_tac[]
+QED
+
+(* ----------------------------------------------------------------------
+    COND
+   ---------------------------------------------------------------------- *)
+
+Theorem COND_rule:
+  ((=) |==> AB |==> AB |==> AB) COND COND
+Proof
+  simp[FUN_REL_def] >> rw[] >> rw[]
 QED
 
 (* ----------------------------------------------------------------------
@@ -425,6 +439,25 @@ Theorem option_CASE_CONG:
 Proof
   simp[FUN_REL_def, optionTheory.FORALL_OPTION]
 QED
+
+Theorem OPTION_BIND_rule:
+  (OPTREL AB |==> (AB |==> OPTREL CD) |==> OPTREL CD) OPTION_BIND OPTION_BIND
+Proof
+  simp[FUN_REL_def] >> rw[optionTheory.OPTREL_def]
+QED
+
+Theorem NONE_rule:
+  OPTREL AB NONE NONE
+Proof
+  simp[]
+QED
+
+Theorem SOME_rule:
+  (AB |==> OPTREL AB) SOME SOME
+Proof
+  simp[FUN_REL_def]
+QED
+
 
 
 (* ----------------------------------------------------------------------
