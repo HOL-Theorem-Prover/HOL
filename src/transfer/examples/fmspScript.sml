@@ -137,6 +137,30 @@ Proof
   simp[surj_def]
 QED
 
+Theorem left_unique_FMSP[transfer_safe]:
+  total AN /\ left_unique CD ==> left_unique (FMSP AN CD)
+Proof
+  simp[left_unique_def, right_unique_def, FMSP_def, total_def] >>
+  rpt strip_tac >>
+  simp[FLOOKUP_EXT, FUN_EQ_THM] >>
+  rename [‘FLOOKUP fm1 _ = FLOOKUP fm2 _’] >> qx_gen_tac ‘a’ >>
+  ‘?n. AN a n’ by metis_tac[] >>
+  pop_assum (fn th => ntac 2 (first_x_assum (C (mp_then Any assume_tac) th))) >>
+  Cases_on ‘FLOOKUP fm1 a’ >> gvs[optionTheory.OPTREL_SOME] >> metis_tac[]
+QED
+
+Theorem right_unique_FMSP[transfer_safe]:
+  surj AN /\ right_unique CD ==> right_unique (FMSP AN CD)
+Proof
+  simp[left_unique_def, right_unique_def, FMSP_def, surj_def] >>
+  rpt strip_tac >>
+  simp[sptreeTheory.spt_eq_thm] >> gen_tac >>
+  rename [‘lookup n sp1 = lookup n sp2’, ‘FLOOKUP fm _’] >>
+  ‘?a. AN a n’ by metis_tac[] >>
+  pop_assum (fn th => ntac 2 (first_x_assum (C (mp_then Any assume_tac) th))) >>
+  Cases_on ‘lookup n sp1’ >> gvs[optionTheory.OPTREL_SOME] >> metis_tac[]
+QED
+
 Theorem RRANGE_FMSP[transfer_simp]:
   total AN /\ bi_unique AN /\ surj BC ==>
   RRANGE (FMSP AN BC) = wf
@@ -178,15 +202,69 @@ Definition sp2fm_def:
   sp2fm sp = FUN_FMAP (λk. THE (lookup k sp)) (domain sp)
 End
 
+Theorem FDOM_sp2fm[simp]:
+  FDOM (sp2fm sp) = domain sp
+Proof
+  simp[sp2fm_def]
+QED
+
+Theorem FLOOKUP_sp2fm[simp]:
+  FLOOKUP (sp2fm sp) k = lookup k sp
+Proof
+  simp[FLOOKUP_SIMP, sp2fm_def] >> rw[] >>
+  simp[lookup_NONE_domain] >> gs[domain_lookup]
+QED
+
+Theorem sp2fm_thm[simp]:
+  sp2fm LN = FEMPTY /\
+  sp2fm (insert k v sp) = sp2fm sp |+ (k,v)
+Proof
+  simp[FLOOKUP_EXT, FUN_EQ_THM, FLOOKUP_SIMP, lookup_insert] >> rw[]
+QED
+
 Theorem sp2fm_correct:
   FMSP (=) (=) fm sp <=> wf sp /\ fm = sp2fm sp
 Proof
-  simp[FMSP_def, sp2fm_def, EQ_IMP_THM, FLOOKUP_SIMP, AllCaseEqs()] >>
-  rpt conj_tac
-  >- (simp[FLOOKUP_EXT, FLOOKUP_SIMP, FUN_EQ_THM] >> rpt strip_tac >> rw[] >>
-      simp[lookup_NONE_domain] >> gs[domain_lookup]) >>
-  rpt strip_tac >> Cases_on ‘lookup n sp’ >>
-  simp[lookup_NONE_domain, domain_lookup]
+  simp[FMSP_def, FLOOKUP_EXT, FUN_EQ_THM]
+QED
+
+Definition fm2sp_def:
+  fm2sp fm = ITFMAP insert fm LN
+End
+
+Theorem fm2sp_thm[simp]:
+  fm2sp FEMPTY = LN /\
+  fm2sp (fm |+ (k,v)) = insert k v $ fm2sp (fm \\ k)
+Proof
+  conj_tac >- simp[fm2sp_def] >>
+  map_every qid_spec_tac [‘k’, ‘v’, ‘fm’] >>
+  simp[fm2sp_def] >> irule $ cj 2 ITFMAP_thm>>
+  metis_tac[insert_swap]
+QED
+
+Theorem wf_fm2sp[simp]:
+  !fm. wf (fm2sp fm)
+Proof
+  Induct >> simp[wf_insert, DOMSUB_NOT_IN_DOM]
+QED
+
+Theorem lookup_fm2sp[simp]:
+  lookup k (fm2sp fm) = FLOOKUP fm k
+Proof
+  Induct_on ‘fm’ >> rw[lookup_insert, DOMSUB_NOT_IN_DOM] >>
+  rw[FLOOKUP_SIMP]
+QED
+
+Theorem fm2sp_sp2fm[simp]:
+  !sp. wf sp ==> fm2sp (sp2fm sp) = sp
+Proof
+  simp[spt_eq_thm]
+QED
+
+Theorem sp2fm_fm2sp[simp]:
+  !fm. sp2fm (fm2sp fm) = fm
+Proof
+  Induct >> simp[DOMSUB_NOT_IN_DOM]
 QED
 
 val _ = export_theory();
