@@ -681,6 +681,13 @@ Proof
   SRW_TAC[][OPTREL_def]
 QED
 
+Theorem OPTREL_NONE[simp]:
+  (OPTREL R NONE y <=> y = NONE) /\
+  (OPTREL R x NONE <=> x = NONE)
+Proof
+  SRW_TAC[][OPTREL_def]
+QED
+
 val OPTREL_O_lemma = Q.prove(
   `!R1 R2 l1 l2.
      OPTREL (R1 O R2) l1 l2 <=> ?l3. OPTREL R2 l1 l3 /\ OPTREL R1 l3 l2`,
