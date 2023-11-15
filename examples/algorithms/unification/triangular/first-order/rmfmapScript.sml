@@ -17,6 +17,12 @@ Proof
   gs[sp2fm_correct]
 QED
 
+Theorem FUNREL_flipR:
+  (AB |==> CD |==> EF) f (flip g) ⇔ (CD |==> AB |==> EF) (flip f) g
+Proof
+  simp[FUN_REL_def] >> metis_tac[]
+QED
+
 Definition TERMREL_def:
   (TERMREL AB (Var n) t ⇔ t = Var n) ∧
   (TERMREL AB (Pair t11 t12) t ⇔ ∃t21 t22. t = Pair t21 t22 ∧
@@ -38,27 +44,20 @@ Proof
   simp[FUN_REL_def] >> Cases >> simp[TERMREL_def, PULL_EXISTS]
 QED
 
-(*
-val th = GEN_ALL corevwalk_thm
-val _ = show_assums := true
-val base = transfer_skeleton true (concl th)
-val th = base
 
-val rdb = global_ruledb()
-val cleftp = true
+Theorem term_CASE_EQCONG[transfer_rule]:
+  ((=) |==>
+       ((=) |==> CD) |==> (* Var *)
+       ((=) |==> (=) |==> CD) |==> (* Pair *)
+       ((=) |==> CD) |==> (* Const *)
+       CD) term_CASE term_CASE
+Proof
+  simp[FUN_REL_def] >> Cases >> simp[]
+QED
 
-fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
+fun xfer l th = transfer_thm 5 l true (global_ruledb()) (GEN_ALL th)
 
-val F = seq.hd o resolve_relhyps ["vR"] true (global_ruledb())
-val th = fpow F 8 th
-
-th |> mkrelsyms_eq true |> eliminate_domrng true (global_ruledb())
-
-*)
-
-
-Theorem rcorevwalk_thm =
-  transfer_thm 5 ["corevwalk"] true (global_ruledb()) (GEN_ALL corevwalk_thm)
+Theorem rcorevwalk_thm = xfer ["corevwalk"] corevwalk_thm
 
 Definition rvR_def:
   rvR sp u v = vR (sp2fm sp) u v
@@ -71,11 +70,103 @@ Proof
   gs[sp2fm_correct]
 QED
 
-Theorem rvR_thm =
-        transfer_thm 10 ["vR", "FLOOKUP", "option_CASE"]
-                     true (global_ruledb())
-                     (INST_TYPE [alpha |-> “:num”] substTheory.vR_def)
+Theorem rvR_thm = xfer ["vR", "FLOOKUP", "option_CASE"]
+                       (INST_TYPE [alpha |-> “:num”] substTheory.vR_def)
 
+Definition swfs_def:
+  swfs sp = wfs (sp2fm sp)
+End
+
+Theorem FMSP_wfs[transfer_rule]:
+  (FMSP (=) (=) |==> (=)) wfs swfs
+Proof
+  simp[FUN_REL_def, swfs_def, sp2fm_correct]
+QED
+
+Definition svwalk_def:
+  svwalk sp t = vwalk (sp2fm sp) t
+End
+
+Theorem FMSP_vwalk[transfer_rule]:
+  (FMSP (=) (=) |==> (=) |==> (=)) vwalk svwalk
+Proof
+  simp[FUN_REL_def, svwalk_def, sp2fm_correct]
+QED
+
+Theorem svwalk_thm = xfer [] walkTheory.vwalk_def
+
+Definition swalk_def:
+  swalk sp t = walk (sp2fm sp) t
+End
+
+Theorem FMSP_walk[transfer_rule]:
+  (FMSP (=) (=) |==> (=) |==> (=)) walk swalk
+Proof
+  simp[FUN_REL_def, swalk_def, sp2fm_correct]
+QED
+
+Theorem swalk_thm = xfer [] walkTheory.walk_def
+
+Definition soc_def:
+  soc sp t v = oc (sp2fm sp) t v
+End
+
+Theorem FMSP_oc[transfer_rule]:
+  (FMSP (=) (=) |==> (=) |==> (=) |==> (=)) oc soc
+Proof
+  simp[sp2fm_correct, FUN_REL_def, soc_def]
+QED
+
+Theorem soc_thm = xfer [] walkstarTheory.oc_thm
+
+Definition sext_s_check_def:
+  sext_s_check sp v t = OPTION_MAP fm2sp (ext_s_check (sp2fm sp) v t)
+End
+
+Theorem FMSP_ext_s_check[transfer_rule]:
+  (FMSP (=) (=) |==> (=) |==> (=) |==> OPTREL (FMSP (=) (=)))
+  ext_s_check sext_s_check
+Proof
+  rw[FUN_REL_def, sext_s_check_def, sp2fm_correct] >>
+  rw[sp2fm_correct,sptreeTheory.wf_insert]
+QED
+
+Theorem sext_s_check_thm = xfer [] unifDefTheory.ext_s_check_def |> SRULE[]
+
+(*
+val th = GEN_ALL unifDefTheory.unify_def
+val _ = show_assums := true
+val base = transfer_skeleton true (concl th)
+val th = base
+
+val rdb = global_ruledb()
+val cleftp = true
+
+fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
+
+fun F th = seq.hd $ resolve_relhyps [] true (global_ruledb()) th
+val th = fpow F 38 base
+
+th |> mkrelsyms_eq true |> eliminate_domrng true (global_ruledb())
+
+*)
+
+
+
+Definition sunify_def:
+  sunify sp t1 t2 = OPTION_MAP fm2sp (unify (sp2fm sp) t1 t2)
+End
+
+Theorem FMSP_unify[transfer_rule]:
+  (FMSP (=) (=) |==> (=) |==> (=) |==> OPTREL (FMSP (=) (=))) unify sunify
+Proof
+  simp[sunify_def, FUN_REL_def, optionTheory.OPTREL_def, PULL_EXISTS,
+       sp2fm_correct] >>
+  metis_tac[optionTheory.option_CASES]
+QED
+
+Theorem sunify_thm = xfer [] unifDefTheory.unify_def
+                       |> SRULE[sext_s_check_thm, soc_thm]
 
 val _ = export_theory();
 
