@@ -2051,7 +2051,7 @@ Proof
 QED
 
 Theorem ITFMAPR_unique:
-  (!k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A)) ==>
+  (!k1 k2 v1 v2 A. k1 <> k2 ==> f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A)) ==>
   !fm A0 A1 A2. ITFMAPR f fm A0 A1 /\ ITFMAPR f fm A0 A2 ==> A1 = A2
 Proof
   strip_tac >> gen_tac >> completeInduct_on ‘CARD (FDOM fm)’ >> rw[] >>
@@ -2098,7 +2098,7 @@ End
 
 Theorem ITFMAP_thm:
   (ITFMAP f FEMPTY A = A) /\
-  ((!k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A))
+  ((!k1 k2 v1 v2 A. k1 <> k2 ==> f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A))
      ==>
    ITFMAP f (fm |+ (k,v)) A = f k v (ITFMAP f (fm\\k) A))
 Proof
