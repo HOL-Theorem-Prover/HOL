@@ -44,9 +44,9 @@ Theorem set_byte_32[compute]:
                      w2w b << 24 || (w && 0x00FFFFFFw)
 Proof
   fs [set_byte_def]
-  \\ qsuff_tac ‘byte_index a be = 0 ∨
-                byte_index a be = 8 ∨
-                byte_index a be = 16 ∨
+  \\ qsuff_tac ‘byte_index a be = 0 \/
+                byte_index a be = 8 \/
+                byte_index a be = 16 \/
                 byte_index a be = 24’
   THEN1 (rw [] \\ fs [word_slice_alt_def] \\ blastLib.BBLAST_TAC)
   \\ fs [byte_index_def]
@@ -66,13 +66,13 @@ Theorem set_byte_64[compute]:
                      w2w b << 56 || (w && 0x00FFFFFFFFFFFFFFw)
 Proof
   fs [set_byte_def]
-  \\ qsuff_tac ‘byte_index a be = 0 ∨
-                byte_index a be = 8 ∨
-                byte_index a be = 16 ∨
-                byte_index a be = 24 ∨
-                byte_index a be = 32 ∨
-                byte_index a be = 40 ∨
-                byte_index a be = 48 ∨
+  \\ qsuff_tac ‘byte_index a be = 0 \/
+                byte_index a be = 8 \/
+                byte_index a be = 16 \/
+                byte_index a be = 24 \/
+                byte_index a be = 32 \/
+                byte_index a be = 40 \/
+                byte_index a be = 48 \/
                 byte_index a be = 56’
   THEN1 (rw [] \\ fs [word_slice_alt_def] \\ blastLib.BBLAST_TAC)
   \\ fs [byte_index_def]
@@ -80,14 +80,15 @@ Proof
 QED
 
 Theorem set_byte_change_a:
-  w2n (a:α word) MOD (dimindex(:α) DIV 8) = w2n a' MOD (dimindex(:α) DIV 8) ⇒
+  w2n (a:'a word) MOD (dimindex(:'a) DIV 8) = w2n a' MOD (dimindex(:'a) DIV 8)
+  ==>
     set_byte a b w be = set_byte a' b w be
 Proof
   rw[set_byte_def,byte_index_def]
 QED
 
 Theorem get_byte_set_byte:
-  8 ≤ dimindex(:α) ⇒
+  8 <= dimindex(:'a) ==>
   (get_byte a (set_byte (a:'a word) b w be) be = b)
 Proof
   fs [get_byte_def,set_byte_def]
@@ -111,7 +112,7 @@ Proof
     \\ fs[dimindex_8]
     \\ qspec_then`8`mp_tac DIVISION
     \\ impl_tac >- simp[]
-    \\ disch_then(qspec_then`dimindex(:α)`(SUBST1_TAC o CONJUNCT1))
+    \\ disch_then(qspec_then`dimindex(:'a)`(SUBST1_TAC o CONJUNCT1))
     \\ simp[] )
   \\ fs [word_or_def,fcpTheory.FCP_BETA,word_lsr_def,word_lsl_def,
          word_slice_alt_def,w2w] \\ rfs []
@@ -142,15 +143,15 @@ Termination
 End
 
 Theorem LENGTH_words_of_bytes:
-   8 ≤ dimindex(:'a) ⇒
-   ∀be ls.
+   8 <= dimindex(:'a) ==>
+   !be ls.
    (LENGTH (words_of_bytes be ls : 'a word list) =
     LENGTH ls DIV (w2n (bytes_in_word : 'a word)) +
     MIN 1 (LENGTH ls MOD (w2n (bytes_in_word : 'a word))))
 Proof
   strip_tac
   \\ recInduct words_of_bytes_ind
-  \\ `1 ≤ w2n bytes_in_word`
+  \\ `1 <= w2n bytes_in_word`
   by (
     simp[bytes_in_word_def,dimword_def]
     \\ DEP_REWRITE_TAC[LESS_MOD]
@@ -186,9 +187,9 @@ Proof
 QED
 
 Theorem words_of_bytes_append:
-   0 < w2n(bytes_in_word:'a word) ⇒
-   ∀l1 l2.
-   (LENGTH l1 MOD w2n (bytes_in_word:'a word) = 0) ⇒
+   0 < w2n(bytes_in_word:'a word) ==>
+   !l1 l2.
+   (LENGTH l1 MOD w2n (bytes_in_word:'a word) = 0) ==>
    (words_of_bytes be (l1 ++ l2) : 'a word list =
     words_of_bytes be l1 ++ words_of_bytes be l2)
 Proof
@@ -228,7 +229,7 @@ Proof
 QED
 
 Theorem words_of_bytes_append_word:
-  0 < LENGTH l1 ∧ (LENGTH l1 = w2n (bytes_in_word:'a word)) ⇒
+  0 < LENGTH l1 /\ (LENGTH l1 = w2n (bytes_in_word:'a word)) ==>
   (words_of_bytes be (l1 ++ l2) = word_of_bytes be (0w:'a word) l1 :: words_of_bytes be l2)
 Proof
   rw[]
@@ -248,8 +249,8 @@ Definition bytes_to_word_def:
 End
 
 Theorem bytes_to_word_eq:
-  bytes_to_word 0 a bs w be = w ∧
-  bytes_to_word k a [] w be = w ∧
+  bytes_to_word 0 a bs w be = w /\
+  bytes_to_word k a [] w be = w /\
   bytes_to_word (SUC k) a (b::bs) w be =
     set_byte a b (bytes_to_word k (a+1w) bs w be) be
 Proof
@@ -257,8 +258,8 @@ Proof
 QED
 
 Theorem word_of_bytes_bytes_to_word:
-  ∀be a bs k.
-    LENGTH bs ≤ k ⇒
+  !be a bs k.
+    LENGTH bs <= k ==>
     (word_of_bytes be a bs = bytes_to_word k a bs 0w be)
 Proof
   Induct_on`bs`
@@ -277,9 +278,9 @@ Proof
 QED
 
 Theorem bytes_to_word_same:
-  ∀bw k b1 w be b2.
-    (∀n. n < bw ⇒ n < LENGTH b1 ∧ n < LENGTH b2 ∧ EL n b1 = EL n b2)
-    ⇒
+  !bw k b1 w be b2.
+    (!n. n < bw ==> n < LENGTH b1 /\ n < LENGTH b2 /\ EL n b1 = EL n b2)
+    ==>
     (bytes_to_word bw k b1 w be = bytes_to_word bw k b2 w be)
 Proof
   ho_match_mp_tac bytes_to_word_ind \\ rw []
@@ -299,7 +300,7 @@ Proof
 QED
 
 Definition word_to_bytes_aux_def: (* length, 'a word, endianness *)
-  word_to_bytes_aux 0 (w:'a word) be = [] ∧
+  word_to_bytes_aux 0 (w:'a word) be = [] /\
   word_to_bytes_aux (SUC n) w be =
     (word_to_bytes_aux n w be) ++ [get_byte (n2w n) w be]
 End
@@ -311,7 +312,7 @@ Definition word_to_bytes_def:
 End
 
 Theorem byte_index_cycle:
-  8 ≤ dimindex (:'a) ⇒
+  8 <= dimindex (:'a) ==>
   byte_index (n2w ((w2n (a:'a word)) MOD (dimindex (:'a) DIV 8)):'a word) be = byte_index a be
 Proof
   strip_tac>>
@@ -327,7 +328,7 @@ Proof
 QED
 
 Theorem get_byte_cycle:
-  8 ≤ dimindex (:'a) ⇒
+  8 <= dimindex (:'a) ==>
   get_byte (n2w ((w2n (a:'a word)) MOD (dimindex (:'a) DIV 8)):'a word) w be
   = get_byte a w be
 Proof
@@ -335,7 +336,7 @@ Proof
 QED
 
 Theorem set_byte_cycle:
-  8 ≤ dimindex (:'a) ⇒
+  8 <= dimindex (:'a) ==>
   set_byte (n2w ((w2n (a:'a word)) MOD (dimindex (:'a) DIV 8)):'a word) b w be
   = set_byte a b w be
 Proof
@@ -343,7 +344,7 @@ Proof
 QED
 
 Theorem word_slice_alt_word_slice:
-  h ≤ dimindex (:'a) ⇒
+  h <= dimindex (:'a) ==>
   word_slice_alt (SUC h) l w = word_slice h l (w:'a word)
 Proof
   rw[word_slice_alt_def,word_slice_def]>>
@@ -353,11 +354,11 @@ Proof
 QED
 
 Theorem word_slice_shift:
-  h < dimindex (:'a) ⇒
-  word_slice h l (w:'a word) = w ⋙ l ≪ l ≪ (dimindex (:'a) - (SUC h)) ⋙ (dimindex (:'a) - (SUC h))
+  h < dimindex (:'a) ==>
+  word_slice h l (w:'a word) = w >>> l << l << (dimindex (:'a) - (SUC h)) >>> (dimindex (:'a) - (SUC h))
 Proof
   strip_tac>>
-  Cases_on ‘l ≤ h’>>fs[NOT_LESS_EQUAL,WORD_SLICE_ZERO]>>
+  Cases_on ‘l <= h’>>fs[NOT_LESS_EQUAL,WORD_SLICE_ZERO]>>
   simp[WORD_SLICE_THM]>>
   simp[word_lsr_n2w,ADD1]>>
   simp[WORD_BITS_LSL]>>
@@ -368,8 +369,8 @@ Proof
 QED
 
 Theorem word_slice_alt_shift:
-  h ≤ dimindex (:'a) ⇒
-  word_slice_alt h l (w:'a word) = w ⋙ l ≪ l ≪ (dimindex (:'a) - h) ⋙ (dimindex (:'a) - h)
+  h <= dimindex (:'a) ==>
+  word_slice_alt h l (w:'a word) = w >>> l << l << (dimindex (:'a) - h) >>> (dimindex (:'a) - h)
 Proof
   strip_tac>>
   Cases_on ‘h’>>fs[]>-
@@ -378,8 +379,8 @@ Proof
 QED
 
 Theorem byte_index_offset:
-  8 ≤ dimindex (:'a) ⇒
-  byte_index (a:'a word) be + 8 ≤ dimindex (:'a)
+  8 <= dimindex (:'a) ==>
+  byte_index (a:'a word) be + 8 <= dimindex (:'a)
 Proof
   strip_tac>>
   ‘0 < dimindex (:'a) DIV 8’ by
@@ -414,7 +415,7 @@ Proof
 QED
 
 Theorem DIV_not_0:
-  1 < d ⇒ (d ≤ n ⇔ 0 < n DIV d)
+  1 < d ==> (d <= n <=> 0 < n DIV d)
 Proof
   strip_tac>>
   drule DIV_EQ_0>>strip_tac>>
@@ -422,8 +423,9 @@ Proof
 QED
 
 Theorem get_byte_set_byte_irrelevant:
-  16 ≤ dimindex (:'a) ∧
-  w2n (a:α word) MOD (dimindex(:α) DIV 8) ≠ w2n a' MOD (dimindex(:α) DIV 8) ⇒
+  16 <= dimindex (:'a) /\
+  w2n (a:'a word) MOD (dimindex(:'a) DIV 8) <> w2n a' MOD (dimindex(:'a) DIV 8)
+  ==>
   get_byte a' (set_byte a b w be) be = get_byte a' w be
 Proof
   strip_tac>>
@@ -434,18 +436,18 @@ Proof
         strip_tac>>
         ‘dimindex (:'a) < 8’
           by (irule DIV_0_IMP_LT>>simp[])>>simp[])>>
-  ‘w2n a' MOD (dimindex (:α) DIV 8) < dimindex (:α) DIV 8’ by
+  ‘w2n a' MOD (dimindex (:'a) DIV 8) < dimindex (:'a) DIV 8’ by
     simp[MOD_LESS]>>
-  ‘w2n a MOD (dimindex (:α) DIV 8) < dimindex (:α) DIV 8’ by
+  ‘w2n a MOD (dimindex (:'a) DIV 8) < dimindex (:'a) DIV 8’ by
     simp[MOD_LESS]>>
-  ‘byte_index a be + 8 ≤ dimindex (:'a)’ by fs[byte_index_offset]>>
-  ‘byte_index a' be + 8 ≤ dimindex (:'a)’ by fs[byte_index_offset]>>
+  ‘byte_index a be + 8 <= dimindex (:'a)’ by fs[byte_index_offset]>>
+  ‘byte_index a' be + 8 <= dimindex (:'a)’ by fs[byte_index_offset]>>
   simp[word_slice_alt_shift]>>
   simp[w2w_def,w2n_lsr]>>
   simp[WORD_MUL_LSL]>>
   simp[word_mul_n2w]>>
   simp[word_mul_def]>>
-  ‘(w2n (w ⋙ (byte_index a be + 8)) * 2 ** (byte_index a be + 8)) < dimword (:α)’ by
+  ‘(w2n (w >>> (byte_index a be + 8)) * 2 ** (byte_index a be + 8)) < dimword (:'a)’ by
     (simp[w2n_lsr]>>
      ‘0:num < 2 ** (byte_index a be + 8)’ by simp[]>>
      drule DA>>disch_then $ qspec_then ‘w2n w’ mp_tac>>strip_tac>>
@@ -453,7 +455,7 @@ Proof
      irule LESS_EQ_LESS_TRANS>>
      irule_at Any w2n_lt>>
      qexists_tac ‘w’>>simp[])>>
-  ‘(w2n b * 2 ** byte_index a be) < dimword (:α)’ by
+  ‘(w2n b * 2 ** byte_index a be) < dimword (:'a)’ by
     (irule LESS_LESS_EQ_TRANS>>
      irule_at Any (iffRL LT_MULT_RCANCEL)>>
      irule_at Any w2n_lt>>
@@ -462,13 +464,13 @@ Proof
      irule_at Any (iffRL EXP_BASE_LE_MONO)>>
      qexists_tac ‘byte_index a be + 8’>>simp[EXP_ADD])>>
   simp[MOD_LESS]>>
-  qmatch_goalsub_abbrev_tac ‘w1 ‖ w2 ‖ w3’>>
-  qpat_x_assum ‘_ ≠ _’ mp_tac>>
+  qmatch_goalsub_abbrev_tac ‘w1 || w2 || w3’>>
+  qpat_x_assum ‘_ <> _’ mp_tac>>
   simp[NOT_NUM_EQ,GSYM LESS_EQ]>>strip_tac>-
    (‘if be then byte_index a' be < byte_index a be
      else byte_index a be < byte_index a' be’ by rw[byte_index_def]>>
     Cases_on ‘be’>>simp[]>-
-     (‘w1 = 0w ∧ w3 = n2w (w2n w DIV 2 ** byte_index a' T) ∧ w2 = 0w’ by
+     (‘w1 = 0w /\ w3 = n2w (w2n w DIV 2 ** byte_index a' T) /\ w2 = 0w’ by
         (conj_tac >-
           (simp[Abbr ‘w1’]>>
            simp[w2n_lsr]>>
@@ -484,25 +486,25 @@ Proof
            simp[EXP_ADD]>>
            ntac 2 (rewrite_tac[Once MULT_ASSOC])>>
            simp[MULT_DIV])>>
-         ‘byte_index a' T + 8 ≤ byte_index a T’ by
+         ‘byte_index a' T + 8 <= byte_index a T’ by
            (simp[byte_index_def]>>
             irule LESS_EQ_TRANS>>
-            qexists_tac ‘8 * (dimindex (:α) DIV 8 − (w2n a' MOD (dimindex (:α) DIV 8) + 1) + 1)’>>
+            qexists_tac ‘8 * (dimindex (:'a) DIV 8 - (w2n a' MOD (dimindex (:'a) DIV 8) + 1) + 1)’>>
             simp[]>>
             rewrite_tac[Once $ GSYM ADD1]>>
             simp[GSYM LESS_EQ]>>
-            ‘w2n a' MOD (dimindex (:α) DIV 8) < dimindex (:α) DIV 8’ by
+            ‘w2n a' MOD (dimindex (:'a) DIV 8) < dimindex (:'a) DIV 8’ by
               simp[MOD_LESS]>>
             simp[])>>
          conj_tac >-
           (simp[Abbr ‘w3’]>>
            ‘dimword (:'a) =
-            2 ** (dimindex (:α) + byte_index a' T − byte_index a T)
+            2 ** (dimindex (:'a) + byte_index a' T - byte_index a T)
             * 2 ** (byte_index a T - byte_index a' T)’ by
              fs[dimword_def,GSYM EXP_ADD]>>
            pop_assum (fn h => rewrite_tac[h])>>
-           ‘0 < 2 ** (byte_index a T - byte_index a' T) ∧
-            0 < 2 ** (dimindex (:α) + byte_index a' T − byte_index a T)’ by
+           ‘0 < 2 ** (byte_index a T - byte_index a' T) /\
+            0 < 2 ** (dimindex (:'a) + byte_index a' T - byte_index a T)’ by
              fs[ZERO_LT_EXP]>>
            drule (GSYM DIV_MOD_MOD_DIV)>>
            pop_assum kall_tac>>
@@ -511,7 +513,7 @@ Proof
            qmatch_goalsub_abbrev_tac ‘(_ * X) DIV Y’>>
            ‘Y = X * 2 ** byte_index a' T’ by simp[Abbr ‘X’,Abbr ‘Y’,GSYM EXP_ADD]>>
            pop_assum (fn h => rewrite_tac[h])>>
-           ‘0 < X ∧ 0 < 2 ** byte_index a' T’ by simp[ZERO_LT_EXP,Abbr ‘X’]>>
+           ‘0 < X /\ 0 < 2 ** byte_index a' T’ by simp[ZERO_LT_EXP,Abbr ‘X’]>>
            simp[GSYM DIV_DIV_DIV_MULT]>>
            simp[Abbr ‘X’]>>
            drule LESS_EQUAL_ADD>>strip_tac>>
@@ -522,8 +524,8 @@ Proof
          simp[EXP_ADD,MULT_DIV]>>
          rewrite_tac[Once MULT_ASSOC]>>
          simp[MULT_DIV])>>simp[])>>
-    ‘byte_index a F + 8 ≤ byte_index a' F’ by simp[byte_index_def]>>
-    ‘w3 = 0w ∧ w1 = n2w (w2n w DIV 2 ** byte_index a' F) ∧ w2 = 0w’ by
+    ‘byte_index a F + 8 <= byte_index a' F’ by simp[byte_index_def]>>
+    ‘w3 = 0w /\ w1 = n2w (w2n w DIV 2 ** byte_index a' F) /\ w2 = 0w’ by
       (conj_tac >-
         (simp[Abbr ‘w3’]>>
          qmatch_goalsub_abbrev_tac ‘(_ * X) MOD _ DIV Y’>>
@@ -531,7 +533,7 @@ Proof
          pop_assum (fn h => rewrite_tac[h])>>
          simp[GSYM DIV_DIV_DIV_MULT,ZERO_LT_EXP,Abbr ‘X’]>>
          ‘dimword (:'a) =
-          2 ** (dimindex (:α) − byte_index a F) * 2 ** (byte_index a F)’ by
+          2 ** (dimindex (:'a) - byte_index a F) * 2 ** (byte_index a F)’ by
            fs[dimword_def,GSYM EXP_ADD]>>
          pop_assum (fn h => rewrite_tac[h])>>
          simp[GSYM DIV_MOD_MOD_DIV,ZERO_LT_EXP,MULT_DIV]>>
@@ -575,8 +577,8 @@ Proof
   ‘if be then byte_index a be < byte_index a' be
    else byte_index a' be < byte_index a be’ by rw[byte_index_def]>>
   Cases_on ‘be’>>simp[]>-
-   (‘byte_index a T + 8 ≤ byte_index a' T’ by simp[byte_index_def]>>
-   ‘w3 = 0w ∧ w1 = n2w (w2n w DIV 2 ** byte_index a' T) ∧ w2 = 0w’ by
+   (‘byte_index a T + 8 <= byte_index a' T’ by simp[byte_index_def]>>
+   ‘w3 = 0w /\ w1 = n2w (w2n w DIV 2 ** byte_index a' T) /\ w2 = 0w’ by
       (conj_tac >-
         (simp[Abbr ‘w3’]>>
          qmatch_goalsub_abbrev_tac ‘(_ * X) MOD _ DIV Y’>>
@@ -584,7 +586,7 @@ Proof
          pop_assum (fn h => rewrite_tac[h])>>
          simp[GSYM DIV_DIV_DIV_MULT,ZERO_LT_EXP,Abbr ‘X’]>>
          ‘dimword (:'a) =
-          2 ** (dimindex (:α) − byte_index a T) * 2 ** (byte_index a T)’ by
+          2 ** (dimindex (:'a) - byte_index a T) * 2 ** (byte_index a T)’ by
            fs[dimword_def,GSYM EXP_ADD]>>
            pop_assum (fn h => rewrite_tac[h])>>
          simp[GSYM DIV_MOD_MOD_DIV,ZERO_LT_EXP,MULT_DIV]>>
@@ -625,7 +627,7 @@ Proof
           irule_at Any w2n_lt>>
           simp[])>>
        simp[])>>simp[])>>
-  ‘w1 = 0w ∧ w3 = n2w (w2n w DIV 2 ** byte_index a' F) ∧ w2 = 0w’ by
+  ‘w1 = 0w /\ w3 = n2w (w2n w DIV 2 ** byte_index a' F) /\ w2 = 0w’ by
         (conj_tac >-
           (simp[Abbr ‘w1’]>>
            simp[w2n_lsr]>>
@@ -641,31 +643,31 @@ Proof
            simp[EXP_ADD]>>
            ntac 2 (rewrite_tac[Once MULT_ASSOC])>>
            simp[MULT_DIV])>>
-         ‘byte_index a' F + 8 ≤ byte_index a F’ by
+         ‘byte_index a' F + 8 <= byte_index a F’ by
            (simp[byte_index_def]>>
             irule LESS_EQ_TRANS>>
-            qexists_tac ‘8 * (dimindex (:α) DIV 8 − (w2n a' MOD (dimindex (:α) DIV 8) + 1) + 1)’>>
+            qexists_tac ‘8 * (dimindex (:'a) DIV 8 - (w2n a' MOD (dimindex (:'a) DIV 8) + 1) + 1)’>>
             simp[]>>
             rewrite_tac[Once $ GSYM ADD1]>>
             simp[GSYM LESS_EQ]>>
-            ‘w2n a' MOD (dimindex (:α) DIV 8) < dimindex (:α) DIV 8’ by
+            ‘w2n a' MOD (dimindex (:'a) DIV 8) < dimindex (:'a) DIV 8’ by
               simp[MOD_LESS]>>
             simp[])>>
          conj_tac >-
           (simp[Abbr ‘w3’]>>
            ‘dimword (:'a) =
-            2 ** (dimindex (:α) + byte_index a' F − byte_index a F)
+            2 ** (dimindex (:'a) + byte_index a' F - byte_index a F)
             * 2 ** (byte_index a F - byte_index a' F)’ by
              fs[dimword_def,GSYM EXP_ADD]>>
            pop_assum (fn h => rewrite_tac[h])>>
-           ‘0 < 2 ** (byte_index a F - byte_index a' F) ∧
-            0 < 2 ** (dimindex (:α) + byte_index a' F − byte_index a F)’ by
+           ‘0 < 2 ** (byte_index a F - byte_index a' F) /\
+            0 < 2 ** (dimindex (:'a) + byte_index a' F - byte_index a F)’ by
              fs[ZERO_LT_EXP]>>
            simp[GSYM DIV_MOD_MOD_DIV]>>
            qmatch_goalsub_abbrev_tac ‘(_ * X) DIV Y’>>
            ‘Y = X * 2 ** byte_index a' F’ by simp[Abbr ‘X’,Abbr ‘Y’,GSYM EXP_ADD]>>
            pop_assum (fn h => rewrite_tac[h])>>
-           ‘0 < X ∧ 0 < 2 ** byte_index a' F’ by simp[ZERO_LT_EXP,Abbr ‘X’]>>
+           ‘0 < X /\ 0 < 2 ** byte_index a' F’ by simp[ZERO_LT_EXP,Abbr ‘X’]>>
            simp[GSYM DIV_DIV_DIV_MULT]>>
            drule LESS_EQUAL_ADD>>strip_tac>>
            simp[EXP_ADD]>>
@@ -680,7 +682,7 @@ QED
 
 (*
 Theorem word_to_bytes_word_of_bytes_32:
-  LENGTH bs = dimindex (:32) DIV 8 ⇒
+  LENGTH bs = dimindex (:32) DIV 8 ==>
   word_to_bytes (word_of_bytes be (0w:word32) bs) be = bs
 Proof
   simp[word_to_bytes_def]>>
@@ -688,16 +690,16 @@ Proof
               word_to_bytes_aux_def]>>
   simp[]>>
   Cases_on ‘bs’>>simp[]>>
-  rename1 ‘_ ⇒ _ ∧ _ = bs’>>Cases_on ‘bs’>>simp[]>>
+  rename1 ‘_ ==> _ /\ _ = bs’>>Cases_on ‘bs’>>simp[]>>
   ntac 2 (SIMP_TAC std_ss [Once CONJ_ASSOC]>>
-       rename1 ‘_ ∧ _ = bs’>>Cases_on ‘bs’>>simp[])>>
+       rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[])>>
   rewrite_tac[numLib.num_CONV “4”,numLib.num_CONV “3”,TWO,ONE]>>
   fs[]>>strip_tac>>
   simp[word_of_bytes_def,get_byte_set_byte_irrelevant,get_byte_set_byte]
 QED
 
 Theorem word_to_bytes_word_of_bytes_64:
-  LENGTH bs = dimindex (:64) DIV 8 ⇒
+  LENGTH bs = dimindex (:64) DIV 8 ==>
   word_to_bytes (word_of_bytes be (0w:word64) bs) be = bs
 Proof
   simp[word_to_bytes_def]>>
@@ -706,9 +708,9 @@ Proof
               TWO,ONE,word_to_bytes_aux_def]>>
   simp[]>>
   Cases_on ‘bs’>>simp[]>>
-  rename1 ‘_ ∧ _ = bs’>>Cases_on ‘bs’>>simp[]>>
+  rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[]>>
   ntac 6 (SIMP_TAC std_ss [Once CONJ_ASSOC]>>
-       rename1 ‘_ ∧ _ = bs’>>Cases_on ‘bs’>>simp[])>>
+       rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[])>>
   rewrite_tac[numLib.num_CONV “8”,numLib.num_CONV “7”,numLib.num_CONV “6”,
               numLib.num_CONV “5”,numLib.num_CONV “4”,numLib.num_CONV “3”,
               TWO,ONE]>>
@@ -718,20 +720,20 @@ QED
 *)
 
 Theorem set_byte_get_byte:
-  8 ≤ dimindex (:'a) ⇒
+  8 <= dimindex (:'a) ==>
   set_byte a (get_byte (a:'a word) (w:'a word) be) w be = w
 Proof
   strip_tac>>
   simp[get_byte_def,set_byte_def]>>
   imp_res_tac byte_index_offset>>
   first_x_assum $ qspecl_then [‘be’, ‘a’]  assume_tac>>
-  qmatch_goalsub_abbrev_tac ‘w0 ‖ _ ‖ _’>>
+  qmatch_goalsub_abbrev_tac ‘w0 || _ || _’>>
   ‘w0 = word_slice_alt (byte_index a be + 8) (byte_index a be) w’ by
     (simp[Abbr ‘w0’]>>
      ‘byte_index a be + 8 = SUC (byte_index a be + 7)’ by simp[]>>
      simp[word_slice_alt_word_slice]>>
      simp[WORD_SLICE_THM]>>
-     qmatch_goalsub_abbrev_tac ‘A ≪ _ = B ≪ _’>>
+     qmatch_goalsub_abbrev_tac ‘A << _ = B << _’>>
      ‘A = B’ by
        (simp[Abbr ‘A’,Abbr ‘B’]>>
         simp[w2w_w2w,word_lsr_n2w]>>
@@ -744,22 +746,22 @@ Proof
 QED
 
 Theorem set_byte_get_byte_copy:
-  8 ≤ dimindex (:'a) ⇒
+  8 <= dimindex (:'a) ==>
   set_byte a (get_byte (a:'a word) (w:'a word) be) w' be =
-  word_slice (byte_index a be + 7) (byte_index a be) w ‖
+  word_slice (byte_index a be + 7) (byte_index a be) w ||
   (if byte_index a be + 8 = dimindex (:'a) then 0w
-   else word_slice (dimindex (:α) - 1) (byte_index a be + 8) w') ‖
+   else word_slice (dimindex (:'a) - 1) (byte_index a be + 8) w') ||
   if byte_index a be = 0 then 0w else word_slice (byte_index a be - 1) 0 w'
 Proof
   strip_tac>>
   simp[get_byte_def,set_byte_def]>>
   imp_res_tac byte_index_offset>>
   first_x_assum $ qspecl_then [‘be’, ‘a’]  assume_tac>>
-  qmatch_goalsub_abbrev_tac ‘w0 ‖ _ ‖ _’>>
+  qmatch_goalsub_abbrev_tac ‘w0 || _ || _’>>
   ‘w0 = word_slice (byte_index a be + 7) (byte_index a be) w’ by
     (simp[Abbr ‘w0’]>>
      simp[WORD_SLICE_THM]>>
-     qmatch_goalsub_abbrev_tac ‘A ≪ _ = B ≪ _’>>
+     qmatch_goalsub_abbrev_tac ‘A << _ = B << _’>>
      ‘A = B’ by
        (simp[Abbr ‘A’,Abbr ‘B’]>>
         simp[w2w_w2w,word_lsr_n2w]>>
@@ -769,11 +771,11 @@ Proof
   Cases_on ‘byte_index a be’>>fs[]>>
   Cases_on ‘byte_index a be + 8 = dimindex (:'a)’>>fs[]>>
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_slice_alt_def]>>
-  Cases_on ‘i ≤ n’>>fs[NOT_LESS]
+  Cases_on ‘i <= n’>>fs[NOT_LESS]
 QED
 
 Theorem set_byte_get_byte':
-  8 ≤ dimindex (:'a) ⇒
+  8 <= dimindex (:'a) ==>
   set_byte a (get_byte (a:'a word) (w:'a word) be) w be = w
 Proof
   rw[set_byte_get_byte_copy]>-
@@ -783,8 +785,8 @@ Proof
    (rewrite_tac[Once WORD_OR_COMM]>>
     simp[WORD_SLICE_COMP_THM]>>
     srw_tac[wordsLib.WORD_BIT_EQ_ss][word_slice_alt_def])>>
-  qmatch_goalsub_abbrev_tac ‘w2 ‖ w3 ‖ w1’>>
-  ‘w3 ‖ w2 ‖ w1 = w’ by
+  qmatch_goalsub_abbrev_tac ‘w2 || w3 || w1’>>
+  ‘w3 || w2 || w1 = w’ by
     (simp[Abbr ‘w2’]>>
      simp[Abbr ‘w1’]>>
      simp[WORD_SLICE_COMP_THM]>>
@@ -806,7 +808,7 @@ QED
 Theorem word_to_bytes_word_of_bytes_32:
   word_of_bytes be (0w:word32) (word_to_bytes (w:word32) be) = w
 Proof
-  ‘8 ≤ dimindex (:32)’ by simp[]>>
+  ‘8 <= dimindex (:32)’ by simp[]>>
   simp[word_to_bytes_def]>>
   rewrite_tac[numLib.num_CONV “4”,numLib.num_CONV “3”,TWO,ONE,
               word_to_bytes_aux_def]>>
@@ -820,7 +822,7 @@ QED
 Theorem word_to_bytes_word_of_bytes_64:
   word_of_bytes be (0w:word64) (word_to_bytes (w:word64) be) = w
 Proof
-  ‘8 ≤ dimindex (:64)’ by simp[]>>
+  ‘8 <= dimindex (:64)’ by simp[]>>
   simp[word_to_bytes_def]>>
   rewrite_tac[numLib.num_CONV “8”,numLib.num_CONV “7”,
               numLib.num_CONV “6”,numLib.num_CONV “5”,
