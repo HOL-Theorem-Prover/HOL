@@ -19,7 +19,7 @@ End
 (* unit *)
 
 Definition from_unit_def:
-  from_unit (u:unit) = (Num 0):cv
+  from_unit () = (Num 0):cv
 End
 
 Definition to_unit_def:
