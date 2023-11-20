@@ -1,21 +1,9 @@
 open HolKernel Parse boolLib bossLib;
 
-open transferTheory tcallUnifTheory fmspTheory
+open transferTheory fmspTheory unifDefTheory
 open pred_setTheory finite_mapTheory transferLib
 
 val _ = new_theory "rmfmap";
-
-Definition rcorevwalk_def:
-  rcorevwalk sp v = corevwalk (sp2fm sp) v
-End
-
-
-Theorem FMSP_corewalk[transfer_rule]:
-  (FMSP (=) (=) |==> (=) |==> (=)) corevwalk rcorevwalk
-Proof
-  simp[FUN_REL_def, rcorevwalk_def] >> rpt strip_tac >>
-  gs[sp2fm_correct]
-QED
 
 Theorem FUNREL_flipR:
   (AB |==> CD |==> EF) f (flip g) ⇔ (CD |==> AB |==> EF) (flip f) g
@@ -57,20 +45,18 @@ QED
 
 fun xfer l th = transfer_thm 5 l true (global_ruledb()) (GEN_ALL th)
 
-Theorem rcorevwalk_thm = xfer ["corevwalk"] corevwalk_thm
-
-Definition rvR_def:
-  rvR sp u v = vR (sp2fm sp) u v
+Definition svR_def:
+  svR sp u v = vR (sp2fm sp) u v
 End
 
 Theorem FMSP_rvR[transfer_rule]:
-  (FMSP (=) (=) |==> (=) |==> (=) |==> (=)) vR rvR
+  (FMSP (=) (=) |==> (=) |==> (=) |==> (=)) vR svR
 Proof
-  simp[FUN_REL_def, rvR_def] >> rpt strip_tac >>
+  simp[FUN_REL_def, svR_def] >> rpt strip_tac >>
   gs[sp2fm_correct]
 QED
 
-Theorem rvR_thm = xfer ["vR", "FLOOKUP", "option_CASE"]
+Theorem svR_thm = xfer ["vR", "FLOOKUP", "option_CASE"]
                        (INST_TYPE [alpha |-> “:num”] substTheory.vR_def)
 
 Definition swfs_def:
@@ -118,20 +104,7 @@ Proof
 QED
 
 Theorem soc_thm = xfer [] walkstarTheory.oc_thm
-
-Definition sext_s_check_def:
-  sext_s_check sp v t = OPTION_MAP fm2sp (ext_s_check (sp2fm sp) v t)
-End
-
-Theorem FMSP_ext_s_check[transfer_rule]:
-  (FMSP (=) (=) |==> (=) |==> (=) |==> OPTREL (FMSP (=) (=)))
-  ext_s_check sext_s_check
-Proof
-  rw[FUN_REL_def, sext_s_check_def, sp2fm_correct] >>
-  rw[sp2fm_correct,sptreeTheory.wf_insert]
-QED
-
-Theorem sext_s_check_thm = xfer [] unifDefTheory.ext_s_check_def |> SRULE[]
+Theorem soc_walking = xfer [] walkstarTheory.oc_walking
 
 (*
 val th = GEN_ALL unifDefTheory.unify_def
@@ -165,8 +138,10 @@ Proof
   metis_tac[optionTheory.option_CASES]
 QED
 
-Theorem sunify_thm = xfer [] unifDefTheory.unify_def
-                       |> SRULE[sext_s_check_thm, soc_thm]
+Theorem sunify_thm =
+        unifDefTheory.unify_def |> SRULE[ext_s_check_def]
+                                |> xfer []
+                                |> SRULE[] (* to β-reduce UNCURRY *)
 
 val _ = export_theory();
 

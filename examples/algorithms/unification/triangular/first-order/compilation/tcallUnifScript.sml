@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib;
 open pairTheory
 open walkTheory walkstarTheory unifDefTheory
 open tailcallsTheory
-open substTheory
+open substTheory rmfmapTheory
 open cpsTheory cpsLib
 
 val _ = new_theory "tcallUnif";
@@ -28,65 +28,15 @@ Definition destvar_def[simp]:
   destvar (Var v) = v
 End
 
-Definition corevwalk_def:
-  corevwalk s v =
-        WHILE (λv. case FLOOKUP s v of
-                               | SOME (Var u) => T
-                               | _ => F)
-                          (λv. case THE (FLOOKUP s v) of
-                                 Var u => u
-                               | _ => v)
-                          v
-End
-
-(* CV-translatable *)
-Theorem corevwalk_thm:
-  corevwalk s v =
-  case FLOOKUP s v of
-  | SOME (Var u) => corevwalk s u
-  | _ => v
+Theorem contify_optbind:
+  contify k (OPTION_BIND opt f) =
+  contify (λov. case ov of
+                  NONE => k NONE
+                | SOME x => contify k (f x))
+          opt
 Proof
-  simp[SimpLHS, corevwalk_def, Once whileTheory.WHILE] >>
-  Cases_on ‘FLOOKUP s v’ >> simp[] >> rename [‘FLOOKUP s v = SOME t’] >>
-  Cases_on ‘t’ >> simp[corevwalk_def]
+  Cases_on ‘opt’ >> simp[contify_def]
 QED
-
-(* CV-translatable *)
-Definition vwalk_alt_def:
-  vwalk_alt s v =
-  let u = corevwalk s v
-  in
-    case FLOOKUP s u of
-      NONE => Var u
-    | SOME t => t
-End
-
-Theorem vwalk_alt_thm:
-  wfs s ⇒ vwalk s v = vwalk_alt s v
-Proof
-  simp[wfs_def, vwalk_alt_def] >> strip_tac >> qid_spec_tac ‘v’ >>
-  first_assum (ho_match_mp_tac o MATCH_MP relationTheory.WF_INDUCTION_THM) >>
-  rpt strip_tac >> ONCE_REWRITE_TAC[corevwalk_thm] >>
-  Cases_on ‘FLOOKUP s v’ >> simp[] >> gvs[GSYM wfs_def]
-  >- simp[Once vwalk_def] >>
-  rename [‘term_CASE t’] >> Cases_on ‘t’ >> simp[]
-  >- (simp[Once vwalk_def] >> first_x_assum irule >> simp[vR_def]) >>
-  simp[Once vwalk_def]
-QED
-
-(* CV-translatable *)
-Definition walk_alt_def:
-  walk_alt s t = case t of Var v => vwalk_alt s v
-                            | u => u
-End
-
-Theorem walk_alt_correct:
-  wfs s ⇒ walk s t = walk_alt s t
-Proof
-  simp[vwalk_alt_thm, walk_def, walk_alt_def]
-QED
-
-Theorem walk_alt_correctD = UNDISCH_ALL walk_alt_correct
 
 Theorem contify_term_case:
   contify k (term_CASE t v p c) =
@@ -97,149 +47,6 @@ Theorem contify_term_case:
 Proof
   Cases_on ‘t’ >> simp[contify_def]
 QED
-
-Definition kwalkstar_def:
-  kwalkstar (s:α subst) t k = cwc (walkstar s t) k
-End
-
-Theorem kwalkstar_thm =
-        kwalkstar_def
-          |> SPEC_ALL
-          |> SRULE [Once walkstar_def, ASSUME “wfs (s:'a subst)”,
-                    GSYM contify_cwc]
-          |> CONV_RULE (TOP_DEPTH_CONV (contify_CONV[contify_term_case]))
-          |> SRULE [cwcp “term$Pair”, cwcp “term$Pair x0”, cwcp “walk*”,
-                    cwcp “walk”]
-          |> SRULE [GSYM kwalkstar_def]
-          |> SRULE [cwc_def, walk_alt_correctD]
-
-Datatype:
-  kwcon = kwcID | kwc1 ('a term) kwcon | kwc2 ('a term) kwcon
-End
-
-Definition apply_kw_def:
-  apply_kw s kwcID t = t ∧
-  apply_kw s (kwc1 t1 k) t2 = apply_kw s k (Pair t1 t2) ∧
-  apply_kw s (kwc2 t2 k) t1 = kwalkstar s t2 (λxk2. apply_kw s k (Pair t1 xk2))
-End
-
-Definition dfkwalkstar_def:
-  dfkwalkstar s t k = kwalkstar s t (apply_kw s k)
-End
-
-
-(* CV-translatable if dfkwalkstar is, which it isn't *)
-Theorem apply_kw_thm =
-        SRULE [GSYM dfkwalkstar_def] $
-              LIST_CONJ [cj 1 apply_kw_def,
-                         cj 2 apply_kw_def,
-                         SRULE [GSYM $ cj 2 apply_kw_def, SF ETA_ss]
-                               (cj 3 apply_kw_def)]
-
-Theorem dfkwalkstar_thm =
-        dfkwalkstar_def
-          |> SPEC_ALL
-          |> ONCE_REWRITE_RULE [kwalkstar_thm]
-          |> SRULE[GSYM apply_kw_thm, SF ETA_ss, GSYM dfkwalkstar_def]
-
-Definition koc_def:
-  koc (s:α subst) t v k = cwc (oc s t v) k
-End
-
-Theorem disj2cond[local] = DECIDE “p ∨ q ⇔ if p then T else q”
-Theorem koc_thm =
-        koc_def
-          |> SPEC_ALL
-          |> SRULE [Once oc_walking, ASSUME “wfs (s:'a subst)”,
-                    GSYM contify_cwc]
-          |> REWRITE_RULE[disj2cond]
-          |> CONV_RULE (TOP_DEPTH_CONV (contify_CONV[contify_term_case]))
-          |> SRULE [cwcp “term$Pair”, cwcp “term$Pair x0”, cwcp “walk*”,
-                    cwcp “walk”, cwcp “$=”, cwcp “(\/)”, cwcp “oc”,
-                    cwcp “oc s”]
-          |> SRULE [GSYM koc_def]
-          |> SRULE [cwc_def, walk_alt_correctD]
-
-(* isomorphic to a list of terms *)
-Datatype: ockont = ocIDk | ock1 ('a term) ockont
-End
-
-Definition apply_ockont_def:
-  apply_ockont s v ocIDk b = b /\
-  apply_ockont s v (ock1 t k) b =
-  if b then T
-  else koc s t v (λb. apply_ockont s v k b)
-End
-
-Theorem apply_ockontT[simp]:
-  apply_ockont s v k T = T
-Proof
-  Induct_on ‘k’ >> simp[apply_ockont_def]
-QED
-
-Definition dfkoc_def:
-  dfkoc s t v k = koc s t v (apply_ockont s v k)
-End
-
-
-(* CV-translatable *)
-Theorem apply_ockont_thm =
-        REWRITE_RULE [GSYM dfkoc_def] $
-              LIST_CONJ [cj 1 apply_ockont_def,
-                         cj 2 apply_ockont_def
-                           |> SRULE [SF ETA_ss]
-                           |> REWRITE_RULE [disj2cond]
-                         ]
-
-Theorem dfkoc_thm =
-        dfkoc_def
-          |> SPEC_ALL
-          |> ONCE_REWRITE_RULE [koc_thm]
-          |> SRULE[GSYM apply_ockont_thm, SF ETA_ss, GSYM dfkoc_def]
-
-Theorem dfkoc_removed:
-  dfkoc s t v k = apply_ockont s v (ock1 t k) F
-Proof
-  simp[apply_ockont_thm]
-QED
-
-Theorem dfkoc_nonrecursive =
-        dfkoc_thm |> CONV_RULE (RAND_CONV (REWRITE_CONV[dfkoc_removed]))
-
-(* "occurs-check worklist" *)
-Overload ocwl0 = “apply_ockont”
-
-Theorem ocwl0_thm =
-        apply_ockont_thm
-          |> CONJUNCTS
-          |> map (GEN_ALL o PURE_REWRITE_RULE[dfkoc_nonrecursive] o SPEC_ALL)
-          |> LIST_CONJ
-
-Definition ocwl_def: ocwl s v k = ocwl0 s v k F
-End
-
-Theorem ocwl0_varcheck: ocwl0 s v k b = if b then T else ocwl s v k
-Proof
-  rw[ocwl_def] >> Cases_on ‘b’ >> simp[]
-QED
-
-Theorem ocwl_thm =
-        ocwl0_thm |> SRULE[GSYM ocwl_def]
-                  |> SRULE[ocwl0_varcheck]
-                  |> SRULE[FORALL_BOOL]
-                  |> PURE_REWRITE_RULE [DECIDE “~p = (p = F)”,
-                                        DECIDE “p \/ q <=> if p then T else q”]
-
-val oc_code = rand “
-               tcall
-               (λ(s,k). case k of
-                    ocIDk => INR F
-                  | ock1 t k =>
-                      case walk_alt s t of
-                        Var n => if v = n then INR T else INL (s,k)
-                      | Pair t1 t2 => INL (s, ock1 t1 (ock1 t2 k))
-                      | Const _ => INL (s,k))
-”
 
 Theorem sum_CASE_term_CASE:
   sum_CASE (term_CASE t vf pf cf) lf rf =
@@ -258,31 +65,202 @@ Proof
   Cases_on ‘p’ >> simp[]
 QED
 
-Theorem sum_CASE_ockont_CASE:
-  sum_CASE (ockont_CASE k i tkf) lf rf =
-  ockont_CASE k (sum_CASE i lf rf)
+Theorem sum_CASE_option_CASE:
+  sum_CASE (option_CASE ov n sf) lf rf =
+  option_CASE ov (sum_CASE n lf rf) (λv. sum_CASE (sf v) lf rf)
+Proof
+  Cases_on ‘ov’ >> simp[]
+QED
+
+Theorem sum_CASE_list_CASE:
+  sum_CASE (list_CASE k i tkf) lf rf =
+  list_CASE k (sum_CASE i lf rf)
               (λt k. sum_CASE (tkf t k) lf rf)
 Proof
   Cases_on ‘k’ >> simp[]
 QED
 
-Theorem ocwl_tcallish:
+val svwalk_code = rand “
+tcall (λ(s,nm).
+        case lookup nm s of
+          NONE => INR (Var nm)
+        | SOME (Var nm') => INL (s,nm')
+        | SOME (Pair t1 t2) => INR (Pair t1 t2)
+        | SOME (Const c) => INR (Const c))
+                  ”
+
+Theorem svwalk_tcallish:
   !x.
-    (λ(s,sm). wfs s) x ==>
-    (λ(s,k). ocwl s v k) x =
-    tcall ^oc_code (λ(s,k). ocwl s v k) x
+    (λ(s,nm). swfs s ∧ wf s) x ==>
+    (λ(s,nm). svwalk s nm) x =
+    tcall ^svwalk_code (λ(s,nm). svwalk s nm) x
 Proof
-  simp[tcall_def, FORALL_PROD, sum_CASE_ockont_CASE, sum_CASE_term_CASE,
+  simp[tcall_def, FORALL_PROD, sum_CASE_term_CASE,
        sum_CASE_COND] >> rw[] >>
-  rename [‘ocwl s v k ⇔ _’] >> Cases_on ‘k’
-  >- (simp[cj 1 ocwl_thm]) >>
-  simp[SimpLHS, Once ocwl_thm] >> simp[]
+  rename [‘svwalk s k = _’] >> Cases_on ‘lookup k s’ >>
+  simp[SimpLHS, Once svwalk_thm] >> simp[] >>
+  simp[sum_CASE_term_CASE]
 QED
 
-Definition ocklist_def:
-  ocklist ocIDk = [] /\
-  ocklist (ock1 t k) = t::ocklist k
+Theorem svwalk_cleaned:
+  !x. (λ(s,nm). swfs s ∧ wf s) x ==>
+      (λ(s,nm). svwalk s nm) x = trec ^svwalk_code x
+Proof
+  match_mp_tac guard_elimination >> rpt conj_tac
+  >- (simp[FORALL_PROD, AllCaseEqs()] >> rw[] >> simp[])
+  >- (simp[FORALL_PROD, AllCaseEqs(), swfs_def] >> rw[] >>
+      rename [‘wfs (sp2fm s)’] >>
+      qexists ‘λ(s0,nm0) (s1,nm). s0 = s ∧ s1 = s ∧ vR (sp2fm s) nm0 nm’ >>
+      simp[] >> conj_tac
+      >- (irule $ iffLR relationTheory.WF_EQ_WFP >>
+          irule relationTheory.WF_SUBSET >>
+          qexists ‘inv_image (vR $ sp2fm s) SND’ >>
+          simp[FORALL_PROD] >>
+          simp[relationTheory.WF_inv_image, GSYM wfs_def]) >>
+      rpt gen_tac >> strip_tac >>
+      rename [‘RTC _ (s0,_)(s,_)’]>>
+      ‘s0 = s’ by (qpat_x_assum ‘RTC _ _ _’ mp_tac >> Induct_on ‘RTC’ >>
+                   simp[FORALL_PROD]) >>
+      gvs[vR_def]) >>
+  MATCH_ACCEPT_TAC svwalk_tcallish
+QED
+
+Definition tvwalk_def:
+  tvwalk s nm = trec ^svwalk_code (s,nm)
 End
+
+Theorem tvwalk_thm =
+        tvwalk_def
+          |> SRULE[Once trec_thm, tcall_def, sum_CASE_option_CASE,
+                   sum_CASE_term_CASE]
+          |> SRULE[GSYM tvwalk_def]
+
+
+
+Theorem tvwalk_correct = svwalk_cleaned |> SRULE[FORALL_PROD, GSYM tvwalk_def]
+
+Definition twalk_def:
+  twalk s t =
+  case t of
+    Var v => tvwalk s v
+  | Pair t1 t2 => Pair t1 t2
+  | Const c => Const c
+End
+
+Theorem twalk_correct:
+  swfs s ∧ wf s ⇒ swalk s t = twalk s t
+Proof
+  simp[twalk_def, swalk_thm, tvwalk_correct]
+QED
+
+Definition koc_def:
+  koc (s:α term num_map) t v k = cwc (soc s t v) k
+End
+
+Theorem disj2cond[local] = DECIDE “p ∨ q ⇔ if p then T else q”
+Theorem koc_thm =
+        koc_def
+          |> SPEC_ALL
+          |> SRULE [Once soc_walking, ASSUME “swfs (s:'a term num_map)”,
+                    ASSUME “wf (s:'a term num_map)”, twalk_correct,
+                    GSYM contify_cwc]
+          |> REWRITE_RULE[disj2cond]
+          |> CONV_RULE (TOP_DEPTH_CONV (contify_CONV[contify_term_case]))
+          |> SRULE [cwcp “term$Pair”, cwcp “term$Pair x0”, cwcp “twalk”,
+                    cwcp “$=”, cwcp “(\/)”, cwcp “soc”,
+                    cwcp “soc s”, cwcp “twalk s”, cwcp “$= n”]
+          |> SRULE [GSYM koc_def]
+          |> SRULE [cwc_def]
+
+Definition apply_ockont_def:
+  apply_ockont s v [] b = b /\
+  apply_ockont s v (t::ts) b =
+  if b then T
+  else koc s t v (λb. apply_ockont s v ts b)
+End
+
+Theorem apply_ockontT[simp]:
+  apply_ockont s v k T = T
+Proof
+  Induct_on ‘k’ >> simp[apply_ockont_def]
+QED
+
+Definition dfkoc_def:
+  dfkoc s t v k = koc s t v (apply_ockont s v k)
+End
+
+(* CV-translatable *)
+Theorem apply_ockont_thm =
+        REWRITE_RULE [GSYM dfkoc_def] $
+              LIST_CONJ [cj 1 apply_ockont_def,
+                         cj 2 apply_ockont_def
+                           |> SRULE [SF ETA_ss]
+                           |> REWRITE_RULE [disj2cond]
+                         ]
+
+Theorem dfkoc_thm =
+        dfkoc_def
+          |> SPEC_ALL
+          |> ONCE_REWRITE_RULE [koc_thm]
+          |> SRULE[GSYM apply_ockont_thm, SF ETA_ss, GSYM dfkoc_def]
+
+Theorem dfkoc_removed:
+  dfkoc s t v k = apply_ockont s v (t :: k) F
+Proof
+  simp[apply_ockont_thm]
+QED
+
+Theorem dfkoc_nonrecursive =
+        dfkoc_thm |> CONV_RULE (RAND_CONV (REWRITE_CONV[dfkoc_removed]))
+
+(* "occurs-check worklist" *)
+Overload ocwl0 = “apply_ockont”
+
+Theorem ocwl0_thm =
+        apply_ockont_thm
+          |> CONJUNCTS
+          |> map (GEN_ALL o PURE_REWRITE_RULE[dfkoc_nonrecursive] o SPEC_ALL)
+          |> LIST_CONJ
+
+Definition kocwl_def: kocwl s v k = ocwl0 s v k F
+End
+
+Theorem ocwl0_varcheck: ocwl0 s v k b = if b then T else kocwl s v k
+Proof
+  rw[kocwl_def] >> Cases_on ‘b’ >> simp[]
+QED
+
+Theorem kocwl_thm =
+        ocwl0_thm |> SRULE[GSYM kocwl_def]
+                  |> SRULE[ocwl0_varcheck]
+                  |> SRULE[FORALL_BOOL]
+                  |> PURE_REWRITE_RULE [DECIDE “~p = (p = F)”,
+                                        DECIDE “p \/ q <=> if p then T else q”]
+
+val oc_code = rand “
+               tcall
+               (λ(s,k). case k of
+                    [] => INR F
+                  | t :: k =>
+                      case twalk s t of
+                        Var n => if v = n then INR T else INL (s,k)
+                      | Pair t1 t2 => INL (s, t1 :: t2 :: k)
+                      | Const _ => INL (s,k))
+”
+
+
+Theorem kocwl_tcallish:
+  !x.
+    (λ(s,sm). swfs s ∧ wf s) x ==>
+    (λ(s,k). kocwl s v k) x =
+    tcall ^oc_code (λ(s,k). kocwl s v k) x
+Proof
+  simp[tcall_def, FORALL_PROD, sum_CASE_list_CASE, sum_CASE_term_CASE,
+       sum_CASE_COND] >> rw[] >>
+  rename [‘kocwl s v k ⇔ _’] >> Cases_on ‘k’
+  >- (simp[cj 1 kocwl_thm]) >>
+  simp[SimpLHS, Once kocwl_thm] >> simp[]
+QED
 
 Overload BAG_OF_LIST = “FOLDR BAG_INSERT EMPTY_BAG”
 
@@ -292,26 +270,25 @@ Proof
   Induct_on ‘l’ >> simp[]
 QED
 
-
 Definition BAG_OF_SUM[simp]:
-  BAG_OF_SUM (INL (t,k)) = BAG_OF_LIST (t :: ocklist k) /\
-  BAG_OF_SUM (INR (k,b)) = BAG_OF_LIST (ocklist k)
+  BAG_OF_SUM (INL (t,k)) = BAG_OF_LIST (t :: k) /\
+  BAG_OF_SUM (INR (k,b)) = BAG_OF_LIST k
 End
 
 Definition ocR_def:
-  ocR (s:α subst) =
-  inv_image (pair$RPROD (=) (mlt1 (walkstarR s)))
-            (λ(s:α subst,k:α ockont). (s, BAG_OF_LIST (ocklist k)))
+  ocR (s:α term num_map) =
+  inv_image (pair$RPROD (=) (mlt1 (walkstarR (sp2fm s))))
+            (λ(s:α term num_map,k:α term list). (s, BAG_OF_LIST k))
 End
 
 Theorem WF_ocR:
-  wfs s ==> WF (ocR s)
+  swfs s ==> WF (ocR s)
 Proof
-  strip_tac >> simp[ocR_def] >>
+  strip_tac >> gs[ocR_def, swfs_def] >>
   irule relationTheory.WF_inv_image >>
   irule relationTheory.WF_SUBSET >>
   simp[FORALL_PROD] >>
-  qexists ‘inv_image (mlt1 (walkstarR s)) SND’ >>
+  qexists ‘inv_image (mlt1 (walkstarR (sp2fm s))) SND’ >>
   simp[] >>
   irule relationTheory.WF_inv_image >>
   irule bagTheory.WF_mlt1 >>
@@ -336,95 +313,90 @@ Proof
 QED
 
 Theorem ocwl_cleaned0:
-  !x. (λ(s,sm). wfs s) x ==> (λ(s,k). ocwl s v k) x = trec ^oc_code x
+  !x. (λ(s,sm). swfs s ∧ wf s) x ==> (λ(s,k). kocwl s v k) x = trec ^oc_code x
 Proof
   match_mp_tac guard_elimination >> rpt conj_tac
   >- (simp[FORALL_PROD, AllCaseEqs()] >> rw[] >> simp[])
   >- (simp[FORALL_PROD, AllCaseEqs()] >> rw[] >>
-      rename [‘wfs th’] >>
+      rename [‘swfs th’] >>
       qexists ‘ocR th’ >> simp[] >> conj_tac
       >- (irule $ iffLR relationTheory.WF_EQ_WFP >> simp[WF_ocR]) >>
       rw[] >>
-      simp[ocR_def, ocklist_def, PAIR_REL, LEX_DEF, mlt1_BAG_INSERT] >>
+      simp[ocR_def, PAIR_REL, LEX_DEF, mlt1_BAG_INSERT] >>
       simp[bagTheory.mlt1_def] >>
-      rename [‘walk_alt s t = Pair t1 t2’] >>
+      rename [‘twalk s t = Pair t1 t2’] >>
       qexistsl [‘t’, ‘{| t1; t2 |}’] >>
       simp[bagTheory.BAG_UNION_INSERT] >>
       simp[DISJ_IMP_THM, FORALL_AND_THM] >>
-      gs[GSYM walk_alt_correct] >>
+      gs[GSYM twalk_correct] >>
       dxrule_then strip_assume_tac RTC_ocR_preserves_subst >>
+      gvs[swalk_def, swfs_def] >>
       metis_tac[walkstar_th1, walkstar_th2]) >>
-  MATCH_ACCEPT_TAC ocwl_tcallish
+  MATCH_ACCEPT_TAC kocwl_tcallish
 QED
 
-Definition ocwl'_def:
-  ocwl' s v k = trec ^oc_code (s, k)
+Definition tocwl_def:
+  tocwl s v k = trec ^oc_code (s, k)
 End
 
 (* CV-translatable:
-     refers to itself, walk_alt and apply_kont'
-     apply_kont' refers to dfkoc_alt only
+     refers to itself, and twalk only
 *)
-Theorem ocwl'_thm =
-        ocwl'_def |> SRULE[trec_thm]
-                  |> SRULE[tcall_def, sum_CASE_ockont_CASE, sum_CASE_term_CASE,
+Theorem tocwl_thm =
+        tocwl_def |> SRULE[trec_thm]
+                  |> SRULE[tcall_def, sum_CASE_list_CASE, sum_CASE_term_CASE,
                            sum_CASE_COND]
-                  |> SRULE[GSYM ocwl'_def]
+                  |> SRULE[GSYM tocwl_def]
+                  |> REWRITE_RULE[disj2cond]
 
-Theorem ocwl'_alt_oc:
-  wfs s ==> oc s t v = ocwl' s v (ock1 t ocIDk)
+Theorem tocwl_correct:
+  swfs s ∧ wf s ==> (soc s t v ⇔ tocwl s v [t])
 Proof
-  simp[ocwl'_def, GSYM ocwl_cleaned0, apply_ockont_def, ocwl_def,
+  simp[tocwl_def, GSYM ocwl_cleaned0, apply_ockont_def, kocwl_def,
        koc_def, apply_ockont_def, cwc_def]
 QED
 
-Theorem contify_optbind:
-  contify k (OPTION_BIND opt f) =
-  contify (λov. case ov of
-                  NONE => k NONE
-                | SOME x => contify k (f x))
-          opt
-Proof
-  Cases_on ‘opt’ >> simp[contify_def]
-QED
-
 Definition kunify_def:
-  kunify (s:α subst) t1 t2 k = cwc (unify s t1 t2) k
+  kunify (s:α term num_map) t1 t2 k = cwc (sunify s t1 t2) k
 End
 
 Theorem disj_oc:
-  wfs s ==> (oc s t1 v \/ oc s t2 v <=> ocwl' s v (ock1 t1 (ock1 t2 ocIDk)))
+  swfs s ∧ wf s ==> (soc s t1 v \/ soc s t2 v <=> tocwl s v [t1; t2])
 Proof
-  simp[ocwl'_def, GSYM ocwl_cleaned0, ocwl_def, apply_ockont_def,
+  simp[tocwl_def, GSYM ocwl_cleaned0, kocwl_def, apply_ockont_def,
        koc_def, cwc_def]
 QED
 
 Theorem kunify_thm =
         kunify_def
           |> SPEC_ALL
-          |> SRULE [Once unify_def, GSYM contify_cwc, ASSUME “wfs (s:α subst)”]
+          |> SRULE [Once sunify_thm, GSYM contify_cwc,
+                    twalk_correct, disj_oc,
+                    ASSUME “swfs (s:α term num_map)”,
+                    ASSUME “wf (s:α term num_map)”]
           |> CONV_RULE (TOP_DEPTH_CONV (contify_CONV[contify_term_case,
                                                      contify_option_case,
                                                      contify_pair_case,
                                                      contify_optbind]))
-          |> SRULE [cwcp “term$Pair”, cwcp “term$Pair x0”,
-                    cwcp “walk”, cwcp “$|+”, cwcp “$,”, cwcp “unify”,
-                    cwcp “unify s”, cwcp “Const”,
-                    cwcp “$, x”, cwcp “$=”, cwcp “oc”, cwcp “oc s”]
+          |> SRULE [cwcp “term$Pair”, cwcp “term$Pair x0”, cwcp “CONS”,
+                    cwcp “SOME”, cwcp “CONS x”, cwcp “term$Var”,
+                    cwcp “twalk”, cwcp “sptree$insert”, cwcp “$,”,
+                    cwcp “sunify”,cwcp “sptree$insert x”,
+                    cwcp “sptree$insert x y”,
+                    cwcp “sunify s”,
+                    cwcp “Const”, cwcp “twalk s”,
+                    cwcp “$, x”, cwcp “$=”, cwcp “tocwl”, cwcp “tocwl s”,
+                    cwcp “tocwl s n”, cwcp “$= x”]
           |> SRULE [GSYM kunify_def]
-          |> SRULE [cwc_def, walk_alt_correctD, UNDISCH_ALL disj_oc]
-
-Datatype: unifkont = unifIDk | unifk1 (α term) (α term) unifkont
-End
 
 Definition apply_unifkont_def:
-  apply_unifkont unifIDk x = x /\
-  apply_unifkont (unifk1 t1 t2 k) NONE = NONE /\
-  apply_unifkont (unifk1 t1 t2 k) (SOME s) = kunify s t1 t2 (apply_unifkont k)
+  apply_unifkont [] x = x /\
+  apply_unifkont ((t1,t2)::k) NONE = NONE /\
+  apply_unifkont ((t1,t2)::k) (SOME s) = kunify s t1 t2 (apply_unifkont k)
 End
 
 Definition dfkunify_def:
-  dfkunify (s:α subst) t1 t2 k = kunify s t1 t2 (apply_unifkont k)
+  dfkunify (s:α term num_map) t1 t2 k = kunify s t1 t2 (apply_unifkont k)
 End
 
 Theorem apply_unifkont_thm =
@@ -434,12 +406,13 @@ Theorem apply_unifkont_thm =
 Theorem apply_unifkont_NONE:
   apply_unifkont k NONE = NONE
 Proof
-  Cases_on ‘k’ >> simp[apply_unifkont_def]
+  Cases_on ‘k’ >> simp[apply_unifkont_def] >>
+  Cases_on ‘h’ >> simp[apply_unifkont_def]
 QED
 
 Theorem abs_EQ_apply_unifkont:
   (λov. case ov of NONE => NONE | SOME s => dfkunify s t1 t2 k) =
-  apply_unifkont (unifk1 t1 t2 k)
+  apply_unifkont ((t1, t2)::k)
 Proof
   simp[FUN_EQ_THM, apply_unifkont_def, optionTheory.FORALL_OPTION, SF ETA_ss] >>
   simp[dfkunify_def]
@@ -461,13 +434,15 @@ Theorem unifywl0 =
              (LIST_CONJ (map SPEC_ALL $ CONJUNCTS apply_unifkont_thm))
 
 (* remove slightly unnecessary use of SOME *)
-Definition unifywl_def:
-  unifywl k s = unifywl0 k (SOME s)
+Definition kunifywl_def:
+  kunifywl s k = unifywl0 k (SOME s)
 End
 
 Theorem unifywl0_NIL = Q.INST [‘x’ |-> ‘SOME s’] $ cj 1 unifywl0
 
-Theorem unifywl_thm =
-        REWRITE_RULE [GSYM unifywl_def] (CONJ unifywl0_NIL $ cj 3 unifywl0)
+Theorem kunifywl_thm =
+        REWRITE_RULE [GSYM kunifywl_def] (CONJ unifywl0_NIL $ cj 3 unifywl0)
+
+(* now to do guard-elimination *)
 
 val _ = export_theory();
