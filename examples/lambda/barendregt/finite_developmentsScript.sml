@@ -3,7 +3,7 @@ open HolKernel Parse bossLib boolLib;
 open BasicProvers metisLib boolSimps pred_setTheory pathTheory relationTheory;
 
 open chap3Theory chap2Theory labelledTermsTheory termTheory binderLib
-     term_posnsTheory chap11_1Theory nomsetTheory;
+     term_posnsTheory horeductionTheory chap11_1Theory nomsetTheory;
 
 local open pred_setLib in end
 val _ = augment_srw_ss [boolSimps.LET_ss]

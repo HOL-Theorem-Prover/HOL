@@ -10,7 +10,7 @@ open HolKernel boolLib Parse bossLib BasicProvers;
 open boolSimps arithmeticTheory pred_setTheory string_numTheory listTheory
      hurdUtils;
 
-open termTheory appFOLDLTheory chap2Theory chap3Theory;
+open termTheory appFOLDLTheory chap2Theory horeductionTheory chap3Theory;
 
 val _ = new_theory "pure_dB"
 

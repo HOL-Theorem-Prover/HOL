@@ -4,7 +4,7 @@ open pred_setTheory
 
 open binderLib
 
-open nomsetTheory labelledTermsTheory termTheory chap3Theory
+open nomsetTheory labelledTermsTheory termTheory horeductionTheory chap3Theory
 
 val _ = new_theory "chap11_1";
 

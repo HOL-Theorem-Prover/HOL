@@ -6,7 +6,7 @@ open metisLib boolSimps relationTheory listTheory llistTheory pathTheory
 open nomsetTheory binderLib
 open finite_developmentsTheory
 open labelledTermsTheory
-open termTheory chap2Theory chap3Theory appFOLDLTheory
+open termTheory chap2Theory horeductionTheory chap3Theory appFOLDLTheory
 open term_posnsTheory
 open chap11_1Theory
 open head_reductionTheory

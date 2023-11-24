@@ -538,6 +538,19 @@ Proof
   Cases_on `v IN FV y` THEN SRW_TAC [][SUB_THM, lemma14c, lemma14b]
 QED
 
+Theorem swap_eq_3substs:
+  z ∉ FV M ∧ x ≠ z ∧ y ≠ z ⇒
+  tpm [(x, y)] M = [VAR y/z] ([VAR x/y] ([VAR z/x] M))
+Proof
+  SRW_TAC [][GSYM fresh_tpm_subst] THEN
+  ‘tpm [(x,y)] (tpm [(z,x)] M) =
+       tpm [(swapstr x y z, swapstr x y x)] (tpm [(x,y)] M)’
+     by (SRW_TAC [][Once (GSYM pmact_sing_to_back), SimpLHS] THEN
+         SRW_TAC [][]) THEN
+  POP_ASSUM SUBST_ALL_TAC THEN
+  SRW_TAC [][pmact_flip_args]
+QED
+
 (* ----------------------------------------------------------------------
     alpha-convertibility results
    ---------------------------------------------------------------------- *)

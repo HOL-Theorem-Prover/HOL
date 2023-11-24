@@ -4,7 +4,7 @@ open boolSimps relationTheory pred_setTheory listTheory finite_mapTheory
      arithmeticTheory llistTheory pathTheory optionTheory hurdUtils;
 
 open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
-     term_posnsTheory finite_developmentsTheory;
+     horeductionTheory term_posnsTheory finite_developmentsTheory;
 
 val _ = new_theory "head_reduction"
 

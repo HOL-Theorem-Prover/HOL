@@ -3,7 +3,8 @@ open HolKernel Parse boolLib bossLib
 open boolSimps pred_setTheory pathTheory;
 
 open chap3Theory standardisationTheory term_posnsTheory termTheory binderLib
-     finite_developmentsTheory appFOLDLTheory nomsetTheory head_reductionTheory;
+     finite_developmentsTheory appFOLDLTheory nomsetTheory head_reductionTheory
+     horeductionTheory
 
 val _ = new_theory "normal_order"
 
