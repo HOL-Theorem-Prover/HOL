@@ -10,7 +10,7 @@ open reg_allocLib;
 open prog_armLib prog_ppcLib prog_x86Lib prog_x64Lib;
 open wordsTheory wordsLib addressTheory;
 open helperLib;
-open tailrecLib;
+open mc_tailrecLib;
 structure Parse = struct
   open Parse
   val (Type,Term) =

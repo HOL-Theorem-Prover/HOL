@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib;
 open multiwordTheory helperLib;
 open wordsTheory wordsLib addressTheory arithmeticTheory listTheory pairSyntax;
 open addressTheory pairTheory set_sepTheory rich_listTheory integerTheory;
-local open tailrecLib blastLib intLib in end
+local open mc_tailrecLib blastLib intLib in end
 
 val _ = new_theory "mc_multiword";
 val _ = ParseExtras.temp_loose_equality()

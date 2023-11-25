@@ -5,7 +5,7 @@ open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory;
 
 open decompilerLib compilerLib;
-open tailrecLib tailrecTheory cheney_gcTheory cheney_allocTheory;
+open mc_tailrecLib tailrecTheory cheney_gcTheory cheney_allocTheory;
 open lisp_gcTheory lisp_typeTheory lisp_invTheory;
 
 

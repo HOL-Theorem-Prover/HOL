@@ -7,7 +7,7 @@ open decompilerLib compilerLib prog_armLib;
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory;
 
-open tailrecLib tailrecTheory;
+open mc_tailrecLib tailrecTheory;
 open cheney_gcTheory cheney_allocTheory; (* an abstract implementation is imported *)
 
 

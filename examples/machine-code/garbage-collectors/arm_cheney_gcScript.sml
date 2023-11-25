@@ -6,7 +6,7 @@ open decompilerLib prog_armLib;
 
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory;
-open tailrecLib tailrecTheory;
+open mc_tailrecLib tailrecTheory;
 open cheney_gcTheory; (* an abstract implementation is imported *)
 
 val decompile_arm = decompile arm_tools;

@@ -5,7 +5,7 @@
 
 open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib
      combinTheory prim_recTheory arithmeticTheory BasicProvers
-     optionTheory
+     optionTheory sumTheory
 
 val _ = new_theory "while";
 
@@ -422,9 +422,32 @@ val OWHILE_IND = store_thm(
   THEN IMP_RES_TAC prim_recTheory.LESS_MONO THEN RES_TAC
   THEN FULL_SIMP_TAC bool_ss [FUNPOW]);
 
+Theorem TAILREC_EXISTS[local]:
+  ?tailrec.
+    !(f:'a -> 'a + 'b) (x:'a).
+      tailrec f x =
+      case f x of
+      | INL z => tailrec f z
+      | INR y => y
+Proof
+  EXISTS_TAC “λ(f:'a -> 'a + 'b) x. OUTR (f (WHILE (ISL o f) (OUTL o f) x))”
+  THEN rpt strip_tac
+  THEN CONV_TAC (DEPTH_CONV BETA_CONV)
+  THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [WHILE]))
+  THEN REWRITE_TAC [combinTheory.o_DEF]
+  THEN CONV_TAC (DEPTH_CONV BETA_CONV)
+  THEN Cases_on ‘f x’
+  THEN ASM_REWRITE_TAC [TypeBase.case_def_of “:'a + 'b”,sumTheory.ISL]
+  THEN CONV_TAC (DEPTH_CONV BETA_CONV)
+  THEN ASM_REWRITE_TAC [sumTheory.OUTL,sumTheory.OUTR]
+QED
+
+val TAILREC = new_specification("TAILREC",["TAILREC"],TAILREC_EXISTS);
+
 val _ =
  computeLib.add_persistent_funs
    ["WHILE"
-   ,"LEAST_DEF"];
+   ,"LEAST_DEF"
+   ,"TAILREC"];
 
 val _ = export_theory();

@@ -1,4 +1,4 @@
-signature tailrecLib =
+signature mc_tailrecLib =
 sig
 
     include Abbrev

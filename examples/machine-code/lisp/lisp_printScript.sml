@@ -609,7 +609,7 @@ val (thms,arm_set_return_def,arm_set_return_pre_def) = compile_all ``
       let r4 = 5w:word32 in
         (r4,r5,r8,dh,h)``;
 
-(* val (arm_print_loop_aux_def,arm_print_loop_aux_pre_def) = tailrecLib.tailrec_define `` *)
+(* val (arm_print_loop_aux_def,arm_print_loop_aux_pre_def) = mc_tailrecLib.tailrec_define *)
 val (thms,arm_print_loop_aux_def,arm_print_loop_aux_pre_def) = compile_all ``
   arm_print_loop_aux (r3:word32,r4:word32,r7:word32,r8:word32,dh:word32 set,h:word32->word32,df:word32 set,f:word32->word8) =
     let (r3,r4,r5) = arm_print_exit(r3,r4) in

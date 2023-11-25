@@ -2,7 +2,7 @@
 open HolKernel boolLib bossLib Parse;
 open wordsTheory;
 open decompilerLib;
-open tailrecLib listTheory pred_setTheory arithmeticTheory;
+open mc_tailrecLib listTheory pred_setTheory arithmeticTheory;
 
 val decompile_arm = decompile prog_armLib.arm_tools;
 val decompile_ppc = decompile prog_ppcLib.ppc_tools;
