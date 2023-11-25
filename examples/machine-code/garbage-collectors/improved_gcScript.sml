@@ -379,7 +379,7 @@ val gc_step_def = Define `
     let i = i + n + 1 in
       (i,j,m)`;
 
-val gc_loop_def = tailrecLib.tailrec_define ``
+val gc_loop_def = mc_tailrecLib.tailrec_define ``
   gc_loop (i,j,m) = if i = j then (i,m) else
                       let (i,j,m) = gc_step (i,j,m) in
                         gc_loop (i,j,m)``;

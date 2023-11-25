@@ -10,7 +10,7 @@ open prog_x64Lib;
 open prog_x64_extraTheory;
 open wordsTheory wordsLib addressTheory;
 open helperLib;
-open tailrecLib;
+open mc_tailrecLib;
 
 
 fun AUTO_ALPHA_CONV () = let

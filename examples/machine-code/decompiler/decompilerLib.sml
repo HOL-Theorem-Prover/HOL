@@ -1640,7 +1640,7 @@ fun extract_function name th entry exit function_in_out = let
   val func_name = name
   val tm_option = NONE
   val (main_thm,main_def,pre_thm,pre_def) =
-         tailrecLib.tailrec_define_from_step func_name step_fun tm_option
+         mc_tailrecLib.tailrec_define_from_step func_name step_fun tm_option
   val finalise =
      CONV_RULE (REMOVE_TAGS_CONV THENC DEPTH_CONV (LET_EXPAND_POS_CONV))
   val main_thm = finalise main_thm

@@ -1,4 +1,4 @@
-structure tailrecLib :> tailrecLib =
+structure mc_tailrecLib :> mc_tailrecLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
