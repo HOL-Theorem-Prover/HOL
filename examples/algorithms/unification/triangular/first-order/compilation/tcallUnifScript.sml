@@ -48,6 +48,13 @@ Proof
   Cases_on ‘t’ >> simp[contify_def]
 QED
 
+Theorem sum_CASE_pair_CASE:
+  sum_CASE (pair_CASE p f) lf rf =
+  pair_CASE p (λa b. sum_CASE (f a b) lf rf)
+Proof
+  Cases_on ‘p’ >> simp[]
+QED
+
 Theorem sum_CASE_term_CASE:
   sum_CASE (term_CASE t vf pf cf) lf rf =
   term_CASE t
@@ -444,5 +451,105 @@ Theorem kunifywl_thm =
         REWRITE_RULE [GSYM kunifywl_def] (CONJ unifywl0_NIL $ cj 3 unifywl0)
 
 (* now to do guard-elimination *)
+
+fun findin f t =
+  if aconv f t then SOME []
+  else
+    case total dest_comb t of
+      NONE => NONE
+    | SOME (t1,t2) =>
+        case findin f t1 of
+          NONE => NONE
+        | SOME pfx => SOME (pfx @ [t2])
+
+
+fun tcallify fn_t inty t =
+  if TypeBase.is_case t then
+    let val (f, ts) = strip_comb t
+        val {Thy,Name,Ty} = dest_thy_const f
+        val f0 = prim_mk_const{Name=Name,Thy=Thy}
+        val basety = type_of f0
+        val (argtys, rngty) = strip_fun basety
+        val rng_th = match_type rngty (sumSyntax.mk_sum(inty,type_of t))
+        val argty_th = match_type (hd argtys) (type_of (hd ts))
+        val ft = Term.inst (rng_th @ argty_th) f0
+        val ft1 = mk_comb(ft, hd ts)
+        val ts' = map (tcallify fn_t inty) (tl ts)
+    in
+      list_mk_comb(ft1, ts')
+    end
+  else
+    case dest_term t of
+      CONST _ => sumSyntax.mk_inr(t,inty)
+    | VAR _ => sumSyntax.mk_inr(t,inty)
+    | LAMB(vt,bt) => mk_abs(vt, tcallify fn_t inty bt)
+    | COMB _ =>
+      case findin fn_t t of
+        NONE => sumSyntax.mk_inr(t,inty)
+      | SOME args => sumSyntax.mk_inl(pairSyntax.list_mk_pair args, type_of t)
+
+fun tcallify_th th =
+  let val (l,r) = dest_eq (concl th)
+      val (lf, args) = strip_comb l
+      val atup = pairSyntax.list_mk_pair args
+      val inty = type_of atup
+      val body_t = tcallify lf inty r
+  in
+      pairSyntax.mk_pabs(atup, body_t)
+  end
+
+val unify_code =
+  DefnBase.one_line_ify NONE kunifywl_thm |> tcallify_th
+
+Theorem kunifywl_tcallish:
+  !x.
+    (λ(s,k). swfs s ∧ wf s) x ==>
+    (λ(s,k). kunifywl s k) x =
+    tcall ^unify_code (λ(s,k). kunifywl s k) x
+Proof
+  simp[tcall_def, FORALL_PROD, sum_CASE_list_CASE, sum_CASE_term_CASE,
+       sum_CASE_COND, sum_CASE_pair_CASE] >> rw[] >>
+  rename [‘kunifywl s k = _’] >> Cases_on ‘k’
+  >- (simp[cj 1 kunifywl_thm]) >>
+  rename [‘kunifywl s (h::t)’] >> Cases_on ‘h’ >>
+  simp[SimpLHS, Once kunifywl_thm] >> simp[]
+QED
+
+Definition plist_vars_def[simp]:
+  plist_vars A [] = A ∧
+  plist_vars A ((t1,t2) :: tps) = plist_vars (A ∪ vars t1 ∪ vars t2) tps
+End
+
+Definition kuR_def:
+  kuR (s : α term num_map, wl : (α term # α term) list) (s0,wl0) ⇔
+    swfs s ∧ sp2fm s0 ⊑ sp2fm s ∧
+    plist_vars (substvars $ sp2fm s) wl ⊆
+       plist_vars (substvars $ sp2fm s0) wl0 ∧
+    mlt1 (measure (λ(t1,t2). pair_count t1 + pair_count t2))
+         (BAG_OF_LIST wl)
+         (BAG_OF_LIST wl0)
+End
+
+(*
+Theorem kunify_cleaned:
+  ∀x. (λ(s,k). swfs s ∧ wf s) x ⇒
+      (λ(s,k). kunifywl s k) x = trec ^unify_code x
+Proof
+  match_mp_tac guard_elimination >> rpt conj_tac
+  >- (simp[FORALL_PROD, AllCaseEqs()] >> rw[] >> simp[] >>
+      gvs[GSYM twalk_correct, GSYM disj_oc] >>
+      gvs[swfs_def, sptreeTheory.wf_insert, swalk_def] >>
+      irule wfs_extend >> simp[] >> rpt conj_tac >>~-
+      ([‘n ∉ domain s’],
+       drule walk_to_var >> disch_then (rpt o dxrule_all) >> simp[]) >~
+      [‘vwalk (sp2fm s) nm’]
+      >- (‘vwalk (sp2fm s) nm = Var nm’ suffices_by simp[] >>
+          irule NOT_FDOM_vwalk >> simp[] >>
+          drule walk_to_var >> disch_then (rpt o dxrule_all) >> simp[]) >>
+      gs[GSYM oc_eq_vars_walkstar, soc_def])
+  >- (simp[FORALL_PROD] >> rpt strip_tac >> ...)
+  >- ...
+QED
+*)
 
 val _ = export_theory();
