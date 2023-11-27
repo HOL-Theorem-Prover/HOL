@@ -556,26 +556,17 @@ val lemma3_16 = store_thm( (* p. 37 *)
     ]
   ]);
 
-val theorem3_17 = store_thm(
-  "theorem3_17",
-  ``TC grandbeta = reduction beta``,
-  Q_TAC SUFF_TAC
-    `(!M N. TC grandbeta M N ==> reduction beta M N) /\
-     (!M N. RTC (compat_closure beta) M N ==> TC grandbeta M N)`
-    THEN1 SRW_TAC [] [FUN_EQ_THM, EQ_IMP_THM] THEN
-  CONJ_TAC THENL [
-    Q_TAC SUFF_TAC `!M N. grandbeta M N ==> reduction beta M N`
-      THEN1 (PROVE_TAC [TC_IDEM, TC_RC_EQNS,
-                        TC_MONOTONE]) THEN
-    HO_MATCH_MP_TAC grandbeta_ind THEN PROVE_TAC [reduction_rules, beta_def],
-
-    Q_TAC SUFF_TAC `!M N. RC (compat_closure beta) M N ==> grandbeta M N`
-      THEN1 PROVE_TAC [TC_MONOTONE,
-                       TC_RC_EQNS] THEN
-    Q_TAC SUFF_TAC `!M N. compat_closure beta M N ==> grandbeta M N`
-      THEN1 PROVE_TAC [RC_DEF, grandbeta_rules] THEN
-    PROVE_TAC [exercise3_3_1]
-  ]);
+Theorem theorem3_17:
+  TC grandbeta = reduction beta
+Proof
+  ‘RTC grandbeta = reduction beta’ suffices_by
+    (disch_then (simp o single o GSYM) >> simp[cj 1 $ GSYM TC_RC_EQNS] >>
+     simp[FUN_EQ_THM, RC_DEF, EQ_IMP_THM, DISJ_IMP_THM] >>
+     metis_tac[reflexive_TC, reflexive_def, grandbeta_rules]) >>
+  irule RTC_BRACKETS_RTC_EQN >> conj_tac >~
+  [‘_ -β-> _ ⇒ _’] >- metis_tac[exercise3_3_1] >>
+  Induct_on ‘grandbeta’ >> metis_tac[reduction_rules, beta_def]
+QED
 
 val beta_CR = store_thm(
   "beta_CR",
@@ -617,7 +608,7 @@ Proof
 QED
 
 Theorem Omega_app_starloops :
-    Omega @@ A -b->* N ==> ?A'. N = Omega @@ A'
+    Omega @@ A -β->* N ⇒ ∃A'. N = Omega @@ A'
 Proof
     Suff ‘!M N. M -b->* N ==> !A. M = Omega @@ A ==> ?A'. N = Omega @@ A'’
  >- METIS_TAC [RTC_RULES]
@@ -1327,16 +1318,54 @@ Proof
   metis_tac[eta_beta_reorder0]
 QED
 
-(*
-Theorem eta_betastar_reorder:
-  M0 -η-> M1 ∧ M1 -β->* M ⇒
-  ∃M1'. M0 -β->* M1' ∧ reduction eta M1' M
+Inductive peta:
+[~refl[simp]:]
+  !M. peta M M
+[~lam:]
+  !v M N. peta M N ⇒ peta (LAM v M) (LAM v N)
+[~app:]
+  !M1 M2 N1 N2. peta M1 M2 /\ peta N1 N2 ⇒ peta (M1 @@ N1) (M2 @@ N2)
+[~eta:]
+  !v M N. peta M N /\ v ∉ FV N ⇒ peta (LAM v (M @@ VAR v)) N
+End
+
+val _ = set_mapped_fixity {term_name = "peta", tok = "=η=>",
+                           fixity = Infix(NONASSOC, 450)}
+
+Theorem tpm_eta[simp]:
+  eta (tpm p M) (tpm p N) ⇔ eta M N
 Proof
-  Induct_on ‘RTC’ >> rpt strip_tac
-  >- metis_tac[RTC_RULES] >>
-  drule_all_then strip_assume_tac eta_beta_reorder >>
-  metis_tac[RTC_CASES_RTC_TWICE]
-*)
+  simp[eta_def] >> iff_tac >> rw[] >> simp[] >~
+  [‘LAM _ _ = LAM _ _’]
+  >- (irule_at Any EQ_REFL >> simp[]) >>
+  rename [‘tpm p M = LAM v (tpm p M0 @@ VAR v)’] >>
+  ‘M = tpm p⁻¹ (LAM v (tpm p M0 @@ VAR v))’ by metis_tac[tpm_eqr]>> gvs[] >>
+  irule_at Any EQ_REFL >> simp[]
+QED
+
+Theorem cc_eta_peta:
+  ∀M N. M -η-> N ==> peta M N
+Proof
+  ho_match_mp_tac cc_ind >> simp[] >> qexists ‘{}’ >> rw[] >>
+  simp[peta_rules] >> gvs[eta_def, peta_eta]
+QED
+
+Theorem peta_reduction_eta:
+  ∀M N. peta M N ⇒ M -η->* N
+Proof
+  Induct_on ‘peta’ >> simp[] >> rw[] >~
+  [‘LAM v (M @@ VAR v) -η->* N’]
+  >- (irule $ cj 2 RTC_RULES_RIGHT1 >>
+      irule_at Any compat_closure_R >> qexists ‘LAM v (N @@ VAR v)’ >>
+      simp[eta_def] >> metis_tac [reduction_rules]) >>
+  metis_tac[reduction_rules]
+QED
+
+Theorem RTC_peta_reduction_eta:
+  ∀M N. peta꙳ M N ⇔ M -η->* N
+Proof
+  metis_tac[peta_reduction_eta, cc_eta_peta, RTC_BRACKETS_RTC_EQN]
+QED
 
 Theorem reduction_RUNION1:
   reduction R1 M N ⇒ reduction (R1 RUNION R2) M N
@@ -1351,23 +1380,6 @@ Proof
   Induct_on ‘RTC’ >> simp[] >> rpt strip_tac >>
   irule (cj 2 RTC_RULES) >> gs[CC_RUNION_DISTRIB, RUNION] >> metis_tac[]
 QED
-
-(*
-Theorem beta_eta_factors:
-  M -βη->* N ⇔ ∃M'. M -β->* M' ∧ M' -η->* N
-Proof
-  reverse iff_tac
-  >- (strip_tac >> irule (iffRL RTC_CASES_RTC_TWICE) >>
-      metis_tac[reduction_RUNION1, reduction_RUNION2]) >>
-  Induct_on ‘RTC’ >> conj_tac
-  >- metis_tac[RTC_RULES] >> rpt strip_tac >~
-  [‘M -βη-> M1’, ‘M1 -β->* M2’, ‘M2 -η->* N’]
-  >- (‘M -β-> M1 ∨ M -η-> M1’ by gs[CC_RUNION_DISTRIB, RUNION]
-      >- metis_tac[RTC_RULES] >>
-*)
-
-
-
 
 (* ----------------------------------------------------------------------
     Congruence and rewrite rules for -b-> and -b->*
