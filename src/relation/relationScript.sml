@@ -187,6 +187,15 @@ Proof MESON_TAC [reflexive_def, RTC_RULES]
 QED
 Theorem reflexive_RTC = RTC_REFLEXIVE
 
+Theorem RTC_BRACKETS_RTC_EQN:
+  (!x y. R1 x y ==> R2 x y) /\ (!x y. R2 x y ==> RTC R1 x y) ==>
+  (RTC R2 = RTC R1)
+Proof
+  strip_tac >> SIMP_TAC bool_ss [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] >>
+  conj_tac >> Induct_on ‘RTC’ >> simp_tac (srw_ss()) [] >>
+  METIS_TAC[RTC_RTC, RTC_RULES]
+QED
+
 Theorem RC_REFLEXIVE[simp]:
   !R:'a->'a->bool. reflexive (RC R)
 Proof MESON_TAC [reflexive_def, RC_DEF]
