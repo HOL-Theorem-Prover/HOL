@@ -513,6 +513,18 @@ val TC_RC_EQNS = store_thm(
     HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [TC_RULES, RC_DEF]
   ]);
 
+Theorem TC_LEFT1_I:
+  !x y z. R x y /\ TC R y z ==> TC R x z
+Proof
+  METIS_TAC[TC_RULES]
+QED
+
+Theorem TC_RIGHT1_I:
+  !x y z. TC R x y /\ R y z ==> TC R x z
+Proof
+  METIS_TAC[TC_RULES]
+QED
+
 (* can get inductive principles for properties which do not hold generally
   but only for particular cases of x or y in RTC R x y *)
 

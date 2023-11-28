@@ -6,6 +6,8 @@ open tailcallsTheory
 open substTheory rmfmapTheory
 open cpsTheory cpsLib
 
+open relationTheory sptreeTheory pred_setTheory finite_mapTheory optionTheory
+
 val _ = new_theory "tcallUnif";
 
 Definition ispair_def[simp]:
@@ -119,11 +121,11 @@ Proof
       rename [‘wfs (sp2fm s)’] >>
       qexists ‘λ(s0,nm0) (s1,nm). s0 = s ∧ s1 = s ∧ vR (sp2fm s) nm0 nm’ >>
       simp[] >> conj_tac
-      >- (irule $ iffLR relationTheory.WF_EQ_WFP >>
-          irule relationTheory.WF_SUBSET >>
+      >- (irule $ iffLR WF_EQ_WFP >>
+          irule WF_SUBSET >>
           qexists ‘inv_image (vR $ sp2fm s) SND’ >>
           simp[FORALL_PROD] >>
-          simp[relationTheory.WF_inv_image, GSYM wfs_def]) >>
+          simp[WF_inv_image, GSYM wfs_def]) >>
       rpt gen_tac >> strip_tac >>
       rename [‘RTC _ (s0,_)(s,_)’]>>
       ‘s0 = s’ by (qpat_x_assum ‘RTC _ _ _’ mp_tac >> Induct_on ‘RTC’ >>
@@ -292,12 +294,12 @@ Theorem WF_ocR:
   swfs s ==> WF (ocR s)
 Proof
   strip_tac >> gs[ocR_def, swfs_def] >>
-  irule relationTheory.WF_inv_image >>
-  irule relationTheory.WF_SUBSET >>
+  irule WF_inv_image >>
+  irule WF_SUBSET >>
   simp[FORALL_PROD] >>
   qexists ‘inv_image (mlt1 (walkstarR (sp2fm s))) SND’ >>
   simp[] >>
-  irule relationTheory.WF_inv_image >>
+  irule WF_inv_image >>
   irule bagTheory.WF_mlt1 >>
   irule walkstar_thWF >> simp[]
 QED
@@ -327,7 +329,7 @@ Proof
   >- (simp[FORALL_PROD, AllCaseEqs()] >> rw[] >>
       rename [‘swfs th’] >>
       qexists ‘ocR th’ >> simp[] >> conj_tac
-      >- (irule $ iffLR relationTheory.WF_EQ_WFP >> simp[WF_ocR]) >>
+      >- (irule $ iffLR WF_EQ_WFP >> simp[WF_ocR]) >>
       rw[] >>
       simp[ocR_def, PAIR_REL, LEX_DEF, mlt1_BAG_INSERT] >>
       simp[bagTheory.mlt1_def] >>
@@ -421,7 +423,7 @@ Theorem abs_EQ_apply_unifkont:
   (λov. case ov of NONE => NONE | SOME s => dfkunify s t1 t2 k) =
   apply_unifkont ((t1, t2)::k)
 Proof
-  simp[FUN_EQ_THM, apply_unifkont_def, optionTheory.FORALL_OPTION, SF ETA_ss] >>
+  simp[FUN_EQ_THM, apply_unifkont_def, FORALL_OPTION, SF ETA_ss] >>
   simp[dfkunify_def]
 QED
 
@@ -516,21 +518,175 @@ Proof
 QED
 
 Definition plist_vars_def[simp]:
-  plist_vars A [] = A ∧
-  plist_vars A ((t1,t2) :: tps) = plist_vars (A ∪ vars t1 ∪ vars t2) tps
+  plist_vars [] = {} ∧
+  plist_vars ((t1,t2) :: tps) = vars t1 ∪ vars t2 ∪ plist_vars tps
 End
+
+Theorem FINITE_plist_vars[simp]:
+  FINITE (plist_vars tps)
+Proof
+  Induct_on ‘tps’ >> simp[FORALL_PROD]
+QED
 
 Definition kuR_def:
   kuR (s : α term num_map, wl : (α term # α term) list) (s0,wl0) ⇔
-    swfs s ∧ sp2fm s0 ⊑ sp2fm s ∧
-    plist_vars (substvars $ sp2fm s) wl ⊆
-       plist_vars (substvars $ sp2fm s0) wl0 ∧
-    mlt1 (measure (λ(t1,t2). pair_count t1 + pair_count t2))
+    wf s ∧ swfs s ∧ wf s0 ∧ swfs s0 ∧ sp2fm s0 ⊑ sp2fm s ∧
+    (substvars $ sp2fm s) ∪ plist_vars wl ⊆
+    (substvars $ sp2fm s0) ∪ plist_vars wl0 ∧
+    mlt1 (measure
+          (λ(t1,t2).
+             pair_count (walk* (sp2fm s) t1) +
+             pair_count (walk* (sp2fm s) t2)))
          (BAG_OF_LIST wl)
          (BAG_OF_LIST wl0)
 End
 
-(*
+Theorem WF_kuR:
+  WF kuR
+Proof
+  simp[WF_DEF] >> qx_gen_tac ‘A’ >>
+  disch_then $ qx_choose_then ‘a’ assume_tac >> CCONTR_TAC >>
+  gs[DECIDE “¬p ∨ q ⇔ p ⇒ q”] >>
+  ‘∃s0 wl0. a = (s0,wl0)’ by (Cases_on ‘a’ >> simp[])>>
+  gvs[FORALL_PROD, EXISTS_PROD] >>
+  reverse $ Cases_on ‘swfs s0’
+  >- (first_x_assum drule >> simp[kuR_def]) >>
+  reverse $ Cases_on ‘wf s0’
+  >- (first_x_assum drule >> simp[kuR_def]) >>
+  qabbrev_tac ‘R = λ(a,b) (x,y). kuR (a,b) (x,y) ∧ A (a,b)’>>
+  ‘∀a b x y. kuR (a,b) (x,y) ∧ A(a,b) ⇔ R (a,b) (x,y)’
+    by simp[Abbr‘R’] >>
+  qpat_x_assum ‘Abbrev(R = _)’ kall_tac >>
+  gvs[] >>
+  ‘∀s0 wl0 s wl. R⁺ (s,wl) (s0,wl0) ⇒
+                 swfs s0 ∧ wf s0 ∧ swfs s ∧ wf s ∧ sp2fm s0 ⊑ sp2fm s ∧
+                 (A (s0,wl0) ⇒ A(s,wl)) ∧
+                 substvars (sp2fm s) ∪ plist_vars wl ⊆
+                 substvars (sp2fm s0) ∪ plist_vars wl0’
+    by (Induct_on ‘TC R’ >> simp[FORALL_PROD] >>
+        pop_assum (assume_tac o GSYM) >>
+        simp[kuR_def] >> rw[] >~
+        [‘_ ⊑ _’] >- metis_tac[SUBMAP_TRANS] >>
+        ASM_SET_TAC[]) >>
+  ‘∃s wl.
+     swfs s ∧ wf s ∧ sp2fm s0 ⊑ sp2fm s ∧ A (s,wl) ∧
+     (substvars $ sp2fm s) ∪ plist_vars wl ⊆
+     (substvars $ sp2fm s0) ∪ plist_vars wl0 ∧
+     ∀s' wl'. TC R (s',wl') (s,wl) ⇒ s' = s’
+    by (qpat_x_assum ‘A _’ mp_tac >>
+        completeInduct_on
+        ‘CARD ((substvars $ sp2fm s0) ∪ plist_vars wl0) -
+         CARD (FDOM (sp2fm s0))’ >>
+        gvs[GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO, GSYM CONJ_ASSOC] >>
+        rw[] >> gvs[] >>
+        reverse $ Cases_on ‘∃s' wl'. TC R (s',wl') (s0,wl0) ∧ s' ≠ s0’ >> gvs[]
+        >- (qexistsl [‘s0’, ‘wl0’]>> rw[] >> metis_tac[]) >>
+        first_x_assum $ qspecl_then [‘s'’, ‘wl'’] mp_tac >> simp[] >>
+        impl_tac
+        >- (first_x_assum $ drule_then strip_assume_tac >>
+            ‘CARD (domain s0) ≤
+               CARD (substvars (sp2fm s0) ∪ plist_vars wl0)’
+                  by (irule CARD_SUBSET >> simp[substvars_def] >> SET_TAC[]) >>
+            ‘domain s0 ⊂ domain s'’
+              by (simp[PSUBSET_DEF] >>
+                  qpat_x_assum ‘_ ⊑ _’ mp_tac >>
+                  simp[SUBMAP_FLOOKUP_EQN] >> strip_tac >>
+                  ‘domain s0 ⊆ domain s'’
+                    by (simp[SUBSET_DEF] >>
+                        metis_tac[domain_lookup]) >> simp[] >>
+                  strip_tac >> qpat_x_assum ‘s' ≠ s0’ mp_tac >>
+                  gvs[spt_eq_thm] >> pop_assum mp_tac >>
+                  simp[EXTENSION,domain_lookup]>>
+                  metis_tac[SOME_11,option_CASES]) >>
+            simp[DECIDE “x ≤ y ⇒ (0 < y - x ⇔ x < y)”,
+                 DECIDE “a ≤ x ⇒ (y < b + x - a ⇔ a + y < b + x)”] >>
+            conj_tac
+            >- (irule (DECIDE “x < y ∧ a ≤ b ⇒ x + a < y + b”) >> conj_tac
+                >- (irule CARD_PSUBSET >> simp[]) >>
+                irule CARD_SUBSET >> simp[]) >>
+            irule CARD_PSUBSET >> simp[] >>
+            irule PSUBSET_SUBSET_TRANS >> first_assum $ irule_at Any >>
+            gs[substvars_def] >> ASM_SET_TAC[]) >>
+        strip_tac >> first_x_assum $ drule_then strip_assume_tac >>
+        gvs[] >> rename [‘R⁺ _ (s,wl) ⇒ _ = s’] >>
+        qexistsl [‘s’, ‘wl’] >> simp[] >> rw[] >~
+        [‘_ ⊑ _’] >- metis_tac[SUBMAP_TRANS] >>
+        ((qmatch_abbrev_tac ‘_ ⊆ _’ >> ASM_SET_TAC[]) ORELSE metis_tac[])) >>
+  qabbrev_tac
+    ‘M = (measure (λ(t1,t2).
+                     pair_count (sp2fm s ◁ t1) + pair_count (sp2fm s ◁ t2)))’ >>
+  ‘∀s' wl'.
+     R⁺ (s',wl') (s,wl) ⇒
+     mlt M (BAG_OF_LIST wl') (BAG_OF_LIST wl)’
+    by (Induct_on ‘TC R’ using TC_STRONG_INDUCT_LEFT1 >>
+        simp[GSYM RIGHT_FORALL_IMP_THM, FORALL_PROD] >>
+        rw[]
+        >- (rename [‘R (s',wl') (s,wl)’] >>
+            ‘R⁺ (s',wl') (s,wl)’ by simp[TC_SUBSET] >>
+            ‘s' = s’ by metis_tac[] >> pop_assum SUBST_ALL_TAC >>
+            irule TC_SUBSET >> qpat_x_assum ‘R _ _’ mp_tac >>
+            first_x_assum (assume_tac o GSYM o
+                           assert (is_eq o #2 o strip_forall o concl) o
+                           assert (is_forall o concl)
+                          ) >>
+            simp[kuR_def]) >>
+        irule TC_LEFT1_I >> first_assum $ irule_at Any >>
+        rename [‘TC R (s1,wl1) (s,wl)’, ‘R (s2,wl2) (s1,wl1)’]>>
+        ‘s1 = s ∧ s2 = s’ by metis_tac[TC_RULES] >>
+        ntac 2 $ pop_assum SUBST_ALL_TAC >>
+        qpat_x_assum ‘R _ _’ mp_tac >>
+        first_x_assum (assume_tac o GSYM o
+                       assert (is_eq o #2 o strip_forall o concl) o
+                       assert (is_forall o concl)) >>
+        simp[kuR_def]) >>
+  qabbrev_tac ‘rwlbs (* "reachable wl bags" *) =
+               λrwlb. ∃rwl. R⁺ (s,rwl) (s,wl) ∧ rwlb = BAG_OF_LIST rwl’ >>
+  ‘WF (mlt M)’ by simp[WF_TC_EQN, bagTheory.WF_mlt1, Abbr‘M’] >>
+  drule_then (assume_tac o SRULE[PULL_EXISTS]) (iffLR WF_DEF) >>
+  ‘∀wl'. R꙳(s,wl') (s,wl) ⇒ ∃wl''. R(s,wl'') (s,wl')’
+    by (simp[cj 1 (GSYM TC_RC_EQNS), RC_DEF, DISJ_IMP_THM, FORALL_AND_THM] >>
+        metis_tac[TC_RULES]) >>
+  ‘∃b. rwlbs b’ by (simp[Abbr‘rwlbs’] >> irule_at Any TC_SUBSET >>
+                    metis_tac[TC_RULES]) >>
+  first_assum (pop_assum o
+               mp_then Any (qx_choose_then ‘minwlb’ strip_assume_tac)) >>
+  gvs[Abbr‘rwlbs’, PULL_FORALL] >> rename [‘R⁺ (s,minwl) (s,wl)’] >>
+  ‘∃cwl. R(s,cwl)(s,minwl)’ by metis_tac[TC_RTC] >>
+  ‘R⁺ (s,cwl)(s,wl)’ by metis_tac[TC_LEFT1_I] >>
+  first_x_assum (pop_assum o mp_then Concl mp_tac) >>
+  pop_assum mp_tac >>
+  first_x_assum (assume_tac o GSYM o
+                       assert (is_eq o #2 o strip_forall o concl) o
+                       assert (is_forall o concl)) >>
+  simp[kuR_def, TC_SUBSET]
+QED
+
+Theorem vwalk_rangevars:
+  wfs s ∧ vwalk s v = t ⇒
+  t = Var v ∧ v ∉ FDOM s ∨ vars t ⊆ rangevars s
+Proof
+  Cases_on ‘wfs s’ >> simp[] >> map_every qid_spec_tac [‘t’, ‘v’] >>
+  ho_match_mp_tac vwalk_ind >> rw[] >>
+  ONCE_REWRITE_TAC[UNDISCH vwalk_def] >> Cases_on ‘FLOOKUP s v’ >>
+  simp[AllCaseEqs()] >> gs[FLOOKUP_DEF] >> rename [‘s ' v = t’] >>
+  Cases_on ‘t’ >> simp[]
+  >- (gs[] >> simp[rangevars_def, PULL_EXISTS, FRANGE_DEF] >>
+      first_assum $ irule_at Any >> simp[]) >>
+  simp[rangevars_def, PULL_EXISTS, FRANGE_DEF, SUBSET_DEF] >> rw[] >>
+  first_assum $ irule_at Any >> simp[]
+QED
+
+Theorem walk_rangevars:
+  wfs s ∧ walk s t = u ⇒
+  vars u ⊆ rangevars s ∪ vars t
+Proof
+  Cases_on ‘t’ >> simp[walk_thm] >> rw[] >> simp[]
+  >- (drule vwalk_rangevars >> simp[] >> rename [‘vwalk s vn’] >>
+      disch_then $ qspec_then ‘vn’ strip_assume_tac >> simp[] >>
+      ASM_SET_TAC[]) >>
+  SET_TAC[]
+QED
+
 Theorem kunify_cleaned:
   ∀x. (λ(s,k). swfs s ∧ wf s) x ⇒
       (λ(s,k). kunifywl s k) x = trec ^unify_code x
@@ -538,7 +694,7 @@ Proof
   match_mp_tac guard_elimination >> rpt conj_tac
   >- (simp[FORALL_PROD, AllCaseEqs()] >> rw[] >> simp[] >>
       gvs[GSYM twalk_correct, GSYM disj_oc] >>
-      gvs[swfs_def, sptreeTheory.wf_insert, swalk_def] >>
+      gvs[swfs_def, wf_insert, swalk_def] >>
       irule wfs_extend >> simp[] >> rpt conj_tac >>~-
       ([‘n ∉ domain s’],
        drule walk_to_var >> disch_then (rpt o dxrule_all) >> simp[]) >~
@@ -547,9 +703,83 @@ Proof
           irule NOT_FDOM_vwalk >> simp[] >>
           drule walk_to_var >> disch_then (rpt o dxrule_all) >> simp[]) >>
       gs[GSYM oc_eq_vars_walkstar, soc_def])
-  >- (simp[FORALL_PROD] >> rpt strip_tac >> ...)
-  >- ...
+  >- (simp[FORALL_PROD] >> rpt strip_tac >>
+      qexists ‘kuR’ >> conj_tac >- (irule $ iffLR WF_EQ_WFP >> simp[WF_kuR]) >>
+      simp[AllCaseEqs(), PULL_EXISTS] >> rw[] >>
+      simp[kuR_def, mlt1_BAG_INSERT, wf_insert] >>~-
+      ([‘twalk s u1 = Var v’, ‘twalk s u2 = Pair t1 t2’],
+       gvs[GSYM twalk_correct, swalk_def, GSYM disj_oc, soc_def] >>
+       gvs[swfs_def, oc_eq_vars_walkstar]>>
+       ‘∃un. u1 = Var un ∧ v ∉ FDOM (sp2fm s)’ by metis_tac[walk_to_var] >>
+       gs[] >> rw[]
+       >- (irule wfs_extend >> simp[])
+       >- (simp[substvars_def] >> drule_all vwalk_rangevars >> simp[] >>
+           strip_tac >> gvs[rangevars_FUPDATE] >> drule_all walk_rangevars >>
+           simp[] >> SET_TAC[])
+       >- SET_TAC[]) >>~-
+      ([‘twalk s u1 = Var v’, ‘twalk s u2 = Const cn’],
+       gvs[GSYM twalk_correct, swalk_def] >> gvs[swfs_def] >>
+       ‘∃un. u1 = Var un ∧ v ∉ FDOM (sp2fm s)’ by metis_tac[walk_to_var] >>
+       gs[] >> rw[]
+       >- (irule wfs_extend >> simp[])
+       >- (simp[substvars_def, rangevars_FUPDATE] >>
+           drule_all_then strip_assume_tac vwalk_rangevars >> gvs[] >>
+           SET_TAC[])
+       >- SET_TAC[]) >~
+      [‘(t1,t2)::wl’, ‘twalk s t1 = Var n’, ‘twalk s t2 = Var n’]
+      >- SET_TAC[] >~
+      [‘(t1,t2)::wl’, ‘twalk s t1 = Var v1’, ‘twalk s t2 = Var v2’]
+      >- (gvs[GSYM twalk_correct, swalk_def] >> gvs[swfs_def]>>
+          ‘∃u1 u2. t1 = Var u1 ∧ t2 = Var u2 ∧ v1 ∉ FDOM (sp2fm s) ∧
+                   v2 ∉ FDOM (sp2fm s)’
+            by metis_tac[walk_to_var] >> gvs[] >>
+          rw[]
+          >- (irule wfs_extend >> simp[NOT_FDOM_vwalk])
+          >- (simp[substvars_def] >>
+              qpat_assum ‘wfs (sp2fm s)’
+                         (mp_then Any assume_tac vwalk_rangevars) >>
+              pop_assum (rpt o dxrule_then strip_assume_tac) >>
+              gvs[rangevars_FUPDATE] >> SET_TAC[])
+          >- SET_TAC[]) >~
+      [‘(u1,u2)::wl’, ‘twalk s u1 = Pair a1 a2’, ‘twalk s u2 = Pair b1 b2’]
+      >- (gvs[GSYM twalk_correct, swalk_def] >> gvs[swfs_def]>>
+          simp[substvars_def] >>
+          qpat_assum ‘wfs (sp2fm s)’ (mp_then Any assume_tac walk_rangevars) >>
+          rpt conj_tac >~
+          [‘mlt1 _ _ _ ’]
+          >- (simp[bagTheory.mlt1_def] >>
+              qexistsl [‘(u1,u2)’, ‘{|(a1,b1); (a2,b2)|}’, ‘BAG_OF_LIST wl’] >>
+              simp[bagTheory.BAG_UNION_INSERT, DISJ_IMP_THM, FORALL_AND_THM] >>
+              conj_tac >> irule (DECIDE “a < u1 ∧ b < u2 ⇒ a + b < u1 + u2”) >>
+              metis_tac[walkstar_subterm_smaller]) >>
+          pop_assum (rpt o dxrule) >> simp[] >> SET_TAC[]) >~
+      [‘(u1,u2)::wl’, ‘twalk s u1 = Const cn’, ‘twalk s u2 = Const cn’]
+      >- SET_TAC[])
+  >- simp[kunifywl_tcallish]
 QED
-*)
+
+Definition tunifywl_def:
+  tunifywl s wl = trec ^unify_code (s,wl)
+End
+
+Theorem tunifywl_thm =
+        tunifywl_def |> SRULE[trec_thm]
+                     |> SRULE[tcall_def, sum_CASE_list_CASE, sum_CASE_term_CASE,
+                              sum_CASE_COND, sum_CASE_pair_CASE]
+                     |> SRULE[GSYM tunifywl_def]
+
+Theorem tunify_correct =
+        kunify_cleaned
+          |> SRULE [GSYM tunifywl_def, FORALL_PROD, kunifywl_def]
+          |> Q.SPECL [‘s’, ‘[(t1,t2)]’]
+          |> SRULE[GSYM abs_EQ_apply_unifkont, dfkunify_def, kunify_def,
+                   cwc_def]
+          |> SRULE[apply_unifkont_thm, sunify_def]
+          |> Q.INST [‘s’ |-> ‘fm2sp σ’]
+          |> SRULE[swfs_def]
+          |> UNDISCH
+          |> Q.AP_TERM ‘OPTION_MAP sp2fm’
+          |> SRULE[OPTION_MAP_COMPOSE, combinTheory.o_DEF]
+          |> DISCH_ALL
 
 val _ = export_theory();
