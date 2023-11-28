@@ -67,7 +67,7 @@ INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
 ifneq($(HOLSELFTESTLEVEL),1)
 EX2DIRS = AKS algebra algorithms/boyer_moore \
             algorithms/unification/triangular/nominal \
-            algorithms/unification/triangular/first-order \
+            algorithms/unification/triangular/first-order/compilation \
             arm/arm6-verification/correctness \
             arm/v4 arm/v7 \
           balanced_bst \

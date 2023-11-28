@@ -768,4 +768,18 @@ Theorem tunifywl_thm =
                               sum_CASE_COND, sum_CASE_pair_CASE]
                      |> SRULE[GSYM tunifywl_def]
 
+Theorem tunify_correct =
+        kunify_cleaned
+          |> SRULE [GSYM tunifywl_def, FORALL_PROD, kunifywl_def]
+          |> Q.SPECL [‘s’, ‘[(t1,t2)]’]
+          |> SRULE[GSYM abs_EQ_apply_unifkont, dfkunify_def, kunify_def,
+                   cwc_def]
+          |> SRULE[apply_unifkont_thm, sunify_def]
+          |> Q.INST [‘s’ |-> ‘fm2sp σ’]
+          |> SRULE[swfs_def]
+          |> UNDISCH
+          |> Q.AP_TERM ‘OPTION_MAP sp2fm’
+          |> SRULE[OPTION_MAP_COMPOSE, combinTheory.o_DEF]
+          |> DISCH_ALL
+
 val _ = export_theory();
