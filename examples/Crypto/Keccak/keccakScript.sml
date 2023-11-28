@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib;
-open pairTheory listTheory rich_listTheory wordsTheory;
+open pairTheory arithmeticTheory listTheory rich_listTheory wordsTheory;
 
 val _ = new_theory "keccak";
 
@@ -104,5 +104,54 @@ Proof
   \\ rename1 `a.A (x, y, z)`
   \\ Cases_on`x = 0` \\ fs[]
 *)
+
+Definition theta_c_def:
+  theta_c a (x, z) =
+    (a.A (x, 0, z) ≠
+     (a.A (x, 1, z) ≠
+      (a.A (x, 2, z) ≠
+       (a.A (x, 3, z) ≠
+        (a.A (x, 4, z))))))
+End
+
+Definition theta_d_def:
+  theta_d a (x, z) =
+  let c = theta_c a in
+    c ((x + 4) MOD 5, z) ≠
+    c ((x + 1) MOD 5, (z + PRE a.w) MOD a.w)
+End
+
+Definition theta_def:
+  theta a =
+  a with A updated_by (λf (x, y, z).
+    f (x, y, z) ≠ theta_d a (x, z))
+End
+
+Definition rho_xy_def[simp]:
+  rho_xy 0 = (1, 0) ∧
+  rho_xy (SUC t) =
+  let (x, y) = rho_xy t in
+    (y, (2 * x + 3 * y) MOD 5)
+End
+
+Theorem rho_xy_exists:
+  x < 5 ∧ y < 5 ∧ ¬(x = 0 ∧ y = 0)
+  ⇒ ∃t. t ≤ 23 ∧ rho_xy t = (x, y)
+Proof
+  disch_then(strip_assume_tac o SIMP_RULE(srw_ss())[NUMERAL_LESS_THM])
+  \\ simp[LESS_OR_EQ]
+  \\ ntac 25 (srw_tac[DNF_ss][Once NUMERAL_LESS_THM] \\ EVAL_TAC)
+QED
+
+Definition rho_def:
+  rho a =
+  a with A updated_by (λf (x, y, z).
+    if x = 0 ∧ y = 0 then f (x, y, z)
+    else
+      let t = LEAST t. rho_xy t = (x, y) in
+      let tt = ((t + 1) * (t + 2)) DIV 2 in
+      let ww = a.w * (SUC tt DIV a.w) in
+      f (x, y, (z + ww - tt) MOD a.w))
+End
 
 val _ = export_theory();
