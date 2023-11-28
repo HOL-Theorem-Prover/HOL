@@ -1,5 +1,5 @@
 open testutils HolKernel Parse boolLib cv_computeLib cvSyntax cvTheory;
-open arithmeticTheory
+open arithmeticTheory tailrecLib
 
 fun simp ths = simpLib.ASM_SIMP_TAC (BasicProvers.srw_ss()) ths
 
@@ -57,3 +57,21 @@ fun test n =
 
 val _ = List.app test [0, 1, 5, 10, 13, 74, 157, 180];
 
+(* tail-recursion *)
+val base_t = “fib A N x = if x = 0 then A else fib (N + A) A (x -1) ”
+val expected = “?fib. !A N x. ^base_t”
+val _ = tprint "tailrecursive fibonacci"
+val _ = require_msg (check_result (aconv expected o concl)) thm_to_string
+                    prove_tailrec_exists
+                    base_t
+
+val odd = “(odd n = if n = 0 then F else even (n - 1))”
+val even = “(even i = if i = 0 then T else odd (i - 1))”
+val base_t = mk_conj(odd,even)
+val expected = “?odd even. (!n. ^odd) /\ (!i. ^even) ”
+val _ = tprint "tailrecursive even/odd"
+val _ = require_msg (check_result (aconv expected o concl)) thm_to_string
+                    prove_tailrec_exists
+                    base_t
+
+val _ = require_msg
