@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory pairTheory listTheory pred_setTheory sortingTheory hurdUtils
-     topologyTheory;
+open arithmeticTheory pairTheory listTheory pred_setTheory sortingTheory
+     hurdUtils
 
 open genericGraphTheory;
 
