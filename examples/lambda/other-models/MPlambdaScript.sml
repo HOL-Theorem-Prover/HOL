@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib binderLib
-open nomsetTheory
+open nomsetTheory horeductionTheory
 
 local open stringTheory in end
 
