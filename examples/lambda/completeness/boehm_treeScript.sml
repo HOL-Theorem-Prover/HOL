@@ -5,18 +5,21 @@
 open HolKernel boolLib Parse bossLib;
 
 (* core theories *)
-open optionTheory arithmeticTheory pred_setTheory listTheory llistTheory
-     ltreeTheory pathTheory posetTheory hurdUtils rich_listTheory;
+open optionTheory arithmeticTheory pred_setTheory listTheory rich_listTheory
+     llistTheory relationTheory ltreeTheory pathTheory posetTheory hurdUtils;
 
-open binderLib termTheory appFOLDLTheory chap2Theory chap3Theory
-     head_reductionTheory standardisationTheory solvableTheory pure_dBTheory;
+open basic_swapTheory binderLib termTheory appFOLDLTheory chap2Theory
+     chap3Theory head_reductionTheory standardisationTheory solvableTheory;
+
+open pure_dBTheory;
 
 val _ = new_theory "boehm_tree";
 
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"];
 val o_DEF = combinTheory.o_DEF; (* cannot directly open combinTheory *)
 
 (* A dB-term M is hnf if its corresponding Lambda term is hnf *)
-Overload dhnf = “hnf o toTerm”
+Overload dhnf = “\M. hnf (toTerm M)”
 
 Theorem dhnf_fromTerm[simp] :
     !M. dhnf (fromTerm M) <=> hnf M

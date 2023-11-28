@@ -309,13 +309,19 @@ val bvc_cases = store_thm(
   Q_TAC (NEW_TAC "z") `v INSERT X UNION FV t0` THEN
   METIS_TAC []);
 
-val (grandbeta_rules, grandbeta_ind, grandbeta_cases) =
-    Hol_reln`(!M. grandbeta M M) /\
-             (!M M' x. grandbeta M M' ==> grandbeta (LAM x M) (LAM x M')) /\
-             (!M N M' N'. grandbeta M M' /\ grandbeta N N' ==>
-                          grandbeta (M @@ N) (M' @@ N')) /\
-             (!M N M' N' x. grandbeta M M' /\ grandbeta N N' ==>
-                            grandbeta ((LAM x M) @@ N) ([N'/x] M'))`;
+(* Definition 3.2.3 [1, p60] (one-step parallel beta-reduction) *)
+Inductive grandbeta :
+[~REFL:]
+  !M. grandbeta M M
+[~ABS:]
+  !M M' x. grandbeta M M' ==> grandbeta (LAM x M) (LAM x M')
+[~APP:]
+  !M N M' N'. grandbeta M M' /\ grandbeta N N' ==> grandbeta (M @@ N) (M' @@ N')
+[~BETA:]
+  !M N M' N' x. grandbeta M M' /\ grandbeta N N' ==>
+                grandbeta ((LAM x M) @@ N) ([N'/x] M')
+End
+
 val _ = set_fixity "=b=>" (Infix(NONASSOC,450))
 val _ = overload_on ("=b=>", ``grandbeta``)
 val _ = set_fixity "=b=>*" (Infix(NONASSOC,450))

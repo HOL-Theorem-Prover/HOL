@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib BasicProvers metisLib
 local open stringTheory in end
 
 open pred_setTheory binderLib boolSimps relationTheory
-open chap3Theory
+open chap3Theory horeductionTheory
 
 (* ----------------------------------------------------------------------
 

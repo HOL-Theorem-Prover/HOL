@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory listTheory pred_setTheory hurdUtils;
+open arithmeticTheory listTheory rich_listTheory pred_setTheory hurdUtils;
 
 open termTheory binderLib;
 
@@ -10,6 +10,20 @@ val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
 
 Overload "@*" = “\f (args:term list). FOLDL APP f args”
+
+Theorem appstar_empty[simp] :
+    M @* [] = M
+Proof
+    rw [FOLDL]
+QED
+
+(* NOTE: no more [simp] for this theorem *)
+Theorem appstar_thm :
+    (M @* [] = M) /\
+    (M @* (h::t) = M @@ h @* t)
+Proof
+    rw [FOLDL]
+QED
 
 Theorem var_eq_appstar[simp]:
   VAR s = f ·· args ⇔ args = [] ∧ f = VAR s
@@ -163,6 +177,13 @@ Proof
     Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC, MAP_SNOC]
 QED
 
+Theorem appstar_SUB :
+    !args. [N/v] (t @* args) = [N/v] t @* MAP [N/v] args
+Proof
+    Induct_on ‘args’ using SNOC_INDUCT
+ >> rw [appstar_SNOC, MAP_SNOC]
+QED
+
 Theorem FV_appstar :
     !M Ns. FV (M @* Ns) = FV M UNION (BIGUNION (IMAGE FV (set Ns)))
 Proof
@@ -303,6 +324,12 @@ Proof
     DISCH_THEN (K ALL_TAC) THEN
     SRW_TAC [][LAMl_vsub, SUB_ISUB_SINGLETON, ISUB_APPEND]
   ]
+QED
+
+Theorem LAMl_SNOC[simp] :
+    LAMl (SNOC v vs) t = LAMl vs (LAM v t)
+Proof
+    rw [FOLDR_SNOC]
 QED
 
 (*---------------------------------------------------------------------------*

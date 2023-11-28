@@ -218,6 +218,12 @@ val lemma2_13 = store_thm( (* p.20 *)
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `c` THEN
   HO_MATCH_MP_TAC ctxt_indn THEN PROVE_TAC [lameq_rules]);
 
+Theorem lameq_LAMl_cong :
+    !vs M N. M == N ==> LAMl vs M == LAMl vs N
+Proof
+    Induct_on ‘vs’ >> rw [lameq_ABS]
+QED
+
 val (lamext_rules, lamext_indn, lamext_cases) = (* p. 21 *)
   Hol_reln`(!x M N. lamext ((LAM x M) @@ N) ([N/x]M)) /\
            (!M. lamext M M) /\
@@ -230,15 +236,24 @@ val (lamext_rules, lamext_indn, lamext_cases) = (* p. 21 *)
                     lamext (M @@ VAR x) (N @@ VAR x) ==>
                     lamext M N)`
 
-val (lameta_rules, lameta_ind, lameta_cases) = (* p. 21 *)
-  Hol_reln`(!x M N. lameta ((LAM x M) @@ N) ([N/x]M)) /\
-           (!M. lameta M M) /\
-           (!M N. lameta M N ==> lameta N M) /\
-           (!M N L. lameta M N /\ lameta N L ==> lameta M L) /\
-           (!M N Z. lameta M N ==> lameta (M @@ Z) (N @@ Z)) /\
-           (!M N Z. lameta M N ==> lameta (Z @@ M) (Z @@ N)) /\
-           (!M N x. lameta M N ==> lameta (LAM x M) (LAM x N)) /\
-           (!M x. ~(x IN FV M) ==> lameta (LAM x (M @@ VAR x)) M)`;
+Inductive lameta : (* p. 21 *)
+[~BETA:]
+  !x M N. lameta ((LAM x M) @@ N) ([N/x]M)
+[~REFL:]
+  !M. lameta M M
+[~SYM:]
+  !M N. lameta M N ==> lameta N M
+[~TRANS:]
+  !M N L. lameta M N /\ lameta N L ==> lameta M L
+[~APPL:]
+  !M N Z. lameta M N ==> lameta (M @@ Z) (N @@ Z)
+[~APPR:]
+  !M N Z. lameta M N ==> lameta (Z @@ M) (Z @@ N)
+[~ABS:]
+  !M N x. lameta M N ==> lameta (LAM x M) (LAM x N)
+[~ETA:]
+  !M x. ~(x IN FV M) ==> lameta (LAM x (M @@ VAR x)) M
+End
 
 val lemma2_14 = store_thm(
   "lemma2_14",
@@ -269,6 +284,20 @@ Definition consistent_def :
     consistent (thy:term -> term -> bool) = ?M N. ~thy M N
 End
 
+Overload inconsistent = “\thy. ~consistent thy”
+
+Theorem inconsistent_def :
+    !thy. inconsistent thy <=> !M N. thy M N
+Proof
+    rw [consistent_def]
+QED
+
+Theorem inconsistent_mono :
+    !t1 t2. t1 RSUBSET t2 /\ inconsistent t1 ==> inconsistent t2
+Proof
+    rw [relationTheory.RSUBSET, inconsistent_def]
+QED
+
 (* This is lambda theories (only having beta equivalence, no eta equivalence)
    extended with extra equations as formulas.
 
@@ -294,6 +323,18 @@ Inductive asmlam :
 [~abscong:]
   !x M M'. asmlam eqns M M' ==> asmlam eqns (LAM x M) (LAM x M')
 End
+
+Theorem asmlam_subst :
+    !M N P x. asmlam eqns M N ==> asmlam eqns ([P/x] M) ([P/x] N)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC asmlam_trans
+ >> Q.EXISTS_TAC ‘LAM x N @@ P’
+ >> simp [asmlam_rules]
+ >> MATCH_MP_TAC asmlam_trans
+ >> Q.EXISTS_TAC ‘LAM x M @@ P’
+ >> simp [asmlam_rules]
+QED
 
 (* Definition 2.1.32 [1, p.33]
 
@@ -621,6 +662,19 @@ Proof
  >> qexistsl_tac [‘v’, ‘t0’] >> REWRITE_TAC []
 QED
 
+Theorem is_abs_cases_genX :
+    !v t. is_abs t /\ v # t <=> ?t0. t = LAM v t0
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC >- (STRIP_TAC >> rw [is_abs_thm])
+ >> rw [is_abs_cases]
+ >> fs [FV_thm]
+ >> Cases_on ‘v = v'’
+ >- (Q.EXISTS_TAC ‘t0’ >> rw [])
+ >> Q.EXISTS_TAC ‘[VAR v/v'] t0’
+ >> MATCH_MP_TAC SIMPLE_ALPHA >> rw []
+QED
+
 Theorem is_abs_appstar[simp]:
   is_abs (M @* Ns) ⇔ is_abs M ∧ (Ns = [])
 Proof
@@ -909,8 +963,8 @@ End
 Definition has_bnf_def: has_bnf t = ?t'. t == t' /\ bnf t'
 End
 
-(* wrong? shouldn't this be ==_eta rather than == ? *)
-val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
+Definition has_benf_def: has_benf t = ?t'. lameta t t' /\ benf t'
+End
 
 Theorem fresh_ssub:
   ∀N. y ∉ FV N ∧ (∀k:string. k ∈ FDOM fm ⇒ y # fm ' k) ⇒ y # fm ' N
@@ -947,6 +1001,42 @@ Proof
   Induct_on ‘Ns’ using SNOC_INDUCT >> rw [appstar_SNOC, lameq_APPL]
 QED
 
+Theorem lameq_LAMl_appstar_VAR[simp] :
+    !xs. LAMl xs t @* (MAP VAR xs) == t
+Proof
+    Induct_on ‘xs’ >> rw []
+ >> qabbrev_tac ‘M = LAMl xs t’
+ >> qabbrev_tac ‘args :term list = MAP VAR xs’
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘M @* args’ >> art []
+ >> MATCH_MP_TAC lameq_appstar_cong
+ >> rw [Once lameq_cases]
+ >> DISJ1_TAC >> qexistsl_tac [‘h’, ‘M’] >> rw []
+QED
+
+Theorem lameq_LAMl_appstar_reduce :
+    !xs t args. DISJOINT (set xs) (FV t) /\ LENGTH xs = LENGTH args ==>
+                LAMl xs t @* args == t
+Proof
+    Induct_on ‘xs’ >> rw []
+ >> Cases_on ‘args’ >- fs []
+ >> rw [GSYM appstar_CONS]
+ >> qabbrev_tac ‘M = LAMl xs t’
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘M @* t'’
+ >> reverse CONJ_TAC
+ >- (qunabbrev_tac ‘M’ \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> fs [])
+ >> MATCH_MP_TAC lameq_appstar_cong
+ >> rw [Once lameq_cases] >> DISJ1_TAC
+ >> qexistsl_tac [‘h’, ‘M’] >> art []
+ >> MATCH_MP_TAC (GSYM lemma14b)
+ >> rw [Abbr ‘M’, FV_LAMl]
+QED
+
+(* NOTE: The antecedents ‘EVERY closed Ns’ is just one way to make sure that
+   the order of ‘vs’ makes no difference in the substitution results.
+ *)
 Theorem lameq_LAMl_appstar :
     !vs M Ns. ALL_DISTINCT vs /\ (LENGTH vs = LENGTH Ns) /\ EVERY closed Ns ==>
               LAMl vs M @* Ns == (FEMPTY |++ ZIP (vs,Ns)) ' M

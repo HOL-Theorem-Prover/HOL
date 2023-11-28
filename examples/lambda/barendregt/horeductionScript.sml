@@ -179,6 +179,9 @@ Proof
   ]
 QED
 
+(* |- !R x y z. conversion R x y /\ conversion R y z ==> conversion R x z *)
+Theorem conversion_TRANS = cj 3 conversion_rules
+
 Theorem compat_closure_compatible:
   !R. compatible (compat_closure R)
 Proof
@@ -233,6 +236,33 @@ val conversion_compatible = store_thm(
     SRW_TAC [][compatible_def] THEN
   HO_MATCH_MP_TAC equiv_closure_ind THEN SRW_TAC [][] THEN
   PROVE_TAC [compatible_def, equiv_closure_rules, compat_closure_compatible]);
+
+Theorem conversion_monotone :
+    !r1 r2. r1 RSUBSET r2 ==> (conversion r1) RSUBSET (conversion r2)
+Proof
+    rpt STRIP_TAC
+ >> simp [relationTheory.RSUBSET]
+ >> HO_MATCH_MP_TAC relationTheory.EQC_INDUCTION
+ >> reverse (rw [conversion_rules])
+ >- (MATCH_MP_TAC EQC_TRANS \\
+     rename1 ‘conversion r2 z y’ \\
+     Q.EXISTS_TAC ‘z’ >> ASM_REWRITE_TAC [])
+ >> POP_ASSUM MP_TAC
+ >> Q.ID_SPEC_TAC ‘y’
+ >> Q.ID_SPEC_TAC ‘x’
+ >> HO_MATCH_MP_TAC compat_closure_ind
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 4) *)
+      Q_TAC SUFF_TAC ‘r2 x y’ >- rw [conversion_rules] \\
+      Q.PAT_X_ASSUM ‘r1 RSUBSET r2’ MP_TAC \\
+      rw [relationTheory.RSUBSET],
+      (* goal 2 (of 4) *)
+      PROVE_TAC [conversion_compatible, compatible_def, leftctxt],
+      (* goal 3 (of 4) *)
+      PROVE_TAC [conversion_compatible, compatible_def, rightctxt, rightctxt_thm],
+      (* goal 7 (of 7) *)
+      PROVE_TAC [conversion_compatible, compatible_def, absctxt] ]
+QED
 
 (* "Follows from an induction on the structure of M, and the
     compatibility of reduction R" *)
