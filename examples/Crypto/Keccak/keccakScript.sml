@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib bossLib;
 open pairTheory arithmeticTheory listTheory rich_listTheory wordsTheory;
 
+(* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
+
 val _ = new_theory "keccak";
 
 Datatype:
@@ -203,6 +205,23 @@ Definition iota_def:
       in
         f (x, y, z) ≠ RCz
     else f (x, y, z))
+End
+
+Definition Rnd_def:
+  Rnd a = iota (chi (pi (theta a)))
+End
+
+(* N.B. We assume here that the round index is always non-negative, which is not
+* assumed in the standard. *)
+
+Definition Keccak_p_def:
+  Keccak_p s n =
+  let a = string_to_state_array s in
+  let l = w2l a.w in
+  let i0 = 12 + 2 * l - n in
+  let i1 = 12 + 2 * l - 1 in
+  let a1 = FST (FUNPOW (λ(a,i). (Rnd a i, SUC i)) (SUC i1 - i0) (a, i0)) in
+  state_array_to_string a1
 End
 
 val _ = export_theory();
