@@ -234,7 +234,7 @@ End
 * assumed in the standard. *)
 
 Definition Keccak_p_def:
-  Keccak_p s n =
+  Keccak_p n s =
   let a = string_to_state_array s in
   let l = w2l a.w in
   let i0 = 12 + 2 * l - n in
@@ -247,8 +247,8 @@ End
 Definition chunks_def:
   chunks n ls =
   if LENGTH ls <= n ∨ n = 0
-  then ls
-  else TAKE n ls ++ chunks n (DROP n ls)
+  then [ls]
+  else CONS (TAKE n ls) (chunks n (DROP n ls))
 Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ rw[LENGTH_DROP]
 End
@@ -264,6 +264,36 @@ Definition sponge_def:
   let t = SUC (d DIV r) in
   let Z = FST $ FUNPOW (λ(Z, S). (Z ++ (TAKE r S), f S)) t ([], S) in
   TAKE d Z
+End
+
+Definition pad10s1_def:
+  pad10s1 x m =
+  let j = (x * (2 + m DIV x) - m - 2) MOD x in
+    [T] ++ REPLICATE j F ++ [T]
+End
+
+Definition Keccak_def:
+  Keccak c = sponge (Keccak_p 24) 1600 pad10s1 (1600 - c)
+End
+
+Definition Keccak_256_def:
+  Keccak_256 M = Keccak 512 M 256
+End
+
+Definition SHA3_224_def:
+  SHA3_224 M = Keccak 448 (M ++ [F; T]) 224
+End
+
+Definition SHA3_256_def:
+  SHA3_256 M = Keccak 512 (M ++ [F; T]) 256
+End
+
+Definition SHA3_384_def:
+  SHA3_384 M = Keccak 768 (M ++ [F; T]) 384
+End
+
+Definition SHA3_512_def:
+  SHA3_512 M = Keccak 1024 (M ++ [F; T]) 512
 End
 
 val _ = export_theory();
