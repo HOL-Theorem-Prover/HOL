@@ -742,6 +742,15 @@ fun find_indoption sl =
           set_diff sl [s]
       )
 
+fun tailrecDefine nm q =
+    let
+      val (t, _) = Defn.parse_absyn (Parse.Absyn q)
+      val th = tailrecLib.tailrec_define nm t
+    in
+      Defn.add_defs_to_EVAL [(nm,th)];
+      th
+    end
+
 fun qDefine stem q tacopt =
     let
       val (corename, attrs) = ThmAttribute.extract_attributes stem
@@ -749,6 +758,7 @@ fun qDefine stem q tacopt =
       val (svarsok, attrs) = test_remove "schematic" attrs
       val (notuserdef, attrs) = test_remove "notuserdef" attrs
       val (rebindok, attrs) = test_remove "allow_rebind" attrs
+      val (tailrecp, attrs) = test_remove "tailrecursive" attrs
       val (indopt,attrs) = find_indoption attrs
       fun fmod f =
           f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
@@ -761,14 +771,21 @@ fun qDefine stem q tacopt =
             |> (if rebindok then trace ("Theory.allow_rebinds", 1)
                 else (fn f => f))
       val (thm,indopt) =
-          case tacopt of
-              NONE => fmod (xDefine corename) q
-            | SOME tac => fmod (tDefine corename q) tac
+          case (tailrecp, tacopt) of
+              (true, NONE) => (fmod (tailrecDefine corename) q, NONE)
+            | (true, SOME _) =>
+              raise ERR "qDefine"
+                    "Termination tactic for tail-recursive definition makes \
+                    \no sense"
+            | (false, NONE) => fmod (xDefine corename) q
+            | (false, SOME tac) => fmod (tDefine corename q) tac
       fun proc_attr a =
           ThmAttribute.store_at_attribute{name = corename, attrname = a,
                                           thm = thm}
       val attrs = if notuserdef then attrs else "userdef" :: attrs
-      val gen_ind = Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
+      val gen_ind =
+          if tailrecp then (fn th => raise ERR "Unseen" "")
+          else Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}
     in
       List.app proc_attr attrs;
       if notuserdef then ()

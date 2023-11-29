@@ -40,6 +40,7 @@ sig
 
    val defnDefine  : tactic -> defn -> thm * thm option * thm option
    val primDefine  : defn -> thm * thm option * thm option
+   val tailrecDefine: string -> term quotation -> thm
    val tDefine     : string -> term quotation -> tactic -> thm * thm option
    val xDefine     : string -> term quotation -> thm * thm option
    val Define      : term quotation -> thm

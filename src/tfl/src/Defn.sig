@@ -13,6 +13,7 @@ sig
   val ind_suffix : string ref
   val def_suffix : string ref
   val const_eq_ref : conv ref
+  val add_defs_to_EVAL : (string * thm) list -> unit
 
   val wfrec_eqns : thry -> term ->
                     {SV : term list,

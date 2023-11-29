@@ -410,7 +410,7 @@ local fun is_suc tm =
 in
 val SUC_TO_NUMERAL_DEFN_CONV_hook =
       ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
-fun add_persistent_funs l =
+fun add_defs_to_EVAL l =
   if not (!computeLib.auto_import_definitions) then () else
     let val has_lhs_SUC = List.exists
               (can (find_term is_suc) o lhs o #2 o strip_forall)
@@ -440,7 +440,7 @@ local
   val _ = Feedback.register_btrace("Define.storage_message", chatting)
 in
 fun been_stored (s,thm) =
-  (add_persistent_funs [(s,thm)];
+  (add_defs_to_EVAL [(s,thm)];
    if !chatting then
      mesg (if !Globals.interactive then
              "Definition has been stored under " ^ Lib.quote s ^ "\n"
@@ -478,7 +478,7 @@ fun store(stem,eqs,ind) =
       fun save x = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm x
       val   _  = save (ind_bind, ind)
       val eqns = save (eqs_bind, eqs)
-      val _ = add_persistent_funs [(eqs_bind,eqs)]
+      val _ = add_defs_to_EVAL [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
     if !chatting then
