@@ -36,6 +36,10 @@ Definition b2w_def:
   b2w b = b DIV 25
 End
 
+Definition w2l_def:
+  w2l w = LOG2 w
+End
+
 Definition string_to_state_array_def:
   string_to_state_array s =
   let b = LENGTH s in
@@ -152,6 +156,53 @@ Definition rho_def:
       let tt = ((t + 1) * (t + 2)) DIV 2 in
       let ww = a.w * (SUC tt DIV a.w) in
       f (x, y, (z + ww - tt) MOD a.w))
+End
+
+Definition pi_def:
+  pi a =
+  a with A updated_by (λf (x, y, z).
+    f ((x + 3 * y) MOD 5, x, z))
+End
+
+Definition chi_def:
+  chi a =
+  a with A updated_by (λf (x, y, z).
+    f (x, y, z) ≠
+    (¬ f ((x + 1) MOD 5, y, z) ∧
+     f ((x + 2) MOD 5, y, z)))
+End
+
+Definition rc_step_def:
+  rc_step r =
+  let ra = F :: r in
+  let re =
+    GENLIST (λi.
+      if i ∈ {0; 4; 5; 6} then
+        EL i ra ≠ EL 8 ra
+      else
+        EL i ra)
+      9
+  in
+    TAKE 8 re
+End
+
+Definition rc_def:
+  rc t =
+  if t MOD 255 = 0 then T else
+  HD (FUNPOW rc_step (t MOD 255) (T :: REPLICATE 7 F))
+End
+
+Definition iota_def:
+  iota a i =
+  a with A updated_by (λf (x, y, z).
+    if x = 0 ∧ y = 0 then
+      let l = w2l a.w in
+      let RCz = case some j. j ≤ l ∧ z = 2 ** j - 1
+                of NONE => F
+                 | SOME j => rc (j + 7 * i)
+      in
+        f (x, y, z) ≠ RCz
+    else f (x, y, z))
 End
 
 val _ = export_theory();
