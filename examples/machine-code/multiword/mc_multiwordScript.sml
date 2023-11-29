@@ -11,7 +11,7 @@ val _ = temp_delsimps ["NORMEQ_CONV"]
 val REV = Tactical.REVERSE;
 
 fun tailrec_define name tm = let
-  val (def,t1,pre,t2) = tailrecLib.tailrec_define_from_step name tm NONE;
+  val (def,t1,pre,t2) = mc_tailrecLib.tailrec_define_from_step name tm NONE;
   val _ = save_thm(name ^ "_def", def)
   val _ = save_thm(name ^ "_pre_def", pre)
   in (def,t1,pre,t2) end
