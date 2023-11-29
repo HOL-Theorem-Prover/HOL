@@ -243,4 +243,27 @@ Definition Keccak_p_def:
   state_array_to_string a1
 End
 
+(* TODO: move / find in a lib *)
+Definition chunks_def:
+  chunks n ls =
+  if LENGTH ls <= n ∨ n = 0
+  then ls
+  else TAKE n ls ++ chunks n (DROP n ls)
+Termination
+  WF_REL_TAC`measure (LENGTH o SND)` \\ rw[LENGTH_DROP]
+End
+
+Definition sponge_def:
+  sponge f b pad r N d =
+  let P = N ++ pad r (LENGTH N) in
+  let n = LENGTH P DIV r in
+  let c = b - r in
+  let Pis = chunks r P in
+  let S0 = REPLICATE b F in
+  let S = FOLDL (λSi Pi. f (MAP2 $<> Si (Pi ++ REPLICATE c F))) S0 Pis in
+  let t = SUC (d DIV r) in
+  let Z = FST $ FUNPOW (λ(Z, S). (Z ++ (TAKE r S), f S)) t ([], S) in
+  TAKE d Z
+End
+
 val _ = export_theory();
