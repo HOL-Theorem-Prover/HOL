@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib;
-open pairTheory arithmeticTheory listTheory rich_listTheory wordsTheory;
+open pairTheory arithmeticTheory combinTheory listTheory rich_listTheory wordsTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
@@ -42,14 +42,26 @@ Definition w2l_def:
   w2l w = LOG2 w
 End
 
+Definition restrict_def:
+  restrict (w:num) f (x, y, z) ⇔
+  x < 5 ∧ y < 5 ∧ z < w ∧ f (x, y, z)
+End
+
 Definition string_to_state_array_def:
   string_to_state_array s =
   let b = LENGTH s in
   let w = b2w b in
     <| w := w
-     ; A := λ(x, y, z). EL (w * (5 * y + x) + z) s
+     ; A := restrict w $ λ(x, y, z). EL (w * (5 * y + x) + z) s
      |>
 End
+
+Theorem wf_string_to_state_array[simp]:
+  wf_state_array (string_to_state_array s)
+Proof
+  rw[wf_state_array_def, string_to_state_array_def, restrict_def]
+  \\ rw[]
+QED
 
 Definition Lane_def:
   Lane a (i, j) =
@@ -78,12 +90,19 @@ Definition state_array_to_string_def:
     FLAT (GENLIST (Plane a) 5)
 End
 
+Triviality GENLIST_AND_LENGTH:
+  GENLIST (λx. x < n ∧ P x) n = GENLIST P n
+Proof
+  qid_spec_tac`P` \\
+  Induct_on`n` \\ rw[GENLIST_CONS, o_DEF]
+QED
+
 Theorem string_to_state_array_to_string:
   LENGTH s = 25 * n ⇒
   state_array_to_string (string_to_state_array s) = s
 Proof
   rw[state_array_to_string_def, string_to_state_array_def,
-     Plane_def, Lane_def, b2w_def] \\
+     Plane_def, Lane_def, b2w_def, restrict_def, GENLIST_AND_LENGTH] \\
   let
     val thm = GENLIST_APPEND |> GSYM
     val cnv = numSyntax.term_of_int
