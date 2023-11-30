@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib dep_rewrite bitLib reduceLib combinLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
-     rich_listTheory bitTheory wordsTheory;
+     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
@@ -343,6 +343,35 @@ Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ rw[LENGTH_DROP]
 End
 
+val chunks_ind = theorem"chunks_ind";
+
+Theorem chunks_NIL[simp]:
+  chunks n [] = [[]]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem FLAT_chunks[simp]:
+  FLAT (chunks n ls) = ls
+Proof
+  completeInduct_on`LENGTH ls` \\ rw[]
+  \\ rw[Once chunks_def]
+QED
+
+Theorem divides_EVERY_LENGTH_chunks:
+  !n ls. ls <> [] /\ divides n (LENGTH ls) ==>
+    EVERY ($= n o LENGTH) (chunks n ls)
+Proof
+  recInduct chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def] \\ fs[]
+  \\ gs[divides_def]
+  >- ( Cases_on`q = 0` \\ fs[] )
+  \\ first_x_assum irule
+  \\ qexists_tac`PRE q`
+  \\ Cases_on`q` \\ fs[ADD1]
+QED
+
 Definition sponge_def:
   sponge f b pad r N d =
   let P = N ++ pad r (LENGTH N) in
@@ -361,6 +390,14 @@ Definition pad10s1_def:
   let j = (x * (2 + m DIV x) - m - 2) MOD x in
     [T] ++ REPLICATE j F ++ [T]
 End
+
+Theorem LENGTH_pad10s1:
+  0 < x ⇒ ∃d. m + LENGTH (pad10s1 x m) = d * x
+Proof
+  rw[pad10s1_def, ADD1, LEFT_ADD_DISTRIB] \\
+  qspec_then`x`mp_tac DIVISION \\ simp[] \\
+  cheat
+QED
 
 Definition Keccak_def:
   Keccak c = sponge (Keccak_p 24) 1600 pad10s1 (1600 - c)
@@ -551,16 +588,20 @@ Proof
   \\ simp[]
 QED
 
-Theorem Keccak_p_tabulate:
-  LENGTH s = 25 * divisor ⇒
-  Keccak_p n s =
+Definition Keccak_p_tabulate_def:
+  Keccak_p_tabulate n s =
   let w = b2w (LENGTH s) in
   let l = w2l w in
   let i0 = 12 + 2 * l - n in
   let i1 = 12 + 2 * l - 1 in
   FST (FUNPOW (λ(s,i). (Rnd_string w s i, SUC i)) (SUC i1 - i0) (s, i0))
+End
+
+Theorem Keccak_p_tabulate:
+  LENGTH s = 25 * divisor ⇒
+  Keccak_p n s = Keccak_p_tabulate n s
 Proof
-  rw[Keccak_p_def, string_to_state_array_w, ADD1]
+  rw[Keccak_p_def, Keccak_p_tabulate_def, string_to_state_array_w, ADD1]
   \\ qmatch_goalsub_abbrev_tac`2 * l`
   \\ qmatch_goalsub_abbrev_tac`(s, i)`
   \\ qmatch_goalsub_abbrev_tac`FUNPOW k m`
@@ -601,7 +642,33 @@ Proof
   \\ simp[Abbr`P`, Abbr`q`, Abbr`p`, FORALL_PROD, Abbr`w`, b2w_def]
 QED
 
-(* WIP
+(*
+Theorem Keccak_tabulate:
+  Keccak c = sponge (Keccak_p_tabulate 24) 1600 pad10s1 (1600 - c)
+Proof
+  rw[Keccak_def, sponge_def, FUN_EQ_THM]
+  \\ AP_TERM_TAC
+  \\ AP_TERM_TAC
+  \\ qmatch_goalsub_abbrev_tac`FUNPOW f n ([], (FOLDL g e z))`
+  \\ qmatch_goalsub_abbrev_tac`_ = FUNPOW h n ([], (FOLDL k e z))`
+  \\ `EVERY ($= (1600 - c) o LENGTH) z`
+  by (
+    rw[Abbr`z`]
+    \\ irule divides_EVERY_LENGTH_chunks
+
+  \\ `FOLDL g e z = FOLDL k e z`
+  by (
+    `EVERY (λls. LENGTH ls = c) z`
+    by (
+      rw[Abbr`z`, chunks_def]
+    irule FOLDL_CONG
+    \\ simp[Abbr`g`, Abbr`k`]
+    \\ rw[]
+
+    \\ irule Keccak_p_tabulate
+    MAP2
+
+  m``FOLDL _ _ _ = FOLDL _ _ _``
 
 val cs = num_compset();
 val () = extend_compset [
@@ -619,17 +686,17 @@ val () = extend_compset [
     theta_c_def,
     theta_d_def,
     theta_def,
-    rho_def (* TODO: remove LEAST *),
+    rho_def |> SIMP_RULE std_ss [LEAST_DEF, o_DEF],
     pi_def,
     chi_def,
     rc_step_def,
     rc_def,
     iota_compute,
-    Keccak_p_tabulate (* TODO: specialise to remove condition *),
+    Keccak_p_tabulate_def,
     chunks_def,
     pad10s1_def,
     sponge_def,
-    Keccak_def,
+    Keccak_tabulate,
     Keccak_256_def],
   Extenders [
     listSimps.list_rws,
