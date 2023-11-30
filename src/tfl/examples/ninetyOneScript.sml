@@ -2,17 +2,18 @@
            McCarthy's 91 function.
  ---------------------------------------------------------------------------*)
 
-quietdec := true;
-open TotalDefn numLib prim_recTheory arithmeticTheory;
-quietdec := false;
+open HolKernel Parse boolLib bossLib
+open Defn TotalDefn numLib prim_recTheory arithmeticTheory;
 
 (*---------------------------------------------------------------------------
-       Define the 91 function. We call it "N". We use Hol_defn to 
-       make the definition, since we have to tackle the termination 
+       Define the 91 function. We call it "N". We use Hol_defn to
+       make the definition, since we have to tackle the termination
        proof ourselves.
  ---------------------------------------------------------------------------*)
 
-val N_defn = Hol_defn "N" `N(x) = if x>100 then x-10 else N (N (x+11))`;
+val _ = new_theory "ninetyOne"
+
+val N_defn = Hol_defn "N" ‘N(x) = if x>100 then x-10 else N (N (x+11))’;
 
 val [Neqn] = Defn.eqns_of N_defn;
 val SOME Nind = Defn.ind_of N_defn;
@@ -27,34 +28,34 @@ val [E] = map DISCH_ALL (Defn.eqns_of N_aux_defn);
  ---------------------------------------------------------------------------*)
 
 val Npartly_correct = Q.prove
-(`WF R /\ 
+(‘WF R /\
   (!x. ~(x > 100) ==> R (N_aux R (x + 11)) x) /\
   (!x. ~(x > 100) ==> R (x + 11) x)
     ==>
-  !n. N(n) = if n>100 then n-10 else 91`,
+  !n. N(n) = if n>100 then n-10 else 91’,
  STRIP_TAC THEN recInduct Nind
-   THEN RW_TAC arith_ss [] 
+   THEN RW_TAC arith_ss []
    THEN ONCE_REWRITE_TAC [Neqn]
    THEN RW_TAC arith_ss []);
 
 val N_aux_partial_correctness = Q.prove
-(`WF R /\ 
+(‘WF R /\
   (!x. ~(x > 100) ==> R (N_aux R (x + 11)) x) /\
   (!x. ~(x > 100) ==> R (x + 11) x)
     ==>
-  !n. N_aux R n = if n>100 then n-10 else 91`,
+  !n. N_aux R n = if n>100 then n-10 else 91’,
  STRIP_TAC THEN recInduct N_aux_ind
-   THEN RW_TAC arith_ss [] 
+   THEN RW_TAC arith_ss []
    THEN RW_TAC arith_ss [E]);
 
 (*---------------------------------------------------------------------------*)
 (* Termination of 91 is a bit tricky.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val lem = DECIDE ``~(x > 100) ==> (101-y < 101-x = x<y)``;
+val lem = DECIDE “~(x > 100) ==> (101-y < 101-x <=> x<y)”;
 
 val unexpand_measure = Q.prove
-(`(\x' x''. 101 < x' + (101 - x'') /\ x'' < 101) = measure \x. 101-x`,
+(‘(\x' x''. 101 < x' + (101 - x'') /\ x'' < 101) = measure \x. 101-x’,
  RW_TAC arith_ss [FUN_EQ_THM, measure_thm]);
 
 (*---------------------------------------------------------------------------*)
@@ -62,17 +63,17 @@ val unexpand_measure = Q.prove
 (* do some simplifications.                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val condE = 
-  SIMP_RULE arith_ss [AND_IMP_INTRO,WF_measure,measure_thm,SUB_LEFT_LESS] 
-        (Q.INST [`R` |-> `measure \x. 101-x`] E);
+val condE =
+  SIMP_RULE arith_ss [AND_IMP_INTRO,WF_measure,measure_thm,SUB_LEFT_LESS]
+        (Q.INST [‘R’ |-> ‘measure \x. 101-x’] E);
 
 val correctness' =
-  SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS] 
-        (Q.INST [`R` |-> `measure \x. 101-x`] (N_aux_partial_correctness));
+  SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS]
+        (Q.INST [‘R’ |-> ‘measure \x. 101-x’] (N_aux_partial_correctness));
 
 val N_aux_ind' = (* takes ages, because of subtraction? *)
-  SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS] 
-        (Q.INST [`R` |-> `measure \x. 101-x`] (DISCH_ALL N_aux_ind));
+  SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS]
+        (Q.INST [‘R’ |-> ‘measure \x. 101-x’] (DISCH_ALL N_aux_ind));
 
 (*---------------------------------------------------------------------------*)
 (* Termination. This is done the hard way, to prop up an obscure point.      *)
@@ -104,40 +105,33 @@ val N_aux_ind' = (* takes ages, because of subtraction? *)
 
 val (N_def,N_ind) = Defn.tprove
  (N_defn,
-  WF_REL_TAC `measure \x. 101 - x` 
+  WF_REL_TAC ‘measure \x. 101 - x’
     THEN RW_TAC arith_ss [SUB_LEFT_LESS,unexpand_measure]
-    THEN Q.ABBREV_TAC `NA = N_aux (measure (\x. 101 - x))`
-    THEN measureInduct_on `(\m. 101 - m) x`
+    THEN Q.ABBREV_TAC ‘NA = N_aux (measure (\x. 101 - x))’
+    THEN measureInduct_on ‘(\m. 101 - m) x’
     THEN STRIP_TAC THEN FULL_SIMP_TAC arith_ss [lem]
-    THEN MP_TAC (Q.INST [`x` |-> `x+11`] condE)
+    THEN MP_TAC (Q.INST [‘x’ |-> ‘x+11’] condE)
     THEN RW_TAC arith_ss []  (* implicit case split *)
-    THEN `x+11 < NA(x+22)` by METIS_TAC[DECIDE``x<x+11``,DECIDE``x+11+11=x+22``]
+    THEN ‘x+11 < NA(x+22)’ by METIS_TAC[DECIDE“x<x+11”,DECIDE“x+11+11=x+22”]
     THEN RW_TAC std_ss [] THEN WEAKEN_TAC is_imp
-    THEN MP_TAC (Q.INST [`x` |-> `NA(x+22)`] condE) 
+    THEN MP_TAC (Q.INST [‘x’ |-> ‘NA(x+22)’] condE)
     THEN RW_TAC arith_ss [] (* implicit case split *)
-    THEN `x < NA (x+22) - 11 /\ ~(NA (x + 22) - 11 > 100)` by DECIDE_TAC
-    THEN `NA(x+22) - 11 < NA(NA(x+22) - 11 + 11)` by METIS_TAC[]
+    THEN ‘x < NA (x+22) - 11 /\ ~(NA (x + 22) - 11 > 100)’ by DECIDE_TAC
+    THEN ‘NA(x+22) - 11 < NA(NA(x+22) - 11 + 11)’ by METIS_TAC[]
     THEN POP_ASSUM MP_TAC
-    THEN FULL_SIMP_TAC arith_ss [DECIDE ``x+y < p ==> ((p-y)+y = p)``]);
+    THEN FULL_SIMP_TAC arith_ss [DECIDE “x+y < p ==> ((p-y)+y = p)”]);
 
 (*---------------------------------------------------------------------------
       Note that the above development is slightly cranky, since
-      the partial correctness theorem has constraints remaining. 
-      These were addressed by the termination proof, but the 
-      constraints were proved and then thrown away. 
+      the partial correctness theorem has constraints remaining.
+      These were addressed by the termination proof, but the
+      constraints were proved and then thrown away.
 
       Now try some computations with N.
  ---------------------------------------------------------------------------*)
 
-EVAL ``N 0``;
-EVAL ``N 10``;
-EVAL ``N 11``;
-EVAL ``N 12``;
-EVAL ``N 40``;
-EVAL ``N 89``;
-EVAL ``N 90``;
-EVAL ``N 99``;
-EVAL ``N 100``;
-EVAL ``N 101``;
-EVAL ``N 102``;
-EVAL ``N 127``;
+val results = map EVAL [
+  “N 0”, “N 10”, “N 11”, “N 12”, “N 40”, “N 89”, “N 90” ,
+  “N 99”, “N 100”, “N 101”, “N 102”, “N 127”]
+
+val _ = export_theory()
