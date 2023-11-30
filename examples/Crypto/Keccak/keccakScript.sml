@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib;
-open pairTheory arithmeticTheory combinTheory listTheory rich_listTheory wordsTheory;
+open pairTheory arithmeticTheory combinTheory listTheory rich_listTheory wordsTheory dep_rewrite;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
@@ -117,7 +117,13 @@ Proof
   simp[GENLIST_ID]
 QED
 
-(*
+Theorem less_5_eq:
+  x < (5:num) ⇔
+  x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3 ∨ x = 4
+Proof
+  rw[]
+QED
+
 Theorem state_array_to_string_to_state_array:
   wf_state_array a ⇒
   string_to_state_array (state_array_to_string a) = a
@@ -127,8 +133,13 @@ Proof
      wf_state_array_def]
   \\ rw [Plane_def, Lane_def]
   \\ rename1 `a.A (x, y, z)`
-  \\ Cases_on`x = 0` \\ fs[]
-*)
+  \\ simp[restrict_def]
+  \\ reverse (Cases_on`x < 5 ∧ y < 5 ∧ z < a.w`)
+  >-
+    metis_tac[]
+  \\ fs[less_5_eq]
+  \\ simp[EL_APPEND1,EL_APPEND2]
+QED
 
 Definition theta_c_def:
   theta_c a (x, z) =
