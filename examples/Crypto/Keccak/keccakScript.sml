@@ -64,6 +64,12 @@ Proof
   \\ rw[]
 QED
 
+Theorem string_to_state_array_w:
+  (string_to_state_array s).w = b2w $ LENGTH s
+Proof
+  rw[string_to_state_array_def]
+QED
+
 Definition Lane_def:
   Lane a (i, j) =
     GENLIST (λw. a.A (i, j, w)) a.w
@@ -152,9 +158,15 @@ End
 
 Definition theta_def:
   theta a =
-  a with A updated_by (λf (x, y, z).
+  a with A updated_by (λf. restrict a.w $ λ(x, y, z).
     f (x, y, z) ≠ theta_d a.w a.A (x, z))
 End
+
+Theorem wf_theta[simp]:
+  wf_state_array a ⇒ wf_state_array (theta a)
+Proof
+  rw[wf_state_array_def, theta_def, restrict_def] \\ rw[]
+QED
 
 Definition rho_xy_def[simp]:
   rho_xy 0 = (1, 0) ∧
@@ -174,7 +186,7 @@ QED
 
 Definition rho_def:
   rho a =
-  a with A updated_by (λf (x, y, z).
+  a with A updated_by (λf. restrict a.w $ λ(x, y, z).
     if x = 0 ∧ y = 0 then f (x, y, z)
     else
       let t = LEAST t. rho_xy t = (x, y) in
@@ -183,19 +195,37 @@ Definition rho_def:
       f (x, y, (z + ww - tt) MOD a.w))
 End
 
+Theorem wf_rho[simp]:
+  wf_state_array a ⇒ wf_state_array (rho a)
+Proof
+  rw[wf_state_array_def, rho_def, restrict_def] \\ rw[]
+QED
+
 Definition pi_def:
   pi a =
-  a with A updated_by (λf (x, y, z).
+  a with A updated_by (λf. restrict a.w $ λ(x, y, z).
     f ((x + 3 * y) MOD 5, x, z))
 End
 
+Theorem wf_pi[simp]:
+  wf_state_array a ⇒ wf_state_array (pi a)
+Proof
+  rw[wf_state_array_def, pi_def, restrict_def] \\ rw[]
+QED
+
 Definition chi_def:
   chi a =
-  a with A updated_by (λf (x, y, z).
+  a with A updated_by (λf. restrict a.w $ λ(x, y, z).
     f (x, y, z) ≠
     (¬ f ((x + 1) MOD 5, y, z) ∧
      f ((x + 2) MOD 5, y, z)))
 End
+
+Theorem wf_chi[simp]:
+  wf_state_array a ⇒ wf_state_array (chi a)
+Proof
+  rw[wf_state_array_def, chi_def, restrict_def] \\ rw[]
+QED
 
 Definition rc_step_def:
   rc_step r =
@@ -219,7 +249,7 @@ End
 
 Definition iota_def[nocompute]:
   iota a i =
-  a with A updated_by (λf (x, y, z).
+  a with A updated_by (λf. restrict a.w $ λ(x, y, z).
     if x = 0 ∧ y = 0 then
       let l = w2l a.w in
       let RCz = case some j. j ≤ l ∧ z = 2 ** j - 1
@@ -230,9 +260,23 @@ Definition iota_def[nocompute]:
     else f (x, y, z))
 End
 
+Theorem wf_iota[simp]:
+  wf_state_array a ⇒ wf_state_array (iota a i)
+Proof
+  rw[wf_state_array_def, iota_def, restrict_def] \\ rw[]
+QED
+
 Definition Rnd_def:
-  Rnd a = iota (chi (pi (theta a)))
+  Rnd a = iota (chi (pi (rho (theta a))))
 End
+
+Theorem wf_Rnd[simp]:
+  wf_state_array a ⇒ wf_state_array (Rnd a i)
+Proof
+  rw[Rnd_def]
+  \\ DEP_REWRITE_TAC[wf_iota]
+  \\ rw[]
+QED
 
 (* N.B. We assume here that the round index is always non-negative, which is not
 * assumed in the standard. *)
