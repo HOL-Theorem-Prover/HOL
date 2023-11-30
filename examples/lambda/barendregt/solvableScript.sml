@@ -94,7 +94,7 @@ Theorem solvable_alt_closed'[local] =
     REWRITE_RULE [closed_def] solvable_alt_closed
 
 (* 8.3.1 (iii) [1, p.171] *)
-Overload unsolvable = “\M. ~(solvable M)”
+Overload unsolvable = “\M. ~solvable M”
 
 (* 8.3.2 Examples of solvable terms [1, p.171] *)
 Theorem solvable_K :
@@ -606,6 +606,12 @@ Proof
         Q.EXISTS_TAC ‘fm’ >> simp [] ] ]
 QED
 
+Theorem solvable_iff_LAMl[simp] :
+    !vs M. solvable (LAMl vs M) <=> solvable M
+Proof
+    Induct_on ‘vs’ >> rw [solvable_iff_LAM]
+QED
+
 (* Theorem 8.3.14 (Wadsworth) [1, p.175] *)
 Theorem solvable_iff_has_hnf :
     !M. solvable M <=> has_hnf M
@@ -616,9 +622,9 @@ Proof
  >> ‘closed M0’
        by (rw [closed_def, Abbr ‘M0’, Abbr ‘vs’, FV_LAMl, SET_TO_LIST_INV])
  >> Suff ‘solvable M0 <=> has_hnf M0’
- >- (Q.UNABBREV_TAC ‘M0’ \\
-     KILL_TAC >> Induct_on ‘vs’ >- rw [] \\
-     rw [solvable_iff_LAM, has_hnf_LAM_E])
+ >- (‘solvable M <=> solvable M0’ by rw [Abbr ‘M0’, solvable_iff_LAMl] \\
+     POP_ORW >> Rewr' \\
+     rw [Abbr ‘M0’, has_hnf_LAMl_E])
  >> POP_ASSUM MP_TAC >> KILL_TAC
  >> Q.SPEC_TAC (‘M0’, ‘M’)
  (* stage work, now M is closed *)
@@ -721,7 +727,7 @@ QED
 Theorem hnf_principle_hnf' =
    REWRITE_RULE [GSYM solvable_iff_has_hnf] hnf_principle_hnf
 
-Theorem principle_hnf_eq_self :
+Theorem principle_hnf_eq_self[simp] :
     !M. hnf M ==> principle_hnf M = M
 Proof
     rw [principle_hnf_def]
@@ -868,8 +874,8 @@ QED
 
    NOTE: to satisfy ‘DISJOINT (set xs) (set ys)’, one first get ‘LENGTH xs’
          without knowing ‘xs’ (e.g. by ‘LAMl_size’), then generate ‘ys’ by
-        ‘FRESH_list’, and then call ‘hnf_cases’ (more general version) using ‘ys’
-         as the excluded list.
+        ‘FRESH_list’, and then call ‘hnf_cases_genX’ using ‘ys’ as the excluded
+         list.
  *)
 Theorem principle_hnf_LAMl_appstar :
     !t xs ys. hnf t /\
@@ -895,6 +901,37 @@ Proof
  >> MATCH_MP_TAC principle_hnf_LAMl_appstar_lemma >> rw []
 QED
 
+Theorem principle_hnf_reduce1 :
+    !v t. hnf t ==> principle_hnf (LAM v t @@ VAR v) = t
+Proof
+    rpt STRIP_TAC
+ >> Know ‘principle_hnf (LAM v t @@ VAR v) =
+          principle_hnf ([VAR v/v] t)’
+ >- (MATCH_MP_TAC principle_hnf_hreduce1 \\
+     rw [Once hreduce1_cases] \\
+     qexistsl_tac [‘v’, ‘t’] >> rw [])
+ >> Rewr'
+ >> rw [principle_hnf_eq_self]
+QED
+
+Theorem principle_hnf_reduce :
+    !xs t. hnf t ==> principle_hnf (LAMl xs t @* (MAP VAR xs)) = t
+Proof
+    Induct_on ‘xs’
+ >- rw [principle_hnf_eq_self]
+ >> rw []
+ >> qabbrev_tac ‘M = LAMl xs t’
+ >> qabbrev_tac ‘args :term list = MAP VAR xs’
+ >> Know ‘principle_hnf (LAM h M @@ VAR h @* args) =
+          principle_hnf ([VAR h/h] M @* args)’
+ >- (MATCH_MP_TAC principle_hnf_hreduce1 \\
+     MATCH_MP_TAC hreduce1_rules_appstar >> simp [] \\
+     rw [Once hreduce1_cases] \\
+     qexistsl_tac [‘h’, ‘M’] >> rw [])
+ >> Rewr'
+ >> simp [Abbr ‘M’]
+QED
+
 (* Example 8.3.2 [1, p.171] *)
 Theorem unsolvable_Omega :
     unsolvable Omega
@@ -910,6 +947,82 @@ Proof
  >> POP_ASSUM MP_TAC
  >> rw [Omega_def, I_def]
 QED
+
+(* Another proof based on solvable_iff_has_hnf, told by Michael Norrish *)
+Theorem unsolvable_Omega' :
+    unsolvable Omega
+Proof
+    rw [solvable_iff_has_hnf, corollary11_4_8]
+ >> ‘?r. r is_head_redex Omega /\ labelled_redn beta Omega r Omega’
+       by (rw [GSYM head_reduce1_def, Omega_hreduce1_loops])
+ >> qabbrev_tac ‘p = pgenerate (\n. Omega) (\n. r)’
+ >> ‘infinite p’ by rw [Abbr ‘p’, pgenerate_infinite]
+ >> ‘tail p = p’ by rw [Abbr ‘p’, Once pgenerate_def, tail_def, combinTheory.o_DEF]
+ >> Suff ‘head_reduction_path Omega = p’ >- (Rewr' >> art [])
+ >> MATCH_MP_TAC head_reduction_path_unique
+ >> simp []
+ >> CONJ_TAC >- rw [Abbr ‘p’, Once pgenerate_def]
+ (* is_head_reduction p *)
+ >> irule is_head_reduction_coind
+ >> Q.EXISTS_TAC ‘\p. first p = Omega /\ first_label p = r /\ tail p = p’
+ >> simp []
+ >> CONJ_TAC >- (STRIP_TAC >> rw [Abbr ‘p’, Once pgenerate_def])
+ >> RW_TAC std_ss [] (* 4 subgoals *)
+ >| [ POP_ORW >> simp [first_thm],
+      POP_ORW >> simp [first_thm],
+      POP_ORW >> simp [first_label_def],
+      METIS_TAC [tail_def] ]
+QED
+
+Theorem lameq_solvable_cong_lemma[local] :
+    !M N. closed M /\ closed N /\ M == N ==> (solvable M <=> solvable N)
+Proof
+    Suff ‘!M N. closed M /\ closed N /\ M == N /\ solvable M ==> solvable N’
+ >- METIS_TAC [lameq_SYM]
+ >> rw [solvable_alt_closed]
+ >> gs [solvable_alt_closed]
+ >> Q.EXISTS_TAC ‘Ns’
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘M @* Ns’ >> art []
+ >> MATCH_MP_TAC lameq_appstar_cong
+ >> rw [lameq_SYM]
+QED
+
+Theorem lameq_solvable_cong :
+    !M N. M == N ==> (solvable M <=> solvable N)
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘vs = SET_TO_LIST (FV M UNION FV N)’
+ >> qabbrev_tac ‘M0 = LAMl vs M’
+ >> qabbrev_tac ‘N0 = LAMl vs N’
+ >> Know ‘closed M0 /\ closed N0’
+ >- (rw [closed_def, Abbr ‘M0’, Abbr ‘N0’, Abbr ‘vs’, FV_LAMl] \\
+    ‘FINITE (FV M UNION FV N)’ by rw [] \\
+     simp [SET_TO_LIST_INV] >> SET_TAC [])
+ >> STRIP_TAC
+ >> ‘solvable M <=> solvable M0’ by (rw [Abbr ‘M0’]) >> POP_ORW
+ >> ‘solvable N <=> solvable N0’ by (rw [Abbr ‘N0’]) >> POP_ORW
+ >> ‘M0 == N0’ by (rw [Abbr ‘M0’, Abbr ‘N0’, lameq_LAMl_cong])
+ >> MATCH_MP_TAC lameq_solvable_cong_lemma >> art []
+QED
+
+Theorem lameq_principle_hnf :
+    !M. has_hnf M ==> principle_hnf M == M
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘N = principle_hnf M’
+ >> Know ‘M head_reduces N’
+ >- (rw [head_reduces_def] \\
+     Q.EXISTS_TAC ‘head_reduction_path M’ \\
+     fs [corollary11_4_8, head_reduction_path_def] \\
+     rw [Abbr ‘N’, principle_hnf_def])
+ >> rw [head_reduces_RTC_hreduce1]
+ >> MATCH_MP_TAC lameq_SYM
+ >> MATCH_MP_TAC hreduces_lameq >> art []
+QED
+
+Theorem lameq_principle_hnf' =
+        REWRITE_RULE [GSYM solvable_iff_has_hnf] lameq_principle_hnf
 
 val _ = export_theory ();
 val _ = html_theory "solvable";

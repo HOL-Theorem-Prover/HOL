@@ -1918,6 +1918,9 @@ Proof
   ASM_SIMP_TAC (srw_ss()) [TAKE_def]
 QED
 
+(* |- !n l. 0 < n ==> HD (TAKE n l) = HD l *)
+Theorem HD_TAKE = GEN_ALL (REWRITE_RULE [EL] (Q.SPECL [‘n’, ‘0’] EL_TAKE))
+
 val MAP_TAKE = store_thm(
   "MAP_TAKE",
   “!f n l. MAP f (TAKE n l) = TAKE n (MAP f l)”,
@@ -2625,6 +2628,10 @@ val _ = export_rewrites ["FRONT_SNOC"]
 val SNOC_APPEND = store_thm("SNOC_APPEND",
    “!x (l:('a) list). SNOC x l = APPEND l [x]”,
    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC, APPEND]);
+
+(* |- !l. l <> [] ==> SNOC (LAST l) (FRONT l) = l *)
+Theorem SNOC_LAST_FRONT =
+     REWRITE_RULE [GSYM SNOC_APPEND] APPEND_FRONT_LAST
 
 val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",
     ‘set (SNOC x ls) = x INSERT set ls’,

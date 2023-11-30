@@ -2403,4 +2403,20 @@ Proof
   ]
 QED
 
+(* ‘RINSERT’ inserts one more element into an existing relation *)
+val RINSERT = new_definition ("RINSERT",
+   “RINSERT R a b = \x y. R x y \/ (x = a /\ y = b)”);
+
+Theorem RINSERT_IDEM :
+    !R a b. (RINSERT R a b) a b
+Proof
+    SRW_TAC [] [RINSERT]
+QED
+
+Theorem RSUBSET_RINSERT :
+    !R a b. R RSUBSET (RINSERT R a b)
+Proof
+    SRW_TAC [] [RSUBSET, RINSERT]
+QED
+
 val _ = export_theory();

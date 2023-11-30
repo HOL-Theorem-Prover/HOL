@@ -1532,6 +1532,82 @@ Proof
  >> MATCH_MP_TAC isub_SNOC_lemma >> art []
 QED
 
+(* Translations from dLAMl to dABSi.
+
+   Some samples for guessing out the statements of this theorem:
+
+> SIMP_CONV arith_ss [dLAM_def, lift_def, sub_def, lift_sub]
+                     “dLAM v1 (dLAM v0 t)”;
+# val it =
+   |- dLAM v1 (dLAM v0 t) =
+      dABS (dABS ([dV 1/v1 + 2] ([dV 0/v0 + 2] (lift (lift t 0) 1)))): thm
+
+> SIMP_CONV arith_ss [dLAM_def, lift_def, sub_def, lift_sub]
+                     “dLAM v2 (dLAM v1 (dLAM v0 t))”;
+# val it =
+   |- dLAM v2 (dLAM v1 (dLAM v0 t)) =
+      dABS
+        (dABS
+           (dABS ([dV 2/v2 + 3]
+                    ([dV 1/v1 + 3]
+                       ([dV 0/v0 + 3]
+                          (lift (lift (lift t 0) 1) 2)))))): thm
+ *)
+Theorem dLAMl_to_dABSi :
+    !vs. ALL_DISTINCT (vs :num list) ==>
+         let n = LENGTH vs;
+             body = FOLDL lift t (GENLIST I n);
+             phi = ZIP (GENLIST dV n, MAP (\i. i + n) (REVERSE vs))
+         in dLAMl vs t = dABSi n (body ISUB phi)
+Proof
+    Induct_on ‘vs’ >- rw [isub_def]
+ >> rw [isub_def, GSYM SNOC_APPEND, MAP_SNOC, FUNPOW_SUC, GENLIST, FOLDL_SNOC,
+        dLAM_def]
+ >> fs []
+ >> qabbrev_tac ‘n = LENGTH vs’
+ >> rw [lift_dABSi]
+ >> Q.PAT_X_ASSUM ‘dLAMl vs t = _’ K_TAC
+ >> qabbrev_tac ‘N = FOLDL lift t (GENLIST I n)’
+ >> qabbrev_tac ‘Ms = GENLIST dV n’
+ >> qabbrev_tac ‘Vs = MAP (\i. i + n) (REVERSE vs)’
+ >> Know ‘lift (N ISUB ZIP (Ms,Vs)) n =
+          (lift N n) ISUB (ZIP (MAP (\e. lift e n) Ms,MAP SUC Vs))’
+ >- (MATCH_MP_TAC lift_isub \\
+     rw [Abbr ‘Ms’, Abbr ‘Vs’, EVERY_MEM, MEM_MAP] >> rw [])
+ >> Rewr'
+ >> ‘MAP SUC Vs = MAP (\i. i + SUC n) (REVERSE vs)’
+       by (rw [LIST_EQ_REWRITE, EL_MAP, Abbr ‘Vs’]) >> POP_ORW
+ >> qunabbrev_tac ‘Vs’ (* now useless *)
+ >> rw [sub_def, GSYM ADD1]
+ >> ‘MAP (\e. lift e n) Ms = Ms’
+       by (rw [LIST_EQ_REWRITE, EL_MAP, Abbr ‘Ms’]) >> POP_ORW
+ >> qabbrev_tac ‘Ns = MAP (\i. i + SUC n) (REVERSE vs)’
+ >> qabbrev_tac ‘N' = lift N n’
+ >> Suff ‘N' ISUB ZIP (SNOC (dV n) Ms,SNOC (h + SUC n) Ns) =
+          [dV n/h + SUC n] (N' ISUB ZIP (Ms,Ns))’ >- rw []
+ >> MATCH_MP_TAC isub_SNOC
+ >> rw [Abbr ‘Ms’, Abbr ‘Ns’, MEM_EL, EL_MAP]
+ >> rename1 ‘~(i < n)’
+ >> ‘LENGTH (REVERSE vs) = n’ by rw [Abbr ‘n’]
+ >> CCONTR_TAC >> gs [EL_MAP]
+ >> ‘h = EL i (REVERSE vs)’ by rw []
+ >> Suff ‘MEM h (REVERSE vs)’ >- rw [MEM_REVERSE]
+ >> Q.PAT_X_ASSUM ‘~MEM h vs’ K_TAC
+ >> ‘LENGTH (REVERSE vs) = n’ by rw [Abbr ‘n’]
+ >> REWRITE_TAC [MEM_EL]
+ >> Q.EXISTS_TAC ‘i’ >> art []
+QED
+
+(* |- !t vs.
+        ALL_DISTINCT vs ==>
+        dLAMl vs t =
+        dABSi (LENGTH vs)
+          (FOLDL lift t (GENLIST I (LENGTH vs)) ISUB
+           ZIP (GENLIST dV (LENGTH vs),MAP (\i. i + LENGTH vs) (REVERSE vs)))
+ *)
+Theorem dLAMl_to_dABSi_applied =
+    GEN_ALL (SIMP_RULE std_ss [LET_DEF] dLAMl_to_dABSi)
+
 val _ = export_theory();
 val _ = html_theory "pure_dB";
 

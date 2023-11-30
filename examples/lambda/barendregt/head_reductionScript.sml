@@ -1,7 +1,8 @@
 open HolKernel Parse boolLib bossLib BasicProvers;
 
 open boolSimps relationTheory pred_setTheory listTheory finite_mapTheory
-     arithmeticTheory llistTheory pathTheory optionTheory hurdUtils;
+     arithmeticTheory llistTheory pathTheory optionTheory rich_listTheory
+     hurdUtils;
 
 open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
      horeductionTheory term_posnsTheory finite_developmentsTheory;
@@ -1159,6 +1160,211 @@ Proof
  >> MATCH_MP_TAC EL_GENLIST
  >> Know ‘LENGTH (GENLIST I (PRE len)) = LENGTH (0::xs)’ >- art []
  >> simp []
+QED
+
+(* cf. Omega_starloops *)
+Theorem Omega_hreduce1_loops :
+    Omega -h-> N <=> (N = Omega)
+Proof
+    rw [hreduce1_rwts, Omega_def]
+QED
+
+(*---------------------------------------------------------------------------*
+ *  Accessors of hnf components
+ *---------------------------------------------------------------------------*)
+
+Definition hnf_head_def :
+    hnf_head t = if is_comb t then hnf_head (rator t) else t
+Termination
+    WF_REL_TAC ‘measure size’
+ >> rw [is_comb_APP_EXISTS] >> rw []
+End
+
+Theorem hnf_head_appstar :
+    !t. ~is_comb t ==> (hnf_head (t @* args) = t)
+Proof
+    Induct_on ‘args’ using SNOC_INDUCT
+ >> rw [appstar_SNOC, Once hnf_head_def, FOLDL]
+QED
+
+Theorem hnf_head_hnf[simp] :
+    (hnf_head (VAR y @@ t) = VAR y) /\
+    (hnf_head (VAR y @* args) = VAR y)
+Proof
+    CONJ_TAC
+ >- NTAC 2 (rw [Once hnf_head_def])
+ >> MATCH_MP_TAC hnf_head_appstar
+ >> rw []
+QED
+
+Overload hnf_headvar = “\t. THE_VAR (hnf_head t)”
+
+(* hnf_children retrives the ‘args’ part of an abs-free hnf (VAR y @* args) *)
+Definition hnf_children_def :
+    hnf_children t = if is_comb t then
+                        SNOC (rand t) (hnf_children (rator t))
+                     else []
+Termination
+    WF_REL_TAC ‘measure size’ >> rw [is_comb_APP_EXISTS] >> rw []
+End
+
+Theorem hnf_children_thm :
+   (!y.     hnf_children ((VAR :string -> term) y) = []) /\
+   (!v t.   hnf_children (LAM v t) = []) /\
+   (!t1 t2. hnf_children (t1 @@ t2) = SNOC t2 (hnf_children t1))
+Proof
+   rpt (rw [Once hnf_children_def])
+QED
+
+Theorem hnf_children_appstar :
+    !t. ~is_comb t ==> (hnf_children (t @* args) = args)
+Proof
+    Induct_on ‘args’ using SNOC_INDUCT
+ >- rw [Once hnf_children_def, FOLDL]
+ >> RW_TAC std_ss [appstar_SNOC]
+ >> rw [Once hnf_children_def]
+QED
+
+Theorem hnf_children_hnf :
+    !y args. hnf_children (VAR y @* args) = args
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC hnf_children_appstar >> rw []
+QED
+
+Theorem absfree_hnf_cases :
+    !M. hnf M /\ ~is_abs M <=> ?y args. M = VAR y @* args
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> EQ_TAC
+ >- (STRIP_TAC \\
+    ‘?vs args y. ALL_DISTINCT vs /\ (M = LAMl vs (VAR y @* args))’
+        by METIS_TAC [hnf_cases] \\
+     reverse (Cases_on ‘vs = []’) >- fs [] \\
+     qexistsl_tac [‘y’, ‘args’] >> rw [LAMl_thm])
+ >> rpt STRIP_TAC
+ >- rw [hnf_appstar]
+ >> rfs [is_abs_cases]
+QED
+
+Theorem absfree_hnf_thm :
+    !M. hnf M /\ ~is_abs M ==> (M = hnf_head M @* hnf_children M)
+Proof
+    rw [absfree_hnf_cases]
+ >> rw [hnf_children_appstar, hnf_head_appstar]
+QED
+
+Theorem hnf_head_absfree :
+    !y args. hnf_head (VAR y @* args) = VAR y
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC hnf_head_appstar >> rw []
+QED
+
+Theorem lameq_hnf_fresh_subst :
+    !as args P. (LENGTH args = LENGTH as) /\ DISJOINT (set as) (FV P) ==>
+                ([LAMl as P/y] (VAR y @* args) == P)
+Proof
+    Induct_on ‘as’ using SNOC_INDUCT >> rw []
+ >> Cases_on ‘args = []’ >- fs []
+ >> ‘args = SNOC (LAST args) (FRONT args)’ by PROVE_TAC [SNOC_LAST_FRONT]
+ >> POP_ORW
+ >> REWRITE_TAC [appstar_SNOC, SUB_THM]
+ >> MATCH_MP_TAC lameq_TRANS
+ >> qabbrev_tac ‘M = [LAMl as (LAM x P)/y] (LAST args)’
+ >> Q.EXISTS_TAC ‘LAM x P @@ M’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC lameq_APPL \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> rw [FV_thm, LENGTH_FRONT] \\
+     Q.PAT_X_ASSUM ‘DISJOINT _ _’ MP_TAC \\
+     rw [DISJOINT_ALT])
+ >> rw [Once lameq_cases] >> DISJ1_TAC
+ >> qexistsl_tac [‘x’, ‘P’] >> art []
+ >> MATCH_MP_TAC (GSYM lemma14b)
+ >> Q.PAT_X_ASSUM ‘DISJOINT _ _’ MP_TAC
+ >> rw [DISJOINT_ALT]
+QED
+
+(*---------------------------------------------------------------------------*
+ *  LAMl_size (of hnf)
+ *---------------------------------------------------------------------------*)
+
+val (LAMl_size_thm, _) = define_recursive_term_function
+   ‘(LAMl_size ((VAR :string -> term) s) = 0) /\
+    (LAMl_size (t1 @@ t2) = 0) /\
+    (LAMl_size (LAM v t) = 1 + LAMl_size t)’;
+
+val _ = export_rewrites ["LAMl_size_thm"];
+
+Theorem LAMl_size_0_cases :
+    !t. is_var t \/ is_comb t ==> (LAMl_size t = 0)
+Proof
+    rw [is_var_cases, is_comb_APP_EXISTS]
+ >> rw []
+QED
+
+Theorem LAMl_size_0_cases' :
+    !t. ~is_abs t ==> (LAMl_size t = 0)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC LAMl_size_0_cases
+ >> METIS_TAC [term_cases]
+QED
+
+Theorem LAMl_size_LAMl :
+    !vs t. ~is_abs t ==> (LAMl_size (LAMl vs t) = LENGTH vs)
+Proof
+    rpt STRIP_TAC
+ >> Induct_on ‘vs’
+ >- rw [LAMl_size_0_cases']
+ >> rw []
+QED
+
+Theorem LAMl_size_hnf :
+    !vs y args. LAMl_size (LAMl vs (VAR y @* args)) = LENGTH vs
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC LAMl_size_LAMl
+ >> Cases_on ‘args = []’ >- rw []
+ >> ‘?x l. args = SNOC x l’ by METIS_TAC [SNOC_CASES]
+ >> rw [appstar_SNOC]
+QED
+
+(* Another variant of ‘hnf_cases’ with a given (shared) list of fresh variables
+
+   NOTE: "irule (iffLR hnf_cases_shared)" is a useful tactic for this theorem.
+ *)
+Theorem hnf_cases_shared :
+    !vs M. ALL_DISTINCT vs /\ LAMl_size M <= LENGTH vs /\
+           DISJOINT (set vs) (FV M) ==>
+          (hnf M <=> ?y args. (M = LAMl (TAKE (LAMl_size M) vs) (VAR y @* args)))
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC
+ >- (STRIP_TAC >> POP_ORW \\
+     rw [hnf_appstar, hnf_LAMl])
+ >> rpt (POP_ASSUM MP_TAC)
+ >> Q.ID_SPEC_TAC ‘M’
+ >> Induct_on ‘vs’
+ >- (rw [] \\
+    ‘?vs args y. M = LAMl vs (VAR y @* args)’ by METIS_TAC [hnf_cases] \\
+     fs [LAMl_size_hnf])
+ (* stage work *)
+ >> rw [LIST_TO_SET_SNOC, ALL_DISTINCT_SNOC]
+ >> fs []
+ >> Cases_on ‘LAMl_size M = 0’
+ >- (fs [] \\
+     Q.PAT_X_ASSUM ‘!M. P’ (MP_TAC o (Q.SPEC ‘M’)) >> rw [])
+ >> ‘is_abs M’ by METIS_TAC [LAMl_size_0_cases']
+ (* applying is_abs_cases_genX *)
+ >> ‘?t0. M = LAM h t0’ by METIS_TAC [is_abs_cases_genX]
+ >> FIRST_X_ASSUM (MP_TAC o (Q.SPEC ‘t0’))
+ >> ‘hnf t0’ by METIS_TAC [hnf_thm]
+ >> fs [LAMl_size_hnf]
+ >> Suff ‘DISJOINT (set vs) (FV t0)’ >- rw []
+ >> Q.PAT_X_ASSUM ‘DISJOINT _ _’ MP_TAC
+ >> rw [DISJOINT_ALT]
+ >> METIS_TAC []
 QED
 
 val _ = export_theory()
