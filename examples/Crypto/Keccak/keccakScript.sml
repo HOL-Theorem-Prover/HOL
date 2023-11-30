@@ -1,5 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-open pairTheory arithmeticTheory combinTheory listTheory rich_listTheory wordsTheory dep_rewrite;
+open HolKernel Parse boolLib bossLib dep_rewrite bitLib reduceLib combinLib computeLib;
+open optionTheory pairTheory arithmeticTheory combinTheory listTheory
+     rich_listTheory bitTheory wordsTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
@@ -117,13 +118,6 @@ Proof
   simp[GENLIST_ID]
 QED
 
-Theorem less_5_eq:
-  x < (5:num) ⇔
-  x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3 ∨ x = 4
-Proof
-  rw[]
-QED
-
 Theorem state_array_to_string_to_state_array:
   wf_state_array a ⇒
   string_to_state_array (state_array_to_string a) = a
@@ -135,32 +129,31 @@ Proof
   \\ rename1 `a.A (x, y, z)`
   \\ simp[restrict_def]
   \\ reverse (Cases_on`x < 5 ∧ y < 5 ∧ z < a.w`)
-  >-
-    metis_tac[]
-  \\ fs[less_5_eq]
+  >- metis_tac[]
+  \\ fs[NUMERAL_LESS_THM]
   \\ simp[EL_APPEND1,EL_APPEND2]
 QED
 
 Definition theta_c_def:
-  theta_c a (x, z) =
-    (a.A (x, 0, z) ≠
-     (a.A (x, 1, z) ≠
-      (a.A (x, 2, z) ≠
-       (a.A (x, 3, z) ≠
-        (a.A (x, 4, z))))))
+  theta_c A (x, z) =
+    (A (x, 0, z) ≠
+     (A (x, 1, z) ≠
+      (A (x, 2, z) ≠
+       (A (x, 3, z) ≠
+        (A (x, 4, z))))))
 End
 
 Definition theta_d_def:
-  theta_d a (x, z) =
-  let c = theta_c a in
+  theta_d w A (x, z) =
+  let c = theta_c A in
     c ((x + 4) MOD 5, z) ≠
-    c ((x + 1) MOD 5, (z + PRE a.w) MOD a.w)
+    c ((x + 1) MOD 5, (z + PRE w) MOD w)
 End
 
 Definition theta_def:
   theta a =
   a with A updated_by (λf (x, y, z).
-    f (x, y, z) ≠ theta_d a (x, z))
+    f (x, y, z) ≠ theta_d a.w a.A (x, z))
 End
 
 Definition rho_xy_def[simp]:
@@ -224,7 +217,7 @@ Definition rc_def:
   HD (FUNPOW rc_step (t MOD 255) (T :: REPLICATE 7 F))
 End
 
-Definition iota_def:
+Definition iota_def[nocompute]:
   iota a i =
   a with A updated_by (λf (x, y, z).
     if x = 0 ∧ y = 0 then
