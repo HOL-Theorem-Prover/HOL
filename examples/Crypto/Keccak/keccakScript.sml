@@ -6,6 +6,58 @@ open optionTheory pairTheory arithmeticTheory combinTheory listTheory
 
 val _ = new_theory "keccak";
 
+(* TODO: move *)
+Theorem LOG_POW:
+  1 < b ==> LOG b (b ** n) = n
+Proof
+  strip_tac
+  \\ irule logrootTheory.LOG_UNIQUE
+  \\ rw[EXP]
+QED
+
+(* TODO: move *)
+Theorem FUNPOW_COMPOSE:
+  !n x f g h.
+  (!m. m < n ==> h(g(FUNPOW f m x)) = FUNPOW f m x)
+  ==>
+  FUNPOW (g o f o h) n (g x) =
+  g (FUNPOW f n x)
+Proof
+  Induct \\ rw[]
+  \\ rw[FUNPOW_SUC]
+QED
+
+(* TODO: move *)
+Theorem FUNPOW_CONG:
+  !n x f g.
+  (!m. m < n ==> f (FUNPOW f m x) = g (FUNPOW f m x))
+  ==>
+  FUNPOW f n x = FUNPOW g n x
+Proof
+  Induct \\ rw[FUNPOW_SUC]
+  \\ AP_TERM_TAC \\ rw[]
+QED
+
+(* TODO: move *)
+Theorem FUNPOW_invariant:
+  !m x.
+  P x /\ (!x. P x ==> P (f x)) ==>
+  P (FUNPOW f m x)
+Proof
+  Induct \\ rw[FUNPOW_SUC]
+QED
+
+(* TODO: move *)
+Theorem FOLDL_CONG_invariant:
+  !P f1 f2 l e.
+  P e /\
+  (!x a. MEM x l ∧ P a ==> f1 a x = f2 a x /\ P (f2 a x))
+  ==>
+  FOLDL f1 e l = FOLDL f2 e l /\ P (FOLDL f2 e l)
+Proof
+  ntac 3 gen_tac \\ Induct \\ rw[]
+QED
+
 Datatype:
   state_array =
   <| w: num
@@ -333,6 +385,17 @@ Definition Keccak_p_def:
   state_array_to_string a1
 End
 
+Theorem LENGTH_Keccak_p:
+  LENGTH (Keccak_p n s) = LENGTH s DIV 25 * 25
+Proof
+  rw[Keccak_p_def, string_to_state_array_w, ADD1]
+  \\ qmatch_goalsub_abbrev_tac`FUNPOW f (i1 - i0) (a, i0)`
+  \\ qho_match_abbrev_tac`P (FUNPOW f (i1 - i0) (a, i0))`
+  \\ irule FUNPOW_invariant
+  \\ simp[Abbr`P`, Abbr`a`, string_to_state_array_w, b2w_def]
+  \\ simp[Abbr`f`, FORALL_PROD]
+QED
+
 (* TODO: move / find in a lib *)
 Definition chunks_def:
   chunks n ls =
@@ -347,6 +410,12 @@ val chunks_ind = theorem"chunks_ind";
 
 Theorem chunks_NIL[simp]:
   chunks n [] = [[]]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem chunks_0[simp]:
+  chunks 0 ls = [ls]
 Proof
   rw[Once chunks_def]
 QED
@@ -449,47 +518,6 @@ Definition SHA3_512_def:
 End
 
 (* compute-friendly versions and tests *)
-
-(* TODO: move *)
-Theorem LOG_POW:
-  1 < b ==> LOG b (b ** n) = n
-Proof
-  strip_tac
-  \\ irule logrootTheory.LOG_UNIQUE
-  \\ rw[EXP]
-QED
-
-(* TODO: move *)
-Theorem FUNPOW_COMPOSE:
-  !n x f g h.
-  (!m. m < n ==> h(g(FUNPOW f m x)) = FUNPOW f m x)
-  ==>
-  FUNPOW (g o f o h) n (g x) =
-  g (FUNPOW f n x)
-Proof
-  Induct \\ rw[]
-  \\ rw[FUNPOW_SUC]
-QED
-
-(* TODO: move *)
-Theorem FUNPOW_CONG:
-  !n x f g.
-  (!m. m < n ==> f (FUNPOW f m x) = g (FUNPOW f m x))
-  ==>
-  FUNPOW f n x = FUNPOW g n x
-Proof
-  Induct \\ rw[FUNPOW_SUC]
-  \\ AP_TERM_TAC \\ rw[]
-QED
-
-(* TODO: move *)
-Theorem FUNPOW_invariant:
-  !m x.
-  P x /\ (!x. P x ==> P (f x)) ==>
-  P (FUNPOW f m x)
-Proof
-  Induct \\ rw[FUNPOW_SUC]
-QED
 
 Triviality iota_some_elim:
   (some j. j ≤ l ∧ z = 2 ** j - 1)
@@ -667,8 +695,8 @@ Proof
   \\ simp[Abbr`P`, Abbr`q`, Abbr`p`, FORALL_PROD, Abbr`w`, b2w_def]
 QED
 
-(*
 Theorem Keccak_tabulate:
+  ∀c. c < 1600 ⇒
   Keccak c = sponge (Keccak_p_tabulate 24) 1600 pad10s1 (1600 - c)
 Proof
   rw[Keccak_def, sponge_def, FUN_EQ_THM]
@@ -680,21 +708,63 @@ Proof
   by (
     rw[Abbr`z`]
     \\ irule divides_EVERY_LENGTH_chunks
-
-  \\ `FOLDL g e z = FOLDL k e z`
+    \\ gs[]
+    \\ conj_tac >- simp[pad10s1_def]
+    \\ `0 < 1600 - c` by simp[]
+    \\ drule_then(qspec_then`LENGTH x`strip_assume_tac) LENGTH_pad10s1
+    \\ simp[] )
+  \\ `FOLDL g e z = FOLDL k e z /\ (divides 25 o LENGTH) (FOLDL k e z)`
   by (
-    `EVERY (λls. LENGTH ls = c) z`
-    by (
-      rw[Abbr`z`, chunks_def]
-    irule FOLDL_CONG
-    \\ simp[Abbr`g`, Abbr`k`]
-    \\ rw[]
+    irule FOLDL_CONG_invariant \\
+    conj_tac >- rw[Abbr`e`, divides_def]
+    \\ rpt gen_tac \\ strip_tac
+    \\ conj_asm1_tac >- (
+      rw[Abbr`g`, Abbr`k`]
+      \\ irule Keccak_p_tabulate
+      \\ rw[]
+      \\ fs[EVERY_MEM]
+      \\ res_tac \\ pop_assum (SUBST1_TAC o SYM)
+      \\ simp[] \\ fs[divides_def]
+      \\ rw[MIN_DEF] )
+    \\ pop_assum (SUBST1_TAC o SYM)
+    \\ rw[Abbr`g`, LENGTH_Keccak_p] )
+  \\ gs[]
+  \\ irule FUNPOW_CONG
+  \\ rw[Abbr`f`, Abbr`h`, UNCURRY]
+  \\ irule Keccak_p_tabulate
+  \\ qmatch_goalsub_abbrev_tac`FUNPOW f m y`
+  \\ qho_match_abbrev_tac`P (FUNPOW f m y)`
+  \\ irule FUNPOW_invariant
+  \\ rw[Abbr`P`, Abbr`y`, Abbr`f`] \\ rw[UNCURRY, LENGTH_Keccak_p]
+  \\ fs[divides_def]
+QED
 
-    \\ irule Keccak_p_tabulate
-    MAP2
+Theorem Keccak_tabulate_512 = Keccak_tabulate |>
+  Q.SPEC`512` |> SIMP_RULE std_ss []
 
-  m``FOLDL _ _ _ = FOLDL _ _ _``
+Theorem state_array_to_string_compute:
+  state_array_to_string a =
+  GENLIST (λi.
+    a.A ((i DIV a.w) MOD 5, i DIV a.w DIV 5, i MOD a.w))
+  (5 * 5 * a.w)
+Proof
+  rw[state_array_to_string_def, Plane_def, Lane_def]
+  \\ rw[LIST_EQ_REWRITE]
+  \\ rw[EL_APPEND_EQN]
+  \\ gs[LESS_DIV_EQ_ZERO]
+  THENL
+  let
+    fun tac i =
+      `x DIV a.w = ^(numSyntax.term_of_int i)` by gs[DIV_EQ_X]
+      \\ gs[]
+      \\ simp[Ntimes cvTheory.MOD_RECURSIVE i]
+    fun loop i = if i = 25 then [] else tac i :: loop (i + 1)
+  in
+    loop 1
+  end
+QED
 
+(* WIP -- too slow
 val cs = num_compset();
 val () = extend_compset [
   Tys [``:state_array``],
@@ -703,9 +773,7 @@ val () = extend_compset [
     b2w_def,
     w2l_def,
     string_to_state_array_def,
-    Lane_def,
-    Plane_def,
-    state_array_to_string_def,
+    state_array_to_string_compute,
     tabulate_string_def,
     Rnd_string_def,
     theta_c_def,
@@ -721,7 +789,7 @@ val () = extend_compset [
     chunks_def,
     pad10s1_def,
     sponge_def,
-    Keccak_tabulate,
+    Keccak_tabulate_512,
     Keccak_256_def],
   Extenders [
     listSimps.list_rws,
@@ -735,12 +803,13 @@ val () = extend_compset [
 val thm = CBV_CONV cs ``Keccak_256 []``
 
 val ctm = ``512``
-val ftm = ``Keccak_p 24``
+val ftm = ``Keccak_p_tabulate 24``
 val btm = ``1600``
 val padtm = ``pad10s1``
-val rtm = ``1600 - ^ctm``
+val rtm = ``1088``
 val Ntm = ``[]: bool list``
 val dtm = ``256``
+
 val Ptm = ``^Ntm ++ ^padtm ^rtm (LENGTH ^Ntm)``
 val ntm = ``LENGTH ^Ptm DIV ^rtm``
 val ctm = ``^btm - ^rtm``
@@ -750,16 +819,22 @@ val Stm = ``FOLDL (λSi Pi. ^ftm (MAP2 (λx y. x ⇎ y) Si (Pi ⧺ REPLICATE ^ct
 
 val chunksrw = CBV_CONV cs ``chunks 1088 (pad10s1 1088 0)``
 val step1 = (SIMP_CONV (srw_ss()) [REPLICATE_compute, chunksrw]) Stm
-val step1args = step1 |> concl |> rhs |> strip_comb |> #2
+val (step1f, step1args) = step1 |> concl |> rhs |> strip_comb
 val n1tm = step1args |> el 1
 val s1tm = step1args |> el 2
-val atm = ``string_to_state_array ^s1tm``
-val ltm = ``w2l ^atm.w``
+
+val wtm = ``b2w (LENGTH ^s1tm)``
+val ltm = ``w2l ^wtm``
 val i0tm = ``12 + 2 * ^ltm - ^n1tm``
 val i1tm = ``12 + 2 * ^ltm - 1``
-val step2tm = ``Rnd ^atm ^i0tm``
-val step2atm = ``theta ^atm``
+val step2tm = ``Rnd_string ^wtm ^s1tm ^i0tm``
 
+val theta_arg  = ``tabulate_string ^wtm ^s1tm``
+val theta_res = ``theta ^theta_arg``
+val theta_res_th = CBV_CONV cs theta_res
+val theta_str = ``state_array_to_string ^(rhs(concl theta_res_th))``
+
+CBV_CONV cs theta_str
 *)
 
 val _ = export_theory();
