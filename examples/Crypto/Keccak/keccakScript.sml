@@ -1,10 +1,12 @@
 open HolKernel Parse boolLib bossLib dep_rewrite bitLib reduceLib combinLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
-     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory;
+     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory intLib;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
 val _ = new_theory "keccak";
+
+val _ = numLib.prefer_num();
 
 Datatype:
   state_array =
@@ -394,9 +396,34 @@ End
 Theorem LENGTH_pad10s1:
   0 < x ⇒ ∃d. m + LENGTH (pad10s1 x m) = d * x
 Proof
-  rw[pad10s1_def, ADD1, LEFT_ADD_DISTRIB] \\
-  qspec_then`x`mp_tac DIVISION \\ simp[] \\
-  cheat
+  Cases_on`x = 1` >> fs[]>>
+  rw[pad10s1_def, ADD1, LEFT_ADD_DISTRIB]>>
+  `2 * x + x * (m DIV x) = (2 + m DIV x) * x` by fs[]>>
+  pop_assum SUBST_ALL_TAC>>
+  DEP_REWRITE_TAC[MOD_COMPLEMENT]>>
+  imp_res_tac DIVISION>>fs[]>>
+  CONJ_TAC >- (
+    simp[LEFT_ADD_DISTRIB]>>
+    last_x_assum (qspec_then`m` assume_tac)>>
+    qsuff_tac`2 + m MOD x < 2 * x` >>
+    simp[]>>
+    `2 <= x` by
+      (Cases_on`x`>>fs[])>>
+    last_x_assum (qspec_then`m` assume_tac)>>
+    intLib.ARITH_TAC)>>
+  last_x_assum(qspec_then`m+2` assume_tac)>>
+  Cases_on`(m + 2) MOD x = 0`
+  >- (
+    fs[]>>
+    metis_tac[MULT_COMM])>>
+  DEP_ONCE_REWRITE_TAC[LESS_MOD]>>
+  simp[]>>
+  `(m + 2) MOD x + (x − (m + 2) MOD x) = x` by
+    (last_x_assum (qspec_then`m+2` assume_tac)>>
+    intLib.ARITH_TAC)>>
+  `m + (x − (m + 2) MOD x + 2)  =
+   ((m + 2) DIV x + 1) * x` by fs[]>>
+  metis_tac[]
 QED
 
 Definition Keccak_def:
