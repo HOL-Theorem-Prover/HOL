@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib dep_rewrite bitLib reduceLib combinLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
-     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory;
+     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
+     sptreeTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
@@ -539,6 +540,231 @@ QED
 Theorem iota_compute = iota_def |>
   SIMP_RULE (srw_ss()) [iota_some_elim, iota_case_cond];
 
+Theorem state_array_to_string_compute:
+  state_array_to_string a =
+  GENLIST (λi.
+    a.A ((i DIV a.w) MOD 5, i DIV a.w DIV 5, i MOD a.w))
+  (5 * 5 * a.w)
+Proof
+  rw[state_array_to_string_def, Plane_def, Lane_def]
+  \\ rw[LIST_EQ_REWRITE]
+  \\ rw[EL_APPEND_EQN]
+  \\ gs[LESS_DIV_EQ_ZERO]
+  THENL
+  let
+    fun tac i =
+      `x DIV a.w = ^(numSyntax.term_of_int i)` by gs[DIV_EQ_X]
+      \\ gs[]
+      \\ simp[Ntimes cvTheory.MOD_RECURSIVE i]
+    fun loop i = if i = 25 then [] else tac i :: loop (i + 1)
+  in
+    loop 1
+  end
+QED
+
+Definition index_to_triple_def:
+  index_to_triple w i = ((i DIV w) MOD 5, i DIV w DIV 5, i MOD w)
+End
+
+Definition triple_to_index_def:
+  triple_to_index w (x, y, z) = x * w + 5 * y * w + z
+End
+
+Theorem index_less:
+  x < 5 ∧ y < 5 ∧ z < w ⇒ triple_to_index w (x, y, z) < 25 * w
+Proof
+  rw[triple_to_index_def]
+  \\ `z + (w * x + 5 * (w * y)) = (x + 5 * y) * w + z` by simp[]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ fs[NUMERAL_LESS_THM]
+QED
+
+(* if y is fixed 0 *)
+(* i -> (i DIV w, i MOD w) *)
+(* (x, z) -> x * w + z *)
+
+Definition theta_spt_def:
+  theta_spt w t =
+  let c = fromList (
+    GENLIST (λi.
+      (THE (lookup i t) ≠
+        (THE (lookup (i + 5 * w) t) ≠
+          (THE (lookup (i + 10 * w) t) ≠
+            (THE (lookup (i + 15 * w) t) ≠
+              (THE (lookup (i + 20 * w) t)))))))
+      (5 * w)) in
+  let d = fromList (
+    GENLIST (λi.
+      (THE (lookup (((i DIV w + 4) MOD 5) * w + i MOD w) c) ≠
+       THE (lookup (((i DIV w + 1) MOD 5) * w + (i MOD w + PRE w) MOD w) c)))
+      (5 * w)) in
+  mapi (λi b. b ≠ THE (lookup (((i DIV w) MOD 5) * w + i MOD w) d)) t
+End
+
+Definition sptify_def:
+  sptify a =
+  a with A := restrict a.w $ λ(x,y,z).
+    case lookup (y * 5 * a.w + x * a.w + z)
+           $ fromList (state_array_to_string a)
+    of NONE => F | SOME b => b
+End
+
+Theorem sptify_id:
+  wf_state_array a ⇒ sptify a = a
+Proof
+  rw[sptify_def, state_array_component_equality,
+     FUN_EQ_THM, FORALL_PROD, restrict_def]
+  \\ reverse (rw[lookup_fromList])
+  >- (
+    fs[wf_state_array_def]
+    \\ first_x_assum irule
+    \\ CCONTR_TAC \\ gs[]
+    \\ last_x_assum mp_tac \\ simp[]
+    \\ fs[NUMERAL_LESS_THM] )
+  \\ qmatch_goalsub_rename_tac`a.A (x,y,z)`
+  \\ reverse(Cases_on`x < 5 ∧ y < 5 ∧ z < a.w`)
+  >- fs[wf_state_array_def] \\ fs[]
+  \\ rw[state_array_to_string_compute]
+  \\ AP_TERM_TAC \\ simp[]
+  \\ `z + (x * a.w + 5 * (y * a.w)) = (x + 5 * y) * a.w + z` by simp[]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ simp[DIV_MULT, LESS_DIV_EQ_ZERO]
+QED
+
+Definition sptfun_def:
+  sptfun w t (x,y,z) ⇔
+    x < 5 ∧ y < 5 ∧ z < w ∧
+    case lookup (y * 5 * w + x * w + z) t
+    of NONE => F | SOME b => b
+End
+
+Theorem theta_spt:
+  w = b2w $ LENGTH s
+  ⇒
+  sptfun w (theta_spt w (fromList s)) =
+  (theta $ string_to_state_array s).A
+Proof
+  rw[FUN_EQ_THM, FORALL_PROD, theta_def, sptfun_def, restrict_def] \\
+  rw[string_to_state_array_w]
+  \\ qmatch_goalsub_rename_tac`(x,y,z)`
+  \\ Cases_on`x < 5` \\ simp[]
+  \\ Cases_on`y < 5` \\ simp[]
+  \\ Cases_on`z < b2w $ LENGTH s` \\ simp[]
+  \\ qmatch_assum_abbrev_tac`z < w`
+  \\ rewrite_tac[theta_spt_def]
+  \\ qmatch_goalsub_abbrev_tac`LET _ c`
+  \\ rw[]
+  \\ qmatch_goalsub_abbrev_tac`THE (lookup _ d)`
+  \\ rw[lookup_mapi]
+  \\ reverse(rw[lookup_fromList])
+  >- (
+    `F` suffices_by simp[]
+    \\ pop_assum mp_tac \\ simp[]
+    \\ `triple_to_index w (x,y,z) < 25 * w` by metis_tac[index_less]
+    \\ gs[triple_to_index_def]
+    \\ `25 * w ≤ LENGTH s` suffices_by simp[]
+    \\ simp[Abbr`w`, b2w_def]
+    \\ `0 < 25` by simp[]
+    \\ `LENGTH s = 25 * (LENGTH s DIV 25) + LENGTH s MOD 25`
+        by metis_tac[DIVISION, MULT_COMM]
+    \\ metis_tac[LESS_EQ_ADD])
+  \\ rw[string_to_state_array_def, restrict_def]
+  \\ rw[theta_d_def]
+  \\ rw[theta_c_def, restrict_def]
+  \\ reverse(rw[Abbr`d`, lookup_fromList])
+  >- (
+    `F` suffices_by simp[]
+    \\ pop_assum mp_tac \\ simp[]
+    \\ qmatch_goalsub_abbrev_tac`z + w * b`
+    \\ `b < 5` by simp[Abbr`b`]
+    \\ pop_assum mp_tac \\ simp[NUMERAL_LESS_THM]
+    \\ rw[] \\ decide_tac )
+  \\ rw[Abbr`c`]
+  \\ reverse(rw[Once lookup_fromList])
+  >- (
+    `F` suffices_by simp[]
+    \\ pop_assum mp_tac \\ simp[]
+    \\ qmatch_goalsub_abbrev_tac`z + w * b`
+    \\ `b < 5` by simp[Abbr`b`]
+    \\ pop_assum mp_tac \\ simp[NUMERAL_LESS_THM]
+    \\ rw[] \\ decide_tac )
+  \\ `25 * w ≤ LENGTH s`
+  by (
+    rw[Abbr`w`, b2w_def]
+    \\ `0 < 25` by simp[]
+    \\ `LENGTH s = 25 * (LENGTH s DIV 25) + LENGTH s MOD 25`
+        by metis_tac[DIVISION, MULT_COMM]
+    \\ metis_tac[LESS_EQ_ADD])
+  \\ rw[Once lookup_fromList]
+  \\ rw[Once lookup_fromList]
+  \\ rw[Once lookup_fromList]
+  \\ rw[Once lookup_fromList]
+  \\ rw[Once lookup_fromList]
+  \\ reverse(rw[Once lookup_fromList])
+  >- (
+    `F` suffices_by simp[]
+    \\ pop_assum mp_tac \\ simp[]
+    \\ qmatch_goalsub_abbrev_tac`w * q MOD 5 + r MOD w`
+    \\ `q MOD 5 < 5` by simp[]
+    \\ pop_assum mp_tac
+    \\ `r MOD w < w` by simp[]
+    \\ qmatch_goalsub_abbrev_tac`c < 5`
+    \\ rw[NUMERAL_LESS_THM]
+    \\ decide_tac )
+  \\ rw[lookup_fromList]
+  \\ qmatch_goalsub_abbrev_tac`(z + w * c) DIV w`
+  \\ simp[ADD_DIV_RWT, MULT_DIV]
+  \\ qmatch_asmsub_abbrev_tac`c = ((z + d) DIV w) MOD 5`
+  \\ `d = w * (x + 5 * y)`
+  by simp[Abbr`d`]
+  \\ qpat_x_assum`Abbrev(d = _)`kall_tac
+  \\ `(z + d) DIV w = (x + 5 * y) + z DIV w`
+  by (
+    pop_assum SUBST1_TAC
+    \\ rewrite_tac[Once ADD_COMM]
+    \\ rewrite_tac[Once MULT_COMM]
+    \\ DEP_REWRITE_TAC[ADD_DIV_ADD_DIV]
+    \\ simp[] )
+  \\ pop_assum SUBST_ALL_TAC
+  \\ `c = (x + z DIV w) MOD 5` by simp[Abbr`c`]
+  \\ qpat_x_assum`Abbrev(c = _)`kall_tac
+  \\ pop_assum SUBST_ALL_TAC
+  \\ qmatch_goalsub_abbrev_tac`w * c MOD 5`
+  \\ cheat
+QED
+
+(*
+Theorem sptfun_fromList_state_array_to_string[simp]:
+  w = a.w ∧ wf_state_array a ⇒
+  sptfun w (fromList (state_array_to_string a)) = a.A
+Proof
+  rw[sptfun_def, FORALL_PROD, FUN_EQ_THM, lookup_fromList,
+     state_array_to_string_compute, wf_state_array_def]
+  \\ reverse (rw[])
+  >- (
+    first_x_assum irule
+    \\ CCONTR_TAC \\ gs[]
+    \\ last_x_assum mp_tac \\ simp[]
+    \\ fs[NUMERAL_LESS_THM] )
+  \\ qmatch_goalsub_rename_tac`_ = a.A (x,y,z)`
+  \\ reverse(Cases_on`x < 5 ∧ y < 5 ∧ z < a.w`) >> fs[]
+  \\ AP_TERM_TAC \\ simp[]
+  \\ `z + (x * a.w + 5 * (y * a.w)) = (x + 5 * y) * a.w + z` by simp[]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ simp[DIV_MULT, LESS_DIV_EQ_ZERO]
+QED
+
+Theorem theta_spt:
+  wf_state_array a ⇒
+  sptfun a.w (theta_spt a.w (fromList (state_array_to_string a)))
+  =
+  (theta a).A
+Proof
+  rw[theta_def, FUN_EQ_THM, FORALL_PROD, restrict_def, sptfun_def]
+  \\ rw[theta_spt_def, lookup_mapi, lookup_fromList]
+  \\ rw[state_array_to_string_compute]
+*)
+
 Definition tabulate_array_def:
   tabulate_array a =
   a with A := restrict a.w (λ(x, y, z).
@@ -742,29 +968,34 @@ QED
 Theorem Keccak_tabulate_512 = Keccak_tabulate |>
   Q.SPEC`512` |> SIMP_RULE std_ss []
 
-Theorem state_array_to_string_compute:
-  state_array_to_string a =
-  GENLIST (λi.
-    a.A ((i DIV a.w) MOD 5, i DIV a.w DIV 5, i MOD a.w))
-  (5 * 5 * a.w)
+Definition Rnd_spt_def:
+  Rnd_spt a =
+    let θ = theta (sptify a) in
+    let ρ = rho (sptify θ) in
+    let π = pi (sptify ρ) in
+    let χ = chi (sptify π) in
+    let ι = iota (sptify χ) in
+      ι
+End
+
+Theorem Rnd_spt_Rnd:
+  wf_state_array a ==> Rnd_spt a = Rnd a
 Proof
-  rw[state_array_to_string_def, Plane_def, Lane_def]
-  \\ rw[LIST_EQ_REWRITE]
-  \\ rw[EL_APPEND_EQN]
-  \\ gs[LESS_DIV_EQ_ZERO]
-  THENL
-  let
-    fun tac i =
-      `x DIV a.w = ^(numSyntax.term_of_int i)` by gs[DIV_EQ_X]
-      \\ gs[]
-      \\ simp[Ntimes cvTheory.MOD_RECURSIVE i]
-    fun loop i = if i = 25 then [] else tac i :: loop (i + 1)
-  in
-    loop 1
-  end
+  strip_tac
+  \\ rw[Rnd_spt_def, Rnd_def]
+  \\ DEP_REWRITE_TAC[sptify_id]
+  \\ rw[]
 QED
 
-(* WIP -- too slow
+Theorem state_array_to_string_remove_restrict:
+  state_array_to_string <| w := w0; A := restrict w0 f |> =
+  state_array_to_string <| w := w0; A := f |>
+Proof
+  rw[state_array_to_string_compute, restrict_def, LIST_EQ_REWRITE]
+  \\ rw[DIV_LT_X]
+QED
+
+(*
 val cs = num_compset();
 val () = extend_compset [
   Tys [``:state_array``],
@@ -775,7 +1006,8 @@ val () = extend_compset [
     string_to_state_array_def,
     state_array_to_string_compute,
     tabulate_string_def,
-    Rnd_string_def,
+    sptify_def,
+    Rnd_spt_def,
     theta_c_def,
     theta_d_def,
     theta_def,
@@ -785,6 +1017,8 @@ val () = extend_compset [
     rc_step_def,
     rc_def,
     iota_compute,
+    Keccak_p_def
+    Rnd_spt_def
     Keccak_p_tabulate_def,
     chunks_def,
     pad10s1_def,
@@ -829,12 +1063,21 @@ val i0tm = ``12 + 2 * ^ltm - ^n1tm``
 val i1tm = ``12 + 2 * ^ltm - 1``
 val step2tm = ``Rnd_string ^wtm ^s1tm ^i0tm``
 
+Triviality EL_n_PLUS:
+  n + m < LENGTH ls ==> EL (n + m) ls = EL m (DROP n ls)
+Proof
+  rw[EL_DROP]
+QED
+
 val theta_arg  = ``tabulate_string ^wtm ^s1tm``
 val theta_res = ``theta ^theta_arg``
 val theta_res_th = CBV_CONV cs theta_res
 val theta_str = ``state_array_to_string ^(rhs(concl theta_res_th))``
-
-CBV_CONV cs theta_str
+      |> SIMP_CONV std_ss [state_array_to_string_remove_restrict]
+      |> SIMP_RULE std_ss [GSYM ADD_ASSOC, EL_n_PLUS, MOD_LESS]
+      |> concl |> rhs
+val A_abbrev_def = new_definition("A_abbrev_def",
+  ``A_abbrev = ^(theta_str |> funpow 2 rand |> rator |> funpow 2 rand)``)
 *)
 
 val _ = export_theory();
