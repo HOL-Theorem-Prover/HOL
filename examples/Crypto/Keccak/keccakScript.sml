@@ -1,12 +1,10 @@
 open HolKernel Parse boolLib bossLib dep_rewrite bitLib reduceLib combinLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
-     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory intLib;
+     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
 val _ = new_theory "keccak";
-
-val _ = numLib.prefer_num();
 
 Datatype:
   state_array =
@@ -410,7 +408,7 @@ Proof
     `2 <= x` by
       (Cases_on`x`>>fs[])>>
     last_x_assum (qspec_then`m` assume_tac)>>
-    intLib.ARITH_TAC)>>
+    DECIDE_TAC)>>
   last_x_assum(qspec_then`m+2` assume_tac)>>
   Cases_on`(m + 2) MOD x = 0`
   >- (
@@ -420,7 +418,7 @@ Proof
   simp[]>>
   `(m + 2) MOD x + (x − (m + 2) MOD x) = x` by
     (last_x_assum (qspec_then`m+2` assume_tac)>>
-    intLib.ARITH_TAC)>>
+     DECIDE_TAC)>>
   `m + (x − (m + 2) MOD x + 2)  =
    ((m + 2) DIV x + 1) * x` by fs[]>>
   metis_tac[]
