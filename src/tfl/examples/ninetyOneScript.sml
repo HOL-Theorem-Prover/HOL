@@ -159,8 +159,8 @@ Termination
                                          in
                                            (c + m, 202 - 2 * n)
                          else if c = 0 then (c,n)
-                         else if c = 1 ∧ 101 < n then (c,n)
-                         else if n ≤ 111 then (c - 1, 223 - 2 * n)
+                         else if c = 1 /\ 101 < n then (c,n)
+                         else if n <= 111 then (c - 1, 223 - 2 * n)
                          else (c,n))’ >>
   rpt strip_tac >> asm_simp_tac (srw_ss()) []
   >- (irule relationTheory.WF_inv_image >> irule pairTheory.WF_LEX >>
@@ -170,9 +170,9 @@ Termination
           disj2_tac >>
           ‘101 - n = 11 + (90 - n)’ by simp[] >>
           pop_assum SUBST1_TAC >> simp[ADD_DIV_RWT]) >>
-      ‘90 ≤ n’ by simp[] >>
+      ‘90 <= n’ by simp[] >>
       simp[pairTheory.LEX_DEF])
-  >- (Cases_on ‘c ≤ 1’ >> asm_simp_tac (srw_ss())[pairTheory.LEX_DEF]
+  >- (Cases_on ‘c <= 1’ >> asm_simp_tac (srw_ss())[pairTheory.LEX_DEF]
       >- (‘c = 1’ by simp[] >> simp[] >> rw[] >> gs[NOT_LESS, NOT_LESS_EQUAL] >>
           simp[DIV_EQ_X]) >>
       ‘1 < c’ by simp[] >> simp[] >>
@@ -182,8 +182,8 @@ Termination
 End
 
 Theorem NT_THM:
-  ∀c n. NT c n = if c = 0 then n
-                 else if n ≤ 10 * c + 91 then 91
+  !c n. NT c n = if c = 0 then n
+                 else if n <= 10 * c + 91 then 91
                  else n - c * 10
 Proof
   recInduct NT_ind >> rpt strip_tac >> Cases_on ‘c=0’
@@ -192,14 +192,14 @@ Proof
       Cases_on ‘100 < n’ >>
       pop_assum (fn th => RULE_ASSUM_TAC $ SRULE[th] >> assume_tac th) >>
       ONCE_REWRITE_TAC [NT_def] >>
-      REWRITE_TAC[ASSUME “c ≠ 0”]
+      REWRITE_TAC[ASSUME “c <> 0”]
       >- (asm_simp_tac bool_ss [] >>
           qpat_x_assum ‘NT _ _ = _’ kall_tac >>
           simp[]) >> simp[])
 QED
 
 Theorem NT_FUNPOW:
-  ∀c n. NT c n = FUNPOW (NT 1) c n
+  !c n. NT c n = FUNPOW (NT 1) c n
 Proof
   Induct >> simp[NT_THM] >> simp[FUNPOW, NT_THM] >>
   pop_assum (assume_tac o GSYM) >> simp[] >>
@@ -209,7 +209,7 @@ QED
 Overload TrN = “NT 1”
 
 (* looks just like the traditional nested-recursion definition:
-     ⊢ TrN n = if 100 < n then n − 10 else TrN (TrN (n + 11))
+     |- TrN n = if 100 < n then n - 10 else TrN (TrN (n + 11))
 *)
 Theorem TrN_recursive_characterisation =
         NT_def |> Q.SPECL [‘n’, ‘1’]
@@ -217,7 +217,7 @@ Theorem TrN_recursive_characterisation =
                |> REWRITE_RULE[FUNPOW, TWO, ONE]
                |> REWRITE_RULE[GSYM ONE]
 
-(* ⊢ TrN n = if n ≤ 101 then 91 else n − 10 *)
+(* |- TrN n = if n <= 101 then 91 else n - 10 *)
 Theorem TrN_thm = NT_THM |> Q.SPECL [‘1’, ‘n’] |> SRULE[]
 
 
