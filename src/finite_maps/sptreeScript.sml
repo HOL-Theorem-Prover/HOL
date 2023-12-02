@@ -1880,6 +1880,19 @@ Theorem wf_LN[simp]: wf LN
 Proof rw[wf_def]
 QED
 
+Theorem wf_fromList[simp]:
+  wf (fromList ls)
+Proof
+  rw[fromList_def]
+  \\ qmatch_goalsub_abbrev_tac`FOLDL f (0,LN) ls`
+  \\ qho_match_abbrev_tac`P (FOLDL f (0,LN) ls)`
+  \\ `FOLDL f (0,LN) ls = FOLDL f (0,LN) ls /\ P (FOLDL f (0,LN) ls)`
+  suffices_by rw[]
+  \\ irule rich_listTheory.FOLDL_CONG_invariant
+  \\ simp[Abbr`P`, Abbr`f`, pairTheory.FORALL_PROD]
+  \\ rw[wf_insert]
+QED
+
 val splem1 = Q.prove(`
   a <> 0 ==> (a-1) DIV 2 < a`,
   simp[DIV_LT_X]);

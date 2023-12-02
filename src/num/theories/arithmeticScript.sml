@@ -3785,6 +3785,24 @@ val FUNPOW_1 = store_thm ("FUNPOW_1",
   REWRITE_TAC [FUNPOW, ONE]);
 val _ = export_rewrites ["FUNPOW_1"]
 
+Theorem FUNPOW_CONG:
+  !n x f g.
+  (!m. m < n ==> f (FUNPOW f m x) = g (FUNPOW f m x))
+  ==>
+  FUNPOW f n x = FUNPOW g n x
+Proof
+  INDUCT_TAC \\ SRW_TAC[][FUNPOW_SUC]
+  THEN METIS_TAC[LESS_SUC, LESS_SUC_REFL]
+QED
+
+Theorem FUNPOW_invariant:
+  !m x.
+  P x /\ (!x. P x ==> P (f x)) ==>
+  P (FUNPOW f m x)
+Proof
+  Induct \\ SRW_TAC[][FUNPOW_SUC]
+QED
+
 val NRC_0 = save_thm ("NRC_0", CONJUNCT1 NRC);
 val _ = export_rewrites ["NRC_0"]
 
