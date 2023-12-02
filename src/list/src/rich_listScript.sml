@@ -348,7 +348,7 @@ val MAP_FOLDL = Q.store_thm ("MAP_FOLDL",
 Theorem FOLDL_CONG_invariant:
   !P f1 f2 l e.
   P e /\
-  (!x a. MEM x l ∧ P a ==> f1 a x = f2 a x /\ P (f2 a x))
+  (!x a. MEM x l /\ P a ==> f1 a x = f2 a x /\ P (f2 a x))
   ==>
   FOLDL f1 e l = FOLDL f2 e l /\ P (FOLDL f2 e l)
 Proof
