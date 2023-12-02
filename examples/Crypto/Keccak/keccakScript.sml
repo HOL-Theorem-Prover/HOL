@@ -730,7 +730,10 @@ Proof
   \\ qpat_x_assum`Abbrev(c = _)`kall_tac
   \\ pop_assum SUBST_ALL_TAC
   \\ qmatch_goalsub_abbrev_tac`w * c MOD 5`
-  \\ cheat
+  \\ rw[]
+  \\ `z DIV w = 0` by
+    metis_tac[LESS_DIV_EQ_ZERO]
+  \\ fs[Abbr`c`,LEFT_ADD_DISTRIB]
 QED
 
 (*
