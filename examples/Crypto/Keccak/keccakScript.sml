@@ -7,7 +7,7 @@ open optionTheory pairTheory arithmeticTheory combinTheory listTheory
 
 val _ = new_theory "keccak";
 
-(* TODO: move *)
+(* TODO: move -- pending merge *)
 Theorem LOG_POW:
   1 < b ==> LOG b (b ** n) = n
 Proof
@@ -16,8 +16,53 @@ Proof
   \\ rw[EXP]
 QED
 
+(* TODO: move -- pending merge *)
+Theorem FUNPOW_CONG:
+  !n x f g.
+  (!m. m < n ==> f (FUNPOW f m x) = g (FUNPOW f m x))
+  ==>
+  FUNPOW f n x = FUNPOW g n x
+Proof
+  Induct \\ rw[FUNPOW_SUC]
+  \\ AP_TERM_TAC \\ rw[]
+QED
+
+(* TODO: move -- pending merge *)
+Theorem FUNPOW_invariant:
+  !m x.
+  P x /\ (!x. P x ==> P (f x)) ==>
+  P (FUNPOW f m x)
+Proof
+  Induct \\ rw[FUNPOW_SUC]
+QED
+
+(* TODO: move -- pending merge *)
+Theorem FOLDL_CONG_invariant:
+  !P f1 f2 l e.
+  P e /\
+  (!x a. MEM x l ∧ P a ==> f1 a x = f2 a x /\ P (f2 a x))
+  ==>
+  FOLDL f1 e l = FOLDL f2 e l /\ P (FOLDL f2 e l)
+Proof
+  ntac 3 gen_tac \\ Induct \\ rw[]
+QED
+
+(* TODO: move -- pending merge*)
+Theorem wf_fromList[simp]:
+  wf (fromList ls)
+Proof
+  rw[fromList_def]
+  \\ qmatch_goalsub_abbrev_tac`FOLDL f (0,LN) ls`
+  \\ qho_match_abbrev_tac`P (FOLDL f (0,LN) ls)`
+  \\ `FOLDL f (0,LN) ls = FOLDL f (0,LN) ls /\ P (FOLDL f (0,LN) ls)`
+  suffices_by rw[]
+  \\ irule FOLDL_CONG_invariant
+  \\ simp[Abbr`P`, Abbr`f`, FORALL_PROD]
+  \\ rw[wf_insert]
+QED
+
 (* TODO: move *)
-Theorem FUNPOW_COMPOSE:
+Theorem FUNPOW_COMPOSE_INV:
   !n x f g h.
   (!m. m < n ==> h(g(FUNPOW f m x)) = FUNPOW f m x)
   ==>
@@ -29,34 +74,74 @@ Proof
 QED
 
 (* TODO: move *)
-Theorem FUNPOW_CONG:
-  !n x f g.
-  (!m. m < n ==> f (FUNPOW f m x) = g (FUNPOW f m x))
-  ==>
-  FUNPOW f n x = FUNPOW g n x
-Proof
-  Induct \\ rw[FUNPOW_SUC]
-  \\ AP_TERM_TAC \\ rw[]
-QED
+Definition flatten_across_def:
+  flatten_across ls =
+    if EVERY NULL ls then []
+    else
+      let ls = FILTER ($<> []) ls in
+      MAP HD ls ++ flatten_across (MAP TL ls)
+Termination
+  WF_REL_TAC`measure (LENGTH o FLAT)`
+  \\ rw[LENGTH_FLAT, MAP_MAP_o]
+  \\ Induct_on`ls` \\ rw[NULL_EQ] \\ gs[]
+  \\ Cases_on`h` \\ fs[ADD1]
+  \\ Cases_on`EXISTS ($~ o NULL) ls` \\ gs[]
+  \\ `FILTER (\y. y <> []) ls = []`
+  by ( rw[FILTER_EQ_NIL] \\ fs[EVERY_MEM, NULL_EQ] )
+  \\ simp[]
+End
 
 (* TODO: move *)
-Theorem FUNPOW_invariant:
-  !m x.
-  P x /\ (!x. P x ==> P (f x)) ==>
-  P (FUNPOW f m x)
+Theorem spts_to_alist_null:
+  !i ls. spts_to_alist i ls = [] <=> EVERY isEmpty (MAP SND ls)
 Proof
-  Induct \\ rw[FUNPOW_SUC]
+  recInduct spts_to_alist_ind \\ rw[]
+  \\ rw[Once spts_to_alist_def]
+  >- fs[EVERY_combine_rle, EVERY_MAP, o_DEF]
+  \\ fs[]
+  \\ qmatch_asmsub_abbrev_tac`_ = spt_centers i z`
+  \\ Cases_on`spt_centers i z` \\ gs[]
+  \\ cheat
 QED
 
-(* TODO: move *)
-Theorem FOLDL_CONG_invariant:
-  !P f1 f2 l e.
-  P e /\
-  (!x a. MEM x l ∧ P a ==> f1 a x = f2 a x /\ P (f2 a x))
-  ==>
-  FOLDL f1 e l = FOLDL f2 e l /\ P (FOLDL f2 e l)
+Triviality MAP_SND_spts_to_alist:
+  !i ts ls.
+    MAP SND ts = MAP fromList ls ==>
+    MAP SND (spts_to_alist i ts) =
+    flatten_across ls
 Proof
-  ntac 3 gen_tac \\ Induct \\ rw[]
+  recInduct spts_to_alist_ind \\ rw[]
+  \\ rw[Once flatten_across_def]
+  >- (
+    rw[spts_to_alist_null, EVERY_MAP]
+    \\ fs[EVERY_MEM, FORALL_PROD, MAP_EQ_EVERY2]
+    \\ rw[]
+    \\ imp_res_tac LIST_REL_MEM_IMP
+    \\ fs[] \\ rw[] \\ gs[NULL_EQ]
+    \\ rw[fromList_def] )
+  \\ qmatch_asmsub_abbrev_tac`EXISTS ($~ o P o SND) crle`
+  \\ `EXISTS ($~ o P o SND) crle = ~EVERY (P o SND) crle` by simp[]
+  \\ `EVERY (P o SND) crle = EVERY (P o SND) xs`
+  by simp[Abbr`crle`, EVERY_combine_rle]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ pop_assum SUBST_ALL_TAC
+  \\ gs[Abbr`P`]
+  \\ Cases_on`spt_centers i crle` \\ gs[]
+  \\ cheat
+QED
+
+Theorem flatten_across_sing[simp]:
+  !ls. flatten_across [ls] = ls
+Proof
+  Induct \\ rw[Once flatten_across_def]
+QED
+
+Theorem fromList_toSortedAList:
+  MAP SND (toSortedAList (fromList ls)) = ls
+Proof
+  rw[toSortedAList_def]
+  \\ DEP_REWRITE_TAC[MAP_SND_spts_to_alist |> SPEC_ALL |> Q.GEN`ls` |> Q.SPEC`[ls]`]
+  \\ rw[]
 QED
 
 Datatype:
@@ -891,7 +976,7 @@ Proof
   \\ qmatch_goalsub_abbrev_tac`FUNPOW f m (s,i)`
   \\ qspecl_then[`m`,`(s,i)`,`f`,
        `string_to_state_array ## I`,
-       `state_array_to_string ## I`]mp_tac FUNPOW_COMPOSE
+       `state_array_to_string ## I`]mp_tac FUNPOW_COMPOSE_INV
   \\ simp[Abbr`f`, o_DEF, LAMBDA_PROD, PAIR_MAP]
   \\ qmatch_goalsub_abbrev_tac`FST (FUNPOW k m x)`
   \\ qmatch_goalsub_abbrev_tac`FUNPOW d m x`
