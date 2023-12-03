@@ -89,6 +89,7 @@ Proof
   simp[]
 QED
 
+(* TODO: move -- pending merge *)
 Theorem ALL_DISTINCT_MAP_FST_toSortedAList:
   ALL_DISTINCT (MAP FST (toSortedAList t))
 Proof
@@ -144,7 +145,7 @@ Proof
   rw[size_domain]
 QED
 
-(* TODO: move *)
+(* TODO: move -- pending merge *)
 Theorem LENGTH_toAList[simp]:
   LENGTH (toAList t) = size t
 Proof
@@ -157,7 +158,7 @@ Proof
   simp[MEM_MAP,EXISTS_PROD,MEM_toAList,domain_lookup]
 QED
 
-(* TODO: move *)
+(* TODO: move -- pending merge *)
 Theorem LENGTH_toSortedAList[simp]:
   LENGTH (toSortedAList t) = size t
 Proof
@@ -169,6 +170,65 @@ Proof
   AP_TERM_TAC>>
   rw[pred_setTheory.EXTENSION]>>
   simp[MEM_MAP,EXISTS_PROD,MEM_toSortedAList,domain_lookup]
+QED
+
+(* TODO: move -- pending merge *)
+Theorem union_disjoint_sym:
+  !t1 t2.
+  wf t1 /\ wf t2 /\ DISJOINT (domain t1) (domain t2) ==>
+  union t1 t2 = union t2 t1
+Proof
+  Induct
+  >- rw[]
+  >- (
+    rw[union_def]
+    \\ CASE_TAC \\ rw[union_def]
+    \\ fs[] )
+  \\ rw[wf_def] \\ fs[]
+  \\ rw[Once union_def]
+  \\ CASE_TAC \\ rw[Once union_def, SimpRHS] \\ fs[]
+  \\ first_x_assum irule \\ fs[wf_def]
+  \\ gs[pred_setTheory.DISJOINT_IMAGE]
+  \\ simp[pred_setTheory.DISJOINT_SYM]
+QED
+
+(* TODO: move -- pending merge *)
+Theorem fromList_fromAList:
+  !l. fromList l = fromAList (ZIP (COUNT_LIST (LENGTH l), l))
+Proof
+  ho_match_mp_tac SNOC_INDUCT
+  \\ conj_tac >- rw[fromList_def, fromAList_def, COUNT_LIST_def]
+  \\ rw[fromList_def, COUNT_LIST_def]
+  \\ rw[FOLDL_SNOC, UNCURRY]
+  \\ rw[GSYM COUNT_LIST_def]
+  \\ rw[COUNT_LIST_SNOC, ZIP_SNOC, LENGTH_COUNT_LIST]
+  \\ rw[SNOC_APPEND, fromAList_append]
+  \\ DEP_ONCE_REWRITE_TAC[union_disjoint_sym]
+  \\ simp[union_insert_LN]
+  \\ simp[wf_fromAList, wf_insert, domain_fromAList,
+          MAP_ZIP, LENGTH_COUNT_LIST, MEM_COUNT_LIST]
+  \\ AP_THM_TAC \\ AP_THM_TAC
+  \\ AP_TERM_TAC
+  \\ qmatch_goalsub_abbrev_tac`FOLDL f e l`
+  \\ `∀l e. FST (FOLDL f e l) = FST e + LENGTH l` suffices_by simp[Abbr`e`]
+  \\ Induct \\ rw[Abbr`f`, UNCURRY]
+QED
+
+(* TODO: move -- pending merge *)
+Theorem set_MAP_FST_toAList_domain:
+  set (MAP FST (toAList t)) = domain t
+Proof
+  rw[pred_setTheory.EXTENSION]
+  \\ `(ALOOKUP (toAList t) x <> NONE) <=> x IN domain t`
+  suffices_by metis_tac[alistTheory.ALOOKUP_NONE]
+  \\ simp[ALOOKUP_toAList, lookup_NONE_domain]
+QED
+
+(* TODO: move -- pending merge *)
+Theorem size_fromList[simp]:
+  size (fromList ls) = LENGTH ls
+Proof
+  rw[size_domain, domain_fromList]
 QED
 
 Datatype:
@@ -691,6 +751,31 @@ Proof
   \\ fs[NUMERAL_LESS_THM]
 QED
 
+Theorem index_to_triple_to_index[simp]:
+  0 < w ==>
+  triple_to_index w (index_to_triple w i) = i
+Proof
+  rw[index_to_triple_def, triple_to_index_def]
+  \\ rw[DIV_DIV_DIV_MULT]
+  \\ rewrite_tac[MULT_ASSOC]
+  \\ `0 < 5 * w` by simp[]
+  \\ drule_then(qspec_then`i`strip_assume_tac) DIVISION
+  \\ qpat_x_assum`i = _`(fn th => CONV_TAC(RAND_CONV(REWR_CONV th)))
+  \\ simp[]
+  \\ simp[DIV_MOD_MOD_DIV]
+  \\ qspec_then`w`mp_tac DIVISION
+  \\ impl_tac >- rw[]
+  \\ disch_then(qspec_then`i MOD (5 * w)`strip_assume_tac)
+  \\ qpat_x_assum`i MOD _ = _`(fn th => CONV_TAC(RAND_CONV(REWR_CONV th)))
+  \\ simp[]
+  \\ qspecl_then[`5`,`w`]mp_tac MOD_MULT_MOD
+  \\ simp[]
+QED
+
+Definition isFromList_def:
+  isFromList t = ∃ls. t = fromList ls
+End
+
 (* if y is fixed 0 *)
 (* i -> (i DIV w, i MOD w) *)
 (* (x, z) -> x * w + z *)
@@ -711,6 +796,16 @@ Definition theta_spt_def:
        THE (lookup (((i DIV w + 1) MOD 5) * w + (i MOD w + PRE w) MOD w) c)))
       (5 * w)) in
   mapi (λi b. b ≠ THE (lookup (((i DIV w) MOD 5) * w + i MOD w) d)) t
+End
+
+Definition spt_to_state_array_def:
+  spt_to_state_array t =
+  let w = b2w $ size t in
+  <| w := w
+   ; A := restrict w $
+          λp. case lookup (triple_to_index w p) t
+              of SOME b => b | NONE => F
+   |>
 End
 
 Definition sptify_def:
@@ -750,7 +845,7 @@ Definition sptfun_def:
     of NONE => F | SOME b => b
 End
 
-Theorem theta_spt:
+Theorem theta_spt_fromList:
   w = b2w $ LENGTH s
   ⇒
   sptfun w (theta_spt w (fromList s)) =
@@ -848,37 +943,142 @@ Proof
   \\ fs[Abbr`c`,LEFT_ADD_DISTRIB]
 QED
 
-(*
-Theorem sptfun_fromList_state_array_to_string[simp]:
-  w = a.w ∧ wf_state_array a ⇒
-  sptfun w (fromList (state_array_to_string a)) = a.A
+Theorem spt_to_state_array_sptfun:
+  (spt_to_state_array t).A = sptfun (b2w $ size t) t
 Proof
-  rw[sptfun_def, FORALL_PROD, FUN_EQ_THM, lookup_fromList,
-     state_array_to_string_compute, wf_state_array_def]
-  \\ reverse (rw[])
+  rw[spt_to_state_array_def, FUN_EQ_THM, sptfun_def, FORALL_PROD]
+  \\ rw[triple_to_index_def, restrict_def]
+QED
+
+Theorem spt_to_state_array_w[simp]:
+  (spt_to_state_array t).w = b2w $ size t
+Proof
+  rw[spt_to_state_array_def]
+QED
+
+Theorem size_theta_spt[simp]:
+  size (theta_spt w t) = size t
+Proof
+  rw[theta_spt_def]
+QED
+
+Definition spt_to_string_def:
+  spt_to_string t = MAP SND (toSortedAList t)
+End
+
+Theorem theta_spt_isFromList:
+  isFromList t ⇒ isFromList (theta_spt w t)
+Proof
+  rw[theta_spt_def]
+  \\ rw[isFromList_def]
+  \\ rw[fromList_fromAList]
+  \\ rw[mapi_Alist]
+  \\ qmatch_goalsub_abbrev_tac`MAP f (toAList t)`
+  \\ qexists_tac`GENLIST (λi. THE (ALOOKUP (MAP f (toAList t)) i)) (size t)`
+  \\ simp[]
+  \\ DEP_REWRITE_TAC[spt_eq_thm]
+  \\ simp[wf_fromAList]
+  \\ simp[lookup_fromAList]
+  \\ GEN_TAC \\ AP_THM_TAC
+  \\ irule alistTheory.ALOOKUP_ALL_DISTINCT_PERM_same
+  \\ simp[MAP_MAP_o]
+  \\ `MAP (FST o f) = MAP FST`
+  by rw[FUN_EQ_THM, Abbr`f`, LIST_EQ_REWRITE, EL_MAP]
+  \\ conj_asm1_tac >- simp[ALL_DISTINCT_MAP_FST_toAList]
+  \\ gs[]
+  \\ simp[MAP_ZIP, LENGTH_COUNT_LIST]
+  \\ reverse conj_asm2_tac
   >- (
-    first_x_assum irule
-    \\ CCONTR_TAC \\ gs[]
-    \\ last_x_assum mp_tac \\ simp[]
-    \\ fs[NUMERAL_LESS_THM] )
-  \\ qmatch_goalsub_rename_tac`_ = a.A (x,y,z)`
-  \\ reverse(Cases_on`x < 5 ∧ y < 5 ∧ z < a.w`) >> fs[]
-  \\ AP_TERM_TAC \\ simp[]
-  \\ `z + (x * a.w + 5 * (y * a.w)) = (x + 5 * y) * a.w + z` by simp[]
-  \\ pop_assum SUBST_ALL_TAC
-  \\ simp[DIV_MULT, LESS_DIV_EQ_ZERO]
+    irule sortingTheory.PERM_ALL_DISTINCT
+    \\ simp[set_MAP_FST_toAList_domain, all_distinct_count_list, MEM_COUNT_LIST]
+    \\ fs[isFromList_def, domain_fromList] )
+  \\ rw[pred_setTheory.EXTENSION, FORALL_PROD]
+  \\ rw[EQ_IMP_THM]
+  >- (
+    rw[MEM_ZIP, LENGTH_COUNT_LIST]
+    \\ qmatch_asmsub_rename_tac`MEM (k,v) _`
+    \\ qexists_tac`k`
+    \\ pop_assum mp_tac \\ simp[MEM_MAP, PULL_EXISTS, FORALL_PROD, MEM_toAList]
+    \\ qx_genl_tac[`k1`,`v1`]
+    \\ strip_tac
+    \\ `k = k1` by fs[Abbr`f`]
+    \\ gvs[]
+    \\ `k ∈ domain t` by metis_tac[domain_lookup]
+    \\ gs[isFromList_def, domain_fromList, EL_COUNT_LIST]
+    \\ simp[alistTheory.ALOOKUP_MAP_2, Abbr`f`, LAMBDA_PROD]
+    \\ qmatch_goalsub_abbrev_tac`OPTION_MAP f`
+    \\ fs[]
+    \\ simp[ALOOKUP_toAList] )
+  \\ pop_assum mp_tac
+  \\ simp[MEM_ZIP, LENGTH_COUNT_LIST, PULL_EXISTS, EL_COUNT_LIST]
+  \\ qx_gen_tac`n` \\ strip_tac
+  \\ gs[EL_COUNT_LIST]
+  \\ rw[MEM_MAP, MEM_toAList, EXISTS_PROD]
+  \\ simp[alistTheory.ALOOKUP_MAP_2, Abbr`f`, LAMBDA_PROD]
+  \\ qmatch_goalsub_abbrev_tac`OPTION_MAP f` \\ fs[]
+  \\ simp[ALOOKUP_toAList]
+  \\ Cases_on`lookup n t` \\ simp[]
+  \\ fs[lookup_NONE_domain]
+  \\ gs[isFromList_def, domain_fromList]
+QED
+
+Theorem spt_to_state_array_to_string:
+  isFromList t ∧ divides 25 (size t) ⇒
+  state_array_to_string (spt_to_state_array t) =
+  spt_to_string t
+Proof
+  rw[spt_to_state_array_def, state_array_to_string_compute, spt_to_string_def]
+  \\ rw[GSYM GENLIST_EL_MAP]
+  \\ simp[LIST_EQ_REWRITE]
+  \\ conj_asm1_tac
+  >- (
+    gs[b2w_def]
+    \\ pop_assum mp_tac \\ rw[divides_def]
+    \\ simp[] )
+  \\ rw[restrict_def]
+  \\ qmatch_goalsub_abbrev_tac`triple_to_index w tr`
+  \\ `tr = index_to_triple w x` by rw[index_to_triple_def]
+  \\ rw[]
+  \\ `x DIV w DIV 5 < 5`
+  by ( simp[DIV_DIV_DIV_MULT] \\ simp[DIV_LT_X] )
+  \\ simp[]
+  \\ gs[isFromList_def, toSortedAList_fromList, lookup_fromList,
+        EL_ZIP, LENGTH_COUNT_LIST]
+QED
+
+Theorem spt_to_state_array_fromList:
+  spt_to_state_array (fromList ls) =
+  string_to_state_array ls
+Proof
+  rw[spt_to_state_array_def, string_to_state_array_def, restrict_def,
+     FUN_EQ_THM, FORALL_PROD]
+  \\ qmatch_goalsub_rename_tac`(x,y,z)`
+  \\ simp[triple_to_index_def, LEFT_ADD_DISTRIB]
+  \\ simp[lookup_fromList]
+  \\ rw[]
+  \\ CCONTR_TAC \\ gs[]
+  \\ qmatch_asmsub_abbrev_tac`x * w`
+  \\ `triple_to_index w (x,y,z) < 25 * w`
+  by ( irule index_less \\ rw[] )
+  \\ fs[triple_to_index_def]
+  \\ gs[Abbr`w`, b2w_def]
+  \\ qmatch_asmsub_abbrev_tac`_ < b DIV 25`
+  \\ qspec_then`25`mp_tac DIVISION \\ simp[]
+  \\ qexists_tac`b`
+  \\ strip_tac \\ gs[]
 QED
 
 Theorem theta_spt:
-  wf_state_array a ⇒
-  sptfun a.w (theta_spt a.w (fromList (state_array_to_string a)))
-  =
-  (theta a).A
+  isFromList t ⇒
+  spt_to_state_array (theta_spt (b2w $ size t) t) =
+  (theta (spt_to_state_array t))
 Proof
-  rw[theta_def, FUN_EQ_THM, FORALL_PROD, restrict_def, sptfun_def]
-  \\ rw[theta_spt_def, lookup_mapi, lookup_fromList]
-  \\ rw[state_array_to_string_compute]
-*)
+  rw[state_array_component_equality] \\
+  rw[spt_to_state_array_sptfun] \\
+  gs[isFromList_def] \\
+  simp[theta_spt_fromList] \\
+  simp[spt_to_state_array_fromList]
+QED
 
 Definition tabulate_array_def:
   tabulate_array a =
