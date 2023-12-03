@@ -1857,4 +1857,19 @@ Proof
   \\ simp[QSORT_SORTED]
 QED
 
+Theorem SORTED_FST_ZIP:
+  !R ls rs.
+  SORTED R ls /\ LENGTH ls = LENGTH rs ==>
+  SORTED (\x y. R (FST x) (FST y)) (ZIP (ls,rs))
+Proof
+  ho_match_mp_tac SORTED_IND>>rw[]
+  >- (Cases_on`rs`>>fs[])>>
+  `?a b rss. rs = a::b::rss` by
+    (Cases_on`rs` \\ fs[] \\
+     metis_tac[list_CASES,LENGTH_NIL,SUC_NOT]) >>
+  fs[]>>
+  first_x_assum(qspec_then`b::rss` mp_tac)>>
+  simp[]
+QED
+
 val _ = export_theory();

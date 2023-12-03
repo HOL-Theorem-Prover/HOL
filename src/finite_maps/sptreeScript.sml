@@ -2357,6 +2357,43 @@ Proof
   \\ simp [SORTED_toSortedAList, relationTheory.irreflexive_def]
 QED
 
+Theorem toSortedAList_fromList:
+  toSortedAList (fromList ls) = ZIP (COUNT_LIST (LENGTH ls),ls)
+Proof
+  mp_tac (sortingTheory.SORTED_ALL_DISTINCT_LIST_TO_SET_EQ
+          |> INST_TYPE [alpha |-> ``:num # 'a``]
+          |> Q.SPEC`(\x y. FST x < FST y)`)>>
+  impl_keep_tac >-
+    fs[relationTheory.transitive_def,relationTheory.antisymmetric_def]>>
+  disch_then match_mp_tac>>
+  CONJ_ASM1_TAC
+  >- (
+    match_mp_tac sortingTheory.SORTED_weaken>>
+    irule_at Any (SORTED_toSortedAList |> SIMP_RULE std_ss [sortingTheory.sorted_map])>>
+    simp[])>>
+  CONJ_ASM1_TAC
+  >- (
+    match_mp_tac sortingTheory.SORTED_FST_ZIP>>
+    simp[rich_listTheory.LENGTH_COUNT_LIST,sortingTheory.sorted_lt_count_list])>>
+  rw[]
+  >- (
+    irule sortingTheory.SORTED_ALL_DISTINCT>>
+    first_x_assum (irule_at Any)>>
+    first_x_assum (irule_at Any)>>
+    simp[relationTheory.irreflexive_def])
+  >- (
+    irule sortingTheory.SORTED_ALL_DISTINCT>>
+    first_x_assum (irule_at Any)>>
+    first_x_assum (irule_at Any)>>
+    simp[relationTheory.irreflexive_def])
+  >- (
+    rw[pred_setTheory.EXTENSION]>>
+    Cases_on`x`>>
+    DEP_REWRITE_TAC[MEM_ZIP]>>
+    simp[rich_listTheory.LENGTH_COUNT_LIST,MEM_toSortedAList,lookup_fromList]>>
+    metis_tac[rich_listTheory.EL_COUNT_LIST])
+QED
+
 val _ = let
   open sptreepp
 in
