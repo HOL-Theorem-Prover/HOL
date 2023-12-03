@@ -89,6 +89,14 @@ Proof
   simp[]
 QED
 
+Theorem ALL_DISTINCT_MAP_FST_toSortedAList:
+  ALL_DISTINCT (MAP FST (toSortedAList t))
+Proof
+  irule sortingTheory.SORTED_ALL_DISTINCT>>
+  irule_at Any (SORTED_toSortedAList)>>
+  simp[relationTheory.irreflexive_def]
+QED
+
 (* TODO: move -- pending merge *)
 Theorem toSortedAList_fromList:
   toSortedAList (fromList ls) = ZIP (COUNT_LIST (LENGTH ls),ls)
@@ -97,7 +105,7 @@ Proof
   impl_keep_tac >-
     fs[relationTheory.transitive_def,relationTheory.antisymmetric_def]>>
   disch_then match_mp_tac>>
-  CONJ_ASM1_TAC
+  CONJ_TAC
   >- (
     match_mp_tac sortingTheory.SORTED_weaken>>
     irule_at Any (SORTED_toSortedAList |> SIMP_RULE std_ss [sortingTheory.sorted_map])>>
@@ -107,11 +115,8 @@ Proof
     match_mp_tac SORTED_FST_ZIP>>
     simp[LENGTH_COUNT_LIST,sortingTheory.sorted_lt_count_list])>>
   rw[]
-  >- (
-    irule sortingTheory.SORTED_ALL_DISTINCT>>
-    first_x_assum (irule_at Any)>>
-    first_x_assum (irule_at Any)>>
-    simp[relationTheory.irreflexive_def])
+  >-
+    metis_tac[ALL_DISTINCT_MAP_FST_toSortedAList,ALL_DISTINCT_MAP]
   >- (
     irule sortingTheory.SORTED_ALL_DISTINCT>>
     first_x_assum (irule_at Any)>>
@@ -140,32 +145,30 @@ Proof
 QED
 
 (* TODO: move *)
-Theorem LENGTH_spts_to_alist[simp]:
-  !i ls. LENGTH (spts_to_alist i ls) = SUM (MAP (size o SND) ls)
+Theorem LENGTH_toAList[simp]:
+  LENGTH (toAList t) = size t
 Proof
-  recInduct spts_to_alist_ind
-  \\ rw[]
-  \\ rw[Once spts_to_alist_def, EVERY_combine_rle, SUM_eq_0]
-  >- fs[EVERY_MEM, MEM_MAP]
-  \\ qmatch_asmsub_abbrev_tac`EXISTS ($~ o P) crl`
-  \\ `~(EVERY P crl)`
-  by (
-    qunabbrev_tac`crl`
-    \\ qunabbrev_tac`P`
-    \\ rewrite_tac[EVERY_combine_rle]
-    \\ fs[] )
-  \\ fs[]
-  \\ Cases_on`spt_centers i crl` \\ gs[]
-  \\ gs[MAP_MAP_o, o_DEF]
-  \\ simp[Abbr`crl`]
-  \\ cheat
+  `LENGTH (toAList t) = LENGTH (MAP FST (toAList t))` by simp[]>>
+  pop_assum SUBST_ALL_TAC>>
+  DEP_REWRITE_TAC[GSYM ALL_DISTINCT_CARD_LIST_TO_SET]>>
+  simp[ALL_DISTINCT_MAP_FST_toAList,size_domain]>>
+  AP_TERM_TAC>>
+  rw[pred_setTheory.EXTENSION]>>
+  simp[MEM_MAP,EXISTS_PROD,MEM_toAList,domain_lookup]
 QED
 
 (* TODO: move *)
 Theorem LENGTH_toSortedAList[simp]:
   LENGTH (toSortedAList t) = size t
 Proof
-  rw[toSortedAList_def]
+  `LENGTH (toSortedAList t) =
+    LENGTH (MAP FST (toSortedAList t))` by simp[]>>
+  pop_assum SUBST_ALL_TAC>>
+  DEP_REWRITE_TAC[GSYM ALL_DISTINCT_CARD_LIST_TO_SET]>>
+  simp[ALL_DISTINCT_MAP_FST_toSortedAList,size_domain]>>
+  AP_TERM_TAC>>
+  rw[pred_setTheory.EXTENSION]>>
+  simp[MEM_MAP,EXISTS_PROD,MEM_toSortedAList,domain_lookup]
 QED
 
 Datatype:
