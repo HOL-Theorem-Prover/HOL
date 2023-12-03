@@ -2483,6 +2483,21 @@ Proof
   simp[MEM_MAP,pairTheory.EXISTS_PROD,MEM_toSortedAList,domain_lookup]
 QED
 
+Theorem set_MAP_FST_toAList_domain:
+  set (MAP FST (toAList t)) = domain t
+Proof
+  rw[EXTENSION]
+  \\ `(ALOOKUP (toAList t) x <> NONE) <=> x IN domain t`
+  suffices_by metis_tac[ALOOKUP_NONE]
+  \\ simp[ALOOKUP_toAList, lookup_NONE_domain]
+QED
+
+Theorem size_fromList[simp]:
+  size (fromList ls) = LENGTH ls
+Proof
+  rw[size_domain, domain_fromList]
+QED
+
 val _ = let
   open sptreepp
 in
