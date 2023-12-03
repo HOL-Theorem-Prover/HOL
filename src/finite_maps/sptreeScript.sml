@@ -2016,6 +2016,18 @@ Proof
   Induct_on `xs` \\ fs [list_size_def]
 QED
 
+Theorem size_map[simp]:
+  size (map f t) = size t
+Proof
+  rw[size_domain]
+QED
+
+Theorem size_mapi[simp]:
+  size (mapi f t) = size t
+Proof
+  rw[size_domain]
+QED
+
 val spt_size_def = definition "spt_size_def";
 
 Theorem SUM_MAP_same_LE:
