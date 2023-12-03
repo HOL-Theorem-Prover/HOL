@@ -73,39 +73,23 @@ Proof
   \\ rw[FUNPOW_SUC]
 QED
 
-(* TODO: move *)
-Definition flatten_across_def:
-  flatten_across ls =
-    if EVERY NULL ls then []
-    else
-      let ls = FILTER ($<> []) ls in
-      MAP HD ls ++ flatten_across (MAP TL ls)
-Termination
-  WF_REL_TAC`measure (LENGTH o FLAT)`
-  \\ rw[LENGTH_FLAT, MAP_MAP_o]
-  \\ Induct_on`ls` \\ rw[NULL_EQ] \\ gs[]
-  \\ Cases_on`h` \\ fs[ADD1]
-  \\ Cases_on`EXISTS ($~ o NULL) ls` \\ gs[]
-  \\ `FILTER (\y. y <> []) ls = []`
-  by ( rw[FILTER_EQ_NIL] \\ fs[EVERY_MEM, NULL_EQ] )
-  \\ simp[]
-End
-
+(* TODO: move -- pending merge *)
 Theorem SORTED_FST_ZIP:
-  ∀R ls rs.
-  SORTED R ls ∧ LENGTH ls = LENGTH rs ⇒
-  SORTED (λx y. R (FST x) (FST y)) (ZIP (ls,rs))
+  !R ls rs.
+  SORTED R ls /\ LENGTH ls = LENGTH rs ==>
+  SORTED (\x y. R (FST x) (FST y)) (ZIP (ls,rs))
 Proof
   ho_match_mp_tac sortingTheory.SORTED_IND>>rw[]
   >-
     (Cases_on`rs`>>fs[])>>
-  `∃a b rss. rs = a::b::rss` by
+  `?a b rss. rs = a::b::rss` by
     metis_tac[quantHeuristicsTheory.LIST_LENGTH_COMPARE_SUC]>>
   fs[]>>
   first_x_assum(qspec_then`b::rss` mp_tac)>>
   simp[]
 QED
 
+(* TODO: move -- pending merge *)
 Theorem toSortedAList_fromList:
   toSortedAList (fromList ls) = ZIP (COUNT_LIST (LENGTH ls),ls)
 Proof
@@ -141,12 +125,47 @@ Proof
     metis_tac[EL_COUNT_LIST])
 QED
 
-(* TODO: badly named? *)
-Theorem fromList_toSortedAList:
-  MAP SND (toSortedAList (fromList ls)) = ls
+(* TODO: move -- pending merge *)
+Theorem size_map[simp]:
+  size (map f t) = size t
 Proof
-  assume_tac (Q.AP_TERM `MAP SND` toSortedAList_fromList)>>
-  simp[MAP_ZIP,LENGTH_COUNT_LIST]
+  rw[size_domain]
+QED
+
+(* TODO: move -- pending merge *)
+Theorem size_mapi[simp]:
+  size (mapi f t) = size t
+Proof
+  rw[size_domain]
+QED
+
+(* TODO: move *)
+Theorem LENGTH_spts_to_alist[simp]:
+  !i ls. LENGTH (spts_to_alist i ls) = SUM (MAP (size o SND) ls)
+Proof
+  recInduct spts_to_alist_ind
+  \\ rw[]
+  \\ rw[Once spts_to_alist_def, EVERY_combine_rle, SUM_eq_0]
+  >- fs[EVERY_MEM, MEM_MAP]
+  \\ qmatch_asmsub_abbrev_tac`EXISTS ($~ o P) crl`
+  \\ `~(EVERY P crl)`
+  by (
+    qunabbrev_tac`crl`
+    \\ qunabbrev_tac`P`
+    \\ rewrite_tac[EVERY_combine_rle]
+    \\ fs[] )
+  \\ fs[]
+  \\ Cases_on`spt_centers i crl` \\ gs[]
+  \\ gs[MAP_MAP_o, o_DEF]
+  \\ simp[Abbr`crl`]
+  \\ cheat
+QED
+
+(* TODO: move *)
+Theorem LENGTH_toSortedAList[simp]:
+  LENGTH (toSortedAList t) = size t
+Proof
+  rw[toSortedAList_def]
 QED
 
 Datatype:
