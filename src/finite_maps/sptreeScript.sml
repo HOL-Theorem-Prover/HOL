@@ -620,6 +620,27 @@ val domain_fromList = store_thm(
   qmatch_assum_rename_tac `nn < SUC (LENGTH l)` >>
   Cases_on `nn` >> fs[] >> metis_tac[ADD1]);
 
+val size_domain = Q.store_thm("size_domain",
+  `!t. size t = CARD (domain t)`,
+  Induct_on `t`
+  >- rw[size_def, domain_def]
+  >- rw[size_def, domain_def]
+  >> rw[CARD_UNION_EQN, CARD_INJ_IMAGE]
+  >-
+   (`IMAGE (\n. 2 * n + 2) (domain t) INTER
+     IMAGE (\n. 2 * n + 1) (domain t') = {}`
+      by (rw[GSYM DISJOINT_DEF, IN_DISJOINT]
+          >> Cases_on `ODD x`
+          >> fs[ODD_EXISTS, ADD1, oddevenlemma])
+    >> simp[]) >>
+  `(({0} INTER IMAGE (\n. 2 * n + 2) (domain t)) = {}) /\
+   (({0} UNION (IMAGE (\n. 2 * n + 2) (domain t)))
+        INTER (IMAGE (\n. 2 * n + 1) (domain t')) = {})`
+  by (rw[GSYM DISJOINT_DEF, IN_DISJOINT]
+      >> Cases_on `ODD x`
+      >> fs[ODD_EXISTS, ADD1, oddevenlemma])
+  >> simp[]);
+
 val ODD_IMP_NOT_ODD = prove(
   ``!k. ODD k ==> ~(ODD (k-1))``,
   Cases >> fs [ODD]);
@@ -947,6 +968,18 @@ val ALL_DISTINCT_MAP_FST_toAList = store_thm("ALL_DISTINCT_MAP_FST_toAList",
     simp[] ) >>
   simp[MEM_MAP,PULL_EXISTS,pairTheory.EXISTS_PROD] >>
   metis_tac[ODD_EVEN,lemmas] )
+
+Theorem LENGTH_toAList[simp]:
+  LENGTH (toAList t) = size t
+Proof
+  `LENGTH (toAList t) = LENGTH (MAP FST (toAList t))` by simp[]>>
+  pop_assum SUBST_ALL_TAC>>
+  DEP_REWRITE_TAC[GSYM ALL_DISTINCT_CARD_LIST_TO_SET]>>
+  simp[ALL_DISTINCT_MAP_FST_toAList,size_domain]>>
+  AP_TERM_TAC>>
+  rw[pred_setTheory.EXTENSION]>>
+  simp[MEM_MAP,pairTheory.EXISTS_PROD,MEM_toAList,domain_lookup]
+QED
 
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
 
@@ -1658,27 +1691,6 @@ val mapi_Alist = Q.store_thm(
   simp[spt_eq_thm, wf_mapi, wf_fromAList, lookup_fromAList] >>
   srw_tac[boolSimps.ETA_ss][lookup_mapi, ALOOKUP_MAP_lemma, ALOOKUP_toAList]);
 
-val size_domain = Q.store_thm("size_domain",
-  `!t. size t = CARD (domain t)`,
-  Induct_on `t`
-  >- rw[size_def, domain_def]
-  >- rw[size_def, domain_def]
-  >> rw[CARD_UNION_EQN, CARD_INJ_IMAGE]
-  >-
-   (`IMAGE (\n. 2 * n + 2) (domain t) INTER
-     IMAGE (\n. 2 * n + 1) (domain t') = {}`
-      by (rw[GSYM DISJOINT_DEF, IN_DISJOINT]
-          >> Cases_on `ODD x`
-          >> fs[ODD_EXISTS, ADD1, oddevenlemma])
-    >> simp[]) >>
-  `(({0} INTER IMAGE (\n. 2 * n + 2) (domain t)) = {}) /\
-   (({0} UNION (IMAGE (\n. 2 * n + 2) (domain t)))
-        INTER (IMAGE (\n. 2 * n + 1) (domain t')) = {})`
-  by (rw[GSYM DISJOINT_DEF, IN_DISJOINT]
-      >> Cases_on `ODD x`
-      >> fs[ODD_EXISTS, ADD1, oddevenlemma])
-  >> simp[]);
-
 val num_set_domain_eq = Q.store_thm("num_set_domain_eq",
   `!t1 t2:unit spt.
      wf t1 /\ wf t2 ==>
@@ -1691,6 +1703,25 @@ val num_set_domain_eq = Q.store_thm("num_set_domain_eq",
 val union_num_set_sym = Q.store_thm ("union_num_set_sym",
   `!(t1:unit spt) t2. union t1 t2 = union t2 t1`,
   Induct >> fs[union_def] >> rw[] >> CASE_TAC >> fs[union_def]);
+
+Theorem union_disjoint_sym:
+  !t1 t2.
+  wf t1 /\ wf t2 /\ DISJOINT (domain t1) (domain t2) ==>
+  union t1 t2 = union t2 t1
+Proof
+  Induct
+  >- rw[]
+  >- (
+    rw[union_def]
+    \\ CASE_TAC \\ rw[union_def]
+    \\ fs[] )
+  \\ rw[wf_def] \\ fs[]
+  \\ rw[Once union_def]
+  \\ CASE_TAC \\ rw[Once union_def, SimpRHS] \\ fs[]
+  \\ first_x_assum irule \\ fs[wf_def]
+  \\ gs[pred_setTheory.DISJOINT_IMAGE]
+  \\ simp[pred_setTheory.DISJOINT_SYM]
+QED
 
 Theorem difference_sub:
   (difference a b = LN) ==> (domain a SUBSET domain b)
@@ -1880,6 +1911,19 @@ Theorem wf_LN[simp]: wf LN
 Proof rw[wf_def]
 QED
 
+Theorem wf_fromList[simp]:
+  wf (fromList ls)
+Proof
+  rw[fromList_def]
+  \\ qmatch_goalsub_abbrev_tac`FOLDL f (0,LN) ls`
+  \\ qho_match_abbrev_tac`P (FOLDL f (0,LN) ls)`
+  \\ `FOLDL f (0,LN) ls = FOLDL f (0,LN) ls /\ P (FOLDL f (0,LN) ls)`
+  suffices_by rw[]
+  \\ irule rich_listTheory.FOLDL_CONG_invariant
+  \\ simp[Abbr`P`, Abbr`f`, pairTheory.FORALL_PROD]
+  \\ rw[wf_insert]
+QED
+
 val splem1 = Q.prove(`
   a <> 0 ==> (a-1) DIV 2 < a`,
   simp[DIV_LT_X]);
@@ -2001,6 +2045,18 @@ Theorem list_size_APPEND:
   list_size f (xs ++ ys) = list_size f xs + list_size f ys
 Proof
   Induct_on `xs` \\ fs [list_size_def]
+QED
+
+Theorem size_map[simp]:
+  size (map f t) = size t
+Proof
+  rw[size_domain]
+QED
+
+Theorem size_mapi[simp]:
+  size (mapi f t) = size t
+Proof
+  rw[size_domain]
 QED
 
 val spt_size_def = definition "spt_size_def";
@@ -2342,6 +2398,104 @@ Proof
   \\ irule sortingTheory.SORTED_ALL_DISTINCT
   \\ qexists_tac `(<)`
   \\ simp [SORTED_toSortedAList, relationTheory.irreflexive_def]
+QED
+
+Theorem toSortedAList_fromList:
+  toSortedAList (fromList ls) = ZIP (COUNT_LIST (LENGTH ls),ls)
+Proof
+  mp_tac (sortingTheory.SORTED_ALL_DISTINCT_LIST_TO_SET_EQ
+          |> INST_TYPE [alpha |-> ``:num # 'a``]
+          |> Q.SPEC`(\x y. FST x < FST y)`)>>
+  impl_keep_tac >-
+    fs[relationTheory.transitive_def,relationTheory.antisymmetric_def]>>
+  disch_then match_mp_tac>>
+  CONJ_ASM1_TAC
+  >- (
+    match_mp_tac sortingTheory.SORTED_weaken>>
+    irule_at Any (SORTED_toSortedAList |> SIMP_RULE std_ss [sortingTheory.sorted_map])>>
+    simp[])>>
+  CONJ_ASM1_TAC
+  >- (
+    match_mp_tac sortingTheory.SORTED_FST_ZIP>>
+    simp[rich_listTheory.LENGTH_COUNT_LIST,sortingTheory.sorted_lt_count_list])>>
+  rw[]
+  >- (
+    irule sortingTheory.SORTED_ALL_DISTINCT>>
+    first_x_assum (irule_at Any)>>
+    first_x_assum (irule_at Any)>>
+    simp[relationTheory.irreflexive_def])
+  >- (
+    irule sortingTheory.SORTED_ALL_DISTINCT>>
+    first_x_assum (irule_at Any)>>
+    first_x_assum (irule_at Any)>>
+    simp[relationTheory.irreflexive_def])
+  >- (
+    rw[pred_setTheory.EXTENSION]>>
+    Cases_on`x`>>
+    DEP_REWRITE_TAC[MEM_ZIP]>>
+    simp[rich_listTheory.LENGTH_COUNT_LIST,MEM_toSortedAList,lookup_fromList]>>
+    metis_tac[rich_listTheory.EL_COUNT_LIST])
+QED
+
+Theorem fromList_fromAList:
+  !l. fromList l = fromAList (ZIP (COUNT_LIST (LENGTH l), l))
+Proof
+  ho_match_mp_tac SNOC_INDUCT
+  \\ conj_tac >- rw[fromList_def, fromAList_def,
+                    rich_listTheory.COUNT_LIST_def]
+  \\ rw[fromList_def, rich_listTheory.COUNT_LIST_def]
+  \\ rw[FOLDL_SNOC, pairTheory.UNCURRY]
+  \\ rw[GSYM rich_listTheory.COUNT_LIST_def]
+  \\ rw[rich_listTheory.COUNT_LIST_SNOC,
+        rich_listTheory.ZIP_SNOC,
+        rich_listTheory.LENGTH_COUNT_LIST]
+  \\ rw[SNOC_APPEND, fromAList_append]
+  \\ DEP_ONCE_REWRITE_TAC[union_disjoint_sym]
+  \\ simp[union_insert_LN]
+  \\ simp[wf_fromAList, wf_insert, domain_fromAList,
+          MAP_ZIP, rich_listTheory.LENGTH_COUNT_LIST,
+          rich_listTheory.MEM_COUNT_LIST]
+  \\ AP_THM_TAC \\ AP_THM_TAC
+  \\ AP_TERM_TAC
+  \\ qmatch_goalsub_abbrev_tac`FOLDL f e l`
+  \\ `!l e. FST (FOLDL f e l) = FST e + LENGTH l` suffices_by simp[Abbr`e`]
+  \\ Induct \\ rw[Abbr`f`, pairTheory.UNCURRY]
+QED
+
+Theorem ALL_DISTINCT_MAP_FST_toSortedAList:
+  ALL_DISTINCT (MAP FST (toSortedAList t))
+Proof
+  irule sortingTheory.SORTED_ALL_DISTINCT>>
+  irule_at Any (SORTED_toSortedAList)>>
+  simp[relationTheory.irreflexive_def]
+QED
+
+Theorem LENGTH_toSortedAList[simp]:
+  LENGTH (toSortedAList t) = size t
+Proof
+  `LENGTH (toSortedAList t) =
+    LENGTH (MAP FST (toSortedAList t))` by simp[]>>
+  pop_assum SUBST_ALL_TAC>>
+  DEP_REWRITE_TAC[GSYM ALL_DISTINCT_CARD_LIST_TO_SET]>>
+  simp[ALL_DISTINCT_MAP_FST_toSortedAList,size_domain]>>
+  AP_TERM_TAC>>
+  rw[pred_setTheory.EXTENSION]>>
+  simp[MEM_MAP,pairTheory.EXISTS_PROD,MEM_toSortedAList,domain_lookup]
+QED
+
+Theorem set_MAP_FST_toAList_domain:
+  set (MAP FST (toAList t)) = domain t
+Proof
+  rw[EXTENSION]
+  \\ `(ALOOKUP (toAList t) x <> NONE) <=> x IN domain t`
+  suffices_by metis_tac[ALOOKUP_NONE]
+  \\ simp[ALOOKUP_toAList, lookup_NONE_domain]
+QED
+
+Theorem size_fromList[simp]:
+  size (fromList ls) = LENGTH ls
+Proof
+  rw[size_domain, domain_fromList]
 QED
 
 val _ = let

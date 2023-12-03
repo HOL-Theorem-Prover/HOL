@@ -345,6 +345,16 @@ val MAP_FOLDL = Q.store_thm ("MAP_FOLDL",
    THEN GEN_TAC
    THEN REFL_TAC);
 
+Theorem FOLDL_CONG_invariant:
+  !P f1 f2 l e.
+  P e /\
+  (!x a. MEM x l /\ P a ==> f1 a x = f2 a x /\ P (f2 a x))
+  ==>
+  FOLDL f1 e l = FOLDL f2 e l /\ P (FOLDL f2 e l)
+Proof
+  ntac 3 gen_tac \\ Induct \\ rw[]
+QED
+
 val FILTER_FOLDR = Q.store_thm ("FILTER_FOLDR",
    `!P l. FILTER P l = FOLDR (\x l'. if P x then CONS x l' else l') [] l`,
    BasicProvers.Induct_on `l`

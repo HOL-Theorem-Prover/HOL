@@ -171,6 +171,12 @@ val LOG_UNIQUE = Q.store_thm("LOG_UNIQUE",
    THEN METIS_TAC [exp_lemma5, DECIDE ``a < b <=> SUC a <= b``, LESS_EQ_TRANS,
                    NOT_LESS, LOG, EXP]);
 
+val LOG_POW = Q.store_thm("LOG_POW",
+  `!b n. 1n < b ==> (LOG b (b ** n) = n)`,
+  REPEAT STRIP_TAC
+  THEN irule LOG_UNIQUE
+  THEN SRW_TAC [ARITH_ss] [EXP]);
+
 val LOG_ADD1 = Q.store_thm("LOG_ADD1",
    `!n a b. 0n < n /\ 1n < a /\ 0 < b ==>
             (LOG a (a ** SUC n * b) = SUC (LOG a (a ** n * b)))`,
