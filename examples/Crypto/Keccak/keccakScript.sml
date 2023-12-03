@@ -91,57 +91,62 @@ Termination
   \\ simp[]
 End
 
-(* TODO: move *)
-Theorem spts_to_alist_null:
-  !i ls. spts_to_alist i ls = [] <=> EVERY isEmpty (MAP SND ls)
+Theorem SORTED_FST_ZIP:
+  ∀R ls rs.
+  SORTED R ls ∧ LENGTH ls = LENGTH rs ⇒
+  SORTED (λx y. R (FST x) (FST y)) (ZIP (ls,rs))
 Proof
-  recInduct spts_to_alist_ind \\ rw[]
-  \\ rw[Once spts_to_alist_def]
-  >- fs[EVERY_combine_rle, EVERY_MAP, o_DEF]
-  \\ fs[]
-  \\ qmatch_asmsub_abbrev_tac`_ = spt_centers i z`
-  \\ Cases_on`spt_centers i z` \\ gs[]
-  \\ cheat
+  ho_match_mp_tac sortingTheory.SORTED_IND>>rw[]
+  >-
+    (Cases_on`rs`>>fs[])>>
+  `∃a b rss. rs = a::b::rss` by
+    metis_tac[quantHeuristicsTheory.LIST_LENGTH_COMPARE_SUC]>>
+  fs[]>>
+  first_x_assum(qspec_then`b::rss` mp_tac)>>
+  simp[]
 QED
 
-Triviality MAP_SND_spts_to_alist:
-  !i ts ls.
-    MAP SND ts = MAP fromList ls ==>
-    MAP SND (spts_to_alist i ts) =
-    flatten_across ls
+Theorem toSortedAList_fromList:
+  toSortedAList (fromList ls) = ZIP (COUNT_LIST (LENGTH ls),ls)
 Proof
-  recInduct spts_to_alist_ind \\ rw[]
-  \\ rw[Once flatten_across_def]
+  mp_tac (sortingTheory.SORTED_ALL_DISTINCT_LIST_TO_SET_EQ |> INST_TYPE [alpha |-> ``:num # 'a``] |> Q.SPEC`(λx y. FST x < FST y)`)>>
+  impl_keep_tac >-
+    fs[relationTheory.transitive_def,relationTheory.antisymmetric_def]>>
+  disch_then match_mp_tac>>
+  CONJ_ASM1_TAC
   >- (
-    rw[spts_to_alist_null, EVERY_MAP]
-    \\ fs[EVERY_MEM, FORALL_PROD, MAP_EQ_EVERY2]
-    \\ rw[]
-    \\ imp_res_tac LIST_REL_MEM_IMP
-    \\ fs[] \\ rw[] \\ gs[NULL_EQ]
-    \\ rw[fromList_def] )
-  \\ qmatch_asmsub_abbrev_tac`EXISTS ($~ o P o SND) crle`
-  \\ `EXISTS ($~ o P o SND) crle = ~EVERY (P o SND) crle` by simp[]
-  \\ `EVERY (P o SND) crle = EVERY (P o SND) xs`
-  by simp[Abbr`crle`, EVERY_combine_rle]
-  \\ pop_assum SUBST_ALL_TAC
-  \\ pop_assum SUBST_ALL_TAC
-  \\ gs[Abbr`P`]
-  \\ Cases_on`spt_centers i crle` \\ gs[]
-  \\ cheat
+    match_mp_tac sortingTheory.SORTED_weaken>>
+    irule_at Any (SORTED_toSortedAList |> SIMP_RULE std_ss [sortingTheory.sorted_map])>>
+    simp[])>>
+  CONJ_ASM1_TAC
+  >- (
+    match_mp_tac SORTED_FST_ZIP>>
+    simp[LENGTH_COUNT_LIST,sortingTheory.sorted_lt_count_list])>>
+  rw[]
+  >- (
+    irule sortingTheory.SORTED_ALL_DISTINCT>>
+    first_x_assum (irule_at Any)>>
+    first_x_assum (irule_at Any)>>
+    simp[relationTheory.irreflexive_def])
+  >- (
+    irule sortingTheory.SORTED_ALL_DISTINCT>>
+    first_x_assum (irule_at Any)>>
+    first_x_assum (irule_at Any)>>
+    simp[relationTheory.irreflexive_def])
+  >- (
+    rw[pred_setTheory.EXTENSION]>>
+    Cases_on`x`>>
+    DEP_REWRITE_TAC[MEM_ZIP]>>
+    simp[LENGTH_COUNT_LIST,MEM_toSortedAList,lookup_fromList]>>
+    metis_tac[EL_COUNT_LIST])
 QED
 
-Theorem flatten_across_sing[simp]:
-  !ls. flatten_across [ls] = ls
-Proof
-  Induct \\ rw[Once flatten_across_def]
-QED
-
+(* TODO: badly named? *)
 Theorem fromList_toSortedAList:
   MAP SND (toSortedAList (fromList ls)) = ls
 Proof
-  rw[toSortedAList_def]
-  \\ DEP_REWRITE_TAC[MAP_SND_spts_to_alist |> SPEC_ALL |> Q.GEN`ls` |> Q.SPEC`[ls]`]
-  \\ rw[]
+  assume_tac (Q.AP_TERM `MAP SND` toSortedAList_fromList)>>
+  simp[MAP_ZIP,LENGTH_COUNT_LIST]
 QED
 
 Datatype:
