@@ -1704,6 +1704,25 @@ val union_num_set_sym = Q.store_thm ("union_num_set_sym",
   `!(t1:unit spt) t2. union t1 t2 = union t2 t1`,
   Induct >> fs[union_def] >> rw[] >> CASE_TAC >> fs[union_def]);
 
+Theorem union_disjoint_sym:
+  !t1 t2.
+  wf t1 /\ wf t2 /\ DISJOINT (domain t1) (domain t2) ==>
+  union t1 t2 = union t2 t1
+Proof
+  Induct
+  >- rw[]
+  >- (
+    rw[union_def]
+    \\ CASE_TAC \\ rw[union_def]
+    \\ fs[] )
+  \\ rw[wf_def] \\ fs[]
+  \\ rw[Once union_def]
+  \\ CASE_TAC \\ rw[Once union_def, SimpRHS] \\ fs[]
+  \\ first_x_assum irule \\ fs[wf_def]
+  \\ gs[pred_setTheory.DISJOINT_IMAGE]
+  \\ simp[pred_setTheory.DISJOINT_SYM]
+QED
+
 Theorem difference_sub:
   (difference a b = LN) ==> (domain a SUBSET domain b)
 Proof
@@ -2416,6 +2435,31 @@ Proof
     DEP_REWRITE_TAC[MEM_ZIP]>>
     simp[rich_listTheory.LENGTH_COUNT_LIST,MEM_toSortedAList,lookup_fromList]>>
     metis_tac[rich_listTheory.EL_COUNT_LIST])
+QED
+
+Theorem fromList_fromAList:
+  !l. fromList l = fromAList (ZIP (COUNT_LIST (LENGTH l), l))
+Proof
+  ho_match_mp_tac SNOC_INDUCT
+  \\ conj_tac >- rw[fromList_def, fromAList_def,
+                    rich_listTheory.COUNT_LIST_def]
+  \\ rw[fromList_def, rich_listTheory.COUNT_LIST_def]
+  \\ rw[FOLDL_SNOC, pairTheory.UNCURRY]
+  \\ rw[GSYM rich_listTheory.COUNT_LIST_def]
+  \\ rw[rich_listTheory.COUNT_LIST_SNOC,
+        rich_listTheory.ZIP_SNOC,
+        rich_listTheory.LENGTH_COUNT_LIST]
+  \\ rw[SNOC_APPEND, fromAList_append]
+  \\ DEP_ONCE_REWRITE_TAC[union_disjoint_sym]
+  \\ simp[union_insert_LN]
+  \\ simp[wf_fromAList, wf_insert, domain_fromAList,
+          MAP_ZIP, rich_listTheory.LENGTH_COUNT_LIST,
+          rich_listTheory.MEM_COUNT_LIST]
+  \\ AP_THM_TAC \\ AP_THM_TAC
+  \\ AP_TERM_TAC
+  \\ qmatch_goalsub_abbrev_tac`FOLDL f e l`
+  \\ `!l e. FST (FOLDL f e l) = FST e + LENGTH l` suffices_by simp[Abbr`e`]
+  \\ Induct \\ rw[Abbr`f`, pairTheory.UNCURRY]
 QED
 
 Theorem ALL_DISTINCT_MAP_FST_toSortedAList:
