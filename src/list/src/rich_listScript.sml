@@ -2965,6 +2965,14 @@ val MEM_FRONT = Q.store_thm ("MEM_FRONT",
    `!l e y. MEM y (FRONT (e::l)) ==> MEM y (e::l)`,
    Induct_on `l` THEN FULL_SIMP_TAC list_ss [DISJ_IMP_THM, MEM]);
 
+Theorem MEM_FRONT_NOT_NIL :
+    !l y. l <> [] /\ MEM y (FRONT l) ==> MEM y l
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘l’ >> FULL_SIMP_TAC std_ss []
+ >> MATCH_MP_TAC MEM_FRONT >> ASM_REWRITE_TAC []
+QED
+
 val FRONT_APPEND = Q.store_thm ("FRONT_APPEND",
    `!l1 l2 e. FRONT (l1 ++ e::l2) = l1 ++ FRONT (e::l2)`,
    Induct_on `l1` THEN ASM_SIMP_TAC list_ss [FRONT_DEF])
@@ -2997,6 +3005,13 @@ val EL_FRONT = Q.store_thm ("EL_FRONT",
 val MEM_LAST = Q.store_thm ("MEM_LAST",
    `!e l. MEM (LAST (e::l)) (e::l)`,
    Induct_on `l` THEN ASM_SIMP_TAC arith_ss [LAST_CONS, Once MEM]);
+
+Theorem MEM_LAST_NOT_NIL :
+    !e l. l <> [] ==> MEM (LAST l) l
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘l’ >> FULL_SIMP_TAC std_ss [MEM_LAST]
+QED
 
 val DROP_CONS_EL = Q.store_thm ("DROP_CONS_EL",
    `!n l. n < LENGTH l ==> (DROP n l = EL n l :: DROP (SUC n) l)`,
@@ -3082,6 +3097,15 @@ Theorem ALL_DISTINCT_TAKE :
 Proof
     Induct >> simp[TAKE_def] >> rw[]
  >> METIS_TAC [MEM_TAKE]
+QED
+
+Theorem ALL_DISTINCT_FRONT :
+    !l. l <> [] /\ ALL_DISTINCT l ==> ALL_DISTINCT (FRONT l)
+Proof
+    rpt STRIP_TAC
+ >> ‘ALL_DISTINCT l = ALL_DISTINCT (SNOC (LAST l) (FRONT l))’
+      by rw [SNOC_LAST_FRONT]
+ >> FULL_SIMP_TAC std_ss [ALL_DISTINCT_SNOC]
 QED
 
 val MAP_SND_FILTER_NEQ = Q.store_thm("MAP_SND_FILTER_NEQ",
