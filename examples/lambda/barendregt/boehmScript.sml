@@ -737,47 +737,6 @@ Proof
  >> rw [Abbr ‘p3’]
 QED
 
-(* Definition 10.3.10 (ii) *)
-Definition is_faithful_def :
-    is_faithful p Fs pi =
-       !M N. M IN Fs /\ N IN Fs ==>
-            (subterm_eta_equiv p M N <=> equivalent (apply pi M) (apply pi N)) /\
-            (!X. IS_SOME (ltree_lookup (BT X M) p) <=>
-                 solvable (apply pi M))
-End
-
-Definition term_agrees_upto_def :
-    term_agrees_upto M N p <=>
-      !q. q <<= p ==> !X. ltree_el (BT X M) q = ltree_el (BT X N) q
-End
-
-(* Definition 10.3.10 (iv) *)
-val _ = set_fixity "agrees_upto" (Infixr 490);
-Definition agrees_upto_def :
-    $agrees_upto Fs p = !M N. M IN Fs /\ N IN Fs ==> term_agrees_upto M N p
-End
-
-(* Lemma 10.3.11 (3) [1. p.251] *)
-Theorem agrees_upto_lemma :
-    !Fs p. Fs agrees_upto p ==>
-           ?pi. Boehm_transform pi /\
-                !M N. M IN Fs /\ N IN Fs ==>
-                     (subterm_eta_equiv p M N <=>
-                      subterm_eta_equiv p (apply pi M) (apply pi N))
-Proof
-    cheat
-QED
-
-(* Proposition 10.3.13 [1, p.253]
-
-   Used by separability_thm
- *)
-Theorem agrees_upto_thm :
-    !Fs p. Fs agrees_upto p ==> ?pi. Boehm_transform pi /\ is_faithful p Fs pi
-Proof
-    cheat
-QED
-
 (*---------------------------------------------------------------------------*
  *  Separability of terms
  *---------------------------------------------------------------------------*)
