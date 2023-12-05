@@ -781,7 +781,8 @@ End
 (* (x, z) -> x * w + z *)
 
 Definition theta_spt_def:
-  theta_spt w t =
+  theta_spt t =
+  let w = b2w $ size t in
   let c = fromList (
     GENLIST (λi.
       (THE (lookup i t) ≠
@@ -848,7 +849,7 @@ End
 Theorem theta_spt_fromList:
   w = b2w $ LENGTH s
   ⇒
-  sptfun w (theta_spt w (fromList s)) =
+  sptfun w (theta_spt (fromList s)) =
   (theta $ string_to_state_array s).A
 Proof
   rw[FUN_EQ_THM, FORALL_PROD, theta_def, sptfun_def, restrict_def] \\
@@ -859,9 +860,11 @@ Proof
   \\ Cases_on`z < b2w $ LENGTH s` \\ simp[]
   \\ qmatch_assum_abbrev_tac`z < w`
   \\ rewrite_tac[theta_spt_def]
-  \\ qmatch_goalsub_abbrev_tac`LET _ c`
   \\ rw[]
   \\ qmatch_goalsub_abbrev_tac`THE (lookup _ d)`
+  \\ pop_assum mp_tac
+  \\ qmatch_goalsub_abbrev_tac`THE (lookup _ c)`
+  \\ strip_tac
   \\ rw[lookup_mapi]
   \\ reverse(rw[lookup_fromList])
   >- (
@@ -938,8 +941,7 @@ Proof
   \\ pop_assum SUBST_ALL_TAC
   \\ qmatch_goalsub_abbrev_tac`w * c MOD 5`
   \\ rw[]
-  \\ `z DIV w = 0` by
-    metis_tac[LESS_DIV_EQ_ZERO]
+  \\ `z DIV w = 0` by metis_tac[LESS_DIV_EQ_ZERO]
   \\ fs[Abbr`c`,LEFT_ADD_DISTRIB]
 QED
 
@@ -957,7 +959,7 @@ Proof
 QED
 
 Theorem size_theta_spt[simp]:
-  size (theta_spt w t) = size t
+  size (theta_spt t) = size t
 Proof
   rw[theta_spt_def]
 QED
@@ -967,7 +969,7 @@ Definition spt_to_string_def:
 End
 
 Theorem theta_spt_isFromList:
-  isFromList t ⇒ isFromList (theta_spt w t)
+  isFromList t ⇒ isFromList (theta_spt t)
 Proof
   rw[theta_spt_def]
   \\ rw[isFromList_def]
@@ -1070,7 +1072,7 @@ QED
 
 Theorem theta_spt:
   isFromList t ⇒
-  spt_to_state_array (theta_spt (b2w $ size t) t) =
+  spt_to_state_array (theta_spt t) =
   (theta (spt_to_state_array t))
 Proof
   rw[state_array_component_equality] \\
@@ -1079,6 +1081,24 @@ Proof
   simp[theta_spt_fromList] \\
   simp[spt_to_state_array_fromList]
 QED
+
+Definition rho_spt_def:
+  rho_spt a =
+    let w = b2w $ size a in
+    let (x,y,t,a') =
+    WHILE (λ(x,y,t,a'). t ≤ 23)
+      (λ(x,y,t,a'). (y, (2 * x + 3 * y) MOD 5, t + 1,
+        let tt = (t + 1) * (t + 2) DIV 2 in
+        let ww = w * (tt DIV w) in
+        SND $
+        WHILE (λ(z,a'). z < w) (λ(z,a'). (z+1,
+          insert (triple_to_index w (x,y,z))
+            (THE $ lookup (triple_to_index w (x,y,(z + ww - tt) MOD w)) a)
+          a'))
+          (0, a')))
+      (1,0,0,a)
+    in a'
+End
 
 Definition tabulate_array_def:
   tabulate_array a =
