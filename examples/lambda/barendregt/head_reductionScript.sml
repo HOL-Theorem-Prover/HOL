@@ -14,6 +14,7 @@ val _ = ParseExtras.temp_loose_equality()
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 Inductive hreduce1 :
+[~BETA:]
   (∀v M N. hreduce1 (LAM v M @@ N) ([N/v]M))
 [~LAM:]
   (∀v M1 M2. hreduce1 M1 M2 ⇒ hreduce1 (LAM v M1) (LAM v M2))
@@ -1320,12 +1321,19 @@ Proof
  >> rw []
 QED
 
-Theorem LAMl_size_hnf :
-    !vs y args. LAMl_size (LAMl vs (VAR y @* args)) = LENGTH vs
+Theorem LAMl_size_hnf[simp] :
+    LAMl_size (LAMl vs (VAR y @* args)) = LENGTH vs
 Proof
-    rpt GEN_TAC
- >> MATCH_MP_TAC LAMl_size_LAMl
+    MATCH_MP_TAC LAMl_size_LAMl
  >> Cases_on ‘args = []’ >- rw []
+ >> ‘?x l. args = SNOC x l’ by METIS_TAC [SNOC_CASES]
+ >> rw [appstar_SNOC]
+QED
+
+Theorem LAMl_size_hnf_absfree[simp] :
+    LAMl_size (VAR y @* args) = 0
+Proof
+    Cases_on ‘args = []’ >- rw []
  >> ‘?x l. args = SNOC x l’ by METIS_TAC [SNOC_CASES]
  >> rw [appstar_SNOC]
 QED

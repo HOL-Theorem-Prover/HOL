@@ -238,7 +238,7 @@ Proof
  >> Q.ABBREV_TAC ‘fm = FEMPTY |++ ZIP (vs,Ns0)’
  >> Know ‘LAMl vs M @* Ns0 == fm ' M’
  >- (Q.UNABBREV_TAC ‘fm’ \\
-     MATCH_MP_TAC lameq_LAMl_appstar >> rw [])
+     MATCH_MP_TAC lameq_LAMl_appstar_ssub_closed >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs M @* Ns0 @* Ns1 == fm ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
  >> ‘fm ' M @* Ns1 == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM]
@@ -290,7 +290,7 @@ Proof
  >> rw [solvable_def, closed_substitution_instances_def]
  >> Q.ABBREV_TAC ‘vss = FDOM fm’
  >> ‘FINITE vss’ by rw [FDOM_FINITE, Abbr ‘vss’]
- (* preparing for lameq_LAMl_appstar *)
+ (* preparing for lameq_LAMl_appstar_ssub_closed *)
  >> Q.ABBREV_TAC ‘vs = SET_TO_LIST vss’
  >> ‘ALL_DISTINCT vs’ by PROVE_TAC [Abbr ‘vs’, ALL_DISTINCT_SET_TO_LIST]
  >> Q.ABBREV_TAC ‘Ps = MAP (\v. fm ' v) vs’
@@ -316,7 +316,7 @@ Proof
  >> Rewr'
  >> DISCH_TAC
  >> Know ‘LAMl vs M @* Ps == (FEMPTY |++ ZIP (vs,Ps)) ' M’
- >- (MATCH_MP_TAC lameq_LAMl_appstar >> art [] \\
+ >- (MATCH_MP_TAC lameq_LAMl_appstar_ssub_closed >> art [] \\
      rw [Abbr ‘Ps’, EVERY_MEM, MEM_MAP] \\
      FIRST_X_ASSUM MATCH_MP_TAC \\
      POP_ASSUM MP_TAC \\
@@ -364,7 +364,7 @@ Proof
  >> Q.ABBREV_TAC ‘fm = FEMPTY |++ ZIP (vs,Ns0)’
  >> Know ‘LAMl vs M @* Ns0 == fm ' M’
  >- (Q.UNABBREV_TAC ‘fm’ \\
-     MATCH_MP_TAC lameq_LAMl_appstar >> rw [])
+     MATCH_MP_TAC lameq_LAMl_appstar_ssub_closed >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs M @* Ns0 @* Ns1 == fm ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
  >> ‘fm ' M @* Ns1 == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM]
@@ -387,7 +387,7 @@ Proof
  >> Q.ABBREV_TAC ‘fm' = FEMPTY |++ ZIP (vs',Ns0')’
  >> Know ‘LAMl vs' M @* Ns0' == fm' ' M’
  >- (Q.UNABBREV_TAC ‘fm'’ \\
-     MATCH_MP_TAC lameq_LAMl_appstar >> rw [])
+     MATCH_MP_TAC lameq_LAMl_appstar_ssub_closed >> rw [])
  >> DISCH_TAC
  >> ‘LAMl vs' M @* Ns0' @* Ns1 == fm' ' M @* Ns1’ by PROVE_TAC [lameq_appstar_cong]
  >> MATCH_MP_TAC lameq_TRANS
@@ -502,7 +502,7 @@ Proof
         Know ‘fm = fm0 |+ (x,N)’
         >- (rw [Abbr ‘fm0’, DOMSUB_FUPDATE_THM, FUPDATE_ELIM]) >> Rewr' \\
         Know ‘(fm0 |+ (x,N)) ' M = fm0 ' ([N/x] M)’
-        >- (MATCH_MP_TAC ssub_update_apply' \\
+        >- (MATCH_MP_TAC ssub_update_apply_subst \\
             Q.PAT_X_ASSUM ‘!v. v IN FDOM fm ==> closed (fm ' v)’ MP_TAC \\
             rw [Abbr ‘fm0’, Abbr ‘N’, DOMSUB_FAPPLY_THM, closed_def]) >> Rewr' \\
         DISCH_TAC \\
@@ -666,11 +666,11 @@ Proof
  (* now we use arithmeticTheory.FUNPOW instead of locally defined one *)
  >> qabbrev_tac ‘Ms = GENLIST (\i. FUNPOW (APP K) m I) n’
  >> Q.EXISTS_TAC ‘Ms’
- (* applying lameq_LAMl_appstar and ssub_appstar *)
+ (* applying ssub_appstar *)
  >> MATCH_MP_TAC lameq_TRANS
  >> Q.EXISTS_TAC ‘(FEMPTY |++ ZIP (vs,Ms)) ' (VAR y @* Ns)’
  >> CONJ_TAC
- >- (MATCH_MP_TAC lameq_LAMl_appstar >> art [] \\
+ >- (MATCH_MP_TAC lameq_LAMl_appstar_ssub_closed >> art [] \\
      CONJ_TAC >- rw [Abbr ‘Ms’] \\
      rw [EVERY_EL, Abbr ‘Ms’, closed_def, FV_FUNPOW])
  >> REWRITE_TAC [ssub_appstar]
@@ -727,7 +727,7 @@ QED
 Theorem hnf_principle_hnf' =
    REWRITE_RULE [GSYM solvable_iff_has_hnf] hnf_principle_hnf
 
-Theorem principle_hnf_eq_self[simp] :
+Theorem principle_hnf_reduce[simp] :
     !M. hnf M ==> principle_hnf M = M
 Proof
     rw [principle_hnf_def]
@@ -745,7 +745,7 @@ Theorem principle_hnf_stable :
     !M. has_hnf M ==> principle_hnf (principle_hnf M) = principle_hnf M
 Proof
     rpt STRIP_TAC
- >> MATCH_MP_TAC principle_hnf_eq_self
+ >> MATCH_MP_TAC principle_hnf_reduce
  >> MATCH_MP_TAC hnf_principle_hnf >> art []
 QED
 
@@ -761,9 +761,7 @@ Proof
  >> qabbrev_tac ‘N = [VAR y/v] t’
  >> ‘hnf N’ by rw [Abbr ‘N’, GSYM fresh_tpm_subst]
  >> Know ‘M -h-> N’
- >- (qunabbrevl_tac [‘M’, ‘N’] \\
-     rw [Once hreduce1_cases] \\
-     qexistsl_tac [‘v’, ‘t’] >> rw [])
+ >- rw [Abbr ‘M’, Abbr ‘N’, hreduce1_BETA]
  >> rw [head_reduce1_def]
  >> qabbrev_tac ‘p = pcons M r (stopped_at N)’
  >> Suff ‘head_reduction_path M = p’ >- rw [Abbr ‘p’]
@@ -795,7 +793,7 @@ Theorem principle_hnf_LAMl_appstar_lemma[local] :
         principle_hnf (LAMl (MAP FST pi) t @* MAP VAR (MAP SND pi)) = tpm pi t
 Proof
     Induct_on ‘pi’ (* using SNOC_INDUCT *)
- >- rw [principle_hnf_eq_self]
+ >- rw [principle_hnf_reduce]
  >> rw [] (* rw [FOLDR_SNOC, MAP_SNOC] *)
  >> Cases_on ‘h’ (* ‘x’ *) >> fs []
  >> qabbrev_tac ‘M = LAMl (MAP FST pi) t’
@@ -804,9 +802,7 @@ Proof
  >> Know ‘principle_hnf (LAM q M @@ VAR r @* args) =
           principle_hnf ([VAR r/q] M @* args)’
  >- (MATCH_MP_TAC principle_hnf_hreduce1 \\
-     MATCH_MP_TAC hreduce1_rules_appstar >> simp [] \\
-     rw [Once hreduce1_cases] \\
-     qexistsl_tac [‘q’, ‘M’] >> rw [])
+     MATCH_MP_TAC hreduce1_rules_appstar >> rw [hreduce1_BETA])
  >> Rewr'
  >> Know ‘[VAR r/q] M = LAMl (MAP FST pi) ([VAR r/q] t)’
  >- (qunabbrev_tac ‘M’ \\
@@ -901,33 +897,29 @@ Proof
  >> MATCH_MP_TAC principle_hnf_LAMl_appstar_lemma >> rw []
 QED
 
-Theorem principle_hnf_reduce1 :
+Theorem principle_hnf_beta_reduce1 :
     !v t. hnf t ==> principle_hnf (LAM v t @@ VAR v) = t
 Proof
     rpt STRIP_TAC
  >> Know ‘principle_hnf (LAM v t @@ VAR v) =
           principle_hnf ([VAR v/v] t)’
  >- (MATCH_MP_TAC principle_hnf_hreduce1 \\
-     rw [Once hreduce1_cases] \\
-     qexistsl_tac [‘v’, ‘t’] >> rw [])
+     rw [hreduce1_BETA])
  >> Rewr'
- >> rw [principle_hnf_eq_self]
+ >> rw [principle_hnf_reduce]
 QED
 
-Theorem principle_hnf_reduce :
+Theorem principle_hnf_beta_reduce :
     !xs t. hnf t ==> principle_hnf (LAMl xs t @* (MAP VAR xs)) = t
 Proof
     Induct_on ‘xs’
- >- rw [principle_hnf_eq_self]
- >> rw []
+ >> rw [principle_hnf_reduce]
  >> qabbrev_tac ‘M = LAMl xs t’
  >> qabbrev_tac ‘args :term list = MAP VAR xs’
  >> Know ‘principle_hnf (LAM h M @@ VAR h @* args) =
           principle_hnf ([VAR h/h] M @* args)’
  >- (MATCH_MP_TAC principle_hnf_hreduce1 \\
-     MATCH_MP_TAC hreduce1_rules_appstar >> simp [] \\
-     rw [Once hreduce1_cases] \\
-     qexistsl_tac [‘h’, ‘M’] >> rw [])
+     MATCH_MP_TAC hreduce1_rules_appstar >> rw [hreduce1_BETA])
  >> Rewr'
  >> simp [Abbr ‘M’]
 QED
@@ -1021,6 +1013,7 @@ Proof
  >> MATCH_MP_TAC hreduces_lameq >> art []
 QED
 
+(* |- !M. solvable M ==> principle_hnf M == M *)
 Theorem lameq_principle_hnf' =
         REWRITE_RULE [GSYM solvable_iff_has_hnf] lameq_principle_hnf
 

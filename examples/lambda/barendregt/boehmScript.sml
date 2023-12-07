@@ -6,10 +6,13 @@ open HolKernel boolLib Parse bossLib;
 
 (* core theories *)
 open optionTheory arithmeticTheory pred_setTheory listTheory rich_listTheory
-     llistTheory relationTheory ltreeTheory pathTheory posetTheory hurdUtils;
+     llistTheory relationTheory ltreeTheory pathTheory posetTheory hurdUtils
+     finite_mapTheory;
 
 open binderLib nomsetTheory termTheory appFOLDLTheory chap2Theory chap3Theory
      head_reductionTheory standardisationTheory solvableTheory reductionEval;
+
+open horeductionTheory takahashiTheory;
 
 val _ = new_theory "boehm";
 
@@ -86,37 +89,86 @@ Proof
     RW_TAC std_ss [equivalent_def]
 QED
 
-(* NOTE: this combined tactic is useful after:
+(* NOTE: the initial calls of ‘principle_hnf’ get eliminated if the involved
+         terms are already in head normal forms.
+ *)
+Theorem equivalent_of_hnf :
+    !M N. hnf M /\ hnf N ==>
+         (equivalent M N <=>
+          let n  = LAMl_size M;
+              n' = LAMl_size N;
+              vs = FRESH_list (MAX n n') (FV M UNION FV N);
+             vsM = TAKE n  vs;
+             vsN = TAKE n' vs;
+              M1 = principle_hnf (M @* (MAP VAR vsM));
+              N1 = principle_hnf (N @* (MAP VAR vsN));
+              y  = hnf_head M1;
+              y' = hnf_head N1;
+              m  = LENGTH (hnf_children M1);
+              m' = LENGTH (hnf_children N1);
+           in
+              y = y' /\ n + m' = n' + m)
+Proof
+    rpt STRIP_TAC
+ >> ‘solvable M /\ solvable N’ by PROVE_TAC [hnf_has_hnf, solvable_iff_has_hnf]
+ >> RW_TAC std_ss [equivalent_def, principle_hnf_reduce]
+ >> METIS_TAC []
+QED
 
-   RW_TAC std_ss [equivalent_def]
+(* Given a hnf ‘M0’ and a shared binding variable list ‘vs’
+
+   hnf_tac adds the following abbreviation and new assumptions:
+
+   Abbrev (M1 = principle_hnf (M0 @* MAP VAR (TAKE (LAMl_size M0) vs)))
+   M0 = LAMl (TAKE (LAMl_size M0) vs) (VAR y @* args)
+   M1 = VAR y @* args
+
+   where the names "M1", "y" and "args" can be chosen from inputs.
+ *)
+fun hnf_tac (M0,vs,M1,y,args) = let val n = “LAMl_size ^M0” in
+    qabbrev_tac ‘^M1 = principle_hnf (^M0 @* MAP VAR (TAKE ^n ^vs))’
+ >> Know ‘?^y ^args. ^M0 = LAMl (TAKE ^n ^vs) (VAR ^y @* ^args)’
+ >- (irule (iffLR hnf_cases_shared) >> rw [])
+ >> STRIP_TAC
+ >> Know ‘^M1 = VAR ^y @* ^args’
+ >- (qunabbrev_tac ‘^M1’ \\
+     Q.PAT_ASSUM ‘^M0 = LAMl (TAKE ^n ^vs) (VAR ^y @* ^args)’
+        (fn th => REWRITE_TAC [Once th]) \\
+     MATCH_MP_TAC principle_hnf_beta_reduce >> rw [hnf_appstar])
+ >> DISCH_TAC
+end;
+
+(* The following combined tactic is useful after:
+
+   RW_TAC std_ss [equivalent_of_solvables, principle_hnf_reduce]
+
+   NOTE: it doesn't work with equivalent_of_hnf
  *)
 val equivalent_tac =
-   ‘hnf M0 /\ hnf N0’ by PROVE_TAC [hnf_principle_hnf, solvable_iff_has_hnf] \\
-   ‘ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M0 UNION FV N0) /\
-    LENGTH vs = MAX n n'’ by rw [Abbr ‘vs’, FRESH_list_def] \\
-    Know ‘?y2 args2. N0 = LAMl vsN (VAR y2 @* args2)’
-    >- (qunabbrevl_tac [‘vsN’, ‘n'’] \\
-        irule (iffLR hnf_cases_shared) >> rw [] \\
-        MATCH_MP_TAC DISJOINT_SUBSET \\
-        Q.EXISTS_TAC ‘FV M0 UNION FV N0’ >> rw [SUBSET_UNION]) \\
-    Know ‘?y1 args1. M0 = LAMl vsM (VAR y1 @* args1)’
-    >- (qunabbrevl_tac [‘vsM’, ‘n’] \\
-        irule (iffLR hnf_cases_shared) >> rw [] \\
-        MATCH_MP_TAC DISJOINT_SUBSET \\
-        Q.EXISTS_TAC ‘FV M0 UNION FV N0’ >> rw [SUBSET_UNION]) \\
-    NTAC 2 STRIP_TAC \\
-    Know ‘M1 = VAR y1 @* args1’
-    >- (qunabbrev_tac ‘M1’ \\
-        Q.PAT_ASSUM ‘M0 = _’ (ONCE_REWRITE_TAC o wrap) \\
-        MATCH_MP_TAC principle_hnf_reduce >> rw [hnf_appstar]) \\
-    DISCH_TAC \\
-    Know ‘N1 = VAR y2 @* args2’
-    >- (qunabbrev_tac ‘N1’ \\
-        Q.PAT_ASSUM ‘N0 = _’ (ONCE_REWRITE_TAC o wrap) \\
-        MATCH_MP_TAC principle_hnf_reduce >> rw [hnf_appstar]) \\
-    DISCH_TAC \\
-   ‘VAR y1 = y’ by rw [Abbr ‘y’, hnf_head_absfree] \\
-   ‘VAR y2 = y'’ by rw [Abbr ‘y'’, hnf_head_absfree];
+    ‘hnf M0 /\ hnf N0’ by PROVE_TAC [hnf_principle_hnf, solvable_iff_has_hnf]
+ >> ‘ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M0 UNION FV N0) /\
+     LENGTH vs = MAX n n'’ by rw [Abbr ‘vs’, FRESH_list_def]
+ >> ‘DISJOINT (set vs) (FV M0) /\ DISJOINT (set vs) (FV N0)’
+      by METIS_TAC [DISJOINT_SYM, DISJOINT_UNION]
+ >> qunabbrevl_tac [‘M1’, ‘N1’]
+ >> hnf_tac (“M0 :term”, “vs :string list”,
+             “M1 :term”, “y1 :string”, “args1 :term list”)
+ >> hnf_tac (“N0 :term”, “vs :string list”,
+             “N1 :term”, “y2 :string”, “args2 :term list”)
+ >> ‘TAKE (LAMl_size M0) vs = vsM’ by rw [Abbr ‘vsM’, Abbr ‘n’]
+ >> ‘TAKE (LAMl_size N0) vs = vsN’ by rw [Abbr ‘vsN’, Abbr ‘n'’]
+ >> NTAC 2 (POP_ASSUM (rfs o wrap))
+ (* reshaping and reordering assumptions *)
+ >> qunabbrev_tac ‘M1’
+ >> qabbrev_tac ‘M1 = principle_hnf (M0 @* MAP VAR vsM)’
+ >> qunabbrev_tac ‘N1’
+ >> qabbrev_tac ‘N1 = principle_hnf (N0 @* MAP VAR vsN)’
+ >> Q.PAT_X_ASSUM ‘M0 = _’ ASSUME_TAC
+ >> Q.PAT_X_ASSUM ‘N0 = _’ ASSUME_TAC
+ >> Q.PAT_X_ASSUM ‘M1 = _’ ASSUME_TAC
+ >> Q.PAT_X_ASSUM ‘N1 = _’ ASSUME_TAC
+ >> ‘VAR y1 = y’  by rw [Abbr ‘y’ , hnf_head_absfree]
+ >> ‘VAR y2 = y'’ by rw [Abbr ‘y'’, hnf_head_absfree];
 
 (* From [1, p.238]. This concerte example shows that dB encoding is not easy in
    defining this "concept": the literal encoding of inner head variables are not
@@ -130,7 +182,7 @@ Proof
  >> ‘hnf (LAM x (VAR v @@ M)) /\ hnf (LAM v (VAR v @@ M))’ by rw []
  >> ‘solvable (LAM x (VAR v @@ M)) /\ solvable (LAM v (VAR v @@ M))’
        by rw [solvable_iff_has_hnf, hnf_has_hnf]
- >> RW_TAC std_ss [equivalent_of_solvables, principle_hnf_eq_self]
+ >> RW_TAC std_ss [equivalent_of_solvables, principle_hnf_reduce]
  (* applying shared tactics *)
  >> equivalent_tac
  >> qunabbrevl_tac [‘n’, ‘n'’]
@@ -221,6 +273,12 @@ Definition Boehm_transform_def :
     Boehm_transform pi = EVERY solving_transform pi
 End
 
+Theorem Boehm_transform_empty[simp] :
+    Boehm_transform []
+Proof
+    rw [Boehm_transform_def]
+QED
+
 Theorem Boehm_transform_CONS[simp] :
     Boehm_transform (h::pi) <=> solving_transform h /\ Boehm_transform pi
 Proof
@@ -233,9 +291,18 @@ Proof
     rw [Boehm_transform_def, EVERY_SNOC]
 QED
 
+Theorem Boehm_transform_MAP_rightctxt_o_VAR[simp] :
+    Boehm_transform (MAP (rightctxt o VAR) vs)
+Proof
+    rw [Boehm_transform_def, EVERY_MAP]
+QED
+
 (* ‘apply pi M’ (applying a Boehm transformation) means "M^{pi}" or "pi(M)"
 
-   NOTE: ‘apply [f3;f2;f1] M = (f3 o f2 o f1) M = f3 (f2 (f1 M))’ *)
+   NOTE: ‘apply [f3;f2;f1] M = (f3 o f2 o f1) M = f3 (f2 (f1 M))’
+
+   NOTE2: This function seems general: “:('a -> 'a) list -> 'a -> 'a”.
+ *)
 Definition apply_def :
     apply pi = FOLDR $o I pi
 End
@@ -285,6 +352,75 @@ Proof
  >> irule lameq_sub_cong >> rw []
 QED
 
+(* Lemma 10.3.4 (ii) [1, p.246]
+
+   Used by: Boehm_transform_lameq_appstar
+ *)
+Theorem Boehm_transform_lameq_LAMl_appstar :
+    !pi. Boehm_transform pi ==>
+         ?c. ctxt c /\ (!M. apply pi M == c M) /\
+             !vs. ALL_DISTINCT vs ==>
+                  ?Ns. !M. FV M SUBSET (set vs) ==> c M == LAMl vs M @* Ns
+Proof
+    Induct_on ‘pi’
+ >- (rw [] \\
+     Q.EXISTS_TAC ‘\x. x’ >> rw [ctxt_rules] \\
+     Q.EXISTS_TAC ‘MAP VAR vs’ >> rpt STRIP_TAC \\
+     rw [Once lameq_SYM, lameq_LAMl_appstar_VAR])
+ >> rw []
+ >> Q.PAT_X_ASSUM ‘Boehm_transform pi ==> P’ MP_TAC
+ >> RW_TAC std_ss []
+ >> FULL_SIMP_TAC std_ss [solving_transform_def] (* 2 subgoals *)
+ (* goal 1 (of 2) *)
+ >- (Q.EXISTS_TAC ‘\z. c z @@ (\z. VAR x) z’ \\
+     rw [ctxt_rules, lameq_rules] \\
+     Q.PAT_X_ASSUM ‘!vs. ALL_DISTINCT vs ==> P’ (drule_then STRIP_ASSUME_TAC) \\
+     Q.EXISTS_TAC ‘SNOC (VAR x) Ns’ \\
+     rw [appstar_SNOC, lameq_rules])
+ (* goal 2 (of 2) *)
+ >> rename1 ‘h = [P/y]’
+ >> qabbrev_tac ‘c1 = \z. LAM y (c z)’
+ >> ‘ctxt c1’ by rw [ctxt_rules, Abbr ‘c1’]
+ >> Q.EXISTS_TAC ‘\z. c1 z @@ (\z. P) z’
+ >> CONJ_TAC >- rw [ctxt_rules, constant_contexts_exist]
+ >> CONJ_TAC
+ >- (rw [Abbr ‘c1’] \\
+     MATCH_MP_TAC lameq_TRANS >> Q.EXISTS_TAC ‘[P/y] (c M)’ \\
+     rw [lameq_sub_cong, Once lameq_SYM, lameq_BETA])
+ >> rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!vs. ALL_DISTINCT vs ==> _’ (drule_then STRIP_ASSUME_TAC)
+ >> Q.EXISTS_TAC ‘MAP [P/y] Ns’
+ >> rw [Abbr ‘c1’]
+ >> Q.PAT_X_ASSUM ‘!M. FV M SUBSET set vs ==> _’ (drule_then STRIP_ASSUME_TAC)
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘[P/y] (c M)’ >> rw [lameq_BETA]
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘[P/y] (LAMl vs M @* Ns)’ >> rw [lameq_sub_cong]
+ >> rw [appstar_SUB]
+ >> Suff ‘[P/y] (LAMl vs M) = LAMl vs M’ >- rw []
+ >> MATCH_MP_TAC lemma14b
+ >> Suff ‘FV (LAMl vs M) = {}’ >- rw []
+ >> rw [FV_LAMl]
+ >> Q.PAT_X_ASSUM ‘FV M SUBSET (set vs)’ MP_TAC >> SET_TAC []
+QED
+
+(* An corollary of the above lemma with ‘xs = {}’
+
+   Used by: closed_separability_thm
+ *)
+Theorem Boehm_transform_lameq_appstar :
+    !pi. Boehm_transform pi ==>
+         ?Ns. !M. closed M ==> apply pi M == M @* Ns
+Proof
+    rpt STRIP_TAC
+ >> POP_ASSUM (STRIP_ASSUME_TAC o (MATCH_MP Boehm_transform_lameq_LAMl_appstar))
+ >> POP_ASSUM (MP_TAC o (Q.SPEC ‘[]’))
+ >> rw [closed_def]
+ >> Q.EXISTS_TAC ‘Ns’
+ >> RW_TAC (betafy (srw_ss())) []
+QED
+
+(* Used by: distinct_benf_imp_inconsistent *)
 Theorem asmlam_apply_cong :
     !pi M N. Boehm_transform pi /\ asmlam eqns M N ==>
              asmlam eqns (apply pi M) (apply pi N)
@@ -305,12 +441,14 @@ Proof
  >> MATCH_MP_TAC solving_transform_lameq >> art []
 QED
 
+(* Used by separability_thm *)
 Theorem Boehm_transform_APPEND :
     !p1 p2. Boehm_transform p1 /\ Boehm_transform p2 ==> Boehm_transform (p1 ++ p2)
 Proof
     rw [Boehm_transform_def]
 QED
 
+(* Used by separability_thm *)
 Theorem Boehm_apply_APPEND :
     !p1 p2 M. apply (p1 ++ p2) M = apply p1 (apply p2 M)
 Proof
@@ -350,6 +488,253 @@ Proof
       (* goal 2 (of 2) *)
       CCONTR_TAC >> fs [] \\
       METIS_TAC [has_hnf_SUB_E] ]
+QED
+
+(* Definition 10.3.5 (ii) *)
+Definition head_original_def :
+    head_original M0 = let n = LAMl_size M0;
+                          vs = FRESH_list n (FV M0);
+                          M1 = principle_hnf (M0 @* MAP VAR vs);
+                       in
+                          EVERY (\e. hnf_headvar M1 # e) (hnf_children M1)
+End
+
+(* Definition 10.3.5 (iii)
+
+   NOTE: |- has_hnf M <=> ?N. M == N /\ hnf N
+ *)
+Definition is_ready_def :
+    is_ready M <=> unsolvable M \/
+                   ?N. M == N /\ hnf N /\ ~is_abs N /\ head_original N
+End
+
+(* cf. NEW_TAC (This is the multivariate version)
+
+   NOTE: “FINITE X” must be present in the assumptions or provable by rw [].
+ *)
+fun FRESH_list_tac (vs,n,X) =
+    qabbrev_tac ‘^vs = FRESH_list ^n ^X’
+ >> KNOW_TAC “ALL_DISTINCT ^vs /\ DISJOINT (set ^vs) ^X /\ LENGTH ^vs = ^n”
+ >- rw [FRESH_list_def, Abbr ‘^vs’]
+ >> STRIP_TAC;
+
+(* NOTE: This alternative definition of ‘is_ready’ consumes ‘head_original’
+         and eliminated the ‘principle_hnf’ inside it.
+ *)
+Theorem is_ready_alt :
+    !M. is_ready M <=>
+        unsolvable M \/ ?y Ns. M == VAR y @* Ns /\ EVERY (\e. y # e) Ns
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> reverse EQ_TAC
+ >- (rw [is_ready_def] >- art [] \\
+     DISJ2_TAC >> Q.EXISTS_TAC ‘VAR y @* Ns’ >> art [] \\
+     CONJ_ASM1_TAC >- (rw [hnf_appstar]) >> simp [] \\
+     RW_TAC std_ss [head_original_def, LAMl_size_hnf_absfree] \\
+     qunabbrev_tac ‘n’ \\
+    ‘vs = []’ by METIS_TAC [LENGTH_NIL, FRESH_list_def, FINITE_FV] \\
+     POP_ASSUM (fs o wrap) >> qunabbrev_tac ‘vs’ \\
+    ‘M1 = VAR y @* Ns’ by rw [principle_hnf_reduce, Abbr ‘M1’] \\
+     POP_ORW >> qunabbrev_tac ‘M1’ \\
+     simp [hnf_head_hnf, hnf_children_hnf])
+ (* stage work *)
+ >> rw [is_ready_def] >- art []
+ >> DISJ2_TAC
+ >> qabbrev_tac ‘n = LAMl_size N’
+ >> FRESH_list_tac (“vs :string list”, “n :num”, “FV (N :term)”)
+ >> qabbrev_tac ‘M1 = principle_hnf (N @* MAP VAR vs)’
+ >> ‘EVERY (\e. hnf_headvar M1 # e) (hnf_children M1)’
+       by METIS_TAC [head_original_def]
+ >> Know ‘?y args. N = LAMl (TAKE (LAMl_size N) vs) (VAR y @* args)’
+ >- (Suff ‘ALL_DISTINCT vs /\ LAMl_size N <= LENGTH vs /\ DISJOINT (set vs) (FV N)’
+     >- METIS_TAC [hnf_cases_shared] \\
+     rw [Abbr ‘n’])
+ >> ‘TAKE (LAMl_size N) vs = vs’ by rw [] >> POP_ORW
+ >> STRIP_TAC
+ >> Know ‘M1 = VAR y @* args’
+ >- (rw [Abbr ‘M1’] \\
+     MATCH_MP_TAC principle_hnf_beta_reduce >> rw [hnf_appstar])
+ >> DISCH_THEN (fn th => fs [th, hnf_head_hnf, hnf_children_hnf])
+ (* stage work *)
+ >> qexistsl_tac [‘y’, ‘args’] >> art []
+QED
+
+(* Lemma 10.3.6 (i) [1, p.247] *)
+Theorem Boehm_transform_is_ready_exists :
+    !M. ?pi. Boehm_transform pi /\ is_ready (apply pi M)
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> reverse (Cases_on ‘solvable M’)
+ >- (Q.EXISTS_TAC ‘[]’ >> rw [is_ready_def])
+ (* now M is solvable *)
+ >> qabbrev_tac ‘M0 = principle_hnf M’
+ >> ‘hnf M0’ by PROVE_TAC [hnf_principle_hnf, solvable_iff_has_hnf]
+ >> qabbrev_tac ‘n = LAMl_size M0’
+ >> qabbrev_tac ‘vs = FRESH_list n (FV M0)’
+ >> ‘ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M0) /\ LENGTH vs = n’
+       by (rw [Abbr ‘vs’, FRESH_list_def])
+ (* applying the shared hnf_tac *)
+ >> hnf_tac (“M0 :term”, “vs :string list”,
+             “M1 :term”, “y :string”, “args :term list”)
+ >> ‘TAKE (LAMl_size M0) vs = vs’ by rw []
+ >> POP_ASSUM (REV_FULL_SIMP_TAC std_ss o wrap)
+ >> qabbrev_tac ‘xs :term list = MAP VAR vs’
+ >> qabbrev_tac ‘p1 = MAP rightctxt (REVERSE xs)’
+ >> ‘apply p1 M0 == M1’
+       by (rw [Abbr ‘p1’, Boehm_apply_MAP_rightctxt', Abbr ‘xs’])
+ >> qabbrev_tac ‘m = LENGTH args’
+ (* X collects all free variables in ‘args’ *)
+ >> qabbrev_tac ‘X = BIGUNION (IMAGE FV (set args))’
+ >> Know ‘FINITE X’
+ >- (qunabbrev_tac ‘X’ \\
+     MATCH_MP_TAC FINITE_BIGUNION >> rw [] >> rw [])
+ >> DISCH_TAC
+ (* Z needs to avoid any free variables in args' *)
+ >> FRESH_list_tac (“Z :string list”, “(m + 1) :num”, “X :string set”)
+ >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> qabbrev_tac ‘z = LAST Z’
+ >> ‘MEM z Z’ by rw [Abbr ‘z’, MEM_LAST_NOT_NIL]
+ (* P is a permutator *)
+ >> qabbrev_tac ‘P = LAMl Z (VAR z @* MAP VAR (FRONT Z))’
+ >> Know ‘FV P = {}’
+ >- (rw [Abbr ‘P’, FV_LAMl] \\
+     Suff ‘FV (VAR z @* MAP VAR (FRONT Z)) SUBSET set Z’ >- SET_TAC [] \\
+     rw [FV_appstar, SUBSET_DEF, MEM_MAP] >- art [] \\
+     rfs [MEM_FRONT_NOT_NIL])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘p2 = [[P/y]]’
+ >> ‘apply p2 M1 = P @* MAP [P/y] args’ by (rw [Abbr ‘p2’, appstar_SUB])
+ >> qabbrev_tac ‘args' = MAP [P/y] args’
+ >> ‘!i. i < m ==> FV (EL i args') SUBSET FV (EL i args)’
+         by rw [Abbr ‘args'’, EL_MAP, FV_SUB]
+ >> ‘LENGTH args' = m’ by rw [Abbr ‘args'’, Abbr ‘m’]
+  (* Key: “args'” has less free variables than “args” *)
+ >> Know ‘BIGUNION (IMAGE FV (set args')) SUBSET
+          BIGUNION (IMAGE FV (set args))’
+ >- (rw [SUBSET_DEF, IN_BIGUNION_IMAGE, MEM_EL] \\
+     Q.EXISTS_TAC ‘EL n args’ \\
+     CONJ_TAC >- (Q.EXISTS_TAC ‘n’ >> art []) \\
+     POP_ASSUM MP_TAC \\
+     Suff ‘FV (EL n args') SUBSET FV (EL n args)’ >- METIS_TAC [SUBSET_DEF] \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> DISCH_TAC
+ (* a needs to avoid any free variables in args' *)
+ >> NEW_TAC "a" “X :string set”
+ >> qabbrev_tac ‘p3 = [rightctxt (VAR a)]’
+ >> Know ‘apply p3 (P @* args') == VAR a @* args'’
+ >- (rw [Abbr ‘p3’, Abbr ‘P’, rightctxt_thm] \\
+    ‘!t. LAMl Z t = LAMl (SNOC z (FRONT Z)) t’
+         by (ASM_SIMP_TAC std_ss [Abbr ‘z’, SNOC_LAST_FRONT]) >> POP_ORW \\
+     REWRITE_TAC [LAMl_SNOC] \\
+     qabbrev_tac ‘t = LAM z (VAR z @* MAP VAR (FRONT Z))’ \\
+     MATCH_MP_TAC lameq_TRANS \\
+     Q.EXISTS_TAC ‘LAM z (VAR z @* args') @@ VAR a’ \\
+  (* applying lameq_LAMl_appstar_ssub *)
+     CONJ_TAC
+     >- (MATCH_MP_TAC lameq_APPL \\
+         Suff ‘LAM z (VAR z @* args') = (FEMPTY |++ ZIP (FRONT Z,args')) ' t’
+         >- (Rewr' >> MATCH_MP_TAC lameq_LAMl_appstar_ssub \\
+             CONJ_TAC >- rw [ALL_DISTINCT_FRONT] \\
+             CONJ_TAC >- rw [LENGTH_FRONT] \\
+             ONCE_REWRITE_TAC [DISJOINT_SYM] \\
+             MATCH_MP_TAC DISJOINT_SUBSET >> Q.EXISTS_TAC ‘set Z’ \\
+             reverse CONJ_TAC >- rw [SUBSET_DEF, MEM_FRONT_NOT_NIL] \\
+             ASM_SIMP_TAC std_ss [Once DISJOINT_SYM, Abbr ‘X’] \\
+             MATCH_MP_TAC DISJOINT_SUBSET \\
+             Q.EXISTS_TAC ‘BIGUNION (IMAGE FV (set args))’ >> art []) \\
+         qunabbrev_tac ‘t’ \\
+         qabbrev_tac ‘fm = FEMPTY |++ ZIP (FRONT Z,args')’ \\
+        ‘LENGTH (FRONT Z) = LENGTH args'’ by rw [LENGTH_FRONT] \\
+        ‘FDOM fm = set (FRONT Z)’ by rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, MAP_ZIP] \\
+         Know ‘z NOTIN FDOM fm’
+         >- (rw [Abbr ‘z’] \\
+             Know ‘ALL_DISTINCT (SNOC (LAST Z) (FRONT Z))’
+             >- rw [SNOC_LAST_FRONT] \\
+             rw [ALL_DISTINCT_SNOC]) >> DISCH_TAC \\
+         qabbrev_tac ‘t = VAR z @* MAP VAR (FRONT Z)’ \\
+         qabbrev_tac ‘L = ZIP (FRONT Z,args')’ \\
+         Know ‘!n. n < LENGTH args' ==> (FEMPTY |++ L) ' (EL n (FRONT Z)) = EL n args'’
+         >- (rpt STRIP_TAC \\
+             MATCH_MP_TAC FUPDATE_LIST_APPLY_MEM \\
+             Q.EXISTS_TAC ‘n’ >> rw [Abbr ‘L’, MAP_ZIP] \\
+            ‘m <> n’ by rw [] \\
+            ‘ALL_DISTINCT (FRONT Z)’ by METIS_TAC [ALL_DISTINCT_FRONT] \\
+             METIS_TAC [EL_ALL_DISTINCT_EL_EQ]) >> DISCH_TAC \\
+         Know ‘fm ' (LAM z t) = LAM z (fm ' t)’
+         >- (MATCH_MP_TAC ssub_LAM >> art [] \\
+             rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, MAP_ZIP, MEM_EL] \\
+             Know ‘(FEMPTY |++ L) ' (EL n (FRONT Z)) = EL n args'’
+             >- (FIRST_X_ASSUM MATCH_MP_TAC >> art []) >> Rewr' \\
+             Suff ‘z # EL n args’
+             >- (DISCH_TAC \\
+                 CCONTR_TAC >> fs [] >> METIS_TAC [SUBSET_DEF]) \\
+             CCONTR_TAC >> fs [] \\
+             Q.PAT_X_ASSUM ‘DISJOINT (set Z) X’ MP_TAC \\
+             rw [DISJOINT_ALT, Abbr ‘X’] \\
+             Q.EXISTS_TAC ‘FV (EL n args)’ \\
+             CONJ_TAC >- (Q.EXISTS_TAC ‘EL n args’ >> rw [MEM_EL] \\
+                          Q.EXISTS_TAC ‘n’ >> rw []) \\
+             Q.EXISTS_TAC ‘z’ >> rw [MEM_LAST_NOT_NIL, Abbr ‘z’]) >> Rewr' \\
+         simp [Abbr ‘t’, ssub_appstar] \\
+         simp [Once LIST_EQ_REWRITE] \\
+         Q.X_GEN_TAC ‘i’ \\
+         Q.PAT_X_ASSUM ‘LENGTH args = LENGTH args'’ K_TAC \\
+         REWRITE_TAC [MAP_MAP_o] \\
+         DISCH_TAC >> ‘i < LENGTH (FRONT Z)’ by rw [] \\
+         ASM_SIMP_TAC std_ss [EL_MAP] \\
+        ‘MEM (EL i (FRONT Z)) (FRONT Z)’ by METIS_TAC [MEM_EL] \\
+         rw [Abbr ‘fm’, ssub_thm]) \\
+     Suff ‘VAR a @* args' = [VAR a/z](VAR z @* args')’
+     >- (Rewr' >> rw [lameq_BETA]) \\
+     rw [appstar_SUB] \\
+     rw [Once LIST_EQ_REWRITE] >> rename1 ‘n < LENGTH args'’ \\
+     rw [EL_MAP] \\
+     MATCH_MP_TAC (GSYM lemma14b) \\
+     Know ‘DISJOINT (set Z) (BIGUNION (IMAGE FV (set args')))’
+     >- (MATCH_MP_TAC DISJOINT_SUBSET \\
+         Q.EXISTS_TAC ‘X’ >> rw [Abbr ‘X’]) \\
+     rw [DISJOINT_ALT] \\
+     FIRST_X_ASSUM irule >> art [] \\
+     Q.EXISTS_TAC ‘EL n args'’ >> rw [MEM_EL] \\
+     Q.EXISTS_TAC ‘n’ >> art [])
+ >> DISCH_TAC
+ (* final stage *)
+ >> Q.EXISTS_TAC ‘p3 ++ p2 ++ p1’
+ >> CONJ_ASM1_TAC
+ >- (MATCH_MP_TAC Boehm_transform_APPEND \\
+     reverse CONJ_TAC
+     >- (rw [Abbr ‘p1’, Abbr ‘xs’, MAP_MAP_o, GSYM MAP_REVERSE]) \\
+     MATCH_MP_TAC Boehm_transform_APPEND >> rw [Abbr ‘p2’, Abbr ‘p3’])
+ >> simp [is_ready_alt]
+ >> DISJ2_TAC
+ >> qexistsl_tac [‘a’, ‘args'’]
+ >> reverse CONJ_TAC
+ >- (rw [EVERY_MEM] \\
+     Suff ‘FV e SUBSET X’ >- METIS_TAC [SUBSET_DEF] \\
+     MATCH_MP_TAC SUBSET_TRANS \\
+     Q.EXISTS_TAC ‘BIGUNION (IMAGE FV (set args'))’ \\
+     reverse CONJ_TAC >- rw [Abbr ‘X’] \\
+     rw [SUBSET_DEF, IN_BIGUNION_IMAGE] \\
+     Q.EXISTS_TAC ‘e’ >> art [])
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘apply (p3 ++ p2 ++ p1) M0’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC lameq_apply_cong \\
+     CONJ_TAC >- art [] \\
+     qunabbrev_tac ‘M0’ \\
+     MATCH_MP_TAC lameq_SYM \\
+     MATCH_MP_TAC lameq_principle_hnf' >> art [])
+ >> ONCE_REWRITE_TAC [Boehm_apply_APPEND]
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘apply (p3 ++ p2) M1’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC lameq_apply_cong >> art [] \\
+     MATCH_MP_TAC Boehm_transform_APPEND >> rw [Abbr ‘p2’, Abbr ‘p3’])
+ >> REWRITE_TAC [Boehm_apply_APPEND]
+ >> MATCH_MP_TAC lameq_TRANS
+ >> Q.EXISTS_TAC ‘apply p3 (P @* args')’ >> art []
+ >> MATCH_MP_TAC lameq_apply_cong
+ >> rw [Abbr ‘p3’]
 QED
 
 (*---------------------------------------------------------------------------*
@@ -521,7 +906,7 @@ Theorem separability_lemma0[local] :
           equivalent M N \/
           !P Q. ?pi. Boehm_transform pi /\ apply pi M == P /\ apply pi N == Q
 Proof
-    RW_TAC std_ss [equivalent_def]
+    RW_TAC std_ss [equivalent_of_solvables]
  (* applying the shared equivalent_tac *)
  >> equivalent_tac
  (* cleanup MAX and vsN *)
