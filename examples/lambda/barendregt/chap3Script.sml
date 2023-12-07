@@ -574,6 +574,12 @@ Proof
   Induct_on ‘grandbeta’ >> metis_tac[reduction_rules, beta_def]
 QED
 
+Theorem RTC_grandbeta:
+  RTC grandbeta = reduction beta
+Proof
+  simp[GSYM TC_RC_EQNS, theorem3_17]
+QED
+
 val beta_CR = store_thm(
   "beta_CR",
   ``CR beta``,
@@ -1219,6 +1225,9 @@ val rator_isub_commutes = store_thm(
 
 (* ----------------------------------------------------------------------
     Reordering β and η steps
+
+    Following Takahashi "Parallel Reductions in λ-Calculus", 1995,
+      §3: Postponement Theorem
    ---------------------------------------------------------------------- *)
 
 Overload "-η->" = “compat_closure eta”
@@ -1324,19 +1333,162 @@ Proof
   metis_tac[eta_beta_reorder0]
 QED
 
-Inductive peta:
-[~refl[simp]:]
-  !M. peta M M
-[~lam:]
-  !v M N. peta M N ⇒ peta (LAM v M) (LAM v N)
-[~app:]
-  !M1 M2 N1 N2. peta M1 M2 /\ peta N1 N2 ⇒ peta (M1 @@ N1) (M2 @@ N2)
-[~eta:]
-  !v M N. peta M N /\ v ∉ FV N ⇒ peta (LAM v (M @@ VAR v)) N
-End
 
-val _ = set_mapped_fixity {term_name = "peta", tok = "=η=>",
-                           fixity = Infix(NONASSOC, 450)}
+
+Theorem strong_grandbeta_gen_ind =
+        grandbeta_bvc_gen_ind
+          |> SPEC_ALL
+          |> Q.INST [‘P’ |-> ‘λM N x. P M N x /\ grandbeta M N’]
+          |> SRULE[grandbeta_rules, FORALL_AND_THM,
+                   GSYM CONJ_ASSOC]
+          |> GEN_ALL
+
+Theorem has_bnf_LAM[simp]:
+  has_bnf (LAM v M) ⇔ has_bnf M
+Proof
+  simp[has_bnf_thm, abs_betastar, PULL_EXISTS]
+QED
+
+Theorem ccbeta_beta:
+  LAM v M @@ N -β-> [N/v]M
+Proof
+  simp[ccbeta_rwt]
+QED
+
+Theorem appEQvsubst[simp]:
+  M @@ N = [VAR u/v] P ⇔
+    ∃M0 N0. P = M0 @@ N0 ∧ M = [VAR u/v] M0 ∧ N = [VAR u/v]N0
+Proof
+  Cases_on ‘P’ using term_CASES >> rw[SUB_VAR, SUB_THM]
+QED
+
+Theorem lamEQvsubst:
+  v ≠ u ∧ v ≠ w ⇒
+  (LAM v M = [VAR u/w] P ⇔ ∃M0. P = LAM v M0 ∧ M = [VAR u/w]M0)
+Proof
+  Cases_on ‘P’ using term_CASES >> rw[SUB_VAR, SUB_THM] >>
+  rename [‘LAM v M = [VAR u/w] (LAM x M')’] >>
+  Q_TAC (NEW_TAC "z") ‘{x;u;w;v} ∪ FV M ∪ FV M'’ >>
+  Cases_on ‘w = x’ >> gvs[lemma14b]
+  >- (simp[LAM_eq_thm, EQ_IMP_THM] >> simp[tpm_eqr] >> rw[] >>
+      simp[pmact_flip_args] >> gvs[lemma14b]) >>
+  ‘LAM x M' = LAM z ([VAR z/x] M')’ by simp[SIMPLE_ALPHA] >>
+  simp[SUB_THM] >> gvs[LAM_eq_thm] >> simp[tpm_eqr] >>
+  gvs[FV_SUB] >> rw[] >> gvs[] >>
+  Cases_on ‘v = x’ >> gvs[] >> simp[pmact_flip_args]
+QED
+
+Theorem varsubst_betaL:
+  [VAR v/u] M -β-> N ⇒ ∃N0. M -β-> N0 ∧ N = [VAR v/u]N0
+Proof
+  ‘∀M0 N. M0 -β-> N ⇒
+          ∀vuM v u M. vuM = (v,u,M) ∧ M0 = [VAR v/u]M ⇒
+                      ∃N0. M -β-> N0 ∧ N = [VAR v/u]N0’
+    suffices_by metis_tac[] >>
+  ho_match_mp_tac strong_ccbeta_gen_ind >>
+  qexists ‘λ(v,u,M). {v;u} ∪ FV M’ >> rw[] >> gvs[]
+  >- (gvs[lamEQvsubst] >> irule_at Any ccbeta_beta >>
+      simp[substitution_lemma])
+  >- metis_tac[compat_closure_rules]
+  >- metis_tac[compat_closure_rules]
+  >- (gvs[lamEQvsubst, PULL_EXISTS] >> metis_tac[compat_closure_LAM]) >>
+  PairCases_on ‘vuM’ >> simp[]
+QED
+
+Theorem varsubst_betastarL:
+  ∀M N v u. [VAR v/u] M -β->* N ⇒ ∃N0. M -β->* N0 ∧ N = [VAR v/u]N0
+Proof
+  Induct_on ‘RTC’ >> rw[] >- metis_tac[RTC_REFL] >>
+  drule_then strip_assume_tac varsubst_betaL >> gvs[] >>
+  first_x_assum (resolve_then Any mp_tac EQ_REFL) >> rw[] >>
+  metis_tac[RTC_RULES]
+QED
+
+Theorem has_bnf_appVAR_LR:
+  ∀M N s. M @@ VAR s -β->* N ∧ bnf N ⇒ has_bnf M
+Proof
+  Induct_on ‘RTC’>> rw[] >> gs[]
+  >- (simp[has_bnf_thm] >> metis_tac[RTC_REFL]) >>
+  rename [‘M @@ VAR s -β-> M'’] >>
+  qpat_x_assum ‘_ -β-> _’ mp_tac >>
+  simp[Once compat_closure_cases] >> rw[]
+  >- (gvs[beta_def] >> drule_then strip_assume_tac varsubst_betastarL >>
+      gvs[] >> metis_tac[has_bnf_thm])
+  >- gvs[cc_beta_thm] >>
+  first_x_assum (resolve_then Any mp_tac EQ_REFL) >>
+  simp[has_bnf_thm, PULL_EXISTS] >> metis_tac[RTC_RULES]
+QED
+
+Theorem has_bnf_appVAR_RL:
+  ∀M N. M -β->* N ∧ bnf N ⇒ has_bnf (M @@ VAR s)
+Proof
+  Induct_on ‘RTC’ >> rw[]
+  >- (Cases_on ‘M’ using term_CASES >> simp[has_bnf_thm] >~
+      [‘LAM v M @@ VAR u’]
+      >- (irule_at Any RTC_SUBSET >> irule_at Any ccbeta_beta >>
+          gvs[]) >>
+      irule_at Any RTC_REFL >> simp[]) >>
+  gvs[has_bnf_thm] >>
+  irule_at Any (cj 2 RTC_RULES) >>
+  first_assum $ irule_at (Pat ‘_ -β->* _’) >> simp[] >>
+  simp[compat_closure_rules]
+QED
+
+Theorem has_bnf_VAR[simp]:
+  has_bnf (VAR s)
+Proof
+  metis_tac[bnf_thm, RTC_REFL, has_bnf_thm]
+QED
+
+Theorem has_bnf_varapp[simp]:
+  ∀s M. has_bnf (VAR s @@ M) ⇔ has_bnf M
+Proof
+  simp[has_bnf_thm, PULL_EXISTS, EQ_IMP_THM, FORALL_AND_THM] >>
+  conj_tac >> Induct_on ‘RTC’ >> rw[] >> gvs[] >~
+  [‘VAR s @@ M -β-> M2’]
+  >- (gvs[ccbeta_rwt] >> metis_tac[RTC_RULES]) >~
+  [‘M -β-> P’]
+  >- (irule_at Any (cj 2 RTC_RULES) >>
+      irule_at Any compat_closure_APPR >> metis_tac[]) >>
+  irule_at Any RTC_REFL >> simp[]
+QED
+
+Theorem app_becomes_abs:
+  M @@ N =β=> P ∧ is_abs P ⇒ is_abs M
+Proof
+  CCONTR_TAC >> gvs[] >> qpat_x_assum ‘M @@ N =β=> P’ mp_tac >>
+  simp[Once grandbeta_cases] >> rpt strip_tac >> gvs[]
+QED
+
+Theorem LAMl_beta_cong:
+  ∀M N. M -β-> N ⇒ LAMl vs M -β-> LAMl vs N
+Proof
+  Induct_on ‘vs’ >> simp[] >> metis_tac[compat_closure_rules]
+QED
+
+Theorem LAMl_betastar_cong:
+  ∀M N. M -β->* N ⇒ LAMl vs M -β->* LAMl vs N
+Proof
+  Induct_on ‘RTC’ >> metis_tac[reduction_rules, LAMl_beta_cong]
+QED
+
+Theorem tpm_eql:
+  tpm π t = u ⇔ t = tpm π⁻¹ u
+Proof
+  simp[tpm_eqr]
+QED
+
+
+Theorem has_benf_thm:
+  has_benf M ⇔ ∃N. M -βη->* N ∧ benf N
+Proof
+  rw[has_benf_def, GSYM beta_eta_lameta, EQ_IMP_THM,
+     GSYM beta_eta_normal_form_benf]
+  >- (drule_at Any theorem3_13 >>
+      drule_then strip_assume_tac corollary3_2_1 >> simp[beta_eta_CR] >>
+      strip_tac >> first_x_assum drule >> metis_tac[]) >>
+  metis_tac[conversion_rules]
+QED
 
 Theorem tpm_eta[simp]:
   eta (tpm p M) (tpm p N) ⇔ eta M N
@@ -1349,28 +1501,18 @@ Proof
   irule_at Any EQ_REFL >> simp[]
 QED
 
-Theorem cc_eta_peta:
-  ∀M N. M -η-> N ==> peta M N
+Theorem eta_reduces_size:
+  ∀M N. M -η-> N ⇒ size N < size M
 Proof
-  ho_match_mp_tac cc_ind >> simp[] >> qexists ‘{}’ >> rw[] >>
-  simp[peta_rules] >> gvs[eta_def, peta_eta]
+  ho_match_mp_tac cc_ind >> qexists‘{}’ >> rw[] >>
+  gvs[eta_def]
 QED
 
-Theorem peta_reduction_eta:
-  ∀M N. peta M N ⇒ M -η->* N
+Theorem SN_eta:
+  chap3$SN η
 Proof
-  Induct_on ‘peta’ >> simp[] >> rw[] >~
-  [‘LAM v (M @@ VAR v) -η->* N’]
-  >- (irule $ cj 2 RTC_RULES_RIGHT1 >>
-      irule_at Any compat_closure_R >> qexists ‘LAM v (N @@ VAR v)’ >>
-      simp[eta_def] >> metis_tac [reduction_rules]) >>
-  metis_tac[reduction_rules]
-QED
-
-Theorem RTC_peta_reduction_eta:
-  ∀M N. peta꙳ M N ⇔ M -η->* N
-Proof
-  metis_tac[peta_reduction_eta, cc_eta_peta, RTC_BRACKETS_RTC_EQN]
+  simp[SN_def, relationTheory.SN_def] >> irule WF_SUBSET >>
+  simp[]>> qexists ‘measure size’ >> simp[eta_reduces_size]
 QED
 
 Theorem reduction_RUNION1:
@@ -1386,6 +1528,7 @@ Proof
   Induct_on ‘RTC’ >> simp[] >> rpt strip_tac >>
   irule (cj 2 RTC_RULES) >> gs[CC_RUNION_DISTRIB, RUNION] >> metis_tac[]
 QED
+
 
 (* ----------------------------------------------------------------------
     Congruence and rewrite rules for -b-> and -b->*
