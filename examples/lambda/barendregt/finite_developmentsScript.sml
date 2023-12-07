@@ -2332,22 +2332,20 @@ val size_vsubst = prove(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
-val old_induction = prove(
-  ``!P. (!x. P (VAR x)) /\
-        (!t u. P t /\ P u ==> P (t @@ u)) /\
-        (!x u. (!y'. P ([VAR y'/x] u)) ==> P (LAM x u)) ==>
-        !u:term. P u``,
+Theorem old_induction[local]:
+  !P. (!x. P (VAR x)) /\
+      (!t u. P t /\ P u ==> P (t @@ u)) /\
+      (!x u. (!y'. P ([VAR y'/x] u)) ==> P (LAM x u)) ==>
+      !u:term. P u
+Proof
   REPEAT STRIP_TAC THEN
   completeInduct_on `size u` THEN GEN_TAC THEN
   Q.SPEC_THEN `u` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][] THENL [
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-    SRW_TAC [numSimps.ARITH_ss][],
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-    SRW_TAC [numSimps.ARITH_ss][size_vsubst]
-  ]);
+  SRW_TAC [][] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
+  SRW_TAC [numSimps.ARITH_ss][]
+QED
 
 
 val weight_at_subst = store_thm(

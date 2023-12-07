@@ -311,7 +311,7 @@ val bvc_cases = store_thm(
 
 (* Definition 3.2.3 [1, p60] (one-step parallel beta-reduction) *)
 Inductive grandbeta :
-[~REFL:]
+[~REFL[simp]:]
   !M. grandbeta M M
 [~ABS:]
   !M M' x. grandbeta M M' ==> grandbeta (LAM x M) (LAM x M')
@@ -1471,13 +1471,6 @@ Theorem LAMl_betastar_cong:
 Proof
   Induct_on ‘RTC’ >> metis_tac[reduction_rules, LAMl_beta_cong]
 QED
-
-Theorem tpm_eql:
-  tpm π t = u ⇔ t = tpm π⁻¹ u
-Proof
-  simp[tpm_eqr]
-QED
-
 
 Theorem has_benf_thm:
   has_benf M ⇔ ∃N. M -βη->* N ∧ benf N

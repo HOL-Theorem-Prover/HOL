@@ -8,6 +8,13 @@ local open pred_setLib in end;
 open binderLib BasicProvers nomsetTheory termTheory chap2Theory appFOLDLTheory;
 open horeductionTheory chap3Theory
 
+(* ----------------------------------------------------------------------
+    A mechanisation of §3 of
+
+     Takahashi 1995, "Parallel Reductions in λ-Calculus"
+
+    leading to ⊢ has_benf M ⇔ has_bnf M
+   ---------------------------------------------------------------------- *)
 
 val _ = new_theory "takahashiS3";
 
@@ -146,113 +153,113 @@ Proof
   >- (irule peta_eta >> simp[NOT_IN_FV_SUB])
 QED
 
-Inductive eta_expkR:
+Inductive eta_expandR:
 [~zero:]
-  eta_expkR 0 M M
+  eta_expandR 0 M M
 [~suc:]
-  eta_expkR n M N ∧ v ∉ FV M ⇒ eta_expkR (n + 1) M (LAM v (N @@ VAR v))
+  eta_expandR n M N ∧ v ∉ FV M ⇒ eta_expandR (n + 1) M (LAM v (N @@ VAR v))
 End
 
-Theorem eta_expkR_FV:
-  ∀k M N. eta_expkR k M N ⇒ FV N = FV M
+Theorem eta_expandR_FV:
+  ∀k M N. eta_expandR k M N ⇒ FV N = FV M
 Proof
-  Induct_on ‘eta_expkR’ >>
+  Induct_on ‘eta_expandR’ >>
   simp[pred_setTheory.DELETE_INSERT, pred_setTheory.UNION_DELETE,
        pred_setTheory.DELETE_NON_ELEMENT_RWT]
 QED
 
-Theorem eta_expkR_unique:
-  ∀k M N. eta_expkR k M N ⇒ ∀N'. eta_expkR k M N' ⇔ N' = N
+Theorem eta_expandR_unique:
+  ∀k M N. eta_expandR k M N ⇒ ∀N'. eta_expandR k M N' ⇔ N' = N
 Proof
-  Induct_on ‘eta_expkR’>> conj_tac >> rpt gen_tac
-  >- simp[Once eta_expkR_cases] >>
-  strip_tac >> simp[Once eta_expkR_cases] >>
+  Induct_on ‘eta_expandR’>> conj_tac >> rpt gen_tac
+  >- simp[Once eta_expandR_cases] >>
+  strip_tac >> simp[Once eta_expandR_cases] >>
   simp[EQ_IMP_THM, FORALL_AND_THM] >> reverse conj_tac >- metis_tac[] >>
   rw[PULL_EXISTS,LAM_eq_thm] >> rename [‘u:string = v’] >> Cases_on ‘u = v’ >>
-  simp[] >> rpt (dxrule eta_expkR_FV) >> simp[tpm_fresh]
+  simp[] >> rpt (dxrule eta_expandR_FV) >> simp[tpm_fresh]
 QED
 
-Theorem eta_expkR_total:
-  ∀k M. ∃N. eta_expkR k M N
+Theorem eta_expandR_total:
+  ∀k M. ∃N. eta_expandR k M N
 Proof
-  Induct >- metis_tac[eta_expkR_zero] >> rpt gen_tac >>
-  simp[arithmeticTheory.ADD1] >> irule_at Any eta_expkR_suc >>
+  Induct >- metis_tac[eta_expandR_zero] >> rpt gen_tac >>
+  simp[arithmeticTheory.ADD1] >> irule_at Any eta_expandR_suc >>
   Q_TAC (NEW_TAC "z") ‘FV M’ >> metis_tac[]
 QED
 
-Definition eta_expk_def:
-  eta_expk k M = @N. eta_expkR k M N
+Definition eta_expand_def:
+  eta_expand k M = @N. eta_expandR k M N
 End
 
-Theorem eta_expk0[simp]:
-  eta_expk 0 M = M
+Theorem eta_expand0[simp]:
+  eta_expand 0 M = M
 Proof
-  simp[eta_expk_def, Once eta_expkR_cases]
+  simp[eta_expand_def, Once eta_expandR_cases]
 QED
 
-Theorem eta_expk_FV[simp]:
-  FV (eta_expk k M) = FV M
+Theorem eta_expand_FV[simp]:
+  FV (eta_expand k M) = FV M
 Proof
-  simp[eta_expk_def] >> SELECT_ELIM_TAC >>
-  metis_tac[eta_expkR_total, eta_expkR_FV]
+  simp[eta_expand_def] >> SELECT_ELIM_TAC >>
+  metis_tac[eta_expandR_total, eta_expandR_FV]
 QED
 
-Theorem eta_expkSUC:
-  v ∉ FV M ⇒ eta_expk (SUC k) M = LAM v (eta_expk k M @@ VAR v)
+Theorem eta_expandSUC:
+  v ∉ FV M ⇒ eta_expand (SUC k) M = LAM v (eta_expand k M @@ VAR v)
 Proof
-  simp[eta_expk_def] >> rpt SELECT_ELIM_TAC >> simp[eta_expkR_total] >>
-  gen_tac >> strip_tac >> simp[Once eta_expkR_cases] >>
+  simp[eta_expand_def] >> rpt SELECT_ELIM_TAC >> simp[eta_expandR_total] >>
+  gen_tac >> strip_tac >> simp[Once eta_expandR_cases] >>
   simp[PULL_EXISTS, arithmeticTheory.ADD1] >>
-  dxrule_then assume_tac eta_expkR_unique >> simp[] >> rpt strip_tac >>
-  rename [‘eta_expkR k M _ ⇔ _ = N’] >>
-  ‘FV N = FV M’ by metis_tac[eta_expkR_FV] >> rw[LAM_eq_thm]>>
+  dxrule_then assume_tac eta_expandR_unique >> simp[] >> rpt strip_tac >>
+  rename [‘eta_expandR k M _ ⇔ _ = N’] >>
+  ‘FV N = FV M’ by metis_tac[eta_expandR_FV] >> rw[LAM_eq_thm]>>
   metis_tac[tpm_fresh]
 QED
 
-Theorem eta_expk_EQ_VAR[simp]:
-  eta_expk k M = VAR s ⇔ k = 0 ∧ M = VAR s
+Theorem eta_expand_EQ_VAR[simp]:
+  eta_expand k M = VAR s ⇔ k = 0 ∧ M = VAR s
 Proof
   Cases_on ‘k’ >> simp[] >> Q_TAC (NEW_TAC "z") ‘FV M’ >>
-  drule_then assume_tac eta_expkSUC >> simp[]
+  drule_then assume_tac eta_expandSUC >> simp[]
 QED
 
 Theorem takahashi_3_2_1:
-  M =η=> VAR x ⇔ ∃k. M = eta_expk k (VAR x)
+  M =η=> VAR x ⇔ ∃k. M = eta_expand k (VAR x)
 Proof
   iff_tac
-  >- (‘∀M N. M =η=> N ⇒ ∀s. N = VAR s ⇒ ∃k. M = eta_expk k (VAR s)’
+  >- (‘∀M N. M =η=> N ⇒ ∀s. N = VAR s ⇒ ∃k. M = eta_expand k (VAR s)’
         suffices_by metis_tac[] >>
       ho_match_mp_tac peta_genind >> qexists ‘λx. {x}’ >> rw[] >> gvs[] >>
-      rename [‘eta_expk k’] >> qexists ‘SUC k’ >> ‘v ∉ FV (VAR s)’ by simp[] >>
-      dxrule_then assume_tac eta_expkSUC >> simp[]) >>
+      rename [‘eta_expand k’] >> qexists ‘SUC k’ >> ‘v ∉ FV (VAR s)’ by simp[] >>
+      dxrule_then assume_tac eta_expandSUC >> simp[]) >>
   simp[PULL_EXISTS] >> map_every qid_spec_tac [‘x’, ‘M’] >> Induct_on ‘k’ >>
   gvs[] >> qx_gen_tac ‘u’ >> Q_TAC (NEW_TAC "v") ‘{u}’ >>
   ‘v ∉ FV (VAR u)’ by simp[] >>
-  dxrule_then assume_tac eta_expkSUC >> simp[] >> irule peta_eta >> simp[]
+  dxrule_then assume_tac eta_expandSUC >> simp[] >> irule peta_eta >> simp[]
 QED
 
 Theorem takahashi_3_2_2:
   M =η=> N1 @@ N2 ⇔
-    ∃k M1 M2. M = eta_expk k (M1 @@ M2) ∧ M1 =η=> N1 ∧ M2 =η=> N2
+    ∃k M1 M2. M = eta_expand k (M1 @@ M2) ∧ M1 =η=> N1 ∧ M2 =η=> N2
 Proof
   iff_tac
   >- (‘∀M N. M =η=> N ⇒
              ∀N12 N1 N2.
                N12 = (N1,N2) ∧ N = N1 @@ N2 ⇒
-               ∃k M1 M2. M = eta_expk k (M1 @@ M2) ∧ M1 =η=> N1 ∧
+               ∃k M1 M2. M = eta_expand k (M1 @@ M2) ∧ M1 =η=> N1 ∧
                          M2 =η=> N2’
         suffices_by metis_tac[] >>
       ho_match_mp_tac peta_genind >> qexists ‘λp. FV (FST p) ∪ FV (SND p)’>>
       rw[]
-      >- metis_tac[peta_refl, eta_expk0]
-      >- metis_tac[peta_app, eta_expk0] >>
-      gvs[] >> rename [‘eta_expk k’, ‘LAM v’] >> qexists ‘SUC k’ >>
+      >- metis_tac[peta_refl, eta_expand0]
+      >- metis_tac[peta_app, eta_expand0] >>
+      gvs[] >> rename [‘eta_expand k’, ‘LAM v’] >> qexists ‘SUC k’ >>
       ‘v ∉ FV (M1 @@ M2)’ by simp[] >>
-      dxrule_then (assume_tac o GSYM) eta_expkSUC >> simp[] >> metis_tac[]) >>
+      dxrule_then (assume_tac o GSYM) eta_expandSUC >> simp[] >> metis_tac[]) >>
   map_every qid_spec_tac [‘M’, ‘N1’, ‘N2’] >> simp[PULL_EXISTS] >>
   Induct_on ‘k’ >> simp[peta_app] >> rw[] >>
   Q_TAC (NEW_TAC "z") ‘FV (M1 @@ M2)’ >>
-  drule_then assume_tac eta_expkSUC >> simp[] >>
+  drule_then assume_tac eta_expandSUC >> simp[] >>
   irule peta_eta >> gvs[]
 QED
 
@@ -286,16 +293,16 @@ Proof
 QED
 
 Theorem takahashi_3_2_3:
-  M =η=> LAM x N ⇔ ∃k M'. M = eta_expk k (LAM x M') ∧ M' =η=> N
+  M =η=> LAM x N ⇔ ∃k M'. M = eta_expand k (LAM x M') ∧ M' =η=> N
 Proof
   iff_tac
   >- (‘∀M N0. M =η=> N0 ⇒
               ∀vN v N. vN = (v,N) ∧ N0 = LAM v N ⇒
-                       ∃k M'. M = eta_expk k (LAM v M') ∧ M' =η=> N’
+                       ∃k M'. M = eta_expand k (LAM v M') ∧ M' =η=> N’
         suffices_by metis_tac[] >>
       ho_match_mp_tac peta_genind >> qexists ‘λp. FST p INSERT FV (SND p)’ >>
       rw[]
-      >- metis_tac[eta_expk0, peta_refl]
+      >- metis_tac[eta_expand0, peta_refl]
       >- (gvs[LAM_eq_thm] >> qexists ‘0’ >> simp[LAM_eq_thm] >>
           simp[tpm_eqr] >> dxrule (iffRL tpm_peta) >>
           rename [‘tpm [(u,v)] N’] >>
@@ -308,81 +315,81 @@ Proof
           gvs[] >> first_assum $ irule_at Any>>
           rename [‘LAM v M’, ‘u # M’]>>
           ‘u # LAM v M’ by simp[] >>
-          pop_assum (mp_then Any (assume_tac o GSYM) eta_expkSUC)>>
+          pop_assum (mp_then Any (assume_tac o GSYM) eta_expandSUC)>>
           simp[]>> metis_tac[])) >>
   map_every qid_spec_tac [‘M’, ‘x’, ‘N’] >> simp[PULL_EXISTS] >>
   Induct_on ‘k’>> simp[peta_lam] >> rw[] >>
-  rename [‘eta_expk (SUC k) (LAM v M)’] >>
-  ‘v # LAM v M’ by simp[] >> dxrule_then assume_tac eta_expkSUC >>
+  rename [‘eta_expand (SUC k) (LAM v M)’] >>
+  ‘v # LAM v M’ by simp[] >> dxrule_then assume_tac eta_expandSUC >>
   simp[peta_eta]
 QED
 
 Theorem takahashi_3_3_1_0:
-  ∀M M' v k. M =β=> M' ⇒ eta_expk k (LAM v M) @@ VAR v =β=> M'
+  ∀M M' v k. M =β=> M' ⇒ eta_expand k (LAM v M) @@ VAR v =β=> M'
 Proof
   Induct_on ‘k’ >> simp[redex_grandbeta, var_grandbeta] >> rw[] >>
   ‘v # LAM v M’ by simp[] >>
-  dxrule_then assume_tac eta_expkSUC >> simp[] >>
+  dxrule_then assume_tac eta_expandSUC >> simp[] >>
   simp[redex_grandbeta, var_grandbeta]
 QED
 
 Theorem takahashi_3_3_1:
-  ∀M M' v k. M =β=> M' ⇒ eta_expk k (LAM v M) =β=> LAM v M'
+  ∀M M' v k. M =β=> M' ⇒ eta_expand k (LAM v M) =β=> LAM v M'
 Proof
   Cases_on ‘k’ >> simp[abs_grandbeta]>> rw[] >>
   ‘v # LAM v M’ by simp[] >>
-  dxrule_then assume_tac eta_expkSUC >> simp[] >>
+  dxrule_then assume_tac eta_expandSUC >> simp[] >>
   simp[abs_grandbeta, takahashi_3_3_1_0]
 QED
 
 Theorem takahashi_3_3_2:
   ∀M M' N N' v k.
     M =β=> M' ∧ N =β=> N' ⇒
-    eta_expk k (LAM v M) @@ N =β=> [N'/v]M'
+    eta_expand k (LAM v M) @@ N =β=> [N'/v]M'
 Proof
   Induct_on ‘k’ >> simp[redex_grandbeta, var_grandbeta]
   >- metis_tac[] >>
   rpt strip_tac >>
   ‘v # LAM v M’ by simp[] >>
-  drule_then assume_tac eta_expkSUC >> simp[redex_grandbeta] >>
+  drule_then assume_tac eta_expandSUC >> simp[redex_grandbeta] >>
   metis_tac[takahashi_3_3_1_0]
 QED
 
-Theorem eta_expkSUC':
+Theorem eta_expandSUC':
   ∀v M k. v # M ⇒
-          eta_expk (SUC k) M = eta_expk k (LAM v (M @@ VAR v))
+          eta_expand (SUC k) M = eta_expand k (LAM v (M @@ VAR v))
 Proof
   ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
   Induct_on ‘k’ >> rpt strip_tac
-  >- (drule_then assume_tac eta_expkSUC >> simp[]) >>
-  drule_then assume_tac eta_expkSUC  >>
+  >- (drule_then assume_tac eta_expandSUC >> simp[]) >>
+  drule_then assume_tac eta_expandSUC  >>
   ‘v # LAM v (M @@ VAR v)’ by simp[] >>
-  drule_then assume_tac eta_expkSUC  >>
+  drule_then assume_tac eta_expandSUC  >>
   simp[]
 QED
 
 Theorem takahashi_3_3_3:
   ∀M M' N N' k.
     M =β=> M' ∧ N =β=> N' ⇒
-    eta_expk k M @@ N =β=> M' @@ N'
+    eta_expand k M @@ N =β=> M' @@ N'
 Proof
   Cases_on ‘k’ >> simp[grandbeta_APP] >> rw[] >>
-  Q_TAC (NEW_TAC "z") ‘FV M’ >> drule_then assume_tac eta_expkSUC' >>
+  Q_TAC (NEW_TAC "z") ‘FV M’ >> drule_then assume_tac eta_expandSUC' >>
   simp[] >>
   ‘[N'/z](M' @@ VAR z) = M' @@ N'’ suffices_by
     (disch_then (fn th => simp[GSYM th, Excl "SUB_THM"]) >>
-     irule takahashi_3_3_2 >> simp[grandbeta_APP, grandbeta_REFL]) >>
+     irule takahashi_3_3_2 >> simp[grandbeta_APP]) >>
   ‘z # M'’ by metis_tac[grandbeta_FV, SUBSET_DEF] >>
   simp[lemma14b]
 QED
 
 Theorem takahashi_3_3_4:
-  ∀M M' k. k ≠ 0 ∧ M =β=> M' ⇒ eta_expk k M =β=> eta_expk 1 M'
+  ∀M M' k. k ≠ 0 ∧ M =β=> M' ⇒ eta_expand k M =β=> eta_expand 1 M'
 Proof
   rw[] >> Q_TAC (NEW_TAC "z") ‘FV M ∪ FV M'’ >>
   Cases_on ‘k’ >> gvs[] >>
-  qpat_assum ‘z # M’ (mp_then Any assume_tac eta_expkSUC') >>
-  qpat_assum ‘z # M'’ (mp_then Any (qspec_then ‘0’ assume_tac) eta_expkSUC') >>
+  qpat_assum ‘z # M’ (mp_then Any assume_tac eta_expandSUC') >>
+  qpat_assum ‘z # M'’ (mp_then Any (qspec_then ‘0’ assume_tac) eta_expandSUC') >>
   gvs[] >> irule takahashi_3_3_1>> simp[grandbeta_APP, var_grandbeta]
 QED
 
@@ -398,21 +405,21 @@ Proof
       irule_at Any peta_lam >> metis_tac[])
   >- (qpat_x_assum ‘peta M (_ @@ _)’ mp_tac >>
       simp[SimpL “$==>”, takahashi_3_2_2] >> rw[] >>
-      rename [‘eta_expk k (M0 @@ N0)’]>>
+      rename [‘eta_expand k (M0 @@ N0)’]>>
       ‘∃PM. M0 =β=> PM ∧ PM =η=> M2’ by metis_tac[] >>
       ‘∃PN. N0 =β=> PN ∧ PN =η=> N2’ by metis_tac[] >>
       Cases_on ‘k = 0’ >> simp[] >- metis_tac [grandbeta_APP, peta_app] >>
       gs[] >> ‘M0 @@ N0 =β=> PM @@ PN’ by simp[grandbeta_APP] >>
       irule_at Any takahashi_3_3_4 >> rpt $ first_assum $ irule_at Any >>
       Q_TAC (NEW_TAC "z") ‘FV (PM @@ PN)’ >>
-      drule_then assume_tac eta_expkSUC >>
+      drule_then assume_tac eta_expandSUC >>
       ASM_REWRITE_TAC[arithmeticTheory.ONE] >> simp[] >>
       irule peta_eta >> gvs[peta_app]) >>
   rename [‘M =η=> LAM v M1 @@ N1’] >>
-  ‘∃k M0 N0. M = eta_expk k (M0 @@ N0) ∧ M0 =η=> LAM v M1 ∧ N0 =η=> N1’
+  ‘∃k M0 N0. M = eta_expand k (M0 @@ N0) ∧ M0 =η=> LAM v M1 ∧ N0 =η=> N1’
     by metis_tac[takahashi_3_2_2] >>
   gs[takahashi_3_2_3] >>
-  rename [‘M = eta_expk k (eta_expk l (LAM v M0) @@ N0)’] >>
+  rename [‘M = eta_expand k (eta_expand l (LAM v M0) @@ N0)’] >>
   ‘∃PM PN. M0 =β=> PM ∧ PM =η=> M2 ∧ N0 =β=> PN ∧ PN =η=> N2’
     by metis_tac[] >>
   Cases_on ‘k = 0’ >> simp[]
@@ -423,7 +430,7 @@ Proof
   rpt $ first_assum $ irule_at Any >> simp[peta_subst_closed] >>
   ‘v # ([PN/v]PM)’ by (simp[FV_SUB] >> rw[] >>
                        metis_tac[grandbeta_FV, SUBSET_DEF]) >>
-  drule_then (qspec_then ‘0’ mp_tac) eta_expkSUC >> simp[] >>
+  drule_then (qspec_then ‘0’ mp_tac) eta_expandSUC >> simp[] >>
   strip_tac >> irule peta_eta >> simp[peta_subst_closed]
 QED
 
@@ -455,29 +462,29 @@ Proof
 QED
 
 Theorem takahashi_3_3_4_star:
-  ∀M N k. M -β->* N ∧ k ≠ 0 ⇒ eta_expk k M -β->* eta_expk 1 N
+  ∀M N k. M -β->* N ∧ k ≠ 0 ⇒ eta_expand k M -β->* eta_expand 1 N
 Proof
   Induct_on ‘RTC’ >> rw[]
-  >- (‘M =β=> M’ by simp[grandbeta_REFL] >>
+  >- (‘M =β=> M’ by simp[] >>
       drule_all takahashi_3_3_4 >> metis_tac[grandbeta_imp_betastar]) >>
   rename [‘M -β-> P’, ‘P -β->* N’] >>
   ‘M =β=> P’ by metis_tac[exercise3_3_1] >>
   drule_all takahashi_3_3_4 >> strip_tac >>
-  ‘eta_expk 1 P -β->* eta_expk 1 N’ by simp[] >>
+  ‘eta_expand 1 P -β->* eta_expand 1 N’ by simp[] >>
   metis_tac[RTC_CASES_RTC_TWICE, grandbeta_imp_betastar]
 QED
 
-Theorem has_bnf_eta_expk[simp]:
-  ∀t k. has_bnf (eta_expk k t) ⇔ has_bnf t
+Theorem has_bnf_eta_expand[simp]:
+  ∀t k. has_bnf (eta_expand k t) ⇔ has_bnf t
 Proof
   simp[EQ_IMP_THM, FORALL_AND_THM] >> conj_tac >~
-  [‘has_bnf (eta_expk _ _) ⇒ _’]
+  [‘has_bnf (eta_expand _ _) ⇒ _’]
   >- (Induct_on ‘k’>> simp[] >> qx_gen_tac ‘M’ >>
-      Q_TAC (NEW_TAC "z") ‘FV M’ >> drule_then assume_tac eta_expkSUC >>
+      Q_TAC (NEW_TAC "z") ‘FV M’ >> drule_then assume_tac eta_expandSUC >>
       simp[] >> simp[SimpL “$==>”, has_bnf_thm] >> strip_tac >>
       drule_all has_bnf_appVAR_LR >> metis_tac[]) >>
   Induct_on ‘k’ >> simp[] >> rw[] >>
-  Q_TAC (NEW_TAC "z") ‘FV t’ >> drule_then assume_tac eta_expkSUC' >>
+  Q_TAC (NEW_TAC "z") ‘FV t’ >> drule_then assume_tac eta_expandSUC' >>
   simp[] >> first_x_assum irule >> simp[] >>
   irule has_bnf_appVAR_RL >> metis_tac[has_bnf_thm]
 QED
@@ -486,21 +493,21 @@ Theorem peta_LAML_expk:
   ∀P vs M.
     P =η=> LAMl vs M ⇔
     ∃ls M0. LENGTH ls = LENGTH vs ∧
-            P = FOLDR (λ(i,v) A. eta_expk i (LAM v A)) M0 (ZIP (ls,vs)) ∧
+            P = FOLDR (λ(i,v) A. eta_expand i (LAM v A)) M0 (ZIP (ls,vs)) ∧
             M0 =η=> M
 Proof
   Induct_on ‘vs’ >>
   simp[takahashi_3_2_3, PULL_EXISTS, LENGTH_CONS] >> metis_tac[]
 QED
 
-Theorem eta_expk_sum:
-  ∀k1 k2 M. eta_expk k1 (eta_expk k2 M) = eta_expk (k1 + k2) M
+Theorem eta_expand_sum:
+  ∀k1 k2 M. eta_expand k1 (eta_expand k2 M) = eta_expand (k1 + k2) M
 Proof
   Induct_on ‘k1’ >> simp[] >> rw[] >>
   Q_TAC (NEW_TAC "z") ‘FV M’ >>
-  drule_then assume_tac eta_expkSUC >>
-  ‘z # eta_expk k2 M’ by simp[] >>
-  drule_then assume_tac eta_expkSUC >>
+  drule_then assume_tac eta_expandSUC >>
+  ‘z # eta_expand k2 M’ by simp[] >>
+  drule_then assume_tac eta_expandSUC >>
   simp[arithmeticTheory.ADD_CLAUSES]
 QED
 
@@ -512,11 +519,11 @@ QED
 
 Definition eapp_def[simp]:
   eapp A [] = A ∧
-  eapp A (h::t) = eapp (eta_expk (FST h) (A @@ SND h)) t
+  eapp A (h::t) = eapp (eta_expand (FST h) (A @@ SND h)) t
 End
 
 Theorem eapp_SNOC[simp]:
-  eapp A (SNOC l f) = eta_expk (FST l) (eapp A f @@ SND l)
+  eapp A (SNOC l f) = eta_expand (FST l) (eapp A f @@ SND l)
 Proof
   map_every qid_spec_tac [‘A’, ‘l’] >> Induct_on ‘f’ >> simp[]
 QED
@@ -534,11 +541,11 @@ Proof
   metis_tac[]
 QED
 
-Theorem is_abs_eta_expk[simp]:
-  is_abs (eta_expk k M) ⇔ 0 < k ∨ is_abs M
+Theorem is_abs_eta_expand[simp]:
+  is_abs (eta_expand k M) ⇔ 0 < k ∨ is_abs M
 Proof
   Cases_on ‘k’ >> simp[] >> Q_TAC (NEW_TAC "z") ‘FV M’ >>
-  drule_then assume_tac eta_expkSUC >> simp[]
+  drule_then assume_tac eta_expandSUC >> simp[]
 QED
 
 Theorem is_abs_eapp:
@@ -550,7 +557,7 @@ Proof
 QED
 
 Theorem takahashi_3_3_4star:
-  ∀M N k. M =β=>* N ∧ k ≠ 0 ⇒ eta_expk k M =β=>* eta_expk 1 N
+  ∀M N k. M =β=>* N ∧ k ≠ 0 ⇒ eta_expand k M =β=>* eta_expand 1 N
 Proof
   Induct_on ‘RTC’ >> rpt strip_tac
   >- metis_tac[takahashi_3_3_4, grandbeta_REFL, RTC_SUBSET] >>
@@ -558,19 +565,19 @@ Proof
   metis_tac[DECIDE “1n ≠ 0”, RTC_RULES]
 QED
 
-Theorem eta_expk_beta_cong:
-  ∀M N. M -β-> N ⇒ eta_expk k M -β-> eta_expk k N
+Theorem eta_expand_beta_cong:
+  ∀M N. M -β-> N ⇒ eta_expand k M -β-> eta_expand k N
 Proof
   Induct_on ‘k’ >> simp[] >> rw[] >>
   Q_TAC (NEW_TAC "z") ‘FV M ∪ FV N’ >>
-  rpt $ dxrule_then assume_tac eta_expkSUC >> simp[] >>
+  rpt $ dxrule_then assume_tac eta_expandSUC >> simp[] >>
   simp[compat_closure_rules]
 QED
 
-Theorem eta_expk_betastar_cong:
-  ∀M N. M -β->* N ⇒ eta_expk k M -β->* eta_expk k N
+Theorem eta_expand_betastar_cong:
+  ∀M N. M -β->* N ⇒ eta_expand k M -β->* eta_expand k N
 Proof
-  Induct_on ‘RTC’ >> metis_tac[RTC_RULES, eta_expk_beta_cong]
+  Induct_on ‘RTC’ >> metis_tac[RTC_RULES, eta_expand_beta_cong]
 QED
 
 Theorem takahashi_3_6_0:
@@ -581,7 +588,7 @@ Proof
   gvs[peta_LAML_expk, peta_appstar_expk, takahashi_3_2_1] >>
   rename [‘LIST_REL peta Ps Qs’] >>
   qmatch_abbrev_tac ‘has_bnf (FOLDR lamf P' (ZIP(ls,vs)))’ >>
-  ‘∃k. k ≤ 1 ∧ P' =β=>* eta_expk k (VAR v @* Ps)’
+  ‘∃k. k ≤ 1 ∧ P' =β=>* eta_expand k (VAR v @* Ps)’
     by (simp[Abbr‘P'’] >> ‘LENGTH Ps = LENGTH ks’ by simp[] >>
         pop_assum mp_tac >> map_every qid_spec_tac [‘ks’, ‘Ps’] >>
         map_every (C qpat_x_assum kall_tac)[‘LIST_REL peta Ps Qs’,
@@ -598,24 +605,24 @@ Proof
         first_x_assum (resolve_then Any
                                     (qx_choose_then ‘k2’ strip_assume_tac)
                                     EQ_REFL) >> gvs[] >>
-        rename [‘eta_expk k3 (eapp _ _ @@ Plast)’] >>
-        qabbrev_tac ‘MM = eapp (eta_expk k (VAR v)) (ZIP(l,Ps))’ >>
+        rename [‘eta_expand k3 (eapp _ _ @@ Plast)’] >>
+        qabbrev_tac ‘MM = eapp (eta_expand k (VAR v)) (ZIP(l,Ps))’ >>
         Cases_on ‘k3 = 0’ >> gvs[]
         >- (Cases_on ‘k2 = 0’ >> gvs[]
             >- (qexists ‘0’ >> simp[] >> gvs[RTC_grandbeta] >>
                 metis_tac[reduction_rules]) >>
-            ‘MM @@ Plast =β=>* eta_expk k2 (VAR v @* Ps) @@ Plast’
+            ‘MM @@ Plast =β=>* eta_expand k2 (VAR v @* Ps) @@ Plast’
               by (gvs[RTC_grandbeta] >> metis_tac[reduction_rules]) >>
             irule_at Any (cj 2 RTC_RULES_RIGHT1) >>
             first_assum $ irule_at Any >> qexists ‘0’ >>
-            simp[takahashi_3_3_3, grandbeta_REFL]) >>
+            simp[takahashi_3_3_3]) >>
         Cases_on ‘k2 = 0’ >> gvs[]
         >- (‘MM @@ Plast =β=>* VAR v @* Ps @@ Plast’
               by (gvs[RTC_grandbeta] >> metis_tac[reduction_rules]) >>
             qexists ‘1’ >> simp[] >>
             irule takahashi_3_3_4star >> simp[]) >>
-        ‘eta_expk k2 (VAR v @* Ps) @@ Plast =β=> VAR v @* Ps @@ Plast’
-          by (irule takahashi_3_3_3 >> simp[grandbeta_REFL]) >>
+        ‘eta_expand k2 (VAR v @* Ps) @@ Plast =β=> VAR v @* Ps @@ Plast’
+          by (irule takahashi_3_3_3 >> simp[]) >>
         irule_at Any takahashi_3_3_4star >> simp[] >>
         gvs[RTC_grandbeta] >> irule (iffRL RTC_CASES_RTC_TWICE) >>
         drule_then (irule_at Any) grandbeta_imp_betastar >>
@@ -628,16 +635,16 @@ Proof
   pop_assum mp_tac >> simp[has_bnf_thm] >>
   CONV_TAC (LAND_CONV (SCONV[GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM])) >>
   disch_then $ qx_choose_then ‘Nf’ strip_assume_tac >> gs[RTC_grandbeta] >>
-  ‘eta_expk k' (VAR v @* Ps) -β->* eta_expk k' (VAR v @* MAP Nf Ps)’
-    by (irule eta_expk_betastar_cong >> pop_assum mp_tac >>
+  ‘eta_expand k' (VAR v @* Ps) -β->* eta_expand k' (VAR v @* MAP Nf Ps)’
+    by (irule eta_expand_betastar_cong >> pop_assum mp_tac >>
         rpt (pop_assum kall_tac) >> Induct_on ‘Ps’ using SNOC_INDUCT >>
         simp[DISJ_IMP_THM, FORALL_AND_THM, MAP_SNOC] >> rw[] >>
         metis_tac[reduction_rules]) >>
-  ‘bnf (eta_expk k' (VAR v @* MAP Nf Ps))’
+  ‘bnf (eta_expand k' (VAR v @* MAP Nf Ps))’
     by (Cases_on ‘k' = 0’ >> simp[MEM_MAP, PULL_EXISTS] >>
         ‘k' = SUC 0’ by simp[] >>
         Q_TAC (NEW_TAC "z") ‘FV (VAR v @* MAP Nf Ps)’ >>
-        drule_then assume_tac eta_expkSUC >> ASM_REWRITE_TAC[] >>
+        drule_then assume_tac eta_expandSUC >> ASM_REWRITE_TAC[] >>
         simp[PULL_EXISTS, MEM_MAP]) >>
   ‘FOLDR lamf P' (ZIP (ls,vs)) =β=>* LAMl vs P'’
     by (simp[Abbr‘lamf’] >>

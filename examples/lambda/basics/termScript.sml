@@ -359,10 +359,19 @@ val simple_induction = store_thm(
         !M. P M``,
   METIS_TAC [nc_INDUCTION2, FINITE_EMPTY, NOT_IN_EMPTY])
 
-val tpm_eqr = store_thm(
-  "tpm_eqr",
-  ``(t = tpm pi u) = (tpm (REVERSE pi) t = u)``,
-  METIS_TAC [pmact_inverse]);
+Theorem tpm_eqr:
+  (t = tpm pi u) = (tpm (REVERSE pi) t = u)
+Proof
+  METIS_TAC [pmact_inverse]
+QED
+
+Theorem tpm_eql:
+  tpm π t = u ⇔ t = tpm π⁻¹ u
+Proof
+  simp[tpm_eqr]
+QED
+
+
 
 val tpm_CONS = store_thm(
   "tpm_CONS",
@@ -624,7 +633,7 @@ Proof
 QED
 
 (* moved here from standardisationScript.sml *)
-Theorem size_vsubst :
+Theorem size_vsubst[simp]:
     !M:term. size ([VAR v/u] M) = size M
 Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
