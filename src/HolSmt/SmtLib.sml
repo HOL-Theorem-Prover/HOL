@@ -524,7 +524,7 @@ local
      arguments to the term.  (Because SMT-LIB is first-order,
      partially applied functions are mapped to different SMT-LIB
      identifiers, depending on the number of actual arguments.) *)
-  fun goal_to_SmtLib_aux (ts, t)
+  fun goal_to_SmtLib_aux logic (ts, t)
     : ((Type.hol_type, string) Redblackmap.dict *
       (Term.term * int, string) Redblackmap.dict) * string list =
   let
@@ -540,9 +540,12 @@ local
        declarations before all assertions) *)
     val smtlibs = List.foldl
       (fn ((xs, s), acc) => acc @ xs @ ["(assert " ^ s ^ ")\n"]) [] smtlibs
+    val set_logic =
+      case logic of
+        NONE => []
+      | SOME l => ["(set-logic " ^ l ^ ")\n"]
   in
-    (acc, [
-      (* "(set-logic AUFBVNIRA)\n", *)
+    (acc, set_logic @ [
       "(set-info :source |Automatically generated from HOL4 by SmtLib.goal_to_SmtLib.\n",
       "Copyright (c) 2011 Tjark Weber. All rights reserved.|)\n",
       "(set-info :smt-lib-version 2.0)\n"
@@ -553,11 +556,11 @@ local
 
 in
 
-  val goal_to_SmtLib =
-    Lib.apsnd (fn xs => xs @ ["(exit)\n"]) o goal_to_SmtLib_aux
+  fun goal_to_SmtLib logic =
+    Lib.apsnd (fn xs => xs @ ["(exit)\n"]) o (goal_to_SmtLib_aux logic)
 
-  val goal_to_SmtLib_with_get_proof =
-    Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o goal_to_SmtLib_aux
+  fun goal_to_SmtLib_with_get_proof logic =
+    Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o (goal_to_SmtLib_aux logic)
 
   (* eliminates some HOL terms that are not supported by the SMT-LIB
      translation *)

@@ -30,11 +30,13 @@ structure HolSmtLib :> HolSmtLib = struct
       raise ERR ("solver reports 'unknown' (" ^ message ^ ")")
   end
 
+  val CVC_ORACLE_TAC = GENERIC_SMT_TAC CVC.CVC_SMT_Oracle
   val YICES_TAC = GENERIC_SMT_TAC Yices.Yices_Oracle
   val Z3_ORACLE_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Oracle
   val Z3_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Prover
 
   fun prove (tm, tac) = Tactical.TAC_PROOF(([], tm), tac)
+  fun CVC_ORACLE_PROVE tm = prove (tm, CVC_ORACLE_TAC)
   fun YICES_PROVE tm = prove (tm, YICES_TAC)
   fun Z3_ORACLE_PROVE tm = prove (tm, Z3_ORACLE_TAC)
   fun Z3_PROVE tm = prove (tm, Z3_TAC)
@@ -53,6 +55,10 @@ structure HolSmtLib :> HolSmtLib = struct
             Feedback.HOL_MESG ("HolSmtLib: " ^ message)
     in
       Feedback.set_trace "HolSmtLib" 0;
+      if CVC.is_configured () then
+        check_available CVC_ORACLE_PROVE "cvc5 (oracle)"
+      else
+        provoke_err CVC_ORACLE_PROVE;
       if Yices.is_configured () then
         check_available YICES_PROVE "Yices"
       else

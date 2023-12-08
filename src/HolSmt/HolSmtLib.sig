@@ -6,10 +6,12 @@ signature HolSmtLib = sig
 
   val GENERIC_SMT_TAC : (goal -> SolverSpec.result) -> tactic
 
+  val CVC_ORACLE_TAC : tactic
   val YICES_TAC : tactic
   val Z3_ORACLE_TAC : tactic
   val Z3_TAC : tactic
 
+  val CVC_ORACLE_PROVE : term -> thm
   val YICES_PROVE : term -> thm
   val Z3_ORACLE_PROVE : term -> thm
   val Z3_PROVE : term -> thm

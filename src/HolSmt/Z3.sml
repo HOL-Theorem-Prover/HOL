@@ -37,7 +37,7 @@ structure Z3 = struct
       (fn goal =>
         let
           val (goal, _) = SolverSpec.simplify (SmtLib.SIMP_TAC false) goal
-          val (_, strings) = SmtLib.goal_to_SmtLib goal
+          val (_, strings) = SmtLib.goal_to_SmtLib NONE goal
         in
           ((), strings)
         end)
@@ -83,7 +83,7 @@ structure Z3 = struct
       (fn goal =>
         let
           val (goal, validation) = SolverSpec.simplify (SmtLib.SIMP_TAC true) goal
-          val (ty_tm_dict, strings) = SmtLib.goal_to_SmtLib_with_get_proof goal
+          val (ty_tm_dict, strings) = SmtLib.goal_to_SmtLib_with_get_proof NONE goal
         in
           (((goal, validation), ty_tm_dict), strings)
         end)
