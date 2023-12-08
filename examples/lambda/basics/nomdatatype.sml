@@ -126,11 +126,8 @@ fun new_type_step1 tyname n {vp, lp} = let
   val (glam_ty, gvar_ty) = first2 (#2 (dest_type gtty))
   val term_exists =
       prove(mk_exists(x, mk_comb(termP, x)),
-            EXISTS_TAC (list_mk_icomb(inst [beta |-> glam_ty] GVAR_t,
-                                      [mk_arb stringSyntax.string_ty,
-                                       mk_arb gvar_ty])) THEN
-            MATCH_MP_TAC (genind_rules |> SPEC_ALL |> CONJUNCT1) THEN
-            BETA_TAC THEN REWRITE_TAC [])
+            irule_at (Pos hd) (cj 1 genind_rules) THEN BETA_TAC THEN
+            REWRITE_TAC[])
   val {absrep_id, newty, repabs_pseudo_id, termP, termP_exists, termP_term_REP,
        term_ABS_t, term_ABS_pseudo11,
        term_REP_t, term_REP_11} =
