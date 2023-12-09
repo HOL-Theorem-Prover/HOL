@@ -19,6 +19,77 @@ Proof
   \\ rw[FUNPOW_SUC]
 QED
 
+(* TODO: move *)
+Theorem WHILE_FUNPOW:
+  (?n. ~P (FUNPOW f n s))
+  ==> WHILE P f s = FUNPOW f (LEAST n. ~P (FUNPOW f n s)) s
+Proof
+  strip_tac
+  \\ `~!n. P (FUNPOW f n s)` by PROVE_TAC[]
+  \\ `?x. OWHILE P f s = SOME x` by PROVE_TAC[OWHILE_EQ_NONE, option_CASES]
+  \\ irule OWHILE_WHILE
+  \\ rewrite_tac[OWHILE_def]
+  \\ IF_CASES_TAC
+  \\ fsrw_tac[][]
+QED
+
+(* TODO: move *)
+Theorem insert_fromList_IN_domain:
+  !ls k v.
+  k < LENGTH ls ==>
+  insert k v (fromList ls) =
+  fromList (TAKE k ls ++ [v] ++ DROP (SUC k) ls)
+Proof
+  simp[fromList_def]
+  \\ ho_match_mp_tac SNOC_INDUCT
+  \\ rw[FOLDL_SNOC, TAKE_SNOC]
+  \\ Cases_on`k = LENGTH ls` \\ gs[]
+  >- (
+    rw[DROP_LENGTH_NIL_rwt]
+    \\ gs[GSYM fromList_def, UNCURRY]
+    \\ qmatch_goalsub_abbrev_tac`FST (FOLDL f e ls)`
+    \\ `!ls e. FST (FOLDL f e ls) = FST e + LENGTH ls`
+    by ( Induct \\ rw[Abbr`f`, UNCURRY] )
+    \\ rw[Abbr`e`, insert_shadow]
+    \\ simp[fromList_def, FOLDL_APPEND]
+    \\ simp[Abbr`f`, UNCURRY] )
+  \\ gs[GSYM fromList_def, UNCURRY, DROP_SNOC]
+  \\ simp[SNOC_APPEND]
+  \\ qmatch_goalsub_abbrev_tac`FST (FOLDL f e ls)`
+  \\ `!ls e. FST (FOLDL f e ls) = FST e + LENGTH ls`
+  by ( Induct \\ rw[Abbr`f`, UNCURRY] )
+  \\ simp[Abbr`e`]
+  \\ simp[Once insert_insert]
+  \\ simp[fromList_def]
+  \\ simp[Once FOLDL_APPEND, SimpRHS]
+  \\ simp[Abbr`f`, UNCURRY]
+  \\ simp[ADD1]
+QED
+
+(*
+(* TODO: move *)
+Theorem fromList_SNOC:
+  !ls x.
+  fromList (SNOC x ls) =
+  insert (LENGTH ls) x (fromList ls)
+Proof
+  Induct
+  \\ gs[fromList_def]
+  \\ gs[FOLDL_SNOC]
+  \\ rpt gen_tac
+  \\ qmatch_goalsub_abbrev_tac`insert _ _ (SND p)`
+  \\ PairCases_on`p` \\ simp[]
+  \\ rpt AP_THM_TAC \\ AP_TERM_TAC
+  \\ gs[GSYM fromList_def]
+
+  \\ pop_assum mp_tac
+  \\ qmatch_goalsub_abbrev_tac`FOLDL f e`
+  \\ `FOLDL f e ls = FOLDL f e ls /\
+      (\p. FST p = FST e + LENGTH ls) (FOLDL f e ls)`
+  by (
+    irule FOLDL_CONG_invariant
+*)
+
 Datatype:
   state_array =
   <| w: num
@@ -564,6 +635,16 @@ Definition isFromList_def:
   isFromList t = ∃ls. t = fromList ls
 End
 
+Theorem isFromList_insert:
+  isFromList t /\ k IN domain t ==>
+  isFromList (insert k v t)
+Proof
+  rw[isFromList_def, PULL_EXISTS]
+  \\ gs[domain_fromList]
+  \\ gs[insert_fromList_IN_domain]
+  \\ PROVE_TAC[]
+QED
+
 (* if y is fixed 0 *)
 (* i -> (i DIV w, i MOD w) *)
 (* (x, z) -> x * w + z *)
@@ -887,6 +968,90 @@ Definition rho_spt_def:
       (1,0,0,a)
     in a'
 End
+
+Theorem rho_spt_invariants:
+  isFromList t ⇒
+    size (rho_spt t) = size t ∧
+    isFromList (rho_spt t)
+Proof
+  simp[rho_spt_def]
+  \\ qmatch_goalsub_abbrev_tac`WHILE P g x`
+  \\ strip_tac
+  \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
+  \\ `∀n. FST(SND(SND(FUNPOW g n x))) = n`
+  by (
+    Induct
+    >- rw[Abbr`x`]
+    \\ rw[FUNPOW_SUC]
+    \\ qmatch_goalsub_abbrev_tac`g xx`
+    \\ PairCases_on`xx`
+    \\ simp[Abbr`g`])
+  \\ conj_asm1_tac
+  >- (
+    qexists_tac`24`
+    \\ first_x_assum(qspec_then`24`mp_tac)
+    \\ qmatch_goalsub_abbrev_tac`P xx`
+    \\ PairCases_on`xx`
+    \\ rw[Abbr`P`] )
+  \\ numLib.LEAST_ELIM_TAC
+  \\ conj_tac >- rw[]
+  \\ gen_tac \\ strip_tac
+  \\ qho_match_abbrev_tac`Q (FUNPOW g n x)`
+  \\ `(λ(x,y,m,a). x < 5 ∧ y < 5 ∧ Q (x,y,m,a)) (FUNPOW g n x)`
+  suffices_by rw[UNCURRY]
+  \\ irule FUNPOW_invariant
+  \\ simp[Abbr`Q`]
+  \\ conj_tac >- simp[Abbr`x`]
+  \\ qx_gen_tac`p`
+  \\ PairCases_on`p`
+  \\ simp[Abbr`g`]
+  \\ strip_tac
+  \\ qpat_x_assum`~P _`kall_tac
+  \\ qmatch_goalsub_abbrev_tac`WHILE R h u`
+  \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
+  \\ `∀n. FST (FUNPOW h n u) = n`
+  by (
+    Induct >- rw[Abbr`u`]
+    \\ rw[FUNPOW_SUC]
+    \\ rw[Abbr`h`, UNCURRY] )
+  \\ conj_asm1_tac
+  >- (
+    qexists_tac`SUC (b2w (size t))`
+    \\ rw[Abbr`R`, UNCURRY] )
+  \\ numLib.LEAST_ELIM_TAC
+  \\ conj_tac >- rw[]
+  \\ qx_gen_tac`m` \\ strip_tac
+  \\ `(λz. (* (FST z < m ⇒ FST z < b2w $ size (SND z)) ∧ *)
+           isFromList (SND z) ∧ size (SND z) = size t)
+      (FUNPOW h m u)` suffices_by rw[]
+  \\ irule FUNPOW_invariant
+  \\ simp[FORALL_PROD]
+  \\ conj_tac >- (
+    gs[Abbr`u`]
+    \\ first_x_assum(qspec_then`0`mp_tac)
+    \\ simp[Abbr`R`] )
+  \\ qx_genl_tac[`q1`,`q2`]
+  \\ strip_tac
+  \\ simp[Abbr`h`]
+  \\ qpat_x_assum`~R _`kall_tac
+  \\ DEP_REWRITE_TAC[isFromList_insert]
+  \\ simp[size_insert]
+  \\ IF_CASES_TAC \\ simp[]
+  \\ qpat_x_assum`_ ∉ domain _`mp_tac
+  \\ qpat_x_assum`isFromList _`mp_tac
+  \\ rw[isFromList_def, PULL_EXISTS, domain_fromList]
+  \\ gs[size_fromList]
+  \\ simp[b2w_def]
+  \\ cheat (* index_less, and probably need a better invariant somewhere *)
+QED
+
+(*
+Theorem rho_spt:
+  spt_to_state_array (rho_spt t) =
+  (rho (spt_to_state_array t))
+Proof
+  rw[state_array_component_equality]
+*)
 
 Definition tabulate_array_def:
   tabulate_array a =
