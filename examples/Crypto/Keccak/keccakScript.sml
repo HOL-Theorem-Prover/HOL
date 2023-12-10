@@ -20,6 +20,17 @@ Proof
 QED
 
 (* TODO: move *)
+Theorem FUNPOW_invariant_index:
+  !m x.
+  P x /\
+  (!n. n < m ==> R (FUNPOW f n x)) /\
+  (!x. P x /\ R x ==> P (f x)) ==>
+  P (FUNPOW f m x)
+Proof
+  Induct>>rw[FUNPOW_SUC]
+QED
+
+(* TODO: move *)
 Theorem WHILE_FUNPOW:
   (?n. ~P (FUNPOW f n s))
   ==> WHILE P f s = FUNPOW f (LEAST n. ~P (FUNPOW f n s)) s
@@ -969,16 +980,6 @@ Definition rho_spt_def:
     in a'
 End
 
-Theorem FUNPOW_invariant_index:
-  ∀m x.
-  P x ∧
-  (∀n. n < m ⇒ R (FUNPOW f n x)) ∧
-  (∀x. P x ∧ R x ⇒ P (f x)) ⇒
-  P (FUNPOW f m x)
-Proof
-  Induct>>rw[FUNPOW_SUC]
-QED
-
 Theorem rho_spt_invariants:
   isFromList t ⇒
     size (rho_spt t) = size t ∧
@@ -1058,16 +1059,79 @@ Proof
     drule DIVISION>>
     disch_then(qspec_then`size t` assume_tac)>>
     simp[b2w_def])
-  \\ metis_tac[arithmeticTheory.LESS_LESS_EQ_TRANS]
+  \\ metis_tac[LESS_LESS_EQ_TRANS]
 QED
 
-(*
+Theorem rho_spt_size[simp]:
+  isFromList t ⇒ size (rho_spt t) = size t
+Proof
+  rw[rho_spt_invariants]
+QED
+
 Theorem rho_spt:
+  isFromList t ⇒
   spt_to_state_array (rho_spt t) =
   (rho (spt_to_state_array t))
 Proof
   rw[state_array_component_equality]
-*)
+  \\ `∃rs. rho_spt t = fromList rs`
+  by metis_tac[isFromList_def, rho_spt_invariants]
+  \\ simp[spt_to_state_array_fromList]
+  \\ `∃ls. t = fromList ls` by metis_tac[isFromList_def]
+  \\ simp[spt_to_state_array_fromList]
+  \\ simp[rho_def, string_to_state_array_w]
+  \\ simp[string_to_state_array_def]
+  \\ simp[FUN_EQ_THM, FORALL_PROD]
+  \\ simp[Once restrict_def]
+  \\ simp[Once restrict_def, SimpRHS]
+  \\ qx_genl_tac[`x`,`y`,`z`]
+  \\ Cases_on`x < 5 ∧ y < 5` \\ fs[]
+  \\ qmatch_goalsub_abbrev_tac`z < w`
+  \\ `LENGTH ls = LENGTH rs` by metis_tac[rho_spt_invariants, size_fromList]
+  \\ Cases_on`z < w` \\ fs[]
+  \\ qpat_x_assum`rho_spt _ = _`mp_tac
+  \\ simp[rho_spt_def]
+  \\ qmatch_goalsub_abbrev_tac`WHILE P f a`
+  \\ simp[restrict_def]
+  \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
+  \\ `∀n. FST(SND(SND(FUNPOW f n a))) = n`
+  by (
+    Induct >- rw[Abbr`a`]
+    \\ rw[FUNPOW_SUC]
+    \\ qmatch_goalsub_abbrev_tac`f xx`
+    \\ PairCases_on`xx`
+    \\ simp[Abbr`f`])
+  \\ conj_asm1_tac
+  >- ( qexists_tac`24` \\ simp[Abbr`P`, UNCURRY] )
+  \\ numLib.LEAST_ELIM_TAC
+  \\ conj_tac >- rw[]
+  \\ rpt strip_tac
+  \\ `∀m b x y t u.
+      FUNPOW f m b = (x,y,t,u) ∧
+      rho_xy (FST(SND(SND b))) = (FST b, FST (SND b))
+      ⇒ rho_xy t = (x,y)`
+  by (
+    ntac 2 gen_tac
+    \\ qho_match_abbrev_tac`Q (FUNPOW f m b)`
+    \\ irule FUNPOW_invariant
+    \\ simp[Abbr`Q`]
+    \\ conj_tac
+    >- ( rw[] \\ gs[] )
+    \\ simp[FORALL_PROD]
+    \\ simp[Abbr`f`]
+    \\ simp[GSYM ADD1] )
+  \\ `∀m x y t u.
+      FUNPOW f m a = (x,y,t,u) ⇒
+      t = m ∧ rho_xy m = (x,y)`
+  by (
+    rpt gen_tac
+    \\ strip_tac
+    \\ first_x_assum(qspecl_then[`m`,`a`]mp_tac)
+    \\ first_x_assum(qspecl_then[`m`]mp_tac)
+    \\ first_x_assum(qspecl_then[`m`]mp_tac)
+    \\ simp[Abbr`a`] )
+  \\ cheat
+QED
 
 Definition tabulate_array_def:
   tabulate_array a =
