@@ -1068,6 +1068,45 @@ Proof
   rw[rho_spt_invariants]
 QED
 
+Theorem rho_xy_cycle:
+  ∀t. rho_xy t = rho_xy (t + 24)
+Proof
+  Induct \\ rw[]
+  >- EVAL_TAC
+  \\ simp[ADD]
+QED
+
+Theorem rho_xy_not_zero:
+  ∀t. rho_xy t ≠ (0,0)
+Proof
+  completeInduct_on`t`
+  \\ Cases_on`24 ≤ t`
+  >- ( fs[LESS_EQ_EXISTS] \\ simp[GSYM rho_xy_cycle] )
+  \\ fs[NOT_LESS_EQUAL]
+  \\ pop_assum mp_tac
+  \\ simp_tac(std_ss)[NUMERAL_LESS_THM]
+  \\ strip_tac \\ rw[]
+  \\ EVAL_TAC
+QED
+
+Theorem rho_xy_lt_5:
+  ∀t x y. rho_xy t = (x,y) ⇒ x < 5 ∧ y < 5
+Proof
+  completeInduct_on`t`
+  \\ Cases_on`24 ≤ t`
+  >- (
+    fs[PULL_FORALL, LESS_EQ_EXISTS, GSYM rho_xy_cycle]
+    \\ rpt gen_tac \\ strip_tac
+    \\ first_x_assum irule
+    \\ goal_assum (first_assum o mp_then Any mp_tac)
+    \\ rw[] )
+  \\ fs[NOT_LESS_EQUAL]
+  \\ pop_assum mp_tac
+  \\ simp_tac(std_ss)[NUMERAL_LESS_THM]
+  \\ strip_tac \\ gvs[]
+  \\ EVAL_TAC \\ rw[]
+QED
+
 Theorem rho_spt:
   isFromList t ⇒
   spt_to_state_array (rho_spt t) =
