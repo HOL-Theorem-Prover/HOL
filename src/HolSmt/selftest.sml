@@ -407,11 +407,11 @@ in
     (``(x:int) % 1 = x - x / 1 * 1``, [thm_AUTO, thm_YO]),
     (``(x:int) % 42 = x - x / 42 * 42``, [thm_AUTO, thm_YO]),
 
-    (``ABS (x:int) >= 0``, [thm_AUTO, thm_CVC, thm_YO(*, thm_Z3, thm_Z3p*)]),
-    (``(ABS (x:int) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO(*, thm_Z3, thm_Z3p*)]),
-    (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
-    (``(x:int) <= 0 ==> (ABS x = ~x)``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
-    (``ABS (ABS (x:int)) = ABS x``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
+    (``ABS (x:int) >= 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(ABS (x:int) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:int) <= 0 ==> (ABS x = ~x)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``ABS (ABS (x:int)) = ABS x``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``ABS (x:int) = x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
 
     (``int_min (x:int) y <= x``, [thm_AUTO, thm_YO]),
@@ -436,22 +436,22 @@ in
     (``((x:real) + y = 0) = (x = 0) /\ (y = 0)``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``((x:real) + y = 0) = (x = ~y)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (``(x:real) - 0 = x``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``(x:real) - 0 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``(x:real) - y = y - x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) - y - z = x - (y + z)``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``(x:real) - y - z = x - (y + z)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``(x:real) <= y ==> (x - y = 0)``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``((x:real) - y = 0) \/ (y - x = 0)``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) - y = x + ~y``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``(x:real) - y = x + ~y``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (``(x:real) * 0 = 0``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``0 * (x:real) = 0``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``(x:real) * 1 = x``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``1 * (x:real) = x``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``(x:real) * 42 = 42 * x``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``(x:real) * 0 = 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``0 * (x:real) = 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:real) * 1 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``1 * (x:real) = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:real) * 42 = 42 * x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (``(x:real) / 1 = x``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``x > 0 ==> (x:real) / 42 < x``, [(*thm_AUTO,*) thm_CVC, thm_YO]),
-    (``x < 0 ==> (x:real) / 42 > x``, [(*thm_AUTO,*) thm_CVC, thm_YO]),
+    (``(x:real) / 1 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``x > 0 ==> (x:real) / 42 < x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``x < 0 ==> (x:real) / 42 > x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``abs (x:real) >= 0``, [thm_AUTO, thm_YO]),
     (``(abs (x:real) = 0) = (x = 0)``, [thm_AUTO, thm_YO]),
@@ -545,32 +545,32 @@ in
 
     (* real *)
 
-    (``0r < 1r``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``0r < 1r``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``1r < 0r``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:real) < x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) < y ==> 42 * x < 42 * y``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``(x:real) < y ==> 42 * x < 42 * y``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``0n <= 1n``, [thm_AUTO, thm_YO]),
     (``1n <= 0n``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:num) <= x``, [thm_AUTO, thm_YO]),
     (``(x:num) <= y ==> 2 * x <= 2 * y``, [thm_AUTO, thm_YO]),
 
-    (``1r > 0r``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``1r > 0r``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``0r > 1r``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:real) > x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) > y ==> 42 * x > 42 * y``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``(x:real) > y ==> 42 * x > 42 * y``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (``1r >= 0r``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``1r >= 0r``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``0r >= 1r``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) >= x``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``(x:real) >= y ==> 42 * x >= 42 * y``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``(x:real) >= x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:real) >= y ==> 42 * x >= 42 * y``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (``((x:real) < y) = (y > x)``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``((x:real) <= y) = (y >= x)``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``(x:real) < y /\ y <= z ==> x < z``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``(x:real) <= y /\ y <= z ==> x <= z``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``(x:real) > y /\ y >= z ==> x > z``, [thm_AUTO, thm_CVC, thm_YO]),
-    (``(x:real) >= y /\ y >= z ==> x >= z``, [thm_AUTO, thm_CVC, thm_YO]),
+    (``((x:real) < y) = (y > x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``((x:real) <= y) = (y >= x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:real) < y /\ y <= z ==> x < z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:real) <= y /\ y <= z ==> x <= z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:real) > y /\ y >= z ==> x > z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:real) >= y /\ y >= z ==> x >= z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``(x:real) >= 0``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``0 < (x:real) /\ x <= 1 ==> (x = 1)``,
@@ -600,14 +600,12 @@ in
        (somewhat surprisingly, as SMT-LIB does not seem to require
        non-empty sorts) can prove it *)
     (``?x. x = x``, [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p*)]),
-    (* CVC5 1.0.8 and Z3 2.13 report `unknown' for the next goal *)
-    (``(?y. !x. P x y) ==> (!x. ?y. P x y)``, [thm_AUTO, thm_YO]),
-    (* CVC5 1.0.8, Yices 1.0.28 and Z3 2.13 report `unknown' for the next goal *)
-    (``(!x. ?y. P x y) ==> (?y. !x. P x y)``, []),
-    (* Z3 2.13 reports `unknown' for the next goal *)
-    (``(?x. P x) ==> !x. P x``, [sat_CVC, sat_YO]),
-    (* Z3 2.13 reports `unknown' for the next goal *)
-    (``?x. P x ==> !x. P x``, [thm_AUTO, thm_CVC, thm_YO]),
+    (* CVC5 1.0.8 reports `unknown' for the next goal *)
+    (``(?y. !x. P x y) ==> (!x. ?y. P x y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (* CVC5 1.0.8 and Yices 1.0.28 report `unknown' for the next goal *)
+    (``(!x. ?y. P x y) ==> (?y. !x. P x y)``, [sat_Z3, sat_Z3p]),
+    (``(?x. P x) ==> !x. P x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
+    (``?x. P x ==> !x. P x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (* let binders *)
 
@@ -976,12 +974,12 @@ in
      (b <=+ a /\ a <> b <=> b <+ a) /\ (a <> b /\ b <=+ a <=> b <+ a) /\
      (b <= a /\ a <> b <=> b < a) /\ (a <> b /\ b <= a <=> b < a) /\
      (((v:word32) - w = 0w) <=> (v = w)) /\ (w - 0w = w)``,
-      [(*thm_AUTO,*) thm_CVC, thm_YO(*, thm_Z3, thm_Z3p*)]),
+      [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (* from Yogesh Mahajan *)
     (``!(w: 18 word). (sw2sw w): 32 word = w2w ((16 >< 0) w: 17 word) +
      0xfffe0000w + ((0 >< 0) (~(17 >< 17) w: bool[unit]) << 17): 32 word``,
-      [thm_AUTO, thm_CVC, thm_YO(*, thm_Z3, thm_Z3p*)]),
+      [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (* The Yices translation currently rejects polymorphic-width bit
        vectors; the SMT-LIB translation treats their type -- and
