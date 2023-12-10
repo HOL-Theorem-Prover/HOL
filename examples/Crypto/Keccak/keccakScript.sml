@@ -969,6 +969,16 @@ Definition rho_spt_def:
     in a'
 End
 
+Theorem FUNPOW_invariant_index:
+  ∀m x.
+  P x ∧
+  (∀n. n < m ⇒ R (FUNPOW f n x)) ∧
+  (∀x. P x ∧ R x ⇒ P (f x)) ⇒
+  P (FUNPOW f m x)
+Proof
+  Induct>>rw[FUNPOW_SUC]
+QED
+
 Theorem rho_spt_invariants:
   isFromList t ⇒
     size (rho_spt t) = size t ∧
@@ -1021,10 +1031,11 @@ Proof
   \\ numLib.LEAST_ELIM_TAC
   \\ conj_tac >- rw[]
   \\ qx_gen_tac`m` \\ strip_tac
-  \\ `(λz. (* (FST z < m ⇒ FST z < b2w $ size (SND z)) ∧ *)
-           isFromList (SND z) ∧ size (SND z) = size t)
+  \\ fs[]
+  \\ `(λz. isFromList (SND z) ∧ size (SND z) = size t)
       (FUNPOW h m u)` suffices_by rw[]
-  \\ irule FUNPOW_invariant
+  \\ drule_at (Pos (el 2)) FUNPOW_invariant_index
+  \\ disch_then irule
   \\ simp[FORALL_PROD]
   \\ conj_tac >- (
     gs[Abbr`u`]
@@ -1040,9 +1051,14 @@ Proof
   \\ qpat_x_assum`_ ∉ domain _`mp_tac
   \\ qpat_x_assum`isFromList _`mp_tac
   \\ rw[isFromList_def, PULL_EXISTS, domain_fromList]
-  \\ gs[size_fromList]
-  \\ simp[b2w_def]
-  \\ cheat (* index_less, and probably need a better invariant somewhere *)
+  \\ gs[size_fromList,Abbr`R`]
+  \\ drule_at Any index_less
+  \\ `25 * b2w (size t) ≤ size t` by (
+    `0 < 25:num` by fs[]>>
+    drule DIVISION>>
+    disch_then(qspec_then`size t` assume_tac)>>
+    simp[b2w_def])
+  \\ metis_tac[arithmeticTheory.LESS_LESS_EQ_TRANS]
 QED
 
 (*
