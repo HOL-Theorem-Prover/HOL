@@ -693,6 +693,13 @@ CoInductive ltree_every :
     P a ts /\ every (ltree_every P) ts ==> (ltree_every P (Branch a ts))
 End
 
+Theorem ltree_every_rewrite[simp] :
+    ltree_every P (Branch a ts) <=> P a ts /\ every (ltree_every P) ts
+Proof
+    GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [ltree_every_cases]
+ >> EQ_TAC >> rw []
+QED
+
 Definition ltree_finite_branching_def :
     ltree_finite_branching = ltree_every (\a ts. LFINITE ts)
 End
@@ -745,6 +752,19 @@ Proof
  >> Q.PAT_X_ASSUM ‘!t. P t ==> _’ (drule_then STRIP_ASSUME_TAC)
  >> qexistsl_tac [‘a’, ‘fromList ts’]
  >> rw [LFINITE_fromList, every_fromList_EVERY]
+QED
+
+Theorem ltree_finite_branching_rewrite[simp] :
+    ltree_finite_branching (Branch a ts) <=>
+    LFINITE ts /\ every ltree_finite_branching ts
+Proof
+    GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites
+      [ltree_finite_branching_cases]
+ >> EQ_TAC >> rw []
+ >- rw [LFINITE_fromList]
+ >- rw [every_fromList_EVERY]
+ >> ‘?l. ts = fromList l’ by METIS_TAC [LFINITE_IMP_fromList]
+ >> fs [every_fromList_EVERY]
 QED
 
 (*---------------------------------------------------------------------------*
