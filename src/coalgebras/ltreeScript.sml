@@ -689,6 +689,68 @@ Proof
   \\ fs [LSET_def,IN_DEF,LNTH_fromList,PULL_EXISTS,LFINITE_fromList,EVERY_EL]
 QED
 
+CoInductive ltree_every :
+    P a ts /\ every (ltree_every P) ts ==> (ltree_every P (Branch a ts))
+End
+
+Definition ltree_finite_branching_def :
+    ltree_finite_branching = ltree_every (\a ts. LFINITE ts)
+End
+
+Theorem ltree_finite_branching_rules :
+    !a ts. EVERY ltree_finite_branching ts ==>
+           ltree_finite_branching (Branch a (fromList ts))
+Proof
+    rw [ltree_finite_branching_def, EVERY_MEM]
+ >> qabbrev_tac ‘P = \(a :'a) (ts :'a ltree llist). LFINITE ts’
+ >> rw [Once ltree_every_cases]
+ >- rw [Abbr ‘P’, LFINITE_fromList]
+ >> rw [every_fromList_EVERY, EVERY_MEM]
+QED
+
+Theorem ltree_finite_imp_finite_branching :
+    !t. ltree_finite t ==> ltree_finite_branching t
+Proof
+    HO_MATCH_MP_TAC ltree_finite_ind
+ >> rw [ltree_finite_branching_rules]
+QED
+
+(* cf. ltree_cases *)
+Theorem ltree_finite_branching_cases :
+    !t. ltree_finite_branching t <=>
+        ?a ts. t = Branch a (fromList ts) /\ EVERY ltree_finite_branching ts
+Proof
+    rw [ltree_finite_branching_def, Once ltree_every_cases]
+ >> EQ_TAC >> rw [LFINITE_fromList, every_fromList_EVERY]
+ >> ‘?l. ts = fromList l’ by METIS_TAC [LFINITE_IMP_fromList]
+ >> fs [every_fromList_EVERY]
+QED
+
+(* |- (!a0. P a0 ==> ?a ts. a0 = Branch a ts /\ LFINITE ts /\ every P ts) ==>
+      !a0. P a0 ==> ltree_finite_branching a0
+ *)
+val lemma = ltree_every_coind
+         |> (Q.SPEC ‘\(a :'a) (ts :'a ltree llist). LFINITE ts’)
+         |> (Q.SPEC ‘P’) |> BETA_RULE
+         |> REWRITE_RULE [GSYM ltree_finite_branching_def];
+
+Theorem ltree_finite_branching_coind :
+    !P. (!t. P t ==> ?a ts. t = Branch a (fromList ts) /\ EVERY P ts) ==>
+         !t. P t ==> ltree_finite_branching t
+Proof
+    NTAC 2 STRIP_TAC
+ >> MATCH_MP_TAC lemma
+ >> Q.X_GEN_TAC ‘t’
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘!t. P t ==> _’ (drule_then STRIP_ASSUME_TAC)
+ >> qexistsl_tac [‘a’, ‘fromList ts’]
+ >> rw [LFINITE_fromList, every_fromList_EVERY]
+QED
+
+(*---------------------------------------------------------------------------*
+ *  Rose tree is a finite variant of ltree, defined inductively.
+ *---------------------------------------------------------------------------*)
+
 Datatype:
   rose_tree = Rose 'a (rose_tree list)
 End
