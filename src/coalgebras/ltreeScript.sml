@@ -696,7 +696,7 @@ End
 Theorem ltree_every_rewrite[simp] :
     ltree_every P (Branch a ts) <=> P a ts /\ every (ltree_every P) ts
 Proof
-    GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [ltree_every_cases]
+    SIMP_TAC std_ss [Once ltree_every_cases]
  >> EQ_TAC >> rw []
 QED
 
@@ -758,8 +758,7 @@ Theorem ltree_finite_branching_rewrite[simp] :
     ltree_finite_branching (Branch a ts) <=>
     LFINITE ts /\ every ltree_finite_branching ts
 Proof
-    GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites
-      [ltree_finite_branching_cases]
+    SIMP_TAC std_ss [ltree_finite_branching_cases]
  >> EQ_TAC >> rw []
  >- rw [LFINITE_fromList]
  >- rw [every_fromList_EVERY]
