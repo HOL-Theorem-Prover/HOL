@@ -14,87 +14,9 @@ open binderLib nomsetTheory termTheory appFOLDLTheory chap2Theory chap3Theory
 
 val _ = new_theory "solvable";
 
-(*---------------------------------------------------------------------------*
- * closed terms and closures of (open or closed) terms
- *---------------------------------------------------------------------------*)
-
-(* By prefixing a list of abstractions of FVs, any term can be "closed". The
-   set ‘closures M’ represent such closures with different order of FVs.
- *)
-Definition closures_def :
-    closures M = {LAMl vs M | vs | ALL_DISTINCT vs /\ set vs = FV M}
-End
-
-Theorem closures_not_empty :
-    !M. closures M <> {}
-Proof
-    Q.X_GEN_TAC ‘M’
- >> rw [GSYM MEMBER_NOT_EMPTY]
- >> Q.EXISTS_TAC ‘LAMl (SET_TO_LIST (FV M)) M’
- >> rw [closures_def]
- >> Q.EXISTS_TAC ‘SET_TO_LIST (FV M)’
- >> rw [SET_TO_LIST_INV]
-QED
-
-Theorem closures_of_closed[simp] :
-    !M. closed M ==> closures M = {M}
-Proof
-    rw [closures_def, closed_def]
- >> rw [Once EXTENSION]
-QED
-
-Theorem closures_of_open_sing :
-    !M v. FV M = {v} ==> closures M = {LAM v M}
-Proof
-    rw [closures_def, LIST_TO_SET_SING]
- >> rw [Once EXTENSION]
-QED
-
-(* ‘closure M’ is just one arbitrary element in ‘closures M’. *)
-Overload closure = “\M. CHOICE (closures M)”
-
-Theorem closure_in_closures :
-    !M. closure M IN closures M
-Proof
-    rw [CHOICE_DEF, closures_not_empty]
-QED
-
-Theorem closure_idem[simp] :
-    !M. closed M ==> closure M = M
-Proof
-    rw [closures_of_closed]
-QED
-
-Theorem closure_open_sing :
-    !M v. FV M = {v} ==> closure M = LAM v M
-Proof
-    rpt STRIP_TAC
- >> ‘closures M = {LAM v M}’ by PROVE_TAC [closures_of_open_sing]
- >> rw []
-QED
-
-(*---------------------------------------------------------------------------*
- * solvable terms and some equivalent definitions
- *---------------------------------------------------------------------------*)
-
-(* 8.3.1 (ii) [1, p.171] *)
-Definition solvable_def :
-    solvable (M :term) = ?M' Ns. M' IN closures M /\ M' @* Ns == I
-End
-
-(* 8.3.1 (i) [1, p.171] *)
-Theorem solvable_alt_closed :
-    !M. closed M ==> (solvable M <=> ?Ns. M @* Ns == I)
-Proof
-    rw [solvable_def, closed_def]
-QED
-
 (* |- !M. FV M = {} ==> (solvable M <=> ?Ns. M @* Ns == I) *)
 Theorem solvable_alt_closed'[local] =
     REWRITE_RULE [closed_def] solvable_alt_closed
-
-(* 8.3.1 (iii) [1, p.171] *)
-Overload unsolvable = “\M. ~solvable M”
 
 (* 8.3.2 Examples of solvable terms [1, p.171] *)
 Theorem solvable_K :

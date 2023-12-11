@@ -153,15 +153,17 @@ val lameq_weaken_cong = store_thm(
   ``(M1:term) == M2 ==> N1 == N2 ==> (M1 == N1 <=> M2 == N2)``,
   METIS_TAC [lameq_rules]);
 
-val fixed_point_thm = store_thm(  (* p. 14 *)
-  "fixed_point_thm",
-  ``!f. ?x. f @@ x == x``,
+Theorem fixed_point_thm:
+  !f. ?x. f @@ x == x ∧ FV x = FV f
+Proof
   GEN_TAC THEN Q_TAC (NEW_TAC "x") `FV f` THEN
   Q.ABBREV_TAC `w = (LAM x (f @@ (VAR x @@ VAR x)))` THEN
   Q.EXISTS_TAC `w @@ w` THEN
   `w @@ w == [w/x] (f @@ (VAR x @@ VAR x))` by PROVE_TAC [lameq_rules] THEN
   POP_ASSUM MP_TAC THEN
-  ASM_SIMP_TAC (srw_ss())[SUB_THM, lemma14b, lameq_rules]);
+  ASM_SIMP_TAC (srw_ss())[SUB_THM, lemma14b, lameq_rules] >>
+  rw[] >> ASM_SET_TAC[]
+QED
 
 (* properties of substitution - p19 *)
 
@@ -304,6 +306,7 @@ QED
    cf. Definition 4.1.1 [1, p.76]. If ‘eqns’ is a set of closed equations,
    then ‘{(M,N) | asmlam eqns M N}’ is the set of closed equations provable
    in lambda + eqns, denoted by ‘eqns^+’ in [1], or ‘asmlam eqns’ here.
+
  *)
 Inductive asmlam :
 [~eqn:]
@@ -1145,6 +1148,97 @@ Proof
 QED
 
 val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
+
+(* ----------------------------------------------------------------------
+    closed terms and closures of (open or closed) terms, leading into
+    B's Chapter 2's section “Solvable and unsolvable terms” p41.
+
+    These definitions are stated again in Chapter 8 as per references
+    below.
+   ---------------------------------------------------------------------- *)
+
+(* By prefixing a list of abstractions of FVs, any term can be "closed". The
+   set ‘closures M’ represent such closures with different order of FVs.
+ *)
+Definition closures_def :
+    closures M = {LAMl vs M | vs | ALL_DISTINCT vs /\ set vs = FV M}
+End
+
+Theorem closures_not_empty :
+    !M. closures M <> {}
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> rw [GSYM MEMBER_NOT_EMPTY]
+ >> Q.EXISTS_TAC ‘LAMl (SET_TO_LIST (FV M)) M’
+ >> rw [closures_def]
+ >> Q.EXISTS_TAC ‘SET_TO_LIST (FV M)’
+ >> rw [SET_TO_LIST_INV]
+QED
+
+Theorem closures_of_closed[simp] :
+    !M. closed M ==> closures M = {M}
+Proof
+    rw [closures_def, closed_def]
+ >> rw [Once EXTENSION]
+QED
+
+Theorem closures_of_open_sing :
+    !M v. FV M = {v} ==> closures M = {LAM v M}
+Proof
+    rw [closures_def, LIST_TO_SET_SING]
+ >> rw [Once EXTENSION]
+QED
+
+(* ‘closure M’ is just one arbitrary element in ‘closures M’. *)
+Overload closure = “\M. CHOICE (closures M)”
+
+Theorem closure_in_closures :
+    !M. closure M IN closures M
+Proof
+    rw [CHOICE_DEF, closures_not_empty]
+QED
+
+Theorem closure_idem[simp] :
+    !M. closed M ==> closure M = M
+Proof
+    rw [closures_of_closed]
+QED
+
+Theorem closure_open_sing :
+    !M v. FV M = {v} ==> closure M = LAM v M
+Proof
+    rpt STRIP_TAC
+ >> ‘closures M = {LAM v M}’ by PROVE_TAC [closures_of_open_sing]
+ >> rw []
+QED
+
+Theorem closed_closure[simp]:
+  closed (closure M)
+Proof
+  qspec_then ‘M’ assume_tac closure_in_closures >> gvs[closures_def] >>
+  simp[closed_def, appFOLDLTheory.FV_LAMl]
+QED
+
+(*---------------------------------------------------------------------------*
+ * solvable terms and some equivalent definitions
+ *---------------------------------------------------------------------------*)
+
+(* 8.3.1 (ii) [1, p.171] *)
+Definition solvable_def :
+    solvable (M :term) = ?M' Ns. M' IN closures M /\ M' @* Ns == I
+End
+
+(* 8.3.1 (i) [1, p.171] *)
+Theorem solvable_alt_closed :
+    !M. closed M ==> (solvable M <=> ?Ns. M @* Ns == I)
+Proof
+    rw [solvable_def, closed_def]
+QED
+
+(* 8.3.1 (iii) [1, p.171] *)
+Overload unsolvable = “\M. ~solvable M”
+
+
 
 val _ = export_theory()
 val _ = html_theory "chap2";
