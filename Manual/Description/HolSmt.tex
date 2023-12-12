@@ -35,43 +35,46 @@ be much better).
 
 \subsection{Interface}
 
-The library currently provides three tactics to invoke different SMT
-solvers, namely \ml{YICES\_TAC}, \ml{Z3\_ORACLE\_TAC}, and
-\ml{Z3\_TAC}.  These tactics are defined in the \ml{HolSmtLib}
-structure, which is the library's main entry point.  Given a
-goal~$(\Gamma, \varphi)$ (where $\Gamma$ is a list of assumptions, and
-$\varphi$ is the goal's conclusion), each tactic returns (i)~an empty
-list of new goals, and (ii)~a validation function that returns a
-theorem~$\Gamma' \vdash \varphi$ (with $\Gamma' \subseteq \Gamma$).
-These tactics fail if the SMT solver cannot prove the
-goal.\footnote{Internally, the goal's assumptions and the
-  \emph{negated} conclusion are passed to the SMT solver.  If the SMT
-  solver determines that these formulas are unsatisfiable, then the
-  (unnegated) conclusion must be provable from the assumptions.}  In
+The library currently provides four tactics to invoke different SMT
+solvers, namely \ml{CVC\_ORACLE\_TAC}, \ml{YICES\_TAC},
+\ml{Z3\_ORACLE\_TAC}, and \ml{Z3\_TAC}.  These tactics are defined in
+the \ml{HolSmtLib} structure, which is the library's main entry point.
+Given a goal~$(\Gamma, \varphi)$ (where $\Gamma$ is a list of
+assumptions, and $\varphi$ is the goal's conclusion), each tactic
+returns (i)~an empty list of new goals, and (ii)~a validation function
+that returns a theorem~$\Gamma' \vdash \varphi$ (with $\Gamma'
+\subseteq \Gamma$). These tactics fail if the SMT solver cannot prove
+the goal.\footnote{Internally, the goal's assumptions and the
+\emph{negated} conclusion are passed to the SMT solver.  If the SMT
+solver determines that these formulas are unsatisfiable, then the
+(unnegated) conclusion must be provable from the assumptions.}  In
 other words, these tactics solve the goal (or fail).  As with other
 tactics, \ml{Tactical.TAC\_PROOF} can be used to derive functions of
 type \ml{goal -> thm}.
 
 For each tactic, the \ml{HolSmtLib} structure additionally provides a
 corresponding function of type \ml{term -> thm}.  These functions are
-called \ml{YICES\_PROVE}, \ml{Z3\_ORACLE\_PROVE}, and \ml{Z3\_PROVE},
-respectively.  Applied to a formula $\varphi$, they return the theorem
-$\emptyset \vdash \varphi$ (or fail).
+called \ml{CVC\_ORACLE\_PROVE}, \ml{YICES\_PROVE},
+\ml{Z3\_ORACLE\_PROVE}, and \ml{Z3\_PROVE}, respectively.  Applied to
+a formula $\varphi$, they return the theorem $\emptyset \vdash
+\varphi$ (or fail).
 
 \paragraph{Oracles vs.\ proof reconstruction}
 
-\ml{YICES\_TAC} and \ml{Z3\_ORACLE\_TAC} use the SMT solver (Yices and
-Z3, respectively) as an oracle: the solver's result is trusted.  Bugs
-in the SMT solver or in \ml{HolSmtLib} could potentially lead to
-inconsistent theorems.  Accordingly, the derived theorem is tagged
-with an oracle tag.
+\ml{CVC\_ORACLE\_TAC}, \ml{YICES\_TAC} and \ml{Z3\_ORACLE\_TAC} use
+the SMT solver (cvc5, Yices and Z3, respectively) as an oracle: the
+solver's result is trusted.  Bugs in the SMT solver or in
+\ml{HolSmtLib} could potentially lead to inconsistent theorems.
+Accordingly, the derived theorem is tagged with an oracle tag.
 
 \ml{Z3\_TAC}, on the other hand, performs proof reconstruction.  It
 requests a detailed proof from Z3, which is then checked in \HOL{}.
 One obtains a proper \HOL{} theorem; no (additional) oracle tags are
 introduced. However, Z3's proofs do not always contain enough
 information to allow efficient checking in \HOL{}; therefore, proof
-reconstruction may be slow or fail.
+reconstruction may be slow or fail. Furthermore, proof reconstruction
+only works with Z3~2.19. Newer versions of Z3 are only supported as an
+oracle, currently.
 
 \paragraph{Supported subsets of higher-order logic}
 
@@ -90,12 +93,12 @@ minus, \holtxt{DIV}, \holtxt{MOD}, \holtxt{ABS}, \holtxt{MIN},
 \holtxt{real}), function application, lambda abstraction, tuple
 selectors \holtxt{FST} and \holtxt{SND}, and various word operations.
 
-Z3 is integrated via a more restrictive translation into SMT-LIB~2
-format, described below.  Therefore, Yices is typically the solver of
-choice at the moment (unless you need proof reconstruction, which is
-available for Z3 only).  However, there are a few operations (\eg,
-specific word operations) that are supported by the SMT-LIB format,
-but not by Yices.  See \ml{selftest.sml} for further details.
+cvc5 and Z3 are integrated via a more restrictive translation into
+SMT-LIB~2 format, described below.  Therefore, Yices is typically the
+solver of choice at the moment (unless you need proof reconstruction,
+which is available for Z3 only).  However, there are a few operations
+(\eg, specific word operations) that are supported by the SMT-LIB
+format, but not by Yices.  See \ml{selftest.sml} for further details.
 
 Terms of higher-order logic that are not supported by the respective
 target solver/\allowbreak translation are typically treated in one of
@@ -135,27 +138,31 @@ three ways:
 - show_tags := true;
 > val it = () : unit
 
-- YICES_PROVE ``(a ==> b) /\ (b ==> a) = (a=b)``;
+- CVC_ORACLE_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
 > val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
-           |- (a ==> b) /\ (b ==> a) = (a = b) : thm
+           |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
 
-- Z3_ORACLE_PROVE ``(a ==> b) /\ (b ==> a) = (a=b)``;
+- YICES_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
 > val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
-           |- (a ==> b) /\ (b ==> a) = (a = b) : thm
+           |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
 
-- Z3_PROVE ``(a ==> b) /\ (b ==> a) = (a=b)``;
+- Z3_ORACLE_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
+> val it = [oracles: DISK_THM, HolSmtLib] [axioms: ] []
+           |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
+
+- Z3_PROVE ``(a ==> b) /\ (b ==> a) <=> (a <=> b)``;
 > val it = [oracles: DISK_THM] [axioms: ] []
-           |- (a ==> b) /\ (b ==> a) = (a = b) : thm
+           |- (a ==> b) /\ (b ==> a) <=> (a <=> b) : thm
 \end{verbatim}
 \end{session}
 
 \paragraph{Support for the SMT-LIB 2 file format}
 
-SMT-LIB (see \url{http://combination.cs.uiowa.edu/smtlib/}) is the
-standard input format for SMT solvers.  \ml{HolSmtLib} supports (a
-subset of) version~2.0 of this format.  A translation of \HOL{} terms
-into SMT-LIB~2 format is available in \ml{SmtLib.sml}, and a parser
-for SMT-LIB~2 files (translating them into \HOL{} types, terms, and
+SMT-LIB (see \url{https://smtlib.cs.uiowa.edu/}) is the standard input
+format for SMT solvers.  \ml{HolSmtLib} supports (a subset of)
+version~2.0 of this format.  A translation of \HOL{} terms into
+SMT-LIB~2 format is available in \ml{SmtLib.sml}, and a parser for
+SMT-LIB~2 files (translating them into \HOL{} types, terms, and
 formulas) can be found in \ml{SmtLib\_Parser.sml}, with auxiliary
 functions in \ml{SmtLib\_\{Logics,Theories\}.sml}.
 
@@ -188,40 +195,48 @@ delete temporary files automatically, \eg, when \HOL{} exits).
 
 \subsection{Installing SMT solvers}
 
-\ml{HolSmtLib} has been tested with Yices~1.0.29 and Z3~2.19. Later
-versions may or may not work.  (Yices~2 is not supported.)  To use
-\ml{HolSmtLib}, you need to install at least one of these SMT solvers
-on your machine.  As mentioned before, Yices supports a larger
-fragment of higher-order logic than Z3, but proof reconstruction has
-been implemented only for Z3.
+\ml{HolSmtLib} has been tested with cvc5~1.0.8, Yices~1.0.29, Z3~2.19
+and Z3~4.8.17. Later versions may or may not work.  (Yices~2 is not
+supported.)  To use \ml{HolSmtLib}, you need to install at least one
+of these SMT solvers on your machine.  As mentioned before, Yices
+supports a larger fragment of higher-order logic than Z3, but proof
+reconstruction has been implemented only for Z3~2.19.
+
+cvc5 is available for various platforms from
+\url{https://cvc5.github.io/}. After installation, you must set the
+environment variable {\tt \$HOL4\_CVC\_EXECUTABLE} to the pathname of
+the cvc5 executable, \eg, {tt /usr/bin/cvc5}, before you invoke \HOL.
 
 Yices is available for various platforms from
-\url{http://yices.csl.sri.com/}.  After installation, you must set the
-environment variable {\tt \$HOL4\_YICES\_EXECUTABLE} to the name of
-the Yices executable, \eg, {\tt /bin/yices}, before you invoke \HOL.
+\url{https://yices.csl.sri.com/}.  After installation, you must set
+the environment variable {\tt \$HOL4\_YICES\_EXECUTABLE} to the
+pathname of the Yices executable, \eg, {\tt /bin/yices}, before you
+invoke \HOL.
 
-The Z3 website,
-\url{http://research.microsoft.com/en-us/um/redmond/projects/z3/},
-provides Windows and Linux versions of the solver.  Alternatively, the
-Windows version can be installed on Linux and Mac OS~X---see the
-instructions at
-\url{http://www4.in.tum.de/~boehmes/z3.html}.\footnote{Later versions
-  of Z3 than 2.19 are available for Mac OS~X directly, but not
-  supported by \HOL.}  After installation, you must set the
-environment variable {\tt \$HOL4\_Z3\_EXECUTABLE} to the name of the
-Z3 executable, \eg, {\tt /bin/z3}, before you invoke \HOL.
+Precompiled binaries of Z3~2.19 for Linux can be downloaded from
+\url{https://github.com/Z3Prover/bin/tree/master/legacy}. Note that
+Z3~2.19.1 apparently cannot parse real literals (even though Z3~2.19
+can), so that version is not recommended since it won't work with
+reals. After installation, you must set the environment variable {\tt
+\$HOL4\_Z3\_EXECUTABLE} to the pathname of the Z3 executable, \eg,
+{\tt /bin/z3}, before you invoke \HOL.
+
+Newer versions of Z3 are available at
+\url{https://github.com/Z3Prover/z3}. After installation, you must set
+the environment variable {\tt \$HOL4\_Z3\_EXECUTABLE} to the pathname
+of the Z3 executable, \eg, {\tt /bin/z3}, before you invoke \HOL.
 
 It should be relatively straightforward to integrate other SMT solvers
 that support the SMT-LIB~2 input format as oracles.  However, this
 will involve a (typically small) amount of Standard ML programming,
-\eg, to interpret the solver's output.  See \ml{Z3.sml} for some
-relevant code.
+\eg, to interpret the solver's output.  See \ml{CVC.sml} and
+\ml{Z3.sml} for some relevant code.
 
 \subsection{Wishlist}
 
 The following features have not been implemented yet.  Please submit
 additional feature requests (or code contributions) via
-\url{http://github.com/HOL-Theorem-Prover/HOL}.
+\url{https://github.com/HOL-Theorem-Prover/HOL}.
 
 \paragraph{Counterexamples}
 
@@ -231,19 +246,24 @@ satisfying assignment.  This assignment could be displayed to the
 theorem, similar to the way \ml{HolSatLib} treats satisfying
 assignments.
 
-\paragraph{Proof reconstruction for other SMT solvers}
+\paragraph{Proof reconstruction}
 
-Proof reconstruction has been implemented only for Z3.  Several other
-SMT solvers can produce proofs, and it would be nice to offer \HOL{}
-users more choice.  However, in the absence of a standard proof format
-for SMT solvers, it is perhaps not worth the implementation effort.
+Proof reconstruction has been implemented only for Z3~2.19. It would
+be desirable to implement it for newer versions of Z3, since Z3~2.19
+is quite old and is only available as a binary.
 
-\paragraph{Support for Z3's SMT-LIB extensions}
+Several other SMT solvers can also produce proofs, and it would be
+nice to offer \HOL{} users more choice.  However, in the absence of a
+standard proof format for SMT solvers, it is perhaps not worth the
+implementation effort.
 
-Z3 supports extensions of the SMT-LIB language, \eg, data types.
-\ml{HolSmtLib} does not utilize these extensions yet when calling Z3.
-This would require the translation for Z3 to be distinct from the
-generic SMT-LIB translation.
+\paragraph{Support for cvc5's and Z3's SMT-LIB extensions}
+
+cvc5 and Z3 support extensions of the SMT-LIB language, \eg, data
+types, sets, multisets/bags and strings. \ml{HolSmtLib} does not
+utilize these extensions yet when calling these SMT solvers. This
+would require the translation for these solvers to be distinct from
+the generic SMT-LIB translation.
 
 \paragraph{SMT solvers as a web service}
 
