@@ -267,4 +267,11 @@ Proof
   Induct >> simp[DOMSUB_NOT_IN_DOM]
 QED
 
+Theorem fm2sp_DOMSUB:
+  fm2sp (fm \\ k) = delete k (fm2sp fm)
+Proof
+  simp[spt_eq_thm, wf_delete, lookup_delete,
+       DOMSUB_FLOOKUP_THM] >> rw[]
+QED
+
 val _ = export_theory();

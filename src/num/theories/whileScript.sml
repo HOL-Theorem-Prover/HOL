@@ -17,6 +17,7 @@ in
 end
 
 fun INDUCT_TAC g = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g;
+fun simp ths = asm_simp_tac (srw_ss()) ths
 
 val cond_lemma = prove(
   ``(if ~p then q else r) = (if p then r else q)``,
@@ -443,6 +444,64 @@ Proof
 QED
 
 val TAILREC = new_specification("TAILREC",["TAILREC"],TAILREC_EXISTS);
+
+val TAILCALL_def = new_definition(
+  "TAILCALL_def",
+  “TAILCALL f k x = case f x of INL cv => k cv | INR tv => tv”);
+
+Theorem TAILREC_TAILCALL:
+  TAILREC f x = TAILCALL f (TAILREC f) x
+Proof
+  ONCE_REWRITE_TAC[TAILCALL_def, TAILREC] >>
+  REWRITE_TAC[]
+QED
+
+(* This theorem can be used to eliminate guards on tail-recursive equations.
+   The recursion equation you don't like is the last assumption:
+     f has an equation but the whole thing is guarded by the annoying P
+   But if the other conditions hold, you can use TAILREC c everywhere you
+   were using f instead.
+   The other two conditions spell out:
+      1. guard actually holds on all recursive calls;
+      2. guard guarantees that something gets smaller with every call (this is
+         super general version of this; an easier version is below)
+*)
+Theorem TAILREC_GUARD_ELIMINATION:
+  (!x y. P x /\ c x = INL y ==> P y) /\
+  (!x. P x ==>
+       ?R. WFP R x /\ !y z. P y /\ R^* y x /\ c y = INL z ==> R z y) /\
+  (!x. P x ==> f x = TAILCALL c f x) ==>
+  (!x. P x ==> f x = TAILREC c x)
+Proof
+  rpt strip_tac >>
+  Q.PAT_X_ASSUM ‘!x. P x ==> ?R. _’ (drule_then strip_assume_tac) >>
+  Q.PAT_X_ASSUM ‘WFP R x’ (fn th => ntac 2 (pop_assum mp_tac) >> mp_tac th) >>
+  Q.ID_SPEC_TAC ‘x’ >>
+  ho_match_mp_tac relationTheory.WFP_STRONG_INDUCT >> rpt strip_tac >>
+  simp[TAILCALL_def] >>
+  Cases_on ‘c x’ >> simp[]
+  >- (simp[TAILREC_TAILCALL] >> simp[TAILCALL_def] >>
+      first_x_assum irule >> simp[] >>
+      rpt strip_tac >> first_assum irule >> simp[]
+      >- METIS_TAC[] >>
+      irule (cj 2 relationTheory.RTC_RULES_RIGHT1) >>
+      first_assum $ irule_at (Pat ‘RTC _ _ _’) >> first_assum irule >>
+      simp[]) >>
+  simp[TAILREC_TAILCALL] >> simp[TAILCALL_def]
+QED
+
+Theorem TAILREC_GUARD_ELIMINATION_SIMPLER:
+  WF R /\
+  (!x y. P x /\ c x = INL y ==> P y) /\
+  (!x y. P x /\ c x = INL y ==> R y x) /\
+  (!x. P x ==> f x = TAILCALL c f x) ==>
+  (!x. P x ==> f x = TAILREC c x)
+Proof
+  strip_tac >> MATCH_MP_TAC TAILREC_GUARD_ELIMINATION >> rpt strip_tac >>
+  simp[]
+  >- METIS_TAC[] >>
+  Q.EXISTS_TAC ‘R’ >> full_simp_tac (srw_ss())[relationTheory.WF_EQ_WFP]
+QED
 
 val _ =
  computeLib.add_persistent_funs
