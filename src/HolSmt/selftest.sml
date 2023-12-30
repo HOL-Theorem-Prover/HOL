@@ -3,8 +3,6 @@
 (* Unit tests for HolSmtLib *)
 open HolKernel Parse boolLib bossLib;
 
-val _ = loose_equality ();
-
 val _ = print "Testing HolSmtLib\n"
 
 (*****************************************************************************)
@@ -310,7 +308,7 @@ in
     (``0 + (x:int) = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``(x:int) + y = y + x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``(x:int) + (y + z) = (x + y) + z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
-    (``((x:int) + y = 0) = (x = 0) /\ (y = 0)``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:int) + y = 0 <=> x = 0 /\ y = 0``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``((x:int) + y = 0) = (x = ~y)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
     (``(x:int) - 0 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
@@ -353,7 +351,7 @@ in
     (``(x:int) / 42 <= x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:int) / 42 <= ABS x``, [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
     (``((x:int) / 42 = x) = (x = 0)``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``((x:int) / 42 = x) = (x = 0) \/ (x = ~1)``, [thm_AUTO, thm_YO]),
+    (``(x:int) / 42 = x <=> x = 0 \/ x = ~1``, [thm_AUTO, thm_YO]),
     (``(x:int) / 0 = x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:int) / 0 = 0``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(0:int) / 0 = 0``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
@@ -436,7 +434,7 @@ in
     (``0 + (x:real) = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``(x:real) + y = y + x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``(x:real) + (y + z) = (x + y) + z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``((x:real) + y = 0) = (x = 0) /\ (y = 0)``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:real) + y = 0 <=> x = 0 /\ y = 0``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``((x:real) + y = 0) = (x = ~y)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``(x:real) - 0 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
@@ -666,7 +664,7 @@ in
 
     (``(FST (x, y) = SND (x, y)) = (x = y)``, [thm_AUTO, thm_YO]),
     (``(FST p = SND p) = (p = (SND p, FST p))``, [(*thm_AUTO,*) thm_YO]),
-    (``((\p. FST p) (x, y)= (\p. SND p) (x, y)) = (x = y)``,
+    (``((\p. FST p) (x, y) = (\p. SND p) (x, y)) = (x = y)``,
       [thm_AUTO, thm_YO]),
 
     (* words (i.e., bit vectors) *)
@@ -811,7 +809,7 @@ in
     (``x:word32 >>~ 31w = 0w``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>~ 31w = 0w) \/ (x >>~ 31w = 0xFFFFFFFFw)``,
       [thm_AUTO, thm_CVC, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
-    (``(x:word32 >>~ x = 0w)  \/ (x >>~ x = 0xFFFFFFFFw)``,
+    (``(x:word32 >>~ x = 0w) \/ (x >>~ x = 0xFFFFFFFFw)``,
       [thm_AUTO, thm_CVC, (*thm_YO,*) thm_Z3(*, thm_Z3p*)]),
     (``x:word32 >>~ y = y >>~ x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:word32 >>~ y) >>~ z = x >>~ (y >>~ z)``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
