@@ -2035,6 +2035,17 @@ one writes
    End
 \end{verbatim}
 where, as with other special syntaxes, the keywords (\ml{Inductive} and \ml{End}) have to be in the leftmost column of the source file.
+Additionally, users can automatically export each rule as a theorem by assigning a name using the square-bracket syntax.
+The appropriate format is \holtxt{[\(\sim\)Name:]}, where \holtxt{Name} acts as the placeholder for the rule name, see the following example:
+\begin{verbatim}
+   Inductive foo:
+   [~rule1:]
+     ...
+   [~rule2:]
+     ...
+   ...
+   End
+\end{verbatim}
 
 \paragraph{Strong induction principles}
 So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when an inductive definition is made.
