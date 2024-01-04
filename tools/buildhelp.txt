@@ -21,4 +21,7 @@ OR
   build [--nograph|--graph] help
     builds the help system only
 
+The clean* variations can be given in whatever mix of letter-cases
+desired (i.e., "cleanall" and "Cleanall" work as well as "cleanAll").
+
 Options:

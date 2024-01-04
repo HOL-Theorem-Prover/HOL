@@ -317,10 +317,12 @@ fun get_cline () = let
                               errFn = cline_die } (CommandLine.arguments())
   val option_record = apply_updates opts buildcline.initial
   val _ = if #help option_record then exit_with_help() else ()
+  fun lcnorm_mem s list =
+      List.exists (fn s' => CharVector.map Char.toLower s' = s) list
   val _ =
-      if mem "cleanAll" rest then raise DoClean "cleanAll"
-      else if mem "clean" rest then raise DoClean "clean"
-      else if mem "cleanForReloc" rest then raise DoClean "cleanForReloc"
+      if lcnorm_mem "cleanall" rest then raise DoClean "cleanAll"
+      else if lcnorm_mem "clean" rest then raise DoClean "clean"
+      else if lcnorm_mem "cleanforreloc" rest then raise DoClean "cleanForReloc"
       else ()
   val seqspec =
       case #seqname option_record of
