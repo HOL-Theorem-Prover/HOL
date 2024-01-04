@@ -39,6 +39,9 @@ val hreduce1_FV = store_thm(
   ``∀M N. M -h-> N ⇒ ∀v. v ∈ FV N ⇒ v ∈ FV M``,
   METIS_TAC [SUBSET_DEF, hreduce_ccbeta, cc_beta_FV_SUBSET]);
 
+(* |- !M N. M -h-> N ==> FV N SUBSET FV M *)
+Theorem hreduce1_FV_SUBSET = hreduce1_FV |> REWRITE_RULE [GSYM SUBSET_DEF]
+
 Theorem hreduces_FV :
     ∀M N. M -h->* N ⇒ v ∈ FV N ⇒ v ∈ FV M
 Proof
@@ -985,10 +988,58 @@ Proof
           (tail (pcons x r q) = tail (drop i p))’ >- art []
  >> simp []
  >> DISCH_THEN (fs o wrap)
- >> ‘nth_label i p = g i’ by (rw [Abbr ‘p’, nth_label_pgenerate])
- >> ‘!i. el i p = f i’    by (rw [Abbr ‘p’, el_pgenerate])
+ >> ‘nth_label i p = g i’ by rw [Abbr ‘p’, nth_label_pgenerate]
+ >> ‘!i. el i p = f i’    by rw [Abbr ‘p’, el_pgenerate]
  >> ASM_REWRITE_TAC [GSYM ADD1]
  >> Q.EXISTS_TAC ‘SUC i’ >> REWRITE_TAC []
+QED
+
+(* This theorem guarentees the one-one mapping between the list and the path *)
+Theorem finite_head_reduction_path_to_list_11 :
+    !M p. (p = head_reduction_path M) /\ finite p ==>
+          ?l. l <> [] /\ (HD l = M) /\ hnf (LAST l) /\
+             (LENGTH l = THE (length p)) /\
+             (!i. i < LENGTH l ==> (EL i l = el i (head_reduction_path M))) /\
+              !i. SUC i < LENGTH l ==> EL i l -h-> EL (SUC i) l
+Proof
+    RW_TAC std_ss []
+ >> qabbrev_tac ‘p = head_reduction_path M’
+ >> ‘?n. length p = SOME n’ by METIS_TAC [finite_length]
+ >> Cases_on ‘n’ >- fs [length_never_zero]
+ >> rename1 ‘length p = SOME (SUC n)’
+ >> Q.EXISTS_TAC ‘GENLIST (\i. el i p) (SUC n)’ >> simp []
+ >> STRONG_CONJ_TAC >- rw [NOT_NIL_EQ_LENGTH_NOT_0] >> DISCH_TAC
+ >> CONJ_TAC >- rw [GSYM EL, Abbr ‘p’, head_reduction_path_def]
+ >> CONJ_TAC (* hnf *)
+ >- (qabbrev_tac ‘l = GENLIST (\i. el i p) (SUC n)’ \\
+     rw [Abbr ‘l’, LAST_EL] \\
+     Suff ‘el n p = last p’ >- rw [Abbr ‘p’, head_reduction_path_def] \\
+     rw [finite_last_el])
+ >> rw [head_reduce1_def]
+ >> ‘i IN PL p /\ i + 1 IN PL p’ by rw [PL_def]
+ >> qabbrev_tac ‘q = drop i p’
+ >> ‘el i p = first q’ by rw [Abbr ‘q’] >> POP_ORW
+ >> Know ‘el i (tail p) = first (tail q)’
+ >- (rw [Abbr ‘q’, REWRITE_RULE [ADD1] el_def])
+ >> Rewr'
+ >> Know ‘is_head_reduction q’
+ >- (qunabbrev_tac ‘q’ \\
+     irule finite_is_head_reduction_drop \\
+     rw [Abbr ‘p’, head_reduction_path_def])
+ >> DISCH_TAC
+ (* perform case analysis *)
+ >> ‘(?x. q = stopped_at x) \/ ?x r xs. q = pcons x r xs’ by METIS_TAC [path_cases]
+ >- (Know ‘PL q = IMAGE (\n. n - i) (PL p)’
+     >- rw [Abbr ‘q’, PL_drop] \\
+    ‘PL p = count (SUC n)’ by rw [PL_def, count_def] >> POP_ORW \\
+     POP_ORW (* q = stopped_at x *) \\
+     simp [PL_stopped_at] \\
+     Suff ‘IMAGE (\n. n - i) (count (SUC n)) <> {0}’ >- METIS_TAC [] \\
+     rw [Once EXTENSION] \\
+     Q.EXISTS_TAC ‘n - i’ >> rw [] \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> fs [is_head_reduction_thm]
+ >> Q.EXISTS_TAC ‘r’ >> art []
 QED
 
 Theorem finite_head_reduction_path_to_list :
@@ -999,40 +1050,8 @@ Proof
     Q.X_GEN_TAC ‘M’
  >> qabbrev_tac ‘p = head_reduction_path M’
  >> EQ_TAC >> rpt STRIP_TAC
- >- (‘?n. length p = SOME n’ by METIS_TAC [finite_length] \\
-     Cases_on ‘n’ >- fs [length_never_zero] \\
-     rename1 ‘length p = SOME (SUC n)’ \\
-     Q.EXISTS_TAC ‘GENLIST (\i. el i p) (SUC n)’ >> simp [] \\
-     STRONG_CONJ_TAC >- rw [NOT_NIL_EQ_LENGTH_NOT_0] >> DISCH_TAC \\
-     CONJ_TAC >- rw [GSYM EL, Abbr ‘p’, head_reduction_path_def] \\
-     CONJ_TAC (* hnf *)
-     >- (qabbrev_tac ‘l = GENLIST (\i. el i p) (SUC n)’ \\
-         rw [Abbr ‘l’, LAST_EL] \\
-         Suff ‘el n p = last p’ >- rw [Abbr ‘p’, head_reduction_path_def] \\
-         rw [finite_last_el]) \\
-     rw [head_reduce1_def] \\
-    ‘i IN PL p /\ i + 1 IN PL p’ by rw [PL_def] \\
-     qabbrev_tac ‘q = drop i p’ \\
-    ‘el i p = first q’ by rw [Abbr ‘q’] >> POP_ORW \\
-     Know ‘el i (tail p) = first (tail q)’
-     >- (rw [Abbr ‘q’, REWRITE_RULE [ADD1] el_def]) >> Rewr' \\
-     Know ‘is_head_reduction q’
-     >- (qunabbrev_tac ‘q’ \\
-         irule finite_is_head_reduction_drop \\
-         rw [Abbr ‘p’, head_reduction_path_def]) >> DISCH_TAC \\
-  (* perform case analysis *)
-    ‘(?x. q = stopped_at x) \/ ?x r xs. q = pcons x r xs’ by METIS_TAC [path_cases]
-     >- (Know ‘PL q = IMAGE (\n. n - i) (PL p)’
-         >- rw [Abbr ‘q’, PL_drop] \\
-        ‘PL p = count (SUC n)’ by rw [PL_def, count_def] >> POP_ORW \\
-         POP_ORW (* q = stopped_at x *) \\
-         simp [PL_stopped_at] \\
-         Suff ‘IMAGE (\n. n - i) (count (SUC n)) <> {0}’ >- METIS_TAC [] \\
-         rw [Once EXTENSION] \\
-         Q.EXISTS_TAC ‘n - i’ >> rw [] \\
-         Q.EXISTS_TAC ‘n’ >> art []) \\
-     fs [is_head_reduction_thm] \\
-     Q.EXISTS_TAC ‘r’ >> art [])
+ >- (MP_TAC (Q.SPECL [‘M’, ‘p’] finite_head_reduction_path_to_list_11) \\
+     rw [] >> Q.EXISTS_TAC ‘l’ >> rw [])
  (* stage work *)
  >> qabbrev_tac ‘len = LENGTH l’
  >> ‘0 < len /\ len <> 0’ by rw [Abbr ‘len’, GSYM NOT_NIL_EQ_LENGTH_NOT_0]
@@ -1200,7 +1219,7 @@ QED
 
 Overload hnf_headvar = “\t. THE_VAR (hnf_head t)”
 
-(* hnf_children retrives the ‘args’ part of an abs-free hnf (VAR y @* args) *)
+(* hnf_children retrives the ‘args’ part of absfree hnf *)
 Definition hnf_children_def :
     hnf_children t = if is_comb t then
                         SNOC (rand t) (hnf_children (rator t))
@@ -1255,7 +1274,25 @@ Proof
  >> rw [hnf_children_appstar, hnf_head_appstar]
 QED
 
-Theorem hnf_head_absfree :
+Theorem hnf_children_FV_SUBSET :
+    !M Ms. hnf M /\ ~is_abs M /\ (Ms = hnf_children M) ==>
+           !i. i < LENGTH Ms ==> FV (EL i Ms) SUBSET FV M
+Proof
+    rpt STRIP_TAC
+ >> ‘M = hnf_head M @* hnf_children M’ by PROVE_TAC [absfree_hnf_thm]
+ >> POP_ORW
+ >> Q.PAT_X_ASSUM ‘Ms = hnf_children M’ (fs o wrap)
+ >> qabbrev_tac ‘Ms = hnf_children M’
+ >> simp [FV_appstar]
+ >> MATCH_MP_TAC SUBSET_TRANS
+ >> Q.EXISTS_TAC ‘BIGUNION (IMAGE FV (set Ms))’
+ >> simp []
+ >> rw [SUBSET_DEF, IN_BIGUNION_IMAGE]
+ >> Q.EXISTS_TAC ‘EL i Ms’ >> rw [MEM_EL]
+ >> Q.EXISTS_TAC ‘i’ >> rw []
+QED
+
+Theorem absfree_hnf_head :
     !y args. hnf_head (VAR y @* args) = VAR y
 Proof
     rpt GEN_TAC

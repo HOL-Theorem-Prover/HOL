@@ -186,6 +186,16 @@ val ccbeta_rwt = store_thm(
     FULL_SIMP_TAC (srw_ss()) []
   ]);
 
+Theorem ccbeta_LAMl_rwt :
+    !vs M N. LAMl vs M -b-> N <=> ?M'. N = LAMl vs M' /\ M -b-> M'
+Proof
+    Induct_on ‘vs’
+ >> rw [ccbeta_rwt] (* only one goal left *)
+ >> EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘M'’ >> art [])
+ >> Q.EXISTS_TAC ‘LAMl vs M'’ >> rw []
+QED
+
 val beta_normal_form_bnf = store_thm(
   "beta_normal_form_bnf",
   ``normal_form beta = bnf``,
@@ -689,6 +699,7 @@ val ccbeta_lameq = store_thm(
   "ccbeta_lameq",
   ``!M N. M -b-> N ==> M == N``,
   SRW_TAC [][lameq_betaconversion, EQC_R]);
+
 val betastar_lameq = store_thm(
   "betastar_lameq",
   ``!M N. M -b->* N ==> M == N``,
@@ -1577,6 +1588,11 @@ val betastar_eq_cong = store_thm(
   "betastar_eq_cong",
   ``bnf N ==> M -b->* M' ==> (M -b->* N  <=> M' -b->* N)``,
   METIS_TAC [bnf_triangle, RTC_CASES_RTC_TWICE]);
+
+(* |- !x y z. x -b->* y /\ y -b->* z ==> x -b->* z *)
+Theorem betastar_TRANS =
+        RTC_TRANSITIVE |> Q.ISPEC ‘compat_closure beta’
+                       |> REWRITE_RULE [transitive_def]
 
 val _ = export_theory();
 val _ = html_theory "chap3";

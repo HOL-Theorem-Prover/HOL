@@ -332,6 +332,12 @@ Proof
     rw [FOLDR_SNOC]
 QED
 
+Theorem LAMl_eq_rewrite[simp] :
+    LAMl vs t1 = LAMl vs t2 <=> t1 = t2
+Proof
+    Induct_on ‘vs’ >> rw [LAM_eq_thm]
+QED
+
 (*---------------------------------------------------------------------------*
  *  funpow for lambda terms (using arithmeticTheory.FUNPOW)
  *---------------------------------------------------------------------------*)
