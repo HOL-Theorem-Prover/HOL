@@ -8,9 +8,10 @@
   Note that this tree data structure allows for both infinite depth
   and infinite breadth.
 *)
-open HolKernel Parse boolLib bossLib term_tactic;
+open HolKernel Parse boolLib bossLib;
+
 open arithmeticTheory listTheory llistTheory alistTheory optionTheory;
-open mp_then pred_setTheory relationTheory pairTheory combinTheory;
+open pred_setTheory relationTheory pairTheory combinTheory hurdUtils;
 
 val _ = new_theory "ltree";
 
@@ -700,50 +701,65 @@ Proof
  >> EQ_TAC >> rw []
 QED
 
-Definition ltree_finite_branching_def :
-    ltree_finite_branching = ltree_every (\a ts. LFINITE ts)
+Definition finite_branching_def :
+    finite_branching = ltree_every (\a ts. LFINITE ts)
 End
 
-Theorem ltree_finite_branching_rules :
-    !a ts. EVERY ltree_finite_branching ts ==>
-           ltree_finite_branching (Branch a (fromList ts))
+Theorem finite_branching_rules :
+    !a ts. EVERY finite_branching ts ==>
+           finite_branching (Branch a (fromList ts))
 Proof
-    rw [ltree_finite_branching_def, EVERY_MEM]
+    rw [finite_branching_def, EVERY_MEM]
  >> qabbrev_tac ‘P = \(a :'a) (ts :'a ltree llist). LFINITE ts’
  >> rw [Once ltree_every_cases]
  >- rw [Abbr ‘P’, LFINITE_fromList]
  >> rw [every_fromList_EVERY, EVERY_MEM]
 QED
 
+(* The "primed" version uses ‘every’ (and ‘LFINITE’) instead of ‘EVERY’ *)
+Theorem finite_branching_rules' :
+    !a ts. LFINITE ts /\ every finite_branching ts ==>
+           finite_branching (Branch a ts)
+Proof
+    rw [finite_branching_def]
+QED
+
 Theorem ltree_finite_imp_finite_branching :
-    !t. ltree_finite t ==> ltree_finite_branching t
+    !t. ltree_finite t ==> finite_branching t
 Proof
     HO_MATCH_MP_TAC ltree_finite_ind
- >> rw [ltree_finite_branching_rules]
+ >> rw [finite_branching_rules]
 QED
 
 (* cf. ltree_cases *)
-Theorem ltree_finite_branching_cases :
-    !t. ltree_finite_branching t <=>
-        ?a ts. t = Branch a (fromList ts) /\ EVERY ltree_finite_branching ts
+Theorem finite_branching_cases :
+    !t. finite_branching t <=>
+        ?a ts. t = Branch a (fromList ts) /\ EVERY finite_branching ts
 Proof
-    rw [ltree_finite_branching_def, Once ltree_every_cases]
+    rw [finite_branching_def, Once ltree_every_cases]
  >> EQ_TAC >> rw [LFINITE_fromList, every_fromList_EVERY]
  >> ‘?l. ts = fromList l’ by METIS_TAC [LFINITE_IMP_fromList]
  >> fs [every_fromList_EVERY]
 QED
 
+Theorem finite_branching_cases' :
+    !t. finite_branching t <=>
+        ?a ts. t = Branch a ts /\ LFINITE ts /\ every finite_branching ts
+Proof
+    rw [finite_branching_def, Once ltree_every_cases]
+QED
+
 (* |- (!a0. P a0 ==> ?a ts. a0 = Branch a ts /\ LFINITE ts /\ every P ts) ==>
-      !a0. P a0 ==> ltree_finite_branching a0
+      !a0. P a0 ==> finite_branching a0
  *)
 val lemma = ltree_every_coind
          |> (Q.SPEC ‘\(a :'a) (ts :'a ltree llist). LFINITE ts’)
          |> (Q.SPEC ‘P’) |> BETA_RULE
-         |> REWRITE_RULE [GSYM ltree_finite_branching_def];
+         |> REWRITE_RULE [GSYM finite_branching_def];
 
-Theorem ltree_finite_branching_coind :
+Theorem finite_branching_coind :
     !P. (!t. P t ==> ?a ts. t = Branch a (fromList ts) /\ EVERY P ts) ==>
-         !t. P t ==> ltree_finite_branching t
+         !t. P t ==> finite_branching t
 Proof
     NTAC 2 STRIP_TAC
  >> MATCH_MP_TAC lemma
@@ -754,16 +770,120 @@ Proof
  >> rw [LFINITE_fromList, every_fromList_EVERY]
 QED
 
-Theorem ltree_finite_branching_rewrite[simp] :
-    ltree_finite_branching (Branch a ts) <=>
-    LFINITE ts /\ every ltree_finite_branching ts
+Theorem finite_branching_coind' :
+    !P. (!t. P t ==> ?a ts. t = Branch a ts /\ LFINITE ts /\ every P ts) ==>
+         !t. P t ==> finite_branching t
 Proof
-    SIMP_TAC std_ss [ltree_finite_branching_cases]
+    NTAC 2 STRIP_TAC
+ >> MATCH_MP_TAC lemma >> rw []
+QED
+
+Theorem finite_branching_rewrite[simp] :
+    finite_branching (Branch a ts) <=> LFINITE ts /\ every finite_branching ts
+Proof
+    SIMP_TAC std_ss [finite_branching_cases]
  >> EQ_TAC >> rw []
  >- rw [LFINITE_fromList]
  >- rw [every_fromList_EVERY]
  >> ‘?l. ts = fromList l’ by METIS_TAC [LFINITE_IMP_fromList]
  >> fs [every_fromList_EVERY]
+QED
+
+(*---------------------------------------------------------------------------*
+ *  More ltree operators
+ *---------------------------------------------------------------------------*)
+
+Definition ltree_node_def[simp] :
+    ltree_node (Branch a ts) = a
+End
+
+Definition ltree_children_def[simp] :
+    ltree_children (Branch a ts) = ts
+End
+
+Theorem ltree_node_children_reduce[simp] :
+    Branch (ltree_node t) (ltree_children t) = t
+Proof
+   ‘?a ts. t = Branch a ts’ by METIS_TAC [ltree_cases]
+ >> rw []
+QED
+
+Definition ltree_paths_def :
+    ltree_paths t = {p | ltree_lookup t p <> NONE}
+End
+
+Theorem IN_ltree_lookup :
+    !p t. p IN ltree_paths t <=> ltree_lookup t p <> NONE
+Proof
+    rw [ltree_paths_def]
+QED
+
+Theorem NIL_IN_ltree_paths[simp] :
+    [] IN ltree_paths t
+Proof
+    rw [ltree_paths_def, ltree_lookup_def]
+QED
+
+Theorem ltree_paths_inclusive :
+    !l1 l2 t. l1 <<= l2 /\ l2 IN ltree_paths t ==> l1 IN ltree_paths t
+Proof
+    Induct_on ‘l1’
+ >> rw [] (* only one goal left *)
+ >> Cases_on ‘l2’ >> fs []
+ >> rename1 ‘l1 <<= l2’
+ >> Q.PAT_X_ASSUM ‘h = h'’ K_TAC
+ >> rename1 ‘h::l1 IN ltree_paths t’
+ >> POP_ASSUM MP_TAC
+ >> ‘?a ts. t = Branch a ts’ by METIS_TAC [ltree_cases]
+ >> POP_ORW
+ >> simp [ltree_paths_def, ltree_lookup_def]
+ >> Cases_on ‘LNTH h ts’ >> rw []
+ >> fs [GSYM IN_ltree_lookup]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘l2’ >> rw []
+QED
+
+Theorem ltree_el :
+    ltree_el t [] = SOME (ltree_node t,LLENGTH (ltree_children t)) /\
+    ltree_el t (n::ns) =
+      case LNTH n (ltree_children t) of
+        NONE => NONE
+      | SOME a => ltree_el a ns
+Proof
+   ‘?a ts. t = Branch a ts’ by METIS_TAC [ltree_cases]
+ >> simp [ltree_el_def]
+QED
+
+Theorem ltree_lookup :
+    ltree_lookup t [] = SOME t /\
+    ltree_lookup t (n::ns) =
+      case LNTH n (ltree_children t) of
+        NONE => NONE
+      | SOME a => ltree_lookup a ns
+Proof
+   ‘?a ts. t = Branch a ts’ by METIS_TAC [ltree_cases]
+ >> simp [ltree_lookup_def]
+QED
+
+Theorem ltree_lookup_iff_ltree_el[local] :
+    !p t. ltree_lookup t p <> NONE <=> ltree_el t p <> NONE
+Proof
+    Induct_on ‘p’
+ >- rw [ltree_lookup, ltree_el]
+ >> rw [Once ltree_lookup, Once ltree_el]
+ >> Cases_on ‘LNTH h (ltree_children t)’ >> fs []
+QED
+
+Theorem ltree_paths_alt :
+    !t. ltree_paths A = {p | ltree_el A p <> NONE}
+Proof
+    rw [ltree_paths_def, Once EXTENSION, ltree_lookup_iff_ltree_el]
+QED
+
+Theorem ltree_el_valid :
+    !p t. p IN ltree_paths t ==> ltree_el t p <> NONE
+Proof
+    rw [ltree_paths_alt]
 QED
 
 (*---------------------------------------------------------------------------*
