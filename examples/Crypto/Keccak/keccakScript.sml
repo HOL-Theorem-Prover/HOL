@@ -1169,6 +1169,80 @@ Proof
     \\ first_x_assum(qspecl_then[`m`]mp_tac)
     \\ first_x_assum(qspecl_then[`m`]mp_tac)
     \\ simp[Abbr`a`] )
+  \\ `∀m x y t u.
+        FUNPOW f m a = (x,y,t,u)
+        ⇒
+        ∀z. z < w ⇒
+            lookup (triple_to_index w (0,0,z)) u =
+            lookup (triple_to_index w (0,0,z)) (SND(SND(SND a)))`
+  by (
+    gen_tac
+    \\ qho_match_abbrev_tac`Q (FUNPOW f m a)`
+    \\ irule FUNPOW_invariant_index
+    \\ simp[Abbr`Q`, FORALL_PROD]
+    \\ qexists_tac`λ(x,y,t,u). (x, y) ≠ (0,0)`
+    \\ reverse(rw[])
+    >- (
+      qmatch_goalsub_abbrev_tac`_ xx`
+      \\ PairCases_on`xx`
+      \\ pop_assum mp_tac
+      \\ rw[markerTheory.Abbrev_def]
+      \\ qpat_x_assum`_ = FUNPOW _ _ _`(assume_tac o SYM)
+      \\ first_assum drule
+      \\ rpt strip_tac
+      \\ metis_tac[rho_xy_not_zero])
+    \\ qpat_x_assum`f _ = _`mp_tac
+    \\ simp[Abbr`f`] \\ rw[]
+    \\ qmatch_goalsub_abbrev_tac`WHILE Q g`
+    \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
+    \\ `∀n a. FST(FUNPOW g n a) = (FST a + n)`
+    by (
+      Induct >- rw[]
+      \\ rw[FUNPOW_SUC, ADD1]
+      \\ qmatch_goalsub_abbrev_tac`g xx`
+      \\ `FST (g xx) = FST xx + 1` suffices_by (
+        qmatch_asmsub_rename_tac`xx = FUNPOW g _ c`
+        \\ first_x_assum(qspec_then`c`mp_tac)
+        \\ simp[])
+      \\ simp[Abbr`g`, UNCURRY] )
+    \\ conj_asm1_tac >- ( qexists_tac`w` \\ simp[Abbr`Q`, UNCURRY])
+    \\ numLib.LEAST_ELIM_TAC
+    \\ rw[] \\ fs[]
+    \\ first_assum $ drule_then(CHANGED_TAC o SUBST1_TAC o SYM)
+    \\ qmatch_goalsub_rename_tac`FUNPOW g p (0, j)`
+    \\ qmatch_goalsub_abbrev_tac`SND pp`
+    \\ qho_match_abbrev_tac`QQ pp`
+    \\ qunabbrev_tac`pp`
+    \\ irule FUNPOW_invariant
+    \\ simp[Abbr`QQ`]
+    \\ simp[FORALL_PROD]
+    \\ rpt gen_tac \\ disch_then (SUBST1_TAC o SYM)
+    \\ simp[Abbr`g`]
+    \\ qmatch_goalsub_abbrev_tac`insert kk vv _`
+    \\ rw[lookup_insert]
+    \\ pop_assum mp_tac
+    \\ rw[triple_to_index_def]
+    \\ qpat_x_assum`_ < w` mp_tac
+    \\ qmatch_goalsub_rename_tac`c1 * w`
+    \\ Cases_on`c1 <> 0`
+    >- ( Cases_on`c1` \\ fs[MULT_SUC] )
+    \\ fs[]
+    \\ qmatch_goalsub_rename_tac`c2 * w`
+    \\ Cases_on`c2 <> 0`
+    >- ( Cases_on`c2` \\ fs[MULT_SUC] )
+    \\ fs[])
+  \\ Cases_on`x = 0 ∧ y = 0` \\ simp[]
+  >- (
+    Cases_on`FUNPOW f n a`
+    \\ PairCases_on`r` \\ fs[] \\ rw[]
+    \\ first_x_assum drule
+    \\ disch_then drule
+    \\ simp[triple_to_index_def, lookup_fromList, Abbr`a`]
+    \\ rw[]
+    \\ rfs[Abbr`w`, b2w_def, X_LT_DIV] )
+  \\ numLib.LEAST_ELIM_TAC
+  \\ conj_tac >- metis_tac[rho_xy_exists]
+  \\ rw[]
   \\ cheat
 QED
 
