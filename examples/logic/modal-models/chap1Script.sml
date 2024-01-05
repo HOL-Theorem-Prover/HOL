@@ -544,19 +544,6 @@ val exercise_1_6_6_d1 = store_thm(
      fs[NMLG_def] >> rpt strip_tac >> metis_tac[SUBSET_DEF]));
 
 
-
-
-val KGproof_APPEND = store_thm(
-    "KGproof_APPEND",
-    ``!p2. KGproof Γ p2 ==> !p1. KGproof Γ p1 ==> KGproof Γ (p1 ++ p2)``,
-    Induct_on `KGproof` >> simp[] >>
-    metis_tac[KGproof_rules, MEM_APPEND, APPEND_ASSOC]);
-
-
-
-
-
-
 val KG_provable_G = store_thm(
     "KG_provable_G",
     ``Γ SUBSET {form | KG_provable Γ form}``,

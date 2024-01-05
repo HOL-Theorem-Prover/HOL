@@ -222,11 +222,11 @@ val bounded_mor_def = Define`
 val bounded_mor_image_def = Define`
 bounded_mor_image f M M' = (bounded_mor f M M' /\ (SURJ f M.frame.world M'.frame.world))`;
 
-
-
-val prop_2_14 = store_thm(
-"prop_2_14",
-``!M M' w f form. bounded_mor f M M' /\ w IN M.frame.world ==> (satis M w form <=> satis M' (f w) form)``,
+Theorem prop_2_14:
+  !M M' w f form.
+    bounded_mor f M M' /\ w IN M.frame.world ==> (
+    satis M w form <=> satis M' (f w) form)
+Proof
 Induct_on `form` >> rw[satis_def]
 >- (eq_tac
    >- (rpt strip_tac
@@ -263,48 +263,7 @@ Induct_on `form` >> rw[satis_def]
     >- metis_tac[IN_DEF]
     >- metis_tac[]
     >- metis_tac[]))
-);
-
-val prop_2_14 = store_thm(
-"prop_2_14",
-``!M M' w f form. bounded_mor f M M' /\ w IN M.frame.world ==> (satis M w form <=> satis M' (f w) form)``,
-Induct_on `form` >> rw[satis_def]
->- (eq_tac
-   >- (rpt strip_tac
-     >- metis_tac[bounded_mor_def]
-     >- (`(!a. (satis M w (VAR a) <=> satis M' (f w) (VAR a)))` by metis_tac[bounded_mor_def]
-   >> fs[satis_def]
-   >> metis_tac[]))
-   >- (rpt strip_tac
-   >> fs[bounded_mor_def,satis_def,IN_DEF]))
->- (eq_tac
-  >- (rpt strip_tac
-    >- (`satis M w form ⇔ satis M' (f w) form` by metis_tac[]
-       >> fs[])
-    >- (`satis M w form' ⇔ satis M' (f w) form'` by metis_tac[]
-       >> fs[]))
-  >- (rpt strip_tac
-    >- (`satis M w form ⇔ satis M' (f w) form` by metis_tac[]
-       >> fs[])
-    >- (`satis M w form' ⇔ satis M' (f w) form'` by metis_tac[]
-       >> fs[])))
->- fs[bounded_mor_def,IN_DEF,satis_def]
->- (eq_tac
-  >- (rpt strip_tac
-     >- metis_tac[bounded_mor_def]
-     >- (qexists_tac `f v`
-       >> (rpt strip_tac
-       >- metis_tac[bounded_mor_def,IN_DEF]
-       >- metis_tac[bounded_mor_def]
-       >- metis_tac[])))
-  >- (rpt strip_tac
-  >> `?x. x IN M.frame.world /\ M.frame.rel w x /\ f x = v` by metis_tac[bounded_mor_def,IN_DEF]
-  >> qexists_tac `x`
-  >> rpt strip_tac
-    >- metis_tac[IN_DEF]
-    >- metis_tac[]
-    >- metis_tac[]))
-);
+QED
 
 
 

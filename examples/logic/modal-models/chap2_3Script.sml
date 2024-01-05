@@ -214,18 +214,16 @@ Proof
       qexists_tac ‘n + 1’ >> rw[] >> qexists_tac ‘w’ >> rw[])
 QED
 
-val heightLE_RTC = store_thm(
-  "heightLE_RTC",
-  “!w n. heightLE M x M' w n ==>
-  rooted_model M x M' ==> (RESTRICT M'.frame.rel M'.frame.world)^* x w”,
+Theorem heightLE_RTC:
+  !w n. heightLE M x M' w n ==>
+        rooted_model M x M' ==> (RESTRICT M'.frame.rel M'.frame.world)^* x w
+Proof
   Induct_on ‘heightLE’ >> rw[] >>
   ‘(RESTRICT M'.frame.rel M'.frame.world)^* x w'’ by metis_tac[] >>
   ‘RESTRICT M'.frame.rel M'.frame.world w' w’
     suffices_by metis_tac[RTC_CASES2] >>
   metis_tac[RESTRICT_def,rooted_model_def]
 QED
-
-
 
 Theorem rooted_have_height:
   !x w. (RESTRICT M'.frame.rel M'.frame.world)^* x w ==>

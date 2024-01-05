@@ -38,24 +38,35 @@ val _ = set_fixity "ioₛ" (Infixl 600);
 val _ = overload_on ("ioₛ", “s_ICONJ”);
 
 Inductive slaney_provable:
-[s_identity:] (∀A. slaney_provable (A -->ₛ A)) ∧
-[s_permutation:] (∀A B C. slaney_provable ((A -->ₛ (B -->ₛ C)) -->ₛ (B -->ₛ (A -->ₛ C)))) ∧
-[s_transitivity:] (∀A B C. slaney_provable ((A -->ₛ B) -->ₛ ((B -->ₛ C) -->ₛ (A -->ₛ C)))) ∧
-[s_contraction:] (∀A B. slaney_provable ((A -->ₛ (A -->ₛ B)) -->ₛ (A -->ₛ B))) ∧
-[s_conjunction_l:] (∀A B. slaney_provable ((A &ₛ B) -->ₛ A)) ∧
-[s_conjunction_r:] (∀A B. slaney_provable ((A &ₛ B) -->ₛ B)) ∧
-[s_conj_introduction:] (∀A B C. slaney_provable (((A -->ₛ B) &ₛ (A -->ₛ C)) -->ₛ (A -->ₛ (B &ₛ C)))) ∧
-[s_disjunction_l:] (∀A B. slaney_provable (A -->ₛ (A Vₛ B))) ∧
-[s_disjunction_r:] (∀A B. slaney_provable (B -->ₛ (A Vₛ B))) ∧
-[s_disjunction_elim:] (∀A B C. slaney_provable (((A -->ₛ C) &ₛ (B -->ₛ C)) -->ₛ ((A Vₛ B) -->ₛ C))) ∧
-[s_distribution:] (∀A B C. slaney_provable ((A &ₛ (B Vₛ C)) -->ₛ ((A &ₛ B) Vₛ (A &ₛ C)))) ∧
-[s_contrapositive:] (∀A B. slaney_provable ((A -->ₛ (~ₛB)) -->ₛ (B -->ₛ (~ₛA)))) ∧
-[s_double_negation:] (∀A. slaney_provable ((~ₛ(~ₛA)) -->ₛ A )) ∧
-[s_adjunction_rule:] (∀A B. slaney_provable A ∧ slaney_provable B ⇒ slaney_provable (A &ₛ B)) ∧
-[s_modus_ponens:] (∀A B. slaney_provable A ∧ slaney_provable (A -->ₛ B) ⇒ slaney_provable B) ∧
-[s_intensional_conj_lr:] (∀A B C. slaney_provable ((A ioₛ B) -->ₛ C) ⇒ slaney_provable (A -->ₛ (B -->ₛ C))) ∧
-[s_intensional_conj_rl:] (∀A B C. slaney_provable (A -->ₛ (B -->ₛ C)) ⇒ slaney_provable ((A ioₛ B) -->ₛ C)) ∧
-[s_tt_rl:] (∀A. slaney_provable A ⇒ slaney_provable (τₛ -->ₛ A)) ∧
+[s_identity:]
+  ∀A. slaney_provable (A -->ₛ A)
+[s_permutation:]
+  ∀A B C. slaney_provable ((A -->ₛ (B -->ₛ C)) -->ₛ (B -->ₛ (A -->ₛ C)))
+[s_transitivity:]
+  ∀A B C. slaney_provable ((A -->ₛ B) -->ₛ ((B -->ₛ C) -->ₛ (A -->ₛ C)))
+[s_contraction:] (∀A B. slaney_provable ((A -->ₛ (A -->ₛ B)) -->ₛ (A -->ₛ B)))
+[s_conjunction_l:] (∀A B. slaney_provable ((A &ₛ B) -->ₛ A))
+[s_conjunction_r:] (∀A B. slaney_provable ((A &ₛ B) -->ₛ B))
+[s_conj_introduction:]
+  ∀A B C. slaney_provable (((A -->ₛ B) &ₛ (A -->ₛ C)) -->ₛ (A -->ₛ (B &ₛ C)))
+[s_disjunction_l:] (∀A B. slaney_provable (A -->ₛ (A Vₛ B)))
+[s_disjunction_r:] (∀A B. slaney_provable (B -->ₛ (A Vₛ B)))
+[s_disjunction_elim:]
+  ∀A B C. slaney_provable (((A -->ₛ C) &ₛ (B -->ₛ C)) -->ₛ ((A Vₛ B) -->ₛ C))
+[s_distribution:]
+  ∀A B C. slaney_provable ((A &ₛ (B Vₛ C)) -->ₛ ((A &ₛ B) Vₛ (A &ₛ C)))
+[s_contrapositive:] ∀A B. slaney_provable ((A -->ₛ (~ₛB)) -->ₛ (B -->ₛ (~ₛA)))
+[s_double_negation:] (∀A. slaney_provable ((~ₛ(~ₛA)) -->ₛ A ))
+[s_adjunction_rule:]
+  (∀A B. slaney_provable A ∧ slaney_provable B ⇒ slaney_provable (A &ₛ B))
+[s_modus_ponens:]
+  (∀A B. slaney_provable A ∧ slaney_provable (A -->ₛ B) ⇒ slaney_provable B)
+[s_intensional_conj_lr:]
+  (∀A B C. slaney_provable ((A ioₛ B) -->ₛ C) ⇒ slaney_provable (A -->ₛ (B -->ₛ C)))
+[s_intensional_conj_rl:]
+  ∀A B C. slaney_provable (A -->ₛ (B -->ₛ C)) ⇒
+          slaney_provable ((A ioₛ B) -->ₛ C)
+[s_tt_rl:] (∀A. slaney_provable A ⇒ slaney_provable (τₛ -->ₛ A))
 [s_tt_lr:] (∀A. slaney_provable (τₛ -->ₛ A) ⇒ slaney_provable A)
 End
 

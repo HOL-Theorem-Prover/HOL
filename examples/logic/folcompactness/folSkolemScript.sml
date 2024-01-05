@@ -475,7 +475,7 @@ Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
 
-Theorem bumpterm_def[simp] =
+Theorem bumpterm_def[simp,allow_rebind] =
         SIMP_RULE bool_ss [SF ETA_ss] bumpterm_def
 
 Theorem termval_bump[simp]:

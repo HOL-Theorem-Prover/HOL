@@ -37,10 +37,11 @@ Termination
   WF_REL_TAC ‘measure (foterm_size o SND)’ >> simp[]
 End
 
-Theorem raw_tpm_def = SIMP_RULE (srw_ss() ++ ETA_ss) [] raw_tpm_def
+Theorem raw_tpm_def[allow_rebind] =
+        SIMP_RULE (srw_ss() ++ ETA_ss) [] raw_tpm_def
 
-val _ = overload_on ("tpm", “pmact (mk_pmact raw_tpm)”)
-val _ = overload_on ("tlpm", “listpm (mk_pmact raw_tpm)”)
+Overload tpm = “pmact (mk_pmact raw_tpm)”
+Overload tlpm = “listpm (mk_pmact raw_tpm)”
 val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] listTheory.MAP_CONG
 
 val tpm_raw = Q.prove(
@@ -92,14 +93,6 @@ Proof
   Induct >> simp[MEM_MAP, PULL_EXISTS, DISJ_IMP_THM]
 QED
 
-Theorem tfv_tpm:
-  ∀t. tfv (tpm pi t) = ssetpm pi (tfv t)
-Proof
-  Induct >>
-  simp[pmact_INSERT, pmact_LIST_UNION, listpm_MAP, MAP_MAP_o,
-       Cong MAP_CONG']
-QED
-
 val OR_LEFT_FORALL_THM = Q.prove(
   ‘(∀x. P x) ∨ Q ⇔ ∀x. P x ∨ Q’,
   metis_tac[])
@@ -129,7 +122,8 @@ Proof
   ‘∃y. y ∉ tfv t ∧ y ∉ s’
      by (Q.SPEC_THEN `tfv t UNION s` MP_TAC basic_swapTheory.NEW_def >>
          simp[] THEN METIS_TAC []) >>
-  METIS_TAC [tfv_apart]);
+  METIS_TAC [tfv_apart]
+QED
 
 Theorem ssetpm_LIST_UNION[simp]:
   ssetpm π (LIST_UNION l) = LIST_UNION (MAP (ssetpm π) l)

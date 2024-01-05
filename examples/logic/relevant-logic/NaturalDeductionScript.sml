@@ -64,34 +64,55 @@ val _ = overload_on ("；", “LSEMI”);
 
 Inductive R_sequent:
 (* Classical Rules *)
-[Assumption:] (∀A. R_sequent (PROP A) A) ∧
-[AND_Elimination_l:] (∀X A B. R_sequent X (A & B) ⇒ R_sequent X A) ∧
-[AND_Elimination_r:] (∀X A B. R_sequent X (A & B) ⇒ R_sequent X B) ∧
-[OR_Introduction_l:] (∀X A B. R_sequent X A ⇒ R_sequent X (A V B)) ∧
-[OR_Introduction_r:] (∀X A B. R_sequent X B ⇒ R_sequent X (A V B)) ∧
-[NOT_NOT_Introduction:] (∀X A. R_sequent X A ⇒ R_sequent X (~~A)) ∧
-[NOT_NOT_Elimination:] (∀X A. R_sequent X (~~A) ⇒ R_sequent X A) ∧
+[Assumption:] (∀A. R_sequent (PROP A) A)
+[AND_Elimination_l:] (∀X A B. R_sequent X (A & B) ⇒ R_sequent X A)
+[AND_Elimination_r:] (∀X A B. R_sequent X (A & B) ⇒ R_sequent X B)
+[OR_Introduction_l:] (∀X A B. R_sequent X A ⇒ R_sequent X (A V B))
+[OR_Introduction_r:] (∀X A B. R_sequent X B ⇒ R_sequent X (A V B))
+[NOT_NOT_Introduction:] (∀X A. R_sequent X A ⇒ R_sequent X (~~A))
+[NOT_NOT_Elimination:] (∀X A. R_sequent X (~~A) ⇒ R_sequent X A)
 
 (* Non-Classical Rules *)
-[AND_Introduction:] (∀X Y A B. (R_sequent X A ∧ R_sequent Y B ⇒ R_sequent (X， Y) (A & B))) ∧
-[IMP_Introduction:] (∀X A B. R_sequent (X ； (PROP A)) B ⇒ R_sequent X (A --> B)) ∧
-[IMP_Elimination:] (∀X Y A B. R_sequent X (A --> B) ∧ R_sequent Y A ⇒ R_sequent (X ； Y) B) ∧
-[RAA:] (∀X Y A B. R_sequent (X ； (PROP A)) B ∧ R_sequent Y (~B) ⇒ R_sequent (X ； Y) (~A)) ∧
-[OR_Elimination:] (∀Γ X A B C. R_sequent X (A V B) ∧ R_sequent(REPLACE Γ (PROP  A)) C ∧ R_sequent (REPLACE Γ (PROP  B)) C
-                               ⇒ R_sequent (REPLACE Γ X) C) ∧
+[AND_Introduction:]
+  ∀X Y A B. (R_sequent X A ∧ R_sequent Y B ⇒ R_sequent (X， Y) (A & B))
+[IMP_Introduction:]
+  ∀X A B. R_sequent (X ； (PROP A)) B ⇒ R_sequent X (A --> B)
+[IMP_Elimination:]
+  ∀X Y A B. R_sequent X (A --> B) ∧ R_sequent Y A ⇒ R_sequent (X ； Y) B
+[RAA:]
+  ∀X Y A B. R_sequent (X ； (PROP A)) B ∧ R_sequent Y (~B) ⇒
+            R_sequent (X ； Y) (~A)
+[OR_Elimination:]
+  ∀Γ X A B C. R_sequent X (A V B) ∧ R_sequent(REPLACE Γ (PROP  A)) C ∧
+              R_sequent (REPLACE Γ (PROP  B)) C
+              ⇒
+              R_sequent (REPLACE Γ X) C
 (* Structural Rules *)
-[COMMA_commutative:] (∀Γ X Y A. R_sequent (REPLACE Γ (X ， Y)) A ⇒ R_sequent (REPLACE Γ (Y ， X)) A) ∧
-[COMMA_associative_lr:] (∀Γ X Y Z A. R_sequent (REPLACE Γ ((X ， Y) ， Z)) A ⇒ R_sequent (REPLACE Γ (X ， (Y ， Z))) A) ∧
-[COMMA_associative_rl:] (∀Γ X Y Z A. R_sequent (REPLACE Γ (X ， (Y ， Z))) A ⇒ R_sequent (REPLACE Γ ((X ， Y) ， Z)) A) ∧ (* delete*)
-[COMMA_idempotent_lr:] (∀Γ X A. R_sequent (REPLACE Γ (X ， X)) A ⇒ R_sequent (REPLACE Γ X) A) ∧
-[COMMA_idempotent_rl:] (∀Γ X A. R_sequent (REPLACE Γ X) A ⇒ R_sequent (REPLACE Γ (X ， X)) A) ∧
-[weakening:] (∀Γ X Y A. R_sequent (REPLACE Γ X) A ⇒ R_sequent (REPLACE Γ (X ， Y)) A) ∧
-[identity_lr:] (∀Γ X A. R_sequent (REPLACE Γ ((PROP τ) ； X) ) A ⇒ R_sequent (REPLACE Γ X) A) ∧
-[identity_rl:] (∀Γ X A. R_sequent (REPLACE Γ X) A ⇒ R_sequent (REPLACE Γ ((PROP τ) ； X) ) A) ∧
+[COMMA_commutative:]
+  (∀Γ X Y A. R_sequent (REPLACE Γ (X ， Y)) A ⇒ R_sequent (REPLACE Γ (Y ， X)) A)
+[COMMA_associative_lr:]
+  (∀Γ X Y Z A. R_sequent (REPLACE Γ ((X ， Y) ， Z)) A ⇒
+               R_sequent (REPLACE Γ (X ， (Y ， Z))) A)
+[COMMA_associative_rl:]
+  (∀Γ X Y Z A. R_sequent (REPLACE Γ (X ， (Y ， Z))) A ⇒ R_sequent (REPLACE Γ ((X ， Y) ， Z)) A) (* delete*)
+[COMMA_idempotent_lr:]
+  (∀Γ X A. R_sequent (REPLACE Γ (X ， X)) A ⇒ R_sequent (REPLACE Γ X) A)
+[COMMA_idempotent_rl:]
+  (∀Γ X A. R_sequent (REPLACE Γ X) A ⇒ R_sequent (REPLACE Γ (X ， X)) A)
+[weakening:]
+  (∀Γ X Y A. R_sequent (REPLACE Γ X) A ⇒ R_sequent (REPLACE Γ (X ， Y)) A)
+[identity_lr:]
+  (∀Γ X A. R_sequent (REPLACE Γ ((PROP τ) ； X) ) A ⇒ R_sequent (REPLACE Γ X) A)
+[identity_rl:]
+  (∀Γ X A. R_sequent (REPLACE Γ X) A ⇒ R_sequent (REPLACE Γ ((PROP τ) ； X) ) A)
 (* system R *)
-[SEMICOLON_commutative:]  (∀Γ X Y A. R_sequent (REPLACE Γ (X ； Y)) A ⇒ R_sequent (REPLACE Γ (Y；X)) A) ∧
-[SEMICOLON_associative_lr:] (∀Γ X Y Z A. R_sequent (REPLACE Γ ((X ； Y) ； Z)) A ⇒ R_sequent (REPLACE Γ (X ； (Y ； Z))) A) ∧
-[SEMICOLON_idempotent_lr:] (∀Γ X A. R_sequent (REPLACE Γ (X ； X)) A ⇒ R_sequent (REPLACE Γ X) A)
+[SEMICOLON_commutative:]
+  (∀Γ X Y A. R_sequent (REPLACE Γ (X ； Y)) A ⇒ R_sequent (REPLACE Γ (Y；X)) A)
+[SEMICOLON_associative_lr:]
+  (∀Γ X Y Z A. R_sequent (REPLACE Γ ((X ； Y) ； Z)) A ⇒
+               R_sequent (REPLACE Γ (X ； (Y ； Z))) A)
+[SEMICOLON_idempotent_lr:]
+  (∀Γ X A. R_sequent (REPLACE Γ (X ； X)) A ⇒ R_sequent (REPLACE Γ X) A)
 End
 
 val _ = overload_on ("|-", “goldblatt_provable”);

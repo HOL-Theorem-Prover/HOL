@@ -43,22 +43,35 @@ val _ = overload_on ("ioₐ", “g_ICONJ”);
 
 
 Inductive goldblatt_provable:
-[g_identity:] (∀A. goldblatt_provable (A -->ₐ A)) ∧
-[g_suffixing:] (∀ A B C. goldblatt_provable ((A -->ₐ B) -->ₐ ((B -->ₐ C) -->ₐ (A -->ₐ C)))) ∧
-[g_assertion:]  (∀A B. goldblatt_provable (A -->ₐ ((A -->ₐ B) -->ₐ B))) ∧
-[g_contraction:] (∀A B. goldblatt_provable ((A -->ₐ (A -->ₐ B)) -->ₐ (A -->ₐ B))) ∧
-[g_conjunction_l:] (∀A B. goldblatt_provable((A &ₐ B) -->ₐ A)) ∧
-[g_conjunction_r:] (∀A B. goldblatt_provable ((A &ₐ B) -->ₐ B)) ∧
-[g_conj_introduction:] (∀A B C. goldblatt_provable (((A -->ₐ B) &ₐ (A -->ₐ C)) -->ₐ (A -->ₐ (B &ₐ C)))) ∧
-[g_disjunction_l:] (∀A B. goldblatt_provable (A -->ₐ (A Vₐ B))) ∧
-[g_disjunction_r:] (∀A B. goldblatt_provable (B -->ₐ (A Vₐ B))) ∧
-[g_disjunction_elim:] (∀A B C. goldblatt_provable (((A -->ₐ C) &ₐ (B -->ₐ C)) -->ₐ ((A Vₐ B) -->ₐ C))) ∧
-[g_distribution:] (∀A B C. goldblatt_provable ((A &ₐ (B Vₐ C)) -->ₐ ((A &ₐ B) Vₐ (A &ₐ C)))) ∧
-[g_contrapositive:] (∀A B. goldblatt_provable ((A -->ₐ (~ₐB)) -->ₐ (B -->ₐ (~ₐA)))) ∧
-[g_double_negation:] (∀A. goldblatt_provable ((~ₐ(~ₐA)) -->ₐ A )) ∧
-[g_adjunction_rule:] (∀A B. goldblatt_provable A ∧ goldblatt_provable B ⇒ goldblatt_provable (A &ₐ B)) ∧
-[g_modus_ponens:] (∀A B. goldblatt_provable A ∧ goldblatt_provable (A -->ₐ B) ⇒ goldblatt_provable B) ∧
-[g_tt_rl:] (∀A. goldblatt_provable A ⇒ goldblatt_provable (τₐ -->ₐ A)) ∧
+[g_identity:] (∀A. goldblatt_provable (A -->ₐ A))
+[g_suffixing:]
+  (∀ A B C. goldblatt_provable ((A -->ₐ B) -->ₐ ((B -->ₐ C) -->ₐ (A -->ₐ C))))
+[g_assertion:]
+  (∀A B. goldblatt_provable (A -->ₐ ((A -->ₐ B) -->ₐ B)))
+[g_contraction:]
+  (∀A B. goldblatt_provable ((A -->ₐ (A -->ₐ B)) -->ₐ (A -->ₐ B)))
+[g_conjunction_l:] (∀A B. goldblatt_provable((A &ₐ B) -->ₐ A))
+[g_conjunction_r:] (∀A B. goldblatt_provable ((A &ₐ B) -->ₐ B))
+[g_conj_introduction:]
+  ∀A B C.
+    goldblatt_provable (((A -->ₐ B) &ₐ (A -->ₐ C)) -->ₐ (A -->ₐ (B &ₐ C)))
+[g_disjunction_l:] (∀A B. goldblatt_provable (A -->ₐ (A Vₐ B)))
+[g_disjunction_r:] (∀A B. goldblatt_provable (B -->ₐ (A Vₐ B)))
+[g_disjunction_elim:]
+  ∀A B C.
+    goldblatt_provable (((A -->ₐ C) &ₐ (B -->ₐ C)) -->ₐ ((A Vₐ B) -->ₐ C))
+[g_distribution:]
+  (∀A B C. goldblatt_provable ((A &ₐ (B Vₐ C)) -->ₐ ((A &ₐ B) Vₐ (A &ₐ C))))
+[g_contrapositive:]
+  ∀A B. goldblatt_provable ((A -->ₐ (~ₐB)) -->ₐ (B -->ₐ (~ₐA)))
+[g_double_negation:] (∀A. goldblatt_provable ((~ₐ(~ₐA)) -->ₐ A ))
+[g_adjunction_rule:]
+  ∀A B. goldblatt_provable A ∧ goldblatt_provable B ⇒
+        goldblatt_provable (A &ₐ B)
+[g_modus_ponens:]
+  ∀A B. goldblatt_provable A ∧ goldblatt_provable (A -->ₐ B) ⇒
+        goldblatt_provable B
+[g_tt_rl:] (∀A. goldblatt_provable A ⇒ goldblatt_provable (τₐ -->ₐ A))
 [g_tt_lr:] (∀A. goldblatt_provable (τₐ -->ₐ A) ⇒ goldblatt_provable A)
 End
 

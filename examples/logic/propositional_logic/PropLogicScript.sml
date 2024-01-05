@@ -145,13 +145,13 @@ End
 
 Inductive is_thm:
 [~Ax1:]
-  (!p q (H:prop set). is_thm H (Ax1 p q)) /\
+  (!p q (H:prop set). is_thm H (Ax1 p q))
 [~Ax2:]
-  (!p q r H. is_thm H (Ax2 p q r)) /\
+  (!p q r H. is_thm H (Ax2 p q r))
 [~Ax3:]
-  (!p H. is_thm H (Ax3 p)) /\
+  (!p H. is_thm H (Ax3 p))
 [~inH:]
-  (!p H. p IN H ==> is_thm H p) /\
+  (!p H. p IN H ==> is_thm H p)
 [~MP:]
   (!H p q. is_thm H (p --> q) /\ is_thm H p ==> is_thm H q)
 End

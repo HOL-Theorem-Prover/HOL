@@ -161,14 +161,14 @@ QED
 
 
 Inductive ded:
-[PL1:] (∀A B. ded R Hs (A ⥰ B ⥰ A)) ∧
-[PL2:] (∀A B C. ded R Hs ((A ⥰ B ⥰ C) ⥰ (A ⥰ B) ⥰ (A ⥰ C))) ∧
-[PL3:] (∀A B. ded R Hs ((⌁A ⥰ ⌁B) ⥰ (⌁A ⥰ B) ⥰ A)) ∧
-[PL4:] (∀v t f. acceptable v t f ⇒ ded R Hs ((ALL v f) ⥰ fsubst v t f)) ∧
-[PL5:] (∀v A B. v ∉ fFV A ⇒ ded R Hs (ALL v (A ⥰ B) ⥰ A ⥰ (ALL v B))) ∧
-[~MP:] (∀A B. ded R Hs (A ⥰ B) ∧ ded R Hs A ⇒ ded R Hs B) ∧
-[UG:] (∀v A. (∀h. h ∈ Hs ⇒ v ∉ fFV h) ∧ ded R Hs A ⇒ ded R Hs (ALL v A)) ∧
-[~hyp:] (∀h. h ∈ Hs ⇒ ded R Hs h) ∧
+[PL1:] (∀A B. ded R Hs (A ⥰ B ⥰ A))
+[PL2:] (∀A B C. ded R Hs ((A ⥰ B ⥰ C) ⥰ (A ⥰ B) ⥰ (A ⥰ C)))
+[PL3:] (∀A B. ded R Hs ((⌁A ⥰ ⌁B) ⥰ (⌁A ⥰ B) ⥰ A))
+[PL4:] (∀v t f. acceptable v t f ⇒ ded R Hs ((ALL v f) ⥰ fsubst v t f))
+[PL5:] (∀v A B. v ∉ fFV A ⇒ ded R Hs (ALL v (A ⥰ B) ⥰ A ⥰ (ALL v B)))
+[~MP:] (∀A B. ded R Hs (A ⥰ B) ∧ ded R Hs A ⇒ ded R Hs B)
+[UG:] (∀v A. (∀h. h ∈ Hs ⇒ v ∉ fFV h) ∧ ded R Hs A ⇒ ded R Hs (ALL v A))
+[~hyp:] (∀h. h ∈ Hs ⇒ ded R Hs h)
 [~R:] (∀B s. (∀A hs. (hs,A) ∈ s ⇒ ded R hs A) ∧ R s Hs B ⇒ ded R Hs B)
 End
 
