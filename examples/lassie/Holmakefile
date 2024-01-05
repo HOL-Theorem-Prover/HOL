@@ -1,7 +1,0 @@
-ANT_INSTALLED = $(which ant)
-
-ifneq "$(ANT_INSTALLED)" ""
-CLINE_OPTIONS = -j1 -r
-INCLUDES = src examples
-
-endif
