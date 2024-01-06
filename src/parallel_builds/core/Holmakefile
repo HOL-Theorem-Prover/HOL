@@ -45,7 +45,7 @@ EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
          misc parity rings set-theory/zfset set-theory/vbg zipper
 
 # selftest directories under src/quotient
-QUOTDIRS = examples examples/lambda examples/sigma
+QUOTDIRS = examples examples/lambda examples/sigma choice
 
 SRCTESTDIRS = \
   integer/testing \

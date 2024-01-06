@@ -1,7 +1,4 @@
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
-
 
 (* --------------------------------------------------------------------- *)
 (* Definitions and theorems for higher order quotients package.          *)
@@ -12,7 +9,7 @@ infixr -->;
 (* --------------------------------------------------------------------- *)
 
 
-val _ = new_theory "quotient";
+val _ = new_theory "cfree_quotient";
 
 (*
 load "dep_rewrite";
@@ -62,29 +59,27 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 val QUOTIENT_def =
     Define
-      `QUOTIENT R (abs:'a->'b) =
+      `QUOTIENT R (abs:'a->'b) <=>
         (!a. ?r. R r r /\ (abs r = a)) /\
-        (!r s. R r s = R r r /\ R s s /\ (abs r = abs s))`;
+        (!r s. R r s <=> R r r /\ R s s /\ (abs r = abs s))`;
 
-val QUOTIENT_REP = store_thm
-   ("QUOTIENT_REP",
-    (--`!R (abs:'a->'b). QUOTIENT R abs ==> (!a. ?r. R r r /\ (abs r = a))`--),
-    REWRITE_TAC[QUOTIENT_def]
-    THEN REPEAT STRIP_TAC
-   );
+Theorem QUOTIENT_REP:
+  !R (abs:'a->'b). QUOTIENT R abs ==> (!a. ?r. R r r /\ (abs r = a))
+Proof
+  REWRITE_TAC[QUOTIENT_def] THEN REPEAT STRIP_TAC
+QED
 
-val QUOTIENT_REL = store_thm
-   ("QUOTIENT_REL",
-    (--`!R (abs:'a->'b). QUOTIENT R abs ==>
-            (!r s. R r s = R r r /\ R s s /\ (abs r = abs s))`--),
-    REWRITE_TAC[QUOTIENT_def]
-    THEN REPEAT STRIP_TAC
-   );
+Theorem QUOTIENT_REL:
+  !R (abs:'a->'b). QUOTIENT R abs ==>
+                   (!r s. R r s <=> R r r /\ R s s /\ (abs r = abs s))
+Proof
+  REWRITE_TAC[QUOTIENT_def] THEN REPEAT STRIP_TAC
+QED
 
 val QUOTIENT_REL_ABS = store_thm
    ("QUOTIENT_REL_ABS",
-    (--`!R (abs:'a->'b). QUOTIENT R abs ==>
-            (!r s. R r s ==> (abs r = abs s))`--),
+    “!R (abs:'a->'b). QUOTIENT R abs ==>
+                      (!r s. R r s ==> (abs r = abs s))”,
     REWRITE_TAC[QUOTIENT_def]
     THEN REPEAT STRIP_TAC
     THEN RES_TAC
@@ -92,9 +87,9 @@ val QUOTIENT_REL_ABS = store_thm
 
 val QUOTIENT_REL_ABS_EQ = store_thm
    ("QUOTIENT_REL_ABS_EQ",
-    (--`!R (abs:'a->'b). QUOTIENT R abs ==>
+    “!R (abs:'a->'b). QUOTIENT R abs ==>
             (!r s. R r r ==> R s s ==>
-                   (R r s = (abs r = abs s)))`--),
+                   (R r s = (abs r = abs s)))”,
     REWRITE_TAC[QUOTIENT_def]
     THEN REPEAT GEN_TAC
     THEN STRIP_TAC
@@ -107,7 +102,7 @@ val QUOTIENT_REL_ABS_EQ = store_thm
 
 val IDENTITY_EQUIV = store_thm
    ("IDENTITY_EQUIV",
-    (--`!x y:'a. (x = y) = ($= x = $= y)`--),
+    “!x y:'a. (x = y) = ($= x = $= y)”,
     REPEAT GEN_TAC
     THEN EQ_TAC
     THEN DISCH_THEN REWRITE_THM
@@ -115,11 +110,11 @@ val IDENTITY_EQUIV = store_thm
 
 val IDENTITY_QUOTIENT = store_thm
    ("IDENTITY_QUOTIENT",
-    (--`QUOTIENT $= (I:'a->'a)`--),
+    “QUOTIENT $= (I:'a->'a)”,
     REWRITE_TAC[QUOTIENT_def]
     THEN REWRITE_TAC[I_THM]
     THEN GEN_TAC
-    THEN EXISTS_TAC (--`a:'a`--)
+    THEN EXISTS_TAC “a:'a”
     THEN REFL_TAC
    );
 
@@ -127,12 +122,12 @@ val IDENTITY_QUOTIENT = store_thm
 
 val EQUIV_REFL_SYM_TRANS = store_thm
    ("EQUIV_REFL_SYM_TRANS",
-    (--`!R.
+    “!R.
          (!x y:'a. R x y = (R x = R y))
-         =
+         <=>
          (!x. R x x) /\
          (!x y. R x y ==> R y x) /\
-         (!x y z. R x y /\ R y z ==> R x z)`--),
+         (!x y z. R x y /\ R y z ==> R x z)”,
     GEN_TAC
     THEN EQ_TAC
     THEN STRIP_TAC
@@ -167,8 +162,8 @@ val EQUIV_REFL_SYM_TRANS = store_thm
 
 val QUOTIENT_SYM = store_thm
    ("QUOTIENT_SYM",
-    (--`!R (abs:'a -> 'b). QUOTIENT R abs ==>
-         !x y. R x y ==> R y x`--),
+    “!R (abs:'a -> 'b). QUOTIENT R abs ==>
+         !x y. R x y ==> R y x”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN REPEAT GEN_TAC
@@ -179,8 +174,8 @@ val QUOTIENT_SYM = store_thm
 
 val QUOTIENT_TRANS = store_thm
    ("QUOTIENT_TRANS",
-    (--`!R (abs:'a -> 'b). QUOTIENT R abs ==>
-         !x y z. R x y /\ R y z ==> R x z`--),
+    “!R (abs:'a -> 'b). QUOTIENT R abs ==>
+         !x y z. R x y /\ R y z ==> R x z”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN REPEAT GEN_TAC
@@ -197,7 +192,7 @@ val QUOTIENT_TRANS = store_thm
 val LIST_MAP_I =
  store_thm
   ("LIST_MAP_I",
-   (--`MAP (I:'a -> 'a) = I`--),
+   “MAP (I:'a -> 'a) = I”,
    REWRITE_TAC[FUN_EQ_THM]
    THEN Induct
    THEN ASM_REWRITE_TAC[MAP,I_THM]
@@ -217,7 +212,7 @@ val LIST_REL_ind = fetch "-" "LIST_REL_ind";
 
 val LIST_REL_EQ = store_thm
    ("LIST_REL_EQ",
-    (--`(LIST_REL ($= : 'a->'a->bool)) = $=`--),
+    “(LIST_REL ($= : 'a->'a->bool)) = $=”,
     CONV_TAC FUN_EQ_CONV
     THEN CONV_TAC (RAND_CONV (ABS_CONV FUN_EQ_CONV))
     THEN Induct
@@ -230,8 +225,8 @@ val LIST_REL_EQ = store_thm
 
 val LIST_REL_REFL = store_thm
    ("LIST_REL_REFL",
-    (--`!R. (!x y:'a. R x y = (R x = R y)) ==>
-            !x. LIST_REL R x x`--),
+    “!R. (!x y:'a. R x y = (R x = R y)) ==>
+            !x. LIST_REL R x x”,
     GEN_TAC
     THEN DISCH_TAC
     THEN Induct
@@ -242,8 +237,8 @@ val LIST_REL_REFL = store_thm
 
 val LIST_EQUIV = store_thm
    ("LIST_EQUIV",
-    (--`!R. (!x y:'a. R x y = (R x = R y)) ==>
-            (!x y. LIST_REL R x y = (LIST_REL R x = LIST_REL R y))`--),
+    “!R. (!x y:'a. R x y = (R x = R y)) ==>
+            (!x y. LIST_REL R x y = (LIST_REL R x = LIST_REL R y))”,
     GEN_TAC
     THEN DISCH_TAC
     THEN Induct THENL [ALL_TAC, GEN_TAC]
@@ -274,9 +269,9 @@ val LIST_EQUIV = store_thm
 
 val LIST_REL_REL = store_thm
    ("LIST_REL_REL",
-    (--`!R (abs:'a -> 'b). QUOTIENT R abs ==>
-         !r s. LIST_REL R r s = LIST_REL R r r /\ LIST_REL R s s /\
-                                (MAP abs r = MAP abs s)`--),
+    “!R (abs:'a -> 'b). QUOTIENT R abs ==>
+         !r s. LIST_REL R r s <=> LIST_REL R r r /\ LIST_REL R s s /\
+                                  (MAP abs r = MAP abs s)”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN Induct
@@ -295,8 +290,8 @@ val LIST_REL_REL = store_thm
 
 val LIST_QUOTIENT = store_thm
    ("LIST_QUOTIENT",
-    (--`!R (abs:'a -> 'b). QUOTIENT R abs ==>
-         QUOTIENT (LIST_REL R) (MAP abs)`--),
+    “!R (abs:'a -> 'b). QUOTIENT R abs ==>
+         QUOTIENT (LIST_REL R) (MAP abs)”,
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[QUOTIENT_def]
     THEN REPEAT CONJ_TAC
@@ -327,7 +322,7 @@ val LIST_QUOTIENT = store_thm
 
 val OPTION_MAP_I = store_thm
    ("OPTION_MAP_I",
-    (--`OPTION_MAP I = (I : 'a option -> 'a option)`--),
+    “OPTION_MAP I = (I : 'a option -> 'a option)”,
     CONV_TAC FUN_EQ_CONV
     THEN Cases
     THEN REWRITE_TAC[OPTION_MAP_DEF,I_THM]
@@ -344,7 +339,7 @@ val OPTION_REL_def =
 
 val OPTION_REL_EQ = store_thm
    ("OPTION_REL_EQ",
-    (--`(OPTION_REL ($= : 'a->'a->bool)) = $=`--),
+    “(OPTION_REL ($= : 'a->'a->bool)) = $=”,
     CONV_TAC FUN_EQ_CONV
     THEN CONV_TAC (RAND_CONV (ABS_CONV FUN_EQ_CONV))
     THEN Cases
@@ -354,8 +349,8 @@ val OPTION_REL_EQ = store_thm
 
 val OPTION_EQUIV = store_thm
    ("OPTION_EQUIV",
-    (--`!R. (!x y:'a. R x y = (R x = R y)) ==>
-            (!x y. OPTION_REL R x y = (OPTION_REL R x = OPTION_REL R y))`--),
+    “!R. (!x y:'a. R x y = (R x = R y)) ==>
+            (!x y. OPTION_REL R x y = (OPTION_REL R x = OPTION_REL R y))”,
     GEN_TAC
     THEN DISCH_TAC
     THEN Cases
@@ -383,8 +378,8 @@ val OPTION_EQUIV = store_thm
 
 val OPTION_QUOTIENT = store_thm
    ("OPTION_QUOTIENT",
-    (--`!R (abs:'a -> 'b). QUOTIENT R abs ==>
-         QUOTIENT (OPTION_REL R) (OPTION_MAP abs)`--),
+    “!R (abs:'a -> 'b). QUOTIENT R abs ==>
+         QUOTIENT (OPTION_REL R) (OPTION_MAP abs)”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN REWRITE_TAC[QUOTIENT_def]
@@ -393,11 +388,11 @@ val OPTION_QUOTIENT = store_thm
     THENL
       [ Cases
         THENL
-          [ EXISTS_TAC (--`NONE:'a option`--)
+          [ EXISTS_TAC “NONE:'a option”
             THEN REWRITE_TAC[OPTION_MAP_DEF,OPTION_REL_def,option_CLAUSES],
 
-            POP_ASSUM (STRIP_ASSUME_TAC o SPEC (--`x:'b`--))
-            THEN EXISTS_TAC (--`SOME r:'a option`--)
+            POP_ASSUM (STRIP_ASSUME_TAC o SPEC “x:'b”)
+            THEN EXISTS_TAC “SOME r:'a option”
             THEN ASM_REWRITE_TAC[OPTION_MAP_DEF,OPTION_REL_def,option_CLAUSES]
           ],
 
@@ -415,7 +410,7 @@ val OPTION_QUOTIENT = store_thm
 
 val PAIR_MAP_I = store_thm
    ("PAIR_MAP_I",
-    (--`(I ## I) = (I : 'a # 'b -> 'a # 'b)`--),
+    “(I ## I) = (I : 'a # 'b -> 'a # 'b)”,
     CONV_TAC FUN_EQ_CONV
     THEN Cases
     THEN REWRITE_TAC[PAIR_MAP_THM,I_THM]
@@ -424,15 +419,15 @@ val PAIR_MAP_I = store_thm
 (* just like RPROD_DEF, except infix: *)
 
 val PAIR_REL =
-    new_infixr_definition
+    new_definition
     ("PAIR_REL",
-     (--`$### R1 R2 = \(a:'a,b:'b) (c:'c,d:'d). R1 a c /\ R2 b d`--),
-     450);
+     “$### R1 R2 = \(a:'a,b:'b) (c:'c,d:'d). R1 a c /\ R2 b d”);
+val _ = set_fixity "###" (Infix(NONASSOC, 450))
 
 val PAIR_REL_THM = store_thm
    ("PAIR_REL_THM",
-    (--`!R1 R2 (a:'a) (b:'b) (c:'c) (d:'d).
-         (R1 ### R2) (a,b) (c,d) = R1 a c /\ R2 b d`--),
+    “!R1 R2 (a:'a) (b:'b) (c:'c) (d:'d).
+         (R1 ### R2) (a,b) (c,d) <=> R1 a c /\ R2 b d”,
     REPEAT GEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[PAIR_REL]
     THEN GEN_BETA_TAC
@@ -441,7 +436,7 @@ val PAIR_REL_THM = store_thm
 
 val PAIR_REL_EQ = store_thm
    ("PAIR_REL_EQ",
-    (--`($= ### $=) = ($= : 'a # 'b -> 'a # 'b -> bool)`--),
+    “($= ### $=) = ($= : 'a # 'b -> 'a # 'b -> bool)”,
     CONV_TAC FUN_EQ_CONV
     THEN Cases
     THEN CONV_TAC FUN_EQ_CONV
@@ -451,9 +446,9 @@ val PAIR_REL_EQ = store_thm
 
 val PAIR_REL_REFL = store_thm
    ("PAIR_REL_REFL",
-    (--`!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) /\
+    “!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) /\
                 (!x y:'b. R2 x y = (R2 x = R2 y)) ==>
-                !x. (R1 ### R2) x x`--),
+                !x. (R1 ### R2) x x”,
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN Cases
@@ -463,9 +458,9 @@ val PAIR_REL_REFL = store_thm
 
 val PAIR_EQUIV = store_thm
    ("PAIR_EQUIV",
-    (--`!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) ==>
+    “!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) ==>
                 (!x y:'b. R2 x y = (R2 x = R2 y)) ==>
-                (!x y. (R1 ### R2) x y = ((R1 ### R2) x = (R1 ### R2) y))`--),
+                (!x y. (R1 ### R2) x y = ((R1 ### R2) x = (R1 ### R2) y))”,
     REPEAT GEN_TAC
     THEN REPEAT DISCH_TAC
     THEN Cases
@@ -489,9 +484,9 @@ val PAIR_EQUIV = store_thm
 
 val PAIR_QUOTIENT = store_thm
    ("PAIR_QUOTIENT",
-    (--`!R1 (abs1:'a -> 'c). QUOTIENT R1 abs1 ==>
+    “!R1 (abs1:'a -> 'c). QUOTIENT R1 abs1 ==>
         !R2 (abs2:'b -> 'd). QUOTIENT R2 abs2 ==>
-         QUOTIENT (R1 ### R2) (abs1 ## abs2)`--),
+         QUOTIENT (R1 ### R2) (abs1 ## abs2)”,
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[QUOTIENT_def]
     THEN CONJ_TAC
@@ -516,17 +511,15 @@ val PAIR_QUOTIENT = store_thm
 
 (* for SUM of ABS / REP functions, use infix ++, defined here: *)
 
-val _ = Lib.try add_infix("++", 450, HOLgrammars.RIGHT)
-
 val SUM_MAP_def = xDefine "SUM_MAP"
        `(($++ f g) (INL (a:'a)) = INL ((f a):'c)) /\
         (($++ f g) (INR (b:'b)) = INR ((g b):'d))`;
 
 val SUM_MAP = store_thm
    ("SUM_MAP",
-    (--`!f g (z:'a + 'b).
+    “!f g (z:'a + 'b).
          (f ++ g) z = (if ISL z then INL (f (OUTL z))
-                                else INR (g (OUTR z))) :'c + 'd`--),
+                                else INR (g (OUTR z))) :'c + 'd”,
     GEN_TAC
     THEN GEN_TAC
     THEN Cases
@@ -535,8 +528,8 @@ val SUM_MAP = store_thm
 
 val SUM_MAP_CASE = store_thm
    ("SUM_MAP_CASE",
-    (--`!f g (z:'a + 'b).
-         (f ++ g) z = sum_case (INL o f) (INR o g) z :'c + 'd`--),
+    “!f g (z:'a + 'b).
+         (f ++ g) z = sum_CASE z (INL o f) (INR o g) :'c + 'd”,
     GEN_TAC
     THEN GEN_TAC
     THEN Cases
@@ -545,15 +538,13 @@ val SUM_MAP_CASE = store_thm
 
 val SUM_MAP_I = store_thm
    ("SUM_MAP_I",
-    (--`(I ++ I) = (I : 'a + 'b -> 'a + 'b)`--),
+    “(I ++ I) = (I : 'a + 'b -> 'a + 'b)”,
     CONV_TAC FUN_EQ_CONV
     THEN Cases
     THEN REWRITE_TAC[SUM_MAP_def,I_THM]
    );
 
 (* for SUM of equivalence relations, use infix +++, defined here: *)
-
-val _ = Lib.try add_infix("+++", 450, HOLgrammars.RIGHT)
 
 val SUM_REL_def = xDefine "SUM_REL"
        `(($+++ R1 R2) (INL (a1:'a)) (INL (a2:'a)) = R1 a1 a2) /\
@@ -563,7 +554,7 @@ val SUM_REL_def = xDefine "SUM_REL"
 
 val SUM_REL_EQ = store_thm
    ("SUM_REL_EQ",
-    (--`($= +++ $=) = ($= : 'a + 'b -> 'a + 'b -> bool)`--),
+    “($= +++ $=) = ($= : 'a + 'b -> 'a + 'b -> bool)”,
     CONV_TAC FUN_EQ_CONV
     THEN Cases
     THEN CONV_TAC FUN_EQ_CONV
@@ -573,9 +564,9 @@ val SUM_REL_EQ = store_thm
 
 val SUM_EQUIV = store_thm
    ("SUM_EQUIV",
-    (--`!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) ==>
+    “!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) ==>
                 (!x y:'b. R2 x y = (R2 x = R2 y)) ==>
-                (!x y. (R1 +++ R2) x y = ((R1 +++ R2) x = (R1 +++ R2) y))`--),
+                (!x y. (R1 +++ R2) x y = ((R1 +++ R2) x = (R1 +++ R2) y))”,
     REPEAT GEN_TAC
     THEN REPEAT DISCH_TAC
     THEN Cases
@@ -613,9 +604,9 @@ val SUM_EQUIV = store_thm
 
 val SUM_QUOTIENT = store_thm
    ("SUM_QUOTIENT",
-    (--`!R1 (abs1:'a -> 'c). QUOTIENT R1 abs1 ==>
+    “!R1 (abs1:'a -> 'c). QUOTIENT R1 abs1 ==>
         !R2 (abs2:'b -> 'd). QUOTIENT R2 abs2 ==>
-         QUOTIENT (R1 +++ R2) (abs1 ++ abs2)`--),
+         QUOTIENT (R1 +++ R2) (abs1 ++ abs2)”,
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[QUOTIENT_def]
     THEN CONJ_TAC
@@ -647,7 +638,7 @@ val SUM_QUOTIENT = store_thm
 
 val IMAGE_I = store_thm
    ("IMAGE_I",
-    (--`(IMAGE (I:'a->'a)) = I`--),
+    “(IMAGE (I:'a->'a)) = I”,
     ONCE_REWRITE_TAC[FUN_EQ_THM]
     THEN REWRITE_TAC[EXTENSION]
     THEN REWRITE_TAC[IN_IMAGE,I_THM]
@@ -660,7 +651,7 @@ val IMAGE_I = store_thm
 
 val EQ_SING = store_thm
    ("EQ_SING",
-    (--`!x. $= (x:'a) = {x}`--),
+    “!x. $= (x:'a) = {x}”,
     REWRITE_TAC[EXTENSION,IN_SING]
     THEN REWRITE_TAC[SPECIFICATION]
     THEN MATCH_ACCEPT_TAC EQ_SYM_EQ
@@ -668,7 +659,7 @@ val EQ_SING = store_thm
 
 val IMAGE_SING = store_thm
    ("IMAGE_SING",
-    (--`!(f:'a->'b) x. IMAGE f {x} = {f x}`--),
+    “!(f:'a->'b) x. IMAGE f {x} = {f x}”,
     REWRITE_TAC[EXTENSION,IN_IMAGE,IN_SING]
     THEN REPEAT GEN_TAC
     THEN EQ_TAC
@@ -678,7 +669,7 @@ val IMAGE_SING = store_thm
    );
 
 val SELECT1_EXISTS = TAC_PROOF(([],
-    (--`?f. !P. !(x:'a). P x ==> (!y. P y ==> (x = y)) ==> P (f P)`--)),
+    “?f. !P. !(x:'a). P x ==> (!y. P y ==> (x = y)) ==> P (f P)”),
     EXISTS_TAC ``$@ :('a -> bool) -> 'a``
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC SELECT_AX
@@ -690,15 +681,14 @@ in
 val SELECT1_DEF =
     new_specification
     {name = "SELECT1_DEF",
-     consts = [{const_name = "@!", fixity = Binder}],
+     consts = [{const_name = "@!", fixity = SOME Binder}],
      sat_thm = SELECT1_EXISTS}
 
-val _ = Parse.add_binder("@!", 0)
 end;
 
 val SELECT1_SING = store_thm
    ("SELECT1_SING",
-    (--`!x:'a. $@! {x} = x`--),
+    “!x:'a. $@! {x} = x”,
     GEN_TAC
     THEN MP_TAC (SPEC ``x:'a`` (ISPEC ``$= (x:'a)`` SELECT1_DEF))
     THEN REWRITE_TAC[GSYM EQ_SING]
@@ -706,7 +696,7 @@ val SELECT1_SING = store_thm
    );
 
 val THE_LEAST_NUM_IS_ZERO = TAC_PROOF(([],
-    (--`(@!n. !m. n <= m) = 0`--)),
+    “(@!n. !m. n <= m) = 0”),
     MP_TAC (SPEC ``0`` (ISPEC ``\n. !m. n <= m`` SELECT1_DEF))
     THEN BETA_TAC
     THEN CONV_TAC (DEPTH_CONV RIGHT_IMP_FORALL_CONV)
@@ -723,7 +713,7 @@ val THE_LEAST_NUM_IS_ZERO = TAC_PROOF(([],
 (* version using skolemization, which secretly involves @:
 
 val CONTENTS_EXISTS1 = TAC_PROOF(([],
-    (--`!P. ?e. !(x:'a). P x ==> (!y. P y ==> (x = y)) ==> P e`--)),
+    “!P. ?e. !(x:'a). P x ==> (!y. P y ==> (x = y)) ==> P e”),
     GEN_TAC
     THEN ASM_CASES_TAC ``?z:'a. P z``
     THENL
@@ -749,19 +739,16 @@ val CONTENTS_DEF =
 (* for ABS of functions,
    use ((abs1 // R1) --> abs2) *)
 
-val _ = hide "//";
-
 val FUN_REP =
-    new_infixr_definition
+    new_definition
     ("FUN_REP",
-     (--`$// (f:'a->'b) R =
-         \a r. R r r /\ (f r = a)`--),
-     450);
+     “$// (f:'a->'b) R = \a r. R r r /\ (f r = a)”);
+val _ = set_fixity "//" (Infix(NONASSOC, 450))
 
 val FUN_REP_THM = store_thm
    ("FUN_REP_THM",
-    (--`!(f:'a -> 'b) R a r.
-         (f // R) a r = R r r /\ (f r = a)`--),
+    “!(f:'a -> 'b) R a r.
+         (f // R) a r <=> R r r /\ (f r = a)”,
     REPEAT GEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[FUN_REP]
     THEN BETA_TAC
@@ -770,33 +757,32 @@ val FUN_REP_THM = store_thm
 
 val FUN_REP_ELEM = store_thm
    ("FUN_REP_ELEM",
-    (--`!(f:'a -> 'b) R r.
-         r IN (f // R) (f r) = R r r`--),
+    “!(f:'a -> 'b) R r.
+         r IN (f // R) (f r) <=> R r r”,
     REPEAT GEN_TAC
     THEN REWRITE_TAC[SPECIFICATION,FUN_REP_THM]
    );
 
 val FUN_REP_IDENTITY = store_thm
    ("FUN_REP_IDENTITY",
-    (--`(I:'a->'a // $=) = $=`--),
+    “(I:'a->'a // $=) = $=”,
     REWRITE_TAC[FUN_EQ_THM,FUN_REP_THM,I_THM]
     THEN MATCH_ACCEPT_TAC EQ_SYM_EQ
    );
 
-val _ = hide "-->";
-
+val _ = hide "-->"
 val FUN_MAP =
-    new_infixr_definition
+    new_definition
     ("FUN_MAP",
-     (--`$--> (rep:'c->'a->bool) (abs:'b->'d) =
-            \h x. $@! (IMAGE abs (IMAGE h (rep x)))`--),
-     450);
+     “$--> (rep:'c->'a->bool) (abs:'b->'d) =
+            \h x. $@! (IMAGE abs (IMAGE h (rep x)))”);
+val _ = set_fixity "-->" (Infix(NONASSOC, 450))
 
 
 val FUN_MAP_THM = store_thm
    ("FUN_MAP_THM",
-    (--`!(rep:'c -> 'a -> bool) (abs:'b -> 'd) h x.
-         (rep --> abs) h x = $@! (IMAGE abs (IMAGE h (rep x)))`--),
+    “!(rep:'c -> 'a -> bool) (abs:'b -> 'd) h x.
+         (rep --> abs) h x = $@! (IMAGE abs (IMAGE h (rep x)))”,
     REPEAT GEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[FUN_MAP]
     THEN BETA_TAC
@@ -805,7 +791,7 @@ val FUN_MAP_THM = store_thm
 
 val FUN_MAP_EQ_I = store_thm
    ("FUN_MAP_EQ_I",
-    (--`(($= :'a->'a->bool) --> (I:'b->'b)) = I`--),
+    “(($= :'a->'a->bool) --> (I:'b->'b)) = I”,
     REPEAT (CONV_TAC FUN_EQ_CONV ORELSE GEN_TAC)
     THEN REWRITE_TAC[FUN_MAP_THM]
     THEN REWRITE_TAC[IMAGE_I,I_THM]
@@ -819,11 +805,11 @@ val FUN_MAP_EQ_I = store_thm
 (* The strong version of FUN_REL: *)
 
 val FUN_REL =
-    new_infixr_definition
+    new_definition
     ("FUN_REL",
-     (--`$===> (R1:'a->'a->bool) (R2:'b->'b->bool) f g =
-           !x y. R1 x y ==> R2 (f x) (g y)`--),
-     450);
+     “$===> (R1:'a->'a->bool) (R2:'b->'b->bool) f g =
+           !x y. R1 x y ==> R2 (f x) (g y)”);
+val _ = set_fixity "===>" (Infix(NONASSOC, 450))
 
 (* NOTE: R1 ===> R2 is NOT an equivalence relation, but a partial
          equivalence relation, and it does satisfy a quotient theorem. *)
@@ -831,7 +817,7 @@ val FUN_REL =
 
 val FUN_REL_EQ = store_thm
    ("FUN_REL_EQ",
-    (--`(($= :'a -> 'a -> bool) ===> ($= :'b -> 'b -> bool)) = $=`--),
+    “(($= :'a -> 'a -> bool) ===> ($= :'b -> 'b -> bool)) = $=”,
     CONV_TAC FUN_EQ_CONV
     THEN GEN_TAC
     THEN CONV_TAC FUN_EQ_CONV
@@ -843,8 +829,8 @@ val FUN_REL_EQ = store_thm
 
 val IMAGE_o = store_thm
    ("IMAGE_o",
-    (--`!(f:'b->'c) g (s:'a -> bool).
-           IMAGE f (IMAGE g s) = IMAGE (f o g) s`--),
+    “!(f:'b->'c) g (s:'a -> bool).
+           IMAGE f (IMAGE g s) = IMAGE (f o g) s”,
     REWRITE_TAC[EXTENSION]
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[IN_IMAGE,o_THM]
@@ -853,10 +839,10 @@ val IMAGE_o = store_thm
 
 val SELECT1_IMAGE = store_thm
    ("SELECT1_IMAGE",
-    (--`!(f:'a->'b) s x.
+    “!(f:'a->'b) s x.
            x IN s ==>
            (!x y. x IN s /\ y IN s ==> (f x = f y)) ==>
-           ($@! (IMAGE f s) = f x)`--),
+           ($@! (IMAGE f s) = f x)”,
     REPEAT STRIP_TAC
     THEN MP_TAC (SPEC ``(f:'a->'b) x``
                   (ISPEC ``IMAGE (f:'a->'b) s`` SELECT1_DEF))
@@ -883,11 +869,11 @@ val SELECT1_IMAGE = store_thm
 
 val FUN_REP_MAP = store_thm
    ("FUN_REP_MAP",
-    (--`!R1 (abs1:'a -> 'c) R2 (abs2:'b -> 'd) a r.
+    “!R1 (abs1:'a -> 'c) R2 (abs2:'b -> 'd) a r.
          QUOTIENT R1 abs1 ==>
          QUOTIENT R2 abs2 ==>
          (((R1 ===> R2) r r /\ (((abs1 // R1) --> abs2) r = a))  =
-          (!x. R1 x x ==> (abs2 // R2) (a (abs1 x)) (r x))         )`--),
+          (!x. R1 x x ==> (abs2 // R2) (a (abs1 x)) (r x))         )”,
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN DISCH_TAC
@@ -938,9 +924,9 @@ val FUN_REP_MAP = store_thm
 
 val FUN_QUOTIENT = store_thm
    ("FUN_QUOTIENT",
-    (--`!R1 (abs1:'a -> 'c). QUOTIENT R1 abs1 ==>
+    “!R1 (abs1:'a -> 'c). QUOTIENT R1 abs1 ==>
         !R2 (abs2:'b -> 'd). QUOTIENT R2 abs2 ==>
-         QUOTIENT (R1 ===> R2) ((abs1 // R1) --> abs2)`--),
+         QUOTIENT (R1 ===> R2) ((abs1 // R1) --> abs2)”,
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[QUOTIENT_def]
     THEN CONJ_TAC
@@ -1021,7 +1007,7 @@ val FUN_QUOTIENT = store_thm
 
 val ABSTRACTION_QUOTIENT = store_thm
    ("ABSTRACTION_QUOTIENT",
-    (--`!f:'a->'b. ONTO f ==> QUOTIENT (\r s. f r = f s) f`--),
+    “!f:'a->'b. ONTO f ==> QUOTIENT (\r s. f r = f s) f”,
     GEN_TAC
     THEN REWRITE_TAC[ONTO_DEF,QUOTIENT_def]
     THEN BETA_TAC
@@ -1034,9 +1020,9 @@ val ABSTRACTION_QUOTIENT = store_thm
 
 val PARTIAL_ABSTRACTION_QUOTIENT = store_thm
    ("PARTIAL_ABSTRACTION_QUOTIENT",
-    (--`!(f:'a->'b) P.
+    “!(f:'a->'b) P.
           (!a. ?r. P r /\ (f r = a)) ==>
-          QUOTIENT (\r s. P r /\ P s /\ (f r = f s)) f`--),
+          QUOTIENT (\r s. P r /\ P s /\ (f r = f s)) f”,
     REPEAT GEN_TAC
     THEN REWRITE_TAC[ONTO_DEF,QUOTIENT_def]
     THEN BETA_TAC
@@ -1057,7 +1043,7 @@ end;
 
 val ONTO_FUNCTION_INVERSE = store_thm
    ("ONTO_FUNCTION_INVERSE",
-    (--`!(f :'a -> 'b). ONTO f ==> ?g. f o g = I`--),
+    “!(f :'a -> 'b). ONTO f ==> ?g. f o g = I”,
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC ONTO_FUN_EXISTS_CHOICE
     THEN POP_ASSUM MP_TAC
@@ -1074,7 +1060,7 @@ val ONTO_FUNCTION_INVERSE = store_thm
 
 val ONTO_PARTIAL_FUNCTION = store_thm
    ("ONTO_PARTIAL_FUNCTION",
-    (--`!Q. ?(P,a:'a). (P = Q) /\ ((?x. P x) ==> P a)`--),
+    “!Q. ?(P,a:'a). (P = Q) /\ ((?x. P x) ==> P a)”,
     GEN_TAC
     THEN ASM_CASES_TAC ``?x:'a. Q x``
     THEN POP_ASSUM STRIP_ASSUME_TAC
@@ -1084,7 +1070,7 @@ val ONTO_PARTIAL_FUNCTION = store_thm
 
 val ONTO_PARTIAL_FUNCTION1 = store_thm
    ("ONTO_PARTIAL_FUNCTION1",
-    (--`!Q. ?p. ((?x:'a. FST p x) ==> FST p (SND p)) /\ (FST p = Q)`--),
+    “!Q. ?p. ((?x:'a. FST p x) ==> FST p (SND p)) /\ (FST p = Q)”,
     GEN_TAC
     THEN PairRules.PSTRIP_ASSUME_TAC (SPEC_ALL ONTO_PARTIAL_FUNCTION)
     THEN PairRules.PEXISTS_TAC ``(P:'a -> bool, a:'a)``
@@ -1138,7 +1124,7 @@ from which by QUOTIENT_REP_EXISTS,
 
 val NEW_CHOICE_EXISTS = store_thm
    ("NEW_CHOICE_EXISTS",
-    (--`?c. !P (x:'a). P x ==> P (c P)`--),
+    “?c. !P (x:'a). P x ==> P (c P)”,
     STRIP_ASSUME_TAC CHOICE_FUN_PAIR_EXISTS
     THEN EXISTS_TAC ``SND o (r:('a -> bool) -> (('a -> bool) # 'a))``
     THEN POP_ASSUM MP_TAC
@@ -1159,7 +1145,7 @@ in
 val NEW_CHOICE =
     new_specification { name    = "NEW_CHOICE",
                         consts  = [ { const_name = "@@",
-                                      fixity = Binder    } ],
+                                      fixity = SOME Binder    } ],
                         sat_thm = NEW_CHOICE_EXISTS           }
 end;
 
@@ -1170,9 +1156,9 @@ end;
 
 val _ = export_theory();
 
-val _ = print_theory_to_file "-" "quotient.lst";
+val _ = print_theory_to_file "-" "cfree_quotient.lst";
 
-val _ = html_theory "quotient";
+val _ = html_theory "cfree_quotient";
 
 fun print_theory_size () =
    (print "The theory ";
