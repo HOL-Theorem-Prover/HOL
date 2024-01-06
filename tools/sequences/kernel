@@ -1,3 +1,4 @@
+[poly]tools/check-builds
 !tools/Holmake/tests/holdep
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
