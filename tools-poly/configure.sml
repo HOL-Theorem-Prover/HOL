@@ -237,17 +237,17 @@ in
       ("val POLY_LDFLAGS = [" ^
        String.concatWith ", "
                          (map quote
-                              (if null POLY_LDFLAGS then machine_flags
-                               else POLY_LDFLAGS)) ^
+                              ((if null POLY_LDFLAGS then machine_flags
+                                else POLY_LDFLAGS) @ EXTRA_POLY_LDFLAGS)) ^
        "]\n"),
    "val POLY_LDFLAGS_STATIC =" -->
       ("val POLY_LDFLAGS_STATIC = [" ^
        String.concatWith ", "
                          (map quote
-                              (if null POLY_LDFLAGS_STATIC then
-                                 ("-static" :: machine_flags)
-                               else
-                                 POLY_LDFLAGS_STATIC)) ^
+                              ((if null POLY_LDFLAGS_STATIC then
+                                  ("-static" :: machine_flags)
+                                else
+                                  POLY_LDFLAGS_STATIC) @ EXTRA_POLY_LDFLAGS)) ^
        "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
