@@ -17,21 +17,10 @@
 |									|
 + --------------------------------------------------------------------- +
 
-There is only one file making up the example: Bmark.sml. Several
-theories are produced in the course of execution.  They are currently
-represented by the structures
-
-    NEXTTheory,  MULT_FUN_CURRYTheory, MULT_FUNTheory, 
-    primsTheory, MULT_IMPTheory, MULT_VERTheory
-
-which are automatically cleaned up after the benchmark finishes.
-
-+ --------------------------------------------------------------------- +
-|									|
-| TO RUN: invoke "run_bmark <hol98> in the shell, where <hol98> is a    |
-| path to Hol98.                                                        |
-+ --------------------------------------------------------------------- +
-
+There is only one file making up the example: BmarkScript.sml. This
+was previously set up to run interactively and generate a number of
+different theories but for the sake of simplicity there is now just
+one theory file generated (BmarkTheory.*).
 
 + --------------------------------------------------------------------- +
 |									|
@@ -39,4 +28,4 @@ which are automatically cleaned up after the benchmark finishes.
 |									|
 + --------------------------------------------------------------------- +
 
-The multiplier was documented in the original LCF-LSM paper. 
+The multiplier was documented in the original LCF-LSM paper.

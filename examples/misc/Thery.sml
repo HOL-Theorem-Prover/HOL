@@ -116,6 +116,9 @@ val eight_three_five = prove(Term `!i. ?j k. i+8 = 3*j + 5*k`,
      ]
   ]);
 
+val x = eight_three_five (* if above failed, interpreter aborts at this point
+                            with unknown ID failure *)
+
 (*---------------------------------------------------------------------------
      The semantics of THEN allow a more compact version.
  ---------------------------------------------------------------------------*)
@@ -140,26 +143,33 @@ val eight_three_five = prove(Term `!i. ?j k. i+8 = 3*j + 5*k`,
 
 load "intLib";
 
+fun test f nm x =
+    f x handle HOL_ERR _ =>
+               (TextIO.output(TextIO.stdErr, "Invocation of "^nm^" failed\n");
+                OS.Process.exit OS.Process.failure)
+val COOPER_PROVE = test intLib.COOPER_PROVE "COOPER_PROVE"
+val ARITH_PROVE = test intLib.ARITH_PROVE "ARITH_PROVE"
 
 (* Integer version *)
 val eight_three_five =
-  Count.apply intLib.COOPER_PROVE (Term `!i:int. ?j k. i+8 = 3*j + 5*k`);
+  Count.apply COOPER_PROVE (Term `!i:int. ?j k. i+8 = 3*j + 5*k`);
 
 (* Natural number version *)
 val eight_three_five =
-  Count.apply intLib.COOPER_PROVE (Term `!i:num. ?j k. i+8 = 3*j + 5*k`);
+  Count.apply COOPER_PROVE (Term `!i:num. ?j k. i+8 = 3*j + 5*k`);
 
 val _ = print "Using OMEGA\n"
 
 val eight_three_five =
-  Count.apply intLib.ARITH_PROVE (Term `!i:int. ?j k. i+8 = 3*j + 5*k`);
+  Count.apply ARITH_PROVE (Term `!i:int. ?j k. i+8 = 3*j + 5*k`);
 val eight_three_five =
-    Count.apply intLib.ARITH_PROVE (Term `!i:num. ?j k. i+8 = 3*j + 5*k`);
+    Count.apply ARITH_PROVE (Term `!i:num. ?j k. i+8 = 3*j + 5*k`);
 
 (* Equivalence with a more natural statement *)
 val equiv =
-  Count.apply intLib.COOPER_PROVE (Term
-   `(!i:int. ?j k. i+8 = 3*j + 5*k)
+  Count.apply COOPER_PROVE
+   “(!i:int. ?j k. i+8 = 3*j + 5*k)
       =
-    (!i:int. 7<i ==> ?j k. i = 3*j + 5*k)`);
+    (!i:int. 7<i ==> ?j k. i = 3*j + 5*k)”;
 
+val _ = print "Thery interactive script DONE\n"

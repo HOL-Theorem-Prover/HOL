@@ -1,9 +1,14 @@
-INCLUDES = $(dprot $(HOLDIR)/src/real) $(dprot $(HOLDIR)/src/real/analysis) $(dprot $(HOLDIR)/src/bag) $(dprot $(HOLDIR)/src/integer)
+INCLUDES = $(dprot $(HOLDIR)/src/real) $(dprot $(HOLDIR)/src/real/analysis) \
+           $(dprot $(HOLDIR)/src/bag) $(dprot $(HOLDIR)/src/integer) \
+           $(dprot $(HOLDIR)/src/unwind)
 
-all: $(DEFAULT_TARGETS) euclid-OK
+all: $(DEFAULT_TARGETS) euclid-OK thery-done
 .PHONY: all
 
 euclid-OK: use-euclid.ML
 	$(protect $(HOLDIR)/bin/hol) < use-euclid.ML
 
-EXTRA_CLEANS = euclid-OK
+thery-done: Thery.sml
+	$(protect $(HOLDIR)/bin/hol) < $< | grep -q "Thery.*DONE"
+
+EXTRA_CLEANS = euclid-OK thery-done
