@@ -1,22 +1,21 @@
-open HolKernel boolLib Parse bossLib BasicProvers
-open pred_setTheory
+open HolKernel boolLib Parse bossLib;
 
-open binderLib
-open basic_swapTheory nomsetTheory generic_termsTheory
-open nomdatatype
-open boolSimps
+open BasicProvers boolSimps pred_setTheory listTheory;
 
+open binderLib basic_swapTheory nomsetTheory generic_termsTheory nomdatatype;
 
 val _ = new_theory "labelledTerms"
 
 val tyname = "lterm"
 
-val vp = “(λn u: unit. n = 0)”
+(* GVAR corresponds to VAR *)
+val vp = “(λn u: unit. n = 0)”;
 
+(* GLAM corresponds to APP, LAM and LAMi *)
 val lp = “(λn (d:unit + unit + num) tns uns.
                (n = 0) ∧ ISL d ∧ (tns = []) ∧ (uns = [0;0]) ∨
                (n = 0) ∧ ISR d ∧ ISL (OUTR d) ∧ (tns = [0]) ∧ (uns = []) ∨
-               (n = 0) ∧ ISR d ∧ ISR (OUTR d) ∧ (tns = [0]) ∧ (uns = [0]))”
+               (n = 0) ∧ ISR d ∧ ISR (OUTR d) ∧ (tns = [0]) ∧ (uns = [0]))”;
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, newty, term_REP_t, term_ABS_t,...} =
@@ -38,6 +37,7 @@ val LAM_termP = prove(
   match_mp_tac glam >> srw_tac [][genind_term_REP])
 val LAM_t = defined_const LAM_def
 
+(* NOTE: in ‘(LAMi n v t1) t2’, only t1 is bounded (by v), t2 is not. *)
 val LAMi_t = mk_var("LAMi", “:num -> string -> ^newty -> ^newty -> ^newty”)
 val LAMi_def = new_definition(
   "LAMi_def",
@@ -220,16 +220,6 @@ val termP0 = prove(
   Q.ISPEC_THEN ‘t’ STRUCT_CASES_TAC gterm_cases >>
   srw_tac [][genind_GVAR, genind_GLAM_eqn]);
 
-val LENGTH_NIL' =
-    CONV_RULE (BINDER_CONV (LAND_CONV (REWR_CONV EQ_SYM_EQ)))
-              listTheory.LENGTH_NIL
-val LENGTH1 = prove(
-  “(1 = LENGTH l) ⇔ ∃e. l = [e]”,
-  Cases_on ‘l’ >> srw_tac [][listTheory.LENGTH_NIL]);
-val LENGTH2 = prove(
-  “(2 = LENGTH l) ⇔ ∃a b. l = [a;b]”,
-  Cases_on ‘l’ >> srw_tac [][LENGTH1]);
-
 val termP_elim = prove(
   “(∀g. ^termP g ⇒ P g) ⇔ (∀t. P (^term_REP_t t))”,
   srw_tac [][EQ_IMP_THM] >- srw_tac [][genind_term_REP] >>
@@ -258,10 +248,9 @@ val parameter_tm_recursion = save_thm(
                                  LIST_REL_CONS1, genind_GVAR,
                                  genind_GLAM_eqn, NEWFCB_def,
                                  sidecond_def, relsupp_def,
-                                 LENGTH_NIL', LENGTH1, LENGTH2]
+                                 LENGTH_NIL_SYM, LENGTH1, LENGTH2]
         |> ONCE_REWRITE_RULE [termP0]
-        |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2,
-                                           listTheory.LENGTH_NIL]
+        |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2, LENGTH_NIL]
         |> CONV_RULE (DEPTH_CONV termP_removal)
         |> SIMP_RULE (srw_ss()) [GSYM supp_tpm, SYM term_REP_tpm]
         |> UNDISCH
@@ -279,25 +268,6 @@ val parameter_tm_recursion = save_thm(
         |> Q.INST [‘vr'’ |-> ‘vr’, ‘dpm’ |-> ‘apm’]
         |> CONV_RULE (REDEPTH_CONV sort_uvars))
 
-val FORALL_ONE = prove(
-  “(!u:one. P u) = P ()”,
-  SRW_TAC [][EQ_IMP_THM, oneTheory.one_induction]);
-val FORALL_ONE_FN = prove(
-  “(!uf : one -> 'a. P uf) = !a. P (\u. a)”,
-  SRW_TAC [][EQ_IMP_THM] THEN
-  POP_ASSUM (Q.SPEC_THEN ‘uf ()’ MP_TAC) THEN
-  Q_TAC SUFF_TAC ‘(\y. uf()) = uf’ THEN1 SRW_TAC [][] THEN
-  SRW_TAC [][FUN_EQ_THM, oneTheory.one]);
-
-val EXISTS_ONE_FN = prove(
-  “(?f : 'a -> one -> 'b. P f) = (?f : 'a -> 'b. P (\x u. f x))”,
-  SRW_TAC [][EQ_IMP_THM] THENL [
-    Q.EXISTS_TAC ‘\a. f a ()’ THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC ‘(\x u. f x ()) = f’ THEN1 SRW_TAC [][] THEN
-    SRW_TAC [][FUN_EQ_THM, oneTheory.one],
-    Q.EXISTS_TAC ‘\a u. f a’ THEN SRW_TAC [][]
-  ]);
-
 val tm_recursion = save_thm(
   "tm_recursion",
   parameter_tm_recursion
@@ -306,8 +276,8 @@ val tm_recursion = save_thm(
                  ‘ap’ |-> ‘λr1 r2 t1 t2 u. apu (r1()) (r2()) t1 t2’,
                  ‘lm’ |-> ‘λr v t u. lmu (r()) v t’,
                  ‘li’ |-> ‘λr1 r2 n v t1 t2 u. liu (r1()) (r2()) n v t1 t2’]
-      |> SIMP_RULE (srw_ss()) [FORALL_ONE, FORALL_ONE_FN, EXISTS_ONE_FN,
-                               fnpm_def]
+      |> SIMP_RULE (srw_ss()) [oneTheory.FORALL_ONE, oneTheory.FORALL_ONE_FN,
+                               oneTheory.EXISTS_ONE_FN, fnpm_def]
       |> SIMP_RULE (srw_ss() ++ CONJ_ss) [supp_unitfn]
       |> Q.INST [‘apu’ |-> ‘ap’, ‘lmu’ |-> ‘lm’, ‘vru’ |-> ‘vr’,
                  ‘liu’ |-> ‘li’])

@@ -1,16 +1,22 @@
-(*
- * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
- * Copyright 2016-2017  University of Bologna, Italy (Author: Chun Tian)
- * Copyright 2018-2019  Fondazione Bruno Kessler, Italy (Author: Chun Tian)
- *)
+(* ========================================================================== *)
+(* FILE          : StrongEQScript.sml                                         *)
+(* DESCRIPTION   : Strong bisimulation and strong bisimularity (STRONG_EQUIV) *)
+(*                                                                            *)
+(* COPYRIGHTS    : 1991-1995 University of Cambridge, UK (Monica Nesi)        *)
+(*                 2016-2017 University of Bologna, Italy (Chun Tian)         *)
+(*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
+(******************************************************************************)
 
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory pairTheory relationTheory bisimulationTheory listTheory;
+open pred_setTheory pairTheory relationTheory bisimulationTheory listTheory
+     finite_mapTheory;
+
 open CCSLib CCSTheory;
 
 val _ = new_theory "StrongEQ";
-val _ = temp_loose_equality ();
+
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"];
 
 (******************************************************************************)
 (*                                                                            *)
@@ -19,15 +25,16 @@ val _ = temp_loose_equality ();
 (******************************************************************************)
 
 (* Type abbreviations *)
-val _ = type_abbrev_pp ("simulation", ``:('a, 'b) CCS -> ('a, 'b) CCS -> bool``);
+Type simulation = “:'a CCS -> 'a CCS -> bool”
 
 (* new definition based on relationTheory.BISIM *)
-val STRONG_BISIM_def = Define
-   `STRONG_BISIM (R :('a, 'b) simulation) = BISIM TRANS R`;
+Definition STRONG_BISIM_def :
+    STRONG_BISIM = BISIM TRANS
+End
 
 (* original definition of STRONG_BISIM, now becomes a theorem *)
 Theorem STRONG_BISIM :
-    STRONG_BISIM (Bsm :('a, 'b) simulation) =
+    STRONG_BISIM (Bsm :'a simulation) =
     !E E'. Bsm E E' ==>
         !u.
            (!E1. TRANS E u E1 ==>
@@ -69,8 +76,15 @@ Proof
     REWRITE_TAC [STRONG_BISIM_def, BISIM_RUNION]
 QED
 
-(* The (strong) bisimilarity, now based on BISIM_REL *)
-val STRONG_EQUIV_def = Define `STRONG_EQUIV = BISIM_REL TRANS`;
+(* The strong bisimilarity is now based on bisimulationTheory.BISIM_REL
+
+   NOTE: this definition only works for closed CCS terms (IS_PROC), or
+   arbitrary CCS terms in which open ‘var s’ has the same transition
+   behavior with ‘nil’ (cf. NIL_NO_TRANS and VAR_NO_TRANS.)
+ *)
+Definition STRONG_EQUIV_def :
+    STRONG_EQUIV = BISIM_REL TRANS
+End
 
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Infix (NONASSOC, 450),
@@ -132,7 +146,7 @@ Proof
     REWRITE_TAC [STRONG_EQUIV_def, BISIM_REL_IS_EQUIV_REL]
 QED
 
-Theorem STRONG_EQUIV_REFL :
+Theorem STRONG_EQUIV_REFL[simp] :
     !E. STRONG_EQUIV E E
 Proof
     PROVE_TAC [REWRITE_RULE [equivalence_def, reflexive_def]
@@ -144,6 +158,12 @@ Theorem STRONG_EQUIV_SYM :
 Proof
     PROVE_TAC [REWRITE_RULE [equivalence_def, symmetric_def]
                             STRONG_EQUIV_equivalence]
+QED
+
+Theorem STRONG_EQUIV_SYM_EQ :
+    !E E'. STRONG_EQUIV E E' <=> STRONG_EQUIV E' E
+Proof
+    rpt GEN_TAC >> EQ_TAC >> rw [STRONG_EQUIV_SYM]
 QED
 
 Theorem STRONG_EQUIV_TRANS :
@@ -193,10 +213,10 @@ val STRONG_EQUIV_SUBST_PREFIX = store_thm (
          STRONG_EQUIV E E' ==> !u. STRONG_EQUIV (prefix u E) (prefix u E')``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC
-      [SPECL [``prefix (u :'b Action) E``, ``prefix (u :'b Action) E'``] PROPERTY_STAR]
+      [SPECL [``prefix (u :'a Action) E``, ``prefix (u :'a Action) E'``] PROPERTY_STAR]
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
- >| [ EXISTS_TAC ``E' :('a, 'b) CCS``,
-      EXISTS_TAC ``E :('a, 'b) CCS``]
+ >| [ EXISTS_TAC ``E' :'a CCS``,
+      EXISTS_TAC ``E :'a CCS``]
  >> IMP_RES_TAC TRANS_PREFIX
  >> ASM_REWRITE_TAC [PREFIX]);
 
@@ -212,14 +232,14 @@ val STRONG_EQUIV_PRESD_BY_SUM = store_thm (
  >| [ (* goal 1 *)
       IMP_RES_TAC TRANS_SUM \\ (* 2 sub-goals here *)
       RES_TAC \\
-      EXISTS_TAC ``E2'' :('a, 'b) CCS`` \\
+      EXISTS_TAC ``E2'' :'a CCS`` \\
       ASM_REWRITE_TAC []
       >| [ MATCH_MP_TAC SUM1, MATCH_MP_TAC SUM2 ] \\
       ASM_REWRITE_TAC [],
       (* goal 2 *)
       IMP_RES_TAC TRANS_SUM \\ (* 2 sub-goals here *)
       RES_TAC \\
-      EXISTS_TAC ``E1'' :('a, 'b) CCS`` \\
+      EXISTS_TAC ``E1'' :'a CCS`` \\
       ASM_REWRITE_TAC []
       >| [ MATCH_MP_TAC SUM1, MATCH_MP_TAC SUM2] \\
       ASM_REWRITE_TAC [] ]);
@@ -313,7 +333,7 @@ val STRONG_EQUIV_PRESD_BY_PAR = store_thm (
           CONJ_TAC >| (* 2 sub-goals here *)
           [ (* goal 2.1.3.1 (of 2) *)
             MATCH_MP_TAC PAR3 \\
-            EXISTS_TAC ``l: 'b Label`` \\
+            EXISTS_TAC ``l: 'a Label`` \\
             ASM_REWRITE_TAC [],
             (* goal 2.1.3.2 (of 2) *)
             take [`E1'''`, `E2'''`, `E2''`, `E2''''`] \\
@@ -357,7 +377,7 @@ val STRONG_EQUIV_PRESD_BY_PAR = store_thm (
            CONJ_TAC >| (* 2 sub-goals here *)
            [ (* goal 2.2.3.1 (of 2) *)
              MATCH_MP_TAC PAR3 \\
-             EXISTS_TAC ``l: 'b Label`` \\
+             EXISTS_TAC ``l: 'a Label`` \\
              ASM_REWRITE_TAC [],
              (* goal 2.2.3.2 (of 2) *)
              take [`E1'''`, `E1''`, `E1''''`, `E2'''`] \\
@@ -419,12 +439,12 @@ val STRONG_EQUIV_SUBST_RESTR = store_thm (
         [ (* goal 2.1.1 (of 2) *)
           IMP_RES_TAC (ONCE_REWRITE_RULE [PROPERTY_STAR]
                                          (ASSUME ``STRONG_EQUIV E1 E2``)) \\
-          EXISTS_TAC ``restr (L' :'b Label set) E2'`` \\
+          EXISTS_TAC ``restr (L' :'a Label set) E2'`` \\
           CONJ_TAC >| (* 2 sub-goals here *)
           [ (* goal 2.1.1.1 (of 2) *)
             ASM_REWRITE_TAC [] \\
             MATCH_MP_TAC RESTR \\
-            REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'b Action) = tau``]
+            REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'a Action) = tau``]
                                       (ASSUME ``TRANS E2 u E2'``)],
             (* goal 2.1.1.2 (of 2) *)
             take [`E''''`, `E2'`, `L'`] \\
@@ -432,13 +452,13 @@ val STRONG_EQUIV_SUBST_RESTR = store_thm (
           (* goal 2.1.2 (of 2) *)
           IMP_RES_TAC (ONCE_REWRITE_RULE [PROPERTY_STAR]
                                          (ASSUME ``STRONG_EQUIV E1 E2``)) \\
-          EXISTS_TAC ``restr (L' :'b Label set) E2'`` \\
+          EXISTS_TAC ``restr (L' :'a Label set) E2'`` \\
           CONJ_TAC >| (* 2 sub-goals here *)
           [ (* goal 2.1.2.1 (of 2) *)
             ASM_REWRITE_TAC [] \\
             MATCH_MP_TAC RESTR \\
-            EXISTS_TAC ``l: 'b Label`` \\
-            ASM_REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'b Action) = label l``]
+            EXISTS_TAC ``l: 'a Label`` \\
+            ASM_REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'a Action) = label l``]
                                           (ASSUME ``TRANS E2 u E2'``)],
             (* goal 2.1.2.2 (of 2) *)
             take [`E''''`, `E2'`, `L'`] \\
@@ -450,12 +470,12 @@ val STRONG_EQUIV_SUBST_RESTR = store_thm (
           [ (* goal 2.2.1 (of 2) *)
             IMP_RES_TAC (ONCE_REWRITE_RULE [PROPERTY_STAR]
                                            (ASSUME ``STRONG_EQUIV E1 E2``)) \\
-            EXISTS_TAC ``restr (L' :'b Label set) E1'`` \\
+            EXISTS_TAC ``restr (L' :'a Label set) E1'`` \\
             CONJ_TAC >| (* 2 sub-goals here *)
             [ (* goal 2.2.1.1 (of 2) *)
               ASM_REWRITE_TAC [] \\
               MATCH_MP_TAC RESTR \\
-              REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'b Action) = tau``]
+              REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'a Action) = tau``]
                                         (ASSUME ``TRANS E1 u E1'``)],
               (* goal 2.2.1.2 (of 2) *)
               take [`E1'`, `E''''`, `L'`] \\
@@ -463,13 +483,13 @@ val STRONG_EQUIV_SUBST_RESTR = store_thm (
            (* goal 2.2.2 (of 2) *)
            IMP_RES_TAC (ONCE_REWRITE_RULE [PROPERTY_STAR]
                                           (ASSUME ``STRONG_EQUIV E1 E2``)) \\
-           EXISTS_TAC ``restr (L' :'b Label set) E1'`` \\
+           EXISTS_TAC ``restr (L' :'a Label set) E1'`` \\
            CONJ_TAC >| (* 2 sub-goals here *)
            [ (* goal 2.2.2.1 (of 2) *)
              ASM_REWRITE_TAC [] \\
              MATCH_MP_TAC RESTR \\
-             EXISTS_TAC ``l: 'b Label`` \\
-             ASM_REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'b Action) = label l``]
+             EXISTS_TAC ``l: 'a Label`` \\
+             ASM_REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'a Action) = label l``]
                                            (ASSUME ``TRANS E1 u E1'``)],
              (* goal 2.2.2.2 (of 2) *)
              take [`E1'`, `E''''`, `L'`] \\
@@ -525,5 +545,110 @@ val STRONG_EQUIV_SUBST_RELAB = store_thm (
           take [`E1'`, `E''''`, `rf'`] \\
           ASM_REWRITE_TAC [] ] ] ]);
 
+(******************************************************************************)
+(*                                                                            *)
+(*          The clasic proof of PROPERTY_STAR [1, p.91]                       *)
+(*                                                                            *)
+(******************************************************************************)
+
+(* Currently we define STRONG_EQUIV (strong bisimilarity) by HOL's co-inductive
+   relation package (Hol_coreln):
+
+CoInductive STRONG_EQUIV :
+    !(E :'a CCS) (E' :'a CCS).
+       (!u.
+         (!E1. TRANS E u E1 ==>
+               (?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2)) /\
+         (!E2. TRANS E' u E2 ==>
+               (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2))) ==> STRONG_EQUIV E E'
+End
+
+  then the 3rd returned value (STRONG_EQUIV_cases) is just the PROPERTY_STAR:
+
+(* Prop. 4, page 91: strong equivalence satisfies property [*] *)
+val PROPERTY_STAR = save_thm ((* NEW *)
+   "PROPERTY_STAR", STRONG_EQUIV_cases);
+
+ However, if we started with the original definition of STRONG_EQUIV:
+
+Definition STRONG_EQUIV :
+    STRONG_EQUIV E E' = ?Bsm. Bsm E E' /\ STRONG_BISIM Bsm
+End
+
+ It's not easy to prove PROPERTY_STAR. Below is the proof of Robin Milner through
+ a temporarily definition STRONG_EQUIV', originally formalized by Monica Nesi.
+ *)
+
+(* Definition 3, page 91 in Milner's book. *)
+val STRONG_EQUIV' = new_definition (
+   "STRONG_EQUIV'",
+  ``STRONG_EQUIV' E E' =
+        (!u.
+         (!E1. TRANS E u E1 ==>
+               (?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2)) /\
+         (!E2. TRANS E' u E2 ==>
+               (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``);
+
+(* Strong equivalence implies the new relation. *)
+val STRONG_EQUIV_IMP_STRONG_EQUIV' = store_thm (
+   "STRONG_EQUIV_IMP_STRONG_EQUIV'",
+      ``!E E'. STRONG_EQUIV E E' ==> STRONG_EQUIV' E E'``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [STRONG_EQUIV', STRONG_EQUIV]
+ >> rpt STRIP_TAC (* 2 sub-goals *)
+ >> IMP_RES_TAC
+      (MATCH_MP (EQ_MP STRONG_BISIM (ASSUME ``STRONG_BISIM Bsm``))
+                (ASSUME ``(Bsm: 'a simulation) E E'``))
+ >| [ Q.EXISTS_TAC `E2`,
+      Q.EXISTS_TAC `E1` ]
+ >> ASM_REWRITE_TAC []
+ >> Q.EXISTS_TAC `Bsm`
+ >> ASM_REWRITE_TAC [] );
+
+val STRONG_EQUIV'_IS_STRONG_BISIM = store_thm (
+   "STRONG_EQUIV'_IS_STRONG_BISIM",
+  ``STRONG_BISIM STRONG_EQUIV'``,
+    PURE_ONCE_REWRITE_TAC [STRONG_BISIM]
+ >> rpt STRIP_TAC (* 2 sub-goals here *)
+ >> IMP_RES_TAC
+       (EQ_MP (Q.SPECL [`E`, `E'`] STRONG_EQUIV')
+              (ASSUME ``STRONG_EQUIV' E E'``))
+ >| [ Q.EXISTS_TAC `E2`,
+      Q.EXISTS_TAC `E1` ]
+ >> IMP_RES_TAC STRONG_EQUIV_IMP_STRONG_EQUIV'
+ >> ASM_REWRITE_TAC []);
+
+(* The new relation implies strong equivalence. *)
+val STRONG_EQUIV'_IMP_STRONG_EQUIV = store_thm (
+   "STRONG_EQUIV'_IMP_STRONG_EQUIV",
+      ``!E E'. STRONG_EQUIV' E E' ==> STRONG_EQUIV E E'``,
+    rpt STRIP_TAC
+ >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
+ >> EXISTS_TAC ``STRONG_EQUIV'``
+ >> ASM_REWRITE_TAC [STRONG_EQUIV'_IS_STRONG_BISIM]);
+
+(* Prop. 4, page 91: strong equivalence satisfies property [*] *)
+val PROPERTY_STAR' = store_thm (
+   "PROPERTY_STAR'",
+      ``!E E'. STRONG_EQUIV E E' =
+         (!u.
+           (!E1. TRANS E u E1 ==>
+                 (?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2)) /\
+           (!E2. TRANS E' u E2 ==>
+                 (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``,
+    rpt GEN_TAC
+ >> EQ_TAC (* 2 sub-goals here *)
+ >| [ PURE_ONCE_REWRITE_TAC
+        [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV_IMP_STRONG_EQUIV'],
+      PURE_ONCE_REWRITE_TAC
+        [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV'_IMP_STRONG_EQUIV] ]);
+
 val _ = export_theory ();
 val _ = html_theory "StrongEQ";
+
+(* Bibliography:
+
+ [1] Milner, Robin. Communication and concurrency. Prentice hall, 1989.
+ [2] Gorrieri, R., Versari, C.: Introduction to Concurrency Theory. Springer (2015).
+
+ *)

@@ -2,23 +2,20 @@
 (* FILE          : UniqueSolutionsScript.sml                                  *)
 (* DESCRIPTION   : Milner and Sangiorgi's "Unique Solutions of Equations"     *)
 (*                                                                            *)
-(* THESIS        : A Formalization of Unique Solutions of Equations in        *)
-(*                 Process Algebra                                            *)
-(* AUTHOR        : (c) 2017 Chun Tian, University of Bologna, Italy           *)
-(*                 (c) 2018 Chun Tian, Fondazione Bruno Kessler (FBK)         *)
-(* DATE          : 2017-2018                                                  *)
+(* COPYRIGHTS    : 2016-2017 University of Bologna, Italy (Chun Tian)         *)
+(*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
+(*                 2023-2024 The Australian National University (Chun Tian)   *)
 (* ========================================================================== *)
 
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory relationTheory pairTheory sumTheory listTheory;
-open prim_recTheory arithmeticTheory combinTheory;
+open combinTheory pred_setTheory relationTheory pairTheory sumTheory listTheory
+     prim_recTheory arithmeticTheory;
 
 open CCSLib CCSTheory TraceTheory StrongEQTheory WeakEQTheory ObsCongrTheory
      BisimulationUptoTheory CongruenceTheory ExpansionTheory ContractionTheory;
 
 val _ = new_theory "UniqueSolutions";
-val _ = temp_loose_equality ();
 
 (******************************************************************************)
 (*                                                                            *)
@@ -30,15 +27,16 @@ val _ = temp_loose_equality ();
    If the variable X is weakly guarded in E, and E{P/X} --a-> P', then P' takes the form
    E'{P/X} (for some expression E'), and moreover, for any Q, E{Q/X} --a-> E'{Q/X}.
  *)
-val STRONG_UNIQUE_SOLUTION_LEMMA = store_thm (
-   "STRONG_UNIQUE_SOLUTION_LEMMA",
-  ``!E. WG E ==>
+Theorem STRONG_UNIQUE_SOLUTION_LEMMA :
+    !E. WG E ==>
         !P a P'. TRANS (E P) a P' ==>
-                 ?E'. CONTEXT E' /\ (P' = E' P) /\ !Q. TRANS (E Q) a (E' Q)``,
+                 ?E'. CONTEXT E' /\ (P' = E' P) /\ !Q. TRANS (E Q) a (E' Q)
+Proof
     Induct_on `WG` >> BETA_TAC
  >> COUNT_TAC (rpt STRIP_TAC) (* 6 sub-goals here *)
  >| [ (* goal 1 (of 6) *)
-      Q.EXISTS_TAC `\t. P'` >> SIMP_TAC std_ss [CONTEXT2] >> art [],
+      Q.EXISTS_TAC `\t. P'` >> rw [] \\
+      rw [CONTEXT2],
       (* goal 2 (of 6) *)
       IMP_RES_TAC TRANS_PREFIX >> art [] \\
       Q.EXISTS_TAC `e` >> art [PREFIX],
@@ -105,7 +103,8 @@ val STRONG_UNIQUE_SOLUTION_LEMMA = store_thm (
       RES_TAC >> FULL_SIMP_TAC std_ss [] \\
       Q.EXISTS_TAC `\t. relab (E' t) rf` >> BETA_TAC >> REWRITE_TAC [] \\
       CONJ_TAC >- ( MATCH_MP_TAC CONTEXT7 >> art [] ) \\
-      GEN_TAC >> MATCH_MP_TAC RELABELING >> art [] ]);
+      GEN_TAC >> MATCH_MP_TAC RELABELING >> art [] ]
+QED
 
 (* Proposition 4.14 in Milner's book [1] (uni-variate version):
    Let the expression E contains at most the variable X, and let X be
@@ -119,8 +118,8 @@ Proof
  >> irule (REWRITE_RULE [RSUBSET] STRONG_BISIM_UPTO_THM)
  >> Q.EXISTS_TAC `\x y. (x = y) \/ (?G. CONTEXT G /\ (x = G P) /\ (y = G Q))`
  >> BETA_TAC >> reverse CONJ_TAC
- >- ( DISJ2_TAC >> Q.EXISTS_TAC `\x. x` >> BETA_TAC \\
-      KILL_TAC >> RW_TAC std_ss [CONTEXT1] )
+ >- (DISJ2_TAC >> Q.EXISTS_TAC `\x. x` >> BETA_TAC \\
+     KILL_TAC >> RW_TAC std_ss [CONTEXT1])
  >> REWRITE_TAC [STRONG_BISIM_UPTO]
  >> fix [`P'`, `Q'`]
  >> BETA_TAC >> STRIP_TAC (* 2 sub-goals here *)
@@ -138,7 +137,7 @@ Proof
  (* preparing for induction *)
  >> NTAC 2 POP_ORW
  >> POP_ASSUM MP_TAC
- >> Q.SPEC_TAC (`G`, `G`)
+ >> Q.ID_SPEC_TAC ‘G’
  >> Induct_on `CONTEXT` >> BETA_TAC
  >> CONJ_TAC (* case 1: "var" *)
  >- (rpt STRIP_TAC >| (* 2 subgoals *)
@@ -231,6 +230,7 @@ Proof
                       art [STRONG_EQUIV_REFL]) \\
          DISJ2_TAC \\
          Q.EXISTS_TAC `\t. y || G' t` >> BETA_TAC >> REWRITE_TAC [] \\
+
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
          Know `CONTEXT (\t. (\z. y) t || G' t)`
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
@@ -674,14 +674,14 @@ val GSEQ_EPS_lemma = Q.prove (
  >> rpt STRIP_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       IMP_RES_TAC (Q.SPECL [`H P`, `(H o E) P`] WEAK_EQUIV_EPS) \\
-      MP_TAC (Q.SPEC `(H :('a, 'b) context) o E` WEAK_UNIQUE_SOLUTION_LEMMA_EPS) \\
+      MP_TAC (Q.SPEC `(H :'a context) o E` WEAK_UNIQUE_SOLUTION_LEMMA_EPS) \\
       RW_TAC bool_ss [] >> POP_ASSUM (MP_TAC o (Q.SPECL [`P`, `E2`])) \\
       RW_TAC bool_ss [] \\
       POP_ASSUM (ASSUME_TAC o BETA_RULE o (Q.SPEC `Q`)) \\
-      MP_TAC (Q.SPECL [`(H :('a, 'b) context) Q`,
-                       `((H :('a, 'b) context) o (E :('a, 'b) context)) Q`]
+      MP_TAC (Q.SPECL [`(H :'a context) Q`,
+                       `((H :'a context) o (E :'a context)) Q`]
                       WEAK_EQUIV_EPS') >> RW_TAC bool_ss [] \\
-      POP_ASSUM (MP_TAC o (Q.SPEC `(H' :('a, 'b) context) Q`)) \\
+      POP_ASSUM (MP_TAC o (Q.SPEC `(H' :'a context) Q`)) \\
       RW_TAC bool_ss [] \\
       Q.EXISTS_TAC `E1` >> art [] \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
@@ -691,14 +691,14 @@ val GSEQ_EPS_lemma = Q.prove (
       Q.EXISTS_TAC `H'` >> art [],
       (* goal 2 (of 2) *)
       IMP_RES_TAC (Q.SPECL [`H Q`, `(H o E) Q`] WEAK_EQUIV_EPS) \\
-      MP_TAC (Q.SPEC `(H :('a, 'b) context) o E` WEAK_UNIQUE_SOLUTION_LEMMA_EPS) \\
+      MP_TAC (Q.SPEC `(H :'a context) o E` WEAK_UNIQUE_SOLUTION_LEMMA_EPS) \\
       RW_TAC bool_ss [] >> POP_ASSUM (MP_TAC o (Q.SPECL [`Q`, `E2`])) \\
       RW_TAC bool_ss [] \\
       POP_ASSUM (ASSUME_TAC o BETA_RULE o (Q.SPEC `P`)) \\
-      MP_TAC (Q.SPECL [`(H :('a, 'b) context) P`,
-                       `((H :('a, 'b) context) o (E :('a, 'b) context)) P`]
+      MP_TAC (Q.SPECL [`(H :'a context) P`,
+                       `((H :'a context) o (E :'a context)) P`]
                       WEAK_EQUIV_EPS') >> RW_TAC bool_ss [] \\
-      POP_ASSUM (MP_TAC o (Q.SPEC `(H' :('a, 'b) context) P`)) \\
+      POP_ASSUM (MP_TAC o (Q.SPEC `(H' :'a context) P`)) \\
       RW_TAC bool_ss [] \\
       Q.EXISTS_TAC `E1` >> art [] \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
@@ -1347,9 +1347,9 @@ val unfolding_lemma4 = store_thm (
  >> IMP_RES_TAC TRACE_cases2
  >> Cases_on `xs`
  >- (REV_FULL_SIMP_TAC std_ss [NULL] \\
-    `LENGTH (epsilon :'b Action list) <= n` by FULL_SIMP_TAC arith_ss [LENGTH] \\
+    `LENGTH (epsilon :'a Action list) <= n` by FULL_SIMP_TAC arith_ss [LENGTH] \\
      Q.PAT_X_ASSUM `!xs P' P. X ==> X'`
-       (MP_TAC o (Q.SPECL [`[] :'b Action list`, `P'`, `(E :('a, 'b) context) P`])) \\
+       (MP_TAC o (Q.SPECL [`[] :'a Action list`, `P'`, `(E :'a context) P`])) \\
      RW_TAC std_ss [] \\
      Q.EXISTS_TAC `C' o E` >> art [] \\
      CONJ_TAC >- (IMP_RES_TAC WGS_IMP_GCONTEXT \\
@@ -1361,7 +1361,7 @@ val unfolding_lemma4 = store_thm (
  >> Q.ABBREV_TAC `xs = FRONT (h::t)`
  >> Q.ABBREV_TAC `x = LAST (h::t)`
  >> Q.PAT_X_ASSUM `!xs P'' P'''. X ==> X'`
-      (MP_TAC o (Q.SPECL [`xs`, `u`, `(E :('a, 'b) context) P`]))
+      (MP_TAC o (Q.SPECL [`xs`, `u`, `(E :'a context) P`]))
  >> RW_TAC std_ss []
  >> MP_TAC (Q.SPECL [`C'`, `E`] unfolding_lemma3)
  >> RW_TAC bool_ss []
@@ -1378,9 +1378,9 @@ val unfolding_lemma4 = store_thm (
 (* Lemma 3.9 of [2] *)
 val UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA = store_thm (
    "UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA",
-  ``!(P :('a, 'b) CCS) (Q :('a, 'b) CCS).
+  ``!(P :'a CCS) (Q :'a CCS).
         (?E. WGS E /\ P contracts (E P) /\ Q contracts (E Q)) ==>
-        !(C :('a, 'b) context). GCONTEXT C ==>
+        !(C :'a context). GCONTEXT C ==>
             (!l R. WEAK_TRANS (C P) (label l) R ==>
                 ?C'. GCONTEXT C' /\ R contracts (C' P) /\
                      (WEAK_EQUIV O (\x y. WEAK_TRANS x (label l) y)) (C Q) (C' Q)) /\
@@ -1511,7 +1511,7 @@ Proof
       PROVE_TAC [WEAK_EQUIV_TRANS],
       (* goal 3 (of 4) *)
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_TRANS_tau
-                            (ASSUME ``WEAK_EQUIV E' ((C :('a, 'b) context) P)``)) \\
+                            (ASSUME ``WEAK_EQUIV E' ((C :'a context) P)``)) \\
       IMP_RES_TAC EPS_IMP_WEAK_TRANS (* 2 sub-goals here *)
       >- ( Q.EXISTS_TAC `E''` >> REWRITE_TAC [EPS_REFL] \\
            Q.EXISTS_TAC `C` >> art [] ) \\
@@ -1534,7 +1534,7 @@ Proof
       PROVE_TAC [WEAK_EQUIV_TRANS],
       (* goal 4 (of 4) *)
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_TRANS_tau
-                            (ASSUME ``WEAK_EQUIV E'' ((C :('a, 'b) context) Q)``)) \\
+                            (ASSUME ``WEAK_EQUIV E'' ((C :'a context) Q)``)) \\
       IMP_RES_TAC EPS_IMP_WEAK_TRANS (* 2 sub-goals here *)
       >- ( Q.EXISTS_TAC `E'` >> REWRITE_TAC [EPS_REFL] \\
            Q.EXISTS_TAC `C` >> art [] ) \\
@@ -1582,9 +1582,9 @@ val unfolding_lemma1' = store_thm (
 (* The proof has only minor differences with UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA *)
 val UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA = store_thm (
    "UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA",
-  ``!(P :('a, 'b) CCS) (Q :('a, 'b) CCS).
+  ``!(P :'a CCS) (Q :'a CCS).
         (?E. WGS E /\ P expands (E P) /\ Q expands (E Q)) ==>
-        !(C :('a, 'b) context). GCONTEXT C ==>
+        !(C :'a context). GCONTEXT C ==>
             (!l R. WEAK_TRANS (C P) (label l) R ==>
                 ?C'. GCONTEXT C' /\ R expands (C' P) /\
                      (WEAK_EQUIV O (\x y. WEAK_TRANS x (label l) y)) (C Q) (C' Q)) /\
@@ -1715,7 +1715,7 @@ Proof
       PROVE_TAC [WEAK_EQUIV_TRANS],
       (* goal 3 (of 4) *)
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_TRANS_tau
-                            (ASSUME ``WEAK_EQUIV E' ((C :('a, 'b) context) P)``)) \\
+                            (ASSUME ``WEAK_EQUIV E' ((C :'a context) P)``)) \\
       IMP_RES_TAC EPS_IMP_WEAK_TRANS (* 2 sub-goals here *)
       >- ( Q.EXISTS_TAC `E''` >> REWRITE_TAC [EPS_REFL] \\
            Q.EXISTS_TAC `C` >> art [] ) \\
@@ -1738,7 +1738,7 @@ Proof
       PROVE_TAC [WEAK_EQUIV_TRANS],
       (* goal 4 (of 4) *)
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_TRANS_tau
-                            (ASSUME ``WEAK_EQUIV E'' ((C :('a, 'b) context) Q)``)) \\
+                            (ASSUME ``WEAK_EQUIV E'' ((C :'a context) Q)``)) \\
       IMP_RES_TAC EPS_IMP_WEAK_TRANS (* 2 sub-goals here *)
       >- ( Q.EXISTS_TAC `E'` >> REWRITE_TAC [EPS_REFL] \\
            Q.EXISTS_TAC `C` >> art [] ) \\
@@ -1921,9 +1921,9 @@ Proof
  >> IMP_RES_TAC TRACE_cases2
  >> Cases_on `xs`
  >- (REV_FULL_SIMP_TAC std_ss [NULL] \\
-    `LENGTH (epsilon :'b Action list) <= n` by FULL_SIMP_TAC arith_ss [LENGTH] \\
+    `LENGTH (epsilon :'a Action list) <= n` by FULL_SIMP_TAC arith_ss [LENGTH] \\
      Q.PAT_X_ASSUM `!xs P' P. X ==> X'`
-        (MP_TAC o (Q.SPECL [`[] :'b Action list`, `P'`, `(E :('a, 'b) context) P`])) \\
+        (MP_TAC o (Q.SPECL [`[] :'a Action list`, `P'`, `(E :'a context) P`])) \\
      RW_TAC std_ss [] \\
      Q.EXISTS_TAC `C' o E` >> art [] \\
      CONJ_TAC >- (IMP_RES_TAC WG_IMP_CONTEXT \\
@@ -1935,7 +1935,7 @@ Proof
  >> Q.ABBREV_TAC `xs = FRONT (h::t)`
  >> Q.ABBREV_TAC `x = LAST (h::t)`
  >> Q.PAT_X_ASSUM `!xs P'' P'''. X ==> X'`
-        (MP_TAC o (Q.SPECL [`xs`, `u`, `(E :('a, 'b) context) P`]))
+        (MP_TAC o (Q.SPECL [`xs`, `u`, `(E :'a context) P`]))
  >> RW_TAC std_ss []
  >> MP_TAC (Q.SPECL [`C'`, `E`] OBS_unfolding_lemma3)
  >> RW_TAC bool_ss []
@@ -1952,9 +1952,9 @@ QED
 (* Lemma 3.9 of [2] *)
 val UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS_LEMMA = store_thm (
    "UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS_LEMMA",
-  ``!(P :('a, 'b) CCS) (Q :('a, 'b) CCS) E.
+  ``!(P :'a CCS) (Q :'a CCS) E.
         WG E /\ OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==>
-        !(C :('a, 'b) context). CONTEXT C ==>
+        !(C :'a context). CONTEXT C ==>
             (!l R. WEAK_TRANS (C P) (label l) R ==>
                 ?C'. CONTEXT C' /\ R contracts (C' P) /\
                      (WEAK_EQUIV O (\x y. WEAK_TRANS x (label l) y)) (C Q) (C' Q)) /\

@@ -3,7 +3,7 @@ open HolKernel Parse boolLib
 
 open bossLib binderLib
 open basic_swapTheory nomsetTheory
-open pred_setTheory
+open pred_setTheory listTheory
 open BasicProvers
 open quotientLib
 open boolSimps
@@ -567,7 +567,7 @@ val [GFV_thm0, gfvl_thm, GFV_raw_gtpm, simple_induction0,
 
 val simple_induction = save_thm(
   "simple_induction",
-  REWRITE_RULE [listTheory.EVERY_MEM] simple_induction0)
+  REWRITE_RULE [EVERY_MEM] simple_induction0)
 
 val _ = overload_on("gt_pmact",``mk_pmact raw_gtpm``);
 val _ = overload_on("gtpm",``pmact gt_pmact``);
@@ -587,9 +587,6 @@ val MAP_EQ1 = prove(
   ``(MAP f l = l) ⇔ ∀x. MEM x l ⇒ (f x = x)``,
   Induct_on `l` >> srw_tac [][DISJ_IMP_THM, FORALL_AND_THM]);
 
-val MEM_MAP = listTheory.MEM_MAP
-val EL_MAP = listTheory.EL_MAP
-val MEM_EL = listTheory.MEM_EL
 val IN_gfvl = prove(
   ``x ∈ gfvl ts ⇔ ∃t. MEM t ts ∧ x ∈ GFV t``,
   Induct_on `ts` >> srw_tac [][gfvl_thm] >> metis_tac []);
@@ -597,7 +594,7 @@ val IN_gfvl = prove(
 val GFV_apart = prove(
   ``∀t x y. x ∈ GFV t ∧ y ∉ GFV t ⇒ gtpm [(x,y)] t ≠ t``,
   ho_match_mp_tac simple_induction >>
-  srw_tac [][GFV_thm0, gtpm_thm, gterm_11, listTheory.MEM_MAP,
+  srw_tac [][GFV_thm0, gtpm_thm, gterm_11, MEM_MAP,
              MAP_EQ1, GLAM_eq_thm0, IN_gfvl] >>
   srw_tac [][] >> metis_tac[swapstr_def]);
 
@@ -667,10 +664,6 @@ val list_rel_split = prove(
       LIST_REL P l1 l2 ∧ LIST_REL Q l1 l2``,
   qid_spec_tac `l2` >> Induct_on `l1` >> Cases_on `l2` >> srw_tac [][] >>
   metis_tac []);
-
-val LIST_REL_ind = listTheory.LIST_REL_ind
-val LIST_REL_rules = listTheory.LIST_REL_rules
-val LIST_REL_EL_EQN = listTheory.LIST_REL_EL_EQN
 
 (* generic sub-type of a generic term, where one is only allowed to look
    at the data attached to the GLAM and the number of arguments in the lists *)
@@ -1098,7 +1091,7 @@ qabbrev_tac `GGSIZE = gtmsize (GLAM s' bv ts' us)` >>
         (listpm (fn_pmact ppm dpm) [(a,b)] r2 =
          MAP (tmrec A ppm vf lf) (gtpml [(a,b)] us)))`
   by (asm_simp_tac (srw_ss() ++ DNF_ss)
-                   [listpm_tMAP, listTheory.MAP_EQ_f, MEM_listpm_EXISTS,
+                   [listpm_tMAP, MAP_EQ_f, MEM_listpm_EXISTS,
                     Abbr`r1`, Abbr`r2`, fnpm_def, FUN_EQ_THM,
                     pmact_sing_inv]) >>
 map_every qx_gen_tac [`s''`, `bv'`, `ts''`, `us'`] >>
@@ -1149,7 +1142,7 @@ qabbrev_tac `xyus = gtpml [(x,y)] us` >>
        qmatch_abbrev_tac
         `LIST_REL RR TS (MAP f1 TS) ==> LIST_REL RR TS (MAP f2 TS)` >>
        qsuff_tac `MAP f1 TS = MAP f2 TS` >- srw_tac [][] >>
-       srw_tac [][listTheory.MAP_EQ_f] >>
+       srw_tac [][MAP_EQ_f] >>
        map_every qunabbrev_tac [`f1`, `f2`, `TS`] >>
        asm_simp_tac (srw_ss()) [FUN_EQ_THM, fnpm_def] >> gen_tac >>
        ih_commute_tac lhs >> asm_simp_tac (srw_ss()) [pmact_sing_inv] >>
@@ -1181,7 +1174,7 @@ reverse conj_tac >- (
   qsuff_tac `(X1 = X2) ∧ (Y1 = Y2)` >- srw_tac [][] >>
   map_every qunabbrev_tac [`X1`, `X2`, `Y1`, `Y2`] >>
   asm_simp_tac (srw_ss() ++ DNF_ss)
-               [listTheory.MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM, fnpm_def] >>
+               [MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM, fnpm_def] >>
   srw_tac [][] >> (* two similar goals here-on *)
   ih_commute_tac lhs >>
   asm_simp_tac (srw_ss()) [gtmsize_gtpm, pmact_sing_inv] >>
@@ -1201,7 +1194,7 @@ qmatch_abbrev_tac `lf u bv X1 Y1 = lf u bv X2 Y2` >>
 qsuff_tac `(X1 = X2) ∧ (Y1 = Y2)` >- srw_tac [][] >>
 map_every qunabbrev_tac [`X1`,`X2`,`Y1`, `Y2`] >>
 conj_tac >> (* splits in two *)
-srw_tac [][listTheory.MAP_EQ_f, FUN_EQ_THM, fnpm_def] >>
+srw_tac [][MAP_EQ_f, FUN_EQ_THM, fnpm_def] >>
 ih_commute_tac rhs >>
 asm_simp_tac (srw_ss()) [pmact_sing_inv, gtmsize_gtpm] >>
 disch_then (match_mp_tac o GSYM) >>
@@ -1321,7 +1314,7 @@ qx_gen_tac `u` >> strip_tac >>
  LIST_REL (relsupp A dpm ppm) us (MAP (tmrec A ppm vf lf) us)` by (
   assume_tac fresh_I >>
   fsrw_tac [DNF_ss][MEM_EL] >>
-  srw_tac [][LIST_REL_EL_EQN,listTheory.EL_MAP, relsupp_def] >>
+  srw_tac [][LIST_REL_EL_EQN, EL_MAP, relsupp_def] >>
   fsrw_tac [][AND_IMP_INTRO] >>
   first_x_assum match_mp_tac >>
   fsrw_tac [][] >>
@@ -1333,7 +1326,7 @@ qsuff_tac `MAP (tmrec A ppm vf lf) (gtpml [(u,v)] ts) =
            listpm (fn_pmact ppm dpm) [(u,v)] (MAP (tmrec A ppm vf lf) ts)`
   >- (disch_then SUBST1_TAC >> fsrw_tac [][NEWFCB_def] >>
       first_x_assum match_mp_tac >> fsrw_tac [][perm_supp] >> metis_tac []) >>
-srw_tac [][listpm_tMAP, listTheory.MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM,
+srw_tac [][listpm_tMAP, MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM,
            fnpm_def] >>
 srw_tac [][pmact_sing_inv] >>
 assume_tac (eqv_I |> Q.GEN `t`

@@ -9,6 +9,8 @@ struct
 
 open HolKernel Parse boolLib bossLib;
 
+open hurdUtils;
+
 (******************************************************************************)
 (*                                                                            *)
 (*      Backward compatibility and utility tactic/tacticals (2019)            *)
@@ -19,15 +21,6 @@ open HolKernel Parse boolLib bossLib;
 fun fix   ts = MAP_EVERY Q.X_GEN_TAC ts;        (* from HOL Light *)
 fun unset ts = MAP_EVERY Q.UNABBREV_TAC ts;     (* from HOL mizar mode *)
 fun take  ts = MAP_EVERY Q.EXISTS_TAC ts;       (* from HOL mizar mode *)
-val Know     = Q_TAC KNOW_TAC;                  (* from util_prob *)
-val Suff     = Q_TAC SUFF_TAC;                  (* from util_prob *)
-fun K_TAC _  = ALL_TAC;                         (* from util_prob *)
-val KILL_TAC = POP_ASSUM_LIST K_TAC;            (* from util_prob *)
-fun wrap   a = [a];                             (* from util_prob *)
-val art      = ASM_REWRITE_TAC;
-val Rewr     = DISCH_THEN (REWRITE_TAC o wrap); (* from util_prob *)
-val Rewr'    = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val POP_ORW  = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
 fun PRINT_TAC s gl =                            (* from cardinalTheory *)
   (print ("** " ^ s ^ "\n"); ALL_TAC gl);
@@ -36,12 +29,6 @@ fun COUNT_TAC tac g =                           (* from Konrad Slind *)
    let val res as (sg, _) = tac g
        val _ = print ("subgoals: " ^ Int.toString (List.length sg) ^ "\n")
    in res end;
-
-local
-  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
-in
-  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
-end;
 
 fun NDISJ_TAC n = (NTAC n DISJ2_TAC) >> TRY DISJ1_TAC;
 
@@ -124,11 +111,11 @@ fun STRIP_FORALL_RULE f th =
 
 (* The rule EQ_IMP_LR returns the implication from left to right of a given
    equational theorem. *)
-val EQ_IMP_LR = STRIP_FORALL_RULE (fst o EQ_IMP_RULE);
+val EQ_IMP_LR = iffLR; (* STRIP_FORALL_RULE (fst o EQ_IMP_RULE); *)
 
 (* The rule EQ_IMP_RL returns the implication from right to left of a given
    equational theorem. *)
-val EQ_IMP_RL = STRIP_FORALL_RULE (snd o EQ_IMP_RULE);
+val EQ_IMP_RL = iffRL; (* STRIP_FORALL_RULE (snd o EQ_IMP_RULE); *)
 
 (* Functions to get the left and right hand side of the equational conclusion
    of a theorem. *)

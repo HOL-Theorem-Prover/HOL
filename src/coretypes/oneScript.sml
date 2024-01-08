@@ -144,6 +144,27 @@ val FORALL_ONE = store_thm(
   ``(!x:unit. P x) <=> P ()``,
   simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]);
 
+(* This (and the next) was in examples/lambda/basics/termSceipt.sml, etc. *)
+Theorem FORALL_ONE_FN :
+    (!uf : one -> 'a. P uf) = !a. P (\u. a)
+Proof
+  SRW_TAC [][EQ_IMP_THM] THEN
+  POP_ASSUM (Q.SPEC_THEN `uf ()` MP_TAC) THEN
+  Q_TAC SUFF_TAC `(\y. uf()) = uf` THEN1 SRW_TAC [][] THEN
+  SRW_TAC [][FUN_EQ_THM, one]
+QED
+
+Theorem EXISTS_ONE_FN :
+    (?f : 'a -> one -> 'b. P f) = (?f : 'a -> 'b. P (\x u. f x))
+Proof
+  SRW_TAC [][EQ_IMP_THM] THENL [
+    Q.EXISTS_TAC `\a. f a ()` THEN SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC `(\x u. f x ()) = f` THEN1 SRW_TAC [][] THEN
+    SRW_TAC [][FUN_EQ_THM, one],
+    Q.EXISTS_TAC `\a u. f a` THEN SRW_TAC [][]
+  ]
+QED
+
 (*---------------------------------------------------------------------------
     Define the case constant
  ---------------------------------------------------------------------------*)

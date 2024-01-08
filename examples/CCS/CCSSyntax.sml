@@ -214,5 +214,3 @@ in
 end;
 
 end (* struct *)
-
-(* last updated: May 14, 2017 *)

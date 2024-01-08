@@ -6,9 +6,9 @@
 open HolKernel Parse boolLib bossLib;
 
 open pred_setTheory relationTheory;
-open CCSLib CCSTheory;
-open StrongEQTheory StrongLawsTheory;
-open WeakEQTheory WeakEQLib WeakLawsTheory;
+
+open CCSLib CCSTheory StrongEQTheory StrongLawsTheory
+     WeakEQTheory WeakEQLib WeakLawsTheory;
 
 val _ = new_theory "ObsCongr";
 val _ = temp_loose_equality ();
@@ -22,8 +22,8 @@ val _ = temp_loose_equality ();
 
 (* Define the observation congruence over CCS agents expressions. *)
 val OBS_CONGR = new_definition ("OBS_CONGR",
-  ``OBS_CONGR (E :('a, 'b) CCS) (E' :('a, 'b) CCS) =
-       (!(u :'b Action).
+  ``OBS_CONGR (E :'a CCS) (E' :'a CCS) =
+       (!(u :'a Action).
          (!E1. TRANS E u E1 ==>
                ?E2. WEAK_TRANS E' u E2 /\ WEAK_EQUIV E1 E2) /\
          (!E2. TRANS E' u E2 ==>
@@ -41,14 +41,14 @@ val _ = TeX_notation { hol = UTF8.chr 0x2248 ^ UTF8.chr 0x1D9C,
 
 val OBS_CONGR_TRANS_LEFT = store_thm (
    "OBS_CONGR_TRANS_LEFT",
-  ``!E E'. OBS_CONGR (E :('a, 'b) CCS) (E' :('a, 'b) CCS) ==>
+  ``!E E'. OBS_CONGR (E :'a CCS) (E' :'a CCS) ==>
            !u E1. TRANS E u E1 ==>
                   ?E2. WEAK_TRANS E' u E2 /\ WEAK_EQUIV E1 E2``,
     PROVE_TAC [OBS_CONGR]);
 
 val OBS_CONGR_TRANS_RIGHT = store_thm (
    "OBS_CONGR_TRANS_RIGHT",
-  ``!E E'. OBS_CONGR (E :('a, 'b) CCS) (E' :('a, 'b) CCS) ==>
+  ``!E E'. OBS_CONGR (E :'a CCS) (E' :'a CCS) ==>
            !u E2. TRANS E' u E2 ==>
                   ?E1. WEAK_TRANS E  u E1 /\ WEAK_EQUIV E1 E2``,
     PROVE_TAC [OBS_CONGR]);
@@ -75,7 +75,7 @@ val WEAK_EQUIV_STABLE_IMP_CONGR = store_thm (
  >| [ (* goal 1 (of 2) *)
       RES_TAC \\
       IMP_RES_TAC Action_no_tau_is_Label \\
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u :'b Action) = label x``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u :'a Action) = label x``]
                                (ASSUME ``TRANS E u E1``)) \\
       IMP_RES_TAC
         (CONJUNCT1 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
@@ -83,7 +83,7 @@ val WEAK_EQUIV_STABLE_IMP_CONGR = store_thm (
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
       (* goal 2 (of 2) *)
       RES_TAC THEN IMP_RES_TAC Action_no_tau_is_Label \\
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u :'b Action) = label x``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u :'a Action) = label x``]
                                (ASSUME ``TRANS E' u E2``)) \\
       IMP_RES_TAC
         (CONJUNCT1 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
@@ -254,14 +254,14 @@ val PROP6 = store_thm ("PROP6",
       IMP_RES_TAC TRANS_PREFIX \\
       Q.EXISTS_TAC `E'` \\
       ASM_REWRITE_TAC [WEAK_TRANS] \\
-      EXISTS_TAC ``prefix (u :'b Action) E'`` \\
+      EXISTS_TAC ``prefix (u :'a Action) E'`` \\
       Q.EXISTS_TAC `E'` \\
       ASM_REWRITE_TAC [EPS_REFL, PREFIX],
       (* goal 2 (of 2) *)
       IMP_RES_TAC TRANS_PREFIX \\
       Q.EXISTS_TAC `E` \\
       ASM_REWRITE_TAC [WEAK_TRANS] \\
-      EXISTS_TAC ``prefix (u :'b Action) E`` \\
+      EXISTS_TAC ``prefix (u :'a Action) E`` \\
       Q.EXISTS_TAC `E` \\
       ASM_REWRITE_TAC [EPS_REFL, PREFIX] ]);
 
@@ -395,7 +395,7 @@ val OBS_CONGR_PRESD_BY_PAR = store_thm (
                     (CONJ (ASSUME ``EPS E2''''' E2'''``)
                           (ASSUME ``EPS E2'''''' E2''''``))] \\
         MATCH_MP_TAC PAR3 \\
-        EXISTS_TAC ``l: 'b Label`` >> ASM_REWRITE_TAC [] ],
+        EXISTS_TAC ``l :'a Label`` >> ASM_REWRITE_TAC [] ],
       (* goal 2 (of 2) *)
       IMP_RES_TAC TRANS_PAR >| (* 3 sub-goals here *)
       [ (* goal 2.1 (of 3) *)
@@ -457,7 +457,7 @@ val OBS_CONGR_PRESD_BY_PAR = store_thm (
                     (CONJ (ASSUME ``EPS E2'''' E1'''``)
                           (ASSUME ``EPS E2''''' E1''''``))] \\
         MATCH_MP_TAC PAR3 \\
-        EXISTS_TAC ``l: 'b Label`` >> ASM_REWRITE_TAC [] ] ]);
+        EXISTS_TAC ``l :'a Label`` >> ASM_REWRITE_TAC [] ] ]);
 
 (* Observation congruence is substitutive under parallel operator on the left:
    !E E'. OBS_CONGR E E' ==> (!E''. OBS_CONGR (par E'' E) (par E'' E'))
@@ -496,19 +496,19 @@ val OBS_CONGR_SUBST_RESTR = store_thm (
         RES_TAC \\
         ASSUME_TAC
           (MATCH_MP WEAK_RESTR_tau
-                    (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``]
+                    (REWRITE_RULE [ASSUME ``(u :'a Action) = tau``]
                                   (ASSUME ``WEAK_TRANS E' u E2``))) \\
-        EXISTS_TAC ``restr (L :'b Label set) E2`` \\
+        EXISTS_TAC ``restr (L :'a Label set) E2`` \\
         IMP_RES_TAC WEAK_EQUIV_SUBST_RESTR >> ASM_REWRITE_TAC [],
         (* goal 1.2 (of 2) *)
         RES_TAC \\
         ASSUME_TAC
           (MATCH_MP WEAK_RESTR_label
-                    (LIST_CONJ [ASSUME ``~((l :'b Label) IN L)``,
-                                ASSUME ``~((COMPL (l :'b Label)) IN L)``,
-                                REWRITE_RULE [ASSUME ``(u :'b Action) = label l``]
+                    (LIST_CONJ [ASSUME ``~((l :'a Label) IN L)``,
+                                ASSUME ``~((COMPL (l :'a Label)) IN L)``,
+                                REWRITE_RULE [ASSUME ``(u :'a Action) = label l``]
                                              (ASSUME ``WEAK_TRANS E' u E2``)])) \\
-        EXISTS_TAC ``restr (L :'b Label set) E2`` \\
+        EXISTS_TAC ``restr (L :'a Label set) E2`` \\
         IMP_RES_TAC WEAK_EQUIV_SUBST_RESTR >> ASM_REWRITE_TAC [] ],
       (* goal 2 (of 2) *)
       IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
@@ -516,19 +516,19 @@ val OBS_CONGR_SUBST_RESTR = store_thm (
         RES_TAC \\
         ASSUME_TAC
           (MATCH_MP WEAK_RESTR_tau
-                    (REWRITE_RULE [ASSUME ``(u :'b Action) = tau``]
+                    (REWRITE_RULE [ASSUME ``(u :'a Action) = tau``]
                                   (ASSUME ``WEAK_TRANS E u E1``))) \\
-        EXISTS_TAC ``restr (L :'b Label set) E1`` \\
+        EXISTS_TAC ``restr (L :'a Label set) E1`` \\
         IMP_RES_TAC WEAK_EQUIV_SUBST_RESTR >> ASM_REWRITE_TAC [],
         (* goal 2.2 (of 2) *)
         RES_TAC \\
         ASSUME_TAC
           (MATCH_MP WEAK_RESTR_label
-                    (LIST_CONJ [ASSUME ``~((l: 'b Label) IN L)``,
-                                ASSUME ``~((COMPL (l :'b Label)) IN L)``,
-                                REWRITE_RULE [ASSUME ``(u :'b Action) = label l``]
+                    (LIST_CONJ [ASSUME ``~((l :'a Label) IN L)``,
+                                ASSUME ``~((COMPL (l :'a Label)) IN L)``,
+                                REWRITE_RULE [ASSUME ``(u :'a Action) = label l``]
                                              (ASSUME ``WEAK_TRANS E u E1``)])) \\
-        EXISTS_TAC ``restr (L :'b Label set) E1`` \\
+        EXISTS_TAC ``restr (L :'a Label set) E1`` \\
         IMP_RES_TAC WEAK_EQUIV_SUBST_RESTR >> ASM_REWRITE_TAC [] ] ]);
 
 (* Observation congruence is substitutive under the relabelling operator. *)
