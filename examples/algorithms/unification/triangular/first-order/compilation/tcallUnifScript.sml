@@ -454,49 +454,12 @@ Theorem kunifywl_thm =
         REWRITE_RULE [GSYM kunifywl_def] (CONJ unifywl0_NIL $ cj 3 unifywl0)
 
 (* now to do guard-elimination *)
-
-fun findin f t =
-  if aconv f t then SOME []
-  else
-    case total dest_comb t of
-      NONE => NONE
-    | SOME (t1,t2) =>
-        case findin f t1 of
-          NONE => NONE
-        | SOME pfx => SOME (pfx @ [t2])
-
-
-fun tcallify fn_t inty t =
-  if TypeBase.is_case t then
-    let val (f, ts) = strip_comb t
-        val {Thy,Name,Ty} = dest_thy_const f
-        val f0 = prim_mk_const{Name=Name,Thy=Thy}
-        val basety = type_of f0
-        val (argtys, rngty) = strip_fun basety
-        val rng_th = match_type rngty (sumSyntax.mk_sum(inty,type_of t))
-        val argty_th = match_type (hd argtys) (type_of (hd ts))
-        val ft = Term.inst (rng_th @ argty_th) f0
-        val ft1 = mk_comb(ft, hd ts)
-        val ts' = map (tcallify fn_t inty) (tl ts)
-    in
-      list_mk_comb(ft1, ts')
-    end
-  else
-    case dest_term t of
-      CONST _ => sumSyntax.mk_inr(t,inty)
-    | VAR _ => sumSyntax.mk_inr(t,inty)
-    | LAMB(vt,bt) => mk_abs(vt, tcallify fn_t inty bt)
-    | COMB _ =>
-      case findin fn_t t of
-        NONE => sumSyntax.mk_inr(t,inty)
-      | SOME args => sumSyntax.mk_inl(pairSyntax.list_mk_pair args, type_of t)
-
 fun tcallify_th th =
   let val (l,r) = dest_eq (concl th)
       val (lf, args) = strip_comb l
       val atup = pairSyntax.list_mk_pair args
       val inty = type_of atup
-      val body_t = tcallify lf inty r
+      val body_t = tailrecLib.mk_sum_term lf inty r
   in
       pairSyntax.mk_pabs(atup, body_t)
   end

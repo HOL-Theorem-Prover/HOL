@@ -3,6 +3,9 @@ struct
 
 open HolKernel Parse boolLib simpLib boolSimps
 
+fun mk_HOL_ERR f msg = HOL_ERR {origin_structure = "tailrecLib",
+                                origin_function = f, message = msg}
+
 val Cases = BasicProvers.Cases
 val PairCases = pairLib.PairCases
 
@@ -29,6 +32,36 @@ val TAILREC_def = whileTheory.TAILREC
                   |> CONV_RULE (DEPTH_CONV ETA_CONV)
                   |> REWRITE_RULE [GSYM combinTheory.I_EQ_IDABS];
 
+fun mk_sum_term fn_t inty tm =
+    let
+      fun build_sum t =
+          if TypeBase.is_case t then
+            let val (a,b,xs) = TypeBase.dest_case t
+                val ys = map (apsnd build_sum) xs
+            in
+              TypeBase.mk_case (b,ys)
+            end
+          else if can pairSyntax.dest_anylet t then
+            let val (xs,x) = pairSyntax.dest_anylet t
+            in pairSyntax.mk_anylet(xs,build_sum x) end
+          else if cvSyntax.is_cv_if tm then
+            let val (b,x,y) = cvSyntax.dest_cv_if tm
+            in mk_cond(cvSyntax.mk_c2b b,build_sum x,build_sum y) end
+          else
+            let val (f, xs) = strip_comb t
+            in
+              if aconv f fn_t then
+                if null xs then raise mk_HOL_ERR "mk_sum_term" "malformed term"
+                else
+                  sumSyntax.mk_inl (pairSyntax.list_mk_pair xs, type_of t)
+              else if is_abs t then
+                mk_abs (apsnd build_sum (dest_abs t))
+              else sumSyntax.mk_inr(t,inty)
+            end
+    in
+      build_sum tm
+    end
+
 fun prove_simple_tailrec_exists tm = let
   val (l,r) = dest_eq tm
   val (f_tm,arg_tm) = dest_comb l
@@ -39,26 +72,7 @@ fun prove_simple_tailrec_exists tm = let
   fun mk_inl x = sumSyntax.mk_inl(x,output_ty)
   fun mk_inr x = sumSyntax.mk_inr(x,input_ty)
   (* building the witness *)
-  fun build_sum tm =
-    if is_comb tm andalso aconv (rator tm) f_tm then
-      mk_inl (rand tm)
-    else if List.all (not o aconv f_tm) (free_vars tm) then
-      mk_inr tm
-    else if is_cond tm then let
-      val (b,x,y) = dest_cond tm
-      in mk_cond(b,build_sum x,build_sum y) end
-    else if cvSyntax.is_cv_if tm then let
-      val (b,x,y) = cvSyntax.dest_cv_if tm
-      in mk_cond(cvSyntax.mk_c2b b,build_sum x,build_sum y) end
-    else if can pairSyntax.dest_anylet tm then let
-      val (xs,x) = pairSyntax.dest_anylet tm
-      in pairSyntax.mk_anylet(xs,build_sum x) end
-    else if TypeBase.is_case tm then let
-      val (a,b,xs) = TypeBase.dest_case tm
-      val ys = map (fn (x,tm) => (x,build_sum tm)) xs
-      in TypeBase.mk_case(b,ys) end
-    else failwith ("Unsupported: " ^ term_to_string tm)
-  val sum_tm = build_sum r
+  val sum_tm = mk_sum_term f_tm input_ty r
   val abs_sum_tm = pairSyntax.mk_pabs(arg_tm,sum_tm)
   val witness = ISPEC abs_sum_tm whileTheory.TAILREC |> SPEC_ALL
                 |> concl |> dest_eq |> fst |> rator
