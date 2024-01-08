@@ -870,21 +870,33 @@ Theorem DISJOINT_UNION_BOTH:
 Proof PROVE_TAC [DISJOINT_UNION, DISJOINT_SYM]
 QED
 
-val DISJOINT_SUBSET = Q.store_thm
-("DISJOINT_SUBSET",
-  `!s t u. DISJOINT s t /\ u SUBSET t ==> DISJOINT s u`,
+Theorem DISJOINT_SUBSET :
+   !s t u. DISJOINT s t /\ u SUBSET t ==> DISJOINT s u
+Proof
   REWRITE_TAC [DISJOINT_DEF, SUBSET_DEF, IN_INTER, NOT_IN_EMPTY,
                EXTENSION] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
-val SUBSET_DISJOINT = store_thm
-  ("SUBSET_DISJOINT",
-  ``!s t u v. DISJOINT s t /\ u SUBSET s /\ v SUBSET t ==> DISJOINT u v``,
+Theorem SUBSET_DISJOINT :
+    !s t u v. DISJOINT s t /\ u SUBSET s /\ v SUBSET t ==> DISJOINT u v
+Proof
     RW_TAC std_ss [DISJOINT_ALT]
  >> `x IN s` by PROVE_TAC [SUBSET_DEF]
  >> CCONTR_TAC >> fs []
  >> `x IN t` by PROVE_TAC [SUBSET_DEF]
- >> RES_TAC);
+ >> RES_TAC
+QED
+
+Theorem DISJOINT_SUBSET' :
+    !s t u. DISJOINT s t /\ u SUBSET s ==> DISJOINT u t
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC SUBSET_DISJOINT
+ >> Q.EXISTS_TAC ‘s’
+ >> Q.EXISTS_TAC ‘t’
+ >> ASM_REWRITE_TAC [SUBSET_REFL]
+QED
 
 (* ===================================================================== *)
 (* Set difference                                                        *)
@@ -5286,6 +5298,10 @@ val max_lemma = prove(
     ]
   ])
 
+(* |- !s. FINITE s ==>
+          (s <> {} ==> MAX_SET s IN s /\ !y. y IN s ==> y <= MAX_SET s) /\
+          (s = {} ==> MAX_SET s = 0)
+ *)
 val MAX_SET_DEF = new_specification (
   "MAX_SET_DEF", ["MAX_SET"],
   CONV_RULE (BINDER_CONV RIGHT_IMP_EXISTS_CONV THENC
@@ -5335,6 +5351,7 @@ val MAX_SET_ELIM = store_thm(
           Q (MAX_SET P)``,
   PROVE_TAC [MAX_SET_DEF]);
 
+(* NOTE: “MIN_SET {}” is undefined *)
 val MIN_SET_DEF = new_definition("MIN_SET_DEF", ``MIN_SET = $LEAST``);
 
 val MIN_SET_ELIM = store_thm(
@@ -5375,6 +5392,18 @@ val MIN_SET_THM = store_thm(
                       FORALL_AND_THM] THEN
     REPEAT STRIP_TAC THEN RES_TAC THEN ASM_SIMP_TAC arith_ss [MIN_DEF]
   ]);
+
+(* This version of MIN_SET_THM may be more useful when doing induction on s *)
+Theorem MIN_SET_THM' :
+    (!e. MIN_SET {e} = e) /\
+    (!e s. s <> {} ==> MIN_SET (e INSERT s) = MIN e (MIN_SET s))
+Proof
+    CONJ_TAC >- REWRITE_TAC [MIN_SET_THM]
+ >> rpt GEN_TAC
+ >> DISCH_THEN (fn th =>
+                   ONCE_REWRITE_TAC [SYM (MATCH_MP CHOICE_INSERT_REST th)])
+ >> REWRITE_TAC [MIN_SET_THM]
+QED
 
 val MIN_SET_LEM = Q.store_thm
 ("MIN_SET_LEM",

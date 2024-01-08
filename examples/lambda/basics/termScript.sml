@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open boolSimps arithmeticTheory pred_setTheory finite_mapTheory hurdUtils;
+open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory hurdUtils;
 
 open generic_termsTheory binderLib nomsetTheory nomdatatype;
 
@@ -10,25 +10,26 @@ val _ = set_fixity "=" (Infix(NONASSOC, 450))
 
 val tyname = "term"
 
-val vp = ``(λn u:unit. n = 0)``
-val lp = ``(λn (d:unit + unit) tns uns.
+val vp = “(λn u:unit. n = 0)”
+val lp = “(λn (d:unit + unit) tns uns.
                (n = 0) ∧ ISL d ∧ (tns = []) ∧ (uns = [0;0]) ∨
-               (n = 0) ∧ ISR d ∧ (tns = [0]) ∧ (uns = []))``
+               (n = 0) ∧ ISR d ∧ (tns = [0]) ∧ (uns = []))”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 {vp=vp, lp = lp}
+    new_type_step1 tyname 0 {vp = vp, lp = lp};
+
 val [gvar,glam] = genind_rules |> SPEC_ALL |> CONJUNCTS
 
 val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
 val LAM_def = new_definition(
   "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v (INR ()) [^term_REP_t t] [])``)
+  ``^LAM_t v t = ^term_ABS_t (GLAM v (INR ()) [^term_REP_t t] [])``);
+
 val LAM_termP = prove(
   mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
   match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val LAM_t = defined_const LAM_def
-
 
 val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
 val APP_def = new_definition(
@@ -58,6 +59,7 @@ val cons_info =
      {con_termP = APP_termP, con_def = SYM APP_def'},
      {con_termP = LAM_termP, con_def = LAM_def}]
 
+(* tpm *)
 val tpm_name_pfx = "t"
 val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
     define_permutation {name_pfx = "t", name = tyname,
@@ -65,7 +67,7 @@ val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
                         term_ABS_t = term_ABS_t, absrep_id = absrep_id,
                         repabs_pseudo_id = repabs_pseudo_id,
                         cons_info = cons_info, newty = newty,
-                        genind_term_REP = genind_term_REP}
+                        genind_term_REP = genind_term_REP};
 
 (* support *)
 val term_REP_eqv = prove(
@@ -155,17 +157,19 @@ fun mkX_ind th = th |> Q.SPEC `λt x. Q t` |> Q.SPEC `λx. X`
                     |> SIMP_RULE std_ss [] |> Q.GEN `X`
                     |> Q.INST [`Q` |-> `P`] |> Q.GEN `P`
 
+Theorem nc_INDUCTION[local] = mkX_ind term_ind
+
 (* exactly mimic historical bound variable names etc for backwards
    compatibility *)
-val nc_INDUCTION2 = store_thm(
-  "nc_INDUCTION2",
-  ``∀P X.
+Theorem nc_INDUCTION2 :
+    ∀P X.
       (∀s. P (VAR s)) ∧
       (∀t u. P t ∧ P u ==> P (APP t u)) ∧
       (∀y u. y ∉ X ∧ P u ==> P (LAM y u)) ∧ FINITE X ==>
-      ∀u. P u``,
-  metis_tac [mkX_ind term_ind]);
-
+      ∀u. P u
+Proof
+  metis_tac [nc_INDUCTION]
+QED
 
 val LAM_eq_thm = save_thm(
   "LAM_eq_thm",
@@ -175,29 +179,16 @@ val LAM_eq_thm = save_thm(
                               GSYM supp_tpm]
      |> GENL [``u:string``, ``v:string``, ``t1:term``, ``t2:term``]);
 
-
-
-
 val (_, repty) = dom_rng (type_of term_REP_t)
 val repty' = ty_antiq repty
 
 val tlf =
-  ``λ(v:string) (u:unit + unit) (ds1:(ρ -> α) list) (ds2:(ρ -> α)  list)
-                                (ts1:^repty' list) (ts2:^repty' list) (p:ρ).
-       if ISR u then tlf (HD ds1) v (term_ABS (HD ts1)) p: α
-       else taf (HD ds2) (HD (TL ds2)) (term_ABS (HD ts2))
-                (term_ABS (HD (TL ts2))) p: α``
-val tvf = ``λ(s:string) (u:unit) (p:ρ). tvf s p : α``
-
-val LENGTH_NIL' =
-    CONV_RULE (BINDER_CONV (LAND_CONV (REWR_CONV EQ_SYM_EQ)))
-              listTheory.LENGTH_NIL
-val LENGTH1 = prove(
-  ``(1 = LENGTH l) ⇔ ∃e. l = [e]``,
-  Cases_on `l` >> srw_tac [][listTheory.LENGTH_NIL]);
-val LENGTH2 = prove(
-  ``(2 = LENGTH l) ⇔ ∃a b. l = [a;b]``,
-  Cases_on `l` >> srw_tac [][LENGTH1]);
+   “λ(v:string) (u:unit + unit) (ds1:(ρ -> α) list) (ds2:(ρ -> α) list)
+                                (ts1:^repty' list) (ts2:^repty' list) (p :ρ).
+       if ISR u then tlf (HD ds1) v (^term_ABS_t (HD ts1)) p :α
+       else taf (HD ds2) (HD (TL ds2)) (^term_ABS_t (HD ts2))
+                (^term_ABS_t (HD (TL ts2))) p :α”
+val tvf = “λ(s:string) (u:unit) (p:ρ). tvf s p :α”;
 
 val termP_elim = prove(
   ``(∀g. ^termP g ⇒ P g) ⇔ (∀t. P (^term_REP_t t))``,
@@ -219,8 +210,6 @@ val termP0 = prove(
   Q.ISPEC_THEN `t` STRUCT_CASES_TAC gterm_cases >>
   srw_tac [][genind_GVAR, genind_GLAM_eqn]);
 
-
-
 val parameter_tm_recursion = save_thm(
   "parameter_tm_recursion",
   parameter_gtm_recursion
@@ -236,10 +225,9 @@ val parameter_tm_recursion = save_thm(
                                LIST_REL_CONS1, genind_GVAR,
                                genind_GLAM_eqn, sidecond_def,
                                NEWFCB_def, relsupp_def,
-                               LENGTH_NIL', LENGTH1, LENGTH2]
+                               LENGTH_NIL_SYM, LENGTH1, LENGTH2]
       |> ONCE_REWRITE_RULE [termP0]
-      |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2,
-                                         listTheory.LENGTH_NIL]
+      |> SIMP_RULE (srw_ss() ++ DNF_ss) [LENGTH1, LENGTH2, LENGTH_NIL]
       |> CONV_RULE (DEPTH_CONV termP_removal)
       |> SIMP_RULE (srw_ss()) [GSYM supp_tpm, SYM term_REP_tpm]
       |> UNDISCH
@@ -258,25 +246,6 @@ val parameter_tm_recursion = save_thm(
                  `dpm` |-> `apm`]
       |> CONV_RULE (REDEPTH_CONV sort_uvars))
 
-val FORALL_ONE = prove(
-  ``(!u:one. P u) = P ()``,
-  SRW_TAC [][EQ_IMP_THM, oneTheory.one_induction]);
-val FORALL_ONE_FN = prove(
-  ``(!uf : one -> 'a. P uf) = !a. P (\u. a)``,
-  SRW_TAC [][EQ_IMP_THM] THEN
-  POP_ASSUM (Q.SPEC_THEN `uf ()` MP_TAC) THEN
-  Q_TAC SUFF_TAC `(\y. uf()) = uf` THEN1 SRW_TAC [][] THEN
-  SRW_TAC [][FUN_EQ_THM, oneTheory.one]);
-
-val EXISTS_ONE_FN = prove(
-  ``(?f : 'a -> one -> 'b. P f) = (?f : 'a -> 'b. P (\x u. f x))``,
-  SRW_TAC [][EQ_IMP_THM] THENL [
-    Q.EXISTS_TAC `\a. f a ()` THEN SRW_TAC [][] THEN
-    Q_TAC SUFF_TAC `(\x u. f x ()) = f` THEN1 SRW_TAC [][] THEN
-    SRW_TAC [][FUN_EQ_THM, oneTheory.one],
-    Q.EXISTS_TAC `\a u. f a` THEN SRW_TAC [][]
-  ]);
-
 val tm_recursion = save_thm(
   "tm_recursion",
   parameter_tm_recursion
@@ -284,8 +253,8 @@ val tm_recursion = save_thm(
       |> Q.INST [`ppm` |-> `discrete_pmact`, `vr` |-> `λs u. vru s`,
                  `ap` |-> `λr1 r2 t1 t2 u. apu (r1()) (r2()) t1 t2`,
                  `lm` |-> `λr v t u. lmu (r()) v t`]
-      |> SIMP_RULE (srw_ss()) [FORALL_ONE, FORALL_ONE_FN, EXISTS_ONE_FN,
-                               fnpm_def]
+      |> SIMP_RULE (srw_ss()) [oneTheory.FORALL_ONE, oneTheory.FORALL_ONE_FN,
+                               oneTheory.EXISTS_ONE_FN, fnpm_def]
       |> SIMP_RULE (srw_ss() ++ CONJ_ss) [supp_unitfn]
       |> Q.INST [`apu` |-> `ap`, `lmu` |-> `lm`, `vru` |-> `vr`])
 
@@ -370,8 +339,6 @@ Theorem tpm_eql:
 Proof
   simp[tpm_eqr]
 QED
-
-
 
 val tpm_CONS = store_thm(
   "tpm_CONS",
@@ -503,18 +470,16 @@ val SUB_VAR = save_thm("SUB_VAR", hd (CONJUNCTS SUB_DEF))
 Theorem fresh_tpm_subst:
   !t. ~(u IN FV t) ==> (tpm [(u,v)] t = [VAR u/v] t)
 Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
 Theorem tpm_subst:
   !N. tpm pi ([M/v] N) = [tpm pi M/lswapstr pi v] (tpm pi N)
 Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN
   Q.EXISTS_TAC `v INSERT FV M` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR] THEN
-  MATCH_MP_TAC (SUB_THM |> CONJUNCTS |> C (curry List.nth) 3 |> GSYM) THEN
-  SRW_TAC [][stringpm_raw]
+  SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
 Theorem tpm_subst_out:
@@ -525,21 +490,76 @@ QED
 Theorem lemma14a[simp]:
   !t. [VAR v/v] t = t
 Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{v}` THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN Q.EXISTS_TAC `{v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
 Theorem lemma14b:
   !M. ~(v IN FV M) ==> ([N/v] M = M)
 Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV N` THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN Q.EXISTS_TAC `v INSERT FV N` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]
+QED
+
+(* Note: this is the opposite direction of lemma14b *)
+Theorem SUB_FIX_IMP_NOTIN_FV :
+    !x t. (!u. [u/x] t = t) ==> x NOTIN FV t
+Proof
+    rpt GEN_TAC
+ >> Suff ‘(?u. u # t /\ [VAR u/x] t = t) ==> x # t’
+ >- (rw [] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q_TAC (NEW_TAC "z") ‘FV t’ \\
+     Q.EXISTS_TAC ‘z’ >> rw [])
+ >> simp [PULL_EXISTS]
+ >> Q.X_GEN_TAC ‘u’
+ >> Q.ID_SPEC_TAC ‘t’
+ >> HO_MATCH_MP_TAC nc_INDUCTION
+ >> Q.EXISTS_TAC ‘{x;u}’ >> rw []
+ >> CCONTR_TAC >> fs []
+QED
+
+Theorem lemma14b_ext1 :
+    !v M. v # M <=> !N. ([N/v] M = M)
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC >- rw [lemma14b]
+ >> DISCH_TAC
+ >> rw [SUB_FIX_IMP_NOTIN_FV]
+QED
+
+Theorem SUB_EQ_IMP_NOTIN_FV :
+    !x t. (!t1 t2. [t1/x] t = [t2/x] t) ==> x NOTIN FV t
+Proof
+    rpt GEN_TAC
+ >> Suff ‘(?u u'. u <> u' /\ u # t /\ u' # t /\
+                  [VAR u/x] t = [VAR u'/x] t) ==> x # t’
+ >- (rw [] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q_TAC (NEW_TAC "z") ‘FV t’ \\
+     Q.EXISTS_TAC ‘z’ >> rw [] \\
+     Q_TAC (NEW_TAC "z'") ‘{z} UNION FV t’ \\
+     Q.EXISTS_TAC ‘z'’ >> rw [])
+ >> simp [PULL_EXISTS]
+ >> rpt GEN_TAC
+ >> Q.ID_SPEC_TAC ‘t’
+ >> HO_MATCH_MP_TAC nc_INDUCTION
+ >> Q.EXISTS_TAC ‘{x;u;u'}’ >> rw []
+ >> CCONTR_TAC >> fs []
+QED
+
+Theorem lemma14b_ext2 :
+    !v M. v # M <=> !N1 N2. [N1/v] M = [N2/v] M
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC >- rw [lemma14b]
+ >> rw [SUB_EQ_IMP_NOTIN_FV]
 QED
 
 Theorem lemma14c:
   !t x u. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))
 Proof
-  NTAC 2 GEN_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  NTAC 2 GEN_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION THEN
   Q.EXISTS_TAC `x INSERT FV t` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, EXTENSION] THEN
   METIS_TAC [lemma14b]
@@ -553,7 +573,7 @@ QED
 Theorem lemma15a:
   !M. v ∉ FV M ==> [N/v]([VAR v/x]M) = [N/x]M
 Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;v} UNION FV N` THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN Q.EXISTS_TAC `{x;v} UNION FV N` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
@@ -565,7 +585,7 @@ QED
 Theorem SUB_TWICE_ONE_VAR :
     !body. [x/v] ([y/v] body) = [[x/v]y / v] body
 Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN SRW_TAC [][SUB_THM, SUB_VAR] THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [][SUB_THM, SUB_VAR] THEN
   Q.EXISTS_TAC `v INSERT FV x UNION FV y` THEN
   SRW_TAC [][SUB_THM] THEN
   Cases_on `v IN FV y` THEN SRW_TAC [][SUB_THM, lemma14c, lemma14b]
@@ -594,7 +614,6 @@ Proof
   SRW_TAC [][GSYM fresh_tpm_subst] THEN
   SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]
 QED
-
 
 (* ----------------------------------------------------------------------
     size function
@@ -636,7 +655,7 @@ QED
 Theorem size_vsubst[simp]:
     !M:term. size ([VAR v/u] M) = size M
 Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_VAR, SUB_THM]
 QED
 
@@ -913,7 +932,7 @@ val tpm_ssub = save_thm("tpm_ssub", CONJUNCT2 ssub_def)
 val single_ssub = store_thm(
   "single_ssub",
   ``∀N. (FEMPTY |+ (s,M)) ' N = [M/s]N``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `s INSERT FV M` THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN Q.EXISTS_TAC `s INSERT FV M` THEN
   SRW_TAC [][SUB_VAR, SUB_THM]);
 
 Theorem in_fmap_supp:
@@ -932,7 +951,7 @@ QED
 Theorem ssub_14b:
   ∀t. (FV t ∩ FDOM phi = EMPTY) ==> ((phi : string |-> term) ' t = t)
 Proof
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  HO_MATCH_MP_TAC nc_INDUCTION THEN
   Q.EXISTS_TAC `fmFV phi` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, pred_setTheory.EXTENSION] THEN METIS_TAC []
 QED
@@ -954,7 +973,7 @@ Theorem FV_ssub :
 Proof
     rpt STRIP_TAC
  >> Q.ID_SPEC_TAC ‘N’
- >> HO_MATCH_MP_TAC nc_INDUCTION2
+ >> HO_MATCH_MP_TAC nc_INDUCTION
  >> Q.EXISTS_TAC ‘FDOM fm’
  >> rw [SUB_VAR, SUB_THM, ssub_thm]
  >> SET_TAC []
@@ -963,7 +982,7 @@ QED
 Theorem fresh_ssub:
   ∀N. y ∉ FV N ∧ (∀k:string. k ∈ FDOM fm ⇒ y # fm ' k) ⇒ y # fm ' N
 Proof
-  ho_match_mp_tac nc_INDUCTION2 >>
+  ho_match_mp_tac nc_INDUCTION >>
   qexists ‘fmFV fm’ >>
   rw[] >> metis_tac[]
 QED
@@ -973,10 +992,11 @@ Theorem ssub_SUBST:
     (∀k. k ∈ FDOM fm ⇒ v # fm ' k) ∧ v ∉ FDOM fm ⇒
     fm ' ([N/v]M) = [fm ' N / v] (fm ' M)
 Proof
-  ho_match_mp_tac nc_INDUCTION2 >>
+  ho_match_mp_tac nc_INDUCTION >>
   qexists ‘fmFV fm ∪ {v} ∪ FV N’ >>
   rw[] >> rw[lemma14b, SUB_VAR] >>
   gvs[DECIDE “~p ∨ q ⇔ p ⇒ q”, PULL_FORALL] >>
+  rename1 ‘y # N’ >>
   ‘y # fm ' N’ suffices_by simp[SUB_THM] >>
   irule fresh_ssub >> simp[]
 QED
@@ -993,12 +1013,13 @@ Theorem ssub_update_apply :
 Proof
     RW_TAC std_ss [closed_def]
  >> Q.ID_SPEC_TAC ‘M’
- >> HO_MATCH_MP_TAC nc_INDUCTION2
+ >> HO_MATCH_MP_TAC nc_INDUCTION
  >> Q.EXISTS_TAC ‘v INSERT (FDOM fm UNION FV N)’
  >> rw [SUB_VAR, SUB_THM, ssub_thm, FAPPLY_FUPDATE_THM]
  >> TRY (METIS_TAC [])
  >- (MATCH_MP_TAC (GSYM lemma14b) \\
      METIS_TAC [NOT_IN_EMPTY])
+ >> rename1 ‘y # N’
  >> Suff ‘(fm |+ (v,N)) ' (LAM y M) = LAM y ((fm |+ (v,N)) ' M)’ >- rw []
  >> MATCH_MP_TAC ssub_LAM
  >> rw [FAPPLY_FUPDATE_THM]
@@ -1013,16 +1034,41 @@ Theorem ssub_update_apply_SUBST :
         DISJOINT (FDOM fm) (FV N) ==>
         (fm |+ (v,N)) ' M = fm ' ([N/v] M)
 Proof
-    HO_MATCH_MP_TAC nc_INDUCTION2
+    HO_MATCH_MP_TAC nc_INDUCTION
  >> Q.EXISTS_TAC ‘v INSERT fmFV fm UNION FV M UNION FV N’
  >> rw [SUB_VAR, SUB_THM, ssub_thm, FAPPLY_FUPDATE_THM]
  >> TRY (METIS_TAC [])
  >- (MATCH_MP_TAC (GSYM ssub_14b) \\
      rw [GSYM DISJOINT_DEF, Once DISJOINT_SYM])
+ >> rename1 ‘y # N’
  >> Know ‘(fm |+ (v,N)) ' (LAM y M') = LAM y ((fm |+ (v,N)) ' M')’
  >- (MATCH_MP_TAC ssub_LAM >> rw [FAPPLY_FUPDATE_THM])
  >> Rewr'
  (* finally, applying IH *)
+ >> rw []
+QED
+
+(* A combined version of ssub_update_apply_SUBST and ssub_SUBST *)
+Theorem ssub_update_apply_SUBST' :
+    !M. (!k. k IN FDOM fm ==> v # fm ' k) /\ v NOTIN FDOM fm /\
+        DISJOINT (FDOM fm) (FV N) ==>
+        (fm |+ (v,N)) ' M = [fm ' N/v] (fm ' M)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘[fm ' N/v] (fm ' M) = fm ' ([N/v] M)’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ]  \\
+     MATCH_MP_TAC ssub_SUBST >> art [])
+ >> Rewr'
+ >> MATCH_MP_TAC ssub_update_apply_SUBST >> art []
+QED
+
+Theorem FEMPTY_update_apply :
+    !M. (FEMPTY |+ (v,N)) ' M = [N/v] M
+Proof
+    Q.X_GEN_TAC ‘M’
+ >> ‘[N/v] M = FEMPTY ' ([N/v] M)’ by rw []
+ >> POP_ORW
+ >> MATCH_MP_TAC ssub_update_apply_SUBST
  >> rw []
 QED
 

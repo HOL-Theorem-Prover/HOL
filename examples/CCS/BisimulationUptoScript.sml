@@ -26,7 +26,7 @@ val _ = new_theory "BisimulationUpto";
 (* Define the strong bisimulation relation up to STRONG_EQUIV *)
 val STRONG_BISIM_UPTO = new_definition (
    "STRONG_BISIM_UPTO",
-  ``STRONG_BISIM_UPTO (Bsm :('a, 'b) simulation) =
+  ``STRONG_BISIM_UPTO (Bsm :'a simulation) =
     !E E'.
         Bsm E E' ==>
         !u. (!E1. TRANS E u E1 ==>
@@ -45,14 +45,14 @@ val IDENTITY_STRONG_BISIM_UPTO = store_thm (
     PURE_ONCE_REWRITE_TAC [STRONG_BISIM_UPTO]
  >> rpt STRIP_TAC (* 2 sub-goals *)
  >| [ (* goal 1 *)
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``E:('a, 'b) CCS = E'``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``E:'a CCS = E'``]
                                (ASSUME ``TRANS E u E1``)) \\
-      EXISTS_TAC ``E1 :('a, 'b) CCS`` \\
+      EXISTS_TAC ``E1 :'a CCS`` \\
       ASM_REWRITE_TAC [] \\
       REWRITE_TAC [IDENTITY_STRONG_BISIM_UPTO_lemma],
       (* goal 2 *)
       PURE_ONCE_ASM_REWRITE_TAC [] \\
-      EXISTS_TAC ``E2 :('a, 'b) CCS`` \\
+      EXISTS_TAC ``E2 :'a CCS`` \\
       ASM_REWRITE_TAC [] \\
       REWRITE_TAC [IDENTITY_STRONG_BISIM_UPTO_lemma] ]);
 
@@ -164,7 +164,7 @@ val STRONG_BISIM_UPTO_THM = store_thm (
  >> IMP_RES_TAC STRONG_BISIM_SUBSET_STRONG_EQUIV
  >> Suff `Bsm RSUBSET (STRONG_EQUIV O Bsm O STRONG_EQUIV)`
  >- ( DISCH_TAC \\
-      Know `transitive ((RSUBSET) :('a, 'b) simulation -> ('a, 'b) simulation -> bool)`
+      Know `transitive ((RSUBSET) :'a simulation -> 'a simulation -> bool)`
       >- PROVE_TAC [RSUBSET_WeakOrder, WeakOrder] \\
       RW_TAC std_ss [transitive_def] >> RES_TAC )
  >> KILL_TAC
@@ -194,7 +194,7 @@ val STRONG_EQUIV_BY_BISIM_UPTO = store_thm (
  *)
 val WEAK_BISIM_UPTO = new_definition (
    "WEAK_BISIM_UPTO",
-  ``WEAK_BISIM_UPTO (Wbsm: ('a, 'b) simulation) =
+  ``WEAK_BISIM_UPTO (Wbsm: 'a simulation) =
     !E E'. Wbsm E E' ==>
         (!l.
           (!E1. TRANS E  (label l) E1 ==>
@@ -260,7 +260,7 @@ val IDENTITY_WEAK_BISIM_UPTO = store_thm (
     PURE_ONCE_REWRITE_TAC [WEAK_BISIM_UPTO]
  >> rpt STRIP_TAC (* 4 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``E :('a, 'b) CCS = E'``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``E :'a CCS = E'``]
                                (ASSUME ``TRANS E (label l) E1``)) \\
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
       Q.EXISTS_TAC `E1` >> art [] \\
@@ -270,7 +270,7 @@ val IDENTITY_WEAK_BISIM_UPTO = store_thm (
       Q.EXISTS_TAC `E2` >> art [] \\
       REWRITE_TAC [IDENTITY_WEAK_BISIM_UPTO_lemma'],
       (* goal 3 (of 4) *)
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``E :('a, 'b) CCS = E'``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``E :'a CCS = E'``]
                                (ASSUME ``TRANS E tau E1``)) \\
       IMP_RES_TAC ONE_TAU \\
       Q.EXISTS_TAC `E1` >> art [] \\
@@ -585,7 +585,7 @@ val WEAK_BISIM_UPTO_THM = store_thm (
  >> IMP_RES_TAC WEAK_BISIM_SUBSET_WEAK_EQUIV
  >> Suff `Wbsm RSUBSET (WEAK_EQUIV O Wbsm O WEAK_EQUIV)`
  >- ( DISCH_TAC \\
-      Know `transitive ((RSUBSET) :('a, 'b) simulation -> ('a, 'b) simulation -> bool)`
+      Know `transitive ((RSUBSET) :'a simulation -> 'a simulation -> bool)`
       >- PROVE_TAC [RSUBSET_WeakOrder, WeakOrder] \\
       RW_TAC std_ss [transitive_def] >> RES_TAC )
  >> KILL_TAC
@@ -612,7 +612,7 @@ val WEAK_EQUIV_BY_BISIM_UPTO = store_thm (
          corrected Definition 5.8 in the ERRATA (1990) of [1]. *)
 val WEAK_BISIM_UPTO_ALT = new_definition (
    "WEAK_BISIM_UPTO_ALT",
-  ``WEAK_BISIM_UPTO_ALT (Wbsm: ('a, 'b) simulation) =
+  ``WEAK_BISIM_UPTO_ALT (Wbsm: 'a simulation) =
     !E E'. Wbsm E E' ==>
         (!l.
           (!E1. WEAK_TRANS E  (label l) E1 ==>
@@ -779,7 +779,7 @@ val WEAK_BISIM_UPTO_ALT_THM = store_thm (
  >> IMP_RES_TAC WEAK_BISIM_SUBSET_WEAK_EQUIV
  >> Suff `Wbsm RSUBSET (WEAK_EQUIV O Wbsm O WEAK_EQUIV)`
  >- ( DISCH_TAC \\
-      Know `transitive ((RSUBSET) :('a, 'b) simulation -> ('a, 'b) simulation -> bool)`
+      Know `transitive ((RSUBSET) :'a simulation -> 'a simulation -> bool)`
       >- PROVE_TAC [RSUBSET_WeakOrder, WeakOrder] \\
       RW_TAC std_ss [transitive_def] >> RES_TAC )
  >> KILL_TAC
@@ -805,7 +805,7 @@ val WEAK_EQUIV_BY_BISIM_UPTO_ALT = store_thm (
 (* this work is now useless *)
 val OBS_BISIM_UPTO = new_definition (
    "OBS_BISIM_UPTO",
-  ``OBS_BISIM_UPTO (Obsm: ('a, 'b) simulation) =
+  ``OBS_BISIM_UPTO (Obsm: 'a simulation) =
     !E E'. Obsm E E' ==>
       !u. (!E1. TRANS E  u E1 ==>
                 ?E2. WEAK_TRANS E' u E2 /\ (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2) /\
@@ -833,7 +833,7 @@ val IDENTITY_OBS_BISIM_UPTO = store_thm (
     PURE_ONCE_REWRITE_TAC [OBS_BISIM_UPTO]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``E :('a, 'b) CCS = E'``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``E :'a CCS = E'``]
                                (ASSUME ``TRANS E u E1``)) \\
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
       Q.EXISTS_TAC `E1` >> art [] \\
@@ -1195,16 +1195,16 @@ val OBS_CONGR_BY_BISIM_UPTO = store_thm (
  >> irule (REWRITE_RULE [RSUBSET] OBS_BISIM_UPTO_THM)
  >> Q.EXISTS_TAC `Obsm` >> art []);
 
+val _ = export_theory ();
+val _ = html_theory "BisimulationUpto";
+
 (* Bibliography:
  *
  * [1] Milner, R.: Communication and concurrency. (1989).
-.* [2] Gorrieri, R., Versari, C.: Introduction to Concurrency Theory. Springer, Cham (2015).
- * [3] Sangiorgi, D.: Introduction to Bisimulation and Coinduction. Cambridge University Press (2011).
+ * [2] Gorrieri, R., Versari, C.: Introduction to Concurrency Theory. Springer, Cham (2015).
+ * [3] Sangiorgi, D.: Introduction to Bisimulation and Coinduction.
+                      Cambridge University Press (2011).
  * [4] Sangiorgi, D., Rutten, J.: Advanced Topics in Bisimulation and Coinduction.
                                   Cambridge University Press (2011).
  *)
 
-val _ = export_theory ();
-val _ = html_theory "BisimulationUpto";
-
-(* last updated: Aug 5, 2017 *)

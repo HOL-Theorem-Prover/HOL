@@ -47,7 +47,7 @@ val CCS_TRANS_tests =
 
      (* test #3 *)
      (``par nil nil``,
-“∀u (E :('a, 'b) CCS). ¬(nil || nil --u-> E)”),
+“∀u (E :'a CCS). ¬(nil || nil --u-> E)”),
 
      (* test #4 *)
      (``restr { name "a" } (par nil nil)``,

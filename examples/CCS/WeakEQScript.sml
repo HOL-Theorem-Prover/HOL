@@ -7,6 +7,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open pred_setTheory relationTheory bisimulationTheory listTheory IndDefRules;
+
 open CCSLib CCSTheory StrongEQTheory;
 
 val _ = new_theory "WeakEQ";
@@ -400,10 +401,10 @@ val WEAK_SUM2 = store_thm ((* NEW *)
 (******************************************************************************)
 
 val WEAK_BISIM_def = Define
-   `WEAK_BISIM (R :('a, 'b) simulation) = WBISIM TRANS tau R`;
+   `WEAK_BISIM (R :'a simulation) = WBISIM TRANS tau R`;
 
 Theorem WEAK_BISIM :
-    WEAK_BISIM (Wbsm: ('a, 'b) simulation) =
+    WEAK_BISIM (Wbsm: 'a simulation) =
     !E E'. Wbsm E E' ==>
        (!l.
          (!E1. TRANS E  (label l) E1 ==>
@@ -455,7 +456,7 @@ val EPS_TRANS_AUX = store_thm (
       IMP_RES_TAC
         (CONJUNCT2
            (MATCH_MP (EQ_MP (SPEC_ALL WEAK_BISIM) (ASSUME ``WEAK_BISIM Wbsm``))
-                     (ASSUME ``(Wbsm: ('a, 'b) simulation) E E''``))) \\
+                     (ASSUME ``(Wbsm: 'a simulation) E E''``))) \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
       (* goal 2 (of 3) *)
       REPEAT STRIP_TAC \\
@@ -466,12 +467,12 @@ val EPS_TRANS_AUX = store_thm (
         (MATCH_MP (ASSUME ``!Wbsm E'. WEAK_BISIM Wbsm /\ Wbsm E E' ==>
                                       (?E2. EPS E' E2 /\ Wbsm E1 E2)``)
                   (CONJ (ASSUME ``WEAK_BISIM Wbsm``)
-                        (ASSUME ``(Wbsm: ('a, 'b) simulation) E E''``))) \\
+                        (ASSUME ``(Wbsm: 'a simulation) E E''``))) \\
       STRIP_ASSUME_TAC
         (MATCH_MP (ASSUME ``!Wbsm E''. WEAK_BISIM Wbsm /\ Wbsm E1 E'' ==>
                                        (?E2. EPS E'' E2 /\ Wbsm E' E2)``)
                   (CONJ (ASSUME ``WEAK_BISIM Wbsm``)
-                        (ASSUME ``(Wbsm: ('a, 'b) simulation) E1 E2``))) \\
+                        (ASSUME ``(Wbsm: 'a simulation) E1 E2``))) \\
       Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
       MATCH_MP_TAC EPS_TRANS \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ]);
@@ -493,7 +494,7 @@ val EPS_TRANS_AUX_SYM = store_thm (
        (Q.SPEC `inv Wbsm` (MATCH_MP EPS_TRANS_AUX (ASSUME ``EPS E' E1``)))
  >> ASSUME_TAC
       (REWRITE_RULE [INVERSE_REL]
-                    (ASSUME ``(inv (Wbsm :('a, 'b) simulation)) E1 E2'``))
+                    (ASSUME ``(inv (Wbsm :'a simulation)) E1 E2'``))
  >> Q.EXISTS_TAC `E2'` >> art []);
 
 (* Auxiliary result for WEAK_TRANS. *)
@@ -508,20 +509,20 @@ val WEAK_TRANS_AUX = store_thm (
  >> STRIP_ASSUME_TAC
        (MATCH_MP (MATCH_MP EPS_TRANS_AUX (ASSUME ``EPS E E1'``))
                  (CONJ (ASSUME ``WEAK_BISIM Wbsm``)
-                       (ASSUME ``(Wbsm: ('a, 'b) simulation) E E'``)))
+                       (ASSUME ``(Wbsm: 'a simulation) E E'``)))
  >> IMP_RES_TAC
        (MATCH_MP (EQ_MP (SPEC_ALL WEAK_BISIM) (ASSUME ``WEAK_BISIM Wbsm``))
-                 (ASSUME ``(Wbsm: ('a, 'b) simulation) E1' E2'``))
+                 (ASSUME ``(Wbsm: 'a simulation) E1' E2'``))
  >> STRIP_ASSUME_TAC
        (MATCH_MP (MATCH_MP EPS_TRANS_AUX (ASSUME ``EPS E2 E1``))
                  (CONJ (ASSUME ``WEAK_BISIM Wbsm``)
-                       (ASSUME ``(Wbsm: ('a, 'b) simulation) E2 E2''``)))
+                       (ASSUME ``(Wbsm: 'a simulation) E2 E2''``)))
  >> ASSUME_TAC
        (MATCH_MP EPS_WEAK_EPS
                  (LIST_CONJ [ASSUME ``EPS E' E2'``,
                              ASSUME ``WEAK_TRANS E2' (label l) E2''``,
                              ASSUME ``EPS E2'' E2'''``]))
- >> EXISTS_TAC ``E2''' :('a, 'b) CCS``
+ >> EXISTS_TAC ``E2''' :'a CCS``
  >> ASM_REWRITE_TAC []);
 
 (* Symmetric auxiliary result for WEAK_TRANS. *)
@@ -539,8 +540,8 @@ val WEAK_TRANS_AUX_SYM = store_thm (
               (MATCH_MP WEAK_TRANS_AUX (ASSUME ``WEAK_TRANS E' (label l) E1``)))
  >> ASSUME_TAC
       (REWRITE_RULE [INVERSE_REL]
-                    (ASSUME ``(inv (Wbsm: ('a, 'b) simulation)) E1 E2'``))
- >> EXISTS_TAC ``E2' :('a, 'b) CCS`` >> art []);
+                    (ASSUME ``(inv (Wbsm: 'a simulation)) E1 E2'``))
+ >> EXISTS_TAC ``E2' :'a CCS`` >> art []);
 
 (* The composition of two weak bisimulations is a weak bisimulation. *)
 Theorem COMP_WEAK_BISIM :
@@ -565,7 +566,7 @@ QED
    3. WEAK_EQUIV_coind is new (the co-inductive principle)
  *)
 CoInductive WEAK_EQUIV :
-    !(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
+    !(E :'a CCS) (E' :'a CCS).
        (!l.
          (!E1. TRANS E  (label l) E1 ==>
                ?E2. WEAK_TRANS E' (label l) E2 /\ WEAK_EQUIV E1 E2) /\
@@ -696,18 +697,18 @@ val WEAK_EQUIV_SUBST_PREFIX = store_thm (
    "WEAK_EQUIV_SUBST_PREFIX",
   ``!E E'. WEAK_EQUIV E E' ==> !u. WEAK_EQUIV (prefix u E) (prefix u E')``,
     REPEAT GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [SPECL [``prefix (u :'b Action) E``,
-                                  ``prefix (u :'b Action) E'``] WEAK_PROPERTY_STAR]
+ >> PURE_ONCE_REWRITE_TAC [SPECL [``prefix (u :'a Action) E``,
+                                  ``prefix (u :'a Action) E'``] WEAK_PROPERTY_STAR]
  >> REPEAT STRIP_TAC (* 4 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
       IMP_RES_TAC TRANS_PREFIX \\
       Q.EXISTS_TAC `E'` >> ASM_REWRITE_TAC [WEAK_TRANS] \\
-      EXISTS_TAC ``prefix (u :'b Action) E'`` \\
+      EXISTS_TAC ``prefix (u :'a Action) E'`` \\
       Q.EXISTS_TAC `E'` >> ASM_REWRITE_TAC [EPS_REFL, PREFIX],
       (* goal 2 (of 4) *)
       IMP_RES_TAC TRANS_PREFIX \\
       Q.EXISTS_TAC `E` >> ASM_REWRITE_TAC [WEAK_TRANS] \\
-      EXISTS_TAC ``prefix (u :'b Action) E`` \\
+      EXISTS_TAC ``prefix (u :'a Action) E`` \\
       Q.EXISTS_TAC `E` >> ASM_REWRITE_TAC [EPS_REFL, PREFIX],
       (* goal 3 (of 4) *)
       IMP_RES_TAC TRANS_PREFIX \\
@@ -722,7 +723,7 @@ val WEAK_EQUIV_SUBST_PREFIX = store_thm (
 val _ = hide "STABLE"; (* conflicted with sortingTheory *)
 
 val STABLE = new_definition ("STABLE",
-  ``STABLE (E :('a, 'b) CCS) = (!u E'. TRANS E u E' ==> ~(u = tau))``);
+  ``STABLE (E :'a CCS) = (!u E'. TRANS E u E' ==> ~(u = tau))``);
 
 (* Alternative definition using P, Q, p, q as process variables *)
 val STABLE' = store_thm (
@@ -742,23 +743,25 @@ val STABLE_cases = store_thm (
 
 (* Properties of stable agents with respect to the epsilon and weak transition
    relations. *)
-val EPS_STABLE = store_thm ("EPS_STABLE",
-  ``!E E'. EPS E E' ==> (STABLE E ==> (E' = E))``,
+Theorem EPS_STABLE :
+    !E E'. EPS E E' ==> (STABLE E ==> (E' = E))
+Proof
     EPS_INDUCT_TAC (* 3 sub-goals here *)
  >| [ (* goal 1 (of 3) *)
       REWRITE_TAC [STABLE] >> DISCH_TAC \\
       CHECK_ASSUME_TAC
         (REWRITE_RULE []
-         (MATCH_MP (ASSUME ``!(u: 'b Action) E'. TRANS E u E' ==> ~(u = tau)``)
+         (MATCH_MP (ASSUME ``!(u :'a Action) E'. TRANS E u E' ==> ~(u = tau)``)
                    (ASSUME ``TRANS E tau E'``))),
       (* goal 2 (of 3) *)
       REWRITE_TAC [],
       (* goal 3 (of 3) *)
       DISCH_TAC >> RES_TAC \\
       REWRITE_TAC
-        [MATCH_MP (REWRITE_RULE [ASSUME ``E1 = E: ('a, 'b) CCS``]
+        [MATCH_MP (REWRITE_RULE [ASSUME ``E1 = E: 'a CCS``]
                                 (ASSUME ``STABLE E1 ==> (E' = E1)``))
-                  (ASSUME ``STABLE E``)] ]);
+                  (ASSUME ``STABLE E``)] ]
+QED
 
 val EPS_STABLE' = store_thm (
    "EPS_STABLE'", ``!E E'. EPS E E' /\ STABLE E ==> (E' = E)``,
@@ -775,7 +778,7 @@ val WEAK_TRANS_STABLE = store_thm (
        (MATCH_MP
         (MATCH_MP EPS_STABLE (ASSUME ``EPS E E1``))
         (ASSUME ``STABLE E``))
- >> ASSUME_TAC (REWRITE_RULE [ASSUME ``E1 = E: ('a, 'b) CCS``]
+ >> ASSUME_TAC (REWRITE_RULE [ASSUME ``E1 = E: 'a CCS``]
                              (ASSUME ``TRANS E1 (label l) E2``))
  >> Q.EXISTS_TAC `E2`
  >> ASM_REWRITE_TAC []);
@@ -1217,7 +1220,7 @@ val WEAK_EQUIV_PRESD_BY_PAR = store_thm (
                                         (ASSUME ``EPS E2'''''' E2''''``))] \\
             MATCH_MP_TAC ONE_TAU \\
             MATCH_MP_TAC PAR3 \\
-            EXISTS_TAC ``l: 'b Label`` \\
+            EXISTS_TAC ``l :'a Label`` \\
             ASM_REWRITE_TAC [],
             (* goal 3.3.2 (of 2) *)
             take [`E1'''`, `E2'''`, `E2''`, `E2''''`] \\
@@ -1273,7 +1276,7 @@ val WEAK_EQUIV_PRESD_BY_PAR = store_thm (
                                         (ASSUME ``EPS E2''''' E1''''``))] \\
             MATCH_MP_TAC ONE_TAU \\
             MATCH_MP_TAC PAR3 \\
-            EXISTS_TAC ``l: 'b Label`` \\
+            EXISTS_TAC ``l :'a Label`` \\
             ASM_REWRITE_TAC [],
             (* goal 4.3.2 (of 2) *)
             take [`E1'''`, `E1''`, `E1''''`, `E2'''`] \\
@@ -1313,7 +1316,7 @@ val EPS_RESTR = store_thm (
       IMP_RES_TAC
         (REWRITE_RULE [] (Q.SPECL [`E`, `tau`, `E'`] RESTR)) \\
       ASSUME_TAC
-        (Q.SPEC `L` (ASSUME ``!L :('b Label) set.
+        (Q.SPEC `L` (ASSUME ``!L :'a Label set.
                                 TRANS (restr L E) tau (restr L E')``)) \\
       IMP_RES_TAC ONE_TAU,
       (* goal 2 (of 3) *)
@@ -1321,26 +1324,26 @@ val EPS_RESTR = store_thm (
       (* goal 3 (of 3) *)
       GEN_TAC \\
       ASSUME_TAC
-        (Q.SPEC `L` (ASSUME ``!L :('b Label) set. EPS (restr L E) (restr L E1)``)) \\
+        (Q.SPEC `L` (ASSUME ``!L :'a Label set. EPS (restr L E) (restr L E1)``)) \\
       ASSUME_TAC
-        (Q.SPEC `L` (ASSUME ``!L :('b Label) set. EPS (restr L E1) (restr L E')``)) \\
+        (Q.SPEC `L` (ASSUME ``!L :'a Label set. EPS (restr L E1) (restr L E')``)) \\
       IMP_RES_TAC EPS_TRANS ]);
 
 (* The relation WEAK_TRANS is preserved by the restriction operator. *)
 val WEAK_RESTR_label = store_thm (
    "WEAK_RESTR_label",
-      ``!(l :'b Label) L E E'.
+      ``!(l :'a Label) L E E'.
          ~(l IN L) /\ ~((COMPL l) IN L) /\ WEAK_TRANS E (label l) E' ==>
           WEAK_TRANS (restr L E) (label l) (restr L E')``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [WEAK_TRANS]
  >> STRIP_TAC
- >> EXISTS_TAC ``restr (L :'b Label set) E1``
- >> EXISTS_TAC ``restr (L :'b Label set) E2``
+ >> EXISTS_TAC ``restr (L :'a Label set) E1``
+ >> EXISTS_TAC ``restr (L :'a Label set) E2``
  >> IMP_RES_TAC EPS_RESTR
  >> ASM_REWRITE_TAC []
  >> MATCH_MP_TAC RESTR
- >> EXISTS_TAC ``l: 'b Label``
+ >> EXISTS_TAC ``l :'a Label``
  >> ASM_REWRITE_TAC []);
 
 val WEAK_RESTR_tau = store_thm (
@@ -1351,8 +1354,8 @@ val WEAK_RESTR_tau = store_thm (
  >> PURE_ONCE_REWRITE_TAC [WEAK_TRANS]
  >> STRIP_TAC
  >> GEN_TAC
- >> EXISTS_TAC ``restr (L :'b Label set) E1``
- >> EXISTS_TAC ``restr (L :'b Label set) E2``
+ >> EXISTS_TAC ``restr (L :'a Label set) E1``
+ >> EXISTS_TAC ``restr (L :'a Label set) E2``
  >> IMP_RES_TAC EPS_RESTR
  >> ASM_REWRITE_TAC []
  >> MATCH_MP_TAC RESTR
@@ -1384,12 +1387,12 @@ val WEAK_EQUIV_SUBST_RESTR = store_thm (
           IMP_RES_TAC
               (CONJUNCT1 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
                                             (ASSUME ``WEAK_EQUIV E1 E2``))) \\
-          EXISTS_TAC ``restr (L' :'b Label set) E2'`` \\
+          EXISTS_TAC ``restr (L' :'a Label set) E2'`` \\
           ASM_REWRITE_TAC
             [MATCH_MP WEAK_RESTR_label
-                      (LIST_CONJ [ASSUME ``~((l': 'b Label) IN L')``,
-                                  ASSUME ``~((COMPL (l': 'b Label)) IN L')``,
-                                  REWRITE_RULE [ASSUME ``label (l :'b Label) = label l'``]
+                      (LIST_CONJ [ASSUME ``~((l' :'a Label) IN L')``,
+                                  ASSUME ``~((COMPL (l' :'a Label)) IN L')``,
+                                  REWRITE_RULE [ASSUME ``label (l :'a Label) = label l'``]
                                                (ASSUME ``WEAK_TRANS E2 (label l) E2'``)])] \\
           take [`E''''`, `E2'`, `L'`] >> ASM_REWRITE_TAC [] ],
         (* goal 2.2 (of 4) *)
@@ -1402,12 +1405,12 @@ val WEAK_EQUIV_SUBST_RESTR = store_thm (
           IMP_RES_TAC
               (CONJUNCT1 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
                                             (ASSUME ``WEAK_EQUIV E1 E2``))) \\
-          EXISTS_TAC ``restr (L' :'b Label set) E1'`` \\
+          EXISTS_TAC ``restr (L' :'a Label set) E1'`` \\
           ASM_REWRITE_TAC
             [MATCH_MP WEAK_RESTR_label
-                      (LIST_CONJ [ASSUME ``~((l': 'b Label) IN L')``,
-                                  ASSUME ``~((COMPL (l': 'b Label)) IN L')``,
-                                  REWRITE_RULE [ASSUME ``label (l :'b Label) = label l'``]
+                      (LIST_CONJ [ASSUME ``~((l' :'a Label) IN L')``,
+                                  ASSUME ``~((COMPL (l' :'a Label)) IN L')``,
+                                  REWRITE_RULE [ASSUME ``label (l :'a Label) = label l'``]
                                                (ASSUME ``WEAK_TRANS E1 (label l) E1'``)])] \\
           take [`E1'`, `E''''`, `L'`] >> ASM_REWRITE_TAC [] ],
         (* goal 2.3 (of 4) *)
@@ -1418,7 +1421,7 @@ val WEAK_EQUIV_SUBST_RESTR = store_thm (
           IMP_RES_TAC
               (CONJUNCT2 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
                                             (ASSUME ``WEAK_EQUIV E1 E2``))) \\
-          EXISTS_TAC ``restr (L' :'b Label set) E2'`` \\
+          EXISTS_TAC ``restr (L' :'a Label set) E2'`` \\
           IMP_RES_TAC EPS_RESTR >> ASM_REWRITE_TAC [] \\
           take [`E''''`, `E2'`, `L'`] >> ASM_REWRITE_TAC [],
           (* goal 2.3.2 (of 2) *)
@@ -1431,7 +1434,7 @@ val WEAK_EQUIV_SUBST_RESTR = store_thm (
           IMP_RES_TAC
               (CONJUNCT2 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
                                             (ASSUME ``WEAK_EQUIV E1 E2``))) \\
-          EXISTS_TAC ``restr (L' :'b Label set) E1'`` \\
+          EXISTS_TAC ``restr (L' :'a Label set) E1'`` \\
           IMP_RES_TAC EPS_RESTR >> ASM_REWRITE_TAC [] \\
           take [`E1'`, `E''''`, `L'`] >> ASM_REWRITE_TAC [],
           (* goal 2.4.2 (of 2) *)
@@ -1448,25 +1451,25 @@ val EPS_RELAB = store_thm ("EPS_RELAB",
         (REWRITE_RULE [relabel_def]
                       (Q.SPECL [`E`, `tau`, `E'`] RELABELING)) \\
       ASSUME_TAC
-        (SPEC ``RELAB (labl :('b Label # 'b Label) list)``
-         (ASSUME ``!rf :'b Relabeling.
+        (SPEC ``RELAB (labl :('a Label # 'a Label) list)``
+         (ASSUME ``!rf :'a Relabeling.
                    TRANS (relab E rf) tau (relab E' rf)``)) \\
       IMP_RES_TAC ONE_TAU,
       (* goal 2 (of 3) *)
       REWRITE_TAC [EPS_REFL],
       (* goal 3 (of 3) *)
       GEN_TAC \\
-      PAT_X_ASSUM ``!labl :('b Label # 'b Label) list.
+      PAT_X_ASSUM ``!labl :('a Label # 'a Label) list.
                      EPS (relab E (RELAB labl)) (relab E1 (RELAB labl))``
-                  (ASSUME_TAC o (SPEC ``labl :('b Label # 'b Label) list``)) \\
-      PAT_X_ASSUM ``!labl :('b Label # 'b Label) list.
+                  (ASSUME_TAC o (SPEC ``labl :('a Label # 'a Label) list``)) \\
+      PAT_X_ASSUM ``!labl :('a Label # 'a Label) list.
                      EPS (relab E1 (RELAB labl)) (relab E' (RELAB labl))``
-                  (ASSUME_TAC o (SPEC ``labl :('b Label # 'b Label) list``)) \\
+                  (ASSUME_TAC o (SPEC ``labl :('a Label # 'a Label) list``)) \\
       IMP_RES_TAC EPS_TRANS ]);
 
 val EPS_RELAB_rf = store_thm (
    "EPS_RELAB_rf",
-  ``!E E'. EPS E E' ==> !(rf :'b Relabeling). EPS (relab E rf) (relab E' rf)``,
+  ``!E E'. EPS E E' ==> !(rf :'a Relabeling). EPS (relab E rf) (relab E' rf)``,
     EPS_INDUCT_TAC (* 3 sub-goals here *)
  >| [ (* goal 1 (of 3) *)
       GEN_TAC \\
@@ -1475,16 +1478,16 @@ val EPS_RELAB_rf = store_thm (
                       (Q.SPECL [`E`, `tau`, `E'`] RELABELING)) \\
       ASSUME_TAC
         (Q.SPEC `rf`
-         (ASSUME ``!rf :'b Relabeling.
+         (ASSUME ``!rf :'a Relabeling.
                    TRANS (relab E rf) tau (relab E' rf)``)) \\
       IMP_RES_TAC ONE_TAU,
       (* goal 2 (of 3) *)
       REWRITE_TAC [EPS_REFL],
       (* goal 3 (of 3) *)
       GEN_TAC \\
-      PAT_X_ASSUM ``!rf :'b Relabeling. EPS (relab E rf) (relab E1 rf)``
+      PAT_X_ASSUM ``!rf :'a Relabeling. EPS (relab E rf) (relab E1 rf)``
                   (ASSUME_TAC o (Q.SPEC `rf`)) \\
-      PAT_X_ASSUM ``!rf :'b Relabeling. EPS (relab E1 rf) (relab E' rf)``
+      PAT_X_ASSUM ``!rf :'a Relabeling. EPS (relab E1 rf) (relab E' rf)``
                   (ASSUME_TAC o (Q.SPEC `rf`)) \\
       IMP_RES_TAC EPS_TRANS ]);
 
@@ -1492,7 +1495,7 @@ val EPS_RELAB_rf = store_thm (
 val WEAK_RELAB = store_thm ("WEAK_RELAB",
   ``!E u E'.
        WEAK_TRANS E u E' ==>
-        !(labl :('b Label # 'b Label) list).
+        !(labl :('a Label # 'a Label) list).
           WEAK_TRANS (relab E (RELAB labl))
                      (relabel (RELAB labl) u)
                      (relab E' (RELAB labl))``,
@@ -1510,7 +1513,7 @@ val WEAK_RELAB_rf = store_thm (
    "WEAK_RELAB_rf",
   ``!E u E'.
        WEAK_TRANS E u E' ==>
-        !(rf :'b Relabeling). WEAK_TRANS (relab E rf) (relabel rf u) (relab E' rf)``,
+        !(rf :'a Relabeling). WEAK_TRANS (relab E rf) (relabel rf u) (relab E' rf)``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [WEAK_TRANS]
  >> REPEAT STRIP_TAC
@@ -1541,9 +1544,9 @@ val WEAK_EQUIV_SUBST_RELAB = store_thm (
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E'' = relab E1 rf'``]
                                  (ASSUME ``TRANS E'' (label l) E1'``)) \\
         IMP_RES_TAC TRANS_RELAB \\
-        PAT_X_ASSUM ``label (l :'b Label) = relabel rf' u'`` (ASSUME_TAC o SYM) \\
+        PAT_X_ASSUM ``label (l :'a Label) = relabel rf' u'`` (ASSUME_TAC o SYM) \\
         IMP_RES_TAC Relab_label \\
-        ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = label l'``]
+        ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'a Action) = label l'``]
                                  (ASSUME ``TRANS E1 u' E''''``)) \\
         IMP_RES_TAC (CONJUNCT1 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
                                                   (ASSUME ``WEAK_EQUIV E1 E2``))) \\
@@ -1559,9 +1562,9 @@ val WEAK_EQUIV_SUBST_RELAB = store_thm (
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E''' = relab E2 rf'``]
                                  (ASSUME ``TRANS E''' (label l) E2'``)) \\
         IMP_RES_TAC TRANS_RELAB \\
-        PAT_X_ASSUM ``label (l :'b Label) = relabel rf' u'`` (ASSUME_TAC o SYM) \\
+        PAT_X_ASSUM ``label (l :'a Label) = relabel rf' u'`` (ASSUME_TAC o SYM) \\
         IMP_RES_TAC Relab_label \\
-        ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = label l'``]
+        ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'a Action) = label l'``]
                                  (ASSUME ``TRANS E2 u' E''''``)) \\
         IMP_RES_TAC (CONJUNCT1 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
                                                   (ASSUME ``WEAK_EQUIV E1 E2``))) \\
@@ -1577,9 +1580,9 @@ val WEAK_EQUIV_SUBST_RELAB = store_thm (
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E'' = relab E1 rf'``]
                                  (ASSUME ``TRANS E'' tau E1'``)) \\
         IMP_RES_TAC TRANS_RELAB \\
-        PAT_X_ASSUM ``(tau :'b Action) = relabel rf' u'`` (ASSUME_TAC o SYM) \\
+        PAT_X_ASSUM ``(tau :'a Action) = relabel rf' u'`` (ASSUME_TAC o SYM) \\
         IMP_RES_TAC Relab_tau \\
-        ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = tau``]
+        ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'a Action) = tau``]
                                  (ASSUME ``TRANS E1 u' E''''``)) \\
         IMP_RES_TAC (CONJUNCT2 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
                                                   (ASSUME ``WEAK_EQUIV E1 E2``))) \\
@@ -1595,9 +1598,9 @@ val WEAK_EQUIV_SUBST_RELAB = store_thm (
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E''' = relab E2 rf'``]
                                  (ASSUME ``TRANS E''' tau E2'``)) \\
         IMP_RES_TAC TRANS_RELAB \\
-        PAT_X_ASSUM ``(tau :'b Action) = relabel rf' u'`` (ASSUME_TAC o SYM) \\
+        PAT_X_ASSUM ``(tau :'a Action) = relabel rf' u'`` (ASSUME_TAC o SYM) \\
         IMP_RES_TAC Relab_tau \\
-        ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = tau``]
+        ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'a Action) = tau``]
                                  (ASSUME ``TRANS E2 u' E''''``)) \\
         IMP_RES_TAC (CONJUNCT2 (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR]
                                                   (ASSUME ``WEAK_EQUIV E1 E2``))) \\

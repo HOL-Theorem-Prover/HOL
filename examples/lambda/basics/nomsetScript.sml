@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib BasicProvers boolSimps
 
 local open stringTheory in end;
 
-open pred_setTheory
+open pred_setTheory listTheory finite_mapTheory;
 
 open basic_swapTheory NEWLib
 
@@ -75,14 +75,14 @@ val permof_inverse_lemma = prove(
 val permof_inverse = store_thm(
   "permof_inverse",
  ``(p ++ REVERSE p == []) /\ (REVERSE p ++ p == [])``,
-  METIS_TAC [permof_inverse_lemma, listTheory.REVERSE_REVERSE]);
+  METIS_TAC [permof_inverse_lemma, REVERSE_REVERSE]);
 
 val permof_inverse_append = store_thm (
   "permof_inverse_append",
   ``(p ++ q) ++ REVERSE q == p ∧ (p ++ REVERSE q) ++ q == p``,
-  SIMP_TAC bool_ss [GSYM listTheory.APPEND_ASSOC] THEN
+  SIMP_TAC bool_ss [GSYM APPEND_ASSOC] THEN
   CONJ_TAC THEN
-  SIMP_TAC bool_ss [Once (GSYM listTheory.APPEND_NIL), SimpR ``(==)``] THEN
+  SIMP_TAC bool_ss [Once (GSYM APPEND_NIL), SimpR ``(==)``] THEN
   MATCH_MP_TAC app_permeq_monotone THEN SRW_TAC [][permof_inverse]);
 
 val permof_inverse_applied = raw_lswapstr_inverse
@@ -112,9 +112,9 @@ val permof_REVERSE_monotone = store_thm(
   `REVERSE x ++ y == []`
     by METIS_TAC [permof_inverse, permeq_trans, permeq_sym] THEN
   `REVERSE x ++ (y ++ REVERSE y) == REVERSE y`
-    by METIS_TAC [listTheory.APPEND, listTheory.APPEND_ASSOC,
+    by METIS_TAC [APPEND, APPEND_ASSOC,
                   app_permeq_monotone, permeq_refl] THEN
-  METIS_TAC [permof_inverse, listTheory.APPEND_NIL,
+  METIS_TAC [permof_inverse, APPEND_NIL,
              app_permeq_monotone, permeq_refl, permeq_trans, permeq_sym]);
 
 val permeq_cons_monotone = store_thm(
@@ -138,11 +138,11 @@ val app_permeq_left_cancel = store_thm(
   REPEAT STRIP_TAC THEN
   `REVERSE p1 == REVERSE p1'` by METIS_TAC [permof_REVERSE_monotone] THEN
   `(REVERSE p1) ++ p1 ++ p2 == (REVERSE p1') ++ p1' ++ p2'`
-    by (METIS_TAC [app_permeq_monotone, listTheory.APPEND_ASSOC]) THEN
+    by (METIS_TAC [app_permeq_monotone, APPEND_ASSOC]) THEN
   `[] ++ p2 == (REVERSE p1) ++ p1 ++ p2 /\
    [] ++ p2' == (REVERSE p1') ++ p1' ++ p2'`
     by (METIS_TAC [app_permeq_monotone, permeq_refl, permeq_sym, permof_inverse]) THEN
-  METIS_TAC [listTheory.APPEND, permeq_refl, permeq_sym, permeq_trans]);
+  METIS_TAC [APPEND, permeq_refl, permeq_sym, permeq_trans]);
 
 val app_permeq_right_cancel = store_thm(
   "app_permeq_right_cancel",
@@ -150,11 +150,11 @@ val app_permeq_right_cancel = store_thm(
   REPEAT STRIP_TAC THEN
   `REVERSE p1 == REVERSE p1'` by METIS_TAC [permof_REVERSE_monotone] THEN
   `p2 ++ (p1 ++ (REVERSE p1)) == p2' ++ (p1' ++ (REVERSE p1'))`
-    by (METIS_TAC [app_permeq_monotone, listTheory.APPEND_ASSOC]) THEN
+    by (METIS_TAC [app_permeq_monotone, APPEND_ASSOC]) THEN
   `p2 ++ [] == p2 ++ (p1 ++ (REVERSE p1)) /\
    p2' ++ [] == p2' ++ (p1' ++ (REVERSE p1'))`
     by (METIS_TAC [app_permeq_monotone, permeq_refl, permeq_sym, permof_inverse]) THEN
-  METIS_TAC [listTheory.APPEND_NIL, permeq_refl, permeq_trans, permeq_sym]);
+  METIS_TAC [APPEND_NIL, permeq_refl, permeq_trans, permeq_sym]);
 
 (* ----------------------------------------------------------------------
     Define what it is to be a permutation action on a type
@@ -235,7 +235,7 @@ val pmact_inverse = Store_thm(
 val pmact_sing_inv = Store_thm(
   "pmact_sing_inv",
   ``pmact pm [h] (pmact pm [h] x) = x``,
-  METIS_TAC [listTheory.REVERSE_DEF, listTheory.APPEND, pmact_inverse]);
+  METIS_TAC [REVERSE_DEF, APPEND, pmact_inverse]);
 
 val pmact_eql = store_thm(
   "pmact_eql",
@@ -346,7 +346,7 @@ val fnpm_raw = store_thm(
 "fnpm_raw",
 ``fnpm dpm rpm = raw_fnpm dpm rpm``,
 srw_tac [][GSYM pmact_bijections] >>
-SRW_TAC [][is_pmact_def, FUN_EQ_THM, listTheory.REVERSE_APPEND, pmact_decompose] THEN
+SRW_TAC [][is_pmact_def, FUN_EQ_THM, REVERSE_APPEND, pmact_decompose] THEN
 METIS_TAC [permof_REVERSE_monotone,pmact_permeq]);
 
 val fnpm_def = save_thm(
@@ -585,7 +585,7 @@ val pmact_support = store_thm(
     `pmact pm ([(stringpm π a, stringpm π b)] ++ π) x = pmact pm π x`
        by METIS_TAC [pmact_decompose] THEN
     `[(stringpm π a, stringpm π b)] ++ π == π ++ [(a,b)]`
-       by METIS_TAC [permeq_swap_ends, permeq_sym, listTheory.APPEND] THEN
+       by METIS_TAC [permeq_swap_ends, permeq_sym, APPEND] THEN
     `pmact pm (π ++ [(a,b)]) x = pmact pm π x`
        by METIS_TAC [pmact_permeq] THEN
     METIS_TAC [pmact_injective, pmact_decompose],
@@ -623,7 +623,7 @@ val support_dwards_directed = store_thm(
   `pmact pm [(x,y)] e = pmact pm [(x,z); (y,z); (x,z)] e`
      by METIS_TAC [pmact_permeq] THEN
   ` _ = pmact pm [(x,z)] (pmact pm [(y,z)] (pmact pm [(x,z)] e))`
-     by METIS_TAC [pmact_decompose, listTheory.APPEND] THEN
+     by METIS_TAC [pmact_decompose, APPEND] THEN
   METIS_TAC [IN_INTER]);
 
 val supp_def = Define`
@@ -670,7 +670,7 @@ val perm_supp = store_thm(
   `!e x y. pmact pm (REVERSE p) (pmact pm [(x,y)] e) =
            pmact pm [(stringpm (REVERSE p) x, stringpm (REVERSE p) y)]
               (pmact pm (REVERSE p) e)`
-      by METIS_TAC [stringpm_raw, pmact_decompose, pmact_permeq, permeq_swap_ends, listTheory.APPEND] THEN
+      by METIS_TAC [stringpm_raw, pmact_decompose, pmact_permeq, permeq_swap_ends, APPEND] THEN
   SRW_TAC [][pmact_inverse] THEN
   Q.MATCH_ABBREV_TAC `FINITE s1 = FINITE s2` THEN
   `s1 = { b | (\s. ~(x = pmact pm [(stringpm (REVERSE p) a, s)] x))
@@ -872,7 +872,7 @@ val pm_cpmpm_cancel = prove(
   POP_ASSUM (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
   ONCE_REWRITE_TAC [GSYM pmact_sing_to_back] THEN
   fsrw_tac [][GSYM pmact_decompose] >>
-  metis_tac [pmact_decompose,listTheory.APPEND]);
+  metis_tac [pmact_decompose, APPEND]);
 
 val pmact_supp_empty = store_thm(
   "pmact_supp_empty",
@@ -957,10 +957,9 @@ val supp_perm_of = store_thm(
        by (POP_ASSUM (ASSUME_TAC o SIMP_RULE (srw_ss()) [fnpm_def]) THEN
            SRW_TAC [][permeq_thm, pmact_decompose, GSYM swapstr_eq_left]) THEN
     `(x,y) :: p == (lswapstr p x, lswapstr p y) :: p`
-       by METIS_TAC [permeq_swap_ends, permeq_trans, permeq_sym,
-                     listTheory.APPEND] THEN
+       by METIS_TAC [permeq_swap_ends, permeq_trans, permeq_sym, APPEND] THEN
     `(x,y) :: (p ++ p⁻¹) == (lswapstr p x, lswapstr p y) :: (p ++ p⁻¹)`
-       by METIS_TAC [app_permeq_monotone, listTheory.APPEND, permeq_refl] THEN
+       by METIS_TAC [app_permeq_monotone, APPEND, permeq_refl] THEN
     `!h. [h] == h :: (p ++ p⁻¹)`
        by METIS_TAC [permeq_cons_monotone, permof_inverse, permeq_sym] THEN
     `[(x,y)] == [(lswapstr p x, lswapstr p y)]`
@@ -998,7 +997,6 @@ val notinsupp_fnapp = store_thm(
     v ∉ supp rpm (f x)``,
   prove_tac [supp_fnapp, SUBSET_DEF, IN_UNION]);
 
-open finite_mapTheory
 val raw_fmpm_def = Define`
   raw_fmpm (dpm : 'd pmact) (rpm : 'r pmact) pi fmap =
     pmact rpm pi o_f fmap f_o pmact dpm (REVERSE pi)
@@ -1030,7 +1028,7 @@ val fmpm_def = store_thm(
      (!r pi1 pi2. pmact rpm (pi1 ++ pi2) r = pmact rpm pi1 (pmact rpm pi2 r))`
       by METIS_TAC [pmact_decompose] THEN
     SRW_TAC [][fmap_EXT, FDOM_f_o, lemma, o_f_FAPPLY,
-               listTheory.REVERSE_APPEND, FAPPLY_f_o],
+               REVERSE_APPEND, FAPPLY_f_o],
 
     `REVERSE p1 == REVERSE p2` by METIS_TAC [permof_REVERSE_monotone] THEN
     `(pmact rpm p1 = pmact rpm p2) ∧ (pmact dpm (REVERSE p1) = pmact dpm (REVERSE p2))`

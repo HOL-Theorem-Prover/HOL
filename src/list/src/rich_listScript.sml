@@ -3533,6 +3533,71 @@ in
    val _ = overload_on("MEM", mem_t)
 end
 
+(* moved here from examples/CCS/CCSScript.sml, originally by Chun Tian *)
+Definition DELETE_ELEMENT :
+    (DELETE_ELEMENT e [] = []) /\
+    (DELETE_ELEMENT e (x :: l) = if (e = x) then DELETE_ELEMENT e l
+                                 else x :: DELETE_ELEMENT e l)
+End
+
+Theorem NOT_IN_DELETE_ELEMENT :
+    !e L. ~MEM e (DELETE_ELEMENT e L)
+Proof
+    GEN_TAC >> Induct_on `L`
+ >- REWRITE_TAC [DELETE_ELEMENT, MEM]
+ >> GEN_TAC >> REWRITE_TAC [DELETE_ELEMENT]
+ >> Cases_on `e = h` >> fs []
+QED
+
+Theorem DELETE_ELEMENT_FILTER :
+    !e L. DELETE_ELEMENT e L = FILTER ((<>) e) L
+Proof
+    GEN_TAC >> Induct_on `L`
+ >- REWRITE_TAC [DELETE_ELEMENT, FILTER]
+ >> GEN_TAC >> REWRITE_TAC [DELETE_ELEMENT, FILTER]
+ >> Cases_on `e = h` >> fs []
+QED
+
+Theorem LENGTH_DELETE_ELEMENT_LEQ :
+    !e L. LENGTH (DELETE_ELEMENT e L) <= LENGTH L
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [DELETE_ELEMENT_FILTER]
+ >> MP_TAC (Q.SPECL [`\y. e <> y`, `\y. T`] LENGTH_FILTER_LEQ_MONO)
+ >> BETA_TAC >> simp []
+QED
+
+fun K_TAC _ = ALL_TAC;
+val KILL_TAC = POP_ASSUM_LIST K_TAC;
+
+Theorem LENGTH_DELETE_ELEMENT_LE :
+    !e L. MEM e L ==> LENGTH (DELETE_ELEMENT e L) < LENGTH L
+Proof
+    rpt GEN_TAC >> Induct_on `L`
+ >- REWRITE_TAC [MEM]
+ >> GEN_TAC >> REWRITE_TAC [MEM, DELETE_ELEMENT]
+ >> Cases_on `e = h` >> fs []
+ >> MP_TAC (Q.SPECL [`h`, `L`] LENGTH_DELETE_ELEMENT_LEQ)
+ >> KILL_TAC >> RW_TAC arith_ss []
+QED
+
+Theorem EVERY_DELETE_ELEMENT :
+    !e L P. P e /\ EVERY P (DELETE_ELEMENT e L) ==> EVERY P L
+Proof
+    GEN_TAC >> Induct_on `L`
+ >- RW_TAC std_ss [DELETE_ELEMENT]
+ >> rpt GEN_TAC >> REWRITE_TAC [DELETE_ELEMENT]
+ >> Cases_on `e = h` >> fs []
+QED
+
+Theorem DELETE_ELEMENT_APPEND :
+    !a L L'. DELETE_ELEMENT a (L ++ L') =
+             DELETE_ELEMENT a L ++ DELETE_ELEMENT a L'
+Proof
+    REWRITE_TAC [DELETE_ELEMENT_FILTER]
+ >> REWRITE_TAC [GSYM FILTER_APPEND_DISTRIB]
+QED
+
 (* ------------------------------------------------------------------------ *)
 
 local

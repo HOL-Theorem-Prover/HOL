@@ -9,6 +9,7 @@ struct
 open HolKernel Parse boolLib bossLib;
 open prim_recTheory arithmeticTheory numTheory numLib;
 open PFset_conv IndDefRules listSyntax stringLib;
+
 open CCSLib CCSTheory CCSSyntax CCSConv;
 open StrongEQTheory StrongEQLib StrongLawsTheory;
 

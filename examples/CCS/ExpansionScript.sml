@@ -11,10 +11,9 @@
 open HolKernel Parse boolLib bossLib;
 
 open relationTheory listTheory;
-open CCSLib CCSTheory;
-open StrongEQTheory StrongLawsTheory;
-open WeakEQTheory WeakLawsTheory;
-open CongruenceTheory TraceTheory;
+
+open CCSLib CCSTheory StrongEQTheory StrongLawsTheory;
+open WeakEQTheory WeakLawsTheory CongruenceTheory TraceTheory;
 
 val _ = new_theory "Expansion";
 val _ = temp_loose_equality ();
@@ -27,8 +26,8 @@ val _ = temp_loose_equality ();
 
 (* The definitin is confirmed with [1], [2] and [3] *)
 val EXPANSION = new_definition ("EXPANSION",
-  ``EXPANSION (Exp: ('a, 'b) simulation) =
-    !(E :('a, 'b) CCS) (E' :('a, 'b) CCS). Exp E E' ==>
+  ``EXPANSION (Exp: 'a simulation) =
+    !(E :'a CCS) (E' :'a CCS). Exp E E' ==>
        (!l.
          (!E1. TRANS E  (label l) E1 ==>
                 ?E2. TRANS E' (label l) E2 /\ Exp E1 E2) /\
@@ -40,8 +39,8 @@ val EXPANSION = new_definition ("EXPANSION",
 (* alternative definition *)
 val EXPANSION_ALT = store_thm (
    "EXPANSION_ALT",
-  ``EXPANSION (Exp: ('a, 'b) simulation) =
-    !(E :('a, 'b) CCS) (E' :('a, 'b) CCS). Exp E E' ==>
+  ``EXPANSION (Exp: 'a simulation) =
+    !(E :'a CCS) (E' :'a CCS). Exp E E' ==>
        (!l E1. TRANS E (label l) E1 ==> ?E2. TRANS E' (label l) E2 /\ Exp E1 E2) /\
        (!  E1. TRANS E    tau    E1 ==> Exp E1 E' \/ ?E2. TRANS E' tau E2 /\ Exp E1 E2) /\
        (!u E2. TRANS E'     u    E2 ==> ?E1. WEAK_TRANS E u E1 /\ Exp E1 E2)``,
@@ -79,7 +78,7 @@ val IDENTITY_EXPANSION = store_thm (
 
 val EXPANSION_EPS = store_thm (
    "EXPANSION_EPS",
-  ``!(Exp: ('a, 'b) simulation). EXPANSION Exp ==>
+  ``!(Exp: 'a simulation). EXPANSION Exp ==>
      !E E'. Exp E E' ==> !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ Exp E1 E2``,
     REPEAT STRIP_TAC
  >> qpat_x_assum `Exp E E'` MP_TAC
@@ -94,7 +93,7 @@ val EXPANSION_EPS = store_thm (
       RES_TAC \\
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [EXPANSION] (ASSUME ``EXPANSION Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E1 E2``))
+                  (ASSUME ``(Exp :'a simulation) E1 E2``))
       >- ( Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ) \\
       Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC ONE_TAU \\
@@ -102,7 +101,7 @@ val EXPANSION_EPS = store_thm (
 
 val EXPANSION_EPS' = store_thm (
    "EXPANSION_EPS'",
-  ``!(Exp: ('a, 'b) simulation). EXPANSION Exp ==>
+  ``!(Exp: 'a simulation). EXPANSION Exp ==>
      !E E'. Exp E E' ==> !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ Exp E1 E2``,
     REPEAT STRIP_TAC
  >> qpat_x_assum `Exp E E'` MP_TAC
@@ -117,7 +116,7 @@ val EXPANSION_EPS' = store_thm (
       RES_TAC \\
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E1 E2``)) \\
+                  (ASSUME ``(Exp :'a simulation) E1 E2``)) \\
       `WEAK_TRANS E tau E1'` by PROVE_TAC [EPS_AND_WEAK_TRANS] \\
       `EPS E E1'` by PROVE_TAC [WEAK_TRANS_IMP_EPS] \\
       Q.EXISTS_TAC `E1'` >> ASM_REWRITE_TAC [] ]);
@@ -125,20 +124,20 @@ val EXPANSION_EPS' = store_thm (
 (* NOTE: EXPANSION_WEAK_TRANS doens't hold *)
 val EXPANSION_WEAK_TRANS' = store_thm (
    "EXPANSION_WEAK_TRANS'",
-  ``!(Exp: ('a, 'b) simulation). EXPANSION Exp ==>
+  ``!(Exp: 'a simulation). EXPANSION Exp ==>
      !E E'. Exp E E' ==>
         !u E2. WEAK_TRANS E' u E2 ==> ?E1. WEAK_TRANS E u E1 /\ Exp E1 E2``,
     REPEAT STRIP_TAC
  >> IMP_RES_TAC WEAK_TRANS
  >> IMP_RES_TAC
       (MATCH_MP (MATCH_MP EXPANSION_EPS' (ASSUME ``EXPANSION Exp``))
-                (ASSUME ``(Exp :('a, 'b) simulation) E E'``))
+                (ASSUME ``(Exp :'a simulation) E E'``))
  >> IMP_RES_TAC
       (MATCH_MP (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp``))
-                (ASSUME ``(Exp :('a, 'b) simulation) E1' E1``))
+                (ASSUME ``(Exp :'a simulation) E1' E1``))
  >> IMP_RES_TAC
       (MATCH_MP (MATCH_MP EXPANSION_EPS' (ASSUME ``EXPANSION Exp``))
-                (ASSUME ``(Exp :('a, 'b) simulation) E1'' E2'``))
+                (ASSUME ``(Exp :'a simulation) E1'' E2'``))
  >> Q.EXISTS_TAC `E1'''`
  >> ASM_REWRITE_TAC []
  >> MATCH_MP_TAC EPS_WEAK_EPS
@@ -157,33 +156,33 @@ val COMP_EXPANSION = store_thm (
       IMP_RES_TAC
         (MATCH_MP
           (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp1``))
-          (ASSUME ``(Exp1 :('a, 'b) simulation) E y``)) \\
+          (ASSUME ``(Exp1 :'a simulation) E y``)) \\
       IMP_RES_TAC
         (MATCH_MP
           (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp2``))
-          (ASSUME ``(Exp2 :('a, 'b) simulation) y E'``)) \\
+          (ASSUME ``(Exp2 :'a simulation) y E'``)) \\
       Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
       (* goal 2 (of 3) *)
       IMP_RES_TAC
         (MATCH_MP
           (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp1``))
-          (ASSUME ``(Exp1 :('a, 'b) simulation) E y``)) (* 2 sub-goals here *)
+          (ASSUME ``(Exp1 :'a simulation) E y``)) (* 2 sub-goals here *)
       >- ( DISJ1_TAC >> Q.EXISTS_TAC `y` >> ASM_REWRITE_TAC [] ) \\
       IMP_RES_TAC
         (MATCH_MP
           (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp2``))
-          (ASSUME ``(Exp2 :('a, 'b) simulation) y E'``)) (* 2 sub-goals here *)
+          (ASSUME ``(Exp2 :'a simulation) y E'``)) (* 2 sub-goals here *)
       >- ( DISJ1_TAC >> Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ) \\
       DISJ2_TAC >> Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
       (* goal 2 (of 3) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp2``))
-                  (ASSUME ``(Exp2 :('a, 'b) simulation) y E'``)) \\
+                  (ASSUME ``(Exp2 :'a simulation) y E'``)) \\
       IMP_RES_TAC
         (MATCH_MP (MATCH_MP EXPANSION_WEAK_TRANS' (ASSUME ``EXPANSION Exp1``))
-                  (ASSUME ``(Exp1 :('a, 'b) simulation) E y``)) \\
+                  (ASSUME ``(Exp1 :'a simulation) E y``)) \\
       Q.EXISTS_TAC `E1'` >> ASM_REWRITE_TAC [] \\
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ]);
 
@@ -195,24 +194,24 @@ val STRONG_BISIM_IMP_EXPANSION = store_thm (
  >| [ (* goal 1 (of 4) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [STRONG_BISIM] (ASSUME ``STRONG_BISIM Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E E'``)) \\
+                  (ASSUME ``(Exp :'a simulation) E E'``)) \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
       (* goal 2 (of 4) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [STRONG_BISIM] (ASSUME ``STRONG_BISIM Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E E'``)) \\
+                  (ASSUME ``(Exp :'a simulation) E E'``)) \\
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS,
       (* goal 3 (of 4) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [STRONG_BISIM] (ASSUME ``STRONG_BISIM Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E E'``)) \\
+                  (ASSUME ``(Exp :'a simulation) E E'``)) \\
       DISJ2_TAC \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
       (* goal 4 (of 4) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [STRONG_BISIM] (ASSUME ``STRONG_BISIM Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E E'``)) \\
+                  (ASSUME ``(Exp :'a simulation) E E'``)) \\
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS ]);
 
@@ -225,25 +224,25 @@ val EXPANSION_IMP_WEAK_BISIM = store_thm (
  >| [ (* goal 1 (of 4) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [EXPANSION] (ASSUME ``EXPANSION Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E E'``)) \\
+                  (ASSUME ``(Exp :'a simulation) E E'``)) \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS,
       (* goal 2 (of 4) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [EXPANSION] (ASSUME ``EXPANSION Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E E'``)) \\
+                  (ASSUME ``(Exp :'a simulation) E E'``)) \\
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [],
       (* goal 3 (of 4) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [EXPANSION] (ASSUME ``EXPANSION Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E E'``)) (* 2 sub-goals here *)
+                  (ASSUME ``(Exp :'a simulation) E E'``)) (* 2 sub-goals here *)
       >- ( Q.EXISTS_TAC `E'` >> ASM_REWRITE_TAC [EPS_REFL] ) \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC ONE_TAU,
       (* goal 4 (of 4) *)
       IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [EXPANSION] (ASSUME ``EXPANSION Exp``))
-                  (ASSUME ``(Exp :('a, 'b) simulation) E E'``)) \\
+                  (ASSUME ``(Exp :'a simulation) E E'``)) \\
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC WEAK_TRANS_IMP_EPS ]);
 
@@ -252,7 +251,7 @@ val EXPANSION_IMP_WEAK_BISIM = store_thm (
  * resources as P".
  *)
 CoInductive expands :
-    !(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
+    !(E :'a CCS) (E' :'a CCS).
        (!l.
          (!E1. TRANS E  (label l) E1 ==>
                ?E2. TRANS E' (label l) E2 /\ $expands E1 E2) /\
@@ -702,9 +701,9 @@ val expands_SUBST_RESTR = store_thm (
       Q.EXISTS_TAC `restr L' E2'` \\
       ASM_REWRITE_TAC
         [MATCH_MP WEAK_RESTR_label
-                  (LIST_CONJ [ASSUME ``~((l': 'b Label) IN L')``,
-                              ASSUME ``~((COMPL (l': 'b Label)) IN L')``,
-                              REWRITE_RULE [ASSUME ``label (l :'b Label) = label l'``]
+                  (LIST_CONJ [ASSUME ``~((l' :'a Label) IN L')``,
+                              ASSUME ``~((COMPL (l' :'a Label)) IN L')``,
+                              REWRITE_RULE [ASSUME ``label (l :'a Label) = label l'``]
                                            (ASSUME ``WEAK_TRANS E2 (label l) E2'``)])] \\
       CONJ_TAC >- ( MATCH_MP_TAC RESTR >> Q.EXISTS_TAC `l'` >> rfs [Action_11] ) \\
       take [`E''''`, `E2'`, `L'`] >> ASM_REWRITE_TAC [],
@@ -716,9 +715,9 @@ val expands_SUBST_RESTR = store_thm (
       Q.EXISTS_TAC `restr L' E1'` \\
       ASM_REWRITE_TAC
         [MATCH_MP WEAK_RESTR_label
-                  (LIST_CONJ [ASSUME ``~((l': 'b Label) IN L')``,
-                              ASSUME ``~((COMPL (l': 'b Label)) IN L')``,
-                              REWRITE_RULE [ASSUME ``label (l :'b Label) = label l'``]
+                  (LIST_CONJ [ASSUME ``~((l' :'a Label) IN L')``,
+                              ASSUME ``~((COMPL (l' :'a Label)) IN L')``,
+                              REWRITE_RULE [ASSUME ``label (l :'a Label) = label l'``]
                                            (ASSUME ``WEAK_TRANS E1 (label l) E1'``)])] \\
       take [`E1'`, `E''''`, `L'`] >> ASM_REWRITE_TAC [],
       (* goal 3 (of 4) *)
@@ -766,7 +765,7 @@ val expands_SUBST_RELAB = store_thm (
       IMP_RES_TAC TRANS_RELAB \\
       qpat_x_assum `label l = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_label \\
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = label l'``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'a Action) = label l'``]
                                (ASSUME ``TRANS E1 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_label (ASSUME ``E1 expands E2``)) \\
       EXISTS_TAC ``relab E2' rf'`` \\
@@ -781,7 +780,7 @@ val expands_SUBST_RELAB = store_thm (
       IMP_RES_TAC TRANS_RELAB \\
       qpat_x_assum `label l = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_label \\
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = label l'``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'a Action) = label l'``]
                                (ASSUME ``TRANS E2 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_label' (ASSUME ``E1 expands E2``)) \\
       EXISTS_TAC ``relab E1' rf'`` \\
@@ -795,7 +794,7 @@ val expands_SUBST_RELAB = store_thm (
       IMP_RES_TAC TRANS_RELAB \\
       qpat_x_assum `tau = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_tau \\
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = tau``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'a Action) = tau``]
                                (ASSUME ``TRANS E1 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_tau (ASSUME ``E1 expands E2``))
       >- ( DISJ1_TAC >> ASM_REWRITE_TAC [] \\
@@ -812,7 +811,7 @@ val expands_SUBST_RELAB = store_thm (
       IMP_RES_TAC TRANS_RELAB \\
       qpat_x_assum `tau = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_tau \\
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = tau``]
+      ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'a Action) = tau``]
                                (ASSUME ``TRANS E2 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_tau' (ASSUME ``E1 expands E2``)) \\
       EXISTS_TAC ``relab E1' rf'`` \\
@@ -868,7 +867,7 @@ val expands_AND_TRACE_tau_lemma = Q.prove (
       REWRITE_TAC [TRACE_REFL, LENGTH] >> RW_TAC arith_ss [] )
  >> IMP_RES_TAC NO_LABEL_cases
  >> qpat_x_assum `NO_LABEL xs ==> X`
-        (ASSUME_TAC o (fn thm => MATCH_MP thm (ASSUME ``NO_LABEL (xs :'b Action list)``)))
+        (ASSUME_TAC o (fn thm => MATCH_MP thm (ASSUME ``NO_LABEL (xs :'a Action list)``)))
  >> Cases_on `h` >> FULL_SIMP_TAC std_ss [Action_distinct_label, LENGTH]
  >> IMP_RES_TAC expands_TRANS_tau >> RES_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -948,7 +947,7 @@ val expands_AND_TRACE_label = store_thm (
 (*
 val BISIM_UPTO_expands_and_C = new_definition (
    "BISIM_UPTO_expands_and_C",
-  ``BISIM_UPTO_expands_and_C (Wbsm: ('a, 'b) simulation) =
+  ``BISIM_UPTO_expands_and_C (Wbsm: 'a simulation) =
     !E E'.
         Wbsm E E' ==>
         (!l.
