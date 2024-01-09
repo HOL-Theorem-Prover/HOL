@@ -3028,7 +3028,7 @@ Proof
  >> fs [CCS_equation_def, CCS_solution_def, EVERY_MEM, LIST_REL_EL_EQN]
 QED
 
-(* THE FINAL THEOREM (Theorem 3.13 of [3], full version) *)
+(* THE FINAL THEOREM (Theorem 3.16 of [3]) *)
 Theorem unique_solution_of_rooted_contractions :
     !Xs Es Ps Qs.
         CCS_equation Xs Es /\ EVERY (weakly_guarded Xs) Es /\
@@ -3100,11 +3100,8 @@ val _ = html_theory "Multivariate";
      solutions." ACM Transactions on Computational Logic (TOCL) 18.1
      (2017): 4. (DOI: 10.1145/2971339)
 
- [3] Tian, Chun, and Davide Sangiorgi. "Unique Solutions of
-     Contractions, CCS, and their HOL Formalisation." Combined 25th
-     International Workshop on Expressiveness in Concurrency and 15th
-     Workshop on Structural Operational Semantics (EXPRESS/SOS
-     2018). Vol. 276. No. 4. 2018. (DOI: 10.4204/EPTCS.276.10)
+ [3] C. Tian and D. Sangiorgi, “Unique solutions of contractions, CCS, and
+     their HOL formalisation,” Inf. Comput., vol. 275, p. 104606, Dec. 2020.
 
  [4] Gorrieri, R., Versari, C.: Introduction to Concurrency Theory.
      Springer, Cham (2015).
