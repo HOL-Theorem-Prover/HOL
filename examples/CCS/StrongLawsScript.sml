@@ -1,8 +1,12 @@
-(*
- * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
- * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
- * Copyright 2019  Fondazione Bruno Kessler, Italy (Author: Chun Tian)
- *)
+(* ========================================================================== *)
+(* FILE          : StrongLawsScript.sml                                       *)
+(* DESCRIPTION   : Laws of strong equivalence (STRONG_EQUIV)                  *)
+(*                                                                            *)
+(* COPYRIGHTS    : 1991-1995 University of Cambridge, UK (Monica Nesi)        *)
+(*                 2016-2017 University of Bologna, Italy (Chun Tian)         *)
+(*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
+(*                 2023-2024 The Australian National University (Chun Tian)   *)
+(******************************************************************************)
 
 open HolKernel Parse boolLib bossLib;
 
@@ -11,7 +15,6 @@ open pred_setTheory prim_recTheory arithmeticTheory relationTheory;
 open CCSLib CCSTheory StrongEQTheory StrongEQLib;
 
 val _ = new_theory "StrongLaws";
-val _ = temp_loose_equality ();
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1105,20 +1108,24 @@ val STRONG_RELAB_PREFIX = store_thm (
    If A := P, then A ~ P
 
    where A is ‘rec X E’, P is ‘CCS_Subst E (rec X E) X’ (instead of just E)
+
+   NOTE: this proof has been fixed due to changed [REC]. --binghe, 9 gen 2024
  *)
 Theorem STRONG_UNFOLDING :
     !X E. STRONG_EQUIV (rec X E) (CCS_Subst E (rec X E) X)
 Proof
     rpt GEN_TAC
+ >> Cases_on ‘E = var X’ >- rw []
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
- >> EXISTS_TAC
-       ``\x y. (x = y) \/
-              (?Y E'. (x = rec Y E') /\ (y = CCS_Subst E' (rec Y E') Y))``
+ >> Q.EXISTS_TAC
+      ‘\x y. x = y \/
+            ?Y E'. x = rec Y E' /\ y = CCS_Subst E' (rec Y E') Y /\ E' <> var Y’
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       BETA_TAC >> DISJ2_TAC \\
       qexistsl_tac [‘X’, ‘E’] >> rw [],
       (* goal 2 (of 2) *)
+      POP_ASSUM K_TAC \\
       PURE_ONCE_REWRITE_TAC [STRONG_BISIM] >> BETA_TAC \\
       rpt STRIP_TAC >| (* 4 sub-goals here *)
       [ (* goal 2.1 (of 4) *)
@@ -1142,11 +1149,11 @@ QED
 (* Prove the theorem STRONG_PREF_REC_EQUIV:
    |- ∀u s v. u..rec s (v..u..var s) ~ rec s (u..v..var s):
  *)
-val STRONG_PREF_REC_EQUIV = store_thm (
-   "STRONG_PREF_REC_EQUIV",
-  ``!(u :'a Action) s v.
+Theorem STRONG_PREF_REC_EQUIV :
+    !(u :'a Action) s v.
         STRONG_EQUIV (prefix u (rec s (prefix v (prefix u (var s)))))
-                     (rec s (prefix u (prefix v (var s))))``,
+                     (rec s (prefix u (prefix v (var s))))
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -1157,66 +1164,61 @@ val STRONG_PREF_REC_EQUIV = store_thm (
           (x = rec s' (prefix v' (prefix u' (var s')))) /\
           (y = prefix v' (rec s' (prefix u' (prefix v' (var s')))))``
  >> CONJ_TAC (* 2 sub-goals *)
- >| [ (* goal 1 (of 2) *)
-      BETA_TAC \\
-      take [`u`, `v`, `s`] >> REWRITE_TAC [],
-      (* goal 2 (of 2) *)
-      PURE_ONCE_REWRITE_TAC [STRONG_BISIM] \\
-      BETA_TAC \\
-      rpt STRIP_TAC >| (* 4 sub-goals *)
-      [ (* goal 2.1 (of 4) *)
-        ASSUME_TAC
+ >- (BETA_TAC >> take [`u`, `v`, `s`] >> REWRITE_TAC [])
+ >> PURE_ONCE_REWRITE_TAC [STRONG_BISIM]
+ >> BETA_TAC
+ >> rpt STRIP_TAC (* 4 sub-goals *)
+ >| [ (* goal 1 (of 4) *)
+      ASSUME_TAC
           (REWRITE_RULE
                [ASSUME ``E = prefix u' (rec s' (prefix v' (prefix u' (var s'))))``]
-               (ASSUME ``TRANS E u E1``)) \\
-        IMP_RES_TAC TRANS_PREFIX \\
-        EXISTS_TAC ``prefix (v' :'a Action) (rec s' (prefix u' (prefix v' (var s'))))`` \\
-        CONJ_TAC >| (* 2 sub-goals here *)
-        [ (* goal 2.1.1 (of 2) *)
-          art [] \\
-          MATCH_MP_TAC REC \\
-          REWRITE_TAC [CCS_Subst_def, PREFIX],
-          (* goal 2.1.2 (of 2) *)
-          take [`u'`, `v'`, `s'`] >> art [] ],
-        (* goal 2.2 (of 4) *)
-        ASSUME_TAC (REWRITE_RULE
+               (ASSUME ``TRANS E u E1``)) >> fs [] \\
+      IMP_RES_TAC TRANS_PREFIX \\
+      EXISTS_TAC ``prefix (v' :'a Action) (rec s' (prefix u' (prefix v' (var s'))))`` \\
+      CONJ_TAC >| (* 2 sub-goals here *)
+      [ (* goal 1.1 (of 2) *)
+        art [] >> MATCH_MP_TAC REC >> rw [CCS_Subst_def, PREFIX],
+        (* goal 1.2 (of 2) *)
+        take [`u'`, `v'`, `s'`] >> art [] ],
+      (* goal 2 (of 4) *)
+      ASSUME_TAC (REWRITE_RULE
                      [ASSUME ``E' = rec s' (prefix u' (prefix v' (var s')))``,
                       TRANS_REC_EQ, CCS_Subst_def]
-                     (ASSUME ``TRANS E' u E2``)) \\
-        IMP_RES_TAC TRANS_PREFIX \\
-        EXISTS_TAC ``rec s' (prefix v' (prefix u (var s')))`` \\
-        CONJ_TAC >| (* 2 sub-goals here, first one is easy *)
-        [ (* goal 2.2.1 (of 2) *)
-          art [PREFIX],
-          (* goal 2.2.2 (of 2) *)
-          take [`u`, `v'`, `s'`] >> art
-            [REWRITE_RULE [ASSUME ``u' :'a Action = u``]
+                     (ASSUME ``TRANS E' u E2``)) >> fs [] \\
+      IMP_RES_TAC TRANS_PREFIX \\
+      EXISTS_TAC ``rec s' (prefix v' (prefix u (var s')))`` \\
+      CONJ_TAC >| (* 2 sub-goals here, first one is easy *)
+      [ (* goal 2.1 (of 2) *)
+        art [PREFIX],
+        (* goal 2.2 (of 2) *)
+        take [`u`, `v'`, `s'`] \\
+        art [REWRITE_RULE [ASSUME ``u' :'a Action = u``]
                (ASSUME ``E2 = prefix v' (rec s' (prefix u' (prefix v' (var s'))))``)] ],
-        (* goal 2.3 (of 4) *)
-        ASSUME_TAC (REWRITE_RULE
-                     [ASSUME ``E = rec s' (prefix v' (prefix u' (var s')))``,
-                      TRANS_REC_EQ, CCS_Subst_def]
-                     (ASSUME ``TRANS E u E1``)) \\
-        IMP_RES_TAC TRANS_PREFIX \\
-        EXISTS_TAC ``rec s' (prefix u' (prefix v' (var s')))`` \\
-        CONJ_TAC >| (* 2 sub-goals here, first one is easy *)
-        [ (* goal 2.3.1 (of 2) *)
-          art [PREFIX],
-          (* goal 2.3.2 (of 2) *)
-          take [`u'`, `v'`, `s'`] >> art [] ],
-        (* goal 2.4 (of 4) *)
-        ASSUME_TAC (REWRITE_RULE
-                     [ASSUME ``E' = prefix v' (rec s' (prefix u' (prefix v' (var s'))))``]
-                     (ASSUME ``TRANS E' u E2``)) \\
-        IMP_RES_TAC TRANS_PREFIX \\
-        EXISTS_TAC ``prefix (u' :'a Action)
-                            (rec s' (prefix v' (prefix u' (var s'))))`` \\
-        CONJ_TAC >| (* 2 sub-goals here *)
-        [ (* goal 2.4.1 (of 2) *)
-          art [] \\
-          MATCH_MP_TAC REC >> REWRITE_TAC [CCS_Subst_def, PREFIX],
-          (* goal 2.4.2 (of 2) *)
-          take [`u'`, `v'`, `s'`] >> art [] ] ] ]);
+      (* goal 3 (of 4) *)
+      ASSUME_TAC (REWRITE_RULE
+                   [ASSUME ``E = rec s' (prefix v' (prefix u' (var s')))``,
+                    TRANS_REC_EQ, CCS_Subst_def]
+                   (ASSUME ``TRANS E u E1``)) >> fs [] \\
+      IMP_RES_TAC TRANS_PREFIX \\
+      EXISTS_TAC ``rec s' (prefix u' (prefix v' (var s')))`` \\
+      CONJ_TAC >| (* 2 sub-goals here, first one is easy *)
+      [ (* goal 3.1 (of 2) *)
+        art [PREFIX],
+        (* goal 3.2 (of 2) *)
+        take [`u'`, `v'`, `s'`] >> art [] ],
+      (* goal 4 (of 4) *)
+      ASSUME_TAC (REWRITE_RULE
+                   [ASSUME ``E' = prefix v' (rec s' (prefix u' (prefix v' (var s'))))``]
+                   (ASSUME ``TRANS E' u E2``)) >> fs [] \\
+      IMP_RES_TAC TRANS_PREFIX \\
+      EXISTS_TAC ``prefix (u' :'a Action)
+                          (rec s' (prefix v' (prefix u' (var s'))))`` \\
+      CONJ_TAC >| (* 2 sub-goals here *)
+      [ (* goal 4.1 (of 2) *)
+        art [] >> MATCH_MP_TAC REC >> rw [CCS_Subst_def, PREFIX],
+        (* goal 4.2 (of 2) *)
+        take [`u'`, `v'`, `s'`] >> art [] ] ]
+QED
 
 (* Prove the theorem STRONG_REC_ACT2:
    |- ∀s u. rec s (u..u..var s) ~ rec s (u..var s)
@@ -1245,50 +1247,77 @@ Proof
         ASSUME_TAC
           (REWRITE_RULE [ASSUME ``E = rec s' (prefix u' (prefix u' (var s')))``,
                          TRANS_REC_EQ, CCS_Subst_def]
-                        (ASSUME ``TRANS E u E1``)) \\
+                        (ASSUME ``TRANS E u E1``)) >> fs [] \\
         IMP_RES_TAC TRANS_PREFIX >> EXISTS_TAC ``E' :'a CCS`` \\
         CONJ_TAC >| (* 2 sub-goals here *)
         [ (* goal 2.1.1 (of 2) *)
-          ASM_REWRITE_TAC [] \\
-          MATCH_MP_TAC REC >> REWRITE_TAC [CCS_Subst_def, PREFIX],
+          art [] >> MATCH_MP_TAC REC >> rw [CCS_Subst_def, PREFIX],
           (* goal 2.1.2 (of 2) *)
           qexistsl_tac [‘s'’, ‘u'’] >> art [] ],
         (* goal 2.2 (of 4) *)
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E' = rec s'(prefix u'(var s'))``,
                                   TRANS_REC_EQ, CCS_Subst_def]
-                                 (ASSUME ``TRANS E' u E2``)) \\
+                                 (ASSUME ``TRANS E' u E2``)) >> fs [] \\
         IMP_RES_TAC TRANS_PREFIX \\
         EXISTS_TAC ``prefix (u' :'a Action) E`` \\
         CONJ_TAC >| (* 2 sub-goals here *)
         [ (* goal 2.2.1 (of 2) *)
-          ASM_REWRITE_TAC [] \\
-          MATCH_MP_TAC REC >> REWRITE_TAC [CCS_Subst_def, PREFIX],
+          art [] >> MATCH_MP_TAC REC >> rw [CCS_Subst_def, PREFIX],
           (* goal 2.2.2 (of 2) *)
           qexistsl_tac [‘s'’, ‘u'’] >> art [] ],
         (* goal 2.3 (of 4) *)
         ASSUME_TAC
           (REWRITE_RULE
                [ASSUME ``E = prefix u' (rec s' (prefix u' (prefix u' (var s'))))``]
-               (ASSUME ``TRANS E u E1``)) \\
+               (ASSUME ``TRANS E u E1``)) >> fs [] \\
         IMP_RES_TAC TRANS_PREFIX >> EXISTS_TAC ``E' :'a CCS`` \\
         CONJ_TAC >| (* 2 sub-goals here *)
         [ (* goal 2.3.1 (of 2) *)
-          ASM_REWRITE_TAC [] \\
-          MATCH_MP_TAC REC \\
-          REWRITE_TAC [CCS_Subst_def, PREFIX],
+          art [] >> MATCH_MP_TAC REC >> rw [CCS_Subst_def, PREFIX],
           (* goal 2.3.2 (of 2) *)
           qexistsl_tac [‘s'’, ‘u'’] >> art [] ],
         (* goal 2.4 (of 4) *)
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E' = rec s' (prefix u' (var s'))``,
                                   TRANS_REC_EQ, CCS_Subst_def]
-                                 (ASSUME ``TRANS E' u E2``)) \\
+                                 (ASSUME ``TRANS E' u E2``)) >> fs [] \\
         IMP_RES_TAC TRANS_PREFIX \\
         EXISTS_TAC ``rec s' (prefix u' (prefix u' (var s')))`` \\
         CONJ_TAC >| (* 2 sub-goals here, first one is easy *)
         [ (* goal 2.4.1 (of 2) *)
-          ASM_REWRITE_TAC [PREFIX],
+          art [PREFIX],
           (* goal 2.4.2 (of 2) *)
           qexistsl_tac [‘s'’, ‘u'’] >> art [] ] ] ]
+QED
+
+(******************************************************************************)
+(*                                                                            *)
+(*       The strong laws for the redundant recursion operators                *)
+(*                                                                            *)
+(******************************************************************************)
+
+Theorem STRONG_EQUIV_REC_ELIM :
+    !X E. X # E ==> STRONG_EQUIV (rec X E) E
+Proof
+    rw [Once PROPERTY_STAR]
+ >| [ (* goal 1 (of 2) *)
+      fs [TRANS_REC_EQ, CCS_Subst] \\
+      Know ‘[rec X E/X] E = E’
+      >- (MATCH_MP_TAC lemma14b >> art []) \\
+      DISCH_THEN (fs o wrap) \\
+      Q.EXISTS_TAC ‘E1’ >> rw [],
+      (* goal 2 (of 2) *)
+      Q.EXISTS_TAC ‘E2’ >> reverse (rw [TRANS_REC_EQ, CCS_Subst])
+      >- (CCONTR_TAC >> fs [VAR_NO_TRANS]) \\
+      Know ‘[rec X E/X] E = E’
+      >- (MATCH_MP_TAC lemma14b >> art []) >> rw [] ]
+QED
+
+Theorem STRONG_EQUIV_REC_REC_ELIM :
+    !X E. STRONG_EQUIV (rec X (rec X E)) (rec X E)
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC STRONG_EQUIV_REC_ELIM
+ >> rw []
 QED
 
 (******************************************************************************)
@@ -1399,7 +1428,7 @@ val [ALL_SYNC_BASE, ALL_SYNC_INDUCT] =
  |- !m n. m < (SUC n) = m <= n
  *)
 val LESS_SUC_LESS_EQ' = Q.prove (
-   `!m n. m < SUC n = m <= n`,
+   `!m n. m < SUC n <=> m <= n`,
     REWRITE_TAC [LESS_EQ, LESS_EQ_MONO]);
 
 (* |- ∀n m. m < SUC n ⇒ m ≤ n
@@ -1420,9 +1449,9 @@ val LESS_EQ_LESS_EQ_SUC = Q.prove (
  >> IMP_RES_TAC LESS_EQ_IMP_LESS_SUC
  >> IMP_RES_TAC LESS_IMP_LESS_OR_EQ);
 
-val SIGMA_TRANS_THM_EQ = store_thm (
-   "SIGMA_TRANS_THM_EQ",
-  ``!n f (u :'a Action) E. TRANS (SIGMA f n) u E = (?k. k <= n /\ TRANS (f k) u E)``,
+Theorem SIGMA_TRANS_THM_EQ :
+    !n f (u :'a Action) E. TRANS (SIGMA f n) u E <=> ?k. k <= n /\ TRANS (f k) u E
+Proof
     Induct (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       rpt GEN_TAC \\
@@ -1461,7 +1490,8 @@ val SIGMA_TRANS_THM_EQ = store_thm (
           (* goal 2.2.2 (of 2) *)
           DISJ2_TAC \\
           REWRITE_TAC [REWRITE_RULE [ASSUME ``k = SUC n``]
-                        (ASSUME ``TRANS ((f: num -> 'a CCS) k) u E``)] ] ] ]);
+                        (ASSUME ``TRANS ((f: num -> 'a CCS) k) u E``)] ] ] ]
+QED
 
 (* SIGMA_TRANS_THM =
  |- ∀u n f E. SIGMA f n --u-> E ⇒ ∃k. k ≤ n ∧ f k --u-> E
@@ -1469,12 +1499,12 @@ val SIGMA_TRANS_THM_EQ = store_thm (
 val SIGMA_TRANS_THM = save_thm (
    "SIGMA_TRANS_THM", EQ_IMP_LR SIGMA_TRANS_THM_EQ);
 
-val SYNC_TRANS_THM_EQ = store_thm (
-   "SYNC_TRANS_THM_EQ",
-  ``!m (u :'a Action) P f v Q. TRANS (SYNC u P f m) v Q =
-         (?j l. j <= m /\
+Theorem SYNC_TRANS_THM_EQ :
+    !m (u :'a Action) P f v Q. TRANS (SYNC u P f m) v Q <=>
+          ?j l. j <= m /\
                 (u = label l) /\ (PREF_ACT (f j) = label (COMPL l)) /\
-                (v = tau) /\ (Q = par P (PREF_PROC (f j))))``,
+                (v = tau) /\ (Q = par P (PREF_PROC (f j)))
+Proof
     Induct_on `m` (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       rpt GEN_TAC \\
@@ -1637,7 +1667,8 @@ val SYNC_TRANS_THM_EQ = store_thm (
               CHECK_ASSUME_TAC
                 (REWRITE_RULE [ASSUME ``x = COMPL (l :'a Label)``, COMPL_COMPL_LAB,
                                ASSUME ``x' :'a Label = l``]
-                              (ASSUME ``~(x' = COMPL (x :'a Label))``)) ] ] ] ] ] );
+                              (ASSUME ``~(x' = COMPL (x :'a Label))``)) ] ] ] ] ]
+QED
 
 (* SYNC_TRANS_THM =
  |- ∀v u m f Q P.
