@@ -1013,7 +1013,7 @@ val SUB_THMv = prove(
   “([N/x](var x) = (N :'a CCS)) /\ (x <> y ==> [N/y](var x) = var x)”,
   SRW_TAC [][SUB_DEF]);
 
-val SUB_COMM = prove(
+Theorem SUB_COMM = prove(
    “!N x x' y (t :'a CCS).
         x' <> x /\ x' # N ∧ y <> x /\ y # N ==>
         (tpm [(x',y)] ([N/x] t) = [N/x] (tpm [(x',y)] t))”,
@@ -1728,8 +1728,6 @@ Type transition[pp] = “:'a CCS -> 'a Action -> 'a CCS -> bool”
 
 (* Inductive definition of the transition relation TRANS for CCS.
    TRANS: CCS -> Action -> CCS -> bool
-
-   NOTE: added ‘E <> var X’ into [REC] to prove I_NO_TRANS (see below).
  *)
 Inductive TRANS :
     (!E u.                           TRANS (prefix u E) u E) /\         (* PREFIX *)
@@ -1744,7 +1742,7 @@ Inductive TRANS :
                 ==> TRANS (restr L E) u (restr L E')) /\                (* RESTR *)
     (!E u E' rf.    TRANS E u E'
                 ==> TRANS (relab E rf) (relabel rf u) (relab E' rf)) /\ (* RELABELING *)
-    (!E u X E1.     TRANS (CCS_Subst E (rec X E) X) u E1 /\ E <> var X
+    (!E u X E1.     TRANS (CCS_Subst E (rec X E) X) u E1
                 ==> TRANS (rec X E) u E1)                               (* REC *)
 End
 
@@ -1764,6 +1762,9 @@ val [PREFIX, SUM1, SUM2, PAR1, PAR2, PAR3, RESTR, RELABELING, REC] =
         (combine (["PREFIX", "SUM1", "SUM2", "PAR1", "PAR2", "PAR3", "RESTR",
                    "RELABELING", "REC"],
                   CONJUNCTS TRANS_rules));
+
+(* Use SUB instead of CCS_Subst *)
+Theorem REC' = REWRITE_RULE [CCS_Subst] REC
 
 val TRANS_IND = save_thm ("TRANS_IND",
     TRANS_ind |> (Q.SPEC `P`) |> GEN_ALL);
@@ -1792,15 +1793,19 @@ QED
    !X u E. ~TRANS (var X) u E
  *)
 Theorem VAR_NO_TRANS =
-    Q.GENL [`X`, `u`, `E`]
-           (REWRITE_RULE [CCS_distinct', CCS_one_one]
-                         (Q.SPECL [`var X`, `u`, `E`] TRANS_cases))
+    TRANS_cases |> Q.SPECL [`var X`, `u`, `E`]
+                |> REWRITE_RULE [CCS_distinct', CCS_one_one]
+                |> Q.GENL [`X`, `u`, `E`]
+
+(*---------------------------------------------------------------------------*
+ *  The "I combinator" of CCS
+ *---------------------------------------------------------------------------*)
 
 val _ = hide "I";
 
 (* cf. chap2Theory (examples/lambda/barendregt) *)
 Definition I_def :
-    I = rec "x" (var "x")
+    I = rec "s" (var "s")
 End
 
 Theorem FV_I[simp] :
@@ -1812,17 +1817,8 @@ QED
 Theorem I_thm :
     !X. I = rec X (var X)
 Proof
-    Q.X_GEN_TAC ‘x’
- >> REWRITE_TAC [I_def, Once EQ_SYM_EQ]
- >> Cases_on ‘x = "x"’ >- rw []
- >> qabbrev_tac ‘u = var x’
- >> qabbrev_tac ‘y = "x"’
- >> ‘y NOTIN FV u’ by rw [Abbr ‘u’]
- >> Know ‘rec x u = rec y ([var y/x] u)’
- >- (MATCH_MP_TAC SIMPLE_ALPHA >> art [])
- >> Rewr'
- >> Suff ‘[var y/x] u = var y’ >- rw []
- >> rw [Abbr ‘u’]
+    rw [I_def, Once EQ_SYM_EQ]
+ >> Cases_on ‘X = "s"’ >> rw [rec_eq_thm]
 QED
 
 Theorem SUB_I[simp] :
@@ -1838,24 +1834,149 @@ Proof
 QED
 
 Theorem I_cases :
-    I = rec Y P ==> P = var Y
+    !Y P. I = rec Y P ==> P = var Y
 Proof
     rw [I_def]
  >> qabbrev_tac ‘X = "x"’
  >> Cases_on ‘X = Y’ >> fs [rec_eq_thm]
 QED
 
-(* NOTE: This proof is only possible under the modified [REC] *)
-Theorem REC_VAR_NO_TRANS :
-    !X u E. ~TRANS (rec X (var X)) u E
+(* TRANSn is the labelled version of TRANS. *)
+Inductive TRANSn :
+    (!E u.            TRANSn 0 (prefix u E) u E) /\
+    (!n E u E1 E'.    TRANSn n E u E1 ==> TRANSn (SUC n) (sum E E') u E1) /\
+    (!n E u E1 E'.    TRANSn n E u E1 ==> TRANSn (SUC n) (sum E' E) u E1) /\
+    (!n E u E1 E'.    TRANSn n E u E1 ==> TRANSn (SUC n) (par E E') u (par E1 E')) /\
+    (!n E u E1 E'.    TRANSn n E u E1 ==> TRANSn (SUC n) (par E' E) u (par E' E1)) /\
+    (!n E l E1 E' E2. TRANSn n E (label l) E1 /\ TRANSn n' E' (label (COMPL l)) E2
+                  ==> TRANSn (SUC (MAX n n')) (par E E') tau (par E1 E2)) /\
+    (!n E u E' l L.   TRANSn n E u E' /\ ((u = tau) \/
+                                          ((u = label l) /\ l NOTIN L /\ (COMPL l) NOTIN L))
+                  ==> TRANSn (SUC n) (restr L E) u (restr L E')) /\
+    (!n E u E' rf.    TRANSn n E u E'
+                  ==> TRANSn (SUC n) (relab E rf) (relabel rf u) (relab E' rf)) /\
+    (!n E u X E1.     TRANSn n (CCS_Subst E (rec X E) X) u E1
+                  ==> TRANSn (SUC n) (rec X E) u E1)
+End
+
+(* The rules for the transition relation TRANS as individual theorems. *)
+val [PREFIXn, SUM1n, SUM2n, PAR1n, PAR2n, PAR3n, RESTRn, RELABELINGn, RECn] =
+    map save_thm
+        (combine (["PREFIXn", "SUM1n", "SUM2n", "PAR1n", "PAR2n", "PAR3n",
+                   "RESTRn", "RELABELINGn", "RECn"],
+                  CONJUNCTS TRANSn_rules));
+
+Theorem TRANS0_cases :
+    !E u E0. TRANSn 0 E u E0 <=> E = prefix u E0
 Proof
-    rw [Once TRANS_cases, CCS_Subst]
- >> DISJ2_TAC
- >> fs [GSYM I_thm, I_cases]
+    rw [Once TRANSn_cases]
 QED
 
-(* |- !u E. ~(I --u-> E) *)
-Theorem I_NO_TRANS = REWRITE_RULE [GSYM I_thm] REC_VAR_NO_TRANS
+Theorem RECn_cases_EQ =
+    TRANSn_cases |> Q.SPECL [‘n’, `rec X E`]
+                 |> REWRITE_RULE [CCS_distinct', CCS_one_one]
+                 |> Q.SPECL [`u`, `E'`]
+                 |> Q.GENL [‘n’, `X`, `E`, `u`, `E'`]
+
+Theorem RECn_cases = EQ_IMP_LR RECn_cases_EQ
+
+Theorem TRANS0_REC_EQ :
+    !X E u E'. TRANSn 0 (rec X E) u E' <=> F
+Proof
+    rw [TRANS0_cases]
+QED
+
+Theorem TRANSn_REC_EQ :
+    !n X E u E'. TRANSn (SUC n) (rec X E) u E' <=>
+                 TRANSn n (CCS_Subst E (rec X E) X) u E'
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC
+ >- PURE_ONCE_REWRITE_TAC [RECn]
+ >> PURE_ONCE_REWRITE_TAC [RECn_cases_EQ]
+ >> rpt STRIP_TAC
+ >> fs [rec_eq_thm, CCS_Subst]
+ >> rename1 ‘X <> Y’
+ >> rename1 ‘X # P’
+ >> Q.PAT_X_ASSUM ‘n = n'’ (fs o wrap o SYM)
+ (* stage work *)
+ >> rw [fresh_tpm_subst]
+ >> Q.ABBREV_TAC ‘E = [var X/Y] P’
+ >> Know ‘rec X E = rec Y ([var Y/X] E)’
+ >- (MATCH_MP_TAC SIMPLE_ALPHA \\
+     rw [Abbr ‘E’, FV_SUB])
+ >> Rewr'
+ >> rw [Abbr ‘E’]
+ >> Know ‘[var Y/X] ([var X/Y] P) = P’
+ >- (MATCH_MP_TAC lemma15b >> art [])
+ >> Rewr'
+ >> Suff ‘[rec Y P/X] ([var X/Y] P) = [rec Y P/Y] P’
+ >- rw []
+ >> MATCH_MP_TAC lemma15a >> art []
+QED
+
+Theorem TRANSn_REC_EQ' = REWRITE_RULE [CCS_Subst] TRANSn_REC_EQ
+
+Theorem I_NO_TRANSn_lemma[local] :
+    !X u E n. ~TRANSn n (rec X (var X)) u E
+Proof
+    Induct_on ‘n’
+ >- rw [TRANS0_REC_EQ]
+ >> rw [TRANSn_REC_EQ']
+QED
+
+(* |- !u E n. ~TRANSn n I u E *)
+Theorem I_NO_TRANSn = REWRITE_RULE [GSYM I_thm] I_NO_TRANSn_lemma
+
+Theorem TRANS_imp_TRANSn :
+    !E u E'. TRANS E u E' ==> ?n. TRANSn n E u E'
+Proof
+    HO_MATCH_MP_TAC TRANS_ind >> rw [] (* 10 subgoals *)
+ >- (Q.EXISTS_TAC ‘0’ >> rw [PREFIXn])
+ >- (Q.EXISTS_TAC ‘SUC n’ >> rw [SUM1n])
+ >- (Q.EXISTS_TAC ‘SUC n’ >> rw [SUM2n])
+ >- (Q.EXISTS_TAC ‘SUC n’ >> rw [PAR1n])
+ >- (Q.EXISTS_TAC ‘SUC n’ >> rw [PAR2n])
+ >- (Q.EXISTS_TAC ‘SUC (MAX n n')’ \\
+     MATCH_MP_TAC PAR3n >> Q.EXISTS_TAC ‘l’ >> rw [])
+ >- (Q.EXISTS_TAC ‘SUC n’ >> rw [RESTRn])
+ >- (Q.EXISTS_TAC ‘SUC n’ >> rw [RESTRn])
+ >- (Q.EXISTS_TAC ‘SUC n’ >> rw [RELABELINGn])
+ >> (Q.EXISTS_TAC ‘SUC n’ >> rw [RECn])
+QED
+
+Theorem TRANSn_imp_TRANS :
+    !n E u E'. TRANSn n E u E' ==> TRANS E u E'
+Proof
+    HO_MATCH_MP_TAC TRANSn_ind >> rw [] (* 10 subgoals *)
+ >- (rw [PREFIX])
+ >- (rw [SUM1])
+ >- (rw [SUM2])
+ >- (rw [PAR1])
+ >- (rw [PAR2])
+ >- (MATCH_MP_TAC PAR3 >> Q.EXISTS_TAC ‘l’ >> rw [])
+ >- (rw [RESTR])
+ >- (rw [RESTR])
+ >- (rw [RELABELING])
+ >> (rw [REC])
+QED
+
+Theorem TRANS_iff_TRANSn :
+    !E u E'. TRANS E u E' <=> ?n. TRANSn n E u E'
+Proof
+    rpt GEN_TAC >> EQ_TAC
+ >- rw [TRANS_imp_TRANSn]
+ >> STRIP_TAC
+ >> MATCH_MP_TAC TRANSn_imp_TRANS
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+(* NOTE: This proof method based on ‘TRANSn’ is learnt from Ian Shillito. *)
+Theorem I_NO_TRANS :
+    !X u E. ~TRANS I u E
+Proof
+    rw [TRANS_iff_TRANSn, I_NO_TRANSn]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -2224,56 +2345,57 @@ val REC_cases_EQ = save_thm
 
 val REC_cases = save_thm ("REC_cases", EQ_IMP_LR REC_cases_EQ);
 
-Theorem VAR_lemma[local] :
-    X # P ==> var X = [var X/Y] P ==> X <> Y ==> P = var Y
-Proof
-    MP_TAC (Q.SPEC ‘P’ CCS_cases) >> rw []
- >> fs [] (* 3 subgoals left *)
- >| [ (* goal 1 (of 3) *)
-      rename1 ‘Z = Y’ >> CCONTR_TAC >> fs [SUB_THM],
-      (* goal 2 (of 3) *)
-      rename1 ‘var X = [var X/Y] (rec Z E)’ \\
-      Q_TAC (NEW_TAC "Z'") ‘{X;Y;Z} UNION FV E’ \\
-      Know ‘rec Z E = rec Z' ([var Z'/Z] E)’
-      >- (MATCH_MP_TAC SIMPLE_ALPHA >> art []) \\
-      DISCH_THEN (fs o wrap),
-      (* goal 3 (of 3) *)
-      Q.PAT_X_ASSUM ‘X = X'’ (fs o wrap o SYM) \\
-      Q_TAC (NEW_TAC "Z") ‘{X;Y} UNION FV E’ \\
-      Know ‘rec X E = rec Z ([var Z/X] E)’
-      >- (MATCH_MP_TAC SIMPLE_ALPHA >> art []) \\
-      DISCH_THEN (fs o wrap) ]
-QED
-
 Theorem TRANS_REC_EQ :
-    !X E u E'. TRANS (rec X E) u E' <=> TRANS (CCS_Subst E (rec X E) X) u E' /\ E <> var X
+    !X E u E'. TRANS (rec X E) u E' <=> TRANS (CCS_Subst E (rec X E) X) u E'
 Proof
     rpt GEN_TAC
  >> reverse EQ_TAC
  >- PURE_ONCE_REWRITE_TAC [REC]
  >> PURE_ONCE_REWRITE_TAC [REC_cases_EQ]
- >> STRIP_TAC
- >> rename1 ‘rec X E = rec Y P’
+ >> rpt STRIP_TAC
  >> fs [rec_eq_thm, CCS_Subst]
- >> Q.PAT_X_ASSUM ‘E = _’ K_TAC
- >> simp [fresh_tpm_subst]
+ >> rename1 ‘X <> Y’
+ >> rename1 ‘X # P’
+ (* stage work *)
+ >> rw [fresh_tpm_subst]
  >> Q.ABBREV_TAC ‘E = [var X/Y] P’
  >> Know ‘rec X E = rec Y ([var Y/X] E)’
  >- (MATCH_MP_TAC SIMPLE_ALPHA \\
      rw [Abbr ‘E’, FV_SUB])
  >> Rewr'
- >> simp [Abbr ‘E’]
+ >> rw [Abbr ‘E’]
  >> Know ‘[var Y/X] ([var X/Y] P) = P’
  >- (MATCH_MP_TAC lemma15b >> art [])
  >> Rewr'
- >> Know ‘[rec Y P/X] ([var X/Y] P) = [rec Y P/Y] P’
- >- (MATCH_MP_TAC lemma15a >> art [])
- >> Rewr' >> art []
- >> METIS_TAC [VAR_lemma]
+ >> Suff ‘[rec Y P/X] ([var X/Y] P) = [rec Y P/Y] P’
+ >- rw []
+ >> MATCH_MP_TAC lemma15a >> art []
 QED
 
-val TRANS_REC = save_thm ("TRANS_REC", EQ_IMP_LR TRANS_REC_EQ);
+(* |- !X E u E'. rec X E --u-> E' <=> [rec X E/X] E --u-> E' *)
+Theorem TRANS_REC_EQ' = REWRITE_RULE [CCS_Subst] TRANS_REC_EQ
 
+(* |- !X E u E'. rec X E --u-> E' ==> CCS_Subst E (rec X E) X --u-> E' *)
+Theorem TRANS_REC = EQ_IMP_LR TRANS_REC_EQ
+
+(* |- !X E u E'. rec X E --u-> E' ==> [rec X E/X] E --u-> E' *)
+Theorem TRANS_REC' = EQ_IMP_LR TRANS_REC_EQ'
+
+Theorem REC_VAR_NO_TRANS :
+    !X Y u E. ~TRANS (rec X (var Y)) u E
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘X = Y’
+ >- rw [GSYM I_thm, I_NO_TRANS]
+ >> rw [TRANS_REC_EQ', VAR_NO_TRANS]
+QED
+
+(* NOTE: This is the *ONLY* theorem for which the induction principle of
+  ‘TRANS’ is needed. And this theorem (and the next TRANS_PROC) is only needed
+   in MultivariateScript.sml (so even the univariate "Unique solution" theorems
+   do not need this theorem). Thus, if ‘TRANS’ were defined by CoInductive,
+  "almost all" CCS theorems in this work, still hold.  -- Chun Tian, 11 gen 2024
+ *)
 Theorem TRANS_FV :
     !E u E'. TRANS E u E' ==> FV E' SUBSET (FV E)
 Proof
@@ -2293,6 +2415,7 @@ Proof
  >> rfs []
 QED
 
+(* A modern name after ‘IS_PROC’ has been overloaded on ‘closed’. *)
 Theorem TRANS_closed = TRANS_PROC
 
 (* ----------------------------------------------------------------------

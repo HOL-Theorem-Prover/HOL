@@ -1,14 +1,18 @@
-(*
- * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
- * Copyright 2016-2017  University of Bologna, Italy (Author: Chun Tian)
- * Copyright 2018-2019  Fondazione Bruno Kessler, Italy (Author: Chun Tian)
- *)
+(* ========================================================================== *)
+(* FILE          : ExampleScript.sml                                          *)
+(* DESCRIPTION   : Examples of concrete CCS processes; Some experiments       *)
+(*                                                                            *)
+(* COPYRIGHTS    : 1991-1995 University of Cambridge, UK (Monica Nesi)        *)
+(*                 2016-2017 University of Bologna, Italy (Chun Tian)         *)
+(*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
+(******************************************************************************)
 
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory relationTheory pairTheory sumTheory listTheory;
-open prim_recTheory arithmeticTheory combinTheory stringTheory;
+open combinTheory pred_setTheory relationTheory pairTheory sumTheory listTheory
+     arithmeticTheory stringTheory EmitTeX;
 
+(* local theories *)
 open CCSLib CCSTheory CCSSyntax CCSConv;
 open StrongEQTheory StrongEQLib StrongLawsTheory;
 open WeakEQTheory WeakEQLib WeakLawsTheory;
@@ -16,11 +20,9 @@ open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory;
 open CongruenceTheory CoarsestCongrTheory;
 open TraceTheory ExpansionTheory ContractionTheory;
 open BisimulationUptoTheory UniqueSolutionsTheory;
-
 open MultivariateTheory;
 
 val _ = new_theory "Example";
-val _ = temp_loose_equality ();
 
 (* For paper generating purposes, some type abbreviations are disabled *)
 val _ = disable_tyabbrev_printing "transition";
@@ -126,8 +128,6 @@ QED
 
 val _ = export_theory ();
 val _ = html_theory "Example";
-
-open EmitTeX;
 
 (* Emit theory books in TeX *)
 val _ =
