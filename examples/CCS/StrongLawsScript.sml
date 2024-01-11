@@ -1108,24 +1108,20 @@ val STRONG_RELAB_PREFIX = store_thm (
    If A := P, then A ~ P
 
    where A is ‘rec X E’, P is ‘CCS_Subst E (rec X E) X’ (instead of just E)
-
-   NOTE: this proof has been fixed due to changed [REC]. --binghe, 9 gen 2024
  *)
 Theorem STRONG_UNFOLDING :
     !X E. STRONG_EQUIV (rec X E) (CCS_Subst E (rec X E) X)
 Proof
     rpt GEN_TAC
- >> Cases_on ‘E = var X’ >- rw []
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
- >> Q.EXISTS_TAC
-      ‘\x y. x = y \/
-            ?Y E'. x = rec Y E' /\ y = CCS_Subst E' (rec Y E') Y /\ E' <> var Y’
+ >> EXISTS_TAC
+       ``\x y. (x = y) \/
+              (?Y E'. (x = rec Y E') /\ (y = CCS_Subst E' (rec Y E') Y))``
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       BETA_TAC >> DISJ2_TAC \\
       qexistsl_tac [‘X’, ‘E’] >> rw [],
       (* goal 2 (of 2) *)
-      POP_ASSUM K_TAC \\
       PURE_ONCE_REWRITE_TAC [STRONG_BISIM] >> BETA_TAC \\
       rpt STRIP_TAC >| (* 4 sub-goals here *)
       [ (* goal 2.1 (of 4) *)
@@ -1220,6 +1216,8 @@ Proof
         take [`u'`, `v'`, `s'`] >> art [] ] ]
 QED
 
+Theorem STRONG_UNFOLDING' = REWRITE_RULE [CCS_Subst] STRONG_UNFOLDING
+
 (* Prove the theorem STRONG_REC_ACT2:
    |- ∀s u. rec s (u..u..var s) ~ rec s (u..var s)
  *)
@@ -1306,8 +1304,7 @@ Proof
       DISCH_THEN (fs o wrap) \\
       Q.EXISTS_TAC ‘E1’ >> rw [],
       (* goal 2 (of 2) *)
-      Q.EXISTS_TAC ‘E2’ >> reverse (rw [TRANS_REC_EQ, CCS_Subst])
-      >- (CCONTR_TAC >> fs [VAR_NO_TRANS]) \\
+      Q.EXISTS_TAC ‘E2’ >> rw [TRANS_REC_EQ, CCS_Subst] \\
       Know ‘[rec X E/X] E = E’
       >- (MATCH_MP_TAC lemma14b >> art []) >> rw [] ]
 QED
@@ -1316,8 +1313,7 @@ Theorem STRONG_EQUIV_REC_REC_ELIM :
     !X E. STRONG_EQUIV (rec X (rec X E)) (rec X E)
 Proof
     rpt GEN_TAC
- >> MATCH_MP_TAC STRONG_EQUIV_REC_ELIM
- >> rw []
+ >> MATCH_MP_TAC STRONG_EQUIV_REC_ELIM >> rw []
 QED
 
 (******************************************************************************)

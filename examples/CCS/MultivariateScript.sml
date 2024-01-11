@@ -544,7 +544,7 @@ Proof
 QED
 
 (* A more precise estimation with `set Xs` *)
-Theorem FV_SUBSET_BIGUNION_PRO :
+Theorem FV_SUBSET_BIGUNION' :
     !Xs Ps E. ALL_DISTINCT Xs /\ (LENGTH Ps = LENGTH Xs) ==>
               FV (CCS_SUBST (fromList Xs Ps) E) SUBSET
                  ((FV E) DIFF (set Xs)) UNION BIGUNION (IMAGE FV (set Ps))
@@ -579,7 +579,7 @@ Proof
  >> Suff `FV (CCS_SUBST (fromList Xs Ps) E) SUBSET {}` >- SET_TAC []
  >> Know `FV (CCS_SUBST (fromList Xs Ps) E) SUBSET
            ((FV E) DIFF (set Xs)) UNION BIGUNION (IMAGE FV (set Ps))`
- >- PROVE_TAC [FV_SUBSET_BIGUNION_PRO]
+ >- PROVE_TAC [FV_SUBSET_BIGUNION']
  >> Know `FV E DIFF (set Xs) = {}` >- ASM_SET_TAC [] >> Rewr'
  >> Know `BIGUNION (IMAGE FV (set Ps)) = {}`
  >- rw [NOT_IN_EMPTY, IN_BIGUNION_IMAGE, IMAGE_EQ_SING] >> Rewr'
@@ -590,7 +590,7 @@ QED
    "CCS_SUBST_elim" (or "CCS_SUBST_elim");
    `LENGTH Ps = LENGTH Xs` is due to the limitation of "MAP_ZIP"
  *)
-Theorem CCS_SUBST_PROC :
+Theorem CCS_SUBST_elim_closed :
     !Xs Ps P. LENGTH Ps = LENGTH Xs /\ IS_PROC P ==>
               CCS_SUBST (fromList Xs Ps) P = P
 Proof
