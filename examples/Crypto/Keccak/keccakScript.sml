@@ -642,6 +642,18 @@ Proof
   \\ simp[]
 QED
 
+Theorem triple_to_index_to_triple[simp]:
+  x < 5 ∧ y < 5 ∧ z < w ⇒
+  index_to_triple w (triple_to_index w (x,y,z)) = (x,y,z)
+Proof
+  rw[index_to_triple_def, triple_to_index_def]
+  \\ `w * x + 5 * (w * y) = w * (x + 5 * y)` by simp[]
+  \\ pop_assum SUBST1_TAC
+  \\ simp[ADD_DIV_RWT, LESS_DIV_EQ_ZERO]
+  \\ once_rewrite_tac[MULT_COMM]
+  \\ simp[MULT_DIV, LESS_DIV_EQ_ZERO]
+QED
+
 Definition isFromList_def:
   isFromList t = ∃ls. t = fromList ls
 End
@@ -1243,7 +1255,81 @@ Proof
   \\ numLib.LEAST_ELIM_TAC
   \\ conj_tac >- metis_tac[rho_xy_exists]
   \\ rw[]
+  \\ Cases_on`FUNPOW f n a`
+  \\ PairCases_on`r`
+  \\ fs[] \\ rw[]
+  \\ qpat_assum`∀m x y t u. _ ⇒ _ ∧ _` drule
+  \\ strip_tac \\ rw[]
+  \\ qmatch_asmsub_rename_tac`rho_xy i = (x,y)`
+  \\ `23 < n` by fs[Abbr`P`]
+  \\ qmatch_goalsub_abbrev_tac`EL ti rs`
+  \\ `ti = triple_to_index w (x,y,z)`
+  by simp[triple_to_index_def, Abbr`ti`]
+  \\ pop_assum SUBST1_TAC \\ qunabbrev_tac`ti`
+  \\ qmatch_goalsub_abbrev_tac`EL ti ls`
+  \\ qabbrev_tac`ii = ((i + 1) * (i + 2) DIV 2)`
+  \\ `w * (SUC ii DIV w) = SUC ii - SUC ii MOD w`
+  by (
+    qspec_then`w`mp_tac DIVISION
+    \\ impl_tac >- simp[]
+    \\ disch_then(qspec_then`SUC ii`mp_tac)
+    \\ qmatch_goalsub_abbrev_tac`sdw * w`
+    \\ rw[] )
+  \\ fs[]
+  \\ qmatch_asmsub_abbrev_tac`_ + zz MOD w`
+  \\ `ti = triple_to_index w (x,y,zz MOD w)`
+  by simp[Abbr`ti`, triple_to_index_def]
+  \\ pop_assum SUBST1_TAC \\ qunabbrev_tac`ti`
   \\ cheat
+QED
+
+Definition pi_spt_def:
+  pi_spt a =
+  let w = b2w (size a) in
+  fromList (GENLIST (λi.
+    let (x, y, z) = index_to_triple w i in
+      THE (lookup (triple_to_index w ((x + 3 * y) MOD 5, x, z)) a)
+  ) (size a))
+End
+
+Theorem size_pi_spt[simp]:
+  size (pi_spt a) = size a
+Proof
+  rw[pi_spt_def]
+QED
+
+Theorem pi_spt:
+  isFromList t ⇒
+  spt_to_state_array (pi_spt t) =
+  pi (spt_to_state_array t)
+Proof
+  rw[state_array_component_equality, isFromList_def]
+  \\ rw[pi_spt_def]
+  \\ rw[spt_to_state_array_fromList]
+  \\ rw[pi_def, string_to_state_array_def]
+  \\ simp[restrict_def, FORALL_PROD, FUN_EQ_THM]
+  \\ qx_genl_tac[`x`,`y`,`z`]
+  \\ qmatch_goalsub_abbrev_tac`z < w`
+  \\ Cases_on`x < 5 ∧ y < 5 ∧ z < w` \\ fs[]
+  \\ mp_tac index_less
+  \\ impl_tac >- simp[]
+  \\ simp[Once triple_to_index_def]
+  \\ `25 * w ≤ LENGTH ls`
+  by (
+    simp[Abbr`w`, b2w_def]
+    \\ `0 < 25` by simp[]
+    \\ drule_then(qspec_then`LENGTH ls`mp_tac) DIVISION
+    \\ simp[] )
+  \\ simp[lookup_fromList]
+  \\ `z + w * (x + 5 * y) = triple_to_index w (x,y,z)` by simp[triple_to_index_def]
+  \\ pop_assum SUBST1_TAC
+  \\ simp[]
+  \\ strip_tac
+  \\ rw[]
+  >- rw[triple_to_index_def, LEFT_ADD_DISTRIB]
+  \\ `triple_to_index w ((x + 3 * y) MOD 5,x,z) < 25 * w`
+  by ( irule index_less \\ simp[] )
+  \\ fs[]
 QED
 
 Definition tabulate_array_def:
