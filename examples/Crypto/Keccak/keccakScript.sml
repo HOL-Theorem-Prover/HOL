@@ -869,7 +869,7 @@ Definition spt_to_string_def:
   spt_to_string t = MAP SND (toSortedAList t)
 End
 
-Theorem theta_spt_isFromList:
+Theorem isFromList_theta_spt[simp]:
   isFromList t ⇒ isFromList (theta_spt t)
 Proof
   rw[theta_spt_def]
@@ -1452,6 +1452,145 @@ Proof
   \\ cheat (* similar to in chi_spt *)
 QED
 
+Definition Rnd_spt_def:
+  Rnd_spt t =
+  iota_spt (chi_spt (pi_spt (rho_spt (theta_spt t))))
+End
+
+Theorem isFromList_chi_spt[simp]:
+  isFromList t ⇒ isFromList (chi_spt t)
+Proof
+  rw[chi_spt_def, isFromList_def]
+  \\ rw[mapi_fromList]
+  \\ metis_tac[]
+QED
+
+Theorem isFromList_pi_spt[simp]:
+  isFromList (pi_spt t)
+Proof
+  rw[pi_spt_def, isFromList_def]
+  \\ metis_tac[]
+QED
+
+Theorem isFromList_rho_spt[simp]:
+  isFromList t ⇒ isFromList (rho_spt t)
+Proof
+  metis_tac[rho_spt_invariants]
+QED
+
+Theorem isFromList_iota_spt[simp]:
+  isFromList t ⇒ isFromList (iota_spt t i)
+Proof
+  rw[iota_spt_def, isFromList_def]
+  \\ rw[mapi_fromList]
+  \\ metis_tac[]
+QED
+
+Theorem Rnd_spt:
+  isFromList t ⇒
+  spt_to_state_array (Rnd_spt t i) =
+  Rnd (spt_to_state_array t) i
+Proof
+  rw[Rnd_spt_def, Rnd_def]
+  \\ rw[iota_spt, chi_spt, pi_spt, rho_spt, theta_spt]
+QED
+
+Theorem isFromList_Rnd_spt[simp]:
+  isFromList t ⇒ isFromList (Rnd_spt t i)
+Proof
+  rw[Rnd_spt_def]
+QED
+
+Theorem size_iota_spt[simp]:
+  size (iota_spt t i) = size t
+Proof
+  rw[iota_spt_def]
+QED
+
+Theorem size_chi_spt[simp]:
+  size (chi_spt t) = size t
+Proof
+  rw[chi_spt_def]
+QED
+
+Theorem size_rho_spt[simp]:
+  isFromList t ⇒ size (rho_spt t) = size t
+Proof
+  rw[rho_spt_invariants]
+QED
+
+
+Theorem size_Rnd_spt[simp]:
+  isFromList t ⇒
+  size (Rnd_spt t i) = size t
+Proof
+  rw[Rnd_spt_def]
+QED
+
+Theorem Keccak_p_spt:
+  divides 25 (LENGTH s) ⇒
+  Keccak_p n s =
+  let w = b2w (LENGTH s) in
+  let l = w2l w in
+  let i0 = 12 + 2 * l - n in
+  let i1 = 12 + 2 * l - 1 in
+  let t = FST (FUNPOW (λ(t,i). (Rnd_spt t i, SUC i)) (SUC i1 - i0)
+            (fromList s, i0)) in
+  spt_to_string t
+Proof
+  rw[Keccak_p_def, string_to_state_array_w]
+  \\ qmatch_goalsub_abbrev_tac`(_, 2 * w2l w + 12 - n)`
+  \\ qmatch_goalsub_abbrev_tac`_, i0`
+  \\ qmatch_goalsub_abbrev_tac`i1 - i0`
+  \\ qmatch_goalsub_abbrev_tac`FUNPOW f1 m (string_to_state_array _,_)`
+  \\ qmatch_goalsub_abbrev_tac`FUNPOW f2 m (fromList _,_)`
+  \\ DEP_REWRITE_TAC[GSYM spt_to_state_array_to_string]
+  \\ `∀x j s.
+        FST x = (fromList s) ⇒
+        let t = (FST (FUNPOW f2 j x)) in
+        isFromList t ∧ size t = LENGTH s`
+  by (
+    ntac 2 gen_tac
+    \\ qho_match_abbrev_tac`Q (FUNPOW f2 j x)`
+    \\ irule FUNPOW_invariant
+    \\ simp[Abbr`Q`]
+    \\ simp[Once isFromList_def]
+    \\ conj_tac >- PROVE_TAC[]
+    \\ simp[FORALL_PROD, Abbr`f2`]
+    \\ rpt gen_tac \\ strip_tac
+    \\ gen_tac \\ first_x_assum (disch_then o mp_then Any mp_tac)
+    \\ simp[])
+  \\ first_assum(qspec_then`(fromList s, i0)`mp_tac)
+  \\ simp_tac(srw_ss())[]
+  \\ disch_then(qspecl_then[`m`,`s`]mp_tac)
+  \\ impl_tac >- simp[]
+  \\ simp_tac(srw_ss() ++ boolSimps.LET_ss)[]
+  \\ simp[] \\ strip_tac
+  \\ `∀x y j s.
+        FST y = (fromList s) ∧
+        FST x = (string_to_state_array s) ∧
+        SND x = SND y
+        ⇒
+        FST (FUNPOW f1 j x) =
+        spt_to_state_array (FST (FUNPOW f2 j y)) ∧
+        SND (FUNPOW f1 j x) = SND (FUNPOW f2 j y)`
+  by (
+    Induct_on`j` \\ simp[]
+    >- simp[spt_to_state_array_fromList]
+    \\ simp[FUNPOW_SUC]
+    \\ rpt gen_tac \\ strip_tac
+    \\ first_x_assum (drule_then drule)
+    \\ rw[Abbr`f1`, Abbr`f2`, UNCURRY]
+    \\ DEP_REWRITE_TAC[Rnd_spt]
+    \\ fs[]
+    \\ metis_tac[])
+  \\ first_x_assum(qspecl_then[
+       `(string_to_state_array s, i0)`,
+       `(fromList s, i0)`
+     ] mp_tac)
+  \\ simp[]
+QED
+
 Definition tabulate_array_def:
   tabulate_array a =
   a with A := restrict a.w (λ(x, y, z).
@@ -1655,6 +1794,7 @@ QED
 Theorem Keccak_tabulate_512 = Keccak_tabulate |>
   Q.SPEC`512` |> SIMP_RULE std_ss []
 
+(*
 Definition Rnd_spt_def:
   Rnd_spt a =
     let θ = theta (sptify a) in
@@ -1673,6 +1813,7 @@ Proof
   \\ DEP_REWRITE_TAC[sptify_id]
   \\ rw[]
 QED
+*)
 
 Theorem state_array_to_string_remove_restrict:
   state_array_to_string <| w := w0; A := restrict w0 f |> =
