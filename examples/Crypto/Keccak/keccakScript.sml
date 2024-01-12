@@ -77,6 +77,15 @@ Proof
   \\ simp[ADD1]
 QED
 
+(* TODO: move *)
+Theorem mapi_fromList:
+  mapi f (fromList ls) = fromList (MAPi f ls)
+Proof
+  DEP_REWRITE_TAC[spt_eq_thm]
+  \\ simp[wf_mapi]
+  \\ rw[lookup_fromList, lookup_mapi]
+QED
+
 (*
 (* TODO: move *)
 Theorem fromList_SNOC:
@@ -1330,6 +1339,71 @@ Proof
   \\ `triple_to_index w ((x + 3 * y) MOD 5,x,z) < 25 * w`
   by ( irule index_less \\ simp[] )
   \\ fs[]
+QED
+
+Definition chi_spt_def:
+  chi_spt a =
+    let w = b2w (size a) in
+    mapi (λk v.
+      let (x,y,z) = index_to_triple w k in
+      let v1 = THE (lookup (triple_to_index w ((x + 1) MOD 5, y, z)) a) in
+      let v2 = THE (lookup (triple_to_index w ((x + 2) MOD 5, y, z)) a) in
+      v ≠ (¬v1 ∧ v2)) a
+End
+
+Theorem chi_spt:
+  isFromList t ⇒
+  spt_to_state_array (chi_spt t) = chi (spt_to_state_array t)
+Proof
+  rw[isFromList_def, chi_spt_def]
+  \\ simp[size_fromList, mapi_fromList]
+  \\ qmatch_goalsub_abbrev_tac`triple_to_index w`
+  \\ simp[spt_to_state_array_fromList]
+  \\ rw[state_array_component_equality, string_to_state_array_w]
+  \\ rw[chi_def, string_to_state_array_def]
+  \\ `25 * w ≤ LENGTH ls`
+  by (
+    simp[Abbr`w`, b2w_def]
+    \\ `0 < 25` by simp[]
+    \\ drule_then(qspec_then`LENGTH ls`mp_tac) DIVISION
+    \\ simp[] )
+  \\ simp[lookup_fromList]
+  \\ simp[FUN_EQ_THM, FORALL_PROD, restrict_def]
+  \\ qx_genl_tac[`x`,`y`,`z`]
+  \\ Cases_on`x < 5 ∧ y < 5 ∧ z < w` \\ fs[]
+  \\ DEP_REWRITE_TAC[indexedListsTheory.EL_MAPi]
+  \\ mp_tac index_less
+  \\ simp[Once triple_to_index_def]
+  \\ simp[index_to_triple_def]
+  \\ strip_tac
+  \\ qmatch_goalsub_abbrev_tac`triple_to_index w (x1,y1,z)`
+  \\ qmatch_goalsub_abbrev_tac`¬EL t1 ls ∧ EL t2 ls`
+  \\ `x1 < 5 ∧ y1 < 5`
+  by simp[Abbr`x1`, Abbr`y1`, DIV_LT_X]
+  \\ `triple_to_index w (x1,y1,z) < 25 * w`
+  by simp[index_less]
+  \\ simp[]
+  \\ `triple_to_index w (x1,y1,z) = t1`
+  by (
+    rw[triple_to_index_def, Abbr`t1`, Abbr`y1`, Abbr`x1`]
+    \\ qmatch_goalsub_abbrev_tac`5 * (w * (q DIV 5))`
+    \\ `5 * (w * (q DIV 5)) = w * (5 * (q DIV 5))` by simp[]
+    \\ pop_assum SUBST1_TAC
+    \\ simp[GSYM LEFT_ADD_DISTRIB]
+    \\ cheat)
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`triple_to_index w (x2,y1,z)`
+  \\ `x2 < 5` by simp[Abbr`x2`, DIV_LT_X]
+  \\ `triple_to_index w (x2,y1,z) < 25 * w`
+  by simp[index_less]
+  \\ simp[]
+  \\ `triple_to_index w (x2,y1,z) = t2` suffices_by simp[]
+  \\ rw[triple_to_index_def, Abbr`t2`, Abbr`y1`, Abbr`x2`]
+  \\ qmatch_goalsub_abbrev_tac`5 * (w * (q DIV 5))`
+  \\ `5 * (w * (q DIV 5)) = w * (5 * (q DIV 5))` by simp[]
+  \\ pop_assum SUBST1_TAC
+  \\ simp[GSYM LEFT_ADD_DISTRIB]
+  \\ cheat (* same as above *)
 QED
 
 Definition tabulate_array_def:
