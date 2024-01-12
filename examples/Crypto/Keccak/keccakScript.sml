@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib dep_rewrite bitLib reduceLib combinLib computeLib;
+open HolKernel Parse boolLib bossLib dep_rewrite bitLib reduceLib combinLib sptreeLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
      rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
      logrootTheory sptreeTheory;
@@ -1591,6 +1591,165 @@ Proof
   \\ simp[]
 QED
 
+Theorem state_array_to_string_remove_restrict:
+  state_array_to_string <| w := w0; A := restrict w0 f |> =
+  state_array_to_string <| w := w0; A := f |>
+Proof
+  rw[state_array_to_string_compute, restrict_def, LIST_EQ_REWRITE]
+  \\ rw[DIV_LT_X]
+QED
+
+
+Definition Keccak_p_spt_def:
+  Keccak_p_spt n s =
+  let w = b2w (LENGTH s); l = w2l w; i0 = 12 + 2 * l - n; i1 = 12 + 2 * l - 1 in
+  let t = FST (FUNPOW (λ(t, i). (Rnd_spt t i, SUC i)) (SUC i1 - i0)
+               (fromList s, i0)) in
+    spt_to_string t
+End
+
+Theorem Keccak_p_spt_eq:
+  divides 25 (LENGTH s) ⇒
+  Keccak_p_spt n s = Keccak_p n s
+Proof
+  rw[Keccak_p_spt_def, Keccak_p_spt]
+QED
+
+Theorem Keccak_512_spt:
+  Keccak 512 = sponge (Keccak_p_spt 24) 1600 pad10s1 (1600 - 512)
+Proof
+  rw[Keccak_def, sponge_def, FUN_EQ_THM]
+  \\ AP_TERM_TAC
+  \\ AP_TERM_TAC
+  \\ qmatch_goalsub_abbrev_tac`FUNPOW f1 n ([], FOLDL f2 e xs)`
+  \\ qmatch_goalsub_abbrev_tac`_ = FUNPOW f3 n ([], FOLDL f4 e xs)`
+  \\ `FOLDL f2 e xs = FOLDL f4 e xs ∧ (λa. LENGTH a = 1600) (FOLDL f4 e xs)`
+  by (
+    irule FOLDL_CONG_invariant
+    \\ simp[Abbr`f2`, Abbr`f4`]
+    \\ conj_tac >- simp[Abbr`e`, LENGTH_REPLICATE]
+    \\ qx_gen_tac`y`
+    \\ qx_gen_tac`a`
+    \\ strip_tac
+    \\ DEP_REWRITE_TAC[Keccak_p_spt_eq]
+    \\ simp[LENGTH_Keccak_p]
+    \\ `1600 <= LENGTH y + 512` suffices_by (
+      simp[MIN_DEF, LESS_OR_EQ]
+      \\ strip_tac \\ rw[] \\ EVAL_TAC )
+    \\ fs[Abbr`xs`]
+    \\ `∃d. LENGTH x + LENGTH (pad10s1 1088 (LENGTH x)) = d * 1088`
+    by ( irule LENGTH_pad10s1 \\ simp[] )
+    \\ qmatch_asmsub_abbrev_tac`chunks 1088 ls`
+    \\ `divides 1088 (LENGTH ls)` by simp[Abbr`ls`]
+    \\ Cases_on`ls = []`
+    >- ( fs[Abbr`ls`] \\ fs[pad10s1_def] )
+    \\ drule_then drule divides_EVERY_LENGTH_chunks
+    \\ simp[EVERY_MEM] )
+  \\ simp[]
+  \\ `∀n x.
+      LENGTH (SND x) = 1600 ⇒
+      FUNPOW f1 n x = FUNPOW f3 n x ∧
+      LENGTH (SND (FUNPOW f3 n x)) = 1600 `
+  by (
+    Induct \\ simp[]
+    \\ simp[FUNPOW_SUC]
+    \\ ntac 2 strip_tac
+    \\ simp[Abbr`f1`, Abbr`f3`]
+    \\ simp[UNCURRY]
+    \\ reverse conj_asm1_tac
+    >- (
+      pop_assum (SUBST1_TAC o SYM)
+      \\ simp[LENGTH_Keccak_p])
+    \\ irule (GSYM Keccak_p_spt_eq)
+    \\ simp[]
+    \\ EVAL_TAC )
+  \\ fs[]
+QED
+
+val cs = num_compset();
+val () = extend_compset [
+  Tys [``:state_array``],
+  Defs [
+    Keccak_256_def,
+    Keccak_512_spt,
+    sponge_def,
+    chunks_def,
+    pad10s1_def,
+    Keccak_p_spt_def,
+    b2w_def,
+    w2l_def,
+    spt_to_string_def,
+    Rnd_spt_def,
+    iota_spt_def,
+    chi_spt_def,
+    pi_spt_def,
+    rho_spt_def,
+    theta_spt_def,
+    triple_to_index_def,
+    index_to_triple_def,
+    rc_step_def,
+    rc_def],
+  Extenders [
+    listSimps.list_rws,
+    rich_listSimps.add_rich_list_compset,
+    pairLib.add_pair_compset,
+    add_bit_compset,
+    pred_setLib.add_pred_set_compset,
+    add_sptree_compset,
+    add_combin_compset]
+ ] cs
+
+(*
+val thm = CBV_CONV cs ``Keccak_256 []``
+*)
+
+(*
+val ctm = ``512``
+val ftm = ``Keccak_p_tabulate 24``
+val btm = ``1600``
+val padtm = ``pad10s1``
+val rtm = ``1088``
+val Ntm = ``[]: bool list``
+val dtm = ``256``
+
+val Ptm = ``^Ntm ++ ^padtm ^rtm (LENGTH ^Ntm)``
+val ntm = ``LENGTH ^Ptm DIV ^rtm``
+val ctm = ``^btm - ^rtm``
+val Pistm =  ``chunks ^rtm ^Ptm``
+val S0tm = ``REPLICATE ^btm F``
+val Stm = ``FOLDL (λSi Pi. ^ftm (MAP2 (λx y. x ⇎ y) Si (Pi ⧺ REPLICATE ^ctm F))) ^S0tm ^Pistm``
+
+val chunksrw = CBV_CONV cs ``chunks 1088 (pad10s1 1088 0)``
+val step1 = (SIMP_CONV (srw_ss()) [REPLICATE_compute, chunksrw]) Stm
+val (step1f, step1args) = step1 |> concl |> rhs |> strip_comb
+val n1tm = step1args |> el 1
+val s1tm = step1args |> el 2
+
+val wtm = ``b2w (LENGTH ^s1tm)``
+val ltm = ``w2l ^wtm``
+val i0tm = ``12 + 2 * ^ltm - ^n1tm``
+val i1tm = ``12 + 2 * ^ltm - 1``
+val step2tm = ``Rnd_string ^wtm ^s1tm ^i0tm``
+
+Triviality EL_n_PLUS:
+  n + m < LENGTH ls ==> EL (n + m) ls = EL m (DROP n ls)
+Proof
+  rw[EL_DROP]
+QED
+
+val theta_arg  = ``tabulate_string ^wtm ^s1tm``
+val theta_res = ``theta ^theta_arg``
+val theta_res_th = CBV_CONV cs theta_res
+val theta_str = ``state_array_to_string ^(rhs(concl theta_res_th))``
+      |> SIMP_CONV std_ss [state_array_to_string_remove_restrict]
+      |> SIMP_RULE std_ss [GSYM ADD_ASSOC, EL_n_PLUS, MOD_LESS]
+      |> concl |> rhs
+val A_abbrev_def = new_definition("A_abbrev_def",
+  ``A_abbrev = ^(theta_str |> funpow 2 rand |> rator |> funpow 2 rand)``)
+*)
+
+(*
+
 Definition tabulate_array_def:
   tabulate_array a =
   a with A := restrict a.w (λ(x, y, z).
@@ -1793,6 +1952,7 @@ QED
 
 Theorem Keccak_tabulate_512 = Keccak_tabulate |>
   Q.SPEC`512` |> SIMP_RULE std_ss []
+*)
 
 (*
 Definition Rnd_spt_def:
@@ -1813,99 +1973,6 @@ Proof
   \\ DEP_REWRITE_TAC[sptify_id]
   \\ rw[]
 QED
-*)
-
-Theorem state_array_to_string_remove_restrict:
-  state_array_to_string <| w := w0; A := restrict w0 f |> =
-  state_array_to_string <| w := w0; A := f |>
-Proof
-  rw[state_array_to_string_compute, restrict_def, LIST_EQ_REWRITE]
-  \\ rw[DIV_LT_X]
-QED
-
-(*
-val cs = num_compset();
-val () = extend_compset [
-  Tys [``:state_array``],
-  Defs [
-    restrict_def,
-    b2w_def,
-    w2l_def,
-    string_to_state_array_def,
-    state_array_to_string_compute,
-    tabulate_string_def,
-    sptify_def,
-    Rnd_spt_def,
-    theta_c_def,
-    theta_d_def,
-    theta_def,
-    rho_def |> SIMP_RULE std_ss [LEAST_DEF, o_DEF],
-    pi_def,
-    chi_def,
-    rc_step_def,
-    rc_def,
-    iota_compute,
-    Keccak_p_def
-    Rnd_spt_def
-    Keccak_p_tabulate_def,
-    chunks_def,
-    pad10s1_def,
-    sponge_def,
-    Keccak_tabulate_512,
-    Keccak_256_def],
-  Extenders [
-    listSimps.list_rws,
-    rich_listSimps.add_rich_list_compset,
-    pairLib.add_pair_compset,
-    add_bit_compset,
-    pred_setLib.add_pred_set_compset,
-    add_combin_compset]
- ] cs
-
-val thm = CBV_CONV cs ``Keccak_256 []``
-
-val ctm = ``512``
-val ftm = ``Keccak_p_tabulate 24``
-val btm = ``1600``
-val padtm = ``pad10s1``
-val rtm = ``1088``
-val Ntm = ``[]: bool list``
-val dtm = ``256``
-
-val Ptm = ``^Ntm ++ ^padtm ^rtm (LENGTH ^Ntm)``
-val ntm = ``LENGTH ^Ptm DIV ^rtm``
-val ctm = ``^btm - ^rtm``
-val Pistm =  ``chunks ^rtm ^Ptm``
-val S0tm = ``REPLICATE ^btm F``
-val Stm = ``FOLDL (λSi Pi. ^ftm (MAP2 (λx y. x ⇎ y) Si (Pi ⧺ REPLICATE ^ctm F))) ^S0tm ^Pistm``
-
-val chunksrw = CBV_CONV cs ``chunks 1088 (pad10s1 1088 0)``
-val step1 = (SIMP_CONV (srw_ss()) [REPLICATE_compute, chunksrw]) Stm
-val (step1f, step1args) = step1 |> concl |> rhs |> strip_comb
-val n1tm = step1args |> el 1
-val s1tm = step1args |> el 2
-
-val wtm = ``b2w (LENGTH ^s1tm)``
-val ltm = ``w2l ^wtm``
-val i0tm = ``12 + 2 * ^ltm - ^n1tm``
-val i1tm = ``12 + 2 * ^ltm - 1``
-val step2tm = ``Rnd_string ^wtm ^s1tm ^i0tm``
-
-Triviality EL_n_PLUS:
-  n + m < LENGTH ls ==> EL (n + m) ls = EL m (DROP n ls)
-Proof
-  rw[EL_DROP]
-QED
-
-val theta_arg  = ``tabulate_string ^wtm ^s1tm``
-val theta_res = ``theta ^theta_arg``
-val theta_res_th = CBV_CONV cs theta_res
-val theta_str = ``state_array_to_string ^(rhs(concl theta_res_th))``
-      |> SIMP_CONV std_ss [state_array_to_string_remove_restrict]
-      |> SIMP_RULE std_ss [GSYM ADD_ASSOC, EL_n_PLUS, MOD_LESS]
-      |> concl |> rhs
-val A_abbrev_def = new_definition("A_abbrev_def",
-  ``A_abbrev = ^(theta_str |> funpow 2 rand |> rator |> funpow 2 rand)``)
 *)
 
 val _ = export_theory();
