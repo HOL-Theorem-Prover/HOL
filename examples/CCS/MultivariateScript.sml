@@ -1107,17 +1107,6 @@ Proof
  >> fs [FDOM_fromList] >> ASM_SET_TAC []
 QED
 
-Theorem LIST_REL_equivalence : (* unused *)
-    !R. equivalence R ==> equivalence (LIST_REL R)
-Proof
-    RW_TAC list_ss [equivalence_def, reflexive_def, symmetric_def,
-                    transitive_def, LIST_REL_EL_EQN]
- >- (EQ_TAC >> RW_TAC std_ss [])
- >> Q.PAT_X_ASSUM `!x y z. R x y /\ R y z ==> R x z` MATCH_MP_TAC
- >> Q.EXISTS_TAC `EL n y`
- >> CONJ_TAC >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
-QED
-
 (* ========================================================================== *)
 (*  Section III: Weakly guarded equations                                     *)
 (* ========================================================================== *)
@@ -1412,15 +1401,13 @@ Proof
  >> HO_MATCH_MP_TAC nc_INDUCTION2
  >> Q.EXISTS_TAC ‘set Xs UNION (BIGUNION (IMAGE FV (set Es)))’
  >> rw [ssub_thm] >> rw [FINITE_FV]
- (* 9 subgoals *)
+ (* 8 subgoals *)
  >- (fs [FDOM_fromList, MEM_EL, LIST_REL_EL_EQN] \\
      rw [fromList_FAPPLY_EL] \\
      fs [EVERY_EL])
- (* 8 subgoals *)
+ (* 7 subgoals *)
  >- (fs [FDOM_fromList] \\
      MATCH_MP_TAC weakly_guarded_var_rule >> art [])
- (* 7 subgoals *)
- >- (rw [weakly_guarded_nil])
  (* 6 subgoals *)
  >- (IMP_RES_TAC context_prefix \\
      rename1 ‘weakly_guarded Xs (u..[Es/Xs] C0)’ \\
@@ -1524,22 +1511,20 @@ Theorem strong_unique_solution_lemma :
 Proof
     Q.X_GEN_TAC `Xs`
  >> HO_MATCH_MP_TAC nc_INDUCTION2
- >> Q.EXISTS_TAC ‘set Xs’ >> rw [FDOM_fromList] (* 8 subgoals *)
- (* Case 0: E = var s, impossible *)
+ >> Q.EXISTS_TAC ‘set Xs’ >> rw [FDOM_fromList]
+ (* 7 subgoals: E = var s, impossible *)
  >- (rename1 `weakly_guarded Xs (var Y)` \\
      IMP_RES_TAC weakly_guarded_var)
- (* Case 1: E = nil, still impossible *)
- >- (fs [NIL_NO_TRANS])
- (* Case 2: E = b.E' *)
+ (* 6 subgoals: E = b.E' *)
  >- (rename1 `weakly_guarded Xs (prefix b E)` \\
      fs [CCS_SUBST_def, TRANS_PREFIX_EQ] \\
      Q.EXISTS_TAC `E` >> art [] \\
      IMP_RES_TAC weakly_guarded_prefix)
- (* Case 3: E = E1 + E2 *)
+ (* 5 subgoals: E = E1 + E2 *)
  >- (IMP_RES_TAC weakly_guarded_sum \\
      fs [CCS_SUBST_def, TRANS_SUM_EQ] \\ (* 2 subgoals, same tactics *)
      RES_TAC >> Q.EXISTS_TAC `E''` >> fs [])
- (* Case 4: E = E1 || E2 *)
+ (* 4 subgoals: E = E1 || E2 *)
  >- (rename1 `weakly_guarded Xs (E1 || E2)` \\
      IMP_RES_TAC weakly_guarded_par \\
      fs [CCS_SUBST_def, TRANS_PAR_EQ, FV_def] >| (* 3 subgoals *)
@@ -1597,7 +1582,7 @@ Proof
        GEN_TAC >> DISCH_TAC >> NTAC 2 DISJ2_TAC \\
        take [`CCS_SUBST (fromList Xs Qs) E'`,
              `CCS_SUBST (fromList Xs Qs) E''`, `l`] >> fs [] ])
- (* Case 5: E = restr f E' *)
+ (* 3 subgoals: E = restr f E' *)
  >- (IMP_RES_TAC weakly_guarded_restr \\
      fs [CCS_SUBST_def, TRANS_RESTR_EQ, FV_def] >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
@@ -1614,7 +1599,7 @@ Proof
        Q.EXISTS_TAC `restr L E'` \\
        rfs [CCS_SUBST_def, FV_def] \\
        MATCH_MP_TAC context_restr_rule >> art [] ])
- (* Case 6: E = relab E' R *)
+ (* 2 subgoals: E = relab E' R *)
  >- (IMP_RES_TAC weakly_guarded_relab \\
      Q.PAT_X_ASSUM `weakly_guarded Xs E /\ _ ==> _` MP_TAC \\
      fs [FV_def] >> rpt STRIP_TAC \\
@@ -1627,7 +1612,7 @@ Proof
      GEN_TAC >> DISCH_TAC \\
      take [`u'`, `CCS_SUBST (fromList Xs Qs) E'`] >> art [] \\
      FIRST_X_ASSUM MATCH_MP_TAC >> art [])
- (* Case 7 (difficult): E = rec Y E' *)
+ (* final goal: E = rec Y E' *)
  >> IMP_RES_TAC weakly_guarded_rec
  >> `DISJOINT (FV (rec y E)) (set Xs)` by ASM_SET_TAC [FV_def]
  (* simplify `CCS_Subst (rec y E) (Ps |-> Qs)` *)

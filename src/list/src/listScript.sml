@@ -1322,6 +1322,17 @@ val (rules,ind,cases) = IndDefLib.Hol_reln`
 val strong = IndDefLib.derive_strong_induction (rules,ind)
 *)
 
+Theorem LIST_REL_equivalence :
+    !R. equivalence R ==> equivalence (LIST_REL R)
+Proof
+    SRW_TAC [] [equivalence_def, reflexive_def, symmetric_def,
+                transitive_def, LIST_REL_EL_EQN]
+ >- (EQ_TAC >> SRW_TAC [][])
+ >> Q.PAT_X_ASSUM `!x y z. R x y /\ R y z ==> R x z` MATCH_MP_TAC
+ >> Q.EXISTS_TAC `EL n y`
+ >> CONJ_TAC >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
 
 (*---------------------------------------------------------------------------
      Congruence rules for higher-order functions. Used when making
