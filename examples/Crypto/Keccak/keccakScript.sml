@@ -1,4 +1,5 @@
-open HolKernel Parse boolLib bossLib dep_rewrite bitLib reduceLib combinLib sptreeLib computeLib;
+open HolKernel Parse boolLib bossLib dep_rewrite
+     bitLib reduceLib combinLib optionLib sptreeLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
      rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
      logrootTheory sptreeTheory;
@@ -1666,6 +1667,24 @@ Proof
   \\ fs[]
 QED
 
+Theorem triple_to_index_1600 =
+  List.tabulate(5, (fn x =>
+    List.tabulate(5, (fn y =>
+      List.tabulate(64, (fn z =>
+        EVAL``triple_to_index 64 (
+                 ^(numLib.term_of_int x),
+                 ^(numLib.term_of_int y),
+                 ^(numLib.term_of_int z)
+              )``))))))
+  |> List.concat
+  |> List.concat
+  |> LIST_CONJ
+
+Theorem index_to_triple_1600 =
+  List.tabulate(1600, fn i =>
+    EVAL``index_to_triple 64 ^(numLib.term_of_int i)``)
+  |> LIST_CONJ
+
 val cs = num_compset();
 val () = extend_compset [
   Tys [``:state_array``],
@@ -1685,10 +1704,15 @@ val () = extend_compset [
     pi_spt_def,
     rho_spt_def,
     theta_spt_def,
-    triple_to_index_def,
-    index_to_triple_def,
+    triple_to_index_1600,
+    index_to_triple_1600,
     rc_step_def,
-    rc_def],
+    rc_def,
+    WHILE, (* TODO: why is this not in a compset? *)
+    (* TODO: move to sptree_compset *)
+    mapi_def, mapi0_def, apsnd_cons_def, combine_rle_def, spt_center_def,
+    spt_left_def, spt_right_def, spt_centers_def, spts_to_alist_def, toSortedAList_def
+      ],
   Extenders [
     listSimps.list_rws,
     rich_listSimps.add_rich_list_compset,
@@ -1696,283 +1720,19 @@ val () = extend_compset [
     add_bit_compset,
     pred_setLib.add_pred_set_compset,
     add_sptree_compset,
+    OPTION_rws,
     add_combin_compset]
  ] cs
 
 (*
-val thm = CBV_CONV cs ``Keccak_256 []``
-*)
+Theorem Keccak_256_NIL = CBV_CONV cs ``Keccak_256 []``
 
-(*
-val ctm = ``512``
-val ftm = ``Keccak_p_tabulate 24``
-val btm = ``1600``
-val padtm = ``pad10s1``
-val rtm = ``1088``
-val Ntm = ``[]: bool list``
-val dtm = ``256``
+val res = Keccak_256_NIL |> concl |> rand |> rand
 
-val Ptm = ``^Ntm ++ ^padtm ^rtm (LENGTH ^Ntm)``
-val ntm = ``LENGTH ^Ptm DIV ^rtm``
-val ctm = ``^btm - ^rtm``
-val Pistm =  ``chunks ^rtm ^Ptm``
-val S0tm = ``REPLICATE ^btm F``
-val Stm = ``FOLDL (λSi Pi. ^ftm (MAP2 (λx y. x ⇎ y) Si (Pi ⧺ REPLICATE ^ctm F))) ^S0tm ^Pistm``
+wordsLib.add_words_compset true cs
 
-val chunksrw = CBV_CONV cs ``chunks 1088 (pad10s1 1088 0)``
-val step1 = (SIMP_CONV (srw_ss()) [REPLICATE_compute, chunksrw]) Stm
-val (step1f, step1args) = step1 |> concl |> rhs |> strip_comb
-val n1tm = step1args |> el 1
-val s1tm = step1args |> el 2
-
-val wtm = ``b2w (LENGTH ^s1tm)``
-val ltm = ``w2l ^wtm``
-val i0tm = ``12 + 2 * ^ltm - ^n1tm``
-val i1tm = ``12 + 2 * ^ltm - 1``
-val step2tm = ``Rnd_string ^wtm ^s1tm ^i0tm``
-
-Triviality EL_n_PLUS:
-  n + m < LENGTH ls ==> EL (n + m) ls = EL m (DROP n ls)
-Proof
-  rw[EL_DROP]
-QED
-
-val theta_arg  = ``tabulate_string ^wtm ^s1tm``
-val theta_res = ``theta ^theta_arg``
-val theta_res_th = CBV_CONV cs theta_res
-val theta_str = ``state_array_to_string ^(rhs(concl theta_res_th))``
-      |> SIMP_CONV std_ss [state_array_to_string_remove_restrict]
-      |> SIMP_RULE std_ss [GSYM ADD_ASSOC, EL_n_PLUS, MOD_LESS]
-      |> concl |> rhs
-val A_abbrev_def = new_definition("A_abbrev_def",
-  ``A_abbrev = ^(theta_str |> funpow 2 rand |> rator |> funpow 2 rand)``)
-*)
-
-(*
-
-Definition tabulate_array_def:
-  tabulate_array a =
-  a with A := restrict a.w (λ(x, y, z).
-    EL (y * 5 * a.w + x * a.w + z) (state_array_to_string a))
-End
-
-Definition tabulate_string_def:
-  tabulate_string w s = <|
-    w := w
-  ; A := restrict w (λ(x, y, z). EL (y * 5 * w + x * w + z) s)
-  |>
-End
-
-Theorem wf_tabulate_string[simp]:
-  wf_state_array (tabulate_string w s)
-Proof
-  rw[wf_state_array_def, tabulate_string_def, restrict_def]
-  \\ rw[]
-QED
-
-Theorem tabulate_string_w[simp]:
-  (tabulate_string w s).w = w
-Proof
-  rw[tabulate_string_def]
-QED
-
-Theorem tabulate_id:
-  wf_state_array a ⇒
-  tabulate_array a = a
-Proof
-  rw[wf_state_array_def, tabulate_array_def, state_array_component_equality]
-  \\ rw[state_array_to_string_def, FUN_EQ_THM, FORALL_PROD, restrict_def]
-  \\ rename1`(x,y,z)`
-  \\ Cases_on`x < 5` \\ fs[]
-  \\ Cases_on`y < 5` \\ fs[]
-  \\ Cases_on`z < a.w` \\ fs[]
-  \\ fs[NUMERAL_LESS_THM, EL_APPEND_EQN] \\ rw[]
-  \\ fs[Plane_def, EL_APPEND_EQN] \\ fs[Lane_def]
-QED
-
-Definition Rnd_string_def:
-  Rnd_string w s i =
-  let θ = state_array_to_string $ theta $ tabulate_string w s in
-  let ρ = state_array_to_string $ rho $ tabulate_string w θ in
-  let π = state_array_to_string $ pi $ tabulate_string w ρ in
-  let χ = state_array_to_string $ chi $ tabulate_string w π in
-  let ι = iota $ tabulate_string w χ in
-  state_array_to_string $ ι i
-End
-
-Theorem LENGTH_Rnd_string[simp]:
-  LENGTH (Rnd_string w s i) = 25 * w
-Proof
-  rw[Rnd_string_def]
-QED
-
-Theorem tabulate_state_array_to_string:
-  wf_state_array a ∧ w = a.w
-  ⇒
-  tabulate_string w (state_array_to_string a) = a
-Proof
-  strip_tac
-  \\ first_assum (mp_then Any
-       (CONV_TAC o (RHS_CONV o (REWR_CONV o SYM)))
-       tabulate_id)
-  \\ rw[tabulate_array_def, tabulate_string_def, state_array_component_equality]
-QED
-
-Theorem Rnd_string_Rnd:
-  w = b2w (LENGTH s) ⇒
-  Rnd_string w s i =
-  state_array_to_string (Rnd (string_to_state_array s) i)
-Proof
-  rw[Rnd_string_def, Rnd_def]
-  \\ AP_TERM_TAC
-  \\ AP_THM_TAC
-  \\ AP_TERM_TAC
-  \\ DEP_REWRITE_TAC[tabulate_state_array_to_string, wf_chi]
-  \\ simp[]
-  \\ rpt AP_TERM_TAC
-  \\ rw[string_to_state_array_def,
-        state_array_component_equality,
-        tabulate_string_def]
-  \\ rw[restrict_def, FUN_EQ_THM, FORALL_PROD]
-  \\ rw[EQ_IMP_THM]
-  \\ fs[LEFT_ADD_DISTRIB]
-QED
-
-Theorem Rnd_Rnd_string:
-  wf_state_array a ∧ w = a.w
-  ⇒
-  Rnd a i =
-  string_to_state_array (Rnd_string w (state_array_to_string a) i)
-Proof
-  rw[Rnd_def, Rnd_string_def]
-  \\ DEP_REWRITE_TAC[state_array_to_string_to_state_array]
-  \\ simp[]
-  \\ AP_THM_TAC \\ AP_TERM_TAC
-  \\ DEP_REWRITE_TAC[tabulate_state_array_to_string]
-  \\ simp[]
-QED
-
-Definition Keccak_p_tabulate_def:
-  Keccak_p_tabulate n s =
-  let w = b2w (LENGTH s) in
-  let l = w2l w in
-  let i0 = 12 + 2 * l - n in
-  let i1 = 12 + 2 * l - 1 in
-  FST (FUNPOW (λ(s,i). (Rnd_string w s i, SUC i)) (SUC i1 - i0) (s, i0))
-End
-
-Theorem Keccak_p_tabulate:
-  LENGTH s = 25 * divisor ⇒
-  Keccak_p n s = Keccak_p_tabulate n s
-Proof
-  rw[Keccak_p_def, Keccak_p_tabulate_def, string_to_state_array_w, ADD1]
-  \\ qmatch_goalsub_abbrev_tac`2 * l`
-  \\ qmatch_goalsub_abbrev_tac`(s, i)`
-  \\ qmatch_goalsub_abbrev_tac`FUNPOW k m`
-  \\ qmatch_goalsub_abbrev_tac`Rnd_string w`
-  \\ qmatch_goalsub_abbrev_tac`FUNPOW f m (s,i)`
-  \\ qspecl_then[`m`,`(s,i)`,`f`,
-       `string_to_state_array ## I`,
-       `state_array_to_string ## I`]mp_tac FUNPOW_COMPOSE_INV
-  \\ simp[Abbr`f`, o_DEF, LAMBDA_PROD, PAIR_MAP]
-  \\ qmatch_goalsub_abbrev_tac`FST (FUNPOW k m x)`
-  \\ qmatch_goalsub_abbrev_tac`FUNPOW d m x`
-  \\ `∀x. w = (FST x).w ∧ wf_state_array (FST x) ⇒ d x = k x`
-  by (
-    simp[Abbr`d`,Abbr`k`, FUN_EQ_THM, FORALL_PROD]
-    \\ rw[Rnd_Rnd_string] )
-  \\ `FUNPOW k m x = FUNPOW d m x`
-  by (
-    irule FUNPOW_CONG
-    \\ qx_gen_tac`z`
-    \\ strip_tac
-    \\ irule EQ_SYM
-    \\ first_x_assum irule
-    \\ conj_tac
-    \\ qho_match_abbrev_tac`P (FUNPOW k z x)`
-    \\ irule FUNPOW_invariant
-    \\ simp[Abbr`P`, Abbr`x`, Abbr`k`, FORALL_PROD]
-    \\ simp[string_to_state_array_w] )
-  \\ fs[]
-  \\ disch_then (fn th => DEP_REWRITE_TAC[th])
-  \\ simp[]
-  \\ rw[]
-  \\ DEP_REWRITE_TAC[GEN_ALL string_to_state_array_to_string]
-  \\ simp[]
-  \\ qexists_tac`divisor`
-  \\ qmatch_goalsub_abbrev_tac`FUNPOW p z q`
-  \\ qho_match_abbrev_tac`P (FUNPOW p z q)`
-  \\ irule FUNPOW_invariant
-  \\ simp[Abbr`P`, Abbr`q`, Abbr`p`, FORALL_PROD, Abbr`w`, b2w_def]
-QED
-
-Theorem Keccak_tabulate:
-  ∀c. c < 1600 ⇒
-  Keccak c = sponge (Keccak_p_tabulate 24) 1600 pad10s1 (1600 - c)
-Proof
-  rw[Keccak_def, sponge_def, FUN_EQ_THM]
-  \\ AP_TERM_TAC
-  \\ AP_TERM_TAC
-  \\ qmatch_goalsub_abbrev_tac`FUNPOW f n ([], (FOLDL g e z))`
-  \\ qmatch_goalsub_abbrev_tac`_ = FUNPOW h n ([], (FOLDL k e z))`
-  \\ `EVERY ($= (1600 - c) o LENGTH) z`
-  by (
-    rw[Abbr`z`]
-    \\ irule divides_EVERY_LENGTH_chunks
-    \\ gs[]
-    \\ conj_tac >- simp[pad10s1_def]
-    \\ `0 < 1600 - c` by simp[]
-    \\ drule_then(qspec_then`LENGTH x`strip_assume_tac) LENGTH_pad10s1
-    \\ simp[] )
-  \\ `FOLDL g e z = FOLDL k e z /\ (divides 25 o LENGTH) (FOLDL k e z)`
-  by (
-    irule FOLDL_CONG_invariant \\
-    conj_tac >- rw[Abbr`e`, divides_def]
-    \\ rpt gen_tac \\ strip_tac
-    \\ conj_asm1_tac >- (
-      rw[Abbr`g`, Abbr`k`]
-      \\ irule Keccak_p_tabulate
-      \\ rw[]
-      \\ fs[EVERY_MEM]
-      \\ res_tac \\ pop_assum (SUBST1_TAC o SYM)
-      \\ simp[] \\ fs[divides_def]
-      \\ rw[MIN_DEF] )
-    \\ pop_assum (SUBST1_TAC o SYM)
-    \\ rw[Abbr`g`, LENGTH_Keccak_p] )
-  \\ gs[]
-  \\ irule FUNPOW_CONG
-  \\ rw[Abbr`f`, Abbr`h`, UNCURRY]
-  \\ irule Keccak_p_tabulate
-  \\ qmatch_goalsub_abbrev_tac`FUNPOW f m y`
-  \\ qho_match_abbrev_tac`P (FUNPOW f m y)`
-  \\ irule FUNPOW_invariant
-  \\ rw[Abbr`P`, Abbr`y`, Abbr`f`] \\ rw[UNCURRY, LENGTH_Keccak_p]
-  \\ fs[divides_def]
-QED
-
-Theorem Keccak_tabulate_512 = Keccak_tabulate |>
-  Q.SPEC`512` |> SIMP_RULE std_ss []
-*)
-
-(*
-Definition Rnd_spt_def:
-  Rnd_spt a =
-    let θ = theta (sptify a) in
-    let ρ = rho (sptify θ) in
-    let π = pi (sptify ρ) in
-    let χ = chi (sptify π) in
-    let ι = iota (sptify χ) in
-      ι
-End
-
-Theorem Rnd_spt_Rnd:
-  wf_state_array a ==> Rnd_spt a = Rnd a
-Proof
-  strip_tac
-  \\ rw[Rnd_spt_def, Rnd_def]
-  \\ DEP_REWRITE_TAC[sptify_id]
-  \\ rw[]
-QED
+CBV_CONV cs``(word_from_bin_list (MAP (λb. if b then 1 else 0) ^res)):256 word``
+(* 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 *)
 *)
 
 val _ = export_theory();
