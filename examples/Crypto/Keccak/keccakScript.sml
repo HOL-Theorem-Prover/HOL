@@ -1406,6 +1406,52 @@ Proof
   \\ cheat (* same as above *)
 QED
 
+Definition iota_spt_def:
+  iota_spt a i =
+  let w = b2w (size a) in
+  mapi (λk v.
+    let (x,y,z) = index_to_triple w k in
+    if x = 0 ∧ y = 0 then
+      let l = w2l w in
+      let RCz = ((z = 2 ** LOG2 (SUC z) - 1 ∧ LOG2 (SUC z) ≤ l) ∧
+                 rc (LOG2 (SUC z) + 7 * i)) in
+        THE (lookup (triple_to_index w (0,0,z)) a) ≠ RCz
+    else v) a
+End
+
+Theorem iota_spt:
+  isFromList t ⇒
+  spt_to_state_array (iota_spt t i) =
+  iota (spt_to_state_array t) i
+Proof
+  rw[isFromList_def, iota_spt_def]
+  \\ rw[mapi_fromList, spt_to_state_array_fromList]
+  \\ rw[state_array_component_equality]
+  \\ rw[string_to_state_array_def]
+  \\ rw[iota_compute]
+  \\ simp[FUN_EQ_THM, FORALL_PROD, restrict_def]
+  \\ qx_genl_tac[`x`,`y`,`z`]
+  \\ qmatch_goalsub_abbrev_tac`z < w`
+  \\ `25 * w ≤ LENGTH ls`
+  by (
+    simp[Abbr`w`, b2w_def]
+    \\ `0 < 25` by simp[]
+    \\ drule_then(qspec_then`LENGTH ls`mp_tac) DIVISION
+    \\ simp[] )
+  \\ Cases_on`x < 5 ∧ y < 5 ∧ z < w` \\ fs[]
+  \\ DEP_REWRITE_TAC[indexedListsTheory.EL_MAPi]
+  \\ mp_tac index_less
+  \\ simp[Once triple_to_index_def]
+  \\ simp[index_to_triple_def]
+  \\ strip_tac
+  \\ simp[Once triple_to_index_def]
+  \\ simp[lookup_fromList]
+  \\ qmatch_goalsub_abbrev_tac`x1 = 0 ∧ y1 = 0`
+  \\ `x1 = x ∧ y1 = y` suffices_by rw[]
+  \\ simp[Abbr`x1`, Abbr`y1`]
+  \\ cheat (* similar to in chi_spt *)
+QED
+
 Definition tabulate_array_def:
   tabulate_array a =
   a with A := restrict a.w (λ(x, y, z).
