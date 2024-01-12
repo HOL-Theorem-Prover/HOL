@@ -89,6 +89,8 @@ fun add_sptree_compset compset =
         size_def,
         spt_center_def,
         spt_centers_def,
+        spt_left_def,
+        spt_right_def,
         spts_to_alist_def,
         toListA_def,
         toList_def,
