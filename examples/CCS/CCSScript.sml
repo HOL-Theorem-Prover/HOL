@@ -330,33 +330,30 @@ val tyname = "CCS";
 (* ‘GVAR s vv’ corresponds to ‘var 'a’ *)
 val vp = “(\n u:unit. n = 0)”;                                  (* 0. var *)
 
-val rep_t = “:unit + 'a Action + unit + unit + 'a Label set + 'a Relabeling + unit”;
+val rep_t = “:'a Action + unit + unit + 'a Label set + 'a Relabeling + unit”;
 val d_tm = mk_var("d", rep_t);
 
-(* ‘GLAM v bv ts us’ corresponds to everything else. *)
+(* ‘GLAM v bv ts us’ corresponds to everything else.
+
+   NOTE: ‘nil’ is now defined by ‘rec "s" (var "s")’, no more primitive.
+ *)
 val lp =
   “(\n ^d_tm tns uns.
-     n = 0 /\ ISL d /\ tns = [] ∧ uns = []  \/                  (* 1. nil *)
-     n = 0 /\ ISR d /\ ISL (OUTR d) /\ tns = [] /\ uns = [0] \/ (* 2. prefix *)
+     n = 0 /\ ISL d /\ tns = [] ∧ uns = [0]  \/                   (* 1. prefix *)
+     n = 0 /\ ISR d /\ ISL (OUTR d) /\ tns = [] /\ uns = [0;0] \/ (* 2. sum *)
      n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISL (OUTR (OUTR d)) /\
-              tns = [] /\ uns = [0;0] \/                        (* 3. sum *)
+              tns = [] /\ uns = [0;0] \/                          (* 3. par *)
      n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
               ISL (OUTR (OUTR (OUTR d))) /\
-              tns = [] /\ uns = [0;0] \/                        (* 4. par *)
+              tns = [] /\ uns = [0] \/                          (* 4. restr *)
      n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
               ISR (OUTR (OUTR (OUTR d))) /\
               ISL (OUTR (OUTR (OUTR (OUTR d)))) /\
-              tns = [] ∧ uns = [0] \/                           (* 5. restr *)
+              tns = [] ∧ uns = [0] \/                           (* 5. relab *)
      n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
               ISR (OUTR (OUTR (OUTR d))) /\
               ISR (OUTR (OUTR (OUTR (OUTR d)))) /\
-              ISL (OUTR (OUTR (OUTR (OUTR (OUTR d))))) /\
-              tns = [] /\ uns = [0] \/                          (* 6. relab *)
-     n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
-              ISR (OUTR (OUTR (OUTR d))) /\
-              ISR (OUTR (OUTR (OUTR (OUTR d)))) /\
-              ISR (OUTR (OUTR (OUTR (OUTR (OUTR d))))) /\
-              tns = [0] ∧ uns = [])”;                           (* 7. rec *)
+              tns = [0] /\ uns = [])”;                          (* 6. rec *)
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
@@ -377,43 +374,39 @@ val var_termP = prove(
   srw_tac [][genind_rules]);
 val var_t = defined_const var_def;
 
-(* nil *)
-val nil_t = mk_var("nil", “:^newty”);
-val nil_def = new_definition(
-   "nil_def", “^nil_t = ^term_ABS_t (GLAM ARB (INL ()) [] [])”);
-val nil_termP = prove(“^termP (GLAM x (INL ()) [] [])”,
-    match_mp_tac glam >> srw_tac [][genind_term_REP]);
-val nil_t = defined_const nil_def;
-val nil_def' = prove(“^term_ABS_t (GLAM v (INL ()) [] []) = ^nil_t”,
-    srw_tac [][nil_def, GLAM_NIL_EQ, term_ABS_pseudo11, nil_termP]);
-
-val _ = TeX_notation { hol = "nil", TeX = ("\\ensuremath{\\mathbf{0}}", 1) };
-
 (* prefix *)
 val prefix_t = mk_var("prefix", “:'a Action -> ^newty -> ^newty”);
 val prefix_def = new_definition(
    "prefix_def",
-  “^prefix_t u E = ^term_ABS_t (GLAM ARB (INR (INL u)) [] [^term_REP_t E])”);
+  “^prefix_t u E = ^term_ABS_t (GLAM ARB (INL u) [] [^term_REP_t E])”);
 val prefix_termP = prove(
-  “^termP (GLAM x (INR (INL u)) [] [^term_REP_t E])”,
+  “^termP (GLAM x (INL u) [] [^term_REP_t E])”,
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val prefix_t = defined_const prefix_def;
 val prefix_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INL u)) [] [^term_REP_t E]) = ^prefix_t u E”,
+  “^term_ABS_t (GLAM v (INL u) [] [^term_REP_t E]) = ^prefix_t u E”,
     srw_tac [][prefix_def, GLAM_NIL_EQ, term_ABS_pseudo11, prefix_termP]);
+
+val _ =
+    add_rule { term_name = "prefix", fixity = Infixr 700,
+        pp_elements = [ BreakSpace(0,0), TOK "..", BreakSpace(0,0) ],
+        paren_style = OnlyIfNecessary,
+        block_style = (AroundSamePrec, (PP.CONSISTENT, 0)) };
+
+val _ = TeX_notation { hol = "..", TeX = ("\\ensuremath{\\ldotp}", 1) };
 
 (* sum *)
 val sum_t = mk_var("sum", “:^newty -> ^newty -> ^newty”);
 val sum_def = new_definition(
    "sum_def",
-  “^sum_t E1 E2 = ^term_ABS_t (GLAM ARB (INR (INR (INL ()))) []
+  “^sum_t E1 E2 = ^term_ABS_t (GLAM ARB (INR (INL ())) []
                                         [^term_REP_t E1; ^term_REP_t E2])”);
 val sum_termP = prove(
-  “^termP (GLAM x (INR (INR (INL ()))) [] [^term_REP_t E1; ^term_REP_t E2])”,
+  “^termP (GLAM x (INR (INL ())) [] [^term_REP_t E1; ^term_REP_t E2])”,
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val sum_t = defined_const sum_def;
 val sum_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INR (INL ()))) []
+  “^term_ABS_t (GLAM v (INR (INL ())) []
                        [^term_REP_t E1; ^term_REP_t E2]) = ^sum_t E1 E2”,
     srw_tac [][sum_def, GLAM_NIL_EQ, term_ABS_pseudo11, sum_termP]);
 
@@ -424,15 +417,15 @@ val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
 val par_t = mk_var("par", “:^newty -> ^newty -> ^newty”);
 val par_def = new_definition(
    "par_def",
-  “^par_t E1 E2 = ^term_ABS_t (GLAM ARB (INR (INR (INR (INL ())))) []
+  “^par_t E1 E2 = ^term_ABS_t (GLAM ARB (INR (INR (INL ()))) []
                                         [^term_REP_t E1; ^term_REP_t E2])”);
 val par_termP = prove(
-  “^termP (GLAM x (INR (INR (INR (INL ())))) []
+  “^termP (GLAM x (INR (INR (INL ()))) []
                   [^term_REP_t E1; ^term_REP_t E2])”,
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val par_t = defined_const par_def;
 val par_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INR (INR (INL ())))) []
+  “^term_ABS_t (GLAM v (INR (INR (INL ()))) []
                        [^term_REP_t E1; ^term_REP_t E2]) = ^par_t E1 E2”,
     srw_tac [][par_def, GLAM_NIL_EQ, term_ABS_pseudo11, par_termP]);
 
@@ -446,14 +439,14 @@ val _ = TeX_notation { hol = "||", TeX = ("\\ensuremath{\\mid}", 1) };
 val restr_t = mk_var("restr", “:'a Label set -> ^newty -> ^newty”);
 val restr_def = new_definition(
    "restr_def",
-  “^restr_t L E = ^term_ABS_t (GLAM ARB (INR (INR (INR (INR (INL L))))) []
+  “^restr_t L E = ^term_ABS_t (GLAM ARB (INR (INR (INR (INL L)))) []
                                         [^term_REP_t E])”);
 val restr_termP = prove(
-  “^termP (GLAM x (INR (INR (INR (INR (INL L))))) [] [^term_REP_t E])”,
+  “^termP (GLAM x (INR (INR (INR (INL L)))) [] [^term_REP_t E])”,
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val restr_t = defined_const restr_def;
 val restr_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INR (INR (INR (INL L))))) [] [^term_REP_t E]) =
+  “^term_ABS_t (GLAM v (INR (INR (INR (INL L)))) [] [^term_REP_t E]) =
    ^restr_t L E”,
     srw_tac [][restr_def, GLAM_NIL_EQ, term_ABS_pseudo11, restr_termP]);
 
@@ -470,14 +463,14 @@ val relab_t = mk_var("relab", “:^newty -> 'a Relabeling -> ^newty”);
 val relab_def = new_definition(
    "relab_def",
   “^relab_t E rf =
-   ^term_ABS_t (GLAM ARB (INR (INR (INR (INR (INR (INL rf)))))) []
+   ^term_ABS_t (GLAM ARB (INR (INR (INR (INR (INL rf))))) []
                          [^term_REP_t E])”);
 val relab_termP = prove(
-  “^termP (GLAM x (INR (INR (INR (INR (INR (INL rf)))))) [] [^term_REP_t E])”,
+  “^termP (GLAM x (INR (INR (INR (INR (INL rf))))) [] [^term_REP_t E])”,
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val relab_t = defined_const relab_def;
 val relab_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INR (INR (INR (INR (INL rf)))))) []
+  “^term_ABS_t (GLAM v (INR (INR (INR (INR (INL rf))))) []
                        [^term_REP_t E]) =
    ^relab_t E rf”,
     srw_tac [][relab_def, GLAM_NIL_EQ, term_ABS_pseudo11, relab_termP]);
@@ -487,20 +480,12 @@ val rec_t = mk_var("rec", “:string -> ^newty -> ^newty”);
 val rec_def = new_definition(
    "rec_def",
   “^rec_t X E =
-   ^term_ABS_t (GLAM X (INR (INR (INR (INR (INR (INR ()))))))
+   ^term_ABS_t (GLAM X (INR (INR (INR (INR (INR ())))))
                        [^term_REP_t E] [])”);
 val rec_termP = prove(
-  “^termP (GLAM X (INR (INR (INR (INR (INR (INR ())))))) [^term_REP_t E] [])”,
+  “^termP (GLAM X (INR (INR (INR (INR (INR ()))))) [^term_REP_t E] [])”,
     match_mp_tac glam >> srw_tac [][genind_term_REP]);
 val rec_t = defined_const rec_def;
-
-val _ =
-    add_rule { term_name = "prefix", fixity = Infixr 700,
-        pp_elements = [ BreakSpace(0,0), TOK "..", BreakSpace(0,0) ],
-        paren_style = OnlyIfNecessary,
-        block_style = (AroundSamePrec, (PP.CONSISTENT, 0)) };
-
-val _ = TeX_notation { hol = "..", TeX = ("\\ensuremath{\\ldotp}", 1) };
 
 (* ----------------------------------------------------------------------
     tpm (permutation of CCS recursion variables)
@@ -508,7 +493,6 @@ val _ = TeX_notation { hol = "..", TeX = ("\\ensuremath{\\ldotp}", 1) };
 
 val cons_info =
     [{con_termP = var_termP,    con_def = var_def},
-     {con_termP = nil_termP,    con_def = SYM nil_def'},
      {con_termP = prefix_termP, con_def = SYM prefix_def'},
      {con_termP = sum_termP,    con_def = SYM sum_def'},
      {con_termP = par_termP,    con_def = SYM par_def'},
@@ -607,12 +591,35 @@ in
 end
 
 Theorem FV_thm[simp] = LIST_CONJ (map supp_clause cons_info)
-Theorem FV_def = FV_thm
 
-val [FV_var, FV_nil, FV_prefix, FV_sum, FV_par,
+(*---------------------------------------------------------------------------*
+ *  The "I combinator" of CCS, or nil (deadlock)
+ *---------------------------------------------------------------------------*)
+
+Definition nil_def :
+    nil = rec "s" (var "s")
+End
+val _ = TeX_notation { hol = "nil", TeX = ("\\ensuremath{\\mathbf{0}}", 1) };
+
+Theorem FV_nil[simp] :
+    FV nil = {}
+Proof
+    SRW_TAC [][nil_def]
+QED
+
+(* |- FV nil = {} /\ (!s. FV (var s) = {s}) /\ (!u E. FV (u..E) = FV E) /\
+      (!E2 E1. FV (E1 + E2) = FV E1 UNION FV E2) /\
+      (!E2 E1. FV (E1 || E2) = FV E1 UNION FV E2) /\
+      (!L E. FV (restr L E) = FV E) /\
+      (!rf E. FV (relab E rf) = FV E) /\
+       !X E. FV (rec X E) = FV E DELETE X
+ *)
+Theorem FV_def = LIST_CONJ (cons FV_nil (map supp_clause cons_info))
+
+val [FV_var, FV_prefix, FV_sum, FV_par,
      FV_restr, FV_relab, FV_rec] =
     map save_thm
-        (combine (["FV_var", "FV_nil", "FV_prefix", "FV_sum", "FV_par",
+        (combine (["FV_var", "FV_prefix", "FV_sum", "FV_par",
                    "FV_restr", "FV_relab", "FV_rec"], CONJUNCTS FV_thm));
 
 (* |- !x t p. x IN FV (tpm p t) <=> lswapstr (REVERSE p) x IN FV t *)
@@ -649,7 +656,7 @@ val term_ind =
                       IN_UNION, NOT_IN_EMPTY, oneTheory.FORALL_ONE,
                       genind_exists, LIST_REL_CONS1, LIST_REL_NIL]
         |> Q.INST [‘Q’ |-> ‘\t. P (^term_ABS_t t)’]
-        |> SIMP_RULE std_ss [GSYM var_def, GSYM nil_def, nil_def', prefix_def',
+        |> SIMP_RULE std_ss [GSYM var_def, prefix_def',
                              sum_def', par_def', restr_def', relab_def',
                              GSYM rec_def, absrep_id]
         |> SIMP_RULE (srw_ss()) [GSYM supp_tpm]
@@ -670,7 +677,7 @@ Theorem nc_INDUCTION[local] = mkX_ind term_ind
  *)
 Theorem nc_INDUCTION2 :
     !P X.
-        (!s. P (var s)) /\ P nil /\ (!u E. P E ==> P (u..E)) /\
+        (!s. P (var s)) /\ (!u E. P E ==> P (u..E)) /\
         (!E1 E2. P E1 /\ P E2 ==> P (E1 + E2)) /\
         (!E1 E2. P E1 /\ P E2 ==> P (E1 || E2)) /\
         (!L E. P E ==> P (restr L E)) /\
@@ -733,7 +740,6 @@ val tvf = “λ(s:string) (u:unit) (p:ρ). tvf s p : 'r”; (* var *)
 
 (* Type of constants occurring in tlf:
 
-   nil:    “tnf :'q -> 'r”
    prefix: “tff :('q -> 'r) -> 'a Action -> 'a CCS -> 'q -> 'r”
    sum:    “tsf :('q -> 'r) -> ('q -> 'r) -> 'a CCS -> 'a CCS -> 'q -> 'r”
    par:    “tpf :('q -> 'r) -> ('q -> 'r) -> 'a CCS -> 'a CCS -> 'q -> 'r”
@@ -746,21 +752,19 @@ val tlf =
    “λ(v:string) ^u_tm (ds1:('q -> 'r) list) (ds2:('q -> 'r) list)
                       (ts1:^repty' list) (ts2:^repty' list) (p :'q).
        if ISL u then
-         tnf p :'r
+         tff (HD ds2) (OUTL u) (^term_ABS_t (HD ts2)) p :'r
        else if ISL (OUTR u) then
-         tff (HD ds2) (OUTL (OUTR u)) (^term_ABS_t (HD ts2)) p :'r
-       else if ISL (OUTR (OUTR u)) then
          tsf (HD ds2) (HD (TL ds2))
              (^term_ABS_t (HD ts2)) (^term_ABS_t (HD (TL ts2))) p :'r
-       else if ISL (OUTR (OUTR (OUTR u))) then
+       else if ISL (OUTR (OUTR u)) then
          tpf (HD ds2) (HD (TL ds2))
              (^term_ABS_t (HD ts2)) (^term_ABS_t (HD (TL ts2))) p :'r
-       else if ISL (OUTR (OUTR (OUTR (OUTR u)))) then
-         trf (HD ds2) (OUTL (OUTR (OUTR (OUTR (OUTR u)))))
+       else if ISL (OUTR (OUTR (OUTR u))) then
+         trf (HD ds2) (OUTL (OUTR (OUTR (OUTR u))))
              (^term_ABS_t (HD ts2)) p :'r
-       else if ISL (OUTR (OUTR (OUTR (OUTR (OUTR u))))) then
+       else if ISL (OUTR (OUTR (OUTR (OUTR u)))) then
          tlf (HD ds2) (^term_ABS_t (HD ts2))
-             (OUTL (OUTR (OUTR (OUTR (OUTR (OUTR u)))))) p :'r
+             (OUTL (OUTR (OUTR (OUTR (OUTR u))))) p :'r
        else
          tcf (HD ds1) v (^term_ABS_t (HD ts1)) p :'r”;
 
@@ -795,7 +799,6 @@ Theorem parameter_tm_recursion =
       |> REWRITE_RULE [AND_IMP_INTRO]
       |> CONV_RULE (LAND_CONV (REWRITE_CONV [GSYM CONJ_ASSOC]))
       |> Q.INST [‘tvf’ |-> ‘vr’, (* var *)
-                 ‘tnf’ |-> ‘nl’, (* nil *)
                  ‘tff’ |-> ‘pf’, (* prefix *)
                  ‘tsf’ |-> ‘sm’, (* sum *)
                  ‘tpf’ |-> ‘pr’, (* par *)
@@ -810,7 +813,6 @@ Theorem tm_recursion =
       |> Q.INST_TYPE [‘:'q’ |-> ‘:unit’]
       |> Q.INST [‘ppm’ |-> ‘discrete_pmact’,
                   ‘vr’ |-> ‘\s u. vru s’,
-                  ‘nl’ |-> ‘\u. nlu’,
                   ‘pf’ |-> ‘\r a t u. pfu (r()) a t’,
                   ‘sm’ |-> ‘\r1 r2 t1 t2 u. smu (r1()) (r2()) t1 t2’,
                   ‘pr’ |-> ‘\r1 r2 t1 t2 u. pru (r1()) (r2()) t1 t2’,
@@ -821,7 +823,6 @@ Theorem tm_recursion =
                                oneTheory.EXISTS_ONE_FN, fnpm_def]
       |> SIMP_RULE (srw_ss() ++ CONJ_ss) [supp_unitfn]
       |> Q.INST [‘vru’ |-> ‘vr’,
-                 ‘nlu’ |-> ‘nl’,
                  ‘pfu’ |-> ‘pf’,
                  ‘smu’ |-> ‘sm’,
                  ‘pru’ |-> ‘pr’,
@@ -834,7 +835,7 @@ Theorem tm_recursion =
    ---------------------------------------------------------------------- *)
 
 Theorem CCS_cases :
-    !t. (t :'a CCS) = nil \/ (?a. t = var a) \/ (?u E. t = prefix u E) \/
+    !t. (?a. t = var a) \/ (?u E. t = prefix u E) \/
         (?E1 E2. t = sum E1 E2) \/ (?E1 E2. t = par E1 E2) \/
         (?L E. t = restr L E) \/ (?E rf. t = relab E rf) \/
          ?X E. t = rec X E
@@ -845,13 +846,6 @@ Proof
 QED
 
 Theorem CCS_distinct[simp] :
-    (nil <> var X :'a CCS) /\
-    (nil <> prefix u E :'a CCS) /\
-    (nil <> E1 + E2 :'a CCS) /\
-    (nil <> E1 || E2 :'a CCS) /\
-    (nil <> restr L E :'a CCS) /\
-    (nil <> relab E rf :'a CCS) /\
-    (nil <> rec X E :'a CCS) /\
     (var X <> prefix u E :'a CCS) /\
     (var X <> E1 + E2 :'a CCS) /\
     (var X <> E1 || E2 :'a CCS) /\
@@ -874,39 +868,31 @@ Theorem CCS_distinct[simp] :
     (restr L E <> rec X E' :'a CCS) /\
      relab E rf <> rec X E' :'a CCS
 Proof
-    rw [nil_def, nil_termP, var_def, var_termP, prefix_def, prefix_termP,
+    rw [var_def, var_termP, prefix_def, prefix_termP,
         sum_def, sum_termP, par_def, par_termP, restr_def, restr_termP,
         relab_def, relab_termP, rec_def, rec_termP,
         term_ABS_pseudo11, gterm_distinct, GLAM_eq_thm]
 QED
 
+(* NOTE: ‘var X <> rec Y E’ does't hold in general. *)
+Theorem CCS_distinct_nil[simp] :
+    (nil <> var X :'a CCS) /\
+    (nil <> prefix u E :'a CCS) /\
+    (nil <> E1 + E2 :'a CCS) /\
+    (nil <> E1 || E2 :'a CCS) /\
+    (nil <> restr L E :'a CCS) /\
+    (nil <> relab E rf :'a CCS)
+Proof
+    rw [nil_def]
+QED
+
 local
-    val thm = CONJUNCTS CCS_distinct;
+    val thm = (CONJUNCTS CCS_distinct) @ (CONJUNCTS CCS_distinct_nil);
     val CCS_distinct_LIST = thm @ (map GSYM thm);
 in
     val CCS_distinct' = save_thm
       ("CCS_distinct'", LIST_CONJ CCS_distinct_LIST);
 end
-
-Theorem CCS_distinct_exists :
-    !(p :'a CCS). ?q. q <> p
-Proof
-    Q.X_GEN_TAC ‘p’
- >> MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw []
- >- (Q.EXISTS_TAC ‘nil + nil’ >> rw [CCS_distinct'])
- >> Q.EXISTS_TAC ‘nil’
- >> rw [CCS_distinct]
-QED
-
-Theorem CCS_distinct_exists_FV :
-    !X (p :'a CCS). ?q. q <> p /\ DISJOINT (FV q) X
-Proof
-    rw []
- >> MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw []
- >- (Q.EXISTS_TAC ‘prefix a nil’ >> rw [CCS_distinct'])
- >> Q.EXISTS_TAC ‘nil’
- >> rw [CCS_distinct]
-QED
 
 (* cf. rec_eq_thm for “rec X E = rec X' E'” *)
 Theorem CCS_one_one[simp] :
@@ -917,12 +903,31 @@ Theorem CCS_one_one[simp] :
     (!L E L' E' :'a CCS. restr L E = restr L' E' <=> L = L' /\ E = E') /\
     (!(E :'a CCS) rf E' rf'. relab E rf = relab E' rf' <=> E = E' /\ rf = rf')
 Proof
-    srw_tac [] [nil_def, nil_termP, var_def, var_termP,
-                prefix_def, prefix_termP, sum_def, sum_termP,
-                par_def, par_termP, restr_def, restr_termP,
-                relab_def, relab_termP,
+    srw_tac [] [var_def, var_termP, prefix_def, prefix_termP, sum_def, sum_termP,
+                par_def, par_termP, restr_def, restr_termP, relab_def, relab_termP,
                 term_ABS_pseudo11, gterm_11, term_REP_11]
  >> rw [Once CONJ_COMM]
+QED
+
+Theorem CCS_distinct_exists :
+    !(p :'a CCS). ?q. q <> p
+Proof
+    Q.X_GEN_TAC ‘p’
+ >> MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw []
+ >- (Q.EXISTS_TAC ‘nil’ >> rw [])
+ >> Q.EXISTS_TAC ‘var a’
+ >> rw [CCS_distinct]
+QED
+
+Theorem CCS_distinct_exists_FV :
+    !X (p :'a CCS). FINITE X ==> ?q. q <> p /\ DISJOINT (FV q) X
+Proof
+    rpt STRIP_TAC
+ >> Q_TAC (NEW_TAC "z") ‘X’
+ >> MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw []
+ >- (Q.EXISTS_TAC ‘nil’ >> rw [])
+ >> Q.EXISTS_TAC ‘var z’
+ >> rw [CCS_distinct]
 QED
 
 Theorem sum_acyclic :
@@ -939,7 +944,7 @@ QED
 
 Theorem FORALL_TERM :
     (!(t :'a CCS). P t) <=>
-    P nil /\ (!s. P (var s)) /\ (!u t. P (prefix u t)) /\
+    (!s. P (var s)) /\ (!u t. P (prefix u t)) /\
     (!t1 t2. P (t1 + t2)) /\ (!t1 t2. P (t1 || t2)) /\
     (!L t. P (restr L t)) /\ (!t rf. P (relab t rf)) /\
     (!v t. P (rec v t))
@@ -970,6 +975,16 @@ Proof
     srw_tac [][supp_fresh]
 QED
 
+Theorem tpm_nil[simp] :
+    tpm pi nil = nil
+Proof
+    Induct_on ‘pi’ >- rw []
+ >> Q.X_GEN_TAC ‘h’
+ >> Cases_on ‘h’
+ >> rw [Once tpm_CONS]
+ >> MATCH_MP_TAC tpm_fresh >> rw []
+QED
+
 val rewrite_pairing = prove(
    “(?f: 'a CCS -> (string # 'a CCS) -> 'a CCS. P f) <=>
     (?f: 'a CCS -> string -> 'a CCS -> 'a CCS. P (\M (x,N). f N x M))”,
@@ -988,7 +1003,6 @@ val subst_exists =
         |> Q.INST [‘A’ |-> ‘{}’, ‘apm’ |-> ‘^t_pmact_t’,
                    ‘ppm’ |-> ‘pair_pmact string_pmact ^t_pmact_t’,
                    ‘vr’ |-> ‘\s (x,N). if s = x then N else var s’,
-                   ‘nl’ |-> ‘\r. nil’,
                    ‘pf’ |-> ‘\r x t p. prefix x (r p)’,
                    ‘sm’ |-> ‘\r1 r2 t1 t2 p. r1 p + r2 p’,
                    ‘pr’ |-> ‘\r1 r2 t1 t2 p. r1 p || r2 p’,
@@ -1032,7 +1046,7 @@ val _ = export_rewrites ["SUB_THM"];
 Theorem SUB_VAR = hd (CONJUNCTS SUB_DEF) |> Q.SPECL [‘Y’, ‘X’] |> GEN_ALL
 
 (* |- !Y X E' E. Y <> X /\ Y # E' ==> [E'/X] (rec Y E) = rec Y ([E'/X] E) *)
-Theorem SUB_REC = List.nth (CONJUNCTS SUB_DEF, 7)
+Theorem SUB_REC = List.nth (CONJUNCTS SUB_DEF, 6)
                |> Q.SPECL [‘Y’, ‘X’, ‘E'’, ‘E’] |> GEN_ALL
 
 (* ----------------------------------------------------------------------
@@ -1195,6 +1209,29 @@ Proof
  >> SRW_TAC [boolSimps.CONJ_ss][rec_eq_thm, pmact_flip_args]
 QED
 
+Theorem nil_thm :
+    !X. nil = rec X (var X)
+Proof
+    rw [nil_def, Once EQ_SYM_EQ]
+ >> Cases_on ‘X = "s"’ >> rw [rec_eq_thm]
+QED
+
+Theorem SUB_nil[simp] :
+    [N/v] nil = nil
+Proof
+    rw [lemma14b]
+QED
+
+Theorem nil_eq_cases :
+    !X E. nil = rec X E <=> E = var X
+Proof
+    qx_genl_tac [‘Y’, ‘P’]
+ >> reverse EQ_TAC >- rw [GSYM nil_thm]
+ >> rw [nil_def]
+ >> qabbrev_tac ‘X = "x"’
+ >> Cases_on ‘X = Y’ >> fs [rec_eq_thm]
+QED
+
 (* ----------------------------------------------------------------------
     size function
    ---------------------------------------------------------------------- *)
@@ -1205,7 +1242,6 @@ val size_exists =
         |> SPEC_ALL
         |> Q.INST [‘A’ |-> ‘{}’, ‘apm’ |-> ‘discrete_pmact’,
                    ‘vr’ |-> ‘\s. 1’,
-                   ‘nl’ |-> ‘1’,
                    ‘pf’ |-> ‘\m u E. m + 1’,
                    ‘sm’ |-> ‘\m n t1 t2. m + n + 1’,
                    ‘pr’ |-> ‘\m n t1 t2. m + n + 1’,
@@ -1260,16 +1296,16 @@ Theorem CCS_Subst_def :
    (Y <> X /\ Y # E' ==>
     CCS_Subst (rec Y E)    E' X = rec Y (CCS_Subst E E' X))
 Proof
-    rw [CCS_Subst]
+    rw [CCS_Subst, SUB_nil]
 QED
 
-val [CCS_Subst_nil,   CCS_Subst_prefix, CCS_Subst_sum, CCS_Subst_par,
-     CCS_Subst_restr, CCS_Subst_relab,  CCS_Subst_var, CCS_Subst_rec] =
+val [CCS_Subst_nil, CCS_Subst_prefix, CCS_Subst_sum, CCS_Subst_par,
+     CCS_Subst_restr, CCS_Subst_relab, CCS_Subst_var, CCS_Subst_rec] =
     map save_thm
-        (combine (["CCS_Subst_nil",   "CCS_Subst_prefix",
-                   "CCS_Subst_sum",   "CCS_Subst_par",
+        (combine (["CCS_Subst_nil", "CCS_Subst_prefix",
+                   "CCS_Subst_sum", "CCS_Subst_par",
                    "CCS_Subst_restr", "CCS_Subst_relab",
-                   "CCS_Subst_var",   "CCS_Subst_rec"],
+                   "CCS_Subst_var", "CCS_Subst_rec"],
                   CONJUNCTS CCS_Subst_def));
 
 (* 1st fixed point of CCS_Subst *)
@@ -1400,16 +1436,16 @@ Proof
  >> Q.EXISTS_TAC `n` >> art []
 QED
 
-Theorem closed_nil[simp] :
-    closed nil
-Proof
-    rw [closed_def]
-QED
-
 Theorem not_closed_var[simp] :
     ~closed (var X)
 Proof
     rw [closed_def]
+QED
+
+Theorem closed_nil[simp] :
+    closed nil
+Proof
+    rw [closed_def, nil_def]
 QED
 
 Theorem IS_PROC_prefix[simp] :
@@ -1448,7 +1484,6 @@ val PREF_ACT_exists =
         |> SPEC_ALL
         |> Q.INST [‘A’ |-> ‘{}’, ‘apm’ |-> ‘discrete_pmact’,
                    ‘vr’ |-> ‘\s. tau’,
-                   ‘nl’ |-> ‘tau’,
                    ‘pf’ |-> ‘\m u E. u’, (* here *)
                    ‘sm’ |-> ‘\m n t1 t2. tau’,
                    ‘pr’ |-> ‘\m n t1 t2. tau’,
@@ -1465,6 +1500,7 @@ val PREF_ACT_def = new_specification
   ("PREF_ACT_def", ["PREF_ACT"], lemma);
 end
 
+(* NOTE: tpm_nil[simp] is implicitly used here *)
 val PREF_PROC_exists =
     tm_recursion
         |> INST_TYPE [“:'r” |-> “:'a CCS”]
@@ -1473,7 +1509,6 @@ val PREF_PROC_exists =
                    ‘apm’ |-> ‘^t_pmact_t’,
                    ‘ppm’ |-> ‘pair_pmact string_pmact ^t_pmact_t’,
                    ‘vr’ |-> ‘\s. nil’,
-                   ‘nl’ |-> ‘nil’,
                    ‘pf’ |-> ‘\m u E. E’, (* here *)
                    ‘sm’ |-> ‘\m n t1 t2. nil’,
                    ‘pr’ |-> ‘\m n t1 t2. nil’,
@@ -1559,7 +1594,6 @@ val ssub_exists =
                    ‘ppm’ |-> ‘fm_pmact string_pmact ^t_pmact_t’,
                    ‘vr’ |-> ‘\s fm. if s IN FDOM fm then fm ' s else var s’,
                    ‘re’ |-> ‘\r v t fm. rec v (r fm)’,
-                   ‘nl’ |-> ‘\r. nil’,
                    ‘pf’ |-> ‘\r u t fm. prefix u (r fm)’,
                    ‘sm’ |-> ‘\r1 r2 t1 t2 fm. r1 fm + r2 fm’,
                    ‘pr’ |-> ‘\r1 r2 t1 t2 fm. r1 fm || r2 fm’,
@@ -1575,10 +1609,10 @@ val ssub_exists =
                                rwts = [notin_frange, strterm_fmap_supp],
                                alphas = [tpm_ALPHA]};
 
-val ssub_def = new_specification ("ssub_def", ["ssub"], ssub_exists)
+val ssub_def = new_specification ("ssub_def", ["ssub"], ssub_exists);
 
 (* |- (!s fm. ssub fm (var s) = if s IN FDOM fm then fm ' s else var s) /\
-      (!fm. ssub fm nil = nil) /\ (!x fm t. ssub fm (x..t) = x..ssub fm t) /\
+      (!x fm t. ssub fm (x..t) = x..ssub fm t) /\
       (!fm t t'. ssub fm (t' + t) = ssub fm t' + ssub fm t) /\
       (!fm t t'. ssub fm (t' || t) = ssub fm t' || ssub fm t) /\
       (!x fm t. ssub fm (restr x t) = restr x (ssub fm t)) /\
@@ -1633,6 +1667,12 @@ QED
 Theorem ssub_value' =
         ssub_value |> REWRITE_RULE [GSYM closed_def] |> GEN_ALL
 
+Theorem ssub_nil[simp] :
+    ssub fm nil = nil
+Proof
+    MATCH_MP_TAC ssub_value' >> rw []
+QED
+
 Theorem ssub_FEMPTY[simp]:
     !t. (FEMPTY :string |-> 'a CCS) ' t = t
 Proof
@@ -1675,7 +1715,7 @@ QED
         v NOTIN FDOM fm /\ (!y. y IN FDOM fm ==> v # fm ' y) ==>
         fm ' (rec v t) = rec v (fm ' t)
  *)
-Theorem ssub_rec = List.nth(CONJUNCTS ssub_thm, 7)
+Theorem ssub_rec = List.nth(CONJUNCTS ssub_thm, 6)
 
 Theorem ssub_update_apply_SUBST :
     !M. (!k. k IN FDOM fm ==> v # fm ' k) /\ v NOTIN FDOM fm /\
@@ -1714,8 +1754,7 @@ Proof
     Q.X_GEN_TAC ‘M’
  >> ‘[N/v] M = FEMPTY ' ([N/v] M)’ by rw []
  >> POP_ORW
- >> MATCH_MP_TAC ssub_update_apply_SUBST
- >> rw []
+ >> MATCH_MP_TAC ssub_update_apply_SUBST >> rw []
 QED
 
 (******************************************************************************)
@@ -1769,26 +1808,6 @@ Theorem REC' = REWRITE_RULE [CCS_Subst] REC
 val TRANS_IND = save_thm ("TRANS_IND",
     TRANS_ind |> (Q.SPEC `P`) |> GEN_ALL);
 
-(* The process nil has no transitions.
-   !u E. ~TRANS nil u E
- *)
-Theorem NIL_NO_TRANS =
-    TRANS_cases |> Q.SPECL [‘nil’, ‘u’, ‘E’]
-                |> REWRITE_RULE [CCS_distinct]
-                |> Q.GENL [‘u’, ‘E’]
-
-(* !u E. nil --u-> E <=> F *)
-val NIL_NO_TRANS_EQF = save_thm (
-   "NIL_NO_TRANS_EQF",
-    Q.GENL [`u`, `E`] (EQF_INTRO (SPEC_ALL NIL_NO_TRANS)));
-
-(* If a process can do an action, the process is not `nil`. *)
-Theorem TRANS_IMP_NO_NIL :
-    !E u E'. TRANS E u E' ==> E <> nil
-Proof
-    PROVE_TAC [NIL_NO_TRANS]
-QED
-
 (* An recursion variable has no transition.
    !X u E. ~TRANS (var X) u E
  *)
@@ -1797,51 +1816,7 @@ Theorem VAR_NO_TRANS =
                 |> REWRITE_RULE [CCS_distinct', CCS_one_one]
                 |> Q.GENL [`X`, `u`, `E`]
 
-(*---------------------------------------------------------------------------*
- *  The "I combinator" of CCS
- *---------------------------------------------------------------------------*)
-
-val _ = hide "I";
-
-(* cf. chap2Theory (examples/lambda/barendregt) *)
-Definition I_def :
-    I = rec "s" (var "s")
-End
-
-Theorem FV_I[simp] :
-    FV I = {}
-Proof
-    SRW_TAC [][I_def]
-QED
-
-Theorem I_thm :
-    !X. I = rec X (var X)
-Proof
-    rw [I_def, Once EQ_SYM_EQ]
- >> Cases_on ‘X = "s"’ >> rw [rec_eq_thm]
-QED
-
-Theorem SUB_I[simp] :
-    [N/v] I = I
-Proof
-    rw [lemma14b]
-QED
-
-Theorem ssub_I :
-    ssub fm I = I
-Proof
-    rw [ssub_value]
-QED
-
-Theorem I_cases :
-    !Y P. I = rec Y P ==> P = var Y
-Proof
-    rw [I_def]
- >> qabbrev_tac ‘X = "x"’
- >> Cases_on ‘X = Y’ >> fs [rec_eq_thm]
-QED
-
-(* TRANSn is the labelled version of TRANS. *)
+(* TRANSn is the labelled version of TRANS with "proof depth" information. *)
 Inductive TRANSn :
     (!E u.            TRANSn 0 (prefix u E) u E) /\
     (!n E u E1 E'.    TRANSn n E u E1 ==> TRANSn (SUC n) (sum E E') u E1) /\
@@ -1917,7 +1892,7 @@ QED
 
 Theorem TRANSn_REC_EQ' = REWRITE_RULE [CCS_Subst] TRANSn_REC_EQ
 
-Theorem I_NO_TRANSn_lemma[local] :
+Theorem NIL_NO_TRANSn_lemma[local] :
     !X u E n. ~TRANSn n (rec X (var X)) u E
 Proof
     Induct_on ‘n’
@@ -1925,8 +1900,8 @@ Proof
  >> rw [TRANSn_REC_EQ']
 QED
 
-(* |- !u E n. ~TRANSn n I u E *)
-Theorem I_NO_TRANSn = REWRITE_RULE [GSYM I_thm] I_NO_TRANSn_lemma
+(* |- !u E n. ~TRANSn n nil u E *)
+Theorem NIL_NO_TRANSn = NIL_NO_TRANSn_lemma |> REWRITE_RULE [GSYM nil_thm]
 
 Theorem TRANS_imp_TRANSn :
     !E u E'. TRANS E u E' ==> ?n. TRANSn n E u E'
@@ -1972,10 +1947,22 @@ Proof
 QED
 
 (* NOTE: This proof method based on ‘TRANSn’ is learnt from Ian Shillito. *)
-Theorem I_NO_TRANS :
-    !X u E. ~TRANS I u E
+Theorem NIL_NO_TRANS :
+    !u E. ~TRANS nil u E
 Proof
-    rw [TRANS_iff_TRANSn, I_NO_TRANSn]
+    rw [TRANS_iff_TRANSn, NIL_NO_TRANSn]
+QED
+
+(* !u E. nil --u-> E <=> F *)
+val NIL_NO_TRANS_EQF = save_thm (
+   "NIL_NO_TRANS_EQF",
+    Q.GENL [`u`, `E`] (EQF_INTRO (SPEC_ALL NIL_NO_TRANS)));
+
+(* If a process can do an action, the process is not `nil`. *)
+Theorem TRANS_IMP_NO_NIL :
+    !E u E'. TRANS E u E' ==> E <> nil
+Proof
+    PROVE_TAC [NIL_NO_TRANS]
 QED
 
 (******************************************************************************)
@@ -2386,7 +2373,7 @@ Theorem REC_VAR_NO_TRANS :
 Proof
     rpt GEN_TAC
  >> Cases_on ‘X = Y’
- >- rw [GSYM I_thm, I_NO_TRANS]
+ >- rw [GSYM nil_thm, NIL_NO_TRANS]
  >> rw [TRANS_REC_EQ', VAR_NO_TRANS]
 QED
 

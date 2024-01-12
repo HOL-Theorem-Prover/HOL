@@ -153,7 +153,7 @@ Proof
  >> ONCE_REWRITE_TAC [CONTEXT_cases]
  >> fs [FUN_EQ_THM, IS_CONST_def]
  >> rpt STRIP_TAC
- >- (Q.EXISTS_TAC ‘nil’ >> rw [])
+ >- (Q.EXISTS_TAC ‘var X’ >> rw [])
  >> MP_TAC (Q.SPEC ‘p’ CCS_cases)
  >> rw [] >> CCONTR_TAC >> fs []
  >> rename1 ‘!t. rec X (e t) = rec Y E’
@@ -304,7 +304,7 @@ Proof
  >> fs [FUN_EQ_THM] (* 3 subgoals left *)
  >| [ (* goal 1 (of 3) *)
       POP_ASSUM (MP_TAC o (Q.SPEC `nil`)) \\
-      SIMP_TAC std_ss [CCS_distinct],
+      SIMP_TAC std_ss [CCS_distinct'],
       (* goal 2 (of 3) *)
       MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] >> fs [] \\
      ‘e = \t. E’ by PROVE_TAC [] >> POP_ORW \\
@@ -687,7 +687,7 @@ Proof
      STRIP_ASSUME_TAC (Q.SPEC `p` CCS_distinct_exists) >> METIS_TAC [])
  >> fs [FUN_EQ_THM]
  >> Q.PAT_X_ASSUM `!t. t = X` (ASSUME_TAC o (Q.SPEC `nil`))
- >> fs [CCS_distinct]
+ >> fs [CCS_distinct']
 QED
 
 Theorem WG_CONST :
@@ -927,7 +927,6 @@ Proof
       POP_ASSUM (ASSUME_TAC o BETA_RULE o (ONCE_REWRITE_RULE [FUN_EQ_THM])) \\
       MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 8 subgoals *)
       >- PROVE_TAC [CCS_distinct']
-      >- PROVE_TAC [CCS_distinct']
       >- (fs [CCS_one_one, FUN_EQ_THM] \\
          ‘e = \t. E’ by PROVE_TAC [] >> POP_ORW \\
           rw [SG1])
@@ -967,14 +966,13 @@ Proof
   ( POP_ASSUM (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [SG_cases])) (* 7 sub-goals here *)
  >| [ (* goal 1 (of 7) *)
       POP_ASSUM (ASSUME_TAC o BETA_RULE o (ONCE_REWRITE_RULE [FUN_EQ_THM])) \\
-      MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 8 subgoals *)
-      >- PROVE_TAC [CCS_distinct]
-      >- PROVE_TAC [CCS_distinct]
-      >- PROVE_TAC [CCS_distinct]
+      MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 7 subgoals *)
+      >- PROVE_TAC [CCS_distinct']
+      >- PROVE_TAC [CCS_distinct']
       >- (fs [FUN_EQ_THM, CCS_one_one] \\
          ‘(e = \t. E1) /\ (e' = \t. E2)’ by PROVE_TAC [] >> art [] \\
           rw [SG1])
-      >> PROVE_TAC [CCS_distinct],
+      >> PROVE_TAC [CCS_distinct'],
       (* goal 2 (of 7) *)
       qpat_x_assum `(\t. sum (e t) (e' t)) = X`
         (ASSUME_TAC o BETA_RULE o (REWRITE_RULE [FUN_EQ_THM])) \\
@@ -1010,19 +1008,17 @@ Proof
       POP_ASSUM (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [SG_cases])) >| (* 7 sub-goals here *)
       [ (* goal 1.1 (of 7) *)
         POP_ASSUM (ASSUME_TAC o BETA_RULE o (ONCE_REWRITE_RULE [FUN_EQ_THM])) \\
-        MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 8 subgoals *)
-        >- PROVE_TAC [CCS_distinct]
-        >- PROVE_TAC [CCS_distinct]
-        >- PROVE_TAC [CCS_distinct]
+        MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 7 subgoals *)
+        >- PROVE_TAC [CCS_distinct']
+        >- PROVE_TAC [CCS_distinct']
         >- (fs [CCS_one_one, FUN_EQ_THM] \\
-            MP_TAC (Q.SPEC ‘E1’ CCS_cases) >> rw [] (* 8 subgoals *)
-            >- PROVE_TAC [CCS_distinct]
-            >- PROVE_TAC [CCS_distinct]
+            MP_TAC (Q.SPEC ‘E1’ CCS_cases) >> rw [] (* 7 subgoals *)
+            >- PROVE_TAC [CCS_distinct']
             >- (fs [CCS_one_one, FUN_EQ_THM] \\
                ‘e = \t. E’ by PROVE_TAC [] >> POP_ORW \\
                 rw [SG1])
-            >> PROVE_TAC [CCS_distinct])
-        >> PROVE_TAC [CCS_distinct],
+            >> PROVE_TAC [CCS_distinct'])
+        >> PROVE_TAC [CCS_distinct'],
         (* goal 1.2 (of 7) *)
         qpat_x_assum `(\t. sum (prefix tau (e t)) (prefix tau (e' t))) = X`
           (ASSUME_TAC o BETA_RULE o (REWRITE_RULE [FUN_EQ_THM])) \\
@@ -1054,19 +1050,17 @@ Proof
       POP_ASSUM (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [SG_cases])) >| (* 7 sub-goals here *)
       [ (* goal 2.1 (of 7) *)
         POP_ASSUM (ASSUME_TAC o BETA_RULE o (ONCE_REWRITE_RULE [FUN_EQ_THM])) \\
-        MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 8 subgoals *)
-        >- PROVE_TAC [CCS_distinct]
-        >- PROVE_TAC [CCS_distinct]
-        >- PROVE_TAC [CCS_distinct]
+        MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 7 subgoals *)
+        >- PROVE_TAC [CCS_distinct']
+        >- PROVE_TAC [CCS_distinct']
         >- (fs [CCS_one_one, FUN_EQ_THM] \\
-            MP_TAC (Q.SPEC ‘E2’ CCS_cases) >> rw [] (* 8 subgoals *)
-            >- PROVE_TAC [CCS_distinct]
-            >- PROVE_TAC [CCS_distinct]
+            MP_TAC (Q.SPEC ‘E2’ CCS_cases) >> rw [] (* 7 subgoals *)
+            >- PROVE_TAC [CCS_distinct']
             >- (fs [CCS_one_one, FUN_EQ_THM] \\
                ‘e' = \t. E’ by PROVE_TAC [] >> POP_ORW \\
                 rw [SG1])
-            >> PROVE_TAC [CCS_distinct])
-        >> PROVE_TAC [CCS_distinct],
+            >> PROVE_TAC [CCS_distinct'])
+        >> PROVE_TAC [CCS_distinct'],
         (* goal 2.2 (of 7) *)
         qpat_x_assum `(\t. sum (prefix tau (e t)) (prefix tau (e' t))) = X`
           (ASSUME_TAC o BETA_RULE o (REWRITE_RULE [FUN_EQ_THM])) \\
@@ -1103,19 +1097,17 @@ Proof
  >> POP_ASSUM (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [SG_cases])) (* 7 sub-goals here *)
  >| [ (* goal 1 (of 7) *)
       POP_ASSUM (ASSUME_TAC o BETA_RULE o (ONCE_REWRITE_RULE [FUN_EQ_THM])) \\
-      MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 8 subgoals *)
-      >- PROVE_TAC [CCS_distinct]
-      >- PROVE_TAC [CCS_distinct]
-      >- PROVE_TAC [CCS_distinct]
+      MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 7 subgoals *)
+      >- PROVE_TAC [CCS_distinct']
+      >- PROVE_TAC [CCS_distinct']
       >- (fs [CCS_one_one, FUN_EQ_THM] \\
-          MP_TAC (Q.SPEC ‘E1’ CCS_cases) >> rw [] (* 8 subgoals *)
-          >- PROVE_TAC [CCS_distinct]
-          >- PROVE_TAC [CCS_distinct]
+          MP_TAC (Q.SPEC ‘E1’ CCS_cases) >> rw [] (* 7 subgoals *)
+          >- PROVE_TAC [CCS_distinct']
           >- (fs [CCS_one_one, FUN_EQ_THM] \\
              ‘e = \t. E’ by PROVE_TAC [] >> POP_ORW \\
               rw [SG1])
-          >> PROVE_TAC [CCS_distinct])
-      >> PROVE_TAC [CCS_distinct],
+          >> PROVE_TAC [CCS_distinct'])
+      >> PROVE_TAC [CCS_distinct'],
       (* goal 2 (of 7) *)
       qpat_x_assum `(\t. sum (prefix tau (e t)) (prefix (label L) (e' t))) = X`
           (ASSUME_TAC o BETA_RULE o (REWRITE_RULE [FUN_EQ_THM])) \\
@@ -1152,19 +1144,17 @@ Proof
  >> POP_ASSUM (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [SG_cases])) (* 7 sub-goals here *)
  >| [ (* goal 1 (of 7) *)
       POP_ASSUM (ASSUME_TAC o BETA_RULE o (ONCE_REWRITE_RULE [FUN_EQ_THM])) \\
-      MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 8 subgoals *)
-      >- PROVE_TAC [CCS_distinct]
-      >- PROVE_TAC [CCS_distinct]
-      >- PROVE_TAC [CCS_distinct]
+      MP_TAC (Q.SPEC ‘p’ CCS_cases) >> rw [] (* 7 subgoals *)
+      >- PROVE_TAC [CCS_distinct']
+      >- PROVE_TAC [CCS_distinct']
       >- (fs [CCS_one_one, FUN_EQ_THM] \\
-          MP_TAC (Q.SPEC ‘E2’ CCS_cases) >> rw [] (* 8 subgoals *)
-          >- PROVE_TAC [CCS_distinct]
-          >- PROVE_TAC [CCS_distinct]
+          MP_TAC (Q.SPEC ‘E2’ CCS_cases) >> rw [] (* 7 subgoals *)
+          >- PROVE_TAC [CCS_distinct']
           >- (fs [CCS_one_one, FUN_EQ_THM] \\
              ‘e' = \t. E’ by PROVE_TAC [] >> POP_ORW \\
               rw [SG1])
-          >> PROVE_TAC [CCS_distinct])
-      >> PROVE_TAC [CCS_distinct],
+          >> PROVE_TAC [CCS_distinct'])
+      >> PROVE_TAC [CCS_distinct'],
       (* goal 2 (of 7) *)
       qpat_x_assum `(\t. sum (prefix (label L) (e t)) (prefix tau (e' t))) = X`
           (ASSUME_TAC o BETA_RULE o (REWRITE_RULE [FUN_EQ_THM])) \\
