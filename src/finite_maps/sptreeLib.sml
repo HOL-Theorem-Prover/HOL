@@ -79,6 +79,8 @@ fun add_sptree_compset compset =
         lookup_compute,
         lrnext_thm,
         map_def,
+        mapi_def,
+        mapi0_def,
         mk_BN_def,
         mk_BS_def,
         mk_wf_def,
