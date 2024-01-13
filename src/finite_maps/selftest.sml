@@ -43,7 +43,20 @@ val _ = app testeval [
    ``fromList [a;b;c;d:num]``,
    ``BS (LS c) (a:num) (BS LN b (LS d))``),
   ("EVAL wf o fromList", ``wf ^tm1``, boolSyntax.T),
-  ("EVAL wf o fromAList", ``wf ^tm2``, boolSyntax.T)]
+  ("EVAL wf o fromAList", ``wf ^tm2``, boolSyntax.T),
+  ("EVAL mapi",
+   ``mapi (arithmetic$+) (fromList [1;2;3]) =
+     fromList [1;3;5]``,
+   boolSyntax.T),
+  ("EVAL toSortedAList",
+   ``toSortedAList (fromAList [(23940, a:num); (22, b); (1, c); (234, d)]) =
+     [(1, c); (22, b); (234, d); (23940, a)]``,
+   boolSyntax.T),
+  ("EVAL toSortedAList fromList",
+   ``toSortedAList (fromList [239n; 1; 4; 123; 5]) =
+     [(0, 239); (1, 1); (2, 4); (3, 123); (4, 5)]``,
+   boolSyntax.T)
+]
 
 val _ = temp_add_sptree_printer ()
 val _ = remove_sptree_printer ()
