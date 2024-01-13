@@ -1948,11 +1948,35 @@ val TAKE_APPEND2 = store_thm(
   “!n. LENGTH l1 < n ==> (TAKE n (l1 ++ l2) = l1 ++ TAKE (n - LENGTH l1) l2)”,
   Induct_on ‘l1’ THEN SRW_TAC [numSimps.ARITH_ss] [arithmeticTheory.ADD1]);
 
-val DROP_0 = store_thm(
-  "DROP_0",
-  “DROP 0 l = l”,
-  Induct_on ‘l’ THEN SRW_TAC [] [DROP_def])
-val _ = export_rewrites ["DROP_0"]
+Theorem DROP_0[simp]:
+  DROP 0 l = l
+Proof
+  Induct_on ‘l’ THEN SRW_TAC [] [DROP_def]
+QED
+
+Theorem DROP_LENGTH_NIL[simp]:
+  !l. DROP (LENGTH l) l = []
+Proof
+  Induct >> simp[]
+QED
+
+Theorem DROP_APPEND1:
+  !n l1. n <= LENGTH l1 ==> !l2. DROP n (l1 ++ l2) = DROP n l1 ++ l2
+Proof
+  Induct_on ‘l1’ >> simp[] >> Cases_on ‘n’ >> simp[]
+QED
+
+Theorem DROP_APPEND2:
+  !l1 n. LENGTH l1 <= n ==> !l2. DROP n (l1 ++ l2) = DROP (n - LENGTH l1) l2
+Proof
+  Induct >> simp[] >> Cases_on ‘n’ >> simp[GSYM arithmeticTheory.ADD1]
+QED
+
+Theorem DROP_APPEND:
+  !n l1 l2. DROP n (l1 ++ l2) = DROP n l1 ++ DROP (n - LENGTH l1) l2
+Proof
+  Induct_on ‘l1’ >> simp[] >> Cases_on ‘n’ >> simp[]
+QED
 
 val TAKE_DROP = store_thm(
   "TAKE_DROP",

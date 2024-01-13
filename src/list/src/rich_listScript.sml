@@ -1413,31 +1413,10 @@ val TAKE_TAKE = Q.store_thm ("TAKE_TAKE",
    `!m l. m <= LENGTH l ==> !n. n <= m ==> (TAKE n (TAKE m l) = TAKE n l)`,
    SIMP_TAC bool_ss [TAKE_TAKE_T]) ;
 
-val DROP_LENGTH_NIL = Q.store_thm ("DROP_LENGTH_NIL",
-   `!l. DROP (LENGTH l) l = []`,
-   BasicProvers.Induct THEN ASM_REWRITE_TAC [LENGTH, DROP]);
-
-val DROP_APPEND = Q.store_thm ("DROP_APPEND",
-   `!n l1 l2. DROP n (APPEND l1 l2) = DROP n l1 ++ DROP (n - LENGTH l1) l2`,
-   Induct THEN1 SIMP_TAC list_ss [DROP, DROP_def]
-   THEN Cases THEN1 SIMP_TAC list_ss [DROP, DROP_def]
-   THEN ASM_SIMP_TAC list_ss [DROP, DROP_def]) ;
-
-val DROP_APPEND1 = Q.store_thm ("DROP_APPEND1",
-   `!n l1.
-       n <= LENGTH l1 ==> !l2. DROP n (APPEND l1 l2) = APPEND (DROP n l1) l2`,
-   NTAC 2 BasicProvers.Induct
-   THEN REWRITE_TAC [LENGTH, DROP, NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]
-   THEN GEN_TAC THEN ASM_REWRITE_TAC [APPEND, DROP]);
-
-val DROP_APPEND2 = Q.store_thm ("DROP_APPEND2",
-   `!l1 n.
-       LENGTH l1 <= n ==> !l2. DROP n (APPEND l1 l2) = DROP (n - LENGTH l1) l2`,
-   BasicProvers.Induct
-   THEN REWRITE_TAC [LENGTH, APPEND, DROP, SUB_0]
-   THEN GEN_TAC
-   THEN BasicProvers.Induct
-   THEN ASM_REWRITE_TAC [NOT_SUC_LESS_EQ_0, LESS_EQ_MONO, SUB_MONO_EQ, DROP])
+Theorem DROP_LENGTH_NIL = listTheory.DROP_LENGTH_NIL
+Theorem DROP_APPEND = listTheory.DROP_APPEND
+Theorem DROP_APPEND1 = listTheory.DROP_APPEND1
+Theorem DROP_APPEND2 = listTheory.DROP_APPEND2
 
 val DROP_DROP_T = Q.store_thm ("DROP_DROP_T",
    `!n m l. DROP n (DROP m l) = DROP (n + m) l`,
