@@ -3070,13 +3070,9 @@ Theorem EVERY_REPLICATE[simp]:
 Proof Induct_on `n` >> rw [] >> metis_tac []
 QED
 
-(* ALL_DISTINCT_DROP is already in listTheory *)
-Theorem ALL_DISTINCT_TAKE :
-    !ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (TAKE n ls)
-Proof
-    Induct >> simp[TAKE_def] >> rw[]
- >> METIS_TAC [MEM_TAKE]
-QED
+(* ALL_DISTINCT_{DROP,TAKE} are already in listTheory; keep this binding
+   here for backwards compatibility *)
+Theorem ALL_DISTINCT_TAKE = listTheory.ALL_DISTINCT_TAKE
 
 Theorem ALL_DISTINCT_FRONT :
     !l. l <> [] /\ ALL_DISTINCT l ==> ALL_DISTINCT (FRONT l)
