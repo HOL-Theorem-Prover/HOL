@@ -301,6 +301,20 @@ Proof
   \\ ntac 25 (srw_tac[DNF_ss][Once NUMERAL_LESS_THM] \\ EVAL_TAC)
 QED
 
+Theorem rho_xy_inj:
+  rho_xy t1 = (x,y) ∧
+  rho_xy t2 = (x,y) ∧
+  t1 < 24 ∧ t2 < 24 ⇒
+  t1 = t2
+Proof
+  disch_then(strip_assume_tac o SIMP_RULE(srw_ss())[NUMERAL_LESS_THM])
+  \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ rpt (pop_assum mp_tac) \\ EVAL_TAC
+  \\ rpt strip_tac
+  \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ rpt (pop_assum mp_tac) \\ EVAL_TAC
+QED
+
 Definition rho_def:
   rho a =
   a with A updated_by (λf. restrict a.w $ λ(x, y, z).
@@ -662,6 +676,17 @@ Proof
   \\ simp[ADD_DIV_RWT, LESS_DIV_EQ_ZERO]
   \\ once_rewrite_tac[MULT_COMM]
   \\ simp[MULT_DIV, LESS_DIV_EQ_ZERO]
+QED
+
+Theorem triple_to_index_inj:
+  EVERY (λ(x,y,z). x < 5 ∧ y < 5 ∧ z < w) [t1; t2] ∧
+  triple_to_index w t1 = triple_to_index w t2
+  ⇒ t1 = t2
+Proof
+  PairCases_on`t1`
+  \\ PairCases_on`t2`
+  \\ simp[]
+  \\ metis_tac[triple_to_index_to_triple, PAIR_EQ]
 QED
 
 Definition isFromList_def:
