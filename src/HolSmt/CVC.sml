@@ -28,7 +28,10 @@ structure CVC = struct
   fun mk_CVC_fun name pre cmd_stem post goal =
     case OS.Process.getEnv "HOL4_CVC_EXECUTABLE" of
       SOME file =>
-        SolverSpec.make_solver pre (file ^ cmd_stem) post goal
+        if file = "" then
+           raise Feedback.mk_HOL_ERR "CVC" name error_msg
+        else
+           SolverSpec.make_solver pre (file ^ cmd_stem) post goal
     | NONE =>
         raise Feedback.mk_HOL_ERR "CVC" name error_msg
 

@@ -31,7 +31,7 @@ ENV HOL4_Z3_EXECUTABLE=${Z3_VERSION:+/ML/z3-${Z3_VERSION}/bin/z3}
 
 # if --build-arg CVC_VERSION=5, set HOL4_CVC_EXECUTABLE to its full path,
 # or set to null otherwise.
-ENV HOL4_CVC_EXECUTABLE=${CVC_VERSION:+/ML/cvc${Z3_VERSION}-Linux}
+ENV HOL4_CVC_EXECUTABLE=${CVC_VERSION:+/ML/cvc${CVC_VERSION}-Linux}
 
 # if --build-arg YICES_VERSION=1.0.40, set HOL4_YICES_EXECUTABLE to its full path,
 # or set to null otherwise.
