@@ -24,6 +24,8 @@ jobs:
           push: false
           build-args: |
             SML=poly
+            Z3_VERSION=2.19
+            CVC_VERSION=5
             BUILDOPTS=--stdknl -j2 -t
 
   build-expk:
@@ -43,4 +45,6 @@ jobs:
           push: false
           build-args: |
             SML=poly
+            Z3_VERSION=2.19
+            CVC_VERSION=5
             BUILDOPTS=--expk -j2 -t
