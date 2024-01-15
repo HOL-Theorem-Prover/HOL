@@ -21,15 +21,21 @@ structure Z3 = struct
     end
 
   fun is_configured () =
-    Option.isSome (OS.Process.getEnv "HOL4_Z3_EXECUTABLE")
+      let val v = OS.Process.getEnv "HOL4_Z3_EXECUTABLE" in
+          (Option.isSome v) andalso (Option.valOf v <> "")
+      end;
+
+  val error_msg = "Z3 not configured: set the HOL4_Z3_EXECUTABLE environment variable to point to the Z3 executable file.";
 
   fun mk_Z3_fun name pre cmd_stem post goal =
     case OS.Process.getEnv "HOL4_Z3_EXECUTABLE" of
       SOME file =>
+        if file = "" then
+           raise Feedback.mk_HOL_ERR "Z3" name error_msg
+        else
         SolverSpec.make_solver pre (file ^ cmd_stem) post goal
     | NONE =>
-        raise Feedback.mk_HOL_ERR "Z3" name
-          "Z3 not configured: set the HOL4_Z3_EXECUTABLE environment variable to point to the Z3 executable file."
+        raise Feedback.mk_HOL_ERR "Z3" name error_msg
 
   (* Z3 (Linux/Unix), SMT-LIB file format, no proofs *)
   val Z3_SMT_Oracle =
@@ -58,6 +64,7 @@ structure Z3 = struct
       case OS.Process.getEnv "HOL4_Z3_EXECUTABLE" of
           NONE => "0"
         | SOME p =>
+          if p = "" then "0" else
           let
             val outfile = OS.FileSys.tmpName()
             fun work () = let

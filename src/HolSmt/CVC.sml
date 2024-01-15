@@ -19,15 +19,18 @@ structure CVC = struct
     end
 
   fun is_configured () =
-    Option.isSome (OS.Process.getEnv "HOL4_CVC_EXECUTABLE")
+      let val v = OS.Process.getEnv "HOL4_CVC_EXECUTABLE" in
+          (Option.isSome v) andalso (Option.valOf v <> "")
+      end;
+
+  val error_msg = "CVC not configured: set the HOL4_CVC_EXECUTABLE environment variable to point to the cvc5 executable file.";
 
   fun mk_CVC_fun name pre cmd_stem post goal =
     case OS.Process.getEnv "HOL4_CVC_EXECUTABLE" of
       SOME file =>
         SolverSpec.make_solver pre (file ^ cmd_stem) post goal
     | NONE =>
-        raise Feedback.mk_HOL_ERR "CVC" name
-          "CVC not configured: set the HOL4_CVC_EXECUTABLE environment variable to point to the cvc5 executable file."
+        raise Feedback.mk_HOL_ERR "CVC" name error_msg
 
   (* cvc5, SMT-LIB file format, no proofs *)
   val CVC_SMT_Oracle =

@@ -1,6 +1,9 @@
 (* Copyright (c) 2009-2012 Tjark Weber. All rights reserved. *)
 
 (* Unit tests for HolSmtLib *)
+open HolKernel Parse boolLib bossLib;
+
+val _ = loose_equality ();
 
 val _ = print "Testing HolSmtLib\n"
 
