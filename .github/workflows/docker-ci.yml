@@ -42,6 +42,8 @@ jobs:
           push: true
           build-args: |
             SML=poly
+            Z3_VERSION=2.19
+            CVC_VERSION=5
             # NOTE: the arg value cannot be quoted here:
             BUILDOPTS=--stdknl -j2 -t
           tags: ${{ steps.meta.outputs.tags }}
@@ -78,6 +80,8 @@ jobs:
           push: true
           build-args: |
             SML=poly
+            Z3_VERSION=2.19
+            CVC_VERSION=5
             # NOTE: the arg value cannot be quoted here:
             BUILDOPTS=--expk -j2 -t
           tags: ${{ steps.meta.outputs.tags }}
