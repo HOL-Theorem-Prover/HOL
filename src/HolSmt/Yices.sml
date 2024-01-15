@@ -777,19 +777,25 @@ structure Yices = struct
     end
 
   fun is_configured () =
-    Option.isSome (OS.Process.getEnv "HOL4_YICES_EXECUTABLE")
+      let val v = OS.Process.getEnv "HOL4_YICES_EXECUTABLE" in
+          (Option.isSome v) andalso (Option.valOf v <> "")
+      end;
+
+  val error_msg = "Yices not configured: set the HOL4_YICES_EXECUTABLE environment variable to point to the Yices executable file.";
 
   (* Yices 1.0.29, native file format *)
   fun Yices_Oracle goal =
     case OS.Process.getEnv "HOL4_YICES_EXECUTABLE" of
       SOME file =>
+        if file = "" then
+           raise Feedback.mk_HOL_ERR "Yices" "Yices_Oracle" error_msg
+        else
         SolverSpec.make_solver
           (Lib.pair () o goal_to_Yices)
           (file ^ " -tc ")
           (Lib.K result_fn)
           goal
     | NONE =>
-        raise Feedback.mk_HOL_ERR "Yices" "Yices_Oracle"
-          "Yices not configured: set the HOL4_YICES_EXECUTABLE environment variable to point to the Yices executable file."
+        raise Feedback.mk_HOL_ERR "Yices" "Yices_Oracle" error_msg
 
 end
