@@ -10,6 +10,7 @@ FROM --platform=$TARGETPLATFORM debian:stable
 # The following two arguments are supported by "docker buildx"
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
+ARG POLY_VERSION="5.9.1"
 
 RUN echo "I was running on $BUILDPLATFORM, building for $TARGETPLATFORM" > /tmp/log
 
@@ -27,10 +28,6 @@ RUN apt-get install -qy build-essential graphviz git libgmp-dev wget curl procps
 
 # for Unicode display, learnt from Magnus Myreen
 RUN apt-get install -qy locales-all terminfo man aptitude
-RUN apt-get clean
-
-# IDE
-RUN apt-get install -qy emacs-nox
 
 # 1. install Moscow ML (https://github.com/kfl/mosml.git)
 RUN wget -q -O - https://github.com/kfl/mosml/archive/refs/tags/ver-2.10.1.tar.gz | tar xzf -
@@ -38,16 +35,17 @@ RUN make -C mosml-ver-2.10.1/src world install
 RUN rm -rf mosml-ver-2.10.1
 
 # 2. install polyml (https://github.com/polyml/polyml.git)
-RUN wget -q -O polyml-master.zip https://github.com/polyml/polyml/archive/refs/heads/master.zip
-RUN unzip polyml-master.zip
+RUN wget -q -O polyml-${POLY_VERSION}.tar.gz \
+    https://github.com/polyml/polyml/archive/refs/tags/v${POLY_VERSION}.tar.gz
+RUN tar xzf polyml-${POLY_VERSION}.tar.gz
 RUN if [ "linux/386" = "$TARGETPLATFORM" ]; then \
-       cd polyml-master && ./configure --build=i686-pc-linux-gnu --enable-intinf-as-int; \
+       cd polyml-${POLY_VERSION} && ./configure --build=i686-pc-linux-gnu --enable-intinf-as-int; \
     else \
-       cd polyml-master && ./configure --enable-intinf-as-int; \
+       cd polyml-${POLY_VERSION} && ./configure --enable-intinf-as-int; \
     fi
-RUN make -C polyml-master -j4
-RUN make -C polyml-master compiler install
-RUN rm -rf polyml-master polyml-master.zip
+RUN make -C polyml-${POLY_VERSION} -j4
+RUN make -C polyml-${POLY_VERSION} install
+RUN rm -rf polyml-${POLY_VERSION} polyml-${POLY_VERSION}.tar.gz
 
 # 3. install MLton binary (https://github.com/MLton/mlton.git) for linux/amd64 only
 RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
@@ -55,25 +53,21 @@ RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
 RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then make -C mlton-20210117-1.amd64-linux-glibc2.31; fi
 RUN rm -rf mlton-20210117-1.amd64-linux-glibc2.31
 
-# 4. install OpenTheory with local packages
-RUN wget -q -O - https://github.com/binghe/opentheory/archive/refs/tags/v1.5.tar.gz | tar xzf -
+# 4. install OpenTheory (develop version)
+RUN wget -q -O opentheory-develop.zip \
+    https://github.com/binghe/opentheory/archive/refs/heads/develop.zip && unzip opentheory-develop.zip
 RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
-        make -C opentheory-1.5 mlton; \
+        make -C opentheory-develop mlton; \
     else \
-        make -C opentheory-1.5 polyml; \
+        make -C opentheory-develop polyml; \
     fi
 RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
-        cp opentheory-1.5/bin/mlton/opentheory /usr/local/bin; \
+        cp opentheory-develop/bin/mlton/opentheory /usr/local/bin; \
     else \
-        cp opentheory-1.5/bin/polyml/opentheory /usr/local/bin; \
+        cp opentheory-develop/bin/polyml/opentheory /usr/local/bin; \
     fi
-RUN rm -rf opentheory-1.5
-RUN wget -q -O /root/opentheory-local.tar.gz \
-    https://github.com/binghe/opentheory/releases/download/v1.5/opentheory-local.tar.gz
-RUN cd /root && tar xzf opentheory-local.tar.gz && rm opentheory-local.tar.gz
-
-# for HOL Emacs mode (Emacs is not installed by default, however)
-COPY .emacs /root
+RUN rm -rf opentheory-develop opentheory-develop.zip
+RUN opentheory init && opentheory install base
 
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en

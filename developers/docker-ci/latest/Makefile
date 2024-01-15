@@ -1,4 +1,4 @@
-DOCKER_IMAGE=binghelisp/hol-dev:base
+DOCKER_IMAGE=binghelisp/hol-dev:latest
 
 build:
 	docker buildx build --platform linux/386 .
@@ -11,4 +11,4 @@ push: build
 
 # This runs the docker image in your native platform
 run:
-	docker run -ti -v ML --rm $(DOCKER_IMAGE)
+	docker run -ti --rm $(DOCKER_IMAGE)
