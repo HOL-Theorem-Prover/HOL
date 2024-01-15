@@ -111,6 +111,51 @@ Proof
     irule FOLDL_CONG_invariant
 *)
 
+(* TODO: move / find in a lib *)
+Definition chunks_def:
+  chunks n ls =
+  if LENGTH ls <= n ∨ n = 0
+  then [ls]
+  else CONS (TAKE n ls) (chunks n (DROP n ls))
+Termination
+  WF_REL_TAC`measure (LENGTH o SND)` \\ rw[LENGTH_DROP]
+End
+
+val chunks_ind = theorem"chunks_ind";
+
+Theorem chunks_NIL[simp]:
+  chunks n [] = [[]]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem chunks_0[simp]:
+  chunks 0 ls = [ls]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem FLAT_chunks[simp]:
+  FLAT (chunks n ls) = ls
+Proof
+  completeInduct_on`LENGTH ls` \\ rw[]
+  \\ rw[Once chunks_def]
+QED
+
+Theorem divides_EVERY_LENGTH_chunks:
+  !n ls. ls <> [] /\ divides n (LENGTH ls) ==>
+    EVERY ($= n o LENGTH) (chunks n ls)
+Proof
+  recInduct chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def] \\ fs[]
+  \\ gs[divides_def]
+  >- ( Cases_on`q = 0` \\ fs[] )
+  \\ first_x_assum irule
+  \\ qexists_tac`PRE q`
+  \\ Cases_on`q` \\ fs[ADD1]
+QED
+
 Datatype:
   state_array =
   <| w: num
@@ -148,6 +193,13 @@ Definition w2l_def:
   w2l w = LOG2 w
 End
 
+Theorem bwl_table:
+  MAP b2w [25; 50; 100; 200; 400; 800; 1600] = [1; 2; 4; 8; 16; 32; 64] ∧
+  MAP w2l [1; 2; 4; 8; 16; 32; 64] = [0; 1; 2; 3; 4; 5; 6]
+Proof
+  EVAL_TAC
+QED
+
 Definition restrict_def:
   restrict (w:num) f (x, y, z) ⇔
   x < 5 ∧ y < 5 ∧ z < w ∧ f (x, y, z)
@@ -173,6 +225,21 @@ Theorem string_to_state_array_w:
   (string_to_state_array s).w = b2w $ LENGTH s
 Proof
   rw[string_to_state_array_def]
+QED
+
+Definition index_to_triple_def:
+  index_to_triple w i = ((i DIV w) MOD 5, i DIV w DIV 5, i MOD w)
+End
+
+Definition triple_to_index_def:
+  triple_to_index w (x, y, z) = x * w + 5 * y * w + z
+End
+
+Theorem triple_to_index_examples:
+  triple_to_index 64 (4, 1, 2) = 578 ∧
+  index_to_triple 64 766 = (1, 2, 62)
+Proof
+  EVAL_TAC
 QED
 
 Definition Lane_def:
@@ -322,7 +389,7 @@ Definition rho_def:
     else
       let t = LEAST t. rho_xy t = (x, y) in
       let tt = ((t + 1) * (t + 2)) DIV 2 in
-      let ww = a.w * (SUC tt DIV a.w) in
+      let ww = ((24 * 25) DIV 2) * a.w in
       f (x, y, (z + ww - tt) MOD a.w))
 End
 
@@ -463,51 +530,6 @@ Proof
   \\ simp[Abbr`f`, FORALL_PROD]
 QED
 
-(* TODO: move / find in a lib *)
-Definition chunks_def:
-  chunks n ls =
-  if LENGTH ls <= n ∨ n = 0
-  then [ls]
-  else CONS (TAKE n ls) (chunks n (DROP n ls))
-Termination
-  WF_REL_TAC`measure (LENGTH o SND)` \\ rw[LENGTH_DROP]
-End
-
-val chunks_ind = theorem"chunks_ind";
-
-Theorem chunks_NIL[simp]:
-  chunks n [] = [[]]
-Proof
-  rw[Once chunks_def]
-QED
-
-Theorem chunks_0[simp]:
-  chunks 0 ls = [ls]
-Proof
-  rw[Once chunks_def]
-QED
-
-Theorem FLAT_chunks[simp]:
-  FLAT (chunks n ls) = ls
-Proof
-  completeInduct_on`LENGTH ls` \\ rw[]
-  \\ rw[Once chunks_def]
-QED
-
-Theorem divides_EVERY_LENGTH_chunks:
-  !n ls. ls <> [] /\ divides n (LENGTH ls) ==>
-    EVERY ($= n o LENGTH) (chunks n ls)
-Proof
-  recInduct chunks_ind
-  \\ rw[]
-  \\ rw[Once chunks_def] \\ fs[]
-  \\ gs[divides_def]
-  >- ( Cases_on`q = 0` \\ fs[] )
-  \\ first_x_assum irule
-  \\ qexists_tac`PRE q`
-  \\ Cases_on`q` \\ fs[ADD1]
-QED
-
 Definition sponge_def:
   sponge f b pad r N d =
   let P = N ++ pad r (LENGTH N) in
@@ -523,7 +545,7 @@ End
 
 Definition pad10s1_def:
   pad10s1 x m =
-  let j = (x * (2 + m DIV x) - m - 2) MOD x in
+  let j = (x * (m + 2) - m - 2) MOD x in
     [T] ++ REPLICATE j F ++ [T]
 End
 
@@ -532,19 +554,10 @@ Theorem LENGTH_pad10s1:
 Proof
   Cases_on`x = 1` >> fs[]>>
   rw[pad10s1_def, ADD1, LEFT_ADD_DISTRIB]>>
-  `2 * x + x * (m DIV x) = (2 + m DIV x) * x` by fs[]>>
+  `2 * x + m * x = (2 + m) * x` by fs[]>>
   pop_assum SUBST_ALL_TAC>>
   DEP_REWRITE_TAC[MOD_COMPLEMENT]>>
   imp_res_tac DIVISION>>fs[]>>
-  CONJ_TAC >- (
-    simp[LEFT_ADD_DISTRIB]>>
-    last_x_assum (qspec_then`m` assume_tac)>>
-    qsuff_tac`2 + m MOD x < 2 * x` >>
-    simp[]>>
-    `2 <= x` by
-      (Cases_on`x`>>fs[])>>
-    last_x_assum (qspec_then`m` assume_tac)>>
-    DECIDE_TAC)>>
   last_x_assum(qspec_then`m+2` assume_tac)>>
   Cases_on`(m + 2) MOD x = 0`
   >- (
@@ -627,14 +640,6 @@ Proof
     loop 1
   end
 QED
-
-Definition index_to_triple_def:
-  index_to_triple w i = ((i DIV w) MOD 5, i DIV w DIV 5, i MOD w)
-End
-
-Definition triple_to_index_def:
-  triple_to_index w (x, y, z) = x * w + 5 * y * w + z
-End
 
 Theorem index_less:
   x < 5 ∧ y < 5 ∧ z < w ⇒ triple_to_index w (x, y, z) < 25 * w
@@ -735,36 +740,6 @@ Definition spt_to_state_array_def:
               of SOME b => b | NONE => F
    |>
 End
-
-Definition sptify_def:
-  sptify a =
-  a with A := restrict a.w $ λ(x,y,z).
-    case lookup (y * 5 * a.w + x * a.w + z)
-           $ fromList (state_array_to_string a)
-    of NONE => F | SOME b => b
-End
-
-Theorem sptify_id:
-  wf_state_array a ⇒ sptify a = a
-Proof
-  rw[sptify_def, state_array_component_equality,
-     FUN_EQ_THM, FORALL_PROD, restrict_def]
-  \\ reverse (rw[lookup_fromList])
-  >- (
-    fs[wf_state_array_def]
-    \\ first_x_assum irule
-    \\ CCONTR_TAC \\ gs[]
-    \\ last_x_assum mp_tac \\ simp[]
-    \\ fs[NUMERAL_LESS_THM] )
-  \\ qmatch_goalsub_rename_tac`a.A (x,y,z)`
-  \\ reverse(Cases_on`x < 5 ∧ y < 5 ∧ z < a.w`)
-  >- fs[wf_state_array_def] \\ fs[]
-  \\ rw[state_array_to_string_compute]
-  \\ AP_TERM_TAC \\ simp[]
-  \\ `z + (x * a.w + 5 * (y * a.w)) = (x + 5 * y) * a.w + z` by simp[]
-  \\ pop_assum SUBST_ALL_TAC
-  \\ simp[DIV_MULT, LESS_DIV_EQ_ZERO]
-QED
 
 Definition sptfun_def:
   sptfun w t (x,y,z) ⇔
@@ -1012,11 +987,11 @@ QED
 Definition rho_spt_def:
   rho_spt a =
     let w = b2w $ size a in
+    let ww = 300 * w in
     let (x,y,t,a') =
     WHILE (λ(x,y,t,a'). t ≤ 23)
       (λ(x,y,t,a'). (y, (2 * x + 3 * y) MOD 5, t + 1,
         let tt = (t + 1) * (t + 2) DIV 2 in
-        let ww = w * (tt DIV w) in
         SND $
         WHILE (λ(z,a'). z < w) (λ(z,a'). (z+1,
           insert (triple_to_index w (x,y,z))
@@ -1315,6 +1290,27 @@ Proof
   \\ `ti = triple_to_index w (x,y,zz MOD w)`
   by simp[Abbr`ti`, triple_to_index_def]
   \\ pop_assum SUBST1_TAC \\ qunabbrev_tac`ti`
+  \\ `i < 24`
+  by (
+    `¬(x = 0 ∧ y = 0)` by metis_tac[]
+    \\ pop_assum (mp_then Any mp_tac rho_xy_exists)
+    \\ rw[]
+    \\ `¬(t < i)` by metis_tac[]
+    \\ decide_tac )
+  \\ `i < n` by decide_tac
+  \\ `n = 24`
+  by (
+    `n ≤ 24` suffices_by decide_tac
+    \\ CCONTR_TAC
+    \\ `24 < n` by decide_tac
+    \\ `P (FUNPOW f 24 a)` by metis_tac[]
+    \\ `FST (SND (SND (FUNPOW f 24 a))) = 24` by metis_tac[]
+    \\ fs[Abbr`P`, UNCURRY] )
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ qpat_x_assum`rho_xy 24 = _`mp_tac
+  \\ CONV_TAC(LAND_CONV EVAL)
+  \\ rw[] \\ fs[] \\ rw[]
+
   \\ cheat
 QED
 
@@ -1638,7 +1634,6 @@ Proof
   rw[state_array_to_string_compute, restrict_def, LIST_EQ_REWRITE]
   \\ rw[DIV_LT_X]
 QED
-
 
 Definition Keccak_p_spt_def:
   Keccak_p_spt n s =
