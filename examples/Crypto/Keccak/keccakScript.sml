@@ -1416,7 +1416,13 @@ Proof
     \\ `5 * (w * (q DIV 5)) = w * (5 * (q DIV 5))` by simp[]
     \\ pop_assum SUBST1_TAC
     \\ simp[GSYM LEFT_ADD_DISTRIB]
-    \\ cheat)
+    \\ `q = x + 5 * y`
+    by (
+      simp[Abbr`q`]
+      \\ simp[ADD_DIV_RWT, LESS_DIV_EQ_ZERO]
+      \\ once_rewrite_tac[MULT_COMM]
+      \\ simp[MULT_DIV] )
+    \\ fs[Abbr`q`, LESS_DIV_EQ_ZERO])
   \\ simp[]
   \\ qmatch_goalsub_abbrev_tac`triple_to_index w (x2,y1,z)`
   \\ `x2 < 5` by simp[Abbr`x2`, DIV_LT_X]
@@ -1429,7 +1435,13 @@ Proof
   \\ `5 * (w * (q DIV 5)) = w * (5 * (q DIV 5))` by simp[]
   \\ pop_assum SUBST1_TAC
   \\ simp[GSYM LEFT_ADD_DISTRIB]
-  \\ cheat (* same as above *)
+  \\ `q = x + 5 * y`
+  by (
+    simp[Abbr`q`]
+    \\ simp[ADD_DIV_RWT, LESS_DIV_EQ_ZERO]
+    \\ once_rewrite_tac[MULT_COMM]
+    \\ simp[MULT_DIV] )
+  \\ fs[Abbr`q`, LESS_DIV_EQ_ZERO]
 QED
 
 Definition iota_spt_def:
@@ -1475,7 +1487,9 @@ Proof
   \\ qmatch_goalsub_abbrev_tac`x1 = 0 ∧ y1 = 0`
   \\ `x1 = x ∧ y1 = y` suffices_by rw[]
   \\ simp[Abbr`x1`, Abbr`y1`]
-  \\ cheat (* similar to in chi_spt *)
+  \\ simp[ADD_DIV_RWT, LESS_DIV_EQ_ZERO]
+  \\ once_rewrite_tac[MULT_COMM]
+  \\ simp[MULT_DIV, LESS_DIV_EQ_ZERO]
 QED
 
 Definition Rnd_spt_def:
