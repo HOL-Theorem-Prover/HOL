@@ -1310,8 +1310,52 @@ Proof
   \\ qpat_x_assum`rho_xy 24 = _`mp_tac
   \\ CONV_TAC(LAND_CONV EVAL)
   \\ rw[] \\ fs[] \\ rw[]
-
-  \\ cheat
+  \\ `∀j l x y z zz ii.
+      rho_xy l = (x,y) ∧ z < w ∧ l < j ∧ j ≤ 24 ∧
+      zz = 300 * w + z - ii ∧
+      ii = ((l + 1) * (l + 2)) DIV 2
+      ⇒
+      lookup (triple_to_index w (x,y,z)) (SND(SND(SND(FUNPOW f j a)))) =
+      lookup (triple_to_index w (x,y,zz MOD w)) (fromList ls)`
+  by (
+    Induct_on`j` \\ simp[]
+    \\ simp[Abbr`f`, FUNPOW_SUC, UNCURRY]
+    \\ qmatch_goalsub_abbrev_tac`FUNPOW f`
+    \\ Cases_on`FUNPOW f j a`
+    \\ PairCases_on`r` \\ fs[]
+    \\ `r1 = j ∧ rho_xy j = (q,r0)` by metis_tac[]
+    \\ fs[] \\ rw[]
+    \\ qmatch_goalsub_abbrev_tac`WHILE _ g`
+    \\ Cases_on`l < j`
+    >- (
+      first_x_assum(qspec_then`l`mp_tac)
+      \\ simp[]
+      \\ disch_then drule
+      \\ disch_then(SUBST1_TAC o SYM)
+      \\ `(q,r0) ≠ rho_xy l`
+      by (
+        CCONTR_TAC \\ rfs[]
+        \\ `j < 24 ∧ l < 24` by decide_tac
+        \\ `j = l` by metis_tac[rho_xy_inj]
+        \\ decide_tac )
+      \\ cheat)
+    \\ `j = l` by decide_tac
+    \\ fs[] \\ rw[]
+    \\ cheat )
+  \\ first_x_assum(qspec_then`24`mp_tac)
+  \\ simp[]
+  \\ disch_then(qspec_then`i`mp_tac)
+  \\ simp[lookup_fromList]
+  \\ disch_then drule
+  \\ simp[]
+  \\ rw[]
+  \\ `triple_to_index w (x,y,z) < 25 * w` by metis_tac[index_less]
+  \\ fs[Abbr`w`, b2w_def]
+  \\ qmatch_asmsub_abbrev_tac`25 * (l DIV 25)`
+  \\ qspec_then`25`mp_tac DIVISION
+  \\ simp[]
+  \\ disch_then(qspec_then`l`mp_tac)
+  \\ simp[]
 QED
 
 Definition pi_spt_def:
