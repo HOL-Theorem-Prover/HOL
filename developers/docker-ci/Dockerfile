@@ -28,14 +28,23 @@ ARG YICES_VERSION
 # if --build-arg Z3_VERSION=2.19, set HOL4_Z3_EXECUTABLE to its full path,
 # or set to null otherwise.
 ENV HOL4_Z3_EXECUTABLE=${Z3_VERSION:+/ML/z3-${Z3_VERSION}/bin/z3}
+RUN if [ "" != "${Z3_VERSION}" ]; then \
+    echo "Using Z3 solver: `${HOL4_Z3_EXECUTABLE} -version`"; \
+fi
 
 # if --build-arg CVC_VERSION=5, set HOL4_CVC_EXECUTABLE to its full path,
 # or set to null otherwise.
 ENV HOL4_CVC_EXECUTABLE=${CVC_VERSION:+/ML/cvc${CVC_VERSION}-Linux}
+RUN if [ "" != "${CVC_VERSION}" ]; then \
+    echo "Using CVC solver: `${HOL4_CVC_EXECUTABLE} --version | head -1`"; \
+fi
 
 # if --build-arg YICES_VERSION=1.0.40, set HOL4_YICES_EXECUTABLE to its full path,
 # or set to null otherwise.
 ENV HOL4_YICES_EXECUTABLE=${YICES_VERSION:+/ML/yices-${YICES_VERSION}/bin/yices}
+RUN if [ "" != "${YICES_VERSION}" ]; then \
+    echo "Using Yices solver: `${HOL4_YICES_EXECUTABLE} --version`"; \
+fi
 
 # remove potential local poly-includes.ML for docker builds
 RUN rm -f tools-poly/poly-includes.ML
