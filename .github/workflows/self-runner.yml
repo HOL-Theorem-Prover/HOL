@@ -43,6 +43,7 @@ on:
         default: '4.12.4'
         type: choice
         options:
+        - ''
         - 2.19
         - 2.19.1
         - 4.12.4
@@ -52,6 +53,7 @@ on:
         default: '5'
         type: choice
         options:
+        - ''
         - 5
       Yices:
         description: 'Yices verison'
@@ -59,6 +61,7 @@ on:
         default: ''
         type: choice
         options:
+        - ''
         - 1.0.40
 jobs:
   build:
