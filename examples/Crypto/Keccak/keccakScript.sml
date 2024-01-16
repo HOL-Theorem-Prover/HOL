@@ -1338,7 +1338,34 @@ Proof
         \\ `j < 24 ∧ l < 24` by decide_tac
         \\ `j = l` by metis_tac[rho_xy_inj]
         \\ decide_tac )
-      \\ cheat)
+      \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
+      \\ `∀m x. FST (FUNPOW g m x) = m + FST x`
+      by (
+        Induct \\ rw[FUNPOW_SUC]
+        \\ rw[Abbr`g`, UNCURRY] )
+      \\ conj_asm1_tac
+      >- ( qexists_tac`w` \\ rw[UNCURRY] )
+      \\ qmatch_goalsub_abbrev_tac`FUNPOW g m`
+      \\ `m ≤ w`
+      by (
+        simp[Abbr`m`]
+        \\ numLib.LEAST_ELIM_TAC
+        \\ simp[UNCURRY] \\ rw[]
+        \\ CCONTR_TAC
+        \\ `w < n` by decide_tac
+        \\ `w < w` by metis_tac[]
+        \\ fs[] )
+      \\ qpat_x_assum`Abbrev (m = _)`kall_tac
+      \\ Induct_on`m` \\ simp[]
+      \\ rw[FUNPOW_SUC]
+      \\ rw[Abbr`g`, UNCURRY]
+      \\ qmatch_goalsub_abbrev_tac`FUNPOW g`
+      \\ simp[lookup_insert] \\ rw[]
+      \\ first_assum(mp_then Any mp_tac triple_to_index_inj)
+      \\ simp[] \\ rfs[]
+      \\ `rho_xy j = (q,r0)` by metis_tac[]
+      \\ imp_res_tac rho_xy_lt_5
+      \\ simp[] )
     \\ `j = l` by decide_tac
     \\ fs[] \\ rw[]
     \\ cheat )
