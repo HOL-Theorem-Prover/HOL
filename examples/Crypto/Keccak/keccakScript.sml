@@ -538,8 +538,10 @@ Definition sponge_def:
   let Pis = chunks r P in
   let S0 = REPLICATE b F in
   let S = FOLDL (λSi Pi. f (MAP2 $<> Si (Pi ++ REPLICATE c F))) S0 Pis in
-  let t = SUC (d DIV r) in
-  let Z = FST $ FUNPOW (λ(Z, S). (Z ++ (TAKE r S), f S)) t ([], S) in
+  let Z = FST $ WHILE
+    (λ(Z, S). LENGTH Z < d)
+    (λ(Z, S). (Z ++ (TAKE r S), f S))
+    ([], S) in
   TAKE d Z
 End
 
@@ -1782,11 +1784,12 @@ QED
 Theorem Keccak_512_spt:
   Keccak 512 = sponge (Keccak_p_spt 24) 1600 pad10s1 (1600 - 512)
 Proof
-  rw[Keccak_def, sponge_def, FUN_EQ_THM]
+  simp[Keccak_def, sponge_def, FUN_EQ_THM]
+  \\ qx_genl_tac[`m`,`d`]
   \\ AP_TERM_TAC
   \\ AP_TERM_TAC
-  \\ qmatch_goalsub_abbrev_tac`FUNPOW f1 n ([], FOLDL f2 e xs)`
-  \\ qmatch_goalsub_abbrev_tac`_ = FUNPOW f3 n ([], FOLDL f4 e xs)`
+  \\ qmatch_goalsub_abbrev_tac`WHILE P f1 ([], FOLDL f2 e xs)`
+  \\ qmatch_goalsub_abbrev_tac`_ = WHILE P f3 ([], FOLDL f4 e xs)`
   \\ `FOLDL f2 e xs = FOLDL f4 e xs ∧ (λa. LENGTH a = 1600) (FOLDL f4 e xs)`
   by (
     irule FOLDL_CONG_invariant
@@ -1801,7 +1804,7 @@ Proof
       simp[MIN_DEF, LESS_OR_EQ]
       \\ strip_tac \\ rw[] \\ EVAL_TAC )
     \\ fs[Abbr`xs`]
-    \\ `∃d. LENGTH x + LENGTH (pad10s1 1088 (LENGTH x)) = d * 1088`
+    \\ `∃d. LENGTH m + LENGTH (pad10s1 1088 (LENGTH m)) = d * 1088`
     by ( irule LENGTH_pad10s1 \\ simp[] )
     \\ qmatch_asmsub_abbrev_tac`chunks 1088 ls`
     \\ `divides 1088 (LENGTH ls)` by simp[Abbr`ls`]
@@ -1810,6 +1813,34 @@ Proof
     \\ drule_then drule divides_EVERY_LENGTH_chunks
     \\ simp[EVERY_MEM] )
   \\ simp[]
+  \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
+  \\ qmatch_goalsub_abbrev_tac`FUNPOW f1 _ ([], ls)`
+  \\ `∀n z l.
+        LENGTH l = 1600 ⇒
+        LENGTH (FST (FUNPOW f1 n (z,l))) = n * 1088 + LENGTH z ∧
+        LENGTH (SND (FUNPOW f1 n (z,l))) = 1600`
+  by (
+    Induct \\ simp[FUNPOW_SUC]
+    \\ rw[Abbr`f1`, UNCURRY, LENGTH_TAKE_EQ]
+    \\ simp[LENGTH_Keccak_p])
+  \\ `∀n z l.
+        LENGTH l = 1600 ⇒
+        LENGTH (FST (FUNPOW f3 n (z,l))) = n * 1088 + LENGTH z ∧
+        LENGTH (SND (FUNPOW f3 n (z,l))) = 1600`
+  by (
+    Induct \\ simp[FUNPOW_SUC]
+    \\ rw[Abbr`f3`, UNCURRY, LENGTH_TAKE_EQ]
+    \\ DEP_REWRITE_TAC[Keccak_p_spt_eq]
+    \\ simp[LENGTH_Keccak_p]
+    \\ EVAL_TAC)
+  \\ `∀n. P (FUNPOW f3 n ([],ls)) = P (FUNPOW f1 n ([], ls))`
+  by ( rw[Abbr`P`, UNCURRY] \\ gs[] )
+  \\ simp[]
+  \\ conj_asm1_tac
+  >- ( qexists_tac`d` \\ rw[Abbr`P`, UNCURRY] \\ gs[] )
+  \\ numLib.LEAST_ELIM_TAC
+  \\ conj_tac >- simp[]
+  \\ gen_tac \\ strip_tac
   \\ `∀n x.
       LENGTH (SND x) = 1600 ⇒
       FUNPOW f1 n x = FUNPOW f3 n x ∧
@@ -1848,6 +1879,42 @@ Theorem index_to_triple_1600 =
     EVAL``index_to_triple 64 ^(numLib.term_of_int i)``)
   |> LIST_CONJ
 
+Theorem triple_to_index_25 =
+  List.tabulate(5, (fn x =>
+    List.tabulate(5, (fn y =>
+      List.tabulate(1, (fn z =>
+        EVAL``triple_to_index 1 (
+                 ^(numLib.term_of_int x),
+                 ^(numLib.term_of_int y),
+                 ^(numLib.term_of_int z)
+              )``))))))
+  |> List.concat
+  |> List.concat
+  |> LIST_CONJ
+
+Theorem index_to_triple_25 =
+  List.tabulate(25, fn i =>
+    EVAL``index_to_triple 1 ^(numLib.term_of_int i)``)
+  |> LIST_CONJ
+
+Theorem triple_to_index_100 =
+  List.tabulate(5, (fn x =>
+    List.tabulate(5, (fn y =>
+      List.tabulate(4, (fn z =>
+        EVAL``triple_to_index 4 (
+                 ^(numLib.term_of_int x),
+                 ^(numLib.term_of_int y),
+                 ^(numLib.term_of_int z)
+              )``))))))
+  |> List.concat
+  |> List.concat
+  |> LIST_CONJ
+
+Theorem index_to_triple_100 =
+  List.tabulate(100, fn i =>
+    EVAL``index_to_triple 4 ^(numLib.term_of_int i)``)
+  |> LIST_CONJ
+
 val cs = num_compset();
 val () = extend_compset [
   Tys [``:state_array``],
@@ -1871,6 +1938,16 @@ val () = extend_compset [
     index_to_triple_1600,
     rc_step_def,
     rc_def,
+    (* for examples *)
+    triple_to_index_25,
+    index_to_triple_25,
+    triple_to_index_100,
+    index_to_triple_100,
+    spt_to_state_array_w,
+    spt_to_state_array_sptfun,
+    sptfun_def,
+    Lane_def,
+    (* -- *)
     WHILE, (* TODO: why is this not in a compset? *)
     (* TODO: move to sptree_compset *)
     mapi_def, mapi0_def, apsnd_cons_def, combine_rle_def, spt_center_def,
@@ -1886,6 +1963,36 @@ val () = extend_compset [
     OPTION_rws,
     add_combin_compset]
  ] cs
+
+(* w = 1, so rho does nothing *)
+Theorem rho_spt_25_example:
+  rho_spt (fromList (GENLIST (λi. i < 10) 25))
+  = fromList (GENLIST (λi. i < 10) 25)
+Proof
+  CONV_TAC(CBV_CONV cs)
+QED
+
+(* w = 4,
+ * rho shifts (4,0) by 3 (91 MOD 4)
+ * rho shifts (1,4) by 2 (66 MOD 4)
+ * rho shifts (4,3) by 0 (136 MOD 4)
+*)
+
+Theorem rho_spt_100_example:
+  let t = fromList $ GENLIST (λi. i MOD 5 = 0) 100 in
+  let a0 = spt_to_state_array t in
+  let a1 = spt_to_state_array $ rho_spt t in
+    Lane a1 (4,0) =
+      (let l = Lane a0 (4,0) in
+       (DROP 3 l) ++ (TAKE 3 l)) ∧
+    Lane a1 (1,4) =
+      (let l = Lane a0 (1,4) in
+       (DROP 2 l) ++ (TAKE 2 l)) ∧
+    Lane a1 (4,3) = Lane a0 (4,3)
+Proof
+  rw[]
+  \\ CONV_TAC(CBV_CONV cs)
+QED
 
 (*
 Theorem Keccak_256_NIL = CBV_CONV cs ``Keccak_256 []``
