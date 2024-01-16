@@ -25,7 +25,7 @@ fun modelCheck_test1 () = let
 in
   if aconv (concl (valOf test1)) result1 then OK ()
   else die ("Got " ^ term_to_string (concl (valOf test1)));
-  Process.system ("rm " ^ (!model_check_temp_file)))
+  Process.system ("rm " ^ (!model_check_temp_file))
 end;
 
 fun modelCheck_test2 () = let
@@ -34,7 +34,7 @@ in
   if (isSome test2) then
     die ("Got " ^ term_to_string (concl (valOf test2)))
   else OK ();
-  Process.system ("rm " ^ (!model_check_temp_file)))
+  Process.system ("rm " ^ (!model_check_temp_file))
 end;
 
 val _ = modelCheck_test1 ();
