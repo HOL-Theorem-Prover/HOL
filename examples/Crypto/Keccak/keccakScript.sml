@@ -1326,11 +1326,14 @@ Proof
     \\ `r1 = j ∧ rho_xy j = (q,r0)` by metis_tac[]
     \\ fs[] \\ rw[]
     \\ qmatch_goalsub_abbrev_tac`WHILE _ g`
+    \\ `∀m x. FST (FUNPOW g m x) = m + FST x`
+    by (
+      Induct \\ rw[FUNPOW_SUC]
+      \\ rw[Abbr`g`, UNCURRY] )
     \\ Cases_on`l < j`
     >- (
-      first_x_assum(qspec_then`l`mp_tac)
+      first_x_assum(drule_then drule)
       \\ simp[]
-      \\ disch_then drule
       \\ disch_then(SUBST1_TAC o SYM)
       \\ `(q,r0) ≠ rho_xy l`
       by (
@@ -1339,12 +1342,7 @@ Proof
         \\ `j = l` by metis_tac[rho_xy_inj]
         \\ decide_tac )
       \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
-      \\ `∀m x. FST (FUNPOW g m x) = m + FST x`
-      by (
-        Induct \\ rw[FUNPOW_SUC]
-        \\ rw[Abbr`g`, UNCURRY] )
-      \\ conj_asm1_tac
-      >- ( qexists_tac`w` \\ rw[UNCURRY] )
+      \\ conj_asm1_tac >- ( qexists_tac`w` \\ rw[UNCURRY] )
       \\ qmatch_goalsub_abbrev_tac`FUNPOW g m`
       \\ `m ≤ w`
       by (
@@ -1368,7 +1366,67 @@ Proof
       \\ simp[] )
     \\ `j = l` by decide_tac
     \\ fs[] \\ rw[]
-    \\ cheat )
+    \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
+    \\ conj_asm1_tac >- ( qexists_tac`w` \\ rw[UNCURRY] )
+    \\ qmatch_goalsub_abbrev_tac`FUNPOW g m`
+    \\ `m = w`
+    by (
+      simp[Abbr`m`]
+      \\ numLib.LEAST_ELIM_TAC
+      \\ simp[UNCURRY] \\ rw[]
+      \\ CCONTR_TAC
+      \\ `w < n` by decide_tac
+      \\ `w < w` by metis_tac[]
+      \\ fs[] )
+    \\ rw[]
+    \\ qmatch_goalsub_rename_tac`(t,u,v)`
+    \\ qho_match_abbrev_tac`_ = lookup (triple_to_index m (t,u,h v j)) _`
+    \\ fs[]
+    \\ `∀i z. i ≤ m ∧ z < m ⇒
+        lookup (triple_to_index m (t,u,z)) (SND (FUNPOW g i (0,r2))) =
+        lookup (triple_to_index m (t,u,
+          if i ≤ z then z else h z j))
+          if i ≤ z then r2 else fromList ls`
+    by (
+      Induct \\ simp[]
+      \\ simp[FUNPOW_SUC]
+      \\ qx_gen_tac`p`
+      \\ qmatch_goalsub_rename_tac`SUC q ≤ m`
+      \\ strip_tac
+      \\ simp[Abbr`g`, UNCURRY]
+      \\ qmatch_goalsub_abbrev_tac`FUNPOW g`
+      \\ imp_res_tac rho_xy_lt_5
+      \\ rw[]
+      >- (
+        Cases_on`q = p` \\ fs[]
+        \\ simp[lookup_insert]
+        \\ IF_CASES_TAC
+        >- (
+          first_x_assum (mp_then Any mp_tac triple_to_index_inj)
+          \\ simp[])
+        \\ rw[] )
+      \\ fs[NOT_LESS_EQUAL]
+      \\ simp[lookup_insert]
+      \\ reverse(Cases_on`p=q` \\ simp[])
+      >- (
+        rw[]
+        \\ first_x_assum (mp_then Any mp_tac triple_to_index_inj)
+        \\ simp[])
+      \\ rw[]
+      \\ rw[lookup_fromList]
+      \\ `h p j < m` by simp[Abbr`h`]
+      \\ `triple_to_index m (t, u, h p j) < 25 * m`
+      by metis_tac[index_less]
+      \\ `25 * m ≤ LENGTH rs` suffices_by decide_tac
+      \\ qpat_x_assum`Abbrev(m = $LEAST _)`kall_tac
+      \\ qunabbrev_tac`m`
+      \\ rewrite_tac[b2w_def]
+      \\ qspec_then`25`mp_tac DIVISION
+      \\ impl_tac >- rw[]
+      \\ disch_then(qspec_then`LENGTH rs`mp_tac)
+      \\ simp[])
+    \\ first_x_assum(qspecl_then[`m`,`v`]mp_tac)
+    \\ simp[])
   \\ first_x_assum(qspec_then`24`mp_tac)
   \\ simp[]
   \\ disch_then(qspec_then`i`mp_tac)
