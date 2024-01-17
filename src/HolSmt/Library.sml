@@ -172,7 +172,7 @@ struct
 
   (* creates a dictionary that maps strings to lists of parsing functions *)
   fun dict_from_list xs
-      : (string, (string -> Arbnum.num list -> 'a list -> 'a) list)
+      : (string, (string -> string list -> 'a list -> 'a) list)
         Redblackmap.dict =
     List.foldl extend_dict (Redblackmap.mkDict String.compare) xs
 

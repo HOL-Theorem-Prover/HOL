@@ -35,13 +35,14 @@ local
 
   val BV_extension_tmdict = Library.dict_from_list [
     (* bit-vector constants *)
-    ("_", one_zero (fn token =>
+    ("_", one_zero (fn token => fn n_str =>
       if String.isPrefix "bv" token then
         let
           val decimal = String.extract (token, 2, NONE)
-          val value = Arbnum.fromString decimal
+          val value = Library.parse_arbnum decimal
+          val n = Library.parse_arbnum n_str
         in
-          Lib.curry wordsSyntax.mk_word value
+          Lib.curry wordsSyntax.mk_word value n
         end
      else
         raise ERR "<BV_extension_dict._>" "not a bit-vector constant")),
@@ -56,17 +57,22 @@ local
     ("bvsmod", K_zero_two integer_wordSyntax.mk_word_smod),
     ("bvashr", K_zero_two wordsSyntax.mk_word_asr_bv),
     ("repeat", K_one_one
-      (Lib.curry wordsSyntax.mk_word_replicate o numSyntax.mk_numeral)),
+      (Lib.curry wordsSyntax.mk_word_replicate o numSyntax.mk_numeral o
+        Library.parse_arbnum)),
     ("zero_extend", K_one_one (fn n => fn t => wordsSyntax.mk_w2w (t,
       fcpLib.index_type
-        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
+        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t),
+          Library.parse_arbnum n))))),
     ("sign_extend", K_one_one (fn n => fn t => wordsSyntax.mk_sw2sw (t,
       fcpLib.index_type
-        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
+        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t),
+          Library.parse_arbnum n))))),
     ("rotate_left", K_one_one
-      (Lib.C (Lib.curry wordsSyntax.mk_word_rol) o numSyntax.mk_numeral)),
+      (Lib.C (Lib.curry wordsSyntax.mk_word_rol) o numSyntax.mk_numeral o
+        Library.parse_arbnum)),
     ("rotate_right", K_one_one
-      (Lib.C (Lib.curry wordsSyntax.mk_word_ror) o numSyntax.mk_numeral)),
+      (Lib.C (Lib.curry wordsSyntax.mk_word_ror) o numSyntax.mk_numeral o
+        Library.parse_arbnum)),
     ("bvule", K_zero_two wordsSyntax.mk_word_ls),
     ("bvugt", K_zero_two wordsSyntax.mk_word_hi),
     ("bvuge", K_zero_two wordsSyntax.mk_word_hs),
