@@ -21,6 +21,7 @@ ignoring fact that it should really only occur at the beginning of the line.")
         '("\\_<THEN_LT\\_>" . 'holscript-then-syntax)
         '("\\S.\\(>\\(>>?\\|[-~|]\\)\\|\\\\\\\\\\)\\S." 1
           'holscript-then-syntax)
+        '("\\S.\\(>>~-\\)\\S." 1 'holscript-then-syntax)
         "^Type\\>"
         "^Overload\\>"
         (list (regexp-opt
