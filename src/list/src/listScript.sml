@@ -3598,8 +3598,7 @@ val SHORTLEX_def = Define‘
                       else F)
 ’;
 
-fun pmap f (a, b) = (f a, f b)
-val def' = uncurry CONJ (pmap SPEC_ALL (CONJ_PAIR SHORTLEX_def))
+val def' = uncurry CONJ (Lib.pair_map SPEC_ALL (CONJ_PAIR SHORTLEX_def))
 val SHORTLEX_THM = save_thm(
   "SHORTLEX_THM[simp]",
   CONJ (def' |> Q.INST [‘l2’ |-> ‘[]’]
@@ -3733,8 +3732,7 @@ val LLEX_def = Define‘
                    else F)
 ’;
 
-fun pmap f (a, b) = (f a, f b)
-val def' = uncurry CONJ (pmap SPEC_ALL (CONJ_PAIR LLEX_def))
+val def' = uncurry CONJ (Lib.pair_map SPEC_ALL (CONJ_PAIR LLEX_def))
 val LLEX_THM = save_thm(
   "LLEX_THM[simp]",
   CONJ (def' |> Q.INST [‘l2’ |-> ‘[]’]

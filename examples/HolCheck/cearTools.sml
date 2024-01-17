@@ -338,7 +338,7 @@ fun mk_abs_fun_ap_thm state astate hR_defs_ unwind_thm (apl,ks_def,wfKS_ks) hd_d
                                    (fn th => PURE_ONCE_REWRITE_RULE [MU_SAT_def] (GSYM th))
                                    (let val (prop_type,state_type) = get_types ksname
                                         val Lth = ksTools.mk_Lth ks_def
-                                        val (msa1,msa2) =  pair_map (fn t => PBETA_RULE (PURE_REWRITE_RULE [Lth]        (MATCH_MP
+                                        val (msa1,msa2) = Lib.pair_map (fn t => PBETA_RULE (PURE_REWRITE_RULE [Lth]        (MATCH_MP
                                                 (CONV_RULE FORALL_IMP_CONV (ISPECL [t,ksname] MU_SAT_AP)) wfKS_ks))) (st1,st2)
                                     in (List.map (fn mf =>muCheck.mk_gen_ap_thm ksname st1 msa1 mf)(List.map (fn ap => ``AP ^ap``) apl))
                                      @ (List.map (fn mf =>muCheck.mk_gen_ap_thm ksname st2 msa2 mf)(List.map (fn ap =>``AP ^ap``) apl'))
