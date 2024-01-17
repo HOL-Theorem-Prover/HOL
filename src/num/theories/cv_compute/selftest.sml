@@ -74,4 +74,15 @@ val _ = require_msg (check_result (aconv expected o concl)) thm_to_string
                     prove_tailrec_exists
                     base_t
 
+val odd = “(odd n = cv_if (cv_eq n (cv$Num 0))
+                          (cv$Num 0) (even (cv_sub n (cv$Num 1))))”
+val even = “(even i = cv_if (cv_eq i (cv$Num 0))
+                          (cv$Num 1) (odd (cv_sub i (cv$Num 1))))”
+val base_t = mk_conj(odd,even)
+val expected = “?odd even. (!n. ^odd) /\ (!i. ^even) ”
+val _ = tprint "tailrecursive even/odd"
+val _ = require_msg (check_result (aconv expected o concl)) thm_to_string
+                    prove_tailrec_exists
+                    base_t
+
 val _ = require_msg

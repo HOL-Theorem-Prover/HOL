@@ -44,8 +44,8 @@ fun mk_sum_term fn_t inty tm =
           else if can pairSyntax.dest_anylet t then
             let val (xs,x) = pairSyntax.dest_anylet t
             in pairSyntax.mk_anylet(xs,build_sum x) end
-          else if cvSyntax.is_cv_if tm then
-            let val (b,x,y) = cvSyntax.dest_cv_if tm
+          else if cvSyntax.is_cv_if t then
+            let val (b,x,y) = cvSyntax.dest_cv_if t
             in mk_cond(cvSyntax.mk_c2b b,build_sum x,build_sum y) end
           else
             let val (f, xs) = strip_comb t
@@ -73,6 +73,7 @@ fun prove_simple_tailrec_exists tm = let
   fun mk_inr x = sumSyntax.mk_inr(x,input_ty)
   (* building the witness *)
   val sum_tm = mk_sum_term f_tm input_ty r
+  val _ = not (exists (aconv f_tm) (free_vars sum_tm)) orelse fail()
   val abs_sum_tm = pairSyntax.mk_pabs(arg_tm,sum_tm)
   val witness = ISPEC abs_sum_tm whileTheory.TAILREC |> SPEC_ALL
                 |> concl |> dest_eq |> fst |> rator
