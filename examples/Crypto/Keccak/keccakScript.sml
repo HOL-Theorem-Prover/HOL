@@ -533,7 +533,6 @@ QED
 Definition sponge_def:
   sponge f b pad r N d =
   let P = N ++ pad r (LENGTH N) in
-  let n = LENGTH P DIV r in
   let c = b - r in
   let Pis = chunks r P in
   let S0 = REPLICATE b F in
@@ -581,6 +580,10 @@ End
 
 Definition Keccak_256_def:
   Keccak_256 M = Keccak 512 M 256
+End
+
+Definition Keccak_224_def:
+  Keccak_224 M = Keccak 448 M 224
 End
 
 Definition SHA3_224_def:
@@ -1781,10 +1784,12 @@ Proof
   rw[Keccak_p_spt_def, Keccak_p_spt]
 QED
 
-Theorem Keccak_512_spt:
-  Keccak 512 = sponge (Keccak_p_spt 24) 1600 pad10s1 (1600 - 512)
+Theorem Keccak_spt:
+  ∀c. c < 1600 ⇒
+  Keccak c = sponge (Keccak_p_spt 24) 1600 pad10s1 (1600 - c)
 Proof
-  simp[Keccak_def, sponge_def, FUN_EQ_THM]
+  gen_tac \\ strip_tac
+  \\ simp[Keccak_def, sponge_def, FUN_EQ_THM]
   \\ qx_genl_tac[`m`,`d`]
   \\ AP_TERM_TAC
   \\ AP_TERM_TAC
@@ -1800,36 +1805,39 @@ Proof
     \\ strip_tac
     \\ DEP_REWRITE_TAC[Keccak_p_spt_eq]
     \\ simp[LENGTH_Keccak_p]
-    \\ `1600 <= LENGTH y + 512` suffices_by (
+    \\ `1600 <= LENGTH y + c` suffices_by (
       simp[MIN_DEF, LESS_OR_EQ]
       \\ strip_tac \\ rw[] \\ EVAL_TAC )
     \\ fs[Abbr`xs`]
-    \\ `∃d. LENGTH m + LENGTH (pad10s1 1088 (LENGTH m)) = d * 1088`
+    \\ `∃d. LENGTH m + LENGTH (pad10s1 (1600 - c) (LENGTH m)) = d * (1600 - c)`
     by ( irule LENGTH_pad10s1 \\ simp[] )
-    \\ qmatch_asmsub_abbrev_tac`chunks 1088 ls`
-    \\ `divides 1088 (LENGTH ls)` by simp[Abbr`ls`]
+    \\ qmatch_asmsub_abbrev_tac`chunks (1600 - c) ls`
+    \\ `divides (1600 - c) (LENGTH ls)` by simp[Abbr`ls`]
     \\ Cases_on`ls = []`
     >- ( fs[Abbr`ls`] \\ fs[pad10s1_def] )
     \\ drule_then drule divides_EVERY_LENGTH_chunks
-    \\ simp[EVERY_MEM] )
+    \\ simp[EVERY_MEM]
+    \\ disch_then drule
+    \\ disch_then(SUBST1_TAC o SYM)
+    \\ simp[])
   \\ simp[]
   \\ DEP_REWRITE_TAC[WHILE_FUNPOW]
   \\ qmatch_goalsub_abbrev_tac`FUNPOW f1 _ ([], ls)`
   \\ `∀n z l.
         LENGTH l = 1600 ⇒
-        LENGTH (FST (FUNPOW f1 n (z,l))) = n * 1088 + LENGTH z ∧
+        LENGTH (FST (FUNPOW f1 n (z,l))) = n * (1600 - c) + LENGTH z ∧
         LENGTH (SND (FUNPOW f1 n (z,l))) = 1600`
   by (
     Induct \\ simp[FUNPOW_SUC]
-    \\ rw[Abbr`f1`, UNCURRY, LENGTH_TAKE_EQ]
+    \\ rw[Abbr`f1`, UNCURRY, LENGTH_TAKE_EQ, MULT]
     \\ simp[LENGTH_Keccak_p])
   \\ `∀n z l.
         LENGTH l = 1600 ⇒
-        LENGTH (FST (FUNPOW f3 n (z,l))) = n * 1088 + LENGTH z ∧
+        LENGTH (FST (FUNPOW f3 n (z,l))) = n * (1600 - c) + LENGTH z ∧
         LENGTH (SND (FUNPOW f3 n (z,l))) = 1600`
   by (
     Induct \\ simp[FUNPOW_SUC]
-    \\ rw[Abbr`f3`, UNCURRY, LENGTH_TAKE_EQ]
+    \\ rw[Abbr`f3`, UNCURRY, LENGTH_TAKE_EQ, MULT]
     \\ DEP_REWRITE_TAC[Keccak_p_spt_eq]
     \\ simp[LENGTH_Keccak_p]
     \\ EVAL_TAC)
@@ -1860,6 +1868,12 @@ Proof
     \\ EVAL_TAC )
   \\ fs[]
 QED
+
+Theorem Keccak_512_spt =
+  Keccak_spt |> Q.SPEC`512` |> SIMP_RULE std_ss []
+
+Theorem Keccak_448_spt =
+  Keccak_spt |> Q.SPEC`448` |> SIMP_RULE std_ss []
 
 Theorem triple_to_index_1600 =
   List.tabulate(5, (fn x =>
@@ -1919,7 +1933,9 @@ val cs = num_compset();
 val () = extend_compset [
   Tys [``:state_array``],
   Defs [
+    Keccak_224_def,
     Keccak_256_def,
+    Keccak_448_spt,
     Keccak_512_spt,
     sponge_def,
     chunks_def,
@@ -1934,15 +1950,15 @@ val () = extend_compset [
     pi_spt_def,
     rho_spt_def,
     theta_spt_def,
+    triple_to_index_25,
+    index_to_triple_25,
+    triple_to_index_100,
+    index_to_triple_100,
     triple_to_index_1600,
     index_to_triple_1600,
     rc_step_def,
     rc_def,
     (* for examples *)
-    triple_to_index_25,
-    index_to_triple_25,
-    triple_to_index_100,
-    index_to_triple_100,
     spt_to_state_array_w,
     spt_to_state_array_sptfun,
     sptfun_def,
