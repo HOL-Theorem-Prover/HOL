@@ -43,6 +43,7 @@ infix 3 ##
 fun (f ## g) (x, y) = (f x, g y)
 fun apfst f (x, y) = (f x, y)
 fun apsnd f (x, y) = (x, f y)
+fun pair_map f (x, y) = (f x, f y)
 infix |> ||> |>> ||->
 fun x |> f = f x
 fun (x,y) |>> f = (f x, y)

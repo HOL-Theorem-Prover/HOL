@@ -124,6 +124,7 @@ sig
    val pair : 'a -> 'b -> 'a * 'b
    val pair_compare : ('a cmp * 'b cmp) -> ('a * 'b) cmp
    val pair_eq : 'a eqf -> 'b eqf -> ('a * 'b) eqf
+   val pair_map : ('a -> 'b) -> 'a * 'a -> 'b * 'b
    val pair_of_list : 'a list -> 'a * 'a
    val partial : exn -> ('a -> 'b option) -> 'a -> 'b
    val partition : ('a -> bool) -> 'a list -> 'a list * 'a list

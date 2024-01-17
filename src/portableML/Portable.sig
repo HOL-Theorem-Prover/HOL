@@ -5,6 +5,7 @@ sig
   val ## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
   val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
   val apsnd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
+  val pair_map : ('a -> 'b) -> 'a * 'a -> 'b * 'b
   val $  : ('a -> 'b) * 'a -> 'b
   val ?  : (bool * ('a -> 'a)) -> 'a -> 'a
   val |> : 'a * ('a -> 'b) -> 'b
