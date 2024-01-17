@@ -44,6 +44,8 @@ in
   fun one_zero f x = zero_args o (one_arg (f x))
   fun one_one f x = one_arg o (one_arg (f x))
 
+  fun list_list f x = list_args o (list_args (f x))
+
   fun K_zero_zero x = Lib.K (zero_args (zero_args x))
   fun K_zero_one f = Lib.K (zero_args (one_arg f))
   fun K_zero_two f = Lib.K (zero_args (two_args f))

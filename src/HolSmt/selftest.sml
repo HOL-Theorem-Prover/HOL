@@ -408,11 +408,11 @@ in
     (``(x:int) % 1 = x - x / 1 * 1``, [thm_AUTO, thm_YO]),
     (``(x:int) % 42 = x - x / 42 * 42``, [thm_AUTO, thm_YO]),
 
-    (``ABS (x:int) >= 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(ABS (x:int) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(x:int) <= 0 ==> (ABS x = ~x)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``ABS (ABS (x:int)) = ABS x``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``ABS (x:int) >= 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(ABS (x:int) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) <= 0 ==> (ABS x = ~x)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``ABS (ABS (x:int)) = ABS x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``ABS (x:int) = x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
 
     (``int_min (x:int) y <= x``, [thm_AUTO, thm_YO]),
@@ -536,13 +536,13 @@ in
 
     (``((x:int) < y) = (y > x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``((x:int) <= y) = (y >= x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) < y /\ y <= z ==> x < z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(x:int) <= y /\ y <= z ==> x <= z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(x:int) > y /\ y >= z ==> x > z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``(x:int) >= y /\ y >= z ==> x >= z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:int) < y /\ y <= z ==> x < z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) <= y /\ y <= z ==> x <= z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) > y /\ y >= z ==> x > z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) >= y /\ y >= z ==> x >= z``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
     (``(x:int) >= 0``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``0 < (x:int) /\ x <= 1 ==> (x = 1)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``0 < (x:int) /\ x <= 1 ==> (x = 1)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
     (* real *)
 
