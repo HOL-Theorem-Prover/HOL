@@ -159,13 +159,13 @@ local
       else
         raise ERR "<z3_builtin_dict._>" "not extract[m:n]")),
     (* (_ extractm n) t *)
-    ("_", SmtLib_Theories.one_one (fn token => fn n =>
+    ("_", SmtLib_Theories.one_one (fn token => fn n_str =>
       if String.isPrefix "extract" token then
         let
-          val m = Library.parse_arbnum (String.extract (token, 7, NONE))
+          val m_str = String.extract (token, 7, NONE)
+          val (m, n) = Lib.pair_map Library.parse_arbnum (m_str, n_str)
           val index_type = fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
-          val m = numSyntax.mk_numeral m
-          val n = numSyntax.mk_numeral n
+          val (m, n) = Lib.pair_map numSyntax.mk_numeral (m, n)
         in
           fn t => wordsSyntax.mk_word_extract (m, n, t, index_type)
         end

@@ -5,7 +5,7 @@
 structure SmtLib_Parser =
 struct
 
-  type 'a parse_fn = string -> Arbnum.num list -> 'a list -> 'a
+  type 'a parse_fn = string -> string list -> 'a list -> 'a
 
 local
 
@@ -43,20 +43,20 @@ local
      to these arguments. It raises 'HOL_ERR' if the arguments are not
      valid. 'parse_term' uses the result of the first parsing function
      that does not raise 'HOL_ERR'. 5. Each parsing function
-     additionally takes a list of numerals. This list will be empty
-     for non-indexed identifiers, and non-empty for indexed
-     identifiers. Non-indexed identifiers are therefore parsed as a
-     special case of indexed identifiers. This allows parsing
-     functions for indexed and non-indexed identifiers to be stored in
-     the same dictionary. 6. To deal with numerals and other tokens
-     for which a dictionary-based approach is not sufficient, the
-     dictionary additionally contains an entry for "_". If there is no
-     dictionary entry for a token (or every parsing function in its
-     dictionary entry raised 'HOL_ERR'), 'parse_term' uses the result
-     of the first parsing function in the entry for "_" that does not
-     raise 'HOL_ERR'. So the dictionary key "_" is NOT used for
-     indexed identifiers (which are instead keyed by the first token
-     following "_" in SMT-LIB syntax), but is instead used as a
+     additionally takes a list of indices, each one a string. This
+     list will be empty for non-indexed identifiers, and non-empty for
+     indexed identifiers. Non-indexed identifiers are therefore
+     parsed as a special case of indexed identifiers. This allows
+     parsing functions for indexed and non-indexed identifiers to be
+     stored in the same dictionary. 6. To deal with numerals and other
+     tokens for which a dictionary-based approach is not sufficient,
+     the dictionary additionally contains an entry for "_". If there
+     is no dictionary entry for a token (or every parsing function in
+     its dictionary entry raised 'HOL_ERR'), 'parse_term' uses the
+     result of the first parsing function in the entry for "_" that
+     does not raise 'HOL_ERR'. So the dictionary key "_" is NOT used
+     for indexed identifiers (which are instead keyed by the first
+     token following "_" in SMT-LIB syntax), but is instead used as a
      catch-all entry. The token itself is passed verbatim.
 
      FIXME: The current setup doesn't do implicit conversions
@@ -73,18 +73,18 @@ local
      for declared types, one for declared terms), while parsing types
      only requires one dictionary (for declared types). *)
 
-  fun t_with_args dict (token : string) (nums : Arbnum.num list)
+  fun t_with_args dict (token : string) (indices : string list)
       (args : 'a list) : 'a =
-    Lib.tryfind (fn f => f token nums args) (Redblackmap.find (dict, token)
+    Lib.tryfind (fn f => f token indices args) (Redblackmap.find (dict, token)
       handle Redblackmap.NotFound => [])
     handle Feedback.HOL_ERR _ =>
     (* catch-all *)
-    Lib.tryfind (fn f => f token nums args) (Redblackmap.find (dict, "_")
+    Lib.tryfind (fn f => f token indices args) (Redblackmap.find (dict, "_")
       handle Redblackmap.NotFound => [])
     handle Feedback.HOL_ERR _ =>
       raise ERR "t_with_args" ("failed to parse '" ^ token ^
-        "' (with numerals [" ^ String.concatWith ", " (List.map Arbnum.toString
-        nums) ^ "] and " ^ Int.toString (List.length args) ^ " argument(s))")
+        "' (with indices [" ^ String.concatWith ", " indices ^
+        "] and " ^ Int.toString (List.length args) ^ " argument(s))")
 
   fun parse_indexed_t get_token dict : 'a list -> 'a =
   let
@@ -101,7 +101,7 @@ local
   in
     case get_tokens [] of
       [] => raise ERR "parse_indexed_t" "'_' immediately followed by ')'"
-    | hd::tl => t_with_args dict hd (List.map Library.parse_arbnum tl)
+    | hd::tl => t_with_args dict hd tl
   end
 
   (***************************************************************************)
