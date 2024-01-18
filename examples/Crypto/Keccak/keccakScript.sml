@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib dep_rewrite
-     bitLib reduceLib combinLib optionLib sptreeLib computeLib;
+     bitLib reduceLib combinLib optionLib sptreeLib wordsLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
      rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
      logrootTheory sptreeTheory;
@@ -1929,6 +1929,25 @@ Theorem index_to_triple_100 =
     EVAL``index_to_triple 4 ^(numLib.term_of_int i)``)
   |> LIST_CONJ
 
+Definition bool_to_bit_def:
+  bool_to_bit b = if b then 1 else 0
+End
+
+Definition bools_to_word_def:
+  bools_to_word bs =
+  word_from_bin_list (MAP bool_to_bit bs)
+End
+
+Definition bools_to_hex_string_def:
+  bools_to_hex_string bs =
+  FLAT $
+    MAP (
+      PAD_LEFT #"0" 2 o
+      (word_to_hex_string : word8 -> string) o
+      bools_to_word
+    ) $ chunks 8 bs
+End
+
 val cs = num_compset();
 val () = extend_compset [
   Tys [``:state_array``],
@@ -1958,6 +1977,9 @@ val () = extend_compset [
     index_to_triple_1600,
     rc_step_def,
     rc_def,
+    bool_to_bit_def,
+    bools_to_word_def,
+    bools_to_hex_string_def,
     (* for examples *)
     spt_to_state_array_w,
     spt_to_state_array_sptfun,
@@ -1977,7 +1999,8 @@ val () = extend_compset [
     pred_setLib.add_pred_set_compset,
     add_sptree_compset,
     OPTION_rws,
-    add_combin_compset]
+    add_combin_compset,
+    add_words_compset true]
  ] cs
 
 (* w = 1, so rho does nothing *)
@@ -2010,12 +2033,21 @@ Proof
   \\ CONV_TAC(CBV_CONV cs)
 QED
 
-(*
+Theorem Keccak_224_NIL:
+  bools_to_hex_string (Keccak_224 []) =
+  "F71837502BA8E10837BDD8D365ADB85591895602FC552B48B7390ABD"
+Proof
+  CONV_TAC(CBV_CONV cs)
+QED
 
-Definition bools_to_word_def:
-  bools_to_word bs =
-  word_from_bin_list (MAP (λb. if b then 1 else 0) bs)
-End
+Theorem Keccak_256_NIL:
+  bools_to_hex_string (Keccak_256 []) =
+  "C5D2460186F7233C927E7DB2DCC703C0E500B653CA82273B7BFAD8045D85A470"
+Proof
+  CONV_TAC(CBV_CONV cs)
+QED
+
+(*
 
 Definition state_array_to_lane_words_def:
   state_array_to_lane_words a =
@@ -2023,33 +2055,71 @@ Definition state_array_to_lane_words_def:
     (FLAT (GENLIST (λx. GENLIST (λy. Lane a (x,y)) 5) 5))
 End
 
-val () = wordsLib.add_words_compset true cs
 val () = computeLib.add_thms
-  [bools_to_word_def, state_array_to_lane_words_def,
+  [state_array_to_lane_words_def,
    string_to_state_array_def, restrict_def] cs
 
 val init_state_thm = CBV_CONV cs ``state_array_to_lane_words
   (string_to_state_array (GENLIST (λi. i MOD 5 = 0) 1600))``
 
-val init_state = init_state_thm |> concl |> lhs |> rand |> rand
+val init_string = init_state_thm |> concl |> lhs |> rand |> rand
 
 val rho_test_thm = CBV_CONV cs ``state_array_to_lane_words (
-  spt_to_state_array (rho_spt (fromList ^init_state)))``
+  spt_to_state_array (rho_spt (fromList ^init_string)))``
 
 val pi_test_thm = CBV_CONV cs ``state_array_to_lane_words (
-  spt_to_state_array (pi_spt (fromList ^init_state)))``
+  spt_to_state_array (pi_spt (fromList ^init_string)))``
 
 val theta_test_thm = CBV_CONV cs ``state_array_to_lane_words (
-  spt_to_state_array (theta_spt (fromList ^init_state)))``
+  spt_to_state_array (theta_spt (fromList ^init_string)))``
 
 val chi_test_thm = CBV_CONV cs ``state_array_to_lane_words (
-  spt_to_state_array (chi_spt (fromList ^init_state)))``
+  spt_to_state_array (chi_spt (fromList ^init_string)))``
 
 val iota_test_thm = CBV_CONV cs ``state_array_to_lane_words (
-  spt_to_state_array (iota_spt (fromList ^init_state) 7))``
+  spt_to_state_array (iota_spt (fromList ^init_string) 7))``
 
 val Keccak_f_test_thm = CBV_CONV cs ``state_array_to_lane_words (
-  string_to_state_array (Keccak_p_spt 24 ^init_state))``
+  string_to_state_array (Keccak_p_spt 24 ^init_string))``
+
+val pad_test_thm = CBV_CONV cs ``
+MAP word_from_bin_list
+(chunks 8
+(MAP (λb. if b then 1 else 0)
+  (^init_string ++ pad10s1 (1600 - 512) (LENGTH ^init_string))))
+  : word8 list
+``
+
+val init_string_bytes = CBV_CONV cs``
+  MAP word_from_bin_list (
+    chunks 8 (MAP (λb. if b then 1 else 0) ^init_string)
+    ) : word8 list
+    ``
+
+val absorb_test_thm = CBV_CONV cs
+``let f = Keccak_p_spt 24 in
+  let b = 1600 in
+  let c = 512 in
+  let r = 1600 - c in
+  let P = ^(pad_test_thm |> concl |> lhs |> funpow 3 rand) in
+  let Pis = chunks r P in
+  let S0 = REPLICATE b F in
+  let S = FOLDL (λSi Pi. f (MAP2 (λx y. x <> y) Si (Pi ++ REPLICATE c F))) S0
+  Pis
+  in S
+``
+
+val squeeze_test_thm = CBV_CONV cs
+``
+let f = Keccak_p_spt 24 in
+let c = 512 in
+let r = 1600 - c in
+let d = 256 in
+let S = ^(rhs(concl absorb_test_thm)) in
+let Z = FST (
+  WHILE (λ(Z,S). LENGTH Z < d) (λ(Z,S). (Z ++ TAKE r S, f S)) ([], S)
+) in TAKE d Z
+``
 
 EVAL ``
 MAP n2w [1190112520884487201;2380225043985731716;9520900167075897608;2380225112705208452;9520900167075906064;4760450083537948804;1190113655864232002;2380225041768974468;2380227311728464004;9520900167075897608;1190112520884487201;9520900167075897616;1190113655864232002;4760450083537953032;9818428297297019408;2380225041838248068;9530197921145307664;9520900167084556816;595056260442784801;613651768581063713;2380225041704030340;595056260441736225;9520899901065019920;4760450083537948680;9520900167075889680]
@@ -2075,25 +2145,27 @@ EVAL ``MAP n2w
 [12527428395425175348;15801298012686366507;3188220639418651126;3321697703372914021;392354921814910000;12969346763022901137;16472965139809776265;7551077093031917714;3462283554697442690;11880954693601669160;14043976998532219136;13290350532005714486;8281948419926017253;5563974798024345351;1095251020247860242;11824366241951878661;6839891776852556124;15993682277163781118;18195611134401667551;5043288562153437971;7883103420529788315;8402947264540262517;1941332173674254838;18102320560554041299;2992148669962812600]
 = ^(rhs(concl Keccak_f_test_thm))``
 
-val test_vector =
-  EVAL ``string_to_state_array (GENLIST (λi. i MOD 5 = 0) 1600)``
-       |> concl |> rhs
-Lane_def
-LENGTH_Lane
-EVAL``b2w 1600``
+EVAL `` MAP n2w
+[33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;33;132;16;66;8;1;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;128]
+= ^(rhs(concl pad_test_thm))``
 
-EVAL ``pad10s1 3  1600``
+EVAL ``MAP n2w
+[12417067843063317025;11559189604044637574;10283124272294950150;14699815144987270495;283173274300431045;3236883229902219665;2896567989647695906;1420376225281158638;17609325282516577257;4943531605352710241;6348566720201527309;13438540713024530881;9813492967349884184;3951509894084461853;13945734360192510516;5945400830828459221;8243876224757392082;2324403489064850701;12570080452898761122;1516007673639937983;15662554419738670582;16342922203974826137;3023483368381129057;3389012354561481769;8948748016597943154]
+= state_array_to_lane_words (
+    string_to_state_array ^(rhs(concl absorb_test_thm))
+  )``
 
-Theorem Keccak_224_NIL = CBV_CONV cs ``Keccak_224 []``
-Theorem Keccak_256_NIL = CBV_CONV cs ``Keccak_256 []``
+EVAL ``MAP n2w
+[33;2;183;49;106;73;82;172;145;169;189;217;37;184;235;44;13;144;122;190;203;163;26;88;213;180;215;56;142;78;130;82]
+= MAP bools_to_word (chunks 8 ^(rhs(concl squeeze_test_thm)))
+``
 
-CBV_CONV cs``(word_from_bin_list $ MAP (λb. if b then 1 else 0)
-  ^(Keccak_224_NIL |> concl |> rand |> rand)) :224 word``
-(* 0xf71837502ba8e10837bdd8d365adb85591895602fc552b48b7390abd *)
+val test_Keccak_256_thm = CBV_CONV cs ``Keccak_256 ^init_string``
 
-CBV_CONV cs``(word_from_bin_list $ MAP (λb. if b then 1 else 0)
-  ^(Keccak_256_NIL |> concl |> rand |> rand)) :256 word``
-(* 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 *)
+CBV_CONV cs ``bools_to_hex_string
+  ^(rhs (concl test_Keccak_256_thm))``
+(* 2102B7316A4952AC91A9BDD925B8EB2C0D907ABECBA31A58D5B4D7388E4E8252 *)
+(* 2102b7316a4952ac91a9bdd925b8eb2c0d907abecba31a58d5b4d7388e4e8252 *)
 
 *)
 
