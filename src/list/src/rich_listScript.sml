@@ -3027,6 +3027,55 @@ val LIST_ELEM_COUNT_MEM = Q.store_thm ("LIST_ELEM_COUNT_MEM",
    THEN FULL_SIMP_TAC list_ss [LIST_ELEM_COUNT_DEF, COND_RAND, COND_RATOR]
    THEN PROVE_TAC []);
 
+(*---------------------------------------------------------------------------
+   chunks: split a list into equal-sized lists
+ ---------------------------------------------------------------------------*)
+
+Definition chunks_def:
+  chunks n ls =
+  if LENGTH ls <= n \/ n = 0
+  then [ls]
+  else CONS (TAKE n ls) (chunks n (DROP n ls))
+Termination
+  Q.EXISTS_TAC`measure (LENGTH o SND)` \\ rw[LENGTH_DROP]
+End
+
+val chunks_ind = theorem"chunks_ind";
+
+Theorem chunks_NIL[simp]:
+  chunks n [] = [[]]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem chunks_0[simp]:
+  chunks 0 ls = [ls]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem FLAT_chunks[simp]:
+  FLAT (chunks n ls) = ls
+Proof
+  completeInduct_on`LENGTH ls` \\ rw[]
+  \\ rw[Once chunks_def]
+QED
+
+Theorem divides_EVERY_LENGTH_chunks:
+  !n ls. ls <> [] /\ divides n (LENGTH ls) ==>
+    EVERY ($= n o LENGTH) (chunks n ls)
+Proof
+  ho_match_mp_tac chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def] \\ fs[]
+  \\ fs[dividesTheory.divides_def]
+  \\ REV_FULL_SIMP_TAC(srw_ss())[]
+  >- ( Cases_on`q = 0` \\ fs[] )
+  \\ first_x_assum irule
+  \\ Q.EXISTS_TAC`PRE q`
+  \\ Cases_on`q` \\ fs[ADD1]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
