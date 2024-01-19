@@ -1924,6 +1924,46 @@ Proof
   \\ rw[wf_insert]
 QED
 
+Theorem mapi_fromList:
+  mapi f (fromList ls) = fromList (MAPi f ls)
+Proof
+  DEP_REWRITE_TAC[spt_eq_thm]
+  \\ simp[wf_mapi]
+  \\ rw[lookup_fromList, lookup_mapi]
+QED
+
+Theorem insert_fromList_IN_domain:
+  !ls k v.
+  k < LENGTH ls ==>
+  insert k v (fromList ls) =
+  fromList (TAKE k ls ++ [v] ++ DROP (SUC k) ls)
+Proof
+  simp[fromList_def]
+  \\ ho_match_mp_tac SNOC_INDUCT
+  \\ rw[FOLDL_SNOC, rich_listTheory.TAKE_SNOC]
+  \\ Cases_on`k = LENGTH ls` \\ gs[]
+  >- (
+    rw[rich_listTheory.DROP_LENGTH_NIL_rwt]
+    \\ gs[GSYM fromList_def, pairTheory.UNCURRY]
+    \\ qmatch_goalsub_abbrev_tac`FST (FOLDL f e ls)`
+    \\ `!ls e. FST (FOLDL f e ls) = FST e + LENGTH ls`
+    by ( Induct \\ rw[Abbr`f`, pairTheory.UNCURRY] )
+    \\ rw[Abbr`e`, insert_shadow]
+    \\ simp[fromList_def, rich_listTheory.FOLDL_APPEND]
+    \\ simp[Abbr`f`, pairTheory.UNCURRY] )
+  \\ gs[GSYM fromList_def, pairTheory.UNCURRY, rich_listTheory.DROP_SNOC]
+  \\ simp[SNOC_APPEND]
+  \\ qmatch_goalsub_abbrev_tac`FST (FOLDL f e ls)`
+  \\ `!ls e. FST (FOLDL f e ls) = FST e + LENGTH ls`
+  by ( Induct \\ rw[Abbr`f`, pairTheory.UNCURRY] )
+  \\ simp[Abbr`e`]
+  \\ simp[Once insert_insert]
+  \\ simp[fromList_def]
+  \\ simp[Once rich_listTheory.FOLDL_APPEND, SimpRHS]
+  \\ simp[Abbr`f`, pairTheory.UNCURRY]
+  \\ simp[ADD1]
+QED
+
 val splem1 = Q.prove(`
   a <> 0 ==> (a-1) DIV 2 < a`,
   simp[DIV_LT_X]);
