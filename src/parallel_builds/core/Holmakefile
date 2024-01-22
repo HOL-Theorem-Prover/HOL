@@ -15,7 +15,7 @@ SRCRELNAMES = \
   pred_set/src/more_theories probability \
   rational real real/analysis res_quan/src ring/src \
   search sort string \
-  temporal/src TeX transfer \
+  TeX transfer \
   update
 
 INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
@@ -42,7 +42,8 @@ EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
          lambda \
          logic logic/folcompactness logic/modal-models logic/modal-tableaux \
          logic/ncfolproofs logic/propositional_logic logic/relevant-logic \
-         misc parity rings set-theory/zfset set-theory/vbg zipper
+         logic/temporal/src misc parity rings set-theory/zfset set-theory/vbg \
+         zipper
 
 # selftest directories under src/quotient
 QUOTDIRS = examples examples/lambda examples/sigma choice
@@ -77,15 +78,15 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
           decidable_separationLogic/src \
           formal-languages/regular fun-op-sem \
           lambda/other-models lambda/typing \
-            logic/ltl logic/ltl-transformations \
+            logic/ltl logic/temporal_deep \
+            logic/ltl-transformations \
             l3-machine-code/decompilers \
           miller \
           probability vector \
-          separationLogic/src separationLogic/src/holfoot simple_complexity \
-          temporal_deep
+          separationLogic/src separationLogic/src/holfoot simple_complexity
 
 ifdef POLY
-EX2DIRS += separationLogic/src/holfoot/poly temporal_deep/src/examples
+EX2DIRS += separationLogic/src/holfoot/poly logic/temporal_deep/src/examples
 endif
 
 INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))

@@ -1,4 +1,4 @@
-INCLUDES = ../../rational # for schneiderUtils
+INCLUDES = $(HOLDIR)/src/rational # for schneiderUtils
 
 ifdef HOLBUILD
 .PHONY: link-to-sigobj
