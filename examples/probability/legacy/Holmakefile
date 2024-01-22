@@ -1,0 +1,8 @@
+INCLUDES = $(HOLDIR)/src/real $(HOLDIR)/src/res_quan/src $(HOLDIR)/src/real/analysis
+
+EXTRA_CLEANS = heap \
+	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
+
+all: $(DEFAULT_TARGETS)
+
+.PHONY: all

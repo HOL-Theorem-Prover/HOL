@@ -1,2 +1,2 @@
-INCLUDES = ../miller/subtypes ../miller/formalize $(HOLDIR)/src/probability \
+INCLUDES = ../miller/subtypes ../miller/formalize $(HOLDIR)/examples/probability/legacy \
 	$(HOLDIR)/src/real/analysis
