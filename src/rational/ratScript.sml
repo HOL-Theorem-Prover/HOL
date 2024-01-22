@@ -1191,8 +1191,8 @@ val RAT_EQ_AINV = store_thm("RAT_EQ_AINV[simp]",
 val RAT_AINV_MINV = store_thm("RAT_AINV_MINV",
   “!r1. r1 <> 0q ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))”,
   REPEAT STRIP_TAC THEN
-  COPY_ASM_NO 0 THEN
-  APPLY_ASM_TAC 0 (REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR]) THEN
+  FIRST_ASSUM MP_TAC THEN
+  RULE_ASSUM_TAC (REWRITE_RULE[rat_nmr_def, RAT_EQ0_NMR]) THEN
   SUBST_TAC[GSYM RAT_AINV_0] THEN
   ONCE_REWRITE_TAC[GSYM RAT_AINV_EQ] THEN
   REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR] THEN
@@ -1200,7 +1200,7 @@ val RAT_AINV_MINV = store_thm("RAT_AINV_MINV",
   REWRITE_TAC[RAT_NMREQ0_CONG] THEN
   STRIP_TAC THEN
   RW_TAC int_ss[RAT_AINV_CONG, RAT_MINV_CONG] THEN
-  COPY_ASM_NO 1 THEN
+  LAST_ASSUM MP_TAC THEN
   ONCE_REWRITE_TAC[GSYM INT_EQ_NEG] THEN
   ONCE_REWRITE_TAC[INT_NEG_0] THEN
   STRIP_TAC THEN
@@ -2224,18 +2224,21 @@ val RAT_SAVE_NUM = store_thm("RAT_SAVE_NUM", ``!n. &n = abs_rat(frac_save (&n) 0
    |- !n. (&n // 1 = &n) /\ ((~&n) // 1 = ~&n)
  *--------------------------------------------------------------------------*)
 
-val RAT_CONS_TO_NUM = store_thm("RAT_CONS_TO_NUM", ``!n. (&n // 1 = &n) /\ ((~&n) // 1 = ~&n)``,
-        Induct_on `n` THEN1
-        RW_TAC int_ss [rat_cons_def, RAT_AINV_0, rat_0, frac_0_def] THEN
-        APPLY_ASM_TAC 0 (ONCE_REWRITE_TAC[EQ_SYM_EQ]) THEN
-        ASM_REWRITE_TAC[rat_cons_def, RAT_OF_NUM, RAT_AINV_ADD] THEN
-        RAT_CALC_TAC THEN
-        `0 < ABS 1` by ARITH_TAC THEN
-        FRAC_CALC_TAC THEN
-        REWRITE_TAC[RAT_EQ] THEN
-        FRAC_NMRDNM_TAC THEN
-        RW_TAC int_ss [SGN_def] THEN
-        ARITH_TAC );
+Theorem RAT_CONS_TO_NUM:
+  !n. (&n // 1 = &n) /\ ((~&n) // 1 = ~&n)
+Proof
+  Induct_on ‘n’ THEN1
+   RW_TAC int_ss [rat_cons_def, RAT_AINV_0, rat_0, frac_0_def] THEN
+  RULE_ASSUM_TAC (ONCE_REWRITE_RULE[EQ_SYM_EQ]) THEN
+  ASM_REWRITE_TAC[rat_cons_def, RAT_OF_NUM, RAT_AINV_ADD] THEN
+  RAT_CALC_TAC THEN
+  ‘0 < ABS 1’ by ARITH_TAC THEN
+  FRAC_CALC_TAC THEN
+  REWRITE_TAC[RAT_EQ] THEN
+  FRAC_NMRDNM_TAC THEN
+  RW_TAC int_ss [SGN_def] THEN
+  ARITH_TAC
+QED
 
 (*--------------------------------------------------------------------------
    RAT_0: thm
@@ -2366,17 +2369,23 @@ val RAT_ADD_NUM1 = prove(``!n m. ( &n +  &m = &(n+m))``,
         `SUC (SUC n) + m = SUC m + SUC n` by ARITH_TAC THEN
         PROVE_TAC[RAT_ADD_ASSOC, RAT_ADD_COMM] );
 
-val RAT_ADD_NUM2 = prove(``!n m. (~&n + &m = if n<=m then &(m-n) else ~&(n-m))``,
-        Induct_on `n` THEN
-        Induct_on `m` THEN
-        SIMP_TAC int_ss [RAT_AINV_0, RAT_ADD_LID, RAT_ADD_RID] THEN
-        LEFT_NO_FORALL_TAC 1 ``m:num`` THEN
-        APPLY_ASM_TAC 0 (ONCE_REWRITE_TAC[EQ_SYM_EQ]) THEN
-        ASM_REWRITE_TAC[] THEN
-        REWRITE_TAC[RAT_OF_NUM] THEN
-        REWRITE_TAC[RAT_AINV_ADD] THEN
-        SUBST1_TAC (EQT_ELIM (AC_CONV (RAT_ADD_ASSOC, RAT_ADD_COMM) ``~& n + ~rat_1 + (& m + rat_1) = ~& n + & m + (rat_1 + ~rat_1)``)) THEN
-        REWRITE_TAC[RAT_ADD_RINV, RAT_ADD_RID] );
+Theorem RAT_ADD_NUM2[local]:
+  !n m. (~&n + &m = if n<=m then &(m-n) else ~&(n-m))
+Proof
+  Induct_on ‘n’ THEN
+  Induct_on ‘m’ THEN
+  SIMP_TAC int_ss [RAT_AINV_0, RAT_ADD_LID, RAT_ADD_RID] THEN
+  FIRST_X_ASSUM
+    (Q.SPEC_THEN ‘m’ (ASSUME_TAC o ONCE_REWRITE_RULE[EQ_SYM_EQ])) THEN
+  ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[RAT_OF_NUM] THEN
+  REWRITE_TAC[RAT_AINV_ADD] THEN
+  SUBST1_TAC
+    (EQT_ELIM
+     (AC_CONV (RAT_ADD_ASSOC, RAT_ADD_COMM)
+       “~& n + ~rat_1 + (& m + rat_1) = ~& n + & m + (rat_1 + ~rat_1)”)) THEN
+  REWRITE_TAC[RAT_ADD_RINV, RAT_ADD_RID]
+QED
 
 val RAT_ADD_NUM3 = prove(``!n m.  &n + ~&m = if m<=n then &(n-m) else ~&(m-n)``,
         PROVE_TAC[RAT_ADD_NUM2, RAT_ADD_COMM] );

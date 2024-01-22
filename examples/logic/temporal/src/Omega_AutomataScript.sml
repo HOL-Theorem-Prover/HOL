@@ -5,6 +5,7 @@
 open HolKernel Parse boolLib Rsyntax schneiderUtils
      numLib numTheory prim_recTheory arithmeticTheory pairTheory
      Temporal_LogicTheory Past_Temporal_LogicTheory;
+open tautLib bossLib
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
@@ -24,17 +25,17 @@ val _ = ParseExtras.temp_loose_equality()
 
 
 
-val DET_OMEGA_EXISTS_FORALL_THEOREM = TAC_PROOF(
-  ([],“(?q:num->'state.
-                  (q t0 = InitVal) /\
-                  (!t. q(t+(t0+1)) = TransRel((i(t+t0):'input),q(t+t0))) /\
-                  Accept(i,(\t.q(t+t0))))
-         =
-         (!q:num->'state.
-                  (q t0 = InitVal) /\
-                  (!t. q(t+(t0+1)) = TransRel((i(t+t0):'input),q(t+t0)))
-                  ==>     Accept(i,(\t.q(t+t0))))
-          ”),
+Theorem DET_OMEGA_EXISTS_FORALL_THEOREM[local]:
+  (?q:num->'state.
+     (q t0 = InitVal) /\
+     (!t. q(t+(t0+1)) = TransRel((i(t+t0):'input),q(t+t0))) /\
+     Accept(i,(\t.q(t+t0))))
+  =
+  (!q:num->'state.
+     (q t0 = InitVal) /\
+     (!t. q(t+(t0+1)) = TransRel((i(t+t0):'input),q(t+t0)))
+     ==>     Accept(i,(\t.q(t+t0))))
+Proof
   EQ_TAC THEN REPEAT STRIP_TAC
   THENL[
       MY_MP_TAC “(\t.q'(t+t0))=((\t.q(t+t0)):num->'state)”
@@ -45,20 +46,17 @@ val DET_OMEGA_EXISTS_FORALL_THEOREM = TAC_PROOF(
           DISCH_TAC]
       THEN ASM_REWRITE_TAC[],
       (* ------------------------------------------------------------------ *)
-      ASSUME_TAC(EXISTENCE(REWRITE_RULE[ADD1](BETA_RULE
+      STRIP_ASSUME_TAC(EXISTENCE(REWRITE_RULE[ADD1](BETA_RULE
           (ISPECL[“InitVal:'state”,
                   “\x:'state.\t:num.TransRel((i(t+t0)):'input,x):'state”]
                   num_Axiom_old))))
-      THEN LEFT_EXISTS_TAC THEN EXISTS_TAC “\t:num.fn1(t-t0):'state”
-      THEN LEFT_NO_FORALL_TAC 1 “\t:num.fn1(t-t0):'state”
+      THEN EXISTS_TAC “\t:num.fn1(t-t0):'state”
+      THEN FIRST_X_ASSUM
+             (Q.SPEC_THEN ‘\t:num.fn1(t-t0):'state’ STRIP_ASSUME_TAC)
       THEN UNDISCH_HD_TAC THEN BETA_TAC
-      THEN ASM_REWRITE_TAC[
-                  EQT_ELIM(ARITH_CONV“n-n=0”),
-                  EQT_ELIM(ARITH_CONV“(t+t0)-t0=t”),
-                  EQT_ELIM(ARITH_CONV“(t+(t0+1))-t0=t+1”)]
-  ]);
-
-
+      THEN simp[]
+  ]
+QED
 
 val NEG_DET_AUTOMATA = TAC_PROOF(
   ([],“
@@ -74,9 +72,9 @@ val NEG_DET_AUTOMATA = TAC_PROOF(
   ”),
   SUBST1_TAC DET_OMEGA_EXISTS_FORALL_THEOREM
   THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
-  THEN REWRITE_TAC[TAC_PROOF(([],“(a==>b) = (~a\/b)”),PROP_TAC)]
+  THEN REWRITE_TAC[DECIDE “(a==>b) = (~a\/b)”]
   THEN REWRITE_TAC[DE_MORGAN_THM]
-  THEN REWRITE_TAC[TAC_PROOF(([],“((a/\b)/\c) = (a/\b/\c)”),PROP_TAC)]
+  THEN REWRITE_TAC[DECIDE “((a/\b)/\c) = (a/\b/\c)”]
   );
 
 
@@ -569,14 +567,14 @@ val DISJ_FG = prove(
               (!t. q(t+(t0+1)) = (if q(t+t0) then b(t+t0) else ~a(t+t0))) /\
               ?t1.!t2. ~q(t1+(t2+t0)) \/ b(t1+(t2+t0)))”,
   REPEAT GEN_TAC
-  THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
+  THEN PURE_ONCE_REWRITE_TAC[DECIDE “(a=b)=(~a= ~b)”]
   THEN PURE_REWRITE_TAC[DE_MORGAN_THM]
   THEN CONV_TAC(REPEATC(CHANGED_CONV(DEPTH_CONV
                   (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV))))
   THEN SUBST1_TAC(BETA_RULE(SPECL
           [“\t:num. ~a(t)”,“\t:num. ~b(t)”]
           CONJ_GF))
-  THEN REWRITE_TAC[TAC_PROOF(([],“~(a/\b/\c) = (a/\b) ==> ~c”),PROP_TAC)]
+  THEN REWRITE_TAC[DECIDE “~(a/\b/\c) = (a/\b) ==> ~c”]
   THEN REWRITE_TAC[ADD_CLAUSES,num_CONV“1”]
   THEN EQ_TAC THEN REPEAT STRIP_TAC
   THENL[
@@ -644,7 +642,7 @@ val DISJ_GF = TAC_PROOF(
                   (!t1.?t2.a(t1+(t2+t0))) \/ (!t1.?t2.b(t1+(t2+t0)))
                 = !t1.?t2. a(t1+(t2+t0)) \/ b(t1+(t2+t0))”),
         REPEAT GEN_TAC
-        THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
+        THEN PURE_ONCE_REWRITE_TAC[DECIDE “(a=b)=(~a= ~b)”]
         THEN PURE_REWRITE_TAC[DE_MORGAN_THM]
         THEN CONV_TAC(REPEATC(CHANGED_CONV(DEPTH_CONV
                         (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV))))
@@ -893,8 +891,7 @@ val FG_AS_NDET_GF = prove(
       THEN REWRITE_TAC[ARITH_PROVE “(t1+t0<SUC(t+t0)) = (t1<SUC t)”]
       THEN CONJ_TAC
       THENL[
-          GEN_TAC THEN REWRITE_TAC[TAC_PROOF(
-                          ([],“~(a/\~b) = (a==>b)”),PROP_TAC)]
+          GEN_TAC THEN REWRITE_TAC[DECIDE “~(a/\~b) = (a==>b)”]
           THEN REWRITE_TAC[ARITH_PROVE “t1<t ==> t1<SUC t”]
           THEN DISCH_TAC THEN IMP_RES_TAC LESS_ADD
           THEN POP_ASSUM (SUBST1_TAC o SYM)
@@ -942,7 +939,7 @@ val FG_AS_NDET_GF = prove(
           THEN UNDISCH_HD_TAC THEN UNDISCH_HD_TAC
           THEN LEFT_FORALL_TAC “SUC(SUC(t+d))”
           THEN UNDISCH_HD_TAC
-          THEN REWRITE_TAC[ADD_CLAUSES,ADD_ASSOC] THEN PROP_TAC
+          THEN REWRITE_TAC[ADD_CLAUSES,ADD_ASSOC] THEN TAUT_TAC
           ],
       DISCH_TAC]
   THEN EXISTS_TAC “t:num” THEN ASM_REWRITE_TAC[]
@@ -1054,7 +1051,7 @@ val WHEN2BUECHI_THM = prove(
       (* ---------------------------------------------------------- *)
       UNDISCH_HD_TAC THEN POP_ASSUM REWRITE1_TAC
       THEN DISCH_TAC
-      THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a:bool=b) = (b=a)”),PROP_TAC)]
+      THEN ONCE_REWRITE_TAC[DECIDE “(a:bool=b) = (b=a)”]
       THEN MY_MP_TAC “
                   (!n. EVENTUAL b n)
                   ==> !n. (a WHEN b) n = (a SWHEN b) n”
@@ -1129,10 +1126,8 @@ val UNTIL2BUECHI_THM = TAC_PROOF(
           (!t. l t = ~b t ==> a t /\ l(t+1)) /\
           (!t1.?t2. ~l(t1+t2) ==> ~a(t1+t2) \/ b(t1+t2))”),
   REWRITE_TAC[UNTIL_AS_WHEN,WHEN2BUECHI_THM] THEN BETA_TAC
-  THEN REWRITE_TAC[TAC_PROOF
-          (([],“(if (a ==> b) then b else l) = (~b ==> a /\ l)”),PROP_TAC)]
-  THEN REWRITE_TAC[TAC_PROOF
-          (([],“(l \/(a==>b)) = (~l ==> (~a\/b))”),PROP_TAC)]);
+  THEN REWRITE_TAC[DECIDE“(if (a ==> b) then b else l) = (~b ==> a /\ l)”]
+  THEN REWRITE_TAC[DECIDE“(l \/(a==>b)) = (~l ==> (~a\/b))”]);
 
 
 val SUNTIL2BUECHI_THM = TAC_PROOF(
@@ -1140,10 +1135,8 @@ val SUNTIL2BUECHI_THM = TAC_PROOF(
           (!t. l t = ~b t ==> a t /\ l(t+1)) /\
           (!t1.?t2. l(t1+t2) ==> ~a(t1+t2) \/ b(t1+t2))”),
   REWRITE_TAC[SUNTIL_AS_SWHEN,SWHEN2BUECHI_THM] THEN BETA_TAC
-  THEN REWRITE_TAC[TAC_PROOF
-          (([],“(if (a ==> b) then b else l) = (~b ==> a /\ l)”),PROP_TAC)]
-  THEN REWRITE_TAC[TAC_PROOF
-          (([],“(l ==> a==>b) = (l ==> ~a \/ b)”),PROP_TAC)]);
+  THEN REWRITE_TAC[DECIDE“(if (a ==> b) then b else l) = (~b ==> a /\ l)”]
+  THEN REWRITE_TAC[DECIDE“(l ==> a==>b) = (l ==> ~a \/ b)”]);
 
 
 val BEFORE2BUECHI_THM = TAC_PROOF(
@@ -1151,17 +1144,14 @@ val BEFORE2BUECHI_THM = TAC_PROOF(
           (!t. l t = ~b t /\ (a t \/ l(t+1))) /\
           (!t1.?t2. ~l(t1+t2) ==> a(t1+t2) \/ b(t1+t2))”),
   REWRITE_TAC[BEFORE_AS_SUNTIL]
-  THEN REWRITE_TAC[TAC_PROOF
-          (([],“(l = ~b/\(a\/l1)) = (~l = ~b ==>~a/\~l1)”),PROP_TAC)]
-  THEN ONCE_REWRITE_TAC[TAC_PROOF
-          (([],“(~l ==> a \/b) = (~l ==> ~~a \/ b)”),PROP_TAC)]
+  THEN REWRITE_TAC[DECIDE“(l = ~b/\(a\/l1)) = (~l = ~b ==>~a/\~l1)”]
+  THEN ONCE_REWRITE_TAC[DECIDE“(~l ==> a \/b) = (~l ==> ~~a \/ b)”]
   THEN REWRITE1_TAC(SYM(BETA_RULE
             (SPEC“\t:num.~l t”(GEN“l:num->bool”
             (SPEC“\t:num.~a t”(GEN“a:num->bool”
                   SUNTIL2BUECHI_THM)))) ))
   THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-  THEN ONCE_REWRITE_TAC[TAC_PROOF
-          (([],“(a = ~b) = (~a = b)”),PROP_TAC)]
+  THEN ONCE_REWRITE_TAC[DECIDE “(a = ~b) = (~a = b)”]
   THEN REWRITE_TAC[]);
 
 val SBEFORE2BUECHI_THM = TAC_PROOF(
@@ -1169,15 +1159,13 @@ val SBEFORE2BUECHI_THM = TAC_PROOF(
           (!t. l t = ~b t /\ (a t \/ l(t+1))) /\
           (!t1.?t2. l(t1+t2) ==> a(t1+t2) \/ b(t1+t2))”),
   REWRITE_TAC[SBEFORE_AS_UNTIL]
-  THEN REWRITE_TAC[TAC_PROOF
-          (([],“(l = ~b/\(a\/l1)) = (~l = ~b ==>~a/\~l1)”),PROP_TAC)]
+  THEN REWRITE_TAC[DECIDE “(l = ~b/\(a\/l1)) = (~l = ~b ==>~a/\~l1)”]
   THEN REWRITE1_TAC(SYM(REWRITE_RULE[](BETA_RULE
             (SPEC“\t:num.~l t”(GEN“l:num->bool”
             (SPEC“\t:num.~a t”(GEN“a:num->bool”
                   UNTIL2BUECHI_THM)))) )))
   THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-  THEN ONCE_REWRITE_TAC[TAC_PROOF
-          (([],“(a = ~b) = (~a = b)”),PROP_TAC)]
+  THEN ONCE_REWRITE_TAC[DECIDE “(a = ~b) = (~a = b)”]
   THEN REWRITE_TAC[]);
 
 
@@ -1187,8 +1175,7 @@ val ALWAYS2BUECHI_THM = TAC_PROOF(
                 (!t. l t = a t /\ l(t+1)) /\
                 (!t1.?t2. a(t1+t2) ==> l(t1+t2))”),
         REWRITE_TAC[ALWAYS_AS_UNTIL,UNTIL2BUECHI_THM] THEN BETA_TAC
-        THEN REWRITE_TAC[TAC_PROOF
-                (([],“(~a ==> ~l) =( l ==> a)”),PROP_TAC)]);
+        THEN REWRITE_TAC[DECIDE “(~a ==> ~l) =( l ==> a)”]);
 
 
 
@@ -1197,8 +1184,7 @@ val EVENTUAL2BUECHI_THM = TAC_PROOF(
                 (!t. l t = a t \/ l(t+1)) /\
                 (!t1.?t2. l(t1+t2) ==> a(t1+t2))”),
         REWRITE_TAC[EVENTUAL_AS_SUNTIL,SUNTIL2BUECHI_THM] THEN BETA_TAC
-        THEN REWRITE_TAC[TAC_PROOF
-                (([],“(~a ==> l) = (a \/ l)”),PROP_TAC)]);
+        THEN REWRITE_TAC[DECIDE “(~a ==> l) = (a \/ l)”]);
 
 
 
@@ -1294,13 +1280,13 @@ val PSNEXT_PSBEFORE2OMEGA = TAC_PROOF(
             THEN REWRITE_TAC[PRE,LESS_REFL,LESS_0,INITIALISATION]
             THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
             THEN BETA_TAC THEN REWRITE_TAC[PSNEXT,ZERO_LEMMA,PRE]
-            THEN PROP_TAC,
+            THEN TAUT_TAC,
             CONV_TAC FUN_EQ_CONV
             THEN INDUCT_TAC THEN ASM_REWRITE_TAC[PSNEXT,PRE,LESS_0,LESS_REFL]
             THEN DISJ_CASES_TAC(ARITH_PROVE “(n=0)\/(0<n)”)
             THEN ASM_REWRITE_TAC[INITIALISATION,LESS_REFL]
             THEN IMP_RES_TAC LESS_ADD_1
-            THEN POP_ASSUM SUBST1_TAC THENL[PROP_TAC,ALL_TAC]
+            THEN POP_ASSUM SUBST1_TAC THENL[TAUT_TAC,ALL_TAC]
             THEN REWRITE_TAC[num_CONV“1”,ADD_CLAUSES,PRE]
             THEN CONV_TAC(RHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
             THEN BETA_TAC THEN REWRITE_TAC[PSNEXT,ZERO_LEMMA,PRE]
@@ -1350,12 +1336,12 @@ val PSNEXT_PUNTIL2OMEGA = TAC_PROOF(
             THEN REWRITE_TAC[PRE,INITIALISATION,ZERO_LEMMA]
             THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
             THEN BETA_TAC THEN REWRITE_TAC[PNEXT,ZERO_LEMMA,PRE]
-            THEN PROP_TAC,
+            THEN TAUT_TAC,
             CONV_TAC FUN_EQ_CONV
             THEN INDUCT_TAC THEN ASM_REWRITE_TAC[PNEXT,PRE,ZERO_LEMMA]
             THEN DISJ_CASES_TAC(ARITH_PROVE “(n=0)\/(0<n)”)
             THEN ASM_REWRITE_TAC[INITIALISATION,ZERO_LEMMA]
-            THENL[PROP_TAC,ALL_TAC]
+            THENL[TAUT_TAC,ALL_TAC]
             THEN IMP_RES_TAC LESS_ADD_1
             THEN POP_ASSUM SUBST1_TAC
             THEN REWRITE_TAC[num_CONV“1”,ADD_CLAUSES,PRE,ZERO_LEMMA]
@@ -1378,7 +1364,7 @@ val PSNEXT_PWHEN2OMEGA = TAC_PROOF(
             THEN REWRITE_TAC[PRE,INITIALISATION,ZERO_LEMMA]
             THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
             THEN BETA_TAC THEN REWRITE_TAC[PNEXT,ZERO_LEMMA,PRE]
-            THEN PROP_TAC,
+            THEN TAUT_TAC,
             CONV_TAC FUN_EQ_CONV
             THEN INDUCT_TAC THEN ASM_REWRITE_TAC[PNEXT,PRE,ZERO_LEMMA]
             THEN DISJ_CASES_TAC(ARITH_PROVE “(n=0)\/(0<n)”)
@@ -1388,7 +1374,7 @@ val PSNEXT_PWHEN2OMEGA = TAC_PROOF(
             THEN REWRITE_TAC[num_CONV“1”,ADD_CLAUSES,PRE,ZERO_LEMMA]
             THEN CONV_TAC(RHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
             THEN BETA_TAC THEN REWRITE_TAC[PNEXT,ZERO_LEMMA,PRE]
-            THEN PROP_TAC
+            THEN TAUT_TAC
             ]);
 
 
@@ -1405,7 +1391,7 @@ val PSNEXT_PBEFORE2OMEGA = TAC_PROOF(
             THEN REWRITE_TAC[PRE,INITIALISATION,ZERO_LEMMA]
             THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
             THEN BETA_TAC THEN REWRITE_TAC[PNEXT,ZERO_LEMMA,PRE]
-            THEN PROP_TAC,
+            THEN TAUT_TAC,
             CONV_TAC FUN_EQ_CONV
             THEN INDUCT_TAC THEN ASM_REWRITE_TAC[PNEXT,PRE,ZERO_LEMMA]
             THEN DISJ_CASES_TAC(ARITH_PROVE “(n=0)\/(0<n)”)
@@ -1415,7 +1401,7 @@ val PSNEXT_PBEFORE2OMEGA = TAC_PROOF(
             THEN REWRITE_TAC[num_CONV“1”,ADD_CLAUSES,PRE,ZERO_LEMMA]
             THEN CONV_TAC(RHS_CONV(ONCE_REWRITE_CONV[RECURSION]))
             THEN BETA_TAC THEN REWRITE_TAC[PNEXT,ZERO_LEMMA,PRE]
-            THEN PROP_TAC
+            THEN TAUT_TAC
             ]);
 
 
@@ -1753,7 +1739,7 @@ val AUTOMATON_PSBEFORE_CLOSURE = TAC_PROOF(
         REWRITE1_TAC PSUNTIL_EXPRESSIVE THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[AUTOMATON_PSUNTIL_CLOSURE]
         THEN BETA_TAC
-        THEN REWRITE_TAC[TAC_PROOF(([],“a/\~b\/~b/\q = ~b/\(a\/q)”),PROP_TAC)]);
+        THEN REWRITE_TAC[DECIDE “a/\~b\/~b/\q = ~b/\(a\/q)”]);
 
 
 val AUTOMATON_PUNTIL_CLOSURE = TAC_PROOF(
@@ -1766,7 +1752,7 @@ val AUTOMATON_PUNTIL_CLOSURE = TAC_PROOF(
   REWRITE1_TAC PBEFORE_EXPRESSIVE THEN CONV_TAC(DEPTH_CONV ETA_CONV)
   THEN REWRITE_TAC[AUTOMATON_PBEFORE_CLOSURE]
   THEN BETA_TAC
-  THEN REWRITE_TAC[TAC_PROOF(([],“~(~a/\~b)/\(b\/q) = b\/a/\q”),PROP_TAC)]);
+  THEN REWRITE_TAC[DECIDE “~(~a/\~b)/\(b\/q) = b\/a/\q”]);
 
 
 val AUTOMATON_PWHEN_CLOSURE = TAC_PROOF(
@@ -1779,7 +1765,7 @@ val AUTOMATON_PWHEN_CLOSURE = TAC_PROOF(
   REWRITE1_TAC PBEFORE_EXPRESSIVE THEN CONV_TAC(DEPTH_CONV ETA_CONV)
   THEN REWRITE_TAC[AUTOMATON_PBEFORE_CLOSURE]
   THEN BETA_TAC
-  THEN REWRITE_TAC[prove(“~(~a/\b)/\(a/\b\/q) = a/\b\/~b/\q”,PROP_TAC)]);
+  THEN REWRITE_TAC[DECIDE“~(~a/\b)/\(a/\b\/q) = a/\b\/~b/\q”]);
 
 val AUTOMATON_TEMP_CLOSURE = TAC_PROOF(
   ([],“
@@ -1946,8 +1932,8 @@ val BUECHI_TRANSLATION = TAC_PROOF(
   )
   ”),
   REWRITE_TAC[AUTOMATON_NEXT_CLOSURE]
-  THEN REWRITE_TAC[TAC_PROOF(([],“a/\(b/\c) = (a/\b)/\c”),PROP_TAC)]
-  THEN REWRITE_TAC[TAC_PROOF(([],“b\/a/\q = ~b==>a/\q”),PROP_TAC)]
+  THEN REWRITE_TAC[DECIDE “a/\(b/\c) = (a/\b)/\c”]
+  THEN REWRITE_TAC[DECIDE “b\/a/\q = ~b==>a/\q”]
   THEN REWRITE_TAC
          (map SYM (CONJUNCTS (REWRITE_RULE[ADD1]TEMP_OPS_DEFS_TO_OMEGA)))
   THEN REPEAT CONJ_TAC THEN EQ_TAC THEN STRIP_TAC
@@ -2712,8 +2698,7 @@ val CO_BUECHI_BEFORE_CLOSURE = prove(
   (* second implication: from right to left                         *)
   (* -------------------------------------------------------------- *)
   REPEAT (CONV_TAC LEFT_IMP_EXISTS_CONV THEN GEN_TAC)
-  THEN REWRITE_TAC[TAC_PROOF(([],“a/\b/\c ==> d
-                                  = a ==> b ==> c ==>d”),PROP_TAC)]
+  THEN REWRITE_TAC[DECIDE “a/\b/\c ==> d = a ==> b ==> c ==>d”]
   THEN REPEAT DISCH_TAC THEN LEFT_EXISTS_TAC
   THEN REPEAT STRIP_TAC
   (* -------------------------------------------------------------- *)
@@ -2766,7 +2751,7 @@ val CO_BUECHI_BEFORE_CLOSURE = prove(
              in the initial state up to delta+t0. But then
              phi(delta+t0) could not hold.
             ----------------------------------------------------- *)
-      THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“a = ~~a”),PROP_TAC)]
+      THEN ONCE_REWRITE_TAC[DECIDE “a = ~~a”]
       THEN CONV_TAC(ONCE_DEPTH_CONV NOT_EXISTS_CONV)
       THEN DISCH_TAC
       THEN MY_MP_TAC
@@ -3819,7 +3804,7 @@ val SUNTIL_AS_CO_BUECHI = prove(
       THEN CONJ_TAC
       THENL[
           GEN_TAC THEN LEFT_NO_FORALL_TAC 1 “t':num”
-          THEN UNDISCH_HD_TAC THEN PROP_TAC,
+          THEN UNDISCH_HD_TAC THEN TAUT_TAC,
           EXISTS_TAC “SUC t”
           THEN INDUCT_TAC THEN ASM_REWRITE_TAC[ADD_CLAUSES]
           THEN ASM_REWRITE_TAC[EQT_ELIM(ARITH_CONV
@@ -3828,13 +3813,13 @@ val SUNTIL_AS_CO_BUECHI = prove(
                   “(SUC t + t2)+t0 = (SUC t)+(t2+t0)”)]
           ],
       EXISTS_TAC“q:num->bool” THEN ASM_REWRITE_TAC[]
-      THEN REWRITE_TAC[TAC_PROOF(([],“a/\b/\c = (a/\b)/\c”),PROP_TAC)]
+      THEN REWRITE_TAC[DECIDE “a/\b/\c = (a/\b)/\c”]
       THEN CONV_TAC(DEPTH_CONV AND_FORALL_CONV)
       THEN LEFT_CONJ_TAC
       THENL[
           GEN_TAC THEN LEFT_NO_FORALL_TAC 1 “t:num”
-          THEN UNDISCH_HD_TAC THEN PROP_TAC,
-          ONCE_REWRITE_TAC[TAC_PROOF(([],“a = ~~a”),PROP_TAC)]
+          THEN UNDISCH_HD_TAC THEN TAUT_TAC,
+          ONCE_REWRITE_TAC[DECIDE “a = ~~a”]
           THEN CONV_TAC(DEPTH_CONV NOT_EXISTS_CONV)
           THEN DISCH_TAC
           THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x]))
@@ -3866,9 +3851,9 @@ val UNTIL_AS_CO_BUECHI = TAC_PROOF(
         THEN EQ_TAC THEN REPEAT STRIP_TAC
         THENL[
             EXISTS_TAC“q:num->bool” THEN ASM_REWRITE_TAC[]
-            THEN REWRITE_TAC[TAC_PROOF(([],“~a\/a”),PROP_TAC)]
+            THEN REWRITE_TAC[DECIDE “~a\/a”]
             THEN GEN_TAC THEN LEFT_FORALL_TAC “t:num”
-            THEN UNDISCH_HD_TAC THEN PROP_TAC,
+            THEN UNDISCH_HD_TAC THEN TAUT_TAC,
             POP_NO_TAC 0
             THEN EXISTS_TAC“q:num->bool” THEN ASM_REWRITE_TAC[]
             THEN LEFT_CONJ_TAC
@@ -3877,15 +3862,15 @@ val UNTIL_AS_CO_BUECHI = TAC_PROOF(
                 THENL[
                     LEFT_FORALL_TAC “0” THEN UNDISCH_HD_TAC
                     THEN ASM_REWRITE_TAC[ADD_CLAUSES]
-                    THEN PROP_TAC,
+                    THEN TAUT_TAC,
                     LEFT_NO_FORALL_TAC 1 “SUC t” THEN UNDISCH_HD_TAC
                     THEN ASM_REWRITE_TAC[ADD_CLAUSES]
-                    THEN PROP_TAC],
+                    THEN TAUT_TAC],
                 GEN_TAC THEN DISJ_CASES_TAC(SPEC“q(t+t0):bool”BOOL_CASES_AX)
                 THEN ASM_REWRITE_TAC[]
                 THEN LEFT_NO_FORALL_TAC 2 “t:num”
                 THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[]
-                THEN PROP_TAC
+                THEN TAUT_TAC
                 ]
             ]);
 
@@ -3909,9 +3894,9 @@ val WHEN_AS_CO_BUECHI = TAC_PROOF(
         THEN EQ_TAC THEN REPEAT STRIP_TAC
         THENL[
             EXISTS_TAC“q:num->bool” THEN ASM_REWRITE_TAC[]
-            THEN REWRITE_TAC[TAC_PROOF(([],“~a\/a”),PROP_TAC)]
+            THEN REWRITE_TAC[DECIDE “~a\/a”]
             THEN GEN_TAC THEN LEFT_FORALL_TAC “t:num”
-            THEN UNDISCH_HD_TAC THEN PROP_TAC,
+            THEN UNDISCH_HD_TAC THEN TAUT_TAC,
             POP_NO_TAC 0
             THEN EXISTS_TAC“q:num->bool” THEN ASM_REWRITE_TAC[]
             THEN LEFT_CONJ_TAC
@@ -3920,15 +3905,15 @@ val WHEN_AS_CO_BUECHI = TAC_PROOF(
                 THENL[
                     LEFT_FORALL_TAC “0” THEN UNDISCH_HD_TAC
                     THEN ASM_REWRITE_TAC[ADD_CLAUSES]
-                    THEN PROP_TAC,
+                    THEN TAUT_TAC,
                     LEFT_NO_FORALL_TAC 1 “SUC t” THEN UNDISCH_HD_TAC
                     THEN ASM_REWRITE_TAC[ADD_CLAUSES]
-                    THEN PROP_TAC],
+                    THEN TAUT_TAC],
                 GEN_TAC THEN DISJ_CASES_TAC(SPEC“q(t+t0):bool”BOOL_CASES_AX)
                 THEN ASM_REWRITE_TAC[]
                 THEN LEFT_NO_FORALL_TAC 2 “t:num”
                 THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[]
-                THEN PROP_TAC
+                THEN TAUT_TAC
                 ]
             ]);
 
@@ -4027,7 +4012,7 @@ val SBEFORE_AS_CO_BUECHI = TAC_PROOF(
     THENL[UNDISCH_HD_TAC >> STRIP_TAC, UNDISCH_NO_TAC 2 >> ASM_REWRITE_TAC[]]
     THEN MY_MP_TAC “d<=delta”
     THENL[
-        ONCE_REWRITE_TAC[TAC_PROOF(([],“a = ~~a”),PROP_TAC)]
+        ONCE_REWRITE_TAC[DECIDE “a = ~~a”]
         THEN SUBST1_TAC(ARITH_PROVE “~(d<=delta) = delta<d”)
         THEN DISCH_TAC THEN RES_TAC,
         DISCH_TAC]
@@ -4076,9 +4061,9 @@ val SBEFORE_AS_CO_BUECHI = TAC_PROOF(
     THEN EXISTS_TAC“p:num”
     THEN MY_MP_TAC “!t. t<d ==> ~b(t+t0)”
     THENL[
-        ONCE_REWRITE_TAC[TAC_PROOF(([],“a = ~~a”),PROP_TAC)]
+        ONCE_REWRITE_TAC[DECIDE “a = ~~a”]
         THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
-        THEN REWRITE_TAC[TAC_PROOF(([],“~(a==>b) = a/\~b”),PROP_TAC)]
+        THEN REWRITE_TAC[DECIDE “~(a==>b) = a/\~b”]
         THEN STRIP_TAC THEN RES_TAC THEN LEFT_NO_FORALL_TAC 9 “t:num”
         THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[],
         DISCH_TAC]
@@ -4113,7 +4098,7 @@ val BEFORE_AS_CO_BUECHI = TAC_PROOF(
   REWRITE_TAC[BEFORE_AS_SBEFORE,ALWAYS_SIGNAL]
   THEN BETA_TAC
   THEN REWRITE_TAC[SBEFORE_AS_CO_BUECHI]
-  THEN REWRITE_TAC[TAC_PROOF(([],“~a \/ a”),PROP_TAC)]
+  THEN REWRITE_TAC[DECIDE “~a \/ a”]
   THEN EQ_TAC THEN STRIP_TAC
   THENL[
       EXISTS_TAC“q:num->bool” THEN ASM_REWRITE_TAC[],
@@ -4142,7 +4127,7 @@ val BEFORE_AS_CO_BUECHI = TAC_PROOF(
           EXISTS_TAC “\t:num.F” THEN BETA_TAC
           THEN REWRITE_TAC[]
           ],
-      ONCE_REWRITE_TAC[TAC_PROOF(([],“a \/ b = (~b ==> a)”),PROP_TAC)]
+      ONCE_REWRITE_TAC[DECIDE “a \/ b = (~b ==> a)”]
       THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
       THEN REWRITE_TAC[] THEN DISCH_TAC
       THEN EXISTS_TAC “q:num->bool” THEN ASM_REWRITE_TAC[]
@@ -4167,11 +4152,12 @@ val BEFORE_AS_CO_BUECHI = TAC_PROOF(
        Periodicity
  ---------------------------------------------------------------------------*)
 
-val REPETITION_LEMMA = prove(
-  “(!t1. ?t2. Phi(q(t1+t2):'state)) /\
-   (!s:num->'state. ?x0 l. 0 < l /\ (s x0 = s(x0+l)))
-          ==>
-   (?x0 l. (0<l) /\ (q x0 = q(x0+l)) /\ Phi(q x0))”,
+Theorem REPETITION_LEMMA[local]:
+  (!t1. ?t2. Phi(q(t1+t2):'state)) /\
+  (!s:num->'state. ?x0 l. 0 < l /\ (s x0 = s(x0+l)))
+  ==>
+  (?x0 l. (0<l) /\ (q x0 = q(x0+l)) /\ Phi(q x0))
+Proof
   REPEAT STRIP_TAC
   THEN ASSUME_TAC(EXISTENCE(BETA_RULE(ISPECL
           [“@d.Phi((q d):'state) /\ !d'. d'<d==>~Phi((q d'))”,
@@ -4184,17 +4170,16 @@ val REPETITION_LEMMA = prove(
       GEN_TAC THEN DISJ_CASES_TAC(SPEC“t:num”num_CASES)
       THENL[
           ASM_REWRITE_TAC[]
-          THEN SELECT_EXISTS_TAC “@d.Phi((q d):'state) /\
-                                        (!d'.d'<d ==> ~(Phi(q d')))”
+          THEN SELECT_ELIM_TAC
+          THEN CONJ_TAC
           THENL[
               MATCH_MP_TAC(BETA_RULE(SPEC“\x:num.(Phi:'state->bool)(q x)”WOP))
               THEN LEFT_NO_FORALL_TAC 3 “0” THEN LEFT_EXISTS_TAC
               THEN EXISTS_TAC “0+t2” THEN ASM_TAC 0 REWRITE1_TAC,
               REPEAT STRIP_TAC],
           LEFT_EXISTS_TAC THEN ASM_REWRITE_TAC[]
-          THEN SELECT_EXISTS_TAC
-                 “@d.(Phi:'state->bool)(q((fn1(n:num))+(1+d))) /\
-                     (!d'.d'<d ==>~Phi(q((fn1 n)+(1+d'))))”
+          THEN SELECT_ELIM_TAC
+          THEN CONJ_TAC
           THENL[
               MATCH_MP_TAC
                 (BETA_RULE
@@ -4228,15 +4213,17 @@ val REPETITION_LEMMA = prove(
   THEN UNDISCH_NO_TAC 1 THEN ASM_REWRITE_TAC[]
   THEN DISCH_TAC THEN IMP_RES_TAC LESS_ADD_1
   THEN EXISTS_TAC “p+1”
-  THEN ASM_REWRITE_TAC[SYM(SPEC_ALL ADD1),LESS_0]);
+  THEN ASM_REWRITE_TAC[SYM(SPEC_ALL ADD1),LESS_0]
+QED
 
 
 
 
-val REPETITION_BOOL_LEMMA = TAC_PROOF(
-  ([],“ (!s:num->'state.?x0 l. (0<l) /\ (s(x0)=s(x0+l))) ==>
-          (!s:num->'state.!q:num->bool.?x0 l.
-                          (0<l) /\ (s x0 =s(x0+l)) /\ (q x0 = q(x0+l)))”),
+Theorem REPETITION_BOOL_LEMMA[local]:
+  (!s:num->'state.?x0 l. (0<l) /\ (s(x0)=s(x0+l))) ==>
+  !(s:num->'state) (q:num->bool).
+    ?x0 l. 0<l /\ (s x0 =s(x0+l)) /\ (q x0 = q(x0+l))
+Proof
   REPEAT STRIP_TAC
   THEN DISJ_CASES_TAC(SPEC“?t0.!t.~q(t+t0)”
                           (REWRITE_RULE[]BOOL_CASES_AX))
@@ -4274,13 +4261,12 @@ val REPETITION_BOOL_LEMMA = TAC_PROOF(
       THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV) THEN REWRITE_TAC[]
       THEN DISCH_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[]
       THENL[
-          SELECT_EXISTS_TAC “@d:num. q d /\ (!d'. d'<d ==> ~q d')”
+          SELECT_ELIM_TAC THEN CONJ_TAC
           THENL[ALL_TAC,REPEAT STRIP_TAC]
           THEN MATCH_MP_TAC WOP THEN LEFT_FORALL_TAC “0”
           THEN LEFT_EXISTS_TAC THEN EXISTS_TAC “t:num”
           THEN UNDISCH_HD_TAC THEN REWRITE_TAC[ADD_CLAUSES],
-          SELECT_EXISTS_TAC “@d:num.q((fn1 (t:num))+(1+d))/\
-                                       (!d'.d'<d==>~(q((fn1 t)+(1+d'))))”
+          SELECT_ELIM_TAC THEN CONJ_TAC
           THENL[ALL_TAC,REPEAT STRIP_TAC]
           THEN MATCH_MP_TAC(BETA_RULE(SPEC“\x.q((fn1(t:num))+(1+x)):bool”WOP))
           THEN LEFT_NO_FORALL_TAC 1 “(fn1(t:num))+1”
@@ -4300,10 +4286,8 @@ val REPETITION_BOOL_LEMMA = TAC_PROOF(
   THEN IMP_RES_TAC LESS_IMP_LESS_OR_EQ
   THEN IMP_RES_TAC(ONCE_REWRITE_RULE[ADD_SYM]SUB_ADD)
   THEN ASM_TAC 1 SUBST1_TAC THEN ASM_REWRITE_TAC[]
-  THEN UNDISCH_NO_TAC 9 THEN CONV_TAC ARITH_CONV)
-;
-
-
+  THEN UNDISCH_NO_TAC 9 THEN CONV_TAC ARITH_CONV
+QED
 
 val SUC_MOD_LEMMA = prove(
   “0<y ==> ((x+1) MOD y = (if ((x MOD y)+1=y) then 0 else (x MOD y)+1))”,
@@ -4709,11 +4693,11 @@ val FORALL_EXISTS_THM = TAC_PROOF(
 val EXISTS_FORALL_THM = TAC_PROOF(
         ([],“!P.(?t1.!t2. P(t1+t2)) = (?t1.!t2. t1<t2 ==> P t2)”),
         GEN_TAC
-        THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
+        THEN PURE_ONCE_REWRITE_TAC[DECIDE “(a=b)=(~a= ~b)”]
         THEN CONV_TAC(REPEATC(CHANGED_CONV(DEPTH_CONV
                         (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV))))
         THEN SUBST1_TAC(BETA_RULE(SPEC“\t:num. ~P t”FORALL_EXISTS_THM))
-        THEN REWRITE_TAC[TAC_PROOF(([],“~(a==>b) = a/\~b”),PROP_TAC)])
+        THEN REWRITE_TAC[DECIDE “~(a==>b) = a/\~b”])
 
 
 
@@ -4753,12 +4737,11 @@ val ELGOT1_THM = TAC_PROOF(
 val ELGOT2_THM = TAC_PROOF(
   ([],“!PHI. (!x:'a.?p:'a->bool. PHI p x)
                   = (!q:'a->bool.?p.?x.!z. q z ==> PHI p x /\ q x)”),
-  GEN_TAC THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“ (a=b) = (~a= ~b)”),PROP_TAC)]
+  GEN_TAC THEN ONCE_REWRITE_TAC[DECIDE “ (a=b) = (~a= ~b)”]
   THEN CONV_TAC(REPEATC(CHANGED_CONV(DEPTH_CONV
                   (NOT_FORALL_CONV ORELSEC NOT_EXISTS_CONV))))
   THEN SUBST1_TAC(BETA_RULE(SPEC“\(p:'a->bool) (x:'a).~PHI p x”ELGOT1_THM))
-  THEN REWRITE_TAC[TAC_PROOF(([],“((qz ==> ~PHI) /\ qx) = ~(qx ==> PHI /\ qz)”),
-                          PROP_TAC)]);
+  THEN REWRITE_TAC[DECIDE “((qz ==> ~PHI) /\ qx) = ~(qx ==> PHI /\ qz)”]);
 
 
 
