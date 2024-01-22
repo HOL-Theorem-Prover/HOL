@@ -6,77 +6,82 @@ open boolSimps
 val _ = new_theory "hol_dpll"
 
 val _ = set_fixity "satisfies_clause" (Infixl 500)
-val satisfies_clause_def = Define`
+Definition satisfies_clause_def:
   sigma satisfies_clause (c:('a # bool) list) =
     EXISTS (\ (a,v). FLOOKUP sigma a = SOME v) c
-`;
+End
 
-val satisfies_clause_thm = store_thm(
-  "satisfies_clause_thm",
-  ``(s satisfies_clause [] = F) /\
-    (s satisfies_clause (h :: t) =
-        (FLOOKUP s (FST h) = SOME (SND h)) \/
-        s satisfies_clause t)``,
+Theorem satisfies_clause_thm:
+  (s satisfies_clause [] <=> F) /\
+  (s satisfies_clause (h :: t) <=>
+   FLOOKUP s (FST h) = SOME (SND h) \/
+   s satisfies_clause t)
+Proof
   SRW_TAC [][satisfies_clause_def] THEN Cases_on `h` THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 val _ = set_fixity "satisfies" (Infixl 500)
-val satisfies_def = Define`
+Definition satisfies_def:
   sigma satisfies (cset : ('a # bool) list list) =
     EVERY (\c. sigma satisfies_clause c) cset
-`;
+End
 
-val satisfies_thm = store_thm(
-  "satisfies_thm",
-  ``(s satisfies [] = T) /\
-    (s satisfies (c::cs) = s satisfies_clause c /\ s satisfies cs)``,
-  SRW_TAC [][satisfies_def]);
+Theorem satisfies_thm:
+  (s satisfies [] = T) /\
+  (s satisfies (c::cs) ⇔ s satisfies_clause c /\ s satisfies cs)
+Proof
+  SRW_TAC [][satisfies_def]
+QED
 
-val binds_def = Define`binds a p = (a = FST p)`
+Definition binds_def:
+  binds a p = (a = FST p)
+End
 
-val rewrite_def = Define`
+Definition rewrite_def:
   (rewrite a v [] = []) /\
   (rewrite a v (c::cs) = if MEM (a,v) c then
                              rewrite a v cs
                          else
                              FILTER ($~ o binds a) c :: rewrite a v cs)
-`;
+End
 
-val catom_def = Define`
-  (catom a [] = F) /\
-  (catom a (h :: t) = (a = FST h) \/ catom a t)
-`;
+Definition catom_def:
+  (catom a [] <=> F) /\
+  (catom a (h :: t) <=> (a = FST h) \/ catom a t)
+End
 
-val atom_appears_def = Define`
+Definition atom_appears_def:
   atom_appears a cset = EXISTS (catom a) cset
-`;
+End
 
 val LENGTH_FILTER_1 = prove(
   ``LENGTH (FILTER P l) <= LENGTH l``,
   Induct_on `l` THEN SRW_TAC [][] THEN DECIDE_TAC);
 
-val rewrite_noincrease = store_thm(
-  "rewrite_noincrease",
-  ``list_size LENGTH (rewrite a v cset) <= list_size LENGTH cset``,
+Theorem rewrite_noincrease:
+  list_size LENGTH (rewrite a v cset) <= list_size LENGTH cset
+Proof
   Induct_on `cset` THEN
   SRW_TAC [][rewrite_def, listTheory.list_size_def] THENL [
     DECIDE_TAC,
     Q_TAC SUFF_TAC `LENGTH (FILTER ($~ o binds a) h) <= LENGTH h`
           THEN1 DECIDE_TAC THEN
     SRW_TAC [][LENGTH_FILTER_1]
-  ]);
+  ]
+QED
 
 val lemma = prove(
   ``catom a h ==> LENGTH (FILTER ($~ o binds a) h) < LENGTH h``,
   Induct_on `h` THEN
-  SRW_TAC [][catom_def, binds_def, DECIDE ``x < SUC y = x <= y``,
+  SRW_TAC [][catom_def, binds_def, DECIDE “x < SUC y ⇔ x <= y”,
              LENGTH_FILTER_1] THEN
   FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []);
 
-val rewrite_reduces_size = store_thm(
-  "rewrite_reduces_size",
-  ``atom_appears a cset ==> (list_size LENGTH (rewrite a v cset) <
-                             list_size LENGTH cset)``,
+Theorem rewrite_reduces_size:
+  atom_appears a cset ==>
+  list_size LENGTH (rewrite a v cset) < list_size LENGTH cset
+Proof
   Induct_on `cset` THEN SRW_TAC [][atom_appears_def] THENL [
     SRW_TAC [][listTheory.list_size_def, rewrite_def] THENL [
       ASSUME_TAC rewrite_noincrease THEN DECIDE_TAC,
@@ -92,35 +97,38 @@ val rewrite_reduces_size = store_thm(
             THEN1 FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [atom_appears_def] THEN
       SRW_TAC [][LENGTH_FILTER_1]
     ]
-  ]);
+  ]
+QED
 
-val find_uprop_def = Define`
+Definition find_uprop_def:
   (find_uprop [] = NONE) /\
   (find_uprop (c::cs) = if LENGTH c = 1 then SOME (HD c)
                         else find_uprop cs)
-`;
+End
 
-val find_uprop_works = store_thm(
-  "find_uprop_works",
-  ``(find_uprop cset = SOME (v',b)) ==> atom_appears v' cset``,
+Theorem find_uprop_works:
+  find_uprop cset = SOME (v',b) ==> atom_appears v' cset
+Proof
   Induct_on `cset` THEN SRW_TAC [][find_uprop_def] THENL [
     SRW_TAC [][atom_appears_def] THEN Cases_on `h` THEN
     FULL_SIMP_TAC (srw_ss()) [catom_def],
     FULL_SIMP_TAC (srw_ss()) [atom_appears_def]
-  ]);
+  ]
+QED
 
-val choose_def = Define`
+Definition choose_def:
   choose cset = FST (HD (HD cset))
-`;
+End
 
-val choose_works = store_thm(
-  "choose_works",
-  ``~(cset = []) /\ ~MEM [] cset ==> atom_appears (choose cset) cset``,
+Theorem choose_works:
+  cset ≠ [] /\ ~MEM [] cset ==> atom_appears (choose cset) cset
+Proof
   Cases_on `cset` THEN SRW_TAC [][] THEN
   Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [choose_def] THEN
-  SRW_TAC [][atom_appears_def, catom_def]);
+  SRW_TAC [][atom_appears_def, catom_def]
+QED
 
-val dpll_defn = Hol_defn "dpll" `
+Definition dpll_def:
   dpll cset =
     if cset = [] then SOME FEMPTY
     else if MEM [] cset then NONE
@@ -137,20 +145,16 @@ val dpll_defn = Hol_defn "dpll" `
           case dpll (rewrite v b cset) of
             NONE => NONE
           | SOME fm => SOME (fm |+ (v,b))
-`;
-
-
-
-val (dpll_def, dpll_ind) = Defn.tprove(
-  dpll_defn,
+Termination
   WF_REL_TAC `measure (\cset. list_size LENGTH cset)` THEN
   SRW_TAC [][] THENL [
     SRW_TAC [][rewrite_reduces_size, choose_works],
     SRW_TAC [][rewrite_reduces_size, choose_works],
     METIS_TAC [find_uprop_works, rewrite_reduces_size]
-  ]);
+  ]
+End
 
-val induct =
+Theorem induct[local] =
     (SIMP_RULE (srw_ss()) [prim_recTheory.WF_measure,
                            prim_recTheory.measure_thm] o
      Q.ISPEC `measure (\cset. list_size LENGTH cset)`)
@@ -169,21 +173,22 @@ val exrwt_lemma = prove(
   FULL_SIMP_TAC (srw_ss()) [] THEN
   POP_ASSUM MP_TAC THEN SRW_TAC [][]);
 
-val extend_rewrite = store_thm(
-  "extend_rewrite",
-  ``!fm v b.
-       fm satisfies rewrite v b cset ==> (fm |+ (v,b)) satisfies cset``,
+Theorem extend_rewrite:
+  !fm v b.
+    fm satisfies rewrite v b cset ==> (fm |+ (v,b)) satisfies cset
+Proof
   Induct_on `cset` THEN SRW_TAC [][satisfies_thm, rewrite_def] THENL [
     Induct_on `h` THEN1 SRW_TAC [][] THEN
     ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                  [pairTheory.FORALL_PROD, satisfies_clause_thm] THEN
     SRW_TAC [][finite_mapTheory.FLOOKUP_DEF],
     SRW_TAC [][exrwt_lemma]
-  ]);
+  ]
+QED
 
-val dpll_satisfies = store_thm(
-  "dpll_satisfies",
-  ``!cset fm. (dpll cset = SOME fm) ==> fm satisfies cset``,
+Theorem dpll_satisfies:
+  !cset fm. (dpll cset = SOME fm) ==> fm satisfies cset
+Proof
   HO_MATCH_MP_TAC dpll_ind THEN SRW_TAC [][] THEN
   POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [dpll_def] THEN
   SRW_TAC [][] THEN1 SRW_TAC [][satisfies_def] THEN
@@ -200,7 +205,8 @@ val dpll_satisfies = store_thm(
     Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     Cases_on `dpll (rewrite q r cset)` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     SRW_TAC [][extend_rewrite]
-  ]);
+  ]
+QED
 
 val empty_clause_unsatisfiable = prove(
   ``!cset. MEM [] cset ==> !fm. ~(fm satisfies cset)``,
@@ -208,7 +214,7 @@ val empty_clause_unsatisfiable = prove(
   SRW_TAC [][satisfies_clause_thm]);
 
 val option_cond = prove(
-  ``((if p then SOME x else NONE) = SOME y) = p /\ (x = y)``,
+  ``((if p then SOME x else NONE) = SOME y) ⇔ p /\ (x = y)``,
   SRW_TAC [][]);
 
 val fm_gives_value = prove(
@@ -228,11 +234,13 @@ val cpos_fm_gives_value = prove(
     ~(fm satisfies cset)``,
   METIS_TAC [fm_gives_value]);
 
-val novbind_lemma = prove(
-  ``~MEM (v,T) h /\ ~MEM (v,F) h ==> (FILTER ($~ o binds v) h = h)``,
+Theorem novbind_lemma[local]:
+  ~MEM (v,T) h /\ ~MEM (v,F) h ==> (FILTER ($~ o binds v) h = h)
+Proof
   Induct_on `h` THEN1 SRW_TAC [][] THEN
   ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
-               [pairTheory.FORALL_PROD, binds_def]);
+               [pairTheory.FORALL_PROD, binds_def, AllCaseEqs()]
+QED
 
 val partial_clause_1 = prove(
   ``!h. fm satisfies_clause h /\
@@ -311,16 +319,16 @@ val find_uprop_forces = prove(
   Induct THEN SRW_TAC [][find_uprop_def, satisfies_thm, rewrite_def] THENL [
     Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
       METIS_TAC [],
-      Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) []
+      gvs[]
     ],
     Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     SRW_TAC [][binds_def] THEN
-    Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [satisfies_clause_thm]
+    simp[satisfies_clause_thm]
   ]);
 
-val dpll_unsatisfied = store_thm(
-  "dpll_unsatisfied",
-  ``!cset. (dpll cset = NONE) ==> !fm. ~(fm satisfies cset)``,
+Theorem dpll_unsatisfied:
+  !cset. (dpll cset = NONE) ==> !fm. ~(fm satisfies cset)
+Proof
   HO_MATCH_MP_TAC dpll_ind THEN GEN_TAC THEN STRIP_TAC THEN
   ONCE_REWRITE_TAC [dpll_def] THEN
   SRW_TAC [][empty_clause_unsatisfiable] THEN
@@ -338,7 +346,8 @@ val dpll_unsatisfied = store_thm(
     IMP_RES_TAC find_uprop_forces THEN
     Cases_on `r` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     METIS_TAC [case_split_unsat]
-  ]);
+  ]
+QED
 
 val _ = EVAL ``dpll [[(1,T); (2,F); (3,T)]; [(1,F); (2,T)]]``
 
@@ -346,18 +355,16 @@ val _ = EVAL ``dpll [[(1,T); (2,F); (3,T)]; [(1,F); (2,T)]]``
 (* it seems necessary to push the variable type through a substitution,  mapping
    into a type that will allow the "variables" of the original formula to be
    compared with each other without worrying about their semantic content *)
-val interpret_clause_def = Define`
+Definition interpret_clause_def[simp]:
   (interpret_clause f [] = F) /\
-  (interpret_clause f ((h : 'a # bool) :: t) =
+  (interpret_clause f ((h : 'a # bool) :: t) ⇔
      (f (FST h) = SND h) \/ interpret_clause f t)
-`
-val _ = export_rewrites ["interpret_clause_def"]
+End
 
-val interpret_def = Define`
+Definition interpret_def[simp]:
   (interpret f [] = T) /\
-  (interpret f (c::cs) = interpret_clause f c /\ interpret f cs)
-`;
-val _ = export_rewrites ["interpret_def"]
+  (interpret f (c::cs) ⇔ interpret_clause f c /\ interpret f cs)
+End
 
 val empty_clause_interpret = store_thm(
   "empty_clause_interpret",
@@ -443,7 +450,7 @@ in
   else raise Fail "formula is propositionally satisfiable"
 end
 
-(* 0.3 seconds *)
-val example = time prove_cnf_unsat t
+(* 0.018s seconds [Poly/ML, 22 Jan 2024, Apple M1 Macbook Pro] *)
+Theorem example = time prove_cnf_unsat t
 
 val _ = export_theory();
