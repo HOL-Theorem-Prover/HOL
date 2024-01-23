@@ -567,13 +567,15 @@ in
   fun SIMP_TAC simp_let =
     let
       open Tactical simpLib
-      val INT_ABS = intLib.ARITH_PROVE
-                      ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
+      (* TODO: In the future it'd probably be better to translate the
+         definitions of `ABS`, `int_min`, `int_max`, etc, or any other needed
+         user-defined functions automatically and pass those on to the SMT
+         solver, instead of doing these special-case rewrites here. *)
     in
       REPEAT Tactic.GEN_TAC THEN
       (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
       SIMP_TAC pureSimps.pure_ss
-        [integerTheory.INT_MIN, integerTheory.INT_MAX, INT_ABS] THEN
+        [integerTheory.INT_MIN, integerTheory.INT_MAX, integerTheory.INT_ABS] THEN
       Library.WORD_SIMP_TAC THEN
       Library.SET_SIMP_TAC THEN
       Tactic.BETA_TAC
