@@ -1925,6 +1925,9 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key global-map [menu-bar hol-menu hol-misc db-find]
    '("DB find" . hol-db-find))
 
+(define-key global-map [menu-bar hol-menu hol-misc db-match-with-selectors]
+  '("DB match (multiple selectors)" . hol-db-select))
+
 (define-key global-map [menu-bar hol-menu hol-misc db-match]
    '("DB match" . hol-db-match))
 
