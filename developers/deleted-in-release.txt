@@ -2,7 +2,7 @@
 # is eventually tarred up to create the release.
 # Deletion is done with /bin/rm -r
 .gitignore
-.travis.yml
+.github
 Manual
 developers
 examples/dev/sw
