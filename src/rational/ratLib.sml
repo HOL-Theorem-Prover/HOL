@@ -3,11 +3,13 @@ struct
 
 open HolKernel boolLib Parse bossLib;
 
-open simpLib pairLib integerTheory intLib intExtensionTheory jbUtils
+open simpLib pairLib integerTheory intLib intExtensionTheory
      schneiderUtils fracTheory fracLib fracUtils ratTheory ratUtils
      integerRingLib ratSyntax;
 
 val ERR = mk_HOL_ERR "ratLib";
+
+val IMP_AND_RULE = REWRITE_RULE[GSYM AND_IMP_INTRO];
 
 (*--------------------------------------------------------------------------
  *  imported from fracLib

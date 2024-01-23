@@ -15,7 +15,7 @@ open
         pairTheory pairLib integerTheory intLib intSyntax
         EVAL_ringLib integerRingTheory integerRingLib
         intExtensionTheory intExtensionLib
-        jbUtils fracTheory fracUtils fracSyntax;
+        fracTheory fracUtils fracSyntax;
 
 val ERR = mk_HOL_ERR "fracLib"
 

@@ -13,7 +13,7 @@ open
         integerTheory intLib
         intExtensionTheory intExtensionLib
         EVAL_ringLib integerRingLib
-        fracTheory fracLib ratUtils jbUtils
+        fracTheory fracLib ratUtils
         quotient schneiderUtils;
 
 val arith_ss = old_arith_ss
@@ -850,17 +850,21 @@ val RAT_EQ0_NMR = store_thm("RAT_EQ0_NMR", ``!r1. (r1 = 0q) = (rat_nmr r1 = 0)``
    |- !r1. (r1 < 0q) = (rat_nmr r1 < 0i)
  *--------------------------------------------------------------------------*)
 
-val RAT_0LES_NMR = store_thm("RAT_0LES_NMR", ``!r1. rat_les 0q r1 = 0i < rat_nmr r1``,
-        GEN_TAC THEN
-        REWRITE_TAC[rat_0, rat_nmr_def, rat_les_def, rat_sgn_def, frac_0_def, frac_sgn_def, SGN_def] THEN
-        RAT_CALC_TAC THEN
-        FRAC_POS_TAC ``1i`` THEN
-        FRAC_POS_TAC ``frac_dnm (rep_rat r1)`` THEN
-        SUBST_TAC[FRAC_CALC_CONV ``frac_sub (rep_rat r1) (abs_frac (0,1))``] THEN
-        REWRITE_TAC[RAT_NMREQ0_CONG,RAT_NMRLT0_CONG,RAT_NMRGT0_CONG] THEN
-        FRAC_NMRDNM_TAC THEN
-        RW_TAC int_ss [RAT, FRAC, INT_SUB_RZERO] THEN
-        PROVE_TAC[INT_LT_ANTISYM, INT_LT_TOTAL] );
+Theorem RAT_0LES_NMR:
+  !r1. rat_les 0q r1 = 0i < rat_nmr r1
+Proof
+  GEN_TAC THEN
+  REWRITE_TAC[rat_0, rat_nmr_def, rat_les_def, rat_sgn_def, frac_0_def,
+              frac_sgn_def, SGN_def] THEN
+  RAT_CALC_TAC THEN
+  FRAC_POS_TAC ``1i`` THEN
+  FRAC_POS_TAC ``frac_dnm (rep_rat r1)`` THEN
+  SUBST_TAC[FRAC_CALC_CONV ``frac_sub (rep_rat r1) (abs_frac (0,1))``] THEN
+  REWRITE_TAC[RAT_NMREQ0_CONG,RAT_NMRLT0_CONG,RAT_NMRGT0_CONG] THEN
+  FRAC_NMRDNM_TAC THEN
+  RW_TAC int_ss [RAT, FRAC, INT_SUB_RZERO] THEN
+  PROVE_TAC[INT_LT_ANTISYM, INT_LT_TOTAL]
+QED
 
 val RAT_LES0_NMR = store_thm("RAT_LES0_NMR", ``!r1. rat_les r1 0q = rat_nmr r1 < 0i``,
         GEN_TAC THEN
@@ -882,17 +886,21 @@ val RAT_LES0_NMR = store_thm("RAT_LES0_NMR", ``!r1. rat_les r1 0q = rat_nmr r1 <
    |- !r1. (r1 <= 0q) = (rat_nmr r1 <= 0i)
  *--------------------------------------------------------------------------*)
 
-val RAT_0LEQ_NMR = store_thm("RAT_0LEQ_NMR", ``!r1. rat_leq 0q r1 = 0i <= rat_nmr r1``,
-        GEN_TAC THEN
-        REWRITE_TAC[rat_leq_def, INT_LE_LT] THEN
-        NEW_GOAL_TAC ``!a b c d. ((a=c) /\ (b=d)) ==> (a \/ b = c \/ d)`` THEN
-        PROVE_TAC[RAT_0LES_NMR, RAT_EQ0_NMR, rat_nmr_def] );
+Theorem RAT_0LEQ_NMR:
+  !r1. rat_leq 0q r1 = 0i <= rat_nmr r1
+Proof
+  GEN_TAC THEN
+  REWRITE_TAC[rat_leq_def, INT_LE_LT] THEN
+  PROVE_TAC[RAT_0LES_NMR, RAT_EQ0_NMR, rat_nmr_def]
+QED
 
-val RAT_LEQ0_NMR = store_thm("RAT_LEQ0_NMR", ``!r1. rat_leq r1 0q = rat_nmr r1 <= 0i``,
-        GEN_TAC THEN
-        REWRITE_TAC[rat_leq_def, INT_LE_LT] THEN
-        NEW_GOAL_TAC ``!a b c d. ((a=c) /\ (b=d)) ==> (a \/ b = c \/ d)`` THEN
-        PROVE_TAC[RAT_LES0_NMR, RAT_EQ0_NMR, rat_nmr_def] );
+Theorem RAT_LEQ0_NMR:
+  !r1. rat_leq r1 0q = rat_nmr r1 <= 0i
+Proof
+  GEN_TAC THEN
+  REWRITE_TAC[rat_leq_def, INT_LE_LT] THEN
+  PROVE_TAC[RAT_LES0_NMR, RAT_EQ0_NMR, rat_nmr_def]
+QED
 
 (*==========================================================================
  *  field properties

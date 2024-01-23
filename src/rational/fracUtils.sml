@@ -1,22 +1,29 @@
 structure fracUtils :> fracUtils =
 struct
 
-open HolKernel boolLib Parse bossLib;
+open HolKernel boolLib bossLib;
 
-(* interactive mode
-app load ["pairTheory", "pairLib",
-        "integerTheory", "intLib",
-        "jbUtils"];
-*)
+structure Parse =
+struct
+open Parse
+val (Type,Term) = parse_from_grammars fracTheory.frac_grammars
+end
 
-open
-        pairTheory pairLib
-        integerTheory intLib
-        jbUtils;
+open Parse pairTheory pairLib integerTheory intLib
 
 (*--------------------------------------------------------------------------
  *  dest_frac : term -> term * term list
  *--------------------------------------------------------------------------*)
+fun dest_comb2 t = let val (fx,y) = dest_comb t
+                       val (f,x) = dest_comb fx
+                   in
+                     (f, [x,y])
+                   end
+fun is_rep_rat t = let val {Thy,Name,...} = dest_thy_const t
+                   in
+                     Thy = "rat" andalso Name = "rep_rat"
+                   end handle HOL_ERR _ => false
+
 
 fun dest_frac (t1:term) =
   if is_comb t1 then
@@ -31,14 +38,14 @@ fun dest_frac (t1:term) =
         end
       else
         if top_rator ~~ ``frac_ainv`` orelse top_rator ~~ ``frac_minv`` orelse
-           top_rator ~~ ``rep_rat``
+           is_rep_rat top_rator
         then
           (top_rator, [top_rand])
         else
           let
-            val (this_op, this_first, this_second) = dest_binop_triple t1
+            val (f, args) = dest_comb2 t1
           in
-            (this_op, [this_first, this_second])
+            (f, args)
           end
     end
   else (* t1 must be a variable *)
@@ -56,7 +63,12 @@ fun dest_frac (t1:term) =
  *  extract_frac : term -> term list
  *--------------------------------------------------------------------------*)
 
-fun extract_frac (t1:term) = extract_terms_of_type ``:frac`` t1;
+val frac_ty = mk_thy_type {Thy = "frac", Tyop = "frac", Args = []}
+fun extract_frac t =
+    if type_of t = frac_ty then [t]
+    else case dest_term t of
+             COMB (t1,t2) => op_U aconv [extract_frac t1, extract_frac t2]
+           | _ => []
 
 (* ---------- test cases ---------- *
         extract_frac ``4i + (frac_nmr(abs_frac(3i,4i))) = 3``;
@@ -131,17 +143,6 @@ fun extract_frac_fun (l2:term list) (t1:term) =
         extract_frac_fun [``frac_nmr``] ``frac_nmr (abs_frac(4,frac_nmr(abs_frac(3,4))))``;
         extract_frac_fun [``frac_nmr``,``frac_dnm``] ``nmr(abs_frac(3,4)) + dnm(abs_frac(4,5))``;
  * ---------- test cases ---------- *)
-
-(*--------------------------------------------------------------------------
- *  INT_GT0_CONV : conv
- *
- *    t1          (with t1 greater than zero)
- *   -----------
- *    |- 0 < t1
- *--------------------------------------------------------------------------*)
-
-fun INT_GT0_CONV (t1:term) =
-        EQT_ELIM (intLib.ARITH_CONV ``0 < ^t1``);
 
 (*==========================================================================
  * end of structure
