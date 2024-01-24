@@ -3923,65 +3923,36 @@ Proof
   metis_tac[SUBSET_DEF, LIST_TO_SET_TAKE]
 QED
 
+fun gvs ths =
+  global_simp_tac{elimvars = true, droptrues = true, strip = true,
+                  oldestfirst = false} (srw_ss()) ths
+
+Theorem FINITE_BOUNDED_LISTS:
+  !s n. FINITE s ==> FINITE { l | set l SUBSET s /\ LENGTH l <= n}
+Proof
+  Induct_on ‘n’ >> simp[] >> simp[SF CONJ_ss] >> rpt strip_tac >>
+  Q.MATCH_ABBREV_TAC ‘FINITE As’ >>
+  ‘As = IMAGE (λ(h,t). CONS h t)
+              (s CROSS { l | set l SUBSET s /\ LENGTH l <= n}) UNION
+        { l | set l SUBSET s /\ LENGTH l <= n}’
+    suffices_by simp[] >>
+  simp[Abbr‘As’, EXTENSION, pairTheory.EXISTS_PROD] >>
+  Q.X_GEN_TAC ‘l’ >> iff_tac >~
+  [‘LENGTH l <= SUC n’]
+  >- (simp[arithmeticTheory.LE] >> strip_tac >> simp[] >>
+      gvs[LENGTH_CONS]) >>
+  strip_tac >> simp[]
+QED
+
 Theorem FINITE_ALL_DISTINCT_LISTS:
   !s. FINITE s ==> FINITE { l | set l SUBSET s /\ ALL_DISTINCT l}
 Proof
-  Induct_on ‘FINITE’ >> simp[SF CONJ_ss] >> rpt strip_tac >>
-  Q.RENAME_TAC [‘e NOTIN A’,
-                ‘FINITE { l | set l SUBSET A /\ ALL_DISTINCT l}’] >>
-  Q.ABBREV_TAC ‘As = { l | set l SUBSET A /\ ALL_DISTINCT l }’ >>
-  Q.MATCH_ABBREV_TAC ‘FINITE Bs’ >>
-  ‘Bs = IMAGE (λ(i,l). TAKE i l ++ [e] ++ DROP i l)
-              { (i,l) | l IN As /\ i <= LENGTH l } UNION As’
-    suffices_by (simp[] >> strip_tac >> irule IMAGE_FINITE >>
-                 irule SUBSET_FINITE >>
-                 Q.EXISTS_TAC ‘count (CARD A + 1) CROSS As’>>
-                 simp[SUBSET_DEF, PULL_EXISTS] >>
-                 simp[Abbr‘As’] >> rpt strip_tac >>
-                 ‘LENGTH l <= CARD A’ suffices_by simp[] >>
-                 drule_then (assume_tac o SYM) ALL_DISTINCT_CARD_LIST_TO_SET >>
-                 simp[] >> irule CARD_SUBSET >> simp[]) >>
-  simp[Abbr‘Bs’, Abbr‘As’, EXTENSION, PULL_EXISTS, EXISTS_PROD] >>
-  Q.X_GEN_TAC ‘l’ >> Cases_on ‘set l SUBSET A’ >> simp[] >> iff_tac >>
-  simp[] >> rw[] >> fs[] >> rw[] >>~-
-  ([‘~(set (TAKE i l) SUBSET A)’, ‘set l SUBSET A’],
-   metis_tac[LIST_TO_SET_TAKE, SUBSET_TRANS]) >>~-
-  ([‘~(set (DROP i l) SUBSET A)’, ‘set l SUBSET A’],
-   metis_tac[LIST_TO_SET_DROP, SUBSET_TRANS]) >~
-  [‘_ <= LENGTH _’, ‘set L SUBSET e INSERT A’]
-  >- (‘MEM e L’ by (CCONTR_TAC >> Q.PAT_X_ASSUM ‘~(set L SUBSET A)’ mp_tac >>
-                    fs[SUBSET_DEF]) >>
-      fs[MEM_SPLIT] >> rw[] >> fs[ALL_DISTINCT_APPEND] >~
-      [‘~(set pfx SUBSET A)’]
-      >- (‘F’ suffices_by simp[] >>
-          Q.PAT_X_ASSUM ‘~(set pfx SUBSET A)’ MP_TAC >>
-          Q.PAT_X_ASSUM ‘set pfx SUBSET e INSERT A’ MP_TAC >>
-          simp[SUBSET_DEF]) >>
-      Q.RENAME_TAC [‘MEM _ pfx ==> _ /\ ~MEM _ sfx’] >>
-      map_every Q.EXISTS_TAC [‘LENGTH pfx’, ‘pfx ++ sfx’] >>
-      simp[TAKE_APPEND1, ALL_DISTINCT_APPEND, DROP_APPEND] >>
-      simp[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >>
-      Q.PAT_X_ASSUM ‘set pfx SUBSET e INSERT A’ MP_TAC >>
-      simp[SUBSET_DEF]) >>~-
-  ([‘set _ SUBSET _ INSERT _’],
-   irule SUBSET_TRANS >>
-   irule_at (Pat ‘_ SUBSET _ INSERT _’) SUBSET_OF_INSERT >>
-   metis_tac[LIST_TO_SET_TAKE, LIST_TO_SET_DROP, SUBSET_TRANS]) >>
-  simp[ALL_DISTINCT_APPEND, ALL_DISTINCT_DROP, ALL_DISTINCT_TAKE] >>
-  Q.RENAME_TAC [‘MEM e (TAKE n L)’] >>
-  ‘~MEM e (TAKE n L)’ by metis_tac[LIST_TO_SET_TAKE, SUBSET_DEF] >> simp[] >>
-  rw[] >~
-  [‘~MEM a (DROP n L)’, ‘~MEM a (TAKE n L)’]
-  >- metis_tac[SUBSET_DEF, LIST_TO_SET_DROP, SUBSET_TRANS] >~
-  [‘~MEM b (DROP n L)’, ‘MEM b (TAKE n L)’] >>
-  Q.PAT_X_ASSUM ‘MEM b (TAKE n L)’ MP_TAC >>
-  simp[MEM_EL] >> rpt strip_tac >>
-  REV_FULL_SIMP_TAC (srw_ss()) [EL_TAKE] >>
-  global_simp_tac {elimvars = true, oldestfirst = false, strip = true,
-                   droptrues = true}
-          (srw_ss() ++ numSimps.ARITH_ss) [EL_TAKE, EL_DROP] >>
-  drule_at (Pat ‘EL _ _ = EL _ _’) (iffLR ALL_DISTINCT_EL_IMP) >>
-  simp[]
+  rpt strip_tac >> irule SUBSET_FINITE_I >>
+  Q.EXISTS_TAC ‘{l | set l SUBSET s /\ LENGTH l <= CARD s}’ >>
+  simp[FINITE_BOUNDED_LISTS] >>
+  simp[Once SUBSET_DEF] >> rpt strip_tac >>
+  drule_then (assume_tac o SYM) ALL_DISTINCT_CARD_LIST_TO_SET >> simp[] >>
+  simp[CARD_SUBSET]
 QED
 
 val EXISTS_LIST_EQ_MAP = Q.store_thm("EXISTS_LIST_EQ_MAP",
