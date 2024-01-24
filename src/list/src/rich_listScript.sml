@@ -1178,6 +1178,10 @@ val TAKE_SNOC = Q.store_thm ("TAKE_SNOC",
    THEN RES_TAC
    THEN ASM_REWRITE_TAC []);
 
+val SNOC_EL_TAKE = Q.store_thm ("SNOC_EL_TAKE",
+   `!n l. n < LENGTH l ==> (SNOC (EL n l) (TAKE n l) = TAKE (SUC n) l)`,
+   Induct_on `n` THEN Cases_on `l` THEN ASM_SIMP_TAC list_ss [SNOC, TAKE]);
+
 val BUTLASTN_LENGTH_NIL = Q.store_thm ("BUTLASTN_LENGTH_NIL",
    `!l. BUTLASTN (LENGTH l) l = []`,
    SNOC_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH, LENGTH_SNOC, BUTLASTN]);
@@ -2518,8 +2522,6 @@ QED
    A bunch of properties relating to the use of IS_PREFIX as a partial order
  ---------------------------------------------------------------------------*)
 
-val list_CASES = list_CASES
-
 val IS_PREFIX_NIL = Q.store_thm ("IS_PREFIX_NIL",
    `!x. IS_PREFIX x [] /\ (IS_PREFIX [] x = (x = []))`,
    STRIP_TAC
@@ -2654,6 +2656,61 @@ val prefixes_is_prefix_total = Q.store_thm("prefixes_is_prefix_total",
   Induct THEN SIMP_TAC(srw_ss())[IS_PREFIX_NIL] THEN
   GEN_TAC THEN Cases THEN SIMP_TAC(srw_ss())[] THEN
   Cases THEN SRW_TAC[][])
+
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+
+Theorem IS_PREFIX_EQ_TAKE :
+    !l l1. l1 <<= l <=> ?n. n <= LENGTH l /\ l1 = TAKE n l
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC
+ >- (STRIP_TAC \\
+     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites
+                     [SYM (Q.SPECL [‘n’, ‘l’] TAKE_DROP)] \\
+     POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) \\
+     PROVE_TAC [IS_PREFIX_APPEND])
+ (* stage work *)
+ >> Induct_on ‘l1’ using SNOC_INDUCT
+ >- (rw [] >> Q.EXISTS_TAC ‘0’ >> rw [])
+ >> rw [SNOC_APPEND]
+ >> Q.PAT_X_ASSUM ‘l1 <<= l ==> P’ MP_TAC
+ >> ‘l1 <<= l’ by PROVE_TAC [IS_PREFIX_APPEND1]
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM ‘TAKE n l ++ [x] <<= l’ MP_TAC
+ >> rw [IS_PREFIX_APPEND]
+ >> Q.EXISTS_TAC ‘SUC n’
+ >> CONJ_ASM1_TAC
+ >- (POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) >> rw [])
+ (* applying SNOC_EL_TAKE *)
+ >> Know ‘TAKE (SUC n) l = SNOC (EL n l) (TAKE n l)’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC SNOC_EL_TAKE >> rw [])
+ >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+ >> Suff ‘EL n l = x’ >- rw [SNOC_APPEND]
+ >> Q.PAT_X_ASSUM ‘l = _’ (fn th => ONCE_REWRITE_TAC [th])
+ (* applying el_append3, fortunately *)
+ >> Q.ABBREV_TAC ‘l1 = TAKE n l’
+ >> ‘n = LENGTH l1’ by rw [Abbr ‘l1’, LENGTH_TAKE]
+ >> POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
+ >> rw [el_append3]
+QED
+
+(* ‘n <= LENGTH l’ can be removed from RHS *)
+Theorem IS_PREFIX_EQ_TAKE' :
+    !l l1. l1 <<= l <=> ?n. l1 = TAKE n l
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC
+ >- (rw [IS_PREFIX_EQ_TAKE] \\
+     Q.EXISTS_TAC ‘n’ >> REWRITE_TAC [])
+ >> STRIP_TAC
+ >> Cases_on ‘n <= LENGTH l’
+ >- (rw [IS_PREFIX_EQ_TAKE] \\
+     Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC [])
+ >> ‘LENGTH l <= n’ by rw []
+ >> rw [TAKE_LENGTH_TOO_LONG]
+QED
 
 (* ----------------------------------------------------------------------
     longest_prefix
@@ -2882,10 +2939,6 @@ QED
    General theorems about lists. From Anthony Fox's and Thomas Tuerk's theories.
    Added by Thomas Tuerk
  ---------------------------------------------------------------------------*)
-
-val SNOC_EL_TAKE = Q.store_thm ("SNOC_EL_TAKE",
-   `!n l. n < LENGTH l ==> (SNOC (EL n l) (TAKE n l) = TAKE (SUC n) l)`,
-   Induct_on `n` THEN Cases_on `l` THEN ASM_SIMP_TAC list_ss [SNOC, TAKE]);
 
 val ZIP_TAKE_LEQ = Q.store_thm ("ZIP_TAKE_LEQ",
   `!n a b.
