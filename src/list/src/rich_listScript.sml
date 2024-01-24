@@ -2712,18 +2712,6 @@ Proof
  >> rw [TAKE_LENGTH_TOO_LONG]
 QED
 
-Theorem IS_PREFIX_FINITE :
-    !l. FINITE {l1 | l1 <<= l}
-Proof
-    rw [IS_PREFIX_EQ_TAKE]
- >> Know ‘{l1 | (?n. n <= LENGTH l /\ l1 = TAKE n l)} =
-          IMAGE (\n. TAKE n l) (count (SUC (LENGTH l)))’
- >- (rw [Once EXTENSION, LT_SUC_LE] >> METIS_TAC [])
- >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
- >> MATCH_MP_TAC IMAGE_FINITE
- >> rw []
-QED
-
 (* ----------------------------------------------------------------------
     longest_prefix
 
