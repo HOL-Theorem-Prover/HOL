@@ -292,6 +292,12 @@ Incompatibilities:
               (!y. reln 100 y)
            End
 
+*   A number of theories embodying the “old” approach to measure theory and probability (using a real number as a set’s measure rather than an extended real) have moved from `src/probability` to `examples/probability/legacy`.
+    These theories are still used by the dependability analysis example mentioned above, and by the verification of the probabilistic Miller-Rabin primality test (`examples/miller`).
+    The effect of this is that the default build of the system will not build these theories; `Holmake` will build them when used in their new directory.
+
+*   The mechanisation of temporal logic that used to live in `src/temporal` has been moved to `examples/logic/temporal`.
+
 * * * * *
 
 <div class="footer">
