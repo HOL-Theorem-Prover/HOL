@@ -575,7 +575,8 @@ in
       REPEAT Tactic.GEN_TAC THEN
       (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
       SIMP_TAC pureSimps.pure_ss
-        [integerTheory.INT_MIN, integerTheory.INT_MAX, integerTheory.INT_ABS] THEN
+        [integerTheory.INT_MIN, integerTheory.INT_MAX, integerTheory.INT_ABS,
+         realaxTheory.real_min, realaxTheory.real_max, realTheory.abs] THEN
       Library.WORD_SIMP_TAC THEN
       Library.SET_SIMP_TAC THEN
       Tactic.BETA_TAC
