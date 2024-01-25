@@ -1239,29 +1239,27 @@ Proof
                REWRITE_TAC[INT_NOT_LE, INT_LT_ADDR, INT_LT_01]]
 QED
 
-Theorem INT_LT:
-    !m n. &m:int < &n <=> m < n
+Theorem INT_LT[simp]:
+  !m n. &m:int < &n <=> m < n
 Proof
-              REPEAT GEN_TAC
-              THEN MATCH_ACCEPT_TAC ((REWRITE_RULE[] o
-                                      AP_TERM (Term `$~:bool->bool`) o
-                                      REWRITE_RULE[GSYM NOT_LESS,
-                                                   GSYM INT_NOT_LT])
-                                     (SPEC_ALL INT_LE))
+  REPEAT GEN_TAC THEN
+  MATCH_ACCEPT_TAC ((REWRITE_RULE[] o
+                     AP_TERM (Term `$~:bool->bool`) o
+                     REWRITE_RULE[GSYM NOT_LESS, GSYM INT_NOT_LT])
+                    (SPEC_ALL INT_LE))
 QED
 
-val INT_INJ =
-    store_thm("INT_INJ",
-              Term `!m n. (&m:int = &n) = (m = n)`,
-              let val th = prove(Term `(m:num = n) <=> m <= n /\ n <= m`,
-                                 EQ_TAC
-                                 THENL [DISCH_THEN SUBST1_TAC
-                                        THEN REWRITE_TAC[LESS_EQ_REFL],
-                                        MATCH_ACCEPT_TAC LESS_EQUAL_ANTISYM])
-              in
-                  REPEAT GEN_TAC
-                  THEN REWRITE_TAC[th, GSYM INT_LE_ANTISYM, INT_LE]
-              end)
+Theorem INT_INJ[simp]: !m n. (&m:int = &n) = (m = n)
+Proof
+  let val th = prove(“(m:num = n) <=> m <= n /\ n <= m”,
+                     EQ_TAC
+                     THENL [DISCH_THEN SUBST1_TAC
+                            THEN REWRITE_TAC[LESS_EQ_REFL],
+                            MATCH_ACCEPT_TAC LESS_EQUAL_ANTISYM])
+  in
+    REPEAT GEN_TAC THEN REWRITE_TAC[th, GSYM INT_LE_ANTISYM, INT_LE]
+  end
+QED
 
 val INT_ADD =
     store_thm("INT_ADD",
@@ -1561,16 +1559,17 @@ Proof
                DISCH_TAC THEN ASM_REWRITE_TAC[INT_MUL_LZERO, INT_ADD_RID]]
 QED
 
-val INT_EQ_NEG =
-    store_thm("INT_EQ_NEG",
-              Term `!x y:int. (~x = ~y) = (x = y)`,
-              REPEAT GEN_TAC THEN
-              REWRITE_TAC[GSYM INT_LE_ANTISYM, INT_LE_NEG] THEN
-              MATCH_ACCEPT_TAC CONJ_SYM);
+Theorem INT_EQ_NEG[simp]: !x y:int. (~x = ~y) = (x = y)
+Proof
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[GSYM INT_LE_ANTISYM, INT_LE_NEG] THEN
+  MATCH_ACCEPT_TAC CONJ_SYM
+QED
 
-val int_eq_calculate = prove(
-  Term`!n m. ((&n = ~&m) <=> (n = 0) /\ (m = 0)) /\
-             ((~&n = &m) <=> (n = 0) /\ (m = 0))`,
+Theorem int_eq_calculate[simp]:
+  !n m. ((&n = ~&m) <=> (n = 0) /\ (m = 0)) /\
+        ((~&n = &m) <=> (n = 0) /\ (m = 0))
+Proof
   Induct THENL [
     SIMP_TAC int_ss [INT_NEG_0, INT_INJ, GSYM INT_NEG_EQ],
     SIMP_TAC int_ss [INT] THEN GEN_TAC THEN CONJ_TAC THENL [
@@ -1580,7 +1579,8 @@ val int_eq_calculate = prove(
       SIMP_TAC int_ss [int_sub] THEN
       ASM_SIMP_TAC int_ss [INT_NEGNEG, INT_ADD]
     ]
-  ]);
+  ]
+QED
 
 Theorem INT_LT_CALCULATE:
   !n m.  (&n:int < &m <=> n < m) /\ (~&n < ~&m <=> m < n) /\
@@ -1731,39 +1731,52 @@ QED
 val Num = new_definition("Num",
   Term `Num (i:int) = @n. if 0 <= i then i = &n else i = - &n`);
 
-val NUM_OF_INT =
-    store_thm("NUM_OF_INT[simp]",
-              Term `!n. Num(&n) = n`,
-              GEN_TAC THEN REWRITE_TAC[Num, INT_INJ, INT_POS] THEN
-              CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
-              REWRITE_TAC[SELECT_REFL]);
-val _ = computeLib.add_persistent_funs ["NUM_OF_INT"]
+Theorem NUM_OF_INT[simp,compute]:
+  !n. Num(&n) = n
+Proof
+  GEN_TAC THEN REWRITE_TAC[Num, INT_INJ, INT_POS] THEN
+  CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV SYM_CONV)) THEN
+  REWRITE_TAC[SELECT_REFL]
+QED
 
-val NUM_OF_NEG_INT =
-    store_thm("NUM_OF_NEG_INT[simp]",
-              Term `!n. Num(-&n) = n`,
-              GEN_TAC THEN
-              REWRITE_TAC[Num, INT_INJ, INT_POS, INT_EQ_NEG] THEN
-              Cases_on ‘0 <= -&n’ THEN ASM_REWRITE_TAC [] THEN
-              CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
-              REWRITE_TAC [SELECT_REFL] THEN
-              POP_ASSUM MP_TAC THEN
-              REWRITE_TAC [INT_NEG_GE0,INT_LE,LE] THEN
-              STRIP_TAC THEN ASM_REWRITE_TAC [INT_NEG_0,INT_INJ] THEN
-              REWRITE_TAC [SELECT_REFL]);
-val _ = computeLib.add_persistent_funs ["NUM_OF_NEG_INT"]
+Theorem NUM_OF_NEG_INT[simp,compute]:
+  !n. Num(-&n) = n
+Proof
+  GEN_TAC THEN
+  REWRITE_TAC[Num, INT_INJ, INT_POS, INT_EQ_NEG] THEN
+  Cases_on ‘0 <= -&n’ THEN ASM_REWRITE_TAC [] THEN
+  CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
+  REWRITE_TAC [SELECT_REFL] THEN
+  POP_ASSUM MP_TAC THEN
+  REWRITE_TAC [INT_NEG_GE0,INT_LE,LE] THEN
+  STRIP_TAC THEN ASM_REWRITE_TAC [INT_NEG_0,INT_INJ] THEN
+  REWRITE_TAC [SELECT_REFL]
+QED
 
-val INT_OF_NUM =
-    store_thm("INT_OF_NUM",
-              Term `!i. (&(Num i) = i) <=> 0 <= i`,
-              GEN_TAC THEN EQ_TAC THEN1
-                (DISCH_THEN(SUBST1_TAC o SYM) THEN MATCH_ACCEPT_TAC INT_POS) THEN
-              DISCH_THEN(ASSUME_TAC o EXISTENCE o MATCH_MP NUM_POSINT) THEN
-              REWRITE_TAC[Num] THEN CONV_TAC SYM_CONV THEN
-              POP_ASSUM STRIP_ASSUME_TAC THEN
-              ASM_REWRITE_TAC [INT_POS,INT_INJ] THEN
-              CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
-              REWRITE_TAC [SELECT_REFL]);
+Theorem INT_OF_NUM[simp]:
+  !i. (&(Num i) = i) <=> 0 <= i
+Proof
+  GEN_TAC THEN EQ_TAC THEN1
+   (DISCH_THEN(SUBST1_TAC o SYM) THEN MATCH_ACCEPT_TAC INT_POS) THEN
+  DISCH_THEN(ASSUME_TAC o EXISTENCE o MATCH_MP NUM_POSINT) THEN
+  REWRITE_TAC[Num] THEN CONV_TAC SYM_CONV THEN
+  POP_ASSUM STRIP_ASSUME_TAC THEN
+  ASM_REWRITE_TAC [INT_POS,INT_INJ] THEN
+  CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
+  REWRITE_TAC [SELECT_REFL]
+QED
+
+Theorem NUM_EQ0[simp]:
+  Num i = 0 <=> i = 0
+Proof
+  Cases_on ‘i’ >> simp[]
+QED
+
+Theorem Num_EQ:
+  Num a = Num b <=> a=b \/ a=-b
+Proof
+  Cases_on ‘a’ >> Cases_on ‘b’ >> simp[]
+QED
 
 val LE_NUM_OF_INT = store_thm
   ("LE_NUM_OF_INT",
@@ -3500,9 +3513,9 @@ val _ = BasicProvers.export_rewrites
          "INT_DIVIDES_RADD", "INT_DIVIDES_REFL", "INT_DIVIDES_RMUL",
          "INT_DIVIDES_RSUB", "INT_DIV", "INT_QUOT", "INT_DIV_1",
          "INT_QUOT_1", "INT_DIV_ID", "INT_QUOT_ID", "INT_DIV_NEG",
-         "INT_QUOT_NEG", "INT_ENTIRE", "INT_EQ_CALCULATE",
+         "INT_QUOT_NEG", "INT_ENTIRE",
          "INT_EQ_LADD", "INT_EQ_LMUL", "INT_EQ_RADD", "INT_EQ_LMUL",
-         "INT_EXP", "INT_EXP_EQ0", "INT_INJ", "INT_LE", "INT_LE_ADD",
+         "INT_EXP", "INT_EXP_EQ0", "INT_LE", "INT_LE_ADD",
          "INT_LE_ADDL", "INT_LE_ADDR", "INT_LE_DOUBLE", "INT_LE_LADD",
          "INT_LE_MUL", "INT_LE_NEG", "INT_LE_NEGL", "INT_LE_NEGR",
          "INT_LE_RADD", "INT_LE_SQUARE", "INT_LT_ADD",

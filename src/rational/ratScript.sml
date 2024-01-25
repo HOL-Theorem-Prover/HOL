@@ -2608,32 +2608,7 @@ val rat_of_int_def = Define ‘
 Theorem rat_of_int_11[simp]:
   (rat_of_int i1 = rat_of_int i2) <=> (i1 = i2)
 Proof
-  simp[EQ_IMP_THM] >> simp[rat_of_int_def] >> Cases_on ‘i1 < 0’ >>
-  Cases_on ‘i2 < 0’ >> simp[]
-  >- (‘0 <= -i1 /\ 0 <= -i2’ by simp[] >>
-      rpt (pop_assum
-             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
-      ntac 2 strip_tac >> disch_then (mp_tac o AP_TERM ``$& : num -> int``) >>
-      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
-  >- (rename [‘a < 0’, ‘~(b < 0)’] >>
-      ‘0 <= -a /\ 0 <= b’ by (simp[] >> fs[integerTheory.INT_NOT_LT]) >>
-      rpt (pop_assum
-             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
-      ntac 2 strip_tac >>
-      disch_then (CONJUNCTS_THEN (mp_tac o AP_TERM ``$& : num -> int``)) >>
-      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
-  >- (rename [‘a < 0’, ‘~(b < 0)’] >>
-      ‘0 <= -a /\ 0 <= b’ by (simp[] >> fs[integerTheory.INT_NOT_LT]) >>
-      rpt (pop_assum
-             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
-      ntac 2 strip_tac >>
-      disch_then (CONJUNCTS_THEN (mp_tac o AP_TERM ``$& : num -> int``)) >>
-      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
-  >- (‘0 <= i1 /\ 0 <= i2’ by fs[integerTheory.INT_NOT_LT] >>
-      rpt (pop_assum
-             (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
-      ntac 2 strip_tac >> disch_then (mp_tac o AP_TERM ``$& : num -> int``) >>
-      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
+  Cases_on ‘i1’ >> Cases_on ‘i2’ >> simp[rat_of_int_def]
 QED
 
 Theorem rat_of_int_of_num[simp]: rat_of_int (&x) = &x

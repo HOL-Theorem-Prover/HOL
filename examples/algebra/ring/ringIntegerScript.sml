@@ -808,42 +808,34 @@ val Z_quotient_iso_ZN = store_thm(
          ==> &k < &n               by INT_LT_CALCULATE
          ==> k < n                 by INT_LT (or INT_LT_CALCULATE)
 *)
-val Z_euclid_ring = store_thm(
-  "Z_euclid_ring",
-  ``EuclideanRing Z (Num o ABS)``,
-  rw[EuclideanRing_def] >-
-  rw[Z_ring] >-
- (rw[Z_def, Z_add_def] >>
-  rw[EQ_IMP_THM] >>
-  `(?n. (ABS x = &n) /\ n <> 0) \/ (?n. (ABS x = -&n) /\ n <> 0) \/ (ABS x = 0)` by rw[INT_NUM_CASES] >-
-  metis_tac[NUM_OF_INT] >-
- (`- &n < 0` by rw[] >>
-  metis_tac[INT_ABS_LT0]) >>
-  fs[INT_ABS_LE0]) >>
+
+Theorem Z_euclid_ring: EuclideanRing Z Num
+Proof
+  rw[EuclideanRing_def]
+  >- rw[Z_ring]
+  >- rw[Z_def, Z_add_def] >>
   pop_assum mp_tac >>
   pop_assum mp_tac >>
   pop_assum mp_tac >>
   rw[Z_def, Z_add_def, Z_mult_def] >>
-  qexists_tac `x / y` >>
-  qexists_tac `x % y` >>
-  `(x = x / y * y + x % y) /\ if y < 0 then (y < x % y /\ x % y <= 0) else (0 <= x % y /\ x % y < y)` by rw[INT_DIVISION] >>
-  qabbrev_tac `q = x / y ` >>
-  qabbrev_tac `t = x % y ` >>
-  `(?n. (y = &n) /\ n <> 0) \/ (?n. (y = -&n) /\ n <> 0) \/ (y = 0)` by rw[INT_NUM_CASES] >| [
-    `~(y < 0)` by rw[] >>
-    `0 <= t /\ t < y` by metis_tac[] >>
-    `?k. t = &k` by metis_tac[NUM_POSINT] >>
-    `Num (ABS t) = k` by rw[INT_ABS_NUM] >>
-    `Num (ABS y) = n` by rw[INT_ABS_NUM] >>
-    metis_tac[INT_LT],
-    `y < 0` by rw[] >>
-    `y < t /\ t <=0` by metis_tac[] >>
-    `?k. t = -&k` by metis_tac[NUM_NEGINT_EXISTS] >>
-    `-&n < -&k` by rw[] >>
-    `Num (ABS t) = k` by rw[INT_ABS_NEG, INT_ABS_NUM] >>
-    `Num (ABS y) = n` by rw[INT_ABS_NEG, INT_ABS_NUM] >>
-    metis_tac[INT_LT_CALCULATE]
-  ]);
+  qexists_tac ‘x / y’ >>
+  qexists_tac ‘x % y’ >>
+  ‘(x = x / y * y + x % y) /\
+   if y < 0 then (y < x % y /\ x % y <= 0) else (0 <= x % y /\ x % y < y)’
+    by rw[INT_DIVISION] >>
+  qabbrev_tac ‘q = x / y’ >>
+  qabbrev_tac ‘t = x % y’ >>
+  ‘(?n. (y = &n) /\ n <> 0) \/ (?n. (y = -&n) /\ n <> 0) \/ (y = 0)’
+    by rw[INT_NUM_CASES]
+  >- (‘~(y < 0)’ by rw[] >>
+      ‘0 <= t /\ t < y’ by metis_tac[] >>
+      ‘?k. t = &k’ by metis_tac[NUM_POSINT] >>
+      gvs[]) >>
+  ‘y < 0’ by rw[] >>
+  ‘y < t /\ t <= 0’ by metis_tac[] >>
+  ‘?k. t = -&k’ by metis_tac[NUM_NEGINT_EXISTS] >>
+  gvs[]
+QED
 
 (* Theorem: PrincipalIdealRing Z *)
 (* Proof:
