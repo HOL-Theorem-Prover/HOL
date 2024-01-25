@@ -216,7 +216,6 @@ open gcdTheory; (* for P_EUCLIDES *)
    ONE_DIV           |- !n. 1 < n ==> (1 DIV n = 0)
    DIVIDES_ODD       |- !n. ODD n ==> !m. m divides n ==> ODD m
    DIVIDES_EVEN      |- !m. EVEN m ==> !n. m divides n ==> EVEN n
-   DIVIDES_MOD_0     |- !n. 0 < n ==> !m. n divides m <=> (m MOD n = 0)
    EVEN_ALT          |- !n. EVEN n <=> 2 divides n
    ODD_ALT           |- !n. ODD n <=> ~(2 divides n)
 
@@ -2374,28 +2373,6 @@ val DIVIDES_EVEN = store_thm(
   "DIVIDES_EVEN",
   ``!m. EVEN m ==> !n. m divides n ==> EVEN n``,
   metis_tac[divides_def, EVEN_MULT]);
-
-(* Theorem: n divides m <=> m MOD n = 0 *)
-(* Proof:
-   if part: n divides m ==> m MOD n = 0
-       n divides m
-   ==> ?q. m = q * n               by divides_def
-   ==>   m MOD n
-       = (q * n) MOD n             by substitution
-       = 0                         by MOD_EQ_0
-   only-if part: m MOD n = 0 ==> n divides m
-   m = (m DIV n) * n + (m MOD n)   by DIVISION
-     = (m DIV n) * n               by ADD_0 and given
-   Hence  n divides m              by divides_def
-   Or,
-       m MOD n = 0
-   <=> ?d. m = d * n    by MOD_EQ_0_DIVISOR, 0 < n
-   <=> n divides m      by divides_def
-*)
-val DIVIDES_MOD_0 = store_thm(
-  "DIVIDES_MOD_0",
-  ``!n. 0 < n ==> !m. n divides m <=> (m MOD n = 0)``,
-  metis_tac[MOD_EQ_0_DIVISOR, divides_def]);
 
 (* Theorem: EVEN n = 2 divides n *)
 (* Proof:

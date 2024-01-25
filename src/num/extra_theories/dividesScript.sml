@@ -175,11 +175,11 @@ Proof
 QED
 
 Theorem DIVIDES_MOD_0:
-  !p n. 0 < p /\ divides p n ==> n MOD p = 0
+  !p n. 0 < p ==> (divides p n <=> n MOD p = 0)
 Proof
-  rpt strip_tac >>
-  ‘?q. n = q * p’ by METIS_TAC[divides_def,ADD_CLAUSES] >>
-  simp[]
+  SRW_TAC[][divides_def, EQ_IMP_THM, PULL_EXISTS] >>
+  Q.EXISTS_TAC ‘n DIV p’ >>
+  METIS_TAC [ADD_CLAUSES, DIVISION]
 QED
 
 Theorem DIVIDES_DIV:
