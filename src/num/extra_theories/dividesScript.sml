@@ -8,6 +8,12 @@ val DECIDE = EQT_ELIM o Arith.ARITH_CONV;
 
 val arith_ss = numLib.arith_ss;
 
+fun simp ths = asm_simp_tac (srw_ss() ++ numSimps.ARITH_ss) ths
+fun gvs ths = global_simp_tac {droptrues = true, elimvars = true,
+                               oldestfirst = true, strip = true}
+                              (srw_ss() ++ numSimps.ARITH_ss) ths
+val op >~ = Q.>~
+
 val ARW = RW_TAC arith_ss;
 
 local open numeralTheory in end;
@@ -146,6 +152,68 @@ Theorem factor_divides[simp]:
   !m n. divides n (m * n) /\ divides n (n * m)
 Proof
   METIS_TAC[divides_def, MULT_COMM]
+QED
+
+Theorem EXP_DIVIDES:
+  divides (a ** b) (a ** c) <=>
+    b <= c \/ a = 0 /\ 0 < c \/ a = 0 /\ b = 0 \/ a = 1
+Proof
+  SRW_TAC [][divides_def, EQ_IMP_THM] >> simp[] >~
+  [‘a ** c = r * a ** b’]
+  >- (Cases_on ‘a = 0’ >> gvs[] >> CCONTR_TAC >>
+      gvs[NOT_LESS, NOT_LESS_EQUAL] >>
+      ‘?d. b = c + d /\ 0 < d’ by (Q.EXISTS_TAC ‘b - c’ >> simp[]) >>
+      gvs[EXP_ADD] >>
+      ‘a ** c = 0 \/ r * a ** d = 1’
+        by (irule $ iffLR EQ_MULT_LCANCEL >> REWRITE_TAC [MULT_RIGHT_1] >>
+            Q.PAT_X_ASSUM ‘a ** c = _’ (fn th => CONV_TAC (RHS_CONV (K th))) >>
+            simp[]) >>
+      gvs[]) >~
+  [‘b <= c’]
+  >- (gvs[LESS_EQ_EXISTS, EXP_ADD] >> METIS_TAC[MULT_COMM]) >>
+  Q.EXISTS_TAC ‘0’ >> simp[]
+QED
+
+Theorem DIVIDES_MOD_0:
+  !p n. 0 < p /\ divides p n ==> n MOD p = 0
+Proof
+  rpt strip_tac >>
+  ‘?q. n = q * p’ by METIS_TAC[divides_def,ADD_CLAUSES] >>
+  simp[]
+QED
+
+Theorem DIVIDES_DIV:
+  !p n. 0 < p /\ divides p n ==> p * (n DIV p) = n
+Proof
+  rpt strip_tac >> drule_then (Q.SPEC_THEN ‘n’ strip_assume_tac) DIVISION >>
+  drule_all_then assume_tac DIVIDES_MOD_0 >> gvs[]
+QED
+
+Theorem DIVIDES_COMMON_MULT_I:
+  !a b c. divides a b ==> divides (c * a) (c * b)
+Proof
+  SRW_TAC[][divides_def] >> simp[EXISTS_OR_THM]
+QED
+
+Theorem DIVIDES_MULT_RCANCEL:
+  !a b c. c <> 0 ==> (divides (a * c) (b * c) <=> divides a b)
+Proof
+  SRW_TAC[][divides_def, EQ_IMP_THM] >> gvs[EXISTS_OR_THM] >>
+  ‘b * c = (a * q) * c’ by METIS_TAC[MULT_ASSOC, MULT_COMM] >>
+  METIS_TAC[EQ_MULT_RCANCEL]
+QED
+
+Theorem DIVIDES_MULT_LCANCEL:
+  !a b c. c <> 0 ==> (divides (c * a) (c * b) <=> divides a b)
+Proof
+  METIS_TAC[MULT_COMM, DIVIDES_MULT_RCANCEL]
+QED
+
+Theorem DIVIDES_PROD:
+  !a b c d. divides a c /\ divides b d ==> divides (a * b) (c * d)
+Proof
+  SRW_TAC[][divides_def] >> Q.RENAME_TAC [‘(q1 * a) * (q2 * b)’] >>
+  Q.EXISTS_TAC ‘q1 * q2’ >> simp[]
 QED
 
 (*---------------------------------------------------------------------------*)
