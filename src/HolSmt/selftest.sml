@@ -454,25 +454,25 @@ in
     (``x > 0 ==> (x:real) / 42 < x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``x < 0 ==> (x:real) / 42 > x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
-    (``abs (x:real) >= 0``, [thm_AUTO, thm_YO]),
-    (``(abs (x:real) = 0) = (x = 0)``, [thm_AUTO, thm_YO]),
-    (``(x:real) >= 0 ==> (abs x = x)``, [thm_AUTO, thm_YO]),
-    (``(x:real) <= 0 ==> (abs x = ~x)``, [thm_AUTO, thm_YO]),
-    (``abs (abs (x:real)) = abs x``, [thm_AUTO, thm_YO]),
+    (``abs (x:real) >= 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(abs (x:real) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:real) >= 0 ==> (abs x = x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:real) <= 0 ==> (abs x = ~x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``abs (abs (x:real)) = abs x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``abs (x:real) = x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
 
-    (``min (x:real) y <= x``, [(*thm_AUTO,*) thm_YO]),
-    (``min (x:real) y <= y``, [(*thm_AUTO,*) thm_YO]),
-    (``(z:real) < x /\ z < y ==> z < min x y``, [(*thm_AUTO,*) thm_YO]),
+    (``min (x:real) y <= x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``min (x:real) y <= y``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(z:real) < x /\ z < y ==> z < min x y``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``min (x:real) y < x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``min (x:real) 0 = 0``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) >= 0 ==> (min x 0 = 0)``, [(*thm_AUTO,*) thm_YO]),
+    (``(x:real) >= 0 ==> (min x 0 = 0)``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``max (x:real) y >= x``, [(*thm_AUTO,*) thm_YO]),
-    (``max (x:real) y >= y``, [(*thm_AUTO,*) thm_YO]),
-    (``(z:real) > x /\ z > y ==> z > max x y``, [(*thm_AUTO,*) thm_YO]),
+    (``max (x:real) y >= x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``max (x:real) y >= y``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(z:real) > x /\ z > y ==> z > max x y``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``max (x:real) y > x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:real) >= 0 ==> (max x 0 = x)``, [(*thm_AUTO,*) thm_YO]),
+    (``(x:real) >= 0 ==> (max x 0 = x)``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
     (* arithmetic inequalities: <, <=, >, >= *)
 
