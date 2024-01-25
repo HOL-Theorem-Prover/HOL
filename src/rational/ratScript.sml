@@ -19,7 +19,6 @@ open
 val arith_ss = old_arith_ss
 
 val _ = new_theory "rat";
-val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "ratScript"
 
@@ -679,15 +678,19 @@ val RAT_OF_NUM_CALCULATE = store_thm(
     [NMR, DNM, ARITH_PROVE “int_of_num (SUC n) + 1 = int_of_num (SUC (SUC n))”]
 );
 
-val RAT_OF_NUM_LEQ = store_thm("RAT_OF_NUM_LEQ[simp]",
-  ``rat_of_num a <= rat_of_num b = a <= b``,
+Theorem RAT_OF_NUM_LEQ[simp]:
+  rat_of_num a <= rat_of_num b <=> a <= b
+Proof
   SIMP_TAC std_ss [RAT_OF_NUM_CALCULATE, RAT_LEQ_CALCULATE,
-    NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LE]);
+                   NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LE]
+QED
 
-val RAT_OF_NUM_LES = store_thm("RAT_OF_NUM_LES[simp]",
-  ``rat_of_num a < rat_of_num b = a < b``,
+Theorem RAT_OF_NUM_LES[simp]:
+  rat_of_num a < rat_of_num b <=> a < b
+Proof
   SIMP_TAC std_ss [RAT_OF_NUM_CALCULATE, RAT_LES_CALCULATE,
-    NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LT]);
+                   NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LT]
+QED
 
 (*--------------------------------------------------------------------------
  *  rat_calculate_table : (term * thm) list
@@ -851,7 +854,7 @@ val RAT_EQ0_NMR = store_thm("RAT_EQ0_NMR", ``!r1. (r1 = 0q) = (rat_nmr r1 = 0)``
  *--------------------------------------------------------------------------*)
 
 Theorem RAT_0LES_NMR:
-  !r1. rat_les 0q r1 = 0i < rat_nmr r1
+  !r1. rat_les 0q r1 <=> 0i < rat_nmr r1
 Proof
   GEN_TAC THEN
   REWRITE_TAC[rat_0, rat_nmr_def, rat_les_def, rat_sgn_def, frac_0_def,
@@ -866,17 +869,19 @@ Proof
   PROVE_TAC[INT_LT_ANTISYM, INT_LT_TOTAL]
 QED
 
-val RAT_LES0_NMR = store_thm("RAT_LES0_NMR", ``!r1. rat_les r1 0q = rat_nmr r1 < 0i``,
-        GEN_TAC THEN
-        REWRITE_TAC[rat_0, rat_nmr_def, rat_les_def, rat_sgn_def, frac_0_def, frac_sgn_def, SGN_def] THEN
-        RAT_CALC_TAC THEN
-        FRAC_POS_TAC ``1i`` THEN
-        FRAC_POS_TAC ``frac_dnm (rep_rat r1)`` THEN
-        SUBST_TAC[FRAC_CALC_CONV ``frac_sub (abs_frac (0,1)) (rep_rat r1)``] THEN
-        REWRITE_TAC[RAT_NMREQ0_CONG,RAT_NMRLT0_CONG,RAT_NMRGT0_CONG] THEN
-        FRAC_NMRDNM_TAC THEN
-        RW_TAC int_ss [RAT, FRAC, INT_SUB_LZERO] THEN
-        PROVE_TAC[INT_LT_ANTISYM, INT_LT_TOTAL, INT_NEG_LT0, INT_NEG_EQ, INT_NEG_0] );
+Theorem RAT_LES0_NMR: !r1. rat_les r1 0q <=> rat_nmr r1 < 0i
+Proof
+  GEN_TAC THEN
+  REWRITE_TAC[rat_0, rat_nmr_def, rat_les_def, rat_sgn_def, frac_0_def, frac_sgn_def, SGN_def] THEN
+  RAT_CALC_TAC THEN
+  FRAC_POS_TAC ``1i`` THEN
+  FRAC_POS_TAC ``frac_dnm (rep_rat r1)`` THEN
+  SUBST_TAC[FRAC_CALC_CONV ``frac_sub (abs_frac (0,1)) (rep_rat r1)``] THEN
+  REWRITE_TAC[RAT_NMREQ0_CONG,RAT_NMRLT0_CONG,RAT_NMRGT0_CONG] THEN
+  FRAC_NMRDNM_TAC THEN
+  RW_TAC int_ss [RAT, FRAC, INT_SUB_LZERO] THEN
+  PROVE_TAC[INT_LT_ANTISYM, INT_LT_TOTAL, INT_NEG_LT0, INT_NEG_EQ, INT_NEG_0]
+QED
 
 (*--------------------------------------------------------------------------
    RAT_0LES_NMR: thm
@@ -887,7 +892,7 @@ val RAT_LES0_NMR = store_thm("RAT_LES0_NMR", ``!r1. rat_les r1 0q = rat_nmr r1 <
  *--------------------------------------------------------------------------*)
 
 Theorem RAT_0LEQ_NMR:
-  !r1. rat_leq 0q r1 = 0i <= rat_nmr r1
+  !r1. rat_leq 0q r1 <=> 0i <= rat_nmr r1
 Proof
   GEN_TAC THEN
   REWRITE_TAC[rat_leq_def, INT_LE_LT] THEN
@@ -895,7 +900,7 @@ Proof
 QED
 
 Theorem RAT_LEQ0_NMR:
-  !r1. rat_leq r1 0q = rat_nmr r1 <= 0i
+  !r1. rat_leq r1 0q <=> rat_nmr r1 <= 0i
 Proof
   GEN_TAC THEN
   REWRITE_TAC[rat_leq_def, INT_LE_LT] THEN
@@ -1566,10 +1571,12 @@ val RAT_LES_LEQ = store_thm("RAT_LES_LEQ",
   REPEAT GEN_TAC THEN REWRITE_TAC[rat_leq_def] THEN
   PROVE_TAC[RAT_LES_TOTAL, RAT_LES_IMP_NEQ, RAT_LES_ANTISYM] );
 
-val RAT_LES_LEQ2 = store_thm("RAT_LES_LEQ2",
-  ``!r1 r2. rat_les r1 r2 = rat_leq r1 r2 /\ ~(rat_leq r2 r1)``,
+Theorem RAT_LES_LEQ2:
+  !r1 r2. rat_les r1 r2 <=> rat_leq r1 r2 /\ ~(rat_leq r2 r1)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[rat_leq_def] THEN EQ_TAC THEN
-  RW_TAC bool_ss [] THEN PROVE_TAC[RAT_LES_ANTISYM, RAT_LES_IMP_NEQ] );
+  RW_TAC bool_ss [] THEN PROVE_TAC[RAT_LES_ANTISYM, RAT_LES_IMP_NEQ]
+QED
 
 (*--------------------------------------------------------------------------
    RAT_LES_LEQ_TRANS, RAT_LEQ_LES_TRANS
@@ -2054,7 +2061,7 @@ Theorem RAT_SGN_AINV' = RAT_SGN_AINV |> Q.SPEC ‘-r’
 
 Theorem RAT_MINV_LES:
   !r1. r1 <> 0q ==>
-       (rat_minv r1 < 0q = r1 < 0q) /\ (0q < rat_minv r1 = 0q < r1)
+       (rat_minv r1 < 0q <=> r1 < 0q) /\ (0q < rat_minv r1 <=> 0q < r1)
 Proof
   GEN_TAC THEN
   DISCH_TAC THEN
@@ -2074,18 +2081,24 @@ QED
         (p * q < 0q = 0q < p /\ q < 0q \/ p < 0q /\ 0q < q)
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_SIGN_CASES  = store_thm("RAT_MUL_SIGN_CASES", ``!p q. (0q < p * q = 0q < p /\ 0q < q \/ p < 0q /\ q < 0q) /\ (p * q < 0q = 0q < p /\ q < 0q \/ p < 0q /\ 0q < q)``,
-        REPEAT GEN_TAC THEN
-        REWRITE_TAC[rat_les_def, RAT_SUB_LID, RAT_SUB_RID] THEN
-        SUBST_TAC[GSYM (SPECL[``rat_sgn ~p``,``1i``] INT_EQ_NEG), GSYM (SPECL[``rat_sgn ~q``,``1i``] INT_EQ_NEG), GSYM (SPECL[``rat_sgn ~(p*q)``,``1i``] INT_EQ_NEG)] THEN
-        REWRITE_TAC[RAT_SGN_AINV,RAT_SGN_MUL] THEN
-        CONJ_TAC THEN
-        ASSUME_TAC (SPEC ``p:rat`` RAT_SGN_TOTAL) THEN
-        ASSUME_TAC (SPEC ``q:rat`` RAT_SGN_TOTAL) THEN
-        UNDISCH_ALL_TAC THEN
-        REPEAT STRIP_TAC THEN
-        ASM_REWRITE_TAC[] THEN
-        SIMP_TAC int_ss [] );
+Theorem RAT_MUL_SIGN_CASES:
+  !p q. (0q < p * q <=> 0q < p /\ 0q < q \/ p < 0q /\ q < 0q) /\
+        (p * q < 0q <=> 0q < p /\ q < 0q \/ p < 0q /\ 0q < q)
+Proof
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[rat_les_def, RAT_SUB_LID, RAT_SUB_RID] THEN
+  SUBST_TAC[GSYM (SPECL[“rat_sgn ~p”,“1i”] INT_EQ_NEG),
+            GSYM (SPECL[“rat_sgn ~q”,“1i”] INT_EQ_NEG),
+            GSYM (SPECL[“rat_sgn ~(p*q)”,“1i”] INT_EQ_NEG)] THEN
+  REWRITE_TAC[RAT_SGN_AINV,RAT_SGN_MUL] THEN
+  CONJ_TAC THEN
+  ASSUME_TAC (SPEC “p:rat” RAT_SGN_TOTAL) THEN
+  ASSUME_TAC (SPEC “q:rat” RAT_SGN_TOTAL) THEN
+  UNDISCH_ALL_TAC THEN
+  REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  SIMP_TAC int_ss []
+QED
 
 (*--------------------------------------------------------------------------
    RAT_NO_ZERODIV
@@ -2095,27 +2108,30 @@ val RAT_MUL_SIGN_CASES  = store_thm("RAT_MUL_SIGN_CASES", ``!p q. (0q < p * q = 
    |- !r1 r2. ~(r1 * r2 = 0q) = ~(r1 = 0q) /\ ~(r2 = 0q)
  *--------------------------------------------------------------------------*)
 
-val RAT_NO_ZERODIV = store_thm("RAT_NO_ZERODIV", ``!r1 r2. (r1 = 0q) \/ (r2 = 0q) = (rat_mul r1 r2 = 0q)``,
-        REPEAT GEN_TAC THEN
-        ASM_CASES_TAC ``r1=0q`` THEN
-        ASM_CASES_TAC ``r2=0q`` THEN
-        RW_TAC int_ss[RAT_MUL_LZERO, RAT_MUL_RZERO] THEN
-        UNDISCH_ALL_TAC THEN
-        REWRITE_TAC[RAT_EQ0_NMR, rat_nmr_def] THEN
-        DISCH_TAC THEN
-        DISCH_TAC THEN
-        RAT_CALCTERM_TAC ``rat_mul r1 r2`` THEN
-        FRAC_CALCTERM_TAC ``frac_mul (rep_rat r1) (rep_rat r2)`` THEN
-        REWRITE_TAC[RAT_NMREQ0_CONG] THEN
-        FRAC_NMRDNM_TAC THEN
-        PROVE_TAC[INT_ENTIRE] );
+Theorem RAT_NO_ZERODIV:
+  !r1 r2. r1 = 0q \/ r2 = 0q <=> rat_mul r1 r2 = 0q
+Proof
+  REPEAT GEN_TAC THEN
+  ASM_CASES_TAC “r1=0q” THEN
+  ASM_CASES_TAC “r2=0q” THEN
+  RW_TAC int_ss[RAT_MUL_LZERO, RAT_MUL_RZERO] THEN
+  UNDISCH_ALL_TAC THEN
+  REWRITE_TAC[RAT_EQ0_NMR, rat_nmr_def] THEN
+  DISCH_TAC THEN
+  DISCH_TAC THEN
+  RAT_CALCTERM_TAC “rat_mul r1 r2” THEN
+  FRAC_CALCTERM_TAC “frac_mul (rep_rat r1) (rep_rat r2)” THEN
+  REWRITE_TAC[RAT_NMREQ0_CONG] THEN
+  FRAC_NMRDNM_TAC THEN
+  PROVE_TAC[INT_ENTIRE]
+QED
 
-val RAT_NO_ZERODIV_THM = save_thm(
-  "RAT_NO_ZERODIV_THM[simp]",
-  ONCE_REWRITE_RULE [EQ_SYM_EQ] RAT_NO_ZERODIV);
+Theorem RAT_NO_ZERODIV_THM[simp] =
+  ONCE_REWRITE_RULE [EQ_SYM_EQ] RAT_NO_ZERODIV
 
-val RAT_NO_ZERODIV_NEG = store_thm("RAT_NO_ZERODIV_NEG",``!r1 r2. ~(r1 * r2 = 0q) = ~(r1 = 0q) /\ ~(r2 = 0q)``,
-        PROVE_TAC[RAT_NO_ZERODIV]);
+Theorem RAT_NO_ZERODIV_NEG: !r1 r2. r1 * r2 <> 0q <=> r1 <> 0q /\ r2 <> 0q
+Proof PROVE_TAC[RAT_NO_ZERODIV]
+QED
 
 (*--------------------------------------------------------------------------
    RAT_NO_IDDIV
@@ -2123,15 +2139,21 @@ val RAT_NO_ZERODIV_NEG = store_thm("RAT_NO_ZERODIV_NEG",``!r1 r2. ~(r1 * r2 = 0q
    |- !r1 r2. (r1 * r2 = r2) = (r1=1q) \/ (r2=0q)
  *--------------------------------------------------------------------------*)
 
-val RAT_NO_IDDIV = store_thm("RAT_NO_IDDIV", ``!r1 r2. (rat_mul r1 r2 = r2) = (r1=1q) \/ (r2=0q)``,
-        REPEAT GEN_TAC THEN
-        ASM_CASES_TAC ``r2 = 0q`` THEN
-        RW_TAC bool_ss [RAT_MUL_LID, RAT_MUL_RID, RAT_MUL_LZERO, RAT_MUL_RZERO] THEN
-        SUBST_TAC[GSYM (SPEC ``r2:rat`` RAT_MUL_LID)] THEN
-        SUBST1_TAC (EQT_ELIM (AC_CONV (RAT_MUL_ASSOC, RAT_MUL_COMM) ``rat_mul r1 (rat_mul 1q r2) = rat_mul (rat_mul r1 1q) r2``)) THEN
-        REWRITE_TAC[RAT_MUL_RID] THEN
-        SUBST_TAC [UNDISCH (SPECL[``r1:rat``,``1q``,``r2:rat``] RAT_EQ_RMUL)] THEN
-        PROVE_TAC[] );
+Theorem RAT_NO_IDDIV:
+  !r1 r2. rat_mul r1 r2 = r2 <=> r1 = 1 \/ r2 = 0
+Proof
+  REPEAT GEN_TAC THEN
+  ASM_CASES_TAC “r2 = 0q” THEN
+  RW_TAC bool_ss [RAT_MUL_LID, RAT_MUL_RID, RAT_MUL_LZERO, RAT_MUL_RZERO] THEN
+  SUBST_TAC[GSYM (SPEC “r2:rat” RAT_MUL_LID)] THEN
+  SUBST1_TAC
+  (EQT_ELIM (AC_CONV
+             (RAT_MUL_ASSOC, RAT_MUL_COMM)
+             “rat_mul r1 (rat_mul 1q r2) = rat_mul (rat_mul r1 1q) r2”)) THEN
+  REWRITE_TAC[RAT_MUL_RID] THEN
+  SUBST_TAC [UNDISCH (SPECL[“r1:rat”,“1q”,“r2:rat”] RAT_EQ_RMUL)] THEN
+  PROVE_TAC[]
+QED
 
 (* moving divisions out *)
 
@@ -2448,66 +2470,82 @@ val RAT_MUL_NUM_CALCULATE = save_thm("RAT_MUL_NUM_CALCULATE", LIST_CONJ[RAT_MUL_
    |- !n m. (~&n = ~&m) = (n=m)
  *--------------------------------------------------------------------------*)
 
-val RAT_EQ_NUM1 = prove(``!n m. ( &n =  &m) = (n=m)``,
-        Induct_on `n` THEN
-        Induct_on `m` THEN
-        RW_TAC arith_ss [RAT_OF_NUM] THENL
-        [
-                MATCH_MP_TAC (prove(``!r1 r2. (r1 < r2) ==> ~(r1 = r2)``, PROVE_TAC[RAT_LES_ANTISYM])) THEN
-                ASSUME_TAC (ONCE_REWRITE_RULE[RAT_ADD_COMM, GSYM RAT_0] (SPECL[``rat_1``,``&m:rat``] RAT_0LES_0LEQ_ADD)) THEN
-                ASSUME_TAC (SPEC ``m:num`` RAT_OF_NUM_LEQ_0) THEN
-                PROVE_TAC[RAT_LES_01, RAT_1, RAT_0]
-        ,
-                ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-                MATCH_MP_TAC (prove(``!r1 r2. (r1 < r2) ==> ~(r1 = r2)``, PROVE_TAC[RAT_LES_ANTISYM])) THEN
-                ASSUME_TAC (ONCE_REWRITE_RULE[RAT_ADD_COMM, GSYM RAT_0] (SPECL[``rat_1``,``&n:rat``] RAT_0LES_0LEQ_ADD)) THEN
-                ASSUME_TAC (SPEC ``n:num`` RAT_OF_NUM_LEQ_0) THEN
-                PROVE_TAC[RAT_LES_01, RAT_1, RAT_0]
-        ,
-                LEFT_NO_FORALL_TAC 1 ``m:num`` THEN
-                REWRITE_TAC[RAT_EQ_RADD] THEN
-                PROVE_TAC[]
-        ] );
+Theorem RAT_EQ_NUM1[local]: !n m. &n = &m <=> n = m
+Proof
+  Induct_on ‘n’ THEN
+  Induct_on ‘m’ THEN
+  RW_TAC arith_ss [RAT_OF_NUM] THENL
+  [
+    MATCH_MP_TAC (prove(“!r1 r2. (r1 < r2) ==> ~(r1 = r2)”,
+                        PROVE_TAC[RAT_LES_ANTISYM])) THEN
+    ASSUME_TAC (ONCE_REWRITE_RULE
+                [RAT_ADD_COMM, GSYM RAT_0]
+                (SPECL[“rat_1”,“&m:rat”] RAT_0LES_0LEQ_ADD)) THEN
+    ASSUME_TAC (SPEC “m:num” RAT_OF_NUM_LEQ_0) THEN
+    PROVE_TAC[RAT_LES_01, RAT_1, RAT_0]
+    ,
+    ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
+    MATCH_MP_TAC (prove(“!r1 r2. (r1 < r2) ==> ~(r1 = r2)”,
+                        PROVE_TAC[RAT_LES_ANTISYM])) THEN
+    ASSUME_TAC (ONCE_REWRITE_RULE
+                [RAT_ADD_COMM, GSYM RAT_0]
+                (SPECL[“rat_1”,“&n:rat”] RAT_0LES_0LEQ_ADD)) THEN
+    ASSUME_TAC (SPEC “n:num” RAT_OF_NUM_LEQ_0) THEN
+    PROVE_TAC[RAT_LES_01, RAT_1, RAT_0]
+    ,
+    simp[RAT_EQ_RADD]
+  ]
+QED
 
-val RAT_EQ_NUM2 = prove(``!n m. ( &n = ~&m) = (n=0) /\ (m=0)``,
-        Induct_on `n` THEN
-        Induct_on `m` THEN
-        RW_TAC arith_ss [RAT_OF_NUM] THENL
-        [
-                PROVE_TAC[RAT_AINV_0, RAT_0]
-        ,
-                ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-                MATCH_MP_TAC (prove(``!r1 r2. (r1 < r2) ==> ~(r1 = r2)``, PROVE_TAC[RAT_LES_ANTISYM])) THEN
-                REWRITE_TAC[RAT_0] THEN
-                ONCE_REWRITE_TAC[GSYM RAT_AINV_0] THEN
-                REWRITE_TAC[RAT_LES_AINV] THEN
-                ASSUME_TAC (ONCE_REWRITE_RULE[RAT_ADD_COMM, GSYM RAT_0] (SPECL[``rat_1``,``&m:rat``] RAT_0LES_0LEQ_ADD)) THEN
-                ASSUME_TAC (SPEC ``m:num`` RAT_OF_NUM_LEQ_0) THEN
-                PROVE_TAC[RAT_LES_01, RAT_1, RAT_0]
-        ,
-                ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-                MATCH_MP_TAC (prove(``!r1 r2. (r1 < r2) ==> ~(r1 = r2)``, PROVE_TAC[RAT_LES_ANTISYM])) THEN
-                REWRITE_TAC[RAT_0] THEN
-                REWRITE_TAC[RAT_AINV_0] THEN
-                ASSUME_TAC (ONCE_REWRITE_RULE[RAT_ADD_COMM, GSYM RAT_0] (SPECL[``rat_1``,``&n:rat``] RAT_0LES_0LEQ_ADD)) THEN
-                ASSUME_TAC (SPEC ``n:num`` RAT_OF_NUM_LEQ_0) THEN
-                PROVE_TAC[RAT_LES_01, RAT_1, RAT_0]
-        ,
-                REWRITE_TAC[GSYM RAT_RSUB_EQ] THEN
-                REWRITE_TAC[RAT_SUB_ADDAINV, GSYM RAT_AINV_ADD] THEN
-                LEFT_NO_FORALL_TAC 1 ``SUC (SUC m):num`` THEN
-                UNDISCH_HD_TAC THEN
-                SIMP_TAC arith_ss [RAT_OF_NUM]
-        ] );
+Theorem RAT_EQ_NUM2[local]: !n m. ( &n = ~&m) <=> (n=0) /\ (m=0)
+Proof
+  Induct_on ‘n’ THEN
+  Induct_on ‘m’ THEN
+  RW_TAC arith_ss [RAT_OF_NUM] THENL
+  [
+    PROVE_TAC[RAT_AINV_0, RAT_0]
+    ,
+    ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
+    MATCH_MP_TAC (prove(“!r1 r2. (r1 < r2) ==> ~(r1 = r2)”,
+                        PROVE_TAC[RAT_LES_ANTISYM])) THEN
+    REWRITE_TAC[RAT_0] THEN
+    ONCE_REWRITE_TAC[GSYM RAT_AINV_0] THEN
+    REWRITE_TAC[RAT_LES_AINV] THEN
+    ASSUME_TAC
+    (ONCE_REWRITE_RULE[RAT_ADD_COMM, GSYM RAT_0]
+                      (SPECL[“rat_1”,“&m:rat”] RAT_0LES_0LEQ_ADD)) THEN
+    ASSUME_TAC (SPEC “m:num” RAT_OF_NUM_LEQ_0) THEN
+    PROVE_TAC[RAT_LES_01, RAT_1, RAT_0]
+    ,
+    ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
+    MATCH_MP_TAC (prove(“!r1 r2. (r1 < r2) ==> ~(r1 = r2)”,
+                        PROVE_TAC[RAT_LES_ANTISYM])) THEN
+    REWRITE_TAC[RAT_0] THEN
+    REWRITE_TAC[RAT_AINV_0] THEN
+    ASSUME_TAC (ONCE_REWRITE_RULE
+                [RAT_ADD_COMM, GSYM RAT_0]
+                (SPECL[“rat_1”,“&n:rat”] RAT_0LES_0LEQ_ADD)) THEN
+    ASSUME_TAC (SPEC “n:num” RAT_OF_NUM_LEQ_0) THEN
+    PROVE_TAC[RAT_LES_01, RAT_1, RAT_0]
+    ,
+    REWRITE_TAC[GSYM RAT_RSUB_EQ] THEN
+    REWRITE_TAC[RAT_SUB_ADDAINV, GSYM RAT_AINV_ADD] THEN
+    LEFT_NO_FORALL_TAC 1 “SUC (SUC m):num” THEN
+    UNDISCH_HD_TAC THEN
+    SIMP_TAC arith_ss [RAT_OF_NUM]
+  ]
+QED
 
-val RAT_EQ_NUM3 = prove(``!n m. (~&n =  &m) = (n=0)/\(m=0)``,
-        PROVE_TAC[RAT_EQ_AINV, RAT_EQ_NUM2] );
+Theorem RAT_EQ_NUM3[local]: !n m. (~&n =  &m) <=> (n=0)/\(m=0)
+Proof PROVE_TAC[RAT_EQ_AINV, RAT_EQ_NUM2]
+QED
 
-val RAT_EQ_NUM4 = prove(``!n m. (~&n = ~&m) = (n=m)``,
-        PROVE_TAC[RAT_AINV_EQ, RAT_EQ_NUM1] );
+Theorem RAT_EQ_NUM4[local]: !n m. (~&n = ~&m) <=> n=m
+Proof PROVE_TAC[RAT_AINV_EQ, RAT_EQ_NUM1]
+QED
 
-val RAT_EQ_NUM_CALCULATE = save_thm("RAT_EQ_NUM_CALCULATE[simp]",
-  LIST_CONJ [RAT_EQ_NUM1, RAT_EQ_NUM2, RAT_EQ_NUM3, RAT_EQ_NUM4] );
+Theorem RAT_EQ_NUM_CALCULATE[simp] =
+  LIST_CONJ [RAT_EQ_NUM1, RAT_EQ_NUM2, RAT_EQ_NUM3, RAT_EQ_NUM4]
 
 (* ----------------------------------------------------------------------
     RAT_LT_NUM
@@ -2567,9 +2605,9 @@ val rat_of_int_def = Define ‘
   rat_of_int i : rat = if i < 0 then - (& (Num (-i))) else &(Num i)
 ’;
 
-val rat_of_int_11 = Q.store_thm(
-  "rat_of_int_11[simp]",
-  ‘(rat_of_int i1 = rat_of_int i2) <=> (i1 = i2)’,
+Theorem rat_of_int_11[simp]:
+  (rat_of_int i1 = rat_of_int i2) <=> (i1 = i2)
+Proof
   simp[EQ_IMP_THM] >> simp[rat_of_int_def] >> Cases_on ‘i1 < 0’ >>
   Cases_on ‘i2 < 0’ >> simp[]
   >- (‘0 <= -i1 /\ 0 <= -i2’ by simp[] >>
@@ -2595,12 +2633,12 @@ val rat_of_int_11 = Q.store_thm(
       rpt (pop_assum
              (mp_tac o CONV_RULE (REWR_CONV (GSYM integerTheory.INT_OF_NUM))))>>
       ntac 2 strip_tac >> disch_then (mp_tac o AP_TERM ``$& : num -> int``) >>
-      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE]));
+      ntac 2 (pop_assum SUBST1_TAC) >> simp[integerTheory.INT_EQ_CALCULATE])
+QED
 
-val rat_of_int_of_num = Q.store_thm(
-  "rat_of_int_of_num[simp]",
-  ‘rat_of_int (&x) = &x’,
-  simp[rat_of_int_def]);
+Theorem rat_of_int_of_num[simp]: rat_of_int (&x) = &x
+Proof simp[rat_of_int_def]
+QED
 
 val elim1 = intLib.ARITH_PROVE ``y <= x /\ x <= y ==> (x = y:int)``
 val elim2 = intLib.ARITH_PROVE ``x:int < y /\ y < x ==> F``
@@ -2720,8 +2758,9 @@ val RAT_OF_INT_CALCULATE = Q.store_thm(
     numerator is zero, denominator is always one.
    ---------------------------------------------------------------------- *)
 
-val frac_exists = Q.prove(
-  ‘!r. ?n:int d:num. 0 < d /\ (&d * r = rat_of_int n)’,
+Theorem frac_exists[local]:
+  !r. ?n:int d:num. 0 < d /\ (&d * r = rat_of_int n)
+Proof
   gen_tac >>
   qabbrev_tac ‘f = rep_rat r’ >>
   ‘r = abs_rat f’ by metis_tac[rat_type_thm] >>
@@ -2737,13 +2776,15 @@ val frac_exists = Q.prove(
   simp[fracTheory.FRAC_MULT_CALCULATE, RAT_ABS_EQUIV] >>
   simp[RAT_EQUIV_ALT] >>
   map_every qexists_tac [‘1’, ‘&d’] >>
-  simp[fracTheory.FRAC_MULT_CALCULATE, integerTheory.INT_MUL_COMM]);
+  simp[fracTheory.FRAC_MULT_CALCULATE, integerTheory.INT_MUL_COMM]
+QED
 
-val numdenom_exists = Q.prove(
-  ‘!r:rat.
+Theorem numdenom_exists[local]:
+  !r:rat.
      ?n:int d:num.
        (r = rat_of_int n / &d) /\ 0 < d /\ ((n = 0) ==> (d = 1)) /\
-       !n' d'. (r = rat_of_int n' / &d') /\ 0 < d' ==> ABS n <= ABS n'’,
+       !n' d'. (r = rat_of_int n' / &d') /\ 0 < d' ==> ABS n <= ABS n'
+Proof
   gen_tac >>
   qabbrev_tac `reps = { (a,b) | (&b * r = rat_of_int a) /\ 0 < b }` >>
   `WF (measure (Num o ABS o (FST : int # num -> int)))` by simp[] >>
@@ -2771,7 +2812,8 @@ val numdenom_exists = Q.prove(
       reverse conj_tac
       >- (‘&dd <> 0’ by simp[] >> simp[RAT_DIV_MULMINV] >>
           metis_tac[RAT_MUL_ASSOC, RAT_MUL_COMM, RAT_MUL_RINV, RAT_MUL_LID]) >>
-      simp[NUM_LT]))
+      simp[NUM_LT])
+QED
 
 val RATND_THM = new_specification("RATND_THM", ["RATN", "RATD"],
   CONV_RULE (SKOLEM_CONV THENC BINDER_CONV SKOLEM_CONV) numdenom_exists)
