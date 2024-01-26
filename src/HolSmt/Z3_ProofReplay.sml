@@ -798,7 +798,7 @@ local
         handle Feedback.HOL_ERR _ =>
 
         if term_contains_real_ty t then
-          profile "rewrite(11.1)(REAL_ARITH)" RealArith.REAL_ARITH t
+          profile "rewrite(11.1)(REAL_ARITH)" RealField.REAL_ARITH t
         else
           profile "rewrite(11.2)(ARITH_PROVE)" intLib.ARITH_PROVE t
     in
@@ -836,7 +836,7 @@ local
           (* this is just a heuristic - it is quite conceivable that a
              term that contains type real is provable by integer
              arithmetic *)
-          profile "th_lemma[arith](3.1)(real)" RealArith.REAL_ARITH t'
+          profile "th_lemma[arith](3.1)(real)" RealField.REAL_ARITH t'
         else
           profile "th_lemma[arith](3.2)(int)" intLib.ARITH_PROVE t'
       val subst = List.map (fn (term, var) => {redex = var, residue = term})
