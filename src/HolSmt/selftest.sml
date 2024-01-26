@@ -548,10 +548,10 @@ in
     (``(x:real) < x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:real) < y ==> 42 * x < 42 * y``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``0n <= 1n``, [thm_AUTO, thm_YO]),
-    (``1n <= 0n``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
-    (``(x:num) <= x``, [thm_AUTO, thm_YO]),
-    (``(x:num) <= y ==> 2 * x <= 2 * y``, [thm_AUTO, thm_YO]),
+    (``0r <= 1r``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``1r <= 0r``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
+    (``(x:real) <= x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:real) <= y ==> 42 * x <= 42 * y``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
     (``1r > 0r``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``0r > 1r``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
