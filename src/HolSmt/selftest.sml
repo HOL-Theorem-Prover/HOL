@@ -213,9 +213,6 @@ in
 
     (* real *)
 
-    (* Z3 2.19 prints reals as integers in its proofs; I see no way to
-       reliably distinguish between them. *)
-
     (``0r = 0r``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``1r = 1r``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``0r = 1r``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
@@ -450,9 +447,9 @@ in
     (``1 * (x:real) = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``(x:real) * 42 = 42 * x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``(x:real) / 1 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``x > 0 ==> (x:real) / 42 < x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
-    (``x < 0 ==> (x:real) / 42 > x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``(x:real) / 1 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``x > 0 ==> (x:real) / 42 < x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``x < 0 ==> (x:real) / 42 > x``, [(*thm_AUTO,*) thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
     (``abs (x:real) >= 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``(abs (x:real) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
