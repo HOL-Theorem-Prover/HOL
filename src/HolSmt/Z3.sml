@@ -78,14 +78,12 @@ structure Z3 = struct
             Portable.finally finish work ()
           end
 
-  val doproofs =
-      if String.sub(Z3version, 0) = #"2" then true
-      else if String.sub(Z3version, 0) = #"0" then false
-      else
-        (Feedback.HOL_MESG ("Can't replay proofs with Z3 v"^Z3version); false)
+  val is_v4 = String.sub(Z3version, 0) = #"4"
+
+  val proof_option = if is_v4 then " proof=true" else " PROOF_MODE=2"
 
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
-  val Z3_SMT_Prover = if not doproofs then Z3_SMT_Oracle else
+  val Z3_SMT_Prover =
     mk_Z3_fun "Z3_SMT_Prover"
       (fn goal =>
         let
@@ -94,7 +92,7 @@ structure Z3 = struct
         in
           (((goal, validation), ty_tm_dict), strings)
         end)
-      " PROOF_MODE=2 -smt2 -file:"
+      (proof_option ^ " -smt2 -file:")
       (fn ((goal, validation), (ty_dict, tm_dict)) =>
         fn outfile =>
           let

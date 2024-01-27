@@ -354,37 +354,87 @@ local
         proof)
   end
 
-  (* entry point into the parser (i.e., the grammar's start symbol) *)
-  fun parse_proof get_token (tydict, tmdict, proof) (rpars : int) =
+  fun undo_look_ahead symbols get_token =
   let
-    val _ = Library.expect_token "(" (get_token ())
+    val buffer = ref symbols
+    fun get_token' () =
+      case !buffer of
+        [] => get_token ()
+      | x::xs => (buffer := xs; x)
+  in
+    get_token'
+  end
+
+  fun parse_proof_inner get_token (tydict, tmdict, proof) (rpars : int) =
+  let
+    val () = Library.expect_token "(" (get_token ())
     val head = get_token ()
   in
-    if head = "let" then
+    if head = "proof" then
+      parse_proof_inner get_token (tydict, tmdict, proof) (rpars + 1)
+    else if head = "let" then
       let
         val (tmdict, proof) = parse_definition get_token (tydict, tmdict, proof)
       in
-        parse_proof get_token (tydict, tmdict, proof) (rpars + 1)
+        parse_proof_inner get_token (tydict, tmdict, proof) (rpars + 1)
       end
     else if head = "error" then (
       (* some (otherwise valid) proofs are preceded by an error message,
          which we simply ignore *)
       get_token ();
       Library.expect_token ")" (get_token ());
-      parse_proof get_token (tydict, tmdict, proof) rpars
+      parse_proof_inner get_token (tydict, tmdict, proof) rpars
     ) else
       let
         (* undo look-ahead of 2 tokens *)
-        val buffer = ref ["(", head]
-        fun get_token' () =
-          case !buffer of
-            [] => get_token ()
-          | x::xs => (buffer := xs; x)
+        val get_token' = undo_look_ahead ["(", head] get_token
         val t = SmtLib_Parser.parse_term get_token' (tydict, tmdict)
       in
         (* Z3 assigns no ID to the final proof step; we use ID 0 *)
         extend_proof proof (0, t) before Lib.funpow rpars
           (fn () => Library.expect_token ")" (get_token ())) ()
+      end
+  end
+
+  (* entry point into the parser (i.e., the grammar's start symbol)
+
+     Z3 v2.19 proofs begin with:
+     ```
+     (error "...")          ; may or may not be present
+     (let ...
+     ```
+
+     Z3 v4 proofs begin with:
+     ```
+     (                      ; note the extra parenthesis
+       (declare-fun ...)    ; any number of these, maybe none
+       (proof
+         (let ...
+     ```
+     We'll try to seamlessly handle both styles of proof here. Namely,
+     for v4 proofs we'll consume the extra parenthesis here and then
+     continue parsing as normal. *)
+  fun parse_proof get_token state =
+  let
+    val () = Library.expect_token "(" (get_token ())
+    val token = get_token ()
+  in
+    if token = "let" orelse token = "error" then
+      (* Z3 v2.19 proof *)
+      let
+        (* undo look-ahead of the 2 tokens *)
+        val get_token' = undo_look_ahead ["(", token] get_token
+      in
+        parse_proof_inner get_token' state 0
+      end
+    else
+      (* Must be a Z3 v4 proof then *)
+      let
+        val () = Library.expect_token "(" token
+        (* leave the 1st parenthesis consumed and undo the 2nd *)
+        val get_token' = undo_look_ahead ["("] get_token
+      in
+        parse_proof_inner get_token' state 1
       end
   end
 
@@ -405,7 +455,7 @@ in
       else ()
     val get_token = Library.get_token (Library.get_buffered_char instream)
     val proof = parse_proof get_token
-      (tydict, tmdict, Redblackmap.mkDict Int.compare) 0
+      (tydict, tmdict, Redblackmap.mkDict Int.compare)
     val _ = if !Library.trace > 0 then
         WARNING "parse_stream" ("ignoring token '" ^ get_token () ^
           "' (and perhaps others) after proof")
