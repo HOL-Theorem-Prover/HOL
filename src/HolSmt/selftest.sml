@@ -48,6 +48,8 @@ fun die s =
     OS.Process.exit OS.Process.failure
   )
 
+fun term_with_types t = Lib.with_flag(show_types, true) Hol_pp.term_to_string t
+
 (* provable terms: theorem expected *)
 fun expect_thm name smt_tac t =
   let
@@ -55,14 +57,14 @@ fun expect_thm name smt_tac t =
     val thm = Tactical.TAC_PROOF (([], t), smt_tac)
       handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
         die ("Test of solver '" ^ name ^ "' failed on term '" ^
-          Hol_pp.term_to_string t ^ "': exception HOL_ERR (in " ^
+          term_with_types t ^ "': exception HOL_ERR (in " ^
           origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
           ")")
   in
     if null (Thm.hyp thm) andalso Thm.concl thm ~~ t then ()
     else
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
-        Hol_pp.term_to_string t ^ "': theorem differs (" ^
+        term_with_types t ^ "': theorem differs (" ^
         Hol_pp.thm_to_string thm ^ ")")
   end
 
@@ -72,7 +74,7 @@ fun expect_sat name smt_tac t =
     val _ = Tactical.TAC_PROOF (([], t), smt_tac)
   in
     die ("Test of solver '" ^ name ^ "' failed on term '" ^
-      Hol_pp.term_to_string t ^ "': exception expected")
+      term_with_types t ^ "': exception expected")
   end handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
     if origin_structure = "HolSmtLib" andalso
        origin_function = "GENERIC_SMT_TAC" andalso
@@ -82,7 +84,7 @@ fun expect_sat name smt_tac t =
       ()
     else
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
-        Hol_pp.term_to_string t ^
+        term_with_types t ^
         "': exception HOL_ERR has unexpected argument values (in " ^
         origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
         ")")
