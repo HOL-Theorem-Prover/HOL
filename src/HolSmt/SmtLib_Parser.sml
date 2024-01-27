@@ -525,6 +525,8 @@ local
 
 in
 
+  val parse_declare_fun = parse_declare_fun
+
   val parse_type = parse_type
   val parse_type_list = parse_type_list
 
