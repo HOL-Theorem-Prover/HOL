@@ -372,6 +372,12 @@ local
   in
     if head = "proof" then
       parse_proof_inner get_token (tydict, tmdict, proof) (rpars + 1)
+    else if head = "declare-fun" then
+      let
+        val tmdict = SmtLib_Parser.parse_declare_fun get_token (tydict, tmdict)
+      in
+        parse_proof_inner get_token (tydict, tmdict, proof) rpars
+      end
     else if head = "let" then
       let
         val (tmdict, proof) = parse_definition get_token (tydict, tmdict, proof)
