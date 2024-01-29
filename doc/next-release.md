@@ -148,6 +148,15 @@ number of components.
 
 -   __armv8-memory-model__ (in `examples/arm`): a port by Anthony Fox of Viktor Vafeiadis’s [Coq formalization of the Armv8 Memory Model](https://github.com/vafeiadis/arm-model), which is based on the official [mixed-size Armv8 memory model](https://github.com/herd/herdtools7/blob/95785c747750be4a3b64adfab9d5f5ee0ead8240/herd/libdir/aarch64.cat) and associated [paper](https://doi.org/10.1145/3458926).
 
+-   __*p*-adic numbers__ (in `examples/padics`): a construction of the *p*-adic numbers by Noah Gorrell.
+    The approach taken defines the prime valuation function *ν* on first the natural numbers and then the rationals.
+    It then defines the absolute value on ℚ so as to establish a $p$-metric.
+    Cauchy sequences over these can be constructed and quotiented to construct a new numeric type.
+    The new type `adic` is polymorphic such that the cardinality of the universe of the argument defines the prime number *p* of the construction.
+    For types that have infinite or non-prime universes, *p* is taken to be 2.
+    Thus, `:2 adic`, `:4 adic` and `:num adic` are isomorphic types, but `:3 adic` is distinct.
+    Addition, multiplication and injection from the rationals are defined.
+
 Incompatibilities:
 ------------------
 

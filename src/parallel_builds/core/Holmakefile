@@ -42,7 +42,10 @@ EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
          lambda \
          logic logic/folcompactness logic/modal-models logic/modal-tableaux \
          logic/ncfolproofs logic/propositional_logic logic/relevant-logic \
-         logic/temporal/src misc parity rings set-theory/zfset set-theory/vbg \
+         logic/temporal/src \
+         misc \
+         padics parity \
+         rings set-theory/zfset set-theory/vbg \
          zipper
 
 # selftest directories under src/quotient
