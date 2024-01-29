@@ -3518,28 +3518,28 @@ Proof
 QED
 
 Theorem RAT_EXP_LT2:
- !r i j. 1<r ==> (i<j <=> exp r i < exp r j)
+ !r i j. 1<r ==> (exp r i < exp r j <=> i < j)
 Proof
   rpt strip_tac >> simp[EQ_IMP_THM]
   >> qid_spec_tac ‘j’ >> CONV_TAC FORALL_AND_CONV
   >> qid_spec_tac ‘i’ >> CONV_TAC FORALL_AND_CONV
-  >> conj_asm1_tac
-  >-(rw[]
-     >> ‘?n. j = &(SUC n) + i’
-       by simp[NUM_POSINT_EXISTS_SUC,INT_SUB_LT,GSYM INT_EQ_SUB_RADD] >> gvs[]
-     >> ‘r<>0 /\ 0<r’ by metis_tac[RAT_LES_REF,RAT_LES_01,RAT_LES_TRANS]
-     >> Induct_on ‘n’
-     >- (simp[RAT_EXP_ADD,RAT_EXPN_TO_1]
-         >> metis_tac[RAT_LES_MUL_GTR_1,RAT_MUL_COMM,RAT_EXP_R_POS])
-  >- (‘exp r (&SUC (SUC n) + i) = exp r (&SUC n + i) * r’
-        by simp[INT,RAT_EXP_ADD,RAT_EXP_CALCULATE,rat_expn_def,
-                AC RAT_MUL_ASSOC RAT_MUL_COMM]
-      >> ‘exp r (&SUC n + i) < exp r (&SUC (SUC n) + i)’
-        by simp[RAT_LES_MUL_GTR_1,RAT_EXP_R_POS]
-      >> metis_tac[RAT_LES_TRANS]))
+  >> conj_asm2_tac
   >- (rw[] >> CCONTR_TAC >> ‘j<i \/ j=i’ by simp[GSYM INT_NOT_LT,GSYM INT_LE_LT]
       >- metis_tac[RAT_LES_ANTISYM]
       >- gs[RAT_LES_REF])
+  >- (rw[]
+      >> ‘?n. j = &(SUC n) + i’
+        by simp[NUM_POSINT_EXISTS_SUC,INT_SUB_LT,GSYM INT_EQ_SUB_RADD] >> gvs[]
+      >> ‘r<>0 /\ 0<r’ by metis_tac[RAT_LES_REF,RAT_LES_01,RAT_LES_TRANS]
+      >> Induct_on ‘n’
+      >- (simp[RAT_EXP_ADD,RAT_EXPN_TO_1]
+          >> metis_tac[RAT_LES_MUL_GTR_1,RAT_MUL_COMM,RAT_EXP_R_POS])
+      >- (‘exp r (&SUC (SUC n) + i) = exp r (&SUC n + i) * r’
+            by simp[INT,RAT_EXP_ADD,RAT_EXP_CALCULATE,rat_expn_def,
+                    AC RAT_MUL_ASSOC RAT_MUL_COMM]
+          >> ‘exp r (&SUC n + i) < exp r (&SUC (SUC n) + i)’
+            by simp[RAT_LES_MUL_GTR_1,RAT_EXP_R_POS]
+          >> metis_tac[RAT_LES_TRANS]))
 QED
 
 Theorem RAT_MINV_LT_1:
