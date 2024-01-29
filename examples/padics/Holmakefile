@@ -1,0 +1,3 @@
+INCLUDES = $(HOLDIR)/src/rational $(HOLDIR)/src/real $(HOLDIR)/src/n-bit
+
+# n-bit is used to find fcpTheory for the itself
