@@ -26,21 +26,24 @@ All files are located under tools/vim
 - `vimhol.sh`: Wraps hol and vim side-by-side in tmux. Below you find the
   description of its usage. See below for an alternative approach of running
   an hol interactive session within vim.
+- `hol4script.vim`: Syntax highlighting definitions for HOL4 scripts.
 - `README.md`: Documentation. (This file.)
 
 ## Quickstart
 
 1. Add the contents of `hol-config.sml` to your `~/.hol-config.sml` file
 2. Add the contents of `filetype.vim` to your `~/.vim/filetype.vim`
-3. Run hol to start the HOL session (only necessary when using vim without
+3. Copy `hol4script.vim` to your `~/.vim/syntax/hol4script.vim`
+4. Run hol to start the HOL session (only necessary when using vim without
    support for terminal buffers)
-4. Run vim and open a HOL script
-5. Select some SML value or declaration and type `hs` to send it to the HOL
+5. Run vim and open a HOL script
+6. Select some SML value or declaration and type `hs` to send it to the HOL
    session. See below for more key mappings
 
 If you don't have `filetype on` in vim, then this won't work. In that case, you
 should forget step 2 and source `hol.vim` manually in step 3. To turn filetype
-on, you can add `filetype on` to your `~/.vimrc`.
+on, you can add `filetype on` to your `~/.vimrc`. Similarly, syntax
+highlighting requires `syntax on`.
 
 ## WARNING
 
