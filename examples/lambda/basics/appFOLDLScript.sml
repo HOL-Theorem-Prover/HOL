@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory listTheory rich_listTheory pred_setTheory hurdUtils;
+open arithmeticTheory listTheory rich_listTheory pred_setTheory finite_mapTheory
+     hurdUtils;
 
 open termTheory binderLib;
 
@@ -57,18 +58,7 @@ val take_lemma = prove(
   ``∀l n. 0 < n ∧ n ≤ LENGTH l ⇒ TAKE n l ≠ []``,
   Induct THEN SRW_TAC [ARITH_ss][]);
 
-val _ = augment_srw_ss[rewrites[listTheory.TAKE_def,listTheory.DROP_def]];
-
-val DROP_PREn_LAST_CONS = store_thm(
-  "DROP_PREn_LAST_CONS",
-  ``∀t n. 0 < n ∧ n ≤ LENGTH t ⇒
-          (DROP (n - 1) t = LAST (TAKE n t) :: DROP n t)``,
-  Induct THEN SRW_TAC [ARITH_ss][] THENL [
-    `n = 1` by DECIDE_TAC THEN SRW_TAC [][],
-    `n = 1` by DECIDE_TAC THEN SRW_TAC [][],
-    `(t = []) ∨ ∃h t0. t = h :: t0` by METIS_TAC [listTheory.list_CASES] THEN
-    FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
-  ]);
+val _ = augment_srw_ss[rewrites[TAKE_def, DROP_def]];
 
 val appstar_eq_appstar = store_thm(
   "appstar_eq_appstar",
@@ -324,6 +314,54 @@ Proof
     DISCH_THEN (K ALL_TAC) THEN
     SRW_TAC [][LAMl_vsub, SUB_ISUB_SINGLETON, ISUB_APPEND]
   ]
+QED
+
+Theorem LAMl_ALPHA_ssub :
+    !vs vs' M.
+       LENGTH vs = LENGTH vs' /\ ALL_DISTINCT vs /\ ALL_DISTINCT vs' /\
+       DISJOINT (LIST_TO_SET vs') (LIST_TO_SET vs UNION FV M) ==>
+       LAMl vs M = LAMl vs' ((FEMPTY |++ ZIP (vs, MAP VAR vs')) ' M)
+Proof
+    rpt STRIP_TAC
+ >> Suff ‘(FEMPTY |++ ZIP (vs, MAP VAR vs')) ' M =
+          M ISUB REVERSE (ZIP (MAP VAR vs', vs))’
+ >- (Rewr' >> MATCH_MP_TAC LAMl_ALPHA >> art [])
+ >> rpt (POP_ASSUM MP_TAC)
+ >> Q.ID_SPEC_TAC ‘vs'’
+ >> Q.ID_SPEC_TAC ‘vs’
+ >> Induct_on ‘vs’ >- rw [FUPDATE_LIST_THM, ISUB_def]
+ >> rw []
+ >> Cases_on ‘vs'’ >- fs []
+ >> fs [] >> rename1 ‘v # M’
+ (* RHS rewriting *)
+ >> REWRITE_TAC [GSYM ISUB_APPEND, GSYM SUB_ISUB_SINGLETON]
+ (* LHS rewriting *)
+ >> rw [FUPDATE_LIST_THM]
+ >> Know ‘(FEMPTY :string |-> term) |+ (h,VAR v) |++ ZIP (vs,MAP VAR t) =
+          (FEMPTY |++ ZIP (vs,MAP VAR t)) |+ (h,VAR v)’
+ >- (MATCH_MP_TAC FUPDATE_FUPDATE_LIST_COMMUTES \\
+     rw [MAP_ZIP])
+ >> Rewr'
+ >> qabbrev_tac ‘fm = (FEMPTY :string |-> term) |++ ZIP (vs,MAP VAR t)’
+ >> ‘FDOM fm = set vs’ by (rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, MAP_ZIP])
+ (* applying ssub_update_apply_SUBST' *)
+ >> Know ‘(fm |+ (h,VAR v)) ' M = [fm ' (VAR v)/h] (fm ' M)’
+ >- (MATCH_MP_TAC ssub_update_apply_SUBST' >> rw [] \\
+    ‘fm = fromPairs vs (MAP VAR t)’ by rw [Abbr ‘fm’, fromPairs_def] \\
+     POP_ORW \\
+     Q.PAT_X_ASSUM ‘MEM k vs’ MP_TAC >> rw [MEM_EL] \\
+     Know ‘fromPairs vs (MAP VAR t) ' (EL n vs) = EL n (MAP VAR t)’
+     >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
+     rw [EL_MAP] \\
+     Q.PAT_X_ASSUM ‘~MEM h t’ MP_TAC >> rw [MEM_EL] \\
+     POP_ASSUM (MP_TAC o (Q.SPEC ‘n’)) >> rw [])
+ >> Rewr'
+ >> Know ‘fm ' (VAR v) = VAR v’
+ >- (MATCH_MP_TAC ssub_14b >> rw [GSYM DISJOINT_DEF])
+ >> Rewr'
+ >> Suff ‘fm ' M = M ISUB REVERSE (ZIP (MAP VAR t,vs))’ >- rw []
+ >> qunabbrev_tac ‘fm’
+ >> FIRST_X_ASSUM irule >> rw []
 QED
 
 Theorem LAMl_SNOC[simp] :
