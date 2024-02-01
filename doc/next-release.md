@@ -65,6 +65,12 @@ New theories:
 - `permutes`: The theory of permutations for general and finite sets, originally
   ported from HOL-Light's `Library/permutations.ml`.
 
+- `keccak`: Defines the SHA-3 standard family of hash functions, based on the
+  Keccak permutation and sponge construction. Keccak256, which is widely used
+  in Ethereum, is included and was the basis for this work. A rudimentary
+  computable version based on sptrees is included; faster evaluation using
+  cvcompute is left for future work.
+
 New tools:
 ----------
 
