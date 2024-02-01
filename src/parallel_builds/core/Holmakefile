@@ -76,8 +76,7 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
           balanced_bst \
           category computability/kolmog computability/lambda \
             computability/recdegrees \
-            computability/register computability/turing \
-            Crypto Crypto/Keccak \
+            computability/register computability/turing Crypto \
           decidable_separationLogic/src \
           formal-languages/regular fun-op-sem \
           lambda/other-models lambda/typing \
