@@ -829,6 +829,14 @@ val DISJOINT_ALT = store_thm (* from util_prob *)
    RW_TAC std_ss [IN_DISJOINT]
    >> PROVE_TAC []);
 
+Theorem DISJOINT_ALT' :
+    !s t. DISJOINT s t <=> !x. x IN t ==> x NOTIN s
+Proof
+    ONCE_REWRITE_TAC [DISJOINT_SYM]
+ >> RW_TAC std_ss [IN_DISJOINT]
+ >> PROVE_TAC []
+QED
+
 (* --------------------------------------------------------------------- *)
 (* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
 (* --------------------------------------------------------------------- *)
@@ -861,6 +869,13 @@ Proof
      DISCH_THEN(fn th => GEN_TAC THEN
                          STRIP_ASSUME_TAC (SPEC (“x:'a”) th)) THEN
      ASM_REWRITE_TAC []
+QED
+
+Theorem DISJOINT_UNION' :
+    !s t u. DISJOINT u (s UNION t) <=> DISJOINT u s /\ DISJOINT u t
+Proof
+    ONCE_REWRITE_TAC [DISJOINT_SYM]
+ >> REWRITE_TAC [DISJOINT_UNION]
 QED
 
 Theorem DISJOINT_UNION_BOTH:

@@ -2382,6 +2382,18 @@ Proof
   simp[LASTN_DROP_UNCOND]
 QED
 
+(* from examples/lambda/basics/appFOLDLScript.sml *)
+Theorem DROP_PREn_LAST_CONS :
+    !l n. 0 < n /\ n <= LENGTH l ==>
+          (DROP (n - 1) l = LAST (TAKE n l) :: DROP n l)
+Proof
+  Induct THEN SRW_TAC [numSimps.ARITH_ss][TAKE_def, DROP_def] THENL [
+    `n = 1` by numLib.DECIDE_TAC THEN SRW_TAC [][],
+    `n = 1` by numLib.DECIDE_TAC THEN SRW_TAC [][],
+    `(l = []) \/ ?h t0. l = h :: t0` by METIS_TAC [list_CASES] THEN
+    FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [] ]
+QED
+
 val SUB_ADD_lem =
    numLib.DECIDE ``!l n m. n + m <= l ==> ((l - (n + m)) + n = l - m)``
 
@@ -2568,6 +2580,14 @@ val IS_PREFIX_BUTLAST = Q.store_thm ("IS_PREFIX_BUTLAST",
    THEN Q.SPEC_TAC (`y`, `y`)
    THEN INDUCT_THEN list_INDUCT ASSUME_TAC
    THEN ASM_SIMP_TAC boolSimps.bool_ss [FRONT_CONS, IS_PREFIX]);
+
+Theorem IS_PREFIX_BUTLAST' :
+    !l. l <> [] ==> IS_PREFIX l (FRONT l)
+Proof
+    Q.X_GEN_TAC ‘l’
+ >> Cases_on ‘l’ >- SRW_TAC[][]
+ >> SRW_TAC[][IS_PREFIX_BUTLAST]
+QED
 
 val IS_PREFIX_LENGTH = Q.store_thm ("IS_PREFIX_LENGTH",
    `!x y. IS_PREFIX y x ==> LENGTH x <= LENGTH y`,

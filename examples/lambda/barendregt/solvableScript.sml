@@ -56,7 +56,7 @@ Proof
     Know ‘closure (VAR x) = LAM x (VAR x)’
  >- (MATCH_MP_TAC closure_open_sing >> rw [])
  >> Rewr'
- >> REWRITE_TAC [Q.SPEC ‘x’ I_alt]
+ >> REWRITE_TAC [Q.SPEC ‘x’ I_thm]
 QED
 
 Theorem closures_imp_closed :
@@ -1062,7 +1062,7 @@ Theorem lameq_principle_hnf_lemma :
                 M1 = principle_hnf (M @* MAP VAR vs);
                 N1 = principle_hnf (N @* MAP VAR vs)
             in
-                hnf_headvar M1 = hnf_headvar N1 /\
+                hnf_head M1 = hnf_head N1 /\
                 LENGTH (hnf_children M1) = LENGTH (hnf_children N1) /\
                 !i. i < LENGTH (hnf_children M1) ==>
                     EL i (hnf_children M1) == EL i (hnf_children N1)
@@ -1166,7 +1166,7 @@ Theorem lameq_principle_hnf_headvar_eq :
          n = LAMl_size M0 /\ vs = FRESH_list n X /\
          M1 = principle_hnf (M0 @* MAP VAR vs) /\
          N1 = principle_hnf (N0 @* MAP VAR vs)
-     ==> hnf_headvar M1 = hnf_headvar N1
+     ==> hnf_head M1 = hnf_head N1
 Proof
     RW_TAC std_ss [UNION_SUBSET]
  >> qabbrev_tac ‘M0 = principle_hnf M’
@@ -1205,7 +1205,7 @@ Theorem lameq_principle_hnf_thm :
          M1 = principle_hnf (M0 @* MAP VAR vs) /\
          N1 = principle_hnf (N0 @* MAP VAR vs)
      ==> LAMl_size M0 = LAMl_size N0 /\
-         hnf_headvar M1 = hnf_headvar N1 /\
+         hnf_head M1 = hnf_head N1 /\
          LENGTH (hnf_children M1) = LENGTH (hnf_children N1) /\
          !i. i < LENGTH (hnf_children M1) ==>
              EL i (hnf_children M1) == EL i (hnf_children N1)

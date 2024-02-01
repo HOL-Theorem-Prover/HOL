@@ -1375,10 +1375,36 @@ Proof
  >> rw [appstar_SNOC]
 QED
 
-(* Another variant of ‘hnf_cases’ with a given (shared) list of fresh variables
+(*---------------------------------------------------------------------------*
+ *  hnf_children_size (of hnf)
+ *---------------------------------------------------------------------------*)
 
-   NOTE: "irule (iffLR hnf_cases_shared)" is a useful tactic for this theorem.
- *)
+val (hnf_children_size_thm, _) = define_recursive_term_function
+   ‘(hnf_children_size ((VAR :string -> term) s) = 0) /\
+    (hnf_children_size (t1 @@ t2) = 1 + hnf_children_size t1) /\
+    (hnf_children_size (LAM v t) = hnf_children_size t)’;
+
+val _ = export_rewrites ["hnf_children_size_thm"];
+
+Theorem hnf_children_size_LAMl[simp] :
+    hnf_children_size (LAMl vs t) = hnf_children_size t
+Proof
+    Induct_on ‘vs’ >> rw []
+QED
+
+Theorem hnf_children_size_hnf[simp] :
+    hnf_children_size (LAMl vs (VAR y @* Ms)) = LENGTH Ms
+Proof
+    rw []
+ >> Induct_on ‘Ms’ using SNOC_INDUCT >- rw []
+ >> rw [appstar_SNOC]
+QED
+
+(*---------------------------------------------------------------------------*
+ *  hnf_cases_shared - ‘hnf_cases’ with a given list of fresh variables
+ *---------------------------------------------------------------------------*)
+
+(* NOTE: "irule (iffLR hnf_cases_shared)" is a useful tactic *)
 Theorem hnf_cases_shared :
     !vs M. ALL_DISTINCT vs /\ LAMl_size M <= LENGTH vs /\
            DISJOINT (set vs) (FV M) ==>
