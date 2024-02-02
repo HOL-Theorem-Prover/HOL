@@ -407,9 +407,9 @@ in
 
     (``ABS (x:int) >= 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``(ABS (x:int) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:int) <= 0 ==> (ABS x = ~x)``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``ABS (ABS (x:int)) = ABS x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``(x:int) <= 0 ==> (ABS x = ~x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
+    (``ABS (ABS (x:int)) = ABS x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``ABS (x:int) = x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
 
     (``int_min (x:int) y <= x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
