@@ -327,4 +327,82 @@ struct
       wordsTheory.LSL_LIMIT, wordsTheory.LSR_LIMIT]
 *)
 
+  (* This tactic proves one of the hypotheses created in
+     Z3_ProofReplay.remove_definitions. For illustration purposes, let's say we
+     have the following goal:
+
+     ?z2. (?z1. z1 = x + 1 /\ z2 = z1 + 2) /\ z2 = x + 1 + 2
+
+     In this example, we first find an appropriate instantiation for `z2`, which
+     is `x + 1 + 2` in this case, and then apply EXISTS_TAC, obtaining the
+     following goal:
+
+     (?z1. z1 = x + 1 /\ x + 1 + 2 = z1 + 2) /\ x + 1 + 2 = x + 1 + 2
+
+     We split the conjunct above, obtaining two sub-goals. The equality on the
+     rhs is proved trivially with REFL_TAC, leaving the following sub-goal to be
+     proved:
+
+     ?z1. z1 = x + 1 /\ x + 1 + 2 = z1 + 2
+
+     We then repeat the same for `z1` by recursing into this tactic, which
+     completes the proof. *)
+  fun COMPOSITE_HYP_TAC goal =
+  let
+    (* Let's find an appropriate instantiation for the variable *)
+    val (var, term) = boolSyntax.dest_exists (Lib.snd goal)
+    (* `term` now contains conjunctions. We just need to find one of them
+       that is in the form `var = value` (rather than `?var. ...` or
+       `value = value` *)
+    fun find_value tm =
+      if boolSyntax.is_conj tm then
+        (* If it's a conjunction, we inspect one side and, iff we haven't found
+           an appropriate instantiation, we inspect the other one. *)
+        let
+          val (c1, c2) = boolSyntax.dest_conj tm
+        in
+          case find_value c2 of
+            SOME x => SOME x
+          | NONE => find_value c1
+        end
+      else if boolSyntax.is_exists tm then
+        (* If we reach an existentially quantified term (corresponding to a
+           different variable), don't bother looking into it *)
+        NONE
+      else
+        (* Otherwise we should be at an equality. An appropriate instantiation
+           will have the form `var = value` *)
+        let
+          val (lhs, rhs) = boolSyntax.dest_eq tm
+        in
+          (* Note: I don't think it's enough to make sure `lhs` is a var,
+             because it could accidentally be another var that we're not
+             interested in (such as `x`), rather than the one we want to
+             instantiate (e.g. `z1`). So we actually need to compare `lhs` with
+             `var` to be sure. `var` is the existentially quantified variable
+             that we are looking into. *)
+          if Term.term_eq var lhs then
+            SOME rhs
+          else
+            NONE
+        end
+    val value = Option.valOf (find_value term)
+    (* PROVE_CONJ_TAC proves the conjunctions after instantiating the
+       existential quantifier *)
+    fun PROVE_CONJ_TAC goal =
+      if boolSyntax.is_conj (Lib.snd goal) then
+        (* If we're at a conjunction, split it and prove the two subgoals using
+           this same tactic *)
+        (Tactical.THEN (Tactic.CONJ_TAC, PROVE_CONJ_TAC)) goal
+      else if boolSyntax.is_exists (Lib.snd goal) then
+        (* If we're at an existential quantifier, recurse into the outer tactic
+           and do the same all over again *)
+        COMPOSITE_HYP_TAC goal
+      else
+        (* Otherwise, we must have a fully-expanded equality by now, since we've
+           already instantiated all the quantifiers that affect this equality *)
+        Tactic.REFL_TAC goal
+  in
+    (Tactical.THEN (Tactic.EXISTS_TAC value, PROVE_CONJ_TAC)) goal
+  end
 end
