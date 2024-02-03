@@ -844,7 +844,7 @@ local
         profile "rewrite(10)(BBLAST)" blastLib.BBLAST_PROVE t
         handle Feedback.HOL_ERR _ =>
 
-        if term_contains_real_ty t then
+        if profile "rewrite(11.0)(contains_real)" term_contains_real_ty t then
           profile "rewrite(11.1)(REAL_ARITH)" RealField.REAL_ARITH t
         else
           profile "rewrite(11.2)(ARITH_PROVE)" intLib.ARITH_PROVE t
