@@ -101,6 +101,12 @@
   val _ = s ("d027", P ``~(if p then q else r) \/ ~p \/ q``)
   val _ = s ("d028", P ``~(if p then q else r) \/ p \/ r``)
 
+  (* used for Z3's proof rule intro-def *)
+  val _ = s ("i001", Drule.UNDISCH (T ``(n = t) ==> (n = t)``))
+  val _ = s ("i002", Drule.UNDISCH (T ``(n = t) ==> ~n \/ t``))
+  val _ = s ("i003", Drule.UNDISCH (T ``(n = t) ==> (n \/ ~t) /\ (~n \/ t)``))
+  val _ = s ("i004", Drule.UNDISCH (P ``(n = if c then t1 else t2) ==> (~c \/ (n = t1)) /\ (c \/ (n = t2))``))
+
   (* used for Z3's proof rule rewrite *)
 
   val _ = s ("r001", P ``(x = y) <=> (y = x)``)

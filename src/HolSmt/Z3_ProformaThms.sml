@@ -17,6 +17,9 @@ in
      d013, d014, d015, d016, d017, d018, d019, d020, d021, d022, d023, d024,
      d025, d026, d027, d028]
 
+  val intro_def_thms = thm_net_from_list
+    [i001, i002, i003, i004]
+
   val rewrite_thms = thm_net_from_list
     [r001, r002, r003, r004, r005, r006, r007, r008, r009, r010, r011, r012,
      r013, r014, r015, r016, r017, r018, r019, r020, r021, r022, r023, r024,

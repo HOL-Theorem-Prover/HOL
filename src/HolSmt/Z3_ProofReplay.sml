@@ -56,6 +56,10 @@ local
     (* keeps track of assumptions; (only) these may remain in the
        final theorem *)
     asserted_hyps : Term.term HOLset.set,
+    (* keeps track of definitions introduced by Z3; these get added during the
+       proof and are deleted at the end, just before returning the final theorem.
+       all of them should be of the form: ``name = term`` *)
+    definition_hyps : Term.term HOLset.set,
     (* stores certain theorems (proved by 'rewrite' or 'th_lemma') for
        later retrieval, to avoid re-reproving them *)
     thm_cache : Thm.thm Net.net
@@ -64,12 +68,21 @@ local
   fun state_assert (s : state) (t : Term.term) : state =
     {
       asserted_hyps = HOLset.add (#asserted_hyps s, t),
+      definition_hyps = #definition_hyps s,
+      thm_cache = #thm_cache s
+    }
+
+  fun state_define (s : state) (terms : Term.term list) : state =
+    {
+      asserted_hyps = #asserted_hyps s,
+      definition_hyps = HOLset.addList (#definition_hyps s, terms),
       thm_cache = #thm_cache s
     }
 
   fun state_cache_thm (s : state) (thm : Thm.thm) : state =
     {
       asserted_hyps = #asserted_hyps s,
+      definition_hyps = #definition_hyps s,
       thm_cache = Net.insert (Thm.concl thm, thm) (#thm_cache s)
     }
 
@@ -595,6 +608,40 @@ local
   fun z3_iff_true (state, thm, _) =
     (state, Thm.MP (Thm.SPEC (Thm.concl thm) VALID_IFF_TRUE) thm)
 
+  (* `intro-def` introduces a name for a term.
+
+     `t` will be in one of the following schematic forms:
+
+     1. name = term
+
+     2. ~name \/ term
+
+     3. (name \/ ~term) /\ (~name \/ term)
+
+     ... or, when the term is of the form `if cond then t1 else t2`:
+
+     4. (~cond \/ (name = t1)) /\ (cond \/ (name = t2))
+
+     We then instantiate the following theorem:
+
+     name = term |- t
+
+     The introduced assumption is added to a set of hypotheses (i.e. the set
+     of introduced definitions) stored in `state`. Since the variable names
+     used in these definitions are local names introduced by Z3 for the
+     purposes of completing the proof and should not otherwise be relevant in
+     either the remaining hypotheses or the conclusion of the final theorem,
+     we can remove all such definitions at the end of the proof. *)
+
+  fun z3_intro_def (state, t) =
+  let
+    val thm = List.hd (Net.match t Z3_ProformaThms.intro_def_thms)
+    val inst_thm = Drule.INST_TY_TERM (Term.match_term (Thm.concl thm) t) thm
+    val asm = List.hd (Thm.hyp inst_thm)
+  in
+    (state_define state [asm], inst_thm)
+  end
+
   (*  [l1, ..., ln] |- F
      --------------------
      |- ~l1 \/ ... \/ ~ln
@@ -1017,6 +1064,8 @@ local
         zero_prems state_proof "hypothesis" z3_hypothesis x continuation
     | thm_of_proofterm (state_proof, IFF_TRUE x) continuation =
         one_prem state_proof "iff_true" z3_iff_true x continuation
+    | thm_of_proofterm (state_proof, INTRO_DEF x) continuation =
+        zero_prems state_proof "intro_def" z3_intro_def x continuation
     | thm_of_proofterm (state_proof, LEMMA x) continuation =
         one_prem state_proof "lemma" z3_lemma x continuation
     | thm_of_proofterm (state_proof, MONOTONICITY x) continuation =
@@ -1071,6 +1120,69 @@ local
     | thm_of_proofterm (state_proof, THEOREM thm) continuation =
         continuation (state_proof, thm)
 
+  (* Remove the definitions `defs` from the set of hypotheses in `thm`,
+     returning the resulting theorem, i.e.:
+
+     A u defs |- t
+     -------------  remove_definitions defs
+       A |- t
+
+     Each definition in `defs` must be of the form ``var = term`` and `var` must
+     not be free in `t` nor in `A`.
+
+     There is a major complication: some definitions reference variables in
+     other definitions and they may even be duplicated (with and without
+     expansion), e.g.:
+
+     z2 = z1 + 2
+     z1 = x + 1
+     z2 = x + 1 + 2
+     z3 = 3 + y
+
+     We use Drule.EXISTS_LEFT [``z1``, ``z2``, ``z3``] to convert `thm` into a
+     semi-final theorem with the above hypotheses modified into a more useful
+     form. Namely, EXISTS_LEFT introduces existential quantifiers and also
+     collapses all the definitions that reference other definitions into a
+     single composite hypothesis. In the above example, the hypotheses would
+     become:
+
+     ?z2. (?z1. z1 = x + 1 /\ z2 = z1 + 2) /\ z2 = x + 1 + 2
+
+     ?z3. z3 = 3 + y
+
+     We then prove the above hypotheses (see Library.COMPOSITE_HYP_TAC). After
+     obtaining these theorems (two in this example), we use Drule.PROVE_HYP to
+     delete the hypotheses from the semi-final theorem, thus obtaining the final
+     theorem, which no longer contains any definitions in its set of
+     hypotheses. *)
+  fun remove_definitions (defs: Term.term HOLset.set, thm: Thm.thm): Thm.thm =
+    if HOLset.isEmpty defs then
+      thm
+    else
+      let
+        fun add_var (def, set) = HOLset.add (set, Lib.fst (boolSyntax.dest_eq def))
+        (* `var_set` will contain the set of all variables being defined *)
+        val var_set = HOLset.foldl add_var Term.empty_tmset defs
+        val var_list = HOLset.listItems var_set
+        val semifinal_thm = Drule.EXISTS_LEFT var_list thm
+        (* The hypotheses corresponding to the definitions have been modified by
+           EXISTS_LEFT, so they are no longer the same as `defs`. To prove them,
+           we need to find them among the set of all hypotheses in `semifinal_thm`,
+           i.e. we need to reliably distinguish the definitions from the other
+           hypotheses. Fortunately, this should be easy, as they should all start
+           with `?var.`, where `var` is one of the variables in `var_set`. *)
+        fun find_hyp hyp = boolSyntax.is_exists hyp andalso HOLset.member (var_set,
+          Lib.fst (boolSyntax.dest_exists hyp))
+        val new_defs = HOLset.filter find_hyp (Thm.hypset semifinal_thm)
+        (* We now prove all these hypotheses and store the result in `theorems` *)
+        fun prove_hyp hyp = Tactical.TAC_PROOF (([], hyp),
+          Library.COMPOSITE_HYP_TAC)
+        val theorems = List.map prove_hyp (HOLset.listItems new_defs)
+        (* All that's left is removing the hypotheses from `semifinal_thm` *)
+        fun remove_hyp (hyp_thm, thm) = Drule.PROVE_HYP hyp_thm thm
+      in
+        List.foldl remove_hyp semifinal_thm theorems
+      end
 in
 
   (* returns a theorem that concludes ``F``, with its hypotheses (a
@@ -1084,6 +1196,7 @@ in
     (* initial state *)
     val state = {
       asserted_hyps = Term.empty_tmset,
+      definition_hyps = Term.empty_tmset,
       thm_cache = Net.empty
     }
 
@@ -1093,13 +1206,17 @@ in
     val _ = Feq (Thm.concl thm) orelse
       raise ERR "check_proof" "final conclusion is not 'F'"
 
+    (* remove the definitions introduced by Z3 from the set of hypotheses *)
+    val final_thm = profile "check_proof(remove_definitions)" remove_definitions
+      (#definition_hyps state, thm)
+
     (* check that the final theorem contains no hyps other than those
        that have been asserted *)
-    val _ = profile "check_proof(hypcheck)" HOLset.isSubset (Thm.hypset thm,
+    val _ = profile "check_proof(hypcheck)" HOLset.isSubset (Thm.hypset final_thm,
         #asserted_hyps state) orelse
       raise ERR "check_proof" "final theorem contains additional hyp(s)"
   in
-    thm
+    final_thm
   end
 
 end  (* local *)
