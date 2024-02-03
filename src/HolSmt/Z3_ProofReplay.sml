@@ -851,6 +851,46 @@ local
     in
       (state_cache_thm state thm, thm)
     end
+
+    handle Feedback.HOL_ERR _ =>
+
+    (* If nothing worked, let's try unifying terms.
+       As a motivating example, when proving `(if x < y then x else y) <= x`,
+       Z3 v4.12.4 asks us to prove the following rewrite as one of the proof
+       steps:
+
+       ~(x + -1 * (if x + -1 * y >= 0 then y else x) >= 0) <=>
+       ~(x + -1 * $var$(z3name!0) >= 0)
+
+       ... where z3name!0 is a variable declared by Z3 at the beginning of its
+       proof certificate, but which we know nothing about at this point.
+
+       We use the following function to unify both sides of the equality such
+       that we obtain instantiations for these variables invented by Z3 (i.e. in
+       this example, we'll obtain ``z3name!0 = if x + -1 * y >= 0 then y else x``):
+
+       > Unify.simp_unify_terms [] ``<lhs>`` ``<rhs>``;
+
+       val it = [{redex = ``$var$(z3name!0)``, residue =
+         ``if x + -1 * y >= 0 then y else x``}]: (term, term) subst
+
+       We then prove the theorem by substituting the variable(s) and add
+       ``z3name!0 = if ... then y else x`` to the list of Z3-provided
+       definitions (as in the `z3_intro_def` handler), to make sure it gets
+       removed from the set of hypotheses of the final theorem. *)
+
+    let
+      val (lhs, rhs) = dest_eq t
+      val substs = profile "rewrite(12.1)(unification)"
+        (Unify.simp_unify_terms [] lhs) rhs
+      val asl = List.map (fn {redex, residue} => mk_eq(redex, residue)) substs
+      val thms = List.map Thm.ASSUME asl
+      fun proof goal = Tactical.TAC_PROOF ((asl, goal),
+        Tactical.THEN (Tactic.SUBST_TAC thms, Tactic.REFL_TAC))
+      val thm = profile "rewrite(12.2)(unification_proof)" proof t
+    in
+      (state_define (state_cache_thm state thm) asl, thm)
+    end
   end
 
   fun z3_symm (state, thm, t) =
