@@ -53,6 +53,7 @@ local
     ("bvcomp", K_zero_two wordsSyntax.mk_word_compare),
     ("bvsub", K_zero_two wordsSyntax.mk_word_sub),
     ("bvsdiv", K_zero_two wordsSyntax.mk_word_quot),
+    ("bvsdiv_i", K_zero_two wordsSyntax.mk_word_quot),
     ("bvsrem", K_zero_two wordsSyntax.mk_word_rem),
     ("bvsmod", K_zero_two integer_wordSyntax.mk_word_smod),
     ("bvashr", K_zero_two wordsSyntax.mk_word_asr_bv),
