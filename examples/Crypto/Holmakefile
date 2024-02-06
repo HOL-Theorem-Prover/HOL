@@ -3,5 +3,7 @@ INCLUDES = \
 CLINE_OPTIONS = -r
 
 ifeq ($(KERNELID),stdknl)
+ifeq ($(HOLSELFTESTLEVEL),3)
 INCLUDES += Keccak
+endif
 endif
