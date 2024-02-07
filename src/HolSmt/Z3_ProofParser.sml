@@ -125,6 +125,7 @@ local
           list_prems name token [] prems
         end)),
     ("trans",           two_prems "trans"),
+    ("trans*",          list_prems "trans*"),
     ("true-axiom",      zero_prems "true-axiom"),
     ("unit-resolution", list_prems "unit-resolution"),
 
@@ -310,6 +311,7 @@ local
       ("th-lemma-basic",  list_prems_pt TH_LEMMA_BASIC),
       ("th-lemma-bv",     list_prems_pt TH_LEMMA_BV),
       ("trans",           two_prems_pt TRANS),
+      ("trans*",          list_prems_pt TRANS_STAR),
       ("true-axiom",      zero_prems_pt TRUE_AXIOM),
       ("unit-resolution", list_prems_pt UNIT_RESOLUTION)
     ]

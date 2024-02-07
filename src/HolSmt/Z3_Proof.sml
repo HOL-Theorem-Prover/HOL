@@ -51,6 +51,7 @@ struct
                      | TH_LEMMA_BASIC of proofterm list * Term.term
                      | TH_LEMMA_BV of proofterm list * Term.term
                      | TRANS of proofterm * proofterm * Term.term
+                     | TRANS_STAR of proofterm list * Term.term
                      | TRUE_AXIOM of Term.term
                      | UNIT_RESOLUTION of proofterm list * Term.term
                      | ID of int

@@ -977,6 +977,35 @@ local
   fun z3_trans (state, thm1, thm2, t) =
     (state, Thm.TRANS thm1 thm2)
 
+  (* `z3_trans_star` is supposed to handle multiple symmetry and transitivity
+     rules. Z3 provides the following example:
+
+     A1 |- R a b   A2 |- R c b   A3 |- R c d
+     --------------------------------------- trans*
+                A1 u A2 u A3 |- R a d
+
+     Although more generally, the proof rule is supposed to handle any number of
+     theorems passed as arguments and any path between the elements.
+
+     R must be a symmetric and transitive relation. So far only equality has
+     been observed to be used as `R` (same as in the `symm` and `trans` rules),
+     although it's not inconceivable that it may be used for other relations as
+     well.
+
+     For the initial implementation, we rely on metisLib.METIS_TAC to find a
+     proof. However, if it becomes a bottleneck, a more specialized proof
+     handler could be implemented to improve performance. *)
+
+  fun z3_trans_star (state, thms, t) =
+  let
+    (* Gather all the hypotheses of all theorems together into a set of assumptions *)
+    fun join_fn (thm, asm_set) = HOLset.union (asm_set, Thm.hypset thm)
+    val asms = List.foldl join_fn Term.empty_tmset thms
+    val thm = Tactical.TAC_PROOF ((HOLset.listItems asms, t), metisLib.METIS_TAC thms)
+  in
+    (state, thm)
+  end
+
   fun z3_true_axiom (state, t) =
     (state, boolTheory.TRUTH)
 
@@ -1133,6 +1162,8 @@ local
         list_prems state_proof "th_lemma[bv]" z3_th_lemma_bv x continuation []
     | thm_of_proofterm (state_proof, TRANS x) continuation =
         two_prems state_proof "trans" z3_trans x continuation
+    | thm_of_proofterm (state_proof, TRANS_STAR x) continuation =
+        list_prems state_proof "trans*" z3_trans_star x continuation []
     | thm_of_proofterm (state_proof, TRUE_AXIOM x) continuation =
         zero_prems state_proof "true_axiom" z3_true_axiom x continuation
     | thm_of_proofterm (state_proof, UNIT_RESOLUTION x) continuation =
