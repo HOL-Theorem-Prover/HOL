@@ -46,10 +46,14 @@ local
         end
      else
         raise ERR "<BV_extension_dict._>" "not a bit-vector constant")),
+    ("bvand", leftassoc wordsSyntax.mk_word_and),
+    ("bvor", leftassoc wordsSyntax.mk_word_or),
+    ("bvadd", leftassoc wordsSyntax.mk_word_add),
+    ("bvmul", leftassoc wordsSyntax.mk_word_mul),
     ("bvnand", K_zero_two wordsSyntax.mk_word_nand),
     ("bvnor", K_zero_two wordsSyntax.mk_word_nor),
-    ("bvxor", K_zero_two wordsSyntax.mk_word_xor),
-    ("bvxnor", K_zero_two wordsSyntax.mk_word_xnor),
+    ("bvxor", leftassoc wordsSyntax.mk_word_xor),
+    ("bvxnor", leftassoc wordsSyntax.mk_word_xnor),
     ("bvcomp", K_zero_two wordsSyntax.mk_word_compare),
     ("bvsub", K_zero_two wordsSyntax.mk_word_sub),
     ("bvsdiv", K_zero_two wordsSyntax.mk_word_quot),
