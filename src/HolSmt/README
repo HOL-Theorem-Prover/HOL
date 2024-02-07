@@ -4,6 +4,7 @@ solvers with the HOL theorem prover.
 Files:
 
 COPYRIGHT               Copyright notice, license and disclaimer.
+CVC.sml                 Functions to invoke the cvc5 SMT solver.
 Holmakefile             Makefile for Holmake (to build selftest.exe).
 HolSmtLib.{sig,sml}     Entry point into HolSmtLib. Provides GENERIC_SMT_TAC
                         and derived tactics to call SMT solvers.
