@@ -195,6 +195,8 @@ in
       ("bvneg", K_zero_one wordsSyntax.mk_word_2comp),
       ("bvand", K_zero_two wordsSyntax.mk_word_and),
       ("bvor", K_zero_two wordsSyntax.mk_word_or),
+      ("bvxor", K_zero_two wordsSyntax.mk_word_xor),
+      ("bvxnor", K_zero_two wordsSyntax.mk_word_xnor),
       ("bvadd", K_zero_two wordsSyntax.mk_word_add),
       ("bvmul", K_zero_two wordsSyntax.mk_word_mul),
       (* SMT-LIB states that division by 0w is unspecified. Thus, any
