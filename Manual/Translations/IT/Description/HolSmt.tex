@@ -72,9 +72,7 @@ requests a detailed proof from Z3, which is then checked in \HOL{}.
 One obtains a proper \HOL{} theorem; no (additional) oracle tags are
 introduced. However, Z3's proofs do not always contain enough
 information to allow efficient checking in \HOL{}; therefore, proof
-reconstruction may be slow or fail. Furthermore, proof reconstruction
-only works with Z3~2.19. Newer versions of Z3 are only supported as an
-oracle, currently.
+reconstruction may be slow or fail.
 
 \paragraph{Supported subsets of higher-order logic}
 
@@ -195,12 +193,12 @@ delete temporary files automatically, \eg, when \HOL{} exits).
 
 \subsection{Installing SMT solvers}
 
-\ml{HolSmtLib} has been tested with cvc5~1.1.0, Yices~1.0.40, Z3~2.19
-and Z3~4.12.4. Later versions may or may not work.  (Yices~2 is not
+\ml{HolSmtLib} has been tested with cvc5~1.1.0, Yices~1.0.40, and
+Z3~4.12.4. Later versions may or may not work.  (Yices~2 is not
 supported.)  To use \ml{HolSmtLib}, you need to install at least one
 of these SMT solvers on your machine.  As mentioned before, Yices
 supports a larger fragment of higher-order logic than Z3, but proof
-reconstruction has been implemented only for Z3~2.19.
+reconstruction has been implemented only for Z3.
 
 cvc5 is available for various platforms from
 \url{https://cvc5.github.io/}. After installation, you must set the
@@ -213,15 +211,7 @@ the environment variable {\tt \$HOL4\_YICES\_EXECUTABLE} to the
 pathname of the Yices executable, \eg, {\tt /bin/yices}, before you
 invoke \HOL.
 
-Precompiled binaries of Z3~2.19 for Linux can be downloaded from
-\url{https://github.com/Z3Prover/bin/tree/master/legacy}. Note that
-Z3~2.19.1 apparently cannot parse real literals (even though Z3~2.19
-can), so that version is not recommended since it won't work with
-reals. After installation, you must set the environment variable {\tt
-\$HOL4\_Z3\_EXECUTABLE} to the pathname of the Z3 executable, \eg,
-{\tt /bin/z3}, before you invoke \HOL.
-
-Newer versions of Z3 are available at
+Z3 is available for various platforms from
 \url{https://github.com/Z3Prover/z3}. After installation, you must set
 the environment variable {\tt \$HOL4\_Z3\_EXECUTABLE} to the pathname
 of the Z3 executable, \eg, {\tt /bin/z3}, before you invoke \HOL.
@@ -247,10 +237,6 @@ theorem, similar to the way \ml{HolSatLib} treats satisfying
 assignments.
 
 \paragraph{Proof reconstruction}
-
-Proof reconstruction has been implemented only for Z3~2.19. It would
-be desirable to implement it for newer versions of Z3, since Z3~2.19
-is quite old and is only available as a binary.
 
 Several other SMT solvers can also produce proofs, and it would be
 nice to offer \HOL{} users more choice.  However, in the absence of a
