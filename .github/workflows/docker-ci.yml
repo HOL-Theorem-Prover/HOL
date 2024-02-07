@@ -42,7 +42,7 @@ jobs:
           push: true
           build-args: |
             SML=poly
-            Z3_VERSION=2.19
+            Z3_VERSION=4.12.4
             CVC_VERSION=5
             # NOTE: the arg value cannot be quoted here:
             BUILDOPTS=--stdknl -j2 -t
@@ -80,7 +80,7 @@ jobs:
           push: true
           build-args: |
             SML=poly
-            Z3_VERSION=2.19
+            Z3_VERSION=4.12.4
             CVC_VERSION=5
             # NOTE: the arg value cannot be quoted here:
             BUILDOPTS=--expk -j2 -t
