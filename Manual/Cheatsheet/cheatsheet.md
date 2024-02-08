@@ -198,6 +198,13 @@ This is most useful for certain simpset fragments:
 `DNF_ss`
 : Rewrites to convert to disjunctive normal form.
 
+<br>
+Conversely, `ExclSF` is like `Excl` above, but can be used to *exclude* a set of rewrites.
+
+<code>ExclSF <i>"simpset fragment name"</i></code>
+: Do not use the supplied simpset fragment when rewriting.
+  This allows temporary exclusion of a fragment from the stateful simpset.
+
 
 ## Provers
 In some cases, a decision procedure can save you some work.
@@ -354,6 +361,9 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 
 `MK_COMB_TAC`
 : Reduces a goal of the form `f x = g y` to two subgoals, `f = g` and `x = y`.
+
+`iff_tac`<br>`eq_tac`
+: Reduces a goal of the form `P <=> Q` to two subgoals, `P ==> Q` and `Q ==> P`.
 
 `impl_tac`
 : For a goal of the form `(A ==> B) ==> C`, splits into the two subgoals `A` and `B ==> C`.
