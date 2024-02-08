@@ -162,6 +162,9 @@ val CasePred          = TypeBase.CasePred
 val CasePreds         = TypeBase.CasePreds
 val AllCasePreds      = TypeBase.AllCasePreds
 
+val oneline           = DefnBase.one_line_ify NONE
+val lambdify          = DefnBase.LIST_HALF_MK_ABS
+
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
 val update_induction  = BasicProvers.update_induction

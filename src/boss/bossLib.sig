@@ -117,6 +117,10 @@ sig
   val Req0           : thm -> thm
   val ReqD           : thm -> thm
 
+  (* useful rules to use with simplification *)
+  val oneline        : thm -> thm
+  val lambdify       : thm -> thm
+
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
   val SRULE             : thm list -> thm -> thm (* uses srw_ss() *)
