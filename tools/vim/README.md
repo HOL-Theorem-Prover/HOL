@@ -80,7 +80,7 @@ Command  | Description
 `hL`     | Send region to be split into words and each word `load`ed.
 `hl`     | Same as above, but also send the region as a command afterwards.
 `hg`     | Send region (should be a quotation) to `g`, to start a new proof.
-`hG`     | Send region to g after quoting it, to start a new proof.
+`hG`     | Send region to `new_goalstack` after quoting it, to start a new proof. Any trailing `Proof[...]` modifiers are passed to HOL too.
 `he`     | Send region (should be a tactic) to `e`, to expand a tactic.
 `hS`     | Send region (should be a quotation) as a new subgoal.
 `hF`     | Send region (should be a quotation) to be proved sufficient then proved.
@@ -103,7 +103,7 @@ Command     | Description
 `hc`        | Interrupt execution (of whichever of the things sent is running).
 `ht`        | Select a quotation, including the  `` ` `` delimiters. Find `` ` `` left of (or under) cursor and select to next `` ` ``.  Also works for Unicode single quotes (`‘` and `’`).
 `hT`        | Select a term: same as above, but with ``` `` ``` delimiters. (Or Unicode `“` and `”`.)
-`ha`        | Select the previous (or if within current) Theorem or Trivialty statement.
+`ha`        | Select the previous (or if within current) `Theorem` or `Triviality` statement, including its `Proof` keyword and associated modifiers.
 `hh`        | A normal h (usually means move cursor left). This one works in both normal and visual modes.
 `hy`        | Toggle HOL's show types trace.
 `hn`        | Toggle HOL's `PP.avoid_unicode` trace.

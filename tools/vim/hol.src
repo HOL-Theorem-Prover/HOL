@@ -111,8 +111,15 @@ fu! HOLGoal()
 endf
 
 fu! HOLUQGoal()
-  silent keepjumps normal pG$a`)
-  silent keepjumps normal gg0iproofManagerLib.g(`
+  silent keepjumps normal pG
+  if search('^Proof','cbW')
+    silent keepjumps normal I``) (BasicProvers.mk_tacmod "
+    silent keepjumps normal VGJ
+    silent keepjumps normal A") I
+  else
+    silent keepjumps normal GA``) (BasicProvers.mk_tacmod "Proof") I
+  endif
+  silent keepjumps normal gg0iproofManagerLib.new_goalstack([],``
 endf
 
 let s:stripStart     = ')\|\]\|\['
@@ -129,8 +136,8 @@ fu! HOLExpand()
   while search('\%(\%('.s:stripBoth.'\|'.s:stripEnd.'\)\|'.s:delim.'\zs\%('.s:stripBothWords.'\)\)\_s*\%$','cW')
     silent keepjumps normal vG$"_dgg0
   endw
-  keepjumps normal iproofManagerLib.expand(
-  keepjumps normal G$a)
+  keepjumps normal iproofManagerLib.expand(fn HOLgoal => (
+  keepjumps normal G$a) HOLgoal)
 endf
 
 fu! HOLSubgoal()
@@ -197,6 +204,7 @@ fu! HOLSelect(l,r)
     return
   endif
   call search(a:r,"ce")
+  normal zv
 endf
 
 fu! HOLPattern()
@@ -244,7 +252,7 @@ nn <buffer><silent> <LocalLeader>r :call HOLCall(function("HOLF"),["proofManager
 nn <buffer><silent> <LocalLeader>c :call HOLINT()<CR>
 nn <buffer><silent> <LocalLeader>t :call HOLSelect('`\\|‘','`\\|’')<CR>
 nn <buffer><silent> <LocalLeader>T :call HOLSelect('``\\|“','``\\|”')<CR>
-nn <buffer><silent> <LocalLeader>a :call HOLSelect('^Triviality\\|^Theorem','^Proof')<CR>-Vo+
+nn <buffer><silent> <LocalLeader>a :call HOLSelect('^Triviality\\|^Theorem','^Proof$\\|^Proof\[\_.\{-}\]')<CR>Vo+
 nn <buffer><silent> <LocalLeader>y :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
 nn <buffer><silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"PP.avoid_unicode\" (1 - Feedback.current_trace \"PP.avoid_unicode\")"])<CR>
 no <buffer><LocalLeader>h h
