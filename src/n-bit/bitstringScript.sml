@@ -17,7 +17,7 @@ val _ = diminish_srw_ss ["NORMEQ"]
 
 (* MSB is head of list, e.g. [T, F] represents 2 *)
 
-val _ = Parse.type_abbrev ("bitstring", ``:bool list``)
+Type bitstring = “:bool list”
 
 val extend_def = Define`
    (extend _ 0 l = l: bitstring) /\
@@ -32,11 +32,11 @@ val bitify_def = Define`
   (bitify a (F :: l) = bitify (0::a) l) /\
   (bitify a (T :: l) = bitify (1::a) l)`
 
-val n2v_def = Define`
-  n2v n = boolify [] (num_to_bin_list n)`
+Definition n2v_def: n2v n = boolify [] (n2l 2 n)
+End
 
-val v2n_def = Define`
-  v2n l = num_from_bin_list (bitify [] l)`
+Definition v2n_def: v2n l = l2n 2 (bitify [] l)
+End
 
 val s2v_def = Define`
   s2v = MAP (\c. (c = #"1") \/ (c = #"T"))`
@@ -508,21 +508,26 @@ val sw2sw_v2w = Q.store_thm("sw2sw_v2w",
       \\ lrw [DECIDE ``0n < d ==> ~(d < 1)``, arithmeticTheory.LE_LT1])
   \\ Cases_on `i < LENGTH v` \\ lrw [])
 
-val n2w_v2n = Q.store_thm("n2w_v2n",
-  `!v. n2w (v2n v) = v2w v`,
+Theorem n2w_v2n:
+  !v. n2w (v2n v) = v2w v
+Proof
   wrw [wordsTheory.word_bit, bit_v2w, wordsTheory.word_bit_n2w, v2n_def,
        testbit]
   \\ Cases_on `i < LENGTH v`
   \\ rw []
   >| [
     `i < LENGTH (bitify [] v)` by metis_tac [length_bitify_null]
-    \\ rw [numposrepTheory.BIT_num_from_bin_list, every_bit_bitify, el_bitify],
+    \\ qspecl_then [‘i’, ‘REVERSE (bitify [] v)’]
+                   (mp_tac o SRULE[num_from_bin_list_def])
+                   BIT_num_from_bin_list
+    \\ rw [every_bit_bitify, el_bitify],
     match_mp_tac bitTheory.NOT_BIT_GT_TWOEXP
     \\ qspecl_then [`bitify [] v`, `2`] assume_tac l2n_lt
     \\ fs [arithmeticTheory.NOT_LESS, num_from_bin_list_def]
     \\ metis_tac [length_bitify_null, bitTheory.TWOEXP_MONO2,
                   arithmeticTheory.LESS_LESS_EQ_TRANS]
-  ])
+  ]
+QED
 
 val v2n_n2v_lem = Q.prove(
   `!l. EVERY ($> 2) l ==>

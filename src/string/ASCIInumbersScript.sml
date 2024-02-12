@@ -22,7 +22,7 @@ Definition n2s_def[nocompute]:
   n2s b f n : string = REVERSE (MAP f (n2l b n))
 End
 
-val HEX_def = Define`
+Definition HEX_def:
   (HEX 0 = #"0") /\
   (HEX 1 = #"1") /\
   (HEX 2 = #"2") /\
@@ -38,9 +38,10 @@ val HEX_def = Define`
   (HEX 12 = #"C") /\
   (HEX 13 = #"D") /\
   (HEX 14 = #"E") /\
-  (HEX 15 = #"F")`;
+  (HEX 15 = #"F")
+End
 
-val UNHEX_def = Define`
+Definition UNHEX_def:
   (UNHEX #"0" = 0) /\
   (UNHEX #"1" = 1) /\
   (UNHEX #"2" = 2) /\
@@ -62,7 +63,8 @@ val UNHEX_def = Define`
   (UNHEX #"C" = 12) /\
   (UNHEX #"D" = 13) /\
   (UNHEX #"E" = 14) /\
-  (UNHEX #"F" = 15)`;
+  (UNHEX #"F" = 15)
+End
 
 val num_from_bin_string_def = Define `num_from_bin_string = s2n 2 UNHEX`;
 val num_from_oct_string_def = Define `num_from_oct_string = s2n 8 UNHEX`;
@@ -200,8 +202,8 @@ val n2s_s2n = Q.store_thm("n2s_s2n",
     toString and toNum as overloads for the above (decimal notation)
    ---------------------------------------------------------------------- *)
 
-val _ = overload_on ("toString", ``num_to_dec_string``)
-val _ = overload_on ("toNum", ``num_from_dec_string``)
+Overload toString = “num_to_dec_string”
+Overload toNum = “num_from_dec_string”
 
 Theorem toNum_toString[simp]:
   !n. toNum (toString n) = n

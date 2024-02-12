@@ -13,11 +13,10 @@ val rw = SRW_TAC[ARITH_ss]
 
 (* ------------------------------------------------------------------------- *)
 
-val () = computeLib.auto_import_definitions := false
-
-val l2n_def = Define`
+Definition l2n_def:
   (l2n b [] = 0) /\
-  (l2n b (h::t) = h MOD b + b * l2n b t)`;
+  (l2n b (h::t) = h MOD b + b * l2n b t)
+End
 
 Definition n2l_def:
   n2l b n = if n < b \/ b < 2 then [n MOD b] else n MOD b :: n2l b (n DIV b)
@@ -25,15 +24,19 @@ End
 
 (* related version that gives MS-digit first, using an accumulator, and passes
    each digit through a function *)
-Definition n2lA_def:
+Definition n2lA_def[nocompute]:
   n2lA A f b n = if n < b \/ b < 2 then f (n MOD b)::A
                  else n2lA (f (n MOD b) :: A) f b (n DIV b)
 End
 
-val num_from_bin_list_def = Define `num_from_bin_list = l2n 2`;
-val num_from_oct_list_def = Define `num_from_oct_list = l2n 8`;
-val num_from_dec_list_def = Define `num_from_dec_list = l2n 10`;
-val num_from_hex_list_def = Define `num_from_hex_list = l2n 16`;
+Definition num_from_bin_list_def: num_from_bin_list = l2n 2 o REVERSE
+End
+Definition num_from_oct_list_def: num_from_oct_list = l2n 8 o REVERSE
+End
+Definition num_from_dec_list_def: num_from_dec_list = l2n 10 o REVERSE
+End
+Definition num_from_hex_list_def: num_from_hex_list = l2n 16 o REVERSE
+End
 
 Theorem n2lA_10[compute]:
   n2lA A f 10 n = if n < 10 then f n::A
@@ -56,14 +59,19 @@ QED
 
 
 
-val num_to_bin_list_def = Define `num_to_bin_list = n2l 2`;
-val num_to_oct_list_def = Define `num_to_oct_list = n2l 8`;
-val num_to_dec_list_def = Define `num_to_dec_list = n2l 10`;
-val num_to_hex_list_def = Define `num_to_hex_list = n2l 16`;
+Definition num_to_bin_list_def: num_to_bin_list = REVERSE o n2l 2
+End
+Definition num_to_oct_list_def: num_to_oct_list = REVERSE o n2l 8
+End
+Definition num_to_dec_list_def: num_to_dec_list = REVERSE o n2l 10
+End
+Definition num_to_hex_list_def: num_to_hex_list = REVERSE o n2l 16
+End
 
-val BOOLIFY_def = Define`
+Definition BOOLIFY_def:
    (BOOLIFY 0 m a = a) /\
-   (BOOLIFY (SUC n) m a = BOOLIFY n (DIV2 m) (ODD m::a))`
+   (BOOLIFY (SUC n) m a = BOOLIFY n (DIV2 m) (ODD m::a))
+End
 
 (* ------------------------------------------------------------------------- *)
 
@@ -164,29 +172,28 @@ val EL_n2l = Q.store_thm("EL_n2l",
         \\ SRW_TAC [ARITH_ss] [GSYM EXP, DIV_DIV_DIV_MULT,
              DECIDE ``!n. 0 < n ==> (SUC (PRE n) = n)``]]);
 
-val LIST_EQ = Q.prove(
-  `!a b. (LENGTH a = LENGTH b) /\
-         (!x. x < LENGTH a ==> (EL x a = EL x b)) ==>
-         (a = b)`,
-  Induct_on `a` \\ Induct_on `b` \\ SRW_TAC [] []
-    \\ METIS_TAC [prim_recTheory.LESS_0, LESS_MONO_EQ, EL, HD, TL]);
+Theorem LIST_EQ[local] = iffRL LIST_EQ_REWRITE
 
-val n2l_l2n = Q.prove(
-  `!b n l. 1 < b /\ EVERY ($> b) l /\ (n = l2n b l) ==>
-      (n2l b n = if n = 0 then [0] else TAKE (SUC (LOG b n)) l)`,
+Theorem n2l_l2n[local]:
+  !b n l. 1 < b /\ EVERY ($> b) l /\ (n = l2n b l) ==>
+          (n2l b n = if n = 0 then [0] else TAKE (SUC (LOG b n)) l)
+Proof
   SRW_TAC [] [] >- SRW_TAC [ARITH_ss] [Once n2l_def]
     \\ MATCH_MP_TAC LIST_EQ \\ IMP_RES_TAC LENGTH_l2n
-    \\ SRW_TAC [ARITH_ss] [LENGTH_n2l,LENGTH_TAKE,EL_TAKE,EL_n2l,l2n_DIGIT]);
+    \\ SRW_TAC [ARITH_ss] [LENGTH_n2l,LENGTH_TAKE,EL_TAKE,EL_n2l,l2n_DIGIT]
+QED
 
-val n2l_l2n = save_thm("n2l_l2n",
+Theorem n2l_l2n =
   n2l_l2n |> Q.SPECL [`b`,`l2n b l`,`l`]
           |> REWRITE_RULE []
-          |> Q.GEN `l` |> Q.GEN `b`);
+          |> Q.GEN `l` |> Q.GEN `b`
 
-val l2n_eq_0 = store_thm("l2n_eq_0",
-  ``!b. 0 < b ==> !l. (l2n b l = 0) <=> EVERY ($= 0 o combin$C $MOD b) l``,
+Theorem l2n_eq_0:
+  !b. 0 < b ==> !l. (l2n b l = 0) <=> EVERY ($= 0 o combin$C $MOD b) l
+Proof
   NTAC 2 STRIP_TAC THEN Induct THEN simp[l2n_def] THEN
-  Q.X_GEN_TAC`z` THEN Cases_on`0=z MOD b` THEN simp[])
+  Q.X_GEN_TAC`z` THEN Cases_on`0=z MOD b` THEN simp[]
+QED
 
 val l2n_SNOC_0 = store_thm("l2n_SNOC_0",
   ``!b ls. 0 < b ==> (l2n b (SNOC 0 ls) = l2n b ls)``,
@@ -323,17 +330,22 @@ val () = Parse.remove_ovl_mapping "l2n2" {Thy = "numposrep", Name = "l2n2"}
 
 (* ------------------------------------------------------------------------- *)
 
-val BIT_num_from_bin_list = Q.store_thm("BIT_num_from_bin_list",
-   `!x l. EVERY ($> 2) l /\ x < LENGTH l ==>
-          (BIT x (num_from_bin_list l) = (EL x l = 1))`,
+Theorem BIT_num_from_bin_list:
+  !x l. EVERY ($> 2) l /\ x < LENGTH l ==>
+        (BIT x (num_from_bin_list l) = (EL x (REVERSE l) = 1))
+Proof
    SRW_TAC [ARITH_ss]
-     [num_from_bin_list_def, l2n_DIGIT, SUC_SUB, BIT_def, BITS_THM])
+     [num_from_bin_list_def, l2n_DIGIT, SUC_SUB, BIT_def, BITS_THM]
+QED
 
-val EL_num_to_bin_list = Q.store_thm("EL_num_to_bin_list",
-   `!x n.
-     x < LENGTH (num_to_bin_list n) ==> (EL x (num_to_bin_list n) = BITV n x)`,
+Theorem EL_num_to_bin_list:
+  !x n.
+    x < LENGTH (num_to_bin_list n) ==>
+    EL x (REVERSE (num_to_bin_list n)) = BITV n x
+Proof
    SRW_TAC [ARITH_ss]
-     [num_to_bin_list_def, EL_n2l, SUC_SUB, BITV_def, BIT_def, BITS_THM])
+     [num_to_bin_list_def, EL_n2l, SUC_SUB, BITV_def, BIT_def, BITS_THM]
+QED
 
 val tac =
    SRW_TAC [ARITH_ss]

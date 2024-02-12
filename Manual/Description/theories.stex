@@ -3699,6 +3699,33 @@ of results from \ml{listTheory}:
 \end{hol}
 
 
+\paragraph{Strings into numbers, and \emph{vice versa}}
+\index{strings, the HOL theory of@strings, the \HOL{} theory of!converting to and from numbers}
+\index{numerals, in HOL logic@numerals, in \HOL{} logic!parsing/printing of in the logic}
+>>__ load "ASCIInumbersTheory";
+>>__ open ASCIInumbersTheory
+It is natural to want to convert strings to and from (natural) numbers.
+Constants supporting this for a variety of bases ($2$, $8$, $10$, and $16$) are defined in the theory \ml{ASCIInumbersTheory}.
+There the constants are named according to the scheme
+\[
+\holtxt{num\_}\{\holtxt{to},\holtxt{from}\}\holtxt{\_}\{\holtxt{bin},\holtxt{oct},\holtxt{dec},\holtxt{hex}\}\holtxt{\_string}
+\]
+making for a total of eight constants.
+The two decimal constants are also available under the (overloaded) names \holtxt{toString} and \holtxt{toNum}.
+The natural theorem expressing these last two are inverse is
+\begin{hol}
+\begin{alltt}
+##thm toNum_toString
+\end{alltt}
+\end{hol}
+and there is also a theorem specifying how long the strings produced by \holtxt{toString} will be:
+\begin{hol}
+\begin{alltt}
+##thm LENGTH_num_to_dec_string
+\end{alltt}
+\end{hol}
+
+
 \index{strings, the HOL theory of@strings, the \HOL{} theory of|)}
 
 \section{Collections}
