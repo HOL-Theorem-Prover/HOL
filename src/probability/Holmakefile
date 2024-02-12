@@ -53,3 +53,5 @@ all: prob-selftest.log
 prob-selftest.log: selftest.exe
 	$(tee ./$<, $@)
 endif
+
+HOLHEAP = ../real/analysis/realheap
