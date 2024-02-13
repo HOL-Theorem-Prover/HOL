@@ -874,6 +874,7 @@ region instead. With prefix ARG prompt for a file-name to load."
     (setq buffer-read-only nil)
     (delete-region (point-min) (point-max))
     (insert "Running Holmake in directory " dir "\n\n")
+    (message "Running Holmake in directory %s" dir)
     (term-ansi-make-term
      (buffer-name)
      holmake-executable nil "--qof" "-k")
