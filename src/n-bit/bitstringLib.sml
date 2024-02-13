@@ -115,14 +115,14 @@ local
 
    val num_from_bin_list_compute = prove(
      “(num_from_bin_list [] = 0) /\
-      (!l. num_from_bin_list (0::l) = NUMERAL (l2n 2 (0::l))) /\
-      (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 (1::l)))”,
+      (!l. num_from_bin_list (0::l) = NUMERAL (l2n 2 $ REVERSE (0::l))) /\
+      (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 $ REVERSE (1::l)))”,
       simp [numposrepTheory.num_from_bin_list_def] >> qm [NUMERAL_DEF])
 
    val cnv =
       Conv.REWR_CONV bitstringTheory.v2n_def
       THENC Conv.RAND_CONV (PURE_REWRITE_CONV [bitstringTheory.bitify_def])
-      THENC PURE_ONCE_REWRITE_CONV [num_from_bin_list_compute]
+      THENC Conv.REWR_CONV (GSYM NUMERAL_DEF)
       THENC Conv.TRY_CONV
               (Conv.RAND_CONV (PURE_REWRITE_CONV [l2n_2_numeric, iDUB_removal])
                THENC Conv.TRY_CONV (Conv.REWR_CONV NORM_0))

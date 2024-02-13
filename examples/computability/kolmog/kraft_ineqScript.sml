@@ -15,7 +15,7 @@ open realTheory;
 open real_sigmaTheory;
 open transcTheory;
 open boolListsTheory;
-
+local open numposrepTheory in end
 val _ = new_theory "kraft_ineq";
 
 val _ = intLib.deprecate_int()
@@ -948,7 +948,7 @@ Proof
 QED
 
 Definition TN2BL_def:
-  TN2BL n = MAP ((=) 1) $ REVERSE $ num_to_bin_list n
+  TN2BL n = MAP ((=) 1) $ num_to_bin_list n
 End
 
 Definition padL_def:
