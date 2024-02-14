@@ -880,14 +880,9 @@ local
        removed from the set of hypotheses of the final theorem. *)
 
     let
-      val (lhs, rhs) = dest_eq t
-      val substs = profile "rewrite(12.1)(unification)"
-        (Unify.simp_unify_terms [] lhs) rhs
-      val asl = List.map (fn {redex, residue} => mk_eq(redex, residue)) substs
-      val thms = List.map Thm.ASSUME asl
-      fun proof goal = Tactical.TAC_PROOF ((asl, goal),
-        Tactical.THEN (Tactic.SUBST_TAC thms, Tactic.REFL_TAC))
-      val thm = profile "rewrite(12.2)(unification_proof)" proof t
+      val thm = profile "rewrite(12)(unification)" Library.gen_instantiation
+        (boolSyntax.dest_eq t)
+      val asl = Thm.hyp thm
     in
       (state_define (state_cache_thm state thm) asl, thm)
     end
@@ -1205,54 +1200,116 @@ local
      other definitions and they may even be duplicated (with and without
      expansion), e.g.:
 
-     z2 = z1 + 2
      z1 = x + 1
      z2 = x + 1 + 2
+     z2 = z1 + 2
      z3 = 3 + y
 
-     We use Drule.EXISTS_LEFT [``z1``, ``z2``, ``z3``] to convert `thm` into a
-     semi-final theorem with the above hypotheses modified into a more useful
-     form. Namely, EXISTS_LEFT introduces existential quantifiers and also
-     collapses all the definitions that reference other definitions into a
-     single composite hypothesis. In the above example, the hypotheses would
-     become:
+     Furthermore, another major complication is that such nested definitions
+     can easily cause exponential term blow-up in case all such definitions were
+     to be fully expanded (e.g. by substituting each variable with one of its
+     definitions), which might occur in a naive attempt at removing these
+     definitions. Therefore, a more careful implementation is warranted.
 
-     ?z2. (?z1. z1 = x + 1 /\ z2 = z1 + 2) /\ z2 = x + 1 + 2
+     In general, the variable references can form an acyclic graph. For
+     efficiency purposes (explained later), we first find a variable that is not
+     referenced in any definition of the other variables.
 
-     ?z3. z3 = 3 + y
+     In the above example, one such variable could be `z2` or `z3` (we'll pick
+     `z2` for this example), but not `z1`, since it is referenced in one of the
+     definitions of `z2`.
 
-     We then prove the above hypotheses (see Library.COMPOSITE_HYP_TAC). After
-     obtaining these theorems (two in this example), we use Drule.PROVE_HYP to
-     delete the hypotheses from the semi-final theorem, thus obtaining the final
-     theorem, which no longer contains any definitions in its set of
-     hypotheses. *)
+     We then perform the following:
+
+     1. Gather all definitions of this variable. In this example, the
+     definitions for ``z2`` would be:
+
+     z2 = z1 + 2
+     z2 = x + 1 + 2
+
+     2. Instantiate the variable with one of its definitions (chosen
+     arbitrarily). In this example, it could result in the following hypotheses:
+
+     z1 + 2 = z1 + 2
+     z1 + 2 = x + 1 + 2
+
+     3. For each of these hypotheses, we create a theorem proving the hypothesis
+     so that we can remove it with Drule.PROVE_HYP. To prove such a theorem,
+     first we unify the terms on both sides of the equality, such that we obtain
+     new definitions for the variables in these hypotheses. For the first one,
+     no new definitions are needed, which means such a theorem can be proven
+     with REFL. For the second one, we get:
+
+     z1 = x + 1
+
+     We can then substitute `z1` with `x + 1`, then use REFL to prove the
+     theorem. This is implemented in `Library.gen_instantiation`. Note that this
+     theorem will have `z1 = x + 1` in its set of hypotheses, which
+     Drule.PROVE_HYP then adds to the set of hypotheses of `thm`.
+
+     However, this new hypothesis will be removed later when we process `z1`.
+     Often, these additional hypotheses are identical to pre-existing ones, so
+     they get deduplicated when added to the set of hypotheses of `thm`. By
+     processing variables in this specific order, we thus avoid doing a lot of
+     repeated work of removing the same definitions over and over again.
+
+     Once all the definitions of the variable we've chosen are removed, we
+     recurse into this same function, with the new set of definitions that are
+     to be removed (corresponding to one less variable). Note that in general,
+     at no point we needed to fully expand a definition (unless it's already
+     expanded). *)
+
   fun remove_definitions (defs: Term.term HOLset.set, thm: Thm.thm): Thm.thm =
     if HOLset.isEmpty defs then
       thm
     else
       let
-        fun add_var (def, set) = HOLset.add (set, Lib.fst (boolSyntax.dest_eq def))
+        (* For convenience, `pvar_defs` will contain a list of (var, def)
+           pairs *)
+        val pvar_defs = List.map boolSyntax.dest_eq (HOLset.listItems defs)
         (* `var_set` will contain the set of all variables being defined *)
-        val var_set = HOLset.foldl add_var Term.empty_tmset defs
-        val var_list = HOLset.listItems var_set
-        val semifinal_thm = Drule.EXISTS_LEFT var_list thm
-        (* The hypotheses corresponding to the definitions have been modified by
-           EXISTS_LEFT, so they are no longer the same as `defs`. To prove them,
-           we need to find them among the set of all hypotheses in `semifinal_thm`,
-           i.e. we need to reliably distinguish the definitions from the other
-           hypotheses. Fortunately, this should be easy, as they should all start
-           with `?var.`, where `var` is one of the variables in `var_set`. *)
-        fun find_hyp hyp = boolSyntax.is_exists hyp andalso HOLset.member (var_set,
-          Lib.fst (boolSyntax.dest_exists hyp))
-        val new_defs = HOLset.filter find_hyp (Thm.hypset semifinal_thm)
-        (* We now prove all these hypotheses and store the result in `theorems` *)
-        fun prove_hyp hyp = Tactical.TAC_PROOF (([], hyp),
-          Library.COMPOSITE_HYP_TAC)
-        val theorems = List.map prove_hyp (HOLset.listItems new_defs)
-        (* All that's left is removing the hypotheses from `semifinal_thm` *)
+        fun add_var ((var, def), set) = HOLset.add (set, var)
+        val var_set = List.foldl add_var Term.empty_varset pvar_defs
+        (* `ref_set` will contain the set of all variables being referenced *)
+        val all_defs = List.map Lib.snd pvar_defs
+        val ref_set = Term.FVL all_defs Term.empty_varset
+        (* `unref_set` will contain the set of all variables not being
+           referenced *)
+        val unref_set = HOLset.difference (var_set, ref_set)
+
+        (* Pick an arbitrary variable from `unref_set` *)
+        val var = Option.valOf (HOLset.find (fn _ => true) unref_set)
+
+        (* Get all the variable's definitions *)
+        fun filter_def (v, d) = if Term.term_eq v var then SOME d else NONE
+        val defs_to_remove = List.mapPartial filter_def pvar_defs
+
+        (* Pick an arbitrary definition for instantiation *)
+        val inst = List.hd defs_to_remove
+
+        (* Instantiate the variable with the definition *)
+        val thm = Thm.INST [{redex = var, residue = inst}] thm
+
+        (* For each definition corresponding to this variable, create a theorem
+           that can eliminate the definition from the set of hypotheses of `thm` *)
+        val hyp_thms = List.map (fn def => Library.gen_instantiation (inst, def))
+          defs_to_remove
+
+        (* Remove all the definitions corresponding to this variable *)
         fun remove_hyp (hyp_thm, thm) = Drule.PROVE_HYP hyp_thm thm
+        val thm = List.foldl remove_hyp thm hyp_thms
+
+        (* Compute the new set of definitions to remove when recursing.
+           Basically, it's all the definitions in `thm`, i.e. all hypotheses of
+           the form ``var = def``, where ``var`` is in `var_set` *)
+        fun is_definition hyp = boolSyntax.is_eq hyp andalso
+          HOLset.member (var_set, Lib.fst (boolSyntax.dest_eq hyp))
+        fun add_def (hyp, set) =
+          if is_definition hyp then HOLset.add (set, hyp) else set
+        val new_defs = HOLset.foldl add_def Term.empty_tmset (Thm.hypset thm)
       in
-        List.foldl remove_hyp semifinal_thm theorems
+        (* Recurse to remove the remaining variables' definitions *)
+        remove_definitions (new_defs, thm)
       end
 in
 
