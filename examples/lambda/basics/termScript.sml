@@ -1053,7 +1053,8 @@ QED
 
 (* A combined version of ssub_update_apply_SUBST and ssub_SUBST *)
 Theorem ssub_update_apply_SUBST' :
-    !M. (!k. k IN FDOM fm ==> v # fm ' k) /\ v NOTIN FDOM fm /\
+    !M fm v N.
+       (!k. k IN FDOM fm ==> v # fm ' k) /\ v NOTIN FDOM fm /\
         DISJOINT (FDOM fm) (FV N) ==>
         (fm |+ (v,N)) ' M = [fm ' N/v] (fm ' M)
 Proof
