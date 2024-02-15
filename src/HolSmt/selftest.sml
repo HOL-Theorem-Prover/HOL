@@ -1,6 +1,6 @@
 (* Copyright (c) 2009-2012 Tjark Weber. All rights reserved. *)
 
-(* Unit tests for HolSmtLib *)
+(* HolSmtLib tests *)
 open HolKernel Parse boolLib bossLib;
 
 val _ = print "Testing HolSmtLib\n"
@@ -40,13 +40,7 @@ val _ = if Z3.is_configured () then () else
 
 local
 
-fun die s =
-  if !Globals.interactive then
-    raise (Fail s)
-  else (
-    print ("\n" ^ s ^ "\n");
-    OS.Process.exit OS.Process.failure
-  )
+val die = Unittest.die
 
 fun term_with_types t = Lib.with_flag(show_types, true) Hol_pp.term_to_string t
 
@@ -1060,6 +1054,9 @@ end
 (* actually perform tests                                                    *)
 (*****************************************************************************)
 
+val () = Unittest.run_unittests ()
+
+val () = print "Running functional tests...\n"
 val _ = map (fn (term, test_funs) =>
                map (fn test_fun => test_fun term) test_funs) tests
 

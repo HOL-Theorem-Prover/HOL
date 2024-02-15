@@ -1313,6 +1313,9 @@ local
       end
 in
 
+  (* For unit tests *)
+  val remove_definitions = remove_definitions
+
   (* returns a theorem that concludes ``F``, with its hypotheses (a
      subset of) those asserted in the proof *)
   fun check_proof proof : Thm.thm =
