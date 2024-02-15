@@ -460,6 +460,68 @@ Proof
   simp[trans_clos_TC_closed]
 QED
 
+Definition SCC_def:
+  SCC E x y ⇔ RTC E x y ∧ RTC E y x
+End
+
+Theorem SCC_REFL:
+  SCC E x x
+Proof
+  simp[SCC_def]
+QED
+
+Theorem SCC_SYM:
+  SCC E x y ⇔ SCC E y x
+Proof
+  rw[SCC_def,EQ_IMP_THM]
+QED
+   
+Theorem SCC_TRANS:
+  SCC E x y ∧ SCC E y z ⇒ SCC E x z
+Proof
+  metis_tac[SCC_def,RTC_RTC]
+QED
+
+Theorem SCC_EQUIV:
+  EQUIV (SCC E)
+Proof
+  simp[quotientTheory.EQUIV_def,quotientTheory.EQUIV_REFL_SYM_TRANS] >>
+  metis_tac[SCC_REFL,SCC_SYM,SCC_TRANS]
+QED
+
+Triviality is_reachable_IMP_MEM:
+  ALL_DISTINCT (MAP FST graph) ⇒ x ≠ y ⇒
+  is_reachable (fromAList graph) x y ⇒ MEM x (MAP FST graph)
+Proof
+  rw[is_reachable_def,Once RTC_CASES1] >>
+  fs[is_adjacent_def,lookup_fromAList] >>
+  metis_tac[ALOOKUP_MEM,FST,MEM_MAP]
+QED
+
+Theorem top_sort_SCC:
+  ALL_DISTINCT (MAP FST graph) ∧ MEM x l ∧ MEM l (top_sort graph) ⇒
+    SCC (is_adjacent (fromAList graph)) x = set l
+Proof
+  simp[lambdify SCC_def,GSYM is_reachable_def,EXTENSION,EQ_IMP_THM] >>
+  ntac 2 strip_tac >>
+  conj_tac
+  >- (
+    Cases_on `x' = x`
+    >- gvs[] >>
+    strip_tac >>
+    drule_then strip_assume_tac $ SRULE[] top_sort_correct >>
+    `∃xss zss. top_sort graph = xss ++ [l] ++ zss`
+      by metis_tac[MEM_SING_APPEND] >>
+    first_x_assum (dxrule_then $ drule_then drule) >>
+    disch_then $ irule o iffLR o cj 2 >>
+    metis_tac[is_reachable_IMP_MEM]
+  ) >>
+  strip_tac >>
+  Cases_on `x' = x`
+  >- gvs[is_reachable_def] >>
+  metis_tac[top_sort_same_partition,trans_clos_correct]
+QED
+
 Theorem to_nums_correct:
   !xs b res.
     to_nums b xs = res /\
@@ -623,6 +685,19 @@ Definition depends_on_def:
       ALOOKUP alist a = SOME deps /\ MEM b deps /\ MEM b (MAP FST alist)) x y
 End
 
+Definition depends_on1_def:
+  depends_on1 alist a b =
+    ∃deps.
+      ALOOKUP alist a = SOME deps ∧ MEM b deps ∧
+      MEM b (MAP FST alist)
+End
+
+Theorem depends_on:
+  depends_on alist = RTC (depends_on1 alist)
+Proof
+  simp[FUN_EQ_THM,lambdify depends_on1_def,depends_on_def]
+QED
+
 Triviality top_sort_any_depends_on_weak:
   !lets res.
     (!xss ys zss y.
@@ -774,16 +849,35 @@ Proof
   metis_tac[RTC_ALOOKUP_enc_graph_IMP_depends_on]
 QED
 
+Theorem top_sort_any_SCC:
+  ALL_DISTINCT (MAP FST graph) ∧ MEM x l ∧ MEM l (top_sort_any graph) ⇒
+    SCC (depends_on1 graph) x = set l
+Proof
+  simp[lambdify SCC_def,EXTENSION,EQ_IMP_THM,GSYM depends_on] >>
+  ntac 2 strip_tac >>
+  conj_tac
+  >- (
+    Cases_on `x' = x`
+    >- gvs[] >>
+    strip_tac >>
+    drule_then strip_assume_tac $ SRULE[] top_sort_any_correct >>
+    `∃xss zss. top_sort_any graph = xss ++ [l] ++ zss`
+      by metis_tac[MEM_SING_APPEND] >>
+    metis_tac[]
+  ) >>
+  strip_tac >>
+  Cases_on `x' = x`
+  >- gvs[depends_on] >>
+  metis_tac[top_sort_any_same_partition]
+QED
+
 (* similar to depends_on, but we use TC instead of RTC *)
 Definition TC_depends_on_def:
   TC_depends_on alist ⇔
-  TC (λa b.
-    ∃deps.
-      ALOOKUP alist a = SOME deps ∧ MEM b deps ∧
-      MEM b (MAP FST alist))
+  TC $ depends_on1 alist
 End
 
-Triviality TC_REFL_CASES_lem:
+Triviality cycle_CASES_lem:
   ∀x z. TC R x z ⇒ x = z ⇒
   (R x z ∨ (∃y. x ≠ y ∧ TC R x y ∧ TC R y z))
 Proof
@@ -796,11 +890,11 @@ QED
 (* A cycle is either a self loop or
 * there exists another node that is reachable from x and
 * x is reachable from that node *)
-Theorem TC_REFL_CASES:
+Theorem cycle_CASES:
   TC R x x ⇔ (R x x ∨ (∃y. x ≠ y ∧ TC R x y ∧ TC R y x))
 Proof
   iff_tac
-  >- metis_tac[TC_REFL_CASES_lem] >>
+  >- metis_tac[cycle_CASES_lem] >>
   metis_tac[TC_RULES]
 QED
 
@@ -814,6 +908,35 @@ Proof
   simp[]
 QED
 
+Triviality TC_depends_on_SCC:
+  x ≠ y ⇒
+  SCC (depends_on1 graph) x y = (TC_depends_on graph x y ∧ TC_depends_on graph y x)
+Proof
+  simp[SCC_def,TC_depends_on_def,RTC_CASES_TC]
+QED
+
+Triviality ONE_LT_LENGTH_ALL_DISTINCT_IMP:
+  1 < LENGTH l ∧ ALL_DISTINCT l ⇒ ∃x y. MEM x l ∧ MEM y l ∧ x ≠ y
+Proof
+  rpt strip_tac >>
+  qexistsl [`EL 0 l`,`EL 1 l`] >>
+  (drule_then $ drule_then $ qspec_then `0` strip_assume_tac) $
+     iffLR EL_ALL_DISTINCT_EL_EQ >>
+  fs[EL_MEM]
+QED
+
+Triviality DISTINCT_IMP_ONE_LT_LENGTH:
+  MEM x l ∧ MEM y l ∧ x ≠ y ⇒ 1 < LENGTH l
+Proof
+  rpt strip_tac >>
+  irule arithmeticTheory.LESS_LESS_EQ_TRANS >>
+  irule_at (Pos last) CARD_LIST_TO_SET >>
+  irule arithmeticTheory.LESS_LESS_EQ_TRANS >>
+  qexists `CARD {x;y}` >>
+  irule_at (Pos last) CARD_SUBSET >>
+  simp[]
+QED
+
 Theorem has_cycle_correct:
   ALL_DISTINCT (MAP FST graph) ⇒
   (has_cycle graph ⇔ ∃x. TC_depends_on graph x x)
@@ -823,64 +946,31 @@ Proof
   rw[EQ_IMP_THM,TC_depends_on_def,has_cycle_def,
     EXISTS_MEM,LAMBDA_PROD,GSYM PEXISTS_THM]
   >- (
-    `∃x y. MEM x l ∧ MEM y l ∧ x ≠ y`
-      by (
-        qexistsl [`EL 0 l`,`EL 1 l`] >>
-        simp[EL_MEM] >>
-        drule_then assume_tac $
-          cj 1 $ SRULE[] top_sort_any_correct >>
-        `ALL_DISTINCT l` by fs[ALL_DISTINCT_FLAT] >>
-        (drule_then $ drule_then strip_assume_tac) $
-          iffLR EL_ALL_DISTINCT_EL_EQ >>
-        pop_assum $ qspec_then `0` (assume_tac o SRULE[]) >>
-        fs[]
-      ) >>
-    `depends_on graph x y ∧ depends_on graph y x` by
-      metis_tac[top_sort_any_same_partition] >>
-    gvs[depends_on_def,RTC_CASES_TC] >>
-    qexists `x` >>
-    irule $ cj 2 TC_RULES >>
-    metis_tac[]
+    drule ONE_LT_LENGTH_ALL_DISTINCT_IMP >>
+    impl_tac
+    >- metis_tac[top_sort_any_correct,ALL_DISTINCT_FLAT] >>
+    rpt strip_tac >>
+    irule_at (Pos hd) $ cj 2 TC_RULES >>
+    metis_tac[top_sort_any_same_partition,RTC_CASES_TC,depends_on]
   )
   >- (
-    qexists `p1` >>
-    irule $ cj 1 TC_RULES >>
-    simp[] >>
-    first_assum $ irule_at Any >>
-    simp[MEM_MAP] >>
-    first_assum $ irule_at Any >>
-    simp[]
+    irule_at (Pos hd) $ cj 1 TC_RULES >>
+    simp[depends_on1_def] >>
+    metis_tac[MEM_MAP,FST,TC_RULES]
   ) >>
-  fs[TC_REFL_CASES]
-  >- (
-    disj2_tac >>
-    metis_tac[]
-  ) >>
+  fs[cycle_CASES]
+  >- metis_tac[depends_on1_def] >>
   disj1_tac >>
-  `depends_on graph y x`
-    by simp[RTC_CASES_TC,depends_on_def] >>
-  `depends_on graph x y`
-    by simp[RTC_CASES_TC,depends_on_def] >>
-  rpt $ qpat_x_assum `TC _ _ _` kall_tac >>
-  drule_then strip_assume_tac $
-    SRULE[]top_sort_any_correct >>
-  fs[EXTENSION] >>
-  `MEM x (MAP FST graph)` by metis_tac[depends_on_IMP_MEM] >>
-  qpat_x_assum `∀x. MEM _ _ ⇔ MEM _ _` $ assume_tac o GSYM >>
+  `MEM x (MAP FST graph)` by metis_tac[depends_on_IMP_MEM,depends_on,TC_RTC] >>
+  drule_then strip_assume_tac $ GSYM $
+    cj 2 $ SRULE[EXTENSION] top_sort_any_correct >>
   fs[MEM_FLAT] >>
-  `∃xss zss. top_sort_any graph = xss ++ [l] ++ zss`
-    by metis_tac[MEM_SING_APPEND] >>
-  first_x_assum (drule_then $ drule_then drule) >>
-  disch_then assume_tac >>
-  `MEM y l` by fs[] >>
-  qpat_x_assum `_ ∧ (depends_on _ _ _ ⇒ _)` kall_tac >>
+  drule_all_then (assume_tac o SRULE[FUN_EQ_THM]) top_sort_any_SCC >>
+  drule_all_then assume_tac $ SRULE[TC_depends_on_def] $ iffRL TC_depends_on_SCC >>
+  rfs[] >>
   first_assum $ irule_at (Pos hd) >>
-  irule arithmeticTheory.LESS_LESS_EQ_TRANS >>
-  irule_at (Pos last) CARD_LIST_TO_SET >>
-  irule arithmeticTheory.LESS_LESS_EQ_TRANS >>
-  qexists `CARD {x;y}` >>
-  irule_at (Pos last) CARD_SUBSET >>
-  simp[]
+  drule_at_then (Pos last) irule DISTINCT_IMP_ONE_LT_LENGTH >>
+  simp[IN_DEF]
 QED
 
 (* Similar to TC_depends_on, but we do not require
@@ -912,7 +1002,7 @@ Triviality TC_depends_on_weak_IMP_TC_depends_on:
 Proof
   PURE_REWRITE_TAC[TC_depends_on_weak_def] >>
   ho_match_mp_tac TC_STRONG_INDUCT_RIGHT1 >>
-  rw[TC_depends_on_def]
+  rw[TC_depends_on_def,lambdify depends_on1_def]
   >- (
     irule $ cj 1 TC_RULES >>
     simp[]
@@ -935,8 +1025,8 @@ Theorem TC_depends_on_TC_depends_on_weak_thm:
     (TC_depends_on_weak graph x y ∧ MEM y (MAP FST graph))
 Proof
   simp[EQ_IMP_THM,TC_depends_on_weak_IMP_TC_depends_on] >>
-  simp[TC_depends_on_weak_def,TC_depends_on_def] >>
-  simp[IMP_CONJ_THM,FORALL_AND_THM] >>
+  simp[TC_depends_on_weak_def,TC_depends_on_def,lambdify depends_on1_def,
+    IMP_CONJ_THM,FORALL_AND_THM] >>
   conj_tac
   >- (
     rpt strip_tac >>
