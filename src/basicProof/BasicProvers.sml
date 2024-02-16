@@ -827,15 +827,13 @@ fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 
 fun LIFT_SIMP ss = STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []
 
-local
-  fun DTHEN ttac = fn (asl,w) =>
+fun DTHEN ttac = fn (asl,w) =>
    let val (ant,conseq) = dest_imp_only w
        val (gl,prf) = ttac (ASSUME ant) (asl,conseq)
    in (gl, Thm.DISCH ant o prf)
    end
-in
-val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
-end;
+
+val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC];
 
 fun add_simpls tyinfo ss =
     (ss ++ simpLib.tyi_to_ssdata tyinfo) handle HOL_ERR _ => ss;
@@ -888,7 +886,15 @@ fun LET_ELIM_TAC goal =
                            combinTheory.literal_case_FORALL_ELIM ::
                            !let_movement_thms) THENC
         SIMP_CONV (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'])) THEN
-  REPEAT BOSS_STRIP_TAC THEN markerLib.REABBREV_TAC
+  (*
+     NOTE: The old tactics here were REPEAT BOSS_STRIP_TAC. Now we expand the
+     definition of BOSS_STRIP_TAC, and then removed the CONJ_TAC. This change
+     is useful when users want to eliminate LET but do not break conjuncted
+     goals into subgoals. (The behavior of RW_TAC doesn't change. It still
+     does the full STRIP_TAC including CONJ_TAC, together with LET_ELIM_TAC.
+   *)
+  REPEAT (Tactical.FIRST [GEN_TAC, DTHEN STRIP_ASSUME_TAC])
+  THEN markerLib.REABBREV_TAC
  end goal
 
 fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
