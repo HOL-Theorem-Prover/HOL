@@ -475,7 +475,7 @@ Theorem SCC_SYM:
 Proof
   rw[SCC_def,EQ_IMP_THM]
 QED
-   
+
 Theorem SCC_TRANS:
   SCC E x y ∧ SCC E y z ⇒ SCC E x z
 Proof
