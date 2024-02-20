@@ -330,12 +330,24 @@ val () = Parse.remove_ovl_mapping "l2n2" {Thy = "numposrep", Name = "l2n2"}
 
 (* ------------------------------------------------------------------------- *)
 
+Theorem BIT_l2n_2:
+  !x l. EVERY ($> 2) l ==>
+        (BIT x (l2n 2 l) <=> x < LENGTH l /\ EL x l = 1)
+Proof
+  rpt strip_tac >> Cases_on ‘x < LENGTH l’ >>
+  SRW_TAC [ARITH_ss] [l2n_DIGIT, SUC_SUB, BIT_def, BITS_THM] >>
+  Q.RENAME_TAC [‘l2n 2 l DIV 2 ** x’] >>
+  Q_TAC SUFF_TAC ‘l2n 2 l DIV 2 ** x = 0’ >> simp[] >>
+  MATCH_MP_TAC LESS_DIV_EQ_ZERO >>
+  MATCH_MP_TAC LESS_LESS_EQ_TRANS >> Q.EXISTS_TAC ‘2 ** LENGTH l’ >>
+  SRW_TAC[ARITH_ss][l2n_lt]
+QED
+
 Theorem BIT_num_from_bin_list:
   !x l. EVERY ($> 2) l /\ x < LENGTH l ==>
         (BIT x (num_from_bin_list l) = (EL x (REVERSE l) = 1))
 Proof
-   SRW_TAC [ARITH_ss]
-     [num_from_bin_list_def, l2n_DIGIT, SUC_SUB, BIT_def, BITS_THM]
+   simp[num_from_bin_list_def, BIT_l2n_2]
 QED
 
 Theorem EL_num_to_bin_list:
