@@ -84,6 +84,21 @@ Proof
   METIS_TAC [pmact_inverse, tpm_hreduce_I]
 QED
 
+Theorem tpm_hreduces_I[local] :
+    !M N. M -h->* N ==> tpm pi M -h->* tpm pi N
+Proof
+    HO_MATCH_MP_TAC RTC_INDUCT >> rw []
+ >> rw [Once RTC_CASES1]
+ >> DISJ2_TAC
+ >> Q.EXISTS_TAC ‘tpm pi M'’ >> rw []
+QED
+
+Theorem tpm_hreduces[simp] :
+    !pi M N. tpm pi M -h->* tpm pi N <=> M -h->* N
+Proof
+    METIS_TAC [pmact_inverse, tpm_hreduces_I]
+QED
+
 val hreduce1_rwts = store_thm(
   "hreduce1_rwts",
   ``(VAR s -h-> M ⇔ F) ∧
@@ -1607,6 +1622,29 @@ Proof
  >> rw [DISJOINT_ALT]
 QED
 
+Theorem hnf_children_tpm :
+    !pi M. hnf M ==> (hnf_children (tpm pi M) = MAP (tpm pi) (hnf_children M))
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘~is_comb M’
+ >- (‘is_var M \/ is_abs M’ by METIS_TAC [term_cases]
+     >- (‘?y. M = VAR y’ by METIS_TAC [is_var_cases] \\
+         NTAC 2 (rw [Once hnf_children_def])) \\
+    ‘?v t. M = LAM v t’ by METIS_TAC [is_abs_cases] \\
+     NTAC 2 (rw [Once hnf_children_def]))
+ >> fs []
+ >> ‘?t args. (M = t @* args) /\ args <> [] /\ ~is_comb t’
+      by METIS_TAC [is_comb_appstar_exists]
+ >> rw [tpm_appstar]
+ >> Know ‘~is_abs t’
+ >- (CCONTR_TAC >> fs [hnf_appstar])
+ >> DISCH_TAC
+ >> ‘is_var t’ by METIS_TAC [term_cases]
+ >> ‘?y. t = VAR y’ by METIS_TAC [is_var_cases]
+ >> rw [hnf_children_hnf]
+ >> rw [LIST_EQ_REWRITE, EL_MAP]
+QED
+
 (*---------------------------------------------------------------------------*
  *  LAMl_size (of hnf)
  *---------------------------------------------------------------------------*)
@@ -1659,6 +1697,12 @@ Proof
  >> rw [appstar_SNOC]
 QED
 
+Theorem LAMl_size_tpm[simp] :
+    !M. LAMl_size (tpm pi M) = LAMl_size M
+Proof
+    HO_MATCH_MP_TAC simple_induction >> rw []
+QED
+
 (*---------------------------------------------------------------------------*
  *  hnf_children_size (of hnf)
  *---------------------------------------------------------------------------*)
@@ -1681,6 +1725,12 @@ Theorem hnf_children_size_appstar[simp] :
 Proof
     Induct_on ‘Ms’ using SNOC_INDUCT >- rw []
  >> rw [appstar_SNOC]
+QED
+
+Theorem hnf_children_size_tpm[simp] :
+    !M. hnf_children_size (tpm pi M) = hnf_children_size M
+Proof
+    HO_MATCH_MP_TAC simple_induction >> rw []
 QED
 
 (*---------------------------------------------------------------------------*
