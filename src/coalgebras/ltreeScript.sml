@@ -881,9 +881,33 @@ Proof
 QED
 
 Theorem ltree_el_valid :
-    !p t. p IN ltree_paths t ==> ltree_el t p <> NONE
+    !p t. p IN ltree_paths t <=> ltree_el t p <> NONE
 Proof
     rw [ltree_paths_alt]
+QED
+
+Theorem ltree_el_valid_inclusive :
+    !p t. p IN ltree_paths t <=> !p'. p' <<= p ==> ltree_el t p' <> NONE
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC >> STRIP_TAC
+ >- (POP_ASSUM (MP_TAC o (Q.SPEC ‘p’)) \\
+     rw [ltree_el_valid])
+ >> rw [GSYM ltree_el_valid]
+ >> MATCH_MP_TAC ltree_paths_inclusive
+ >> Q.EXISTS_TAC ‘p’ >> art []
+QED
+
+Theorem ltree_lookup_valid :
+    !p t. p IN ltree_paths t <=> ltree_lookup t p <> NONE
+Proof
+    rw [ltree_lookup_iff_ltree_el, ltree_el_valid]
+QED
+
+Theorem ltree_lookup_valid_inclusive :
+    !p t. p IN ltree_paths t <=> !p'. p' <<= p ==> ltree_lookup t p' <> NONE
+Proof
+    rw [ltree_lookup_iff_ltree_el, ltree_el_valid_inclusive]
 QED
 
 (*---------------------------------------------------------------------------*
