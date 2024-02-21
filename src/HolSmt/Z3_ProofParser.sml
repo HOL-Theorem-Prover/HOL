@@ -321,15 +321,15 @@ local
   (***************************************************************************)
 
   (* returns an extended proof; 't' must encode a proofterm *)
-  fun extend_proof proof (id, t) =
+  fun extend_proof (steps, vars) (id, t) =
   let
     val _ = if !Library.trace > 0 andalso
-      Option.isSome (Redblackmap.peek (proof, id)) then
+      Option.isSome (Redblackmap.peek (steps, id)) then
         WARNING "extend_proof"
           ("proofterm ID " ^ Int.toString id ^ " defined more than once")
       else ()
   in
-    Redblackmap.insert (proof, id, proofterm_of_term t)
+    (Redblackmap.insert (steps, id, proofterm_of_term t), vars)
   end
 
   (* distinguishes between a term definition and a proofterm
@@ -378,7 +378,8 @@ local
       parse_proof_inner get_token (tydict, tmdict, proof) (rpars + 1)
     else if head = "declare-fun" then
       let
-        val tmdict = SmtLib_Parser.parse_declare_fun get_token (tydict, tmdict)
+        val (tm, tmdict) = SmtLib_Parser.parse_declare_fun get_token (tydict, tmdict)
+        val proof = Lib.apsnd (fn set => HOLset.add (set, tm)) proof
       in
         parse_proof_inner get_token (tydict, tmdict, proof) rpars
       end
@@ -464,8 +465,9 @@ in
         Feedback.HOL_MESG "HolSmtLib: parsing Z3 proof"
       else ()
     val get_token = Library.get_token (Library.get_buffered_char instream)
+    val empty_proof = (Redblackmap.mkDict Int.compare, Term.empty_tmset)
     val proof = parse_proof get_token
-      (tydict, tmdict, Redblackmap.mkDict Int.compare)
+      (tydict, tmdict, empty_proof)
     val _ = if !Library.trace > 0 then
         WARNING "parse_stream" ("ignoring token '" ^ get_token () ^
           "' (and perhaps others) after proof")
