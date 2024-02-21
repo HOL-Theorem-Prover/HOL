@@ -633,7 +633,7 @@ Proof
  >> Q.EXISTS_TAC ‘tpm pi N’ >> rw []
 QED
 
-Theorem solvable_tpm :
+Theorem solvable_tpm[simp] :
     !pi M. solvable (tpm pi M) <=> solvable M
 Proof
     METIS_TAC [pmact_inverse, solvable_tpm_I]

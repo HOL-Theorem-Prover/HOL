@@ -1179,14 +1179,14 @@ val TAKE_SNOC = Q.store_thm ("TAKE_SNOC",
    THEN ASM_REWRITE_TAC []);
 
 Theorem TAKE_FRONT :
-    !l n. l <> [] /\ n <= PRE (LENGTH l) ==> TAKE n (FRONT l) = TAKE n l
+    !l n. l <> [] /\ n < LENGTH l ==> TAKE n (FRONT l) = TAKE n l
 Proof
     HO_MATCH_MP_TAC SNOC_INDUCT
  >> CONJ_TAC >- SRW_TAC [][]
  >> RW_TAC arith_ss [FRONT_SNOC, LENGTH_SNOC]
  >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
  >> MATCH_MP_TAC TAKE_SNOC
- >> ASM_REWRITE_TAC []
+ >> RW_TAC arith_ss []
 QED
 
 val SNOC_EL_TAKE = Q.store_thm ("SNOC_EL_TAKE",
