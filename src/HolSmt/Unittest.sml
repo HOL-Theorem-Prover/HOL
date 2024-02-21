@@ -37,14 +37,14 @@ end
 (*****************************************************************************)
 
 (* Test: `Z3_ProofReplay.remove_definitions` works without any definitions *)
-fun remove_defs_no_defs () = []
+fun remove_defs_no_defs () = ([], [])
 
 (* Test: `Z3_ProofReplay.remove_definitions` works with a duplicate definition *)
-fun remove_defs_dup () = [
+fun remove_defs_dup () = ([
   ``(z1:num) = x + 1``,
   ``(z2:num) = z1 + 2``,
   ``(z2:num) = (x + 1) + 2``
-]
+], [``(z1:num)``, ``(z2:num)``])
 
 (* Test: `Z3_ProofReplay.remove_definitions` works with the following set of
    (tricky) definitions, which can cause an exponential term blow-up in a
@@ -67,28 +67,31 @@ let
     ``(x:num) = a128``,
     ``(x:num) = b128``
   ]
+  val varl = [``(a1:num)``, ``(b1:num)``, ``(a128:num)``, ``(b128:num)``,
+    ``(x:num)``]
+
   (* `gen_def` creates a definition of the form ``si = s(i-1) + s(i-1)`` *)
   fun gen_def (i, s) =
   let
     val si = Term.mk_var (s ^ Int.toString i, numSyntax.num)
     val si_1 = Term.mk_var (s ^ Int.toString (i - 1), numSyntax.num)
   in
-    boolSyntax.mk_eq (si, numSyntax.mk_plus (si_1, si_1))
+    (si, boolSyntax.mk_eq (si, numSyntax.mk_plus (si_1, si_1)))
   end
 
   (* Add ``ai = a(i-1) + a(i-1)`` and the same for ``bi``, for all 1 < i <= n *)
-  fun add_defs (n, l) =
+  fun add_defs (n, asl, varl) =
     if n = 1 then
-      l
+      (asl, varl)
     else
       let
-        val an_def = gen_def (n, "a")
-        val bn_def = gen_def (n, "b")
+        val (an, an_def) = gen_def (n, "a")
+        val (bn, bn_def) = gen_def (n, "b")
       in
-        add_defs (n - 1, an_def :: bn_def :: l)
+        add_defs (n - 1, an_def :: bn_def :: asl, an :: bn :: varl)
       end
 in
-  add_defs (128, asl)
+  add_defs (128, asl, varl)
 end
 
 (* Test: `Z3_ProofReplay.remove_definitions` works with the following set of
@@ -122,6 +125,8 @@ let
     ``(z3:num) = z2 + (y + 1) + z1``,
     ``(z3:num) = (y + 1) + z2 + (x + 1)``
   ]
+  val varl = List.map (fn t => Lib.fst (boolSyntax.dest_eq t)) asl
+
   fun add3 (a, b, c) = numSyntax.mk_plus (numSyntax.mk_plus (a, b), c)
 
   (* `gen_def1` creates a definition of the form:
@@ -135,7 +140,7 @@ let
     val middle_addend = add3 (zi_2, zi_2, z1)
     val sum = add3 (zi_1, middle_addend, z1)
   in
-    boolSyntax.mk_eq (zi, sum)
+    (zi, boolSyntax.mk_eq (zi, sum))
   end
 
   (* `gen_def2` creates a definition of the form:
@@ -149,22 +154,22 @@ let
     val first_addend = add3 (zi_2, zi_2, xp1)
     val sum = add3 (first_addend, zi_1, xp1)
   in
-    boolSyntax.mk_eq (zi, sum)
+    (zi, boolSyntax.mk_eq (zi, sum))
   end
 
   (* Add the definitions `gen_def1 i` and `gen_def2 i`, for all 3 < i <= n *)
-  fun add_defs (n, l) =
+  fun add_defs (n, asl, varl) =
     if n = 3 then
-      l
+      (asl, varl)
     else
       let
-        val def1 = gen_def1 n
-        val def2 = gen_def2 n
+        val (v1, def1) = gen_def1 n
+        val (v2, def2) = gen_def2 n
       in
-        add_defs (n - 1, def1 :: def2 :: l)
+        add_defs (n - 1, def1 :: def2 :: asl, v1 :: v2 :: varl)
       end
 in
-  add_defs (128, asl)
+  add_defs (128, asl, varl)
 end
 
 (* Wrapper for `Z3_ProofReplay.remove_definitions` unit tests *)
@@ -177,11 +182,12 @@ let
   val thm = Drule.ADD_ASSUM ``(i:num) = 7`` thm
   val thm = Drule.ADD_ASSUM ``(j:num) = i + 3`` thm
   (* Add definitions (which should be removed) *)
-  val asl = get_definitions_fn ()
+  val (asl, varl) = get_definitions_fn ()
   val defs = List.foldl (Lib.flip HOLset.add) Term.empty_tmset asl
+  val vars = List.foldl (Lib.flip HOLset.add) Term.empty_tmset varl
   val thm_with_defs = List.foldl (Lib.uncurry Drule.ADD_ASSUM) thm asl
   (* Remove definitions *)
-  val final_thm = Z3_ProofReplay.remove_definitions (defs, thm_with_defs)
+  val final_thm = Z3_ProofReplay.remove_definitions (defs, vars, thm_with_defs)
 in
   (* Make sure the resulting theorem is equal to the one before definitions
      were added *)

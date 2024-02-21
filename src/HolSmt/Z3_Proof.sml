@@ -60,8 +60,11 @@ struct
   (* The Z3 proof is a directed acyclic graph of inference steps.  A
      unique integer ID is assigned to each inference step.  Note that
      Z3 assigns no ID to the proof's root node, which derives the
-     final theorem "... |- F".  We will use ID 0 for the root node. *)
+     final theorem "... |- F".  We will use ID 0 for the root node.
 
-  type proof = (int, proofterm) Redblackmap.dict
+     Additionally, Z3 also defines variables in proofs, which we keep
+     keep track of in a set, so we can properly replay the proof. *)
+
+  type proof = (int, proofterm) Redblackmap.dict * Term.term HOLset.set
 
 end

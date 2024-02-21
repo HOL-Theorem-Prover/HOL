@@ -62,28 +62,33 @@ local
     definition_hyps : Term.term HOLset.set,
     (* stores certain theorems (proved by 'rewrite' or 'th_lemma') for
        later retrieval, to avoid re-reproving them *)
-    thm_cache : Thm.thm Net.net
+    thm_cache : Thm.thm Net.net,
+    (* contains all of the variables that Z3 has defined *)
+    var_set : Term.term HOLset.set
   }
 
   fun state_assert (s : state) (t : Term.term) : state =
     {
       asserted_hyps = HOLset.add (#asserted_hyps s, t),
       definition_hyps = #definition_hyps s,
-      thm_cache = #thm_cache s
+      thm_cache = #thm_cache s,
+      var_set = #var_set s
     }
 
   fun state_define (s : state) (terms : Term.term list) : state =
     {
       asserted_hyps = #asserted_hyps s,
       definition_hyps = HOLset.addList (#definition_hyps s, terms),
-      thm_cache = #thm_cache s
+      thm_cache = #thm_cache s,
+      var_set = #var_set s
     }
 
   fun state_cache_thm (s : state) (thm : Thm.thm) : state =
     {
       asserted_hyps = #asserted_hyps s,
       definition_hyps = #definition_hyps s,
-      thm_cache = Net.insert (Thm.concl thm, thm) (#thm_cache s)
+      thm_cache = Net.insert (Thm.concl thm, thm) (#thm_cache s),
+      var_set = #var_set s
     }
 
   fun state_inst_cached_thm (s : state) (t : Term.term) : Thm.thm =
@@ -1165,20 +1170,20 @@ local
         list_prems state_proof "unit_resolution" z3_unit_resolution x
           continuation []
     | thm_of_proofterm ((state, proof), ID id) continuation =
-        (case Redblackmap.peek (proof, id) of
+        (case Redblackmap.peek (Lib.fst proof, id) of
           SOME (THEOREM thm) =>
             continuation ((state, proof), thm)
         | SOME pt =>
             thm_of_proofterm ((state, proof), pt) (continuation o
               (* update the proof, replacing the original proofterm with
                  the theorem just derived *)
-              (fn ((state, proof), thm) =>
+              (fn ((state, (steps, vars)), thm) =>
                 (
                   if !Library.trace > 2 then
                     Feedback.HOL_MESG
                       ("HolSmtLib: updating proof at ID " ^ Int.toString id)
                   else ();
-                  ((state, Redblackmap.insert (proof, id, THEOREM thm)), thm)
+                  ((state, (Redblackmap.insert (steps, id, THEOREM thm), vars)), thm)
                 )))
         | NONE =>
             raise ERR "thm_of_proofterm"
@@ -1190,11 +1195,11 @@ local
      returning the resulting theorem, i.e.:
 
      A u defs |- t
-     -------------  remove_definitions defs
+     -------------  remove_definitions (defs, var_set)
        A |- t
 
-     Each definition in `defs` must be of the form ``var = term`` and `var` must
-     not be free in `t` nor in `A`.
+     Each definition in `defs` must be of the form ``var = term``, where `var`
+     must not be free in `t` nor in `A` and must be in `var_set`.
 
      There is a major complication: some definitions reference variables in
      other definitions and they may even be duplicated (with and without
@@ -1211,7 +1216,7 @@ local
      definitions), which might occur in a naive attempt at removing these
      definitions. Therefore, a more careful implementation is warranted.
 
-     In general, the variable references can form an acyclic graph. For
+     In general, the variable references can form a directed acyclic graph. For
      efficiency purposes (explained later), we first find a variable that is not
      referenced in any definition of the other variables.
 
@@ -1259,30 +1264,38 @@ local
      at no point we needed to fully expand a definition (unless it's already
      expanded). *)
 
-  fun remove_definitions (defs: Term.term HOLset.set, thm: Thm.thm): Thm.thm =
+  fun remove_definitions (defs, var_set, thm): Thm.thm =
     if HOLset.isEmpty defs then
       thm
     else
       let
-        (* For convenience, `pvar_defs` will contain a list of (var, def)
-           pairs *)
-        val pvar_defs = List.map boolSyntax.dest_eq (HOLset.listItems defs)
-        (* `var_set` will contain the set of all variables being defined *)
-        fun add_var ((var, def), set) = HOLset.add (set, var)
-        val var_set = List.foldl add_var Term.empty_varset pvar_defs
+        (* For convenience, `dest_defs` will contain a list of `(lhs, rhs)`
+           pairs, where `lhs` is the var being defined and `rhs` its
+           definition. *)
+        val dest_defs = List.map boolSyntax.dest_eq (HOLset.listItems defs)
+        val (lhs_l, rhs_l) = ListPair.unzip dest_defs
         (* `ref_set` will contain the set of all variables being referenced *)
-        val all_defs = List.map Lib.snd pvar_defs
-        val ref_set = Term.FVL all_defs Term.empty_varset
-        (* `unref_set` will contain the set of all variables not being
-           referenced *)
-        val unref_set = HOLset.difference (var_set, ref_set)
+        val ref_set = Term.FVL rhs_l Term.empty_tmset
+        (* `def_set` will contain the set of all variables being defined.
+           It should always be a subset of `var_set`. *)
+        val def_set = List.foldl (Lib.flip HOLset.add) Term.empty_tmset lhs_l
+
+        (* `unref_set` will contain the set of all the variables being defined
+           but not being referenced *)
+        val unref_set = HOLset.difference (def_set, ref_set)
+
+        val () =
+          if HOLset.isEmpty unref_set then
+            raise ERR "remove_definitions" "no unreferenced variables"
+          else
+            ()
 
         (* Pick an arbitrary variable from `unref_set` *)
         val var = Option.valOf (HOLset.find (fn _ => true) unref_set)
 
         (* Get all the variable's definitions *)
         fun filter_def (v, d) = if Term.term_eq v var then SOME d else NONE
-        val defs_to_remove = List.mapPartial filter_def pvar_defs
+        val defs_to_remove = List.mapPartial filter_def dest_defs
 
         (* Pick an arbitrary definition for instantiation *)
         val inst = List.hd defs_to_remove
@@ -1309,7 +1322,7 @@ local
         val new_defs = HOLset.foldl add_def Term.empty_tmset (Thm.hypset thm)
       in
         (* Recurse to remove the remaining variables' definitions *)
-        remove_definitions (new_defs, thm)
+        remove_definitions (new_defs, var_set, thm)
       end
 in
 
@@ -1328,7 +1341,8 @@ in
     val state = {
       asserted_hyps = Term.empty_tmset,
       definition_hyps = Term.empty_tmset,
-      thm_cache = Net.empty
+      thm_cache = Net.empty,
+      var_set = Lib.snd proof
     }
 
     (* ID 0 denotes the proof's root node *)
@@ -1339,7 +1353,7 @@ in
 
     (* remove the definitions introduced by Z3 from the set of hypotheses *)
     val final_thm = profile "check_proof(remove_definitions)" remove_definitions
-      (#definition_hyps state, thm)
+      (#definition_hyps state, #var_set state, thm)
 
     (* check that the final theorem contains no hyps other than those
        that have been asserted *)
