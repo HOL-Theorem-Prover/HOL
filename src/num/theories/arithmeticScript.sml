@@ -60,6 +60,13 @@ and RTC_IM_TC     = prim_recTheory.RTC_IM_TC
 and TC_IM_RTC_SUC = prim_recTheory.TC_IM_RTC_SUC
 and LESS_ALT      = prim_recTheory.LESS_ALT;
 
+
+fun bossify stac ths = stac (srw_ss()) ths
+val simp = bossify asm_simp_tac
+val fs = bossify full_simp_tac
+val gvs = bossify (global_simp_tac {droptrues = true, elimvars = true,
+                                    oldestfirst = true, strip = true})
+
 (*---------------------------------------------------------------------------*
  * The basic arithmetic operations.                                          *
  *---------------------------------------------------------------------------*)
@@ -4360,6 +4367,7 @@ val result2 =
     SIMP_CONV modss
               [ASSUME “0 < n”, MULT_CLAUSES, ADD_CLAUSES]
               “(4 + 3 * n + 1) MOD n”
+
 
 (* ----------------------------------------------------------------------
     set up characterisation as a standard algebraic type
