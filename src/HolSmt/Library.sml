@@ -177,6 +177,32 @@ struct
     List.foldl extend_dict (Redblackmap.mkDict String.compare) xs
 
   (***************************************************************************)
+  (* auxiliary functions                                                     *)
+  (***************************************************************************)
+
+  (* `is_def_oriented` must return false when:
+     1. `lhs` is not a variable in `var_set` but `rhs` is, or
+     2. `lhs` and `rhs` are both variables in `var_set` but `rhs` is smaller
+         than `lhs` (for some definition of "smaller").
+     Otherwise, it must return true. *)
+  fun is_def_oriented var_set (lhs, rhs) =
+    (not (HOLset.member (var_set, rhs))) orelse
+      (HOLset.member (var_set, lhs) andalso
+        Term.var_compare (rhs, lhs) <> LESS)
+
+  (* Orient a definition of the form `lhs = rhs` into `rhs = lhs`, if necessary.
+     This is used to ensure that the `lhs` is a variable in `var_set`. Also, if
+     both the `lhs` and the `rhs` are variables in `var_set`, then the `rhs`
+     must not be "smaller" than the `lhs`. This is done to avoid ending up with
+     circular definitions after they are all aggregated into the final theorem,
+     i.e. we want to avoid ending up with both `var1 = var2` and `var2 = var1`. *)
+  fun orient_def var_set (lhs, rhs) =
+    if is_def_oriented var_set (lhs, rhs) then
+      (lhs, rhs)
+    else
+      (rhs, lhs)
+
+  (***************************************************************************)
   (* Derived rules                                                           *)
   (***************************************************************************)
 
@@ -268,14 +294,24 @@ struct
      returned. The instantiations become hypotheses of the returned theorem.
      e.g.:
 
-     gen_instantiation ``x+1+z2`` ``z1+2`` returns the theorem:
+     gen_instantiation (``x+1+z2``, ``z1+2``, {``z1``, ``z2``, ``z3``})
+     returns the theorem:
 
-     { z1 = x+1, z2 = 2 } |- x+1+z2 = z1+2        *)
-  fun gen_instantiation (lhs, rhs) =
+     { z1 = x+1, z2 = 2 } |- x+1+z2 = z1+2
+
+     In cases where we end up with an hypothesis of the form `var1 = var2`,
+     we might orient the hypothesis to become `var2 = var1` to make sure that
+     the left-hand side is a variable in `var_set`. If both `var1` and `var2`
+     are in `var_set`, then we make sure that the left-hand side contains the
+     "smaller" variable. This avoids creating circular definitions across
+     multiple calls of this function (i.e. one call instantiating `z1 = z2`
+     and another instantiating `z2 = z1`). *)
+  fun gen_instantiation (lhs, rhs, var_set) =
   let
     val substs = Unify.simp_unify_terms [] lhs rhs
-    val asl = List.map (fn {redex, residue} => boolSyntax.mk_eq(redex, residue))
-      substs
+    fun orient {redex, residue} = orient_def var_set (redex, residue)
+    val oriented_substs = List.map orient substs
+    val asl = List.map boolSyntax.mk_eq oriented_substs
     val thms = List.map Thm.ASSUME asl
     val concl = boolSyntax.mk_eq (lhs, rhs)
   in

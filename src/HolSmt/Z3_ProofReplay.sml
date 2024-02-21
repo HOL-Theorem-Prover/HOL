@@ -636,15 +636,39 @@ local
      used in these definitions are local names introduced by Z3 for the
      purposes of completing the proof and should not otherwise be relevant in
      either the remaining hypotheses or the conclusion of the final theorem,
-     we can remove all such definitions at the end of the proof. *)
+     we can remove all such definitions at the end of the proof.
+
+     We must take an additional precaution: if `term` is a Z3-defined variable
+     and it is "smaller" than `name`, then we must actually return the theorem:
+
+     term = name |- t
+
+     This is done to avoid ending up with circular definitions in the final
+     theorem. *)
 
   fun z3_intro_def (state, t) =
   let
     val thm = List.hd (Net.match t Z3_ProformaThms.intro_def_thms)
-    val inst_thm = Drule.INST_TY_TERM (Term.match_term (Thm.concl thm) t) thm
-    val asm = List.hd (Thm.hyp inst_thm)
+    val substs = Term.match_term (Thm.concl thm) t
+    val term_substs = Lib.fst substs
+    (* Check if the hypothesis should be changed from `name = term` to
+       `term = name`. Note that `name` and `term` are actually called `n` and
+       `t` in `intro_def_thms`, except for the 4th schematic form which doesn't
+       have `t` (nor does it need to be oriented). *)
+    fun is_varname s tm = Lib.fst (Term.dest_var tm) = s
+    val name = Option.valOf (Lib.subst_assoc (is_varname "n") term_substs)
+    val term_opt = Lib.subst_assoc (is_varname "t") term_substs
+    val is_oriented =
+      case term_opt of
+        NONE => true (* `term_opt` will be NONE in the 4th schematic form *)
+      | SOME term => Library.is_def_oriented (#var_set state) (name, term)
+    (* Orient the hypothesis if necessary *)
+    val thm = if is_oriented then thm else
+      Conv.HYP_CONV_RULE (fn _ => true) Conv.SYM_CONV thm
+    val inst_thm = Drule.INST_TY_TERM substs thm
+    val asl = Thm.hyp inst_thm
   in
-    (state_define state [asm], inst_thm)
+    (state_define state asl, inst_thm)
   end
 
   (*  [l1, ..., ln] |- F
@@ -885,8 +909,9 @@ local
        removed from the set of hypotheses of the final theorem. *)
 
     let
+      val (lhs, rhs) = boolSyntax.dest_eq t
       val thm = profile "rewrite(12)(unification)" Library.gen_instantiation
-        (boolSyntax.dest_eq t)
+        (lhs, rhs, #var_set state)
       val asl = Thm.hyp thm
     in
       (state_define (state_cache_thm state thm) asl, thm)
@@ -1305,8 +1330,8 @@ local
 
         (* For each definition corresponding to this variable, create a theorem
            that can eliminate the definition from the set of hypotheses of `thm` *)
-        val hyp_thms = List.map (fn def => Library.gen_instantiation (inst, def))
-          defs_to_remove
+        val hyp_thms = List.map (fn def => Library.gen_instantiation (inst, def,
+          var_set)) defs_to_remove
 
         (* Remove all the definitions corresponding to this variable *)
         fun remove_hyp (hyp_thm, thm) = Drule.PROVE_HYP hyp_thm thm
