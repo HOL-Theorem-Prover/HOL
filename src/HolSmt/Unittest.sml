@@ -183,8 +183,11 @@ let
   val thm = Drule.ADD_ASSUM ``(j:num) = i + 3`` thm
   (* Add definitions (which should be removed) *)
   val (asl, varl) = get_definitions_fn ()
-  val defs = List.foldl (Lib.flip HOLset.add) Term.empty_tmset asl
   val vars = List.foldl (Lib.flip HOLset.add) Term.empty_tmset varl
+  (* Let's orient definitions in the same way we do during proof replay *)
+  val orient = boolSyntax.mk_eq o (Library.orient_def vars) o boolSyntax.dest_eq
+  val asl = List.map orient asl
+  val defs = List.foldl (Lib.flip HOLset.add) Term.empty_tmset asl
   val thm_with_defs = List.foldl (Lib.uncurry Drule.ADD_ASSUM) thm asl
   (* Remove definitions *)
   val final_thm = Z3_ProofReplay.remove_definitions (defs, vars, thm_with_defs)
