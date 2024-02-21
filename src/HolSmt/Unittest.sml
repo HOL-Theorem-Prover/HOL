@@ -172,6 +172,26 @@ in
   add_defs (128, asl, varl)
 end
 
+(* Test: `Z3_ProofReplay.remove_definitions` works with the following set of
+   definitions which are not originally circular, but can become circular due
+   to term unification. Credit: Tjark Weber *)
+fun remove_defs_circular1 () = ([
+    ``(a:num) = 1``,
+    ``(b:num) = a``,
+    ``(x:num) = a``,
+    ``(x:num) = b``
+], [``(a:num)``, ``(b:num)``, ``(x:num)``])
+
+(* Test: `Z3_ProofReplay.remove_definitions` works with the following set of
+   definitions which are not originally circular, but can become circular due
+   to term unification. Credit: Tjark Weber *)
+fun remove_defs_circular2 () = ([
+    ``(a:num) = 1``,
+    ``(b:num) = a``,
+    ``(x:num) = b``,
+    ``(x:num) = a``
+], [``(a:num)``, ``(b:num)``, ``(x:num)``])
+
 (* Wrapper for `Z3_ProofReplay.remove_definitions` unit tests *)
 fun remove_defs_test get_definitions_fn =
 let
@@ -223,7 +243,9 @@ let
     ("remove_definitions_no_defs", fn () => remove_defs_test remove_defs_no_defs),
     ("remove_definitions_dup", fn () => remove_defs_test remove_defs_dup),
     ("remove_definitions_tricky1", fn () => remove_defs_test remove_defs_tricky1),
-    ("remove_definitions_tricky2", fn () => remove_defs_test remove_defs_tricky2)
+    ("remove_definitions_tricky2", fn () => remove_defs_test remove_defs_tricky2),
+    ("remove_definitions_circular1", fn () => remove_defs_test remove_defs_circular1),
+    ("remove_definitions_circular2", fn () => remove_defs_test remove_defs_circular2)
   ]
   val () = List.app run_test tests
   val () = print "\ndone, all unit tests successful.\n"
