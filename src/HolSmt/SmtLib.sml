@@ -562,6 +562,48 @@ in
   fun goal_to_SmtLib_with_get_proof logic =
     Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o (goal_to_SmtLib_aux logic)
 
+  (* convert `num` literals into integer literals *)
+  fun NUM_TO_INT_CONV tm =
+  let
+    fun conv_term tm =
+      if numSyntax.is_numeral tm then
+        Thm.SYM (Thm.SPEC tm integerTheory.NUM_OF_INT)
+      else
+        raise Conv.UNCHANGED
+    fun is_builtin_num_sym tm =
+    let
+      val sym = Lib.fst (boolSyntax.strip_comb tm)
+    in
+    (* The following are symbols that take numerals as arguments but which we
+       already have special handlers to convert into SMT-LIB syntax (therefore
+       we don't need to convert their arguments into integer literals) *)
+      List.exists (Term.same_const sym) [
+        wordsSyntax.word_extract_tm, wordsSyntax.word_replicate_tm,
+        wordsSyntax.word_rol_tm, wordsSyntax.word_ror_tm
+      ]
+    end
+  in
+    (* Don't descend when encountering integer, rational, real or word literals,
+       otherwise we'll be inadvertently converting those as well. Also, don't
+       descend when encountering symbols that take numerals as arguments and
+       which we already handle specially. *)
+    if intSyntax.is_int_literal tm orelse ratSyntax.is_literal tm orelse
+       realSyntax.is_real_literal tm orelse wordsSyntax.is_word_literal tm orelse
+       is_builtin_num_sym tm then
+      raise Conv.UNCHANGED
+    else
+      (Conv.THENC (Conv.SUB_CONV NUM_TO_INT_CONV, conv_term)) tm
+  end
+
+  (* Applies NUM_TO_INT_CONV to both the assumptions and the conclusion *)
+  val NUM_TO_INT_TAC =
+  let
+    open Tactic Tactical
+  in
+    RULE_ASSUM_TAC (Conv.CONV_RULE NUM_TO_INT_CONV) THEN
+    CONV_TAC NUM_TO_INT_CONV
+  end
+
   (* eliminates some HOL terms that are not supported by the SMT-LIB
      translation *)
   fun SIMP_TAC simp_let =
@@ -580,9 +622,9 @@ in
          pairTheory.PAIR_EQ, pairTheory.FST, pairTheory.SND] THEN
       Library.WORD_SIMP_TAC THEN
       Library.SET_SIMP_TAC THEN
-      Tactic.BETA_TAC
+      Tactic.BETA_TAC THEN
+      NUM_TO_INT_TAC
     end
-
 end  (* local *)
 
 end
