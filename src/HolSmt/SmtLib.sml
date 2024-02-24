@@ -604,27 +604,40 @@ in
     CONV_TAC NUM_TO_INT_CONV
   end
 
-  (* eliminates some HOL terms that are not supported by the SMT-LIB
-     translation *)
+  (* Eliminates some HOL terms that are not supported by the SMT-LIB
+     translation. It also adds some useful theorems to the list of assumptions
+     so that SMT solvers can reason about some symbols defined in HOL4 theories. *)
   fun SIMP_TAC simp_let =
-    let
-      open Tactical simpLib
-      (* TODO: In the future it'd probably be better to translate the
-         definitions of `ABS`, `int_min`, `int_max`, etc, or any other needed
-         user-defined functions automatically and pass those on to the SMT
-         solver, instead of doing these special-case rewrites here. *)
-    in
-      REPEAT Tactic.GEN_TAC THEN
-      (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
-      SIMP_TAC pureSimps.pure_ss
-        [integerTheory.INT_MIN, integerTheory.INT_MAX, integerTheory.INT_ABS,
-         realaxTheory.real_min, realaxTheory.real_max, realTheory.abs,
-         pairTheory.PAIR_EQ, pairTheory.FST, pairTheory.SND] THEN
-      Library.WORD_SIMP_TAC THEN
-      Library.SET_SIMP_TAC THEN
-      Tactic.BETA_TAC THEN
-      NUM_TO_INT_TAC
-    end
+  let
+    open Tactical simpLib
+    (* TODO: In the future we should add all relevant theorems automatically,
+       either based on which symbols are used (recursively) or, perhaps more
+       simply, just translate all the theorems defined in all the theories that
+       are being used. For now we just manually add a few useful ones. *)
+    val facts = [
+      integerTheory.INT_MIN, integerTheory.INT_MAX,
+      realaxTheory.real_min, realaxTheory.real_max, realTheory.abs
+    ]
+  in
+    REPEAT Tactic.GEN_TAC THEN
+    (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
+    SIMP_TAC pureSimps.pure_ss [
+      (* FIXME: polymorphic functions seem to be highly problematic at the
+         moment because after HolSmt's translation, the symbols in these
+         theorems (e.g. ``FST``, ``SND``, ``$,``, etc) won't be the same as the
+         ones in the goal, apparently because they have different types (due to
+         type instantiation). This means that currently, passing these theorems
+         as facts/assumptions will be useless in most circumstances. We try to
+         use these theorems in simplification here but this only helps solving
+         the simpler goals. *)
+      pairTheory.PAIR_EQ, pairTheory.FST, pairTheory.SND
+    ] THEN
+    Library.WORD_SIMP_TAC THEN
+    Library.SET_SIMP_TAC THEN
+    Tactic.BETA_TAC THEN
+    MAP_EVERY Tactic.ASSUME_TAC facts THEN
+    NUM_TO_INT_TAC
+  end
 end  (* local *)
 
 end

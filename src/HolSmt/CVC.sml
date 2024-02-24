@@ -45,7 +45,9 @@ structure CVC = struct
         in
           ((), strings)
         end)
-      " --lang smt "
+      (* Some options were added due to:
+         https://github.com/cvc5/cvc5/issues/10293 *)
+      " --finite-model-find --macros-quant --macros-quant-mode=all --lang smt "
       (Lib.K is_sat_file)
 
 end
