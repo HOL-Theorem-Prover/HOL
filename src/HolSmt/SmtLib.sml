@@ -556,6 +556,12 @@ local
 
 in
 
+  (* Controls whether HolSmt will try to include relevant theorems when trying
+     to prove the goal, including theorems necessary for solving goals that
+     have terms of type `num`. Unfortunately, these theorems may also hinder
+     SMT performance in some cases, hence this escape hatch. *)
+  val include_theorems = ref true
+
   fun goal_to_SmtLib logic =
     Lib.apsnd (fn xs => xs @ ["(exit)\n"]) o (goal_to_SmtLib_aux logic)
 
@@ -614,10 +620,10 @@ in
        either based on which symbols are used (recursively) or, perhaps more
        simply, just translate all the theorems defined in all the theories that
        are being used. For now we just manually add a few useful ones. *)
-    val facts = [
+    val facts = if !include_theorems then [
       integerTheory.INT_MIN, integerTheory.INT_MAX,
       realaxTheory.real_min, realaxTheory.real_max, realTheory.abs
-    ]
+    ] else []
   in
     REPEAT Tactic.GEN_TAC THEN
     (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
