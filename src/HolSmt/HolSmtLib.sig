@@ -16,4 +16,7 @@ signature HolSmtLib = sig
   val Z3_ORACLE_PROVE : term -> thm
   val Z3_PROVE : term -> thm
 
+  (* exposed tunables, mostly for debugging *)
+  val include_theorems : bool ref
+
 end

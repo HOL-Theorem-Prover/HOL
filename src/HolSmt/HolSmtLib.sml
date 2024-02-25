@@ -41,6 +41,8 @@ structure HolSmtLib :> HolSmtLib = struct
   fun Z3_ORACLE_PROVE tm = prove (tm, Z3_ORACLE_TAC)
   fun Z3_PROVE tm = prove (tm, Z3_TAC)
 
+  val include_theorems = SmtLib.include_theorems
+
   (* report whether solvers are available *)
   val _ =
     let
