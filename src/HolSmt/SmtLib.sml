@@ -620,10 +620,21 @@ in
        either based on which symbols are used (recursively) or, perhaps more
        simply, just translate all the theorems defined in all the theories that
        are being used. For now we just manually add a few useful ones. *)
-    val facts = if !include_theorems then [
-      integerTheory.INT_MIN, integerTheory.INT_MAX,
-      realaxTheory.real_min, realaxTheory.real_max, realTheory.abs
-    ] else []
+    val facts =
+    let
+      open arithmeticTheory integerTheory
+    in
+      if !include_theorems then [
+        (* arithmeticTheory *)
+        GREATER_DEF, GREATER_EQ, MIN_DEF, MAX_DEF,
+        (* integerTheory *)
+        INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN, INT_MUL,
+        INT_OF_NUM, INT_POS,
+        (* others *)
+        int_arithTheory.INT_NUM_SUB,
+        realaxTheory.real_min, realaxTheory.real_max, realTheory.abs
+      ] else []
+    end
   in
     REPEAT Tactic.GEN_TAC THEN
     (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
