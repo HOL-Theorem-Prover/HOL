@@ -3041,6 +3041,13 @@ val flookup_thm = Q.store_thm ("flookup_thm",
          ((FLOOKUP f x = SOME v) = (x IN FDOM f /\ (f ' x = v)))`,
 rw [FLOOKUP_DEF]);
 
+Theorem FINITE_MAP_LOOKUP_RANGE:
+  (!f x y. FLOOKUP f x = SOME y ==> y IN FRANGE f) /\
+  (!f x. x IN FDOM f ==> FAPPLY f x IN FRANGE f)
+Proof
+  metis_tac [FRANGE_FLOOKUP, flookup_thm]
+QED
+
 val FUPDATE_EQ_FUPDATE_LIST = store_thm("FUPDATE_EQ_FUPDATE_LIST",
   ``!fm kv. fm |+ kv = fm |++ [kv]``,
   rw[FUPDATE_LIST_THM]);
@@ -3124,6 +3131,23 @@ val FDIFF_def = Define `FDIFF f1 s = DRESTRICT f1 (COMPL s)`;
 Theorem FDOM_FDIFF[simp]:
   x IN FDOM (FDIFF refs f2) <=> x IN FDOM refs /\ x NOTIN f2
 Proof   full_simp_tac(srw_ss())[FDIFF_def,DRESTRICT_DEF]
+QED
+
+Theorem FDOM_F_COMP_G_SUBSET_FDOM_G:
+  !f g. FDOM (f f_o_f g) SUBSET (FDOM g)
+Proof
+  fs[f_o_f_DEF]
+QED
+
+Theorem FRANGE_SUBSET_FDOM_COMP_FDOM_EQUALITY:
+  !f g. FRANGE g SUBSET FDOM f ==> FDOM (f f_o_f g) = FDOM g
+Proof
+     rpt strip_tac
+  \\ rw [SET_EQ_SUBSET]
+  >- rw[FDOM_F_COMP_G_SUBSET_FDOM_G]
+  >- ( fs[f_o_f_DEF, SUBSET_DEF]
+       \\ metis_tac [FINITE_MAP_LOOKUP_RANGE]
+     )
 QED
 
 val NUM_NOT_IN_FDOM =
