@@ -80,6 +80,8 @@ structure Z3 = struct
 
   val is_v4 = String.sub(Z3version, 0) = #"4"
 
+  fun is_v4_configured () = is_configured () andalso is_v4
+
   val proof_option = if is_v4 then " proof=true" else " PROOF_MODE=2"
 
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
