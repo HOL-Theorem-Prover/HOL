@@ -161,6 +161,21 @@ struct
     Redblackmap.insert (dict, key, value :: values)
   end
 
+  (* the same as `extend_dict`, but ensures the key did not contain any
+     associated value in the dictionary prior to this call *)
+  fun extend_dict_unique ((key, value), dict) =
+  let
+    val values = Redblackmap.find (dict, key)
+      handle Redblackmap.NotFound => []
+    val new_dict = Redblackmap.insert (dict, key, value :: values)
+  in
+    if not (List.null values) then
+      raise Feedback.mk_HOL_ERR "Library" "extend_dict_unique"
+          ("key '" ^ key ^ "' already contained a value")
+    else
+      new_dict
+  end
+
   (* entries in 'dict2' are prepended to entries in 'dict1' *)
   fun union_dict dict1 dict2 = Redblackmap.foldl (fn (key, vals, dict) =>
     let
