@@ -357,16 +357,16 @@ local
     if String.isPrefix "@x" name then
       (* proofterm definition *)
       let
-        val tmdict = Library.extend_dict ((name, SmtLib_Theories.K_zero_zero
-          (Term.mk_var (name, pt_ty))), tmdict)
+        val tmdict = Library.extend_dict_unique ((name,
+          SmtLib_Theories.K_zero_zero (Term.mk_var (name, pt_ty))), tmdict)
         val proof = extend_proof proof (proofterm_id name, t)
       in
         (tmdict, proof)
       end
     else
       (* term definition *)
-      (Library.extend_dict ((name, SmtLib_Theories.K_zero_zero t), tmdict),
-        proof)
+      (Library.extend_dict_unique ((name, SmtLib_Theories.K_zero_zero t),
+        tmdict), proof)
   end
 
   (* Parses the actual proof expression *)
