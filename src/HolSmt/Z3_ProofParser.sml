@@ -332,6 +332,17 @@ local
     (Redblackmap.insert (steps, id, proofterm_of_term t), vars)
   end
 
+  fun undo_look_ahead symbols get_token =
+  let
+    val buffer = ref symbols
+    fun get_token' () =
+      case !buffer of
+        [] => get_token ()
+      | x::xs => (buffer := xs; x)
+  in
+    get_token'
+  end
+
   (* distinguishes between a term definition and a proofterm
      definition; returns a (possibly extended) dictionary and proof *)
   fun parse_definition get_token (tydict, tmdict, proof) =
@@ -358,44 +369,19 @@ local
         proof)
   end
 
-  fun undo_look_ahead symbols get_token =
-  let
-    val buffer = ref symbols
-    fun get_token' () =
-      case !buffer of
-        [] => get_token ()
-      | x::xs => (buffer := xs; x)
-  in
-    get_token'
-  end
-
-  fun parse_proof_inner get_token (tydict, tmdict, proof) (rpars : int) =
+  (* Parses the actual proof expression *)
+  fun parse_proof_expression get_token (tydict, tmdict, proof) (rpars : int) =
   let
     val () = Library.expect_token "(" (get_token ())
     val head = get_token ()
   in
-    if head = "proof" then
-      parse_proof_inner get_token (tydict, tmdict, proof) (rpars + 1)
-    else if head = "declare-fun" then
-      let
-        val (tm, tmdict) = SmtLib_Parser.parse_declare_fun get_token (tydict, tmdict)
-        val proof = Lib.apsnd (fn set => HOLset.add (set, tm)) proof
-      in
-        parse_proof_inner get_token (tydict, tmdict, proof) rpars
-      end
-    else if head = "let" then
+    if head = "let" then
       let
         val (tmdict, proof) = parse_definition get_token (tydict, tmdict, proof)
       in
-        parse_proof_inner get_token (tydict, tmdict, proof) (rpars + 1)
+        parse_proof_expression get_token (tydict, tmdict, proof) (rpars + 1)
       end
-    else if head = "error" then (
-      (* some (otherwise valid) proofs are preceded by an error message,
-         which we simply ignore *)
-      get_token ();
-      Library.expect_token ")" (get_token ());
-      parse_proof_inner get_token (tydict, tmdict, proof) rpars
-    ) else
+    else
       let
         (* undo look-ahead of 2 tokens *)
         val get_token' = undo_look_ahead ["(", head] get_token
@@ -404,6 +390,36 @@ local
         (* Z3 assigns no ID to the final proof step; we use ID 0 *)
         extend_proof proof (0, t) before Lib.funpow rpars
           (fn () => Library.expect_token ")" (get_token ())) ()
+      end
+  end
+
+  (* Parses the initial proof declarations *)
+  fun parse_proof_decl get_token (tydict, tmdict, proof) (rpars : int) =
+  let
+    val () = Library.expect_token "(" (get_token ())
+    val head = get_token ()
+  in
+    if head = "proof" then
+      parse_proof_expression get_token (tydict, tmdict, proof) (rpars + 1)
+    else if head = "declare-fun" then
+      let
+        val (tm, tmdict) = SmtLib_Parser.parse_declare_fun get_token (tydict, tmdict)
+        val proof = Lib.apsnd (fn set => HOLset.add (set, tm)) proof
+      in
+        parse_proof_decl get_token (tydict, tmdict, proof) rpars
+      end
+    else if head = "error" then (
+      (* some (otherwise valid) proofs are preceded by an error message,
+         which we simply ignore *)
+      get_token ();
+      Library.expect_token ")" (get_token ());
+      parse_proof_decl get_token (tydict, tmdict, proof) rpars
+    ) else
+      let
+        (* undo look-ahead of 2 tokens *)
+        val get_token' = undo_look_ahead ["(", head] get_token
+      in
+        parse_proof_expression get_token' (tydict, tmdict, proof) rpars
       end
   end
 
@@ -436,7 +452,7 @@ local
         (* undo look-ahead of the 2 tokens *)
         val get_token' = undo_look_ahead ["(", token] get_token
       in
-        parse_proof_inner get_token' state 0
+        parse_proof_decl get_token' state 0
       end
     else
       (* Must be a Z3 v4 proof then *)
@@ -445,7 +461,7 @@ local
         (* leave the 1st parenthesis consumed and undo the 2nd *)
         val get_token' = undo_look_ahead ["("] get_token
       in
-        parse_proof_inner get_token' state 1
+        parse_proof_decl get_token' state 1
       end
   end
 
