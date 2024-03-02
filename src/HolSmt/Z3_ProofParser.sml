@@ -275,7 +275,8 @@ local
       handle Redblackmap.NotFound =>
         ID (proofterm_id (Lib.fst (Term.dest_var t)))
       handle Feedback.HOL_ERR _ =>
-        raise ERR "proofterm_of_term" "term does not encode a Z3 proofterm"
+        raise ERR "proofterm_of_term" ("term <" ^ Hol_pp.term_to_string t ^
+          "> does not encode a Z3 proofterm")
   end
 
   val zero_prems_pt = SmtLib_Theories.one_arg
