@@ -484,6 +484,19 @@ local
     aux (Redblackmap.mkDict Term.compare, t)
   end
 
+  (* Returns a proof of `t` given a list of theorems as inputs. It relies on
+     `metisLib.METIS_TAC` to find a proof. The returned theorem will have as
+     hypotheses all the hypotheses of all the input theorems. *)
+  fun metis_prove (thms, t) =
+  let
+    (* Gather all the hypotheses of all theorems together into a set of
+       assumptions *)
+    fun join_fn (thm, asm_set) = HOLset.union (asm_set, Thm.hypset thm)
+    val asms = List.foldl join_fn Term.empty_tmset thms
+  in
+    Tactical.TAC_PROOF ((HOLset.listItems asms, t), metisLib.METIS_TAC thms)
+  end
+
   (***************************************************************************)
   (* implementation of Z3's inference rules                                  *)
   (***************************************************************************)
@@ -768,6 +781,22 @@ local
   fun z3_mp (state, thm1, thm2, t) =
     (state, Thm.MP thm2 thm1 handle Feedback.HOL_ERR _ => Thm.EQ_MP thm2 thm1)
 
+  (* `z3_nnf_neg` creates a proof for a negative NNF step.
+
+     For the initial implementation, we rely on metisLib.METIS_TAC to find a
+     proof. However, if it becomes a bottleneck, a more specialized proof
+     handler could be implemented to improve performance. *)
+  fun z3_nnf_neg (state, thms, t) =
+    (state, metis_prove (thms, t))
+
+  (* `z3_nnf_pos` creates a proof for a positive NNF step.
+
+     For the initial implementation, we rely on metisLib.METIS_TAC to find a
+     proof. However, if it becomes a bottleneck, a more specialized proof
+     handler could be implemented to improve performance. *)
+  fun z3_nnf_pos (state, thms, t) =
+    (state, metis_prove (thms, t))
+
   (* ~(... \/ p \/ ...)
      ------------------
              ~p         *)
@@ -1022,14 +1051,7 @@ local
      handler could be implemented to improve performance. *)
 
   fun z3_trans_star (state, thms, t) =
-  let
-    (* Gather all the hypotheses of all theorems together into a set of assumptions *)
-    fun join_fn (thm, asm_set) = HOLset.union (asm_set, Thm.hypset thm)
-    val asms = List.foldl join_fn Term.empty_tmset thms
-    val thm = Tactical.TAC_PROOF ((HOLset.listItems asms, t), metisLib.METIS_TAC thms)
-  in
-    (state, thm)
-  end
+    (state, metis_prove (thms, t))
 
   fun z3_true_axiom (state, t) =
     (state, boolTheory.TRUTH)
@@ -1166,6 +1188,10 @@ local
         list_prems state_proof "monotonicity" z3_monotonicity x continuation []
     | thm_of_proofterm (state_proof, MP x) continuation =
         two_prems state_proof "mp" z3_mp x continuation
+    | thm_of_proofterm (state_proof, NNF_NEG x) continuation =
+        list_prems state_proof "nnf_neg" z3_nnf_neg x continuation []
+    | thm_of_proofterm (state_proof, NNF_POS x) continuation =
+        list_prems state_proof "nnf_pos" z3_nnf_pos x continuation []
     | thm_of_proofterm (state_proof, NOT_OR_ELIM x) continuation =
         one_prem state_proof "not_or_elim" z3_not_or_elim x continuation
     | thm_of_proofterm (state_proof, QUANT_INTRO x) continuation =
