@@ -42,6 +42,7 @@ struct
                      | LEMMA of proofterm * Term.term
                      | MONOTONICITY of proofterm list * Term.term
                      | MP of proofterm * proofterm * Term.term
+                     | MP_EQ of proofterm * proofterm * Term.term
                      | NNF_NEG of proofterm list * Term.term
                      | NNF_POS of proofterm list * Term.term
                      | NOT_OR_ELIM of proofterm * Term.term

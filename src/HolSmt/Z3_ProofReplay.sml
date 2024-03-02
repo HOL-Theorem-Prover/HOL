@@ -781,6 +781,10 @@ local
   fun z3_mp (state, thm1, thm2, t) =
     (state, Thm.MP thm2 thm1 handle Feedback.HOL_ERR _ => Thm.EQ_MP thm2 thm1)
 
+  (* `z3_mp_eq` implements the inference rule corresponding to `Thm.EQ_MP` *)
+  fun z3_mp_eq (state, thm1, thm2, t) =
+    (state, Thm.EQ_MP thm2 thm1)
+
   (* `z3_nnf_neg` creates a proof for a negative NNF step.
 
      For the initial implementation, we rely on metisLib.METIS_TAC to find a
@@ -1188,6 +1192,8 @@ local
         list_prems state_proof "monotonicity" z3_monotonicity x continuation []
     | thm_of_proofterm (state_proof, MP x) continuation =
         two_prems state_proof "mp" z3_mp x continuation
+    | thm_of_proofterm (state_proof, MP_EQ x) continuation =
+        two_prems state_proof "mp~" z3_mp_eq x continuation
     | thm_of_proofterm (state_proof, NNF_NEG x) continuation =
         list_prems state_proof "nnf_neg" z3_nnf_neg x continuation []
     | thm_of_proofterm (state_proof, NNF_POS x) continuation =
