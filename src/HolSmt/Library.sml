@@ -132,6 +132,17 @@ struct
       end
   end
 
+  fun undo_look_ahead symbols get_token =
+  let
+    val buffer = ref symbols
+    fun get_token' () =
+      case !buffer of
+        [] => get_token ()
+      | x::xs => (buffer := xs; x)
+  in
+    get_token'
+  end
+
   fun parse_arbnum (s : string) =
     let
       fun handle_err () =
@@ -187,7 +198,7 @@ struct
 
   (* creates a dictionary that maps strings to lists of parsing functions *)
   fun dict_from_list xs
-      : (string, (string -> string list -> 'a list -> 'a) list)
+      : (string, (string -> Term.term list -> 'a list -> 'a) list)
         Redblackmap.dict =
     List.foldl extend_dict (Redblackmap.mkDict String.compare) xs
 

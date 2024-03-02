@@ -5,7 +5,7 @@
 structure SmtLib_Parser =
 struct
 
-  type 'a parse_fn = string -> string list -> 'a list -> 'a
+  type 'a parse_fn = string -> Term.term list -> 'a list -> 'a
 
 local
 
@@ -43,7 +43,7 @@ local
      to these arguments. It raises 'HOL_ERR' if the arguments are not
      valid. 'parse_term' uses the result of the first parsing function
      that does not raise 'HOL_ERR'. 5. Each parsing function
-     additionally takes a list of indices, each one a string. This
+     additionally takes a list of indices, each one a `Term.term`. This
      list will be empty for non-indexed identifiers, and non-empty for
      indexed identifiers. Non-indexed identifiers are therefore
      parsed as a special case of indexed identifiers. This allows
@@ -73,7 +73,7 @@ local
      for declared types, one for declared terms), while parsing types
      only requires one dictionary (for declared types). *)
 
-  fun t_with_args dict (token : string) (indices : string list)
+  fun t_with_args dict (token : string) (indices : Term.term list)
       (args : 'a list) : 'a =
     Lib.tryfind (fn f => f token indices args) (Redblackmap.find (dict, token)
       handle Redblackmap.NotFound => [])
@@ -83,10 +83,15 @@ local
       handle Redblackmap.NotFound => [])
     handle Feedback.HOL_ERR _ =>
       raise ERR "t_with_args" ("failed to parse '" ^ token ^
-        "' (with indices [" ^ String.concatWith ", " indices ^
-        "] and " ^ Int.toString (List.length args) ^ " argument(s))")
+        "' (with indices [" ^ String.concatWith ", "
+        (List.map Hol_pp.term_to_string indices) ^ "] and " ^
+        Int.toString (List.length args) ^ " argument(s))")
 
-  fun parse_indexed_t get_token dict : 'a list -> 'a =
+  (***************************************************************************)
+  (* type-specific parsing functions                                         *)
+  (***************************************************************************)
+
+  fun parse_indexed_type get_token dict : Type.hol_type list -> Type.hol_type =
   let
     (* returns all tokens before the next ")" *)
     fun get_tokens acc =
@@ -100,13 +105,11 @@ local
     end
   in
     case get_tokens [] of
-      [] => raise ERR "parse_indexed_t" "'_' immediately followed by ')'"
-    | hd::tl => t_with_args dict hd tl
+      [] => raise ERR "parse_indexed_type" "'_' immediately followed by ')'"
+    | hd::tl =>
+        t_with_args dict hd (List.map (numSyntax.mk_numeral o
+          Library.parse_arbnum) tl)
   end
-
-  (***************************************************************************)
-  (* type-specific parsing functions                                         *)
-  (***************************************************************************)
 
   fun parse_type_operands get_token tydict acc : Type.hol_type list =
   let
@@ -137,7 +140,7 @@ local
     val token = get_token ()
   in
     if token = "_" then
-      parse_indexed_t get_token tydict
+      parse_indexed_type get_token tydict
     else
       let
         val t = parse_compound_type get_token tydict token
@@ -169,7 +172,26 @@ local
   (* term-specific parsing functions                                         *)
   (***************************************************************************)
 
-  fun parse_var_bindings get_token (tydict, tmdict)
+  fun parse_indexed_term get_token (tydict, tmdict) : Term.term list -> Term.term =
+  let
+    val head = get_token ()
+
+    (* returns all terms corresponding to the indices *)
+    fun get_indices acc =
+    let
+      val token = get_token ()
+      val get_token' = Library.undo_look_ahead [token] get_token
+    in
+      if token = ")" then
+        List.rev acc
+      else
+        get_indices (parse_term get_token' (tydict, tmdict) :: acc)
+    end
+  in
+    t_with_args tmdict head (get_indices [])
+  end
+
+  and parse_var_bindings get_token (tydict, tmdict)
     : (string * Term.term) list =
   let
     val _ = Library.expect_token "(" (get_token ())
@@ -306,7 +328,7 @@ local
     val token = get_token ()
   in
     if token = "_" then
-      parse_indexed_t get_token tmdict
+      parse_indexed_term get_token (tydict, tmdict)
     else
       let
         val t = if token = "let" then

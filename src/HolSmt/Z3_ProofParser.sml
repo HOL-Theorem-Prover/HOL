@@ -90,12 +90,26 @@ local
       ([listSyntax.mk_list_type pt_ty, Type.bool], pt_ty))))) o
       Lib.apfst (Lib.C (Lib.curry listSyntax.mk_list) pt_ty) o Lib.front_last)
 
+  (* This function is used only to allow some symbols used as indices in indexed
+     identifiers to be parsed (as terms) without the parser erroring out due to
+     not having the symbols in the term dictionary. *)
+  fun builtin_name name =
+    SmtLib_Theories.K_zero_zero (Term.mk_var (name, Type.alpha))
+
   val z3_builtin_dict = Library.dict_from_list [
     ("and-elim",        one_prem "and-elim"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("arith",           builtin_name "arith"),
+    (* the following is used in `(_ th-lemma bv ...)` inference rules *)
+    ("bv",              builtin_name "bv"),
     ("asserted",        zero_prems "asserted"),
     ("commutativity",   zero_prems "commutativity"),
     ("def-axiom",       zero_prems "def-axiom"),
     ("elim-unused",     zero_prems "elim-unused"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("eq-propagate",    builtin_name "eq-propagate"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("farkas",          builtin_name "farkas"),
     ("hypothesis",      zero_prems "hypothesis"),
     ("iff-true",        one_prem "iff-true"),
     ("intro-def",       zero_prems "intro-def"),
@@ -112,23 +126,26 @@ local
     ("th-lemma",        SmtLib_Theories.list_list (fn token => fn indices =>
       fn prems =>
         let
-          (* Parsing this rule: (_ |th-lemma| arith farkas -1 -1 1)
+          (* Parsing this rule: (_ |th-lemma| arith farkas 1 1 1)
              The vertical bars have already been eliminated in the tokenizer, so
              we're already matching "th-lemma".
 
-             The indices will be passed as ["arith", "farkas", "-1", "-1", "1"]
-             but currently we only care about the first one (the theory name), so
-             we'll discard the rest.
+             The indices will be passed as [``arith``, ``farkas``, ``1``, ``1``,
+             ``1``] but currently we only care about the first one (the theory
+             name), so we'll discard the rest.
 
              We'll change the name of the rule to "th-lemma-<theory>" which will
              later hook into the theory-specific rule processing. *)
-          val theory = List.hd indices
-          val name = "th-lemma-" ^ theory
+          val theory_tm = List.hd indices
+          val theory_str = Lib.fst (Term.dest_var theory_tm)
+          val name = "th-lemma-" ^ theory_str
         in
           list_prems name token [] prems
         end)),
     ("trans",           two_prems "trans"),
     ("trans*",          list_prems "trans*"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("triangle-eq",     builtin_name "triangle-eq"),
     ("true-axiom",      zero_prems "true-axiom"),
     ("unit-resolution", list_prems "unit-resolution"),
 
@@ -178,11 +195,12 @@ local
       else
         raise ERR "<z3_builtin_dict._>" "not extract[m:n]")),
     (* (_ extractm n) t *)
-    ("_", SmtLib_Theories.one_one (fn token => fn n_str =>
+    ("_", SmtLib_Theories.one_one (fn token => fn n_tm =>
       if String.isPrefix "extract" token then
         let
           val m_str = String.extract (token, 7, NONE)
-          val (m, n) = Lib.pair_map Library.parse_arbnum (m_str, n_str)
+          val m = Library.parse_arbnum m_str
+          val n = Arbint.toNat (intSyntax.int_of_term n_tm)
           val index_type = fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
           val (m, n) = Lib.pair_map numSyntax.mk_numeral (m, n)
         in
@@ -339,17 +357,6 @@ local
     (Redblackmap.insert (steps, id, proofterm_of_term t), vars)
   end
 
-  fun undo_look_ahead symbols get_token =
-  let
-    val buffer = ref symbols
-    fun get_token' () =
-      case !buffer of
-        [] => get_token ()
-      | x::xs => (buffer := xs; x)
-  in
-    get_token'
-  end
-
   (* distinguishes between a term definition and a proofterm
      definition; returns a (possibly extended) dictionary and proof *)
   fun parse_definition get_token (tydict, tmdict, proof) =
@@ -391,7 +398,7 @@ local
     else
       let
         (* undo look-ahead of 2 tokens *)
-        val get_token' = undo_look_ahead ["(", head] get_token
+        val get_token' = Library.undo_look_ahead ["(", head] get_token
         val t = SmtLib_Parser.parse_term get_token' (tydict, tmdict)
       in
         (* Z3 assigns no ID to the final proof step; we use ID 0 *)
@@ -424,7 +431,7 @@ local
     ) else
       let
         (* undo look-ahead of 2 tokens *)
-        val get_token' = undo_look_ahead ["(", head] get_token
+        val get_token' = Library.undo_look_ahead ["(", head] get_token
       in
         parse_proof_expression get_token' (tydict, tmdict, proof) rpars
       end
@@ -457,7 +464,7 @@ local
       (* Z3 v2.19 proof *)
       let
         (* undo look-ahead of the 2 tokens *)
-        val get_token' = undo_look_ahead ["(", token] get_token
+        val get_token' = Library.undo_look_ahead ["(", token] get_token
       in
         parse_proof_decl get_token' state 0
       end
@@ -466,7 +473,7 @@ local
       let
         val () = Library.expect_token "(" token
         (* leave the 1st parenthesis consumed and undo the 2nd *)
-        val get_token' = undo_look_ahead ["("] get_token
+        val get_token' = Library.undo_look_ahead ["("] get_token
       in
         parse_proof_decl get_token' state 1
       end
