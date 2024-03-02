@@ -156,7 +156,7 @@ in
 
     val tydict = Library.dict_from_list [
       ("BitVec", K_one_zero (wordsSyntax.mk_word_type o fcpLib.index_type o
-        Library.parse_arbnum))
+        numSyntax.dest_numeral))
     ]
 
     val tmdict = Library.dict_from_list [
@@ -183,9 +183,10 @@ in
           raise ERR "<Fixed_Size_BitVectors.tmdict._>"
             "not a bit-vector constant")),
       ("concat", K_zero_two wordsSyntax.mk_word_concat),
-      ("extract", K_two_one (fn (m_str, n_str) =>
+      ("extract", K_two_one (fn (m_tm, n_tm) =>
         let
-          val (m, n) = Lib.pair_map Library.parse_arbnum (m_str, n_str)
+          val (m, n) = Lib.pair_map (Arbint.toNat o intSyntax.int_of_term)
+            (m_tm, n_tm)
           val index_type = fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
           val (m, n) = Lib.pair_map numSyntax.mk_numeral (m, n)
         in
