@@ -820,6 +820,23 @@ local
     (state, if is_neg then th1 else Thm.MP (Thm.SPEC t NOT_NOT_ELIM) th1)
   end
 
+  (*
+     ------------------------------------------  QUANT_INST [u1,...,un]
+       |- ~(!x1...xn. t) \/ t[u1/x1]...[un/xn]
+  *)
+  fun z3_quant_inst (state, terms, t) =
+  let
+    val t1 = Lib.fst (boolSyntax.dest_disj t)
+    val t2 = boolSyntax.dest_neg t1
+    val p_term = Term.mk_var ("p", Type.bool)
+    val thm1 = Thm.INST [{redex = p_term, residue = t2}] HolSmtTheory.NOT_P_OR_P
+    val thm2 = Thm.ASSUME t1
+    val thm3_quant = Thm.ASSUME t2
+    val thm3 = Drule.SPECL terms thm3_quant
+  in
+    (state, Drule.DISJ_CASES_UNION thm1 thm2 thm3)
+  end
+
   (*         P = Q
      ---------------------
      (!x. P x) = (!y. Q y) *)
@@ -1103,6 +1120,21 @@ local
     continuation ((state, proof), thm)
   end
 
+  fun one_arg_zero_prems (state : state, proof : proof)
+      (name : string)
+      (z3_rule_fn : state * 'a * Term.term -> state * Thm.thm)
+      (arg : 'a, concl : Term.term)
+      (continuation : (state * proof) * Thm.thm -> (state * proof) * Thm.thm)
+      : (state * proof) * Thm.thm =
+  let
+    val (state, thm) = profile name z3_rule_fn (state, arg, concl)
+      handle Feedback.HOL_ERR _ =>
+        raise ERR name (Hol_pp.term_to_string concl)
+    val _ = profile "check_thm" check_thm (name, thm, concl)
+  in
+    continuation ((state, proof), thm)
+  end
+
   fun one_prem (state_proof : state * proof)
       (name : string)
       (z3_rule_fn : state * Thm.thm * Term.term -> state * Thm.thm)
@@ -1200,6 +1232,8 @@ local
         list_prems state_proof "nnf_pos" z3_nnf_pos x continuation []
     | thm_of_proofterm (state_proof, NOT_OR_ELIM x) continuation =
         one_prem state_proof "not_or_elim" z3_not_or_elim x continuation
+    | thm_of_proofterm (state_proof, QUANT_INST x) continuation =
+        one_arg_zero_prems state_proof "quant_inst" z3_quant_inst x continuation
     | thm_of_proofterm (state_proof, QUANT_INTRO x) continuation =
         one_prem state_proof "quant_intro" z3_quant_intro x continuation
     | thm_of_proofterm (state_proof, REWRITE x) continuation =

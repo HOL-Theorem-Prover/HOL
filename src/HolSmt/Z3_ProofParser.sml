@@ -90,6 +90,17 @@ local
       ([listSyntax.mk_list_type pt_ty, Type.bool], pt_ty))))) o
       Lib.apfst (Lib.C (Lib.curry listSyntax.mk_list) pt_ty) o Lib.front_last)
 
+  fun list_args_zero_prems name =
+    SmtLib_Theories.K_list_one (fn indices => fn term =>
+      let
+        val arg_types = List.map Term.type_of indices
+        val fn_type = arg_types @ [Type.bool]
+        val t = Term.mk_var (name, boolSyntax.list_mk_fun (fn_type, pt_ty))
+        val args = indices @ [term]
+      in
+        Term.list_mk_comb (t, args)
+      end)
+
   (* This function is used only to allow some symbols used as indices in indexed
      identifiers to be parsed (as terms) without the parser erroring out due to
      not having the symbols in the term dictionary. *)
@@ -120,6 +131,7 @@ local
     ("nnf-neg",         list_prems "nnf-neg"),
     ("nnf-pos",         list_prems "nnf-pos"),
     ("not-or-elim",     one_prem "not-or-elim"),
+    ("quant-inst",      list_args_zero_prems "quant-inst"),
     ("quant-intro",     one_prem "quant-intro"),
     ("rewrite",         zero_prems "rewrite"),
     ("symm",            one_prem "symm"),
@@ -309,6 +321,8 @@ local
     SmtLib_Theories.two_args (f o Lib.apfst
       (List.map proofterm_of_term o Lib.fst o listSyntax.dest_list))
 
+  fun list_args_zero_prems_pt f = f o Lib.front_last
+
   val _ = pt_dict := List.foldl
     (fn ((key, value), dict) => Redblackmap.insert (dict, key, value))
     (!pt_dict)
@@ -328,6 +342,7 @@ local
       ("nnf-neg",         list_prems_pt NNF_NEG),
       ("nnf-pos",         list_prems_pt NNF_POS),
       ("not-or-elim",     one_prem_pt NOT_OR_ELIM),
+      ("quant-inst",      list_args_zero_prems_pt QUANT_INST),
       ("quant-intro",     one_prem_pt QUANT_INTRO),
       ("rewrite",         zero_prems_pt REWRITE),
       ("symm",            one_prem_pt SYMM),

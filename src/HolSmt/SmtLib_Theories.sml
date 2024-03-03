@@ -57,6 +57,8 @@ in
 
   fun K_two_one f = Lib.K (one_arg o two_args f)
 
+  fun K_list_one f = Lib.K (one_arg o list_args f)
+
   fun chainable f =
   let
     fun aux t [] = raise Match  (* should never happen *)
