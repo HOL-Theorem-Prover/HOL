@@ -46,6 +46,7 @@ struct
                      | NNF_NEG of proofterm list * Term.term
                      | NNF_POS of proofterm list * Term.term
                      | NOT_OR_ELIM of proofterm * Term.term
+                     | QUANT_INST of Term.term list * Term.term
                      | QUANT_INTRO of proofterm * Term.term
                      | REWRITE of Term.term
                      | SYMM of proofterm * Term.term
