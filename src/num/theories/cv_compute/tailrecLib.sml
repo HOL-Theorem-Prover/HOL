@@ -32,6 +32,13 @@ val TAILREC_def = whileTheory.TAILREC
                   |> CONV_RULE (DEPTH_CONV ETA_CONV)
                   |> REWRITE_RULE [GSYM combinTheory.I_EQ_IDABS];
 
+fun strip_to_dest test A t =
+    if aconv test t then SOME A
+    else
+      case Lib.total dest_comb t of
+          NONE => NONE
+        | SOME (f,x) => strip_to_dest test (x::A) f
+
 fun mk_sum_term fn_t inty tm =
     let
       fun build_sum t =
@@ -48,16 +55,16 @@ fun mk_sum_term fn_t inty tm =
             let val (b,x,y) = cvSyntax.dest_cv_if t
             in mk_cond(cvSyntax.mk_c2b b,build_sum x,build_sum y) end
           else
-            let val (f, xs) = strip_comb t
-            in
-              if aconv f fn_t then
-                if null xs then raise mk_HOL_ERR "mk_sum_term" "malformed term"
-                else
-                  sumSyntax.mk_inl (pairSyntax.list_mk_pair xs, type_of t)
-              else if is_abs t then
-                mk_abs (apsnd build_sum (dest_abs t))
-              else sumSyntax.mk_inr(t,inty)
-            end
+            case strip_to_dest fn_t [] t of
+                SOME xs => if null xs then
+                             raise mk_HOL_ERR "mk_sum_term" "malformed term"
+                           else
+                             sumSyntax.mk_inl
+                               (pairSyntax.list_mk_pair xs, type_of t)
+              | NONE =>
+                if is_abs t then
+                  mk_abs (apsnd build_sum (dest_abs t))
+                else sumSyntax.mk_inr(t,inty)
     in
       build_sum tm
     end
