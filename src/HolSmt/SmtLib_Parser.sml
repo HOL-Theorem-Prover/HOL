@@ -7,6 +7,17 @@ struct
 
   type 'a parse_fn = string -> Term.term list -> 'a list -> 'a
 
+  type 'a dict = (string, 'a parse_fn list) Redblackmap.dict
+
+  type dicts = Type.hol_type dict * Term.term dict
+
+  type bindings = (string * Term.term * Term.term) list
+
+  type parser_cfg = {
+    mk_let_bindings: dicts * bindings -> Term.term dict,
+    mk_let: bindings * Term.term -> Term.term
+  }
+
 local
 
   val ERR = Feedback.mk_HOL_ERR "SmtLib_Parser"
@@ -172,7 +183,8 @@ local
   (* term-specific parsing functions                                         *)
   (***************************************************************************)
 
-  fun parse_indexed_term get_token (tydict, tmdict) : Term.term list -> Term.term =
+  fun parse_indexed_term cfg get_token (tydict, tmdict)
+    : Term.term list -> Term.term =
   let
     val head = get_token ()
 
@@ -185,13 +197,13 @@ local
       if token = ")" then
         List.rev acc
       else
-        get_indices (parse_term get_token' (tydict, tmdict) :: acc)
+        get_indices (parse_term_with_cfg cfg get_token' (tydict, tmdict) :: acc)
     end
   in
     t_with_args tmdict head (get_indices [])
   end
 
-  and parse_var_bindings get_token (tydict, tmdict)
+  and parse_var_bindings cfg get_token (tydict, tmdict)
     : (string * Term.term) list =
   let
     val _ = Library.expect_token "(" (get_token ())
@@ -205,7 +217,7 @@ local
         let
           val _ = Library.expect_token "(" token
           val symbol = get_token ()
-          val term = parse_term get_token (tydict, tmdict)
+          val term = parse_term_with_cfg cfg get_token (tydict, tmdict)
           val _ = Library.expect_token ")" (get_token ())
         in
           aux ((symbol, term) :: acc)
@@ -215,24 +227,16 @@ local
     aux []
   end
 
-  and parse_let_term get_token (tydict, tmdict) : Term.term =
+  and parse_let_term cfg get_token (tydict, tmdict) : Term.term =
   let
-    val bindings = parse_var_bindings get_token (tydict, tmdict)
+    val bindings = parse_var_bindings cfg get_token (tydict, tmdict)
     val bindings = List.map
       (fn (s, t) => (s, Term.mk_var (s, Term.type_of t), t)) bindings
-    (* variables don't take arguments *)
-    fun parsefn var token indices args =
-      if List.null indices andalso List.null args then
-        var
-      else
-        raise ERR ("<" ^ Hol_pp.term_to_string var ^ ">")
-          "wrong number of arguments"
-    val tmdict = List.foldl Library.extend_dict tmdict
-      (List.map (fn (s, var, _) => (s, parsefn var)) bindings)
-    val body = parse_term get_token (tydict, tmdict)
+    val tmdict = (#mk_let_bindings cfg) ((tydict, tmdict), bindings)
+    val body = parse_term_with_cfg cfg get_token (tydict, tmdict)
     val _ = Library.expect_token ")" (get_token ())
   in
-    pairSyntax.mk_anylet (List.map (fn (_, var, t) => (var, t)) bindings, body)
+    (#mk_let cfg) (bindings, body)
   end
 
   and parse_sorted_vars get_token tydict : (string * Type.hol_type) list =
@@ -258,7 +262,7 @@ local
     aux []
   end
 
-  and parse_binder_term get_token (tydict, tmdict) mk_binder : Term.term =
+  and parse_binder_term cfg get_token (tydict, tmdict) mk_binder : Term.term =
   let
     val vars = parse_sorted_vars get_token tydict
     val vars = List.map (fn vT => (Lib.fst vT, Term.mk_var vT)) vars
@@ -271,15 +275,15 @@ local
           "wrong number of arguments"
     val tmdict = List.foldl Library.extend_dict tmdict
       (List.map (Lib.apsnd parsefn) vars)
-    val body = parse_term get_token (tydict, tmdict)
+    val body = parse_term_with_cfg cfg get_token (tydict, tmdict)
     val _ = Library.expect_token ")" (get_token ())
   in
     mk_binder (List.map Lib.snd vars, body)
   end
 
-  and parse_annotated_term get_token (tydict, tmdict) : Term.term =
+  and parse_annotated_term cfg get_token (tydict, tmdict) : Term.term =
   let
-    val term = parse_term get_token (tydict, tmdict)
+    val term = parse_term_with_cfg cfg get_token (tydict, tmdict)
     (* we ignore all attributes; since these can be S-expressions, we
        need to count parentheses *)
     fun parse_attributes n =
@@ -298,7 +302,7 @@ local
     term
   end
 
-  and parse_term_operands get_token (tydict, tmdict) acc : Term.term list =
+  and parse_term_operands cfg get_token (tydict, tmdict) acc : Term.term list =
   let
     val token = get_token ()
   in
@@ -307,42 +311,42 @@ local
     else
       let
         (* operands don't take arguments *)
-        val operand = parse_term_aux get_token (tydict, tmdict) token []
+        val operand = parse_term_aux cfg get_token (tydict, tmdict) token []
       in
-        parse_term_operands get_token (tydict, tmdict) (operand :: acc)
+        parse_term_operands cfg get_token (tydict, tmdict) (operand :: acc)
       end
   end
 
-  and parse_compound_term get_token (tydict, tmdict) (token : string)
+  and parse_compound_term cfg get_token (tydict, tmdict) (token : string)
     : Term.term =
    let
-    val headfn = parse_term_aux get_token (tydict, tmdict) token
-    val operands = parse_term_operands get_token (tydict, tmdict) []
+    val headfn = parse_term_aux cfg get_token (tydict, tmdict) token
+    val operands = parse_term_operands cfg get_token (tydict, tmdict) []
   in
     headfn operands
   end
 
-  and parse_indexed_or_compound_term get_token (tydict, tmdict)
+  and parse_indexed_or_compound_term cfg get_token (tydict, tmdict)
     : Term.term list -> Term.term =
   let
     val token = get_token ()
   in
     if token = "_" then
-      parse_indexed_term get_token (tydict, tmdict)
+      parse_indexed_term cfg get_token (tydict, tmdict)
     else
       let
         val t = if token = "let" then
-            parse_let_term get_token (tydict, tmdict)
+            parse_let_term cfg get_token (tydict, tmdict)
           else if token = "forall" then
-            parse_binder_term get_token (tydict, tmdict)
+            parse_binder_term cfg get_token (tydict, tmdict)
               boolSyntax.list_mk_forall
           else if token = "exists" then
-            parse_binder_term get_token (tydict, tmdict)
+            parse_binder_term cfg get_token (tydict, tmdict)
               boolSyntax.list_mk_exists
           else if token = "!" then
-            parse_annotated_term get_token (tydict, tmdict)
+            parse_annotated_term cfg get_token (tydict, tmdict)
           else
-            parse_compound_term get_token (tydict, tmdict) token
+            parse_compound_term cfg get_token (tydict, tmdict) token
       in
         (* compounds don't take arguments *)
         fn [] => t
@@ -351,20 +355,47 @@ local
       end
   end
 
-  and parse_term_aux get_token (tydict, tmdict) (token : string)
+  and parse_term_aux cfg get_token (tydict, tmdict) (token : string)
     : Term.term list -> Term.term =
     if token = "(" then
-      parse_indexed_or_compound_term get_token (tydict, tmdict)
+      parse_indexed_or_compound_term cfg get_token (tydict, tmdict)
     else
       t_with_args tmdict token []
 
-  and parse_term get_token (tydict, tmdict) : Term.term =
-    parse_term_aux get_token (tydict, tmdict) (get_token ()) []
+  and parse_term_with_cfg cfg get_token (tydict, tmdict) : Term.term =
+    parse_term_aux cfg get_token (tydict, tmdict) (get_token ()) []
+
+  (* the SMT-LIB version of `mk_let_bindings` binds each name to a HOL4 variable
+     with the same name *)
+  fun smtlib_mk_let_bindings ((tydict, tmdict), bindings) : Term.term dict =
+  let
+    (* variables don't take arguments *)
+    fun parsefn var token indices args =
+      if List.null indices andalso List.null args then
+        var
+      else
+        raise ERR ("<" ^ Hol_pp.term_to_string var ^ ">")
+          "wrong number of arguments"
+  in
+    List.foldl Library.extend_dict tmdict
+      (List.map (fn (s, var, _) => (s, parsefn var)) bindings)
+  end
+
+  (* the SMT-LIB version of `mk_let` constructs a HOL4 `let` term *)
+  fun smtlib_mk_let (bindings, body) : Term.term =
+    pairSyntax.mk_anylet (List.map (fn (_, var, t) => (var, t)) bindings, body)
+
+  val smtlib_cfg = {
+    mk_let_bindings = smtlib_mk_let_bindings,
+    mk_let = smtlib_mk_let
+  }
+
+  val parse_term = parse_term_with_cfg smtlib_cfg
 
   fun parse_term_list get_token (tydict, tmdict) : Term.term list =
   (
     Library.expect_token "(" (get_token ());
-    parse_term_operands get_token (tydict, tmdict) []
+    parse_term_operands smtlib_cfg get_token (tydict, tmdict) []
   )
 
   (***************************************************************************)
@@ -552,6 +583,7 @@ in
   val parse_type = parse_type
   val parse_type_list = parse_type_list
 
+  val parse_term_with_cfg = parse_term_with_cfg
   val parse_term = parse_term
   val parse_term_list = parse_term_list
 
@@ -569,9 +601,8 @@ in
             currently (as of 2011-05-20) found in the SMT-LIB
             library. *)
 
-  fun parse_file (path : string) : string *
-    (string, Type.hol_type parse_fn list) Redblackmap.dict *
-    (string, Term.term parse_fn list) Redblackmap.dict * Term.term list =
+  fun parse_file (path : string)
+    : string * Type.hol_type dict * Term.term dict * Term.term list =
   let
     (* parse the file contents *)
     val _ = if !Library.trace > 1 then

@@ -499,9 +499,8 @@ in
   (* Similar to 'parse_file' below, but for instreams.  Does not close
      the instream. *)
 
-  fun parse_stream (tydict : (string, Type.hol_type SmtLib_Parser.parse_fn list)
-    Redblackmap.dict, tmdict : (string, Term.term SmtLib_Parser.parse_fn list)
-    Redblackmap.dict) (instream : TextIO.instream) : proof =
+  fun parse_stream ((tydict, tmdict): SmtLib_Parser.dicts)
+    (instream : TextIO.instream) : proof =
   let
     (* union of user-declared names and Z3's inference rule names *)
     val tmdict = Library.union_dict tmdict z3_builtin_dict
