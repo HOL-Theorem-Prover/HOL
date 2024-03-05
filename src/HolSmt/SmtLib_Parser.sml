@@ -15,7 +15,8 @@ struct
 
   type parser_cfg = {
     mk_let_bindings: dicts * bindings -> Term.term dict,
-    mk_let: bindings * Term.term -> Term.term
+    mk_let: bindings * Term.term -> Term.term,
+    parse_lambda: bool
   }
 
 local
@@ -343,6 +344,18 @@ local
           else if token = "exists" then
             parse_binder_term cfg get_token (tydict, tmdict)
               boolSyntax.list_mk_exists
+          (* SMT-LIB 2.6 doesn't have special `lambda` terms, but Z3 proof
+             certificates do. So we only parse them when allowed by the
+             parser configuration, otherwise we will parse identifiers that are
+             coincidentally named `lambda` as if they were special (this cannot
+             happen in Z3 proof certificates since all user identifiers are
+             renamed to non-conflicting names).
+             In Z3 proof certificates, `lambda` terms only seem to be a local
+             declaration of variable names/types that apparently need to be
+             interpreted as free variables in the enclosed term. *)
+          else if token = "lambda" andalso #parse_lambda cfg then
+            parse_binder_term cfg get_token (tydict, tmdict)
+              Lib.snd
           else if token = "!" then
             parse_annotated_term cfg get_token (tydict, tmdict)
           else
@@ -387,7 +400,8 @@ local
 
   val smtlib_cfg = {
     mk_let_bindings = smtlib_mk_let_bindings,
-    mk_let = smtlib_mk_let
+    mk_let = smtlib_mk_let,
+    parse_lambda = false
   }
 
   val parse_term = parse_term_with_cfg smtlib_cfg
