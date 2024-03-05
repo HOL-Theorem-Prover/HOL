@@ -372,6 +372,51 @@ local
     (Redblackmap.insert (steps, id, proofterm_of_term t), vars)
   end
 
+  (* Checks whether the `let` bindings are like the ones used in Z3 proof
+     certificates, i.e. that there is only one binding and the name starts with
+     `?x`, `$x` or `@x`. Otherwise, we'll assume it's of a real `let` expression
+     as used in SMT-LIB.
+     Ideally, `@x` bindings nested within `let` definitions would be treated
+     specially like those being bound in the outermost `let` definitions, i.e.
+     we'd create nodes in the proof graph so that we don't have to replay the
+     proofs for these proofterms more than once. However, this would greatly
+     complicate the parser and currently each of these nested proofterms only
+     seem to be used once, so there doesn't seem to be a need to handle them
+     specially. *)
+  fun is_z3_proof_binding ((name, _, _) :: []) =
+        String.isPrefix "?x" name orelse String.isPrefix "$x" name orelse
+          String.isPrefix "@x" name
+    | is_z3_proof_binding _ = false
+
+  (* The Z3 proof certificate version of `mk_let_bindings` checks whether we are
+     parsing a typical Z3 proof certificate `let` binding. If so, it binds the
+     name to the corresponding term. Otherwise, it does what the SMT-LIB version
+     of the parser would do. *)
+  fun z3_mk_let_bindings ((tydict, tmdict), bindings)
+    : Term.term SmtLib_Parser.dict =
+    if is_z3_proof_binding bindings then
+      (* We cannot use `Library.extend_dict_unique` because Z3 does rebind the
+         same name (although when this happened, it assigned the same value). *)
+      List.foldl (fn ((name, _, t), tmdict) => Library.extend_dict
+        ((name, SmtLib_Theories.K_zero_zero t), tmdict)) tmdict bindings
+    else
+      SmtLib_Parser.smtlib_mk_let_bindings ((tydict, tmdict), bindings)
+
+  (* The Z3 proof certificate version of `mk_let` checks whether we are parsing
+     a typical Z3 proof certificate `let` binding. If so, it simply returns the
+     body of the `let` expression, otherwise it does what the SMT-LIB version of
+     the parser would do (i.e. create a HOL4 `let` term). *)
+  fun z3_mk_let (bindings, body) : Term.term =
+    if is_z3_proof_binding bindings then
+      body
+    else
+      SmtLib_Parser.smtlib_mk_let (bindings, body)
+
+  val z3_proof_cfg = {
+    mk_let_bindings = z3_mk_let_bindings,
+    mk_let = z3_mk_let
+  }
+
   (* distinguishes between a term definition and a proofterm
      definition; returns a (possibly extended) dictionary and proof *)
   fun parse_definition get_token (tydict, tmdict, proof) =
@@ -379,7 +424,8 @@ local
     val _ = Library.expect_token "(" (get_token ())
     val _ = Library.expect_token "(" (get_token ())
     val name = get_token ()
-    val t = SmtLib_Parser.parse_term get_token (tydict, tmdict)
+    val t = SmtLib_Parser.parse_term_with_cfg z3_proof_cfg get_token
+      (tydict, tmdict)
     val _ = Library.expect_token ")" (get_token ())
     val _ = Library.expect_token ")" (get_token ())
   in
@@ -414,7 +460,8 @@ local
       let
         (* undo look-ahead of 2 tokens *)
         val get_token' = Library.undo_look_ahead ["(", head] get_token
-        val t = SmtLib_Parser.parse_term get_token' (tydict, tmdict)
+        val t = SmtLib_Parser.parse_term_with_cfg z3_proof_cfg get_token'
+          (tydict, tmdict)
       in
         (* Z3 assigns no ID to the final proof step; we use ID 0 *)
         extend_proof proof (0, t) before Lib.funpow rpars
