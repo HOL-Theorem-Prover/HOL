@@ -209,11 +209,11 @@ QED
 (*---------------------------------------------------------------------------*)
 
 Definition KSTAR_def:
- KSTAR(L:'a lang) = BIGUNION {DOTn L n | n IN UNIV}
+  KSTAR(L:'a lang) = BIGUNION {DOTn L n | n IN UNIV}
 End
 
 Theorem IN_KSTAR:
-   x IN KSTAR(L) <=> ?n. x IN DOTn L n
+  x IN KSTAR(L) <=> ?n. x IN DOTn L n
 Proof
   RW_TAC basic_ss [KSTAR_def,BIGUNION] >>
   RW_TAC basic_ss [SPECIFICATION] >>
@@ -429,50 +429,59 @@ Proof
   Cases_on `u` >> RW_TAC list_ss []
 QED
 
+Theorem ARDEN1[local]:
+  epsilon ∉ A ∧ (X = A dot X ∪ B) ∧ w ∈ X ⇒ w ∈ KSTAR A dot B
+Proof
+ strip_tac >> measureInduct_on `LENGTH w` >> Cases_on `LENGTH w` >> disch_tac
+ >- (gvs[] >> metis_tac [EMPTY_IN_KSTAR,EMPTY_IN_DOT,IN_UNION])
+ >- (‘w ∈ A dot X ∨ w ∈ B’ by metis_tac[EXTENSION,IN_UNION]
+     >- (‘?u v. (w = u ++ v) /\ u ∈ A /\ v ∈ X ∧ u ≠ epsilon’
+             by metis_tac [IN_dot] >>
+         ‘LENGTH v < SUC n’ by metis_tac [LENGTH_LESS] >>
+         ‘v IN KSTAR A dot B’ by metis_tac [] >>
+         metis_tac [STRCAT_IN_KSTAR])
+     >- metis_tac [SUBSET_DEF,SUBSET_KSTAR_DOT]
+    )
+QED
+
 Triviality lemma:
-  !A B X. (!n. (DOTn A n dot B) ⊆ X) ==> KSTAR(A) dot B SUBSET X
+  !A B X. (!n. (DOTn A n dot B) ⊆ X) ==> KSTAR(A) dot B ⊆ X
 Proof
  RW_TAC basic_ss [SUBSET_DEF,IN_KSTAR,IN_dot] >> METIS_TAC []
 QED
 
+Theorem ARDEN2[local]:
+ X = A dot X ∪ B ⇒ (KSTAR A dot B) ⊆ X
+Proof
+  strip_tac >> irule lemma >> Induct_on ‘n’
+  >- (rw [DOTn_def,SUBSET_DEF,dot_def] >> metis_tac [IN_UNION])
+  >- (‘A dot (DOTn A n dot B) ⊆ (A dot X)’
+          by metis_tac [DOT_MONO,SUBSET_REFL] >>
+      gvs [DOTn_def,GSYM DOT_ASSOC] >>
+      metis_tac [IN_UNION,SUBSET_DEF])
+QED
+
 Theorem ARDENS_LEMMA:
  !A B X:'a lang.
-    ~(epsilon IN A) /\ (X = (A dot X) UNION B) ==> (X = KSTAR(A) dot B)
+    epsilon ∉ A ∧ (X = (A dot X) ∪ B) ==> (X = KSTAR(A) dot B)
 Proof
- rpt strip_tac >> rw_tac basic_ss [SET_EQ_SUBSET]
- >- (rewrite_tac [SUBSET_DEF] >> gen_tac >>
-     measureInduct_on `LENGTH x` >>
-     Cases_on `LENGTH x`
-     >- (gvs [EMPTY_IN_DOT] >> metis_tac [EMPTY_IN_KSTAR,EMPTY_IN_DOT,IN_UNION])
-     >- (strip_tac >>
-         `x IN A dot X \/ x IN B` by metis_tac [IN_UNION]
-         >- (`?u v. (x = u ++ v) /\ u IN A /\ v IN X` by metis_tac [IN_dot] >>
-             `~(u = [])` by metis_tac [] >>
-             `LENGTH v < LENGTH x` by metis_tac [LENGTH_LESS] >>
-             `v IN KSTAR A dot B` by metis_tac [] >>
-             metis_tac [STRCAT_IN_KSTAR])
-         >- metis_tac [SUBSET_DEF,SUBSET_KSTAR_DOT])
-    )
- >- (irule lemma >> Induct
-     >- (RW_TAC basic_ss [DOTn_def,SUBSET_DEF,dot_def] >> metis_tac [IN_UNION])
-     >- (`A dot (DOTn A n dot B) SUBSET (A dot X)`
-            by metis_tac [DOT_MONO,SUBSET_REFL] >>
-         gvs [DOTn_def,GSYM DOT_ASSOC] >> metis_tac [IN_UNION,SUBSET_DEF])
-    )
+  rpt strip_tac >> rw[SET_EQ_SUBSET]
+  >- metis_tac [SUBSET_DEF,ARDEN1]
+  >- metis_tac [ARDEN2]
 QED
 
 (*---------------------------------------------------------------------------*)
 (* Abstract definition of the finite state languages. This is based on the   *)
-(* "left quotient" operation. Brzozowski derivatives are the syntactic       *)
-(* counterpart of left quotient.                                             *)
+(* "left quotient" operation. Brzozowski derivatives (see                    *)
+(* regular/regexpScript.sml) are the syntactic counterpart of left quotient. *)
 (*---------------------------------------------------------------------------*)
 
-Definition Drop_def:
-  Drop x L = {y | (x ++ y) ∈ L}
+Definition Left_Quotient_def:
+  Left_Quotient x L = {y | (x ++ y) ∈ L}
 End
 
 Definition Intrinsic_States_def:
-  Intrinsic_States L = {Drop x L | x ∈ (UNIV:'a list set)}
+  Intrinsic_States L = {Left_Quotient x L | x ∈ (UNIV:'a list set)}
 End
 
 Definition Finite_State_def:
@@ -493,33 +502,32 @@ Proof
   metis_tac [IMAGE_CONSTANT, combinTheory.K_DEF]
 QED
 
-Theorem Drop_EMPTY:
-  Drop x {} = {}
+Theorem Left_Quotient_empty:
+  Left_Quotient x {} = {}
 Proof
- rw[Drop_def]
+ rw[Left_Quotient_def]
 QED
 
-Theorem Drop_epsilon:
-  Drop epsilon L = L
+Theorem Left_Quotient_epsilon:
+  Left_Quotient epsilon L = L
 Proof
- rw[Drop_def]
+ rw[Left_Quotient_def]
 QED
 
-Theorem Drop_word:
-  Drop x L =
+Theorem Left_Quotient_word:
+  Left_Quotient x L =
    case x
     of epsilon => L
-     | h::t => Drop t (Drop [h] L)
+     | h::t => Left_Quotient t (Left_Quotient [h] L)
 Proof
- Induct_on ‘x’ >> rw[Drop_def]
+ Induct_on ‘x’ >> rw[Left_Quotient_def]
 QED
 
-Theorem Finite_State_EMPTY:
+Theorem Finite_State_empty:
   Finite_State {}
 Proof
-  rw[Finite_State_def, Intrinsic_States_def,Drop_EMPTY] >>
+  rw[Finite_State_def, Intrinsic_States_def,Left_Quotient_empty] >>
   rw[combinTheory.o_DEF, GSPEC_IMAGE, IMAGE_CONSTANT]
 QED
-
 
 val _ = export_theory();
