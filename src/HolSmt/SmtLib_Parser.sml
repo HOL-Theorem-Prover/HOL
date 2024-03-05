@@ -578,6 +578,9 @@ local
 
 in
 
+  val smtlib_mk_let_bindings = smtlib_mk_let_bindings
+  val smtlib_mk_let = smtlib_mk_let
+
   val parse_declare_fun = parse_declare_fun
 
   val parse_type = parse_type
