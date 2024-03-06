@@ -131,6 +131,10 @@ local
     ("nnf-neg",         list_prems "nnf-neg"),
     ("nnf-pos",         list_prems "nnf-pos"),
     ("not-or-elim",     one_prem "not-or-elim"),
+    (* `proof-bind` doesn't seem to have semantic value, despite the Z3 v4.12.4
+       source code implying that it either introduces lambda abstractions or
+       `forall` quantifiers, depending on the interpretation *)
+    ("proof-bind",      SmtLib_Theories.K_zero_one Lib.I),
     ("quant-inst",      list_args_zero_prems "quant-inst"),
     ("quant-intro",     one_prem "quant-intro"),
     ("refl",            zero_prems "refl"),
