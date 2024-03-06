@@ -1129,22 +1129,18 @@ Theorem WF_PULL:
     (!x y. R' x y ==> P (f x) /\ f x = f y /\ R (f x) (g x) (g y)) ==>
     WF R'
 Proof
-  rw[WF_DEF] >>
-  reverse $ Cases_on `?w'. P (f w') /\ B w'`
-  >- (fs[] >> metis_tac[]) >>
-  rw[] >>
-  first_x_assum drule >>
-  qpat_x_assum `B w` kall_tac >>
-  disch_then $ qspec_then
-    `\x. ?y. x = g y /\ B y /\ P (f y) /\ f y = f w'` assume_tac >>
-  fs[PULL_EXISTS] >>
-  first_x_assum (dxrule_then dxrule) >>
-  rw[] >>
-  first_assum $ irule_at (Pos hd) >>
-  rw[] >>
-  last_x_assum drule >>
-  rw[] >>
-  gvs[]
+  rw_tac(srw_ss())[WF_DEF] >>
+  Cases_on `?w'. P (f w') /\ B w'`
+  >- (
+    POP_ASSUM STRIP_ASSUME_TAC >>
+    FIRST_X_ASSUM drule >>
+    Q.PAT_X_ASSUM `B w` (K ALL_TAC) >>
+    DISCH_THEN $ Q.SPEC_THEN
+      `\x. ?y. x = g y /\ B y /\ P (f y) /\ f y = f w'`
+      (ASSUME_TAC o SIMP_RULE bool_ss [PULL_EXISTS]) >>
+    FIRST_X_ASSUM (dxrule_then dxrule) >>
+    METIS_TAC[]) >>
+  METIS_TAC[]
 QED
 
 (*---------------------------------------------------------------------------
