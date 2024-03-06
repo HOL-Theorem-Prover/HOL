@@ -1010,7 +1010,9 @@ local
              arithmetic *)
           profile "th_lemma[arith](3.1)(real)" RealField.REAL_ARITH t'
         else
-          profile "th_lemma[arith](3.2)(int)" intLib.ARITH_PROVE t'
+          (* the following should be reverted to use ARITH_PROVE instead of
+             COOPER_PROVE when issue HOL-Theorem-Prover/HOL#1203 is fixed *)
+          profile "th_lemma[arith](3.2)(int)" intLib.COOPER_PROVE t'
       val subst = List.map (fn (term, var) => {redex = var, residue = term})
         (Redblackmap.listItems dict)
     in
