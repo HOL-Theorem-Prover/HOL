@@ -133,6 +133,7 @@ local
     ("not-or-elim",     one_prem "not-or-elim"),
     ("quant-inst",      list_args_zero_prems "quant-inst"),
     ("quant-intro",     one_prem "quant-intro"),
+    ("refl",            zero_prems "refl"),
     ("rewrite",         zero_prems "rewrite"),
     ("symm",            one_prem "symm"),
     ("th-lemma",        SmtLib_Theories.list_list (fn token => fn indices =>
@@ -167,6 +168,9 @@ local
        additional parsing functions are no longer necessary. *)
     ("iff", SmtLib_Theories.K_zero_two boolSyntax.mk_eq),
     ("implies", SmtLib_Theories.K_zero_two boolSyntax.mk_imp),
+    (* equivalence modulo naming *)
+    ("~", SmtLib_Theories.K_zero_two boolSyntax.mk_eq),
+    (* the following two are the unary arithmetic negation operator *)
     ("~", SmtLib_Theories.K_zero_one intSyntax.mk_negated),
     ("~", SmtLib_Theories.K_zero_one realSyntax.mk_negated),
     (* bit-vector constants: bvm[n] *)
@@ -344,6 +348,7 @@ local
       ("not-or-elim",     one_prem_pt NOT_OR_ELIM),
       ("quant-inst",      list_args_zero_prems_pt QUANT_INST),
       ("quant-intro",     one_prem_pt QUANT_INTRO),
+      ("refl",            zero_prems_pt REFL),
       ("rewrite",         zero_prems_pt REWRITE),
       ("symm",            one_prem_pt SYMM),
       ("th-lemma-arith",  list_prems_pt TH_LEMMA_ARITH),
