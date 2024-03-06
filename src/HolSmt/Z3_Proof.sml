@@ -48,6 +48,7 @@ struct
                      | NOT_OR_ELIM of proofterm * Term.term
                      | QUANT_INST of Term.term list * Term.term
                      | QUANT_INTRO of proofterm * Term.term
+                     | REFL of Term.term
                      | REWRITE of Term.term
                      | SYMM of proofterm * Term.term
                      | TH_LEMMA_ARITH of proofterm list * Term.term

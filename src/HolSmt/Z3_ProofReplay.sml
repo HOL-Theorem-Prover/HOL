@@ -868,6 +868,16 @@ local
     (state, thm)
   end
 
+  (* A proof for `R t t`, where R is a reflexive relation. The only `R` that are
+     used are equivalence modulo namings, equality and equivalence, i.e. `~`,
+     `=` or `iff`, all represented in HOL4 terms as `boolSyntax.mk_eq`. *)
+  fun z3_refl (state, t) =
+  let
+    val (lhs, rhs) = boolSyntax.dest_eq t
+  in
+    (state, Thm.ALPHA lhs rhs)
+  end
+
   fun z3_rewrite (state, t) =
   let
     val (l, r) = boolSyntax.dest_eq t
@@ -1236,6 +1246,8 @@ local
         one_arg_zero_prems state_proof "quant_inst" z3_quant_inst x continuation
     | thm_of_proofterm (state_proof, QUANT_INTRO x) continuation =
         one_prem state_proof "quant_intro" z3_quant_intro x continuation
+    | thm_of_proofterm (state_proof, REFL x) continuation =
+        zero_prems state_proof "refl" z3_refl x continuation
     | thm_of_proofterm (state_proof, REWRITE x) continuation =
         zero_prems state_proof "rewrite" z3_rewrite x continuation
     | thm_of_proofterm (state_proof, SYMM x) continuation =
