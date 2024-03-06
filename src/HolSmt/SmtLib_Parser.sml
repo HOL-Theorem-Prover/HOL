@@ -221,8 +221,8 @@ local
     val bindings = List.map
       (fn (s, t) => (s, Term.mk_var (s, Term.type_of t), t)) bindings
     (* variables don't take arguments *)
-    fun parsefn var token nums args =
-      if List.null nums andalso List.null args then
+    fun parsefn var token indices args =
+      if List.null indices andalso List.null args then
         var
       else
         raise ERR ("<" ^ Hol_pp.term_to_string var ^ ">")
@@ -263,8 +263,8 @@ local
     val vars = parse_sorted_vars get_token tydict
     val vars = List.map (fn vT => (Lib.fst vT, Term.mk_var vT)) vars
     (* variables don't take arguments *)
-    fun parsefn var token nums args =
-      if List.null nums andalso List.null args then
+    fun parsefn var token indices args =
+      if List.null indices andalso List.null args then
         var
       else
         raise ERR ("<" ^ Hol_pp.term_to_string var ^ ">")
@@ -396,8 +396,8 @@ local
     val _ = Library.expect_token "0" (get_token ())
     val _ = Library.expect_token ")" (get_token ())
     val ty = Type.mk_vartype ("'" ^ name)
-    fun parsefn token nums args =
-      if List.null nums andalso List.null args then
+    fun parsefn token indices args =
+      if List.null indices andalso List.null args then
         ty
       else
         raise ERR ("<" ^ name ^ ">") "wrong number of arguments"
@@ -415,8 +415,8 @@ local
     val tm = Term.mk_var (name,
       boolSyntax.list_mk_fun (domain_types, range_type))
     val args_count = List.length domain_types
-    fun parsefn token nums args =
-      if List.null nums andalso List.length args = args_count then
+    fun parsefn token indices args =
+      if List.null indices andalso List.length args = args_count then
         Term.list_mk_comb (tm, args)
       else
         raise ERR ("<" ^ name ^ ">") "wrong number of arguments"
@@ -433,8 +433,8 @@ local
     val range_type = parse_type get_token tydict
     val vars = List.map (fn vT => (Lib.fst vT, Term.mk_var vT)) vars
     (* variables don't take arguments *)
-    fun var_parsefn var token nums args =
-      if List.null nums andalso List.null args then
+    fun var_parsefn var token indices args =
+      if List.null indices andalso List.null args then
         var
       else
         raise ERR ("<" ^ Hol_pp.term_to_string var ^ ">")
@@ -447,8 +447,8 @@ local
     val tm = Term.mk_var (name,
       boolSyntax.list_mk_fun (domain_types, range_type))
     val args_count = List.length domain_types
-    fun parsefn token nums args =
-      if List.null nums andalso List.length args = args_count then
+    fun parsefn token indices args =
+      if List.null indices andalso List.length args = args_count then
         Term.list_mk_comb (tm, args)
       else
         raise ERR ("<" ^ name ^ ">") "wrong number of arguments"
