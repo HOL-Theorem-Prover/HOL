@@ -1119,6 +1119,35 @@ val WF_antisymmetric = store_thm(
   METIS_TAC [TC_RULES]);
 
 (*---------------------------------------------------------------------------
+ * If `f x` remains unchanged in relation `R'` and `f x` always satisfy `P`,
+ * and there is a mapping `g` such that `R' x y ==> R (f x) (g x) (g y)`, then
+ * to prove `WF R'`, it is sufficient to prove that `P (f x) ==> WF (R (f x))`.
+ *---------------------------------------------------------------------------*)
+Theorem WF_PULL:
+  !P f R g R'.
+    (!x. P (f x) ==> WF (R (f x))) /\
+    (!x y. R' x y ==> P (f x) /\ f x = f y /\ R (f x) (g x) (g y)) ==>
+    WF R'
+Proof
+  rw[WF_DEF] >>
+  reverse $ Cases_on `?w'. P (f w') /\ B w'`
+  >- (fs[] >> metis_tac[]) >>
+  rw[] >>
+  first_x_assum drule >>
+  qpat_x_assum `B w` kall_tac >>
+  disch_then $ qspec_then
+    `\x. ?y. x = g y /\ B y /\ P (f y) /\ f y = f w'` assume_tac >>
+  fs[PULL_EXISTS] >>
+  first_x_assum (dxrule_then dxrule) >>
+  rw[] >>
+  first_assum $ irule_at (Pos hd) >>
+  rw[] >>
+  last_x_assum drule >>
+  rw[] >>
+  gvs[]
+QED
+
+(*---------------------------------------------------------------------------
  * Inverse image theorem: mapping into a wellfounded relation gives a
  * derived well founded relation. A "size" mapping, like "length" for
  * lists is such a relation.
