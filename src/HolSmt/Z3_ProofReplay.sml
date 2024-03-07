@@ -833,8 +833,18 @@ local
     val thm2 = Thm.ASSUME t1
     val thm3_quant = Thm.ASSUME t2
     val thm3 = Drule.SPECL terms thm3_quant
+    val thm = Drule.DISJ_CASES_UNION thm1 thm2 thm3
+    (* The following is a quick workaround for the following Z3 issue:
+       https://github.com/Z3Prover/z3/issues/7154
+       The fix seems to be scheduled to be released in the Z3 version after
+       v4.12.6. *)
+    val thm' =
+      if Thm.concl thm !~ t then
+        metis_prove ([thm], t)
+      else
+        thm
   in
-    (state, Drule.DISJ_CASES_UNION thm1 thm2 thm3)
+    (state, thm')
   end
 
   (*         P = Q
