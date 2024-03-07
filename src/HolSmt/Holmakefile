@@ -1,5 +1,5 @@
-INCLUDES = ../n-bit ../integer ../real ../res_quan/src \
-           ../hol88 ../string ../sort
+INCLUDES = ../hol88 ../integer ../n-bit ../rational ../real ../real/analysis \
+           ../res_quan/src ../sort ../string
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
@@ -20,4 +20,22 @@ all: link-to-sigobj
 .PHONY: link-to-sigobj
 link-to-sigobj: $(DEFAULT_TARGETS)
 	$(HOL_LNSIGOBJ)
+endif
+
+# Build an smtheap
+ifdef POLY
+HOLHEAP = smtheap
+EXTRA_CLEANS += $(HOLHEAP)
+
+SMT_DEPS = integer/intLib n-bit/blastLib rational/ratTheory
+
+BARE_DEPS = $(patsubst %,../%,$(SMT_DEPS))
+
+DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
+
+all: $(HOLHEAP) selftest.exe
+
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/src/real/analysis/realheap)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ \
+		-b $(protect $(HOLDIR)/src/real/analysis/realheap) $(BARE_DEPS)
 endif
