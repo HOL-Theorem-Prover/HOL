@@ -283,29 +283,6 @@ Theorem FRESH_LAM[simp]:
 Proof SRW_TAC [][] THEN METIS_TAC []
 QED
 
-(* NOTE: this theorem doesn't really belong here but moving it to basic_swapTheory
-         seems unnecessary (and NEW_TAC is not available).
- *)
-Theorem FRESH_lists :
-    !n s : string set.
-       FINITE s ==> ?l'. ALL_DISTINCT l' /\ DISJOINT (LIST_TO_SET l') s /\
-                         (LENGTH l' = n)
-Proof
-  Induct THEN SRW_TAC [][] THENL [
-    RES_TAC THEN
-    Q_TAC (NEW_TAC "z") `LIST_TO_SET l' UNION s` THEN
-    Q.EXISTS_TAC `z::l'` THEN
-    FULL_SIMP_TAC (srw_ss()) []
-  ]
-QED
-
-(* ‘FRESH_list’ is a function for generating fresh list of new variables *)
-local
-    val th = SIMP_RULE std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] FRESH_lists
-in
-    val FRESH_list_def = new_specification ("FRESH_list_def", ["FRESH_list"], th)
-end
-
 val FV_EMPTY = store_thm(
   "FV_EMPTY",
   ``(FV t = {}) <=> !v. v NOTIN FV t``,
@@ -704,6 +681,12 @@ End
 
 val _ = set_fixity "ISUB" (Infixr 501);
 
+Theorem ISUB_NIL[simp] :
+    t ISUB [] = t
+Proof
+    rw [ISUB_def]
+QED
+
 Definition DOM_DEF :
    (DOM [] = {}) /\
    (DOM ((x,y)::rst) = {y} UNION DOM rst)
@@ -958,6 +941,9 @@ Proof
   Q.EXISTS_TAC `fmFV phi` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, pred_setTheory.EXTENSION] THEN METIS_TAC []
 QED
+
+(* |- !t. DISJOINT (FV t) (FDOM phi) ==> phi ' t = t *)
+Theorem ssub_14b' = ssub_14b |> REWRITE_RULE [GSYM DISJOINT_DEF]
 
 val ssub_value = store_thm(
   "ssub_value",

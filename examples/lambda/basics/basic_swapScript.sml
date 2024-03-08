@@ -123,6 +123,7 @@ val new_exists = store_thm(
                          pred_setTheory.IN_INFINITE_NOT_FINITE] THEN
   SRW_TAC [][INFINITE_STR_UNIV]);
 
+(* |- !s. FINITE s ==> NEW s NOTIN s *)
 val NEW_def =
     new_specification
       ("NEW_def", ["NEW"],
@@ -133,5 +134,40 @@ val NEW_ELIM_RULE = store_thm(
   ``!P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
           P (NEW X)``,
   PROVE_TAC [NEW_def]);
+
+(* ‘NEWS n s’ generates n fresh names from the excluded set ‘s’ *)
+Definition NEWS :
+    NEWS      0  s = [] /\
+    NEWS (SUC n) s = NEW s :: NEWS n (NEW s INSERT s)
+End
+
+Theorem NEWS_0[simp] :
+    NEWS 0 s = []
+Proof
+    rw [NEWS]
+QED
+
+(* NOTE: this is the old FRESH_list_def *)
+Theorem NEWS_def :
+    !n s. FINITE s ==>
+          ALL_DISTINCT (NEWS n s) /\ DISJOINT (set (NEWS n s)) s /\
+          LENGTH (NEWS n s) = n
+Proof
+    Induct_on ‘n’ >- rw [NEWS]
+ >> Q.X_GEN_TAC ‘s’ >> DISCH_TAC
+ >> simp [NEWS]
+ >> Q.PAT_X_ASSUM ‘!s. FINITE s ==> P’ (MP_TAC o (Q.SPEC ‘NEW s INSERT s’))
+ >> rw []
+ >> MATCH_MP_TAC NEW_def
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem NEWS_prefix :
+    !m n s. FINITE s /\ m <= n ==> NEWS m s <<= NEWS n s
+Proof
+    Induct_on ‘m’
+ >> rw [NEWS]
+ >> Cases_on ‘n’ >> rw [NEWS]
+QED
 
 val _ = export_theory();

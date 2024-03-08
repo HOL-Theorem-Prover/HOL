@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib BasicProvers;
 open metisLib boolSimps relationTheory listTheory llistTheory pathTheory
      pred_setTheory finite_mapTheory hurdUtils;
 
-open nomsetTheory binderLib
+open nomsetTheory binderLib basic_swapTheory;
 open finite_developmentsTheory
 open labelledTermsTheory
 open termTheory chap2Theory horeductionTheory chap3Theory appFOLDLTheory
@@ -1087,6 +1087,16 @@ val i_reduces_to_LAMl = prove(
   ]);
 
 val _ = augment_srw_ss [rewrites [size_vsubst, size_ISUB]]
+
+Theorem FRESH_lists :
+    !n s : string set.
+       FINITE s ==> ?l'. ALL_DISTINCT l' /\ DISJOINT (LIST_TO_SET l') s /\
+                         (LENGTH l' = n)
+Proof
+    rpt STRIP_TAC
+ >> Q.EXISTS_TAC ‘NEWS n s’
+ >> MATCH_MP_TAC NEWS_def >> art []
+QED
 
 val cant_ireduce_to_lam_atom = prove(
   ``!vs M N. (size N = 1) ==> ~(M i_reduce1 LAMl vs N)``,
