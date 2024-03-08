@@ -10,7 +10,8 @@ open arithmeticTheory pred_setTheory listTheory rich_listTheory sortingTheory
 
 (* lambda theories *)
 open binderLib nomsetTheory termTheory appFOLDLTheory chap2Theory chap3Theory
-     reductionEval standardisationTheory head_reductionTheory horeductionTheory;
+     reductionEval standardisationTheory head_reductionTheory horeductionTheory
+     basic_swapTheory;
 
 val _ = new_theory "solvable";
 
@@ -787,6 +788,13 @@ Proof
  >> gs [is_head_reduction_thm, hnf_no_head_redex]
 QED
 
+Theorem principle_hnf_absfree_hnf[simp] :
+    principle_hnf (VAR y @* args) = VAR y @* args
+Proof
+    MATCH_MP_TAC principle_hnf_reduce
+ >> rw [hnf_appstar]
+QED
+
 Theorem principle_hnf_stable :
     !M. has_hnf M ==> principle_hnf (principle_hnf M) = principle_hnf M
 Proof
@@ -926,7 +934,7 @@ QED
 
    NOTE: to satisfy ‘DISJOINT (set xs) (set ys)’, one first get ‘LENGTH xs’
          without knowing ‘xs’ (e.g. by ‘LAMl_size’), then generate ‘ys’ by
-        ‘FRESH_list’, and then call [hnf_cases_genX] using ‘ys’ as the new
+        ‘NEWS’, and then call [hnf_cases_genX] using ‘ys’ as the new
          excluded list.
  *)
 Theorem principle_hnf_LAMl_appstar :
@@ -978,19 +986,6 @@ Proof
      MATCH_MP_TAC hreduce1_rules_appstar >> rw [hreduce1_BETA])
  >> Rewr'
  >> simp [Abbr ‘M’]
-QED
-
-Theorem hreduce_BETA :
-    !vs t. LAMl vs t @* MAP VAR vs -h->* t
-Proof
-    Induct_on ‘vs’
- >> rw [Once RTC_CASES1] (* only 1 goal is left *)
- >> DISJ2_TAC
- >> qabbrev_tac ‘M = LAMl vs t’
- >> Q.EXISTS_TAC ‘[VAR h/h] M @* MAP VAR vs’
- >> reverse CONJ_TAC >- rw [Abbr ‘M’]
- >> MATCH_MP_TAC hreduce1_rules_appstar
- >> rw [hreduce1_BETA]
 QED
 
 (* Example 8.3.2 [1, p.171] *)
@@ -1163,7 +1158,7 @@ Theorem lameq_principle_hnf_lemma :
             hnf M /\ hnf N /\ M == N
         ==> LAMl_size M = LAMl_size N /\
             let n = LAMl_size M;
-                vs = FRESH_list n X;
+                vs = NEWS n X;
                 M1 = principle_hnf (M @* MAP VAR vs);
                 N1 = principle_hnf (N @* MAP VAR vs)
             in
@@ -1177,9 +1172,9 @@ Proof
  >> qabbrev_tac ‘n  = LAMl_size M’
  >> qabbrev_tac ‘n' = LAMl_size N’
  (* applying hnf_cases_shared *)
- >> qabbrev_tac ‘vs = FRESH_list (MAX n n') X’
+ >> qabbrev_tac ‘vs = NEWS (MAX n n') X’
  >> ‘ALL_DISTINCT vs /\ DISJOINT (set vs) X /\ LENGTH vs = MAX n n'’
-      by rw [FRESH_list_def, Abbr ‘vs’]
+      by rw [NEWS_def, Abbr ‘vs’]
  >> Know ‘?y args. M = LAMl (TAKE n vs) (VAR y @* args)’
  >- (qunabbrev_tac ‘n’ >> irule (iffLR hnf_cases_shared) >> rw [] \\
      MATCH_MP_TAC DISJOINT_SUBSET \\
@@ -1268,7 +1263,7 @@ Theorem lameq_principle_hnf_head_eq :
          FINITE X /\ FV M UNION FV N SUBSET X /\
          has_hnf M /\ has_hnf N /\ M == N /\
          M0 = principle_hnf M /\ N0 = principle_hnf N /\
-         n = LAMl_size M0 /\ vs = FRESH_list n X /\
+         n = LAMl_size M0 /\ vs = NEWS n X /\
          M1 = principle_hnf (M0 @* MAP VAR vs) /\
          N1 = principle_hnf (N0 @* MAP VAR vs)
      ==> hnf_head M1 = hnf_head N1
@@ -1277,7 +1272,7 @@ Proof
  >> qabbrev_tac ‘M0 = principle_hnf M’
  >> qabbrev_tac ‘N0 = principle_hnf N’
  >> qabbrev_tac ‘n = LAMl_size M0’
- >> qabbrev_tac ‘vs = FRESH_list n X’
+ >> qabbrev_tac ‘vs = NEWS n X’
  >> qabbrev_tac ‘M1 = principle_hnf (M0 @* MAP VAR vs)’
  >> qabbrev_tac ‘N1 = principle_hnf (N0 @* MAP VAR vs)’
  >> Know ‘M0 == N0’
@@ -1306,7 +1301,7 @@ Theorem lameq_principle_hnf_thm :
          FINITE X /\ FV M UNION FV N SUBSET X /\
          has_hnf M /\ has_hnf N /\ M == N /\
          M0 = principle_hnf M /\ N0 = principle_hnf N /\
-         n = LAMl_size M0 /\ vs = FRESH_list n X /\
+         n = LAMl_size M0 /\ vs = NEWS n X /\
          M1 = principle_hnf (M0 @* MAP VAR vs) /\
          N1 = principle_hnf (N0 @* MAP VAR vs)
      ==> LAMl_size M0 = LAMl_size N0 /\
@@ -1320,7 +1315,7 @@ Proof
  >> qabbrev_tac ‘M0 = principle_hnf M’
  >> qabbrev_tac ‘N0 = principle_hnf N’
  >> qabbrev_tac ‘n = LAMl_size M0’
- >> qabbrev_tac ‘vs = FRESH_list n X’
+ >> qabbrev_tac ‘vs = NEWS n X’
  >> qabbrev_tac ‘M1 = principle_hnf (M0 @* MAP VAR vs)’
  >> qabbrev_tac ‘N1 = principle_hnf (N0 @* MAP VAR vs)’
  >> Know ‘M0 == N0’
@@ -1380,7 +1375,7 @@ QED
 (* This is an important theroem, hard to prove.
 
    To use this theorem, first one defines ‘M0 = principle_hnf M’ as abbreviation,
-   then define ‘n = LAMl_size M0’ and ‘vs = FRESH_list n (FV M)’ (or ‘FV M0’, or
+   then define ‘n = LAMl_size M0’ and ‘vs = NEWS n (FV M)’ (or ‘FV M0’, or
   ‘X UNION FV M0’, ‘X UNION FV M’), and this give us the needed antecedents:
 
        ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M) /\ LENGTH vs = n
@@ -1601,14 +1596,14 @@ Proof
  >> ‘MEM z Z’ by rw [Abbr ‘z’, MEM_LAST_NOT_NIL]
  >> qabbrev_tac ‘M = VAR z @* MAP VAR (FRONT Z)’
  (* preparing for LAMl_ALPHA_ssub *)
- >> qabbrev_tac ‘Y = FRESH_list (n + 1)
+ >> qabbrev_tac ‘Y = NEWS (n + 1)
                        (set Z UNION (FV N) UNION (BIGUNION (IMAGE FV (set Ns))))’
  >> ‘FINITE (set Z UNION (FV N) UNION (BIGUNION (IMAGE FV (set Ns))))’
        by (rw [] >> rw [FINITE_FV])
  >> Know ‘ALL_DISTINCT Y /\
           DISJOINT (set Y) (set Z UNION (FV N) UNION (BIGUNION (IMAGE FV (set Ns)))) /\
           LENGTH Y = n + 1’
- >- (ASM_SIMP_TAC std_ss [FRESH_list_def, Abbr ‘Y’])
+ >- (ASM_SIMP_TAC std_ss [NEWS_def, Abbr ‘Y’])
  >> rw [] (* this breaks all unions in the DISJOINT *)
  (* applying LAMl_ALPHA_ssub *)
  >> Know ‘LAMl Z M = LAMl Y ((FEMPTY |++ ZIP (Z,MAP VAR Y)) ' M)’

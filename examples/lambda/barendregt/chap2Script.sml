@@ -2,12 +2,12 @@
  * Beta-equivalence and combinators (Chapter 2 of Hankin [2])
  *---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib bossLib BasicProvers;
 
 open pred_setTheory pred_setLib listTheory rich_listTheory finite_mapTheory
      arithmeticTheory string_numTheory hurdUtils;
 
-open termTheory BasicProvers nomsetTheory binderLib appFOLDLTheory;
+open basic_swapTheory termTheory nomsetTheory binderLib appFOLDLTheory;
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
@@ -1211,14 +1211,14 @@ Proof
  >> qabbrev_tac ‘M = VAR z @* MAP VAR (FRONT Z)’
  (* preparing for LAMl_ALPHA_ssub *)
  >> qabbrev_tac
-     ‘Y = FRESH_list (n + 1) (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
+     ‘Y = NEWS (n + 1) (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
  >> Know ‘FINITE (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
  >- (rw [] >> rw [FINITE_FV])
  >> DISCH_TAC
  >> Know ‘ALL_DISTINCT Y /\
           DISJOINT (set Y) (set Z UNION (BIGUNION (IMAGE FV (set Ns)))) /\
           LENGTH Y = n + 1’
- >- (ASM_SIMP_TAC std_ss [FRESH_list_def, Abbr ‘Y’])
+ >- (ASM_SIMP_TAC std_ss [NEWS_def, Abbr ‘Y’])
  >> rw []
  (* applying LAMl_ALPHA_ssub *)
  >> Know ‘LAMl Z M = LAMl Y ((FEMPTY |++ ZIP (Z,MAP VAR Y)) ' M)’
@@ -1387,14 +1387,14 @@ Proof
  >> DISCH_TAC
  (* preparing for LAMl_ALPHA_ssub *)
  >> qabbrev_tac
-     ‘Y = FRESH_list n (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
+     ‘Y = NEWS n (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
  >> Know ‘FINITE (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
  >- (rw [] >> rw [FINITE_FV])
  >> DISCH_TAC
  >> Know ‘ALL_DISTINCT Y /\
           DISJOINT (set Y) (set Z UNION (BIGUNION (IMAGE FV (set Ns)))) /\
           LENGTH Y = n’
- >- (ASM_SIMP_TAC std_ss [FRESH_list_def, Abbr ‘Y’])
+ >- (ASM_SIMP_TAC std_ss [NEWS_def, Abbr ‘Y’])
  >> rw []
  (* applying LAMl_ALPHA_ssub *)
  >> Know ‘LAMl Z (VAR z) = LAMl Y ((FEMPTY |++ ZIP (Z,MAP VAR Y)) ' (VAR z))’

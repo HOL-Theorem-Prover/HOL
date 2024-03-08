@@ -2743,6 +2743,19 @@ Proof
  >> rw [TAKE_LENGTH_TOO_LONG]
 QED
 
+Theorem IS_PREFIX_FRONT_MONO :
+    !l1 l2. l1 <> [] /\ l2 <> [] /\ l1 <<= l2 ==> FRONT l1 <<= FRONT l2
+Proof
+    rw [IS_PREFIX_EQ_TAKE]
+ >> Cases_on ‘n = 0’ >> fs []
+ >> ‘0 < LENGTH l2’ by rw []
+ >> rw [LENGTH_FRONT, FRONT_TAKE]
+ >> Q.EXISTS_TAC ‘n - 1’ >> rw []
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC TAKE_FRONT
+ >> rw []
+QED
+
 (* ----------------------------------------------------------------------
     longest_prefix
 
