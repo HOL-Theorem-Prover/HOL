@@ -650,7 +650,7 @@ in
     (* Yices 1.0.28 reports `unknown' for the next goal, while Z3 2.13
        (somewhat surprisingly, as SMT-LIB does not seem to require
        non-empty sorts) can prove it *)
-    (``?x. x = x``, [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p*)]),
+    (``?x. x = x``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
     (* CVC5 1.0.8 reports `unknown' for the next goal *)
     (``(?y. !x. P x y) ==> (!x. ?y. P x y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (* CVC5 1.0.8 and Yices 1.0.28 report `unknown' for the next goal *)
