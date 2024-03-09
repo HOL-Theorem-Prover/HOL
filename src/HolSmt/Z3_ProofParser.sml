@@ -139,6 +139,7 @@ local
     ("quant-intro",     one_prem "quant-intro"),
     ("refl",            zero_prems "refl"),
     ("rewrite",         zero_prems "rewrite"),
+    ("sk",              zero_prems "sk"),
     ("symm",            one_prem "symm"),
     ("th-lemma",        SmtLib_Theories.list_list (fn token => fn indices =>
       fn prems =>
@@ -354,6 +355,7 @@ local
       ("quant-intro",     one_prem_pt QUANT_INTRO),
       ("refl",            zero_prems_pt REFL),
       ("rewrite",         zero_prems_pt REWRITE),
+      ("sk",              zero_prems_pt SKOLEM),
       ("symm",            one_prem_pt SYMM),
       ("th-lemma-arith",  list_prems_pt TH_LEMMA_ARITH),
       ("th-lemma-array",  list_prems_pt TH_LEMMA_ARRAY),

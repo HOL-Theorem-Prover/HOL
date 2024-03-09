@@ -1023,6 +1023,29 @@ local
     end
   end
 
+  (* |- ~(!x. P x y) <=> ~(P (sk y) y)
+     |- (?x. P x y) <=> P (sk y) y *)
+  fun z3_skolem (state, t) =
+  let
+    val lhs = Lib.fst (boolSyntax.dest_eq t)
+    val thm1 =
+      if boolSyntax.is_exists lhs then
+        HolSmtTheory.SKOLEM_EXISTS
+      else
+        HolSmtTheory.SKOLEM_FORALL
+    val thm2 = Drule.SELECT_RULE thm1
+    val thm3 = Conv.HO_REWR_CONV thm2 lhs
+    val substs = Term.match_term t (Thm.concl thm3)
+    val {redex, residue} = List.hd (Lib.fst substs)
+    val thm4 = Thm.SYM (Thm.ASSUME (boolSyntax.mk_eq (redex, residue)))
+    val thm5 = Drule.SUBST_CONV [{redex = redex, residue = thm4}] t
+      (Thm.concl thm3)
+    val thm = Thm.EQ_MP thm5 thm3
+    val asl = Thm.hyp thm
+  in
+    (state_define state asl, thm)
+  end
+
   fun z3_symm (state, thm, t) =
     (state, Thm.SYM thm)
 
@@ -1297,6 +1320,8 @@ local
         zero_prems state_proof "refl" z3_refl x continuation
     | thm_of_proofterm (state_proof, REWRITE x) continuation =
         zero_prems state_proof "rewrite" z3_rewrite x continuation
+    | thm_of_proofterm (state_proof, SKOLEM x) continuation =
+        zero_prems state_proof "skolem" z3_skolem x continuation
     | thm_of_proofterm (state_proof, SYMM x) continuation =
         one_prem state_proof "symm" z3_symm x continuation
     | thm_of_proofterm (state_proof, TH_LEMMA_ARITH x) continuation =

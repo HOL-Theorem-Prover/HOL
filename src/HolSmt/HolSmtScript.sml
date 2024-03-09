@@ -70,6 +70,8 @@
   val _ = s ("AND_IMP_INTRO_SYM", T ``!p q r. p /\ q ==> r <=> p ==> q ==> r``)
   val _ = s ("VALID_IFF_TRUE", T ``!p. p ==> (p <=> T)``)
   val _ = s ("NOT_P_OR_P", T ``~p \/ p``)
+  val _ = s ("SKOLEM_FORALL", P ``?a. ~(!x. P x) <=> ~(P a)``)
+  val _ = s ("SKOLEM_EXISTS", P ``?a. (?x. P x) <=> P a``)
 
   (* used for Z3's proof rule def-axiom *)
 
