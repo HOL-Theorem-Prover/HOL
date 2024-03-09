@@ -1499,14 +1499,38 @@ local
         (* Recurse to remove the remaining variables' definitions *)
         remove_definitions (new_defs, var_set, thm)
       end
-in
 
+  (* this function identifies hypotheses in the final theorem that are not in
+     the original list of assumptions and then tries to remove them; it's a
+     workaround for the following Z3 issue, whose fix is currently still in
+     progress:
+
+     https://github.com/Z3Prover/z3/pull/7157 *)
+  fun remove_hyps (asl, g, thm) : Thm.thm =
+  let
+    val hyps = Thm.hypset thm
+    (* add the negation of the conclusion of the goal to the list of
+       expected hypotheses *)
+    val asl = (boolSyntax.mk_neg g) :: asl
+    val asms = HOLset.addList (Term.empty_tmset, asl)
+    val bad_hyps = HOLset.difference (hyps, asms)
+    fun remove_hyp (hyp, thm) : Thm.thm =
+    let
+      val hyp_thm = Tactical.TAC_PROOF ((asl, hyp), metisLib.METIS_TAC [])
+    in
+      Drule.PROVE_HYP hyp_thm thm
+    end
+  in
+    HOLset.foldl remove_hyp thm bad_hyps
+  end
+
+in
   (* For unit tests *)
   val remove_definitions = remove_definitions
 
   (* returns a theorem that concludes ``F``, with its hypotheses (a
      subset of) those asserted in the proof *)
-  fun check_proof proof : Thm.thm =
+  fun check_proof (asl, g, proof) : Thm.thm =
   let
     val _ = if !Library.trace > 1 then
         Feedback.HOL_MESG "HolSmtLib: checking Z3 proof"
@@ -1535,6 +1559,12 @@ in
     val _ = profile "check_proof(hypcheck)" HOLset.isSubset (Thm.hypset final_thm,
         #asserted_hyps state) orelse
       raise ERR "check_proof" "final theorem contains additional hyp(s)"
+
+    (* if the final theorem contains hyps that are not in `asl`, it likely means
+       that we've run into a Z3 issue where it slightly modifies the original
+       assumptions; as a workaround we try to remove those hyps here *)
+    val final_thm = profile "check_proof(hyp_removal)" remove_hyps
+      (asl, g, final_thm)
   in
     final_thm
   end
