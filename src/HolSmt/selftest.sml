@@ -681,13 +681,10 @@ in
 
     (* higher-order logic *)
 
-    (* Z3 2.19 unexpectedly replaces certain implications by conjunctions in
-       its proof *)
-
     (``(P (f x) ==> Q f) ==> P (f x) ==> Q f``,
-      [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+      [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``(Q f ==> P (f x)) ==> Q f ==> P (f x)``,
-      [thm_AUTO, thm_CVC, thm_YO, thm_Z3(*, thm_Z3p*)]),
+      [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
     (* tuples, FST, SND *)
 

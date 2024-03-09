@@ -82,7 +82,14 @@ structure Z3 = struct
 
   fun is_v4_configured () = is_configured () andalso is_v4
 
-  val proof_option = if is_v4 then " proof=true" else " PROOF_MODE=2"
+  val proof_option =
+    if is_v4 then
+      (* disable `pp.simplify_implies` so that Z3's AST pretty-printer doesn't
+         mangle `asserted` proof rules, which would cause a mismatch against the
+         goal's assumption list *)
+      " proof=true pp.simplify_implies=false"
+    else
+      " PROOF_MODE=2"
 
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
   val Z3_SMT_Prover =
@@ -129,8 +136,8 @@ structure Z3 = struct
                 val proof = Z3_ProofParser.parse_stream (ty_dict, tm_dict)
                   instream
                 val _ = TextIO.closeIn instream
-                val thm = Z3_ProofReplay.check_proof proof
                 val (As, g) = goal
+                val thm = Z3_ProofReplay.check_proof (As, g, proof)
                 val thm = Thm.CCONTR g thm
                 val thm = validation [thm]
               in
