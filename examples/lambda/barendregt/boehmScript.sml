@@ -998,7 +998,7 @@ Proof
  >> qabbrev_tac ‘m = LENGTH Ms'’
  >> Cases_on ‘h < m’ >> simp []
  >> Cases_on ‘p = []’ >> fs []
-  (* final stage *)
+ (* final stage *)
  >> FIRST_X_ASSUM MATCH_MP_TAC >> simp []
  >> CONJ_TAC (* 2 subgoals *)
  >| [ (* goal 1 (of 2) *)
@@ -1094,7 +1094,7 @@ Proof
  >> Q.PAT_X_ASSUM ‘n = LAMl_size M0'’ (rfs o wrap o SYM)
  >> ‘TAKE n vs = vs’ by rw [TAKE_LENGTH_ID_rwt]
  >> POP_ASSUM (rfs o wrap)
-  (* refine P1 and Q1 again for clear assumptions using them *)
+ (* refine P1 and Q1 again for clear assumptions using them *)
  >> qunabbrevl_tac [‘M1’, ‘M1'’]
  >> qabbrev_tac ‘M1 = principle_hnf (M0 @* MAP VAR vs)’
  >> qabbrev_tac ‘M1' = principle_hnf (M0' @* MAP VAR vs)’
@@ -1173,7 +1173,7 @@ Proof
  >> qabbrev_tac ‘n' = LAMl_size M0'’
  >> Know ‘n' = n’ >- (rw [Abbr ‘n’, Abbr ‘n'’, LAMl_size_tpm])
  >> DISCH_TAC
-  (* special case *)
+ (* special case *)
  >> reverse (Cases_on ‘h < m’)
  >- (rw [] >> rw [subterm_of_solvables])
  (* stage work, now h < m *)
@@ -2528,7 +2528,7 @@ Proof
      Q.EXISTS_TAC ‘FRONT l’ >> rw [] \\
      MATCH_MP_TAC IS_PREFIX_FRONT_MONO >> rw [])
  >> Rewr
-  (* Michael Norrish's tactics *)
+ (* Michael Norrish's tactics *)
  >> CONV_TAC (UNBETA_CONV “subterm X M (h::p')”)
  >> qmatch_abbrev_tac ‘f _’
  >> RW_TAC bool_ss [subterm_of_solvables]
@@ -2597,8 +2597,8 @@ QED
          [Boehm_apply_unsolvable], but in this case it is, and this is needed in
          [Boehm_out_lemma] when rewriting ‘apply pi M’ to explicit forms using
          [is_ready_alt] (assuming M is solvable). The extra conclusion is added:
-        ‘solvable M ==> solvable (apply pi M)’, which is not provable outside
-         the proof of this lemma.
+         ‘solvable M ==> solvable (apply pi M)’, which is not provable outside
+          the proof of this lemma.
 
    NOTE7: The core textbook proof steps of this lemma is actually in the proof of
          [subterm_subst_cong], which has to have a ‘tpm_rel’ in the conclusion.
@@ -2613,19 +2613,19 @@ QED
 Theorem Boehm_transform_exists_lemma :
     !X M p. FINITE X /\
             p <> [] /\ p IN ltree_paths (BTe X M) /\ subterm X M p <> NONE ==>
-            ?pi. Boehm_transform pi /\
-                (solvable M ==> solvable (apply pi M)) /\
-                 is_ready (apply pi M) /\
-                ?Z ss. FINITE Z /\ subterm Z (apply pi M) p <> NONE /\
-                       tpm_rel (subterm' Z (apply pi M) p)
-                               ((subterm' Z M p) ISUB ss)
+           ?pi. Boehm_transform pi /\
+                solvable (apply pi M) /\ is_ready (apply pi M) /\
+               ?Z v N. Z = X UNION FV M /\ closed N /\
+                       subterm Z (apply pi M) p <> NONE /\
+                       tpm_rel (subterm' Z (apply pi M) p) ([N/v] (subterm' Z M p))
 Proof
     rpt STRIP_TAC
- (* trivial case: unsolvable M (useless) *)
- >> reverse (Cases_on ‘solvable M’)
- >- (Q.EXISTS_TAC ‘[]’ >> rw [is_ready_def] \\
-     Q.EXISTS_TAC ‘X’ >> rw [] \\
-     Q.EXISTS_TAC ‘[]’ >> rw [])
+ >> ‘(!q. q <<= p ==> subterm X M q <> NONE) /\
+      !q. q <<= FRONT p ==> solvable (subterm' X M q)’
+         by METIS_TAC [subterm_solvable_lemma]
+ >> Know ‘solvable M’
+ >- (POP_ASSUM (MP_TAC o Q.SPEC ‘[]’) >> rw [])
+ >> DISCH_TAC
  (* M0 is now meaningful since M is solvable *)
  >> qabbrev_tac ‘M0 = principle_hnf M’
  >> ‘hnf M0’ by PROVE_TAC [hnf_principle_hnf, solvable_iff_has_hnf]
@@ -2671,13 +2671,14 @@ Proof
     But since P is a closed term, these fresh variables seem irrelevant...
   *)
  >> qabbrev_tac ‘P = permutator d’
+ >> ‘closed P’ by rw [Abbr ‘P’, closed_permutator]
  >> qabbrev_tac ‘p2 = [[P/y]]’
  >> ‘Boehm_transform p2’ by rw [Abbr ‘p2’]
  >> ‘apply p2 M1 = P @* MAP [P/y] args’ by rw [Abbr ‘p2’, appstar_SUB]
  >> qabbrev_tac ‘args' = MAP [P/y] args’
  >> Know ‘!i. i < m ==> FV (EL i args') SUBSET FV (EL i args)’
  >- (rw [Abbr ‘args'’, EL_MAP, FV_SUB] \\
-     rw [Abbr ‘P’, closed_permutator, GSYM closed_def])
+     fs [closed_def])
  >> DISCH_TAC
  >> ‘LENGTH args' = m’ by rw [Abbr ‘args'’, Abbr ‘m’]
  (* NOTE: Z contains ‘vs’ in addition to X and FV M *)
@@ -2885,8 +2886,6 @@ Proof
  (* NOTE: for rewriting M to M0 in the goal, Z can be anything. *)
  >> Q.ABBREV_TAC ‘Y = X UNION FV M’
  >> ‘FINITE Y’ by rw [Abbr ‘Y’]
- (* stage work, there's no other choice for RHS *)
- >> Q.EXISTS_TAC ‘Y’ >> art []
  (* RHS rewriting from M to M0 *)
  >> Know ‘subterm Y M0 p = subterm Y M p’
  >- (qunabbrev_tac ‘M0’ \\
@@ -2987,7 +2986,7 @@ Proof
      MATCH_MP_TAC principle_hnf_FV_SUBSET' >> art [])
  >> DISCH_TAC
  (* stage work, there's the textbook choice *)
- >> Q.EXISTS_TAC ‘[(P,y)]’
+ >> qexistsl_tac [‘y’, ‘P’] >> art []
  >> REWRITE_TAC [GSYM SUB_ISUB_SINGLETON]
  (* preparing for subterm_subst_cong *)
  >> Suff ‘subterm Z ([P/y] N) t <> NONE /\
@@ -3094,19 +3093,14 @@ Proof
  (* applying subterm_hnf_children_size_cong *)
  >> MATCH_MP_TAC subterm_hnf_children_size_cong >> art []
  (* subgoals: subterm X M (h::p') <> NONE /\ solvable (subterm' X M (h::p')) *)
- >> qabbrev_tac ‘p = h::t’
- >> ‘p <> []’ by rw [Abbr ‘p’]
- >> MP_TAC (Q.SPECL [‘X’, ‘M’, ‘p’] subterm_solvable_lemma)
- >> simp [] >> STRIP_TAC
- >> qunabbrev_tac ‘p’
- >> CONJ_TAC (* subterm X M (h::p') <> NONE *)
+ >> reverse CONJ_TAC
  >- (FIRST_X_ASSUM MATCH_MP_TAC >> rw [] \\
-     MATCH_MP_TAC IS_PREFIX_TRANS \\
-     Q.EXISTS_TAC ‘FRONT t’ >> art [] \\
-     MATCH_MP_TAC IS_PREFIX_BUTLAST' >> art [])
- (* final goal: solvable (subterm' X M (h::p')) *)
+     Cases_on ‘t’ >> fs [])
+ (* final goal: subterm X M (h::p') <> NONE *)
  >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
- >> Cases_on ‘t’ >> fs []
+ >> MATCH_MP_TAC IS_PREFIX_TRANS
+ >> Q.EXISTS_TAC ‘FRONT t’ >> art []
+ >> MATCH_MP_TAC IS_PREFIX_BUTLAST' >> art []
 QED
 
 (*---------------------------------------------------------------------------*
