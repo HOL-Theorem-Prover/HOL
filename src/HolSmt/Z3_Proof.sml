@@ -50,6 +50,7 @@ struct
                      | QUANT_INTRO of proofterm * Term.term
                      | REFL of Term.term
                      | REWRITE of Term.term
+                     | SKOLEM of Term.term
                      | SYMM of proofterm * Term.term
                      | TH_LEMMA_ARITH of proofterm list * Term.term
                      | TH_LEMMA_ARRAY of proofterm list * Term.term
