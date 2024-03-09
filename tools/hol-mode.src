@@ -1787,6 +1787,7 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'hol-db-match)
 (define-key hol-map "M"    'hol-db-select)
+(define-key hol-map ","    'hol-db-polarity-match)
 (define-key hol-map "f"    'hol-db-find)
 (define-key hol-map "c" 'hol-db-find-consts)
 (define-key hol-map "n"    'hol-name-top-theorem)
