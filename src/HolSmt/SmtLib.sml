@@ -90,8 +90,8 @@ local
     (intSyntax.minus_tm, apfst_K "-"),
     (intSyntax.plus_tm, apfst_K "+"),
     (intSyntax.mult_tm, apfst_K "*"),
-    (* (..., "div"), *)
-    (* (..., "mod"), *)
+    (Term.prim_mk_const {Thy="HolSmt", Name="smtdiv"}, apfst_K "div"),
+    (Term.prim_mk_const {Thy="HolSmt", Name="smtmod"}, apfst_K "mod"),
     (intSyntax.absval_tm, apfst_K "abs"),
     (intSyntax.leq_tm, apfst_K "<="),
     (intSyntax.less_tm, apfst_K "<"),
@@ -628,14 +628,17 @@ in
        are being used. For now we just manually add a few useful ones. *)
     val facts =
     let
-      open arithmeticTheory integerTheory
+      open arithmeticTheory integerTheory HolSmtTheory
     in
       if !include_theorems then [
         (* arithmeticTheory *)
         GREATER_DEF, GREATER_EQ, MIN_DEF, MAX_DEF,
         (* integerTheory *)
-        INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN, INT_MUL,
+        INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN,
         INT_OF_NUM, INT_POS,
+        (* HolSmtTheory *)
+        SMT_NUM_MUL, SMT_NUM_DIV, SMT_NUM_MOD, SMT_INT_DIV, SMT_INT_MOD,
+        SMT_INT_QUOT, SMT_INT_REM,
         (* others *)
         int_arithTheory.INT_NUM_SUB,
         realaxTheory.real_min, realaxTheory.real_max, realTheory.abs
