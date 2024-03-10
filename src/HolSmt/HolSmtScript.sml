@@ -2,6 +2,8 @@
 
 (* Various theorems for HolSmtLib *)
 
+  val op >> = Tactical.>>
+
   val T = tautLib.TAUT_PROVE
   val P = bossLib.PROVE []
   val S = simpLib.SIMP_PROVE (simpLib.++ (simpLib.++ (simpLib.++
@@ -11,6 +13,9 @@
   val R = RealArith.REAL_ARITH
   val W = wordsLib.WORD_DECIDE
   val B = blastLib.BBLAST_PROVE
+
+  val I = simpLib.SIMP_PROVE (simpLib.++ (simpLib.++
+    (bossLib.arith_ss, intSimps.INT_RWTS_ss), intSimps.INT_ARITH_ss))
 
   (* simplify 't' using 'thms', then prove the simplified term using
      'TAUT_PROVE' *)
@@ -29,6 +34,52 @@
   val _ = Theory.new_theory "HolSmt"
   val _ = ParseExtras.temp_loose_equality()
 
+  (* constants used in SMT-LIB *)
+
+  val smtdiv_def = bossLib.Define
+    `smtdiv (i: int) (j: int) = if 0 < j then i / j else -(i / -j)`
+
+  val smtmod_def = bossLib.Define
+    `smtmod (i: int) (j: int) = i % ABS j`
+
+  (* Note that according to SMT-LIB's `Ints` theory, `div` and `mod` must match
+     Boute's Euclidean definition, that is, they must satisfy the formula:
+
+     !m n. n <> 0 ==>
+       let q = smtdiv m n
+       and r = smtmod m n
+       in
+         (m = n * q + r /\ 0 <= r /\ r <= (ABS n) - 1)
+
+     We prove this as a test case in `selftest.sml` *)
+
+  (* theorems used for arithmetic operators *)
+
+  val _ = s ("SMT_NUM_MUL", I [] ``!m n. m * n = Num (&m * &n)``)
+  val _ = s ("SMT_NUM_DIV", I [smtdiv_def]
+    ``!k n. n <> 0 ==> (k DIV n = Num (smtdiv (&k) (&n)))``)
+  val _ = s ("SMT_NUM_MOD", I [smtmod_def]
+    ``!k n. n <> 0 ==> (k MOD n = Num (smtmod (&k) (&n)))``)
+  val _ = s ("SMT_INT_DIV", I [smtdiv_def]
+    ``!i j. j <> 0 ==> (i / j =
+        if 0 < j then smtdiv i j else -(smtdiv (-i) j))``)
+  val _ = s ("SMT_INT_MOD", I [smtmod_def, integerTheory.INT_ABS]
+    ``!i j. j <> 0 ==> (i % j =
+        if 0 < j then smtmod i j else -(smtmod (-i) j))``)
+  val _ = s ("SMT_INT_QUOT", Tactical.prove (
+    ``!i j. j <> 0 ==> (i quot j =
+        if 0 <= i then smtdiv i j else smtdiv (-i) (-j))``,
+          bossLib.rw [smtdiv_def, integerTheory.int_div, integerTheory.int_quot]
+          >> bossLib.Cases_on `i = 0` >> bossLib.fs [] >> intLib.ARITH_TAC))
+  val _ = s ("SMT_INT_REM", Tactical.prove (
+    ``!i j. j <> 0 ==> (i rem j =
+        if 0 <= i then smtmod i j else -(smtmod (-i) j))``,
+          let
+            open integerTheory
+          in
+            bossLib.rw [smtmod_def, int_mod, int_rem, int_div, int_quot, INT_ABS]
+            >> intLib.ARITH_TAC
+          end))
 
   (* constants used by Z3 *)
 
@@ -478,10 +529,10 @@
     ``(x = y) \/ ((x =+ z) f y = f y)``)
   val _ = s ("t005", Tactical.prove
     (``(f = g) \/ (f (array_ext f g) <> g (array_ext f g))``,
-    Tactical.THEN (Tactic.DISJ_CASES_TAC
-        (Thm.SPEC ``?x. f x <> g x`` boolTheory.EXCLUDED_MIDDLE),
-      Tactical.THEN (Rewrite.REWRITE_TAC [array_ext_def],
-        bossLib.METIS_TAC []))))
+      Tactic.DISJ_CASES_TAC
+        (Thm.SPEC ``?x. f x <> g x`` boolTheory.EXCLUDED_MIDDLE)
+      >> Rewrite.REWRITE_TAC [array_ext_def]
+      >> bossLib.METIS_TAC []))
 
   val _ = s ("t006", A ``((x :int) <> y) \/ (x <= y)``)
   val _ = s ("t007", A ``((x :int) <> y) \/ (x >= y)``)
@@ -500,11 +551,10 @@
     let
       val RW = bossLib.RW_TAC (bossLib.++ (bossLib.bool_ss, fcpLib.FCP_ss))
     in
-      Tactical.THEN (RW [],
-        Tactical.THEN (Tactic.EXISTS_TAC ``0 :num``,
-          Tactical.THEN (RW [wordsTheory.DIMINDEX_GT_0,
-              wordsTheory.word_1comp_def],
-            tautLib.TAUT_TAC)))
+      RW []
+      >> Tactic.EXISTS_TAC ``0 :num``
+      >> RW [wordsTheory.DIMINDEX_GT_0, wordsTheory.word_1comp_def]
+      >> tautLib.TAUT_TAC
     end))
   val _ = s ("t018", W ``(x = y) ==> x ' i ==> y ' i``)
   val _ = s ("t019", S ``(1w = ~(x :word1)) \/ x ' 0``)
