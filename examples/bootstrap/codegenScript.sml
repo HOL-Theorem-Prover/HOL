@@ -2,6 +2,7 @@
 open HolKernel Parse boolLib bossLib;
 open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
 open source_valuesTheory source_syntaxTheory x64asm_syntaxTheory;
+open parsingTheory wordsLib;
 
 val _ = new_theory "codegen";
 
@@ -331,6 +332,11 @@ Definition codegen_def:
     let (_,fs,k) = c_decs init_l [] funs in
     let (c,fs,_) = c_decs init_l fs (funs ++ [Defun (name "main") [] main]) in
       flatten (Append (List (init (k+1))) c) []
+End
+
+Definition compiler_def:
+  compiler input =
+    asm2str (codegen (parser (lexer input)))
 End
 
 val _ = export_theory();

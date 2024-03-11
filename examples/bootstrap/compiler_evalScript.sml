@@ -1,7 +1,7 @@
 
 open HolKernel Parse boolLib bossLib term_tactic;
 open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open wordsTheory wordsLib automationLib compilerTheory compiler_progTheory;
+open wordsTheory wordsLib automationLib compiler_progTheory;
 
 val _ = new_theory "compiler_eval";
 
@@ -24,6 +24,5 @@ Theorem compiler_asm_str  = time EVAL “compiler_asm_str”;
 
 val _ = write_hol_string_to_file "compiler_prog.txt" (compiler_str |> concl |> rand);
 val _ = write_hol_string_to_file "compiler_asm.s"    (compiler_asm_str |> concl |> rand);
-
 
 val _ = export_theory();
