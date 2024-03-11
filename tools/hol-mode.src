@@ -1275,9 +1275,10 @@ printed out.  (That's assuming that quietdec is false to start with.)"
                           hol-echo-commands-p))
                           
 (defun hol-db-polarity-match (tm)
-  "Does a DB.polarity_match [] on the given TERM (given as a string, without quotes)."
+  "Does a DB.polarity_match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
   (interactive "sTerm to polarity match on: ")
   (send-raw-string-to-hol (format "Hol_pp.print_polarity_match true (Term`%s`)" tm)
+                           hol-echo-commands-p))
 
 
 (defun hol-check-dbselector (s)
