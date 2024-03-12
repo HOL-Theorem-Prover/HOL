@@ -13,6 +13,7 @@ local
 
   open Z3_Proof
 
+  val op ++ = bossLib.++
   val op >> = Tactical.>>
 
   val ERR = Feedback.mk_HOL_ERR "Z3_ProofReplay"
@@ -474,7 +475,7 @@ local
     let
       fun cooper goal =
         profile "arith_prove(cooper)" intLib.COOPER_TAC goal
-      fun tactic (goal as (_, term)) =
+      fun arith_tactic (goal as (_, term)) =
         if term_contains_real_ty term then
           (* this is just a heuristic - it is quite conceivable that a
              term that contains type real is provable by integer
@@ -489,6 +490,10 @@ local
           handle NotFound => cooper goal
           handle Feedback.HOL_ERR _ => cooper goal
         )
+      val TRY = Tactical.TRY
+      val ap_tactic =
+        TRY AP_TERM_TAC >> TRY arith_tactic
+        >> TRY AP_THM_TAC >> TRY arith_tactic
     in
       Tactical.prove (t,
         (* rewrite the `smtdiv`, `smtmod` symbols so that the arithmetic
@@ -497,7 +502,14 @@ local
         (* the next rewrites are a workaround for this issue:
            https://github.com/HOL-Theorem-Prover/HOL/issues/1207 *)
         >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT]
-        >> tactic)
+        (* if `arith_tactic` doesn't work at first, don't give up immediately;
+           instead let's try additional tactics *)
+        >> TRY arith_tactic
+        >> bossLib.RW_TAC (bossLib.arith_ss ++ intSimps.INT_RWTS_ss ++
+             intSimps.INT_ARITH_ss ++ realSimps.REAL_ARITH_ss)
+               [Conv.GSYM integerTheory.INT_NEG_MINUS1]
+        >> TRY arith_tactic
+        >> Tactical.rpt (Tactical.CHANGED_TAC ap_tactic))
     end
 
   (***************************************************************************)
