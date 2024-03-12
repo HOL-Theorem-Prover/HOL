@@ -957,8 +957,13 @@ local
 
         if profile "rewrite(11.0)(contains_real)" term_contains_real_ty t then
           profile "rewrite(11.1)(REAL_ARITH)" RealField.REAL_ARITH t
-        else
+        else (
           profile "rewrite(11.2)(ARITH_PROVE)" intLib.ARITH_PROVE t
+            (* the following is a workaround for:
+               https://github.com/HOL-Theorem-Prover/HOL/issues/1209 *)
+            handle NotFound =>
+              raise ERR "z3_rewrite" "ARITH_PROVE raised NotFound"
+        )
     in
       (state_cache_thm state thm, thm)
     end
@@ -1048,6 +1053,8 @@ local
 
   val z3_th_lemma_arith = th_lemma_wrapper "arith" (fn (state, t) =>
     let
+      fun cooper goal =
+        profile "th_lemma[arith](3.3)(cooper)" intLib.COOPER_TAC goal
       fun tactic (goal as (_, term)) =
         if term_contains_real_ty term then
           (* this is just a heuristic - it is quite conceivable that a
@@ -1056,10 +1063,12 @@ local
           profile "th_lemma[arith](3.1)(real)" RealField.REAL_ARITH_TAC goal
         else (
           profile "th_lemma[arith](3.2)(int)" intLib.ARITH_TAC goal
-          (* the following should be removed when issue
-             HOL-Theorem-Prover/HOL#1203 is fixed *)
-          handle Feedback.HOL_ERR _ =>
-            profile "th_lemma[arith](3.3)(cooper)" intLib.COOPER_TAC goal
+          (* the following two exception handlers are workarounds for these two
+             issues:
+             https://github.com/HOL-Theorem-Prover/HOL/issues/1203
+             https://github.com/HOL-Theorem-Prover/HOL/issues/1209 *)
+          handle NotFound => cooper goal
+          handle Feedback.HOL_ERR _ => cooper goal
         )
       val thm = Tactical.prove (t,
         (* rewrite the `smtdiv`, `smtmod` symbols so that the arithmetic
