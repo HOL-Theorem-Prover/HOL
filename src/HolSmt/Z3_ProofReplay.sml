@@ -468,6 +468,38 @@ local
     Tactical.TAC_PROOF ((HOLset.listItems asms, t), metisLib.METIS_TAC thms)
   end
 
+  (* Returns a proof of `t` using arithmetic decision procedures. This function
+     is used by both `z3_th_lemma_arith` and `z3_rewrite`. *)
+  fun arith_prove t =
+    let
+      fun cooper goal =
+        profile "arith_prove(cooper)" intLib.COOPER_TAC goal
+      fun tactic (goal as (_, term)) =
+        if term_contains_real_ty term then
+          (* this is just a heuristic - it is quite conceivable that a
+             term that contains type real is provable by integer
+             arithmetic *)
+          profile "arith_prove(real)" RealField.REAL_ARITH_TAC goal
+        else (
+          profile "arith_prove(int)" intLib.ARITH_TAC goal
+          (* the following two exception handlers are workarounds for these two
+             issues:
+             https://github.com/HOL-Theorem-Prover/HOL/issues/1203
+             https://github.com/HOL-Theorem-Prover/HOL/issues/1209 *)
+          handle NotFound => cooper goal
+          handle Feedback.HOL_ERR _ => cooper goal
+        )
+    in
+      Tactical.prove (t,
+        (* rewrite the `smtdiv`, `smtmod` symbols so that the arithmetic
+           decision procedures can solve terms containing these functions *)
+        PURE_REWRITE_TAC[HolSmtTheory.smtdiv_def, HolSmtTheory.smtmod_def]
+        (* the next rewrites are a workaround for this issue:
+           https://github.com/HOL-Theorem-Prover/HOL/issues/1207 *)
+        >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT]
+        >> tactic)
+    end
+
   (***************************************************************************)
   (* implementation of Z3's inference rules                                  *)
   (***************************************************************************)
@@ -969,15 +1001,7 @@ local
         profile "rewrite(10)(BBLAST)" blastLib.BBLAST_PROVE t
         handle Feedback.HOL_ERR _ =>
 
-        if profile "rewrite(11.0)(contains_real)" term_contains_real_ty t then
-          profile "rewrite(11.1)(REAL_ARITH)" RealField.REAL_ARITH t
-        else (
-          profile "rewrite(11.2)(ARITH_PROVE)" intLib.ARITH_PROVE t
-            (* the following is a workaround for:
-               https://github.com/HOL-Theorem-Prover/HOL/issues/1209 *)
-            handle NotFound =>
-              raise ERR "z3_rewrite" "ARITH_PROVE raised NotFound"
-        )
+        profile "rewrite(11)(arith)" arith_prove t
     in
       (state_cache_thm state thm, thm)
     end
@@ -1067,31 +1091,7 @@ local
 
   val z3_th_lemma_arith = th_lemma_wrapper "arith" (fn (state, t) =>
     let
-      fun cooper goal =
-        profile "th_lemma[arith](3.3)(cooper)" intLib.COOPER_TAC goal
-      fun tactic (goal as (_, term)) =
-        if term_contains_real_ty term then
-          (* this is just a heuristic - it is quite conceivable that a
-             term that contains type real is provable by integer
-             arithmetic *)
-          profile "th_lemma[arith](3.1)(real)" RealField.REAL_ARITH_TAC goal
-        else (
-          profile "th_lemma[arith](3.2)(int)" intLib.ARITH_TAC goal
-          (* the following two exception handlers are workarounds for these two
-             issues:
-             https://github.com/HOL-Theorem-Prover/HOL/issues/1203
-             https://github.com/HOL-Theorem-Prover/HOL/issues/1209 *)
-          handle NotFound => cooper goal
-          handle Feedback.HOL_ERR _ => cooper goal
-        )
-      val thm = Tactical.prove (t,
-        (* rewrite the `smtdiv`, `smtmod` symbols so that the arithmetic
-           decision procedures can solve terms containing these functions *)
-        PURE_REWRITE_TAC[HolSmtTheory.smtdiv_def, HolSmtTheory.smtmod_def]
-        (* the next rewrites are a workaround for this issue:
-           https://github.com/HOL-Theorem-Prover/HOL/issues/1207 *)
-        >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT]
-        >> tactic)
+      val thm = profile "th_lemma[arith](3)" arith_prove t
     in
       (* cache 'thm' *)
       (state_cache_thm state thm, thm)
