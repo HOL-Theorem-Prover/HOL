@@ -634,8 +634,8 @@ in
         (* arithmeticTheory *)
         GREATER_DEF, GREATER_EQ, MIN_DEF, MAX_DEF,
         (* integerTheory *)
-        INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN,
-        INT_OF_NUM, INT_POS,
+        INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN, INT_OF_NUM,
+        INT_POS, NUM_OF_INT,
         (* HolSmtTheory *)
         SMT_NUM_MUL, SMT_NUM_DIV, SMT_NUM_MOD, SMT_INT_DIV, SMT_INT_MOD,
         SMT_INT_QUOT, SMT_INT_REM,

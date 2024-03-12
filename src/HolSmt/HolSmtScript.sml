@@ -55,6 +55,9 @@
 
   (* theorems used for arithmetic operators *)
 
+  val _ = s ("SMT_NUM_ADD", A ``!m n. m + n = Num (&m + &n)``)
+  val _ = s ("SMT_NUM_SUB", A
+    ``!m n. m - n = if (&m:int) <= &n then 0n else Num (&m - &n)``)
   val _ = s ("SMT_NUM_MUL", I [] ``!m n. m * n = Num (&m * &n)``)
   val _ = s ("SMT_NUM_DIV", I [smtdiv_def]
     ``!k n. n <> 0 ==> (k DIV n = Num (smtdiv (&k) (&n)))``)
