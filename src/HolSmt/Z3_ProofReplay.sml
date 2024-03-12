@@ -610,6 +610,12 @@ local
   fun z3_hypothesis (state, t) =
     (state, Thm.ASSUME t)
 
+  (*   ... |- ~p
+     ------------
+     ... |- p = F *)
+  fun z3_iff_false (state, thm, _) =
+    (state, Drule.EQF_INTRO thm)
+
   (*   ... |- p
      ------------
      ... |- p = T *)
@@ -1274,6 +1280,8 @@ local
         zero_prems state_proof "elim_unused" z3_elim_unused x continuation
     | thm_of_proofterm (state_proof, HYPOTHESIS x) continuation =
         zero_prems state_proof "hypothesis" z3_hypothesis x continuation
+    | thm_of_proofterm (state_proof, IFF_FALSE x) continuation =
+        one_prem state_proof "iff_false" z3_iff_false x continuation
     | thm_of_proofterm (state_proof, IFF_TRUE x) continuation =
         one_prem state_proof "iff_true" z3_iff_true x continuation
     | thm_of_proofterm (state_proof, INTRO_DEF x) continuation =
