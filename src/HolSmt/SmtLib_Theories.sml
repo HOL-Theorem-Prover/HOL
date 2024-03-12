@@ -337,7 +337,11 @@ in
       ("*", leftassoc intSyntax.mk_mult),
       ("div", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
         (Term.prim_mk_const {Thy="HolSmt", Name="smtdiv"}, t1), t2))),
+      ("div0", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="HolSmt", Name="smtdiv"}, t1), t2))),
       ("mod", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="HolSmt", Name="smtmod"}, t1), t2))),
+      ("mod0", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
         (Term.prim_mk_const {Thy="HolSmt", Name="smtmod"}, t1), t2))),
       ("abs", K_zero_one intSyntax.mk_absval),
       ("<=", chainable intSyntax.mk_leq),
