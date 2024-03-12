@@ -13,9 +13,13 @@ local
 
   open Z3_Proof
 
+  val op >> = Tactical.>>
+
   val ERR = Feedback.mk_HOL_ERR "Z3_ProofReplay"
   val WARNING = Feedback.HOL_WARNING "Z3_ProofReplay"
 
+  val smtdiv_def = HolSmtTheory.smtdiv_def
+  val smtmod_def = HolSmtTheory.smtmod_def
   val ALL_DISTINCT_NIL = HolSmtTheory.ALL_DISTINCT_NIL
   val ALL_DISTINCT_CONS = HolSmtTheory.ALL_DISTINCT_CONS
   val NOT_MEM_NIL = HolSmtTheory.NOT_MEM_NIL
@@ -449,39 +453,6 @@ local
       boolSyntax.rhs (Thm.concl r_eq_r'))
   in
     Thm.TRANS (Thm.TRANS l_eq_l' l'_eq_r') (Thm.SYM r_eq_r')
-  end
-
-  (* replaces distinct if-then-else terms by distinct variables;
-     returns the generalized term and a map from ite-subterms to
-     variables (treating anything but combinations as atomic, i.e.,
-     this function does NOT descend into lambda-abstractions) *)
-  fun generalize_ite t =
-  let
-    fun aux (dict, t) =
-      if boolSyntax.is_cond t then (
-        case Redblackmap.peek (dict, t) of
-          SOME var =>
-          (dict, var)
-        | NONE =>
-          let
-            val var = Term.genvar (Term.type_of t)
-          in
-            (Redblackmap.insert (dict, t, var), var)
-          end
-      ) else (
-        let
-          val (l, r) = Term.dest_comb t
-          val (dict, l) = aux (dict, l)
-          val (dict, r) = aux (dict, r)
-        in
-          (dict, Term.mk_comb (l, r))
-        end
-        handle Feedback.HOL_ERR _ =>
-          (* 't' is not a combination *)
-          (dict, t)
-      )
-  in
-    aux (Redblackmap.mkDict Term.compare, t)
   end
 
   (* Returns a proof of `t` given a list of theorems as inputs. It relies on
@@ -1071,24 +1042,30 @@ local
 
   val z3_th_lemma_arith = th_lemma_wrapper "arith" (fn (state, t) =>
     let
-      val (dict, t') = generalize_ite t
-      val thm = if term_contains_real_ty t' then
+      fun tactic (goal as (_, term)) =
+        if term_contains_real_ty term then
           (* this is just a heuristic - it is quite conceivable that a
              term that contains type real is provable by integer
              arithmetic *)
-          profile "th_lemma[arith](3.1)(real)" RealField.REAL_ARITH t'
+          profile "th_lemma[arith](3.1)(real)" RealField.REAL_ARITH_TAC goal
         else (
-          profile "th_lemma[arith](3.2)(int)" intLib.ARITH_PROVE t'
+          profile "th_lemma[arith](3.2)(int)" intLib.ARITH_TAC goal
           (* the following should be removed when issue
              HOL-Theorem-Prover/HOL#1203 is fixed *)
           handle Feedback.HOL_ERR _ =>
-            profile "th_lemma[arith](3.3)(cooper)" intLib.COOPER_PROVE t'
+            profile "th_lemma[arith](3.3)(cooper)" intLib.COOPER_TAC goal
         )
-      val subst = List.map (fn (term, var) => {redex = var, residue = term})
-        (Redblackmap.listItems dict)
+      val thm = Tactical.prove (t,
+        (* rewrite the `smtdiv`, `smtmod` symbols so that the arithmetic
+           decision procedures can solve terms containing these functions *)
+        PURE_REWRITE_TAC[HolSmtTheory.smtdiv_def, HolSmtTheory.smtmod_def]
+        (* the next rewrites are a workaround for this issue:
+           https://github.com/HOL-Theorem-Prover/HOL/issues/1207 *)
+        >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT]
+        >> tactic)
     in
-      (* cache 'thm', instantiate to undo 'generalize_ite' *)
-      (state_cache_thm state thm, Thm.INST subst thm)
+      (* cache 'thm' *)
+      (state_cache_thm state thm, thm)
     end)
 
   val z3_th_lemma_array = th_lemma_wrapper "array" (fn (state, t) =>
