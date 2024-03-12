@@ -122,6 +122,7 @@ local
     (* the following is used in `(_ th-lemma arith ...)` inference rules *)
     ("farkas",          builtin_name "farkas"),
     ("hypothesis",      zero_prems "hypothesis"),
+    ("iff-false",       one_prem "iff-false"),
     ("iff-true",        one_prem "iff-true"),
     ("intro-def",       zero_prems "intro-def"),
     ("lemma",           one_prem "lemma"),
@@ -342,6 +343,7 @@ local
       ("def-axiom",       zero_prems_pt DEF_AXIOM),
       ("elim-unused",     zero_prems_pt ELIM_UNUSED),
       ("hypothesis",      zero_prems_pt HYPOTHESIS),
+      ("iff-false",       one_prem_pt IFF_FALSE),
       ("iff-true",        one_prem_pt IFF_TRUE),
       ("intro-def",       zero_prems_pt INTRO_DEF),
       ("lemma",           one_prem_pt LEMMA),
