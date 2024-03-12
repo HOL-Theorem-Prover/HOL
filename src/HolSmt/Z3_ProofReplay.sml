@@ -608,7 +608,21 @@ local
   (* introduces a local hypothesis (which must be discharged by
      'z3_lemma' at some later point in the proof) *)
   fun z3_hypothesis (state, t) =
-    (state, Thm.ASSUME t)
+    (* FIXME: The following is a workaround for a yet-to-be-filed Z3 issue where
+       a hypothesis is introduced but is not discharged by `z3_lemma` at any
+       point in the proof. So far, all such hypotheses have assumed the form
+       `p = p`, which can easily be proved without introducing an assumption. *)
+    if boolSyntax.is_eq t then
+      let
+        val (lhs, rhs) = boolSyntax.dest_eq t
+      in
+        if Term.term_eq lhs rhs then
+          (state, Thm.REFL lhs)
+        else
+          (state, Thm.ASSUME t)
+      end
+    else
+      (state, Thm.ASSUME t)
 
   (*   ... |- ~p
      ------------
