@@ -102,6 +102,15 @@ val _ = if (Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
         then OK()
         else die "FAILED"
 
+val _ = shouldfail { testfn = quietly (xHol_reln "tr"),
+                     printresult = (fn (th,_,_) => thm_to_string th),
+                     printarg = K "Double implication should fail",
+                     checkexn = (fn(HOL_ERR{message,...}) =>
+                                   String.isSubstring "double implication"
+                                                      message
+                                | _ => false) }
+                   ‘fib Z ONE /\ fib ONE ONE /\ !m r s. fib m r ==> fib (SUC m) s ==> fib (SUC (SUC m)) (r + s)’ 
+                 
 (* isolate_to_front test cases *)
 val failcount = ref 0
 val _ = diemode := Remember failcount
