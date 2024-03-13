@@ -183,11 +183,33 @@ in
   export_rule_induction (name ^ "_strongind")
 end
 
+fun find_double_implications (tm,locs) =
+    let fun rule_has_double_imp conj =
+            let val (_, body) = strip_forall conj
+                val (lhs, _) = strip_imp body
+            in
+                length lhs > 1
+            end
+        fun process_conjs i cs =
+            case cs of
+                [] => NONE
+              | c::rest => if rule_has_double_imp c
+                           then SOME (i, List.nth(locs,i))
+                           else process_conjs (i+1) rest
+    in
+      process_conjs 0 (strip_conj tm)
+    end
+
 fun Hol_mono_reln name monoset tm = let
   val _ = Lexis.ok_sml_identifier (name ^ !boolLib.def_suffix) orelse
           raise ERR "Hol_mono_reln"
                     ("Bad name for definition: "^ Lib.mlquote name^
                      " (use xHol_reln to specify a better)")
+  val _ = case find_double_implications tm of
+              NONE => ()
+           |  SOME (idx,loc) => raise ERRloc "Hol_mono_reln" loc
+                                ("Clause #" ^ Int.toString idx ^
+                                 " has a double implication (use conjunctions instead)")
   val (rules, indn, cases) = new_inductive_definition monoset name tm
       (* not! InductiveDefinition.bool_monoset tm *)
   val strong_ind = derive_strong_induction (rules, indn)
