@@ -2,11 +2,16 @@ structure test_cases :> test_cases =
 struct
 
 open Abbrev
-open HolKernel Parse boolLib
+open HolKernel Parse boolLib testutils
 
-fun test_term c (n,t,b) = let
-  val _ = print (StringCvt.padRight #" " 25 n)
+fun test_term c (n,t,b) =
+    let val expected = if b then boolSyntax.T else boolSyntax.F
+    in
+      convtest(n,c,t,expected)
+    end
+(*  val _ = print (StringCvt.padRight #" " 25 n)
   val _ = Profile.reset_all()
+
   val timer = Timer.startCPUTimer ()
   val result = SOME (SOME (c t))
     handle Interrupt => SOME NONE
@@ -297,34 +302,28 @@ val goals_to_test = [
    ([``n:num < p + 1``, ``!m:num. m < p ==> ~(n < m + 1)``], ``p:num = n``))
 ]
 
-fun test_goal tac (name, g) = let
-  val _ = print (StringCvt.padRight #" " 25 name)
-  val result = SOME (SOME (tac g)) handle Interrupt => SOME NONE
-                                        | _ => NONE
-  val (verdictmsg, verdict) =
-      case result of
-        SOME (SOME (subgoals, _)) => if null subgoals then ("OK", true)
-                                     else ("Subgoals remain", false)
-      | SOME NONE => ("Interrupted", false)
-      | NONE => ("Raised exception", false)
-  val _ = print (verdictmsg ^  "\n")
-in
-  verdict
-end
-
+fun test_goal (tac:tactic) (name, g) =
+    let
+      val _ = tprint name
+    in
+      require (check_result null) (#1 o tac) g
+    end
 
 fun perform_tests conv tactic =
-    (print "Testing terms\n";
-     List.all (test_term conv) terms_to_test) andalso
-    (print "Testing goals\n";
-     List.all (test_goal tactic) goals_to_test)
+    let
+    in
+      print "Testing terms\n";
+      List.app (test_term conv) terms_to_test;
+      print "Testing goals\n";
+      List.app (test_goal tactic) goals_to_test
+    end
 
 fun perform_omega_tests conv =
     (print "Testing Omega terms\n";
-     List.all (test_term conv) omega_test_terms)
+     List.app (test_term conv) omega_test_terms)
 
 fun perform_cooper_tests conv =
     (print "Testing Cooper terms\n";
-     List.all (test_term conv) cooper_test_terms)
+     List.app (test_term conv) cooper_test_terms)
 
 end; (* struct *)

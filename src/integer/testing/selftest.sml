@@ -2,12 +2,15 @@ open HolKernel Parse;
 
 val _ = Portable.catch_SIGINT()
 
-fun cooper() =
-    test_cases.perform_tests Cooper.COOPER_CONV Cooper.COOPER_TAC andalso
-    test_cases.perform_cooper_tests Cooper.COOPER_CONV
+fun cooper0() =
+    (test_cases.perform_tests Cooper.COOPER_CONV Cooper.COOPER_TAC ;
+     test_cases.perform_cooper_tests Cooper.COOPER_CONV)
 
-fun omega() = test_cases.perform_tests Omega.OMEGA_CONV Omega.OMEGA_TAC andalso
-              test_cases.perform_omega_tests Omega.OMEGA_CONV
+fun cooper() = (print "\n\nCooper Test regression tests\n"; cooper0())
+
+fun omega() =
+    (test_cases.perform_tests Omega.OMEGA_CONV Omega.OMEGA_TAC;
+     test_cases.perform_omega_tests Omega.OMEGA_CONV)
 
 val omega_result = (print "Omega Test regression tests\n"; omega())
 
@@ -17,17 +20,13 @@ fun usage() =
                    String.concatWith " " (CommandLine.arguments()) ^ "\n");
      TextIO.flushOut TextIO.stdErr)
 
-val cooper_result =
-    case CommandLine.arguments() of
-      [] => if Systeml.ML_SYSNAME = "poly" then cooper() else (usage(); true)
-    | [x] => let
-      in
-        case Int.fromString x of
-          SOME n => if n >= 2 then cooper()
-                    else true
-        | NONE => (usage(); true)
-      end
-    | _ => (usage(); true)
+(* maybe run cooper *)
+val _ =
+    case OS.Process.getEnv "HOLSELFTESTLEVEL" of
+        NONE => if Systeml.ML_SYSNAME = "poly" then cooper() else ()
+      | SOME s => (case Int.fromString s of
+                       NONE => ()
+                     | SOME i => if i >= 2 then cooper() else ())
 
 val _ = print "Testing simplifier integration\n"
 
