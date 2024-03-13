@@ -467,8 +467,8 @@
         year            = 1997,
         type            = "Technical Report",
         number          = 428,
-        note            = "Available on the Web as
-                           {\url{http://www.cl.cam.ac.uk/users/jrh/papers/tang.html}}"}
+        url             = {http://www.cl.cam.ac.uk/users/jrh/papers/tang.html}
+}
 
 @Article{oleary-itj-99,
   author  = {O'Leary, John and Zhao, Xudong and Gerth, Robert and
@@ -478,7 +478,7 @@
   journal = {Intel Technology Journal},
   year    = 1999,
   month   = {First Quarter},
-  note    = {Online at {\url{http://developer.intel.com/technology/itj/}}}
+  url     = {http://developer.intel.com/technology/itj/}
 }
 
 @techreport{SegerVoss,
@@ -495,7 +495,7 @@
   title       = {A methodology for hardware verification using compositional model checking},
   institution = {Cadence Berkeley Labs},
   month       = apr,
-  note        = {Available at {\url{http://www-cad.eecs.berkeley.edu/~kenmcmil/}}},
+  url         = {http://www-cad.eecs.berkeley.edu/~kenmcmil/},
   year        = "1999"}
 
 
@@ -542,20 +542,20 @@
   month       = jul,
   year        = "1996"}
 
-@misc{HoareFest,
-  author      = "Mike Gordon",
-  title       = {Programming combinations of deduction and {BDD}-based symbolic calculation},
-  note        = {Draft available at
-                 {\url{http://www.cl.cam.ac.uk/~mjcg/celebration/}}}
+@article{HoareFest,
+  title={Programming combinations of deduction and BDD-based symbolic calculation},
+  author={Gordon, Michael JC},
+  journal={LMS Journal of Computation and Mathematics},
+  volume={5},
+  pages={56--76},
+  year={2002},
+  publisher={Cambridge University Press}
 }
-
-
 
 @misc{GordonVerilogSemantics,
   author      = "Mike Gordon",
   title       = {Synthesizable Verilog: syntax and semantics},
-  note        = {Draft available at
-                 {\url{http://www.cl.cam.ac.uk/users/mjcg/Verilog/V/V.ps.gz}}}
+  url         = {http://www.cl.cam.ac.uk/users/mjcg/Verilog/V/V.ps.gz}
 }
 
 @incollection{JoyceSeger,
@@ -580,8 +580,7 @@
   month         = oct,
   organization  ="Department of Information Technology, Technical University of Denmark,
                   Building 344, DK-2800 Lyngby, Denmark",
-  note          ="Lecture notes for 49285 Advanced Algorithms E97.
-                  Available from: {\url{http://www.it.dtu.dk/~hra}}"
+  url           = {https://course.ccs.neu.edu/cs5800gc/parent/buddy-2.4/doc/bddnotes.pdf}
 }
 
 
@@ -817,11 +816,9 @@
  title  = "{BDD} Representation Judgements in {HOL}: A Performance Evaluation",
  note = "Category B paper presented at the
          {\it 14th International Conference on Theorem Proving and Higher Order Logics\/}.
-         Edinburgh, Scotland, UK, August 2001.
-         Available from \url{http://www.cl.cam.ac.uk/~ha227/}",
+         Edinburgh, Scotland, UK, August 2001.",
+ url  = {https://www.inf.ed.ac.uk/publications/online/0046/b017.pdf}
 }
-
-
 
 @Book{Isabelle-book,
   author        = "Lawrence C. Paulson",
@@ -838,9 +835,6 @@
   year =         1998,
   volume        = 6,
   pages         = {85-128}}
-
-
-
 
 @Book{Back,
   author        = "Ralph-Johan Back and Joakim von Wright",
@@ -912,7 +906,6 @@
   location = {Victoria, BC, Canada},
   pages = {35--46},
   numpages = {12},
-  url = {http://doi.acm.org/10.1145/1411304.1411311},
   doi = {10.1145/1411304.1411311},
   acmid = {1411311},
   publisher = {ACM},
@@ -1009,7 +1002,7 @@ address = {New York}
 @book{Shiryaev:2016vm,
 author = {Shiryaev, Albert Nikolaevich},
 title = {Probability-1},
-publisher = {Springer-Verlag New York},
+publisher = {Springer-Verlag},
 year = {2016},
 volume = {95},
 series = {Graduate Texts in Mathematics},
@@ -1020,9 +1013,9 @@ doi = {10.1007/978-0-387-72206-1}
 }
 
 @book{Shiryaev:2019kf,
-author = {Albert N. Shiryaev},
+author = {Shiryaev, Albert Nikolaevich},
 title = {Probability-2},
-publisher = {Springer-Verlag New York},
+publisher = {Springer-Verlag},
 year = {2019},
 address = {New York, NY},
 edition = {3},
@@ -1087,6 +1080,41 @@ year = {1954},
 address = {Cambridge, MA}
 }
 
+@Manual{harrison2017hol,
+  title={HOL Light tutorial},
+  author={Harrison, John},
+  url={http://www.cl.cam.ac.uk/~jrh13/hol-light/tutorial.pdf},
+  day = {14},
+  month = jan,
+  year = {2017}
+}
+
+@article{Harrison:2012ig,
+author = {Harrison, John},
+title = {{The HOL Light Theory of Euclidean Space}},
+journal = {Journal of Automated Reasoning},
+year = {2012},
+volume = {50},
+number = {2},
+pages = {173--190},
+month = apr,
+doi = {10.1007/s10817-012-9250-9}
+}
+
+@book{Courant:1989vw,
+author = {Courant, Richard and John, Fritz},
+title = {{Introduction to Calculus and Analysis, Volume I}},
+publisher = {Springer-Verlag},
+year = {1989}
+}
+
+@book{Courant:1989tt,
+author = {Courant, Richard and John, Fritz},
+title = {{Introduction to Calculus and Analysis, Volume II}},
+publisher = {Springer-Verlag},
+year = {1989}
+}
+
 @inproceedings{ITP23,
   author = {Oskar Abrahamsson and Magnus O. Myreen},
   title = {Fast, Verified Computation for {Candle}},
@@ -1095,5 +1123,40 @@ address = {Cambridge, MA}
   publisher = {LIPIcs},
   note = {To appear},
   url = {https://cakeml.org/itp23.pdf}
+}
+
+@incollection{Norrish:2013,
+author = {Norrish, Michael and Huffman, Brian},
+title = {{Ordinals in HOL: Transfinite Arithmetic up to (and Beyond) $\omega_1$}},
+booktitle = {LNCS 7998 - Interactive Theorem Proving (ITP 2013)},
+year = {2013},
+pages = {133--146},
+publisher = {Springer},
+month = jun,
+doi = {10.1007/978-3-642-39634-2_12}
+}
+
+@incollection{IsaCardinals,
+author = {Blanchette, Jasmin Christian and Popescu, Andrei and Traytel, Dmitriy},
+title = {{Cardinals in Isabelle/HOL}},
+booktitle = {LNCS 8558 - Interactive Theorem Proving (ITP 2014)},
+year = {2014},
+publisher = {Springer},
+month = jun,
+doi = {10.1007/978-3-319-08970-6_8}
+}
+
+@book{ACL2approach,
+author = {Kaufmann, Matt and Manolios, Panagiotis and Moore, J Strother},
+title = {{Computer-Aided Reasoning: An Approach}},
+publisher = {Springer},
+year = {2000},
+volume = {3},
+series = {Advances in Formal Methods},
+address = {Boston, MA},
+month = jul,
+doi = {10.1007/978-1-4615-4449-4},
+isbn = {9780792377443},
+issn = {1567-7338}
 }
 

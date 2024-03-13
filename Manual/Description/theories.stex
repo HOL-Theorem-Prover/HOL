@@ -19,7 +19,6 @@
 
 \setcounter{sessioncount}{0}
 
-
 \newcommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
 \newcommand{\nil}{\mathbf{[} \;\mathbf{]}}
 \newcommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
@@ -32,6 +31,8 @@ The sections that follow provide an overview of the contents of each theory.
 For a complete list of all the axioms, definitions and theorems in \HOL, see the online resources distributed with the system.
 In particular, the HTML file \url{help/HOLindex.html} is a good place to start browsing the available theories.
 For a graphical picture of the theory hierarchy, see \url{help/theorygraph/theories.html}.
+
+In addition, core theories of higher mathematics are described in Chapter~\ref{ch:math}.
 
 \section{The Theory {\tt min}}\label{minTheory}
 
@@ -2010,6 +2011,9 @@ source files.
 \subsection{Real numbers}\label{reals}
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|(}
 
+>>__ load "realTheory"; open realTheory
+>>__ load "real_sigmaTheory"; open real_sigmaTheory  
+
 There is an extensive collection of theories that make up the
 development of real numbers and analysis in HOL, due to John Harrison
 \cite{jrh:thesis}. We will only give a sketchy overview of the
@@ -2049,16 +2053,19 @@ On the basis of {\small\verb+realTheory+}, the following sequence of
 theories is constructed:
 
 \begin{description}
-\item [topology] General topology (ported from HOL Light).
+\item [real_sigma] Summation of real numbers (the $\Sigma$ operator, etc.)
+\item [topology] General topology.
 \item [metric] Metric spaces, including metric on the real line.
-\item [nets] Moore-Smith convergence nets, and special cases like
-sequences.
+\item [nets] Moore-Smith convergence nets, and special cases like sequences.
+\item [real_topology] Topology of one-dimensional Euclidean space (Section~\ref{sec:topology}).
 \item [seq] Sequences and series of real numbers.
-\item [lim] Limits, continuity and differentiation.
+\item [derivative] The \emph{new} univariate differential calculus (Section~\ref{sec:calculus}).
+\item [lim] Limits, continuity and the \emph{old} differentiation.
 \item [powser] Power series.
 \item [transc] Transcendental functions, \eg, exp, sin,
-cos, ln, root, sqrt, pi, tan, asn, acs, atn.
-\item [real_sigma] Summation of real numbers (the $\Sigma$ operator).
+  cos, ln, root, sqrt, pi, tan, asn, acs, atn.
+\item [integration] The \emph{new} univariate integral calculus (Section~\ref{sec:calculus}).
+\item [integral] The \emph{old} univariate integral calculus.
 \end{description}
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|)}
 
@@ -3649,18 +3656,15 @@ to be doubled.  (See Section~\ref{sec:quotation-antiquotation}.)
 
 As with numerals, string literals can be injected into other types, where it might make sense to have string literals appear to inhabit types in addition to the core system's \holtxt{string} type.
 Such literals can be written with different delimiters to make it clear that such an injection has occurred.
-For more on this facility, see \REFERENCE's description of the \ml{add_strliteral_form} function.
+For more on this facility, see \REFERENCE{}'s description of the \ml{add_strliteral_form} function.
 
-There is also a destructor function {\small\verb+DEST_STRING+} for
-strings which returns an option type.
+There is also a destructor function \holtxt{DEST_STRING} for strings which returns an \holtxt{option} type:
 \begin{hol}
-\begin{verbatim}
-   DEST_STRING
-     |- (DEST_STRING "" = NONE) /\
-        (DEST_STRING (STRING c rst) = SOME(c,rst))
-\end{verbatim}
+\begin{alltt}
+>>__ open stringTheory;
+##thm DEST_STRING_def
+\end{alltt}
 \end{hol}
-
 
 \paragraph{Case expressions}
 \index{case expressions!over strings}
@@ -3900,14 +3904,14 @@ The finite sets have an induction theorem:
 %
 \begin{hol}
 \begin{alltt}
-##thm FINITE_INDUCT
+  ##thm FINITE_INDUCT
 \end{alltt}
 \end{hol}
 %
 As mentioned, set operations apply to both finite and infinite
 sets. However, some operations, such as cardinality
-(\holtxt{CARD}), are only defined for finite sets.  The
-cardinality of an infinite set is not specified.
+(\holtxt{CARD}), are only defined for finite sets. (See Section~\ref{ss:cardinals}
+for the theory of cardinality of possibly infinite sets.)
 \index{cardinality of (finite) sets}
 %
 \begin{hol}
@@ -3960,7 +3964,10 @@ f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the set
 in a tail-recursive fashion.
 \begin{hol}
 \begin{alltt}
+  ##thm ITSET_THM
+
   ##thm ITSET_EMPTY
+
   ##thm COMMUTING_ITSET_INSERT
 \end{alltt}
 \end{hol}
@@ -5298,6 +5305,39 @@ See Figure~\ref{fig:bind-defns} for the bind definitions for a number of differe
 \end{figure}
 
 \index{monads|)}
+
+\section{Other Theories}
+Other theories of interest in \HOL{} are listed and briefly described
+in Figure~\ref{fig:further-hol-theories}.
+
+\begin{figure}[hbtp]
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|p{0.2\textwidth}p{0.7\textwidth}|}
+  \hline
+  \theoryimp{poset} & Partial Orders, Knaster-Tarski theorem
+  \\
+  \theoryimp{divides}, \theoryimp{gcd} &
+  Divisibility and the greatest common divisor.
+  \\
+  \theoryimp{poly} &
+  A theory of polynomials over $\mathbb{R}$, providing
+  a collection of operations on polynomials, and theorems about them.
+  \\
+  \theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
+  &
+  Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
+  \\
+  \theoryimp{ctl}, \theoryimp{mu}
+  &
+  Computation Tree Logic and the $\mu$-calculus. See Hasan Amjad's
+  thesis. \\
+  \theoryimp{lbtree} & Possibly infinitely deep (\ie, co-algebraic) binary trees.\\
+  \theoryimp{inftree} & Possibly infinitely branching, algebraic trees\\
+  \hline
+\end{tabular}
+\caption{A selection of \HOL{} theories}
+\label{fig:further-hol-theories}
+\end{figure}
 
 %%% Local Variables:
 %%% mode: latex
