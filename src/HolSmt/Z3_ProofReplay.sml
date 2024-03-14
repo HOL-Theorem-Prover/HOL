@@ -652,20 +652,6 @@ local
   (* introduces a local hypothesis (which must be discharged by
      'z3_lemma' at some later point in the proof) *)
   fun z3_hypothesis (state, t) =
-    (* FIXME: The following is a workaround for a yet-to-be-filed Z3 issue where
-       a hypothesis is introduced but is not discharged by `z3_lemma` at any
-       point in the proof. So far, all such hypotheses have assumed the form
-       `p = p`, which can easily be proved without introducing an assumption. *)
-    if boolSyntax.is_eq t then
-      let
-        val (lhs, rhs) = boolSyntax.dest_eq t
-      in
-        if Term.term_eq lhs rhs then
-          (state, Thm.REFL lhs)
-        else
-          (state, Thm.ASSUME t)
-      end
-    else
       (state, Thm.ASSUME t)
 
   (*   ... |- ~p
@@ -1547,6 +1533,28 @@ local
     HOLset.foldl remove_hyp thm bad_hyps
   end
 
+  (* FIXME: The following is a workaround for a yet-to-be-filed Z3 issue where
+     a hypothesis is introduced in a `hypothesis` rule but is not discharged by
+     a `lemma` rule at any point in the proof. So far, all such hypotheses have
+     assumed the form `p = p`, which can easily be discharged here. *)
+  fun remove_extra_hyps (asserted, thm) =
+  let
+    val extra_hyps = HOLset.difference (Thm.hypset thm, asserted)
+    fun remove_hyp (hyp, thm) =
+      if boolSyntax.is_eq hyp then
+        let
+          val (lhs, rhs) = boolSyntax.dest_eq hyp
+        in
+          if Term.term_eq lhs rhs then
+            Drule.PROVE_HYP (Thm.REFL lhs) thm
+          else
+            thm
+        end
+      else
+        thm
+  in
+    HOLset.foldl remove_hyp thm extra_hyps
+  end
 in
   (* For unit tests *)
   val remove_definitions = remove_definitions
@@ -1576,6 +1584,10 @@ in
     (* remove the definitions introduced by Z3 from the set of hypotheses *)
     val final_thm = profile "check_proof(remove_definitions)" remove_definitions
       (#definition_hyps state, #var_set state, thm)
+
+    (* workaround for Z3 bug *)
+    val final_thm = profile "check_proof(remove_extra_hyps)" remove_extra_hyps
+      (#asserted_hyps state, final_thm)
 
     (* check that the final theorem contains no hyps other than those
        that have been asserted *)
