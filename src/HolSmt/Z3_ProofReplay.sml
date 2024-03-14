@@ -471,8 +471,6 @@ local
      is used by both `z3_th_lemma_arith` and `z3_rewrite`. *)
   fun arith_prove t =
     let
-      fun cooper goal =
-        profile "arith_prove(cooper)" intLib.COOPER_TAC goal
       fun arith_tactic (goal as (_, term)) =
         if term_contains_real_ty term then
           (* this is just a heuristic - it is quite conceivable that a
@@ -481,12 +479,10 @@ local
           profile "arith_prove(real)" RealField.REAL_ARITH_TAC goal
         else (
           profile "arith_prove(int)" intLib.ARITH_TAC goal
-          (* the following two exception handlers are workarounds for these two
-             issues:
-             https://github.com/HOL-Theorem-Prover/HOL/issues/1203
-             https://github.com/HOL-Theorem-Prover/HOL/issues/1209 *)
-          handle NotFound => cooper goal
-          handle Feedback.HOL_ERR _ => cooper goal
+          (* the following exception handler is a workaround for this issue:
+             https://github.com/HOL-Theorem-Prover/HOL/issues/1203 *)
+          handle Feedback.HOL_ERR _ =>
+            profile "arith_prove(cooper)" intLib.COOPER_TAC goal
         )
       val TRY = Tactical.TRY
       val ap_tactic =
