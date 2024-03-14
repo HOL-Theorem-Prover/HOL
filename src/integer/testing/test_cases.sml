@@ -37,7 +37,7 @@ fun test_term c (n,t,b) =
   val _ = print "\n"
 in
   verdict
-end
+end*)
 
 fun A s = ("at."^s, concl (DB.fetch "arithmetic" s), true)
 fun I s = ("it."^s, concl (DB.fetch "integer" s), true)
@@ -255,7 +255,16 @@ val terms_to_test =
   L (``0i < &(Num (f (x:'a) - 1)) + 1``, "Num4a"),
   L (``0i < (if 0 <= f (x:'a) - 1i then f x - 1 else &(g (f x - 1))) + 1``,
      "Num4b"),
-  L (“n MOD 5 = 1  ==> 5 * ((n - 1) DIV 5) + 1 = n”, "Github677")
+  L (“n MOD 5 = 1  ==> 5 * ((n - 1) DIV 5) + 1 = n”, "Github0677"),
+  ("Github1209a",
+   “! $var$(_ _) q r:int.
+          0 = q * 5 + r /\ 0 <= r /\ r < 5 ==>
+          $var$(_ _) + r = 0”,
+   false),
+  ("Github1209b",
+   “! v q r:int. 0 = q * 5 + r /\ 0 <= r /\ r < 5 ==> v + r = 0”, false),
+  ("Github1209c",
+   “?i q r. ~(~(0i = q * 5 + r /\ 0 <= r /\ r < 5) \/ i + r = 0)”, true)
 ];
 
 val omega_test_terms = [

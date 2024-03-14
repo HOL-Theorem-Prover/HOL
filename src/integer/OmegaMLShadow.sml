@@ -28,8 +28,23 @@ open intSyntax
 datatype factoid =
          ALT of Arbint.int Vector.vector
 
+(*
+fun print_list p l = "[" ^ String.concatWith ", " (map p l) ^ "]"
+fun print_vmap pi = let
+  val kvs = PIntMap.fold (fn (k,v,A) => (k,v)::A) [] pi
+  fun pkv (k,v) = "(" ^ Int.toString k ^ " |-> " ^ Arbint.toString v ^ ")"
+in
+  print_list pkv kvs
+end
+fun print_vector p v = "<" ^
+                       String.concatWith ", " (map p $ Vector.foldr op:: [] v) ^
+                       ">"
+fun print_factoid (ALT v) = print_vector Arbint.toString v
+*)
+
 val fromArbList = ALT o Vector.fromList
 val fromList = fromArbList o map Arbint.fromInt
+fun toArbVector (ALT v) = v
 
 fun extract x = VectorSlice.vector(VectorSlice.slice x)
 
@@ -81,6 +96,10 @@ in
   case f of
     ALT fv => foldli foldthis zero fv
 end
+(* handle e => raise Fail ("eval_factoid_except: "^General.exnName e ^
+                            "; vmap = " ^ print_vmap vmap ^ "; i = " ^
+                            Int.toString i)
+*)
 
 val negate_key = Vector.map Arbint.~
 
@@ -259,6 +278,20 @@ datatype 'a derivation =
        | DIRECT_CONTR of 'a derivation * 'a derivation
 type 'a dfactoid = (factoid * 'a derivation)
 
+structure Map =
+struct
+  exception NotFound = PIntMap.NotFound
+  type 'a t = 'a dfactoid list PIntMap.t * int
+  fun items(m,_) = PIntMap.fold (fn (k,v,A) => (k,v)::A) [] m
+  fun add k v = apfst (PIntMap.add k v)
+  fun find (m,_) k = PIntMap.find k m
+  fun width (m,w) = w
+  fun size (m,w) = PIntMap.size m
+  fun empty w = (PIntMap.empty, w)
+  (* fun itemStrings (M:'a t) =
+      print_list print_factoid (map fst (List.concat (map snd (items M)))) *)
+end
+
 datatype 'a result = CONTR of 'a derivation
                    | SATISFIABLE of Arbint.int PIntMap.t
                    | NO_CONCL
@@ -297,10 +330,10 @@ fun inexactify EXACT = REAL
 
 fun mode_result em result =
     case em of
-      EXACT => result
-    | REAL => (case result of SATISFIABLE _ => NO_CONCL | x => x)
-    | DARK => (case result of CONTR _ => NO_CONCL | x => x)
-    | EDARK => (case result of CONTR _ => NO_CONCL | x => x)
+        EXACT => result
+      | REAL => (case result of SATISFIABLE _ => NO_CONCL | x => x)
+      | DARK => (case result of CONTR _ => NO_CONCL | x => x)
+      | EDARK => (case result of CONTR _ => NO_CONCL | x => x)
 
 fun combine_dfactoids em i ((f1, d1), (f2, d2)) =
     case em of
@@ -325,7 +358,7 @@ fun fkassoc k alist =
 fun lookup_fkey (ptree,w) fk =
   fkassoc fk (PIntMap.find (keyhash fk) ptree)
 
-type 'a cstdb = ((factoid * 'a derivation) list) PIntMap.t * int
+type 'a cstdb = 'a Map.t
 
 fun dbempty i = (PIntMap.empty, i)
 
@@ -347,9 +380,8 @@ in
   hd a_bucket
 end
 
-fun dbwidth (ptree,w) = w
-
-fun dbsize (ptree,w) = PIntMap.size ptree
+val dbwidth = Map.width
+val dbsize = Map.size
 
 (* ----------------------------------------------------------------------
     dbadd df ptree
@@ -446,7 +478,10 @@ end
     false, combining the maximum lower and the minimum upper constraint.
    ---------------------------------------------------------------------- *)
 
+
+
 fun one_var_analysis ptree em = let
+  (* val _ = print ("ptree constraints = " ^ Map.itemStrings ptree ^ "\n") *)
   val (a_constraint, _) = dbchoose ptree
   fun find_var (i, ai, NONE) = if ai <> Arbint.zero then SOME i else NONE
     | find_var (_, _, v as SOME _) = v
@@ -528,7 +563,8 @@ fun throwaway_redundant_factoids ptree nextstage kont = let
 in
   case find_redundant_var 0 of
     NONE => nextstage ptree kont
-  | SOME(i, hasupper) => let
+  | SOME(i, hasupper) =>
+    let
       fun partition (df as (f,d), (pt, elim)) = let
         open Arbint
       in
@@ -540,10 +576,12 @@ in
       val (newptree, elim) = dbfold partition (dbempty dwidth, []) ptree
       fun handle_result r =
           case r of
-            SATISFIABLE vmap => let
+            SATISFIABLE vmap => (let
               open Arbint
               fun mapthis (f,_) = (eval_factoid_except vmap i f) div
                                   abs (Vector.sub(factoid_key f, i))
+                        handle Map.NotFound =>
+                               raise Fail "trt.mapthis: NotFound"
               val evaluated = if hasupper then map mapthis elim
                               else map (~ o mapthis) elim
               val foldfn = if hasupper then Arbint.min else Arbint.max
@@ -551,7 +589,8 @@ in
               SATISFIABLE (PIntMap.add i (foldl foldfn (hd evaluated)
                                                 (tl evaluated))
                                        vmap)
-            end
+            end handle Map.NotFound =>
+                       raise Fail "throwaway_redundant_factoids: NotFound")
           | x => x
     in
       throwaway_redundant_factoids newptree nextstage (kont o handle_result)
@@ -819,7 +858,7 @@ fun toplevel ptree em kont = let
       if dbsize pt = 0 then
         k (SATISFIABLE (zero_upto (dbwidth pt - 2)))
       else if has_one_var pt then
-        k (mode_result em (one_var_analysis ptree em))
+        k (mode_result em (one_var_analysis pt em))
       else one_step pt em toplevel k
 in
   throwaway_redundant_factoids ptree after_throwaway kont
