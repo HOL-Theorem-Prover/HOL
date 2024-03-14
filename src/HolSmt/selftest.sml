@@ -106,7 +106,8 @@ fun auto_tac (_, t) =
   let
     val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
     val t_eq_t' = simpLib.SIMP_CONV simpset [integerTheory.INT_ABS,
-      integerTheory.INT_MAX, integerTheory.INT_MIN]
+      integerTheory.INT_MAX, integerTheory.INT_MIN, integerTheory.int_quot,
+      integerTheory.int_rem]
       t
       handle Conv.UNCHANGED =>
         Thm.REFL t
