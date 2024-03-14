@@ -19,8 +19,6 @@ local
   val ERR = Feedback.mk_HOL_ERR "Z3_ProofReplay"
   val WARNING = Feedback.HOL_WARNING "Z3_ProofReplay"
 
-  val smtdiv_def = HolSmtTheory.smtdiv_def
-  val smtmod_def = HolSmtTheory.smtmod_def
   val ALL_DISTINCT_NIL = HolSmtTheory.ALL_DISTINCT_NIL
   val ALL_DISTINCT_CONS = HolSmtTheory.ALL_DISTINCT_CONS
   val NOT_MEM_NIL = HolSmtTheory.NOT_MEM_NIL
@@ -496,9 +494,9 @@ local
         >> TRY AP_THM_TAC >> TRY arith_tactic
     in
       Tactical.prove (t,
-        (* rewrite the `smtdiv`, `smtmod` symbols so that the arithmetic
+        (* rewrite the `ediv` and `emod` symbols so that the arithmetic
            decision procedures can solve terms containing these functions *)
-        PURE_REWRITE_TAC[HolSmtTheory.smtdiv_def, HolSmtTheory.smtmod_def]
+        PURE_REWRITE_TAC[integerTheory.EDIV_DEF, integerTheory.EMOD_DEF]
         (* the next rewrites are a workaround for this issue:
            https://github.com/HOL-Theorem-Prover/HOL/issues/1207 *)
         >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT]

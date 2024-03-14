@@ -1150,12 +1150,12 @@ in
     (``x IN P INTER (Q INTER R) <=> x IN (P INTER Q) INTER R``,
       [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
 
-    (* prove that HolSmt$smtdiv and HolSmt$smtmod match Boute's Euclidean
-       definition, i.e. that they match SMT-LIB's `Ints` theory's definition of
-       integer div and mod *)
+    (* prove that `ediv` and `emod` match Boute's Euclidean definition, i.e.
+       that they match SMT-LIB's `Ints` theory's definition of integer div and
+       mod *)
     (``!m n. n <> 0 ==>
-         let q = HolSmt$smtdiv m n
-         and r = HolSmt$smtmod m n
+         let q = ediv m n
+         and r = emod m n
          in
            (m = n * q + r /\ 0 <= r /\ r <= (ABS n) - 1)``,
       [(*thm_AUTO, thm_CVC,*) thm_Z3_v4(*, thm_Z3p*)])
