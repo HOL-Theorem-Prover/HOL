@@ -678,14 +678,9 @@ Definition ISUB_def:
      ($ISUB t [] = t)
   /\ ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)
 End
+val _ = export_rewrites ["ISUB_def"];
 
 val _ = set_fixity "ISUB" (Infixr 501);
-
-Theorem ISUB_NIL[simp] :
-    t ISUB [] = t
-Proof
-    rw [ISUB_def]
-QED
 
 Definition DOM_DEF :
    (DOM [] = {}) /\
@@ -765,6 +760,40 @@ Proof
  >> Induct_on ‘sub’ >> rw [ISUB_def]
  >> Cases_on ‘h’ >> fs []
  >> rw [ISUB_def, SUB_VAR]
+QED
+
+Theorem tpm1_ISUB_exists[local] :
+    !M x y. ?ss. tpm [(x,y)] M = M ISUB ss
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘x # M’
+ >- (rw [fresh_tpm_subst] \\
+     Q.EXISTS_TAC ‘[(VAR x,y)]’ >> rw [])
+ >> Cases_on ‘y # M’
+ >- (rw [Once pmact_flip_args, fresh_tpm_subst] \\
+     Q.EXISTS_TAC ‘[(VAR y,x)]’ >> rw [])
+ (* stage work *)
+ >> fs []
+ >> Q_TAC (NEW_TAC "z") ‘FV M UNION {x} UNION {y}’
+ (* applying swap_eq_3substs *)
+ >> Q.EXISTS_TAC ‘[(VAR z,x);(VAR x,y);(VAR y,z)]’
+ >> rw [swap_eq_3substs]
+QED
+
+Theorem tpm_ISUB_exists :
+    !pi M. ?ss. tpm pi M = M ISUB ss
+Proof
+    Induct_on ‘pi’
+ >- (rw [] >> Q.EXISTS_TAC ‘[]’ >> rw [])
+ >> rpt GEN_TAC
+ >> Cases_on ‘h’
+ >> rw [Once tpm_CONS]
+ >> STRIP_ASSUME_TAC (Q.SPECL [‘tpm pi M’, ‘q’, ‘r’] tpm1_ISUB_exists)
+ >> POP_ORW
+ >> POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC ‘M’))
+ >> POP_ORW
+ >> rw [ISUB_APPEND]
+ >> Q.EXISTS_TAC ‘ss' ++ ss’ >> rw []
 QED
 
 (* ----------------------------------------------------------------------
