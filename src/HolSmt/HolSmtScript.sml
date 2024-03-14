@@ -34,56 +34,6 @@
   val _ = Theory.new_theory "HolSmt"
   val _ = ParseExtras.temp_loose_equality()
 
-  (* constants used in SMT-LIB *)
-
-  val smtdiv_def = bossLib.Define
-    `smtdiv (i: int) (j: int) = if 0 < j then i / j else -(i / -j)`
-
-  val smtmod_def = bossLib.Define
-    `smtmod (i: int) (j: int) = i % ABS j`
-
-  (* Note that according to SMT-LIB's `Ints` theory, `div` and `mod` must match
-     Boute's Euclidean definition, that is, they must satisfy the formula:
-
-     !m n. n <> 0 ==>
-       let q = smtdiv m n
-       and r = smtmod m n
-       in
-         (m = n * q + r /\ 0 <= r /\ r <= (ABS n) - 1)
-
-     We prove this as a test case in `selftest.sml` *)
-
-  (* theorems used for arithmetic operators *)
-
-  val _ = s ("SMT_NUM_ADD", A ``!m n. m + n = Num (&m + &n)``)
-  val _ = s ("SMT_NUM_SUB", A
-    ``!m n. m - n = if (&m:int) <= &n then 0n else Num (&m - &n)``)
-  val _ = s ("SMT_NUM_MUL", I [] ``!m n. m * n = Num (&m * &n)``)
-  val _ = s ("SMT_NUM_DIV", I [smtdiv_def]
-    ``!k n. n <> 0 ==> (k DIV n = Num (smtdiv (&k) (&n)))``)
-  val _ = s ("SMT_NUM_MOD", I [smtmod_def]
-    ``!k n. n <> 0 ==> (k MOD n = Num (smtmod (&k) (&n)))``)
-  val _ = s ("SMT_INT_DIV", I [smtdiv_def]
-    ``!i j. j <> 0 ==> (i / j =
-        if 0 < j then smtdiv i j else -(smtdiv (-i) j))``)
-  val _ = s ("SMT_INT_MOD", I [smtmod_def, integerTheory.INT_ABS]
-    ``!i j. j <> 0 ==> (i % j =
-        if 0 < j then smtmod i j else -(smtmod (-i) j))``)
-  val _ = s ("SMT_INT_QUOT", Tactical.prove (
-    ``!i j. j <> 0 ==> (i quot j =
-        if 0 <= i then smtdiv i j else smtdiv (-i) (-j))``,
-          bossLib.rw [smtdiv_def, integerTheory.int_div, integerTheory.int_quot]
-          >> bossLib.Cases_on `i = 0` >> bossLib.fs [] >> intLib.ARITH_TAC))
-  val _ = s ("SMT_INT_REM", Tactical.prove (
-    ``!i j. j <> 0 ==> (i rem j =
-        if 0 <= i then smtmod i j else -(smtmod (-i) j))``,
-          let
-            open integerTheory
-          in
-            bossLib.rw [smtmod_def, int_mod, int_rem, int_div, int_quot, INT_ABS]
-            >> intLib.ARITH_TAC
-          end))
-
   (* constants used by Z3 *)
 
   (* exclusive or *)
