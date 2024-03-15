@@ -26,13 +26,13 @@ instance of the type that the constant has in the signature.
 
 \EXAMPLE
 {
-   - mk_const ("T", bool);
+   - mk_const ("T", “:bool”);
    > val it = `T` : term
 
-   - mk_const ("=", bool --> bool --> bool);
+   - mk_const ("=", “:bool -> bool -> bool”);
    > val it = `$=` : term
 
-   - try mk_const ("test", bool);
+   - try mk_const ("test", “:bool”);
    Exception raised at Term.mk_const:
    test not found
 }
@@ -41,10 +41,10 @@ The following example shows a new constant being introduced that
 has the same name as the standard equality of HOL. Then we attempt
 to make an instance of that constant.
 {
-   - new_constant ("=", bool --> bool --> bool);
+   - new_constant ("=", “:bool -> bool -> bool”);
    > val it = () : unit
 
-   - mk_const("=", bool --> bool --> bool);
+   - mk_const("=", “:bool -> bool -> bool”);
    <<HOL warning: Term.mk_const: "=": more than one possibility>>
 
    > val it = `$=` : term

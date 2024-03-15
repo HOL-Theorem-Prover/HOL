@@ -21,8 +21,8 @@ Fails if {ty} is a type variable.
 
 \EXAMPLE
 {
-- dest_thy_type (alpha --> bool);
-> val it = {Args = [`:'a`, `:bool`], Thy = "min", Tyop = "fun"} :
+- dest_thy_type “:'a -> bool”;
+> val it = {Args = [“:α”, “:bool”], Thy = "min", Tyop = "fun"} :
 
 - try dest_thy_type alpha;
 

@@ -29,13 +29,13 @@ equals {redex_i} but {residue} does not equal {residue_i}.
 
 \EXAMPLE
 {
-- val res1 = raw_match_type alpha  (alpha --> bool) ([],[]);
-> val it = ([{redex = `:'a`, residue = `:'a -> bool`}], []) : ...
+> val res1 = raw_match_type alpha “:'a -> bool” ([],[]);
+val res1 = ([{redex = “:α”, residue = “:α -> bool”}], []) : ...
 
-- raw_match_type (alpha --> beta --> gamma)
-                 ((alpha --> bool) --> beta --> ind) res1;
-> val it =([{redex = `:'c`, residue = `:ind`},
-            {redex = `:'a`, residue = `:'a -> bool`}], [`:'b`]) : ....
+> raw_match_type “:'a -> 'b -> 'c”
+                 “:('a -> bool) -> 'b -> ind” res1;
+val it = ([{redex = “:γ”, residue = “:ind”},
+           {redex = “:α”, residue = “:α -> bool”}], [“:β”]) : ....
 }
 
 
