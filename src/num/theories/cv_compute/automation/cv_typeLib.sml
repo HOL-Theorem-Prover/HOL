@@ -1,44 +1,17 @@
-structure cv_typesLib :> cv_typesLib =
+(*
+  Automation for defining translations into and out of cv type
+*)
+structure cv_typeLib :> cv_typeLib =
 struct
 
-open HolKernel Parse boolLib bossLib cvTheory;
-open integerTheory wordsTheory cv_typesTheory;
-
-(* --------------------------------------------------- *
-    Memory management
- * --------------------------------------------------- *)
-
-(* Updates the set given a delta  *)
-fun apply_delta (ThmSetData.ADD(_, th)) thml = th :: thml
-  | apply_delta _ _ = failwith "unimplemented case of apply_delta"
-
-(* Defines/Setups the from_to theorem set *)
-val {update_global_value = from_to_apply_global_update,
-     record_delta = from_to_record_delta,
-     get_deltas = from_to_get_deltas,
-     get_global_value = from_to_thm_list,
-     DB = eval_ruleuction_map_by_theory,...} =
-    ThmSetData.export_with_ancestry {
-      settype = "from_to",
-      delta_ops = {apply_to_global = apply_delta, (* How to update the set (globally) *)
-                   uptodate_delta = K true,
-                   thy_finaliser = NONE,
-                   initial_value = [],            (* The initial value of the set *)
-                   apply_delta = apply_delta}
-    }
-
-(* Add a theorem to the from_to set *)
-fun add_from_to_thm th =
-    from_to_apply_global_update (curry (op ::) th)
-
-(* Get a list of all the theorems in the from_to set *)
-val from_to_thms = from_to_thm_list
+open HolKernel Parse boolLib bossLib cvTheory cv_miscLib;
+open integerTheory wordsTheory cv_typeTheory cv_memLib cv_repTheory;
 
 (* --------------------------------------------------- *
     Preliminaries
  * --------------------------------------------------- *)
 
-val ERR = mk_HOL_ERR "cv_typesLib";
+val ERR = mk_HOL_ERR "cv_typeLib";
 
 fun auto_prove proof_name (goal,tac:tactic) = let
   val (rest,validation) = tac ([],goal)
@@ -145,17 +118,22 @@ exception Missing_from_to of hol_type;
 fun from_to_for_tyvar tyvar = let
   val name = dest_vartype tyvar
   val name = if String.isPrefix "'" name
-             then String.substring(name,1,size(name)-1) else name
+             then String.substring(name,1,String.size(name)-1) else name
   val f = mk_var("f_" ^ name,tyvar --> cvSyntax.cv)
   val t = mk_var("t_" ^ name,cvSyntax.cv --> tyvar)
   in ISPECL [f,t] from_to_def |> concl |> dest_eq |> fst |> ASSUME end
 
 fun from_to_for tyvars_alist ty =
+  if can dom_rng ty then (
+    cv_print Silent ("cv translator encountered a function type: " ^ type_to_string ty ^ "\n");
+    failwith  "cv translator does not support function types")
+  else
   if ty = “:unit” then from_to_unit else
   if ty = “:bool” then from_to_bool else
   if ty = “:num” then from_to_num else
   if ty = “:char” then from_to_char else
   if ty = “:int” then from_to_int else
+  if ty = “:rat” then from_to_rat else
   if wordsSyntax.is_word_type ty then
     let val ty = wordsSyntax.dest_word_type ty
     in INST_TYPE [alpha|->ty] from_to_word end
@@ -180,7 +158,7 @@ fun from_to_for tyvars_alist ty =
       SOME tyvar_assum => ASSUME tyvar_assum
     | NONE => if is_vartype ty then from_to_for_tyvar ty else
     let
-      val thms = from_to_thms ()
+      val thms = cv_from_to_thms ()
       fun match_from_to_thm th =
         let
           val th1 = th |> UNDISCH_ALL
@@ -211,6 +189,160 @@ fun from_for tyvars_alist ty = from_to_for tyvars_alist ty |> concl |> rator |> 
 fun to_for tyvars_alist ty = from_to_for tyvars_alist ty |> concl |> rand;
 
 (* --------------------------------------------------- *
+    Deriving cv_rep theorems for case / cons
+ * --------------------------------------------------- *)
+
+val the_from_term_for = ref (fn (ty:hol_type) => (fail()):term);
+
+val from_def = from_list_def
+
+fun cv_rep_cons_for from_def =
+  from_def |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL;
+
+(*
+val from_def = hd from_defs
+*)
+fun cv_rep_case_for from_def = let
+  val from_for = !the_from_term_for
+  val from_def = from_def |> ONCE_REWRITE_RULE [oneTheory.one]
+  val ds = from_def |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL
+  val ty = ds |> hd |> concl |> dest_eq |> fst |> rand |> type_of
+  val case_def = TypeBase.case_def_of ty
+  val ty = case_def |> SPEC_ALL |> CONJUNCTS |> hd |> SPEC_ALL |> concl |> dest_eq
+                    |> fst |> strip_comb |> snd |> hd |> type_of
+  val ty1 = from_def |> SPEC_ALL |> CONJUNCTS |> hd |> SPEC_ALL |> concl |> dest_eq
+                     |> fst |> rand |> type_of
+  val from_def = INST_TYPE (match_type ty1 ty) from_def |> SPEC_ALL
+  fun fix_ty_funs d = let
+    val funs = d |> concl |> dest_eq |> fst |> strip_comb |> snd |> butlast
+    fun get_new_name f =
+      f |> dest_var |> snd |> dest_type |> snd |> hd |> from_for
+    val i = map (fn f => f |-> get_new_name f) funs
+    in INST i d end
+  val ds = from_def |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL |> map fix_ty_funs
+  val cs = case_def |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL
+  val vs = cs |> hd |> concl |> dest_eq |> fst |> strip_comb |> snd |> tl
+  val s = mapi (fn i => fn v => v |-> mk_var("f" ^ int_to_string i, type_of v)) vs
+  val cs = map (INST s) cs
+  (*
+  val c = last (butlast cs)
+  *)
+  fun fix_var_names c = let
+    val vs = c |> concl |> dest_eq |> snd |> strip_comb |> snd
+    val s = mapi (fn i => fn v => v |-> mk_var("v" ^ int_to_string i, type_of v)) vs
+    in INST s c end
+  val cs = map fix_var_names cs
+  val tm = mk_var("cv",cvSyntax.cv)
+  fun is_num_case th = th |> concl |> dest_eq |> snd |> cvSyntax.is_cv_num
+  val num_to_int = numSyntax.int_of_term o cvSyntax.dest_cv_num
+  val nums = ds |> filter is_num_case
+                |> map (fn th => (th,th |> concl |> dest_eq |> snd |> num_to_int))
+                |> sort (fn x => fn y => snd x <= snd y)
+                |> map (fn (x,n) => (mk_var((x |> concl |> dest_eq |> fst
+                                               |> rand |> dest_const |> fst) ^
+                                            "_cv",cvSyntax.cv),n))
+  fun mk_rhs tm (from_one_def,n) = let
+    val (l,r) = dest_eq (concl from_one_def)
+    val (c,vs) = strip_comb (rand l)
+    val name = (c |> dest_const |> fst) ^ "_cv"
+    val ty = foldr (fn (x,y) => x --> y) cvSyntax.cv (map (K cvSyntax.cv) vs)
+    val v = mk_var(name,ty)
+    fun find_path tm r target =
+      if is_comb r andalso aconv (rand r) target then SOME tm else
+      if not (cvSyntax.is_cv_pair r) then NONE else let
+        val (r1,r2) = cvSyntax.dest_cv_pair r
+        in case find_path (cvSyntax.mk_cv_fst tm) r1 target of
+             SOME res => SOME res
+           | NONE => find_path (cvSyntax.mk_cv_snd tm) r2 target
+        end
+    in (list_mk_comb(v,map (Option.valOf o find_path tm r) vs),n) end
+  fun get_num th = (th |> concl |> dest_eq |> snd |> rator |> rand |> num_to_int)
+                   handle HOL_ERR _ => 0
+  fun fix_zero_tag (cv_t,tag) =
+    if tag <> 0 orelse not (null nums) then (cv_t,tag) else
+      (cvSyntax.mk_cv_if(cvSyntax.mk_cv_ispair tm,cv_t,
+                         cvSyntax.mk_cv_num (numSyntax.term_of_int 0)), 0)
+  val pairs = ds |> filter (not o is_num_case)
+                 |> map (fn th => (th,get_num th))
+                 |> sort (fn x => fn y => snd x <= snd y)
+                 |> map (mk_rhs tm)
+                 |> map fix_zero_tag
+  fun mk_decision_tree tm [] = 0 |> numSyntax.term_of_int |> cvSyntax.mk_cv_num
+    | mk_decision_tree tm [(x,n)] = x
+    | mk_decision_tree tm xs = let
+        val l = length xs
+        val xs1 = List.take (xs, l div 2)
+        val xs2 = List.drop (xs, l div 2)
+        val n = snd (last xs1) |> numSyntax.term_of_int |> cvSyntax.mk_cv_num
+        in cvSyntax.mk_cv_if(cvSyntax.mk_cv_lt(n,tm),
+                             mk_decision_tree tm xs2,
+                             mk_decision_tree tm xs1) end;
+  val ns = mk_decision_tree tm nums
+  val ps = mk_decision_tree (cvSyntax.mk_cv_fst tm) pairs
+  val cv_tm =
+    if null nums then ps else
+    if null pairs then ns else
+      cvSyntax.mk_cv_if(cvSyntax.mk_cv_ispair tm,ps,ns)
+  val (l,r) = cs |> hd |> concl |> dest_eq
+  val (l1,l2) = l |> strip_comb
+  val case_on_ty = l2 |> hd |> type_of
+  val case_on_var = mk_var("x",case_on_ty)
+  val case_on_from = ds |> hd |> concl |> dest_eq |> fst |> rator
+  val ret_from = from_for (type_of r)
+  val case_tm = list_mk_comb(l1,case_on_var :: tl l2)
+  (*
+  val c = cs |> el 2
+  *)
+  fun process_line_of_case_of_def c = let
+    val (l,r) = dest_eq (concl c)
+    val cons_args = l |> strip_comb |> snd |> hd
+    val (cons_tm,args) = cons_args |> strip_comb
+    val name = cons_tm |> dest_const |> fst
+    fun fun_typ arg_tys ret_ty = foldr (fn (x,y) => x --> y) ret_ty arg_tys
+    val pre_var = mk_var(name ^ "_pre", fun_typ (map type_of args) bool)
+    val pre = list_mk_comb(pre_var,args)
+    val cv_var = mk_var(name ^ "_cv", fun_typ (map (K cvSyntax.cv) args) cvSyntax.cv)
+    val cv = list_mk_comb(cv_var,map (fn tm => mk_comb(from_for (type_of tm),tm)) args)
+    val assum = list_mk_forall(args,mk_cv_rep pre cv ret_from r)
+    val pre_part = list_mk_forall(args,mk_imp(mk_eq(case_on_var,cons_args),pre))
+    in (assum,pre_part) end
+  val ws = map process_line_of_case_of_def cs
+  val p = mk_var("p",bool)
+  val a = mk_cv_rep p (mk_var("cv",cvSyntax.cv)) case_on_from case_on_var
+  val assums = list_mk_conj(a :: map fst ws)
+  val pre = list_mk_conj(p :: map snd ws)
+  val res = mk_imp(assums,mk_cv_rep pre cv_tm ret_from case_tm)
+  val goal = mk_forall(case_on_var,res)
+  val dist = TypeBase.distinct_of ty handle HOL_ERR _ => TRUTH
+  val inj = TypeBase.one_one_of ty handle HOL_ERR _ => TRUTH
+  val cv_rep_alt = cv_rep_def |> SPEC_ALL
+                     |> CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))
+  (*
+  set_goal([],goal)
+  *)
+  val lemma = prove(goal,
+    Cases
+    \\ rewrite_tac [inj,dist]
+    \\ rewrite_tac [cv_rep_alt]
+    \\ rpt strip_tac
+    \\ full_simp_tac bool_ss cs
+    \\ rewrite_tac ds
+    \\ simp [cv_lt_def])
+  val res = SPEC_ALL lemma
+            |> CONV_RULE ((RAND_CONV o RATOR_CONV)
+                          (ONCE_REWRITE_CONV [oneTheory.one] THENC
+                           REWRITE_CONV []))
+  in res end
+
+fun cv_rep_datatype_thms_for from_def = let
+  val th = LIST_CONJ (cv_rep_case_for from_def :: cv_rep_cons_for from_def)
+  val c_str = from_def |> SPEC_ALL |> CONJUNCTS |> hd |> SPEC_ALL |> concl
+                       |> dest_eq |> fst |> strip_comb |> fst |> dest_const |> fst
+  val ty_name = String.substring(c_str,5,String.size(c_str)-5)
+  val _ = save_thm("cv_rep_" ^ ty_name ^ "_datatype[cv_rep]",th)
+  in th end;
+
+(* --------------------------------------------------- *
     Defining new from/to functions for a datatype
  * --------------------------------------------------- *)
 
@@ -218,13 +350,30 @@ exception UnusedTypeVars of hol_type list;
 
 datatype tag_sum = TagNil of int | TagCons of (int * (int option) list);
 
+
 (*
 val ignore_tyvars = [alpha,gamma]
 val ignore_tyvars = tl [alpha]
 val ty = “:('a,'b,'c) word_tree”
-val ty = “:('d, 'c) b”
+val ty = “:xx_yy”
 *)
-fun define_from_to_aux ignore_tyvars ty = let
+fun define_from_to_aux ignore_tyvars ty =
+  if can pairSyntax.dest_prod ty then let
+    val _ = cv_rep_datatype_thms_for from_pair_def
+    in (from_pair_def,to_pair_def,[from_to_pair]) end
+  else if can sumSyntax.dest_sum ty then let
+    val _ = cv_rep_datatype_thms_for from_sum_def
+    in (from_sum_def,to_sum_def,[from_to_sum]) end
+  else if can optionSyntax.dest_option ty then let
+    val _ = cv_rep_datatype_thms_for from_option_def
+    in (from_option_def,to_option_def,[from_to_option]) end
+  else if listSyntax.is_list_type ty then let
+    val _ = cv_rep_datatype_thms_for from_list_def
+    in (from_list_def,to_list_def,[from_to_list]) end
+  else if oneSyntax.one_ty = ty then let
+    val _ = cv_rep_datatype_thms_for from_unit_def
+    in (from_unit_def,to_unit_def,[from_to_unit]) end
+  else let
   (* extract target structure from induction theorem *)
   val mutrec_count = length (find_mutrec_types ty)
   val ind = TypeBase.induction_of ty
@@ -262,17 +411,39 @@ fun define_from_to_aux ignore_tyvars ty = let
   (* define encoding into cv type, i.e. "from function" *)
   val from_names = names |>
     map (fn (fname,ty) =>
-      make_stem ("from_" ^ fname) tyvar_encoders (mk_funtype [ty] cvSyntax.cv))
+      make_stem ("from_" ^ thy_name ^ "_" ^ fname) tyvar_encoders (mk_funtype [ty] cvSyntax.cv))
   val lookups =
     map (fn tm => (tm |> type_of |> dest_fun_type |> fst, tm)) (from_names @ tyvar_encoders)
   (*
-  val from_f = el 4 from_names
+  val from_f = el 1 from_names
   *)
   fun from_lines from_f = let
-    val conses = from_f |> type_of |> dest_type |> snd |> hd |> constructors_of
+    val from_ty = from_f |> type_of |> dest_type |> snd |> hd
+    val conses = constructors_of from_ty
+    fun strip_fun_ty ty =
+      if can dom_rng ty then
+        fst (dom_rng ty) :: strip_fun_ty (snd (dom_rng ty))
+      else []
+    (* val cons_tm = hd conses *)
+    fun check_for_fun_ty cons_tm = let
+      val cons_tys = cons_tm |> type_of |> strip_fun_ty
+      val bad_tys = filter contains_fun_ty cons_tys
+      in
+        if null bad_tys then ()
+        else let
+          val cons_name = cons_tm |> dest_const |> fst
+          val _ = cv_print Silent ("Unable to define cv from/to definition for type " ^
+                                   type_to_string from_ty ^ ".\n")
+          val _ = cv_print Silent ("Constructor " ^ cons_name ^
+                                   " is higher-order due to the following argument types:\n")
+          val _ = app (fn ty => cv_print Silent ("\n  " ^ type_to_string ty ^ "\n")) bad_tys
+          val _ = cv_print Silent "\n"
+        in failwith "Higher-order constructor" end
+      end
+    val _ = app check_for_fun_ty conses
     (*
       val i = 0
-      val cons_tm = el 2 conses
+      val cons_tm = el 1 conses
     *)
     fun from_line i cons_tm = let
       val (tys,target_ty) = dest_fun_types (type_of cons_tm)
@@ -533,16 +704,20 @@ fun define_from_to_aux ignore_tyvars ty = let
   val to_def = ts0 |> map SPEC_ALL |> LIST_CONJ |> REWRITE_RULE to_simps
   (* save all results *)
   val th1 = Feedback.trace ("Theory.allow_rebinds", 1)
-            save_thm ("from_" ^ first_name ^ "_def[compute]", from_def)
+            save_thm ("from_" ^ name_prefix ^ first_name ^ "_def[compute]", from_def)
   val th2 = Feedback.trace ("Theory.allow_rebinds", 1)
-            save_thm ("to_" ^ first_name ^ "_def[compute]", to_def)
+            save_thm ("to_" ^ name_prefix ^ first_name ^ "_def[compute]", to_def)
   fun save_from_to_thms th = let
     val to_name = th |> UNDISCH_ALL |> concl |> rand |> repeat rator |> dest_const |> fst
     val _ = Feedback.trace ("Theory.allow_rebinds", 1)
-            save_thm("from_" ^ to_name ^ "_thm", th)
-    val _ = add_from_to_thm th
+            save_thm("from_" ^ name_prefix ^ to_name ^ "_thm[cv_from_to]", th)
     in () end
   val _ = List.app save_from_to_thms from_to_thms
+  val froms_2 = from_def |> CONJUNCTS
+  val from_defs = from_heads
+    |> map (fn c => filter (fn d => aconv c (pick d)) froms_2)
+    |> filter (not o null) |> map LIST_CONJ
+  val _ = map cv_rep_datatype_thms_for from_defs
   in (from_def,to_def,from_to_thms) end
   handle UnusedTypeVars ignore_tyvars => define_from_to_aux ignore_tyvars ty;
 
@@ -558,17 +733,17 @@ fun rec_define_from_to ty = let
   fun loop acc ty =
     let
       val (to_def,from_def,thms) = define_from_to ty
-      val _ = print ("Finished to/from for " ^ get_type_name ty ^ "\n\n")
-      val _ = print_thm to_def
-      val _ = print "\n\n"
+      val _ = cv_print Verbose ("Finished to/from for " ^ get_type_name ty ^ "\n\n")
+      val _ = cv_print_thm Verbose to_def
+      val _ = cv_print Verbose "\n\n"
     in thms @ acc end
     handle Missing_from_to needs_ty =>
     let
-      val _ = print ("Interrupting " ^ get_type_name ty ^
-                     " since " ^ get_type_name needs_ty ^ " needed.\n")
+      val _ = cv_print Verbose ("Interrupting " ^ get_type_name ty ^
+                                " since " ^ get_type_name needs_ty ^ " needed.\n")
       val acc = loop acc needs_ty
-      val _ = print ("Continuing " ^ get_type_name ty ^
-                     " since " ^ get_type_name needs_ty ^ " exists.\n")
+      val _ = cv_print Verbose ("Continuing " ^ get_type_name ty ^
+                                " since " ^ get_type_name needs_ty ^ " exists.\n")
     in loop acc ty end
   in loop [] ty end
 
@@ -585,5 +760,7 @@ fun from_to_thm_for ty =
 
 fun from_term_for ty = from_to_thm_for ty |> concl |> rator |> rand;
 fun to_term_for ty = from_to_thm_for ty |> concl |> rand;
+
+val _ = (the_from_term_for := from_term_for);
 
 end
