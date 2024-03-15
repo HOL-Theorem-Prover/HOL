@@ -5,8 +5,7 @@ structure cv_memLib :> cv_memLib =
 struct
 
 open HolKernel Abbrev Parse boolLib bossLib;
-open cv_repTheory cvTheory;
-
+open cv_miscLib cv_repTheory cvTheory;
 
 datatype verbosity = Silent | Quiet | Verbose;
 
@@ -49,24 +48,6 @@ fun indent_print_aux f verbosity prefix suffix x = let
 val indent_print_term = indent_print_aux term_to_string;
 val indent_print_thm = indent_print_aux thm_to_string;
 
-val cv_ty = cvSyntax.cv
-val cv_rep_hol_tm = rand
-val cv_rep_hol_tm_conv = RAND_CONV
-val cv_rep_cv_tm = rand o rator o rator
-val cv_rep_cv_tm_conv = RATOR_CONV o RATOR_CONV o RAND_CONV
-
-fun is_cv_rep tm = let
-  val (c,vs) = strip_comb tm
-  val { Thy = thy, Name = name, ... } = dest_thy_const c
-  in length vs = 4 andalso
-     name = "cv_rep" andalso
-     thy = "cv_rep" end handle HOL_ERR _ => false;
-
-fun contains_fun_ty ty =
-  if can dom_rng ty then true
-  else if not (can dest_type ty) then false
-       else dest_type ty |> snd |> List.exists contains_fun_ty
-
 (*--------------------------------------------------------------------------*
    Reused function
  *--------------------------------------------------------------------------*)
@@ -102,7 +83,7 @@ fun formulate_cv_rep th =
     | lift_each (v::vs) th1 = let
     val name = dest_var v |> fst
     val p = mk_var("p_" ^ name, bool)
-    val cv = mk_var("cv_" ^ name, cv_ty)
+    val cv = mk_var("cv_" ^ name, cvSyntax.cv)
     val t = find_term (fn tm => is_comb tm andalso aconv (rand tm) v) cv_tm
     val th2 = th1 |> CONV_RULE (cv_rep_cv_tm_conv (UNBETA_CONV t))
     val th3 = MATCH_MP cv_rep_assum th2 |> SPECL [cv,p] |> UNDISCH

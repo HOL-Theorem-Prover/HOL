@@ -19,6 +19,13 @@ val cv_rep_pre = rand o rator o rator o rator
 fun mk_cv_rep pre cv ret_from r =
   cv_rep_def |> ISPECL [pre,cv,ret_from,r] |> concl |> dest_eq |> fst;
 
+fun is_cv_rep tm = let
+  val (c,vs) = strip_comb tm
+  val { Thy = thy, Name = name, ... } = dest_thy_const c
+  in length vs = 4 andalso
+     name = "cv_rep" andalso
+     thy = "cv_rep" end handle HOL_ERR _ => false;
+
 fun is_cv_proj tm = let
   val (c,args) = strip_comb tm
   val { Thy = thy, Name = name, ... } = dest_thy_const c
@@ -74,6 +81,11 @@ val remove_fupd_conv = let
         RAND_CONV (rpt_ABS_CONV BETA_CONV) THENC
         PURE_REWRITE_CONV (remove :: combinTheory.K_THM :: updates_def)) tm end
   in TOP_DEPTH_CONV del_fupd_conv end;
+
+fun contains_fun_ty ty =
+  if can dom_rng ty then true
+  else if not (can dest_type ty) then false
+       else dest_type ty |> snd |> List.exists contains_fun_ty
 
 val _ = temp_overload_on("Num",cvSyntax.cv_num_tm);
 val _ = temp_overload_on("Pair",cvSyntax.cv_pair_tm);

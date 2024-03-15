@@ -12,10 +12,13 @@ sig
   val cv_rep_pre : term -> term
   val cv_rep_pre_conv : conv -> conv
   val mk_cv_rep : term -> term -> term -> term -> term
+  val is_cv_rep : term -> bool
   val is_cv_proj : term -> bool
   val dest_cv_proj : term -> term * term
   val cv_sum_depth_tm : term
   val mk_cv_sum_depth : term -> term
+
+  val contains_fun_ty : hol_type -> bool
 
   val remove_fupd_conv : conv
 
