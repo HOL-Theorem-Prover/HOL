@@ -139,7 +139,9 @@ local
     ("quant-inst",      list_args_zero_prems "quant-inst"),
     ("quant-intro",     one_prem "quant-intro"),
     ("refl",            zero_prems "refl"),
-    ("rewrite",         zero_prems "rewrite"),
+    (* in `rewrite` proof rules, we currently ignore the indices (if they exist) *)
+    ("rewrite",         (fn token => fn indices => fn prems =>
+      zero_prems "rewrite" token [] prems)),
     ("sk",              zero_prems "sk"),
     ("symm",            one_prem "symm"),
     ("th-lemma",        SmtLib_Theories.list_list (fn token => fn indices =>
