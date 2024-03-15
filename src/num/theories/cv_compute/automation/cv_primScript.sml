@@ -397,184 +397,6 @@ QED
    rat
  *----------------------------------------------------------*)
 
-(*---------- Helper lemmas - TODO move these? ----------*)
-
-Theorem Num_neg:
-  Num (-a) = Num a
-Proof
-  Cases_on `a` >> gvs[]
-QED
-
-Theorem gcd_LESS_EQ:
-  !m n. n <> 0 ==> gcd m n <= n
-Proof
-  recInduct gcdTheory.gcd_ind >> rw[Once gcdTheory.gcd_def]
-QED
-
-Theorem ABS_SGN:
-  ABS (SGN i) = if i = 0 then 0 else 1
-Proof
-  Cases_on `i` >> gvs[intExtensionTheory.SGN_def]
-QED
-
-Theorem divides_coprime_mul:
-  !n m k. gcd n m = 1 ==> (divides n (m * k) <=> divides n k)
-Proof
-  rw[] >> eq_tac >> rw[]
-  >- (gvs[Once gcdTheory.GCD_SYM] >> drule gcdTheory.L_EUCLIDES >> simp[])
-  >- (drule dividesTheory.DIVIDES_MULT >> disch_then irule)
-QED
-
-Theorem nmr_dnm_unique:
-  gcd n1 d1 = 1 /\ gcd n2 d2 = 1 /\
-  n1 * d2 = n2 * d1
-  ==> n1 = n2 /\ d1 = d2
-Proof
-  strip_tac >> imp_res_tac divides_coprime_mul >> gvs[] >>
-  first_x_assum $ qspec_then `n2` $ mp_tac o iffLR >> gvs[] >>
-  impl_tac >- (gvs[dividesTheory.divides_def] >> qexists `d2` >> gvs[]) >>
-  strip_tac >> first_x_assum $ qspec_then `n1` assume_tac >> gvs[] >>
-  dxrule_all dividesTheory.DIVIDES_ANTISYM >> strip_tac >> gvs[]
-QED
-
-Theorem SGN_MUL_Num[simp]:
-  SGN i * &Num i = i
-Proof
-  Cases_on `i` >> gvs[intExtensionTheory.SGN_def] >>
-  simp[INT_MUL_CALCULATE]
-QED
-
-Theorem gcd_RATND[simp]:
-  gcd (Num $ RATN r) (RATD r) = 1
-Proof
-  CCONTR_TAC >> gvs[] >>
-  qmatch_asmsub_abbrev_tac `gcd n d` >>
-  `d <> 0` by (unabbrev_all_tac >> gvs[]) >>
-  qspecl_then [`n`,`d`] assume_tac gcdTheory.FACTOR_OUT_GCD >> gvs[] >>
-  Cases_on `n = 0` >> gvs[] >>
-  qspecl_then [`rat_sgn r * &p`,`q`] mp_tac RATN_LEAST >> simp[] >>
-  Cases_on `q = 0` >> gvs[] >> reverse $ rw[]
-  >- (
-    simp[RAT_SGN_ALT, GSYM INT_ABS_MUL, ABS_SGN] >>
-    Cases_on `r = 0` >> gvs[] >>
-    `ABS (RATN r) = &n` by (unabbrev_all_tac >> Cases_on `RATN r` >> gvs[]) >>
-    simp[] >> qpat_assum `n = _` SUBST1_TAC >> simp[] >>
-    Cases_on `p = 0` >> gvs[] >> simp[NOT_LESS_EQUAL] >>
-    Cases_on `gcd n d = 0` >- gvs[] >- simp[]
-    ) >>
-  rewrite_tac[Once RATN_RATD_EQ_THM] >> DEP_REWRITE_TAC[RAT_LDIV_EQ] >> simp[] >>
-  simp[RDIV_MUL_OUT] >> DEP_REWRITE_TAC[RAT_RDIV_EQ] >> simp[] >>
-  `RATN r = rat_sgn r * &n` by (simp[RAT_SGN_ALT] >> unabbrev_all_tac >> gvs[]) >>
-  simp[GSYM rat_of_int_MUL, AC RAT_MUL_ASSOC RAT_MUL_COMM] >>
-  simp[RAT_MUL_ASSOC] >> rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
-  simp[RAT_MUL_NUM_CALCULATE] >>
-  qsuff_tac `(p * gcd n d) * q = (q * gcd n d) * p`
-  >- metis_tac[]
-  >- simp[]
-QED
-
-Theorem RATND_suff_eq:
-  gcd (Num n) d = 1 /\ d <> 0
-  ==> RATN (rat_of_int n / &d) = n /\ RATD (rat_of_int n / &d) = d
-Proof
-  strip_tac >>
-  qpat_abbrev_tac `r = _ / _` >>
-  qsuff_tac `rat_sgn r = SGN n /\ Num (RATN r) = Num n /\ RATD r = d`
-  >- (rw[RAT_SGN_ALT] >> once_rewrite_tac[GSYM SGN_MUL_Num] >> metis_tac[]) >>
-  conj_asm1_tac
-  >- (
-    unabbrev_all_tac >> simp[RAT_SGN_ALT, intExtensionTheory.SGN_def] >>
-    Cases_on `n` >> gvs[] >> simp[rat_of_int_ainv]
-    ) >>
-  `rat_of_int n * &RATD r = rat_of_int (RATN r) * &d` by (
-    DEP_REWRITE_TAC[GSYM RAT_RDIV_EQ] >> simp[] >>
-    simp[GSYM LDIV_MUL_OUT] >> rewrite_tac[Once RAT_MUL_COMM] >>
-    DEP_REWRITE_TAC[GSYM RAT_LDIV_EQ] >> unabbrev_all_tac >> gvs[]) >>
-  pop_assum mp_tac >> simp[rat_of_int_def] >>
-  `n < 0 <=> r < 0` by (
-    unabbrev_all_tac >> gvs[RAT_LDIV_LES_POS] >>
-    Cases_on `n` >> gvs[] >> simp[rat_of_int_ainv]) >>
-  IF_CASES_TAC >> gvs[Num_neg] >>
-  simp[RAT_MUL_NUM_CALCULATE] >> strip_tac >> irule nmr_dnm_unique >> simp[]
-QED
-
-Definition div_gcd_def:
-  div_gcd a b =
-    let d = gcd (Num a) b in
-      if d = 0 \/ d = 1 then (a, b) else (a / &d, b DIV d)
-End
-
-Theorem div_gcd_reduces:
-  div_gcd a b = (n,d) /\ b <> 0 ==> d <> 0 /\ gcd (Num n) d = 1 /\ a * &d = n * &b
-Proof
-  rw[div_gcd_def] >> gvs[]
-  >- (
-    Cases_on `b = 1` >> gvs[] >>
-    DEP_REWRITE_TAC[DIV_EQ_0] >> simp[NOT_LESS] >>
-    Cases_on `gcd (Num a) b` >> gvs[] >>
-    qspecl_then [`Num a`,`b`] assume_tac gcd_LESS_EQ >> gvs[]
-    )
-  >- (
-    Cases_on `Num a = 0` >> simp[] >>
-    qspecl_then [`Num a`,`b`] assume_tac gcdTheory.FACTOR_OUT_GCD >> gvs[] >>
-    qsuff_tac `b DIV gcd (Num a) b = q /\ Num (a / &gcd (Num a) b) = p` >> rw[]
-    >- (
-      qpat_x_assum `b = _` $ simp o single o Once >>
-      irule MULT_DIV >> Cases_on `gcd (Num a) b` >> gvs[]
-      ) >>
-    simp[int_div] >> rw[] >> gvs[Num_neg]
-    >- (
-      qpat_x_assum `Num a = _` $ simp o single o Once >>
-      irule MULT_DIV >> Cases_on `gcd (Num a) b` >> gvs[]
-      )
-    >- (
-      qpat_x_assum `Num a = _` $ simp o single o Once >>
-      irule MULT_DIV >> Cases_on `gcd (Num a) b` >> gvs[]
-      )
-    >- (
-      irule FALSITY >> pop_assum mp_tac >> simp[] >>
-      qpat_x_assum `Num a = _` $ rewrite_tac o single o Once >>
-      irule MOD_EQ_0 >> simp[]
-      )
-    )
-  >- (
-    qspecl_then [`Num a`,`b`] assume_tac gcdTheory.FACTOR_OUT_GCD >>
-    Cases_on `a = 0` >> gvs[] >>
-    qabbrev_tac `g = gcd (Num a) b` >>
-    `b DIV g = q` by  (irule DIV_UNIQUE >> qexists `0` >> gvs[]) >>
-    `a / &g = SGN a * &p` by (
-      qspec_then `a` mp_tac $ GEN_ALL (GSYM SGN_MUL_Num) >>
-      disch_then $ rewrite_tac o single o Once >>
-      DEP_REWRITE_TAC[INT_MUL_DIV] >> conj_tac >- gvs[] >>
-      AP_TERM_TAC >> gvs[INT_DIV_CALCULATE] >>
-      rewrite_tac[Once MULT_COMM] >> irule MULT_DIV >> gvs[]) >>
-    simp[] >>
-    qspec_then `a` mp_tac $ GEN_ALL (GSYM SGN_MUL_Num) >>
-    disch_then $ rewrite_tac o single o Once >>
-    once_rewrite_tac[GSYM INT_MUL_ASSOC] >>
-    AP_TERM_TAC >> simp[INT_MUL_CALCULATE]
-    )
-QED
-
-Theorem div_gcd_correct:
-  div_gcd a b = (n,d) /\ b <> 0 ==>
-  rat_of_int a / &b = rat_of_int n / &d /\
-  RATN (rat_of_int a / &b) = n /\
-  RATD (rat_of_int a / &b) = d
-Proof
-  strip_tac >> reverse conj_asm1_tac
-  >- (
-    pop_assum SUBST_ALL_TAC >> match_mp_tac RATND_suff_eq >>
-    imp_res_tac div_gcd_reduces >> simp[]
-    ) >>
-  simp[RAT_LDIV_EQ, RDIV_MUL_OUT] >> DEP_REWRITE_TAC[RAT_RDIV_EQ] >> simp[] >>
-  once_rewrite_tac[GSYM rat_of_int_of_num] >> simp[rat_of_int_MUL] >>
-  imp_res_tac div_gcd_reduces >> gvs[] >>
-  gvs[AC INT_MUL_ASSOC INT_MUL_COMM]
-QED
-
-(*----------*)
-
 Theorem cv_rat_of_int[cv_rep]:
   from_rat (rat_of_int i) = Pair (from_int i) (Num 1)
 Proof
@@ -821,65 +643,6 @@ Proof
 QED
 
 (*----------------------------------------------------------*
-   word lemmas, ported from:
-   HOL/examples/l3-machine-code/arm8/asl-equiv/l3_equivalence_miscScript.sml
-   TODO: move these?
- *----------------------------------------------------------*)
-
-Theorem bitify_APPEND[local]:
-  !l1 l2 a. bitify a (l1 ++ l2) = bitify (bitify a l1) l2
-Proof
-  rw[bitify_reverse_map]
-QED
-
-Theorem v2n_APPEND[local]:
-  !a b. v2n (a ++ b) = v2n b + (2 ** LENGTH b * v2n a)
-Proof
-  rw[v2n_def, bitify_APPEND] >>
-  rw[bitify_reverse_map] >>
-  gvs[numposrepTheory.num_from_bin_list_def, numposrepTheory.l2n_APPEND]
-QED
-
-Theorem v2n[local]:
-  v2n [] = 0 /\
-  v2n (b::bs) = if b then 2 ** LENGTH bs + v2n bs else v2n bs
-Proof
-  rw[] >> once_rewrite_tac[CONS_APPEND]
-  >- EVAL_TAC >>
-  once_rewrite_tac[v2n_APPEND] >> simp[] >> EVAL_TAC
-QED
-
-Theorem fixwidth_REPLICATE[local]:
-  !len l. fixwidth len l =
-    if LENGTH l <= len then REPLICATE (len - LENGTH l) F ++ l
-    else DROP (LENGTH l - len) l
-Proof
-  rw[fixwidth, GSYM pad_left_extend, PAD_LEFT] >> gvs[GSYM REPLICATE_GENLIST] >>
-  `len = LENGTH l` by gvs[] >> pop_assum SUBST_ALL_TAC >> gvs[]
-QED
-
-Theorem cv_inline_word_ror[cv_inline]:
-  !r a. (a : 'a word) #>> r =
-    let a = a;
-        d = dimindex (:'a);
-        r = r MOD d
-    in a << (d - r) || a >>> r
-Proof
-  rw[] >> qspec_then `a` assume_tac ranged_bitstring_nchotomy >> gvs[] >>
-  simp[word_ror_v2w, rotate_def] >> IF_CASES_TAC >> gvs[] >>
-  qabbrev_tac `r' = r MOD dimindex (:'a)` >>
-  `r' < dimindex (:'a)` by (unabbrev_all_tac >> gvs[]) >>
-  qpat_x_assum `Abbrev _` kall_tac >>
-  simp[word_lsl_v2w, word_lsr_v2w, rotate_def, word_or_v2w] >>
-  simp[Once v2w_11] >> simp[field_def, ADD1] >>
-  `shiftr v 0 = v` by simp[shiftr_def] >> simp[fixwidth] >>
-  simp[bor_def, bitwise_def, shiftl_def, shiftr_def, PAD_LEFT, PAD_RIGHT, MAX_DEF] >>
-  simp[fixwidth_REPLICATE, GSYM MAP_DROP, GSYM ZIP_DROP, DROP_APPEND] >>
-  `dimindex (:'a) - r' - dimindex (:'a) = 0` by simp[] >> simp[] >>
-  rw[LIST_EQ_REWRITE, EL_DROP, EL_MAP, EL_ZIP, EL_APPEND_EQN, EL_REPLICATE] >> rw[]
-QED
-
-(*----------------------------------------------------------*
    word conversions
  *----------------------------------------------------------*)
 
@@ -1110,6 +873,16 @@ Proof
     \\ rpt strip_tac \\ CCONTR_TAC \\ gvs [word_T,word_lsr_def]
     \\ gvs [fcpTheory.FCP_BETA])
   \\ rw [word_asr]
+QED
+
+Theorem cv_inline_word_ror[cv_inline]:
+  !r a. (a : 'a word) #>> r =
+    let a = a;
+        d = dimindex (:'a);
+        r = r MOD d
+    in a << (d - r) || a >>> r
+Proof
+  rw[word_ror_alt]
 QED
 
 (*----------------------------------------------------------*

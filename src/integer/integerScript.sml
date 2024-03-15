@@ -1778,6 +1778,12 @@ Proof
   Cases_on ‘a’ >> Cases_on ‘b’ >> simp[]
 QED
 
+Theorem Num_neg:
+  Num (-a) = Num a
+Proof
+  Cases_on `a` >> gvs[]
+QED
+
 val LE_NUM_OF_INT = store_thm
   ("LE_NUM_OF_INT",
    ``!n i. & n <= i ==> n <= Num i``,
