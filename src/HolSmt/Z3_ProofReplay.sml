@@ -495,8 +495,7 @@ local
         PURE_REWRITE_TAC[integerTheory.EDIV_DEF, integerTheory.EMOD_DEF]
         (* the next rewrites are a workaround for this issue:
            https://github.com/HOL-Theorem-Prover/HOL/issues/1207 *)
-        >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT,
-             integerTheory.int_quot, integerTheory.int_rem]
+        >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT]
         (* if `arith_tactic` doesn't work at first, don't give up immediately;
            instead let's try additional tactics *)
         >> TRY arith_tactic
