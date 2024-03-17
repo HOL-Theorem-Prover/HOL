@@ -569,7 +569,7 @@ fun cv_trans_pre def = let
      else res end;
 
 fun cv_trans_rec def tac =
-  cv_trans_no_loop false (SOME tac) def;
+  (cv_trans_no_loop false (SOME tac) def; ());
 
 fun cv_trans_pre_rec def tac =
   cv_trans_no_loop true (SOME tac) def;
@@ -746,7 +746,7 @@ fun cv_auto_trans_pre def = let
      else res end;
 
 fun cv_auto_trans_rec def tac =
-  cv_trans_loop false (SOME tac) [Def def];
+  (cv_trans_loop false (SOME tac) [Def def]; ());
 
 fun cv_auto_trans_pre_rec def tac =
   cv_trans_loop true (SOME tac) [Def def];
