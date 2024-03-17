@@ -1,0 +1,46 @@
+\DOC cv_auto_trans_pre
+
+\TYPE {cv_auto_trans_pre : thm -> thm}
+
+\SYNOPSIS
+Translates functional definitions to the {cv_compute} subset of HOL.
+
+\LIBRARY
+cv_transLib
+
+\DESCRIBE
+This is a recursive version of {cv_transLib.cv_trans_pre}. If the
+{cv_transLib.cv_trans_pre}-translation of the given HOL function
+encounters untranslated constants, then {cv_transLib.cv_auto_trans}
+will be called on each of the definitions of the not-yet-translated
+constants. The auto-functions are sometimes able to translate
+functions that mention higher-order functions, such as {MAP}.
+
+\FAILURE
+When the recursive translations produce a precondition that the
+automation is unable to prove automatically, or
+{cv_transLib.cv_termination_tac} is insufficient for proving
+the termination goal of the translator-defined {:cv} function.
+In case the termination goal is not proved, then the problematic
+goal is pushed to the goal stack.
+
+\EXAMPLE
+See {cv_transLib.cv_auto_trans} and {cv_transLib.cv_trans_pre} for
+relevant examples.
+
+\COMMENTS
+Designed to produce definitions suitable for evaluation by {cv_transLib.cv_eval}.
+
+\SEEALSO
+cv_transLib.cv_trans,
+cv_transLib.cv_trans_pre,
+cv_transLib.cv_trans_pre_rec,
+cv_transLib.cv_trans_rec,
+cv_transLib.cv_auto_trans,
+cv_transLib.cv_auto_trans_pre,
+cv_transLib.cv_auto_trans_pre_rec,
+cv_transLib.cv_auto_trans_rec,
+cv_transLib.cv_eval,
+cv_transLib.cv_termination_tac
+
+\ENDDOC

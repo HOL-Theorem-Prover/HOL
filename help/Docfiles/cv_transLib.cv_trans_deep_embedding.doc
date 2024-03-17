@@ -1,0 +1,57 @@
+\DOC cv_trans_deep_embedding
+
+\TYPE {cv_trans_deep_embedding : conv -> thm -> unit}
+
+\SYNOPSIS
+Translates equations defining a deeply embedded AST
+
+\LIBRARY
+cv_transLib
+
+\DESCRIBE
+This function behaves like a faster version of {cv_transLib.cv_trans} but
+can only translate constants. It is intended to be used in situations where
+large deep embeddings need to be translated for use with {cv_transLib.cv_eval}.
+The first argument to {cv_trans_deep_embedding} is a conversion that needs
+to be able to evaluate terms such as {from <deep_embedding>}.
+
+\FAILURE
+When the input term is not a constant, or otherwise does not fit the intended
+use as translator for deep embeddings.
+
+\EXAMPLE
+
+{
+> Datatype:
+  exp = Const num | Add exp exp
+End
+<<HOL message: Defined type: "exp">>
+> Definition sem_def:
+  sem (Const n) = n ∧
+  sem (Add e1 e2) = sem e1 + sem e2
+End
+Definition has been stored under "sem_def"
+val sem_def =
+   ⊢ (∀n. sem (Const n) = n) ∧ ∀e1 e2. sem (Add e1 e2) = sem e1 + sem e2: thm
+> Definition deep_def:
+  deep = Add (Const 5) (Add (Const 2) (Const 3))
+End
+Definition has been stored under "deep_def"
+val deep_def = ⊢ deep = Add (Const 5) (Add (Const 2) (Const 3)): thm
+> cv_trans sem_def;
+Definition has been stored under "from_scratch_exp_def"
+Equations stored under "cv_sem_def".
+Induction stored under "cv_sem_ind".
+Finished translating sem, stored in cv_sem_thm
+val it = (): unit
+> cv_trans_deep_embedding EVAL deep_def;
+val it = (): unit
+> cv_eval “sem deep”;
+val it = ⊢ sem deep = 10: thm
+}
+
+\SEEALSO
+cv_transLib.cv_trans,
+cv_transLib.cv_eval
+
+\ENDDOC

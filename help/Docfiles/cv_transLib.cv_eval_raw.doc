@@ -1,0 +1,37 @@
+\DOC cv_eval_raw
+
+\TYPE {cv_eval_raw : term -> thm}
+
+\SYNOPSIS
+Evaluates closed terms with {cv_computeLib} using translations from {cv_transLib}
+
+\LIBRARY
+cv_transLib
+
+\DESCRIBE
+Exactly the same as {cv_transLib.cv_eval}, except that {cv_eval_raw} omits the potentially
+expensive evaluation out of the {:cv} type.
+
+\FAILURE
+Exactly the same as teh failures of {cv_transLib.cv_eval}.
+
+\EXAMPLE
+
+{
+> cv_trans rich_listTheory.REPLICATE;
+Equations stored under "cv_REPLICATE_def".
+Induction stored under "cv_REPLICATE_ind".
+Finished translating REPLICATE, stored in cv_REPLICATE_thm
+val it = (): unit
+> cv_eval “REPLICATE 3 (3:num)”;
+val it = ⊢ REPLICATE 3 3 = [3; 3; 3]: thm
+> cv_eval_raw “REPLICATE 3 (3:num)”;
+val it =
+   ⊢ REPLICATE 3 3 =
+     to_list cv$c2n (Pair (Num 3) (Pair (Num 3) (Pair (Num 3) (Num 0)))): thm
+}
+
+\SEEALSO
+cv_transLib.cv_eval
+
+\ENDDOC

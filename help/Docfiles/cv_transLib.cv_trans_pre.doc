@@ -10,14 +10,16 @@ cv_transLib
 
 \DESCRIBE
 Accepts a theorem describing a functional definition.  Attempts to translate
-this a function operating over the {:cv} type, used by
+this to a function operating over the {:cv} type, used by
 {cv_computeLib.cv_compute}.  Returns a precondition representing the proof
 obligation which must be discharged before this translated function can be
-evaluated.
+evaluated with {cv_computeLib.cv_eval}.
 
 \FAILURE
 When the translation does not produce a precondition, or encounters a sub-term
-containing a constant that has not already been translated before.
+containing a constant that has not already been translated, or
+{cv_transLib.cv_termination_tac} is insufficient for proving the termination
+goal of the translator-defined {:cv} function.
 
 \EXAMPLE
 
@@ -42,7 +44,15 @@ val it = ⊢ ∀v. HD_pre v ⇔ (∃t h. v = h::t) ∧ v ≠ []: thm
 Designed to produce definitions suitable for evaluation by {cv_transLib.cv_eval}.
 
 \SEEALSO
-cv_transLib.cv_trans, cv_transLib.cv_trans_rec, cv_transLib.cv_auto_trans,
-cv_transLib.cv_auto_trans_pre, cv_transLib.cv_auto_trans_rec, cv_transLib.cv_eval
+cv_transLib.cv_trans,
+cv_transLib.cv_trans_pre,
+cv_transLib.cv_trans_pre_rec,
+cv_transLib.cv_trans_rec,
+cv_transLib.cv_auto_trans,
+cv_transLib.cv_auto_trans_pre,
+cv_transLib.cv_auto_trans_pre_rec,
+cv_transLib.cv_auto_trans_rec,
+cv_transLib.cv_eval,
+cv_transLib.cv_termination_tac
 
 \ENDDOC
