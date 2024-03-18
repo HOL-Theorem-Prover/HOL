@@ -451,10 +451,14 @@ local
   end
 
   (* returns an extended 'tmdict' *)
-  fun parse_declare_fun get_token (tydict, tmdict) =
+  fun parse_declare_const_fun parse_types get_token (tydict, tmdict) =
   let
     val name = get_token ()
-    val domain_types = parse_type_list get_token tydict
+    val domain_types =
+      if parse_types then
+        parse_type_list get_token tydict
+      else
+        []
     val range_type = parse_type get_token tydict
     val _ = Library.expect_token ")" (get_token ())
     val tm = Term.mk_var (name,
@@ -468,6 +472,9 @@ local
   in
     (tm, Library.extend_dict ((name, parsefn), tmdict))
   end
+
+  val parse_declare_const = parse_declare_const_fun false
+  val parse_declare_fun = parse_declare_const_fun true
 
   (* returns an extended 'tmdict', and the definition (as a formula) *)
   fun parse_define_fun get_token (tydict, tmdict) =
@@ -535,6 +542,13 @@ local
       let
         val (logic, tydict, tmdict, asserted) = dest_state "declare-sort"
         val tydict = parse_declare_sort get_token tydict
+      in
+        parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
+      end
+    | "declare-const" =>
+      let
+        val (logic, tydict, tmdict, asserted) = dest_state "declare-const"
+        val (_, tmdict) = parse_declare_const get_token (tydict, tmdict)
       in
         parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
       end
