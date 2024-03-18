@@ -54,12 +54,12 @@ QED
 
 (********************************************************************************************)
 
-val finite_enumeration_of_sets_has_max_non_empty = store_thm
-  ("finite_enumeration_of_sets_has_max_non_empty",
-   ``!f s. FINITE s /\ (!x. f x IN s) /\
+Theorem finite_enumeration_of_sets_has_max_non_empty :
+    !f s. FINITE s /\ (!x. f x IN s) /\
             (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-            ?N. !n:num. n >= N ==> (f n = {})``,
-        `!s. FINITE s ==>
+            ?N. !n:num. n >= N ==> (f n = {})
+Proof
+   `!s. FINITE s ==>
         (\s. !f. (!x. f x IN {} INSERT s) /\
                  (~({} IN s)) /\
                  (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
@@ -119,7 +119,8 @@ val finite_enumeration_of_sets_has_max_non_empty = store_thm
    >> Cases_on `{} IN s`
    >- (Q.PAT_X_ASSUM `!s. FINITE s ==> P` (MP_TAC o Q.SPEC `s DELETE {}`)
        >> RW_TAC std_ss [FINITE_DELETE, IN_INSERT, IN_DELETE])
-   >> METIS_TAC [IN_INSERT]);
+   >> METIS_TAC [IN_INSERT]
+QED
 
 val PREIMAGE_REAL_COMPL1 = store_thm
   ("PREIMAGE_REAL_COMPL1", ``!c:real. COMPL {x | c < x} = {x | x <= c}``,
@@ -529,11 +530,11 @@ val finite_decomposition_simple = store_thm (* new *)
  >> PROVE_TAC [BIJ_IMAGE]);
 
 (* any finite set can be decomposed into a finite (non-repeated) sequence of sets *)
-val finite_decomposition = store_thm (* new *)
-  ("finite_decomposition",
-  ``!c. FINITE c ==>
+Theorem finite_decomposition :
+    !c. FINITE c ==>
         ?f n. (!x. x < n ==> f x IN c) /\ (c = IMAGE f (count n)) /\
-              (!i j. i < n /\ j < n /\ i <> j ==> f i <> f j)``,
+              (!i j. i < n /\ j < n /\ i <> j ==> f i <> f j)
+Proof
     GEN_TAC
  >> REWRITE_TAC [FINITE_BIJ_COUNT_EQ]
  >> rpt STRIP_TAC
@@ -544,16 +545,17 @@ val finite_decomposition = store_thm (* new *)
  >> CONJ_TAC >- PROVE_TAC [BIJ_IMAGE]
  >> rpt STRIP_TAC
  >> fs [BIJ_ALT, IN_FUNSET, IN_COUNT]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 (* any finite disjoint set can be decomposed into a finite pair-wise
    disjoint sequence of sets *)
-val finite_disjoint_decomposition = store_thm (* new *)
-  ("finite_disjoint_decomposition",
-  ``!c. FINITE c /\ disjoint c ==>
+Theorem finite_disjoint_decomposition :
+    !c. FINITE c /\ disjoint c ==>
         ?f n. (!i. i < n ==> f i IN c) /\ (c = IMAGE f (count n)) /\
               (!i j. i < n /\ j < n /\ i <> j ==> f i <> f j) /\
-              (!i j. i < n /\ j < n /\ i <> j ==> DISJOINT (f i) (f j))``,
+              (!i j. i < n /\ j < n /\ i <> j ==> DISJOINT (f i) (f j))
+Proof
     GEN_TAC
  >> REWRITE_TAC [FINITE_BIJ_COUNT_EQ]
  >> rpt STRIP_TAC
@@ -570,16 +572,18 @@ val finite_disjoint_decomposition = store_thm (* new *)
  >> rpt STRIP_TAC
  >> fs [disjoint_def]
  >> FIRST_X_ASSUM MATCH_MP_TAC
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
-val countable_disjoint_decomposition = store_thm (* new *)
-  ("countable_disjoint_decomposition",
-  ``!c. FINITE c /\ disjoint c ==>
+(* cf. cardinalTheory. disjoint_countable_decomposition *)
+Theorem finite_disjoint_decomposition' :
+    !c. FINITE c /\ disjoint c ==>
         ?f n. (!i. i < n ==> f i IN c) /\ (!i. n <= i ==> (f i = {})) /\
               (c = IMAGE f (count n)) /\
               (BIGUNION c = BIGUNION (IMAGE f univ(:num))) /\
               (!i j. i < n /\ j < n /\ i <> j ==> f i <> f j) /\
-              (!i j. i < n /\ j < n /\ i <> j ==> DISJOINT (f i) (f j))``,
+              (!i j. i < n /\ j < n /\ i <> j ==> DISJOINT (f i) (f j))
+Proof
     rpt STRIP_TAC
  >> STRIP_ASSUME_TAC
         (MATCH_MP finite_disjoint_decomposition
@@ -598,7 +602,8 @@ val countable_disjoint_decomposition = store_thm (* new *)
  >> GEN_TAC >> EQ_TAC >> rpt STRIP_TAC
  >| [ Q.EXISTS_TAC `x'` >> METIS_TAC [],
       Cases_on `i < n` >- (Q.EXISTS_TAC `i` >> METIS_TAC []) \\
-      fs [NOT_IN_EMPTY] ]);
+      fs [NOT_IN_EMPTY] ]
+QED
 
 (* any union of two sets can be decomposed into 3 disjoint unions *)
 val UNION_TO_3_DISJOINT_UNIONS = store_thm (* new *)
@@ -633,7 +638,6 @@ val BIGUNION_IMAGE_UNIV_CROSS_UNIV = store_thm
  >> EQ_TAC >> STRIP_TAC
  >- (Q.PAT_X_ASSUM `!y. ?!x. y = h x` (MP_TAC o (Q.SPEC `x'`)) >> METIS_TAC [])
  >> Q.EXISTS_TAC `h x'` >> art []);
-
 
 (* ------------------------------------------------------------------------- *)
 (*  Three series of lemmas on bigunion-equivalent sequences of sets          *)
@@ -955,9 +959,10 @@ val INCREASING_TO_DISJOINT_SETS' = store_thm
 (* ------------------------------------------------------------------------- *)
 
 (* This is not more general than disjoint_def *)
-val disjoint_family_on = new_definition ("disjoint_family_on",
-  ``disjoint_family_on a s =
-      (!m n. m IN s /\ n IN s /\ (m <> n) ==> (a m INTER a n = {}))``);
+Definition disjoint_family_on :
+    disjoint_family_on a s =
+      (!m n. m IN s /\ n IN s /\ (m <> n) ==> (a m INTER a n = {}))
+End
 
 (* A new, equivalent definition based on DISJOINT *)
 Theorem disjoint_family_on_def :
@@ -967,30 +972,31 @@ Proof
     rw [DISJOINT_DEF, disjoint_family_on]
 QED
 
-val disjoint_family = new_definition ("disjoint_family",
-  ``disjoint_family A = disjoint_family_on A UNIV``);
+Overload disjoint_family = “\A. disjoint_family_on A UNIV”
 
 (* A new, equivalent definition based on DISJOINT *)
 Theorem disjoint_family_def :
     !A. disjoint_family (A :'index -> 'a set) <=>
         !i j. i <> j ==> DISJOINT (A i) (A j)
 Proof
-    rw [disjoint_family, disjoint_family_on_def]
+    rw [disjoint_family_on_def]
 QED
 
-(* This is the way to convert a family of sets into a disjoint family *)
-(* of sets, cf. SETS_TO_DISJOINT_SETS -- Chun Tian *)
-val disjointed = new_definition ("disjointed",
-  ``!A n. disjointed A n =
-          A n DIFF BIGUNION {A i | i IN {x:num | 0 <= x /\ x < n}}``);
+(* This is the way to convert a family of sets into a disjoint family
+   of sets, cf. SETS_TO_DISJOINT_SETS -- Chun Tian
+ *)
+Definition disjointed :
+    disjointed A n = A n DIFF BIGUNION {A i | i IN {x:num | 0 <= x /\ x < n}}
+End
 
 val disjointed_subset = store_thm ("disjointed_subset",
   ``!A n. disjointed A n SUBSET A n``,
   RW_TAC std_ss [disjointed] THEN ASM_SET_TAC []);
 
-val disjoint_family_disjoint = store_thm ("disjoint_family_disjoint",
-  ``!A. disjoint_family (disjointed A)``,
-  SIMP_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
+Theorem disjoint_family_disjoint :
+    !A. disjoint_family (disjointed A)
+Proof
+  SIMP_TAC std_ss [disjoint_family_on, IN_UNIV] THEN
   RW_TAC std_ss [disjointed, EXTENSION, GSPECIFICATION, IN_INTER] THEN
   SIMP_TAC std_ss [NOT_IN_EMPTY, IN_DIFF, IN_BIGUNION] THEN
   ASM_CASES_TAC ``(x NOTIN A (m:num) \/ ?s. x IN s /\ s IN {A i | i < m})`` THEN
@@ -998,7 +1004,8 @@ val disjoint_family_disjoint = store_thm ("disjoint_family_disjoint",
   ASM_CASES_TAC ``x NOTIN A (n:num)`` THEN FULL_SIMP_TAC std_ss [] THEN
   FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN
   ASM_CASES_TAC ``m < n:num`` THENL [METIS_TAC [], ALL_TAC] THEN
-  `n < m:num` by ASM_SIMP_TAC arith_ss [] THEN METIS_TAC []);
+  `n < m:num` by ASM_SIMP_TAC arith_ss [] THEN METIS_TAC []
+QED
 
 val finite_UN_disjointed_eq = prove (
   ``!A n. BIGUNION {disjointed A i | i IN {x | 0 <= x /\ x < n}} =
@@ -1312,6 +1319,13 @@ Theorem count1_def :
     !n. count1 n = {m | m <= n}
 Proof
     rw [Once EXTENSION, LT_SUC_LE]
+QED
+
+(* ‘count n’ re-expressed by numseg *)
+Theorem count1_numseg :
+    !n. count1 n = {0..n}
+Proof
+    rw [Once EXTENSION]
 QED
 
 val _ = export_theory ();
