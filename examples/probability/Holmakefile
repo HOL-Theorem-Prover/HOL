@@ -1,5 +1,7 @@
 INCLUDES = $(HOLDIR)/src/probability $(HOLDIR)/src/n-bit $(HOLDIR)/src/real \
-	   $(HOLDIR)/src/res_quan/src $(HOLDIR)/src/real/analysis
+	   $(HOLDIR)/src/res_quan/src $(HOLDIR)/src/real/analysis legacy
+
+CLINE_OPTIONS = -r
 
 EXTRA_CLEANS = heap \
 	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) \
