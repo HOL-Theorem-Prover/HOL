@@ -3882,6 +3882,30 @@ Proof
     irule MEASURABLE_PROD_SIGMA' >> simp[o_DEF,ETA_AX]
 QED
 
+Theorem algebra_finite_subsets_imp_sigma_algebra :
+    !a. algebra a /\ FINITE (subsets a) ==> sigma_algebra a
+Proof
+    rw [sigma_algebra_def]
+ >> ‘FINITE c’ by PROVE_TAC [SUBSET_FINITE_I]
+ >> MP_TAC (Q.ISPEC ‘c :('a set) set’ finite_decomposition_simple) >> rw []
+ >> MATCH_MP_TAC ALGEBRA_FINITE_UNION >> art []
+QED
+
+Theorem algebra_finite_space_imp_sigma_algebra :
+    !a. algebra a /\ FINITE (space a) ==> sigma_algebra a
+Proof
+    rw [sigma_algebra_def]
+ >> Know ‘subsets a SUBSET (POW (space a))’
+ >- (rw [Once SUBSET_DEF, IN_POW] \\
+     fs [algebra_def, subset_class_def])
+ >> DISCH_TAC
+ >> ‘FINITE (POW (space a))’ by PROVE_TAC [FINITE_POW]
+ >> ‘c SUBSET (POW (space a))’ by PROVE_TAC [SUBSET_TRANS]
+ >> ‘FINITE c’ by PROVE_TAC [SUBSET_FINITE_I]
+ >> MP_TAC (Q.ISPEC ‘c :('a set) set’ finite_decomposition_simple) >> rw []
+ >> MATCH_MP_TAC ALGEBRA_FINITE_UNION >> art []
+QED
+
 val _ = export_theory ();
 
 (* References:
