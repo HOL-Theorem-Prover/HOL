@@ -111,6 +111,8 @@ local
     ("and-elim",        one_prem "and-elim"),
     (* the following is used in `(_ th-lemma arith ...)` inference rules *)
     ("arith",           builtin_name "arith"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("assign-bounds",   builtin_name "assign-bounds"),
     (* the following is used in `(_ th-lemma bv ...)` inference rules *)
     ("bv",              builtin_name "bv"),
     ("asserted",        zero_prems "asserted"),
