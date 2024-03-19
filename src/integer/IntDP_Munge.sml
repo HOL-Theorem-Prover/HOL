@@ -274,7 +274,7 @@ local
   open arithmeticTheory numSyntax
 
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
-                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
+                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD, INT_NUM_SUB,
                   GSYM INT_MUL, INT, INT_NUM_COND, Num_EQ_ABS]
   val p_var = mk_var("p", num)
   val q_var = mk_var("q", num)

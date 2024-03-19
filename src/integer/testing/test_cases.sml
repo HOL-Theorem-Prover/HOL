@@ -260,6 +260,8 @@ val terms_to_test =
   ("Github1203b", “x:num = x * Num 1i”, true),
   ("Github1203c", “0n = x * 0n”, true),
   ("Github1203d", “0n = Num 0i”, true),
+  ("Github1207a", “&(x - x:num) = 0i”, true),
+  ("Github1207b", “&(x - a:num) <= &x:int”, true),
   ("Github1209a",
    “! $var$(_ _) q r:int.
           0 = q * 5 + r /\ 0 <= r /\ r < 5 ==>
