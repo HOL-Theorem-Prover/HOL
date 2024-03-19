@@ -28,7 +28,7 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x2212 ^ UTF8.chr 0x221E,
 val _ = TeX_notation {hol = "+" ^ UTF8.chr 0x221E,
                       TeX = ("\\ensuremath{+\\infty}", 1)};
 
-val _ = TeX_notation {hol = "-" ^ UTF8.chr 0x221E,
+val _ = TeX_notation {hol = UTF8.chr 0x2212 ^ UTF8.chr 0x221E,
                       TeX = ("\\ensuremath{-\\infty}", 1)};
 
 Definition extreal_of_num_def :
