@@ -330,7 +330,7 @@ fun dtc' (t : term) =
 (* essentially those which are negated in the conclusion to the expression.   *)
 (* That is, "p" is positive whereas "~p" is negative.                         *)
 (*                                                                            *)
-(* This derives from the fact that a ==> b can be transformed into b \/ ¬a.   *)
+(* This derives from the fact that a ==> b can be transformed into b \/ ~a.   *)
 (*                                                                            *)
 (* Also, given the theorem a ==> b, which has 'a' as a premise, we can use    *)
 (* the contrapositive to derive a theorem with ~a as a conclusion. Similarly, *)
