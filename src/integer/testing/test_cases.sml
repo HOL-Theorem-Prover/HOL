@@ -256,6 +256,10 @@ val terms_to_test =
   L (``0i < (if 0 <= f (x:'a) - 1i then f x - 1 else &(g (f x - 1))) + 1``,
      "Num4b"),
   L (“n MOD 5 = 1  ==> 5 * ((n - 1) DIV 5) + 1 = n”, "Github0677"),
+  ("Github1203a", “0n = x * Num 0i”, true),
+  ("Github1203b", “x:num = x * Num 1i”, true),
+  ("Github1203c", “0n = x * 0n”, true),
+  ("Github1203d", “0n = Num 0i”, true),
   ("Github1209a",
    “! $var$(_ _) q r:int.
           0 = q * 5 + r /\ 0 <= r /\ r < 5 ==>
