@@ -5,13 +5,14 @@
  * are also defined.                                                         *
  *---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib QLib tautLib mesonLib metisLib
-     simpLib boolSimps BasicProvers;
+open HolKernel Parse boolLib BasicProvers;
+
+open QLib tautLib mesonLib metisLib simpLib boolSimps combinTheory;
 
 (* mention satTheory to work around dependency-analysis flaw in Holmake;
    satTheory is a dependency of BasicProvers, but without explicit mention
    here, Holmake will not rebuild relationTheory when satTheory changes. *)
-local open combinTheory satTheory in end;
+local open satTheory in end;
 
 val _ = new_theory "relation";
 
@@ -1218,11 +1219,19 @@ val _ = export_rewrites ["transitive_inv_image"]
  * Gordon's HOL development of the primitive recursion theorem.
  *---------------------------------------------------------------------------*)
 
-val RESTRICT_DEF =
-Q.new_definition
-("RESTRICT_DEF",
-   `RESTRICT (f:'a->'b) R (x:'a) = \y:'a. if R y x then f y else ARB`);
+(* NOTE: Now RESTRICT is based on the new combinTheory.RESTRICTION
 
+   :('a -> 'b) -> ('a -> 'a -> bool) -> 'a -> 'a -> 'b
+ *)
+val RESTRICT = new_definition
+  ("RESTRICT", “RESTRICT (f :'a->'b) R (x :'a) = RESTRICTION (\y. R y x) f”);
+
+(* The old definition of RESTRICT now becomes a theorem *)
+Theorem RESTRICT_DEF :
+    !(f :'a->'b) R x. RESTRICT f R x = \y. if R y x then f y else ARB
+Proof
+    SRW_TAC[][RESTRICT, FUN_EQ_THM, RESTRICTION, IN_DEF]
+QED
 
 (*---------------------------------------------------------------------------
  * Obvious, but crucially useful. Unary case. Handling the n-ary case might
