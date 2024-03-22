@@ -131,7 +131,9 @@ fun new_type_step1 tyname n {vp, lp} = let
   val {absrep_id, newty, repabs_pseudo_id, termP, termP_exists, termP_term_REP,
        term_ABS_t, term_ABS_pseudo11,
        term_REP_t, term_REP_11} =
-      newtypeTools.rich_new_type (tyname, term_exists)
+      newtypeTools.rich_new_type {tyname = tyname, exthm = term_exists,
+                                  ABS = tyname ^ "_ABS",
+                                  REP = tyname ^ "_REP"}
 in
   {term_ABS_pseudo11 = term_ABS_pseudo11, term_REP_11 = term_REP_11,
    term_REP_t = term_REP_t, term_ABS_t = term_ABS_t, absrep_id = absrep_id,
