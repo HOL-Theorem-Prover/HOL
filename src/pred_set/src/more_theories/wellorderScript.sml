@@ -74,28 +74,26 @@ val wellfounded_subset = store_thm(
   `?min. min IN s /\ !w. (w,min) IN r ==> w NOTIN s` by metis_tac [] >>
   metis_tac [SUBSET_DEF])
 
-val wellorder_results = newtypeTools.rich_new_type(
-  "wellorder",
-  prove(``?x. wellorder x``, qexists_tac `{}` >> simp[wellorder_EMPTY]))
+val wellorder_results = newtypeTools.rich_new_type
+   {tyname = "wellorder",
+    exthm  = prove(``?x. wellorder x``, qexists_tac `{}` >> simp[wellorder_EMPTY]),
+    ABS    = "mkWO",
+    REP    = "destWO"};
 
-val _ = overload_on ("mkWO", ``wellorder_ABS``)
-val _ = overload_on ("destWO", ``wellorder_REP``)
-
-val _ = save_thm("mkWO_destWO", #absrep_id wellorder_results)
-val _ = export_rewrites ["mkWO_destWO"]
-val destWO_mkWO = save_thm("destWO_mkWO", #repabs_pseudo_id wellorder_results)
+Theorem mkWO_destWO[simp] = #absrep_id wellorder_results
+Theorem destWO_mkWO = #repabs_pseudo_id wellorder_results
 
 val termP_term_REP = #termP_term_REP wellorder_results
 
 val elsOf_def = Define`
-  elsOf w = domain (wellorder_REP w) UNION range (wellorder_REP w)
+  elsOf w = domain (destWO w) UNION range (destWO w)
 `;
 
-val _ = overload_on("WIN", ``\p w. p IN strict (wellorder_REP w)``)
+val _ = overload_on("WIN", ``\p w. p IN strict (destWO w)``)
 val _ = set_fixity "WIN" (Infix(NONASSOC, 425))
-val _ = overload_on("WLE", ``\p w. p IN wellorder_REP w``)
+val _ = overload_on("WLE", ``\p w. p IN destWO w``)
 val _ = set_fixity "WLE" (Infix(NONASSOC, 425))
-val _ = overload_on ("wrange", ``\w. range (wellorder_REP w)``)
+val _ = overload_on ("wrange", ``\w. range (destWO w)``)
 
 val WIN_elsOf = store_thm(
   "WIN_elsOf",
@@ -112,13 +110,13 @@ val WIN_trichotomy = store_thm(
   ``!x y. x IN elsOf w /\ y IN elsOf w ==>
           (x,y) WIN w \/ (x = y) \/ (y,x) WIN w``,
   rpt strip_tac >>
-  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[elsOf_def, wellorder_def, strict_def, linear_order_def] >> metis_tac[]);
 
 val WIN_REFL = store_thm(
   "WIN_REFL",
   ``(x,x) WIN w <=> F``,
-  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, strict_def]);
 val _ = export_rewrites ["WIN_REFL"]
 
@@ -126,14 +124,14 @@ val WLE_TRANS = store_thm(
   "WLE_TRANS",
   ``(x,y) WLE w /\ (y,z) WLE w ==> (x,z) WLE w``,
   strip_tac >>
-  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, linear_order_def, transitive_def] >> metis_tac[]);
 
 val WLE_ANTISYM = store_thm(
   "WLE_ANTISYM",
   ``(x,y) WLE w /\ (y,x) WLE w ==> (x = y)``,
   strip_tac >>
-  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, linear_order_def, antisym_def]);
 
 val WIN_WLE = store_thm(
@@ -144,7 +142,7 @@ val WIN_WLE = store_thm(
 val elsOf_WLE = store_thm(
   "elsOf_WLE",
   ``x IN elsOf w <=> (x,x) WLE w``,
-  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, elsOf_def, reflexive_def, in_domain, in_range] >>
   metis_tac[]);
 
@@ -156,16 +154,16 @@ val transitive_strict = store_thm(
 val WIN_TRANS = store_thm(
   "WIN_TRANS",
   ``(x,y) WIN w /\ (y,z) WIN w ==> (x,z) WIN w``,
-  `transitive (wellorder_REP w) /\ antisym (wellorder_REP w)`
+  `transitive (destWO w) /\ antisym (destWO w)`
      by metis_tac [termP_term_REP, wellorder_def, linear_order_def] >>
   metis_tac [transitive_def, transitive_strict]);
 
 val WIN_WF = store_thm(
   "WIN_WF",
   ``wellfounded (\p. p WIN w)``,
-  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def] >>
-  qsuff_tac `(\p. p WIN w) = strict (wellorder_REP w)` >- simp[] >>
+  qsuff_tac `(\p. p WIN w) = strict (destWO w)` >- simp[] >>
   simp[FUN_EQ_THM, SPECIFICATION]);
 
 val CURRY_def = pairTheory.CURRY_DEF |> SPEC_ALL |> ABS ``y:'b``
@@ -211,16 +209,16 @@ val reflexive_rrestrict = store_thm(
 
 val wellorder_rrestrict = store_thm(
   "wellorder_rrestrict",
-  ``wellorder (rrestrict (wellorder_REP w) s)``,
-  `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
+  ``wellorder (rrestrict (destWO w) s)``,
+  `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def] >>
   rw[linear_order_rrestrict, reflexive_rrestrict] >>
   match_mp_tac wellfounded_subset >>
-  qexists_tac `strict(wellorder_REP w)` >>
+  qexists_tac `strict(destWO w)` >>
   rw[rrestrict_SUBSET, strict_subset]);
 
 val wobound_def = Define`
-  wobound x w = wellorder_ABS (rrestrict (wellorder_REP w) (iseg w x))
+  wobound x w = mkWO (rrestrict (destWO w) (iseg w x))
 `;
 
 val WIN_wobound = store_thm(
@@ -240,7 +238,7 @@ val localDefine = with_flag (computeLib.auto_import_definitions, false) Define
 
 val wellorder_cases = store_thm(
   "wellorder_cases",
-  ``!w. ?s. wellorder s /\ (w = wellorder_ABS s)``,
+  ``!w. ?s. wellorder s /\ (w = mkWO s)``,
   rw[Once (#termP_exists wellorder_results)] >>
   simp_tac (srw_ss() ++ DNF_ss)[#absrep_id wellorder_results]);
 
@@ -352,7 +350,7 @@ val wellorder_fromNat_SUM = store_thm(
   simp[]);
 
 val fromNatWO_def = Define`
-  fromNatWO n = wellorder_ABS { (INL i, INL j) | i <= j /\ j < n }
+  fromNatWO n = mkWO { (INL i, INL j) | i <= j /\ j < n }
 `
 
 val fromNatWO_11 = store_thm(
@@ -759,7 +757,7 @@ val orderlt_trichotomy = store_thm(
     metis_tac [wo2wo_mono, THE_DEF, WIN_elsOf, option_CASES]
   ]);
 
-val wZERO_def = Define`wZERO = wellorder_ABS {}`
+val wZERO_def = Define`wZERO = mkWO {}`
 
 val elsOf_wZERO = store_thm(
   "elsOf_wZERO",
@@ -892,7 +890,7 @@ val orderiso_unique = store_thm(
     (!x y. (x,y) WIN w1 ==> (f2 x, f2 y) WIN w2) ==>
     !x. x IN elsOf w1 ==> (f1 x = f2 x)``,
   rpt strip_tac >> spose_not_then strip_assume_tac >>
-  `wellorder (wellorder_REP w1)` by rw[termP_term_REP] >>
+  `wellorder (destWO w1)` by rw[termP_term_REP] >>
   fs[wellorder_def, wellfounded_def] >>
   first_x_assum (qspec_then `elsOf w1 INTER {x | f1 x <> f2 x}` mp_tac) >>
   asm_simp_tac (srw_ss() ++ SatisfySimps.SATISFY_ss) [] >>
@@ -939,7 +937,7 @@ val WLE_WIN_EQ = store_thm(
   metis_tac [elsOf_WLE, WLE_WIN, WIN_WLE]);
 
 val remove_def = Define`
-  remove e w = wellorder_ABS { (x,y) | x <> e /\ y <> e /\ (x,y) WLE w }
+  remove e w = mkWO { (x,y) | x <> e /\ y <> e /\ (x,y) WLE w }
 `;
 
 val wellorder_remove = store_thm(
@@ -947,7 +945,7 @@ val wellorder_remove = store_thm(
   ``wellorder { (x,y) | x <> e /\ y <> e /\ (x,y) WLE w }``,
   qspec_then `w` assume_tac (GEN_ALL termP_term_REP) >>
   qmatch_abbrev_tac `wellorder r` >>
-  `r = rrestrict (wellorder_REP w) (elsOf w DELETE e)`
+  `r = rrestrict (destWO w) (elsOf w DELETE e)`
      by (simp[EXTENSION, Abbr`r`, rrestrict_def, FORALL_PROD] >>
          metis_tac [WLE_elsOf]) >>
   simp[wellorder_rrestrict]);
@@ -988,11 +986,11 @@ val wellorder_ADD1 = store_thm(
       qexists_tac `a` >> metis_tac [WLE_elsOf]
     ],
     fs[linear_order_def, wellorder_def] >>
-    `domain (wellorder_REP w UNION {(x,e) | x IN elsOf w} UNION {(e,e)}) =
+    `domain (destWO w UNION {(x,e) | x IN elsOf w} UNION {(e,e)}) =
      e INSERT elsOf w`
        by (rw[EXTENSION, in_domain, in_range, EQ_IMP_THM] >>
            metis_tac [WLE_elsOf]) >>
-    `range (wellorder_REP w UNION {(x,e) | x IN elsOf w} UNION {(e,e)}) =
+    `range (destWO w UNION {(x,e) | x IN elsOf w} UNION {(e,e)}) =
      e INSERT elsOf w`
        by (rw[EXTENSION, in_domain, in_range] >>
            metis_tac [elsOf_WLE, WLE_elsOf]) >>
@@ -1028,16 +1026,16 @@ val elsOf_cardeq_iso = store_thm(
   ``INJ f (elsOf (wo:'b wellorder)) univ(:'a) ==>
     ?wo':'a wellorder. orderiso wo wo'``,
   simp[elsOf_def] >> strip_tac >>
-  `wellorder (wellorder_REP wo)` by simp[#termP_term_REP wellorder_results] >>
-  qexists_tac `wellorder_ABS (IMAGE (f ## f) (wellorder_REP wo))` >>
+  `wellorder (destWO wo)` by simp[#termP_term_REP wellorder_results] >>
+  qexists_tac `mkWO (IMAGE (f ## f) (destWO wo))` >>
   simp[orderiso_thm] >>
-  `wellorder (IMAGE (f ## f) (wellorder_REP wo))`
+  `wellorder (IMAGE (f ## f) (destWO wo))`
     by imp_res_tac INJ_preserves_wellorder >>
   qexists_tac `f` >>
   simp[destWO_mkWO, elsOf_def, domain_IMAGE_ff, range_IMAGE_ff] >>
   simp_tac bool_ss [GSYM IMAGE_UNION] >>
   qabbrev_tac `
-    els = domain (wellorder_REP wo) UNION range (wellorder_REP wo)` >>
+    els = domain (destWO wo) UNION range (destWO wo)` >>
   simp[BIJ_DEF, SURJ_IMAGE] >>
   simp[strict_def, EXISTS_PROD] >>
   fs[INJ_DEF] >>

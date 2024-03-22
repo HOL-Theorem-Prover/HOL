@@ -51,7 +51,7 @@ val _ = save_thm ("ordlt_trichotomy", ordlt_trichotomy)
 val _ = overload_on ("mkOrdinal", ``ordinal_ABS``)
 
 val allOrds_def = Define`
-  allOrds = wellorder_ABS { (x,y) | (x = y) \/ ordlt x y }
+  allOrds = mkWO { (x,y) | (x = y) \/ ordlt x y }
 `;
 val EXISTS_PROD = pairTheory.EXISTS_PROD
 val EXISTS_SUM = sumTheory.EXISTS_SUM

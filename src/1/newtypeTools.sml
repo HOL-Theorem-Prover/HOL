@@ -10,8 +10,7 @@ fun t1 /\ t2 = mk_conj(t1, t2)
 fun t1 ==> t2 = mk_imp (t1,t2)
 fun t1 == t2 = mk_eq(t1,t2)
 
-
-fun rich_new_type (tyname, exthm) = let
+fun rich_new_type {tyname, exthm, ABS, REP} = let
   val bij_ax = new_type_definition(tyname, exthm)
   val (termP, oldty) = let
     val (bvar, exthm_body) = exthm |> concl |> dest_exists
@@ -23,8 +22,8 @@ fun rich_new_type (tyname, exthm) = let
   val x = mk_var("x", oldty) and y = mk_var("y", oldty)
   val newty = bij_ax |> concl |> dest_exists |> #1 |> type_of |> dom_rng |> #1
   val term_ABSREP =
-      define_new_type_bijections { ABS = tyname ^ "_ABS", REP = tyname ^ "_REP",
-                                   name = tyname ^ "_ABSREP", tyax = bij_ax}
+      define_new_type_bijections { ABS = ABS, REP = REP,
+                                   name = tyname ^ "_ABSREP", tyax = bij_ax }
   val absrep_id = term_ABSREP |> CONJUNCT1
   val (term_ABS_t, term_REP_t) = let
     val eqn1_lhs = absrep_id|> concl |> strip_forall |> #2 |> lhs
@@ -73,6 +72,5 @@ in
    termP = termP,
    term_REP_t = term_REP_t, term_ABS_t = term_ABS_t}
 end
-
 
 end (* struct *)
