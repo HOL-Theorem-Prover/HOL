@@ -85,7 +85,7 @@ end
 fun callsimple t =
     (OmegaSimple.simple_CONV ORELSEC
      (OmegaSymbolic.eliminate_an_existential THENC
-      EVERY_DISJ_CONV callsimple)) t
+      EVERY_DISJ_CONV (IS_NOT_EXISTS_CONV ORELSEC callsimple))) t
 
 val simple =
   TRY_CONV (STRIP_QUANT_CONV OmegaMath.cond_removal) THENC
