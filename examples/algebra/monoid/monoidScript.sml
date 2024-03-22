@@ -854,6 +854,47 @@ val GPROD_SET_PROPERTY = store_thm(
   `CARD t < CARD s` by rw[] >>
   metis_tac[GPROD_SET_THM, DELETE_NON_ELEMENT, monoid_op_element]);
 
+(* ----------------------------------------------------------------------
+    monoid extension
+
+    lifting a monoid so that its carrier is the whole of the type but the
+    op is the same on the old carrier set.
+   ---------------------------------------------------------------------- *)
+
+Definition extend_def:
+  extend m = <| carrier := UNIV; id := m.id;
+                op := λx y. if x ∈ m.carrier then
+                              if y ∈ m.carrier then m.op x y else y
+                            else x |>
+End
+
+Theorem extend_is_monoid[simp]:
+  ∀m. Monoid m ⇒ Monoid (extend m)
+Proof
+  simp[extend_def, EQ_IMP_THM, Monoid_def] >> rw[] >> rw[] >>
+  gvs[]
+QED
+
+Theorem extend_carrier[simp]:
+  (extend m).carrier = UNIV
+Proof
+  simp[extend_def]
+QED
+
+Theorem extend_id[simp]:
+  (extend m).id = m.id
+Proof
+  simp[extend_def]
+QED
+
+Theorem extend_op:
+  x ∈ m.carrier ∧ y ∈ m.carrier ⇒ (extend m).op x y = m.op x y
+Proof
+  simp[extend_def]
+QED
+
+
+
 (* ------------------------------------------------------------------------- *)
 
 (* export theory at end *)
