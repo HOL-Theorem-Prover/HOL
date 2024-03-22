@@ -59,9 +59,12 @@ Inductive iscv:
 [~pair:] (!c d. iscv c /\ iscv d ==> iscv (P0 c d))
 End
 
-val cv_tydefrec = newtypeTools.rich_new_type("cv",
-  prove(“?cv. iscv cv”,
-        Q.EXISTS_TAC ‘N0 0’ >> REWRITE_TAC[iscv_num]))
+val cv_tydefrec = newtypeTools.rich_new_type
+   {tyname = "cv",
+    exthm  = prove(“?cv. iscv cv”,
+                   Q.EXISTS_TAC ‘N0 0’ >> REWRITE_TAC[iscv_num]),
+    ABS    = "cv_ABS",
+    REP    = "cv_REP"};
 
 val Pair_def = new_definition("Pair_def",
   “Pair c d = cv_ABS (P0 (cv_REP c) (cv_REP d))”);
