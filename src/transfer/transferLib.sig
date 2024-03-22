@@ -39,6 +39,6 @@ sig
   val temp_add_simp : thm -> unit
 
   val xfer_back_tac : string list -> tactic
-
+  val xfer_fwd_tac : string list -> tactic
 
 end
