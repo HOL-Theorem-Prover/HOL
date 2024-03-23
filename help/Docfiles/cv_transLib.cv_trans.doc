@@ -9,17 +9,15 @@ Translates functional definitions to the {cv_compute} subset of HOL.
 cv_transLib
 
 \DESCRIBE
-This function is that the same as {cv_transLib.cv_trans_pre} except that
-{cv_transLib.cv_trans} will attempt to automatically prove any precondition
-produced in the translation.
+This function is the same as {cv_transLib.cv_trans_pre}, except that it
+tries to discharge any preconditions automatically.
 
 \FAILURE
-When the translation produced a precondition that {cv_transLib.cv_trans} is
-unable to automatically prove, or encounters a sub-term containing a constant
-that has not already been translated, or {cv_transLib.cv_termination_tac}
-is insufficient for proving the termination goal of the translator-defined
-{:cv} function. In case the termination goal is not proved, then the
-problematic goal is pushed to the goal stack.
+When translation produces a precondition that {cv_transLib.cv_trans} cannot
+prove automatically, or encounters a sub-term containing a constant that has
+not already been translated, or {cv_transLib.cv_termination_tac} fails to prove
+the termination goal of the translator-defined {:cv} function. In the latter
+case, the termination goal is pushed onto the goal stack.
 
 \EXAMPLE
 
@@ -39,7 +37,6 @@ val it =
 Designed to produce definitions suitable for evaluation by {cv_transLib.cv_eval}.
 
 \SEEALSO
-cv_transLib.cv_trans,
 cv_transLib.cv_trans_pre,
 cv_transLib.cv_trans_pre_rec,
 cv_transLib.cv_trans_rec,

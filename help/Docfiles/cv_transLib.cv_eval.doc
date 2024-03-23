@@ -3,18 +3,19 @@
 \TYPE {cv_eval : term -> thm}
 
 \SYNOPSIS
-Evaluates closed terms with {cv_computeLib} using translations from {cv_transLib}
+Uses {cv_computeLib} to evaluate closed terms, equipped with translations from
+{cv_transLib}.
 
 \LIBRARY
 cv_transLib
 
 \DESCRIBE
-This function provides an easy interface to {cv_computeLib.cv_compute}, if
-{cv_transLib} has been set up to manage all constants in the given input term.
+Provides a user-friendly interface to {cv_computeLib.cv_compute}, as long as
+{cv_transLib} has been used to translate all constants in the given input term.
 
 \FAILURE
-When the input term has free variables, or when the input term contains constants
-that the cv translator has not translated before.
+When the input term contains either free variables or constants which have not
+yet been translated.
 
 \EXAMPLE
 
@@ -39,7 +40,6 @@ cv_transLib.cv_auto_trans,
 cv_transLib.cv_auto_trans_pre,
 cv_transLib.cv_auto_trans_pre_rec,
 cv_transLib.cv_auto_trans_rec,
-cv_transLib.cv_eval,
 cv_transLib.cv_eval_raw,
 cv_transLib.cv_termination_tac
 

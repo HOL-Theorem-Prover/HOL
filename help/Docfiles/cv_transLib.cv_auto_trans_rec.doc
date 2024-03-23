@@ -9,22 +9,20 @@ Translates functional definitions to the {cv_compute} subset of HOL.
 cv_transLib
 
 \DESCRIBE
-This is a recursive version of {cv_transLib.cv_trans_rec}. If the
-{cv_transLib.cv_trans_rec}-translation of the given HOL function
-encounters untranslated constants, then {cv_transLib.cv_auto_trans}
-will be called on each of the definitions of the not-yet-translated
-constants. The auto-functions are sometimes able to translate
-functions that mention higher-order functions, such as {MAP}.
+This is a recursive version of {cv_transLib.cv_trans_rec}. During translation
+of the given HOL function, {cv_transLib.cv_auto_trans_pre_rec} will call itself
+recursively on the definitions of any not-yet-translated constants it
+encounters.
+
+As with all {auto} variants, {cv_transLib.cv_auto_trans_rec} can sometimes
+translate uses of higher-order functions, such as {MAP}.
 
 \FAILURE
-When the recursive translations produce a precondition that the
-automation is unable to prove automatically, or the provided tactic
-is insufficient for proving the termination goal arising from the
-top-level translator-defined {:cv} function, or
-{cv_transLib.cv_termination_tac} is insufficient for proving
-the termination goal of recursively translated functions.
-In case the termination goal is not proved, then the problematic
-goal is pushed to the goal stack.
+When the translation produces a precondition that
+{cv_transLib.cv_auto_trans_rec} cannot prove automatically, or
+{cv_transLib.cv_termination_tac} fails to prove the termination goal of any
+recursively translated function, or the provided tactic fails to prove the
+termination goal of the top-level translator-defined {:cv} function.
 
 \EXAMPLE
 See {cv_transLib.cv_auto_trans} and {cv_transLib.cv_trans_rec} for
@@ -41,7 +39,6 @@ cv_transLib.cv_trans_rec,
 cv_transLib.cv_auto_trans,
 cv_transLib.cv_auto_trans_pre,
 cv_transLib.cv_auto_trans_pre_rec,
-cv_transLib.cv_auto_trans_rec,
 cv_transLib.cv_eval,
 cv_transLib.cv_termination_tac
 

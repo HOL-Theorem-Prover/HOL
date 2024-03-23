@@ -3,39 +3,38 @@
 \TYPE {cv_trans_deep_embedding : conv -> thm -> unit}
 
 \SYNOPSIS
-Translates equations defining a deeply embedded AST
+Translates equations defining a deeply embedded AST to the {cv_compute} subset
+of HOL.
 
 \LIBRARY
 cv_transLib
 
 \DESCRIBE
-This function behaves like a faster version of {cv_transLib.cv_trans} but
-can only translate constants. It is intended to be used in situations where
-large deep embeddings need to be translated for use with {cv_transLib.cv_eval}.
-The first argument to {cv_trans_deep_embedding} is a conversion that needs
-to be able to evaluate terms such as {from <deep_embedding>}.
+This function is similar to {cv_transLib.cv_trans}, but can only translate
+constants.  It is designed for the translation of large deep embeddings to
+{:cv} functions.  It takes as an argument a conversion which must evaluate
+terms such as {from <deep_embedding>} (e.g. {computeLib.EVAL}).
 
 \FAILURE
-When the input term is not a constant, or otherwise does not fit the intended
-use as translator for deep embeddings.
+When the input term is not a constant defining a suitable deep embedding.
 
 \EXAMPLE
 
 {
 > Datatype:
-  exp = Const num | Add exp exp
-End
+    exp = Const num | Add exp exp
+  End
 <<HOL message: Defined type: "exp">>
 > Definition sem_def:
-  sem (Const n) = n ∧
-  sem (Add e1 e2) = sem e1 + sem e2
-End
+    sem (Const n) = n ∧
+    sem (Add e1 e2) = sem e1 + sem e2
+  End
 Definition has been stored under "sem_def"
 val sem_def =
    ⊢ (∀n. sem (Const n) = n) ∧ ∀e1 e2. sem (Add e1 e2) = sem e1 + sem e2: thm
 > Definition deep_def:
-  deep = Add (Const 5) (Add (Const 2) (Const 3))
-End
+    deep = Add (Const 5) (Add (Const 2) (Const 3))
+  End
 Definition has been stored under "deep_def"
 val deep_def = ⊢ deep = Add (Const 5) (Add (Const 2) (Const 3)): thm
 > cv_trans sem_def;
@@ -49,6 +48,9 @@ val it = (): unit
 > cv_eval “sem deep”;
 val it = ⊢ sem deep = 10: thm
 }
+
+\COMMENTS
+Designed to produce definitions suitable for evaluation by {cv_transLib.cv_eval}.
 
 \SEEALSO
 cv_transLib.cv_trans,

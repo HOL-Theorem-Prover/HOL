@@ -3,17 +3,18 @@
 \TYPE {cv_eval_raw : term -> thm}
 
 \SYNOPSIS
-Evaluates closed terms with {cv_computeLib} using translations from {cv_transLib}
+Uses {cv_computeLib} to evaluate closed terms, equipped with translations from
+{cv_transLib}.
 
 \LIBRARY
 cv_transLib
 
 \DESCRIBE
-Exactly the same as {cv_transLib.cv_eval}, except that {cv_eval_raw} omits the potentially
-expensive evaluation out of the {:cv} type.
+Like {cv_transLib.cv_eval}, except it omits the potentially expensive
+evaluation out of the {:cv} type.
 
 \FAILURE
-Exactly the same as teh failures of {cv_transLib.cv_eval}.
+Fails in the same ways as {cv_transLib.cv_eval}.
 
 \EXAMPLE
 

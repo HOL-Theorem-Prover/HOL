@@ -3,15 +3,14 @@
 \TYPE {cv_termination_tac : tactic}
 
 \SYNOPSIS
-A tactic for simplifying goals concerning {cv_depth_sum}
+A tactic for simplifying goals concerning {cv_depth_sum}.
 
 \LIBRARY
 cv_transLib
 
 \DESCRIBE
-This tactic is used by {cv_transLib.cv_trans} when attempting to
-automatically prove termination goals that arise definitions of
-{:cv} functions.
+This tactic is used by {cv_transLib.cv_trans} (and siblings) when attempting to
+prove termination goals of translated {:cv} functions.
 
 \SEEALSO
 cv_transLib.cv_trans,
@@ -22,7 +21,6 @@ cv_transLib.cv_auto_trans,
 cv_transLib.cv_auto_trans_pre,
 cv_transLib.cv_auto_trans_pre_rec,
 cv_transLib.cv_auto_trans_rec,
-cv_transLib.cv_eval,
-cv_transLib.cv_termination_tac
+cv_transLib.cv_eval
 
 \ENDDOC
