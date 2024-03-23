@@ -477,13 +477,8 @@ local
              term that contains type real is provable by integer
              arithmetic *)
           profile "arith_prove(real)" RealField.REAL_ARITH_TAC goal
-        else (
+        else
           profile "arith_prove(int)" intLib.ARITH_TAC goal
-          (* the following exception handler is a workaround for this issue:
-             https://github.com/HOL-Theorem-Prover/HOL/issues/1203 *)
-          handle Feedback.HOL_ERR _ =>
-            profile "arith_prove(cooper)" intLib.COOPER_TAC goal
-        )
       val TRY = Tactical.TRY
       val ap_tactic =
         TRY AP_TERM_TAC >> TRY arith_tactic
