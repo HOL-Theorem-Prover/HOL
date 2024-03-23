@@ -583,8 +583,9 @@ fun base_transfer hints cleftp ruledb t =
       seq.filter (not o const_occurs RDOM_tm o concl)
     end
 
+fun nontrivial_eq t = is_eq t andalso lhs t !~ rhs t
 fun transfer_tm depth hints cleftp ruledb t =
-    base_transfer hints cleftp ruledb t |> search_for is_eq depth
+    base_transfer hints cleftp ruledb t |> search_for nontrivial_eq depth
 
 fun transfer_thm depth hints cleftp ruledb th =
     let
@@ -599,28 +600,37 @@ fun transfer_thm depth hints cleftp ruledb th =
       else MP th0 th
     end
 
+fun is_flipimp t = rator (rator t) ~~ “flip $==>” handle HOL_ERR _ => false
 val default_depth = Sref.new 4
 val the_ruledb = Sref.new ruledb
-fun xfer_back_tac hints (g as (asl,c)) =
+fun xfer_tac cleftp hints (g as (asl,c)) =
     let
-      val th = transfer_tm (Sref.value default_depth) hints false
+      val th = transfer_tm (Sref.value default_depth) hints cleftp
                            (Sref.value the_ruledb) c
+      val (is_imp', impc, impa, imp_munge, eql, eqr, eqmunge) =
+          if cleftp then
+            (is_flipimp, lhand, rand, CONV_RULE (REWR_CONV combinTheory.C_THM),
+             lhand, rand, I)
+          else (is_imp, rand, lhand, I, rand, lhand, SYM)
       val con = concl th
-      val mkE = mk_HOL_ERR "transferLib" "xfer_back_tac"
+      val mkE = mk_HOL_ERR "transferLib" "xfer_tac"
     in
       if aconv con c then ACCEPT_TAC th g
-      else if is_imp con then
-        if aconv (rand con) c then
-          if aconv (lhand con) c then
+      else if is_imp' con then
+        if aconv (impc con) c then
+          if aconv (impa con) c then
             raise mkE "Derived p ==> p implication"
-          else Tactic.MATCH_MP_TAC th g
+          else Tactic.MATCH_MP_TAC (imp_munge th) g
         else raise mkE "Derived an implication, but conclusion <> goal"
-      else if is_eq con andalso aconv (rand con) c then
-        if aconv (lhand con) c then raise mkE "Derived p <=> p equality"
-        else CONV_TAC (REWR_CONV (SYM th)) g
+      else if is_eq con andalso aconv (eql con) c then
+        if aconv (eqr con) c then raise mkE "Derived p <=> p equality"
+        else CONV_TAC (REWR_CONV (eqmunge th)) g
       else raise mkE ("Derived non-equality, non-implication: "^
                       term_to_string con)
     end
+
+val xfer_back_tac = xfer_tac false
+val xfer_fwd_tac = xfer_tac true
 
 open ruledb
 fun not_ceq th1 th2 = concl th1 !~ concl th2

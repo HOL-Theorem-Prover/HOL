@@ -74,7 +74,6 @@ New theories:
 New tools:
 ----------
 
-
 -   The linear decision procedure for the reals (`REAL_ARITH`, `REAL_ARITH_TAC`
     and `REAL_ASM_ARITH_TAC`) have been updated by porting the latest code from
     HOL-Light. There are two versions: those in the existing `RealArith` package
@@ -115,6 +114,9 @@ New tools:
   See the DESCRIPTION manual for a full description of the functionality offered by `cv_compute`.
 
   The definitions of `DIV` and `MOD` over natural numbers `num` have been given specifications for the case when the second operand is zero. We follow HOL Light and Candle in defining `n DIV 0 = 0` and `n MOD 0 = n`. These changes make `DIV` and `MOD` match the way Candle's compute primitive handles `DIV` and `MOD`.
+
+-   **Polarity-aware theorem-search**. Extending what is available through `DB.find` and `DB.match`, the `DB.polarity_search` allows the user to search for explicitly negative or positive occurrences of the specified pattern.
+    Thanks to Eric Hall for this contribution.
 
 New examples:
 -------------
