@@ -35,7 +35,10 @@ Proof
 QED
 
 val mrec as {absrep_id,...} =
-       newtypeTools.rich_new_type ("monoid", fullmonoids_exist)
+       newtypeTools.rich_new_type {tyname = "monoid",
+                                   exthm = fullmonoids_exist,
+                                   ABS = "monoid_ABS",
+                                   REP = "monoid_REP"};
 
 Overload mkmonoid = “monoid_ABS”
 
