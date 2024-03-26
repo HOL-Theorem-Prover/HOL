@@ -426,7 +426,7 @@ Proof
 QED
 
 Theorem lrnext_eq:
-  ∀n. sptree$lrnext n = 2 ** (LOG 2 (n + 1))
+  !n. sptree$lrnext n = 2 ** (LOG 2 (n + 1))
 Proof
   strip_tac >> completeInduct_on `n` >> rw[] >>
   rw[Once lrnext_def] >>

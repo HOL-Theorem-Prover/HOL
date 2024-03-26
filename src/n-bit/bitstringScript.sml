@@ -833,13 +833,13 @@ Proof
   simp[word_lsl_v2w, word_lsr_v2w, rotate_def, word_or_v2w] >>
   simp[Once v2w_11] >> simp[field_def, arithmeticTheory.ADD1] >>
   `shiftr v 0 = v` by simp[shiftr_def] >> simp[] >>
-  `¬ (LENGTH v < r MOD LENGTH v)` by (
+  `~(LENGTH v < r MOD LENGTH v)` by (
     simp[arithmeticTheory.NOT_LESS] >>
     irule arithmeticTheory.LESS_IMP_LESS_OR_EQ >>
     simp[arithmeticTheory.MOD_LESS]) >>
   rewrite_tac[fixwidth] >> simp[length_shiftr] >>
   qmatch_goalsub_abbrev_tac `bor a b` >>
-  `¬ (LENGTH (bor a b) < LENGTH v)` by (
+  `~(LENGTH (bor a b) < LENGTH v)` by (
     unabbrev_all_tac >> rewrite_tac[bor_def, bitwise_def] >>
     simp[length_shiftr, shiftl_def, length_fixwidth, length_pad_right]) >>
   unabbrev_all_tac >>
