@@ -5,8 +5,9 @@ Examples on using the cv_computeLib library
 
    examplesScript.sml      Two examples of how to define functions in the :cv
                            type, for use with cv_computeLib.compute.
-   cv_numsLib.{sig,sml}    An example building a conversion for natural number
-                           arithmetic using cv_computeLib.
-   cv_numsScript.sml       Support theorems and definitions for cv_numsLib.
-   cv_numsTestScript.sml   Examples using cv_numsLib.
 
+   cv_golScript.sml        An example which uses cv_transLib to evaluate
+                           Conway's Game of Life symbolically.
+
+   cv_bootScript.sml       An example which applies cv_transLib to the compiler
+                           from HOL/examples/bootstrap.

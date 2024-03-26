@@ -63,6 +63,19 @@ Proof
   rw[INT_ABS, SGN_def]
 QED
 
+Theorem ABS_SGN:
+  ABS (SGN i) = if i = 0 then 0 else 1
+Proof
+  Cases_on `i` >> gvs[SGN_def]
+QED
+
+Theorem SGN_MUL_Num[simp]:
+  SGN i * &Num i = i
+Proof
+  Cases_on `i` >> gvs[SGN_def] >>
+  simp[INT_MUL_CALCULATE]
+QED
+
 (*--------------------------------------------------------------------------
    INT_MUL_POS_SIGN: thm
    |- !a b. 0 < a ==> 0 < b ==> 0 < a * b
