@@ -131,3 +131,10 @@ val _ = if s =
         then
           OK()
         else gotdie s
+
+val _ = tprint "Testing printing of fn update syntax"
+val expected = "\\HOLFreeVar{f}\\llparenthesis\\HOLFreeVar{k} \\mapsto \
+               \\\HOLFreeVar{v}\\rrparenthesis"
+val _ = require_msg (check_result (equal expected)) String.toString
+                    (pp_to_string 70 pp_term_as_tex)
+                    “f (| k |-> v |)”

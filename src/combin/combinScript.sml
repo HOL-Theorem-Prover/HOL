@@ -67,6 +67,12 @@ in
   add_user_printer ("combin.updpp", “UPDATE k v f”)
 end;
 
+val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = UnicodeChars.lensel}
+val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = "(|"}
+val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = UnicodeChars.lenser}
+val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = "|)"}
+val _ = TeX_notation {TeX = ("\\mapsto", 1), hol = "↦"}              (* UOK *)
+val _ = TeX_notation {TeX = ("\\mapsto", 1), hol = "|->"}
 
 local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}
