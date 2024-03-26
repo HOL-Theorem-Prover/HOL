@@ -1,8 +1,26 @@
+(*---------------------------------------------------------------------------*
+ *       New routines supporting the definition of types                     *
+ *                                                                           *
+ * USAGE: rich_new_type {tyname, exthm, ABS, REP}                            *
+ *                                                                           *
+ * ARGUMENTS: tyname -- the name of the new type                             *
+ *                                                                           *
+ *            exthm --- the existence theorem of the new type (|- ?x. P x)   *
+ *                                                                           *
+ *            ABS  --- the name of the required abstraction function         *
+ *                                                                           *
+ *            REP  --- the name of the required representation function      *
+ *---------------------------------------------------------------------------*)
+
 signature newtypeTools =
 sig
 
   include Abbrev
-  val rich_new_type : string * thm ->
+  val rich_new_type : {tyname: string,
+                       exthm: thm,
+                       ABS: string,
+                       REP: string}
+                       ->
                       {absrep_id: thm,
                        newty: hol_type,
                        repabs_pseudo_id: thm,

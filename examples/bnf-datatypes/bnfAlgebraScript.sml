@@ -196,14 +196,13 @@ Type alg[local,pp] = “:α set # ((β,α)F -> α)”
 val idx_tydef as
               {absrep_id, newty, repabs_pseudo_id, termP, termP_exists,
                termP_term_REP, ...} =
-  newtypeTools.rich_new_type(
-  "idx",
+  newtypeTools.rich_new_type{
+  tyname = "idx",
   prove(“∃i : (α,β) alg. alg i”,
         simp[EXISTS_PROD] >> qexists_tac ‘UNIV’ >>
-        simp[alg_def]));
-Overload dIx = (#term_REP_t idx_tydef)
-Overload mkIx = (#term_ABS_t idx_tydef)
-
+        simp[alg_def]),
+  ABS = "mkIx",
+  REP = "dIx"};
 
 Definition bigprod_def:
   bigprod : ((α,β)idx -> α, β) alg =

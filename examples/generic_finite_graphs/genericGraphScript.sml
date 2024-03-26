@@ -125,23 +125,47 @@ Definition edge_cst_def:
      (dirp ⇒ ∀m n. CARD {(m,n,l) | l | (m,n,l) ∈ es} ≤ 1))
 End
 
-val SL_OK_tydefrec = newtypeTools.rich_new_type("SL_OK",
-  prove(“∃x:unit. (λx. T) x”, simp[]));
-val noSL_tydefrec = newtypeTools.rich_new_type("noSL",
-  prove(“∃x:num. (λx. T) x”, simp[]));
+val SL_OK_tydefrec = newtypeTools.rich_new_type
+   {tyname = "SL_OK",
+    exthm  = prove(“∃x:unit. (λx. T) x”, simp[]),
+    ABS    = "SL_OK_ABS",
+    REP    = "SL_OK_REP"};
 
-val INF_OK_tydefrec = newtypeTools.rich_new_type("INF_OK",
-  prove(“∃x:num. (λx. T) x”, simp[]));
-val finiteG_tydefrec = newtypeTools.rich_new_type("finiteG",
-  prove(“∃x:unit. (λx. T) x”, simp[]));
+val noSL_tydefrec = newtypeTools.rich_new_type
+   {tyname = "noSL",
+    exthm  = prove(“∃x:num. (λx. T) x”, simp[]),
+    ABS    = "noSL_ABS",
+    REP    = "noSL_REP"};
 
-val undirectedG_tydefrec = newtypeTools.rich_new_type("undirectedG",
-  prove(“∃x:num. (λx. T) x”, simp[]));
-val directedG_tydefrec = newtypeTools.rich_new_type("directedG",
-  prove(“∃x:unit. (λx. T) x”, simp[]));
+val INF_OK_tydefrec = newtypeTools.rich_new_type
+   {tyname = "INF_OK",
+    exthm  = prove(“∃x:num. (λx. T) x”, simp[]),
+    ABS    = "INF_OK_ABS",
+    REP    = "INF_OK_REP"};
 
-val allEdgesOK_tydefrec = newtypeTools.rich_new_type("allEdgesOK",
-  prove(“∃x:num. (λx. T) x”, simp[]));
+val finiteG_tydefrec = newtypeTools.rich_new_type
+   {tyname = "finiteG",
+    exthm  = prove(“∃x:unit. (λx. T) x”, simp[]),
+    ABS    = "finiteG_ABS",
+    REP    = "finiteG_REP"};
+
+val undirectedG_tydefrec = newtypeTools.rich_new_type
+   {tyname = "undirectedG",
+    exthm  = prove(“∃x:num. (λx. T) x”, simp[]),
+    ABS    = "undirectedG_ABS",
+    REP    = "undirectedG_REP"};
+
+val directedG_tydefrec = newtypeTools.rich_new_type
+   {tyname = "directedG",
+    exthm  = prove(“∃x:unit. (λx. T) x”, simp[]),
+    ABS    = "directedG_ABS",
+    REP    = "directedG_REP"};
+
+val allEdgesOK_tydefrec = newtypeTools.rich_new_type
+   {tyname = "allEdgesOK",
+    exthm  = prove(“∃x:num. (λx. T) x”, simp[]),
+    ABS    = "allEdgesOK_ABS",
+    REP    = "allEdgesOK_REP"};
 
 Definition itself2set_def[simp]:
   itself2set (:'a) = univ(:'a)
@@ -351,11 +375,14 @@ Proof
   qexists ‘{}’ >> simp[]
 QED
 
-val tydefrec = newtypeTools.rich_new_type("graph", graphs_exist)
+val tydefrec = newtypeTools.rich_new_type
+   {tyname = "graph",
+    exthm  = graphs_exist,
+    ABS    = "graph_ABS",
+    REP    = "graph_REP"};
 
 (* any undirected graph *)
 Type udgraph[pp] = “:('a,undirectedG,'ec,'el,'nf,'nl,'sl)graph”
-
 
 (* finite directed graph with labels on nodes and edges, possibility of
    multiple, but finitely many edges, and with self-loops allowed *)
@@ -1886,4 +1913,5 @@ Proof
   simp[DELETE_COMM, DIFF_COMM]
 QED
 
-val  _ = export_theory();
+val _ = export_theory();
+val _ = html_theory "genericGraph";

@@ -28,7 +28,10 @@ QED
 
 val {absrep_id, newty, repabs_pseudo_id, termP, termP_exists, termP_term_REP,
      term_ABS_t, term_ABS_pseudo11, term_REP_t, term_REP_11} =
-    newtypeTools.rich_new_type("sexpcode", decencs_exist);
+    newtypeTools.rich_new_type{tyname = "sexpcode",
+                               exthm = decencs_exist,
+                               ABS = "sexpcode_ABS",
+                               REP = "sexpcode_REP"};
 
 Definition encode_def[nocompute]:
   encode sc = SND (^term_REP_t sc)
