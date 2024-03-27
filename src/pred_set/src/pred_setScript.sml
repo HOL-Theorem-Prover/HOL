@@ -7519,6 +7519,160 @@ val _ = export_rewrites
      "SUBSET_UNION"
 ];
 
+(* ------------------------------------------------------------------------- *)
+(* More theorems about EXTENSIONAL and RESTRICTION                           *)
+(*                                                                           *)
+(* (Ported from HOL-Light's sets.ml by Chun Tian)                            *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem EXTENSIONAL :
+    !s. EXTENSIONAL s = {f :'a->'b | !x. x NOTIN s ==> f x = ARB}
+Proof
+    RW_TAC std_ss [IN_APP, EXTENSIONAL_def, Once EXTENSION, GSPECIFICATION]
+QED
+
+Theorem EXTENSIONAL_EMPTY :
+    EXTENSIONAL {} = {\x:'a. ARB:'b}
+Proof
+  RW_TAC std_ss [EXTENSION, IN_EXTENSIONAL, IN_SING, NOT_IN_EMPTY] THEN
+  REWRITE_TAC[FUN_EQ_THM]
+QED
+
+Theorem EXTENSIONAL_UNIV :
+    !f. EXTENSIONAL univ(:'a) f
+Proof
+  RW_TAC std_ss [EXTENSIONAL_def, IN_UNIV]
+QED
+
+Theorem EXTENSIONAL_EQ :
+    !s f (g :'a->'b).
+     f IN EXTENSIONAL s /\ g IN EXTENSIONAL s /\ (!x. x IN s ==> f x = g x)
+     ==> f = g
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[FUN_EQ_THM] THEN GEN_TAC THEN
+  ASM_CASES_TAC “(x :'a) IN s” THENL
+  [ASM_SIMP_TAC std_ss [],
+   ASM_MESON_TAC[IN_EXTENSIONAL_UNDEFINED]]
+QED
+
+Theorem RESTRICTION_IN_EXTENSIONAL :
+    !s (f :'a->'b). RESTRICTION s f IN EXTENSIONAL s
+Proof
+  SIMP_TAC std_ss [IN_EXTENSIONAL, RESTRICTION]
+QED
+
+Theorem RESTRICTION_EXTENSION :
+    !s f (g :'a->'b). RESTRICTION s f = RESTRICTION s g <=>
+                (!x. x IN s ==> f x = g x)
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC [RESTRICTION, FUN_EQ_THM] THEN
+  EQ_TAC >> RW_TAC std_ss [] THEN
+  Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o (Q.SPEC ‘x’)) THEN
+  RW_TAC std_ss []
+QED
+
+Theorem RESTRICTION_FIXPOINT :
+    !s (f :'a->'b). RESTRICTION s f = f <=> f IN EXTENSIONAL s
+Proof
+    REWRITE_TAC[IN_EXTENSIONAL, FUN_EQ_THM, RESTRICTION]
+ >> rpt GEN_TAC >> EQ_TAC >> RW_TAC std_ss []
+ >- (Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [])
+ >> Cases_on ‘x IN s’ >> RW_TAC std_ss []
+QED
+
+Theorem RESTRICTION_RESTRICTION :
+    !s t (f :'a->'b).
+        s SUBSET t ==> RESTRICTION s (RESTRICTION t f) = RESTRICTION s f
+Proof
+    REWRITE_TAC [FUN_EQ_THM, RESTRICTION]
+ >> RW_TAC std_ss [SUBSET_DEF]
+QED
+
+Theorem RESTRICTION_IDEMP :
+    !s (f :'a->'b). RESTRICTION s (RESTRICTION s f) = RESTRICTION s f
+Proof
+  REWRITE_TAC[RESTRICTION_FIXPOINT, RESTRICTION_IN_EXTENSIONAL]
+QED
+
+Theorem IMAGE_RESTRICTION :
+    !(f :'a->'b) s t. s SUBSET t ==> IMAGE (RESTRICTION t f) s = IMAGE f s
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_IMAGE, RESTRICTION, SUBSET_DEF]
+ >> EQ_TAC
+ >| [ (* goal 1 (of 2) *)
+      DISCH_THEN (X_CHOOSE_THEN “y :'a” MP_TAC) \\
+      RW_TAC std_ss []
+      >- (Q.EXISTS_TAC ‘y’ >> ASM_REWRITE_TAC []) \\
+      Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o (Q.SPEC ‘y’)) \\
+      ASM_REWRITE_TAC [],
+      (* goal 2 (of 2) *)
+      DISCH_THEN (X_CHOOSE_THEN “y :'a” MP_TAC) \\
+      RW_TAC std_ss [] \\
+      Q.EXISTS_TAC ‘y’ >> RW_TAC std_ss [] ]
+QED
+
+Theorem RESTRICTION_COMPOSE_RIGHT :
+    !(f :'a->'b) (g :'b->'c) s.
+        RESTRICTION s (g o RESTRICTION s f) =
+        RESTRICTION s (g o f)
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, o_DEF, RESTRICTION]
+QED
+
+Theorem RESTRICTION_COMPOSE_LEFT :
+    !(f :'a->'b) (g :'b->'c) s t.
+        IMAGE f s SUBSET t
+        ==> RESTRICTION s (RESTRICTION t g o f) =
+            RESTRICTION s (g o f)
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, o_DEF, RESTRICTION, IN_IMAGE, SUBSET_DEF]
+ >> Cases_on ‘x IN s’
+ >> ASM_REWRITE_TAC []
+ >> ‘f x IN t’ by (FIRST_X_ASSUM MATCH_MP_TAC \\
+                   Q.EXISTS_TAC ‘x’ >> ASM_REWRITE_TAC [])
+ >> ASM_SIMP_TAC std_ss []
+QED
+
+Theorem RESTRICTION_COMPOSE :
+    !(f :'a->'b) (g :'b->'c) s t.
+        IMAGE f s SUBSET t
+        ==> RESTRICTION s (RESTRICTION t g o RESTRICTION s f) =
+            RESTRICTION s (g o f)
+Proof
+  SIMP_TAC std_ss [RESTRICTION_COMPOSE_LEFT, RESTRICTION_COMPOSE_RIGHT]
+QED
+
+Theorem RESTRICTION_UNIQUE :
+    !s (f :'a->'b) g.
+        RESTRICTION s f = g <=> EXTENSIONAL s g /\ !x. x IN s ==> f x = g x
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, RESTRICTION, EXTENSIONAL_def]
+ >> EQ_TAC
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 3) *)
+      Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o (Q.SPEC ‘x’)) \\
+      RW_TAC std_ss [],
+      (* goal 2 (of 3) *)
+      Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o (Q.SPEC ‘x’)) \\
+      RW_TAC std_ss [],
+      (* goal 3 (of 3) *)
+      Cases_on ‘x IN s’ >> RW_TAC std_ss [] ]
+QED
+
+Theorem RESTRICTION_UNIQUE_ALT :
+    !s (f :'a->'b) g.
+        f = RESTRICTION s g <=> EXTENSIONAL s f /\ !x. x IN s ==> f x = g x
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, RESTRICTION, EXTENSIONAL_def]
+ >> EQ_TAC
+ >> RW_TAC std_ss []
+ >> Cases_on ‘x IN s’
+ >> RW_TAC std_ss []
+QED
+
+(*---------------------------------------------------------------------------*)
+
 val _ = Theory.quote_adjoin_to_theory
   `val SET_SPEC_ss : simpLib.ssfrag`
 `local
