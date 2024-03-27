@@ -532,6 +532,18 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
+(* NOTE: HOL-Light doesn't have this theorem. *)
+Theorem EXTENSIONAL_RESTRICTION :
+    !s (f :'a->'b). EXTENSIONAL s (RESTRICTION s (f :'a -> 'b))
+Proof
+    REWRITE_TAC [EXTENSIONAL_def, RESTRICTION, IN_DEF]
+ >> BETA_TAC
+ >> rpt STRIP_TAC
+ >> reverse COND_CASES_TAC >- REFL_TAC
+ >> POP_ASSUM MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
+
 (*---------------------------------------------------------------------------*)
 
 val _ = adjoin_to_theory
