@@ -37,6 +37,7 @@ struct
                      | DEF_AXIOM of Term.term
                      | ELIM_UNUSED of Term.term
                      | HYPOTHESIS of Term.term
+                     | IFF_FALSE of proofterm * Term.term
                      | IFF_TRUE of proofterm * Term.term
                      | INTRO_DEF of Term.term
                      | LEMMA of proofterm * Term.term

@@ -90,8 +90,8 @@ local
     (intSyntax.minus_tm, apfst_K "-"),
     (intSyntax.plus_tm, apfst_K "+"),
     (intSyntax.mult_tm, apfst_K "*"),
-    (* (..., "div"), *)
-    (* (..., "mod"), *)
+    (Term.prim_mk_const {Thy="integer", Name="ediv"}, apfst_K "div"),
+    (Term.prim_mk_const {Thy="integer", Name="emod"}, apfst_K "mod"),
     (intSyntax.absval_tm, apfst_K "abs"),
     (intSyntax.leq_tm, apfst_K "<="),
     (intSyntax.less_tm, apfst_K "<"),
@@ -421,18 +421,24 @@ local
     end
     handle Feedback.HOL_ERR _ =>
 
-    (* let binder - somewhat similar to quantifiers, but we only
-       translate one let at a time (so we don't have to worry about
-       semantic differences caused by parallel vs. sequential let) *)
+    (* let binder - somewhat similar to quantifiers *)
     let
-      val (M, N) = boolSyntax.dest_let tm
-      val (var, body) = Term.dest_abs M
-      val (acc, (Ndecls, N)) = translate_term (acc, (bounds, N))
-      val (bounds, name) = create_bound_name (bounds, var)
+      val (bindings, body) = pairSyntax.dest_anylet tm
+      val (vars, bodies) = ListPair.unzip bindings
+      (* we should translate the bodies without first creating the bound names *)
+      val bounds_bodies = List.map (fn body => (bounds, body)) bodies
+      val (acc, decls_bodies) = Lib.foldl_map translate_term (acc, bounds_bodies)
+      (* now we can create the bound names *)
+      val (bounds, smtvars) = Lib.foldl_map create_bound_name (bounds, vars)
+      val decls_bodies_smtvars = ListPair.zipEq (decls_bodies, smtvars)
+      val (decls, smtbinds) = List.foldl (fn (((d, b), v), (decls, smtbinds)) =>
+        (d @ decls, "(" ^ v ^ " " ^ b ^ ")" :: smtbinds)) ([], [])
+          decls_bodies_smtvars
+      val bindings_str = String.concatWith " " (List.rev smtbinds)
       val (acc, (bodydecls, body)) = translate_term (acc, (bounds, body))
     in
-      (acc, (Ndecls @ bodydecls,
-        "(let ((" ^ name ^ " " ^ N ^ ")) " ^ body ^ ")"))
+      (acc, (decls @ bodydecls,
+        "(let (" ^ bindings_str ^ ") " ^ body ^ ")"))
     end
     handle Feedback.HOL_ERR _ =>
 
@@ -628,8 +634,9 @@ in
         (* arithmeticTheory *)
         GREATER_DEF, GREATER_EQ, MIN_DEF, MAX_DEF,
         (* integerTheory *)
-        INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN, INT_MUL,
-        INT_OF_NUM, INT_POS,
+        INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN, INT_OF_NUM,
+        INT_POS, NUM_OF_INT, NUM_INT_MUL, NUM_INT_EDIV, NUM_INT_EMOD,
+        INT_DIV_EDIV, INT_MOD_EMOD, INT_QUOT_EDIV, INT_REM_EMOD,
         (* others *)
         int_arithTheory.INT_NUM_SUB,
         realaxTheory.real_min, realaxTheory.real_max, realTheory.abs

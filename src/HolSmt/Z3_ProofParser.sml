@@ -111,6 +111,8 @@ local
     ("and-elim",        one_prem "and-elim"),
     (* the following is used in `(_ th-lemma arith ...)` inference rules *)
     ("arith",           builtin_name "arith"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("assign-bounds",   builtin_name "assign-bounds"),
     (* the following is used in `(_ th-lemma bv ...)` inference rules *)
     ("bv",              builtin_name "bv"),
     ("asserted",        zero_prems "asserted"),
@@ -122,6 +124,7 @@ local
     (* the following is used in `(_ th-lemma arith ...)` inference rules *)
     ("farkas",          builtin_name "farkas"),
     ("hypothesis",      zero_prems "hypothesis"),
+    ("iff-false",       one_prem "iff-false"),
     ("iff-true",        one_prem "iff-true"),
     ("intro-def",       zero_prems "intro-def"),
     ("lemma",           one_prem "lemma"),
@@ -138,7 +141,9 @@ local
     ("quant-inst",      list_args_zero_prems "quant-inst"),
     ("quant-intro",     one_prem "quant-intro"),
     ("refl",            zero_prems "refl"),
-    ("rewrite",         zero_prems "rewrite"),
+    (* in `rewrite` proof rules, we currently ignore the indices (if they exist) *)
+    ("rewrite",         (fn token => fn indices => fn prems =>
+      zero_prems "rewrite" token [] prems)),
     ("sk",              zero_prems "sk"),
     ("symm",            one_prem "symm"),
     ("th-lemma",        SmtLib_Theories.list_list (fn token => fn indices =>
@@ -342,6 +347,7 @@ local
       ("def-axiom",       zero_prems_pt DEF_AXIOM),
       ("elim-unused",     zero_prems_pt ELIM_UNUSED),
       ("hypothesis",      zero_prems_pt HYPOTHESIS),
+      ("iff-false",       one_prem_pt IFF_FALSE),
       ("iff-true",        one_prem_pt IFF_TRUE),
       ("intro-def",       zero_prems_pt INTRO_DEF),
       ("lemma",           one_prem_pt LEMMA),
