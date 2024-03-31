@@ -36,7 +36,7 @@ Type lang = ``:'a list set``
 
 val epsilon = UTF8.chr 0x03B5;
 
-Overload epsilon = “[]”;
+Overload epsilon[inferior] = “[]”;
 
 (*---------------------------------------------------------------------------*)
 (* Binary language concatenation. Right infix                                *)
