@@ -85,7 +85,6 @@ val _ = add_infix_type
             ParseName = SOME "|->",
             Assoc = RIGHT,
             Name = "fmap"};
-val _ = TeX_notation {hol = "|->", TeX = ("\\HOLTokenMapto{}", 1)}
 
 (* --------------------------------------------------------------------- *)
 (* Define bijections                                                     *)

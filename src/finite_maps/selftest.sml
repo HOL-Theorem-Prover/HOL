@@ -58,6 +58,14 @@ val _ = app testeval [
    boolSyntax.T)
 ]
 
+val _ = tprint "Testing TeX form of finite map printing"
+val _ = require_msg
+          (check_result (equal "\\alpha{} \\HOLTokenMapto{} \\beta{}"))
+          String.toString
+          (PP.pp_to_string 70 EmitTeX.pp_type_as_tex) “:'a |-> 'b”
+
+
+
 val _ = temp_add_sptree_printer ()
 val _ = remove_sptree_printer ()
 val _ = temp_add_sptree_printer ()
@@ -68,6 +76,7 @@ val _ = app tpp' [
   ("BS (LS c) (a:num) (BS LN b (LS d))", "sptree$fromList [a; b; c; d]"),
   ("BS LN (a:num) (BS LN b (LS d))", "sptree$fromAList [(0,a); (1,b); (3,d)]")
 ]
+
 
 (* File: enumfDemo Author: F. Lockwood Morris created: 17 Dec. 2013 *)
 
