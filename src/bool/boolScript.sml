@@ -54,6 +54,16 @@ val _ = TeX_notation {hol = "if",   TeX = ("\\HOLKeyword{if}", 2)}
 val _ = TeX_notation {hol = "then", TeX = ("\\HOLKeyword{then}", 4)}
 val _ = TeX_notation {hol = "else", TeX = ("\\HOLKeyword{else}", 4)}
 
+(* type syntax *)
+val _ = TeX_notation {hol = "->",   TeX = ("\\HOLTokenMap{}", 1)}
+val _ = TeX_notation {hol = "'a",   TeX = ("\\alpha{}", 1)}
+val _ = TeX_notation {hol = "'b",   TeX = ("\\beta{}", 1)}
+val _ = TeX_notation {hol = "'c",   TeX = ("\\gamma{}", 1)}
+val _ = TeX_notation {hol = "'d",   TeX = ("\\delta{}", 1)}
+val _ = TeX_notation {hol = "'e",   TeX = ("\\epsilon{}", 1)}
+(* past this point the Greek letters are likely to be more confusing than
+   helpful *)
+
 
 val T_DEF =
  Definition.new_definition
