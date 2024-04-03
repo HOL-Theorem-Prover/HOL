@@ -271,7 +271,19 @@ val terms_to_test =
   ("Github1209b",
    “! v q r:int. 0 = q * 5 + r /\ 0 <= r /\ r < 5 ==> v + r = 0”, false),
   ("Github1209c",
-   “?i q r. ~(~(0i = q * 5 + r /\ 0 <= r /\ r < 5) \/ i + r = 0)”, true)
+   “?i q r. ~(~(0i = q * 5 + r /\ 0 <= r /\ r < 5) \/ i + r = 0)”, true),
+  ("asl-equiv1",
+   “~(j > 0) /\ -1 < i + j - k /\ ~(-1 < k - i) /\ -1 < i - k /\ j < 0 /\
+    k <= i ==> Num (1 + (i + j - k)) < Num (1 + (i - k))”, true),
+  ("asl-equiv2",
+   “?k j i.
+     (k < i + j + 1 /\ k + 1 <= i /\ j < 0) /\
+     (1 + i < k /\
+      (1 + (i + j) < k \/
+       k <= 1 + (i + j) /\ 2 * k <= 2 + (2 * i + j)) \/
+     k <= 1 + i /\
+     (1 + (i + j) < k /\ 2 + (2 * i + j) <= 2 * k \/
+      1 + (i + -k) <= 1 + (i + j + -k)))”, false)
 ];
 
 val omega_test_terms = [
