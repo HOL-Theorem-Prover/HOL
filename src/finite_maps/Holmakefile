@@ -1,4 +1,4 @@
-INCLUDES = ../sort ../n-bit ../bag ../res_quan/src ../string
+INCLUDES = ../sort ../n-bit ../bag ../res_quan/src ../string ../TeX
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
