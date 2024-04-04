@@ -29,10 +29,10 @@ ifdef HOLSELFTESTLEVEL
 EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
          CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
-	 STE algorithms computability countchars cv_compute dependability dev \
+         STE algorithms computability countchars dependability dev \
          developers/ThmSetData \
-	 fermat \
-	 formal-languages formal-languages/context-free \
+         fermat \
+         formal-languages formal-languages/context-free \
          formal-languages/contig \
          formal-languages/lambek formal-languages/regular/regular-play \
          fun-op-sem/lprefix_lub fun-op-sem/for \
@@ -60,6 +60,11 @@ SRCTESTDIRS = \
 ifdef POLY
 SRCTESTDIRS += n-bit/interactive_tests
 EXDIRS += RL_Environment
+endif
+
+# NOTE: these examples are very slow under the expk kernel
+ifeq ($(KERNELID),stdknl)
+EXDIRS += bootstrap cv_compute
 endif
 
 INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
@@ -92,18 +97,12 @@ EX2DIRS += separationLogic/src/holfoot/poly logic/temporal_deep/src/examples
 endif
 
 INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))
-
-ifeq ($(KERNELID),stdknl)
-INCLUDES += ../../../examples/bootstrap
-endif
-
 endif
 
 ifeq($(HOLSELFTESTLEVEL),3)
 EX3DIRS = arm/ARM_security_properties \
           diningcryptos \
           l3-machine-code/cheri/step
-
 
 ifdef POLY
 EX3DIRS += machine-code theorem-prover
