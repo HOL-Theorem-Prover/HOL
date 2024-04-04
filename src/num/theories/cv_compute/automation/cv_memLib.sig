@@ -4,6 +4,7 @@ sig
 
   datatype verbosity = Silent | Quiet | Verbose;
 
+  val use_long_names  : bool ref
   val verbosity_level : verbosity ref
   val cv_print        : verbosity -> string -> unit
   val cv_print_term   : verbosity -> term -> unit

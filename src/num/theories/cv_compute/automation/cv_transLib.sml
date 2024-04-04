@@ -159,6 +159,11 @@ fun mk_cv_rep_var_assum var_tm = let
   val cv = mk_var("cv_" ^ var_name,cvSyntax.cv)
   in mk_cv_rep p cv f var_tm end;
 
+fun add_prefix thy base_name =
+  if !use_long_names andalso thy <> current_theory() then
+    thy ^ "_" ^ base_name
+  else base_name;
+
 fun mk_assum_for def = let
   val lhs_tm = def |> SPEC_ALL |> concl |> dest_eq |> fst
   val (f,args) = strip_comb lhs_tm
@@ -167,8 +172,9 @@ fun mk_assum_for def = let
   val ps = map cv_rep_pre arg_assums
   val cvs = map cv_rep_cv_tm arg_assums
   val funname = dest_const f |> fst
+  val thy = #Thy (dest_thy_const f)
   val cv_fun_ty = foldr (fn (x,y) => x --> y) cvSyntax.cv (map type_of cvs)
-  val cv_fun_tm = mk_primed_var("cv_" ^ funname,cv_fun_ty)
+  val cv_fun_tm = mk_primed_var(add_prefix thy ("cv_" ^ funname),cv_fun_ty)
   val cv_lhs = list_mk_comb(cv_fun_tm,cvs)
   val cv_lhs_from = curry list_mk_comb cv_fun_tm
     (map (fn tm => mk_comb(cv_rep_from tm, cv_rep_hol_tm tm)) arg_assums)
@@ -184,8 +190,10 @@ fun mk_assum_for def = let
 fun mk_pre_var one_def = let
   val (v,args) = one_def |> concl |> dest_eq |> fst |> strip_comb
   val name = fst (dest_const v)
+  val thy = #Thy (dest_thy_const v)
   fun mk_funtype arg_tys ret_ty = foldr (op -->) ret_ty arg_tys;
-  val pre_v = mk_var(name ^ "_pre", mk_funtype (map type_of args) bool)
+  val pre_ty = mk_funtype (map type_of args) bool
+  val pre_v = mk_primed_var(add_prefix thy (name ^ "_pre"), pre_ty)
   in list_mk_comb(pre_v,args) end
 
 fun match_some_pat [] tm = NONE
