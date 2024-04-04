@@ -185,12 +185,12 @@ QED
 val all_distinct =
   ALL_DISTINCT |> DefnBase.one_line_ify NONE |> PURE_REWRITE_RULE [conj_eq_if,if_not]
 
-val res = cv_trans_pre all_distinct;
+val res = cv_trans all_distinct;
 
 val is_prefix =
   isPREFIX |> DefnBase.one_line_ify NONE |> PURE_REWRITE_RULE [conj_eq_if,if_not]
 
-val res = cv_trans_pre is_prefix;
+val res = cv_trans is_prefix;
 
 val res = cv_trans LUPDATE_DEF;
 
@@ -209,7 +209,7 @@ Proof
   \\ rename [‘_ = SOME y’] \\ PairCases_on ‘y’ \\ gvs []
 QED
 
-val res = cv_trans_pre index_of
+val res = cv_trans_pre index_of;
 
 Definition replicate_acc_def:
   replicate_acc n x acc =
@@ -248,7 +248,7 @@ Proof
   \\ gvs [UNZIP] \\ Cases_on ‘UNZIP t’ \\ gvs []
 QED
 
-val res = cv_trans_pre UNZIP_eq
+val res = cv_trans UNZIP_eq
 
 Definition genlist_def:
   genlist i f 0 = [] /\
