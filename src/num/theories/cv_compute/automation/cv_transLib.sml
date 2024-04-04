@@ -174,7 +174,7 @@ fun mk_assum_for def = let
   val funname = dest_const f |> fst
   val thy = #Thy (dest_thy_const f)
   val cv_fun_ty = foldr (fn (x,y) => x --> y) cvSyntax.cv (map type_of cvs)
-  val cv_fun_tm = mk_primed_var(add_prefix thy ("cv_" ^ funname),cv_fun_ty)
+  val cv_fun_tm = mk_primed_var("cv_" ^ add_prefix thy funname,cv_fun_ty)
   val cv_lhs = list_mk_comb(cv_fun_tm,cvs)
   val cv_lhs_from = curry list_mk_comb cv_fun_tm
     (map (fn tm => mk_comb(cv_rep_from tm, cv_rep_hol_tm tm)) arg_assums)
@@ -193,7 +193,7 @@ fun mk_pre_var one_def = let
   val thy = #Thy (dest_thy_const v)
   fun mk_funtype arg_tys ret_ty = foldr (op -->) ret_ty arg_tys;
   val pre_ty = mk_funtype (map type_of args) bool
-  val pre_v = mk_primed_var(add_prefix thy (name ^ "_pre"), pre_ty)
+  val pre_v = mk_primed_var(add_prefix thy name ^ "_pre", pre_ty)
   in list_mk_comb(pre_v,args) end
 
 fun match_some_pat [] tm = NONE
