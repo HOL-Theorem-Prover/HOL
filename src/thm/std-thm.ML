@@ -1338,9 +1338,11 @@ local
       else
         raise ERR "compute" "types of lhs and rhs disagree"
     end;
+  val merge_tags = foldr (uncurry Tag.merge)
 in
   fun compute {cval_terms, cval_type, num_type, char_eqns} =
     let
+      val tag0 = merge_tags empty_tag (List.map (tag o snd) char_eqns)
       val char_eqns = List.map (I ## dest_thm) char_eqns
       val _ = List.all (List.null o fst o snd) char_eqns
       val tc = Compute.term_compute
@@ -1351,14 +1353,14 @@ in
     in
       fn code_eqs => fn tm =>
         let
+          val tag1 = merge_tags tag0 (List.map tag code_eqs)
           val eqs = List.map dest_code_eqn code_eqs
           val tm' = tc eqs tm
           val eqn = safe_mk_eq tm tm'
         in
-          make_thm Count.Compute (Tag.empty_tag, empty_hyp, eqn)
+          make_thm Count.Compute (tag1, empty_hyp, eqn)
         end
     end;
 end (*local *)
 
 end (* Thm *)
-
