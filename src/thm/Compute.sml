@@ -601,7 +601,7 @@ fun term_compute {cval_terms, cval_type, num_type, char_eqns } =
       num_type = num_type }
     val _ = check_thms ct char_eqns
   in
-    fn code_eqs => fn tm =>
+    fn code_eqs =>
       let
         (* all function constants from the left-hand sides of code equations *)
         val fns = List.map (fst o strip_comb o fst o dest_eq) code_eqs
@@ -609,12 +609,15 @@ fun term_compute {cval_terms, cval_type, num_type, char_eqns } =
         val eqs = Vector.map (dest_code_eqn ct fns) (Vector.fromList code_eqs)
         (* replace functions and variables with indices, with dest_cexp: *)
         val code = Vector.map (fn (_,(bvs,r)) => dest_cexp ct bvs eqs r) eqs
-        val cexp = dest_cexp ct [] eqs tm
-        val cval = exec code [] cexp
       in
-        mk_cval_term ct cval
+        fn tm =>
+          let
+            val cexp = dest_cexp ct [] eqs tm
+            val cval = exec code [] cexp
+          in
+            mk_cval_term ct cval
+          end
       end
   end;
 
 end (* struct *)
-
