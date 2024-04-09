@@ -1102,6 +1102,26 @@ val REAL_DIV_MUL2 = store_thm("REAL_DIV_MUL2",
   IMP_SUBST_TAC REAL_MUL_LINV THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[REAL_MUL_LID]);
 
+Theorem REAL_DIV_PROD:
+  !a b c (d :real). a / b * (c / d) = (a * c) / (b * d)
+Proof
+    rpt STRIP_TAC
+ >> simp[real_div,REAL_INV_MUL'] >> metis_tac[REAL_MUL_ASSOC,REAL_MUL_SYM]
+QED
+
+Theorem REAL_DIV_LT:
+  !a b c (d :real). 0 < b * d ==> (a / b < c / d <=> a * d < c * b)
+Proof
+  rw[real_div]
+  >> ‘b<>0 /\ d<>0’ by (CCONTR_TAC >> gs[])
+  >> ‘a * inv b <c * inv d <=> a * inv b * (b*d) < c * inv d * (b*d)’ by simp[REAL_LT_RMUL]
+  >> ‘a * inv b * (b*d) = a*d * (inv b * b)’ by metis_tac[REAL_MUL_ASSOC,REAL_MUL_SYM]
+  >> ‘_ = a*d’ by simp[REAL_MUL_RID,REAL_MUL_LINV]
+  >> ‘c * inv d * (b*d) = c*b * (inv d * d)’ by metis_tac[REAL_MUL_ASSOC,REAL_MUL_SYM]
+  >> ‘_ = c*b’ by simp[REAL_MUL_RID,REAL_MUL_LINV]
+  >> simp[]
+QED
+
 val REAL_MIDDLE1 = store_thm("REAL_MIDDLE1",
   “!a b. a <= b ==> a <= (a + b) / &2”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
@@ -4062,7 +4082,7 @@ val NUM_CEILING_LE = store_thm
    THEN numLib.LEAST_ELIM_TAC
    THEN METIS_TAC [NOT_LESS_EQUAL]);
 
-Theorem NUM_CEILING_UPPER_BOUND : (* was: util_probTheory.CLG_UBOUND *)
+Theorem NUM_CEILING_UPPER_BOUND :
     !x. 0 <= x ==> &(clg x) < x + 1
 Proof
     RW_TAC std_ss [NUM_CEILING_def]
@@ -4084,6 +4104,9 @@ Proof
  >> `&n - 1 < x` by RW_TAC arith_ss [REAL_SUB]
  >> FULL_SIMP_TAC std_ss [REAL_LT_SUB_RADD]
 QED
+
+(* backward compatible name of NUM_CEILING_UPPER_BOUND *)
+Theorem CLG_UBOUND = NUM_CEILING_UPPER_BOUND
 
 (* ----------------------------------------------------------------------
     nonzerop : real -> real
@@ -5151,6 +5174,21 @@ Proof
   REPEAT DISCH_TAC THEN REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
   MATCH_MP_TAC(TAUT `(a <=> a') /\ (b <=> b') ==> (a /\ b <=> a' /\ b')`) THEN
   CONJ_TAC THEN MATCH_MP_TAC RAT_LEMMA4 THEN ASM_REWRITE_TAC[]
+QED
+
+Theorem RAT_LEMMA5_BETTER:
+  y1 <> 0:real /\ y2 <> 0 ==> (x1 / y1 = x2 / y2 <=> x1 * y2 = x2 * y1)
+Proof
+    rw[]
+ >> ‘y1*y2 <> 0’ by simp[] >> simp[real_div]
+ >> ‘x1 * inv y1 = x2 * inv y2 <=>
+     x1 * inv y1 * (y1 * y2) = x2 * inv y2 * (y1 * y2)’ by simp[REAL_EQ_RMUL]
+ >> ‘x1 * inv y1 * (y1 * y2) = x2 * inv y2 * (y1 * y2) <=>
+     x1 * y2 * (inv y1 * y1) = x2 * y1 * (inv y2 * y2)’ by
+    metis_tac[REAL_MUL_ASSOC, REAL_MUL_SYM]
+ >> ‘x1 * y2 * (inv y1 * y1) = x2 * y1 * (inv y2 * y2) <=>
+     x1 * y2 = x2 * y1’ by simp[REAL_MUL_LINV]
+ >> metis_tac[]
 QED
 
 (* The following common used HALF theorems were moved from seqTheory *)

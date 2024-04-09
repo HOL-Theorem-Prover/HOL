@@ -8,13 +8,14 @@
 
 open HolKernel boolLib Parse BasicProvers bossLib;
 
-open
-        arithmeticTheory
+open arithmeticTheory pred_setTheory
         integerTheory intLib
         intExtensionTheory intExtensionLib
         EVAL_ringLib integerRingLib
         fracTheory fracLib ratUtils
         quotient schneiderUtils;
+
+open gcdTheory dividesTheory primeFactorTheory;
 
 val arith_ss = old_arith_ss
 
@@ -3125,6 +3126,23 @@ Proof
     Cases_on `n` >> gvs[] >> simp[rat_of_int_ainv]) >>
   IF_CASES_TAC >> gvs[Num_neg] >>
   simp[RAT_MUL_NUM_CALCULATE] >> strip_tac >> irule nmr_dnm_unique >> simp[]
+QED
+
+(* This is another form of RATND_suff_eq using only natural numbers *)
+Theorem RATND_of_coprimes :
+    !p q. gcd p q = 1 /\ q <> 0 ==> RATN (&p / &q) = &p /\ RATD (&p / &q) = q
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> qabbrev_tac ‘n = int_of_num p’
+ >> ‘&p = rat_of_int n’ by rw [rat_of_int_def]
+ >> ‘gcd (Num n) q = 1’ by rw [Abbr ‘n’]
+ >> rw [RATND_suff_eq]
+QED
+
+Theorem RATND_of_coprimes' :
+    !p q. gcd p q = 1 /\ q <> 0 ==> RATN (-&p / &q) = -&p /\ RATD (-&p / &q) = q
+Proof
+    rw [GSYM RAT_DIV_AINV, RATND_of_coprimes]
 QED
 
 Definition div_gcd_def:

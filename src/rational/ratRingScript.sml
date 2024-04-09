@@ -8,13 +8,7 @@
 
 open HolKernel boolLib Parse bossLib;
 
-(* interactive mode
-app load [
-        "integerTheory", "ratTheory", "ringLib", "schneiderUtils";
-*)
-
-open
-        integerTheory ratTheory EVAL_ringLib schneiderUtils;
+open integerTheory ratTheory EVAL_ringLib schneiderUtils;
 
 val _ = new_theory "ratRing";
 
