@@ -9,15 +9,7 @@
 
 open HolKernel boolLib Parse bossLib;
 
-(* interactive mode
-app load ["integerTheory","intLib",
-"ringLib", "pairTheory",
-        "integerRingTheory","integerRingLib",
-        "schneiderUtils"];
-*)
-open
-        arithmeticTheory pairTheory
-        integerTheory intLib
+open arithmeticTheory pairTheory integerTheory intLib
         EVAL_ringTheory EVAL_ringLib integerRingLib
         schneiderUtils;
 

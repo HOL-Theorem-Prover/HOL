@@ -26,7 +26,7 @@ val _ = set_grammar_ancestry ["arithmetic", "pred_set"]
             "BasicProvers", "boolSimps", "pairSimps",
             "numSimps", "numLib", "metisLib"];
 *)
-open jrhUtils quotient liteLib
+open jrhUtils quotient liteLib pred_setTheory
      arithmeticTheory prim_recTheory numTheory
      simpLib numLib boolTheory liteLib metisLib BasicProvers;
 
@@ -1731,6 +1731,13 @@ QED
 val Num = new_definition("Num",
   Term `Num (i:int) = @n. if 0 <= i then i = &n else i = - &n`);
 
+Overload num_of_int[inferior] = “Num” (* from HOL Light *)
+
+(* NOTE: In HOL-Light, num_of_int is unspecified for negative integers:
+   |- !x. num_of_int x = (@n. &n = x) (int.ml, line 2056)
+ *)
+Theorem num_of_int = Num
+
 Theorem NUM_OF_INT[simp,compute]:
   !n. Num(&n) = n
 Proof
@@ -3127,7 +3134,6 @@ val INT_LE_MONO = store_thm(
   ASM_SIMP_TAC bool_ss [INT_LE_LT, INT_MUL_SIGN_CASES, INT_LT_GT] THEN
   PROVE_TAC [INT_ENTIRE, INT_LT_REFL]);
 
-open pred_setTheory
 val INFINITE_INT_UNIV = store_thm(
   "INFINITE_INT_UNIV",
   ``INFINITE univ(:int)``,
@@ -3507,6 +3513,16 @@ val LEAST_INT_DEF = new_definition ("LEAST_INT_DEF",
   ``LEAST_INT P = @i. P i /\ !j. j < i ==> ~P j``)
 
 val _ = set_fixity "LEAST_INT" Binder
+
+(* NOTE: Ported from HOL-Light *)
+Theorem FORALL_INT_CASES :
+    !(P :int -> bool). (!x. P x) <=> (!n. P (&n)) /\ (!n. P (-&n))
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> rw []
+ >> MP_TAC (Q.SPEC ‘x’ INT_NUM_CASES) >> rw [] (* 3 subgoals *)
+ >> rw []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Euclidean div and mod                                                     *)

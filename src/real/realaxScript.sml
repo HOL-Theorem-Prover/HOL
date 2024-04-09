@@ -470,6 +470,16 @@ val REAL_ADD = store_thm("REAL_ADD",
 (* HOL-Light compatible name of the above theorem *)
 Theorem REAL_OF_NUM_ADD = REAL_ADD;
 
+Theorem REAL_OF_NUM_SUB:
+  !m n. m <= n ==> (&(n-m):real = &n - &m)
+Proof
+  rw[] >> ‘?d. n=m+d’ by (irule LESS_EQUAL_ADD >> simp[])
+  >> simp[SUB_RIGHT_EQ]
+  >> once_rewrite_tac[GSYM REAL_ADD]
+  >> simp[REAL_ADD_RINV, bossLib.AC REAL_ADD_ASSOC REAL_ADD_SYM,
+          real_sub, REAL_ADD_LID]
+QED
+
 val REAL_MUL = store_thm("REAL_MUL",
   “!m n. real_of_num m * real_of_num n = real_of_num(m * n)”,
   INDUCT_TAC THEN REWRITE_TAC[REAL_MUL_LZERO, MULT_CLAUSES, REAL,
