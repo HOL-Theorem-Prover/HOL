@@ -12,8 +12,7 @@ open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory;
 open real_sigmaTheory;
 
 open hurdUtils util_probTheory sigma_algebraTheory real_measureTheory
-     real_borelTheory real_lebesgueTheory
-     real_probabilityTheory;
+     real_borelTheory real_lebesgueTheory real_probabilityTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
@@ -25,6 +24,9 @@ Overload indicator_fn[local] = “indicator”
 Theorem indicator_fn_def[local] = indicator
 
 val _ = temp_set_fixity "CROSS" (Infixl 600)
+
+val _ = intLib.deprecate_int();
+val _ = ratLib.deprecate_rat();
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)

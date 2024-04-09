@@ -23,6 +23,9 @@ val _ = hide "S";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
 (* "The theory of martingales as we know it now goes back to Doob and most of
     the material of this and the following chapter can be found in his seminal
     monograph [2] from 1953.
