@@ -20,6 +20,9 @@ val _ = new_theory "dining_cryptos";
 
 val _ = temp_set_fixity "CROSS" (Infixl 600)
 
+val _ = intLib.deprecate_int();
+val _ = ratLib.deprecate_rat();
+
 (* ----------------------------------------------------------------------
     Helpful proof tools
    ---------------------------------------------------------------------- *)
