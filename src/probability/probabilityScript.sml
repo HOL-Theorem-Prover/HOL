@@ -45,6 +45,9 @@ val set_ss = std_ss ++ PRED_SET_ss;
 val _ = hide "S";
 val _ = hide "W";
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
 (* ------------------------------------------------------------------------- *)
 (* Basic probability theory definitions.                                     *)
 (* ------------------------------------------------------------------------- *)

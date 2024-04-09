@@ -27,6 +27,9 @@ val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = new_theory "real_probability";
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
 Overload indicator_fn[local] = “indicator”
 
 (* ------------------------------------------------------------------------- *)

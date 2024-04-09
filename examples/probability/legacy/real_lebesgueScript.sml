@@ -18,6 +18,9 @@ open util_probTheory sigma_algebraTheory real_measureTheory real_borelTheory;
 
 val _ = new_theory "real_lebesgue";
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
 Overload indicator_fn[local] = “indicator”
 Theorem indicator_fn_def[local] = indicator
 
