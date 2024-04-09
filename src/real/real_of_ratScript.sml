@@ -349,9 +349,15 @@ QED
 (*    (was in util_probTheory and then in real_sigmaTheory)                  *)
 (* ========================================================================= *)
 
-Definition real_rat_set :
-    real_rat_set = {r | ?q. r = real_of_rat q}
+Definition Q_SET :
+    real_rat_set = IMAGE real_of_rat UNIV
 End
+
+Theorem real_rat_set :
+    real_rat_set = {r | ?q. r = real_of_rat q}
+Proof
+    rw [Q_SET, Once EXTENSION]
+QED
 
 Overload q_set = “real_rat_set”
 
