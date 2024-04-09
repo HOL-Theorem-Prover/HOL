@@ -168,6 +168,14 @@ val L_EUCLIDES = store_thm("L_EUCLIDES",
   THEN ONCE_ASM_REWRITE_TAC[]
   THEN PROVE_TAC[EUCLIDES_AUX,DIVIDES_MULT,MULT_SYM,DIVIDES_REFL]);
 
+Theorem divides_coprime_mul:
+  !n m k. gcd n m = 1 ==> (divides n (m * k) <=> divides n k)
+Proof
+  srw_tac[][] >> eq_tac >> srw_tac[][]
+  >- (full_simp_tac bool_ss [Once GCD_SYM] >> drule L_EUCLIDES >> srw_tac[][])
+  >- (drule dividesTheory.DIVIDES_MULT >> simp_tac bool_ss [Once MULT_COMM])
+QED
+
 val P_EUCLIDES = store_thm(
   "P_EUCLIDES",
   Term `!p a b. prime p /\ divides p (a*b)
@@ -436,5 +444,18 @@ val BINARY_GCD = store_thm("BINARY_GCD",
   THEN FULL_SIMP_TAC bool_ss [GCD_COMMON_FACTOR,
          ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV,
          ONCE_REWRITE_RULE [GCD_SYM] ODD_IMP_GCD_CANCEL_EVEN]);
+
+Theorem gcd_LESS_EQ:
+  !m n. n <> 0 ==> gcd m n <= n
+Proof
+  recInduct gcd_ind >> srw_tac[][] >> rewrite_tac[GCD] >>
+  IF_CASES_TAC >> FULL_SIMP_TAC (srw_ss()) [] >>
+  irule LESS_EQ_TRANS >> goal_assum drule >>
+  rewrite_tac[SUB_RIGHT_LESS_EQ] >>
+  rewrite_tac[Once ADD_COMM] >>
+  rewrite_tac[ADD_CLAUSES] >>
+  rewrite_tac[ADD_SUC] >>
+  rewrite_tac[LESS_EQ_ADD]
+QED
 
 val _ = export_theory();
