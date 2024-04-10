@@ -56,7 +56,7 @@ fun getmap E = (E, #1 E)
 val newconst : Preterm.preterm t = fn (vmap, i) =>
     ((vmap, i + 1), pmk_var("UC" ^ Int.toString i, i))
 fun newvar bv (m:'a t) : (preterm * 'a) t = fn (vmap,i) =>
-    let val pv = pmk_var("UV" ^ Int.toString i, i)
+    let val pv = pmk_var(#1 (dest_var bv) (* ^ Int.toString i *), i)
         val vmap' = Binarymap.insert(vmap, bv, pv)
         val ((vmap'',i'), result) = m (vmap', i + 1)
     in
