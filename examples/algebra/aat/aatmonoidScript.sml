@@ -80,6 +80,12 @@ Proof
   simp[FORALL_tmonoid, tmonoid_repabs_id]
 QED
 
+Theorem Monoid_relates[transfer_rule]:
+  (MTR |==> (=)) Monoid (K T)
+Proof
+  simp[FUN_REL_def, MTR_def]
+QED
+
 Theorem tmop_relates[transfer_rule]:
   (MTR |==> (=) |==> (=) |==> (=)) monoid_op tmop
 Proof
@@ -110,7 +116,7 @@ Proof
   simp[right_unique_def, MTR_def, #term_REP_11 mrec]
 QED
 
-Theorem total_MTR[transfer_simp]:
+Theorem surj_MTR[transfer_simp]:
   surj MTR
 Proof
   simp[surj_def, MTR_def]
@@ -239,11 +245,20 @@ Proof
   xfer_back_tac[] >> simp[monoidTheory.FiniteAbelianMonoid_def_alt]
 QED
 
-Theorem monoid_carrier_nonempty[simp]:
-  ∀m. tmcarrier m <> {}
-Proof
-  xfer_back_tac [] >> simp[monoid_carrier_nonempty]
-QED
+
+fun prettify th =
+  let val (vs, _) = strip_forall (concl th)
+  in
+    if #1 (dest_type $ type_of $ hd vs) = "monoid" then
+      CONV_RULE (RENAME_VARS_CONV ["M"]) th
+    else th
+  end handle HOL_ERR _ => th
+fun xfer hs th =
+  th |> transfer_thm 10 ("Monoid"::hs) true (global_ruledb())
+     |> prettify
+
+Theorem monoid_carrier_nonempty[simp] =
+        xfer [] monoidTheory.monoid_carrier_nonempty
 
 Definition monoid_exp_def:
   monoid_exp m x n = monoid$monoid_exp (monoid_REP m) x n
@@ -262,30 +277,14 @@ Proof
   xfer_back_tac []  >> simp[]
 QED
 
-Theorem monoid_exp_FUNPOW:
-  !m x n. monoid_exp m x n = FUNPOW (tmop m x) n (tmid m)
-Proof
-  xfer_back_tac [] >> simp[monoidTheory.monoid_exp_def]
-QED
+Theorem monoid_exp_FUNPOW =
+        xfer ["monoid_exp"] monoidTheory.monoid_exp_def
 
-Theorem monoid_exp_element[simp]:
-  !m x. x ∈ tmcarrier m ⇒ !n. monoid_exp m x n ∈ tmcarrier m
-Proof
-  xfer_back_tac [] >> simp[monoidTheory.monoid_exp_element]
-QED
+Theorem monoid_exp_element[simp] =
+        xfer ["monoid_exp"] monoidTheory.monoid_exp_element
 
-Theorem monoid_exp_1[simp]:
-  !m x. monoid_exp m x 1 = x
-Proof
-  rewrite_tac[arithmeticTheory.ONE, monoid_exp_thm] >>
-  simp[]
-QED
-
-Theorem monoid_id_exp[simp]:
-  !m n. monoid_exp m (tmid m) n = tmid m
-Proof
-  xfer_back_tac [] >> simp[monoidTheory.monoid_id_exp]
-QED
+Theorem monoid_exp_1[simp] = xfer [] monoidTheory.monoid_exp_1
+Theorem monoid_id_exp[simp] = xfer [] monoidTheory.monoid_id_exp
 
 Theorem monoid_comm_exp:
   !m x y n.
@@ -346,14 +345,8 @@ QED
     Finite monoids
    ---------------------------------------------------------------------- *)
 
-Theorem finite_monoid_exp_not_distinct:
-  !m x. FiniteMonoid m /\ x ∈ tmcarrier m ⇒
-        ∃h k. monoid_exp m x h = monoid_exp m x k /\ h ≠ k
-Proof
-  xfer_back_tac [] >> simp[] >>
-  metis_tac[monoidTheory.finite_monoid_exp_not_distinct,
-            monoidTheory.FiniteMonoid_def]
-QED
+Theorem finite_monoid_exp_not_distinct =
+        xfer ["FiniteMonoid"] monoidTheory.finite_monoid_exp_not_distinct
 
 (* ----------------------------------------------------------------------
     MITSET : iterating monoid operation over (finite) set of elements
@@ -361,36 +354,18 @@ QED
 
 Overload MITSET = “λm. ITSET (tmop m)”
 
-Theorem abelian_monoid_op_closure_comm_assoc_fun:
-  !m. AbelianMonoid m ⇒ closure_comm_assoc_fun (tmop m) (tmcarrier m)
-Proof
-  xfer_back_tac [] >>
-  simp[monoidTheory.abelian_monoid_op_closure_comm_assoc_fun]
-QED
+Theorem abelian_monoid_op_closure_comm_assoc_fun =
+        xfer ["AbelianMonoid"]
+             monoidTheory.abelian_monoid_op_closure_comm_assoc_fun
 
-Theorem COMMUTING_MITSET_INSERT:
-  !m s. AbelianMonoid m /\ FINITE s /\ s ⊆ tmcarrier m ⇒
-        !b x. b ∈ tmcarrier m /\ x ∈ tmcarrier m ⇒
-              MITSET m (x INSERT s) b = MITSET m (s DELETE x) (tmop m x b)
-Proof
-  xfer_back_tac [] >> simp[COMMUTING_GITSET_INSERT]
-QED
+Theorem COMMUTING_MITSET_INSERT =
+        xfer ["AbelianMonoid"] COMMUTING_GITSET_INSERT
 
-Theorem COMMUTING_MITSET_REDUCTION:
-  !m s. AbelianMonoid m /\ FINITE s /\ s ⊆ tmcarrier m ⇒
-        !b x. b ∈ tmcarrier m /\ x ∈ tmcarrier m ⇒
-              MITSET m s (tmop m x b) = tmop m x (MITSET m s b)
-Proof
-  xfer_back_tac [] >> simp[COMMUTING_GITSET_REDUCTION]
-QED
+Theorem COMMUTING_MITSET_REDUCTION =
+        xfer ["AbelianMonoid"] COMMUTING_GITSET_REDUCTION
 
-Theorem COMMUTING_MITSET_RECURSES:
-  !m s. AbelianMonoid m /\ FINITE s /\ s ⊆ tmcarrier m ⇒
-        !b x. b ∈ tmcarrier m /\ x ∈ tmcarrier m ⇒
-              MITSET m (x INSERT s) b = tmop m x (MITSET m (s DELETE x) b)
-Proof
-  xfer_back_tac [] >> simp[COMMUTING_GITSET_RECURSES]
-QED
+Theorem COMMUTING_MITSET_RECURSES =
+        xfer ["AbelianMonoid"] COMMUTING_GITSET_RECURSES
 
 Overload MPROD_SET = “λm s. MITSET m s (tmid m)”
 
@@ -399,6 +374,22 @@ Theorem MPROD_SET_SING[simp]:
 Proof
   simp[]
 QED
+
+(* Interesting case where forward transfer breaks down
+val th = GPROD_SET_PROPERTY
+
+val _ = show_assums := true
+val base = transfer_skeleton true (concl th)
+val th = base
+val rdb = global_ruledb()
+val cleftp = true
+
+fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
+
+fun F th = seq.hd $ resolve_relhyps ["AbelianMonoid"] true (global_ruledb()) th
+val th = fpow F 11 base
+*)
+
 
 Theorem MPROD_SET_PROPERTY:
   !m s. AbelianMonoid m /\ FINITE s /\ s ⊆ tmcarrier m ⇒
@@ -418,24 +409,10 @@ Proof
   strip_tac >> irule tmonoid_repabs_id >> simp[]
 QED
 
-Theorem tmextend_carrier[simp]:
-  !m. tmcarrier (tmextend m) = UNIV
-Proof
-  xfer_back_tac [] >> simp[]
-QED
+Theorem tmextend_carrier[simp] = xfer ["extend"] (GEN_ALL extend_carrier)
+Theorem tmextend_id[simp] = xfer ["extend"] (GEN_ALL extend_id)
 
-Theorem tmextend_id[simp]:
-  !m. tmid (tmextend m) = tmid m
-Proof
-  xfer_back_tac [] >> simp[]
-QED
-
-Theorem tmextend_op:
-  !m x y. x ∈ tmcarrier m /\ y ∈ tmcarrier m ⇒
-          tmop (tmextend m) x y = tmop m x y
-Proof
-  xfer_back_tac [] >> simp[extend_op]
-QED
+Theorem tmextend_op = xfer ["extend"] (GEN_ALL extend_op)
 
 Definition period_def:
   period m x k = monoidOrder$period (monoid_REP m) x k
@@ -459,118 +436,23 @@ QED
 
 Overload tord[local] = “aatmonoid$order m”
 
-Theorem order_property:
-  !m x. monoid_exp m x (tord x) = tmid m
-Proof
-  xfer_back_tac [] >> simp[monoidOrderTheory.order_property]
-QED
-
-Theorem order_period:
-  !m x. 0 < tord x ⇒ period m x (tord x)
-Proof
-  xfer_back_tac [] >> simp[order_period]
-QED
-
-Theorem order_minimal:
-  !m x n. 0 < n /\ n < tord x ⇒ monoid_exp m x n <> tmid m
-Proof
-  xfer_back_tac [] >> simp[order_minimal]
-QED
-
-Theorem order_eq_0:
-  !m x. tord x = 0 ⇔ !n. 0 < n ==> monoid_exp m x n <> tmid m
-Proof
-  xfer_back_tac [] >> simp[order_eq_0]
-QED
-
-Theorem order_thm:
-  !m x n. 0 < n ⇒
-          (tord x = n ⇔ monoid_exp m x n = tmid m /\
-                        !p. 0 < p /\ p < n ⇒ monoid_exp m x p <> tmid m)
-Proof
-  xfer_back_tac [] >> simp[order_thm]
-QED
-
-Theorem monoid_order_id[simp]:
-  !m. tord (tmid m) = 1
-Proof
-  xfer_back_tac [] >> simp[monoid_order_id]
-QED
-
-Theorem monoid_order_eq_1:
-  !m x. x ∈ tmcarrier m ⇒ (tord x = 1 ⇔ x = tmid m)
-Proof
-  xfer_back_tac [] >> simp[monoid_order_eq_1]
-QED
-
-Theorem monoid_order_condition:
-  !m x. x ∈ tmcarrier m ⇒ !p. monoid_exp m x p = tmid m ⇔ tord x divides p
-Proof
-  xfer_back_tac [] >> simp[monoid_order_condition]
-QED
-
-Theorem monoid_order_power_eq_0:
-  !m x. x ∈ tmcarrier m ⇒ !k. tord (monoid_exp m x k) = 0 ⇔ 0 < k /\ tord x = 0
-Proof
-  xfer_back_tac[] >> simp[monoid_order_power_eq_0]
-QED
-
-Theorem monoid_order_power:
-  !m x. x ∈ tmcarrier m ⇒ !k. tord (monoid_exp m x k) * gcd (tord x) k = tord x
-Proof
-  xfer_back_tac[] >> simp[monoid_order_power]
-QED
-
-Theorem monoid_order_power_eqn:
-  !m x k. x ∈ tmcarrier m /\ 0 < k ⇒
-          tord (monoid_exp m x k) = tord x DIV gcd k (tord x)
-Proof
-  xfer_back_tac[] >> simp[monoid_order_power_eqn]
-QED
-
-Theorem monoid_order_power_coprime:
-  !m x k. x ∈ tmcarrier m /\ coprime k (tord x) ⇒
-          tord (monoid_exp m x k) = tord x
-Proof
-  xfer_back_tac[] >> simp[monoid_order_power_coprime]
-QED
-
-Theorem monoid_order_cofactor:
-  !m x n. x ∈ tmcarrier m /\ 0 < tord x /\ n divides tord x ⇒
-          tord (monoid_exp m x (tord x DIV n)) = n
-Proof
-  xfer_back_tac[] >> simp[monoid_order_cofactor]
-QED
-
-Theorem monoid_order_divisor:
-  !m x n. x ∈ tmcarrier m /\ 0 < tord x /\ n divides tord x ⇒
-          ∃y. y ∈ tmcarrier m /\ tord y = n
-Proof
-  xfer_back_tac[] >> simp[] >> metis_tac[monoid_order_divisor]
-QED
-
-Theorem monoid_order_common:
-  !m x y. x ∈ tmcarrier m /\ y ∈ tmcarrier m /\ tmop m x y = tmop m y x ⇒
-          ∃z. z ∈ tmcarrier m /\
-              tord z * gcd (tord x) (tord y) = lcm (tord x) (tord y)
-Proof
-  xfer_back_tac[] >> simp[] >>
-  metis_tac[monoid_order_common, arithmeticTheory.MULT_COMM]
-QED
-
-Theorem monoid_order_common_coprime:
-  !m x y. x ∈ tmcarrier m /\ y ∈ tmcarrier m /\ tmop m x y = tmop m y x /\
-          coprime (tord x) (tord y) ⇒
-          ∃z. z ∈ tmcarrier m /\ tord z = tord x * tord y
-Proof
-  xfer_back_tac[] >> simp[] >> metis_tac[monoid_order_common_coprime]
-QED
-
-Theorem monoid_exp_mod_order:
-  !m x n. x ∈ tmcarrier m /\ 0 < tord x ⇒
-          monoid_exp m x n = monoid_exp m x (n MOD tord x)
-Proof
-  xfer_back_tac[] >> simp[] >> metis_tac[monoid_exp_mod_order]
-QED
+Theorem order_property =
+        xfer ["order"] monoidOrderTheory.order_property
+Theorem order_period = xfer ["period"] monoidOrderTheory.order_period
+Theorem order_minimal = xfer ["order"] order_minimal
+Theorem order_eq_0 = xfer ["order"] order_eq_0
+Theorem order_thm = xfer ["order"] order_thm
+Theorem monoid_order_id[simp] = xfer ["order"] monoid_order_id
+Theorem monoid_order_eq_1 = xfer ["order"] monoid_order_eq_1
+Theorem monoid_order_condition = xfer ["order"] monoid_order_condition
+Theorem monoid_order_power_eq_0 = xfer ["order"] monoid_order_power_eq_0
+Theorem monoid_order_power = xfer ["order"] monoid_order_power
+Theorem monoid_order_power_eqn = xfer ["order"] monoid_order_power_eqn
+Theorem monoid_order_power_coprime = xfer ["order"] monoid_order_power_coprime
+Theorem monoid_order_cofactor = xfer ["order"] monoid_order_cofactor
+Theorem monoid_order_divisor = xfer ["order"] monoid_order_divisor
+Theorem monoid_order_common = xfer ["order"] monoid_order_common
+Theorem monoid_order_common_coprime = xfer ["order"] monoid_order_common_coprime
+Theorem monoid_exp_mod_order = xfer ["order"] monoid_exp_mod_order
 
 val _ = export_theory();
