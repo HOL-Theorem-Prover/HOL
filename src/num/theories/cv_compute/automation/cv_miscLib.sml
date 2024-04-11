@@ -35,9 +35,9 @@ fun is_cv_proj tm = let
 fun dest_cv_proj tm =
   if is_cv_proj tm then (rand (rator tm), rand tm) else failwith "dest_cv_proj";
 
-val cv_sum_depth_tm = cv_sum_depth_def |> CONJUNCT1 |> SPEC_ALL
+val cv_size_tm = cv_size_def |> CONJUNCT1 |> SPEC_ALL
                         |> concl |> dest_eq |> fst |> repeat rator;
-fun mk_cv_sum_depth tm = mk_comb(cv_sum_depth_tm, tm);
+fun mk_cv_size tm = mk_comb(cv_size_tm, tm);
 
 val remove_fupd_conv = let
   fun rpt_ABS_CONV c tm =

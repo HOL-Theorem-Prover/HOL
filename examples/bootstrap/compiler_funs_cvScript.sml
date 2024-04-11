@@ -1,7 +1,7 @@
 
 open HolKernel Parse boolLib bossLib term_tactic cv_transLib cv_stdTheory;
 open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open wordsTheory wordsLib automationLib printingTheory;
+open wordsTheory wordsLib printingTheory codegenTheory;
 
 val _ = new_theory "compiler_funs_cv";
 
@@ -12,8 +12,8 @@ val res = cv_auto_trans codegenTheory.c_pops_def;
 
 val res = cv_auto_trans_pre_rec codegenTheory.c_exp_def
  (WF_REL_TAC ‘inv_image (measure I LEX measure I)
-    (λx. case x of INL (t,l,vs,fs,x) => (cv_sum_depth x, cv$c2n t)
-                 | INR (l,vs,fs,xs) => (cv_sum_depth xs, 0))’
+    (λx. case x of INL (t,l,vs,fs,x) => (cv_size x, cv$c2n t)
+                 | INR (l,vs,fs,xs) => (cv_size xs, 0))’
   \\ rpt strip_tac
   \\ (Cases_on ‘cv_z’ ORELSE Cases_on ‘cv_zs’) \\ gvs []
   \\ gvs [cvTheory.c2b_def]
@@ -34,7 +34,7 @@ Proof
 QED
 
 val pre = cv_trans_pre_rec printingTheory.num2str_def
-  (WF_REL_TAC ‘measure cv_sum_depth’ \\ Cases \\ gvs [] \\ rw [] \\ gvs []);
+  (WF_REL_TAC ‘measure cv_size’ \\ Cases \\ gvs [] \\ rw [] \\ gvs []);
 
 Theorem num2str_pre[cv_pre]:
   ∀n. num2str_pre n
@@ -82,8 +82,8 @@ val _ = cv_trans printingTheory.dest_list_def;
 Theorem cv_dest_list_size:
   ∀v x y.
     cv_dest_list v = Pair x y ⇒
-    cv_sum_depth x <= cv_sum_depth v ∧
-    cv_sum_depth y <= cv_sum_depth v
+    cv_size x <= cv_size v ∧
+    cv_size y <= cv_size v
 Proof
   recInduct (fetch "-" "cv_dest_list_ind") \\ rw []
   \\ cv_termination_tac \\ gvs [ADD1]
@@ -97,8 +97,8 @@ val v2pretty_eq =
   CONJ (printingTheory.v2pretty_def |> SRULE [GSYM vs2pretty_def]) vs2pretty_thm;
 
 val pre = cv_auto_trans_pre_rec v2pretty_eq
-  (WF_REL_TAC ‘measure $ λx. case x of INL v => cv_sum_depth v
-                                     | INR v => cv_sum_depth v’
+  (WF_REL_TAC ‘measure $ λx. case x of INL v => cv_size v
+                                     | INR v => cv_size v’
    \\ rw [] \\ cv_termination_tac
    \\ qpat_x_assum ‘cv_dest_list _ = _’ mp_tac
    \\ simp [Once $ fetch "-" "cv_dest_list_def"] \\ rw [] \\ gvs []
@@ -147,9 +147,9 @@ QED
 
 val pre = cv_auto_trans_pre_rec exp2v_def
   (WF_REL_TAC ‘measure $ λx. case x of
-                             | INL v => cv_sum_depth v + 1
-                             | INR (INL v) => cv_sum_depth v + 1
-                             | INR (INR v) => cv_sum_depth v’
+                             | INL v => cv_size v + 1
+                             | INR (INL v) => cv_size v + 1
+                             | INR (INR v) => cv_size v’
    \\ cv_termination_tac \\ cheat);
 
 Theorem exp2v_pre[cv_pre]:

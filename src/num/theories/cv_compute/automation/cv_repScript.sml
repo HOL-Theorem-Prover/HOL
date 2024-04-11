@@ -86,11 +86,6 @@ Proof
   strip_tac \\ fs [FUN_EQ_THM] \\ Cases \\ fs []
 QED
 
-Definition cv_sum_depth_def[simp]:
-  cv_sum_depth (Num n) = n /\
-  cv_sum_depth (Pair x y) = 1 + cv_sum_depth x + cv_sum_depth y
-End
-
 Definition cv_proj_def:
   cv_proj [] v = v /\
   cv_proj (T::xs) v = cv_fst (cv_proj xs v) /\
@@ -98,13 +93,13 @@ Definition cv_proj_def:
 End
 
 Theorem cv_proj_less_eq:
-  !v xs. cv_sum_depth (cv_proj xs v) <= cv_sum_depth v
+  !v xs. cv_size (cv_proj xs v) <= cv_size v
 Proof
   gen_tac \\ Induct \\ gvs [cv_proj_def]
   \\ Cases \\ gvs [cv_proj_def] \\ rw []
   \\ irule arithmeticTheory.LESS_EQ_TRANS
   \\ pop_assum $ irule_at (Pos last)
-  \\ Cases_on ‘cv_proj xs v’ \\ gvs [cv_sum_depth_def]
+  \\ Cases_on ‘cv_proj xs v’ \\ gvs []
 QED
 
 Theorem to_cv_proj:

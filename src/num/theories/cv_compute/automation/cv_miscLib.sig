@@ -15,8 +15,8 @@ sig
   val is_cv_rep : term -> bool
   val is_cv_proj : term -> bool
   val dest_cv_proj : term -> term * term
-  val cv_sum_depth_tm : term
-  val mk_cv_sum_depth : term -> term
+  val cv_size_tm : term
+  val mk_cv_size : term -> term
 
   val contains_fun_ty : hol_type -> bool
 

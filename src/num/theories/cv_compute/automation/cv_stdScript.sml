@@ -288,7 +288,7 @@ Definition cv_map_fst_def:
       (Pair (cv_fst (cv_fst cv)) (cv_map_fst (cv_snd cv)))
       (Num 0)
 Termination
-  WF_REL_TAC `measure cv_sum_depth` >> cv_termination_tac
+  WF_REL_TAC ‘measure cv_size’ >> cv_termination_tac
 End
 
 Theorem cv_MAP_FST[cv_rep]:
@@ -305,7 +305,7 @@ Definition cv_map_snd_def:
       (Pair (cv_snd (cv_fst cv)) (cv_map_snd (cv_snd cv)))
       (Num 0)
 Termination
-  WF_REL_TAC `measure cv_sum_depth` >> cv_termination_tac
+  WF_REL_TAC ‘measure cv_size’ >> cv_termination_tac
 End
 
 Theorem cv_MAP_SND[cv_rep]:

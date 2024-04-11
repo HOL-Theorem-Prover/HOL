@@ -42,7 +42,7 @@ fun make_measures alts = let
   fun process (combs,nargs) = let
     val input = mk_var("input",cvs_ty nargs)
     fun each combs = let
-      val ys = map (fn i => mk_cv_sum_depth (access i nargs input)) combs
+      val ys = map (fn i => mk_cv_size (access i nargs input)) combs
       in mk_abs(input,mk_sum_term ys) end
     in map each combs end
   fun combine x y = let
