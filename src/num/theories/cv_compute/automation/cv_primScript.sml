@@ -1027,7 +1027,7 @@ Theorem cv_word_slice_thm[cv_rep]:
     (cv_div (cv_mod (from_word w)
                    (cv_exp (Num 2) (cv_min (cv_add (Num h) (Num 1)) (Num (dimindex (:'a))))))
             (cv_exp (Num 2) (Num l)))
-     (Num (2 ** l))) (Num (dimword (:'a)))
+    (cv_exp (Num 2) (Num l))) (Num (dimword (:'a)))
 Proof
   rewrite_tac [GSYM cv_word_bits_thm,wordsTheory.WORD_SLICE_THM]
   \\ rewrite_tac [cv_rep_word_lsl,cv_exp_def] \\ fs []
