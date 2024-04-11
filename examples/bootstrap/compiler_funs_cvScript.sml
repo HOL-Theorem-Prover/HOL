@@ -145,12 +145,152 @@ Proof
   metis_tac [exp2v_def]
 QED
 
+Triviality cv_EL_trivial:
+  ∀n m. cv_EL (Num n) (Num m) = Num 0
+Proof
+  Induct >> rw[] >> simp[Once cv_EL_def]
+QED
+
+Triviality cv_EL_size:
+  ∀l n. cv_size (cv_EL n l) ≤ cv_size l
+Proof
+  Induct >> rw[] >> simp[Once cv_EL_def] >>
+  Cases_on `n` >> gvs[] >> IF_CASES_TAC >> gvs[] >>
+  pop_assum mp_tac >> IF_CASES_TAC >> gvs[cv_EL_trivial] >>
+  irule LESS_EQ_TRANS >> first_x_assum $ irule_at Any >> simp[]
+QED
+
+val _ = cv_trans get_Op_Head_def;
+val _ = cv_trans dest_case_lets_def;
+val _ = cv_trans dest_case_tree_def;
+val _ = cv_trans dest_case_enum_def;
+val _ = cv_trans dest_cons_chain_def;
+
+Triviality cv_get_Op_Head_size:
+  ∀x. cv_size (cv_get_Op_Head x) ≤ cv_size x
+Proof
+  Induct >> rw[fetch "-" "cv_get_Op_Head_def"] >> cv_termination_tac
+QED
+
+Triviality cv_dest_case_lets_size:
+  ∀a b x.
+    cv_dest_case_lets a b = x
+  ⇒ cv_size (cv_snd x) ≤ cv_size b + 3
+Proof
+  recInduct $ fetch "-" "cv_dest_case_lets_ind" >> rw[] >>
+  simp[Once $ fetch "-" "cv_dest_case_lets_def"] >>
+  reverse $ rw[] >> gvs[] >> cv_termination_tac >>
+  gvs[cvTheory.c2b_def, cvTheory.cv_lt_def0, AllCaseEqs(), cvTheory.b2c_if] >>
+  namedCases_on `z` ["", "a1 b1"] >> gvs[] >>
+  namedCases_on `b1` ["", "a2 b2"] >> gvs[] >>
+  namedCases_on `b2` ["", "a3 b3"] >> gvs[]
+QED
+
+Theorem cv_dest_case_tree_size[local]:
+  ∀a b x y.
+    cv_dest_case_tree a b = Pair x y ⇒
+    cv_size (cv_map_snd (cv_map_snd y)) < cv_size b
+Proof
+  recInduct $ fetch "-" "cv_dest_case_tree_ind" >> rw[] >>
+  pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_case_tree_def"] >>
+  reverse $ rw[] >> gvs[]
+  >- (
+    simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Num _)``] >>
+    Cases_on `cv_v` >> gvs[]
+    ) >>
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Pair _ _)``] >>
+  unabbrev_all_tac >> cv_termination_tac >>
+  drule cv_dest_case_lets_size >> simp[] >>
+  rename1 `cv_dest_case_lets _ (cv_fst x)` >> Cases_on `x` >> gvs[]
+QED
+
+Theorem cv_dest_case_enum_size[local]:
+  ∀a b x y.
+    cv_dest_case_enum a b = Pair x y
+  ⇒ cv_size (cv_map_snd y) < cv_size b
+Proof
+  recInduct $ fetch "-" "cv_dest_case_enum_ind" >> rw[] >>
+  pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_case_enum_def"] >>
+  rw[] >> gvs[] >>
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Num _)``] >>
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Pair _ _)``]
+  >- (cv_termination_tac >> rename1 `cv_fst x` >> Cases_on `x` >> gvs[])
+  >- (Cases_on `cv_v` >> gvs[])
+  >- (cv_termination_tac >> rename1 `cv_fst x` >> Cases_on `x` >> gvs[])
+  >- (cv_termination_tac >> rename1 `cv_fst x` >> Cases_on `x` >> gvs[])
+  >- (Cases_on `cv_v` >> gvs[])
+QED
+
+Triviality cv_dest_cons_chain_size:
+  ∀a x y. cv_dest_cons_chain a = Pair x y ⇒ cv_size y < cv_size a
+Proof
+  recInduct $ fetch "-" "cv_dest_cons_chain_ind" >> rw[] >>
+  pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_cons_chain_def"] >>
+  rw[AllCaseEqs()] >> gvs[] >> cv_termination_tac
+QED
+
 val pre = cv_auto_trans_pre_rec exp2v_def
-  (WF_REL_TAC ‘measure $ λx. case x of
-                             | INL v => cv_size v + 1
-                             | INR (INL v) => cv_size v + 1
-                             | INR (INR v) => cv_size v’
-   \\ cv_termination_tac \\ cheat);
+  (
+    WF_REL_TAC ‘measure $ λx. case x of
+                               | INL v => cv_size v + 3
+                               | INR (INL v) => cv_size v + 3
+                               | INR (INR v) => cv_size v’
+    \\ cv_termination_tac
+    >- (
+      irule LESS_EQ_LESS_TRANS >> irule_at Any cv_get_Op_Head_size >>
+      irule LESS_EQ_LESS_TRANS >> irule_at Any cv_EL_size >>
+      irule LESS_EQ_LESS_TRANS >> goal_assum $ drule_at Any >> simp[]
+      )
+    >- (
+      `k = 3` by gvs[] >> gvs[] >>
+      drule cv_dest_case_tree_size >> strip_tac >>
+      gvs[cvTheory.cv_eq_def0,
+          cv_typeTheory.from_to_bool |> SRULE [cv_typeTheory.from_to_def]] >>
+      qpat_x_assum `cv_LENGTH _ = _` mp_tac >>
+      simp[Once cv_LENGTH_def] >>
+      ntac 2 $ simp[Once cv_LEN_def, AllCaseEqs()] >> strip_tac >>
+      cv_termination_tac >> drule cv_dest_case_tree_size >> simp[] >>
+      Cases_on `z'` >> gvs[] >>
+      qpat_x_assum `cv_dest_case_tree _ _ = _` mp_tac >>
+      ntac 2 $ simp[Once cv_EL_def] >>
+      simp[Once $ fetch "-" "cv_dest_case_tree_def", AllCaseEqs()] >> rw[] >> gvs[] >>
+      rpt $ pop_assum mp_tac >> rpt $ simp[Once $ fetch "-" "cv_dest_case_lets_def"]
+      )
+    >- (
+      `k = 3` by gvs[] >> gvs[] >>
+      gvs[cvTheory.cv_eq_def0,
+          cv_typeTheory.from_to_bool |> SRULE [cv_typeTheory.from_to_def]] >>
+      qpat_x_assum `cv_LENGTH _ = _` mp_tac >> simp[Once cv_LENGTH_def] >>
+      ntac 2 $ simp[Once cv_LEN_def, AllCaseEqs()] >> strip_tac >>
+      cv_termination_tac >>
+      drule cv_dest_case_enum_size >> strip_tac >> gvs[] >>
+      Cases_on `z'` >> gvs[] >>
+      last_x_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_case_enum_def"] >>
+      rw[AllCaseEqs()] >> gvs[] >>
+      pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_case_enum_def"]
+      )
+    >- (
+      `k = 1` by gvs[] >> gvs[] >>
+      drule cv_dest_cons_chain_size >> simp[ADD1] >>
+      Cases_on `x2` >> gvs[ADD1] >> Cases_on `z` >> gvs[]
+      )
+    >- (
+      `k = 1` by gvs[] >> gvs[] >>
+      drule cv_dest_cons_chain_size >> simp[ADD1] >>
+      Cases_on `z` >> gvs[] >>
+      last_x_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_cons_chain_def"]
+      )
+    >- (
+      `k = 1` by gvs[] >> gvs[] >>
+      drule cv_dest_cons_chain_size >> simp[ADD1] >>
+      Cases_on `z` >> gvs[] >>
+      last_x_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_cons_chain_def"]
+      )
+    >- (
+      `k = 4` by gvs[] >> gvs[] >>
+      Cases_on `z` >> gvs[] >> Cases_on `g'` >> gvs[]
+      )
+    )
 
 Theorem exp2v_pre[cv_pre]:
   (∀v. exp2v_pre v) ∧
