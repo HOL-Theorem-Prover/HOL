@@ -102,18 +102,35 @@ New tools:
     evaluated are **defined**.
 
 - <a name="verified-comp">**Fast in-logic computation primitive**:</a>
-  A port of the Candle theorem prover's primitive rule for computation, described in the paper *"Fast, Verified Computation for Candle"* (ITP 2023), has been added to the kernel.
-  The new compute primitive works on certain operations on a lisp-like datatype of pairs of numbers:
+  A port of the Candle theorem prover's primitive rule for computation,
+  described in the paper *"Fast, Verified Computation for Candle"* (ITP 2023),
+  has been added to the kernel.  The new compute primitive works on certain
+  operations on a lisp-like datatype of pairs of numbers:
 
            Datatype: cv = Pair cv cv
                         | Num num
            End
 
-  This datatype and its operations are defined in `cvScript.sml`, and the compute primitive `cv_compute` is accessible via the library `cv_computeLib.sml` (both in `src/cv_compute`).
-  Some usage examples are located in `examples/cv_compute`.
-  See the DESCRIPTION manual for a full description of the functionality offered by `cv_compute`.
+  This datatype and its operations are defined in `cvScript.sml`, and the
+  compute primitive `cv_compute` is accessible via the library
+  `cv_computeLib.sml` (both in `src/cv_compute`).
 
-  The definitions of `DIV` and `MOD` over natural numbers `num` have been given specifications for the case when the second operand is zero. We follow HOL Light and Candle in defining `n DIV 0 = 0` and `n MOD 0 = n`. These changes make `DIV` and `MOD` match the way Candle's compute primitive handles `DIV` and `MOD`.
+  There is also new automation that enables the use of `cv_compute` on
+  functional HOL definitions which do not use the `:cv` type.  In particular,
+  `cv_trans` translates such definitions into equivalent functions operating
+  over the `:cv` type.  These can then be evaluated using `cv_eval`, which uses
+  `cv_compute` internally.  Both `cv_trans` and `cv_eval` can be found in the
+  new `cv_transLib`.
+
+  Some usage examples are located in `examples/cv_compute`.  See the
+  DESCRIPTION manual for a full description of the functionality offered by
+  `cv_compute`.
+
+  NB. To support `cv_compute`, the definitions of `DIV` and `MOD` over natural
+  numbers `num` have been given specifications for the case when the second
+  operand is zero. We follow HOL Light and Candle in defining `n DIV 0 = 0` and
+  `n MOD 0 = n`. These changes make `DIV` and `MOD` match the way Candle's
+  compute primitive handles `DIV` and `MOD`.
 
 -   **Polarity-aware theorem-search**. Extending what is available through `DB.find` and `DB.match`, the `DB.polarity_search` allows the user to search for explicitly negative or positive occurrences of the specified pattern.
     Thanks to Eric Hall for this contribution.

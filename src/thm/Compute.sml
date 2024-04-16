@@ -328,19 +328,33 @@ fun mk_num ({cv_num_tm, numeral_tm, ...} : ctsyntax) t =
 fun mk_pair ({cv_pair_tm, ...} : ctsyntax) s t =
   mk_comb (mk_comb (cv_pair_tm, s), t);
 
-local
-  fun mk_cv_zero ({cv_num_tm, zero_tm, ...} : ctsyntax) =
-    mk_comb (cv_num_tm, zero_tm)
-in
-  fun mk_cval_term ct cv =
-    case cv of
-      Num n =>
-        if n = Arbnum.zero then
-          mk_cv_zero ct
-        else
-          mk_num ct (mk_numeral ct n)
-    | Pair (p, q) => mk_pair ct (mk_cval_term ct p) (mk_cval_term ct q);
-end (* local *)
+fun mk_cv_zero ({cv_num_tm, zero_tm, ...} : ctsyntax) =
+  mk_comb (cv_num_tm, zero_tm);
+
+fun mk_cv_num ct n =
+  if n = Arbnum.zero then
+    mk_cv_zero ct
+  else
+    mk_num ct (mk_numeral ct n);
+
+fun make_cv_to_term ct =
+  let
+    val mk_Num_temp = mk_cv_num ct
+    val mk_Pair = mk_pair ct
+    val vector_256 = Vector.tabulate(256, mk_Num_temp o Arbnum.fromInt)
+    val num_256 = Arbnum.fromInt 256
+    fun mk_Num n =
+      if Arbnum.< (n, num_256) then
+        Vector.sub(vector_256, Arbnum.toInt n)
+      else
+        mk_Num_temp n
+    fun cv_to_term cv =
+      case cv of
+        Num n => mk_Num n
+      | Pair (p, q) => mk_Pair (cv_to_term p) (cv_to_term q)
+  in
+    cv_to_term
+  end;
 
 (* -------------------------------------------------------------------------
  * [dest_code_eqn] takes apart a code equation and performs a type check at the
@@ -600,8 +614,9 @@ fun term_compute {cval_terms, cval_type, num_type, char_eqns } =
       cval_type = cval_type,
       num_type = num_type }
     val _ = check_thms ct char_eqns
+    val cv_to_term = make_cv_to_term ct
   in
-    fn code_eqs => fn tm =>
+    fn code_eqs =>
       let
         (* all function constants from the left-hand sides of code equations *)
         val fns = List.map (fst o strip_comb o fst o dest_eq) code_eqs
@@ -609,12 +624,15 @@ fun term_compute {cval_terms, cval_type, num_type, char_eqns } =
         val eqs = Vector.map (dest_code_eqn ct fns) (Vector.fromList code_eqs)
         (* replace functions and variables with indices, with dest_cexp: *)
         val code = Vector.map (fn (_,(bvs,r)) => dest_cexp ct bvs eqs r) eqs
-        val cexp = dest_cexp ct [] eqs tm
-        val cval = exec code [] cexp
       in
-        mk_cval_term ct cval
+        fn tm =>
+          let
+            val cexp = dest_cexp ct [] eqs tm
+            val cval = exec code [] cexp
+          in
+            cv_to_term cval
+          end
       end
   end;
 
 end (* struct *)
-

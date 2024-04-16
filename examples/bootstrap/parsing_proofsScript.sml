@@ -585,16 +585,20 @@ QED
 Theorem dest_case_enum_IMP:
   ∀z x' rows.
     dest_case_enum z x' = SOME rows ∧
-    (∀x z. MEM (x,z) rows ⇒ v2exp (exp2v z) = z) ⇒
-    v2case z (enum2v (MAP (λ(x,e). (x,exp2v e)) rows)) = x'
+    v2exps (list (exps2v (MAP SND rows))) = MAP SND rows ⇒
+    v2case z (enum2v (ZIP (MAP FST rows,exps2v (MAP SND rows)))) = x'
 Proof
   ho_match_mp_tac dest_case_enum_ind
   \\ fs [dest_case_enum_def,row2v_def] \\ rw []
   THEN1 EVAL_TAC
   \\ fs [AllCaseEqs()] \\ rw [] \\ rfs []
+  \\ simp [Once exp2v_def]
   \\ fs [enum2v_def] \\ simp [Once v2exp_def] \\ fs []
-  \\ first_x_assum match_mp_tac
-  \\ fs [] \\ rw [] \\ res_tac \\ fs []
+  \\ pop_assum mp_tac \\ pop_assum mp_tac
+  \\ simp [Once v2exp_def]
+  \\ gvs [AllCaseEqs()] \\ strip_tac
+  \\ pop_assum mp_tac \\ simp [Once exp2v_def]
+  \\ pop_assum mp_tac \\ simp [Once exp2v_def]
 QED
 
 Theorem dest_case_lets_IMP:
@@ -613,7 +617,7 @@ QED
 Theorem dest_case_tree_IMP:
   ∀z x' rows.
     dest_case_tree z x' = SOME rows ∧
-    (∀x y z. MEM (x,y,z) rows ⇒ v2exp (exp2v z) = z) ⇒
+    v2exps (list (exps2v (MAP SND (MAP SND rows)))) = MAP SND (MAP SND rows) ⇒
     v2case z (row2v (MAP (λ(x,vs,e). (x,vs,exp2v e)) rows)) = x'
 Proof
   ho_match_mp_tac dest_case_tree_ind
@@ -624,12 +628,39 @@ Proof
   \\ fs [row2v_def]
   \\ simp [Once v2exp_def] \\ fs []
   \\ imp_res_tac dest_case_lets_IMP \\ fs []
-  \\ first_x_assum match_mp_tac
-  \\ fs [] \\ rw [] \\ res_tac \\ fs []
+  \\ qpat_x_assum ‘v2exps _ = _’ mp_tac
+  \\ simp [Once v2exp_def]
+  \\ gvs [AllCaseEqs()]
+  \\ strip_tac
+  \\ pop_assum mp_tac \\ simp [Once exp2v_def] \\ gvs []
+  \\ pop_assum mp_tac \\ simp [Once exp2v_def] \\ gvs []
+QED
+
+Triviality exps2v_thm[simp]:
+  exps2v [] = [] ∧
+  exps2v (e::es) = exp2v e :: exps2v es
+Proof
+  metis_tac [exp2v_def]
+QED
+
+Theorem exps2v_append:
+  ∀xs ys. exps2v (xs ++ ys) = exps2v xs ++ exps2v ys
+Proof
+  Induct \\ gvs []
+QED
+
+Theorem v2exps_list_append:
+  ∀xs ys. v2exps (list (xs ++ ys)) = v2exps (list xs) ++ v2exps (list ys)
+Proof
+  Induct \\ fs [] >- EVAL_TAC
+  \\ once_rewrite_tac [v2exp_def] \\ gvs []
+  \\ Cases \\ gvs [] >- EVAL_TAC
+  \\ simp [Once v2exp_def]
 QED
 
 Theorem v2exp_exp2v:
   (∀x. v2exp (exp2v x) = x) ∧
+  (∀x. v2exps (list (exps2v x)) = x) ∧
   (∀x. is_Let x ⇒ v2lets (lets2v x) = x)
 Proof
   ho_match_mp_tac exp2v_ind \\ rw []
@@ -642,62 +673,68 @@ Proof
          \\ once_rewrite_tac [v2exp_def]
          \\ simp [name_def,is_upper_def]
          \\ fs [isNum_def] \\ fs [num2exp_def])
-  THEN1 (* Op *)
+  >~ [‘Op op es’] THEN1
    (reverse (Cases_on ‘dest_cons_chain (Op op es)’) \\ fs []
     THEN1
      (Cases_on ‘op’ \\ fs [dest_cons_chain_def,exp2v_def]
       \\ reverse IF_CASES_TAC THEN1
-       (fs [] \\ drule v2exps_list_exp2v \\ strip_tac
-        \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ fs [op2str_def,name_def]
-        \\ once_rewrite_tac [v2exp_def] \\ fs [name_def]
+       (fs [] \\ once_rewrite_tac [v2exp_def] \\ fs [name_def]
         \\ imp_res_tac dest_cons_chain_IMP_conses \\ fs [])
       \\ Cases_on ‘up_const x’ \\ fs []
       THEN1
-       (fs [] \\ drule v2exps_list_exp2v \\ strip_tac
-        \\ once_rewrite_tac [v2exp_def] \\ fs [name_def]
-        \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ fs [op2str_def,name_def]
-        \\ imp_res_tac dest_cons_chain_IMP_conses \\ fs []
-        \\ ‘∃x1 x2. x = SNOC x1 x2’ by
+       (‘∃x1 x2. x = SNOC x1 x2’ by
           (Cases_on ‘x’ \\ fs [] \\ metis_tac [SNOC_CASES,NOT_NIL_CONS,SNOC_APPEND])
         \\ full_simp_tac std_ss [FRONT_SNOC,LAST_SNOC]
-        \\ rfs [SNOC_APPEND])
+        \\ gvs [SNOC_APPEND,exps2v_append]
+        \\ rewrite_tac [GSYM SNOC_APPEND,FRONT_SNOC]
+        \\ fs [] \\ once_rewrite_tac [v2exp_def] \\ fs [name_def]
+        \\ gvs [v2exps_list_append,EVAL “v2exps (Pair (exp2v (Const 0)) (Num 0))”]
+        \\ imp_res_tac dest_cons_chain_IMP_conses \\ fs [])
+      \\ Cases_on ‘x’ \\ gvs []
+      \\ imp_res_tac dest_cons_chain_IMP_conses \\ fs []
+      \\ gvs [oneline up_const_def,AllCaseEqs()]
+      \\ Cases_on ‘t’ using SNOC_CASES
+      >- gvs [conses_def,is_upper_def]
+      \\ gvs [SNOC_APPEND,exps2v_append]
+      \\ rewrite_tac [GSYM SNOC_APPEND,FRONT_SNOC]
+      \\ gvs [v2exps_list_append]
       \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ fs [op2str_def,name_def]
       \\ once_rewrite_tac [v2exp_def]
       \\ rewrite_tac [head_def,getNum_def,isNum_def,LET_THM,tail_def]
       \\ asm_simp_tac std_ss []
-      \\ fs [DefnBase.one_line_ify NONE up_const_def,AllCaseEqs()]
-      \\ CCONTR_TAC \\ fs [Excl "lift_disj_eq"]
-      \\ TRY (qpat_x_assum ‘is_upper _’ mp_tac \\ rw []
-              \\ rename [‘is_upper (name _)’] \\ EVAL_TAC)
-      \\ pop_assum mp_tac
-      \\ imp_res_tac dest_cons_chain_IMP_conses \\ fs []
-      \\ fs [] \\ pop_assum (rewrite_tac o single o GSYM)
-      \\ (Cases_on ‘v0 = []’ \\ fs [] THEN1 (rw [] \\ fs [EVAL “is_upper 0”]))
-      \\ drule v2exps_list_exp2v \\ strip_tac \\ fs []
-      \\ ‘∃x1 x2. v0 = SNOC x1 x2’ by
-        (Cases_on ‘v0’ \\ fs [] \\ metis_tac [SNOC_CASES,NOT_NIL_CONS,SNOC_APPEND])
-      \\ full_simp_tac std_ss [FRONT_SNOC,LAST_SNOC,LAST_DEF]
-      \\ rfs [SNOC_APPEND])
+      \\ qpat_x_assum ‘is_upper _’ mp_tac
+      \\ rpt (IF_CASES_TAC >- (simp [name_def,is_upper_def]))
+      \\ rpt (qpat_x_assum ‘_ ≠ name _’ kall_tac)
+      \\ gvs [otherwise_def]
+      \\ full_simp_tac std_ss [GSYM SNOC_APPEND, GSYM SNOC, LAST_SNOC,
+               EVAL “v2exps (Pair (exp2v (Const 0)) (Num 0))”, SNOC_11]
+      \\ gvs [SNOC_APPEND])
     \\ Cases_on ‘op’ \\ fs []
-    \\ drule v2exps_list_exp2v \\ strip_tac
     \\ fs [exp2v_def,list_def]
     \\ once_rewrite_tac [v2exp_def] \\ fs [op2str_def]
     \\ fs [name_def] \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ fs [])
-  THEN1 (* If *)
-   (reverse (Cases_on ‘dest_case_enum (HD xs) (If t xs x x')’)
+  >~ [‘If t xs x x'’] THEN1
+   (reverse $ Cases_on ‘LENGTH xs = 2’
     THEN1
-     (fs [exp2v_def]
+     (gvs [exp2v_def]
+      \\ once_rewrite_tac [v2exp_def] \\ fs [list_def,name_def]
+      \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ fs []
+      \\ Cases_on ‘t’ \\ EVAL_TAC)
+    \\ reverse (Cases_on ‘dest_case_enum (HD xs) (If t xs x x')’)
+    THEN1
+     (gvs [exp2v_def,LENGTH_EQ_NUM_compute]
       \\ once_rewrite_tac [v2exp_def] \\ fs [list_def,name_def]
       \\ pop_assum mp_tac
       \\ simp [Once (DefnBase.one_line_ify NONE dest_case_enum_def), AllCaseEqs()]
       \\ strip_tac \\ rw []
-      \\ qabbrev_tac ‘z = HD xs’ \\ rw []
       \\ fs [enum2v_def] \\ simp [Once v2exp_def]
+      \\ qpat_x_assum ‘v2exps _ = _’ mp_tac
+      \\ simp [Once v2exp_def]
       \\ imp_res_tac dest_case_enum_IMP
-      \\ pop_assum match_mp_tac \\ rw [] \\ res_tac)
+      \\ rw [] \\ gvs [])
     \\ Cases_on ‘dest_case_tree (get_Op_Head (EL 1 xs)) (If t xs x x')’
     THEN1
-     (fs [exp2v_def] \\ drule v2exps_list_exp2v \\ strip_tac
+     (fs [exp2v_def]
       \\ once_rewrite_tac [v2exp_def] \\ fs [list_def,name_def]
       \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ fs []
       \\ Cases_on ‘t’ \\ EVAL_TAC)
@@ -705,29 +742,27 @@ Proof
     \\ once_rewrite_tac [v2exp_def] \\ fs [list_def,name_def]
     \\ pop_assum mp_tac
     \\ simp [Once (DefnBase.one_line_ify NONE dest_case_tree_def), AllCaseEqs()]
+    \\ gvs [LENGTH_EQ_NUM_compute]
     \\ strip_tac \\ rw []
-    \\ qabbrev_tac ‘z = get_Op_Head (EL 1 xs)’ \\ rw []
     \\ pairarg_tac \\ fs [] \\ rw []
     \\ fs [row2v_def] \\ simp [Once v2exp_def]
+      \\ qpat_x_assum ‘v2exps _ = _’ mp_tac
+      \\ simp [Once v2exp_def] \\ strip_tac
     \\ imp_res_tac dest_case_lets_IMP \\ fs []
     \\ imp_res_tac dest_case_tree_IMP \\ fs []
-    \\ pop_assum match_mp_tac  \\ rw [] \\ res_tac)
+    \\ pop_assum (fn th => once_rewrite_tac [GSYM th])
+    \\ rpt AP_TERM_TAC
+    \\ qid_spec_tac ‘rows’ \\ Induct \\ gvs [FORALL_PROD])
   THEN1
    (fs [exp2v_def,list_def]
     \\ once_rewrite_tac [v2exp_def] \\ fs [list_def,name_def])
   THEN1
-   (Cases_on ‘MEM n (MAP name protected_names)’ \\ fs [exp2v_def]
-    THEN1
-     (drule v2exps_list_exp2v \\ strip_tac
-      \\ once_rewrite_tac [v2exp_def |> SIMP_RULE (srw_ss()) [name_def]]
-      \\ simp [AllCaseEqs(),list_def,name_def]
-      \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ fs [])
-    \\ Cases_on ‘is_upper n’ \\ fs [exp2v_def]
-    \\ drule v2exps_list_exp2v \\ strip_tac
+   (fs [exp2v_def] \\ IF_CASES_TAC
     THEN1
      (once_rewrite_tac [v2exp_def |> SIMP_RULE (srw_ss()) [name_def]]
       \\ simp [AllCaseEqs(),list_def,name_def]
       \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ fs [])
+    \\ gvs [is_protected_def]
     \\ qpat_x_assum ‘~MEM _ _’ (fn th => assume_tac (CONV_RULE EVAL th))
     \\ pop_assum mp_tac \\ rewrite_tac [DE_MORGAN_THM]
     \\ once_rewrite_tac [v2exp_def |> SIMP_RULE (srw_ss()) [name_def]]

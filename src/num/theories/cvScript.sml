@@ -201,7 +201,7 @@ Overload case = “cv_CASE”
 val cv_size_def = Prim_rec.new_recursive_definition {
   name = "cv_size_def",
   rec_axiom = cv_Axiom,
-  def = “cv_size (Num n) = 1 + n /\
+  def = “cv_size (Num n) = n /\
          cv_size (Pair c d) = 1 + (cv_size c + cv_size d)”};
 
 val _ = TypeBase.export (
@@ -220,7 +220,7 @@ val cv_snd_def = recdef("cv_snd_def",
 val cv_ispair_def = recdef("cv_ispair_def",
                            “cv_ispair (Pair p q) = Num (SUC 0) /\
                             cv_ispair (Num m) = Num 0”);
-val _ = export_rewrites ["cv_fst_def", "cv_snd_def", "cv_ispair_def"];
+val _ = export_rewrites ["cv_fst_def", "cv_snd_def", "cv_ispair_def", "cv_size_def"];
 
 val b2c_def = Prim_rec.new_recursive_definition{
   def = “b2c T = Num (SUC 0) /\ b2c F = Num 0”,
@@ -334,11 +334,6 @@ Theorem cv_eq[simp]:
 Proof
   simp [cv_eq_def0]
 QED
-
-
-val cv_size_alt_def = recdef("cv_size_alt_def",
-  “(cv_size_alt (Num n) = n) /\
-   (cv_size_alt (Pair p q) = 1 + cv_size_alt p + cv_size_alt q)”);
 
 (* -------------------------------------------------------------------------
  * Extra characteristic theorems

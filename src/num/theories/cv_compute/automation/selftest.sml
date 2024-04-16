@@ -1,5 +1,11 @@
-open HolKernel Parse boolLib bossLib cvTheory;
-open integerTheory wordsTheory sptreeTheory cv_typesTheory cv_typesLib;
+
+open HolKernel Parse boolLib bossLib cvTheory cv_repTheory cv_primTheory;
+open cv_typeTheory cv_typeLib cv_repLib cv_transLib;
+open arithmeticTheory integerTheory wordsTheory sptreeTheory wordsLib;
+
+(*---------------------------------------------------------------------------*
+  Testing only cv_type
+ *---------------------------------------------------------------------------*)
 
 val _ = Datatype ‘
   a = A1 (num list) (((a # b) list) list)
@@ -37,7 +43,7 @@ val _ = Datatype ‘
 
 val ty = “:('a,'b,'c) word_tree”
 val res = define_from_to ty
-val _ = (type_of “from_word_tree f0 t” = “:cv”) orelse fail()
+val _ = (type_of “from_scratch_word_tree f0 t” = “:cv$cv”) orelse fail()
 
 val res = define_from_to “:'a sptree$spt”
 
@@ -52,5 +58,215 @@ val _ = Datatype ‘
 val _ = Datatype ‘
   prog = Skip | Seq prog prog | Assign string exp
 ’
+
+(*---------------------------------------------------------------------------*
+  Testing full cv_trans automation
+ *---------------------------------------------------------------------------*)
+
+fun test_for_failure f x =
+  case total f x of
+    NONE => ()
+  | SOME _ => failwith "unexpected success";
+
+val _ = Datatype `
+  xx_yy = XX xx_yy | YY (xx_yy list)
+`
+
+val xx_yy_depth_def = Define `
+  xx_yy_depth (XX x) = xx_yy_depth x /\
+  xx_yy_depth (YY xs) = xx_yy_depth_list xs /\
+  xx_yy_depth_list [] = 0:num /\
+  xx_yy_depth_list (y::ys) = xx_yy_depth y + xx_yy_depth_list ys
+`
+
+val _ = cv_trans xx_yy_depth_def
+
+val add1_def = Define `
+  add1 a xs = MAP (\x . x + a:num) xs
+`
+
+val _ = cv_auto_trans add1_def;
+
+val genlist_def = Define `
+  genlist i f 0 = [] /\
+  genlist i f (SUC n) = f i :: genlist (i+1:num) f n
+`
+
+val genlist_eq_GENLIST = store_thm("genlist_eq_GENLIST[cv_inline]",
+  ``GENLIST = genlist 0``,
+  qsuff_tac ‘!i f n. genlist i f n = GENLIST (f o (\k. k + i)) n’
+  >- (gvs [FUN_EQ_THM] \\ rw [] \\ AP_THM_TAC \\ AP_TERM_TAC \\ gvs [FUN_EQ_THM])
+  \\ Induct_on ‘n’ \\ gvs [genlist_def]
+  \\ rewrite_tac [listTheory.GENLIST_CONS] \\ gvs []
+  \\ rw [] \\ AP_THM_TAC \\ AP_TERM_TAC \\ gvs [FUN_EQ_THM,arithmeticTheory.ADD1]
+);
+
+val mult_table_def = Define `
+  mult_table n = GENLIST (\i . GENLIST (\j . i * j) n) n
+`
+
+val _ = cv_auto_trans mult_table_def;
+
+val _ = Datatype `
+  rec = <| abc : num ; def : num; rest : rec list |>
+`
+
+val rec_test1_def = Define `
+  rec_test1 r = r.abc + 1
+`
+
+val _ = cv_auto_trans rec_test1_def;
+
+val rec_test2_def = Define `
+  rec_test2 r = r with <| rest := r :: r.rest |>
+`
+
+val _ = cv_auto_trans rec_test2_def;
+
+val rec_test3_def = Define `
+  rec_test3 r = <| abc := 4; def := 45; rest := r.rest |>
+`
+
+val _ = cv_auto_trans rec_test3_def;
+
+val fac_def = Define `
+  fac (n:num) = if n = 0:num then 1 else n * fac (n-1)
+`
+
+val inc_def = Define `
+  inc n = n + 1:num
+`
+
+val risky_def = Define `
+  risky n = if n = 0 then ARB else n+1:num
+`
+
+val foo_def = Define `
+  foo (n:num) k i = if n = 0:num then k + i + 1:num else
+                    if 500 < n then ARB else n * foo (n-1) i k
+`
+
+val use_foo_def = Define `
+  use_foo n = foo 1 (n + 2) 3
+`
+
+val cond_def_lemma = Q.prove (
+  `?(f:num -> num) . !n . n <> 0 ==> f n = n - 1`,
+  qexists_tac ‘\n. n - 1’ \\ fs []
+)
+
+val cond_def = new_specification("cond_sub_def",["cond_sub"],cond_def_lemma);
+
+val res = cv_trans fac_def;
+val res = cv_trans_pre foo_def;
+val res = cv_trans_pre use_foo_def;
+val res = cv_trans_pre risky_def;
+val res = cv_trans inc_def;
+val res = cv_trans_pre cond_def;
+
+val _ = Datatype `
+  a_type = A_cons | B_cons | C_cons num num | D_cons (a_type list)
+`
+
+val a_fun_def = Define `
+  a_fun n = D_cons [A_cons; C_cons n 5]
+`
+
+val res = cv_trans a_fun_def;
+
+open sptreeTheory
+
+val _ = Datatype `
+  b_type = B1 | B2 | B3 | B4 | B5 | B6 | B7
+`
+
+val _ = Datatype `
+  c_type = C1 num | C2 c_type | C3 c_type
+`
+
+val num_sum_def = Define `
+  num_sum ns =
+    case ns of [] => 0:num | (n::ns) => n + num_sum ns
+`
+
+val res = cv_trans num_sum_def;
+val res = cv_trans listTheory.LENGTH;
+(* val res = cv_trans_pre lookup_def; *)
+
+val f1_def = Define `
+  f1 (n:num) = 1:num
+`
+
+val f2_def = Define `
+  f2 n = f1 n
+`
+
+val f3_def = Define `
+  f3 n = f2 n
+`
+
+val res = cv_auto_trans f3_def;
+
+val fw1_def = Define `
+  fw1 w = w + 1w
+`
+
+val fw2_def = Define `
+  fw2 w = fw1 (w:word8)
+`
+
+val res = cv_auto_trans fw2_def;
+
+val hello_def = Define `
+  hello xs = "HELLO!" ++ xs
+`
+
+val res = cv_auto_trans hello_def;
+
+val res = time cv_eval “f3 (1+2)”;
+
+val even_def = Define `
+  even 0 = T /\
+  even (SUC n) = odd n /\
+  odd 0 = F /\
+  odd (SUC n) = even n
+`
+
+val res = cv_trans_pre even_def
+
+val _ = store_thm("even_pre[local,cv_pre]",
+  ``(!a0. even_pre a0) /\ (!a1. odd_pre a1)``,
+  ho_match_mp_tac (fetch "-" "even_ind") \\ rpt strip_tac
+  \\ once_rewrite_tac [res] \\ fs []
+);
+
+val th = cv_eval “even 10”
+val th = cv_eval “even 999999”
+
+val test_u2_def = Define `
+  test_u2 n = (n+1:num,())
+`
+
+val _ = cv_trans test_u2_def;
+
+val _ = Datatype `
+  foo = RoseTree (num -> num) (foo list)
+`
+
+val _ = test_for_failure (cv_rep_for []) “RoseTree (\i. i) []”;
+
+val missing_arg_def = Define `
+  missing_arg = K
+`
+
+val _ = cv_trans combinTheory.K_THM
+val _ = cv_trans missing_arg_def
+
+val apply_list_def = Define `
+  apply_list [] x = x /\
+  apply_list (f::fs) x = apply_list fs (f x)
+`
+
+val _ = test_for_failure cv_trans apply_list_def;
 
 val thms = rec_define_from_to “:prog”;

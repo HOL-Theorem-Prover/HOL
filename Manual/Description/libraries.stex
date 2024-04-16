@@ -1829,22 +1829,30 @@ For example, one might write
 \end{alltt}
 \end{session}
 
-\section{Computation with First-Order Terms---\texttt{cv\_computeLib}}
+\section{Computation with First-Order Terms---\texttt{cv\_computeLib} and \texttt{cv\_transLib}}
 \label{sec:cv-computeLib}
 \index{cv\_computeLib@\ml{cv\_computeLib}}
+\index{cv\_transLib@\ml{cv\_transLib}}
 
 The library \ml{cv\_computeLib} supports fast evaluation of \HOL{} terms.
+It exports a single conversion, \ml{cv\_compute}, which accepts terms in a simple, first-order, untyped language built from a recursive datatype of pairs and natural numbers.
+Its accompanying theory, \ml{cvTheory}, defines this type (called \ty{:cv}) and its operations.
 When applicable, \ml{cv\_computeLib} will often execute several orders of magnitude faster than \ml{computeLib} (Section~\ref{sec:computeLib}) on similar inputs.
 Such performance is possible because \ml{cv\_computeLib} relies on an interpreter that is implemented inside the kernel, and that uses native ML datatypes and arbitrary precision integer arithmetic to execute quickly.
 This implementation is a Standard ML adaption of the compute facility in the Candle theorem prover, which has been proved to be sound wrt. the inference rules of higher-order logic~\cite{ITP23}.
 
-The library \ml{cv\_computeLib} exports a single conversion, \ml{cv\_compute}, which accepts terms in a simple, first-order, untyped language built from a recursive datatype of pairs and natural numbers.
-Its accompanying theory, \ml{cvTheory}, defines this type (called \ty{:cv}) and its operations.
+The library \ml{cv\_transLib} provides a user-friendly interface to \ml{cv\_computeLib}.
+It exports automation which translates functional \HOL{} definitions into equivalent functions which operate over the \ty{:cv} type, and a wrapper around \ml{cv\_computeLib.cv\_compute} called \ml{cv\_eval} which can be used much like \ml{computeLib.EVAL}~(Section~\ref{sec:computeLib}).
+Its accompanying theories (\ml{cv\_primTheory} and \ml{cv\_stdTheory}) define and translate various common operations over primitive types.
 
-\subsection{Computing with \ml{cv\_compute}}
+\subsection{Computing with \ml{cv\_compute} directly}
 \label{ssec:cv-exprs}
 
-The following example shows how to define a (very simple) function and use it in a computation with \ml{cv\_compute}:
+The following example shows how to define a (very simple) function and use it in a computation with \ml{cv\_compute}.
+
+\textbf{NB:} this example illustrates how \ml{cv\_compute} works, but is not the recommended workflow for using it.
+Instead, use \ml{cv\_transLib}~(Section~\ref{ssec:cv-trans-lib}).
+
 \begin{session}
 \begin{alltt}
 >> load "cv_computeLib";
@@ -1896,11 +1904,7 @@ Aside from the \ty{:cv} datatype constructors, the following operations can be u
 
 The following holds for the semantics of these operations:
 \begin{itemize}
-\item Arithmetic works as on \HOL{}'s natural numbers, except:
-\begin{itemize}
-  \item \holtxt{cv\_div m (Num 0)} is defined to be \holtxt{Num 0},
-  \item \holtxt{cv\_mod m (Num 0)} is defined to be \holtxt{m}.
-\end{itemize}
+\item Arithmetic works as on \HOL{}'s natural numbers.
 \item Boolean-like expressions (such as \holtxt{cv\_if}) treat \holtxt{Num 1} as true, and all other values as false.
 \item All ill-typed expressions (such as \holtxt{cv\_fst (Num 3)}) are defined as \holtxt{Num 0}.
 \item Function constants must have a corresponding code equation, see below.
@@ -1977,6 +1981,68 @@ An example instantiation can be seen in the source code of \ml{cv\_computeLib} i
 
 \paragraph{Further reading}
 For an in-depth explanation of \ml{Thm.compute}, we refer the reader to the Candle theorem prover's \ml{compute} primitive~\cite{ITP23}, on which \ml{Thm.compute} is based.
+
+\subsection{Computing with \ml{cv\_compute} via \ml{cv\_transLib}}
+\label{ssec:cv-trans-lib}
+
+It is also possible to use \ml{cv\_compute} on \HOL{} functions that are not defined using the \ty{:cv} type, using \ml{cv\_transLib}.
+This library supports automatic translation of functions to equivalent versions operating over the \ty{:cv} type, and maintains a database of known translations.
+Then, the \ml{cv\_eval} entrypoint can be used on a regular \HOL{} term: it uses the database to translate the term to an equivalent \ty{:cv} version, invokes \ml{cv\_compute}, and translates the result back from the \ty{:cv} type.
+Note therefore that, like \ml{cv\_compute}, \ml{cv\_eval} accepts only closed terms.
+All constants in its input must also be found in its database of known translations.
+Therefore, the intended workflow for using \ml{cv\_transLib} is as follows:
+\begin{enumerate}
+  \item Define \HOL{} functions in the usual way.
+  \item Invoke \ml{cv\_transLib} to translate these functions to \ty{:cv} versions, populating the database of known translations.
+  \item Use \ml{cv\_transLib.cv\_eval} to evaluate terms composed of known constants efficiently.
+\end{enumerate}
+
+\paragraph{Translation entrypoints}
+There are eight entrypoints in \ml{cv\_transLib} for translating \HOL{} functions to \ty{:cv} equivalents:
+  \ml{cv\_trans}, \ml{cv\_trans\_pre}, \ml{cv\_trans\_rec}, \ml{cv\_trans\_rec\_pre},
+  \ml{cv\_auto\_trans}, \ml{cv\_auto\_trans\_pre}, \ml{cv\_auto\_trans\_rec}, and \ml{cv\_auto\_trans\_rec\_pre}.
+
+All accept a theorem representing a \HOL{} definition.
+Those with prefix \ml{cv\_trans} fail if, during translation, they encounter a constant which does not have a known translation.
+Those with prefix \ml{cv\_auto\_trans} invoke themselves recursively on any such unknown constants.
+
+Translation of some \HOL{} functions give rise to a precondition (for example, \ml{listheory.HD} requires its argument to be non-empty).
+All eight entrypoints will attempt to discharge simple preconditions, but the variants containing \ml{pre} allow a more complex precondition to persist and return its definition to the user.
+Preconditions bubble up through further translations, and must be discharged for any term used with \ml{cv\_eval}.
+The other variants fail if they encounter a precondition they cannot discharge.
+
+Translation of a recursive \HOL{} function produces a recursive \ty{:cv} function, which may require a termination proof.
+All eight entrypoints attempt to discharge simple termination proofs, but the variants containing \ml{rec} accept an additional argument, a tactic which should discharge a more complex termination goal.
+The other variants will fail if they cannot prove termination.
+
+\paragraph{Examples: computing squares and factorials}
+
+The following example mirrors those in Section \ref{ssec:cv-exprs}, but it uses \ml{cv\_transLib} instead of interacting directly with the \ty{:cv} type.
+
+\begin{session}
+\begin{alltt}
+>> load "cv_transLib";
+>> load "cv_stdTheory";
+
+>> Definition square'_def:
+     square' (x:num) = x * x
+   End
+
+>> cv_transLib.cv_trans square'_def;
+
+>> cv_transLib.cv_eval ``square' 7``;
+
+>> arithmeticTheory.FACT;
+
+>> cv_transLib.cv_trans arithmeticTheory.FACT;
+
+##linelen_limit 75
+>> time cv_transLib.cv_eval ``FACT 1234``;
+##nolinelen_limit
+\end{alltt}
+\end{session}
+
+Further usage examples are located in \ml{examples/cv\_compute}.
 
 \section{Arithmetic Libraries---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
 \label{sec:numLib}

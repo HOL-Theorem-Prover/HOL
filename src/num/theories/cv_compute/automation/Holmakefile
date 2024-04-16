@@ -1,4 +1,4 @@
-INCLUDES = $(HOLDIR)/src/integer
+INCLUDES = $(HOLDIR)/src/integer $(HOLDIR)/src/rational
 
 all: $(DEFAULT_TARGETS) selftest.exe
 

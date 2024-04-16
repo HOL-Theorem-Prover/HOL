@@ -425,6 +425,19 @@ Proof
   THEN1 simp[NUMERAL_DEF]
 QED
 
+Theorem lrnext_eq:
+  !n. sptree$lrnext n = 2 ** (LOG 2 (n + 1))
+Proof
+  strip_tac >> completeInduct_on `n` >> rw[] >>
+  rw[Once lrnext_def] >>
+  first_x_assum $ qspec_then `(n - 1) DIV 2` mp_tac >>
+  impl_tac >> rw[] >- simp[DIV_LT_X] >>
+  simp[GSYM EXP] >> Cases_on `EVEN n` >>
+  gvs[GSYM ODD_EVEN] >> imp_res_tac EVEN_ODD_EXISTS >> gvs[]
+  >- (`(2 * m - 1) DIV 2 = m - 1` by simp[DIV_EQ_X] >> simp[LOG_add_digit])
+  >- simp[Once LOG_RWT, SimpRHS, ADD1]
+QED
+
 Definition domain_def[simp,nocompute]:
   domain LN = {} /\
   domain (LS _) = {0} /\

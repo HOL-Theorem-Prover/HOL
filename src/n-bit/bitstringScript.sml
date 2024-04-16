@@ -155,6 +155,16 @@ val fixwidth = Q.store_thm("fixwidth",
               DROP (l - n) v`,
    lrw [fixwidth_def, extend])
 
+Theorem fixwidth_REPLICATE:
+  !len l. fixwidth len l =
+    if LENGTH l <= len then REPLICATE (len - LENGTH l) F ++ l
+    else DROP (LENGTH l - len) l
+Proof
+  rw[fixwidth, GSYM pad_left_extend, listTheory.PAD_LEFT] >>
+  gvs[GSYM rich_listTheory.REPLICATE_GENLIST] >>
+  `len = LENGTH l` by gvs[] >> pop_assum SUBST_ALL_TAC >> gvs[]
+QED
+
 val fixwidth_id = Q.store_thm("fixwidth_id",
   `!w. fixwidth (LENGTH w) w = w`,
   lrw [fixwidth_def])
@@ -554,6 +564,23 @@ val v2n_lt = Q.store_thm("v2n_lt",
     metis_tac [v2n_def, length_bitify_null, num_from_bin_list_def,
                l2n_lt, DECIDE ``0 < 2n``])
 
+Theorem v2n_APPEND:
+  !a b. v2n (a ++ b) = v2n b + (2 ** LENGTH b * v2n a)
+Proof
+  rw[v2n_def, bitify_reverse_map, listTheory.REVERSE_APPEND] >>
+  gvs[num_from_bin_list_def, l2n_APPEND]
+QED
+
+Theorem v2n:
+  v2n [] = 0 /\
+  v2n (b::bs) = if b then 2 ** LENGTH bs + v2n bs else v2n bs
+Proof
+  rw[] >> once_rewrite_tac[rich_listTheory.CONS_APPEND]
+  >- simp[v2n_def, bitify_reverse_map, l2n_def] >>
+  once_rewrite_tac[v2n_APPEND] >> simp[] >>
+  simp[v2n_def, bitify_reverse_map, l2n_def]
+QED
+
 (* ------------------------------------------------------------------------- *)
 
 fun bitwise_tac x y =
@@ -792,6 +819,38 @@ Proof
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, el_field, length_fixwidth,
           arithmeticTheory.ADD1, el_fixwidth,
           DECIDE ``i + (p + 1) <= p + v - q <=> i + q < v``]
+QED
+
+Theorem word_ror_alt:
+  !r a. (a : 'a word) #>> r =
+    let d = dimindex (:'a) in a << (d - r MOD d) || a >>> (r MOD d)
+Proof
+  rw[] >> qspec_then `a` assume_tac ranged_bitstring_nchotomy >> gvs[] >>
+  simp[word_ror_v2w, rotate_def] >> IF_CASES_TAC >> gvs[fixwidth_id] >>
+  qabbrev_tac `r' = r MOD dimindex (:'a)` >>
+  `r' < dimindex (:'a)` by (unabbrev_all_tac >> gvs[]) >>
+  qpat_x_assum `Abbrev _` kall_tac >>
+  simp[word_lsl_v2w, word_lsr_v2w, rotate_def, word_or_v2w] >>
+  simp[Once v2w_11] >> simp[field_def, arithmeticTheory.ADD1] >>
+  `shiftr v 0 = v` by simp[shiftr_def] >> simp[] >>
+  `~(LENGTH v < r MOD LENGTH v)` by (
+    simp[arithmeticTheory.NOT_LESS] >>
+    irule arithmeticTheory.LESS_IMP_LESS_OR_EQ >>
+    simp[arithmeticTheory.MOD_LESS]) >>
+  rewrite_tac[fixwidth] >> simp[length_shiftr] >>
+  qmatch_goalsub_abbrev_tac `bor a b` >>
+  `~(LENGTH (bor a b) < LENGTH v)` by (
+    unabbrev_all_tac >> rewrite_tac[bor_def, bitwise_def] >>
+    simp[length_shiftr, shiftl_def, length_fixwidth, length_pad_right]) >>
+  unabbrev_all_tac >>
+  simp[bor_def, bitwise_def, shiftl_def, shiftr_def,
+       listTheory.PAD_LEFT, listTheory.PAD_RIGHT, arithmeticTheory.MAX_DEF] >>
+  simp[fixwidth_REPLICATE, GSYM listTheory.MAP_DROP,
+       GSYM listTheory.ZIP_DROP, listTheory.DROP_APPEND] >>
+  `dimindex (:'a) - r' - dimindex (:'a) = 0` by simp[] >> simp[] >>
+  rw[listTheory.LIST_EQ_REWRITE, listTheory.EL_DROP, listTheory.EL_MAP, listTheory.EL_TAKE,
+     listTheory.EL_ZIP, listTheory.EL_APPEND_EQN, rich_listTheory.EL_REPLICATE] >> rw[] >>
+  AP_THM_TAC >> AP_TERM_TAC >> rw[]
 QED
 
 Theorem word_reverse_v2w:
