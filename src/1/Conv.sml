@@ -1778,15 +1778,36 @@ fun SWAP_EXISTS_CONV xyt =
    let
       val {Bvar = x, Body = yt} = dest_exists xyt
       val {Bvar = y, Body = t} = dest_exists yt
-      val xt  = mk_exists {Bvar = x, Body = t}
-      val yxt = mk_exists {Bvar = y, Body = xt}
-      val t_thm = ASSUME t
    in
-      IMP_ANTISYM_RULE
-         (DISCH xyt (CHOOSE (x, ASSUME xyt) (CHOOSE (y, (ASSUME yt))
-          (EXISTS (yxt, y) (EXISTS (xt, x) t_thm)))))
-         (DISCH yxt (CHOOSE (y, ASSUME yxt) (CHOOSE (x, (ASSUME xt))
-         (EXISTS (xyt, x) (EXISTS (yt, y) t_thm)))))
+     if x ~~ y then (* x is vacuous *)
+         (*
+              ?a b. t  =  ?b. t   (1)  (by EXISTS_SIMP)
+                 t     =  ?a. t   (2)  (by EXISTS_SIMP)
+                ?b. t  = ?b a. t  (3)  (from 2 and ABS/MK_COMB)
+              ?a b. t  = ?b a. t       (from 1 and 3 by TRANS)
+         *)
+       let val v' = variant (HOLset.listItems (FVL[t] empty_tmset)) x
+           val exc = rator xyt
+           val th1 = REWR_CONV EXISTS_SIMP xyt
+           val th2 = SYM (REWR_CONV EXISTS_SIMP (Psyntax.mk_exists(v', t)))
+           val th3 = AP_TERM exc (ABS x th2)
+       in
+         TRANS th1 th3
+       end
+     else
+       let
+         val xt  = mk_exists {Bvar = x, Body = t}
+         val yxt = mk_exists {Bvar = y, Body = xt}
+         val t_thm = ASSUME t
+       in
+         IMP_ANTISYM_RULE
+           (DISCH xyt (CHOOSE (x, ASSUME xyt)
+                          (CHOOSE (y, (ASSUME yt))
+                                  (EXISTS (yxt, y) (EXISTS (xt, x) t_thm)))))
+           (DISCH yxt (CHOOSE (y, ASSUME yxt)
+                          (CHOOSE (x, (ASSUME xt))
+                                  (EXISTS (xyt, x) (EXISTS (yt, y) t_thm)))))
+       end
    end
    handle HOL_ERR _ => raise ERR "SWAP_EXISTS_CONV" ""
 

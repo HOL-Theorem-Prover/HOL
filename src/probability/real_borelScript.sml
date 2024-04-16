@@ -21,10 +21,10 @@
 open HolKernel Parse boolLib bossLib;
 
 open metisLib arithmeticTheory pred_setTheory pred_setLib numTheory numLib
-     listTheory combinTheory pairTheory realTheory realLib jrhUtils RealArith
+     listTheory combinTheory pairTheory realTheory realLib jrhUtils
      seqTheory real_sigmaTheory transcTheory metricTheory topologyTheory;
 
-open cardinalTheory real_topologyTheory iterateTheory;
+open cardinalTheory real_topologyTheory iterateTheory real_of_ratTheory;
 
 open hurdUtils util_probTheory sigma_algebraTheory;
 
@@ -40,6 +40,9 @@ val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 val set_ss = std_ss ++ PRED_SET_ss;
+
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)

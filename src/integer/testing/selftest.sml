@@ -71,4 +71,13 @@ val _ = convtest ("decide_closed_presburger w/genvar % 4",
                       $var$(%%genvar%%801) + r = 0”,
                   boolSyntax.F);
 
+val _ = convtest ("decide_closed_presburger gh1207c",
+                  OmegaShell.decide_closed_presburger,
+                  “∀x q r:int.
+                    41 * x = q * 42 + r ∧ 0 ≤ r ∧ r < 42 ⇒
+                    ∀k r'.
+                       41 * x = k * 42 + r' ∧ 0 ≤ r' ∧ r' < 42 ⇒
+                       x ≤ -42 ∨ 1 < r ∨ -21 < k”,
+                  boolSyntax.T);
+
 val _ = exit_count0 erc

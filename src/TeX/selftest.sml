@@ -2,6 +2,9 @@ open HolKernel boolLib bossLib Parse
 open EmitTeX combinSyntax PP
 open testutils
 
+val errcount = ref 0
+val _ = diemode := Remember errcount
+
 fun udie() = testutils.die "FAILED!"
 fun gotdie s = testutils.die ("\nFAILED: Got >" ^ s ^ "<")
 
@@ -61,7 +64,7 @@ val _ = set_trace "EmitTeX: dollar parens" 1
 
 val _ = tprint "Testing UNIV printing (:'a)"
 val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ alpha)
-val _ = if s = "\\ensuremath{{\\cal{U}}}(:'a)" then OK() else gotdie s
+val _ = if s = "\\ensuremath{{\\cal{U}}}(:\\alpha{})" then OK() else gotdie s
 
 val _ = tprint "Testing UNIV printing \"raw\" (:'a)"
 val s = pp_to_string 70
@@ -88,7 +91,7 @@ val _ = tprint "Testing datatype printing (default)"
 val s = dtype_test 55 "foo"
 val expected_consistent =
   "\\HOLFreeVar{foo} =\n\
-  \    \\HOLConst{C} (\\HOLTyOp{bool} -> \\ensuremath{\\alpha} -> \\HOLTyOp{bool})\n\
+  \    \\HOLConst{C} (\\HOLTyOp{bool} \\HOLTokenMap{} \\ensuremath{\\alpha} \\HOLTokenMap{} \\HOLTyOp{bool})\n\
   \  \\HOLTokenBar{} \\HOLConst{D} (\\ensuremath{\\alpha} \\HOLTyOp{foo}) \\ensuremath{\\alpha} (\\HOLTyOp{num} \\HOLTyOp{list})\n\
   \  \\HOLTokenBar{} \\HOLConst{Econ} (\\ensuremath{\\alpha} \\HOLTyOp{foo}) (\\ensuremath{\\alpha} \\HOLTyOp{foo}) \\ensuremath{\\alpha}"
 val _ = if s = expected_consistent then OK()
@@ -96,7 +99,7 @@ val _ = if s = expected_consistent then OK()
 
 val expected_inconsistent =
   "\\HOLFreeVar{foo} = \
-  \\\HOLConst{C} (\\HOLTyOp{bool} -> \\ensuremath{\\alpha} -> \\HOLTyOp{bool}) \
+  \\\HOLConst{C} (\\HOLTyOp{bool} \\HOLTokenMap{} \\ensuremath{\\alpha} \\HOLTokenMap{} \\HOLTyOp{bool}) \
   \\\HOLTokenBar{} \\HOLConst{D} (\\ensuremath{\\alpha} \\HOLTyOp{foo}) \\ensuremath{\\alpha} (\\HOLTyOp{num} \\HOLTyOp{list})\n\
   \  \\HOLTokenBar{} \\HOLConst{Econ} (\\ensuremath{\\alpha} \\HOLTyOp{foo}) (\\ensuremath{\\alpha} \\HOLTyOp{foo}) \\ensuremath{\\alpha}"
 val _ = tprint "Testing datatype printing (compact)"
@@ -121,13 +124,29 @@ val _ = if s = "\\HOLFreeVar{bar} = \\HOLConst{ETA} \\HOLTokenBar{} \\HOLConst{E
 
 val _ = tprint "Testing d/type printing of a polymorphic (2-field) record type"
 val _ = Datatype‘recdtype = <| carrier : 'a set; opn : 'a -> 'b -> 'b |>’
-val s = dtype_test 80 "recdtype"
-val _ = if s =
-           "\\HOLFreeVar{recdtype} = \\HOLTokenLeftrec{} \
-           \\\HOLFieldName{carrier} : \
-           \\\ensuremath{\\alpha} -> \\HOLTyOp{bool}; \
-           \\\HOLFieldName{opn} : \\ensuremath{\\alpha} -> \
-           \\\ensuremath{\\beta} -> \\ensuremath{\\beta} \\HOLTokenRightrec{}"
-        then
-          OK()
-        else gotdie s
+val expected =
+    "\\HOLFreeVar{recdtype} = \\HOLTokenLeftrec{} \
+    \\\HOLFieldName{carrier} : \
+    \\\ensuremath{\\alpha} \\HOLTokenMap{} \\HOLTyOp{bool}; \
+    \\\HOLFieldName{opn} : \\ensuremath{\\alpha} \\HOLTokenMap{} \
+    \\\ensuremath{\\beta} \\HOLTokenMap{} \\ensuremath{\\beta} \
+    \\\HOLTokenRightrec{}"
+val _ = require_msg (check_result (equal expected)) String.toString
+                    (dtype_test 80) "recdtype"
+
+val _ = tprint "Testing printing of type variables"
+val _ = require_msg (check_result (equal "\\alpha{}")) String.toString
+                    (pp_to_string 70 pp_type_as_tex) alpha
+
+val _ = tprint "Testing printing of type arrow"
+val _ = require_msg (check_result (equal "\\alpha{} \\HOLTokenMap{} \\beta{}"))
+                    String.toString
+                    (pp_to_string 70 pp_type_as_tex) (alpha --> beta)
+
+val _ = tprint "Testing printing of fn update syntax"
+val expected = "\\HOLFreeVar{f}\\llparenthesis\\HOLFreeVar{k} \\HOLTokenMapto{}\
+               \ \\HOLFreeVar{v}\\rrparenthesis"
+val _ = require_msg (check_result (equal expected)) String.toString
+                    (pp_to_string 70 pp_term_as_tex)
+                    “f (| k |-> v |)”
+val _ = exit_count0 errcount

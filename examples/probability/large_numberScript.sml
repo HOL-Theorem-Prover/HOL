@@ -1,8 +1,7 @@
 (* ========================================================================= *)
 (* The Laws of Large Numbers (for Uncorrelated and I.I.D. Random Variables)  *)
 (*                                                                           *)
-(* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2020 - 2022)          *)
-(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
+(* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2020 - 2023)          *)
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
@@ -19,7 +18,7 @@ open util_probTheory sigma_algebraTheory extrealTheory measureTheory
 val _ = new_theory "large_number";
 
 (* An unintended overload/abbreviation from pred_setTheory *)
-val _ = hide "equiv_class";
+val _ = temp_clear_overloads_on "equiv_class";
 
 (* "In the formal construction of a course in the theory of probability, limit
     theorems appear as a kind of superstructure over elementary chapters, in
@@ -39,6 +38,15 @@ val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = hide "S";
 val _ = hide "W";
+
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
+(* NOTE: The above deprecate settings do not cover "flr" and "clg", which
+   are overloaded again in intrealTheory.
+ *)
+val _ = bring_to_front_overload "flr" {Name = "NUM_FLOOR",   Thy = "real"};
+val _ = bring_to_front_overload "clg" {Name = "NUM_CEILING", Thy = "real"};
 
 (* ------------------------------------------------------------------------- *)
 (*  Definitions                                                              *)
@@ -3047,7 +3055,7 @@ Proof
         ‘?r. a i = Normal r’ by METIS_TAC [extreal_cases] \\
         ‘0 <= r /\ r <= &i’ by METIS_TAC [extreal_of_num_def, extreal_le_eq] \\
          rw [Abbr ‘b’, real_normal]) >> DISCH_TAC \\
-     Q.ABBREV_TAC ‘k = flr (b n)’ \\
+     Q.ABBREV_TAC ‘k :num = flr (b n)’ \\
      Know ‘&k <= a n’
      >- (Know ‘!i. a i = Normal (b i)’
          >- (rw [Abbr ‘b’, normal_real]) >> Rewr' \\

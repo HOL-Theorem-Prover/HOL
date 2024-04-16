@@ -24,7 +24,10 @@ drules.tex: drules.stex $(PS_STUFF)
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) $(dprot $(HOLDIR)/src/integer/integerTheory.uo)
+theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
+	$(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
+	$(dprot $(SIGOBJ)/real_sigmaTheory.uo) \
+	$(dprot $(SIGOBJ)/iterateTheory.uo)
 	$(PS_COMMAND)
 
 math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
@@ -46,6 +49,10 @@ system.tex: system.stex $(PS_STUFF)
 
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)
+
+# This builds figs/0.mps, figs/1.mps, ...
+figures:
+	mpost -mem=metafun -tex=latex figure.mp
 
 EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \

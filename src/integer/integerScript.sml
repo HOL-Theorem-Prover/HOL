@@ -26,7 +26,7 @@ val _ = set_grammar_ancestry ["arithmetic", "pred_set"]
             "BasicProvers", "boolSimps", "pairSimps",
             "numSimps", "numLib", "metisLib"];
 *)
-open jrhUtils quotient liteLib
+open jrhUtils quotient liteLib pred_setTheory
      arithmeticTheory prim_recTheory numTheory
      simpLib numLib boolTheory liteLib metisLib BasicProvers;
 
@@ -1731,6 +1731,13 @@ QED
 val Num = new_definition("Num",
   Term `Num (i:int) = @n. if 0 <= i then i = &n else i = - &n`);
 
+Overload num_of_int[inferior] = “Num” (* from HOL Light *)
+
+(* NOTE: In HOL-Light, num_of_int is unspecified for negative integers:
+   |- !x. num_of_int x = (@n. &n = x) (int.ml, line 2056)
+ *)
+Theorem num_of_int = Num
+
 Theorem NUM_OF_INT[simp,compute]:
   !n. Num(&n) = n
 Proof
@@ -3127,7 +3134,6 @@ val INT_LE_MONO = store_thm(
   ASM_SIMP_TAC bool_ss [INT_LE_LT, INT_MUL_SIGN_CASES, INT_LT_GT] THEN
   PROVE_TAC [INT_ENTIRE, INT_LT_REFL]);
 
-open pred_setTheory
 val INFINITE_INT_UNIV = store_thm(
   "INFINITE_INT_UNIV",
   ``INFINITE univ(:int)``,
@@ -3507,6 +3513,80 @@ val LEAST_INT_DEF = new_definition ("LEAST_INT_DEF",
   ``LEAST_INT P = @i. P i /\ !j. j < i ==> ~P j``)
 
 val _ = set_fixity "LEAST_INT" Binder
+
+(* NOTE: Ported from HOL-Light *)
+Theorem FORALL_INT_CASES :
+    !(P :int -> bool). (!x. P x) <=> (!n. P (&n)) /\ (!n. P (-&n))
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> rw []
+ >> MP_TAC (Q.SPEC ‘x’ INT_NUM_CASES) >> rw [] (* 3 subgoals *)
+ >> rw []
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Euclidean div and mod                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val EDIV_DEF = new_definition ("EDIV_DEF",
+  ``ediv i j = if 0 < j then i / j else -(i / -j)``)
+
+val EMOD_DEF = new_definition ("EMOD_DEF",
+  ``emod i j = i % ABS j``)
+
+(*---------------------------------------------------------------------------*)
+(* Theorems used for converting div/mod operations into ediv and emod        *)
+(*---------------------------------------------------------------------------*)
+
+val INT_DIV_EDIV = store_thm("INT_DIV_EDIV",
+  Term`!i j. j <> 0 ==> i / j = if 0 < j then ediv i j else -ediv (-i) j`,
+  simp[EDIV_DEF, INT_DIV_NEG, INT_NEGNEG])
+
+val INT_MOD_EMOD = store_thm("INT_MOD_EMOD",
+  Term`!i j. j <> 0 ==> i % j = if 0 < j then emod i j else -emod (-i) j`,
+  METIS_TAC[INT_MOD_NEG, INT_NEGNEG, INT_NOT_LT, INT_LT_LE, EMOD_DEF, INT_ABS])
+
+val INT_QUOT_EDIV = store_thm("INT_QUOT_EDIV",
+  Term`!i j. j <> 0 ==> i quot j = if 0 <= i then ediv i j else ediv (-i) (-j)`,
+  simp[EDIV_DEF, int_quot, int_div, INT_DIV_NEG, INT_NEGNEG] THEN
+  METIS_TAC[INT_NEG_0, NUM_OF_INT, INT_ADD_LID, INT_LT_LE, INT_NOT_LE,
+    INT_LE_NEG, ZERO_DIV, ZERO_MOD, NUM_LT])
+
+val INT_REM_EMOD = store_thm("INT_REM_EMOD",
+  Term`!i j. j <> 0 ==> i rem j = if 0 <= i then emod i j else -emod (-i) j`,
+  REPEAT GEN_TAC THEN
+  STRIP_TAC THEN
+  simp[EMOD_DEF, int_rem, int_mod, int_quot, int_div, INT_ABS_EQ0] THEN
+  simp[INT_ABS] THEN
+  Cases_on `j < 0` THEN
+  simp[INT_NEGNEG] THEN
+  METIS_TAC[INT_MUL_CALCULATE, INT_LE_NEG, INT_LT_LE, INT_NOT_LE, INT_SUB_NEG2,
+    INT_NEG_SUB, INT_NEG_EQ0])
+
+(*---------------------------------------------------------------------------*)
+(* Theorems used for converting num operators into int operators             *)
+(*---------------------------------------------------------------------------*)
+
+val NUM_INT_ADD = store_thm("NUM_INT_ADD",
+  Term`!m n. m + n = Num (&m + &n)`,
+  REWRITE_TAC [INT_ADD, NUM_OF_INT])
+
+val NUM_INT_SUB = store_thm("NUM_INT_SUB",
+  Term`!m n. m - n = if &m <= &n then 0n else Num (&m - &n)`,
+  METIS_TAC[INT_LE, INT_SUB, NUM_OF_INT, NOT_LESS_EQUAL, LESS_IMP_LESS_OR_EQ,
+    SUB_EQ_0, INT_LE])
+
+val NUM_INT_MUL = store_thm("NUM_INT_MUL",
+  Term`!m n. m * n = Num (&m * &n)`,
+  REWRITE_TAC [INT_MUL, NUM_OF_INT])
+
+val NUM_INT_EDIV = store_thm("NUM_INT_EDIV",
+  Term`!n m. m <> 0 ==> n DIV m = Num (ediv (&n) (&m))`,
+  METIS_TAC[EDIV_DEF, INT_POS, INT_LT_LE, INT_DIV, NUM_OF_INT])
+
+val NUM_INT_EMOD = store_thm("NUM_INT_EMOD",
+  Term`!n m. m <> 0 ==> n MOD m = Num (emod (&n) (&m))`,
+  METIS_TAC[EMOD_DEF, INT_ABS_NUM, INT_MOD, NUM_OF_INT])
 
 (*---------------------------------------------------------------------------*)
 

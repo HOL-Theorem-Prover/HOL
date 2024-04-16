@@ -451,10 +451,14 @@ local
   end
 
   (* returns an extended 'tmdict' *)
-  fun parse_declare_fun get_token (tydict, tmdict) =
+  fun parse_declare_const_fun parse_types get_token (tydict, tmdict) =
   let
     val name = get_token ()
-    val domain_types = parse_type_list get_token tydict
+    val domain_types =
+      if parse_types then
+        parse_type_list get_token tydict
+      else
+        []
     val range_type = parse_type get_token tydict
     val _ = Library.expect_token ")" (get_token ())
     val tm = Term.mk_var (name,
@@ -468,6 +472,9 @@ local
   in
     (tm, Library.extend_dict ((name, parsefn), tmdict))
   end
+
+  val parse_declare_const = parse_declare_const_fun false
+  val parse_declare_fun = parse_declare_const_fun true
 
   (* returns an extended 'tmdict', and the definition (as a formula) *)
   fun parse_define_fun get_token (tydict, tmdict) =
@@ -506,17 +513,20 @@ local
     (tmdict, definition)
   end
 
+  fun dest_state cmd (SOME x) = x
+    | dest_state cmd NONE     =
+        raise ERR "dest_state" ("received " ^ cmd ^ " before set-logic")
+
+  and finalize_state cmd state =
+  let
+    val (logic, tydict, tmdict, asserted) = dest_state cmd state
+  in
+    (logic, tydict, tmdict, List.rev asserted)
+  end
+
   (* returns the logic's name, its 'tydict', its 'tmdict' extended with
      declared function symbols, and a list of asserted formulas *)
-  fun parse_commands get_token state =
-  let
-    fun dest_state cmd =
-      case state of
-        SOME x => x
-      | NONE   => raise ERR "parse_commands" (cmd ^ " issued before set-logic")
-    val _ = Library.expect_token "(" (get_token ())
-    val command = get_token ()
-  in
+  and parse_command command get_token state =
     case command of "set-info" =>
       let
         val _ = parse_set_info get_token
@@ -533,21 +543,28 @@ local
       end
     | "declare-sort" =>
       let
-        val (logic, tydict, tmdict, asserted) = dest_state "declare-sort"
+        val (logic, tydict, tmdict, asserted) = dest_state "declare-sort" state
         val tydict = parse_declare_sort get_token tydict
+      in
+        parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
+      end
+    | "declare-const" =>
+      let
+        val (logic, tydict, tmdict, asserted) = dest_state "declare-const" state
+        val (_, tmdict) = parse_declare_const get_token (tydict, tmdict)
       in
         parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
       end
     | "declare-fun" =>
       let
-        val (logic, tydict, tmdict, asserted) = dest_state "declare-fun"
+        val (logic, tydict, tmdict, asserted) = dest_state "declare-fun" state
         val (_, tmdict) = parse_declare_fun get_token (tydict, tmdict)
       in
         parse_commands get_token (SOME (logic, tydict, tmdict, asserted))
       end
     | "define-fun" =>
       let
-        val (logic, tydict, tmdict, asserted) = dest_state "define-fun"
+        val (logic, tydict, tmdict, asserted) = dest_state "define-fun" state
         val (tmdict, def) = parse_define_fun get_token (tydict, tmdict)
         val asserted = def :: asserted
       in
@@ -555,7 +572,7 @@ local
       end
     | "assert" =>
       let
-        val (logic, tydict, tmdict, asserted) = dest_state "assert"
+        val (logic, tydict, tmdict, asserted) = dest_state "assert" state
         val asserted = parse_term get_token (tydict, tmdict) :: asserted
         val _ = Library.expect_token ")" (get_token ())
       in
@@ -563,27 +580,38 @@ local
       end
     | "check-sat" =>
       let
-        val _ = dest_state "check-sat"
+        val _ = dest_state "check-sat" state
         val _ = Library.expect_token ")" (get_token ())
       in
         parse_commands get_token state
       end
     | "get-proof" =>
       let
-        val _ = dest_state "get-proof"
+        val _ = dest_state "get-proof" state
         val _ = Library.expect_token ")" (get_token ())
       in
         parse_commands get_token state
       end
     | "exit" =>
-      let
-        val (logic, tydict, tmdict, asserted) = dest_state "exit"
-        val _ = Library.expect_token ")" (get_token ())
-      in
-        (logic, tydict, tmdict, List.rev asserted)
-      end
+      finalize_state "exit" state
+        before Library.expect_token ")" (get_token ())
     | _ =>
       raise ERR "parse_commands" ("unknown command '" ^ command ^ "'")
+
+  (* returns the logic's name, its 'tydict', its 'tmdict' extended with
+     declared function symbols, and a list of asserted formulas *)
+  and parse_commands get_token state =
+  let
+    val tok = SOME (get_token ())
+      (* assume an error to be end-of-stream *)
+      handle _ => NONE
+  in
+    case tok of
+      NONE => finalize_state "(end-of-stream)" state
+    | SOME t => (
+        Library.expect_token "(" t;
+        parse_command (get_token ()) get_token state
+      )
   end
 
   (* entry point into the parser (i.e., the grammar's start symbol) *)

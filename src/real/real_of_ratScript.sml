@@ -1,19 +1,21 @@
+(*---------------------------------------------------------------------------*)
+(* real_of_ratTheory, mapping between rationals and a subset of reals        *)
+(*---------------------------------------------------------------------------*)
+
 open HolKernel Parse boolLib bossLib;
 
-open realaxTheory ratTheory integerTheory intrealTheory realTheory;
+open realaxTheory ratTheory integerTheory realTheory intrealTheory hurdUtils;
+open pred_setTheory gcdTheory;
 
 val _ = augment_srw_ss [intSimps.INT_ARITH_ss]
 
 val _ = new_theory "real_of_rat";
 
-Theorem REAL_NEG_EQ:
-  -r1:real = -r2 <=> r1=r2
-Proof
-  metis_tac[REAL_NEG_NEG]
-QED
-
 Theorem NUM_OPP_SIGNS_COMPARE:
-  i1 <= 0 /\ 0 <= i2 ==> (Num i1 < Num i2 <=> 0 < i1 + i2) /\ (Num i2 < Num i1 <=> i1 + i2 < 0) /\ (Num i1 = Num i2 <=> i1 + i2 = 0)
+    !i1 i2. i1 <= 0 /\ 0 <= i2 ==>
+           (Num i1 < Num i2 <=> 0 < i1 + i2) /\
+           (Num i2 < Num i1 <=> i1 + i2 < 0) /\
+           (Num i1 = Num i2 <=> i1 + i2 = 0)
 Proof
   rw[]
   >> ‘i1 = - ABS i1’ by (Cases_on ‘i1=0’ >- simp[] >- metis_tac[INT_ABS,INT_LE_LT,INT_NEGNEG])
@@ -27,32 +29,16 @@ Proof
   Cases_on ‘i’ >> rw[]
 QED
 
-Theorem REAL_OF_NUM_SUB:
-  !m n. m <= n ==> &(n-m):real = &n - &m
-Proof
-  rw[] >> ‘?d. n=m+d’ by (irule arithmeticTheory.LESS_EQUAL_ADD >> simp[])
-  >> simp[arithmeticTheory.SUB_RIGHT_EQ]
-  >> once_rewrite_tac[GSYM REAL_ADD]
-  >> simp[REAL_ADD_RINV,AC REAL_ADD_ASSOC REAL_ADD_SYM,real_sub,REAL_ADD_LID']
-QED
-
 Theorem NUM_NEG:
   Num (-i) = Num i
 Proof
   Cases_on ‘i’ >> simp[]
 QED
 
-
 Theorem NUM_LT_NEG:
-  i1 <= 0 /\ i2 <= 0 ==> (Num i1 < Num i2 <=> i2 < i1)
+  !i1 i2. i1 <= 0 /\ i2 <= 0 ==> (Num i1 < Num i2 <=> i2 < i1)
 Proof
   rw[] >> once_rewrite_tac[GSYM NUM_NEG] >> once_rewrite_tac[GSYM INT_LT_NEG] >> simp[NUM_LT,INT_NEG_GE0]
-QED
-
-Theorem EQUIV_NOT_POS:
-  !A B. (~A<=>B)<=>(A<=>~B)
-Proof
-  rpt strip_tac >> iff_tac >> rw[] >> rw[NOT_CLAUSES]
 QED
 
 Definition real_of_rat_def:
@@ -75,17 +61,6 @@ Theorem REAL_OF_RAT_OF_INT:
   real_of_rat (rat_of_int i) = real_of_int i
 Proof
   simp[real_of_rat_def]
-QED
-
-Theorem RAT_LEMMA5_BETTER:
-  y1 <> 0:real /\ y2 <> 0 ==> (x1 / y1 = x2 / y2 <=> x1 * y2 = x2 * y1)
-Proof
-  rw[] >> ‘y1*y2 <> 0’ by simp[] >> simp[real_div]
-  >> ‘x1 * inv y1 = x2 * inv y2 <=> x1 * inv y1 * (y1 * y2) = x2 * inv y2 * (y1 * y2)’ by simp[REAL_EQ_RMUL]
-  >> ‘x1 * inv y1 * (y1 * y2) = x2 * inv y2 * (y1 * y2) <=> x1 * y2 * (inv y1 * y1) = x2 * y1 * (inv y2 * y2)’ by
-    metis_tac[REAL_MUL_ASSOC, REAL_MUL_SYM]
-  >> ‘x1 * y2 * (inv y1 * y1) = x2 * y1 * (inv y2 * y2) <=> x1 * y2 = x2 * y1’ by simp[REAL_MUL_LINV]
-  >> metis_tac[]
 QED
 
 Theorem RAT_DIV_LEMMA:
@@ -145,12 +120,6 @@ Proof
   >> once_rewrite_tac[GSYM rat_of_int_of_num] >> simp[rat_of_int_MUL,rat_of_int_ADD] >> metis_tac[INT_MUL_COMM]
 QED
 
-Theorem REAL_DIV_PROD:
-  a/b:real * (c/d) = (a*c)/(b*d)
-Proof
-  simp[real_div,REAL_INV_MUL'] >> metis_tac[REAL_MUL_ASSOC,REAL_MUL_SYM]
-QED
-
 val _ = temp_delsimps ["real_of_int_num"]
 
 Theorem REAL_OF_RAT_MUL:
@@ -196,19 +165,6 @@ QED
 
 val _ = temp_delsimps ["RATN_DIV_RATD"]
 
-Theorem REAL_DIV_LT:
-  0<b*d:real ==> (a/b<c/d <=> a*d<c*b)
-Proof
-  rw[real_div]
-  >> ‘b<>0 /\ d<>0’ by (CCONTR_TAC >> gs[])
-  >> ‘a * inv b <c * inv d <=> a * inv b * (b*d) < c * inv d * (b*d)’ by simp[REAL_LT_RMUL]
-  >> ‘a * inv b * (b*d) = a*d * (inv b * b)’ by metis_tac[REAL_MUL_ASSOC,REAL_MUL_SYM]
-  >> ‘_ = a*d’ by simp[REAL_MUL_RID,REAL_MUL_LINV]
-  >> ‘c * inv d * (b*d) = c*b * (inv d * d)’ by metis_tac[REAL_MUL_ASSOC,REAL_MUL_SYM]
-  >> ‘_ = c*b’ by simp[REAL_MUL_RID,REAL_MUL_LINV]
-  >> simp[]
-QED
-
 Theorem REAL_OF_RAT_OF_NUM:
   real_of_rat (&n) = &n
 Proof
@@ -234,23 +190,17 @@ Proof
 QED
 
 (* much, but not all, of the below is just for fun, mostly looking at proving Q is dense in R*)
-
 Theorem INT_BI_INDUCTION:
-  (P (0:int) /\ !x. (P x <=> P (x+1))) <=> !x. P x
+  !P. (P (0:int) /\ !x. (P x <=> P (x+1))) <=> !x. P x
 Proof
   rw[EQ_IMP_THM] >> Cases_on ‘x’ >> simp[]
-  >- (‘!m. P (&m)’ by (
-       Induct_on ‘m’ >> simp[INT]
-       )
-      >> simp[]
-     )
-  >- (‘!m. P (-&m)’ by (
-       Induct_on ‘m’
-       >- simp[]
-       >- (‘P ((-&m + -1) + 1)’ by simp[INT_ADD_LINV,GSYM INT_ADD_ASSOC] >> simp[INT,INT_NEG_ADD])
-       )
-      >> simp[]
-     )
+  >- (‘!m. P (&m)’ by (Induct_on ‘m’ >> simp[INT])
+      >> simp[])
+  >> ‘!m. P (-&m)’ by (
+       Induct_on ‘m’ >- simp[] \\
+       ‘P ((-&m + -1) + 1)’ by simp[INT_ADD_LINV,GSYM INT_ADD_ASSOC] \\
+       simp[INT,INT_NEG_ADD])
+  >> simp[]
 QED
 
 Theorem INT_FLOOR_REAL_OF_INT:
@@ -366,10 +316,9 @@ Proof
       >> ‘!x. x-2+1=x-1:real’ by simp[real_sub,GSYM REAL_ADD_ASSOC,add_ints]
       >> simp[REAL_MUL_ASSOC, INT_FLOOR_BOUNDS']
      )
-  >- (simp[REAL_LT_LDIV_EQ,REAL_LT_MUL',real_of_int_num]
-      >> ‘-1 < 0:real’ by simp[]
-      >> metis_tac[REAL_ADD_RID,REAL_LTE_ADD2,INT_FLOOR_BOUNDS,REAL_ADD_SYM,REAL_MUL_ASSOC,real_sub]
-     )
+  >> simp[REAL_LT_LDIV_EQ,REAL_LT_MUL',real_of_int_num]
+  >> ‘-1 < 0:real’ by simp[]
+  >> metis_tac[REAL_ADD_RID,REAL_LTE_ADD2,INT_FLOOR_BOUNDS,REAL_ADD_SYM,REAL_MUL_ASSOC,real_sub]
 QED
 
 Theorem REAL_OF_RAT_NUM_CLAUSES:
@@ -391,7 +340,183 @@ QED
 Theorem REAL_OF_RAT_MIN:
   min (real_of_rat r) (real_of_rat q) = real_of_rat (rat_min r q)
 Proof
-  Cases_on ‘r<q’ >> simp[Once $ cj 1 REAL_MIN_ACI,rat_min_def,GSYM REAL_NOT_LT,real_min,REAL_OF_RAT_LT]
+    Cases_on ‘r < q’
+ >> simp[Once $ cj 1 REAL_MIN_ACI,rat_min_def,GSYM REAL_NOT_LT,real_min,REAL_OF_RAT_LT]
 QED
+
+(* ========================================================================= *)
+(*  Rational numbers as a subset of real numbers (real_rat_set or q_set)     *)
+(*    (was in util_probTheory and then in real_sigmaTheory)                  *)
+(* ========================================================================= *)
+
+Definition Q_SET :
+    real_rat_set = IMAGE real_of_rat UNIV
+End
+
+Theorem real_rat_set :
+    real_rat_set = {r | ?q. r = real_of_rat q}
+Proof
+    rw [Q_SET, Once EXTENSION]
+QED
+
+Overload q_set = “real_rat_set”
+
+(* Unicode Character 'DOUBLE-STRUCK CAPITAL Q' (U+211A) *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x211A, tmnm = "q_set"};
+val _ = TeX_notation {hol = "q_set", TeX = ("\\ensuremath{\\mathbb{Q}}", 1)};
+
+Theorem q_set_def :
+    q_set = {x:real | ?a b. (x = (&a/(&b))) /\ (0:real < &b)} UNION
+            {x:real | ?a b. (x = -(&a/(&b))) /\ (0:real < &b)}
+Proof
+    rw [real_rat_set, real_of_rat_def]
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> CONJ_TAC
+ >- (rw [SUBSET_DEF] \\
+     qabbrev_tac ‘i = RATN q’ \\
+     reverse (Cases_on ‘i < 0’)
+     >- (DISJ1_TAC >> rw [real_of_int_def] \\
+         qexistsl_tac [‘num_of_int i’, ‘RATD q’] >> rw [RATD_NZERO]) \\
+     DISJ2_TAC >> rw [real_of_int_def] \\
+     qexistsl_tac [‘num_of_int i’, ‘RATD q’] >> rw [RATD_NZERO] \\
+    ‘i <= 0’ by rw [] \\
+    ‘?n. i = -&n’ by PROVE_TAC [NUM_NEGINT_EXISTS] \\
+     simp [neg_rat])
+ >> rw [SUBSET_DEF]
+ >| [ (* goal 1 (of 2) *)
+      Cases_on ‘a = 0’
+      >- (rw [REAL_DIV_LZERO] >> Q.EXISTS_TAC ‘0’ >> rw [real_of_int_num]) \\
+      qabbrev_tac ‘c = gcd a b’ \\
+      MP_TAC (Q.SPECL [‘a’, ‘b’] FACTOR_OUT_GCD) >> rw [] \\
+      REWRITE_TAC [GSYM REAL_OF_NUM_MUL] \\
+      Know ‘((&c) :real) * &p / (&c * &q) = &p / &q’
+      >- (MATCH_MP_TAC REAL_DIV_LMUL_CANCEL >> rw [] \\
+          CCONTR_TAC >> rfs []) >> Rewr' \\
+      Q.EXISTS_TAC ‘rat_of_num p / rat_of_num q’ \\
+     ‘q <> 0’ by fs [] \\
+      rw [RATND_of_coprimes, real_of_int_num],
+      (* goal 2 (of 2) *)
+      Cases_on ‘a = 0’
+      >- (rw [REAL_DIV_LZERO] >> Q.EXISTS_TAC ‘0’ >> rw [real_of_int_num]) \\
+      qabbrev_tac ‘c = gcd a b’ \\
+      MP_TAC (Q.SPECL [‘a’, ‘b’] FACTOR_OUT_GCD) >> rw [] \\
+      REWRITE_TAC [GSYM REAL_OF_NUM_MUL] \\
+      Know ‘((&c) :real) * &p / (&c * &q) = &p / &q’
+      >- (MATCH_MP_TAC REAL_DIV_LMUL_CANCEL >> rw [] \\
+          CCONTR_TAC >> rfs []) >> Rewr' \\
+      Q.EXISTS_TAC ‘-rat_of_num p / rat_of_num q’ \\
+     ‘q <> 0’ by fs [] \\
+      rw [RATND_of_coprimes', neg_rat, real_of_int_num] ]
+QED
+
+Theorem real_rat_set_def = q_set_def
+
+Theorem QSET_COUNTABLE :
+    countable q_set
+Proof
+  RW_TAC std_ss [q_set_def] THEN
+  MATCH_MP_TAC union_countable THEN CONJ_TAC THENL
+  [RW_TAC std_ss [COUNTABLE_ALT] THEN
+   MP_TAC NUM_2D_BIJ_NZ_INV THEN RW_TAC std_ss [] THEN
+   Q.EXISTS_TAC `(\(a,b). &a/(&b)) o f` THEN RW_TAC std_ss [GSPECIFICATION] THEN
+   FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV] THEN
+   PAT_X_ASSUM ``!x. x IN P ==> Q x y`` (MP_TAC o Q.SPEC `(&a,&b)`) THEN
+   RW_TAC std_ss [] THEN
+   FULL_SIMP_TAC std_ss [IN_CROSS,IN_UNIV,IN_SING,DIFF_DEF,
+                          GSPECIFICATION,GSYM REAL_LT_NZ] THEN
+   `?y. f y = (a,b)` by METIS_TAC [] THEN
+   Q.EXISTS_TAC `y` THEN RW_TAC std_ss [], ALL_TAC] THEN
+  RW_TAC std_ss [COUNTABLE_ALT] THEN
+  MP_TAC NUM_2D_BIJ_NZ_INV THEN
+  RW_TAC std_ss [] THEN Q.EXISTS_TAC `(\(a,b). -(&a/(&b))) o f` THEN
+  RW_TAC std_ss [GSPECIFICATION] THEN
+  FULL_SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV] THEN
+  PAT_X_ASSUM ``!x. x IN P ==> Q x y`` (MP_TAC o Q.SPEC `(&a,&b)`) THEN
+  RW_TAC std_ss [] THEN
+  FULL_SIMP_TAC std_ss [IN_CROSS,IN_UNIV,IN_SING,
+                         DIFF_DEF,GSPECIFICATION,GSYM REAL_LT_NZ] THEN
+  `?y. f y = (a,b)` by METIS_TAC [] THEN Q.EXISTS_TAC `y` THEN
+  RW_TAC std_ss []
+QED
+
+Theorem countable_real_rat_set = QSET_COUNTABLE
+
+Theorem NUM_IN_QSET :
+    !n. &n IN q_set /\ -&n IN q_set
+Proof
+    rw [real_rat_set]
+ >- (Q.EXISTS_TAC ‘&n’ \\
+     rw [REAL_OF_RAT_OF_NUM])
+ >> rw [Once EQ_SYM_EQ, REAL_OF_RAT_NUM_CLAUSES]
+QED
+
+Theorem OPP_IN_QSET :
+    !x. x IN q_set ==> -x IN q_set
+Proof
+    rw [real_rat_set]
+ >> Q.EXISTS_TAC ‘-q’
+ >> rw [REAL_OF_RAT_NEG]
+QED
+
+Theorem INV_IN_QSET :
+    !x. x IN q_set /\ x <> 0 ==> 1/x IN q_set
+Proof
+    rw [real_rat_set]
+ >> Q.EXISTS_TAC ‘rat_minv q’
+ >> rw [GSYM REAL_INV_1OVER]
+ >> MATCH_MP_TAC REAL_OF_RAT_MINV
+ >> CCONTR_TAC >> fs []
+QED
+
+Theorem ADD_IN_QSET :
+    !x y. x IN q_set /\ y IN q_set ==> x + y IN q_set
+Proof
+    rw [real_rat_set]
+ >> Q.EXISTS_TAC ‘q + q'’
+ >> rw [REAL_OF_RAT_ADD]
+QED
+
+Theorem SUB_IN_QSET :
+    !x y. x IN q_set /\ y IN q_set ==> x - y IN q_set
+Proof
+    rw [real_rat_set]
+ >> Q.EXISTS_TAC ‘q - q'’
+ >> rw [REAL_OF_RAT_SUB]
+QED
+
+Theorem MUL_IN_QSET :
+    !x y. x IN q_set /\ y IN q_set ==> x * y IN q_set
+Proof
+    rw [real_rat_set]
+ >> Q.EXISTS_TAC ‘q * q'’
+ >> rw [REAL_OF_RAT_MUL]
+QED
+
+Theorem DIV_IN_QSET :
+    !x y. x IN q_set /\ y IN q_set /\ y <> 0 ==> x / y IN q_set
+Proof
+    rw [real_rat_set]
+ >> Q.EXISTS_TAC ‘q / q'’
+ >> MATCH_MP_TAC REAL_OF_RAT_DIV
+ >> CCONTR_TAC >> fs []
+QED
+
+Theorem Q_DENSE_IN_REAL :
+    !x y. x < y ==> ?r. r IN q_set /\ x < r /\ r < y
+Proof
+    rw [real_rat_set]
+ >> MP_TAC (Q.SPECL [‘x’, ‘y’] REAL_Q_DENSE) >> rw []
+ >> Q.EXISTS_TAC ‘real_of_rat q’ >> rw []
+ >> Q.EXISTS_TAC ‘q’ >> rw []
+QED
+
+Theorem Q_DENSE_IN_REAL_LEMMA :
+    !x y. 0 <= x /\ x < y ==> ?r. r IN q_set /\ x < r /\ r < y
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC Q_DENSE_IN_REAL >> rw []
+QED
+
+Theorem REAL_RAT_DENSE = Q_DENSE_IN_REAL
 
 val _ = export_theory();

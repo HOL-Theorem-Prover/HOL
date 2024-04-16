@@ -27,6 +27,7 @@ sig
   val print_apropos       : term -> unit
   val print_find          : string -> unit
   val print_match         : string list -> term -> unit
+  val print_polarity_match: bool -> term -> unit
 
   val print_theory_to_file      : string -> string -> unit
   val print_theory_to_outstream : string -> TextIO.outstream -> unit

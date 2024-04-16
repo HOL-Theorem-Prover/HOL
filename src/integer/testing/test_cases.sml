@@ -256,6 +256,13 @@ val terms_to_test =
   L (``0i < (if 0 <= f (x:'a) - 1i then f x - 1 else &(g (f x - 1))) + 1``,
      "Num4b"),
   L (“n MOD 5 = 1  ==> 5 * ((n - 1) DIV 5) + 1 = n”, "Github0677"),
+  ("Github1203a", “0n = x * Num 0i”, true),
+  ("Github1203b", “x:num = x * Num 1i”, true),
+  ("Github1203c", “0n = x * 0n”, true),
+  ("Github1203d", “0n = Num 0i”, true),
+  ("Github1207a", “&(x - x:num) = 0i”, true),
+  ("Github1207b", “&(x - a:num) <= &x:int”, true),
+  ("Github1207c", “x <= -42 \/ 1 < (41 * x) % 42 \/ -21 < (41 * x) / 42”, true),
   ("Github1209a",
    “! $var$(_ _) q r:int.
           0 = q * 5 + r /\ 0 <= r /\ r < 5 ==>
@@ -264,7 +271,19 @@ val terms_to_test =
   ("Github1209b",
    “! v q r:int. 0 = q * 5 + r /\ 0 <= r /\ r < 5 ==> v + r = 0”, false),
   ("Github1209c",
-   “?i q r. ~(~(0i = q * 5 + r /\ 0 <= r /\ r < 5) \/ i + r = 0)”, true)
+   “?i q r. ~(~(0i = q * 5 + r /\ 0 <= r /\ r < 5) \/ i + r = 0)”, true),
+  ("asl-equiv1",
+   “~(j > 0) /\ -1 < i + j - k /\ ~(-1 < k - i) /\ -1 < i - k /\ j < 0 /\
+    k <= i ==> Num (1 + (i + j - k)) < Num (1 + (i - k))”, true),
+  ("asl-equiv2",
+   “?k j i.
+     (k < i + j + 1 /\ k + 1 <= i /\ j < 0) /\
+     (1 + i < k /\
+      (1 + (i + j) < k \/
+       k <= 1 + (i + j) /\ 2 * k <= 2 + (2 * i + j)) \/
+     k <= 1 + i /\
+     (1 + (i + j) < k /\ 2 + (2 * i + j) <= 2 * k \/
+      1 + (i + -k) <= 1 + (i + j + -k)))”, false)
 ];
 
 val omega_test_terms = [

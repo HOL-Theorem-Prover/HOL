@@ -13,6 +13,9 @@ local
 
   open Z3_Proof
 
+  val op ++ = bossLib.++
+  val op >> = Tactical.>>
+
   val ERR = Feedback.mk_HOL_ERR "Z3_ProofReplay"
   val WARNING = Feedback.HOL_WARNING "Z3_ProofReplay"
 
@@ -451,39 +454,6 @@ local
     Thm.TRANS (Thm.TRANS l_eq_l' l'_eq_r') (Thm.SYM r_eq_r')
   end
 
-  (* replaces distinct if-then-else terms by distinct variables;
-     returns the generalized term and a map from ite-subterms to
-     variables (treating anything but combinations as atomic, i.e.,
-     this function does NOT descend into lambda-abstractions) *)
-  fun generalize_ite t =
-  let
-    fun aux (dict, t) =
-      if boolSyntax.is_cond t then (
-        case Redblackmap.peek (dict, t) of
-          SOME var =>
-          (dict, var)
-        | NONE =>
-          let
-            val var = Term.genvar (Term.type_of t)
-          in
-            (Redblackmap.insert (dict, t, var), var)
-          end
-      ) else (
-        let
-          val (l, r) = Term.dest_comb t
-          val (dict, l) = aux (dict, l)
-          val (dict, r) = aux (dict, r)
-        in
-          (dict, Term.mk_comb (l, r))
-        end
-        handle Feedback.HOL_ERR _ =>
-          (* 't' is not a combination *)
-          (dict, t)
-      )
-  in
-    aux (Redblackmap.mkDict Term.compare, t)
-  end
-
   (* Returns a proof of `t` given a list of theorems as inputs. It relies on
      `metisLib.METIS_TAC` to find a proof. The returned theorem will have as
      hypotheses all the hypotheses of all the input theorems. *)
@@ -496,6 +466,40 @@ local
   in
     Tactical.TAC_PROOF ((HOLset.listItems asms, t), metisLib.METIS_TAC thms)
   end
+
+  (* Returns a proof of `t` using arithmetic decision procedures. This function
+     is used by both `z3_th_lemma_arith` and `z3_rewrite`. *)
+  fun arith_prove t =
+    let
+      fun arith_tactic (goal as (_, term)) =
+        if term_contains_real_ty term then
+          (* this is just a heuristic - it is quite conceivable that a
+             term that contains type real is provable by integer
+             arithmetic *)
+          profile "arith_prove(real)" RealField.REAL_ARITH_TAC goal
+        else
+          profile "arith_prove(int)" intLib.ARITH_TAC goal
+      val TRY = Tactical.TRY
+      val ap_tactic =
+        TRY AP_TERM_TAC >> TRY arith_tactic
+        >> TRY AP_THM_TAC >> TRY arith_tactic
+    in
+      Tactical.prove (t,
+        (* rewrite the `ediv` and `emod` symbols so that the arithmetic
+           decision procedures can solve terms containing these functions *)
+        PURE_REWRITE_TAC[integerTheory.EDIV_DEF, integerTheory.EMOD_DEF]
+        (* the next rewrites are a workaround for this issue:
+           https://github.com/HOL-Theorem-Prover/HOL/issues/1207 *)
+        >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT]
+        (* if `arith_tactic` doesn't work at first, don't give up immediately;
+           instead let's try additional tactics *)
+        >> TRY arith_tactic
+        >> bossLib.RW_TAC (bossLib.arith_ss ++ intSimps.INT_RWTS_ss ++
+             intSimps.INT_ARITH_ss ++ realSimps.REAL_ARITH_ss)
+               [Conv.GSYM integerTheory.INT_NEG_MINUS1]
+        >> TRY arith_tactic
+        >> Tactical.rpt (Tactical.CHANGED_TAC ap_tactic))
+    end
 
   (***************************************************************************)
   (* implementation of Z3's inference rules                                  *)
@@ -637,7 +641,13 @@ local
   (* introduces a local hypothesis (which must be discharged by
      'z3_lemma' at some later point in the proof) *)
   fun z3_hypothesis (state, t) =
-    (state, Thm.ASSUME t)
+      (state, Thm.ASSUME t)
+
+  (*   ... |- ~p
+     ------------
+     ... |- p = F *)
+  fun z3_iff_false (state, thm, _) =
+    (state, Drule.EQF_INTRO thm)
 
   (*   ... |- p
      ------------
@@ -978,10 +988,7 @@ local
         profile "rewrite(10)(BBLAST)" blastLib.BBLAST_PROVE t
         handle Feedback.HOL_ERR _ =>
 
-        if profile "rewrite(11.0)(contains_real)" term_contains_real_ty t then
-          profile "rewrite(11.1)(REAL_ARITH)" RealField.REAL_ARITH t
-        else
-          profile "rewrite(11.2)(ARITH_PROVE)" intLib.ARITH_PROVE t
+        profile "rewrite(11)(arith)" arith_prove t
     in
       (state_cache_thm state thm, thm)
     end
@@ -1071,21 +1078,10 @@ local
 
   val z3_th_lemma_arith = th_lemma_wrapper "arith" (fn (state, t) =>
     let
-      val (dict, t') = generalize_ite t
-      val thm = if term_contains_real_ty t' then
-          (* this is just a heuristic - it is quite conceivable that a
-             term that contains type real is provable by integer
-             arithmetic *)
-          profile "th_lemma[arith](3.1)(real)" RealField.REAL_ARITH t'
-        else
-          (* the following should be reverted to use ARITH_PROVE instead of
-             COOPER_PROVE when issue HOL-Theorem-Prover/HOL#1203 is fixed *)
-          profile "th_lemma[arith](3.2)(int)" intLib.COOPER_PROVE t'
-      val subst = List.map (fn (term, var) => {redex = var, residue = term})
-        (Redblackmap.listItems dict)
+      val thm = profile "th_lemma[arith](3)" arith_prove t
     in
-      (* cache 'thm', instantiate to undo 'generalize_ite' *)
-      (state_cache_thm state thm, Thm.INST subst thm)
+      (* cache 'thm' *)
+      (state_cache_thm state thm, thm)
     end)
 
   val z3_th_lemma_array = th_lemma_wrapper "array" (fn (state, t) =>
@@ -1294,6 +1290,8 @@ local
         zero_prems state_proof "elim_unused" z3_elim_unused x continuation
     | thm_of_proofterm (state_proof, HYPOTHESIS x) continuation =
         zero_prems state_proof "hypothesis" z3_hypothesis x continuation
+    | thm_of_proofterm (state_proof, IFF_FALSE x) continuation =
+        one_prem state_proof "iff_false" z3_iff_false x continuation
     | thm_of_proofterm (state_proof, IFF_TRUE x) continuation =
         one_prem state_proof "iff_true" z3_iff_true x continuation
     | thm_of_proofterm (state_proof, INTRO_DEF x) continuation =
@@ -1524,6 +1522,28 @@ local
     HOLset.foldl remove_hyp thm bad_hyps
   end
 
+  (* FIXME: The following is a workaround for a yet-to-be-filed Z3 issue where
+     a hypothesis is introduced in a `hypothesis` rule but is not discharged by
+     a `lemma` rule at any point in the proof. So far, all such hypotheses have
+     assumed the form `p = p`, which can easily be discharged here. *)
+  fun remove_extra_hyps (asserted, thm) =
+  let
+    val extra_hyps = HOLset.difference (Thm.hypset thm, asserted)
+    fun remove_hyp (hyp, thm) =
+      if boolSyntax.is_eq hyp then
+        let
+          val (lhs, rhs) = boolSyntax.dest_eq hyp
+        in
+          if Term.term_eq lhs rhs then
+            Drule.PROVE_HYP (Thm.REFL lhs) thm
+          else
+            thm
+        end
+      else
+        thm
+  in
+    HOLset.foldl remove_hyp thm extra_hyps
+  end
 in
   (* For unit tests *)
   val remove_definitions = remove_definitions
@@ -1553,6 +1573,10 @@ in
     (* remove the definitions introduced by Z3 from the set of hypotheses *)
     val final_thm = profile "check_proof(remove_definitions)" remove_definitions
       (#definition_hyps state, #var_set state, thm)
+
+    (* workaround for Z3 bug *)
+    val final_thm = profile "check_proof(remove_extra_hyps)" remove_extra_hyps
+      (#asserted_hyps state, final_thm)
 
     (* check that the final theorem contains no hyps other than those
        that have been asserted *)

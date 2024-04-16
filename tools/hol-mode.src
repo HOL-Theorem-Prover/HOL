@@ -1273,6 +1273,13 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (interactive "sTerm to match on: ")
   (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p))
+                          
+(defun hol-db-polarity-match (p tm)
+  "Does a DB.polarity_match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
+  (interactive "P\nsTerm to polarity match on: ")
+  (send-raw-string-to-hol (format "Hol_pp.print_polarity_match %s (Term`%s`)" (if p "false" "true") tm)
+                          hol-echo-commands-p))
+
 
 (defun hol-check-dbselector (s)
   (if (string-prefix-p "'" s) (string-suffix-p "'" s)
@@ -1787,6 +1794,7 @@ the surrounding text (as done by ‘hol-do-goal’ and
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'hol-db-match)
 (define-key hol-map "M"    'hol-db-select)
+(define-key hol-map ","    'hol-db-polarity-match)
 (define-key hol-map "f"    'hol-db-find)
 (define-key hol-map "c" 'hol-db-find-consts)
 (define-key hol-map "n"    'hol-name-top-theorem)

@@ -1118,6 +1118,13 @@ Proof
   simp[numseg]
 QED
 
+(* ‘count n’ re-expressed by numseg *)
+Theorem COUNT_NUMSEG :
+    !n. 0 < n ==> count n = {0..n-1}
+Proof
+    rw [Once EXTENSION]
+QED
+
 Theorem FINITE_NUMSEG:
   !m n. FINITE {m..n}
 Proof

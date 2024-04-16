@@ -272,15 +272,10 @@ fun subtm_rel (t1, t2) =
 
 local
   open arithmeticTheory numSyntax
-  val Num_lemma = prove(
-    ``&(Num i) = if 0 <= i then i else & ((Num o I) i)``,
-    COND_CASES_TAC THEN
-    ASM_REWRITE_TAC [combinTheory.o_THM, integerTheory.INT_OF_NUM,
-                     combinTheory.I_THM])
 
   val rewrites = [GSYM INT_INJ, GSYM INT_LT, GSYM INT_LE,
-                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD,
-                  GSYM INT_MUL, INT, INT_NUM_COND, Num_lemma]
+                  GREATER_DEF, GREATER_EQ, GSYM INT_ADD, INT_NUM_SUB,
+                  GSYM INT_MUL, INT, INT_NUM_COND, Num_EQ_ABS]
   val p_var = mk_var("p", num)
   val q_var = mk_var("q", num)
   fun elim_div_mod0 exp t = let

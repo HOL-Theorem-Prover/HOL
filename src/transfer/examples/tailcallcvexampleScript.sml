@@ -96,8 +96,8 @@ val th3 = CONV_RULE (RAND_CONV (REWR_CONV (GSYM th2))) th1
 
 val th4 = cISPRIME_AUX |> CONV_RULE (FORK_CONV(tuplify, REWR_CONV th3))
 |> DISCH_ALL |> REWRITE_RULE[AND_IMP_INTRO]
-|> CONV_RULE (LAND_CONV (UNPBETA_CONV “(UV3:cv,UV1:cv)”))
-|> pairLib.PGEN “p:cv # cv”  “(UV3:cv, UV1:cv)”
+|> CONV_RULE (LAND_CONV (UNPBETA_CONV “(dvs:cv,n:cv)”))
+|> pairLib.PGEN “p:cv # cv”  “(dvs:cv, n:cv)”
 
 Theorem FORALL_CV:
   (!c. P c) <=> (!n. P (Num n)) /\ (!c d. P (Pair c d))

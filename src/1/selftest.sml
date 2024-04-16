@@ -1302,3 +1302,16 @@ val _ = shouldfail {checkexn = is_struct_HOL_ERR "Parse",
                     printresult = with_flag (show_types, true) term_to_string,
                     testfn = Parse.Term o single o QUOTE}
                    "!b:bool'. p /\\ b"
+
+(* ?p p. p  with inner variable binding, should swap to ?p q. p
+   or something alpha equivalent to that *)
+val _ = let
+  val v = mk_var("p", bool)
+  val u = mk_var("q", bool)
+  val t = mk_exists(v, mk_exists(v, v))
+  val expected = mk_exists(v, mk_exists (u, v))
+in
+  convtest("SWAP_EXISTS_CONV with vacuous binding of identical names",
+           SWAP_EXISTS_CONV,
+           t, expected)
+end

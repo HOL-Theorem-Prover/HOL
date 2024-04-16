@@ -1,5 +1,7 @@
 INCLUDES = $(HOLDIR)/src/probability $(HOLDIR)/src/n-bit $(HOLDIR)/src/real \
-	   $(HOLDIR)/src/res_quan/src $(HOLDIR)/src/real/analysis
+	   $(HOLDIR)/src/res_quan/src $(HOLDIR)/src/real/analysis legacy
+
+CLINE_OPTIONS = -r
 
 EXTRA_CLEANS = heap \
 	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) \
@@ -17,7 +19,8 @@ FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS)) \
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(FULL_OBJPATHS)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ \
+            -b $(protect $(HOLDIR)/src/real/analysis/realheap) $(FULL_OBJPATHS)
 endif
 
 all: $(DEFAULT_TARGETS)

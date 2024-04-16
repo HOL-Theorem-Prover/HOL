@@ -39,6 +39,8 @@ sig
   val listDB      : unit -> data list
   val revlookup   : thm -> location list
 
+  val polarity_search : bool -> term -> public_data list
+
   val store_local : {private:bool} -> string -> thm -> unit
   val local_thm   : string -> thm option
 

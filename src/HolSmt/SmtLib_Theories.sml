@@ -270,7 +270,10 @@ in
       ("-", leftassoc intSyntax.mk_minus),
       ("+", leftassoc intSyntax.mk_plus),
       ("*", leftassoc intSyntax.mk_mult),
-      (* FIXME: add parsing of div and mod *)
+      ("div", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="ediv"}, t1), t2))),
+      ("mod", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="emod"}, t1), t2))),
       ("abs", K_zero_one intSyntax.mk_absval),
       ("<=", chainable intSyntax.mk_leq),
       ("<", chainable intSyntax.mk_less),
@@ -332,7 +335,14 @@ in
       ("-", leftassoc intSyntax.mk_minus),
       ("+", leftassoc intSyntax.mk_plus),
       ("*", leftassoc intSyntax.mk_mult),
-      (* FIXME: add parsing of div and mod *)
+      ("div", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="ediv"}, t1), t2))),
+      ("div0", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="ediv"}, t1), t2))),
+      ("mod", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="emod"}, t1), t2))),
+      ("mod0", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="emod"}, t1), t2))),
       ("abs", K_zero_one intSyntax.mk_absval),
       ("<=", chainable intSyntax.mk_leq),
       ("<", chainable intSyntax.mk_less),

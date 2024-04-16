@@ -164,12 +164,12 @@ SMT-LIB~2 files (translating them into \HOL{} types, terms, and
 formulas) can be found in \ml{SmtLib\_Parser.sml}, with auxiliary
 functions in \ml{SmtLib\_\{Logics,Theories\}.sml}.
 
-The SMT-LIB~2 translation supports types \holtxt{bool}, \holtxt{int}
-and \holtxt{real}, fixed-width word types, and the following terms:
-equality, Boolean connectives, quantifiers, numeric literals,
-arithmetic operators, comparison operators, function application, and
-various word operations.  Notably, the SMT-LIB interface does
-\emph{not} support type \holtxt{num}, data types or records, and
+The SMT-LIB~2 translation supports types \holtxt{bool}, \holtxt{num},
+\holtxt{int} and \holtxt{real}, fixed-width word types, and the
+following terms: equality, Boolean connectives, quantifiers, numeric
+literals, arithmetic operators, comparison operators, function
+application, and various word operations.  Notably, the SMT-LIB
+interface does \emph{not} support data types or records, and
 higher-order formulas.  See the files mentioned above and the examples
 in \ml{selftest.sml} for further details.
 
@@ -194,7 +194,7 @@ delete temporary files automatically, \eg, when \HOL{} exits).
 \subsection{Installing SMT solvers}
 
 \ml{HolSmtLib} has been tested with cvc5~1.1.0, Yices~1.0.40, and
-Z3~4.12.4. Later versions may or may not work.  (Yices~2 is not
+Z3~4.12.6. Later versions may or may not work.  (Yices~2 is not
 supported.)  To use \ml{HolSmtLib}, you need to install at least one
 of these SMT solvers on your machine.  As mentioned before, Yices
 supports a larger fragment of higher-order logic than Z3, but proof

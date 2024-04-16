@@ -45,6 +45,9 @@ val set_ss = std_ss ++ PRED_SET_ss;
 val _ = hide "S";
 val _ = hide "W";
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
 (* ------------------------------------------------------------------------- *)
 (* Basic probability theory definitions.                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -5401,7 +5404,7 @@ val _ = Datatype `convergence_mode = almost_everywhere   ('a p_space)
 (* convergence of extreal-valued random series [1, p.68,70], only works
    for real-valued random variables (cf. real_random_variable_def)
  *)
-Definition converge_def :
+Definition converge_def[nocompute] :
    (* X(n) converges to Y (a.e.) *)
    (converge (X :num->'a->extreal) (Y :'a->extreal) (almost_everywhere p) =
      AE x::p. ((\n. real (X n x)) --> real (Y x)) sequentially) /\

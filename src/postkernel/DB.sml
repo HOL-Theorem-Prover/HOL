@@ -290,6 +290,167 @@ val apropos = match [];
 fun matches pat th =
   can (find_term (can (match_primitive pat))) (concl th) ;
 
+(* dtc': auxiliary function used by dest_polarity *)
+fun dtc' (t : term) =
+    let val {Thy, Name, ...} = dest_thy_const t in
+        SOME (Thy, Name)
+    end handle HOL_ERR _ => NONE
+
+(* -------------------------------------------------------------------------- *)
+(* dest_polarity:                                                             *)
+(*                                                                            *)
+(* The general idea of this function is to split a term into its conclusion   *)
+(* and its premises.                                                          *)
+(*                                                                            *)
+(* This function will be used to allow the user to search for theorems        *)
+(* matching a certain pattern in either the premises or in the conclusion.    *)
+(*                                                                            *)
+(* More precisely, it splits a term into a set of "positive" terms and        *)
+(* "negative" terms. (Thanks to Michael Norrish for this idea. I'm not sure   *)
+(* whether or not he himself got the idea from someplace else). This is a     *)
+(* general notion of premises and conclusions that is more robust than an     *)
+(* intuitive understanding. For example, in the equation (a ==> b) ==> c,     *)
+(* at first glance, b appears to be the conclusion of an implication operator.*)
+(* However, in this case, it makes more sense to treat b as a premise, since  *)
+(* the implication it is a conclusion of is itself the premise of another     *)
+(* implication. In particular, if you knew b, then you would immediately also *)
+(* know (a ==> b), thus, you would have a premise to the equation. Similarly, *)
+(* whereas 'a' appears at first glance to be a premise, in fact, it makes     *)
+(* more sense to treat it as a conclusion. Knowing 'a' doesn't directly help  *)
+(* in proving c, but if you know ~c, then you can derive 'a', since           *)
+(* (a ==> b) ==> F can only be true if (a ==> b) is false, and (a ==> b) is   *)
+(* only false if 'a' is true and b is false.                                  *)
+(*                                                                            *)
+(* My understanding of the notion of positive terms and negative terms is     *)
+(* incomplete and more rigour could probably be applied. However, this is     *)
+(* sufficient for the application of searching for theorems.                  *)
+(*                                                                            *)
+(* In this notion, "positive" terms are essentially those which are           *)
+(* un-negated in the conclusion to the expression, and "negative" terms are   *)
+(* essentially those which are negated in the conclusion to the expression.   *)
+(* That is, "p" is positive whereas "~p" is negative.                         *)
+(*                                                                            *)
+(* This derives from the fact that a ==> b can be transformed into b \/ ~a.   *)
+(*                                                                            *)
+(* Also, given the theorem a ==> b, which has 'a' as a premise, we can use    *)
+(* the contrapositive to derive a theorem with ~a as a conclusion. Similarly, *)
+(* if we have 'b' as a conclusion, we can use the contrapositive to derive a  *)
+(* theorem with ~b as a premise. Thus, premises are in some sense essentially *)
+(* negated conclusions.                                                       *)
+(*                                                                            *)
+(* -------------------------------------------------------------------------- *)
+(*                                                                            *)
+(* The function is defined recursively as follows:                            *)
+(*                                                                            *)
+(* Terms which cannot be broken down further (or unrecognised terms) are      *)
+(* treated as positive.                                                       *)
+(*                                                                            *)
+(* Applying a not swaps the positive and negative terms.                      *)
+(*                                                                            *)
+(* An implication will retain the polarity of the terms in the conclusion to  *)
+(* the implication, and swap the polarity of the terms in the premise to the  *)
+(* implication.                                                               *)
+(*                                                                            *)
+(* An 'and' statement will retain the polarity of its operands. Note that an  *)
+(* 'and' statement in the outermost layer can be treated as essentially being *)
+(* two separate theorems, which helps to motivate this treatment.             *)
+(*                                                                            *)
+(* An 'or' statement will retain the polarity of its operands.                *)
+(*                                                                            *)
+(* A 'forall' statement or an 'exists' statement will retain the polarity of  *)
+(* its operands.                                                              *)
+(*                                                                            *)
+(* Unrecognised terms are treated as positive.                                *)
+(*                                                                            *)
+(* Thanks to Michael Norrish for writing some of the code used by this        *)
+(* function.                                                                  *)
+(*                                                                            *)
+(* Term -> Term List * Term List                                              *)
+(*                                                                            *)
+(* The first term list contains the positive terms, while the second term     *)
+(* list contains the negative terms.                                          *)
+fun dest_polarity (t : term) : term list * term list =
+    let
+        val (f, xs) = strip_comb t
+    in
+        case (dtc' f) of
+        SOME ("bool", "~") =>
+            (let
+                val inner_term = hd xs
+                val recursive_result = dest_polarity inner_term
+                val (positive_terms, negative_terms) = recursive_result
+            in
+                (negative_terms, positive_terms)
+            end)
+        | SOME ("min", "==>") =>
+            (let
+                val antecedent = el 1 xs
+                val consequent = el 2 xs
+                val ant_recursive_result = dest_polarity antecedent
+                val con_recursive_result = dest_polarity consequent
+                val (ant_pos, ant_neg) = ant_recursive_result
+                val (con_pos, con_neg) = con_recursive_result
+            in
+                (ant_neg @ con_pos, ant_pos @ con_neg)
+            end)
+        | SOME ("bool", "/\\") =>
+            (let
+                val term1 = el 1 xs
+                val term2 = el 2 xs
+                val recursive_result_1 = dest_polarity term1
+                val recursive_result_2 = dest_polarity term2
+                val (pos_1, neg_1) = recursive_result_1
+                val (pos_2, neg_2) = recursive_result_2
+            in
+                (pos_1 @ pos_2, neg_1 @ neg_2)
+            end)
+        | SOME ("bool", "\\/") =>
+            (let
+                val term1 = el 1 xs
+                val term2 = el 2 xs
+                val recursive_result_1 = dest_polarity term1
+                val recursive_result_2 = dest_polarity term2
+                val (pos_1, neg_1) = recursive_result_1
+                val (pos_2, neg_2) = recursive_result_2
+            in
+                (pos_1 @ pos_2, neg_1 @ neg_2)
+            end)
+        | SOME ("bool", "!") =>
+            (let
+                val quantified_term = hd xs
+                val recurse_on_term = (case (total dest_abs quantified_term) of
+                    NONE => quantified_term
+                    | SOME (_, bound_term) => bound_term)
+                val recursive_result = dest_polarity recurse_on_term
+            in
+                recursive_result
+            end)
+        | SOME ("bool", "?") =>
+            (let
+                val quantified_term = hd xs
+                val recurse_on_term = (case (total dest_abs quantified_term) of
+                    NONE => quantified_term
+                    | SOME (_, bound_term) => bound_term)
+                val recursive_result = dest_polarity recurse_on_term
+            in
+                recursive_result
+            end)
+        | _ => ([t], [])
+    end;
+
+fun polarity_match (polarity : bool) (match_term : term) (th : thm) =
+    (let
+      val theorem_term = concl th
+      val polarity_terms = dest_polarity theorem_term
+      val match_predicate = can ((ho_match_term [] empty_tmset) match_term)
+      val match_results = map (can (find_term match_predicate)) (if polarity then fst polarity_terms else snd polarity_terms)
+    in
+         List.exists (fn x => x) match_results
+    end)
+
+fun polarity_search (polarity : bool) (match_term : term) =
+    matchp (polarity_match polarity match_term) []
+
 fun apropos_in pat dbdata =
   List.filter (fn (_, pdv) => matches pat $ pdv_thm pdv) dbdata
 

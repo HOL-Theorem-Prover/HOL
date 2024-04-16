@@ -67,6 +67,12 @@ in
   add_user_printer ("combin.updpp", “UPDATE k v f”)
 end;
 
+val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = UnicodeChars.lensel}
+val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = "(|"}
+val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = UnicodeChars.lenser}
+val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = "|)"}
+val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "↦"}       (* UOK *)
+val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "|->"}
 
 local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}
@@ -449,6 +455,102 @@ val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
 Overload flip = “C”
 
 val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
+
+(* ------------------------------------------------------------------------- *)
+(* "Extensional" functions, mapping to a fixed value ARB outside the domain. *)
+(* Even though these are still total, they're a conveniently better model    *)
+(* of the partial function space (e.g. the space has the right cardinality). *)
+(*                                                                           *)
+(* (Ported from HOL-Light's sets.ml by Chun Tian)                            *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: the original definition in HOL-Light was:
+
+   EXTENSIONAL s = {f :'a->'b | !x. x NOTIN s ==> f x = ARB}
+ *)
+val EXTENSIONAL_def = new_definition
+  ("EXTENSIONAL_def",
+   “EXTENSIONAL s (f :'a->'b) <=> !x. ~(x IN s) ==> f x = ARB”);
+
+Theorem IN_EXTENSIONAL :
+    !s (f :'a->'b). f IN EXTENSIONAL s <=> (!x. ~(x IN s) ==> f x = ARB)
+Proof
+    REWRITE_TAC [IN_DEF]
+ >> BETA_TAC
+ >> rpt GEN_TAC
+ >> REWRITE_TAC [FUN_EQ_THM, EXTENSIONAL_def, IN_DEF]
+ >> BETA_TAC
+ >> REWRITE_TAC []
+QED
+
+Theorem IN_EXTENSIONAL_UNDEFINED :
+    !s (f :'a->'b) x. f IN EXTENSIONAL s /\ ~(x IN s) ==> f x = ARB
+Proof
+    REWRITE_TAC [IN_EXTENSIONAL]
+ >> rpt STRIP_TAC
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Restriction of a function to an EXTENSIONAL one on a subset.              *)
+(*                                                                           *)
+(* NOTE: It's put here, so that RESTRICT in relationTheory can be defined    *)
+(*       upon RESTRICTION. More theorems about RESTRICTION and EXTENSIONAL   *)
+(*       are in pred_setTheory.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+val RESTRICTION = new_definition
+  ("RESTRICTION",
+   “RESTRICTION s (f :'a->'b) x = if x IN s then f x else ARB”);
+
+Theorem RESTRICTION_THM :
+    !s (f :'a->'b). RESTRICTION s f = \x. if x IN s then f x else ARB
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC[FUN_EQ_THM, RESTRICTION]
+ >> BETA_TAC
+ >> REWRITE_TAC []
+QED
+
+Theorem RESTRICTION_DEFINED :
+    !s (f :'a->'b) x. x IN s ==> RESTRICTION s f x = f x
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [RESTRICTION]
+ >> COND_CASES_TAC >> REWRITE_TAC []
+QED
+
+Theorem RESTRICTION_UNDEFINED :
+    !s (f :'a->'b) x. ~(x IN s) ==> RESTRICTION s f x = ARB
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [RESTRICTION]
+ >> COND_CASES_TAC >> REWRITE_TAC []
+QED
+
+Theorem RESTRICTION_EQ :
+    !s (f :'a->'b) x y. x IN s /\ f x = y ==> RESTRICTION s f x = y
+Proof
+    rpt STRIP_TAC
+ >> POP_ASSUM (fn th => (ONCE_REWRITE_TAC [SYM th]))
+ >> MATCH_MP_TAC RESTRICTION_DEFINED
+ >> ASM_REWRITE_TAC []
+QED
+
+(* NOTE: HOL-Light doesn't have this theorem. *)
+Theorem EXTENSIONAL_RESTRICTION :
+    !s (f :'a->'b). EXTENSIONAL s (RESTRICTION s (f :'a -> 'b))
+Proof
+    REWRITE_TAC [EXTENSIONAL_def, RESTRICTION, IN_DEF]
+ >> BETA_TAC
+ >> rpt STRIP_TAC
+ >> reverse COND_CASES_TAC >- REFL_TAC
+ >> POP_ASSUM MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
+
+(*---------------------------------------------------------------------------*)
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

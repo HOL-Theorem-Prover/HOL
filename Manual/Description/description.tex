@@ -5,7 +5,11 @@
 \documentclass[12pt,fleqn]{book}
 \usepackage[notindex]{tocbibind}
 
-%\usepackage{amsmath}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
 \usepackage{amssymb}
 %\usepackage{amsbsy}
 \usepackage{amsthm}
@@ -19,6 +23,7 @@
 
 \usepackage{../../src/TeX/holtexbasic}
 \usepackage{fancyvrb}
+\usepackage[format=hang,justification=raggedright]{caption}  % multi-line figure caption
 
 \hyphenation{docu-ments}
 
@@ -36,7 +41,15 @@
 %\includeonly{logic,semantics}
 %\includeonly{system,theories,libraries}
 
-\usepackage[hidelinks,hypertexnames=false,pdftitle={The HOL System DESCRIPTION}]{hyperref}
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+\hypersetup{
+  pdftitle={The HOL System DESCRIPTION},
+  pdfauthor={The HOL4 contributors},
+  pdfsubject={HOL4},
+  pdfkeywords={Interactive Theorem Proving; Higher Order Logic},
+  pdfdisplaydoctitle=true
+}
+
 \usepackage{breakurl} % it depends on hyperref
 
 \usepackage{centernot}
@@ -86,7 +99,6 @@
 
    % \part{The HOL System \label{HOL-SYS}}
 
-
    \include{system}                      % embedding HOL logic in ML
    \include{drules}                      % derived rules
    \include{conv}                        % conversions
@@ -95,7 +107,6 @@
    \include{math}                        % math theories
    \include{definitions}
    \include{libraries}
-%   \include{map}
    \include{misc}
 
    % ---------------------------------------------------------------------
@@ -111,20 +122,13 @@
    % references to entire description
    % ---------------------------------------------------------------------
 
-   %\include{references}
-   \bibliographystyle{plain}
+   % The "plainnat" style will show also the DOI and URL, etc.
+   \bibliographystyle{plainnat}
    \bibliography{description}
-
-   % ---------------------------------------------------------------------
-   % Appendix describing Version 2.0
-   % ---------------------------------------------------------------------
-
-%   \include{version2}
 
    % ---------------------------------------------------------------------
    % Index
    % ---------------------------------------------------------------------
-
 
 \small
 \emergencystretch=14pt

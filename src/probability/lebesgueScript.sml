@@ -39,6 +39,9 @@ val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove (tm, METIS_TAC ths);
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
@@ -7343,7 +7346,7 @@ val suminf_measure = prove (
          (suminf (\i. measure M (A i)) = measure M (BIGUNION {A i | i IN UNIV}))``,
     RW_TAC std_ss [GSYM IMAGE_DEF]
  >> MATCH_MP_TAC (SIMP_RULE std_ss [o_DEF] MEASURE_COUNTABLY_ADDITIVE)
- >> FULL_SIMP_TAC std_ss [IN_FUNSET, disjoint_family_on, disjoint_family]
+ >> FULL_SIMP_TAC std_ss [IN_FUNSET, disjoint_family_on]
  >> ASM_SET_TAC []);
 
 (* removed ‘image_measure_space’, reduced ‘N’ (measure_space) to ‘B’ (sigma_algebra) *)
@@ -7366,7 +7369,7 @@ Proof
  >> `BIGUNION {PREIMAGE t (A i) INTER m_space M | i IN UNIV} IN measurable_sets M`
       by (FULL_SIMP_TAC std_ss [sigma_algebra_alt])
  >> `disjoint_family (\i. PREIMAGE t (A i) INTER m_space M)`
-      by (FULL_SIMP_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] \\
+      by (FULL_SIMP_TAC std_ss [disjoint_family_on, IN_UNIV] \\
           FULL_SIMP_TAC std_ss [PREIMAGE_def] THEN ASM_SET_TAC [])
  >> SIMP_TAC std_ss [PREIMAGE_BIGUNION, o_DEF]
  >> Know `IMAGE (PREIMAGE t) {A i | i IN univ(:num)} =
@@ -9478,7 +9481,7 @@ Proof
    suminf (\j. indicator_fn ((\i'. s INTER A i') j) x)` THENL
   [DISCH_TAC THEN ASM_SIMP_TAC std_ss [],
    GEN_TAC THEN ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC indicator_fn_suminf THEN
-  FULL_SIMP_TAC std_ss [disjoint_family, disjoint_family_on, DISJOINT_DEF] THEN
+  FULL_SIMP_TAC std_ss [disjoint_family_on, DISJOINT_DEF] THEN
   ASM_SET_TAC []] THEN ONCE_REWRITE_TAC [METIS [ETA_AX]
    ``(\x'. indicator_fn (s INTER A x) x') = (\x. indicator_fn (s INTER A x)) x``] THEN
   ONCE_REWRITE_TAC [METIS [] ``suminf (\j. indicator_fn (s INTER A j) x) =
@@ -9844,7 +9847,7 @@ Proof
    SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE, subsets_def, GSPECIFICATION] THEN
    GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [] THEN METIS_TAC [], ALL_TAC] THEN
   CONJ_TAC THENL
-  [SIMP_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
+  [SIMP_TAC std_ss [disjoint_family_on, IN_UNIV] THEN
    REPEAT STRIP_TAC THEN Q.UNABBREV_TAC `QQ` THEN BETA_TAC THEN
    SIMP_TAC std_ss [INTER_DEF, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION] THEN
    GEN_TAC THEN REPEAT COND_CASES_TAC THENL (* 4 subgoals *)
@@ -10155,7 +10158,7 @@ Proof
           suminf (\j. indicator_fn ((\i'. Q i INTER A i') j) x)` THENL
        [DISCH_TAC THEN ASM_SIMP_TAC std_ss [],
         GEN_TAC THEN ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC indicator_fn_suminf THEN
-        FULL_SIMP_TAC std_ss [disjoint_family, disjoint_family_on, DISJOINT_DEF] THEN
+        FULL_SIMP_TAC std_ss [disjoint_family_on, DISJOINT_DEF] THEN
         ASM_SET_TAC []] THEN ONCE_REWRITE_TAC [METIS [ETA_AX]
           ``(\x'. indicator_fn (Q i INTER A x) x') = (\x. indicator_fn (Q i INTER A x)) x``] THEN
        ONCE_REWRITE_TAC [METIS [] ``suminf (\j. indicator_fn (Q i INTER A j) x) =
@@ -10190,7 +10193,7 @@ Proof
            suminf (\j. indicator_fn ((\i'. Q i INTER A i') j) x)` THENL
    [DISCH_TAC THEN ASM_SIMP_TAC std_ss [],
     GEN_TAC THEN ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC indicator_fn_suminf THEN
-    FULL_SIMP_TAC std_ss [disjoint_family, disjoint_family_on, DISJOINT_DEF] THEN
+    FULL_SIMP_TAC std_ss [disjoint_family_on, DISJOINT_DEF] THEN
     ASM_SET_TAC []] THEN ONCE_REWRITE_TAC [METIS [ETA_AX]
      ``(\x'. indicator_fn (Q i INTER A x) x') = (\x. indicator_fn (Q i INTER A x)) x``] THEN
    ONCE_REWRITE_TAC [METIS [] ``suminf (\j. indicator_fn (Q i INTER A j) x) =
@@ -10521,7 +10524,7 @@ Proof
     METIS_TAC [ALGEBRA_INTER, subsets_def, measure_space_def, sigma_algebra_def],
     ALL_TAC] THEN
    CONJ_TAC THENL
-   [ASM_SET_TAC [DISJOINT_DEF, disjoint_family, disjoint_family_on], ALL_TAC] THEN
+   [ASM_SET_TAC [DISJOINT_DEF, disjoint_family_on], ALL_TAC] THEN
    ONCE_REWRITE_TAC [METIS [subsets_def] ``measurbale_sets M =
                        subsets (m_space M, measurbale_sets M)``] THEN
    MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION THEN
@@ -10600,10 +10603,10 @@ Proof
   Suff `((BIGUNION {Q i | i IN UNIV} INTER A) UNION (Q0 INTER A) = A) /\
                   ((BIGUNION {Q i | i IN UNIV} INTER A) INTER (Q0 INTER A) = {})` THENL
   [DISCH_TAC,
-   CONJ_TAC THENL [ALL_TAC, ASM_SET_TAC [disjoint_family, disjoint_family_on]] THEN
+   CONJ_TAC THENL [ALL_TAC, ASM_SET_TAC [disjoint_family_on]] THEN
    UNDISCH_TAC ``Q0 = m_space M DIFF BIGUNION {Q i | i IN univ(:num)}`` THEN
    UNDISCH_TAC ``disjoint_family (Q:num->'a->bool)`` THEN
-   SIMP_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
+   SIMP_TAC std_ss [disjoint_family_on, IN_UNIV] THEN
    FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_alt_pow, POW_DEF] THEN
    ASM_SET_TAC []] THEN
   ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN ASM_REWRITE_TAC [] THEN
@@ -10617,7 +10620,7 @@ Theorem ext_suminf_cmult_indicator :
     !A f x i. disjoint_family A /\ x IN A i /\ (!i. 0 <= f i) ==>
               (suminf (\n. f n * indicator_fn (A n) x) = f i)
 Proof
-  RW_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
+  RW_TAC std_ss [disjoint_family_on, IN_UNIV] THEN
   Suff `!n. f n * indicator_fn (A n) x = if n = i then f n else 0` THENL
   [DISCH_TAC,
    RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero] THEN
@@ -10921,7 +10924,7 @@ Proof
                suminf (\j. indicator_fn (A j) x)`
      >- (GEN_TAC >> ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
          MATCH_MP_TAC indicator_fn_suminf \\
-         FULL_SIMP_TAC std_ss [disjoint_family, disjoint_family_on, DISJOINT_DEF] \\
+         FULL_SIMP_TAC std_ss [disjoint_family_on, DISJOINT_DEF] \\
          ASM_SET_TAC []) \\
      DISCH_TAC >> ASM_SIMP_TAC std_ss [] \\
      Know `!x. h x * suminf (\j. indicator_fn (A j) x) =
@@ -11247,26 +11250,45 @@ Proof
     simp[]
 QED
 
-Theorem integral_sum':
+(* NOTE: reworked proof for "HOL warning: Type.mk_vartype: non-standard syntax" *)
+Theorem integral_sum' :
     !m f s. FINITE s /\ measure_space m /\ (!i. i IN s ==> integrable m (f i)) ==>
-        integral m (λx. SIGMA (λi. f i x) s) = SIGMA (λi. integral m (f i)) s
+            integral m (λx. SIGMA (λi. f i x) s) = SIGMA (λi. integral m (f i)) s
 Proof
-    rw[] >>
-    resolve_then Any (resolve_then (Pos $ el 2)
-        (qspecl_then [‘zzz’,‘xxx’,‘s’,‘m’,‘λi. Normal o real o f i’] irule) integral_sum) EQ_TRANS EQ_TRANS >>
-    qexistsl_tac [‘f’,‘m’,‘s’] >> simp[] >>
-    first_assum $ C (resolve_then Any assume_tac) integrable_AE_finite >> rfs[] >>
-    qspecl_then [‘m’,‘λi x. f i x = Normal (real (f i x))’,‘s’] assume_tac AE_BIGINTER >>
-    rfs[finite_countable] >> rw[]
-    >- (irule integrable_eq_AE_alt >> simp[integrable_measurable,IN_MEASURABLE_BOREL_NORMAL_REAL] >>
-        qexists_tac ‘f i’ >> simp[])
-    >- (irule integral_cong_AE >> simp[] >>
-        qspecl_then [‘m’,‘λx. !n. n IN s ==> f n x = Normal (real (f n x))’,
-            ‘λx. SIGMA (λi. f i x) s = SIGMA (λi. Normal (real (f i x))) s’]
-            (irule o SIMP_RULE (srw_ss ()) []) AE_subset >>
-        rw[] >> irule EXTREAL_SUM_IMAGE_EQ' >> simp[])
-    >- (irule EXTREAL_SUM_IMAGE_EQ' >> simp[] >>
-        rw[] >> irule integral_cong_AE >> simp[Once EQ_SYM_EQ])
+    rpt STRIP_TAC
+ (* applying integral_sum *)
+ >> MP_TAC (Q.SPECL [‘m’, ‘\i. Normal o real o f i’, ‘s’] integral_sum)
+ >> simp []
+ >> qabbrev_tac ‘g = \i. Normal o real o f i’ >> simp []
+ >> Know ‘!i. i IN s ==> integrable m (g i)’
+ >- (rw [Abbr ‘g’] \\
+     MATCH_MP_TAC integrable_eq_AE_alt \\
+     Q.EXISTS_TAC ‘f i’ >> ASM_SIMP_TAC bool_ss [] \\
+     CONJ_TAC >- (MATCH_MP_TAC integrable_AE_finite >> rw []) \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_NORMAL_REAL \\
+     fs [measure_space_def, integrable_def])
+ >> RW_TAC std_ss []
+ (* rewrite RHS from f to g *)
+ >> MATCH_MP_TAC EQ_TRANS
+ >> Q.EXISTS_TAC ‘SIGMA (\i. integral m (g i)) s’
+ >> reverse CONJ_TAC
+ >- (irule EXTREAL_SUM_IMAGE_EQ' >> rw [] \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC integral_cong_AE >> RW_TAC bool_ss [Abbr ‘g’] \\
+     MATCH_MP_TAC integrable_AE_finite >> rw [])
+ (* rewrite LHS from f to g *)
+ >> MATCH_MP_TAC EQ_TRANS
+ >> Q.EXISTS_TAC ‘integral m (\x. SIGMA (\i. g i x) s)’
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC integral_cong_AE >> rw [] \\
+     HO_MATCH_MP_TAC AE_subset \\
+     Q.EXISTS_TAC ‘\x. !i. i IN s ==> f i x = g i x’ >> simp [] \\
+     reverse CONJ_TAC >- (rpt STRIP_TAC \\
+                          irule EXTREAL_SUM_IMAGE_EQ' >> rw []) \\
+     HO_MATCH_MP_TAC AE_BIGINTER \\
+     RW_TAC bool_ss [finite_countable, Abbr ‘g’] \\
+     MATCH_MP_TAC integrable_AE_finite >> rw [])
+ >> simp [Abbr ‘g’]
 QED
 
 Theorem integrable_sum':

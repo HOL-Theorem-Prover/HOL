@@ -23,6 +23,9 @@ val _ = hide "S";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
 (* "The theory of martingales as we know it now goes back to Doob and most of
     the material of this and the following chapter can be found in his seminal
     monograph [2] from 1953.
@@ -6150,6 +6153,43 @@ val INFTY_SIGMA_ALGEBRA_MAXIMAL = store_thm
  >- (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION_IMAGE, IN_UNIV] \\
      Q.EXISTS_TAC `n` >> art [])
  >> REWRITE_TAC [SIGMA_SUBSET_SUBSETS]);
+
+(* A construction of sigma-filteration from only measurable functions *)
+Theorem filtration_from_measurable_functions :
+    !m X A. measure_space m /\
+           (!n. X n IN Borel_measurable (measurable_space m)) /\
+           (!n. A n = sigma (m_space m) (\n. Borel) X (count1 n)) ==>
+            filtration (measurable_space m) A
+Proof
+    rw [filtration_def]
+ >- (rw [sub_sigma_algebra_def, space_sigma_functions]
+     >- (MATCH_MP_TAC sigma_algebra_sigma_functions \\
+         rw [IN_FUNSET, SPACE_BOREL]) \\
+     MATCH_MP_TAC (REWRITE_RULE [space_def, subsets_def]
+                    (Q.ISPECL [‘measurable_space m’, ‘\n:num. Borel’]
+                               sigma_functions_subset)) \\
+     rw [MEASURE_SPACE_SIGMA_ALGEBRA, SIGMA_ALGEBRA_BOREL])
+ (* stage work *)
+ >> REWRITE_TAC [Once sigma_functions_def]
+ >> Q.ABBREV_TAC ‘B = (sigma (m_space m) (\n. Borel) X (count1 j))’
+ >> ‘m_space m = space B’ by METIS_TAC [space_sigma_functions]
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_SUBSET
+ >> CONJ_ASM1_TAC
+ >- (Q.UNABBREV_TAC ‘B’ \\
+     MATCH_MP_TAC sigma_algebra_sigma_functions \\
+     rw [IN_FUNSET, SPACE_BOREL])
+ >> rw [SUBSET_DEF, IN_BIGUNION_IMAGE]
+ >> rename1 ‘k < SUC i’
+ >> rename1 ‘t IN subsets Borel’
+ >> ‘k <= i’ by rw []
+ >> ‘k <= j’ by rw []
+ (* applying SIGMA_SIMULTANEOUSLY_MEASURABLE *)
+ >> Suff ‘X k IN measurable B Borel’ >- rw [IN_MEASURABLE]
+ >> MP_TAC (ISPECL [“m_space m”, “\n:num. Borel”, “X :num->'a->extreal”, “count1 j”]
+                   SIGMA_SIMULTANEOUSLY_MEASURABLE)
+ >> rw [SIGMA_ALGEBRA_BOREL, IN_FUNSET, SPACE_BOREL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Martingale alternative definitions and properties (Chapter 23 of [1])    *)
