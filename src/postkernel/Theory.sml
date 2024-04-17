@@ -628,9 +628,9 @@ local
     in
       if List.null tags
         then "theorem"
-      else if Lib.null_intersection tags ["fast_proof", "cheat"]
-        then "ORACLE thm"
-      else "CHEAT"
+      else if Lib.mem "cheat" tags then "CHEAT"
+      else if Lib.mem "fast_proof" tags then "FAST-CHEAT"
+      else "ORACLE thm"
     end
   val msgOut = with_flag(MESG_to_string,Lib.I) HOL_MESG
   fun save_mesg s name =

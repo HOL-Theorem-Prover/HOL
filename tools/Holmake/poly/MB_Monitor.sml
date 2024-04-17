@@ -114,8 +114,9 @@ fun polish tgtw s = StringCvt.padRight #" " tgtw (truncate tgtw (polish0 s))
 val polish = nstr_subhandler polish "polish"
 
 
-val cheat_string = "Saved CHEAT _"
-val oracle_string = "Saved ORACLE thm _"
+val cheat_string =      "Saved CHEAT _"
+val fastcheat_string =  "Saved FAST-CHEAT _"
+val oracle_string =     "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
 
 fun delsml_sfx s =
@@ -294,7 +295,8 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
             val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {
                   numlines = 10,
-                  patterns = [cheat_string, oracle_string, used_cheat_string]
+                  patterns = [cheat_string, oracle_string, used_cheat_string,
+                              fastcheat_string]
                 }
           in
             monitor_map :=
@@ -362,6 +364,8 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
                   if st = W_EXITED then
                     if seen cheat_string orelse seen used_cheat_string then
                       tinfo (boldyellow, "CHEATED")
+                    else if seen fastcheat_string then
+                      tinfo (boldyellow, "F-CHEAT")
                     else
                       tinfo ((if seen oracle_string then boldyellow else green),
                              "OK")
