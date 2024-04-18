@@ -90,59 +90,83 @@ end;
 (*                                                                      *)
 (* =====================================================================*)
 
-local val inI = pred_setTheory.IN_INSERT
-      val inE = GEN ``x:'a``
-                 (EQF_INTRO (SPEC ``x:'a`` pred_setTheory.NOT_IN_EMPTY))
-      val inUNIV = pred_setTheory.IN_UNIV
-      val gv = genvar bool
-      val DISJ = AP_TERM boolSyntax.disjunction
-      val F_OR = el 3 (CONJUNCTS (SPEC gv OR_CLAUSES))
-      val OR_T = el 2 (CONJUNCTS (SPEC gv OR_CLAUSES))
-      fun in_conv conv (eth,ith) x S =
-        let val (y,S') = dest_insert S
-            val thm = SPEC S' (SPEC y ith)
-            val rectm = rand(rand(concl thm))
-        in if aconv x y
-           then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (ALPHA x y) rectm))
-           else
-             let val eql = conv (mk_eq(x, y))
-                 val res = rand(concl eql)
-             in
-               if aconv res T then
-                 EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (EQT_ELIM eql) rectm))
-               else if aconv res F then
-                 let val rthm = in_conv conv (eth,ith) x S'
-                     val thm2 = MK_COMB (DISJ eql,rthm)
-                     val thm3 = INST[gv |-> rand(concl rthm)] F_OR
-                 in TRANS thm (TRANS thm2 thm3)
-                 end
-               else raise ERR "IN_CONV" ""
-             end
-             handle HOL_ERR _ =>
-              let val rthm = in_conv conv (eth,ith) x S'
-              in if aconv (rand(concl rthm)) T
-                 then let val eqn = mk_eq(x,y)
-                          val thm2 = MK_COMB(DISJ (REFL eqn), rthm)
-                          val thm3 = TRANS thm2 (INST [gv |-> eqn] OR_T)
-                      in TRANS thm thm3
-                      end
-                 else raise ERR "IN_CONV" ""
-              end
-        end
-        handle HOL_ERR _ => let val _ = check_const empty_tm S in eth end
+local
+  val inEmpty =
+    GEN ``x:'a`` (EQF_INTRO (SPEC ``x:'a`` pred_setTheory.NOT_IN_EMPTY))
+  val inUNIV = GEN_ALL (EQT_INTRO (SPEC_ALL pred_setTheory.IN_UNIV))
+  val gv = genvar bool
+  val DISJ = AP_TERM boolSyntax.disjunction
+  val F_OR = el 3 (CONJUNCTS (SPEC gv OR_CLAUSES))
+  fun join thm1 thm2 tm = EQT_INTRO (EQ_MP (SYM thm1) (DISJ1 thm2 tm))
+  fun true_or_false tm =
+    same_const boolSyntax.T tm orelse same_const boolSyntax.F tm
+  val SPEC_CONV = Conv.REWR_CONV pred_setTheory.SPECIFICATION
 in
-fun IN_CONV conv tm =
- let val (x,S) = dest_in tm
- in if same_const pred_setSyntax.univ_tm S
-    then EQT_INTRO (ISPEC x inUNIV)
-    else
-     let val ith = ISPEC x inI
-         val eth = ISPEC x inE
-     in in_conv conv (eth,ith) x S
-     end
- end
- handle e => raise wrap_exn "PFset_conv" "IN_CONV" e
-end;
+  fun IN_CONV cnv tm =
+    let
+      fun conv tm = Lib.with_exn cnv tm (ERR "IN_CONV" "")
+      val (x, s) = dest_in tm
+      val ith = ISPEC x pred_setTheory.IN_INSERT
+      fun iter s =
+        case Lib.total dest_insert s of
+          SOME (y, s') =>
+            let
+              val thm = SPEC s' (SPEC y ith)
+              val rectm = rand (rhs (concl thm))
+            in
+              if aconv x y then
+                join thm (ALPHA x y) rectm
+              else
+                let
+                  val eql = conv (mk_eq (x, y))
+                  val res = rhs (concl eql)
+                in
+                  if aconv res boolSyntax.T then
+                    join thm (EQT_ELIM eql) rectm
+                  else if aconv res boolSyntax.F then
+                    let
+                      val rthm = iter s'
+                      val res = rand (concl rthm)
+                    in
+                      if true_or_false res then
+                        let
+                          val thm2 = MK_COMB (DISJ eql, rthm)
+                          val thm3 = INST [gv |-> res] F_OR
+                        in
+                          TRANS thm (TRANS thm2 thm3)
+                        end
+                      else
+                        raise ERR "IN_CONV" ""
+                    end
+                  else
+                    raise ERR "IN_CONV" ""
+                end
+            end
+        | NONE =>
+            if same_const pred_setSyntax.empty_tm s then
+              ISPEC x inEmpty
+            else if same_const pred_setSyntax.univ_tm s then
+              ISPEC x inUNIV
+            else if pred_setSyntax.is_set_spec s then
+              let
+                val thm = conv (mk_in (x, s))
+                val res = rhs (concl thm)
+              in
+                if true_or_false res then thm else raise ERR "IN_CONV" ""
+              end
+            else if Term.is_abs s then
+              let
+                val thm = (SPEC_CONV THENC conv) (mk_in (x, s))
+                val res = rhs (concl thm)
+              in
+                if true_or_false res then thm else raise ERR "IN_CONV" ""
+              end
+            else
+              raise ERR "IN_CONV" ""
+    in
+      iter s
+    end
+end
 
 (* =====================================================================*)
 (* DELETE_CONV: delete an element from a finite set.                    *)
