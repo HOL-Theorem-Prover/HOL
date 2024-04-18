@@ -15,7 +15,7 @@ fun test0 n_t =
 fun mkN n = numSyntax.mk_numeral (Arbnum.fromInt n)
 
 fun test (N n) = test0 (mkN n)
-  | test (T n) = test0 (``2 ** 2 ** ^(mkN n) + 1`` |> EVAL |> concl |> rhs)
+  | test (T n) = test0 (``2 ** (2 ** ^(mkN n)) + 1n`` |> EVAL |> concl |> rhs)
 
 open Systeml
 val _ = app (ignore o test)
