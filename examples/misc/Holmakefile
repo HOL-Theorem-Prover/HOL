@@ -1,6 +1,5 @@
 INCLUDES = $(dprot $(HOLDIR)/src/real) $(dprot $(HOLDIR)/src/real/analysis) \
-           $(dprot $(HOLDIR)/src/bag) $(dprot $(HOLDIR)/src/integer) \
-           $(dprot $(HOLDIR)/src/unwind)
+           $(dprot $(HOLDIR)/src/bag) $(dprot $(HOLDIR)/src/integer) 
 
 all: $(DEFAULT_TARGETS) euclid-OK thery-done
 .PHONY: all
