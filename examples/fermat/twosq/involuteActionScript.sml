@@ -12,17 +12,10 @@ val _ = new_theory "involuteAction";
 
 (* ------------------------------------------------------------------------- *)
 
-
-(* open dependent theories *)
-(* arithmeticTheory -- load by default *)
+open arithmeticTheory pred_setTheory numberTheory dividesTheory;
 
 (* val _ = load "helperTwosqTheory"; *)
 open helperTwosqTheory;
-open helperNumTheory;
-open helperSetTheory;
-open helperFunctionTheory;
-open arithmeticTheory pred_setTheory;
-open dividesTheory; (* for divides_def, prime_def *)
 
 (* val _ = load "involuteTheory"; *)
 open involuteTheory;
@@ -32,7 +25,6 @@ open groupInstancesTheory; (* for Zadd_def *)
 
 (* val _ = load "groupActionTheory"; *)
 open groupActionTheory; (* for fixed_points_def *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Involution and Action Documentation                                       *)

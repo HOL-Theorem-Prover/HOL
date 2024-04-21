@@ -14,18 +14,19 @@ val _ = new_theory "AKStheorem";
 
 open jcLib;
 
+(* open dependent theories *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
+     dividesTheory gcdTheory numberTheory listRangeTheory combinatoricsTheory
+     primeTheory;
+
 (* Get dependent theories local *)
 open AKSmapsTheory;
 open AKSsetsTheory;
 open AKSintroTheory;
-
 open AKSshiftTheory;
 
-open logPowerTheory;
 open computeRingTheory;
 open computeParamTheory;
-open EulerTheory;
-open helperFunctionTheory;
 
 open monoidTheory groupTheory ringTheory ringUnitTheory;
 
@@ -46,20 +47,9 @@ open polyCyclicTheory;
 open subgroupTheory;
 open groupOrderTheory;
 
-(* Get dependent theories in lib *)
-open helperNumTheory helperSetTheory;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory;
-open dividesTheory gcdTheory;
-
-open binomialTheory;
-open GaussTheory; (* for phi *)
-
 open ringBinomialTheory;
 open ringDividesTheory;
 
-open monoidInstancesTheory;
 open groupInstancesTheory;
 open ringInstancesTheory;
 open fieldInstancesTheory;
@@ -70,6 +60,9 @@ open ffPolyTheory;
 open ffUnityTheory;
 open ffExistTheory;
 
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Main Theorem Documentation                                            *)

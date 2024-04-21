@@ -31,19 +31,10 @@ val _ = new_theory "FLTnecklace";
 
 (* ------------------------------------------------------------------------- *)
 
-
-(* open dependent theories *)
-(* val _ = load "patternTheory"; *)
-open helperNumTheory helperSetTheory;
-open arithmeticTheory pred_setTheory;
+open arithmeticTheory dividesTheory logrootTheory gcdTheory pred_setTheory
+     numberTheory combinatoricsTheory;
 
 open cycleTheory patternTheory;
-
-(* val _ = load "necklaceTheory"; *)
-open necklaceTheory;
-open dividesTheory; (* for PRIME_POS *)
-open gcdTheory; (* for PRIME_GCD *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by necklace Documentation                         *)
@@ -1192,7 +1183,6 @@ Proof
   `a <= a ** p` by rw[EXP_LE] >>
   metis_tac[DIVIDES_MOD_0, MOD_EQ]
 QED
-
 
 (* ------------------------------------------------------------------------- *)
 

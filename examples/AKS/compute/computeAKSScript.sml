@@ -12,11 +12,12 @@ val _ = new_theory "computeAKS";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory primeTheory;
 
 (* Get dependent theories local *)
 (* val _ = load "computeParamTheory"; *)
@@ -29,26 +30,7 @@ open computeRingTheory computePolyTheory;
 open polyWeakTheory polyRingTheory;
 open polyMonicTheory polyDivisionTheory;
 
-(*
-open helperFunctionTheory; (* for SQRT_LE *)
-open logPowerTheory; (* for ulog *)
-open ringTheory ringInstancesTheory; (* for ZN_coprime_order_alt *)
-open monoidOrderTheory;
-*)
 open ringInstancesTheory; (* for ZN_ring *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-open logPowerTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Computations Documentation                                            *)

@@ -43,14 +43,9 @@ val _ = new_theory "cycle";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* open dependent theories *)
-(* val _ = load "helperFunctionTheory"; *)
-open helperListTheory; (* for DROP_SUC, TAKE_SUC *)
-open arithmeticTheory pred_setTheory listTheory;
-
-open gcdTheory; (* for GCD_0R, LINEAR_GCD *)
-
+open arithmeticTheory gcdTheory pred_setTheory listTheory rich_listTheory
+     combinatoricsTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Cycle Theory Documentation                                                *)

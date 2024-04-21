@@ -12,26 +12,20 @@ val _ = new_theory "loopDivide";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories in lib *)
-(* val _ = load "loopTheory"; *)
-open loopTheory;
-
-(* val _ = load "bitsizeTheory"; *)
-open bitsizeTheory;
-
 (* open dependent theories *)
-open arithmeticTheory dividesTheory;
-open helperNumTheory helperListTheory helperFunctionTheory; (* for DIV_EQUAL_0 *)
-open listTheory rich_listTheory;
-open listRangeTheory;
+open arithmeticTheory dividesTheory numberTheory combinatoricsTheory listTheory
+     rich_listTheory listRangeTheory logrootTheory;
 
-open logrootTheory; (* for LOG_EQ_0 *)
-open logPowerTheory; (* for LOG_LE_REVERSE *)
+open loopTheory bitsizeTheory;
 
+val _ = temp_overload_on("SQ", ``\n. n * n``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
+val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
 
 (* ------------------------------------------------------------------------- *)
 (* Loop Recurrence with Dividing argument Documentation                      *)

@@ -14,12 +14,13 @@ val _ = new_theory "AKSmaps";
 
 open jcLib;
 
+(* open dependent theories *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
+     logrootTheory combinatoricsTheory dividesTheory gcdTheory primeTheory;
+
 (* Get dependent theories local *)
 open AKSsetsTheory;
 open AKSintroTheory;
-
-(* For SQRT n and LOG2 n *)
-open logPowerTheory;
 
 open monoidTheory groupTheory ringTheory ringUnitTheory;
 
@@ -46,20 +47,8 @@ open polyIrreducibleTheory;
 open subgroupTheory;
 open groupOrderTheory;
 
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-open helperNumTheory helperSetTheory helperFunctionTheory;
-
-open dividesTheory gcdTheory;
-
-open GaussTheory; (* for phi_eq_0 *)
-
-open binomialTheory;
 open ringBinomialTheory;
 
-open monoidInstancesTheory;
 open groupInstancesTheory;
 open ringInstancesTheory;
 open fieldInstancesTheory;
@@ -68,7 +57,6 @@ open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;
 open ffUnityTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Mappings for Introspective Sets Documentation                             *)

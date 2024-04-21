@@ -14,6 +14,10 @@ val _ = new_theory "AKSimproved";
 
 open jcLib;
 
+(* open dependent theories *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
+     numberTheory combinatoricsTheory dividesTheory gcdTheory primeTheory;
+
 (* Get dependent theories local *)
 open AKSrevisedTheory;
 open AKStheoremTheory;
@@ -43,31 +47,16 @@ open monoidTheory groupTheory ringTheory fieldTheory;
 
 open subgroupTheory;
 open groupOrderTheory;
-open monoidOrderTheory;
 open fieldMapTheory;
 open ringUnitTheory;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-open helperNumTheory helperSetTheory helperListTheory;
-open helperFunctionTheory;
-
-open dividesTheory gcdTheory;
-
-open triangleTheory;
-open binomialTheory;
 
 open ringBinomialTheory;
 open ringDividesTheory;
 
-open monoidInstancesTheory;
 open groupInstancesTheory;
 open ringInstancesTheory;
 open fieldInstancesTheory;
 open groupOrderTheory;
-open monoidOrderTheory;
 
 open groupCyclicTheory;
 
@@ -79,7 +68,6 @@ open fieldOrderTheory;
 
 open fieldProductTheory;
 
-open logPowerTheory;
 open computeBasicTheory;
 open computeOrderTheory;
 open computePolyTheory;
@@ -98,11 +86,6 @@ open ffExistTheory;
 open ffConjugateTheory;
 open ffMasterTheory;
 open ffMinimalTheory;
-
-(* (* val _ = load "GaussTheory"; *) *)
-open EulerTheory;
-open GaussTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Bounds Improvement Documentation                                      *)

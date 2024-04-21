@@ -7,11 +7,14 @@
 (* add all dependent libraries for script *)
 open HolKernel boolLib bossLib Parse;
 
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory listRangeTheory dividesTheory
+     gcdTheory numberTheory combinatoricsTheory;
+
 (* declare new theory at start *)
 val _ = new_theory "AKSintro";
 
 (* ------------------------------------------------------------------------- *)
-
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -25,11 +28,6 @@ open ffUnityTheory;
 open ffConjugateTheory;
 open ffExistTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* (* val _ = load "polyDivisionTheory"; *) *)
-(* (* val _ = load "polyMapTheory"; *) *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
 open polyBinomialTheory polyEvalTheory;
 
@@ -44,38 +42,17 @@ open polyRingModuloTheory;
 open polyMapTheory;
 open polyIrreducibleTheory;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "ringUnitTheory"; *) *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* (* val _ = load "fieldTheory"; *) *)
 open monoidTheory groupTheory ringTheory ringUnitTheory;
 open fieldTheory fieldMapTheory;
 
 (* (* val _ = load "ringBinomialTheory"; *) *)
 open ringBinomialTheory;
-open binomialTheory;
 
 (* (* val _ = load "ringInstancesTheory"; *) *)
 open ringInstancesTheory;
 
 (* val _ = load "computeRingTheory"; *)
 open computeRingTheory; (* for overloads on x^, x+^, x^+, x^- *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperFunctionTheory;
-open helperListTheory; (* for listRangeINC_EVERY *)
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Introspective Relation for AKS Theorem Documentation                      *)

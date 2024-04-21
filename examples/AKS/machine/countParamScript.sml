@@ -12,15 +12,13 @@ val _ = new_theory "countParam";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
+     logrootTheory pairTheory optionTheory listRangeTheory numberTheory
+     combinatoricsTheory primeTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "countPowerTheory"; *)
 open countMonadTheory countMacroTheory;
 open countBasicTheory countPowerTheory;
 
@@ -30,27 +28,11 @@ open countOrderTheory;
 open bitsizeTheory complexityTheory;
 open loopIncreaseTheory loopDecreaseTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory listTheory arithmeticTheory;
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "logPowerTheory"; *) *)
-open logrootTheory logPowerTheory;
-
 (* val _ = load "computeParamTheory"; *)
 open computeParamTheory; (* for param_search_result *)
 
 (* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
-open pairTheory optionTheory;
-open listRangeTheory;
 
 (* val _ = load "ringInstancesTheory"; *)
 open ringInstancesTheory; (* for ZN order *)
@@ -58,6 +40,9 @@ open ringInstancesTheory; (* for ZN order *)
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* AKS parameter with Count Monad Documentation                              *)
