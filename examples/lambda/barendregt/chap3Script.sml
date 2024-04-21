@@ -1164,6 +1164,13 @@ val beta_eta_lameta = store_thm(
     ]
   ]);
 
+(* |- !M N.
+        lameta M N ==> ?Z. reduction (beta RUNION eta) M Z /\
+                           reduction (beta RUNION eta) N Z
+ *)
+Theorem lameta_CR = REWRITE_RULE [beta_eta_lameta, beta_eta_CR]
+                                 (Q.SPEC ‘beta RUNION eta’ theorem3_13)
+
 val beta_eta_normal_form_benf = store_thm(
   "beta_eta_normal_form_benf",
   ``normal_form (beta RUNION eta) = benf``,

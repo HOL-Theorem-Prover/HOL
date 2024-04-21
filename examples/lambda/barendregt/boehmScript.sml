@@ -2762,7 +2762,7 @@ Proof
  >> ‘LENGTH as = d - m’ by rw [Abbr ‘as’, LENGTH_FRONT]
  >> qabbrev_tac ‘b = LAST l’
  >> Know ‘l = SNOC b as’
- >- (ASM_SIMP_TAC std_ss [Abbr ‘as’, Abbr ‘b’, SNOC_LAST_FRONT])
+ >- (ASM_SIMP_TAC std_ss [Abbr ‘as’, Abbr ‘b’, SNOC_OF_LAST_FRONT])
  >> DISCH_TAC
  >> qabbrev_tac ‘p3 = MAP rightctxt (REVERSE (MAP VAR l))’
  >> ‘Boehm_transform p3’ by rw [Abbr ‘p3’, MAP_MAP_o, GSYM MAP_REVERSE]
@@ -3342,7 +3342,7 @@ Proof
      Know ‘LAMl Z (VAR z) = LAMl (FRONT Z) (LAM z (VAR z))’
      >- (REWRITE_TAC [GSYM LAMl_SNOC] \\
          Suff ‘SNOC z (FRONT Z) = Z’ >- Rewr \\
-         qunabbrev_tac ‘z’ >> MATCH_MP_TAC SNOC_LAST_FRONT >> art []) >> Rewr' \\
+         qunabbrev_tac ‘z’ >> MATCH_MP_TAC SNOC_OF_LAST_FRONT >> art []) >> Rewr' \\
      REWRITE_TAC [appstar_APPEND] \\
      qabbrev_tac ‘t :term = LAM z (VAR z)’ \\
      MATCH_MP_TAC lameq_TRANS >> Q.EXISTS_TAC ‘t @* MAP VAR vs’ \\
@@ -3369,7 +3369,7 @@ Proof
      Know ‘LAMl Z (VAR z) = LAMl (FRONT Z) (LAM z (VAR z))’
      >- (REWRITE_TAC [GSYM LAMl_SNOC] \\
          Suff ‘SNOC z (FRONT Z) = Z’ >- Rewr \\
-         qunabbrev_tac ‘z’ >> MATCH_MP_TAC SNOC_LAST_FRONT >> art []) >> Rewr' \\
+         qunabbrev_tac ‘z’ >> MATCH_MP_TAC SNOC_OF_LAST_FRONT >> art []) >> Rewr' \\
      Know ‘args2' ++ MAP VAR vs = SNOC (VAR b0) (args2' ++ MAP VAR (FRONT vs))’
      >- (qunabbrev_tac ‘b0’ \\
          Know ‘VAR (LAST bs) :term = LAST (MAP VAR vs)’
@@ -3379,7 +3379,7 @@ Proof
              MATCH_MP_TAC (GSYM FRONT_APPEND_NOT_NIL) >> rw []) >> Rewr' \\
          Suff ‘LAST (MAP VAR vs) = LAST (args2' ++ MAP VAR vs)’
          >- (Rewr' >> qabbrev_tac ‘l = args2' ++ MAP VAR vs’ \\
-             MATCH_MP_TAC (GSYM SNOC_LAST_FRONT) >> rw [Abbr ‘l’]) \\
+             MATCH_MP_TAC SNOC_LAST_FRONT >> rw [Abbr ‘l’]) \\
          MATCH_MP_TAC (GSYM LAST_APPEND_NOT_NIL) >> rw []) >> Rewr' \\
      REWRITE_TAC [appstar_SNOC] \\
      qabbrev_tac ‘t :term = LAM z (VAR z)’ \\

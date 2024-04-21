@@ -1654,7 +1654,7 @@ Theorem lameq_hnf_fresh_subst :
 Proof
     Induct_on ‘as’ using SNOC_INDUCT >> rw []
  >> Cases_on ‘args = []’ >- fs []
- >> ‘args = SNOC (LAST args) (FRONT args)’ by PROVE_TAC [SNOC_LAST_FRONT]
+ >> ‘args = SNOC (LAST args) (FRONT args)’ by PROVE_TAC [SNOC_OF_LAST_FRONT]
  >> POP_ORW
  >> REWRITE_TAC [appstar_SNOC, SUB_THM]
  >> MATCH_MP_TAC lameq_TRANS
@@ -1951,7 +1951,7 @@ Proof
  >- (MATCH_MP_TAC LAMl_ALPHA_ssub >> rw [DISJOINT_SYM] \\
      Suff ‘FV M = set Z’ >- METIS_TAC [DISJOINT_SYM] \\
      rw [Abbr ‘M’, FV_appstar] \\
-    ‘Z = SNOC (LAST Z) (FRONT Z)’ by PROVE_TAC [SNOC_LAST_FRONT] \\
+    ‘Z = SNOC (LAST Z) (FRONT Z)’ by PROVE_TAC [SNOC_OF_LAST_FRONT] \\
      POP_ORW \\
      simp [LIST_TO_SET_SNOC] \\
      rw [Once EXTENSION, MEM_MAP] \\
@@ -1966,7 +1966,7 @@ Proof
  >> ‘FDOM fm = set Z’ by rw [FDOM_fromPairs, Abbr ‘fm’]
  >> qabbrev_tac ‘y = LAST Y’
  >> ‘!t. LAMl Y t = LAMl (SNOC y (FRONT Y)) t’
-       by (ASM_SIMP_TAC std_ss [Abbr ‘y’, SNOC_LAST_FRONT]) >> POP_ORW
+       by (ASM_SIMP_TAC std_ss [Abbr ‘y’, SNOC_OF_LAST_FRONT]) >> POP_ORW
  >> REWRITE_TAC [LAMl_SNOC]
  >> Know ‘fm ' M = VAR y @* MAP VAR (FRONT Y)’
  >- (simp [Abbr ‘M’, ssub_appstar] \\
@@ -2066,7 +2066,7 @@ Proof
      Q.PAT_X_ASSUM ‘ALL_DISTINCT Y’ MP_TAC \\
      Know ‘SNOC y vs = Y’
      >- (qunabbrevl_tac [‘y’, ‘vs’] \\
-         MATCH_MP_TAC SNOC_LAST_FRONT >> art []) \\
+         MATCH_MP_TAC SNOC_OF_LAST_FRONT >> art []) \\
      DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM) \\
      rw [ALL_DISTINCT_SNOC]
      >- (qunabbrev_tac ‘vs1’ >> PROVE_TAC [MEM_TAKE]) \\
@@ -2094,7 +2094,7 @@ Proof
  >- (Q.PAT_X_ASSUM ‘ALL_DISTINCT Y’ MP_TAC \\
      Know ‘SNOC y vs = Y’
      >- (qunabbrevl_tac [‘y’, ‘vs’] \\
-         MATCH_MP_TAC SNOC_LAST_FRONT >> art []) \\
+         MATCH_MP_TAC SNOC_OF_LAST_FRONT >> art []) \\
      DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM) \\
      rw [ALL_DISTINCT_SNOC] \\
      qunabbrev_tac ‘vs1’ >> PROVE_TAC [MEM_TAKE])
@@ -2139,7 +2139,7 @@ Proof
      Q.PAT_X_ASSUM ‘ALL_DISTINCT Y’ MP_TAC \\
      Know ‘SNOC y vs = Y’
      >- (qunabbrevl_tac [‘y’, ‘vs’] \\
-         MATCH_MP_TAC SNOC_LAST_FRONT >> art []) \\
+         MATCH_MP_TAC SNOC_OF_LAST_FRONT >> art []) \\
      DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM) \\
      rw [ALL_DISTINCT_SNOC] \\
      CCONTR_TAC >> fs [Abbr ‘vs2’] \\
