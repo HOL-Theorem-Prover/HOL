@@ -1,6 +1,6 @@
-open HolKernel boolLib Parse
-open Parse BasicProvers metisLib simpLib
-open arithmeticTheory pairTheory combinTheory
+open HolKernel boolLib Parse BasicProvers;
+
+open metisLib simpLib arithmeticTheory pairTheory combinTheory computeLib;
 
 val _ = new_theory "logroot";
 
@@ -14,8 +14,17 @@ fun DECIDE_TAC (g as (asl, _)) =
    (MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith_asm asl)
     THEN CONV_TAC Arith.ARITH_CONV) g
 
-val DECIDE = EQT_ELIM o Arith.ARITH_CONV
-fun simp ths = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
+val decide_tac = DECIDE_TAC;
+val metis_tac = METIS_TAC;
+
+val DECIDE = EQT_ELIM o Arith.ARITH_CONV;
+val rw = SRW_TAC [ARITH_ss];
+val std_ss = arith_ss;
+val qabbrev_tac = Q.ABBREV_TAC;
+val qexists_tac = Q.EXISTS_TAC;
+fun simp l = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
+fun fs l = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
+fun rfs l = REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 
 val Define = TotalDefn.Define
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
@@ -28,6 +37,10 @@ val lt_mult2 = Q.prove(
    THEN `0 < d` by DECIDE_TAC
    THEN METIS_TAC [LE_MULT_LCANCEL, LT_MULT_RCANCEL, LESS_EQ_LESS_TRANS,
                    LESS_OR_EQ]);
+
+(* ------------------------------------------------------------------------- *)
+(* Exponential Theorems                                                      *)
+(* ------------------------------------------------------------------------- *)
 
 val exp_lemma2 = Q.prove(
    `!a b r. 0 < r ==> a < b ==> a ** r < b ** r`,
@@ -84,6 +97,103 @@ val EXP_LT_ISO = Q.store_thm("EXP_LT_ISO",
 val EXP_LE_ISO = Q.store_thm("EXP_LE_ISO",
    `!a b r. 0 < r ==> (a <= b <=> a ** r <= b ** r)`,
    PROVE_TAC [NOT_LESS, exp_lemma3, exp_lemma2, LESS_OR_EQ, NOT_LESS]);
+
+(* Theorem: 0 < m ==> ((n ** m = n) <=> ((m = 1) \/ (n = 0) \/ (n = 1))) *)
+(* Proof:
+   If part: n ** m = n ==> n = 0 \/ n = 1
+      By contradiction, assume n <> 0 /\ n <> 1.
+      Then ?k. m = SUC k            by num_CASES, 0 < m
+        so  n ** SUC k = n          by n ** m = n
+        or  n * n ** k = n          by EXP
+       ==>      n ** k = 1          by MULT_EQ_SELF, 0 < n
+       ==>      n = 1 or k = 0      by EXP_EQ_1
+       ==>      n = 1 or m = 1,
+      These contradict n <> 1 and m <> 1.
+   Only-if part: n ** 1 = n /\ 0 ** m = 0 /\ 1 ** m = 1
+      These are true   by EXP_1, ZERO_EXP.
+*)
+val EXP_EQ_SELF = store_thm(
+  "EXP_EQ_SELF",
+  ``!n m. 0 < m ==> ((n ** m = n) <=> ((m = 1) \/ (n = 0) \/ (n = 1)))``,
+  rw_tac std_ss[EQ_IMP_THM] >| [
+    spose_not_then strip_assume_tac >>
+    `m <> 0` by decide_tac >>
+    `?k. m = SUC k` by metis_tac[num_CASES] >>
+    `n * n ** k = n` by fs[EXP] >>
+    `n ** k = 1` by metis_tac[MULT_EQ_SELF, NOT_ZERO_LT_ZERO] >>
+    fs[EXP_EQ_1],
+    rw[],
+    rw[],
+    rw[]
+  ]);
+
+(* Obtain a theorem *)
+val EXP_LE = save_thm("EXP_LE", X_LE_X_EXP |> GEN ``x:num`` |> SPEC ``b:num`` |> GEN_ALL);
+(* val EXP_LE = |- !n b. 0 < n ==> b <= b ** n: thm *)
+
+(* Theorem: 1 < b /\ 1 < n ==> b < b ** n *)
+(* Proof:
+   By contradiction, assume ~(b < b ** n).
+   Then b ** n <= b       by arithmetic
+    But b <= b ** n       by EXP_LE, 0 < n
+    ==> b ** n = b        by EQ_LESS_EQ
+    ==> b = 1 or n = 0 or n = 1.
+   All these contradict 1 < b and 1 < n.
+*)
+val EXP_LT = store_thm(
+  "EXP_LT",
+  ``!n b. 1 < b /\ 1 < n ==> b < b ** n``,
+  spose_not_then strip_assume_tac >>
+  `b <= b ** n` by rw[EXP_LE] >>
+  `b ** n = b` by decide_tac >>
+  rfs[EXP_EQ_SELF]);
+
+(* Theorem: 0 < a /\ n < m /\ (a ** n * b = a ** m * c) ==> ?d. 0 < d /\ (b = a ** d * c) *)
+(* Proof:
+   Let d = m - n.
+   Then 0 < d, and  m = n + d       by arithmetic
+    and 0 < a ==> a ** n <> 0       by EXP_EQ_0
+      a ** n * b
+    = a ** (n + d) * c              by m = n + d
+    = (a ** n * a ** d) * c         by EXP_ADD
+    = a ** n * (a ** d * c)         by MULT_ASSOC
+   The result follows               by MULT_LEFT_CANCEL
+*)
+val EXP_LCANCEL = store_thm(
+  "EXP_LCANCEL",
+  ``!a b c n m. 0 < a /\ n < m /\ (a ** n * b = a ** m * c) ==> ?d. 0 < d /\ (b = a ** d * c)``,
+  rpt strip_tac >>
+  `0 < m - n /\ (m = n + (m - n))` by decide_tac >>
+  qabbrev_tac `d = m - n` >>
+  `a ** n <> 0` by metis_tac[EXP_EQ_0, NOT_ZERO_LT_ZERO] >>
+  metis_tac[EXP_ADD, MULT_ASSOC, MULT_LEFT_CANCEL]);
+
+(* Theorem: 0 < a /\ n < m /\ (a ** n * b = a ** m * c) ==> ?d. 0 < d /\ (b = a ** d * c) *)
+(* Proof: by EXP_LCANCEL, MULT_COMM. *)
+val EXP_RCANCEL = store_thm(
+  "EXP_RCANCEL",
+  ``!a b c n m. 0 < a /\ n < m /\ (b * a ** n = c * a ** m) ==> ?d. 0 < d /\ (b = c * a ** d)``,
+  metis_tac[EXP_LCANCEL, MULT_COMM]);
+
+(*
+EXP_POS      |- !m n. 0 < m ==> 0 < m ** n
+ONE_LT_EXP   |- !x y. 1 < x ** y <=> 1 < x /\ 0 < y
+ZERO_LT_EXP  |- 0 < x ** y <=> 0 < x \/ (y = 0)
+*)
+
+(* Theorem: 0 < m ==> 1 <= m ** n *)
+(* Proof:
+   0 < m ==>  0 < m ** n      by EXP_POS
+          or 1 <= m ** n      by arithmetic
+*)
+val ONE_LE_EXP = store_thm(
+  "ONE_LE_EXP",
+  ``!m n. 0 < m ==> 1 <= m ** n``,
+  metis_tac[EXP_POS, DECIDE``!x. 0 < x <=> 1 <= x``]);
+
+(* ------------------------------------------------------------------------- *)
+(* ROOT and LOG                                                              *)
+(* ------------------------------------------------------------------------- *)
 
 val ROOT_exists = Q.store_thm("ROOT_exists",
    `!r n. 0 < r ==> ?rt. rt ** r <= n /\ n < SUC rt ** r`,
@@ -198,7 +308,6 @@ val LOG_BASE = Q.store_thm("LOG_BASE",
    THEN Induct_on `a`
    THEN RW_TAC arith_ss [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB, EXP_ADD, ADD1,
                          EXP_1, square]);
-
 
 val LOG_EXP = Q.store_thm("LOG_EXP",
    `!n a b. 1n < a /\ 0 < b ==> (LOG a (a ** n * b) = n + LOG a b)`,
@@ -687,6 +796,620 @@ QED
 
 val () = Theory.delete_const "iSQRTd"
 
+(* ------------------------------------------------------------------------- *)
+(* ROOT Computation                                                          *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: ROOT n (a ** n) = a *)
+(* Proof:
+   Since   a < SUC a         by LESS_SUC
+      a ** n < (SUC a) ** n  by EXP_BASE_LT_MONO
+   Let b = a ** n,
+   Then  a ** n <= b         by LESS_EQ_REFL
+    and  b < (SUC a) ** n    by above
+   Hence a = ROOT n b        by ROOT_UNIQUE
+*)
+val ROOT_POWER = store_thm(
+  "ROOT_POWER",
+  ``!a n. 1 < a /\ 0 < n ==> (ROOT n (a ** n) = a)``,
+  rw[EXP_BASE_LT_MONO, ROOT_UNIQUE]);
+
+(* Theorem: 0 < m /\ (b ** m = n) ==> (b = ROOT m n) *)
+(* Proof:
+   Note n <= n                  by LESS_EQ_REFL
+     so b ** m <= n             by b ** m = n
+   Also b < SUC b               by LESS_SUC
+     so b ** m < (SUC b) ** m   by EXP_EXP_LT_MONO, 0 < m
+     so n < (SUC b) ** m        by b ** m = n
+   Thus b = ROOT m n            by ROOT_UNIQUE
+*)
+val ROOT_FROM_POWER = store_thm(
+  "ROOT_FROM_POWER",
+  ``!m n b. 0 < m /\ (b ** m = n) ==> (b = ROOT m n)``,
+  rpt strip_tac >>
+  rw[ROOT_UNIQUE]);
+
+(* Theorem: 0 < m ==> (ROOT m 0 = 0) *)
+(* Proof:
+   Note 0 ** m = 0    by EXP_0
+   Thus 0 = ROOT m 0  by ROOT_FROM_POWER
+*)
+val ROOT_OF_0 = store_thm(
+  "ROOT_OF_0[simp]",
+  ``!m. 0 < m ==> (ROOT m 0 = 0)``,
+  rw[ROOT_FROM_POWER]);
+
+(* Theorem: 0 < m ==> (ROOT m 1 = 1) *)
+(* Proof:
+   Note 1 ** m = 1    by EXP_1
+   Thus 1 = ROOT m 1  by ROOT_FROM_POWER
+*)
+val ROOT_OF_1 = store_thm(
+  "ROOT_OF_1[simp]",
+  ``!m. 0 < m ==> (ROOT m 1 = 1)``,
+  rw[ROOT_FROM_POWER]);
+
+(* Theorem: 0 < r ==> !n p. (ROOT r n = p) <=> (p ** r <= n /\ n < SUC p ** r) *)
+(* Proof:
+   If part: 0 < r ==> ROOT r n ** r <= n /\ n < SUC (ROOT r n) ** r
+      This is true             by ROOT, 0 < r
+   Only-if part: p ** r <= n /\ n < SUC p ** r ==> ROOT r n = p
+      This is true             by ROOT_UNIQUE
+*)
+val ROOT_THM = store_thm(
+  "ROOT_THM",
+  ``!r. 0 < r ==> !n p. (ROOT r n = p) <=> (p ** r <= n /\ n < SUC p ** r)``,
+  metis_tac[ROOT, ROOT_UNIQUE]);
+
+(* Theorem: 0 < m ==> !n. (ROOT m n = 0) <=> (n = 0) *)
+(* Proof:
+   If part: ROOT m n = 0 ==> n = 0
+      Note n < SUC (ROOT m n) ** r      by ROOT
+        or n < SUC 0 ** m               by ROOT m n = 0
+        so n < 1                        by ONE, EXP_1
+        or n = 0                        by arithmetic
+   Only-if part: ROOT m 0 = 0, true     by ROOT_OF_0
+*)
+val ROOT_EQ_0 = store_thm(
+  "ROOT_EQ_0",
+  ``!m. 0 < m ==> !n. (ROOT m n = 0) <=> (n = 0)``,
+  rw[EQ_IMP_THM] >>
+  `n < 1` by metis_tac[ROOT, EXP_1, ONE] >>
+  decide_tac);
+
+(* Theorem: ROOT 1 n = n *)
+(* Proof:
+   Note n ** 1 = n      by EXP_1
+     so n ** 1 <= n
+   Also n < SUC n       by LESS_SUC
+     so n < SUC n ** 1  by EXP_1
+   Thus ROOT 1 n = n    by ROOT_UNIQUE
+*)
+val ROOT_1 = store_thm(
+  "ROOT_1[simp]",
+  ``!n. ROOT 1 n = n``,
+  rw[ROOT_UNIQUE]);
+
+(* Theorem: 0 < r ==>
+            (ROOT r (SUC n) = ROOT r n + if SUC n = (SUC (ROOT r n)) ** r then 1 else 0) *)
+(* Proof:
+   Let x = ROOT r n, y = ROOT r (SUC n).  x <= y.
+   Note n < (SUC x) ** r /\ x ** r <= n          by ROOT_THM
+    and SUC n < (SUC y) ** r /\ y ** r <= SUC n  by ROOT_THM
+   Since n < (SUC x) ** r,
+    SUC n <= (SUC x) ** r.
+   If SUC n = (SUC x) ** r,
+      Then y = ROOT r (SUC n)
+             = ROOT r ((SUC x) ** r)
+             = SUC x                             by ROOT_POWER
+   If SUC n < (SUC x) ** r,
+      Then x ** r <= n < SUC n                   by LESS_SUC
+      Thus x = y                                 by ROOT_THM
+*)
+val ROOT_SUC = store_thm(
+  "ROOT_SUC",
+  ``!r n. 0 < r ==>
+   (ROOT r (SUC n) = ROOT r n + if SUC n = (SUC (ROOT r n)) ** r then 1 else 0)``,
+  rpt strip_tac >>
+  qabbrev_tac `x = ROOT r n` >>
+  qabbrev_tac `y = ROOT r (SUC n)` >>
+  Cases_on `n = 0` >| [
+    `x = 0` by rw[ROOT_OF_0, Abbr`x`] >>
+    `y = 1` by rw[ROOT_OF_1, Abbr`y`] >>
+    simp[],
+    `x <> 0` by rw[ROOT_EQ_0, Abbr`x`] >>
+    `n < (SUC x) ** r /\ x ** r <= n` by metis_tac[ROOT_THM] >>
+    `SUC n < (SUC y) ** r /\ y ** r <= SUC n` by metis_tac[ROOT_THM] >>
+    `(SUC n = (SUC x) ** r) \/ SUC n < (SUC x) ** r` by decide_tac >| [
+      `1 < SUC x` by decide_tac >>
+      `y = SUC x` by metis_tac[ROOT_POWER] >>
+      simp[],
+      `x ** r <= SUC n` by decide_tac >>
+      `x = y` by metis_tac[ROOT_THM] >>
+      simp[]
+    ]
+  ]);
+
+(*
+ROOT_SUC;
+|- !r n. 0 < r ==> ROOT r (SUC n) = ROOT r n + if SUC n = SUC (ROOT r n) ** r then 1 else 0
+Let z = ROOT r n.
+
+   z(n)
+   -------------------------------------------------
+                      n   (n+1=(z+1)**r)
+
+> EVAL ``MAP (ROOT 2) [1 .. 20]``;
+val it = |- MAP (ROOT 2) [1 .. 20] =
+      [1; 1; 1; 2; 2; 2; 2; 2; 3; 3; 3; 3; 3; 3; 3; 4; 4; 4; 4; 4]: thm
+       1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+*)
+
+(* Theorem: 0 < m ==> !n. (ROOT m n = 1) <=> (0 < n /\ n < 2 ** m) *)
+(* Proof:
+       ROOT m n = 1
+   <=> 1 ** m <= n /\ n < (SUC 1) ** m    by ROOT_THM, 0 < m
+   <=> 1 <= n /\ n < 2 ** m               by TWO, EXP_1
+   <=> 0 < n /\ n < 2 ** m                by arithmetic
+*)
+val ROOT_EQ_1 = store_thm(
+  "ROOT_EQ_1",
+  ``!m. 0 < m ==> !n. (ROOT m n = 1) <=> (0 < n /\ n < 2 ** m)``,
+  rpt strip_tac >>
+  `!n. 0 < n <=> 1 <= n` by decide_tac >>
+  metis_tac[ROOT_THM, TWO, EXP_1]);
+
+(* Theorem: 0 < m ==> ROOT m n <= n *)
+(* Proof:
+   Let r = ROOT m n.
+   Note r <= r ** m   by X_LE_X_EXP, 0 < m
+          <= n        by ROOT
+*)
+val ROOT_LE_SELF = store_thm(
+  "ROOT_LE_SELF",
+  ``!m n. 0 < m ==> ROOT m n <= n``,
+  metis_tac[X_LE_X_EXP, ROOT, LESS_EQ_TRANS]);
+
+(* Theorem: 0 < m ==> ((ROOT m n = n) <=> ((m = 1) \/ (n = 0) \/ (n = 1))) *)
+(* Proof:
+   If part: ROOT m n = n ==> m = 1 \/ n = 0 \/ n = 1
+      Note n ** m <= n               by ROOT, 0 < r
+       But n <= n ** m               by X_LE_X_EXP, 0 < m
+        so n ** m = n                by EQ_LESS_EQ
+       ==> m = 1 or n = 0 or n = 1   by EXP_EQ_SELF
+   Only-if part: ROOT 1 n = n /\ ROOT m 0 = 0 /\ ROOT m 1 = 1
+      True by ROOT_1, ROOT_OF_0, ROOT_OF_1.
+*)
+Theorem ROOT_EQ_SELF:
+  !m n. 0 < m ==> (ROOT m n = n <=> m = 1 \/ n = 0 \/ n = 1)
+Proof
+  rw_tac std_ss[EQ_IMP_THM] >> rw[] >>
+  `n ** m <= n` by metis_tac[ROOT] >>
+  `n <= n ** m` by rw[X_LE_X_EXP] >>
+  `n ** m = n` by decide_tac >>
+  fs[]
+QED
+
+(* Theorem: 0 < m ==> (n <= ROOT m n <=> ((m = 1) \/ (n = 0) \/ (n = 1))) *)
+(* Proof:
+   Note ROOT m n <= n                     by ROOT_LE_SELF
+   Thus n <= ROOT m n <=> ROOT m n = n    by EQ_LESS_EQ
+   The result follows                     by ROOT_EQ_SELF
+*)
+val ROOT_GE_SELF = store_thm(
+  "ROOT_GE_SELF",
+  ``!m n. 0 < m ==> (n <= ROOT m n <=> ((m = 1) \/ (n = 0) \/ (n = 1)))``,
+  metis_tac[ROOT_LE_SELF, ROOT_EQ_SELF, EQ_LESS_EQ]);
+
+(*
+EVAL ``MAP (\k. ROOT k 100)  [1 .. 10]``; = [100; 10; 4; 3; 2; 2; 1; 1; 1; 1]: thm
+
+This shows (ROOT k) is a decreasing function of k,
+but this is very hard to prove without some real number theory.
+Even this is hard to prove: ROOT 3 n <= ROOT 2 n
+
+No! -- this can be proved, see below.
+*)
+
+(* Theorem: 0 < a /\ a <= b ==> ROOT b n <= ROOT a n *)
+(* Proof:
+   Let x = ROOT a n, y = ROOT b n. To show: y <= x.
+   By contradiction, suppose x < y.
+   Then SUC x <= y.
+   Note x ** a <= n /\ n < (SUC x) ** a     by ROOT
+    and y ** b <= n /\ n < (SUC y) ** b     by ROOT
+    But a <= b
+        (SUC x) ** a
+     <= (SUC x) ** b       by EXP_BASE_LEQ_MONO_IMP, 0 < SUC x, a <= b
+     <=       y ** b       by EXP_EXP_LE_MONO, 0 < b
+   This leads to n < (SUC x) ** a <= y ** b <= n, a contradiction.
+*)
+val ROOT_LE_REVERSE = store_thm(
+  "ROOT_LE_REVERSE",
+  ``!a b n. 0 < a /\ a <= b ==> ROOT b n <= ROOT a n``,
+  rpt strip_tac >>
+  qabbrev_tac `x = ROOT a n` >>
+  qabbrev_tac `y = ROOT b n` >>
+  spose_not_then strip_assume_tac >>
+  `0 < b /\ SUC x <= y` by decide_tac >>
+  `x ** a <= n /\ n < (SUC x) ** a` by rw[ROOT, Abbr`x`] >>
+  `y ** b <= n /\ n < (SUC y) ** b` by rw[ROOT, Abbr`y`] >>
+  `(SUC x) ** a <= (SUC x) ** b` by rw[EXP_BASE_LEQ_MONO_IMP] >>
+  `(SUC x) ** b <= y ** b` by rw[EXP_EXP_LE_MONO] >>
+  decide_tac);
+
+(* ------------------------------------------------------------------------- *)
+(* Square Root                                                               *)
+(* ------------------------------------------------------------------------- *)
+
+(* Use overload for SQRT *)
+val _ = overload_on ("SQRT", ``\n. ROOT 2 n``);
+
+(* Theorem: 0 < n ==> (SQRT n) ** 2 <= n /\ n < SUC (SQRT n) ** 2 *)
+(* Proof: by ROOT:
+   |- !r n. 0 < r ==> ROOT r n ** r <= n /\ n < SUC (ROOT r n) ** r
+*)
+val SQRT_PROPERTY = store_thm(
+  "SQRT_PROPERTY",
+  ``!n. (SQRT n) ** 2 <= n /\ n < SUC (SQRT n) ** 2``,
+  rw[ROOT]);
+
+(* Get a useful theorem *)
+Theorem SQRT_UNIQUE = ROOT_UNIQUE |> SPEC ``2``;
+(* val SQRT_UNIQUE = |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p: thm *)
+
+(* Obtain a theorem *)
+val SQRT_THM = save_thm("SQRT_THM",
+    ROOT_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
+(* val SQRT_THM = |- !n p. (SQRT n = p) <=> p ** 2 <= n /\ n < SUC p ** 2: thm *)
+
+(* Theorem: n <= m ==> SQRT n <= SQRT m *)
+(* Proof: by ROOT_LE_MONO *)
+val SQRT_LE = store_thm(
+  "SQRT_LE",
+  ``!n m. n <= m ==> SQRT n <= SQRT m``,
+  rw[ROOT_LE_MONO]);
+
+(* Theorem: n < m ==> SQRT n <= SQRT m *)
+(* Proof:
+   Since n < m ==> n <= m   by LESS_IMP_LESS_OR_EQ
+   This is true             by ROOT_LE_MONO
+*)
+val SQRT_LT = store_thm(
+  "SQRT_LT",
+  ``!n m. n < m ==> SQRT n <= SQRT m``,
+  rw[ROOT_LE_MONO, LESS_IMP_LESS_OR_EQ]);
+
+(* Theorem: SQRT 0 = 0 *)
+(* Proof: by ROOT_OF_0 *)
+val SQRT_0 = store_thm(
+  "SQRT_0[simp]",
+  ``SQRT 0 = 0``,
+  rw[]);
+
+(* Theorem: SQRT 1 = 1 *)
+(* Proof: by ROOT_OF_1 *)
+val SQRT_1 = store_thm(
+  "SQRT_1[simp]",
+  ``SQRT 1 = 1``,
+  rw[]);
+
+(* Theorem: SQRT n = 0 <=> n = 0 *)
+(* Proof:
+   If part: SQRT n = 0 ==> n = 0.
+   By contradiction, suppose n <> 0.
+      This means 1 <= n
+      Hence  SQRT 1 <= SQRT n   by SQRT_LE
+         so       1 <= SQRT n   by SQRT_1
+      This contradicts SQRT n = 0.
+   Only-if part: n = 0 ==> SQRT n = 0
+      True since SQRT 0 = 0     by SQRT_0
+*)
+val SQRT_EQ_0 = store_thm(
+  "SQRT_EQ_0",
+  ``!n. (SQRT n = 0) <=> (n = 0)``,
+  rw[EQ_IMP_THM] >>
+  spose_not_then strip_assume_tac >>
+  `1 <= n` by decide_tac >>
+  `SQRT 1 <= SQRT n` by rw[SQRT_LE] >>
+  `SQRT 1 = 1` by rw[] >>
+  decide_tac);
+
+(* Theorem: SQRT n = 1 <=> n = 1 \/ n = 2 \/ n = 3 *)
+(* Proof:
+   If part: SQRT n = 1 ==> (n = 1) \/ (n = 2) \/ (n = 3).
+   By contradiction, suppose n <> 1 /\ n <> 2 /\ n <> 3.
+      Note n <> 0    by SQRT_EQ_0
+      This means 4 <= n
+      Hence  SQRT 4 <= SQRT n   by SQRT_LE
+         so       2 <= SQRT n   by EVAL_TAC, SQRT 4 = 2
+      This contradicts SQRT n = 1.
+   Only-if part: n = 1 \/ n = 2 \/ n = 3 ==> SQRT n = 1
+      All these are true        by EVAL_TAC
+*)
+val SQRT_EQ_1 = store_thm(
+  "SQRT_EQ_1",
+  ``!n. (SQRT n = 1) <=> ((n = 1) \/ (n = 2) \/ (n = 3))``,
+  rw[EQ_IMP_THM] >| [
+    spose_not_then strip_assume_tac >>
+    `n <> 0` by metis_tac[SQRT_EQ_0] >>
+    `4 <= n` by decide_tac >>
+    `SQRT 4 <= SQRT n` by rw[SQRT_LE] >>
+    `SQRT 4 = 2` by EVAL_TAC >>
+    decide_tac,
+    EVAL_TAC,
+    EVAL_TAC,
+    EVAL_TAC
+  ]);
+
+(* Theorem: SQRT (n ** 2) = n *)
+(* Proof:
+   If 1 < n, true                       by ROOT_POWER, 0 < 2
+   Otherwise, n = 0 or n = 1.
+      When n = 0,
+           SQRT (0 ** 2) = SQRT 0 = 0   by SQRT_0
+      When n = 1,
+           SQRT (1 ** 2) = SQRT 1 = 1   by SQRT_1
+*)
+val SQRT_EXP_2 = store_thm(
+  "SQRT_EXP_2",
+  ``!n. SQRT (n ** 2) = n``,
+  rpt strip_tac >>
+  Cases_on `1 < n` >-
+  fs[ROOT_POWER] >>
+  `(n = 0) \/ (n = 1)` by decide_tac >>
+  rw[]);
+
+(* Theorem alias *)
+val SQRT_OF_SQ = save_thm("SQRT_OF_SQ", SQRT_EXP_2);
+(* val SQRT_OF_SQ = |- !n. SQRT (n ** 2) = n: thm *)
+
+(* Theorem: (n <= SQRT n) <=> ((n = 0) \/ (n = 1)) *)
+(* Proof:
+   If part: (n <= SQRT n) ==> ((n = 0) \/ (n = 1))
+     By contradiction, suppose n <> 0 /\ n <> 1.
+     Then 1 < n, implying n ** 2 <= SQRT n ** 2   by EXP_BASE_LE_MONO
+      but SQRT n ** 2 <= n                        by SQRT_PROPERTY
+       so n ** 2 <= n                             by LESS_EQ_TRANS
+       or n * n <= n * 1                          by EXP_2
+       or     n <= 1                              by LE_MULT_LCANCEL, n <> 0.
+     This contradicts 1 < n.
+   Only-if part: ((n = 0) \/ (n = 1)) ==> (n <= SQRT n)
+     This is to show:
+     (1) 0 <= SQRT 0, true by SQRT 0 = 0          by SQRT_0
+     (2) 1 <= SQRT 1, true by SQRT 1 = 1          by SQRT_1
+*)
+val SQRT_GE_SELF = store_thm(
+  "SQRT_GE_SELF",
+  ``!n. (n <= SQRT n) <=> ((n = 0) \/ (n = 1))``,
+  rw[EQ_IMP_THM] >| [
+    spose_not_then strip_assume_tac >>
+    `1 < n` by decide_tac >>
+    `n ** 2 <= SQRT n ** 2` by rw[EXP_BASE_LE_MONO] >>
+    `SQRT n ** 2 <= n` by rw[SQRT_PROPERTY] >>
+    `n ** 2 <= n` by metis_tac[LESS_EQ_TRANS] >>
+    `n * n <= n * 1` by metis_tac[EXP_2, MULT_RIGHT_1] >>
+    `n <= 1` by metis_tac[LE_MULT_LCANCEL] >>
+    decide_tac,
+    rw[],
+    rw[]
+  ]);
+
+(* Theorem: (SQRT n = n) <=> ((n = 0) \/ (n = 1)) *)
+(* Proof: by ROOT_EQ_SELF, 0 < 2 *)
+val SQRT_EQ_SELF = store_thm(
+  "SQRT_EQ_SELF",
+  ``!n. (SQRT n = n) <=> ((n = 0) \/ (n = 1))``,
+  rw[ROOT_EQ_SELF]);
+
+(* Theorem: SQRT n < m ==> n < m ** 2 *)
+(* Proof:
+                     SQRT n < m
+   ==>        SUC (SQRT n) <= m                by arithmetic
+   ==> (SUC (SQRT m)) ** 2 <= m ** 2           by EXP_EXP_LE_MONO
+   But n < (SUC (SQRT n)) ** 2                 by SQRT_PROPERTY
+   Thus n < m ** 2                             by inequality
+*)
+Theorem SQRT_LT_IMP:
+  !n m. SQRT n < m ==> n < m ** 2
+Proof
+  rpt strip_tac >>
+  `SUC (SQRT n) <= m` by decide_tac >>
+  `SUC (SQRT n) ** 2 <= m ** 2` by simp[EXP_EXP_LE_MONO] >>
+  `n < SUC (SQRT n) ** 2` by simp[SQRT_PROPERTY] >>
+  decide_tac
+QED
+
+(* Theorem: n < SQRT m ==> n ** 2 < m *)
+(* Proof:
+                   n < SQRT m
+   ==>        n ** 2 < (SQRT m) ** 2           by EXP_EXP_LT_MONO
+   But        (SQRT m) ** 2 <= m               by SQRT_PROPERTY
+   Thus       n ** 2 < m                       by inequality
+*)
+Theorem LT_SQRT_IMP:
+  !n m. n < SQRT m ==> n ** 2 < m
+Proof
+  rpt strip_tac >>
+  `n ** 2 < (SQRT m) ** 2` by simp[EXP_EXP_LT_MONO] >>
+  `(SQRT m) ** 2 <= m` by simp[SQRT_PROPERTY] >>
+  decide_tac
+QED
+
+(* Theorem: SQRT n < SQRT m ==> n < m *)
+(* Proof:
+       SQRT n < SQRT m
+   ==>      n < (SQRT m) ** 2      by SQRT_LT_IMP
+   and (SQRT m) ** 2 <= m          by SQRT_PROPERTY
+    so      n < m                  by inequality
+*)
+Theorem SQRT_LT_SQRT:
+  !n m. SQRT n < SQRT m ==> n < m
+Proof
+  rpt strip_tac >>
+  imp_res_tac SQRT_LT_IMP >>
+  `(SQRT m) ** 2 <= m` by simp[SQRT_PROPERTY] >>
+  decide_tac
+QED
+
+(* Non-theorems:
+   SQRT n <= SQRT m ==> n <= m
+   counter-example: SQRT 5 = 2 = SQRT 4, but 5 > 4.
+
+   n < m ==> SQRT n < SQRT m
+   counter-example: 4 < 5, but SQRT 4 = 2 = SQRT 5.
+*)
+
+(* ------------------------------------------------------------------------- *)
+(* Logarithm                                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: 1 < a ==> LOG a (a ** n) = n *)
+(* Proof:
+     LOG a (a ** n)
+   = LOG a ((a ** n) * 1)     by MULT_RIGHT_1
+   = n + LOG a 1              by LOG_EXP
+   = n + 0                    by LOG_1
+   = n                        by ADD_0
+*)
+val LOG_EXACT_EXP = store_thm(
+  "LOG_EXACT_EXP",
+  ``!a. 1 < a ==> !n. LOG a (a ** n) = n``,
+  metis_tac[MULT_RIGHT_1, LOG_EXP, LOG_1, ADD_0, DECIDE``0 < 1``]);
+
+(* Theorem: 1 < a /\ 0 < b /\ b <= a ** n ==> LOG a b <= n *)
+(* Proof:
+   Given     b <= a ** n
+       LOG a b <= LOG a (a ** n)   by LOG_LE_MONO
+                = n                by LOG_EXACT_EXP
+*)
+val EXP_TO_LOG = store_thm(
+  "EXP_TO_LOG",
+  ``!a b n. 1 < a /\ 0 < b /\ b <= a ** n ==> LOG a b <= n``,
+  metis_tac[LOG_LE_MONO, LOG_EXACT_EXP]);
+
+(* Theorem: 1 < a /\ 0 < n ==> !p. (LOG a n = p) <=> (a ** p <= n /\ n < a ** SUC p) *)
+(* Proof:
+   If part: 1 < a /\ 0 < n ==> a ** LOG a n <= n /\ n < a ** SUC (LOG a n)
+      This is true by LOG.
+   Only-if part: a ** p <= n /\ n < a ** SUC p ==> LOG a n = p
+      This is true by LOG_UNIQUE
+*)
+val LOG_THM = store_thm(
+  "LOG_THM",
+  ``!a n. 1 < a /\ 0 < n ==> !p. (LOG a n = p) <=> (a ** p <= n /\ n < a ** SUC p)``,
+  metis_tac[LOG, LOG_UNIQUE]);
+
+(* Theorem: LOG m n = if m <= 1 \/ (n = 0) then LOG m n
+            else if n < m then 0 else SUC (LOG m (n DIV m)) *)
+(* Proof: by LOG_RWT *)
+val LOG_EVAL = store_thm(
+  "LOG_EVAL", (* was: "LOG_EVAL[compute]" *)
+  ``!m n. LOG m n = if m <= 1 \/ (n = 0) then LOG m n
+         else if n < m then 0 else SUC (LOG m (n DIV m))``,
+  rw[LOG_RWT]);
+(* Put to computeLib for LOG evaluation of any base *)
+
+(*
+> EVAL ``MAP (LOG 3) [1 .. 20]``; =
+      [0; 0; 1; 1; 1; 1; 1; 1; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2]: thm
+> EVAL ``MAP (LOG 3) [1 .. 30]``; =
+      [0; 0; 1; 1; 1; 1; 1; 1; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 2; 3; 3; 3; 3]: thm
+*)
+
+(* Theorem: 1 < a /\ 0 < n ==>
+           !p. (LOG a n = p) <=> SUC n <= a ** SUC p /\ a ** SUC p <= a * n *)
+(* Proof:
+   Note !p. LOG a n = p
+        <=> n < a ** SUC p /\ a ** p <= n                by LOG_THM
+        <=> n < a ** SUC p /\ a * a ** p <= a * n        by LE_MULT_LCANCEL
+        <=> n < a ** SUC p /\ a ** SUC p <= a * n        by EXP
+        <=> SUC n <= a ** SUC p /\ a ** SUC p <= a * n   by arithmetic
+*)
+val LOG_TEST = store_thm(
+  "LOG_TEST",
+  ``!a n. 1 < a /\ 0 < n ==>
+   !p. (LOG a n = p) <=> SUC n <= a ** SUC p /\ a ** SUC p <= a * n``,
+  rw[EQ_IMP_THM] >| [
+    `n < a ** SUC (LOG a n)` by metis_tac[LOG_THM] >>
+    decide_tac,
+    `a ** (LOG a n) <= n` by metis_tac[LOG_THM] >>
+    rw[EXP],
+    `a * a ** p <= a * n` by fs[EXP] >>
+    `a ** p <= n` by fs[] >>
+    `n < a ** SUC p` by decide_tac >>
+    metis_tac[LOG_THM]
+  ]);
+
+(* For continuous functions, log_b (x ** y) = y * log_b x. *)
+
+(* Theorem: 1 < b /\ 0 < x /\ 0 < n ==>
+           n * LOG b x <= LOG b (x ** n) /\ LOG b (x ** n) < n * SUC (LOG b x) *)
+(* Proof:
+   Note:
+> LOG_THM |> SPEC ``b:num`` |> SPEC ``x:num``;
+val it = |- 1 < b /\ 0 < x ==> !p. LOG b x = p <=> b ** p <= x /\ x < b ** SUC p: thm
+> LOG_THM |> SPEC ``b:num`` |> SPEC ``(x:num) ** n``;
+val it = |- 1 < b /\ 0 < x ** n ==>
+   !p. LOG b (x ** n) = p <=> b ** p <= x ** n /\ x ** n < b ** SUC p: thm
+
+   Let y = LOG b x, z = LOG b (x ** n).
+   Then b ** y <= x /\ x < b ** SUC y              by LOG_THM, (1)
+    and b ** z <= x ** n /\ x ** n < b ** SUC z    by LOG_THM, (2)
+   From (1),
+        b ** (n * y) <= x ** n /\                  by EXP_EXP_LE_MONO, EXP_EXP_MULT
+        x ** n < b ** (n * SUC y)                  by EXP_EXP_LT_MONO, EXP_EXP_MULT, 0 < n
+   Cross combine with (2),
+        b ** (n * y) <= x ** n < b ** SUC z
+    and b ** z <= x ** n < b ** (n * y)
+    ==> n * y < SUC z /\ z < n * SUC y             by EXP_BASE_LT_MONO
+     or    n * y <= z /\ z < n * SUC y
+*)
+val LOG_POWER = store_thm(
+  "LOG_POWER",
+  ``!b x n. 1 < b /\ 0 < x /\ 0 < n ==>
+           n * LOG b x <= LOG b (x ** n) /\ LOG b (x ** n) < n * SUC (LOG b x)``,
+  ntac 4 strip_tac >>
+  `0 < x ** n` by rw[] >>
+  qabbrev_tac `y = LOG b x` >>
+  qabbrev_tac `z = LOG b (x ** n)` >>
+  `b ** y <= x /\ x < b ** SUC y` by metis_tac[LOG_THM] >>
+  `b ** z <= x ** n /\ x ** n < b ** SUC z` by metis_tac[LOG_THM] >>
+  `b ** (y * n) <= x ** n` by rw[EXP_EXP_MULT] >>
+  `x ** n < b ** ((SUC y) * n)` by rw[EXP_EXP_MULT] >>
+  `b ** (y * n) < b ** SUC z` by decide_tac >>
+  `b ** z < b ** (SUC y * n)` by decide_tac >>
+  `y * n < SUC z` by metis_tac[EXP_BASE_LT_MONO] >>
+  `z < SUC y * n` by metis_tac[EXP_BASE_LT_MONO] >>
+  decide_tac);
+
+(* Theorem: 1 < a /\ 0 < n /\ a <= b ==> LOG b n <= LOG a n *)
+(* Proof:
+   Let x = LOG a n, y = LOG b n. To show: y <= x.
+   By contradiction, suppose x < y.
+   Then SUC x <= y.
+   Note a ** x <= n /\ n < a ** SUC x     by LOG_THM
+    and b ** y <= n /\ n < b ** SUC y     by LOG_THM
+    But a <= b
+        a ** SUC x
+     <= b ** SUC x         by EXP_EXP_LE_MONO, 0 < SUC x
+     <= b ** y             by EXP_BASE_LEQ_MONO_IMP, SUC x <= y
+   This leads to n < a ** SUC x <= b ** y <= n, a contradiction.
+*)
+val LOG_LE_REVERSE = store_thm(
+  "LOG_LE_REVERSE",
+  ``!a b n. 1 < a /\ 0 < n /\ a <= b ==> LOG b n <= LOG a n``,
+  rpt strip_tac >>
+  qabbrev_tac `x = LOG a n` >>
+  qabbrev_tac `y = LOG b n` >>
+  spose_not_then strip_assume_tac >>
+  `1 < b /\ SUC x <= y` by decide_tac >>
+  `a ** x <= n /\ n < a ** SUC x` by metis_tac[LOG_THM] >>
+  `b ** y <= n /\ n < b ** SUC y` by metis_tac[LOG_THM] >>
+  `a ** SUC x <= b ** SUC x` by rw[EXP_EXP_LE_MONO] >>
+  `b ** SUC x <= b ** y` by rw[EXP_BASE_LEQ_MONO_IMP] >>
+  decide_tac);
+
 (* ----------------------------------------------------------------------- *)
 
 (*
@@ -744,9 +1467,280 @@ val _ = add_conv (``$SQRT``, 1, cbv_SQRT_CONV) compset2;
 
 time (CBV_CONV compset2) ``SQRT 123456789123456789123456789``;
 time (CBV_CONV compset1) ``ROOT 2 123456789123456789123456789``;
-
-
 *)
+
+
+(* Overload LOG base 2 *)
+val _ = overload_on ("LOG2", ``\n. LOG 2 n``);
+
+(* Theorem: LOG2 1 = 0 *)
+(* Proof:
+   LOG_1 |> SPEC ``2``;
+   val it = |- 1 < 2 ==> LOG2 1 = 0: thm
+*)
+val LOG2_1 = store_thm(
+  "LOG2_1[simp]",
+  ``LOG2 1 = 0``,
+  rw[LOG_1]);
+
+(* Theorem: LOG2 2 = 1 *)
+(* Proof:
+   LOG_BASE |> SPEC ``2``;
+   val it = |- 1 < 2 ==> LOG2 2 = 1: thm
+*)
+val LOG2_2 = store_thm(
+  "LOG2_2[simp]",
+  ``LOG2 2 = 1``,
+  rw[LOG_BASE]);
+
+(* Obtain a theorem *)
+val LOG2_THM = save_thm("LOG2_THM",
+    LOG_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
+(* val LOG2_THM = |- !n. 0 < n ==> !p. (LOG2 n = p) <=> 2 ** p <= n /\ n < 2 ** SUC p: thm *)
+
+(* Obtain a theorem *)
+Theorem LOG2_PROPERTY = LOG |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
+(* val LOG2_PROPERTY =  |- !n. 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n): thm *)
+
+(* Theorem: 0 < n ==> 2 ** LOG2 n <= n) *)
+(* Proof: by LOG2_PROPERTY *)
+val TWO_EXP_LOG2_LE = store_thm(
+  "TWO_EXP_LOG2_LE",
+  ``!n. 0 < n ==> 2 ** LOG2 n <= n``,
+  rw[LOG2_PROPERTY]);
+
+(* Obtain a theorem *)
+val LOG2_UNIQUE = save_thm("LOG2_UNIQUE",
+    LOG_UNIQUE |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num`` |> GEN_ALL);
+(* val LOG2_UNIQUE = |- !n m. 2 ** m <= n /\ n < 2 ** SUC m ==> LOG2 n = m: thm *)
+
+(* Theorem: 0 < n ==> ((LOG2 n = 0) <=> (n = 1)) *)
+(* Proof:
+   LOG_EQ_0 |> SPEC ``2``;
+   |- !b. 1 < 2 /\ 0 < b ==> (LOG2 b = 0 <=> b < 2)
+*)
+val LOG2_EQ_0 = store_thm(
+  "LOG2_EQ_0",
+  ``!n. 0 < n ==> ((LOG2 n = 0) <=> (n = 1))``,
+  rw[LOG_EQ_0]);
+
+(* Theorem: 0 < n ==> LOG2 n = 1 <=> (n = 2) \/ (n = 3) *)
+(* Proof:
+   If part: LOG2 n = 1 ==> n = 2 \/ n = 3
+      Note  2 ** 1 <= n /\ n < 2 ** SUC 1  by LOG2_PROPERTY
+        or       2 <= n /\ n < 4           by arithmetic
+      Thus  n = 2 or n = 3.
+   Only-if part: LOG2 2 = 1 /\ LOG2 3 = 1
+      Note LOG2 2 = 1                      by LOG2_2
+       and LOG2 3 = 1                      by LOG2_UNIQUE
+     since 2 ** 1 <= 3 /\ 3 < 2 ** SUC 1 ==> (LOG2 3 = 1)
+*)
+val LOG2_EQ_1 = store_thm(
+  "LOG2_EQ_1",
+  ``!n. 0 < n ==> ((LOG2 n = 1) <=> ((n = 2) \/ (n = 3)))``,
+  rw_tac std_ss[EQ_IMP_THM] >| [
+    imp_res_tac LOG2_PROPERTY >>
+    rfs[],
+    rw[],
+    irule LOG2_UNIQUE >>
+    simp[]
+  ]);
+
+(* Obtain theorem *)
+val LOG2_LE_MONO = save_thm("LOG2_LE_MONO",
+    LOG_LE_MONO |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num``
+                |> SIMP_RULE (srw_ss())[] |> GEN_ALL);
+(* val LOG2_LE_MONO = |- !n m. 0 < n ==> n <= m ==> LOG2 n <= LOG2 m: thm *)
+
+(* Theorem: 0 < n /\ n <= m ==> LOG2 n <= LOG2 m *)
+(* Proof: by LOG_LE_MONO *)
+val LOG2_LE = store_thm(
+  "LOG2_LE",
+  ``!n m. 0 < n /\ n <= m ==> LOG2 n <= LOG2 m``,
+  rw[LOG_LE_MONO, DECIDE``1 < 2``]);
+
+(* Note: next is not LOG2_LT_MONO! *)
+
+(* Theorem: 0 < n /\ n < m ==> LOG2 n <= LOG2 m *)
+(* Proof:
+   Since n < m ==> n <= m   by LESS_IMP_LESS_OR_EQ
+   This is true             by LOG_LE_MONO
+*)
+val LOG2_LT = store_thm(
+  "LOG2_LT",
+  ``!n m. 0 < n /\ n < m ==> LOG2 n <= LOG2 m``,
+  rw[LOG_LE_MONO, LESS_IMP_LESS_OR_EQ, DECIDE``1 < 2``]);
+
+(* Theorem: 0 < n ==> LOG2 n < n *)
+(* Proof:
+       LOG2 n
+     < 2 ** (LOG2 n)     by X_LT_EXP_X, 1 < 2
+    <= n                 by LOG2_PROPERTY, 0 < n
+*)
+val LOG2_LT_SELF = store_thm(
+  "LOG2_LT_SELF",
+  ``!n. 0 < n ==> LOG2 n < n``,
+  rpt strip_tac >>
+  `LOG2 n < 2 ** (LOG2 n)` by rw[X_LT_EXP_X] >>
+  `2 ** LOG2 n <= n` by rw[LOG2_PROPERTY] >>
+  decide_tac);
+
+(* Theorem: 0 < n ==> LOG2 n <> n *)
+(* Proof:
+   Note n < LOG2 n     by LOG2_LT_SELF
+   Thus n <> LOG2 n    by arithmetic
+*)
+val LOG2_NEQ_SELF = store_thm(
+  "LOG2_NEQ_SELF",
+  ``!n. 0 < n ==> LOG2 n <> n``,
+  rpt strip_tac >>
+  `LOG2 n < n` by rw[LOG2_LT_SELF] >>
+  decide_tac);
+
+(* Theorem: LOG2 n = n ==> n = 0 *)
+(* Proof: by LOG2_NEQ_SELF *)
+val LOG2_EQ_SELF = store_thm(
+  "LOG2_EQ_SELF",
+  ``!n. (LOG2 n = n) ==> (n = 0)``,
+  metis_tac[LOG2_NEQ_SELF, DECIDE``~(0 < n) <=> (n = 0)``]);
+
+(* Theorem: 1 < n ==> 0 < LOG2 n *)
+(* Proof:
+       1 < n
+   ==> 2 <= n
+   ==> LOG2 2 <= LOG2 n     by LOG2_LE
+   ==>      1 <= LOG2 n     by LOG_BASE, LOG2 2 = 1
+    or      0 < LOG2 n
+*)
+val LOG2_POS = store_thm(
+  "LOG2_POS[simp]",
+  ``!n. 1 < n ==> 0 < LOG2 n``,
+  rpt strip_tac >>
+  `LOG2 2 = 1` by rw[LOG_BASE, DECIDE``1 < 2``] >>
+  `2 <= n` by decide_tac >>
+  `LOG2 2 <= LOG2 n` by rw[LOG2_LE] >>
+  decide_tac);
+
+(* Theorem: 1 < n ==> 1 < 2 * LOG2 n *)
+(* Proof:
+       1 < n
+   ==> 2 <= n
+   ==> LOG2 2 <= LOG2 n        by LOG2_LE
+   ==>      1 <= LOG2 n        by LOG_BASE, LOG2 2 = 1
+   ==>  2 * 1 <= 2 * LOG2 n    by LE_MULT_LCANCEL
+    or      1 < 2 * LOG2 n
+*)
+val LOG2_TWICE_LT = store_thm(
+  "LOG2_TWICE_LT",
+  ``!n. 1 < n ==> 1 < 2 * (LOG2 n)``,
+  rpt strip_tac >>
+  `LOG2 2 = 1` by rw[LOG_BASE, DECIDE``1 < 2``] >>
+  `2 <= n` by decide_tac >>
+  `LOG2 2 <= LOG2 n` by rw[LOG2_LE] >>
+  `1 <= LOG2 n` by decide_tac >>
+  `2 <= 2 * LOG2 n` by rw_tac arith_ss[LE_MULT_LCANCEL, DECIDE``0 < 2``] >>
+  decide_tac);
+
+(* Theorem: 1 < n ==> 4 <= (2 * (LOG2 n)) ** 2 *)
+(* Proof:
+       1 < n
+   ==> 2 <= n
+   ==> LOG2 2 <= LOG2 n              by LOG2_LE
+   ==>      1 <= LOG2 n              by LOG2_2, or LOG_BASE, LOG2 2 = 1
+   ==>  2 * 1 <= 2 * LOG2 n          by LE_MULT_LCANCEL
+   ==> 2 ** 2 <= (2 * LOG2 n) ** 2   by EXP_EXP_LE_MONO
+   ==>      4 <= (2 * LOG2 n) ** 2
+*)
+val LOG2_TWICE_SQ = store_thm(
+  "LOG2_TWICE_SQ",
+  ``!n. 1 < n ==> 4 <= (2 * (LOG2 n)) ** 2``,
+  rpt strip_tac >>
+  `LOG2 2 = 1` by rw[] >>
+  `2 <= n` by decide_tac >>
+  `LOG2 2 <= LOG2 n` by rw[LOG2_LE] >>
+  `1 <= LOG2 n` by decide_tac >>
+  `2 <= 2 * LOG2 n` by rw_tac arith_ss[LE_MULT_LCANCEL, DECIDE``0 < 2``] >>
+  `2 ** 2 <= (2 * LOG2 n) ** 2` by rw[EXP_EXP_LE_MONO, DECIDE``0 < 2``] >>
+  `2 ** 2 = 4` by rw_tac arith_ss[] >>
+  decide_tac);
+
+(* Theorem: 0 < n ==> 4 <= (2 * SUC (LOG2 n)) ** 2 *)
+(* Proof:
+       0 < n
+   ==> 1 <= n
+   ==> LOG2 1 <= LOG2 n                    by LOG2_LE
+   ==>      0 <= LOG2 n                    by LOG2_1, or LOG_BASE, LOG2 1 = 0
+   ==>      1 <= SUC (LOG2 n)              by LESS_EQ_MONO
+   ==>  2 * 1 <= 2 * SUC (LOG2 n)          by LE_MULT_LCANCEL
+   ==> 2 ** 2 <= (2 * SUC (LOG2 n)) ** 2   by EXP_EXP_LE_MONO
+   ==>      4 <= (2 * SUC (LOG2 n)) ** 2
+*)
+val LOG2_SUC_TWICE_SQ = store_thm(
+  "LOG2_SUC_TWICE_SQ",
+  ``!n. 0 < n ==> 4 <= (2 * SUC (LOG2 n)) ** 2``,
+  rpt strip_tac >>
+  `LOG2 1 = 0` by rw[] >>
+  `1 <= n` by decide_tac >>
+  `LOG2 1 <= LOG2 n` by rw[LOG2_LE] >>
+  `1 <= SUC (LOG2 n)` by decide_tac >>
+  `2 <= 2 * SUC (LOG2 n)` by rw_tac arith_ss[LE_MULT_LCANCEL, DECIDE``0 < 2``] >>
+  `2 ** 2 <= (2 * SUC (LOG2 n)) ** 2` by rw[EXP_EXP_LE_MONO, DECIDE``0 < 2``] >>
+  `2 ** 2 = 4` by rw_tac arith_ss[] >>
+  decide_tac);
+
+(* Theorem: 1 < n ==> 1 < (SUC (LOG2 n)) ** 2 *)
+(* Proof:
+   Note 0 < LOG2 n                 by LOG2_POS, 1 < n
+     so 1 < SUC (LOG2 n)           by arithmetic
+    ==> 1 < (SUC (LOG2 n)) ** 2    by ONE_LT_EXP, 0 < 2
+*)
+val LOG2_SUC_SQ = store_thm(
+  "LOG2_SUC_SQ",
+  ``!n. 1 < n ==> 1 < (SUC (LOG2 n)) ** 2``,
+  rpt strip_tac >>
+  `0 < LOG2 n` by rw[] >>
+  `1 < SUC (LOG2 n)` by decide_tac >>
+  rw[ONE_LT_EXP]);
+
+(* Theorem: LOG2 (2 ** n) = n *)
+(* Proof: by LOG_EXACT_EXP *)
+val LOG2_2_EXP = store_thm(
+  "LOG2_2_EXP",
+  ``!n. LOG2 (2 ** n) = n``,
+  rw[LOG_EXACT_EXP]);
+
+(* Theorem: (2 ** (LOG2 n) = n) <=> ?k. n = 2 ** k *)
+(* Proof:
+   If part: 2 ** LOG2 n = n ==> ?k. n = 2 ** k
+      True by taking k = LOG2 n.
+   Only-if part: 2 ** LOG2 (2 ** k) = 2 ** k
+      Note LOG2 n = k               by LOG_EXACT_EXP, 1 < 2
+        or n = 2 ** k = 2 ** LOG2 n.
+*)
+val LOG2_EXACT_EXP = store_thm(
+  "LOG2_EXACT_EXP",
+  ``!n. (2 ** (LOG2 n) = n) <=> ?k. n = 2 ** k``,
+  metis_tac[LOG2_2_EXP]);
+
+(* Theorem: 0 < n ==> LOG2 (n * 2 ** m) = (LOG2 n) + m *)
+(* Proof:
+   LOG_EXP |> SPEC ``m:num`` |> SPEC ``2`` |> SPEC ``n:num``;
+   val it = |- 1 < 2 /\ 0 < n ==> LOG2 (2 ** m * n) = m + LOG2 n: thm
+*)
+val LOG2_MULT_EXP = store_thm(
+  "LOG2_MULT_EXP",
+  ``!n m. 0 < n ==> (LOG2 (n * 2 ** m) = (LOG2 n) + m)``,
+  rw[GSYM LOG_EXP]);
+
+(* Theorem: 0 < n ==> (LOG2 (2 * n) = 1 + LOG2 n) *)
+(* Proof:
+   LOG_MULT |> SPEC ``2`` |> SPEC ``n:num``;
+   val it = |- 1 < 2 /\ 0 < n ==> LOG2 (TWICE n) = SUC (LOG2 n): thm
+*)
+val LOG2_TWICE = store_thm(
+  "LOG2_TWICE",
+  ``!n. 0 < n ==> (LOG2 (2 * n) = 1 + LOG2 n)``,
+  rw[LOG_MULT]);
 
 (* ----------------------------------------------------------------------- *)
 

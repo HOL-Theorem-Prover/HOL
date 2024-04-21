@@ -22,31 +22,15 @@ val _ = new_theory "integralDomainInstances";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "integralDomainTheory"; *)
+open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory;
+
 open monoidTheory groupTheory ringTheory integralDomainTheory;
-(* val _ = load "monoidInstancesTheory"; *)
-open monoidInstancesTheory;
+
 (* val _ = load "groupInstancesTheory"; *)
 open groupInstancesTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-open helperNumTheory;
-
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Integral Domain Instances Documentation                                   *)

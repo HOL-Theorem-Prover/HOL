@@ -12,39 +12,17 @@ val _ = new_theory "polyWeak";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "polynomialTheory"; *)
-open monoidTheory gbagTheory groupTheory ringTheory polynomialTheory;
-
-(* Instances for examples. *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
-(* open ringInstancesTheory fieldInstancesTheory; *)
-
 (* open dependent theories *)
-open pairTheory bagTheory pred_setTheory listTheory arithmeticTheory;
-(* (* val _ = load "dividesTheory"; *) *)
-(* (* val _ = load "gcdTheory"; *) *)
-(* open dividesTheory gcdTheory; *)
+open pairTheory bagTheory pred_setTheory listTheory arithmeticTheory
+     numberTheory rich_listTheory combinatoricsTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperListTheory;
-open rich_listTheory; (* for MEM_LAST *)
+open monoidTheory groupTheory ringTheory polynomialTheory;
 
-(* val _ = load "sublistTheory"; *)
-open sublistTheory; (* for sublist_every *)
-
+(* Overload sublist by infix operator *)
+val _ = temp_overload_on ("<=", ``sublist``);
 
 (* ------------------------------------------------------------------------- *)
 (* Weak Polynomials Documentation                                            *)
@@ -2541,7 +2519,7 @@ Proof
   Induct
   \\ rw[] \\ fs[]
   \\ simp[EL_weak_add]
-  \\ simp[helperSetTheory.COUNT_SUC_BY_SUC]
+  \\ simp[COUNT_SUC_BY_SUC]
   \\ simp[Once CROSS_INSERT_LEFT]
   \\ dep_rewrite.DEP_REWRITE_TAC[BAG_OF_SET_DISJOINT_UNION]
   \\ conj_tac >- simp[IN_DISJOINT]

@@ -12,58 +12,27 @@ val _ = new_theory "polyBinomial";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "ringUnitTheory"; *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* (* val _ = load "fieldTheory"; *) *)
+(* open dependent theories *)
+open pred_setTheory arithmeticTheory listTheory rich_listTheory numberTheory
+     combinatoricsTheory dividesTheory gcdTheory;
+
 open monoidTheory groupTheory ringTheory ringUnitTheory;
 
 (* val _ = load "fieldInstancesTheory"; *)
 open fieldTheory fieldInstancesTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* val _ = load "polyDivisionTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
 
-(* val _ = load "polyMonicTheory"; *)
 open polyMonicTheory;
-
-(* val _ = load "polyEvalTheory"; *)
 open polyFieldTheory;
 open polyRootTheory;
 open polyEvalTheory;
 
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory rich_listTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory" -- in ringTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* val _ = load "binomialTheory"; *)
-open binomialTheory;
-
-(* val _ = load "ringBinomialTheory"; *)
 open ringBinomialTheory;
-
-(* val _ = load "ringInstancesTheory"; *)
 open ringInstancesTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Binomial R[x] Documentation                                    *)

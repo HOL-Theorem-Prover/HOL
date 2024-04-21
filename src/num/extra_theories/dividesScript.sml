@@ -1,17 +1,31 @@
-open HolKernel Parse boolLib simpLib BasicProvers
-     prim_recTheory arithmeticTheory boolSimps
-     metisLib numLib;
+open HolKernel Parse boolLib BasicProvers;
+
+open simpLib computeLib prim_recTheory arithmeticTheory boolSimps
+     metisLib numLib TotalDefn;
 
 val CALC = EQT_ELIM o reduceLib.REDUCE_CONV;
 val ARITH_TAC = CONV_TAC Arith.ARITH_CONV;
 val DECIDE = EQT_ELIM o Arith.ARITH_CONV;
 
+fun DECIDE_TAC (g as (asl,_)) =
+  ((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl) THEN
+    CONV_TAC Arith.ARITH_CONV)
+   ORELSE tautLib.TAUT_TAC) g;
+
+val decide_tac = DECIDE_TAC;
+val metis_tac = METIS_TAC;
 val arith_ss = numLib.arith_ss;
+val rw = srw_tac[];
+val qabbrev_tac = Q.ABBREV_TAC;
+val qspec_then = Q.SPEC_THEN;
 
 fun simp ths = asm_simp_tac (srw_ss() ++ numSimps.ARITH_ss) ths
 fun gvs ths = global_simp_tac {droptrues = true, elimvars = true,
                                oldestfirst = true, strip = true}
                               (srw_ss() ++ numSimps.ARITH_ss) ths
+
+fun fs l = FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) l;
+
 val op >~ = Q.>~
 
 val ARW = RW_TAC arith_ss;
@@ -439,6 +453,17 @@ val ZERO_LT_PRIMES = Q.store_thm
  `!n. 0 < PRIMES n`,
   METIS_TAC [LESS_TRANS, ONE_LT_PRIMES, DECIDE ``0 < 1``]);
 
+(* Theorem: !n. ?p. prime p /\ n < p *)
+(* Proof:
+   Since ?i. n < PRIMES i   by NEXT_LARGER_PRIME
+     and prime (PRIMES i)   by primePRIMES
+   Take p = PRIMES i.
+*)
+val prime_always_bigger = store_thm(
+  "prime_always_bigger",
+  ``!n. ?p. prime p /\ n < p``,
+  metis_tac[NEXT_LARGER_PRIME, primePRIMES]);
+
 (*---------------------------------------------------------------------------*)
 (* Directly computable version of divides                                    *)
 (*---------------------------------------------------------------------------*)
@@ -465,5 +490,602 @@ Proof
                ADD_CLAUSES]
   ]
 QED
+
+(* ------------------------------------------------------------------------- *)
+(* DIVIDES Theorems (from examples/algebra)                                  *)
+(* ------------------------------------------------------------------------- *)
+
+(* temporarily make divides an infix *)
+val _ = temp_set_fixity "divides" (Infixl 480);
+
+(* Theorem: 0 < n ==> ((m DIV n = 0) <=> m < n) *)
+(* Proof:
+   If part: 0 < n /\ m DIV n = 0 ==> m < n
+      Since m = m DIV n * n + m MOD n) /\ (m MOD n < n)   by DIVISION, 0 < n
+         so m = 0 * n + m MOD n            by m DIV n = 0
+              = 0 + m MOD n                by MULT
+              = m MOD n                    by ADD
+      Since m MOD n < n, m < n.
+   Only-if part: 0 < n /\ m < n ==> m DIV n = 0
+      True by LESS_DIV_EQ_ZERO.
+*)
+val DIV_EQUAL_0 = store_thm(
+  "DIV_EQUAL_0",
+  ``!m n. 0 < n ==> ((m DIV n = 0) <=> m < n)``,
+  rw[EQ_IMP_THM] >-
+  metis_tac[DIVISION, MULT, ADD] >>
+  rw[LESS_DIV_EQ_ZERO]);
+(* This is an improvement of
+   arithmeticTheory.DIV_EQ_0 = |- 1 < b ==> (n DIV b = 0 <=> n < b) *)
+
+(* Theorem: 0 < m /\ m <= n ==> 0 < n DIV m *)
+(* Proof:
+   Note n = (n DIV m) * m + n MOD m /\
+        n MDO m < m                            by DIVISION, 0 < m
+    ==> n MOD m < n                            by m <= n
+   Thus 0 < (n DIV m) * m                      by inequality
+     so 0 < n DIV m                            by ZERO_LESS_MULT
+*)
+Theorem DIV_POS:
+  !m n. 0 < m /\ m <= n ==> 0 < n DIV m
+Proof
+  rpt strip_tac >>
+  imp_res_tac (DIVISION |> SPEC_ALL) >>
+  first_x_assum (qspec_then `n` strip_assume_tac) >>
+  first_x_assum (qspec_then `n` strip_assume_tac) >>
+  `0 < (n DIV m) * m` by decide_tac >>
+  metis_tac[ZERO_LESS_MULT]
+QED
+
+(* Theorem: 0 < z ==> (x DIV z = y DIV z <=> x - x MOD z = y - y MOD z) *)
+(* Proof:
+   Note x = (x DIV z) * z + x MOD z            by DIVISION
+    and y = (y DIV z) * z + y MDO z            by DIVISION
+        x DIV z = y DIV z
+    <=> (x DIV z) * z = (y DIV z) * z          by EQ_MULT_RCANCEL
+    <=> x - x MOD z = y - y MOD z              by arithmetic
+*)
+Theorem DIV_EQ:
+  !x y z. 0 < z ==> (x DIV z = y DIV z <=> x - x MOD z = y - y MOD z)
+Proof
+  rpt strip_tac >>
+  `x = (x DIV z) * z + x MOD z` by simp[DIVISION] >>
+  `y = (y DIV z) * z + y MOD z` by simp[DIVISION] >>
+  `x DIV z = y DIV z <=> (x DIV z) * z = (y DIV z) * z` by simp[] >>
+  decide_tac
+QED
+
+(* Theorem: a MOD n + b < n ==> (a + b) DIV n = a DIV n *)
+(* Proof:
+   Note 0 < n                                  by a MOD n + b < n
+     a + b
+   = ((a DIV n) * n + a MOD n) + b             by DIVISION, 0 < n
+   = (a DIV n) * n + (a MOD n + b)             by ADD_ASSOC
+
+   If a MOD n + b < n,
+   Then (a + b) DIV n = a DIV n /\
+        (a + b) MOD n = a MOD n + b            by DIVMOD_UNIQ
+*)
+Theorem ADD_DIV_EQ:
+  !n a b. a MOD n + b < n ==> (a + b) DIV n = a DIV n
+Proof
+  rpt strip_tac >>
+  `0 < n` by decide_tac >>
+  `a = (a DIV n) * n + a MOD n` by simp[DIVISION] >>
+  `a + b = (a DIV n) * n + (a MOD n + b)` by decide_tac >>
+  metis_tac[DIVMOD_UNIQ]
+QED
+
+(* Theorem: 0 < y /\ x <= y * z ==> x DIV y <= z *)
+(* Proof:
+             x <= y * z
+   ==> x DIV y <= (y * z) DIV y      by DIV_LE_MONOTONE, 0 < y
+                = z                  by MULT_TO_DIV
+*)
+val DIV_LE = store_thm(
+  "DIV_LE",
+  ``!x y z. 0 < y /\ x <= y * z ==> x DIV y <= z``,
+  metis_tac[DIV_LE_MONOTONE, MULT_TO_DIV]);
+
+(* Theorem: 0 < n ==> !x y. (x * n = y) ==> (x = y DIV n) *)
+(* Proof:
+     x = (x * n + 0) DIV n     by DIV_MULT, 0 < n
+       = (x * n) DIV n         by ADD_0
+*)
+val DIV_SOLVE = store_thm(
+  "DIV_SOLVE",
+  ``!n. 0 < n ==> !x y. (x * n = y) ==> (x = y DIV n)``,
+  metis_tac[DIV_MULT, ADD_0]);
+
+(* Theorem: 0 < n ==> !x y. (n * x = y) ==> (x = y DIV n) *)
+(* Proof: by DIV_SOLVE, MULT_COMM *)
+val DIV_SOLVE_COMM = store_thm(
+  "DIV_SOLVE_COMM",
+  ``!n. 0 < n ==> !x y. (n * x = y) ==> (x = y DIV n)``,
+  rw[DIV_SOLVE, MULT_TO_DIV]);
+
+(* Theorem: 1 < n ==> (1 DIV n = 0) *)
+(* Proof:
+   Since  1 = (1 DIV n) * n + (1 MOD n)   by DIVISION, 0 < n.
+     and  1 MOD n = 1                     by ONE_MOD, 1 < n.
+    thus  (1 DIV n) * n = 0               by arithmetic
+      or  1 DIV n = 0  since n <> 0       by MULT_EQ_0
+*)
+val ONE_DIV = store_thm(
+  "ONE_DIV",
+  ``!n. 1 < n ==> (1 DIV n = 0)``,
+  rpt strip_tac >>
+  `0 < n /\ n <> 0` by decide_tac >>
+  `1 = (1 DIV n) * n + (1 MOD n)` by rw[DIVISION] >>
+  `_ = (1 DIV n) * n + 1` by rw[ONE_MOD] >>
+  `(1 DIV n) * n = 0` by decide_tac >>
+  metis_tac[MULT_EQ_0]);
+
+(* Theorem: ODD n ==> !m. m divides n ==> ODD m *)
+(* Proof:
+   Since m divides n
+     ==> ?q. n = q * m      by divides_def
+   By contradiction, suppose ~ODD m.
+   Then EVEN m              by ODD_EVEN
+    and EVEN (q * m) = EVEN n    by EVEN_MULT
+     or ~ODD n                   by ODD_EVEN
+   This contradicts with ODD n.
+*)
+val DIVIDES_ODD = store_thm(
+  "DIVIDES_ODD",
+  ``!n. ODD n ==> !m. m divides n ==> ODD m``,
+  metis_tac[divides_def, EVEN_MULT, EVEN_ODD]);
+
+(* Note: For EVEN n, m divides n cannot conclude EVEN m.
+Example: EVEN 2 or ODD 3 both divides EVEN 6.
+*)
+
+(* Theorem: EVEN m ==> !n. m divides n ==> EVEN n*)
+(* Proof:
+   Since m divides n
+     ==> ?q. n = q * m      by divides_def
+   Given EVEN m
+    Then EVEN (q * m) = n   by EVEN_MULT
+*)
+val DIVIDES_EVEN = store_thm(
+  "DIVIDES_EVEN",
+  ``!m. EVEN m ==> !n. m divides n ==> EVEN n``,
+  metis_tac[divides_def, EVEN_MULT]);
+
+(* Theorem: EVEN n = 2 divides n *)
+(* Proof:
+       EVEN n
+   <=> n MOD 2 = 0     by EVEN_MOD2
+   <=> 2 divides n     by DIVIDES_MOD_0, 0 < 2
+*)
+val EVEN_ALT = store_thm(
+  "EVEN_ALT",
+  ``!n. EVEN n = 2 divides n``,
+  rw[EVEN_MOD2, DIVIDES_MOD_0]);
+
+(* Theorem: ODD n = ~(2 divides n) *)
+(* Proof:
+   Note n MOD 2 < 2    by MOD_LESS
+    and !x. x < 2 <=> (x = 0) \/ (x = 1)   by arithmetic
+       ODD n
+   <=> n MOD 2 = 1     by ODD_MOD2
+   <=> ~(2 divides n)  by DIVIDES_MOD_0, 0 < 2
+   Or,
+   ODD n = ~(EVEN n)        by ODD_EVEN
+         = ~(2 divides n)   by EVEN_ALT
+*)
+val ODD_ALT = store_thm(
+  "ODD_ALT",
+  ``!n. ODD n = ~(2 divides n)``,
+  metis_tac[EVEN_ODD, EVEN_ALT]);
+
+(* Theorem: 0 < n ==> !q. (q DIV n) * n <= q *)
+(* Proof:
+   Since q = (q DIV n) * n + q MOD n  by DIVISION
+    Thus     (q DIV n) * n <= q       by discarding remainder
+*)
+val DIV_MULT_LE = store_thm(
+  "DIV_MULT_LE",
+  ``!n. 0 < n ==> !q. (q DIV n) * n <= q``,
+  rpt strip_tac >>
+  `q = (q DIV n) * n + q MOD n` by rw[DIVISION] >>
+  decide_tac);
+
+(* Theorem: 0 < n ==> !q. n divides q <=> ((q DIV n) * n = q) *)
+(* Proof:
+   If part: n divides q ==> q DIV n * n = q
+     q = (q DIV n) * n + q MOD n  by DIVISION
+       = (q DIV n) * n + 0        by MOD_EQ_0_DIVISOR, divides_def
+       = (q DIV n) * n            by ADD_0
+   Only-if part: q DIV n * n = q ==> n divides q
+     True by divides_def
+*)
+val DIV_MULT_EQ = store_thm(
+  "DIV_MULT_EQ",
+  ``!n. 0 < n ==> !q. n divides q <=> ((q DIV n) * n = q)``,
+  metis_tac[divides_def, DIVISION, MOD_EQ_0_DIVISOR, ADD_0]);
+(* same as DIVIDES_EQN below *)
+
+(* Theorem: 0 < x /\ 0 < y /\ x <= y ==> !n. n DIV y <= n DIV x *)
+(* Proof:
+   If n DIV y = 0,
+      Then 0 <= n DIV x is trivially true.
+   If n DIV y <> 0,
+     (n DIV y) * x <= (n DIV y) * y        by LE_MULT_LCANCEL, x <= y, n DIV y <> 0
+                   <= n                    by DIV_MULT_LE
+  Hence        (n DIV y) * x <= n          by LESS_EQ_TRANS
+  Then ((n DIV y) * x) DIV x <= n DIV x    by DIV_LE_MONOTONE
+  or                 n DIV y <= n DIV x    by MULT_DIV
+*)
+val DIV_LE_MONOTONE_REVERSE = store_thm(
+  "DIV_LE_MONOTONE_REVERSE",
+  ``!x y. 0 < x /\ 0 < y /\ x <= y ==> !n. n DIV y <= n DIV x``,
+  rpt strip_tac >>
+  Cases_on `n DIV y = 0` >-
+  decide_tac >>
+  `(n DIV y) * x <= (n DIV y) * y` by rw[LE_MULT_LCANCEL] >>
+  `(n DIV y) * y <= n` by rw[DIV_MULT_LE] >>
+  `(n DIV y) * x <= n` by decide_tac >>
+  `((n DIV y) * x) DIV x <= n DIV x` by rw[DIV_LE_MONOTONE] >>
+  metis_tac[MULT_DIV]);
+
+(* Theorem: n divides m <=> (m = (m DIV n) * n) *)
+(* Proof:
+   Since n divides m <=> m MOD n = 0     by DIVIDES_MOD_0
+     and m = (m DIV n) * n + (m MOD n)   by DIVISION
+   If part: n divides m ==> m = m DIV n * n
+      This is true                       by ADD_0
+   Only-if part: m = m DIV n * n ==> n divides m
+      Since !x y. x + y = x <=> y = 0    by ADD_INV_0
+   The result follows.
+*)
+val DIVIDES_EQN = store_thm(
+  "DIVIDES_EQN",
+  ``!n. 0 < n ==> !m. n divides m <=> (m = (m DIV n) * n)``,
+  metis_tac[DIVISION, DIVIDES_MOD_0, ADD_0, ADD_INV_0]);
+
+(* Theorem: 0 < n ==> !m. n divides m <=> (m = n * (m DIV n)) *)
+(* Proof: vy DIVIDES_EQN, MULT_COMM *)
+val DIVIDES_EQN_COMM = store_thm(
+  "DIVIDES_EQN_COMM",
+  ``!n. 0 < n ==> !m. n divides m <=> (m = n * (m DIV n))``,
+  rw_tac std_ss[DIVIDES_EQN, MULT_COMM]);
+
+(* Theorem: 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1) *)
+(* Proof:
+   Apply DIV_SUB |> GEN_ALL |> SPEC ``1`` |> REWRITE_RULE[MULT_RIGHT_1];
+   val it = |- !n m. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1): thm
+*)
+val SUB_DIV = save_thm("SUB_DIV",
+    DIV_SUB |> GEN ``n:num`` |> GEN ``m:num`` |> GEN ``q:num`` |> SPEC ``1``
+            |> REWRITE_RULE[MULT_RIGHT_1]);
+(* val SUB_DIV = |- !m n. 0 < n /\ n <= m ==> ((m - n) DIV n = m DIV n - 1): thm *)
+
+(* Theorem: 0 < n ==> !k m. (m MOD n = 0) ==> ((k * n = m) <=> (k = m DIV n)) *)
+(* Proof:
+   Note m MOD n = 0
+    ==> n divides m            by DIVIDES_MOD_0, 0 < n
+    ==> m = (m DIV n) * n      by DIVIDES_EQN, 0 < n
+       k * n = m
+   <=> k * n = (m DIV n) * n   by above
+   <=>     k = (m DIV n)       by EQ_MULT_RCANCEL, n <> 0.
+*)
+val DIV_EQ_MULT = store_thm(
+  "DIV_EQ_MULT",
+  ``!n. 0 < n ==> !k m. (m MOD n = 0) ==> ((k * n = m) <=> (k = m DIV n))``,
+  rpt strip_tac >>
+  `n <> 0` by decide_tac >>
+  `m = (m DIV n) * n` by rw[GSYM DIVIDES_EQN, DIVIDES_MOD_0] >>
+  metis_tac[EQ_MULT_RCANCEL]);
+
+(* Theorem: 0 < n ==> !k m. (m MOD n = 0) ==> (k * n < m <=> k < m DIV n) *)
+(* Proof:
+       k * n < m
+   <=> k * n < (m DIV n) * n    by DIVIDES_EQN, DIVIDES_MOD_0, 0 < n
+   <=>     k < m DIV n          by LT_MULT_RCANCEL, n <> 0
+*)
+val MULT_LT_DIV = store_thm(
+  "MULT_LT_DIV",
+  ``!n. 0 < n ==> !k m. (m MOD n = 0) ==> (k * n < m <=> k < m DIV n)``,
+  metis_tac[DIVIDES_EQN, DIVIDES_MOD_0, LT_MULT_RCANCEL, NOT_ZERO_LT_ZERO]);
+
+(* Theorem: 0 < n ==> !k m. (m MOD n = 0) ==> (m <= n * k <=> m DIV n <= k) *)
+(* Proof:
+       m <= n * k
+   <=> (m DIV n) * n <= n * k   by DIVIDES_EQN, DIVIDES_MOD_0, 0 < n
+   <=> (m DIV n) * n <= k * n   by MULT_COMM
+   <=>       m DIV n <= k       by LE_MULT_RCANCEL, n <> 0
+*)
+val LE_MULT_LE_DIV = store_thm(
+  "LE_MULT_LE_DIV",
+  ``!n. 0 < n ==> !k m. (m MOD n = 0) ==> (m <= n * k <=> m DIV n <= k)``,
+  metis_tac[DIVIDES_EQN, DIVIDES_MOD_0, MULT_COMM, LE_MULT_RCANCEL, NOT_ZERO_LT_ZERO]);
+
+(* Theorem: 0 < m ==> ((n DIV m = 0) /\ (n MOD m = 0) <=> (n = 0)) *)
+(* Proof:
+   If part: (n DIV m = 0) /\ (n MOD m = 0) ==> (n = 0)
+      Note n DIV m = 0 ==> n < m        by DIV_EQUAL_0
+      Thus n MOD m = n                  by LESS_MOD
+        or n = 0
+   Only-if part: 0 DIV m = 0            by ZERO_DIV
+                 0 MOD m = 0            by ZERO_MOD
+*)
+Theorem DIV_MOD_EQ_0:
+  !m n. 0 < m ==> ((n DIV m = 0) /\ (n MOD m = 0) <=> (n = 0))
+Proof
+  rpt strip_tac >>
+  rw[EQ_IMP_THM] >>
+  metis_tac[DIV_EQUAL_0, LESS_MOD]
+QED
+
+(* Theorem: 0 < n /\ a ** n divides b ==> a divides b *)
+(* Proof:
+   Note ?k. n = SUC k              by num_CASES, n <> 0
+    and ?q. b = q * (a ** n)       by divides_def
+              = q * (a * a ** k)   by EXP
+              = (q * a ** k) * a   by arithmetic
+   Thus a divides b                by divides_def
+*)
+Theorem EXP_divides : (* was: EXP_DIVIDES *)
+    !a b n. 0 < n /\ a ** n divides b ==> a divides b
+Proof
+  rpt strip_tac >>
+  `?k. n = SUC k` by metis_tac[num_CASES, NOT_ZERO_LT_ZERO] >>
+  `?q. b = q * a ** n` by rw[GSYM divides_def] >>
+  `_ = q * (a * a ** k)` by rw[EXP] >>
+  `_ = (q * a ** k) * a` by decide_tac >>
+  metis_tac[divides_def]
+QED
+
+(* Theorem: n divides m ==> !k. n divides (k * m) *)
+(* Proof:
+   n divides m ==> ?q. m = q * n   by divides_def
+   Hence k * m = k * (q * n)
+               = (k * q) * n       by MULT_ASSOC
+   or n divides (k * m)            by divides_def
+*)
+val DIVIDES_MULTIPLE = store_thm(
+  "DIVIDES_MULTIPLE",
+  ``!m n. n divides m ==> !k. n divides (k * m)``,
+  metis_tac[divides_def, MULT_ASSOC]);
+
+val divisor_pos = store_thm(
+  "divisor_pos",
+  ``!m n. 0 < n /\ m divides n ==> 0 < m``,
+  metis_tac[ZERO_DIVIDES, NOT_ZERO_LT_ZERO]);
+
+(* Theorem: 0 < n /\ m divides n ==> 0 < m /\ m <= n *)
+(* Proof:
+   Since 0 < n /\ m divides n,
+    then 0 < m           by divisor_pos
+     and m <= n          by DIVIDES_LE
+*)
+val divides_pos = store_thm(
+  "divides_pos",
+  ``!m n. 0 < n /\ m divides n ==> 0 < m /\ m <= n``,
+  metis_tac[divisor_pos, DIVIDES_LE]);
+
+(* Theorem: 0 < n /\ m divides n ==> (n DIV (n DIV m) = m) *)
+(* Proof:
+   Since 0 < n /\ m divides n, 0 < m       by divisor_pos
+   Hence n = (n DIV m) * m                 by DIVIDES_EQN, 0 < m
+    Note 0 < n DIV m, otherwise contradicts 0 < n      by MULT
+     Now n = m * (n DIV m)                 by MULT_COMM
+           = m * (n DIV m) + 0             by ADD_0
+   Therefore n DIV (n DIV m) = m           by DIV_UNIQUE
+*)
+val divide_by_cofactor = store_thm(
+  "divide_by_cofactor",
+  ``!m n. 0 < n /\ m divides n ==> (n DIV (n DIV m) = m)``,
+  rpt strip_tac >>
+  `0 < m` by metis_tac[divisor_pos] >>
+  `n = (n DIV m) * m` by rw[GSYM DIVIDES_EQN] >>
+  `0 < n DIV m` by metis_tac[MULT, NOT_ZERO_LT_ZERO] >>
+  `n = m * (n DIV m) + 0` by metis_tac[MULT_COMM, ADD_0] >>
+  metis_tac[DIV_UNIQUE]);
+
+(* Theorem: 0 < n ==> !a b. a divides b ==> a divides b ** n *)
+(* Proof:
+   Since 0 < n, n = SUC m for some m.
+    thus b ** n = b ** (SUC m)
+                = b * b ** m    by EXP
+   Now a divides b means
+       ?k. b = k * a            by divides_def
+    so b ** n
+     = k * a * b ** m
+     = (k * b ** m) * a         by MULT_COMM, MULT_ASSOC
+   Hence a divides (b ** n)     by divides_def
+*)
+val divides_exp = store_thm(
+  "divides_exp",
+  ``!n. 0 < n ==> !a b. a divides b ==> a divides b ** n``,
+  rw_tac std_ss[divides_def] >>
+  `n <> 0` by decide_tac >>
+  `?m. n = SUC m` by metis_tac[num_CASES] >>
+  `(q * a) ** n = q * a * (q * a) ** m` by rw[EXP] >>
+  `_ = q * (q * a) ** m * a` by rw[MULT_COMM, MULT_ASSOC] >>
+  metis_tac[]);
+
+(* Note; converse need prime divisor:
+DIVIDES_EXP_BASE |- !a b n. prime a /\ 0 < n ==> (a divides b <=> a divides b ** n)
+Counter-example for a general base: 12 divides 36 = 6^2, but ~(12 divides 6)
+*)
+
+(* Better than: DIVIDES_ADD_1 |- !a b c. a divides b /\ a divides c ==> a divides b + c *)
+
+(* Theorem: c divides a /\ c divides b ==> !h k. c divides (h * a + k * b) *)
+(* Proof:
+   Since c divides a, ?u. a = u * c     by divides_def
+     and c divides b, ?v. b = v * c     by divides_def
+      h * a + k * b
+    = h * (u * c) + k * (v * c)         by above
+    = h * u * c + k * v * c             by MULT_ASSOC
+    = (h * u + k * v) * c               by RIGHT_ADD_DISTRIB
+   Hence c divides (h * a + k * b)      by divides_def
+*)
+val divides_linear = store_thm(
+  "divides_linear",
+  ``!a b c. c divides a /\ c divides b ==> !h k. c divides (h * a + k * b)``,
+  rw_tac std_ss[divides_def] >>
+  metis_tac[RIGHT_ADD_DISTRIB, MULT_ASSOC]);
+
+(* Theorem: c divides a /\ c divides b ==> !h k d. (h * a = k * b + d) ==> c divides d *)
+(* Proof:
+   If c = 0,
+      0 divides a ==> a = 0     by ZERO_DIVIDES
+      0 divides b ==> b = 0     by ZERO_DIVIDES
+      Thus d = 0                by arithmetic
+      and 0 divides 0           by ZERO_DIVIDES
+   If c <> 0, 0 < c.
+      c divides a ==> (a MOD c = 0)  by DIVIDES_MOD_0
+      c divides b ==> (b MOD c = 0)  by DIVIDES_MOD_0
+      Hence 0 = (h * a) MOD c        by MOD_TIMES2, ZERO_MOD
+              = (0 + d MOD c) MOD c  by MOD_PLUS, MOD_TIMES2, ZERO_MOD
+              = d MOD c              by MOD_MOD
+      or c divides d                 by DIVIDES_MOD_0
+*)
+val divides_linear_sub = store_thm(
+  "divides_linear_sub",
+  ``!a b c. c divides a /\ c divides b ==> !h k d. (h * a = k * b + d) ==> c divides d``,
+  rpt strip_tac >>
+  Cases_on `c = 0` >| [
+    `(a = 0) /\ (b = 0)` by metis_tac[ZERO_DIVIDES] >>
+    `d = 0` by rw_tac arith_ss[] >>
+    rw[],
+    `0 < c` by decide_tac >>
+    `(a MOD c = 0) /\ (b MOD c = 0)` by rw[GSYM DIVIDES_MOD_0] >>
+    `0 = (h * a) MOD c` by metis_tac[MOD_TIMES2, ZERO_MOD, MULT_0] >>
+    `_ = (0 + d MOD c) MOD c` by metis_tac[MOD_PLUS, MOD_TIMES2, ZERO_MOD, MULT_0] >>
+    `_ = d MOD c` by rw[MOD_MOD] >>
+    rw[DIVIDES_MOD_0]
+  ]);
+
+(* ------------------------------------------------------------------------- *)
+(* Factorial                                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: FACT 0 = 1 *)
+(* Proof: by FACT *)
+val FACT_0 = store_thm(
+  "FACT_0",
+  ``FACT 0 = 1``,
+  EVAL_TAC);
+
+(* Theorem: FACT 1 = 1 *)
+(* Proof:
+     FACT 1
+   = FACT (SUC 0)      by ONE
+   = (SUC 0) * FACT 0  by FACT
+   = (SUC 0) * 1       by FACT
+   = 1                 by ONE
+*)
+val FACT_1 = store_thm(
+  "FACT_1",
+  ``FACT 1 = 1``,
+  EVAL_TAC);
+
+(* Theorem: FACT 2 = 2 *)
+(* Proof:
+     FACT 2
+   = FACT (SUC 1)      by TWO
+   = (SUC 1) * FACT 1  by FACT
+   = (SUC 1) * 1       by FACT_1
+   = 2                 by TWO
+*)
+val FACT_2 = store_thm(
+  "FACT_2",
+  ``FACT 2 = 2``,
+  EVAL_TAC);
+
+(* Theorem: (FACT n = 1) <=> n <= 1 *)
+(* Proof:
+   If n = 0,
+      LHS = (FACT 0 = 1) = T         by FACT_0
+      RHS = 0 <= 1 = T               by arithmetic
+   If n <> 0, n = SUC m              by num_CASES
+      LHS = FACT (SUC m) = 1
+        <=> (SUC m) * FACT m = 1     by FACT
+        <=> SUC m = 1 /\ FACT m = 1  by  MULT_EQ_1
+        <=> m = 0  /\ FACT m = 1     by m = PRE 1 = 0
+        <=> m = 0                    by FACT_0
+      RHS = SUC m <= 1
+        <=> ~(1 <= m)                by NOT_LEQ
+        <=> m < 1                    by NOT_LESS_EQUAL
+        <=> m = 0                    by arithmetic
+*)
+val FACT_EQ_1 = store_thm(
+  "FACT_EQ_1",
+  ``!n. (FACT n = 1) <=> n <= 1``,
+  rpt strip_tac >>
+  Cases_on `n` >>
+  rw[FACT_0] >>
+  rw[FACT] >>
+  `!m. SUC m <= 1 <=> (m = 0)` by decide_tac >>
+  metis_tac[FACT_0]);
+
+(* Theorem: (FACT n = n) <=> (n = 1) \/ (n = 2) *)
+(* Proof:
+   If part: (FACT n = n) ==> (n = 1) \/ (n = 2)
+      Note n <> 0           by FACT_0: FACT 0 = 1
+       ==> ?m. n = SUC m    by num_CASES
+      Thus SUC m * FACT m = SUC m       by FACT
+                          = SUC m * 1   by MULT_RIGHT_1
+       ==> FACT m = 1                   by EQ_MULT_LCANCEL, SUC_NOT
+        or m <= 1           by FACT_EQ_1
+      Thus m = 0 or 1       by arithmetic
+        or n = 1 or 2       by ONE, TWO
+
+   Only-if part: (FACT 1 = 1) /\ (FACT 2 = 2)
+      Note FACT 1 = 1       by FACT_1
+       and FACT 2 = 2       by FACT_2
+*)
+val FACT_EQ_SELF = store_thm(
+  "FACT_EQ_SELF",
+  ``!n. (FACT n = n) <=> (n = 1) \/ (n = 2)``,
+  rw[EQ_IMP_THM] >| [
+    `n <> 0` by metis_tac[FACT_0, DECIDE``1 <> 0``] >>
+    `?m. n = SUC m` by metis_tac[num_CASES] >>
+    fs[FACT] >>
+    `FACT m = 1` by metis_tac[MULT_LEFT_1, EQ_MULT_RCANCEL, SUC_NOT] >>
+    `m <= 1` by rw[GSYM FACT_EQ_1] >>
+    decide_tac,
+    rw[FACT_1],
+    rw[FACT_2]
+  ]);
+
+(* Theorem: 0 < n ==> n <= FACT n *)
+(* Proof:
+   Note n <> 0             by 0 < n
+    ==> ?m. n = SUC m      by num_CASES
+   Thus FACT n
+      = FACT (SUC m)       by n = SUC m
+      = (SUC m) * FACT m   by FACT_LESS: 0 < FACT m
+      >= (SUC m)           by LE_MULT_CANCEL_LBARE
+      >= n                 by n = SUC m
+*)
+val FACT_GE_SELF = store_thm(
+  "FACT_GE_SELF",
+  ``!n. 0 < n ==> n <= FACT n``,
+  rpt strip_tac >>
+  `?m. n = SUC m` by metis_tac[num_CASES, NOT_ZERO_LT_ZERO] >>
+  rw[FACT] >>
+  rw[FACT_LESS]);
+
+(* Theorem: 0 < n ==> (FACT (n-1) = FACT n DIV n) *)
+(* Proof:
+   Since  n = SUC(n-1)                 by SUC_PRE, 0 < n.
+     and  FACT n = n * FACT (n-1)      by FACT
+                 = FACT (n-1) * n      by MULT_COMM
+                 = FACT (n-1) * n + 0  by ADD_0
+   Hence  FACT (n-1) = FACT n DIV n    by DIV_UNIQUE, 0 < n.
+*)
+val FACT_DIV = store_thm(
+  "FACT_DIV",
+  ``!n. 0 < n ==> (FACT (n-1) = FACT n DIV n)``,
+  rpt strip_tac >>
+  `n = SUC(n-1)` by decide_tac >>
+  `FACT n = n * FACT (n-1)` by metis_tac[FACT] >>
+  `_ = FACT (n-1) * n + 0` by rw[MULT_COMM] >>
+  metis_tac[DIV_UNIQUE]);
 
 val _ = export_theory();

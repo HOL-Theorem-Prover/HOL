@@ -1,1 +1,1 @@
-INCLUDES = ../lib ../ring ../polynomial
+INCLUDES = ../ring ../polynomial

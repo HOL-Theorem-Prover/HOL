@@ -16,36 +16,29 @@
 (* DATE          : September 15, 1991                                    *)
 (* ===================================================================== *)
 
+open HolKernel Parse boolLib BasicProvers;
 
-(* ----------------------------------------------------------------------
-    Require ancestor theory structures to be present. The parents of list
-    are "arithmetic", "pair", "pred_set" and those theories behind the
-    datatype definition library
-   ---------------------------------------------------------------------- *)
-
-local
-  open arithmeticTheory pairTheory pred_setTheory Datatype
-       OpenTheoryMap
-in end;
-
-
-(*---------------------------------------------------------------------------
- * Open structures used in the body.
- *---------------------------------------------------------------------------*)
-
-open HolKernel Parse boolLib Num_conv BasicProvers mesonLib
+open Num_conv mesonLib arithmeticTheory
      simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
      relationTheory combinTheory quotientLib
+
+local open pairTheory pred_setTheory Datatype OpenTheoryMap
+in end;
 
 val ERR = mk_HOL_ERR "listScript"
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 fun simp l = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss) l
-
 val rw = SRW_TAC []
 val metis_tac = METIS_TAC
 fun fs l = FULL_SIMP_TAC (srw_ss()) l
+val std_ss = arith_ss ++ boolSimps.LET_ss;
 
+fun DECIDE_TAC (g as (asl,_)) =
+  ((MAP_EVERY UNDISCH_TAC (filter numSimps.is_arith asl) THEN
+    CONV_TAC Arith.ARITH_CONV)
+   ORELSE tautLib.TAUT_TAC) g;
+val decide_tac = DECIDE_TAC;
 
 val _ = new_theory "list";
 
@@ -64,17 +57,6 @@ val PRE          = prim_recTheory.PRE;
 val LESS_MONO    = prim_recTheory.LESS_MONO;
 val INV_SUC_EQ   = prim_recTheory.INV_SUC_EQ;
 val num_Axiom    = prim_recTheory.num_Axiom;
-
-val ADD_CLAUSES  = arithmeticTheory.ADD_CLAUSES;
-val LESS_ADD_1   = arithmeticTheory.LESS_ADD_1;
-val LESS_EQ      = arithmeticTheory.LESS_EQ;
-val NOT_LESS     = arithmeticTheory.NOT_LESS;
-val LESS_EQ_ADD  = arithmeticTheory.LESS_EQ_ADD;
-val num_CASES    = arithmeticTheory.num_CASES;
-val LESS_MONO_EQ = arithmeticTheory.LESS_MONO_EQ;
-val LESS_MONO_EQ = arithmeticTheory.LESS_MONO_EQ;
-val ADD_EQ_0     = arithmeticTheory.ADD_EQ_0;
-val ONE          = arithmeticTheory.ONE;
 val PAIR_EQ      = pairTheory.PAIR_EQ;
 
 (*---------------------------------------------------------------------------*)
@@ -455,6 +437,19 @@ val EQ_LIST = store_thm("EQ_LIST",
      REPEAT STRIP_TAC THEN
      ASM_REWRITE_TAC [CONS_11]);
 
+(* Theorem: ls <> [] <=> (ls = HD ls::TL ls) *)
+(* Proof:
+   If part: ls <> [] ==> (ls = HD ls::TL ls)
+       ls <> []
+   ==> ?h t. ls = h::t         by list_CASES
+   ==> ls = (HD ls)::(TL ls)   by HD, TL
+   Only-if part: (ls = HD ls::TL ls) ==> ls <> []
+   This is true                by NOT_NIL_CONS
+*)
+val LIST_NOT_NIL = store_thm(
+  "LIST_NOT_NIL",
+  ``!ls. ls <> [] <=> (ls = HD ls::TL ls)``,
+  metis_tac[list_CASES, HD, TL, NOT_NIL_CONS]);
 
 Theorem CONS:
   !l : 'a list. ~NULL l ==> HD l :: TL l = l
@@ -547,6 +542,10 @@ val MAP_MAP_o = store_thm("MAP_MAP_o",
     (“!(f:'b->'c) (g:'a->'b) l. MAP f (MAP g l) = MAP (f o g) l”),
     REPEAT GEN_TAC THEN REWRITE_TAC [MAP_o, o_DEF]
     THEN BETA_TAC THEN REFL_TAC);
+
+(* Theorem alias *)
+val MAP_COMPOSE = save_thm("MAP_COMPOSE", MAP_MAP_o);
+(* val MAP_COMPOSE = |- !f g l. MAP f (MAP g l) = MAP (f o g) l: thm *)
 
 val EL_MAP = store_thm("EL_MAP",
     (“!n l. n < (LENGTH l) ==> !f:'a->'b. EL n (MAP f l) = f (EL n l)”),
@@ -742,11 +741,52 @@ val LENGTH_NIL = store_thm("LENGTH_NIL[simp]",
       LIST_INDUCT_TAC THEN
       REWRITE_TAC [LENGTH, NOT_SUC, NOT_CONS_NIL]);
 
+(* Note: There is LENGTH_NIL, but no LENGTH_NON_NIL *)
+
+(* Theorem: 0 < LENGTH l <=> l <> [] *)
+(* Proof:
+   Since  (LENGTH l = 0) <=> (l = [])   by LENGTH_NIL
+   l <> [] <=> LENGTH l <> 0,
+            or 0 < LENGTH l             by NOT_ZERO_LT_ZERO
+*)
+val LENGTH_NON_NIL = store_thm(
+  "LENGTH_NON_NIL",
+  ``!l. 0 < LENGTH l <=> l <> []``,
+  metis_tac[LENGTH_NIL, NOT_ZERO_LT_ZERO]);
+
+(* val LENGTH_EQ_0 = save_thm("LENGTH_EQ_0", LENGTH_EQ_NUM |> CONJUNCT1); *)
+val LENGTH_EQ_0 = save_thm("LENGTH_EQ_0", LENGTH_NIL);
+(* > val LENGTH_EQ_0 = |- !l. (LENGTH l = 0) <=> (l = []): thm *)
+
 Theorem LENGTH1 :
     (1 = LENGTH l) <=> ?e. l = [e]
 Proof
     Cases_on `l` >> srw_tac [][LENGTH_NIL]
 QED
+
+(* Theorem: (LENGTH l = 1) <=> ?x. l = [x] *)
+(* Proof:
+   If part: (LENGTH l = 1) ==> ?x. l = [x]
+     Since LENGTH l <> 0, l <> []  by LENGTH_NIL
+        or ?h t. l = h::t          by list_CASES
+       and LENGTH t = 0            by LENGTH
+        so t = []                  by LENGTH_NIL
+     Hence l = [x]
+   Only-if part: (l = [x]) ==> (LENGTH l = 1)
+     True by LENGTH.
+*)
+val LENGTH_EQ_1 = store_thm(
+  "LENGTH_EQ_1",
+  ``!l. (LENGTH l = 1) <=> ?x. l = [x]``,
+  rw [GSYM LENGTH1]
+(*rw[EQ_IMP_THM] >| [
+    `LENGTH l <> 0` by decide_tac >>
+    `?h t. l = h::t` by metis_tac[LENGTH_NIL, list_CASES] >>
+    `SUC (LENGTH t) = 1` by metis_tac[LENGTH] >>
+    `LENGTH t = 0` by decide_tac >>
+    metis_tac[LENGTH_NIL],
+    rw[]
+  ]*));
 
 Theorem LENGTH2 :
     (2 = LENGTH l) <=> ?a b. l = [a;b]
@@ -1796,7 +1836,6 @@ val FILTER_REVERSE = store_thm(
   ASM_SIMP_TAC bool_ss [FILTER, REVERSE_DEF, FILTER_APPEND_DISTRIB,
     COND_RAND, COND_RATOR, APPEND_NIL]);
 
-
 (* ----------------------------------------------------------------------
     FRONT and LAST
    ---------------------------------------------------------------------- *)
@@ -2664,6 +2703,11 @@ val SNOC = new_recursive_definition {
 };
 val _ = BasicProvers.export_rewrites ["SNOC"]
 
+val SNOC_NIL = save_thm("SNOC_NIL", SNOC |> CONJUNCT1);
+(* > val SNOC_NIL = |- !x. SNOC x [] = [x]: thm *)
+val SNOC_CONS = save_thm("SNOC_CONS", SNOC |> CONJUNCT2);
+(* > val SNOC_CONS = |- !x x' l. SNOC x (x'::l) = x'::SNOC x l: thm *)
+
 val LENGTH_SNOC = store_thm(
   "LENGTH_SNOC",
   “!(x:'a) l. LENGTH (SNOC x l) = SUC (LENGTH l)”,
@@ -2694,8 +2738,12 @@ val SNOC_APPEND = store_thm("SNOC_APPEND",
    “!x (l:('a) list). SNOC x l = APPEND l [x]”,
    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC, APPEND]);
 
-(* |- !l. l <> [] ==> SNOC (LAST l) (FRONT l) = l *)
-Theorem SNOC_LAST_FRONT =
+(* |- !l. l <> [] ==> SNOC (LAST l) (FRONT l) = l
+
+   NOTE: was called "SNOC_LAST_FRONT", renamed due to name conflicts with
+         "examples/algebra" (cf. rich_listTheory.SNOC_LAST_FRONT)
+ *)
+Theorem SNOC_OF_LAST_FRONT =
      REWRITE_RULE [GSYM SNOC_APPEND] APPEND_FRONT_LAST
 
 val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",
@@ -2837,6 +2885,13 @@ Proof
     Induct_on ‘l’ >> rw [SNOC, isPREFIX]
 QED
 
+local val REVERSE = REVERSE_SNOC_DEF
+in
+val MAP_REVERSE = Q.store_thm ("MAP_REVERSE",
+   `!f l. MAP f (REVERSE l) = REVERSE (MAP f l)`,
+   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [REVERSE, MAP, MAP_SNOC]);
+end;
+
 (*--------------------------------------------------------------*)
 (* List generator                                               *)
 (*  GENLIST f n = [f 0;...; f(n-1)]                             *)
@@ -2975,6 +3030,26 @@ val GENLIST_NUMERALS = store_thm(
   REWRITE_TAC [GENLIST_GENLIST_AUX, GENLIST_AUX]);
 val _ = export_rewrites ["GENLIST_NUMERALS"]
 
+(* Theorem: GENLIST f 0 = [] *)
+(* Proof: by GENLIST *)
+val GENLIST_0 = store_thm(
+  "GENLIST_0",
+  ``!f. GENLIST f 0 = []``,
+  rw[]);
+
+(* Theorem: GENLIST f 1 = [f 0] *)
+(* Proof:
+      GENLIST f 1
+    = GENLIST f (SUC 0)          by ONE
+    = SNOC (f 0) (GENLIST f 0)   by GENLIST
+    = SNOC (f 0) []              by GENLIST
+    = [f 0]                      by SNOC
+*)
+val GENLIST_1 = store_thm(
+  "GENLIST_1",
+  ``!f. GENLIST f 1 = [f 0]``,
+  rw[]);
+
 val MEM_GENLIST = Q.store_thm(
 "MEM_GENLIST",
 ‘MEM x (GENLIST f n) <=> ?m. m < n /\ (x = f m)’,
@@ -3030,6 +3105,14 @@ Proof
   simp[GENLIST_CONS]
 QED
 
+(* Theorem alias *)
+Theorem GENLIST_EQ =
+   GENLIST_CONG |> GEN ``n:num`` |> GEN ``f2:num -> 'a``
+                |> GEN ``f1:num -> 'a``;
+(*
+val GENLIST_EQ = |- !f1 f2 n. (!m. m < n ==> f1 m = f2 m) ==> GENLIST f1 n = GENLIST f2 n: thm
+*)
+
 Theorem LIST_REL_O:
   !R1 R2. LIST_REL (R1 O R2) = LIST_REL R1 O LIST_REL R2
 Proof
@@ -3041,6 +3124,67 @@ Proof
   >- simp[]
   >- metis_tac[]
 QED
+
+(* Theorem: (GENLIST f n = []) <=> (n = 0) *)
+(* Proof:
+   If part: GENLIST f n = [] ==> n = 0
+      By contradiction, suppose n <> 0.
+      Then LENGTH (GENLIST f n) = n <> 0  by LENGTH_GENLIST
+      This contradicts LENGTH [] = 0.
+   Only-if part: GENLIST f 0 = [], true   by GENLIST_0
+*)
+val GENLIST_EQ_NIL = store_thm(
+  "GENLIST_EQ_NIL",
+  ``!f n. (GENLIST f n = []) <=> (n = 0)``,
+  rw[EQ_IMP_THM] >>
+  metis_tac[LENGTH_GENLIST, LENGTH_NIL]);
+
+(* Theorem: LAST (GENLIST f (SUC n)) = f n *)
+(* Proof:
+     LAST (GENLIST f (SUC n))
+   = LAST (SNOC (f n) (GENLIST f n))  by GENLIST
+   = f n                              by LAST_SNOC
+*)
+val GENLIST_LAST = store_thm(
+  "GENLIST_LAST",
+  ``!f n. LAST (GENLIST f (SUC n)) = f n``,
+  rw[GENLIST]);
+
+(* Note:
+
+- EVERY_MAP;
+> val it = |- !P f l. EVERY P (MAP f l) <=> EVERY (\x. P (f x)) l : thm
+- EVERY_GENLIST;
+> val it = |- !n. EVERY P (GENLIST f n) <=> !i. i < n ==> P (f i) : thm
+- MAP_GENLIST;
+> val it = |- !f g n. MAP f (GENLIST g n) = GENLIST (f o g) n : thm
+*)
+
+(* Note: the following can use EVERY_GENLIST. *)
+
+(* Theorem: !k. (k < n ==> f k = c) <=> EVERY (\x. x = c) (GENLIST f n) *)
+(* Proof: by induction on n.
+   Base case: !c. (!k. k < 0 ==> (f k = c)) <=> EVERY (\x. x = c) (GENLIST f 0)
+     Since GENLIST f 0 = [], this is true as no k < 0.
+   Step case: (!k. k < n ==> (f k = c)) <=> EVERY (\x. x = c) (GENLIST f n) ==>
+              (!k. k < SUC n ==> (f k = c)) <=> EVERY (\x. x = c) (GENLIST f (SUC n))
+         EVERY (\x. x = c) (GENLIST f (SUC n))
+     <=> EVERY (\x. x = c) (SNOC (f n) (GENLIST f n))  by GENLIST
+     <=> EVERY (\x. x = c) (GENLIST f n) /\ (f n = c)  by EVERY_SNOC
+     <=> (!k. k < n ==> (f k = c)) /\ (f n = c)        by induction hypothesis
+     <=> !k. k < SUC n ==> (f k = c)
+*)
+val GENLIST_CONSTANT = store_thm(
+  "GENLIST_CONSTANT",
+  ``!f n c. (!k. k < n ==> (f k = c)) <=> EVERY (\x. x = c) (GENLIST f n)``,
+  strip_tac >>
+  Induct_on ‘n’ >-
+  rw[] >>
+  rw_tac std_ss[EVERY_DEF, GENLIST, EVERY_SNOC, EQ_IMP_THM] >-
+  metis_tac[prim_recTheory.LESS_SUC] >>
+  Cases_on `k = n` >-
+  rw_tac std_ss[] >>
+  metis_tac[prim_recTheory.LESS_THM]);
 
 (* ---------------------------------------------------------------------- *)
 

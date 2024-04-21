@@ -25,22 +25,13 @@ val _ = new_theory "group";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory arithmeticTheory;
+open pred_setTheory arithmeticTheory numberTheory combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "monoidOrderTheory"; *)
-open monoidTheory monoidOrderTheory; (* for G*, monoid_invertibles_is_monoid *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
+open monoidTheory; (* for G*, monoid_invertibles_is_monoid *)
 
 (* ------------------------------------------------------------------------- *)
 (* Group Documentation                                                      *)
@@ -205,7 +196,12 @@ val _ = Hol_datatype`
 *)
 val _ = type_abbrev ("group", Type `:'a monoid`);
 
-(* Define Group by Monoid *)
+(* Define Group by Monoid
+
+   NOTE:
+val _ = overload_on ("G", ``g.carrier``);
+val _ = overload_on ("G*", ``monoid_invertibles g``);
+ *)
 val Group_def = Define`
   Group (g:'a group) <=>
     Monoid g /\ (G* = G)

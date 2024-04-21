@@ -12,28 +12,16 @@ val _ = new_theory "ringUnit";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "groupInstancesTheory"; *) *)
-(* val _ = load "ringTheory"; *)
 open ringTheory;
 open groupTheory;
 open monoidTheory;
-open monoidOrderTheory groupOrderTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
+open groupOrderTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Units Documentation                                                  *)

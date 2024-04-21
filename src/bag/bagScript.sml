@@ -3324,7 +3324,24 @@ Theorem unibag_SUB_BAG:
 Proof rw[unibag_thm,SUB_BAG,BAG_IN,BAG_INN]
 QED
 
-
+Theorem BAG_OF_SET_IMAGE_INJ:
+  !f s.
+  (!x y. x IN s /\ y IN s /\ f x = f y ==> x = y) ==>
+  BAG_OF_SET (IMAGE f s) = BAG_IMAGE f (BAG_OF_SET s)
+Proof
+  rw[FUN_EQ_THM, BAG_OF_SET, BAG_IMAGE_DEF]
+  \\ rw[] \\ gs[GSYM BAG_OF_SET]
+  \\ gs[BAG_FILTER_BAG_OF_SET]
+  \\ simp[BAG_CARD_BAG_OF_SET]
+  >- (
+    irule SING_CARD_1
+    \\ simp[SING_TEST, GSYM pred_setTheory.MEMBER_NOT_EMPTY]
+    \\ metis_tac[] )
+  >- simp[EXTENSION]
+  \\ qmatch_asmsub_abbrev_tac`INFINITE z`
+  \\ `z = {}` suffices_by metis_tac[FINITE_EMPTY]
+  \\ simp[EXTENSION, Abbr`z`]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Add multiset type to the TypeBase.                                        *)

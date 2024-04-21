@@ -12,38 +12,20 @@ val _ = new_theory "ffUnity";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+(* open dependent theories *)
+open arithmeticTheory pred_setTheory listTheory dividesTheory gcdTheory
+     gcdsetTheory numberTheory combinatoricsTheory primeTheory;
 
-(* Loading theories *)
-(* val _ = load "ffCycloTheory"; *)
-(* val _ = load "ffMasterTheory"; *)
 open ffPolyTheory ffAdvancedTheory ffBasicTheory;
 open ffCycloTheory;
 open ffMasterTheory;
 
 (* Open theories in order *)
-
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory;
-open dividesTheory gcdTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-
-(* Get dependent theories local *)
-(* (* val _ = load "groupInstancesTheory"; -- in ringInstancesTheory *) *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
-(* (* val _ = load "fieldOrderTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open monoidOrderTheory groupOrderTheory;
+open groupOrderTheory;
 open subgroupTheory;
 
 open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
@@ -78,13 +60,8 @@ open polyProductTheory;
 open polyIrreducibleTheory;
 open polyGCDTheory;
 
-(* (* val _ = load "GaussTheory"; *) *)
-open binomialTheory;
-open GaussTheory;
-
 (* val _ = load "polyCyclicTheory"; *)
 open polyCyclicTheory; (* for poly_unity_irreducible_factor_exists *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Unity Polynomial Documentation                               *)

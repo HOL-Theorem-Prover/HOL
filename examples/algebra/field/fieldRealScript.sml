@@ -1,8 +1,10 @@
 (* ------------------------------------------------------------------------- *)
 (* The field of reals.                                                       *)
 (* ------------------------------------------------------------------------- *)
-open HolKernel boolLib bossLib Parse
-     groupTheory fieldTheory ringRealTheory groupRealTheory
+
+open HolKernel boolLib bossLib Parse;
+
+open groupTheory fieldTheory ringRealTheory groupRealTheory;
 
 val _ = new_theory"fieldReal";
 

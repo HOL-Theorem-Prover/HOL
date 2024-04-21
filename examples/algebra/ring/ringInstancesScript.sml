@@ -21,26 +21,16 @@ val _ = new_theory "ringInstances";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
+open prim_recTheory pred_setTheory arithmeticTheory dividesTheory gcdTheory
+     numberTheory combinatoricsTheory whileTheory primeTheory;
+
 open monoidTheory groupTheory ringTheory;
-open monoidInstancesTheory;
 open groupInstancesTheory;
-open monoidOrderTheory groupOrderTheory;
-
-open monoidMapTheory groupMapTheory ringMapTheory;
-
-open helperNumTheory helperFunctionTheory;
-
-open prim_recTheory pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-open EulerTheory;
-
-open GaussTheory;
-
-open whileTheory; (* for order computation by WHILE loop *)
-
+open groupOrderTheory;
+open groupMapTheory ringMapTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Instances Documentation                                              *)

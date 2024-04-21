@@ -29,25 +29,13 @@ val _ = new_theory "quotientGroup";
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory;
+open pred_setTheory numberTheory combinatoricsTheory;
 
-(*
-(* val _ = load "helperFunctionTheory"; *)
-open helperFunctionTheory;
-*)
-
-(* Get dependent theories local *)
-(* val _ = load "monoidOrderTheory"; *)
-open monoidTheory monoidOrderTheory;
+open monoidTheory;
 
 (* val _ = load "subgroupTheory"; *)
 open groupTheory subgroupTheory;
-open monoidMapTheory groupMapTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperSetTheory"; loaded by monoidTheory *) *)
-open helperSetTheory;
-
+open groupMapTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Group Documentation                                              *)

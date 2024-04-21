@@ -12,19 +12,13 @@ val _ = new_theory "polynomial";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
 open pred_setTheory listTheory arithmeticTheory;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-open monoidTheory groupTheory ringTheory
+open monoidTheory groupTheory ringTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Polynomials Documentation                                           *)

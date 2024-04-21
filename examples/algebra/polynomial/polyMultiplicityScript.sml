@@ -12,9 +12,11 @@ val _ = new_theory "polyMultiplicity";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 open jcLib;
+
+(* open dependent theories *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
+     combinatoricsTheory dividesTheory gcdTheory gcdsetTheory;
 
 (* Get dependent theories local *)
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
@@ -29,15 +31,6 @@ open polyGCDTheory;
 
 open monoidTheory groupTheory ringTheory;
 open fieldTheory;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-open helperNumTheory helperSetTheory;
-
-open dividesTheory gcdTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Multiple Roots of Polynomials Documentation                               *)

@@ -12,21 +12,17 @@ val _ = new_theory "polyGCD";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "ringUnitTheory"; (* this overloads |/ as r*.inv *) *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* val _ = load "fieldTheory"; (* see poly_roots_mult, this overload |/ as (r.prod excluding #0).inv *) *)
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory gcdsetTheory;
+
 open monoidTheory groupTheory ringTheory ringUnitTheory fieldTheory;
 
 open subgroupTheory;
-open monoidOrderTheory groupOrderTheory;
+open groupOrderTheory;
 
 (* (* val _ = load "polyWeakTheory"; *) *)
 (* (* val _ = load "polyRingTheory"; *) *)
@@ -54,21 +50,6 @@ open polyProductTheory;
 
 (* val _ = load "polyDerivativeTheory"; *)
 open polyDerivativeTheory;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-(* val _ = load "helperFunctionTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* GCD and LCM of Polynomials Documentation                                  *)

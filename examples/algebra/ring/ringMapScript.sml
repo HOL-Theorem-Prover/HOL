@@ -12,35 +12,24 @@ val _ = new_theory "ringMap";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* val _ = load "groupOrderTheory"; (* loads monoidTheory implicitly *) *)
+open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
+     numberTheory combinatoricsTheory;
+
 open monoidTheory groupTheory;
-open monoidOrderTheory groupOrderTheory;
+open groupOrderTheory;
 
 (* val _ = load "ringUnitTheory"; *)
 open ringTheory ringUnitTheory;
 
 (* val _ = load "subgroupTheory"; *)
-open submonoidTheory subgroupTheory;
-open monoidMapTheory groupMapTheory;
+open subgroupTheory;
+open groupMapTheory;
 
 (* val _ = load "quotientGroupTheory"; *)
 open quotientGroupTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* Get arithmetic for Ring characteristics *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Maps Documentation                                                   *)

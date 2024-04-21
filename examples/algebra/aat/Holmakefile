@@ -1,1 +1,1 @@
-INCLUDES = ../monoid
+INCLUDES = $(HOLDIR)/src/algebra
