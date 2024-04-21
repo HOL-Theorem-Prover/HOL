@@ -70,6 +70,14 @@ New theories:
   in Ethereum, is included and was the basis for this work. A rudimentary
   computable version based on sptrees is included; faster evaluation using
   cvcompute is left for future work.
+  
+- `monoid` and `real_algebra`: These are combined theory using materials ever in
+  `examples/algebra/monoid`. A monoid as an algebraic structure: with a carrier set,
+   a binary operation and an identity element.
+
+- `number`, `combinatorics` and `prime`: These are combined theory using materials
+   from `examples/algebra/lib`, etc. They contain some more advanced results from
+   number theory (in particular properties of prime numbers) and combinatorics.
 
 New tools:
 ----------
@@ -172,6 +180,8 @@ number of components.
     Three proof systems (two Hilbert, one natural deduction) are shown equivalent, and two model theories (the Routley-Meyer ternary-relation Kripke semantics, and Goldblatt’s “cover” semantics) are shown sound and complete with respect to the proof systems.
 
 -   __armv8-memory-model__ (in `examples/arm`): a port by Anthony Fox of Viktor Vafeiadis’s [Coq formalization of the Armv8 Memory Model](https://github.com/vafeiadis/arm-model), which is based on the official [mixed-size Armv8 memory model](https://github.com/herd/herdtools7/blob/95785c747750be4a3b64adfab9d5f5ee0ead8240/herd/libdir/aarch64.cat) and associated [paper](https://doi.org/10.1145/3458926).
+
+-   __Data Encryption Standard (DES)__ (in `examples/Crypto/DES`) is added to HOL's collection of block ciphers.
 
 -   __*p*-adic numbers__ (in `examples/padics`): a construction of the *p*-adic numbers by Noah Gorrell.
     The approach taken defines the prime valuation function *ν* on first the natural numbers and then the rationals.
