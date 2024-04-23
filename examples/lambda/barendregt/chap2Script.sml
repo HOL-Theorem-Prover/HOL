@@ -1225,7 +1225,7 @@ Proof
  >- (MATCH_MP_TAC LAMl_ALPHA_ssub >> rw [DISJOINT_SYM] \\
      Suff ‘FV M = set Z’ >- METIS_TAC [DISJOINT_SYM] \\
      rw [Abbr ‘M’, FV_appstar] \\
-    ‘Z = SNOC (LAST Z) (FRONT Z)’ by PROVE_TAC [SNOC_OF_LAST_FRONT] \\
+    ‘Z = SNOC (LAST Z) (FRONT Z)’ by PROVE_TAC [SNOC_LAST_FRONT] \\
      POP_ORW \\
      simp [LIST_TO_SET_SNOC] \\
      rw [Once EXTENSION, MEM_MAP] \\
@@ -1241,7 +1241,7 @@ Proof
  >> qabbrev_tac ‘y = LAST Y’
  (* postfix for LAMl_ALPHA_ssub *)
  >> ‘!t. LAMl Y t = LAMl (SNOC y (FRONT Y)) t’
-       by (ASM_SIMP_TAC std_ss [Abbr ‘y’, SNOC_OF_LAST_FRONT]) >> POP_ORW
+       by (ASM_SIMP_TAC std_ss [Abbr ‘y’, SNOC_LAST_FRONT]) >> POP_ORW
  >> REWRITE_TAC [LAMl_SNOC]
  >> Know ‘fm ' M = VAR y @* MAP VAR (FRONT Y)’
  >- (simp [Abbr ‘M’, ssub_appstar] \\

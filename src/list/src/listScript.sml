@@ -2738,12 +2738,8 @@ val SNOC_APPEND = store_thm("SNOC_APPEND",
    “!x (l:('a) list). SNOC x l = APPEND l [x]”,
    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC, APPEND]);
 
-(* |- !l. l <> [] ==> SNOC (LAST l) (FRONT l) = l
-
-   NOTE: was called "SNOC_LAST_FRONT", renamed due to name conflicts with
-         "examples/algebra" (cf. rich_listTheory.SNOC_LAST_FRONT)
- *)
-Theorem SNOC_OF_LAST_FRONT =
+(* |- !l. l <> [] ==> SNOC (LAST l) (FRONT l) = l *)
+Theorem SNOC_LAST_FRONT =
      REWRITE_RULE [GSYM SNOC_APPEND] APPEND_FRONT_LAST
 
 val LIST_TO_SET_SNOC = Q.store_thm("LIST_TO_SET_SNOC",

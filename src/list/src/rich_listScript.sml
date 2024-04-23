@@ -3233,7 +3233,7 @@ Theorem ALL_DISTINCT_FRONT :
 Proof
     rpt STRIP_TAC
  >> ‘ALL_DISTINCT l = ALL_DISTINCT (SNOC (LAST l) (FRONT l))’
-      by rw [SNOC_OF_LAST_FRONT]
+      by rw [SNOC_LAST_FRONT]
  >> FULL_SIMP_TAC std_ss [ALL_DISTINCT_SNOC]
 QED
 
@@ -3733,8 +3733,8 @@ QED
    = FRONT l ++ [LAST l]      by APPEND_FRONT_LAST, l <> []
    = SNOC (LAST l) (FRONT l)  by SNOC_APPEND
  *)
-val SNOC_LAST_FRONT = store_thm(
-   "SNOC_LAST_FRONT",
+val SNOC_LAST_FRONT' = store_thm(
+   "SNOC_LAST_FRONT'",
   ``!l. l <> [] ==> (l = SNOC (LAST l) (FRONT l))``,
   rw[APPEND_FRONT_LAST]);
 

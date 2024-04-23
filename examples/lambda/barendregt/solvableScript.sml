@@ -1610,7 +1610,7 @@ Proof
  >- (MATCH_MP_TAC LAMl_ALPHA_ssub >> rw [DISJOINT_SYM] \\
      Suff ‘FV M = set Z’ >- METIS_TAC [DISJOINT_SYM] \\
      rw [Abbr ‘M’, FV_appstar] \\
-    ‘Z = SNOC (LAST Z) (FRONT Z)’ by PROVE_TAC [SNOC_OF_LAST_FRONT] \\
+    ‘Z = SNOC (LAST Z) (FRONT Z)’ by PROVE_TAC [SNOC_LAST_FRONT] \\
      POP_ORW \\
      simp [LIST_TO_SET_SNOC] \\
      rw [Once EXTENSION, MEM_MAP] \\
@@ -1626,7 +1626,7 @@ Proof
  >> qabbrev_tac ‘y = LAST Y’
  (* postfix for LAMl_ALPHA_ssub *)
  >> ‘!t. LAMl Y t = LAMl (SNOC y (FRONT Y)) t’
-       by (ASM_SIMP_TAC std_ss [Abbr ‘y’, SNOC_OF_LAST_FRONT]) >> POP_ORW
+       by (ASM_SIMP_TAC std_ss [Abbr ‘y’, SNOC_LAST_FRONT]) >> POP_ORW
  >> REWRITE_TAC [LAMl_SNOC]
  >> Know ‘fm ' M = VAR y @* MAP VAR (FRONT Y)’
  >- (simp [Abbr ‘M’, ssub_appstar] \\
@@ -1657,11 +1657,11 @@ Proof
  >> qabbrev_tac ‘vs = FRONT Y’
  >> Know ‘ALL_DISTINCT vs /\ ~MEM y vs’
  >- (Q.PAT_X_ASSUM ‘ALL_DISTINCT Y’ MP_TAC \\
-    ‘Y = SNOC y vs’ by METIS_TAC [SNOC_OF_LAST_FRONT] >> POP_ORW \\
+    ‘Y = SNOC y vs’ by METIS_TAC [SNOC_LAST_FRONT] >> POP_ORW \\
      rw [ALL_DISTINCT_SNOC])
  >> STRIP_TAC
  >> MATCH_MP_TAC principle_hnf_permutator_lemma
- >> ‘SNOC y vs = Y’ by METIS_TAC [SNOC_OF_LAST_FRONT] >> POP_ORW
+ >> ‘SNOC y vs = Y’ by METIS_TAC [SNOC_LAST_FRONT] >> POP_ORW
  >> rw [EVERY_MEM, Abbr ‘vs’, LENGTH_FRONT] >- art []
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> Q.EXISTS_TAC ‘e’ >> art []

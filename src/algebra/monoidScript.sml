@@ -1,4 +1,10 @@
 (* ------------------------------------------------------------------------- *)
+(* Monoid Theory                                                             *)
+(* ========================================================================= *)
+(* A monoid is a semi-group with an identity.                                *)
+(* The units of a monoid form a group.                                       *)
+(* A finite, cancellative monoid is also a group.                            *)
+(* ------------------------------------------------------------------------- *)
 (* Monoid                                                                    *)
 (* Monoid Order and Invertibles                                              *)
 (* Monoid Maps                                                               *)
@@ -6,18 +12,8 @@
 (* Applying Monoid Theory: Monoid Instances                                  *)
 (* Theory about folding a monoid (or group) operation over a bag of elements *)
 (* ------------------------------------------------------------------------- *)
-(* Author: (Joseph) Hing-Lun Chan (Australian National University, 2019)     *)
+(* (Joseph) Hing-Lun Chan, The Australian National University, 2014-2019     *)
 (* ------------------------------------------------------------------------- *)
-
-(*
-
-Monoid Theory
-=============
-A monoid is a semi-group with an identity.
-The units of a monoid form a group.
-A finite, cancellative monoid is also a group.
-
-*)
 
 (*===========================================================================*)
 
