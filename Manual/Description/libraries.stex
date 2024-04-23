@@ -1933,9 +1933,9 @@ The following example is taken from the \ml{cv\_computeLib} examples, available 
              one
              (cv_mul n (fact (cv_sub n one)))
    Termination
-     WF_REL_TAC `measure cv_size_alt` >>
+     WF_REL_TAC `measure cv_size` >>
      Cases >>
-     simp [cv_size_alt_def, CaseEq "bool", c2b_def]
+     simp [cv_size_def, CaseEq "bool", c2b_def]
    End
 
 ##linelen_limit 75
