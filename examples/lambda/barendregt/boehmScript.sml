@@ -3379,7 +3379,7 @@ Proof
              MATCH_MP_TAC (GSYM FRONT_APPEND_NOT_NIL) >> rw []) >> Rewr' \\
          Suff ‘LAST (MAP VAR vs) = LAST (args2' ++ MAP VAR vs)’
          >- (Rewr' >> qabbrev_tac ‘l = args2' ++ MAP VAR vs’ \\
-             MATCH_MP_TAC SNOC_LAST_FRONT >> rw [Abbr ‘l’]) \\
+             MATCH_MP_TAC SNOC_LAST_FRONT' >> rw [Abbr ‘l’]) \\
          MATCH_MP_TAC (GSYM LAST_APPEND_NOT_NIL) >> rw []) >> Rewr' \\
      REWRITE_TAC [appstar_SNOC] \\
      qabbrev_tac ‘t :term = LAM z (VAR z)’ \\
