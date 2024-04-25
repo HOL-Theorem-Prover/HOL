@@ -25,6 +25,7 @@ fun cv_print_term v tm = cv_print_aux v term_to_string tm;
 fun cv_print_thm v th = cv_print_aux v thm_to_string th;
 
 (* Custom version of Lib.time *)
+local open Time; in
 fun cv_time f x =
   let val start = Time.now()
       val res = f x
@@ -33,6 +34,7 @@ fun cv_time f x =
     cv_print Verbose ("Took " ^ Time.fmt 1 (finish - start) ^ " seconds.\n");
     res
   end
+end
 
 fun indent_print_aux f verbosity prefix suffix x = let
   val m = !max_print_depth
