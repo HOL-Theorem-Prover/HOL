@@ -7,6 +7,8 @@
 # GitHub Actions recommends Debian-based systems as base images
 FROM --platform=$TARGETPLATFORM debian:stable
 
+MAINTAINER Chun Tian <binghe.lisp@gmail.com>
+
 # The following two arguments are supported by "docker buildx"
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -28,6 +30,9 @@ RUN apt-get install -qy build-essential graphviz git libgmp-dev wget curl procps
 
 # for Unicode display, learnt from Magnus Myreen
 RUN apt-get install -qy locales-all terminfo man aptitude
+
+# clean up downloaded packages after installation (this reduces Docker image sizes)
+RUN apt-get clean
 
 # 1. install Moscow ML (https://github.com/kfl/mosml.git)
 RUN wget -q -O - https://github.com/kfl/mosml/archive/refs/tags/ver-2.10.1.tar.gz | tar xzf -

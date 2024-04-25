@@ -30,8 +30,23 @@ RUN if [ "linux/amd64" = "$TARGETPLATFORM" ] || [ "linux/386" = "$TARGETPLATFORM
     rm z3-2.19.1.tar.gz; \
 fi
 
+# Z3 4.12.4
+RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
+    wget -q https://github.com/Z3Prover/z3/releases/download/z3-4.12.4/z3-4.12.4-x64-glibc-2.35.zip; \
+    unzip z3-4.12.4-x64-glibc-2.35.zip; \
+    mv z3-4.12.4-x64-glibc-2.35 z3-4.12.4; \
+    rm z3-4.12.4-x64-glibc-2.35.zip; \
+fi
+
+RUN if [ "linux/arm64" = "$TARGETPLATFORM" ]; then \
+    wget -q https://github.com/Z3Prover/z3/releases/download/z3-4.12.4/z3-4.12.4-arm64-glibc-2.35.zip; \
+    unzip z3-4.12.4-arm64-glibc-2.35.zip; \
+    mv z3-4.12.4-arm64-glibc-2.35 z3-4.12.4; \
+    rm z3-4.12.4-arm64-glibc-2.35.zip; \
+fi
+
 # Z3 4.x
-ARG Z3_VERSION="4.12.4"
+ARG Z3_VERSION="4.13.0"
 
 RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
     wget -q https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/z3-${Z3_VERSION}-x64-glibc-2.35.zip; \
@@ -60,9 +75,14 @@ RUN if [ "linux/386" = "$TARGETPLATFORM" ]; then \
 fi
 
 # cvc5
+ARG CVC5_VERSION="1.1.2"
+
 RUN if [ "linux/amd64" = "$TARGETPLATFORM" ]; then \
-    wget -q https://github.com/cvc5/cvc5/releases/latest/download/cvc5-Linux; \
-    chmod a+x cvc5-Linux; \
+    wget -q -O cvc5-Linux-static.zip \
+         https://github.com/cvc5/cvc5/releases/download/cvc5-${CVC5_VERSION}/cvc5-Linux-static.zip; \
+    unzip cvc5-Linux-static.zip; \
+    rm cvc5-Linux-static.zip; \
+    ln -s cvc5-Linux-static/bin/cvc5 cvc5-Linux; \
 fi
 
 # NuRV 2.0.0
@@ -85,3 +105,8 @@ RUN if [ "linux/arm64" = "$TARGETPLATFORM" ]; then \
 fi
 
 ENV HOL4_SMV_EXECUTABLE=/ML/solvers/NuRV
+
+# necessary TeXlive packages for buliding HOL manuals (+pandoc for Markdown)
+RUN apt-get install -qy texlive-latex-recommended pandoc latexmk texlive-latex-extra \
+                        texlive-fonts-extra texlive-science
+RUN apt-get clean
