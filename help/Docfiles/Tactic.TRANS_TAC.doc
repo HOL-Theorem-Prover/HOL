@@ -55,9 +55,10 @@ type-instantiation of the theorem, whereas in highly polymorphic theorems the
 use of {MATCH_MP_TAC} may leave the wrong types for the subsequent {EXISTS_TAC}
 step.
 
-If {R1 x y}, etc. is actually overloads of negated terms, e.g., {~(R1' y x)},
-{TRANS_TAC} can still work. This is common for most "less" definitions, which
-is an overload of "not less-and-equal", i.e. {x < y} overloads {~(y <= x)}.
+If {R1 x y}, etc. are actually overloads of negated terms, e.g., {~(R1' y x)},
+{TRANS_TAC} can still work. Such overloads are common for many definitions of
+"less" as an overload of "not less-or-equal", i.e. {x < y} is an overload of
+{~(y <= x)}.
 
 \SEEALSO
 MATCH_MP_TAC, TRANS.
