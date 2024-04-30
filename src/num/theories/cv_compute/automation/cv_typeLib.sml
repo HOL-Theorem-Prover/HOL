@@ -128,12 +128,12 @@ fun from_to_for tyvars_alist ty =
     cv_print Silent ("cv translator encountered a function type: " ^ type_to_string ty ^ "\n");
     failwith  "cv translator does not support function types")
   else
-  if ty = “:unit” then from_to_unit else
-  if ty = “:bool” then from_to_bool else
-  if ty = “:num” then from_to_num else
-  if ty = “:char” then from_to_char else
-  if ty = “:int” then from_to_int else
-  if ty = “:rat” then from_to_rat else
+  if ty = oneSyntax.one_ty then from_to_unit else
+  if ty = Type.bool then from_to_bool else
+  if ty = numSyntax.num then from_to_num else
+  if ty = stringSyntax.char_ty then from_to_char else
+  if ty = intSyntax.int_ty then from_to_int else
+  if ty = ratSyntax.rat_ty then from_to_rat else
   if wordsSyntax.is_word_type ty then
     let val ty = wordsSyntax.dest_word_type ty
     in INST_TYPE [alpha|->ty] from_to_word end

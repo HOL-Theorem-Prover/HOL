@@ -55,7 +55,8 @@ SRCTESTDIRS = \
   integer/testing \
   string/theorytesting \
   TeX/theory_tests TeX/theory_tests/proj1paper \
-  tfl/examples transfer/examples
+  tfl/examples transfer/examples \
+  num/theories/cv_compute/automation/theory_tests
 
 ifdef POLY
 SRCTESTDIRS += n-bit/interactive_tests
