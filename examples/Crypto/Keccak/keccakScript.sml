@@ -1837,6 +1837,247 @@ Definition bools_to_hex_string_def:
     ) $ chunks 8 bs
 End
 
+open cv_transLib cv_stdTheory;
+
+val _ = cv_trans index_to_triple_def;
+val _ = cv_trans triple_to_index_def;
+
+Definition bool_lookup_def:
+  bool_lookup n t =
+    case lookup n t of
+    | NONE => F
+    | SOME b => b
+End
+
+val _ = cv_trans bool_lookup_def;
+
+Theorem to_bool_lookup:
+  THE (lookup n t) = bool_lookup n t
+Proof
+  cheat
+QED
+
+val _ = theta_spt_def |> SRULE [mapi_def,to_bool_lookup] |> cv_auto_trans;
+
+Definition while1_def:
+  while1 a tt ww x y w z a' =
+    if z < w:num then
+      while1 a tt ww x y w (z + 1)
+        (insert (triple_to_index w (x,y,z))
+          (bool_lookup (triple_to_index w (x,y,(z + ww − tt) MOD w)) a) a')
+    else a'
+Termination
+  WF_REL_TAC ‘measure $ λ(a,tt,ww,x,y,w,z,a'). w - z’
+End
+
+Triviality while1_thm:
+  ∀a tt ww x y w z a'.
+    SND (WHILE (λ(z,a'). z < w)
+               (λ(z,a').
+                  (z + 1,
+                   insert (triple_to_index w (x,y,z))
+                          (bool_lookup
+                            (triple_to_index w
+                              (x,y,(z + ww − tt) MOD w)) a) a')) (z,a')) =
+    while1 a tt ww x y w z a'
+Proof
+  ho_match_mp_tac while1_ind \\ rw []
+  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once while1_def]
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+Definition while2_def:
+  while2 a w ww x y t a' =
+    if t ≤ 23 then
+      while2 a w ww y ((2 * x + 3 * y) MOD 5) (t + 1:num)
+             (let tt = (t + 1) * (t + 2) DIV 2 in
+                while1 a tt ww x y w 0 a')
+    else a'
+Termination
+  WF_REL_TAC ‘measure $ λ(a,w,ww,x,y,t,a'). 24 - t’ \\ gvs []
+End
+
+Theorem while2_thm:
+  ∀a w ww x y t a'.
+    (λ(x,y,t,a'). a')
+      (WHILE (λ(x,y,t,a'). t ≤ 23)
+            (λ(x,y,t,a').
+                 (y,(2 * x + 3 * y) MOD 5,t + 1,
+                  (let
+                     tt = (t + 1) * (t + 2) DIV 2
+                   in
+                     while1 a tt ww x y w 0 a'))) (x,y,t,a')) =
+    while2 a w ww x y t a'
+Proof
+  ho_match_mp_tac while2_ind \\ rw []
+  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once while2_def]
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+val _ = cv_trans while1_def;
+val _ = cv_trans while2_def;
+
+val _ = rho_spt_def |> ISPEC “a :bool num_map”
+          |> SRULE [mapi_def,to_bool_lookup,while1_thm]
+          |> SRULE [LET_THM,while2_thm]
+          |> CONV_RULE (RAND_CONV (UNBETA_CONV “size (a:bool num_map)” THENC
+                                   RATOR_CONV (ALPHA_CONV “n:num”) THENC
+                                   REWR_CONV (GSYM LET_THM)))
+          |> cv_trans;
+
+val _ = pi_spt_def |> ISPEC “a :bool num_map” |> SRULE [mapi_def,to_bool_lookup]
+                                              |> cv_auto_trans;
+
+val _ = chi_spt_def |> SRULE [mapi_def,to_bool_lookup] |> cv_auto_trans;
+
+val _ = cv_trans spt_to_string_def;
+
+val _ = cv_trans b2w_def;
+
+val pre = rc_step_def |> SRULE [LET_THM] |> cv_trans_pre;
+Theorem rc_step_pre[cv_pre]:
+  ∀r. rc_step_pre r ⇔ 8 ≤ LENGTH r
+Proof
+  simp [Once pre] \\ rw [] \\ eq_tac \\ gvs [] \\ Cases_on ‘r’ \\ gvs []
+QED
+
+Definition rc_steps_def:
+  rc_steps n r =
+    if n = 0:num then HD r else
+      rc_steps (n-1) (rc_step r)
+End
+
+val pre = cv_trans_pre rc_steps_def;
+Theorem rc_steps_pre[cv_pre]:
+  ∀n r. rc_steps_pre n r = if n = 0 then r ≠ [] else 8 ≤ LENGTH r
+Proof
+  Induct \\ simp [Once pre] \\ gvs [] \\ rw []
+  \\ Cases_on ‘r’ \\ gvs [rc_step_def]
+QED
+
+Triviality rc_eq:
+  rc t = rc_steps (t MOD 255) [T;F;F;F;F;F;F;F]
+Proof
+  rewrite_tac [rc_def,EVAL “REPLICATE 7 x”]
+  \\ IF_CASES_TAC \\ asm_rewrite_tac []
+  >- EVAL_TAC
+  \\ rename [‘rc_steps n xs’]
+  \\ pop_assum kall_tac
+  \\ qid_spec_tac ‘xs’
+  \\ Induct_on ‘n’
+  \\ simp [Once rc_steps_def]
+  \\ rewrite_tac [FUNPOW]
+  \\ gvs []
+QED
+
+val pre = cv_trans_pre rc_eq;
+Theorem rc_pre[cv_pre]:
+  ∀t. rc_pre t
+Proof
+  rw [Once pre]
+QED
+
+Definition log2_def:
+  log2 n acc = if n < 2 then acc else log2 (n DIV 2) (acc + 1:num)
+End
+
+val _ = cv_trans log2_def;
+
+Theorem LOG2_eq_log2:
+  LOG2 n = log2 n 0
+Proof
+  qsuff_tac ‘∀n acc. log2 n acc = LOG2 n + acc’ >- gvs []
+  \\ ho_match_mp_tac log2_ind \\ rw []
+  \\ Cases_on ‘n = 0’ >- cheat
+  \\ Cases_on ‘n = 1’
+  >- (gvs [] \\ simp [Once log2_def])
+  \\ simp [Once log2_def]
+  \\ simp [LOG2_def, SimpRHS]
+  \\ once_rewrite_tac [numeral_bitTheory.LOG_compute]
+  \\ gvs [] \\ gvs [ADD1,LOG2_def]
+QED
+
+val _ = w2l_def |> SRULE [LOG2_eq_log2] |> cv_trans
+
+Definition iota_body_def:
+  iota_body w i a l1 k v =
+                 (let
+                    (x,y,z) = index_to_triple w k
+                  in
+                    if x = 0 ∧ y = 0 then
+                      (let
+                         l = l1 ;
+                         RCz =
+                           ((z = 2 ** log2 (SUC z) 0 − 1 ∧
+                             log2 (SUC z) 0 ≤ l) ∧
+                            rc (log2 (SUC z) 0 + 7 * i))
+                       in
+                         bool_lookup (triple_to_index w (0,0,z)) a ⇎ RCz)
+                    else v)
+End
+
+val _ = iota_spt_def
+          |> SRULE [to_bool_lookup,LOG2_eq_log2,mapi_def,GSYM iota_body_def]
+          |> cv_auto_trans;
+
+val _ = cv_trans Rnd_spt_def;
+val _ = cv_auto_trans Keccak_p_spt_def;
+val _ = cv_trans pad10s1_def;
+
+Definition sponge_foldl_def:
+  sponge_foldl xs S0 Pis =
+    FOLDL (λSi Pi. Keccak_p_spt 24 (MAP2 (λx y. x ⇎ y) Si (Pi ⧺ xs))) S0 Pis
+End
+
+val _ = cv_auto_trans sponge_foldl_def;
+
+Definition while3_def:
+  while3 cl k x Z S =
+    if cl = 0 then Z else
+    if LENGTH Z < x then
+      while3 (cl-1:num) k x (Z ⧺ TAKE k S) (Keccak_p_spt 24 S)
+    else Z
+End
+
+val _ = cv_trans while3_def;
+
+Theorem while3_thm:
+  ∀S Z.
+    c < 1600 ⇒
+    FST (WHILE (λ(Z,S). LENGTH Z < x')
+      (λ(Z,S). (Z ⧺ TAKE (1600 − c) S,Keccak_p_spt 24 S))
+      ([],S))
+    =
+    while3 1600 (1600 − c) x' [] S
+Proof
+  cheat
+QED
+
+Definition Keccak_spt_def:
+  Keccak_spt c x x' =
+    let
+      P = x ⧺ pad10s1 (1600 − c) (LENGTH x);
+      c' = 1600 − (1600 − c);
+      Pis = chunks (1600 − c) P;
+      S0 = REPLICATE 1600 F;
+      S = sponge_foldl (REPLICATE c' F) S0 Pis;
+      Z = while3 1600 (1600 − c) x' [] S
+    in
+      TAKE x' Z
+End;
+
+Theorem Keccak_spt_thm:
+  ∀c. c < 1600 ⇒ ∀x y. Keccak c x y = Keccak_spt c x y
+Proof
+  rw [] \\ irule
+    (Keccak_spt |> SRULE [sponge_def,FUN_EQ_THM,GSYM sponge_foldl_def]
+                |> SRULE [while3_thm,GSYM Keccak_spt_def]) \\ fs []
+QED
+
+
+
 val cs = num_compset();
 val () = extend_compset [
   Tys [``:state_array``],
