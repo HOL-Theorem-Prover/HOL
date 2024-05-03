@@ -1,9 +1,1 @@
-INCLUDES = ../bag ../integer ../pred_set/src/more_theories base construction
-
-ifdef HOLBUILD
-.PHONY: link-to-sigobj
-all: link-to-sigobj
-
-link-to-sigobj: $(DEFAULT_TARGETS)
-	$(HOL_LNSIGOBJ)
-endif
+INCLUDES = base construction
