@@ -321,6 +321,8 @@ Proof
   REWRITE_TAC [NOT_LESS_0, LESS_0, NOT_SUC]
 QED
 
+Theorem NOT_ZERO = NOT_ZERO_LT_ZERO
+
 Theorem NOT_LT_ZERO_EQ_ZERO[simp]:
    !n. ~(0 < n) <=> (n = 0)
 Proof REWRITE_TAC [GSYM NOT_ZERO_LT_ZERO]
