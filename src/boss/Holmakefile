@@ -57,7 +57,8 @@ ARTS = bool_defs.ot.art \
   ../list/src/list.ot.art \
   ../list/src/rich_list.ot.art \
   ../list/src/indexedLists.ot.art \
-  ../list/src/numposrep.ot.art
+  ../list/src/numposrep.ot.art \
+  ../quotient/src/quotient.ot.art
 
 hol4-base-unint.art: hol4-base-unint.thy $(ARTS)
 	opentheory info --article -o $@ $<

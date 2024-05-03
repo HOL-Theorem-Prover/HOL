@@ -8,17 +8,19 @@ val M = “(λf n. cv_if (cv_lt n (cv$Num 1)) (cv$Num 1)
 val factc_def0 = new_definition("factc_def0",
   “factc = WFREC (measure cv_size) ^M”);
 
+(* |- n < n + 1 *)
+val lemma = REWRITE_RULE [GSYM ONE] (Q.SPECL [‘n’, ‘0’] LESS_ADD_SUC);
+
 val restrict_lemma = Q.prove(
   ‘^M (RESTRICT factc (measure cv_size) x) x = ^M factc x’,
   BETA_TAC >> irule cv_if_cong >> simp[] >>
   Q.SPEC_THEN ‘x’ STRUCT_CASES_TAC (TypeBase.nchotomy_of “:cv”) >>
   simp[] >> IF_CASES_TAC >> simp[c2b_def] >>
-  simp[relationTheory.RESTRICT_DEF, cv_size_def] >>
+  simp[relationTheory.RESTRICT_DEF, cv_size_def, SUB_RIGHT_LESS] >>
   Q.RENAME_TAC [‘n <> 0’] >>
-  reverse $ Q.SUBGOAL_THEN ‘n - 1 < n’ ASSUME_TAC >- simp[] >>
-  irule SUB_LESS >> pop_assum mp_tac >>
-  Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES >>
-  simp[ONE, LESS_EQ_MONO, ZERO_LESS_EQ]);
+  REWRITE_TAC [Once ADD_COMM, lemma] >>
+  reverse $ Q.SUBGOAL_THEN ‘0 < n’ ASSUME_TAC >- simp[] >>
+  simp [GSYM NOT_ZERO]);
 
 val factc_def = MATCH_MP relationTheory.WFREC_THM
                          (Q.ISPEC ‘cv_size’ prim_recTheory.WF_measure)

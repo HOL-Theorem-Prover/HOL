@@ -8,6 +8,7 @@ main {
   import: ordinal
   import: topology
   import: wellorder
+  import: permutes
 }
 cardinal {
   import: wellorder
@@ -25,4 +26,8 @@ topology {
 }
 wellorder {
   article: "wellorder.ot.art"
+}
+permutes {
+  import: cardinal
+  article: "permutes.ot.art"
 }

@@ -11,12 +11,16 @@ SRCRELNAMES = \
   integer \
   monad/more_monads \
   n-bit \
-  num/theories/cv_compute/automation \
+  num/theories/cv_compute \
   pred_set/src/more_theories probability \
   rational real real/analysis res_quan/src ring/src \
   search sort string \
   TeX transfer \
   update
+
+ifneq ($(KERNELID),otknl)
+SRCRELNAMES += num/theories/cv_compute/automation
+endif
 
 INCLUDES = $(patsubst %,../../%,$(SRCRELNAMES))
 
@@ -25,11 +29,12 @@ INCLUDES += ../../floating-point/native
 endif
 
 ifdef HOLSELFTESTLEVEL
+
 # example directories to build at selftest level 1
 EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
          CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
-	 STE algorithms computability countchars cv_compute dependability dev \
+	 STE algorithms computability countchars dependability dev \
          developers/ThmSetData \
 	 fermat \
 	 formal-languages formal-languages/context-free \
@@ -55,12 +60,16 @@ SRCTESTDIRS = \
   integer/testing \
   string/theorytesting \
   TeX/theory_tests TeX/theory_tests/proj1paper \
-  tfl/examples transfer/examples \
-  num/theories/cv_compute/automation/theory_tests
+  tfl/examples transfer/examples
 
 ifdef POLY
 SRCTESTDIRS += n-bit/interactive_tests
 EXDIRS += RL_Environment
+
+ifneq ($(KERNELID),otknl)
+EXDIRS += cv_compute
+SRCTESTDIRS += num/theories/cv_compute/automation/theory_tests
+endif
 endif
 
 INCLUDES += ../../tfl/examples $(patsubst %,../../quotient/%,$(QUOTDIRS)) \
@@ -90,13 +99,13 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
 
 ifdef POLY
 EX2DIRS += separationLogic/src/holfoot/poly logic/temporal_deep/src/examples
+
+ifeq ($(KERNELID),stdknl)
+EX2DIRS += ../../../examples/bootstrap
+endif
 endif
 
 INCLUDES += $(patsubst %,../../../examples/%,$(EX2DIRS))
-
-ifeq ($(KERNELID),stdknl)
-INCLUDES += ../../../examples/bootstrap
-endif
 
 endif
 
@@ -104,7 +113,6 @@ ifeq($(HOLSELFTESTLEVEL),3)
 EX3DIRS = arm/ARM_security_properties \
           diningcryptos \
           l3-machine-code/cheri/step
-
 
 ifdef POLY
 EX3DIRS += machine-code theorem-prover

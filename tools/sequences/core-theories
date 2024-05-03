@@ -22,6 +22,12 @@ src/coretypes
 src/tfl/src
 src/num/theories
 src/num/theories/cv_compute
+
+# NOTE: otknl builds use the old Arithconv for proof constructions
+(stdknl)src/num/reduce/conv
+(expk)src/num/reduce/conv
+(otknl)src/num/reduce/conv-old
+
 src/num/reduce/src
 src/num/arith/src
 src/num
