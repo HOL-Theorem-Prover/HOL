@@ -1,4 +1,4 @@
-INCLUDES = ../bag ../integer ../pred_set/src/more_theories base construction
+INCLUDES = ../../bag ../../integer ../../pred_set/src/more_theories
 
 ifdef HOLBUILD
 .PHONY: link-to-sigobj
