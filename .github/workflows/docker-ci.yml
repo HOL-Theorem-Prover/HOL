@@ -122,3 +122,41 @@ jobs:
             BUILDOPTS=--expk --seq=tools/sequences/upto-parallel -t
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  build-otknl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.USERNAME }}/hol-dev
+          tags: |
+            type=sha,prefix=ci-,suffix=-otknl
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.USERNAME }}
+          password: ${{ env.PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: developers/docker-ci/Dockerfile
+          push: true
+          build-args: |
+            SML=poly
+            Z3_VERSION=4.13.0
+            CVC_VERSION=5
+            # NOTE: the arg value cannot be quoted here:
+            BUILDOPTS=--otknl -j2 --seq=tools/sequences/upto-parallel
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
