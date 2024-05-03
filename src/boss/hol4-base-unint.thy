@@ -34,6 +34,7 @@ main {
   import: bit
   import: numeral-bit
   import: numposrep
+  import: quotient
 }
 bool {
   article: "bool_defs.ot.art"
@@ -56,6 +57,15 @@ combin {
   import: marker
   article: "../combin/combin.ot.art"
 }
+sat {
+  import: bool
+  article: "../HolSat/sat.ot.art"
+}
+quotient {
+  import: bool
+  import: combin
+  article: "../quotient/src/quotient.ot.art"
+}
 relation {
   import: bool
   import: combin
@@ -70,6 +80,7 @@ pair {
   import: bool
   import: combin
   import: relation
+  import: quotient
   article: "../coretypes/pair.ot.art"
 }
 poset {
@@ -80,6 +91,7 @@ poset {
 sum {
   import: bool
   import: combin
+  import: quotient
   article: "../coretypes/sum.ot.art"
 }
 option {
@@ -123,7 +135,9 @@ basic-size {
 while {
   import: bool
   import: combin
+  import: relation
   import: arithmetic
+  import: sum
   article: "../num/theories/while.ot.art"
 }
 numpair {
@@ -217,6 +231,7 @@ set-relation {
 ind-type {
   import: bool
   import: arithmetic
+  import: numpair
   article: "../datatype/ind_type.ot.art"
 }
 list {
@@ -230,6 +245,7 @@ list {
   import: marker
   import: pred-set
   import: combin
+  import: quotient
   article: "../list/src/list.ot.art"
 }
 rich-list {
@@ -239,6 +255,8 @@ rich-list {
   import: list
   import: arithmetic
   import: pred-set
+  import: relation
+  import: divides
   article: "../list/src/rich_list.ot.art"
 }
 indexed-lists {
@@ -259,8 +277,4 @@ numposrep {
   import: relation
   import: basic-size
   article: "../list/src/numposrep.ot.art"
-}
-sat {
-  import: bool
-  article: "../HolSat/sat.ot.art"
 }
