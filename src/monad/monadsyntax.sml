@@ -282,19 +282,19 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   val (prname, arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
   val minprint = ppstring (#2 (print_from_grammars min_grammars))
-  fun syspr bp gravs t =
-    sysprinter {gravs = gravs, binderp = bp, depth = depth - 1} t
-  fun pr_action (v, letm, action) =
+  fun syspr bp gravs depth t =
+    sysprinter {gravs = gravs, binderp = bp, depth = depth} t
+  fun pr_action depth (v, letm, action) =
       case (v, letm) of
-        (NONE, _) => syspr false (Top,Top,Top) action
+        (NONE, _) => syspr false (Top,Top,Top) depth action
       | (SOME v, false) => let
           val new_bvars = free_vars v
         in
           ublock PP.INCONSISTENT 0
             (record_bvars new_bvars
-                          (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
+                          (syspr true (Top,Top,Prec(100, "monad_assign")) depth v) >>
              strn " " >> strn "<-" >> brk(1,2) >>
-             syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
+             syspr false (Top,Prec(100, "monad_assign"),Top) (decdepth depth) action) >>
           addbvs new_bvars
         end
       | (SOME v, true) => let
@@ -304,16 +304,16 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
             ublock PP.INCONSISTENT 0
               (strn mlet >>
                record_bvars new_bvars
-                  (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
+                  (syspr true (Top,Top,Prec(100, "monad_assign")) depth v) >>
                strn " " >> strn "<-" >> brk(1,2) >>
-               syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
+               syspr false (Top,Prec(100, "monad_assign"),Top) (decdepth depth) action) >>
             addbvs new_bvars
           else
             ublock PP.INCONSISTENT 0
               (record_bvars new_bvars
-                  (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
+                  (syspr true (Top,Top,Prec(100, "monad_assign")) depth v) >>
                strn " " >> strn "<<-" >> brk(1,2) >>
-               syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
+               syspr false (Top,Prec(100, "monad_assign"),Top) (decdepth depth) action) >>
             addbvs new_bvars
         end
   fun brk_bind binder arg1 arg2 =
@@ -334,11 +334,21 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
         end
   val (arg1',arg2') = brk_bind prname arg1 arg2
   val actions = strip [arg1'] arg2'
+  fun pr_action_list _ [] = []
+    | pr_action_list 0 _ = [strn "..."]
+    | pr_action_list depth (b::bs) =
+        pr_action depth b :: pr_action_list (decdepth depth) bs
+  fun concatWith brk [] = nothing
+    | concatWith brk [x] = x
+    | concatWith brk (x::xs) =
+        let fun mk [] = nothing
+              | mk (y::ys) = brk >> y >> mk ys
+        in x >> mk xs end
 in
   ublock PP.CONSISTENT 0
     (strn "do" >> brk(1,2) >>
      getbvs >- (fn oldbvs =>
-     pr_list pr_action (strn ";" >> brk(1,2)) actions >>
+     concatWith (strn ";" >> brk(1,2)) (pr_action_list depth actions) >>
      brk(1,0) >>
      strn "od" >> setbvs oldbvs))
 end
