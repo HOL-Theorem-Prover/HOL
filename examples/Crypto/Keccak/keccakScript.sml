@@ -602,6 +602,13 @@ Proof
   \\ PROVE_TAC[]
 QED
 
+Definition bool_lookup_def:
+  bool_lookup n t =
+    case lookup n t of
+    | NONE => F
+    | SOME b => b
+End
+
 (* if y is fixed 0 *)
 (* i -> (i DIV w, i MOD w) *)
 (* (x, z) -> x * w + z *)
@@ -611,18 +618,18 @@ Definition theta_spt_def:
   let w = b2w $ size t in
   let c = fromList (
     GENLIST (λi.
-      (THE (lookup i t) ≠
-        (THE (lookup (i + 5 * w) t) ≠
-          (THE (lookup (i + 10 * w) t) ≠
-            (THE (lookup (i + 15 * w) t) ≠
-              (THE (lookup (i + 20 * w) t)))))))
+      (bool_lookup i t ≠
+        (bool_lookup (i + 5 * w) t ≠
+          (bool_lookup (i + 10 * w) t ≠
+            (bool_lookup (i + 15 * w) t ≠
+              (bool_lookup (i + 20 * w) t))))))
       (5 * w)) in
   let d = fromList (
     GENLIST (λi.
-      (THE (lookup (((i DIV w + 4) MOD 5) * w + i MOD w) c) ≠
-       THE (lookup (((i DIV w + 1) MOD 5) * w + (i MOD w + PRE w) MOD w) c)))
+      (bool_lookup (((i DIV w + 4) MOD 5) * w + i MOD w) c ≠
+       bool_lookup (((i DIV w + 1) MOD 5) * w + (i MOD w + PRE w) MOD w) c))
       (5 * w)) in
-  mapi (λi b. b ≠ THE (lookup (((i DIV w) MOD 5) * w + i MOD w) d)) t
+  mapi (λi b. b ≠ bool_lookup (((i DIV w) MOD 5) * w + i MOD w) d) t
 End
 
 Definition spt_to_state_array_def:
@@ -657,9 +664,9 @@ Proof
   \\ qmatch_assum_abbrev_tac`z < w`
   \\ rewrite_tac[theta_spt_def]
   \\ rw[]
-  \\ qmatch_goalsub_abbrev_tac`THE (lookup _ d)`
+  \\ qmatch_goalsub_abbrev_tac`bool_lookup _ d`
   \\ pop_assum mp_tac
-  \\ qmatch_goalsub_abbrev_tac`THE (lookup _ c)`
+  \\ qmatch_goalsub_abbrev_tac`bool_lookup _ c`
   \\ strip_tac
   \\ rw[lookup_mapi]
   \\ reverse(rw[lookup_fromList])
@@ -677,7 +684,7 @@ Proof
   \\ rw[string_to_state_array_def, restrict_def]
   \\ rw[theta_d_def]
   \\ rw[theta_c_def, restrict_def]
-  \\ reverse(rw[Abbr`d`, lookup_fromList])
+  \\ reverse(rw[Abbr`d`, lookup_fromList, bool_lookup_def])
   >- (
     `F` suffices_by simp[]
     \\ pop_assum mp_tac \\ simp[]
@@ -701,6 +708,7 @@ Proof
     \\ `LENGTH s = 25 * (LENGTH s DIV 25) + LENGTH s MOD 25`
         by metis_tac[DIVISION, MULT_COMM]
     \\ metis_tac[LESS_EQ_ADD])
+  \\ rw[bool_lookup_def]
   \\ rw[Once lookup_fromList]
   \\ rw[Once lookup_fromList]
   \\ rw[Once lookup_fromList]
@@ -1842,22 +1850,9 @@ open cv_transLib cv_stdTheory;
 val _ = cv_trans index_to_triple_def;
 val _ = cv_trans triple_to_index_def;
 
-Definition bool_lookup_def:
-  bool_lookup n t =
-    case lookup n t of
-    | NONE => F
-    | SOME b => b
-End
-
 val _ = cv_trans bool_lookup_def;
 
-Theorem to_bool_lookup:
-  THE (lookup n t) = bool_lookup n t
-Proof
-  cheat
-QED
-
-val _ = theta_spt_def |> SRULE [mapi_def,to_bool_lookup] |> cv_auto_trans;
+val _ = theta_spt_def |> SRULE [mapi_def] |> cv_auto_trans;
 
 Definition while1_def:
   while1 a tt ww x y w z a' =
@@ -1918,6 +1913,12 @@ QED
 
 val _ = cv_trans while1_def;
 val _ = cv_trans while2_def;
+
+Theorem to_bool_lookup:
+  THE (lookup n t) = bool_lookup n t
+Proof
+  cheat (* replace THE (lookup ...) in definitions *)
+QED
 
 val _ = rho_spt_def |> ISPEC “a :bool num_map”
           |> SRULE [mapi_def,to_bool_lookup,while1_thm]
