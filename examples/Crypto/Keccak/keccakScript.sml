@@ -2102,6 +2102,7 @@ val () = extend_compset [
     index_to_triple_100,
     triple_to_index_1600,
     index_to_triple_1600,
+    bool_lookup_def,
     rc_step_def,
     rc_def,
     bool_to_bit_def,
