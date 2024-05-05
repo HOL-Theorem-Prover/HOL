@@ -897,7 +897,7 @@ Definition rho_spt_def:
         SND $
         WHILE (λ(z,a'). z < w) (λ(z,a'). (z+1,
           insert (triple_to_index w (x,y,z))
-            (THE $ lookup (triple_to_index w (x,y,(z + ww - tt) MOD w)) a)
+            (bool_lookup (triple_to_index w (x,y,(z + ww - tt) MOD w)) a)
           a'))
           (0, a')))
       (1,0,0,a)
@@ -1311,10 +1311,10 @@ Proof
       \\ simp[lookup_insert]
       \\ reverse(Cases_on`p=q` \\ simp[])
       >- (
-        rw[]
+        rw[bool_lookup_def]
         \\ first_x_assum (mp_then Any mp_tac triple_to_index_inj)
         \\ simp[])
-      \\ rw[]
+      \\ rw[bool_lookup_def]
       \\ rw[lookup_fromList]
       \\ `h p j < m` by simp[Abbr`h`]
       \\ `triple_to_index m (t, u, h p j) < 25 * m`
@@ -1350,7 +1350,7 @@ Definition pi_spt_def:
   let w = b2w (size a) in
   fromList (GENLIST (λi.
     let (x, y, z) = index_to_triple w i in
-      THE (lookup (triple_to_index w ((x + 3 * y) MOD 5, x, z)) a)
+      bool_lookup (triple_to_index w ((x + 3 * y) MOD 5, x, z)) a
   ) (size a))
 End
 
@@ -1382,7 +1382,7 @@ Proof
     \\ `0 < 25` by simp[]
     \\ drule_then(qspec_then`LENGTH ls`mp_tac) DIVISION
     \\ simp[] )
-  \\ simp[lookup_fromList]
+  \\ simp[lookup_fromList, bool_lookup_def]
   \\ `z + w * (x + 5 * y) = triple_to_index w (x,y,z)` by simp[triple_to_index_def]
   \\ pop_assum SUBST1_TAC
   \\ simp[]
@@ -1399,8 +1399,8 @@ Definition chi_spt_def:
     let w = b2w (size a) in
     mapi (λk v.
       let (x,y,z) = index_to_triple w k in
-      let v1 = THE (lookup (triple_to_index w ((x + 1) MOD 5, y, z)) a) in
-      let v2 = THE (lookup (triple_to_index w ((x + 2) MOD 5, y, z)) a) in
+      let v1 = bool_lookup (triple_to_index w ((x + 1) MOD 5, y, z)) a in
+      let v2 = bool_lookup (triple_to_index w ((x + 2) MOD 5, y, z)) a in
       v ≠ (¬v1 ∧ v2)) a
 End
 
@@ -1420,7 +1420,7 @@ Proof
     \\ `0 < 25` by simp[]
     \\ drule_then(qspec_then`LENGTH ls`mp_tac) DIVISION
     \\ simp[] )
-  \\ simp[lookup_fromList]
+  \\ simp[lookup_fromList, bool_lookup_def]
   \\ simp[FUN_EQ_THM, FORALL_PROD, restrict_def]
   \\ qx_genl_tac[`x`,`y`,`z`]
   \\ Cases_on`x < 5 ∧ y < 5 ∧ z < w` \\ fs[]
@@ -1480,7 +1480,7 @@ Definition iota_spt_def:
       let l = w2l w in
       let RCz = ((z = 2 ** LOG2 (SUC z) - 1 ∧ LOG2 (SUC z) ≤ l) ∧
                  rc (LOG2 (SUC z) + 7 * i)) in
-        THE (lookup (triple_to_index w (0,0,z)) a) ≠ RCz
+        bool_lookup (triple_to_index w (0,0,z)) a ≠ RCz
     else v) a
 End
 
@@ -1510,7 +1510,7 @@ Proof
   \\ simp[index_to_triple_def]
   \\ strip_tac
   \\ simp[Once triple_to_index_def]
-  \\ simp[lookup_fromList]
+  \\ simp[lookup_fromList, bool_lookup_def]
   \\ qmatch_goalsub_abbrev_tac`x1 = 0 ∧ y1 = 0`
   \\ `x1 = x ∧ y1 = y` suffices_by rw[]
   \\ simp[Abbr`x1`, Abbr`y1`]
@@ -1914,24 +1914,18 @@ QED
 val _ = cv_trans while1_def;
 val _ = cv_trans while2_def;
 
-Theorem to_bool_lookup:
-  THE (lookup n t) = bool_lookup n t
-Proof
-  cheat (* replace THE (lookup ...) in definitions *)
-QED
-
 val _ = rho_spt_def |> ISPEC “a :bool num_map”
-          |> SRULE [mapi_def,to_bool_lookup,while1_thm]
+          |> SRULE [mapi_def,while1_thm]
           |> SRULE [LET_THM,while2_thm]
           |> CONV_RULE (RAND_CONV (UNBETA_CONV “size (a:bool num_map)” THENC
                                    RATOR_CONV (ALPHA_CONV “n:num”) THENC
                                    REWR_CONV (GSYM LET_THM)))
           |> cv_trans;
 
-val _ = pi_spt_def |> ISPEC “a :bool num_map” |> SRULE [mapi_def,to_bool_lookup]
+val _ = pi_spt_def |> ISPEC “a :bool num_map” |> SRULE [mapi_def]
                                               |> cv_auto_trans;
 
-val _ = chi_spt_def |> SRULE [mapi_def,to_bool_lookup] |> cv_auto_trans;
+val _ = chi_spt_def |> SRULE [mapi_def] |> cv_auto_trans;
 
 val _ = cv_trans spt_to_string_def;
 
@@ -2020,7 +2014,7 @@ Definition iota_body_def:
 End
 
 val _ = iota_spt_def
-          |> SRULE [to_bool_lookup,LOG2_eq_log2,mapi_def,GSYM iota_body_def]
+          |> SRULE [LOG2_eq_log2,mapi_def,GSYM iota_body_def]
           |> cv_auto_trans;
 
 val _ = cv_trans Rnd_spt_def;
