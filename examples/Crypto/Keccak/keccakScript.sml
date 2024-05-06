@@ -81,7 +81,7 @@ Definition b2w_def:
 End
 
 Definition w2l_def:
-  w2l w = LOG2 w
+  w2l w = if 0 < w then LOG2 w else 0
 End
 
 Theorem bwl_table:
@@ -1983,17 +1983,18 @@ End
 val _ = cv_trans log2_def;
 
 Theorem LOG2_eq_log2:
-  LOG2 n = log2 n 0
+  0 < n ⇒ LOG2 n = log2 n 0
 Proof
-  qsuff_tac ‘∀n acc. log2 n acc = LOG2 n + acc’ >- gvs []
+  qsuff_tac ‘∀n acc. 0 < n ⇒ log2 n acc = LOG2 n + acc’ >- gvs []
   \\ ho_match_mp_tac log2_ind \\ rw []
-  \\ Cases_on ‘n = 0’ >- cheat
   \\ Cases_on ‘n = 1’
   >- (gvs [] \\ simp [Once log2_def])
   \\ simp [Once log2_def]
   \\ simp [LOG2_def, SimpRHS]
   \\ once_rewrite_tac [numeral_bitTheory.LOG_compute]
   \\ gvs [] \\ gvs [ADD1,LOG2_def]
+  \\ first_x_assum irule
+  \\ simp[X_LT_DIV]
 QED
 
 val _ = w2l_def |> SRULE [LOG2_eq_log2] |> cv_trans
