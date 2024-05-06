@@ -1,4 +1,11 @@
 
+use "../tools/Holmake/HFS_NameMunge.sig";
+use "../tools/Holmake/poly/HFS_NameMunge.sml";
+use "../tools/Holmake/HOLFS_dtype.sml";
+use "../tools/Holmake/HOLFileSys.sig";
+use "../tools/Holmake/HOLFileSys.sml";
+use "../tools/Holmake/AttributeSyntax.sig";
+use "../tools/Holmake/AttributeSyntax.sml";
 use "../tools/Holmake/GetOpt.sig";
 use "../tools/Holmake/GetOpt.sml";
 use "../tools-poly/poly/Binaryset.sig";
