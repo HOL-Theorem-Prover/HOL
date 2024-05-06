@@ -100,7 +100,7 @@ ifdef POLY
 EX2DIRS += separationLogic/src/holfoot/poly logic/temporal_deep/src/examples
 
 ifeq ($(KERNELID),stdknl)
-EX2DIRS += ../../../examples/bootstrap
+EX2DIRS += bootstrap
 endif
 endif
 
