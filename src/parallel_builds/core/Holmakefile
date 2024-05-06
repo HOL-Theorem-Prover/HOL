@@ -11,7 +11,6 @@ SRCRELNAMES = \
   integer \
   monad/more_monads \
   n-bit \
-  num/theories/cv_compute \
   pred_set/src/more_theories probability \
   rational real real/analysis res_quan/src ring/src \
   search sort string \
