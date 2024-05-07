@@ -273,6 +273,7 @@ end handle HOL_ERR _ => NONE
 
 
 val explicit_mlets = ref false;
+val monad_print_length = ref (~1);
 
 fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   open term_pp_types term_grammar smpp term_pp_utils
@@ -282,19 +283,19 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   val (prname, arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
   val minprint = ppstring (#2 (print_from_grammars min_grammars))
-  fun syspr bp gravs depth t =
-    sysprinter {gravs = gravs, binderp = bp, depth = depth} t
-  fun pr_action depth (v, letm, action) =
+  fun syspr bp gravs t =
+    sysprinter {gravs = gravs, binderp = bp, depth = depth - 1} t
+  fun pr_action (v, letm, action) =
       case (v, letm) of
-        (NONE, _) => syspr false (Top,Top,Top) depth action
+        (NONE, _) => syspr false (Top,Top,Top) action
       | (SOME v, false) => let
           val new_bvars = free_vars v
         in
           ublock PP.INCONSISTENT 0
             (record_bvars new_bvars
-                          (syspr true (Top,Top,Prec(100, "monad_assign")) depth v) >>
+                          (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
              strn " " >> strn "<-" >> brk(1,2) >>
-             syspr false (Top,Prec(100, "monad_assign"),Top) (decdepth depth) action) >>
+             syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
           addbvs new_bvars
         end
       | (SOME v, true) => let
@@ -304,16 +305,16 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
             ublock PP.INCONSISTENT 0
               (strn mlet >>
                record_bvars new_bvars
-                  (syspr true (Top,Top,Prec(100, "monad_assign")) depth v) >>
+                  (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
                strn " " >> strn "<-" >> brk(1,2) >>
-               syspr false (Top,Prec(100, "monad_assign"),Top) (decdepth depth) action) >>
+               syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
             addbvs new_bvars
           else
             ublock PP.INCONSISTENT 0
               (record_bvars new_bvars
-                  (syspr true (Top,Top,Prec(100, "monad_assign")) depth v) >>
+                  (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
                strn " " >> strn "<<-" >> brk(1,2) >>
-               syspr false (Top,Prec(100, "monad_assign"),Top) (decdepth depth) action) >>
+               syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
             addbvs new_bvars
         end
   fun brk_bind binder arg1 arg2 =
@@ -336,8 +337,8 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   val actions = strip [arg1'] arg2'
   fun pr_action_list _ [] = []
     | pr_action_list 0 _ = [strn "..."]
-    | pr_action_list depth (b::bs) =
-        pr_action depth b :: pr_action_list (decdepth depth) bs
+    | pr_action_list print_length (b::bs) =
+        pr_action b :: pr_action_list (decdepth print_length) bs
   fun concatWith brk [] = nothing
     | concatWith brk [x] = x
     | concatWith brk (x::xs) =
@@ -348,7 +349,7 @@ in
   ublock PP.CONSISTENT 0
     (strn "do" >> brk(1,2) >>
      getbvs >- (fn oldbvs =>
-     concatWith (strn ";" >> brk(1,2)) (pr_action_list depth actions) >>
+     concatWith (strn ";" >> brk(1,2)) (pr_action_list (!monad_print_length) actions) >>
      brk(1,0) >>
      strn "od" >> setbvs oldbvs))
 end
@@ -498,6 +499,10 @@ val enable_monadsyntax = add_monadsyntax
 val temp_enable_monadsyntax = temp_add_monadsyntax
 
 fun print_explicit_monadic_lets b = (explicit_mlets := b);
+fun set_monad_print_length NONE = (monad_print_length := ~1)
+  | set_monad_print_length (SOME n) =
+      if n < 0 then raise ERR "set_monad_print_length" "Cannot set a negative length!"
+      else (monad_print_length := n)
 
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap{}", 1)}
