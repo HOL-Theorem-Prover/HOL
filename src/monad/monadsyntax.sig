@@ -20,6 +20,7 @@ sig
   val temp_disable_monadsyntax : unit -> unit
 
   val print_explicit_monadic_lets : bool -> unit
+  val set_monad_print_length : int option -> unit
 
   type monadinfo =
        { bind : term,
