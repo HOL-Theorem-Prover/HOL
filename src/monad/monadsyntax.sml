@@ -273,7 +273,6 @@ end handle HOL_ERR _ => NONE
 
 
 val explicit_mlets = ref false;
-val monad_print_length = ref (~1);
 
 fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   open term_pp_types term_grammar smpp term_pp_utils
@@ -349,7 +348,8 @@ in
   ublock PP.CONSISTENT 0
     (strn "do" >> brk(1,2) >>
      getbvs >- (fn oldbvs =>
-     concatWith (strn ";" >> brk(1,2)) (pr_action_list (!monad_print_length) actions) >>
+     concatWith (strn ";" >> brk(1,2))
+      (pr_action_list (!Globals.max_print_length) actions) >>
      brk(1,0) >>
      strn "od" >> setbvs oldbvs))
 end
@@ -499,10 +499,6 @@ val enable_monadsyntax = add_monadsyntax
 val temp_enable_monadsyntax = temp_add_monadsyntax
 
 fun print_explicit_monadic_lets b = (explicit_mlets := b);
-fun set_monad_print_length NONE = (monad_print_length := ~1)
-  | set_monad_print_length (SOME n) =
-      if n < 0 then raise ERR "set_monad_print_length" "Cannot set a negative length!"
-      else (monad_print_length := n)
 
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap{}", 1)}
