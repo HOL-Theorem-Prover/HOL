@@ -14,6 +14,7 @@ sig
   val show_scrub              : bool ref
   val linewidth               : int ref
   val max_print_depth         : int ref
+  val max_print_length        : int ref
   val type_pp_prefix          : string ref
   val type_pp_suffix          : string ref
   val term_pp_prefix          : string ref
