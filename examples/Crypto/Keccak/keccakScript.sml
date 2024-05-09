@@ -1916,13 +1916,15 @@ QED
 val _ = cv_trans while1_def;
 val _ = cv_trans while2_def;
 
-val _ = rho_spt_def |> ISPEC “a :bool num_map”
-          |> SRULE [mapi_def,while1_thm]
-          |> SRULE [LET_THM,while2_thm]
-          |> CONV_RULE (RAND_CONV (UNBETA_CONV “size (a:bool num_map)” THENC
-                                   RATOR_CONV (ALPHA_CONV “n:num”) THENC
-                                   REWR_CONV (GSYM LET_THM)))
-          |> cv_trans;
+val rho_spt_eq = rho_spt_def
+  |> ISPEC “a :bool num_map”
+  |> SRULE [mapi_def,while1_thm]
+  |> SRULE [LET_THM,while2_thm]
+  |> CONV_RULE (RAND_CONV (UNBETA_CONV “size (a:bool num_map)” THENC
+                           RATOR_CONV (ALPHA_CONV “n:num”) THENC
+                           REWR_CONV (GSYM LET_THM)));
+
+val _ = cv_trans rho_spt_eq;
 
 val _ = pi_spt_def |> ISPEC “a :bool num_map” |> SRULE [mapi_def]
                                               |> cv_auto_trans;
@@ -2041,16 +2043,90 @@ End
 
 val _ = cv_trans while3_def;
 
+Theorem toSortedAList_EQ_NIL:
+  ∀t. toSortedAList t = [] ⇔ size t = 0
+Proof
+  rewrite_tac [GSYM sptreeTheory.LENGTH_toSortedAList] \\ rw []
+QED
+
+Triviality GENLIST_EQ_NIL:
+  GENLIST f n = [] ⇔ n = 0
+Proof
+  Cases_on ‘n’ \\ gvs [GENLIST]
+QED
+
+Triviality size_while1_neq_0:
+  ∀a tt ww x y w z s.
+    size s ≠ 0 ⇒
+    size (while1 a tt ww x y w z s) ≠ 0
+Proof
+  ho_match_mp_tac while1_ind
+  \\ rpt gen_tac \\ strip_tac \\ strip_tac \\ gvs []
+  \\ once_rewrite_tac [while1_def]
+  \\ IF_CASES_TAC \\ gvs []
+  \\ last_x_assum irule
+  \\ gvs [size_insert] \\ rw []
+QED
+
+Triviality size_while2_neq_0:
+  ∀a w ww x y t s.
+    size s ≠ 0 ⇒
+    size (while2 a w ww x y t s) ≠ 0
+Proof
+  ho_match_mp_tac while2_ind
+  \\ rpt gen_tac \\ strip_tac \\ strip_tac
+  \\ gvs []
+  \\ once_rewrite_tac [while2_def]
+  \\ IF_CASES_TAC \\ gvs []
+  \\ last_x_assum irule
+  \\ irule size_while1_neq_0 \\ fs []
+QED
+
+Triviality Keccak_p_spt_NOT_NIL:
+  xs ≠ [] ⇒ Keccak_p_spt n xs ≠ []
+Proof
+  gvs [Keccak_p_spt_def,spt_to_string_def]
+  \\ qmatch_goalsub_abbrev_tac ‘FUNPOW f k init’ \\ rw []
+  \\ fs [toSortedAList_EQ_NIL]
+  \\ ‘size (FST init) ≠ 0’ by gvs [Abbr‘init’]
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac ‘init’ \\ qid_spec_tac ‘k’
+  \\ unabbrev_all_tac
+  \\ Induct \\ gvs []
+  \\ gen_tac \\ strip_tac
+  \\ PairCases_on ‘init’ \\ gvs [FUNPOW]
+  \\ first_x_assum irule
+  \\ gvs [Rnd_spt_def,iota_spt_def]
+  \\ gvs [rho_spt_eq]
+  \\ irule size_while2_neq_0
+  \\ gvs [theta_spt_def,wf_mapi]
+QED
+
 Theorem while3_thm:
-  ∀S Z.
-    c < 1600 ⇒
+  ∀Z S.
+    c < 1600 ∧ S ≠ [] ∧ x' ≤ 1600 ⇒
     FST (WHILE (λ(Z,S). LENGTH Z < x')
       (λ(Z,S). (Z ⧺ TAKE (1600 − c) S,Keccak_p_spt 24 S))
       ([],S))
     =
     while3 1600 (1600 − c) x' [] S
 Proof
-  cheat
+  rw []
+  \\ qsuff_tac ‘∀Z0 S0 k. S0 ≠ [] ∧ x' ≤ k + LENGTH Z0 ⇒
+    FST (WHILE (λ(Z,S). LENGTH Z < x')
+      (λ(Z,S). (Z ⧺ TAKE (1600 − c) S,Keccak_p_spt 24 S)) (Z0,S0)) =
+    while3 k (1600 − c) x' Z0 S0’
+  >- (rw [] \\ pop_assum irule \\ gvs [])
+  \\ gen_tac
+  \\ completeInduct_on ‘x' - LENGTH Z0’
+  \\ rpt strip_tac \\ gvs [PULL_FORALL]
+  \\ once_rewrite_tac [while3_def] \\ gvs []
+  \\ once_rewrite_tac [WHILE] \\ simp []
+  \\ IF_CASES_TAC \\ gvs []
+  \\ last_x_assum irule
+  \\ gvs [Keccak_p_spt_NOT_NIL]
+  \\ conj_asm1_tac \\ gvs []
+  \\ Cases_on ‘S0’ \\ gvs []
 QED
 
 Definition Keccak_spt_def:
@@ -2066,12 +2142,29 @@ Definition Keccak_spt_def:
       TAKE x' Z
 End;
 
-Theorem Keccak_spt_thm:
-  ∀c. c < 1600 ⇒ ∀x y. Keccak c x y = Keccak_spt c x y
+Triviality sponge_foldl_NOT_NIL:
+  ∀xs S0 Pis.
+    S0 ≠ [] ∧ xs ≠ [] ⇒
+    sponge_foldl xs S0 Pis ≠ []
 Proof
-  rw [] \\ irule
-    (Keccak_spt |> SRULE [sponge_def,FUN_EQ_THM,GSYM sponge_foldl_def]
-                |> SRULE [while3_thm,GSYM Keccak_spt_def]) \\ fs []
+  Induct_on ‘Pis’ \\ gvs [sponge_foldl_def]
+  \\ gvs [GSYM sponge_foldl_def] \\ rw []
+  \\ last_x_assum irule \\ gvs []
+  \\ irule Keccak_p_spt_NOT_NIL \\ gvs []
+  \\ Cases_on ‘S0’ \\ gvs []
+  \\ Cases_on ‘xs’ \\ gvs []
+  \\ Cases_on ‘h’ \\ gvs []
+QED
+
+Theorem Keccak_spt_thm:
+  ∀c x y. c ≠ 0 ∧ c < 1600 ∧ y ≤ 1600 ⇒ Keccak c x y = Keccak_spt c x y
+Proof
+  rw []
+  \\ DEP_REWRITE_TAC [Keccak_spt] \\ simp [Keccak_spt_def]
+  \\ gvs [sponge_def,FUN_EQ_THM,GSYM sponge_foldl_def]
+  \\ AP_TERM_TAC
+  \\ irule while3_thm \\ fs []
+  \\ irule sponge_foldl_NOT_NIL \\ gvs []
 QED
 
 Definition chunks_tail_def:
@@ -2104,7 +2197,84 @@ val _ = SHA3_256_def |> SRULE [Keccak_spt_thm] |> cv_trans;
 val _ = SHA3_384_def |> SRULE [Keccak_spt_thm] |> cv_trans;
 val _ = SHA3_512_def |> SRULE [Keccak_spt_thm] |> cv_trans;
 
+Theorem HEX_eq:
+  n < 16 ⇒ HEX n = if n < 10 then CHR (ORD #"0" + n) else
+                                  CHR (ORD #"A" + n - 10)
+Proof
+  rpt (Cases_on ‘n’ \\ gvs [ASCIInumbersTheory.HEX_def]
+       \\ Cases_on ‘n'’ \\ gvs [ASCIInumbersTheory.HEX_def,ADD1])
+QED
 
+val pre = cv_trans_pre HEX_eq
+Theorem HEX_pre[cv_pre]:
+  ∀n. HEX_pre n ⇔ n < 16
+Proof
+  gvs [pre]
+QED
+
+Definition hex_string_def:
+  hex_string n acc =
+    if n < 16 then HEX n :: acc else
+      hex_string (n DIV 16) (HEX (n MOD 16) :: acc)
+End
+
+val pre = cv_trans_pre hex_string_def;
+Theorem hex_string_pre[cv_pre]:
+  ∀n acc. hex_string_pre n acc
+Proof
+  ho_match_mp_tac hex_string_ind \\ rw [] \\ simp [Once pre]
+QED
+
+Theorem word_to_hex_string_eq_byte:
+  word_to_hex_string (w:word8) = hex_string (w2n w) []
+Proof
+  gvs [word_to_hex_string_def,w2s_def,ASCIInumbersTheory.n2s_def]
+  \\ qsuff_tac ‘∀n acc. hex_string n acc = REVERSE (MAP HEX (n2l 16 n)) ++ acc’
+  >- gvs []
+  \\ ho_match_mp_tac hex_string_ind \\ rw []
+  \\ once_rewrite_tac [numposrepTheory.n2l_def]
+  \\ simp [Once hex_string_def]
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+val _ = cv_trans word_to_hex_string_eq_byte;
+
+Definition bools_to_hex_f_def:
+  bools_to_hex_f =
+    PAD_LEFT #"0" 2 ∘ word_to_hex_string ∘ (bools_to_word : bool list -> word8)
+End
+
+val _ =  bools_to_hex_f_def
+  |> SRULE [FUN_EQ_THM,bools_to_word_def,word_from_bin_list_def,l2w_def]
+  |> cv_auto_trans;
+
+val _ = bools_to_hex_string_def
+  |> SRULE [GSYM bools_to_hex_f_def]
+  |> cv_auto_trans;
+
+(* w = 1, so rho does nothing *)
+Theorem rho_spt_25_example:
+  rho_spt (fromList (GENLIST (λi. i < 10) 25))
+  = fromList (GENLIST (λi. i < 10) 25)
+Proof
+  simp [] \\ CONV_TAC cv_eval
+QED
+
+Theorem Keccak_224_NIL:
+  bools_to_hex_string (Keccak_224 []) =
+  "F71837502BA8E10837BDD8D365ADB85591895602FC552B48B7390ABD"
+Proof
+  CONV_TAC cv_eval
+QED
+
+Theorem Keccak_256_NIL:
+  bools_to_hex_string (Keccak_256 []) =
+  "C5D2460186F7233C927E7DB2DCC703C0E500B653CA82273B7BFAD8045D85A470"
+Proof
+  CONV_TAC cv_eval
+QED
+
+(*
 
 val cs = num_compset();
 val () = extend_compset [
@@ -2167,7 +2337,7 @@ Theorem rho_spt_25_example:
   rho_spt (fromList (GENLIST (λi. i < 10) 25))
   = fromList (GENLIST (λi. i < 10) 25)
 Proof
-  CONV_TAC(CBV_CONV cs)
+  simp [] \\ CONV_TAC cv_eval
 QED
 
 (* w = 4,
@@ -2189,6 +2359,8 @@ Theorem rho_spt_100_example:
     Lane a1 (4,3) = Lane a0 (4,3)
 Proof
   rw[]
+  \\ CONV_TAC cv_eval
+
   \\ CONV_TAC(CBV_CONV cs)
 QED
 
@@ -2205,8 +2377,6 @@ Theorem Keccak_256_NIL:
 Proof
   CONV_TAC(CBV_CONV cs)
 QED
-
-(*
 
 Definition state_array_to_lane_words_def:
   state_array_to_lane_words a =
