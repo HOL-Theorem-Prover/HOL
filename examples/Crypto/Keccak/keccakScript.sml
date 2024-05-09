@@ -2074,6 +2074,36 @@ Proof
                 |> SRULE [while3_thm,GSYM Keccak_spt_def]) \\ fs []
 QED
 
+Definition chunks_tail_def:
+  chunks_tail n ls acc =
+    if LENGTH ls ≤ n ∨ n = 0 then REVERSE (ls :: acc) else
+      chunks_tail n (DROP n ls) (TAKE n ls :: acc)
+Termination
+  WF_REL_TAC ‘measure $ λ(n,ls,acc). LENGTH ls’
+  \\ gvs [LENGTH_DROP]
+End
+
+Theorem chunks_eq_chunks_tail:
+  chunks n ls = chunks_tail n ls []
+Proof
+  qsuff_tac ‘∀n ls acc. chunks_tail n ls acc = REVERSE acc ++ chunks n ls’
+  \\ gvs [] \\ ho_match_mp_tac chunks_tail_ind
+  \\ rw []
+  \\ simp_tac std_ss [Once chunks_tail_def, Once chunks_def]
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+val _ = cv_trans chunks_tail_def;
+val _ = cv_trans chunks_eq_chunks_tail;
+val _ = cv_trans Keccak_spt_def;
+
+val _ = Keccak_224_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = Keccak_256_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = SHA3_224_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = SHA3_256_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = SHA3_384_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = SHA3_512_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+
 
 
 val cs = num_compset();
