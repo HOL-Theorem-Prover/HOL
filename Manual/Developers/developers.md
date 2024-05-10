@@ -272,7 +272,7 @@ Unless otherwise noted, they are built by the configuration process.
 
 `l`
 :   - A list.
-:   - Suffix for a variant of a functions whose difference is that it operates on a list instead of a single element. E.g: the tactical `THENL` compared to `THEN`.
+:   - Suffix for a variant of a function whose difference is that it operates on a list instead of a single element. E.g: the tactical `THENL` compared to `THEN`.
 
 `lhs`
 :   Left-hand side of an equation.
