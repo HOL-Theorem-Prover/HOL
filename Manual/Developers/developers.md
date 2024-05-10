@@ -319,3 +319,8 @@ Unless otherwise noted, they are built by the configuration process.
 
 <!--  LocalWords:  executables mosmlc sml categorise
  -->
+<!--
+Local variables:
+compile-command: "Holmake"
+End:
+-->
