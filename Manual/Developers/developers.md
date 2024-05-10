@@ -203,7 +203,7 @@ Unless otherwise noted, they are built by the configuration process.
 `mllex`
 :   The tool from SML/NJ.
 
-`mllyacc`
+`mlyacc`
 :   The tool from SML/NJ.
 
 `quote-filter`
@@ -283,8 +283,8 @@ Unless otherwise noted, they are built by the configuration process.
 `prim_`
 :   “primitive”. Optional prefix for the name of internal functions that contain most of the implementation. The function without the prefix is a thin wrapper that implements the public interface.
 
-`q_`
-:   Optional prefix in the name of a tactical to indicates that it takes a term quotation which is parsed in the context of the goal. Example: `q_abbrev_tac`.
+`q_` or just `q`
+:   Optional prefix in the name of a tactical to indicates that it takes a term quotation which is parsed in the context of the goal. Example: `qabbrev_tac`.
 
 `rand`
 :   Ope*rand* of a combination.
