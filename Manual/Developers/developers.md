@@ -124,6 +124,11 @@ Past the initial prefix of this process, most directories in the build sequence 
 This arrangement allows parallel processing of lots of directories at once.
 The sequence file `upto-parallel` gives the sequence of build targets up this point, so is a reasonable argument to `--seq` for tests of the core system.
 
+## Rebuilding
+
+It is often possible to repeat `build` to get the system to rebuild itself in the face of changed source files.
+If source files have moved directories, or disappeared entirely, `build` (more accurately `Holmake` when `build` calls it) may get confused by stale dependency information.
+In this situation, cleaning everything first with `build cleanall` may be necessary.
 
 # Things in `bin`
 
