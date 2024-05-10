@@ -208,7 +208,7 @@ Unless otherwise noted, they are built by the configuration process.
 
 `quote-filter`
 :   The quotation filter that runs over sources before they are seen by SML implementations.
-    This is used interactively (*via* a Unix filter that preprocesses all user-input), and non-interactively (by being applied to source files).
+    This is used interactively (*via* a Unix filter that preprocesses all user-input under Moscow ML, or built into the Poly/ML REPL), and non-interactively (by being applied to source files).
 
 ## Other Tools Directories
 
