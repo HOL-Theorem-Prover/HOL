@@ -385,6 +385,8 @@ fun new_infix_type (x as {Name, Arity, ParseName, Prec, Assoc}) =
 fun lift_bool _ true  = T
   | lift_bool _ false = F
 
+fun mk_bool b = if b then T else F
+
 (*--------------------------------------------------------------------------*)
 (*  Some simple algebraic properties expressed at the term level.           *)
 (*--------------------------------------------------------------------------*)

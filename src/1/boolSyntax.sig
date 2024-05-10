@@ -175,6 +175,7 @@ sig
   (* Lifter from ML bool to HOL bool *)
 
   val lift_bool : hol_type -> bool -> term
+  val mk_bool : bool -> term
 
   (* Algebraic properties *)
 
