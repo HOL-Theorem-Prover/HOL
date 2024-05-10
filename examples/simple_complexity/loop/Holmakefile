@@ -1,1 +1,1 @@
-INCLUDES = ../../algebra/lib ../lib
+INCLUDES = ../lib

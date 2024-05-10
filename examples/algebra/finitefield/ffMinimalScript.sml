@@ -12,12 +12,11 @@ val _ = new_theory "ffMinimal";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open arithmeticTheory pred_setTheory listTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory gcdsetTheory;
 
 (* Get dependent theories local *)
 (* val _ = load "ffUnityTheory"; *)
@@ -31,27 +30,11 @@ open SpanSpaceTheory;
 open LinearIndepTheory;
 open FiniteVSpaceTheory;
 
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "groupInstancesTheory"; -- in ringInstancesTheory *) *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open monoidOrderTheory groupOrderTheory fieldOrderTheory;
+open groupOrderTheory fieldOrderTheory;
 open subgroupTheory;
 open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
 open polyMonicTheory polyEvalTheory;
 open polyDividesTheory;
@@ -69,7 +52,6 @@ open ringBinomialTheory;
 open ringDividesTheory;
 open ringIdealTheory;
 open ringUnitTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Minimal Polynomial Documentation                             *)

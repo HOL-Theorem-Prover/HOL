@@ -12,28 +12,16 @@ val _ = new_theory "groupOrder";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories in lib *)
-(* val _ = load "helperFunctionTheory"; *)
-(* (* val _ = load "helperNumTheory"; -- in helperFunctionTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in helperFunctionTheory *) *)
-open helperNumTheory helperSetTheory helperFunctionTheory;
-
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-open dividesTheory gcdTheory;
+open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
+     numberTheory combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "monoidOrderTheory"; *)
-open monoidTheory monoidOrderTheory;
+open monoidTheory;
 
-(* (* val _ = load "groupTheory"; *) *)
-(* val _ = load "subgroupTheory"; *)
 open groupTheory groupMapTheory subgroupTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Group Order Documentation                                          *)
@@ -387,7 +375,7 @@ local
 val gim = group_is_monoid |> SPEC_ALL |> UNDISCH
 in
 fun lift_monoid_order_thm suffix = let
-   val mth = DB.fetch "monoidOrder" ("monoid_order_" ^ suffix)
+   val mth = DB.fetch "monoid" ("monoid_order_" ^ suffix)
    val mth' = mth |> SPEC_ALL
 in
    save_thm("group_order_" ^ suffix, gim |> MP mth' |> DISCH_ALL |> GEN_ALL)

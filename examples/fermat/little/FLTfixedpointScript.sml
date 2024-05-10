@@ -31,21 +31,16 @@ val _ = new_theory "FLTfixedpoint";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* open dependent theories *)
-(* val _ = load "FLTactionTheory"; *)
-open helperNumTheory helperSetTheory;
-open arithmeticTheory pred_setTheory;
-open dividesTheory; (* for PRIME_POS *)
+open arithmeticTheory pred_setTheory dividesTheory numberTheory
+     combinatoricsTheory;
 
-open necklaceTheory;
 open cycleTheory;
 
 (* val _ = load "groupInstancesTheory"; *)
 (* val _ = load "groupActionTheory"; *)
 open groupTheory;
 open groupActionTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Action Documentation                           *)

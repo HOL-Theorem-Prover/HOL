@@ -12,28 +12,14 @@ val _ = new_theory "hopping";
 
 (* ------------------------------------------------------------------------- *)
 
-
-(* open dependent theories *)
-(* arithmeticTheory -- load by default *)
+open arithmeticTheory pred_setTheory logrootTheory dividesTheory pairTheory
+     listTheory rich_listTheory listRangeTheory indexedListsTheory
+     numberTheory combinatoricsTheory primeTheory;
 
 (* val _ = load "quarityTheory"; *)
 open helperTwosqTheory;
-open helperNumTheory;
-open helperSetTheory;
-open helperFunctionTheory;
-open arithmeticTheory pred_setTheory;
-open dividesTheory; (* for divides_def, prime_def *)
-open logPowerTheory; (* for square_alt *)
-
-open listTheory rich_listTheory;
-open helperListTheory;
-open listRangeTheory; (* for listRangeLHI_ALL_DISTINCT *)
-open indexedListsTheory; (* for findi_EL and EL_findi *)
-
-open sublistTheory;
 
 open quarityTheory;
-open pairTheory;
 
 (* val _ = load "twoSquaresTheory"; *)
 open windmillTheory;
@@ -44,6 +30,9 @@ open iterateComposeTheory; (* for involute_involute_fix_orbit_fix_odd *)
 open iterateComputeTheory; (* for iterate_while_thm *)
 open twoSquaresTheory; (* for loop test found *)
 
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Node Hopping Algorithm Documentation                                      *)

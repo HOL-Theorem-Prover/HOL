@@ -12,30 +12,17 @@ val _ = new_theory "groupProduct";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory arithmeticTheory;
+open pred_setTheory arithmeticTheory numberTheory combinatoricsTheory;
 
 (* Get dependent theories local *)
 (* val _ = load "groupTheory"; *)
 open groupTheory monoidTheory;
-open monoidOrderTheory;
 
-(* val _ = load "subgroupTheory"; *)
-open submonoidTheory;
 open subgroupTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperSetTheory";  loaded by monoidTheory *) *)
-open helperSetTheory;
-
-(* Load dependent theories *)
-(* val _ = load "Satisfysimps"; *)
-(* used in coset_id_eq_subgroup: srw_tac[SatisfySimps.SATISFY_ss] *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Iterated Product Documentation                                            *)

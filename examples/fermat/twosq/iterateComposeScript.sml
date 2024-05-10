@@ -7,22 +7,16 @@
 (* add all dependent libraries for script *)
 open HolKernel boolLib bossLib Parse;
 
+open arithmeticTheory pred_setTheory dividesTheory gcdsetTheory numberTheory
+     combinatoricsTheory;
+
 (* declare new theory at start *)
 val _ = new_theory "iterateCompose";
 
 (* ------------------------------------------------------------------------- *)
 
-
-(* open dependent theories *)
-(* arithmeticTheory -- load by default *)
-
 (* val _ = load "helperTwosqTheory"; *)
 open helperTwosqTheory;
-open helperNumTheory;
-open helperSetTheory;
-open helperFunctionTheory;
-open arithmeticTheory pred_setTheory;
-open dividesTheory; (* for divides_def, prime_def *)
 
 (* val _ = load "involuteFixTheory"; *)
 open involuteTheory; (* for involute_bij *)
@@ -32,6 +26,9 @@ open involuteFixTheory;
 open iterationTheory;
 open iterateComputeTheory; (* for iterate_while_thm *)
 
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Iteration of Involution Composition Documentation                         *)

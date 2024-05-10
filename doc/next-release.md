@@ -26,6 +26,14 @@ Bugs fixed:
 New theories:
 -------------
 
+- `number`, `combinatorics` and `prime`: These are combined theories of materials
+   from `examples/algebra/lib`, etc. They contain some more advanced results from
+   number theory (in particular properties of prime numbers) and combinatorics.
+ 
+- `monoid` (and `real_algebra`): These are combined theories of materials ever in
+  `examples/algebra/monoid`. A monoid as an algebraic structure: with a carrier set,
+   a binary operation and an identity element.
+
 New tools:
 ----------
 

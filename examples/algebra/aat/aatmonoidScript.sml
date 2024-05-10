@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open monoidTheory monoidOrderTheory transferTheory transferLib
+open monoidTheory transferTheory transferLib
 
 val _ = new_theory "aatmonoid";
 

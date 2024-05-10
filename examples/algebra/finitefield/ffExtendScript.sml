@@ -12,12 +12,12 @@ val _ = new_theory "ffExtend";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
+     gcdsetTheory numberTheory combinatoricsTheory cardinalTheory;
 
 (* Get dependent theories local *)
 (* val _ = load "ffExistTheory"; *)
@@ -28,24 +28,11 @@ open ffMinimalTheory;
 open ffConjugateTheory;
 open ffExistTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperListTheory helperSetTheory;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "fieldTheory"; *) *)
-(* (* val _ = load "ringUnitTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
 open subgroupTheory;
 open ringUnitTheory;
 open groupOrderTheory;
-open monoidMapTheory groupMapTheory ringMapTheory fieldMapTheory;
+open groupMapTheory ringMapTheory fieldMapTheory;
 
 (* (* val _ = load "ringBinomialTheory"; *) *)
 open ringBinomialTheory;
@@ -53,8 +40,6 @@ open ringBinomialTheory;
 (* (* val _ = load "groupCyclicTheory"; *) *)
 open groupCyclicTheory;
 
-(* (* val _ = load "fieldInstancesTheory"; *) *)
-open monoidInstancesTheory;
 open groupInstancesTheory;
 open ringInstancesTheory;
 open fieldInstancesTheory;
@@ -78,10 +63,6 @@ open polyFieldModuloTheory;
 open polyRingModuloTheory;
 open polyModuloRingTheory;
 open polyMapTheory;
-
-(* val _ = load "cardinalTheory"; *)
-open cardinalTheory; (* for helpers: INJ_FINITE_INFINITE *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Field Extension Documentation                                             *)

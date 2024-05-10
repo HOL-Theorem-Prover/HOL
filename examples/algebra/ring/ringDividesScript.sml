@@ -12,41 +12,21 @@ val _ = new_theory "ringDivides";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory dep_rewrite;
+open pred_setTheory listTheory arithmeticTheory dep_rewrite numberTheory
+     combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "ringUnitTheory"; *) *)
-(* val _ = load "ringIdealTheory"; *)
 open ringIdealTheory;
 open ringUnitTheory;
 open ringTheory;
 open groupTheory;
-open monoidTheory gbagTheory bagTheory containerTheory;
-val MEMBER_NOT_EMPTY = pred_setTheory.MEMBER_NOT_EMPTY;
+open monoidTheory bagTheory containerTheory;
 
-open ringMapTheory monoidMapTheory groupMapTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* (* val _ = load "subgroupTheory"; *) *)
-(* val _ = load "quotientGroupTheory"; *)
+open ringMapTheory groupMapTheory;
 open subgroupTheory quotientGroupTheory;
-
-(* Make srw_tac more powerful with SATISFY_ss *)
-(* (* val _ = load "SatisfySimps"; *) *)
-(* val _ = augment_srw_ss [SatisfySimps.SATISFY_ss]; *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Divisbility in Ring Documentation                                         *)
@@ -966,7 +946,7 @@ Proof
   \\ impl_tac
   >- (
     `p = LINV f R (f p) /\ x = LINV f R (f x) /\ y = LINV f R (f y)`
-    by metis_tac[helperSetTheory.BIJ_LINV_THM]
+    by metis_tac[BIJ_LINV_THM]
     \\ ntac 3 (pop_assum SUBST1_TAC)
     \\ `r.prod.op (LINV f R (f x)) (LINV f R (f y)) =
         LINV f R (r_.prod.op (f x) (f y))`

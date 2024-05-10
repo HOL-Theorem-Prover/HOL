@@ -12,36 +12,22 @@ val _ = new_theory "polyRing";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "polynomialTheory"; *) *)
-(* val _ = load "polyWeakTheory"; *)
+(* open dependent theories *)
+open pred_setTheory arithmeticTheory listTheory rich_listTheory numberTheory
+     dividesTheory combinatoricsTheory;
+
 open monoidTheory groupTheory ringTheory;
 open polynomialTheory polyWeakTheory;
 
 (* val _ = load "ringUnitTheory"; *)
 open ringUnitTheory;
 
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory rich_listTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory;
-
+val _ = temp_overload_on("SQ", ``\n. n * n``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomials over a Ring R[x] Documentation                                *)
@@ -4824,7 +4810,7 @@ val poly_truncated_by_degree = store_thm(
     Then {p | poly p /\ deg p < n} SUBSET s          by SUBSET_DEF
      and BIJ chop {p | weak p /\ (LENGTH p = n)} s   by weak_poly_poly_bij, FINITE R /\ #0 IN R
      Now FINITE {p | weak p /\ (LENGTH p = n)}       by weak_poly_finite]);
-      so FINITE s                                    by FINITE_BIJ_PROPERTY
+      so FINITE s                                    by FINITE_BIJ
    Hence FINITE {p | poly p /\ deg p < n}            by SUBSET_FINITE
 *)
 val poly_truncated_by_degree_finite = store_thm(
@@ -4832,7 +4818,7 @@ val poly_truncated_by_degree_finite = store_thm(
   ``!r:'a ring. FINITE R /\ #0 IN R ==> !n. FINITE {p | poly p /\ deg p < n}``,
   rpt strip_tac >>
   `{p | poly p /\ deg p < n} SUBSET {p | poly p /\ ((p = []) \/ deg p < n)}` by rw[SUBSET_DEF] >>
-  metis_tac[weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ_PROPERTY, SUBSET_FINITE]);
+  metis_tac[weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ, SUBSET_FINITE]);
 
 (* ------------------------------------------------------------------------- *)
 (* Other Useful Theorems                                                     *)

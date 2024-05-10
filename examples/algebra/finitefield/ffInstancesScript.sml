@@ -12,43 +12,23 @@ val _ = new_theory "ffInstances";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
+
+(* open dependent theories *)
+open pred_setTheory arithmeticTheory listTheory numberTheory dividesTheory
+     gcdTheory;
 
 (* Get dependent theories local *)
 (* val _ = load "ffBasicTheory"; *)
 open ffBasicTheory;
 
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-open helperNumTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "groupInstancesTheory"; -- in ringInstancesTheory *) *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open monoidOrderTheory groupOrderTheory;
+open groupOrderTheory;
 open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* (* val _ = load "polyDivisionTheory"; *) *)
-(* (* val _ = load "polyBinomialTheory"; *) *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 
-(* (* val _ = load "polyFieldTheory"; *) *)
-(* (* val _ = load "polyFieldDivisionTheory"; -- has polyDivisionTheory *) *)
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polyFieldTheory polyDivisionTheory polyFieldDivisionTheory;
 open polyModuloRingTheory polyFieldModuloTheory;
 
@@ -63,7 +43,6 @@ open ringIdealTheory;
 open ringUnitTheory;
 open subgroupTheory;
 open quotientGroupTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Instances Documentation                                      *)

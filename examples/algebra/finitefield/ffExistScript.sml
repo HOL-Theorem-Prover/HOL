@@ -12,14 +12,13 @@ val _ = new_theory "ffExist";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+(* open dependent theories *)
+open arithmeticTheory pred_setTheory listTheory numberTheory dividesTheory
+     combinatoricsTheory gcdTheory gcdsetTheory primeTheory cardinalTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "ffConjugateTheory"; *)
 open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;
@@ -29,25 +28,8 @@ open ffMinimalTheory;
 open ffMasterTheory;
 open ffConjugateTheory;
 
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory"; -- in ringTheory *) *)
-(* (* val _ = load "helperListTheory"; -- in polyRingTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "groupInstancesTheory"; -- in ringInstancesTheory *) *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open monoidOrderTheory groupOrderTheory fieldOrderTheory;
+open groupOrderTheory fieldOrderTheory;
 open subgroupTheory;
 open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
 open groupCyclicTheory;
@@ -68,7 +50,7 @@ open polyRingModuloTheory;
 open polyModuloRingTheory;
 
 open polyMapTheory;
-open monoidMapTheory groupMapTheory ringMapTheory fieldMapTheory;
+open groupMapTheory ringMapTheory fieldMapTheory;
 
 (* (* val _ = load "polyGCDTheory"; *) *)
 open polyGCDTheory;
@@ -83,13 +65,6 @@ open ringUnitTheory;
 
 (* (* val _ = load "fieldBinomialTheory"; *) *)
 open fieldBinomialTheory;
-
-(* val _ = load "MobiusTheory"; *)
-open MobiusTheory; (* for sigma_eq_perfect_power_bounds_2 *)
-
-(* val _ = load "cardinalTheory"; *)
-open cardinalTheory; (* for helpers: A_LIST_BIJ_A *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Existence and Uniqueness Documentation                       *)
@@ -2570,7 +2545,7 @@ val monoid_bij_image_group = store_thm(
   rpt strip_tac >>
   rw_tac std_ss[Group_def] >-
   rw[monoid_bij_image_monoid] >>
-  rw[monoidOrderTheory.monoid_invertibles_def, monoid_bij_image_def, EXTENSION, EQ_IMP_THM] >>
+  rw[monoid_invertibles_def, monoid_bij_image_def, EXTENSION, EQ_IMP_THM] >>
   `g.inv x' IN G` by rw[] >>
   qexists_tac `f (g.inv x')` >>
   metis_tac[group_inv_thm]);

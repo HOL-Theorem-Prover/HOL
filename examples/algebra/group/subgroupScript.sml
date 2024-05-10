@@ -21,30 +21,14 @@ val _ = new_theory "subgroup";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory arithmeticTheory;
+open pred_setTheory arithmeticTheory numberTheory combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "groupMapTheory"; *)
 open groupMapTheory;
 open groupTheory monoidTheory;
-open monoidOrderTheory;
-
-(* val _ = load "submonoidTheory"; *)
-open submonoidTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperSetTheory";  loaded by monoidTheory *) *)
-open helperSetTheory;
-
-(* Load dependent theories *)
-(* val _ = load "Satisfysimps"; *)
-(* used in coset_id_eq_subgroup: srw_tac[SatisfySimps.SATISFY_ss] *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroup Documentation                                                    *)
@@ -1558,14 +1542,14 @@ val subgroup_big_intersect_subset = store_thm(
        Since (sgbINTER g).op x y IN (sgbINTER g).carrier    by subgroup_big_intersect_op_element
          and (sgbINTER g).op y z IN (sgbINTER g).carrier    by subgroup_big_intersect_op_element
        So this is to show: (x * y) * z = x * (y * z)        by subgroup_big_intersect_property
-       Since x IN G, y IN G and z IN G                      by IN_SUBSET
+       Since x IN G, y IN G and z IN G                      by SUBSET_DEF
        This follows by group_assoc.
    (3) (sgbINTER g).id IN (sgbINTER g).carrier
        This is true by subgroup_big_intersect_has_id.
    (4) x IN (sgbINTER g).carrier ==> (sgbINTER g).op (sgbINTER g).id x = x
        Since (sgbINTER g).id IN (sgbINTER g).carrier   by subgroup_big_intersect_op_element
          and (sgbINTER g).id = #e                      by subgroup_big_intersect_property
-        also x IN G                                    by IN_SUBSET
+        also x IN G                                    by SUBSET_DEF
          (sgbINTER g).op (sgbINTER g).id x
        = #e * x                                        by subgroup_big_intersect_property
        = x                                             by group_id
@@ -1574,7 +1558,7 @@ val subgroup_big_intersect_subset = store_thm(
        Since |/ x IN (sgbINTER g).carrier              by subgroup_big_intersect_has_inv
          and (sgbINTER g).id IN (sgbINTER g).carrier   by subgroup_big_intersect_op_element
          and (sgbINTER g).id = #e                      by subgroup_big_intersect_property
-        also x IN G                                    by IN_SUBSET
+        also x IN G                                    by SUBSET_DEF
         Let y = |/ x, then y IN (sgbINTER g).carrier,
          (sgbINTER g).op y x
        = |/ x * x                                      by subgroup_big_intersect_property
@@ -1590,20 +1574,20 @@ val subgroup_big_intersect_group = store_thm(
     `(sgbINTER g).op x y IN (sgbINTER g).carrier` by metis_tac[subgroup_big_intersect_op_element] >>
     `(sgbINTER g).op y z IN (sgbINTER g).carrier` by metis_tac[subgroup_big_intersect_op_element] >>
     `(x * y) * z = x * (y * z)` suffices_by rw[subgroup_big_intersect_property] >>
-    `x IN G /\ y IN G /\ z IN G` by metis_tac[IN_SUBSET] >>
+    `x IN G /\ y IN G /\ z IN G` by metis_tac[SUBSET_DEF] >>
     rw[group_assoc],
     metis_tac[subgroup_big_intersect_has_id],
     `(sgbINTER g).id = #e` by rw[subgroup_big_intersect_property] >>
     `(sgbINTER g).id IN (sgbINTER g).carrier` by metis_tac[subgroup_big_intersect_has_id] >>
     `#e * x = x` suffices_by rw[subgroup_big_intersect_property] >>
-    `x IN G` by metis_tac[IN_SUBSET] >>
+    `x IN G` by metis_tac[SUBSET_DEF] >>
     rw[],
     `|/ x IN (sgbINTER g).carrier` by rw[subgroup_big_intersect_has_inv] >>
     `(sgbINTER g).id = #e` by rw[subgroup_big_intersect_property] >>
     `(sgbINTER g).id IN (sgbINTER g).carrier` by rw[subgroup_big_intersect_has_id] >>
     qexists_tac `|/ x` >>
     `|/ x * x = #e` suffices_by rw[subgroup_big_intersect_property] >>
-    `x IN G` by metis_tac[IN_SUBSET] >>
+    `x IN G` by metis_tac[SUBSET_DEF] >>
     rw[]
   ]);
 

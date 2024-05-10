@@ -26,26 +26,15 @@ val _ = new_theory "integralDomain";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "ringUnitTheory"; *) *)
-(* val _ = load "ringIdealTheory"; *)
+open pred_setTheory listTheory sortingTheory containerTheory dep_rewrite
+     arithmeticTheory dividesTheory;
+
 open groupTheory monoidTheory ringTheory ringUnitTheory ringIdealTheory;
-open monoidOrderTheory groupOrderTheory;
-open monoidMapTheory ringMapTheory ringDividesTheory;
-
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-open pred_setTheory listTheory sortingTheory containerTheory gbagTheory
-     dep_rewrite arithmeticTheory dividesTheory;
-
+open groupOrderTheory;
+open groupMapTheory ringMapTheory ringDividesTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Integral Domain Documentation                                             *)
@@ -271,10 +260,9 @@ Proof
   \\ simp[RingIso_def, RingHomo_def]
   \\ strip_tac
   \\ qmatch_asmsub_abbrev_tac`BIJ g s.carrier r.carrier`
-  \\ `Group s.sum /\ Group r.sum` by
-  metis_tac[Ring_def, groupTheory.AbelianGroup_def]
-  \\ `g s.sum.id = r.sum.id` by metis_tac[groupMapTheory.group_homo_id]
-  \\ conj_asm1_tac >- metis_tac[monoidMapTheory.monoid_homo_id]
+  \\ `Group s.sum /\ Group r.sum` by metis_tac[Ring_def, AbelianGroup_def]
+  \\ `g s.sum.id = r.sum.id` by metis_tac[group_homo_id]
+  \\ conj_asm1_tac >- metis_tac[monoid_homo_id]
   \\ rw[]
   \\ first_x_assum(qspecl_then[`g x`,`g y`]mp_tac)
   \\ impl_keep_tac >- metis_tac[BIJ_DEF, INJ_DEF]

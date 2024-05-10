@@ -12,40 +12,19 @@ val _ = new_theory "finiteGroup";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory arithmeticTheory;
+open pred_setTheory arithmeticTheory dividesTheory numberTheory
+     combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "groupOrderTheory"; *)
-open groupTheory monoidTheory;
-open groupOrderTheory monoidOrderTheory;
+open groupTheory monoidTheory groupOrderTheory;
 
-(* val _ = load "subgroupTheory"; *)
-open submonoidTheory;
 open subgroupTheory;
 
 (* val _ = load "groupProductTheory"; *)
 open groupProductTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory";  loaded by monoidTheory *) *)
-(* (* val _ = load "helperSetTheory";  loaded by monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* val _ = load "helperListTheory"; *)
-open helperListTheory;
-
-(* val _ = load "helperFunctionTheory"; *)
-open helperFunctionTheory;
-
-(* Load dependent theories *)
-(* val _ = load "Satisfysimps"; *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Group Theory Documentation                                         *)
@@ -805,7 +784,7 @@ val subset_cross_to_preimage_cross_bij = store_thm(
    Note s1 SUBSET G /\ s2 SUBSET G         by subgroup_carrier_subset
      so FINITE s1 /\ FINITE s2             by SUBSET_FINITE, FINITE G
     ==> FINITE (s1 INTER s2)               by FINITE_INTER
-   Thus CARD t = CARD (s1 INTER s2)        by FINITE_BIJ_PROPERTY
+   Thus CARD t = CARD (s1 INTER s2)        by FINITE_BIJ
 *)
 val subset_cross_partition_property = store_thm(
   "subset_cross_partition_property",
@@ -820,7 +799,7 @@ val subset_cross_partition_property = store_thm(
   `?m. BIJ m (s1 INTER s2) t` by metis_tac[subset_cross_to_preimage_cross_bij] >>
   `FINITE s1 /\ FINITE s2` by metis_tac[subgroup_carrier_subset, SUBSET_FINITE] >>
   `FINITE (s1 INTER s2)` by rw[] >>
-  metis_tac[FINITE_BIJ_PROPERTY]);
+  metis_tac[FINITE_BIJ]);
 
 (* Theorem: h1 <= g /\ h2 <= g /\ FINITE G ==>
             let (s1 = h1.carrier) in let (s2 = h2.carrier) in let (f = (\(x, y). x * y)) in
@@ -831,7 +810,7 @@ val subset_cross_partition_property = store_thm(
    Note s1 SUBSET G /\ s2 SUBSET G                   by subgroup_carrier_subset
      so FINITE s1 /\ FINITE s2                       by SUBSET_FINITE, FINITE G
     ==> FINITE (s1 INTER s2)                         by FINITE_INTER
-   Thus CARD (preimage f s z) = CARD (s1 INTER s2)   by FINITE_BIJ_PROPERTY
+   Thus CARD (preimage f s z) = CARD (s1 INTER s2)   by FINITE_BIJ
 *)
 val subset_cross_element_preimage_card = store_thm(
   "subset_cross_element_preimage_card",
@@ -839,7 +818,7 @@ val subset_cross_element_preimage_card = store_thm(
    let (s1 = h1.carrier) in let (s2 = h2.carrier) in let (f = (\(x, y). x * y)) in
    !z. z IN (s1 o s2) ==> (CARD (preimage f (s1 CROSS s2) z) = CARD (s1 INTER s2))``,
   metis_tac[subset_cross_to_preimage_cross_bij, subgroup_carrier_subset,
-             SUBSET_FINITE, FINITE_INTER, FINITE_BIJ_PROPERTY]);
+             SUBSET_FINITE, FINITE_INTER, FINITE_BIJ]);
 
 (* Theorem: INJ (preimage (\(x, y). x * y) (s1 CROSS s2)) (s1 o s2) univ(:('a # 'a -> bool)) *)
 (* Proof:

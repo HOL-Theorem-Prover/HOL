@@ -12,32 +12,17 @@ val _ = new_theory "ringBinomial";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory;
 
-(* val _ = load "binomialTheory"; *)
-open binomialTheory;
-open dividesTheory;
-
-(* Get dependent theories local *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "groupInstancesTheory"; *) *)
-(* val _ = load "ringMapTheory"; *)
 open ringTheory;
 open groupTheory;
 open monoidTheory;
-open monoidMapTheory groupMapTheory ringMapTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
+open groupMapTheory ringMapTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Binomial Documentation                                               *)

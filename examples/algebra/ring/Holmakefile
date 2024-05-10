@@ -1,1 +1,1 @@
-INCLUDES = ../lib ../monoid ../group
+INCLUDES = ../group

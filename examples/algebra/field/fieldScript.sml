@@ -23,32 +23,18 @@ val _ = new_theory "field";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "integralDomainTheory"; *)
+open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
+     numberTheory combinatoricsTheory;
+
 open monoidTheory groupTheory ringTheory ringUnitTheory integralDomainTheory;
-open monoidOrderTheory groupOrderTheory;
+open groupOrderTheory;
 open subgroupTheory; (* for field subgroups *)
 
 (* val _ = load "ringDividesTheory"; *)
 open ringDividesTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Field Documentation                                                       *)

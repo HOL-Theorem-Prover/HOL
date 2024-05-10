@@ -7,25 +7,15 @@
 (* add all dependent libraries for script *)
 open HolKernel boolLib bossLib Parse;
 
-(* declare new theory at start *)
-val _ = new_theory "corres";
-
 (* ------------------------------------------------------------------------- *)
 
-
-
-(* val _ = load "quotientGroupTheory"; *)
-
-(* open HolKernel Parse boolLib bossLib; *)
-
-open pred_setTheory arithmeticTheory helperSetTheory;
+open pred_setTheory arithmeticTheory numberTheory combinatoricsTheory;
 
 open groupTheory subgroupTheory;
 
 open quotientGroupTheory groupMapTheory;
 
-(* val _ = new_theory "corres"; *)
-
+val _ = new_theory "corres";
 
 (* ------------------------------------------------------------------------- *)
 (* Group Correspondence Documentation                                        *)

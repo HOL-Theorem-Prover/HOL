@@ -12,19 +12,10 @@ val _ = new_theory "involute";
 
 (* ------------------------------------------------------------------------- *)
 
+open arithmeticTheory pred_setTheory gcdsetTheory numberTheory
+     combinatoricsTheory;
 
-(* open dependent theories *)
-(* arithmeticTheory -- load by default *)
-
-(* val _ = load "helperTwosqTheory"; *)
-open helperNumTheory;
-open helperSetTheory;
-open helperFunctionTheory;
 open helperTwosqTheory; (* for FUNPOW_closure *)
-
-(* arithmeticTheory -- load by default *)
-open arithmeticTheory pred_setTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Involution: Basic Documentation                                           *)

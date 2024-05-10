@@ -1,8 +1,9 @@
 (* ------------------------------------------------------------------------- *)
-(* The groups of addition and multiplication of real numbers.               *)
+(* The groups of addition and multiplication of real numbers.                *)
 (* ------------------------------------------------------------------------- *)
-open HolKernel boolLib bossLib Parse pred_setTheory
-     groupTheory monoidTheory monoidOrderTheory monoidRealTheory
+open HolKernel boolLib bossLib Parse;
+
+open pred_setTheory groupTheory monoidTheory real_algebraTheory;
 
 val _ = new_theory"groupReal";
 

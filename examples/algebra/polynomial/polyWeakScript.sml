@@ -12,39 +12,17 @@ val _ = new_theory "polyWeak";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "polynomialTheory"; *)
-open monoidTheory gbagTheory groupTheory ringTheory polynomialTheory;
-
-(* Instances for examples. *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
-(* open ringInstancesTheory fieldInstancesTheory; *)
-
 (* open dependent theories *)
-open pairTheory bagTheory pred_setTheory listTheory arithmeticTheory;
-(* (* val _ = load "dividesTheory"; *) *)
-(* (* val _ = load "gcdTheory"; *) *)
-(* open dividesTheory gcdTheory; *)
+open pairTheory bagTheory pred_setTheory listTheory arithmeticTheory
+     numberTheory rich_listTheory combinatoricsTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperListTheory;
-open rich_listTheory; (* for MEM_LAST *)
+open monoidTheory groupTheory ringTheory polynomialTheory;
 
-(* val _ = load "sublistTheory"; *)
-open sublistTheory; (* for sublist_every *)
-
+(* Overload sublist by infix operator *)
+val _ = temp_overload_on ("<=", ``sublist``);
 
 (* ------------------------------------------------------------------------- *)
 (* Weak Polynomials Documentation                                            *)
@@ -1383,7 +1361,7 @@ val weak_cmult_snoc = store_thm(
 (* Proof:
      c o p
    = MAP (\x. c * x) p                          by weak_cmult_map
-   = MAP (\x. c * x) (SNOC (LAST p) (FRONT p))  by SNOC_LAST_FRONT
+   = MAP (\x. c * x) (SNOC (LAST p) (FRONT p))  by SNOC_LAST_FRONT'
    = SNOC (\x. c * x) (LAST p) (MAP (\x. c * x) (FRONT p))
                                                 by MAP_SNOC
    = SNOC (c * LAST p) (c o FRONT p)            by weak_cmult_map
@@ -1397,7 +1375,7 @@ val weak_cmult_front_last = store_thm(
   ntac 4 strip_tac >>
   qabbrev_tac `f = \(x:'a). c * x` >>
   `c o p = MAP f p` by rw[weak_cmult_map, Abbr`f`] >>
-  `_ = MAP f (SNOC (LAST p) (FRONT p))` by metis_tac[SNOC_LAST_FRONT, poly_zero] >>
+  `_ = MAP f (SNOC (LAST p) (FRONT p))` by metis_tac[SNOC_LAST_FRONT', poly_zero] >>
   `_ = SNOC (f (LAST p)) (MAP f (FRONT p))` by rw[MAP_SNOC] >>
   `_ = SNOC (c * LAST p) (c o FRONT p)` by rw[weak_cmult_map, weak_front_last, Abbr`f`] >>
   rw[]);
@@ -2541,7 +2519,7 @@ Proof
   Induct
   \\ rw[] \\ fs[]
   \\ simp[EL_weak_add]
-  \\ simp[helperSetTheory.COUNT_SUC_BY_SUC]
+  \\ simp[COUNT_SUC_BY_SUC]
   \\ simp[Once CROSS_INSERT_LEFT]
   \\ dep_rewrite.DEP_REWRITE_TAC[BAG_OF_SET_DISJOINT_UNION]
   \\ conj_tac >- simp[IN_DISJOINT]
@@ -4237,7 +4215,7 @@ QED
    Note p <> []                         by poly_zero
    If part: lead p = #0 ==> chop (FRONT p) = chop p
       chop p
-    = chop (SNOC (LAST p) (FRONT p))    by SNOC_LAST_FRONT, p <> []
+    = chop (SNOC (LAST p) (FRONT p))    by SNOC_LAST_FRONT', p <> []
     = chop (SNOC (lead p) (FRONT p))    by poly_lead_alt], p <> |0|
     = chop (SNOC #0 (FRONT p))          by given
     = chop (FRONT p)                    by poly_chop_alt
@@ -4259,7 +4237,7 @@ val poly_chop_front = store_thm(
   rpt strip_tac >>
   `p <> []` by metis_tac[poly_zero] >>
   rw_tac std_ss[EQ_IMP_THM] >| [
-    `p = SNOC (LAST p) (FRONT p)` by rw[SNOC_LAST_FRONT] >>
+    `p = SNOC (LAST p) (FRONT p)` by rw[SNOC_LAST_FRONT'] >>
     `LAST p = lead p` by rw[GSYM poly_lead_alt] >>
     metis_tac[poly_chop_alt],
     spose_not_then strip_assume_tac >>

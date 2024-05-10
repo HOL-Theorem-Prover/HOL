@@ -12,27 +12,11 @@ val _ = new_theory "computePoly";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
-
-(* Get dependent theories local *)
-
-(* open dependent theories *)
-(* val _ = load "fieldInstancesTheory"; *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open pred_setTheory listTheory arithmeticTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
+open pred_setTheory listTheory rich_listTheory arithmeticTheory numberTheory
+     combinatoricsTheory dividesTheory gcdTheory logrootTheory whileTheory;
 
 (* val _ = load "polyFieldModuloTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
@@ -46,13 +30,10 @@ open ringBinomialTheory;
 
 (* val _ = load "computeOrderTheory"; *)
 open computeBasicTheory computeOrderTheory;
-open logrootTheory logPowerTheory;
 
-(* val _ = load "whileTheory"; *)
-open whileTheory;
-
-open rich_listTheory; (* for FRONT and LAST *)
-
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Computations Documentation                                     *)

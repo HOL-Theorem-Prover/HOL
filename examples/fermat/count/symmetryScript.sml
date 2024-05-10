@@ -12,27 +12,21 @@ val _ = new_theory "symmetry";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib; (* for stripDup *)
 
-(* open dependent theories *)
-(* val _ = load "mapCountTheory"; *)
-open pred_setTheory arithmeticTheory;
-open helperCountTheory;
-open helperSetTheory;
+open pred_setTheory arithmeticTheory gcdsetTheory numberTheory
+     combinatoricsTheory;
 
 open mapCountTheory; (* for on_def *)
-open combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "fieldMapTheory"; *)
 open monoidTheory groupTheory;
 open ringTheory fieldTheory;
-open submonoidTheory subgroupTheory;
-open monoidMapTheory groupMapTheory;
+open subgroupTheory;
+open groupMapTheory;
 open ringMapTheory fieldMapTheory;
 
+val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
 
 (* ------------------------------------------------------------------------- *)
 (* Symmetry Group Documentation                                              *)

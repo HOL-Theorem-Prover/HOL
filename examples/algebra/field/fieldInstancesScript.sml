@@ -16,37 +16,21 @@ GF(p) -- Galois Field of order prime p.
 (* add all dependent libraries for script *)
 open HolKernel boolLib bossLib Parse;
 
+open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory
+     combinatoricsTheory;
+
 (* declare new theory at start *)
 val _ = new_theory "fieldInstances";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "groupTheory"; *) *)
-(* val _ = load "fieldMapTheory"; *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open groupOrderTheory monoidOrderTheory;
-
-open monoidMapTheory groupMapTheory ringMapTheory fieldMapTheory;
-
-(* val _ = load "ringInstancesTheory"; *)
-(* (* val _ = load "groupInstancesTheory"; -- in ringInstancesTheory *) *)
-open monoidInstancesTheory groupInstancesTheory ringInstancesTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-
+open groupOrderTheory;
+open groupMapTheory ringMapTheory fieldMapTheory;
+open groupInstancesTheory ringInstancesTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Field Instances Documentation                                              *)

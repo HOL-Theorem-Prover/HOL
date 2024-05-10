@@ -12,25 +12,20 @@ val _ = new_theory "polyIrreducible";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* val _ = load "fieldTheory"; (* This takes |/ = (r.prod excluding #0).inv *) *)
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory;
+
 open monoidTheory groupTheory ringTheory integralDomainTheory fieldTheory;
 
 (* (* val _ = load "ringIdealTheory"; *) *)
 (* val _ = load "fieldIdealTheory"; *)
 open ringIdealTheory fieldIdealTheory;
 
-(* (* val _ = load "groupOrderTheory"; *) *)
-open monoidOrderTheory groupOrderTheory;
+open groupOrderTheory;
 
 (* Get polynomial theory of Ring *)
 (* (* val _ = load "polyWeakTheory"; *) *)
@@ -49,19 +44,6 @@ open polyRootTheory;
 
 (* val _ = load "polyDividesTheory"; *)
 open ringDividesTheory polyDividesTheory;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Irreducible Polynomials Documentation                                     *)

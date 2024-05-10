@@ -7,33 +7,20 @@
 (* add all dependent libraries for script *)
 open HolKernel boolLib bossLib Parse;
 
+open arithmeticTheory pred_setTheory pairTheory listTheory rich_listTheory
+     listRangeTheory dividesTheory gcdTheory logrootTheory numberTheory
+     combinatoricsTheory primeTheory;
+
+open helperTwosqTheory windmillTheory;
+
 (* declare new theory at start *)
 val _ = new_theory "quarity";
 
 (* ------------------------------------------------------------------------- *)
 
-
-(* open dependent theories *)
-(* arithmeticTheory -- load by default *)
-(* val _ = load "helperTwosqTheory"; *)
-open helperTwosqTheory;
-open helperNumTheory;
-open helperSetTheory;
-open helperListTheory;
-open helperFunctionTheory;
-open arithmeticTheory pred_setTheory;
-open listTheory rich_listTheory listRangeTheory;
-(* val _ = load "dividesTheory"; *)
-open dividesTheory;
-
-(* val _ = load "windmillTheory"; *)
-open windmillTheory;
-
-open pairTheory; (* for FORALL_PROD, PAIR_EQ *)
-
-(* val _ = load "GaussTheory"; *)
-open logrootTheory logPowerTheory GaussTheory EulerTheory; (* for SQRT, divisors_upper_bound *)
-
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Quarity Documentation                                                     *)

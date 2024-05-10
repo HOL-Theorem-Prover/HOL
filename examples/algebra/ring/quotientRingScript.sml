@@ -24,32 +24,18 @@ val _ = new_theory "quotientRing";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory;
+open arithmeticTheory dividesTheory pred_setTheory numberTheory
+     combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "ringIdealTheory"; *)
 open monoidTheory groupTheory ringTheory ringIdealTheory;
-open monoidMapTheory groupMapTheory ringMapTheory;
+open groupMapTheory ringMapTheory;
 
-(* (* val _ = load "subgroupTheory"; *) *)
-(* open subgroupTheory; *)
-(* val _ = load "quotientGroupTheory"; *)
 open subgroupTheory;
 open quotientGroupTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperSetTheory;
-
-(* Get arithmetic for Ring characteristics *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-open arithmeticTheory dividesTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Ring Documentation                                               *)

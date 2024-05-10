@@ -12,24 +12,13 @@ val _ = new_theory "iterateCompute";
 
 (* ------------------------------------------------------------------------- *)
 
-
-(* open dependent theories *)
-open helperFunctionTheory;
-open helperSetTheory;
-open helperNumTheory;
-
-(* arithmeticTheory -- load by default *)
-open arithmeticTheory pred_setTheory;
-open dividesTheory; (* for divides_def *)
+open arithmeticTheory pred_setTheory dividesTheory numberTheory listTheory
+     rich_listTheory listRangeTheory combinatoricsTheory whileTheory;
 
 open iterationTheory;
-open listTheory rich_listTheory listRangeTheory;
-open helperListTheory; (* for listRangeINC_SNOC *)
 
 (* val _ = load "helperTwosqTheory"; *)
 open helperTwosqTheory; (* for WHILE_RULE_PRE_POST *)
-open whileTheory; (* for WHILE definition *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Iteration Period Computation Documentation                                *)
@@ -651,27 +640,32 @@ Proof
   irule WHILE_RULE_PRE_POST >>
   qexists_tac `\x. MEM x ls /\ findi x ls <= n` >>
   qexists_tac `\x. 1 + c - findi x ls` >>
-  rw[] >| [
+  rw[] >| (* 5 subgoals *)
+  [ (* goal 1 (of 5) *)
     `a = HD ls` by rw[iterate_trace_head, Abbr`ls`] >>
     metis_tac[HEAD_MEM, iterate_trace_non_nil],
+    (* goal 2 (of 5) *)
     `a = iterate a b 0` by simp[] >>
     `findi a ls = 0` by metis_tac[iterate_trace_element_idx, DECIDE``0 <= c``] >>
     decide_tac,
+    (* goal 3 (of 5) *)
     qabbrev_tac `p = iterate_period b a` >>
     qabbrev_tac `y = iterate a b c` >>
-    `findi y ls = c` by metis_tac[iterate_trace_element_idx, DECIDE``c <= c``] >>
+    `findi y ls = c` by metis_tac[iterate_trace_element_idx, DECIDE``c <= (c :num)``] >>
     `x <> y` by metis_tac[NOT_LESS] >>
     `findi (b x) ls = 1 + findi x ls` by metis_tac[iterate_trace_index] >>
     decide_tac,
+    (* goal 4 (of 5) *)
     qabbrev_tac `p = iterate_period b a` >>
     `?j. j <= c /\ (x = iterate a b j)` by metis_tac[iterate_trace_member_iff] >>
     `findi x ls = j` by metis_tac[iterate_trace_element_idx] >>
     `~(j < n)` by metis_tac[] >>
     `j = n` by decide_tac >>
     fs[],
+    (* goal 5 (of 5) *)
     qabbrev_tac `p = iterate_period b a` >>
     qabbrev_tac `y = iterate a b c` >>
-    `findi y ls = c` by metis_tac[iterate_trace_element_idx, DECIDE``c <= c``] >>
+    `findi y ls = c` by metis_tac[iterate_trace_element_idx, DECIDE``c <= (c :num)``] >>
     simp[whileTheory.HOARE_SPEC_DEF] >>
     rpt strip_tac >| [
       `x <> y` by metis_tac[NOT_LESS] >>
@@ -891,8 +885,6 @@ Proof
   metis_tac[LESS_IMP_LESS_OR_EQ]) >>
   fs[iterate_while_thm]
 QED
-
-
 
 (* ------------------------------------------------------------------------- *)
 

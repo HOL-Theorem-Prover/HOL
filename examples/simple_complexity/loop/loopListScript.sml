@@ -12,8 +12,6 @@ val _ = new_theory "loopList";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -25,14 +23,11 @@ open loopTheory;
 open bitsizeTheory;
 
 (* open dependent theories *)
-open arithmeticTheory dividesTheory;
-open helperNumTheory helperListTheory helperFunctionTheory;
-open listTheory rich_listTheory;
-open listRangeTheory;
+open arithmeticTheory dividesTheory numberTheory combinatoricsTheory listTheory
+     rich_listTheory listRangeTheory;
 
-(* val _ = load "sublistTheory"; *)
-open sublistTheory; (* for sublist_drop *)
-
+(* Overload sublist by infix operator *)
+val _ = temp_overload_on ("<=", ``sublist``);
 
 (* ------------------------------------------------------------------------- *)
 (* Loop Recurrence with List argument Documentation                          *)

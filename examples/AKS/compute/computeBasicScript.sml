@@ -12,38 +12,18 @@ val _ = new_theory "computeBasic";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
-
-(* Get dependent theories local *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory"; -- in ringTheory *) *)
-(* (* val _ = load "helperListTheory"; -- in polyRingTheory *) *)
-(* val _ = load "logPowerTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-open pred_setTheory listTheory arithmeticTheory;
-
-open logPowerTheory; (* for LOG2, SQRT, and Perfect Power, Power Free *)
-open logrootTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* val _ = load "GaussTheory"; *)
-open EulerTheory;
-open GaussTheory;
+open pred_setTheory listTheory arithmeticTheory logrootTheory dividesTheory
+     gcdTheory gcdsetTheory numberTheory combinatoricsTheory primeTheory;
 
 (* val _ = load "whileTheory"; *)
 open whileTheory;
 
+val _ = temp_overload_on("SQ", ``\n. n * n``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Computations Documentation                                          *)

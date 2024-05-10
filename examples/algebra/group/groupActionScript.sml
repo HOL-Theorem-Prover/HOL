@@ -12,30 +12,15 @@ val _ = new_theory "groupAction";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
-
-(* Get dependent theories local *)
-(* val _ = load "groupOrderTheory"; *)
 open monoidTheory groupTheory;
 open subgroupTheory groupOrderTheory;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
+open pred_setTheory listTheory arithmeticTheory numberTheory dividesTheory
+     gcdTheory combinatoricsTheory;
 
 (*===========================================================================*)
 

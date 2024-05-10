@@ -12,47 +12,26 @@ val _ = new_theory "polyModuloRing";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "ringUnitTheory"; *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory;
+
 open monoidTheory groupTheory ringTheory ringUnitTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-(* val _ = load "helperFunctionTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "ringIdealTheory"; *) *)
-(* val _ = load "quotientRingTheory"; *)
 open ringIdealTheory quotientRingTheory;
 open subgroupTheory;
 open quotientGroupTheory;
 
-open monoidMapTheory groupMapTheory ringMapTheory;
+open groupMapTheory ringMapTheory;
 
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* val _ = load "polyDivisionTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyDivisionTheory;
 
 (* val _ = load "polyFieldTheory"; *)
 open polyFieldTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Quotient Ring by a Modulus Documentation                       *)
@@ -1033,7 +1012,7 @@ val poly_mod_ring_carrier_alt = store_thm(
        t = {p | poly p /\ ((p = []) \/ deg p < deg z)}.
    Note BIJ chop s t      by weak_poly_poly_bij
     Now FINITE s          by weak_poly_finite
-     so FINITE t          by FINITE_BIJ_PROPERTY
+     so FINITE t          by FINITE_BIJ
      or FINITE Rz         by poly_mod_ring_carrier_alt
 *)
 val poly_mod_ring_finite = store_thm(
@@ -1041,13 +1020,13 @@ val poly_mod_ring_finite = store_thm(
   ``!r:'a ring z:'a poly. FiniteRing r ==> FINITE Rz``,
   rw[FiniteRing_def] >>
   `#0 IN R` by rw[] >>
-  metis_tac[weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ_PROPERTY, poly_mod_ring_carrier_alt]);
+  metis_tac[weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ, poly_mod_ring_carrier_alt]);
 
 (* Theorem: FiniteRing r ==> CARD Rz = (CARD R) ** (deg z)  *)
 (* Proof:
      CARD Rz
    = CARD { p | poly p /\ ((p = []) \/ deg p < deg z) }    by poly_mod_ring_carrier_alt
-   = CARD { p | weak p /\ (LENGTH p = deg z) }             by weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ_PROPERTY
+   = CARD { p | weak p /\ (LENGTH p = deg z) }             by weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ
    = CARD R ** (deg z)                                     by weak_poly_card
 *)
 val poly_mod_ring_card = store_thm(
@@ -1055,7 +1034,7 @@ val poly_mod_ring_card = store_thm(
   ``!r:'a ring z. FiniteRing r ==> (CARD Rz = (CARD R) ** (deg z))``,
   rw[FiniteRing_def] >>
   `#0 IN R` by rw[] >>
-  metis_tac[poly_mod_ring_carrier_alt, weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ_PROPERTY, weak_poly_card]);
+  metis_tac[poly_mod_ring_carrier_alt, weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ, weak_poly_card]);
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Modulo Theorems                                                *)

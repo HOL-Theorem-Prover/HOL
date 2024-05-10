@@ -116,17 +116,11 @@ val _ = new_theory "pattern";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* open dependent theories *)
-(* val _ = load "cycleTheory"; *)
-open arithmeticTheory pred_setTheory listTheory;
-open helperNumTheory helperSetTheory;
-open helperListTheory; (* for LENGTH_NON_NIL *)
+open arithmeticTheory pred_setTheory listTheory numberTheory dividesTheory
+     combinatoricsTheory;
 
 open cycleTheory;
-
-open dividesTheory; (* for prime_def, NOT_PRIME_0 *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Pattern Theory Documentation                                              *)

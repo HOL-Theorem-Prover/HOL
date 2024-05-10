@@ -2,15 +2,9 @@
 (* Fundamental theorem of arithmetic for num.                                *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib simpLib BasicProvers metisLib
-     bagTheory dividesTheory arithmeticTheory;
+open HolKernel Parse boolLib bossLib;
 
-(* Interactive
-quietdec := true;
-app load ["dividesTheory", "gcdTheory", "bagTheory"];
-open dividesTheory bagTheory arithmeticTheory;
-quietdec := false;
-*)
+open simpLib BasicProvers metisLib bagTheory dividesTheory arithmeticTheory;
 
 val _ = new_theory "primeFactor";
 
