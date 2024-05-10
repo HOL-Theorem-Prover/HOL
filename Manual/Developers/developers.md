@@ -37,6 +37,8 @@ As *per* [the standard installation instructions](http://hol-theorem-prover.org/
     The building of the theory graph can be slow however, and this *does* happen with every invocation of `build` by default.
     To avoid this use `build`’s `--nograph` option.
 
+    When updating the existing HOL via git, calls to `build` may encounter failures if files are relocated to different directories, preventing rebuilding on the previous build. In such instances, please ensure to execute `build cleanall` beforehand.
+
 # Configuration
 
 The configuration process is responsible for
