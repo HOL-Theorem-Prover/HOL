@@ -1,0 +1,25 @@
+\DOC ANTS_TAC
+
+\TYPE {ANTS_TAC : tactic}
+
+\SYNOPSIS
+Split off antecedent of antecedent of goal as a new subgoal.
+
+\DESCRIBE
+{
+   A ?- (p ==> q) ==> r
+  ======================= ANTS_TAC
+   A ?- p   A ?- q ==> r
+}
+
+\FAILURE
+Fails unless the goal is of the specified form.
+
+\USES
+Convenient for focusing on assumptions of an implicational theorem that one
+wants to use.
+
+\SEEALSO
+MP_TAC.
+
+\ENDDOC
