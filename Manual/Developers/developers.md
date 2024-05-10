@@ -122,6 +122,8 @@ The details of the required format for sequence files is spelled out in a commen
 
 Past the initial prefix of this process, most directories in the build sequence are actually listed in the `Holmakefile` in `src/parallel_builds/core`.
 This arrangement allows parallel processing of lots of directories at once.
+The sequence file `upto-parallel` gives the sequence of build targets up this point, so is a reasonable argument to `--seq` for tests of the core system.
+
 
 # Things in `bin`
 
