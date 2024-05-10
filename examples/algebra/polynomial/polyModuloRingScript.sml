@@ -19,19 +19,15 @@ open jcLib;
 open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
      dividesTheory gcdTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory;
-
-open ringIdealTheory quotientRingTheory;
-open subgroupTheory;
-open quotientGroupTheory;
-
-open groupMapTheory ringMapTheory;
+open monoidTheory groupTheory ringTheory;
 
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyDivisionTheory;
 
-(* val _ = load "polyFieldTheory"; *)
 open polyFieldTheory;
+
+val _ = intLib.deprecate_int ();
+val _ = hide "Z";
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Quotient Ring by a Modulus Documentation                       *)
@@ -1311,8 +1307,6 @@ val poly_field_mod_ring_exp = store_thm("poly_field_mod_ring_exp",
   ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
     !p. p IN Rz ==> !n. p **z n = (p ** n) % z``,
   rw[poly_mod_ring_exp]);
-
-
 
 (* ------------------------------------------------------------------------- *)
 

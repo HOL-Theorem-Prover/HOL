@@ -20,13 +20,9 @@ open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory
 
 open polyFieldModuloTheory;
 
-(* (* val _ = load "fieldTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open groupOrderTheory;
-open groupMapTheory ringMapTheory fieldMapTheory;
 
-(* val _ = load "fieldInstancesTheory"; *)
-open groupInstancesTheory ringInstancesTheory;
+open fieldMapTheory;
 open fieldInstancesTheory; (* for GF_property, in prime field homomorphism *)
 
 (* Note:

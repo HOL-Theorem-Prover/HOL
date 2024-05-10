@@ -17,10 +17,8 @@ open jcLib;
 
 open pred_setTheory listTheory arithmeticTheory pairTheory optionTheory;
 
-(* val _ = load "errorStateMonadTheory"; *)
 open errorStateMonadTheory;
 
-(* val _ = load "monadsyntax"; *)
 open monadsyntax;
 
 val _ = set_grammar_ancestry ["pair", "option", "arithmetic"];

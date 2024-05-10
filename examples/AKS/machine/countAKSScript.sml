@@ -19,8 +19,9 @@ open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
      rich_listTheory listRangeTheory numberTheory combinatoricsTheory
      logrootTheory pairTheory optionTheory primeTheory;
 
+open ringTheory;
+
 (* Get dependent theories local *)
-(* val _ = load "countParamTheory"; *)
 open countMonadTheory countMacroTheory;
 open countModuloTheory countOrderTheory;
 open countParamTheory;
@@ -37,13 +38,9 @@ open loopDivideTheory loopListTheory;
 
 open monadsyntax;
 
-(* val _ = load "ringInstancesTheory"; *)
-open ringInstancesTheory; (* for ZN order *)
-
 open computeParamTheory computeAKSTheory;
 open computeBasicTheory; (* for power_free_check_eqn *)
 
-(* (* val _ = load "computePolyTheory"; *) *)
 open computePolyTheory; (* for unity_mod_monomial *)
 (* Try: import computeRing rather than computePoly *)
 
@@ -52,9 +49,11 @@ open polynomialTheory polyWeakTheory;
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
+val _ = intLib.deprecate_int ();
+
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* AKS computations in monadic style Documentation                           *)

@@ -26,7 +26,6 @@ open loopDivideTheory loopMultiplyTheory loopListTheory;
 
 open countMonadTheory;
 
-(* val _ = load "monadsyntax"; *)
 open monadsyntax;
 
 val _ = monadsyntax.enable_monadsyntax();

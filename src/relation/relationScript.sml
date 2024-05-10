@@ -183,6 +183,11 @@ Proof REWRITE_TAC [transitive_def] THEN MESON_TAC [RTC_RTC]
 QED
 Theorem transitive_RTC = RTC_TRANSITIVE
 
+val RTC_TRANS = store_thm(
+  "RTC_TRANS",
+  ``R^* x y /\ R^* y z ==> R^* x z``,
+  METIS_TAC[RTC_TRANSITIVE, transitive_def]);
+
 Theorem RTC_REFLEXIVE[simp]: !R:'a->'a->bool. reflexive (RTC R)
 Proof MESON_TAC [reflexive_def, RTC_RULES]
 QED

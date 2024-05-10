@@ -28,9 +28,7 @@ open AKSshiftTheory;
 open computeRingTheory;
 open computeParamTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory;
-
-open fieldTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* Get polynomial theory of Ring *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory
@@ -44,14 +42,6 @@ open polyFieldModuloTheory;
 open polyIrreducibleTheory;
 open polyCyclicTheory;
 
-open subgroupTheory;
-open groupOrderTheory;
-
-open ringBinomialTheory;
-open ringDividesTheory;
-
-open groupInstancesTheory;
-open ringInstancesTheory;
 open fieldInstancesTheory;
 
 open ffBasicTheory;
@@ -60,9 +50,11 @@ open ffPolyTheory;
 open ffUnityTheory;
 open ffExistTheory;
 
+val _ = intLib.deprecate_int ();
+
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Main Theorem Documentation                                            *)

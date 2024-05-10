@@ -20,17 +20,9 @@ open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
      dividesTheory gcdTheory;
 
 (* Get dependet theories local *)
-open monoidTheory groupTheory ringTheory ringUnitTheory;
-
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* val _ = load "fieldTheory"; *)
-open integralDomainTheory;
-open fieldTheory;
-
-open groupOrderTheory groupCyclicTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* Get polynomial theory of Ring *)
-(* val _ = load "polyIrreducibleTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyDivisionTheory;
 open polyMonicTheory;
@@ -38,6 +30,8 @@ open polyEvalTheory;
 open polyRootTheory;
 open polyDividesTheory;
 open polyIrreducibleTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclic Polynomial Documentation                                           *)

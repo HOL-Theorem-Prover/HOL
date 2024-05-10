@@ -19,14 +19,14 @@ open jcLib;
 open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
      rich_listTheory dividesTheory gcdTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyDivisionTheory; (* for ulead, pmonic and poly_mod theorems. *)
 
-(* val _ = load "polyFieldTheory"; *)
 open polyFieldTheory;
-open fieldTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Monic Polynomial Documentation                                            *)

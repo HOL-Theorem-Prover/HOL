@@ -24,7 +24,6 @@ open countBasicTheory countPowerTheory;
 open bitsizeTheory complexityTheory;
 open loopIncreaseTheory;
 
-(* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
 
 val _ = monadsyntax.enable_monadsyntax();

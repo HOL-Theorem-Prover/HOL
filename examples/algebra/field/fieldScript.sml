@@ -29,12 +29,9 @@ open jcLib;
 open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
      numberTheory combinatoricsTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory integralDomainTheory;
-open groupOrderTheory;
-open subgroupTheory; (* for field subgroups *)
+open monoidTheory groupTheory ringTheory;
 
-(* val _ = load "ringDividesTheory"; *)
-open ringDividesTheory;
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Field Documentation                                                       *)
@@ -1707,7 +1704,7 @@ local
 val fir = field_is_ring |> SPEC_ALL |> UNDISCH
 in
 fun lift_ring_unit_thm_with_goal rsuffix fsuffix goal = let
-   val rth = DB.fetch "ringUnit" ("ring_" ^ rsuffix)
+   val rth = DB.fetch "ring" ("ring_" ^ rsuffix)
    val rth' = rth |> SPEC_ALL |> UNDISCH |> PROVE_HYP fir |> DISCH_ALL |> GEN_ALL
 in
    store_thm("field_" ^ fsuffix, goal, metis_tac[rth', field_nonzero_unit])

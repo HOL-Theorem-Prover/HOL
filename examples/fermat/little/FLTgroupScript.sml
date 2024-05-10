@@ -41,7 +41,6 @@ open arithmeticTheory pred_setTheory dividesTheory numberTheory
      combinatoricsTheory;
 
 open groupTheory; (* for FiniteGroup_def *)
-open groupOrderTheory; (* for finite_group_Fermat *)
 
 val _ = new_theory "FLTgroup";
 
@@ -86,49 +85,7 @@ val _ = new_theory "FLTgroup";
 
 (* Part 1: Basic ----------------------------------------------------------- *)
 
-(* ------------------------------------------------------------------------- *)
-(* Establish the existence of multiplicative inverse when p is prime.        *)
-(* ------------------------------------------------------------------------- *)
-
 (* Part 2: General Theory -------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* Group-theoretic Proof applied to Z^{*}[p].                                *)
-(* ------------------------------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* Residue -- a close-relative of COUNT                                      *)
-(* ------------------------------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* The Group Z^{*}[p] = Multiplication Modulo p, for prime p.                *)
-(* ------------------------------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* The Group of Multiplication modulo p                                      *)
-(* ------------------------------------------------------------------------- *)
-
-val Zstar_def = groupInstancesTheory.Zstar_def;
-(* |- !p. Zstar p = <|carrier := residue p; id := 1; op := (\i j. (i * j) MOD p)|> *)
-
-val Zstar_element = groupInstancesTheory.Zstar_element;
-(* |- !p x. x IN (Zstar p).carrier <=> 0 < x /\ x < 1 *)
-
-val Zstar_id = groupInstancesTheory.Zstar_id;
-(* |- !p. (Zstar p).id = 1 *)
-
-val Zstar_finite = groupInstancesTheory.Zstar_finite;
-(* |- !p. FINITE (Zstar p).carrier *)
-
-val Zstar_card = groupInstancesTheory.Zstar_card;
-(* |- !p. 0 < p ==> CARD (Zstar p).carrier = p - 1 *)
-
-val Zstar_group = groupInstancesTheory.Zstar_group;
-(* |- !p. prime p ==> Group (Zstar p) *)
-
-val Zstar_exp = groupInstancesTheory.Zstar_exp;
-(* |- !p a. prime p /\ a IN (Zstar p).carrier ==>
-        !n. (Zstar p).exp a n = a ** n MOD p *)
 
 (* Part 3: Actual Proof ---------------------------------------------------- *)
 

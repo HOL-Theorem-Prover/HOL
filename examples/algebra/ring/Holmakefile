@@ -1,1 +1,16 @@
-INCLUDES = ../group
+INCLUDES = $(HOLDIR)/src/algebra/construction $(HOLDIR)/src/pred_set/src/more_theories
+
+ifdef POLY
+HOLHEAP = heap
+OBJS = ringTheory cardinalTheory
+EXTRA_CLEANS = $(HOLHEAP)
+
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(HOLDIR)/bin/hol.state
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ $(OBJS)
+endif
+
+all: $(DEFAULT_TARGETS)
+
+.PHONY: all

@@ -1,2 +1,2 @@
-ALGEBRA_INCLUDES = group ring field polynomial finitefield
+ALGEBRA_INCLUDES = field polynomial finitefield
 INCLUDES = $(patsubst %,../../algebra/%,$(ALGEBRA_INCLUDES)) 

@@ -20,7 +20,6 @@ val _ = new_theory "AKSintro";
 open jcLib;
 
 (* Get dependent theories *)
-(* val _ = load "ffExistTheory"; *)
 open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;
@@ -31,28 +30,20 @@ open ffExistTheory;
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
 open polyBinomialTheory polyEvalTheory;
 
-(* (* val _ = load "polyDividesTheory"; *) *)
 open polyDividesTheory;
 open polyMonicTheory;
-
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polyFieldTheory;
 open polyFieldModuloTheory;
 open polyRingModuloTheory;
 open polyMapTheory;
 open polyIrreducibleTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory;
+open monoidTheory groupTheory ringTheory;
 open fieldTheory fieldMapTheory;
 
-(* (* val _ = load "ringBinomialTheory"; *) *)
-open ringBinomialTheory;
-
-(* (* val _ = load "ringInstancesTheory"; *) *)
-open ringInstancesTheory;
-
-(* val _ = load "computeRingTheory"; *)
 open computeRingTheory; (* for overloads on x^, x+^, x^+, x^- *)
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Introspective Relation for AKS Theorem Documentation                      *)

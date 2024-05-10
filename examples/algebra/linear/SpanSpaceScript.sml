@@ -18,8 +18,6 @@ open jcLib;
 (* open dependent theories *)
 open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "VectorSpaceTheory"; *)
 open VectorSpaceTheory;
 open monoidTheory groupTheory fieldTheory;
 

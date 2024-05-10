@@ -30,11 +30,7 @@ open AKSshiftTheory;
 open countAKSTheory; (* for aks0_eq_aks *)
 
 open fieldInstancesTheory;
-open ringInstancesTheory;
-open groupInstancesTheory; (* for Estar_group *)
-open monoidTheory; (* for Monoid_def *)
-open subgroupTheory; (* for Subgroup_def *)
-open groupOrderTheory; (* for Generated_subset_group *)
+open monoidTheory groupTheory ringTheory;
 
 open polyRingModuloTheory; (* for poly_mod_ring_has_monomials *)
 open polyFieldModuloTheory; (* for poly_mod_prod_group *)
@@ -47,9 +43,11 @@ open computeRingTheory;
 open computeParamTheory;
 open computeAKSTheory;
 
+val _ = intLib.deprecate_int ();
+
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Clean Presentation Documentation                                      *)

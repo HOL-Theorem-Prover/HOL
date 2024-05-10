@@ -25,17 +25,8 @@ open ffMasterTheory;
 
 (* Open theories in order *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open groupOrderTheory;
-open subgroupTheory;
 
-open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
-open groupCyclicTheory;
-
-(* (* val _ = load "ringBinomialTheory"; *) *)
-open ringBinomialTheory;
-open ringDividesTheory;
-open ringIdealTheory;
-open ringUnitTheory;
+open fieldInstancesTheory;
 
 open fieldOrderTheory;
 open fieldMapTheory;
@@ -43,7 +34,6 @@ open fieldMapTheory;
 (* Get polynomial theory of Ring *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
 
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
@@ -53,15 +43,15 @@ open polyModuloRingTheory;
 open polyEvalTheory;
 open polyRootTheory;
 
-(* (* val _ = load "polyGCDTheory"; *) *)
 open polyDividesTheory;
 open polyMonicTheory;
 open polyProductTheory;
 open polyIrreducibleTheory;
 open polyGCDTheory;
 
-(* val _ = load "polyCyclicTheory"; *)
 open polyCyclicTheory; (* for poly_unity_irreducible_factor_exists *)
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Unity Polynomial Documentation                               *)

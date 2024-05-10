@@ -25,7 +25,6 @@ open bitsizeTheory complexityTheory;
 open loopIncreaseTheory loopDecreaseTheory;
 open loopDivideTheory loopMultiplyTheory;
 
-(* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
 
 val _ = monadsyntax.enable_monadsyntax();

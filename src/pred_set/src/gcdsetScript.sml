@@ -1,10 +1,14 @@
 open HolKernel Parse boolLib BasicProvers;
 
-open arithmeticTheory dividesTheory pred_setTheory gcdTheory simpLib metisLib;
+open arithmeticTheory dividesTheory pred_setTheory gcdTheory simpLib metisLib
+     TotalDefn;
 
-local open TotalDefn numSimps; in end;
+local open numSimps; in end;
 
 val ARITH_ss = numSimps.ARITH_ss;
+val arith_ss = srw_ss() ++ ARITH_ss;
+val std_ss = arith_ss;
+
 val zDefine =
    Lib.with_flag (computeLib.auto_import_definitions, false) TotalDefn.Define;
 
@@ -478,5 +482,377 @@ val coprimes_max = store_thm(
   `!x. x IN s ==> x < n` by rw[coprimes_element_less, Abbr`s`] >>
   `!x. x < n ==> x <= (n - 1)` by decide_tac >>
   metis_tac[MAX_SET_TEST]);
+
+(* ------------------------------------------------------------------------- *)
+(* Set GCD as Big Operator                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+(* Big Operators:
+SUM_IMAGE_DEF   |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0: thm
+PROD_IMAGE_DEF  |- !f s. PI f s = ITSET (\e acc. f e * acc) s 1: thm
+*)
+
+(* Define big_gcd for a set *)
+val big_gcd_def = Define`
+    big_gcd s = ITSET gcd s 0
+`;
+
+(* Theorem: big_gcd {} = 0 *)
+(* Proof:
+     big_gcd {}
+   = ITSET gcd {} 0    by big_gcd_def
+   = 0                 by ITSET_EMPTY
+*)
+val big_gcd_empty = store_thm(
+  "big_gcd_empty",
+  ``big_gcd {} = 0``,
+  rw[big_gcd_def, ITSET_EMPTY]);
+
+(* Theorem: big_gcd {x} = x *)
+(* Proof:
+     big_gcd {x}
+   = ITSET gcd {x} 0    by big_gcd_def
+   = gcd x 0            by ITSET_SING
+   = x                  by GCD_0R
+*)
+val big_gcd_sing = store_thm(
+  "big_gcd_sing",
+  ``!x. big_gcd {x} = x``,
+  rw[big_gcd_def, ITSET_SING]);
+
+(* Theorem: FINITE s /\ x NOTIN s ==> (big_gcd (x INSERT s) = gcd x (big_gcd s)) *)
+(* Proof:
+   Note big_gcd s = ITSET gcd s 0                   by big_lcm_def
+   Since !x y z. gcd x (gcd y z) = gcd y (gcd x z)  by GCD_ASSOC_COMM
+   The result follows                               by ITSET_REDUCTION
+*)
+val big_gcd_reduction = store_thm(
+  "big_gcd_reduction",
+  ``!s x. FINITE s /\ x NOTIN s ==> (big_gcd (x INSERT s) = gcd x (big_gcd s))``,
+  rw[big_gcd_def, ITSET_REDUCTION, GCD_ASSOC_COMM]);
+
+(* Theorem: FINITE s ==> !x. x IN s ==> (big_gcd s) divides x *)
+(* Proof:
+   By finite induction on s.
+   Base: x IN {} ==> big_gcd {} divides x
+      True since x IN {} = F                           by MEMBER_NOT_EMPTY
+   Step: !x. x IN s ==> big_gcd s divides x ==>
+         e NOTIN s /\ x IN (e INSERT s) ==> big_gcd (e INSERT s) divides x
+      Since e NOTIN s,
+         so big_gcd (e INSERT s) = gcd e (big_gcd s)   by big_gcd_reduction
+      By IN_INSERT,
+      If x = e,
+         to show: gcd e (big_gcd s) divides e, true    by GCD_IS_GREATEST_COMMON_DIVISOR
+      If x <> e, x IN s,
+         to show gcd e (big_gcd s) divides x,
+         Since (big_gcd s) divides x                   by induction hypothesis, x IN s
+           and (big_gcd s) divides gcd e (big_gcd s)   by GCD_IS_GREATEST_COMMON_DIVISOR
+            so gcd e (big_gcd s) divides x             by DIVIDES_TRANS
+*)
+val big_gcd_is_common_divisor = store_thm(
+  "big_gcd_is_common_divisor",
+  ``!s. FINITE s ==> !x. x IN s ==> (big_gcd s) divides x``,
+  Induct_on `FINITE` >>
+  rpt strip_tac >-
+  metis_tac[MEMBER_NOT_EMPTY] >>
+  metis_tac[big_gcd_reduction, IN_INSERT, GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_TRANS]);
+
+(* Theorem: FINITE s ==> !m. (!x. x IN s ==> m divides x) ==> m divides (big_gcd s) *)
+(* Proof:
+   By finite induction on s.
+   Base: m divides big_gcd {}
+      Since big_gcd {} = 0                        by big_gcd_empty
+      Hence true                                  by ALL_DIVIDES_0
+   Step: !m. (!x. x IN s ==> m divides x) ==> m divides big_gcd s ==>
+         e NOTIN s /\ !x. x IN e INSERT s ==> m divides x ==> m divides big_gcd (e INSERT s)
+      Note x IN e INSERT s ==> x = e \/ x IN s    by IN_INSERT
+      Put x = e, then m divides e                 by x divides m, x = e
+      Put x IN s, then m divides big_gcd s        by induction hypothesis
+      Therefore, m divides gcd e (big_gcd s)      by GCD_IS_GREATEST_COMMON_DIVISOR
+             or  m divides big_gcd (e INSERT s)   by big_gcd_reduction, e NOTIN s
+*)
+val big_gcd_is_greatest_common_divisor = store_thm(
+  "big_gcd_is_greatest_common_divisor",
+  ``!s. FINITE s ==> !m. (!x. x IN s ==> m divides x) ==> m divides (big_gcd s)``,
+  Induct_on `FINITE` >>
+  rpt strip_tac >-
+  rw[big_gcd_empty] >>
+  metis_tac[big_gcd_reduction, GCD_IS_GREATEST_COMMON_DIVISOR, IN_INSERT]);
+
+(* Theorem: FINITE s ==> !x. big_gcd (x INSERT s) = gcd x (big_gcd s) *)
+(* Proof:
+   If x IN s,
+      Then (big_gcd s) divides x          by big_gcd_is_common_divisor
+           gcd x (big_gcd s)
+         = gcd (big_gcd s) x              by GCD_SYM
+         = big_gcd s                      by divides_iff_gcd_fix
+         = big_gcd (x INSERT s)           by ABSORPTION
+   If x NOTIN s, result is true           by big_gcd_reduction
+*)
+val big_gcd_insert = store_thm(
+  "big_gcd_insert",
+  ``!s. FINITE s ==> !x. big_gcd (x INSERT s) = gcd x (big_gcd s)``,
+  rpt strip_tac >>
+  Cases_on `x IN s` >-
+  metis_tac[big_gcd_is_common_divisor, divides_iff_gcd_fix, ABSORPTION, GCD_SYM] >>
+  rw[big_gcd_reduction]);
+
+(* Theorem: big_gcd {x; y} = gcd x y *)
+(* Proof:
+     big_gcd {x; y}
+   = big_gcd (x INSERT y)          by notation
+   = gcd x (big_gcd {y})           by big_gcd_insert
+   = gcd x (big_gcd {y INSERT {}}) by notation
+   = gcd x (gcd y (big_gcd {}))    by big_gcd_insert
+   = gcd x (gcd y 0)               by big_gcd_empty
+   = gcd x y                       by gcd_0R
+*)
+val big_gcd_two = store_thm(
+  "big_gcd_two",
+  ``!x y. big_gcd {x; y} = gcd x y``,
+  rw[big_gcd_insert, big_gcd_empty]);
+
+(* Theorem: FINITE s ==> (!x. x IN s ==> 0 < x) ==> 0 < big_gcd s *)
+(* Proof:
+   By finite induction on s.
+   Base: {} <> {} /\ !x. x IN {} ==> 0 < x ==> 0 < big_gcd {}
+      True since {} <> {} = F
+   Step: s <> {} /\ (!x. x IN s ==> 0 < x) ==> 0 < big_gcd s ==>
+         e NOTIN s /\ e INSERT s <> {} /\ !x. x IN e INSERT s ==> 0 < x ==> 0 < big_gcd (e INSERT s)
+      Note 0 < e /\ !x. x IN s ==> 0 < x   by IN_INSERT
+      If s = {},
+           big_gcd (e INSERT {})
+         = big_gcd {e}                     by IN_INSERT
+         = e > 0                           by big_gcd_sing
+      If s <> {},
+        so 0 < big_gcd s                   by induction hypothesis
+       ==> 0 < gcd e (big_gcd s)           by GCD_EQ_0
+        or 0 < big_gcd (e INSERT s)        by big_gcd_insert
+*)
+val big_gcd_positive = store_thm(
+  "big_gcd_positive",
+  ``!s. FINITE s /\ s <> {} /\ (!x. x IN s ==> 0 < x) ==> 0 < big_gcd s``,
+  `!s. FINITE s ==> s <> {} /\ (!x. x IN s ==> 0 < x) ==> 0 < big_gcd s` suffices_by rw[] >>
+  Induct_on `FINITE` >>
+  rpt strip_tac >-
+  rw[] >>
+  `0 < e /\ (!x. x IN s ==> 0 < x)` by rw[] >>
+  Cases_on `s = {}` >-
+  rw[big_gcd_sing] >>
+  metis_tac[big_gcd_insert, GCD_EQ_0, NOT_ZERO_LT_ZERO]);
+
+(* Theorem: FINITE s /\ s <> {} ==> !k. big_gcd (IMAGE ($* k) s) = k * big_gcd s *)
+(* Proof:
+   By finite induction on s.
+   Base: {} <> {} ==> ..., must be true.
+   Step: s <> {} ==> !!k. big_gcd (IMAGE ($* k) s) = k * big_gcd s ==>
+         e NOTIN s ==> big_gcd (IMAGE ($* k) (e INSERT s)) = k * big_gcd (e INSERT s)
+      If s = {},
+         big_gcd (IMAGE ($* k) (e INSERT {}))
+       = big_gcd (IMAGE ($* k) {e})        by IN_INSERT, s = {}
+       = big_gcd {k * e}                   by IMAGE_SING
+       = k * e                             by big_gcd_sing
+       = k * big_gcd {e}                   by big_gcd_sing
+       = k * big_gcd (e INSERT {})         by IN_INSERT, s = {}
+     If s <> {},
+         big_gcd (IMAGE ($* k) (e INSERT s))
+       = big_gcd ((k * e) INSERT (IMAGE ($* k) s))   by IMAGE_INSERT
+       = gcd (k * e) (big_gcd (IMAGE ($* k) s))      by big_gcd_insert
+       = gcd (k * e) (k * big_gcd s)                 by induction hypothesis
+       = k * gcd e (big_gcd s)                       by GCD_COMMON_FACTOR
+       = k * big_gcd (e INSERT s)                    by big_gcd_insert
+*)
+val big_gcd_map_times = store_thm(
+  "big_gcd_map_times",
+  ``!s. FINITE s /\ s <> {} ==> !k. big_gcd (IMAGE ($* k) s) = k * big_gcd s``,
+  `!s. FINITE s ==> s <> {} ==> !k. big_gcd (IMAGE ($* k) s) = k * big_gcd s` suffices_by rw[] >>
+  Induct_on `FINITE` >>
+  rpt strip_tac >-
+  rw[] >>
+  Cases_on `s = {}` >-
+  rw[big_gcd_sing] >>
+  `big_gcd (IMAGE ($* k) (e INSERT s)) = gcd (k * e) (k * big_gcd s)` by rw[big_gcd_insert] >>
+  `_ = k * gcd e (big_gcd s)` by rw[GCD_COMMON_FACTOR] >>
+  `_ = k * big_gcd (e INSERT s)` by rw[big_gcd_insert] >>
+  rw[]);
+
+(* ------------------------------------------------------------------------- *)
+(* Set LCM as Big Operator                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+(* big_lcm s = ITSET (\e x. lcm e x) s 1 = ITSET lcm s 1, of course! *)
+val big_lcm_def = Define`
+    big_lcm s = ITSET lcm s 1
+`;
+
+(* Theorem: big_lcm {} = 1 *)
+(* Proof:
+     big_lcm {}
+   = ITSET lcm {} 1     by big_lcm_def
+   = 1                  by ITSET_EMPTY
+*)
+val big_lcm_empty = store_thm(
+  "big_lcm_empty",
+  ``big_lcm {} = 1``,
+  rw[big_lcm_def, ITSET_EMPTY]);
+
+(* Theorem: big_lcm {x} = x *)
+(* Proof:
+     big_lcm {x}
+   = ITSET lcm {x} 1     by big_lcm_def
+   = lcm x 1             by ITSET_SING
+   = x                   by LCM_1
+*)
+val big_lcm_sing = store_thm(
+  "big_lcm_sing",
+  ``!x. big_lcm {x} = x``,
+  rw[big_lcm_def, ITSET_SING]);
+
+(* Theorem: FINITE s /\ x NOTIN s ==> (big_lcm (x INSERT s) = lcm x (big_lcm s)) *)
+(* Proof:
+   Note big_lcm s = ITSET lcm s 1                   by big_lcm_def
+   Since !x y z. lcm x (lcm y z) = lcm y (lcm x z)  by LCM_ASSOC_COMM
+   The result follows                               by ITSET_REDUCTION
+*)
+val big_lcm_reduction = store_thm(
+  "big_lcm_reduction",
+  ``!s x. FINITE s /\ x NOTIN s ==> (big_lcm (x INSERT s) = lcm x (big_lcm s))``,
+  rw[big_lcm_def, ITSET_REDUCTION, LCM_ASSOC_COMM]);
+
+(* Theorem: FINITE s ==> !x. x IN s ==> x divides (big_lcm s) *)
+(* Proof:
+   By finite induction on s.
+   Base: x IN {} ==> x divides big_lcm {}
+      True since x IN {} = F                           by MEMBER_NOT_EMPTY
+   Step: !x. x IN s ==> x divides big_lcm s ==>
+         e NOTIN s /\ x IN (e INSERT s) ==> x divides big_lcm (e INSERT s)
+      Since e NOTIN s,
+         so big_lcm (e INSERT s) = lcm e (big_lcm s)   by big_lcm_reduction
+      By IN_INSERT,
+      If x = e,
+         to show: e divides lcm e (big_lcm s), true    by LCM_DIVISORS
+      If x <> e, x IN s,
+         to show x divides lcm e (big_lcm s),
+         Since x divides (big_lcm s)                   by induction hypothesis, x IN s
+           and (big_lcm s) divides lcm e (big_lcm s)   by LCM_DIVISORS
+            so x divides lcm e (big_lcm s)             by DIVIDES_TRANS
+*)
+val big_lcm_is_common_multiple = store_thm(
+  "big_lcm_is_common_multiple",
+  ``!s. FINITE s ==> !x. x IN s ==> x divides (big_lcm s)``,
+  Induct_on `FINITE` >>
+  rpt strip_tac >-
+  metis_tac[MEMBER_NOT_EMPTY] >>
+  metis_tac[big_lcm_reduction, IN_INSERT, LCM_DIVISORS, DIVIDES_TRANS]);
+
+(* Theorem: FINITE s ==> !m. (!x. x IN s ==> x divides m) ==> (big_lcm s) divides m *)
+(* Proof:
+   By finite induction on s.
+   Base: big_lcm {} divides m
+      Since big_lcm {} = 1                        by big_lcm_empty
+      Hence true                                  by ONE_DIVIDES_ALL
+   Step: !m. (!x. x IN s ==> x divides m) ==> big_lcm s divides m ==>
+         e NOTIN s /\ !x. x IN e INSERT s ==> x divides m ==> big_lcm (e INSERT s) divides m
+      Note x IN e INSERT s ==> x = e \/ x IN s    by IN_INSERT
+      Put x = e, then e divides m                 by x divides m, x = e
+      Put x IN s, then big_lcm s divides m        by induction hypothesis
+      Therefore, lcm e (big_lcm s) divides m      by LCM_IS_LEAST_COMMON_MULTIPLE
+             or  big_lcm (e INSERT s) divides m   by big_lcm_reduction, e NOTIN s
+*)
+val big_lcm_is_least_common_multiple = store_thm(
+  "big_lcm_is_least_common_multiple",
+  ``!s. FINITE s ==> !m. (!x. x IN s ==> x divides m) ==> (big_lcm s) divides m``,
+  Induct_on `FINITE` >>
+  rpt strip_tac >-
+  rw[big_lcm_empty] >>
+  metis_tac[big_lcm_reduction, LCM_IS_LEAST_COMMON_MULTIPLE, IN_INSERT]);
+
+(* Theorem: FINITE s ==> !x. big_lcm (x INSERT s) = lcm x (big_lcm s) *)
+(* Proof:
+   If x IN s,
+      Then x divides (big_lcm s)          by big_lcm_is_common_multiple
+           lcm x (big_lcm s)
+         = big_lcm s                      by divides_iff_lcm_fix
+         = big_lcm (x INSERT s)           by ABSORPTION
+   If x NOTIN s, result is true           by big_lcm_reduction
+*)
+val big_lcm_insert = store_thm(
+  "big_lcm_insert",
+  ``!s. FINITE s ==> !x. big_lcm (x INSERT s) = lcm x (big_lcm s)``,
+  rpt strip_tac >>
+  Cases_on `x IN s` >-
+  metis_tac[big_lcm_is_common_multiple, divides_iff_lcm_fix, ABSORPTION] >>
+  rw[big_lcm_reduction]);
+
+(* Theorem: big_lcm {x; y} = lcm x y *)
+(* Proof:
+     big_lcm {x; y}
+   = big_lcm (x INSERT y)          by notation
+   = lcm x (big_lcm {y})           by big_lcm_insert
+   = lcm x (big_lcm {y INSERT {}}) by notation
+   = lcm x (lcm y (big_lcm {}))    by big_lcm_insert
+   = lcm x (lcm y 1)               by big_lcm_empty
+   = lcm x y                       by LCM_1
+*)
+val big_lcm_two = store_thm(
+  "big_lcm_two",
+  ``!x y. big_lcm {x; y} = lcm x y``,
+  rw[big_lcm_insert, big_lcm_empty]);
+
+(* Theorem: FINITE s ==> (!x. x IN s ==> 0 < x) ==> 0 < big_lcm s *)
+(* Proof:
+   By finite induction on s.
+   Base: !x. x IN {} ==> 0 < x ==> 0 < big_lcm {}
+      big_lcm {} = 1 > 0     by big_lcm_empty
+   Step: (!x. x IN s ==> 0 < x) ==> 0 < big_lcm s ==>
+         e NOTIN s /\ !x. x IN e INSERT s ==> 0 < x ==> 0 < big_lcm (e INSERT s)
+      Note 0 < e /\ !x. x IN s ==> 0 < x   by IN_INSERT
+        so 0 < big_lcm s                   by induction hypothesis
+       ==> 0 < lcm e (big_lcm s)           by LCM_EQ_0
+        or 0 < big_lcm (e INSERT s)        by big_lcm_insert
+*)
+val big_lcm_positive = store_thm(
+  "big_lcm_positive",
+  ``!s. FINITE s ==> (!x. x IN s ==> 0 < x) ==> 0 < big_lcm s``,
+  Induct_on `FINITE` >>
+  rpt strip_tac >-
+  rw[big_lcm_empty] >>
+  `0 < e /\ (!x. x IN s ==> 0 < x)` by rw[] >>
+  metis_tac[big_lcm_insert, LCM_EQ_0, NOT_ZERO_LT_ZERO]);
+
+(* Theorem: FINITE s /\ s <> {} ==> !k. big_lcm (IMAGE ($* k) s) = k * big_lcm s *)
+(* Proof:
+   By finite induction on s.
+   Base: {} <> {} ==> ..., must be true.
+   Step: s <> {} ==> !!k. big_lcm (IMAGE ($* k) s) = k * big_lcm s ==>
+         e NOTIN s ==> big_lcm (IMAGE ($* k) (e INSERT s)) = k * big_lcm (e INSERT s)
+      If s = {},
+         big_lcm (IMAGE ($* k) (e INSERT {}))
+       = big_lcm (IMAGE ($* k) {e})        by IN_INSERT, s = {}
+       = big_lcm {k * e}                   by IMAGE_SING
+       = k * e                             by big_lcm_sing
+       = k * big_lcm {e}                   by big_lcm_sing
+       = k * big_lcm (e INSERT {})         by IN_INSERT, s = {}
+     If s <> {},
+         big_lcm (IMAGE ($* k) (e INSERT s))
+       = big_lcm ((k * e) INSERT (IMAGE ($* k) s))   by IMAGE_INSERT
+       = lcm (k * e) (big_lcm (IMAGE ($* k) s))      by big_lcm_insert
+       = lcm (k * e) (k * big_lcm s)                 by induction hypothesis
+       = k * lcm e (big_lcm s)                       by LCM_COMMON_FACTOR
+       = k * big_lcm (e INSERT s)                    by big_lcm_insert
+*)
+val big_lcm_map_times = store_thm(
+  "big_lcm_map_times",
+  ``!s. FINITE s /\ s <> {} ==> !k. big_lcm (IMAGE ($* k) s) = k * big_lcm s``,
+  `!s. FINITE s ==> s <> {} ==> !k. big_lcm (IMAGE ($* k) s) = k * big_lcm s` suffices_by rw[] >>
+  Induct_on `FINITE` >>
+  rpt strip_tac >-
+  rw[] >>
+  Cases_on `s = {}` >-
+  rw[big_lcm_sing] >>
+  `big_lcm (IMAGE ($* k) (e INSERT s)) = lcm (k * e) (k * big_lcm s)` by rw[big_lcm_insert] >>
+  `_ = k * lcm e (big_lcm s)` by rw[LCM_COMMON_FACTOR] >>
+  `_ = k * big_lcm (e INSERT s)` by rw[big_lcm_insert] >>
+  rw[]);
 
 val _ = export_theory()

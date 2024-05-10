@@ -18,23 +18,20 @@ open jcLib;
 open pred_setTheory listTheory rich_listTheory arithmeticTheory numberTheory
      combinatoricsTheory dividesTheory gcdTheory logrootTheory;
 
-(* val _ = load "polyFieldModuloTheory"; *)
+open ringTheory;
+
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 open polyMonicTheory polyEvalTheory;
 open polyDivisionTheory polyFieldDivisionTheory polyFieldModuloTheory;
-open ringTheory;
-
-(* val _ = load "polyBinomialTheory"; *)
 open polyBinomialTheory;
-open ringBinomialTheory;
 
-(* val _ = load "computePolyTheory"; *)
 open computeBasicTheory computeOrderTheory computePolyTheory;
-open ringInstancesTheory;
+
+val _ = intLib.deprecate_int ();
 
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* Modulo Polynomial Computations in (ZN n) Ring Documentation               *)

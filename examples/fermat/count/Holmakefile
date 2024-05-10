@@ -1,6 +1,6 @@
 # prefix to HOL examples
 LOC_PREFIX = $(HOLDIR)/examples
 
-ALGEBRA_INCLUDES = ring group field polynomial finitefield
+ALGEBRA_INCLUDES = field polynomial finitefield
 INCLUDES = $(patsubst %,$(LOC_PREFIX)/algebra/%,$(ALGEBRA_INCLUDES)) \
            ../little ../twosq

@@ -29,8 +29,9 @@ open polyIrreducibleTheory;
 open polyDerivativeTheory;
 open polyGCDTheory;
 
-open monoidTheory groupTheory ringTheory;
-open fieldTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Multiple Roots of Polynomials Documentation                               *)

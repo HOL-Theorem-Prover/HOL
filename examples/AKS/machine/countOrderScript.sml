@@ -19,6 +19,8 @@ open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
      numberTheory combinatoricsTheory logrootTheory pairTheory optionTheory
      listRangeTheory;
 
+open ringTheory;
+
 open countMonadTheory countMacroTheory;
 open countModuloTheory;
 
@@ -26,7 +28,6 @@ open bitsizeTheory complexityTheory;
 open loopIncreaseTheory loopDecreaseTheory;
 
 open computeOrderTheory; (* for ordz_seek and ordz_simple *)
-open ringInstancesTheory; (* for ZN_order_mod_1, ZN_order_mod *)
 
 (* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
@@ -34,9 +35,11 @@ open monadsyntax;
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
+val _ = intLib.deprecate_int ();
+
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* Order Computations with Count Monad Documentation                         *)

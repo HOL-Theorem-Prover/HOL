@@ -18,13 +18,7 @@ open jcLib;
 open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
      dividesTheory gcdTheory gcdsetTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory fieldTheory;
-
-open subgroupTheory;
-open groupOrderTheory;
-
-(* val _ = load "groupProductTheory"; *)
-open groupProductTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 open polyDividesTheory polyDivisionTheory;
 open polynomialTheory polyWeakTheory polyRingTheory;
@@ -34,6 +28,8 @@ open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyEvalTheory;
 open polyRootTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Product of Polynomials Documentation                                      *)

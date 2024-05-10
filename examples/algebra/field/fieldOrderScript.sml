@@ -19,13 +19,9 @@ open jcLib;
 open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
      gcdsetTheory numberTheory combinatoricsTheory primeTheory;
 
-open fieldTheory;
-open integralDomainTheory;
-open ringTheory;
-open groupTheory;
-open monoidTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
-open groupOrderTheory subgroupTheory groupCyclicTheory;
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Order of Elements in a Field Documentation                                *)
