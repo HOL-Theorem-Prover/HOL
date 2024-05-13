@@ -847,22 +847,6 @@ in
    val match_mp_tac = MATCH_MP_TAC
 end
 
-(* ------------------------------------------------------------------------- *)
-(* Split off antecedent of antecedent as a subgoal (from HOL-Light)          *)
-(* ------------------------------------------------------------------------- *)
-
-val ANTS_TAC :tactic = let
-  val p = mk_var("p", bool);
-  val q = mk_var("q", bool);
-  val r = mk_var("r", bool);
-  val tm1 = mk_conj(p, mk_imp(q, r)) (* p /\ (q ==> r) *)
-  and tm2 = mk_imp(p, q)             (* p ==> q *)
-  val (th1,th2) = CONJ_PAIR(ASSUME tm1)
-  val th = itlist DISCH [tm1,tm2] (MP th2 (MP(ASSUME tm2) th1))
-in
-  MATCH_MP_TAC th THEN CONJ_TAC
-end;
-
 (* --------------------------------------------------------------------------*
  * irule: similar to MATCH_MP_TAC, but                                       *
  * (1) uses conclusion following more than one ==>                           *

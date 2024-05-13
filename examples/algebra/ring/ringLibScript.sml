@@ -12,7 +12,7 @@ open HolKernel boolLib bossLib Parse;
 
 open combinTheory pred_setTheory pred_setLib arithmeticTheory integerTheory
      numLib intLib mesonLib hurdUtils cardinalTheory oneTheory newtypeTools
-     tautLib;
+     tautLib liteLib;
 
 open monoidTheory groupTheory ringTheory;
 
