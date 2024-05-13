@@ -414,6 +414,8 @@ val ZERO_LESS_EQ = store_thm ("ZERO_LESS_EQ",
    “!n. 0 <= n”,
    REWRITE_TAC [LESS_0,LESS_EQ_IFF_LESS_SUC]);
 
+Theorem LE_0 = ZERO_LESS_EQ (* HOL-Light compatible name *)
+
 val LESS_SUC_EQ_COR = store_thm ("LESS_SUC_EQ_COR",
    “!m n. ((m < n) /\ (~(SUC m = n))) ==> (SUC m < n)”,
    CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN
@@ -923,6 +925,16 @@ val LESS_EQUAL_ANTISYM = store_thm ("LESS_EQUAL_ANTISYM",
      REPEAT STRIP_TAC THENL
      [IMP_RES_TAC LESS_ANTISYM,
       ASM_REWRITE_TAC[]]);
+
+Theorem LE_ANTISYM :
+    !m (n :num). m <= n /\ n <= m <=> m = n
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (MATCH_MP_TAC LESS_EQUAL_ANTISYM \\
+     ASM_REWRITE_TAC [])
+ >> ASM_REWRITE_TAC [LESS_EQ_REFL]
+QED
 
 val LESS_ADD_SUC = store_thm ("LESS_ADD_SUC",
      “!m n. m < m + SUC n”,
@@ -3004,12 +3016,12 @@ Theorem SUB_ELIM_THM_EXISTS =
                |> SIMP_RULE bool_ss []
 
 (* some HOL-Light compatible theorem names *)
-val LTE_CASES = LESS_CASES;
-val NOT_LT    = NOT_LESS;
-val NOT_LE    = NOT_LESS_EQUAL;
-val LT_IMP_LE = LESS_IMP_LESS_OR_EQ;
-val LE_ADD    = LESS_EQ_ADD;
-val LE_EXISTS = LESS_EQ_EXISTS;
+Theorem LTE_CASES = LESS_CASES
+Theorem NOT_LT    = NOT_LESS
+Theorem NOT_LE    = NOT_LESS_EQUAL
+Theorem LT_IMP_LE = LESS_IMP_LESS_OR_EQ
+Theorem LE_ADD    = LESS_EQ_ADD
+Theorem LE_EXISTS = LESS_EQ_EXISTS
 
 (* This is HOL-Light's SUB_ELIM_THM, with a single ‘P d’ at rhs. *)
 Theorem SUB_ELIM_THM' :

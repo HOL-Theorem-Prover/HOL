@@ -2,11 +2,9 @@
 (* Version of the MESON procedure a la PTTP. Various search options.         *)
 (* ========================================================================= *)
 
-
 signature mesonLib =
 sig
-type thm = Thm.thm
-type tactic = Abbrev.tactic
+   include Abbrev
 
    val depth     : bool ref
    val prefine   : bool ref
@@ -20,5 +18,6 @@ type tactic = Abbrev.tactic
    val GEN_MESON_TAC : int -> int -> int -> thm list -> tactic
    val MESON_TAC     : thm list -> tactic
    val ASM_MESON_TAC : thm list -> tactic
+   val MESON         : thm list -> term -> thm
 
 end (* sig *)

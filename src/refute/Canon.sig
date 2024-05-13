@@ -4,10 +4,7 @@
 
 signature Canon =
 sig
-
- type term = Term.term
- type thm = Thm.thm
- type conv = Abbrev.conv
+    include Abbrev
 
     val ONEWAY_SKOLEM_CONV : term list -> conv
     val NNF_CONV : conv -> bool -> conv
@@ -33,5 +30,11 @@ sig
     val EQ_ABS_CONV : conv
 
     val latest :  (thm * thm * term) option ref
+
+    (* ACI rearrangements of conjunctions and disjunctions *)
+    val CONJ_ACI_RULE   : term -> thm
+    val DISJ_ACI_RULE   : term -> thm
+    val CONJ_CANON_CONV : conv
+    val DISJ_CANON_CONV : conv
 
 end (* sig *)

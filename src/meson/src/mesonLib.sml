@@ -994,6 +994,7 @@ val max_depth = ref 30;
 fun ASM_MESON_TAC e = GEN_MESON_TAC 0 (!max_depth) 1 e;
 
 fun MESON_TAC ths = POP_ASSUM_LIST (K ALL_TAC) THEN ASM_MESON_TAC ths;
+fun MESON ths tm = prove(tm,MESON_TAC ths);
 
 val _ = Parse.temp_set_grammars ambient_grammars;
 

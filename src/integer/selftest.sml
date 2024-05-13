@@ -50,8 +50,7 @@ val _ = List.app (ignore o rma_p) [
       (“3n ** 2n”, "3 ** 2"),
       (“((x:num) ** (y:num)):num”, "x ** y"),
       (“x:int / (y + 1)”, "x / (y + 1)")
-    ]
-
+    ];
 
 (* check prefer/deprecate rat *)
 val grammars = (type_grammar(),term_grammar());
@@ -76,4 +75,20 @@ val _ = require_msg (check_result (aconv expected2)) term_to_string
 
 val _ = temp_set_grammars grammars;
 
-val _ = Process.exit Process.success
+(* Tests for INTEGER_RULE *)
+fun rule_test prover (r as (n,tm)) =
+    let
+      fun check res = aconv tm (concl res);
+    in
+      tprint (n ^ ": " ^ term_to_string tm);
+      require_msg (check_result check) (term_to_string o concl) prover tm
+    end;
+
+val _ = List.app (rule_test INTEGER_RULE) [
+      ("INTEGER_RULE_00",
+       “w * y + x * z - (w * z + x * y) = (w - x) * (y - z:int)”),
+      ("INTEGER_RULE_01",
+       “a int_divides &n <=> a int_divides -&n”)
+      ];
+
+val _ = Process.exit Process.success;
