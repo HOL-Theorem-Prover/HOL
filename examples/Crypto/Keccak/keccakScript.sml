@@ -8,6 +8,8 @@ open optionTheory pairTheory arithmeticTheory combinTheory listTheory
 
 val _ = new_theory "keccak";
 
+val _ = numLib.prefer_num();
+
 (* TODO: move *)
 Theorem FUNPOW_COMPOSE_INV:
   !n x f g h.
@@ -79,7 +81,7 @@ Definition b2w_def:
 End
 
 Definition w2l_def:
-  w2l w = LOG2 w
+  w2l w = if 0 < w then LOG2 w else 0
 End
 
 Theorem bwl_table:
@@ -602,6 +604,13 @@ Proof
   \\ PROVE_TAC[]
 QED
 
+Definition bool_lookup_def:
+  bool_lookup n t =
+    case lookup n t of
+    | NONE => F
+    | SOME b => b
+End
+
 (* if y is fixed 0 *)
 (* i -> (i DIV w, i MOD w) *)
 (* (x, z) -> x * w + z *)
@@ -611,18 +620,18 @@ Definition theta_spt_def:
   let w = b2w $ size t in
   let c = fromList (
     GENLIST (λi.
-      (THE (lookup i t) ≠
-        (THE (lookup (i + 5 * w) t) ≠
-          (THE (lookup (i + 10 * w) t) ≠
-            (THE (lookup (i + 15 * w) t) ≠
-              (THE (lookup (i + 20 * w) t)))))))
+      (bool_lookup i t ≠
+        (bool_lookup (i + 5 * w) t ≠
+          (bool_lookup (i + 10 * w) t ≠
+            (bool_lookup (i + 15 * w) t ≠
+              (bool_lookup (i + 20 * w) t))))))
       (5 * w)) in
   let d = fromList (
     GENLIST (λi.
-      (THE (lookup (((i DIV w + 4) MOD 5) * w + i MOD w) c) ≠
-       THE (lookup (((i DIV w + 1) MOD 5) * w + (i MOD w + PRE w) MOD w) c)))
+      (bool_lookup (((i DIV w + 4) MOD 5) * w + i MOD w) c ≠
+       bool_lookup (((i DIV w + 1) MOD 5) * w + (i MOD w + PRE w) MOD w) c))
       (5 * w)) in
-  mapi (λi b. b ≠ THE (lookup (((i DIV w) MOD 5) * w + i MOD w) d)) t
+  mapi (λi b. b ≠ bool_lookup (((i DIV w) MOD 5) * w + i MOD w) d) t
 End
 
 Definition spt_to_state_array_def:
@@ -657,9 +666,9 @@ Proof
   \\ qmatch_assum_abbrev_tac`z < w`
   \\ rewrite_tac[theta_spt_def]
   \\ rw[]
-  \\ qmatch_goalsub_abbrev_tac`THE (lookup _ d)`
+  \\ qmatch_goalsub_abbrev_tac`bool_lookup _ d`
   \\ pop_assum mp_tac
-  \\ qmatch_goalsub_abbrev_tac`THE (lookup _ c)`
+  \\ qmatch_goalsub_abbrev_tac`bool_lookup _ c`
   \\ strip_tac
   \\ rw[lookup_mapi]
   \\ reverse(rw[lookup_fromList])
@@ -677,7 +686,7 @@ Proof
   \\ rw[string_to_state_array_def, restrict_def]
   \\ rw[theta_d_def]
   \\ rw[theta_c_def, restrict_def]
-  \\ reverse(rw[Abbr`d`, lookup_fromList])
+  \\ reverse(rw[Abbr`d`, lookup_fromList, bool_lookup_def])
   >- (
     `F` suffices_by simp[]
     \\ pop_assum mp_tac \\ simp[]
@@ -701,6 +710,7 @@ Proof
     \\ `LENGTH s = 25 * (LENGTH s DIV 25) + LENGTH s MOD 25`
         by metis_tac[DIVISION, MULT_COMM]
     \\ metis_tac[LESS_EQ_ADD])
+  \\ rw[bool_lookup_def]
   \\ rw[Once lookup_fromList]
   \\ rw[Once lookup_fromList]
   \\ rw[Once lookup_fromList]
@@ -889,7 +899,7 @@ Definition rho_spt_def:
         SND $
         WHILE (λ(z,a'). z < w) (λ(z,a'). (z+1,
           insert (triple_to_index w (x,y,z))
-            (THE $ lookup (triple_to_index w (x,y,(z + ww - tt) MOD w)) a)
+            (bool_lookup (triple_to_index w (x,y,(z + ww - tt) MOD w)) a)
           a'))
           (0, a')))
       (1,0,0,a)
@@ -1303,10 +1313,10 @@ Proof
       \\ simp[lookup_insert]
       \\ reverse(Cases_on`p=q` \\ simp[])
       >- (
-        rw[]
+        rw[bool_lookup_def]
         \\ first_x_assum (mp_then Any mp_tac triple_to_index_inj)
         \\ simp[])
-      \\ rw[]
+      \\ rw[bool_lookup_def]
       \\ rw[lookup_fromList]
       \\ `h p j < m` by simp[Abbr`h`]
       \\ `triple_to_index m (t, u, h p j) < 25 * m`
@@ -1342,7 +1352,7 @@ Definition pi_spt_def:
   let w = b2w (size a) in
   fromList (GENLIST (λi.
     let (x, y, z) = index_to_triple w i in
-      THE (lookup (triple_to_index w ((x + 3 * y) MOD 5, x, z)) a)
+      bool_lookup (triple_to_index w ((x + 3 * y) MOD 5, x, z)) a
   ) (size a))
 End
 
@@ -1374,7 +1384,7 @@ Proof
     \\ `0 < 25` by simp[]
     \\ drule_then(qspec_then`LENGTH ls`mp_tac) DIVISION
     \\ simp[] )
-  \\ simp[lookup_fromList]
+  \\ simp[lookup_fromList, bool_lookup_def]
   \\ `z + w * (x + 5 * y) = triple_to_index w (x,y,z)` by simp[triple_to_index_def]
   \\ pop_assum SUBST1_TAC
   \\ simp[]
@@ -1391,8 +1401,8 @@ Definition chi_spt_def:
     let w = b2w (size a) in
     mapi (λk v.
       let (x,y,z) = index_to_triple w k in
-      let v1 = THE (lookup (triple_to_index w ((x + 1) MOD 5, y, z)) a) in
-      let v2 = THE (lookup (triple_to_index w ((x + 2) MOD 5, y, z)) a) in
+      let v1 = bool_lookup (triple_to_index w ((x + 1) MOD 5, y, z)) a in
+      let v2 = bool_lookup (triple_to_index w ((x + 2) MOD 5, y, z)) a in
       v ≠ (¬v1 ∧ v2)) a
 End
 
@@ -1412,7 +1422,7 @@ Proof
     \\ `0 < 25` by simp[]
     \\ drule_then(qspec_then`LENGTH ls`mp_tac) DIVISION
     \\ simp[] )
-  \\ simp[lookup_fromList]
+  \\ simp[lookup_fromList, bool_lookup_def]
   \\ simp[FUN_EQ_THM, FORALL_PROD, restrict_def]
   \\ qx_genl_tac[`x`,`y`,`z`]
   \\ Cases_on`x < 5 ∧ y < 5 ∧ z < w` \\ fs[]
@@ -1472,7 +1482,7 @@ Definition iota_spt_def:
       let l = w2l w in
       let RCz = ((z = 2 ** LOG2 (SUC z) - 1 ∧ LOG2 (SUC z) ≤ l) ∧
                  rc (LOG2 (SUC z) + 7 * i)) in
-        THE (lookup (triple_to_index w (0,0,z)) a) ≠ RCz
+        bool_lookup (triple_to_index w (0,0,z)) a ≠ RCz
     else v) a
 End
 
@@ -1502,7 +1512,7 @@ Proof
   \\ simp[index_to_triple_def]
   \\ strip_tac
   \\ simp[Once triple_to_index_def]
-  \\ simp[lookup_fromList]
+  \\ simp[lookup_fromList, bool_lookup_def]
   \\ qmatch_goalsub_abbrev_tac`x1 = 0 ∧ y1 = 0`
   \\ `x1 = x ∧ y1 = y` suffices_by rw[]
   \\ simp[Abbr`x1`, Abbr`y1`]
@@ -1837,6 +1847,435 @@ Definition bools_to_hex_string_def:
     ) $ chunks 8 bs
 End
 
+open cv_transLib cv_stdTheory;
+
+val _ = cv_trans index_to_triple_def;
+val _ = cv_trans triple_to_index_def;
+
+val _ = cv_trans bool_lookup_def;
+
+val _ = theta_spt_def |> SRULE [mapi_def] |> cv_auto_trans;
+
+Definition while1_def:
+  while1 a tt ww x y w z a' =
+    if z < w:num then
+      while1 a tt ww x y w (z + 1)
+        (insert (triple_to_index w (x,y,z))
+          (bool_lookup (triple_to_index w (x,y,(z + ww − tt) MOD w)) a) a')
+    else a'
+Termination
+  WF_REL_TAC ‘measure $ λ(a,tt,ww,x,y,w,z,a'). w - z’
+End
+
+Triviality while1_thm:
+  ∀a tt ww x y w z a'.
+    SND (WHILE (λ(z,a'). z < w)
+               (λ(z,a').
+                  (z + 1,
+                   insert (triple_to_index w (x,y,z))
+                          (bool_lookup
+                            (triple_to_index w
+                              (x,y,(z + ww − tt) MOD w)) a) a')) (z,a')) =
+    while1 a tt ww x y w z a'
+Proof
+  ho_match_mp_tac while1_ind \\ rw []
+  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once while1_def]
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+Definition while2_def:
+  while2 a w ww x y t a' =
+    if t ≤ 23 then
+      while2 a w ww y ((2 * x + 3 * y) MOD 5) (t + 1:num)
+             (let tt = (t + 1) * (t + 2) DIV 2 in
+                while1 a tt ww x y w 0 a')
+    else a'
+Termination
+  WF_REL_TAC ‘measure $ λ(a,w,ww,x,y,t,a'). 24 - t’ \\ gvs []
+End
+
+Theorem while2_thm:
+  ∀a w ww x y t a'.
+    (λ(x,y,t,a'). a')
+      (WHILE (λ(x,y,t,a'). t ≤ 23)
+            (λ(x,y,t,a').
+                 (y,(2 * x + 3 * y) MOD 5,t + 1,
+                  (let
+                     tt = (t + 1) * (t + 2) DIV 2
+                   in
+                     while1 a tt ww x y w 0 a'))) (x,y,t,a')) =
+    while2 a w ww x y t a'
+Proof
+  ho_match_mp_tac while2_ind \\ rw []
+  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once while2_def]
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+val _ = cv_trans while1_def;
+val _ = cv_trans while2_def;
+
+val rho_spt_eq = rho_spt_def
+  |> ISPEC “a :bool num_map”
+  |> SRULE [mapi_def,while1_thm]
+  |> SRULE [LET_THM,while2_thm]
+  |> CONV_RULE (RAND_CONV (UNBETA_CONV “size (a:bool num_map)” THENC
+                           RATOR_CONV (ALPHA_CONV “n:num”) THENC
+                           REWR_CONV (GSYM LET_THM)));
+
+val _ = cv_trans rho_spt_eq;
+
+val _ = pi_spt_def |> ISPEC “a :bool num_map” |> SRULE [mapi_def]
+                                              |> cv_auto_trans;
+
+val _ = chi_spt_def |> SRULE [mapi_def] |> cv_auto_trans;
+
+val _ = cv_trans spt_to_string_def;
+
+val _ = cv_trans b2w_def;
+
+val pre = rc_step_def |> SRULE [LET_THM] |> cv_trans_pre;
+Theorem rc_step_pre[cv_pre]:
+  ∀r. rc_step_pre r ⇔ 8 ≤ LENGTH r
+Proof
+  simp [Once pre] \\ rw [] \\ eq_tac \\ gvs [] \\ Cases_on ‘r’ \\ gvs []
+QED
+
+Definition rc_steps_def:
+  rc_steps n r =
+    if n = 0:num then HD r else
+      rc_steps (n-1) (rc_step r)
+End
+
+val pre = cv_trans_pre rc_steps_def;
+Theorem rc_steps_pre[cv_pre]:
+  ∀n r. rc_steps_pre n r = if n = 0 then r ≠ [] else 8 ≤ LENGTH r
+Proof
+  Induct \\ simp [Once pre] \\ gvs [] \\ rw []
+  \\ Cases_on ‘r’ \\ gvs [rc_step_def]
+QED
+
+Triviality rc_eq:
+  rc t = rc_steps (t MOD 255) [T;F;F;F;F;F;F;F]
+Proof
+  rewrite_tac [rc_def,EVAL “REPLICATE 7 x”]
+  \\ IF_CASES_TAC \\ asm_rewrite_tac []
+  >- EVAL_TAC
+  \\ rename [‘rc_steps n xs’]
+  \\ pop_assum kall_tac
+  \\ qid_spec_tac ‘xs’
+  \\ Induct_on ‘n’
+  \\ simp [Once rc_steps_def]
+  \\ rewrite_tac [FUNPOW]
+  \\ gvs []
+QED
+
+val pre = cv_trans_pre rc_eq;
+Theorem rc_pre[cv_pre]:
+  ∀t. rc_pre t
+Proof
+  rw [Once pre]
+QED
+
+Definition log2_def:
+  log2 n acc = if n < 2 then acc else log2 (n DIV 2) (acc + 1:num)
+End
+
+val _ = cv_trans log2_def;
+
+Theorem LOG2_eq_log2:
+  0 < n ⇒ LOG2 n = log2 n 0
+Proof
+  qsuff_tac ‘∀n acc. 0 < n ⇒ log2 n acc = LOG2 n + acc’ >- gvs []
+  \\ ho_match_mp_tac log2_ind \\ rw []
+  \\ Cases_on ‘n = 1’
+  >- (gvs [] \\ simp [Once log2_def])
+  \\ simp [Once log2_def]
+  \\ simp [LOG2_def, SimpRHS]
+  \\ once_rewrite_tac [numeral_bitTheory.LOG_compute]
+  \\ gvs [] \\ gvs [ADD1,LOG2_def]
+  \\ first_x_assum irule
+  \\ simp[X_LT_DIV]
+QED
+
+val _ = w2l_def |> SRULE [LOG2_eq_log2] |> cv_trans
+
+Definition iota_body_def:
+  iota_body w i a l1 k v =
+                 (let
+                    (x,y,z) = index_to_triple w k
+                  in
+                    if x = 0 ∧ y = 0 then
+                      (let
+                         l = l1 ;
+                         RCz =
+                           ((z = 2 ** log2 (SUC z) 0 − 1 ∧
+                             log2 (SUC z) 0 ≤ l) ∧
+                            rc (log2 (SUC z) 0 + 7 * i))
+                       in
+                         bool_lookup (triple_to_index w (0,0,z)) a ⇎ RCz)
+                    else v)
+End
+
+val _ = iota_spt_def
+          |> SRULE [LOG2_eq_log2,mapi_def,GSYM iota_body_def]
+          |> cv_auto_trans;
+
+val _ = cv_trans Rnd_spt_def;
+val _ = cv_auto_trans Keccak_p_spt_def;
+val _ = cv_trans pad10s1_def;
+
+Definition sponge_foldl_def:
+  sponge_foldl xs S0 Pis =
+    FOLDL (λSi Pi. Keccak_p_spt 24 (MAP2 (λx y. x ⇎ y) Si (Pi ⧺ xs))) S0 Pis
+End
+
+val _ = cv_auto_trans sponge_foldl_def;
+
+Definition while3_def:
+  while3 cl k x Z S =
+    if cl = 0 then Z else
+    if LENGTH Z < x then
+      while3 (cl-1:num) k x (Z ⧺ TAKE k S) (Keccak_p_spt 24 S)
+    else Z
+End
+
+val _ = cv_trans while3_def;
+
+Theorem toSortedAList_EQ_NIL:
+  ∀t. toSortedAList t = [] ⇔ size t = 0
+Proof
+  rewrite_tac [GSYM sptreeTheory.LENGTH_toSortedAList] \\ rw []
+QED
+
+Triviality GENLIST_EQ_NIL:
+  GENLIST f n = [] ⇔ n = 0
+Proof
+  Cases_on ‘n’ \\ gvs [GENLIST]
+QED
+
+Triviality size_while1_neq_0:
+  ∀a tt ww x y w z s.
+    size s ≠ 0 ⇒
+    size (while1 a tt ww x y w z s) ≠ 0
+Proof
+  ho_match_mp_tac while1_ind
+  \\ rpt gen_tac \\ strip_tac \\ strip_tac \\ gvs []
+  \\ once_rewrite_tac [while1_def]
+  \\ IF_CASES_TAC \\ gvs []
+  \\ last_x_assum irule
+  \\ gvs [size_insert] \\ rw []
+QED
+
+Triviality size_while2_neq_0:
+  ∀a w ww x y t s.
+    size s ≠ 0 ⇒
+    size (while2 a w ww x y t s) ≠ 0
+Proof
+  ho_match_mp_tac while2_ind
+  \\ rpt gen_tac \\ strip_tac \\ strip_tac
+  \\ gvs []
+  \\ once_rewrite_tac [while2_def]
+  \\ IF_CASES_TAC \\ gvs []
+  \\ last_x_assum irule
+  \\ irule size_while1_neq_0 \\ fs []
+QED
+
+Triviality Keccak_p_spt_NOT_NIL:
+  xs ≠ [] ⇒ Keccak_p_spt n xs ≠ []
+Proof
+  gvs [Keccak_p_spt_def,spt_to_string_def]
+  \\ qmatch_goalsub_abbrev_tac ‘FUNPOW f k init’ \\ rw []
+  \\ fs [toSortedAList_EQ_NIL]
+  \\ ‘size (FST init) ≠ 0’ by gvs [Abbr‘init’]
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac ‘init’ \\ qid_spec_tac ‘k’
+  \\ unabbrev_all_tac
+  \\ Induct \\ gvs []
+  \\ gen_tac \\ strip_tac
+  \\ PairCases_on ‘init’ \\ gvs [FUNPOW]
+  \\ first_x_assum irule
+  \\ gvs [Rnd_spt_def,iota_spt_def]
+  \\ gvs [rho_spt_eq]
+  \\ irule size_while2_neq_0
+  \\ gvs [theta_spt_def,wf_mapi]
+QED
+
+Theorem while3_thm:
+  ∀Z S.
+    c < 1600 ∧ S ≠ [] ∧ x' ≤ 1600 ⇒
+    FST (WHILE (λ(Z,S). LENGTH Z < x')
+      (λ(Z,S). (Z ⧺ TAKE (1600 − c) S,Keccak_p_spt 24 S))
+      ([],S))
+    =
+    while3 1600 (1600 − c) x' [] S
+Proof
+  rw []
+  \\ qsuff_tac ‘∀Z0 S0 k. S0 ≠ [] ∧ x' ≤ k + LENGTH Z0 ⇒
+    FST (WHILE (λ(Z,S). LENGTH Z < x')
+      (λ(Z,S). (Z ⧺ TAKE (1600 − c) S,Keccak_p_spt 24 S)) (Z0,S0)) =
+    while3 k (1600 − c) x' Z0 S0’
+  >- (rw [] \\ pop_assum irule \\ gvs [])
+  \\ gen_tac
+  \\ completeInduct_on ‘x' - LENGTH Z0’
+  \\ rpt strip_tac \\ gvs [PULL_FORALL]
+  \\ once_rewrite_tac [while3_def] \\ gvs []
+  \\ once_rewrite_tac [WHILE] \\ simp []
+  \\ IF_CASES_TAC \\ gvs []
+  \\ last_x_assum irule
+  \\ gvs [Keccak_p_spt_NOT_NIL]
+  \\ conj_asm1_tac \\ gvs []
+  \\ Cases_on ‘S0’ \\ gvs []
+QED
+
+Definition Keccak_spt_def:
+  Keccak_spt c x x' =
+    let
+      P = x ⧺ pad10s1 (1600 − c) (LENGTH x);
+      c' = 1600 − (1600 − c);
+      Pis = chunks (1600 − c) P;
+      S0 = REPLICATE 1600 F;
+      S = sponge_foldl (REPLICATE c' F) S0 Pis;
+      Z = while3 1600 (1600 − c) x' [] S
+    in
+      TAKE x' Z
+End;
+
+Triviality sponge_foldl_NOT_NIL:
+  ∀xs S0 Pis.
+    S0 ≠ [] ∧ xs ≠ [] ⇒
+    sponge_foldl xs S0 Pis ≠ []
+Proof
+  Induct_on ‘Pis’ \\ gvs [sponge_foldl_def]
+  \\ gvs [GSYM sponge_foldl_def] \\ rw []
+  \\ last_x_assum irule \\ gvs []
+  \\ irule Keccak_p_spt_NOT_NIL \\ gvs []
+  \\ Cases_on ‘S0’ \\ gvs []
+  \\ Cases_on ‘xs’ \\ gvs []
+  \\ Cases_on ‘h’ \\ gvs []
+QED
+
+Theorem Keccak_spt_thm:
+  ∀c x y. c ≠ 0 ∧ c < 1600 ∧ y ≤ 1600 ⇒ Keccak c x y = Keccak_spt c x y
+Proof
+  rw []
+  \\ DEP_REWRITE_TAC [Keccak_spt] \\ simp [Keccak_spt_def]
+  \\ gvs [sponge_def,FUN_EQ_THM,GSYM sponge_foldl_def]
+  \\ AP_TERM_TAC
+  \\ irule while3_thm \\ fs []
+  \\ irule sponge_foldl_NOT_NIL \\ gvs []
+QED
+
+Definition chunks_tail_def:
+  chunks_tail n ls acc =
+    if LENGTH ls ≤ n ∨ n = 0 then REVERSE (ls :: acc) else
+      chunks_tail n (DROP n ls) (TAKE n ls :: acc)
+Termination
+  WF_REL_TAC ‘measure $ λ(n,ls,acc). LENGTH ls’
+  \\ gvs [LENGTH_DROP]
+End
+
+Theorem chunks_eq_chunks_tail:
+  chunks n ls = chunks_tail n ls []
+Proof
+  qsuff_tac ‘∀n ls acc. chunks_tail n ls acc = REVERSE acc ++ chunks n ls’
+  \\ gvs [] \\ ho_match_mp_tac chunks_tail_ind
+  \\ rw []
+  \\ simp_tac std_ss [Once chunks_tail_def, Once chunks_def]
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+val _ = cv_trans chunks_tail_def;
+val _ = cv_trans chunks_eq_chunks_tail;
+val _ = cv_trans Keccak_spt_def;
+
+val _ = Keccak_224_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = Keccak_256_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = SHA3_224_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = SHA3_256_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = SHA3_384_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+val _ = SHA3_512_def |> SRULE [Keccak_spt_thm] |> cv_trans;
+
+Theorem HEX_eq:
+  n < 16 ⇒ HEX n = if n < 10 then CHR (ORD #"0" + n) else
+                                  CHR (ORD #"A" + n - 10)
+Proof
+  rpt (Cases_on ‘n’ \\ gvs [ASCIInumbersTheory.HEX_def]
+       \\ Cases_on ‘n'’ \\ gvs [ASCIInumbersTheory.HEX_def,ADD1])
+QED
+
+val pre = cv_trans_pre HEX_eq
+Theorem HEX_pre[cv_pre]:
+  ∀n. HEX_pre n ⇔ n < 16
+Proof
+  gvs [pre]
+QED
+
+Definition hex_string_def:
+  hex_string n acc =
+    if n < 16 then HEX n :: acc else
+      hex_string (n DIV 16) (HEX (n MOD 16) :: acc)
+End
+
+val pre = cv_trans_pre hex_string_def;
+Theorem hex_string_pre[cv_pre]:
+  ∀n acc. hex_string_pre n acc
+Proof
+  ho_match_mp_tac hex_string_ind \\ rw [] \\ simp [Once pre]
+QED
+
+Theorem word_to_hex_string_eq_byte:
+  word_to_hex_string (w:word8) = hex_string (w2n w) []
+Proof
+  gvs [word_to_hex_string_def,w2s_def,ASCIInumbersTheory.n2s_def]
+  \\ qsuff_tac ‘∀n acc. hex_string n acc = REVERSE (MAP HEX (n2l 16 n)) ++ acc’
+  >- gvs []
+  \\ ho_match_mp_tac hex_string_ind \\ rw []
+  \\ once_rewrite_tac [numposrepTheory.n2l_def]
+  \\ simp [Once hex_string_def]
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+val _ = cv_trans word_to_hex_string_eq_byte;
+
+Definition bools_to_hex_f_def:
+  bools_to_hex_f =
+    PAD_LEFT #"0" 2 ∘ word_to_hex_string ∘ (bools_to_word : bool list -> word8)
+End
+
+val _ =  bools_to_hex_f_def
+  |> SRULE [FUN_EQ_THM,bools_to_word_def,word_from_bin_list_def,l2w_def]
+  |> cv_auto_trans;
+
+val _ = bools_to_hex_string_def
+  |> SRULE [GSYM bools_to_hex_f_def]
+  |> cv_auto_trans;
+
+(* w = 1, so rho does nothing *)
+Theorem rho_spt_25_example:
+  rho_spt (fromList (GENLIST (λi. i < 10) 25))
+  = fromList (GENLIST (λi. i < 10) 25)
+Proof
+  simp [] \\ CONV_TAC cv_eval
+QED
+
+Theorem Keccak_224_NIL:
+  bools_to_hex_string (Keccak_224 []) =
+  "F71837502BA8E10837BDD8D365ADB85591895602FC552B48B7390ABD"
+Proof
+  CONV_TAC cv_eval
+QED
+
+Theorem Keccak_256_NIL:
+  bools_to_hex_string (Keccak_256 []) =
+  "C5D2460186F7233C927E7DB2DCC703C0E500B653CA82273B7BFAD8045D85A470"
+Proof
+  CONV_TAC cv_eval
+QED
+
+(*
+
 val cs = num_compset();
 val () = extend_compset [
   Tys [``:state_array``],
@@ -1864,6 +2303,7 @@ val () = extend_compset [
     index_to_triple_100,
     triple_to_index_1600,
     index_to_triple_1600,
+    bool_lookup_def,
     rc_step_def,
     rc_def,
     bool_to_bit_def,
@@ -1897,7 +2337,7 @@ Theorem rho_spt_25_example:
   rho_spt (fromList (GENLIST (λi. i < 10) 25))
   = fromList (GENLIST (λi. i < 10) 25)
 Proof
-  CONV_TAC(CBV_CONV cs)
+  simp [] \\ CONV_TAC cv_eval
 QED
 
 (* w = 4,
@@ -1919,6 +2359,8 @@ Theorem rho_spt_100_example:
     Lane a1 (4,3) = Lane a0 (4,3)
 Proof
   rw[]
+  \\ CONV_TAC cv_eval
+
   \\ CONV_TAC(CBV_CONV cs)
 QED
 
@@ -1935,8 +2377,6 @@ Theorem Keccak_256_NIL:
 Proof
   CONV_TAC(CBV_CONV cs)
 QED
-
-(*
 
 Definition state_array_to_lane_words_def:
   state_array_to_lane_words a =

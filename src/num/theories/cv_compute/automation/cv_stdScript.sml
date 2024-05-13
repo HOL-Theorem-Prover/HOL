@@ -382,38 +382,10 @@ QED
 val res = cv_trans
   (sptreeTheory.toAList_def |> REWRITE_RULE [GSYM toAList_foldi_def,FUN_EQ_THM]);
 
-Definition combine_rle_isEmpty_def:
-  combine_rle_isEmpty = combine_rle isEmpty
-End
-
-Theorem combine_rle_isEmpty_eq:
-  combine_rle_isEmpty xs =
-    case xs of
-    | [] => []
-    | [t] => [t]
-    | ((i,x)::(j,y)::xs) =>
-        if x = LN /\ y = LN then combine_rle_isEmpty ((i + j,x)::xs)
-        else (i,x)::combine_rle_isEmpty ((j,y)::xs)
-Proof
-  BasicProvers.every_case_tac
-  \\ gvs [combine_rle_isEmpty_def,sptreeTheory.combine_rle_def] \\ rw []
-QED
-
 Definition cv_right_depth_def:
   cv_right_depth (Num _) = 0:num /\
   cv_right_depth (Pair x y) = cv_right_depth y + 1
 End
-
-val res = cv_trans_pre_rec combine_rle_isEmpty_eq
-  (WF_REL_TAC ‘measure cv_right_depth’ \\ rw [cv_right_depth_def]
-   \\ cv_termination_tac \\ fs [cv_right_depth_def])
-
-Theorem combine_rle_isEmpty_pre[cv_pre]:
-  combine_rle_isEmpty_pre xs
-Proof
-  completeInduct_on ‘LENGTH xs’ \\ rw [] \\ gvs [PULL_FORALL]
-  \\ Cases_on ‘xs’ \\ gvs [] \\ simp [Once res] \\ rw []
-QED
 
 Definition every_empty_snd_def:
   every_empty_snd [] = T /\
@@ -421,7 +393,7 @@ Definition every_empty_snd_def:
 End
 
 Theorem every_empty_snd:
-  !ys. EVERY ((λt. isEmpty t) o SND) ys = every_empty_snd ys
+  !ys. EVERY ((\t. isEmpty t) o SND) ys = every_empty_snd ys
 Proof
   Induct \\ gvs [every_empty_snd_def,FORALL_PROD]
 QED
@@ -439,19 +411,123 @@ Definition map_spt_left_def:
 End
 
 Theorem map_spt_right_left:
-  MAP (λ(i,t). (i,spt_right t)) ys = map_spt_right ys /\
-  MAP (λ(i,t). (i,spt_left t)) ys = map_spt_left ys
+  MAP (\(i,t). (i,spt_right t)) ys = map_spt_right ys /\
+  MAP (\(i,t). (i,spt_left t)) ys = map_spt_left ys
 Proof
   Induct_on ‘ys’ \\ gvs [map_spt_left_def,map_spt_right_def,FORALL_PROD]
 QED
 
-(*
-  sptreeTheory.spts_to_alist_def
-  |> REWRITE_RULE [GSYM combine_rle_isEmpty_def,every_empty_snd,map_spt_right_left]
+Definition combine_rle_isEmpty_def:
+  combine_rle_isEmpty [] = [] /\
+  combine_rle_isEmpty [t] = [t] /\
+  combine_rle_isEmpty ((i,x)::(j,y)::xs) =
+    if x = LN /\ y = LN then combine_rle_isEmpty ((i + j:num,x)::xs)
+    else (i,x)::combine_rle_isEmpty ((j,y)::xs)
+End
 
-val res = cv_auto_trans sptreeTheory.spts_to_alist_def
-val res = cv_auto_trans sptreeTheory.toSortedAList_def
-*)
+val _ = cv_trans_rec combine_rle_isEmpty_def
+  (WF_REL_TAC ‘measure cv_size’ \\ rw []
+   \\ cv_termination_tac
+   \\ rename [‘cv_eq x’] \\ Cases_on ‘x’ \\ gvs [] \\ Cases_on ‘m’ \\ gvs []
+   \\ rename [‘cv_eq x’] \\ Cases_on ‘x’ \\ gvs [] \\ Cases_on ‘m’ \\ gvs []
+   \\ rename [‘cv_add x y’] \\ Cases_on ‘x’ \\ Cases_on ‘y’ \\ gvs [])
+
+Triviality to_combine_rle_isEmpty:
+  combine_rle isEmpty = combine_rle_isEmpty
+Proof
+  rw [FUN_EQ_THM]
+  \\ completeInduct_on ‘LENGTH x’
+  \\ rw [] \\ gvs [PULL_FORALL]
+  \\ Cases_on ‘x’ \\ gvs [combine_rle_def,combine_rle_isEmpty_def]
+  \\ Cases_on ‘t’ \\ gvs [combine_rle_def,combine_rle_isEmpty_def]
+  \\ rename [‘x::y::_’] \\ PairCases_on ‘x’ \\ PairCases_on ‘y’
+  \\ gvs [combine_rle_def,combine_rle_isEmpty_def]
+  \\ IF_CASES_TAC \\ gvs []
+  \\ IF_CASES_TAC \\ gvs []
+QED
+
+Definition spt_centers_acc_def:
+  spt_centers_acc i xs acc =
+    case xs of
+    | [] => (i,acc)
+    | ((j,x)::xs) =>
+      case spt_center x of
+      | NONE => spt_centers_acc (i + j) xs acc
+      | SOME y => spt_centers_acc (i + j) xs ((i:num,y)::acc)
+End
+
+Triviality spt_centers_acc_thm:
+  !i xs acc j ys.
+    spt_centers i xs = (j,ys) ==>
+    spt_centers_acc i xs acc = (j,REVERSE ys ++ acc)
+Proof
+  ho_match_mp_tac spt_centers_acc_ind
+  \\ rw [] \\ pop_assum mp_tac
+  \\ Cases_on ‘xs’
+  \\ simp [Once spt_centers_acc_def, Once spt_centers_def]
+  \\ PairCases_on ‘h’ \\ gvs [spt_centers_def]
+  \\ simp [AllCaseEqs()] \\ strip_tac \\ gvs []
+  \\ Cases_on ‘spt_centers (h0 + i) t’ \\ gvs [apsnd_cons_def]
+QED
+
+Triviality combine_rle_LESS_TRANS = MATCH_MP
+  (LESS_LESS_EQ_TRANS |> RES_CANON |> last)
+  (SPEC_ALL sum_size_combine_rle_LE);
+
+Definition spts_to_alist_acc_def:
+  spts_to_alist_acc i xs acc =
+   let ys = combine_rle_isEmpty xs in
+     if EVERY (isEmpty o SND) ys then REVERSE acc
+     else let
+            (j,acc1) = spt_centers_acc i ys acc;
+            rights = MAP (\(i,t). (i,spt_right t)) ys;
+            lefts = MAP (\(i,t). (i,spt_left t)) ys
+          in
+            spts_to_alist_acc j (rights ++ lefts) acc1
+Termination
+  WF_REL_TAC `measure (SUM o MAP (spt_size (K 0) o SND) o FST o SND)`
+  \\ rw [MAP_MAP_o, SUM_APPEND, GSYM SUM_MAP_PLUS]
+  \\ irule (combine_rle_LESS_TRANS |> REWRITE_RULE [combinTheory.o_DEF])
+  \\ qexists_tac `isEmpty`
+  \\ gvs [to_combine_rle_isEmpty]
+  \\ irule SUM_MAP_same_LESS
+  \\ fs [EVERY_MEM, EXISTS_MEM]
+  \\ rw [] \\ TRY (qexists_tac `e`)
+  \\ pairarg_tac \\ fs []
+  \\ rename [`spt_size _ (spt_left spt)`] \\ Cases_on `spt`
+  \\ fs [spt_size_def, spt_left_def, spt_right_def]
+End
+
+Triviality spts_to_alist_acc_thm:
+  !i xs acc.
+    spts_to_alist_acc i xs acc =
+    REVERSE acc ++ spts_to_alist i xs
+Proof
+  ho_match_mp_tac spts_to_alist_acc_ind \\ rw []
+  \\ simp [Once spts_to_alist_acc_def]
+  \\ simp [Once spts_to_alist_def,to_combine_rle_isEmpty]
+  \\ IF_CASES_TAC \\ gvs []
+  \\ rpt (pairarg_tac \\ gvs [])
+  \\ drule spt_centers_acc_thm \\ strip_tac \\ gvs []
+QED
+
+Theorem toSortedAList_acc:
+  toSortedAList spt = spts_to_alist_acc 0 [(1,spt)] []
+Proof
+  gvs [spts_to_alist_acc_thm,toSortedAList_def]
+QED
+
+val pre = cv_auto_trans_pre spts_to_alist_acc_def;
+Theorem spts_to_alist_acc_pre[cv_pre,local]:
+  !i xs acc. spts_to_alist_acc_pre i xs acc
+Proof
+  ho_match_mp_tac spts_to_alist_acc_ind
+  \\ rw [] \\ simp [Once pre]
+  \\ rw [] \\ res_tac \\ gvs []
+  \\ gvs [LAMBDA_PROD]
+QED
+
+val _ = cv_trans toSortedAList_acc;
 
 (*----------------------------------------------------------*
    num |-> 'a
