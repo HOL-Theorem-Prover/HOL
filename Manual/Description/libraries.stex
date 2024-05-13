@@ -1114,6 +1114,7 @@ The following session illustrates antiquotation.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+>>_ load "intLib";
 >>__ remove_ovl_mapping "+" {Name = "int_add", Thy = "integer"};
 >> val y = “x+1”;
 
@@ -2183,7 +2184,6 @@ The symbols for the standard arithmetic operations (addition, subtraction and mu
 In the above, natural number addition is chosen in preference to word addition.  Conversely, words are preferred over the integers below:
 \begin{session}
 \begin{alltt}
->>_ load "intLib";
 >>__ temp_overload_on("+", ``int_add``);
 
 >> type_of ``a + b``;
