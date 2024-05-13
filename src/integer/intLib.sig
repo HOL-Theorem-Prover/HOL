@@ -17,7 +17,7 @@ sig
   val COOPER_PROVE   : conv
   val COOPER_TAC     : tactic
 
-  val INTEGER_TAC         : tactic
-  val INTEGER_RULE        : term -> thm
+  val INTEGER_TAC    : tactic
+  val INTEGER_RULE   : term -> thm
 
 end

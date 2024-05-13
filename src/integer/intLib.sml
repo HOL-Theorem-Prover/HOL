@@ -148,7 +148,7 @@ local
       let val i' = map (fn s => snd s |-> fst s) i in
         rhs(concl(INT_POLY_CONV (subst i' p)))
       end;
-  fun subtract2 tms1 tms2 = 
+  fun subtract2 tms1 tms2 =
       HOLset.listItems(HOLset.difference(HOLset.addList(empty_tmset,tms1),
                                          HOLset.addList(empty_tmset,tms2)));
   fun solve_idealism evs ps eqs =
