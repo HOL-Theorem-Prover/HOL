@@ -17,6 +17,6 @@ ifdef HOLSELFTESTLEVEL
 all: combin-selftest.log
 
 combin-selftest.log: selftest.exe
-	./selftest.exe > $@ 2>&1
+	$(tee ./selftest.exe, $@)
 
 endif
