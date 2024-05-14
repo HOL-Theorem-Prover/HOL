@@ -110,7 +110,7 @@ fun build_skeleton ct =
       Term.inst sigma tm
     end
 
-val FUN_REL_t = prim_mk_const{Thy = "transfer", Name = "FUN_REL"}
+val FUN_REL_t = prim_mk_const{Thy = "quotient", Name = "===>"}
 fun ty2relvar cleftp skty cty =
     if is_vartype skty then
       mk_var("RV" ^ dvty skty,
@@ -515,7 +515,7 @@ val ruledb =
         |> add_domrng RES_EXISTS_RRANGE
         |> add_domrng RES_FORALL_RDOM
         |> add_domrng RES_FORALL_RRANGE
-        |> add_domrng FUN_REL_EQ2
+        |> add_domrng quotientTheory.FUN_REL_EQ
     end (* let *)
 
 fun search_for P depth sq =

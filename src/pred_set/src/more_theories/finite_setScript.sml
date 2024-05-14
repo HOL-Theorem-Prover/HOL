@@ -8,6 +8,8 @@ val _ = new_theory "finite_set";
 
 Theorem psEXTENSION[local] = pred_setTheory.EXTENSION
 
+Overload FUN_REL[local] = “$===>”
+
 Theorem RSUBSET_I:
   R1 RSUBSET R2 ==> R1 x y ==> R2 x y
 Proof

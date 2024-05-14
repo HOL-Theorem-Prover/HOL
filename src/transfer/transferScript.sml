@@ -75,13 +75,14 @@ Theorem equalityp_applied:   equalityp A ==> A x x
 Proof simp[equalityp_def]
 QED
 
-Definition FUN_REL_def:
-  FUN_REL AB CD (f : 'a -> 'c) (g : 'b -> 'd) <=>
-    !a:'a b:'b. AB a b ==> CD (f a) (g b)
-End
+Theorem FUN_REL_def =
+        quotientTheory.FUN_REL
+          |> CONV_RULE $ STRIP_QUANT_CONV $ RAND_CONV
+                       $ RENAME_VARS_CONV ["a", "b"]
 
-val _ = set_fixity "|==>" (Infixr 490)
-Overload "|==>" = “FUN_REL”  (* co-existing with quotientTheory$|==> *)
+val _ = set_mapped_fixity {
+  tok = "|==>", fixity = Infixr 490, term_name = "===>"
+ };
 
 Theorem FUN_REL_COMB:
   (AB |==> CD) f g /\ AB a b ==> CD (f a) (g b)
@@ -92,10 +93,6 @@ Theorem FUN_REL_IFF_IMP:
   (AB |==> (=)) P Q ==> (AB |==> (==>)) P Q /\ (AB |==> combin$C (==>)) P Q
 Proof
   simp[FUN_REL_def] >> metis_tac[]
-QED
-
-Theorem FUN_REL_EQ2[simp]:   ((=) |==> (=)) = (=)
-Proof simp[FUN_REL_def, FUN_EQ_THM]
 QED
 
 Theorem equalityp_FUN_REL:
@@ -119,6 +116,7 @@ Theorem ALL_IFF:
   bitotal AB ==> ((AB |==> (=)) |==> (=)) (!) (!)
 Proof
   simp[bitotal_def, FUN_REL_def, total_def, surj_def] >> rpt strip_tac >>
+  rename [‘$! a = $! b’] >>
   ‘a = (\x. a x) /\ b = (\y. b y)’ by simp[FUN_EQ_THM] >>
   ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
 QED
@@ -126,7 +124,7 @@ QED
 Theorem ALL_surj_RDOM:
   surj AB ==> ((AB |==> (=)) |==> (=)) (RES_FORALL (RDOM AB)) (!)
 Proof
-  simp[FUN_REL_def, surj_def] >> rpt strip_tac >>
+  simp[FUN_REL_def, surj_def] >> rpt strip_tac >> rename [‘_ a = $! b’] >>
   ‘b = (\y. b y)’ by simp[FUN_EQ_THM] >>
   simp[RES_FORALL_THM, relationTheory.RDOM_DEF, IN_DEF] >>
   pop_assum SUBST1_TAC >> metis_tac[]
