@@ -1,9 +1,4 @@
 INCLUDES = \
-  AES DES IDEA MARS RC6 Serpent/Bitslice Serpent/Reference SHA-1 TEA TWOFISH
+  AES DES IDEA Keccak MARS RC6 Serpent/Bitslice Serpent/Reference SHA-1 TEA \
+  TWOFISH
 CLINE_OPTIONS = -r
-
-ifeq ($(KERNELID),stdknl)
-ifeq ($(HOLSELFTESTLEVEL),3)
-INCLUDES += Keccak
-endif
-endif
