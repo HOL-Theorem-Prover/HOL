@@ -18,26 +18,17 @@ open jcLib;
 (* open dependent theories *)
 open pred_setTheory listTheory arithmeticTheory numberTheory dividesTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory fieldTheory;
-
-open subgroupTheory;
-open groupOrderTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
 
-(* val _ = load "polyRootTheory"; *)
 open polyRootTheory;
 open polyMonicTheory;
-
-(* val _ = load "polyFieldDivisionTheory"; *)
 open polyFieldTheory;
 open polyFieldDivisionTheory;
-
-(* val _ = load "ringDividesTheory"; *)
-open ringDividesTheory;
-
-(* val _ = load "polyEvalTheory"; *)
 open polyEvalTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Divisibility of Polynomials Documentation                                 *)
@@ -2505,7 +2496,6 @@ val poly_monic_divides_one = store_thm(
     metis_tac[poly_monic_deg_0],
     rw[poly_divides_reflexive]
   ]);
-
 
 (* ------------------------------------------------------------------------- *)
 

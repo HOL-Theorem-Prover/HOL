@@ -716,11 +716,22 @@ Definition set_exp_def:
 End
 Overload "**" = “set_exp”
 
+Theorem exp_c :
+    !(s :'a set) (t :'b set).
+         s ** t =
+         {f | (!x. x IN t ==> f x IN s) /\ (!x. ~(x IN t) ==> f x = ARB)}
+Proof
+    rw [set_exp_def, Once EXTENSION]
+QED
+
 Theorem UNIV_fun_exp:
   univ(:'a -> 'b) = univ(:'b) ** univ(:'a)
 Proof
   simp[set_exp_def]
 QED
+
+(* |- univ(:'b) ** univ(:'a) = univ(:'a -> 'b) *)
+Theorem CARD_EXP_UNIV = GSYM UNIV_fun_exp
 
 Theorem BIJ_functions_agree:
   !f g s t. BIJ f s t /\ (!x. x IN s ==> (f x = g x)) ==> BIJ g s t
@@ -2218,6 +2229,23 @@ val COUNTABLE = store_thm
 (* Relational variant of =_c is sometimes useful.                            *)
 (* ------------------------------------------------------------------------- *)
 
+Theorem EQ_C_BIJECTIONS :
+    !(s :'a -> bool) (t :'b -> bool).
+        s =_c t <=> ?f g. (!x. x IN s ==> f x IN t /\ g(f x) = x) /\
+                          (!y. y IN t ==> g y IN s /\ f(g y) = y)
+Proof
+  REPEAT GEN_TAC THEN SIMP_TAC std_ss [eq_c] THEN
+  AP_TERM_TAC THEN GEN_REWRITE_TAC I empty_rewrites [FUN_EQ_THM] THEN
+  Q.X_GEN_TAC ‘f’ THEN SIMP_TAC std_ss [] THEN
+  EQ_TAC THENL [STRIP_TAC, MESON_TAC[]] THEN
+  Q.EXISTS_TAC `(\y. @x. x IN s /\ f x = y)` THEN
+(* HOL-Light's ASM_MESON_TAC seems more powerful than HOL4's:
+   ASM_MESON_TAC[]
+ *)
+  rw [] >> SELECT_ELIM_TAC \\
+  fs [EXISTS_UNIQUE_DEF]
+QED
+
 val EQ_C = store_thm ("EQ_C",
  ``!s t. s =_c t <=>
    ?R:'a#'b->bool. (!x y. R(x,y) ==> x IN s /\ y IN t) /\
@@ -2515,7 +2543,6 @@ val CARD_EQ_IMAGE = store_thm ("CARD_EQ_IMAGE",
 (* ------------------------------------------------------------------------- *)
 (* Cardinal arithmetic operations.                                           *)
 (* ------------------------------------------------------------------------- *)
-
 
 val add_c = disjUNION_def
 
@@ -2847,6 +2874,75 @@ Theorem CANTOR_THM_UNIV:
 Proof
   ‘univ(:'a -> bool) = POW univ(:'a)’ suffices_by simp[] >>
   simp[EXTENSION, POW_DEF]
+QED
+
+Theorem CARD_EXP_SING :
+    !(s :'a -> bool) (b :'b). (s ** {b}) =_c s
+Proof
+    REWRITE_TAC [SING_set_exp_CARD]
+QED
+
+Theorem CARD_EXP_CONG :
+    !(s:'a->bool) (s':'b->bool) (t:'c->bool) (t':'d->bool).
+      s =_c s' /\ t =_c t' ==> s ** t =_c s' ** t'
+Proof
+    rw [set_exp_card_cong]
+QED
+
+Theorem CARD_LE_EXP_LEFT :
+    !(s :'a -> bool) (s' :'b -> bool) (t :'c -> bool).
+        s <=_c s' ==> s ** t <=_c s' ** t
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[le_c, exp_c] THEN
+  DISCH_THEN(X_CHOOSE_TAC “f :'a -> 'b”) THEN
+  rw [GSPECIFICATION] THEN
+  EXISTS_TAC “\(g:'c->'a) (z:'c). if z IN t then f(g z):'b else ARB” THEN
+  rw [FUN_EQ_THM] THEN
+  METIS_TAC []
+QED
+
+Theorem CARD_EXP_MUL :
+    !(s:'a->bool) (t:'b->bool) (u:'c->bool).
+        s ** (t *_c u) =_c (s ** t) ** u
+Proof
+    rw [Once cardeq_SYM, set_exp_product]
+QED
+
+Theorem CARD_EXP_POWERSET :
+    !s :'a -> bool. univ(:bool) ** s =_c {t | t SUBSET s}
+Proof
+    GEN_TAC
+ >> REWRITE_TAC [exp_c, EQ_C_BIJECTIONS, IN_UNIV]
+ >> qexistsl_tac [‘\P. {x | x IN s /\ P x}’,
+                  ‘\t x. if x IN s then x IN t else ARB’]
+ >> SIMP_TAC std_ss [GSPECIFICATION]
+ >> SET_TAC []
+QED
+
+Theorem CARD_EXP_CANTOR :
+    !s :'a -> bool. s <_c univ(:bool) ** s
+Proof
+  GEN_TAC THEN
+  TRANS_TAC CARD_LTE_TRANS “{t :'a->bool | t SUBSET s}” THEN
+  REWRITE_TAC[CANTOR_THM] THEN
+  MATCH_MP_TAC CARD_EQ_IMP_LE THEN
+  ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN REWRITE_TAC[CARD_EXP_POWERSET]
+QED
+
+Theorem CARD_EXP_ABSORB :
+    !(s :'a -> bool) (t :'b -> bool).
+        INFINITE t /\ univ(:bool) <=_c s /\ s <=_c univ(:bool) ** t
+        ==> s ** t =_c univ(:bool) ** t
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN
+  ASM_SIMP_TAC std_ss [CARD_LE_EXP_LEFT, CARD_LE_REFL] THEN
+  TRANS_TAC CARD_LE_TRANS “(univ(:bool) ** t) ** (t:'b->bool)” THEN
+  ASM_SIMP_TAC std_ss[CARD_LE_EXP_LEFT] THEN
+  MATCH_MP_TAC CARD_EQ_IMP_LE THEN
+  TRANS_TAC CARD_EQ_TRANS “univ(:bool) ** ((t:'b->bool) *_c t)” THEN
+  SIMP_TAC std_ss[ONCE_REWRITE_RULE[CARD_EQ_SYM] CARD_EXP_MUL] THEN
+  MATCH_MP_TAC CARD_EXP_CONG THEN
+  ASM_SIMP_TAC std_ss[CARD_SQUARE_INFINITE, CARD_EQ_REFL]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -3341,6 +3437,36 @@ Proof
         dsimp[EXTENSION] >> metis_tac[]) >>
   simp[PULL_EXISTS] >>
   simp[destWO_mkWO] >> simp[strict_def, Abbr‘W2’]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Misc lemmas from HOL-Light's card.ml                                      *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem MUL_C_UNIV :
+    univ(:'a) *_c univ(:'b) = univ(:'a # 'b)
+Proof
+  REWRITE_TAC[CROSS_UNIV]
+QED
+
+Theorem CARD_MUL_FINITE_EQ :
+    !s t. FINITE (s *_c t) <=> s = {} \/ t = {} \/ FINITE s /\ FINITE t
+Proof
+  REWRITE_TAC [FINITE_CROSS_EQ]
+QED
+
+Theorem INJECTIVE_ON_ALT :
+    !P (f :'a -> 'b).
+        (!x y. P x /\ P y /\ f x = f y ==> x = y) <=>
+        (!x y. P x /\ P y ==> (f x = f y <=> x = y))
+Proof
+  MESON_TAC[]
+QED
+
+Theorem INJECTIVE_ALT :
+    !f :'a -> 'b. (!x y. f x = f y ==> x = y) <=> (!x y. f x = f y <=> x = y)
+Proof
+  MESON_TAC[]
 QED
 
 val _ = export_theory()

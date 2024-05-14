@@ -99,7 +99,7 @@ sig
   val KNOW_TAC              : term -> tactic
   val SUFF_TAC              : term -> tactic
   val suff_tac              : term -> tactic
-
+  val TRANS_TAC             : thm -> term -> tactic
 
   val eliminable            : term -> bool
   val VSUBST_TAC            : thm -> tactic

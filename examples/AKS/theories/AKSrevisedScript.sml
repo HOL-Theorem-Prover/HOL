@@ -38,27 +38,11 @@ open polyRootTheory;
 open polyDividesTheory;
 
 open monoidTheory groupTheory ringTheory fieldTheory;
-open subgroupTheory;
-open groupOrderTheory;
 open fieldMapTheory;
-open ringUnitTheory;
-
-open ringBinomialTheory;
-open ringDividesTheory;
-
-open groupInstancesTheory;
-open ringInstancesTheory;
 open fieldInstancesTheory;
-open groupOrderTheory;
-
-open groupCyclicTheory;
-
 open fieldBinomialTheory;
-
 open fieldIdealTheory;
-
 open fieldOrderTheory;
-
 open fieldProductTheory;
 
 open ffBasicTheory;
@@ -71,6 +55,8 @@ open ffExistTheory;
 open ffConjugateTheory;
 open ffMasterTheory;
 open ffMinimalTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* AKS parameter k revised (not required to be prime) Documentation          *)

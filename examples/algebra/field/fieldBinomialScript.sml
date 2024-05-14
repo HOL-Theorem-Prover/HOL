@@ -24,10 +24,9 @@ open ringTheory;
 open groupTheory;
 open monoidTheory;
 
-open groupMapTheory ringMapTheory fieldMapTheory;
+open fieldMapTheory;
 
-(* val _ = load "ringBinomialTheory"; *)
-open ringBinomialTheory;
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Field Binomial Documentation                                              *)

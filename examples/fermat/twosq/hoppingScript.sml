@@ -21,7 +21,6 @@ open helperTwosqTheory;
 
 open quarityTheory;
 
-(* val _ = load "twoSquaresTheory"; *)
 open windmillTheory;
 open involuteTheory;
 open involuteFixTheory;
@@ -30,9 +29,11 @@ open iterateComposeTheory; (* for involute_involute_fix_orbit_fix_odd *)
 open iterateComputeTheory; (* for iterate_while_thm *)
 open twoSquaresTheory; (* for loop test found *)
 
+val _ = intLib.deprecate_int ();
+
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* Node Hopping Algorithm Documentation                                      *)

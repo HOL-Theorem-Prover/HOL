@@ -1,1 +1,1 @@
-INCLUDES = ../ring ../group ../field ../polynomial  
+INCLUDES = ../field ../polynomial  

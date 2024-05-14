@@ -22,9 +22,7 @@ open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
 open AKSsetsTheory;
 open AKSintroTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory;
-
-open fieldTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* Get polynomial theory of Ring *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
@@ -32,9 +30,7 @@ open polyBinomialTheory polyEvalTheory;
 
 open polyDividesTheory;
 open polyMonicTheory;
-
 open polyRootTheory;
-
 open polyProductTheory;
 
 open polyFieldTheory;
@@ -44,19 +40,14 @@ open polyRingModuloTheory;
 open polyModuloRingTheory;
 open polyIrreducibleTheory;
 
-open subgroupTheory;
-open groupOrderTheory;
-
-open ringBinomialTheory;
-
-open groupInstancesTheory;
-open ringInstancesTheory;
 open fieldInstancesTheory;
 
 open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;
 open ffUnityTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Mappings for Introspective Sets Documentation                             *)

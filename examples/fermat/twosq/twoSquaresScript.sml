@@ -21,26 +21,22 @@ open arithmeticTheory pred_setTheory dividesTheory numberTheory gcdsetTheory
 
 open windmillTheory;
 
-(* val _ = load "involuteFixTheory"; *)
 open involuteTheory; (* for involute_bij *)
 open involuteFixTheory;
 
-(* val _ = load "iterateComposeTheory"; *)
 open iterationTheory;
 open iterateComposeTheory;
 
-(* val _ = load "iterateComputeTheory"; *)
 open iterateComputeTheory;
 
-(* for group action *)
-(* val _ = load "involuteActionTheory"; *)
 open involuteActionTheory;
-open groupActionTheory;
-open groupInstancesTheory;
+open groupTheory;
+
+val _ = intLib.deprecate_int ();
 
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* Windmills of the minds Documentation                                      *)

@@ -29,20 +29,16 @@ open ffMasterTheory;
 open ffConjugateTheory;
 
 open monoidTheory groupTheory ringTheory fieldTheory;
-open groupOrderTheory fieldOrderTheory;
-open subgroupTheory;
-open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
-open groupCyclicTheory;
+open fieldOrderTheory;
+open fieldInstancesTheory;
 
 (* Get polynomial theory of Ring *)
-(* (* val _ = load "polyFieldDivisionTheory"; *) *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
 open polyMonicTheory polyEvalTheory;
 open polyDividesTheory;
 open polyMonicTheory;
 open polyRootTheory;
 
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
@@ -50,21 +46,15 @@ open polyRingModuloTheory;
 open polyModuloRingTheory;
 
 open polyMapTheory;
-open groupMapTheory ringMapTheory fieldMapTheory;
+open fieldMapTheory;
 
-(* (* val _ = load "polyGCDTheory"; *) *)
 open polyGCDTheory;
 open polyIrreducibleTheory;
 open polyProductTheory;
 
-(* (* val _ = load "ringBinomialTheory"; *) *)
-open ringBinomialTheory;
-open ringDividesTheory;
-open ringIdealTheory;
-open ringUnitTheory;
-
-(* (* val _ = load "fieldBinomialTheory"; *) *)
 open fieldBinomialTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Existence and Uniqueness Documentation                       *)

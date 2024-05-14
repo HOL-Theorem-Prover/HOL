@@ -20,11 +20,9 @@ open pred_setTheory arithmeticTheory gcdsetTheory numberTheory
 
 open mapCountTheory; (* for on_def *)
 
-open monoidTheory groupTheory;
-open ringTheory fieldTheory;
-open subgroupTheory;
-open groupMapTheory;
-open ringMapTheory fieldMapTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
+
+open fieldMapTheory;
 
 val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
 
@@ -213,10 +211,6 @@ val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
    subfield_auto_group_group_1 |- !r s. Field r /\ subfield s r ==> Group (subfield_auto_group r s)
    subfield_auto_group_group_2 |- !r s. s <<= r ==> Group (subfield_auto_group r s)
 *)
-
-(* ------------------------------------------------------------------------- *)
-(* Helper Theorems                                                           *)
-(* ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
 (* Symmetric Group                                                           *)

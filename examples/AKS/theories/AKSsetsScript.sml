@@ -22,9 +22,7 @@ open prim_recTheory pred_setTheory listTheory arithmeticTheory dividesTheory
 (* Get dependent theories local *)
 open AKSintroTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory;
-
-open fieldTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory
      polyBinomialTheory;
@@ -40,14 +38,9 @@ open polyIrreducibleTheory;
 open polyRootTheory;
 open polyProductTheory;
 
-open subgroupTheory;
-open groupOrderTheory;
-
-open ringBinomialTheory;
-
-open groupInstancesTheory;
-open ringInstancesTheory;
 open fieldInstancesTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Introspective Sets Documentation                                          *)

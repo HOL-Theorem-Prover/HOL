@@ -24,6 +24,8 @@ open monoidTheory groupTheory ringTheory polynomialTheory;
 (* Overload sublist by infix operator *)
 val _ = temp_overload_on ("<=", ``sublist``);
 
+val _ = intLib.deprecate_int ();
+
 (* ------------------------------------------------------------------------- *)
 (* Weak Polynomials Documentation                                            *)
 (* ------------------------------------------------------------------------- *)

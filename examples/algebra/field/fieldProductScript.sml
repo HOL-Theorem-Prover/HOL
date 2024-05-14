@@ -19,14 +19,7 @@ open jcLib;
 open pred_setTheory listTheory arithmeticTheory dividesTheory numberTheory
      combinatoricsTheory;
 
-open fieldTheory;
-open ringTheory;
-open groupTheory;
-open monoidTheory;
-
-(* val _ = load "groupProductTheory"; *)
-open groupProductTheory;
-open subgroupTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Product of a set of Field elements Documentation                          *)

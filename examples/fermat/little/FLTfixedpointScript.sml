@@ -37,10 +37,7 @@ open arithmeticTheory pred_setTheory dividesTheory numberTheory
 
 open cycleTheory;
 
-(* val _ = load "groupInstancesTheory"; *)
-(* val _ = load "groupActionTheory"; *)
 open groupTheory;
-open groupActionTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Action Documentation                           *)
@@ -121,73 +118,7 @@ open groupActionTheory;
 
 (* Part 1: Basic ----------------------------------------------------------- *)
 
-val Zadd_element = groupInstancesTheory.Zadd_element;
-(* |- !n x. x IN (Zadd n).carrier <=> x < n *)
-
-val Zadd_card = groupInstancesTheory.Zadd_card;
-(* |- !n. CARD (Zadd n).carrier = n *)
-
-val Zadd_group = groupInstancesTheory.Zadd_group;
-(* |- !n. 0 < n ==> Group (Zadd n) *)
-
-val Zadd_finite_group = groupInstancesTheory.Zadd_finite_group;
-(* |- !n. 0 < n ==> FiniteGroup (Zadd n) *)
-
 (* Part 2: General Theory -------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* Theory of necklaces                                                       *)
-(* ------------------------------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* Fixed Points of action.                                                   *)
-(* ------------------------------------------------------------------------- *)
-
-val fixed_points_def = groupActionTheory.fixed_points_def;
-(* |- !f g X. fixed_points f g X = {x | x IN X /\ !a. a IN G ==> f a x = x} *)
-
-val fixed_points_element = groupActionTheory.fixed_points_element;
-(* |- !f g X x. x IN fixed_points f g X <=> x IN X /\ !a. a IN G ==> f a x = x *)
-
-val fixed_points_orbit_sing = groupActionTheory.fixed_points_orbit_sing;
-(* |- !f g X. Group g /\ (g act X) f ==>
-              !x. x IN fixed_points f g X <=> x IN X /\ orbit f g x = {x} *)
-
-val orbit_sing_fixed_points = groupActionTheory.orbit_sing_fixed_points;
-(* |- !f g X. (g act X) f ==>
-              !x. x IN X /\ orbit f g x = {x} ==> x IN fixed_points f g X *)
-
-val fixed_points_orbit_iff_sing = groupActionTheory.fixed_points_orbit_iff_sing;
-(* |- !f g X. Group g /\ (g act X) f ==>
-              !x. x IN X ==> (x IN fixed_points f g X <=> SING (orbit f g x)) *)
-
-val sing_orbits_def = groupActionTheory.sing_orbits_def;
-(* |- !f g X. sing_orbits f g X = {e | e IN orbits f g X /\ SING e} *)
-
-val multi_orbits_def = groupActionTheory.multi_orbits_def;
-(* |- !f g X. multi_orbits f g X = {e | e IN orbits f g X /\ ~SING e} *)
-
-val sing_orbits_to_fixed_points_inj = groupActionTheory.sing_orbits_to_fixed_points_inj;
-(* |- !f g X. Group g /\ (g act X) f ==> INJ CHOICE (sing_orbits f g X) (fixed_points f g X) *)
-
-val sing_orbits_to_fixed_points_surj = groupActionTheory.sing_orbits_to_fixed_points_surj;
-(* |- !f g X. Group g /\ (g act X) f ==> SURJ CHOICE (sing_orbits f g X) (fixed_points f g X) *)
-
-val sing_orbits_to_fixed_points_bij = groupActionTheory.sing_orbits_to_fixed_points_bij;
-(* |- !f g X. Group g /\ (g act X) f ==> BIJ CHOICE (sing_orbits f g X) (fixed_points f g X): *)
-
-val sing_orbits_card_eqn = groupActionTheory.sing_orbits_card_eqn;
-(* |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
-              CARD (sing_orbits f g X) = CARD (fixed_points f g X) *)
-
-val target_card_by_fixed_points = groupActionTheory.target_card_by_fixed_points;
-(* |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
-              CARD X = CARD (fixed_points f g X) + SIGMA CARD (multi_orbits f g X) *)
-
-val target_card_and_fixed_points_congruence = groupActionTheory.target_card_and_fixed_points_congruence;
-(* |- !f g X n. Group g /\ (g act X) f /\ FINITE X /\ 0 < n /\
-                (!e. e IN multi_orbits f g X ==> CARD e = n) ==>
-                CARD X MOD n = CARD (fixed_points f g X) MOD n *)
 
 (* ------------------------------------------------------------------------- *)
 (* From FLTnecklace.                                                           *)

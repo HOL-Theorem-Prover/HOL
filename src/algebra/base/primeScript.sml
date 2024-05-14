@@ -23,59 +23,7 @@ val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 (* ------------------------------------------------------------------------- *)
 (* Integer Functions Computation Documentation                               *)
 (* ------------------------------------------------------------------------- *)
-(* Overloading:
-   SQRT n       = ROOT 2 n
-   LOG2 n       = LOG 2 n
-   n power_of b = perfect_power n b
-*)
-
-(* Definitions and Theorems (# are exported):
-
-   ROOT computation:
-   ROOT_POWER       |- !a n. 1 < a /\ 0 < n ==> (ROOT n (a ** n) = a)
-   ROOT_FROM_POWER  |- !m n b. 0 < m /\ (b ** m = n) ==> (b = ROOT m n)
-#  ROOT_OF_0        |- !m. 0 < m ==> (ROOT m 0 = 0)
-#  ROOT_OF_1        |- !m. 0 < m ==> (ROOT m 1 = 1)
-   ROOT_EQ_0        |- !m. 0 < m ==> !n. (ROOT m n = 0) <=> (n = 0)
-#  ROOT_1           |- !n. ROOT 1 n = n
-   ROOT_THM         |- !r. 0 < r ==> !n p. (ROOT r n = p) <=> p ** r <= n /\ n < SUC p ** r
-   ROOT_EQN         |- !r n. 0 < r ==> (ROOT r n =
-                             (let m = TWICE (ROOT r (n DIV 2 ** r))
-                               in m + if (m + 1) ** r <= n then 1 else 0))
-   ROOT_SUC         |- !r n. 0 < r ==>
-                             ROOT r (SUC n) = ROOT r n +
-                                              if SUC n = SUC (ROOT r n) ** r then 1 else 0
-   ROOT_EQ_1        |- !m. 0 < m ==> !n. (ROOT m n = 1) <=> 0 < n /\ n < 2 ** m
-   ROOT_LE_SELF     |- !m n. 0 < m ==> ROOT m n <= n
-   ROOT_EQ_SELF     |- !m n. 0 < m ==> (ROOT m n = n) <=> (m = 1) \/ (n = 0) \/ (n = 1))
-   ROOT_GE_SELF     |- !m n. 0 < m ==> (n <= ROOT m n) <=> (m = 1) \/ (n = 0) \/ (n = 1))
-   ROOT_LE_REVERSE  |- !a b n. 0 < a /\ a <= b ==> ROOT b n <= ROOT a n
-
-   Square Root:
-   SQRT_PROPERTY    |- !n. 0 < n ==> SQRT n ** 2 <= n /\ n < SUC (SQRT n) ** 2
-   SQRT_UNIQUE      |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p
-   SQRT_THM         |- !n p. (SQRT n = p) <=> p ** 2 <= n /\ n < SUC p ** 2
-   SQ_SQRT_LE       |- !n. SQ (SQRT n) <= n
-   SQ_SQRT_LE_alt   |- !n. SQRT n ** 2 <= n
-   SQRT_LE          |- !n m. n <= m ==> SQRT n <= SQRT m
-   SQRT_LT          |- !n m. n < m ==> SQRT n <= SQRT m
-#  SQRT_0           |- SQRT 0 = 0
-#  SQRT_1           |- SQRT 1 = 1
-   SQRT_EQ_0        |- !n. (SQRT n = 0) <=> (n = 0)
-   SQRT_EQ_1        |- !n. (SQRT n = 1) <=> (n = 1) \/ (n = 2) \/ (n = 3)
-   SQRT_EXP_2       |- !n. SQRT (n ** 2) = n
-   SQRT_OF_SQ       |- !n. SQRT (n ** 2) = n
-   SQRT_SQ          |- !n. SQRT (SQ n) = n
-   SQRT_LE_SELF     |- !n. SQRT n <= n
-   SQRT_GE_SELF     |- !n. n <= SQRT n <=> (n = 0) \/ (n = 1)
-   SQRT_EQ_SELF     |- !n. (SQRT n = n) <=> (n = 0) \/ (n = 1)
-   SQRT_LE_IMP      |- !n m. SQRT n <= m ==> n <= 3 * m ** 2
-   SQRT_MULT_LE     |- !n m. SQRT n * SQRT m <= SQRT (n * m)
-   SQRT_LT_IMP      |- !n m. SQRT n < m ==> n < m ** 2
-   LT_SQRT_IMP      |- !n m. n < SQRT m ==> n ** 2 < m
-   SQRT_LT_SQRT     |- !n m. SQRT n < SQRT m ==> n < m
-
-   Square predicate:
+(* Square predicate:
    square_def       |- !n. square n <=> ?k. n = k * k
    square_alt       |- !n. square n <=> ?k. n = k ** 2
 !  square_eqn       |- !n. square n <=> SQRT n ** 2 = n
@@ -85,48 +33,6 @@ val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
    SQ_SQRT_LT       |- !n. ~square n ==> SQRT n * SQRT n < n
    SQ_SQRT_LT_alt   |- !n. ~square n ==> SQRT n ** 2 < n
    odd_square_lt    |- !n m. ~square n ==> ((2 * m + 1) ** 2 < n <=> m < HALF (1 + SQRT n))
-
-   Logarithm:
-   LOG_EXACT_EXP    |- !a. 1 < a ==> !n. LOG a (a ** n) = n
-   EXP_TO_LOG       |- !a b n. 1 < a /\ 0 < b /\ b <= a ** n ==> LOG a b <= n
-   LOG_THM          |- !a n. 1 < a /\ 0 < n ==>
-                       !p. (LOG a n = p) <=> a ** p <= n /\ n < a ** SUC p
-   LOG_EVAL         |- !m n. LOG m n = if m <= 1 \/ n = 0 then LOG m n
-                             else if n < m then 0 else SUC (LOG m (n DIV m))
-   LOG_TEST         |- !a n. 1 < a /\ 0 < n ==>
-                       !p. (LOG a n = p) <=> SUC n <= a ** SUC p /\ a ** SUC p <= a * n
-   LOG_POWER        |- !b x n. 1 < b /\ 0 < x /\ 0 < n ==>
-                          n * LOG b x <= LOG b (x ** n) /\
-                          LOG b (x ** n) < n * SUC (LOG b x)
-   LOG_LE_REVERSE   |- !a b n. 1 < a /\ 0 < n /\ a <= b ==> LOG b n <= LOG a n
-
-#  LOG2_1              |- LOG2 1 = 0
-#  LOG2_2              |- LOG2 2 = 1
-   LOG2_THM            |- !n. 0 < n ==> !p. (LOG2 n = p) <=> 2 ** p <= n /\ n < 2 ** SUC p
-   LOG2_PROPERTY       |- !n. 0 < n ==> 2 ** LOG2 n <= n /\ n < 2 ** SUC (LOG2 n)
-   TWO_EXP_LOG2_LE     |- !n. 0 < n ==> 2 ** LOG2 n <= n
-   LOG2_UNIQUE         |- !n m. 2 ** m <= n /\ n < 2 ** SUC m ==> (LOG2 n = m)
-   LOG2_EQ_0           |- !n. 0 < n ==> (LOG2 n = 0 <=> n = 1)
-   LOG2_EQ_1           |- !n. 0 < n ==> ((LOG2 n = 1) <=> (n = 2) \/ (n = 3))
-   LOG2_LE_MONO        |- !n m. 0 < n ==> n <= m ==> LOG2 n <= LOG2 m
-   LOG2_LE             |- !n m. 0 < n /\ n <= m ==> LOG2 n <= LOG2 m
-   LOG2_LT             |- !n m. 0 < n /\ n < m ==> LOG2 n <= LOG2 m
-   LOG2_LT_SELF        |- !n. 0 < n ==> LOG2 n < n
-   LOG2_NEQ_SELF       |- !n. 0 < n ==> LOG2 n <> n
-   LOG2_EQ_SELF        |- !n. (LOG2 n = n) ==> (n = 0)
-#  LOG2_POS            |- !n. 1 < n ==> 0 < LOG2 n
-   LOG2_TWICE_LT       |- !n. 1 < n ==> 1 < 2 * LOG2 n
-   LOG2_TWICE_SQ       |- !n. 1 < n ==> 4 <= (2 * LOG2 n) ** 2
-   LOG2_SUC_TWICE_SQ   |- !n. 0 < n ==> 4 <= (2 * SUC (LOG2 n)) ** 2
-   LOG2_SUC_SQ         |- !n. 1 < n ==> 1 < SUC (LOG2 n) ** 2
-   LOG2_SUC_TIMES_SQ_DIV_2_POS  |- !n m. 1 < m ==> 0 < SUC (LOG2 n) * (m ** 2 DIV 2)
-   LOG2_2_EXP          |- !n. LOG2 (2 ** n) = n
-   LOG2_EXACT_EXP      |- !n. (2 ** LOG2 n = n) <=> ?k. n = 2 ** k
-   LOG2_MULT_EXP       |- !n m. 0 < n ==> (LOG2 (n * 2 ** m) = LOG2 n + m)
-   LOG2_TWICE          |- !n. 0 < n ==> (LOG2 (TWICE n) = 1 + LOG2 n)
-   LOG2_HALF           |- !n. 1 < n ==> (LOG2 (HALF n) = LOG2 n - 1)
-   LOG2_BY_HALF        |- !n. 1 < n ==> (LOG2 n = 1 + LOG2 (HALF n))
-   LOG2_DIV_EXP        |- !n m. 2 ** m < n ==> (LOG2 (n DIV 2 ** m) = LOG2 n - m)
 
    LOG2 Computation:
    halves_def          |- !n. halves n = if n = 0 then 0 else SUC (halves (HALF n))

@@ -19,37 +19,21 @@ open jcLib;
 open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
      dividesTheory gcdTheory gcdsetTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory fieldTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
-open subgroupTheory;
-open groupOrderTheory;
-
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* val _ = load "polyDividesTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyDivisionTheory polyDividesTheory;
-
-(* val _ = load "polyRootTheory"; *)
 open polyRootTheory;
 open polyMonicTheory;
-
-(* val _ = load "polyFieldModuloTheory"; *)
 open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
 open polyIrreducibleTheory;
-
-open ringDividesTheory;
-
-(* val _ = load "polyEvalTheory"; *)
 open polyEvalTheory;
-
-(* val _ = load "polyProductTheory"; *)
 open polyProductTheory;
-
-(* val _ = load "polyDerivativeTheory"; *)
 open polyDerivativeTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* GCD and LCM of Polynomials Documentation                                  *)

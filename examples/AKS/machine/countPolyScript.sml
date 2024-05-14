@@ -19,6 +19,8 @@ open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
      rich_listTheory listRangeTheory logrootTheory numberTheory
      combinatoricsTheory pairTheory optionTheory primeTheory;
 
+open ringTheory;
+
 open countMonadTheory countMacroTheory;
 open countModuloTheory;
 
@@ -26,13 +28,8 @@ open bitsizeTheory complexityTheory;
 open loopIncreaseTheory loopDecreaseTheory;
 open loopDivideTheory loopListTheory;
 
-(* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
 
-(* val _ = load "ringInstancesTheory"; *)
-open ringInstancesTheory; (* for ZN order *)
-
-(* val _ = load "computeRingTheory"; *)
 open computeRingTheory; (* for ZN_poly_cmult_alt *)
 open computePolyTheory; (* for unity_mod_monomial *)
 
@@ -44,9 +41,11 @@ val _ = monadsyntax.enable_monad "Count";
 (* Overload sublist by infix operator *)
 val _ = temp_overload_on ("<=", ``sublist``);
 
+val _ = intLib.deprecate_int ();
+
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial computations in monadic style Documentation                    *)

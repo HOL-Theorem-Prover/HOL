@@ -19,9 +19,8 @@ open jcLib;
 open pred_setTheory arithmeticTheory listTheory rich_listTheory numberTheory
      combinatoricsTheory dividesTheory gcdTheory;
 
-open monoidTheory groupTheory ringTheory ringUnitTheory;
+open monoidTheory groupTheory ringTheory;
 
-(* val _ = load "fieldInstancesTheory"; *)
 open fieldTheory fieldInstancesTheory;
 
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory;
@@ -31,8 +30,7 @@ open polyFieldTheory;
 open polyRootTheory;
 open polyEvalTheory;
 
-open ringBinomialTheory;
-open ringInstancesTheory;
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Binomial R[x] Documentation                                    *)

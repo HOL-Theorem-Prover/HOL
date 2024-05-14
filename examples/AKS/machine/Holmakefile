@@ -1,4 +1,4 @@
-ALGEBRA_INCLUDES = group ring field polynomial finitefield
+ALGEBRA_INCLUDES = field polynomial finitefield
 INCLUDES = $(patsubst %,../../algebra/%,$(ALGEBRA_INCLUDES)) \
            ../../simple_complexity/lib ../../simple_complexity/loop ../compute \
            $(HOLDIR)/src/monad/more_monads

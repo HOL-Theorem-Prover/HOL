@@ -4,7 +4,7 @@ open dep_rewrite pairTheory pred_setTheory listTheory rich_listTheory bagTheory
      gcdsetTheory numberTheory combinatoricsTheory;
 
 open ringTheory polynomialTheory polyWeakTheory polyRingTheory polyEvalTheory
-     polyFieldTheory integralDomainTheory groupMapTheory ringMapTheory;
+     polyFieldTheory;
 
 open monoidTheory groupTheory;
 

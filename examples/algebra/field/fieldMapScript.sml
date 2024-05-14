@@ -18,17 +18,7 @@ open jcLib;
 open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
      numberTheory combinatoricsTheory;
 
-open monoidTheory groupTheory;
-open groupOrderTheory;
-open ringTheory ringUnitTheory integralDomainTheory;
-open fieldTheory fieldOrderTheory;
-
-(* val _ = load "ringDividesTheory"; *)
-open ringDividesTheory;
-
-(* val _ = load "ringMapTheory"; *)
-open groupMapTheory ringMapTheory;
-open quotientGroupTheory subgroupTheory;
+open monoidTheory groupTheory ringTheory fieldTheory fieldOrderTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Field Maps Documentation                                                  *)

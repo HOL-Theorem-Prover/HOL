@@ -18,12 +18,11 @@ open jcLib;
 open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
      dividesTheory gcdTheory logrootTheory primeTheory;
 
-open groupInstancesTheory;
-open ringInstancesTheory;
-open fieldInstancesTheory;
-open groupOrderTheory;
+open groupTheory ringTheory fieldInstancesTheory;
 
 open computeBasicTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Order Computations Documentation                                          *)

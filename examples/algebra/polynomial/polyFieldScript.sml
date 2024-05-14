@@ -19,10 +19,8 @@ open jcLib;
 open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
      dividesTheory gcdTheory;
 
-open monoidTheory groupTheory ringTheory integralDomainTheory fieldTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* val _ = load "polyRingTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 
 (* ------------------------------------------------------------------------- *)

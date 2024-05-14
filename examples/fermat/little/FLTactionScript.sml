@@ -41,7 +41,6 @@ open arithmeticTheory pred_setTheory dividesTheory gcdTheory gcdsetTheory
 open cycleTheory;
 
 open groupTheory;
-open groupActionTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Action Documentation                           *)
@@ -149,37 +148,6 @@ open groupActionTheory;
    then ls is monocoloured iff CARD (orbit cycle ls) = 1,
    and  ls is multicoloured iff CARD (orbit cycle ls) = p.
 *)
-
-(* ------------------------------------------------------------------------- *)
-(* Zadd -- the additive group of modulo prime (simple cyclic clock).         *)
-(* ------------------------------------------------------------------------- *)
-
-val Zadd_def = groupInstancesTheory.Zadd_def;
-(* |- !n. Zadd n = <|carrier := count n; id := 0; op := (\i j. (i + j) MOD n)|> *)
-
-val Zadd_element = groupInstancesTheory.Zadd_element
-(* |- !n x. x IN (Zadd n).carrier <=> x < n *)
-
-val Zadd_carrier = groupInstancesTheory.Zadd_carrier;
-(* val Zadd_carrier = |- !n. (Zadd n).carrier = count n: thm *)
-
-val Zadd_id = groupInstancesTheory.Zadd_id
-(* |- !n. (Zadd n).id = 0 *)
-
-val Zadd_group = groupInstancesTheory.Zadd_group;
-(* |- !n. 0 < n ==> Group (Zadd n) *)
-
-val Zadd_finite = groupInstancesTheory.Zadd_finite;
-(* |- !n. FINITE (Zadd n).carrier *)
-
-val Zadd_finite_group = groupInstancesTheory.Zadd_finite_group;
-(* |- !n. 0 < n ==> FiniteGroup (Zadd n) *)
-
-val Zadd_card = groupInstancesTheory.Zadd_card;
-(* |- !n. CARD (Zadd n).carrier = n *)
-
-val Zadd_exp = groupInstancesTheory.Zadd_exp;
-(* |- !n. 0 < n ==> !x m. (Zadd n).exp x m = (x * m) MOD n *)
 
 (* ------------------------------------------------------------------------- *)
 (* Cycle and Necklaces.                                                      *)

@@ -22,9 +22,6 @@ open mapCountTheory;
 
 (* Get dependent theories local *)
 open monoidTheory groupTheory;
-open subgroupTheory;
-open groupMapTheory;
-open quotientGroupTheory; (* for homo_image_def *)
 
 open symmetryTheory;
 
@@ -167,10 +164,6 @@ val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
                                       if ls IN perm_count n then list_op_inv ls
                                       else FAIL ((permutation_group n).inv ls) bad_element
 *)
-
-(* ------------------------------------------------------------------------- *)
-(* Helper Theorems                                                           *)
-(* ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
 (* Permutation Group                                                         *)

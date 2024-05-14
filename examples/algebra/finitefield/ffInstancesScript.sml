@@ -20,29 +20,21 @@ open pred_setTheory arithmeticTheory listTheory numberTheory dividesTheory
      gcdTheory;
 
 (* Get dependent theories local *)
-(* val _ = load "ffBasicTheory"; *)
 open ffBasicTheory;
 
 open monoidTheory groupTheory ringTheory fieldTheory;
-open groupOrderTheory;
-open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
+open fieldInstancesTheory;
 
 open polynomialTheory polyWeakTheory polyRingTheory;
 
 open polyFieldTheory polyDivisionTheory polyFieldDivisionTheory;
 open polyModuloRingTheory polyFieldModuloTheory;
 
-(* (* val _ = load "polyIrreducibleTheory"; *) *)
 open polyMonicTheory;
 open polyRootTheory;
 open polyIrreducibleTheory;
 
-(* (* val _ = load "ringDividesTheory"; *) *)
-open ringDividesTheory;
-open ringIdealTheory;
-open ringUnitTheory;
-open subgroupTheory;
-open quotientGroupTheory;
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Instances Documentation                                      *)

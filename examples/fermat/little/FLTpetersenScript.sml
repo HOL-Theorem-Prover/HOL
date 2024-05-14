@@ -35,7 +35,6 @@ open arithmeticTheory dividesTheory gcdTheory logrootTheory numberTheory;
 open pred_setTheory combinatoricsTheory;
 
 open groupTheory;
-open groupActionTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Action Documentation                           *)
@@ -80,9 +79,6 @@ open groupActionTheory;
 (* ------------------------------------------------------------------------- *)
 
 (* Part 1: Basic ----------------------------------------------------------- *)
-
-val Zadd_group = groupInstancesTheory.Zadd_group;
-(* |- !n. 0 < n ==> Group (Zadd n) *)
 
 val necklace_cycle = FLTnecklaceTheory.necklace_cycle;
 (* |- !n a ls k. ls IN necklace n a ==> cycle k ls IN necklace n a *)

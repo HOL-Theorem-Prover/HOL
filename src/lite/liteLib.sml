@@ -5,7 +5,7 @@
 structure liteLib :> liteLib =
 struct
 
-open Feedback Thm Conv Abbrev;
+open Feedback Thm Conv Abbrev Tactic;
 
 val aconv = Term.aconv
 
@@ -482,5 +482,7 @@ val setify_term = let
 in
     fn s => uniq (Lib.sort term_le s)
 end;
+
+val ANTS_TAC = impl_tac;
 
 end;

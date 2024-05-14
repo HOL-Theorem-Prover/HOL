@@ -1,2 +1,2 @@
 CLINE_OPTIONS = -r
-INCLUDES = group ring field polynomial multipoly linear finitefield
+INCLUDES = ring field polynomial multipoly linear finitefield

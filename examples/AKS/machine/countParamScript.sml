@@ -19,30 +19,28 @@ open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
      logrootTheory pairTheory optionTheory listRangeTheory numberTheory
      combinatoricsTheory primeTheory;
 
+open ringTheory;
+
 open countMonadTheory countMacroTheory;
 open countBasicTheory countPowerTheory;
 
-(* val _ = load "countOrderTheory"; *)
 open countOrderTheory;
 
 open bitsizeTheory complexityTheory;
 open loopIncreaseTheory loopDecreaseTheory;
 
-(* val _ = load "computeParamTheory"; *)
 open computeParamTheory; (* for param_search_result *)
 
-(* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
-
-(* val _ = load "ringInstancesTheory"; *)
-open ringInstancesTheory; (* for ZN order *)
 
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
+val _ = intLib.deprecate_int ();
+
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* AKS parameter with Count Monad Documentation                              *)

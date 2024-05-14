@@ -22,15 +22,11 @@ open arithmeticTheory pred_setTheory listTheory numberTheory dividesTheory
 open ffAdvancedTheory ffBasicTheory;
 
 open monoidTheory groupTheory ringTheory fieldTheory;
-open groupOrderTheory;
-open subgroupTheory;
 
 open fieldOrderTheory;
-open groupCyclicTheory;
 
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
 
-(* (* val _ = load "polyEvalTheory"; *) *)
 open polyMonicTheory polyEvalTheory;
 
 open polyFieldTheory;
@@ -38,23 +34,15 @@ open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
 open polyRingModuloTheory;
 
-(* (* val _ = load "polyRootTheory"; *) *)
 open polyRootTheory;
 open polyDividesTheory;
 
-(* (* val _ = load "ringBinomialTheory"; *) *)
-open ringBinomialTheory;
-open ringDividesTheory;
-open ringIdealTheory;
-open ringUnitTheory;
-
-(* val _ = load "polyMapTheory"; *)
 open polyGCDTheory;
 open polyIrreducibleTheory;
 open polyProductTheory;
 open polyMultiplicityTheory;
 open polyMapTheory;
-open groupMapTheory ringMapTheory fieldMapTheory;
+open fieldMapTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Polynomials of Subfield Documentation                        *)

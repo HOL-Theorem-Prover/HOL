@@ -1,1 +1,21 @@
-INCLUDES = ../group
+INCLUDES = $(HOLDIR)/src/pred_set/src/more_theories $(HOLDIR)/src/integer \
+           $(HOLDIR)/src/algebra/construction
+
+ifdef POLY
+HOLHEAP = heap
+OBJS = pred_set/src/more_theories/cardinalTheory integer/intLib \
+       algebra/construction/ringTheory
+
+FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS))
+
+EXTRA_CLEANS = $(HOLHEAP)
+
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ $(FULL_OBJPATHS)
+endif
+
+all: $(DEFAULT_TARGETS)
+
+.PHONY: all

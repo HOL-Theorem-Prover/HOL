@@ -1809,6 +1809,12 @@ val IMAGE_I = store_thm("IMAGE_I[simp]",
   ``IMAGE I s = s``,
   full_simp_tac(srw_ss())[EXTENSION]);
 
+Theorem IMAGE_o :
+     !(f :'b -> 'c) (g :'a -> 'b) s. IMAGE (f o g) s = IMAGE f (IMAGE g s)
+Proof
+  REWRITE_TAC[EXTENSION, IN_IMAGE, o_THM] THEN MESON_TAC[]
+QED
+
 val IMAGE_II = store_thm (* from util_prob *)
   ("IMAGE_II",
    ``IMAGE I = I``,
@@ -1940,6 +1946,15 @@ Proof
   POP_ASSUM MP_TAC THEN
   SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_IMAGE, GSPECIFICATION] THEN
   MESON_TAC[]
+QED
+
+Theorem IMAGE_CONST : (* from HOL-Light *)
+    !(s:'a->bool) (c:'b). IMAGE (\x. c) s = if s = {} then {} else {c}
+Proof
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN
+  ASM_REWRITE_TAC[IMAGE_CLAUSES] THEN
+  REWRITE_TAC[EXTENSION, IN_IMAGE, IN_SING] THEN
+  ASM_MESON_TAC[MEMBER_NOT_EMPTY]
 QED
 
 (* ===================================================================== *)

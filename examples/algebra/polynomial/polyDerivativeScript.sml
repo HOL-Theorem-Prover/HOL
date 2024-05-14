@@ -21,8 +21,7 @@ open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyMonicTheory polyRootTheory;
 
-open monoidTheory groupTheory ringTheory;
-open fieldTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Formal Derivative of Polynomials Documentation                            *)

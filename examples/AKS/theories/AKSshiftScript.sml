@@ -25,7 +25,6 @@ open computeRingTheory; (* for overloads on x^, x+^, x^+, x^- *)
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 open polyBinomialTheory polyDivisionTheory polyEvalTheory;
 
-(* (* val _ = load "polyDividesTheory"; *) *)
 open polyDividesTheory;
 open polyMonicTheory;
 
@@ -36,23 +35,14 @@ open polyMapTheory;
 
 open monoidTheory groupTheory ringTheory fieldTheory;
 
-open subgroupTheory;
-open groupOrderTheory;
-open groupMapTheory ringMapTheory;
-
-(* (* val _ = load "ringBinomialTheory"; *) *)
-open ringBinomialTheory;
-open ringDividesTheory;
-
-open groupInstancesTheory;
-open ringInstancesTheory;
 open fieldInstancesTheory;
 
-(* (* val _ = load "ffUnityTheory"; *) *)
 open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;
 open ffUnityTheory;
+
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Introspective Shifting Documentation                                      *)

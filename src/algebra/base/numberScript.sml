@@ -3959,69 +3959,6 @@ val FACTOR_OUT_PRIME = store_thm(
     decide_tac
   ]);
 
-(* ------------------------------------------------------------------------- *)
-(* Consequences of Coprime.                                                  *)
-(* ------------------------------------------------------------------------- *)
-
-(* Theorem: If 1 < n, !x. coprime n x ==> 0 < x /\ 0 < x MOD n *)
-(* Proof:
-   If x = 0, gcd n x = n. But n <> 1, hence x <> 0, or 0 < x.
-   x MOD n = 0 ==> x a multiple of n ==> gcd n x = n <> 1  if n <> 1.
-   Hence if 1 < n, coprime n x ==> x MOD n <> 0, or 0 < x MOD n.
-*)
-val MOD_NONZERO_WHEN_GCD_ONE = store_thm(
-  "MOD_NONZERO_WHEN_GCD_ONE",
-  ``!n. 1 < n ==> !x. coprime n x ==> 0 < x /\ 0 < x MOD n``,
-  ntac 4 strip_tac >>
-  conj_asm1_tac >| [
-    `1 <> n` by decide_tac >>
-    `x <> 0` by metis_tac[GCD_0R] >>
-    decide_tac,
-    `1 <> n /\ x <> 0` by decide_tac >>
-    `?k q. k * x = q * n + 1` by metis_tac[LINEAR_GCD] >>
-    `(k*x) MOD n = 1` by rw_tac std_ss[MOD_MULT] >>
-    spose_not_then strip_assume_tac >>
-    `(x MOD n = 0) /\ 0 < n /\ 1 <> 0` by decide_tac >>
-    metis_tac[MOD_MULTIPLE_ZERO, MULT_COMM]
-  ]);
-
-(* Theorem: If 1 < n, coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k *)
-(* Proof:
-       gcd n x = 1 ==> x <> 0               by GCD_0R
-   Also,
-       gcd n x = 1
-   ==> ?k q. k * x = q * n + 1              by LINEAR_GCD
-   ==> (k * x) MOD n = (q * n + 1) MOD n    by arithmetic
-   ==> (k * x) MOD n = 1                    by MOD_MULT, 1 < n.
-
-   Let g = gcd n k.
-   Since 1 < n, 0 < n.
-   Since q * n+1 <> 0, x <> 0, k <> 0, hence 0 < k.
-   Hence 0 < g /\ (n MOD g = 0) /\ (k MOD g = 0)    by GCD_DIVIDES.
-   Or  n = a * g /\ k = b * g    for some a, b.
-   Therefore:
-        (b * g) * x = q * (a * g) + 1
-        (b * x) * g = (q * a) * g + 1      by arithmetic
-   Hence g divides 1, or g = 1     since 0 < g.
-*)
-val GCD_ONE_PROPERTY = store_thm(
-  "GCD_ONE_PROPERTY",
-  ``!n x. 1 < n /\ coprime n x ==> ?k. ((k * x) MOD n = 1) /\ coprime n k``,
-  rpt strip_tac >>
-  `n <> 1` by decide_tac >>
-  `x <> 0` by metis_tac[GCD_0R] >>
-  `?k q. k * x = q * n + 1` by metis_tac[LINEAR_GCD] >>
-  `(k * x) MOD n = 1` by rw_tac std_ss[MOD_MULT] >>
-  `?g. g = gcd n k` by rw[] >>
-  `n <> 0 /\ q*n + 1 <> 0` by decide_tac >>
-  `k <> 0` by metis_tac[MULT_EQ_0] >>
-  `0 < g /\ (n MOD g = 0) /\ (k MOD g = 0)` by metis_tac[GCD_DIVIDES, NOT_ZERO_LT_ZERO] >>
-  `g divides n /\ g divides k` by rw[DIVIDES_MOD_0] >>
-  `g divides (n * q) /\ g divides (k*x)` by rw[DIVIDES_MULT] >>
-  `g divides (n * q + 1)` by metis_tac [MULT_COMM] >>
-  `g divides 1` by metis_tac[DIVIDES_ADD_2] >>
-  metis_tac[DIVIDES_ONE]);
-
 (* Theorem: For 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
             ?y. 0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1) *)
 (* Proof:
@@ -4145,76 +4082,6 @@ val LCM_EXCHANGE = store_thm(
     `_ = lcm a b` by rw[lcm_def] >>
     decide_tac
   ]);
-
-(* Theorem: LCM (k * m) (k * n) = k * LCM m n *)
-(* Proof:
-   If m = 0 or n = 0, LHS = 0 = RHS.
-   If m <> 0 and n <> 0,
-     lcm (k * m) (k * n)
-   = (k * m) * (k * n) / gcd (k * m) (k * n)    by GCD_LCM
-   = (k * m) * (k * n) / k * (gcd m n)          by GCD_COMMON_FACTOR
-   = k * m * n / (gcd m n)
-   = k * LCM m n                                by GCD_LCM
-*)
-val LCM_COMMON_FACTOR = store_thm(
-  "LCM_COMMON_FACTOR",
-  ``!m n k. lcm (k * m) (k * n) = k * lcm m n``,
-  rpt strip_tac >>
-  `k * (k * (m * n)) = (k * m) * (k * n)` by rw_tac arith_ss[] >>
-  `_ = gcd (k * m) (k * n) * lcm (k * m) (k * n) ` by rw[GCD_LCM] >>
-  `_ = k * (gcd m n) * lcm (k * m) (k * n)` by rw[GCD_COMMON_FACTOR] >>
-  `_ = k * ((gcd m n) * lcm (k * m) (k * n))` by rw_tac arith_ss[] >>
-  Cases_on `k = 0` >-
-  rw[] >>
-  `(gcd m n) * lcm (k * m) (k * n) = k * (m * n)` by metis_tac[MULT_LEFT_CANCEL] >>
-  `_ = k * ((gcd m n) * (lcm m n))` by rw_tac std_ss[GCD_LCM] >>
-  `_ = (gcd m n) * (k * (lcm m n))` by rw_tac arith_ss[] >>
-  Cases_on `n = 0` >-
-  rw[] >>
-  metis_tac[MULT_LEFT_CANCEL, GCD_EQ_0]);
-
-(* Theorem: coprime a b ==> !c. lcm (a * c) (b * c) = a * b * c *)
-(* Proof:
-     lcm (a * c) (b * c)
-   = lcm (c * a) (c * b)     by MULT_COMM
-   = c * (lcm a b)           by LCM_COMMON_FACTOR
-   = (lcm a b) * c           by MULT_COMM
-   = a * b * c               by LCM_COPRIME
-*)
-val LCM_COMMON_COPRIME = store_thm(
-  "LCM_COMMON_COPRIME",
-  ``!a b. coprime a b ==> !c. lcm (a * c) (b * c) = a * b * c``,
-  metis_tac[LCM_COMMON_FACTOR, LCM_COPRIME, MULT_COMM]);
-
-(* Theorem: 0 < n /\ m MOD n = 0 ==> gcd m n = n *)
-(* Proof:
-   Since m MOD n = 0
-         ==> n divides m     by DIVIDES_MOD_0
-   Hence gcd m n = gcd n m   by GCD_SYM
-                 = n         by divides_iff_gcd_fix
-*)
-val GCD_MULTIPLE = store_thm(
-  "GCD_MULTIPLE",
-  ``!m n. 0 < n /\ (m MOD n = 0) ==> (gcd m n = n)``,
-  metis_tac[DIVIDES_MOD_0, divides_iff_gcd_fix, GCD_SYM]);
-
-(* Theorem: gcd (m * n) n = n *)
-(* Proof:
-     gcd (m * n) n
-   = gcd (n * m) n          by MULT_COMM
-   = gcd (n * m) (n * 1)    by MULT_RIGHT_1
-   = n * (gcd m 1)          by GCD_COMMON_FACTOR
-   = n * 1                  by GCD_1
-   = n                      by MULT_RIGHT_1
-*)
-val GCD_MULTIPLE_ALT = store_thm(
-  "GCD_MULTIPLE_ALT",
-  ``!m n. gcd (m * n) n = n``,
-  rpt strip_tac >>
-  `gcd (m * n) n = gcd (n * m) n` by rw[MULT_COMM] >>
-  `_ = gcd (n * m) (n * 1)` by rw[] >>
-  rw[GCD_COMMON_FACTOR]);
-
 
 (* Theorem: k * a <= b ==> gcd a b = gcd a (b - k * a) *)
 (* Proof:
@@ -7922,11 +7789,6 @@ val sum_image_by_composition_without_inj = store_thm(
 (* Pre-image Theorems.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-(*
-- IN_IMAGE;
-> val it = |- !y s f. y IN IMAGE f s <=> ?x. (y = f x) /\ x IN s : thm
-*)
-
 (* Define preimage *)
 val preimage_def = Define `preimage f s y = { x | x IN s /\ (f x = y) }`;
 
@@ -7944,6 +7806,12 @@ val in_preimage = store_thm(
   ``!f s x y. x IN preimage f s y <=> (x IN s /\ (f x = y))``,
   rw[preimage_def]);
 (* same as theorem above. *)
+
+Theorem preimage_alt :
+    !f s y. preimage f s y = PREIMAGE f {y} INTER s
+Proof
+    rw [Once EXTENSION, in_preimage, IN_PREIMAGE, Once CONJ_SYM]
+QED
 
 (* Theorem: (preimage f s y) SUBSET s *)
 (* Proof:

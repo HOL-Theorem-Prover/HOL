@@ -45,27 +45,11 @@ open polyGCDTheory;
 
 open monoidTheory groupTheory ringTheory fieldTheory;
 
-open subgroupTheory;
-open groupOrderTheory;
 open fieldMapTheory;
-open ringUnitTheory;
-
-open ringBinomialTheory;
-open ringDividesTheory;
-
-open groupInstancesTheory;
-open ringInstancesTheory;
 open fieldInstancesTheory;
-open groupOrderTheory;
-
-open groupCyclicTheory;
-
 open fieldBinomialTheory;
-
 open fieldIdealTheory;
-
 open fieldOrderTheory;
-
 open fieldProductTheory;
 
 open computeBasicTheory;
@@ -87,11 +71,11 @@ open ffConjugateTheory;
 open ffMasterTheory;
 open ffMinimalTheory;
 
+val _ = intLib.deprecate_int ();
+
 (* ------------------------------------------------------------------------- *)
 (* AKS Bounds Improvement Documentation                                      *)
 (* ------------------------------------------------------------------------- *)
-(* Datatype and Overloading:
-*)
 (* Definitions and Theorems (# are exported):
 
    Improve Bounds for AKS Theorem:
