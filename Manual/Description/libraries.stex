@@ -2081,6 +2081,14 @@ generally perform better than Cooper's algorithm.  There are problems
 for which this is not true however, so it is useful to have both
 procedures available.
 
+In addition, the \ml{intLib.INTEGER_RULE} (and its tactic version \ml{intLib.INTEGER_TAC})
+ported from HOL-Light can solve some simple equations about divisibility of integers,
+e.g.~\holtxt{d int_divides m ==> d int_divides (m * n)}.
+As part of the procedure, multivariate polynomials of integer are expanded to their
+``normal forms'' (with respect to certain ordering), and thus equations between equivalent
+such polynomials can be decided,
+e.g.~\holtxt{w * y + x * z - (w * z + x * y) = (w - x) * (y - z)}.
+
 \paragraph{realLib}
 
 The \ml{realLib} library provides a foundational development
