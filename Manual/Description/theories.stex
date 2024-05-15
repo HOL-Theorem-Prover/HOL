@@ -2961,14 +2961,15 @@ Section~\ref{sec:indexed-lists} below.
 \paragraph {Mapping functions over lists}
 \index{MAP, the HOL constant@\ml{MAP}, the \HOL{} constant}
 \index{MAP2, the HOL constant@\ml{MAP2}, the \HOL{} constant}
+\index{mapPartial, the HOL constant@\ml{mapPartial}, the \HOL{} constant}
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for lists}
 
 There are functions for mapping a function $f : \alpha \to \beta$ over
-a single list (\holtxt{MAP}) or a function $f : \alpha \to \beta
-\to \gamma$ over two lists (\holtxt{MAP2}).
+a single list (\holtxt{MAP}), a ``partial'' function $f : \alpha \to \beta\,\mathsf{option}$ over a list (\holtxt{mapPartial}), or a function $f : \alpha \to \beta \to \gamma$ over two lists (\holtxt{MAP2}):
 \begin{hol}
 \begin{alltt}
 ##thm MAP
+##thm mapPartial_def
 ##thm MAP2_DEF
 \end{alltt}
 \end{hol}
