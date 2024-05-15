@@ -293,6 +293,32 @@ Theorem MAP2_APPEND:
 Proof Induct >> Cases_on ‘xs1’ >> fs [MAP2]
 QED
 
+(* ----------------------------------------------------------------------
+    mapPartial : ('a -> 'b option) -> 'a list -> 'b list
+   ---------------------------------------------------------------------- *)
+
+Definition mapPartial_def[simp]:
+  mapPartial f [] = [] /\
+  mapPartial f (x :: xs) = case f x of NONE => mapPartial f xs
+                                    | SOME y => y :: mapPartial f xs
+End
+
+Theorem mapPartial_EQ_NIL[simp]:
+  mapPartial f xs = [] <=> !x. MEM x xs ==> f x = NONE
+Proof
+  Q.ID_SPEC_TAC ‘xs’ >> Induct >> simp[optionTheory.option_case_eq] >>
+  metis_tac[]
+QED
+
+Theorem LENGTH_mapPartial:
+  LENGTH (mapPartial f xs) <= LENGTH xs
+Proof
+  Q.ID_SPEC_TAC ‘xs’ >> Induct >>
+  simp[] >> strip_tac >>
+  DEEP_INTRO_TAC (GEN_ALL $ iffRL $ TypeBase.case_pred_disj_of “:'a option”) >>
+  simp[] >> metis_tac[TypeBase.nchotomy_of “:'a option”]
+QED
+
 (* Some searches *)
 
 Definition INDEX_FIND_def:
@@ -976,6 +1002,24 @@ val APPEND_EQ_SELF = store_thm(
   (!l1 l2:'a list. ((l2 = l1 ++ l2) = (l1 = [])))”,
 PROVE_TAC[APPEND_11, APPEND_NIL, APPEND]);
 
+Theorem mapPartial_EQ_CONS:
+  !f xs y ys.
+    mapPartial f xs = y::ys <=>
+    ?p x s. xs = p ++ [x] ++ s /\ (!x0. MEM x0 p ==> f x0 = NONE) /\
+            f x = SOME y /\ mapPartial f s = ys
+Proof
+  gen_tac >> Induct >> simp[APPEND_eq_NIL] >> rpt gen_tac >>
+  Q.RENAME_TAC [‘option_CASE (f x)’] >> Cases_on ‘f x’ >> simp[]
+  >- (rw[EQ_IMP_THM]
+      >- (REWRITE_TAC [GSYM $ cj 2 APPEND] >>
+          rpt $ irule_at Any EQ_REFL >> simp[DISJ_IMP_THM]) >>
+      Q.RENAME_TAC [‘x::xs = p ++ [e] ++ s’] >> Cases_on ‘p’ >> fs[] >>
+      rw[] >> metis_tac[]) >>
+  iff_tac
+  >- (rw[] >> Q.EXISTS_TAC ‘[]’ >> simp[])
+  >- (strip_tac >> Q.RENAME_TAC [‘x::xs = p ++ [e] ++ s’] >>
+      Cases_on ‘p’ >> fs[])
+QED
 
 val MEM_SPLIT = Q.store_thm
 ("MEM_SPLIT",
