@@ -776,7 +776,10 @@ end; (* CONJ_ACI_RULE *)
 val DISJ_ACI_RULE = let
   val pth_left = UNDISCH(TAUT `~(a \/ b) ==> ~a`)
   and pth_right = UNDISCH(TAUT `~(a \/ b) ==> ~b`)
-  and pth = repeat UNDISCH (TAUT `~a ==> ~b ==> ~(a \/ b)`)
+  (* NOTE: HOL4's UNDISCH treats ‘~(a \/ b)’ as ‘a \/ b ==> F’, while HOL-Light
+     doesn't. We have changed ‘repeat’ to ‘funpow 2’ here.
+   *)
+  and pth = funpow 2 UNDISCH (TAUT `~a ==> ~b ==> ~(a \/ b)`)
   and pth_neg = UNDISCH(TAUT `(~a <=> ~b) ==> (a <=> b)`)
   and a_tm = “a:bool” and b_tm = “b:bool”;
   fun NOT_DISJ_PAIR th = let
@@ -807,7 +810,7 @@ val DISJ_ACI_RULE = let
         end
     else find (f,tm)
 in
-  fn fm => let val (p,p') = dest_eq fm in
+  fn tm => let val (p,p') = dest_eq tm in
                if p ~~ p' then REFL p else
                let val th = use_fun (mk_fun (ASSUME(mk_neg p)) undefined) p'
                    and th' = use_fun (mk_fun (ASSUME(mk_neg p')) undefined) p;
