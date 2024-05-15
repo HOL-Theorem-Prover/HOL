@@ -2846,7 +2846,14 @@ The predicate \ml{NULL} and the selectors
 \begin{alltt}
 ##thm NULL
 ##thm HD
-##thm TL
+##thm TL_DEF
+\end{alltt}
+\end{hol}
+The nil-clause for the \holtxt{TL} constant is included to make the function total, but does represent a case that often needs to be excluded.
+For example:
+\begin{hol}
+\begin{alltt}
+##thm LIST_NOT_NIL
 \end{alltt}
 \end{hol}
 
@@ -2970,6 +2977,7 @@ If passed lists of unequal length, \holtxt{MAP2} returns a list of length equal 
 \paragraph {Predicates over lists}
 \index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
 \index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
+\index{nub, the HOL constant@\ml{nub}, the \HOL{} constant}
 \index{ALL_DISTINCT, the HOL constant@\ml{ALL\_DISTINCT}, the \HOL{} constant}
 \index{EXISTS, the HOL constant (over lists)@\ml{EXISTS}, the \HOL{}
   constant (over lists)}
@@ -2990,6 +2998,12 @@ is performed by \holtxt{FILTER}.
 \end{hol}
 The predicate \holtxt{ALL\_DISTINCT} holds on a list just in case no
 element in the list is equal to any other.
+A list can have its duplicates removed through the use of the \holtxt{nub} constant:
+\begin{hol}
+\begin{alltt}
+##thm nub_def
+\end{alltt}
+\end{hol}
 
 \index{EVERY2@\ml{EVERY2}|see{\ml{LIST\_REL}}}
 \index{LIST_REL, the HOL constant@\ml{LIST\_REL}, the \HOL{} constant}
@@ -3020,7 +3034,7 @@ Equally, \holtxt{LIST\_REL} can be seen as a test that checks the relation at al
 ##thm LIST_REL_EL_EQN
 \end{alltt}
 \end{hol}
-Finally, there is a natural induction principle for this constant (as \emph{per} Section~\ref{sec:proofs-with-inductive-relations}, the tactic \ml{Induct_on~\bq{}LIST_REL\bq} applies it):
+Finally, there is a natural induction principle for this constant (as \emph{per} Section~\ref{sec:proofs-with-inductive-relations}, the tactic \ml{Induct_on~\bq{}LIST_REL'} applies it):
 \begin{hol}
 \begin{alltt}
 ##thm LIST_REL_strongind
@@ -3058,14 +3072,6 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
      |- (!acc. REV [] acc = acc) /\
         (!h t acc. REV (h::t) acc = REV t (h::acc))
 \end{verbatim}
-\end{hol}
-
-\paragraph {Removal of duplicates}
-The \holtxt{nub} function removes all duplicate entries from a list.
-\begin{hol}
-\begin{alltt}
-##thm nub_def
-\end{alltt}
 \end{hol}
 
 \paragraph {Conversion to sets}
