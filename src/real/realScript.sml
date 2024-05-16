@@ -2674,6 +2674,9 @@ val REAL_SUB = store_thm
    THEN ONCE_REWRITE_TAC [REAL_ADD_SYM]
    THEN RW_TAC old_arith_ss [GSYM real_sub, REAL_EQ_SUB_LADD, REAL_ADD]);
 
+Theorem REAL_SUB_NUMERAL[simp] =
+        REAL_SUB |> SPECL [“NUMERAL m”, “NUMERAL n”]
+
 (* ------------------------------------------------------------------------- *)
 (* Define a constant for extracting "the positive part" of real numbers.     *)
 (* ------------------------------------------------------------------------- *)
