@@ -315,9 +315,12 @@ end;
 
 val data_list_to_string = (foldl (fn (d, s) => s^(data_to_string d)^"\n\n") "\n\n\n");
 
-val print_apropos = print o data_list_to_string o apropos;
-val print_find = print o data_list_to_string o find;
-fun print_match x1 x2 = print (data_list_to_string (match x1 x2));
-fun print_polarity_match polarity term = print (data_list_to_string (polarity_search polarity term));
+val print_apropos = print o data_list_to_string o apropos
+val print_find = print o data_list_to_string o find
+fun print_match x1 x2 = print (data_list_to_string (match x1 x2))
+fun print_polarity_match polarity term =
+    print (data_list_to_string (polarity_search polarity term))
+val print_DBselection = print o data_list_to_string o selectDB
+
 
 end

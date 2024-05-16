@@ -1295,7 +1295,7 @@ printed out.  (That's assuming that quietdec is false to start with.)"
                                                 (substring s 1 -1) "\"")
                                       (concat "DB.SelTM “" s "”"))))
                          args ", ")))
-    (concat "DB.selectDB [" sels "]")))
+    (concat "Hol_pp.print_DBselection [" sels "]")))
 
 (defconst hol-db-select-info "('thy'; \"name\"; term pattern)" "")
 (defun hol-db-select (arg1)
