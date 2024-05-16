@@ -755,7 +755,7 @@ Proof
                           RENAMING_THM] THEN
   SRW_TAC [][] THEN SRW_TAC [][size_vsubst]
 QED
-
+*)
 (* ----------------------------------------------------------------------
     Simultaneous substitution (using a finite map) - much more interesting
    ---------------------------------------------------------------------- *)
@@ -772,18 +772,22 @@ QED
 Theorem FINITE_strterm_fmap_supp[simp]:
   FINITE (fmcFV fmap)
 Proof
-  SRW_TAC [][strterm_fmap_supp, supp_sectpm] THEN SRW_TAC [][]
+  SRW_TAC [][strterm_fmap_supp, supp_setpm] THEN SRW_TAC [][]
 QED
 
-val lem1 = prove(
-  ``∃a. ~(a ∈ supp (fm_pmact string_pmact ^t_pmact_t) fm)``,
+Theorem lem1[local]:
+  ∃a. ~(a ∈ supp (fm_pmact string_pmact ^t_pmact_t) fm)
+Proof
   Q_TAC (NEW_TAC "z") `supp (fm_pmact string_pmact ^t_pmact_t) fm` THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
-val supp_FRANGE = prove(
-  ``~(x ∈ supp (set_pmact ^t_pmact_t) (FRANGE fm)) =
-   ∀y. y ∈ FDOM fm ==> ~(x ∈ cFV (fm ' y))``,
-  SRW_TAC [][supp_sectpm, finite_mapTheory.FRANGE_DEF] THEN METIS_TAC []);
+Theorem supp_FRANGE[local]:
+  ~(x ∈ supp (set_pmact ^t_pmact_t) (FRANGE fm)) =
+  ∀y. y ∈ FDOM fm ==> ~(x ∈ cFV (fm ' y))
+Proof
+  SRW_TAC [][supp_setpm, finite_mapTheory.FRANGE_DEF] THEN METIS_TAC []
+QED
 
 fun ex_conj1 thm = let
   val (v,c) = dest_exists (concl thm)
@@ -801,7 +805,7 @@ val supp_EMPTY = prove(
 
 Theorem lem2[local]: ∀fm. FINITE (tmscFV (FRANGE fm))
 Proof
-  srw_tac [][supp_sectpm] >> srw_tac [][]
+  srw_tac [][supp_setpm] >> srw_tac [][]
 QED
 
 val ordering = prove(
@@ -813,22 +817,23 @@ val ordering = prove(
 Theorem notin_frange:
   v ∉ tmscFV (FRANGE p) <=> ∀y. y ∈ FDOM p ==> v ∉ cFV (p ' y)
 Proof
-  srw_tac [][supp_sectpm, EQ_IMP_THM, finite_mapTheory.FRANGE_DEF] >>
+  srw_tac [][supp_setpm, EQ_IMP_THM, finite_mapTheory.FRANGE_DEF] >>
   metis_tac []
 QED
 
 val ssub_exists =
     parameter_tm_recursion
-        |> INST_TYPE [alpha |-> ``:term``, ``:ρ`` |-> ``:string |-> term``]
+        |> INST_TYPE [“:ς” |-> ``:α cterm``, ``:ρ`` |-> ``:string |-> α cterm``]
         |> Q.INST [`vr` |-> `\s fm. if s ∈ FDOM fm then fm ' s else VAR s`,
                    `lm` |-> `\r v t fm. LAM v (r fm)`, `apm` |-> `^t_pmact_t`,
                    `ppm` |-> `fm_pmact string_pmact ^t_pmact_t`,
                    `ap` |-> `\r1 r2 t1 t2 fm. r1 fm @@ r2 fm`,
+                   ‘cn’ |-> ‘CONST’,
                    `A` |-> `{}`]
-        |> SIMP_RULE (srw_ss()) [ctpm_COND, strterm_fmap_supp, lem2,
-                                 FAPPLY_eqv_lswapstr, supp_fresh,
-                                 pmact_sing_inv, fnpm_def,
-                                 fmpm_FDOM, notin_frange]
+        |> SRULE [tpm_COND, strterm_fmap_supp, lem2,
+                  FAPPLY_eqv_lswapstr, supp_fresh,
+                  pmact_sing_inv, fnpm_def,
+                  fmpm_FDOM, notin_frange]
         |> SIMP_RULE (srw_ss()) [Once ordering]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p", "fm")]))
         |> prove_alpha_fcbhyp {ppm = ``fm_pmact string_pmact ^t_pmact_t``,
@@ -845,9 +850,9 @@ val ssub_def = new_specification ("ssub_def", ["ssub"], ssub_exists)
  *)
 Theorem ssub_thm[simp] = CONJUNCT1 ssub_def
 
-val _ = overload_on ("'", ``ssub``)
+Overload "'" = “ssub”
 
-val ctpm_ssub = save_thm("ctpm_ssub", CONJUNCT2 ssub_def)
+Theorem ctpm_ssub = CONJUNCT2 ssub_def
 
 val single_ssub = store_thm(
   "single_ssub",
@@ -858,7 +863,7 @@ val single_ssub = store_thm(
 Theorem in_fmap_supp:
   x ∈ fmcFV fm ⇔ x ∈ FDOM fm ∨ ∃y. y ∈ FDOM fm ∧ x ∈ cFV (fm ' y)
 Proof
-  SRW_TAC [][strterm_fmap_supp, nomsetTheory.supp_sectpm] THEN
+  SRW_TAC [][strterm_fmap_supp, nomsetTheory.supp_setpm] THEN
   SRW_TAC [boolSimps.DNF_ss][finite_mapTheory.FRANGE_DEF] THEN METIS_TAC []
 QED
 
@@ -869,7 +874,7 @@ Proof
 QED
 
 Theorem ssub_14b:
-  ∀t. (cFV t ∩ FDOM phi = EMPTY) ==> ((phi : string |-> term) ' t = t)
+  ∀t. (cFV t ∩ FDOM phi = EMPTY) ==> ((phi : string |-> 'a cterm) ' t = t)
 Proof
   HO_MATCH_MP_TAC cterm_induction THEN
   Q.EXISTS_TAC `fmcFV phi` THEN
@@ -878,11 +883,11 @@ QED
 
 val ssub_value = store_thm(
   "ssub_value",
-  ``(cFV t = EMPTY) ==> ((phi : string |-> term) ' t = t)``,
+  ``(cFV t = EMPTY) ==> ((phi : string |-> 'a cterm) ' t = t)``,
   SRW_TAC [][ssub_14b]);
 
 Theorem ssub_FEMPTY[simp]:
-  ∀t. (FEMPTY:string|->term) ' t = t
+  ∀t. (FEMPTY:string|->'a cterm) ' t = t
 Proof
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
 QED
@@ -900,7 +905,7 @@ Proof
 QED
 
 Theorem fresh_ssub:
-  ∀N. y ∉ cFV N ∧ (∀k:string. k ∈ FDOM fm ⇒ y # fm ' k) ⇒ y # fm ' N
+  ∀N. y ∉ cFV N ∧ (∀k:string. k ∈ FDOM fm ⇒ y ∉ cFV (fm ' k)) ⇒ y ∉ cFV (fm ' N)
 Proof
   ho_match_mp_tac cterm_induction >>
   qexists ‘fmcFV fm’ >>
@@ -909,14 +914,15 @@ QED
 
 Theorem ssub_SUBST:
   ∀M.
-    (∀k. k ∈ FDOM fm ⇒ v # fm ' k) ∧ v ∉ FDOM fm ⇒
+    (∀k. k ∈ FDOM fm ⇒ v ∉ cFV  (fm ' k)) ∧ v ∉ FDOM fm ⇒
     fm ' ([N/v]M) = [fm ' N / v] (fm ' M)
 Proof
   ho_match_mp_tac cterm_induction >>
   qexists ‘fmcFV fm ∪ {v} ∪ cFV N’ >>
   rw[] >> rw[lemma14b, SUB_VAR] >>
   gvs[DECIDE “~p ∨ q ⇔ p ⇒ q”, PULL_FORALL] >>
-  ‘y # fm ' N’ suffices_by simp[cSUB_THM] >>
+  rename [‘[_ / u] (LAM v (fm ' M))’] >>
+  ‘v ∉ cFV (fm ' N)’ suffices_by simp[cSUB_THM] >>
   irule fresh_ssub >> simp[]
 QED
 
@@ -926,6 +932,7 @@ QED
  *)
 Theorem ssub_LAM = List.nth(CONJUNCTS ssub_thm, 2)
 
+(*
 Theorem ssub_update_apply :
     !fm v N M. v NOTIN FDOM fm /\ (!k. k IN FDOM fm ==> closed (fm ' k)) ==>
               (fm |+ (v,N)) ' M = [N/v] (fm ' (M :term))
@@ -998,13 +1005,13 @@ val term_info_string =
     \val term_info = \n\
     \   NTI {nullfv = ``LAM \"\" (VAR \"\")``,\n\
     \        pm_rewrites = [],\n\
-    \        pm_constant = ``nomset$mk_pmact term$raw_ctpm``,\n\
+    \        pm_constant = ``nomset$mk_pmact cterm$raw_ctpm``,\n\
     \        fv_rewrites = [],\n\
     \        recursion_thm = SOME ctm_recursion_nosideset,\n\
-    \        binders = [(``term$LAM``, 0, ctpm_ALPHA)]}\n\
+    \        binders = [(``cterm$LAM``, 0, ctpm_ALPHA)]}\n\
     \val _ = type_db :=\n\
     \          Binarymap.insert(!type_db,\n\
-    \                           {Name = \"term\",Thy=\"term\"},\n\
+    \                           {Name = \"cterm\",Thy=\"cterm\"},\n\
     \                           term_info)\n\
     \in end;\n"
 
@@ -1012,4 +1019,3 @@ val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
 
 
 val _ = export_theory()
-val _ = html_theory "cterm";
