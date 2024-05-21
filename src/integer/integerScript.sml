@@ -15,22 +15,14 @@
 (*==========================================================================*)
 
 
-open HolKernel Parse boolLib
+open HolKernel Parse boolLib bossLib;
+
+open jrhUtils quotient liteLib pred_setTheory arithmeticTheory prim_recTheory
+     numTheory simpLib numLib liteLib metisLib BasicProvers dividesTheory;
+
+val _ = set_grammar_ancestry ["arithmetic", "pred_set"];
 
 val _ = new_theory "integer";
-
-val _ = set_grammar_ancestry ["arithmetic", "pred_set"]
-
-(* interactive mode
-  app load ["jrhUtils", "quotient", "liteLib", "QLib",
-            "BasicProvers", "boolSimps", "pairSimps",
-            "numSimps", "numLib", "metisLib"];
-*)
-open jrhUtils quotient liteLib pred_setTheory
-     arithmeticTheory prim_recTheory numTheory
-     simpLib numLib boolTheory liteLib metisLib BasicProvers;
-
-open bossLib
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
@@ -531,7 +523,6 @@ Overload "~" = bool_not
 Overload numeric_negate = “int_neg”
 Overload "¬" = bool_not                                              (* UOK *)
 
-
 (*--------------------------------------------------------------------------*)
 (* Define subtraction and the other orderings                               *)
 (*--------------------------------------------------------------------------*)
@@ -550,6 +541,9 @@ val _ = overload_on (">",  Term`$int_gt`);
 
 val int_ge = new_definition("int_ge", Term `int_ge x y <=> y <= x:int`)
 val _ = overload_on (">=", Term`$int_ge`);
+
+Theorem INT_GT = int_gt (* HOL-Light compatible name *)
+Theorem INT_GE = int_ge (* HOL-Light compatible name *)
 
 (*--------------------------------------------------------------------------*)
 (* Now use the lifted inclusion homomorphism int_of_num:num->int.           *)
@@ -688,11 +682,17 @@ val INT_NEG_LMUL =
               REWRITE_TAC[GSYM INT_LNEG_UNIQ, GSYM INT_RDISTRIB,
               INT_ADD_LINV, INT_MUL_LZERO,INT_0]);
 
+(* |- !x y. -x * y = -(x * y) *)
+Theorem INT_MUL_LNEG = GSYM INT_NEG_LMUL (* HOL-Light compatible *)
+
 val INT_NEG_RMUL =
     store_thm("INT_NEG_RMUL",
               Term `!x y. ~(x * y) = x * ~y`,
               REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[INT_MUL_SYM] THEN
               SIMP_TAC int_ss [INT_NEG_LMUL]);
+
+(* |- !x y. x * -y = -(x * y) *)
+Theorem INT_MUL_RNEG = GSYM INT_NEG_RMUL (* HOL-Light compatible *)
 
 Theorem INT_NEGNEG[simp]:
   !x:int. ~~x = x
@@ -700,6 +700,8 @@ Proof
   GEN_TAC THEN CONV_TAC SYM_CONV THEN
   REWRITE_TAC[GSYM INT_LNEG_UNIQ, INT_ADD_RINV]
 QED
+
+Theorem INT_NEG_NEG = INT_NEGNEG (* HOL-Light compatible name *)
 
 val INT_NEG_MUL2 =
     store_thm("INT_NEG_MUL2",
@@ -727,6 +729,13 @@ Theorem INT_NOT_LT:
     !x:int y. ~(x < y) <=> y <= x
 Proof
               REPEAT GEN_TAC THEN REWRITE_TAC[int_le]
+QED
+
+(* NOTE: This is INT_LT of HOL-Light *)
+Theorem INT_LT2 :
+    !x (y :int). x < y <=> ~(y <= x)
+Proof
+    REWRITE_TAC [GSYM INT_NOT_LT]
 QED
 
 val INT_LT_ANTISYM =
@@ -1136,6 +1145,15 @@ val INT_LT_IMP_NE =
                   REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
                   REWRITE_TAC[INT_LT_REFL]);
 
+Theorem INT_NOT_EQ :
+    !x y. ~(x = y) <=> x < y \/ y < x
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC
+ >- PROVE_TAC [INT_LT_TOTAL]
+ >> PROVE_TAC [INT_LT_IMP_NE]
+QED
+
 Theorem INT_LE_ADDR:
     !x y:int. x <= x + y <=> 0 <= y
 Proof
@@ -1249,6 +1267,9 @@ Proof
                     (SPEC_ALL INT_LE))
 QED
 
+Theorem INT_OF_NUM_LE = INT_LE (* HOL-Light compatible name *)
+Theorem INT_OF_NUM_LT = INT_LT (* HOL-Light compatible name *)
+
 Theorem INT_INJ[simp]: !m n. (&m:int = &n) = (m = n)
 Proof
   let val th = prove(“(m:num = n) <=> m <= n /\ n <= m”,
@@ -1260,6 +1281,9 @@ Proof
     REPEAT GEN_TAC THEN REWRITE_TAC[th, GSYM INT_LE_ANTISYM, INT_LE]
   end
 QED
+
+(* |- !m n. &m = &n <=> m = n *)
+Theorem INT_OF_NUM_EQ = INT_INJ (* HOL-Light compatible name *)
 
 val INT_ADD =
     store_thm("INT_ADD",
@@ -1276,6 +1300,9 @@ val INT_MUL =
                                           GSYM INT_ADD, INT_RDISTRIB] THEN
               FIRST_ASSUM(fn th => REWRITE_TAC[GSYM th]) THEN
               REWRITE_TAC[INT_MUL_LID,GSYM INT_1]);
+
+Theorem INT_OF_NUM_ADD = INT_ADD (* HOL-Light compatible name *)
+Theorem INT_OF_NUM_MUL = INT_MUL (* HOL-Light compatible name *)
 
 (*--------------------------------------------------------------------------*)
 (* Now more theorems                                                        *)
@@ -1441,6 +1468,22 @@ val INT_SUB_RNEG =
     store_thm("INT_SUB_RNEG",
               Term `!x y. x - ~y = x + y`,
               REPEAT GEN_TAC THEN REWRITE_TAC[int_sub, INT_NEGNEG]);
+
+Theorem INT_LE_LNEG :
+    !x y. -x <= y <=> &0 <= x + y
+Proof
+    rpt STRIP_TAC
+ >> REWRITE_TAC [Q.SPECL [‘y’, ‘-x’] (GSYM INT_SUB_LE)]
+ >> REWRITE_TAC [INT_SUB_RNEG, Once INT_ADD_SYM]
+QED
+
+Theorem INT_LE_RNEG :
+    !x y. x <= -y <=> x + y <= &0
+Proof
+    rpt STRIP_TAC
+ >> REWRITE_TAC [Q.SPECL [‘-y’, ‘x’] (GSYM INT_SUB_LE)]
+ >> REWRITE_TAC [INT_SUB_LNEG, INT_NEG_GE0, Once INT_ADD_SYM]
+QED
 
 val INT_SUB_NEG2 =
     store_thm("INT_SUB_NEG2",
@@ -1703,6 +1746,8 @@ val INT_LT_LE1 = store_thm(
   ``x < y  <=>  x + 1 <= y``,
   SRW_TAC [][INT_LE_LT1, INT_LT_RADD]);
 
+(* |- !x y. x < y <=> x + 1 <= y *)
+Theorem INT_LT_DISCRETE = Q.GENL [‘x’, ‘y’] INT_LT_LE1
 
 (* ------------------------------------------------------------------------ *)
 (* More random theorems about "stuff"                                       *)
@@ -2014,7 +2059,6 @@ val INT_DIV_MUL_ID = store_thm(
   `p = p / q * q` by PROVE_TAC [INT_ADD_RID] THEN
   PROVE_TAC []);
 
-open dividesTheory
 val lessmult_lemma = prove(
   ``!x y:num. x * y < y ==> (x = 0)``,
   Induct THEN ASM_SIMP_TAC int_ss [MULT_CLAUSES]);
@@ -2841,6 +2885,16 @@ val INT_DIVIDES = new_definition (
   Term`int_divides p q = ?m:int. m * p = q`);
 val _ = set_fixity "int_divides" (Infix(NONASSOC, 450))
 
+(* HOL-Light compatible definition of ‘int_divides’ (divides) *)
+Theorem int_divides :
+    !b a. a int_divides b <=> (?x. b = a * x)
+Proof
+    RW_TAC std_ss [INT_DIVIDES, Once INT_MUL_SYM]
+ >> EQ_TAC >> STRIP_TAC
+ >| [ Q.EXISTS_TAC ‘m’ >> ASM_REWRITE_TAC [],
+      Q.EXISTS_TAC ‘x’ >> ASM_REWRITE_TAC [] ]
+QED
+
 val INT_DIVIDES_MOD0 = store_thm(
   "INT_DIVIDES_MOD0",
   Term`!p q. p int_divides q <=>
@@ -2949,6 +3003,31 @@ val INT_DIVIDES_RSUB = store_thm(
   REWRITE_TAC [int_sub] THEN
   PROVE_TAC [INT_DIVIDES_NEG, INT_DIVIDES_RADD]);
 
+(* temporarily make divides an infix *)
+val _ = temp_set_fixity "divides" (Infixl 480);
+
+(* NOTE: This theorem is the definition of ‘divides’ of natural numbers in
+   HOL-Light. This name is HOL-Light compatible.
+ *)
+Theorem num_divides :
+    a divides b <=> &a int_divides &b
+Proof
+    rw [INT_DIVIDES, divides_def]
+ >> EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘&q’ \\
+     rw [INT_OF_NUM_MUL])
+ (* INT_POS *)
+ >> MP_TAC (Q.SPEC ‘m’ INT_NUM_CASES)
+ >> rw [] (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      Q.EXISTS_TAC ‘n’ >> fs [INT_OF_NUM_MUL],
+      (* goal 2 (of 3): impossible *)
+      fs [INT_MUL_LNEG, INT_OF_NUM_MUL],
+      (* goal 3 (of 3) *)
+      fs [] >> POP_ASSUM (fn th => rw [GSYM th]) \\
+      Q.EXISTS_TAC ‘0’ >> rw [] ]
+QED
+
 (*----------------------------------------------------------------------*)
 (* Define exponentiation                                                *)
 (*----------------------------------------------------------------------*)
@@ -2964,6 +3043,12 @@ val int_exp = Prim_rec.new_recursive_definition{
 val _ = set_fixity "int_exp"  (Infixr 700);
 val _ = overload_on ("**", Term`$int_exp`);
 
+Theorem INT_POW :
+    (x :int) ** 0 = &1 /\ (!n. x ** SUC n = x * x ** n)
+Proof
+    rw [int_exp]
+QED
+
 val INT_EXP = store_thm(
   "INT_EXP",
   Term`!n m. &n ** m = &(n EXP m)`,
@@ -2971,6 +3056,8 @@ val INT_EXP = store_thm(
     REWRITE_TAC [int_exp, EXP],
     ASM_REWRITE_TAC [int_exp, EXP, INT_MUL]
   ]);
+
+Theorem INT_OF_NUM_POW = INT_EXP (* HOL-Light compatible name *)
 
 val INT_EXP_EQ0 = store_thm(
   "INT_EXP_EQ0",
@@ -3037,6 +3124,29 @@ val INT_EXP_NEG = store_thm(
                          EXP, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL, INT_MUL,
                          INT_NEGNEG]
   ]);
+
+Theorem INT_POW_NEG :
+    !(x :int) n. -x ** n = (if EVEN n then x ** n else -(x ** n))
+Proof
+    qx_genl_tac [‘p’, ‘m’]
+ >> MP_TAC (Q.SPEC ‘p’ INT_NUM_CASES)
+ >> RW_TAC std_ss []
+ >> FULL_SIMP_TAC std_ss [GSYM ODD_EVEN]
+ >| [ (* goal 1 (of 6) *)
+      RW_TAC std_ss[INT_EXP_NEG, INT_EXP],
+      (* goal 2 (of 6) *)
+      RW_TAC std_ss[INT_NEG_NEG, INT_EXP_NEG, INT_EXP],
+      (* goal 3 (of 6) *)
+      RW_TAC std_ss[INT_NEG_0],
+      (* goal 4 (of 6) *)
+      RW_TAC std_ss [INT_EXP_NEG, INT_EXP],
+      (* goal 5 (of 6) *)
+      RW_TAC std_ss [INT_NEG_NEG, INT_EXP_NEG, INT_EXP],
+      (* goal 6 (of 6) *)
+      RW_TAC std_ss [INT_NEG_0, INT_EXP] \\
+      rw [ZERO_EXP] \\
+      CCONTR_TAC >> fs [] ]
+QED
 
 val INT_EXP_ADD_EXPONENTS = store_thm(
   "INT_EXP_ADD_EXPONENTS",
