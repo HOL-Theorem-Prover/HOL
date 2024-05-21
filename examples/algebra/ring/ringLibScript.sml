@@ -12,7 +12,7 @@ open HolKernel boolLib bossLib Parse;
 
 open combinTheory pred_setTheory pred_setLib arithmeticTheory integerTheory
      numLib intLib mesonLib hurdUtils cardinalTheory oneTheory newtypeTools
-     tautLib liteLib;
+     tautLib metisLib liteLib Ho_Rewrite;
 
 open monoidTheory groupTheory ringTheory;
 
@@ -39,10 +39,12 @@ val _ = hide "trivial_ring";
 val _ = hide "ring";
 
 (* |- !P Q. P /\ (?x. Q x) <=> ?x. P /\ Q x *)
-val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM
+val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
 
 (* |- !P Q. (?x. P x) /\ Q <=> ?x. P x /\ Q *)
-val LEFT_AND_EXISTS_THM = GSYM LEFT_EXISTS_AND_THM
+val LEFT_AND_EXISTS_THM = GSYM LEFT_EXISTS_AND_THM;
+
+val IMP_CONJ = DECIDE “p /\ q ==> r <=> p ==> q ==> r”;
 
 (* ------------------------------------------------------------------------- *)
 (*  'a Ring as type bijections of a subset of 'a ring                        *)
@@ -112,7 +114,7 @@ Definition ring_add_def :
 End
 
 val _ = hide "ring_sub";
-Definition ring_sub :
+Definition ring_sub_def :
     ring_sub (r :'a Ring) = ring$ring_sub (fromRing r)
 End
 
@@ -124,7 +126,21 @@ Definition ring_pow_def :
     ring_pow (r :'a Ring) = (fromRing r).prod.exp
 End
 
-(* NOTE: not used, only to make sure ‘ring_inv’ is not treated as variables *)
+Theorem ring_pow :
+    ring_pow r x 0 = ring_1 r /\
+    ring_pow r x (SUC n) = ring_mul r x (ring_pow r x n)
+Proof
+    Q.ID_SPEC_TAC ‘r’
+ >> Q.X_GEN_TAC ‘r0’
+ >> REWRITE_TAC [ring_pow_def, ring_1_def, ring_mul_def]
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> REWRITE_TAC [ring_exp_0, ring_exp_SUC]
+QED
+
+(* NOTE: not used, only to make sure ‘ring_inv’ is not treated as variables
+
+   |- !r. ring_inv r = Inv (fromRing r)
+ *)
 Definition ring_inv_def :
     ring_inv (r :'a Ring) = (Invertibles ((fromRing r).prod)).inv
 End
@@ -177,13 +193,29 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
+Theorem ring_sub :
+    !r x y. ring_sub r x y = ring_add r x (ring_neg r y)
+Proof
+    Q.X_GEN_TAC ‘r0’
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> rw [ring_sub_def, ring_add_def, ring_neg_def]
+QED
+
 fun xfer th :tactic =
     Q.X_GEN_TAC ‘r0’
  >> Q.ABBREV_TAC ‘r = fromRing r0’
- >> RW_TAC std_ss [ring_carrier_def, ring_pow_def, ring_add_def, ring_sub,
+ >> RW_TAC std_ss [ring_carrier_def, ring_pow_def, ring_add_def, ring_sub_def,
                    ring_mul_def, ring_0_def, ring_1_def, ring_neg_def]
  >> irule th
  >> rw [Abbr ‘r’];
+
+Theorem RING_NEG_EQ_0 :
+    !r (x :'a).
+        x IN ring_carrier r
+        ==> (ring_neg r x = ring_0 r <=> x = ring_0 r)
+Proof
+    xfer ring_neg_eq_zero
+QED
 
 Theorem RING_POW :
     !r x n. x IN ring_carrier r ==> ring_pow r x n IN ring_carrier (r :'a Ring)
@@ -269,6 +301,22 @@ Proof
     xfer ring_mult_rzero
 QED
 
+Theorem RING_MUL_LNEG :
+    !r x (y :'a).
+        x IN ring_carrier r /\ y IN ring_carrier r
+        ==> ring_mul r (ring_neg r x) y = ring_neg r (ring_mul r x y)
+Proof
+    xfer ring_mult_lneg
+QED
+
+Theorem RING_MUL_RNEG :
+    !r x (y :'a).
+        x IN ring_carrier r /\ y IN ring_carrier r
+        ==> ring_mul r x (ring_neg r y) = ring_neg r (ring_mul r x y)
+Proof
+    xfer ring_mult_rneg
+QED
+
 Theorem RING_MUL_SYM :
     !r x y. x IN ring_carrier r /\ y IN ring_carrier (r :'a Ring)
              ==> ring_mul r x y = ring_mul r y x
@@ -282,6 +330,24 @@ Theorem RING_MUL_ASSOC :
           ==> ring_mul r x (ring_mul r y z) = ring_mul r (ring_mul r x y) z
 Proof
     xfer (GSYM ring_mult_assoc)
+QED
+
+Theorem RING_ADD_LDISTRIB :
+    !r x y (z :'a).
+        x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
+        ==>  ring_mul r x (ring_add r y z) =
+             ring_add r (ring_mul r x y) (ring_mul r x z)
+Proof
+    xfer ring_mult_radd
+QED
+
+Theorem RING_ADD_RDISTRIB :
+    !r x y (z :'a).
+        x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
+        ==> ring_mul r (ring_add r x y) z =
+            ring_add r (ring_mul r x z) (ring_mul r y z)
+Proof
+    xfer ring_mult_ladd
 QED
 
 Theorem RING_ADD_EQ_0 :
@@ -316,6 +382,15 @@ Theorem RING_NEG_NEG :
     !r (x :'a). x IN ring_carrier r ==> ring_neg r (ring_neg r x) = x
 Proof
     xfer ring_neg_neg
+QED
+
+Theorem RING_NEG_ADD :
+    !r x (y :'a).
+        x IN ring_carrier r /\ y IN ring_carrier r
+        ==> ring_neg r (ring_add r x y) =
+            ring_add r (ring_neg r x) (ring_neg r y)
+Proof
+    xfer ring_neg_add
 QED
 
 Theorem RING_ADD_LCANCEL :
@@ -378,6 +453,334 @@ Theorem RING_SUB_EQ_0 :
         ==> (ring_sub r x y = ring_0 r <=> x = y)
 Proof
     xfer ring_sub_eq_zero
+QED
+
+Theorem RING_SUB_LZERO :
+    !r (x :'a). x IN ring_carrier r ==> ring_sub r (ring_0 r) x = ring_neg r x
+Proof
+    xfer ring_zero_sub
+QED
+
+Theorem RING_SUB_RZERO :
+    !r (x :'a). x IN ring_carrier r ==> ring_sub r x (ring_0 r) = x
+Proof
+    xfer ring_sub_zero
+QED
+
+Theorem RING_EQ_SUB_LADD :
+    !r x y (z :'a).
+         x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
+         ==> (x = ring_sub r y z <=> ring_add r x z = y)
+Proof
+    Q.X_GEN_TAC ‘r0’
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> RW_TAC std_ss [ring_carrier_def, ring_sub_def, ring_add_def]
+ >> MP_TAC (Q.SPEC ‘r’ ring_sub_eq_add)
+ >> ANTS_TAC >- rw [Abbr ‘r’]
+ >> DISCH_THEN (MP_TAC o (Q.SPECL [‘y’, ‘z’, ‘x’]))
+ >> ‘Ring r’ by rw [Abbr ‘r’]
+ >> METIS_TAC [ring_add_comm]
+QED
+
+Theorem RING_ADD_AC :
+    !(r :'a Ring).
+        (!x y. x IN ring_carrier r /\ y IN ring_carrier r
+               ==> ring_add r x y = ring_add r y x) /\
+        (!x y z. x IN ring_carrier r /\ y IN ring_carrier r /\
+                 z IN ring_carrier r
+                 ==> ring_add r (ring_add r x y) z =
+                     ring_add r x (ring_add r y z)) /\
+        (!x y z. x IN ring_carrier r /\ y IN ring_carrier r /\
+                 z IN ring_carrier r
+                 ==> ring_add r x (ring_add r y z) =
+                     ring_add r y (ring_add r x z))
+Proof
+  MESON_TAC[RING_ADD_SYM, RING_ADD_ASSOC, RING_ADD]
+QED
+
+Theorem RING_MUL_AC :
+    !(r :'a Ring).
+        (!x y. x IN ring_carrier r /\ y IN ring_carrier r
+               ==> ring_mul r x y = ring_mul r y x) /\
+        (!x y z. x IN ring_carrier r /\ y IN ring_carrier r /\
+                 z IN ring_carrier r
+                 ==> ring_mul r (ring_mul r x y) z =
+                     ring_mul r x (ring_mul r y z)) /\
+        (!x y z. x IN ring_carrier r /\ y IN ring_carrier r /\
+                 z IN ring_carrier r
+                 ==> ring_mul r x (ring_mul r y z) =
+                     ring_mul r y (ring_mul r x z))
+Proof
+  MESON_TAC[RING_MUL_SYM, RING_MUL_ASSOC, RING_MUL]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Mapping natural numbers and integers into a ring in the obvious way.      *)
+(* ------------------------------------------------------------------------- *)
+
+(* ##n *)
+Definition ring_of_num_def :
+    ring_of_num (r :'a Ring) = (fromRing r).sum.exp (ring_1 r)
+End
+
+Theorem ring_of_num :
+    ring_of_num r (0 :num) = ring_0 (r :'a Ring) /\
+    ring_of_num r (SUC n) = ring_add r (ring_of_num r n) (ring_1 r)
+Proof
+    Q.ID_SPEC_TAC ‘r’
+ >> Q.X_GEN_TAC ‘r0’
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> RW_TAC std_ss [ring_num_0, ring_of_num_def, ring_0_def, ring_1_def,
+                   ring_add_def]
+ >> ‘Ring r’ by rw [Abbr ‘r’]
+ >> Know ‘##n + #1 = #1 + ##n’
+ >- (irule ring_add_comm >> rw [])
+ >> Rewr'
+ >> MATCH_MP_TAC ring_num_SUC >> art []
+QED
+
+Theorem RING_OF_NUM :
+    !r n. ring_of_num r n IN ring_carrier (r :'a Ring)
+Proof
+    qx_genl_tac [‘r0’, ‘n’]
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> RW_TAC std_ss [ring_carrier_def, ring_of_num_def, ring_1_def]
+ >> MATCH_MP_TAC ring_num_element
+ >> rw [Abbr ‘r’]
+QED
+
+Theorem RING_OF_NUM_0 :
+    !(r :'a Ring). ring_of_num r 0 = ring_0 r
+Proof
+  REWRITE_TAC[ring_of_num]
+QED
+
+Theorem RING_OF_NUM_1 :
+    !(r :'a Ring). ring_of_num r 1 = ring_1 r
+Proof
+  SIMP_TAC bool_ss[num_CONV “1:num”, ring_of_num, RING_ADD_LZERO, RING_1]
+QED
+
+Theorem RING_OF_NUM_ADD :
+    !(r :'a Ring) m n.
+      ring_of_num r (m + n) = ring_add r (ring_of_num r m) (ring_of_num r n)
+Proof
+    Q.X_GEN_TAC ‘r0’
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> rw [ring_of_num_def, ring_1_def, ring_add_def]
+ >> irule ring_num_add
+ >> rw [Abbr ‘r’]
+QED
+
+Theorem RING_OF_NUM_MUL :
+    !(r :'a Ring) m n.
+      ring_of_num r (m * n) = ring_mul r (ring_of_num r m) (ring_of_num r n)
+Proof
+    Q.X_GEN_TAC ‘r0’
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> rw [ring_of_num_def, ring_mul_def, ring_1_def]
+ >> irule (GSYM ring_num_mult)
+ >> rw [Abbr ‘r’]
+QED
+
+Definition ring_of_int :
+    ring_of_int (r :'a Ring) (n :int) =
+        if &0 <= n then ring_of_num r (num_of_int n)
+        else ring_neg r (ring_of_num r (num_of_int (-n)))
+End
+
+Theorem RING_OF_INT :
+     !r n. ring_of_int r n IN ring_carrier (r :'a Ring)
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[ring_of_int] THEN COND_CASES_TAC THEN
+  ASM_SIMP_TAC std_ss [RING_NEG, RING_OF_NUM]
+QED
+
+(* |- !n. num_of_int(&n) = n *)
+Theorem NUM_OF_INT_OF_NUM = NUM_OF_INT;
+
+Theorem RING_OF_INT_OF_NUM :
+    !r n. ring_of_int r (&n) = ring_of_num (r :'a Ring) n
+Proof
+  REWRITE_TAC[ring_of_int, INT_POS, NUM_OF_INT_OF_NUM]
+QED
+
+(* NOTE: The proof is a direct translation from OCaml to SML *)
+Theorem RING_OF_INT_CASES :
+   (!r n. ring_of_int r (&n) = ring_of_num (r : 'a Ring) n) /\
+   (!r n. ring_of_int r (-&n) = ring_neg r (ring_of_num r n))
+Proof
+  REPEAT STRIP_TAC THEN REWRITE_TAC[RING_OF_INT_OF_NUM] THEN
+  REWRITE_TAC[ring_of_int, INT_ARITH “0:int <= - &n <=> &n:int = &0”] THEN
+  SIMP_TAC std_ss[INT_NEG_NEG, INT_OF_NUM_EQ, INT_NEG_0, NUM_OF_INT_OF_NUM] THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[ring_of_num, RING_NEG_0]
+QED
+
+Theorem RING_OF_INT_NEG :
+    !(r :'a Ring) n. ring_of_int r (-n) = ring_neg r (ring_of_int r n)
+Proof
+  SIMP_TAC std_ss[FORALL_INT_CASES, RING_OF_INT_CASES, INT_NEG_NEG,
+                  RING_NEG_NEG, RING_OF_NUM]
+QED
+
+val lemma1 =
+    METIS_PROVE[RING_ADD_SYM, RING_NEG]
+     “!x y. x IN ring_carrier r /\ y IN ring_carrier r
+         ==> ring_add r (ring_neg r x) y = ring_add r y (ring_neg r x)”;
+
+Theorem RING_OF_INT_ADD :
+    !(r :'a Ring) m n.
+      ring_of_int r (m + n) = ring_add r (ring_of_int r m) (ring_of_int r n)
+Proof
+  SUBGOAL_THEN
+   “!(r :'a Ring) m n p.
+        m + n = p ==>
+      ring_of_int r p = ring_add r (ring_of_int r m) (ring_of_int r n)”
+   (fn th => MESON_TAC[th]) THEN
+  GEN_TAC THEN SIMP_TAC std_ss[FORALL_INT_CASES, RING_OF_INT_CASES] THEN
+  ONCE_REWRITE_TAC[INT_ARITH “-b + (a:int) = a + -b”] THEN
+  REWRITE_TAC[GSYM INT_NEG_ADD, INT_NEG_EQ, INT_NEG_NEG] THEN
+  REWRITE_TAC[INT_ARITH
+   “(&a + &b:int = - &c <=> &a:int = &0 /\ &b:int = &0 /\ &c:int = &0) /\
+    (!m n p. m + -n:int = &p <=> m = n + &p) /\
+    (!m n p. m + -n:int = - &p <=> m + &p = n)”] THEN
+  REWRITE_TAC[INT_OF_NUM_ADD, INT_OF_NUM_EQ] THEN
+  REPEAT STRIP_TAC
+ (* 8 subgoals here *)
+ >- (POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+     REWRITE_TAC [RING_OF_NUM_ADD])
+ (* 7 subgoals left *)
+ >- (rw [GSYM RING_OF_NUM_ADD, RING_OF_NUM_0, RING_NEG_0])
+ (* 6 subgoals left *)
+ >- (POP_ORW \\
+     REWRITE_TAC[RING_OF_NUM_ADD] \\
+     REWRITE_TAC[GSYM ring_sub] \\
+     SIMP_TAC std_ss[RING_EQ_SUB_LADD, RING_SUB, RING_OF_NUM, RING_ADD] \\
+     SIMP_TAC std_ss[Once RING_ADD_SYM, RING_OF_NUM])
+ (* 5 subgoals left *)
+ >- (POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+     REWRITE_TAC [RING_OF_NUM_ADD] \\
+     REWRITE_TAC[GSYM ring_sub] \\
+     SIMP_TAC std_ss[RING_EQ_SUB_LADD, RING_NEG, RING_SUB, RING_OF_NUM, RING_ADD] \\
+     SIMP_TAC std_ss[Once RING_ADD_SYM, RING_OF_NUM, RING_ADD, RING_NEG,
+                     GSYM RING_ADD_ASSOC] \\
+     REWRITE_TAC[GSYM ring_sub] \\
+     Know ‘ring_sub r (ring_of_num r n'') (ring_of_num r n'') = ring_0 r’
+     >- (SIMP_TAC std_ss[RING_SUB_EQ_0, RING_OF_NUM, RING_0]) >> Rewr' \\
+     SIMP_TAC std_ss[RING_ADD_RZERO, RING_OF_NUM])
+ (* 4 subgoals left *)
+ >- (POP_ORW \\
+     REWRITE_TAC [RING_OF_NUM_ADD] \\
+     SIMP_TAC std_ss[RING_ADD_ASSOC, RING_OF_NUM, RING_NEG, RING_ADD] \\
+     Know ‘ring_add r (ring_neg r (ring_of_num r n)) (ring_of_num r n) =
+           ring_add r (ring_of_num r n) (ring_neg r (ring_of_num r n))’
+     >- (SIMP_TAC std_ss[Once RING_ADD_SYM, RING_OF_NUM, RING_NEG]) >> Rewr' \\
+     REWRITE_TAC[GSYM ring_sub] \\
+     Know ‘ring_sub r (ring_of_num r n) (ring_of_num r n) = ring_0 r’
+     >- (SIMP_TAC std_ss[RING_SUB_EQ_0, RING_OF_NUM, RING_0]) >> Rewr' \\
+     SIMP_TAC std_ss[RING_ADD_LZERO, RING_OF_NUM])
+ (* 3 subgoals left *)
+ >- (POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+     REWRITE_TAC [RING_OF_NUM_ADD] \\
+     SIMP_TAC std_ss[lemma1, RING_OF_NUM, RING_NEG, RING_ADD] \\
+     SIMP_TAC std_ss[RING_NEG_ADD, RING_OF_NUM] \\
+     SIMP_TAC std_ss[RING_ADD_ASSOC, RING_OF_NUM, RING_NEG, RING_ADD] \\
+     REWRITE_TAC[GSYM ring_sub] \\
+     Know ‘ring_sub r (ring_of_num r n') (ring_of_num r n') = ring_0 r’
+     >- (SIMP_TAC std_ss[RING_SUB_EQ_0, RING_OF_NUM, RING_0]) >> Rewr' \\
+     SIMP_TAC std_ss[RING_SUB_LZERO, RING_OF_NUM])
+ (* 2 subgoals left *)
+ >- (rw [GSYM RING_OF_NUM_ADD, RING_OF_NUM_0, RING_NEG_0] \\
+     SIMP_TAC std_ss[RING_ADD_LZERO, RING_0])
+ (* final subgoal *)
+ >> SIMP_TAC std_ss[GSYM RING_NEG_ADD, RING_OF_NUM, RING_NEG]
+ >> AP_TERM_TAC
+ >> POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
+ >> REWRITE_TAC [RING_OF_NUM_ADD]
+ >> SIMP_TAC std_ss[Once RING_ADD_SYM, RING_OF_NUM]
+QED
+
+Theorem RING_OF_INT_SUB :
+    !(r :'a Ring) m n.
+      ring_of_int r (m - n) = ring_sub r (ring_of_int r m) (ring_of_int r n)
+Proof
+  SIMP_TAC std_ss[int_sub, ring_sub, RING_OF_INT_ADD, RING_OF_INT_NEG,
+                  RING_NEG, RING_OF_INT]
+QED
+
+Theorem RING_OF_INT_MUL :
+    !(r :'a Ring) m n.
+      ring_of_int r (m * n) = ring_mul r (ring_of_int r m) (ring_of_int r n)
+Proof
+  SIMP_TAC std_ss[FORALL_INT_CASES, INT_MUL_LNEG, INT_MUL_RNEG, INT_NEG_NEG] THEN
+  REWRITE_TAC[RING_OF_INT_CASES, INT_OF_NUM_MUL, RING_OF_NUM_MUL] THEN
+  SIMP_TAC std_ss[RING_MUL_LNEG, RING_MUL_RNEG, RING_OF_NUM, RING_NEG,
+                  RING_NEG_NEG, RING_MUL]
+QED
+
+Theorem RING_OF_INT_0 :
+    !(r :'a Ring). ring_of_int r (&0) = ring_0 r
+Proof
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0]
+QED
+
+Theorem RING_OF_INT_1 :
+    !(r :'a Ring). ring_of_int r (&1) = ring_1 r
+Proof
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_1]
+QED
+
+Theorem RING_OF_INT_POW :
+    !(r :'a Ring) x n.
+        ring_of_int r (x ** n) = ring_pow r (ring_of_int r x) n
+Proof
+  GEN_TAC THEN GEN_TAC THEN
+  INDUCT_TAC THEN ASM_REWRITE_TAC[ring_pow, INT_POW, RING_OF_INT_1] THEN
+  ASM_REWRITE_TAC[RING_OF_INT_MUL]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Characteristic of a ring, characterized by RING_OF_NUM_EQ_0.              *)
+(* ------------------------------------------------------------------------- *)
+
+Definition ring_char_def :
+    ring_char (r :'a Ring) = char (fromRing r)
+End
+
+Theorem RING_OF_NUM_EQ_0 :
+    !(r :'a Ring) n. ring_of_num r n = ring_0 r <=> ring_char r divides n
+Proof
+    Q.X_GEN_TAC ‘r0’
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> rw [ring_of_num_def, ring_0_def, ring_1_def, ring_char_def]
+ >> irule ring_char_divides
+ >> rw [Abbr ‘r’]
+QED
+
+Theorem RING_OF_INT_EQ_0 :
+    !(r :'a Ring) n.
+        ring_of_int r n = ring_0 r <=> &(ring_char r) int_divides n
+Proof
+  SIMP_TAC std_ss[FORALL_INT_CASES, RING_OF_INT_CASES] THEN
+  SIMP_TAC std_ss[RING_NEG_EQ_0, RING_OF_NUM, RING_OF_NUM_EQ_0] THEN
+  REWRITE_TAC[num_divides] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC [INT_DIVIDES_NEG] (* was: INTEGER_TAC *)
+QED
+
+(* The original statement was: (m == n) (mod &(ring_char r))
+
+   NOTE: In HOL-Light, ‘(m == n) f’ (cong) means ‘f m n’ (int.ml). But this
+   syntax is now used by ‘fequiv’, which means ‘f m = f n’ (fequiv_def).
+ *)
+Theorem RING_OF_INT_EQ :
+    !(r :'a Ring) m n.
+        ring_of_int r m = ring_of_int r n <=>
+        &(ring_char r) int_divides (m - n)
+Proof
+  REPEAT STRIP_TAC THEN
+  W(MP_TAC o PART_MATCH (rand o rand) RING_SUB_EQ_0 o lhand o snd) THEN
+  REWRITE_TAC[RING_OF_INT, GSYM RING_OF_INT_SUB] THEN
+  DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[RING_OF_INT_EQ_0]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -483,6 +886,9 @@ Proof
  >> irule ring_homo_mult >> art []
 QED
 
+val lemma = REWRITE_RULE [ringTheory.ring_sub_def, ring_add_def, ring_neg_def]
+                         (Q.SPECL [‘r’, ‘r'’] ring_homo_sub);
+
 Theorem RING_HOMOMORPHISM_SUB :
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !x y. x IN ring_carrier r /\ y IN ring_carrier r
@@ -493,7 +899,8 @@ Proof
  >> Q.ABBREV_TAC ‘r  = fromRing r0’
  >> Q.ABBREV_TAC ‘r' = fromRing r1’
  >> ‘Ring r /\ Ring r'’ by rw [Abbr ‘r’, Abbr ‘r'’]
- >> irule (REWRITE_RULE [ring_sub_def] ring_homo_sub) >> art []
+ >> rw [ring_add_def, ring_neg_def]
+ >> irule lemma >> art []
 QED
 
 Theorem RING_HOMOMORPHISM_POW :
@@ -509,80 +916,6 @@ Proof
  >> irule ring_homo_exp >> art []
 QED
 
-Definition ring_monomorphism :
-    ring_monomorphism (r,r') (f :'a -> 'b) <=>
-        ring_homomorphism (r,r') f /\
-        !x y. x IN ring_carrier r /\ y IN ring_carrier r /\ f x = f y ==> x = y
-End
-
-(* ------------------------------------------------------------------------- *)
-(* Mapping natural numbers and integers into a ring in the obvious way.      *)
-(* ------------------------------------------------------------------------- *)
-
-(* ##n *)
-Definition ring_of_num_def :
-    ring_of_num (r :'a Ring) = (fromRing r).sum.exp (ring_1 r)
-End
-
-Theorem ring_of_num :
-    !r. ring_of_num r (0 :num) = ring_0 (r :'a Ring) /\
-        !n. ring_of_num r (SUC n) = ring_add r (ring_of_num r n) (ring_1 r)
-Proof
-    Q.X_GEN_TAC ‘r0’
- >> Q.ABBREV_TAC ‘r = fromRing r0’
- >> RW_TAC std_ss [ring_num_0, ring_of_num_def, ring_0_def, ring_1_def,
-                   ring_add_def]
- >> ‘Ring r’ by rw [Abbr ‘r’]
- >> Know ‘##n + #1 = #1 + ##n’
- >- (irule ring_add_comm >> rw [])
- >> Rewr'
- >> MATCH_MP_TAC ring_num_SUC >> art []
-QED
-
-Theorem RING_OF_NUM :
-    !r n. ring_of_num r n IN ring_carrier (r :'a Ring)
-Proof
-    qx_genl_tac [‘r0’, ‘n’]
- >> Q.ABBREV_TAC ‘r = fromRing r0’
- >> RW_TAC std_ss [ring_carrier_def, ring_of_num_def, ring_1_def]
- >> MATCH_MP_TAC ring_num_element
- >> rw [Abbr ‘r’]
-QED
-
-Theorem RING_OF_NUM_0 :
-    !(r :'a Ring). ring_of_num r 0 = ring_0 r
-Proof
-  REWRITE_TAC[ring_of_num]
-QED
-
-Theorem RING_OF_NUM_1 :
-    !(r :'a Ring). ring_of_num r 1 = ring_1 r
-Proof
-  SIMP_TAC bool_ss[num_CONV “1:num”, ring_of_num, RING_ADD_LZERO, RING_1]
-QED
-
-Definition ring_of_int :
-    ring_of_int (r :'a Ring) (n :int) =
-        if &0 <= n then ring_of_num r (num_of_int n)
-        else ring_neg r (ring_of_num r (num_of_int (-n)))
-End
-
-Theorem RING_OF_INT :
-     !r n. ring_of_int r n IN ring_carrier (r :'a Ring)
-Proof
-  REPEAT GEN_TAC THEN REWRITE_TAC[ring_of_int] THEN COND_CASES_TAC THEN
-  ASM_SIMP_TAC std_ss [RING_NEG, RING_OF_NUM]
-QED
-
-(* |- !n. num_of_int(&n) = n *)
-Theorem NUM_OF_INT_OF_NUM = NUM_OF_INT;
-
-Theorem RING_OF_INT_OF_NUM :
-    !r n. ring_of_int r (&n) = ring_of_num (r :'a Ring) n
-Proof
-  REWRITE_TAC[ring_of_int, INT_POS, NUM_OF_INT_OF_NUM]
-QED
-
 Theorem RING_HOMOMORPHISM_RING_OF_NUM :
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !n. f(ring_of_num r n) = ring_of_num r' n
@@ -593,23 +926,6 @@ Proof
  >> Q.ABBREV_TAC ‘r' = fromRing r1’
  >> ‘Ring r /\ Ring r'’ by rw [Abbr ‘r’, Abbr ‘r'’]
  >> irule ring_homo_num >> art []
-QED
-
-(* |- |- !x. --x = x *)
-Theorem INT_NEG_NEG = INT_NEGNEG
-
-(* |- !m n. &m = &n <=> m = n *)
-Theorem INT_OF_NUM_EQ = INT_INJ
-
-(* NOTE: The proof is a direct translation from OCaml to SML *)
-Theorem RING_OF_INT_CASES :
-   (!r n. ring_of_int r (&n) = ring_of_num (r : 'a Ring) n) /\
-   (!r n. ring_of_int r (-&n) = ring_neg r (ring_of_num r n))
-Proof
-  REPEAT STRIP_TAC THEN REWRITE_TAC[RING_OF_INT_OF_NUM] THEN
-  REWRITE_TAC[ring_of_int, INT_ARITH “0:int <= - &n <=> &n:int = &0”] THEN
-  SIMP_TAC std_ss[INT_NEG_NEG, INT_OF_NUM_EQ, INT_NEG_0, NUM_OF_INT_OF_NUM] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[ring_of_num, RING_NEG_0]
 QED
 
 (* NOTE: The proof is a direct translation from OCaml to SML *)
@@ -624,6 +940,12 @@ Proof
   FIRST_ASSUM(fn th =>
    ASM_SIMP_TAC std_ss [MATCH_MP RING_HOMOMORPHISM_RING_OF_NUM th])
 QED
+
+Definition ring_monomorphism :
+    ring_monomorphism (r,r') (f :'a -> 'b) <=>
+        ring_homomorphism (r,r') f /\
+        !x y. x IN ring_carrier r /\ y IN ring_carrier r /\ f x = f y ==> x = y
+End
 
 (* NOTE: This theorem was part of HOL-Light's RING_MONOMORPHIC_IMAGE_RULE *)
 Theorem RING_MONOMORPHIC_IMAGE_RULE_THM :
@@ -665,7 +987,7 @@ Theorem RING_MONOMORPHIC_IMAGE_RULE_THM :
                       f(ring_mul r x y) = ring_mul r' x' y')
 Proof
     rpt GEN_TAC >> REWRITE_TAC[ring_monomorphism]
- >> GEN_REWRITE_TAC LAND_CONV empty_rewrites [CONJ_SYM]
+ >> GEN_REWRITE_TAC LAND_CONV [CONJ_SYM]
  >> MATCH_MP_TAC MONO_AND
  >> CONJ_TAC >- MESON_TAC[]
  >> METIS_TAC[RING_0, RING_1, RING_OF_NUM, RING_OF_INT, RING_NEG,
@@ -1026,7 +1348,7 @@ Theorem RING_HOMOMORPHISM_FROM_TRIVIAL_RING :
              trivial_ring r' /\ IMAGE f (ring_carrier r) = {ring_0 r'})
 Proof
   REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC LAND_CONV empty_rewrites [trivial_ring] THEN
+  GEN_REWRITE_TAC LAND_CONV [trivial_ring] THEN
   DISCH_TAC THEN EQ_TAC THENL
   [ (* goal 1 (of 2) *)
     ASM_SIMP_TAC std_ss[ring_homomorphism, TRIVIAL_RING_10] THEN
@@ -1290,32 +1612,6 @@ QED
 Theorem PRODUCT_RING_NEG' =
         PRODUCT_RING_NEG |> SIMP_RULE std_ss [PRODUCT_RING, IN_CARTESIAN_PRODUCT]
 
-Theorem RING_TOTALIZATION_lemma[local] :
-    !r :'a Ring.
-            ~(trivial_ring r) /\ INFINITE univ(:'b) /\ univ(:'a) <=_c univ(:'b)
-            ==> ring_carrier(product_ring univ(:'b) (\(i :'b). r)) =_c univ(:'b -> bool)
-Proof
-    rpt STRIP_TAC
- >> REWRITE_TAC[PRODUCT_RING, CARTESIAN_PRODUCT_CONST, UNIV_fun_exp]
- >> MATCH_MP_TAC CARD_EXP_ABSORB >> art []
- >> CONJ_TAC (* 2 subgoals *)
- >| [ (* goal 1 (of 2) *)
-      TRANS_TAC CARD_LE_TRANS “{ring_0 r:'a;ring_1 r:'a}” \\
-      CONJ_TAC >| (* 2 subgoals *)
-      [ (* goal 1.1 (of 2) *)
-        RULE_ASSUM_TAC(REWRITE_RULE[TRIVIAL_RING_10]) \\
-        rw [CARD_LE_CARD, FINITE_INSERT, FINITE_EMPTY, FINITE_BOOL,
-            CARD_BOOL, CARD_CLAUSES],
-        (* goal 1.2 (of 2) *)
-        MATCH_MP_TAC CARD_LE_SUBSET \\
-        REWRITE_TAC[INSERT_SUBSET, EMPTY_SUBSET, RING_0, RING_1] ],
-      (* goal 2 (of 2) *)
-      TRANS_TAC CARD_LE_TRANS “univ(:'a)” \\
-      ASM_SIMP_TAC std_ss [CARD_LE_SUBSET, SUBSET_UNIV] \\
-      TRANS_TAC CARD_LE_TRANS “univ(:'b)” >> art [] \\
-      SIMP_TAC std_ss[CARD_EXP_CANTOR, CARD_LT_IMP_LE] ]
-QED
-
 Theorem RING_MONOMORPHISM_COMPOSE :
     !r1 r2 r3 (f :'a -> 'b) (g :'b -> 'c).
         ring_monomorphism(r1,r2) f /\ ring_monomorphism(r2,r3) g
@@ -1392,9 +1688,35 @@ Proof
   SET_TAC[]
 QED
 
+Theorem RING_TOTALIZATION_lemma[local] :
+    !r :'a Ring.
+            ~(trivial_ring r) /\ INFINITE univ(:'b) /\ univ(:'a) <=_c univ(:'b)
+            ==> ring_carrier(product_ring univ(:'b) (\(i :'b). r)) =_c univ(:'b -> bool)
+Proof
+    rpt STRIP_TAC
+ >> REWRITE_TAC[PRODUCT_RING, CARTESIAN_PRODUCT_CONST, UNIV_fun_exp]
+ >> MATCH_MP_TAC CARD_EXP_ABSORB >> art []
+ >> CONJ_TAC (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      TRANS_TAC CARD_LE_TRANS “{ring_0 r:'a;ring_1 r:'a}” \\
+      CONJ_TAC >| (* 2 subgoals *)
+      [ (* goal 1.1 (of 2) *)
+        RULE_ASSUM_TAC(REWRITE_RULE[TRIVIAL_RING_10]) \\
+        rw [CARD_LE_CARD, FINITE_INSERT, FINITE_EMPTY, FINITE_BOOL,
+            CARD_BOOL, CARD_CLAUSES],
+        (* goal 1.2 (of 2) *)
+        MATCH_MP_TAC CARD_LE_SUBSET \\
+        REWRITE_TAC[INSERT_SUBSET, EMPTY_SUBSET, RING_0, RING_1] ],
+      (* goal 2 (of 2) *)
+      TRANS_TAC CARD_LE_TRANS “univ(:'a)” \\
+      ASM_SIMP_TAC std_ss [CARD_LE_SUBSET, SUBSET_UNIV] \\
+      TRANS_TAC CARD_LE_TRANS “univ(:'b)” >> art [] \\
+      SIMP_TAC std_ss[CARD_EXP_CANTOR, CARD_LT_IMP_LE] ]
+QED
+
 Theorem RING_TOTALIZATION :
     !r :'a Ring.
-          (?r' f. ring_carrier r' = {()} /\
+          (?r' f. ring_carrier r' = univ(:unit) /\
                   ring_monomorphism(r,r') f) \/
           (?r' f. ring_carrier r' = univ(:(num # 'a) -> bool)/\
                   ring_monomorphism(r,r') f)
@@ -1405,7 +1727,8 @@ Proof
       ASM_SIMP_TAC std_ss[RING_MONOMORPHISM_FROM_TRIVIAL_RING,
                           RING_HOMOMORPHISM_FROM_TRIVIAL_RING] THEN
       ASM_SIMP_TAC std_ss[TRIVIAL_RING_SINGLETON_RING, SINGLETON_RING] THEN
-      REWRITE_TAC[IMAGE_CONST, RING_CARRIER_NONEMPTY] )
+      REWRITE_TAC[IMAGE_CONST, RING_CARRIER_NONEMPTY] THEN
+      rw [Once EXTENSION] )
  >> DISJ2_TAC
  >> MP_TAC(snd(EQ_IMP_RULE(ISPECL
      [“product_ring univ(:num # 'a) (\i. (r :'a Ring))”, “univ(:num # 'a -> bool)”]
@@ -1416,13 +1739,13 @@ Proof
       ASM_REWRITE_TAC[GSYM MUL_C_UNIV, CARD_MUL_FINITE_EQ] THEN
       REWRITE_TAC[UNIV_NOT_EMPTY, DE_MORGAN_THM] THEN
       REWRITE_TAC[num_INFINITE, MUL_C_UNIV] THEN
-      REWRITE_TAC[le_c] THEN EXISTS_TAC “\x:'a. (0,x)” THEN
+      REWRITE_TAC[le_c] THEN EXISTS_TAC “\x:'a. (0:num,x)” THEN
       SIMP_TAC std_ss[IN_UNIV],
       (* goal 2 (of 2) *)
       HO_MATCH_MP_TAC MONO_EXISTS THEN Q.X_GEN_TAC ‘r'’ THEN
       STRIP_TAC THEN ASM_REWRITE_TAC[] ] THEN
  (* stage work *)
-    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I empty_rewrites [isomorphic_ring]) THEN
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I [isomorphic_ring]) THEN
     DISCH_THEN(Q.X_CHOOSE_TAC ‘f’) THEN
     Q.EXISTS_TAC ‘f o (\x i. x)’ THEN
     MATCH_MP_TAC RING_MONOMORPHISM_COMPOSE THEN
@@ -1431,33 +1754,71 @@ Proof
     ASM_SIMP_TAC std_ss[RING_ISOMORPHISM_IMP_MONOMORPHISM]
 QED
 
-Theorem RING_WORD_UNIVERSAL_LEMMA1 :
-    ring_0 r = ring_of_int (r :'a Ring) (&0) /\
-    ring_1 r = ring_of_int (r :'a Ring) (&1)
+(* ------------------------------------------------------------------------- *)
+(* Integral domain and field.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+Definition integral_domain_def :
+    integral_domain (r :'a Ring) = IntegralDomain (fromRing r)
+End
+
+Theorem integral_domain :
+    integral_domain (r :'a Ring) <=>
+        ~(ring_1 r = ring_0 r) /\
+        (!x y. x IN ring_carrier r /\
+               y IN ring_carrier r /\
+               ring_mul r x y = ring_0 r
+               ==> x = ring_0 r \/ y = ring_0 r)
 Proof
-  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0, RING_OF_NUM_1]
+    Q.ID_SPEC_TAC ‘r’
+ >> Q.X_GEN_TAC ‘r0’
+ >> Q.ABBREV_TAC ‘r = fromRing r0’
+ >> rw [integral_domain_def, ring_1_def, ring_0_def, ring_carrier_def,
+        ring_mul_def]
+ >> ‘Ring r’ by rw [Abbr ‘r’]
+ >> rw [IntegralDomain_def]
+ >> EQ_TAC >> rw [] >- METIS_TAC []
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 2) *)
+      rw [ring_mult_lzero],
+      (* goal 2 (of 2) *)
+      rw [ring_mult_rzero] ]
 QED
 
-Theorem RING_WORD_UNIVERSAL_LEMMA2 :
-    ring_carrier r = univ(:'a) ==>
-    (x = y <=> ring_sub r x y = ring_of_int r (&0))
+Theorem INTEGRAL_DOMAIN_MUL_EQ_0 :
+    !r a (b :'a).
+        integral_domain r /\ a IN ring_carrier r /\ b IN ring_carrier r
+        ==> (ring_mul r a b = ring_0 r <=> a = ring_0 r \/ b = ring_0 r)
 Proof
-  SIMP_TAC bool_ss[RING_SUB_EQ_0, IN_UNIV, RING_OF_INT_OF_NUM, RING_OF_NUM_0]
+  REWRITE_TAC[integral_domain] THEN
+  MESON_TAC[RING_MUL_LZERO, RING_MUL_RZERO]
 QED
 
-Theorem RING_WORD_UNIVERSAL_LEMMA3 :
-    ring_carrier r = univ(:'a) ==>
-    p = ring_of_int r (&0) ==> !c. ring_mul r c p = ring_of_int r (&0)
+Theorem RING_INTEGRAL_LEMMA :
+    integral_domain r
+     ==> ring_carrier r = univ(:'a)
+         ==> (!x. ring_mul r (ring_of_int r (&0)) x = ring_of_int r (&0)) /\
+             (!x y z. ring_add r x y = ring_add r x z <=> y = z) /\
+             (!w x y z.
+                      ring_add r (ring_mul r w y) (ring_mul r x z) =
+                      ring_add r (ring_mul r w z) (ring_mul r x y) <=>
+                      w = x \/ y = z)
 Proof
-  SIMP_TAC bool_ss[RING_MUL_RZERO, RING_OF_INT_OF_NUM, RING_OF_NUM_0, IN_UNIV]
-QED
-
-Theorem RING_WORD_UNIVERSAL_LEMMA4 :
-    ring_carrier r = univ(:'a) ==>
-      p = ring_of_int r (&0) /\ q = ring_of_int r (&0) ==>
-        ring_add r p q = ring_of_int r (&0)
-Proof
-  SIMP_TAC bool_ss[RING_ADD_RZERO, RING_OF_INT_OF_NUM, RING_OF_NUM_0, IN_UNIV]
+    REPEAT GEN_TAC THEN REPEAT DISCH_TAC THEN
+    REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0] THEN
+    ASM_SIMP_TAC std_ss[RING_MUL_LZERO, RING_ADD_LCANCEL, IN_UNIV] THEN
+    REPEAT GEN_TAC THEN
+    MP_TAC(ISPEC “r :'a Ring” RING_SUB_EQ_0) THEN
+    ASM_REWRITE_TAC[IN_UNIV] THEN
+    DISCH_THEN(fn th => ONCE_REWRITE_TAC[GSYM th]) THEN
+    FIRST_X_ASSUM(MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ]
+          INTEGRAL_DOMAIN_MUL_EQ_0)) THEN
+    ASM_REWRITE_TAC[IN_UNIV] THEN
+    DISCH_THEN(fn th => ONCE_REWRITE_TAC[GSYM th]) THEN
+    AP_THM_TAC THEN AP_TERM_TAC THEN
+    ASM_SIMP_TAC std_ss[ring_sub, IN_UNIV, RING_ADD_LDISTRIB, RING_ADD_RDISTRIB,
+                        RING_NEG_NEG, RING_NEG_ADD, RING_MUL_LNEG, RING_MUL_RNEG] THEN
+    ASM_SIMP_TAC std_ss[RING_ADD_AC, IN_UNIV]
 QED
 
 val _ = export_theory();

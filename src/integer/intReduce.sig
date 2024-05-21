@@ -19,6 +19,8 @@ sig
   val INT_GT_CONV  : conv
   val INT_EQ_CONV  : conv
   val INT_ADD_CONV : conv
+  val INT_SUB_CONV : conv
+  val INT_NEG_CONV : conv
   val INT_MUL_CONV : conv
   val INT_POW_CONV : conv
 

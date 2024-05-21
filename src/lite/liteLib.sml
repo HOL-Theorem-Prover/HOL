@@ -5,9 +5,9 @@
 structure liteLib :> liteLib =
 struct
 
-open Feedback Thm Conv Abbrev Tactic;
+open HolKernel boolLib Parse;
 
-val aconv = Term.aconv
+infix 3 |> thenf orelsef;
 
 (*---------------------------------------------------------------------------
  * Fake for NJSML: it does not use Interrupt anyway so it won't ever
@@ -45,8 +45,6 @@ fun option_cases f e (SOME x) = f x
 fun option_app f (SOME x) = SOME (f x)
   | option_app f NONE = NONE
 
-
-infix 3 |> thenf orelsef;
 fun (x |> f) = f x;
 
 fun (f thenf g) x = g(f x);
@@ -230,6 +228,8 @@ val is_imp    = is_binop boolSyntax.implication;
 val dest_imp  = dest_binop boolSyntax.implication;
 val strip_imp = splitlist dest_imp;
 
+(* Moved here from Canon_Port *)
+val freesl = free_varsl;
 
 (* ------------------------------------------------------------------------- *)
 (* Grabbing left operand of a binary operator (or something coextensive!)    *)
