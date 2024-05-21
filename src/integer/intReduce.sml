@@ -213,6 +213,15 @@ val (INT_LE_CONV,INT_LT_CONV,INT_GE_CONV,INT_GT_CONV,INT_EQ_CONV) =
      INT_GE_CONV,INT_GT_CONV,INT_EQ_CONV);
 end;
 
+val INT_NEG_CONV =
+  let val pth = prove
+   (“(-(&0) = &0) /\
+     (-(-(&x)) = &x)”,
+    REWRITE_TAC[INT_NEG_NEG, INT_NEG_0])
+  in
+    GEN_REWRITE_CONV I empty_rewrites[pth]
+  end;
+
 (*-----------------------------------------------------------------------*)
 (* INT_ADD_CONV "[x] + [y]" = |- [x] + [y] = [x+y]                       *)
 (*-----------------------------------------------------------------------*)
@@ -313,6 +322,11 @@ val INT_ADD_CONV =
     handle HOL_ERR _ => failwith "INT_ADD_CONV")
 end (* local *)
 
+val INT_SUB_CONV =
+  GEN_REWRITE_CONV I empty_rewrites[int_sub] THENC
+  TRY_CONV(RAND_CONV INT_NEG_CONV) THENC
+  INT_ADD_CONV;
+
 (*-----------------------------------------------------------------------*)
 (* INT_MUL_CONV "[x] * [y]" = |- [x] * [y] = [x * y]                     *)
 (*-----------------------------------------------------------------------*)
@@ -337,7 +351,8 @@ val INT_MUL_CONV =
     FIRST_CONV
      [GEN_REWRITE_CONV I empty_rewrites[pth0],
       GEN_REWRITE_CONV I empty_rewrites[pth1] THENC RAND_CONV NUM_MULT_CONV,
-      GEN_REWRITE_CONV I empty_rewrites[pth2] THENC RAND_CONV(RAND_CONV NUM_MULT_CONV)];
+      GEN_REWRITE_CONV I empty_rewrites[pth2] THENC
+      RAND_CONV(RAND_CONV NUM_MULT_CONV)];
 end;
 
 (*-----------------------------------------------------------------------*)

@@ -88,7 +88,11 @@ val _ = List.app (rule_test INTEGER_RULE) [
       ("INTEGER_RULE_00",
        “w * y + x * z - (w * z + x * y) = (w - x) * (y - z:int)”),
       ("INTEGER_RULE_01",
-       “a int_divides &n <=> a int_divides -&n”)
+       “a int_divides &n <=> a int_divides -&n”),
+      ("INTEGER_RULE_02",
+       “d int_divides m ==> d int_divides (m * n:int) /\ d int_divides -(m * n)”),
+      ("INTEGER_RULE_03",
+       “d int_divides m ==> d int_divides (m * n:int)”)
       ];
 
 val _ = Process.exit Process.success;

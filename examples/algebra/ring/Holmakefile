@@ -1,14 +1,20 @@
 INCLUDES = $(HOLDIR)/src/pred_set/src/more_theories $(HOLDIR)/src/integer \
            $(HOLDIR)/src/algebra/construction
 
-ifdef POLY
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
 HOLHEAP = heap
+EXTRA_CLEANS = $(HOLHEAP) selftest.exe ring-selftest.log
+
+selftest.exe: selftest.uo ringLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef POLY
 OBJS = pred_set/src/more_theories/cardinalTheory integer/intLib \
        algebra/construction/ringTheory
 
 FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS))
-
-EXTRA_CLEANS = $(HOLHEAP)
 
 all: $(HOLHEAP)
 
@@ -16,6 +22,10 @@ $(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state
 	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ $(FULL_OBJPATHS)
 endif
 
-all: $(DEFAULT_TARGETS)
+ifdef HOLSELFTESTLEVEL
+all: ring-selftest.log
 
-.PHONY: all
+ring-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1, $@)
+
+endif

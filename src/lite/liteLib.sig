@@ -88,7 +88,6 @@ sig
   val eager: 'a -> ('b,'a) lazy;
   val eval : ('a,'b)lazy -> 'b;
 
-
 (*--------------------------------------------------------------------*
  * Term operators                                                     *
  *--------------------------------------------------------------------*)
@@ -154,15 +153,12 @@ sig
     val SIMPLE_DISJ_CASES : thm -> thm -> thm
     val SIMPLE_CHOOSE : term -> thm -> thm
 
-(*--------------------------------------------------------------------*
- *  HOL-Light compatible type operators                               *
- *--------------------------------------------------------------------*)
-
     val bool_ty     : hol_type
     val dest_fun_ty : hol_type -> hol_type * hol_type
     val mk_fun_ty   : hol_type -> hol_type -> hol_type
 
     val setify_term : term list -> term list
+    val freesl : term list -> term list
 
     val ANTS_TAC    : tactic
 end
