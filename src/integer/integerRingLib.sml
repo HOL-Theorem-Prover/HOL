@@ -56,7 +56,7 @@ local
   val sth = prove
    (“(!x y z. x + (y + z) = (x + y) + z :int) /\
      (!x y. x + y = y + x :int) /\
-     (!x. &0 + x = x) /\
+     (!x. &0 + x = x :int) /\
      (!x y z. x * (y * z) = (x * y) * z :int) /\
      (!x y. x * y = y * x :int) /\
      (!x. &1 * x = x :int) /\
