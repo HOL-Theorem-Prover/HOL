@@ -13,11 +13,11 @@ fun RING_ERR function message =
 (* reify ring expressions: building a signature, which is the correspondence
    between the semantic level operators and the syntactic level ones. *)
 
-fun ring_field q =
-  rhs(concl(REWRITE_CONV[EVAL_ringTheory.ring_accessors] (Term q)));
+fun ring_field t =
+  rhs(concl(REWRITE_CONV[EVAL_ringTheory.ring_accessors] t));
 
-fun sring_field q =
-  rhs(concl(REWRITE_CONV[EVAL_semiringTheory.semi_ring_accessors] (Term q)));
+fun sring_field t =
+  rhs(concl(REWRITE_CONV[EVAL_semiringTheory.semi_ring_accessors] t));
 
 fun inst_ty ty = inst [alpha |-> ty];
 local fun pmc s = prim_mk_const {Name = s, Thy = "EVAL_ringNorm"}
@@ -31,9 +31,20 @@ local fun pmc s = prim_mk_const {Name = s, Thy = "EVAL_ringNorm"}
       val spcst = canon_pmc "SPconst"
       val spplus = canon_pmc "SPplus"
       val spmult = canon_pmc "SPmult"
+      fun mkrecsel tyn fnm =
+          TypeBasePure.mk_recordtype_fieldsel {tyname = tyn, fieldname = fnm}
+      fun mkc thy tyn fnm = prim_mk_const{Name = mkrecsel tyn fnm,
+                                          Thy = "EVAL_" ^ thy}
+      val RP = mkc "ring" "ring" "RP"
+      val RM = mkc "ring" "ring" "RM"
+      val RN = mkc "ring" "ring" "RN"
+      val SRP = mkc "semiring" "semi_ring" "SRP"
+      val SRM = mkc "semiring" "semi_ring" "SRM"
 in
 fun polynom_sign ty ring =
-  let val (P,M,N) = case map ring_field [`RP ^ring`,`RM ^ring`,`RN ^ring`]
+  let val (P,M,N) = case map ring_field [mk_icomb(RP, ring),
+                                         mk_icomb(RM, ring),
+                                         mk_icomb(RN, ring)]
                     of [P,M,N] => (P,M,N)
                      | _ => raise Match
   in
@@ -44,7 +55,8 @@ fun polynom_sign ty ring =
   end
 
 fun spolynom_sign ty sring =
-  let val (P,M) = case map sring_field [`SRP ^sring`,`SRM ^sring`] of
+  let val (P,M) = case map sring_field [mk_icomb(SRP, sring),
+                                        mk_icomb(SRM, sring)] of
                     [P,M] => (P,M)
                   | _ => raise Match
   in

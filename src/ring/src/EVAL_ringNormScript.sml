@@ -17,6 +17,8 @@ val r = “r:'a ring”;
 val sr = “semi_ring_of r”;
 val _ = set_assums [ “is_ring ^r” ];
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
+val _ = app (fn s => temp_overload_on (s, Parse.Term [QUOTE ("ring_"^s)]))
+            ["R0","R1","RP","RM","RN"];
 
 val rth = EVAL_ringTheory.IMPORT
     { Vals = [r],
