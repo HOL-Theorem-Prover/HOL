@@ -52,6 +52,12 @@ New examples:
 Incompatibilities:
 ------------------
 
+- The old decision procedures for real arithmetics in `RealArith` package has been
+  removed: `OLD_REAL_ARITH`, `OLD_REAL_ARITH_TAC`, `OLD_REAL_ASM_ARITH_TAC` and
+ `PURE_REAL_ARITH_TAC` (user code can switch to `REAL_ASM_ARITH_TAC`).
+  Now `realLib.REAL_ARITH_TAC` (= `RealField.REAL_ARITH_TAC`), etc. solve exactly
+  the same set of problems as in HOL-Light (in rare cases existing proofs break.)
+
 * * * * *
 
 <div class="footer">
