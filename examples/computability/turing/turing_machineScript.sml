@@ -60,36 +60,43 @@ Turing mahines consist of
 
 val _ = remove_termtok {term_name = "O", tok = "O"}
 
-val _ = Datatype `action = Wr0 | Wr1 | L | R`;
+Datatype:
+  action = Wr0 | Wr1 | L | R
+End
 
+Datatype:
+  cell = Z | O
+End
 
-val _ = Datatype `cell = Z | O `;
+Datatype:
+  TM = <| state : num;
+          prog : ((num # cell) |->  (num # action));
+          tape_l : cell list;
+          tape_h : cell;
+          tape_r : cell list
+       |>
+End
 
-val _ = Datatype `TM = <| state : num;
-                          prog : ((num # cell) |->  (num # action));
-                          tape_l : cell list;
-                          tape_h : cell;
-                          tape_r : cell list
-                       |>`;
-
-val concatWith_def = Define`
+Definition concatWith_def:
   (concatWith sep [] = []) /\
   (concatWith sep [x] = x) /\
-  (concatWith sep (x::y::rest) = x ++ sep ++ concatWith sep (y::rest))`;
+  (concatWith sep (x::y::rest) = x ++ sep ++ concatWith sep (y::rest))
+End
 
-val INITIAL_TAPE_TM_def = Define `
+Definition INITIAL_TAPE_TM_def:
   (INITIAL_TAPE_TM tm [] = tm) ∧
   (INITIAL_TAPE_TM tm (h::t) =
     tm with <|tape_l := [] ; tape_h := h ; tape_r := t|>)
-`;
+End
 
-val INITIAL_TM_def = Define`
+Definition INITIAL_TM_def:
   INITIAL_TM p args =
     INITIAL_TAPE_TM <| state := 0;  prog := p;tape_l := [];
                        tape_h := Z;tape_r := [] |>
-                    (concatWith [Z] (MAP (GENLIST (K O)) args))`;
+                    (concatWith [Z] (MAP (GENLIST (K O)) args))
+End
 
-val UPDATE_TAPE_def = Define `
+Definition UPDATE_TAPE_def:
   UPDATE_TAPE tm =
     if (tm.state,tm.tape_h) IN FDOM tm.prog ∧ tm.state <> 0 then
       let tm' = tm with state := FST (tm.prog ' (tm.state, tm.tape_h))
@@ -110,10 +117,9 @@ val UPDATE_TAPE_def = Define `
                                   tape_h := HD tm.tape_r;
                                   tape_r := TL tm.tape_r |>
     else tm with state := 0
-`;
+End
 
-val _ = overload_on("RUN",``FUNPOW UPDATE_TAPE``);
-
+Overload "RUN" = ``FUNPOW UPDATE_TAPE``
 
 Definition DECODE_def:
   (DECODE 0 = []) ∧
@@ -125,20 +131,21 @@ Termination
    simp[]
 End
 
-val ENCODE_def = Define `
+Definition ENCODE_def:
   (ENCODE [] = 0) ∧
   (ENCODE (h::t) = case h of
                      Z => 0 + (2 * (ENCODE t))
                    | O => 1 + (2 * (ENCODE t))
-                   | _ => 0)`;
+                   | _ => 0)
+End
 
 (* Change TO simpler def of DECODE*)
 
 (* Lemmas for ENCODE/DECODE*)
 
-val ENCODE_DECODE_thm = store_thm(
-  "ENCODE_DECODE_thm",
-  ``!n. ENCODE (DECODE n) = n``,
+Theorem ENCODE_DECODE_thm:
+ !n. ENCODE (DECODE n) = n
+Proof
   completeInduct_on `n` >> Cases_on `n` >- EVAL_TAC >> rw[DECODE_def]
   >- (rw[ENCODE_def]
       >> `0<2` by fs[] >> `n' DIV 2 <= n'` by metis_tac[DIV_LESS_EQ]
@@ -152,30 +159,35 @@ val ENCODE_DECODE_thm = store_thm(
   >> rw[ENCODE_def]
   >> `EVEN (SUC n')` by metis_tac[EVEN_OR_ODD]
   >> `(SUC n') MOD 2 =0` by metis_tac[EVEN_MOD2]
-  >> `2 * ((SUC n') DIV 2) = SUC n'` by fs[MULT_EQ_DIV]);
+  >> `2 * ((SUC n') DIV 2) = SUC n'` by fs[MULT_EQ_DIV]
+QED
 
-val DECODE_EMPTY_lem = Q.store_thm (
-  "DECODE_EMPTY_lem",
-  `∀ n. (DECODE n = []) ==> (n=0)`,
-  Induct_on `n` >- EVAL_TAC >> fs[] >> rw[DECODE_def]  );
+Theorem DECODE_EMPTY_lem:
+  ∀ n. (DECODE n = []) ==> (n=0)
+Proof
+  Induct_on `n` >- EVAL_TAC >> fs[] >> rw[DECODE_def]
+QED
 
-val ENCODE_TM_TAPE_def = Define `
+Definition ENCODE_TM_TAPE_def:
   ENCODE_TM_TAPE tm =
        if tm.tape_h = Z then
            (ENCODE tm.tape_l   *,   (2 * (ENCODE tm.tape_r)))
        else
            (ENCODE tm.tape_l   *,   (2 * (ENCODE tm.tape_r) + 1))
-`;
+End
 
-val DECODE_TM_TAPE_def = Define `
+Definition DECODE_TM_TAPE_def:
   DECODE_TM_TAPE n =
        if EVEN (nsnd n) then
            (DECODE (nfst n), Z , DECODE ( (nsnd n) DIV 2))
        else
-           (DECODE (nfst n), O , DECODE ( (nsnd n - 1) DIV 2))`;
+         (DECODE (nfst n), O , DECODE ( (nsnd n - 1) DIV 2))
+End
 
 (* Halted definition and TM examples *)
-val HALTED_def = Define `HALTED tm <=> (tm.state = 0)`;
+Definition HALTED_def:
+  HALTED tm <=> (tm.state = 0)
+End
 
 (*
 
@@ -188,40 +200,45 @@ One can enumerate the Valid Turing Machines (by enumerating programs)
 
 *)
 
-val NUM_CELL_def = Define `
+Definition NUM_CELL_def:
   (NUM_CELL Z = 0:num) ∧
-  (NUM_CELL O = 1:num) `;
+  (NUM_CELL O = 1:num)
+End
 
-val CELL_NUM_def = Define `
+Definition CELL_NUM_def:
   (CELL_NUM 0n = Z) ∧
-  (CELL_NUM 1 = O) `;
+  (CELL_NUM 1 = O)
+End
 
-val ACT_TO_NUM_def = Define `
+Definition ACT_TO_NUM_def:
   (ACT_TO_NUM Wr0 = 0:num) ∧
   (ACT_TO_NUM Wr1 = 1:num) ∧
   (ACT_TO_NUM L   = 2:num) ∧
-  (ACT_TO_NUM R   = 3:num) `;
+  (ACT_TO_NUM R   = 3:num)
+End
 
-val NUM_TO_ACT_def = Define `
+Definition NUM_TO_ACT_def:
   (NUM_TO_ACT 0n = Wr0 ) ∧
   (NUM_TO_ACT 1 = Wr1) ∧
   (NUM_TO_ACT 2 = L) ∧
-  (NUM_TO_ACT 3 = R) `;
+  (NUM_TO_ACT 3 = R)
+End
 
-val FULL_ENCODE_TM_def = Define `
+Definition FULL_ENCODE_TM_def:
   FULL_ENCODE_TM tm = tm.state *, ENCODE_TM_TAPE tm
-`;
+End
 
 
-val FULL_DECODE_TM_def = Define `
+Definition FULL_DECODE_TM_def:
   FULL_DECODE_TM n = <| state:=  nfst n;
                         tape_l := FST (DECODE_TM_TAPE (nsnd n));
                         tape_h := FST (SND (DECODE_TM_TAPE (nsnd n)));
                         tape_r := SND (SND (DECODE_TM_TAPE (nsnd n)))|>
-`;
+End
 
 (* Perform action an move to state *)
-val UPDATE_ACT_S_TM_def = Define `UPDATE_ACT_S_TM s act tm =
+Definition UPDATE_ACT_S_TM_def:
+  UPDATE_ACT_S_TM s act tm =
            let tm' = tm with state := s
            in
                case act of
@@ -240,201 +257,267 @@ val UPDATE_ACT_S_TM_def = Define `UPDATE_ACT_S_TM s act tm =
                              tape_r := [] |>
                         else tm' with <| tape_l := tm.tape_h::tm.tape_l;
                tape_h := HD tm.tape_r;
-               tape_r := TL tm.tape_r |>`;
+               tape_r := TL tm.tape_r |>
+End
 
-val ODD_DIV_2_lem = Q.store_thm ("ODD_DIV_2_lem",
-  `∀ y. ODD y ==> (y DIV 2 = (y-1) DIV 2)`,
-  simp[ODD_EXISTS, PULL_EXISTS, ADD1, ADD_DIV_RWT]);
+Theorem ODD_DIV_2_lem:
+  ∀ y. ODD y ==> (y DIV 2 = (y-1) DIV 2)
+Proof
+  simp[ODD_EXISTS, PULL_EXISTS, ADD1, ADD_DIV_RWT]
+QED
 
-val WRITE_0_HEAD_lem = Q.store_thm("WRITE_0_HEAD_lem",
-  `∀ tm s. (UPDATE_ACT_S_TM s Wr0 tm).tape_h = Z`,
-  rpt strip_tac >> rw[UPDATE_ACT_S_TM_def] );
+Theorem WRITE_0_HEAD_lem:
+  ∀ tm s. (UPDATE_ACT_S_TM s Wr0 tm).tape_h = Z
+Proof
+  rpt strip_tac >> rw[UPDATE_ACT_S_TM_def]
+QED
 
 
-val WRITE_1_HEAD_lem = Q.store_thm("WRITE_1_HEAD_lem",
-  `∀ tm s. (UPDATE_ACT_S_TM s Wr1 tm).tape_h = O`,
-  rpt strip_tac >> rw[UPDATE_ACT_S_TM_def] );
+Theorem WRITE_1_HEAD_lem:
+  ∀ tm s. (UPDATE_ACT_S_TM s Wr1 tm).tape_h = O
+Proof
+  rpt strip_tac >> rw[UPDATE_ACT_S_TM_def]
+QED
 
-val ODD_TL_DECODE_lem = Q.store_thm ("ODD_TL_DECODE_lem",
-  `∀ n. ODD n ==> (TL (DECODE n) = DECODE ((n-1) DIV 2))`,
+Theorem ODD_TL_DECODE_lem:
+  ∀ n. ODD n ==> (TL (DECODE n) = DECODE ((n-1) DIV 2))
+Proof
   rpt strip_tac >> `EVEN 0` by EVAL_TAC >> `n ≠ 0` by metis_tac[EVEN_AND_ODD]>>
   rw[DECODE_def] >> Cases_on `DECODE n` >- `n=0` by fs[DECODE_EMPTY_lem] >>
-  EVAL_TAC >> Cases_on `n` >- fs[] >> fs[DECODE_def] >> rfs[] );
+  EVAL_TAC >> Cases_on `n` >- fs[] >> fs[DECODE_def] >> rfs[]
+QED
 
-val EVEN_TL_DECODE_lem = Q.store_thm ("EVEN_TL_DECODE_lem",
-  `∀ n. ((EVEN n) ∧ (n > 0)) ==> (TL (DECODE n) = DECODE (n DIV 2))`,
+Theorem EVEN_TL_DECODE_lem:
+  ∀ n. ((EVEN n) ∧ (n > 0)) ==> (TL (DECODE n) = DECODE (n DIV 2))
+Proof
   rpt strip_tac >> Cases_on `n` >- fs[]  >>
-  rw[DECODE_def] >> metis_tac[EVEN_AND_ODD] );
+  rw[DECODE_def] >> metis_tac[EVEN_AND_ODD]
+QED
 
-val ODD_MOD_TWO_lem = Q.store_thm ("ODD_MOD_TWO_lem",
-  `∀n. (ODD n) ==> (n MOD 2 = 1)`,
-  rpt strip_tac  >> fs[MOD_2] >> `~EVEN n` by metis_tac[EVEN_AND_ODD] >> rw[]);
+Theorem ODD_MOD_TWO_lem:
+  ∀n. (ODD n) ==> (n MOD 2 = 1)
+Proof
+  rpt strip_tac  >> fs[MOD_2] >> `~EVEN n` by metis_tac[EVEN_AND_ODD] >> rw[]
+QED
 
-val containment_lem = Q.store_thm("containment_lem",
-  `((OLEAST n. (nfst n,CELL_NUM (nsnd n)) ∈ FDOM p) = NONE) <=> (p = FEMPTY)`,
+Theorem containment_lem:
+  ((OLEAST n. (nfst n,CELL_NUM (nsnd n)) ∈ FDOM p) = NONE) <=> (p = FEMPTY)
+Proof
   rw[] >> eq_tac >> simp[] >> csimp[fmap_EXT] >>
   simp[EXTENSION,pairTheory.FORALL_PROD] >> strip_tac >>
   qx_gen_tac `a` >> qx_gen_tac `b` >>
   `∃c. b = CELL_NUM c` by metis_tac[CELL_NUM_def,theorem"cell_nchotomy"] >>
   rw[] >>
-  pop_assum (qspec_then `a *, c` mp_tac) >> simp[]);
+  pop_assum (qspec_then `a *, c` mp_tac) >> simp[]
+QED
 
 
-val UPDATE_TAPE_ACT_STATE_TM_thm = Q.store_thm("UPDATE_TAPE_ACT_STATE_TM_thm",
-  `∀ tm.
+Theorem UPDATE_TAPE_ACT_STATE_TM_thm:
+  ∀ tm.
     ((tm.state , tm.tape_h) ∈ FDOM tm.prog) ∧ tm.state <> 0 ==>
     (UPDATE_ACT_S_TM (FST (tm.prog ' (tm.state, tm.tape_h)))
                      (SND (tm.prog ' (tm.state, tm.tape_h)))
                      tm
        =
-     UPDATE_TAPE tm)`,
-  strip_tac >> fs[UPDATE_ACT_S_TM_def,UPDATE_TAPE_def]  );
+     UPDATE_TAPE tm)
+Proof
+  strip_tac >> fs[UPDATE_ACT_S_TM_def,UPDATE_TAPE_def]
+QED
 
-val NUM_TO_ACT_TO_NUM = Q.store_thm("NUM_TO_ACT_TO_NUM[simp]",
-  `((ACT_TO_NUM k) < 4) ==> (NUM_TO_ACT (ACT_TO_NUM k) = k)`,
+Theorem NUM_TO_ACT_TO_NUM[simp]:
+  ((ACT_TO_NUM k) < 4) ==> (NUM_TO_ACT (ACT_TO_NUM k) = k)
+Proof
   rw[NUM_TO_ACT_def,ACT_TO_NUM_def] >>
   `(ACT_TO_NUM k = 0) ∨ (ACT_TO_NUM k = 1) ∨(ACT_TO_NUM k = 2)∨
    (ACT_TO_NUM k = 3)` by simp[] >>rw[]>>
-  EVAL_TAC >> Cases_on `k` >> rfs[ACT_TO_NUM_def] >> EVAL_TAC);
+  EVAL_TAC >> Cases_on `k` >> rfs[ACT_TO_NUM_def] >> EVAL_TAC
+QED
 val _ = export_rewrites ["NUM_CELL_def"]
 
-val TM_PROG_P_TAPE_H = Q.store_thm("TM_PROG_P_TAPE_H[simp]",
-  `(tm with prog := p).tape_h = tm.tape_h`,
-  fs[]);
+Theorem TM_PROG_P_TAPE_H[simp]:
+  (tm with prog := p).tape_h = tm.tape_h
+Proof
+  fs[]
+QED
 
-val TM_PROG_P_STATE = Q.store_thm("TM_PROG_P_STATE[simp]",
-  `(tm with prog := p).state = tm.state`,
-  fs[]);
+Theorem TM_PROG_P_STATE[simp]:
+  (tm with prog := p).state = tm.state
+Proof
+  fs[]
+QED
 
-val UPDATE_TM_ARB_Q = Q.store_thm("UPDATE_TM_ARB_Q",
-  `(tm.state,tm.tape_h) ∈ FDOM p ∧ tm.state <> 0 ==>
+Theorem UPDATE_TM_ARB_Q:
+  (tm.state,tm.tape_h) ∈ FDOM p ∧ tm.state <> 0 ==>
    (UPDATE_ACT_S_TM (FST (p ' (tm.state,tm.tape_h)))
                     (SND (p ' (tm.state,tm.tape_h)))
                     (tm with prog := q) =
-    (UPDATE_TAPE (tm with prog := p)) with prog := q)`,
+    (UPDATE_TAPE (tm with prog := p)) with prog := q)
+Proof
   rw[UPDATE_TAPE_def,UPDATE_ACT_S_TM_def] >>
-  Cases_on `SND (p ' (tm.state,tm.tape_h))` >> simp[] )
+  Cases_on `SND (p ' (tm.state,tm.tape_h))` >> simp[]
+QED
 
-val tm_with_prog = Q.store_thm("tm_with_prog",
-  `tm with prog := tm.prog = tm`,simp[theorem("TM_component_equality")])
+Theorem tm_with_prog:
+  tm with prog := tm.prog = tm
+Proof
+  simp[theorem("TM_component_equality")]
+QED
 
-val FST_DECODE_TM_TAPE = Q.store_thm(
-  "FST_DECODE_TM_TAPE[simp]",
-  `FST (DECODE_TM_TAPE tp) = DECODE (nfst tp)`,
-  rw[DECODE_TM_TAPE_def])
+Theorem FST_DECODE_TM_TAPE[simp]:
+  FST (DECODE_TM_TAPE tp) = DECODE (nfst tp)
+Proof
+  rw[DECODE_TM_TAPE_def]
+QED
 
-val DECODE_EQ_NIL = Q.store_thm(
-  "DECODE_EQ_NIL[simp]",
-  `(DECODE n = []) ⇔ (n = 0)`,
-  metis_tac[DECODE_EMPTY_lem, DECODE_def]);
+Theorem DECODE_EQ_NIL[simp]:
+  (DECODE n = []) ⇔ (n = 0)
+Proof
+  metis_tac[DECODE_EMPTY_lem, DECODE_def]
+QED
 
-val ODD_HD_DECODE = Q.store_thm(
-  "ODD_HD_DECODE",
-  `ODD n ==> (HD (DECODE n) = O)`,
-  Cases_on `n` >> simp[DECODE_def]);
+Theorem ODD_HD_DECODE:
+  ODD n ==> (HD (DECODE n) = O)
+Proof
+  Cases_on `n` >> simp[DECODE_def]
+QED
 
-val EVEN_HD_DECODE = Q.store_thm(
- "EVEN_HD_DECODE",
-`EVEN n ∧ (n ≠ 0)  ==> (HD (DECODE n) = Z)`,
-Cases_on `n` >> simp[DECODE_def] >> metis_tac[EVEN_AND_ODD,listTheory.HD]);
+Theorem EVEN_HD_DECODE:
+  EVEN n ∧ (n ≠ 0)  ==> (HD (DECODE n) = Z)
+Proof
+Cases_on `n` >> simp[DECODE_def] >> metis_tac[EVEN_AND_ODD,listTheory.HD]
+QED
 
-val SND_SND_DECODE_TM_TAPE = Q.store_thm("SND_SND_DECODE_TM_TAPE",
-`SND (SND (DECODE_TM_TAPE (nsnd tmn))) = DECODE (nsnd (nsnd tmn) DIV 2)`,
+Theorem SND_SND_DECODE_TM_TAPE:
+  SND (SND (DECODE_TM_TAPE (nsnd tmn))) = DECODE (nsnd (nsnd tmn) DIV 2)
+Proof
 rw[DECODE_TM_TAPE_def] >> `ODD (nsnd (nsnd tmn))` by metis_tac[EVEN_OR_ODD] >>
-  rw[ODD_DIV_2_lem]);
+  rw[ODD_DIV_2_lem]
+QED
 
-val SND_SND_DECODE_TM_TAPE_FULL = Q.store_thm(
-  "SND_SND_DECODE_TM_TAPE_FULL[simp]",
-  `SND (SND (DECODE_TM_TAPE (t))) = DECODE (nsnd ( t) DIV 2)`,
+Theorem SND_SND_DECODE_TM_TAPE_FULL[simp]:
+  SND (SND (DECODE_TM_TAPE (t))) = DECODE (nsnd ( t) DIV 2)
+Proof
   rw[DECODE_TM_TAPE_def] >> `ODD (nsnd (t))` by metis_tac[EVEN_OR_ODD] >>
-  rw[ODD_DIV_2_lem]);
+  rw[ODD_DIV_2_lem]
+QED
 
-val FST_SND_DECODE_TM_TAPE_FULL = Q.store_thm(
-  "FST_SND_DECODE_TM_TAPE_FULL[simp]",
-  `ODD (nsnd (t)) ==> (FST (SND (DECODE_TM_TAPE (t))) = O)`,
-  rw[DECODE_TM_TAPE_def] >> metis_tac[EVEN_AND_ODD]);
+Theorem FST_SND_DECODE_TM_TAPE_FULL[simp]:
+  ODD (nsnd (t)) ==> (FST (SND (DECODE_TM_TAPE (t))) = O)
+Proof
+  rw[DECODE_TM_TAPE_def] >> metis_tac[EVEN_AND_ODD]
+QED
 
-val FST_SND_DECODE_TM_TAPE_EVEN_FULL = Q.store_thm(
-  "FST_SND_DECODE_TM_TAPE_EVEN_FULL[simp]",
-  `EVEN (nsnd (t)) ==> (FST (SND (DECODE_TM_TAPE (t))) = Z)`,
-  rw[DECODE_TM_TAPE_def]);
+Theorem FST_SND_DECODE_TM_TAPE_EVEN_FULL[simp]:
+  EVEN (nsnd (t)) ==> (FST (SND (DECODE_TM_TAPE (t))) = Z)
+Proof
+  rw[DECODE_TM_TAPE_def]
+QED
 
-val MEMBER_CARD = Q.store_thm(
-  "MEMBER_CARD",
-  `a ∈ FDOM p ⇒ 0 < CARD (FDOM p)`,
-  Induct_on `p` >> simp[] );
+Theorem MEMBER_CARD:
+  a ∈ FDOM p ⇒ 0 < CARD (FDOM p)
+Proof
+  Induct_on `p` >> simp[]
+QED
 
-val npair_lem = Q.store_thm("npair_lem",
-  `(∀n. P n) <=> (∀j k. P (j *, k))`,
+Theorem npair_lem:
+  (∀n. P n) <=> (∀j k. P (j *, k))
+Proof
   eq_tac >> simp[] >>
-  rpt strip_tac >> `∃j k. j *, k = n` by metis_tac[npair_cases] >> rw[] );
+  rpt strip_tac >> `∃j k. j *, k = n` by metis_tac[npair_cases] >> rw[]
+QED
 
-val NUM_TO_CELL_TO_NUM = Q.store_thm("NUM_TO_CELL_TO_NUM",
-  `((c=0) ∨ (c=1)) ==> (NUM_CELL (CELL_NUM c) = c)`,
-  strip_tac >> rw[NUM_CELL_def,CELL_NUM_def]);
+Theorem NUM_TO_CELL_TO_NUM:
+  ((c=0) ∨ (c=1)) ==> (NUM_CELL (CELL_NUM c) = c)
+Proof
+  strip_tac >> rw[NUM_CELL_def,CELL_NUM_def]
+QED
 
-val FULL_ENCODE_TM_STATE = Q.store_thm("FULL_ENCODE_TM_STATE[simp]",
-  `nfst (FULL_ENCODE_TM tm) = tm.state`,
-  fs[FULL_ENCODE_TM_def]);
+Theorem FULL_ENCODE_TM_STATE[simp]:
+  nfst (FULL_ENCODE_TM tm) = tm.state
+Proof
+  fs[FULL_ENCODE_TM_def]
+QED
 
-val tri_mono = Q.store_thm ("tri_mono[simp]",
-  `∀x y. (tri x <= tri y) <=> (x <= y)`,
-  Induct_on `y` >> simp[]  );
+Theorem tri_mono[simp]:
+  ∀x y. (tri x <= tri y) <=> (x <= y)
+Proof
+  Induct_on `y` >> simp[]
+QED
 
-val CELL_NUM_LEM1 = Q.store_thm("CELL_NUM_LEM1",
-  `(∀n'. n' < n ⊗ c ⇒ (nfst n',CELL_NUM (nsnd n')) ∉ FDOM p) ∧
-   (n,CELL_NUM c) ∈ FDOM p ==> (c=0) ∨ (c=1)`,
+Theorem CELL_NUM_LEM1:
+  (∀n'. n' < n ⊗ c ⇒ (nfst n',CELL_NUM (nsnd n')) ∉ FDOM p) ∧
+   (n,CELL_NUM c) ∈ FDOM p ==> (c=0) ∨ (c=1)
+Proof
   spose_not_then strip_assume_tac >> Cases_on `CELL_NUM c`
   >- (`0<c` by simp[] >>
       metis_tac[nfst_npair,nsnd_npair,npair2_lt,CELL_NUM_def]) >>
-  `1<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair2_lt,CELL_NUM_def]);
+  `1<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair2_lt,CELL_NUM_def]
+QED
 
-val TM_ACT_LEM_1 = Q.store_thm("TM_ACT_LEM_1[simp]",
-  `( (nsnd (nsnd (FULL_ENCODE_TM tm))) MOD 2) = NUM_CELL (tm.tape_h)`,
-  simp[FULL_ENCODE_TM_def,ENCODE_TM_TAPE_def] >> rw[] >> Cases_on `tm.tape_h` >- fs[] >- EVAL_TAC)
+Theorem TM_ACT_LEM_1[simp]:
+  ( (nsnd (nsnd (FULL_ENCODE_TM tm))) MOD 2) = NUM_CELL (tm.tape_h)
+Proof
+  simp[FULL_ENCODE_TM_def,ENCODE_TM_TAPE_def] >> rw[] >> Cases_on `tm.tape_h` >- fs[] >- EVAL_TAC
+QED
 
 val _ = add_rule {term_name = "FULL_ENCODE_TM",fixity = Closefix,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT,0)),
                   paren_style = OnlyIfNecessary,
                   pp_elements = [TOK "⟦",TM,TOK"⟧"]}
 
-val FULL_ENCODE_IGNORES_PROGS = Q.store_thm("FULL_ENCODE_IGNORES_PROGS[simp]",
-`⟦tm with prog := p⟧ = ⟦tm⟧`,
-simp[FULL_ENCODE_TM_def,ENCODE_TM_TAPE_def]);
+Theorem FULL_ENCODE_IGNORES_PROGS[simp]:
+  ⟦tm with prog := p⟧ = ⟦tm⟧
+Proof
+simp[FULL_ENCODE_TM_def,ENCODE_TM_TAPE_def]
+QED
 
-val NUM_CELL_INJ = Q.store_thm("NUM_CELL_INJ",
-`(NUM_CELL a = NUM_CELL b) <=> (a = b)`,
-eq_tac >- (Cases_on ` a` >> Cases_on `b` >> rw[] ) >- (rw[]) )
+Theorem NUM_CELL_INJ:
+  (NUM_CELL a = NUM_CELL b) <=> (a = b)
+Proof
+eq_tac >- (Cases_on ` a` >> Cases_on `b` >> rw[] ) >- (rw[])
+QED
 
-val ACT_TO_NUM_LESS_4 = Q.store_thm("ACT_TO_NUM_LESS_4",
-`ACT_TO_NUM a < 4`,
-Cases_on `a` >> EVAL_TAC)
+Theorem ACT_TO_NUM_LESS_4:
+  ACT_TO_NUM a < 4
+Proof
+Cases_on `a` >> EVAL_TAC
+QED
 
-val TWO_TIMES_DIV_TWO_thm = Q.store_thm("TWO_TIMES_DIV_TWO_thm[simp]",
-  `2 *  n DIV 2 = n`,
-  metis_tac[DECIDE “0 < 2”, MULT_DIV, MULT_COMM]);
+Theorem TWO_TIMES_DIV_TWO_thm[simp]:
+  2 *  n DIV 2 = n
+Proof
+  metis_tac[DECIDE “0 < 2”, MULT_DIV, MULT_COMM]
+QED
 
-val TWO_TIMES_P_ONE_DIV_TWO_thm = Q.store_thm(
-  "TWO_TIMES_P_ONE_DIV_TWO_thm[simp]",
-  `(2 * n + 1) DIV 2 = n`,
-  metis_tac[DECIDE “1 < 2”, DIV_MULT, MULT_COMM]);
+Theorem TWO_TIMES_P_ONE_DIV_TWO_thm[simp]:
+  (2 * n + 1) DIV 2 = n
+Proof
+  metis_tac[DECIDE “1 < 2”, DIV_MULT, MULT_COMM]
+QED
 
-val ENCODE_CONS_DECODE_ENCODE_thm = Q.store_thm(
-  "ENCODE_CONS_DECODE_ENCODE_thm[simp]",
-  `ENCODE (h::DECODE (ENCODE t)) = ENCODE (h::t)`,
-  fs[ENCODE_def,DECODE_def,ENCODE_DECODE_thm]);
+Theorem ENCODE_CONS_DECODE_ENCODE_thm[simp]:
+  ENCODE (h::DECODE (ENCODE t)) = ENCODE (h::t)
+Proof
+  fs[ENCODE_def,DECODE_def,ENCODE_DECODE_thm]
+QED
 
-val NFST_ENCODE_TM_TAPE = Q.store_thm("NFST_ENCODE_TM_TAPE[simp]",
-`nfst (ENCODE_TM_TAPE tm) = ENCODE tm.tape_l`,
-rw[ENCODE_TM_TAPE_def]);
+Theorem NFST_ENCODE_TM_TAPE[simp]:
+  nfst (ENCODE_TM_TAPE tm) = ENCODE tm.tape_l
+Proof
+rw[ENCODE_TM_TAPE_def]
+QED
 
-val FST_SND_DECODE_TM_TAPE = Q.store_thm("FST_SND_DECODE_TM_TAPE[simp]",
-`FST (SND (DECODE_TM_TAPE (ENCODE_TM_TAPE tm))) = tm.tape_h`,
+Theorem FST_SND_DECODE_TM_TAPE[simp]:
+  FST (SND (DECODE_TM_TAPE (ENCODE_TM_TAPE tm))) = tm.tape_h
+Proof
 rw[DECODE_TM_TAPE_def,ENCODE_TM_TAPE_def] >> fs[EVEN_MULT,EVEN_ADD] >>
-Cases_on `tm.tape_h` >> fs[]);
+Cases_on `tm.tape_h` >> fs[]
+QED
 
-val NSND_ENCODE_TM_TAPE_DIV2 = Q.store_thm("NSND_ENCODE_TM_TAPE_DIV2[simp]",
-`(nsnd (ENCODE_TM_TAPE tm) DIV 2) = ENCODE tm.tape_r`,
-rw[ENCODE_TM_TAPE_def]);
+Theorem NSND_ENCODE_TM_TAPE_DIV2[simp]:
+  (nsnd (ENCODE_TM_TAPE tm) DIV 2) = ENCODE tm.tape_r
+Proof
+rw[ENCODE_TM_TAPE_def]
+QED
 
 val _ = export_theory();
