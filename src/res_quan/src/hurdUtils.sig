@@ -1,11 +1,11 @@
 signature hurdUtils =
 sig
+  include Abbrev
 
   (* GENERAL *)
   type 'a thunk = unit -> 'a
   type 'a susp = 'a Susp.susp
   type ('a, 'b) maplet = {redex : 'a, residue : 'b}
-  type ('a, 'b) subst = ('a, 'b) Lib.subst
 
   (* Error handling *)
   val ERR : string -> string -> exn
@@ -32,24 +32,15 @@ sig
 
   (* Combinators *)
   val A : ('a -> 'b) -> 'a -> 'b
-  val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
-  val I : 'a -> 'a
-  val K : 'a -> 'b -> 'a
   val N : int -> ('a -> 'a) -> 'a -> 'a
-  val S : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
-  val W : ('a -> 'a -> 'b) -> 'a -> 'b
   val oo : ('a -> 'b) * ('c -> 'd -> 'a) -> 'c -> 'd -> 'b
 
   (* Pairs *)
   val ## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
   val D : 'a -> 'a * 'a
   val Df : ('a -> 'b) -> ('a * 'a -> 'b * 'b)
-  val fst : 'a * 'b -> 'a
-  val snd : 'a * 'b -> 'b
   val add_fst : 'a -> 'b -> 'a * 'b
   val add_snd : 'a -> 'b -> 'b * 'a
-  val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
-  val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
   val equal : ''a -> ''a -> bool
   val pair_to_string : ('a -> string) -> ('b -> string) -> 'a * 'b -> string
 
@@ -191,16 +182,6 @@ sig
 
   (* HOL Types *)
   type 'a set = 'a HOLset.set
-  type hol_type = Type.hol_type
-  type term = Term.term
-  type thm = Thm.thm
-  type goal = term list * term
-  type conv = term -> thm
-  type rule = thm -> thm
-  type validation = thm list -> thm
-  type tactic = goal -> goal list * validation
-  type thm_tactic = thm -> tactic
-  type thm_tactical = thm_tactic -> thm_tactic
   type vars = term list * hol_type list
   type vterm = vars * term
   type vthm = vars * thm

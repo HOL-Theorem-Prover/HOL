@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib bossLib liteLib;
 
 open integerTheory intSimps Omega Cooper intSyntax intReduce Canon hurdUtils
-     mesonLib tautLib integerRingLib;
+     tautLib integerRingLib;
 
 structure Parse = struct
   open Parse
@@ -187,8 +187,8 @@ local
      (* NOTE: EQT_INTRO must be added in HOL4 to make INT_RING conv-like *)
         CONV_TAC (EQT_INTRO o INT_RING)) gl
     end;
-  val SCRUB_NEQ_TAC = MATCH_MP_TAC o MATCH_MP (MESON[]
-     “~(x = y) ==> x = y \/ p ==> p”);
+  val SCRUB_NEQ_TAC = MATCH_MP_TAC o MATCH_MP (TAUT
+     ‘~(x = y :'a) ==> x = y \/ p ==> p’);
   (* |- !P Q. P /\ (?x. Q x) <=> ?x. P /\ Q x *)
   val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
   (* |- !P Q. (?x. P x) /\ Q <=> ?x. P x /\ Q *)

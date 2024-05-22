@@ -89,12 +89,7 @@ fun firstf [] _ = raise ERR "firstf" "out of combinators"
 (* Combinators *)
 
 fun A f x = f x;
-fun C f x y = f y x;
-fun I x = x;
-fun K x y = x;
 fun N 0 _ x = x | N 1 f x = f x | N n f x = N (n - 1) f (f x);
-fun S f g x = f x (g x);
-fun W f x = f x x;
 fun f oo g = fn x => f o (g x);
 
 (* Pairs *)
@@ -103,12 +98,8 @@ infix 3 ##
 fun (f ## g) (x, y) = (f x, g y);
 fun D x = (x, x);
 fun Df f = f ## f;
-fun fst (x,_) = x;
-fun snd (_,y) = y;
 fun add_fst x y = (x, y);
 fun add_snd x y = (y, x);
-fun curry f x y = f (x, y);
-fun uncurry f (x, y) = f x y;
 fun equal x y = (x = y);
 
 fun pair_to_string fst_to_string snd_to_string (a, b) =
@@ -718,9 +709,11 @@ fun var_match vars tm tm' =
 (* Thms.                                                                 *)
 (* --------------------------------------------------------------------- *)
 
-val FUN_EQ = prove (``!f g. (f = g) = (!x. f x = g x)``, PROVE_TAC [EQ_EXT]);
-val SET_EQ = prove (``!s t. (s = t) = (!x. x IN s = x IN t)``,
-                    PROVE_TAC [SPECIFICATION, FUN_EQ]);
+(* |- !f g. f = g <=> !x. f x = g x *)
+val FUN_EQ = FUN_EQ_THM;
+
+val SET_EQ = prove (“!s t :'a -> bool. (s = t) <=> (!x. x IN s <=> x IN t)”,
+                    SIMP_TAC std_ss [IN_DEF, FUN_EQ_THM]);
 
 val hyps = foldl (fn (h,t) => tunion (hyp h) t) [];
 
@@ -784,8 +777,8 @@ fun N_BETA_CONV 0 = QCONV ALL_CONV
   | N_BETA_CONV n = RATOR_CONV (N_BETA_CONV (n - 1)) THENC TRYC BETA_CONV;
 
 local
-  val EQ_NEG_T = PROVE [] ``!a. (~a = T) = (a = F)``
-  val EQ_NEG_F = PROVE [] ``!a. (~a = F) = (a = T)``
+  val EQ_NEG_T = DECIDE ``!a. (~a = T) <=> (a = F)``
+  val EQ_NEG_F = DECIDE ``!a. (~a = F) <=> (a = T)``
   val EQ_NEG_T_CONV = REWR_CONV EQ_NEG_T
   val EQ_NEG_F_CONV = REWR_CONV EQ_NEG_F
 in
@@ -812,12 +805,7 @@ val ALL_RULE : rule = I;
 fun EVERYR [] = ALL_RULE
   | EVERYR (r::rest) = r THENR EVERYR rest;
 
-local
-  val fir = prove
-    (``(!(x:'a). P x ==> Q x) ==> ((?x. P x) ==> (?x. Q x))``, PROVE_TAC [])
-in
-  val FORALL_IMP = HO_MATCH_MP fir
-end;
+val FORALL_IMP = HO_MATCH_MP MONO_EXISTS;
 
 val EQ_BOOL_INTRO = EQT_INTRO THENR CONV_RULE (REPEATC EQ_NEG_BOOL_CONV);
 
@@ -994,16 +982,18 @@ val FUN_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV FUN_EQ_CONV));
 val SET_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV SET_EQ_CONV));
 
 local
-  val th1 = (prove (``!t. T ==> (F ==> t)``, PROVE_TAC []))
+  val th1 = DECIDE ``!t. T ==> (F ==> t)``
 in
   val CHECK_ASMS_TAC :tactic =
     REPEAT (PAT_ASSUM T K_TAC)
     >> REPEAT (PAT_ASSUM F (fn th => MP_TAC th >> MATCH_MP_TAC th1))
 end;
 
-val Cond =
-  MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
-  >> CONJ_TAC;
+local
+  val th = DECIDE ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``;
+in
+  val Cond = MATCH_MP_TAC th >> CONJ_TAC;
+end;
 
 val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
@@ -1033,7 +1023,7 @@ fun EXACT_MP_TAC mp_th :tactic =
 (* --------------------------------------------------------------------- *)
 
 local
-  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+  val th = DECIDE ``!a b. a /\ (a ==> b) ==> a /\ b``;
 in
   val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
 end;
@@ -1106,21 +1096,9 @@ in
     QCONV (SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) [])
 end
 
-local
-  val EQ_IFF = prove
-    (``!a b. ((a:bool) = b) = ((a ==> b) /\ (b ==> a))``,
-     BasicProvers.PROVE_TAC [])
-in
-  val EQ_IFF_CONV = QCONV (PURE_REWRITE_CONV [EQ_IFF])
-end;
+val EQ_IFF_CONV = QCONV (PURE_REWRITE_CONV [EQ_IMP_THM]);
 
-local
-  val IMP_DISJ = prove
-    (``!a b. ((a:bool) ==> b) = ~a \/ b``,
-     BasicProvers.PROVE_TAC [])
-in
-  val IMP_DISJ_CONV = QCONV (PURE_REWRITE_CONV [IMP_DISJ])
-end;
+val IMP_DISJ_CONV = QCONV (PURE_REWRITE_CONV [IMP_DISJ_THM]);
 
 local
   val NEG_NEG = CONJUNCT1 NOT_CLAUSES
