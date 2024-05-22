@@ -30,7 +30,6 @@ val _ = new_theory "iterate";
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
 (* ------------------------------------------------------------------------- *)
 
-fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
@@ -44,7 +43,6 @@ val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
 (* Minimal hol-light compatibility layer *)
 val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
 val FINITE_SUBSET = SUBSET_FINITE_I; (* pred_setTheory *)
-val LE_0          = ZERO_LESS_EQ;    (* arithmeticTheory *)
 
 (* ------------------------------------------------------------------------- *)
 (* misc.                                                                     *)
@@ -138,12 +136,13 @@ val REAL_BOUNDS_LT = store_thm ("REAL_BOUNDS_LT",
  ``!x k:real. -k < x /\ x < k <=> abs(x) < k``,
   REAL_ARITH_TAC);
 
-Theorem LE_EXISTS: !m n:num. (m <= n) <=> (?d. n = m + d)
+Theorem LE_EXISTS :
+  !m n:num. (m <= n) <=> (?d. n = m + d)
 Proof
   simp[EQ_IMP_THM, PULL_EXISTS] >> rw[] >> qexists ‘n - m’ >> simp[]
 QED
 
-Theorem LT_EXISTS:
+Theorem LT_EXISTS :
   !m n. (m < n) <=> (?d. n = m + SUC d)
 Proof
   simp[EQ_IMP_THM] >> rw[] >> qexists ‘n - (m + 1)’ >> simp[]
@@ -1103,7 +1102,6 @@ End
 (* syntax is similar to the version also available for lists, where
    listRangeTheory has  [ m .. n ]
  *)
-
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Closefix,
                    paren_style = OnlyIfNecessary,
@@ -4760,15 +4758,6 @@ val REAL_X_LE_SUP = store_thm
    >> Suff `!y. P y ==> y <= sup P` >- PROVE_TAC [REAL_LE_TRANS]
    >> MATCH_MP_TAC REAL_SUP_UBOUND_LE
    >> PROVE_TAC []);
-
-val INF_DEF_ALT = store_thm (* c.f. "inf_alt" in seqTheory *)
-  ("INF_DEF_ALT",
-   ``!p. inf p = ~(sup (\r. ~r IN p)):real``,
-   RW_TAC std_ss []
-   >> PURE_REWRITE_TAC [inf_def, IMAGE_DEF]
-   >> Suff `(\r. p (-r)) = (\r. -r IN p)`
-   >- RW_TAC std_ss []
-   >> RW_TAC std_ss [FUN_EQ_THM,SPECIFICATION]);
 
 val LE_INF = store_thm
   ("LE_INF",

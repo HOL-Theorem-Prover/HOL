@@ -48,18 +48,4 @@ sig
   val REAL_ARITH_TAC       : tactic
   val REAL_ASM_ARITH_TAC   : tactic
 
- (* below are Joe Hurd's old port *)
-
- (* PURE_REAL_ARITH_TAC doesn't throw away assumptions, but requires
-    them to be pre-normalised in order to work.  There also must not
-    be any non-Presburger terms lurking amongst them.
-
-    REAL_ASM_ARITH_TAC moves all assumptions into the goal, and then
-    proceeds.  It thus gets around the two restrictions above.  *)
-
-  val PURE_REAL_ARITH_TAC    : tactic
-  val OLD_REAL_ARITH         : term -> thm
-  val OLD_REAL_ARITH_TAC     : tactic
-  val OLD_REAL_ASM_ARITH_TAC : tactic
-
 end

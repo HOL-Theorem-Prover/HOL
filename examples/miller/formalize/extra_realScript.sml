@@ -18,18 +18,6 @@ val Simplify = RW_TAC arith_ss;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem inf_alt : (* was: inf_def *)
-    !p. inf p = ~(sup (IMAGE $~ p))
-Proof
-    RW_TAC real_ss [inf_def]
- >> Suff `(\r. p (-r)) = (IMAGE numeric_negate p)` >- rw []
- >> SET_EQ_TAC
- >> RW_TAC std_ss [IN_IMAGE, IN_APP]
- >> EQ_TAC >> RW_TAC std_ss []
- >- (Q.EXISTS_TAC `-x` >> rw [REAL_NEG_NEG])
- >> rw [REAL_NEG_NEG]
-QED
-
 val zreal_def = Define `zreal (x : real) = (x = 0)`;
 val nzreal_def = Define `nzreal (x : real) = ~(x = 0)`;
 val posreal_def = Define `posreal (x : real) = (0 < x)`;
@@ -40,17 +28,6 @@ val nposreal_def = Define `nposreal (x : real) = (0 <= ~x)`;
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
-
-val INF_DEF_ALT = store_thm
-  ("INF_DEF_ALT",
-   ``!p. inf p = ~(sup (\r. ~r IN p))``,
-   RW_TAC std_ss []
-   >> PURE_REWRITE_TAC [inf_alt, IMAGE_DEF]
-   >> Suff `{~x | x IN p} = (\r:real. ~r IN p)`
-   >- RW_TAC std_ss []
-   >> RW_TAC std_ss [EXTENSION]
-   >> RW_TAC std_ss [GSPECIFICATION, SPECIFICATION]
-   >> PROVE_TAC [REAL_NEGNEG]);
 
 val REAL_LE_EQ = store_thm
   ("REAL_LE_EQ",
@@ -282,7 +259,7 @@ val REAL_ADD_SUBTYPE = store_thm
                 (nposreal -> nposreal -> nposreal) INTER
                 (zreal -> x -> x) INTER
                 (x -> zreal -> x))``,
-   RW_TAC std_ss [IN_FUNSET, IN_NEGREAL, IN_POSREAL, IN_INTER,
+  RW_TAC real_ss [IN_FUNSET, IN_NEGREAL, IN_POSREAL, IN_INTER,
                   IN_NPOSREAL, IN_NNEGREAL, IN_NZREAL, IN_ZREAL]
    >> REPEAT (POP_ASSUM MP_TAC)
    >> REAL_ARITH_TAC);
@@ -296,7 +273,7 @@ val REAL_SUB_SUBTYPE = store_thm
                 (nposreal -> posreal -> negreal) INTER
                 (nposreal -> nnegreal -> nposreal) INTER
                 (x -> zreal -> x))``,
-   RW_TAC std_ss [IN_FUNSET, IN_NEGREAL, IN_POSREAL, IN_INTER,
+  RW_TAC real_ss [IN_FUNSET, IN_NEGREAL, IN_POSREAL, IN_INTER,
                   IN_NPOSREAL, IN_NNEGREAL, IN_NZREAL, IN_ZREAL,
                   REAL_SUB_RZERO]
    >> REPEAT (POP_ASSUM MP_TAC)

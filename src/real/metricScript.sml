@@ -17,7 +17,6 @@ open realTheory cardinalTheory topologyTheory;
 
 val _ = new_theory "metric";
 
-fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 fun wrap a = [a];
 val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);

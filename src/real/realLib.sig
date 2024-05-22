@@ -6,13 +6,12 @@ sig
    type conv = Abbrev.conv
    type tactic = Abbrev.tactic
 
-  val PURE_REAL_ARITH_TAC : tactic
-  val REAL_ARITH_TAC      : tactic
-  val REAL_ARITH          : term -> thm
-  val REAL_ASM_ARITH_TAC  : tactic
+   val REAL_ARITH_TAC      : tactic
+   val REAL_ARITH          : term -> thm
+   val REAL_ASM_ARITH_TAC  : tactic
 
-   val real_ss : simpLib.simpset
    (* Incorporates simpsets for bool, pair, and arithmetic *)
+   val real_ss : simpLib.simpset
 
    (* syntax *)
    val prefer_real     : unit -> unit

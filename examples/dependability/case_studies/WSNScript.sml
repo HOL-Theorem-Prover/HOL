@@ -14,23 +14,17 @@
 (*                                                                           *)
 (* ========================================================================= *)
 
-(*loadPath := "/home/waqar/Downloads/RBD" :: !loadPath;*)
+open HolKernel boolLib bossLib Parse;
 
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory", "real_probabilityTheory", "numTheory",
-          "transcTheory", "rich_listTheory", "pairTheory", "extra_pred_setTools",
-          "combinTheory","limTheory","sortingTheory", "realLib", "optionTheory","satTheory",
-          "util_probTheory", "extrealTheory", "real_measureTheory", "real_lebesgueTheory","real_sigmaTheory",
-          "dep_rewrite","RBDTheory","FT_deepTheory","VDCTheory","smart_gridTheory","ASN_gatewayTheory"];*)
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
+open limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
      seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools listTheory transcTheory
      rich_listTheory pairTheory combinTheory realLib  optionTheory util_probTheory extrealTheory real_measureTheory
-     real_lebesgueTheory real_sigmaTheory satTheory numTheory dep_rewrite extra_pred_setTools
-      RBDTheory FT_deepTheory VDCTheory smart_gridTheory ASN_gatewayTheory ;
+     real_lebesgueTheory real_sigmaTheory satTheory numTheory dep_rewrite extra_pred_setTools;
+
+open RBDTheory FT_deepTheory VDCTheory smart_gridTheory ASN_gatewayTheory;
 
 fun K_TAC _ = ALL_TAC;
 
-open HolKernel boolLib bossLib Parse;
 val _ = new_theory "WSN";
 
 (*--------------------*)
@@ -62,8 +56,10 @@ RW_TAC std_ss[]
 >> RW_TAC list_ss[]
 >> RW_TAC list_ss[exp_func_list_def,list_sum_def,list_prod_def]
 >> RW_TAC real_ss[GSYM transcTheory.EXP_ADD]
+>> AP_TERM_TAC
 >> REAL_ARITH_TAC
 QED
+
 (*------------------------------------*)
 Theorem one_minus_exp_equi :
 !t c. (one_minus_list (exp_func_list c t)) =

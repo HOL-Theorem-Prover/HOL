@@ -1,11 +1,4 @@
 (* ========================================================================= *)
-(* Linear decision procedure for the reals, plus some proof procedures.      *)
-(*                                                                           *)
-(*       John Harrison, University of Cambridge Computer Laboratory          *)
-(*            (c) Copyright, University of Cambridge 1998                    *)
-(*                                                                           *)
-(*       Ported to hol98 by Joe Hurd, 2 Oct 1998                             *)
-(* ========================================================================= *)
 (* Framework for universal real decision procedures, and a simple instance.  *)
 (*             (HOL-Light's calc_int.ml and realarith.ml)                    *)
 (*                                                                           *)
@@ -21,14 +14,8 @@ struct
 open HolKernel Parse boolLib liteLib;
 
 open pairTheory pairLib reduceLib tautLib simpLib BasicProvers Ho_Rewrite
-     jrhUtils
-     Canon_Port AC prim_recTheory numTheory numLib numSyntax arithmeticTheory;
-
-open normalForms;  (* for HOL-Light's GEN_NNF_CONV, etc. *)
-open Normalizer;   (* for HOL-Light's SEMIRING_NORMALIZERS_CONV *)
-
-open realaxTheory; (* NOTE: cannot open realTheory here *)
-open Arbint;       (* TODO: remove this in the future, using the default Int *)
+     jrhUtils Canon Canon_Port AC normalForms Normalizer Arbint numLib
+     prim_recTheory numTheory numSyntax arithmeticTheory realaxTheory;
 
 (*---------------------------------------------------------------------------*)
 (* Establish the required grammar(s) for executing this file                 *)
@@ -47,6 +34,7 @@ open Parse
 val assert      = Lib.assert;
 val is_binop    = liteLib.is_binop;
 val SKOLEM_CONV = Canon_Port.SKOLEM_CONV;
+val PRENEX_CONV = Canon.PRENEX_CONV;
 
 (* recover the primitive theorem names involving real_0 and real_1 *)
 val REAL_10         = REAL_10';
@@ -189,10 +177,6 @@ val dest_intconst = realSyntax.int_of_term;
 (* Preparing the real linear decision procedure.                             *)
 (* ------------------------------------------------------------------------- *)
 
-val LE_0 = arithmeticTheory.ZERO_LESS_EQ;
-val NOT_LE = arithmeticTheory.NOT_LESS_EQUAL;
-val LE_ANTISYM = GSYM arithmeticTheory.EQ_LESS_EQ;
-
 val REAL_ADD_AC_98 = (REAL_ADD_ASSOC, REAL_ADD_SYM);
 val REAL_MUL_AC_98 = (REAL_MUL_ASSOC, REAL_MUL_SYM);
 
@@ -315,68 +299,6 @@ val REAL_INT_MUL_CONV =
   end;
 
 (* ------------------------------------------------------------------------- *)
-(* Conversion to normalize product terms, i.e:                               *)
-(*                                                                           *)
-(* Separate out (and multiply out) integer constants, put the term in        *)
-(* the form "([-]&n) * x" where either x is a canonically ordered product    *)
-(* of the non-integer-constants, or is "&1".                                 *)
-(* ------------------------------------------------------------------------- *)
-
-val REAL_PROD_NORM_CONV =
-  let
-    val REAL_MUL_AC = AC REAL_MUL_AC_98
-    val x_tm = ``x:real``
-    val mul_tm = ``$* : real -> real -> real``
-    val pth1 = SYM(SPEC x_tm REAL_MUL_RID)
-    val pth2 = SYM(SPEC x_tm REAL_MUL_LID)
-    val binops_mul = liteLib.binops mul_tm
-    val list_mk_binop_mul = list_mk_binop mul_tm
-    val mk_binop_mul = mk_binop mul_tm
-  in
-    fn tm =>
-      let
-        val _ = trace "REAL_PROD_NORM_CONV"
-        val _ = trace_term tm
-        val factors = binops_mul tm
-        val (consts,others) = partition is_intconst factors
-        val res =
-        if null others then
-          let
-            val th1 = QCONV (DEPTH_CONV REAL_INT_MUL_CONV) tm
-          in
-            TRANS th1 (INST [x_tm |-> rand(concl th1)] pth1)
-          end
-        else
-          let
-            val sothers = sort term_lt others
-          in
-            if null consts then
-              let
-                val t = mk_eq (tm, list_mk_binop_mul sothers)
-                val th1 = REAL_MUL_AC t
-              in
-                TRANS th1 (INST [x_tm |-> rand(concl th1)] pth2)
-              end
-            else
-              let
-                val th1 = REAL_MUL_AC
-                  (mk_eq(tm,mk_binop_mul(list_mk_binop_mul consts)
-                           (list_mk_binop_mul sothers)))
-                val tm1 = rand(concl th1)
-                val th2 = AP_TERM mul_tm (QCONV (DEPTH_CONV REAL_INT_MUL_CONV)
-                                                (liteLib.lhand tm1))
-              in
-                TRANS th1 (AP_THM th2 (rand tm1))
-              end
-          end
-        val _ = trace_thm res
-        val _ = trace "done REAL_PROD_NORM_CONV"
-      in
-        res
-      end
-  end;
-
-(* ------------------------------------------------------------------------- *)
 (* Addition and subtraction.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
@@ -430,7 +352,7 @@ val REAL_INT_ADD_CONV =
                 let
                   val p = mk_numeral (n' - m')
                   val th1 = INST [m_tm |-> m, n_tm |-> p] pth2
-                  val th2 = NUM_ADD_CONV (rand(rand(liteLib.lhand(concl th1))))
+                  val th2 = NUM_ADD_CONV (rand(rand(lhand(concl th1))))
                   val th3 = AP_TERM (rator tm) (AP_TERM amp_tm (SYM th2))
                 in
                   TRANS th3 th1
@@ -440,8 +362,8 @@ val REAL_INT_ADD_CONV =
                   val p = mk_numeral (m' - n')
                   val th1 = INST [m_tm |-> n, n_tm |-> p] pth3
                   val th2 = NUM_ADD_CONV
-                              (rand(rand(liteLib.lhand
-                                   (liteLib.lhand(concl th1)))))
+                              (rand(rand(lhand
+                                   (lhand(concl th1)))))
                   val th3 = AP_TERM neg_tm (AP_TERM amp_tm (SYM th2))
                   val th4 = AP_THM (AP_TERM add_tm th3) (rand tm)
                 in
@@ -458,7 +380,7 @@ val REAL_INT_ADD_CONV =
                 let
                   val p = mk_numeral (m' - n')
                   val th1 = INST [m_tm |-> n, n_tm |-> p] pth4
-                  val th2 = NUM_ADD_CONV (rand(liteLib.lhand(liteLib.lhand(concl th1))))
+                  val th2 = NUM_ADD_CONV (rand(lhand(lhand(concl th1))))
                   val th3 = AP_TERM add_tm (AP_TERM amp_tm (SYM th2))
                   val th4 = AP_THM th3 (rand tm)
                 in
@@ -468,7 +390,7 @@ val REAL_INT_ADD_CONV =
                 let
                   val p = mk_numeral (n' - m')
                   val th1 = INST [m_tm |-> m, n_tm |-> p] pth5
-                  val th2 = NUM_ADD_CONV (rand(rand(rand(liteLib.lhand(concl th1)))))
+                  val th2 = NUM_ADD_CONV (rand(rand(rand(lhand(concl th1)))))
                   val th3 = AP_TERM neg_tm (AP_TERM amp_tm (SYM th2))
                   val th4 = AP_TERM (rator tm) th3
                 in
@@ -491,368 +413,6 @@ val REAL_INT_SUB_CONV =
   GEN_REWRITE_CONV I [real_sub] THENC
   TRY_CONV(RAND_CONV REAL_INT_NEG_CONV) THENC
   REAL_INT_ADD_CONV;
-
-(* ------------------------------------------------------------------------- *)
-(* Add together canonically ordered standard linear lists.                   *)
-(* ------------------------------------------------------------------------- *)
-
-val LINEAR_ADD =
-  let
-    val pth0a = prove
-      (``&0 + x = x :real``,
-      REWRITE_TAC[REAL_ADD_LID])
-    val pth0b = prove
-      (``x + &0 = x :real``,
-      REWRITE_TAC[REAL_ADD_RID])
-    val x_tm = ``x:real``
-    val [pth1, pth2, pth3, pth4, pth5, pth6] = (CONJUNCTS o prove)
-      (``((l1 + r1) + (l2 + r2) = (l1 + l2) + (r1 + r2):real) /\
-      ((l1 + r1) + tm2 = l1 + (r1 + tm2):real) /\
-      (tm1 + (l2 + r2) = l2 + (tm1 + r2)) /\
-      ((l1 + r1) + tm2 = (l1 + tm2) + r1) /\
-      (tm1 + tm2 = tm2 + tm1) /\
-      (tm1 + (l2 + r2) = (tm1 + l2) + r2)``,
-(REPEAT CONJ_TAC
-   THEN REWRITE_TAC[REAL_ADD_ASSOC]
-   THEN TRY (MATCH_ACCEPT_TAC REAL_ADD_SYM) THENL
-   [REWRITE_TAC[GSYM REAL_ADD_ASSOC] THEN AP_TERM_TAC
-      THEN ONCE_REWRITE_TAC [REAL_ADD_SYM]
-      THEN GEN_REWRITE_TAC RAND_CONV [REAL_ADD_SYM]
-      THEN REWRITE_TAC[GSYM REAL_ADD_ASSOC] THEN AP_TERM_TAC
-      THEN MATCH_ACCEPT_TAC REAL_ADD_SYM,
-    ONCE_REWRITE_TAC [REAL_ADD_SYM] THEN AP_TERM_TAC
-      THEN MATCH_ACCEPT_TAC REAL_ADD_SYM,
-    REWRITE_TAC[GSYM REAL_ADD_ASSOC] THEN AP_TERM_TAC
-      THEN MATCH_ACCEPT_TAC REAL_ADD_SYM]))
-    val tm1_tm = ``tm1:real``
-    val l1_tm = ``l1:real``
-    val r1_tm = ``r1:real``
-    val tm2_tm = ``tm2:real``
-    val l2_tm = ``l2:real``
-    val r2_tm = ``r2:real``
-    val add_tm = ``$+ :real->real->real``
-    val dest = liteLib.dest_binop add_tm
-    val mk = mk_binop add_tm
-    val zero_tm = ``&0 :real``
-    val COEFF_CONV =
-      QCONV (REWR_CONV (GSYM REAL_ADD_RDISTRIB) THENC
-             LAND_CONV REAL_INT_ADD_CONV)
-    fun linear_add tm1 tm2 =
-    let
-      val _ = trace "linear_add"
-      val _ = trace_term tm1
-      val _ = trace_term tm2
-      val res =
-      let
-        val ltm = mk tm1 tm2
-      in
-        if tm1 ~~ zero_tm then INST [x_tm |-> tm2] pth0a
-        else if tm2 ~~ zero_tm then INST [x_tm |-> tm1] pth0b else
-          let
-            val (l1,r1) = dest tm1
-            val v1 = rand l1
-            val _ = trace "v1 ="
-            val _ = trace_term v1
-          in
-            let
-              val (l2,r2) = dest tm2
-              val v2 = rand l2
-              val _ = trace "v2 ="
-              val _ = trace_term v2
-            in
-              if aconv v1 v2 then
-                let
-                  val th1 = INST [l1_tm |-> l1, l2_tm |-> l2,
-                                  r1_tm |-> r1, r2_tm |-> r2] pth1
-                  val th2 = CONV_RULE (RAND_CONV(LAND_CONV COEFF_CONV)) th1
-                  val ctm = rator(rand(concl th2))
-                in
-                  TRANS th2 (AP_TERM ctm (linear_add r1 r2))
-                end
-                (* handle e as HOL_ERR => Raise e *)
-              else if term_lt v1 v2 then
-                let
-                  val th1 = INST [l1_tm |-> l1, r1_tm |-> r1, tm2_tm |-> tm2] pth2
-                  val ctm = rator(rand(concl th1))
-                in
-                  TRANS th1 (AP_TERM ctm (linear_add r1 tm2))
-                end
-              else
-                let
-                  val th1 = INST [tm1_tm |-> tm1, l2_tm |-> l2, r2_tm |-> r2] pth3
-                  val ctm = rator(rand(concl th1))
-                in
-                  TRANS th1 (AP_TERM ctm (linear_add tm1 r2))
-                end
-            end
-            handle HOL_ERR _ =>
-              let
-                val _ = trace "can't add_dest term2"
-                val v2 = rand tm2
-                val _ = trace "v2 ="
-                val _ = trace_term v2
-              in
-                if aconv v1 v2 then
-                  let
-                    val th1 = INST [l1_tm |-> l1, r1_tm |-> r1, tm2_tm |-> tm2] pth4
-                  in
-                    CONV_RULE (RAND_CONV(LAND_CONV COEFF_CONV)) th1
-                  end
-                else if term_lt v1 v2 then
-                  let
-                    val th1 = INST [l1_tm |-> l1, r1_tm |-> r1, tm2_tm |-> tm2] pth2
-                    val ctm = rator(rand(concl th1))
-                  in
-                    TRANS th1 (AP_TERM ctm (linear_add r1 tm2))
-                  end
-                else
-                  INST [tm1_tm |-> tm1, tm2_tm |-> tm2] pth5
-              end
-          end
-          handle _ =>
-            let
-              val _ = trace "can't add_dest term1"
-              val v1 = rand tm1
-            in
-              let
-                val (l2,r2) = dest tm2
-                val v2 = rand l2
-              in
-                if aconv v1 v2 then
-                  let
-                    val th1 = INST [tm1_tm |-> tm1, l2_tm |-> l2, r2_tm |-> r2] pth6
-                  in
-                    CONV_RULE (RAND_CONV(LAND_CONV COEFF_CONV)) th1
-                  end
-                else if term_lt v1 v2 then
-                  REFL ltm
-                else
-                  let
-                    val th1 = INST [tm1_tm |-> tm1, l2_tm |-> l2, r2_tm |-> r2] pth3
-                    val ctm = rator(rand(concl th1))
-                  in
-                    TRANS th1 (AP_TERM ctm (linear_add tm1 r2))
-                  end
-              end
-              handle _ =>
-                let
-                  val _ = trace "can't add_dest term2 either"
-                  val v2 = rand tm2
-                in
-                  if aconv v1 v2 then
-                    COEFF_CONV ltm
-                  else if term_lt v1 v2 then
-                    REFL ltm
-                  else
-                    INST [tm1_tm |-> tm1, tm2_tm |-> tm2] pth5
-                end
-            end
-      end
-    val _ = trace_thm res
-    val _ = trace "done linear_add"
-  in
-    res
-  end
-  in
-    fn tm1 => fn tm2 =>
-      let
-        val _ = trace "LINEAR_ADD"
-        val _ = trace_term tm1
-        val _ = trace_term tm2
-        val th = linear_add tm1 tm2
-        val tm = rand(concl th)
-        val zth =
-            QCONV (GEN_REWRITE_CONV
-                     DEPTH_CONV
-                     [REAL_MUL_LZERO, REAL_ADD_LID, REAL_ADD_RID]) tm
-        val res = TRANS th zth
-        val _ = trace_thm res
-        val _ = trace "done LINEAR_ADD"
-      in
-        res
-      end
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Collection of like terms.                                                 *)
-(* ------------------------------------------------------------------------- *)
-
-val COLLECT_CONV =
-  let
-    val add_tm = ``$+ :real->real->real``
-    val dest = liteLib.dest_binop add_tm
-    fun collect tm =
-      let
-        val (l,r) = dest tm
-        val lth = collect l
-        val rth = collect r
-        val xth = LINEAR_ADD (rand(concl lth)) (rand(concl rth))
-      in
-        TRANS (MK_COMB(AP_TERM add_tm lth,rth)) xth
-      end
-      handle HOL_ERR _ => REFL tm
-  in
-    collect
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Normalize a term in the standard linear form.                             *)
-(* ------------------------------------------------------------------------- *)
-
-val REAL_SUM_NORM_CONV =
-  let
-    val REAL_ADD_AC = AC REAL_ADD_AC_98
-    val pth1 = prove (``~x = ~(&1) * x``,
-                     REWRITE_TAC[REAL_MUL_LNEG, REAL_MUL_LID])
-    val pth2 = prove (``x - y:real = x + ~(&1) * y``,
-                     REWRITE_TAC[real_sub, GSYM pth1])
-    val ptm = ``$~ :real->real``
-    val stm = ``$+ :real->real->real``
-    val one_tm = ``&1 :real``
-    val binops_add = liteLib.binops stm
-    val list_mk_binop_add = list_mk_binop stm
-    fun prelim_conv t =
-      let
-        val _ = trace "prelim_conv"
-        fun c1 t = (trace "gen_rewrite 1";
-                    trace_term t;
-                    GEN_REWRITE_CONV I [pth1] t)
-        fun c2 t = (trace "gen_rewrite 2";
-                    trace_term t;
-                    GEN_REWRITE_CONV I [pth2] t)
-        fun c3 t = (trace "gen_rewrite 3"; trace_term t;
-                    GEN_REWRITE_CONV TOP_DEPTH_CONV
-                    [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB] t)
-        fun c4 t = (trace "gen_rewrite 4"; trace_term t;
-                    GEN_REWRITE_CONV DEPTH_CONV
-                    [REAL_MUL_LZERO, REAL_MUL_RZERO,
-                    REAL_MUL_LID, REAL_MUL_RID,
-                    REAL_ADD_LID, REAL_ADD_RID] t)
-        val c = DEPTH_CONV((c1 o assert(fn t => not (rand t ~~ one_tm)))
-                ORELSEC c2) THENC c3 THENC c4
-        val res = c t
-        val _ = trace "done prelim_conv"
-      in
-        res
-      end
-  in
-    fn tm =>
-      let
-        val _ = trace "REAL_SUM_NORM_CONV"
-        val _ = trace_term tm
-        val th1 = QCONV prelim_conv tm
-        val th2 = liteLib.DEPTH_BINOP_CONV stm
-                     (QCONV REAL_PROD_NORM_CONV) (rand(concl th1))
-        val tm2 = rand(concl th2)
-        val elements = binops_add tm2
-        val selements = sort (fn x => fn y => term_le (rand x) (rand y))
-                             elements
-        val th3 = REAL_ADD_AC(mk_eq(tm2,list_mk_binop_add selements))
-        val th4 = COLLECT_CONV (rand(concl th3))
-        val res = itlist TRANS [th1, th2, th3] th4
-        val _ = trace "done REAL_SUM_NORM_CONV"
-      in
-        res
-      end
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Produce negated forms of canonicalization theorems.                       *)
-(* ------------------------------------------------------------------------- *)
-
-val REAL_NEGATE_CANON =
-  let
-    val pth1 = prove
-      (``((a:real <= b = &0 <= X) = (b < a = &0 < ~X)) /\
-         ((a:real < b = &0 < X) = (b <= a = &0 <= ~X))``,
-      REWRITE_TAC[real_lt, REAL_LE_LNEG, REAL_LE_RNEG] THEN
-      REWRITE_TAC[REAL_ADD_RID, REAL_ADD_LID] THEN
-      CONV_TAC tautLib.TAUT_CONV)
-    val pth2 = prove
-      (``~((~a) * x + z :real) = a * x + ~z``,
-      REWRITE_TAC[GSYM REAL_MUL_LNEG, REAL_NEG_ADD, REAL_NEG_NEG])
-    val pth3 = prove
-      (``~(a * x + z :real) = ~a * x + ~z``,
-      REWRITE_TAC[REAL_NEG_ADD, GSYM REAL_MUL_LNEG])
-    val pth4 = prove
-      (``~(~a * x :real) = a * x``,
-      REWRITE_TAC[REAL_MUL_LNEG, REAL_NEG_NEG])
-    val pth5 = prove
-      (``~(a * x :real) = ~a * x``,
-      REWRITE_TAC[REAL_MUL_LNEG])
-    val rewr1_CONV = FIRST_CONV (map REWR_CONV [pth2, pth3])
-    val rewr2_CONV = FIRST_CONV (map REWR_CONV [pth4, pth5])
-    fun distrib_neg_conv tm =
-      let
-        val _ = trace "distrib_neg_conv"
-        val _ = trace_term tm
-        val res =
-          let
-            val th = rewr1_CONV tm
-            val _ = trace "ok so far"
-            val t = rand (concl th)
-            val _ = trace_term t
-          in
-            TRANS th (RAND_CONV distrib_neg_conv t)
-          end
-          handle HOL_ERR _ => rewr2_CONV tm
-        val _ = trace "done distrib_neg_conv"
-      in
-        res
-      end
-  in
-    fn th =>
-      let
-        val _ = trace "REAL_NEGATE_CANON"
-        val _ = trace_thm th
-        val th1 = GEN_REWRITE_RULE I [pth1] th
-        val _ = trace_thm th1
-        val t = rand (concl th1)
-        val _ = trace_term t
-        val res = TRANS th1 (RAND_CONV distrib_neg_conv t)
-        val _ = trace "done REAL_NEGATE_CANON"
-      in
-        res
-      end
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Version for whole atom, with intelligent cacheing.                        *)
-(* ------------------------------------------------------------------------- *)
-
-val (clear_atom_cache,REAL_ATOM_NORM_CONV) =
-  let
-    val right_CONV = RAND_CONV REAL_SUM_NORM_CONV
-    val atomcache = ref []
-    fun lookup_cache tm =
-      first (fn th => liteLib.lhand(concl th) ~~ tm) (!atomcache)
-    fun clear_atom_cache () = (atomcache := [])
-    val pth2 = prove
-          (``(a:real < b = c < d:real) = (b <= a = d <= c)``,
-          REWRITE_TAC[real_lt] THEN CONV_TAC tautLib.TAUT_CONV)
-    val pth3 = prove
-          (``(a:real <= b = c <= d:real) = (b < a = d < c)``,
-          REWRITE_TAC[real_lt] THEN CONV_TAC tautLib.TAUT_CONV)
-    val negate_CONV = GEN_REWRITE_CONV I [pth2,pth3]
-    val le_tm = ``$<= :real->real->bool``
-    val lt_tm = ``$< :real->real->bool``
-  in
-    (clear_atom_cache,
-    fn tm => (trace "REAL_ATOM_NORM_CONV"; lookup_cache tm
-    handle HOL_ERR _ =>
-      let
-        val th = right_CONV tm
-      in
-        (atomcache := th::(!atomcache);
-        let
-          val th' = REAL_NEGATE_CANON th
-        in
-          atomcache := th'::(!atomcache)
-        end
-        handle HOL_ERR _ => ();
-        th)
-      end))
-  end;
 
 (* ------------------------------------------------------------------------- *)
 (* pow and abs                                                               *)
@@ -917,84 +477,10 @@ in
 end
 
 (* ------------------------------------------------------------------------- *)
-(* Combinators.                                                              *)
-(* ------------------------------------------------------------------------- *)
-
-infix F_F;
-fun (f F_F g) (x, y) = (f x, g y);
-
-(* ------------------------------------------------------------------------- *)
-(* Replication and sequences.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-fun upto n =
-  let
-    fun down l n = if n < zero then l else down (n::l) (n - one)
-  in
-    down [] n
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Encodings of linear inequalities with justifications.                     *)
-(* ------------------------------------------------------------------------- *)
-
-datatype lineq_type = Eq | Le | Lt;
-
-datatype injust = Given of thm
-                | Multiplied of int * injust
-                | Added of injust * injust;
-
-datatype lineq = Lineq of int * lineq_type * int list * injust;
-
-val thmeq = pair_eq (list_eq aconv) aconv
-
-fun injust_eq (Given t, Given t') = thmeq (dest_thm t) (dest_thm t')
-  | injust_eq (Multiplied (i,j), Multiplied (i',j')) =
-      (i = i') andalso injust_eq (j,j')
-  | injust_eq (Added (j1,j2), Added (j1',j2')) =
-      injust_eq (j1,j1') andalso injust_eq (j2,j2')
-  | injust_eq (j,j') = false;
-
-fun lineq_eq (Lineq(i,t,l,j),Lineq(i',t',l',j')) =
-  i = i' andalso t = t' andalso l = l' andalso injust_eq (j,j');
-
-(* ------------------------------------------------------------------------- *)
-(* The main refutation-finding code.                                         *)
-(* ------------------------------------------------------------------------- *)
-
-fun is_trivial (Lineq(_,_,l,_)) = all ((curry op=) zero) l;
-
-fun find_answer (ans as Lineq (k,ty,l,_)) =
-  if ty = Eq andalso (not (k = zero))
-    orelse ty = Le andalso k > zero
-    orelse ty = Lt andalso k >= zero
-  then
-    ans
-  else
-    failwith "find_answer";
-
-fun calc_blowup l =
-  let
-    val (p,n) = partition ((curry op<) zero) (filter ((curry op<>) zero) l)
-  in
-    (fromInt (length p)) * (fromInt (length n))
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* "Set" operations on lists.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-fun union l1 l2 = itlist insert l1 l2;
-
-fun Union l = itlist union l [];
-
-(* ------------------------------------------------------------------------- *)
-(* GCD and LCM.                                                              *)
+(* GCD                                                                       *)
 (* ------------------------------------------------------------------------- *)
 
 fun abs x = if x < zero then ~x else x;
-
-fun sgn x = x >= zero;
 
 (* NOTE: gcd is always positive *)
 fun gcd a b = fromNat (Arbnum.gcd (toNat (abs a), toNat (abs b)))
@@ -1008,600 +494,6 @@ val gcd =
     fn x => fn y => if x < y then gxd y x else gxd x y
   end;
  *)
-
-fun lcm x y = (x * y) div gcd x y;
-
-(* ------------------------------------------------------------------------- *)
-(* Calculate new (in)equality type after addition.                           *)
-(* ------------------------------------------------------------------------- *)
-
-val find_add_type =
-  fn (Eq,x) => x
-    | (x,Eq) => x
-    | (_,Lt) => Lt
-    | (Lt,_) => Lt
-    | (Le,Le) => Le;
-
-(* ------------------------------------------------------------------------- *)
-(* Add together (in)equations.                                               *)
-(* ------------------------------------------------------------------------- *)
-
-fun add_ineq (i1 as Lineq(k1,ty1,l1,just1)) (i2 as Lineq(k2,ty2,l2,just2)) =
-  let
-    val l = map2 (curry op+) l1 l2
-  in
-    Lineq(k1+k2,find_add_type(ty1,ty2),l,Added(just1,just2))
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Multiply out an (in)equation.                                             *)
-(* ------------------------------------------------------------------------- *)
-
-fun multiply_ineq n (i as Lineq(k,ty,l,just)) =
-  if n = one then i
-  else if n = zero andalso ty = Lt then failwith "multiply_ineq"
-  else if n < zero andalso (ty = Le orelse ty = Lt) then
-    failwith "multiply_ineq"
-  else Lineq(n * k,ty,map ((curry op* ) n) l,Multiplied(n,just));
-
-(* ------------------------------------------------------------------------- *)
-(* Elimination of variable between a single pair of (in)equations.           *)
-(* If they're both inequalities, 1st coefficient must be +ve, 2nd -ve.       *)
-(* ------------------------------------------------------------------------- *)
-
-fun elim_var v (i1 as Lineq(k1,ty1,l1,just1)) (i2 as Lineq(k2,ty2,l2,just2)) =
-  let
-    val c1 = el0 v l1
-    val c2 = el0 v l2
-    val m = lcm (abs c1) (abs c2)
-    val m1 = m div (abs c1)
-    val m2 = m div (abs c2)
-    val (n1,n2) =
-      if sgn(c1) = sgn(c2)
-      then if ty1 = Eq
-           then (~m1,m2)
-           else if ty2 = Eq
-                then (m1,~m2)
-                else failwith "elim_var"
-      else (m1,m2)
-    val (p1,p2) =
-      if ty1 = Eq andalso ty2 = Eq andalso (n1 = ~one orelse n2 = ~one)
-      then (~n1,~n2)
-      else (n1,n2)
-  in
-    add_ineq (multiply_ineq n1 i1) (multiply_ineq n2 i2)
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Main elimination code:                                                    *)
-(*                                                                           *)
-(* (1) Looks for immediate solutions (false assertions with no variables).   *)
-(*                                                                           *)
-(* (2) If there are any equations, picks a variable with the lowest absolute *)
-(* coefficient in any of them, and uses it to eliminate.                     *)
-(*                                                                           *)
-(* (3) Otherwise, chooses a variable in the inequality to minimize the       *)
-(* blowup (number of consequences generated) and eliminates it.              *)
-(* ------------------------------------------------------------------------- *)
-
-fun elim ineqs =
-  let
-    val _ = trace ("elim: #(ineqs) = " ^ (Int.toString (length ineqs)) ^ ".")
-    val (triv,nontriv) = partition is_trivial ineqs
-    val res =
-      if not (null triv) then tryfind find_answer triv
-                              handle HOL_ERR _ => elim nontriv
-      else
-        if null nontriv then failwith "elim" else
-          let
-            val (eqs,noneqs) = partition (fn (Lineq(_,ty,_,_)) => ty = Eq)
-                                         nontriv
-          in
-            if not (null eqs) then
-              let
-                val clists = map (fn (Lineq(_,_,l,_)) => l) eqs
-                val sclist = sort (fn x => fn y => abs(x) <= abs(y))
-                  (filter ((curry op<>) zero) (Union clists))
-                val _ = trace ("elim: #(sclist) = "
-                               ^ (Int.toString (length sclist)) ^ ".")
-                val c = hd sclist
-                val (v,eq) = tryfind
-                              (fn (i as Lineq(_,_,l,_)) => (index c l,i)) eqs
-                val othereqs = filter (not o ((curry lineq_eq) eq)) eqs
-                val (ioth,roth) =
-                        partition (fn (Lineq(_,_,l,_)) => el0 v l = zero)
-                                  (othereqs @ noneqs)
-                val others = map (elim_var v eq) roth @ ioth
-              in
-                elim others
-              end
-            else
-              let
-                val lists = map (fn (Lineq(_,_,l,_)) => l) noneqs
-                val _ = trace ("elim: #(lists) = "
-                               ^ (Int.toString (length lists)) ^ ".")
-                val numlist = upto (fromInt (length(hd lists)) - one)
-                val coeffs = map (fn i => map (el0 i) lists) numlist
-                val blows = map calc_blowup coeffs
-                val iblows = zip blows numlist
-                val _ = trace ("elim: #(iblows) = "
-                               ^ (Int.toString (length iblows)) ^ ".")
-                val iblows' = filter ((curry op<>) zero o fst) iblows
-                val _ = trace ("elim: #(iblows') = "
-                               ^ (Int.toString (length iblows')) ^ ".")
-                val (c,v) = Lib.trye hd
-                             (sort (fn x => fn y => fst(x) <= fst(y)) iblows')
-                val (no,yes) = partition
-                                 (fn (Lineq(_,_,l,_)) => el0 v l = zero) ineqs
-                val (pos,neg) = partition
-                                  (fn (Lineq(_,_,l,_)) => el0 v l > zero) yes
-              in
-                elim (no @ op_allpairs (curry lineq_eq) (elim_var v) pos neg)
-              end
-          end
-    val _ = trace "done elim"
-  in
-    res
-  end
-
-
-(* ------------------------------------------------------------------------- *)
-(* Multiply standard linear list by a constant.                              *)
-(* ------------------------------------------------------------------------- *)
-
-val LINEAR_MULT =
-  let
-    val mult_tm = realSyntax.mult_tm
-    val zero_tm = realSyntax.zero_tm
-    val x_tm = ``x:real``
-    val add_tm = realSyntax.plus_tm
-    val pth = prove
-      (``x * &0 = &0 :real``,
-      REWRITE_TAC[REAL_MUL_RZERO])
-    val conv1 = GEN_REWRITE_CONV TOP_SWEEP_CONV [REAL_ADD_LDISTRIB]
-    val conv2 = liteLib.DEPTH_BINOP_CONV add_tm
-                  (REWR_CONV REAL_MUL_ASSOC THENC LAND_CONV REAL_INT_MUL_CONV)
-  in
-    fn n => fn tm =>
-      if tm ~~ zero_tm then INST [x_tm |-> n] pth else
-        let
-          val ltm = mk_comb(mk_comb(mult_tm,n),tm)
-        in
-          (conv1 THENC conv2) ltm
-        end
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Translate back a proof.                                                   *)
-(* ------------------------------------------------------------------------- *)
-
-val TRANSLATE_PROOF =
-  let
-    val TRIVIAL_CONV = DEPTH_CONV
-      (CHANGED_CONV REAL_INT_NEG_CONV ORELSEC
-      REAL_INT_ADD_CONV ORELSEC
-      REAL_INT_MUL_CONV ORELSEC
-      REAL_INT_LE_CONV ORELSEC
-      REAL_INT_EQ_CONV ORELSEC
-      REAL_INT_LT_CONV) THENC
-      GEN_REWRITE_CONV TOP_DEPTH_CONV (implicit_rewrites())
-
-    val ADD_INEQS =
-      let
-        val a_tm = ``a:real``
-        val b_tm = ``b:real``
-        val pths = (CONJUNCTS o prove)
-          (``((&0 = a) /\ (&0 = b) ==> (&0 = a + b :real)) /\
-             ((&0 = a) /\ (&0 <= b) ==> (&0 <= a + b :real)) /\
-             ((&0 = a) /\ (&0 < b) ==> (&0 < a + b :real)) /\
-             ((&0 <= a) /\ (&0 = b) ==> (&0 <= a + b :real)) /\
-             ((&0 <= a) /\ (&0 <= b) ==> (&0 <= a + b :real)) /\
-             ((&0 <= a) /\ (&0 < b) ==> (&0 < a + b :real)) /\
-             ((&0 < a) /\ (&0 = b) ==> (&0 < a + b :real)) /\
-             ((&0 < a) /\ (&0 <= b) ==> (&0 < a + b :real)) /\
-             ((&0 < a) /\ (&0 < b) ==> (&0 < a + b :real))``,
-          CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
-          REPEAT STRIP_TAC THEN
-          ASM_REWRITE_TAC[REAL_ADD_LID, REAL_ADD_RID] THENL
-          [MATCH_MP_TAC REAL_LE_TRANS,
-          MATCH_MP_TAC REAL_LET_TRANS,
-          MATCH_MP_TAC REAL_LTE_TRANS,
-          MATCH_MP_TAC REAL_LT_TRANS] THEN
-          EXISTS_TAC ``a:real`` THEN ASM_REWRITE_TAC[] THEN
-          GEN_REWRITE_TAC LAND_CONV [GSYM REAL_ADD_RID] THEN
-           (MATCH_MP_TAC REAL_LE_LADD_IMP ORELSE MATCH_MP_TAC REAL_LT_LADD_IMP)
-          THEN ASM_REWRITE_TAC[])
-      in
-        fn th1 => fn th2 =>
-          let
-            val a = rand(concl th1)
-            val b = rand(concl th2)
-            val xth = tryfind
-                       (C MP (CONJ th1 th2) o INST [a_tm |-> a, b_tm |-> b]) pths
-            val yth = LINEAR_ADD a b
-          in
-            EQ_MP (AP_TERM (rator(concl xth)) yth) xth
-          end
-      end
-    val MULTIPLY_INEQS =
-      let
-        val pths = (CONJUNCTS o prove)
-          (``((&0 = y) ==> (&0 = x * y :real)) /\
-             (&0 <= y ==> &0 <= x ==> &0 <= x * y :real) /\
-             (&0 < y ==> &0 < x ==> &0 < x * y :real)``,
-          CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
-          REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[REAL_MUL_RZERO] THENL
-          [MATCH_MP_TAC REAL_LE_MUL,
-          MATCH_MP_TAC REAL_LT_MUL] THEN
-          ASM_REWRITE_TAC[])
-        val x_tm = ``x:real``
-        val y_tm = ``y:real``
-      in
-        fn x => fn th =>
-          let
-            val y = rand(concl th)
-            val xth = tryfind (C MP th o INST [x_tm |-> x, y_tm |-> y]) pths
-            val wth = if is_imp(concl xth) then
-              MP (CONV_RULE(LAND_CONV TRIVIAL_CONV) xth) TRUTH else xth
-            val yth = LINEAR_MULT x (rand(rand(concl wth)))
-          in
-            EQ_MP (AP_TERM (rator(concl wth)) yth) wth
-          end
-      end
-  in
-    fn refutation =>
-      let
-        val _ = trace "TRANSLATE_PROOF"
-        val cache = Uref.new []
-        open Uref
-        fun translate refut =
-          (op_assoc (curry injust_eq) refut (!cache))
-          handle HOL_ERR _
-          => case refut
-              of Given(th) => (cache:= (refut,th)::(!cache); th)
-               | Added(r1,r2) =>
-                  let
-                    val th1 = translate r1
-                    val _ = trace_thm th1
-                    val th2 = translate r2
-                    val _ = trace_thm th2
-                    val th = ADD_INEQS th1 th2
-                    val _ = trace_thm th
-                  in
-                   (cache:= (refut,th)::(!cache); th)
-                  end
-               | Multiplied(n,r) =>
-                  let
-                    val th1 = translate r
-                    val th = MULTIPLY_INEQS (mk_intconst n) th1
-                  in
-                    (cache:= (refut,th)::(!cache); th)
-                  end
-        val res = CONV_RULE TRIVIAL_CONV (translate refutation)
-        val _ = trace "done TRANSLATE_PROOF"
-      in
-        res
-      end
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Refute a conjunction of equations and/or inequations.                     *)
-(* ------------------------------------------------------------------------- *)
-
-val REAL_SIMPLE_ARITH_REFUTER =
-  let
-    val trivthm = prove(``&0 < &0 :real = F``,
-                    REWRITE_TAC[REAL_LE_REFL, real_lt])
-    val add_tm = realSyntax.plus_tm
-    val one_tm = realSyntax.one_tm
-    val zero_tm = realSyntax.zero_tm
-    val false_tm = boolSyntax.F
-    val eq_tm = realSyntax.real_eq_tm
-    val le_tm = realSyntax.leq_tm
-    val lt_tm = realSyntax.less_tm
-    fun fixup_atom th =
-      let
-        val _ = trace "fixup_atom"
-        val _ = trace_term (snd (dest_thm th))
-        val th0 = CONV_RULE REAL_ATOM_NORM_CONV th
-        val _ = trace_thm th0
-        val tm0 = concl th0
-      in
-        if rand tm0 ~~ zero_tm then
-          if rator(rator tm0) ~~ lt_tm then EQ_MP trivthm th0
-          else failwith "trivially true, so useless in refutation"
-        else th0
-      end
-  in
-    fn ths0 =>
-      let
-        val _ = trace "REAL_SIMPLE_ARITH_REFUTER"
-        val _ = trace ("#(ths0) = " ^ (Int.toString (length ths0)) ^ ".")
-        val _ = trace_thm_list ths0
-        val ths = mapfilter fixup_atom ths0
-        val _ = trace ("#(ths) = " ^ (Int.toString (length ths)) ^ ".")
-        val _ = trace_thm_list ths
-        val res =
-        first (fn th => Feq (concl th)) ths
-        handle HOL_ERR _ =>
-          let
-            val allvars = itlist
-              (op_union aconv o map rand o liteLib.binops add_tm o
-               rand o concl) ths []
-            val vars =
-              if tmem one_tm allvars then
-                one_tm::op_set_diff aconv allvars [one_tm]
-              else one_tm::allvars
-            fun unthmify th =
-              let
-                val t = concl th
-                val op_alt = rator(rator t)
-                val right = rand t
-                val rights = liteLib.binops add_tm right
-                val cvps = map (((dest_intconst o rand)
-                                 F_F (C index_ac vars)) o dest_comb) rights
-                val k = ~((rev_assoc zero cvps)
-                                handle HOL_ERR _ => zero)
-                val l = Lib.trye tl (map (fn v => ((rev_assoc v cvps)
-                                                    handle HOL_ERR _ => zero))
-                                    (upto (fromInt (length(vars)) - one)))
-                val ty = if op_alt ~~ eq_tm then Eq
-                         else if op_alt ~~ le_tm then Le
-                         else if op_alt ~~ lt_tm then Lt
-                         else failwith "unknown op"
-              in
-                Lineq(k,ty,l,Given th)
-              end
-            val ineqs = map unthmify ths
-            val _ = trace ("#(ineqs) = " ^ (Int.toString (length ineqs)) ^ ".")
-            val (Lineq(_,_,_,proof)) = elim ineqs
-          in
-            TRANSLATE_PROOF proof
-          end
-        val _ = trace_thm res
-        val _ = trace "done REAL_SIMPLE_ARITH_REFUTER"
-      in
-        res
-      end
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* General case: canonicalize and split up, then refute the bits.            *)
-(* ------------------------------------------------------------------------- *)
-
-val PURE_REAL_ARITH_TAC =
-  let
-    val ZERO_LEFT_CONV =
-      let
-        val pth = prove
-          (``((x = y) = (&0 = y + ~x)) /\
-             (x <= y = &0 <= y + ~x) /\
-             (x < y = &0 < y + ~x)``,
-           REWRITE_TAC[real_lt, GSYM REAL_LE_LNEG, REAL_LE_NEG2] THEN
-           REWRITE_TAC[GSYM REAL_LE_RNEG, REAL_NEG_NEG] THEN
-           REWRITE_TAC[GSYM REAL_LE_ANTISYM, GSYM REAL_LE_LNEG,
-                       GSYM REAL_LE_RNEG, REAL_LE_NEG2, REAL_NEG_NEG])
-        val zero_tm = ``&0 :real``
-      in
-        let
-          val raw_CONV = GEN_REWRITE_CONV I [pth] THENC
-            GEN_REWRITE_CONV TOP_SWEEP_CONV
-            [REAL_ADD_LID, REAL_NEG_ADD, REAL_NEG_NEG]
-        in
-          fn tm => if liteLib.lhand tm ~~ zero_tm then REFL tm else raw_CONV tm
-        end
-      end
-    val init_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV [
-        FORALL_SIMP, EXISTS_SIMP,
-        real_gt, real_ge, real_sub,
-        REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB,
-        REAL_MUL_LNEG, REAL_MUL_RNEG, REAL_NEG_NEG, REAL_NEG_ADD,
-        REAL_MUL_LZERO, REAL_MUL_RZERO,
-        REAL_MUL_LID, REAL_MUL_RID,
-        REAL_ADD_LID, REAL_ADD_RID] THENC
-        REPEATC (CHANGED_CONV Sub_and_cond.COND_ELIM_CONV) THENC PRENEX_CONV
-    val eq_tm = realSyntax.real_eq_tm
-    val le_tm = realSyntax.leq_tm
-    val lt_tm = realSyntax.less_tm
-    val (ABS_ELIM_TAC1,ABS_ELIM_TAC2,ABS_ELIM_TAC3) =
-      let
-        val plus_tm = realSyntax.plus_tm
-        val abs_tm = realSyntax.absval_tm
-        val neg_tm = realSyntax.negate_tm
-        val strip_plus = liteLib.binops plus_tm
-        val list_mk_plus = list_mk_binop plus_tm
-        fun is_abstm tm = is_comb tm andalso rator tm ~~ abs_tm
-        fun is_negtm tm = is_comb tm andalso rator tm ~~ neg_tm
-        val REAL_ADD_AC = AC REAL_ADD_AC_98
-        fun is_negabstm tm = is_negtm tm andalso is_abstm(rand tm)
-        val ABS_ELIM_THM = prove (
-         ``(&0 <= ~(abs(x)) + y = &0 <= x + y /\ &0 <= ~x + y) /\
-           (&0 < ~(abs(x)) + y = &0 < x + y /\ &0 < ~x + y)``,
-                    REWRITE_TAC[real_abs] THEN COND_CASES_TAC
-                    THEN ASM_REWRITE_TAC[] THEN
-                    REWRITE_TAC[REAL_NEG_NEG] THEN
-                    REWRITE_TAC [
-                      TAUT_PROVE ``(a = a /\ b) = (a ==> b)``,
-                      TAUT_PROVE ``(b = a /\ b) = (b ==> a)``
-                    ]
-                    THEN REPEAT STRIP_TAC THEN
-                    MAP_FIRST MATCH_MP_TAC [REAL_LE_TRANS, REAL_LTE_TRANS] THEN
-                    FIRST_ASSUM(fn th => EXISTS_TAC(rand(concl th)) THEN
-                    CONJ_TAC THENL [ACCEPT_TAC th, ALL_TAC]) THEN
-                    ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
-                    MATCH_MP_TAC REAL_LE_LADD_IMP THEN
-                    MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC ``&0 :real`` THEN
-                    REWRITE_TAC[REAL_LE_LNEG, REAL_LE_RNEG] THEN
-                    ASM_REWRITE_TAC[REAL_ADD_RID, REAL_ADD_LID] THEN
-                    MP_TAC (SPEC(Term`&0 :real`) (SPEC (Term`x:real`)
-                           REAL_LE_TOTAL))
-                    THEN ASM_REWRITE_TAC[])
-        val ABS_ELIM_RULE = GEN_REWRITE_RULE I [ABS_ELIM_THM]
-        val NEG_DISTRIB_RULE =
-                      GEN_REWRITE_RULE (RAND_CONV o TOP_SWEEP_CONV)
-                      [REAL_NEG_ADD, REAL_NEG_NEG]
-        val REDISTRIB_RULE = CONV_RULE init_CONV
-        val ABS_CASES_THM = prove
-                        (``(abs(x) = x) \/ (abs(x) = ~x)``,
-                        REWRITE_TAC[real_abs] THEN COND_CASES_TAC
-                        THEN REWRITE_TAC[])
-        val ABS_STRONG_CASES_THM = prove (
-                        ``&0 <= x /\ (abs(x) = x) \/
-                           (&0 <= ~x) /\ (abs(x) = ~x)``,
-                        REWRITE_TAC[real_abs] THEN COND_CASES_TAC
-                        THEN REWRITE_TAC[] THEN
-                        REWRITE_TAC[REAL_LE_RNEG, REAL_ADD_LID] THEN
-                        MP_TAC (SPEC(Term`&0 :real`)
-                                  (SPEC (Term`x:real`) REAL_LE_TOTAL))
-                        THEN ASM_REWRITE_TAC[])
-        val x_tm = ``x:real``
-        fun ABS_ELIM_TAC1 th =
-          let
-            val (tmx,tm0) = dest_comb(concl th)
-            val op_alt = rator tmx
-          in
-            (trace "ABS_ELIM_TAC1";
-            if op_alt !~ le_tm andalso op_alt !~ lt_tm
-            then failwith "ABS_ELIM_TAC1" else
-              let
-                val tms = strip_plus tm0
-                val tm = first is_negabstm tms
-                val n = index_ac tm tms
-                val (ltms,rtms) = chop_list n tms
-                val ntms = tm::(ltms @ tl rtms)
-                val th1 = AP_TERM tmx
-                  (REAL_ADD_AC (mk_eq(tm0, list_mk_plus ntms)))
-                val th2 = ABS_ELIM_RULE (EQ_MP th1 th)
-              in
-                CONJUNCTS_THEN ASSUME_TAC (NEG_DISTRIB_RULE th2)
-              end)
-          end
-        fun ABS_ELIM_TAC2 th =
-          let
-            val (tmx,tm0) = dest_comb(concl th)
-            val op_alt = rator tmx
-          in
-            (trace "ABS_ELIM_TAC2";
-            if op_alt !~ le_tm andalso op_alt !~ lt_tm
-            then failwith "ABS_ELIM_TAC1"
-            else
-              let
-                val tms = strip_plus tm0
-                val tm = first is_abstm tms
-              in
-                DISJ_CASES_THEN2
-                (fn th => RULE_ASSUM_TAC (SUBS [th]))
-                (fn th => RULE_ASSUM_TAC (NEG_DISTRIB_RULE o SUBS [th]))
-                (INST [x_tm |-> rand tm] ABS_CASES_THM)
-              end)
-          end
-        fun ABS_ELIM_TAC3 th =
-          let
-            val tm = find_term is_abstm (concl th)
-          in
-            (trace "ABS_ELIM_TAC2";
-            DISJ_CASES_THEN2
-            (CONJUNCTS_THEN2 ASSUME_TAC (fn th => RULE_ASSUM_TAC (SUBS [th])))
-            (CONJUNCTS_THEN2 (ASSUME_TAC o REDISTRIB_RULE)
-            (fn th => RULE_ASSUM_TAC (REDISTRIB_RULE o SUBS [th])))
-            (INST [x_tm |-> rand tm] ABS_STRONG_CASES_THM))
-          end
-      in
-        (ABS_ELIM_TAC1,ABS_ELIM_TAC2,ABS_ELIM_TAC3)
-      end
-    val atom_CONV =
-      let
-        val pth = prove
-          (``(~(x:real <= y) = y < x) /\
-             (~(x:real < y) = y <= x) /\
-             (~(x = y) = (x:real) < y \/ y < x)``,
-          REWRITE_TAC[real_lt] THEN REWRITE_TAC[GSYM DE_MORGAN_THM] THEN
-          REWRITE_TAC[REAL_LE_ANTISYM] THEN AP_TERM_TAC THEN
-          MATCH_ACCEPT_TAC EQ_SYM_EQ)
-      in
-        GEN_REWRITE_CONV I [pth]
-      end
-    fun DISCARD_UNREAL_TAC th =
-      let
-        val tm = concl th
-      in
-        if is_comb tm andalso
-          let
-            val tm' = rator tm
-          in
-            is_comb tm' andalso
-            let
-              val tm'' = rator tm'
-            in
-              tm'' ~~ eq_tm orelse tm'' ~~ le_tm orelse tm'' ~~ lt_tm
-            end
-          end
-        then failwith "DISCARD_UNREAL_TAC"
-        else
-          ALL_TAC
-      end
-  in
-    fn g =>
-      let
-        val _ = trace "PURE_REAL_ARITH_TAC"
-        val tac =
-          REPEAT GEN_TAC THEN
-          CONV_TAC init_CONV THEN
-          REPEAT GEN_TAC THEN
-          REFUTE_THEN(MP_TAC o
-                      CONV_RULE
-                        (PRESIMP_CONV THENC NNF_CONV THENC SKOLEM_CONV THENC
-                         PRENEX_CONV THENC ONCE_DEPTH_CONV atom_CONV THENC
-                         PROP_DNF_CONV)) THEN
-          DISCH_THEN(REPEAT_TCL
-                       (CHOOSE_THEN ORELSE_TCL DISJ_CASES_THEN ORELSE_TCL
-                        CONJUNCTS_THEN)
-                       ASSUME_TAC) THEN
-          TRY(FIRST_ASSUM CONTR_TAC) THEN
-          REPEAT(FIRST_X_ASSUM DISCARD_UNREAL_TAC) THEN
-          RULE_ASSUM_TAC(CONV_RULE ZERO_LEFT_CONV) THEN
-          REPEAT(FIRST_X_ASSUM ABS_ELIM_TAC1 ORELSE
-                 FIRST_ASSUM ABS_ELIM_TAC2 ORELSE
-                 FIRST_ASSUM ABS_ELIM_TAC3) THEN
-          POP_ASSUM_LIST(ACCEPT_TAC o REAL_SIMPLE_ARITH_REFUTER)
-        val res = tac g
-        val _ = trace "done PURE_REAL_ARITH_TAC"
-      in
-        res
-      end
-  end;
-
-(* renamed with OLD_ prefixes *)
-fun OLD_REAL_ARITH_TAC g =
-  let
-    val _ = trace "REAL_ARITH_TAC"
-    val res = (POP_ASSUM_LIST(K ALL_TAC) THEN PURE_REAL_ARITH_TAC) g
-    val _ = trace "done REAL_ARITH_TAC"
-  in
-    res
-  end;
-
-fun OLD_REAL_ASM_ARITH_TAC g =
-  let
-    val _ = trace "REAL_ASM_ARITH_TAC"
-    val res = (REPEAT (POP_ASSUM MP_TAC) THEN PURE_REAL_ARITH_TAC) g
-    val _ = trace "done REAL_ASM_ARITH_TAC"
-  in
-    res
-  end;
-
-(* ------------------------------------------------------------------------- *)
-(* Rule version.                                                             *)
-(* ------------------------------------------------------------------------- *)
-
-fun OLD_REAL_ARITH tm =
-  let
-    val _ = trace "REAL_ARITH"
-    val res = Tactical.default_prover (tm,OLD_REAL_ARITH_TAC)
-    val _ = trace "done REAL_ARITH"
-  in
-    res
-  end;
 
 (* ========================================================================= *)
 (* Framework for universal real decision procedures, and a simple instance.  *)
@@ -1882,7 +774,7 @@ fun linear_ineqs (vars :term set) (les :(linear_type * positivstellensatz) list,
 
      (* The so-called "blowup" seems to be a heuristics on how frequently a variable
         occurs with "balanced" times with both positive and negative coefficients.
-       (See also calc_blowup() for a similar piece of code.) *)
+      *)
         fun blowup v = let
             val p = filter (fn (e,_) => Arbrat.> (apply e v,Arbrat.zero)) ineqs
             and n = filter (fn (e,_) => Arbrat.< (apply e v,Arbrat.zero)) ineqs in
@@ -2120,27 +1012,6 @@ fun MATCH_MP_RULE rules =
       fn th => MP (apply_net th) th
   end;
 
-(* This commented code is for debugging GEN_REAL_ARITH only:
-
-val (mk_numeric,
-     NUMERIC_EQ_CONV,NUMERIC_GE_CONV,NUMERIC_GT_CONV,
-     POLY_CONV,POLY_NEG_CONV,POLY_ADD_CONV,POLY_MUL_CONV,
-     absconv1,absconv2,prover) =
-    (term_of_rat,
-     REAL_INT_EQ_CONV,REAL_INT_GE_CONV,REAL_INT_GT_CONV,
-     REAL_POLY_CONV,REAL_POLY_NEG_CONV,REAL_POLY_ADD_CONV,REAL_POLY_MUL_CONV,
-     NO_CONV,NO_CONV,REAL_LINEAR_PROVER);
-
-val (mk_numeric,
-     NUMERIC_EQ_CONV,NUMERIC_GE_CONV,NUMERIC_GT_CONV,
-     POLY_CONV,POLY_NEG_CONV,POLY_ADD_CONV,POLY_MUL_CONV,
-     absconv1,absconv2,prover) =
-    (term_of_rat,
-     REAL_RAT_EQ_CONV,REAL_RAT_GE_CONV,REAL_RAT_GT_CONV,
-     REAL_POLY_CONV,REAL_POLY_NEG_CONV,REAL_POLY_ADD_CONV,REAL_POLY_MUL_CONV,
-     ABSMAXMIN_ELIM_CONV1,ABSMAXMIN_ELIM_CONV2,REAL_LINEAR_PROVER);
- *)
-
 local
   val pth_init = prove
    (“(x < y <=> y - x > &0) /\
@@ -2225,16 +1096,11 @@ fun GEN_REAL_ARITH0 (mk_numeric,
                      POLY_CONV,POLY_NEG_CONV,POLY_ADD_CONV,POLY_MUL_CONV,
                      absconv1,absconv2,prover) =
 let
-
-  (* NOTE: sometimes the real arith expression is hidding in deeper level, e.g.
-     in {x | x + 0 < 1}. Some proofs require their reducitions. -- Chun Tian *)
-  val POLY_CONV' = QCONV (TOP_DEPTH_CONV POLY_CONV);
-
   fun REAL_INEQ_CONV pth tm = let
     val (lop,r) = dest_comb tm;
     val th = INST [x_tm |-> rand lop, y_tm |-> r] pth
   in
-    TRANS th (LAND_CONV POLY_CONV' (rand(concl th)))
+    TRANS th (LAND_CONV POLY_CONV (rand(concl th)))
   end;
 
   val convs = map REAL_INEQ_CONV (CONJUNCTS pth_init)
@@ -2258,7 +1124,7 @@ let
   in
       fn tm => let val (l,r) = dest_eq tm;
                    val th = INST [x_tm |-> l, y_tm |-> r] pth10;
-                   val th_p = POLY_CONV' (lhand(lhand(rand(concl th))));
+                   val th_p = POLY_CONV (lhand(lhand(rand(concl th))));
                    val th_x = AP_TERM neg_tm th_p;
                    val th_n = CONV_RULE (RAND_CONV POLY_NEG_CONV) th_x;
                    val th' = MK_DISJ (AP_THM (AP_TERM gt_tm th_p) z_tm)
@@ -2326,9 +1192,6 @@ let
 
   fun SQUARE_RULE t = CONV_RULE (LAND_CONV POLY_MUL_CONV) (SPEC t pth_square);
 
-  (* val (eqs,les,lts) = (eq,le',lt');
-     NOTE: for debugging purposes, one may use dest_positivstellensatz()
-   *)
   fun hol_of_positivstellensatz(eqs,les,lts) = let
     fun translate (Axiom_eq n) = List.nth (eqs,n)
       | translate (Axiom_le n) = List.nth (les,n)
@@ -2353,13 +1216,6 @@ let
   val init_conv =
     TOP_DEPTH_CONV BETA_CONV THENC
     PRESIMP_CONV THENC
-
-    (* NOTE: this step of POLY_CONV helps by cutting off real arith terms
-       hidding in propositional terms, e.g. ‘closed {x | 1 * x = a}’ will
-       be simplified to ‘closed {x | x = a}’ before going to NNF_CONV.
-       Some HOL4 proofs rely on this. *)
-    TOP_DEPTH_CONV POLY_CONV THENC
-
     NNF_CONV THENC DEPTH_BINOP_CONV or_tm CONDS_ELIM_CONV THENC
     NNF_NORM_CONV THENC
     SKOLEM_CONV THENC
@@ -2393,7 +1249,7 @@ let
       GEN_NNF_CONV false
         (CACHE_CONV REAL_INEQ_NORM_CONV,fn t => failwith "");
   fun absremover (t :term) :thm =
-     (TOP_DEPTH_CONV(absconv1 THENC BINOP_CONV (LAND_CONV POLY_CONV')) THENC
+     (TOP_DEPTH_CONV(absconv1 THENC BINOP_CONV (LAND_CONV POLY_CONV)) THENC
       TRY_CONV(absconv2 THENC NNF_NORM_CONV' THENC BINOP_CONV absremover)) t;
 in
   fn tm => let
@@ -2417,6 +1273,7 @@ in
   end
 end;
 end (* local *)
+
 (* ------------------------------------------------------------------------- *)
 (* Bootstrapping REAL_ARITH: trivial abs-elim and only integer constants.    *)
 (* ------------------------------------------------------------------------- *)

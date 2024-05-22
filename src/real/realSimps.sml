@@ -1,6 +1,7 @@
 (* ------------------------------------------------------------------------- *)
 (* A real simpset (includes Peano arithmetic and pairs).                     *)
 (* ------------------------------------------------------------------------- *)
+
 structure realSimps :> realSimps =
 struct
 
@@ -9,7 +10,7 @@ open HolKernel Parse boolLib realTheory simpLib realSyntax
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars realTheory.real_grammars
+  val (Type,Term) = parse_from_grammars real_grammars
 end
 
 open Parse
@@ -235,7 +236,8 @@ val ltnb12 = TAC_PROOF(([], “0 < NUMERAL (BIT1 n) /\ 0 < NUMERAL (BIT2 n)”),
                                    arithmeticTheory.BIT2,
                                    arithmeticTheory.ADD_CLAUSES,
                                    prim_recTheory.LESS_0])
-val let_id = TAC_PROOF(([], “LET (\n. n) x = x”),
+
+val let_id = TAC_PROOF(([], “LET (\n :'a. n) x = x”),
                        SIMP_TAC boolSimps.bool_ss [LET_THM])
 
 val op_rwts =
@@ -494,8 +496,7 @@ fun is_arith_thm thm =
 
 val is_arith_asm = is_arith_thm o ASSUME
 
-(* The old d.p. is faster *)
-val ARITH = RealArith.OLD_REAL_ARITH
+val ARITH = RealArith.REAL_ARITH;
 
 open Trace Cache Traverse
 fun CTXT_ARITH thms tm = let
@@ -1266,4 +1267,4 @@ val RMULRELNORM_ss = SSFRAG {
 
 val _ = addfrags [RMULRELNORM_ss]
 
-end
+end (* struct *)

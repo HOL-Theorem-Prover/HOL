@@ -4,8 +4,6 @@ open simpLib realSimps isqrtLib RealArith RealField bitArithLib;
 
 open testutils;
 
-(* The original version and old port by Hurd *)
-val REAL_ARITH0 = RealArith.OLD_REAL_ARITH;
 (* The new port, only suppports integral coefficients *)
 val REAL_ARITH1 = RealArith.REAL_ARITH;
 (* The new port, also suppports rational coefficients *)
@@ -327,17 +325,9 @@ val _ = List.app (real_arith_test REAL_ARITH2) [
       (* from iterateTheory.SUM_GP_BASIC *)
       ("REAL_ARITH2_03", “1 - x * x pow n + (1 - x) * (x * x pow n) = 1 - x * (x * x pow n)”),
 
-      (* from real_topologyTheory.LINEAR_INJECTIVE_LEFT_INVERSE
-         NOTE: Hurd's REAL_ARITH can solve this but HOL-Light's original one cannot.
-       *)
-      ("REAL_ARITH2_04", “((f :real->real) (&0 * &0) = &0 * f (&0)) ==> (&0 = f (&0))”),
-
       (* from real_topologyTheory.SEQ_HARMONIC_OFFSET *)
       ("REAL_ARITH2_05", “0 < e ==> N <> 0 ==> 0 < &N ==> realinv (&N) < e ==>
                           -a <= &M ==> &M + &N <= &n ==> &n + a <> 0 ==> &N <= abs (&n + a)”),
-
-      (* from real_topologyTheory.CLOSED_STANDARD_HYPERPLANE *)
-      ("REAL_ARITH2_06", “closed {x | 1 * x = (a:real)} ==> closed {x | x = (a:real)}”),
 
       (* from integrationTheory.FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG *)
       ("REAL_ARITH2_07", “x = (b:real) ==> &0 < &1 ==> 0 <= e / 2 pow (4 + n b) * 0”)

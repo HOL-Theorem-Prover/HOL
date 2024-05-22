@@ -22,7 +22,7 @@ open numTheory numLib unwindLib tautLib prim_recTheory
      combinTheory quotientTheory arithmeticTheory realTheory
      jrhUtils pairTheory boolTheory pred_setTheory optionTheory
      sumTheory InductiveDefinition listTheory mesonLib
-     realLib topologyTheory metricTheory netsTheory;
+     RealArith realSimps topologyTheory metricTheory netsTheory;
 
 open wellorderTheory cardinalTheory permutesTheory iterateTheory hurdUtils;
 
@@ -30,7 +30,6 @@ val _ = new_theory "real_topology";
 
 val std_ss' = std_ss -* ["lift_disj_eq", "lift_imp_disj"];
 
-fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
@@ -43,7 +42,6 @@ val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* realLib *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
-val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
 val SUM_ABS            = SUM_ABS';           (* iterateTheory *)
 val SUM_ABS_LE         = SUM_ABS_LE';        (* iterateTheory *)
 val SUM_EQ             = SUM_EQ';            (* iterateTheory *)
@@ -1720,11 +1718,11 @@ val LINEAR_INJECTIVE_LEFT_INVERSE = store_thm ("LINEAR_INJECTIVE_LEFT_INVERSE",
    [METIS_TAC [], REWRITE_TAC [GSYM INJECTIVE_LEFT_INVERSE] THEN DISCH_TAC] THEN
    FULL_SIMP_TAC std_ss [linear] THEN KNOW_TAC ``0 = (f:real->real) 0`` THENL
    [UNDISCH_TAC ``!c x. (f:real->real) (c * x) = c * f x`` THEN
-    DISCH_THEN (MP_TAC o SPECL [``0:real``, ``0:real``]) THEN REAL_ARITH_TAC,
+    DISCH_THEN (MP_TAC o SPECL [``0:real``, ``0:real``]) >> rw [],
     DISCH_TAC THEN ONCE_ASM_REWRITE_TAC []] THEN DISCH_TAC THEN
    UNDISCH_TAC ``!x y. ((f:real->real) x = f y) ==> (x = y)`` THEN
    DISCH_THEN (MP_TAC o SPECL [``1:real``,``0:real``]) THEN
-   POP_ASSUM MP_TAC THEN REAL_ARITH_TAC,
+   POP_ASSUM MP_TAC THEN rw [],
    DISCH_THEN (X_CHOOSE_TAC ``h:real->real``) THEN EXISTS_TAC ``h:real->real`` THEN
    POP_ASSUM MP_TAC THEN
    ASM_SIMP_TAC std_ss [FORALL_IN_IMAGE, GSPECIFICATION] THEN STRIP_TAC THEN
@@ -10711,19 +10709,19 @@ val CLOSED_STANDARD_HYPERPLANE = store_thm ("CLOSED_STANDARD_HYPERPLANE",
  ``!a. closed {x:real | x = a}``,
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [``1:real``, ``a:real``] CLOSED_HYPERPLANE) THEN
-  REAL_ARITH_TAC);
+  rw []);
 
 val CLOSED_HALFSPACE_COMPONENT_LE = store_thm ("CLOSED_HALFSPACE_COMPONENT_LE",
  ``!a. closed {x:real | x <= a}``,
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [``1:real``, ``a:real``] CLOSED_HALFSPACE_LE) THEN
-  REAL_ARITH_TAC);
+  rw []);
 
 val CLOSED_HALFSPACE_COMPONENT_GE = store_thm ("CLOSED_HALFSPACE_COMPONENT_GE",
  ``!a. closed {x:real | x >= a}``,
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [``1:real``, ``a:real``] CLOSED_HALFSPACE_GE) THEN
-  REAL_ARITH_TAC);
+  rw []);
 
 (* ------------------------------------------------------------------------- *)
 (* Openness of halfspaces.                                                   *)
