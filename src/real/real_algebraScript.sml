@@ -8,7 +8,7 @@
 
 open HolKernel boolLib bossLib Parse;
 
-open pred_setTheory realTheory iterateTheory dep_rewrite bagTheory
+open pred_setTheory realTheory iterateTheory real_sigmaTheory dep_rewrite bagTheory
      monoidTheory groupTheory ringTheory;
 
 val _ = new_theory "real_algebra";
@@ -176,8 +176,8 @@ Proof
   strip_tac
   \\ ho_match_mp_tac FINITE_INDUCT
   \\ rw[]
-  >- rw[Reals_def, iterateTheory.PRODUCT_CLAUSES]
-  \\ rw[iterateTheory.PRODUCT_CLAUSES]
+  >- rw[Reals_def, PRODUCT_CLAUSES]
+  \\ rw[PRODUCT_CLAUSES]
   \\ fs[DELETE_NON_ELEMENT]
   \\ fs[GSYM DELETE_NON_ELEMENT]
   \\ rw[BAG_OF_SET_INSERT_NON_ELEMENT]
