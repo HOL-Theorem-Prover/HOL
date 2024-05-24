@@ -20,7 +20,7 @@ selftest.exe: selftest.uo realSimps.uo
 EXTRA_CLEANS = selftest.exe real-selftest.log
 
 ifeq ($(KERNELID),otknl)
-BARE_THYS = realax real intreal real_sigma metric nets iterate
+BARE_THYS = realax real intreal real_sigma metric nets
 
 base-theorems.art:
 	opentheory info --theorems -o $@ real-1.61
