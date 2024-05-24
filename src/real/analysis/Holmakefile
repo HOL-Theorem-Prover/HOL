@@ -13,7 +13,7 @@ ifdef POLY
 HOLHEAP = realheap
 EXTRA_CLEANS += $(HOLHEAP)
 
-REAL_DEPS = realLib iterateTheory real_sigmaTheory metricTheory netsTheory \
+REAL_DEPS = realLib real_sigmaTheory metricTheory netsTheory \
             RealArith RealField realSimps
 
 BARE_DEPS = $(patsubst %,../%,$(REAL_DEPS))
