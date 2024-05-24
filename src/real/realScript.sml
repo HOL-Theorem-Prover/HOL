@@ -6,9 +6,11 @@ open HolKernel Parse boolLib bossLib;
 
 open numLib reduceLib pairLib arithmeticTheory numTheory prim_recTheory
      whileTheory mesonLib tautLib simpLib Arithconv jrhUtils Canon_Port
-     BasicProvers TotalDefn metisLib hurdUtils;
+     BasicProvers TotalDefn metisLib hurdUtils pred_setTheory;
 
 open realaxTheory RealArith;
+
+local open markerTheory in end; (* for unint *)
 
 val _ = new_theory "real";
 
@@ -2996,6 +2998,28 @@ QED
 
 val inf_def = Define `inf p = ~(sup (\r. p (~r)))`;
 
+Theorem inf_alt :
+    !p. inf p = ~(sup (IMAGE $~ p))
+Proof
+    RW_TAC std_ss [inf_def]
+ >> Suff `(\r. p (-r)) = (IMAGE numeric_negate p)` >- rw []
+ >> SET_EQ_TAC
+ >> RW_TAC std_ss [IN_IMAGE, IN_APP]
+ >> EQ_TAC >> RW_TAC std_ss []
+ >- (Q.EXISTS_TAC `-x` >> rw [REAL_NEG_NEG])
+ >> rw [REAL_NEG_NEG]
+QED
+
+Theorem INF_DEF_ALT :
+    !p. inf p = ~(sup (\r. ~r IN p)):real
+Proof
+    RW_TAC std_ss []
+ >> PURE_REWRITE_TAC [inf_def, IMAGE_DEF]
+ >> Suff `(\r. p (-r)) = (\r. -r IN p)`
+ >- RW_TAC std_ss []
+ >> RW_TAC std_ss [FUN_EQ_THM, SPECIFICATION]
+QED
+
 (* dual theorem of REAL_SUP *)
 Theorem REAL_INF :
     !P. (?x. P x) /\ (?z. !x. P x ==> z < x) ==>
@@ -3494,22 +3518,19 @@ val REAL_ADD_SUB_ALT = store_thm
    ``!x y : real. (x + y) - y = x``,
    RW_TAC boolSimps.bool_ss [REAL_EQ_SUB_RADD]);
 
-val INFINITE_REAL_UNIV = store_thm(
-  "INFINITE_REAL_UNIV",
-  ``INFINITE univ(:real)``,
+Theorem INFINITE_REAL_UNIV[simp] :
+    INFINITE univ(:real)
+Proof
   REWRITE_TAC [] THEN STRIP_TAC THEN
   `FINITE (IMAGE real_of_num univ(:num))`
-     by METIS_TAC [pred_setTheory.SUBSET_FINITE,
-                   pred_setTheory.SUBSET_UNIV] THEN
-  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.INJECTIVE_IMAGE_FINITE]);
-val _ = export_rewrites ["INFINITE_REAL_UNIV"]
+     by METIS_TAC [SUBSET_FINITE, SUBSET_UNIV] THEN
+  FULL_SIMP_TAC (srw_ss()) [INJECTIVE_IMAGE_FINITE]
+QED
 
 (* ----------------------------------------------------------------------
    theorems for calculating with the reals; naming scheme taken from
    Joe Hurd's development of the positive reals with an infinity
   ---------------------------------------------------------------------- *)
-
-local open markerTheory in end; (* for unint *)
 
 val ui = markerTheory.unint_def
 
