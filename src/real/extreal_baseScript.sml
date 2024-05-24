@@ -11,7 +11,7 @@ open HolKernel Parse boolLib bossLib;
 
 open combinTheory tautLib prim_recTheory arithmeticTheory numLib hurdUtils;
 
-open realTheory realLib iterateTheory;
+open realTheory realLib iterateTheory real_sigmaTheory;
 
 val _ = new_theory "extreal_base";
 
