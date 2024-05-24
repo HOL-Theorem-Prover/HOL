@@ -1534,7 +1534,7 @@ val INDEP_FN_PROB = store_thm
       (MP_TAC o
        Q.SPECL [`p o FST o (f : (num -> bool) -> 'a # (num -> bool))`,
                 `q o SND o (f : (num -> bool) -> 'a # (num -> bool))`])
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [IN_IMAGE, IN_UNIV, PREIMAGE_ALT]
        >> PROVE_TAC [])
    >> RW_TAC std_ss [indep_def]
@@ -1672,7 +1672,7 @@ val PROB_BERN_BIND_BOOL_BOOL = store_thm
                  $~ o FST o f INTER (I o FST o g F) o SND o f`] o
        INST_TYPE [(alpha |-> ``:num -> bool``)])
       PROB_ADDITIVE
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [PROB_SPACE_BERN, EVENTS_INTER, IN_DISJOINT, IN_INTER,
                       IN_o, o_THM]
        >> RW_TAC std_ss [SPECIFICATION, I_THM]
@@ -1752,7 +1752,7 @@ val PROB_BERN_BIND_FINITE = store_thm
                      PROB_BERN_EMPTY]
    >> STRIP_TAC
    >> Q.PAT_X_ASSUM `X ==> Y` MP_TAC
-   >> Cond >- PROVE_TAC [prim_recTheory.LESS_THM]
+   >> impl_tac >- PROVE_TAC [prim_recTheory.LESS_THM]
    >> RW_TAC bool_ss [sum]
    >> POP_ASSUM K_TAC
    >> RW_TAC bool_ss [COUNT_SUC, IMAGE_INSERT, BIGUNION_INSERT]
@@ -1895,7 +1895,7 @@ val PROB_BERN_BIND_UPPER = store_thm
    >> RW_TAC std_ss [] >| (* 2 goals here *)
    [(* goal 1 (of 2) *)
     MP_TAC (Q.SPECL [`p`, `f`, `g`, `c`] PROB_BERN_BIND_INFINITE)
-    >> Cond >- RW_TAC std_ss []
+    >> impl_tac >- RW_TAC std_ss []
     >> Know
        `(\m. prob bern ($= (c m) o FST o f) * (if c m IN q then x else y))
         sums
@@ -2019,7 +2019,7 @@ val PROB_BERN_BIND_UPPER = store_thm
      >> PROVE_TAC [INDEP_FN_FST_EVENTS]],
     (* goal 2 (of 2) *)
     MP_TAC (Q.SPECL [`p`, `f`, `g`, `c`, `n`] PROB_BERN_BIND_FINITE)
-    >> Cond >- RW_TAC std_ss []
+    >> impl_tac >- RW_TAC std_ss []
     >> Know
        `sum (0, n)
         (\m. prob bern ($= (c m) o FST o f) * (if c m IN q then x else y)) =
@@ -2252,7 +2252,7 @@ val PROB_BERN_MANY = store_thm
         `prob bern (FST o (f : (num -> bool) -> bool # (num -> bool)))`])
       PROB_BERN_BIND_BOOL_BOOL
    >> BETA_TAC
-   >> Cond
+   >> impl_tac
    >- RW_TAC std_ss [INDEP_FN_PROB_WHILE_CUT, INDEP_FN_UNIT, K_THM]
    >> Rewr
    >> Know `prob bern (FST o prob_while_cut I (K f) n F) = 0`
@@ -2589,7 +2589,7 @@ Proof
           (prefix_cover_level c (\a l. FST (b a (prefix_seq l))) ca a
            (SUC n)))`])
        PROB_BERN_PREFIX_COVER_INTER
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM)
    >> (MP_TAC o
        Q.SPECL
@@ -2598,10 +2598,10 @@ Proof
          (SUC n = LEAST n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) /\
          ~c (FST (FUNPOW (UNCURRY b) (SUC n) (a,s)))}`])
        PROB_BERN_PREFIX_COVER_INTER
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM)
    >> MP_TAC (Q.ISPEC `IMAGE prefix_set (ca a)` COUNTABLE_DISJOINT_ENUM)
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [image_countable, COUNTABLE_BOOL_LIST]
        >> PROVE_TAC [PREFIX_COVER_DISJOINT])
    >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_INSERT, IN_IMAGE]
@@ -2772,9 +2772,9 @@ Proof
       (fn th =>
        MP_TAC (Q.SPECL [`a`, `l'`, `prefix_seq (APPEND l' y)`] th)
        >> MP_TAC (Q.SPECL [`a`, `l'`, `s`] th))
-   >> Cond >- PROVE_TAC [SDROP_APPEND, PREFIX_SET_APPEND, PREFIX_SEQ]
+   >> impl_tac >- PROVE_TAC [SDROP_APPEND, PREFIX_SET_APPEND, PREFIX_SEQ]
    >> Rewr
-   >> Cond >- PROVE_TAC [SDROP_APPEND, PREFIX_SET_APPEND, PREFIX_SEQ]
+   >> impl_tac >- PROVE_TAC [SDROP_APPEND, PREFIX_SET_APPEND, PREFIX_SEQ]
    >> Rewr
    >> RW_TAC std_ss [SDROP_PREFIX_SEQ_APPEND]
    >> Q.PAT_X_ASSUM `!a l s. P a l s`
@@ -2782,8 +2782,8 @@ Proof
        Q.SPECL [`FST ((b : 'a -> (num -> bool) -> 'a # (num -> bool)) a
                       (prefix_seq (l' : bool list)))`, `y`,
                 `sdrop (LENGTH (l' : bool list)) s`])
-   >> Cond >- PROVE_TAC [SDROP_APPEND]
-   >> Cond >- PROVE_TAC []
+   >> impl_tac >- PROVE_TAC [SDROP_APPEND]
+   >> impl_tac >- PROVE_TAC []
    >> Rewr
    >> RW_TAC std_ss [LENGTH_APPEND]
    >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -3046,7 +3046,7 @@ val PROB_WHILE_EXISTS = store_thm
        INST_TYPE [beta |-> ``:num -> bool``] o
        Q.SPECL [`c`, `b`, `\a l. FST (b a (prefix_seq l))`, `c'`, `a`])
        PROB_WHILE_TERMINATES_PREFIX_COVER_STAR
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> STRIP_TAC
    >> reverse CONJ_TAC >- RW_TAC std_ss [PROB_WHILE_WITNESS_BIND]
    >> SIMP_TAC std_ss [indep_fn_def, GSPECIFICATION]
@@ -3060,7 +3060,7 @@ val PROB_WHILE_EXISTS = store_thm
        Q.SPECL [`c`, `b`, `\a l. FST (b a (prefix_seq l))`, `c'`, `a`,
                 `s`, `l`, `x`])
       PREFIX_COVER_STAR_FIXES_FN
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> RW_TAC std_ss []);
 
 (* ------------------------------------------------------------------------- *)
@@ -3198,7 +3198,7 @@ val PROB_WHILE_TERMINATES_SUFFICIENT = store_thm
    >- ((MP_TAC o
         INST_TYPE [beta |-> alpha, gamma |-> ``:num -> bool``] o
         Q.SPEC `1 - prob bern {s | !a. ~c (FST (b a s))}`) GP
-       >> Cond
+       >> impl_tac
        >- (MATCH_MP_TAC ABS_1_MINUS_PROB
            >> RW_TAC std_ss [PROB_SPACE_BERN])
        >> RW_TAC std_ss [SUMS_EQ])
@@ -3249,7 +3249,7 @@ val PROB_BERN_UNIVERSAL = store_thm
    >> (MP_TAC o
        Q.SPECL [`e`, `{s | p s}`] o
        Q.ISPEC `bern`) PROB_ONE_INTER
-   >> Cond >- RW_TAC std_ss [PROB_SPACE_BERN]
+   >> impl_tac >- RW_TAC std_ss [PROB_SPACE_BERN]
    >> DISCH_THEN (REWRITE_TAC o wrap o SYM)
    >> Know `e INTER {s | p s} IN events bern`
    >- PROVE_TAC [EVENTS_INTER, PROB_SPACE_BERN]
@@ -3367,7 +3367,7 @@ Proof
    >- RW_TAC std_ss [EVENTS_BERN_NONEVENT_SEQ, PROB_SPACE_BERN,
                      EVENTS_BERN_MIRROR, EVENTS_UNION]
    >> STRIP_TAC
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss []
        >> SET_EQ_TAC
        >> PSET_TAC [MIRROR_MIRROR]
@@ -3380,7 +3380,7 @@ Proof
    >> Rewr
    >> Q.PAT_X_ASSUM `X = Y` (REWRITE_TAC o wrap o SYM)
    >> MP_TAC (Q.SPEC `nonevent_seq n` PROB_BERN_MIRROR)
-   >> Cond >- PROVE_TAC [EVENTS_BERN_NONEVENT_SEQ]
+   >> impl_tac >- PROVE_TAC [EVENTS_BERN_NONEVENT_SEQ]
    >> DISCH_THEN
       (fn th => CONV_TAC (RAND_CONV (RAND_CONV (ONCE_REWRITE_CONV [SYM th]))))
    >> MATCH_MP_TAC PROB_ADDITIVE
@@ -3720,7 +3720,7 @@ val PROB_BERN_BIND_LOWER = store_thm
        Q.SPECL [`COMPL p`, `f`, `g`, `q`, `1 - x`, `1 - y`])
       PROB_BERN_BIND_UPPER
    >> SIMP_TAC std_ss [COMPL_o]
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [] >|
        [RES_TAC
         >> Know `p o FST o g a IN events bern`
@@ -3840,7 +3840,7 @@ Proof
            Q.SPECL [`c'`, `n`, `count n`, `s`] o
            INST_TYPE [alpha |-> ``:num``])
           BIJ_INSERT_NOTIN
-       >> Cond >- RW_TAC arith_ss [IN_COUNT]
+       >> impl_tac >- RW_TAC arith_ss [IN_COUNT]
        >> RW_TAC std_ss []
        >> Q.PAT_X_ASSUM `!x. P x` MP_TAC
        >> RW_TAC std_ss [IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM]
@@ -3905,7 +3905,7 @@ Proof
    >> Q.SPEC_TAC (`enumerate (range (FST o f))`, `j`)
    >> RW_TAC std_ss []
    >> MP_TAC (Q.SPECL [`p`, `f`, `g`, `j`] PROB_BERN_BIND_INFINITE)
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> Q.SPEC_TAC (`prob bern (p o FST o BIND f g)`, `l`)
    >> REPEAT STRIP_TAC
    >> Know `!x. 0 <= prob bern ($= x o FST o f) * prob bern (p o FST o g x)`
@@ -3941,7 +3941,7 @@ Proof
                   (g : 'b -> (num -> bool) -> 'a # (num -> bool)) (c n))
                else 0`, `h : num -> num`, `IMAGE (h : num -> num) UNIV`, `l`])
           SER_BIJ_COMPRESS
-       >> Cond
+       >> impl_tac
        >- (POP_ASSUM K_TAC
            >> CONJ_TAC >- RW_TAC std_ss [REAL_LE_REFL]
            >> CONJ_TAC
@@ -3966,7 +3966,7 @@ Proof
            >> POP_ASSUM
               (MP_TAC o
                Q.SPEC `FST ((f : (num -> bool) -> 'b # (num -> bool)) x)`)
-           >> Cond >- (Q.EXISTS_TAC `x` >> RW_TAC std_ss [])
+           >> impl_tac >- (Q.EXISTS_TAC `x` >> RW_TAC std_ss [])
            >> STRIP_TAC
            >> POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
            >> Q.PAT_X_ASSUM `!m. P m /\ Q m` (MP_TAC o GSYM o Q.SPEC `y`)
@@ -4009,11 +4009,11 @@ val PROB_BERN_BIND_EQ = store_thm
        >> RW_TAC std_ss [indep_fn_def, union_countable, GSPECIFICATION])
    >> RW_TAC std_ss [COUNTABLE_ALT, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM]
    >> MP_TAC (Q.SPECL [`p`, `f1`, `g1`, `f`] PROB_BERN_BIND_COUNTABLE)
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> RW_TAC std_ss [SUMS_EQ]
    >> POP_ASSUM (REWRITE_TAC o wrap o SYM)
    >> MP_TAC (Q.SPECL [`p`, `f2`, `g2`, `f`] PROB_BERN_BIND_COUNTABLE)
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> RW_TAC std_ss [SUMS_EQ]
    >> POP_ASSUM (REWRITE_TAC o wrap o SYM));
 
@@ -4059,7 +4059,7 @@ val PROB_BERN_BIND_COMM = store_thm
         `prob bern ($= (q, r) o FST o (\x. BIND g (\y. UNIT (x,y))) q)`, `0`] o
        INST_TYPE [alpha |-> ``:'a # 'b``, beta |-> alpha])
       PROB_BERN_BIND
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [INDEP_FN_BIND, INDEP_FN_UNIT, IN_SING]
        >> Suff `($= (q,r) o FST o BIND g (\y. UNIT (a,y))) = {}`
        >- RW_TAC std_ss [PROB_BERN_EMPTY]
@@ -4073,7 +4073,7 @@ val PROB_BERN_BIND_COMM = store_thm
         `prob bern ($= (q, r) o FST o (\y. BIND f (\x. UNIT (x,y))) r)`, `0`] o
        INST_TYPE [alpha |-> ``:'a # 'b``, beta |-> beta])
       PROB_BERN_BIND
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [INDEP_FN_BIND, INDEP_FN_UNIT, IN_SING]
        >> Suff `($= (q,r) o FST o BIND f (\x. UNIT (x,a))) = {}`
        >- RW_TAC std_ss [PROB_BERN_EMPTY]
@@ -4116,7 +4116,7 @@ val PROB_UNTIL_ADVANCE = store_thm
    RW_TAC std_ss [prob_until_def]
    >> MP_TAC (Q.SPECL [`$~ o c`, `K b`] PROB_WHILE_ADVANCE)
    >> CONV_TAC (DEPTH_CONV FORALL_IMP_CONV)
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [K_THM]
        >> MATCH_MP_TAC PROB_WHILE_TERMINATES_SUFFICIENT
        >> RW_TAC std_ss [K_THM, o_THM])
@@ -4179,7 +4179,7 @@ val PROB_BERN_UNTIL = store_thm
    >- (AP_TERM_TAC
        >> SET_EQ_TAC
        >> MP_TAC (Q.SPECL [`b`, `c`] PROB_UNTIL_ADVANCE)
-       >> Cond >- RW_TAC std_ss []
+       >> impl_tac >- RW_TAC std_ss []
        >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
        >> RW_TAC std_ss [IN_INTER, IN_o, o_THM, BIND_DEF, UNCURRY, UNIT_DEF,
                          GSPECIFICATION])
@@ -4193,7 +4193,7 @@ val PROB_BERN_UNTIL = store_thm
    >> AP_TERM_TAC
    >> SET_EQ_TAC
    >> MP_TAC (Q.SPECL [`b`, `c`] PROB_UNTIL_ADVANCE)
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> STRIP_TAC
    >> GEN_TAC
    >> POP_ASSUM (CONV_TAC o RATOR_CONV o ONCE_REWRITE_CONV o wrap)
@@ -4320,7 +4320,7 @@ val PROB_BERN_COIN_FLIP = store_thm
         (1 / 2) * prob bern (p o FST o g))``,
    RW_TAC std_ss [coin_flip_def]
    >> MP_TAC (Q.SPECL [`\x. if x then f else g`, `p`] PROB_BERN_BIND_SDEST)
-   >> Cond >- (Cases >> RW_TAC std_ss [])
+   >> impl_tac >- (Cases >> RW_TAC std_ss [])
    >> RW_TAC std_ss []);
 
 val INDEP_FN_MMAP = store_thm
@@ -4691,7 +4691,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
         >> MP_TAC
            (Q.SPECL [`SUC n`, `SUC n' + n`, `c`, `b`, `a`, `s`]
             (INST_TYPE [beta |-> ``:num->bool``] PROB_WHILE_CUT_MONO))
-        >> Cond >- RW_TAC arith_ss []
+        >> impl_tac >- RW_TAC arith_ss []
         >> RW_TAC std_ss [PROB_WHILE_CUT_ADD, BIND_DEF, UNCURRY, o_THM],
         POP_ASSUM MP_TAC
         >> Q.SPEC_TAC (`a`, `a`)
@@ -5062,7 +5062,7 @@ val PROB_TERMINATES_MORGAN = store_thm
        prob_while_terminates c b``,
    RW_TAC std_ss []
    >> MP_TAC (Q.SPECL [`c`, `b`] PROB_TERMINATES_HART)
-   >> Cond >- RW_TAC std_ss []
+   >> impl_tac >- RW_TAC std_ss []
    >> Rewr
    >> reverse (Cases_on `p <= 1`)
    >- (Suff `!a. ~c a`

@@ -798,7 +798,7 @@ val MILLER_RABIN_1_COMPOSITE = store_thm
    >- (MP_TAC (Q.ISPECL [`(\x : num. x + 2)`,
                          `count (n - 2) INTER {a | witness n (a + 2)}`,
                          `UNIV : num -> bool`] CARD_IMAGE)
-       >> Cond
+       >> impl_tac
        >- (RW_TAC std_ss [INJ_DEF, IN_UNIV, INTER_FINITE, FINITE_COUNT]
            >> DECIDE_TAC)
        >> RW_TAC std_ss [])

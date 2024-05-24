@@ -289,9 +289,9 @@ val BIJ_ALT_RES = store_thm
     (fn th =>
      MP_TAC (Q.SPEC `(f:'a->'b) x` th)
      >> MP_TAC (Q.SPEC `(f:'a->'b) y` th))
-    >> Cond >- PROVE_TAC []
+    >> impl_tac >- PROVE_TAC []
     >> STRIP_TAC
-    >> Cond >- PROVE_TAC []
+    >> impl_tac >- PROVE_TAC []
     >> STRIP_TAC
     >> PROVE_TAC [],
     PROVE_TAC []]);

@@ -969,7 +969,7 @@ val MONOTONE_CONVERGENCE = store_thm
        INST_TYPE [beta |-> ``:num``] o
        Q.SPECL [`m`, `BIGUNION (IMAGE f UNIV)`, `\x. num_CASE x {} f`])
       MEASURE_COUNTABLE_INCREASING
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [IN_FUNSET, IN_UNIV, num_case_def, measure_space_def] >|
        [Cases_on `x` >|
         [RW_TAC std_ss [num_case_def]

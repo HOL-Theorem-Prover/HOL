@@ -976,44 +976,12 @@ fun K_TAC _ = ALL_TAC;
 
 val KILL_TAC = POP_ASSUM_LIST K_TAC;
 
-fun CONJUNCTS_TAC g = TRY (CONJ_TAC >| [ALL_TAC, CONJUNCTS_TAC]) g;
-
 val FUN_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV FUN_EQ_CONV));
 val SET_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV SET_EQ_CONV));
-
-local
-  val th1 = DECIDE ``!t. T ==> (F ==> t)``
-in
-  val CHECK_ASMS_TAC :tactic =
-    REPEAT (PAT_ASSUM T K_TAC)
-    >> REPEAT (PAT_ASSUM F (fn th => MP_TAC th >> MATCH_MP_TAC th1))
-end;
-
-local
-  val th = DECIDE ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``;
-in
-  val Cond = MATCH_MP_TAC th >> CONJ_TAC;
-end;
 
 val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
 val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val POP_ORW = POP_ASSUM (ONCE_REWRITE_TAC o wrap);
-
-(* --------------------------------------------------------------------- *)
-(* EXACT_MP_TAC : thm -> tactic                                          *)
-(*                                                                       *)
-(* If the goal is (asms, g) then the supplied theorem should be of the   *)
-(* form [..] |- g' ==> g                                                 *)
-(*                                                                       *)
-(* The tactic returns one subgoal of the form (asms, g')                 *)
-(* --------------------------------------------------------------------- *)
-
-fun EXACT_MP_TAC mp_th :tactic =
-  let
-    val g' = fst (dest_imp (concl mp_th))
-  in
-    fn (asms, g) => ([(asms, g')], MP mp_th o hd)
-  end;
 
 (* --------------------------------------------------------------------- *)
 (* STRONG_CONJ_TAC : tactic                                              *)

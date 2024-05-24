@@ -91,7 +91,7 @@ val PROB_TERMINATES_BERNOULLI = store_thm
                       BIND_RIGHT_UNIT, o_THM]
    >> MP_TAC (Q.SPEC `{x | ISR x} o FST o prob_bernoulli_iter x`
               (GSYM PROB_BERN_INTER_HALVES))
-   >> Cond >- RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_BERNOULLI_ITER]
+   >> impl_tac >- RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_BERNOULLI_ITER]
    >> Rewr'
    >> RW_TAC std_ss [prob_bernoulli_iter_def] \\ (* 2 sub-goals here *)
  ( Know `!f b.
@@ -142,7 +142,7 @@ val PROB_BERNOULLI_ALT = store_thm
    SIMP_TAC std_ss [prob_bernoulli_def, prob_bernoulli_loop_def]
    >> MP_TAC (Q.SPECL [`ISL`, `prob_bernoulli_iter o OUTL`, `INL p`]
               (INST_TYPE [alpha |-> ``:real+bool``] PROB_WHILE_ADVANCE))
-   >> Cond
+   >> impl_tac
    >- RW_TAC std_ss [INDEP_FN_PROB_BERNOULLI_ITER, PROB_TERMINATES_BERNOULLI,
                      o_THM]
    >> Rewr
@@ -189,7 +189,7 @@ val PROB_BERNOULLI = store_thm
        >> REAL_ARITH_TAC)
    >> GEN_TAC
    >> MP_TAC (Q.SPEC `I o FST o prob_bernoulli p` (GSYM PROB_BERN_INTER_HALVES))
-   >> Cond >- RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_BERNOULLI]
+   >> impl_tac >- RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_BERNOULLI]
    >> Rewr'
    >> REPEAT DISCH_TAC
    >> Know `!x y : real. abs 2 * x <= 2 * y ==> x <= y`

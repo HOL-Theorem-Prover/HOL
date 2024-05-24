@@ -75,10 +75,6 @@ fun K_TAC _ = ALL_TAC;
 val KILL_TAC = POP_ASSUM_LIST K_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
-val Cond =
-    MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``) \\
-    CONJ_TAC;
-fun wrap a = [a];
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.                                               *)
@@ -2566,9 +2562,9 @@ Proof
         (fn th =>
             MP_TAC (Q.SPEC `(f :'a-> 'b) x` th) \\
             MP_TAC (Q.SPEC `(f:'a->'b) y` th)) \\
-            Cond >- PROVE_TAC [] \\
+            impl_tac >- PROVE_TAC [] \\
             STRIP_TAC \\
-            Cond >- PROVE_TAC [] \\
+            impl_tac >- PROVE_TAC [] \\
             STRIP_TAC >> PROVE_TAC [],
       (* goal 3 (of 4) *)
       PROVE_TAC [],

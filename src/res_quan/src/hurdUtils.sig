@@ -321,18 +321,14 @@ sig
   val Strip : tactic
   val K_TAC : 'a -> tactic
   val KILL_TAC : tactic
-  val CONJUNCTS_TAC : tactic
   val FUN_EQ_TAC : tactic
   val SET_EQ_TAC : tactic
-  val CHECK_ASMS_TAC : tactic
-  val EXACT_MP_TAC : thm_tactic
   val STRONG_CONJ_TAC : tactic
   val STRONG_DISJ_TAC : tactic
   val FORWARD_TAC : (thm list -> thm list) -> tactic
   val Know : term quotation -> tactic
   val Suff : term quotation -> tactic
   val POP_ORW : tactic
-  val Cond : tactic
   val Rewr  : tactic
   val Rewr' : tactic
   val art : thm list -> tactic (* ASM_REWRITE_TAC *)
