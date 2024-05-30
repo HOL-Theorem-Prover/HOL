@@ -639,6 +639,7 @@ in
         INT_DIV_EDIV, INT_MOD_EMOD, INT_QUOT_EDIV, INT_REM_EMOD,
         (* others *)
         int_arithTheory.INT_NUM_SUB,
+        markerTheory.Abbrev_def,
         realaxTheory.real_min, realaxTheory.real_max, realTheory.abs
       ] else []
     end
