@@ -105,11 +105,24 @@ fun mk_test_fun is_configured expect_fun name smt_tac =
 fun auto_tac (_, t) =
   let
     val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
-    val t_eq_t' = simpLib.SIMP_CONV simpset [integerTheory.INT_ABS,
-      integerTheory.INT_MAX, integerTheory.INT_MIN, integerTheory.int_quot,
-      integerTheory.int_rem, integerTheory.EDIV_DEF, integerTheory.EMOD_DEF,
-      boolTheory.LET_THM]
-      t
+    val simp_thms =
+    let
+      open arithmeticTheory integerTheory realTheory
+    in
+      [
+        (* arithmeticTheory *)
+        EXP, EXP_1, EXP_2,
+        (* integerTheory *)
+        EDIV_DEF, EMOD_DEF, INT_ABS, INT_MAX, INT_MIN, int_exp, int_quot,
+        int_rem,
+        (* realTheory *)
+        EXP_2, POW_2, REAL_POW_LT,
+        (* others *)
+        boolTheory.LET_THM
+      ]
+    end
+    val t_eq_t' =
+      simpLib.SIMP_CONV simpset simp_thms t
       handle Conv.UNCHANGED =>
         Thm.REFL t
     val t' = boolSyntax.rhs (Thm.concl t_eq_t')
@@ -252,15 +265,15 @@ in
       [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
     (``SUC (x + y) = (SUC x + SUC y)``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
 
-    (``(x:num) + 0 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
+    (``(x:num) + 0 = x``, [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
     (``0 + (x:num) = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
-    (``(x:num) + y = y + x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
+    (``(x:num) + y = y + x``, [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
     (``(x:num) + (y + z) = (x + y) + z``,
       [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
     (``((x:num) + y = 0) <=> (x = 0) /\ (y = 0)``,
       [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
 
-    (``(x:num) - 0 = x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
+    (``(x:num) - 0 = x``, [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
     (``(x:num) - y = y - x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``(x:num) - y - z = x - (y + z)``,
       [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
@@ -316,6 +329,22 @@ in
       [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
     (``((x:num) = x DIV 42 * 42 + x MOD 42) /\ x MOD 42 < 42``,
       [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
+
+    (``(x:num) ** 0 = 1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``(x:num) ** 0 = 0``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(x:num) ** 1 = x``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``(0:num) ** 1 = 1``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(1:num) ** x = 1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``(1:num) ** x = 0``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(x:num) ** 2 = x * x``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(x:num) ** 2 = 2``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(x:num) ** 3 = x * x * x``, [(*thm_AUTO, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(x:num) ** 3 = 4``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 < (x:num) ** y``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 <= (x:num) ** y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``0 < (1:num) ** y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``0 < (2:num) ** y``, [thm_AUTO, (*thm_CVC,*) thm_Z3, thm_Z3p]),
+    (``0 < (42:num) ** y``, [thm_AUTO, (*thm_CVC,*) thm_Z3, thm_Z3p]),
 
     (``MIN (x:num) y <= x``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
     (``MIN (x:num) y <= y``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
@@ -581,6 +610,28 @@ in
     (``(x:int) rem 42 = x - x quot 42 * 42``,
       [thm_AUTO, (*thm_CVC,*) thm_Z3, thm_Z3p_v4]),
 
+    (``(x:int) ** 0 = 1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``(x:int) ** 0 = 0``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(x:int) ** 1 = x``, [(*thm_AUTO, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(0:int) ** 1 = 1``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(1:int) ** x = 1``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(1:int) ** x = 0``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(-1:int) ** 1 = -1``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(-1:int) ** 2 = 1``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(-3:int) ** 1 = -3``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(-3:int) ** 2 = 9``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(x:int) ** 2 = x * x``, [(*thm_AUTO, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(x:int) ** 2 = 2``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(x:int) ** 3 = x * x * x``, [(*thm_AUTO, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(x:int) ** 3 = 4``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 < (x:int) ** y``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 <= (x:int) ** y``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 < (1:int) ** y``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``0 < (2:int) ** y``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``0 < (-2:int) ** y``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 < (42:int) ** y``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``0 < (-42:int) ** y``, [sat_CVC, sat_Z3, sat_Z3p]),
+
     (``ABS (x:int) >= 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3_v4, thm_Z3p_v4]),
     (``(ABS (x:int) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3_v4, thm_Z3p_v4]),
     (``(x:int) >= 0 ==> (ABS x = x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3_v4, thm_Z3p_v4]),
@@ -630,6 +681,26 @@ in
       [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
     (``x < 0 ==> (x:real) / 42 > x``,
       [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
+
+    (``(x:real) pow 0 = 1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``(x:real) pow 0 = 0``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(x:real) pow 1 = x``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(0:real) pow 1 = 1``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(1:real) pow x = 1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``(1:real) pow x = 0``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``(-1:real) pow 1 = -1``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(-1:real) pow 2 = 1``, [thm_AUTO, (*thm_CVC,*) thm_Z3, thm_Z3p]),
+    (``(-3:real) pow 1 = -3``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``(-3:real) pow 2 = 9``, [thm_AUTO, (*thm_CVC,*) thm_Z3, thm_Z3p]),
+    (``(x:real) pow 2 = x * x``, [thm_AUTO, (*thm_CVC,*) thm_Z3, thm_Z3p]),
+    (``(x:real) pow 3 = x * x * x``, [thm_AUTO(*, thm_CVC, thm_Z3, thm_Z3p*)]),
+    (``0 < (x:real) pow y``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 <= (x:real) pow y``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 < (1:real) pow y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``0 < (2:real) pow y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``0 < (-2:real) pow y``, [sat_CVC, sat_Z3, sat_Z3p]),
+    (``0 < (42:real) pow y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``0 < (-42:real) pow y``, [sat_CVC, sat_Z3, sat_Z3p]),
 
     (``abs (x:real) >= 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
     (``(abs (x:real) = 0) = (x = 0)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
