@@ -7,6 +7,8 @@ structure HolSmtLib :> HolSmtLib = struct
 
   open Abbrev
 
+  val op THEN = Tactical.THEN
+
   fun GENERIC_SMT_TAC solver goal =
   let
     val ERR = Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT_TAC"
@@ -34,6 +36,12 @@ structure HolSmtLib :> HolSmtLib = struct
   val YICES_TAC = GENERIC_SMT_TAC Yices.Yices_Oracle
   val Z3_ORACLE_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Oracle
   val Z3_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Prover
+
+  fun assume_thms thms = Tactical.map_every (Tactic.ASSUME_TAC o Drule.GEN_ALL) thms
+
+  (* The tactics below accept a list of theorems, like metis_tac[] *)
+  fun z3_tac thms = assume_thms thms THEN Z3_TAC
+  fun z3o_tac thms = assume_thms thms THEN Z3_ORACLE_TAC
 
   fun prove (tm, tac) = Tactical.TAC_PROOF(([], tm), tac)
   fun CVC_ORACLE_PROVE tm = prove (tm, CVC_ORACLE_TAC)
