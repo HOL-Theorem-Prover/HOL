@@ -11,6 +11,10 @@ signature HolSmtLib = sig
   val Z3_ORACLE_TAC : tactic
   val Z3_TAC : tactic
 
+  (* The tactics below accept a list of theorems, like metis_tac[] *)
+  val z3_tac : thm list -> tactic
+  val z3o_tac : thm list -> tactic
+
   val CVC_ORACLE_PROVE : term -> thm
   val YICES_PROVE : term -> thm
   val Z3_ORACLE_PROVE : term -> thm
