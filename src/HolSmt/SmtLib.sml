@@ -622,25 +622,39 @@ in
   fun SIMP_TAC simp_let =
   let
     open Tactical simpLib
-    (* TODO: In the future we should add all relevant theorems automatically,
-       either based on which symbols are used (recursively) or, perhaps more
-       simply, just translate all the theorems defined in all the theories that
-       are being used. For now we just manually add a few useful ones. *)
     val facts =
     let
-      open arithmeticTheory integerTheory
+      open arithmeticTheory integerTheory realTheory realaxTheory
     in
       if !include_theorems then [
+        (* NOTE: when adding a theorem to the list below, make sure that it
+           doesn't have any free var -- otherwise, ASSUME_TAC will specialize
+           the theorem to any free var in the goal that happens to have the same
+           name, which very often is not what is desired. As an example,
+           integerTheory's `INT_POW` should not be added -- instead, add
+           `int_exp`. If no appropriate quantified theorem is available,
+           `Drule.GEN_ALL` can be used to quantify all free vars in a theorem.
+
+           Also, make sure the theorem is really needed -- some theorems seem to
+           cause an explosion in the time needed to solve some goals, often
+           making Z3 unable to solve them -- and it's not always easy to tell a
+           priori which ones do. As an example, arithmeticTheory.EXP_1 doesn't
+           seem to cause issues, but EXP_2 prevents Z3 from solving
+           ``x DIV 42 <= x``. *)
+
         (* arithmeticTheory *)
-        GREATER_DEF, GREATER_EQ, MIN_DEF, MAX_DEF,
+        EXP, EXP_1, EXP_POS, GREATER_DEF, GREATER_EQ, MAX_DEF, MIN_DEF,
         (* integerTheory *)
         INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN, INT_OF_NUM,
         INT_POS, NUM_OF_INT, NUM_INT_MUL, NUM_INT_EDIV, NUM_INT_EMOD,
-        INT_DIV_EDIV, INT_MOD_EMOD, INT_QUOT_EDIV, INT_REM_EMOD,
+        INT_DIV_EDIV, INT_MOD_EMOD, INT_QUOT_EDIV, INT_REM_EMOD, int_exp,
+        (* realTheory *)
+        abs, POW_2, POW_ONE, REAL_POW_LT,
+        (* realaxTheory *)
+        real_max, real_min, real_pow,
         (* others *)
         int_arithTheory.INT_NUM_SUB,
-        markerTheory.Abbrev_def,
-        realaxTheory.real_min, realaxTheory.real_max, realTheory.abs
+        markerTheory.Abbrev_def
       ] else []
     end
   in
