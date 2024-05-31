@@ -171,27 +171,46 @@ type t = {
   right : thm Net.net,
   safe : thm Net.net,
   bad : term Net.net,
+  skel_shortcutsL : term Net.net,
+  skel_shortcutsR : term Net.net,
   DOMRNG_ss : thm list
 }
 
 val empty_rdb : t =
    {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty,
+    skel_shortcutsL = Net.empty, skel_shortcutsR = Net.empty,
     DOMRNG_ss = []}
 
-fun fupd_left f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
-  {left = f left, right = right, safe = safe, bad = bad, DOMRNG_ss = DOMRNG_ss}
+(* fupdates *)
+open FunctionalRecordUpdate
+fun mkUp z = makeUpdate7 z
+fun update_T z = let
+  fun from bad DOMRNG_ss left right safe skel_shortcutsL skel_shortcutsR  =
+    {bad = bad, DOMRNG_ss = DOMRNG_ss, left = left, right = right, safe = safe,
+     skel_shortcutsL = skel_shortcutsL, skel_shortcutsR = skel_shortcutsR
+    }
+  (* fields in reverse order to above *)
+  fun from' skel_shortcutsR skel_shortcutsL safe right left DOMRNG_ss bad =
+    {bad = bad, DOMRNG_ss = DOMRNG_ss, left = left, right = right, safe = safe,
+     skel_shortcutsL = skel_shortcutsL, skel_shortcutsR = skel_shortcutsR
+    }
+  (* first order *)
+  fun to f {bad, DOMRNG_ss, left, right, safe, skel_shortcutsL, skel_shortcutsR}
+      =
+      f bad DOMRNG_ss left right safe skel_shortcutsL skel_shortcutsR
+in
+  mkUp (from, from', to)
+end z
 
-fun fupd_right f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
-  {left = left, right = f right, safe = safe, bad = bad, DOMRNG_ss = DOMRNG_ss}
-
-fun fupd_safe f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
-  {left = left, right = right, safe = f safe, bad = bad, DOMRNG_ss = DOMRNG_ss}
-
-fun fupd_bad f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
-  {left = left, right = right, safe = safe, bad = f bad, DOMRNG_ss = DOMRNG_ss}
-
-fun fupd_DOMRNG_ss f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
-  {left = left, right = right, safe = safe, bad = bad, DOMRNG_ss = f DOMRNG_ss}
+fun fupd_DOMRNG_ss f (t:t) : t = update_T t (U #DOMRNG_ss (f (#DOMRNG_ss t))) $$
+fun fupd_bad f (t:t) : t = update_T t (U #bad (f (#bad t))) $$
+fun fupd_left f (t:t) : t = update_T t (U #left (f (#left t))) $$
+fun fupd_right f (t:t) : t = update_T t (U #right (f (#right t))) $$
+fun fupd_safe f (t:t) : t = update_T t (U #safe (f (#safe t))) $$
+fun fupd_skelscL f (t:t) : t =
+    update_T t (U #skel_shortcutsL (f (#skel_shortcutsL t))) $$
+fun fupd_skelscR f (t:t) : t =
+    update_T t (U #skel_shortcutsR (f (#skel_shortcutsR t))) $$
 
 fun addrule0 (th, r) =
     let
