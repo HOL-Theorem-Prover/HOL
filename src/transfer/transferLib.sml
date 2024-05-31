@@ -616,7 +616,12 @@ fun transfer_thm depth hints cleftp ruledb th =
       else MP th0 th
     end
 
-fun is_flipimp t = rator (rator t) ~~ “flip $==>” handle HOL_ERR _ => false
+fun is_flipimp t =
+    let val (impp, _, _) = combinSyntax.dest_C t
+    in
+      same_const impp boolSyntax.implication
+    end handle HOL_ERR _ => false
+
 val default_depth = Sref.new 4
 val the_ruledb = Sref.new ruledb
 fun xfer_tac cleftp hints (g as (asl,c)) =
