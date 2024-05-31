@@ -11,6 +11,7 @@ sig
     val addsafe : thm -> t -> t
     val addbad : term -> t -> t
     val add_domrng : thm -> t -> t
+    val add_skeleton_shortcut : thm -> t -> t
     val lookup_rule : bool -> t -> term -> thm list
   end
 

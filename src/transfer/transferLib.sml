@@ -124,43 +124,6 @@ fun ty2relvar cleftp skty cty =
         mk_comb(mk_comb(FUN_REL_t |> inst sigma, dR), rR)
       end
 
-val GFUN_REL_COMB = GEN_ALL FUN_REL_COMB
-fun prove_relation_thm cleftp ct skt =
-    let
-      val argl = if cleftp then [ct, skt] else [skt, ct]
-      val skty = type_of skt and cty = type_of ct
-    in
-      if numSyntax.is_numeral ct then
-        ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
-      else
-        case dest_term ct of
-            VAR _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
-          | CONST _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
-          | COMB(cf, cx) =>
-            let
-              val fthm = prove_relation_thm cleftp cf (rator skt)
-              val xthm = prove_relation_thm cleftp cx (rand skt)
-            in
-              MATCH_MP GFUN_REL_COMB (CONJ fthm xthm)
-            end
-          | LAMB (cbv, cbod) =>
-            let
-              val (skbv, skbod) = dest_abs skt
-              val brel = ty2relvar cleftp (type_of skbv) (type_of cbv)
-              val b_asm_t =
-                  list_mk_comb(brel,
-                               if cleftp then [cbv, skbv] else [skbv, cbv])
-              val bod_thm = prove_relation_thm cleftp cbod skbod
-              val (lv,rv) = if cleftp then (cbv,skbv) else (skbv,cbv)
-              val hyp_thm =
-                  bod_thm
-                    |> CONV_RULE (FORK_CONV (UNBETA_CONV lv, UNBETA_CONV rv))
-                    |> DISCH b_asm_t |> GENL [lv,rv]
-            in
-              EQ_MP (PART_MATCH lhs (GSYM FUN_REL_def) (concl hyp_thm)) hyp_thm
-            end
-    end
-
 structure ruledb =
 struct
 type t = {
@@ -168,8 +131,8 @@ type t = {
   right : thm Net.net,
   safe : thm Net.net,
   bad : term Net.net,
-  skel_shortcutsL : term Net.net,
-  skel_shortcutsR : term Net.net,
+  skel_shortcutsL : thm Net.net,
+  skel_shortcutsR : thm Net.net,
   DOMRNG_ss : thm list
 }
 
@@ -231,7 +194,56 @@ fun lookup_rule cleftp (rdb:t) t =
       Net.lookup t n
     end
 
+fun add_skeleton_shortcut th r =
+    r |> fupd_skelscL (Net.enter (lhand (concl th), th))
+      |> fupd_skelscR (Net.enter (rand (concl th), th))
+
+fun lookup_skelsc cleftp (rdb:t) t =
+    let
+      val n = if cleftp then #skel_shortcutsL rdb else #skel_shortcutsR rdb
+    in
+      Net.lookup t n
+    end
+
 end (* ruledb struct *)
+
+val GFUN_REL_COMB = GEN_ALL FUN_REL_COMB
+fun prove_relation_thm cleftp ct skt =
+    let
+      val argl = if cleftp then [ct, skt] else [skt, ct]
+      val skty = type_of skt and cty = type_of ct
+    in
+      if numSyntax.is_numeral ct then
+        ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+      else
+        case dest_term ct of
+            VAR _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+          | CONST _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+          | COMB(cf, cx) =>
+            let
+              val fthm = prove_relation_thm cleftp cf (rator skt)
+              val xthm = prove_relation_thm cleftp cx (rand skt)
+            in
+              MATCH_MP GFUN_REL_COMB (CONJ fthm xthm)
+            end
+          | LAMB (cbv, cbod) =>
+            let
+              val (skbv, skbod) = dest_abs skt
+              val brel = ty2relvar cleftp (type_of skbv) (type_of cbv)
+              val b_asm_t =
+                  list_mk_comb(brel,
+                               if cleftp then [cbv, skbv] else [skbv, cbv])
+              val bod_thm = prove_relation_thm cleftp cbod skbod
+              val (lv,rv) = if cleftp then (cbv,skbv) else (skbv,cbv)
+              val hyp_thm =
+                  bod_thm
+                    |> CONV_RULE (FORK_CONV (UNBETA_CONV lv, UNBETA_CONV rv))
+                    |> DISCH b_asm_t |> GENL [lv,rv]
+            in
+              EQ_MP (PART_MATCH lhs (GSYM FUN_REL_def) (concl hyp_thm)) hyp_thm
+            end
+    end
+
 
 fun eliminate_with_unifier ctys th1 h th2 =
     (* h probably a hypothesis of th2; conclusion of th1 unifies with h;
