@@ -7531,7 +7531,7 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
-    A proof of Koenig's Lemma
+    A proof of Kőnig's Lemma                                                UOK
    ---------------------------------------------------------------------- *)
 
 (* a counting exercise for R-trees.  If x0 has finitely many successors, and
