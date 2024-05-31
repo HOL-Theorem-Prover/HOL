@@ -12,13 +12,10 @@ val transfer_ss = simpLib.++(boolSimps.bool_ss, combinSimps.COMBIN_ss)
 fun relconstraint_tm t =
     case dest_term t of
         CONST {Thy = "transfer", Name, ...} =>
-          Name = "left_unique" orelse Name = "bitotal" orelse
-          Name = "total" orelse Name = "bi_unique" orelse
-          Name = "equalityp" orelse Name = "right_unique" orelse
-          Name = "surj"
+        mem Name ["bitotal", "bi_unique", "equalityp", "left_unique",
+                  "right_unique", "surj", "total"]
       | _ => false
-fun is_relconstraint t =
-    relconstraint_tm (rator t)
+fun is_relconstraint t = relconstraint_tm (rator t)
 
 
 fun pmk_const c =
