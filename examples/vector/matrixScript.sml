@@ -470,7 +470,7 @@ QED
 (* Slightly gruesome lemmas: better to define sums over vectors really...    *)
 (* ------------------------------------------------------------------------- *)
 
-Overload SUM[local] = “iterate$Sum”
+Overload SUM[local] = “real_sigma$Sum”
 Overload ADJOINT[local] = “adjoint”
 
 Theorem VECTOR_COMPONENTWISE :
