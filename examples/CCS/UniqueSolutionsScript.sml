@@ -106,177 +106,163 @@ Proof
       GEN_TAC >> MATCH_MP_TAC RELABELING >> art [] ]
 QED
 
-(* Proposition 4.14 in Milner's book [1] (uni-variate version):
-   Let the expression E contains at most the variable X, and let X be
-   weakly guarded in E, then:
-        If P ~ E{P/X} and Q ~ E{Q/X} then P ~ Q.
- *)
-Theorem STRONG_UNIQUE_SOLUTION :
-    !E P Q. WG E /\ STRONG_EQUIV P (E P) /\ STRONG_EQUIV Q (E Q) ==> STRONG_EQUIV P Q
+(* NOTE: This is a generalization of STRONG_UNIQUE_SOLUTION with the same proof. *)
+Theorem STRONG_UNIQUE_SOLUTION_EXT :
+    !C1 C2 P Q. WG C1 /\ WG C2 /\ (!t. STRONG_EQUIV (C1 t) (C2 t)) /\
+                STRONG_EQUIV P (C1 P) /\ STRONG_EQUIV Q (C2 Q) ==> STRONG_EQUIV P Q
 Proof
     rpt STRIP_TAC
- >> irule (REWRITE_RULE [RSUBSET] STRONG_BISIM_UPTO_THM)
- >> Q.EXISTS_TAC `\x y. (x = y) \/ (?G. CONTEXT G /\ (x = G P) /\ (y = G Q))`
- >> BETA_TAC >> reverse CONJ_TAC
- >- (DISJ2_TAC >> Q.EXISTS_TAC `\x. x` >> BETA_TAC \\
-     KILL_TAC >> RW_TAC std_ss [CONTEXT1])
- >> REWRITE_TAC [STRONG_BISIM_UPTO]
- >> fix [`P'`, `Q'`]
- >> BETA_TAC >> STRIP_TAC (* 2 sub-goals here *)
- >- (POP_ASSUM MP_TAC >> RW_TAC std_ss [] >| (* 2 sub-goals here *)
-     [ (* goal 1 (of 2) *)
-       Q.EXISTS_TAC `E1` >> art [O_DEF] \\
-       Q.EXISTS_TAC `E1` >> art [STRONG_EQUIV_REFL] \\
-       Q.EXISTS_TAC `E1` >> art [STRONG_EQUIV_REFL] \\
-       BETA_TAC >> DISJ1_TAC >> REWRITE_TAC [],
-       (* goal 2 (of 2) *)
-       Q.EXISTS_TAC `E2` >> art [O_DEF] \\
-       Q.EXISTS_TAC `E2` >> art [STRONG_EQUIV_REFL] \\
-       Q.EXISTS_TAC `E2` >> art [STRONG_EQUIV_REFL] \\
-       BETA_TAC >> DISJ1_TAC >> REWRITE_TAC [] ])
- (* preparing for induction *)
- >> NTAC 2 POP_ORW
- >> POP_ASSUM MP_TAC
- >> Q.ID_SPEC_TAC ‘G’
- >> Induct_on `CONTEXT` >> BETA_TAC
- >> CONJ_TAC (* case 1: "var" *)
- >- (rpt STRIP_TAC >| (* 2 subgoals *)
-     [ (* goal 1 (of 2) *)
-       Q.PAT_X_ASSUM `STRONG_EQUIV P (E P)`
-         (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
-       RES_TAC \\
-       IMP_RES_TAC STRONG_UNIQUE_SOLUTION_LEMMA \\ (* lemma used here *)
-       FULL_SIMP_TAC std_ss [] \\
-       POP_ASSUM (ASSUME_TAC o (Q.SPEC `Q`)) \\
-       Q.PAT_X_ASSUM `STRONG_EQUIV Q (E Q)`
-         (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
-       RES_TAC >> Q.EXISTS_TAC `E1'` >> art [] \\
-       REWRITE_TAC [O_DEF] \\
-      `STRONG_EQUIV (E' Q) E1'` by PROVE_TAC [STRONG_EQUIV_SYM] \\
-       Q.EXISTS_TAC `E' Q` >> art [] \\
-       Q.EXISTS_TAC `E' P` >> art [] \\
-       BETA_TAC >> DISJ2_TAC \\
-       Q.EXISTS_TAC `E'` >> art [],
-       (* goal 2 (of 2) *)
-       Q.PAT_X_ASSUM `STRONG_EQUIV Q (E Q)`
-         (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
-       RES_TAC \\
-       IMP_RES_TAC STRONG_UNIQUE_SOLUTION_LEMMA \\ (* lemma used here *)
-       FULL_SIMP_TAC std_ss [] \\
-       POP_ASSUM (ASSUME_TAC o (Q.SPEC `P`)) \\
-       Q.PAT_X_ASSUM `STRONG_EQUIV P (E P)`
-         (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
-       RES_TAC >> Q.EXISTS_TAC `E1` >> art [] \\
-       REWRITE_TAC [O_DEF] \\
-      `STRONG_EQUIV (E' P) E1` by PROVE_TAC [STRONG_EQUIV_SYM] \\
-      `STRONG_EQUIV (E' Q) E2` by PROVE_TAC [STRONG_EQUIV_SYM] \\
-       Q.EXISTS_TAC `E' Q` >> art [] \\
-       Q.EXISTS_TAC `E' P` >> art [] \\
-       BETA_TAC >> DISJ2_TAC \\
-       Q.EXISTS_TAC `E'` >> art [] ])
- >> CONJ_TAC (* case 2: "no var" *)
- >- (rpt STRIP_TAC >| (* 2 subgoals *)
+ >> MATCH_MP_TAC STRONG_EQUIV_BY_BISIM_UPTO
+ >> qabbrev_tac ‘R = \x y. x = y \/ ?E. CONTEXT E /\ x = E P /\ y = E Q’
+ >> Q.EXISTS_TAC ‘R’
+ >> reverse CONJ_TAC
+ >- (rw [Abbr ‘R’] \\
+     DISJ2_TAC >> qexistsl_tac [‘\t. t’] >> rw [CONTEXT1])
+ >> simp [STRONG_BISIM_UPTO]
+ >> qx_genl_tac [`P'`, `Q'`]
+ >> ‘R P' Q' <=> P' = Q' \/ ?E. CONTEXT E /\ P' = E P /\ Q' = E Q’ by rw [Abbr ‘R’]
+ >> POP_ORW >> STRIP_TAC (* 2 subgoals *)
+ >- (rw [O_DEF, Abbr ‘R’] >| (* 2 sub-goals here *)
      [ (* goal 1 (of 2) *)
        Q.EXISTS_TAC `E1` >> art [] \\
-       REWRITE_TAC [O_DEF] \\
        Q.EXISTS_TAC `E1` >> art [STRONG_EQUIV_REFL] \\
-       Q.EXISTS_TAC `E1` >> art [STRONG_EQUIV_REFL] \\
-       BETA_TAC >> DISJ1_TAC >> RW_TAC std_ss [],
+       Q.EXISTS_TAC `E1` >> art [STRONG_EQUIV_REFL],
        (* goal 2 (of 2) *)
        Q.EXISTS_TAC `E2` >> art [] \\
-       REWRITE_TAC [O_DEF] \\
        Q.EXISTS_TAC `E2` >> art [STRONG_EQUIV_REFL] \\
-       Q.EXISTS_TAC `E2` >> art [STRONG_EQUIV_REFL] \\
-       BETA_TAC >> DISJ1_TAC >> RW_TAC std_ss [] ])
- >> CONJ_TAC (* case 3: prefix *)
- >- (Q.X_GEN_TAC `a` >> rpt STRIP_TAC >| (* 2 subgoals *)
+       Q.EXISTS_TAC `E2` >> art [STRONG_EQUIV_REFL] ])
+ (* preparing for induction *)
+ >> NTAC 2 POP_ORW
+ >> POP_ASSUM MP_TAC (* CONTEXT E *)
+ >> Q.ID_SPEC_TAC ‘E’
+ >> Induct_on `CONTEXT` >> rw []
+ (* 14 subgoals left *)
+ >- ((*
+        P  ~  C1[P] ~ C2[P]  : C2[Q] ~  Q
+        |     |        |          |     |
+        u     u        u          u     u
+        |     |        |          |     |
+        E1 ~ ?E2   ~  ?G[P]  :  G[Q] ~ ?E3
+      *)
+    ‘?E2. C1 P --u-> E2 /\ STRONG_EQUIV E1 E2’ by METIS_TAC [PROPERTY_STAR_LEFT] \\
+    ‘?E3. C2 P --u-> E3 /\ STRONG_EQUIV E2 E3’ by METIS_TAC [PROPERTY_STAR_LEFT] \\
+     MP_TAC (Q.SPEC ‘C2’ STRONG_UNIQUE_SOLUTION_LEMMA) >> simp [] \\
+     DISCH_THEN (MP_TAC o (Q.SPECL [‘P’, ‘u’, ‘E3’])) >> simp [] \\
+     DISCH_THEN (Q.X_CHOOSE_THEN ‘G’ STRIP_ASSUME_TAC) \\
+     Q.PAT_X_ASSUM ‘E3 = G P’ (rfs o wrap) \\
+    ‘?E3. Q --u-> E3 /\ STRONG_EQUIV E3 (G Q)’ by METIS_TAC [PROPERTY_STAR_RIGHT] \\
+     Q.EXISTS_TAC ‘E3’ >> rw [Abbr ‘R’, O_DEF] \\
+     Q.EXISTS_TAC ‘G Q’ >> reverse CONJ_TAC >- rw [STRONG_EQUIV_SYM] \\
+     Q.EXISTS_TAC ‘G P’ \\
+     CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_TRANS >> Q.EXISTS_TAC ‘E2’ >> art []) \\
+     DISJ2_TAC >> Q.EXISTS_TAC ‘G’ >> art [])
+ (* 13 subgoals left *)
+ >- ((*
+        Q  ~ C2[Q] ~ C1[Q]  :  C1[P] ~  P
+        |    |        |          |      |
+        E2 ~ E1   ~  G[Q]   :  G[P]  ~  E3
+      *)
+    ‘?E1. C2 Q --u-> E1 /\ STRONG_EQUIV E2 E1’ by METIS_TAC [PROPERTY_STAR_LEFT] \\
+    ‘?E3. C1 Q --u-> E3 /\ STRONG_EQUIV E3 E1’ by METIS_TAC [PROPERTY_STAR_RIGHT] \\
+     MP_TAC (Q.SPEC ‘C1’ STRONG_UNIQUE_SOLUTION_LEMMA) >> simp [] \\
+     DISCH_THEN (MP_TAC o (Q.SPECL [‘Q’, ‘u’, ‘E3’])) >> simp [] \\
+     DISCH_THEN (Q.X_CHOOSE_THEN ‘G’ STRIP_ASSUME_TAC) \\
+     Q.PAT_X_ASSUM ‘E3 = G Q’ (rfs o wrap) \\
+    ‘?E3. P --u-> E3 /\ STRONG_EQUIV E3 (G P)’ by METIS_TAC [PROPERTY_STAR_RIGHT] \\
+     Q.EXISTS_TAC ‘E3’ >> rw [Abbr ‘R’, O_DEF] \\
+     Q.EXISTS_TAC ‘G Q’ \\
+     reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_TRANS \\
+                          Q.EXISTS_TAC ‘E1’ >> rw [STRONG_EQUIV_SYM]) \\
+     Q.EXISTS_TAC ‘G P’ >> art [] \\
+     DISJ2_TAC >> Q.EXISTS_TAC ‘G’ >> art [])
+ (* 12 subgoals left *)
+ >- (Q.EXISTS_TAC `E1` >> rw [Abbr ‘R’, O_DEF] \\
+     Q.EXISTS_TAC `E1` >> art [STRONG_EQUIV_REFL] \\
+     Q.EXISTS_TAC `E1` >> art [STRONG_EQUIV_REFL])
+ (* 11 subgoals left *)
+ >- (Q.EXISTS_TAC `E2` >> rw [Abbr ‘R’, O_DEF] \\
+     Q.EXISTS_TAC `E2` >> art [STRONG_EQUIV_REFL] \\
+     Q.EXISTS_TAC `E2` >> art [STRONG_EQUIV_REFL])
+ (* 10 subgoals left *)
+ >- (fs [TRANS_PREFIX_EQ] \\
+     Q.PAT_X_ASSUM ‘!u. _’ K_TAC >> rw [Abbr ‘R’, O_DEF] \\
+     Q.EXISTS_TAC `E Q` >> REWRITE_TAC [STRONG_EQUIV_REFL] \\
+     Q.EXISTS_TAC `E P` >> REWRITE_TAC [STRONG_EQUIV_REFL] \\
+     DISJ2_TAC >> Q.EXISTS_TAC `E` >> art [])
+ (* 9 subgoals left *)
+ >- (fs [TRANS_PREFIX_EQ] \\
+     Q.PAT_X_ASSUM ‘!u. _’ K_TAC >> rw [Abbr ‘R’, O_DEF] \\
+     Q.EXISTS_TAC `E Q` >> REWRITE_TAC [STRONG_EQUIV_REFL] \\
+     Q.EXISTS_TAC `E P` >> REWRITE_TAC [STRONG_EQUIV_REFL] \\
+     DISJ2_TAC >> Q.EXISTS_TAC `E` >> art [])
+ (* 8 subgoals left *)
+ >- (fs [TRANS_SUM_EQ] >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
-       IMP_RES_TAC TRANS_PREFIX \\
-       FULL_SIMP_TAC std_ss [] \\
-       NTAC 2 (POP_ASSUM K_TAC) \\
-       Q.EXISTS_TAC `G Q` >> REWRITE_TAC [PREFIX] \\
-       REWRITE_TAC [O_DEF] >> BETA_TAC \\
-       Q.EXISTS_TAC `G Q` >> REWRITE_TAC [STRONG_EQUIV_REFL] \\
-       Q.EXISTS_TAC `G P` >> REWRITE_TAC [STRONG_EQUIV_REFL] \\
-       DISJ2_TAC >> Q.EXISTS_TAC `G` >> art [],
+       RES_TAC >> Q.EXISTS_TAC `E2` >> art [],
        (* goal 2 (of 2) *)
-       IMP_RES_TAC TRANS_PREFIX \\
-       FULL_SIMP_TAC std_ss [] \\
-       NTAC 2 (POP_ASSUM K_TAC) \\
-       Q.EXISTS_TAC `G P` >> REWRITE_TAC [PREFIX] \\
-       REWRITE_TAC [O_DEF] >> BETA_TAC \\
-       Q.EXISTS_TAC `G Q` >> REWRITE_TAC [STRONG_EQUIV_REFL] \\
-       Q.EXISTS_TAC `G P` >> REWRITE_TAC [STRONG_EQUIV_REFL] \\
-       DISJ2_TAC >> Q.EXISTS_TAC `G` >> art [] ])
- >> CONJ_TAC (* case 4: sum *)
- >- (RW_TAC std_ss [TRANS_SUM_EQ] >| (* 4 subgoals *)
-     [ RES_TAC >> Q.EXISTS_TAC `E2` >> rw [],
-       RES_TAC >> Q.EXISTS_TAC `E2` >> rw [],
-       RES_TAC >> Q.EXISTS_TAC `E1` >> rw [],
-       RES_TAC >> Q.EXISTS_TAC `E1` >> rw [] ])
- >> CONJ_TAC (* case 5: par *)
- >- (RW_TAC std_ss [TRANS_PAR_EQ] >| (* 6 subgoals *)
-     [ (* goal 1 (of 6) *)
-       RES_TAC >> Q.EXISTS_TAC `E2 || G' Q` \\
+       RES_TAC >> Q.EXISTS_TAC `E2` >> art [] ])
+ (* 8 subgoals left *)
+ >- (fs [TRANS_SUM_EQ] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       RES_TAC >> Q.EXISTS_TAC `E1` >> art [],
+       (* goal 2 (of 2) *)
+       RES_TAC >> Q.EXISTS_TAC `E1` >> art [] ])
+ (* 6 subgoals left *)
+ >- (fs [TRANS_PAR_EQ] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       RES_TAC >> Q.EXISTS_TAC `E2 || E' Q` \\
        CONJ_TAC >- (DISJ1_TAC >> Q.EXISTS_TAC `E2` >> art []) \\
-       POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 sub-goals here *)
+       POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 subgoals here *)
        [ (* goal 1.1 (of 2) *)
          rename1 `STRONG_EQUIV E1' y` \\
-         Q.EXISTS_TAC `y || G' Q` \\
-         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                              art [STRONG_EQUIV_REFL]) \\
-         Q.EXISTS_TAC `y || G' P` \\
-         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                      art [STRONG_EQUIV_REFL]) \\
+         Q.EXISTS_TAC `y || E' Q` \\
+         reverse CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         Q.EXISTS_TAC `y || E' P` \\
+         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
          DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. y || G' t` >> BETA_TAC >> REWRITE_TAC [] \\
-
+         Q.EXISTS_TAC `\t. y || E' t` >> rw [] \\
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
-         Know `CONTEXT (\t. (\z. y) t || G' t)`
+         Know `CONTEXT (\t. (\z. y) t || E' t)`
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 1.2 (of 2) *)
-         Q.EXISTS_TAC `G'' Q || G' Q` \\
-         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                              art [STRONG_EQUIV_REFL]) \\
-         Q.EXISTS_TAC `G'' P || G' P` \\
-         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                      art [STRONG_EQUIV_REFL]) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G'' t || G' t` >> BETA_TAC >> REWRITE_TAC [] \\
+         Q.EXISTS_TAC `E'' Q || E' Q` \\
+         reverse CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         Q.EXISTS_TAC `E'' P || E' P` \\
+         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E'' t || E' t` >> rw [] \\
          MATCH_MP_TAC CONTEXT5 >> art [] ],
-       (* goal 2 (of 6) *)
-       RES_TAC >> Q.EXISTS_TAC `G Q || E2` \\
+       (* goal 2 (of 3) *)
+       RES_TAC >> Q.EXISTS_TAC `E Q || E2` \\
        CONJ_TAC >- (NDISJ_TAC 1 >> Q.EXISTS_TAC `E2` >> art []) \\
-       POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 sub-goals here *)
+       POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 subgoals here *)
        [ (* goal 2.1 (of 2) *)
          rename1 `STRONG_EQUIV E1' y` \\
-         Q.EXISTS_TAC `G Q || y` \\
+         Q.EXISTS_TAC `E Q || y` \\
          reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
-         Q.EXISTS_TAC `G P || y` \\
-         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                      art [STRONG_EQUIV_REFL]) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G t || y` >> BETA_TAC >> REWRITE_TAC [] \\
+         Q.EXISTS_TAC `E P || y` \\
+         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E t || y` >> rw [] \\
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
-         Know `CONTEXT (\t. G t || (\z. y) t)`
+         Know `CONTEXT (\t. E t || (\z. y) t)`
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 2.2 (of 2) *)
-         Q.EXISTS_TAC `G Q || G'' Q` \\
-         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                              art [STRONG_EQUIV_REFL]) \\
-         Q.EXISTS_TAC `G P || G'' P` \\
-         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                      art [STRONG_EQUIV_REFL]) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G t || G'' t` >> BETA_TAC >> REWRITE_TAC [] \\
+         Q.EXISTS_TAC `E Q || E'' Q` \\
+         reverse CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         Q.EXISTS_TAC `E P || E'' P` \\
+         CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E t || E'' t` >> rw [] \\
          MATCH_MP_TAC CONTEXT5 >> art [] ],
-       (* goal 3 (of 6) *)
+       (* goal 3 (of 3) *)
        RES_TAC >> Q.EXISTS_TAC `E2'' || E2'` \\
        CONJ_TAC >- (NDISJ_TAC 2 >> take [`E2''`, `E2'`, `l`] >> art []) \\
        Q.PAT_X_ASSUM `X E2 E2'` MP_TAC \\
        Q.PAT_X_ASSUM `X E1' E2''` MP_TAC \\
-       RW_TAC std_ss [O_DEF] >| (* 4 sub-goals here *)
+       rw [Abbr ‘R’, O_DEF] >| (* 4 subgoals here *)
        [ (* goal 3.1 (of 4) *)
          rename1 `STRONG_EQUIV E1' x` \\
          rename1 `STRONG_EQUIV E2 y` \\
@@ -287,139 +273,132 @@ Proof
          DISJ1_TAC >> REWRITE_TAC [],
          (* goal 3.2 (of 4) *)
          rename1 `STRONG_EQUIV E1' y` \\
-         Q.EXISTS_TAC `y || G'' Q` \\
+         Q.EXISTS_TAC `y || E'' Q` \\
          reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         Q.EXISTS_TAC `y || G'' P` \\
+         Q.EXISTS_TAC `y || E'' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. y || G'' t` >> BETA_TAC >> REWRITE_TAC [] \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. y || E'' t` >> rw [] \\
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
-         Know `CONTEXT (\t. (\z. y) t || G'' t)`
+         Know `CONTEXT (\t. (\z. y) t || E'' t)`
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 3.3 (of 4) *)
          rename1 `STRONG_EQUIV E2 y` \\
-         Q.EXISTS_TAC `G'' Q || y` \\
+         Q.EXISTS_TAC `E'' Q || y` \\
          reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         Q.EXISTS_TAC `G'' P || y` \\
+         Q.EXISTS_TAC `E'' P || y` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G'' t || y` >> BETA_TAC >> REWRITE_TAC [] \\
+         Q.EXISTS_TAC `\t. E'' t || y` >> rw [] \\
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
-         Know `CONTEXT (\t. G'' t || (\z. y) t)`
-         >- (MATCH_MP_TAC CONTEXT5 >> art []) \\
-         BETA_TAC >> REWRITE_TAC [],
+         Know `CONTEXT (\t. E'' t || (\z. y) t)`
+         >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 3.4 (of 4) *)
-         Q.EXISTS_TAC `G'' Q || G''' Q` \\
+         Q.EXISTS_TAC `E'' Q || E''' Q` \\
          reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         Q.EXISTS_TAC `G'' P || G''' P` \\
+         Q.EXISTS_TAC `E'' P || E''' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G'' t || G''' t` >> BETA_TAC >> REWRITE_TAC [] \\
-         MATCH_MP_TAC CONTEXT5 >> art [] ],
-       (* goal 4 (of 6) *)
-       RES_TAC >> Q.EXISTS_TAC `E1' || G' P` \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E'' t || E''' t` >> rw [] \\
+         MATCH_MP_TAC CONTEXT5 >> art [] ] ])
+ (* 5 subgoals left *)
+ >- (fs [TRANS_PAR_EQ] >| (* 3 subgoals, again *)
+     [ (* goal 1 (of 3) *)
+       RES_TAC >> Q.EXISTS_TAC `E1' || E' P` \\
        CONJ_TAC >- (DISJ1_TAC >> Q.EXISTS_TAC `E1'` >> art []) \\
-       POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 sub-goals here *)
-       [ (* goal 4.1 (of 2) *)
+       POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 subgoals *)
+       [ (* goal 1.1 (of 2) *)
          rename1 `STRONG_EQUIV E1' y` \\
-         Q.EXISTS_TAC `y || G' Q` \\
-         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                              art [STRONG_EQUIV_REFL]) \\
-         Q.EXISTS_TAC `y || G' P` \\
-         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                      art [STRONG_EQUIV_REFL]) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. y || G' t` >> BETA_TAC >> REWRITE_TAC [] \\
+         Q.EXISTS_TAC `y || E' Q` \\
+         reverse CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         Q.EXISTS_TAC `y || E' P` \\
+         CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. y || E' t` >> rw [] \\
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
-         Know `CONTEXT (\t. (\z. y) t || G' t)`
+         Know `CONTEXT (\t. (\z. y) t || E' t)`
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 4.2 (of 2) *)
-         Q.EXISTS_TAC `G'' Q || G' Q` \\
-         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                              art [STRONG_EQUIV_REFL]) \\
-         Q.EXISTS_TAC `G'' P || G' P` \\
-         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                      art [STRONG_EQUIV_REFL]) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G'' t || G' t` >> BETA_TAC >> REWRITE_TAC [] \\
+         Q.EXISTS_TAC `E'' Q || E' Q` \\
+         reverse CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         Q.EXISTS_TAC `E'' P || E' P` \\
+         CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E'' t || E' t` >> rw [] \\
          MATCH_MP_TAC CONTEXT5 >> art [] ],
-       (* goal 5 (of 6) *)
-       RES_TAC >> Q.EXISTS_TAC `G P || E1'` \\
+       (* goal 2 (of 3) *)
+       RES_TAC >> Q.EXISTS_TAC `E P || E1'` \\
        CONJ_TAC >- (NDISJ_TAC 1 >> Q.EXISTS_TAC `E1'` >> art []) \\
-       POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 sub-goals here *)
-       [ (* goal 5.1 (of 2) *)
+       POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 sub-goals here *)
+       [ (* goal 2.1 (of 2) *)
          rename1 `STRONG_EQUIV E1' y` \\
-         Q.EXISTS_TAC `G Q || y` \\
-         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                              art [STRONG_EQUIV_REFL]) \\
-         Q.EXISTS_TAC `G P || y` \\
-         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                      art [STRONG_EQUIV_REFL]) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G t || y` >> BETA_TAC >> REWRITE_TAC [] \\
+         Q.EXISTS_TAC `E Q || y` \\
+         reverse CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         Q.EXISTS_TAC `E P || y` \\
+         CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E t || y` >> rw [] \\
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
-         Know `CONTEXT (\t. G t || (\z. y) t)`
+         Know `CONTEXT (\t. E t || (\z. y) t)`
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
-         (* goal 5.2 (of 2) *)
-         Q.EXISTS_TAC `G Q || G'' Q` \\
-         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                              art [STRONG_EQUIV_REFL]) \\
-         Q.EXISTS_TAC `G P || G'' P` \\
-         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
-                      art [STRONG_EQUIV_REFL]) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G t || G'' t` >> BETA_TAC >> REWRITE_TAC [] \\
+         (* goal 2.2 (of 2) *)
+         Q.EXISTS_TAC `E Q || E'' Q` \\
+         reverse CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         Q.EXISTS_TAC `E P || E'' P` \\
+         CONJ_TAC
+         >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art [STRONG_EQUIV_REFL]) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E t || E'' t` >> rw [] \\
          MATCH_MP_TAC CONTEXT5 >> art [] ],
-       (* goal 6 (of 6) *)
+       (* goal 3 (of 3) *)
        RES_TAC >> Q.EXISTS_TAC `E1'' || E1'` \\
        CONJ_TAC >- (NDISJ_TAC 2 >> take [`E1''`, `E1'`, `l`] >> art []) \\
-       Q.PAT_X_ASSUM `R E1'' E1` MP_TAC \\
-       Q.PAT_X_ASSUM `R E1' E2'` MP_TAC \\
-       RW_TAC std_ss [O_DEF] >| (* 4 sub-goals here *)
-       [ (* goal 6.1 (of 4) *)
+       Q.PAT_X_ASSUM `_ E1'' E1` MP_TAC \\
+       Q.PAT_X_ASSUM `_ E1' E2'` MP_TAC \\
+       rw [Abbr ‘R’, O_DEF] >| (* 4 sub-goals here *)
+       [ (* goal 3.1 (of 4) *)
          rename1 `STRONG_EQUIV E1' x` \\
          rename1 `STRONG_EQUIV y E1` \\
          Q.EXISTS_TAC `y || x` \\
          reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `y || x` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         DISJ1_TAC >> REWRITE_TAC [],
-         (* goal 6.2 (of 4) *)
+         DISJ1_TAC >> rw [],
+         (* goal 3.2 (of 4) *)
          rename1 `STRONG_EQUIV E1' y` \\
-         Q.EXISTS_TAC `G'' Q || y` \\
+         Q.EXISTS_TAC `E'' Q || y` \\
          reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         Q.EXISTS_TAC `G'' P || y` \\
+         Q.EXISTS_TAC `E'' P || y` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G'' t || y` >> BETA_TAC >> REWRITE_TAC [] \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E'' t || y` >> rw [] \\
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
-         Know `CONTEXT (\t. G'' t || (\z. y) t)`
+         Know `CONTEXT (\t. E'' t || (\z. y) t)`
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
-         (* goal 6.3 (of 4) *)
+         (* goal 3.3 (of 4) *)
          rename1 `STRONG_EQUIV y E1` \\
-         Q.EXISTS_TAC `y || G'' Q` \\
+         Q.EXISTS_TAC `y || E'' Q` \\
          reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         Q.EXISTS_TAC `y || G'' P` \\
+         Q.EXISTS_TAC `y || E'' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. y || G'' t` >> BETA_TAC >> REWRITE_TAC [] \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. y || E'' t` >> rw [] \\
         `CONTEXT (\z. y)` by REWRITE_TAC [CONTEXT2] \\
-         Know `CONTEXT (\t. (\z. y) t || G'' t)`
+         Know `CONTEXT (\t. (\z. y) t || E'' t)`
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
-         (* goal 6.4 (of 4) *)
-         Q.EXISTS_TAC `G''' Q || G'' Q` \\
+         (* goal 3.4 (of 4) *)
+         Q.EXISTS_TAC `E''' Q || E'' Q` \\
          reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         Q.EXISTS_TAC `G''' P || G'' P` \\
+         Q.EXISTS_TAC `E''' P || E'' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
-         DISJ2_TAC \\
-         Q.EXISTS_TAC `\t. G''' t || G'' t` >> BETA_TAC >> REWRITE_TAC [] \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. E''' t || E'' t` >> rw [] \\
          MATCH_MP_TAC CONTEXT5 >> art [] ] ])
- >> CONJ_TAC (* case 6: restr *)
- >- (RW_TAC std_ss [TRANS_RESTR_EQ] >| (* 4 subgoals *)
-    [ (* goal 1 (of 4) *)
+ (* 4 subgoals left *)
+ >- (fs [TRANS_RESTR_EQ] >| (* 2 subgoals *)
+    [ (* goal 1 (of 2) *)
+      POP_ASSUM (fs o wrap) \\
       RES_TAC >> Q.EXISTS_TAC `restr L E2` \\
       CONJ_TAC >- (Q.EXISTS_TAC `E2` >> art []) \\
-      POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 subgoals *)
+      POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 subgoals *)
       [ (* goal 1.1 (of 2) *)
         rename1 `STRONG_EQUIV y E2` \\
         Q.EXISTS_TAC `restr L y` \\
@@ -428,17 +407,17 @@ Proof
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ1_TAC >> REWRITE_TAC [],
         (* goal 1.2 (of 2) *)
-        Q.EXISTS_TAC `restr L (G' Q)` \\
+        Q.EXISTS_TAC `restr L (E' Q)` \\
         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        Q.EXISTS_TAC `restr L (G' P)` \\
+        Q.EXISTS_TAC `restr L (E' P)` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        DISJ2_TAC \\
-        Q.EXISTS_TAC `\t. restr L (G' t)` >> BETA_TAC >> REWRITE_TAC [] \\
+        DISJ2_TAC >> Q.EXISTS_TAC `\t. restr L (E' t)` >> rw [] \\
         MATCH_MP_TAC CONTEXT6 >> art [] ],
       (* goal 2 (of 4) *)
+      Q.PAT_X_ASSUM ‘u = label l’ (fs o wrap) \\
       RES_TAC >> Q.EXISTS_TAC `restr L E2` \\
       CONJ_TAC >- (Q.EXISTS_TAC `E2` >> art []) \\
-      POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 sub-goals here *)
+      POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
         rename1 `STRONG_EQUIV y E2` \\
         Q.EXISTS_TAC `restr L y` \\
@@ -446,94 +425,109 @@ Proof
         Q.EXISTS_TAC `restr L y` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ1_TAC >> REWRITE_TAC [],
-        (* goal 11.2.2 (of 2) *)
-        Q.EXISTS_TAC `restr L (G' Q)` \\
+        (* goal 2.2 (of 2) *)
+        Q.EXISTS_TAC `restr L (E' Q)` \\
         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        Q.EXISTS_TAC `restr L (G' P)` \\
+        Q.EXISTS_TAC `restr L (E' P)` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ2_TAC \\
-        Q.EXISTS_TAC `\t. restr L (G' t)` >> BETA_TAC >> REWRITE_TAC [] \\
-        MATCH_MP_TAC CONTEXT6 >> art [] ],
-      (* goal 3 (of 4) *)
-      RES_TAC >> Q.EXISTS_TAC `restr L E1` \\
-      CONJ_TAC >- (Q.EXISTS_TAC `E1` >> art []) \\
-      POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 subgoals *)
-      [ (* goal 3.1 (of 2) *)
-        rename1 `STRONG_EQUIV E1 y` \\
-        Q.EXISTS_TAC `restr L y` \\
-        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        Q.EXISTS_TAC `restr L y` \\
-        CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        DISJ1_TAC >> REWRITE_TAC [],
-        (* goal 3.2 (of 2) *)
-        Q.EXISTS_TAC `restr L (G' Q)` \\
-        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        Q.EXISTS_TAC `restr L (G' P)` \\
-        CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        DISJ2_TAC \\
-        Q.EXISTS_TAC `\t. restr L (G' t)` >> BETA_TAC >> REWRITE_TAC [] \\
-        MATCH_MP_TAC CONTEXT6 >> art [] ],
-      (* goal 4 (of 4) *)
-      RES_TAC >> Q.EXISTS_TAC `restr L E1` \\
-      CONJ_TAC >- (Q.EXISTS_TAC `E1` >> art []) \\
-      POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 subgoals *)
-      [ (* goal 4.1 (of 2) *)
-        rename1 `STRONG_EQUIV E1 y` \\
-        Q.EXISTS_TAC `restr L y` \\
-        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        Q.EXISTS_TAC `restr L y` \\
-        CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        DISJ1_TAC >> REWRITE_TAC [],
-        (* goal 4.2 (of 2) *)
-        Q.EXISTS_TAC `restr L (G' Q)` \\
-        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        Q.EXISTS_TAC `restr L (G' P)` \\
-        CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
-        DISJ2_TAC \\
-        Q.EXISTS_TAC `\t. restr L (G' t)` >> BETA_TAC >> REWRITE_TAC [] \\
+        Q.EXISTS_TAC `\t. restr L (E' t)` >> BETA_TAC >> REWRITE_TAC [] \\
         MATCH_MP_TAC CONTEXT6 >> art [] ] ])
- (* final case: relab *)
- >> RW_TAC std_ss [TRANS_RELAB_EQ] (* 2 subgoals *)
- >| [ (* goal 1 (of 2) *)
-      RES_TAC >> Q.EXISTS_TAC `relab E2 rf` \\
-      rename1 `TRANS (G Q) u E2` \\
-      CONJ_TAC >- (take [`u`, `E2`] >> art []) \\
-      POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >| (* 2 subgoals *)
-      [ (* goal 13.1 (of 2) *)
-        rename1 `STRONG_EQUIV y E2` \\
-        Q.EXISTS_TAC `relab y rf` \\
-        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art [] ) \\
-        Q.EXISTS_TAC `relab y rf` \\
-        CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
-        DISJ1_TAC >> REWRITE_TAC [],
-        (* goal 13.2 (of 2) *)
-        Q.EXISTS_TAC `relab (G' Q) rf` \\
-        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
-        Q.EXISTS_TAC `relab (G' P) rf` \\
-        CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
-        DISJ2_TAC \\
-        Q.EXISTS_TAC `\t. relab (G' t) rf` >> BETA_TAC >> REWRITE_TAC [] \\
-        MATCH_MP_TAC CONTEXT7 >> art [] ],
-      (* goal 2 (of 2) *)
-      RES_TAC >> Q.EXISTS_TAC `relab E1 rf` \\
-      rename1 `TRANS (G P) u E1` \\
-      CONJ_TAC >- (take [`u`, `E1`] >> art []) \\
-      POP_ASSUM MP_TAC >> RW_TAC std_ss [O_DEF] >|
-      [ (* goal 14.1 (of 2) *)
-        rename1 `STRONG_EQUIV E1 y` \\
-        Q.EXISTS_TAC `relab y rf` \\
-        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
-        Q.EXISTS_TAC `relab y rf` \\
-        CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
-        DISJ1_TAC >> REWRITE_TAC [],
-        (* goal 14.2 (of 2) *)
-        Q.EXISTS_TAC `relab (G' Q) rf` \\
-        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
-        Q.EXISTS_TAC `relab (G' P) rf` \\
-        CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
-        DISJ2_TAC \\
-        Q.EXISTS_TAC `\t. relab (G' t) rf` >> BETA_TAC >> REWRITE_TAC [] \\
-        MATCH_MP_TAC CONTEXT7 >> art [] ] ]
+ (* 3 subgoals left *)
+ >- (fs [TRANS_RESTR_EQ] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       POP_ASSUM (fs o wrap) \\
+       RES_TAC >> Q.EXISTS_TAC `restr L E1` \\
+       CONJ_TAC >- (Q.EXISTS_TAC `E1` >> art []) \\
+       POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 subgoals *)
+       [ (* goal 1.1 (of 2) *)
+         rename1 `STRONG_EQUIV E1 y` \\
+         Q.EXISTS_TAC `restr L y` \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+         Q.EXISTS_TAC `restr L y` \\
+         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+         DISJ1_TAC >> REWRITE_TAC [],
+         (* goal 1.2 (of 2) *)
+         Q.EXISTS_TAC `restr L (E' Q)` \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+         Q.EXISTS_TAC `restr L (E' P)` \\
+         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. restr L (E' t)` >> rw [] \\
+         MATCH_MP_TAC CONTEXT6 >> art [] ],
+       (* goal 2 (of 2) *)
+       Q.PAT_X_ASSUM ‘u = label l’ (fs o wrap) \\
+       RES_TAC >> Q.EXISTS_TAC `restr L E1` \\
+       CONJ_TAC >- (Q.EXISTS_TAC `E1` >> art []) \\
+       POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 subgoals *)
+       [ (* goal 2.1 (of 2) *)
+         rename1 `STRONG_EQUIV E1 y` \\
+         Q.EXISTS_TAC `restr L y` \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+         Q.EXISTS_TAC `restr L y` \\
+         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+         DISJ1_TAC >> REWRITE_TAC [],
+         (* goal 2.2 (of 2) *)
+         Q.EXISTS_TAC `restr L (E' Q)` \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+         Q.EXISTS_TAC `restr L (E' P)` \\
+         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+         DISJ2_TAC >> Q.EXISTS_TAC `\t. restr L (E' t)` >> rw [] \\
+         MATCH_MP_TAC CONTEXT6 >> art [] ] ])
+ (* 2 subgoals left *)
+ >- (fs [TRANS_RELAB_EQ] \\
+     Q.PAT_X_ASSUM ‘u = relabel rf u'’ K_TAC \\
+     RES_TAC >> Q.EXISTS_TAC `relab E2 rf` \\
+     rename1 `TRANS (E Q) u E2` \\
+     CONJ_TAC >- (take [`u`, `E2`] >> art []) \\
+     POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       rename1 `STRONG_EQUIV y E2` \\
+       Q.EXISTS_TAC `relab y rf` \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art [] ) \\
+       Q.EXISTS_TAC `relab y rf` \\
+       CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+       DISJ1_TAC >> REWRITE_TAC [],
+       (* goal 2 (of 2) *)
+       Q.EXISTS_TAC `relab (E' Q) rf` \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+       Q.EXISTS_TAC `relab (E' P) rf` \\
+       CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+       DISJ2_TAC >> Q.EXISTS_TAC `\t. relab (E' t) rf` >> rw [] \\
+       MATCH_MP_TAC CONTEXT7 >> art [] ])
+ (* final goal *)
+ >> (fs [TRANS_RELAB_EQ] \\
+     Q.PAT_X_ASSUM ‘u = relabel rf u'’ K_TAC \\
+     RES_TAC >> Q.EXISTS_TAC `relab E1 rf` \\
+     rename1 `TRANS (E P) u E1` \\
+     CONJ_TAC >- (take [`u`, `E1`] >> art []) \\
+     POP_ASSUM MP_TAC >> rw [Abbr ‘R’, O_DEF] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       rename1 `STRONG_EQUIV E1 y` \\
+       Q.EXISTS_TAC `relab y rf` \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+       Q.EXISTS_TAC `relab y rf` \\
+       CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+       DISJ1_TAC >> REWRITE_TAC [],
+       (* goal 2 (of 2) *)
+       Q.EXISTS_TAC `relab (E' Q) rf` \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+       Q.EXISTS_TAC `relab (E' P) rf` \\
+       CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+       DISJ2_TAC >> Q.EXISTS_TAC `\t. relab (E' t) rf` >> rw [] \\
+       MATCH_MP_TAC CONTEXT7 >> art [] ])
+QED
+
+(* Proposition 4.14 in Milner's book [1] (uni-variate version):
+   Let the expression E contains at most the variable X, and let X be
+   weakly guarded in E, then:
+        If P ~ E{P/X} and Q ~ E{Q/X} then P ~ Q.
+ *)
+Theorem STRONG_UNIQUE_SOLUTION :
+    !E P Q. WG E /\ STRONG_EQUIV P (E P) /\ STRONG_EQUIV Q (E Q) ==> STRONG_EQUIV P Q
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC STRONG_UNIQUE_SOLUTION_EXT
+ >> qexistsl_tac [‘E’, ‘E’] >> rw []
 QED
 
 (******************************************************************************)
