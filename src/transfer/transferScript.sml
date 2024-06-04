@@ -89,6 +89,12 @@ Theorem FUN_REL_COMB:
 Proof simp[FUN_REL_def]
 QED
 
+Theorem FUN_REL_COMB_EQ:
+  (AB1 ===> CD) f g /\ AB2 a b ==> AB1 = AB2 ==> CD (f a) (g b)
+Proof
+  rpt strip_tac >> gvs[] >> irule FUN_REL_COMB >> metis_tac[]
+QED
+
 Theorem FUN_REL_IFF_IMP:
   (AB |==> (=)) P Q ==> (AB |==> (==>)) P Q /\ (AB |==> combin$C (==>)) P Q
 Proof

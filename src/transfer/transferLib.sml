@@ -2,12 +2,15 @@ structure transferLib :> transferLib =
 struct
 
 open HolKernel boolLib
-open transferTheory FullUnify
+open transferTheory FullUnify simpLib
 val op $ = Portable.$
+infix ++
 
 val SIMP_CONV = simpLib.SIMP_CONV
 val SIMP_RULE = simpLib.SIMP_RULE
-val transfer_ss = simpLib.++(boolSimps.bool_ss, combinSimps.COMBIN_ss)
+
+val transfer_ss = boolSimps.bool_ss ++ combinSimps.COMBIN_ss ++
+                  rewrites [eq_equalityp]
 
 fun relconstraint_tm t =
     case dest_term t of
@@ -131,33 +134,28 @@ type t = {
   right : thm Net.net,
   safe : thm Net.net,
   bad : term Net.net,
-  skel_shortcutsL : thm Net.net,
-  skel_shortcutsR : thm Net.net,
   DOMRNG_ss : thm list
 }
 
 val empty_rdb : t =
    {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty,
-    skel_shortcutsL = Net.empty, skel_shortcutsR = Net.empty,
     DOMRNG_ss = []}
+
+fun safenet (t:t) = #safe t
+fun badnet (t:t) = #bad t
+fun domrngs (t:t) = #DOMRNG_ss t
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun mkUp z = makeUpdate7 z
+fun mkUp z = makeUpdate5 z
 fun update_T z = let
-  fun from bad DOMRNG_ss left right safe skel_shortcutsL skel_shortcutsR  =
-    {bad = bad, DOMRNG_ss = DOMRNG_ss, left = left, right = right, safe = safe,
-     skel_shortcutsL = skel_shortcutsL, skel_shortcutsR = skel_shortcutsR
-    }
+  fun from bad DOMRNG_ss left right safe =
+    {bad = bad, DOMRNG_ss = DOMRNG_ss, left = left, right = right, safe = safe}
   (* fields in reverse order to above *)
-  fun from' skel_shortcutsR skel_shortcutsL safe right left DOMRNG_ss bad =
-    {bad = bad, DOMRNG_ss = DOMRNG_ss, left = left, right = right, safe = safe,
-     skel_shortcutsL = skel_shortcutsL, skel_shortcutsR = skel_shortcutsR
-    }
+  fun from' safe right left DOMRNG_ss bad =
+    {bad = bad, DOMRNG_ss = DOMRNG_ss, left = left, right = right, safe = safe}
   (* first order *)
-  fun to f {bad, DOMRNG_ss, left, right, safe, skel_shortcutsL, skel_shortcutsR}
-      =
-      f bad DOMRNG_ss left right safe skel_shortcutsL skel_shortcutsR
+  fun to f {bad, DOMRNG_ss, left, right, safe} = f bad DOMRNG_ss left right safe
 in
   mkUp (from, from', to)
 end z
@@ -167,10 +165,6 @@ fun fupd_bad f (t:t) : t = update_T t (U #bad (f (#bad t))) $$
 fun fupd_left f (t:t) : t = update_T t (U #left (f (#left t))) $$
 fun fupd_right f (t:t) : t = update_T t (U #right (f (#right t))) $$
 fun fupd_safe f (t:t) : t = update_T t (U #safe (f (#safe t))) $$
-fun fupd_skelscL f (t:t) : t =
-    update_T t (U #skel_shortcutsL (f (#skel_shortcutsL t))) $$
-fun fupd_skelscR f (t:t) : t =
-    update_T t (U #skel_shortcutsR (f (#skel_shortcutsR t))) $$
 
 fun addrule0 (th, r) =
     let
@@ -194,20 +188,14 @@ fun lookup_rule cleftp (rdb:t) t =
       Net.lookup t n
     end
 
-fun add_skeleton_shortcut th r =
-    r |> fupd_skelscL (Net.enter (lhand (concl th), th))
-      |> fupd_skelscR (Net.enter (rand (concl th), th))
-
-fun lookup_skelsc cleftp (rdb:t) t =
-    let
-      val n = if cleftp then #skel_shortcutsL rdb else #skel_shortcutsR rdb
-    in
-      Net.lookup t n
-    end
-
 end (* ruledb struct *)
 
 val GFUN_REL_COMB = GEN_ALL FUN_REL_COMB
+val GFUN_REL_COMB_EQ = GEN_ALL FUN_REL_COMB_EQ
+fun first f [] = NONE
+  | first f (x::xs) = SOME (f x) handle HOL_ERR _ => first f xs
+
+
 fun prove_relation_thm cleftp ct skt =
     let
       val argl = if cleftp then [ct, skt] else [skt, ct]
@@ -223,8 +211,10 @@ fun prove_relation_thm cleftp ct skt =
             let
               val fthm = prove_relation_thm cleftp cf (rator skt)
               val xthm = prove_relation_thm cleftp cx (rand skt)
+              val cj = CONJ fthm xthm
             in
-              MATCH_MP GFUN_REL_COMB (CONJ fthm xthm)
+              MATCH_MP GFUN_REL_COMB cj handle HOL_ERR _ =>
+               UNDISCH (MATCH_MP GFUN_REL_COMB_EQ cj)
             end
           | LAMB (cbv, cbod) =>
             let
@@ -281,6 +271,8 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
           case seq.cases sq1 of
               NONE => sq2
             | _ => sq1
+      fun sqfold f [] th = sqreturn th
+        | sqfold f (x::xs) th = seq.bind (f x th) (sqfold f xs)
       val fail = seq.empty
       val hs = hyp th
       fun u1 h th rule =
@@ -292,7 +284,7 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
               [] => sqreturn (progressed,th)
             | h::rest =>
               let
-                val ths = Net.lookup h (#safe ruledb)
+                val ths = Net.lookup h (ruledb.safenet ruledb)
               in
                 ((seq.fromList ths ~> u1 h th) +++ sqreturn (progressed, th)) ~>
                 safe_recurse rest
@@ -303,22 +295,25 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
             | h::rest =>
                 if List.exists
                      (fn pat => can (match_term (gen_tyvarify pat)) h)
-                     (Net.lookup h (#bad ruledb))
+                     (Net.lookup h (ruledb.badnet ruledb))
                 then
                   fail
                 else bad_recurse rest th
-      fun simphyp (h, th) =
-          if not (is_relconstraint h) then th
+      fun nosimpfails h th = if null (free_vars h) then fail else sqreturn th
+      fun simphyp h th =
+          if not (is_relconstraint h) then sqreturn th
           else
             let
-              val hth = SIMP_CONV transfer_ss (#DOMRNG_ss ruledb) h
+              val hth = SIMP_CONV transfer_ss (ruledb.domrngs ruledb) h
             in
               if rhs (concl hth) ~~ T then
-                PROVE_HYP (EQT_ELIM hth) th
+                sqreturn $ PROVE_HYP (EQT_ELIM hth) th
+              else if null (free_vars h) then fail
               else
-                PROVE_HYP (EQ_IMP_RULE hth |> #2 |> UNDISCH) th
-            end handle UNCHANGED => th | HOL_ERR _ => th
-      fun simphyps th = sqreturn (List.foldl simphyp th (hyp th))
+                sqreturn $ PROVE_HYP (EQ_IMP_RULE hth |> #2 |> UNDISCH) th
+            end handle UNCHANGED => nosimpfails h th
+                     | HOL_ERR _ => nosimpfails h th
+      fun simphyps th = sqfold simphyp (hyp th) th
       fun assertprogress (p, th) = if not p andalso forceprogress then fail
                                    else sqreturn th
     in
@@ -361,7 +356,7 @@ fun resolve_relhyps hints cleftp rdb th =
                     | SOME th' => sqreturn th'
             in
               seq.fromList candidate_rules ~> kont ~>
-            check {cleftp=cleftp,forceprogress=false} rdb
+              check {cleftp=cleftp,forceprogress=false} rdb
             end
     end
 
@@ -595,7 +590,7 @@ fun eliminate_domrng cleftp (ruledb:ruledb.t) =
     let
       val argsel = if cleftp then RAND_CONV else LAND_CONV
     in
-      CONV_RULE (argsel $ SIMP_CONV transfer_ss (#DOMRNG_ss ruledb))
+      CONV_RULE (argsel $ SIMP_CONV transfer_ss (ruledb.domrngs ruledb))
     end
 
 fun base_transfer hints cleftp ruledb t =

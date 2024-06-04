@@ -11,8 +11,10 @@ sig
     val addsafe : thm -> t -> t
     val addbad : term -> t -> t
     val add_domrng : thm -> t -> t
-    val add_skeleton_shortcut : thm -> t -> t
     val lookup_rule : bool -> t -> term -> thm list
+    val safenet : t -> thm Net.net
+    val badnet : t -> term Net.net
+    val domrngs : t -> thm list
   end
 
   val prove_relation_thm : bool -> term -> term -> thm
