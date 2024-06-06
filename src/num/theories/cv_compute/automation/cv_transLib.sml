@@ -497,9 +497,13 @@ fun cv_trans_any allow_pre term_opt def = let
   val cv_vars = hyps |> map (fst o strip_comb o
                              cv_rep_cv_tm o concl o UNDISCH_ALL o snd)
   val cv_subst = map2 (fn v => fn c => v |-> c) cv_vars cv_consts
-  val inst_cv_reps = raw_cv_reps |> map (INST cv_subst)
-                                 |> map2 (fn cv_def => fn th =>
-    CONV_RULE (cv_rep_cv_tm_conv (REWR_CONV (SYM cv_def))) th) cv_defs
+  fun sym_rw cv_def th = let
+    val vs = strip_comb (cv_rep_hol_tm (concl th)) |> snd
+    val ws = map (fn v => mk_comb(from_for (type_of v),v)) vs
+    val ts = cv_def |> concl |> lhs |> strip_comb |> snd
+    val adjusted_def = INST (map2 (fn x => fn y => x |-> y) ts ws) cv_def
+    in CONV_RULE (cv_rep_cv_tm_conv (REWR_CONV (SYM adjusted_def))) th end
+  val inst_cv_reps = raw_cv_reps |> map (INST cv_subst) |> map2 sym_rw cv_defs
   val no_pre = (length inst_cv_reps = 1 andalso
                 aconv (inst_cv_reps |> hd |> concl |> cv_rep_pre) T)
   val expand_cv_reps = inst_cv_reps |> map (CONV_RULE (REWR_CONV cv_rep_def))
