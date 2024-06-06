@@ -739,7 +739,7 @@ fun cv_trans_loop allow_pre term_opt [] = failwith "nothing to do"  (* cannot ha
          val _ = check_for_dups tm defs
          val needs_c = strip_comb tm |> fst
          val new_def = find_inst_def_for needs_c
-         val new_tasks = inst_ho_args tm new_def
+         val new_tasks = quiet_warnings (inst_ho_args tm) new_def
          val defs = new_tasks @ Def def::defs
          in cv_trans_loop allow_pre term_opt defs end);
 
