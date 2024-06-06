@@ -148,6 +148,7 @@ sig
    val set_diff : ''a list -> ''a list -> ''a list
    val set_eq : ''a list -> ''a list -> bool
    val setify : (''a -> ''a -> bool) -> ''a list -> ''a list
+   val simple_assert : bool -> exn -> unit
    val single : 'a -> 'a list
    val singleton_of_list : 'a list -> 'a
    val snd : 'a * 'b -> 'b

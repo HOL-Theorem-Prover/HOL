@@ -65,9 +65,7 @@ fun err_BUG s (h as HOL_ERR _) =
 
 (* Success and failure *)
 
-(* renamed due to conflict with Lib.assert *)
-fun simple_assert b e = if b then () else raise e;
-val assert = simple_assert; (* only for the rest of this file *)
+val assert = simple_assert; (* renamed and moved to Lib *)
 
 (* Exception combinators *)
 
