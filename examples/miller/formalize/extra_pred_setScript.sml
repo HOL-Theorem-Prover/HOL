@@ -11,6 +11,8 @@ open ho_proverTools subtypeTheory subtypeTools boolContext listContext;
 
 val _ = new_theory "extra_pred_set";
 
+val assert = simple_assert;
+
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
 (* ------------------------------------------------------------------------- *)

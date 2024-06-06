@@ -1,7 +1,6 @@
-(* non-interactive mode
-*)
 structure ho_proverTools :> ho_proverTools =
 struct
+
 open HolKernel Parse boolLib BasicProvers;
 
 structure Parse = struct
@@ -12,17 +11,6 @@ structure Parse = struct
         |> parse_from_grammars
 end
 open Parse
-
-
-(* interactive mode
-val () = loadPath := union ["..", "../finished"] (!loadPath);
-val () = app load
-  ["HurdUseful",
-   "ho_basicTools",
-   "unifyTools",
-   "skiTheory"];
-val () = show_assums := true;
-*)
 
 open Susp combinTheory hurdUtils skiTools;
 
@@ -36,10 +24,10 @@ val op|| = op ORELSE;
 val op>> = op THEN1;
 val !! = REPEAT;
 
-(* non-interactive mode
-*)
 fun trace _ _ = ();
 fun printVal _ = ();
+
+val assert = simple_assert;
 
 (* ------------------------------------------------------------------------- *)
 (* vterm operations                                                          *)
