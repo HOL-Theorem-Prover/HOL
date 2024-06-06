@@ -335,12 +335,10 @@ val clean_name = let
 (*
   val _ = Define `bar x = x + 5n`
   val def = Define `foo = bar`
-
   val def = Define `mymap f g l1 l2 = (MAP f l1, MAP g l2)`
 *)
 fun preprocess_def def = let
-  val defs = def |> oneline_ify_all |> LIST_CONJ
-  val defs = defs |> SPEC_ALL |> CONJUNCTS |> map (UNDISCH_ALL o SPEC_ALL)
+  val defs = def |> oneline_ify_all |> map (SPEC_ALL o UNDISCH_ALL o SPEC_ALL)
   (* val th = hd defs *)
   fun adjust_def th =
     let val (l,r) = th |> concl |> dest_eq
