@@ -13,9 +13,6 @@ sig
   val BUG_to_string : exn -> string
   val err_BUG : string -> exn -> exn
 
-  (* Success and failure *)
-  val simple_assert : bool -> exn -> unit
-
   (* Exception combinators *)
   val nof : 'a -> 'b
   val allf : 'a -> 'a
