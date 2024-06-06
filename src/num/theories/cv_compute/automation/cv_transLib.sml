@@ -498,7 +498,7 @@ fun cv_trans_any allow_pre term_opt def = let
   fun sym_rw cv_def th = let
     val vs = strip_comb (cv_rep_hol_tm (concl th)) |> snd
     val ws = map (fn v => mk_comb(from_for (type_of v),v)) vs
-    val ts = cv_def |> concl |> lhs |> strip_comb |> snd
+    val ts = if null ws then [] else cv_def |> concl |> lhs |> strip_comb |> snd
     val adjusted_def = INST (map2 (fn x => fn y => x |-> y) ts ws) cv_def
     in CONV_RULE (cv_rep_cv_tm_conv (REWR_CONV (SYM adjusted_def))) th end
   val inst_cv_reps = raw_cv_reps |> map (INST cv_subst) |> map2 sym_rw cv_defs
