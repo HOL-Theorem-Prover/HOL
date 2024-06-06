@@ -1,38 +1,16 @@
-(* non-interactive mode
-*)
 structure subtypeTools :> subtypeTools =
 struct
-open HolKernel Parse boolLib;
 
-(* interactive mode
-val () = loadPath := "../ho_prover" :: !loadPath;
-val () = app load
-  ["Susp",
-   "combinTheory",
-   "pred_setTheory",
-   "prob_extraTheory",
-   "BasicProvers",
-   "HurdUseful",
-   "ho_basicTools",
-   "ho_discrimTools",
-   "ho_proverTools",
-   "subtypeTheory"];
-val () = show_assums := true;
-*)
+open HolKernel Parse boolLib BasicProvers;
 
-open Susp combinTheory pred_setTheory BasicProvers
-     hurdUtils subtypeTheory ho_discrimTools
+open Susp combinTheory pred_setTheory hurdUtils subtypeTheory ho_discrimTools
      ho_proverTools ho_basicTools;
 
-infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER -->;
-infix 1 >> |->;
+infixr 0 oo ## THENC ORELSEC THENR ORELSER -->;
+infix 1 |->;
 infix thenf orelsef then_frule orelse_frule join_frule;
 
-val op++ = op THEN;
-val op<< = op THENL;
-val op|| = op ORELSE;
-val op>> = op THEN1;
-val !! = REPEAT;
+val assert = simple_assert;
 
 (* ------------------------------------------------------------------------- *)
 (* Debugging.                                                                *)
@@ -806,8 +784,8 @@ fun SIMPLIFY_TAC_X conv ctext ths =
   end;
 
 fun PRESIMPLIFY_TAC ctext ths =
-  EVERY (map (ASSUME_TAC o GEN_ALL) ths)
-  ++ ASM_MATCH_MP_TAC (ths @ context_forwards ctext);
+    EVERY (map (ASSUME_TAC o GEN_ALL) ths)
+ >> ASM_MATCH_MP_TAC (ths @ context_forwards ctext);
 
 val SIMPLIFY_TAC' = SIMPLIFY_TAC_X SIMPLIFY_CONV';
 val SIMPLIFY_TAC = SIMPLIFY_TAC_X SIMPLIFY_CONV;

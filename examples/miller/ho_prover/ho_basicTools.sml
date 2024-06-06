@@ -1,33 +1,13 @@
-(* non-interactive mode
-*)
 structure ho_basicTools :> ho_basicTools =
 struct
+
 open HolKernel Parse boolLib;
-
-(* interactive mode
-val () = loadPath := union ["..", "../finished"] (!loadPath);
-val () = app load
-  ["bossLib",
-   "realLib",
-   "rich_listTheory",
-   "arithmeticTheory",
-   "numTheory",
-   "pred_setTheory",
-   "pairTheory",
-   "combinTheory",
-   "listTheory",
-   "dividesTheory",
-   "primeTheory",
-   "gcdTheory",
-   "probLib",
-   "hoTools"];
-val () = show_assums := true;
-
-*)
 
 open hurdUtils;
 
 infixr 0 ##
+
+val assert = simple_assert;
 
 (* ------------------------------------------------------------------------- *)
 (* Debugging.                                                                *)

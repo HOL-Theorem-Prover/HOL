@@ -1,23 +1,19 @@
-open HolKernel Parse boolLib;
-open bossLib arithmeticTheory dividesTheory gcdTheory
-     res_quanTheory pred_setTheory subtypeTheory
-     res_quanTools subtypeTools ho_proverTools numContext hurdUtils
-     extra_numTheory ho_basicTools
+open HolKernel Parse boolLib bossLib;
 
-(* interactive mode
-quietdec := false;
-*)
+open arithmeticTheory dividesTheory gcdTheory res_quanTheory pred_setTheory
+     subtypeTheory res_quanTools subtypeTools ho_proverTools numContext
+     hurdUtils extra_numTheory ho_basicTools;
 
 val _ = new_theory "extra_arith";
 val _ = ParseExtras.temp_loose_equality()
 
-val !! = REPEAT;
+val assert = simple_assert;
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val S_TAC = !! (POP_ASSUM MP_TAC) >> !! RESQ_STRIP_TAC;
+val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
 
 val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS num_c;
 
