@@ -5,8 +5,8 @@
 open HolKernel Parse bossLib boolLib;
 
 open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory jrhUtils
-     prim_recTheory realTheory realLib metricTheory netsTheory combinTheory;
-open pred_setTheory mesonLib;
+     prim_recTheory realTheory realLib metricTheory netsTheory combinTheory
+     pred_setTheory mesonLib hurdUtils;
 
 open topologyTheory real_topologyTheory derivativeTheory seqTheory;
 
@@ -15,17 +15,9 @@ val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
 
-(* mini hurdUtils *)
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-fun wrap a = [a];
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val POP_ORW = POP_ASSUM (ONCE_REWRITE_TAC o wrap);
-val art = ASM_REWRITE_TAC;
-
 val tendsto = netsTheory.tendsto;   (* conflict with real_topologyTheory.tendsto *)
 val GEN_ALL = hol88Lib.GEN_ALL;     (* this gives old (reverted) variable orders *)
+val EXACT_CONV = jrhUtils.EXACT_CONV; (* there's one also in hurdUtils *)
 
 (*---------------------------------------------------------------------------*)
 (* Specialize nets theorems to the pointwise limit of real->real functions   *)
@@ -699,6 +691,18 @@ val DIFF_POW = store_thm("DIFF_POW",
     REWRITE_TAC[REAL_MUL_ASSOC] THEN AP_TERM_TAC THEN
     REWRITE_TAC[ONE, pow] THEN
     REWRITE_TAC[SYM ONE, REAL_MUL_RID]]);
+
+val lemma = REWRITE_RULE [diffl_has_derivative, Once REAL_MUL_COMM] DIFF_POW;
+
+Theorem HAS_DERIVATIVE_POW' :
+    !n x. ((\x. x pow n) has_derivative (\y. &n * x pow (n - 1) * y)) (at x)
+Proof
+    REWRITE_TAC [lemma]
+QED
+
+(* !n x. ((\x. x pow n) has_vector_derivative &n * x pow (n - 1)) (at x) *)
+Theorem HAS_VECTOR_DERIVATIVE_POW =
+        REWRITE_RULE [diffl_has_vector_derivative] DIFF_POW
 
 (*---------------------------------------------------------------------------*)
 (* Now power of -1 (then differentiation of inverses follows from chain rule)*)

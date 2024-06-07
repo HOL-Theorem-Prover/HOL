@@ -1704,6 +1704,7 @@ QED
 (* CONTINUOUS_ON_EXP                                                         *)
 (* ------------------------------------------------------------------------- *)
 
+(* See limTheory.HAS_DERIVATIVE_POW' for a better version without sum *)
 val HAS_DERIVATIVE_POW = store_thm ("HAS_DERIVATIVE_POW",
  ``!q0 n.
      ((\q. q pow n) has_derivative
