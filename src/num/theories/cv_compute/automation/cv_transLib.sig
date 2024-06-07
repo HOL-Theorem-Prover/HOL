@@ -15,6 +15,7 @@ sig
   (* The conv should evaluate `from <deep_embedding>` *)
   val cv_trans_deep_embedding : conv -> thm -> unit
 
+  val cv_eqs_for     : term -> thm list
   val cv_eval_raw    : term -> thm
   val cv_eval        : term -> thm
 
