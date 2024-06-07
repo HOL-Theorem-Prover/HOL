@@ -25,7 +25,7 @@ open reduceLib
      numTheory
      prim_recTheory
      arithmeticTheory
-     realTheory realSimps realLib
+     realTheory realLib
      metricTheory
      netsTheory
      real_sigmaTheory
@@ -33,21 +33,13 @@ open reduceLib
      jrhUtils
      Diff
      pred_setTheory
-     mesonLib;
+     mesonLib hurdUtils;
 
 open iterateTheory real_topologyTheory derivativeTheory;
 open seqTheory limTheory powserTheory;
 
 val _ = new_theory "transc";
 val _ = Parse.reveal "B";
-
-(* Mini hurdUtils *)
-val Suff = Q_TAC SUFF_TAC;
-val Know = Q_TAC KNOW_TAC;
-fun wrap a = [a];
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val POP_ORW = POP_ASSUM (ONCE_REWRITE_TAC o wrap);
-val art = ASM_REWRITE_TAC;
 
 val MVT            = limTheory.MVT;
 val ROLLE          = limTheory.ROLLE;
@@ -2664,30 +2656,64 @@ Theorem DIFF_LN_COMPOSITE'[difftool] = SPEC_ALL DIFF_LN_COMPOSITE
 (* Exponentiation with real exponents (rpow)                                 *)
 (* ------------------------------------------------------------------------- *)
 
-fun K_TAC _ = ALL_TAC;
+Theorem powr_lemma[local] :
+    !n a. 0 < a ==> exp (ln a * &n) = a pow n
+Proof
+    Induct_on ‘n’
+ >- RW_TAC real_ss [pow, POW_1, GSYM EXP_0]
+ >> RW_TAC std_ss [pow, REAL, REAL_LDISTRIB, EXP_ADD, REAL_MUL_RID]
+ >> ‘exp (ln a) = a’ by PROVE_TAC [EXP_LN]
+ >> POP_ORW
+ >> REWRITE_TAC [Once REAL_MUL_COMM]
+QED
 
-(* Definition *)
+(* New definition of powr (rpow) *)
+local
+  val thm = Q.prove (
+     ‘?f :real -> real -> real.
+         (!a b. 0 < a ==> f a b = exp (b * ln a)) /\
+         (!b. 0 < b ==> f 0 b = 0) /\
+         (!a n. f a &n = a pow n /\ f a (-&SUC n) = inv (a pow (SUC n)))’,
+   (* proof *)
+      Q.EXISTS_TAC ‘\a b. if 0 < a then exp (b * ln a) else
+                          if a = 0 /\ 0 < b then 0 else
+                          if ?n. b = &n then a pow (flr b) else
+                          if ?n. -b = &n then inv (a pow (flr (-b))) else 0’
+   >> rw [NUM_FLOOR_EQNS] (* 2 subgoals *)
+   >| [ (* goal 1 (of 2) *)
+        MATCH_MP_TAC powr_lemma >> art [],
+        (* goal 2 (of 2) *)
+        RW_TAC std_ss [REAL_MUL_LNEG, EXP_NEG] \\
+        AP_TERM_TAC \\
+        MATCH_MP_TAC powr_lemma >> art [] ]);
+in
+  (* |- (!a b. 0 < a ==> a powr b = exp (b * ln a)) /\
+        (!b. 0 < b ==> 0 powr b = 0) /\
+         !a n. a powr &n = a pow n /\
+               a powr -&SUC n = inv (a pow SUC n)
+   *)
+  val powr_def = new_specification ("powr_def", ["powr"], thm);
+end;
+
+(* Infix syntax: ‘a powr b’ *)
+val _ = set_fixity "powr" (Infixr 700);
+
+(* NOTE: the name "rpow" is for backward compatibility purposes *)
+Overload rpow[inferior] = “$powr”
 val _ = set_fixity "rpow" (Infixr 700);
 
-val rpow = Define `a rpow b = exp (b * ln a)`;
+(* |- !a b. 0 < a ==> powr a b = exp (b * ln a) *)
+Theorem rpow_def = cj 1 powr_def
 
-(* Properties *)
+val rpow = rpow_def;
 
-val  GEN_RPOW = store_thm
-        ("GEN_RPOW",
-        ``! a n. 0 < a ==> (a pow n = a rpow  &n)``,
- Induct_on `n` THENL [
- RW_TAC real_ss [pow,POW_1, rpow, GSYM EXP_0],
+(* Properties of ‘powr’ / ‘rpow’ *)
 
-GEN_TAC THEN
-        RW_TAC std_ss[rpow,pow,REAL,REAL_RDISTRIB,EXP_ADD,REAL_MUL_LID] THEN
-
-        KNOW_TAC ``exp(ln a)= a`` THEN1
-          PROVE_TAC[EXP_LN] THEN
-        DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
-        KNOW_TAC ``a* exp (&n * ln a) = exp (&n * ln a)*a`` THEN1
-          RW_TAC std_ss[REAL_MUL_COMM] THEN
-        DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC]);
+Theorem GEN_RPOW :
+    !a n. 0 < a ==> (a pow n = a rpow &n)
+Proof
+    rw [rpow, powr_lemma]
+QED
 
 val  RPOW_SUC_N = store_thm
         ("RPOW_SUC_N",
@@ -2698,64 +2724,78 @@ val  RPOW_SUC_N = store_thm
        DISCH_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
        RW_TAC std_ss [GEN_RPOW]) ;
 
-val RPOW_0= store_thm
-        ("RPOW_0",
-        ``! a. (0 < a)==> (a rpow  &0 = &1)``,
-  RW_TAC std_ss [rpow]THEN
-  RW_TAC std_ss [REAL_MUL_LZERO]THEN
-  RW_TAC std_ss [EXP_0]);
+(* NOTE: removed ‘0 < a’ under the new definition *)
+Theorem RPOW_0 :
+    !a. a rpow &0 = &1
+Proof
+    rw [powr_def]
+QED
 
-val  RPOW_1= store_thm
-        ("RPOW_1",
-        ``! a. (0 < a)==> ( a rpow  &1 = a)``,
-   RW_TAC std_ss [GSYM GEN_RPOW,POW_1]);
+(* NOTE: removed ‘0 < a’ under the new definition *)
+Theorem RPOW_1 :
+    !a. a rpow &1 = a
+Proof
+    rw [powr_def]
+QED
 
-val  ONE_RPOW= store_thm
-        ("ONE_RPOW",
-        ``! a. (0 < a)==> (1 rpow a  = 1)``,
-RW_TAC real_ss [rpow,LN_1,EXP_0]);
+(* NOTE: removed ‘0 < a’ (even under the old definition) *)
+Theorem ONE_RPOW :
+    !a. 1 rpow a = 1
+Proof
+    rw [rpow, LN_1, EXP_0]
+QED
 
 val  RPOW_POS_LT= store_thm
         ("RPOW_POS_LT",
         ``! a b. (0 < a)==> (0 < a rpow b)``,
               RW_TAC std_ss [rpow, EXP_POS_LT]);
 
-val  RPOW_NZ= store_thm
-        ("RPOW_NZ",
-        ``! a b. (0 <> a)==> ( a rpow b <>0)``,
-RW_TAC std_ss [rpow,EXP_NZ]);
-
+(* NOTE: the antecedent has changed from ‘0 <> a’ to ‘0 < a’ *)
+Theorem RPOW_NZ :
+    !a b. 0 < a ==> a rpow b <> 0
+Proof
+    RW_TAC std_ss [rpow, EXP_NZ]
+QED
 
 val  LN_RPOW= store_thm
         ("LN_RPOW",
         ``! a b. (0 < a)==> (ln (a rpow b)= (b*ln a))``,
  RW_TAC std_ss [rpow,LN_EXP]);
 
-val  RPOW_ADD= store_thm
-        ("RPOW_ADD",
-        ``! a b c. a rpow (b + c)= (a rpow  b)*(a rpow  c)``,
- RW_TAC std_ss [rpow, EXP_ADD, REAL_RDISTRIB] );
+(* NOTE: added antecedent ‘0 < a’ under the new definition *)
+Theorem RPOW_ADD :
+    !a b c. 0 < a ==> a rpow (b + c)= (a rpow  b)*(a rpow  c)
+Proof
+    RW_TAC std_ss [rpow, EXP_ADD, REAL_RDISTRIB]
+QED
 
-val  RPOW_ADD_MUL= store_thm
-        ("RPOW_ADD_MUL",
-        ``! a b c. a rpow (b + c)* a rpow (-b)= (a rpow c)``,
+(* NOTE: added antecedent ‘0 < a’ under the new definition *)
+Theorem RPOW_ADD_MUL :
+    !a b c. 0 < a ==> a rpow (b + c)* a rpow (-b)= (a rpow c)
+Proof
  RW_TAC std_ss [rpow, REAL_RDISTRIB, GSYM EXP_ADD]THEN
  KNOW_TAC`` ((b * ln a + c * ln a + -b * ln a)=(b * ln a  -b * ln a + c*ln a)) ``THEN1
     REAL_ARITH_TAC THEN
          DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC THEN
      KNOW_TAC``((b * ln a - b * ln a + c * ln a) = (c*ln a )) ``THEN1
          REAL_ARITH_TAC THEN
-         RW_TAC real_ss []);
+         RW_TAC real_ss []
+QED
 
-val  RPOW_SUB= store_thm
-        ("RPOW_SUB",
-        ``! a b c. a rpow (b - c)= (a rpow b)/(a rpow c)``,
-RW_TAC std_ss [rpow, REAL_SUB_RDISTRIB, EXP_SUB]);
+(* NOTE: added antecedent ‘0 < a’ under the new definition *)
+Theorem RPOW_SUB :
+    !a b c. 0 < a ==> a rpow (b - c) = (a rpow b)/(a rpow c)
+Proof
+    RW_TAC std_ss [rpow, REAL_SUB_RDISTRIB, EXP_SUB]
+QED
 
-val  RPOW_DIV= store_thm
-        ("RPOW_DIV",
-        ``! a b c.  (0 < a)/\ (0<b)==> ((a/b) rpow  c= (a rpow c)/(b rpow c))``,
-   RW_TAC std_ss [rpow ,LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB]);
+Theorem RPOW_DIV :
+    !a b c. 0 < a /\ 0 < b ==> ((a/b) rpow  c = (a rpow c)/(b rpow c))
+Proof
+    rpt STRIP_TAC
+ >> ‘0 < a / b’ by PROVE_TAC [REAL_LT_DIV]
+ >> RW_TAC std_ss [rpow, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB]
+QED
 
 val  RPOW_INV= store_thm
         ("RPOW_INV",
@@ -2763,24 +2803,31 @@ val  RPOW_INV= store_thm
 
 RW_TAC real_ss [rpow, REAL_INV_1OVER, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB, LN_1, EXP_0]);
 
+Theorem RPOW_MUL :
+    !a b c. 0 < a /\ 0 < b ==> (((a*b) rpow c) = (a rpow c)*(b rpow c))
+Proof
+    rpt STRIP_TAC
+ >> ‘0 < a * b’ by PROVE_TAC [REAL_LT_MUL]
+ >> RW_TAC std_ss [rpow, LN_MUL, REAL_LDISTRIB, EXP_ADD]
+QED
 
-val  RPOW_MUL= store_thm
-        ("RPOW_MUL",
-        ``! a b c. (0<a) /\ (0<b)==> (((a*b) rpow c)=(a rpow c)*(b rpow c))``,
-RW_TAC std_ss [rpow, LN_MUL, REAL_LDISTRIB, EXP_ADD]);
-
-val  RPOW_RPOW= store_thm
-        ("RPOW_RPOW",
-        ``! a b c. (0<a)==> ((a rpow b) rpow c = a rpow (b*c))``,
-  RW_TAC real_ss [rpow, LN_EXP, REAL_MUL_ASSOC] THEN
-  PROVE_TAC[ REAL_MUL_COMM] );
+Theorem RPOW_RPOW :
+    !a b c. 0 < a ==> ((a rpow b) rpow c = a rpow (b*c))
+Proof
+    rpt STRIP_TAC
+ >> ‘0 < a powr b’ by PROVE_TAC [RPOW_POS_LT]
+ >> RW_TAC real_ss [rpow, LN_EXP, REAL_MUL_ASSOC]
+ >> PROVE_TAC [REAL_MUL_COMM]
+QED
 
 Theorem RPOW_LT :
    !(a:real) (b:real) (c:real). 1 < a ==> (a rpow b < a rpow c <=> b < c)
 Proof
- RW_TAC std_ss [rpow]  THEN
- KNOW_TAC`` exp (b * ln a) < exp (c * ln a) <=> (b*ln a < c*ln a)``  THEN1
-      RW_TAC real_ss [EXP_MONO_LT]  THEN
+    rpt STRIP_TAC
+ >> ‘0 < a’ by PROVE_TAC [REAL_LT_TRANS, REAL_LT_01]
+ >> RW_TAC std_ss [rpow]
+ >> KNOW_TAC ``exp (b * ln a) < exp (c * ln a) <=> (b*ln a < c*ln a)``
+ >- RW_TAC real_ss [EXP_MONO_LT]  THEN
       DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC  THEN
       KNOW_TAC``((b:real)*ln a < (c:real)*ln a) <=> (b < c)``  THENL   [
       MATCH_MP_TAC REAL_LT_RMUL  THEN
@@ -2802,9 +2849,11 @@ Proof
 QED
 
 Theorem RPOW_LE :
-   !a b c. 1 < a ==> (a rpow b <= a rpow c <=> b <= c)
+    !a b c. 1 < a ==> (a rpow b <= a rpow c <=> b <= c)
 Proof
- RW_TAC std_ss [rpow] THEN
+    rpt STRIP_TAC
+ >> ‘0 < a’ by PROVE_TAC [REAL_LT_TRANS, REAL_LT_01]
+ >> RW_TAC std_ss [rpow] THEN
  KNOW_TAC ``exp ((b:real) * ln a) <= exp ((c:real) * ln a) <=>
             ((b:real)*ln a <= (c:real)*ln a)`` THEN1
       RW_TAC real_ss [EXP_MONO_LE] THEN
@@ -2855,9 +2904,10 @@ QED
 Theorem RPOW_UNIQ_BASE :
    !a b c. 0 < a /\ 0 < c /\ 0 <> b /\ (a rpow b = c rpow b) ==> (a = c)
 Proof
- RW_TAC std_ss [rpow, GSYM LN_INJ] THEN
- POP_ASSUM MP_TAC  THEN
- KNOW_TAC ``(exp (b * ln a) = exp (b * ln c)) <=>
+    rpt STRIP_TAC
+ >> rfs [rpow, GSYM LN_INJ]
+ >> POP_ASSUM MP_TAC
+ >> KNOW_TAC ``(exp (b * ln a) = exp (b * ln c)) <=>
             (ln (exp (b * ln a)) = ln (exp (b * ln c)))``THEN1
      PROVE_TAC[LN_EXP]THEN
      DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC THEN
@@ -2868,9 +2918,11 @@ QED
 Theorem RPOW_UNIQ_EXP :
    !a b c. 1 < a /\ 0 < c /\ 0 < b /\ (a rpow b = a rpow c) ==> (b = c)
 Proof
- RW_TAC std_ss [rpow, GSYM LN_INJ] THEN
- POP_ASSUM MP_TAC THEN
- KNOW_TAC ``(exp (b * ln a) = exp (c * ln a)) <=>
+    rpt STRIP_TAC
+ >> ‘0 < a’ by PROVE_TAC [REAL_LT_TRANS, REAL_LT_01]
+ >> fs [rpow, GSYM LN_INJ]
+ >> Q.PAT_X_ASSUM ‘exp (b * ln a) = exp (c * ln a)’ MP_TAC
+ >> KNOW_TAC ``(exp (b * ln a) = exp (c * ln a)) <=>
             (ln (exp (b * ln a)) = ln (exp (c * ln a)))`` THEN1
       PROVE_TAC[LN_EXP] THEN
           DISCH_TAC THEN ASM_REWRITE_TAC[] THEN POP_ASSUM K_TAC THEN
@@ -2933,25 +2985,44 @@ Proof
 QED
 
 Theorem DIFF_RPOW :
-   !x y. 0 < x ==> ((\x. (x rpow y)) diffl (y * (x rpow (y - 1)))) x
+    !x y. 0 < x ==> ((\x. x rpow y) diffl (y * (x rpow (y - 1)))) x
 Proof
-RW_TAC real_ss [rpow,GSYM RPOW_DIV_BASE] THEN
-RW_TAC real_ss [REAL_MUL_ASSOC,real_div,REAL_MUL_COMM]THEN
-RW_TAC real_ss [GSYM real_div] THEN
-KNOW_TAC ``!x'. exp ((y * ln x')) = exp ((\x'. y *ln x') x')`` THEN1
-     RW_TAC real_ss [] THEN
-DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
-KNOW_TAC `` ((y / x) * exp ((\x'. y * ln x') x))= ( exp ((\x'. y * ln x') x)*(y/x) ) `` THEN1
-     RW_TAC std_ss [REAL_MUL_COMM] THEN
-DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
-MATCH_MP_TAC DIFF_COMPOSITE_EXP THEN
-KNOW_TAC ``((\x. y * ln x) diffl (y/x)) x = ((\x. y * (\x.ln x) x) diffl (y/x)) x`` THEN1
-     RW_TAC real_ss [] THEN
-DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
-RW_TAC real_ss [real_div] THEN
-MATCH_MP_TAC DIFF_CMUL THEN
-MATCH_MP_TAC DIFF_LN THEN
-RW_TAC real_ss []
+    RW_TAC real_ss [rpow, GSYM RPOW_DIV_BASE]
+ (* eliminate ‘rpow’ by LIM_TRANSFORM_WITHIN_OPEN_EQ *)
+ >> qabbrev_tac ‘l = y * (exp (y * ln x) / x)’
+ >> Know ‘((\x. x powr y) diffl l) x <=> ((\x. exp (y * ln x)) diffl l) x’
+ >- (REWRITE_TAC [diffl, GSYM LIM_AT_LIM] \\
+     Q.ABBREV_TAC ‘f = \z. (z powr y - x powr y) / (z - x)’ \\
+    ‘(\h. ((x + h) powr y - x powr y) / h) = (\h. f (x + h))’
+        by simp [FUN_EQ_THM, Abbr ‘f’, REAL_ADD_SUB] >> POP_ORW \\
+     Q.ABBREV_TAC ‘g = \z. (exp (y * ln z) - exp (y * ln x)) / (z - x)’ \\
+    ‘(\h. (exp (y * ln (x + h)) - exp (y * ln x)) / h) = (\h. g (x + h))’
+        by simp [FUN_EQ_THM, Abbr ‘g’, REAL_ADD_SUB] >> POP_ORW \\
+     MATCH_MP_TAC LIM_TRANSFORM_WITHIN_OPEN_EQ >> simp [] \\
+     Q.EXISTS_TAC ‘{y | -x < y}’ >> simp [OPEN_INTERVAL_RIGHT] \\
+     Q.X_GEN_TAC ‘z’ >> rw [] \\
+    ‘0 < x + z’ by (Q.PAT_X_ASSUM ‘-x < z’ MP_TAC >> REAL_ARITH_TAC) \\
+     rw [Abbr ‘f’, Abbr ‘g’, REAL_ADD_SUB] \\
+     rw [rpow_def])
+ >> Rewr'
+ >> qunabbrev_tac ‘l’
+ (* below is the old proof *)
+ >> RW_TAC real_ss [REAL_MUL_ASSOC,real_div,REAL_MUL_COMM]
+ >> RW_TAC real_ss [GSYM real_div]
+ >> Know ‘!x'. exp ((y * ln x')) = exp ((\x'. y * ln x') x')’
+ >- RW_TAC real_ss []
+ >> Rewr'
+ >> Know ‘(y/x) * exp ((\x'. y * ln x') x) = exp ((\x'. y * ln x') x) * (y/x)’
+ >- RW_TAC std_ss [REAL_MUL_COMM]
+ >> Rewr'
+ >> MATCH_MP_TAC DIFF_COMPOSITE_EXP
+ >> Know ‘((\x. y * ln x) diffl (y/x)) x = ((\x. y * (\x.ln x) x) diffl (y/x)) x’
+ >- RW_TAC real_ss []
+ >> Rewr'
+ >> RW_TAC real_ss [real_div]
+ >> MATCH_MP_TAC DIFF_CMUL
+ >> MATCH_MP_TAC DIFF_LN
+ >> RW_TAC real_ss []
 QED
 
 Theorem lem[local] :
@@ -3630,9 +3701,6 @@ QED
 (* ------------------------------------------------------------------------- *)
 (*  Real-valued power, log, and log base 2 functions (from util_probTheory)  *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = set_fixity "powr" (Infixr 700);
-val _ = overload_on ("powr", ``$rpow``);
 
 Definition logr_def :
     logr a x = ln x / ln a

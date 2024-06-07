@@ -22,7 +22,7 @@ open numTheory numLib unwindLib tautLib prim_recTheory
      combinTheory quotientTheory arithmeticTheory realTheory real_sigmaTheory
      jrhUtils pairTheory boolTheory pred_setTheory optionTheory
      sumTheory InductiveDefinition listTheory mesonLib
-     RealArith realSimps topologyTheory metricTheory netsTheory;
+     realLib topologyTheory metricTheory netsTheory;
 
 open wellorderTheory cardinalTheory permutesTheory iterateTheory hurdUtils;
 
@@ -6229,22 +6229,39 @@ val LIM_TRANSFORM_WITHIN_SET_IMP = store_thm ("LIM_TRANSFORM_WITHIN_SET_IMP",
 (* Common case assuming being away from some crucial point like 0.           *)
 (* ------------------------------------------------------------------------- *)
 
-val LIM_TRANSFORM_AWAY_WITHIN = store_thm ("LIM_TRANSFORM_AWAY_WITHIN",
- ``!f:real->real g a b s. ~(a = b) /\
+Theorem LIM_TRANSFORM_AWAY_WITHIN_lemma[local] :
+   !f:real->real g a b s. ~(a = b) /\
   (!x. x IN s /\ ~(x = a) /\ ~(x = b) ==> (f(x) = g(x))) /\
-  (f --> l) (at a within s) ==> (g --> l) (at a within s)``,
+  (f --> l) (at a within s) ==> (g --> l) (at a within s)
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC LIM_TRANSFORM_WITHIN THEN
   MAP_EVERY EXISTS_TAC [``f:real->real``, ``dist(a:real,b)``] THEN
   ASM_REWRITE_TAC[GSYM DIST_NZ] THEN X_GEN_TAC ``y:real`` THEN
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  ASM_MESON_TAC[DIST_SYM, REAL_LT_REFL]);
+  ASM_MESON_TAC[DIST_SYM, REAL_LT_REFL]
+QED
 
-val LIM_TRANSFORM_AWAY_AT = store_thm ("LIM_TRANSFORM_AWAY_AT",
- ``!f:real->real g a b. ~(a = b) /\
-  (!x. ~(x = a) /\ ~(x = b) ==> (f(x) = g(x))) /\
-  (f --> l) (at a) ==> (g --> l) (at a)``,
+(* NOTE: removed the unused quantifier ‘b’ *)
+Theorem LIM_TRANSFORM_AWAY_WITHIN :
+   !f:real->real g a s l.
+      (!x. x IN s /\ ~(x = a) ==> (f(x) = g(x))) /\
+      (f --> l) (at a within s) ==> (g --> l) (at a within s)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC LIM_TRANSFORM_AWAY_WITHIN_lemma
+ >> qexistsl_tac [‘f’, ‘a + 1’] >> rw []
+ >> REAL_ARITH_TAC
+QED
+
+(* NOTE: removed the unused quantifier ‘b’ *)
+Theorem LIM_TRANSFORM_AWAY_AT :
+   !f:real->real g a l.
+      (!x. ~(x = a) ==> (f(x) = g(x))) /\
+      (f --> l) (at a) ==> (g --> l) (at a)
+Proof
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
-  MESON_TAC[LIM_TRANSFORM_AWAY_WITHIN]);
+  MESON_TAC[LIM_TRANSFORM_AWAY_WITHIN]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Alternatively, within an open set. *)
@@ -6260,6 +6277,21 @@ val LIM_TRANSFORM_WITHIN_OPEN = store_thm ("LIM_TRANSFORM_WITHIN_OPEN",
   DISCH_THEN(MP_TAC o SPEC ``a:real``) THEN ASM_REWRITE_TAC[] THEN
   STRIP_TAC THEN EXISTS_TAC ``e:real`` THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC[SUBSET_DEF, IN_BALL] THEN ASM_MESON_TAC[DIST_NZ, DIST_SYM]);
+
+Theorem LIM_TRANSFORM_WITHIN_OPEN_EQ :
+    !f g:real->real s a l.
+       open s /\ a IN s /\ (!x. x IN s /\ ~(x = a) ==> (f x = g x)) ==>
+      ((f --> l) (at a) <=> (g --> l) (at a))
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> DISCH_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC LIM_TRANSFORM_WITHIN_OPEN \\
+      qexistsl_tac [‘f’, ‘s’] >> rw [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC LIM_TRANSFORM_WITHIN_OPEN \\
+      qexistsl_tac [‘g’, ‘s’] >> rw [] ]
+QED
 
 val LIM_TRANSFORM_WITHIN_OPEN_IN = store_thm ("LIM_TRANSFORM_WITHIN_OPEN_IN",
  ``!f g:real->real s t a l.
