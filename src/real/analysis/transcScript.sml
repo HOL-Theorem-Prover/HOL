@@ -2673,7 +2673,8 @@ local
      ‘?f :real -> real -> real.
          (!a b. 0 < a ==> f a b = exp (b * ln a)) /\
          (!b. 0 < b ==> f 0 b = 0) /\
-         (!a n. f a &n = a pow n /\ f a (-&SUC n) = inv (a pow (SUC n)))’,
+         (!a n. f a &n = a pow n) /\
+         (!a n. f a (-&n) = inv (a pow n))’,
    (* proof *)
       Q.EXISTS_TAC ‘\a b. if 0 < a then exp (b * ln a) else
                           if a = 0 /\ 0 < b then 0 else
@@ -2689,8 +2690,8 @@ local
 in
   (* |- (!a b. 0 < a ==> a powr b = exp (b * ln a)) /\
         (!b. 0 < b ==> 0 powr b = 0) /\
-         !a n. a powr &n = a pow n /\
-               a powr -&SUC n = inv (a pow SUC n)
+        (!a n. a powr &n = a pow n) /\
+         !a n. a powr -&n = inv (a pow n)
    *)
   val powr_def = new_specification ("powr_def", ["powr"], thm);
 end;
