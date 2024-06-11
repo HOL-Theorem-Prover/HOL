@@ -2552,6 +2552,23 @@ in
   fn pat => PCONV (strip_abs pat)
 end
 
+fun dest_path path =
+  let
+    fun compose f g x = f (g x)
+    fun abs_body tm = #Body (dest_abs tm)
+    fun binder_body tm =
+      if is_abs tm then abs_body tm else abs_body (rand tm)
+    fun loop [] = I
+      | loop (c::cs) =
+         if c = #"a" then compose (loop cs) abs_body else
+         if c = #"b" then compose (loop cs) binder_body else
+         if c = #"l" then compose (loop cs) rator else
+         if c = #"r" then compose (loop cs) rand else
+           failwith ("dest_path does not understand: " ^ str c)
+  in
+    loop (explode path)
+  end;
+
 fun PATH_CONV path c =
   let
     val limit = size path

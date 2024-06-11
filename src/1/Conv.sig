@@ -121,4 +121,7 @@ sig
 
    val memoize : (term -> 'a option) -> ('a, thm) Redblackmap.dict ->
                  (term -> bool) -> exn -> conv -> conv
+
+   val dest_path             : string -> term -> term
+
 end
