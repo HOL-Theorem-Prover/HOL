@@ -400,7 +400,7 @@ fun store_cv_result name orig_names result =
                               ", stored in " ^ thm_name ^ "\n")
   in () end
 
-fun print_pre_goal name pre_def =
+fun print_pre_goal name pre_def orig_names_list thy_name =
   if pre_def |> concl |> aconv T then pre_def else
   let
     val pres = pre_def |> CONJUNCTS
@@ -416,7 +416,9 @@ fun print_pre_goal name pre_def =
       | concat_goals gs = "  (" ^ String.concatWith sep_str gs ^ ")\n"
     val thm_name = pres |> hd |> SPEC_ALL |> concl |> lhs |>
                    strip_comb |> fst |> dest_const |> fst
-    val ind_name = String.substring(thm_name, 0, String.size(thm_name) - 3) ^ "ind"
+    val ind_name = hd orig_names_list ^ "_ind"
+    val ind_name = if thy_name = current_theory() then ind_name
+                   else thy_name ^ "Theory." ^ ind_name
     val _ = cv_print Silent ("\nWARNING: definition of " ^ name ^ " has a precondition.\n")
     val _ = cv_print Silent "You can set up the precondition proof as follows:\n\n"
     val _ = cv_print Silent ("Theorem " ^ thm_name ^ "[cv_pre]:\n")
@@ -505,11 +507,11 @@ fun cv_trans_any allow_pre term_opt def = let
   val no_pre = (length inst_cv_reps = 1 andalso
                 aconv (inst_cv_reps |> hd |> concl |> cv_rep_pre) T)
   val expand_cv_reps = inst_cv_reps |> map (CONV_RULE (REWR_CONV cv_rep_def))
-  val orig_names =
+  val (orig_names_list, thy_name) =
     let fun name_of def = def |> SPEC_ALL |> concl |> dest_eq |> fst |>
-                                 strip_comb |> fst |> dest_const |> fst
-        val names = map name_of defs
-    in String.concatWith ", " names end
+                                 strip_comb |> fst |> dest_thy_const
+    in (map (#Name o name_of) defs, #Thy (name_of (hd defs))) end
+  val orig_names = String.concatWith ", " orig_names_list
   in
     if no_pre then let
       (* derive final theorems *)
@@ -537,7 +539,7 @@ fun cv_trans_any allow_pre term_opt def = let
       (* derive final theorems *)
       val combined_result = LIST_CONJ result
       val _ = store_cv_result name orig_names combined_result
-      in print_pre_goal name pre_def end
+      in print_pre_goal name pre_def orig_names_list thy_name end
   end
 
 (*--------------------------------------------------------------------------*
