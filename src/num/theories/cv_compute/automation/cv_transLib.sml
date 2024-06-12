@@ -846,7 +846,14 @@ fun get_cv_consts tm = let
 fun get_code_eq_info const_tm = let
   val cv_def = get_code_eq_for const_tm
   val tm = cv_def |> SPEC_ALL |> concl |> dest_eq |> snd
-  in (cv_def, get_cv_consts tm) end
+  val res = get_cv_consts tm
+            handle HOL_ERR e => let
+              val _ = print ("\nERROR: " ^ #message e ^ "\n")
+              val _ = print "This appears in definition:\n\n"
+              val _ = print_thm cv_def
+              val _ = print "\n\n"
+              in raise HOL_ERR e end
+  in (cv_def, res) end
 
 fun cv_eqs_for tm = let
   val init_set = get_cv_consts tm
