@@ -740,12 +740,6 @@ Definition itree_loop_def:
                      (INR seed)
 End
 
-Triviality sum_case_RET:
-  sum_CASE M (λx. f(g x)) (λx. f(h x)) = f(sum_CASE M (λx. g x) (λx. h x))
-Proof
-  Cases_on ‘M’ \\ rw[]
-QED
-
 (* weak termination-sensitive bisimulation *)
 
 Inductive strip_tau:
@@ -880,6 +874,12 @@ Proof
   metis_tac[itree_wbisim_coind_upto_equiv]
 QED
 
+Theorem itree_wbisim_vis:
+  !e k1 k2. (!r. itree_wbisim (k1 r) (k2 r)) ==> itree_wbisim (Vis e k1) (Vis e k2)
+Proof
+  metis_tac[strip_tau_cases, itree_wbisim_cases]
+QED
+
 Theorem itree_wbisim_tau:
   !t t'. itree_wbisim (Tau t) t' ==> itree_wbisim t t'
 Proof
@@ -958,6 +958,13 @@ Proof
   metis_tac[itree_wbisim_strip_tau_Vis,
             itree_wbisim_strip_tau_Ret,
             itree_wbisim_sym]
+QED
+
+(* common bind base case *)
+Theorem itree_bind_ret_inv:
+  itree_bind t k = Ret r ==> ?r'. t = Ret r' /\ (k r') = Ret r
+Proof
+  Cases_on ‘t’ >> fs[itree_bind_thm]
 QED
 
 (* combinators respect weak bisimilarity *)
