@@ -1166,11 +1166,11 @@ QED
 (* coinduction upto stripping finite taus, useful for iter and friends *)
 Inductive after_taus:
 [~rel:]
-  (R x y ==> after_taus R x y) /\
+  (R x y ==> after_taus R x y)
 [~tauL:]
-  (after_taus R x y ==> after_taus R (Tau x) y) /\
+  (after_taus R x y ==> after_taus R (Tau x) y)
 [~tauR:]
-  (after_taus R x y ==> after_taus R x (Tau y)) /\
+  (after_taus R x y ==> after_taus R x (Tau y))
 [~vis:]
   ((!r. after_taus R (k r) (k' r)) ==> after_taus R (Vis e k) (Vis e k'))
 End
