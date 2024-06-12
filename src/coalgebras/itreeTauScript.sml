@@ -1156,6 +1156,41 @@ Proof
   >- (qexistsl_tac [‘k1 t’, ‘k2 t’] >> rw[itree_iter_thm])
 QED
 
+(* coinduction upto stripping finite taus, useful for iter and friends *)
+Inductive after_taus:
+[~rel:]
+  (R x y ==> after_taus R x y) /\
+[~tauL:]
+  (after_taus R x y ==> after_taus R (Tau x) y) /\
+[~tauR:]
+  (after_taus R x y ==> after_taus R x (Tau y)) /\
+[~vis:]
+  ((!r. after_taus R (k r) (k' r)) ==> after_taus R (Vis e k) (Vis e k'))
+End
+
+Theorem itree_coind_after_taus:
+  !R. (!t t'.
+         R t t' ==>
+         (?t2 t3.
+           t = Tau t2 /\ t' = Tau t3 /\
+             (after_taus R t2 t3 \/ itree_wbisim t2 t3)) \/
+         (?e k k'.
+            strip_tau t (Vis e k) /\ strip_tau t' (Vis e k') /\
+            !r. after_taus R (k r) (k' r) \/ itree_wbisim (k r) (k' r)) \/
+         (?r. strip_tau t (Ret r) /\ strip_tau t' (Ret r)) \/
+         itree_wbisim t t') ==>
+      !t t'. R t t' ==> itree_wbisim t t'
+Proof
+  rpt strip_tac >>
+  irule itree_wbisim_coind_upto >>
+  qexists ‘after_taus R’ >>
+  reverse conj_tac
+  >- rw[after_taus_rel] >>
+  Induct_on ‘after_taus’ >>
+  rw[] >>
+  metis_tac[after_taus_rules]
+QED
+
 (* misc *)
 
 Definition spin:
