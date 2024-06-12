@@ -740,12 +740,6 @@ Definition itree_loop_def:
                      (INR seed)
 End
 
-Triviality sum_case_RET:
-  sum_CASE M (λx. f(g x)) (λx. f(h x)) = f(sum_CASE M (λx. g x) (λx. h x))
-Proof
-  Cases_on ‘M’ \\ rw[]
-QED
-
 (* weak termination-sensitive bisimulation *)
 
 Inductive strip_tau:
@@ -880,6 +874,12 @@ Proof
   metis_tac[itree_wbisim_coind_upto_equiv]
 QED
 
+Theorem itree_wbisim_vis:
+  !e k1 k2. (!r. itree_wbisim (k1 r) (k2 r)) ==> itree_wbisim (Vis e k1) (Vis e k2)
+Proof
+  metis_tac[strip_tau_cases, itree_wbisim_cases]
+QED
+
 Theorem itree_wbisim_tau:
   !t t'. itree_wbisim (Tau t) t' ==> itree_wbisim t t'
 Proof
@@ -958,6 +958,13 @@ Proof
   metis_tac[itree_wbisim_strip_tau_Vis,
             itree_wbisim_strip_tau_Ret,
             itree_wbisim_sym]
+QED
+
+(* common bind base case *)
+Theorem itree_bind_ret_inv:
+  itree_bind t k = Ret r ==> ?r'. t = Ret r' /\ (k r') = Ret r
+Proof
+  Cases_on ‘t’ >> fs[itree_bind_thm]
 QED
 
 (* combinators respect weak bisimilarity *)
@@ -1154,6 +1161,41 @@ Proof
       fs[Once itree_wbisim_cases] >> fs[GSYM $ Once itree_wbisim_cases] >>
       metis_tac[]))
   >- (qexistsl_tac [‘k1 t’, ‘k2 t’] >> rw[itree_iter_thm])
+QED
+
+(* coinduction upto stripping finite taus, useful for iter and friends *)
+Inductive after_taus:
+[~rel:]
+  (R x y ==> after_taus R x y)
+[~tauL:]
+  (after_taus R x y ==> after_taus R (Tau x) y)
+[~tauR:]
+  (after_taus R x y ==> after_taus R x (Tau y))
+[~vis:]
+  ((!r. after_taus R (k r) (k' r)) ==> after_taus R (Vis e k) (Vis e k'))
+End
+
+Theorem itree_coind_after_taus:
+  !R. (!t t'.
+         R t t' ==>
+         (?t2 t3.
+           t = Tau t2 /\ t' = Tau t3 /\
+             (after_taus R t2 t3 \/ itree_wbisim t2 t3)) \/
+         (?e k k'.
+            strip_tau t (Vis e k) /\ strip_tau t' (Vis e k') /\
+            !r. after_taus R (k r) (k' r) \/ itree_wbisim (k r) (k' r)) \/
+         (?r. strip_tau t (Ret r) /\ strip_tau t' (Ret r)) \/
+         itree_wbisim t t') ==>
+      !t t'. R t t' ==> itree_wbisim t t'
+Proof
+  rpt strip_tac >>
+  irule itree_wbisim_coind_upto >>
+  qexists ‘after_taus R’ >>
+  reverse conj_tac
+  >- rw[after_taus_rel] >>
+  Induct_on ‘after_taus’ >>
+  rw[] >>
+  metis_tac[after_taus_rules]
 QED
 
 (* misc *)
