@@ -337,3 +337,9 @@ val dest_handle_If_def = Define `
 
 val _ = cv_trans can_raise_def;
 val _ = cv_trans dest_handle_If_def;
+
+(*
+val mem_test_def = Define `mem_test n = MEM n ["test1"; "test2"]`
+val _ = cv_trans mem_test_def;
+val _ = cv_eval ``mem_test "hi"``
+*)
