@@ -304,18 +304,36 @@ val _ = Datatype `
 `
 
 val exp_size_alt_def = tDefine "exp_size_alt" `
-  exp_size_alt ((Var x y) : c_exp) = 1:num ∧
-  exp_size_alt (If a b c d) = 1 + exp_size_alt b + exp_size_alt c + exp_size_alt d ∧
-  exp_size_alt (Let a es e) = 1 + exp_size_alt e + exp_sizes_alt es ∧
-  exp_size_alt (Handle a0 a1 a2) = 1 + exp_size_alt a1 + exp_size_alt a2 ∧
-  exp_size_alt (Tick a0 a1) = 1 + exp_size_alt a1 ∧
-  exp_size_alt (Call a0 a1 a2 a3) = 1 + exp_sizes_alt a3 ∧
-  exp_size_alt (App a0 a1 a2 a3) = 1 + exp_size_alt a2 + exp_sizes_alt a3 ∧
-  exp_size_alt (Fn a0 a1 a2 a3 a4) = 1 + exp_size_alt a4 ∧
-  exp_size_alt (Letrec a0 a1 a2 a3 a4) = 6 + exp_size_alt a4 ∧
-  exp_size_alt (Op a0 a1 a2) = 1 + exp_sizes_alt a2 ∧
-  exp_sizes_alt [] = 0 ∧
+  exp_size_alt ((Var x y) : c_exp) = 1:num /\
+  exp_size_alt (If a b c d) = 1 + exp_size_alt b + exp_size_alt c + exp_size_alt d /\
+  exp_size_alt (Let a es e) = 1 + exp_size_alt e + exp_sizes_alt es /\
+  exp_size_alt (Handle a0 a1 a2) = 1 + exp_size_alt a1 + exp_size_alt a2 /\
+  exp_size_alt (Tick a0 a1) = 1 + exp_size_alt a1 /\
+  exp_size_alt (Call a0 a1 a2 a3) = 1 + exp_sizes_alt a3 /\
+  exp_size_alt (App a0 a1 a2 a3) = 1 + exp_size_alt a2 + exp_sizes_alt a3 /\
+  exp_size_alt (Fn a0 a1 a2 a3 a4) = 1 + exp_size_alt a4 /\
+  exp_size_alt (Letrec a0 a1 a2 a3 a4) = 6 + exp_size_alt a4 /\
+  exp_size_alt (Op a0 a1 a2) = 1 + exp_sizes_alt a2 /\
+  exp_sizes_alt [] = 0 /\
   exp_sizes_alt (x::xs) = exp_size_alt x + exp_sizes_alt xs`
   cheat;
 
 val pre = cv_auto_trans_pre_rec exp_size_alt_def cheat;
+
+val can_raise_def = Define ` can_raise x = T `
+
+val _ = Datatype `
+  x_exp = x_If x_exp x_exp x_exp | x_Other `
+
+val dest_handle_If_def = Define `
+  dest_handle_If (x_If x1 x2 x3) =
+     (if can_raise x1 then NONE
+      else if can_raise x2 then
+        if can_raise x3 then NONE else SOME (INL (x1,x2,x3))
+      else if can_raise x3 then
+        if can_raise x2 then NONE else SOME (INR (x1,x2,x3))
+      else NONE) /\
+  dest_handle_If _ = NONE `
+
+val _ = cv_trans can_raise_def;
+val _ = cv_trans dest_handle_If_def;

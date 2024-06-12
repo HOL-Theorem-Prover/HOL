@@ -73,6 +73,11 @@ fun is_no_arg_fun cv_def_tm =
   not (is_comb (fst (dest_eq cv_def_tm)))
   handle HOL_ERR _ => false;
 
+fun is_not_recursive cv_def_tm = let
+  val l = cv_def_tm |> lhs |> strip_comb |> fst
+  val vs = cv_def_tm |> rhs |> free_vars
+  in null (filter (aconv l) vs) end handle HOL_ERR _ => false;
+
 fun is_tailrecursive cv_def_tm = let
   val fnames = strip_conj cv_def_tm |> map (fst o strip_comb o fst o dest_eq)
   val rhs_list = strip_conj cv_def_tm |> map (snd o dest_eq)
@@ -101,6 +106,8 @@ fun define_cv_function name (def:thm) cv_def_tm (SOME t) =
          val cv_def_tm = mk_eq(mk_comb(new_v_tm,arg_tm), snd (dest_eq cv_def_tm))
          val def = new_definition(name ^ "_def",cv_def_tm)
          in SPEC (cvSyntax.mk_cv_num (numSyntax.term_of_int 0)) def end
+       else if is_not_recursive cv_def_tm then
+         new_definition(name ^ "_def",cv_def_tm)
        else if is_tailrecursive cv_def_tm then
          tailrecLib.tailrec_define (name ^ "_def") cv_def_tm
        else (let
