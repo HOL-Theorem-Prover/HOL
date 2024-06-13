@@ -265,6 +265,22 @@ Proof
   \\ rw [] \\ AP_THM_TAC \\ AP_TERM_TAC \\ gvs [FUN_EQ_THM,arithmeticTheory.ADD1]
 QED
 
+Definition count_loop_def:
+  count_loop n k = if n = 0:num then [] else k::count_loop (n-1) (k+1:num)
+End
+
+val res = cv_trans count_loop_def;
+
+Theorem cv_COUNT_LIST[cv_inline]:
+  COUNT_LIST n = count_loop n 0
+Proof
+  qsuff_tac `∀n k. count_loop n k = MAP (λi. i + k) (COUNT_LIST n)` >>
+  simp[] >>
+  Induct \\ rw[] \\ simp [rich_listTheory.COUNT_LIST_def,Once count_loop_def]
+  \\ gvs [MAP_MAP_o,combinTheory.o_DEF,ADD1] \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ gvs [FUN_EQ_THM]
+QED
+
 Theorem K_THM[cv_inline] = combinTheory.K_THM;
 Theorem I_THM[cv_inline] = combinTheory.I_THM;
 Theorem o_THM[cv_inline] = combinTheory.o_THM;
