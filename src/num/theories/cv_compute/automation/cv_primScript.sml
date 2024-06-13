@@ -510,7 +510,7 @@ Definition cv_rat_norm_def:
     let d = cv_gcd (cv_abs (cv_fst r)) (cv_snd r) in
     cv_if (cv_lt d (Num 2))
       r
-      (Pair (cv_int_div (cv_fst r) d) (cv_div (cv_snd r) d))
+      (Pair (cv_total_int_div (cv_fst r) d) (cv_div (cv_snd r) d))
 End
 
 Theorem cv_rat_norm_div_gcd:
@@ -521,7 +521,7 @@ Proof
   simp[GSYM cv_Num, GSYM cv_gcd_thm, c2b_def] >>
   ntac 3 $ simp[Once COND_RAND] >> simp[COND_RATOR] >>
   `Num (gcd (Num a) b) = from_int (&(gcd (Num a) b))` by simp[from_int_def] >>
-  simp[GSYM cv_int_div] >>
+  simp[GSYM cv_total_int_div] >>
   simp[wordsTheory.NUMERAL_LESS_THM] >>
   Cases_on `a = 0 /\ b = 0 \/ gcd (Num a) b = 1` >> gvs[] >>
   IF_CASES_TAC >> gvs[] >> simp[total_int_div_def] >> IF_CASES_TAC >> gvs[]
