@@ -131,6 +131,18 @@ Proof
   fs [cv_rep_def] \\ rw []
 QED
 
+Theorem cv_rep_gt[cv_rep]:
+  b2c (n > m) = cv_lt (Num m) (Num n)
+Proof
+  fs [cv_rep_def] \\ rw []
+QED
+
+Theorem cv_rep_ge[cv_rep]:
+  b2c (n >= m) = cv_sub (Num 1) (cv_lt (Num n) (Num m))
+Proof
+  fs [cv_rep_def] \\ rw []
+QED
+
 Theorem cv_rep_num_case[cv_rep]:
   cv_rep p1 c1 Num x /\
   cv_rep p2 c2 (a:'a->cv) y /\
