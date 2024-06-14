@@ -260,15 +260,17 @@ const lbool l_Undef = toLbool( 0);
 //=================================================================================================
 // Relation operators -- extend definitions from '==' and '<'
 
-
 #ifndef __SGI_STL_INTERNAL_RELOPS   // (be aware of SGI's STL implementation...)
 #define __SGI_STL_INTERNAL_RELOPS
+/* NOTE: The following definition broke the build of zc2hs with late versions of Apple's clang++
+   As a workaround, there are two expressions (in Main.C and zc2hs.cpp) of `x != y` modified
+   to `~(x == y)`. -- Chun Tian (with help of Oskar Abrahamsson), 14/6/2024
 template <class T> static inline bool operator != (const T& x, const T& y) { return !(x == y); }
+*/
 template <class T> static inline bool operator >  (const T& x, const T& y) { return y < x;     }
 template <class T> static inline bool operator <= (const T& x, const T& y) { return !(y < x);  }
 template <class T> static inline bool operator >= (const T& x, const T& y) { return !(x < y);  }
 #endif
-
 
 //=================================================================================================
 #endif
