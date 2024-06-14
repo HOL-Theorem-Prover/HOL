@@ -122,7 +122,7 @@ static void resolve(vec<Lit>& main, vec<Lit>& other, Var x)
         if (var(other[i]) != x)
             main.push(other[i]);
         else{
-            if (p != ~other[i])
+            if (!(p == ~other[i]))
                 printf("PROOF ERROR! Resolved on variable with SAME polarity in both clauses: %d\n", x+1);
             ok2 = true;
         }
