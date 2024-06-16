@@ -22,8 +22,6 @@ val _ = wordsLib.prefer_word();
 infix \\ << >>
 
 val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
 
 val _ = temp_overload_on (parmonadsyntax.monad_bind, ``seqT``);
 val _ = temp_overload_on (parmonadsyntax.monad_par,  ``parT``);
