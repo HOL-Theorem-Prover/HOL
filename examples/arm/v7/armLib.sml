@@ -11,7 +11,7 @@ open arm_parserLib arm_encoderLib arm_disassemblerLib arm_stepLib;
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 
 val ERR = Feedback.mk_HOL_ERR "armLib";

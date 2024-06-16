@@ -10,7 +10,7 @@ open boolLib bossLib;
 
 val _ = new_theory "bitArith";
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (** Code from Michael Norrish for translating to boolean vectors **)
 val tobl_def = new_specification(

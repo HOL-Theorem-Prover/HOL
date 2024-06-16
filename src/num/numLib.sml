@@ -388,16 +388,22 @@ val operators = [("+", ``$+``),
                  ("<=", ``$<=``),
                  (">", ``$>``),
                  (">=", ``$>=``),
+                 ("**", “$EXP”),
                  (GrammarSpecials.fromNum_str, magic_injn)];
 
-fun deprecate_num () = let
+fun prim_deprecate_num f = let
   fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}
-  fun doit (s, t) = Parse.temp_remove_ovl_mapping s (losety (dest_thy_const t))
+  fun doit (s, t) = f s (losety (dest_thy_const t))
 in
   app (ignore o doit) operators
 end
+fun deprecate_num() = prim_deprecate_num Parse.remove_ovl_mapping
+fun temp_deprecate_num() = prim_deprecate_num Parse.temp_remove_ovl_mapping
 
-fun prefer_num () = app temp_overload_on operators
+fun prim_prefer_num f = app f operators
+fun prefer_num() = prim_prefer_num overload_on
+fun temp_prefer_num() = prim_prefer_num temp_overload_on
+
 
 val _ = Parse.temp_set_grammars ambient_grammars;
 

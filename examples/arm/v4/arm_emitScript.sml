@@ -13,7 +13,7 @@ open EmitML basis_emitTheory;
 
 val _ = new_theory "arm_emit";
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 
 (*---------------------------------------------------------------------------*)

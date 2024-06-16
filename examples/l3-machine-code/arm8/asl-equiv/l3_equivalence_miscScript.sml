@@ -8,7 +8,7 @@ val _ = new_theory "l3_equivalence_misc";
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = intLib.deprecate_int()
 
 val _ = augment_srw_ss [

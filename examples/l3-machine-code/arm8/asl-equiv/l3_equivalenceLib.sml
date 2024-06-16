@@ -18,7 +18,7 @@ val _ = set_grammar_ancestry [
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 val _ = Globals.show_assums := false;
 val _ = Globals.max_print_depth := 50;

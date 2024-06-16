@@ -19,7 +19,7 @@ val _ = BasicProvers.temp_delsimps ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 
 infix \\ << >>

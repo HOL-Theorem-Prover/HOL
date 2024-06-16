@@ -15,7 +15,7 @@ val ERR = mk_HOL_ERR "riscv_stepTheory";
 
 val () =
   ( List.app (fn f => f ())
-      [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
+      [numLib.temp_prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
   ; show_assums := true
   ; General.ignore (Parse.hide "imm")
   )

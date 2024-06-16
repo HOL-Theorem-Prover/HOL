@@ -13,7 +13,7 @@ val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
 val _ = List.app (fn f => f ())
-   [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
+   [numLib.temp_prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
 
 (* ------------------------------------------------------------------------ *)
 

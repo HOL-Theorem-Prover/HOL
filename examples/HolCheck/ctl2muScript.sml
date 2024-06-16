@@ -33,7 +33,7 @@ open ctlTheory
 open metisLib
 open res_quanLib
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 fun tsimps ty =
     let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;

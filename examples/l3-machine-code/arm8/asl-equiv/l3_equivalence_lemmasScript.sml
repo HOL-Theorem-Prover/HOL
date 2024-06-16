@@ -13,7 +13,7 @@ val _ = set_grammar_ancestry ["arm8_step", "arm8", "armv86a_termination"];
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = intLib.deprecate_int()
 
 val _ = Globals.show_assums := false;

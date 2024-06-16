@@ -18,7 +18,7 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 
 (* ------------------------------------------------------------------------ *)
