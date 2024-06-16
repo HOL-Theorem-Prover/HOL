@@ -274,7 +274,7 @@ val res = cv_trans count_loop_def;
 Theorem cv_COUNT_LIST[cv_inline]:
   COUNT_LIST n = count_loop n 0
 Proof
-  qsuff_tac `∀n k. count_loop n k = MAP (λi. i + k) (COUNT_LIST n)` >>
+  qsuff_tac `!n k. count_loop n k = MAP (\i. i + k) (COUNT_LIST n)` >>
   simp[] >>
   Induct \\ rw[] \\ simp [rich_listTheory.COUNT_LIST_def,Once count_loop_def]
   \\ gvs [MAP_MAP_o,combinTheory.o_DEF,ADD1] \\ AP_THM_TAC \\ AP_TERM_TAC
