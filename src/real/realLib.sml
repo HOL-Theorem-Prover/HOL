@@ -44,20 +44,6 @@ struct
     List.app doit operators
   end
 
-  (* NOTE: intrealTheory also contains overloads of ‘flr’ and ‘clg’ *)
-  val flr_operators = [("flr", realSyntax.NUM_FLOOR_tm),
-                       ("clg", realSyntax.NUM_CEILING_tm)];
-
-  (* Prefer NUM_FLOOR (and also NUM_CEILING) (again INT_FLOOR, etc., maybe) *)
-  fun prefer_num_floor () = let
-    fun doit (s, t) =
-       let val {Name,Thy,...} = dest_thy_const t in
-          Parse.temp_bring_to_front_overload s {Name = Name, Thy = Thy}
-       end
-  in
-    List.app doit flr_operators
-  end
-
   (* The default REAL_ARITH, etc. can be switched here. *)
   val REAL_ARITH_TAC     = TRY(RealArith.OLD_REAL_ARITH_TAC)
                            THEN RealField.REAL_ARITH_TAC;

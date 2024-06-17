@@ -42,7 +42,11 @@ val _ = hide "W";
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
 
-val _ = realLib.prefer_num_floor ();
+(* Prefer NUM_FLOOR and NUM_CEILING (over INT_FLOOR/INT_CEILING) by redefining
+   their overloads.
+ *)
+Overload flr = “realax$NUM_FLOOR”
+Overload clg = “realax$NUM_CEILING”
 
 (* ------------------------------------------------------------------------- *)
 (*  Definitions                                                              *)

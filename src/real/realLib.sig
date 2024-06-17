@@ -18,6 +18,4 @@ sig
    val prefer_real     : unit -> unit
    val deprecate_real  : unit -> unit
 
-   val prefer_num_floor : unit -> unit
-
 end
