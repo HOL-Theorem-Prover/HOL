@@ -52,6 +52,9 @@ New examples:
 Incompatibilities:
 ------------------
 
+-   `numLib.prefer_num` has been renamed to `numLib.temp_prefer_num`, which name better describes its semantics.
+    The `prefer_num` entry-point is now used to make a change “permanent” (again following the naming convention used by many parsing-related entry-points), which is to say that the overloads made by this function will be exported to child theories.
+
 * * * * *
 
 <div class="footer">
