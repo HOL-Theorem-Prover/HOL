@@ -26,15 +26,15 @@ Bugs fixed:
 New theories:
 -------------
 
-- `number`, `combinatorics` and `prime`: These are combined theories of materials
-   from `examples/algebra/lib`, etc. They contain some more advanced results from
-   number theory (in particular properties of prime numbers) and combinatorics.
- 
-- `monoid`, `group`, `ring` and `real_algebra`: These are combined theories
-   of materials ever in `examples/algebra`. A monoid is an algebraic structure:
-   with a carrier set, a binary operation and an identity element. A group is an
-   algebraic structure: a monoid with all its elements invertible. A ring takes
-   into account the interplay between its additive group and multiplicative monoid.
+- `number`, `combinatorics` and `prime`: These theories combine material
+   from `examples/algebra/lib`, etc.
+   They contain some more advanced results from number theory (in particular properties of prime numbers) and combinatorics.
+
+- `monoid`, `group`, `ring` and `real_algebra`: These theories combine
+   material previously held in `examples/algebra`.
+   A monoid is an algebraic structure: with a carrier set, a binary operation and an identity element.
+   A group is an algebraic structure: a monoid with all its elements invertible.
+   A ring takes into account the interplay between its additive group and multiplicative monoid.
 
 New tools:
 ----------
