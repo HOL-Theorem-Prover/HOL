@@ -42,11 +42,11 @@ val _ = hide "W";
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
 
-(* NOTE: The above deprecate settings do not cover "flr" and "clg", which
-   are overloaded again in intrealTheory.
+(* Prefer NUM_FLOOR and NUM_CEILING (over INT_FLOOR/INT_CEILING) by redefining
+   their overloads.
  *)
-val _ = bring_to_front_overload "flr" {Name = "NUM_FLOOR",   Thy = "real"};
-val _ = bring_to_front_overload "clg" {Name = "NUM_CEILING", Thy = "real"};
+Overload flr = “realax$NUM_FLOOR”
+Overload clg = “realax$NUM_CEILING”
 
 (* ------------------------------------------------------------------------- *)
 (*  Definitions                                                              *)

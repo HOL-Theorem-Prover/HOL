@@ -11,8 +11,8 @@ sig
   val REAL_ARITH          : term -> thm
   val REAL_ASM_ARITH_TAC  : tactic
 
-   val real_ss : simpLib.simpset
    (* Incorporates simpsets for bool, pair, and arithmetic *)
+   val real_ss : simpLib.simpset
 
    (* syntax *)
    val prefer_real     : unit -> unit
