@@ -1,8 +1,8 @@
 structure realSyntax :> realSyntax =
 struct
-
-  local open realaxTheory in end;
   open HolKernel Abbrev;
+
+  local open realaxTheory numSyntax in end;
 
   val ERR = mk_HOL_ERR "realSyntax";
 
@@ -12,8 +12,9 @@ struct
   val real_ty = mk_thy_type {Thy = "realax", Tyop = "real", Args = []}
   val bop_ty = real_ty --> real_ty --> real_ty
   val rel_ty = real_ty --> real_ty --> bool
+  val num_ty = numSyntax.num
 
-  val real_injection = mk_raconst("real_of_num", numSyntax.num --> real_ty)
+  val real_injection = mk_raconst("real_of_num", num_ty --> real_ty)
 
   val zero_tm = mk_comb(real_injection, numSyntax.zero_tm)
   val one_tm = mk_comb(real_injection, numSyntax.mk_numeral (Arbnum.fromInt 1))
@@ -23,7 +24,7 @@ struct
   val minus_tm = mk_raconst("real_sub", bop_ty)
   val mult_tm = mk_raconst("real_mul", bop_ty)
   val div_tm = mk_raconst("/", bop_ty)
-  val exp_tm = mk_raconst("pow", real_ty --> numSyntax.num --> real_ty)
+  val exp_tm = mk_raconst("pow", real_ty --> num_ty --> real_ty)
 
   val real_eq_tm = mk_thy_const { Thy = "min", Name = "=", Ty = rel_ty}
   val less_tm = mk_raconst("real_lt", rel_ty)
@@ -33,6 +34,9 @@ struct
 
   val min_tm = mk_raconst("min", bop_ty)
   val max_tm = mk_raconst("max", bop_ty)
+
+  val NUM_FLOOR_tm   = mk_raconst("NUM_FLOOR",   real_ty --> num_ty);
+  val NUM_CEILING_tm = mk_raconst("NUM_CEILING", real_ty --> num_ty);
 
   (* Functions *)
 
