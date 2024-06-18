@@ -3375,15 +3375,6 @@ Proof
  >> MATCH_MP_TAC Boehm_apply_lameq_cong >> art []
 QED
 
-Theorem Boehm_out_lemma :
-    !p X M. FINITE X /\ subterm X M p <> NONE ==>
-           ?pi ss. Boehm_transform pi /\ apply pi M == subterm' X M p ISUB ss
-Proof
-    rpt STRIP_TAC
- >> MATCH_MP_TAC Boehm_out_lemma_old >> art []
- >> MATCH_MP_TAC subterm_imp_ltree_paths >> art []
-QED
-
 (*---------------------------------------------------------------------------*
  *  Separability of terms
  *---------------------------------------------------------------------------*)
