@@ -1197,6 +1197,80 @@ QED
 (* |- !n. FV (permutator n) = {} *)
 Theorem FV_permutator[simp] = REWRITE_RULE [closed_def] closed_permutator
 
+(* NOTE: the default permutator binding variables can be exchanged to another
+   fresh list excluding any given set X.
+ *)
+Theorem permutator_cases :
+    !X n. FINITE X ==>
+          ?vs v. LENGTH vs = n /\ ALL_DISTINCT (SNOC v vs) /\
+                 DISJOINT X (set (SNOC v vs)) /\
+                 permutator n = LAMl vs (LAM v (VAR v @* MAP VAR vs))
+Proof
+    RW_TAC std_ss [permutator_def]
+ >> qabbrev_tac ‘Z = GENLIST n2s (n + 1)’
+ >> ‘ALL_DISTINCT Z /\ LENGTH Z = n + 1’
+       by (rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST])
+ >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> qabbrev_tac ‘z = LAST Z’
+ >> ‘MEM z Z’ by rw [Abbr ‘z’, MEM_LAST_NOT_NIL]
+ >> qabbrev_tac ‘M = VAR z @* MAP VAR (FRONT Z)’
+ (* preparing for LAMl_ALPHA_ssub *)
+ >> qabbrev_tac ‘Y = NEWS (n + 1) (set Z UNION X)’
+ >> ‘FINITE (set Z UNION X)’ by rw []
+ >> ‘ALL_DISTINCT Y /\ DISJOINT (set Y) (set Z UNION X) /\
+     LENGTH Y = n + 1’ by rw [NEWS_def, Abbr ‘Y’]
+ >> fs []
+ >> Know ‘LAMl Z M = LAMl Y ((FEMPTY |++ ZIP (Z,MAP VAR Y)) ' M)’
+ >- (MATCH_MP_TAC LAMl_ALPHA_ssub >> rw [DISJOINT_SYM] \\
+     Suff ‘FV M = set Z’ >- METIS_TAC [DISJOINT_SYM] \\
+     rw [Abbr ‘M’, FV_appstar] \\
+    ‘Z = SNOC (LAST Z) (FRONT Z)’ by PROVE_TAC [SNOC_LAST_FRONT] \\
+     POP_ORW \\
+     simp [LIST_TO_SET_SNOC] \\
+     rw [Once EXTENSION, MEM_MAP])
+ >> Rewr'
+ >> ‘Y <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> REWRITE_TAC [GSYM fromPairs_def]
+ >> qabbrev_tac ‘fm = fromPairs Z (MAP VAR Y)’
+ >> ‘FDOM fm = set Z’ by rw [FDOM_fromPairs, Abbr ‘fm’]
+ >> qabbrev_tac ‘y = LAST Y’
+ (* postfix for LAMl_ALPHA_ssub *)
+ >> ‘!t. LAMl Y t = LAMl (SNOC y (FRONT Y)) t’
+       by (ASM_SIMP_TAC std_ss [Abbr ‘y’, SNOC_LAST_FRONT]) >> POP_ORW
+ >> REWRITE_TAC [LAMl_SNOC]
+ >> Know ‘fm ' M = VAR y @* MAP VAR (FRONT Y)’
+ >- (simp [Abbr ‘M’, ssub_appstar] \\
+     Know ‘fm ' z = VAR y’
+     >- (rw [Abbr ‘fm’, Abbr ‘z’, LAST_EL] \\
+         Know ‘fromPairs Z (MAP VAR Y) ' (EL (PRE (n + 1)) Z) =
+               EL (PRE (n + 1)) (MAP VAR Y)’
+         >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
+         rw [EL_MAP, Abbr ‘y’, LAST_EL]) >> Rewr' \\
+     Suff ‘MAP ($' fm) (MAP VAR (FRONT Z)) = MAP VAR (FRONT Y)’ >- rw [] \\
+     rw [LIST_EQ_REWRITE, LENGTH_FRONT] \\
+    ‘PRE (n + 1) = n’ by rw [] >> POP_ASSUM (fs o wrap) \\
+     rename1 ‘i < n’ \\
+     simp [EL_MAP, LENGTH_FRONT] \\
+     Know ‘MEM (EL i (FRONT Z)) Z’
+     >- (rw [MEM_EL] \\
+         Q.EXISTS_TAC ‘i’ >> rw [] \\
+         MATCH_MP_TAC EL_FRONT >> rw [LENGTH_FRONT, NULL_EQ]) \\
+     rw [Abbr ‘fm’] \\
+     Know ‘EL i (FRONT Z) = EL i Z’
+     >- (MATCH_MP_TAC EL_FRONT >> rw [LENGTH_FRONT, NULL_EQ]) >> Rewr' \\
+     Know ‘EL i (FRONT Y) = EL i Y’
+     >- (MATCH_MP_TAC EL_FRONT >> rw [LENGTH_FRONT, NULL_EQ]) >> Rewr' \\
+     Know ‘fromPairs Z (MAP VAR Y) ' (EL i Z) = EL i (MAP VAR Y)’
+     >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
+     rw [EL_MAP])
+ >> Rewr'
+ >> qexistsl_tac [‘FRONT Y’, ‘y’]
+ >> rw [LENGTH_FRONT, ALL_DISTINCT_SNOC, SNOC_LAST_FRONT, Abbr ‘y’, ALL_DISTINCT_FRONT]
+ >> Know ‘ALL_DISTINCT (SNOC (LAST Y) (FRONT Y))’
+ >- (rw [SNOC_LAST_FRONT])
+ >> rw [ALL_DISTINCT_SNOC]
+QED
+
 Theorem permutator_thm :
     !n N Ns. LENGTH Ns = n ==> permutator n @* Ns @@ N == N @* Ns
 Proof

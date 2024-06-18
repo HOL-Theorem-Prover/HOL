@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
-open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory hurdUtils;
+open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory
+     relationTheory pairTheory hurdUtils;
 
 open generic_termsTheory binderLib nomsetTheory nomdatatype;
 
@@ -400,11 +401,11 @@ val subst_exists =
                    `vr` |-> `\s (x,N). if s = x then N else VAR s`,
                    `ap` |-> `\r1 r2 t1 t2 p. r1 p @@ r2 p`,
                    `lm` |-> `\r v t p. LAM v (r p)`]
-        |> CONV_RULE (LAND_CONV (SIMP_CONV (srw_ss()) [pairTheory.FORALL_PROD]))
+        |> CONV_RULE (LAND_CONV (SIMP_CONV (srw_ss()) [FORALL_PROD]))
         |> SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def,
                                  tpm_COND, tpm_fresh, pmact_sing_inv,
                                  basic_swapTheory.swapstr_eq_left]
-        |> SIMP_RULE (srw_ss()) [rewrite_pairing, pairTheory.FORALL_PROD]
+        |> SIMP_RULE (srw_ss()) [rewrite_pairing, FORALL_PROD]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p_1", "u"), ("p_2", "N")]))
         |> prove_alpha_fcbhyp {ppm = ``pair_pmact string_pmact ^t_pmact_t``,
                                rwts = [],
@@ -548,6 +549,12 @@ QED
 Theorem FV_SUB:
   !t u v. FV ([t/v] u) = if v ∈ FV u then FV t ∪ (FV u DELETE v) else FV u
 Proof PROVE_TAC [lemma14b, lemma14c]
+QED
+
+Theorem FV_SUB_SUBSET :
+  !t u v. closed t ==> FV ([t/v] u) SUBSET FV u
+Proof
+    rw [FV_SUB, closed_def]
 QED
 
 Theorem lemma15a:
@@ -720,7 +727,7 @@ Theorem ISUB_LAM[simp] :
           !t. (LAM x t) ISUB R = LAM x (t ISUB R)
 Proof
     Induct
- >> ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD,
+ >> ASM_SIMP_TAC (srw_ss()) [ISUB_def, FORALL_PROD,
                              DOM_DEF, FVS_DEF, SUB_THM]
 QED
 
@@ -734,7 +741,7 @@ Theorem ISUB_APPEND :
     !R1 R2 t:term. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)
 Proof
     Induct
- >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]
+ >> ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, ISUB_def]
 QED
 
 (* moved here from standardisationScript.sml *)
@@ -742,9 +749,10 @@ Theorem ISUB_APP :
     !sub M N. (M @@ N) ISUB sub = (M ISUB sub) @@ (N ISUB sub)
 Proof
     Induct
- >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def, SUB_THM]
+ >> ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, ISUB_def, SUB_THM]
 QED
 
+(* NOTE: This is actually appFOLDLTheory.appstar_ISUB *)
 Theorem FOLDL_APP_ISUB :
     !args (t:term) sub.
          FOLDL APP t args ISUB sub =
@@ -753,6 +761,7 @@ Proof
     Induct >> SRW_TAC [][ISUB_APP]
 QED
 
+(* NOTE: This is the basis of a "lemma14b" for ISUB, cf. ssub_14b *)
 Theorem ISUB_VAR_FRESH :
     !y sub. ~MEM y (MAP SND sub) ==> (VAR y ISUB sub = VAR y)
 Proof
@@ -794,6 +803,20 @@ Proof
  >> POP_ORW
  >> rw [ISUB_APPEND]
  >> Q.EXISTS_TAC ‘ss' ++ ss’ >> rw []
+QED
+
+
+Theorem FV_ISUB_SUBSET :
+    !sub u. FVS sub = {} ==> FV (u ISUB sub) SUBSET FV u
+Proof
+    Induct_on ‘sub’ >- rw []
+ >> SIMP_TAC std_ss [FORALL_PROD]
+ >> rw [FVS_DEF, ISUB_def]
+ >> MATCH_MP_TAC SUBSET_TRANS
+ >> Q.EXISTS_TAC ‘FV ([p_1/p_2] u)’
+ >> CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> MATCH_MP_TAC FV_SUB_SUBSET
+ >> rw [closed_def]
 QED
 
 (* ----------------------------------------------------------------------
@@ -846,7 +869,7 @@ Theorem size_ISUB :
     !R N:term. RENAMING R ==> (size (N ISUB R) = size N)
 Proof
   Induct THEN
-  ASM_SIMP_TAC (srw_ss())[ISUB_def, pairTheory.FORALL_PROD,
+  ASM_SIMP_TAC (srw_ss())[ISUB_def, FORALL_PROD,
                           RENAMING_THM] THEN
   SRW_TAC [][] THEN SRW_TAC [][size_vsubst]
 QED
@@ -1497,6 +1520,101 @@ Proof
  >> SET_TAC []
 QED
 
+(*---------------------------------------------------------------------------*
+ *  ‘tpm’ as an equivalence relation between terms
+ *---------------------------------------------------------------------------*)
+
+Definition tpm_rel_def :
+    tpm_rel M N = ?pi. tpm pi M = N
+End
+
+Theorem tpm_rel_alt :
+    !M N. tpm_rel M N <=> ?pi. M = tpm pi N
+Proof
+    rw [tpm_rel_def]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      fs [tpm_eql] >> Q.EXISTS_TAC ‘REVERSE pi’ >> rw [],
+      (* goal 2 (of 2) *)
+      fs [tpm_eqr] >> Q.EXISTS_TAC ‘REVERSE pi’ >> rw [] ]
+QED
+
+Theorem equivalence_tpm_rel :
+    equivalence tpm_rel
+Proof
+    rw [equivalence_def, reflexive_def, symmetric_def, transitive_def]
+ >| [ (* goal 1 (of 3) *)
+      rw [tpm_rel_def] >> Q.EXISTS_TAC ‘[]’ >> rw [],
+      (* goal 2 (of 3) *)
+      rw [tpm_rel_def] >> EQ_TAC >> rpt STRIP_TAC >| (* 2 subgoals *)
+      [ (* goal 2.1 (of 2) *)
+        ONCE_REWRITE_TAC [EQ_SYM_EQ] >> fs [tpm_eql] \\
+        Q.EXISTS_TAC ‘REVERSE pi’ >> rw [],
+        (* goal 2.2 (of 2) *)
+        ONCE_REWRITE_TAC [EQ_SYM_EQ] >> fs [tpm_eql] \\
+        Q.EXISTS_TAC ‘REVERSE pi’ >> rw [] ],
+      (* goal 3 (of 3) *)
+      fs [tpm_rel_def] \\
+      POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+      POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+      Q.EXISTS_TAC ‘pi' ++ pi’ \\
+      rw [pmact_decompose] ]
+QED
+
+val tpm_rel_thm = equivalence_tpm_rel |>
+    REWRITE_RULE [equivalence_def, reflexive_def, symmetric_def, transitive_def];
+
+(* below are easy-to-use forms of [equivalence_tpm_rel] *)
+Theorem tpm_rel_REFL[simp] :
+    tpm_rel M M
+Proof
+    rw [tpm_rel_thm]
+QED
+
+Theorem tpm_rel_SYM :
+    !M N. tpm_rel M N ==> tpm_rel N M
+Proof
+    rw [tpm_rel_thm]
+QED
+
+Theorem tpm_rel_SYM_EQ :
+    !M N. tpm_rel M N <=> tpm_rel N M
+Proof
+    rw [tpm_rel_thm]
+QED
+
+Theorem tpm_rel_TRANS :
+    !M1 M2 M3. tpm_rel M1 M2 /\ tpm_rel M2 M3 ==> tpm_rel M1 M3
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC (cj 3 tpm_rel_thm)
+ >> Q.EXISTS_TAC ‘M2’ >> art []
+QED
+
+Theorem tpm_rel_tpm[simp] :
+    tpm_rel (tpm pi M) M /\ tpm_rel M (tpm pi M)
+Proof
+    CONJ_ASM1_TAC
+ >- (REWRITE_TAC [tpm_rel_alt] \\
+     Q.EXISTS_TAC ‘pi’ >> REWRITE_TAC [])
+ >> MATCH_MP_TAC tpm_rel_SYM >> art []
+QED
+
+Theorem tpm_rel_cong :
+    !M M' N N'. tpm_rel M M' /\ tpm_rel N N' ==> (tpm_rel M N <=> tpm_rel M' N')
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC tpm_rel_TRANS >> Q.EXISTS_TAC ‘N’ >> art [] \\
+      MATCH_MP_TAC tpm_rel_TRANS >> Q.EXISTS_TAC ‘M’ >> art [] \\
+      MATCH_MP_TAC tpm_rel_SYM >> art [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC tpm_rel_TRANS >> Q.EXISTS_TAC ‘M'’ >> art [] \\
+      MATCH_MP_TAC tpm_rel_TRANS >> Q.EXISTS_TAC ‘N'’ >> art [] \\
+      MATCH_MP_TAC tpm_rel_SYM >> art [] ]
+QED
+
 (* ----------------------------------------------------------------------
     Set up the recursion functionality in binderLib
    ---------------------------------------------------------------------- *)
@@ -1506,7 +1624,7 @@ val lemma = prove(
      ∀pi t. pmact apm pi (h t) = h (tpm pi t)``,
   simp_tac (srw_ss()) [EQ_IMP_THM] >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
   strip_tac >> Induct_on `pi` >>
-  asm_simp_tac (srw_ss()) [pmact_nil, pairTheory.FORALL_PROD] >>
+  asm_simp_tac (srw_ss()) [pmact_nil, FORALL_PROD] >>
   srw_tac [][Once tpm_CONS] >> srw_tac [][GSYM pmact_decompose]);
 
 val tm_recursion_nosideset = save_thm(
