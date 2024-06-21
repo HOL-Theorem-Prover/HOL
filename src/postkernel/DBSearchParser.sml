@@ -5,120 +5,113 @@ open HolKernel
 
 val ERR = mk_HOL_ERR "DBSearchParser"
 
-datatype token = Tilde
-               | Question
-               | Pipe
-               | LeftBracket
-               | RightBracket
-               | Word of string
-               | EOF
+(*
+ * We want to parse regular expressions with the following
+ * operators: ~ (search by fragments), | (union), and ? (optional)
+ * with support for parentheses.
+ *
+ * The grammar for this is as follows:
+ *
+ * E  --> E | T
+ * E  --> T
+ * T  --> T ~ T'
+ * T  --> T'
+ * T' --> C[?]
+ * C  --> ( E' )
+ * C  --> string
+ * E' --> E
+ *)
 
-datatype regexp = Maybe of regexp
-                | Orderless of regexp * regexp
-                | Union of regexp * regexp
-                | Then of regexp * regexp
-                | Term of string
+datatype regexp = Optional of regexp
+                | Or of regexp * regexp
+                | Twiddle of regexp * regexp
+                | Seq of regexp * regexp
+                | Word of char list
 
-fun isSpecialChar c = Lib.mem c [#"~", #"(", #")", #"?", #"|"]
+datatype token = E of regexp
+               | T of char
+               | Start
 
-fun tokenise str = let
-    fun tokenise' [] [] = [EOF]
-      | tokenise' acc [] = [Word(String.implode (rev acc)), EOF]
-      | tokenise' acc (c::cs) =
-        (case (acc, c) of
-            ([], #"~") => Tilde :: tokenise' [] cs
-          | ([], #"?") => Question :: tokenise' [] cs
-          | ([], #"|") => Pipe :: tokenise' [] cs
-          | ([], #"(") => LeftBracket :: tokenise' [] cs
-          | ([], #")") => RightBracket :: tokenise' [] cs
-          | _ => if isSpecialChar c
-                 then Word(String.implode (rev acc)) :: tokenise' [] (c::cs)
-                 else tokenise' (c::acc) cs
-        )
-in
-    tokenise' [] (String.explode str)
-end
+val is_special_char = C Lib.mem [#"~", #"|", #"?", #"(", #")"]
 
-val tokens = ref [];
+fun check_precedence (a, b) =
+    case (a, b) of
+        (T #"(", T #")") => EQUAL
+      | (_, T #")") => GREATER
+      | (T #"~", T #"|") => GREATER
+      | (T #"?", _) => GREATER
+      | (_, T #"?") => LESS
+      | (T #")", _) => GREATER
+      | (T id, _) => if is_special_char id
+                     then LESS
+                     else GREATER
+      | _ => LESS
 
-fun tok() = hd (!tokens)
+fun parse_regexp input = let
+    fun top_token (E _::xs) = top_token xs
+      | top_token (x::_) = x
 
-fun advance() = let
-    val head = tok()
-    val _ = tokens := tl (!tokens)
-in head end
-
-fun consume(t) = if tok() = t
-             then advance()
-             else Word "Unexpected character"
-
-fun E() = let
-    val expr = T()
-in
-    case tok() of
-        Question => (advance(); Maybe expr)
-      | _ => expr
-end
-
-and E'() = C(E())
-
-and T() =
-    case tok() of
-        Word s => T'(F())
-      | LeftBracket => T'(F())
-      | _ => raise ERR "T" "Unexpected token"
-
-and T'(a) =
-    case tok() of
-        Tilde => (advance(); Orderless(a, T'(F())))
-      | Pipe => (advance(); Union(a, T'(F())))
-      | _ => a
-
-and F() =
-    case tok() of
-        Word s => (advance(); Term(s))
-      | LeftBracket => let
-          val _ = consume(LeftBracket)
-          val v = E()
-          val _ = consume(RightBracket)
-      in T'(v) end
-      | _ => raise ERR "F" "Unexpected token"
-
-and C(expr) =
-    case tok() of
-        EOF => expr
-      | _ => Then(expr, E'())
-
-fun compile_pattern str = (tokens := tokenise str; E'())
-
-val matches = let
-    fun matches' immediate_match regexp str =
-        case regexp of
-            Union (a, b) => matches' false a str orelse matches' false b str
-          | Orderless (a, b) => matches' false a str andalso matches' false b str
-          | Then (a, Then (Maybe r, b)) => matches' immediate_match (Then(a, b)) str
-                                           orelse matches' immediate_match (Then(a, Then(r, b))) str
-          | Then (a, b) => (case split_on_match a str 0 of
-                                SOME remainder => matches' true b remainder
-                              | NONE => false)
-          | Term s => if immediate_match
-                      then String.isPrefix s str
-                      else String.isSubstring s str
-          | Maybe r => true (* the only case where maybe matters is chained Thens *)
-
-    and split_on_match regexp str n =
-        if n > String.size str then NONE
-        else let
-            val length = String.size str
-            val current = String.substring (str, 0, n)
+    fun parse (stk as (top::_)) input idx =
+        if idx = String.size input then eval stk else let
+            val next = T (String.sub (input, idx))
         in
-            if matches' false regexp current
-            then SOME (String.substring (str, n, length - n))
-            else split_on_match regexp str (n+1)
+            case check_precedence (top_token stk, next) of
+                GREATER => parse (reduce stk) input idx
+             |  _ => parse (next::stk) input (idx + 1) (* i.e., shift *)
         end
+    and reduce stk =
+        case stk of
+            (E a)::(T(#"|"))::(E b)::ts => E(Or(b, a))::ts
+          | (E a)::(T(#"~"))::(E b)::ts => E(Twiddle(b, a))::ts
+          | T(#"?")::(E a)::ts => E(Optional(a))::ts
+          | T(#"?")::(T c)::ts => E(Optional(Word [c]))::ts
+          | (T #")")::(E x)::(T #"(")::ts => E x::ts
+          | (E a)::(E b)::ts => E(Seq(b, a))::ts
+          | T(c)::E(Word cs)::ts => E(Word(cs@[c]))::ts
+          | T(c)::ts => E(Word [c])::ts
+          | _ => raise ERR "reduce" "Could not parse expression"
+    and eval stk =
+        case stk of
+            [E x, Start] => x
+          | _ => eval (reduce stk)
+in parse [Start] input 0 end
 
+(* To actually use this regexp we need to translate it into
+ the form that ‘regexpMatch’ recognises. *)
+
+open regexpMatch
+open POSIX
+
+val any = Star (Symbs word_set)
+
+fun translate_regexp intermediate = let
+    val singleton = Binaryset.singleton Char.compare
+    val compile_chars = List.foldl (fn (c, acc) => Dot (acc, Symbs (singleton c))) Epsilon
 in
-    matches' false
+    case intermediate of
+        Optional pat => Sum (translate_regexp pat, Epsilon)
+      | Or (a, b)  => Sum (translate_regexp a, translate_regexp b)
+      | Seq (a, b) => Dot (translate_regexp a, translate_regexp b)
+      | Word cs => compile_chars cs
+      | Twiddle (a, b) => let
+          val (a', b') = (translate_regexp a, translate_regexp b)
+          fun ends a b = Dot (a, Dot (any, b))
+      in
+          Sum (ends a' b', ends b' a')
+      end
 end
+
+val is_regexp = List.exists is_special_char o String.explode
+
+fun contains_regexp pattern string =
+    if is_regexp pattern then
+        let val intermediate = parse_regexp pattern
+            val compiled_pattern = translate_regexp intermediate
+            fun contains pat = Dot (any, Dot (pat, any))
+        in
+            match (contains compiled_pattern) string
+        end
+    else
+        String.isSubstring pattern string
 
 end
