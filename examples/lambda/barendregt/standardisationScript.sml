@@ -416,16 +416,12 @@ val residuals_to_right_of_reduction = store_thm(
     PROVE_TAC [lrcc_new_labels'],
     PROVE_TAC [],
     PROVE_TAC [lrcc_new_labels'],
-    PROVE_TAC [],
     FULL_SIMP_TAC (srw_ss()) [n_posns_nlabel] THEN SRW_TAC [][],
     PROVE_TAC [],
     FULL_SIMP_TAC (srw_ss()) [n_posns_nlabel] THEN SRW_TAC [][],
-    FULL_SIMP_TAC (srw_ss()) [n_posns_nlabel] THEN SRW_TAC [][],
-    PROVE_TAC [],
     PROVE_TAC [],
     PROVE_TAC []
   ]);
-
 
 val lemma11_4_3iii = store_thm(
   "lemma11_4_3iii",
