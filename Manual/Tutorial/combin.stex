@@ -1039,16 +1039,16 @@ The final goal proof can be packaged into:
                !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u
        Proof
          Induct_on ‘x -||-> y’ >> rpt conj_tac
-         >- (metis_tac [predn_rules],
-             rw[] >>
+         >- metis_tac [predn_rules]
+         >- (rw[] >>
              qpat_x_assum ‘_ # _ -||-> _’
                (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
              rw[]
              >- metis_tac[predn_rules]
              >- metis_tac[predn_rules]
              >- (‘?w. (y = K # w) /\ (z -||-> w)’ by metis_tac [Kx_predn] >>
-                 rw[] >> metis_tac [predn_rules],
-                 ‘?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)’ by
+                 rw[] >> metis_tac [predn_rules])
+             >- (‘?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)’ by
                     metis_tac [Sxy_predn] >>
                  rw [] >> metis_tac [predn_rules]))
          >- (rw[Kxy_predn] >> metis_tac [predn_rules])
