@@ -544,7 +544,10 @@ tactic:
 \end{alltt}
 \end{hol}
 
-\noindent This can be tested to see that we have made no errors:
+\noindent
+The above uses two operators to compose tactics. The \ml{\gt\gt} operator sequentially composes two tactics. The \ml{\gt-} is used to create a subproof for the first goal in situations with multiple subgoals. Here, the tactic after the first top-level \ml{\gt-} proves the base case, and the second proves the inductive case. Such subproofs can be nested, as illustrated in the base case.
+
+This can be tested to see that we have made no errors:
 
 \begin{session}
 \begin{alltt}
