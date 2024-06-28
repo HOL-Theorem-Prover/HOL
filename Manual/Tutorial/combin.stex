@@ -1050,7 +1050,7 @@ The final goal proof can be packaged into:
                  rw[] >> metis_tac [predn_rules],
                  ‘?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)’ by
                     metis_tac [Sxy_predn] >>
-                 rw [] >> metis_tac [predn_rules])
+                 rw [] >> metis_tac [predn_rules]))
          >- (rw[Kxy_predn] >> metis_tac [predn_rules])
          >- (rw[Sxyz_predn] >> metis_tac [predn_rules])
        QED
