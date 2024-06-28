@@ -1004,11 +1004,16 @@ val ITERATE_UNION_GEN = store_thm ("ITERATE_UNION_GEN",
 
 val lemma = prove (
  ``!t s. t SUBSET s ==> (s = (s DIFF t) UNION t) /\ DISJOINT (s DIFF t) t``,
-  REPEAT STRIP_TAC THENL [SIMP_TAC std_ss [UNION_DEF, DIFF_DEF, EXTENSION, GSPECIFICATION]
-  THEN GEN_TAC THEN EQ_TAC THENL [FULL_SIMP_TAC std_ss [], STRIP_TAC THEN
-  FULL_SIMP_TAC std_ss [SUBSET_DEF]], SIMP_TAC std_ss [DISJOINT_DEF, INTER_DEF, DIFF_DEF,
-  EXTENSION, GSPECIFICATION] THEN GEN_TAC THEN EQ_TAC THENL [STRIP_TAC,
-  FULL_SIMP_TAC std_ss [NOT_IN_EMPTY]]]);
+    rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      SIMP_TAC std_ss [UNION_DEF, DIFF_DEF, EXTENSION, GSPECIFICATION] \\
+      GEN_TAC \\
+      EQ_TAC >- FULL_SIMP_TAC std_ss [] \\
+      STRIP_TAC \\
+      FULL_SIMP_TAC std_ss [SUBSET_DEF],
+      (* goal 2 (of 2) *)
+      SIMP_TAC std_ss [DISJOINT_DEF, INTER_DEF, DIFF_DEF,
+                       EXTENSION, GSPECIFICATION, NOT_IN_EMPTY] ]);
 
 val ITERATE_DIFF = store_thm ("ITERATE_DIFF",
  ``!op. monoidal op

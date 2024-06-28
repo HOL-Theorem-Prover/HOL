@@ -304,7 +304,8 @@ fun cases_prove case_const_def th k t =
             end
           else if is_exists (concl th) then
             let val (v, bod) = dest_exists (concl th)
-                val v' = variant (free_vars t) v
+                val avoids = op_union aconv (free_vars t) (free_vars (concl th))
+                val v' = variant avoids v
                 val bod' = subst[v |-> v'] bod
                 val t_th = recurse (ASSUME bod')
             in
