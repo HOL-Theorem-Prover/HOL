@@ -236,10 +236,17 @@ QED
 
 Overload M[local] = “half_message RoundOp”
 Theorem comple_property:
-  ∀k m n.0 < n /\ n< 17 ==> ~ ((FST(DES n k)) m)= (FST(DES n (~ k))) (~ m)
+  ∀k m n.0 < n /\ n< 17 /\  ((encrypt,decrypt) = DES n k) /\  ((encrypt',decrypt') = DES n (~k))
+    ==> ~(encrypt m)= (encrypt') (~ m)
 Proof
      RW_TAC fcp_ss[DES_def,o_DEF, desCore_def, desRound_alt_Round']
-  >> RW_TAC fcp_ss[]
+  >> POP_ASSUM MP_TAC
+  >> POP_ASSUM MP_TAC
+  >> POP_ASSUM MP_TAC
+  >> rw[]
+  >> RW_TAC fcp_ss[desRound_alt_Round']
+  >> Q.ABBREV_TAC ‘keys=(KS k n)’
+  >> Q.ABBREV_TAC ‘keys'=(KS (~k) n)’
   >> Suff ‘(Join (Swap (Round n keys (Split (IP m)))))=
               ~(Join (Swap (Round n keys' (Split (IP (¬m))))))’          
   >- (Rewr' \\
@@ -354,7 +361,7 @@ Definition Wkey_def:
 End
 
 Theorem weakK_proper:
-  !k plaintext. MEM k Wkey ⇒ ((FST(FullDES k)) ((FST(FullDES k)) plaintext) = plaintext)
+   !k plaintext. MEM k Wkey /\ ((encrypt,decrypt) = FullDES k)  ⇒ (encrypt (encrypt plaintext) = plaintext)
 Proof
      rw[DES_def]
   >> Know ‘LENGTH (KS k 16)=16’
@@ -385,13 +392,13 @@ Definition Semiwkey_def:
 End
 
 Theorem semiK_proper1:
-  !plaintext pair. MEM pair Semiwkey ==>
-  ((FST(FullDES (FST(pair)))) ((FST(FullDES (SND(pair)))) plaintext) = plaintext)
+  !plaintext pair. MEM pair Semiwkey /\ (s1,s2)= pair /\ ((encrypt,decrypt) = FullDES s1) /\ ((encrypt',decrypt') = FullDES s2) ==>
+  (encrypt (encrypt' plaintext) = plaintext)
 Proof
      rw[DES_def]
-  >> Know ‘LENGTH ((KS (SND pair) 16))=16’
+  >> Know ‘LENGTH ((KS s2 16))=16’
   >- rw [LENGTH_KS] 
-  >> Suff ‘KS (FST pair) 16 =REVERSE (KS (SND pair) 16)’
+  >> Suff ‘KS s1 16 =REVERSE (KS s2 16)’
   >- rw [desCore_CORRECT] 
   >> POP_ASSUM MP_TAC 
   >> rw[Semiwkey_def] 
@@ -404,13 +411,13 @@ Proof
 QED
 
 Theorem semiK_proper2:
-  !plaintext pair. MEM pair Semiwkey ==>
-  ((FST(FullDES (SND(pair)))) ((FST(FullDES (FST(pair)))) plaintext) = plaintext)
+  !plaintext pair. MEM pair Semiwkey /\ (s1,s2)= pair /\ ((encrypt,decrypt) = FullDES s1) /\ ((encrypt',decrypt') = FullDES s2) ==>
+  (encrypt' (encrypt plaintext) = plaintext)
 Proof
      rw[DES_def]
-  >> Know ‘LENGTH ((KS (FST pair) 16))=16’
+  >> Know ‘LENGTH ((KS s1 16))=16’
   >- rw [LENGTH_KS] 
-  >> Suff ‘KS (SND pair) 16 =REVERSE (KS (FST pair) 16)’
+  >> Suff ‘KS s2 16 =REVERSE (KS s1 16)’
   >- rw [desCore_CORRECT]
   >> POP_ASSUM MP_TAC 
   >> rw[Semiwkey_def] 
