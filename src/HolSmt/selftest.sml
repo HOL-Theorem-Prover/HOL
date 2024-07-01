@@ -313,7 +313,7 @@ in
     (``(0:num) MOD 42 = 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``(1:num) MOD 42 = 1``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
     (``(42:num) MOD 42 = 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
-    (``(x:num) MOD 1 = 0``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
+    (``(x:num) MOD 1 = 0``, [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
     (``(x:num) MOD 42 < 42``,
       [thm_AUTO, (*thm_CVC,*) thm_YO, thm_Z3, thm_Z3p_v4]),
     (``((x:num) MOD 42 = x) = (x < 42)``,
