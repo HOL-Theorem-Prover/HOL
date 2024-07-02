@@ -740,6 +740,30 @@ Definition itree_loop_def:
                      (INR seed)
 End
 
+Definition interp_body_def:
+  interp_body rh (Ret r) = Ret (INR r) ∧
+  interp_body rh (Tau t) = Ret (INL t) ∧
+  interp_body rh (Vis e k) = itree_bind (rh e) (\a. Ret (INL (k a)))
+End
+
+Definition itree_interp_def:
+  itree_interp rh t = itree_iter (interp_body rh) t
+End
+
+Definition mrec_iter_body_def:
+  mrec_iter_body rh t =
+  case t of
+   | Ret r => Ret (INR r)
+   | Tau t => Ret (INL t)
+   | Vis (INL seed') k => Ret (INL (itree_bind (rh seed') k))
+   | Vis (INR e) k => Vis e (Ret o INL o k)
+End
+
+Definition itree_mrec_def:
+  itree_mrec rh seed =
+  itree_iter (mrec_iter_body rh) (rh seed)
+End
+
 (* weak termination-sensitive bisimulation *)
 
 Inductive strip_tau:
