@@ -22,13 +22,13 @@ val ERR = mk_HOL_ERR "DBSearchParser"
  * E' --> E
  *)
 
-datatype regexp = Optional of regexp
-                | Or of regexp * regexp
-                | Twiddle of regexp * regexp
-                | Seq of regexp * regexp
+datatype search_regexp = Optional of search_regexp
+                | Or of search_regexp * search_regexp
+                | Twiddle of search_regexp * search_regexp
+                | Seq of search_regexp * search_regexp
                 | Word of char list
 
-datatype token = E of regexp
+datatype token = E of search_regexp
                | T of char
                | Start
 
