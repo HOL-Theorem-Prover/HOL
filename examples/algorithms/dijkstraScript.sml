@@ -38,25 +38,25 @@ Definition update_def:
                                           dist_from_root := d + len |>))
 End
 
-Inductive disjkstra:
+Inductive calc:
 [~empty:]
-  disjkstra known FEMPTY edges known
+  calc known FEMPTY edges known
 [~step:]
   min_elem n v queue ∧
   FLOOKUP edges n = SOME neighbours ∧
   new_known = known |+ (n,v) ∧
   new_queue = update neighbours n v.dist_from_root new_known (queue \\ n) ∧
-  disjkstra new_known new_queue edges result ⇒
-  disjkstra known queue edges result
+  calc new_known new_queue edges result ⇒
+  calc known queue edges result
 End
 
 Definition root_node_def:
   root_node r = <| prev_node := r; dist_from_root := 0 |>
 End
 
-Definition paths_def:
-  paths root edges result ⇔
-    disjkstra FEMPTY (FEMPTY |+ (root, root_node root)) edges result
+Definition dijkstra_def:
+  dijkstra root edges result ⇔
+    calc FEMPTY (FEMPTY |+ (root, root_node root)) edges result
 End
 
 (* --- definitions used in main correctness theorem --- *)
@@ -326,7 +326,7 @@ QED
 
 Theorem dijkstra_thm:
   ∀root known queue edges res.
-    disjkstra known queue edges res ⇒
+    calc known queue edges res ⇒
     FLOOKUP known root = SOME (root_node root) ⇒
     DISJOINT (FDOM known) (FDOM queue) ∧
     (* content in known is shortest *)
@@ -349,7 +349,7 @@ Theorem dijkstra_thm:
     correct_result edges root res ∧
     complete_result edges root res
 Proof
-  gen_tac \\ Induct_on ‘disjkstra’ \\ conj_tac
+  gen_tac \\ Induct_on ‘calc’ \\ conj_tac
   \\ rpt gen_tac \\ rpt disch_tac
   >-
    (gvs [complete_result_def] \\ pop_assum mp_tac
@@ -452,14 +452,14 @@ QED
 
 (* --- main correctness theorem --- *)
 
-Theorem paths_imp_correct_result:
-  paths root edges result
+Theorem dijkstra_imp_correct_result:
+  dijkstra root edges result
   ⇒
   correct_result edges root result ∧
   complete_result edges root result
 Proof
-  simp [paths_def]
-  \\ simp [Once disjkstra_cases]
+  simp [dijkstra_def]
+  \\ simp [Once calc_cases]
   \\ simp [min_elem_def,FLOOKUP_SIMP]
   \\ gvs [EVAL “(root_node root).dist_from_root”]
   \\ strip_tac
