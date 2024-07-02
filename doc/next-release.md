@@ -49,6 +49,8 @@ New tools:
 New examples:
 -------------
 
+- Dijkstra's algorithm for computing shortest paths: `examples/algorithms/dijkstraScript.sml`
+
 Incompatibilities:
 ------------------
 
