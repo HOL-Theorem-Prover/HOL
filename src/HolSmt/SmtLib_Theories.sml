@@ -305,7 +305,8 @@ in
       ("-", leftassoc realSyntax.mk_minus),
       ("+", leftassoc realSyntax.mk_plus),
       ("*", leftassoc realSyntax.mk_mult),
-      ("/", leftassoc realSyntax.mk_div),
+      ("/", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+          (Term.prim_mk_const {Thy="HolSmt", Name="smt_rdiv"}, t1), t2))),
       ("<=", chainable realSyntax.mk_leq),
       ("<", chainable realSyntax.mk_less),
       (">=", chainable realSyntax.mk_geq),
@@ -354,7 +355,8 @@ in
       ("-", leftassoc realSyntax.mk_minus),
       ("+", leftassoc realSyntax.mk_plus),
       ("*", leftassoc realSyntax.mk_mult),
-      ("/", leftassoc realSyntax.mk_div),
+      ("/", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+          (Term.prim_mk_const {Thy="HolSmt", Name="smt_rdiv"}, t1), t2))),
       ("<=", chainable realSyntax.mk_leq),
       ("<", chainable realSyntax.mk_less),
       (">=", chainable realSyntax.mk_geq),
