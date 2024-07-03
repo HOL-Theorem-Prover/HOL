@@ -118,7 +118,7 @@ local
     (realSyntax.minus_tm, apfst_K "-"),
     (realSyntax.plus_tm, apfst_K "+"),
     (realSyntax.mult_tm, apfst_K "*"),
-    (realSyntax.div_tm, apfst_K "/"),
+    (Term.prim_mk_const {Thy="HolSmt", Name="smt_rdiv"}, apfst_K "/"),
     (realSyntax.leq_tm, apfst_K "<="),
     (realSyntax.less_tm, apfst_K "<"),
     (realSyntax.geq_tm, apfst_K ">="),
@@ -653,6 +653,7 @@ in
         (* realaxTheory *)
         real_max, real_min, real_pow,
         (* others *)
+        HolSmtTheory.real_div_smt_rdiv,
         int_arithTheory.INT_NUM_SUB,
         markerTheory.Abbrev_def
       ] else []
