@@ -278,7 +278,12 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
       fun u1 h th rule =
           case eliminate_with_unifier ctys rule h th of
               NONE => fail
-            | SOME th' => sqreturn (true, th')
+            | SOME th' =>
+              let open HOLset
+              in
+                sqreturn (true, th',
+                          listItems $ difference(hypset th', hypset th))
+              end
       fun safe_recurse hs (progressed,th) =
           case hs of
               [] => sqreturn (progressed,th)
@@ -286,8 +291,9 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
               let
                 val ths = Net.lookup h (ruledb.safenet ruledb)
               in
-                ((seq.fromList ths ~> u1 h th) +++ sqreturn (progressed, th)) ~>
-                safe_recurse rest
+                ((seq.fromList ths ~> u1 h th) +++
+                 sqreturn(progressed, th,[])) ~>
+                (fn (p,th',newhs) => safe_recurse (newhs @ rest) (p,th'))
               end
       fun bad_recurse hs th =
           case hs of
