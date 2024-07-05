@@ -140,15 +140,15 @@ fun prettify th =
       CONV_RULE (RENAME_VARS_CONV ["M"]) th
     else th
   end handle HOL_ERR _ => th
-fun xfer hs th =
-  th |> transfer_thm 10 ("Monoid"::hs) true (global_ruledb())
+fun xfer th =
+  th |> time (transfer_thm 10 [] true (global_ruledb()))
      |> prettify
 
 
-Theorem tmonoid_assoc = xfer [] monoid_assoc
-Theorem tmonoid_lid = xfer [] monoid_lid
-Theorem tmonoid_rid = xfer [] monoid_rid
-Theorem tmonoid_id_unique = xfer [] monoid_id_unique
+Theorem tmonoid_assoc = xfer monoid_assoc
+Theorem tmonoid_lid = xfer monoid_lid
+Theorem tmonoid_rid = xfer monoid_rid
+Theorem tmonoid_id_unique = xfer monoid_id_unique
 
 Definition list_monoid_def:
   list_monoid = mkmonoid <| carrier := UNIV; op := APPEND; id := [] |>
@@ -219,13 +219,13 @@ Proof
 QED
 
 Theorem FiniteAbelianMonoid_def =
-        xfer ["FiniteAbelianMonoid"] monoidTheory.FiniteAbelianMonoid_def
+        xfer monoidTheory.FiniteAbelianMonoid_def
 
 Theorem FiniteAbelianMonoid_def_alt =
-        xfer ["FiniteAbelianMonoid"] monoidTheory.FiniteAbelianMonoid_def_alt
+        xfer monoidTheory.FiniteAbelianMonoid_def_alt
 
 Theorem monoid_carrier_nonempty[simp] =
-        xfer [] monoidTheory.monoid_carrier_nonempty
+        xfer monoidTheory.monoid_carrier_nonempty
 
 Definition monoid_exp_def:
   monoid_exp m x n = monoid$monoid_exp (monoid_REP m) x n
@@ -247,28 +247,28 @@ Proof
 QED
 
 Theorem monoid_exp_FUNPOW =
-        xfer ["monoid_exp"] monoidTheory.monoid_exp_def
+        xfer monoidTheory.monoid_exp_def
 
 Theorem monoid_exp_element[simp] =
-        xfer ["monoid_exp"] monoidTheory.monoid_exp_element
+        xfer monoidTheory.monoid_exp_element
 
-Theorem monoid_exp_1[simp] = xfer [] monoidTheory.monoid_exp_1
-Theorem monoid_id_exp[simp] = xfer [] monoidTheory.monoid_id_exp
+Theorem monoid_exp_1[simp] = xfer monoidTheory.monoid_exp_1
+Theorem monoid_id_exp[simp] = xfer monoidTheory.monoid_id_exp
 
-Theorem monoid_comm_exp = xfer [] monoidTheory.monoid_comm_exp
-Theorem monoid_exp_comm = xfer [] monoidTheory.monoid_exp_comm
-Theorem monoid_comm_op_exp = xfer [] monoidTheory.monoid_comm_op_exp
-Theorem monoid_comm_exp_exp = xfer [] monoidTheory.monoid_comm_exp_exp
-Theorem monoid_exp_add = xfer [] monoidTheory.monoid_exp_add
-Theorem monoid_exp_mult = xfer [] monoidTheory.monoid_exp_mult
-Theorem monoid_exp_mult_comm = xfer [] monoidTheory.monoid_exp_mult_comm
+Theorem monoid_comm_exp = xfer monoidTheory.monoid_comm_exp
+Theorem monoid_exp_comm = xfer monoidTheory.monoid_exp_comm
+Theorem monoid_comm_op_exp = xfer monoidTheory.monoid_comm_op_exp
+Theorem monoid_comm_exp_exp = xfer monoidTheory.monoid_comm_exp_exp
+Theorem monoid_exp_add = xfer monoidTheory.monoid_exp_add
+Theorem monoid_exp_mult = xfer monoidTheory.monoid_exp_mult
+Theorem monoid_exp_mult_comm = xfer monoidTheory.monoid_exp_mult_comm
 
 (* ----------------------------------------------------------------------
     Finite monoids
    ---------------------------------------------------------------------- *)
 
 Theorem finite_monoid_exp_not_distinct =
-        xfer ["FiniteMonoid"] monoidTheory.finite_monoid_exp_not_distinct
+        xfer monoidTheory.finite_monoid_exp_not_distinct
 
 (* ----------------------------------------------------------------------
     MITSET : iterating monoid operation over (finite) set of elements
@@ -277,17 +277,17 @@ Theorem finite_monoid_exp_not_distinct =
 Overload MITSET = “λm. ITSET (tmop m)”
 
 Theorem abelian_monoid_op_closure_comm_assoc_fun =
-        xfer ["AbelianMonoid"]
+        xfer
              monoidTheory.abelian_monoid_op_closure_comm_assoc_fun
 
 Theorem COMMUTING_MITSET_INSERT =
-        xfer ["AbelianMonoid"] COMMUTING_GITSET_INSERT
+        xfer COMMUTING_GITSET_INSERT
 
 Theorem COMMUTING_MITSET_REDUCTION =
-        xfer ["AbelianMonoid"] COMMUTING_GITSET_REDUCTION
+        xfer COMMUTING_GITSET_REDUCTION
 
 Theorem COMMUTING_MITSET_RECURSES =
-        xfer ["AbelianMonoid"] COMMUTING_GITSET_RECURSES
+        xfer COMMUTING_GITSET_RECURSES
 
 Overload MPROD_SET = “λm s. MITSET m s (tmid m)”
 
@@ -326,9 +326,9 @@ Proof
   simp[tmextend_def, FUN_REL_def, mequiv_def, FUN_EQ_THM]
 QED
 
-Theorem tmextend_carrier[simp] = xfer ["extend"] (GEN_ALL extend_carrier)
-Theorem tmextend_id[simp] = xfer ["extend"] (GEN_ALL extend_id)
-Theorem tmextend_op = xfer ["extend"] (GEN_ALL extend_op)
+Theorem tmextend_carrier[simp] = xfer (GEN_ALL extend_carrier)
+Theorem tmextend_id[simp] = xfer (GEN_ALL extend_id)
+Theorem tmextend_op = xfer (GEN_ALL extend_op)
 
 Definition period_def:
   period m x k = monoid$period (monoid_REP m) x k
@@ -356,27 +356,42 @@ Theorem order_relates[transfer_rule] =
 
 Overload tord[local] = “aatmonoid$order M”
 
-Theorem order_property = xfer ["order"] order_property
-Theorem order_period = xfer ["period"] order_period
-Theorem order_minimal = xfer ["order"] order_minimal
-Theorem order_eq_0 = xfer ["order"] order_eq_0
-Theorem order_thm = xfer ["order"] order_thm
-Theorem monoid_order_id[simp] = xfer ["order"] monoid_order_id
-Theorem monoid_order_eq_1 = xfer ["order"] monoid_order_eq_1
-Theorem monoid_order_condition = xfer ["order"] monoid_order_condition
-Theorem monoid_order_power_eq_0 = xfer ["order"] monoid_order_power_eq_0
-Theorem monoid_order_power = xfer ["order"] monoid_order_power
-Theorem monoid_order_power_eqn = xfer ["order"] monoid_order_power_eqn
-Theorem monoid_order_power_coprime = xfer ["order"] monoid_order_power_coprime
-Theorem monoid_order_cofactor = xfer ["order"] monoid_order_cofactor
-Theorem monoid_order_divisor = xfer ["order"] monoid_order_divisor
-Theorem monoid_order_common = xfer ["order"] monoid_order_common
-Theorem monoid_order_common_coprime = xfer ["order"] monoid_order_common_coprime
-Theorem monoid_exp_mod_order = xfer ["order"] monoid_exp_mod_order
-Theorem abelian_monoid_order_common = xfer ["order"] abelian_monoid_order_common
+(*
+val _ = show_assums := true
+val rdb = global_ruledb()
+val cleftp = true
+val base = transfer_skeleton cleftp (concl monoidTheory.monoid_order_id)
+val th = base
+
+
+fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
+
+fun F th = seq.hd $ resolve_relhyps [] cleftp rdb th
+val th = fpow F 19 base
+*)
+
+
+Theorem order_property = xfer order_property
+Theorem order_period = xfer order_period
+Theorem order_minimal = xfer order_minimal
+Theorem order_eq_0 = xfer order_eq_0
+Theorem order_thm = xfer order_thm
+Theorem monoid_order_id[simp] = xfer monoid_order_id
+Theorem monoid_order_eq_1 = xfer monoid_order_eq_1
+Theorem monoid_order_condition = xfer monoid_order_condition
+Theorem monoid_order_power_eq_0 = xfer monoid_order_power_eq_0
+Theorem monoid_order_power = xfer monoid_order_power
+Theorem monoid_order_power_eqn = xfer monoid_order_power_eqn
+Theorem monoid_order_power_coprime = xfer monoid_order_power_coprime
+Theorem monoid_order_cofactor = xfer monoid_order_cofactor
+Theorem monoid_order_divisor = xfer monoid_order_divisor
+Theorem monoid_order_common = xfer monoid_order_common
+Theorem monoid_order_common_coprime = xfer monoid_order_common_coprime
+Theorem monoid_exp_mod_order = xfer monoid_exp_mod_order
+Theorem abelian_monoid_order_common = xfer abelian_monoid_order_common
 Theorem abelian_monoid_order_common_coprime =
-        xfer ["order"] abelian_monoid_order_common_coprime
-Theorem abelian_monoid_order_lcm = xfer ["order"] abelian_monoid_order_lcm
+        xfer abelian_monoid_order_common_coprime
+Theorem abelian_monoid_order_lcm = xfer abelian_monoid_order_lcm
 
 Theorem orders_respects:
   (mequiv ===> (=) ===> (=)) orders orders
@@ -390,19 +405,19 @@ End
 Theorem orders_relates[transfer_rule] =
   REWRITE_RULE[GSYM orders_DEF] xfer_orders
 
-Theorem orders_def = xfer ["orders"] monoidTheory.orders_def
+Theorem orders_def = xfer monoidTheory.orders_def
 
-Theorem orders_element = xfer ["orders"] orders_element
-Theorem orders_subset = xfer ["orders"] orders_subset
-Theorem orders_finite = xfer ["orders"] orders_finite
-Theorem orders_eq_1 = xfer ["orders"] orders_eq_1
+Theorem orders_element = xfer orders_element
+Theorem orders_subset = xfer orders_subset
+Theorem orders_finite = xfer orders_finite
+Theorem orders_eq_1 = xfer orders_eq_1
 
 Overload maximal_order =
   “\M : 'a monoid. MAX_SET (IMAGE (order M) (tmcarrier M))”
 
-Theorem maximal_order_alt = xfer ["order"] maximal_order_alt
+Theorem maximal_order_alt = xfer maximal_order_alt
 Theorem monoid_order_divides_maximal =
-        xfer ["order"] monoid_order_divides_maximal
+        xfer monoid_order_divides_maximal
 
 Theorem monoid_invertibles_respects:
   (mequiv ===> (=)) monoid_invertibles monoid_invertibles
@@ -427,8 +442,8 @@ Proof
 QED
 
 Theorem monoid_invertibles_element =
-        xfer ["monoid_invertibles"] monoid_invertibles_element
-Theorem monoid_order_nonzero = xfer ["monoid_invertibles"] monoid_order_nonzero
+        xfer monoid_invertibles_element
+Theorem monoid_order_nonzero = xfer monoid_order_nonzero
 
 Theorem Invertibles_respects[local]:
   (mequiv ===> mequiv) Invertibles Invertibles

@@ -337,9 +337,17 @@ fun resolve_relhyps hints cleftp rdb th =
       val fail = seq.empty
       fun goodname nm t = #Name (dest_thy_const (argsel t)) = nm
                           handle HOL_ERR _ => false
+      fun goodthy t = let val {Thy,...} = dest_thy_const (argsel t)
+                      in
+                        Thy <> "bool" andalso Thy <> "min"
+                      end handle HOL_ERR _ => false
       fun goodhyp h = not (is_relconstraint h)
       val goods0 = HOLset.filter goodhyp (hypset th)
-      fun check_hints [] s = HOLset.find (K true) s
+      fun avoid_minbool s =
+          case HOLset.find goodthy s of
+              SOME hy => SOME hy
+            | NONE => HOLset.find (K true) s
+      fun check_hints [] s = avoid_minbool s
         | check_hints (h::hs) s =
           case HOLset.find (goodname h) s of
               NONE => check_hints hs s
