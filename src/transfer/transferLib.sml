@@ -458,6 +458,7 @@ val cimp_tm = mk_icomb(combinSyntax.C_tm, boolSyntax.implication)
 val ruledb =
     let
       open ruledb
+      fun munge th = UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] th)
     in
       empty_rdb
         |> addrule EQ_bi_unique
@@ -503,21 +504,14 @@ val ruledb =
                       |> INST_TYPE [alpha |-> (bool --> bool --> bool)]
                       |> INST [mk_var("x", bool --> bool --> bool) |->
                                boolSyntax.implication])
-        |> addsafe (UNDISCH_ALL
-                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                    equalityp_FUN_REL))
-        |> addsafe (UNDISCH_ALL
-                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                    bi_unique_implied))
-        |> addsafe (UNDISCH_ALL
-                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                    bitotal_implied))
-        |> addsafe (UNDISCH_ALL
-                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                    total_total_sets))
-        |> addsafe (UNDISCH_ALL
-                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                    surj_sets))
+        |> addsafe (munge equalityp_FUN_REL)
+        |> addsafe (munge equalityp_PAIR_REL)
+        |> addsafe (munge equalityp_OPTREL)
+        |> addsafe (munge equalityp_LIST_REL)
+        |> addsafe (munge bi_unique_implied)
+        |> addsafe (munge bitotal_implied)
+        |> addsafe (munge total_total_sets)
+        |> addsafe (munge surj_sets)
         |> addsafe eq_equalityp
         |> addsafe bi_unique_EQ
         |> addsafe bitotal_EQ

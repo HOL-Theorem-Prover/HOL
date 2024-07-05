@@ -438,6 +438,12 @@ Proof
   simp[right_unique_def, optionTheory.OPTREL_def, optionTheory.FORALL_OPTION]
 QED
 
+Theorem equalityp_OPTREL:
+  equalityp AB ==> equalityp (OPTREL AB)
+Proof
+  simp[equalityp_def]
+QED
+
 Theorem option_CASE_CONG:
   (OPTREL AB |==> CD |==> (AB |==> CD) |==> CD) option_CASE option_CASE
 Proof
