@@ -541,20 +541,15 @@ val ruledb =
         |> add_domrng quotientTheory.FUN_REL_EQ
     end (* let *)
 
-fun search_for P depth sq =
+fun search_for P sq =
     let
-      val (default, sq') = case seq.cases sq of
-                               NONE => raise Fail "No theorems!"
-                             | SOME (th, rest) => (th, rest)
-      fun recurse i sq =
-          if i > depth then default
-          else
-            case seq.cases sq of
-                NONE => default
-              | SOME (th, rest) => if P (concl th) then th
-                                   else recurse (i + 1) rest
+      fun recurse sq =
+          case seq.cases sq of
+              NONE => raise Fail "No theorems!"
+            | SOME (th, rest) => if P (concl th) then th
+                                 else recurse rest
     in
-      recurse 1 sq'
+      recurse sq
     end
 
 fun const_occurs c = can (find_term (same_const c))
@@ -608,15 +603,15 @@ fun base_transfer hints cleftp ruledb t =
 
 fun nontrivial_eq t = is_eq t andalso lhs t !~ rhs t
 fun transfer_tm depth hints cleftp ruledb t =
-    base_transfer hints cleftp ruledb t |> search_for nontrivial_eq depth
+    base_transfer hints cleftp ruledb t |> search_for nontrivial_eq
 
 fun transfer_thm depth hints cleftp ruledb th =
     let
       fun goodconcl c =
-          is_eq c orelse
+          is_eq c andalso not (aconv (lhs c) (rhs c)) orelse
           aconv (#1 (dest_imp c)) (concl th) handle HOL_ERR _ => false
       val th0 = base_transfer hints cleftp ruledb (concl th)
-                              |> search_for goodconcl depth
+                              |> search_for goodconcl
     in
       if is_eq (concl th0) then
         if cleftp then EQ_MP th0 th else EQ_MP (SYM th0) th
