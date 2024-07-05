@@ -356,21 +356,6 @@ Theorem order_relates[transfer_rule] =
 
 Overload tord[local] = “aatmonoid$order M”
 
-(*
-val _ = show_assums := true
-val rdb = global_ruledb()
-val cleftp = true
-val base = transfer_skeleton cleftp (concl monoidTheory.monoid_order_id)
-val th = base
-
-
-fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
-
-fun F th = seq.hd $ resolve_relhyps [] cleftp rdb th
-val th = fpow F 19 base
-*)
-
-
 Theorem order_property = xfer order_property
 Theorem order_period = xfer order_period
 Theorem order_minimal = xfer order_minimal
@@ -419,6 +404,10 @@ Theorem maximal_order_alt = xfer maximal_order_alt
 Theorem monoid_order_divides_maximal =
         xfer monoid_order_divides_maximal
 
+(* ----------------------------------------------------------------------
+    Invertibles (prelude to groups)
+   ---------------------------------------------------------------------- *)
+
 Theorem monoid_invertibles_respects:
   (mequiv ===> (=)) monoid_invertibles monoid_invertibles
 Proof
@@ -456,5 +445,70 @@ Definition Invertibles_def:
 End
 Theorem Invertibles_relate[transfer_rule] =
         REWRITE_RULE[GSYM Invertibles_def] xfer_Invertibles
+
+Theorem Invertibles_property[simp] = xfer monoidTheory.Invertibles_property
+Theorem Invertibles_subset = xfer monoidTheory.Invertibles_subset
+Theorem Invertibles_order = xfer monoidTheory.Invertibles_order
+
+Theorem monoid_inv_from_invertibles =
+        xfer monoidTheory.monoid_inv_from_invertibles
+
+
+Theorem monoid_inv_respects[local]:
+  (mequiv ===> (=) ===> (=)) monoid_inv monoid_inv
+Proof
+  simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_monoid_inv = opxfer monoid_inv_respects
+Definition monoid_inv_def0:
+  monoid_inv = ^(rand $ concl xfer_monoid_inv)
+End
+
+Theorem monoid_inv_relate[transfer_rule] =
+        REWRITE_RULE[GSYM monoid_inv_def0] xfer_monoid_inv
+
+Theorem monoid_inv_def = xfer monoidTheory.monoid_inv_def
+Theorem monoid_inv_def_alt = xfer monoidTheory.monoid_inv_def_alt
+Theorem monoid_inv_element = xfer monoidTheory.monoid_inv_element
+Theorem monoid_id_invertible[simp] = xfer monoidTheory.monoid_id_invertible
+Theorem monoid_inv_op_invertible[simp] =
+        xfer monoidTheory.monoid_inv_op_invertible
+Theorem monoid_inv_invertible[simp] = xfer monoidTheory.monoid_inv_invertible
+
+(* ----------------------------------------------------------------------
+    Monoid Maps
+   ---------------------------------------------------------------------- *)
+
+Theorem MonoidHomo_respects[local]:
+  (((=) ===> (=)) ===> mequiv ===> mequiv ===> (=)) MonoidHomo MonoidHomo
+Proof
+  simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_MonoidHomo = opxfer MonoidHomo_respects
+Definition MonoidHomo_def0:
+  MonoidHomo = ^(rand $ concl xfer_MonoidHomo)
+End
+Theorem MonoidHomo_relate[transfer_rule] =
+        REWRITE_RULE[GSYM MonoidHomo_def0] xfer_MonoidHomo
+
+(* fails
+Theorem MonoidHomo_def = xfer monoidTheory.MonoidHomo_def
+*)
+
+(*
+val _ = show_assums := true
+val rdb = global_ruledb()
+val cleftp = true
+val base = transfer_skeleton cleftp (concl monoidTheory.MonoidHomo_def)
+val th = base
+
+
+fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
+
+fun F th = seq.hd $ resolve_relhyps [] cleftp rdb th
+val th = fpow F 1 base
+*)
+
+
 
 val _ = export_theory();
