@@ -387,7 +387,7 @@ val xfer_orders = opxfer orders_respects
 Definition orders_DEF:
   orders = ^(rand $ concl xfer_orders)
 End
-Theorem order_relates[transfer_rule] =
+Theorem orders_relates[transfer_rule] =
   REWRITE_RULE[GSYM orders_DEF] xfer_orders
 
 Theorem orders_def = xfer ["orders"] monoidTheory.orders_def
