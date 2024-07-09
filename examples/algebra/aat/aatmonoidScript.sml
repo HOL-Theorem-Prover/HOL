@@ -141,7 +141,8 @@ fun prettify th =
     else th
   end handle HOL_ERR _ => th
 fun xfer th =
-  th |> time (transfer_thm 10 [] true (global_ruledb()))
+  th |> time (transfer_thm 10 {hints=[],force_imp=true,cleftp=true}
+                              (global_ruledb()))
      |> prettify
 
 
@@ -491,9 +492,86 @@ End
 Theorem MonoidHomo_relate[transfer_rule] =
         REWRITE_RULE[GSYM MonoidHomo_def0] xfer_MonoidHomo
 
-(* fails
 Theorem MonoidHomo_def = xfer monoidTheory.MonoidHomo_def
-*)
+
+Theorem MonoidIso_respects[local]:
+  (((=) ===> (=)) ===> mequiv ===> mequiv ===> (=)) MonoidIso MonoidIso
+Proof
+  simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_MonoidIso = opxfer MonoidIso_respects
+Definition MonoidIso_def0:
+  MonoidIso = ^(rand $ concl xfer_MonoidIso)
+End
+Theorem MonoidIso_relate[transfer_rule] =
+        REWRITE_RULE[GSYM MonoidIso_def0] xfer_MonoidIso
+Theorem MonoidIso_def = xfer monoidTheory.MonoidIso_def
+
+Theorem MonoidEndo_respects[local]:
+  (((=) ===> (=)) ===> mequiv ===> (=)) MonoidEndo MonoidEndo
+Proof
+  simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_MonoidEndo = opxfer MonoidEndo_respects
+Definition MonoidEndo_def0:
+  MonoidEndo = ^(rand $ concl xfer_MonoidEndo)
+End
+Theorem MonoidEndo_relate[transfer_rule] =
+        REWRITE_RULE[GSYM MonoidEndo_def0] xfer_MonoidEndo
+Theorem MonoidEndo_def = xfer monoidTheory.MonoidEndo_def
+
+Theorem MonoidAuto_respects[local]:
+  (((=) ===> (=)) ===> mequiv ===> (=)) MonoidAuto MonoidAuto
+Proof
+  simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_MonoidAuto = opxfer MonoidAuto_respects
+Definition MonoidAuto_def0:
+  MonoidAuto = ^(rand $ concl xfer_MonoidAuto)
+End
+Theorem MonoidAuto_relate[transfer_rule] =
+        REWRITE_RULE[GSYM MonoidAuto_def0] xfer_MonoidAuto
+Theorem MonoidAuto_def = xfer monoidTheory.MonoidAuto_def
+
+Theorem submonoid_respects[local]:
+  (mequiv ===> mequiv ===> (=)) submonoid submonoid
+Proof
+  simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_submonoid = opxfer submonoid_respects
+Definition submonoid_def0:
+  submonoid = ^(rand $ concl xfer_submonoid)
+End
+Theorem submonoid_relate[transfer_rule] =
+        REWRITE_RULE[GSYM submonoid_def0] xfer_submonoid
+Theorem submonoid_def = xfer monoidTheory.submonoid_def
+
+Theorem monoid_homo_id = xfer monoidTheory.monoid_homo_id
+Theorem monoid_homo_element = xfer monoidTheory.monoid_homo_element
+Theorem monoid_homo_cong = xfer monoidTheory.monoid_homo_cong
+Theorem monoid_homo_I_refl = xfer monoidTheory.monoid_homo_I_refl
+Theorem monoid_homo_trans = xfer monoidTheory.monoid_homo_trans
+Theorem monoid_homo_sym = xfer monoidTheory.monoid_homo_sym
+Theorem monoid_homo_sym_any = xfer (GEN_ALL monoidTheory.monoid_homo_sym_any)
+Theorem monoid_homo_compose = monoid_homo_trans
+Theorem monoid_homo_exp = xfer monoidTheory.monoid_homo_exp
+
+Theorem monoid_iso_property = xfer monoidTheory.monoid_iso_property
+Theorem monoid_iso_id = xfer monoidTheory.monoid_iso_id
+Theorem monoid_iso_element = xfer monoidTheory.monoid_iso_element
+Theorem monoid_iso_I_refl = xfer monoidTheory.monoid_iso_I_refl
+Theorem monoid_iso_trans = xfer monoidTheory.monoid_iso_trans
+Theorem monoid_iso_compose = monoid_iso_trans
+Theorem monoid_iso_sym = xfer monoidTheory.monoid_iso_sym
+Theorem monoid_iso_linv_iso = monoid_iso_sym
+Theorem monoid_iso_exp = xfer monoidTheory.monoid_iso_exp
+Theorem monoid_iso_bij = xfer monoidTheory.monoid_iso_bij
+Theorem monoid_iso_eq_id = xfer monoidTheory.monoid_iso_eq_id
+Theorem monoid_iso_order = xfer monoidTheory.monoid_iso_order
+Theorem monoid_iso_card_eq = xfer monoidTheory.monoid_iso_card_eq
+
+Theorem monoid_auto_id = xfer monoidTheory.monoid_auto_id
+Theorem monoid_auto_element = xfer monoidTheory.monoid_auto_element
 
 (*
 val _ = show_assums := true
@@ -506,7 +584,9 @@ val th = base
 fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
 
 fun F th = seq.hd $ resolve_relhyps [] cleftp rdb th
-val th = fpow F 1 base
+val th = fpow F 9 base
+
+    fpow F 24 th
 *)
 
 
