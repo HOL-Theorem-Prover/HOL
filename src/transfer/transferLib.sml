@@ -6,6 +6,8 @@ open transferTheory FullUnify simpLib
 val op $ = Portable.$
 infix ++
 
+type config = {cleftp:bool,force_imp:bool,hints:string list}
+
 val SIMP_CONV = simpLib.SIMP_CONV
 val SIMP_RULE = simpLib.SIMP_RULE
 
@@ -547,6 +549,7 @@ val ruledb =
         |> add_domrng RES_FORALL_RDOM
         |> add_domrng RES_FORALL_RRANGE
         |> add_domrng quotientTheory.FUN_REL_EQ
+        |> add_domrng surj_EQ
     end (* let *)
 
 fun search_for P sq =
@@ -564,10 +567,18 @@ fun const_occurs c = can (find_term (same_const c))
 val RRANGE_tm = prim_mk_const{Thy = "relation", Name = "RRANGE"}
 val RDOM_tm = prim_mk_const{Thy = "relation", Name = "RDOM"}
 
-fun transfer_skeleton cleftp t =
-    let val th0 = prove_relation_thm cleftp t (build_skeleton t)
+fun transfer_skeleton (c:config) t =
+    let
+      val th0 = prove_relation_thm (#cleftp c) t (build_skeleton t)
     in
-      (* eliminate_booleans_and_equalities cleftp *) th0
+      if #force_imp c then
+        let
+          val (topf, _) = strip_comb (concl th0)
+          val (tmsubst, tysubst) = match_term topf boolSyntax.implication
+        in
+          INST tmsubst (INST_TYPE tysubst th0)
+        end
+      else th0
     end
 
 fun resolveN n hints cleftp ruledb t =
@@ -576,15 +587,16 @@ fun resolveN n hints cleftp ruledb t =
           if n < 1 then sqreturn th
           else resolve_relhyps hints cleftp ruledb th ~> recurse (n - 1)
     in
-      recurse n (transfer_skeleton cleftp t)
+      recurse n
+              (transfer_skeleton {cleftp=cleftp,force_imp=false,hints=hints} t)
     end
 
-fun transfer_phase1 hints cleftp ruledb t =
+fun transfer_phase1 (r:config as {cleftp,hints,...}) ruledb t =
     let
       open simpLib boolSimps
     in
       seqrpt (resolve_relhyps hints cleftp ruledb)
-             (transfer_skeleton cleftp t) ~>
+             (transfer_skeleton r t) ~>
       seqrptUntil (List.all (is_var o rand) o hyp)
                   (check{cleftp=cleftp,forceprogress=true} ruledb)
     end
@@ -596,12 +608,13 @@ fun eliminate_domrng cleftp (ruledb:ruledb.t) =
       CONV_RULE (argsel $ SIMP_CONV transfer_ss (ruledb.domrngs ruledb))
     end
 
-fun base_transfer hints cleftp ruledb t =
+fun base_transfer (cfg:config) ruledb t =
     let
       open simpLib boolSimps
+      val {cleftp,...} = cfg
       val argsel = if cleftp then RAND_CONV else LAND_CONV
     in
-      transfer_phase1 hints cleftp ruledb t |>
+      transfer_phase1 cfg ruledb t |>
       seq.map (mkrelsyms_eq cleftp) ~>
       check {cleftp=cleftp,forceprogress=false} ruledb |>
       seq.map (eliminate_domrng cleftp ruledb) |>
@@ -609,20 +622,19 @@ fun base_transfer hints cleftp ruledb t =
       seq.filter (not o const_occurs RDOM_tm o concl)
     end
 
-fun nontrivial_eq t = is_eq t andalso lhs t !~ rhs t
-fun transfer_tm depth hints cleftp ruledb t =
-    base_transfer hints cleftp ruledb t |> search_for nontrivial_eq
+fun nontrivial t = lhand t !~ rand t
+fun transfer_tm depth cfg ruledb t =
+    base_transfer cfg ruledb t |> search_for nontrivial
 
-fun transfer_thm depth hints cleftp ruledb th =
+fun transfer_thm depth (cfg:config) ruledb th =
     let
       fun goodconcl c =
           is_eq c andalso not (aconv (lhs c) (rhs c)) orelse
           aconv (#1 (dest_imp c)) (concl th) handle HOL_ERR _ => false
-      val th0 = base_transfer hints cleftp ruledb (concl th)
-                              |> search_for goodconcl
+      val th0 = base_transfer cfg ruledb (concl th) |> search_for goodconcl
     in
       if is_eq (concl th0) then
-        if cleftp then EQ_MP th0 th else EQ_MP (SYM th0) th
+        if #cleftp cfg then EQ_MP th0 th else EQ_MP (SYM th0) th
       else MP th0 th
     end
 
@@ -636,7 +648,8 @@ val default_depth = Sref.new 4
 val the_ruledb = Sref.new ruledb
 fun xfer_tac cleftp hints (g as (asl,c)) =
     let
-      val th = transfer_tm (Sref.value default_depth) hints cleftp
+      val th = transfer_tm (Sref.value default_depth)
+                           {hints = hints, cleftp = cleftp, force_imp = false}
                            (Sref.value the_ruledb) c
       val (is_imp', impc, impa, imp_munge, eql, eqr, eqmunge) =
           if cleftp then

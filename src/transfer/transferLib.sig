@@ -2,6 +2,7 @@ signature transferLib =
 sig
 
   include Abbrev
+  type config = {cleftp:bool,force_imp:bool,hints:string list}
   val GEN_TYVARIFY : thm -> thm
 
   structure ruledb : sig
@@ -25,11 +26,11 @@ sig
   val eliminate_domrng : bool -> ruledb.t -> thm -> thm
 
   val build_skeleton : term -> term
-  val transfer_skeleton : bool -> term -> thm
-  val transfer_phase1   : string list -> bool -> ruledb.t -> term -> thm seq.seq
-  val base_transfer     : string list -> bool -> ruledb.t -> term -> thm seq.seq
-  val transfer_tm : int -> string list -> bool -> ruledb.t -> term -> thm
-  val transfer_thm : int -> string list -> bool -> ruledb.t -> thm -> thm
+  val transfer_skeleton : config -> term -> thm
+  val transfer_phase1   : config -> ruledb.t -> term -> thm seq.seq
+  val base_transfer     : config -> ruledb.t -> term -> thm seq.seq
+  val transfer_tm : int -> config -> ruledb.t -> term -> thm
+  val transfer_thm : int -> config -> ruledb.t -> thm -> thm
 
   val global_ruledb : unit -> ruledb.t
   val default_depth : int Sref.t
