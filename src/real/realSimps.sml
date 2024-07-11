@@ -670,7 +670,8 @@ fun is_literalish t =
       | SOME t0 => is_literalish t0
 
 val NORMLIT_phase1 =
-    PURE_REWRITE_CONV [NEG_FRAC, NEG_DENOM, NEG_INV, REAL_NEGNEG, INV_1OVER]
+    PURE_REWRITE_CONV [NEG_FRAC, NEG_DENOM, NEG_INV, REAL_NEGNEG, INV_1OVER,
+                       REAL_OVER1]
 val GCDELIM = REAL_REDUCE
 
 fun is_real_posliteral t =

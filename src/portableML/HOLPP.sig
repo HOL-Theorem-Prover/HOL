@@ -10,8 +10,11 @@ datatype break_style =
     CONSISTENT
   | INCONSISTENT
 
-datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
-type 'a quotation = 'a frag list
+(* For backwards compatibility; these types are not otherwise used in HOLPP.
+   See instead HOLquotation.
+ *)
+datatype frag = datatype quotation_dtype.frag
+type 'a quotation = 'a quotation_dtype.quotation
 
 val prettyPrint : (string -> unit) * int -> pretty -> unit
 val pp_to_string : int -> ('a -> pretty) -> 'a -> string

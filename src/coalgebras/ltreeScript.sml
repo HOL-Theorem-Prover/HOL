@@ -13,10 +13,14 @@ open HolKernel Parse boolLib bossLib;
 open arithmeticTheory listTheory llistTheory alistTheory optionTheory;
 open pred_setTheory relationTheory pairTheory combinTheory hurdUtils;
 
+(* for ltree_el_alt_ltree_lookup *)
+open monadsyntax;
+val _ = enable_monadsyntax ();
+val _ = enable_monad "option";
+
 val _ = new_theory "ltree";
 
 (* make type definition *)
-
 Type ltree_rep[local] = ``:num list -> 'a # num option``;
 
 Overload NOTHING[local] = ``(ARB:'a, SOME (0:num))``;
@@ -908,6 +912,30 @@ Theorem ltree_lookup_valid_inclusive :
     !p t. p IN ltree_paths t <=> !p'. p' <<= p ==> ltree_lookup t p' <> NONE
 Proof
     rw [ltree_lookup_iff_ltree_el, ltree_el_valid_inclusive]
+QED
+
+(* ltree_lookup returns more information (the entire subtree), thus can be
+   used to construct the return value of ltree_el.
+ *)
+Theorem ltree_el_alt_ltree_lookup :
+    !p t. p IN ltree_paths t ==>
+          ltree_el t p =
+            do
+              t' <- ltree_lookup t p;
+              return (ltree_node t',LLENGTH (ltree_children t'))
+            od
+Proof
+    Induct_on ‘p’
+ >- (Q.X_GEN_TAC ‘t’ \\
+     STRIP_ASSUME_TAC (Q.SPEC ‘t’ ltree_cases) >> POP_ORW \\
+     rw [ltree_el_def, ltree_lookup_def])
+ >> qx_genl_tac [‘h’, ‘t’]
+ >> STRIP_ASSUME_TAC (Q.SPEC ‘t’ ltree_cases) >> POP_ORW
+ >> fs [ltree_paths_def]
+ >> rw [ltree_el_def, ltree_lookup_def]
+ >> qabbrev_tac ‘t' = LNTH h ts’
+ >> Cases_on ‘t' = NONE’ >- rw []
+ >> gs [GSYM IS_SOME_EQ_NOT_NONE, IS_SOME_EXISTS]
 QED
 
 (*---------------------------------------------------------------------------*

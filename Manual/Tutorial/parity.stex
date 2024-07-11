@@ -486,12 +486,11 @@ interactively:
 >>_ restart();
 >> e (PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
                         MUX_def, REG_def] >>
-     rpt strip_tac >| [
-       metis_tac [],
-       qpat_x_assum ‘!t. out t = X t’
+     rpt strip_tac
+     >- metis_tac []
+     >- (qpat_x_assum ‘!t. out t = X t’
                   (fn th => REWRITE_TAC [SPEC “SUC t” th]) >>
-       rw[]
-     ]);
+         rw[]));
 \end{alltt}
 \end{session}
 

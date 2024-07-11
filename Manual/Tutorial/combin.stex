@@ -402,11 +402,10 @@ Again we can (and should) package up the lemma, avoiding the sub-goal package co
              !x p z. RTC R x p ∧ R x z ⇒
                      ∃u. RTC R p u ∧ RTC R z u
        Proof
-         strip_tac >> strip_tac >> Induct_on `RTC` >> rw[] >| [
-           metis_tac [RTC_rules],
-           `?v. R x' v /\ R z v` by metis_tac [diamond_def] >>
-           metis_tac [RTC_rules]
-         ]
+         strip_tac >> strip_tac >> Induct_on `RTC` >> rw[]
+         >- metis_tac [RTC_rules]
+         >- (`?v. R x' v /\ R z v` by metis_tac [diamond_def] >>
+             metis_tac [RTC_rules])
        QED
 \end{alltt}
 \end{session}
@@ -482,11 +481,10 @@ We can now package up our desired result:
          !R. diamond R ==> diamond (RTC R)
        Proof
          strip_tac >> strip_tac >> simp[diamond_def] >>
-         Induct_on `RTC R x y` >> rw[] >| [
-           metis_tac[RTC_rules],
-           `?v. RTC R x' v /\ RTC R z v` by metis_tac[R_RTC_diamond] >>
-           metis_tac [RTC_RTC, RTC_rules]
-         ]
+         Induct_on `RTC R x y` >> rw[]
+         >-  metis_tac[RTC_rules]
+         >- (`?v. RTC R x' v /\ RTC R z v` by metis_tac[R_RTC_diamond] >>
+             metis_tac [RTC_RTC, RTC_rules])
        QED
 \end{alltt}
 \end{session}
@@ -677,16 +675,13 @@ reduction relation.
 \end{session}
 
 There are four conjuncts here, and it should be clear that all but the second can be proved immediately by appeal to the rules for the transitive closure and for $\rightarrow$ itself.
-So, we split apart the conjunctions and enter a \texttt{THENL} branch, putting in an \ml{all\_tac} in the 2nd position so that this falls through to be dealt with more carefully.
+So, we split apart the conjunctions, use a \texttt{THEN1} to discharge the first subgoal, thus putting the second subgoal into focus to be be dealt with more carefully. Note that \texttt{>-} is sugar for \texttt{THEN1}.
 \begin{session}
 \begin{alltt}
->> e (rpt conj_tac >| [metis_tac[RTC_rules, redn_rules],
-                       all_tac,
-                       metis_tac[RTC_rules, redn_rules],
-                       metis_tac[RTC_rules, redn_rules] ]);
+>> e (rpt conj_tac >- metis_tac[RTC_rules, redn_rules]);
 \end{alltt}
 \end{session}
-What of this latest sub-goal?
+What of this sub-goal?
 If we look at it for long enough, we should see that it is another monotonicity fact.
 More accurately, we need what is called a \emph{congruence} result for \holtxt{-->*}.
 In this form, it's not quite right for easy proof.
@@ -1043,23 +1038,21 @@ The final goal proof can be packaged into:
          !x y. x -||-> y ==>
                !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u
        Proof
-         Induct_on ‘x -||-> y’ >> rpt conj_tac >| [
-           metis_tac [predn_rules],
-           rw[] >>
-           qpat_x_assum ‘_ # _ -||-> _’
-             (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
-           rw[] >| [
-             metis_tac[predn_rules],
-             metis_tac[predn_rules],
-             ‘?w. (y = K # w) /\ (z -||-> w)’ by metis_tac [Kx_predn] >>
-             rw[] >> metis_tac [predn_rules],
-             ‘?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)’ by
-                metis_tac [Sxy_predn] >>
-             rw [] >> metis_tac [predn_rules]
-           ],
-           rw[Kxy_predn] >> metis_tac [predn_rules],
-           rw[Sxyz_predn] >> metis_tac [predn_rules]
-         ]
+         Induct_on ‘x -||-> y’ >> rpt conj_tac
+         >- metis_tac [predn_rules]
+         >- (rw[] >>
+             qpat_x_assum ‘_ # _ -||-> _’
+               (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
+             rw[]
+             >- metis_tac[predn_rules]
+             >- metis_tac[predn_rules]
+             >- (‘?w. (y = K # w) /\ (z -||-> w)’ by metis_tac [Kx_predn] >>
+                 rw[] >> metis_tac [predn_rules])
+             >- (‘?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)’ by
+                    metis_tac [Sxy_predn] >>
+                 rw [] >> metis_tac [predn_rules]))
+         >- (rw[Kxy_predn] >> metis_tac [predn_rules])
+         >- (rw[Sxyz_predn] >> metis_tac [predn_rules])
        QED
 \end{alltt}
 \end{session}
