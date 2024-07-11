@@ -29,7 +29,6 @@ open boolSimps simpLib mesonLib metisLib pairTheory pairLib tautLib combinTheory
 
 val _ = new_theory "topology";
 
-fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 fun K_TAC _ = ALL_TAC;
@@ -41,7 +40,6 @@ fun wrap a = [a];
 Theorem IMP_CONJ      = cardinalTheory.CONJ_EQ_IMP
 Theorem IMP_IMP       = boolTheory.AND_IMP_INTRO
 Theorem FINITE_SUBSET = pred_setTheory.SUBSET_FINITE_I
-Theorem LE_0          = arithmeticTheory.ZERO_LESS_EQ
 
 Theorem FINITE_INDUCT_STRONG :
    !P:('a->bool)->bool.
