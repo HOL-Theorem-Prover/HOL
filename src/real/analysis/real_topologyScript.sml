@@ -16547,12 +16547,14 @@ val UNCOUNTABLE_REAL = store_thm ("UNCOUNTABLE_REAL",
   REWRITE_TAC[CANTOR_THM_UNIV] THEN MATCH_MP_TAC CARD_EQ_IMP_LE THEN
   ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN REWRITE_TAC[CARD_EQ_REAL]);
 
-val CARD_EQ_REAL_IMP_UNCOUNTABLE = store_thm ("CARD_EQ_REAL_IMP_UNCOUNTABLE",
- ``!s:real->bool. s =_c univ(:real) ==> ~COUNTABLE s``,
+Theorem CARD_EQ_REAL_IMP_UNCOUNTABLE :
+    !s:real->bool. s =_c univ(:real) ==> ~COUNTABLE s
+Proof
   GEN_TAC THEN STRIP_TAC THEN
-  DISCH_THEN (MP_TAC o SPEC ``univ(:real)`` o MATCH_MP
+  DISCH_THEN (MP_TAC o ISPEC ``univ(:real)`` o MATCH_MP
     (SIMP_RULE std_ss [CONJ_EQ_IMP] CARD_EQ_COUNTABLE)) THEN
-  REWRITE_TAC[UNCOUNTABLE_REAL] THEN ASM_MESON_TAC[CARD_EQ_SYM]);
+  REWRITE_TAC[UNCOUNTABLE_REAL] THEN ASM_MESON_TAC[CARD_EQ_SYM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cardinalities of various useful sets.                                     *)

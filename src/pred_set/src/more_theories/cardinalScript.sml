@@ -21,7 +21,7 @@ open HolKernel Parse boolLib bossLib mesonLib
 open boolSimps pred_setTheory set_relationTheory tautLib
 
 open prim_recTheory arithmeticTheory numTheory numLib pairTheory
-open optionTheory sumTheory ind_typeTheory wellorderTheory;
+open optionTheory sumTheory ind_typeTheory wellorderTheory hurdUtils;
 
 val _ = new_theory "cardinal";
 
@@ -3005,13 +3005,19 @@ Proof
   metis_tac[FINITE_EXPONENT_SETEXP_COUNTABLE]
 QED
 
-val CARD_EQ_COUNTABLE = store_thm ("CARD_EQ_COUNTABLE",
- ``!s:'a->bool t:'a->bool. COUNTABLE t /\ s =_c t ==> COUNTABLE s``,
-  REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_COUNTABLE]);
+(* NOTE: Changed the type of ‘t’ to ‘:'b->bool’ (was: 'a->bool) *)
+Theorem CARD_EQ_COUNTABLE :
+    !s:'a->bool t:'b->bool. COUNTABLE t /\ s =_c t ==> COUNTABLE s
+Proof
+  REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_COUNTABLE]
+QED
 
-val CARD_COUNTABLE_CONG = store_thm ("CARD_COUNTABLE_CONG",
- ``!s:'a->bool t:'a->bool. s =_c t ==> (COUNTABLE s <=> COUNTABLE t)``,
-  REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_COUNTABLE]);
+(* NOTE: Changed the type of ‘t’ to ‘:'b->bool’ (was: 'a->bool) *)
+Theorem CARD_COUNTABLE_CONG :
+    !s:'a->bool t:'b->bool. s =_c t ==> (COUNTABLE s <=> COUNTABLE t)
+Proof
+  REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_COUNTABLE]
+QED
 
 val COUNTABLE_RESTRICT = store_thm ("COUNTABLE_RESTRICT",
  ``!s P. COUNTABLE s ==> COUNTABLE {x | x IN s /\ P x}``,
@@ -3185,6 +3191,32 @@ Proof
   SIMP_TAC std_ss [IN_IMAGE, FORALL_PROD, IN_ELIM_PAIR_THM,
               EXISTS_PROD, IN_CROSS, IN_UNIV] THEN
   ASM_SET_TAC[]
+QED
+
+(* cf. listTheory.INFINITE_LIST_UNIV |- INFINITE univ(:'a list) *)
+Theorem COUNTABLE_LIST_UNIV :
+    countable univ(:'a) ==> countable univ(:'a list)
+Proof
+    rw [UNIV_list]
+ >> MP_TAC (INST [“A :'a set” |-> “univ(:'a)”] list_BIGUNION_EXP)
+ >> qmatch_abbrev_tac ‘list univ(:'a) =~ s ==> _’
+ >> DISCH_TAC
+ >> Suff ‘countable s’
+ >- (MP_TAC (Q.SPEC ‘s’ (INST_TYPE [“:'b” |-> “:num # (num -> 'a)”]
+                          (ISPEC “list univ(:'a)” CARD_EQ_COUNTABLE))) \\
+     rw [])
+ >> qunabbrev_tac ‘s’
+ >> MATCH_MP_TAC COUNTABLE_BIGUNION >> rw []
+ >> MATCH_MP_TAC COUNTABLE_CROSS >> rw []
+ >> rw [countable_setexp]
+QED
+
+Theorem COUNTABLE_LIST_UNIV' :
+    FINITE univ(:'a) ==> countable univ(:'a list)
+Proof
+    DISCH_TAC
+ >> MATCH_MP_TAC COUNTABLE_LIST_UNIV
+ >> MATCH_MP_TAC FINITE_IMP_COUNTABLE >> art []
 QED
 
 Definition BIGPRODi_def:
