@@ -227,12 +227,10 @@ fun thy s =
 
 fun findpred pat s =
     let
-      val pat = toLower pat and s = toLower s
-      val orparts = String.tokens (equal #"|") pat
-      val subparts = map (String.tokens (equal #"~")) orparts
-      val subpred = List.all (C occurs s)
+        open DBSearchParser
+        val pat = toLower pat and s = toLower s
     in
-      List.exists subpred subparts
+        contains_regexp pat s
     end
 
 fun find0 incprivatep s =
