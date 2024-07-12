@@ -66,8 +66,6 @@ fun add_sptree_compset compset =
       open sptreeTheory
     in
       computeLib.add_thms [
-        apsnd_cons_def,
-        combine_rle_def,
         delete_compute,
         difference_def,
         filter_v_def,
@@ -88,7 +86,6 @@ fun add_sptree_compset compset =
         mk_wf_def,
         size_def,
         spt_center_def,
-        spt_centers_def,
         spt_left_def,
         spt_right_def,
         spts_to_alist_def,
