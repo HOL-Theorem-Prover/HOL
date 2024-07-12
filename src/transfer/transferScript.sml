@@ -180,6 +180,16 @@ Proof
   metis_tac[]
 QED
 
+Theorem ALL_total_iff_imp_RRANGE:
+  total AB ==> ((AB |==> (=)) |==> (==>)) (!) (RES_FORALL (RRANGE AB))
+Proof
+  simp[total_def, FUN_REL_def, RES_FORALL_THM, IN_DEF,
+       relationTheory.RRANGE] >>
+  strip_tac >> qx_gen_tac ‘a’ >>
+  ‘a = (\x. a x)’ by simp[FUN_EQ_THM] >> pop_assum SUBST1_TAC >>
+  metis_tac[]
+QED
+
 Theorem ALL_total_cimp_cimp:
   total AB ==> ((AB |==> flip (==>)) |==> flip (==>)) (!) (!)
 Proof

@@ -165,7 +165,8 @@ Proof
   simp[dhreduce1_def, TPDB_def, FUN_REL_def]
 QED
 
-fun xfer th = transfer_thm 10 [] true (global_ruledb()) $ GEN_ALL th
+fun xfer th = transfer_thm 10 {hints = [], force_imp = true, cleftp = true}
+                (global_ruledb()) $ GEN_ALL th
 
 
 Theorem dhreduce1_APP = xfer hreduce1_APP
@@ -175,7 +176,6 @@ Theorem dhreduce1_substitutive = xfer hreduce1_substitutive
 Theorem dhreduce1_rwts = xfer hreduce1_rwts
 Theorem dhreduce_substitutive = xfer hreduce_substitutive
 
-(*
 Definition dhnf_def:
   dhnf pd = hnf (toTerm pd)
 End
@@ -187,7 +187,6 @@ Proof
 QED
 
 Theorem dhnf_dLAM_cases = xfer hnf_cases
-*)
 
 (* BUG: FV transfer rule is ignored because the skeleton reduces through it
    to the underlying supp (pm_act ...) stuff *)
