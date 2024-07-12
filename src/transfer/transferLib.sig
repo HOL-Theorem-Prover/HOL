@@ -16,6 +16,7 @@ sig
     val safenet : t -> thm Net.net
     val badnet : t -> term Net.net
     val domrngs : t -> thm list
+    val atomic_termnet : t -> (string * term) Net.net
   end
 
   val prove_relation_thm : bool -> term -> term -> thm
@@ -25,8 +26,8 @@ sig
   val mkrelsyms_eq : bool -> thm -> thm
   val eliminate_domrng : bool -> ruledb.t -> thm -> thm
 
-  val build_skeleton : term -> term
-  val transfer_skeleton : config -> term -> thm
+  val build_skeleton : ruledb.t -> term -> term
+  val transfer_skeleton : ruledb.t -> config -> term -> thm
   val transfer_phase1   : config -> ruledb.t -> term -> thm seq.seq
   val base_transfer     : config -> ruledb.t -> term -> thm seq.seq
   val transfer_tm : int -> config -> ruledb.t -> term -> thm
@@ -38,9 +39,12 @@ sig
   val add_rule : string -> unit
   val add_safe : string -> unit
   val add_simp : string -> unit
+  val add_atomic_term : string * term -> unit
   val temp_add_rule : thm -> unit
   val temp_add_safe : thm -> unit
   val temp_add_simp : thm -> unit
+  val temp_add_atomic_term : string * term -> unit
+  val atomic_terms : unit -> (string * term) list
 
   val xfer_back_tac : string list -> tactic
   val xfer_fwd_tac : string list -> tactic

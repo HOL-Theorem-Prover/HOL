@@ -46,89 +46,7 @@ fun pmk_var (nm, i) = Preterm.Var{Locn = locn.Loc_None,
                                   Name = nm, Ty = Pretype.UVar i}
 fun pmk_abs (v, b) = Preterm.Abs{Body = b, Bvar = v, Locn = locn.Loc_None}
 
-local
-open stmonad
-infix >* >>-
-val op>>- =  op >-
-fun (m1 >* m2) = lift2 (fn x => fn y => (x,y)) m1 m2
-type preterm = Preterm.preterm
-type env = (term, preterm) Binarymap.dict * int
-type 'a t = env -> env * 'a
-fun getmap E = (E, #1 E)
-val newconst : Preterm.preterm t = fn (vmap, i) =>
-    ((vmap, i + 1), pmk_var("UC" ^ Int.toString i, i))
-fun newvar bv (m:'a t) : (preterm * 'a) t = fn (vmap,i) =>
-    let val pv = pmk_var(#1 (dest_var bv) (* ^ Int.toString i *), i)
-        val vmap' = Binarymap.insert(vmap, bv, pv)
-        val ((vmap'',i'), result) = m (vmap', i + 1)
-    in
-      ((vmap, i'), (pv, result))
-    end
-in
-val env0:env = (Binarymap.mkDict Term.compare, 0)
-fun build_preterm ct : Preterm.preterm t =
-  (* if is_conj ct then
-    let
-      val (cl,cr) = dest_conj ct
-    in
-      lift pmk_conj (build_preterm cl >* build_preterm cr)
-    end
-  else if is_neg ct then lift pmk_neg (build_preterm (dest_neg ct))
-  else  *)
-    let
-      fun varmap ct e =
-          case Binarymap.peek(e,ct) of
-              NONE => raise Fail ("Free variable: "^term_to_string ct)
-            | SOME pt => return pt
-    in
-      if numSyntax.is_numeral ct then
-        newconst
-      else
-        case dest_term ct of
-            VAR _ => getmap >>- varmap ct
-          | CONST _ => newconst
-          | COMB(t1,t2) => lift pmk_comb (build_preterm t1 >* build_preterm t2)
-          | LAMB(bv,body) => lift pmk_abs (newvar bv (build_preterm body))
-    end
-end (* local *)
-
-fun dvty ty = ty |> dest_vartype |> (fn s => String.extract(s,1,NONE))
-fun build_skeleton ct =
-    let val ((_, i), pt) = build_preterm ct env0
-        fun newify n ptye = if n <= 0 then ptye
-                            else newify (n - 1) (#1 (Pretype.Env.new ptye))
-        val ptyenv = newify i Pretype.Env.empty
-        val tm =
-            trace ("notify type variable guesses", 0)
-                  (Preterm.smash (Preterm.typecheck NONE pt))
-                  ptyenv
-        val tyvars = type_vars_in_term tm
-        val sigma = map (
-              fn tyv => {
-                redex = tyv, residue = mk_vartype ("'UU__" ^ dvty tyv)
-              }
-            ) tyvars
-    in
-      Term.inst sigma tm
-    end
-
 val FUN_REL_t = prim_mk_const{Thy = "quotient", Name = "===>"}
-fun ty2relvar cleftp skty cty =
-    if is_vartype skty then
-      mk_var("RV" ^ dvty skty,
-             if cleftp then cty --> skty -->bool
-             else skty --> cty --> bool)
-    else
-      let val (skd,skr) = dom_rng skty
-          val (cd, cr) = dom_rng cty
-          val dR = ty2relvar cleftp skd cd
-          val rR = ty2relvar cleftp skr cr
-          val sigma = match_type (alpha --> beta --> bool) (type_of dR) @
-                      match_type (gamma --> delta --> bool) (type_of rR)
-      in
-        mk_comb(mk_comb(FUN_REL_t |> inst sigma, dR), rR)
-      end
-
 structure ruledb =
 struct
 type t = {
@@ -136,32 +54,39 @@ type t = {
   right : thm Net.net,
   safe : thm Net.net,
   bad : term Net.net,
+  atomic_terms : (string * term) Net.net,
   DOMRNG_ss : thm list
 }
 
 val empty_rdb : t =
    {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty,
-    DOMRNG_ss = []}
+    DOMRNG_ss = [], atomic_terms = Net.empty}
 
 fun safenet (t:t) = #safe t
 fun badnet (t:t) = #bad t
 fun domrngs (t:t) = #DOMRNG_ss t
+fun atomic_termnet (t:t) = #atomic_terms t
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun mkUp z = makeUpdate5 z
+fun mkUp z = makeUpdate6 z
 fun update_T z = let
-  fun from bad DOMRNG_ss left right safe =
-    {bad = bad, DOMRNG_ss = DOMRNG_ss, left = left, right = right, safe = safe}
+  fun from atomic_terms bad DOMRNG_ss left right safe =
+    {atomic_terms = atomic_terms, bad = bad, DOMRNG_ss = DOMRNG_ss, left = left,
+     right = right, safe = safe}
   (* fields in reverse order to above *)
-  fun from' safe right left DOMRNG_ss bad =
-    {bad = bad, DOMRNG_ss = DOMRNG_ss, left = left, right = right, safe = safe}
+  fun from' safe right left DOMRNG_ss bad atomic_terms =
+    {atomic_terms = atomic_terms, bad = bad, DOMRNG_ss = DOMRNG_ss, left = left,
+     right = right, safe = safe}
   (* first order *)
-  fun to f {bad, DOMRNG_ss, left, right, safe} = f bad DOMRNG_ss left right safe
+  fun to f {atomic_terms, bad, DOMRNG_ss, left, right, safe} =
+      f atomic_terms bad DOMRNG_ss left right safe
 in
   mkUp (from, from', to)
 end z
 
+fun fupd_atomic_terms f (t:t) : t =
+    update_T t (U #atomic_terms (f (#atomic_terms t))) $$
 fun fupd_DOMRNG_ss f (t:t) : t = update_T t (U #DOMRNG_ss (f (#DOMRNG_ss t))) $$
 fun fupd_bad f (t:t) : t = update_T t (U #bad (f (#bad t))) $$
 fun fupd_left f (t:t) : t = update_T t (U #left (f (#left t))) $$
@@ -190,7 +115,93 @@ fun lookup_rule cleftp (rdb:t) t =
       Net.lookup t n
     end
 
+fun check_for_atom (rdb:t) ct =
+    let val pats = Net.lookup ct (atomic_termnet rdb)
+    in
+      List.exists (fn (_, p) => can (match_term p) ct) pats
+    end
+
 end (* ruledb struct *)
+
+
+local
+open stmonad
+infix >* >>-
+val op>>- =  op >-
+fun (m1 >* m2) = lift2 (fn x => fn y => (x,y)) m1 m2
+type preterm = Preterm.preterm
+type env = (term, preterm) Binarymap.dict * int
+type 'a t = env -> env * 'a
+fun getmap E = (E, #1 E)
+val newconst : Preterm.preterm t = fn (vmap, i) =>
+    ((vmap, i + 1), pmk_var("UC" ^ Int.toString i, i))
+fun newvar bv (m:'a t) : (preterm * 'a) t = fn (vmap,i) =>
+    let val pv = pmk_var(#1 (dest_var bv) (* ^ Int.toString i *), i)
+        val vmap' = Binarymap.insert(vmap, bv, pv)
+        val ((vmap'',i'), result) = m (vmap', i + 1)
+    in
+      ((vmap, i'), (pv, result))
+    end
+in
+val env0:env = (Binarymap.mkDict Term.compare, 0)
+fun build_preterm rdb ct : Preterm.preterm t =
+    let
+      fun varmap ct e =
+          case Binarymap.peek(e,ct) of
+              NONE => raise Fail ("Free variable: "^term_to_string ct)
+            | SOME pt => return pt
+      fun recurse ct =
+          if ruledb.check_for_atom rdb ct then
+            newconst
+          else
+            case dest_term ct of
+                VAR _ => getmap >>- varmap ct
+              | CONST _ => newconst
+              | COMB(t1,t2) => lift pmk_comb
+                                    (recurse t1 >* recurse t2)
+              | LAMB(bv,body) => lift pmk_abs (newvar bv (recurse body))
+    in
+      recurse ct
+    end
+end (* local *)
+
+fun dvty ty = ty |> dest_vartype |> (fn s => String.extract(s,1,NONE))
+fun ty2relvar cleftp skty cty =
+    if is_vartype skty then
+      mk_var("RV" ^ dvty skty,
+             if cleftp then cty --> skty -->bool
+             else skty --> cty --> bool)
+    else
+      let val (skd,skr) = dom_rng skty
+          val (cd, cr) = dom_rng cty
+          val dR = ty2relvar cleftp skd cd
+          val rR = ty2relvar cleftp skr cr
+          val sigma = match_type (alpha --> beta --> bool) (type_of dR) @
+                      match_type (gamma --> delta --> bool) (type_of rR)
+      in
+        mk_comb(mk_comb(FUN_REL_t |> inst sigma, dR), rR)
+      end
+
+fun build_skeleton rdb ct =
+    let val ((_, i), pt) = build_preterm rdb ct env0
+        fun newify n ptye = if n <= 0 then ptye
+                            else newify (n - 1) (#1 (Pretype.Env.new ptye))
+        val ptyenv = newify i Pretype.Env.empty
+        val tm =
+            trace ("notify type variable guesses", 0)
+                  (Preterm.smash (Preterm.typecheck NONE pt))
+                  ptyenv
+        val tyvars = type_vars_in_term tm
+        val sigma = map (
+              fn tyv => {
+                redex = tyv, residue = mk_vartype ("'UU__" ^ dvty tyv)
+              }
+            ) tyvars
+    in
+      Term.inst sigma tm
+    end
+
+
 
 val GFUN_REL_COMB = GEN_ALL FUN_REL_COMB
 val GFUN_REL_COMB_EQ = GEN_ALL FUN_REL_COMB_EQ
@@ -465,6 +476,8 @@ val equalityp_tm = prim_mk_const{Name = "equalityp", Thy = "transfer"}
 val right_unique_tm = prim_mk_const{Name = "right_unique", Thy = "transfer"}
 val cimp_tm = mk_icomb(combinSyntax.C_tm, boolSyntax.implication)
 
+val numeral_pattern = mk_comb(numSyntax.numeral_tm, mk_var("n", numSyntax.num))
+
 val ruledb =
     let
       open ruledb
@@ -480,6 +493,7 @@ val ruledb =
         |> addrule ALL_IFF
         |> addrule ALL_surj_RDOM
         |> addrule ALL_total_RRANGE
+        |> addrule ALL_total_iff_imp_RRANGE
         |> addrule EXISTS_total_iff_imp
         |> addrule EXISTS_total_imp_imp
         |> addrule EXISTS_surj_iff_cimp
@@ -550,6 +564,8 @@ val ruledb =
         |> add_domrng RES_FORALL_RRANGE
         |> add_domrng quotientTheory.FUN_REL_EQ
         |> add_domrng surj_EQ
+        |> fupd_atomic_terms
+             (Net.insert(numeral_pattern,("numeral", numeral_pattern)))
     end (* let *)
 
 fun search_for P sq =
@@ -567,9 +583,9 @@ fun const_occurs c = can (find_term (same_const c))
 val RRANGE_tm = prim_mk_const{Thy = "relation", Name = "RRANGE"}
 val RDOM_tm = prim_mk_const{Thy = "relation", Name = "RDOM"}
 
-fun transfer_skeleton (c:config) t =
+fun transfer_skeleton rdb (c:config) t =
     let
-      val th0 = prove_relation_thm (#cleftp c) t (build_skeleton t)
+      val th0 = prove_relation_thm (#cleftp c) t (build_skeleton rdb t)
     in
       if #force_imp c then
         let
@@ -588,15 +604,15 @@ fun resolveN n hints cleftp ruledb t =
           else resolve_relhyps hints cleftp ruledb th ~> recurse (n - 1)
     in
       recurse n
-              (transfer_skeleton {cleftp=cleftp,force_imp=false,hints=hints} t)
+        (transfer_skeleton ruledb {cleftp=cleftp,force_imp=false,hints=hints} t)
     end
 
-fun transfer_phase1 (r:config as {cleftp,hints,...}) ruledb t =
+fun transfer_phase1 (cfg:config as {cleftp,hints,...}) ruledb t =
     let
       open simpLib boolSimps
     in
       seqrpt (resolve_relhyps hints cleftp ruledb)
-             (transfer_skeleton r t) ~>
+             (transfer_skeleton ruledb cfg t) ~>
       seqrptUntil (List.all (is_var o rand) o hyp)
                   (check{cleftp=cleftp,forceprogress=true} ruledb)
     end
@@ -628,9 +644,7 @@ fun transfer_tm depth cfg ruledb t =
 
 fun transfer_thm depth (cfg:config) ruledb th =
     let
-      fun goodconcl c =
-          is_eq c andalso not (aconv (lhs c) (rhs c)) orelse
-          aconv (#1 (dest_imp c)) (concl th) handle HOL_ERR _ => false
+      fun goodconcl c = lhand c !~ rand c handle HOL_ERR _ => false
       val th0 = base_transfer cfg ruledb (concl th) |> search_for goodconcl
     in
       if is_eq (concl th0) then
@@ -718,6 +732,49 @@ fun new_exporter nm add del =
 val add_rule = new_exporter "transfer_rule" temp_add_rule temp_remove_named_rule
 val add_safe = new_exporter "transfer_safe" temp_add_safe temp_remove_named_safe
 val add_simp = new_exporter "transfer_simp" temp_add_simp temp_remove_named_simp
+
+
+(* setting up atomic terms store *)
+datatype ATM_DELTA = ADD of string * term | DEL of string
+fun ATM_apply_delta (ADD nmt) l = nmt :: l
+  | ATM_apply_delta (DEL s) l = List.filter (fn (s',_) => s' <> s) l
+val atms_adinfo = {tag = "transfer_atomic_term",
+                   initial_values = [("min", [])],
+                   apply_delta = ATM_apply_delta}
+local open ThyDataSexp infix ||
+in
+val dec_delta : ATM_DELTA dec =
+  Option.map ADD o pair_decode (string_decode, term_decode) ||
+  Option.map DEL o string_decode
+fun enc_delta (ADD (s,t)) = pair_encode(String, Term) (s,t)
+  | enc_delta (DEL s) = String s
+end
+
+fun uptodate_delta (ADD(_,t)) = Term.uptodate_term t
+  | uptodate_delta _ = true
+
+fun apply_to_ruledb (ADD (nmt as (n,t))) rdb =
+    fupd_atomic_terms (Net.insert(t,nmt)) rdb
+  | apply_to_ruledb (DEL nm) rdb =
+    fupd_atomic_terms (Net.filter (fn (n,t) => n <> nm)) rdb
+
+val adresult = AncestryData.fullmake {
+      adinfo = atms_adinfo,
+      uptodate_delta = uptodate_delta,
+      sexps = {dec = dec_delta, enc = enc_delta},
+      globinfo = {initial_value = [],
+                  thy_finaliser = NONE,
+                  apply_to_global =
+                  fn d => fn l => (ATM_apply_delta d l before
+                                   Sref.update the_ruledb (apply_to_ruledb d))}
+    }
+
+fun temp_add_atomic_term nmt =
+    Sref.update the_ruledb (apply_to_ruledb (ADD nmt))
+fun add_atomic_term nmt =
+      (#record_delta adresult (ADD nmt);
+       temp_add_atomic_term nmt)
+val atomic_terms = #get_global_value adresult
 
 fun global_ruledb() = Sref.value the_ruledb
 
