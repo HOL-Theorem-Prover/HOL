@@ -345,8 +345,7 @@ fun match_with_dfa {delta,start,final} = let
                                  Int.toString(Vector.length delta),".\n"])
     fun step (a,q) = Vector.sub(Vector.sub(delta,q), Char.ord a)
     fun exec ss = Substring.foldl step start ss
-    val go: string -> bool = fn s => Vector.sub(final,exec (Substring.full s))
-in go 
+in fn s => Vector.sub(final,exec (Substring.full s))
 end;
 
 val match = match_with_dfa o regexp_to_dfa_arrays;
