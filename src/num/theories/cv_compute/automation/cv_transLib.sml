@@ -359,10 +359,13 @@ fun preprocess_def def = let
            in adjust_def (AP_THM th var) end
     end;
   val defs = map adjust_def defs
+  fun is_bad_arg_ty ty =
+    if can cv_typeLib.from_to_thm_for ty then false else
+      contains_fun_ty ty;
   (* val th = hd defs *)
   fun check_arg_tys th =
     let val (const,args) = th |> concl |> dest_eq |> fst |> strip_comb
-        val bad_args = filter (contains_fun_ty o type_of) args
+        val bad_args = filter (is_bad_arg_ty o type_of) args
     in
       if null bad_args then ()
       else let
