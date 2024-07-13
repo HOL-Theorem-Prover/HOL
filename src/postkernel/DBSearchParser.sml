@@ -27,18 +27,25 @@ datatype search_regexp = Optional of search_regexp
                 | Twiddle of search_regexp * search_regexp
                 | Seq of search_regexp * search_regexp
                 | Word of char list
+                | Many of search_regexp
+                | Any
 
 datatype token = E of search_regexp
                | T of char
                | Start
 
-val is_special_char = C Lib.mem [#"~", #"|", #"?", #"(", #")"]
+(* is_special_char except ‘.’ since we want it to have the precedence of a regular character *)
+val is_special_char = C Lib.mem [#"~", #"|", #"?", #"(", #")", #"*"]
 
 fun check_precedence (a, b) =
     case (a, b) of
         (T #"(", T #")") => EQUAL
       | (_, T #")") => GREATER
       | (T #"~", T #"|") => GREATER
+      | (T #".", T #"*") => GREATER
+      | (T #".", T #"?") => GREATER
+      | (T #"*", _) => GREATER
+      | (_, T #"*") => LESS
       | (T #"?", _) => GREATER
       | (_, T #"?") => LESS
       | (T #")", _) => GREATER
@@ -50,6 +57,7 @@ fun check_precedence (a, b) =
 fun parse_regexp input = let
     fun top_token (E _::xs) = top_token xs
       | top_token (x::_) = x
+      | top_token [] = raise ERR "top_token" "Empty stack" (* shouldn't be possible *)
 
     fun parse (stk as (top::_)) input idx =
         if idx = String.size input then eval stk else let
@@ -61,10 +69,13 @@ fun parse_regexp input = let
         end
     and reduce stk =
         case stk of
-            (E a)::(T(#"|"))::(E b)::ts => E(Or(b, a))::ts
+            T(#".")::ts => E(Any)::ts
+          | (E a)::(T(#"|"))::(E b)::ts => E(Or(b, a))::ts
           | (E a)::(T(#"~"))::(E b)::ts => E(Twiddle(b, a))::ts
           | T(#"?")::(E a)::ts => E(Optional(a))::ts
           | T(#"?")::(T c)::ts => E(Optional(Word [c]))::ts
+          | T(#"*")::(E a)::ts => E(Many(a))::ts
+          | T(#"*")::(T c)::ts => E(Many(Word [c]))::ts
           | (T #")")::(E x)::(T #"(")::ts => E x::ts
           | (E a)::(E b)::ts => E(Seq(b, a))::ts
           | T(c)::E(Word cs)::ts => E(Word(cs@[c]))::ts
@@ -73,6 +84,7 @@ fun parse_regexp input = let
     and eval stk =
         case stk of
             [E x, Start] => x
+          | [Start] => Any
           | _ => eval (reduce stk)
 in parse [Start] input 0 end
 
@@ -99,6 +111,8 @@ in
       in
           Sum (ends a' b', ends b' a')
       end
+      | Many pat => Star (translate_regexp pat)
+      | Any => Symbs word_set
 end
 
 val is_regexp = List.exists is_special_char o String.explode
