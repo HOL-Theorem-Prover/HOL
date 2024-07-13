@@ -124,10 +124,6 @@ fun from_to_for_tyvar tyvar = let
   in ISPECL [f,t] from_to_def |> concl |> dest_eq |> fst |> ASSUME end
 
 fun from_to_for tyvars_alist ty =
-  if can dom_rng ty then (
-    cv_print Silent ("cv translator encountered a function type: " ^ type_to_string ty ^ "\n");
-    failwith  "cv translator does not support function types")
-  else
   if ty = oneSyntax.one_ty then from_to_unit else
   if ty = Type.bool then from_to_bool else
   if ty = numSyntax.num then from_to_num else
@@ -182,7 +178,13 @@ fun from_to_for tyvars_alist ty =
     in
       case find_first match_from_to_thm thms of
         SOME th => th
-      | NONE => raise Missing_from_to ty
+      | NONE =>
+         if can dom_rng ty then (
+           cv_print Silent ("cv translator encountered a function type: " ^
+                            type_to_string ty ^ "\n");
+           failwith  "cv translator does not support function types")
+         else
+           raise Missing_from_to ty
     end
 
 fun from_for tyvars_alist ty = from_to_for tyvars_alist ty |> concl |> rator |> rand;
