@@ -103,15 +103,6 @@ end
 
 val is_regexp = List.exists is_special_char o String.explode
 
-fun contains_regexp pattern string =
-    if is_regexp pattern then
-        let val intermediate = parse_regexp pattern
-            val compiled_pattern = translate_regexp intermediate
-            fun contains pat = Dot (any, Dot (pat, any))
-        in
-            match (contains compiled_pattern) string
-        end
-    else
-        String.isSubstring pattern string
+fun contains pat = Dot (any, Dot (pat, any))
 
 end

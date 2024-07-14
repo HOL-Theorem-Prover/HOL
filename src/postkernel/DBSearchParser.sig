@@ -7,5 +7,5 @@ sig
                 | Word of char list
     val parse_regexp : string -> search_regexp
     val translate_regexp : search_regexp -> regexpMatch.regexp
-    val contains_regexp : string -> string -> bool
+    val contains : regexpMatch.regexp -> regexpMatch.regexp
 end

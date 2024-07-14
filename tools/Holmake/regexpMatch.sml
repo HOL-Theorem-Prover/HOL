@@ -340,15 +340,15 @@ fun dfa_to_arrays (Q,q0,deltaMap,F) =
 
 val regexp_to_dfa_arrays = dfa_to_arrays o regexp_to_dfa;
 
-fun match r =
- let val {delta,start,final} = regexp_to_dfa_arrays r
-     val _ = print (String.concat["DFA states: ",
-                    Int.toString(Vector.length delta),".\n"])
-     fun step (a,q) = Vector.sub(Vector.sub(delta,q), Char.ord a)
-     fun exec ss = Substring.foldl step start ss
- in
-   fn s => Vector.sub(final,exec (Substring.full s))
- end;
+fun match_with_dfa {delta,start,final} = let
+    val _ = print (String.concat["DFA states: ",
+                                 Int.toString(Vector.length delta),".\n"])
+    fun step (a,q) = Vector.sub(Vector.sub(delta,q), Char.ord a)
+    fun exec ss = Substring.foldl step start ss
+in fn s => Vector.sub(final,exec (Substring.full s))
+end;
+
+val match = match_with_dfa o regexp_to_dfa_arrays;
 
 fun pred_to_set P =
     Binaryset.foldl (fn (c, acc) => if P c then Binaryset.add(acc, c) else acc)
