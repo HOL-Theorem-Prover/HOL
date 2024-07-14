@@ -11,9 +11,7 @@ Type mem = “:256 word -> num”;
 Definition to_mem_def:
   to_mem cv =
     let t = to_sptree_spt cv$c2n cv in
-      ((λa. case lookup (w2n a) t of
-            | NONE => 0n
-            | SOME n => n):mem)
+      FOLDR (λ(a,v) f. (n2w a =+ v) f) (λa. 0) (toSortedAList t) :mem
 End
 
 Definition build_spt_def:
@@ -50,12 +48,35 @@ Proof
   Induct \\ gvs [build_spt_def] \\ rw [lookup_insert]
 QED
 
+Triviality to_mem_eq:
+  (∀n. n ∈ domain t ⇒ n < dimword (:'a)) ⇒
+  FOLDR (λ(a,v) f. f⦇n2w a ↦ v⦈) (λ(a:'a word). 0) (toSortedAList t) =
+    (λa. case lookup (w2n a) t of
+         | NONE => 0n
+         | SOME n => n)
+Proof
+  gvs [to_mem_def,FUN_EQ_THM,domain_lookup,PULL_EXISTS]
+  \\ rewrite_tac [GSYM MEM_toSortedAList]
+  \\ rewrite_tac [GSYM ALOOKUP_toSortedAList]
+  \\ qspec_tac (‘toSortedAList t’,‘xs’)
+  \\ Induct \\ gvs [pairTheory.FORALL_PROD,combinTheory.APPLY_UPDATE_THM]
+  \\ rpt strip_tac
+  \\ Cases_on ‘a’ \\ gvs []
+  \\ rw [] \\ gvs []
+  \\ gvs [SF DNF_ss, SF SFY_ss]
+QED
+
 Theorem from_to_mem[cv_from_to]:
   from_to from_mem to_mem
 Proof
   gvs [from_to_def,to_mem_def,from_mem_def,FUN_EQ_THM,
        cv_typeLib.from_to_thm_for “:num spt” |> SRULE [cv_typeTheory.from_to_def]]
-  \\ strip_tac \\ Cases \\ rw [] \\ gvs []
+  \\ gen_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC [to_mem_eq] \\ gvs []
+  \\ conj_tac
+  >- (gvs [domain_lookup] \\ rpt strip_tac
+      \\ CCONTR_TAC \\ gvs [lookup_build_spt_lemma2])
+  \\ Cases \\ rw [] \\ gvs []
   \\ simp [lookup_build_spt_lemma1] \\ rw [build_spt_def]
   \\ simp [lookup_build_spt_lemma2]
 QED
@@ -139,8 +160,8 @@ Theorem to_mem_funs =
 Definition mem_test_def:
   mem_test (mem1:mem) (mem2:mem) a =
    if mem1 a + mem2 a < 100 then
-     (1n,mem2⦇60w ↦ 45; a ↦ mem1 a + 1⦈)
-   else (2n,λa. 0)
+     mem2⦇60w ↦ 45; a ↦ mem1 a + 1⦈
+   else (λa. 0)
 End
 
 val _ = cv_trans (mem_test_def |> SRULE [to_mem_funs]);
