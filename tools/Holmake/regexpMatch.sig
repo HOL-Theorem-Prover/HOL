@@ -46,11 +46,6 @@ sig
                    start : int,
                    final : bool vector}
 
-  val match_with_dfa
-      : {delta : int vector vector,
-         start : int,
-         final : bool vector} -> string -> bool
-
   val match : regexp -> string -> bool
 
 end

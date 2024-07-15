@@ -228,17 +228,16 @@ fun thy s =
 fun findpred pat =
     let
         val pat = toLower pat
-        open regexpMatch DBSearchParser
-        val r = translate_regexp $ parse_regexp (toLower pat)
-        val dfa = regexpMatch.regexp_to_dfa_arrays (contains r)
+        open DBSearchParser regexpMatch
+        val r = translate_regexp $ parse_regexp pat
     in
-        match_with_dfa dfa o toLower
+        match (contains r) o toLower
     end
 
 fun find0 incprivatep s =
     let
       val DB{namemap,...} = CT()
-      val check = findpred s (* pre-compiles the regexp *)
+      val check = findpred s (* pre-compiles regexp *)
       fun subfold (k, vs, acc) =
           if check k then
             (if incprivatep then vs
@@ -456,7 +455,7 @@ fun apropos_in pat dbdata =
   List.filter (fn (_, pdv) => matches pat $ pdv_thm pdv) dbdata
 
 fun find_in s = let
-    val check = findpred s (* pre-compiles the regexp *)
+    val check = findpred s
 in List.filter (check o dataName)
 end
 
