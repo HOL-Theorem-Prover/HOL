@@ -4,8 +4,9 @@ sig
                 | Or of search_regexp * search_regexp
                 | Twiddle of search_regexp * search_regexp
                 | Seq of search_regexp * search_regexp
-                | Word of char list
+                | Char of char
                 | Many of search_regexp
+                | Empty
                 | Any
     val parse_regexp : string -> search_regexp
     val translate_regexp : search_regexp -> regexpMatch.regexp
