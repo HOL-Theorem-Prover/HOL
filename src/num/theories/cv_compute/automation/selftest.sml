@@ -270,3 +270,76 @@ val apply_list_def = Define `
 val _ = test_for_failure cv_trans apply_list_def;
 
 val thms = rec_define_from_to “:prog”;
+
+val _ = Datatype `
+  trafficLight = Red | Yellow | Green
+`
+
+val nothing_def = Define `
+  (nothing t [] = ()) /\
+  (nothing t [x] = ()) /\
+  (nothing t (x::xs) =
+   nothing Red xs)
+`
+
+val _ = cv_trans nothing_def;
+
+val _ = Datatype `
+  clos_op = Add           (* + over the integers *)
+          | Sub           (* - over the integers *)
+`
+
+val _ = Datatype `
+  c_exp = Var num num
+        | If num c_exp c_exp c_exp
+        | Let num (c_exp list) c_exp
+        | Raise num c_exp
+        | Handle num c_exp c_exp
+        | Tick num c_exp
+        | Call num num (* ticks *) num (* loc *) (c_exp list) (* args *)
+        | App num (num option) c_exp (c_exp list)
+        | Fn string (num option) (num list option) num c_exp
+        | Letrec (string list) (num option) (num list option) ((num # c_exp) list) c_exp
+        | Op num clos_op (c_exp list)
+`
+
+val exp_size_alt_def = tDefine "exp_size_alt" `
+  exp_size_alt ((Var x y) : c_exp) = 1:num /\
+  exp_size_alt (If a b c d) = 1 + exp_size_alt b + exp_size_alt c + exp_size_alt d /\
+  exp_size_alt (Let a es e) = 1 + exp_size_alt e + exp_sizes_alt es /\
+  exp_size_alt (Handle a0 a1 a2) = 1 + exp_size_alt a1 + exp_size_alt a2 /\
+  exp_size_alt (Tick a0 a1) = 1 + exp_size_alt a1 /\
+  exp_size_alt (Call a0 a1 a2 a3) = 1 + exp_sizes_alt a3 /\
+  exp_size_alt (App a0 a1 a2 a3) = 1 + exp_size_alt a2 + exp_sizes_alt a3 /\
+  exp_size_alt (Fn a0 a1 a2 a3 a4) = 1 + exp_size_alt a4 /\
+  exp_size_alt (Letrec a0 a1 a2 a3 a4) = 6 + exp_size_alt a4 /\
+  exp_size_alt (Op a0 a1 a2) = 1 + exp_sizes_alt a2 /\
+  exp_sizes_alt [] = 0 /\
+  exp_sizes_alt (x::xs) = exp_size_alt x + exp_sizes_alt xs`
+  cheat;
+
+val pre = cv_auto_trans_pre_rec exp_size_alt_def cheat;
+
+val can_raise_def = Define ` can_raise x = T `
+
+val _ = Datatype `
+  x_exp = x_If x_exp x_exp x_exp | x_Other `
+
+val dest_handle_If_def = Define `
+  dest_handle_If (x_If x1 x2 x3) =
+     (if can_raise x1 then NONE
+      else if can_raise x2 then
+        if can_raise x3 then NONE else SOME (INL (x1,x2,x3))
+      else if can_raise x3 then
+        if can_raise x2 then NONE else SOME (INR (x1,x2,x3))
+      else NONE) /\
+  dest_handle_If _ = NONE `
+
+val _ = cv_trans can_raise_def;
+val _ = cv_trans dest_handle_If_def;
+
+(*
+val mem_test_def = Define `mem_test n = MEM n ["test1"; "test2"]`
+val _ = cv_trans mem_test_def;
+val _ = cv_eval ``mem_test "hi"``
+*)

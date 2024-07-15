@@ -22,7 +22,12 @@ Definition n2s_def[nocompute]:
   n2s b f n : string = REVERSE (MAP f (n2l b n))
 End
 
-Definition HEX_def:
+Definition HEX[nocompute]:
+  HEX n = if n < 10 then CHR (ORD #"0" + n) else
+          if n < 16 then CHR (ORD #"A" + (n - 10)) else CHR 0
+End
+
+Theorem HEX_def[compute]:
   (HEX 0 = #"0") /\
   (HEX 1 = #"1") /\
   (HEX 2 = #"2") /\
@@ -39,32 +44,31 @@ Definition HEX_def:
   (HEX 13 = #"D") /\
   (HEX 14 = #"E") /\
   (HEX 15 = #"F")
+Proof
+  rewrite_tac [HEX] \\ EVAL_TAC
+QED
+
+Definition UNHEX[nocompute]:
+  UNHEX c =
+    let n = ORD c in
+      if ORD #"0" <= n /\ n <= ORD #"9" then n - ORD #"0" else
+      if ORD #"a" <= n /\ n <= ORD #"f" then 10 + n - ORD #"a" else
+      if ORD #"A" <= n /\ n <= ORD #"F" then 10 + n - ORD #"A" else 0
 End
 
-Definition UNHEX_def:
-  (UNHEX #"0" = 0) /\
-  (UNHEX #"1" = 1) /\
-  (UNHEX #"2" = 2) /\
-  (UNHEX #"3" = 3) /\
-  (UNHEX #"4" = 4) /\
-  (UNHEX #"5" = 5) /\
-  (UNHEX #"6" = 6) /\
-  (UNHEX #"7" = 7) /\
-  (UNHEX #"8" = 8) /\
-  (UNHEX #"9" = 9) /\
-  (UNHEX #"a" = 10) /\
-  (UNHEX #"b" = 11) /\
-  (UNHEX #"c" = 12) /\
-  (UNHEX #"d" = 13) /\
-  (UNHEX #"e" = 14) /\
-  (UNHEX #"f" = 15) /\
-  (UNHEX #"A" = 10) /\
-  (UNHEX #"B" = 11) /\
-  (UNHEX #"C" = 12) /\
-  (UNHEX #"D" = 13) /\
-  (UNHEX #"E" = 14) /\
-  (UNHEX #"F" = 15)
-End
+Theorem UNHEX_def[compute]:
+  UNHEX #"0" = 0 /\ UNHEX #"1" = 1 /\
+  UNHEX #"2" = 2 /\ UNHEX #"3" = 3 /\
+  UNHEX #"4" = 4 /\ UNHEX #"5" = 5 /\
+  UNHEX #"6" = 6 /\ UNHEX #"7" = 7 /\
+  UNHEX #"8" = 8 /\ UNHEX #"9" = 9 /\
+  UNHEX #"a" = 10 /\ UNHEX #"b" = 11 /\ UNHEX #"c" = 12 /\
+  UNHEX #"d" = 13 /\ UNHEX #"e" = 14 /\ UNHEX #"f" = 15 /\
+  UNHEX #"A" = 10 /\ UNHEX #"B" = 11 /\ UNHEX #"C" = 12 /\
+  UNHEX #"D" = 13 /\ UNHEX #"E" = 14 /\ UNHEX #"F" = 15
+Proof
+  rewrite_tac [UNHEX] \\ EVAL_TAC
+QED
 
 val num_from_bin_string_def = Define `num_from_bin_string = s2n 2 UNHEX`;
 val num_from_oct_string_def = Define `num_from_oct_string = s2n 8 UNHEX`;

@@ -113,7 +113,7 @@ val _ = prefer_real();
 (* Infixl 600 is the same as "*", "INTER" and "*_c", etc. *)
 val _ = set_fixity "dot"  (Infixl 600); (* was: Infixr 20 (HOL-Light) *)
 
-Overload SUM[local] = “iterate$Sum”; (* see iterateTheory.sum_def *)
+Overload SUM[local] = “real_sigma$Sum”; (* see iterateTheory.sum_def *)
 
 (* NOTE: The original definition of ‘dot’ in HOL-Light is
 
@@ -140,7 +140,7 @@ QED
 (* A naive proof procedure to lift really trivial arithmetic stuff from R.   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SUM_EQ[local] = iterateTheory.SUM_EQ'
+Theorem SUM_EQ[local] = real_sigmaTheory.SUM_EQ'
 
 val VECTOR_ARITH_TAC =
     rpt GEN_TAC

@@ -2,6 +2,8 @@
 
 all: zc2hs
 
+CXX = $(or $(MINISAT_CXX),c++)
+
 zc2hs: 
 	ln -fs ../minisat/Proof.o
 	ln -fs ../minisat/File.o
@@ -10,7 +12,7 @@ zc2hs:
 	ln -fs ../minisat/Global.h
 	ln -fs ../minisat/Sort.h
 	ln -fs ../minisat/SolverTypes.h
-	g++ -O3 Proof.o File.o zc2hs.cpp -o zc2hs
+	@$(CXX) -O3 Proof.o File.o zc2hs.cpp -o zc2hs
 
 clean:
 	@rm -f zc2hs *.h *.o

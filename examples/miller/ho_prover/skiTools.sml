@@ -1,18 +1,7 @@
-(* non-interactive mode
-*)
 structure skiTools :> skiTools =
 struct
-open HolKernel Parse boolLib;
 
-(* interactive mode
-val () = loadPath := union ["..", "../finished"] (!loadPath);
-val () = app load
-  ["HurdUseful",
-   "ho_basicTools",
-   "unifyTools",
-   "skiTheory"];
-val () = show_assums := true;
-*)
+open HolKernel Parse boolLib;
 
 open hurdUtils ho_basicTools unifyTools skiTheory;
 
@@ -25,10 +14,10 @@ val op|| = op ORELSE;
 val op>> = op THEN1;
 val !! = REPEAT;
 
-(* non-interactive mode
-*)
 fun trace _ _ = ();
 fun printVal _ = ();
+
+val assert = simple_assert;
 
 (* ------------------------------------------------------------------------- *)
 (* Type/term substitutions                                                   *)
@@ -113,7 +102,7 @@ local
          let
            val _ = assert (Name = Name') (ERR "ski_unify" "different vars")
            val _ = assert (Ty = Ty')
-             (BUG "ski_unify" "same var, different types?")
+                          (BUG "ski_unify" "same var, different types?")
          in
            solve vars sub rest
          end
@@ -121,7 +110,7 @@ local
          let
            val _ =
              assert (Name = Name' andalso Thy = Thy')
-             (ERR "ski_unify" "different vars")
+                    (ERR "ski_unify" "different vars")
            val sub_extra = var_type_unify (snd vars) Ty Ty'
            val sub' = refine_subst sub ([], sub_extra)
            val vars' = (map (inst_ty sub_extra) ## I) vars

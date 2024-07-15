@@ -13,14 +13,15 @@ open arithmeticTheory combinTheory pred_setTheory pairTheory boolTheory
      PairedLambda pred_setLib fcpTheory fcpLib tautLib numLib realTheory
      realLib InductiveDefinition hurdUtils cardinalTheory;
 
-open permutesTheory iterateTheory vectorTheory vectorLib matrixTheory;
+open permutesTheory iterateTheory vectorTheory vectorLib matrixTheory
+     real_sigmaTheory
 
 open Q;
 
 val _ = new_theory "determinant";
 
-Overload PRODUCT[local]  = “iterate$product”
-Overload SUM[local]      = “iterate$Sum”
+Overload PRODUCT[local]  = “real_sigma$product”
+Overload SUM[local]      = “real_sigma$Sum”
 Overload SWAP[local]     = “permutes$swap”
 Overload INVERSE[local]  = “permutes$inverse”
 Overload PERMUTES[local] = “permutes$permutes”
@@ -33,9 +34,9 @@ Overload COLUMN[local]   = “matrix$column”
 Overload COLUMNS[local]  = “matrix$columns”
 Overload VECTOR_0[local] = “vector$vec 0”
 
-val SUM_EQ       = iterateTheory.SUM_EQ';
-val SUM_EQ_0     = iterateTheory.SUM_EQ_0';
-val SUM_ADD      = iterateTheory.SUM_ADD';
+val SUM_EQ       = real_sigmaTheory.SUM_EQ';
+val SUM_EQ_0     = real_sigmaTheory.SUM_EQ_0';
+val SUM_ADD      = real_sigmaTheory.SUM_ADD';
 val SWAP_DEF     = permutesTheory.swap_def;
 val PERMUTES_DEF = permutesTheory.permutes;
 val VSUM_DEF     = vectorTheory.vsum_def;

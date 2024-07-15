@@ -13,7 +13,7 @@
   val R = RealArith.REAL_ARITH
   val W = wordsLib.WORD_DECIDE
   val B = blastLib.BBLAST_PROVE
-
+  val M = bossLib.METIS_PROVE
   val I = simpLib.SIMP_PROVE (simpLib.++ (simpLib.++
     (bossLib.arith_ss, intSimps.INT_RWTS_ss), intSimps.INT_ARITH_ss))
 
@@ -35,6 +35,16 @@
   val _ = ParseExtras.temp_loose_equality()
 
   (* constants used by Z3 *)
+
+  (* real division -- in SMT-LIB, division by zero is not defined,
+     unlike in HOL4 *)
+  val smt_rdiv_exists = P ``?f. !x y. (y <> 0r) ==> (f x y = x / y)``
+  val smt_rdiv_def = bossLib.new_specification ("smt_rdiv", ["smt_rdiv"],
+    smt_rdiv_exists)
+
+  val _ = s ("real_div_smt_rdiv", M [realaxTheory.real_div,
+    realTheory.REAL_INV_0, realTheory.REAL_MUL_RZERO, smt_rdiv_def]
+    ``!x y. x / y = if y = 0 then 0 else smt_rdiv x y``)
 
   (* exclusive or *)
   val xor_def = bossLib.Define `xor x y = ~(x <=> y)`
@@ -534,11 +544,11 @@
     ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==> ~(x ' 1 <=> ~(x ' 0))``)
   val _ = s ("t033", B ``(0w:word32 = 0xFFFFFFFFw * sw2sw (x :word8)) ==>
       ~(x ' 2 <=> ~(x ' 0) /\ ~(x ' 1))``)
-  val _ = s ("t034",
-    bossLib.METIS_PROVE [simpLib.SIMP_PROVE bossLib.bool_ss
-        [wordsTheory.WORD_ADD_BIT0, wordsLib.WORD_DECIDE ``1w :'a word ' 0``]
-        ``x ' 0 ==> ~(1w + (x :'a word)) ' 0``]
-      ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
+  val _ = s ("t034", M [
+      simpLib.SIMP_PROVE bossLib.bool_ss [
+        wordsTheory.WORD_ADD_BIT0, wordsLib.WORD_DECIDE ``1w :'a word ' 0``
+      ] ``x ' 0 ==> ~(1w + (x :'a word)) ' 0``
+    ] ``(1w + (x :'a word) = y) ==> x ' 0 ==> ~(y ' 0)``)
   val _ = s ("t035", S ``(1w = x :word1) \/ (0 >< 0) x <> (1w :word1)``)
 
   (* used to prove hypotheses of other proforma theorems (recursively) *)

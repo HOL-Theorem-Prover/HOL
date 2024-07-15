@@ -8,7 +8,7 @@ open optionTheory pairTheory arithmeticTheory combinTheory listTheory
 
 val _ = new_theory "keccak";
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (* TODO: move *)
 Theorem FUNPOW_COMPOSE_INV:

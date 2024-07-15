@@ -10,7 +10,7 @@ open armSyntax arm_astSyntax;
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 
 val ERR = Feedback.mk_HOL_ERR "arm_encoderLib";

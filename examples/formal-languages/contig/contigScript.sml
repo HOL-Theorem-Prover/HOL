@@ -16,7 +16,7 @@ open finite_mapTheory bagTheory containerTheory;
 (* Setup basic proof support                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = overload_on ("++", ``list$APPEND``);
 
 infix byA;

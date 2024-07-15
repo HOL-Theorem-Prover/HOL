@@ -73,6 +73,11 @@ fun is_no_arg_fun cv_def_tm =
   not (is_comb (fst (dest_eq cv_def_tm)))
   handle HOL_ERR _ => false;
 
+fun is_not_recursive cv_def_tm = let
+  val l = cv_def_tm |> lhs |> strip_comb |> fst
+  val vs = cv_def_tm |> rhs |> free_vars
+  in null (filter (aconv l) vs) end handle HOL_ERR _ => false;
+
 fun is_tailrecursive cv_def_tm = let
   val fnames = strip_conj cv_def_tm |> map (fst o strip_comb o fst o dest_eq)
   val rhs_list = strip_conj cv_def_tm |> map (snd o dest_eq)
@@ -101,6 +106,8 @@ fun define_cv_function name (def:thm) cv_def_tm (SOME t) =
          val cv_def_tm = mk_eq(mk_comb(new_v_tm,arg_tm), snd (dest_eq cv_def_tm))
          val def = new_definition(name ^ "_def",cv_def_tm)
          in SPEC (cvSyntax.mk_cv_num (numSyntax.term_of_int 0)) def end
+       else if is_not_recursive cv_def_tm then
+         new_definition(name ^ "_def",cv_def_tm)
        else if is_tailrecursive cv_def_tm then
          tailrecLib.tailrec_define (name ^ "_def") cv_def_tm
        else (let
@@ -335,12 +342,10 @@ val clean_name = let
 (*
   val _ = Define `bar x = x + 5n`
   val def = Define `foo = bar`
-
   val def = Define `mymap f g l1 l2 = (MAP f l1, MAP g l2)`
 *)
 fun preprocess_def def = let
-  val defs = def |> oneline_ify_all |> LIST_CONJ
-  val defs = defs |> SPEC_ALL |> CONJUNCTS |> map (UNDISCH_ALL o SPEC_ALL)
+  val defs = def |> oneline_ify_all |> map (SPEC_ALL o UNDISCH_ALL o SPEC_ALL)
   (* val th = hd defs *)
   fun adjust_def th =
     let val (l,r) = th |> concl |> dest_eq
@@ -402,7 +407,7 @@ fun store_cv_result name orig_names result =
                               ", stored in " ^ thm_name ^ "\n")
   in () end
 
-fun print_pre_goal name pre_def =
+fun print_pre_goal name pre_def orig_names_list thy_name =
   if pre_def |> concl |> aconv T then pre_def else
   let
     val pres = pre_def |> CONJUNCTS
@@ -418,7 +423,9 @@ fun print_pre_goal name pre_def =
       | concat_goals gs = "  (" ^ String.concatWith sep_str gs ^ ")\n"
     val thm_name = pres |> hd |> SPEC_ALL |> concl |> lhs |>
                    strip_comb |> fst |> dest_const |> fst
-    val ind_name = String.substring(thm_name, 0, String.size(thm_name) - 3) ^ "ind"
+    val ind_name = hd orig_names_list ^ "_ind"
+    val ind_name = if thy_name = current_theory() then ind_name
+                   else thy_name ^ "Theory." ^ ind_name
     val _ = cv_print Silent ("\nWARNING: definition of " ^ name ^ " has a precondition.\n")
     val _ = cv_print Silent "You can set up the precondition proof as follows:\n\n"
     val _ = cv_print Silent ("Theorem " ^ thm_name ^ "[cv_pre]:\n")
@@ -497,17 +504,21 @@ fun cv_trans_any allow_pre term_opt def = let
   val cv_vars = hyps |> map (fst o strip_comb o
                              cv_rep_cv_tm o concl o UNDISCH_ALL o snd)
   val cv_subst = map2 (fn v => fn c => v |-> c) cv_vars cv_consts
-  val inst_cv_reps = raw_cv_reps |> map (INST cv_subst)
-                                 |> map2 (fn cv_def => fn th =>
-    CONV_RULE (cv_rep_cv_tm_conv (REWR_CONV (SYM cv_def))) th) cv_defs
+  fun sym_rw cv_def th = let
+    val vs = strip_comb (cv_rep_hol_tm (concl th)) |> snd
+    val ws = map (fn v => mk_comb(from_for (type_of v),v)) vs
+    val ts = if null ws then [] else cv_def |> concl |> lhs |> strip_comb |> snd
+    val adjusted_def = INST (map2 (fn x => fn y => x |-> y) ts ws) cv_def
+    in CONV_RULE (cv_rep_cv_tm_conv (REWR_CONV (SYM adjusted_def))) th end
+  val inst_cv_reps = raw_cv_reps |> map (INST cv_subst) |> map2 sym_rw cv_defs
   val no_pre = (length inst_cv_reps = 1 andalso
                 aconv (inst_cv_reps |> hd |> concl |> cv_rep_pre) T)
   val expand_cv_reps = inst_cv_reps |> map (CONV_RULE (REWR_CONV cv_rep_def))
-  val orig_names =
+  val (orig_names_list, thy_name) =
     let fun name_of def = def |> SPEC_ALL |> concl |> dest_eq |> fst |>
-                                 strip_comb |> fst |> dest_const |> fst
-        val names = map name_of defs
-    in String.concatWith ", " names end
+                                 strip_comb |> fst |> dest_thy_const
+    in (map (#Name o name_of) defs, #Thy (name_of (hd defs))) end
+  val orig_names = String.concatWith ", " orig_names_list
   in
     if no_pre then let
       (* derive final theorems *)
@@ -535,7 +546,7 @@ fun cv_trans_any allow_pre term_opt def = let
       (* derive final theorems *)
       val combined_result = LIST_CONJ result
       val _ = store_cv_result name orig_names combined_result
-      in print_pre_goal name pre_def end
+      in print_pre_goal name pre_def orig_names_list thy_name end
   end
 
 (*--------------------------------------------------------------------------*
@@ -710,6 +721,16 @@ fun check_for_dups tm defs = let
         failwith "cv_auto about to enter infinite loop")
   end
 
+fun get_start_msg_for def = let
+  val defs = def |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL
+                 |> map (fst o strip_comb o lhs o concl)
+  val thy = defs |> hd |> dest_thy_const |> #Thy
+  val names = defs |> map (fst o dest_const) |> Lib.mk_set
+  in "Starting translation of " ^
+     String.concatWith ", " names ^
+     " from " ^ thy ^ "Theory.\n"
+  end
+
 fun cv_trans_loop allow_pre term_opt [] = failwith "nothing to do"  (* cannot happen *)
   | cv_trans_loop allow_pre term_opt (Abbr th::defs) = let
       val tm = th |> concl |> dest_eq |> fst
@@ -720,15 +741,16 @@ fun cv_trans_loop allow_pre term_opt [] = failwith "nothing to do"  (* cannot ha
       val th3 = save_thm(c ^ "_ho[cv_rep]",th2)
       in cv_trans_loop allow_pre term_opt defs end
   | cv_trans_loop allow_pre term_opt (Def def::defs) =
+     (cv_print Quiet (get_start_msg_for def);
       case total_cv_trans allow_pre term_opt def (null defs) of
         Res th => if null defs then th else cv_trans_loop allow_pre term_opt defs
       | Needs tm => let
          val _ = check_for_dups tm defs
          val needs_c = strip_comb tm |> fst
          val new_def = find_inst_def_for needs_c
-         val new_tasks = inst_ho_args tm new_def
+         val new_tasks = quiet_warnings (inst_ho_args tm) new_def
          val defs = new_tasks @ Def def::defs
-         in cv_trans_loop allow_pre term_opt defs end;
+         in cv_trans_loop allow_pre term_opt defs end);
 
 (*
 val allow_pre = false
@@ -824,7 +846,14 @@ fun get_cv_consts tm = let
 fun get_code_eq_info const_tm = let
   val cv_def = get_code_eq_for const_tm
   val tm = cv_def |> SPEC_ALL |> concl |> dest_eq |> snd
-  in (cv_def, get_cv_consts tm) end
+  val res = get_cv_consts tm
+            handle HOL_ERR e => let
+              val _ = print ("\nERROR: " ^ #message e ^ "\n")
+              val _ = print "This appears in definition:\n\n"
+              val _ = print_thm cv_def
+              val _ = print "\n\n"
+              in raise HOL_ERR e end
+  in (cv_def, res) end
 
 fun cv_eqs_for tm = let
   val init_set = get_cv_consts tm

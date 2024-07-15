@@ -7,8 +7,9 @@
 structure hurdUtils :> hurdUtils =
 struct
 
-open Susp HolKernel Parse Hol_pp boolLib metisLib bossLib BasicProvers;
-open pairTheory res_quanTools pred_setTheory; (* for RESQ_STRIP_TAC *)
+open HolKernel boolLib BasicProvers;
+
+open Susp Hol_pp metisLib simpLib pairTheory res_quanTools numLib;
 
 infixr 0 oo THENR ORELSER ## thenf orelsef;
 
@@ -64,15 +65,7 @@ fun err_BUG s (h as HOL_ERR _) =
 
 (* Success and failure *)
 
-fun assert b e = if b then () else raise e;
-fun try f a = f a
-  handle (h as HOL_ERR _) => (print (exn_to_string h); raise h)
-       | (b as BUG_EXN _) => (print (BUG_to_string b); raise b)
-       | e => (print "\ntry: strange exception raised\n"; raise e);
-fun total f x = SOME (f x) handle HOL_ERR _ => NONE;
-fun can f = Option.isSome o total f;
-fun partial (e as HOL_ERR _) f x = (case f x of SOME y => y | NONE => raise e)
-  | partial _ _ _ = raise BUG "partial" "must take a HOL_ERR";
+val assert = simple_assert; (* renamed and moved to Lib *)
 
 (* Exception combinators *)
 
@@ -713,7 +706,7 @@ fun var_match vars tm tm' =
 val FUN_EQ = FUN_EQ_THM;
 
 val SET_EQ = prove (“!s t :'a -> bool. (s = t) <=> (!x. x IN s <=> x IN t)”,
-                    SIMP_TAC std_ss [IN_DEF, FUN_EQ_THM]);
+                    SIMP_TAC bool_ss [IN_DEF, FUN_EQ_THM]);
 
 val hyps = foldl (fn (h,t) => tunion (hyp h) t) [];
 
@@ -1057,12 +1050,8 @@ val Suff = Q_TAC SUFF_TAC
 (* A simple-minded CNF conversion.                                       *)
 (* --------------------------------------------------------------------- *)
 
-local
-  open simpLib
-in
-  val EXPAND_COND_CONV =
-    QCONV (SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) [])
-end
+val EXPAND_COND_CONV =
+    QCONV (SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) []);
 
 val EQ_IFF_CONV = QCONV (PURE_REWRITE_CONV [EQ_IMP_THM]);
 

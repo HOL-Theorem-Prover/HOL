@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib sptreeSyntax testutils
+open HolKernel Parse boolLib bossLib sptreeSyntax sptreeLib testutils
 open totoTheory  totoTacs tcTacs enumTacs fmapalTacs;
 open alist_treeLib
 

@@ -4,7 +4,7 @@ struct
 open HolKernel Parse boolLib bossLib;
 
 open pred_setTheory realTheory realLib iterateTheory RealArith fcpTheory fcpLib
-     tautLib vectorTheory;
+     tautLib vectorTheory real_sigmaTheory;
 
 (* tactics and decision procedures *)
 

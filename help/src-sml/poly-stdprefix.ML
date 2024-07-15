@@ -7,6 +7,7 @@ val _ = use "../../tools-poly/poly/Listsort.sml";
 val _ = use "../../src/portableML/Uref.sig"
 val _ = use "../../src/portableML/Uref.sml"
 val _ = use "../../src/portableML/poly/PrettyImpl.sml"
+val _ = use "../../src/portableML/quotation_dtype.sml"
 val _ = use "../../src/portableML/HOLPP.sig"
 val _ = use "../../src/portableML/HOLPP.sml"
 val _ = use "../../src/portableML/poly/Arbnumcore.sig"

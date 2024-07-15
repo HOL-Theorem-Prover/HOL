@@ -1101,12 +1101,13 @@ tactic as its result.  The various parameters passed to tacticals are
 reflected in the various \ML{} types that the built-in tacticals have.
 Some important tacticals in the \HOL{} system are listed below.
 
-\subsubsection{\tt THENL : tactic -> tactic list -> tactic}
+\subsubsection{\tt THEN1 : tactic -> tactic -> tactic}
 
-If tactic $T$ produces $n$ subgoals and $T_1$, $\ldots$ , $T_n$ are tactics then \ml{$T$~THENL~[$T_1$,$\ldots$,$T_n$]} is a tactic which first applies $T$ and then applies $T_i$ to the $i$th subgoal produced by $T$.
-The tactical \ml{THENL} is useful if one wants to do different things to different subgoals.
+If tactic $T$ produces $n$ subgoals and $T_1$ is a tactic, then \ml{$T$~THEN1~($T_1$)} is a tactic which first applies $T$ and then applies $T_1$ to the first subgoal produced by $T$. The composite tactic fails if $T_1$ does not completely solve the first subgoal.
+The tactical \ml{THEN1} is useful if one wants to do different things to different subgoals.
+To discharge more than one subgoal in this manner, sequentially compose the tactics separated by \ml{THEN1} like so: \ml{$T$~THEN1~($T_1$)THEN1~$\dots$~THEN1~($T_n$)}
 
-\ml{THENL} can be illustrated by doing the proof of $\vdash \uquant{m}m+0=m$ in
+\ml{THEN1} can be illustrated by doing the proof of $\vdash \uquant{m}m+0=m$ in
 one step.
 
 \setcounter{sessioncount}{0}
@@ -1119,7 +1120,7 @@ one step.
          Initial goal:
          !m. m + 0 = m
 
-- e (INDUCT_TAC THENL [REWRITE_TAC[ADD], ASM_REWRITE_TAC[ADD]]);
+- e (INDUCT_TAC THEN1 (REWRITE_TAC[ADD]) THEN1 (ASM_REWRITE_TAC[ADD]));
 OK..
 > val it =
     Initial goal proved.
@@ -1128,12 +1129,12 @@ OK..
 \end{session}
 
 \noindent The compound tactic \[
-\ml{INDUCT\_TAC~THENL~[REWRITE\_TAC~[ADD],~ASM\_REWRITE\_TAC~[ADD]]}
+\ml{INDUCT\_TAC~THEN1~(REWRITE\_TAC~[ADD])~THEN1~(ASM\_REWRITE\_TAC~[ADD])}
 \]
 first applies \ml{INDUCT_TAC} and then applies \ml{REWRITE\_TAC[ADD]} to the first subgoal (the basis) and \ml{ASM\_REWRITE\_TAC[ADD]} to the second subgoal (the step).
 
-The tactical {\small\verb|THENL|} is useful for doing different things
-to different subgoals. The tactical \ml{THEN} can be used to apply the
+While {\small\verb|THEN1|} is useful for doing different things
+to different subgoals, the tactical \ml{THEN} can be used to apply the
 same tactic to all subgoals.
 
 \subsubsection{\tt THEN : tactic -> tactic -> tactic}\label{THEN}
@@ -1141,7 +1142,7 @@ same tactic to all subgoals.
 The tactical {\small\verb|THEN|} is an \ML{} infix. If $T_1$ and $T_2$
 are tactics, then the \ML{} expression $T_1${\small\verb| THEN |}$T_2$
 evaluates to a tactic which first applies $T_1$ and then applies $T_2$
-to all the subgoals produced by $T_1$.
+to \emph{all} the subgoals produced by $T_1$.
 
 In fact, \ml{ASM\_REWRITE\_TAC[ADD]} will solve the basis as well as
 the step case of the induction for $\uquant{m}m+0=m$, so there is an
@@ -1209,7 +1210,6 @@ theory \ml{arithmetic} \HOL{} is made.
 theorems are saved in the theory \ml{arithmetic}. The complete list of
 proofs for this built-in theory can be found in the file
 \ml{src/num/theories/arithmeticScript.sml}.
-
 
 \subsubsection{\tt ORELSE : tactic -> tactic -> tactic}\label{ORELSE}
 
@@ -1461,13 +1461,12 @@ achieved by $th$.
   then prove theorems $th_1$ , $\dots$, $th_n$ respectively achieving
   these goals by forward proof. The tactic
 
-\[\ml{  T THENL[ACCEPT\_TAC }th_1\ml{,}\ldots\ml{,ACCEPT\_TAC }th_n\ml{]}
+\[\ml{  T THEN1(ACCEPT\_TAC }th_1\ml{) THEN1}\ldots\ml{(ACCEPT\_TAC }th_n\ml{)}
 \]
 
-would then solve $g$, where \ml{THENL}
-%\index{THENL@\ml{THENL}}
-is the tactical that applies the respective elements of the tactic
-list to the subgoals produced by \ml{T}.
+would then solve $g$, where \ml{THEN1}
+%\index{THEN1@\ml{THEN1}}
+applies its RHS tactic to the first subgoal not solved by its LHS tactic.
 
 \end{itemize}
 
@@ -1479,15 +1478,8 @@ list to the subgoals produced by \ml{T}.
 \item{\bf Summary:} Identity tactic for the tactical {\small\verb%THEN%}
 (see \DESCRIPTION).
 
-\item{\bf Uses:}
-\begin{enumerate}
-\item Writing tacticals (see description of {\small\verb|REPEAT|}
+\item{\bf Uses:} Writing tacticals (see description of {\small\verb|REPEAT|}
 in \DESCRIPTION).
-\item With {\small\verb%THENL%}; for example, if tactic $T$ produces two subgoals
-and we want to apply $T_1$
-to the first one but to do nothing to the second, then
-the tactic to use is \ml{$T$~THENL[$T_1$,ALL_TAC]}.
-\end{enumerate}
 \end{itemize}
 
 \subsubsection{\tt NO\_TAC : tactic}

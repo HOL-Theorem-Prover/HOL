@@ -19,14 +19,8 @@ val _ = BasicProvers.temp_delsimps ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
-
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
 
 (* ------------------------------------------------------------------------- *)
 (* Access functions for ARM model                                            *)
@@ -441,7 +435,7 @@ val align_aligned = Q.prove(
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]
     \\ REWRITE_TAC [GSYM WORD_ADD_LSL]
     \\ Q.PAT_ABBREV_TAC `x:word32 = (f a + g b)`
-    << [`x << 1 + (0 >< 0) b = x << 1 || (0 >< 0) b`
+    >| [`x << 1 + (0 >< 0) b = x << 1 || (0 >< 0) b`
         by (MATCH_MP_TAC WORD_ADD_OR \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []),
         `x << 2 + (1 >< 0) b = x << 2 || (1 >< 0) b`
         by (MATCH_MP_TAC WORD_ADD_OR \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []),
@@ -1175,7 +1169,7 @@ val lem = Q.prove(
    (!x:word32. n2w (w2n (~x) + 1) = ~x + 1w) /\
     !x:word32. n2w (w2n (x << 2) + 1) = x << 2 || 1w`,
   REPEAT STRIP_TAC
-    << [
+    >| [
       ONCE_REWRITE_TAC [GSYM n2w_mod]
         \\ SRW_TAC [ARITH_ss] [ADD_MODULUS_LEFT,
              n2w_mod |> INST_TYPE [alpha |-> ``:32``] |> EVAL_RULE],
@@ -2098,7 +2092,7 @@ val BIT_ALIGN4 = Q.prove(
 val aligned_numeric = Q.prove(
   `aligned (0w:word32,4) /\
    !n. aligned (n2w (NUMERAL (BIT2 (BIT1 n))) : word32, 4)`,
-  REPEAT STRIP_TAC >> EVAL_TAC
+  REPEAT STRIP_TAC >- EVAL_TAC
     \\ Q.SPEC_THEN `n` SUBST1_TAC (Thm.CONJUNCT1 BIT_ALIGN4)
     \\ REWRITE_TAC [GSYM word_mul_n2w, aligned_mul4]);
 

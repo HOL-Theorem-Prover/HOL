@@ -1,11 +1,10 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib bossLib;
+
+open combinTheory pred_setTheory hurdUtils res_quanTheory ho_proverTools
+     pairTheory;
+
 val _ = new_theory "subtype";
 val _ = ParseExtras.temp_loose_equality()
-
-open bossLib combinTheory pred_setTheory hurdUtils
-     res_quanTheory ho_proverTools pairTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;

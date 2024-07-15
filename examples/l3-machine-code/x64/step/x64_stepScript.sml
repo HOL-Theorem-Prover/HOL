@@ -13,8 +13,8 @@ val _ = new_theory "x64_step"
 (* ------------------------------------------------------------------------ *)
 
 val () =
-   (numLib.prefer_num (); wordsLib.prefer_word (); wordsLib.guess_lengths ();
-    ParseExtras.temp_loose_equality())
+   (numLib.temp_prefer_num (); wordsLib.prefer_word ();
+    wordsLib.guess_lengths (); ParseExtras.temp_loose_equality())
 
 (* ------------------------------------------------------------------------ *)
 

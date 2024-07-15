@@ -3,7 +3,7 @@ structure arm8Lib :> arm8Lib =
 struct
 open HolKernel boolLib bossLib
 open utilsLib arm8Theory
-val () = (numLib.prefer_num (); wordsLib.prefer_word ())
+val () = (numLib.temp_prefer_num (); wordsLib.prefer_word ())
 fun arm8_compset thms =
    utilsLib.theory_compset (thms, arm8Theory.inventory)
 end

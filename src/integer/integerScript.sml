@@ -3691,12 +3691,12 @@ val NUM_INT_MUL = store_thm("NUM_INT_MUL",
   REWRITE_TAC [INT_MUL, NUM_OF_INT])
 
 val NUM_INT_EDIV = store_thm("NUM_INT_EDIV",
-  Term`!n m. m <> 0 ==> n DIV m = Num (ediv (&n) (&m))`,
-  METIS_TAC[EDIV_DEF, INT_POS, INT_LT_LE, INT_DIV, NUM_OF_INT])
+  Term`!n m. n DIV m = if m = 0 then 0 else Num (ediv (&n) (&m))`,
+  METIS_TAC[EDIV_DEF, INT_POS, INT_LT_LE, INT_DIV, NUM_OF_INT, DIV_def])
 
 val NUM_INT_EMOD = store_thm("NUM_INT_EMOD",
-  Term`!n m. m <> 0 ==> n MOD m = Num (emod (&n) (&m))`,
-  METIS_TAC[EMOD_DEF, INT_ABS_NUM, INT_MOD, NUM_OF_INT])
+  Term`!n m. n MOD m = if m = 0 then n else Num (emod (&n) (&m))`,
+  METIS_TAC[EMOD_DEF, INT_ABS_NUM, INT_MOD, NUM_OF_INT, MOD_def])
 
 (*---------------------------------------------------------------------------*)
 

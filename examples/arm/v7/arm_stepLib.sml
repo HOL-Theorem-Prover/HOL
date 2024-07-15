@@ -23,7 +23,7 @@ open Parse
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 val srw_ss = srw_ss() -* ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT", "lift_disj_eq",
                           "lift_imp_disj"]

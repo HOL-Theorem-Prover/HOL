@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib IndDefLib
      numTheory prim_recTheory arithmeticTheory
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (*---------------------------------------------------------------------------*)
 (* Functionality discussed with Matt Kaufmann                                *)

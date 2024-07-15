@@ -11,7 +11,7 @@ open optionTheory pairTheory relationTheory arithmeticTheory
 ;
 
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 fun pat_elim q = Q.PAT_X_ASSUM q (K ALL_TAC);
 

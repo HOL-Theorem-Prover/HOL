@@ -3,7 +3,7 @@ structure riscvLib :> riscvLib =
 struct
 open HolKernel boolLib bossLib
 open utilsLib riscvTheory
-val () = (numLib.prefer_num (); wordsLib.prefer_word ())
+val () = (numLib.temp_prefer_num (); wordsLib.prefer_word ())
 fun riscv_compset thms =
    utilsLib.theory_compset (thms, riscvTheory.inventory)
 end

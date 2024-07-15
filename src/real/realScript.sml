@@ -3797,19 +3797,12 @@ val lt_int = store_thm(
     Q.EXISTS_TAC `0` THEN SRW_TAC [][REAL_NEG_LE0]
   ]);
 
-
 (*---------------------------------------------------------------------------*)
-(* Floor and ceiling (nums)                                                  *)
+(* Floor and ceiling (nums) (NOTE: Their definitions are moved to realax)    *)
 (*---------------------------------------------------------------------------*)
 
-val NUM_FLOOR_def = zDefine`
-   NUM_FLOOR (x:real) = LEAST (n:num). real_of_num (n+1) > x`;
-
-val NUM_CEILING_def = zDefine`
-   NUM_CEILING (x:real) = LEAST (n:num). x <= real_of_num n`;
-
-val _ = overload_on ("flr",``NUM_FLOOR``);
-val _ = overload_on ("clg",``NUM_CEILING``);
+Theorem NUM_FLOOR_def   = NUM_FLOOR_def
+Theorem NUM_CEILING_def = NUM_CEILING_def
 
 val lem = SIMP_RULE arith_ss [REAL_POS,REAL_ADD_RID]
               (Q.SPECL[`y`,`&n`,`0r`,`1r`] REAL_LTE_ADD2);

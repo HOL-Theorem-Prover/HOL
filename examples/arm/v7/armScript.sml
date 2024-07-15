@@ -18,7 +18,7 @@ val _ = new_theory "arm";
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 
 val _ = temp_overload_on (parmonadsyntax.monad_bind, ``seqT``);

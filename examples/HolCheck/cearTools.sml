@@ -16,7 +16,7 @@ open cearTheory ksTheory setLemmasTheory muSyntaxTheory muSyntax
      muTheory muTools ksTheory muCheck bddTools envTheory ksTools
      commonTools lazyTools lzPairRules lzConv
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 val dpfx = "crt_"
 

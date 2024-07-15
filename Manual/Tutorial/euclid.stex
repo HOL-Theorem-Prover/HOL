@@ -377,10 +377,12 @@ following\footnote{This and subsequent proofs use the theorems proved
     `!p m. 0 < m ==> m divides (FACT (m + p))`
       suffices_by metis_tac[LESS_EQ_EXISTS] >>
     Induct_on `p` >>
-    rw[FACT,ADD_CLAUSES] >| [
-      Cases_on `m`, ALL_TAC
-    ] >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,
-                    DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL])
+    rw[FACT,ADD_CLAUSES]
+    >- (Cases_on `m` >>
+        metis_tac [FACT, DECIDE ``!x. ~(x < x)``,
+                   DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]) >>
+    metis_tac [FACT, DECIDE ``!x. ~(x < x)``,
+                   DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]);
 \begin{description}
 \item [\small{({\it DIVIDES\_FACT\/})}]
 \begin{tabular}[t]{l}
@@ -531,32 +533,34 @@ tactic:
 \begin{alltt}
   ##eval[tac] `!m p.  0 < m ==> m divides FACT (m + p)`
                 suffices_by metis_tac[LESS_EQ_EXISTS] >>
-              Induct_on `p` >| [
-                rw[] >> Cases_on `m` >| [
-                  fs[],
-                  rw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
-                ],
-                rw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL]
-              ]
+              Induct_on `p`
+              >- (
+                rw[] >> Cases_on `m`
+                >- fs[]
+                >- rw[FACT, DIVIDES_LMUL, DIVIDES_REFL])
+              >- (rw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL])
 >>__ restart(); e tac;
 ##assert can top_thm ()
 \end{alltt}
 \end{hol}
 
-\noindent This can be tested to see that we have made no errors:
+\noindent
+The above uses two operators to compose tactics. The \ml{\gt\gt} operator sequentially composes two tactics. The \ml{\gt-} is used to create a subproof for the first goal in situations with multiple subgoals. Here, the tactic after the first top-level \ml{\gt-} proves the base case, and the second proves the inductive case. Such subproofs can be nested, as illustrated in the base case.
+
+This can be tested to see that we have made no errors:
 
 \begin{session}
 \begin{alltt}
 >>_ restart();
 >> e (`!m p.  0 < m ==> m divides FACT (m + p)`
-        suffices_by metis_tac[LESS_EQ_EXISTS] >>
-      Induct_on `p` >| [
-        rw[] >> Cases_on `m` >| [
-          fs[],
-          rw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
-        ],
-        rw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL]
-      ]);
+                suffices_by metis_tac[LESS_EQ_EXISTS] >>
+              Induct_on `p`
+              >- (
+                rw[] >> Cases_on `m`
+                >- fs[]
+                >- rw[FACT, DIVIDES_LMUL, DIVIDES_REFL])
+              >- (rw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL])
+      );
 ##assert can top_thm ()
 \end{alltt}
 \end{session}
@@ -571,19 +575,18 @@ One obvious step would be to merge the two successive invocations of the simplif
 \begin{alltt}
   ##eval[tac] `!m p.  0 < m ==> m divides FACT (m + p)`
                 suffices_by metis_tac[LESS_EQ_EXISTS] >>
-              Induct_on `p`  >| [
-                Cases_on `m` >| [
-                  fs[],
-                  rw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
-                ],
-                rw[FACT, ADD_CLAUSES, DIVIDES_RMUL]
-              ]
+              Induct_on `p`
+              >- (
+                rw[] >> Cases_on `m`
+                >- fs[]
+                >- rw[FACT, DIVIDES_LMUL, DIVIDES_REFL])
+              >- (rw[FACT, ADD_CLAUSES, DIVIDES_RMUL])
 >>__ restart(); e tac;
 ##assert can top_thm()
 \end{alltt}
 \end{hol}
 
-Now we'll make the occasionally dangerous assumption that the simplifications of the step case won't interfere with what is happening in the base case, and move the step case's tactic to precede the first \ml{\gt|}, using \ml{\gt\gt}.
+Now we'll make the occasionally dangerous assumption that the simplifications of the step case won't interfere with what is happening in the base case, and move the step case's tactic to precede the first \ml{\gt-}, using \ml{\gt\gt}.
 When the \ml{Induct} tactic generates two sub-goals, the step case's simplification will be applied to both of them:
 \begin{session}
 \begin{alltt}
@@ -602,10 +605,9 @@ This means that our tactic can become
              Induct_on `p` >>
              rw[FACT, ADD_CLAUSES,DIVIDES_RMUL] >>
              (* base case only remains *)
-             Cases_on `m` >| [
-               fs[],
-               rw[FACT,DIVIDES_LMUL,DIVIDES_REFL]
-             ]
+             Cases_on `m`
+             >- fs[]
+             >- rw[FACT,DIVIDES_LMUL,DIVIDES_REFL]
 >>__ val tac = it; restart(); e tac;
 ##assert can top_thm ()
 \end{alltt}
@@ -782,12 +784,12 @@ or $n$.  The polished tactic is the following:
 \verb+!n. ~(n = 1) ==> ?p. prime p /\ p divides n+ \\ \hline
 \verb+completeInduct_on `n` >>+ \\
 \verb+  rw [] >>+ \\
-\verb+  Cases_on `prime n` >| [+ \\
-\verb+    metis_tac [DIVIDES_REFL], + \\
-\verb+    `?x. x divides n /\ x<>1 /\ x<>n` + \\
-\verb+      by METIS_TAC[prime_def] >>+ \\
-\verb+    metis_tac [LESS_OR_EQ, PRIME_2, +\\
-\verb+               DIVIDES_LE,DIVIDES_TRANS,DIVIDES_0]]+ \\
+\verb+  Cases_on `prime n` + \\
+\verb+  >- metis_tac [DIVIDES_REFL] >> + \\
+\verb+  `?x. x divides n /\ x<>1 /\ x<>n` + \\
+\verb+    by METIS_TAC[prime_def] >>+ \\
+\verb+  metis_tac [LESS_OR_EQ, PRIME_2, +\\
+\verb+             DIVIDES_LE,DIVIDES_TRANS,DIVIDES_0]+ \\
 \end{tabular}
 \end{description}
 We start by invoking complete induction. This gives us an inductive

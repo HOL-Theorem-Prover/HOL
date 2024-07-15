@@ -131,6 +131,18 @@ Proof
   fs [cv_rep_def] \\ rw []
 QED
 
+Theorem cv_rep_gt[cv_rep]:
+  b2c (n > m) = cv_lt (Num m) (Num n)
+Proof
+  fs [cv_rep_def] \\ rw []
+QED
+
+Theorem cv_rep_ge[cv_rep]:
+  b2c (n >= m) = cv_sub (Num 1) (cv_lt (Num n) (Num m))
+Proof
+  fs [cv_rep_def] \\ rw []
+QED
+
 Theorem cv_rep_num_case[cv_rep]:
   cv_rep p1 c1 Num x /\
   cv_rep p2 c2 (a:'a->cv) y /\
@@ -321,21 +333,16 @@ Proof
   simp[int_sub, GSYM cv_neg_int, GSYM cv_int_add]
 QED
 
-Definition total_int_div_def:
-  total_int_div i j = if j = 0 then 0 else int_div i j
-End
-
-Theorem total_int_div:
-  total_int_div i j =
-    if j = 0 then 0
-    else if j < 0 then
-            if i < 0 then &(Num i DIV Num j)
-            else -&(Num i DIV Num j) + if Num i MOD Num j = 0 then 0 else -1
+Theorem int_div[local]:
+  j <> 0 ==>
+  int_div i j =
+    if j < 0 then
+      if i < 0 then &(Num i DIV Num j)
+      else -&(Num i DIV Num j) + if Num i MOD Num j = 0 then 0 else -1
     else if i < 0 then -&(Num i DIV Num j) + if Num i MOD Num j = 0 then 0 else -1
          else &(Num i DIV Num j)
 Proof
-  simp[total_int_div_def, int_div] >>
-  Cases_on `j = 0` >> gvs[] >>
+  strip_tac >> simp[int_div] >>
   Cases_on `j < 0` >> Cases_on `i < 0` >> gvs[] >>
   namedCases_on `i` ["ni","ni",""] >> gvs[] >>
   namedCases_on `j` ["nj","nj",""] >> gvs[]
@@ -343,32 +350,48 @@ QED
 
 Definition cv_int_div_def:
   cv_int_div i j =
-    cv_if (cv_eq j (Num 0)) (Num 0) $
-      cv_if (cv_ispair j) (* if j < 0 *)
-        (cv_if (cv_ispair i) (* if i < 0 *)
-          (cv_div (cv_fst i) (cv_fst j))
-          (cv_int_add
-            (Pair (cv_div i (cv_fst j)) (Num 0))
-            (cv_if (cv_mod i (cv_fst j))
-              (Pair (Num 1) (Num 0)) (Num 0))))
-        (cv_if (cv_ispair i) (* if i < 0 *)
-          (cv_int_add
-            (Pair (cv_div (cv_fst i) j) (Num 0))
-            (cv_if (cv_mod (cv_fst i) j)
-              (Pair (Num 1) (Num 0)) (Num 0)))
-          (cv_div i j))
+    cv_if (cv_ispair j) (* if j < 0 *)
+      (cv_if (cv_ispair i) (* if i < 0 *)
+        (cv_div (cv_fst i) (cv_fst j))
+        (cv_int_add
+          (Pair (cv_div i (cv_fst j)) (Num 0))
+          (cv_if (cv_mod i (cv_fst j))
+            (Pair (Num 1) (Num 0)) (Num 0))))
+      (cv_if (cv_ispair i) (* if i < 0 *)
+        (cv_int_add
+          (Pair (cv_div (cv_fst i) j) (Num 0))
+          (cv_if (cv_mod (cv_fst i) j)
+            (Pair (Num 1) (Num 0)) (Num 0)))
+        (cv_div i j))
+End
+
+Definition total_int_div_def:
+  total_int_div i j = if j = 0 then 0 else int_div i j
+End
+
+Definition cv_total_int_div_def:
+  cv_total_int_div i j =
+    cv_if (cv_eq j (Num 0)) (Num 0) (cv_int_div i j)
 End
 
 Theorem cv_int_div[cv_rep]:
-  from_int (total_int_div i j) = cv_int_div (from_int i) (from_int j)
+  j <> 0 ==> from_int (int_div i j) = cv_int_div (from_int i) (from_int j)
 Proof
-  simp[total_int_div, cv_int_div_def, from_int_def] >>
+  simp[int_div, cv_int_div_def, from_int_def] >>
   Cases_on `j = 0` >> gvs[] >>
   Cases_on `j < 0` >> Cases_on `i < 0` >> gvs[] >>
   Cases_on `i = 0` >> gvs[] >>
   reverse $ Cases_on `Num i MOD Num j` >> gvs[] >>
   simp[INT_ADD_CALCULATE, cv_int_add_def, cv_int_lt_def] >>
   Cases_on `Num i DIV Num j` >> gvs[]
+QED
+
+Theorem cv_total_int_div[cv_rep]:
+  from_int (total_int_div i j) = cv_total_int_div (from_int i) (from_int j)
+Proof
+  simp[total_int_div_def, cv_total_int_div_def] >>
+  Cases_on `j = 0` >> gvs[] >- simp[from_int_def] >>
+  rw[GSYM cv_int_div] >> Cases_on `j` >> gvs[from_int_def]
 QED
 
 Definition cv_int_mul_def:
@@ -391,6 +414,35 @@ Proof
   namedCases_on `i` ["ni","ni",""] >> gvs[] >>
   namedCases_on `j` ["nj","nj",""] >> gvs[] >>
   gvs[INT_MUL_CALCULATE]
+QED
+
+Definition cv_int_mod_def:
+  cv_int_mod i j = cv_int_add i (cv_int_neg (cv_int_mul (cv_int_div i j) j))
+End
+
+Definition total_int_mod_def:
+  total_int_mod i j = if j = 0 then i else int_mod i j
+End
+
+Definition cv_total_int_mod_def:
+  cv_total_int_mod i j = cv_if (cv_eq j (Num 0)) i (cv_int_mod i j)
+End
+
+Theorem cv_int_mod[cv_rep]:
+  j <> 0 ==>
+  from_int (int_mod i j) = cv_int_mod (from_int i) (from_int j)
+Proof
+  strip_tac >> simp[cv_int_mod_def] >>
+  simp[GSYM cv_int_div, GSYM cv_int_mul, GSYM cv_int_sub] >>
+  simp[Once int_mod]
+QED
+
+Theorem cv_total_int_mod[cv_rep]:
+  from_int (total_int_mod i j) = cv_total_int_mod (from_int i) (from_int j)
+Proof
+  simp[total_int_mod_def, cv_total_int_mod_def] >>
+  Cases_on `j = 0` >> gvs[] >- simp[from_int_def] >>
+  rw[GSYM cv_int_mod] >> Cases_on `j` >> gvs[from_int_def]
 QED
 
 (*----------------------------------------------------------*
@@ -458,7 +510,7 @@ Definition cv_rat_norm_def:
     let d = cv_gcd (cv_abs (cv_fst r)) (cv_snd r) in
     cv_if (cv_lt d (Num 2))
       r
-      (Pair (cv_int_div (cv_fst r) d) (cv_div (cv_snd r) d))
+      (Pair (cv_total_int_div (cv_fst r) d) (cv_div (cv_snd r) d))
 End
 
 Theorem cv_rat_norm_div_gcd:
@@ -469,7 +521,7 @@ Proof
   simp[GSYM cv_Num, GSYM cv_gcd_thm, c2b_def] >>
   ntac 3 $ simp[Once COND_RAND] >> simp[COND_RATOR] >>
   `Num (gcd (Num a) b) = from_int (&(gcd (Num a) b))` by simp[from_int_def] >>
-  simp[GSYM cv_int_div] >>
+  simp[GSYM cv_total_int_div] >>
   simp[wordsTheory.NUMERAL_LESS_THM] >>
   Cases_on `a = 0 /\ b = 0 \/ gcd (Num a) b = 1` >> gvs[] >>
   IF_CASES_TAC >> gvs[] >> simp[total_int_div_def] >> IF_CASES_TAC >> gvs[]

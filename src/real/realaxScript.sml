@@ -284,6 +284,18 @@ Proof
   end
 QED
 
+(* Floor and ceiling (nums) *)
+Definition NUM_FLOOR_def[nocompute] :
+   NUM_FLOOR (x:real) = LEAST (n:num). real_of_num (n+1) > x
+End
+
+Definition NUM_CEILING_def[nocompute] :
+   NUM_CEILING (x:real) = LEAST (n:num). x <= real_of_num n
+End
+
+Overload flr = “NUM_FLOOR”
+Overload clg = “NUM_CEILING”
+
 (* ------------------------------------------------------------------------- *)
 (* Some elementary "bootstrapping" lemmas needed by RealArith.sml            *)
 (*                                                                           *)

@@ -3,7 +3,7 @@ open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_proof";
 open stringTheory finite_mapTheory pred_setTheory listTheory sumTheory;
 open lisp_typeTheory lisp_semanticsTheory lisp_evalTheory;
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (* translating the semantics' s-expressions into implementation s-expressions *)
 

@@ -41,5 +41,7 @@ sig
  val DECIDE_TAC               : tactic
 
  val prefer_num               : unit -> unit
+ val temp_prefer_num          : unit -> unit
  val deprecate_num            : unit -> unit
+ val temp_deprecate_num       : unit -> unit
 end

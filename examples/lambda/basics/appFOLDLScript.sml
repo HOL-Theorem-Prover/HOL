@@ -161,6 +161,12 @@ Proof
  >> rw [appstar_APPEND]
 QED
 
+Theorem appstar_SING[simp] :
+    M @* [N] = M @@ N
+Proof
+    rw [GSYM appstar_CONS]
+QED
+
 Theorem ssub_appstar :
     fm ' (M @* Ns) = (fm ' M) @* MAP (ssub fm) Ns
 Proof
@@ -173,6 +179,9 @@ Proof
     Induct_on ‘args’ using SNOC_INDUCT
  >> rw [appstar_SNOC, MAP_SNOC]
 QED
+
+(* |- !args t sub. t @* args ISUB sub = (t ISUB sub) @* MAP (\t. t ISUB sub) args *)
+Theorem appstar_ISUB = FOLDL_APP_ISUB
 
 Theorem FV_appstar :
     !M Ns. FV (M @* Ns) = FV M UNION (BIGUNION (IMAGE FV (set Ns)))
