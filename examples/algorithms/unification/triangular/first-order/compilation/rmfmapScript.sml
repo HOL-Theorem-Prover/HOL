@@ -43,7 +43,9 @@ Proof
   simp[FUN_REL_def] >> Cases >> simp[]
 QED
 
-fun xfer l th = transfer_thm 5 l true (global_ruledb()) (GEN_ALL th)
+fun xfer th = time (transfer_thm 5 {force_imp = true, cleftp = true, hints = []}
+                                 (global_ruledb()))
+                                 (GEN_ALL th)
 
 Definition svR_def:
   svR sp u v = vR (sp2fm sp) u v
@@ -56,8 +58,7 @@ Proof
   gs[sp2fm_correct]
 QED
 
-Theorem svR_thm = xfer ["vR", "FLOOKUP", "option_CASE"]
-                       (INST_TYPE [alpha |-> “:num”] substTheory.vR_def)
+Theorem svR_thm = xfer (INST_TYPE [alpha |-> “:num”] substTheory.vR_def)
 
 Definition swfs_def:
   swfs sp = wfs (sp2fm sp)
@@ -79,7 +80,7 @@ Proof
   simp[FUN_REL_def, svwalk_def, sp2fm_correct]
 QED
 
-Theorem svwalk_thm = xfer [] walkTheory.vwalk_def
+Theorem svwalk_thm = xfer walkTheory.vwalk_def
 
 Definition swalk_def:
   swalk sp t = walk (sp2fm sp) t
@@ -91,7 +92,7 @@ Proof
   simp[FUN_REL_def, swalk_def, sp2fm_correct]
 QED
 
-Theorem swalk_thm = xfer [] walkTheory.walk_def
+Theorem swalk_thm = xfer walkTheory.walk_def
 
 Definition soc_def:
   soc sp t v = oc (sp2fm sp) t v
@@ -103,8 +104,8 @@ Proof
   simp[sp2fm_correct, FUN_REL_def, soc_def]
 QED
 
-Theorem soc_thm = xfer [] walkstarTheory.oc_thm
-Theorem soc_walking = xfer [] walkstarTheory.oc_walking
+Theorem soc_thm = xfer walkstarTheory.oc_thm
+Theorem soc_walking = xfer walkstarTheory.oc_walking
 
 (*
 val th = GEN_ALL unifDefTheory.unify_def
@@ -140,8 +141,7 @@ QED
 
 Theorem sunify_thm =
         unifDefTheory.unify_def |> SRULE[ext_s_check_def]
-                                |> xfer []
-                                |> SRULE[] (* to β-reduce UNCURRY *)
+                                |> xfer
 
 val _ = export_theory();
 

@@ -17,9 +17,10 @@ sig
     val badnet : t -> term Net.net
     val domrngs : t -> thm list
     val atomic_termnet : t -> (string * term) Net.net
+    val check_for_atom : t -> term -> bool
   end
 
-  val prove_relation_thm : bool -> term -> term -> thm
+  val prove_relation_thm : ruledb.t -> bool -> term -> term -> thm
   val resolve_relhyps : string list -> bool -> ruledb.t -> thm -> thm seq.seq
   val resolveN : int -> string list -> bool -> ruledb.t -> term -> thm seq.seq
   val check_constraints : bool -> ruledb.t -> thm -> thm seq.seq

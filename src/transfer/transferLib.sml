@@ -3,6 +3,8 @@ struct
 
 open HolKernel boolLib
 open transferTheory FullUnify simpLib
+open pred_setTheory
+
 val op $ = Portable.$
 infix ++
 
@@ -12,7 +14,7 @@ val SIMP_CONV = simpLib.SIMP_CONV
 val SIMP_RULE = simpLib.SIMP_RULE
 
 val transfer_ss = boolSimps.bool_ss ++ combinSimps.COMBIN_ss ++
-                  rewrites [eq_equalityp]
+                  rewrites [eq_equalityp, pairTheory.UNCURRY_DEF]
 
 fun relconstraint_tm t =
     case dest_term t of
@@ -97,14 +99,14 @@ fun addrule0 (th, r) =
     let
       val th = UNDISCH_ALL th handle HOL_ERR _ => th
     in
-      r |> fupd_left (Net.enter (lhand (concl th), th))
-        |> fupd_right(Net.enter (rand (concl th), th))
+      r |> fupd_left (Net.insert (lhand (concl th), th))
+        |> fupd_right(Net.insert (rand (concl th), th))
     end
 
 fun addrule th r = List.foldl addrule0 r (CONJUNCTS th)
 
-fun addsafe th r = r |> fupd_safe (Net.enter (concl th, th))
-fun addbad t r = r |> fupd_bad (Net.enter(t,t))
+fun addsafe th r = r |> fupd_safe (Net.insert (concl th, th))
+fun addbad t r = r |> fupd_bad (Net.insert(t,t))
 fun add_domrng th r = r |> fupd_DOMRNG_ss (cons th)
 
 fun lookup_rule cleftp (rdb:t) t =
@@ -112,11 +114,11 @@ fun lookup_rule cleftp (rdb:t) t =
       val n = if cleftp then #left rdb else #right rdb
       val t = if cleftp then lhand t else rand t
     in
-      Net.lookup t n
+      Net.match t n
     end
 
 fun check_for_atom (rdb:t) ct =
-    let val pats = Net.lookup ct (atomic_termnet rdb)
+    let val pats = Net.match ct (atomic_termnet rdb)
     in
       List.exists (fn (_, p) => can (match_term p) ct) pats
     end
@@ -209,42 +211,53 @@ fun first f [] = NONE
   | first f (x::xs) = SOME (f x) handle HOL_ERR _ => first f xs
 
 
-fun prove_relation_thm cleftp ct skt =
+fun prove_relation_thm rdb cleftp ct skt =
     let
-      val argl = if cleftp then [ct, skt] else [skt, ct]
-      val skty = type_of skt and cty = type_of ct
+      fun recurse ct skt =
+          let
+            val argl = if cleftp then [ct, skt] else [skt, ct]
+            val skty = type_of skt and cty = type_of ct
+          in
+            if ruledb.check_for_atom rdb ct then
+              ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+            else
+              case dest_term ct of
+                  VAR _ =>
+                    ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+                | CONST _ =>
+                    ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+                | COMB(cf, cx) =>
+                  let
+                    val fthm = recurse cf (rator skt)
+                    val xthm = recurse cx (rand skt)
+                    val cj = CONJ fthm xthm
+                  in
+                    MATCH_MP GFUN_REL_COMB cj
+                    handle HOL_ERR _ =>
+                           UNDISCH (MATCH_MP GFUN_REL_COMB_EQ cj)
+                  end
+                | LAMB (cbv, cbod) =>
+                  let
+                    val (skbv, skbod) = dest_abs skt
+                    val brel = ty2relvar cleftp (type_of skbv) (type_of cbv)
+                    val b_asm_t =
+                        list_mk_comb(brel,
+                                     if cleftp then [cbv, skbv]
+                                     else [skbv, cbv])
+                    val bod_thm = recurse cbod skbod
+                    val (lv,rv) = if cleftp then (cbv,skbv) else (skbv,cbv)
+                    val hyp_thm =
+                        bod_thm
+                          |> CONV_RULE
+                               (FORK_CONV (UNBETA_CONV lv, UNBETA_CONV rv))
+                          |> DISCH b_asm_t |> GENL [lv,rv]
+                  in
+                    EQ_MP (PART_MATCH lhs (GSYM FUN_REL_def) (concl hyp_thm))
+                          hyp_thm
+                    end
+          end
     in
-      if numSyntax.is_numeral ct then
-        ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
-      else
-        case dest_term ct of
-            VAR _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
-          | CONST _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
-          | COMB(cf, cx) =>
-            let
-              val fthm = prove_relation_thm cleftp cf (rator skt)
-              val xthm = prove_relation_thm cleftp cx (rand skt)
-              val cj = CONJ fthm xthm
-            in
-              MATCH_MP GFUN_REL_COMB cj handle HOL_ERR _ =>
-               UNDISCH (MATCH_MP GFUN_REL_COMB_EQ cj)
-            end
-          | LAMB (cbv, cbod) =>
-            let
-              val (skbv, skbod) = dest_abs skt
-              val brel = ty2relvar cleftp (type_of skbv) (type_of cbv)
-              val b_asm_t =
-                  list_mk_comb(brel,
-                               if cleftp then [cbv, skbv] else [skbv, cbv])
-              val bod_thm = prove_relation_thm cleftp cbod skbod
-              val (lv,rv) = if cleftp then (cbv,skbv) else (skbv,cbv)
-              val hyp_thm =
-                  bod_thm
-                    |> CONV_RULE (FORK_CONV (UNBETA_CONV lv, UNBETA_CONV rv))
-                    |> DISCH b_asm_t |> GENL [lv,rv]
-            in
-              EQ_MP (PART_MATCH lhs (GSYM FUN_REL_def) (concl hyp_thm)) hyp_thm
-            end
+      recurse ct skt
     end
 
 
@@ -302,7 +315,7 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
               [] => sqreturn (progressed,th)
             | h::rest =>
               let
-                val ths = Net.lookup h (ruledb.safenet ruledb)
+                val ths = Net.match h (ruledb.safenet ruledb)
               in
                 ((seq.fromList ths ~> u1 h th) +++
                  sqreturn(progressed, th,[])) ~>
@@ -314,7 +327,7 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
             | h::rest =>
                 if List.exists
                      (fn pat => can (match_term (gen_tyvarify pat)) h)
-                     (Net.lookup h (ruledb.badnet ruledb))
+                     (Net.match h (ruledb.badnet ruledb))
                 then
                   fail
                 else bad_recurse rest th
@@ -445,8 +458,6 @@ fun seqrptUntil P f x =
     else f x ~> seqrptUntil P f
 
 fun seqrpt f x = seqrptUntil (List.all is_relconstraint o hyp) f x
-
-open pred_setTheory
 
 val RES_FORALL_RRANGE =
     RES_FORALL_THM
@@ -585,7 +596,7 @@ val RDOM_tm = prim_mk_const{Thy = "relation", Name = "RDOM"}
 
 fun transfer_skeleton rdb (c:config) t =
     let
-      val th0 = prove_relation_thm (#cleftp c) t (build_skeleton rdb t)
+      val th0 = prove_relation_thm rdb (#cleftp c) t (build_skeleton rdb t)
     in
       if #force_imp c then
         let
