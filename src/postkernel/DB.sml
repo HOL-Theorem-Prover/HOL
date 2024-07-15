@@ -228,10 +228,9 @@ fun thy s =
 fun findpred pat =
     let
         val pat = toLower pat
-        open DBSearchParser regexpMatch
-        val r = translate_regexp $ parse_regexp pat
+        open DBSearchParser
     in
-        match (contains r) o toLower
+        contains_regexp pat o toLower
     end
 
 fun find0 incprivatep s =

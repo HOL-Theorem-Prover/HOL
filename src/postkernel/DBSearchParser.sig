@@ -9,5 +9,5 @@ sig
                 | Any
     val parse_regexp : string -> search_regexp
     val translate_regexp : search_regexp -> regexpMatch.regexp
-    val contains : regexpMatch.regexp -> regexpMatch.regexp
+    val contains_regexp : string -> string -> bool
 end

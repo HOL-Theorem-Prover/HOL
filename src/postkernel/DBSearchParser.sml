@@ -77,6 +77,7 @@ fun parse_regexp input = let
           | T(#"*")::(E a)::ts => E(Many(a))::ts
           | T(#"*")::(T c)::ts => E(Many(Word [c]))::ts
           | (T #")")::(E x)::(T #"(")::ts => E x::ts
+          | (T #")")::(E x)::(E y)::ts => (T #")")::E(Seq(y, x))::ts
           | (E a)::(E b)::ts => E(Seq(b, a))::ts
           | T(c)::E(Word cs)::ts => E(Word(cs@[c]))::ts
           | T(c)::ts => E(Word [c])::ts
@@ -115,8 +116,12 @@ in
       | Any => Symbs word_set
 end
 
-val is_regexp = List.exists is_special_char o String.explode
-
-fun contains pat = Dot (any, Dot (pat, any))
+fun contains_regexp pattern = let
+    val intermediate = parse_regexp pattern
+    val compiled_pattern = translate_regexp intermediate
+    fun contains pat = Dot (any, Dot (pat, any))
+in
+    match (contains compiled_pattern)
+end
 
 end
