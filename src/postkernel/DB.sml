@@ -225,19 +225,20 @@ fun thy s =
         | SOME m => Map.foldl (fn (lcnm, datas, A) => datas @ A) [] m
     end
 
-fun findpred pat s =
+fun findpred pat =
     let
+        val pat = toLower pat
         open DBSearchParser
-        val pat = toLower pat and s = toLower s
     in
-        contains_regexp pat s
+        contains_regexp pat o toLower
     end
 
 fun find0 incprivatep s =
     let
       val DB{namemap,...} = CT()
+      val check = findpred s (* pre-compiles regexp *)
       fun subfold (k, vs, acc) =
-          if findpred s k then
+          if check k then
             (if incprivatep then vs
              else List.filter (fn (_, (_, _, {private=p})) => not p) vs) @
             acc
@@ -452,7 +453,10 @@ fun polarity_search (polarity : bool) (match_term : term) =
 fun apropos_in pat dbdata =
   List.filter (fn (_, pdv) => matches pat $ pdv_thm pdv) dbdata
 
-fun find_in s = List.filter (findpred s o dataName)
+fun find_in s = let
+    val check = findpred s
+in List.filter (check o dataName)
+end
 
 fun listDB () =
     let fun subfold (k,v,acc) = v @ acc
