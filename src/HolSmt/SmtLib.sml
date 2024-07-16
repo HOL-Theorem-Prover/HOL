@@ -560,20 +560,6 @@ local
     ])
   end
 
-in
-
-  (* Controls whether HolSmt will try to include relevant theorems when trying
-     to prove the goal, including theorems necessary for solving goals that
-     have terms of type `num`. Unfortunately, these theorems may also hinder
-     SMT performance in some cases, hence this escape hatch. *)
-  val include_theorems = ref true
-
-  fun goal_to_SmtLib logic =
-    Lib.apsnd (fn xs => xs @ ["(exit)\n"]) o (goal_to_SmtLib_aux logic)
-
-  fun goal_to_SmtLib_with_get_proof logic =
-    Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o (goal_to_SmtLib_aux logic)
-
   (* convert `num` literals into integer literals *)
   fun NUM_TO_INT_CONV tm =
   let
@@ -607,6 +593,142 @@ in
       (Conv.THENC (Conv.SUB_CONV NUM_TO_INT_CONV, conv_term)) tm
   end
 
+  local
+    structure A = arithmeticTheory
+    structure I = integerTheory
+    structure R = realTheory
+    structure RA = realaxTheory
+    infixr 3 -->
+  in
+    fun thms_per_const const =
+    let
+      val { Thy, Name, Ty } = Term.dest_thy_const const
+      val bool = Type.bool
+      val num = numSyntax.num
+      val op--> = Type.-->
+    in
+      (* NOTE: when adding a theorem to the list below, make sure that it
+         doesn't have any free var -- otherwise, ASSUME_TAC will specialize
+         the theorem to any free var in the goal that happens to have the same
+         name, which very often is not what is desired. As an example,
+         integerTheory's `INT_POW` should not be added -- instead, add
+         `int_exp`. If no appropriate quantified theorem is available,
+         `Drule.GEN_ALL` can be used to quantify all free vars in a theorem.
+
+         Also, make sure the theorem is really needed -- some theorems seem to
+         cause an explosion in the time needed to solve some goals, often
+         making Z3 unable to solve them -- and it's not always easy to tell a
+         priori which ones do. As an example, arithmeticTheory.EXP_1 doesn't
+         seem to cause issues, but EXP_2 prevents Z3 from solving
+         ``x DIV 42 <= x``. *)
+      case (Thy, Name) of
+        ("arithmetic", "*") => [ I.NUM_INT_MUL ]
+      | ("arithmetic", "+") => [ I.INT_ADD ]
+      | ("arithmetic", "-") => [ int_arithTheory.INT_NUM_SUB ]
+      | ("arithmetic", "<=") => [ I.INT_LE ]
+      | ("arithmetic", ">") => [ A.GREATER_DEF ]
+      | ("arithmetic", ">=") => [ A.GREATER_EQ ]
+      | ("arithmetic", "DIV") => [ I.NUM_INT_EDIV ]
+      | ("arithmetic", "EXP") => [ A.EXP, A.EXP_1, A.EXP_POS ]
+      | ("arithmetic", "MAX") => [ A.MAX_DEF ]
+      | ("arithmetic", "MIN") => [ A.MIN_DEF ]
+      | ("arithmetic", "MOD") => [ I.NUM_INT_EMOD ]
+      | ("integer", "Num") => [ I.INT_OF_NUM, I.NUM_OF_INT ]
+      | ("integer", "int_div") => [ I.INT_DIV_EDIV ]
+      | ("integer", "int_exp") => [ I.int_exp ]
+      | ("integer", "int_max") => [ I.INT_MAX ]
+      | ("integer", "int_min") => [ I.INT_MIN ]
+      | ("integer", "int_mod") => [ I.INT_MOD_EMOD ]
+      | ("integer", "int_of_num") => [ I.INT_OF_NUM, I.INT_POS, I.NUM_OF_INT ]
+      | ("integer", "int_quot") => [ I.INT_QUOT_EDIV ]
+      | ("integer", "int_rem") => [ I.INT_REM_EMOD ]
+      | ("marker", "Abbrev") => [ markerTheory.Abbrev_def ]
+      | ("min", "=") =>
+          if Type.compare (Ty, num --> num --> bool) = EQUAL then
+            [ I.INT_INJ ]
+          else
+            []
+      | ("num", "SUC") => [ I.INT ]
+      | ("prim_rec", "<") => [ I.INT_LT ]
+      | ("realax", "/") => [ HolSmtTheory.real_div_smt_rdiv ]
+      | ("realax", "abs") => [ R.abs ]
+      | ("realax", "max") => [ RA.real_max ]
+      | ("realax", "min") => [ RA.real_min ]
+      | ("realax", "pow") => [ R.POW_2, R.POW_ONE, R.REAL_POW_LT, RA.real_pow ]
+      | _ => []
+    end
+  end
+
+  (* Prepends the conclusion of a theorem to the list of its hypothesis and
+     returns the resulting list of terms *)
+  fun thm_terms thm =
+  let
+    val (hyps, concl) = Thm.dest_thm thm
+  in
+    concl :: hyps
+  end
+
+  (* Compares two theorems *)
+  fun thm_compare (thm1, thm2) =
+    List.collate Term.compare (thm_terms thm1, thm_terms thm2)
+
+  (* An empty set of theorems *)
+  val empty_thmset = HOLset.empty thm_compare
+
+  (* Computes the list of theorems to add to the goal, given a list of all the
+     terms in the goal. Since the resulting list of theorems might require more
+     theorems to be added (for the SMT solvers to properly solve the goal), this
+     function calls itself recursively until no new theorems are needed anymore. *)
+  fun get_thms ([], acc) = HOLset.listItems acc
+    | get_thms (terms, acc) =
+      let
+        (* Create a set of all the constants used in all the provided terms *)
+        val atoms = Term.all_atomsl terms Term.empty_tmset
+        val consts = HOLset.filter Term.is_const atoms
+
+        (* Generate a set of all the theorems we want to add, based on these
+           constants *)
+        fun const_thms (const, acc) = HOLset.addList (acc, thms_per_const const)
+        val wanted_thms = HOLset.foldl const_thms empty_thmset consts
+
+        (* Apply NUM_TO_INT_CONV to these theorems, to convert any num literals
+           they might have into int literals. We do this here because this
+           conversion introduces constants that might trigger new theorems to be
+           added in subsequent iterations *)
+        fun conv_thm (thm, acc) =
+          HOLset.add (acc, Conv.CONV_RULE NUM_TO_INT_CONV thm)
+        val wanted_thms = HOLset.foldl conv_thm empty_thmset wanted_thms
+
+        (* Since some of the theorems might have already been added in a
+           previous recursive call, here we compute the theorems that will
+           actually be newly added in this iteration *)
+        val thms_to_add = HOLset.difference (wanted_thms, acc)
+
+        (* Now we compute the new terms that will have to be analyzed in the
+           next recursive call, which correspond to the terms used in the
+           theorems newly added in this iteration *)
+        fun add_new_terms (thm, acc) = HOLset.addList (acc, thm_terms thm)
+        val new_terms = HOLset.foldl add_new_terms Term.empty_tmset thms_to_add
+      in
+        get_thms (HOLset.listItems new_terms, HOLset.union (acc, thms_to_add))
+      end
+
+in
+
+  (* Controls whether HolSmt will try to include relevant theorems when trying
+     to prove the goal, including theorems necessary for solving goals that
+     have terms of type `num`. Unfortunately, these theorems may also hinder
+     SMT performance in some cases, hence this escape hatch. *)
+  val include_theorems = ref true
+
+  fun goal_to_SmtLib logic =
+    Lib.apsnd (fn xs => xs @ ["(exit)\n"]) o (goal_to_SmtLib_aux logic)
+
+  fun goal_to_SmtLib_with_get_proof logic =
+    Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o (goal_to_SmtLib_aux logic)
+
+  val NUM_TO_INT_CONV = NUM_TO_INT_CONV
+
   (* Applies NUM_TO_INT_CONV to both the assumptions and the conclusion *)
   val NUM_TO_INT_TAC =
   let
@@ -616,48 +738,30 @@ in
     CONV_TAC NUM_TO_INT_CONV
   end
 
+  (* This tactic calls ASSUME_TAC on theorems that are deemed necessary for SMT
+     solvers to solve the goal (but only if `include_theorems` is true) *)
+  fun ADD_THEOREMS_TAC g =
+  let
+    val (asms, concl) = g
+    val goal_terms = concl :: asms
+
+    val thms_to_add =
+      if !include_theorems then
+        get_thms (goal_terms, empty_thmset)
+      else
+        []
+
+    val tactic = Tactical.MAP_EVERY Tactic.ASSUME_TAC thms_to_add
+  in
+    tactic g
+  end
+
   (* Eliminates some HOL terms that are not supported by the SMT-LIB
      translation. It also adds some useful theorems to the list of assumptions
      so that SMT solvers can reason about some symbols defined in HOL4 theories. *)
   fun SIMP_TAC simp_let =
   let
     open Tactical simpLib
-    val facts =
-    let
-      open arithmeticTheory integerTheory realTheory realaxTheory
-    in
-      if !include_theorems then [
-        (* NOTE: when adding a theorem to the list below, make sure that it
-           doesn't have any free var -- otherwise, ASSUME_TAC will specialize
-           the theorem to any free var in the goal that happens to have the same
-           name, which very often is not what is desired. As an example,
-           integerTheory's `INT_POW` should not be added -- instead, add
-           `int_exp`. If no appropriate quantified theorem is available,
-           `Drule.GEN_ALL` can be used to quantify all free vars in a theorem.
-
-           Also, make sure the theorem is really needed -- some theorems seem to
-           cause an explosion in the time needed to solve some goals, often
-           making Z3 unable to solve them -- and it's not always easy to tell a
-           priori which ones do. As an example, arithmeticTheory.EXP_1 doesn't
-           seem to cause issues, but EXP_2 prevents Z3 from solving
-           ``x DIV 42 <= x``. *)
-
-        (* arithmeticTheory *)
-        EXP, EXP_1, EXP_POS, GREATER_DEF, GREATER_EQ, MAX_DEF, MIN_DEF,
-        (* integerTheory *)
-        INT, INT_ADD, INT_INJ, INT_LE, INT_LT, INT_MAX, INT_MIN, INT_OF_NUM,
-        INT_POS, NUM_OF_INT, NUM_INT_MUL, NUM_INT_EDIV, NUM_INT_EMOD,
-        INT_DIV_EDIV, INT_MOD_EMOD, INT_QUOT_EDIV, INT_REM_EMOD, int_exp,
-        (* realTheory *)
-        abs, POW_2, POW_ONE, REAL_POW_LT,
-        (* realaxTheory *)
-        real_max, real_min, real_pow,
-        (* others *)
-        HolSmtTheory.real_div_smt_rdiv,
-        int_arithTheory.INT_NUM_SUB,
-        markerTheory.Abbrev_def
-      ] else []
-    end
   in
     REPEAT Tactic.GEN_TAC THEN
     (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
@@ -675,8 +779,8 @@ in
     Library.WORD_SIMP_TAC THEN
     Library.SET_SIMP_TAC THEN
     Tactic.BETA_TAC THEN
-    MAP_EVERY Tactic.ASSUME_TAC facts THEN
-    NUM_TO_INT_TAC
+    NUM_TO_INT_TAC THEN
+    ADD_THEOREMS_TAC
   end
 end  (* local *)
 
