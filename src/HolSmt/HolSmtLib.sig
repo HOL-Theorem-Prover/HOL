@@ -12,6 +12,7 @@ signature HolSmtLib = sig
   val Z3_TAC : tactic
 
   (* The tactics below accept a list of theorems, like metis_tac[] *)
+  val cvco_tac : thm list -> tactic
   val z3_tac : thm list -> tactic
   val z3o_tac : thm list -> tactic
 
