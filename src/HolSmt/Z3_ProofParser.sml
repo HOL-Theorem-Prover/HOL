@@ -123,6 +123,8 @@ local
     ("eq-propagate",    builtin_name "eq-propagate"),
     (* the following is used in `(_ th-lemma arith ...)` inference rules *)
     ("farkas",          builtin_name "farkas"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("gomory-cut",      builtin_name "gomory-cut"),
     ("hypothesis",      zero_prems "hypothesis"),
     ("iff-false",       one_prem "iff-false"),
     ("iff-true",        one_prem "iff-true"),
@@ -183,6 +185,36 @@ local
     (* the following two are the unary arithmetic negation operator *)
     ("~", SmtLib_Theories.K_zero_one intSyntax.mk_negated),
     ("~", SmtLib_Theories.K_zero_one realSyntax.mk_negated),
+    (* negative numerals and fractions such as `-3` or `1/2`, used in the
+       indices of `th-lemma arith` rules but otherwise invalid SMT-LIB term
+       syntax *)
+    ("_", SmtLib_Theories.zero_zero (fn token =>
+      let
+        val negated = String.isPrefix "-" token
+        val fraction = String.isSubstring "/" token
+      in
+        if negated orelse fraction then
+          let
+            (* convert to a fraction, if it isn't already *)
+            val n_fraction =
+              if fraction then
+                token
+              else
+                token ^ "/1"
+            val (left, right) = Lib.pair_of_list (String.fields (Lib.equal #"/")
+              n_fraction)
+            val numerator = Arbint.fromString left
+            val denominator = Arbint.fromString right
+          in
+            if denominator = Arbint.one then
+              realSyntax.term_of_int numerator
+            else
+              realSyntax.mk_div (realSyntax.term_of_int numerator,
+                realSyntax.term_of_int denominator)
+          end
+        else
+          raise ERR "<z3_builtin_dict._>" "not a negated numeral or fraction"
+      end)),
     (* bit-vector constants: bvm[n] *)
     ("_", SmtLib_Theories.zero_zero (fn token =>
       if String.isPrefix "bv" token then
