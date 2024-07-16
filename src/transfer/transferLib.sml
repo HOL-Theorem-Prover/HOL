@@ -10,11 +10,18 @@ infix ++
 
 type config = {cleftp:bool,force_imp:bool,hints:string list}
 
+val equalityp_tm = prim_mk_const{Name = "equalityp", Thy = "transfer"}
+val right_unique_tm = prim_mk_const{Name = "right_unique", Thy = "transfer"}
+val cimp_tm = mk_icomb(combinSyntax.C_tm, boolSyntax.implication)
+
+val numeral_pattern = mk_comb(numSyntax.numeral_tm, mk_var("n", numSyntax.num))
+
 val SIMP_CONV = simpLib.SIMP_CONV
 val SIMP_RULE = simpLib.SIMP_RULE
 
 val transfer_ss = boolSimps.bool_ss ++ combinSimps.COMBIN_ss ++
-                  rewrites [eq_equalityp, pairTheory.UNCURRY_DEF]
+                  rewrites [eq_equalityp, pairTheory.UNCURRY_DEF, surj_EQ,
+                            right_unique_EQ, left_unique_EQ, total_EQ]
 
 fun relconstraint_tm t =
     case dest_term t of
@@ -23,6 +30,24 @@ fun relconstraint_tm t =
                   "right_unique", "surj", "total"]
       | _ => false
 fun is_relconstraint t = relconstraint_tm (rator t)
+
+infix ~> +++
+fun sq ~> f = seq.flatten (seq.map f sq)
+fun sqreturn x = seq.fromList [x]
+fun sq1 +++ sq2 =
+    case seq.cases sq1 of
+        NONE => sq2
+      | _ => sq1
+val fail = seq.empty
+fun sqfold f [] th = sqreturn th
+  | sqfold f (x::xs) th = seq.bind (f x th) (sqfold f xs)
+
+fun seqrptUntil P f x =
+    if P x then seq.fromList [x]
+    else f x ~> seqrptUntil P f
+
+fun seqrpt f x = seqrptUntil (List.all is_relconstraint o hyp) f x
+
 
 
 fun pmk_const c =
@@ -284,22 +309,29 @@ fun eliminate_with_unifier ctys th1 h th2 =
     end
 
 
-infix ~>
-fun sq ~> f = seq.flatten (seq.map f sq)
-fun sqreturn x = seq.fromList [x]
+local
+  fun nosimpfails h th = if null (free_vars h) then fail else sqreturn th
+in
+fun simphyp ruledb h th =
+    if not (is_relconstraint h) then sqreturn th
+    else
+      let
+        val hth = SIMP_CONV transfer_ss (ruledb.domrngs ruledb) h
+      in
+        if rhs (concl hth) ~~ T then
+          sqreturn $ PROVE_HYP (EQT_ELIM hth) th
+        else if null (free_vars h) then fail
+        else
+          sqreturn $ PROVE_HYP (EQ_IMP_RULE hth |> #2 |> UNDISCH) th
+      end handle UNCHANGED => nosimpfails h th
+               | HOL_ERR _ => nosimpfails h th
+fun simphyps rdb th = sqfold (simphyp rdb) (hyp th) th
+end
 
 fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
     let
-      infix +++
       val argsel = if cleftp then lhand else rand
       val ctys = type_vars_in_term (th |> concl |> argsel)
-      fun sq1 +++ sq2 =
-          case seq.cases sq1 of
-              NONE => sq2
-            | _ => sq1
-      fun sqfold f [] th = sqreturn th
-        | sqfold f (x::xs) th = seq.bind (f x th) (sqfold f xs)
-      val fail = seq.empty
       val hs = hyp th
       fun u1 h th rule =
           case eliminate_with_unifier ctys rule h th of
@@ -331,71 +363,92 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
                 then
                   fail
                 else bad_recurse rest th
-      fun nosimpfails h th = if null (free_vars h) then fail else sqreturn th
-      fun simphyp h th =
-          if not (is_relconstraint h) then sqreturn th
-          else
-            let
-              val hth = SIMP_CONV transfer_ss (ruledb.domrngs ruledb) h
-            in
-              if rhs (concl hth) ~~ T then
-                sqreturn $ PROVE_HYP (EQT_ELIM hth) th
-              else if null (free_vars h) then fail
-              else
-                sqreturn $ PROVE_HYP (EQ_IMP_RULE hth |> #2 |> UNDISCH) th
-            end handle UNCHANGED => nosimpfails h th
-                     | HOL_ERR _ => nosimpfails h th
-      fun simphyps th = sqfold simphyp (hyp th) th
       fun assertprogress (p, th) = if not p andalso forceprogress then fail
                                    else sqreturn th
     in
-      safe_recurse hs (false,th) ~> assertprogress ~> simphyps ~>
+      safe_recurse hs (false,th) ~> assertprogress ~> simphyps ruledb ~>
       S (C bad_recurse) hyp
     end
 
 fun check_constraints cleftp rdb th =
     check{cleftp=cleftp,forceprogress=false} rdb th
 
+val core_theories = ["bool", "min", "list", "pred_set", "bag",
+                     "combin", "pair", "sum", "one"]
+
+fun thy_in_type thy ty =
+    let
+      fun recurse tys =
+          case tys of
+              [] => false
+            | [] :: rest => recurse rest
+            | (ty::rest1) :: rest2 =>
+              if is_vartype ty then recurse (rest1::rest2)
+              else let val {Thy,Tyop,Args} = dest_thy_type ty
+                   in
+                     Thy = thy orelse
+                     recurse (Args::rest1::rest2)
+                   end
+    in
+      recurse [[ty]]
+    end
+
+fun chainPreds Ps set =
+    case Ps of
+        [] => HOLset.find (K true) set
+      | P::rest => (case HOLset.find P set of
+                        SOME a => SOME a
+                      | NONE => chainPreds rest set)
+
 fun resolve_relhyps hints cleftp rdb th =
     let
-      val argsel = if cleftp then lhand else rand
+      val (argsel,oppsel) = if cleftp then (lhand,rand) else (rand,lhand)
       val ctys = type_vars_in_term (th |> concl |> argsel)
       val fail = seq.empty
       fun goodname nm t = #Name (dest_thy_const (argsel t)) = nm
                           handle HOL_ERR _ => false
-      fun goodthy t = let val {Thy,...} = dest_thy_const (argsel t)
-                      in
-                        Thy <> "bool" andalso Thy <> "min"
-                      end handle HOL_ERR _ => false
+      fun goodthy0 thys t =
+          let val {Thy,...} = dest_thy_const (argsel t)
+          in
+            not (mem Thy thys)
+          end handle HOL_ERR _ => false
+      val goodthy = goodthy0 core_theories
+      val notboolthy = goodthy0 ["min", "bool"]
+      fun current_typed t =
+          thy_in_type (current_theory()) (type_of (oppsel t))
       fun goodhyp h = not (is_relconstraint h)
       val goods0 = HOLset.filter goodhyp (hypset th)
-      fun avoid_minbool s =
-          case HOLset.find goodthy s of
-              SOME hy => SOME hy
-            | NONE => HOLset.find (K true) s
-      fun check_hints [] s = avoid_minbool s
-        | check_hints (h::hs) s =
-          case HOLset.find (goodname h) s of
-              NONE => check_hints hs s
-            | SOME hy => SOME hy
     in
       if HOLset.isEmpty goods0 then fail
       else
-        case check_hints hints goods0 of
+        case chainPreds
+               (map goodname hints @ [goodthy, notboolthy, current_typed])
+               goods0
+         of
             NONE => fail
           | SOME h =>
             let
+              val last_resorts = [UNDISCH equalityp_applied]
               val candidate_rules =
-                  case ruledb.lookup_rule cleftp rdb h of
-                      [] => [UNDISCH equalityp_applied]
-                    | ths => ths @ [UNDISCH equalityp_applied]
+                  ruledb.lookup_rule cleftp rdb h @ last_resorts
 
               fun kont candidate_rule =
                   case eliminate_with_unifier ctys candidate_rule h th of
                       NONE => fail
                     | SOME th' => sqreturn th'
+              val iff_strengtheners =
+                  let
+                    val (Rx, y) = dest_comb h
+                    val (R, x) = dest_comb Rx
+                  in
+                    if rand R ~~ implication then
+                      kont $ UNDISCH FUN_REL_iff_imp_strengthen
+                    else if rand R ~~ cimp_tm then
+                      kont $ UNDISCH FUN_REL_iff_cimp_strengthen
+                    else fail
+                  end handle HOL_ERR _ => fail
             in
-              seq.fromList candidate_rules ~> kont ~>
+              ((seq.fromList candidate_rules ~> kont) +++ iff_strengtheners) ~>
               check {cleftp=cleftp,forceprogress=false} rdb
             end
     end
@@ -453,12 +506,6 @@ fun eliminate_booleans_and_equalities cleftp th =
     end
 end (* local *)
 
-fun seqrptUntil P f x =
-    if P x then seq.fromList [x]
-    else f x ~> seqrptUntil P f
-
-fun seqrpt f x = seqrptUntil (List.all is_relconstraint o hyp) f x
-
 val RES_FORALL_RRANGE =
     RES_FORALL_THM
       |> INST_TYPE [alpha |-> beta]
@@ -483,11 +530,6 @@ val RES_EXISTS_RDOM =
       |> REWRITE_RULE [pred_setTheory.SPECIFICATION]
 
 
-val equalityp_tm = prim_mk_const{Name = "equalityp", Thy = "transfer"}
-val right_unique_tm = prim_mk_const{Name = "right_unique", Thy = "transfer"}
-val cimp_tm = mk_icomb(combinSyntax.C_tm, boolSyntax.implication)
-
-val numeral_pattern = mk_comb(numSyntax.numeral_tm, mk_var("n", numSyntax.num))
 
 val ruledb =
     let
@@ -497,14 +539,14 @@ val ruledb =
       empty_rdb
         |> addrule EQ_bi_unique
         |> addrule UPAIR_COMMA
-        |> addrule ALL_total_iff_cimp
         |> addrule ALL_total_cimp_cimp
-        |> addrule ALL_surj_iff_imp
+        |> addrule ALL_total_iff_cimp
         |> addrule ALL_surj_imp_imp
         |> addrule ALL_IFF
         |> addrule ALL_surj_RDOM
         |> addrule ALL_total_RRANGE
         |> addrule ALL_total_iff_imp_RRANGE
+        |> addrule ALL_surj_iff_imp (* best for quotient type situations *)
         |> addrule EXISTS_total_iff_imp
         |> addrule EXISTS_total_imp_imp
         |> addrule EXISTS_surj_iff_cimp
@@ -593,19 +635,16 @@ fun search_for P sq =
 fun const_occurs c = can (find_term (same_const c))
 val RRANGE_tm = prim_mk_const{Thy = "relation", Name = "RRANGE"}
 val RDOM_tm = prim_mk_const{Thy = "relation", Name = "RDOM"}
-
+val iff_tm = mk_thy_const{Thy = "min", Name = "=", Ty = bool --> bool --> bool}
 fun transfer_skeleton rdb (c:config) t =
     let
       val th0 = prove_relation_thm rdb (#cleftp c) t (build_skeleton rdb t)
+      val tgt = if #force_imp c then boolSyntax.implication
+                else iff_tm
+      val (topf, _) = strip_comb (concl th0)
+      val (tmsubst, tysubst) = match_term topf tgt
     in
-      if #force_imp c then
-        let
-          val (topf, _) = strip_comb (concl th0)
-          val (tmsubst, tysubst) = match_term topf boolSyntax.implication
-        in
           INST tmsubst (INST_TYPE tysubst th0)
-        end
-      else th0
     end
 
 fun resolveN n hints cleftp ruledb t =
@@ -624,8 +663,7 @@ fun transfer_phase1 (cfg:config as {cleftp,hints,...}) ruledb t =
     in
       seqrpt (resolve_relhyps hints cleftp ruledb)
              (transfer_skeleton ruledb cfg t) ~>
-      seqrptUntil (List.all (is_var o rand) o hyp)
-                  (check{cleftp=cleftp,forceprogress=true} ruledb)
+      seqrpt (check{cleftp=cleftp,forceprogress=true} ruledb)
     end
 
 fun eliminate_domrng cleftp (ruledb:ruledb.t) =
@@ -643,6 +681,7 @@ fun base_transfer (cfg:config) ruledb t =
     in
       transfer_phase1 cfg ruledb t |>
       seq.map (mkrelsyms_eq cleftp) ~>
+      simphyps ruledb ~>
       check {cleftp=cleftp,forceprogress=false} ruledb |>
       seq.map (eliminate_domrng cleftp ruledb) |>
       seq.filter (not o const_occurs RRANGE_tm o concl) |>

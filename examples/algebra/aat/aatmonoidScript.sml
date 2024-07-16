@@ -136,20 +136,22 @@ val th = fpow F 20 base
 fun prettify th =
   let val (vs, _) = strip_forall (concl th)
   in
-    if #1 (dest_type $ type_of $ hd vs) = "monoid" then
-      CONV_RULE (RENAME_VARS_CONV ["M"]) th
-    else th
-  end handle HOL_ERR _ => th
+    case vs of
+      [] => th
+    | v::_ => if #1 (dest_type $ type_of $ v) = "monoid" then
+                CONV_RULE (RENAME_VARS_CONV ["M"]) th
+              else th
+end handle HOL_ERR _ => th
 fun xfer th =
   th |> time (transfer_thm 10 {hints=[],force_imp=true,cleftp=true}
                               (global_ruledb()))
      |> prettify
 
 
-Theorem tmonoid_assoc = xfer monoid_assoc
-Theorem tmonoid_lid = xfer monoid_lid
-Theorem tmonoid_rid = xfer monoid_rid
-Theorem tmonoid_id_unique = xfer monoid_id_unique
+Theorem tmonoid_assoc = xfer monoidTheory.monoid_assoc
+Theorem tmonoid_lid = xfer monoidTheory.monoid_lid
+Theorem tmonoid_rid = xfer monoidTheory.monoid_rid
+Theorem tmonoid_id_unique = xfer monoidTheory.monoid_id_unique
 
 Definition list_monoid_def:
   list_monoid = mkmonoid <| carrier := UNIV; op := APPEND; id := [] |>
@@ -189,11 +191,7 @@ Proof
   simp[FiniteMonoid_def, FUN_REL_def, MTR_def, repabs_pseudo_id]
 QED
 
-Theorem FiniteMonoid_thm:
-  !m. FiniteMonoid m = FINITE $ tmcarrier m
-Proof
-  xfer_back_tac[] >> simp[]
-QED
+Theorem FiniteMonoid_thm = xfer monoidTheory.FiniteMonoid_def
 
 Definition AbelianMonoid_def:
   AbelianMonoid m = monoid$AbelianMonoid (monoid_REP m)
@@ -572,21 +570,147 @@ Theorem monoid_iso_card_eq = xfer monoidTheory.monoid_iso_card_eq
 
 Theorem monoid_auto_id = xfer monoidTheory.monoid_auto_id
 Theorem monoid_auto_element = xfer monoidTheory.monoid_auto_element
+Theorem monoid_auto_compose = xfer monoidTheory.monoid_auto_compose
+Theorem monoid_auto_exp = xfer monoidTheory.monoid_auto_exp
+Theorem monoid_auto_I = xfer monoidTheory.monoid_auto_I
+Theorem monoid_auto_linv_auto = xfer monoidTheory.monoid_auto_linv_auto
+Theorem monoid_auto_bij = xfer monoidTheory.monoid_auto_bij
+Theorem monoid_auto_order = xfer monoidTheory.monoid_auto_order
+
+Theorem submonoid_eqn = xfer monoidTheory.submonoid_eqn
+Theorem submonoid_subset = xfer monoidTheory.submonoid_subset
+Theorem submonoid_homo_homo = xfer monoidTheory.submonoid_homo_homo
+Theorem submonoid_refl = xfer monoidTheory.submonoid_refl
+Theorem submonoid_trans = xfer monoidTheory.submonoid_refl
+Theorem submonoid_I_antisym = xfer monoidTheory.submonoid_I_antisym
+Theorem submonoid_carrier_antisym = xfer monoidTheory.submonoid_carrier_antisym
+Theorem submonoid_order_eqn = xfer monoidTheory.submonoid_order_eqn
+
+Theorem image_op_respects[local]:
+  (mequiv ===> ((=) ===> (=)) ===> (=) ===> (=) ===> (=)) image_op image_op
+Proof
+  simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_image_op = opxfer image_op_respects
+Definition image_op_def0:
+  image_op = ^(rand $ concl xfer_image_op)
+End
+Theorem image_op_relate[transfer_rule] =
+        REWRITE_RULE[GSYM image_op_def0] xfer_image_op
+
+Theorem image_op_def = xfer monoidTheory.image_op_def
+Theorem image_op_inj = xfer monoidTheory.image_op_inj
+
+Theorem trivial_monoid_respects[local]:
+  ((=) ===> mequiv) trivial_monoid trivial_monoid
+Proof
+  simp[FUN_REL_def, mequiv_def] >> qx_gen_tac ‘e’ >>
+  qspec_then ‘e’ mp_tac trivial_monoid >>
+  simp[monoidTheory.FiniteAbelianMonoid_def, monoidTheory.AbelianMonoid_def]
+QED
+val xfer_trivial_monoid = opxfer trivial_monoid_respects
+Definition trivial_monoid_def0:
+  trivial_monoid = ^(rand $ concl xfer_trivial_monoid)
+End
+Theorem trivial_monoid_relate[transfer_rule] =
+        REWRITE_RULE[GSYM trivial_monoid_def0] xfer_trivial_monoid
+
+Theorem set_inter_respects[local]:
+  mequiv set_inter set_inter
+Proof
+  simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_set_inter = opxfer set_inter_respects
+Definition set_inter_def0:
+  set_inter = ^(rand $ concl xfer_set_inter)
+End
+Theorem set_inter_relate[transfer_rule] =
+        REWRITE_RULE[GSYM set_inter_def0] xfer_set_inter
+
+Theorem set_inter_abelian_monoid = xfer monoidTheory.set_inter_abelian_monoid
+
+Theorem set_union_respects[local]:
+  mequiv set_union set_union
+Proof
+  simp[FUN_REL_def, mequiv_def]
+QED
+val xfer_set_union = opxfer set_union_respects
+Definition set_union_def0:
+  set_union = ^(rand $ concl xfer_set_union)
+End
+Theorem set_union_relate[transfer_rule] =
+        REWRITE_RULE[GSYM set_union_def0] xfer_set_union
+
+Theorem set_union_abelian_monoid = xfer monoidTheory.set_union_abelian_monoid
+
+Definition monoid_inj_image_def:
+  monoid_inj_image f M =
+  if INJ f (tmcarrier M) UNIV then
+    mkmonoid (monoid$monoid_inj_image (monoid_REP M) f)
+  else
+    trivial_monoid (f (tmid M))
+End
+
+Theorem INJ_MonoidIso_exists:
+  ∀f M. INJ f (tmcarrier M) UNIV ⇒ ∃N. MonoidIso f M N
+Proof
+  xfer_back_tac [] >> simp[] >> rpt strip_tac >>
+  REWRITE_TAC[Monoid_def] >>
+  qexists
+  ‘<| carrier := IMAGE f M.carrier;
+      op := λn1 n2. f (M.op (LINV f M.carrier n1) (LINV f M.carrier n2));
+      id := f M.id |>’ >>
+  simp[PULL_EXISTS] >>
+  drule_then strip_assume_tac LINV_DEF >> simp[] >> rpt strip_tac
+  >- (irule_at Any EQ_REFL >> qpat_x_assum ‘Monoid _’ mp_tac >>
+      REWRITE_TAC[Monoid_def] >> rpt strip_tac >> first_x_assum irule >>
+      simp[])
+  >- metis_tac[Monoid_def] >>
+  simp[monoidTheory.MonoidIso_def] >>
+  drule_then strip_assume_tac (SRULE[PULL_EXISTS] INJ_IMAGE_BIJ) >>
+  simp[monoidTheory.MonoidHomo_def]
+QED
+
+
+(* ----------------------------------------------------------------------
+    MITBAG (lifted from GITBAG)
+   ---------------------------------------------------------------------- *)
+
+Overload MITBAG = “λ(M:'a monoid) s b. ITBAG (tmop M) s b”
+
+Theorem MITBAG_EMPTY = xfer monoidTheory.GITBAG_EMPTY
+Theorem COMMUTING_MITBAG_INSERT = xfer monoidTheory.COMMUTING_GITBAG_INSERT
+Theorem MITBAG_INSERT_THM = xfer monoidTheory.GITBAG_INSERT_THM
+Theorem MITBAG_UNION = xfer monoidTheory.GITBAG_UNION
+Theorem MITBAG_in_carrier = xfer monoidTheory.GITBAG_in_carrier
+
+Overload MBAG = “λ(M:'a monoid) b. MITBAG M b (tmid M)”
+Theorem MBAG_in_carrier = xfer monoidTheory.GBAG_in_carrier
+Theorem MITBAG_MBAG = xfer monoidTheory.GITBAG_GBAG
+Theorem MBAG_UNION = xfer (GEN_ALL monoidTheory.GBAG_UNION)
+Theorem MITBAG_BAG_IMAGE_op = xfer monoidTheory.GITBAG_BAG_IMAGE_op
+Theorem IMP_MBAG_EQ_ID = xfer $ GEN_ALL monoidTheory.IMP_GBAG_EQ_ID
+Theorem MITBAG_CONG = xfer $ GEN_ALL monoidTheory.GITBAG_CONG
+
+Theorme MBAG_IMAGE_PARTITION = xfer $ GEN_ALL GBAG_IMAGE_PARTITION
+
 
 (*
 val _ = show_assums := true
 val rdb = global_ruledb()
 val cleftp = true
-val base = transfer_skeleton cleftp (concl monoidTheory.MonoidHomo_def)
+val cfg = {force_imp = true, cleftp = true,
+           hints = [ ]  :string list}
+val base = transfer_skeleton rdb cfg (concl $ GEN_ALL GBAG_IMAGE_PARTITION)
 val th = base
 
 
 fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
 
 fun F th = seq.hd $ resolve_relhyps [] cleftp rdb th
-val th = fpow F 9 base
+val th = time (fpow F 50) base
 
-    fpow F 24 th
+    fpow F 18 base
 *)
 
 

@@ -121,6 +121,23 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
+    FUN_REL strengthen to iff
+   ---------------------------------------------------------------------- *)
+
+Theorem FUN_REL_iff_imp_strengthen:
+  (AB |==> (=)) P Q ==> (AB |==> (==>)) P Q
+Proof
+  simp[FUN_REL_def] >> metis_tac[]
+QED
+
+Theorem FUN_REL_iff_cimp_strengthen:
+  (AB |==> (=)) P Q ==> (AB |==> flip (==>)) P Q
+Proof
+  simp[FUN_REL_def] >> metis_tac[]
+QED
+
+
+(* ----------------------------------------------------------------------
     forall
    ---------------------------------------------------------------------- *)
 
