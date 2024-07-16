@@ -17,7 +17,7 @@ entries.tex: $(Helpd)/src-sml/Doc2Tex.exe docfiles $(wildcard $(Helpd)/Docfiles/
 	$(Helpd)/src-sml/Doc2Tex.exe ${Helpd}/Docfiles entries.tex
 
 docfiles:
-	@/bin/ls -1 $(Helpd)/Docfiles/*.doc > docfiles0
+	@ls -1 $(Helpd)/Docfiles/*.doc > docfiles0
 	@if [ -r docfiles ] ; then if cmp -s docfiles0 docfiles ; then rm docfiles0 ; else mv docfiles0 docfiles ; fi ; else mv docfiles0 docfiles ; fi
 
 .PHONY: docfiles
