@@ -1356,7 +1356,12 @@ in
          and r = emod m n
          in
            (m = n * q + r /\ 0 <= r /\ r <= (ABS n) - 1)``,
-      [(*thm_AUTO, thm_CVC,*) thm_Z3_v4(*, thm_Z3p*)])
+      [(*thm_AUTO, thm_CVC,*) thm_Z3_v4(*, thm_Z3p*)]),
+
+    (* regression tests *)
+
+    (``!(n:num) z y a. (3 * n + 1) * z <= y * a ==> 3 * (n * z) <= 2 * (y * a)``,
+      [thm_AUTO, (*thm_CVC,*) thm_Z3(*, thm_Z3p*)])
 
   ]  (* tests *)
 end
