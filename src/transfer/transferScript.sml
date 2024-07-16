@@ -89,6 +89,12 @@ Theorem FUN_REL_COMB:
 Proof simp[FUN_REL_def]
 QED
 
+Theorem FUN_REL_COMB_EQ:
+  (AB1 ===> CD) f g /\ AB2 a b ==> AB1 = AB2 ==> CD (f a) (g b)
+Proof
+  rpt strip_tac >> gvs[] >> irule FUN_REL_COMB >> metis_tac[]
+QED
+
 Theorem FUN_REL_IFF_IMP:
   (AB |==> (=)) P Q ==> (AB |==> (==>)) P Q /\ (AB |==> combin$C (==>)) P Q
 Proof
@@ -107,6 +113,29 @@ Proof
   simp[FUN_REL_def, bi_unique_def, left_unique_def, right_unique_def] >>
   metis_tac[]
 QED
+
+Theorem surj_eqeq:
+  surj ($= ===> $=)
+Proof
+  simp[quotientTheory.FUN_REL_EQ]
+QED
+
+(* ----------------------------------------------------------------------
+    FUN_REL strengthen to iff
+   ---------------------------------------------------------------------- *)
+
+Theorem FUN_REL_iff_imp_strengthen:
+  (AB |==> (=)) P Q ==> (AB |==> (==>)) P Q
+Proof
+  simp[FUN_REL_def] >> metis_tac[]
+QED
+
+Theorem FUN_REL_iff_cimp_strengthen:
+  (AB |==> (=)) P Q ==> (AB |==> flip (==>)) P Q
+Proof
+  simp[FUN_REL_def] >> metis_tac[]
+QED
+
 
 (* ----------------------------------------------------------------------
     forall
@@ -164,6 +193,16 @@ Theorem ALL_total_RRANGE:
 Proof
   simp[total_def, FUN_REL_def, RES_FORALL_THM, IN_DEF,
        relationTheory.RRANGE] >> strip_tac >> qx_gen_tac ‘a’ >>
+  ‘a = (\x. a x)’ by simp[FUN_EQ_THM] >> pop_assum SUBST1_TAC >>
+  metis_tac[]
+QED
+
+Theorem ALL_total_iff_imp_RRANGE:
+  total AB ==> ((AB |==> (=)) |==> (==>)) (!) (RES_FORALL (RRANGE AB))
+Proof
+  simp[total_def, FUN_REL_def, RES_FORALL_THM, IN_DEF,
+       relationTheory.RRANGE] >>
+  strip_tac >> qx_gen_tac ‘a’ >>
   ‘a = (\x. a x)’ by simp[FUN_EQ_THM] >> pop_assum SUBST1_TAC >>
   metis_tac[]
 QED
@@ -430,6 +469,12 @@ Theorem OPTREL_right_unique:
   right_unique AB ==> right_unique (OPTREL AB)
 Proof
   simp[right_unique_def, optionTheory.OPTREL_def, optionTheory.FORALL_OPTION]
+QED
+
+Theorem equalityp_OPTREL:
+  equalityp AB ==> equalityp (OPTREL AB)
+Proof
+  simp[equalityp_def]
 QED
 
 Theorem option_CASE_CONG:

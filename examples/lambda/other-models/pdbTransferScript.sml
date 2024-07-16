@@ -165,7 +165,9 @@ Proof
   simp[dhreduce1_def, TPDB_def, FUN_REL_def]
 QED
 
-fun xfer th = transfer_thm 10 [] true (global_ruledb()) $ GEN_ALL th
+fun xfer th =
+  time (transfer_thm 10 {hints = [], force_imp = true, cleftp = true}
+                (global_ruledb())) (GEN_ALL th)
 
 
 Theorem dhreduce1_APP = xfer hreduce1_APP
@@ -175,7 +177,6 @@ Theorem dhreduce1_substitutive = xfer hreduce1_substitutive
 Theorem dhreduce1_rwts = xfer hreduce1_rwts
 Theorem dhreduce_substitutive = xfer hreduce_substitutive
 
-(*
 Definition dhnf_def:
   dhnf pd = hnf (toTerm pd)
 End
@@ -187,26 +188,25 @@ Proof
 QED
 
 Theorem dhnf_dLAM_cases = xfer hnf_cases
-*)
 
-(* BUG: FV transfer rule is ignored because the skeleton reduces through it
-   to the underlying supp (pm_act ...) stuff *)
-(* Theorem dhreduce1_FV = xfer hreduce1_FV
-*)
+val _ = transferLib.add_atomic_term ("termFV", “FV : term -> string set”)
+
+Theorem dhreduce1_FV = xfer hreduce1_FV
 
 (*
 val _ = show_assums := true
-val th = hnf_cases
-val base = transfer_skeleton true (concl th)
+val th = hreduce1_APP
+val rdb = global_ruledb()
+val base = transfer_skeleton rdb {force_imp=true,cleftp=true,hints=[]}
+                (concl th)
 val th = base
 
-val rdb = global_ruledb()
 val cleftp = true
 
 fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
 
 fun F x = seq.hd (resolve_relhyps [] true (global_ruledb()) x)
-val th7 = fpow F 7 th
+val th7 = fpow F 11 th
 
     fpow F 14 th
 
