@@ -484,7 +484,7 @@ local
         TRY AP_TERM_TAC >> TRY arith_tactic
         >> TRY AP_THM_TAC >> TRY arith_tactic
     in
-      Tactical.prove (t,
+      Tactical.TAC_PROOF (([], t),
         (* rewrite the `ediv` and `emod` symbols so that the arithmetic
            decision procedures can solve terms containing these functions *)
         PURE_REWRITE_TAC[integerTheory.EDIV_DEF, integerTheory.EMOD_DEF]
