@@ -113,7 +113,7 @@ local
 open Feedback Theory
 fun prove_local privp (n,th) =
    (if not (!Globals.interactive) then
-      print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n")
+      print ("Proved triviality ___ \"" ^ String.toString n ^ "\"\n")
     else ();
     DB.store_local {private=privp} n th;
     th)
