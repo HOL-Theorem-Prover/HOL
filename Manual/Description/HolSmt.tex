@@ -59,20 +59,27 @@ called \ml{CVC\_ORACLE\_PROVE}, \ml{YICES\_PROVE},
 a formula $\varphi$, they return the theorem $\emptyset \vdash
 \varphi$ (or fail).
 
+Furthermore, the \ml{HolSmtLib} structure provides three more tactics,
+namely \ml{cvco\_tac}, \ml{z3o\_tac} and \ml{z3\_tac}. These tactics
+are equivalent to \ml{CVC\_ORACLE\_TAC}, \ml{Z3\_ORACLE\_TAC} and
+\ml{Z3\_TAC} (respectively), but additionally take a list of theorems
+which are used as lemmas in the proof, similarly to \ml{METIS\_TAC}.
+
 \paragraph{Oracles vs.\ proof reconstruction}
 
-\ml{CVC\_ORACLE\_TAC}, \ml{YICES\_TAC} and \ml{Z3\_ORACLE\_TAC} use
-the SMT solver (cvc5, Yices and Z3, respectively) as an oracle: the
-solver's result is trusted.  Bugs in the SMT solver or in
-\ml{HolSmtLib} could potentially lead to inconsistent theorems.
-Accordingly, the derived theorem is tagged with an oracle tag.
+\ml{CVC\_ORACLE\_TAC}, \ml{YICES\_TAC}, \ml{Z3\_ORACLE\_TAC},
+\ml{cvco\_tac} and \ml{z3o\_tac} use the SMT solver (cvc5, Yices, Z3,
+cvc5 and Z3, respectively) as an oracle: the solver's result is
+trusted. Bugs in the SMT solver or in \ml{HolSmtLib} could potentially
+lead to inconsistent theorems. Accordingly, the derived theorem is
+tagged with an oracle tag.
 
-\ml{Z3\_TAC}, on the other hand, performs proof reconstruction.  It
-requests a detailed proof from Z3, which is then checked in \HOL{}.
-One obtains a proper \HOL{} theorem; no (additional) oracle tags are
-introduced. However, Z3's proofs do not always contain enough
-information to allow efficient checking in \HOL{}; therefore, proof
-reconstruction may be slow or fail.
+\ml{Z3\_TAC} and \ml{z3\_tac}, on the other hand, perform proof
+reconstruction.  They request a detailed proof from Z3, which is then
+checked in \HOL{}. One obtains a proper \HOL{} theorem; no
+(additional) oracle tags are introduced. However, Z3's proofs do not
+always contain enough information to allow efficient checking in
+\HOL{}; therefore, proof reconstruction may be slow or fail.
 
 \paragraph{Supported subsets of higher-order logic}
 
@@ -193,7 +200,7 @@ delete temporary files automatically, \eg, when \HOL{} exits).
 
 \subsection{Installing SMT solvers}
 
-\ml{HolSmtLib} has been tested with cvc5~1.1.0, Yices~1.0.40, and
+\ml{HolSmtLib} has been tested with cvc5~1.1.2, Yices~1.0.40, and
 Z3~4.12.6. Later versions may or may not work.  (Yices~2 is not
 supported.)  To use \ml{HolSmtLib}, you need to install at least one
 of these SMT solvers on your machine.  As mentioned before, Yices
@@ -203,7 +210,7 @@ reconstruction has been implemented only for Z3.
 cvc5 is available for various platforms from
 \url{https://cvc5.github.io/}. After installation, you must set the
 environment variable {\tt \$HOL4\_CVC\_EXECUTABLE} to the pathname of
-the cvc5 executable, \eg, {tt /usr/bin/cvc5}, before you invoke \HOL.
+the cvc5 executable, \eg, {\tt /usr/bin/cvc5}, before you invoke \HOL.
 
 Yices is available for various platforms from
 \url{https://yices.csl.sri.com/}.  After installation, you must set
