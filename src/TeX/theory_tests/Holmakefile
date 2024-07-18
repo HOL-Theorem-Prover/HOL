@@ -1,4 +1,5 @@
 CMPDIR = $(protect $(HOLDIR)/tools/cmp)
+CMP = $(CMPDIR)/cmp.exe
 
 INCLUDES = $(CMPDIR) ../
 
@@ -9,14 +10,14 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
 all: check_output check_utyabb_output check_tyabb_output check_gh242 check_gh248 dupop20171208 $(TARGETS)
 
-check_output: output expected-output
-	$(CMPDIR)/cmp.exe output expected-output
+check_output: output expected-output $(CMP)
+	$(CMP) output expected-output
 
-check_utyabb_output: utyabb_output utyabbexpected
-	$(CMPDIR)/cmp.exe utyabb_output utyabbexpected
+check_utyabb_output: utyabb_output utyabbexpected $(CMP)
+	$(CMP) utyabb_output utyabbexpected
 
-check_tyabb_output: tyabb_output tyabbexpected
-	$(CMPDIR)/cmp.exe tyabb_output tyabbexpected
+check_tyabb_output: tyabb_output tyabbexpected $(CMP)
+	$(CMP) tyabb_output tyabbexpected
 
 output: input munge.exe
 	./munge.exe < $< > $@
@@ -42,17 +43,17 @@ munge248.exe: pp248Theory.uo ../EmitTeX.uo
 munge_d20171208.exe: dupop20171208bTheory.uo ../EmitTeX.uo
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ dupop20171208bTheory
 
-check_gh242: gh242_input gh242_expected munge.exe
+check_gh242: gh242_input gh242_expected munge.exe $(CMP)
 	./munge.exe < $< > gh242_output
-	$(CMPDIR)/cmp.exe gh242_expected gh242_output
+	$(CMP) gh242_expected gh242_output
 
-check_gh248: gh248_input gh248_expected munge248.exe
+check_gh248: gh248_input gh248_expected munge248.exe $(CMP)
 	./munge248.exe < $< > gh248_output
-	$(CMPDIR)/cmp.exe gh248_expected gh248_output
+	$(CMP) gh248_expected gh248_output
 
-dupop20171208: dupop20171208_input dupop20171208_expected munge_d20171208.exe
+dupop20171208: dupop20171208_input dupop20171208_expected munge_d20171208.exe $(CMP)
 	./munge_d20171208.exe < $< > dupop20171208_output
-	$(CMPDIR)/cmp.exe dupop20171208_expected dupop20171208_output
+	$(CMP) dupop20171208_expected dupop20171208_output
 
 
 .PHONY: all check_output check_utyabb_output check_tyabb_output check_gh242 dupop20171208
