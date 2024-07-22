@@ -326,4 +326,13 @@ val already_good2_def = new_definition("already_good2_def",
   “already_good2 p q = case (p,q) of (T,_) => T | (F, q) => q”);
 val _ = test "already good, case on RHS" already_good2_def
 
+val _ = tprint "TypeBase.case_pred_disj_of “:'b # 'c”"
+fun eq_upto_renaming t1 t2 = can (match_term t1) t2 andalso
+                             can (match_term t2) t1
+val desired = “!P. P (pair_CASE p f) <=> ?q r. p = (q,r) /\ P (f q r)”
+val hoelim = require_msg
+               (check_result (eq_upto_renaming desired))
+               term_to_string
+               (concl o TypeBase.case_pred_disj_of) “:'b # 'c”
+
 val _ = Process.exit Process.success

@@ -560,7 +560,8 @@ RW_TAC bool_ss [EXISTS_UNIQUE_THM]
  ---------------------------------------------------------------------------*)
 
 val pair_CASE_def =
-  new_definition("pair_CASE_def", Term`pair_CASE p f = f (FST p) (SND p)`)
+  new_definition("pair_CASE_def",
+                 “pair_CASE (p:('a#'b)) f = f (FST p) (SND p)”)
 val _ = ot0 "pair_case" "case"
 
 val pair_case_thm = save_thm("pair_case_thm",
