@@ -51,6 +51,8 @@ fun mktheta (com,argl,argr) =
         (UnicodeChars.rdquo, norm "rdquo"),
         (UnicodeChars.sup_minus ^ UnicodeChars.sup_1,
          com ^ "(" ^ com ^ "sp" ^ argl ^ "-1" ^ argr ^ com ^ ")"),
+        (UnicodeChars.sup_2,
+         com ^ "(" ^ com ^ "sp" ^ argl ^ "2" ^ argr ^ com ^ ")"),
         ("\194\171", norm "guillemotleft"),
         ("\194\172", math "neg"),
         ("\194\187", norm "guillemotright"),
