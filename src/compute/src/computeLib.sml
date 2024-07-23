@@ -256,6 +256,18 @@ fun WEAK_CBV_CONV rws =
     o cbv_wk
     o initial_state rws;
 
+fun CBVn_CONV n rws t =
+    let val counter = ref n
+        val old : term -> bool =
+            case !stoppers of
+                NONE => (fn _ => false)
+              | SOME f => f
+        fun stop_test t = if !counter <= 0 then true
+                          else (counter := !counter - 1; old t)
+    in
+      with_flag(stoppers, SOME stop_test) (CBV_CONV rws) t
+    end
+
 (*---------------------------------------------------------------------------
  * Adding an arbitrary conv
  *---------------------------------------------------------------------------*)
@@ -304,6 +316,7 @@ val del_consts = List.app (scrub_const the_compset);
 val del_funs = Lib.C scrub_thms the_compset;
 
 val EVAL_CONV = CBV_CONV the_compset;
+fun EVALn_CONV n t = CBVn_CONV n the_compset t
 val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
 val EVAL_TAC  = Tactic.CONV_TAC EVAL_CONV;
 

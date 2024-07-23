@@ -147,6 +147,7 @@ sig
 
   (* Call-by-value evaluation *)
   val EVAL           : conv
+  val EVALn          : int -> conv
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 
