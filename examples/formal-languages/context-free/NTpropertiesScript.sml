@@ -182,7 +182,7 @@ Proof
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
   strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   qx_gen_tac `subs` >> strip_tac >> dsimp[] >>
-  dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >>
+  dsimp[FLAT_EQ_NIL', listTheory.MEM_MAP] >>
   map_every qx_gen_tac [`N`, `sn`] >> Cases_on `N` >>
   simp[nullableML_def, ptree_NTs_def, ptree_rptfree_def] >>
   strip_tac >> simp[EXTENSION] >>
@@ -202,12 +202,12 @@ Proof
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
   strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   simp[ptree_rptfree_def, ptree_NTs_def] >> qx_gen_tac `subs` >> strip_tac >>
-  dsimp[listTheory.MEM_MAP, FLAT_EQ_NIL] >>
+  dsimp[listTheory.MEM_MAP, FLAT_EQ_NIL'] >>
   NTAC 2 strip_tac >>
   Cases_on `pt` >>
-  fs[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP,ptree_NTs_def]
+  fs[ptree_rptfree_def, FLAT_EQ_NIL', listTheory.MEM_MAP,ptree_NTs_def]
   >-(qexists_tac `Nd (N, ARB) subs` >>
-     fs[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP] >> dsimp[]) >>
+     fs[ptree_rptfree_def, FLAT_EQ_NIL', listTheory.MEM_MAP] >> dsimp[]) >>
   metis_tac[]
 QED
 
@@ -220,7 +220,7 @@ Theorem rptfree_nullable_ptrees_possible:
 Proof
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
   strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
-  dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >>
+  dsimp[FLAT_EQ_NIL', listTheory.MEM_MAP] >>
   map_every qx_gen_tac [`subs`, `N`] >> rpt strip_tac >>
   Cases_on `N` >> fs[] >>
   `∃subs' : (α,β,γ) parsetree list.
@@ -235,7 +235,7 @@ Proof
   Cases_on `∃pt. MEM pt subs' ∧ q ∈ ptree_NTs pt`
   >- (fs[] >> metis_tac[rptfree_subtree]) >>
   fs[] >> qexists_tac `Nd (q,r) subs'` >>
-  dsimp[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP] >> metis_tac[]
+  dsimp[ptree_rptfree_def, FLAT_EQ_NIL', listTheory.MEM_MAP] >> metis_tac[]
 QED
 
 Theorem nullable_nullableML:
@@ -507,7 +507,7 @@ Proof
   imp_res_tac heads_give_first >> rveq >> fs[DISJ_IMP_THM, FORALL_AND_THM] >>
   `nullable G (MAP ptree_head p)`
     by (dsimp[nullable_alltrees, MEM_MAP] >>
-        full_simp_tac (srw_ss() ++ boolSimps.DNF_ss) [MEM_MAP, FLAT_EQ_NIL] >>
+        full_simp_tac (srw_ss() ++ boolSimps.DNF_ss) [MEM_MAP, FLAT_EQ_NIL'] >>
         metis_tac[]) >>
   Cases_on `sym` >> Cases_on `p'` >> fs[]
   >- (qexists_tac `[N]` >> simp[] >> metis_tac[]) >>

@@ -2559,44 +2559,23 @@ QED
    A bunch of properties relating to the use of IS_PREFIX as a partial order
  ---------------------------------------------------------------------------*)
 
-val IS_PREFIX_NIL = Q.store_thm ("IS_PREFIX_NIL",
-   `!x. IS_PREFIX x [] /\ (IS_PREFIX [] x = (x = []))`,
-   STRIP_TAC
-   THEN MP_TAC (Q.SPEC `x` list_CASES)
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX]
-   THEN PROVE_TAC [NOT_NIL_CONS]);
+(* |- !x. [] <<= x /\ (x <<= [] <=> x = []) *)
+Theorem IS_PREFIX_NIL = isPREFIX_NIL
 
-val IS_PREFIX_REFL = Q.store_thm ("IS_PREFIX_REFL",
-   `!x. IS_PREFIX x x`,
-   INDUCT_THEN list_INDUCT MP_TAC
-   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX]);
-val _ = export_rewrites ["IS_PREFIX_REFL"]
+(* |- !x. x <<= x *)
+Theorem IS_PREFIX_REFL[simp] = isPREFIX_REFL
 
-val IS_PREFIX_ANTISYM = Q.store_thm ("IS_PREFIX_ANTISYM",
-   `!x y. IS_PREFIX y x /\ IS_PREFIX x y ==> (x = y)`,
-   INDUCT_THEN list_INDUCT ASSUME_TAC
-   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN REPEAT GEN_TAC
-   THEN MP_TAC (Q.SPEC `y` list_CASES)
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN ONCE_REWRITE_TAC [IS_PREFIX]
-   THEN PROVE_TAC []);
+(* |- !x y. x <<= y /\ y <<= x ==> x = y *)
+Theorem IS_PREFIX_ANTISYM = isPREFIX_ANTISYM
 
-val IS_PREFIX_TRANS = Q.store_thm ("IS_PREFIX_TRANS",
-   `!x y z. IS_PREFIX x y /\ IS_PREFIX y z ==> IS_PREFIX x z`,
-   INDUCT_THEN list_INDUCT ASSUME_TAC
-   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN REPEAT GEN_TAC
-   THEN MP_TAC (Q.SPEC `y` list_CASES)
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN MP_TAC (Q.SPEC `z` list_CASES)
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX]
-   THEN PROVE_TAC []);
+(* |- !x y z. y <<= x /\ z <<= y ==> z <<= x *)
+Theorem IS_PREFIX_TRANS :
+    !x y z. IS_PREFIX x y /\ IS_PREFIX y z ==> IS_PREFIX x z
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC isPREFIX_TRANS
+ >> Q.EXISTS_TAC ‘y’ >> rw []
+QED
 
 val IS_PREFIX_BUTLAST = Q.store_thm ("IS_PREFIX_BUTLAST",
    `!x y. IS_PREFIX (x::y) (FRONT (x::y))`,

@@ -39,6 +39,13 @@ fun DECIDE_TAC (g as (asl,_)) =
     CONV_TAC Arith.ARITH_CONV)
    ORELSE tautLib.TAUT_TAC) g;
 val decide_tac = DECIDE_TAC;
+val qexists_tac = Q.EXISTS_TAC;
+val qid_spec_tac = Q.ID_SPEC_TAC;
+val qx_gen_tac = Q.X_GEN_TAC;
+
+val qxch = Q.X_CHOOSE_THEN;
+fun qxchl [] ttac = ttac
+  | qxchl (q::qs) ttac = qxch q (qxchl qs ttac);
 
 val _ = new_theory "list";
 
@@ -3226,6 +3233,66 @@ val GENLIST_CONSTANT = store_thm(
   rw_tac std_ss[] >>
   metis_tac[prim_recTheory.LESS_THM]);
 
+Theorem isPREFIX_NIL :
+    !x. [] <<= x /\ (x <<= [] <=> (x = []))
+Proof
+    qx_gen_tac ‘x’
+ >> Cases_on ‘x’ >- rw []
+ >> rw [isPREFIX]
+QED
+
+Theorem isPREFIX_REFL :
+    !x. x <<= x
+Proof
+    Induct_on ‘x’ >> rw [isPREFIX]
+QED
+
+Theorem isPREFIX_TRANS :
+    !x y z. x <<= y /\ y <<= z ==> x <<= z
+Proof
+    Induct_on ‘x’ >- rw []
+ >> rpt GEN_TAC
+ >> Cases_on ‘y’ >- rw []
+ >> Cases_on ‘z’ >- rw []
+ >> rw []
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘l’ >> rw []
+QED
+
+Theorem isPREFIX_ANTISYM :
+    !x y. x <<= y /\ y <<= x ==> x = y
+Proof
+    Induct_on ‘x’ >- rw []
+ >> rpt GEN_TAC
+ >> Cases_on ‘y’ >- rw []
+ >> STRIP_TAC
+ >> rw []
+ >> fs []
+QED
+
+Theorem isPREFIX_GENLIST :
+    !f m n. m <= n ==> GENLIST f m <<= GENLIST f n
+Proof
+    qx_gen_tac ‘f’
+ >> Induct_on ‘n’ >- rw []
+ >> rpt STRIP_TAC
+ >> ‘m = SUC n \/ m <= n’ by METIS_TAC [LE]
+ >- rw [isPREFIX_REFL]
+ >> MATCH_MP_TAC isPREFIX_TRANS
+ >> Q.EXISTS_TAC ‘GENLIST f n’ >> rw []
+ >> rw [GENLIST, isPREFIX_SNOC]
+QED
+
+Theorem isPREFIX_MAP :
+    !f l1 l2. l1 <<= l2 ==> MAP f l1 <<= MAP f l2
+Proof
+    qx_gen_tac ‘f’
+ >> Induct_on ‘l1’ >- rw []
+ >> rpt STRIP_TAC
+ >> Cases_on ‘l2’ >- fs []
+ >> fs []
+QED
+
 (* ---------------------------------------------------------------------- *)
 
 val FOLDL_SNOC = store_thm("FOLDL_SNOC",
@@ -4388,6 +4455,48 @@ val ALL_DISTINCT_FILTER_EL_IMP = Q.store_thm("ALL_DISTINCT_FILTER_EL_IMP",
 val FLAT_EQ_NIL = Q.store_thm("FLAT_EQ_NIL",
    ‘!ls. (FLAT ls = []) = (EVERY ($= []) ls)’,
    Induct >> SRW_TAC [] [EQ_IMP_THM] >> rw [APPEND]);
+
+Theorem FLAT_EQ_NIL' :
+    FLAT l = [] <=> !e. MEM e l ==> e = []
+Proof simp[FLAT_EQ_NIL, EVERY_MEM] >> metis_tac[]
+QED
+
+Theorem FLAT_EQ_SING:
+  FLAT l = [x] <=>
+    ?p s. l = p ++ [[x]] ++ s /\ FLAT p = [] /\ FLAT s = []
+Proof
+  Induct_on `l` >> simp[] >> simp[APPEND_EQ_CONS] >>
+  simp_tac (srw_ss() ++ DNF_ss) [] >> metis_tac[]
+QED
+
+Theorem FLAT_EQ_APPEND:
+  FLAT l = x ++ y <=>
+    (?p s. l = p ++ s /\ x = FLAT p /\ y = FLAT s) \/
+    (?p s ip is.
+       l = p ++ [ip ++ is] ++ s /\ ip <> [] /\ is <> [] /\
+       x = FLAT p ++ ip /\
+       y = is ++ FLAT s)
+Proof
+  reverse eq_tac >- (rw[] >> rw[APPEND_ASSOC, FLAT_APPEND]) >>
+  map_every qid_spec_tac [`y`,`x`,`l`] >> Induct_on `l` >- simp[] >>
+  simp[] >> map_every qx_gen_tac [`h`, `x`, `y`] >>
+  simp[APPEND_EQ_APPEND] >>
+  disch_then (DISJ_CASES_THEN (qxch `m` strip_assume_tac))
+  >- (Cases_on `x = []`
+      >- (fs[] >> map_every qexists_tac [`[]`, `m::l`] >> simp[]) >>
+      Cases_on `m = []`
+      >- (fs[] >> disj1_tac >> map_every qexists_tac [`[x]`, `l`] >>
+          simp[]) >>
+      disj2_tac >>
+      map_every qexists_tac [`[]`, `l`, `x`, `m`] >> simp[]) >>
+  `(?p s. l = p ++ s /\ FLAT p = m /\ FLAT s = y) \/
+   (?p s ip is.
+       l = p ++ [ip ++ is] ++ s /\ m = FLAT p ++ ip /\ ip <> [] /\ is <> [] /\
+       y = is ++ FLAT s)` by metis_tac[]
+  >- (disj1_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[]) >>
+  disj2_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[APPEND_ASSOC] >>
+  map_every qexists_tac [`ip`, `is`] >> rw []
+QED
 
 val ALL_DISTINCT_MAP_INJ = Q.store_thm("ALL_DISTINCT_MAP_INJ",
    ‘!ls f. (!x y. MEM x ls /\ MEM y ls /\ (f x = f y) ==> (x = y)) /\
