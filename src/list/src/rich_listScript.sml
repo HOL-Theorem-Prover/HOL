@@ -2748,7 +2748,7 @@ QED
 
 (* NOTE: This theorem is more general than listTheory.isPREFIX_GENLIST *)
 Theorem IS_PREFIX_GENLIST :
-    !f m n. m <= n <=> GENLIST f m <<= GENLIST f n
+    !(f :num -> 'a) m n. m <= n <=> GENLIST f m <<= GENLIST f n
 Proof
     rpt GEN_TAC
  >> EQ_TAC
@@ -2757,7 +2757,7 @@ Proof
  >> qid_spec_tac ‘n’
  >> Induct_on ‘n’
  >- (rw [] >> fs [GENLIST_EQ_NIL])
- >> qx_gen_tac ‘m’
+ >> GEN_TAC
  >> simp [GENLIST, IS_PREFIX_SNOC]
  >> STRIP_TAC
  >- (MATCH_MP_TAC LESS_EQ_TRANS \\
