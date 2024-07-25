@@ -75,3 +75,15 @@ val (reln_rules,reln_ind,reln_cases) = (fn q => fn _ => IndDefLib.xHol_reln "rel
 \   (!x. reln x 0) /\\\n\
 \   (!y. reln 100 y))"
 ] NONE; val _ = CompilerSpecific.quietbind "val reln_strongind = DB.fetch \"-\" \"reln_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";val reln_name1 = boolLib.save_thm("reln_name1", Drule.cj 1 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);val reln_sym = boolLib.save_thm("reln_sym", Drule.cj 2 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);
+
+val foo = bar[QUOTE " (*#loc 79 17*)\n\
+\  this is a quotation with\n\
+\ nested \"string\\n\""
+];
+
+val thmname = (fn rule => boolLib.save_thm("thmname",rule)) ( expression
+
+);val _ = bar[QUOTE " (*#loc 86 11*)\n\
+\  another quotation (* with unfinished comment \n\
+\  and bare \" with ", ANTIQUOTE(foo),QUOTE " (*#loc 88 23*) and ^"
+];

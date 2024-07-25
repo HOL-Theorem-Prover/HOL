@@ -91,6 +91,7 @@ descendant theories.  Functions making temporary changes are signified
 by a leading \ml{temp\_} in their names.
 
 \subsection{Parsing types}
+\label{sec:parsing-types}
 \index{types, in HOL logic@types, in \HOL{} logic!parsing of|(}
 
 The language of types is a simple one.  An abstract grammar for the
@@ -1150,6 +1151,34 @@ terms, antiquoting a type into a term quotation requires the use of
 \end{alltt}
 \end{session}
 %
+\subsubsection{Generalised Quotation Syntax}
+\label{sec:generalised-quotation-syntax}
+
+\index{special syntactic forms for scripts!Quote@\ml{Quote}}
+In line with various ``modern'' syntaxes (\eg, \ml{Theorem} and \ml{Definition}), it is possible to define custom quotation tooling using the \ml{Quote} keyword.
+There are two forms.
+The first is
+\begin{verbatim}
+Quote ident1 = ident2:
+  ...
+End
+\end{verbatim}
+where the \texttt{Quote} and \texttt{End} keywords must occur in column 1 of the source script-file.
+This is translated to
+\begin{alltt}
+val ident1 = ident2 \mbox{\textrm{`}} ... \mbox{\textrm{'}};
+\end{alltt}
+The other form is a short-cut where the quotation is parsed by the provided function only for its side-effects.
+The surface syntax is
+\begin{verbatim}
+Quote ident:
+  ...
+End
+\end{verbatim}
+which is translated to
+\begin{alltt}
+val _ = ident \mbox{\textrm{`}} ... \mbox{\textrm{'}};
+\end{alltt}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|)}
 
 
@@ -1330,6 +1359,29 @@ proof, or a different proof. The functions that do this are
 \ml{rotate} and \ml{rotate\_proofs}, respectively. The abbreviations
 \ml{r} and \ml{R} are simpler to type in.
 
+\section{Specialised Syntax for Script Files}\label{sec:special-syntax}
+
+\HOL{} supports a number of syntactic sugar forms to make common idioms easier to read \emph{and} write.
+These are wrappers around existing \ML{} functions, and documented in \DESCRIPTION{} alongside those functions.
+Figure~\ref{fig:special-syntax} summarises the complete set of special forms.
+\begin{figure}[hbtp]
+\begin{center}
+\begin{tabular}{lp{0.3\textwidth}}
+Sugar & Underlying \ML{} (Sec.\ ref.)\\\hline
+\ml{Datatype} \ml{:} \dots \ml{End} & \ml{Datatype} (\ref{sec:datatype})\\
+\ml{Definition} \emph{ident} \emph{attrs}$^?$ \ml{:} \dots $($ \ml{Termination} \dots $)^?$ \ml{End} & Function definition\\
+\ml{Overload} \emph{ident} \emph{attrs}$^?$ \ml{=} ``\emph{term}'' & \ml{overload\_on} (\ref{sec:parsing:overloading})\\
+\ml{Quote} \emph{ident} \ml{:} \dots \ml{End} & Quotation~(\ref{sec:generalised-quotation-syntax})\\
+\ml{Quote} \emph{ident} \ml{=} \emph{ident} \ml{:} \dots \ml{End} & Quotation~(\ref{sec:generalised-quotation-syntax})\\
+\ml{Theorem} \emph{ident} \emph{attrs}$^?$ \ml{:} \dots \ml{Proof} \dots \ml{QED} & \ml{store\_thm}~(\ref{theoryprims})\\
+\ml{Theorem} \emph{ident} \emph{attrs}$^?$ \ml{=} \dots & \ml{save\_thm}~(\ref{theoryprims})\\
+\ml{Type} \emph{ident} \emph{attrs}$^?$  \ml{=} ``:\emph{type}'' & \ml{type_abbrev} (\ref{sec:parsing-types})\\
+\end{tabular}
+\end{center}
+\caption{Special syntactic forms available in script files.
+All capitalised keywords must occur in the first column of their respective lines in order to be recognised.}
+\label{fig:special-syntax}
+\end{figure}
 \section{High Level Proof---\texttt{bossLib}}
 % would use \ml{boss} above but it puts LaTeX into fits
 \label{sec:bossLib}

@@ -76,3 +76,15 @@ Inductive reln:
    (!x. reln x 0) /\
    (!y. reln 100 y)
 End
+
+Quote foo = bar:
+  this is a quotation with
+ nested "string\n"
+End
+
+Theorem thmname = expression
+
+Quote bar:
+  another quotation (* with unfinished comment 
+  and bare " with ^foo and ^^
+End

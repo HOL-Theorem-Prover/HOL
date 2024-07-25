@@ -23,7 +23,8 @@ fun strlit_match _ NONE = false
   | strlit_match "\194\187" (SOME "\194\171") = true
   | strlit_match _ _ = false
 
-datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE | inDTYQUOTE;
+datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE | inDTYQUOTE
+                   | inRAWQUOTE ;
 datatype mltype = inTHMVAL | inTERMINATION_VAL | inINITIAL;
 
 datatype qfs = QFS of {comdepth : int ref,
@@ -202,7 +203,7 @@ fun eof (QFS {mltype_stack,...}) =
       | _ => (~1, "")
 %%
 %structure QuoteFilter
-%s string comment qcomment tmcomment tycomment defncomment defncomment0 datatypecomment tyquote tmquote quote defnquote0 defnquote datatypequote ANTIQ thmval TERMINATION_VAL holstrlit holstrlitlbrk;
+%s string comment qcomment tmcomment tycomment defncomment defncomment0 datatypecomment tyquote tmquote quote rawquote defnquote0 defnquote datatypequote ANTIQ thmval TERMINATION_VAL holstrlit holstrlitlbrk;
 %arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm, inddefp, labelidxs, conjcount, stem,strlitstart});
 %full
 
@@ -224,6 +225,7 @@ defn_attribute =
   {alphaMLid}{optallws} ("="{optallws}{attributeEqnRHS}{optallws})?;
 defn_attribute_list = {defn_attribute} (","({ws}|{newline})*{defn_attribute})*;
 MLid =  {alphaMLid} | {symbol}+;
+QUALMLid = {MLid} ("." {MLid})*;
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 fullquotebegin = "``" | "\226\128\156" ;
@@ -231,6 +233,8 @@ fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
 Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{alphaMLid_list}"]")?;
+Quote_eqnpfx = "Quote"{ws}+{MLid}{ws}*"="{ws}*{QUALMLid}{ws}*":";
+Quote_pfx = "Quote"{ws}+{QUALMLid}{ws}*":";
 HOLconjunction = "/\092" | "\226\136\167";
 DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ | {HOLconjunction};
 DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]";
@@ -263,6 +267,7 @@ ProofLine =
                    | h::t => (antiquote_stack := t;
                               YYBEGIN (case h of
                                          inQUOTE => quote
+                                       | inRAWQUOTE => rawquote (* shouldn't *)
                                        | inDFQUOTE => defnquote
                                        | inTYQUOTE => tyquote
                                        | inTMQUOTE => tmquote
@@ -375,6 +380,47 @@ ProofLine =
      end
    else yytext
   )
+);
+<INITIAL,thmval>^{Quote_eqnpfx} => (
+  (yypos,
+   if inscript andalso not quotefix then
+     let
+       infix |>
+       val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
+       val s1 = String.extract(s0,6,NONE) (* drop "Quote" + next ws char *)
+       val left_id = s1 |> Substring.full |> Substring.dropl Char.isSpace
+                        |> Substring.takel Char.isAlphaNum
+                        |> Substring.string
+       val right_id = s1 |> Substring.full |> Substring.dropr Char.isSpace
+                         |> Substring.taker Char.isAlphaNum
+                         |> Substring.string
+     in
+       YYBEGIN rawquote;
+       ECHO yyarg (mlswitch (!mltype_stack) "" "" ");" ^
+                   "val " ^ left_id ^ " = " ^ right_id ^ "[QUOTE \"" ^
+                   locpragma yyarg (yytext, yypos) 0) before
+       mltype_stack := []
+     end
+   else yytext)
+);
+<INITIAL,thmval>^{Quote_pfx} => (
+  (yypos,
+   if inscript andalso not quotefix then
+     let
+       infix |>
+       val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
+       val s1 = String.extract(s0,6,NONE) (* drop "Quote" + next ws char *)
+       val id = s1 |> Substring.full |> Substring.dropl Char.isSpace
+                   |> Substring.takel Char.isAlphaNum
+                   |> Substring.string
+     in
+       YYBEGIN rawquote;
+       ECHO yyarg (mlswitch (!mltype_stack) "" "" ");" ^
+                   "val _ = " ^ id ^ "[QUOTE \"" ^
+                   locpragma yyarg (yytext, yypos) 0) before
+       mltype_stack := []
+     end
+   else yytext)
 );
 <INITIAL,thmval>{Theorempfx}({ws}|{newline})+"=" => (
   (yypos,
@@ -677,6 +723,7 @@ ProofLine =
    if strlit_match yytext (!strlitstart) then
      (YYBEGIN (case !antiquote_stack of
                  [] => INITIAL (* shouldn't happen *)
+               | inRAWQUOTE :: _ => rawquote (* shouldn't happen *)
                | inQUOTE :: _ => quote
                | inTMQUOTE :: _ => tmquote
                | inTYQUOTE :: _ => tyquote
@@ -710,7 +757,18 @@ ProofLine =
    else ECHO yyarg (String.substring(yytext,0,size yytext - 1) ^
                     qnewline yyarg (yypos,yytext)))
 );
-<quote,tmquote,tyquote,defnquote,datatypequote>"^^" => (
+<rawquote>"^"+{ws} => (
+  (yypos,
+   if quotefix then yytext
+   else ECHO yyarg (String.substring(yytext,1,size yytext - 1)))
+);
+<rawquote>"^"+{ws} => (
+  (yypos,
+   if quotefix then yytext
+   else ECHO yyarg (String.substring(yytext,1,size yytext - 2) ^
+                    qnewline yyarg (yypos,yytext)))
+);
+<quote,tmquote,tyquote,defnquote,datatypequote,rawquote>"^^" => (
   (yypos, if quotefix then yytext else ECHO yyarg "^")
 );
 <quote,tmquote,tyquote,defnquote,datatypequote>"^`" => (
@@ -742,12 +800,13 @@ ProofLine =
   (yypos, (inc comdepth; YYBEGIN defncomment0; yytext))
 );
 
-<quote,tmquote,tyquote,defnquote,datatypequote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
+<quote,tmquote,tyquote,defnquote,datatypequote,rawquote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
 <defnquote0>"^"{symbol} => (
   (yypos, if quotefix then yytext 
           else (inc conjcount; YYBEGIN defnquote; yytext))
 );
-<quote,tmquote,tyquote,defnquote0,defnquote,datatypequote>{newline} => (
+<quote,tmquote,tyquote,defnquote0,defnquote,datatypequote,rawquote>{newline} =>
+(
   (yypos, if quotefix then yytext else qnewline yyarg (yypos,yytext))
 );
 
@@ -758,7 +817,7 @@ ProofLine =
     )
    )
 );
-<datatypequote>{newline}"End" => (
+<datatypequote,rawquote>{newline}"End" => (
   (
     yypos, (
       YYBEGIN INITIAL;
@@ -829,6 +888,14 @@ ProofLine =
    )
   )
 );
+<rawquote>"^" => (
+  (yypos, (
+    YYBEGIN ANTIQ;
+    antiquote_stack := inRAWQUOTE :: !antiquote_stack;
+    if quotefix then yytext else ECHO yyarg "\", ANTIQUOTE("
+   )
+  )
+);
 <defnquote0>{ws}+ => ((yypos, yytext));
 <defnquote0>[\128-\255] => (
   (yypos,
@@ -837,10 +904,10 @@ ProofLine =
     if quotefix then yytext else bslash_escape_s yytext)
   )
 );
-<quote,tmquote,tyquote,defnquote,datatypequote>[\128-\255] => (
+<quote,tmquote,tyquote,defnquote,datatypequote,rawquote>[\128-\255] => (
   (yypos, if quotefix then yytext else ECHO yyarg (bslash_escape_s yytext))
 );
-<quote,tmquote,tyquote,defnquote,datatypequote>. => (
+<quote,tmquote,tyquote,defnquote,datatypequote,rawquote>. => (
   (yypos, if quotefix then yytext else ECHO yyarg (String.toString yytext))
 );
 <defnquote0>. => (
@@ -858,6 +925,7 @@ ProofLine =
                                         | inTMQUOTE => tmquote
                                         | inTYQUOTE => tyquote
                                         | inDFQUOTE => defnquote
+                                        | inRAWQUOTE => rawquote
                                         | inDTYQUOTE => datatypequote));
                   if quotefix then yytext
                   else
