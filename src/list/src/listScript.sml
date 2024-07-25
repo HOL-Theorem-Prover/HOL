@@ -3270,7 +3270,25 @@ Proof
  >> fs []
 QED
 
-Theorem isPREFIX_GENLIST :
+Theorem isPREFIX_SNOC_EQ :
+   !x y z. z <<= SNOC x y <=> z <<= y \/ z = SNOC x y
+Proof
+    NTAC 2 GEN_TAC
+ >> Q.ID_SPEC_TAC `x`
+ >> Q.ID_SPEC_TAC `y`
+ >> INDUCT_THEN list_INDUCT ASSUME_TAC
+ >- (rpt GEN_TAC \\
+     MP_TAC (Q.SPEC `z` list_CASES) \\
+     STRIP_TAC \\
+     rw [SNOC, isPREFIX_NIL, isPREFIX, CONS_11, NOT_CONS_NIL])
+ >> rpt GEN_TAC
+ >> MP_TAC (Q.SPEC `z` list_CASES)
+ >> STRIP_TAC
+ >> rw [SNOC, isPREFIX_NIL, isPREFIX, CONS_11, NOT_CONS_NIL]
+ >> PROVE_TAC []
+QED
+
+Theorem isPREFIX_GENLIST_lemma[local] :
     !f m n. m <= n ==> GENLIST f m <<= GENLIST f n
 Proof
     qx_gen_tac ‘f’
@@ -3281,6 +3299,24 @@ Proof
  >> MATCH_MP_TAC isPREFIX_TRANS
  >> Q.EXISTS_TAC ‘GENLIST f n’ >> rw []
  >> rw [GENLIST, isPREFIX_SNOC]
+QED
+
+Theorem isPREFIX_GENLIST :
+    !(f :num -> 'a) m n. GENLIST f m <<= GENLIST f n <=> m <= n
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC
+ >- rw [isPREFIX_GENLIST_lemma]
+ >> qid_spec_tac ‘m’
+ >> qid_spec_tac ‘n’
+ >> Induct_on ‘n’
+ >- (rw [] >> fs [GENLIST_EQ_NIL])
+ >> GEN_TAC
+ >> simp [GENLIST, isPREFIX_SNOC_EQ]
+ >> STRIP_TAC
+ >- (MATCH_MP_TAC LESS_EQ_TRANS \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> fs [LIST_EQ_REWRITE]
 QED
 
 Theorem isPREFIX_MAP :

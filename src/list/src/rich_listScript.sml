@@ -2616,29 +2616,8 @@ Proof
           THEN PROVE_TAC [numTheory.INV_SUC, IS_PREFIX_REFL]]
 QED
 
-Theorem IS_PREFIX_SNOC:
-   !x y z. IS_PREFIX (SNOC x y) z <=> IS_PREFIX y z \/ (z = SNOC x y)
-Proof
-   GEN_TAC
-   THEN GEN_TAC
-   THEN Q.SPEC_TAC (`x`, `x`)
-   THEN Q.SPEC_TAC (`y`, `y`)
-   THEN INDUCT_THEN list_INDUCT ASSUME_TAC
-   THENL [REPEAT GEN_TAC
-          THEN MP_TAC (Q.SPEC `z` list_CASES)
-          THEN STRIP_TAC
-          THEN ASM_SIMP_TAC boolSimps.bool_ss
-                 [SNOC, IS_PREFIX_NIL, IS_PREFIX, CONS_11,
-                  NOT_CONS_NIL]
-          THEN PROVE_TAC [],
-          REPEAT GEN_TAC
-          THEN MP_TAC (Q.SPEC `z` list_CASES)
-          THEN STRIP_TAC
-          THEN ASM_SIMP_TAC boolSimps.bool_ss
-                 [SNOC, IS_PREFIX_NIL, IS_PREFIX, CONS_11,
-                  NOT_CONS_NIL]
-          THEN PROVE_TAC []]
-QED
+(* |- !x y z. z <<= SNOC x y <=> z <<= y \/ z = SNOC x y *)
+Theorem IS_PREFIX_SNOC = isPREFIX_SNOC
 
 val IS_PREFIX_APPEND1 = Q.store_thm ("IS_PREFIX_APPEND1",
    `!a b c. IS_PREFIX c (APPEND a b) ==> IS_PREFIX c a`,
@@ -2746,24 +2725,8 @@ Proof
  >> rw []
 QED
 
-(* NOTE: This theorem is more general than listTheory.isPREFIX_GENLIST *)
-Theorem IS_PREFIX_GENLIST :
-    !(f :num -> 'a) m n. GENLIST f m <<= GENLIST f n <=> m <= n
-Proof
-    rpt GEN_TAC
- >> reverse EQ_TAC
- >- rw [isPREFIX_GENLIST]
- >> qid_spec_tac ‘m’
- >> qid_spec_tac ‘n’
- >> Induct_on ‘n’
- >- (rw [] >> fs [GENLIST_EQ_NIL])
- >> GEN_TAC
- >> simp [GENLIST, IS_PREFIX_SNOC]
- >> STRIP_TAC
- >- (MATCH_MP_TAC LESS_EQ_TRANS \\
-     Q.EXISTS_TAC ‘n’ >> rw [])
- >> fs [LIST_EQ_REWRITE]
-QED
+(* |- !f m n. GENLIST f m <<= GENLIST f n <=> m <= n *)
+Theorem IS_PREFIX_GENLIST = isPREFIX_GENLIST
 
 (* ----------------------------------------------------------------------
     longest_prefix

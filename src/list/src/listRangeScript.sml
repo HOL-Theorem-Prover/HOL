@@ -1103,17 +1103,13 @@ val listRangeLHI_has_divisors = store_thm(
 Theorem isPREFIX_listRangeLHI :
     !m n m' n'. m = m' /\ n <= n' ==> [m ..< n] <<= [m' ..< n']
 Proof
-    rw [listRangeLHI_def]
- >> MATCH_MP_TAC isPREFIX_GENLIST
- >> rw []
+    rw [listRangeLHI_def, isPREFIX_GENLIST]
 QED
 
 Theorem isPREFIX_listRangeINC :
     !m n m' n'. m = m' /\ n <= n' ==> [m .. n] <<= [m' .. n']
 Proof
-    rw [listRangeINC_def]
- >> MATCH_MP_TAC isPREFIX_GENLIST
- >> rw []
+    rw [listRangeINC_def, isPREFIX_GENLIST]
 QED
 
 Theorem listRangeLHI_11 :
@@ -1147,8 +1143,7 @@ Theorem isPREFIX_listRangeLHI_EQ :
 Proof
     rpt GEN_TAC >> STRIP_TAC
  >> reverse EQ_TAC
- >- (rw [listRangeLHI_def] \\
-     MATCH_MP_TAC isPREFIX_GENLIST >> rw [])
+ >- rw [listRangeLHI_def, isPREFIX_GENLIST]
  >> rw [listRangeLHI_CONS]
  >> Cases_on ‘m + 1 = n’ >- POP_ASSUM (fs o wrap o SYM)
  >> Cases_on ‘m + 1 = n'’
