@@ -2748,10 +2748,10 @@ QED
 
 (* NOTE: This theorem is more general than listTheory.isPREFIX_GENLIST *)
 Theorem IS_PREFIX_GENLIST :
-    !(f :num -> 'a) m n. m <= n <=> GENLIST f m <<= GENLIST f n
+    !(f :num -> 'a) m n. GENLIST f m <<= GENLIST f n <=> m <= n
 Proof
     rpt GEN_TAC
- >> EQ_TAC
+ >> reverse EQ_TAC
  >- rw [isPREFIX_GENLIST]
  >> qid_spec_tac ‘m’
  >> qid_spec_tac ‘n’
