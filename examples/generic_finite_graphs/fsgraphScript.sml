@@ -8,12 +8,14 @@ open genericGraphTheory;
 val _ = new_theory "fsgraph";
 
 Type fsgraph[pp] = “:(α,finiteG,noSL) udulgraph”
-Overload fsgedges = “udedges : α fsgraph -> α set set”
+Definition fsgedges_def:
+  fsgedges (g: α fsgraph) = { {m;n} | adjacent g m n}
+End
 
 Theorem adjacent_fsg:
   adjacent (g : α fsgraph) a b ⇔ {a;b} ∈ fsgedges g
 Proof
-  simp[udedges_thm] >> iff_tac >> rw[] >> gvs[INSERT2_lemma] >>
+  dsimp[fsgedges_def, INSERT2_lemma] >>
   metis_tac[adjacent_SYM]
 QED
 
@@ -42,13 +44,13 @@ End
 Theorem fsgedges_emptyG[simp]:
   fsgedges emptyG = ∅
 Proof
-  simp[udedges_def]
+  simp[fsgedges_def]
 QED
 
 Theorem fsgedges_addNode[simp]:
   fsgedges (addNode n u g) = fsgedges g
 Proof
-  simp[]
+  simp[fsgedges_def]
 QED
 
 Theorem fsgedges_fsgAddNode[simp]:
@@ -79,7 +81,7 @@ Theorem fsgedges_fsgAddEdges:
   fsgedges (fsgAddEdges es g) =
   {{m;n} | m ∈ nodes g ∧ n ∈ nodes g ∧ {m;n} ∈ es ∧ m ≠ n} ∪ fsgedges g
 Proof
-  simp[fsgAddEdges_def, udedges_thm, adjacent_def] >>
+  simp[fsgAddEdges_def, fsgedges_def, adjacent_def] >>
   qabbrev_tac ‘A = {(m,n) | m ≠ n ∧ m ∈ nodes g ∧ n ∈ nodes g ∧ {m;n} ∈ es}’ >>
   ‘FINITE A’
     by (irule SUBSET_FINITE >> qexists ‘nodes g × nodes g’ >>
@@ -120,8 +122,8 @@ QED
 Theorem fsgincident_SUBSET_nodes:
   e ∈ fsgedges g ∧ n ∈ e ⇒ n ∈ nodes g
 Proof
-  simp[udedges_thm, adjacent_def, PULL_EXISTS, SF CONJ_ss] >> rw[] >>
-  irule incident_SUBSET_nodes >> first_assum $ irule_at Any >> simp[]
+  simp[fsgedges_def, PULL_EXISTS, SF CONJ_ss] >>
+  metis_tac[adjacent_members]
 QED
 
 Theorem FINITE_fsgedges[simp]:
@@ -214,6 +216,9 @@ Proof
   simp[EXTENSION] >> metis_tac[]
 QED
 
+(* a bit gross: there's no need to call removeEdge on both elements of this
+   set as removeEdge already does the right thing in an undirected graph, but
+   it doesn't hurt, and this way we dodge the need to pick a direction *)
 Definition remove_fsedge_def:
   remove_fsedge e (g:α fsgraph) =
   let es = { (m,n,()) | e = {m;n} ∧ m ≠ n }
@@ -248,6 +253,15 @@ Proof
   metis_tac[]
 QED
 
+Theorem adjacent_removeEdge:
+  adjacent (removeEdge (a,b,())
+                       (g:(α,undirectedG,unit,unit,ε,ζ,noSL) graph)) m n ⇔
+  (m ≠ a ∨ n ≠ b) ∧ (n ≠ a ∨ m ≠ b) ∧ adjacent g m n
+Proof
+  simp[adjacent_def, edges_removeEdge] >> rw[EQ_IMP_THM] >> rpt strip_tac >>
+  gvs[]
+QED
+
 Theorem fsgedges_remove_fsedge[simp]:
   fsgedges (remove_fsedge e g) = fsgedges g DELETE e
 Proof
@@ -261,7 +275,7 @@ Proof
       ‘{(m,n,()) | {a;b} = {m;n} ∧ m ≠ n} = {(a,b,()); (b,a,())}’
         by (simp[Once EXTENSION, INSERT2_lemma] >> metis_tac[]) >>
       simp[COMMUTING_ITSET_RECURSES, removeEdge_LCOMM, DELETE_NON_ELEMENT_RWT]>>
-      simp[udedges_def, edges_removeEdge] >>
+      simp[fsgedges_def, adjacent_removeEdge] >>
       simp[Once EXTENSION] >> gen_tac >> iff_tac >>
       simp[PULL_EXISTS, INSERT2_lemma, SF CONJ_ss] >> metis_tac[]) >>
   ‘{(m,n,()) | e = {m;n} ∧ m ≠ n} = ∅’ by ASM_SET_TAC[] >> simp[] >>
@@ -272,11 +286,13 @@ QED
 Theorem fsgraph_component_equality:
   (g1 : α fsgraph = g2) ⇔ nodes g1 = nodes g2 ∧ fsgedges g1 = fsgedges g2
 Proof
-  simp[gengraph_component_equality,udedges_def]>> iff_tac >> rw[] >~
+  simp[gengraph_component_equality,fsgedges_def] >> iff_tac >> rw[] >>
+  simp[adjacent_def] >~
   [‘nlabelfun _ = nlabelfun _’] >- simp[FUN_EQ_THM] >>
   qpat_x_assum ‘GSPEC _ = GSPEC _’ mp_tac >>
   ONCE_REWRITE_TAC [EXTENSION] >> simp[FORALL_PROD] >>
   rw[EQ_IMP_THM, PULL_EXISTS, FORALL_AND_THM] >>
+  gvs[adjacent_def, PULL_EXISTS] >>
   first_x_assum drule >> simp[INSERT2_lemma] >> rw[] >> simp[] >>
   metis_tac[edges_SYM]
 QED
@@ -298,15 +314,14 @@ Proof
 QED
 
 Theorem fsgedges_members :
-    !g x y. {x;y} IN fsgedges g ==> x <> y /\ x IN nodes g /\ y IN nodes g
+  !g x y. {x;y} IN fsgedges g ==> x <> y /\ x IN nodes g /\ y IN nodes g
 Proof
-    rpt GEN_TAC >> STRIP_TAC
- >> POP_ASSUM (STRIP_ASSUME_TAC o (MATCH_MP alledges_valid))
- >> fs [INSERT2_lemma]
+  rpt GEN_TAC >> STRIP_TAC >> dxrule alledges_valid >>
+  dsimp [INSERT2_lemma, PULL_EXISTS]
 QED
 
 Theorem fsgAddEdges_remove_fsedge[simp] :
-    e IN fsgedges g ==> fsgAddEdges {e} (remove_fsedge e g) = g
+  e IN fsgedges g ==> fsgAddEdges {e} (remove_fsedge e g) = g
 Proof
     rpt STRIP_TAC
  >> Suff ‘valid_edges {e} (nodes g)’
@@ -368,18 +383,19 @@ Proof
 QED
 
 Theorem fsg_edge_induction :
-  !g P. P (fsgAddNodes (nodes g) emptyG) /\
-        (!e g0. nodes g0 = nodes g /\
-                valid_edges {e} (nodes g0) /\ e NOTIN fsgedges g0 /\
-                P g0 ==> P (fsgAddEdges {e} g0)) ==> P g
+  ∀g P.
+    P (fsgAddNodes (nodes g) emptyG) /\
+    (!e g0. nodes g0 = nodes g /\
+            valid_edges {e} (nodes g0) /\ e NOTIN fsgedges g0 /\
+            P g0 ==> P (fsgAddEdges {e} g0)) ==>
+    P g
 Proof
     rpt STRIP_TAC
  >> Induct_on ‘fsgsize g’
  >- (rw [] \\
      Suff ‘fsgAddNodes (nodes g) emptyG = g’ >- DISCH_THEN (fs o wrap) \\
-     Q.PAT_X_ASSUM ‘fsgsize g = 0’ MP_TAC >> KILL_TAC \\
-     rw [fsgsize_def, udul_component_equality])
- >> rpt STRIP_TAC
+     rw [fsgraph_component_equality] >> gvs[fsgsize_def])
+ >> rpt strip_tac
  >> qspec_then ‘g’ strip_assume_tac fsgraph_edge_decomposition
  >> fs []
 QED
@@ -463,7 +479,7 @@ Proof
        fsgedges_fsgAddEdges_thm] >>
   ‘degree (fsgAddEdges es (addNode n () g)) n = CARD es’
     by (‘∀e. e ∈ fsgedges g ⇒ n ∉ e’
-          by (simp[udedges_thm, PULL_EXISTS] >>
+          by (simp[fsgedges_def, PULL_EXISTS] >>
               metis_tac[adjacent_members]) >>
         dsimp[degree_def, fsgedges_fsgAddEdges_thm, SF CONJ_ss]) >>
   simp[degree_fsgAddEdges] >>
@@ -475,10 +491,10 @@ Proof
   simp[pred_setTheory.CARD_UNION_EQN] >>
   ‘∀n. {ed | ed ∈ es ∧ n ∈ ed} ∩ {ed | ed ∈ fsgedges g ∧ n ∈ ed} = ∅’
     by (simp[EXTENSION] >> rpt gen_tac >> CCONTR_TAC >> gs[] >>
-        gs[udedges_thm] >> first_x_assum drule >> strip_tac >> gvs[] >>
+        gs[fsgedges_def] >> first_x_assum drule >> strip_tac >> gvs[] >>
         metis_tac[adjacent_members]) >>
   simp[SUM_IMAGE_ADD] >>
-  ‘es ∩ fsgedges g = ∅’ by (simp[udedges_thm, Once EXTENSION] >>
+  ‘es ∩ fsgedges g = ∅’ by (simp[fsgedges_def, Once EXTENSION] >>
                             CCONTR_TAC >> gvs[] >> first_x_assum drule >>
                             strip_tac >> gvs[] >> metis_tac[adjacent_members])>>
   simp[GSYM degree_def, SF ETA_ss] >>
@@ -535,7 +551,7 @@ Proof
         simp[degree_def] >> CCONTR_TAC >> gvs[] >>
         ‘{ e | e ∈ fsgedges g ∧ n ∈ e} = ∅’
           suffices_by (strip_tac >> gvs[]) >>
-        simp[EXTENSION] >> qx_gen_tac ‘e’ >> simp[udedges_thm] >>
+        simp[EXTENSION] >> qx_gen_tac ‘e’ >> simp[fsgedges_def] >>
         CCONTR_TAC >> gvs[] >> metis_tac[adjacent_members]) >>
   simp[GSYM ODD_SUMIMAGE, sumdegrees, SF ETA_ss, arithmeticTheory.ODD_MULT]
 QED

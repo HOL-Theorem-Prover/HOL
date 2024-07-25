@@ -531,14 +531,14 @@ Proof
 QED
 
 Definition udedges_def:
-  udedges (G:(α,ν,σ) udulgraph) = {{m;n} | (m,n,()) ∈ edges G}
+  udedges (G:(α,'ec,'el,'nf,'nl,'sl) udgraph) = {({m;n},l) | (m,n,l) ∈ edges G}
 End
 
-Theorem udedges_thm:
+(*Theorem udedges_thm:
   udedges G = {{m; n} | adjacent G m n}
 Proof
   simp[udedges_def, adjacent_def]
-QED
+QED *)
 
 Definition addNode0_def:
   addNode0 n lab grep = grep with <| nodes updated_by (λs. n INSERT s);
@@ -589,7 +589,7 @@ QED
 Theorem udedges_addNode[simp]:
   udedges (addNode n l G) = udedges G
 Proof
-  simp[udedges_thm]
+  simp[udedges_def]
 QED
 
 Definition addUDEdge0_def:
@@ -775,7 +775,8 @@ Proof
 QED
 
 Theorem selfloops_ok_graph[simp]:
-  selfloops_ok (g : ('a,'d,'ec,'el,'nf,'nl,unit) graph)
+  selfloops_ok (g1 : ('a,'d,'ec,'el,'nf,'nl,unit) graph) ∧
+  selfloops_ok (g2 : ('a,'d,'ec,'el,'nf,'nl,SL_OK) graph)
 Proof
   simp[selfloops_ok_def]
 QED
@@ -860,7 +861,8 @@ Proof
   simp[addEdge0_def]
 QED
 
-(* adding undirected self-edge from n to n is the same as adding bare node n *)
+(* adding undirected self-edge from n to n in a no-selfloop graph is the
+   same as adding bare node n *)
 Theorem addUDEdge_addNode[simp]:
   addUDEdge n n lab (G:(α,undirectedG,'ec,'el,'nf,'nl,noSL) graph) =
   addNode n (nlabelfun G n) G
@@ -980,18 +982,18 @@ Proof
   rw[nrelabel0_def]
 QED
 
-Theorem udedges_nrelabel[simp]:
-  udedges (nrelabel n l G) = udedges G
-Proof
-  simp[udedges_thm]
-QED
-
 Theorem edges_nrelabel[simp]:
   edges (nrelabel n l G) = edges G
 Proof
   simp[edges_def, nrelabel_def, #termP_term_REP tydefrec, wfgraph_nrelabel0,
        #repabs_pseudo_id tydefrec] >>
   simp[nrelabel0_def] >> rw[]
+QED
+
+Theorem udedges_nrelabel[simp]:
+  udedges (nrelabel n l G) = udedges G
+Proof
+  simp[udedges_def]
 QED
 
 Theorem nlabelfun_nrelabel:
