@@ -652,6 +652,7 @@ local
       | ("prim_rec", "<") => [ I.INT_LT ]
       | ("realax", "/") => [ HolSmtTheory.real_div_smt_rdiv ]
       | ("realax", "abs") => [ R.abs ]
+      | ("realax", "inv") => [ R.REAL_INV_1OVER ]
       | ("realax", "max") => [ RA.real_max ]
       | ("realax", "min") => [ RA.real_min ]
       | ("realax", "pow") => [ R.POW_2, R.POW_ONE, R.REAL_POW_LT, RA.real_pow ]
