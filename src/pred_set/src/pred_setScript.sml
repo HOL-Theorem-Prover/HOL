@@ -201,7 +201,6 @@ val SET_SPEC_ss = SSFRAG
 
 val _ = augment_srw_ss [SET_SPEC_ss]
 
-
 (* --------------------------------------------------------------------- *)
 (* activate generalized specification parser/pretty-printer.             *)
 (* --------------------------------------------------------------------- *)
@@ -4402,6 +4401,14 @@ Proof
   MESON_TAC []
 QED
 
+val BIGUNION_GSPEC = store_thm ("BIGUNION_GSPEC",
+ ``(!P f. BIGUNION {f x | P x} = {a | ?x. P x /\ a IN (f x)}) /\
+   (!P f. BIGUNION {f x y | P x y} = {a | ?x y. P x y /\ a IN (f x y)}) /\
+   (!P f. BIGUNION {f x y z | P x y z} =
+            {a | ?x y z. P x y z /\ a IN (f x y z)})``,
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [EXTENSION] THEN
+  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
+
 val IN_BIGUNION_IMAGE = store_thm (* from util_prob *)
   ("IN_BIGUNION_IMAGE",
    ``!f s y. (y IN BIGUNION (IMAGE f s)) = (?x. x IN s /\ y IN f x)``,
@@ -4627,6 +4634,14 @@ Theorem IN_BIGINTER[simp]:
 Proof
   SIMP_TAC bool_ss [BIGINTER, GSPECIFICATION, pairTheory.PAIR_EQ]
 QED
+
+val BIGINTER_GSPEC = store_thm ("BIGINTER_GSPEC",
+ ``(!P f. BIGINTER {f x | P x} = {a | !x. P x ==> a IN (f x)}) /\
+   (!P f. BIGINTER {f x y | P x y} = {a | !x y. P x y ==> a IN (f x y)}) /\
+   (!P f. BIGINTER {f x y z | P x y z} =
+                {a | !x y z. P x y z ==> a IN (f x y z)})``,
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [EXTENSION] THEN
+  SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
 
 Theorem IN_BIGINTER_IMAGE:
   !x f s. (x IN BIGINTER (IMAGE f s)) = (!y. y IN s ==> x IN f y)
@@ -6449,6 +6464,26 @@ val MAX_SET_UNION = Q.store_thm
         by SRW_TAC[][EXTENSION,AC DISJ_COMM DISJ_ASSOC]
    THEN FULL_SIMP_TAC (srw_ss()) [MAX_SET_THM, AC MAX_COMM MAX_ASSOC]);
 
+Theorem FINITE_INTER :
+    !s1 s2. ((FINITE s1) \/ (FINITE s2)) ==> FINITE (s1 INTER s2)
+Proof
+  METIS_TAC[INTER_COMM, INTER_FINITE]
+QED
+
+Theorem MAX_SET_INTER :
+    !A B. FINITE A /\ FINITE B ==>
+          MAX_SET (A INTER B) <= MIN (MAX_SET A) (MAX_SET B)
+Proof
+    Q_TAC SUFF_TAC
+   ‘!A. FINITE A ==> !B. FINITE B ==>
+       MAX_SET (A INTER B) <= MIN (MAX_SET A) (MAX_SET B)’
+ >- METIS_TAC []
+ >> SET_INDUCT_TAC >> simp []
+ >> rpt STRIP_TAC (* 2 subgoals, same tactics *)
+ >> MATCH_MP_TAC SUBSET_MAX_SET
+ >> rw [FINITE_INTER, INTER_SUBSET]
+QED
+
 val set_ss = arith_ss ++ SET_SPEC_ss ++
              rewrites [CARD_INSERT,CARD_EMPTY,FINITE_EMPTY,FINITE_INSERT,
                        NOT_IN_EMPTY];
@@ -8210,9 +8245,6 @@ val IN_INSERT_EXPAND = store_thm ("IN_INSERT_EXPAND",
   SIMP_TAC bool_ss [IN_INSERT] THEN
   METIS_TAC[]);
 
-val FINITE_INTER = store_thm ("FINITE_INTER",
-  ``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==> FINITE (s1 INTER s2)``,
-  METIS_TAC[INTER_COMM, INTER_FINITE]);
 (* END misc thms *)
 
 (*---------------------------------------------------------------------------*)

@@ -342,19 +342,23 @@ val wlog_then = wlog_then
 (*---------------------------------------------------------------------------*)
 
 local open pairTheory pred_setTheory in
-fun SET_TAC L =
+
+fun SET_TAC ths =
     POP_ASSUM_LIST (K ALL_TAC) \\
     rpt COND_CASES_TAC \\
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-                         SING_DEF] L) \\
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] \\
+    REWRITE_TAC ([EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF, SING_DEF]
+                 @ ths) \\
+    SIMP_TAC pure_ss
+      [BIGINTER_IMAGE, BIGINTER_GSPEC, BIGUNION_IMAGE, BIGUNION_GSPEC] \\
+    SIMP_TAC std_ss
+      [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+       IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
+       GSPECIFICATION, IN_DEF, EXISTS_PROD] \\
     METIS_TAC [];
 
 fun ASM_SET_TAC L = rpt (POP_ASSUM MP_TAC) >> SET_TAC L;
-
 fun SET_RULE tm = prove (tm, SET_TAC []);
+
 end (* local *)
 
 end

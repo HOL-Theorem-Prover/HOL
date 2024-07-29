@@ -122,22 +122,6 @@ val BOUNDS_LINEAR_0 = store_thm ("BOUNDS_LINEAR_0",
   MP_TAC (SPECL [``A:num``, ``0:num``, ``B:num``] BOUNDS_LINEAR) THEN
   REWRITE_TAC[MULT_CLAUSES, ADD_CLAUSES, LE]);
 
-val BIGUNION_GSPEC = store_thm ("BIGUNION_GSPEC",
- ``(!P f. BIGUNION {f x | P x} = {a | ?x. P x /\ a IN (f x)}) /\
-   (!P f. BIGUNION {f x y | P x y} = {a | ?x y. P x y /\ a IN (f x y)}) /\
-   (!P f. BIGUNION {f x y z | P x y z} =
-            {a | ?x y z. P x y z /\ a IN (f x y z)})``,
-  REPEAT STRIP_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
-  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
-
-val BIGINTER_GSPEC = store_thm ("BIGINTER_GSPEC",
- ``(!P f. BIGINTER {f x | P x} = {a | !x. P x ==> a IN (f x)}) /\
-   (!P f. BIGINTER {f x y | P x y} = {a | !x y. P x y ==> a IN (f x y)}) /\
-   (!P f. BIGINTER {f x y z | P x y z} =
-                {a | !x y z. P x y z ==> a IN (f x y z)})``,
-  REPEAT STRIP_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
-  SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
-
 val FINITE_POWERSET = store_thm ("FINITE_POWERSET",
   ``!s. FINITE s ==> FINITE {t | t SUBSET s}``,
     METIS_TAC [FINITE_POW, POW_DEF]);
