@@ -656,6 +656,8 @@ local
       | ("realax", "max") => [ RA.real_max ]
       | ("realax", "min") => [ RA.real_min ]
       | ("realax", "pow") => [ R.POW_2, R.POW_ONE, R.REAL_POW_LT, RA.real_pow ]
+      | ("realax", "real_of_num") =>
+          [ Drule.GEN_ALL (Thm.SYM intrealTheory.real_of_int_num) ]
       | _ => []
     end
   end

@@ -892,6 +892,18 @@ in
     (``0 < (x:real) /\ x <= 1 ==> (x = 1)``,
       [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
 
+    (* conversions between numeric types *)
+
+    (``(x:num) < 42 ==> &x < (42:int)``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:num) < 42 ==> &x < (42:real)``,
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p*)]),
+    (``(42:int) < x ==> (42:num) < Num x``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:int) < 42 ==> real_of_int x < (42:real)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
+    (``(x:int) < -42 ==> real_of_int x < (-42:real)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
+
     (* uninterpreted functions *)
 
     (``(x = y) ==> (f x = f y)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
