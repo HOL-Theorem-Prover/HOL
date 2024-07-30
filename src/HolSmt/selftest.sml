@@ -904,6 +904,24 @@ in
     (``(x:int) < -42 ==> real_of_int x < (-42:real)``,
       [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
 
+    (``flrtoks (42:real) = (42:int)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
+    (``flrtoks (-42:real) = (-42:int)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
+    (``flrtoks (4/3:real) = (1:int)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``flrtoks (-4/3:real) = (-2:int)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+
+    (``clgtoks (42:real) = (42:int)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``clgtoks (-42:real) = (-42:int)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``clgtoks (4/3:real) = (2:int)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``clgtoks (-4/3:real) = (-1:int)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+
     (* uninterpreted functions *)
 
     (``(x = y) ==> (f x = f y)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p]),
