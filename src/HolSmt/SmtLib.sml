@@ -642,6 +642,7 @@ local
       | ("integer", "int_of_num") => [ I.INT_OF_NUM, I.INT_POS, I.NUM_OF_INT ]
       | ("integer", "int_quot") => [ I.INT_QUOT_EDIV ]
       | ("integer", "int_rem") => [ I.INT_REM_EMOD ]
+      | ("intreal", "INT_CEILING") => [ HolSmtTheory.int_ceiling_floor ]
       | ("marker", "Abbrev") => [ markerTheory.Abbrev_def ]
       | ("min", "=") =>
           if Type.compare (Ty, num --> num --> bool) = EQUAL then
