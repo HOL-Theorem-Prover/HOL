@@ -498,7 +498,9 @@ local
              intSimps.INT_ARITH_ss ++ realSimps.REAL_ARITH_ss)
                [Conv.GSYM integerTheory.INT_NEG_MINUS1]
         >> TRY arith_tactic
-        >> Tactical.rpt (Tactical.CHANGED_TAC ap_tactic))
+        >> Tactical.rpt (Tactical.CHANGED_TAC ap_tactic)
+        >> Tactic.CONV_TAC (bossLib.EVALn 1000000)
+        >> TRY arith_tactic)
     end
 
   (***************************************************************************)
