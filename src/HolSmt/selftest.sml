@@ -136,7 +136,9 @@ fun auto_tac (_, t) =
       handle Feedback.HOL_ERR _ =>
         wordsLib.WORD_DECIDE t'
       handle Feedback.HOL_ERR _ =>
-        Tactical.prove (t', blastLib.BBLAST_TAC)
+        Tactical.TAC_PROOF (([], t'), blastLib.BBLAST_TAC)
+      handle Feedback.HOL_ERR _ =>
+        Drule.EQT_ELIM (bossLib.EVAL t')
     val thm = Thm.EQ_MP (Thm.SYM t_eq_t') t'_thm
   in
     ([], fn _ => thm)
@@ -905,22 +907,22 @@ in
       [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
 
     (``flrtoks (42:real) = (42:int)``,
-      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p*)]),
     (``flrtoks (-42:real) = (-42:int)``,
-      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p*)]),
     (``flrtoks (4/3:real) = (1:int)``,
-      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
     (``flrtoks (-4/3:real) = (-2:int)``,
-      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
 
     (``clgtoks (42:real) = (42:int)``,
-      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
     (``clgtoks (-42:real) = (-42:int)``,
-      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
     (``clgtoks (4/3:real) = (2:int)``,
-      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
     (``clgtoks (-4/3:real) = (-1:int)``,
-      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
 
     (* uninterpreted functions *)
 
