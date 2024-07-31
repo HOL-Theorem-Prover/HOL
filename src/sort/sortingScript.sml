@@ -1755,7 +1755,7 @@ Proof
   rw[]
   \\ ‘SORTED $< (FILTER P (COUNT_LIST n))’
     by ( irule SORTED_FILTER \\ rw[sorted_lt_count_list] )
-  \\ qmatch_goalsub_abbrev_tac‘x = _’
+  \\ qmatch_abbrev_tac‘x = _’
   \\ ‘MEM x (FILTER P (COUNT_LIST n))’ by metis_tac[MEM_EL]
   \\ numLib.LEAST_ELIM_TAC
   \\ conj_tac
@@ -1797,8 +1797,8 @@ Proof
     ‘MEM i (FILTER P (COUNT_LIST m))’ by simp[MEM_FILTER, MEM_COUNT_LIST]
     \\ ‘MEM j (FILTER P (COUNT_LIST m))’ by simp[MEM_FILTER, MEM_COUNT_LIST]
     \\ fs[MEM_EL]
-    \\ qmatch_asmsub_rename_tac‘i = EL ni _’
-    \\ qmatch_asmsub_rename_tac‘j = EL nj _’
+    \\ qmatch_assum_rename_tac‘i = EL ni _’
+    \\ qmatch_assum_rename_tac‘j = EL nj _’
     \\ ‘ni < nj’
     by (
       CCONTR_TAC \\ gs[NOT_LESS, LESS_OR_EQ]
@@ -1810,12 +1810,12 @@ Proof
     \\ CCONTR_TAC
     \\ first_x_assum(qspec_then‘EL (nj-1) (FILTER P (COUNT_LIST m))’mp_tac)
     \\ fs[SORTED_EL_LESS]
-    \\ qmatch_goalsub_abbrev_tac‘P x’
+    \\ qmatch_abbrev_tac‘P x’
     \\ ‘nj - 1 < LENGTH (FILTER P (COUNT_LIST m))’ by simp[]
     \\ ‘MEM x (FILTER P (COUNT_LIST m))’ by metis_tac[MEM_EL]
     \\ fs[MEM_FILTER] )
   \\ first_x_assum irule
-  \\ qmatch_goalsub_abbrev_tac‘P x /\ P y /\ _’
+  \\ qmatch_abbrev_tac‘P x /\ P y /\ _’
   \\ ‘n < LENGTH (FILTER P (COUNT_LIST m))’ by simp[]
   \\ ‘MEM x (FILTER P (COUNT_LIST m))’ by metis_tac[MEM_EL]
   \\ ‘MEM y (FILTER P (COUNT_LIST m))’ by metis_tac[MEM_EL]

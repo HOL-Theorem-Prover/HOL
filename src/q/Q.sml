@@ -538,22 +538,24 @@ fun MATCH_ASSUM_RENAME_TAC q = kMATCH_ASSUM_RENAME_TAC q ALL_TAC
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
-fun subterm_helper make_tac k {ERR,pats,fvs_set} t g = let
+fun subterm_helper strictp make_tac k {ERR,pats,fvs_set} t g = let
   fun test (pat, thetasz) (bvs, subt) =
-      case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
-          SOME ((theta0, _), (tytheta,_)) =>
-          let
-            fun filt {residue, ...} =
-                List.all (fn bv => not (free_in bv residue)) bvs
-            val theta0 =
-                filter (fn s => isnt_uscore_var (#redex s) andalso filt s)
-                       theta0
-            val theta = map (redex_map (inst tytheta)) theta0
-          in
-            if length theta <> thetasz then NONE
-            else Lib.total (make_tac theta THEN k) g
-          end
-        | NONE => NONE
+      if strictp andalso aconv t subt then NONE
+      else
+        case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
+            SOME ((theta0, _), (tytheta,_)) =>
+            let
+              fun filt {residue, ...} =
+                  List.all (fn bv => not (free_in bv residue)) bvs
+              val theta0 =
+                  filter (fn s => isnt_uscore_var (#redex s) andalso filt s)
+                         theta0
+              val theta = map (redex_map (inst tytheta)) theta0
+            in
+              if length theta <> thetasz then NONE
+              else Lib.total (make_tac theta THEN k) g
+            end
+          | NONE => NONE
   fun find_pats patseq =
     case PQ seq.cases patseq of
         NONE => raise ERR "No matching sub-term found"
@@ -582,43 +584,76 @@ in
   {ERR = ERR, pats = seq.map mapthis pats, fvs_set = fvs_set}
 end
 
-fun kMATCH_GOALSUB_RENAME_TAC q k (g as (asl, t)) =
-    subterm_helper make_rename_tac k
+fun kMATCH_GOALSUB_RENAME_TAC b q k (g as (asl, t)) =
+    subterm_helper b make_rename_tac k
                    (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g
 
-fun MATCH_GOALSUB_RENAME_TAC q = kMATCH_GOALSUB_RENAME_TAC q ALL_TAC
+fun MATCH_GOALSUB_RENAME_TAC q = kMATCH_GOALSUB_RENAME_TAC false q ALL_TAC
 
-fun kMATCH_ASMSUB_RENAME_TAC q k (g as (asl, t)) = let
+fun kMATCH_ASMSUB_RENAME_TAC b q k (g as (asl, t)) = let
   val args = prep_rename q "MATCH_ASMSUB_RENAME_TAC" g
 in
-  FIRST_ASSUM (subterm_helper make_rename_tac k args o concl) g
+  FIRST_ASSUM (subterm_helper b make_rename_tac k args o concl) g
 end
 
 fun MATCH_GOALSUB_ABBREV_TAC q (g as (asl, t)) =
-    subterm_helper make_abbrev_tac ALL_TAC
+    subterm_helper false make_abbrev_tac ALL_TAC
                    (prep_rename q "MATCH_GOALSUB_ABBREV_TAC" g) t g
 
 fun MATCH_ASMSUB_ABBREV_TAC q (g as (asl, t)) = let
   val args = prep_rename q "MATCH_ASMSUB_ABBREV_TAC" g
 in
-  FIRST_ASSUM (subterm_helper make_abbrev_tac ALL_TAC args o concl) g
+  FIRST_ASSUM (subterm_helper false make_abbrev_tac ALL_TAC args o concl) g
 end
 
-fun MATCH_ASMSUB_RENAME_TAC q = kMATCH_ASMSUB_RENAME_TAC q ALL_TAC
+fun MATCH_ASMSUB_RENAME_TAC q = kMATCH_ASMSUB_RENAME_TAC false q ALL_TAC
 
-fun RENAME1_TAC q =
-    MATCH_RENAME_TAC q ORELSE MATCH_ASSUM_RENAME_TAC q ORELSE
-    MATCH_GOALSUB_RENAME_TAC q ORELSE MATCH_ASMSUB_RENAME_TAC q
+val seltypes = ["g", "a", "sg", "sa"]
+fun is_seltype s = mem s seltypes
+fun rename_by_type s =
+    case s of
+        "g" => kMATCH_RENAME_TAC
+      | "a" => kMATCH_ASSUM_RENAME_TAC
+      | "sg" => kMATCH_GOALSUB_RENAME_TAC true
+      | "sa" => kMATCH_ASMSUB_RENAME_TAC true
+      | _ => raise Fail "Q.rename_by_type: can't happen"
+fun remove_wspace s =
+    String.implode $
+      CharVector.foldr (fn (c,A) => if Char.isSpace c then A else c::A) [] s
+
+
+fun genrename1_with_opt q k =
+    let val (_, sopt) = HOLquotation.dest_last_comment q
+        val opts0 = case sopt of
+                        NONE => seltypes
+                      | SOME s => String.fields(equal #"|")(remove_wspace s)
+        val opts = case List.filter is_seltype opts0 of
+                       [] => (HOL_WARNING "Q" "RENAME"
+                                   "No valid selection options; using all";
+                              seltypes)
+                     | ss => ss
+        val _ = case List.find (not o is_seltype) opts0 of
+                    NONE => ()
+                  | SOME s => HOL_WARNING "Q" "RENAME"
+                                          ("Bad selection option: \"" ^
+                                           String.toString s ^ "\"")
+        fun build_tac q k [] = raise Fail "coreRENAME_TAC: can't happen"
+          | build_tac q k [opt] = rename_by_type opt q k
+          | build_tac q k (opt::rest) =
+            rename_by_type opt q k ORELSE build_tac q k rest
+    in
+      build_tac q k opts
+    end
+
+fun RENAME1_TAC q = genrename1_with_opt q ALL_TAC
+
 
 fun coreRENAME_TAC qs k =
   let
-    fun kRENAME1 q k =
-      kMATCH_RENAME_TAC q k ORELSE kMATCH_ASSUM_RENAME_TAC q k ORELSE
-      kMATCH_GOALSUB_RENAME_TAC q k ORELSE kMATCH_ASMSUB_RENAME_TAC q k
     fun recurse qs =
       case qs of
           [] => k
-        | q::rest => kRENAME1 q (recurse rest)
+        | q::rest => genrename1_with_opt q (recurse rest)
   in
     recurse qs
   end

@@ -22,7 +22,20 @@ sufficient for variables to have the same name to ``clash''; they need
 not also have the same type. The search for matches begins by
 attempting to find matches against the whole of the goal, against
 whole assumptions, for sub-terms within the goal, and then sub-terms
-of assumptions. If multiple matches are possible, a variant tactic,
+of assumptions. 
+
+These four different flavours of searching can additionally be
+controlled by adding comments {(* ... *)} to the end of the relevant
+quotation. The string in the comment has its whitespace stripped, and
+is then split into fields using the pipe character {|} as a separator.
+If the string consisting of the single character {g} is present, the
+pattern is checked against the entirety of the goal's conclusion; the
+string of character {a} causes a check against each individual
+assumption; the strings {sg} and {sa} cause checks against
+sub-terms present in the conclusion, or in any assumption
+respectively.
+
+If multiple matches are possible, a variant tactic,
 {Q.kRENAME_TAC}, can be used: this tactic takes an additional
 ``continuation'' tactic argument that can be used to discriminate
 between these matches.
@@ -53,9 +66,12 @@ If {Q.RENAME_TAC [`b < c`]} is invoked on the same initial goal, the result is:
 {
    b < y, y < z ?- b < c
 }
-illustrating the way in which variables can eliminate more complicated sub-terms.
+illustrating the way in which variables can eliminate more complicated
+sub-terms.
 
-The useful way in which underscores in patterns can be used to ``dodge'' terms including bound variables is illustrated in the next example, where the initial goal is:
+The useful way in which underscores in patterns can be used to
+``dodge'' terms including bound variables is illustrated in the next
+example, where the initial goal is:
 {
    (!a. f a < z), z < c ?- z < d
 }
@@ -63,7 +79,8 @@ After applying {Q.RENAME_TAC [`_ < x`, `x < c`]}, the goal becomes
 {
    (!a. f a < x), x < c' ?- x < c
 }
-The goal was chosen for the match to the second pattern because the goal is considered first. If the initial goal had been
+The goal was chosen for the match to the second pattern because the
+goal is considered first. If the initial goal had been
 {
    (!a. f a < z), z < c ?- z < d /\ P z
 }
@@ -72,6 +89,17 @@ then the result of the same application would be
    (!a. f a < z), z < c ?- x < d /\ P x
 }
 because whole assumptions are considered before sub-terms of the goal.
+
+The pattern-specification comments can be important when selecting for
+certain assumptions. Here, {Q.RENAME_TAC [‘x < _ (* a *)’]} will fail
+because there is no assumption of the required shape, even though the
+shape appears as a subterm in the assumptions, and is the shape of the
+goal's conclusion:
+{
+   ~(a < b) ?- c < d
+}
+Similarly, using the comment {(* a|sg *)} would also fail because the
+pattern is not present as a sub-term of the goal's conclusion.
 
 \COMMENTS
 This function is also available under the name {bossLib.rename}.

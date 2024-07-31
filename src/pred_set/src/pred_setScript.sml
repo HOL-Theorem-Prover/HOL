@@ -6983,8 +6983,8 @@ val _ = set_fixity "partitions" (Infix(NONASSOC, 425));
 
 Theorem partitions_thm:
   !X Y. X partitions Y <=>
-  ((!x. x IN X ==> x <> {} /\ x SUBSET Y) /\
-   (!y. y IN Y ==> ?!x. x IN X /\ y IN x))
+        ((!x. x IN X ==> x <> {} /\ x SUBSET Y) /\
+         (!y. y IN Y ==> ?!x. x IN X /\ y IN x))
 Proof
   rpt gen_tac \\ simp[partitions_def]
   \\ eq_tac \\ strip_tac
@@ -7017,7 +7017,7 @@ Proof
     \\ simp[EXTENSION]
     \\ METIS_TAC[SUBSET_DEF] )
   \\ `f y IN X /\ y IN f y` by METIS_TAC[]
-  \\ Q.MATCH_GOALSUB_ABBREV_TAC`z IN X`
+  \\ Q.MATCH_ABBREV_TAC `z IN X`
   \\ `z = f y` suffices_by rw[]
   \\ rw[Abbr`z`, EXTENSION]
   \\ reverse(Cases_on`x IN Y`) \\ simp[]
@@ -7105,7 +7105,7 @@ Proof
   \\ rw[EQ_IMP_THM]
   \\ fs[GSYM MEMBER_NOT_EMPTY]
   \\ res_tac \\ fs[] \\ rw[]
-  \\ Q.MATCH_GOALSUB_RENAME_TAC`{a} IN v`
+  \\ Q.MATCH_RENAME_TAC`{a} IN v`
   \\ `{a} = x` suffices_by rw[]
   \\ rw[Once EXTENSION, EQ_IMP_THM]
   \\ res_tac \\ fs[]
@@ -7238,12 +7238,11 @@ Proof
 QED
 
 Theorem FINITE_partitions:
-  !x. FINITE x ==>
-      FINITE { v | v partitions x }
+  !x. FINITE x ==> FINITE { v | v partitions x }
 Proof
   ho_match_mp_tac FINITE_INDUCT
   \\ rw[partitions_empty, partitions_INSERT]
-  \\ Q.MATCH_ASMSUB_ABBREV_TAC`FINITE px`
+  \\ Q.MATCH_ASSUM_ABBREV_TAC`FINITE px`
   \\ Q.ABBREV_TAC`ss = {} INSERT BIGUNION px`
   \\ `FINITE (px CROSS ss)` by (
     simp[Abbr`ss`, Abbr`px`]

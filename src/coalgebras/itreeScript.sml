@@ -193,7 +193,7 @@ Theorem Vis_11:
   !x f y g. Vis x f = Vis y g <=> x = y /\ f = g
 Proof
   rw [Vis_def] \\ eq_tac \\ strip_tac \\ fs []
-  \\ qmatch_asmsub_abbrev_tac `_ x1 = _ x2`
+  \\ qmatch_assum_abbrev_tac `_ x1 = _ x2`
   \\ `itree_rep_ok x1 /\ itree_rep_ok x2` by
       (unabbrev_all_tac \\ rw [] \\ match_mp_tac itree_rep_ok_Vis \\ fs [])
   \\ fs [itree_abs_11] \\ unabbrev_all_tac \\ fs [Vis_rep_11]

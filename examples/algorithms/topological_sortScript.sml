@@ -419,7 +419,7 @@ Proof
   >- (fs[Once $ top_sort_aux_def] >> metis_tac[]) >>
   qpat_x_assum `MEM _ (top_sort_aux _ _ _)` $
     assume_tac o SRULE[Once $ top_sort_aux_def,LET_THM] >>
-  qmatch_asmsub_abbrev_tac `MEM _ (_ ps)` >>
+  qmatch_assum_abbrev_tac `MEM _ (_ ps)` >>
   PairCases_on `ps` >>
   fs[] >>
   last_x_assum $ drule_then irule >>
@@ -828,7 +828,7 @@ Proof
   gvs[MEM_MAP,MEM_FLAT] >>
   `n ≠ n'` by (spose_not_then assume_tac >> gvs[]) >>
   qpat_x_assum `option_CASE _ _ _ ≠ _` kall_tac >>
-  qmatch_asmsub_abbrev_tac `MEM _ (top_sort enc_graph)` >>
+  qmatch_assum_abbrev_tac `MEM _ (top_sort enc_graph)` >>
   `ALL_DISTINCT (MAP FST enc_graph)`
     by (
       rw[Abbr`enc_graph`,ALL_DISTINCT_GENLIST,

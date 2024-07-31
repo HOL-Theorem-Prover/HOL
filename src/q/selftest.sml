@@ -246,7 +246,6 @@ val _ = case sgs of
               (aconvdie "goal conclusion" t expected_result2a; OK())
           | _ => die "FAILED!"
 
-
 val _ = tprint "Q.MATCH_ASMSUB_RENAME_TAC 1"
 val gl3 = ([``P (x:num): bool``, ``Q (x < SUC (SUC (SUC zero))) : bool``],
            ``x + y < SUC (SUC zero)``);
@@ -512,5 +511,13 @@ val _ = let
 in
   recording contains (Q.SPEC_THEN ‘T’ MP_TAC (ASSUME “∀f. f x”)) ([], “p /\ q”)
 end
+
+val _ = testutils.shouldfail {
+      checkexn = check_HOL_ERRexn (fn (s,_,_) => mem s ["Tactical","Q"]),
+      printarg = K "Q.RENAME_TAC (* a|sg *) correctly fails on sub-term",
+      printresult = PP.pp_to_string 70 proofManagerLib.std_goal_pp,
+      testfn = hd o #1 o Q.RENAME_TAC [‘_ < y (* a|sg *)’]
+    } ([“~(x < y)”, “P (x:num):bool”], “a < b”)
+
 
 val _ = Process.exit Process.success;

@@ -9472,7 +9472,7 @@ Proof
   \\ reverse conj_tac
   >- ( irule ring_associates_mult \\ rfs[] )
   \\ DEP_ONCE_REWRITE_TAC[ring_mult_comm] \\ rfs[]
-  \\ qmatch_goalsub_abbrev_tac`rassoc foo _`
+  \\ qmatch_abbrev_tac`rassoc foo _`
   \\ DEP_ONCE_REWRITE_TAC[ring_mult_comm] \\ rfs[]
   \\ qunabbrev_tac`foo`
   \\ irule ring_associates_mult \\ rfs[]
@@ -14705,7 +14705,7 @@ Proof
   \\ drule_then (drule_then drule) ring_iso_sym
   \\ simp[RingIso_def, RingHomo_def]
   \\ strip_tac
-  \\ qmatch_asmsub_abbrev_tac`BIJ g s.carrier r.carrier`
+  \\ qmatch_assum_abbrev_tac`BIJ g s.carrier r.carrier`
   \\ `Group s.sum /\ Group r.sum` by metis_tac[Ring_def, AbelianGroup_def]
   \\ `g s.sum.id = r.sum.id` by metis_tac[group_homo_id]
   \\ conj_asm1_tac >- metis_tac[monoid_homo_id]
@@ -15174,7 +15174,7 @@ Proof
   by metis_tac[ring_prime_divides_product, FINITE_LIST_TO_BAG]
   \\ fs[IN_LIST_TO_BAG]
   \\ `ring_associates r h q` by metis_tac[integral_domain_divides_prime]
-  \\ qmatch_asmsub_rename_tac`ring_divides r p q`
+  \\ qmatch_assum_rename_tac`ring_divides r p q`
   \\ drule (#1(EQ_IMP_RULE MEM_SPLIT_APPEND_first))
   \\ strip_tac
   \\ `PERM l2 (q::(pfx++sfx))`
@@ -15193,7 +15193,7 @@ Proof
     \\ fs[SUBSET_DEF] )
   \\ `?s. Unit r s /\ p = s * q` by metis_tac[ring_associates_def]
   \\ qmatch_asmsub_abbrev_tac`r.prod.op p p1`
-  \\ qmatch_asmsub_abbrev_tac`rassoc (p * p1) p2`
+  \\ qmatch_assum_abbrev_tac`rassoc (p * p1) p2`
   \\ `?s2. Unit r s2 /\ p * p1 = s2 * p2` by metis_tac[ring_associates_def]
   \\ qmatch_asmsub_abbrev_tac`q * q1`
   \\ `q1 IN r.prod.carrier`
@@ -15210,7 +15210,7 @@ Proof
   \\ `unit (s3 * s2)` by metis_tac[ring_unit_mult_eq_unit, ring_unit_property]
   \\ `q * p1 = q * (s3 * s2) * q1` by metis_tac[ring_mult_comm, ring_mult_assoc]
   \\ `q * p1 = q * ((s3 * s2) * q1)` by rfs[ring_mult_assoc]
-  \\ qmatch_asmsub_abbrev_tac`unit u`
+  \\ qmatch_assum_abbrev_tac`unit u`
   \\ `ring_sub r (q * p1) (q * (u * q1)) = #0`
   by metis_tac[ring_sub_eq_zero, ring_mult_element]
   \\ `q * (ring_sub r p1 (u * q1)) = #0`

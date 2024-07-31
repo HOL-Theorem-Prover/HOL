@@ -660,7 +660,7 @@ Proof
   FREEZE_THEN (fn th => fs[th])
     (holds_uncm |> SPEC_ALL |> Q.INST [‘fs’ |-> ‘fvs’, ‘kvs’ |-> ‘∅’]
                 |> SIMP_RULE (srw_ss()) [] |> GSYM |> Q.GENL [‘ϕ’]) >>
-  qmatch_asmsub_abbrev_tac ‘interpretation (language FML) _’ >>
+  qmatch_assum_abbrev_tac ‘interpretation (language FML) _’ >>
   ‘FML = {FMC p | p ∈ A}’
      by (simp[Abbr‘FML’, Abbr‘A’, EXTENSION] >> metis_tac[]) >>
   map_every qexists_tac [‘uncm_mod M’, ‘uncm_map M fvs’] >> simp[] >>

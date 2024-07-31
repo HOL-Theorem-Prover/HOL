@@ -733,7 +733,7 @@ Proof
      ‘byte_index a be + 8 = SUC (byte_index a be + 7)’ by simp[]>>
      simp[word_slice_alt_word_slice]>>
      simp[WORD_SLICE_THM]>>
-     qmatch_goalsub_abbrev_tac ‘A << _ = B << _’>>
+     qmatch_abbrev_tac ‘A << _ = B << _’>>
      ‘A = B’ by
        (simp[Abbr ‘A’,Abbr ‘B’]>>
         simp[w2w_w2w,word_lsr_n2w]>>

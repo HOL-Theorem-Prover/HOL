@@ -1103,8 +1103,8 @@ Proof
     ) >>
   rename1 `FLOOKUP _ k` >> Cases_on `FLOOKUP x k` >> Cases_on `FLOOKUP y k`
   >- simp[] >- simp[] >- simp[] >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP x _ = SOME a` >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP y _ = SOME b` >>
+  qmatch_assum_abbrev_tac `FLOOKUP x _ = SOME a` >>
+  qmatch_assum_abbrev_tac `FLOOKUP y _ = SOME b` >>
   last_x_assum $ qspecl_then [`k`,`a`,`b`] assume_tac >> simp[] >> gvs[]
 QED
 
@@ -1121,9 +1121,9 @@ Proof
   rename1 `FLOOKUP _ k` >>
   Cases_on `FLOOKUP x k` >> Cases_on `FLOOKUP y k` >> Cases_on `FLOOKUP z k`
   >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP x _ = SOME a` >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP y _ = SOME b` >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP z _ = SOME c` >>
+  qmatch_assum_abbrev_tac `FLOOKUP x _ = SOME a` >>
+  qmatch_assum_abbrev_tac `FLOOKUP y _ = SOME b` >>
+  qmatch_assum_abbrev_tac `FLOOKUP z _ = SOME c` >>
   last_x_assum $ qspecl_then [`k`,`a`,`b`,`c`] assume_tac >> simp[] >> gvs[]
 QED
 

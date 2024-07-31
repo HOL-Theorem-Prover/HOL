@@ -3574,8 +3574,8 @@ Theorem LIST_ELEM_COUNT_CARD_EL:
 Proof
   Induct
   \\ rw[LIST_ELEM_COUNT_THM]
-  \\ Q.MATCH_GOALSUB_ABBREV_TAC`_ = CARD B`
-  \\ Q.MATCH_ASMSUB_ABBREV_TAC`_ = CARD A`
+  \\ Q.MATCH_ABBREV_TAC`_ = CARD B`
+  \\ Q.MATCH_ASSUM_ABBREV_TAC`_ = CARD A`
   \\ `A SUBSET count (LENGTH ls)` by simp[Abbr`A`, SUBSET_DEF]
   \\ `B SUBSET count (SUC (LENGTH ls))` by simp[Abbr`B`, SUBSET_DEF]
   \\ `FINITE A /\ FINITE B` by metis_tac[SUBSET_FINITE, FINITE_COUNT]

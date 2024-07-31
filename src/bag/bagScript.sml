@@ -2061,8 +2061,8 @@ Theorem FINITE_SUB_BAGS:
 Proof
   ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
   \\ rw[]
-  \\ qmatch_asmsub_abbrev_tac`FINITE sb`
-  \\ qmatch_goalsub_abbrev_tac`FINITE eb`
+  \\ qmatch_assum_abbrev_tac`FINITE sb`
+  \\ qmatch_abbrev_tac`FINITE eb`
   \\ `eb = sb UNION (IMAGE (BAG_INSERT e) sb)` suffices_by simp[]
   \\ simp[SET_EQ_SUBSET, SUBSET_DEF, Abbr`sb`, Abbr`eb`, PULL_EXISTS]
   \\ reverse conj_tac
@@ -2073,7 +2073,6 @@ Proof
   \\ imp_res_tac BAG_DECOMPOSE \\ rw[]
   \\ fs[SUB_BAG_INSERT]
 QED
-
 
 (* ----------------------------------------------------------------------
     A "fold"-like operation for bags, ITBAG, by analogy with the set
@@ -3338,7 +3337,7 @@ Proof
     \\ simp[SING_TEST, GSYM pred_setTheory.MEMBER_NOT_EMPTY]
     \\ metis_tac[] )
   >- simp[EXTENSION]
-  \\ qmatch_asmsub_abbrev_tac`INFINITE z`
+  \\ qmatch_assum_abbrev_tac`INFINITE z`
   \\ `z = {}` suffices_by metis_tac[FINITE_EMPTY]
   \\ simp[EXTENSION, Abbr`z`]
 QED
