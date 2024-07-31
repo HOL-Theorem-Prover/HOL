@@ -4092,6 +4092,13 @@ val LE_NUM_CEILING = store_thm
    THEN SIMP_TAC (srw_ss()) []
    THEN METIS_TAC [REAL_LT_IMP_LE]);
 
+Theorem NUM_CEILING_BASE:
+    !x. x <= 0 ==> clg x = 0
+Proof
+    metis_tac[NUM_FLOOR_BASE, REAL_LT_ADD1, REAL_ADD_LID,
+      REWRITE_RULE [boolTheory.LET_THM] NUM_CEILING_NUM_FLOOR]
+QED
+
 val NUM_CEILING_LE = store_thm
 ("NUM_CEILING_LE",
  ``!x n. x <= &n ==> clg(x) <= n``,
