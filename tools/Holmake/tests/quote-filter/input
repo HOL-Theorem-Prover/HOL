@@ -77,14 +77,14 @@ Inductive reln:
    (!y. reln 100 y)
 End
 
-Quote foo = bar:
+Quote foo = ba'r:
   this is a quotation with
  nested "string\n"
 End
 
 Theorem thmname = expression
 
-Quote bar:
+Quote bar_x:
   another quotation (* with unfinished comment 
   and bare " with ^foo and ^^
 End

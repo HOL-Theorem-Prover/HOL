@@ -1179,6 +1179,9 @@ which is translated to
 \begin{alltt}
 val _ = ident \mbox{\textrm{`}} ... \mbox{\textrm{'}};
 \end{alltt}
+
+In both forms the identifier immediately before the colon must be a valid SML identifier containing only alpha-numeric characters (but with \ml{structure}-qualification and full-stops also permitted).
+In the first form, \ml{ident1} must be a simple (unqualified) alphanumeric identifier (\eg, \ml{foo}, \ml{bar'}, \ml{Foo_bar}, but not \ml{M.bar}, nor \ml{++}).
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|)}
 
 
