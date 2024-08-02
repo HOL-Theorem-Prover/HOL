@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory pairTheory bagTheory
+open pred_setTheory pairTheory bagTheory liftingTheory transferTheory
+     transferLib
 
 (* Material on finite simple graphs mechanised from
      "Combinatorics and Graph Theory" by Harris, Hirst, and Mossinghoff
@@ -8,22 +9,22 @@ open pred_setTheory pairTheory bagTheory
 
 val _ = new_theory "genericGraph";
 
-Datatype: diredge = directed α α 'label
+Datatype: diredge = directed (α set) (α set) 'label
 End
-Datatype: hyperedge = hyper (α set) 'label
+Datatype: undiredge = undirected (α set) 'label
 End
 Datatype:
-  core_edge = cDE (('a,'l) diredge) | cHE (('a,'l) hyperedge)
+  core_edge = cDE (('a,'l) diredge) | cUDE (('a,'l) undiredge)
 End
 Overload DE = “λm n l. cDE (directed m n l)”
-Overload HE = “λns l. cHE (hyper ns l)”
+Overload UDE = “λns l. cUDE (undirected ns l)”
 
 Theorem core_edge_cases:
-  ∀e. (∃m n l. e = DE m n l) ∨ (∃ns l. e = HE ns l)
+  ∀e. (∃m n l. e = DE m n l) ∨ (∃ns l. e = UDE ns l)
 Proof
   Cases >> simp[] >>
   metis_tac[TypeBase.nchotomy_of “:('a,'l) diredge”,
-            TypeBase.nchotomy_of “:('a,'l) hyperedge”]
+            TypeBase.nchotomy_of “:('a,'l) undiredge”]
 QED
 
 val _ = TypeBase.export [
@@ -34,22 +35,22 @@ val _ = TypeBase.export [
 
 Definition is_directed_edge_def[simp]:
   is_directed_edge (cDE _ ) = T ∧
-  is_directed_edge (cHE _ ) = F
+  is_directed_edge (cUDE _ ) = F
 End
 Definition denodes_def[simp]:
   denodes (directed m n l) = (m,n)
 End
-Definition henodes_def[simp]:
-  henodes (hyper ns l) = ns
+Definition udenodes_def[simp]:
+  udenodes (undirected ns l) = ns
 End
 Definition enodes_def[simp]:
   enodes (cDE de) = INL (denodes de) ∧
-  enodes (cHE he) = INR (henodes he)
+  enodes (cUDE he) = INR (udenodes he)
 End
 
 Theorem enodesEQ:
   (enodes e = INL (m,n) ⇔ ∃l. e = DE m n l) ∧
-  (enodes e = INR ns ⇔ ∃l. e = HE ns l)
+  (enodes e = INR ns ⇔ ∃l. e = UDE ns l)
 Proof
   Cases_on ‘e’ >> simp[]
 QED
@@ -84,30 +85,16 @@ Proof
 QED
 
 Definition incidentDE_def[simp]:
-  incidentDE (directed n1 n2 lab) = {n1;n2}
+  incidentDE (directed n1 n2 lab) = n1 ∪ n2
 End
 
-Overload incidentHE = “henodes”
-Overload henodes = “henodes”
-Overload incident = “incidentHE”
+Overload incident = “udenodes”
 Overload incident = “incidentDE”
 
 Definition core_incident_def[simp]:
   core_incident (cDE de) = incident de ∧
-  core_incident (cHE he) = incident he
+  core_incident (cUDE he) = incident he
 End
-
-Theorem FINITE_incident[simp]:
-  FINITE (incidentDE de)
-Proof
-  Cases_on ‘de’ >> simp[]
-QED
-
-Theorem incident_EQ_SING:
-  incident e = {m} ⇔ ∃l. e = directed m m l
-Proof
-  Cases_on ‘e’ >> simp[] >> metis_tac[]
-QED
 
 Definition selfloop_def[simp]:
   selfloop (directed m n lab) ⇔ m = n
@@ -115,7 +102,7 @@ End
 
 Definition gen_selfloop_def[simp]:
   gen_selfloop (cDE de) = selfloop de ∧
-  gen_selfloop (cHE he) = SING (henodes he)
+  gen_selfloop (cUDE he) = SING (udenodes he)
 End
 
 Definition dirflip_edge_def[simp]:
@@ -136,7 +123,7 @@ QED
 
 Definition flip_edge_def[simp]:
   flip_edge (cDE de) = cDE (dirflip_edge de) ∧
-  flip_edge (cHE he) = cHE he
+  flip_edge (cUDE he) = cUDE he
 End
 
 Theorem flip_edge_inverts[simp]:
@@ -161,8 +148,8 @@ QED
 Theorem flip_edge_EQ[simp]:
   (flip_edge e = DE a b lab ⇔ e = DE b a lab) ∧
   (DE a b lab = flip_edge e ⇔ e = DE b a lab) ∧
-  (flip_edge e = HE ns lab ⇔ e = HE ns lab) ∧
-  (HE ns lab = flip_edge e ⇔ e = HE ns lab)
+  (flip_edge e = UDE ns lab ⇔ e = UDE ns lab) ∧
+  (UDE ns lab = flip_edge e ⇔ e = UDE ns lab)
 Proof
   Cases_on ‘e’ >> simp[] >> metis_tac[]
 QED
@@ -170,17 +157,17 @@ QED
 Theorem incident_dirflip_edge[simp]:
   incident (dirflip_edge de) = incident de
 Proof
-  Cases_on ‘de’ >> simp[INSERT_COMM]
+  Cases_on ‘de’ >> simp[UNION_COMM]
 QED
 
 Theorem incident_flip_edge[simp]:
   core_incident (flip_edge e) = core_incident e
 Proof
-  Cases_on ‘e’ >> simp[INSERT2_lemma]
+  Cases_on ‘e’ >> simp[INSERT2_lemma, AC UNION_COMM UNION_ASSOC]
 QED
 
-Definition hedge_label_def[simp]:
-  hedge_label (hyper ns l) = l
+Definition udedge_label_def[simp]:
+  udedge_label (undirected ns l) = l
 End
 Definition dedge_label_def[simp]:
   dedge_label (directed m n l) = l
@@ -193,7 +180,7 @@ QED
 
 Definition edge_label_def[simp]:
   edge_label (cDE de) = dedge_label de ∧
-  edge_label (cHE he) = hedge_label he
+  edge_label (cUDE he) = udedge_label he
 End
 
 Theorem edge_label_flip_edge[simp]:
@@ -237,12 +224,18 @@ Definition itself2_4_def:
     else (T,T)
 End
 
-(* types of graph encoded with an itself2boolopt:
+Datatype:
+  edge_cst_vals = ONE_EDGE | ONE_EDGE_PERLABEL | FINITE_EDGES | UNC_EDGES
+End
 
-       directed      (SOME F)
-       undirected    (SOME T)
-       hypergraph    NONE
-*)
+Definition itself2_ecv_def:
+  itself2_ecv x =
+  case itself2_4 x of
+  | (F,F) => ONE_EDGE
+  | (F,T) => ONE_EDGE_PERLABEL
+  | (T,F) => FINITE_EDGES
+  | (T,T) => UNC_EDGES
+End
 
 (* constraining edge set sizes between any given set of nodes (possibly
    singleton if selfloops allowed; possibly with size > 2 if hypergraph)
@@ -272,27 +265,25 @@ Definition finite_edges_per_nodeset_def:
 End
 
 Definition edge_cst_def:
-  edge_cst ecst dirp slp ebag ⇔
-    (case itself2_4 ecst of
-     | (F,F) => only_one_edge ebag
-     | (F,T) => only_one_edge_per_label ebag
-     | (T,F) => finite_edges_per_nodeset ebag
-     | (T,T) => T) ∧
-    case (itself2boolopt dirp, itself2bool slp) of
-    | (NONE,   F) => (∀A e. e ∈ set ebag ∧ A = core_incident e ⇒
-                            ¬is_directed_edge e ∧
-                            (FINITE A ⇒ 2 ≤ CARD A))
-    | (NONE,   T) => (∀A e. e ∈ set ebag ∧ A = core_incident e ⇒
-                            ¬is_directed_edge e ∧
-                            (FINITE A ⇒ 1 ≤ CARD A))
-    | (SOME F, F) => (∀e. e ∈ set ebag ⇒ is_directed_edge e ∧ ¬gen_selfloop e)
-    | (SOME F, T) => (∀e. e ∈ set ebag ⇒ is_directed_edge e)
-    | (SOME T, F) => (∀e. e ∈ set ebag ⇒
-                          ¬is_directed_edge e ∧
-                          ∃m n. m ≠ n ∧ core_incident e = {m;n})
-    | (SOME T, T) => (∀e. e ∈ set ebag ⇒
-                          ¬is_directed_edge e ∧
-                          ∃m n. core_incident e = {m;n})
+  edge_cst ecst dirp hypp slp ebag ⇔
+    (case itself2_ecv ecst of
+     | ONE_EDGE => only_one_edge ebag
+     | ONE_EDGE_PERLABEL => only_one_edge_per_label ebag
+     | FINITE_EDGES => finite_edges_per_nodeset ebag
+     | UNC_EDGES => T) ∧
+    case (itself2bool dirp, itself2bool hypp, itself2bool slp) of
+    | (F, F, F) => (∀e. e ∈ set ebag ⇒ ∃m n l. e = UDE {m;n} l ∧ m ≠ n)
+    | (F, F, T) => (∀e. e ∈ set ebag ⇒ ∃m n l. e = UDE {m;n} l)
+    | (F, T, F) => (∀e. e ∈ set ebag ⇒
+                        ∃ns l. e = UDE ns l ∧ (FINITE ns ⇒ 2 ≤ CARD ns))
+    | (F, T, T) => (∀e. e ∈ set ebag ⇒ ∃ns l. e = UDE ns l ∧ ns ≠ ∅)
+    | (T, F, F) => (∀e. e ∈ set ebag ⇒ ∃m n l. e = DE {m} {n} l ∧ m ≠ n)
+    | (T, F, T) => (∀e. e ∈ set ebag ⇒ ∃m n l. e = DE {m} {n} l)
+    | (T, T, F) => (∀e. e ∈ set ebag ⇒
+                        ∃ms ns l. e = DE ms ns l ∧ DISJOINT ms ns ∧
+                                  ms ≠ ∅ ∧ ns ≠ ∅)
+    | (T, T, T) => (∀e. e ∈ set ebag ⇒
+                        ∃ms ns l. e = DE ms ns l ∧ ms ≠ ∅ ∧ ns ≠ ∅)
 End
 
 val SL_OK_tydefrec = newtypeTools.rich_new_type
@@ -321,9 +312,15 @@ val finiteG_tydefrec = newtypeTools.rich_new_type
 
 val undirectedG_tydefrec = newtypeTools.rich_new_type
    {tyname = "undirectedG",
-    exthm  = prove(“∃x:bool. (λx. T) x”, simp[]),
+    exthm  = prove(“∃x:num. (λx. T) x”, simp[]),
     ABS    = "undirectedG_ABS",
     REP    = "undirectedG_REP"};
+
+val unhyperG_tydefrec = newtypeTools.rich_new_type
+   {tyname = "unhyperG",
+    exthm  = prove(“∃x:num. (λx. T) x”, simp[]),
+    ABS    = "unhyperG_ABS",
+    REP    = "unhyperG_REP"};
 
 val directedG_tydefrec = newtypeTools.rich_new_type
    {tyname = "directedG",
@@ -333,7 +330,7 @@ val directedG_tydefrec = newtypeTools.rich_new_type
 
 val hyperG_tydefrec = newtypeTools.rich_new_type
    {tyname = "hyperG",
-    exthm  = prove(“∃x:num. (λx. T) x”, simp[]),
+    exthm  = prove(“∃x:unit. (λx. T) x”, simp[]),
     ABS    = "hyperG_ABS",
     REP    = "hyperG_REP"};
 
@@ -385,10 +382,10 @@ Proof
   simp[EXTENSION, SYM $ #term_REP_11 directedG_tydefrec]
 QED
 
-Theorem itself2boolopt_directedG[simp]:
-  itself2boolopt (:directedG) = SOME F
+Theorem itself2bool_directedG[simp]:
+  itself2bool (:directedG) = T
 Proof
-  simp[itself2boolopt_def]
+  simp[itself2bool_def]
 QED
 
 Theorem itself2bool_noSL[simp]:
@@ -397,14 +394,6 @@ Proof
   simp[itself2bool_def] >>
   simp[infinite_num_inj] >> qexists ‘noSL_ABS’ >>
   simp[INJ_IFF, #term_ABS_pseudo11 noSL_tydefrec]
-QED
-
-Theorem UNIV_undirectedG:
-  univ(:undirectedG) = {undirectedG_ABS F; undirectedG_ABS T}
-Proof
-  simp[EXTENSION, SYM $ #term_REP_11 undirectedG_tydefrec,
-       #repabs_pseudo_id undirectedG_tydefrec
-      ]
 QED
 
 Theorem UNIV_finiteEdges[simp]:
@@ -416,17 +405,27 @@ Proof
       ] >> qx_gen_tac ‘e’ >> Cases_on ‘finiteEdges_REP e’ >> simp[]
 QED
 
-Theorem itself2_t_finiteEdges[simp]:
-  itself2_4 (:finiteEdges) = (T,F)
+Theorem itself2_ecv_finiteEdges[simp]:
+  itself2_ecv (:finiteEdges) = FINITE_EDGES
 Proof
-  simp[itself2_4_def, AllCaseEqs(), #term_ABS_pseudo11 finiteEdges_tydefrec]
+  simp[itself2_ecv_def, itself2_4_def,
+       AllCaseEqs(), #term_ABS_pseudo11 finiteEdges_tydefrec]
 QED
 
-Theorem itself2boolopt_undirectedG[simp]:
-  itself2boolopt (:undirectedG) = SOME T
+Theorem itself2bool_undirectedG[simp]:
+  itself2bool (:undirectedG) = F
 Proof
-  simp[itself2boolopt_def, AllCaseEqs(), UNIV_undirectedG,
-       #term_ABS_pseudo11 undirectedG_tydefrec]
+  simp[itself2bool_def, AllCaseEqs(), infinite_num_inj] >>
+  qexists ‘undirectedG_ABS’ >>
+  simp[INJ_IFF, #term_ABS_pseudo11 undirectedG_tydefrec]
+QED
+
+Theorem itself2bool_unhyperG[simp]:
+  itself2bool (:unhyperG) = F
+Proof
+  simp[itself2bool_def, AllCaseEqs(), infinite_num_inj] >>
+  qexists ‘unhyperG_ABS’ >>
+  simp[INJ_IFF, #term_ABS_pseudo11 unhyperG_tydefrec]
 QED
 
 Theorem INFINITE_UINF_OK[simp]:
@@ -437,9 +436,9 @@ Proof
 QED
 
 Theorem itself2_4_allEdgesOK[simp]:
-  itself2_4 (:allEdgesOK) = (T,T)
+  itself2_ecv (:allEdgesOK) = UNC_EDGES
 Proof
-  simp[itself2_4_def, AllCaseEqs(), infinite_num_inj] >>
+  simp[itself2_ecv_def, itself2_4_def, AllCaseEqs(), infinite_num_inj] >>
   qexists ‘allEdgesOK_ABS’ >>
   simp[INJ_IFF, #term_ABS_pseudo11 allEdgesOK_tydefrec]
 QED
@@ -474,6 +473,7 @@ Datatype:
   graphrep = <| nodes : ('a+num) set ;
                   (* useful to have countable space to expand into *)
                 edges : ('a+num,'el) core_edge bag ;
+                hyperp : 'hyperp itself;
                 nlab : 'a+num -> 'nl ;
                 nfincst : 'nf itself ;
                 dircst : 'd itself ;  (* true implies directed graph *)
@@ -486,7 +486,7 @@ Definition wfgraph_def:
   wfgraph grep ⇔
     (∀e. e ∈ set grep.edges ⇒ core_incident e ⊆ grep.nodes) ∧
     finite_cst (itself2set grep.nfincst) grep.nodes ∧
-    edge_cst grep.edgecst grep.dircst grep.slcst grep.edges ∧
+    edge_cst grep.edgecst grep.dircst grep.hyperp grep.slcst grep.edges ∧
     (∀n. n ∉ grep.nodes ⇒ grep.nlab n = ARB)
 End
 
@@ -508,12 +508,11 @@ Theorem optelim[local] = prove_case_elim_thm {
   case_def = TypeBase.case_def_of ``:'a option``};
 
 Theorem edge_cst_EMPTY[simp]:
-  edge_cst x y z EMPTY_BAG
+  edge_cst w x y z EMPTY_BAG
 Proof
   rw[edge_cst_def, finite_edges_per_nodeset_def, only_one_edge_per_label_def,
-     only_one_edge_def]
-  >- (rename [‘itself2_4 X’] >> Cases_on ‘itself2_4 X’ >> simp[])
-  >- (rename [‘itself2boolopt X’] >> Cases_on ‘itself2boolopt X’ >> simp[])
+     only_one_edge_def] >>
+  rename [‘itself2_ecv X’] >> Cases_on ‘itself2_ecv X’ >> simp[]
 QED
 
 Theorem finite_edges_per_nodeset_BAG_INSERT[simp]:
@@ -540,18 +539,15 @@ Proof
 QED
 
 Theorem edge_cst_DELETE:
-  edge_cst x y z es0 ∧ BAG_DELETE es0 e es ⇒ edge_cst x y z es
+  edge_cst w x y z es0 ∧ BAG_DELETE es0 e es ⇒ edge_cst w x y z es
 Proof
   simp[edge_cst_def, BAG_DELETE] >> rw[] >> gvs[] >>
-  rename [‘itself2_4 ecst’] >> Cases_on ‘itself2_4 ecst’ >>
-  rename [‘itself2_4 ecst = (b1,b2)’] >> map_every Cases_on [‘b1’, ‘b2’] >>
+  rename [‘itself2_ecv ecst’] >> Cases_on ‘itself2_ecv ecst’ >>
   gvs[DISJ_IMP_THM, FORALL_AND_THM] >>~-
   ([‘only_one_edge_per_label (BAG_INSERT e es)’, ‘only_one_edge_per_label es’],
    drule only_one_edge_per_label_BAG_INSERT >> simp[]) >>~-
   ([‘only_one_edge (BAG_INSERT e es)’, ‘only_one_edge es’],
-   drule only_one_edge_BAG_INSERT >> simp[]) >>
-  rename [‘itself2boolopt uhd’] >> Cases_on ‘itself2boolopt uhd’ >> gvs[] >>
-  metis_tac[]
+   drule only_one_edge_BAG_INSERT >> simp[])
 QED
 
 Theorem graphs_exist[local]:
@@ -559,6 +555,7 @@ Theorem graphs_exist[local]:
 Proof
   qexists ‘<| nodes := {};
               edges := EMPTY_BAG;
+              hyperp := ARB;
               nlab := K ARB;
               nfincst := ARB;
               dircst := ARB;
@@ -573,8 +570,60 @@ val tydefrec = newtypeTools.rich_new_type
     ABS    = "graph_ABS",
     REP    = "graph_REP"};
 
-(* any undirected graph *)
-Type udgraph[pp] = “:('a,undirectedG,'ec,'el,'nf,'nl,'sl)graph”
+Definition AR_def:
+  AR r a ⇔ wfgraph r ∧ r = graph_REP a
+End
+
+Definition ceq_def:
+  ceq gr1 gr2 ⇔ gr1 = gr2 ∧ wfgraph gr1
+End
+
+Theorem wfgraph_relates[transfer_rule]:
+  (AR ===> (=)) wfgraph (K T)
+Proof
+  simp[FUN_REL_def, AR_def]
+QED
+
+Theorem AReq_relates[transfer_rule]:
+  (AR ===> AR ===> (=)) (=) (=)
+Proof
+  simp[AR_def, FUN_REL_def, #termP_term_REP tydefrec, #term_REP_11 tydefrec]
+QED
+
+Theorem right_unique_AR[transfer_simp]:
+  right_unique AR
+Proof
+  simp[right_unique_def, AR_def, #term_REP_11 tydefrec]
+QED
+
+Theorem surj_AR[transfer_simp]:
+  surj AR
+Proof
+  simp[surj_def, AR_def, #termP_term_REP tydefrec]
+QED
+
+Theorem RDOM_AR[transfer_simp]:
+  RDOM AR = {gr | wfgraph gr}
+Proof
+  simp[relationTheory.RDOM_DEF, Once FUN_EQ_THM, AR_def, SF CONJ_ss,
+       #termP_term_REP tydefrec] >>
+  metis_tac[#termP_term_REP tydefrec, #repabs_pseudo_id tydefrec]
+QED
+
+
+Theorem Qt_graphs:
+  Qt ceq graph_ABS graph_REP AR
+Proof
+  simp[Qt_alt, AR_def, #absrep_id tydefrec, ceq_def, #termP_term_REP tydefrec]>>
+  simp[SF CONJ_ss, #term_ABS_pseudo11 tydefrec] >>
+  simp[SF CONJ_ss, FUN_EQ_THM, AR_def, #termP_term_REP tydefrec,
+       CONJ_COMM] >>
+  simp[EQ_IMP_THM, #termP_term_REP tydefrec, #absrep_id tydefrec,
+       #repabs_pseudo_id tydefrec]
+QED
+
+(* any undirected (non-hyper) graph *)
+Type udgraph[pp] = “:('a,undirectedG,'ec,'el,unhyperG,'nf,'nl,'sl)graph”
 
 (* finite directed graph with labels on nodes and edges, possibility of
    multiple, but finitely many edges, and with self-loops allowed *)
@@ -582,6 +631,7 @@ Type fdirgraph[pp] = “:('NodeEnum,
                         directedG,
                         finiteEdges (* finitely many edges between nodes *),
                         'edgelabel,
+                        unhyperG,
                         finiteG (* finitely many nodes *),
                         'NodeLabel (* capitalised to precede 'edge *),
                         SL_OK (* self-loops OK *)
@@ -591,6 +641,7 @@ Type allokdirgraph[pp] = “:('NodeEnum,
                             directedG,
                             allEdgesOK,
                             'edgelabel,
+                            hyperG,
                             INF_OK,
                             'NodeLabel,
                             SL_OK) graph”
@@ -600,98 +651,131 @@ Type ulabgraph[pp] = “:(α,
                         δ (* undirected? *),
                         unit,
                         unit (* edge label *),
+                        'h,
                         ν (* infinite nodes allowed? *),
                         unit (* node label *),
                         σ (* self-loops? *)) graph”
-Type ulabgraphrep[local] = “:(α,δ,unit,unit,ν,unit,σ) graphrep”
+Type ulabgraphrep[local] = “:(α,δ,unit,unit,'h,ν,unit,σ) graphrep”
 
-(* undirected version of the same *)
-Type udulgraph[pp] = “:(α, undirectedG, ν, σ)ulabgraph”
-Type udulgraphrep[local] = “:(α,undirectedG,ν,σ)ulabgraphrep”
+(* undirected+unhyper version of the same *)
+Type udulgraph[pp] = “:(α, undirectedG, unhyperG, ν, σ)ulabgraph”
+Type udulgraphrep[local] = “:(α,undirectedG,unhyperG, ν,σ)ulabgraphrep”
 
 (* a relation graph; stripped such are in bijection with binary relations.
    (The stripping makes a canonical, minimal choice of node set in the graph.)
  *)
-Type relgraph[pp] = “:(α, directedG, INF_OK, SL_OK) ulabgraph”
+Type relgraph[pp] = “:(α, directedG, unhyperG, INF_OK, SL_OK) ulabgraph”
 
+
+Theorem funQ'[local] = SRULE[GSYM AND_IMP_INTRO] funQ |> GEN_ALL
+
+Theorem HK_thm2'[local] = HK_thm2 |> GEN_ALL |> SRULE[]
+
+fun grt th1 th2 = resolve_then.gen_resolve_then Any th1 th2 I
+
+fun tidy_tyvars th =
+  let val tyvs = type_vars_in_term (concl th)
+      val newvs =
+        List.tabulate(length tyvs,
+                      fn i => mk_vartype("'" ^ str (Char.chr(i + 97))))
+  in
+      INST_TYPE (ListPair.map(fn (ty1,ty2) => ty1 |-> ty2) (tyvs, newvs)) th
+  end
+
+fun opxfer res_th =
+  grt res_th HK_thm2 |> repeat (grt funQ') |> repeat (grt Qt_graphs)
+                     |> repeat (grt idQ) |> tidy_tyvars
+                     |> CONV_RULE Unwind.UNWIND_FORALL_CONV
 
 Definition emptyG0_def:
-    emptyG0 : (α,δ,'ec,'el,ν,'nl,σ) graphrep =
+    emptyG0 : (α,δ,'ec,'el,'h, ν,'nl,σ) graphrep =
      <| nodes := {} ; edges := {||}; nlab := K ARB;
         nfincst := (:ν); dircst := (:δ); slcst := (:σ);
         edgecst := (:'ec) |>
 End
 
+fun liftdef respth nm =
+  let
+    val xfer = opxfer respth
+    val defrhs = rand (concl xfer)
+    val cvar = mk_var(nm, type_of defrhs)
+    val def = new_definition (nm ^ "_def", mk_eq(cvar, defrhs))
+    val relates = save_thm(nm ^ "_relates[transfer_rule]",
+                           REWRITE_RULE [SYM def] xfer)
+  in
+    (def, relates)
+  end
 
-Definition nodes_def:
-  nodes G = (graph_REP G).nodes
-End
+Theorem emptyG0_respects:
+  ceq emptyG0 emptyG0
+Proof
+  simp[ceq_def, wfgraph_def, emptyG0_def, finite_cst_def]
+QED
+val _ = liftdef emptyG0_respects "emptyG"
 
-Definition edgebag_def:
-  edgebag G = (graph_REP G).edges
-End
+Theorem nodes_respects:
+  (ceq ===> (=)) graphrep_nodes graphrep_nodes
+Proof
+  simp[ceq_def, FUN_REL_def]
+QED
+val _ = liftdef nodes_respects "nodes"
+
+
+Theorem edges_respects:
+  (ceq ===> (=)) graphrep_edges graphrep_edges
+Proof
+  simp[ceq_def, FUN_REL_def]
+QED
+val (e1,e2) = liftdef edges_respects "edgebag"
 
 Definition edges_def:
-  edges (G:(α,directedG,'ec,'el,ν,'nl,σ) graph) =
+  edges (G:(α,directedG,'ec,'el,'h,ν,'nl,σ) graph) =
   {de | cDE de ∈ set $ edgebag G}
 End
 
 Definition udedges_def:
-  udedges (G:(α,'ec,'el,'nf,'nl,'sl) udgraph) = {he | cHE he ∈ set (edgebag G)}
+  udedges (G:(α,'ec,'el,'nf,'nl,'sl) udgraph) = {he | cUDE he ∈ set (edgebag G)}
 End
 
 Theorem incident_SUBSET_nodes:
-  e ∈ edges g ∧ n ∈ incident e ⇒ n ∈ nodes g
+  ∀g e n. e ∈ edges g ∧ n ∈ incident e ⇒ n ∈ nodes g
 Proof
-  rw[edges_def, nodes_def, edgebag_def] >>
-  ‘wfgraph (graph_REP g)’ by simp[#termP_term_REP tydefrec] >>
-  gs[wfgraph_def, SUBSET_DEF] >> first_x_assum irule >>
+  simp[edges_def] >> xfer_back_tac[] >>
+  rw[wfgraph_def, SUBSET_DEF] >> first_x_assum irule >>
   first_assum $ irule_at Any >> simp[]
 QED
 
 Theorem incident_udedges_SUBSET_nodes:
-  e ∈ udedges g ∧ n ∈ incident e ⇒ n ∈ nodes g
+  ∀g e n. e ∈ udedges g ∧ n ∈ incident e ⇒ n ∈ nodes g
 Proof
-  rw[udedges_def, nodes_def, edgebag_def] >>
-  ‘wfgraph (graph_REP g)’ by simp[#termP_term_REP tydefrec] >>
-  gvs[wfgraph_def, SUBSET_DEF, ITSELF_UNIQUE] >>
+  simp[udedges_def] >> xfer_back_tac [] >>
+  rw[wfgraph_def, SUBSET_DEF, ITSELF_UNIQUE] >>
   first_x_assum irule >> first_assum $ irule_at Any >> simp[]
 QED
 
-Definition nlabelfun_def:
-  nlabelfun G = (graph_REP G).nlab
-End
+Theorem nlabelfun_respects:
+  (ceq ===> (=) ===> (=)) graphrep_nlab graphrep_nlab
+Proof
+  simp[ceq_def, FUN_REL_def]
+QED
+val (nl1,nl2) = liftdef nlabelfun_respects "nlabelfun"
 
 Theorem nlabelfun_EQ_ARB[simp]:
-  n ∉ nodes g ⇒ nlabelfun g n = ARB
+  ∀g n. n ∉ nodes g ⇒ nlabelfun g n = ARB
 Proof
-  rw[nodes_def, nlabelfun_def] >>
-  ‘wfgraph (graph_REP g)’ by simp[#termP_term_REP tydefrec] >>
-  gs[wfgraph_def]
-QED
-
-Definition emptyG_def:
-  emptyG = graph_ABS emptyG0
-End
-
-Theorem wfgraph_emptyG0[simp]:
-  wfgraph emptyG0
-Proof
-  simp[wfgraph_def, emptyG0_def, finite_cst_def]
+  xfer_back_tac[] >> rw[wfgraph_def]
 QED
 
 Theorem nodes_empty[simp]:
   nodes emptyG = ∅
 Proof
-  simp[nodes_def, emptyG_def, #repabs_pseudo_id tydefrec] >>
-  simp[emptyG0_def]
+  xfer_back_tac[] >> simp[emptyG0_def]
 QED
 
 Theorem edgebag_empty[simp]:
   edgebag emptyG = {||}
 Proof
-  simp[edgebag_def, emptyG_def, #repabs_pseudo_id tydefrec] >>
-  simp[emptyG0_def]
+  xfer_back_tac [] >> simp[emptyG0_def]
 QED
 
 Theorem edges_empty[simp]:
@@ -709,38 +793,40 @@ QED
 Theorem nlabelfun_empty[simp]:
   nlabelfun emptyG = (λn. ARB)
 Proof
-  simp[nlabelfun_def, emptyG_def, #repabs_pseudo_id tydefrec] >>
-  simp[emptyG0_def, FUN_EQ_THM]
+  xfer_back_tac[] >> simp[emptyG0_def, FUN_EQ_THM]
 QED
 
 Definition adjacent_def:
   adjacent G m n ⇔
-    ∃e. e ∈ set (edgebag G) ∧
-        (enodes e = INL (m,n) ∨ enodes e = INR {m;n})
+    ∃e ms ns.
+      e ∈ set (edgebag G) ∧
+      (enodes e = INL (ms,ns) ∧ m ∈ ms ∧ n ∈ ns ∨
+       enodes e = INR {m;n})
 End
 
 Theorem edge_cst_directedG:
-  edge_cst ecst (:directedG) slcst ebag ⇒
+  edge_cst ecst (:directedG) hypp slcst ebag ⇒
   ∀e. e ∈ set ebag ⇒ is_directed_edge e
 Proof
-  gvs[edge_cst_def] >> metis_tac[]
+  gvs[edge_cst_def] >> rw[] >> first_x_assum drule >> simp[PULL_EXISTS]
 QED
 
 Theorem edge_cst_undirectedG:
-  edge_cst ecst (:undirectedG) slcst ebag ⇒
+  edge_cst ecst (:undirectedG) (:unhyperG) slcst ebag ⇒
   ∀e. e ∈ set ebag ⇒ ¬is_directed_edge e ∧
                      ∃m n. core_incident e = {m;n}
 Proof
-  gvs[edge_cst_def] >> metis_tac[]
+  simp[edge_cst_def] >> rw[COND_EXPAND_OR] >> first_x_assum drule >>
+  dsimp[PULL_EXISTS, INSERT2_lemma] >> rw[]
 QED
 
 Theorem adjacent_directed:
-  adjacent (G : (α,directedG,'ec,'el,'nf,'nl,'sl)graph) m n ⇔
-    ∃l. directed m n l ∈ edges G
+  ∀G m n.
+    adjacent (G : (α,directedG,'ec,'el,'h,'nf,'nl,'sl)graph) m n ⇔
+    ∃ms ns l. directed ms ns l ∈ edges G ∧ m ∈ ms ∧ n ∈ ns
 Proof
-  simp[adjacent_def] >>
-  ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-  gvs[wfgraph_def, ITSELF_UNIQUE, edgebag_def, edges_def] >>
+  simp[adjacent_def, edges_def] >> xfer_back_tac[] >>
+  rw[wfgraph_def, ITSELF_UNIQUE] >>
   drule_then strip_assume_tac edge_cst_directedG >> iff_tac >> rw[] >>
   gvs[IN_SET_OF_BAG, enodesEQ, SF SFY_ss]
   >- (first_x_assum drule >> simp[]) >>
@@ -748,20 +834,20 @@ Proof
 QED
 
 Theorem adjacent_undirected:
-  adjacent (G : ('a,'ec,'el,'nf,'nl,'sl)udgraph) m n ⇔
-    ∃l. hyper {m;n} l ∈ udedges G
+  ∀G m n.
+    adjacent (G : ('a,'ec,'el,'nf,'nl,'sl)udgraph) m n ⇔
+      ∃l. undirected {m;n} l ∈ udedges G
 Proof
-  simp[adjacent_def] >>
-  ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-  gvs[wfgraph_def, ITSELF_UNIQUE, edgebag_def, udedges_def] >>
+  simp[adjacent_def, udedges_def] >> xfer_back_tac[] >>
+  rw[wfgraph_def, ITSELF_UNIQUE] >>
   drule_then strip_assume_tac edge_cst_undirectedG >> iff_tac >> rw[] >>
   gvs[IN_SET_OF_BAG, enodesEQ, SF SFY_ss]
   >- (first_x_assum drule >> simp[]) >>
-  first_assum $ irule_at Any >> simp[]
+  metis_tac[]
 QED
 
 Theorem adjacent_SYM:
-  adjacent (G:('a,undirectedG,'ec,'el,'nf,'nl,'sl)graph) m n ⇔ adjacent G n m
+  adjacent (G:('a,'ec,'el,'nf,'nl,'sl)udgraph) m n ⇔ adjacent G n m
 Proof
   simp[adjacent_undirected] >> metis_tac[INSERT_COMM]
 QED
@@ -769,66 +855,49 @@ QED
 Theorem adjacent_empty[simp]:
   adjacent emptyG m n ⇔ F
 Proof
-  simp[adjacent_def, emptyG_def, edgebag_def, #repabs_pseudo_id tydefrec] >>
-  simp[emptyG0_def]
+  simp[adjacent_def]
 QED
 
 Theorem edges_irrefl[simp]:
-  directed a a l ∉ edges (G:('a,directedG,'ec,'el,'nf,'nl,noSL)graph)
+  ∀a l G. directed a a l ∉ edges (G:('a,directedG,'ec,'el,'h,'nf,'nl,noSL)graph)
 Proof
-  simp[edges_def, edgebag_def] >>
-  ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-  gs[wfgraph_def, ITSELF_UNIQUE, FORALL_PROD, edge_cst_def] >>
-  strip_tac >> first_x_assum drule >> simp[]
+  simp[edges_def] >> xfer_back_tac[] >>
+  rw[wfgraph_def, ITSELF_UNIQUE, FORALL_PROD, edge_cst_def] >>
+  strip_tac >> first_x_assum drule >> simp[SF CONJ_ss]
 QED
 
 Theorem adjacent_irrefl[simp]:
-  adjacent (G:('a,'dir,'ec,'el,'nf,'nl,noSL)graph) a a = F
+  ∀a G. adjacent (G:('a,'dir,'ec,'el,'h,'nf,'nl,noSL)graph) a a = F
 Proof
-  simp[adjacent_def] >>
-  ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-  gs[wfgraph_def, ITSELF_UNIQUE, FORALL_PROD, edge_cst_def, edgebag_def] >>
-  rpt strip_tac >>
-  Cases_on ‘itself2boolopt(:'dir)’ >> gvs[]
-  >- (Cases_on ‘BAG_IN e (graph_REP G).edges’ >> simp[] >>
-      first_x_assum drule >> Cases_on ‘e’>> simp[] >> rpt strip_tac >> gvs[]) >>
-  Cases_on ‘BAG_IN e (graph_REP G).edges’ >> simp[] >>
-  rename [‘SOME b = itself2boolopt _’] >>
-  Cases_on ‘b’ >> gvs[] >> first_x_assum drule >> simp[] >>
-  rename [‘enodes e’] >>
-  Cases_on ‘e’ >> gvs[PULL_EXISTS] >> rw[] >> simp[]
+  simp[adjacent_def] >> xfer_back_tac [] >>
+  rw[wfgraph_def, ITSELF_UNIQUE, FORALL_PROD, edge_cst_def] >>
+  rename [‘¬BAG_IN e G.edges’] >> Cases_on ‘BAG_IN e G.edges’ >> simp[] >>
+  first_x_assum drule >> simp[PULL_EXISTS] >> SET_TAC[]
 QED
 
 Definition addNode0_def:
   addNode0 n lab grep = grep with <| nodes updated_by (λs. n INSERT s);
                                      nlab := grep.nlab⦇n ↦ lab⦈ |>
 End
-
-Theorem wfgraph_addNode0[simp,local]:
-  wfgraph grep ⇒ wfgraph (addNode0 n lab grep)
+Theorem addNode_respects:
+  ((=) ===> (=) ===> ceq ===> ceq) addNode0 addNode0
 Proof
+  simp[FUN_REL_def, ceq_def] >>
   simp[wfgraph_def, addNode0_def] >>
   rw[finite_cst_def, SUBSET_DEF, combinTheory.UPDATE_APPLY] >> metis_tac[]
 QED
-
-Definition addNode_def:
-  addNode n l G = graph_ABS $ addNode0 n l $ graph_REP G
-End
+val (an1,an2) = liftdef addNode_respects "addNode"
 
 Theorem nodes_addNode[simp]:
-  nodes (addNode n l G) = n INSERT nodes G
+  ∀n l G. nodes (addNode n l G) = n INSERT nodes G
 Proof
-  simp[nodes_def, addNode_def] >>
-  ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-  simp[#repabs_pseudo_id tydefrec, addNode0_def]
+  xfer_back_tac [] >> simp[addNode0_def]
 QED
 
 Theorem edgebag_addNode[simp]:
-  edgebag (addNode n l G) = edgebag G
+  ∀n l G. edgebag (addNode n l G) = edgebag G
 Proof
-  simp[edgebag_def, addNode_def, #repabs_pseudo_id tydefrec,
-       #termP_term_REP tydefrec, wfgraph_addNode0] >>
-  simp[addNode0_def]
+  xfer_back_tac [] >> simp[addNode0_def]
 QED
 
 Theorem edges_addNode[simp]:
@@ -844,11 +913,9 @@ Proof
 QED
 
 Theorem nlabelfun_addNode[simp]:
-  nlabelfun (addNode n l g) = (nlabelfun g)⦇ n ↦ l ⦈
+  ∀n l g. nlabelfun (addNode n l g) = (nlabelfun g)⦇ n ↦ l ⦈
 Proof
-  simp[nlabelfun_def, addNode_def, #repabs_pseudo_id tydefrec,
-      #termP_term_REP tydefrec, wfgraph_addNode0] >>
-  simp[addNode0_def]
+  xfer_back_tac[] >> simp[addNode0_def]
 QED
 
 Theorem adjacent_addNode[simp]:
@@ -859,26 +926,25 @@ QED
 
 Definition udfilter_insertedge_def:
   udfilter_insertedge ns lab ecst ebag =
-  let e = HE ns lab
+  let e = UDE ns lab
   in
-    case itself2_4 ecst of
-    | (F,F) => BAG_INSERT e $ BAG_FILTER (λe. core_incident e ≠ ns) ebag
-    | (F,T) => if BAG_IN e ebag then ebag else BAG_INSERT e ebag
-    | (T,F) => BAG_INSERT e ebag
-    | (T,T) => BAG_INSERT e ebag
+    case itself2_ecv ecst of
+    | ONE_EDGE=> BAG_INSERT e $ BAG_FILTER (λe. core_incident e ≠ ns) ebag
+    | ONE_EDGE_PERLABEL => if BAG_IN e ebag then ebag else BAG_INSERT e ebag
+    | FINITE_EDGES => BAG_INSERT e ebag
+    | UNC_EDGES => BAG_INSERT e ebag
 End
 
 Theorem BAG_IN_udfilter_insertedge:
   BAG_IN e (udfilter_insertedge ns lab ecst ebag) ⇒
   core_incident e = ns ∧ ¬is_directed_edge e ∨ BAG_IN e ebag
 Proof
-  simp[udfilter_insertedge_def] >> Cases_on ‘itself2_4 ecst’ >>
-  rename [‘itself2_4 ecst = (b1,b2)’] >>
-  map_every Cases_on [‘b1’, ‘b2’] >> gvs[DISJ_IMP_THM] >> rw[] >> simp[]
+  simp[udfilter_insertedge_def] >> Cases_on ‘itself2_ecv ecst’ >>
+  gvs[DISJ_IMP_THM] >> rw[] >> simp[]
 QED
 
 Theorem finite_edges_per_nodeset_udfilter_insertedge[local]:
-  itself2_4(:'ec) = (T,F) ∧ finite_edges_per_nodeset ebag ⇒
+  itself2_ecv(:'ec) = FINITE_EDGES ∧ finite_edges_per_nodeset ebag ⇒
   finite_edges_per_nodeset (udfilter_insertedge ns lab (:'ec) ebag)
 Proof
   dsimp[finite_edges_per_nodeset_def, udfilter_insertedge_def, GSPEC_OR] >>
@@ -886,7 +952,7 @@ Proof
 QED
 
 Theorem only_one_edge_per_label_udfilter_insertedge[local]:
-  itself2_4(:'ec) = (F,T) ∧ only_one_edge_per_label ebag ⇒
+  itself2_ecv(:'ec) = ONE_EDGE_PERLABEL ∧ only_one_edge_per_label ebag ⇒
   only_one_edge_per_label (udfilter_insertedge ns lab (:'ec) ebag)
 Proof
   dsimp[only_one_edge_per_label_def, udfilter_insertedge_def, GSPEC_OR] >>
@@ -895,7 +961,7 @@ Proof
 QED
 
 Theorem only_one_edge_udfilter_insertedge[local]:
-  itself2_4 (:'ec) = (F,F) ∧ only_one_edge ebag ⇒
+  itself2_ecv (:'ec) = ONE_EDGE ∧ only_one_edge ebag ⇒
   only_one_edge (udfilter_insertedge ns lab (:'ec) ebag)
 Proof
   simp[only_one_edge_def, udfilter_insertedge_def] >> rw[] >> gvs[] >>
@@ -904,84 +970,54 @@ Proof
 QED
 
 Definition addUDEdge0_def:
-  addUDEdge0 m n lab (G:('a,undirectedG,'ec,'el,'nf,'nl,'sl)graphrep) =
+  addUDEdge0 m n lab (G:('a,undirectedG,'ec,'el,'h,'nf,'nl,'sl)graphrep) =
   if m = n ∧ ¬itself2bool(:'sl) then G
   else
     G with <| nodes := {m;n} ∪ G.nodes ;
               edges := udfilter_insertedge {m;n} lab (:'ec) G.edges
            |>
 End
-
-Definition addUDEdge_def:
-  addUDEdge m n lab G = graph_ABS (addUDEdge0 m n lab (graph_REP G))
-End
-
-Theorem wfgraph_addUDEdge0[simp,local]:
-  wfgraph G0 ⇒
-  wfgraph (addUDEdge0 m n lab
-                      (G0:('a,undirectedG,'ec,'el,'nf,'nl, 'sl)graphrep))
+Theorem addUDEdge_respects:
+  ((=) ===> (=) ===> (=) ===> ceq ===> ceq) addUDEdge0 addUDEdge0
 Proof
+  simp[FUN_REL_def, ceq_def] >>
   simp[addUDEdge0_def, wfgraph_def, ITSELF_UNIQUE] >>
-  Cases_on ‘m = n’ >> simp[] >>
-  Cases_on ‘itself2bool (:'sl)’ >> simp[] >>
-  (rw[finite_cst_UNION]
-   >- (drule_then strip_assume_tac BAG_IN_udfilter_insertedge >> simp[] >>
-       first_x_assum drule >> simp[SUBSET_DEF]) >>
-   qpat_x_assum ‘edge_cst _ _ _ _’ mp_tac >>
-   simp[edge_cst_def] >>
-   Cases_on ‘itself2_4 (:'ec)’ >>
-   rename [‘itself2_4 _ = (b1,b2)’] >>
-   map_every Cases_on [‘b1’, ‘b2’] >> gvs[] >>
-   simp[finite_edges_per_nodeset_udfilter_insertedge,
+  Cases_on ‘m = n’ >> rw[finite_cst_UNION] >>~-
+  ([‘BAG_IN e $ udfilter_insertedge _ _ _ _’],
+   drule_then strip_assume_tac BAG_IN_udfilter_insertedge >> simp[] >>
+   first_x_assum drule >> simp[SUBSET_DEF]) >>
+   qpat_x_assum ‘edge_cst _ _ _ _ _’ mp_tac >>
+  simp[edge_cst_def] >>
+  Q.MATCH_GOALSUB_ABBREV_TAC ‘itself2_ecv ecst’ >>
+  Cases_on ‘itself2_ecv ecst’ >>
+  simp[finite_edges_per_nodeset_udfilter_insertedge,
         only_one_edge_per_label_udfilter_insertedge,
-        only_one_edge_udfilter_insertedge] >>
-   strip_tac >> gen_tac >> strip_tac >>
-   drule_then strip_assume_tac BAG_IN_udfilter_insertedge >>
-   metis_tac[INSERT_INSERT])
+        only_one_edge_udfilter_insertedge, Abbr‘ecst’] >>
+  rw[] >>
+  drule_then strip_assume_tac BAG_IN_udfilter_insertedge >>~-
+  ([‘BAG_IN e g.edges (* a *)’], metis_tac[]) >>~-
+  ([‘core_incident e = {m;n}’],
+   Cases_on ‘e’ >> gvs[] >> irule_at Any EQ_REFL >> simp[])
 QED
+val (aud1,aud2) = liftdef addUDEdge_respects "addUDEdge"
 
 Definition edge0_def:
   edge0 m n lab ecst edges =
-  let e = DE m n lab
+  let e = DE {m} {n} lab
   in
-    case itself2_4 ecst of
-      (F,F) => BAG_INSERT e $ BAG_FILTER (λe. enodes e ≠ INL (m,n)) edges
-    | (F,T) => if BAG_IN e edges then edges else BAG_INSERT e edges
-    | (T,F) => BAG_INSERT e edges
-    | (T,T) => BAG_INSERT e edges
+    case itself2_ecv ecst of
+      ONE_EDGE => BAG_INSERT e $ BAG_FILTER (λe. enodes e ≠ INL ({m},{n})) edges
+    | ONE_EDGE_PERLABEL => if BAG_IN e edges then edges else BAG_INSERT e edges
+    | FINITE_EDGES => BAG_INSERT e edges
+    | UNC_EDGES => BAG_INSERT e edges
 End
-
-Definition addEdge0_def:
-  addEdge0 m n (lab:'el) (G : ('ne,directedG,'ec,'el,'nf,'nl,'sl) graphrep) =
-  if m = n ∧ ¬itself2bool (:'sl) then G
-  else
-    G with <|
-        nodes := G.nodes ∪ {m;n} ;
-        edges := edge0 m n lab (:'ec) G.edges
-    |>
-End
-
-Definition addEdge_def:
-  addEdge m n l G = graph_ABS (addEdge0 m n l (graph_REP G))
-End
-
-Theorem IN_edge0:
-  BAG_IN e (edge0 m n lab ecset ebag) ⇒ e = DE m n lab ∨ BAG_IN e ebag
-Proof
-  rw[edge0_def] >>
-  Cases_on ‘itself2_4 ecset’ >> gvs[] >>
-  rename [‘itself2_4 _ = (b1,b2)’] >>
-  map_every Cases_on [‘b1’, ‘b2’] >> gvs[]
-QED
 
 Theorem edge0_preserves_edge_cst:
-  (m ≠ n ∨ itself2bool slp) ∧ edge_cst ecset (:directedG) slp edgeset ⇒
-  edge_cst ecset (:directedG) slp (edge0 m n lab ecset edgeset)
+  (m ≠ n ∨ itself2bool slp) ∧ edge_cst ecset (:directedG) hp slp edgeset ⇒
+  edge_cst ecset (:directedG) hp slp (edge0 m n lab ecset edgeset)
 Proof
   rw[edge_cst_def, edge0_def] >> gvs[] >>
-  Cases_on ‘itself2_4 ecset’ >> gvs[] >>
-  rename [‘itself2_4 _ = (b1,b2)’] >>
-  map_every Cases_on [‘b1’, ‘b2’] >> gvs[] >>~-
+  Cases_on ‘itself2_ecv ecset’ >> gvs[] >>~-
   ([‘only_one_edge (BAG_INSERT _ _)’, ‘¬(BAG_IN (DE _ _ _) ebag)’],
    qpat_x_assum ‘only_one_edge _’ mp_tac >>
    simp[only_one_edge_def] >>
@@ -998,47 +1034,60 @@ Proof
   gvs[BAG_IN, BAG_INN]
 QED
 
-Theorem wfgraph_addEdge0[local]:
-  wfgraph G0 ⇒
-  wfgraph (addEdge0 m n lab (G0:('a,directedG,'ec,'el,'nf,'nl,'sl) graphrep))
+Theorem IN_edge0:
+  BAG_IN e (edge0 m n lab ecset ebag) ⇒ e = DE {m} {n} lab ∨ BAG_IN e ebag
 Proof
+  rw[edge0_def] >> Cases_on ‘itself2_ecv ecset’ >> gvs[]
+QED
+
+Definition addEdge0_def:
+  addEdge0 m n (lab:'el) (G : ('ne,directedG,'ec,'el,'h,'nf,'nl,'sl) graphrep) =
+  if m = n ∧ ¬itself2bool (:'sl) then G
+  else
+    G with <|
+        nodes := G.nodes ∪ {m;n} ;
+        edges := edge0 m n lab (:'ec) G.edges
+    |>
+End
+Theorem addEdge_respects:
+  ((=) ===> (=) ===> (=) ===> ceq ===> ceq) addEdge0 addEdge0
+Proof
+  simp[ceq_def, FUN_REL_def] >>
   simp[addEdge0_def, ITSELF_UNIQUE, finite_cst_UNION] >>
-  Cases_on ‘m = n’ >> gvs[] >>
-  Cases_on ‘itself2bool (:'sl)’ >> gvs[] >>
-  simp[wfgraph_def, finite_cst_UNION] >> rpt strip_tac >>~-
+  rw[wfgraph_def, finite_cst_UNION] >>~-
   ([‘core_incident _ ⊆ _ ∪ _’],
    drule IN_edge0 >> simp[DISJ_IMP_THM] >> ASM_SET_TAC[]) >>
   gvs[ITSELF_UNIQUE] >>
   irule edge0_preserves_edge_cst >> simp[]
 QED
+val (ae1,ae2) = liftdef addEdge_respects "addEdge"
 
 Definition selfloops_ok_def[simp]:
-  selfloops_ok (G : (α,'d,'ec,'el,'nf,'nl,'sl) graph) = itself2bool (:'sl)
+  selfloops_ok (G : (α,'d,'ec,'el,'h,'nf,'nl,'sl) graph) = itself2bool (:'sl)
 End
 
 Theorem selfloop_edges_E:
-  directed m m l ∈ edges G ⇒ selfloops_ok G
+  ∀m l G. directed m m l ∈ edges G ⇒ selfloops_ok G
 Proof
-  simp[selfloops_ok_def] >> strip_tac >>
-  ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-  gvs[wfgraph_def, ITSELF_UNIQUE, edge_cst_def, COND_EXPAND_OR] >>
-  gvs[edges_def, edgebag_def] >> first_x_assum drule >> simp[]
+  simp[selfloops_ok_def, edges_def] >> xfer_back_tac [] >>
+  gvs[wfgraph_def, ITSELF_UNIQUE, edge_cst_def, COND_EXPAND_OR] >> rw[] >>
+  first_x_assum drule >> simp[]
 QED
 
 Definition oneEdge_max_def:
-  oneEdge_max (G: (α,'d,'ec,'el,'nf,'nl,'sl) graph) ⇔
-  itself2_4 (:'ec) = (F,F)
+  oneEdge_max (G: (α,'d,'ec,'el,'h, 'nf,'nl,'sl) graph) ⇔
+  itself2_ecv (:'ec) = ONE_EDGE
 End
 
 Theorem oneEdge_max_graph[simp]:
-  oneEdge_max (g : ('a,'d,unit,'el,'nf,'nl,'sl) graph)
+  oneEdge_max (g : ('a,'d,unit,'el,'h,'nf,'nl,'sl) graph)
 Proof
-  simp[oneEdge_max_def, itself2set_def, itself2_4_def]
+  simp[oneEdge_max_def, itself2_ecv_def, itself2_4_def]
 QED
 
 Definition oneEdge_perlabel_def:
-  oneEdge_perlabel (G: (α,'d,'ec,'el,'nf,'nl,'sl) graph) ⇔
-    itself2_4 (:'ec) = (F,T)
+  oneEdge_perlabel (G: (α,'d,'ec,'el,'h,'nf,'nl,'sl) graph) ⇔
+    itself2_ecv (:'ec) = ONE_EDGE_PERLABEL
 End
 
 Theorem oneEdge_max_fdirgraph[simp]:
@@ -1048,72 +1097,72 @@ Proof
 QED
 
 Theorem selfloops_ok_graph[simp]:
-  selfloops_ok (g1 : ('a,'d,'ec,'el,'nf,'nl,unit) graph) ∧
-  selfloops_ok (g2 : ('a,'d,'ec,'el,'nf,'nl,SL_OK) graph)
+  selfloops_ok (g1 : ('a,'d,'ec,'el,'h,'nf,'nl,unit) graph) ∧
+  selfloops_ok (g2 : ('a,'d,'ec,'el,'h,'nf,'nl,SL_OK) graph)
 Proof
   simp[selfloops_ok_def]
 QED
 
 Theorem wrong_edgetype[simp]:
+  ∀G H a b ns l.
   ¬(BAG_IN (DE a b l)
-           (edgebag (G:('a,undirectedG,'ec, 'el, 'nf, 'nl, 'sl) graph))) ∧
-  ¬(BAG_IN (HE hs l)
-           (edgebag (H:('a,directedG,'ec, 'el, 'nf, 'nl, 'sl) graph)))
+           (edgebag (G:('a,undirectedG,'ec, 'el, 'h, 'nf, 'nl, 'sl) graph))) ∧
+  ¬(BAG_IN (UDE ns l)
+           (edgebag (H:('a,directedG,'ec, 'el, 'h, 'nf, 'nl, 'sl) graph)))
 Proof
-  simp[edgebag_def] >> rpt strip_tac
-  >- (‘wfgraph (graph_REP G)’
-        by simp[#termP_term_REP tydefrec] >>
-      gvs[wfgraph_def, edge_cst_def, optelim, COND_EXPAND_OR, ITSELF_UNIQUE] >>
-      first_x_assum drule >> simp[])
-  >- (‘wfgraph (graph_REP H)’
-        by simp[#termP_term_REP tydefrec] >>
-      gvs[wfgraph_def, edge_cst_def, optelim, COND_EXPAND_OR, ITSELF_UNIQUE] >>
-      first_x_assum drule >> simp[])
+  xfer_back_tac [] >> rw[wfgraph_def, edge_cst_def] >>
+  rpt strip_tac >> gvs[COND_EXPAND_OR, ITSELF_UNIQUE] >>
+  first_x_assum drule >> simp[]
+QED
+
+Theorem edgebag_addEdge:
+  ∀m n l G.
+    edgebag (addEdge m n l (G:('a,directedG,'ec,'ef,'h,'nf,'nl,'sl)graph)) =
+    if m = n ∧ ¬selfloops_ok G then edgebag G
+    else edge0 m n l (:'ec) (edgebag G)
+Proof
+  simp[selfloops_ok_def] >> xfer_back_tac[] >>
+  rw[addEdge0_def]
+QED
+
+Theorem adjacent_REFL_E:
+  ∀G m. adjacent G m m ⇒ selfloops_ok G
+Proof
+  simp[adjacent_def, selfloops_ok_def] >> xfer_back_tac[] >>
+  rw[wfgraph_def, edge_cst_def] >> gvs[ITSELF_UNIQUE, enodesEQ] >>
+  first_x_assum drule >> simp[] >> ASM_SET_TAC[]
 QED
 
 Theorem edges_addEdge:
-  edges (addEdge m n lab (G:('a,directedG,'ecst,'el,'nf,'nl,'sl)graph)) =
-  (edges G DIFF
-         (if adjacent G m n ∧ oneEdge_max G then
-              { directed m n l | l | directed m n l ∈ edges G }
-          else {})) ∪
-  (if m ≠ n ∨ selfloops_ok G then {directed m n lab} else {})
+  ∀m n lab G.
+  edges (addEdge m n lab (G:('a,directedG,'ecst,'el,'h, 'nf,'nl,'sl)graph)) =
+    (edges G DIFF
+     (if adjacent G m n ∧ oneEdge_max G then
+        { directed {m} {n} l | l | directed {m} {n} l ∈ edges G }
+      else {})) ∪
+    (if m ≠ n ∨ selfloops_ok G then {directed {m} {n} lab} else {})
 Proof
-  simp[edges_def, edgebag_def, addEdge_def, wfgraph_addEdge0,
-       #termP_term_REP tydefrec, #repabs_pseudo_id tydefrec] >>
-  simp[addEdge0_def, edge0_def, ITSELF_UNIQUE] >> rw[] >>
-  gvs[oneEdge_max_def] >~
-  [‘adjacent G m m’]
-  >- (‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-      gvs[wfgraph_def, adjacent_def, ITSELF_UNIQUE, edge_cst_def, enodesEQ,
-          edgebag_def] >>
-      first_x_assum drule >> simp[]) >>
-  simp[EXTENSION] >> Cases >> simp[]
-  >- metis_tac[]
-  >- (Cases_on ‘itself2_4 (:'ecst)’ >> simp[] >> rw[]
-      >- metis_tac[]
-      >- metis_tac[] >>
-      iff_tac >> rw[] >> simp[] >> rw[] >>
-      ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-      gvs[wfgraph_def, edge_cst_def, ITSELF_UNIQUE, COND_EXPAND_OR,
-          only_one_edge_def] >>
-      first_x_assum (dxrule_then drule o cj 2) >> simp[])
-  >- metis_tac[] >>
-  Cases_on ‘itself2_4 (:'ecst)’ >> simp[] >> rw[]
-  >- metis_tac[]
-  >- metis_tac[] >>
-  iff_tac >> rw[] >> rw[] >>
-  gvs[adjacent_directed, edges_def, edgebag_def]
+  rw[edges_def, edgebag_addEdge] >> gvs[oneEdge_max_def]
+  >- (drule_then strip_assume_tac adjacent_REFL_E >> gvs[])
+  >- (simp[EXTENSION, edge0_def] >> qx_gen_tac ‘e’ >> Cases_on ‘e’ >> simp[] >>
+      iff_tac >> rw[] >> simp[] >> rw[])
+  >- (simp[EXTENSION, edge0_def] >>
+      qx_gen_tac ‘e’ >>
+      Cases_on ‘itself2_ecv (:'ecst)’ >> gvs[] >> rw[] >>
+      iff_tac >> rw[] >> simp[] >>
+      gvs[adjacent_def, DISJ_EQ_IMP] >> first_x_assum drule >> simp[] >>
+      Cases_on ‘e’ >> rw[] >> gvs[])
 QED
 
 Theorem directed_oneEdge_max:
-  oneEdge_max (G : ('a,directedG,'ecst,'el,'nf, 'nl, 'sl) graph) ∧
+  oneEdge_max (G : ('a,directedG,'ecst,'el,'h,'nf, 'nl, 'sl) graph) ∧
   directed a b l1 ∈ edges G ∧ directed a b l2 ∈ edges G ⇒ l1 = l2
 Proof
-  simp[oneEdge_max_def, edges_def, edgebag_def] >>
-  ‘wfgraph (graph_REP G)’ by simp[#termP_term_REP tydefrec] >>
-  strip_tac >>
-  gvs[wfgraph_def, edge_cst_def, ITSELF_UNIQUE, only_one_edge_def] >>
+  simp[oneEdge_max_def, edges_def] >>
+  map_every qid_spec_tac [‘G’, ‘a’, ‘b’, ‘l1’, ‘l2’] >>
+  xfer_back_tac[] >>
+  gvs[wfgraph_def, edge_cst_def, ITSELF_UNIQUE, only_one_edge_def] >> rw[] >>
+  gvs[] >>
   first_x_assum (dxrule_then drule o cj 2)>> simp[]
 QED
 
@@ -1122,49 +1171,61 @@ Theorem adjacent_addEdge[simp]:
     (m ≠ n ∨ selfloops_ok G) ∧ m = a ∧ n = b ∨ adjacent G a b
 Proof
   simp[adjacent_directed, edges_addEdge] >> rw[EQ_IMP_THM] >> gvs[] >>
-  TRY (drule_then assume_tac selfloop_edges_E) >> gvs[] >>
-  metis_tac[directed_oneEdge_max]
+  metis_tac[directed_oneEdge_max, selfloop_edges_E, selfloops_ok_def,
+            IN_INSERT]
 QED
+(*
+val _ = show_assums := true
+val rdb = global_ruledb()
+val cleftp = false
+val cfg = {force_imp = false, cleftp = cleftp,
+           hints = [ ]  :string list}
+val base = transfer_skeleton rdb cfg (#2 (top_goal()))
+val th = base
 
+
+fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
+
+fun F th = seq.hd $ resolve_relhyps [] cleftp rdb th
+
+    fpow F 4 base
+*)
 Theorem addUDEdge_COMM:
   addUDEdge m n lab G = addUDEdge n m lab G
 Proof
   Cases_on ‘m = n’ >> simp[] >>
-  simp[addUDEdge_def, #term_ABS_pseudo11 tydefrec,
-       #termP_term_REP tydefrec, wfgraph_addUDEdge0] >>
-  simp[addUDEdge0_def, INSERT_COMM]
+  pop_assum mp_tac >> map_every qid_spec_tac [‘G’, ‘m’, ‘n’, ‘lab’] >>
+  time (xfer_back_tac []) >> simp[addUDEdge0_def, INSERT_COMM]
 QED
 
 Theorem nodes_addUDEdge[simp]:
-  nodes (addUDEdge m n lab G) =
-  (if m ≠ n ∨ selfloops_ok G then {m; n} else ∅) ∪ nodes G
+  ∀m n lab G.
+    nodes (addUDEdge m n lab G) =
+    (if m ≠ n ∨ selfloops_ok G then {m; n} else ∅) ∪ nodes G
 Proof
-  simp[addUDEdge_def, nodes_def, #repabs_pseudo_id tydefrec,
-       #termP_term_REP tydefrec, wfgraph_addUDEdge0] >>
-  simp[addUDEdge0_def] >> rw[] >> gvs[]
+  simp[] >> xfer_back_tac[] >> simp[addUDEdge0_def] >> rw[] >> gvs[]
 QED
 
 Theorem udedges_addUDEdge:
-  udedges (addUDEdge m n lab (G:('a,undirectedG,'ecst,'el,'nf,'nl,'sl) graph)) =
+  udedges (addUDEdge m n lab G) =
   if m ≠ n ∨ selfloops_ok G then
     if oneEdge_max G then
-      {hyper {m;n} lab} ∪ { ude | ude ∈ udedges G ∧ henodes ude ≠ {m;n} }
+      {undirected {m;n} lab} ∪ { ude | ude ∈ udedges G ∧ udenodes ude ≠ {m;n} }
     else
-      {hyper {m;n} lab} ∪ udedges G
+      {undirected {m;n} lab} ∪ udedges G
   else udedges G
 Proof
-  simp[addUDEdge_def, udedges_def, #repabs_pseudo_id tydefrec,
-       #termP_term_REP tydefrec, wfgraph_addUDEdge0, edgebag_def] >>
-  simp[addUDEdge0_def] >> Cases_on ‘selfloops_ok G’ >>
-  Cases_on ‘m = n’ >> gvs[oneEdge_max_def] >> rw[] >>
-  Cases_on ‘itself2_4(:'ecst)’ >> gvs[COND_EXPAND_OR] >>
-  TRY (qpat_x_assum ‘_ = itself2_4 _’ (assume_tac o SYM)) >>
-  simp[udfilter_insertedge_def, GSPEC_OR] >> rw[GSPEC_OR] >>
-  simp[Once EXTENSION] >> metis_tac[]
+  simp[udedges_def, oneEdge_max_def] >>
+  map_every qid_spec_tac [‘m’, ‘n’, ‘G’, ‘lab’] >>
+  xfer_back_tac[] >> simp[addUDEdge0_def] >> rw[] >> rw[] >> gvs[]
+  >- (simp[udfilter_insertedge_def, Once EXTENSION] >> metis_tac[]) >>
+  rename [‘itself2_ecv x’] >> Cases_on ‘itself2_ecv x’ >> gvs[] >>
+  simp[udfilter_insertedge_def] >> simp[Once EXTENSION] >> rw[] >>
+  metis_tac[]
 QED
 
 Theorem adjacent_addUDEdge[simp]:
-  adjacent (addUDEdge m n lab G) a b ⇔
+  adjacent (addUDEdge m n lab G : ('a,'b,'c,'d,'e,'f)udgraph) a b ⇔
     (m ≠ n ∨ selfloops_ok G) ∧ {a;b} = {m;n} ∨ adjacent G a b
 Proof
   simp[adjacent_undirected, udedges_addUDEdge] >> rw[] >>
@@ -1175,37 +1236,29 @@ Theorem nodes_addEdge[simp]:
   nodes (addEdge m n lab g) =
   nodes g ∪ (if selfloops_ok g ∨ m ≠ n then {m;n} else {})
 Proof
-  simp[addEdge_def, #termP_term_REP tydefrec, wfgraph_addEdge0, nodes_def,
-       #repabs_pseudo_id tydefrec] >>
-  simp[addEdge0_def] >> rw[] >> gvs[]
+  simp[selfloops_ok_def] >> xfer_back_tac [] >>
+  rw[addEdge0_def] >> gvs[]
 QED
 
 Theorem nlabelfun_addEdge[simp]:
   nlabelfun (addEdge m n l g) = nlabelfun g
 Proof
-  simp[nlabelfun_def, addEdge_def, #repabs_pseudo_id tydefrec,
-       #termP_term_REP tydefrec, wfgraph_addEdge0] >>
-  rw[addEdge0_def]
+  xfer_back_tac [] >> rw[addEdge0_def]
 QED
 
 (* adding undirected self-edge from n to n in a no-selfloop graph is an
    identity operation *)
 Theorem addUDEdge_addNode[simp]:
-  addUDEdge n n lab (G:(α,undirectedG,'ec,'el,'nf,'nl,noSL) graph) = G
+  addUDEdge n n lab (G:(α,'ec,'el,'nf,'nl,noSL) udgraph) = G
 Proof
-  simp[addUDEdge_def, GSYM (#term_REP_11 tydefrec), #repabs_pseudo_id tydefrec,
-       wfgraph_addUDEdge0, #termP_term_REP tydefrec] >>
-  rw[addUDEdge0_def]
+  xfer_back_tac [] >> rw[addUDEdge0_def]
 QED
 
 (* "similarly" for addEdge: *)
 Theorem addEdge_addNode[simp]:
-  addEdge n n lab (G : (α,directedG,'ec,'el,'nf,'nl,noSL)graph) = G
+  addEdge n n lab (G : (α,directedG,'ec,'el,'h, 'nf,'nl,noSL)graph) = G
 Proof
-  simp[SYM $ #term_REP_11 tydefrec] >>
-  simp[addEdge_def, #term_ABS_pseudo11 tydefrec, #repabs_pseudo_id tydefrec,
-       wfgraph_addEdge0, #termP_term_REP tydefrec] >>
-  simp[addEdge0_def]
+  xfer_back_tac [] >> rw[addEdge0_def]
 QED
 
 Definition connected_def:
@@ -1231,9 +1284,7 @@ Theorem gengraph_component_equality:
   g1 = g2 ⇔ nodes g1 = nodes g2 ∧ edgebag g1 = edgebag g2 ∧
             nlabelfun g1 = nlabelfun g2
 Proof
-  simp[EQ_IMP_THM] >>
-  simp[nodes_def, edgebag_def, SYM $ #term_REP_11 tydefrec,
-       nlabelfun_def] >>
+  xfer_back_tac [] >>
   simp[theorem "graphrep_component_equality", ITSELF_UNIQUE]
 QED
 
@@ -1241,14 +1292,13 @@ Theorem oneEdge_max_BAG_INN_edgebag[simp]:
   oneEdge_max g ⇒
   (BAG_INN e c (edgebag g) ⇔ c = 0 ∨ BAG_IN e (edgebag g) ∧ c = 1)
 Proof
-  simp[EQ_IMP_THM, DISJ_IMP_THM, edgebag_def, oneEdge_max_def] >> strip_tac >>
-  ‘wfgraph (graph_REP g)’ by simp[#termP_term_REP tydefrec] >>
+  simp[EQ_IMP_THM, DISJ_IMP_THM, oneEdge_max_def] >> xfer_back_tac [] >>
   gvs[ITSELF_UNIQUE, wfgraph_def, edge_cst_def, COND_EXPAND_OR,
-      only_one_edge_def, BAG_INN, BAG_IN] >>
-  Cases_on ‘c = 0’ >> gvs[] >> strip_tac >>
-  rename [‘(graph_REP g).edges e ≥ c’] >>
-  ‘(graph_REP g).edges e ≥ 1’ by simp[] >>
-  ‘(graph_REP g).edges e = 1’ by simp[] >> simp[]
+      only_one_edge_def, BAG_INN, BAG_IN] >> rw[] >>
+  Cases_on ‘c = 0’ >> gvs[] >>
+  rename [‘g.edges e ≥ c’] >>
+  ‘g.edges e ≥ 1’ by simp[] >>
+  ‘g.edges e = 1’ by simp[] >> simp[]
 QED
 
 Theorem udul_component_equality:
@@ -1265,21 +1315,18 @@ Proof
 QED
 
 Theorem diffedge_types_impossible:
-  BAG_IN (DE m n l1) (edgebag (g1:('a1,'d,'ec1,'el1,'nf1,'nl1,'sl1) graph)) ⇒
-  BAG_IN (HE ns l2) (edgebag (g2:('a2,'d,'ec2,'el2,'nf2,'nl2,'sl2) graph)) ⇒
+  BAG_IN (DE m n l1)(edgebag (g1:('a1,'d,'ec1,'el1,'h1,'nf1,'nl1,'sl1) graph)) ⇒
+  BAG_IN (UDE ns l2)(edgebag (g2:('a2,'d,'ec2,'el2,'h2,'nf2,'nl2,'sl2) graph)) ⇒
   F
 Proof
-  simp[edgebag_def] >>
-  ‘wfgraph (graph_REP g1) ∧ wfgraph (graph_REP g2)’
-    by simp[#termP_term_REP tydefrec] >>
+  xfer_back_tac [] >> rw[] >>
   gvs[wfgraph_def, edge_cst_def, ITSELF_UNIQUE, optelim, COND_EXPAND_OR] >>
-  rpt strip_tac >> res_tac >> gvs[] >>
-  rpt (qpat_x_assum ‘_ = itself2boolopt _’ (assume_tac o SYM)) >> gvs[]
+  rpt strip_tac >> res_tac >> gvs[]
 QED
 
 Definition is_hypergraph_def:
-  is_hypergraph (g:(α,'d,'ecst,'el,'nf,'nl,'sl) graph) ⇔
-  itself2boolopt(:'d) = NONE
+  is_hypergraph (g:(α,'d,'ecst,'el,'h,'nf,'nl,'sl) graph) ⇔
+  itself2bool(:'h)
 End
 
 Theorem nonhypergraph_edges:
