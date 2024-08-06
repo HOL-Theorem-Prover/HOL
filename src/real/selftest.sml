@@ -1,8 +1,15 @@
 open HolKernel Parse bossLib boolLib;
 
 open simpLib realSimps isqrtLib RealArith RealField bitArithLib;
+open intrealTheory
 
 open testutils;
+
+val errc = ref 0
+val _ = diemode := Remember errc
+
+val _ = numLib.prefer_num()
+val _ = realSyntax.prefer_real()
 
 (* The original version and old port by Hurd *)
 val REAL_ARITH0 = RealArith.OLD_REAL_ARITH;
@@ -11,7 +18,10 @@ val REAL_ARITH1 = RealArith.REAL_ARITH;
 (* The new port, also suppports rational coefficients *)
 val REAL_ARITH2 = RealField.REAL_ARITH;
 
-val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss) [LET_THM]
+
+val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss ++
+                   intSimps.INT_REDUCE_ss ++
+                   BasicProvers.thy_ssfrag "intreal") [LET_THM]
 
 fun test conv nm (problem, result) = let
   val t2s = trace ("Unicode", 0) term_to_string
@@ -21,33 +31,58 @@ in
 end;
 
 val real_reduce_simp_tests = [
-  (“~~3r”        , “3r”),
-  (“3r + 4”      , “7r”),
-  (“3 - 4r”      , “~1r”),
-  (“abs (~20r)”  , “20r”),
-  (“abs (1/6)”   , “1/6”),
-  (“abs (~3/6)”  , “1/2”),
-  (“abs 0”       , “0”),
-  (“3r * 3/4”    , “9/4”),
-  (“6/~8”        , “~3/4”),
-  (“1/3 + 1/2”   , “5/6”),
-  (“1/2 = 0”     , “F”),
-  (“0 + 3r”      , “3r”),
-  (“3r * 0”      , “0r”),
-  (“~0r”         , “0r”),
-  (“1r - 0”      , “1r”),
-  (“1 / 10 + 0r” , “1r/10”),
-  (“0r + 1 / 10” , “1r/10”),
-  (“1/2 * 0r”    , “0r”),
-  (“0r * 1/2”    , “0r”),
-  (“flr 10”      , “10n”),
-  (“clg 12”      , “12n”),
-  (“flr (1/10)”  , “0n”),
-  (“clg (1/10)”  , “1n”),
-  (“flr (131/10)”, “13n”),
-  (“clg (131/10)”, “14n”),
-  (“flr (-2/4)”  , “0n”),
-  (“clg (-2/4)”  , “0n”)
+  (“~~3r”              , “3r”),
+  (“3r + 4”            , “7r”),
+  (“3 - 4r”            , “~1r”),
+  (“abs (~20r)”        , “20r”),
+  (“abs (1/6)”         , “1/6”),
+  (“abs (~3/6)”        , “1/2”),
+  (“abs 0”             , “0”),
+  (“3r * 3/4”          , “9/4”),
+  (“6/~8”              , “~3/4”),
+  (“1/3 + 1/2”         , “5/6”),
+  (“1/2 = 0”           , “F”),
+  (“0 + 3r”            , “3r”),
+  (“3r * 0”            , “0r”),
+  (“~0r”               , “0r”),
+  (“1r - 0”            , “1r”),
+  (“1 / 10 + 0r”       , “1r/10”),
+  (“0r + 1 / 10”       , “1r/10”),
+  (“1/2 * 0r”          , “0r”),
+  (“0r * 1/2”          , “0r”),
+  (“flr 10:num”        , “10n”),
+  (“clg 12:num”        , “12n”),
+  (“flr (1/10):num”    , “0n”),
+  (“clg (1/10):num”    , “1n”),
+  (“flr (131/10):num”  , “13n”),
+  (“clg (131/10):num”  , “14n”),
+  (“flr (-2/4):num”    , “0n”),
+  (“clg (-2/4):num”    , “0n”),
+  (“NUM_CEILING (1/4)” , “1n”),
+  (“NUM_CEILING (5/4)” , “2n”),
+  (“NUM_CEILING 0”     , “0n”),
+  (“NUM_CEILING 3”     , “3n”),
+  (“NUM_CEILING (-5)”  , “0n”),
+
+  (“NUM_FLOOR (2/3)”   , “0n”),
+  (“NUM_FLOOR (7/3)”   , “2n”),
+  (“NUM_FLOOR 0”       , “0n”),
+  (“NUM_FLOOR 3”       , “3n”),
+  (“NUM_FLOOR (-5)”    , “0n”),
+
+  (“INT_FLOOR (1/4)”   , “0i”),
+  (“INT_FLOOR (5/4)”   , “1i”),
+  (“INT_FLOOR 0”       , “0i”),
+  (“INT_FLOOR 3”       , “3i”),
+  (“INT_FLOOR (-1/4)”  , “-1i”),
+  (“INT_FLOOR (-5/4)”  , “-2i”),
+
+  (“INT_CEILING (1/4)” , “1i”),
+  (“INT_CEILING (5/4)” , “2i”),
+  (“INT_CEILING 0”     , “0i”),
+  (“INT_CEILING 3”     , “3i”),
+  (“INT_CEILING (-1/4)”, “0i”),
+  (“INT_CEILING (-5/4)”, “-1i”)
 ]
 
 val _ = List.app (test s "simp") real_reduce_simp_tests
@@ -414,5 +449,5 @@ val _ = convtest("Testing real_mul_conv on ``64 * 128``",
                  ``64 * (128:real)``,
                  ``8192:real``)
 
-
-val _ = Process.exit Process.success
+val _ = print "\n"
+val _ = exit_count0 errc

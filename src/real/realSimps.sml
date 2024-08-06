@@ -238,8 +238,10 @@ val ltnb12 = TAC_PROOF(([], “0 < NUMERAL (BIT1 n) /\ 0 < NUMERAL (BIT2 n)”),
 val let_id = TAC_PROOF(([], “LET (\n. n) x = x”),
                        SIMP_TAC boolSimps.bool_ss [LET_THM])
 
+val clg0 = SIMP_RULE boolSimps.bool_ss [flr, LET_THM]
+                     (SPEC “0r” NUM_CEILING_NUM_FLOOR)
 val op_rwts =
-  [to_numeraln mult_ints, to_numeraln add_ints, flr,
+  [to_numeraln mult_ints, to_numeraln add_ints, flr, clg0,
    REAL_DIV_LZERO, REAL_NEGNEG] @
   (transform [(x,posneg)] $ SPEC x NUM_CEILING_NUM_FLOOR) @
   (transform [(x,posneg), (y,nb12)] (
@@ -376,7 +378,7 @@ val REAL_REDUCE_ss = SSFRAG
    ac = [], congs =[],
    convs = simpset_convs,
    dprocs = [], filter = NONE,
-   rewrs = map (fn th => (NONE, th)) rwts}
+   rewrs = map (fn th => (NONE, th)) rwts };
 
 val real_ss = arith_ss ++ real_SS ++ REAL_REDUCE_ss
 
