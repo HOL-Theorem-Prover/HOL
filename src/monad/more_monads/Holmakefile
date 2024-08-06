@@ -1,7 +1,3 @@
-ifdef POLY
-HOLHEAP = ../../num/termination/numheap
-endif
-
 EXTRA_CLEANS = selftest.exe selftest.log
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
