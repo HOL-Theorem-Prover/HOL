@@ -53,6 +53,12 @@
      (provided A and B are different arrays of type T) *)
   val array_ext_def = bossLib.Define `array_ext A B = @i. A i <> B i`
 
+  (* translation of HOL constants *)
+
+  val _ = s ("int_ceiling_floor",
+    M [intrealTheory.INT_CEILING_NEG, realTheory.REAL_NEGNEG]
+      ``!r. clgtoks r = -flrtoks (-r)``)
+
   (* used for Z3 proof reconstruction *)
 
   val _ = s ("ALL_DISTINCT_NIL", S ``ALL_DISTINCT [] = T``)

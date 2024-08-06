@@ -596,9 +596,9 @@ local
   local
     structure A = arithmeticTheory
     structure I = integerTheory
+    structure IR = intrealTheory
     structure R = realTheory
     structure RA = realaxTheory
-    infixr 3 -->
   in
     fun thms_per_const const =
     let
@@ -606,6 +606,7 @@ local
       val bool = Type.bool
       val num = numSyntax.num
       val op--> = Type.-->
+      infixr 3 -->
     in
       (* NOTE: when adding a theorem to the list below, make sure that it
          doesn't have any free var -- otherwise, ASSUME_TAC will specialize
@@ -642,6 +643,7 @@ local
       | ("integer", "int_of_num") => [ I.INT_OF_NUM, I.INT_POS, I.NUM_OF_INT ]
       | ("integer", "int_quot") => [ I.INT_QUOT_EDIV ]
       | ("integer", "int_rem") => [ I.INT_REM_EMOD ]
+      | ("intreal", "INT_CEILING") => [ HolSmtTheory.int_ceiling_floor ]
       | ("marker", "Abbrev") => [ markerTheory.Abbrev_def ]
       | ("min", "=") =>
           if Type.compare (Ty, num --> num --> bool) = EQUAL then
@@ -651,10 +653,15 @@ local
       | ("num", "SUC") => [ I.INT ]
       | ("prim_rec", "<") => [ I.INT_LT ]
       | ("realax", "/") => [ HolSmtTheory.real_div_smt_rdiv ]
+      | ("realax", "NUM_CEILING") => [ IR.INT_NUM_CEILING, R.NUM_CEILING_BASE ]
+      | ("realax", "NUM_FLOOR") => [ IR.INT_NUM_FLOOR, R.NUM_FLOOR_BASE ]
       | ("realax", "abs") => [ R.abs ]
+      | ("realax", "inv") => [ R.REAL_INV_1OVER ]
       | ("realax", "max") => [ RA.real_max ]
       | ("realax", "min") => [ RA.real_min ]
       | ("realax", "pow") => [ R.POW_2, R.POW_ONE, R.REAL_POW_LT, RA.real_pow ]
+      | ("realax", "real_of_num") =>
+          [ Drule.GEN_ALL (Thm.SYM IR.real_of_int_num) ]
       | _ => []
     end
   end

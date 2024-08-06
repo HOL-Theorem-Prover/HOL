@@ -546,6 +546,22 @@ Proof
   Cases_on ‘y’ >> simp[GSYM real_sub, GSYM int_sub]
 QED
 
+Theorem INT_NUM_CEILING:
+  !r. 0 <= r ==> &realax$NUM_CEILING r = INT_CEILING r
+Proof
+  rw[INT_CEILING]
+  >- metis_tac[NUM_CEILING_UPPER_BOUND, REAL_LT_SUB_RADD]
+  >> metis_tac[LE_NUM_CEILING]
+QED
+
+Theorem INT_NUM_FLOOR:
+  !r. 0 <= r ==> &realax$NUM_FLOOR r = INT_FLOOR r
+Proof
+  rw[INT_FLOOR]
+  >- metis_tac[NUM_FLOOR_LE]
+  >> metis_tac[NUM_FLOOR_LT, REAL_ADD, REAL_LT_SUB_RADD]
+QED
+
 Theorem ints_exist_in_gaps:
   !a b. a + 1 < b ==> ?i. a < real_of_int i /\ real_of_int i < b
 Proof

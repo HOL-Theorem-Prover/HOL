@@ -136,7 +136,9 @@ fun auto_tac (_, t) =
       handle Feedback.HOL_ERR _ =>
         wordsLib.WORD_DECIDE t'
       handle Feedback.HOL_ERR _ =>
-        Tactical.prove (t', blastLib.BBLAST_TAC)
+        Tactical.TAC_PROOF (([], t'), blastLib.BBLAST_TAC)
+      handle Feedback.HOL_ERR _ =>
+        Drule.EQT_ELIM (bossLib.EVAL t')
     val thm = Thm.EQ_MP (Thm.SYM t_eq_t') t'_thm
   in
     ([], fn _ => thm)
@@ -714,6 +716,19 @@ in
     (``x < 0 ==> (x:real) / 42 > x``,
       [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4]),
 
+    (``realinv 0 = 0``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``realinv 1 = 1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``realinv (-1) = -1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``realinv 42 = 1 / 42``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``realinv (-42) = -1 / 42``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``realinv (1 / 42) = 42``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``realinv (-1 / 42) = -42``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``realinv x = 1 / x``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``realinv (-x) = -1 / x``, [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``realinv (1 / x) = x``, [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``realinv (abs x) = 1 / (abs x)``, [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``realinv (abs x) = abs (1 / x)``, [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+
     (``(x:real) pow 0 = 1``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
     (``(x:real) pow 0 = 0``, [sat_CVC, sat_Z3, sat_Z3p]),
     (``(x:real) pow 1 = x``, [thm_AUTO, (*thm_CVC,*) thm_Z3, thm_Z3p_v4]),
@@ -878,6 +893,74 @@ in
     (``(x:real) >= 0``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
     (``0 < (x:real) /\ x <= 1 ==> (x = 1)``,
       [sat_CVC, sat_YO, sat_Z3, sat_Z3p]),
+
+    (* conversions between numeric types *)
+
+    (``(x:num) < 42 ==> &x < (42:int)``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:num) < 42 ==> &x < (42:real)``,
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``(42:int) < x ==> (42:num) < Num x``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:int) < 42 ==> real_of_int x < (42:real)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
+    (``(x:int) < -42 ==> real_of_int x < (-42:real)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p*)]),
+
+    (``flr (42:real) = (42:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``flr (-42:real) = (0:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``flr (4/3:real) = (1:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``flr (-4/3:real) = (0:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``flr (0:real) = (0:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:real) < 0 ==> flr x = (0:num)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:real) <= 0 ==> flr x = (0:num)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3, thm_Z3p_v4]),
+
+    (``clg (42:real) = (42:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``clg (-42:real) = (0:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``clg (4/3:real) = (2:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``clg (-4/3:real) = (0:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``clg (0:real) = (0:num)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:real) < 0 ==> clg x = (0:num)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``(x:real) <= 0 ==> clg x = (0:num)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3, thm_Z3p_v4]),
+
+    (``flrtoks (42:real) = (42:int)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``flrtoks (-42:real) = (-42:int)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p]),
+    (``flrtoks (4/3:real) = (1:int)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``flrtoks (-4/3:real) = (-2:int)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``0 < (x:real) ==> ((flrtoks x): int) = &((flr x): num)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``0 <= (x:real) ==> ((flrtoks x): int) = &((flr x): num)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+
+    (``clgtoks (42:real) = (42:int)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``clgtoks (-42:real) = (-42:int)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``clgtoks (4/3:real) = (2:int)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``clgtoks (-4/3:real) = (-1:int)``,
+      [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+    (``0 < (x:real) ==> ((clgtoks x): int) = &((clg x): num)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
+    (``0 <= (x:real) ==> ((clgtoks x): int) = &((clg x): num)``,
+      [(*thm_AUTO,*) thm_CVC, thm_Z3(*, thm_Z3p_v4*)]),
 
     (* uninterpreted functions *)
 
@@ -1362,7 +1445,14 @@ in
     (* regression tests *)
 
     (``!(n:num) z y a. (3 * n + 1) * z <= y * a ==> 3 * (n * z) <= 2 * (y * a)``,
-      [thm_AUTO, (*thm_CVC,*) thm_Z3(*, thm_Z3p*)])
+      [thm_AUTO, (*thm_CVC,*) thm_Z3(*, thm_Z3p*)]),
+
+    (``Abbrev ((x:num) = 5) ==> x = 5``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4]),
+
+    (``!(x:real). 2 <= x /\ x <= 3 ==>
+      0 < x - (x pow 3) / 6 + (x pow 5) / 120 - (x pow 7) / 5040``,
+        [(*thm_AUTO, thm_CVC,*) thm_Z3_v4(*, thm_Z3p_v4*)])
+
 
   ]  (* tests *)
 end
