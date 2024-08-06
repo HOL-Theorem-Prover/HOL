@@ -175,4 +175,40 @@ in
 
   val (inv_tm,mk_inv,dest_inv,is_inv) = syntax_fns1 "realax" "inv"
 
-end ;
+
+local
+  val operators = [("+", plus_tm),
+                   ("-", minus_tm),
+                   ("~", negate_tm),
+                   ("numeric_negate", negate_tm),
+                   ("*", mult_tm),
+                   ("/", div_tm),
+                   ("<", less_tm),
+                   ("<=", leq_tm),
+                   (">", greater_tm),
+                   (">=", geq_tm),
+                   (GrammarSpecials.fromNum_str, real_injection),
+                   (GrammarSpecials.num_injection, real_injection)];
+in
+
+  fun deprecate_real () = let
+    fun doit (s, t) =
+       let val {Name,Thy,...} = dest_thy_const t in
+          Parse.temp_send_to_back_overload s {Name = Name, Thy = Thy}
+       end
+  in
+    List.app doit operators
+  end
+
+  fun prefer_real () = let
+    fun doit (s, t) =
+       let val {Name,Thy,...} = dest_thy_const t in
+          Parse.temp_bring_to_front_overload s {Name = Name, Thy = Thy}
+       end
+  in
+    List.app doit operators
+  end
+end (* local *)
+
+
+end (* struct *)

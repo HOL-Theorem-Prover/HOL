@@ -2,6 +2,9 @@ signature realSyntax =
 sig
   include Abbrev
 
+  val prefer_real    : unit -> unit
+  val deprecate_real : unit -> unit
+
   (* terms and types *)
   val real_ty        : hol_type
   val zero_tm        : term
