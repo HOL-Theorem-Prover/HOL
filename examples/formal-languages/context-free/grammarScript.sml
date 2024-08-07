@@ -31,10 +31,16 @@ Datatype:
   |>
 End
 
+(* NOTE: The type variable 'locs could be “:location$locs”. If it's “:one”, then
+         the parsing tree is location-free (see “:('a,'b) lfptree”).
+ *)
 Datatype:
   parsetree = Lf (('a,'b) symbol # 'locs)
             | Nd ('b inf # 'locs) (parsetree list)
 End
+
+(* loc-free parse tree *)
+Type lfptree = “:(α,β,one) parsetree”
 
 Definition ptree_loc_def:
   ptree_loc (Lf(_,l)) = l ∧
@@ -68,17 +74,21 @@ Termination
    WF_REL_TAC `measure ptree_size`
 End
 
+(* |- (!v0 t. ptree_fringe (Lf (t,v0)) = [t]) /\
+       !v1 children.
+              ptree_fringe (Nd v1 children) = FLAT (MAP ptree_fringe children)
+ *)
 Theorem ptree_fringe_def[simp,compute,allow_rebind] =
   CONV_RULE (DEPTH_CONV ETA_CONV) ptree_fringe_def
 
+(* A (valid) parsing tree is complete if the root node is the start NT of the
+   grammar rules and all its leaves are terminals (TOK).
+ *)
 Definition complete_ptree_def:
   complete_ptree G pt ⇔
     valid_ptree G pt ∧ ptree_head pt = NT G.start ∧
     ∀t. t ∈ set (ptree_fringe pt) ⇒ isTOK t
 End
-
-(* loc-free parse tree *)
-Type lfptree = “:(α,β,one) parsetree”
 
 Definition real_fringe_def[simp]:
   (real_fringe (Lf t) = [t]) ∧
@@ -208,46 +218,6 @@ Proof
   qpat_x_assum `SS ∈ G.rules ' s` (K ALL_TAC) >> Induct_on `l` >> rw[] >>
   fs[DISJ_IMP_THM, FORALL_AND_THM] >>
   metis_tac [derives_paste_horizontally, APPEND]
-QED
-
-Theorem FLAT_EQ_APPEND:
-  FLAT l = x ++ y ⇔
-    (∃p s. l = p ++ s ∧ x = FLAT p ∧ y = FLAT s) ∨
-    (∃p s ip is.
-       l = p ++ [ip ++ is] ++ s ∧ ip ≠ [] ∧ is ≠ [] ∧
-       x = FLAT p ++ ip ∧
-       y = is ++ FLAT s)
-Proof
-  reverse eq_tac >- (rw[] >> rw[rich_listTheory.FLAT_APPEND]) >>
-  map_every qid_spec_tac [`y`,`x`,`l`] >> Induct_on `l` >- simp[] >>
-  simp[] >> map_every qx_gen_tac [`h`, `x`, `y`] >>
-  simp[APPEND_EQ_APPEND] >>
-  disch_then (DISJ_CASES_THEN (qxch `m` strip_assume_tac))
-  >- (Cases_on `x = []`
-      >- (fs[] >> map_every qexists_tac [`[]`, `m::l`] >> simp[]) >>
-      Cases_on `m = []`
-      >- (fs[] >> disj1_tac >> map_every qexists_tac [`[x]`, `l`] >>
-          simp[]) >>
-      disj2_tac >>
-      map_every qexists_tac [`[]`, `l`, `x`, `m`] >> simp[]) >>
-  `(∃p s. l = p ++ s ∧ FLAT p = m ∧ FLAT s = y) ∨
-   (∃p s ip is.
-       l = p ++ [ip ++ is] ++ s ∧ m = FLAT p ++ ip ∧ ip ≠ [] ∧ is ≠ [] ∧
-       y = is ++ FLAT s)` by metis_tac[]
-  >- (disj1_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[]) >>
-  disj2_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[]
-QED
-
-Theorem FLAT_EQ_NIL: FLAT l = [] ⇔ ∀e. MEM e l ⇒ e = []
-Proof simp[listTheory.FLAT_EQ_NIL, EVERY_MEM] >> metis_tac[]
-QED
-
-Theorem FLAT_EQ_SING:
-  FLAT l = [x] ⇔
-    ∃p s. l = p ++ [[x]] ++ s ∧ FLAT p = [] ∧ FLAT s = []
-Proof
-  Induct_on `l` >> simp[] >> simp[APPEND_EQ_CONS] >>
-  simp_tac (srw_ss() ++ DNF_ss) [] >> metis_tac[]
 QED
 
 val fringe_element = store_thm(

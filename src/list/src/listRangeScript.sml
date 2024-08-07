@@ -7,6 +7,8 @@ open HolKernel Parse boolLib BasicProvers;
 open arithmeticTheory TotalDefn simpLib numSimps numLib listTheory metisLib
      pred_setTheory listSimps dividesTheory;
 
+val _ = new_theory "listRange";
+
 val decide_tac = DECIDE_TAC;
 val metis_tac = METIS_TAC;
 val qabbrev_tac = Q.ABBREV_TAC;
@@ -15,8 +17,9 @@ fun simp l = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 fun fs l = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 fun rfs l = REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 val rw = SRW_TAC [ARITH_ss];
-
-val _ = new_theory "listRange";
+val Know = Q_TAC KNOW_TAC;
+fun wrap a = [a];
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 
 (* ------------------------------------------------------------------------- *)
 (* Range Conjunction and Disjunction                                         *)
@@ -1092,5 +1095,78 @@ val listRangeLHI_has_divisors = store_thm(
   "listRangeLHI_has_divisors",
   ``!m n x. 0 < n /\ m <= x /\ x divides n ==> MEM x [m ..< n + 1]``,
   metis_tac[listRangeINC_has_divisors, listRangeLHI_to_INC]);
+
+(* ------------------------------------------------------------------------- *)
+(*  isPREFIX-related theorems (by Chun Tian)                                 *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem isPREFIX_listRangeLHI :
+    !m n m' n'. m = m' /\ n <= n' ==> [m ..< n] <<= [m' ..< n']
+Proof
+    rw [listRangeLHI_def, isPREFIX_GENLIST]
+QED
+
+Theorem isPREFIX_listRangeINC :
+    !m n m' n'. m = m' /\ n <= n' ==> [m .. n] <<= [m' .. n']
+Proof
+    rw [listRangeINC_def, isPREFIX_GENLIST]
+QED
+
+Theorem listRangeLHI_11 :
+    !m n m' n'. m < n /\ m' < n' ==>
+               ([m ..< n] = [m' ..< n'] <=> m = m' /\ n = n')
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> reverse EQ_TAC >- rw []
+ >> rw [LIST_EQ_REWRITE, listRangeLHI_EL]
+ >- (rfs [listRangeLHI_EL] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘0’ >> rw [])
+ >> rfs [listRangeLHI_EL]
+ >> POP_ASSUM (MP_TAC o Q.SPEC ‘0’)
+ >> rw []
+QED
+Theorem listRangeINC_11 :
+    !m n m' n'. m <= n /\ m' <= n' ==>
+               ([m .. n] = [m' .. n'] <=> m = m' /\ n = n')
+Proof
+    rw [listRangeINC_to_LHI]
+ >> Know ‘[m ..< SUC n] = [m' ..< SUC n'] <=> m = m' /\ SUC n = SUC n'’
+ >- (MATCH_MP_TAC listRangeLHI_11 >> rw [])
+ >> Rewr'
+ >> rw []
+QED
+
+Theorem isPREFIX_listRangeLHI_EQ :
+    !m n m' n'. m < n /\ m' < n' ==>
+               ([m ..< n] <<= [m' ..< n'] <=> m = m' /\ n <= n')
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> reverse EQ_TAC
+ >- rw [listRangeLHI_def, isPREFIX_GENLIST]
+ >> rw [listRangeLHI_CONS]
+ >> Cases_on ‘m + 1 = n’ >- POP_ASSUM (fs o wrap o SYM)
+ >> Cases_on ‘m + 1 = n'’
+ >- (POP_ASSUM (fs o wrap o SYM) \\
+     fs [listRangeLHI_NIL])
+ >> CCONTR_TAC
+ >> ‘n' <= n’ by rw []
+ >> ‘[m + 1 ..< n'] <<= [m + 1 ..< n]’ by PROVE_TAC [isPREFIX_listRangeLHI]
+ >> ‘[m + 1 ..< n] = [m + 1 ..< n']’ by PROVE_TAC [isPREFIX_ANTISYM]
+ >> Know ‘[m + 1 ..< n] = [m + 1 ..< n'] <=> m + 1 = m + 1 /\ n = n'’
+ >- (MATCH_MP_TAC listRangeLHI_11 >> simp [])
+ >> rw []
+QED
+
+Theorem isPREFIX_listRangeINC_EQ :
+    !m n m' n'. m <= n /\ m' <= n' ==>
+               ([m .. n] <<= [m' .. n'] <=> m = m' /\ n <= n')
+Proof
+    rw [listRangeINC_to_LHI]
+ >> Know ‘[m ..< SUC n] <<= [m' ..< SUC n'] <=> m = m' /\ SUC n <= SUC n'’
+ >- (MATCH_MP_TAC isPREFIX_listRangeLHI_EQ >> rw [])
+ >> Rewr'
+ >> rw []
+QED
 
 val _ = export_theory();
