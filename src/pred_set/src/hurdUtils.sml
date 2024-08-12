@@ -7,27 +7,11 @@
 structure hurdUtils :> hurdUtils =
 struct
 
-open HolKernel boolLib BasicProvers;
+open HolKernel Parse boolLib BasicProvers;
 
-open Susp Hol_pp metisLib simpLib pairTheory res_quanTools numLib;
+open Susp Hol_pp metisLib simpLib pairTheory (* res_quanTools *) numLib;
 
 infixr 0 oo THENR ORELSER ## thenf orelsef;
-
-(* obsoleted:
-infix 1 >> |->;
-val op++ = op THEN;
-val op<< = op THENL;
-val op|| = op ORELSE;
- *)
-
-structure Parse = struct
-  open Parse
-  val (Type,Term) =
-      pred_setTheory.pred_set_grammars
-        |> apsnd ParseExtras.grammar_loose_equality
-        |> parse_from_grammars
-end
-open Parse
 
 (* ------------------------------------------------------------------------- *)
 (* Basic ML datatypes/functions.                                             *)
@@ -44,11 +28,6 @@ exception BUG_EXN of
   {origin_structure : string, origin_function : string, message : string};
 
 val ERR = mk_HOL_ERR "hurdUtils"
-
-(* old definition:
-fun ERR f s = HOL_ERR
-  {origin_structure = "hurdUtils", origin_function = f, message = s};
- *)
 
 fun BUG f s = BUG_EXN
   {origin_structure = "hurdUtils", origin_function = f, message = s};
@@ -962,8 +941,10 @@ fun POP_ASSUM_TAC tac =
 
 val TRUTH_TAC = ACCEPT_TAC TRUTH;
 
+(*
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
 val Strip = S_TAC;
+ *)
 
 fun K_TAC _ = ALL_TAC;
 

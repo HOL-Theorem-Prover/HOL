@@ -514,6 +514,15 @@ val LESS_EQ_ANTISYM = store_thm ("LESS_EQ_ANTISYM",
      ASM_REWRITE_TAC [LESS_MONO_EQ, LESS_EQ_MONO,
        ZERO_LESS_EQ, LESS_0, NOT_LESS_0, NOT_SUC_LESS_EQ_0]) ;
 
+Theorem LTE_ANTISYM = LESS_EQ_ANTISYM (* HOL-Light compatible name *)
+Theorem LET_ANTISYM :
+    !m n. ~(m <= n /\ n < m)
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [CONJ_COMM]
+ >> REWRITE_TAC [LESS_EQ_ANTISYM]
+QED
+
 val LESS_EQ_0 = store_thm ("LESS_EQ_0",
   “!n. (n <= 0) = (n = 0)”,
   REWRITE_TAC [LESS_OR_EQ, NOT_LESS_0]) ;
@@ -820,6 +829,10 @@ val LESS_LESS_EQ_TRANS = store_thm ("LESS_LESS_EQ_TRANS",
   REPEAT GEN_TAC THEN REWRITE_TAC[LESS_OR_EQ] THEN
   ASM_CASES_TAC (“n:num = p”) THEN ASM_REWRITE_TAC[LESS_TRANS]);
 
+Theorem LE_TRANS  = LESS_EQ_TRANS      (* HOL-Light compatible name *)
+Theorem LET_TRANS = LESS_EQ_LESS_TRANS (* HOL-Light compatible name *)
+Theorem LTE_TRANS = LESS_LESS_EQ_TRANS (* HOL-Light compatible name *)
+
 (* % Proof modified for new IMP_RES_TAC                 [TFM 90.04.25]  *)
 
 val LESS_EQ_LESS_EQ_MONO = store_thm ("LESS_EQ_LESS_EQ_MONO",
@@ -837,6 +850,8 @@ val LESS_EQ_REFL = store_thm ("LESS_EQ_REFL",
    “!m. m <= m”,
    GEN_TAC
     THEN REWRITE_TAC[LESS_OR_EQ]);
+
+Theorem LE_REFL = LESS_EQ_REFL (* HOL-Light compatible name *)
 
 val LESS_IMP_LESS_OR_EQ = store_thm ("LESS_IMP_LESS_OR_EQ",
    “!m n. (m < n) ==> (m <= n)”,
@@ -1105,6 +1120,17 @@ val SUB_LESS_OR = store_thm ("SUB_LESS_OR",
    DISCH_THEN (STRIP_THM_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
    REWRITE_TAC [SYM (SPEC_ALL PRE_SUB1)] THEN
    REWRITE_TAC [PRE,ONE,ADD_CLAUSES,LESS_EQ_ADD]);
+
+Theorem SUB_LESS_OR_EQ :
+    !m n. 0 < m ==> (n <= m - 1 <=> n < m)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC
+ >- REWRITE_TAC [SUB_LESS_OR]
+ >> Cases_on ‘m’
+ >- FULL_SIMP_TAC std_ss [LESS_REFL]
+ >> REWRITE_TAC [SUC_SUB1, LT_SUC_LE]
+QED
 
 val LESS_SUB_ADD_LESS = store_thm ("LESS_SUB_ADD_LESS",
  “!n m i. (i < (n - m)) ==> ((i + m) < n)”,
@@ -3454,6 +3480,19 @@ val MIN_DEF = new_definition("MIN_DEF", “MIN m n = if m < n then m else n”);
 
 val MAX = MAX_DEF;
 val MIN = MIN_DEF;
+
+(* Alternative definitions of MAX and MIN using ‘<=’ instead of ‘<’ *)
+Theorem MIN_ALT :
+    !m n. MIN m n = if m <= n then m else n
+Proof
+    rw [LESS_OR_EQ, MIN_DEF] >> fs []
+QED
+
+Theorem MAX_ALT :
+    !m n. MAX m n = if m <= n then n else m
+Proof
+    rw [LESS_OR_EQ, MAX_DEF] >> fs []
+QED
 
 val ARW = RW_TAC bool_ss
 

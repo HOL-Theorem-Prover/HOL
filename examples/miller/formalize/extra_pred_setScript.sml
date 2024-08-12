@@ -18,6 +18,7 @@ val assert = simple_assert;
 (* ------------------------------------------------------------------------- *)
 
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
 
 val std_pc = precontext_mergel [bool_pc, list_pc];
 val std_c = precontext_compile std_pc;

@@ -5826,17 +5826,23 @@ Proof
    ``\d. ((x:real) = (A:(real->bool)->real)(d)):bool``
    lemma) THEN
   REPEAT CONJ_TAC THENL
-   [ALL_TAC,
+  [ (* goal 1 (of 3) *)
+    ALL_TAC,
+    (* goal 2 (of 3) *)
     ONCE_REWRITE_TAC [METIS [] ``{k | k IN d /\ content k <> 0 /\ x IN k} =
                             {k | k IN d /\ (\k. content k <> 0 /\ x IN k) k}``] THEN
     MATCH_MP_TAC FINITE_RESTRICT THEN ASM_MESON_TAC[division_of],
+    (* goal 3 (of 3) *)
     MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC ``CARD univ(:bool)`` THEN CONJ_TAC THENL
-     [KNOW_TAC ``(IMAGE (\(d :real -> bool). (x :real) = (A :(real -> bool) -> real) d)
+    [ (* goal 3.1 (of 2) *)
+      KNOW_TAC ``(IMAGE (\(d :real -> bool). (x :real) = (A :(real -> bool) -> real) d)
          {k | k IN (d :(real -> bool) -> bool) /\ content k <> (0 :real) /\
           x IN k}) SUBSET univ(:bool)`` THENL [REWRITE_TAC [SUBSET_UNIV], ALL_TAC] THEN
       MATCH_MP_TAC CARD_SUBSET THEN
       SIMP_TAC std_ss [FINITE_BOOL],
-      SIMP_TAC std_ss [FINITE_BOOL, CARD_CART_UNIV, CARD_BOOL, LESS_EQ_REFL]]] THEN
+      (* goal 3.2 (of 2) *)
+      SIMP_TAC std_ss [FINITE_BOOL, CARD_BOOL, LESS_EQ_REFL] ] ] THEN
+ (* NOTE: below are tactics for goal 1 *)
   MAP_EVERY X_GEN_TAC [``k:real->bool``, ``l:real->bool``] THEN
   SIMP_TAC std_ss [GSPECIFICATION] THEN STRIP_TAC THEN
   UNDISCH_TAC ``d division_of s`` THEN DISCH_TAC THEN

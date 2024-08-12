@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open realTheory realLib
+open realTheory realLib res_quanTools
      hurdUtils subtypeTheory extra_numTheory transcTheory
      pred_setTheory arithmeticTheory seqTheory combinTheory pairTheory
      extra_pred_setTheory extra_boolTheory real_sigmaTheory
@@ -13,6 +13,8 @@ val _ = new_theory "extra_real";
 (* ------------------------------------------------------------------------- *)
 
 val Simplify = RW_TAC arith_ss;
+val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

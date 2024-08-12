@@ -310,8 +310,6 @@ sig
   val ASMLIST_CASES : tactic -> (term -> tactic) -> tactic
   val POP_ASSUM_TAC : tactic -> tactic
   val TRUTH_TAC : tactic
-  val S_TAC : tactic
-  val Strip : tactic
   val K_TAC : 'a -> tactic
   val KILL_TAC : tactic
   val FUN_EQ_TAC : tactic
