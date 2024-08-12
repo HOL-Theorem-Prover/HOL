@@ -336,25 +336,4 @@ val wlog_then = wlog_then
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
-(*---------------------------------------------------------------------------*)
-(* Tactic to automate some routine set theory by reduction to FOL            *)
-(* (Ported from HOL Light)                                                   *)
-(*---------------------------------------------------------------------------*)
-
-local open pairTheory pred_setTheory in
-fun SET_TAC L =
-    POP_ASSUM_LIST (K ALL_TAC) \\
-    rpt COND_CASES_TAC \\
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-                         SING_DEF] L) \\
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] \\
-    METIS_TAC [];
-
-fun ASM_SET_TAC L = rpt (POP_ASSUM MP_TAC) >> SET_TAC L;
-
-fun SET_RULE tm = prove (tm, SET_TAC []);
-end (* local *)
-
 end

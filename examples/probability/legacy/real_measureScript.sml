@@ -18,6 +18,9 @@ val _ = new_theory "real_measure";
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
 
+val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
+
 (* ------------------------------------------------------------------------- *)
 (* Basic measure theory definitions.                                         *)
 (* ------------------------------------------------------------------------- *)

@@ -1,5 +1,4 @@
 (* ========================================================================= *)
-(*                                                                           *)
 (*    Generic iterated operations and special cases of sums over N           *)
 (*                                                                           *)
 (*        (c) Copyright 2014-2015,                                           *)
@@ -16,15 +15,30 @@
 (*              (c) Copyright, Lars Schewe 2007                              *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib BasicProvers;
 
-open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
-     arithmeticTheory jrhUtils pairTheory mesonLib pred_setTheory pred_setLib
-     optionTheory relationTheory permutesTheory hurdUtils;
-
-open wellorderTheory cardinalTheory;
+open numLib tautLib Arith prim_recTheory combinTheory quotientTheory metisLib
+     arithmeticTheory pairTheory mesonLib pred_setTheory pred_setLib simpLib
+     optionTheory relationTheory permutesTheory pureSimps numSimps hurdUtils
+     TotalDefn computeLib TypeBase boolSimps unwindLib;
 
 val _ = new_theory "iterate";
+
+val qexists_tac = Q.EXISTS_TAC;
+val qabbrev_tac = Q.ABBREV_TAC;
+val qid_spec_tac = Q.ID_SPEC_TAC;
+val rename = Q.RENAME_TAC;
+val rename1 = Q.RENAME1_TAC;
+val rw = SRW_TAC [];
+fun simp ths = ASM_SIMP_TAC (srw_ss()) ths;
+fun fs ths = FULL_SIMP_TAC (srw_ss()) ths;
+fun rfs ths = REV_FULL_SIMP_TAC (srw_ss()) ths;
+
+val metis_tac = METIS_TAC;
+
+val _ = augment_srw_ss [ARITH_ss];
+
+val GEN_REWR_TAC = Lib.C Rewrite.GEN_REWRITE_TAC Rewrite.empty_rewrites;
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
@@ -39,9 +53,40 @@ fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 
 val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC;
 
+Theorem CONJ_EQ_IMP[local] :
+    !p q r. p /\ q ==> r <=> p ==> q ==> r
+Proof
+    REWRITE_TAC [AND_IMP_INTRO]
+QED
+
 (* Minimal hol-light compatibility layer *)
-val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
 val FINITE_SUBSET = SUBSET_FINITE_I; (* pred_setTheory *)
+
+Theorem LEFT_IMP_EXISTS_THM[local] :
+    !P Q. (?x. P x) ==> Q <=> (!x. P x ==> Q)
+Proof
+    SIMP_TAC std_ss [PULL_EXISTS]
+QED
+
+Theorem FORALL_IN_GSPEC[local] :
+   (!P f. (!z. z IN {f x | P x} ==> Q z) <=> (!x. P x ==> Q(f x))) /\
+   (!P f. (!z. z IN {f x y | P x y} ==> Q z) <=>
+          (!x y. P x y ==> Q(f x y))) /\
+   (!P f. (!z. z IN {f w x y | P w x y} ==> Q z) <=>
+          (!w x y. P w x y ==> Q(f w x y)))
+Proof
+   SRW_TAC [][] THEN SET_TAC []
+QED
+
+Theorem CONJ_ACI[local] :
+   !p q. (p /\ q <=> q /\ p) /\
+   ((p /\ q) /\ r <=> p /\ (q /\ r)) /\
+   (p /\ (q /\ r) <=> q /\ (p /\ r)) /\
+   (p /\ p <=> p) /\
+   (p /\ (p /\ q) <=> p /\ q)
+Proof
+  METIS_TAC [CONJ_ASSOC, CONJ_SYM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* misc.                                                                     *)
@@ -88,20 +133,21 @@ val EMPTY_BIGUNION = store_thm ("EMPTY_BIGUNION",
 Theorem UPPER_BOUND_FINITE_SET:
   !f:('a->num) s. FINITE(s) ==> ?a. !x. x IN s ==> f(x) <= a
 Proof
-  rpt strip_tac >> qexists ‘MAX_SET (IMAGE f s)’ >>
+  rpt strip_tac >> qexists_tac ‘MAX_SET (IMAGE f s)’ >>
   rpt strip_tac >> irule X_LE_MAX_SET >> simp[]
 QED
 
 Theorem LE_EXISTS :
   !m n:num. (m <= n) <=> (?d. n = m + d)
 Proof
-  simp[EQ_IMP_THM, PULL_EXISTS] >> rw[] >> qexists ‘n - m’ >> simp[]
+    simp[EQ_IMP_THM, PULL_EXISTS] >> rw[]
+ >> qexists_tac ‘n - m’ >> simp[]
 QED
 
 Theorem LT_EXISTS :
   !m n. (m < n) <=> (?d. n = m + SUC d)
 Proof
-  simp[EQ_IMP_THM] >> rw[] >> qexists ‘n - (m + 1)’ >> simp[]
+  simp[EQ_IMP_THM] >> rw[] >> qexists_tac ‘n - (m + 1)’ >> simp[]
 QED
 
 val BOUNDS_LINEAR = store_thm ("BOUNDS_LINEAR",
@@ -121,22 +167,6 @@ val BOUNDS_LINEAR_0 = store_thm ("BOUNDS_LINEAR_0",
   REPEAT GEN_TAC THEN
   MP_TAC (SPECL [``A:num``, ``0:num``, ``B:num``] BOUNDS_LINEAR) THEN
   REWRITE_TAC[MULT_CLAUSES, ADD_CLAUSES, LE]);
-
-val BIGUNION_GSPEC = store_thm ("BIGUNION_GSPEC",
- ``(!P f. BIGUNION {f x | P x} = {a | ?x. P x /\ a IN (f x)}) /\
-   (!P f. BIGUNION {f x y | P x y} = {a | ?x y. P x y /\ a IN (f x y)}) /\
-   (!P f. BIGUNION {f x y z | P x y z} =
-            {a | ?x y z. P x y z /\ a IN (f x y z)})``,
-  REPEAT STRIP_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
-  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
-
-val BIGINTER_GSPEC = store_thm ("BIGINTER_GSPEC",
- ``(!P f. BIGINTER {f x | P x} = {a | !x. P x ==> a IN (f x)}) /\
-   (!P f. BIGINTER {f x y | P x y} = {a | !x y. P x y ==> a IN (f x y)}) /\
-   (!P f. BIGINTER {f x y z | P x y z} =
-                {a | !x y z. P x y z ==> a IN (f x y z)})``,
-  REPEAT STRIP_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
-  SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
 
 val FINITE_POWERSET = store_thm ("FINITE_POWERSET",
   ``!s. FINITE s ==> FINITE {t | t SUBSET s}``,
@@ -485,6 +515,31 @@ val CHOOSE_SUBSET = store_thm ("CHOOSE_SUBSET",
  ``!s:'a->bool. FINITE s ==> !n. n <= CARD s ==> ?t. t SUBSET s /\ t HAS_SIZE n``,
   MESON_TAC[CHOOSE_SUBSET_STRONG]);
 
+val HAS_SIZE_NUMSEG_LT = store_thm ("HAS_SIZE_NUMSEG_LT",
+ ``!n. {m | m < n} HAS_SIZE n``,
+  INDUCT_TAC THENL
+   [SUBGOAL_THEN ``{m:num | m < 0} = {}``
+       (fn th => REWRITE_TAC[HAS_SIZE_0, th]) THEN
+    SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, GSPECIFICATION, LESS_THM, NOT_LESS_0],
+    SUBGOAL_THEN ``{m | m < SUC n} = n INSERT {m | m < n}`` SUBST1_TAC THENL
+     [SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INSERT] THEN ARITH_TAC,
+      ALL_TAC] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
+    ASM_SIMP_TAC std_ss [HAS_SIZE, CARD_EMPTY, CARD_INSERT, FINITE_INSERT] THEN
+    SIMP_TAC std_ss [GSPECIFICATION, LESS_REFL]]);
+
+val FINITE_NUMSEG_LT = store_thm ("FINITE_NUMSEG_LT",
+ ``!n:num. FINITE {m | m < n}``,
+  REWRITE_TAC[REWRITE_RULE[HAS_SIZE] HAS_SIZE_NUMSEG_LT]);
+
+val HAS_SIZE_NUMSEG_LE = store_thm ("HAS_SIZE_NUMSEG_LE",
+ ``!n. {m | m <= n} HAS_SIZE (n + 1)``,
+  REWRITE_TAC[GSYM LT_SUC_LE, HAS_SIZE_NUMSEG_LT, ADD1]);
+
+val FINITE_NUMSEG_LE = store_thm ("FINITE_NUMSEG_LE",
+ ``!n:num. FINITE {m | m <= n}``,
+ SIMP_TAC std_ss [REWRITE_RULE[HAS_SIZE] HAS_SIZE_NUMSEG_LE]);
+
 (* ------------------------------------------------------------------------- *)
 (* A natural notation for segments of the naturals.                          *)
 (* ------------------------------------------------------------------------- *)
@@ -572,16 +627,17 @@ Theorem CARD_NUMSEG_LEMMA:
   !m d. CARD{m..m+d} = d + 1
 Proof
   GEN_TAC THEN INDUCT_TAC THEN
-  gs[NUMSEG_SING, ADD_CLAUSES, NUMSEG_REC, FINITE_NUMSEG]
+  fs[NUMSEG_SING, ADD_CLAUSES, NUMSEG_REC, FINITE_NUMSEG]
 QED
 
 Theorem CARD_NUMSEG:
   !m n. CARD {m..n} = n + 1 - m
 Proof
-  REPEAT GEN_TAC >> Cases_on ‘m <= n’
-  >- gs[LESS_EQ_EXISTS, CARD_NUMSEG_LEMMA] >>
-  gs[NOT_LESS_EQUAL] >> drule_then assume_tac (iffRL NUMSEG_EMPTY) >>
-  simp[]
+    REPEAT GEN_TAC >> Cases_on ‘m <= n’
+ >- fs[LESS_EQ_EXISTS, CARD_NUMSEG_LEMMA]
+ >> fs[NOT_LESS_EQUAL]
+ >> drule_then assume_tac (iffRL NUMSEG_EMPTY)
+ >> simp[]
 QED
 
 val HAS_SIZE_NUMSEG = store_thm ("HAS_SIZE_NUMSEG",
@@ -619,7 +675,7 @@ Proof
   >- (simp[EXTENSION, combinTheory.APPLY_UPDATE_THM, AllCaseEqs(), SF DNF_ss] >>
       metis_tac[LE, DECIDE “x <= y ==> x <> SUC y”]) >>
   rpt gen_tac >> simp[AllCaseEqs()] >>
-  ‘!i. 1 <= i /\ i <= C ==> f i <> e’ by (gvs[] >> metis_tac[]) >>
+  ‘!i. 1 <= i /\ i <= C ==> f i <> e’ by (rfs[] >> rw[Abbr ‘C’] >> metis_tac[]) >>
   simp[LE] >> rpt strip_tac >> metis_tac[]
 QED
 
@@ -739,7 +795,7 @@ val INFINITE_FROM = store_thm ("INFINITE_FROM",
    GEN_TAC THEN KNOW_TAC ``from n = univ(:num) DIFF {i | i < n}`` THENL
   [SIMP_TAC std_ss [EXTENSION, from_def, IN_DIFF, IN_UNIV, GSPECIFICATION] THEN
    ARITH_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
-   MATCH_MP_TAC INFINITE_DIFF_FINITE THEN
+   MATCH_MP_TAC INFINITE_DIFF_FINITE' THEN
    REWRITE_TAC [FINITE_NUMSEG_LT, num_INFINITE]]);
 
 (* ------------------------------------------------------------------------- *)

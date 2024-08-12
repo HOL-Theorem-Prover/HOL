@@ -6,12 +6,21 @@
 (*              (c) Copyright, Liming Li 2011                                *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib BasicProvers;
 
 open arithmeticTheory combinTheory pred_setTheory pairTheory PairedLambda
-     pred_setLib tautLib numLib cardinalTheory hurdUtils;
+     pred_setLib tautLib numLib numTheory hurdUtils pureSimps metisLib simpLib;
 
 val _ = new_theory "permutes";
+
+val qx_gen_tac = Q.X_GEN_TAC;
+val qx_genl_tac = map_every qx_gen_tac;
+val qexists_tac = Q.EXISTS_TAC;
+val qexistsl_tac = map_every qexists_tac;
+val qid_spec_tac = Q.ID_SPEC_TAC;
+val rename1 = Q.RENAME1_TAC;
+val rw = SRW_TAC [];
+fun simp ths = ASM_SIMP_TAC (srw_ss()) ths;
 
 (* ========================================================================= *)
 (* HOL-Light compatibility layer                                             *)
@@ -32,9 +41,6 @@ val IMAGE_CLAUSES = CONJ IMAGE_EMPTY IMAGE_INSERT;
 (* |- FINITE {} /\ !x s. FINITE (x INSERT s) <=> FINITE s *)
 val FINITE_RULES = CONJ FINITE_EMPTY FINITE_INSERT;
 
-(* |- !n. SUC n <> 0 *)
-val NOT_SUC = numTheory.NOT_SUC;
-
 (* |- !m n. SUC m = SUC n <=> m = n *)
 val SUC_INJ = prim_recTheory.INV_SUC_EQ;
 
@@ -43,6 +49,18 @@ val LT = CONJ (DECIDE ``!m:num. ~(m < 0)``) prim_recTheory.LESS_THM;
 
 (* |- !n. ~(n < n) *)
 val LT_REFL = prim_recTheory.LESS_REFL;
+
+Theorem CONJ_EQ_IMP[local] :
+    !p q r. p /\ q ==> r <=> p ==> q ==> r
+Proof
+    REWRITE_TAC [AND_IMP_INTRO]
+QED
+
+Theorem IMP_CONJ_ALT[local] :
+    !p q r. p /\ q ==> r <=> q ==> p ==> r
+Proof
+    METIS_TAC [AND_IMP_INTRO]
+QED
 
 (* ========================================================================= *)
 (* Permutations, both general and specifically on finite sets.               *)
@@ -99,11 +117,13 @@ Proof
       PROVE_TAC [] ]
 QED
 
-Theorem permutes_bijn:
-  f permutes s <=> f IN bijns s
+(* connection to ‘cardinal$bijns’
+Theorem permutes_alt_bijns:
+    !f s. f permutes s <=> f IN bijns s
 Proof
   simp[permutes_alt, bijns_def]
 QED
+ *)
 
 Theorem permutes_alt_univ :
     !f. f permutes UNIV <=> f PERMUTES UNIV

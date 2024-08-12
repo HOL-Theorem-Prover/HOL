@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory hurdUtils
+open arithmeticTheory hurdUtils res_quanTools
      pred_setTheory subtypeTheory extra_boolTheory combinTheory;
 
 val _ = new_theory "extra_num";
@@ -10,6 +10,8 @@ val _ = new_theory "extra_num";
 (* ------------------------------------------------------------------------- *)
 
 val Simplify = RW_TAC arith_ss;
+val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
 
 (* ------------------------------------------------------------------------- *)
 (* Needed for definitions.                                                   *)
