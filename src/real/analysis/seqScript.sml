@@ -20,6 +20,9 @@ val assert = Lib.assert;              (* conflict with hurdUtils.assert *)
 
 val _ = add_implicit_rewrites pairTheory.pair_rws;
 
+val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
+
 (*---------------------------------------------------------------------------*)
 (* Specialize net theorems to sequences:num->real                            *)
 (*---------------------------------------------------------------------------*)
