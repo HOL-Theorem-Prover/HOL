@@ -16,12 +16,11 @@
 (*                                                                           *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib mesonLib
+open HolKernel Parse boolLib bossLib;
 
-open boolSimps pred_setTheory set_relationTheory tautLib
-
-open prim_recTheory arithmeticTheory numTheory numLib pairTheory
-open optionTheory sumTheory ind_typeTheory wellorderTheory hurdUtils;
+open boolSimps pred_setTheory set_relationTheory tautLib permutesTheory
+     prim_recTheory arithmeticTheory numTheory numLib pairTheory mesonLib
+     optionTheory sumTheory ind_typeTheory wellorderTheory hurdUtils;
 
 val _ = new_theory "cardinal";
 
@@ -1511,6 +1510,12 @@ QED
 Definition bijns_def:
   bijns A = { f | BIJ f A A /\ !a. a NOTIN A ==> f a = a }
 End
+
+Theorem bijns_alt_permutes:
+    !f s. f IN bijns s <=> f permutes s
+Proof
+  simp[permutes_alt, bijns_def]
+QED
 
 Theorem cardeq_bijns_cong:
   A =~ B ==> bijns A =~ bijns B
