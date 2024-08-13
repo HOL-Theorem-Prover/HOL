@@ -3065,7 +3065,7 @@ QED
 Theorem FINITE_IMAGE_INJ' :
     (!x y. x IN s /\ y IN s ==> ((f x = f y) <=> (x = y))) ==>
     (FINITE (IMAGE f s) <=> FINITE s)
-Proof 
+Proof
   STRIP_TAC THEN EQ_TAC THEN SIMP_TAC (srw_ss()) [IMAGE_FINITE] THEN
   `!P. FINITE P ==> !Q. Q SUBSET s /\ (P = IMAGE f Q) ==> FINITE Q`
     suffices_by METIS_TAC[SUBSET_REFL] THEN
