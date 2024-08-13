@@ -737,8 +737,13 @@ fun xfer_tac cleftp hints (g as (asl,c)) =
                       term_to_string con)
     end
 
-val xfer_back_tac = xfer_tac false
-val xfer_fwd_tac = xfer_tac true
+fun SPEC_ALL_TAC (asl,g) =
+    (rpt (pop_assum mp_tac) >>
+     map_every (fn v => SPEC_TAC (v,v))
+               (HOLset.listItems $ FVL (g::asl) empty_tmset))
+    (asl,g)
+fun xfer_back_tac hs = SPEC_ALL_TAC >> xfer_tac false hs
+fun xfer_fwd_tac hs = SPEC_ALL_TAC >> xfer_tac true hs
 
 open ruledb
 fun not_ceq th1 th2 = concl th1 !~ concl th2
