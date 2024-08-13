@@ -37,6 +37,7 @@ src/num/termination
 # speed up the last few theories (sets, extra numbers, and lists) before
 # bossLib
 src/num/extra_theories
+src/unwind
 src/pred_set/src
 src/datatype/record
 src/datatype
@@ -44,7 +45,6 @@ src/datatype
 src/monad
 src/list/src
 src/quantHeuristics
-src/unwind
 src/pattern_matches
 !src/pattern_matches/interactive_tests
 src/HolSat/vector_def_CNF
