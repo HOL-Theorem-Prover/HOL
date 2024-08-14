@@ -32,7 +32,7 @@ Definition fsgAddEdges_def:
   let
     es = { (m,n) | m ≠ n ∧ m ∈ nodes g ∧ n ∈ nodes g ∧ {m;n} ∈ es0 }
   in
-    ITSET (λ(m,n) g. addUDEdge m n () g) es g
+    ITSET (λ(m,n) g. addUDEdge {m; n} () g) es g
 End
 
 Definition valid_edges_def:

@@ -1058,36 +1058,63 @@ Proof
 QED
 
 Definition addUDEdge0_def:
-  addUDEdge0 m n lab (G:('a,undirectedG,'ec,'el,'h,'nf,'nl,'sl)graphrep) =
-  if m = n ∧ ¬itself2bool(:'sl) then G
+  addUDEdge0 ns lab (G:('a,undirectedG,'ec,'el,'h,'nf,'nl,'sl)graphrep) =
+  if SING ns ∧ ¬itself2bool(:'sl) then G
+  else if INFINITE ns ∧ itself2bool(:'nf) then G
+  else if ¬itself2bool(:'h) ∧ (FINITE ns ⇒ 2 < CARD ns) then G
+  else if ns = ∅ then G
   else
-    G with <| nodes := {m;n} ∪ G.nodes ;
-              edges := udfilter_insertedge {m;n} lab (:'ec) G.edges
+    G with <| nodes := ns ∪ G.nodes ;
+              edges := udfilter_insertedge ns lab (:'ec) G.edges
            |>
 End
-Theorem addUDEdge_respects:
-  ((=) ===> (=) ===> (=) ===> ceq ===> ceq) addUDEdge0 addUDEdge0
+Theorem TWO_LECARD_I:
+  FINITE A ∧ ¬SING A ∧ A ≠ ∅ ⇒ 2 ≤ CARD A
 Proof
-  simp[FUN_REL_def, ceq_def] >>
+  simp[SING_DEF] >> rpt strip_tac >>
+  ‘∃a A0. A = a INSERT A0 ∧ a ∉ A0’ by metis_tac[SET_CASES] >> gvs[] >>
+  ‘A0 ≠ ∅’ by (strip_tac >> gvs[]) >>
+  ‘∃a2 A00. A0 = a2 INSERT A00 ∧ a2 ∉ A00’ by metis_tac[SET_CASES] >> gvs[]
+QED
+
+Theorem CARD_LE2:
+  FINITE A ⇒ (CARD A ≤ 2 ⇔ A = ∅ ∨ SING A ∨ ∃m n. m ≠ n ∧ A = {m;n})
+Proof
+  strip_tac >> Cases_on ‘A = ∅’ >> simp[] >>
+  Cases_on ‘SING A’
+  >- gvs[SING_DEF] >>
+  simp[EQ_IMP_THM, PULL_EXISTS] >> strip_tac >>
+  ‘CARD A = 0 ∨ CARD A = 1 ∨ CARD A = 2’ by DECIDE_TAC >> gvs[SING_IFF_CARD1] >>
+  metis_tac[CARDEQ2]
+QED
+
+Theorem addUDEdge_respects:
+  (((=) ===> (=)) ===> (=) ===> ceq ===> ceq) addUDEdge0 addUDEdge0
+Proof
+  simp[FUN_REL_def, ceq_def, GSYM FUN_EQ_THM] >>
   simp[addUDEdge0_def, wfgraph_def, ITSELF_UNIQUE] >>
-  Cases_on ‘m = n’ >> rw[finite_cst_UNION] >>~-
-  ([‘BAG_IN e $ udfilter_insertedge _ _ _ _’],
-   drule_then strip_assume_tac BAG_IN_udfilter_insertedge >> simp[] >>
-   first_x_assum drule >> simp[SUBSET_DEF]) >>~-
-  ([‘edge_cst _ _’, ‘edge_cst _ (udfilter_insertedge _ _ _ _)’],
-   qpat_x_assum ‘edge_cst _ _’ mp_tac >>
-   simp[edge_cst_def] >>
-   rename [‘itself2_ecv ecst’] >>
-   Cases_on ‘itself2_ecv ecst’ >>
-   gvs[finite_edges_per_nodeset_udfilter_insertedge,
-        only_one_edge_per_label_udfilter_insertedge,
-        only_one_edge_udfilter_insertedge, ITSELF_UNIQUE]) >>
+  rw[finite_cst_UNION] >~
+  [‘BAG_IN e $ udfilter_insertedge _ _ _ _’]
+  >- (drule_then strip_assume_tac BAG_IN_udfilter_insertedge >> simp[] >>
+      first_x_assum drule >> simp[SUBSET_DEF]) >~
+  [‘finite_cst _ (A ∪ g.nodes)’]
+  >- gvs[finite_cst_def, itself2bool_def] >~
+  [‘edge_cst _ g.edges’, ‘edge_cst _ (udfilter_insertedge _ _ _ _)’]
+  >- (qpat_x_assum ‘edge_cst _ _’ mp_tac >>
+      simp[edge_cst_def] >>
+      rename [‘itself2_ecv ecst’] >>
+      Cases_on ‘itself2_ecv ecst’ >>
+      gvs[finite_edges_per_nodeset_udfilter_insertedge,
+          only_one_edge_per_label_udfilter_insertedge,
+          only_one_edge_udfilter_insertedge, ITSELF_UNIQUE]) >>
   gvs[dirhypcst_def] >>
   rw[] >>
   drule_then strip_assume_tac BAG_IN_udfilter_insertedge >>~-
   ([‘BAG_IN e g.edges (* a *)’], metis_tac[]) >>~-
-  ([‘core_incident e = {m;n}’],
-   Cases_on ‘e’ >> gvs[] >> irule_at Any EQ_REFL >> simp[])
+  ([‘core_incident e = _’],
+   Cases_on ‘e’ >>
+   gvs[TWO_LECARD_I, arithmeticTheory.NOT_LESS, CARD_LE2, INSERT2_lemma] >>
+   dsimp[] >> gvs[SING_DEF])
 QED
 val (aud1,aud2) = liftdef addUDEdge_respects "addUDEdge"
 
@@ -1294,23 +1321,18 @@ fun F th = seq.hd $ resolve_relhyps [] cleftp rdb th
 
     fpow F 4 base
 *)
-Theorem addUDEdge_COMM:
-  addUDEdge m n lab G = addUDEdge n m lab G
-Proof
-  Cases_on ‘m = n’ >> simp[] >>
-  time (xfer_back_tac []) >> simp[addUDEdge0_def, INSERT_COMM]
-QED
 
 Theorem nodes_addUDEdge[simp]:
   ∀m n lab G.
-    nodes (addUDEdge m n lab G) =
-    (if m ≠ n ∨ selfloops_ok G then {m; n} else ∅) ∪ nodes G
+    nodes (addUDEdge {m;n} lab G) =
+    (if (m ≠ n ∨ selfloops_ok G) then {m;n} else ∅) ∪ nodes G
 Proof
-  simp[] >> xfer_back_tac[] >> simp[addUDEdge0_def] >> rw[] >> gvs[]
+  simp[] >> xfer_back_tac[] >> simp[addUDEdge0_def] >> rw[] >> gvs[] >>
+  Cases_on ‘m = n’ >> gvs[]
 QED
 
 Theorem udedges_addUDEdge:
-  udedges (addUDEdge m n lab G) =
+  udedges (addUDEdge {m; n} lab G) =
   if m ≠ n ∨ selfloops_ok G then
     if oneEdge_max G then
       {undirected {m;n} lab} ∪ { ude | ude ∈ udedges G ∧ udenodes ude ≠ {m;n} }
@@ -1319,16 +1341,16 @@ Theorem udedges_addUDEdge:
   else udedges G
 Proof
   simp[udedges_def, oneEdge_max_def] >>
-  map_every qid_spec_tac [‘m’, ‘n’, ‘G’, ‘lab’] >>
-  xfer_back_tac[] >> simp[addUDEdge0_def] >> rw[] >> rw[] >> gvs[]
-  >- (simp[udfilter_insertedge_def, Once EXTENSION] >> metis_tac[]) >>
+  xfer_back_tac[] >> simp[addUDEdge0_def] >> rw[] >> rw[] >> gvs[] >>
+  Cases_on ‘m = n’ >> gvs[] >>
+  simp[udfilter_insertedge_def, GSPEC_OR, AC CONJ_COMM CONJ_ASSOC] >>
   rename [‘itself2_ecv x’] >> Cases_on ‘itself2_ecv x’ >> gvs[] >>
-  simp[udfilter_insertedge_def] >> simp[Once EXTENSION] >> rw[] >>
+  simp[Once EXTENSION] >> rw[] >>
   metis_tac[]
 QED
 
 Theorem adjacent_addUDEdge[simp]:
-  adjacent (addUDEdge m n lab G : ('a,'b,'c,'d,'e,'f)udgraph) a b ⇔
+  adjacent (addUDEdge {m; n} lab G : ('a,'b,'c,'d,'e,'f)udgraph) a b ⇔
     (m ≠ n ∨ selfloops_ok G) ∧ {a;b} = {m;n} ∨ adjacent G a b
 Proof
   simp[adjacent_undirected, udedges_addUDEdge] >> rw[] >>
@@ -1352,7 +1374,7 @@ QED
 (* adding undirected self-edge from n to n in a no-selfloop graph is an
    identity operation *)
 Theorem addUDEdge_addNode[simp]:
-  addUDEdge n n lab (G:(α,'ec,'el,'nf,'nl,noSL) udgraph) = G
+  addUDEdge {n} lab (G:(α,'ec,'el,'nf,'nl,noSL) udgraph) = G
 Proof
   xfer_back_tac [] >> rw[addUDEdge0_def]
 QED
@@ -2732,8 +2754,8 @@ Proof
 QED
 
 Theorem addUDEdge_udul_LCOMM:
-  addUDEdge m n l1 (addUDEdge a b l2 g : (α,ν,σ)udulgraph) =
-  addUDEdge a b l2 (addUDEdge m n l1 g)
+  addUDEdge {m; n} l1 (addUDEdge {a; b} l2 g : (α,ν,σ)udulgraph) =
+  addUDEdge {a; b} l2 (addUDEdge {m; n} l1 g)
 Proof
   simp[gengraph_component_equality] >> rw[]
   >- SET_TAC[]
@@ -2747,7 +2769,7 @@ Theorem edges_ITSET_addUDEdge_udul:
     FINITE A ∧ (∀m n. (m,n) ∈ A ⇒ m ∈ nodes g ∧ n ∈ nodes g) ∧
     (¬selfloops_ok g ⇒ ∀m n. (m,n) ∈ A ⇒ m ≠ n)
     ⇒
-    udedges (ITSET (λ(m,n) g. addUDEdge m n () g) A g) =
+    udedges (ITSET (λ(m,n) g. addUDEdge {m; n} () g) A g) =
     { undirected {m;n} () | (m,n) ∈ A } ∪ udedges g
 Proof
   Induct_on ‘FINITE’ >>
