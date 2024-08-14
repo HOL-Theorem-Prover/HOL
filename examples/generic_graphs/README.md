@@ -130,7 +130,7 @@ The following type abbreviations instantiate type variables to generate a set of
     addEdge : α + num -> α + num -> 'el ->
               (α,directedG,'ec,'el,'hp,'nfp,'nl,'slp) graph ->
               (α,directedG,'ec,'el,'hp,'nfp,'nl,'slp) graph
-    addUDEdge : α + num -> α + num -> 'el ->
+    addUDEdge : (α + num) set -> 'el ->
           (α,undirectedG,'ec,'el,'hp,'nfp,'nl,'slp) graph ->
           (α,undirectedG,'ec,'el,'hp,'nfp,'nl,'slp) graph
     nrelabel : α + num -> 'nl ->
@@ -140,7 +140,7 @@ The following type abbreviations instantiate type variables to generate a set of
 Adding edges also adds the mentioned nodes if they are not already
 present in the graph. If an edge is a self-loop and this is not
 permitted by the `:'slp` variable, the operation does nothing (is the
-identity function).
+identity function). Similarly, the set of nodes used to designate an edge in `addUDEdge` is purged of edges that are invalid for the graph (empty sets; sets that are too big).
 
 ### Building graphs (infinite options)
 
