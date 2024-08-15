@@ -1304,6 +1304,187 @@ Proof
   metis_tac[]
 QED
 
+(** FUNPOW **)
+
+Theorem Tau_INJ[simp]:
+  INJ Tau UNIV UNIV
+Proof
+  simp[INJ_DEF]
+QED
+
+Theorem FUNPOW_Tau_neq[simp]:
+  Ret x <> FUNPOW Tau n (Vis a g) /\
+  Vis a g <> FUNPOW Tau n (Ret x)
+Proof
+  MAP_EVERY qid_spec_tac [‘x’,‘a’,‘g’,‘n’]>>
+  Induct>>rw[FUNPOW_SUC]
+QED
+
+Theorem FUNPOW_Tau_neq2[simp]:
+  FUNPOW Tau n' (Ret x) <> FUNPOW Tau n (Vis a g)
+Proof
+  Cases_on ‘n < n'’>>fs[NOT_LESS]>>strip_tac
+  >- (imp_res_tac (GSYM LESS_ADD)>>fs[FUNPOW_ADD]>>
+      fs[FUNPOW_eq_elim,Tau_INJ])>>
+  gvs[FUNPOW_min_cancel,Tau_INJ]
+QED
+
+Theorem strip_tau_FUNPOW:
+  !t1 t2. strip_tau t1 t2 ==>
+        ?n. t1 = FUNPOW Tau n $ t2
+Proof
+  Induct_on ‘strip_tau’ >>
+  rw[]
+  >- (qrefine ‘SUC _’ >>
+      rw[FUNPOW_SUC] >>
+      metis_tac[]
+     ) >>
+  qexists ‘0’ >>
+  rw[]
+QED
+
+Theorem FUNPOW_Tau_wbisim:
+  itree_wbisim (FUNPOW Tau n x) x
+Proof
+  Induct_on ‘n’ >>
+  rw[itree_wbisim_refl,FUNPOW_SUC]
+QED
+
+Theorem FUNPOW_Tau_wbisim_intro:
+  itree_wbisim x y ==>
+  itree_wbisim (FUNPOW Tau n x) (FUNPOW Tau n' y)
+Proof
+  metis_tac[FUNPOW_Tau_wbisim,itree_wbisim_trans,itree_wbisim_refl,itree_wbisim_sym]
+QED
+
+Theorem strip_tau_vis_wbisim:
+  !e k k'. strip_tau t (Vis e k) /\ strip_tau t' (Vis e k') /\
+           (!r. itree_wbisim (k r) (k' r)) ==>
+          itree_wbisim t t'
+Proof
+  rpt strip_tac >>
+  imp_res_tac strip_tau_FUNPOW >>
+  gvs[] >>
+  irule FUNPOW_Tau_wbisim_intro >>
+  rw[Once itree_wbisim_cases]
+QED
+
+Theorem itree_wbisim_Ret_FUNPOW:
+  itree_wbisim t (Ret x) ==> ?n. t = FUNPOW Tau n $ Ret x
+Proof
+  rw[Once itree_wbisim_cases] >>
+  drule_then irule strip_tau_FUNPOW
+QED
+
+Theorem FUNPOW_Tau_imp_wbisim:
+  t = FUNPOW Tau n $ t' ==> itree_wbisim t t'
+Proof
+  strip_tac >>
+  irule itree_wbisim_trans >>
+  irule_at Any FUNPOW_Tau_wbisim>>fs[]>>
+  irule_at Any itree_wbisim_refl
+QED
+
+Theorem itree_wbisim_Vis_FUNPOW:
+  itree_wbisim t (Vis a g) ==>
+  ?n k. t = FUNPOW Tau n $ Vis a k /\ (!r. itree_wbisim (k r) (g r))
+Proof
+  simp[Once itree_wbisim_cases] >> rw[] >>
+  imp_res_tac strip_tau_FUNPOW>>
+  pop_assum $ irule_at Any>>fs[]
+QED
+
+Theorem wbisim_FUNPOW_Tau:
+  (itree_wbisim t (FUNPOW Tau n ht) <=> itree_wbisim t ht) /\
+  (itree_wbisim (FUNPOW Tau n ht) t <=> itree_wbisim ht t)
+Proof
+  rw[EQ_IMP_THM]>>
+  TRY (irule itree_wbisim_trans>>
+       irule_at Any FUNPOW_Tau_wbisim>>
+       fs[]>>metis_tac[]>>NO_TAC)>>
+  irule itree_wbisim_trans>>
+  first_assum $ irule_at Any>>
+  irule itree_wbisim_sym>>
+  irule FUNPOW_Tau_wbisim
+QED
+
+Theorem FUNPOW_Tau_bind:
+  itree_bind (FUNPOW Tau n t)g = FUNPOW Tau n (itree_bind t g)
+Proof
+  MAP_EVERY qid_spec_tac [‘t’,‘n’]>>
+  Induct_on ‘n’>>rw[]>>
+  simp[FUNPOW]
+QED
+
+Theorem strip_tau_FUNPOW_cancel:
+  (!u. t <> Tau u) ==>
+  strip_tau (FUNPOW Tau n t) t
+Proof
+  Induct_on ‘n’>>rw[]
+  >- (Cases_on ‘t’>>rw[])>>
+  Cases_on ‘t’>>rw[FUNPOW_SUC]
+QED
+
+Theorem FUNPOW_Tau_Vis_eq:
+  FUNPOW Tau n (Vis a g) = FUNPOW Tau m (Vis e k) ==>
+  n = m /\ a = e /\ g = k
+Proof
+  strip_tac>>
+  Cases_on ‘n < m’>>fs[NOT_LESS]
+  >- (fs[FUNPOW_min_cancel,Tau_INJ]>>
+      Cases_on ‘m - n’>>fs[FUNPOW_SUC])>>
+  last_x_assum $ assume_tac o GSYM>>
+  rfs[FUNPOW_min_cancel,Tau_INJ]>>
+  Cases_on ‘n - m’>>fs[FUNPOW_SUC]
+QED
+
+Theorem FUNPOW_Tau_Ret_eq:
+  FUNPOW Tau n (Ret x) = FUNPOW Tau m (Ret y) ==>
+  n = m /\ x = y
+Proof
+  strip_tac>>
+  Cases_on ‘n < m’>>fs[NOT_LESS]
+  >- (fs[FUNPOW_min_cancel,Tau_INJ]>>
+      Cases_on ‘m - n’>>fs[FUNPOW_SUC])>>
+  last_x_assum $ assume_tac o GSYM>>
+  rfs[FUNPOW_min_cancel,Tau_INJ]>>
+  Cases_on ‘n - m’>>fs[FUNPOW_SUC]
+QED
+
+(* more on spin *)
+
+Theorem spin_bind:
+  itree_bind spin k = spin
+Proof
+  simp[Once itree_bisimulation]>>
+  qexists ‘CURRY {(itree_bind spin k, spin)}’>>
+  simp[]>>rw[]
+  >- fs[Once spin]
+  >- irule (GSYM spin)
+  >- fs[Once spin,itree_bind_thm]>>
+  fs[Once spin]
+QED
+
+Theorem spin_FUNPOW_Tau:
+  !n. spin = FUNPOW Tau n spin
+Proof
+  Induct>>rw[]>>fs[FUNPOW_SUC]>>
+  irule (GSYM spin)
+QED
+
+Theorem wbisim_spin_eq:
+  itree_wbisim t spin <=> t = spin
+Proof
+  rw[EQ_IMP_THM]
+  >- (simp[Once itree_bisimulation]>>
+      qexists ‘CURRY {(t,spin)|t|itree_wbisim t spin}’>>
+      rw[]
+      >- fs[Once itree_wbisim_cases,spin_strip_tau]
+      >- irule (GSYM spin)>>
+      fs[Once itree_wbisim_cases,spin_strip_tau])>>
+  irule itree_wbisim_refl
+QED
+
 (* tidy up theory exports *)
 
 val _ = List.app Theory.delete_binding
