@@ -3957,7 +3957,13 @@ Proof
   simp[LFLATTEN_EQ_NIL, every_LGENLIST]
 QED
 
-
-
+Theorem LPREFIX_LAPPEND_fromList:
+  (LPREFIX (LAPPEND (fromList l) l1) (LAPPEND (fromList l) l2))
+  <=> (LPREFIX l1 l2)
+Proof
+  fs[LPREFIX_APPEND]>>
+  fs[Once LAPPEND_ASSOC]>>
+  fs[LFINITE_fromList,LAPPEND11_FINITE1]>>metis_tac[]
+QED
 
 val _ = export_theory();
