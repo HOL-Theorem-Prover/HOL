@@ -237,6 +237,7 @@ val IN_GSPEC_IFF = store_thm ("IN_GSPEC_IFF",
   ``y IN {x | P x} <=> P y``,
   REWRITE_TAC [GSPEC_ETA, SPECIFICATION]) ;
 
+
 val PAIR_IN_GSPEC_IFF = store_thm ("PAIR_IN_GSPEC_IFF",
   ``(x,y) IN {(x,y) | P x y} <=> P x y``,
   REWRITE_TAC [GSPEC_PAIR_ETA, UNCURRY_DEF, SPECIFICATION]) ;
@@ -8812,5 +8813,32 @@ in
   val _ = BasicProvers.logged_addfrags {thyname = "pred_set"} [SET_SPEC_ss]
 end
 `
+Theorem FUNPOW_INJ:
+  INJ f UNIV UNIV ==> INJ (FUNPOW f n) UNIV UNIV
+Proof
+  Induct_on ‘n’>>rw[]>>
+  fs[FUNPOW_SUC,INJ_DEF]
+QED
+
+Theorem FUNPOW_eq_elim:
+  INJ f UNIV UNIV ==>
+  (FUNPOW f n t = FUNPOW f n t' <=> t = t')
+Proof
+  Induct_on ‘n’>>rw[EQ_IMP_THM]>>
+  fs[FUNPOW_SUC,INJ_DEF]
+QED
+
+Theorem FUNPOW_min_cancel:
+  (n <= n' /\ INJ f UNIV UNIV) ==>
+  (FUNPOW f n X = FUNPOW f n' X' <=>
+     X = FUNPOW f (n' - n) X')
+Proof
+  Induct_on ‘n'-n’>>rw[FUNPOW_SUC,EQ_IMP_THM]>>
+  IMP_RES_TAC FUNPOW_INJ>>
+  ‘FUNPOW f n' X' = FUNPOW f n (FUNPOW f (n' - n) X')’
+    by simp[GSYM FUNPOW_ADD]>>fs[]>>
+  FIRST_ASSUM $ Q.SPEC_THEN ‘n’ ASSUME_TAC>>
+  IMP_RES_TAC (iffLR FUNPOW_eq_elim)
+QED
 
 val _ = export_theory();
