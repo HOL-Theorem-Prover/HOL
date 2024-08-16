@@ -882,6 +882,41 @@ Proof
   xfer_back_tac[] >> simp[emptyG0_def, FUN_EQ_THM]
 QED
 
+Definition is_hypergraph_def[simp]:
+  is_hypergraph (g:(α,'d,'ecst,'el,'h,'nf,'nl,'sl) graph) ⇔
+  itself2bool(:'h)
+End
+
+Definition selfloops_ok_def[simp]:
+  selfloops_ok (G : (α,'d,'ec,'el,'h,'nf,'nl,'sl) graph) = itself2bool (:'sl)
+End
+
+Definition is_directedgraph_def[simp]:
+  is_directedgraph (g:(α,'d,'ecst,'el,'h,'nf,'nl,'sl) graph) ⇔
+    itself2bool(:'d)
+End
+
+Definition validEdge_def:
+  (validEdge hyp slp (cDE de) ⇔
+     case de of
+       directed m n l =>
+         m ≠ ∅ ∧ n ≠ ∅ ∧ (¬slp ⇒ DISJOINT m n) ∧
+         (¬hyp ⇒ SING m ∧ SING n)) ∧
+  (validEdge hyp slp (cUDE ude) ⇔
+     case ude of
+       undirected ns l =>
+         ns ≠ ∅ ∧ (¬slp ∧ FINITE ns ⇒ 2 ≤ CARD ns) ∧
+         (¬hyp ⇒ ∃m n. ns = {m;n}))
+End
+
+Theorem all_edges_valid:
+  BAG_IN e (edgebag g) ⇒ validEdge (is_hypergraph g) (selfloops_ok g) e
+Proof
+  simp[] >> xfer_back_tac[] >>
+  simp[wfgraph_def, dirhypcst_def, ITSELF_UNIQUE] >> rw[] >>
+  first_x_assum drule >> dsimp[PULL_EXISTS, validEdge_def, INSERT2_lemma]
+QED
+
 Definition adjacent_def:
   adjacent G m n ⇔
     ∃e ms ns.
@@ -1189,10 +1224,6 @@ Proof
 QED
 val (ae1,ae2) = liftdef addEdge_respects "addEdge"
 
-Definition selfloops_ok_def[simp]:
-  selfloops_ok (G : (α,'d,'ec,'el,'h,'nf,'nl,'sl) graph) = itself2bool (:'sl)
-End
-
 Theorem selfloop_edges_E:
   ∀m l G. directed m m l ∈ edges G ⇒ selfloops_ok G
 Proof
@@ -1230,6 +1261,14 @@ Proof
   simp[selfloops_ok_def]
 QED
 
+Theorem wrong_edge_types_condrwt:
+  (is_directedgraph g ⇒ ¬BAG_IN (UDE ns lab) (edgebag g)) ∧
+  (¬is_directedgraph g ⇒ ¬BAG_IN (DE m n lab) (edgebag g))
+Proof
+  simp[] >> xfer_back_tac [] >> simp[wfgraph_def, dirhypcst_def] >> rw[] >>
+  gvs[ITSELF_UNIQUE] >> strip_tac >> first_x_assum drule >> simp[]
+QED
+
 Theorem wrong_edgetype[simp]:
   ¬(BAG_IN (DE a b l)
            (edgebag (G:('a,undirectedG,'ec, 'el, 'h, 'nf, 'nl, 'sl) graph))) ∧
@@ -1238,11 +1277,9 @@ Theorem wrong_edgetype[simp]:
            (edgebag (H:('a,directedG,'ec, 'el, 'h, 'nf, 'nl, 'sl) graph))) ∧
   (edgebag H (UDE ns l) = 0)
 Proof
-  xfer_back_tac [] >> rw[wfgraph_def, dirhypcst_def] >>
-  rpt strip_tac >>
-  gvs[COND_EXPAND_OR, ITSELF_UNIQUE, BAG_IN, BAG_INN,
-      DECIDE “x ≥ 1 ⇔ x ≠ 0”] >> CCONTR_TAC >>
-  first_x_assum drule >> simp[]
+  ‘∀(b:('a,'el)core_edge bag) x. b x = 0 ⇔ ¬(BAG_IN x b)’
+    by simp[BAG_IN, BAG_INN] >> csimp[] >>
+  simp[wrong_edge_types_condrwt]
 QED
 
 Theorem edgebag_addEdge:
@@ -1459,11 +1496,6 @@ Proof
   rpt strip_tac >> res_tac >> gvs[]
 QED
 
-Definition is_hypergraph_def:
-  is_hypergraph (g:(α,'d,'ecst,'el,'h,'nf,'nl,'sl) graph) ⇔
-  itself2bool(:'h)
-End
-
 Theorem nonhypergraph_edges:
   ¬is_hypergraph g ∧ BAG_IN e (edgebag g) ⇒
   (∃m n l. e = UDE {m;n} l) ∨ ∃m n l. e = DE {m} {n} l
@@ -1482,18 +1514,17 @@ Proof
   >- simp[adjacent_def]
   >- (simp[BAG_EXTENSION, oneEdge_max_BAG_INN_edgebag] >>
       gvs[adjacent_def, IN_SET_OF_BAG, enodesEQ, SF DNF_ss] >>
+      Cases_on ‘is_directedgraph g1’ >>
+      gvs[wrong_edge_types_condrwt] >>
       rpt strip_tac >> Cases_on ‘e’ >> simp[] >>
       Cases_on ‘n = 0’ >> simp[] >> Cases_on ‘n = 1’ >> simp[] >>
-      gvs[EQ_IMP_THM, DISJ_IMP_THM, FORALL_AND_THM] >>
-      rpt strip_tac >> ‘¬is_hypergraph g2’ by gvs[is_hypergraph_def] >>
-      drule_all_then strip_assume_tac nonhypergraph_edges >>
-      gvs[PULL_EXISTS] >>
-      first_x_assum drule >> simp[DISJ_IMP_THM, PULL_EXISTS] >>
-      drule_at_then Any (simp o single) diffedge_types_impossible >>
+      gvs[EQ_IMP_THM, DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS] >>
       rpt strip_tac >>
-      qpat_assum ‘BAG_IN (DE _ _ _) (edgebag _)’
-                 (mp_then Any (drule_all_then strip_assume_tac)
-                          nonhypergraph_edges) >> gvs[]) >>
+      drule_at_then (Pos last) strip_assume_tac nonhypergraph_edges >>
+      gvs[PULL_EXISTS, wrong_edge_types_condrwt] >>
+      first_x_assum drule >> simp[DISJ_IMP_THM, PULL_EXISTS] >>
+      rpt strip_tac >>
+      drule_at_then (Pos last) strip_assume_tac nonhypergraph_edges >> gvs[]) >>
   simp[FUN_EQ_THM, EQ_IMP_THM]
 QED
 
@@ -2060,20 +2091,6 @@ Proof
 QED
 val (aes1,aes2) = liftdef addEdges_respects "addEdges"
 
-Definition validEdge_def:
-  (validEdge hyp slp (cDE de) ⇔
-     case de of
-       directed m n l =>
-         m ≠ ∅ ∧ n ≠ ∅ ∧ (¬slp ⇒ DISJOINT m n) ∧
-         (¬hyp ⇒ SING m ∧ SING n)) ∧
-  (validEdge hyp slp (cUDE ude) ⇔
-     case ude of
-       undirected ns l =>
-         ns ≠ ∅ ∧ (¬slp ∧ FINITE ns ⇒ 2 ≤ CARD ns) ∧
-         (¬hyp ⇒ ∃m n. ns = {m;n}))
-End
-
-
 Theorem nodes_addEdges_allokgraph:
   nodes (addEdges es0 g : (α,β,γ) allokdirgraph) =
   nodes g ∪ BIGUNION (IMAGE incident (es0 ∩ { e | validEdge T T (cDE e)}))
@@ -2117,9 +2134,9 @@ Theorem nodes_addEdges_f1edgedir:
            (α,directedG,oneedgeG,'el,unhyperG,finiteG,'nl,'sl)graph) =
   nodes g ∪
   BIGUNION
-    (IMAGE incident (es ∩ { e | validEdge F (itself2bool(:'sl)) (cDE e)}))
+    (IMAGE incident (es ∩ { e | validEdge F (selfloops_ok g) (cDE e)}))
 Proof
-  xfer_back_tac [] >> simp[addEdges0_def] >> rw[] >> rw[] >~
+  simp[] >> xfer_back_tac [] >> simp[addEdges0_def] >> rw[] >> rw[] >~
   [‘INFINITE _’]
   >- (‘F’ suffices_by simp[] >> qpat_x_assum ‘INFINITE _’ mp_tac >> simp[] >>
       irule SUBSET_FINITE >>
@@ -2142,7 +2159,7 @@ Theorem edges_addEdges_f1edgedir:
   FINITE es ⇒
   edges (addEdges es g :
            (α,directedG,oneedgeG,'el,unhyperG,finiteG,'nl,'sl)graph) =
-  (es ∩ { e | validEdge F (itself2bool(:'sl)) (cDE e) ∧
+  (es ∩ { e | validEdge F (selfloops_ok g) (cDE e) ∧
               ∀f. f ∈ es ∧ denodes f = denodes e ⇒ f = e}) ∪
   (edges g DIFF { e | ∃e0. e0 ∈ es ∧ denodes e0 = denodes e })
 Proof
@@ -2600,12 +2617,9 @@ Proof
 QED
 
 Theorem IN_edges_valid:
-  de ∈ edges (g : (α,directedG,'ec,'el,'h,'nf,'nl,'sl) graph) ⇒
-  validEdge (itself2bool (:'h)) (itself2bool(:'sl)) (cDE de)
+  de ∈ edges g ⇒ validEdge (is_hypergraph g) (selfloops_ok g) (cDE de)
 Proof
-  simp[edges_def, validEdge_def] >> xfer_back_tac [] >>
-  simp[FORALL_DIREDGE, wfgraph_def, ITSELF_UNIQUE] >>
-  simp[dirhypcst_def] >> rw[] >> first_x_assum drule >> simp[PULL_EXISTS]
+  simp[edges_def, all_edges_valid]
 QED
 
 Theorem decomposition_f1edgedir:
