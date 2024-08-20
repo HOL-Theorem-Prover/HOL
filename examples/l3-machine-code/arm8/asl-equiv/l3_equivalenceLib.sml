@@ -239,6 +239,7 @@ val asl_cexecute_tac = asl_execute_tac_helper CEVAL;
 
 (***** types *****)
 fun b64 ty = INST_TYPE [ty |-> ``:64``];
+fun b32 ty = INST_TYPE [ty |-> ``:32``];
 
 val one = ``:unit``;
 
