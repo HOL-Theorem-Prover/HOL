@@ -243,7 +243,6 @@ fun pp_struct (info_record : struct_info_record) = let
   fun pparent (s,i,j) = Thry s
 
   fun pr_bind(s, th, {private}) = let
-    val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
     val addsbl = pr_list add_string (add_break(1,2))
   in
     if is_temp_binding s orelse private then nothing
