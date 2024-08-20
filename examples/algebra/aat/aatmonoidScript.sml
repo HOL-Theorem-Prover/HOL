@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open monoidTheory liftingTheory transferTheory transferLib
+open monoidTheory liftingTheory transferTheory transferLib liftLib
 open pred_setTheory
 
 val _ = new_theory "aatmonoid";
@@ -28,7 +28,7 @@ Definition MTR_def:
   MTR m tm ⇔ Monoid m /\ mkmonoid m = tm
 End
 
-Theorem Qt_monoid:
+Theorem Qt_monoid[liftQt]:
   Qt mequiv mkmonoid monoid_REP MTR
 Proof
   simp[Qt_alt, MTR_def, FUN_EQ_THM, #absrep_id mrec, #termP_term_REP mrec,
@@ -36,60 +36,26 @@ Proof
   rw[EQ_IMP_THM] >> gvs[#term_ABS_pseudo11 mrec]
 QED
 
-Theorem funQ'[local] = SRULE[GSYM AND_IMP_INTRO] funQ |> GEN_ALL
-
-Theorem HK_thm2'[local] = HK_thm2 |> GEN_ALL |> SRULE[]
-
 Theorem carrier_respects:
-  (mequiv ===> $=) monoid_carrier monoid_carrier
+  (mequiv ===> $= ===> $=) monoid_carrier monoid_carrier
 Proof
   simp[FUN_REL_def, FUN_EQ_THM, mequiv_def]
 QED
-
-fun grt th1 th2 = resolve_then.gen_resolve_then Any th1 th2 I
-
-fun tidy_tyvars th =
-  let val tyvs = type_vars_in_term (concl th)
-      val newvs =
-        List.tabulate(length tyvs,
-                      fn i => mk_vartype("'" ^ str (Char.chr(i + 97))))
-  in
-      INST_TYPE (ListPair.map(fn (ty1,ty2) => ty1 |-> ty2) (tyvs, newvs)) th
-  end
-
-fun opxfer res_th =
-  grt res_th HK_thm2 |> repeat (grt funQ') |> repeat (grt Qt_monoid)
-                     |> repeat (grt idQ) |> tidy_tyvars
-                     |> CONV_RULE Unwind.UNWIND_FORALL_CONV
-
-val xfer_carrier = opxfer carrier_respects
-Definition tmcarrier_def:
-  tmcarrier = ^(rand $ concl xfer_carrier)
-End
-Theorem tmcarrier_relates[transfer_rule] =
-  SRULE[GSYM tmcarrier_def] xfer_carrier
+val _ = liftdef carrier_respects "tmcarrier"
 
 Theorem id_respects:
   (mequiv ===> $=) monoid_id monoid_id
 Proof
   simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_id = opxfer id_respects
-Definition tmid_def:
-  tmid = ^(rand $ concl xfer_id)
-End
-Theorem tmid_relates[transfer_rule] = SRULE[GSYM tmid_def] xfer_id
+val _ = liftdef id_respects "tmid"
 
 Theorem op_respects:
   (mequiv ===> $= ===> $= ===> $=) monoid_op monoid_op
 Proof
   simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_op = opxfer op_respects
-Definition tmop_def:
-  tmop = ^(rand $ concl xfer_op)
-End
-Theorem tmop_relates[transfer_rule] = REWRITE_RULE[GSYM tmop_def] xfer_op
+val _ = liftdef op_respects "tmop"
 
 Theorem Monoid_monoid_REP[simp] = #termP_term_REP mrec
 
@@ -104,6 +70,13 @@ Theorem right_unique_MTR[transfer_simp]:
 Proof
   simp[right_unique_def, MTR_def]
 QED
+
+Theorem MTReq_relates[transfer_rule]:
+  (MTR ===> MTR ===> (=)) (=) (=)
+Proof
+  simp[MTR_def, FUN_REL_def, #term_ABS_pseudo11 mrec]
+QED
+
 
 Theorem RDOM_MTR[transfer_simp]:
   RDOM MTR = { m | Monoid m }
@@ -152,72 +125,57 @@ Theorem tmonoid_assoc = xfer monoidTheory.monoid_assoc
 Theorem tmonoid_lid = xfer monoidTheory.monoid_lid
 Theorem tmonoid_rid = xfer monoidTheory.monoid_rid
 Theorem tmonoid_id_unique = xfer monoidTheory.monoid_id_unique
+Theorem tmonoid_id_element[simp] = xfer monoidTheory.monoid_id_element
+Theorem tmonoid_op_element = xfer monoidTheory.monoid_op_element
 
-Definition list_monoid_def:
-  list_monoid = mkmonoid <| carrier := UNIV; op := APPEND; id := [] |>
-End
-
-Theorem rep_list_monoid[simp,local]:
-  monoid_REP list_monoid = <| carrier := UNIV; op := APPEND; id := [] |>
+Theorem lists_respect:
+  mequiv lists lists
 Proof
-  simp[list_monoid_def] >> irule repabs_pseudo_id >> simp[Monoid_def]
+  simp[mequiv_def, lists_monoid]
 QED
+val _ = liftdef lists_respect "list_monoid"
 
 Theorem tmop_list_monoid[simp]:
   tmop list_monoid = APPEND
 Proof
-  simp[tmop_def]
+  xfer_back_tac[] >> simp[lists_def]
 QED
 
 Theorem tmid_list_monoid[simp]:
   tmid list_monoid = []
 Proof
-  simp[tmid_def]
+  xfer_back_tac [] >> simp[lists_def]
 QED
 
 Theorem tmcarrier_list_monoid[simp]:
   tmcarrier list_monoid = UNIV
 Proof
-  simp[tmcarrier_def]
+  xfer_back_tac [] >> simp[lists_def]
 QED
 
-Definition FiniteMonoid_def:
-  FiniteMonoid m = monoid$FiniteMonoid (monoid_REP m)
-End
-
-Theorem FiniteMonoid_relates[transfer_rule]:
-  (MTR |==> (=)) FiniteMonoid FiniteMonoid
+Theorem FiniteMonoid_respect:
+  (mequiv ===> (=)) FiniteMonoid FiniteMonoid
 Proof
-  simp[FiniteMonoid_def, FUN_REL_def, MTR_def, repabs_pseudo_id]
+  simp[FUN_REL_def, mequiv_def]
 QED
+val _ = liftdef FiniteMonoid_respect "FiniteMonoid"
 
 Theorem FiniteMonoid_thm = xfer monoidTheory.FiniteMonoid_def
 
-Definition AbelianMonoid_def:
-  AbelianMonoid m = monoid$AbelianMonoid (monoid_REP m)
-End
-
-Theorem AbelianMonoid_relates[transfer_rule]:
-  (MTR |==> (=)) AbelianMonoid AbelianMonoid
-Proof
-  irule HK_thm2 >> irule_at Any funQ' >> irule_at Any Qt_monoid >>
-  irule_at Any idQ >>
-  simp[AbelianMonoid_def, FUN_REL_def, mequiv_def, FUN_EQ_THM]
+Theorem AbelianMonoid_respect:
+  (mequiv ===> (=)) AbelianMonoid AbelianMonoid
+Proof simp[mequiv_def, FUN_REL_def]
 QED
+val _ = liftdef AbelianMonoid_respect "AbelianMonoid"
 
-Definition FiniteAbelianMonoid_DEF:
-  FiniteAbelianMonoid (m:α monoid) ⇔ monoid$FiniteAbelianMonoid (monoid_REP m)
-End
 
-Theorem FiniteAbelianMonoid_relates[transfer_rule]:
-  (MTR |==> (=)) FiniteAbelianMonoid FiniteAbelianMonoid
-Proof
-  irule HK_thm2 >> irule_at Any funQ' >> irule_at Any Qt_monoid >>
-  irule_at Any idQ >>
-  simp[FiniteAbelianMonoid_DEF, FUN_REL_def, mequiv_def, FUN_EQ_THM]
+Theorem FiniteAbelianMonoid_respect:
+  (mequiv ===> (=)) FiniteAbelianMonoid FiniteAbelianMonoid
+Proof simp[mequiv_def, FUN_REL_def]
 QED
+val _ = liftdef FiniteAbelianMonoid_respect "FiniteAbelianMonoid"
 
-Theorem FiniteAbelianMonoid_def =
+Theorem FiniteAbelianMonoid_def[allow_rebind] =
         xfer monoidTheory.FiniteAbelianMonoid_def
 
 Theorem FiniteAbelianMonoid_def_alt =
@@ -226,27 +184,22 @@ Theorem FiniteAbelianMonoid_def_alt =
 Theorem monoid_carrier_nonempty[simp] =
         xfer monoidTheory.monoid_carrier_nonempty
 
-Definition monoid_exp_def:
-  monoid_exp m x n = monoid$monoid_exp (monoid_REP m) x n
-End
-
-Theorem monoid_exp_relates[transfer_rule]:
-  (MTR |==> (=) |==> (=) |==> (=)) monoid_exp monoid_exp
+Theorem monoid_exp_respect:
+  (mequiv ===> (=) ===> (=) ===> (=)) monoid_exp monoid_exp
 Proof
-  irule HK_thm2 >> rpt $ irule_at Any funQ' >> irule_at Any Qt_monoid >>
-  rpt $ irule_at Any idQ >>
-  simp[monoid_exp_def, FUN_REL_def, mequiv_def, FUN_EQ_THM]
+  simp[mequiv_def, FUN_REL_def]
 QED
+val _ = liftdef monoid_exp_respect "monoid_exp"
 
 Theorem monoid_exp_thm[simp]:
-  !m x. monoid_exp m x 0 = tmid m /\
-        !n. monoid_exp m x (SUC n) = tmop m x (monoid_exp m x n)
+  ∀m.
+    (!x. monoid_exp m x 0 = tmid m) /\
+    !x n. monoid_exp m x (SUC n) = tmop m x (monoid_exp m x n)
 Proof
   xfer_back_tac []  >> simp[]
 QED
 
-Theorem monoid_exp_FUNPOW =
-        xfer monoidTheory.monoid_exp_def
+Theorem monoid_exp_FUNPOW = xfer monoidTheory.monoid_exp_def
 
 Theorem monoid_exp_element[simp] =
         xfer monoidTheory.monoid_exp_element
@@ -305,7 +258,6 @@ fun F th = seq.hd $ resolve_relhyps ["AbelianMonoid"] true (global_ruledb()) th
 val th = fpow F 11 base
 *)
 
-
 Theorem MPROD_SET_PROPERTY:
   !m s. AbelianMonoid m /\ FINITE s /\ s ⊆ tmcarrier m ⇒
         MPROD_SET m s ∈ tmcarrier m
@@ -313,45 +265,30 @@ Proof
   xfer_back_tac [] >> simp[GSYM GPROD_SET_def, GPROD_SET_PROPERTY]
 QED
 
-Definition tmextend_def:
-  tmextend m = mkmonoid (extend (monoid_REP m))
-End
-
-Theorem tmextend_relates[transfer_rule]:
-  (MTR |==> MTR) extend tmextend
+Theorem extend_respect:
+  (mequiv ===> mequiv) extend extend
 Proof
-  irule HK_thm2 >> rpt $ irule_at Any funQ' >> rpt $ irule_at Any Qt_monoid >>
-  rpt $ irule_at Any idQ >>
-  simp[tmextend_def, FUN_REL_def, mequiv_def, FUN_EQ_THM]
+  simp[mequiv_def, FUN_REL_def]
 QED
+val _ = liftdef extend_respect "tmextend"
 
 Theorem tmextend_carrier[simp] = xfer (GEN_ALL extend_carrier)
 Theorem tmextend_id[simp] = xfer (GEN_ALL extend_id)
 Theorem tmextend_op = xfer (GEN_ALL extend_op)
 
-Definition period_def:
-  period m x k = monoid$period (monoid_REP m) x k
-End
-
-Theorem period_relates[transfer_rule]:
-  (MTR |==> (=) |==> (=) |==> (<=>)) period period
+Theorem period_respect:
+  (mequiv ===> (=) ===> (=) ===> (=)) period period
 Proof
-  irule HK_thm2 >> rpt $ irule_at Any funQ' >> rpt $ irule_at Any Qt_monoid >>
-  rpt $ irule_at Any idQ >>
-  simp[period_def, FUN_REL_def, mequiv_def, FUN_EQ_THM]
+  simp[mequiv_def, FUN_REL_def]
 QED
+val _ = liftdef period_respect "period"
 
 Theorem order_respects:
   (mequiv ===> (=) ===> (=)) order order
 Proof
   simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_order = opxfer order_respects
-Definition order_def:
-  order = ^(rand $ concl xfer_order)
-End
-Theorem order_relates[transfer_rule] =
-  REWRITE_RULE[GSYM order_def] xfer_order
+val _ = liftdef order_respects "order"
 
 Overload tord[local] = “aatmonoid$order M”
 
@@ -382,14 +319,9 @@ Theorem orders_respects:
 Proof
   simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_orders = opxfer orders_respects
-Definition orders_DEF:
-  orders = ^(rand $ concl xfer_orders)
-End
-Theorem orders_relates[transfer_rule] =
-  REWRITE_RULE[GSYM orders_DEF] xfer_orders
+val _ = liftdef orders_respects "orders"
 
-Theorem orders_def = xfer monoidTheory.orders_def
+Theorem orders_def[allow_rebind] = xfer monoidTheory.orders_def
 
 Theorem orders_element = xfer orders_element
 Theorem orders_subset = xfer orders_subset
@@ -412,38 +344,19 @@ Theorem monoid_invertibles_respects:
 Proof
   simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_monoid_invertibles = opxfer monoid_invertibles_respects
-Definition monoid_invertibles_DEF:
-  monoid_invertibles = ^(rand $ concl xfer_monoid_invertibles)
-End
-Theorem monoid_invertibles_relate[transfer_rule] =
-  REWRITE_RULE[GSYM monoid_invertibles_DEF] xfer_monoid_invertibles
+val _ = liftdef monoid_invertibles_respects "monoid_invertibles"
 
-Theorem monoid_invertibles_def :
-  monoid_invertibles M =
-  { x | x IN tmcarrier M ∧
-        ∃y. y IN tmcarrier M ∧ tmop M x y = tmid M ∧
-            tmop M y x = tmid M }
-Proof
-  qid_spec_tac ‘M’ >> xfer_back_tac [] >>
-  simp[monoidTheory.monoid_invertibles_def]
-QED
-
-Theorem monoid_invertibles_element =
-        xfer monoid_invertibles_element
+Theorem monoid_invertibles_def[allow_rebind] =
+        xfer monoidTheory.monoid_invertibles_def
+Theorem monoid_invertibles_element = xfer monoid_invertibles_element
 Theorem monoid_order_nonzero = xfer monoid_order_nonzero
 
-Theorem Invertibles_respects[local]:
+Theorem Invertibles_respects:
   (mequiv ===> mequiv) Invertibles Invertibles
 Proof
   simp[FUN_REL_def, mequiv_def, monoid_invertibles_is_monoid]
 QED
-val xfer_Invertibles = opxfer Invertibles_respects
-Definition Invertibles_def:
-  Invertibles = ^(rand $ concl xfer_Invertibles)
-End
-Theorem Invertibles_relate[transfer_rule] =
-        REWRITE_RULE[GSYM Invertibles_def] xfer_Invertibles
+val _ = liftdef Invertibles_respects "Invertibles"
 
 Theorem Invertibles_property[simp] = xfer monoidTheory.Invertibles_property
 Theorem Invertibles_subset = xfer monoidTheory.Invertibles_subset
@@ -452,21 +365,14 @@ Theorem Invertibles_order = xfer monoidTheory.Invertibles_order
 Theorem monoid_inv_from_invertibles =
         xfer monoidTheory.monoid_inv_from_invertibles
 
-
 Theorem monoid_inv_respects[local]:
   (mequiv ===> (=) ===> (=)) monoid_inv monoid_inv
 Proof
   simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_monoid_inv = opxfer monoid_inv_respects
-Definition monoid_inv_def0:
-  monoid_inv = ^(rand $ concl xfer_monoid_inv)
-End
+val _ = liftdef monoid_inv_respects "monoid_inv"
 
-Theorem monoid_inv_relate[transfer_rule] =
-        REWRITE_RULE[GSYM monoid_inv_def0] xfer_monoid_inv
-
-Theorem monoid_inv_def = xfer monoidTheory.monoid_inv_def
+Theorem monoid_inv_def[allow_rebind] = xfer monoidTheory.monoid_inv_def
 Theorem monoid_inv_def_alt = xfer monoidTheory.monoid_inv_def_alt
 Theorem monoid_inv_element = xfer monoidTheory.monoid_inv_element
 Theorem monoid_id_invertible[simp] = xfer monoidTheory.monoid_id_invertible
@@ -483,66 +389,41 @@ Theorem MonoidHomo_respects[local]:
 Proof
   simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_MonoidHomo = opxfer MonoidHomo_respects
-Definition MonoidHomo_def0:
-  MonoidHomo = ^(rand $ concl xfer_MonoidHomo)
-End
-Theorem MonoidHomo_relate[transfer_rule] =
-        REWRITE_RULE[GSYM MonoidHomo_def0] xfer_MonoidHomo
+val _ = liftdef MonoidHomo_respects "MonoidHomo"
 
-Theorem MonoidHomo_def = xfer monoidTheory.MonoidHomo_def
+Theorem MonoidHomo_def[allow_rebind] = xfer monoidTheory.MonoidHomo_def
 
 Theorem MonoidIso_respects[local]:
   (((=) ===> (=)) ===> mequiv ===> mequiv ===> (=)) MonoidIso MonoidIso
 Proof
   simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_MonoidIso = opxfer MonoidIso_respects
-Definition MonoidIso_def0:
-  MonoidIso = ^(rand $ concl xfer_MonoidIso)
-End
-Theorem MonoidIso_relate[transfer_rule] =
-        REWRITE_RULE[GSYM MonoidIso_def0] xfer_MonoidIso
-Theorem MonoidIso_def = xfer monoidTheory.MonoidIso_def
+val _ = liftdef MonoidIso_respects "MonoidIso"
+Theorem MonoidIso_def[allow_rebind] = xfer monoidTheory.MonoidIso_def
 
 Theorem MonoidEndo_respects[local]:
   (((=) ===> (=)) ===> mequiv ===> (=)) MonoidEndo MonoidEndo
 Proof
   simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_MonoidEndo = opxfer MonoidEndo_respects
-Definition MonoidEndo_def0:
-  MonoidEndo = ^(rand $ concl xfer_MonoidEndo)
-End
-Theorem MonoidEndo_relate[transfer_rule] =
-        REWRITE_RULE[GSYM MonoidEndo_def0] xfer_MonoidEndo
-Theorem MonoidEndo_def = xfer monoidTheory.MonoidEndo_def
+val _ = liftdef MonoidEndo_respects "MonoidEndo"
+Theorem MonoidEndo_def[allow_rebind] = xfer monoidTheory.MonoidEndo_def
 
 Theorem MonoidAuto_respects[local]:
   (((=) ===> (=)) ===> mequiv ===> (=)) MonoidAuto MonoidAuto
 Proof
   simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_MonoidAuto = opxfer MonoidAuto_respects
-Definition MonoidAuto_def0:
-  MonoidAuto = ^(rand $ concl xfer_MonoidAuto)
-End
-Theorem MonoidAuto_relate[transfer_rule] =
-        REWRITE_RULE[GSYM MonoidAuto_def0] xfer_MonoidAuto
-Theorem MonoidAuto_def = xfer monoidTheory.MonoidAuto_def
+val _ = liftdef MonoidAuto_respects "MonoidAuto"
+Theorem MonoidAuto_def[allow_rebind] = xfer monoidTheory.MonoidAuto_def
 
 Theorem submonoid_respects[local]:
   (mequiv ===> mequiv ===> (=)) submonoid submonoid
 Proof
   simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_submonoid = opxfer submonoid_respects
-Definition submonoid_def0:
-  submonoid = ^(rand $ concl xfer_submonoid)
-End
-Theorem submonoid_relate[transfer_rule] =
-        REWRITE_RULE[GSYM submonoid_def0] xfer_submonoid
-Theorem submonoid_def = xfer monoidTheory.submonoid_def
+val _ = liftdef submonoid_respects "submonoid"
+Theorem submonoid_def[allow_rebind] = xfer monoidTheory.submonoid_def
 
 Theorem monoid_homo_id = xfer monoidTheory.monoid_homo_id
 Theorem monoid_homo_element = xfer monoidTheory.monoid_homo_element
@@ -591,41 +472,31 @@ Theorem image_op_respects[local]:
 Proof
   simp[quotientTheory.FUN_REL_EQ] >> simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_image_op = opxfer image_op_respects
-Definition image_op_def0:
-  image_op = ^(rand $ concl xfer_image_op)
-End
-Theorem image_op_relate[transfer_rule] =
-        REWRITE_RULE[GSYM image_op_def0] xfer_image_op
+val _ = liftdef image_op_respects "image_op"
 
-Theorem image_op_def = xfer monoidTheory.image_op_def
+Theorem image_op_def[allow_rebind] = xfer monoidTheory.image_op_def
 Theorem image_op_inj = xfer monoidTheory.image_op_inj
+
+Theorem Monoid_trivial_monoid[simp]:
+  Monoid (trivial_monoid e)
+Proof
+  metis_tac[monoidTheory.FiniteAbelianMonoid_def,
+            monoidTheory.AbelianMonoid_def, trivial_monoid]
+QED
 
 Theorem trivial_monoid_respects[local]:
   ((=) ===> mequiv) trivial_monoid trivial_monoid
 Proof
-  simp[FUN_REL_def, mequiv_def] >> qx_gen_tac ‘e’ >>
-  qspec_then ‘e’ mp_tac trivial_monoid >>
-  simp[monoidTheory.FiniteAbelianMonoid_def, monoidTheory.AbelianMonoid_def]
+  simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_trivial_monoid = opxfer trivial_monoid_respects
-Definition trivial_monoid_def0:
-  trivial_monoid = ^(rand $ concl xfer_trivial_monoid)
-End
-Theorem trivial_monoid_relate[transfer_rule] =
-        REWRITE_RULE[GSYM trivial_monoid_def0] xfer_trivial_monoid
+val _ = liftdef trivial_monoid_respects "trivial_monoid"
 
 Theorem set_inter_respects[local]:
   mequiv set_inter set_inter
 Proof
   simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_set_inter = opxfer set_inter_respects
-Definition set_inter_def0:
-  set_inter = ^(rand $ concl xfer_set_inter)
-End
-Theorem set_inter_relate[transfer_rule] =
-        REWRITE_RULE[GSYM set_inter_def0] xfer_set_inter
+val _ = liftdef set_inter_respects "set_inter"
 
 Theorem set_inter_abelian_monoid = xfer monoidTheory.set_inter_abelian_monoid
 
@@ -634,22 +505,31 @@ Theorem set_union_respects[local]:
 Proof
   simp[FUN_REL_def, mequiv_def]
 QED
-val xfer_set_union = opxfer set_union_respects
-Definition set_union_def0:
-  set_union = ^(rand $ concl xfer_set_union)
-End
-Theorem set_union_relate[transfer_rule] =
-        REWRITE_RULE[GSYM set_union_def0] xfer_set_union
+val _ = liftdef set_union_respects "set_union"
 
 Theorem set_union_abelian_monoid = xfer monoidTheory.set_union_abelian_monoid
 
-Definition monoid_inj_image_def:
-  monoid_inj_image f M =
-  if INJ f (tmcarrier M) UNIV then
-    mkmonoid (monoid$monoid_inj_image (monoid_REP M) f)
+Definition cmonoid_inj_image_def:
+  cmonoid_inj_image f M =
+  if INJ f M.carrier UNIV then monoid$monoid_inj_image M f
   else
-    trivial_monoid (f (tmid M))
+    trivial_monoid (f M.id)
 End
+Theorem cmonoid_inj_image_respect[local]:
+  (((=) ===> (=)) ===> mequiv ===> mequiv) cmonoid_inj_image cmonoid_inj_image
+Proof
+  simp[FUN_REL_def, mequiv_def] >> simp[GSYM FUN_EQ_THM] >>
+  rw[cmonoid_inj_image_def, monoid_inj_image_monoid]
+QED
+val _ = liftdef cmonoid_inj_image_respect "monoid_inj_image"
+
+Theorem monoid_inj_image_abelian_monoid:
+  AbelianMonoid m ∧ INJ f (tmcarrier m) UNIV ⇒
+  AbelianMonoid (monoid_inj_image f m)
+Proof
+  xfer_back_tac[] >>
+  simp[cmonoid_inj_image_def, monoidTheory.monoid_inj_image_abelian_monoid]
+QED
 
 Theorem INJ_MonoidIso_exists:
   ∀f M. INJ f (tmcarrier M) UNIV ⇒ ∃N. MonoidIso f M N
@@ -692,7 +572,7 @@ Theorem MITBAG_BAG_IMAGE_op = xfer monoidTheory.GITBAG_BAG_IMAGE_op
 Theorem IMP_MBAG_EQ_ID = xfer $ GEN_ALL monoidTheory.IMP_GBAG_EQ_ID
 Theorem MITBAG_CONG = xfer $ GEN_ALL monoidTheory.GITBAG_CONG
 
-Theorme MBAG_IMAGE_PARTITION = xfer $ GEN_ALL GBAG_IMAGE_PARTITION
+Theorem MBAG_IMAGE_PARTITION = xfer $ GEN_ALL GBAG_IMAGE_PARTITION
 
 
 (*
