@@ -1,5 +1,7 @@
 (*===========================================================================*)
-(*  The Data Encryption Standard (DES) in HOL                                *)
+(*  The Data Encryption Standard (DES) Property in HOL                       *)
+(*                                                                           *)
+(*  Author: Ruofan Yang                                                      *)
 (*===========================================================================*)
 
 open HolKernel Parse boolLib bossLib;
@@ -189,7 +191,8 @@ Proof
 QED
 
 Theorem convert_RK:
-  !(k:word64) n. RoundKey n k=REVERSE (GENLIST (λi. RK i k) (SUC n))
+  !(k:word64) n. RoundKey n k
+  =REVERSE (GENLIST (λi. RK i k) (SUC n))
 Proof
     Induct_on `n`
   >- (RW_TAC fcp_ss[RoundKey_def,GENLIST,roundk_supp,REVERSE_DEF,roundk_R,roundk_L]\\
@@ -354,7 +357,6 @@ Proof
   >> rw[comple_PC2]
 QED
 
-
 (* weak key *)
 Definition Wkey_def:
   Wkey= [0x0101010101010101w:word64;0xfefefefefefefefew:word64;0xe0e0e0e0f1f1f1f1w:word64;0x1f1f1f1f0e0e0e0ew:word64]
@@ -426,6 +428,737 @@ Proof
   >- EVAL_TAC
   >- EVAL_TAC
   >- EVAL_TAC
+  >> EVAL_TAC
+QED
+
+Definition Wkey1_def:
+  Wkey1= 0x0101010101010101w:word64
+End
+
+Definition Wkey2_def:
+  Wkey2= 0xfefefefefefefefew:word64
+End
+
+Definition Wkey3_def:
+  Wkey3= 0xe0e0e0e0f1f1f1f1w:word64
+End
+
+Definition Wkey4_def:
+  Wkey4= 0x1f1f1f1f0e0e0e0ew:word64
+End
+
+(* Added by Chun Tian *)
+Definition Wtext_def :
+  Wtext key = {x:word64| ?w. (Split (IP (desCore 8 (KS key 8) x))) = (w,w)}
+End
+
+Overload Wtext1 = “Wtext Wkey1”
+Overload Wtext2 = “Wtext Wkey2”
+Overload Wtext3 = “Wtext Wkey3”
+Overload Wtext4 = “Wtext Wkey4”
+
+Theorem Wtext1_def:
+  Wtext1= {x:word64| ?w. (Split (IP (desCore 8 (KS Wkey1 8) x))) = (w,w)}
+Proof
+  rw [Wtext_def]
+QED
+
+Theorem Wtext2_def:
+  Wtext2= {x:word64| ?w. (Split (IP (desCore 8 (KS Wkey2 8) x))) = (w,w)}
+Proof
+  rw [Wtext_def]
+QED
+
+Theorem Wtext3_def:
+  Wtext3= {x:word64| ?w. (Split (IP (desCore 8 (KS Wkey3 8) x))) = (w,w)}
+Proof
+  rw [Wtext_def]
+QED
+
+Theorem Wtext4_def:
+  Wtext4= {x:word64| ?w. (Split (IP (desCore 8 (KS Wkey4 8) x))) = (w,w)}
+Proof
+  rw [Wtext_def]
+QED
+
+Definition Wtextlist_def:
+  Wtextlist= [Wtext1;Wtext2;Wtext3;Wtext4]
+End
+
+Theorem wkey1_equal:
+   !x n k.MEM k Wkey /\ n<=8 ==> Round n (KS k 8) (Split(x))= Round n (KS k 16) (Split(x))
+Proof
+     rw[]
+  >> Induct_on ‘n’
+  >- rw[Round_def]
+  >> POP_ASSUM MP_TAC
+  >> rw[Round_alt_half_message',SUC_ONE_ADD]
+  >> Know ‘M (Split x) (KS k 8) (n+2) =
+           M (Split x) (KS k 8) n ?? (RoundOp (M (Split x) (KS k 8) (n+1)) (EL n (KS k 8)))’
+  >- rw[half_message']
+  >> Rewr'
+  >> Know ‘M (Split x) (KS k 16) (n+2) =
+           M (Split x) (KS k 16) n ?? (RoundOp (M (Split x) (KS k 16) (n+1)) (EL n (KS k 16)))’
+  >- rw[half_message']
+  >> Rewr'
+  >> rw[]
+  >> Suff ‘(EL n (KS k 8))=(EL n (KS k 16))’
+  >- rw[]
+  >> POP_ASSUM MP_TAC
+  >> POP_ASSUM MP_TAC
+  >> POP_ASSUM MP_TAC
+  >> rw[Wkey_def]
+  >- (EVAL_TAC\\
+      qabbrev_tac ‘l2 :word48 list =
+      [0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w]’\\
+      qabbrev_tac ‘l1 :word48 list = [0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w]’\\
+      ‘LENGTH l2 = 16’ by rw [Abbr ‘l2’,Abbr ‘l1’]\\
+      ‘LENGTH l1 = 8’ by rw [Abbr ‘l1’]\\
+      ‘n < 8’ by rw []\\
+      Suff ‘!i. i < 8 ==> EL i l1 = 0w /\ EL i l2 = 0w’
+      >- rw[] \\
+      rw [Abbr ‘l1’,Abbr ‘l2’]\\
+      ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/ i = 4 \/ i = 5 \/ i = 6 \/ i = 7 ’ by rw []\\
+       rw[])
+  >- (EVAL_TAC\\
+      qabbrev_tac ‘l2 :word48 list =
+       [0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;
+        0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;
+        0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;
+        0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw]’\\
+      qabbrev_tac ‘l1 :word48 list =
+       [0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;0xFFFFFFFFFFFFw;
+        0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw]’\\
+      ‘LENGTH l2 = 16’ by rw [Abbr ‘l2’,Abbr ‘l1’]\\
+      ‘LENGTH l1 = 8’ by rw [Abbr ‘l1’]\\
+      ‘n < 8’ by rw []\\
+      Suff ‘!i. i < 8 ==> EL i l1 = 0xFFFFFFFFFFFFw /\ EL i l2 = 0xFFFFFFFFFFFFw’
+      >- rw[] \\
+      rw [Abbr ‘l1’,Abbr ‘l2’]\\
+      ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/ i = 4 \/ i = 5 \/ i = 6 \/ i = 7 ’ by rw []\\
+       rw[])
+  >- (EVAL_TAC\\
+      qabbrev_tac ‘l2 :word48 list =
+       [0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+        0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+        0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+        0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w]’\\
+      qabbrev_tac ‘l1 :word48 list =
+       [0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+        0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w]’\\
+      ‘LENGTH l2 = 16’ by rw [Abbr ‘l2’,Abbr ‘l1’]\\
+      ‘LENGTH l1 = 8’ by rw [Abbr ‘l1’]\\
+      ‘n < 8’ by rw []\\
+      Suff ‘!i. i < 8 ==> EL i l1 = 0xFFFFFF000000w /\ EL i l2 = 0xFFFFFF000000w’
+      >- rw[] \\
+      rw [Abbr ‘l1’,Abbr ‘l2’]\\
+      ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/ i = 4 \/ i = 5 \/ i = 6 \/ i = 7 ’ by rw []\\
+       rw[])
+  >> EVAL_TAC
+  >> qabbrev_tac ‘l2 :word48 list =
+     [0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw;
+      0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw;
+      0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw;
+      0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw]’
+  >> qabbrev_tac ‘l1 :word48 list =
+     [0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw;
+      0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw]’
+  >> ‘LENGTH l2 = 16’ by rw [Abbr ‘l2’,Abbr ‘l1’]
+  >> ‘LENGTH l1 = 8’ by rw [Abbr ‘l1’]
+  >> ‘n < 8’ by rw []
+  >> Suff ‘!i. i < 8 ==> EL i l1 = 0xFFFFFFw /\ EL i l2 = 0xFFFFFFw’
+  >- rw[]
+  >> rw [Abbr ‘l1’,Abbr ‘l2’]
+  >>‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/ i = 4 \/ i = 5 \/ i = 6 \/ i = 7 ’ by rw []
+  >>rw[]
+QED
+
+Theorem weakK_sup:
+   !n k . MEM k Wkey /\ 0<=n /\ n<=8 /\
+         (Split (IP (desCore 8 (KS k 8) x))) = (w,w) ==>
+         (Round (8-n) (KS k 16) (Split (IP x))) = Swap ((Round (8+n) (KS k 16) (Split (IP x))))
+Proof
+     rw[]
+  >> POP_ASSUM MP_TAC
+  >> Know ‘(desCore 8 (KS k 8) x)=(desCore 8 (KS k 16) x)’
+  >- (rw[desCore_alt]\\
+      rw[wkey1_equal])
+  >> Rewr'
+  >> Q.ABBREV_TAC‘ks=(KS Wkey1 16)’
+  >> Induct_on ‘n’
+  >- (rw[]\\
+      POP_ASSUM MP_TAC\\
+      rw[desCore_alt,Swap_def,IP_IIP_Inverse,Split_Join_Inverse]\\
+      Cases_on ‘Round 8 (KS k 16) (Split (IP x))’\\
+      POP_ASSUM MP_TAC\\
+      POP_ASSUM MP_TAC\\
+      rw[Swap_def])
+  >> POP_ASSUM MP_TAC
+  >> rw[Round_alt_half_message']
+  >> POP_ASSUM MP_TAC
+  >> POP_ASSUM MP_TAC
+  >> POP_ASSUM MP_TAC
+  >> rw[SUC_ONE_ADD]
+  >> Know ‘M (Split (IP x)) (KS k 16) (n+10) =
+           M (Split (IP x)) (KS k 16) (n + 8) ??
+           (RoundOp (M (Split (IP x)) (KS k 16) (n+9)) (EL (n+8) (KS k 16)))’
+  >- rw[half_message']
+  >> Rewr'
+  >> Know ‘M (Split (IP x)) (KS k 16) (7-n) =
+           M (Split (IP x)) (KS k 16) (9-n) ??
+           (RoundOp (M (Split (IP x)) (KS k 16) (8-n)) (EL (7-n) (KS k 16)))’
+  >- rw[half_message']
+  >> Rewr'
+  >> POP_ASSUM MP_TAC
+  >> POP_ASSUM MP_TAC
+  >> POP_ASSUM MP_TAC
+  >> rw[Swap_def]
+  >> Suff ‘(EL (7 − n) (KS k 16))=(EL (n + 8) (KS k 16))’
+  >- rw[]
+  >> Q.PAT_X_ASSUM ‘MEM k Wkey’ MP_TAC
+  >> rw[Wkey_def]
+  >- (EVAL_TAC\\
+      qabbrev_tac ‘l :word48 list =
+      [0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w]’\\
+      ‘LENGTH l = 16’ by rw [Abbr ‘l’]\\
+      ‘7 - n < 16’ by rw []\\
+      ‘n + 8 < 16’ by rw []\\
+      Suff ‘!i. i < 16 ==> EL i l = 0w’ >- rw []\\
+      rw [Abbr ‘l’]\\
+     ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/
+      i = 4 \/ i = 5 \/ i = 6 \/ i = 7 \/
+      i = 8 \/ i = 9 \/ i = 10 \/ i = 11 \/
+      i = 12 \/ i = 13 \/ i = 14 \/ i = 15’ by rw []\\
+      rw[])
+  >- (EVAL_TAC\\
+      qabbrev_tac ‘l :word48 list =
+      [0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;
+           0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;
+           0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;
+           0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;
+           0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw; 0xFFFFFFFFFFFFw;
+           0xFFFFFFFFFFFFw]’\\
+      ‘LENGTH l = 16’ by rw [Abbr ‘l’]\\
+      ‘7 - n < 16’ by rw []\\
+      ‘n + 8 < 16’ by rw []\\
+      Suff ‘!i. i < 16 ==> EL i l = 0xFFFFFFFFFFFFw’ >- rw []\\
+      rw [Abbr ‘l’]\\
+     ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/
+      i = 4 \/ i = 5 \/ i = 6 \/ i = 7 \/
+      i = 8 \/ i = 9 \/ i = 10 \/ i = 11 \/
+      i = 12 \/ i = 13 \/ i = 14 \/ i = 15’ by rw []\\
+      rw[])
+  >- (EVAL_TAC\\
+      qabbrev_tac ‘l :word48 list =
+      [0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+           0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+           0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+           0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+           0xFFFFFF000000w; 0xFFFFFF000000w; 0xFFFFFF000000w;
+           0xFFFFFF000000w]’\\
+      ‘LENGTH l = 16’ by rw [Abbr ‘l’]\\
+      ‘7 - n < 16’ by rw []\\
+      ‘n + 8 < 16’ by rw []\\
+      Suff ‘!i. i < 16 ==> EL i l = 0xFFFFFF000000w’ >- rw []\\
+      rw [Abbr ‘l’]\\
+     ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/
+      i = 4 \/ i = 5 \/ i = 6 \/ i = 7 \/
+      i = 8 \/ i = 9 \/ i = 10 \/ i = 11 \/
+      i = 12 \/ i = 13 \/ i = 14 \/ i = 15’ by rw []\\
+      rw[])
+  >> EVAL_TAC
+  >> qabbrev_tac ‘l :word48 list =
+     [0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw;
+      0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw;
+      0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw;
+      0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw; 0xFFFFFFw]’
+  >> ‘LENGTH l = 16’ by rw [Abbr ‘l’]
+  >> ‘7 - n < 16’ by rw []
+  >> ‘n + 8 < 16’ by rw []
+  >> Suff ‘!i. i < 16 ==> EL i l = 0xFFFFFFw’ >- rw []
+  >> rw [Abbr ‘l’]
+  >> ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/
+      i = 4 \/ i = 5 \/ i = 6 \/ i = 7 \/
+      i = 8 \/ i = 9 \/ i = 10 \/ i = 11 \/
+      i = 12 \/ i = 13 \/ i = 14 \/ i = 15’ by rw []
+  >> rw[]
+QED
+
+Theorem weakK1_proper2:
+  !x. x IN Wtext1 /\  (FullDES Wkey1= (encrypt,decrypt))
+   ==>  encrypt x=x
+Proof
+     rw[DES_def,Wtext1_def]
+  >> Suff ‘desCore 16 (KS Wkey1 16) x=desCore 0 (KS Wkey1 16) x’
+  >- rw[desCore_0]
+  >> rw[desCore_alt,desCore_0]
+  >> Know ‘Swap (Round (8+8) (KS Wkey1 16) (Split (IP x))) =
+           ((Round (8-8) (KS Wkey1 16) (Split (IP x))))’
+  >- (Know ‘MEM Wkey1 Wkey’
+      >- rw[Wkey_def,Wkey1_def]\\
+      rw[weakK_sup])
+  >> rw[]
+  >> rw[Round_def]
+  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+QED
+
+Theorem weakK2_proper2:
+  !x. x IN Wtext2 /\  (FullDES Wkey2= (encrypt,decrypt))
+   ==>  encrypt x=x
+Proof
+     rw[DES_def,Wtext2_def]
+  >> Suff ‘desCore 16 (KS Wkey2 16) x=desCore 0 (KS Wkey2 16) x’
+  >- rw[desCore_0]
+  >> rw[desCore_alt,desCore_0]
+  >> Know ‘Swap (Round (8+8) (KS Wkey2 16) (Split (IP x))) =
+           ((Round (8-8) (KS Wkey2 16) (Split (IP x)))) ’
+  >- (Know ‘MEM Wkey2 Wkey’
+      >- rw[Wkey_def,Wkey2_def]\\
+      rw[weakK_sup])
+  >> rw[]
+  >> rw[Round_def]
+  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+QED
+
+Theorem weakK3_proper2:
+  !x. x IN Wtext3 /\  (FullDES Wkey3= (encrypt,decrypt))
+   ==>  encrypt x=x
+Proof
+     rw[DES_def,Wtext3_def]
+  >> Suff ‘desCore 16 (KS Wkey3 16) x=desCore 0 (KS Wkey3 16) x’
+  >- rw[desCore_0]
+  >> rw[desCore_alt,desCore_0]
+  >> Know ‘Swap (Round (8+8) (KS Wkey3 16) (Split (IP x))) =
+           ((Round (8-8) (KS Wkey3 16) (Split (IP x)))) ’
+  >- (Know ‘MEM Wkey3 Wkey’
+      >- rw[Wkey_def,Wkey3_def]\\
+      rw[weakK_sup])
+  >> rw[]
+  >> rw[Round_def]
+  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+QED
+
+Theorem weakK4_proper2:
+  !x. x IN Wtext4 /\  (FullDES Wkey4= (encrypt,decrypt))
+   ==>  encrypt x=x
+Proof
+     rw[DES_def,Wtext4_def]
+  >> Suff ‘desCore 16 (KS Wkey4 16) x=desCore 0 (KS Wkey4 16) x’
+  >- rw[desCore_0]
+  >> rw[desCore_alt,desCore_0]
+  >> Know ‘Swap (Round (8+8) (KS Wkey4 16) (Split (IP x))) =
+           ((Round (8-8) (KS Wkey4 16) (Split (IP x)))) ’
+  >- (Know ‘MEM Wkey4 Wkey’
+      >- rw[Wkey_def,Wkey4_def]\\
+      rw[weakK_sup])
+  >> rw[]
+  >> rw[Round_def]
+  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+QED
+
+Definition w1trans1_def:
+  w1trans1 (x:word64) = FST (Split(IP(desCore 8 (KS Wkey1 8) x)))
+End
+
+Definition w1trans2_def:
+  w1trans2 (x:word32)= desCore 8 (KS Wkey1 8) (IIP(Join(x,x)))
+End
+
+Definition w2trans1_def:
+  w2trans1 (x:word64) = FST (Split(IP(desCore 8 (KS Wkey2 8) x)))
+End
+
+Definition w2trans2_def:
+  w2trans2 (x:word32)= desCore 8 (KS Wkey2 8) (IIP(Join(x,x)))
+End
+
+Definition w3trans1_def:
+  w3trans1 (x:word64) = FST (Split(IP(desCore 8 (KS Wkey3 8) x)))
+End
+
+Definition w3trans2_def:
+  w3trans2 (x:word32)= desCore 8 (KS Wkey3 8) (IIP(Join(x,x)))
+End
+
+Definition w4trans1_def:
+  w4trans1 (x:word64) = FST (Split(IP(desCore 8 (KS Wkey4 8) x)))
+End
+
+Definition w4trans2_def:
+  w4trans2 (x:word32)= desCore 8 (KS Wkey4 8) (IIP(Join(x,x)))
+End
+
+Theorem BIJ_wtext1:
+   BIJ w1trans1 Wtext1 univ(:word32)
+Proof
+     rw[BIJ_IFF_INV]
+  >> EXISTS_TAC “w1trans2”
+  >> rw[]
+  >- (rw[w1trans2_def,Wtext1_def] \\
+      Know ‘LENGTH (KS Wkey1 8)=8’
+      >- (rw[Wkey1_def]\\
+          EVAL_TAC) \\
+      Suff ‘(desCore 8 (KS Wkey1 8) (desCore 8 (KS Wkey1 8) (IIP (Join (x,x))))) =
+            (desCore 8 (REVERSE (KS Wkey1 8)) (desCore 8 (KS Wkey1 8) (IIP (Join (x,x)))))’
+  >- (Rewr'\\
+     rw[desCore_CORRECT]\\
+     rw[IP_IIP_Inverse,Split_Join_Inverse])
+  >> Know ‘(REVERSE (KS Wkey1 8))=(KS Wkey1 8)’
+  >- (rw[Wkey1_def]\\
+       EVAL_TAC)
+  >> rw[])
+  >- (POP_ASSUM MP_TAC
+  >> rw[w1trans2_def,Wtext1_def,w1trans1_def]
+  >> rw[]
+  >> Know ‘(w,w)=Split (IP (desCore 8 (KS Wkey1 8) x))’
+  >- rw[]
+  >> Rewr'
+  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+  >> Know ‘LENGTH (KS Wkey1 8)=8’
+  >- (rw[Wkey1_def]\\
+     EVAL_TAC)
+  >> Suff ‘(desCore 8 (KS Wkey1 8) (desCore 8 (KS Wkey1 8) x)) =
+           (desCore 8 (REVERSE (KS Wkey1 8)) (desCore 8 (KS Wkey1 8) x))’
+  >- (Rewr'\\
+      rw[desCore_CORRECT])
+  >> Know ‘(REVERSE (KS Wkey1 8))=(KS Wkey1 8)’
+  >- (rw[Wkey1_def]\\
+       EVAL_TAC)
+  >> rw[])
+  >> rw[w1trans1_def,w1trans2_def]
+  >> Know ‘LENGTH (KS Wkey1 8)=8’
+  >- (rw[Wkey1_def]\\
+     EVAL_TAC)
+  >> Suff ‘(desCore 8 (KS Wkey1 8) (desCore 8 (KS Wkey1 8) (IIP (Join (x,x))))) =
+           (desCore 8 (REVERSE (KS Wkey1 8)) (desCore 8 (KS Wkey1 8) (IIP (Join (x,x)))))’
+  >- (Rewr'\\
+      rw[desCore_CORRECT]\\
+      rw[IP_IIP_Inverse,Split_Join_Inverse])
+  >> Know ‘(REVERSE (KS Wkey1 8))=(KS Wkey1 8)’
+  >- (rw[Wkey1_def]\\
+       EVAL_TAC)
+  >> rw[]
+QED
+
+Theorem BIJ_wtext2:
+   BIJ w2trans1 Wtext2 univ(:word32)
+Proof
+     rw[BIJ_IFF_INV]
+  >> EXISTS_TAC “w2trans2”
+  >> rw[]
+  >- (rw[w2trans2_def,Wtext2_def] \\
+      Know ‘LENGTH (KS Wkey2 8)=8’
+      >- (rw[Wkey2_def]\\
+          EVAL_TAC) \\
+      Suff ‘(desCore 8 (KS Wkey2 8) (desCore 8 (KS Wkey2 8) (IIP (Join (x,x))))) =
+            (desCore 8 (REVERSE (KS Wkey2 8)) (desCore 8 (KS Wkey2 8) (IIP (Join (x,x)))))’
+  >- (Rewr'\\
+     rw[desCore_CORRECT]\\
+     rw[IP_IIP_Inverse,Split_Join_Inverse])
+  >> Know ‘(REVERSE (KS Wkey2 8))=(KS Wkey2 8)’
+  >- (rw[Wkey2_def]\\
+       EVAL_TAC)
+  >> rw[])
+  >- (POP_ASSUM MP_TAC
+  >> rw[w2trans2_def,Wtext2_def,w2trans1_def]
+  >> rw[]
+  >> Know ‘(w,w)=Split (IP (desCore 8 (KS Wkey2 8) x))’
+  >- rw[]
+  >> Rewr'
+  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+  >> Know ‘LENGTH (KS Wkey2 8)=8’
+  >- (rw[Wkey1_def]\\
+     EVAL_TAC)
+  >> Suff ‘(desCore 8 (KS Wkey2 8) (desCore 8 (KS Wkey2 8) x)) =
+           (desCore 8 (REVERSE (KS Wkey2 8)) (desCore 8 (KS Wkey2 8) x))’
+  >- (Rewr'\\
+      rw[desCore_CORRECT])
+  >> Know ‘(REVERSE (KS Wkey2 8))=(KS Wkey2 8)’
+  >- (rw[Wkey2_def]\\
+       EVAL_TAC)
+  >> rw[])
+  >> rw[w2trans1_def,w2trans2_def]
+  >> Know ‘LENGTH (KS Wkey2 8)=8’
+  >- (rw[Wkey2_def]\\
+     EVAL_TAC)
+  >> Suff ‘(desCore 8 (KS Wkey2 8) (desCore 8 (KS Wkey2 8) (IIP (Join (x,x))))) =
+           (desCore 8 (REVERSE (KS Wkey2 8)) (desCore 8 (KS Wkey2 8) (IIP (Join (x,x)))))’
+  >- (Rewr'\\
+      rw[desCore_CORRECT]\\
+      rw[IP_IIP_Inverse,Split_Join_Inverse])
+  >> Know ‘(REVERSE (KS Wkey2 8))=(KS Wkey2 8)’
+  >- (rw[Wkey2_def]\\
+       EVAL_TAC)
+  >> rw[]
+QED
+
+Theorem BIJ_wtext3:
+   BIJ w3trans1 Wtext3 univ(:word32)
+Proof
+     rw[BIJ_IFF_INV]
+  >> EXISTS_TAC “w3trans2”
+  >> rw[]
+  >- (rw[w3trans2_def,Wtext3_def] \\
+      Know ‘LENGTH (KS Wkey3 8)=8’
+      >- (rw[Wkey3_def]\\
+          EVAL_TAC) \\
+      Suff ‘(desCore 8 (KS Wkey3 8) (desCore 8 (KS Wkey3 8) (IIP (Join (x,x))))) =
+            (desCore 8 (REVERSE (KS Wkey3 8)) (desCore 8 (KS Wkey3 8) (IIP (Join (x,x)))))’
+  >- (Rewr'\\
+     rw[desCore_CORRECT]\\
+     rw[IP_IIP_Inverse,Split_Join_Inverse])
+  >> Know ‘(REVERSE (KS Wkey3 8))=(KS Wkey3 8)’
+  >- (rw[Wkey3_def]\\
+       EVAL_TAC)
+  >> rw[])
+  >- (POP_ASSUM MP_TAC
+  >> rw[w3trans2_def,Wtext3_def,w3trans1_def]
+  >> rw[]
+  >> Know ‘(w,w)=Split (IP (desCore 8 (KS Wkey3 8) x))’
+  >- rw[]
+  >> Rewr'
+  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+  >> Know ‘LENGTH (KS Wkey3 8)=8’
+  >- (rw[Wkey3_def]\\
+     EVAL_TAC)
+  >> Suff ‘(desCore 8 (KS Wkey3 8) (desCore 8 (KS Wkey3 8) x)) =
+           (desCore 8 (REVERSE (KS Wkey3 8)) (desCore 8 (KS Wkey3 8) x))’
+  >- (Rewr'\\
+      rw[desCore_CORRECT])
+  >> Know ‘(REVERSE (KS Wkey3 8))=(KS Wkey3 8)’
+  >- (rw[Wkey3_def]\\
+       EVAL_TAC)
+  >> rw[])
+  >> rw[w3trans1_def,w3trans2_def]
+  >> Know ‘LENGTH (KS Wkey3 8)=8’
+  >- (rw[Wkey3_def]\\
+     EVAL_TAC)
+  >> Suff ‘(desCore 8 (KS Wkey3 8) (desCore 8 (KS Wkey3 8) (IIP (Join (x,x)))))=(desCore 8 (REVERSE (KS Wkey3 8)) (desCore 8 (KS Wkey3 8) (IIP (Join (x,x)))))’
+  >- (Rewr'\\
+      rw[desCore_CORRECT]\\
+      rw[IP_IIP_Inverse,Split_Join_Inverse])
+  >> Know ‘(REVERSE (KS Wkey3 8))=(KS Wkey3 8)’
+  >- (rw[Wkey3_def]\\
+       EVAL_TAC)
+  >> rw[]
+QED
+
+Theorem BIJ_wtext4:
+   BIJ w4trans1 Wtext4 univ(:word32)
+Proof
+     rw[BIJ_IFF_INV]
+  >> EXISTS_TAC “w4trans2”
+  >> rw[]
+  >- (rw[w4trans2_def,Wtext4_def] \\
+      Know ‘LENGTH (KS Wkey4 8)=8’
+      >- (rw[Wkey4_def]\\
+          EVAL_TAC) \\
+      Suff ‘(desCore 8 (KS Wkey4 8) (desCore 8 (KS Wkey4 8) (IIP (Join (x,x))))) =
+            (desCore 8 (REVERSE (KS Wkey4 8)) (desCore 8 (KS Wkey4 8) (IIP (Join (x,x)))))’
+  >- (Rewr'\\
+     rw[desCore_CORRECT]\\
+     rw[IP_IIP_Inverse,Split_Join_Inverse])
+  >> Know ‘(REVERSE (KS Wkey4 8))=(KS Wkey4 8)’
+  >- (rw[Wkey4_def]\\
+       EVAL_TAC)
+  >> rw[])
+  >- (POP_ASSUM MP_TAC
+  >> rw[w4trans2_def,Wtext4_def,w4trans1_def]
+  >> rw[]
+  >> Know ‘(w,w)=Split (IP (desCore 8 (KS Wkey4 8) x))’
+  >- rw[]
+  >> Rewr'
+  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+  >> Know ‘LENGTH (KS Wkey4 8)=8’
+  >- (rw[Wkey4_def]\\
+     EVAL_TAC)
+  >> Suff ‘(desCore 8 (KS Wkey4 8) (desCore 8 (KS Wkey4 8) x)) =
+           (desCore 8 (REVERSE (KS Wkey4 8)) (desCore 8 (KS Wkey4 8) x))’
+  >- (Rewr'\\
+      rw[desCore_CORRECT])
+  >> Know ‘(REVERSE (KS Wkey4 8))=(KS Wkey4 8)’
+  >- (rw[Wkey4_def]\\
+       EVAL_TAC)
+  >> rw[])
+  >> rw[w4trans1_def,w4trans2_def]
+  >> Know ‘LENGTH (KS Wkey4 8)=8’
+  >- (rw[Wkey4_def]\\
+     EVAL_TAC)
+  >> Suff ‘(desCore 8 (KS Wkey4 8) (desCore 8 (KS Wkey4 8) (IIP (Join (x,x))))) =
+           (desCore 8 (REVERSE (KS Wkey4 8)) (desCore 8 (KS Wkey4 8) (IIP (Join (x,x)))))’
+  >- (Rewr'\\
+      rw[desCore_CORRECT]\\
+      rw[IP_IIP_Inverse,Split_Join_Inverse])
+  >> Know ‘(REVERSE (KS Wkey4 8))=(KS Wkey4 8)’
+  >- (rw[Wkey4_def]\\
+       EVAL_TAC)
+  >> rw[]
+QED
+
+(* Added by Chun Tian *)
+Theorem BIJ_for_weak_keys :
+    !x. MEM x Wtextlist ==> ?f. BIJ f x univ(:word32)
+Proof
+    rw [Wtextlist_def]
+ >| [ (* goal 1 (of 4) *)
+      Q.EXISTS_TAC ‘w1trans1’ >> rw [BIJ_wtext1],
+      (* goal 2 (of 4) *)
+      Q.EXISTS_TAC ‘w2trans1’ >> rw [BIJ_wtext2],
+      (* goal 3 (of 4) *)
+      Q.EXISTS_TAC ‘w3trans1’ >> rw [BIJ_wtext3],
+      (* goal 4 (of 4) *)
+      Q.EXISTS_TAC ‘w4trans1’ >> rw [BIJ_wtext4] ]
+QED
+
+Definition wtrans1_def :
+    wtrans1 = [w1trans1;w2trans1;w3trans1;w4trans1]
+End
+
+(* Added by Chun Tian *)
+Theorem BIJ_for_weak_keys_explicit :
+    !i. i < 4 ==> BIJ (EL i wtrans1) (EL i Wtextlist) univ(:word32)
+Proof
+    NTAC 2 STRIP_TAC
+ >> ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3’ by rw []
+ >| [ (* goal 1 (of 4) *)
+      rw [wtrans1_def, Wtextlist_def, BIJ_wtext1],
+      (* goal 2 (of 4) *)
+      rw [wtrans1_def, Wtextlist_def, BIJ_wtext2],
+      (* goal 3 (of 4) *)
+      rw [wtrans1_def, Wtextlist_def, BIJ_wtext3],
+      (* goal 4 (of 4) *)
+      rw [wtrans1_def, Wtextlist_def, BIJ_wtext4] ]
+QED
+
+Theorem text_num:
+   !x. MEM x Wtextlist ==> CARD x= CARD univ(:word32)
+Proof
+     rw[Wtextlist_def]
+  >- (MATCH_MP_TAC FINITE_BIJ_CARD\\
+      Q.EXISTS_TAC ‘w1trans1’\\
+      CONJ_TAC >- rw[Wtext1_def]\\
+      rw[BIJ_wtext1])
+
+  >- (MATCH_MP_TAC FINITE_BIJ_CARD\\
+      Q.EXISTS_TAC ‘w2trans1’\\
+      CONJ_TAC >- rw[Wtext2_def]\\
+      rw[BIJ_wtext2])
+
+  >- (MATCH_MP_TAC FINITE_BIJ_CARD\\
+      Q.EXISTS_TAC ‘w3trans1’\\
+      CONJ_TAC >- rw[Wtext3_def]\\
+      rw[BIJ_wtext3])
+
+  >> MATCH_MP_TAC FINITE_BIJ_CARD
+  >> Q.EXISTS_TAC ‘w4trans1’
+  >> CONJ_TAC >- rw[Wtext4_def]
+  >> rw[BIJ_wtext4]
+QED
+
+(* Added by Chun Tian *)
+Theorem DES_weak_fp_card :
+    !x. MEM x Wtextlist ==> CARD x = 2 ** 32
+Proof
+    RW_TAC std_ss [GSYM card_word32, BIJ_for_weak_keys]
+ >> MATCH_MP_TAC FINITE_BIJ_CARD
+ >> ‘FINITE x’ by fs [Wtextlist_def]
+ >> simp []
+ >> MATCH_MP_TAC BIJ_for_weak_keys >> art []
+QED
+
+(* See N. Tihanyi, “Report on the First DES Fixed Points for Non-Weak Keys: Case-Study
+   of Hacking an IoT Environment,” IEEE Access, vol. 10, pp. 77802–77809, Jan. 2022.
+ *)
+Definition non_weak_keys_def :
+    non_weak_keys :(word64 # word64) list = [
+      (* format: (non-weak key, plaintext) *)
+      (0xB0B351C802C83DE0w,0x4739A2F04B7EAB28w);
+      (0x5D460701328F2962w,0x9FE10D2E8C496143w);
+      (0x4F4CAE37FD37C21Fw,0xB8C65D0FB48154D7w);
+      (0xA2B9F8FECD70D69Dw,0x601EF2D173B69EBCw)
+    ]
+End
+
+(* Added by Chun Tian *)
+Theorem DES_fp_non_weak_keys :
+    !i. i < LENGTH non_weak_keys ==>
+        let (key,plaintext) = EL i non_weak_keys;
+            (encrypt,decrypt) = FullDES key
+        in
+           encrypt plaintext = plaintext
+Proof
+    rw [non_weak_keys_def, DES_def]
+ >> ‘i = 0 \/ i = 1 \/ i = 2 \/ i = 3’ by rw []
+ >> rw []
+ >> EVAL_TAC
+QED
+
+Definition AllpairXor_def:
+    AllpairXor (X:word6)= {(x1,x2)| x1 ⊕ x2=X}
+End
+
+Definition trans1_def:
+  trans1 (x1:word6,x2:word6) = x1
+End
+
+Definition trans2_def:
+  trans2 (x:word6)= (x,x)
+End
+
+Theorem BIJ_XORL:
+   BIJ trans1 (AllpairXor 0x0w) univ(:word6)
+Proof
+     rw[BIJ_IFF_INV]
+  >> EXISTS_TAC “trans2”
+  >> rw[]
+
+  >- (rw[AllpairXor_def,trans2_def])
+  >- (POP_ASSUM MP_TAC\\
+      rw[AllpairXor_def,trans2_def,trans1_def]\\
+      Know ‘x1 ⊕ x1 ⊕ x2=x1 ⊕ 0w’
+      >- RW_TAC fcp_ss[]\\
+      rw[WORD_XOR_CLAUSES]
+      )
+
+  >>  rw[trans2_def,trans1_def]
+QED
+
+Theorem xor_P:
+   !x1 x2. P(x1) ⊕ P(x2)=P(x1⊕x2)
+Proof
+     RW_TAC fcp_ss[P_def,bitwise_perm_def,dimindex_32]
+  >> Q.ABBREV_TAC ‘p=(32 − EL (31 − i) P_data)’
+  >>Know ‘p<32’
+  >-(fs [Abbr ‘p’, dimindex_32] \\
+      POP_ASSUM MP_TAC \\
+      Q.SPEC_TAC (‘i’, ‘n’) \\
+      rpt (CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV list_ss [P_data]))) \\
+      REWRITE_TAC [])
+  >> rw[word_xor_def]
+  >> rw[FCP_BETA]
+QED
+
+Theorem xor_E:
+   !x1 x2. E(x1) ⊕ E(x2)=E(x1⊕x2)
+Proof
+     RW_TAC fcp_ss[E_def,bitwise_perm_def,dimindex_32,dimindex_48]
+  >> Q.ABBREV_TAC ‘p=(32 − EL (47 − i) E_data)’
+  >> Know ‘p<32’
+  >- (fs [Abbr ‘p’, dimindex_48] \\
+      POP_ASSUM MP_TAC \\
+      Q.SPEC_TAC (‘i’, ‘n’) \\
+      rpt (CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV list_ss [E_data]))) \\
+      REWRITE_TAC [])
+  >> rw[word_xor_def]
+  >> rw[FCP_BETA]
+QED
+
+Theorem xor_S1:
+   ?x1 x2. S1(x1) ⊕ S1(x2)<>S1(x1⊕x2)
+Proof
+     rw[SBox_def,S1_data]
+  >> Q.EXISTS_TAC ‘0b0w’
+  >> Q.EXISTS_TAC ‘0b0w’
   >> EVAL_TAC
 QED
 
