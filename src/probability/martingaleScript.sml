@@ -58,12 +58,12 @@ End
 
 (* the set of all filtrations of A *)
 Definition filtration_def :
-   filtration A (a :num -> 'a algebra) =
-     ((!n. sub_sigma_algebra (a n) A) /\
-      (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j)))
+   filtration A (a :num -> 'a algebra) <=>
+      (!n. sub_sigma_algebra (a n) A) /\
+      (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j))
 End
 
-(* usually denoted by (sp,sts,a,m) in textbooks *)
+(* NOTE: This is usually denoted by (sp,sts,a,m) in textbooks *)
 Definition filtered_measure_space_def :
    filtered_measure_space m a =
       (measure_space m /\ filtration (m_space m,measurable_sets m) a)
@@ -1899,7 +1899,7 @@ Proof
 QED
 
 Theorem pair_operation_CONS :
-    pair_operation (\x y. [x; y]) (EL 0) (EL 1)
+    pair_operation CONS HD TL
 Proof
     rw [pair_operation_def]
 QED

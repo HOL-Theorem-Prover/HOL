@@ -511,6 +511,14 @@ val SIGMA_ALGEBRA_SIGMA = store_thm
    >> RW_TAC std_ss []
    >> PROVE_TAC [SUBSET_DEF]);
 
+Theorem SIGMA_ALGEBRA_SIGMA_UNIV :
+    !sts. sigma_algebra (sigma UNIV sts)
+Proof
+    Q.X_GEN_TAC ‘sts’
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
+ >> rw [subset_class_def]
+QED
+
 (* power set of any space gives the largest possible algebra and sigma-algebra *)
 val POW_ALGEBRA = store_thm
   ("POW_ALGEBRA", ``!sp. algebra (sp, POW sp)``,
