@@ -1366,7 +1366,7 @@ val group_comm_exp_exp = store_thm(
    subgroup_transitive      |- !g h k. subgroup g h /\ subgroup h k ==> subgroup g k
    subgroup_I_antisym       |- !g h. subgroup h g /\ subgroup g h ==> GroupIso I h g
    subgroup_carrier_antisym |- !g h. subgroup h g /\ G SUBSET H ==> GroupIso I h g
-   subgroup_is_submoniod    |- !g h. Group g /\ Group h /\ subgroup h g ==> submonoid h g
+   subgroup_is_submonoid    |- !g h. Group g /\ Group h /\ subgroup h g ==> submonoid h g
    subgroup_order_eqn       |- !g h. Group g /\ Group h /\ subgroup h g ==>
                                !x. x IN H ==> (order h x = ord x)
 
@@ -2046,23 +2046,24 @@ val subgroup_carrier_antisym = store_thm(
       Group g /\ Group h /\ GroupHomo I h g ==> MonoidHomo I h g
    This is true by group_homo_is_monoid_homo
 *)
-val subgroup_is_submoniod = store_thm(
-  "subgroup_is_submoniod",
-  ``!g:'a group h. Group g /\ Group h /\ subgroup h g ==> submonoid h g``,
+Theorem subgroup_is_submonoid0:
+  !g:'a group h. Group g /\ Group h /\ subgroup h g ==> submonoid h g
+Proof
   rw[subgroup_def, submonoid_def] >>
-  rw[group_homo_is_monoid_homo]);
+  rw[group_homo_is_monoid_homo]
+QED
 
 (* Theorem: Group g /\ Group h /\ subgroup h g ==> !x. x IN H ==> (order h x = ord x) *)
 (* Proof:
    Note Monoid g /\ Monoid h                  by group_is_monoid
-    and submonoid h g                         by subgroup_is_submoniod
+    and submonoid h g                         by subgroup_is_submonoid0
    Thus !x. x IN H ==> (order h x = ord x)    by submonoid_order_eqn
 *)
 val subgroup_order_eqn = store_thm(
   "subgroup_order_eqn",
   ``!g:'a group h. Group g /\ Group h /\ subgroup h g ==>
    !x. x IN H ==> (order h x = ord x)``,
-  rw[group_is_monoid, subgroup_is_submoniod, submonoid_order_eqn]);
+  rw[group_is_monoid, subgroup_is_submonoid0, submonoid_order_eqn]);
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphic Image of a Group.                                             *)
@@ -2767,16 +2768,17 @@ val subgroup_is_group = store_thm(
    (2) Group g ==> Monoid g, true by group_is_monoid
    (3) h <= g ==> h.id = #e, true by subgroup_id
 *)
-val subgroup_is_submonoid = store_thm(
-  "subgroup_is_submonoid",
-  ``!(g:'a group) h. h <= g ==> h << g``,
+Theorem subgroup_is_submonoid:
+  !(g:'a group) h. h <= g ==> h << g
+Proof
   rpt strip_tac >>
   `Group h /\ Group g /\ H SUBSET G /\ (h.op = $* )` by metis_tac[Subgroup_def] >>
   rw_tac std_ss[Submonoid_def] >| [
     rw[],
     rw[],
     rw[subgroup_id]
-  ]);
+  ]
+QED
 
 (* Theorem: h <= g ==> !x. x IN H ==> !n. h.exp x n = x ** n *)
 (* Proof: by subgroup_is_submonoid, submonoid_exp *)
