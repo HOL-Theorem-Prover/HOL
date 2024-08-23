@@ -1143,9 +1143,9 @@ Proof
  >> rw []
 QED
 
-(* |- !N i. i < N ==> EL i IN Borel_measurable (sigma_lists Borel N) *)
+(* |- !N i. i < N ==> EL i IN Borel_measurable (Borel_lists N) *)
 Theorem IN_MEASURABLE_BOREL_EL =
-        SRULE [SPACE_BOREL, SIGMA_ALGEBRA_BOREL, IN_FUNSET]
+        SRULE [SPACE_BOREL, SIGMA_ALGEBRA_BOREL, IN_FUNSET, GSYM Borel_lists_def]
               (ISPEC “Borel” sigma_lists_simultaneously_measurable)
 
 val _ = export_theory ();
