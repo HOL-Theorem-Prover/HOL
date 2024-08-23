@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open pred_setTheory pairTheory bagTheory liftingTheory transferTheory
-     transferLib
+     transferLib liftLib
 
 (* Material on finite simple graphs mechanised from
      "Combinatorics and Graph Theory" by Harris, Hirst, and Mossinghoff
@@ -697,7 +697,7 @@ Proof
 QED
 
 
-Theorem Qt_graphs:
+Theorem Qt_graphs[liftQt]:
   Qt ceq graph_ABS graph_REP AR
 Proof
   simp[Qt_alt, AR_def, #absrep_id tydefrec, ceq_def, #termP_term_REP tydefrec]>>
@@ -752,45 +752,12 @@ Type udulgraphrep[local] = “:(α,undirectedG,unhyperG, ν,σ)ulabgraphrep”
  *)
 Type relgraph[pp] = “:(α, directedG, unhyperG, INF_OK, SL_OK) ulabgraph”
 
-
-Theorem funQ'[local] = SRULE[GSYM AND_IMP_INTRO] funQ |> GEN_ALL
-
-Theorem HK_thm2'[local] = HK_thm2 |> GEN_ALL |> SRULE[]
-
-fun grt th1 th2 = resolve_then.gen_resolve_then Any th1 th2 I
-
-fun tidy_tyvars th =
-  let val tyvs = type_vars_in_term (concl th)
-      val newvs =
-        List.tabulate(length tyvs,
-                      fn i => mk_vartype("'" ^ str (Char.chr(i + 97))))
-  in
-      INST_TYPE (ListPair.map(fn (ty1,ty2) => ty1 |-> ty2) (tyvs, newvs)) th
-  end
-
-fun opxfer res_th =
-  grt res_th HK_thm2 |> repeat (grt funQ') |> repeat (grt Qt_graphs)
-                     |> repeat (grt idQ) |> tidy_tyvars
-                     |> CONV_RULE Unwind.UNWIND_FORALL_CONV
-
 Definition emptyG0_def:
     emptyG0 : (α,δ,'ec,'el,'h, ν,'nl,σ) graphrep =
      <| nodes := {} ; edges := {||}; nlab := K ARB;
         nfincst := (:ν); dircst := (:δ); slcst := (:σ);
         edgecst := (:'ec) |>
 End
-
-fun liftdef respth nm =
-  let
-    val xfer = opxfer respth
-    val defrhs = rand (concl xfer)
-    val cvar = mk_var(nm, type_of defrhs)
-    val def = new_definition (nm ^ "_def", mk_eq(cvar, defrhs))
-    val relates = save_thm(nm ^ "_relates[transfer_rule]",
-                           REWRITE_RULE [SYM def] xfer)
-  in
-    (def, relates)
-  end
 
 Theorem emptyG0_respects:
   ceq emptyG0 emptyG0
@@ -2439,6 +2406,17 @@ Proof
   simp[FUN_EQ_THM, combinTheory.APPLY_UPDATE_THM] >> rw[] >>
   simp[BAG_FILTER_DEF] >> rw[]
 QED
+
+
+Definition removeNodes0_def:
+  removeNodes Ns grep =
+  grep with <| nodes := grep.nodes DIFF Ns ;
+               edges := BAG_FILTER
+                          (λe. DISJOINT (core_incident e) Ns)
+                          grep.edges;
+               nlab := λn. if n ∈ Ns then ARB else grep.nlab n |>
+End
+
 
 Definition removeNodes_def:
   removeNodes G N = ITSET removeNode N G
