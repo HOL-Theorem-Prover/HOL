@@ -155,3 +155,9 @@ unchanged. Malformed edges (e.g., those with empty sets in source or
 target position) are dropped. If `:'ec` maps to ONE_EDGE, then old
 edges are replaced by incoming edges (as long as the input set of
 edges only has one such for any given "position").
+
+    projectG : (α + num) set ->
+               (α,’dp,'ec,'el,'hp,'nfp,'nl,'slp) graph ->
+               (α,’dp,'ec,'el,'hp,'nfp,'nl,'slp) graph
+
+Projection restricts the nodes of the input graph to be those that also occur in the input set.
