@@ -30,7 +30,8 @@ endif
 ifdef HOLSELFTESTLEVEL
 
 # example directories to build at selftest level 1
-EXDIRS = arm/arm6-verification arm/armv8-memory-model arm/experimental \
+EXDIRS = algebra/aat \
+         arm/arm6-verification arm/armv8-memory-model arm/experimental \
          CCS Crypto/RSA Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
 	 STE algorithms computability countchars dependability dev \
