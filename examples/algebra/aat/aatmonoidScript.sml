@@ -535,7 +535,7 @@ Theorem INJ_MonoidIso_exists:
   ∀f M. INJ f (tmcarrier M) UNIV ⇒ ∃N. MonoidIso f M N
 Proof
   xfer_back_tac [] >> simp[] >> rpt strip_tac >>
-  REWRITE_TAC[Monoid_def] >>
+  REWRITE_TAC[Monoid_def] >> rename [‘INJ f M.carrier _’] >>
   qexists
   ‘<| carrier := IMAGE f M.carrier;
       op := λn1 n2. f (M.op (LINV f M.carrier n1) (LINV f M.carrier n2));
