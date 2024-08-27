@@ -481,6 +481,7 @@ Theorem monoid_iso_isgroup:
 Proof
   xfer_back_tac[] >>
   rw[monoidTheory.MonoidIso_def, monoidTheory.MonoidHomo_def] >>
+  rename [‘BIJ f g.carrier h.carrier’] >>
   ‘GroupHomo f g h’ by simp[groupTheory.GroupHomo_def] >>
   ‘GroupIso f g h’ by simp[groupTheory.GroupIso_def] >>
   metis_tac[groupTheory.group_iso_group]
