@@ -18,7 +18,7 @@ open prim_recTheory arithmeticTheory numLib combinTheory res_quanTheory
      res_quanTools pairTheory pred_setTheory pred_setLib relationTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
-     real_topologyTheory listTheory;
+     real_topologyTheory listTheory metricTheory;
 
 open util_probTheory extrealTheory sigma_algebraTheory iterateTheory
      real_borelTheory measureTheory hurdUtils;
@@ -2656,6 +2656,27 @@ val BOREL_MEASURABLE_SETS = store_thm
                    BOREL_MEASURABLE_SETS_SING,       (* x = c *)
                    BOREL_MEASURABLE_SETS_NOT_SING]); (* x <> c *)
 
+(* NOTE: This is similar with Borel_eq_le but this generator contains exhausting
+   sequences, which is needed when generating product sigma-algebras.
+ *)
+Theorem Borel_eq_le_ext :
+    Borel = sigma univ(:extreal) (IMAGE (\c. {x | x <= c}) univ(:extreal))
+Proof
+    Suff ‘subsets Borel =
+          subsets (sigma univ(:extreal) (IMAGE (\c. {x | x <= c}) univ(:extreal)))’
+ >- METIS_TAC [SPACE, SPACE_BOREL, SPACE_SIGMA]
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> reverse CONJ_TAC
+ >- (rw [GSYM SPACE_BOREL] \\
+     MATCH_MP_TAC SIGMA_SUBSET \\
+     rw [SPACE_BOREL, SIGMA_ALGEBRA_BOREL] \\
+     rw [SUBSET_DEF] \\
+     rw [BOREL_MEASURABLE_SETS_RC])
+ >> rw [Borel_eq_le]
+ >> MATCH_MP_TAC SIGMA_MONOTONE
+ >> rw [SUBSET_DEF]
+ >> Q.EXISTS_TAC ‘Normal a’ >> rw []
+QED
 
 (* ******************************************* *)
 (*        Borel measurable functions           *)
