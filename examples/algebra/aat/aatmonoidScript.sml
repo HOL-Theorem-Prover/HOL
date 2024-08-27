@@ -574,6 +574,27 @@ Theorem MITBAG_CONG = xfer $ GEN_ALL monoidTheory.GITBAG_CONG
 
 Theorem MBAG_IMAGE_PARTITION = xfer $ GEN_ALL GBAG_IMAGE_PARTITION
 
+(* ----------------------------------------------------------------------
+    Submonoid
+   ---------------------------------------------------------------------- *)
+
+Theorem Submonoid_respect:
+  (mequiv ===> mequiv ===> (=)) Submonoid Submonoid
+Proof
+  simp[FUN_REL_def, mequiv_def]
+QED
+val _ = liftdef Submonoid_respect "Submonoid"
+
+Theorem Submonoid_def[allow_rebind] = xfer monoidTheory.Submonoid_def
+Theorem submonoid_property = xfer monoidTheory.submonoid_property
+Theorem submonoid_carrier_subset = xfer monoidTheory.submonoid_carrier_subset
+Theorem submonoid_element = xfer monoidTheory.submonoid_element
+Theorem submonoid_op = xfer monoidTheory.submonoid_op
+Theorem submonoid_exp = xfer monoidTheory.submonoid_exp
+Theorem submonoid_homomorphism = xfer monoidTheory.submonoid_homomorphism
+Theorem submonoid_order = xfer monoidTheory.submonoid_order
+(* Theorem submonoid_alt = xfer monoidTheory.submonoid_alt *)
+
 
 (*
 val _ = show_assums := true

@@ -376,5 +376,201 @@ Theorem group_concise_axioms = xfer group_alt
 (* not sure what, if anything, to do with excluding/including construction *)
 
 Theorem group_exp_inv = xfer groupTheory.group_exp_inv
+Theorem group_inv_exp = xfer groupTheory.group_inv_exp
+Theorem group_exp_eq = xfer groupTheory.group_exp_eq
+Theorem group_exp_mult_comm = xfer groupTheory.group_exp_mult_comm
+Theorem group_comm_exp_exp = xfer groupTheory.group_comm_exp_exp
+
+Theorem GroupHomo_respect:
+  (((=) ===> (=)) ===> gequiv ===> gequiv ===> (=)) GroupHomo GroupHomo
+Proof
+  simp[FUN_REL_def, gequiv_def] >> simp[GSYM FUN_EQ_THM]
+QED
+val _ = liftdef GroupHomo_respect "GroupHomo"
+
+Theorem GroupIso_respect:
+  (((=) ===> (=)) ===> gequiv ===> gequiv ===> (=)) GroupIso GroupIso
+Proof
+  simp[FUN_REL_def, gequiv_def] >> simp[GSYM FUN_EQ_THM]
+QED
+val _ = liftdef GroupIso_respect "GroupIso"
+
+Theorem GroupIso_def[allow_rebind] = xfer groupTheory.GroupIso_def
+
+Theorem GroupEndo_respect:
+  (((=) ===> (=)) ===> gequiv ===> (=)) GroupEndo GroupEndo
+Proof
+  simp[FUN_REL_def, gequiv_def] >> simp[GSYM FUN_EQ_THM]
+QED
+val _ = liftdef GroupEndo_respect "GroupEndo"
+
+Theorem GroupEndo_def[allow_rebind] = xfer groupTheory.GroupEndo_def
+
+Theorem GroupAuto_respect:
+  (((=) ===> (=)) ===> gequiv ===> (=)) GroupAuto GroupAuto
+Proof
+  simp[FUN_REL_def, gequiv_def] >> simp[GSYM FUN_EQ_THM]
+QED
+val _ = liftdef GroupAuto_respect "GroupAuto"
+
+Theorem GroupAuto_def[allow_rebind] = xfer groupTheory.GroupAuto_def
+
+Theorem subgroup_respect:
+  (gequiv ===> gequiv ===> (=)) subgroup subgroup
+Proof
+  simp[gequiv_def, FUN_REL_def]
+QED
+val _ = liftdef subgroup_respect "subgroup"
+
+Theorem subgroup_def[allow_rebind] = xfer groupTheory.subgroup_def
+
+Theorem group_homo_id = xfer groupTheory.group_homo_id
+
+Theorem group_homo_inv = xfer groupTheory.group_homo_inv
+Theorem group_homo_cong = xfer groupTheory.group_homo_cong
+Theorem group_homo_I_refl = xfer groupTheory.group_homo_I_refl
+Theorem group_homo_trans = xfer groupTheory.group_homo_trans
+Theorem group_homo_sym = xfer groupTheory.group_homo_sym
+Theorem group_homo_sym_any = xfer (GEN_ALL group_homo_sym_any)
+Theorem group_homo_compose = group_homo_trans
+
+Theorem group_homo_monoid_homo:
+  GroupHomo f g h ⇔ MonoidHomo f (G2M g) (G2M h)
+Proof
+  xfer_back_tac[] >> simp[] >>
+  metis_tac[groupTheory.group_homo_is_monoid_homo,
+            groupTheory.group_homo_monoid_homo]
+QED
+
+Theorem group_homo_is_monoid_homo = iffLR group_homo_monoid_homo
+
+Theorem group_homo_exp = xfer groupTheory.group_homo_exp
+Theorem group_iso_property = xfer groupTheory.group_iso_property
+Theorem group_iso_id = xfer groupTheory.group_iso_id
+Theorem group_iso_element = xfer groupTheory.group_iso_element
+Theorem group_iso_I_refl = xfer groupTheory.group_iso_I_refl
+Theorem group_iso_trans = xfer groupTheory.group_iso_trans
+Theorem group_iso_compose = group_iso_trans
+Theorem group_iso_sym = xfer groupTheory.group_iso_sym
+
+Theorem group_iso_monoid_iso:
+  GroupIso f g h ⇔ MonoidIso f (G2M g) (G2M h)
+Proof
+  xfer_back_tac [] >> simp[] >>
+  metis_tac[groupTheory.group_iso_monoid_iso,
+            groupTheory.group_iso_is_monoid_iso]
+QED
+Theorem group_iso_is_monoid_iso = iffLR group_iso_monoid_iso
+
+Theorem group_iso_exp = xfer groupTheory.group_iso_exp
+
+Theorem order_respect:
+  (gequiv ===> (=) ===> (=)) order order
+Proof
+  simp[FUN_REL_def, gequiv_def]
+QED
+val _ = liftdef order_respect "order"
+
+Theorem group_iso_order = xfer groupTheory.group_iso_order
+
+Theorem group_iso_linv_iso = group_iso_sym
+Theorem group_iso_bij = xfer groupTheory.group_iso_bij
+
+Theorem monoid_iso_isgroup:
+  isgroup g ∧ MonoidIso f g h ⇒ isgroup h
+Proof
+  xfer_back_tac[] >>
+  rw[monoidTheory.MonoidIso_def, monoidTheory.MonoidHomo_def] >>
+  ‘GroupHomo f g h’ by simp[groupTheory.GroupHomo_def] >>
+  ‘GroupIso f g h’ by simp[groupTheory.GroupIso_def] >>
+  metis_tac[groupTheory.group_iso_group]
+QED
+
+Theorem group_iso_card_eq = xfer groupTheory.group_iso_card_eq
+
+Theorem group_auto_id = xfer groupTheory.group_auto_id
+Theorem group_auto_element = xfer groupTheory.group_auto_element
+Theorem group_auto_compose = xfer groupTheory.group_auto_compose
+Theorem group_auto_is_monoid_auto:
+  GroupAuto f g ⇒ MonoidAuto f (G2M g)
+Proof
+  xfer_back_tac [] >> simp[group_auto_is_monoid_auto]
+QED
+Theorem group_auto_exp = xfer groupTheory.group_auto_exp
+Theorem group_auto_order = xfer groupTheory.group_auto_order
+Theorem group_auto_I = xfer groupTheory.group_auto_I
+Theorem group_auto_linv_auto = xfer groupTheory.group_auto_linv_auto
+Theorem group_auto_bij = xfer groupTheory.group_auto_bij
+
+Theorem subgroup_eqn = xfer groupTheory.subgroup_eqn
+
+fun transfer s = save_thm(s, xfer $ fetch "group" s)
+
+
+
+Theorem subgroup_is_submonoid0:
+  ∀g h. subgroup g h ⇒ submonoid (G2M g) (G2M h)
+Proof
+  xfer_back_tac[] >> simp[groupTheory.subgroup_is_submonoid0]
+QED
+
+Theorem Group_trivial_monoid[simp]:
+  Group (trivial_monoid x) ∧
+  AbelianGroup (trivial_monoid x)
+Proof
+  simp[groupTheory.Group_def, groupTheory.AbelianGroup_def,
+       monoidTheory.trivial_monoid_def, monoidTheory.monoid_invertibles_def]
+QED
+
+Theorem cmonoid_inj_image_respect:
+  (((=) ===> (=)) ===> gequiv ===> gequiv) cmonoid_inj_image cmonoid_inj_image
+Proof
+  simp[FUN_REL_def, gequiv_def] >> simp[GSYM FUN_EQ_THM] >>
+  simp[aatmonoidTheory.cmonoid_inj_image_def] >> rw[group_inj_image_group]
+QED
+val _ = liftdef cmonoid_inj_image_respect "group_inj_image"
+
+Theorem group_inj_image_abelian_group:
+  AbelianGroup g ⇒ AbelianGroup (group_inj_image f g)
+Proof
+  xfer_back_tac [] >> simp[cmonoid_inj_image_def] >> rw[] >>
+  rw[groupTheory.group_inj_image_abelian_group]
+QED
+
+Theorem group_inj_image_group_homo:
+  INJ f (carrier g) UNIV ⇒ GroupHomo f g (group_inj_image f g)
+Proof
+  xfer_back_tac [] >> rw[cmonoid_inj_image_def] >>
+  simp[groupTheory.group_inj_image_group_homo]
+QED
+
+Theorem Subgroup_respect:
+  (gequiv ===> gequiv ===> (=)) Subgroup Subgroup
+Proof
+  simp[FUN_REL_def, gequiv_def]
+QED
+val _ = liftdef Subgroup_respect "Subgroup"
+
+Theorem Subgroup_def[allow_rebind] = xfer groupTheory.Subgroup_def
+
+Theorem subgroup_is_submonoid:
+  Subgroup h g ⇒ Submonoid (G2M h) (G2M g)
+Proof
+  xfer_back_tac[] >> simp[groupTheory.subgroup_is_submonoid]
+QED
+
+val ths = map transfer [
+  "subgroup_subset",
+  "subgroup_homo_homo",
+  "subgroup_reflexive",
+  "subgroup_transitive",
+  "subgroup_I_antisym",
+  "subgroup_carrier_antisym",
+  "subgroup_order_eqn", "subgroup_property",
+  "subgroup_element", "subgroup_homomorphism",
+  "subgroup_carrier_subset", "subgroup_op", "subgroup_id",
+  "subgroup_inv"
+]
+
 
 val _ = export_theory();
