@@ -16,7 +16,7 @@ open pairTheory combinTheory optionTheory prim_recTheory arithmeticTheory
      pred_setTheory pred_setLib topologyTheory hurdUtils;
 
 open realTheory realLib iterateTheory seqTheory transcTheory real_sigmaTheory
-     real_topologyTheory;
+     real_topologyTheory metricTheory;
 
 open util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory martingaleTheory;
@@ -1032,6 +1032,42 @@ Proof
   \\ metis_tac[]
 QED
 
+(* NOTE: This is one of the rare theorems having ‘prob_space p’ at the conclusion.
+         It's most common uniform distribution over discrete sample space.
+ *)
+Theorem prob_space_on_finite_set :
+    !p. FINITE (p_space p) /\ p_space p <> {} /\ events p = POW (p_space p) /\
+        (!s. s IN events p ==> prob p s = &CARD s / &CARD (p_space p)) ==>
+        prob_space p
+Proof
+    rw [p_space_def, events_def, prob_def]
+ >> ‘CARD (m_space p) <> 0’ by rw [CARD_EQ_0]
+ >> rw [prob_on_finite_set]
+ >| [ (* goal 1 (of 3) *)
+      rw [positive_def]
+      >- (MATCH_MP_TAC zero_div >> rw [extreal_of_num_def]) \\
+      qabbrev_tac ‘N = CARD (m_space p)’ \\
+     ‘&N = Normal (&N)’ by rw [extreal_of_num_def] >> POP_ORW \\
+      MATCH_MP_TAC le_div \\
+      rw [extreal_lt_eq, extreal_of_num_def],
+      (* goal 2 (of 3) *)
+      rw [prob_def, p_space_def] \\
+     ‘m_space p IN measurable_sets p’ by rw [IN_POW] \\
+      rw [] \\
+      MATCH_MP_TAC div_refl >> rw [extreal_of_num_def],
+      (* goal 3 (of 3) *)
+      rw [additive_def] \\
+      Know ‘CARD (s UNION t) = CARD s + CARD t’
+      >- (MATCH_MP_TAC CARD_UNION_DISJOINT >> art [] \\
+          fs [IN_POW] \\
+          CONJ_TAC \\ (* 2 subgoals, same tactics *)
+          MATCH_MP_TAC FINITE_SUBSET >> Q.EXISTS_TAC ‘m_space p’ >> art []) >> Rewr' \\
+      Know ‘&(CARD s + CARD t) = &CARD s + (&CARD t :extreal)’
+      >- rw [extreal_of_num_def, extreal_add_def] >> Rewr' \\
+      ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+      MATCH_MP_TAC div_add >> rw [extreal_of_num_def] ]
+QED
+
 (* ************************************************************************* *)
 
 Theorem distribution_distr :
@@ -1039,6 +1075,13 @@ Theorem distribution_distr :
 Proof
     rpt FUN_EQ_TAC >> qx_genl_tac [`p`, `X`, `s`]
  >> RW_TAC std_ss [distribution_def, distr_def, prob_def, p_space_def]
+QED
+
+Theorem distribution_GSPEC :
+    !s. distribution p X s = prob p {x | x IN p_space p /\ X x IN s}
+Proof
+    rw [distribution_def, PREIMAGE_def]
+ >> simp [PROB_GSPEC]
 QED
 
 (* alternative definition of ‘distribution_function’ *)
