@@ -146,10 +146,10 @@ evaluations.")
   (concat "\\(Theorem\\|Triviality\\)" hol-name-attrs-colon-re))
 (defvar hol-quoted-definition-re-begin
   (concat "\\(Definition\\|\\(Co\\)?Inductive\\)" hol-name-attrs-colon-re))
-(defvar hol-quoted-datatype-re-begin "Datatype[[:space:]]*:")
+(defvar hol-quoted-datatype-re-begin "\\(Datatype[[:space:]]*:\\)")
 (defvar hol-quoted-Quote-re-begin
-  (concat "Quote[[:space:]]+\\([A-Za-z0-9_']+[[:space:]]*=[[:space:]]*\\)?"
-          "[A-Za-z0-9_'.]+[[:space:]]*:"))
+  (concat "\\(Quote[[:space:]]+\\([A-Za-z0-9_']+[[:space:]]*=[[:space:]]*\\)?"
+          "[A-Za-z0-9_'.]+[[:space:]]*:\\)"))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -631,7 +631,7 @@ starts >%s%s<"
                      (t
                       ; (message "Saw \"%s\"; position = %d; loading: %s"
                       ;           ms (point) (match-string 6))
-                      (let ((mod-name (match-string 6)))
+                      (let ((mod-name (match-string 9)))
                         (if hol-auto-load-p
                             ;; need to check if we're in a Proof[...] block
                             (let
