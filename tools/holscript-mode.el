@@ -13,6 +13,11 @@ ignoring fact that it should really only occur at the beginning of the line.")
         '("^\\(Proof\\|^QED\\)\\>" . 'holscript-theorem-syntax)
         '("^\\(Definition\\|\\(?:Co\\)?Inductive\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
           (1 'holscript-definition-syntax) (2 'holscript-thmname-syntax))
+        '("^\\(Quote\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*=[[:space:]]*\\([A-Za-z0-9'_.]+\\)[[:space:]]*:"
+          (1 'holscript-definition-syntax) (2 'holscript-thmname-syntax)
+          (3 'holscript-thmname-syntax))
+        '("^\\(Quote\\)[[:space:]]+\\([A-Za-z0-9'_.]+\\)[[:space:]]*:"
+          (1 'holscript-definition-syntax) (2 'holscript-thmname-syntax))
         '("^Termination\\>\\|^End\\>" . 'holscript-definition-syntax)
         '("^\\(Datatype\\)[[:space:]]*:" (1 'holscript-definition-syntax))
         '("\\_<THEN\\_>" . 'holscript-then-syntax)
@@ -351,6 +356,8 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
    "[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*" ; name
    "\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:"; optional annotations
    "\\|^Datatype[[:space:]]*:" ; or datatype (which has no following guff on same line)
+   "\\|(Quote[[:space:]]*\\([A-Za-z0-9'_]+[[:space:]]*=\\)?"
+   "[[:space:]]*[A-Za-z0-9'_.]*[[:space:]]*:)"
    )
   "Regular expression marking the beginning of the special syntax that marks
 a store_thm equivalent.")
@@ -746,6 +753,7 @@ a store_thm equivalent.")
             ("^Theorem=" sml-expr)
             ("^Triviality=" id)
             ("^Definition" definition-contents "^End")
+            ("^Quote" id-quoted "^End")
             ("^Inductive" id-quoted "^End")
             ("^CoInductive" id-quoted "^End")
             ("^Overload" id)
@@ -869,11 +877,11 @@ class characters.")
 
 (defconst holscript-column0-keywords-regexp
   (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Type"
-                "Proof"
+                "Proof" "Quote"
                 "Termination" "End" "QED" "Inductive" "CoInductive"
                 "Overload")))
 (defconst holscript-column0-declbegin-keyword
-  (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality"
+  (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Quote"
                 "Type" "Inductive" "CoInductive" "Overload")))
 
 (defconst holscript-sml-declaration-keyword
@@ -973,6 +981,7 @@ class characters.")
                 (progn (forward-char 1) "PF[")
               (forward-char 1) (string c))))
          ((equal 5 sclass-number)
+          ;; close paren symbol
           (let ((c (char-after)))
             (forward-char)
             (if (equal c ?\])
@@ -992,14 +1001,20 @@ class characters.")
                  (ldel1 (cl-search "<|" symstr))
                  (rdel1 (cl-search "|>" symstr))
                  (del1 (or (and ldel1 rdel1 (min ldel1 rdel1)) ldel1 rdel1)))
-            (if del1
-                (if (= del1 0)
-                    (progn
-                      (forward-char (- 2 (length symstr)))
-                      (substring symstr 0 2))
-                  (forward-char (- del1 (length symstr)))
-                  (substring symstr 0 del1))
-              symstr)))
+            (cond
+             (del1
+              (if (= del1 0)
+                  (progn
+                    (forward-char (- 2 (length symstr)))
+                    (substring symstr 0 2))
+                (forward-char (- del1 (length symstr)))
+                (substring symstr 0 del1)))
+             ((and (string= symstr "=")
+                   (save-mark-and-excursion
+                    (beginning-of-line)
+                    (looking-at "Quote")))
+              "MQ=")
+             (t symstr))))
          ((looking-at "\\$")
           (let ((p (point)))
             (if (> (skip-chars-forward "$") 1)
@@ -1154,12 +1169,18 @@ class characters.")
                           (match-end 1)))
                (del (or (and ldel rdel (max ldel rdel)) ldel rdel))
                (sz (length symstr)))
-          (if del
-              (if (= del sz) (progn (forward-char (- sz 2))
-                                    (substring symstr -2 nil))
-                (forward-char del)
-                (substring symstr del nil))
-            symstr)))
+          (cond
+           (del
+            (if (= del sz) (progn (forward-char (- sz 2))
+                                  (substring symstr -2 nil))
+              (forward-char del)
+              (substring symstr del nil)))
+           ((and (string= symstr "=")
+                   (save-mark-and-excursion
+                    (beginning-of-line)
+                    (looking-at "Quote")))
+            "MQ=")
+           (t symstr))))
        (t (buffer-substring-no-properties
            (point)
            (progn (skip-syntax-backward "w_")
@@ -1202,6 +1223,7 @@ class characters.")
     (`(:before . "^QED") '(column . 0))
     (`(:before . "^Termination") '(column . 0))
     (`(:before . "^Theorem") '(column . 0))
+    (`(:before . "^Quote") '(column . 0))
     (`(:before . "^Theorem=") '(column . 0))
     (`(:before . "[defnlabel]") '(column . 0))
     (`(:after . "[defnlabel]") 2)
@@ -1209,6 +1231,7 @@ class characters.")
     (`(:after . "PF]") 2)
     (`(:after . "^Termination") 2)
     (`(:after . "^Datatype:") 2)
+    (`(:after . "^Quote:") 2)
     (`(:before . "val") 0)
     (`(:before . "fun") 0)
     (`(:before . "open") 0)

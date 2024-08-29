@@ -146,6 +146,10 @@ evaluations.")
   (concat "\\(Theorem\\|Triviality\\)" hol-name-attrs-colon-re))
 (defvar hol-quoted-definition-re-begin
   (concat "\\(Definition\\|\\(Co\\)?Inductive\\)" hol-name-attrs-colon-re))
+(defvar hol-quoted-datatype-re-begin "Datatype[[:space:]]*:")
+(defvar hol-quoted-Quote-re-begin
+  (concat "Quote[[:space:]]+\\([A-Za-z0-9_']+[[:space:]]*=[[:space:]]*\\)?"
+          "[A-Za-z0-9_'.]+[[:space:]]*:"))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -515,7 +519,7 @@ starts >%s%s<"
       (concat
        (mapconcat (lambda (s) (concat "^" s "\\>"))
                   '("Theorem" "Definition" "Inductive" "CoInductive"
-                    "Triviality" "Datatype" "Type" "Overload")
+                    "Triviality" "Datatype" "Type" "Overload" "Quote")
                   "\\|")
        "\\|;\\|"
        (regexp-opt
@@ -542,6 +546,8 @@ starts >%s%s<"
                  (concat "`\\|“\\|‘\\|"
                          hol-quoted-theorem-proof-re-begin "\\|"
                          hol-quoted-definition-re-begin "\\|"
+                         hol-quoted-datatype-re-begin "\\|"
+                         hol-quoted-Quote-re-begin "\\|"
                          "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
                          "\\_<open\\_>")))
             (while (re-search-forward regexp (point-max) t)
@@ -574,10 +580,12 @@ starts >%s%s<"
                            (re-search-forward "^Termination\\|^End" nil t))
                           (error "Unbalanced `Definition' in region")))
                      ((and (or (string-prefix-p "Inductive" ms)
-                               (string-prefix-p "CoInductive" ms))
+                               (string-prefix-p "CoInductive" ms)
+                               (string-prefix-p "Datatype" ms)
+                               (string-prefix-p "Quote" ms))
                            (char-equal (char-before) ?:))
                       (if (not (re-search-forward "^End" nil t))
-                          (error "Unbalanced [Co]Inductive in region")))
+                          (error "Unbalanced [Co]Inductive/Quote in region")))
                      ((string= ms "open")
                       ;; point now after an open, now search forward
                       ;; to end of buffer or a semi-colon, or an infix
