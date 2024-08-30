@@ -1,3 +1,11 @@
+(* ========================================================================== *)
+(* FILE    : termScript.sml                                                   *)
+(* TITLE   : The type of Lambda terms and its substitution operations         *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(*         : 2023-2024 Michael Norrish and Chun Tian                          *)
+(* ========================================================================== *)
+
 open HolKernel Parse boolLib bossLib;
 
 open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory
@@ -323,6 +331,12 @@ val tpm_CONS = store_thm(
   ``tpm ((x,y)::pi) t = tpm [(x,y)] (tpm pi t)``,
   SRW_TAC [][GSYM pmact_decompose]);
 
+Theorem tpm_SNOC :
+    tpm (SNOC (x,y) pi) t = tpm pi (tpm [(x,y)] t)
+Proof
+    SIMP_TAC std_ss [SNOC_APPEND, GSYM pmact_decompose]
+QED
+
 val tpm_ALPHA = store_thm(
   "tpm_ALPHA",
   ``v ∉ FV u ==> (LAM x u = LAM v (tpm [(v,x)] u))``,
@@ -535,6 +549,21 @@ Proof
     rpt GEN_TAC
  >> EQ_TAC >- rw [lemma14b]
  >> rw [SUB_EQ_IMP_NOTIN_FV]
+QED
+
+(* ‘tpm pi M’ doesn't change M if all its variables are irrelevant *)
+Theorem lemma14b_tpm :
+    !pi M. DISJOINT (set (MAP FST pi)) (FV M) /\
+           DISJOINT (set (MAP SND pi)) (FV M) ==> tpm pi M = M
+Proof
+    Induct_on ‘pi’
+ >- rw []
+ >> simp [pairTheory.FORALL_PROD]
+ >> rw [Once tpm_CONS]
+ >> Know ‘tpm [(p_1,p_2)] M = [VAR p_1/p_2] M’
+ >- (MATCH_MP_TAC fresh_tpm_subst >> art [])
+ >> Rewr'
+ >> MATCH_MP_TAC lemma14b >> art []
 QED
 
 Theorem lemma14c:
@@ -935,6 +964,10 @@ Proof
   metis_tac []
 QED
 
+(*****************************************************************************)
+(*   Simultaneous substitution based on finite maps (ssub)                   *)
+(*****************************************************************************)
+
 val ssub_exists =
     parameter_tm_recursion
         |> INST_TYPE [alpha |-> ``:term``, ``:ρ`` |-> ``:string |-> term``]
@@ -984,6 +1017,15 @@ Theorem not_in_fmap_supp[simp]:
   x ∉ fmFV fm <=> x ∉ FDOM fm ∧ ∀y. y ∈ FDOM fm ==> x ∉ FV (fm ' y)
 Proof
   METIS_TAC [in_fmap_supp]
+QED
+
+Theorem ssub_14a :
+    !t. (!x. x IN FDOM fm ==> fm ' x = VAR x) ==>
+        (fm : string |-> term) ' t = t
+Proof
+    HO_MATCH_MP_TAC nc_INDUCTION2
+ >> Q.EXISTS_TAC ‘fmFV fm’
+ >> rw []
 QED
 
 Theorem ssub_14b:
@@ -1519,6 +1561,14 @@ Proof
  >> Q.PAT_X_ASSUM ‘FV A SUBSET FV E DIFF set Xs UNION B’ MP_TAC
  >> SET_TAC []
 QED
+
+(*****************************************************************************)
+(*  Simultaneous substitution given by a function containing infinite keys   *)
+(*****************************************************************************)
+
+Definition fssub_def :
+    fssub f t = FUN_FMAP f (FV t) ' t
+End
 
 (*---------------------------------------------------------------------------*
  *  ‘tpm’ as an equivalence relation between terms

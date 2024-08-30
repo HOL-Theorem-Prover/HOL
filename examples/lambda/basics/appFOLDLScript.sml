@@ -1,7 +1,15 @@
+(* ========================================================================== *)
+(* FILE    : appFOLDLScript.sml                                               *)
+(* TITLE   : List-based Constructors (LAMl and appstar) of Lambda Terms       *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(*         : 2023-2024 Michael Norrish and Chun Tian                          *)
+(* ========================================================================== *)
+
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory listTheory rich_listTheory pred_setTheory finite_mapTheory
-     hurdUtils;
+     hurdUtils listLib;
 
 open termTheory binderLib;
 
@@ -168,15 +176,16 @@ Proof
 QED
 
 Theorem ssub_appstar :
-    fm ' (M @* Ns) = (fm ' M) @* MAP (ssub fm) Ns
+    !Ns. fm ' (M @* Ns) = (fm ' M) @* MAP (ssub fm) Ns
 Proof
-    Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC, MAP_SNOC]
+    SNOC_INDUCT_TAC
+ >> rw [appstar_SNOC, MAP_SNOC]
 QED
 
 Theorem appstar_SUB :
     !args. [N/v] (t @* args) = [N/v] t @* MAP [N/v] args
 Proof
-    Induct_on ‘args’ using SNOC_INDUCT
+    SNOC_INDUCT_TAC
  >> rw [appstar_SNOC, MAP_SNOC]
 QED
 
@@ -187,7 +196,8 @@ Theorem FV_appstar :
     !M Ns. FV (M @* Ns) = FV M UNION (BIGUNION (IMAGE FV (set Ns)))
 Proof
     Q.X_GEN_TAC ‘M’
- >> Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC, MAP_SNOC]
+ >> SNOC_INDUCT_TAC
+ >> simp[appstar_SNOC, MAP_SNOC]
  >> Q.X_GEN_TAC ‘N’
  >> simp [LIST_TO_SET_SNOC] >> SET_TAC []
 QED

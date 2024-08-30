@@ -2559,44 +2559,23 @@ QED
    A bunch of properties relating to the use of IS_PREFIX as a partial order
  ---------------------------------------------------------------------------*)
 
-val IS_PREFIX_NIL = Q.store_thm ("IS_PREFIX_NIL",
-   `!x. IS_PREFIX x [] /\ (IS_PREFIX [] x = (x = []))`,
-   STRIP_TAC
-   THEN MP_TAC (Q.SPEC `x` list_CASES)
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX]
-   THEN PROVE_TAC [NOT_NIL_CONS]);
+(* |- !x. [] <<= x /\ (x <<= [] <=> x = []) *)
+Theorem IS_PREFIX_NIL = isPREFIX_NIL
 
-val IS_PREFIX_REFL = Q.store_thm ("IS_PREFIX_REFL",
-   `!x. IS_PREFIX x x`,
-   INDUCT_THEN list_INDUCT MP_TAC
-   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX]);
-val _ = export_rewrites ["IS_PREFIX_REFL"]
+(* |- !x. x <<= x *)
+Theorem IS_PREFIX_REFL[simp] = isPREFIX_REFL
 
-val IS_PREFIX_ANTISYM = Q.store_thm ("IS_PREFIX_ANTISYM",
-   `!x y. IS_PREFIX y x /\ IS_PREFIX x y ==> (x = y)`,
-   INDUCT_THEN list_INDUCT ASSUME_TAC
-   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN REPEAT GEN_TAC
-   THEN MP_TAC (Q.SPEC `y` list_CASES)
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN ONCE_REWRITE_TAC [IS_PREFIX]
-   THEN PROVE_TAC []);
+(* |- !x y. x <<= y /\ y <<= x ==> x = y *)
+Theorem IS_PREFIX_ANTISYM = isPREFIX_ANTISYM
 
-val IS_PREFIX_TRANS = Q.store_thm ("IS_PREFIX_TRANS",
-   `!x y z. IS_PREFIX x y /\ IS_PREFIX y z ==> IS_PREFIX x z`,
-   INDUCT_THEN list_INDUCT ASSUME_TAC
-   THEN SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN REPEAT GEN_TAC
-   THEN MP_TAC (Q.SPEC `y` list_CASES)
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN MP_TAC (Q.SPEC `z` list_CASES)
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX_NIL]
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX]
-   THEN PROVE_TAC []);
+(* |- !x y z. y <<= x /\ z <<= y ==> z <<= x *)
+Theorem IS_PREFIX_TRANS :
+    !x y z. IS_PREFIX x y /\ IS_PREFIX y z ==> IS_PREFIX x z
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC isPREFIX_TRANS
+ >> Q.EXISTS_TAC ‘y’ >> rw []
+QED
 
 val IS_PREFIX_BUTLAST = Q.store_thm ("IS_PREFIX_BUTLAST",
    `!x y. IS_PREFIX (x::y) (FRONT (x::y))`,
@@ -2637,29 +2616,8 @@ Proof
           THEN PROVE_TAC [numTheory.INV_SUC, IS_PREFIX_REFL]]
 QED
 
-Theorem IS_PREFIX_SNOC:
-   !x y z. IS_PREFIX (SNOC x y) z <=> IS_PREFIX y z \/ (z = SNOC x y)
-Proof
-   GEN_TAC
-   THEN GEN_TAC
-   THEN Q.SPEC_TAC (`x`, `x`)
-   THEN Q.SPEC_TAC (`y`, `y`)
-   THEN INDUCT_THEN list_INDUCT ASSUME_TAC
-   THENL [REPEAT GEN_TAC
-          THEN MP_TAC (Q.SPEC `z` list_CASES)
-          THEN STRIP_TAC
-          THEN ASM_SIMP_TAC boolSimps.bool_ss
-                 [SNOC, IS_PREFIX_NIL, IS_PREFIX, CONS_11,
-                  NOT_CONS_NIL]
-          THEN PROVE_TAC [],
-          REPEAT GEN_TAC
-          THEN MP_TAC (Q.SPEC `z` list_CASES)
-          THEN STRIP_TAC
-          THEN ASM_SIMP_TAC boolSimps.bool_ss
-                 [SNOC, IS_PREFIX_NIL, IS_PREFIX, CONS_11,
-                  NOT_CONS_NIL]
-          THEN PROVE_TAC []]
-QED
+(* |- !x y z. z <<= SNOC x y <=> z <<= y \/ z = SNOC x y *)
+Theorem IS_PREFIX_SNOC = isPREFIX_SNOC
 
 val IS_PREFIX_APPEND1 = Q.store_thm ("IS_PREFIX_APPEND1",
    `!a b c. IS_PREFIX c (APPEND a b) ==> IS_PREFIX c a`,
@@ -2702,6 +2660,7 @@ val prefixes_is_prefix_total = Q.store_thm("prefixes_is_prefix_total",
   GEN_TAC THEN Cases THEN SIMP_TAC(srw_ss())[] THEN
   Cases THEN SRW_TAC[][])
 
+(* NOTE: By using LENGTH_TAKE, this ‘n’ is actually ’LENGTH l1’ *)
 Theorem IS_PREFIX_EQ_TAKE :
     !l l1. l1 <<= l <=> ?n. n <= LENGTH l /\ l1 = TAKE n l
 Proof
@@ -2766,6 +2725,28 @@ Proof
  >> MATCH_MP_TAC TAKE_FRONT
  >> rw []
 QED
+
+Theorem IS_PREFIX_FRONT_CASES :
+    !l l1. l <> [] ==> (l1 <<= l <=> l = l1 \/ l1 <<= FRONT l)
+Proof
+    rpt GEN_TAC
+ >> STRIP_TAC
+ >> reverse EQ_TAC
+ >- (STRIP_TAC >- rw [IS_PREFIX_REFL] \\
+     MATCH_MP_TAC IS_PREFIX_TRANS \\
+     Q.EXISTS_TAC ‘FRONT l’ >> rw [] \\
+     MATCH_MP_TAC IS_PREFIX_BUTLAST' >> rw [])
+ >> rw [IS_PREFIX_EQ_TAKE, LENGTH_FRONT]
+ >> ‘n = LENGTH l \/ n < LENGTH l’ by rw []
+ >- (DISJ1_TAC >> ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     rw [TAKE_LENGTH_ID_rwt2])
+ >> DISJ2_TAC
+ >> Q.EXISTS_TAC ‘n’
+ >> rw [TAKE_FRONT]
+QED
+
+(* |- !f m n. GENLIST f m <<= GENLIST f n <=> m <= n *)
+Theorem IS_PREFIX_GENLIST = isPREFIX_GENLIST
 
 (* ----------------------------------------------------------------------
     longest_prefix

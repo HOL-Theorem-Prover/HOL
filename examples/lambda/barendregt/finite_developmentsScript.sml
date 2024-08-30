@@ -1,3 +1,10 @@
+(* ========================================================================== *)
+(* FILE    : finite_developmentsScript.sml                                    *)
+(* TITLE   : Finiteness of developments (Section 11.2 of [Barendregt 1984])   *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(* ========================================================================== *)
+
 open HolKernel Parse bossLib boolLib;
 
 open BasicProvers metisLib boolSimps pred_setTheory pathTheory relationTheory;
@@ -10,7 +17,6 @@ val _ = augment_srw_ss [boolSimps.LET_ss]
 
 val _ = new_theory "finite_developments";
 
-fun Save_Thm(n, th) = save_thm(n,th) before export_rewrites [n]
 fun Store_Thm(n, t, tac) = store_thm(n, t, tac) before export_rewrites [n]
 
 val _ = hide "set"
@@ -19,8 +25,6 @@ val RUNION_COMM = relationTheory.RUNION_COMM
 val RUNION = relationTheory.RUNION
 
 val SN_def = pathTheory.SN_def; (* cf. chap3Theory.SN_def, relationTheory.SN_def *)
-
-(* finiteness of developments : section 11.2 of Barendregt *)
 
 (* ----------------------------------------------------------------------
     substitutivity etc
@@ -2008,9 +2012,8 @@ val weight_at_def = new_specification(
     Q.ISPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
     SRW_TAC [][term_weight_thm]));
 
-val weight_at_swap = Save_Thm(
-  "weight_at_swap",
-  last (CONJUNCTS weight_at_def));
+(* |- !p w t pi. weight_at p w (tpm pi t) = weight_at p w t *)
+Theorem weight_at_swap[simp] = last (CONJUNCTS weight_at_def)
 
 val weight_at_vsubst = Store_Thm(
   "weight_at_vsubst",

@@ -1,6 +1,10 @@
-(*---------------------------------------------------------------------------*
- * Head Reductions of Lambda Terms                                           *
- *---------------------------------------------------------------------------*)
+(* ========================================================================== *)
+(* FILE    : head_reductionScript.sml                                         *)
+(* TITLE   : Head Reduction of Lambda Terms and (Weak) Head Normal Forms      *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(*         : 2023-2024 Michael Norrish and Chun Tian                          *)
+(* ========================================================================== *)
 
 open HolKernel Parse boolLib bossLib BasicProvers;
 
@@ -14,7 +18,6 @@ open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
 
 val _ = new_theory "head_reduction"
 
-(* val _ = ParseExtras.temp_loose_equality() *)
 val _ = hide "Y";
 
 Inductive hreduce1 :
@@ -334,6 +337,17 @@ Theorem substitutive_hreduce1 :
     substitutive (-h->)
 Proof
     rw [substitutive_def, hreduce1_substitutive]
+QED
+
+(* hreduce1 and ISUB *)
+Theorem hreduce1_ISUB :
+    !sub M N. M -h-> N ==> M ISUB sub -h-> N ISUB sub
+Proof
+    Induct_on ‘sub’ >- rw []
+ >> SIMP_TAC std_ss [FORALL_PROD, ISUB_def]
+ >> rpt STRIP_TAC
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC hreduce1_substitutive >> art []
 QED
 
 Theorem hreduce_substitutive :
@@ -1739,7 +1753,7 @@ Proof
  >> rw []
 QED
 
-Theorem LAMl_size_0_cases' :
+Theorem LAMl_size_eq_0 :
     !t. ~is_abs t ==> (LAMl_size t = 0)
 Proof
     rpt STRIP_TAC
@@ -1752,7 +1766,7 @@ Theorem LAMl_size_LAMl :
 Proof
     rpt STRIP_TAC
  >> Induct_on ‘vs’
- >- rw [LAMl_size_0_cases']
+ >- rw [LAMl_size_eq_0]
  >> rw []
 QED
 
@@ -1809,7 +1823,7 @@ Proof
     HO_MATCH_MP_TAC simple_induction >> rw []
 QED
 
-Theorem hnf_children_size_alt :
+Theorem hnf_children_size_hnf :
     !M. hnf M /\ ~is_abs M ==> hnf_children_size M = LENGTH (hnf_children M)
 Proof
     rw [absfree_hnf_cases] >> rw []
@@ -1841,7 +1855,7 @@ Proof
  >> Cases_on ‘LAMl_size M = 0’
  >- (fs [] \\
      Q.PAT_X_ASSUM ‘!M. P’ (MP_TAC o (Q.SPEC ‘M’)) >> rw [])
- >> ‘is_abs M’ by METIS_TAC [LAMl_size_0_cases']
+ >> ‘is_abs M’ by METIS_TAC [LAMl_size_eq_0]
  (* applying is_abs_cases_genX *)
  >> ‘?t0. M = LAM h t0’ by METIS_TAC [is_abs_cases_genX]
  >> FIRST_X_ASSUM (MP_TAC o (Q.SPEC ‘t0’))

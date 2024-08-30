@@ -4,13 +4,13 @@ open boolSimps pred_setTheory pathTheory;
 
 open chap3Theory standardisationTheory term_posnsTheory termTheory binderLib
      finite_developmentsTheory appFOLDLTheory nomsetTheory head_reductionTheory
-     horeductionTheory
+     horeductionTheory;
 
-val _ = new_theory "normal_order"
+val _ = new_theory "normal_order";
 
-val _ = set_trace "Unicode" 1
+val _ = set_trace "Unicode" 1;
 
-fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+val _ = hide "list"; (* from cardinalTheory *)
 
 (* ----------------------------------------------------------------------
     Normal order reduction
@@ -445,14 +445,15 @@ val noreduct_thm = store_thm(
     SRW_TAC [][]
   ]);
 
-val noreduct_Yf = Store_thm(
-  "noreduct_Yf",
-  ``(noreduct (Yf f) = SOME (f @@ Yf f)) ∧
-    (noreduct (Yf f @@ x) = SOME (f @@ Yf f @@ x))``,
+Theorem noreduct_Yf[simp] :
+    (noreduct (Yf f) = SOME (f @@ Yf f)) ∧
+    (noreduct (Yf f @@ x) = SOME (f @@ Yf f @@ x))
+Proof
   Q_TAC (NEW_TAC "z") `FV f` THEN
   `Yf f = LAM z (f @@ (VAR z @@ VAR z)) @@ LAM z (f @@ (VAR z @@ VAR z))`
     by SRW_TAC [][chap2Theory.Yf_fresh] THEN
-  SRW_TAC [][noreduct_thm, termTheory.lemma14b]);
+  SRW_TAC [][noreduct_thm, termTheory.lemma14b]
+QED
 
 val noreduct_characterisation = store_thm(
   "noreduct_characterisation",
@@ -544,23 +545,26 @@ val nopath_def = new_specification(
              |> SIMP_RULE (srw_ss()) [oneTheory.one, pair_case_unit,
                                       option_case_unit]);
 
-val first_nopath = Store_thm(
-  "first_nopath",
-  ``first (nopath M) = M``,
+Theorem first_nopath[simp] :
+    first (nopath M) = M
+Proof
   ONCE_REWRITE_TAC [nopath_def] THEN Cases_on `noreduct M` THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val mem_nopath = Store_thm(
-  "mem_nopath",
-  ``mem M (nopath M)``,
+Theorem mem_nopath[simp] :
+    mem M (nopath M)
+Proof
   ONCE_REWRITE_TAC [nopath_def] THEN Cases_on `noreduct M` THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val mem_nopath_expanded = Store_thm(
-  "mem_nopath_expanded",
-  ``mem M (case v of NONE => stopped_at M
-                   | SOME y => pcons M l (f y))``,
-  Cases_on `v` THEN SRW_TAC [][]);
+Theorem mem_nopath_expanded[simp] :
+    mem M (case v of NONE => stopped_at M
+                   | SOME y => pcons M l (f y))
+Proof
+  Cases_on `v` THEN SRW_TAC [][]
+QED
 
 val nopath_okpath = store_thm(
   "nopath_okpath",
@@ -675,10 +679,12 @@ val nopath_smaller = store_thm(
 
 
 val Omega_def = chap2Theory.Omega_def
-val noreduct_omega = Store_thm(
-  "noreduct_omega",
-  ``noreduct Ω = SOME Ω``,
-  SRW_TAC [][noreduct_thm, Omega_def]);
+
+Theorem noreduct_omega[simp] :
+    noreduct Ω = SOME Ω
+Proof
+  SRW_TAC [][noreduct_thm, Omega_def]
+QED
 
 val Omega_loops = store_thm(
   "Omega_loops",
@@ -693,11 +699,11 @@ val Omega_path_infinite = store_thm(
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN
   ONCE_REWRITE_TAC [nopath_def] THEN SRW_TAC [][]);
 
-
-val Omega_has_no_bnf = Store_thm(
-  "Omega_has_no_bnf",
-  ``¬has_bnf Ω``,
-  SRW_TAC [][has_bnf_finite_nopath, Omega_path_infinite]);
+Theorem Omega_has_no_bnf[simp] :
+    ¬has_bnf Ω
+Proof
+  SRW_TAC [][has_bnf_finite_nopath, Omega_path_infinite]
+QED
 
 val last_of_finite_nopath = store_thm(
   "last_of_finite_nopath",
@@ -823,16 +829,16 @@ val bnf_bnf_of = store_thm(
   ``bnf M ⇒ (bnf_of M = SOME M)``,
   SRW_TAC [][Once bnf_of_thm]);
 
-val bnf_of_Omega = Store_thm(
-  "bnf_of_Omega",
-  ``bnf_of Ω = NONE``,
-  METIS_TAC [Omega_has_no_bnf, bnf_of_NONE]);
+Theorem bnf_of_Omega[simp] :
+    bnf_of Ω = NONE
+Proof
+  METIS_TAC [Omega_has_no_bnf, bnf_of_NONE]
+QED
 
 (* ----------------------------------------------------------------------
     weak head reduction gives a congruence rule for -n->* of sorts
    ---------------------------------------------------------------------- *)
 
-open head_reductionTheory
 val head_normorder = store_thm(
   "head_normorder",
   ``∀M N. M -h-> N ⇒ M -n-> N``,

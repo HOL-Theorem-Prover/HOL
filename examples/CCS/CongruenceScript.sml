@@ -5,7 +5,7 @@
 (* COPYRIGHTS    : 1991-1995 University of Cambridge (Monica Nesi)            *)
 (*                 2016-2017 University of Bologna, Italy (Chun Tian)         *)
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
-(*                 2023-2024 Australian National University (Chun Tian)       *)
+(*                 2023-2024 The Australian National University (Chun Tian)   *)
 (******************************************************************************)
 
 open HolKernel Parse boolLib bossLib;
@@ -22,6 +22,11 @@ open BisimulationUptoTheory;
 val _ = new_theory "Congruence";
 
 val set_ss = std_ss ++ PRED_SET_ss;
+
+(* The ".." (Closefix) behind "listRangeINC" causes ‘prefix’ having a lowest
+   priority, breaking the grammar of CCS terms.
+ *)
+val _ = temp_remove_rules_for_term "listRangeINC";
 
 (******************************************************************************)
 (*                                                                            *)
