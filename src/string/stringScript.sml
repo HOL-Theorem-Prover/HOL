@@ -6,13 +6,12 @@
 (* AUTHOR       : Konrad Slind, University of Cambridge, 2001           *)
 (* =====================================================================*)
 
-(* interactive use:
-  app load ["rich_listTheory"];
-*)
-
 open HolKernel boolLib bossLib Parse;
-open numLib numSyntax listTheory rich_listTheory arithmeticTheory;
-open ternaryComparisonsTheory
+
+open numLib numSyntax listTheory rich_listTheory arithmeticTheory
+     pred_setTheory relationTheory;
+
+open ternaryComparisonsTheory;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory                                                *)
@@ -171,7 +170,6 @@ val char_size_def = Define `char_size (c:char) = 0`;
 (*---------------------------------------------------------------------------
     Some facts about the set of all characters and relations between them.
  ---------------------------------------------------------------------------*)
-open pred_setTheory relationTheory
 
 Theorem UNIV_IMAGE_CHR_count_256:
   UNIV = IMAGE CHR (count 256)
@@ -619,6 +617,14 @@ Proof
   \\ qexists_tac`CHR 0`
   \\ qexists_tac`CHR 1`
   \\ simp[char_lt_def]
+QED
+
+Theorem INFINITE_STR_UNIV :
+    INFINITE univ(:string)
+Proof
+  SRW_TAC [][INFINITE_UNIV] THEN
+  Q.EXISTS_TAC `\st. STRING (CHR 0) st` THEN SRW_TAC [][] THEN
+  Q.EXISTS_TAC `""` THEN SRW_TAC [][]
 QED
 
 (*---------------------------------------------------------------------------

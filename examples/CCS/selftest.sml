@@ -13,7 +13,11 @@ open BisimulationUptoTheory UniqueSolutionsTheory;
 
 open testutils;
 
-val _ = srw_ss()
+(* The ".." (Closefix) behind "listRangeINC" causes ‘prefix’ having a lowest
+   priority, breaking the grammar of CCS terms.
+ *)
+val _ = remove_rules_for_term "listRangeINC";
+
 val term_to_string = Portable.with_flag (Globals.linewidth, 3000) term_to_string
 
 fun CCS_TRANS_test (problem, result) = let

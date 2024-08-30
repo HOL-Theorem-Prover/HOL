@@ -1,3 +1,0 @@
-INCLUDES = $(dprot $(HOLDIR)/src/coalgebras) ../basics ../barendregt ../other-models
-
-EXTRA_CLEANS = $(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))

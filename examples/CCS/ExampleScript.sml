@@ -29,6 +29,11 @@ val _ = disable_tyabbrev_printing "transition";
 val _ = disable_tyabbrev_printing "context";
 val _ = disable_tyabbrev_printing "simulation";
 
+(* The ".." (Closefix) behind "listRangeINC" causes ‘prefix’ having a lowest
+   priority, breaking the grammar of CCS terms.
+ *)
+val _ = temp_remove_rules_for_term "listRangeINC";
+
 (******************************************************************************)
 (*                                                                            *)
 (*                     The coffee machine model [2]                           *)

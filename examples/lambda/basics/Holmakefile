@@ -1,4 +1,4 @@
-SRCDIRS = string finite_maps 
+SRCDIRS = string finite_maps pred_set/src/more_theories
 
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/src/%),$(SRCDIRS))
 

@@ -1,19 +1,19 @@
-(* this is an -*- sml -*- file *)
-open HolKernel Parse boolLib
+(* ========================================================================== *)
+(* FILE    : generic_termsScript.sml                                          *)
+(* TITLE   : Theory of generic terms with binders                             *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(* ========================================================================== *)
 
-open bossLib binderLib
-open basic_swapTheory nomsetTheory
-open pred_setTheory listTheory
-open BasicProvers
-open quotientLib
-open boolSimps
+open HolKernel Parse boolLib bossLib;
 
-fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
-fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
+open BasicProvers boolSimps pred_setTheory listTheory quotientLib;
 
-val _ = new_theory "generic_terms"
+open binderLib basic_swapTheory nomsetTheory;
 
-val _ = computeLib.auto_import_definitions := false
+val _ = new_theory "generic_terms";
+
+val _ = computeLib.auto_import_definitions := false;
 
 val _ = Datatype `
   pregterm = var string 'v
@@ -97,11 +97,16 @@ val ptpml_listpm = store_thm(
   Induct >> fsrw_tac[][ptpm_raw] >>
   srw_tac [][raw_ptpm_def]);
 
-val ptpm_thm = Save_Thm(
-  "ptpm_thm",
+(* |- (!p s vv. ptpm p (var s vv) = var (lswapstr p s) vv) /\
+      !p v bv bndts unbndts.
+        ptpm p (lam v bv bndts unbndts) =
+        lam (lswapstr p v) bv (listpm pt_pmact p bndts)
+          (listpm pt_pmact p unbndts)
+ *)
+Theorem ptpm_thm[simp] =
   raw_ptpm_def |> CONJUNCTS |> (fn l => List.take(l, 2))
                |> map (SUBS (map GSYM (CONJUNCTS ptpm_raw))) |> LIST_CONJ
-               |> REWRITE_RULE [ptpml_listpm] );
+               |> REWRITE_RULE [ptpml_listpm]
 
 val ptpm_fv = store_thm(
   "ptpm_fv",
@@ -118,11 +123,12 @@ val allatoms_def = Define`
   (allatomsl (t::ts) = allatoms t ∪ allatomsl ts)
 `;
 
-val allatoms_finite = Store_Thm(
-  "allatoms_finite",
-  ``(∀t:(α,β)pregterm. FINITE (allatoms t)) ∧
-    (∀l:(α,β)pregterm list. FINITE (allatomsl l))``,
-  ho_match_mp_tac oldind >> srw_tac [][allatoms_def]);
+Theorem allatoms_finite[simp] :
+    (∀t:(α,β)pregterm. FINITE (allatoms t)) ∧
+    (∀l:(α,β)pregterm list. FINITE (allatomsl l))
+Proof
+  ho_match_mp_tac oldind >> srw_tac [][allatoms_def]
+QED
 
 val allatoms_supports = store_thm(
   "allatoms_supports",
@@ -243,16 +249,17 @@ val aeq_fv = store_thm(
     ]
   ]);
 
-val aeq_refl = Store_Thm(
-  "aeq_refl",
-  ``(∀t:(α,β)pregterm. aeq t t) ∧ (∀l:(α,β)pregterm list. aeql l l)``,
+Theorem aeq_refl[simp] :
+    (∀t:(α,β)pregterm. aeq t t) ∧ (∀l:(α,β)pregterm list. aeql l l)
+Proof
   ho_match_mp_tac oldind >> asm_simp_tac (srw_ss())[aeq_rules] >>
   REPEAT gen_tac >> strip_tac >>
   MAP_EVERY Q.X_GEN_TAC [`b`, `s`] >>
   MATCH_MP_TAC aeq_lam >>
   SRW_TAC [][aeql_ptpm_eqn, ptpml_listpm] THEN
   Q.SPEC_THEN `s INSERT allatomsl l` MP_TAC NEW_def THEN SRW_TAC [][] THEN
-  METIS_TAC [ pmact_sing_inv]);
+  METIS_TAC [pmact_sing_inv]
+QED
 
 val aeq_sym = store_thm(
   "aeq_sym",

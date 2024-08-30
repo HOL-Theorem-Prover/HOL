@@ -605,6 +605,7 @@ val bnf_triangle = store_thm(
   ``M -b->* N /\ M -b->* N' /\ bnf N ==> N' -b->* N``,
   METIS_TAC [betaCR_square, bnf_reduction_to_self]);
 
+(* cf. normal_orderTheory.Omega_has_no_bnf *)
 Theorem Omega_betaloops[simp] :
     Omega -b-> N <=> N = Omega
 Proof
