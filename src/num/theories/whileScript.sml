@@ -3,9 +3,10 @@
 (* binder.                                                                   *)
 (*===========================================================================*)
 
-open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib
-     combinTheory prim_recTheory arithmeticTheory BasicProvers
-     optionTheory sumTheory
+open HolKernel boolLib Parse BasicProvers;
+
+open Prim_rec simpLib boolSimps metisLib combinTheory optionTheory sumTheory
+     prim_recTheory arithmeticTheory relationTheory;
 
 val _ = new_theory "while";
 
@@ -96,7 +97,7 @@ val WHILE_INDUCTION = Q.store_thm
  `!B C R.
      WF R /\ (!s. B s ==> R (C s) s)
      ==> !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v`,
- METIS_TAC [relationTheory.WF_INDUCTION_THM]);
+ METIS_TAC [WF_INDUCTION_THM]);
 
 
 val HOARE_SPEC_DEF = new_definition
@@ -266,7 +267,7 @@ val OLEAST_EQNS = store_thm(
     ((OLEAST n. F) = NONE) /\
     ((OLEAST n. T) = SOME 0)``,
   REPEAT STRIP_TAC THEN DEEP_INTRO_TAC OLEAST_INTRO THEN SRW_TAC [][] THEN
-  METIS_TAC [arithmeticTheory.NOT_ZERO_LT_ZERO]);
+  METIS_TAC [NOT_ZERO_LT_ZERO]);
 val _ = export_rewrites ["OLEAST_EQNS"]
 
 val OLEAST_EQ_NONE = Q.store_thm(
@@ -477,14 +478,14 @@ Proof
   Q.PAT_X_ASSUM ‘!x. P x ==> ?R. _’ (drule_then strip_assume_tac) >>
   Q.PAT_X_ASSUM ‘WFP R x’ (fn th => ntac 2 (pop_assum mp_tac) >> mp_tac th) >>
   Q.ID_SPEC_TAC ‘x’ >>
-  ho_match_mp_tac relationTheory.WFP_STRONG_INDUCT >> rpt strip_tac >>
+  ho_match_mp_tac WFP_STRONG_INDUCT >> rpt strip_tac >>
   simp[TAILCALL_def] >>
   Cases_on ‘c x’ >> simp[]
   >- (simp[TAILREC_TAILCALL] >> simp[TAILCALL_def] >>
       first_x_assum irule >> simp[] >>
       rpt strip_tac >> first_assum irule >> simp[]
       >- METIS_TAC[] >>
-      irule (cj 2 relationTheory.RTC_RULES_RIGHT1) >>
+      irule (cj 2 RTC_RULES_RIGHT1) >>
       first_assum $ irule_at (Pat ‘RTC _ _ _’) >> first_assum irule >>
       simp[]) >>
   simp[TAILREC_TAILCALL] >> simp[TAILCALL_def]
@@ -500,7 +501,7 @@ Proof
   strip_tac >> MATCH_MP_TAC TAILREC_GUARD_ELIMINATION >> rpt strip_tac >>
   simp[]
   >- METIS_TAC[] >>
-  Q.EXISTS_TAC ‘R’ >> full_simp_tac (srw_ss())[relationTheory.WF_EQ_WFP]
+  Q.EXISTS_TAC ‘R’ >> full_simp_tac (srw_ss())[WF_EQ_WFP]
 QED
 
 val _ =

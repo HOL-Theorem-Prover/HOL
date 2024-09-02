@@ -12,7 +12,7 @@ open pairTheory relationTheory prim_recTheory arithmeticTheory pred_setTheory
      combinTheory fcpTheory hurdUtils;
 
 open realTheory realLib seqTheory transcTheory iterateTheory real_sigmaTheory
-     topologyTheory real_topologyTheory;
+     topologyTheory real_topologyTheory metricTheory;
 
 open util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory;

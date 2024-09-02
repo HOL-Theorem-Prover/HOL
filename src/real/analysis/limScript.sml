@@ -23,10 +23,10 @@ val EXACT_CONV = jrhUtils.EXACT_CONV; (* there's one also in hurdUtils *)
 (* Specialize nets theorems to the pointwise limit of real->real functions   *)
 (*---------------------------------------------------------------------------*)
 
-val tends_real_real = new_definition(
-  "tends_real_real",
-  “(tends_real_real f l)(x0) =
-        (f tends l)(mtop(mr1),tendsto(mr1,x0))”);
+Definition tends_real_real :
+    (tends_real_real f l)(x0) =
+        (f tends l)(mtop(mr1),tendsto(mr1,x0))
+End
 
 val _ = add_infix("->", 250, HOLgrammars.RIGHT)
 val _ = overload_on ("->", ``tends_real_real``);
@@ -44,7 +44,7 @@ val LIM = store_thm("LIM",
 
 (* connection to real_topologyTheory *)
 Theorem LIM_AT_LIM :
-    !f l a. (real_topology$--> f l) (at a) <=> (f -> l)(a)
+    !f l a. (f --> l) (at a) <=> (f -> l)(a)
 Proof
     REWRITE_TAC [LIM_AT, LIM, dist]
 QED
