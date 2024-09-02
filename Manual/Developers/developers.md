@@ -210,6 +210,10 @@ Unless otherwise noted, they are built by the configuration process.
 :   The quotation filter that runs over sources before they are seen by SML implementations.
     This is used interactively (*via* a Unix filter that preprocesses all user-input under Moscow ML, or built into the Poly/ML REPL), and non-interactively (by being applied to source files).
 
+`unicode-grep`
+:   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
+    The command-line specifies the directories to scan, and options dictate which requirements are enforced/checked for.
+
 ## Other Tools Directories
 
 `tools/build-logs` and `tools-poly/build-logs`
