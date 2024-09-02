@@ -8774,13 +8774,13 @@ Proof
 QED
 
 Theorem prob_div_mul_refl :
-  ∀p A x. prob_space p ∧ A IN events p ∧ prob p A ≠ 0 ⇒
+  !p A x. prob_space p /\ A IN events p /\ prob p A <> 0 ==>
           x / prob p A * prob p A = x
 Proof
     rpt STRIP_TAC
  >> `prob p A <> PosInf /\ prob p A <> NegInf` by METIS_TAC [PROB_FINITE]
  >> `?a. prob p A = Normal a` by METIS_TAC [extreal_cases]
- >> ‘a ≠ 0’ by METIS_TAC [extreal_of_num_def, extreal_11]
+ >> ‘a <> 0’ by METIS_TAC [extreal_of_num_def, extreal_11]
  >> Q.PAT_X_ASSUM ‘prob p A = Normal a’ (ONCE_REWRITE_TAC o wrap)
  >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
  >> MATCH_MP_TAC div_mul_refl >> art []
