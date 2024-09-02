@@ -755,6 +755,19 @@ fun check_definition schemevars clocs tm = let
                                                 type_vars_in_term tm))
                              reltyvars schemevars
 
+  (* check for specifications confused about the type of the relation *)
+  val _ = HOLset.app (fn v1 => HOLset.app (fn v2 =>
+    if is_var v1 andalso is_var v2 andalso fst (dest_var v1) = fst (dest_var v2)
+            andalso not (aconv v1 v2)
+    then let
+        fun ty2s ty = String.extract(Parse.type_to_string ty, 1, NONE)
+        val tys = String.concatWith ", " (map (ty2s o type_of) [v1, v2])
+      in
+        raise mk_HOL_ERR "InductiveDefinition"
+                         "check_clause"
+                         ("relation occurs with distinct types: " ^ tys)
+    end else ()) relvars) relvars
+
   (* check that there aren't duplicate names in the forall chain *)
   fun check_clause_foralls n c = let
     val (vs, body) = strip_forall c
