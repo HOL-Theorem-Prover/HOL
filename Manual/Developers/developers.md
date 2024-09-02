@@ -250,16 +250,19 @@ As of September 2024, the requirements are:
     If this is required, the line on which this occurs can be exempted by having that line include the substring `UOK` (typically inside an SML comment).
     All Unicode is accepted under `examples`.
 
--   No use of TABs anywhere
+-   No use of TABs anywhere.
 
 -   No trailing whitespace.
 
-We encourage developers to keep their lines to be 80 columns or less.
+We encourage developers to keep their lines under 80 columns in width.
 
 
 <!-- # Appropriate Idioms  -->
 
 # Glossary of common abbreviations in the source code
+
+These appear with either capitalisation.
+There is a slight tendency to having all upper-case SML identifiers refer to theorems, or functions that returns theorems.
 
 `abs`
 :   Abstraction.
