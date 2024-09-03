@@ -25,15 +25,21 @@ Proof
   metis_tac[MULT_COMM, DIV_MULT, DECIDE “1 < 2n”]
 QED
 
-val prefix_lem1 = Q.store_thm("prefix_lem1",
-`0<LENGTH b  ==> (a++b = c ==> a ≺ c )`,
-simp[prefix_def,rich_listTheory.IS_PREFIX_APPEND] >> rw[] >- (qexists_tac`b` >> simp[]) >> rw[]>>
-metis_tac[listTheory.NOT_NIL_EQ_LENGTH_NOT_0]  )
+Theorem prefix_lem1:
+  0 < LENGTH b ==> a++b = c ==> a ≺ c
+Proof
+  simp[prefix_def,rich_listTheory.IS_PREFIX_APPEND] >> rw[]
+  >- (qexists_tac`b` >> simp[]) >> rw[]>>
+  metis_tac[listTheory.NOT_NIL_EQ_LENGTH_NOT_0]
+QED
 
-val prefix_length_lt = Q.store_thm("prefix_length_lt",
-`a ≺ b ==> LENGTH a < LENGTH b`,
-rw[prefix_def] >> `LENGTH a <= LENGTH b` by fs[rich_listTheory.IS_PREFIX_LENGTH] >>
-Cases_on`LENGTH a = LENGTH b` >> simp[] >> metis_tac[rich_listTheory.IS_PREFIX_LENGTH_ANTI])
+Theorem prefix_length_lt: a ≺ b ==> LENGTH a < LENGTH b
+Proof
+  rw[prefix_def] >>
+  ‘LENGTH a <= LENGTH b’ by fs[rich_listTheory.IS_PREFIX_LENGTH] >>
+  Cases_on‘LENGTH a = LENGTH b’ >> simp[] >>
+  metis_tac[rich_listTheory.IS_PREFIX_LENGTH_ANTI]
+QED
 
 Theorem prefix_append:
   a ≺ b <=> ?s. b=a++s /\ s<>[]
@@ -75,14 +81,19 @@ Proof
   simp[EVEN_ADD,EVEN_MULT] >> metis_tac[MULT_DIV,MULT_COMM,DECIDE ``0n<2``]
 QED
 
-val bool_num_inv = Q.store_thm("bool_num_inv[simp]",
-`∀n. bool_list_to_num (num_to_bool_list n) = n`,
-ho_match_mp_tac (theorem"num_to_bool_list_ind") >> rpt strip_tac >>
+Theorem bool_num_inv[simp]:
+  ∀n. bool_list_to_num (num_to_bool_list n) = n
+Proof
+  ho_match_mp_tac (theorem"num_to_bool_list_ind") >> rpt strip_tac >>
   rw[Once num_to_bool_list_def,bool_list_to_num_def]
-  >- (MP_TAC(Q.INST[`n`|->`2`,`q`|->`1`,`m`|->`n`]DIV_SUB)>>fs[]>>impl_keep_tac
-      >-(fs[EVEN_EXISTS])>>simp[LEFT_SUB_DISTRIB]>>Q.SPEC_THEN`2`MP_TAC DIVISION>>fs[]>>
-      disch_then(Q.SPEC_THEN`n`(MP_TAC o SYM) ) >> fs[EVEN_MOD2] )
-  >- (fs[GSYM ODD_EVEN,ODD_EXISTS] >>metis_tac[MULT_DIV,MULT_COMM,DECIDE ``0n<2``,ADD1] ) )
+  >- (MP_TAC(Q.INST[‘n’|->‘2’,‘q’|->‘1’,‘m’|->‘n’]DIV_SUB)>>fs[]>>
+      impl_keep_tac
+      >- fs[EVEN_EXISTS] >>
+      simp[LEFT_SUB_DISTRIB]>>Q.SPEC_THEN‘2’MP_TAC DIVISION>>fs[]>>
+      disch_then(Q.SPEC_THEN‘n’(MP_TAC o SYM) ) >> fs[EVEN_MOD2] )
+  >- (fs[GSYM ODD_EVEN,ODD_EXISTS] >>
+      metis_tac[MULT_DIV,MULT_COMM,DECIDE “0n<2”,ADD1] )
+QED
 
 Theorem ELL_TWOMULTP1[simp]:
   ℓ (2 * x + 1) = ℓ x + 1
@@ -132,17 +143,23 @@ val prefix_free_sing = Q.store_thm("prefix_free_sing[simp]",
 rw[prefix_free_def])
 
 
-val bar_def = Define`bar x = (Tpow (LENGTH x)) ++ [F] ++ x`
+Definition bar_def: bar x = (Tpow (LENGTH x)) ++ [F] ++ x
+End
 
-val bl_len_def = Define`bl_len bl = n2bl (LENGTH bl)`
+Definition bl_len_def: bl_len bl = n2bl (LENGTH bl)
+End
 
-val dash_def = Define`dash x = (Tpow (LENGTH (bl_len x))) ++ [F] ++ (bl_len x) ++ x`
+Definition dash_def:
+  dash x = (Tpow (LENGTH (bl_len x))) ++ [F] ++ (bl_len x) ++ x
+End
 
-val pair_def = Define`pair x y = (bar x) ++ y`
+Definition pair_def: pair x y = (bar x) ++ y
+End
 
-val tpow_append = Q.store_thm("tpow_append",
-`Tpow (a+b) = Tpow a ++ Tpow b`,
-ONCE_REWRITE_TAC[ADD_COMM] >> fs[Tpow_def,GENLIST_APPEND,combinTheory.K_DEF])
+Theorem tpow_append: Tpow (a+b) = Tpow a ++ Tpow b
+Proof
+  ONCE_REWRITE_TAC[ADD_COMM] >> fs[Tpow_def,GENLIST_APPEND,combinTheory.K_DEF]
+QED
 
 val tpow_suc = Q.store_thm("tpow_suc",
 `Tpow (SUC a) = T::(Tpow a)`,
