@@ -2428,7 +2428,7 @@ define MulDiv > REMUW(rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 define Branch > JAL(rd::reg, imm::imm20) =
 { addr = PC + SignExtend(imm) << 1
-; if addr<0>
+; if addr<1>
   then signalAddressException(Fetch_Misaligned, addr)
   else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
@@ -2440,7 +2440,7 @@ define Branch > JAL(rd::reg, imm::imm20) =
 -----------------------------------
 define Branch > JALR(rd::reg, rs1::reg, imm::imm12) =
 { addr = (GPR(rs1) + SignExtend(imm)) && SignExtend('10')
-; if addr<0>
+; if addr<1>
   then signalAddressException(Fetch_Misaligned, addr)
   else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
