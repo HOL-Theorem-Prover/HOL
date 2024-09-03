@@ -1,4 +1,3 @@
-(* -*- Mode: Holscript; -*- *)
 (* ------------------------------------------------------------------------- *)
 (* Probability Theory                                                        *)
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
