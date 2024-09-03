@@ -673,22 +673,28 @@ local
         end
   fun lcommon_prefix [] = []
     | lcommon_prefix (h::t) = lcommon_prefix0 h t
-
+  fun takeWhile P [] = []
+    | takeWhile P (x::xs) = if P x then x :: takeWhile P xs
+                            else []
 in
 fun unschematize_clauses clauses = let
   val schem = map schem_head clauses
   val schems = op_mk_set aconv schem
-  fun insert_list l s = foldl (fn (t,s) => HOLset.add(s,t)) s l
   val hdops = op_mk_set aconv (map (#1 o strip_comb) schems)
-  val schemv_extent = length (#2 (strip_comb (hd schems)))
-  fun is_hdop_instance t = let
-    val (f,args) = strip_comb t
-  in
-    op_mem aconv f hdops andalso length args = schemv_extent
-  end
   val all_instances =
-      foldl (fn (t, s) => insert_list (find_terms is_hdop_instance t) s)
-            empty_tmset clauses
+      let
+        fun ftfn (bvs, t) =
+            let val (f, xs) = strip_comb t
+                fun goodarg x = is_var x andalso not (op_mem aconv x bvs)
+            in
+              if type_of t = bool andalso op_mem aconv f hdops then
+                SOME (list_mk_comb(f, takeWhile goodarg xs))
+              else NONE
+            end
+      in
+        foldl (fn (t, A) => HOLset.addList (A, gen_find_terms ftfn t))
+              empty_tmset clauses
+      end
   fun do_substitution schems = let
     val avoids = all_vars (list_mk_conj clauses)
     fun hack_fn tm = mk_var(fst(dest_var(repeat rator tm)),type_of tm)
@@ -713,8 +719,8 @@ in
     else
       do_substitution schems
   else (* liberal definitions *) let
-      val prefix_vars = HOLset.foldr (fn (t,l) => #2 (strip_comb t)::l)
-                                     [] all_instances
+      val prefix_vars =
+          HOLset.foldl (fn (t,A) => #2 (strip_comb t) :: A) [] all_instances
       val prefix = lcommon_prefix prefix_vars
     in
       if null prefix then (clauses, [])

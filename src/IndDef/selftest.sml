@@ -202,5 +202,29 @@ val _ = List.app itf_test [
 ]
 end
 
+val _ = tprint "Github 1296/1: bad attempt to schematize"
+(* the code should not schematize here as the new constant is not consistently
+   applied to the same vector of leading free variables *)
+fun good1296 indth =
+    length (#1 (strip_forall (concl indth))) = 1
+val _ = require_msg (check_result good1296) thm_to_string (#2 o Hol_reln)
+                    ‘ (! x.
+                         eq_reln Schema_var x x
+                      ) /\
+                      (
+                        ! Schema_var x y z.
+                          eq_reln Schema_var x y /\
+                          eq_reln Schema_var y z ==>
+                          eq_reln Schema_var x z
+                        )’
+
+val _ = tprint "Github 1296/2: should not schematize"
+(* the code should not schematize here as the new constant is not consistently
+   applied to the same vector of leading free variables *)
+fun good1296 indth =
+    length (#1 (strip_forall (concl indth))) = 1
+val _ = require_msg (check_result good1296) thm_to_string (#2 o Hol_reln)
+                    ‘eq_reln k x x /\
+                     (eq_reln k' x y /\ x < y ==> eq_reln k x z)’
 
 val _ = exit_count0 failcount
