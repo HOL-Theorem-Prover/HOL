@@ -9,7 +9,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open boolSimps arithmeticTheory stringTheory pred_setTheory numLib hurdUtils
-     listTheory rich_listTheory pairTheory numpairTheory cardinalTheory
+     listTheory rich_listTheory pairTheory numpairTheory
      string_numTheory listRangeTheory;
 
 val _ = new_theory "basic_swap";
@@ -141,14 +141,6 @@ val NEW_ELIM_RULE = store_thm(
   ``!P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
           P (NEW X)``,
   PROVE_TAC [NEW_def]);
-
-(* NOTE: This theorem is no more needed in presence of string_numTheory *)
-Theorem COUNTABLE_STR_UNIV :
-    countable univ(:string)
-Proof
-    MATCH_MP_TAC COUNTABLE_LIST_UNIV'
- >> rw [FINITE_UNIV_char]
-QED
 
 (* ----------------------------------------------------------------------
     Primitive definitions on string/name allocations
