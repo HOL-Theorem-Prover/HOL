@@ -1142,7 +1142,8 @@ in
     (``x:word8 < 0w /\ y >= 0w ==> (word_smod x y = -word_mod (-x) y + y)``,
       [sat_CVC, (*sat_YO,*) sat_Z3, sat_Z3p]),
     (``x:word8 >= 0w /\ y < 0w ==> (word_smod x y = word_mod x (-y) + y)``,
-      [sat_CVC (*sat_YO, sat_Z3, sat_Z3p*)]),
+      (* z3 v2 is unsound here since it returns unsat for this test case *)
+      [sat_CVC, (*sat_YO,*) sat_Z3_v4, sat_Z3p_v4]),
     (``x:word8 >= 0w /\ y >= 0w ==> (word_smod x y = word_mod x y)``,
       [thm_CVC, (*thm_AUTO, thm_YO,*) thm_Z3_v4(*, thm_Z3p_v4*)]),
 
