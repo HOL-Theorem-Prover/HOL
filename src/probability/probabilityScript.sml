@@ -8580,6 +8580,19 @@ Proof
  >> METIS_TAC [PROB_FINITE]
 QED
 
+Theorem prob_div_mul_refl :
+  !p A x. prob_space p /\ A IN events p /\ prob p A <> 0 ==>
+          x / prob p A * prob p A = x
+Proof
+  rpt STRIP_TAC
+  >> `prob p A <> PosInf /\ prob p A <> NegInf` by METIS_TAC [PROB_FINITE]
+  >> `?a. prob p A = Normal a` by METIS_TAC [extreal_cases]
+  >> ‘a <> 0’ by METIS_TAC [extreal_of_num_def, extreal_11]
+  >> Q.PAT_X_ASSUM ‘prob p A = Normal a’ (ONCE_REWRITE_TAC o wrap)
+  >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+  >> MATCH_MP_TAC div_mul_refl >> art []
+QED
+
 Theorem COND_PROB_COMPL :
     !p A B. prob_space p /\ A IN events p /\ COMPL A IN events p /\
             B IN events p /\ prob p B <> 0 ==>
@@ -8602,10 +8615,7 @@ Proof
  >> STRIP_TAC
  >> ASM_SIMP_TAC std_ss [sub_rdistrib, num_not_infty, mul_lone]
  >> Know `prob p (A INTER B) / prob p B * prob p B = prob p (A INTER B)`
- >- (MATCH_MP_TAC EQ_SYM \\
-    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
-    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
-     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >- (MATCH_MP_TAC prob_div_mul_refl >> art []) >> Rewr'
  >> ASM_SIMP_TAC std_ss [eq_sub_ladd]
  >> `prob p ((COMPL A) INTER B) + prob p (A INTER B) =
      prob p (((COMPL A) INTER B) UNION (A INTER B))`
@@ -8646,16 +8656,10 @@ Proof
      METIS_TAC [div_not_infty]) >> STRIP_TAC
  >> ASM_SIMP_TAC std_ss [sub_rdistrib]
  >> Know `prob p (A1 INTER B) / prob p B * prob p B = prob p (A1 INTER B)`
- >- (MATCH_MP_TAC EQ_SYM \\
-    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
-    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
-     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >- (MATCH_MP_TAC prob_div_mul_refl >> art []) >> Rewr'
  >> Know `prob p (A1 INTER A2 INTER B) / prob p B * prob p B =
           prob p (A1 INTER A2 INTER B)`
- >- (MATCH_MP_TAC EQ_SYM \\
-    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
-    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
-     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >- (MATCH_MP_TAC prob_div_mul_refl >> art []) >> Rewr'
  >> ASM_SIMP_TAC std_ss [eq_sub_ladd]
  >> `prob p ((A1 DIFF A2) INTER B) + prob p (A1 INTER A2 INTER B) =
         prob p (((A1 DIFF A2) INTER B) UNION (A1 INTER A2 INTER B))`
@@ -8694,15 +8698,9 @@ Proof
  >> `prob p B < PosInf` by METIS_TAC [lt_infty]
  >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
  >> Know `prob p (B INTER A) / prob p A * prob p A = prob p (B INTER A)`
- >- (MATCH_MP_TAC EQ_SYM \\
-    `?a. prob p A = Normal a` by METIS_TAC [extreal_cases] \\
-    `a <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
-     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >- (MATCH_MP_TAC prob_div_mul_refl >> art []) >> Rewr'
  >> Know `prob p (B INTER A) / prob p B * prob p B = prob p (B INTER A)`
- >- (MATCH_MP_TAC EQ_SYM \\
-    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
-    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
-     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr
+ >- (MATCH_MP_TAC prob_div_mul_refl >> art []) >> Rewr
 QED
 
 Theorem COND_PROB_UNION :
@@ -8744,16 +8742,10 @@ Proof
     `A1 DIFF A2 IN events p` by METIS_TAC [EVENTS_DIFF] \\
      METIS_TAC [COND_PROB_FINITE]) >> Rewr'
  >> Know `prob p (A2 INTER B) / prob p B * prob p B = prob p (A2 INTER B)`
- >- (MATCH_MP_TAC EQ_SYM \\
-    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
-    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
-     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >- (MATCH_MP_TAC prob_div_mul_refl >> art []) >> Rewr'
  >> Know `prob p ((A1 DIFF A2) INTER B) / prob p B * prob p B =
           prob p ((A1 DIFF A2) INTER B)`
- >- (MATCH_MP_TAC EQ_SYM \\
-    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
-    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
-     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >- (MATCH_MP_TAC prob_div_mul_refl >> art []) >> Rewr'
  >> `(A1 UNION A2) INTER B IN events p` by METIS_TAC [EVENTS_UNION, EVENTS_INTER]
  >> `A2 INTER B IN events p` by METIS_TAC [EVENTS_INTER]
  >> `(A1 DIFF A2) INTER B IN events p` by METIS_TAC [EVENTS_INTER, EVENTS_DIFF]
@@ -8790,10 +8782,7 @@ Proof
  >> BETA_TAC >> Rewr'
  >> REWRITE_TAC [cond_prob_def, Once mul_comm]
  >> Know `!i. prob p (A i INTER B) / prob p B * prob p B = prob p (A i INTER B)`
- >- (GEN_TAC >> MATCH_MP_TAC EQ_SYM \\
-    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
-    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
-     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >- (MATCH_MP_TAC prob_div_mul_refl >> art[]) >> Rewr'
  >> `SIGMA (\i. prob p (A i INTER B)) (count n) = SIGMA (prob p o (\i. A i INTER B)) (count n)`
         by METIS_TAC [] >> POP_ORW
  >> Know `BIGUNION (IMAGE A (count n)) INTER B = BIGUNION (IMAGE (\i. A i INTER B) (count n))`
@@ -8813,19 +8802,6 @@ Proof
  >- METIS_TAC [EVENTS_INTER]
  >> MATCH_MP_TAC DISJOINT_RESTRICT_L
  >> PROVE_TAC []
-QED
-
-Theorem prob_div_mul_refl :
-  !p A x. prob_space p /\ A IN events p /\ prob p A <> 0 ==>
-          x / prob p A * prob p A = x
-Proof
-    rpt STRIP_TAC
- >> `prob p A <> PosInf /\ prob p A <> NegInf` by METIS_TAC [PROB_FINITE]
- >> `?a. prob p A = Normal a` by METIS_TAC [extreal_cases]
- >> ‘a <> 0’ by METIS_TAC [extreal_of_num_def, extreal_11]
- >> Q.PAT_X_ASSUM ‘prob p A = Normal a’ (ONCE_REWRITE_TAC o wrap)
- >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
- >> MATCH_MP_TAC div_mul_refl >> art []
 QED
 
 Theorem BAYES_RULE :
