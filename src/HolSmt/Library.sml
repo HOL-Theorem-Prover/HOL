@@ -133,7 +133,7 @@ struct
             SOME token => (buffer := NONE; token)
           | NONE => aux [] (get_char ())
       in
-        if !trace > 2 then
+        if !trace > 3 then
           Feedback.HOL_MESG ("HolSmtLib: next token is '" ^ token ^ "'")
         else ();
         token
