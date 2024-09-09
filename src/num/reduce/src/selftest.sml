@@ -38,5 +38,10 @@ val _ = app (fn (n,c,t) => convtest(n,c,lhs t,rhs t)) [
   ("EVEN_CONV(3)", EVEN_CONV, “EVEN 0 <=> T”),
   ("ODD_CONV(1)", ODD_CONV, “ODD 106 <=> F”),
   ("ODD_CONV(2)", ODD_CONV, “ODD 103 <=> T”),
-  ("ODD_CONV(3)", ODD_CONV, “ODD 0 <=> F”)
+  ("ODD_CONV(3)", ODD_CONV, “ODD 0 <=> F”),
+
+  ("NOT_CONV(1)", NOT_CONV, “~T <=> F”),
+  ("NOT_CONV(2)", NOT_CONV, “~F <=> T”),
+  ("NOT_CONV(3)", NOT_CONV, “~~p <=> p”),
+  ("NOT_CONV(4)", NOT_CONV, “~~~q <=> ~q”)
 ]
