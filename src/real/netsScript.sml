@@ -2,9 +2,9 @@
 (* Theory of Moore-Smith covergence nets, and special cases like sequences   *)
 (*===========================================================================*)
 
-open HolKernel Parse boolLib hol88Lib;
+open HolKernel Parse boolLib bossLib;
 
-open numLib reduceLib pairLib pred_setTheory
+open numLib reduceLib pairLib pred_setTheory mesonLib RealArith
      pairTheory arithmeticTheory numTheory prim_recTheory
      jrhUtils realTheory topologyTheory metricTheory;
 
@@ -604,6 +604,159 @@ val NET_LE = store_thm("NET_LE",
   MAP_EVERY EXISTS_TAC [“y0:real”, “x0:real”] THEN
   ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[GSYM REAL_SUB_LT] THEN
   FIRST_ASSUM ACCEPT_TAC);
+
+(* ------------------------------------------------------------------------- *)
+(* A variant of nets (slightly non-standard but good for our purposes).      *)
+(* ------------------------------------------------------------------------- *)
+
+Definition isnet :
+   isnet g <=> !x y. (!z. g z x ==> g z y) \/ (!z. g z y ==> g z x)
+End
+
+val net_tydef = new_type_definition
+ ("net",
+  prove (``?(g:'a->'a->bool). isnet g``,
+        EXISTS_TAC ``\x:'a y:'a. F`` THEN REWRITE_TAC[isnet]));
+
+val net_ty_bij = define_new_type_bijections
+    {name="net_tybij",
+     ABS="mk_net", REP="netord",tyax=net_tydef};
+
+Theorem net_tybij[allow_rebind]:
+  (!a. mk_net (netord a) = a) /\
+  (!r. (!x y. (!z. r z x ==> r z y) \/ (!z. r z y ==> r z x)) <=>
+       (netord (mk_net r) = r))
+Proof
+  SIMP_TAC std_ss [net_ty_bij, GSYM isnet]
+QED
+
+Theorem NET :
+   !n x y. (!z. netord n z x ==> netord n z y) \/
+           (!z. netord n z y ==> netord n z x)
+Proof
+   REWRITE_TAC[net_tybij, ETA_AX]
+QED
+
+Theorem OLDNET :
+    !n x y. netord n x x /\ netord n y y
+           ==> ?z. netord n z z /\
+                   !w. netord n w z ==> netord n w x /\ netord n w y
+Proof
+  MESON_TAC[NET]
+QED
+
+Theorem NET_DILEMMA :
+   !net. (?a. (?x. netord net x a) /\ (!x. netord net x a ==> P x)) /\
+         (?b. (?x. netord net x b) /\ (!x. netord net x b ==> Q x))
+     ==> ?c. (?x. netord net x c) /\ (!x. netord net x c ==> P x /\ Q x)
+Proof
+  MESON_TAC[NET]
+QED
+
+Theorem DORDER_NET :
+    !n. dorder (netord n)
+Proof
+    RW_TAC std_ss [dorder, OLDNET]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Common nets and the "within" modifier for nets.                           *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "within" (Infix(NONASSOC, 450));
+val _ = set_fixity "in_direction" (Infix(NONASSOC, 450));
+
+(* new definition, making connection to netsTheory *)
+Definition at_def :
+    at z = mk_net (tendsto (mr1,z))
+End
+
+(* old definition, now becomes an equivalent theorem *)
+Theorem at :
+    !a. at a = mk_net(\x y. &0 < dist(x,a) /\ dist(x,a) <= dist(y,a))
+Proof
+    RW_TAC std_ss [at_def]
+ >> AP_TERM_TAC
+ >> RW_TAC std_ss [FUN_EQ_THM, tendsto, dist_def]
+ >> PROVE_TAC [METRIC_SYM]
+QED
+
+val at_infinity = new_definition ("at_infinity",
+  ``at_infinity = mk_net(\x y. abs(x) >= abs(y))``);
+
+val at_posinfinity = new_definition ("at_posinfinity",
+  ``at_posinfinity = mk_net(\x y:real. x >= y)``);
+
+val at_neginfinity = new_definition ("at_neginfinity",
+  ``at_neginfinity = mk_net(\x y:real. x <= y)``);
+
+val sequentially = new_definition ("sequentially",
+  ``sequentially = mk_net(\m:num n. m >= n)``);
+
+val within = new_definition ("within",
+  ``(net within s) = mk_net(\x y. netord net x y /\ x IN s)``);
+
+val in_direction = new_definition ("in_direction",
+  ``(a in_direction v) = ((at a) within {b | ?c. &0 <= c /\ (b - a = c * v)})``);
+
+(* ------------------------------------------------------------------------- *)
+(* Prove that they are all nets.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+fun NET_PROVE_TAC [def] =
+  SIMP_TAC std_ss [GSYM FUN_EQ_THM, def] THEN
+  REWRITE_TAC [ETA_AX] THEN
+  ASM_SIMP_TAC std_ss [GSYM(CONJUNCT2 net_tybij)];
+
+val AT = store_thm ("AT",
+ ``!a:real x y.
+        netord(at a) x y <=> &0 < dist(x,a) /\ dist(x,a) <= dist(y,a)``,
+  GEN_TAC THEN NET_PROVE_TAC[at] THEN
+  METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS, REAL_LET_TRANS]);
+
+val AT_INFINITY = store_thm ("AT_INFINITY",
+ ``!x y. netord at_infinity x y <=> abs(x) >= abs(y)``,
+  NET_PROVE_TAC[at_infinity] THEN
+  REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+
+val AT_POSINFINITY = store_thm ("AT_POSINFINITY",
+ ``!x y. netord at_posinfinity x y <=> x >= y``,
+  NET_PROVE_TAC[at_posinfinity] THEN
+  REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+
+val AT_NEGINFINITY = store_thm ("AT_NEGINFINITY",
+ ``!x y. netord at_neginfinity x y <=> x <= y``,
+  NET_PROVE_TAC[at_neginfinity] THEN
+  REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+
+val SEQUENTIALLY = store_thm ("SEQUENTIALLY",
+ ``!m n. netord sequentially m n <=> m >= n``,
+  NET_PROVE_TAC[sequentially] THEN REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL] THEN
+  MESON_TAC[LESS_EQ_CASES, LESS_EQ_REFL, LESS_EQ_TRANS]);
+
+val WITHIN = store_thm ("WITHIN",
+ ``!n s x y. netord(n within s) x y <=> netord n x y /\ x IN s``,
+  GEN_TAC THEN GEN_TAC THEN SIMP_TAC std_ss [within, GSYM FUN_EQ_THM] THEN
+  REWRITE_TAC[GSYM(CONJUNCT2 net_tybij), ETA_AX] THEN
+  METIS_TAC[NET]);
+
+val IN_DIRECTION = store_thm ("IN_DIRECTION",
+ ``!a v x y. netord(a in_direction v) x y <=>
+                &0 < dist(x,a) /\ dist(x,a) <= dist(y,a) /\
+                 ?c. &0 <= c /\ (x - a = c * v)``,
+  SIMP_TAC std_ss [WITHIN, AT, in_direction, GSPECIFICATION] THEN METIS_TAC []);
+
+val WITHIN_UNIV = store_thm ("WITHIN_UNIV",
+ ``!x:real. (at x within UNIV) = at x``,
+  REWRITE_TAC[within, at, IN_UNIV] THEN REWRITE_TAC[ETA_AX, net_tybij]);
+
+val WITHIN_WITHIN = store_thm ("WITHIN_WITHIN",
+ ``!net s t. ((net within s) within t) = (net within (s INTER t))``,
+  ONCE_REWRITE_TAC[within] THEN
+  REWRITE_TAC[WITHIN, IN_INTER, GSYM CONJ_ASSOC]);
 
 val _ = export_theory();
 

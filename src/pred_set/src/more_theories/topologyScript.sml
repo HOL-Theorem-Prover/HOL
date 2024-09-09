@@ -8,33 +8,37 @@
 (* ========================================================================= *)
 (*  Basic Set Theory (using predicates as sets) (from hol-light's sets.ml)   *)
 (*                                                                           *)
-(*       John Harrison, University of Cambridge Computer Laboratory          *)
-(*                                                                           *)
 (*            (c) Copyright, University of Cambridge 1998                    *)
 (*              (c) Copyright, John Harrison 1998-2016                       *)
 (*              (c) Copyright, Marco Maggesi 2012-2017                       *)
 (*             (c) Copyright, Andrea Gabrielli 2012-2017                     *)
 (* ========================================================================= *)
+(*  Formalization of general topological and metric spaces in HOL Light      *)
+(*                     (from hol-light's metric.ml)                          *)
+(*                                                                           *)
+(*              (c) Copyright, John Harrison 1998-2017                       *)
+(*                (c) Copyright, Marco Maggesi 2014-2017                     *)
+(*             (c) Copyright, Andrea Gabrielli  2016-2017                    *)
+(* ========================================================================= *)
 
-(* NOTE: this script is loaded after "integerTheory", before "realTheory", only
-   general topology theorems without using real numbers should be put here.
+(* NOTE: this script is loaded after "integerTheory" and before "realTheory".
+   General topology theorems without using real numbers should be put here.
 
-   see real_topologyTheory for Elementary Topology in Euclidean space.
+   See src/real/analysis/real_topologyTheory for Elementary Topology of
+   (one-dimensional) Euclidean space.
  *)
 
 open HolKernel Parse bossLib boolLib;
 
 open boolSimps simpLib mesonLib metisLib pairTheory pairLib tautLib combinTheory
-     pred_setTheory arithmeticTheory relationTheory cardinalTheory;
+     pred_setTheory arithmeticTheory relationTheory cardinalTheory hurdUtils;
 
 val _ = new_theory "topology";
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
-fun K_TAC _ = ALL_TAC;
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
-fun wrap a = [a];
 
 (* Begin of minimal hol-light compatibility layer *)
 Theorem IMP_CONJ      = cardinalTheory.CONJ_EQ_IMP
@@ -382,8 +386,8 @@ Definition limpt:
 End
 
 (* alternative characterisation without needing neigh, but using IN, rather
-   than application *)
-
+   than application
+ *)
 Theorem limpt_thm:
   limpt t x A <=>
   x IN topspace t /\
@@ -395,15 +399,13 @@ Proof
   >> metis_tac[SUBSET_DEF, IN_DEF]
 QED
 
-
-
 (*---------------------------------------------------------------------------*)
 (* Prove that a set is closed iff it contains all its limit points           *)
 (*---------------------------------------------------------------------------*)
 
 Theorem CLOSED_LIMPT:
   !top. closed top ==>
-        !S'. closed_in(top) S' = (!x:'a. limpt(top) x S' ==> S' x)
+        !S'. closed_in(top) S' <=> !x:'a. limpt(top) x S' ==> S' x
 Proof
     GEN_TAC >> DISCH_TAC
  >> IMP_RES_TAC closed_topspace
@@ -2204,4 +2206,57 @@ Proof
   MESON_TAC[INTER_COMM]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(* Continuous maps (ported from HOL-Light's metric.ml)                       *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: This makes REWRITE_TAC below behave like in HOL-Light *)
+open Ho_Rewrite;
+
+Definition continuous_map :
+    continuous_map (top,top') (f :'a -> 'b) <=>
+     (!x. x IN topspace top ==> f x IN topspace top') /\
+     (!u. open_in top' u
+          ==> open_in top {x | x IN topspace top /\ f x IN u})
+End
+
+Theorem CONTINUOUS_MAP :
+   !top top' f.
+        continuous_map (top,top') f <=>
+       (IMAGE f (topspace top) SUBSET topspace top' /\
+        !u. open_in top' u
+            ==> open_in top {x | x IN topspace top /\ f x IN u})
+Proof
+  REWRITE_TAC[continuous_map, SUBSET_DEF, FORALL_IN_IMAGE]
+QED
+
+Theorem CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE :
+  !top top' (f :'a->'b). continuous_map (top,top')  f
+                     ==> IMAGE f (topspace top) SUBSET topspace top'
+Proof
+  REWRITE_TAC[continuous_map] THEN SET_TAC[]
+QED
+
+Theorem CONTINUOUS_MAP_ON_EMPTY :
+   !top top' (f :'a->'b). topspace top = {} ==> continuous_map(top,top') f
+Proof
+  SIMP_TAC std_ss[continuous_map, NOT_IN_EMPTY, EMPTY_GSPEC, OPEN_IN_EMPTY]
+QED
+
+Theorem CONTINUOUS_MAP_INTO_EMPTY :
+   !top top' (f :'a->'b).
+        topspace top' = {}
+        ==> (continuous_map(top,top') f <=> topspace top = {})
+Proof
+  REPEAT STRIP_TAC THEN EQ_TAC THEN REWRITE_TAC[CONTINUOUS_MAP_ON_EMPTY] THEN
+  DISCH_THEN(MP_TAC o MATCH_MP CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE) THEN
+  ASM_SET_TAC[]
+QED
+
 val _ = export_theory();
+
+(* References:
+
+  [1] J. L. Kelley, General Topology. Springer Science & Business Media, 1975.
+
+ *)

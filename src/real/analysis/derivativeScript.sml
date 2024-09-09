@@ -18,12 +18,11 @@
 open HolKernel Parse boolLib bossLib;
 
 open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
-     combinTheory quotientTheory arithmeticTheory pred_setTheory
-     jrhUtils listTheory mesonLib optionTheory pred_setLib;
+     combinTheory quotientTheory arithmeticTheory pred_setTheory hurdUtils
+     jrhUtils listTheory mesonLib optionTheory pred_setLib iterateTheory;
 
-open realTheory realLib topologyTheory cardinalTheory;
-
-open hurdUtils iterateTheory real_sigmaTheory real_topologyTheory;
+open realTheory realLib topologyTheory cardinalTheory metricTheory netsTheory
+     real_sigmaTheory real_topologyTheory;
 
 val _ = new_theory "derivative";
 
