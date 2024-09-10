@@ -2,8 +2,8 @@
 (* Formal Language Theory                                                    *)
 (*                                                                           *)
 (* A formal language is a set of strings over an alphabet. The notion of     *)
-(* 'a list exactly captures such strings. We define the following language   *)
-(* operations: concatenation, iterated concatenation, and Kleene Star. We    *)
+(* 'a list is used to capture such strings. We define the following language *)
+(* operations: concatenation, iterated concatenation, and Kleene Star, and   *)
 (* prove a collection of lemmas about these operations, including Arden's    *)
 (* lemma.                                                                    *)
 (*****************************************************************************)
@@ -28,8 +28,7 @@ val basic_ss = list_ss ++ PRED_SET_ss ++ rewrites [APPEND_EQNS];
 
 
 (*---------------------------------------------------------------------------*)
-(* A language is a set of strings over an alphabet. A string is represented  *)
-(* by an 'a list.                                                            *)
+(* Basic lexical support for readability                                     *)
 (*---------------------------------------------------------------------------*)
 
 Type lang = ``:'a list set``
@@ -61,7 +60,7 @@ Proof
 QED
 
 Theorem DOT_EMPTYSTRING:
-  !A. (A dot {[]} = A) /\ ({[]} dot A = A)
+  !A. (A dot {ε} = A) /\ ({ε} dot A = A)
 Proof
  RW_TAC basic_ss [dot_def,EXTENSION]
 QED
@@ -73,7 +72,7 @@ Proof
 QED
 
 Theorem EMPTY_IN_DOT:
- !A B. [] IN (A dot B) <=> [] IN A /\ [] IN B
+ !A B. ε IN (A dot B) <=> ε IN A /\ ε IN B
 Proof
  METIS_TAC [IN_dot,APPEND_EQNS]
 QED
@@ -107,7 +106,7 @@ QED
 (*---------------------------------------------------------------------------*)
 
 Definition DOTn_def:
-  DOTn A 0 = {[]} /\
+  DOTn A 0 = {ε} /\
   DOTn A (SUC n) = A dot (DOTn A n)
 End
 
@@ -126,7 +125,7 @@ Proof
 QED
 
 Theorem EMPTY_IN_DOTn_ZERO:
- !x A. x IN DOTn A 0 <=> (x = [])
+ !x A. x IN DOTn A 0 <=> (x = ε)
 Proof
   RW_TAC basic_ss [DOTn_def]
 QED
@@ -137,8 +136,7 @@ Theorem STRCAT_IN_DOTn_SUC:
     (a IN DOTn A n /\ b IN A)
      ==> (a ++ b) IN DOTn A (SUC n)
 Proof
- RW_TAC basic_ss [DOTn_def]
-  >> METIS_TAC [STRCAT_IN_dot,DOTn_RIGHT]
+ RW_TAC basic_ss [DOTn_def] >> METIS_TAC [STRCAT_IN_dot,DOTn_RIGHT]
 QED
 
 Theorem STRCAT_IN_DOTn_ADD:
@@ -153,13 +151,13 @@ Proof
 QED
 
 Theorem DOTn_EMPTYSET:
-  !n. DOTn {} n = if n=0 then {[]} else {}
+  !n. DOTn {} n = if n=0 then {ε} else {}
 Proof
   Induct >> RW_TAC basic_ss [DOTn_def,DOT_EMPTYSET]
 QED
 
 Theorem DOTn_EMPTYSTRING:
- !n. DOTn {[]} n = {[]}
+ !n. DOTn {ε} n = {ε}
 Proof
   Induct
    >> RW_TAC basic_ss [DOTn_def,dot_def,EXTENSION]
@@ -167,7 +165,7 @@ Proof
 QED
 
 Theorem EMPTY_IN_DOTn:
- !n. ([] IN DOTn A n) <=> (n=0) \/ ([] IN A)
+ !n. (ε IN DOTn A n) <=> (n=0) \/ (ε IN A)
 Proof
   Induct
    >> RW_TAC basic_ss [DOTn_def,EMPTY_IN_DOT]
@@ -194,8 +192,8 @@ QED
 
 Theorem DOTn_EMPTYSTRING_FREE:
  !n A w. w IN DOTn A n ==>
-     (w = []) \/
-     ?k. w IN DOTn (A DELETE []) k
+     (w = ε) \/
+     ?k. w IN DOTn (A DELETE ε) k
 Proof
  Induct >> RW_TAC basic_ss [DOTn_def,IN_dot] >>
  RES_TAC >> Cases_on `u` >> RW_TAC basic_ss [] >>
@@ -212,6 +210,10 @@ Definition KSTAR_def:
   KSTAR(L:'a lang) = BIGUNION {DOTn L n | n IN UNIV}
 End
 
+Definition KPLUS_def:
+  KPLUS(L:'a lang) = BIGUNION {DOTn L n | 0 < n}
+End
+
 Theorem IN_KSTAR:
   x IN KSTAR(L) <=> ?n. x IN DOTn L n
 Proof
@@ -221,7 +223,7 @@ Proof
 QED
 
 Theorem KSTAR_EMPTYSET:
- KSTAR {} = {[]}
+ KSTAR {} = {ε}
 Proof
  RW_TAC basic_ss [EXTENSION,IN_KSTAR,DOTn_EMPTYSET,EQ_IMP_THM]
   >- (Cases_on `n` >> FULL_SIMP_TAC basic_ss [])
@@ -229,9 +231,17 @@ Proof
 QED
 
 Theorem EMPTY_IN_KSTAR:
- !A. [] IN (KSTAR A)
+ !A. ε IN (KSTAR A)
 Proof
   RW_TAC basic_ss [IN_KSTAR] >> METIS_TAC [DOTn_def,IN_INSERT]
+QED
+
+Theorem KSTAR_TRIVIAL:
+  s ⊆ {ε} ⇒ KSTAR s = {ε}
+Proof
+  rw [SUBSET_SING]
+  >- metis_tac[KSTAR_EMPTYSET]
+  >- rw [EXTENSION,IN_KSTAR,EQ_IMP_THM,DOTn_EMPTYSTRING]
 QED
 
 Theorem KSTAR_SING:
@@ -276,7 +286,7 @@ Proof
 QED
 
 Theorem IN_KSTAR_LIST:
-  !s A. s IN KSTAR A <=> ?wlist. EVERY (\w. w IN A) wlist /\ (s = FLAT wlist)
+  s IN KSTAR A <=> ?wlist. EVERY (\w. w IN A) wlist /\ (s = FLAT wlist)
 Proof
  RW_TAC list_ss [IN_KSTAR,EQ_IMP_THM]
  >- (POP_ASSUM MP_TAC >> Q.ID_SPEC_TAC `s`
@@ -297,6 +307,112 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
+(* Theorems about L+                                                         *)
+(*---------------------------------------------------------------------------*)
+
+Theorem IN_KPLUS:
+  w ∈ KPLUS L <=> ∃n. 0 < n ∧ w ∈ DOTn L n
+Proof
+  RW_TAC basic_ss [KPLUS_def,BIGUNION,EXTENSION,EQ_IMP_THM,PULL_EXISTS] >>
+  metis_tac[]
+QED
+
+Theorem EPSILON_IN_KPLUS:
+  ε ∈ KPLUS L ⇔ ε ∈ L
+Proof
+  RW_TAC basic_ss [IN_KPLUS,EQ_IMP_THM]
+  >- (Induct_on ‘n’ >> rw[] >> fs[DOTn_def,EMPTY_IN_DOT])
+  >- (qexists_tac ‘SUC 0’ >> rw[DOTn_def,EMPTY_IN_DOT])
+QED
+
+Theorem KPLUS_KSTAR:
+  KPLUS L = L dot KSTAR L
+Proof
+  RW_TAC basic_ss [EXTENSION, IN_KPLUS,EQ_IMP_THM]
+  >- (Cases_on ‘n’ >> fs[DOTn_def,IN_dot,IN_KSTAR] >> metis_tac[])
+  >- (fs [IN_dot,IN_KSTAR] >> qexists_tac ‘SUC n’ >>
+      RW_TAC basic_ss [DOTn_def,IN_dot] >> metis_tac[])
+QED
+
+Theorem KPLUS_EQ_KSTAR_DIFF_EPSILON:
+  ε ∉ L ⇒ KPLUS L = KSTAR L DIFF {ε}
+Proof
+  rw [EXTENSION,IN_KPLUS,IN_KSTAR,EQ_IMP_THM]
+  >- metis_tac[]
+  >- (Cases_on ‘n’ >> fs[DOTn_def,IN_dot] >> metis_tac[])
+  >- (Cases_on ‘n’ >> fs[DOTn_def] >> qexists_tac‘SUC n'’ >> rw[DOTn_def])
+QED
+
+Theorem KPLUS_EQ_KSTAR:
+  ε ∈ L ⇔ (KPLUS L = KSTAR L)
+Proof
+ rw[EQ_IMP_THM]
+ >- (rw[EXTENSION,IN_KSTAR,IN_KPLUS,EQ_IMP_THM]
+     >- metis_tac[]
+     >- (Cases_on ‘n’ >> fs[DOTn_def]
+         >- (qexists_tac ‘SUC 0’ >> rw[DOTn_def,DOT_EMPTYSTRING])
+         >- (qexists_tac ‘SUC n'’ >> rw[DOTn_def])))
+ >- (spose_not_then assume_tac >> drule KPLUS_EQ_KSTAR_DIFF_EPSILON >>
+     rw [] >> WEAKEN_TAC is_eq >> assume_tac (Q.SPEC ‘L’ EMPTY_IN_KSTAR) >>
+     ‘ε ∉ KSTAR L DIFF {ε}’ by rw[] >> metis_tac[EXTENSION])
+QED
+
+Triviality UNION_ABSORPTION:
+  x ∈ s ⇒ s ∪ {x} = s
+Proof
+  rw [EXTENSION,EQ_IMP_THM] >> metis_tac[]
+QED
+
+Triviality UNION_ABSORPTION_EQ:
+  s ∪ {x} = s ⇔ x ∈ s
+Proof
+  rw [EXTENSION,EQ_IMP_THM] >> metis_tac[]
+QED
+
+Theorem KPLUS_UNION_EPSILON_EQ_KSTAR:
+  KPLUS L ∪ {ε} = KSTAR L
+Proof
+  Cases_on ‘ε ∈ L’
+  >- (‘ε ∈ KPLUS L’ by metis_tac [EPSILON_IN_KPLUS] >>
+      rw [UNION_ABSORPTION] >> metis_tac [KPLUS_EQ_KSTAR])
+  >- (drule KPLUS_EQ_KSTAR_DIFF_EPSILON >> rw[] >>
+      rw [GSYM (SRULE [Once UNION_COMM] SUBSET_UNION_ABSORPTION)] >>
+      metis_tac [EMPTY_IN_KSTAR])
+QED
+
+Theorem IN_KPLUS_LIST_EPSILON_FREE:
+  ε ∉ L ⇒
+   (w IN KPLUS L
+    ⇔
+    ∃wlist. wlist ≠ [] ∧ EVERY (λw. w ∈ L) wlist ∧ (w = FLAT wlist))
+Proof
+  rw[EQ_IMP_THM]
+  >- (drule KPLUS_EQ_KSTAR_DIFF_EPSILON >>
+      disch_then SUBST_ALL_TAC >> gvs [IN_KSTAR_LIST] >>
+      first_x_assum (irule_at Any) >>
+      fs[FLAT_EQ_NIL,combinTheory.o_DEF] >>
+      disch_then SUBST_ALL_TAC >> fs[])
+  >- (rw [IN_KPLUS] >> qexists_tac ‘LENGTH wlist’ >> rw[]
+      >- (Cases_on ‘wlist’ >> fs[])
+      >- (Induct_on ‘wlist’ >> fs[] >> rw[] >>
+          Cases_on ‘wlist’ >> fs[ONE,DOTn_def,IN_dot] >>
+          rw[PULL_EXISTS] >> metis_tac[]))
+QED
+
+Theorem IN_KPLUS_LIST:
+   w IN KPLUS L
+   ⇔
+   ∃wlist. wlist ≠ [] ∧ EVERY (λw. w ∈ L) wlist ∧ (w = FLAT wlist)
+Proof
+  Cases_on ‘ε ∈ L’
+  >- (rw [iffLR KPLUS_EQ_KSTAR,IN_KSTAR_LIST,EQ_IMP_THM]
+      >- (qexists_tac ‘ε :: wlist’ >> rw[])
+      >- metis_tac[])
+  >- metis_tac [IN_KPLUS_LIST_EPSILON_FREE]
+QED
+
+
+(*---------------------------------------------------------------------------*)
 (* Some more complex equalities                                              *)
 (*---------------------------------------------------------------------------*)
 
@@ -306,7 +422,7 @@ val lang_ss = basic_ss ++
                          KSTAR_SING,KSTAR_EMPTYSET,EMPTY_IN_KSTAR];
 
 Theorem KSTAR_EQ_EPSILON_UNION_DOT:
- !A. KSTAR A = {[]} UNION (A dot KSTAR A)
+ !A. KSTAR A = {ε} UNION (A dot KSTAR A)
 Proof
   RW_TAC lang_ss [EXTENSION,EQ_IMP_THM]
   >- (Cases_on `n` THENL
@@ -319,13 +435,13 @@ QED
 Theorem IN_KSTAR_THM:
   !w L. w IN KSTAR L
         <=>
-          (w = []) \/
+          (w = ε) \/
            ?w1 w2. (w = w1++w2) /\ w1 IN L /\ w2 IN KSTAR L
 Proof RW_TAC list_ss [Once KSTAR_EQ_EPSILON_UNION_DOT,IN_UNION, IN_SING,IN_dot]
 QED
 
 Theorem KSTAR_EQ_KSTAR_UNION:
- !A. KSTAR A = KSTAR ({[]} UNION A)
+ !A. KSTAR A = KSTAR ({ε} UNION A)
 Proof
  RW_TAC lang_ss [EXTENSION,EQ_IMP_THM]
  >- METIS_TAC [DOTn_UNION,UNION_COMM]
@@ -335,6 +451,14 @@ Proof
       METIS_TAC [APPEND_EQNS],
       METIS_TAC [STRCAT_IN_DOTn_SUC,APPEND_EQNS]])
 QED
+
+(*
+Theorem KSTAR_EPSILON_FREE:
+  KSTAR (A DIFF {ε}) = KSTAR A
+Proof
+  cheat
+QED
+*)
 
 Theorem KSTAR_DOT_KSTAR:
  !A. (KSTAR A dot KSTAR A) = KSTAR A
@@ -424,18 +548,18 @@ QED
 (*===========================================================================*)
 
 Triviality LENGTH_LESS:
- !u x v. (x = u++v) /\ ~(u = epsilon) ==> LENGTH v < LENGTH x
+ !u x v. (x = u++v) /\ ~(u = ε) ==> LENGTH v < LENGTH x
 Proof
   Cases_on `u` >> RW_TAC list_ss []
 QED
 
-Theorem ARDEN1[local]:
-  epsilon ∉ A ∧ (X = A dot X ∪ B) ∧ w ∈ X ⇒ w ∈ KSTAR A dot B
+Theorem ARDEN_LEM1[local]:
+  ε ∉ A ∧ (X = A dot X ∪ B) ∧ w ∈ X ⇒ w ∈ KSTAR A dot B
 Proof
  strip_tac >> measureInduct_on `LENGTH w` >> Cases_on `LENGTH w` >> disch_tac
  >- (gvs[] >> metis_tac [EMPTY_IN_KSTAR,EMPTY_IN_DOT,IN_UNION])
  >- (‘w ∈ A dot X ∨ w ∈ B’ by metis_tac[EXTENSION,IN_UNION]
-     >- (‘?u v. (w = u ++ v) /\ u ∈ A /\ v ∈ X ∧ u ≠ epsilon’
+     >- (‘?u v. (w = u ++ v) /\ u ∈ A /\ v ∈ X ∧ u ≠ ε’
              by metis_tac [IN_dot] >>
          ‘LENGTH v < SUC n’ by metis_tac [LENGTH_LESS] >>
          ‘v IN KSTAR A dot B’ by metis_tac [] >>
@@ -450,8 +574,8 @@ Proof
  RW_TAC basic_ss [SUBSET_DEF,IN_KSTAR,IN_dot] >> METIS_TAC []
 QED
 
-Theorem ARDEN2[local]:
- X = A dot X ∪ B ⇒ (KSTAR A dot B) ⊆ X
+Theorem ARDEN_LEM2[local]:
+  X = A dot X ∪ B ⇒ (KSTAR A dot B) ⊆ X
 Proof
   strip_tac >> irule lemma >> Induct_on ‘n’
   >- (rw [DOTn_def,SUBSET_DEF,dot_def] >> metis_tac [IN_UNION])
@@ -463,29 +587,30 @@ QED
 
 Theorem ARDENS_LEMMA:
  !A B X:'a lang.
-    epsilon ∉ A ∧ (X = (A dot X) ∪ B) ==> (X = KSTAR(A) dot B)
+    ε ∉ A ∧ (X = (A dot X) ∪ B) ==> (X = KSTAR(A) dot B)
 Proof
   rpt strip_tac >> rw[SET_EQ_SUBSET]
-  >- metis_tac [SUBSET_DEF,ARDEN1]
-  >- metis_tac [ARDEN2]
+  >- metis_tac [SUBSET_DEF,ARDEN_LEM1]
+  >- metis_tac [ARDEN_LEM2]
 QED
 
-(*---------------------------------------------------------------------------*)
-(* Abstract definition of the finite state languages. This is based on the   *)
-(* "left quotient" operation. Brzozowski derivatives (see                    *)
+(*===========================================================================*)
+(* Definition of the finite state languages, based on the left quotient      *)
+(* operation. The finite state languages are an abstract characterization of *)
+(* the regular languages. For example, Brzozowski derivatives (see           *)
 (* regular/regexpScript.sml) are the syntactic counterpart of left quotient. *)
-(*---------------------------------------------------------------------------*)
+(*===========================================================================*)
 
-Definition Left_Quotient_def:
-  Left_Quotient x L = {y | (x ++ y) ∈ L}
+Definition LEFT_QUOTIENT_def:
+  LEFT_QUOTIENT x L = {y | (x ++ y) ∈ L}
 End
 
-Definition Intrinsic_States_def:
-  Intrinsic_States L = {Left_Quotient x L | x ∈ (UNIV:'a list set)}
+Definition INTRINSIC_STATES_def:
+  INTRINSIC_STATES (L,A) = {LEFT_QUOTIENT w L | EVERY (λa. a ∈ A) w}
 End
 
-Definition Finite_State_def:
-  Finite_State L <=> FINITE (Intrinsic_States L)
+Definition FINITE_STATE_def:
+  FINITE_STATE (L,A) <=> FINITE (INTRINSIC_STATES (L,A))
 End
 
 (* TODO: put in pred_setTheory *)
@@ -502,32 +627,40 @@ Proof
   metis_tac [IMAGE_CONSTANT, combinTheory.K_DEF]
 QED
 
-Theorem Left_Quotient_empty:
-  Left_Quotient x {} = {}
+Theorem LEFT_QUOTIENT_EMPTY:
+  LEFT_QUOTIENT x {} = {}
 Proof
- rw[Left_Quotient_def]
+ rw[LEFT_QUOTIENT_def]
 QED
 
-Theorem Left_Quotient_epsilon:
-  Left_Quotient epsilon L = L
+Theorem LEFT_QUOTIENT_EPSILON:
+  LEFT_QUOTIENT x {ε} = if x = ε then {ε} else {}
 Proof
- rw[Left_Quotient_def]
+  rw[LEFT_QUOTIENT_def,EXTENSION,EQ_IMP_THM]
 QED
 
-Theorem Left_Quotient_word:
-  Left_Quotient x L =
-   case x
-    of epsilon => L
-     | h::t => Left_Quotient t (Left_Quotient [h] L)
+Theorem FINITE_STATE_EMPTY:
+  FINITE_STATE ({},A)
 Proof
- Induct_on ‘x’ >> rw[Left_Quotient_def]
-QED
-
-Theorem Finite_State_empty:
-  Finite_State {}
-Proof
-  rw[Finite_State_def, Intrinsic_States_def,Left_Quotient_empty] >>
+  rw[FINITE_STATE_def, INTRINSIC_STATES_def,LEFT_QUOTIENT_EMPTY] >>
   rw[combinTheory.o_DEF, GSPEC_IMAGE, IMAGE_CONSTANT]
+QED
+
+Theorem FINITE_STATE_EPSILON:
+  FINITE_STATE ({ε},A)
+Proof
+  rw[FINITE_STATE_def, INTRINSIC_STATES_def,LEFT_QUOTIENT_EPSILON] >>
+  irule SUBSET_FINITE >> rw [SUBSET_DEF] >> qexists_tac ‘{{ε}; ∅}’ >>
+  rw[] >> rw[]
+QED
+
+Theorem LEFT_QUOTIENT_REC:
+  LEFT_QUOTIENT x L =
+   case x
+    of ε => L
+     | a::w => LEFT_QUOTIENT w (LEFT_QUOTIENT [a] L)
+Proof
+ Induct_on ‘x’ >> rw[LEFT_QUOTIENT_def]
 QED
 
 val _ = export_theory();
