@@ -35,7 +35,11 @@ Type lang = ``:'a list set``
 
 val epsilon = UTF8.chr 0x03B5;
 
+val _ = temp_overload_on (epsilon,listSyntax.nil_tm);
+
+(*
 Overload epsilon[inferior] = “[]”;
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Binary language concatenation. Right infix                                *)
@@ -662,5 +666,9 @@ Theorem LEFT_QUOTIENT_REC:
 Proof
  Induct_on ‘x’ >> rw[LEFT_QUOTIENT_def]
 QED
+
+(*
+val _ = gen_remove_ovl_mapping epsilon listSyntax.nil_tm;
+*)
 
 val _ = export_theory();

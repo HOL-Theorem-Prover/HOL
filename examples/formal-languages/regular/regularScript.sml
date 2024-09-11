@@ -36,6 +36,10 @@ val PUSH_EXISTS = LIST_CONJ
    EXISTS_OR_THM];
 
 
+val epsilon = UTF8.chr 0x03B5;
+
+val _ = temp_overload_on (epsilon,listSyntax.nil_tm);
+
 val _ = new_theory "regular";
 
 (* NOTE: duplicate theorems:
