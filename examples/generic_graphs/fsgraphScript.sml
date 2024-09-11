@@ -752,7 +752,7 @@ Overload bipartite = “partite 2”
 
 Theorem bipartite_def :
     !g A B. bipartite (g :fsgraph) {A;B} <=>
-           (DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\ 
+           (DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
             !n1 n2. {n1;n2} IN fsgedges g ==>
                     (n1 IN A /\ n2 IN B) \/ (n1 IN B /\ n2 IN A))
 Proof
@@ -792,7 +792,7 @@ Proof
      >- (Know ‘B = part {A; B} n2’
          >- (MATCH_MP_TAC part_unique \\
              Q.EXISTS_TAC ‘V’ >> rw []) \\
-         DISCH_THEN (fs o wrap o SYM)) \\ 
+         DISCH_THEN (fs o wrap o SYM)) \\
      ASM_SET_TAC [])
  >> STRIP_TAC
  >> CONJ_ASM1_TAC (* {A; B} partitions V *)
