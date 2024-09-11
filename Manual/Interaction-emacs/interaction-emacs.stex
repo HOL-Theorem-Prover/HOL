@@ -414,6 +414,14 @@ does not work since {\tt\small DIV} is an infix operator, but {\tt\small print\_
 
 The key-binding \texttt{M-h~m} (and the menu entry ``DB match'') will prompt for the term pattern to search for, and pass this query onto the HOL session (saving the need to type \texttt{print\_match~[]} and the enclosing quotation marks).
 
+It is also possible to search over theorem \emph{names} using the function \texttt{DB.find}, or the key-binding \texttt{M-h~f}.
+The string provided to this name is a regular expression that ignores case and scans all of the known theorems' names, searching for those that include a sub-string matching the regular expression.
+In addition to the standard operators (\texttt{|}, \texttt{*}, \dots), a particularly useful addition is \td{}, which is defined:
+\[ \mathit{re}_1\td\mathit{re}_2 =  (\mathtt{.}^{\mathtt{*}}\mathit{re}_1\mathtt{.}^{\mathtt{*}})\mathtt{\&}(\mathtt{.}^{\mathtt{*}}\mathit{re}_2\mathtt{.}^{\mathtt{*}})
+\]
+where $\mathtt{\&}$ is the regular expression intersection operator.
+Thus, if one writes \texttt{DB.find~"foo\td{}bar"}, one will get back a list of all theorems whose names include both the strings \texttt{"foo"} and \texttt{"bar"}, which is useful if one is not sure about the order in which those substrings occur in the theorem name.
+
 \mysec{Common proof tactics\label{tactics}}
 
 Most HOL4 proofs are carried out by stating a goal and then applying

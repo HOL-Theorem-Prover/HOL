@@ -6,12 +6,19 @@
 Search for theory element by name fragment.
 
 \DESCRIBE
+
 An invocation {DB.find s} returns a list of theory elements which have
-been stored with a name in which {s} occurs as a proper substring,
-ignoring case distinctions. All currently loaded theory segments are
-searched. The string {s} may use the tilde {~} operator to require
-multiple sub-string matches: in a string such as {s1~s2}, matches will
-be found if the name contains both {s1} and {s2}, in either order.
+been stored with a name containing a substring matching the regular
+expression {s}, ignoring case distinctions. All currently loaded
+theory segments are searched. The regular expression notation allows
+parentheses, dot ({.}) to match any character, Kleene star ({*}),
+alternation ({|}) and a special form of intersection ({~}).
+
+The tilde form {r~s} is defined to be equal to {(.*r.*)&(.*s.*)},
+where {&} is regular expression intersection. This allows one to
+require multiple sub-string matches: in a string such as {s1~s2},
+matches will be found if the name contains both {s1} and {s2}, in
+either order.
 
 \FAILURE
 Never fails. If nothing suitable can be found, the empty list is returned.
