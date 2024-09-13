@@ -1,3 +1,7 @@
+(*---------------------------------------------------------------------------*
+ * fsgraphTheory: Theory of Finite Simple Graphs                             *
+ *---------------------------------------------------------------------------*)
+
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory pairTheory listTheory pred_setTheory sortingTheory
@@ -717,4 +721,143 @@ Proof
   irule adjacent_append2 >> simp[]
 QED
 
+(* ----------------------------------------------------------------------
+    r-partite graphs and (in particular) bipartite graphs [2, p.17]
+   ---------------------------------------------------------------------- *)
+
+Overload V[local] = “nodes (g :fsgraph)”
+Overload E[local] = “fsgedges (g :fsgraph)”
+
+Theorem fsgraph_valid :
+    !g n1 n2. {n1;n2} IN E ==> n1 IN V /\ n2 IN V /\ n1 <> n2
+Proof
+    rpt GEN_TAC
+ >> DISCH_THEN (STRIP_ASSUME_TAC o MATCH_MP alledges_valid)
+ >> ASM_SET_TAC []
+QED
+
+(* r-partite graphs [2, p.17]
+
+   NOTE: ‘partitions’ requires that each partiton must be non-empty. This is not
+   explicitly mentioned in the textbook but seems reasonable.
+ *)
+Definition partite_def :
+    partite r (g :fsgraph) <=>
+      ?v. v partitions (nodes g) /\ CARD v = r /\
+          !n1 n2. {n1;n2} IN fsgedges g ==> part v n1 <> part v n2
+End
+
+(* "Instead of '2-partite' one usually says bipartite." *)
+Overload bipartite = “partite 2”
+
+Theorem bipartite_def :
+    !g. bipartite (g :fsgraph) <=>
+        ?A B. DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
+              !n1 n2. {n1;n2} IN fsgedges g ==>
+                      (n1 IN A /\ n2 IN B) \/ (n1 IN B /\ n2 IN A)
+Proof
+    rw [partite_def]
+ >> EQ_TAC >> simp []
+ >- (STRIP_TAC \\
+    ‘FINITE V’ by rw [] \\
+    ‘FINITE v’ by PROVE_TAC [partitions_FINITE] \\
+     fs [CARDEQ2] >> rename1 ‘v = {A; B}’ >> gvs [] \\
+     qexistsl_tac [‘A’, ‘B’] \\
+     CONJ_ASM1_TAC (* DISJOINT A B *)
+     >- (MATCH_MP_TAC partitions_DISJOINT \\
+         qexistsl_tac [‘{A;B}’, ‘V’] >> rw []) \\
+     CONJ_TAC (* A <> {} *) >- fs [partitions_PAIR_DISJOINT] \\
+     CONJ_TAC (* B <> {} *) >- fs [partitions_PAIR_DISJOINT] \\
+     CONJ_ASM1_TAC (* A UNION B = V *)
+     >- (Q.PAT_X_ASSUM ‘{A;B} partitions V’ (MP_TAC o MATCH_MP partitions_covers) \\
+         SET_TAC []) \\
+     rpt STRIP_TAC \\
+    ‘n1 IN V /\ n2 IN V /\ n1 <> n2’ by PROVE_TAC [fsgraph_valid] \\
+     Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘n1’, ‘n2’]) >> rw [] \\
+     Cases_on ‘n1 IN A’
+     >- (DISJ1_TAC >> rw [] (* goal: n2 IN B *) \\
+         Know ‘A = part {A; B} n1’
+         >- (MATCH_MP_TAC part_unique \\
+             Q.EXISTS_TAC ‘V’ >> rw []) \\
+         DISCH_THEN (fs o wrap o SYM) \\
+         Cases_on ‘n2 IN A’
+         >- (Know ‘A = part {A; B} n2’
+             >- (MATCH_MP_TAC part_unique \\
+                 Q.EXISTS_TAC ‘V’ >> rw []) \\
+             DISCH_THEN (fs o wrap o SYM)) \\
+         ASM_SET_TAC []) \\
+     simp [] \\
+     CONJ_ASM1_TAC >- ASM_SET_TAC [] \\
+     Know ‘B = part {A; B} n1’
+     >- (MATCH_MP_TAC part_unique \\
+         Q.EXISTS_TAC ‘V’ >> rw []) \\
+     DISCH_THEN (fs o wrap o SYM) \\
+     Cases_on ‘n2 IN B’
+     >- (Know ‘B = part {A; B} n2’
+         >- (MATCH_MP_TAC part_unique \\
+             Q.EXISTS_TAC ‘V’ >> rw []) \\
+         DISCH_THEN (fs o wrap o SYM)) \\
+     ASM_SET_TAC [])
+ >> STRIP_TAC
+ >> Q.EXISTS_TAC ‘{A; B}’
+ >> CONJ_ASM1_TAC (* {A; B} partitions V *)
+ >- (rw [partitions_PAIR_DISJOINT] >- art [] \\
+     rw [Once DISJOINT_SYM])
+ >> CONJ_TAC
+ >- (rw [CARDEQ2] \\
+     qexistsl_tac [‘A’, ‘B’] >> art [] \\
+     CCONTR_TAC >> fs [DISJOINT_EMPTY_REFL_RWT])
+ >> rpt STRIP_TAC
+ >> ‘n1 IN V /\ n2 IN V /\ n1 <> n2’ by PROVE_TAC [fsgraph_valid]
+ >> Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘n1’, ‘n2’]) >> rw []
+ >| [ (* goal 1 (of 2) *)
+      CCONTR_TAC >> fs [] \\
+      Know ‘A = part {A; B} n1’
+      >- (MATCH_MP_TAC part_unique \\
+          Q.EXISTS_TAC ‘V’ >> rw []) \\
+      DISCH_THEN (fs o wrap o SYM) \\
+      Know ‘B = part {A; B} n2’
+      >- (MATCH_MP_TAC part_unique \\
+          Q.EXISTS_TAC ‘V’ >> rw []) \\
+      DISCH_THEN (fs o wrap o SYM),
+      (* goal 2 (of 2) *)
+      CCONTR_TAC >> fs [] \\
+      Know ‘B = part {A; B} n1’
+      >- (MATCH_MP_TAC part_unique \\
+          Q.EXISTS_TAC ‘V’ >> rw []) \\
+      DISCH_THEN (fs o wrap o SYM) \\
+      Know ‘A = part {A; B} n2’
+      >- (MATCH_MP_TAC part_unique \\
+          Q.EXISTS_TAC ‘V’ >> rw []) \\
+      DISCH_THEN (fs o wrap o SYM) ]
+QED
+
+Theorem bipartite_alt :
+    !g. bipartite (g :fsgraph) <=>
+        ?A B. DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
+              !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B
+Proof
+    rw [bipartite_def]
+ >> EQ_TAC >> STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      qexistsl_tac [‘A’, ‘B’] >> rw [] \\
+      MP_TAC (Q.SPEC ‘g’ alledges_valid) >> rw [] \\
+      Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘a’, ‘b’]) >> rw []
+      >- (qexistsl_tac [‘a’, ‘b’] >> art []) \\
+      qexistsl_tac [‘b’, ‘a’] >> art [] \\
+      rw [INSERT2_lemma],
+      (* goal 2 (of 2) *)
+      qexistsl_tac [‘A’, ‘B’] >> rw [] \\
+      Q.PAT_X_ASSUM ‘!e. P’ (MP_TAC o Q.SPEC ‘{n1; n2}’) >> rw [] \\
+      gvs [INSERT2_lemma] ]
+QED
+
 val _ = export_theory();
+val _ = html_theory "fsgraph";
+
+(* References:
+
+   [1] Harris, J., Hirst, J.L., Mossinghoff, M.: Combinatorics and Graph Theory.
+       2nd Edition. Springer Science & Business Media (2008).
+   [2] Diestel, R.: Graph Theory, 5th Electronic Edition. Springer-Verlag, Berlin (2017).
+ *)
