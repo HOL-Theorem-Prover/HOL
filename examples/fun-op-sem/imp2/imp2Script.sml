@@ -81,4 +81,63 @@ Proof
         >- simp[com_lt]
 QED
 
+
+(* Theorem pval_NONE[simp]:
+    pval 0 cs s = NONE
+Proof
+    rw[cval_def]
+QED *)
+
+Theorem cval_mono:
+    (!t1 c s t2. t1 <= t2 /\ cval t1 c s <> NONE ==> cval t1 c s = cval t2 c s) /\
+    (!t1 cs s t2. t1 <= t2 /\ pval t1 cs s <> NONE ==> pval t1 cs s = pval t2 cs s)
+Proof
+    ho_match_mp_tac cval_ind >>
+    rw[] >>
+    Cases_on `t2`
+        >- fs[cval_def]
+        >- fs[cval_def]
+        >- fs[]
+        >- simp[cval_def]
+        >- fs[]
+        >- (simp[cval_def] >>
+            first_x_assum $ qspec_then `SUC n` assume_tac >>
+            gvs[cval_def]
+        )
+        >- fs[]
+        >- (simp[cval_def] >>
+            first_x_assum $ qspec_then `SUC n` assume_tac >>
+            gvs[cval_def]
+        )
+        >- fs[]
+        >- (Cases_on `bval b s` >>
+            fs[]
+                >- (simp[cval_def] >>
+                    first_x_assum $ qspec_then `n` assume_tac >>
+                    gvs[cval_def]
+                )
+                >- simp[cval_def]
+        )
+        >- simp[]
+        >- fs[cval_def]
+        >- fs[]
+        >- simp[cval_def]
+        >- fs[]
+        >- (simp[cval_def] >>
+            first_x_assum $ qspec_then `SUC n` assume_tac >>
+            Cases_on `cval (SUC v26) c s`
+                >- gvs[cval_def] (* got lazy trying to do granularly but seems straight forward *)
+                >- (gvs[] >>
+                    last_x_assum $ qspec_then `SUC n` assume_tac >>
+                    Cases_on `cval (SUC n) c s` (* why do I have to do this to force rewrite *)
+                        >- fs[]
+                        >- (gvs[] >>
+                            Cases_on `pval (SUC v26) cs x`
+                                >- gvs[cval_def]
+                                >- gvs[]
+                        )
+                )
+        )
+QED
+
 val _ = export_theory();
