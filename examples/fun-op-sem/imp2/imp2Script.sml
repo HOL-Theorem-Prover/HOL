@@ -58,4 +58,27 @@ Termination
 End
 (* wow terminationa actually worked...I thought it had to be stricly decreasing but I don't think this is *)
 
+
+Theorem com_lt:
+    !c h t. MEM c t ==> com_size c < com1_size (h::t)
+Proof
+    rw[] >>
+    simp[com_size_def] >>
+    Induct_on `t` >>
+    rw[] >>
+    simp[com_size_def] >>
+    fs[]
+QED
+
+Theorem com_ineq:
+    !c cs. MEM c cs ==> com_size c <= com1_size cs
+Proof
+    rw[] >>
+    simp[LESS_OR_EQ] >>
+    Cases_on `cs` >>
+    fs[MEM]
+        >- simp[com_size_def]
+        >- simp[com_lt]
+QED
+
 val _ = export_theory();
