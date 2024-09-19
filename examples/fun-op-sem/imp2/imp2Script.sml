@@ -37,4 +37,25 @@ Termination
     rw[]
 End
 
+Definition imp2imp2_def:
+    (imp2imp2 (SKIP:imp$com) = []) /\
+    (imp2imp2 (Assign v a) = [((Assign v a):com)]) /\
+    (imp2imp2 (Seq c1 c2) = (imp2imp2 c1) ++ (imp2imp2 c2)) /\
+    (imp2imp2 (If b c1 c2) = [(If b (imp2imp2 c1) (imp2imp2 c2))]) /\
+    (imp2imp2 (While b c) = [(While b (imp2imp2 c))])
+End
+
+Definition p2imp_def:
+    (p2imp [] = SKIP) /\
+    (p2imp (x::xs) = Seq (imp2imp x) (p2imp xs)) /\
+    (imp2imp ((Assign v a):com) = ((Assign v a):imp$com)) /\
+    (imp2imp (If b c1s c2s) = (If b (p2imp c1s) (p2imp c2s))) /\
+    (imp2imp (While b cs) = (While b (p2imp cs)))
+Termination
+    WF_REL_TAC `inv_image (measure I) (\r. case r of
+        | INR c => com_size c
+        | INL cs => com1_size cs)`
+End
+(* wow terminationa actually worked...I thought it had to be stricly decreasing but I don't think this is *)
+
 val _ = export_theory();
