@@ -140,4 +140,30 @@ Proof
         )
 QED
 
+Theorem pval_concat:
+    ! t l1 l2 s. pval t (l1 ++ l2) s = OPTION_BIND (pval t l1 s) (pval t l2)
+Proof
+    Cases_on `t`
+        >- simp[cval_def]
+        >- (Induct_on `l1`
+            >- simp[cval_def]
+            >- (simp[cval_def] >>
+                rpt strip_tac >>
+                Cases_on `cval (SUC n) h s`
+                    >- simp[]
+                    >- fs[cval_def]
+            )
+        )
+QED
+
+(* is an equality theorem more useful than an inequality theorem??? *)
+Theorem seq_none:
+    cval (Seq c c') s t <> NONE ==> cval c s t <> NONE
+Proof
+    rw[] >>
+    fs[impTheory.cval_def] >>
+    Cases_on `cval c s t` >>
+    fs[]
+QED
+
 val _ = export_theory();
