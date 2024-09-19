@@ -170,4 +170,73 @@ Proof
     )
 QED
 
+
+(* actually this proof might be good to do by contradiction *)
+Theorem lrg_clk2:
+  !c s t t' s1 t1 t2. ((t1 <= t2) /\ (cval c s t = SOME (s1, t1)) /\ (cval c s t' = SOME (s1, t2))) ==> t <= t'
+Proof
+  recInduct cval_ind >>
+  rw[]
+    >- fs[cval_def]
+    >- fs[cval_def]
+    >- (pop_assum mp_tac >>
+        pop_assum mp_tac >>
+        simp[cval_def] >>
+        Cases_on `cval c1 s t` >>
+        Cases_on `cval c1 s t'`
+          >- simp[]
+          >- simp[]
+          >- simp[]
+          >- (simp[] >>
+              Cases_on `x` >>
+              Cases_on `x'` >>
+              simp[] >>
+              disch_then assume_tac >>
+              disch_then assume_tac >>
+              first_x_assum irule >>
+              last_x_assum $ irule_at Any >>
+              rw[] >>
+              qexists `t2` >>
+              Cases_on `t <= t'`
+                >- (qspecl_then [`c1`, `s`, `t`, `t'`] mp_tac cval_mono >>
+                    rw[]
+                )
+                >- (fs[NOT_LESS_EQUAL] >>
+                    qspecl_then [`c1`, `s`, `t'`, `t`] mp_tac cval_mono >>
+                    rw[] >>
+                    simp[]
+                )
+          )
+    )
+    >- (pop_assum mp_tac >>
+        pop_assum mp_tac >>
+        simp[cval_def]
+    )
+    >- (pop_assum mp_tac >>
+        pop_assum mp_tac >>
+        simp[cval_def]
+    ) 
+    >- (Cases_on `bval b s` >>
+        Cases_on `t` >>
+        Cases_on `t'`
+          >- simp[]
+          >- simp[]
+          >- fs[Once cval_def]
+          >- (fs[] >>
+              pop_assum mp_tac >>
+              pop_assum mp_tac >>
+              pop_assum mp_tac >>
+              once_rewrite_tac[cval_def] >>
+              simp[] >>
+              rw[] >>
+              last_x_assum $ qspecl_then [`n'`, `s1`, `t1`, `t2`] assume_tac >>
+              rfs[]
+          )
+          >- simp[]
+          >- simp[]
+          >- fs[Once cval_def]
+          >- fs[Once cval_def]
+    )
+QED
+
 val _ = export_theory();
