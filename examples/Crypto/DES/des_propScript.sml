@@ -11,6 +11,9 @@ open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
 
 open desTheory;
 
+open measureTheory probabilityTheory extreal_baseTheory;
+open extrealTheory;
+
 val _ = guessing_word_lengths := true;
 val _ = new_theory "des_prop";
 
@@ -1160,6 +1163,201 @@ Proof
   >> Q.EXISTS_TAC ‘0b0w’
   >> Q.EXISTS_TAC ‘0b0w’
   >> EVAL_TAC
+QED
+
+Definition XcauseYkeysS1_def:
+    XcauseYkeysS1 X Y= {k| ?x1 x2. ((x1 ⊕ x2=X) /\ (S1(x1 ⊕ k)) ⊕ (S1 (x2 ⊕ k))=Y)}
+End
+
+Definition XcauseYpairsS1_def:
+    XcauseYpairsS1 X Y={(x1,x2)| ?k.((x1 ⊕ x2=X) /\ (S1(x1 ⊕ k)) ⊕ (S1 (x2 ⊕ k))=Y)}
+End
+
+Definition XcauseYprobS1_def:
+    XcauseYprobS1 X Y= (CARD (XcauseYpairsS1 X Y)) DIV 64
+End
+
+Definition XcauseYkeysF_def:
+    XcauseYkeysF X Y= {k| ?x1 x2. ((x1 ⊕ x2=X) /\ (RoundOp x1 k) ⊕ (RoundOp x1 k)=Y)}
+End
+
+Definition XcauseYpairsF_def:
+    XcauseYpairsF X Y={(x1,x2)| ?k.((x1 ⊕ x2=X) /\ (RoundOp x1 k) ⊕ (RoundOp x2 k)=Y)}
+End
+
+Definition XcauseYprobF_def:
+    XcauseYprobF X= {(x1,x2)|(x1 ⊕ x2=X)}
+End
+
+Theorem XcauseYprob_def:
+    ?x.x =0x23w==>x IN (XcauseYkeysS1 0x34w 0xDw)
+Proof
+     rw[XcauseYkeysS1_def]
+  >> Q.EXISTS_TAC ‘0x23w’
+  >> rw[]
+  >> Q.EXISTS_TAC ‘0x1w’
+  >> Q.EXISTS_TAC ‘0x35w’
+  >> EVAL_TAC
+QED
+
+Definition AllpairXor_def:
+    AllpairXor (X:word6)= {(x1,x2)| x1 ⊕ x2=X}
+End
+
+Definition trans1_def:
+  trans1 (x1:word6,x2:word6) = x1
+End
+
+Definition trans2_def:
+  trans2 (x:word6)= (x,x)
+End
+
+Theorem BIJ_XORL:
+   BIJ trans2 univ(:word6) (AllpairXor 0x0w) 
+Proof
+     rw[BIJ_IFF_INV]
+  >- (rw[AllpairXor_def,trans2_def])
+  >> EXISTS_TAC “trans1”
+  >> rw[]
+  
+  >- rw[trans2_def,trans1_def]
+  
+  >> POP_ASSUM MP_TAC
+  >> rw[AllpairXor_def,trans2_def,trans1_def]
+  >> Know ‘x1 ⊕ x1 ⊕ x2=x1 ⊕ 0w’
+  >- RW_TAC fcp_ss[]
+  >> rw[WORD_XOR_CLAUSES]
+QED
+
+Theorem AllpairXor_card :
+    CARD (AllpairXor 0x0w) = 2 ** 6
+Proof
+    Suff ‘2 ** 6=CARD (AllpairXor 0x0w)’
+ >- rw[]
+ >> RW_TAC std_ss [GSYM card_word6, BIJ_XORL]
+ >> MATCH_MP_TAC FINITE_BIJ_CARD
+ >> Q.EXISTS_TAC ‘trans2’
+ >> CONJ_TAC
+ >- rw[]
+ >> rw[BIJ_XORL]
+QED
+
+Definition Xorp_def:
+   Xorp X=let p=(univ(:word6 # word6), POW (univ(:word6 # word6)), (\s. (&(CARD s))/(&(2 ** 12)))) in
+   prob p {(x1,x2)|x1 ⊕ x2=X} 
+End
+
+Theorem Xorprob_test:
+   Xorp 0x0w=(&64 / &(2 **12))
+Proof
+     rw[Xorp_def]
+  >> EVAL_TAC
+  >> rw[AllpairXor_card,GSYM AllpairXor_def]
+QED
+
+Theorem prob_uniform_on_finite_set :
+    !p. FINITE (p_space p) /\ p_space p <> {} /\ events p = POW (p_space
+p) /\
+        (!s. s IN events p ==> prob p s = &CARD s / &CARD (p_space p)) ==>
+        prob_space p
+Proof
+    rw [p_space_def, events_def, prob_def]
+ >> ‘CARD (m_space p) <> 0’ by rw [CARD_EQ_0]
+ >> rw [prob_on_finite_set]
+ >| [ (* goal 1 (of 3) *)
+      rw [positive_def]
+      >- (MATCH_MP_TAC zero_div >> rw [extreal_of_num_def]) \\
+      qabbrev_tac ‘N = CARD (m_space p)’ \\
+     ‘&N = Normal (&N)’ by rw [extreal_of_num_def] >> POP_ORW \\
+      MATCH_MP_TAC le_div \\
+      rw [extreal_lt_eq, extreal_of_num_def],
+      (* goal 2 (of 3) *)
+      rw [prob_def, p_space_def] \\
+     ‘m_space p IN measurable_sets p’ by rw [IN_POW] \\
+      rw [] \\
+      MATCH_MP_TAC div_refl >> rw [extreal_of_num_def],
+      (* goal 3 (of 3) *)
+      rw [additive_def] \\
+      Know ‘CARD (s UNION t) = CARD s + CARD t’
+      >- (MATCH_MP_TAC CARD_UNION_DISJOINT >> art [] \\
+          fs [IN_POW] \\
+          CONJ_TAC \\ (* 2 subgoals, same tactics *)
+          MATCH_MP_TAC SUBSET_FINITE_I >> Q.EXISTS_TAC ‘m_space p’ >> art
+[]) >> Rewr' \\
+      Know ‘&(CARD s + CARD t) = &CARD s + (&CARD t :extreal)’
+      >- rw [extreal_of_num_def, extreal_add_def] >> Rewr' \\
+      ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+      MATCH_MP_TAC div_add >> rw [extreal_of_num_def] ]
+QED
+
+Definition word6x6_def:
+   word6x6=(univ(:word6 # word6),
+             POW (univ(:word6 # word6)),
+             (\s:(word6 # word6) set.
+               (&(CARD s))/(&(2 ** 12)) :extreal))  
+End
+
+Theorem prob_space_word6x6:
+   prob_space word6x6
+Proof
+     
+     MATCH_MP_TAC prob_uniform_on_finite_set
+  >> rw[]
+  
+  >- (rw[p_space_def]\\
+      rw[word6x6_def])
+
+  >- (rw[p_space_def]\\
+      rw[word6x6_def])
+
+  >- (rw[p_space_def,events_def]\\
+      rw[word6x6_def])
+
+  >> rw[prob_def]
+  >> rw[word6x6_def]
+  >> rw[p_space_def]
+  >> Suff ‘&CARD 𝕌(:word6 # word6)=4096’
+  >- rw[]
+  >> Know ‘CARD 𝕌(:word6 # word6)=CARD 𝕌(:word6)*CARD 𝕌(:word6)’
+  >- rw[CARD_WORD]
+      
+  
+QED   
+
+Definition XcauseYp_def :
+   XcauseYp X Y S =
+   prob word6x6 {(x,y) | x ?? y= X /\ S(x) ?? S(y)= Y}
+End
+
+Theorem XcauseYp_test:
+   prob XcauseYp 0x0w 0x0w) S1=(&64 / &(2 **6))
+Proof
+     rw[XcauseYp_def]
+  >> EVAL_TAC
+  >> rw[AllpairXor_card,GSYM AllpairXor_def]
+QED
+
+Definition FpXor'_def:
+   FpXor' (X:word32) (Y:word48)= let Xe=E(X); x1=(5><0) Xe;x2=(11><6) Xe;x3=(17><12) Xe;x4=(23><18) Xe;x5=(29><24) Xe;x6=(35><30) Xe;x7=(41><36) Xe;x8=(47><42) Xe;y1=(5><0) Y;y2=(11><6) Y;y3=(17><12) Y;y4=(23><18) Y;y5=(29><24) Y;y6=(35><30) Y;y7=(41><36) Y;y8=(47><42) Y in
+   (XcauseYp x1 y1 S1)*(XcauseYp x2 y2 S2)*(XcauseYp x3 y3 S3)*(XcauseYp x4 y4 S4)*(XcauseYp x5 y5 S5)*(XcauseYp x6 y6 S6)*(XcauseYp x7 y7 S7)*(XcauseYp x8 y8 S8)
+End
+
+Definition FpXor_def:
+   FpXor (X:word48) (Y:word32)=let p=(univ(:word48 # word48), POW (univ(:word48 # word48)), (\s. (&(CARD s))/(&(2 ** 48)))) in
+   prob p {(x1,x2)|x1 ⊕ x2=X /\ S(x1) ?? S(x2)=Y} 
+End
+
+Definition Fp_def:
+   Fp (x1:word48) (x2:word48) (Y:word32)=let p=(univ(:word48), POW (univ(:word48)), (\s. (&(CARD s))/(&(2 ** 48)))) in
+   prob p {k|S(x1 ?? k) ?? S(x2 ?? k)=Y} 
+End
+
+Theorem XcauseYp_test:
+   !x1 x2 X Y. x1 ⊕ x2= X ==> FpXor X Y= Fp x1 x2 Y 
+Proof
+     rw[]
+  >> rw[FpXor_def,Fp_def]
+  >>
 QED
 
 val _ = export_theory();
