@@ -239,4 +239,50 @@ Proof
     )
 QED
 
+
+
+Theorem arb_clock:
+    !c s t s1 t1. cval c s t = SOME (s1, t1) ==> (!t2. t1 <= t2 ==> (?t'. cval c s t' = SOME (s1, t2)))
+Proof
+    recInduct cval_ind >>
+    rw[]
+        >- fs[cval_def]
+        >- fs[cval_def]
+        >- (fs[cval_def] >>
+            Cases_on `cval c1 s t`
+                >- fs[]
+                >- (Cases_on `x` >>
+                    fs[] >>
+                    last_x_assum drule >>
+                    rw[] >>
+                    qspecl_then [`c2`, `q`, `r`, `t'`, `s1`, `t1`, `t2`] assume_tac lrg_clk2 >>
+                    rfs[] >>
+                    last_x_assum drule >>
+                    rw[] >>
+                    qexists `t''` >>
+                    simp[]
+                )
+        )
+        >- rfs[cval_def]
+        >- rfs[cval_def]
+        >- (Cases_on `bval b s` >>
+            Cases_on `t`
+              >- fs[Once cval_def]
+              >- (fs[] >>
+                  qpat_x_assum `cval _ _ _ = _` mp_tac >>
+                  once_rewrite_tac[cval_def] >>
+                  simp[] >>
+                  rw[] >>
+                  last_x_assum $ qspecl_then [`s1`, `t1`] assume_tac >>
+                  rfs[] >>
+                  pop_assum $ qspec_then `t2` assume_tac >>
+                  rfs[] >>
+                  qexists `SUC t'` >>
+                  simp[]
+              )
+              >- fs[Once cval_def]
+              >- fs[Once cval_def]
+        )
+QED
+
 val _ = export_theory();
