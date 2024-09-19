@@ -1,6 +1,7 @@
 
 open HolKernel Parse boolLib bossLib;
 open stringLib integerTheory;
+open listTheory arithmeticTheory;
 val ect = BasicProvers.EVERY_CASE_TAC;
 
 val _ = new_theory "imp";
@@ -102,5 +103,55 @@ val cval_ind = prove(
   \\ `t = t2` by DECIDE_TAC \\ fs []) |> REWRITE_RULE [STOP_def];
 
 Theorem cval_ind[allow_rebind] = cval_ind
+
+
+(* not only does this say larger clocks produce larger clocks...but it also says the resultant state stays the same i.e. monotonicity *)
+(* not sure how I was able to prove this directly yet needed it as a lemma to prove a weaker statement *)
+(* maybe the stronger induction hypothesis given by this is in fact needed *)
+(* probably could have said t' is larger too *)
+Theorem lrg_clk:
+    !c s t t' s1 t1. ((t <= t') /\ (cval c s t = SOME (s1, t1))) ==> (?t2.(cval c s t' = SOME (s1, t2)) /\ t1 <= t2)
+Proof
+    recInduct cval_ind >>
+    rw[]
+        >- (qexists `t'` >> fs[cval_def])
+        >- (qexists `t'` >> fs[cval_def])
+        >- (Cases_on `cval c1 s t` >>
+            Cases_on `cval c1 s t'`
+                >- fs[cval_def]
+                >- fs[cval_def]
+                >- (Cases_on `x` >> first_x_assum $ qspecl_then [`t'`, `q`, `r`] assume_tac >> rfs[]) (* rfs works but fs doesn't...not clear why *)
+                >- (Cases_on `x` >>
+                    Cases_on `x'` >>
+                    simp[cval_def] >>
+                    rw[] >> (* this rw automated the instantion I was doing manually...huh???? *)
+                    first_x_assum $ qspec_then `t'` assume_tac >>
+                    gvs[] >> (* this automatically gave me r <= r' which I want *)
+                    first_x_assum $ qspecl_then [`r'`, `s1`, `t1`] assume_tac >>
+                    fs[cval_def] (* automation doing a lot of the tedious steps...might have been able to do more automation earlier *)
+                )
+        )
+        >- (simp[cval_def] >>
+            first_x_assum $ qspecl_then [`t'`, `s1`, `t1`] assume_tac >>
+            rfs[cval_def]
+        )
+        >- (simp[cval_def] >>
+            first_x_assum $ qspecl_then [`t'`, `s1`, `t1`] assume_tac >>
+            rfs[cval_def]
+        )
+        >- (Cases_on `t` >>
+            Cases_on `bval b s`
+                >- fs[Once cval_def] (* need once otherwise it loops *)
+                >- fs[Once cval_def]
+                >- (gvs[] >>
+                    first_x_assum $ qspecl_then [`t'-1`, `s1`, `t1`] assume_tac >>
+                    fs[Once cval_def] >>
+                    Cases_on `cval c s n`
+                        >- fs[Once cval_def]
+                        >- (Cases_on `x` >> gvs[Once cval_def])
+                )
+                >- fs[Once cval_def]
+        )
+QED
 
 val _ = export_theory();
