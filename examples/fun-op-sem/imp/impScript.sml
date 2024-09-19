@@ -154,4 +154,20 @@ Proof
         )
 QED
 
+
+(* I think this should immediatly follow from the above theorem *)
+(* NOTE this is provable without the above lemma ...though probably reconstructs the lemma in some way*)
+Theorem cval_mono:
+    !c s t t'. ((t <= t') /\ (cval c s t <> NONE)) ==> (OPTION_MAP FST (cval c s t)) = (OPTION_MAP FST (cval c s t'))
+Proof
+  rpt strip_tac >>
+  Cases_on `cval c s t`
+    >- fs[]
+    >- (Cases_on `x` >>
+        (* drule_then lrg_clk assume_tac *) (* type error?? *)
+        qspecl_then [`c`, `s`, `t`, `t'`, `q`, `r`] assume_tac lrg_clk >>
+        rfs[]
+    )
+QED
+
 val _ = export_theory();
