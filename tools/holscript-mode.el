@@ -152,11 +152,11 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
            (setq n (- n 1))))
         ((< n 0)
          (setq n (- n))
-         (setq n (- n (if (equal (skip-syntax-backward ".") 0) 0 1))))
+         (setq n (- n (if (equal (skip-syntax-backward ".") 0) 0 1)))
          (while (> n 0)
            (skip-syntax-backward "^.")
            (skip-syntax-backward ".")
-           (setq n (- n 1)))))
+           (setq n (- n 1))))))
 
 (defun is-a-then (s)
   (and s (or (string-equal s "THEN")
