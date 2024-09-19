@@ -285,4 +285,55 @@ Proof
         )
 QED
 
+
+(* don't think I proved the right lemmas...want to say if it is a terminating computation then we can find a high enough initial clock to get any arbitrary clock *)
+(* don't think we need to care about the resultant state here ...unless it is important information for seq case...we'll see *)
+(* actually I think I should use it...it can't be anything else anyway *)
+(* doing suc because don't think can actually get 0 in result and if can...ignoring this case *)
+(* actually can have 0 as a result...the 0 only becomes a problem if we decide to keep looping *)
+(* can find a t' so the program perfectly terminates at 0 before timing out *)
+Theorem arb_resc:
+  !c s t s1 t1. cval c s t = SOME (s1, t1) ==> (!k. ?t'. cval c s t' = SOME (s1, k))
+Proof
+  recInduct cval_ind >>
+  rw[]
+    >- (qexists `k` >> fs[cval_def])
+    >- (qexists `k` >> fs[cval_def])
+    >- (fs[cval_def] >>
+        Cases_on `cval c1 s t`
+          >- fs[]
+          >- (fs[] >>
+              Cases_on `x` >>
+              fs[] >>
+              last_x_assum $ qspec_then `k` assume_tac >>
+              fs[] >>
+              last_x_assum $ qspec_then `t'` assume_tac >>
+              fs[] >>
+              qexists `t''` >>
+              simp[]
+          )
+    )
+    >- gvs[cval_def] (* got lazy doing the rewrites myself *)
+    >- gvs[cval_def]
+    >- (Cases_on `bval b s` >>
+        Cases_on `t`
+          >- fs[Once cval_def]
+          >- (fs[] >>
+              qpat_x_assum `cval _ _ _ = _` mp_tac >>
+              once_rewrite_tac[cval_def] >>
+              simp[] >>
+              disch_then assume_tac >>
+              last_x_assum $ qspecl_then [`s1`, `t1`] assume_tac >>
+              rfs[] >>
+              pop_assum $ qspec_then `k` assume_tac >>
+              fs[] >>
+              qexists `SUC t'` >>
+              simp[]
+          )
+          >- fs[Once cval_def]
+          >- fs[Once cval_def]
+    )
+QED
+
+
 val _ = export_theory();
