@@ -194,44 +194,29 @@ Theorem arb_resc:
   !c s t s1 t1. cval c s t = SOME (s1, t1) ==> (!k. ?t'. cval c s t' = SOME (s1, k))
 Proof
   recInduct cval_ind >>
-  rw[]
-    >- (qexists `k` >> fs[cval_def])
-    >- (qexists `k` >> fs[cval_def])
-    >- (fs[cval_def] >>
-        Cases_on `cval c1 s t`
-          >- fs[]
-          >- (fs[] >>
-              Cases_on `x` >>
-              fs[] >>
-              last_x_assum $ qspec_then `k` assume_tac >>
-              fs[] >>
-              last_x_assum $ qspec_then `t'` assume_tac >>
-              fs[] >>
-              qexists `t''` >>
-              simp[]
-          )
-    )
-    >- gvs[cval_def] (* got lazy doing the rewrites myself *)
-    >- gvs[cval_def]
-    >- (Cases_on `bval b s` >>
-        Cases_on `t`
-          >- fs[Once cval_def]
-          >- (fs[] >>
-              qpat_x_assum `cval _ _ _ = _` mp_tac >>
-              once_rewrite_tac[cval_def] >>
-              simp[] >>
-              disch_then assume_tac >>
-              last_x_assum $ qspecl_then [`s1`, `t1`] assume_tac >>
-              rfs[] >>
-              pop_assum $ qspec_then `k` assume_tac >>
-              fs[] >>
-              qexists `SUC t'` >>
-              simp[]
-          )
-          >- fs[Once cval_def]
-          >- fs[Once cval_def]
-    )
+  rw[] >>~-
+  ([`(While _ _)`],
+    Cases_on `bval b s` >>
+    Cases_on `t` >>
+    fs[Once cval_def] >>
+    last_x_assum $ qspecl_then [`s1`, `t1`] assume_tac >>
+    rfs[Once cval_def] >>
+    pop_assum $ qspec_then `k` assume_tac >>
+    fs[] >>
+    qexists `t' + 1` >>
+    simp[]
+  ) >>
+  gvs[cval_def] >>
+  fs[CaseEq"option"] >>
+  Cases_on `v` >>
+  fs[] >>
+  last_x_assum $ qspec_then `k` assume_tac >>
+  fs[] >>
+  last_x_assum $ qspec_then `t'` assume_tac >>
+  fs[] >>
+  qexists `t''` >>
+  qexists `(q, t')` >>
+  simp[]
 QED
-
 
 val _ = export_theory();
