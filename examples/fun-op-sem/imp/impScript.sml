@@ -135,9 +135,6 @@ Proof
     )
 QED
 
-
-(* I think this should immediatly follow from the above theorem *)
-(* NOTE this is provable without the above lemma ...though probably reconstructs the lemma in some way*)
 Theorem cval_mono:
     !c s t t'. ((t <= t') /\ (cval c s t <> NONE)) ==> (OPTION_MAP FST (cval c s t)) = (OPTION_MAP FST (cval c s t'))
 Proof
@@ -145,38 +142,25 @@ Proof
   Cases_on `cval c s t`
     >- fs[]
     >- (Cases_on `x` >>
-        (* drule_then lrg_clk assume_tac *) (* type error?? *)
         qspecl_then [`c`, `s`, `t`, `t'`, `q`, `r`] assume_tac lrg_clk >>
         rfs[]
     )
 QED
 
-
-(* actually this proof might be good to do by contradiction *)
 Theorem lrg_clk2:
   !c s t t' s1 t1 t2. ((t1 <= t2) /\ (cval c s t = SOME (s1, t1)) /\ (cval c s t' = SOME (s1, t2))) ==> t <= t'
 Proof
   recInduct cval_ind >>
-  rw[]
-    >- fs[cval_def]
-    >- fs[cval_def]
-    >- (pop_assum mp_tac >>
-        pop_assum mp_tac >>
-        simp[cval_def] >>
-        Cases_on `cval c1 s t` >>
-        Cases_on `cval c1 s t'`
-          >- simp[]
-          >- simp[]
-          >- simp[]
-          >- (simp[] >>
-              Cases_on `x` >>
+  rw[] >>
+  fs[Once cval_def]
+    >- (Cases_on `cval c1 s t` >>
+        Cases_on `cval c1 s t'` >>
+        fs[]
+          >- (Cases_on `x` >>
               Cases_on `x'` >>
-              simp[] >>
-              disch_then assume_tac >>
-              disch_then assume_tac >>
+              fs[] >>
               first_x_assum irule >>
               last_x_assum $ irule_at Any >>
-              rw[] >>
               qexists `t2` >>
               Cases_on `t <= t'`
                 >- (qspecl_then [`c1`, `s`, `t`, `t'`] mp_tac cval_mono >>
@@ -189,34 +173,20 @@ Proof
                 )
           )
     )
-    >- (pop_assum mp_tac >>
-        pop_assum mp_tac >>
-        simp[cval_def]
-    )
-    >- (pop_assum mp_tac >>
-        pop_assum mp_tac >>
-        simp[cval_def]
-    )
+    >- rfs[cval_def]
+    >- rfs[cval_def]
     >- (Cases_on `bval b s` >>
         Cases_on `t` >>
-        Cases_on `t'`
-          >- simp[]
-          >- simp[]
-          >- fs[Once cval_def]
-          >- (fs[] >>
-              pop_assum mp_tac >>
-              pop_assum mp_tac >>
-              pop_assum mp_tac >>
-              once_rewrite_tac[cval_def] >>
-              simp[] >>
-              rw[] >>
-              last_x_assum $ qspecl_then [`n'`, `s1`, `t1`, `t2`] assume_tac >>
-              rfs[]
-          )
-          >- simp[]
-          >- simp[]
-          >- fs[Once cval_def]
-          >- fs[Once cval_def]
+        Cases_on `t'` >>
+        fs[Once cval_def] >>
+        last_x_assum $ qspecl_then [`n'`, `s1`, `t1`, `t2`] assume_tac >>
+        rfs[CaseEq"option"] >> (* what does this actually do?? *)
+        rfs[] >>
+        Cases_on `v` >>
+        Cases_on `v'` >>
+        rfs[Once cval_def] >>
+        pop_assum mp_tac >>
+        simp[Once cval_def]
     )
 QED
 
