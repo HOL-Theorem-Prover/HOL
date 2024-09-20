@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib;
-open fsgraphTheory pred_setTheory arithmeticTheory;
+open fsgraphTheory pred_setTheory arithmeticTheory listTheory genericGraphTheory;
 
 val _ = new_theory "matching";
 
@@ -32,18 +32,44 @@ End
 Definition alternating_path_def:
   alternating_path G M P ⇔ matching G M ∧ path G P ∧
                            unmatched G M (HD P) ∧
-                                     ∀(n: num). ODD n ⇔ {EL n P;EL (SUC n) P} ∈ M
+                           ∀(n: num). SUC n < LENGTH P ⇒ (ODD n ⇔ {EL n P; EL (SUC n) P} ∈ M)
 End
 
 Definition augmenting_path_def:
   augmenting_path G M P ⇔ alternating_path G M P ∧ unmatched G M (LAST P)
 End
 
+Theorem adjacent_reversible[simp]: (* TODO: chuck this elsewhere *)
+  ∀l a b. adjacent (REVERSE l) a b ⇔ adjacent l b a
+Proof
+  ‘∀l a b. adjacent l b a ⇒ adjacent (REVERSE l) a b’ suffices_by METIS_TAC [REVERSE_REVERSE]
+  >> Induct_on ‘list$adjacent’ >> rw []
+    >- (simp[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC"] >> simp [adjacent_append2]) >> cheat
+QED
+
+
+  
+Theorem walk_reversible[simp]:
+  ∀(G: fsgraph) P. walk G (REVERSE P) ⇔ walk G P
+Proof
+  rw [walk_def] >> METIS_TAC [adjacent_SYM]
+QED
+
+Theorem path_reversible[simp]:
+  ∀G P. path G (REVERSE P) ⇔ path G P
+Proof
+  rw [path_def]
+QED
+
+
+
+  
 Theorem augmenting_path_reversible:
   ∀G M P. matching G M ⇒ augmenting_path G M P ⇒ augmenting_path G M (REVERSE P)
 Proof
-  rw [] >> simp [augmenting_path_def, alternating_path_def, unmatched_def]
+  rw [augmenting_path_def, alternating_path_def, unmatched_def]
 QED
+
 
 
 Theorem finite_matching:
@@ -60,11 +86,12 @@ Proof
 QED
 *)
 
-
+Q.SPECL [‘matching G’, ‘CARD’]
 Theorem maximal_matching_exists:
   ∀(G: fsgraph). ∃M. matching G M ∧ ∀N. matching G N ⇒ CARD N ≤ CARD M
 Proof                           (* TODO *)
-
+  GEN_TAC >> Q.SPEC_THEN ‘{M | matching G M}’ MP_TAC FINITE_is_measure_maximal >> impl_tac
+  >-                            (* TODO *)
 QED
 
 (* Berge's Theorem: https://en.wikipedia.org/wiki/Berge's_theorem *)
