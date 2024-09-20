@@ -215,7 +215,7 @@ Proof
     >- (pop_assum mp_tac >>
         pop_assum mp_tac >>
         simp[cval_def]
-    ) 
+    )
     >- (Cases_on `bval b s` >>
         Cases_on `t` >>
         Cases_on `t'`
