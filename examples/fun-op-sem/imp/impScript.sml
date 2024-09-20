@@ -151,37 +151,36 @@ Theorem lrg_clk2:
   !c s t t' s1 t1 t2. ((t1 <= t2) /\ (cval c s t = SOME (s1, t1)) /\ (cval c s t' = SOME (s1, t2))) ==> t <= t'
 Proof
   recInduct cval_ind >>
-  rw[] >>
-  fs[Once cval_def]
-    >- (fs[CaseEq"option"] >>
-        first_x_assum irule >>
-        last_x_assum $ irule_at Any >>
-        Cases_on `v` >>
-        Cases_on `v'` >>
-        gvs[] >>
-        qexists `t2` >>
-        Cases_on `t <= t'` >>
-        fs[NOT_LESS_EQUAL] >>
-        imp_res_tac LESS_IMP_LESS_OR_EQ >>
-        drule cval_mono >>
-        disch_then $ qspecl_then [`c1`, `s`] assume_tac >>
-        gvs[]
-    )
-    >- rfs[cval_def]
-    >- rfs[cval_def]
-    >- (Cases_on `bval b s` >>
-        Cases_on `t` >>
-        Cases_on `t'` >>
-        fs[Once cval_def] >>
-        last_x_assum $ qspecl_then [`n'`, `s1`, `t1`, `t2`] assume_tac >>
-        rfs[CaseEq"option"] >>
-        rfs[] >>
-        Cases_on `v` >>
-        Cases_on `v'` >>
-        rfs[Once cval_def] >>
-        pop_assum mp_tac >>
-        simp[Once cval_def]
-    )
+  rw[] >>~-
+  ([`(While _ _)`],
+    fs[Once cval_def] >>
+    Cases_on `bval b s` >>
+    Cases_on `t` >>
+    Cases_on `t'` >>
+    fs[Once cval_def] >>
+    last_x_assum $ qspecl_then [`n'`, `s1`, `t1`, `t2`] assume_tac >>
+    rfs[CaseEq"option"] >>
+    rfs[] >>
+    Cases_on `v` >>
+    Cases_on `v'` >>
+    rfs[Once cval_def] >>
+    pop_assum mp_tac >>
+    simp[Once cval_def]
+  ) >>
+  gvs[cval_def] >>
+  fs[CaseEq"option"] >>
+  first_x_assum irule >>
+  last_x_assum $ irule_at Any >>
+  Cases_on `v` >>
+  Cases_on `v'` >>
+  gvs[] >>
+  qexists `t2` >>
+  Cases_on `t <= t'` >>
+  fs[NOT_LESS_EQUAL] >>
+  imp_res_tac LESS_IMP_LESS_OR_EQ >>
+  drule cval_mono >>
+  disch_then $ qspecl_then [`c1`, `s`] assume_tac >>
+  gvs[]
 QED
 
 Theorem arb_resc:
