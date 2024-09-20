@@ -153,25 +153,19 @@ Proof
   recInduct cval_ind >>
   rw[] >>
   fs[Once cval_def]
-    >- (Cases_on `cval c1 s t` >>
-        Cases_on `cval c1 s t'` >>
-        fs[]
-          >- (Cases_on `x` >>
-              Cases_on `x'` >>
-              fs[] >>
-              first_x_assum irule >>
-              last_x_assum $ irule_at Any >>
-              qexists `t2` >>
-              Cases_on `t <= t'`
-                >- (qspecl_then [`c1`, `s`, `t`, `t'`] mp_tac cval_mono >>
-                    rw[]
-                )
-                >- (fs[NOT_LESS_EQUAL] >>
-                    qspecl_then [`c1`, `s`, `t'`, `t`] mp_tac cval_mono >>
-                    rw[] >>
-                    simp[]
-                )
-          )
+    >- (fs[CaseEq"option"] >>
+        first_x_assum irule >>
+        last_x_assum $ irule_at Any >>
+        Cases_on `v` >>
+        Cases_on `v'` >>
+        gvs[] >>
+        qexists `t2` >>
+        Cases_on `t <= t'` >>
+        fs[NOT_LESS_EQUAL] >>
+        imp_res_tac LESS_IMP_LESS_OR_EQ >>
+        drule cval_mono >>
+        disch_then $ qspecl_then [`c1`, `s`] assume_tac >>
+        gvs[]
     )
     >- rfs[cval_def]
     >- rfs[cval_def]
@@ -180,7 +174,7 @@ Proof
         Cases_on `t'` >>
         fs[Once cval_def] >>
         last_x_assum $ qspecl_then [`n'`, `s1`, `t1`, `t2`] assume_tac >>
-        rfs[CaseEq"option"] >> (* what does this actually do?? *)
+        rfs[CaseEq"option"] >>
         rfs[] >>
         Cases_on `v` >>
         Cases_on `v'` >>
