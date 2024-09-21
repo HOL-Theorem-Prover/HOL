@@ -58,7 +58,7 @@ end handle OS.Path.Path => die ("Path exception in quse "^s)
                                    "error in quse " ^ s ^ " : " ^
                                    General.exnMessage e ^ "\n");
                      TextIO.flushOut TextIO.stdErr;
-                     raise e)
+                     PolyML.Exception.reraise e)
 
 fun myuse f =
   let val op ++ = OS.Path.concat
@@ -66,7 +66,7 @@ fun myuse f =
       val pd = !PolyML.Compiler.printDepth
   in
     PolyML.print_depth 0;
-    (quse f handle e => (PolyML.print_depth pd; raise e));
+    (quse f handle e => (PolyML.print_depth pd; PolyML.Exception.reraise e));
     PolyML.print_depth pd
   end handle OS.Path.Path => die ("Path exception in myuse "^f)
 
@@ -130,12 +130,12 @@ and load ps modPath =
        (l ".ui"; l ".uo")
        handle e =>
               (loadedMods := Binaryset.delete (!loadedMods, modName);
-               raise e))
+               PolyML.Exception.reraise e))
   end handle e => (TextIO.output(TextIO.stdErr,
                                  "error in load " ^ modPath ^ " : " ^
                                  General.exnMessage e ^ "\n");
                    TextIO.flushOut TextIO.stdErr;
-                   raise e)
+                   PolyML.Exception.reraise e)
 in
 
   structure Meta = struct

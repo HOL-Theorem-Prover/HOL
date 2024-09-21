@@ -397,4 +397,8 @@ in
         OS.Process.exit OS.Process.success
       end
 end handle e =>
-           BuildHeap_CLINE.die ("Uncaught exception: "^General.exnMessage e)
+      BuildHeap_CLINE.die ("Uncaught exception" ^
+        (case PolyML.Exception.exceptionLocation e of
+            NONE => ""
+          | SOME {file, startLine, ...} => " at " ^ file ^ ":" ^ FixedInt.toString startLine) ^
+        ": " ^ General.exnMessage e)
