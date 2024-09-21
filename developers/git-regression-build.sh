@@ -66,7 +66,7 @@ else
     die "ML system \"$ML\" is not executable."
 fi
 
-case $kernel in --expk | --stdknl | --otknl ) : ;; * ) die "Bad kernel spec \"$kernel\"."
+case $kernel in --expk | --stdknl | --otknl | --trknl) : ;; * ) die "Bad kernel spec \"$kernel\"."
 esac
 
 if git pull > update-log 2>&1

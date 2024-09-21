@@ -144,6 +144,8 @@ val cline_opt_descrs = [
    desc = mkBoolOpt #build_theory_graph false},
   {help = "build with logging kernel", long = ["otknl"], short = "",
    desc = setKname "--otknl"},
+  {help = "build with tracing kernel", long = ["trknl"], short = "",
+   desc = setKname "--trknl"},
   {help = "do relocation build (e.g., after a cleanForReloc)",
    long = ["relocbuild"], short = "",
    desc = mkBool #relocbuild true},

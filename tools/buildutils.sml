@@ -104,6 +104,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
         "stdknl" => "0"
       | "expk" => "experimental-kernel"
       | "otknl" => "0"
+      | "trknl" => "0"
       | _ => die ("Bad kernelname: "^kernelname)
     ]
   val readline = TextIO.inputLine
@@ -344,12 +345,12 @@ fun get_cline () = let
           SOME s => String.extract(s,2,NONE)
         | NONE =>
           (case
-              List.find (fn s => mem s ["--expk", "--otknl", "--stdknl"])oldopts
+              List.find (fn s => mem s ["--expk", "--otknl", "--stdknl", "--trknl"]) oldopts
              of
                 NONE => "stdknl"
               | SOME s =>
                 (warn ("Using kernel spec "^s^ " from earlier build command;\n\
-                       \    use one of --expk, --stdknl, --otknl to override");
+                       \    use one of --expk, --stdknl, --otknl, --trknl to override");
                  String.extract(s,2,NONE)))
   val _ = write_kernelid knlspec
   val buildgraph =
@@ -519,7 +520,7 @@ fun cleanForReloc0 HOLDIR =
 fun maybe_gmakeclean dirname owise () =
     if OS <> "winNT" then
       let
-        val gnumake = 
+        val gnumake =
             case List.rev (#arcs (OS.Path.fromString dirname)) of
               "minisat" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
             | "zc2hs" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
@@ -912,6 +913,7 @@ fun process_cline () =
                   Binaryset.empty cmp |> add "stdknl" dfltbuildseq
                                       |> add "expk" knlseq
                                       |> add "otknl" knlseq
+                                      |> add "trknl" dfltbuildseq
             in
               Binaryset.listItems alldirs
             end
