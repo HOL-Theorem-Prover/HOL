@@ -133,12 +133,12 @@ Theorem cval_mono:
     !c s t t'. ((t <= t') /\ (cval c s t <> NONE)) ==> (OPTION_MAP FST (cval c s t)) = (OPTION_MAP FST (cval c s t'))
 Proof
   rpt strip_tac >>
-  Cases_on `cval c s t`
-    >- fs[]
-    >- (Cases_on `x` >>
-        qspecl_then [`c`, `s`, `t`, `t'`, `q`, `r`] assume_tac lrg_clk >>
-        rfs[]
-    )
+  Cases_on `cval c s t` >>
+  gs[] >>
+  Cases_on `x` >>
+  rev_drule_all lrg_clk >>
+  rw[] >>
+  simp[]
 QED
 
 Theorem lrg_clk2:
