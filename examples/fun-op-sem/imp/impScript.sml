@@ -108,31 +108,25 @@ Theorem lrg_clk:
     !c s t t' s1 t1. ((t <= t') /\ (cval c s t = SOME (s1, t1))) ==> (?t2.(cval c s t' = SOME (s1, t2)) /\ t1 <= t2)
 Proof
   recInduct cval_ind >>
-  rw[]
-    >>~- ([`(If _ _ _)`], (first_x_assum $ qspecl_then [`t'`, `s1`, `t1`] assume_tac >> rfs[cval_def]))
-    >- (qexists `t'` >> fs[cval_def])
-    >- (qexists `t'` >> fs[cval_def])
-    >- (Cases_on `cval c1 s t` >>
-        Cases_on `cval c1 s t'`
-            >- fs[cval_def]
-            >- fs[cval_def]
-            >- (Cases_on `x` >> first_x_assum $ qspecl_then [`t'`, `q`, `r`] assume_tac >> rfs[])
-            >- (Cases_on `x` >>
-                Cases_on `x'` >>
-                first_x_assum $ qspec_then `t'` assume_tac >>
-                rfs[] >>
-                first_x_assum $ qspecl_then [`r'`, `s1`, `t1`] assume_tac >>
-                fs[cval_def]
-            )
-    )
-    >- (Cases_on `t` >>
-        Cases_on `bval b s` >>
-        fs[Once cval_def]
-          >- (first_x_assum $ qspecl_then [`t'-1`, `s1`, `t1`] assume_tac >>
-              Cases_on `cval c s n` >>
-              gvs[Once cval_def]
-          )
-    )
+  rw[] >>~-
+  ([`(While _ _)`],
+    Cases_on `t` >>
+    Cases_on `bval b s` >>
+    fs[Once cval_def] >>
+    first_x_assum $ qspecl_then [`t'-1`, `s1`, `t1`] assume_tac >>
+    Cases_on `cval c s n` >>
+    gvs[Once cval_def]
+  ) >>~-
+  ([`(If _ _ _)`],
+    first_x_assum $ qspecl_then [`t'`, `s1`, `t1`] assume_tac >>
+    rfs[cval_def]
+  ) >>
+  gvs[cval_def] >>
+  fs[CaseEq"option"] >>
+  Cases_on `v` >>
+  fs[] >>
+  first_x_assum $ qspec_then `t'` assume_tac >>
+  rfs[]
 QED
 
 Theorem cval_mono:
