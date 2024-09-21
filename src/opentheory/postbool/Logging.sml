@@ -708,7 +708,7 @@ fun export_thm th = let
       val _ = log_command "thm"
       val _ = if v then HOL_MESG("Finish logging\n"^(Susp.force s)^"\n") else ()
       in () end
-    val _ = delete_proof th
+    val th = delete_proof th
 in th end
 
 fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=name,ext=SOME"art"})
@@ -717,8 +717,8 @@ fun mkpair f x = (f,x)
 
 datatype OTDirective = DeleteConstant | DeleteType | SkipThm | DeleteProof
 
-fun log_some_thms axdefs th =
-  (if (case Thm.proof th of
+fun log_some_thms axdefs th = let
+  val th = if (case Thm.proof th of
          Thm.Def_const_prf (thyrec, _) =>
            Lib.mem (DeleteConstant, #Name thyrec) axdefs
        | Thm.Def_const_list_prf (_,stys,_) =>
@@ -730,9 +730,9 @@ fun log_some_thms axdefs th =
        | Thm.Def_tyop_prf (thyrec,_,_,_) =>
            Lib.mem (DeleteType, #Tyop thyrec) axdefs
        | _ => false)
-   then Thm.delete_proof th
-   else ();
-   definitions := th::(!definitions))
+  then Thm.delete_proof th
+  else th;
+in definitions := th::(!definitions) end
 
 fun raw_start_logging axdefs out =
   case !log_state of

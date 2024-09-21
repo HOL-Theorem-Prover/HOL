@@ -23,10 +23,10 @@ struct
     val directives = Logging.read_otdfile (current_theory() ^ ".otd")
                                           handle IO.Io _ => []
     fun prepare (nm, th) =
-      (if Lib.mem (DeleteProof, nm) directives
-       then Thm.delete_proof th else ();
-       if Lib.mem (SkipThm, nm) directives
-       then NONE else SOME th)
+      (if Lib.mem (SkipThm, nm) directives then NONE
+       else SOME
+        (if Lib.mem (DeleteProof, nm) directives
+         then Thm.delete_proof th else th))
     val defs' = List.mapPartial prepare (current_definitions())
     val ths' = List.mapPartial prepare (current_theorems())
     val axs' = List.mapPartial prepare (current_axioms())

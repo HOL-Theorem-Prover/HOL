@@ -107,7 +107,7 @@ end;
  * The type of theorems and some basic operations on it.                     *
  *---------------------------------------------------------------------------*)
 
-datatype thm = THM of Tag.tag * term HOLset.set * term * proof ref
+datatype thm = THM of Tag.tag * term HOLset.set * term * proof
 and proof =
   Axiom_prf
 | ASSUME_prf of term
@@ -152,8 +152,8 @@ and proof =
 | Def_spec_prf of term list * thm
 | deductAntisym_prf of thm * thm
 
-fun proof (THM(_,_,_,p)) = !p
-fun delete_proof (THM(_,_,_,p)) = p := Axiom_prf
+fun proof (THM(_,_,_,p)) = p
+fun delete_proof (THM(x,y,z,p)) = THM(x,y,z,Axiom_prf)
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
@@ -167,7 +167,7 @@ val hyp = hyplist   (* backwards compatibility *)
 
 fun dest_thm(t as THM(_,asl,w,_)) = (hyplist t,w) (* Compatible with old code. *)
 fun sdest_thm(THM(_,asl,w,_)) = (asl,w)
-fun make_thm R (x,y,z,p) = (Count.inc_count R; THM (x,y,z,ref p));   (* internal only *)
+fun make_thm R th = (Count.inc_count R; THM th);   (* internal only *)
 
 fun thm_frees (t as THM(_,asl,c,_)) = free_varsl (c::hyplist t);
 

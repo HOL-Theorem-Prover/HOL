@@ -200,7 +200,7 @@ in
 end
 
 val base_thms = read_article "base-theorems.art" reader;
-val _ = Net.itnet (fn th => (Thm.delete_proof th; K ())) base_thms ();
+val _ = Net.itnet Thm.delete_proof base_thms ();
 
 fun itpred P th acc = if P th then th::acc else acc;
 fun amatch tm = Net.itnet (itpred (DB.matches tm)) base_thms [];
@@ -400,8 +400,8 @@ val th12 = store_thm
 
 (*
 val (pow0,powsuc) = CONJ_PAIR realaxTheory.real_pow;
-val () = Thm.delete_proof pow0
-val () = Thm.delete_proof powsuc
+val pow0 = Thm.delete_proof pow0
+val powsuc = Thm.delete_proof powsuc
  *)
 val pow0   = hd(amatch “x pow 0 = 1”);
 val powsuc = hd(amatch “x pow SUC n = x * x pow n”);

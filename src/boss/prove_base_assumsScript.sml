@@ -123,7 +123,7 @@ val (reader:reader) = {
 
 val base_thms = read_article "base-theorems.art" reader;
 
-val _ = Net.itnet (fn th => (Thm.delete_proof th; K ())) base_thms ();
+val _ = Net.itnet Thm.delete_proof base_thms ();
 
 fun itpred P th acc = if P th then th::acc else acc;
 fun amatch tm = Net.itnet (itpred (DB.matches tm)) base_thms [];

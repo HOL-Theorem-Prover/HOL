@@ -47,7 +47,7 @@ sig
   | deductAntisym_prf of thm * thm
 
   val proof : thm -> proof
-  val delete_proof : thm -> unit
+  val delete_proof : thm -> thm
   val mk_proof_thm : proof -> term list * term -> thm
 
   val deductAntisym : thm -> thm -> thm
