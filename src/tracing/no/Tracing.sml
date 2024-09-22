@@ -1,8 +1,7 @@
 signature Tracing =
 sig
 
-open TheoryPP
-val trace_theory : string -> struct_info_record -> unit
+val trace_theory : string -> TheoryPP.struct_info_record -> unit
 
 end
 
