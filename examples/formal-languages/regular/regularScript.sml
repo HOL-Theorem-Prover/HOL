@@ -1788,13 +1788,14 @@ Proof
   >- (‘newFn base q ∈ (rename_states N base).Q’ by rw [rename_states_def] >>
       first_x_assum drule_all >> rw[] >>
       qabbrev_tac ‘oldFn = LINV (newFn base) N.Q’ >>
-      qexists_tac ‘oldFn q''’ >>
+      rename [‘_.delta _ a = {q1}’] >>
+      qexists_tac ‘oldFn q1’ >>
       drule_all_then (qspec_then ‘base’ assume_tac)
         rename_states_delta_commutes >>  rw[])
   >- rw [rename_states_def]
-  >- (rule_assum_tac (SRULE[rename_states_def]) >> fs[] >> rw[] >>
-      first_x_assum drule_all >> rw[] >>
-      qexists_tac ‘newFn base q'’ >> rw [rename_states_def,oldFn_newFn])
+  >- (gvs[rename_states_def] >> first_x_assum drule_all >> rw[] >>
+      rename [‘N.delta x q = {q1}’] >>
+      qexists_tac ‘newFn base q1’ >> rw [oldFn_newFn])
 QED
 
 Theorem nfa_lang_rename_states:
