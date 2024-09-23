@@ -580,5 +580,35 @@ val unhide_assum = unhide_assum0 first_x_assum assume_tac
 val unhide_x_assum = unhide_assum0 first_x_assum (K all_tac)
 val use_hidden_assum = unhide_assum0 first_assum (K all_tac)
 
+val NoAsms = EQT_ELIM markerTheory.NoAsms
 
+fun q2str [] = ""
+  | q2str (QUOTE s :: rest) = s ^ q2str rest
+  | q2str (ANTIQUOTE t :: rest) =
+        raise ERR "IgnAsm"
+              "Pattern quotation must not include antiquotes"
+val IgnAsm_t = mk_thy_const {Thy = "marker", Name = "IgnAsm",
+                             Ty = alpha --> bool}
+fun IgnAsm qpat =
+    let val s = q2str qpat
+        val s_t = mk_var(s, alpha)
+    in
+      EQT_ELIM (SPEC s_t IgnAsm_def)
+    end
+
+fun print_ignasm (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
+    let
+      open term_pp_types smpp
+      val (f, x) = dest_comb tm
+      val {add_string, ...} = ppfns:ppstream_funs
+      val _ = same_const IgnAsm_t f andalso is_var x andalso type_of x = alpha
+              orelse raise UserPP_Failed
+    in
+      add_string ("IgnAsm" ^ UnicodeChars.lsquo ^ #1 (dest_var x) ^
+                  UnicodeChars.rsquo)
+    end
+
+val _ = Parse.temp_add_user_printer("markerLib.IgnAsm",
+                                    mk_comb(IgnAsm_t, mk_var("x", alpha)),
+                                    print_ignasm)
 end
