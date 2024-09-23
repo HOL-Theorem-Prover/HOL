@@ -50,6 +50,4 @@ fun syncref init =
     }
   end
 
-fun export (_: string * 'a) = raise Fail "export not supported on mosml"
-
 end (* struct *)
