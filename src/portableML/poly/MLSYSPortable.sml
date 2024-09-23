@@ -76,12 +76,4 @@ fun syncref init =
      upd = fn f => Synchronized.change_result v f}
   end
 
-fun export (file, x: 'a) = let
-  val _ = PolyML.shareCommonData x
-  val body = PolyML.exportSmall x
-  val ostream = BinIO.openOut file
-  val () = BinIO.output (ostream, body)
-  val () = BinIO.closeOut ostream
-in () end
-
 end
