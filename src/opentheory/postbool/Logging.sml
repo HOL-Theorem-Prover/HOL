@@ -15,6 +15,7 @@ val _ = Feedback.register_trace("opentheory logging",verbosity,5)
 
 val proof_type = let open Thm fun
  f Axiom_prf = "Axiom"
+|f deleted_prf = "deleted"
 |f (ABS_prf _) = "ABS"
 |f (ALPHA_prf _) = "ALPHA"
 |f (AP_TERM_prf _) = "AP_TERM"
@@ -35,6 +36,7 @@ val proof_type = let open Thm fun
 |f (EQ_MP_prf _) = "EQ_MP"
 |f (EXISTS_prf _) = "EXISTS"
 |f (GEN_prf _) = "GEN"
+|f (GENL_prf _) = "GENL"
 |f (GEN_ABS_prf _) = "GEN_ABS"
 |f (INST_TYPE_prf _) = "INST_TYPE"
 |f (INST_prf _) = "INST"
@@ -56,6 +58,7 @@ val proof_type = let open Thm fun
 |f (Mk_comb_prf _) = "Mk_comb"
 |f (Specialize_prf _) = "Specialize"
 |f (deductAntisym_prf _) = "deductAntisym"
+|f compute_prf = "compute"
 in f end
 
 datatype log_state =
@@ -282,7 +285,14 @@ val (log_term, log_thm, log_clear,
     val GEN_pth = let
       val th1 = ASSUME (mk_eq(P,mk_abs(x,T)))
       val th2 = AP_THM FORALL_DEF P
-    in EQ_MP (SYM(CONV_RULE(RAND_CONV BETA_CONV) th2)) th1 end
+      val pth = EQ_MP (SYM(CONV_RULE(RAND_CONV BETA_CONV) th2)) th1
+    in
+      fn v => fn th => let
+        val vty = type_of v
+        val P   = mk_var("P",vty-->bool)
+        val pth = INST_TY_TERM ([P|->mk_abs(v,concl th)],[alpha|->vty]) pth
+      in proveHyp (ABS v (eqtIntro th)) pth end
+    end
     val Q = mk_var("Q",bool)
     val EXISTS_pth = let
       val th1 = CONV_RULE (RAND_CONV BETA_CONV) (AP_THM EXISTS_DEF P)
@@ -390,6 +400,11 @@ val (log_term, log_thm, log_clear,
     val _ = case proof th of
 
       Axiom_prf => let
+      val _ = log_list log_term (hyp th)
+      val _ = log_term (concl th)
+      val _ = log_command "axiom"
+      in () end
+    | deleted_prf => let
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
       val _ = log_command "axiom"
@@ -534,10 +549,10 @@ val (log_term, log_thm, log_clear,
       val _ = log_thm (EQ_MP (rconv fvs source tm) sth)
       in () end
     | GEN_prf (v,th) => let
-      val vty = type_of v
-      val P   = mk_var("P",vty-->bool)
-      val pth = INST_TY_TERM ([P|->mk_abs(v,concl th)],[alpha|->vty]) GEN_pth
-      val _ = log_thm (proveHyp (ABS v (eqtIntro th)) pth)
+      val _ = log_thm (GEN_pth v th)
+      in () end
+    | GENL_prf (vs,th) => let
+      val _ = log_thm (itlist GEN_pth vs th)
       in () end
     | DISJ1_prf (th,tm) => let
       val _ = log_thm (proveHyp th (INST [P|->concl th,Q|->tm] DISJ1_pth))
@@ -671,6 +686,7 @@ val (log_term, log_thm, log_clear,
                                   [alpha|->rty,beta|->aty]) Def_tyop_pth
       val _       = log_thm (proveHyp ra (proveHyp ar pth))
       in () end
+    | compute_prf => raise ERR "log_thm" "disabled in opentheory kernel";
     val _ = if !verbosity >= 4 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
     (*
     val _ = log_comment(pt^")")
