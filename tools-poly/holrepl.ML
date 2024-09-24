@@ -133,6 +133,10 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
       if zeroTerm then
         let
           val endOfCommand = ref false;
+
+          (* Initial prompt / end of splash message *)
+          val () = printOut "\000";
+
           (* Each character typed is fed into the compiler but a "\0"
              terminates the input. *)
           fun readin () =
