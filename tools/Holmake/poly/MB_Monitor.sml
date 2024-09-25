@@ -294,7 +294,7 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
           let
             val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {
-                  numlines = 10,
+                  numlines = 50,
                   patterns = [cheat_string, oracle_string, used_cheat_string,
                               fastcheat_string]
                 }
