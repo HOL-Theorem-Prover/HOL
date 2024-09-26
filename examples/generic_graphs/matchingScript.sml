@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 open fsgraphTheory pred_setTheory arithmeticTheory listTheory genericGraphTheory;
-
+open realTheory;
 val _ = new_theory "matching";
 
 
@@ -27,7 +27,8 @@ Definition bipartite_graph_def:
   V1 ⊆ nodes G ∧ V2 ⊆ nodes G ∧ V1 ∪ V2 = nodes G ∧ V1 ∩ V2 = ∅ ∧
   ∀e. e ∈ fsgedges G ⇒ ∃v1 v2. v1 ∈ e ∧ v2 ∈ e ∧ v1 ≠ v2 ∧ v1 ∈ V1 ∧ v2 ∈ V2
 End
-*)
+ *)
+
 
 Definition alternating_path_def:
   alternating_path G M P ⇔ matching G M ∧ path G P ∧
@@ -61,15 +62,12 @@ Proof
   rw [path_def]
 QED
 
-
-
   
 Theorem augmenting_path_reversible:
   ∀G M P. matching G M ⇒ augmenting_path G M P ⇒ augmenting_path G M (REVERSE P)
 Proof
   rw [augmenting_path_def, alternating_path_def, unmatched_def]
 QED
-
 
 
 Theorem finite_matching:
@@ -86,7 +84,7 @@ Proof
 QED
 *)
 
-Q.SPECL [‘matching G’, ‘CARD’]
+(* Q.SPECL [‘matching G’, ‘CARD’] *)
 Theorem maximal_matching_exists:
   ∀(G: fsgraph). ∃M. matching G M ∧ ∀N. matching G N ⇒ CARD N ≤ CARD M
 Proof                           (* TODO *)
