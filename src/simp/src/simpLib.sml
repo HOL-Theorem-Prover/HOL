@@ -812,16 +812,11 @@ fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l)
 
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
-fun SIMP_TAC0 ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
-fun SIMP_TAC ss = markerLib.mk_require_tac (SIMP_TAC0 ss)
-val simp_tac = SIMP_TAC
-
-fun ASM_SIMP_TAC0 ss =
-   markerLib.ABBRS_THEN
-    (fn thl => fn gl as (asl,_) =>
-         SIMP_TAC ss (markerLib.LLABEL_RESOLVE thl asl) gl);
-fun ASM_SIMP_TAC ss = markerLib.mk_require_tac (ASM_SIMP_TAC0 ss)
+fun ASM_SIMP_TAC ss ths =
+    markerLib.process_taclist_then{arg=ths} (CONV_TAC o SIMP_CONV ss)
 val asm_simp_tac = ASM_SIMP_TAC
+fun SIMP_TAC ss ths = ASM_SIMP_TAC ss (markerLib.NoAsms::ths)
+val simp_tac = SIMP_TAC
 
 (* differs from default strip_assume_tac base in that it doesn't call
    OPPOSITE_TAC or DISCARD_TAC.

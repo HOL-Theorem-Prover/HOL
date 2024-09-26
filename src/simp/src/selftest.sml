@@ -55,7 +55,7 @@ val _ =
     infloop_protect
       "Abbreviations + ASM_SIMP_TAC"
       test4P
-      (ASM_SIMP_TAC bool_ss [markerSyntax.Abbr`y`])
+      (VALID (ASM_SIMP_TAC bool_ss [markerSyntax.Abbr`y`]))
       ([``Abbrev (y:'b = f (x : 'a))``, ``P (y:'b) : bool``],
        ``Q (y:'b) : bool``)
 
@@ -451,7 +451,17 @@ in
     ("fs + Excl (in assumptions)", fs bool_ss [Excl "EXISTS_SIMP"],
      ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)]),
     ("gs + Excl (in assumptions)", gs gsc bool_ss [Excl "EXISTS_SIMP"],
-     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)])
+     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)]),
+    ("NoAsms",
+     asm_simp_tac bool_ss [markerLib.NoAsms],
+     ([“x = F”], “p /\ x”), [([“x = F”], “p /\ x”)]),
+    ("IgnAsm",
+     asm_simp_tac bool_ss [markerLib.IgnAsm ‘x = _’],
+     ([“x = F”, “y = T”], “p /\ x /\ y”), [([“x = F”, “y = T”], “p /\ x”)]),
+    ("IgnAsm (sub-match)",
+     asm_simp_tac bool_ss [markerLib.IgnAsm ‘F (* sa *)’],
+     ([“x = F”, “y = T”], “p /\ x /\ y”), [([“x = F”, “y = T”], “p /\ x”)])
+
   ]
 end
 

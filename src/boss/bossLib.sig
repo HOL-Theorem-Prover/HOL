@@ -116,6 +116,8 @@ sig
   val SF             : ssfrag -> thm
   val Req0           : thm -> thm
   val ReqD           : thm -> thm
+  val NoAsms         : thm
+  val IgnAsm         : 'a quotation -> thm
 
   (* useful rules to use with simplification *)
   val oneline        : thm -> thm
