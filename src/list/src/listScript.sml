@@ -4991,6 +4991,57 @@ Proof
   simp[ADD_CLAUSES, adjacent_rules]
 QED
 
+Theorem adjacent_MAP:
+  !xs a b f.
+    adjacent (MAP f xs) a b <=> ?x y. adjacent xs x y /\ a = f x /\ b = f y
+Proof
+  Induct_on ‘xs’ >> simp[] >> Cases_on ‘xs’ >> gvs[] >>
+  simp[adjacent_iff, SF DNF_ss] >> metis_tac[]
+QED
+
+Theorem adjacent_MEM:
+  !xs a b. adjacent xs a b ==> MEM a xs /\ MEM b xs
+Proof
+  simp[MEM_EL, adjacent_EL, PULL_EXISTS] >> rpt strip_tac >>
+  rpt (irule_at Any EQ_REFL) >> simp[]
+QED
+
+Theorem adjacent_ps_append:
+  !xs a b. adjacent xs a b <=> ?p s. xs = p ++ [a;b] ++ s
+Proof
+  simp[adjacent_EL, PULL_EXISTS, EQ_IMP_THM] >> rw[]
+  >- (Q.RENAME_TAC [‘i + 1 < LENGTH xs’] >>
+      MAP_EVERY Q.EXISTS_TAC [‘TAKE i xs’, ‘DROP (i + 2) xs’] >>
+      simp[LIST_EQ_REWRITE, EL_APPEND_EQN, EL_TAKE, EL_DROP] >> rw[] >>
+      Q.RENAME_TAC [‘~(j < i)’, ‘j < i + 2’] >>
+      ‘j = i \/ j = i + 1’ by simp[] >> simp[]) >>
+  Q.EXISTS_TAC ‘LENGTH p’ >> simp[EL_APPEND_EQN]
+QED
+
+Theorem adjacent_append1:
+  !xs ys a b. adjacent xs a b ==> adjacent (xs ++ ys) a b
+Proof
+  Induct_on ‘adjacent’ >> simp[] >> metis_tac[adjacent_rules]
+QED
+
+Theorem adjacent_append2:
+  !xs ys a b. adjacent ys a b ==> adjacent (xs ++ ys) a b
+Proof
+  simp[adjacent_ps_append, PULL_EXISTS, APPEND_ASSOC] >> rpt strip_tac >>
+  irule_at Any EQ_REFL
+QED
+
+Theorem adjacent_REVERSE[simp]:
+  !xs a b. adjacent (REVERSE xs) a b <=> adjacent xs b a
+Proof
+  simp[adjacent_ps_append, EQ_IMP_THM, PULL_EXISTS] >> rw[]
+  >- (pop_assum (mp_tac o Q.AP_TERM ‘REVERSE’) >>
+      REWRITE_TAC[REVERSE_REVERSE] >> simp[REVERSE_APPEND] >>
+      strip_tac >> Q.EXISTS_TAC ‘REVERSE s’ >>
+      simp[GSYM APPEND_ASSOC, APPEND_11]) >>
+  simp[REVERSE_APPEND, APPEND_ASSOC] >>
+  Q.EXISTS_TAC ‘REVERSE s’ >> simp[GSYM APPEND_ASSOC, APPEND_11]
+QED
 
 (* ---------------------------------------------------------------------- *)
 
