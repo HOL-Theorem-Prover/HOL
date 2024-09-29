@@ -9,6 +9,7 @@ val fromString : bool -> string -> string
 
 val fileToReader : string -> reader
 val stringToReader : bool -> string -> reader
+val inputToReader : bool -> (int -> string) -> reader
 val streamToReader : bool -> TextIO.instream -> reader
 (* bool is true if the stream corresponds to an interactive session
    (stdin) or a Script file. In both such situations, the magic >- and

@@ -32,4 +32,5 @@ src/proofman
 !src/proofman/tests
 !tools/Holmake/tests/preexec
 !tools/Holmake/tests/parallel_tests
+!tools/Holmake/tests/repl
 !src/1/theory_tests
