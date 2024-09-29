@@ -35,19 +35,6 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
        EOT to the command we were running. *)
     val endOfFile    = ref false;
 
-    (* It seems like the only way to *really* reset a lexer, in particular, to
-       force it back into its INITIAL state, is to create a fresh one. So,
-       this is what bind_cgen() does, and this is what is called in the
-       compile-fail exception handler below. *)
-    val cgenref = ref (fn () => SOME #"\000")
-    fun cgen() = !cgenref()
-    fun bind_cgen () =
-        let
-          val {read, ...} = QFRead.streamToReader true TextIO.stdIn
-        in
-          cgenref := read
-        end
-
     fun reportTiming compileTime runTime =
       (* Print the times if required. *)
       if !timing
@@ -65,16 +52,14 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
             | SOME loc => [ContextLocation loc]
         in
           PolyML.prettyPrint(TextIO.print, !lineLength)
-            (PrettyBlock(0, false, [],
-                        [
-                          PrettyBlock(0, false, exLoc,
-                                      [PrettyString "Exception-"]),
-                          PrettyBreak(1, 3),
-                          prettyRepresentation(exn,
-                                                FixedInt.fromInt
-                                                  (! printDepth)),
-                          PrettyBreak(1, 3),
-                          PrettyString "raised"
+            (PrettyBlock(0, false, [], [
+              PrettyBlock(0, false, exLoc,
+                [PrettyString "Exception-"]),
+              PrettyBreak(1, 3),
+              prettyRepresentation(exn,
+                FixedInt.fromInt (! printDepth)),
+              PrettyBreak(1, 3),
+              PrettyString "raised"
             ]));
           PolyML.Exception.reraise exn
         end
@@ -105,7 +90,7 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
           open PolyML.Compiler
         in
           polyCompiler (readin, [CPNameSpace nameSpace,
-                                  CPOutStream TextIO.print])
+                                 CPOutStream TextIO.print])
         end
             (* Don't print any times if this raises an exception. *)
             handle exn as Fail s => (
@@ -132,50 +117,85 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
     val readEvalPrint : unit -> unit =
       if zeroTerm then
         let
-          val endOfCommand = ref false;
-
           (* Initial prompt / end of splash message *)
           val () = printOut "\000";
 
-          (* Each character typed is fed into the compiler but a "\0"
-             terminates the input. *)
-          fun readin () =
-            case cgen() of
-              NONE => (endOfFile := true; NONE)
-            | SOME #"\000" => (endOfCommand := true; NONE)
-            | SOME ch => SOME ch;
+          (* The input state is one of:
+             * `Current ""`: initial state, we have no pending input chunk
+             * `Current chunk`: we have a pending input chunk in the
+               current command
+             * `Next chunk`: The input to the current command is exhausted,
+               and `chunk` is pending input for the next command *)
+          datatype state =
+            Current of string
+          | Next of string
+          val state = ref (Current "");
 
-          (* Remove all buffered but unread input. *)
-          fun flushInput () =
-            case cgen () of
-              NONE => endOfFile := true
-            | SOME #"\000" => ()
-            | SOME ch => flushInput ();
+          (* Parse a pending input chunk, splitting on the first zero byte *)
+          fun process chunk =
+            let fun findZero i =
+              if i < String.size chunk then
+                if String.sub(chunk,i) = #"\000" then
+                 (state := Next (String.extract(chunk,i+1,NONE));
+                  String.substring(chunk,0,i))
+                else findZero (i+1)
+              else (state := Current ""; chunk)
+            in findZero 0 end
 
-          fun resetAfterCompileFail () = (
-            if !endOfCommand then () else flushInput();
-            endOfCommand := false;
-            bind_cgen()
-          );
+          (* This is the input function we give to the lexer. It filters `stdIn`
+             to ensure that we do not yield any data to it which is not for
+             this command, and also avoid data loss if it asks for more from
+             the stream. *)
+          fun input _ =
+            case !state of
+              Next _ => ""
+            | Current "" => (case TextIO.input TextIO.stdIn of
+                "" => (endOfFile := true; "")
+              | chunk => process chunk)
+            | Current chunk => process chunk
 
-          fun readEvalPrint compileAcc runAcc =
-            let
-              val () = bind_cgen();
-              val {compileTime, runTime, result} =
-                readEvalPrint1 readin resetAfterCompileFail;
-              val () = reportResult result;
-            in
-              if !endOfCommand orelse !endOfFile then
-                reportTiming compileTime runTime
-              else
-                readEvalPrint (compileAcc + compileTime) (runAcc + runTime)
-            end;
+          (* Returns true and moves to the next state if another statement
+             is ready. *)
+          fun finishCommand () =
+            case !state of
+              Next s => (state := Current s; true)
+            | _ => false
 
-        in fn () => readEvalPrint Time.zeroTime Time.zeroTime end
+        in fn () =>
+          let
+            (* Create a new lexer for each command block. *)
+            val {read, ...} = QFRead.inputToReader true input
+
+            fun readEvalPrint compileAcc runAcc =
+              let
+                val {compileTime, runTime, result} =
+                  readEvalPrint1 read (fn () => ());
+                val () = reportResult result;
+              in
+                if !endOfFile orelse finishCommand () then
+                  reportTiming compileTime runTime
+                else
+                  readEvalPrint (compileAcc + compileTime) (runAcc + runTime)
+              end;
+          in readEvalPrint Time.zeroTime Time.zeroTime end
+        end
       else (* not zeroTerm *)
         let
           val realDataRead = ref false;
           val lastWasEol   = ref true;
+
+          (* It seems like the only way to *really* reset a lexer, in particular, to
+            force it back into its INITIAL state, is to create a fresh one. So,
+            this is what bind_cgen() does, and this is what is called in the
+            compile-fail exception handler below. *)
+          val cgenref = ref (fn () => SOME #"\000")
+          fun cgen() = !cgenref()
+          fun bind_cgen () =
+              let
+                val {read, ...} = QFRead.streamToReader true TextIO.stdIn
+              in
+                cgenref := read
+              end
 
           val () = bind_cgen();
 

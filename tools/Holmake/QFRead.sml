@@ -43,13 +43,16 @@ fun string_to_lexer isscriptp s =
     (#2 o read, (fn () => ()), reset qstate)
   end
 
-fun stream_to_lexer isscriptp strm =
+fun input_to_lexer isscriptp inp =
   let
     val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp)
-    val read = QuoteFilter.makeLexer (fn n => input strm) qstate
+    val read = QuoteFilter.makeLexer inp qstate
   in
     (#2 o read, (fn () => ()), reset qstate)
   end
+
+fun stream_to_lexer isscriptp strm =
+  input_to_lexer isscriptp (fn n => input strm)
 
 fun inputFile fname = exhaust_lexer (file_to_lexer fname)
 fun fromString b s = exhaust_lexer (string_to_lexer b s)
@@ -72,6 +75,7 @@ end
 
 fun fileToReader fname = mkReaderEOF (file_to_lexer fname)
 fun stringToReader b s = mkReaderEOF (string_to_lexer b s)
+fun inputToReader b inp = mkReaderEOF (input_to_lexer b inp)
 fun streamToReader b strm = mkReaderEOF (stream_to_lexer b strm)
 
 end
