@@ -1754,6 +1754,7 @@ no way to define such infinite families of constants; instead, all
 numerals other than $0$ are actually built up from the constants
 introduced by the following definitions:
 \begin{alltt}
+>>__ val np = valOf (temp_remove_user_printer "num.numeral_computations")
 ##thm NUMERAL_DEF
 
 ##thm BIT1
