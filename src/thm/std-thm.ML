@@ -563,7 +563,7 @@ fun SPEC t th =
    Assert (Name="!" andalso Thy="bool")
           "SPEC" "Theorem not universally quantified";
    make_thm Count.Spec
-       (tag th, hypset th, beta_conv(mk_comb(Rand, t)))
+       (tag th, hypset th, lazy_beta_conv(mk_comb(Rand, t)))
        handle HOL_ERR _ =>
               raise thm_err "SPEC"
                     "Term argument's type not equal to bound variable's"
