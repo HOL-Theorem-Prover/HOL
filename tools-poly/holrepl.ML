@@ -154,26 +154,29 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
               | chunk => process chunk)
             | Current chunk => process chunk
 
-          (* Returns true and moves to the next state if another statement
-             is ready. *)
+          (* Moves to the next state if another statement is ready. *)
           fun finishCommand () =
             case !state of
-              Next s => (state := Current s; true)
-            | _ => false
+              Next s => state := Current s
+            | _ => () (* this can only happen if endOfFile is true *)
 
         in fn () =>
           let
             (* Create a new lexer for each command block. *)
-            val {read, ...} = QFRead.inputToReader true input
+            val {read, ...} = QFRead.inputToReader true input;
+            val endOfBlock = ref false;
+            fun read' () = case read () of
+                NONE => (endOfBlock := true; NONE)
+              | ch => ch;
 
             fun readEvalPrint compileAcc runAcc =
               let
                 val {compileTime, runTime, result} =
-                  readEvalPrint1 read (fn () => ());
+                  readEvalPrint1 read' (fn () => ());
                 val () = reportResult result;
               in
-                if !endOfFile orelse finishCommand () then
-                  reportTiming compileTime runTime
+                if !endOfBlock then
+                  (finishCommand (); reportTiming compileTime runTime)
                 else
                   readEvalPrint (compileAcc + compileTime) (runAcc + runTime)
               end;

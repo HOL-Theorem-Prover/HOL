@@ -7,11 +7,10 @@ HOL = $(protect $(HOLDIR)/bin/hol.bare) --zero
 CMP = diff
 
 ifdef POLY
-DEPS = test1.out test2.out test3.out test4.out
+DEPS = test1.out test2.out test3.out test4.out test5.out
 
 # FIXME: % in targets doesn't work
 test1.out: test1.input test1.expected
-	echo $(DEPS)
 	$(HOL) < $< | tail -n +8 > $@
 	$(CMP) $@ $(patsubst %.input,%.expected,$<)
 
@@ -24,6 +23,10 @@ test3.out: test3.input test3.expected
 	$(CMP) $@ $(patsubst %.input,%.expected,$<)
 
 test4.out: test4.input test4.expected
+	$(HOL) < $< | tail -n +8 > $@
+	$(CMP) $@ $(patsubst %.input,%.expected,$<)
+
+test5.out: test5.input test5.expected
 	$(HOL) < $< | tail -n +8 > $@
 	$(CMP) $@ $(patsubst %.input,%.expected,$<)
 
