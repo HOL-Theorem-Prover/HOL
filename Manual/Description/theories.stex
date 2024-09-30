@@ -1,4 +1,5 @@
 %%% -*- Mode: LaTeX; -*-
+\newcommand{\subr}{\sb{\mathsf{r}}}
 \chapter{Core Theories}\label{HOLtheories}
 
 % LaTeX macros in HOL manuals
@@ -3212,6 +3213,22 @@ total relation.
 \end{alltt}
 \end{hol}
 
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!element adjacency}
+The notion of $R$ holding pairwise through a list can be expressed using the predicate \holtxt{adjacent}, where $\holtxt{adjacent}\;\ell\;a\;b$ holds if values $a$ and $b$ appear together (in that order) in list $\ell$.
+Then, we have
+\begin{hol}
+\begin{alltt}
+##thm SORTED_adjacent
+\end{alltt}
+\end{hol}
+where the $\subseteq\subr$ relation is the notion of relation-subset (see below on page~\pageref{def:rsubset}).
+There are a number of other theorems in \ml{listTheory} about adjacency, including for example:
+\begin{hol}
+\begin{alltt}
+##thm adjacent_REVERSE
+##thm adjacent_MAP
+\end{alltt}
+\end{hol}
 
 
 \subsubsection{Indexed lists}
@@ -4451,7 +4468,6 @@ The following basic properties of relations are defined.
 
 \paragraph{Basic operations}
 
-\newcommand{\subr}{\sb{\mathsf{r}}}
 The following basic operations on relations are defined: the empty
 relation (\holtxt{EMPTY\_REL}, or $\emptyset\subr$), relation composition (\holtxt{O}, or $\circ\subr$,
 infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')), domain (\holtxt{RDOM}), and range
