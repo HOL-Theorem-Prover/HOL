@@ -1604,12 +1604,12 @@ definitions of the following standard arithmetic operators.
 \index{EXP, the HOL constant@\holtxt{EXP}, the \HOL{} constant}
 \index{ addition, in HOL logic@\holtxt{+} (addition, in \HOL{} logic)}
 \index{ subtraction, in HOL logic@\holtxt{-} (subtraction, in \HOL{} logic)}
-\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)!on natural numbers}
 \index{ exponentiation, in HOL logic@\holtxt{**} (exponentiation, in \HOL{} logic)}
 \index{addition, in HOL logic@addition, in \HOL{} logic}
 \index{subtraction, in HOL logic@subtraction, in \HOL{} logic}
-\index{multiplication, in HOL logic@multiplication, in \HOL{} logic}
-\index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic}
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on natural numbers}
+\index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic!on natural numbers}
 \begin{alltt}
 >>__ open arithmeticTheory
 ##thm ADD
@@ -1922,6 +1922,8 @@ similar operations on the natural numbers, and on the real numbers.
 The constants defined in the integer theory include those found in the
 following table.
 
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on integers}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)!on integers}
 \begin{center}
 {\small
 \begin{tabular}{@{}cccc}
@@ -2757,6 +2759,7 @@ paths, and finite strings.
 >>__ open listTheory
 >>__ show_numeral_types := false
 
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!constructors}
 \HOL{} lists are inductively defined finite sequences where each
 element in a list has the same type. The theory \ml{list} introduces
 the unary type operator $\alpha \; \konst{list}$ by a type definition
@@ -2797,6 +2800,8 @@ fundamental theorems about lists are proved and stored in the theory
 \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for lists}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
+\index{lists, the HOL theory of@lists the \HOL{} theory of!initiality theorem}
+\index{lists, the HOL theory of@lists the \HOL{} theory of!induction theorem}
 \begin{alltt}
 ##thm list_Axiom
 ##thm list_INDUCT
@@ -4487,7 +4492,7 @@ infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')),
 \noindent Set operations lifted to work on relations include subset
 (\holtxt{RSUBSET}, or $\subseteq\subr$, infix), union (\holtxt{RUNION}, or $\cup\subr$, infix),
 intersection (\holtxt{RINTER}, or $\cap\subr$, infix), complement (\holtxt{RCOMPL}),
-and universe (\holtxt{RUNIV}, or $\mathbb{U}\subr$).
+and universe (\holtxt{RUNIV}, or $\mathbb{U}\subr$).\label{def:rsubset}
 %
 \begin{hol}
 \begin{alltt}
