@@ -755,23 +755,19 @@ ProofLine =
 );
 <holstrlitlbrk> . => ((yypos, yytext));
 
-<quote,tmquote,tyquote,defnquote,datatypequote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
-<quote,tmquote,tyquote,defnquote,datatypequote>"^"+{newline} => (
+<quote,tmquote,tyquote,defnquote,datatypequote,rawquote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
+<quote,tmquote,tyquote,defnquote,datatypequote,rawquote>"^"+{newline} => (
   (yypos,
    if quotefix then yytext
    else ECHO yyarg (String.substring(yytext,0,size yytext - 1) ^
                     qnewline yyarg (yypos,yytext)))
 );
-<rawquote>"^"+{ws} => (
+<datatypequote,rawquote,defnquote>"^"+{newline}"End" => (
   (yypos,
-   if quotefix then yytext
-   else ECHO yyarg (String.substring(yytext,1,size yytext - 1)))
-);
-<rawquote>"^"+{ws} => (
-  (yypos,
-   if quotefix then yytext
-   else ECHO yyarg (String.substring(yytext,1,size yytext - 2) ^
-                    qnewline yyarg (yypos,yytext)))
+   (YYBEGIN INITIAL;
+    nextline yyarg (yypos + size yytext);
+    if quotefix then yytext
+    else String.substring(yytext,0,size yytext - 4) ^ "\"\n];"))
 );
 <quote,tmquote,tyquote,defnquote,datatypequote,rawquote>"^^" => (
   (yypos, if quotefix then yytext else ECHO yyarg "^")
