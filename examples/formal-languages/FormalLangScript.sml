@@ -1,11 +1,11 @@
 (*****************************************************************************)
 (* Formal Language Theory                                                    *)
 (*                                                                           *)
-(* A formal language is a set of strings over an alphabet. The notion of     *)
-(* 'a list is used to capture such strings. We define the following language *)
-(* operations: concatenation, iterated concatenation, and Kleene Star, and   *)
-(* prove a collection of lemmas about these operations, including Arden's    *)
-(* lemma.                                                                    *)
+(* A formal language is a set of strings over an alphabet. The type 'a list  *)
+(* is the representation of strings. The following language operations are   *)
+(* introduced: concatenation, iterated concatenation, Kleene Star, and left  *)
+(* quotient. We prove a collection of lemmas about these operations,         *)
+(* including Arden's lemma.                                                  *)
 (*****************************************************************************)
 
 
@@ -558,9 +558,10 @@ Proof
 QED
 
 Theorem ARDEN_LEM1[local]:
-  ε ∉ A ∧ (X = A dot X ∪ B) ∧ w ∈ X ⇒ w ∈ KSTAR A dot B
+  ε ∉ A ∧ (X = A dot X ∪ B) ⇒ X ⊆ KSTAR A dot B
 Proof
- strip_tac >> measureInduct_on `LENGTH w` >> Cases_on `LENGTH w` >> disch_tac
+ strip_tac >> simp[SUBSET_DEF] >> qx_gen_tac ‘w’ >>
+ measureInduct_on `LENGTH w` >> Cases_on `LENGTH w` >> disch_tac
  >- (gvs[] >> metis_tac [EMPTY_IN_KSTAR,EMPTY_IN_DOT,IN_UNION])
  >- (‘w ∈ A dot X ∨ w ∈ B’ by metis_tac[EXTENSION,IN_UNION]
      >- (‘?u v. (w = u ++ v) /\ u ∈ A /\ v ∈ X ∧ u ≠ ε’
@@ -590,32 +591,175 @@ Proof
 QED
 
 Theorem ARDENS_LEMMA:
- !A B X:'a lang.
-    ε ∉ A ∧ (X = (A dot X) ∪ B) ==> (X = KSTAR(A) dot B)
+  ε ∉ A ∧ (X = (A dot X) ∪ B)
+  ==>
+  X = KSTAR(A) dot B
 Proof
-  rpt strip_tac >> rw[SET_EQ_SUBSET]
-  >- metis_tac [SUBSET_DEF,ARDEN_LEM1]
-  >- metis_tac [ARDEN_LEM2]
+  metis_tac [ARDEN_LEM1,ARDEN_LEM2,SET_EQ_SUBSET]
 QED
 
 (*===========================================================================*)
-(* Definition of the finite state languages, based on the left quotient      *)
-(* operation. The finite state languages are an abstract characterization of *)
-(* the regular languages. For example, Brzozowski derivatives (see           *)
-(* regular/regexpScript.sml) are the syntactic counterpart of left quotient. *)
+(* Left quotient. Brzozowski derivatives (see regular/regexpScript.sml) are  *)
+(* a syntactic counterpart of left quotient.                                 *)
 (*===========================================================================*)
 
 Definition LEFT_QUOTIENT_def:
   LEFT_QUOTIENT x L = {y | (x ++ y) ∈ L}
 End
 
+Theorem IN_LEFT_QUOTIENT[simp]:
+  y ∈ LEFT_QUOTIENT x L ⇔ (x ++ y) ∈ L
+Proof
+  simp [LEFT_QUOTIENT_def]
+QED
+
+Theorem LEFT_QUOTIENT_EPSILON[simp]:
+  LEFT_QUOTIENT ε L = L
+Proof
+  rw[LEFT_QUOTIENT_def]
+QED
+
+Theorem LEFT_QUOTIENT_EMPTYSET[simp]:
+  LEFT_QUOTIENT x {} = {}
+Proof
+ rw[LEFT_QUOTIENT_def]
+QED
+
+(* Looping rewrite rule! Use LEFT_QUOTIENT_REC instead *)
+Theorem LEFT_QUOTIENT_REC_ALT:
+  LEFT_QUOTIENT x L =
+   case x
+    of ε => L
+     | a::w => LEFT_QUOTIENT w (LEFT_QUOTIENT [a] L)
+Proof
+ Induct_on ‘x’ >> rw[LEFT_QUOTIENT_def]
+QED
+
+Theorem LEFT_QUOTIENT_REC:
+  LEFT_QUOTIENT ε L = L ∧
+  LEFT_QUOTIENT (a::w) L = LEFT_QUOTIENT w {y | ([a] ++ y ∈ L)}
+Proof
+  rw[Once LEFT_QUOTIENT_REC_ALT] >>
+  metis_tac [LEFT_QUOTIENT_def,APPEND]
+QED
+
+Theorem LEFT_QUOTIENT_FOLDL:
+  ∀x L.
+  LEFT_QUOTIENT x L = FOLDL (λlang a. {y | [a] ++ y ∈ lang}) L x
+Proof
+ Induct >> rw[] >> gvs[] >>
+ pop_assum (simp o single o GSYM) >>
+ simp [Once LEFT_QUOTIENT_REC]
+QED
+
+Theorem LEFT_QUOTIENT_EPSILONSET[simp]:
+  LEFT_QUOTIENT x {ε} = if x = ε then {ε} else {}
+Proof
+  rw[LEFT_QUOTIENT_def,EXTENSION,EQ_IMP_THM]
+QED
+
+Theorem LEFT_QUOTIENT_SING:
+  x ≠ ε ⇒ LEFT_QUOTIENT x {[a]} = (if x = [a] then {ε} else {})
+Proof
+  rw[LEFT_QUOTIENT_def,EXTENSION,EQ_IMP_THM] >>
+  Cases_on ‘x’ >> gvs[]
+QED
+
+Theorem LEFT_QUOTIENT_APPEND:
+  LEFT_QUOTIENT (x ++ y) L = LEFT_QUOTIENT y (LEFT_QUOTIENT x L)
+Proof
+  rw [LEFT_QUOTIENT_def]
+QED
+
+Theorem LEFT_QUOTIENT_ELT:
+  x ∈ L ⇔ ε ∈ LEFT_QUOTIENT x L
+Proof
+ simp [LEFT_QUOTIENT_def]
+QED
+
+Theorem LEFT_QUOTIENT_UNION[simp]:
+  LEFT_QUOTIENT x (L1 ∪ L2) = LEFT_QUOTIENT x L1 ∪ LEFT_QUOTIENT x L2
+Proof
+  rw[LEFT_QUOTIENT_def,EXTENSION,EQ_IMP_THM]
+QED
+
+Theorem LEFT_QUOTIENT_DOT:
+  LEFT_QUOTIENT x (L1 dot L2) =
+    (LEFT_QUOTIENT x L1 dot L2)
+    ∪
+    (if ε ∈ L1 then LEFT_QUOTIENT x L2 else {})
+Proof
+  cheat
+QED
+
+Theorem LEFT_QUOTIENT_KSTAR:
+  LEFT_QUOTIENT x (KSTAR L) = (LEFT_QUOTIENT x L) dot (KSTAR L)
+Proof
+cheat
+QED
+
+Theorem LEFT_QUOTIENT_COMPL:
+  LEFT_QUOTIENT x (COMPL L) = COMPL (LEFT_QUOTIENT x L)
+Proof
+  rw [LEFT_QUOTIENT_def,EXTENSION,EQ_IMP_THM]
+QED
+
+Definition LEFT_QUOTIENTS_OF_def:
+  LEFT_QUOTIENTS_OF [] L = [L] ∧
+  LEFT_QUOTIENTS_OF (a::w) L = L :: LEFT_QUOTIENTS_OF w (LEFT_QUOTIENT [a] L)
+End
+
+(*---------------------------------------------------------------------------*)
+(* There's a coercion between symbols in an alphabet set A and the words     *)
+(* needed to build A*.                                                       *)
+(*---------------------------------------------------------------------------*)
+
+Theorem KSTAR_Alphabet[simp]:
+  w ∈ KSTAR {[a] | a ∈ A} <=> EVERY (λa. a ∈ A) w
+Proof
+  Induct_on ‘w’ >>
+  simp [Once IN_KSTAR_THM] >>
+  rw [EQ_IMP_THM,PULL_EXISTS]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* The finite state languages are an abstract characterization of the        *)
+(* regular languages.                                                        *)
+(*---------------------------------------------------------------------------*)
+
 Definition INTRINSIC_STATES_def:
   INTRINSIC_STATES (L,A) = {LEFT_QUOTIENT w L | EVERY (λa. a ∈ A) w}
 End
 
+Theorem IN_INTRINSIC_STATES[simp]:
+  L' ∈ INTRINSIC_STATES (L,A)
+  <=>
+  ∃w. L' = LEFT_QUOTIENT w L ∧ EVERY (λa. a ∈ A) w
+Proof
+  simp [INTRINSIC_STATES_def]
+QED
+
+Theorem IN_INTRINSIC_STATES_IMP:
+ EVERY (λa. a ∈ A) w ⇒ LEFT_QUOTIENT w L ∈ INTRINSIC_STATES (L,A)
+Proof
+  metis_tac [IN_INTRINSIC_STATES]
+QED
+
 Definition FINITE_STATE_def:
-  FINITE_STATE (L,A) <=> FINITE (INTRINSIC_STATES (L,A))
+  FINITE_STATE (L,A) <=>
+    FINITE A ∧
+    L ⊆ KSTAR {[a] | a ∈ A} ∧
+    FINITE (INTRINSIC_STATES (L,A))
 End
+
+Theorem IN_FINITE_STATE[simp]:
+  (L,A) ∈ FINITE_STATE <=>
+  FINITE A ∧
+  (∀x. x ∈ L ⇒ EVERY (λa. a ∈ A) x) ∧
+  FINITE (INTRINSIC_STATES (L,A))
+Proof
+  simp [IN_DEF,FINITE_STATE_def,SUBSET_DEF]
+QED
 
 (* TODO: put in pred_setTheory *)
 Theorem IMAGE_CONSTANT:
@@ -631,40 +775,19 @@ Proof
   metis_tac [IMAGE_CONSTANT, combinTheory.K_DEF]
 QED
 
-Theorem LEFT_QUOTIENT_EMPTY:
-  LEFT_QUOTIENT x {} = {}
+Theorem FINITE_STATE_EMPTYSET:
+  FINITE A ==> FINITE_STATE ({},A)
 Proof
- rw[LEFT_QUOTIENT_def]
-QED
-
-Theorem LEFT_QUOTIENT_EPSILON:
-  LEFT_QUOTIENT x {ε} = if x = ε then {ε} else {}
-Proof
-  rw[LEFT_QUOTIENT_def,EXTENSION,EQ_IMP_THM]
-QED
-
-Theorem FINITE_STATE_EMPTY:
-  FINITE_STATE ({},A)
-Proof
-  rw[FINITE_STATE_def, INTRINSIC_STATES_def,LEFT_QUOTIENT_EMPTY] >>
+  rw[FINITE_STATE_def, INTRINSIC_STATES_def,LEFT_QUOTIENT_EMPTYSET] >>
   rw[combinTheory.o_DEF, GSPEC_IMAGE, IMAGE_CONSTANT]
 QED
 
-Theorem FINITE_STATE_EPSILON:
-  FINITE_STATE ({ε},A)
+Theorem FINITE_STATE_EPSILONSET:
+  FINITE A ⇒ FINITE_STATE ({ε},A)
 Proof
   rw[FINITE_STATE_def, INTRINSIC_STATES_def,LEFT_QUOTIENT_EPSILON] >>
   irule SUBSET_FINITE >> rw [SUBSET_DEF] >> qexists_tac ‘{{ε}; ∅}’ >>
   rw[] >> rw[]
-QED
-
-Theorem LEFT_QUOTIENT_REC:
-  LEFT_QUOTIENT x L =
-   case x
-    of ε => L
-     | a::w => LEFT_QUOTIENT w (LEFT_QUOTIENT [a] L)
-Proof
- Induct_on ‘x’ >> rw[LEFT_QUOTIENT_def]
 QED
 
 (*
