@@ -20,6 +20,11 @@ Contents
 New features:
 -------------
 
+-   The simplifier now supports `NoAsms` and `IgnAsm` special forms that allow all assumptions (or those matching the provided pattern, in the case of `IgnAsm`) to be excluded.
+    See the DESCRIPTION and REFERENCE manuals for details.
+    ([GitHub issue](https://github.com/HOL-Theorem-Prover/HOL/issues/1220))
+
+
 Bugs fixed:
 -----------
 
