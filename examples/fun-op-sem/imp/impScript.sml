@@ -105,7 +105,9 @@ val cval_ind = prove(
 Theorem cval_ind[allow_rebind] = cval_ind
 
 Theorem lrg_clk:
-    !c s t t' s1 t1. ((t <= t') /\ (cval c s t = SOME (s1, t1))) ==> (?t2.(cval c s t' = SOME (s1, t2)) /\ t1 <= t2)
+  !c s t t' s1 t1.
+    t ≤ t' ∧ cval c s t = SOME (s1,t1) ==>
+    ?t2. cval c s t' = SOME (s1,t2) ∧ t1 ≤ t2
 Proof
   recInduct cval_ind >>
   rw[] >>~-
@@ -130,7 +132,9 @@ Proof
 QED
 
 Theorem cval_mono:
-    !c s t t'. ((t <= t') /\ (cval c s t <> NONE)) ==> (OPTION_MAP FST (cval c s t)) = (OPTION_MAP FST (cval c s t'))
+  !c s t t'.
+    t ≤ t' ∧ cval c s t ≠ NONE ==>
+    OPTION_MAP FST (cval c s t) = OPTION_MAP FST (cval c s t')
 Proof
   rpt strip_tac >>
   Cases_on `cval c s t` >>
@@ -142,7 +146,9 @@ Proof
 QED
 
 Theorem lrg_clk2:
-  !c s t t' s1 t1 t2. ((t1 <= t2) /\ (cval c s t = SOME (s1, t1)) /\ (cval c s t' = SOME (s1, t2))) ==> t <= t'
+  !c s t t' s1 t1 t2.
+    t1 ≤ t2 ∧ cval c s t = SOME (s1,t1) ∧ cval c s t' = SOME (s1,t2) ==>
+    t ≤ t'
 Proof
   recInduct cval_ind >>
   rw[] >>~-
@@ -178,7 +184,8 @@ Proof
 QED
 
 Theorem arb_resc:
-  !c s t s1 t1. cval c s t = SOME (s1, t1) ==> (!k. ?t'. cval c s t' = SOME (s1, k))
+  !c s t s1 t1.
+    cval c s t = SOME (s1,t1) ==> !k. ?t'. cval c s t' = SOME (s1,k)
 Proof
   recInduct cval_ind >>
   rw[] >>~-
