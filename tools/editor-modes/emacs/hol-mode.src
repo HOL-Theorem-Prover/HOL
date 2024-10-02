@@ -44,7 +44,7 @@
 (defconst hol-dir
   (file-name-directory
    (directory-file-name (file-name-directory hol-executable))))
-(setq load-path (cons (concat hol-dir "tools/") load-path))
+(setq load-path (cons (concat hol-dir "tools/editor-modes/emacs") load-path))
 (require 'holscript-mode)
 
 (defcustom hol-new-buffer-style-default 'new-frame
@@ -69,7 +69,7 @@ a new buffer that is vertically adjacent and below)."
   (setq holmake-executable filename))
 
 (defvar hol-mode-sml-init-command
-   "use (Globals.HOLDIR ^ \"/tools/hol-mode.sml\")"
+   "use (Globals.HOLDIR ^ \"/tools/editors-modes/emacs/hol-mode.sml\")"
   "*The command to send to HOL to load the ML-part of hol-mode.")
 
 
