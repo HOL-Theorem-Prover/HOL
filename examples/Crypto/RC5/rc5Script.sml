@@ -38,10 +38,6 @@ Definition Q64_data:
 End
 
 (* function *)
-Definition Split16_def :
-   Split16 (w:word16)= ((15 >< 8)w, (7 >< 0)w)
-End
-
 Definition Split32_def :
    Split32 (w:word32)= ((31 >< 16)w, (15 >< 0)w)
 End
@@ -50,8 +46,8 @@ Definition Split64_def :
    Split64 (w:word64)= ((63 >< 32)w, (31 >< 0)w)
 End
 
-Definition Join16_def :
-   Join16 (u:word8,v:word8) :word16= u @@ v
+Definition Split128_def :
+   Split128 (w:word128)= ((127 >< 64)w, (63 >< 0)w)
 End
 
 Definition Join32_def :
@@ -60,6 +56,10 @@ End
 
 Definition Join64_def :
    Join64 (u:word32,v:word32) = (u @@ v) :word64
+End
+
+Definition Join128_def :
+   Join128 (u:word64,v:word64) :word128= u @@ v
 End
 
 Theorem Split32_Join32:
@@ -92,25 +92,26 @@ Proof
  >> WORD_DECIDE_TAC
 QED
 
-Theorem Split16_Join16:
-    !u v. Split16(Join16(u,v))=(u,v) 
+Theorem Split128_Join128:
+    !u v. Split128(Join128(u,v))=(u,v) 
 Proof
-    rw [Join16_def, Split16_def]
+    rw [Join128_def, Split128_def]
  >- WORD_DECIDE_TAC
  >> WORD_DECIDE_TAC
 QED
 
-Theorem Join16_Split16:
-    !w. Join16(Split16 w)=w
+Theorem Join128_Split128:
+    !w. Join128(Split128 w)=w
 Proof
-    rw [Join16_def, Split16_def]
+    rw [Join128_def, Split128_def]
  >> WORD_DECIDE_TAC
 QED
 
 (* Key function *)
 Definition SkeysT32_def:
    SkeysT32 (l:num) 0=[P32_data]
-   /\ SkeysT32 l (SUC t)= let ks=SkeysT32 l t; key=HD ks in (key+Q32_data) :: ks
+   /\ SkeysT32 l (SUC t)= let ks=SkeysT32 l t; key=HD ks in 
+     (key+Q32_data) :: ks
 End
 
 Definition SkeysT64_def:
@@ -126,9 +127,9 @@ End
 
 Definition Skeys_def:
    Skeys (l:num) r= 
-   if l=32 then REVERSE (SkeysT32 l (2*(r+1)-1))
-   else if l=64 then REVERSE (SkeysT64 l (2*(r+1)-1))
-   else REVERSE (SkeysT16 l (2*(r+1)-1))
+     if l=32 then REVERSE (SkeysT32 l (2*(r+1)-1))
+     else if l=64 then REVERSE (SkeysT64 l (2*(r+1)-1))
+     else REVERSE (SkeysT16 l (2*(r+1)-1))
 End
 
 Theorem LENGTH_Skeys:
@@ -137,7 +138,6 @@ Proof
      Q.X_GEN_TAC ‘l’
   >> Induct_on ‘n’
   >- (rw[Skeys_def]\\
-  
       (‘SkeysT32 32 (SUC 0)=(P32_data+Q32_data)::(SkeysT32 32 0)’ by rw[SkeysT32_def]\\
        POP_ASSUM MP_TAC \\
        rw[]\\
@@ -185,23 +185,51 @@ Definition LkeysIni_def:
 End
 
 Definition keysIni_def:
-   keysIni k 0=[(7 >< 0) k] /\
+   keysIni k 0= [w2w ((7 >< 0) k)] /\
    keysIni k (SUC r)=
      let ks=keysIni k r;n=((SUC r)*8) in
-       ((n+7 >< n) k):: ks
+       ((n+7) >< n) k :: ks
 End
 
-(u= (lenW w) DIV 8; b=len w DIV 8; c=len k DIV len w)
+(*u= (lenW w) DIV 8; b=len w DIV 8; c=len k DIV len w*)
 Definition LkeysSup_def:
-   LkeysSup c u k 0= LkeysIni c /\
-   LkeysSup c u k (SUC r)=
-     let ks=LkeysSup c u k r; keys=keysIni k (SUC r) in
-       (GENLIST (λm. if (m=(SUC r) DIV u) then (((EL m ks) #<< 8)+(EL (SUC r) keys)) else EL m ks) c)
+   (LkeysSup c u k 0 b= let ks=LkeysIni c ;keys=keysIni k (b-1) in
+     (GENLIST (λm. if (m=(b-1) DIV u) then (((EL m ks) #<< 8)+(EL (b-1) keys)) else EL m ks) c)) /\
+   LkeysSup c u k (SUC r) b=
+     let ks=LkeysSup c u k r b;i= b-1-(SUC r); (keys=keysIni k i) in
+       (GENLIST (λm. if (m=i DIV u) then (((EL m ks) #<< 8)+(EL i keys)) else EL m ks) c)
 End
 
 Definition Lkeys_def:
-   Lkeys w k= let c=lenKeyw k w; u= (lenW w) DIV 8; r= ((lenW w) DIV 8)-1 in LkeysSup c u k r
+   Lkeys w k= let c=lenKeyw k w; u= (lenW w) DIV 8; r= ((lenW k) DIV 8)-1; b= ((lenW k) DIV 8)-1 in LkeysSup c u k r b
 End
+
+Theorem LENGTH_LkeysIni:
+   !c. LENGTH(LkeysIni c)=c
+Proof
+     Induct_on‘c’
+  >- rw[LkeysIni_def]
+  >> rw[LkeysIni_def]
+QED
+
+Theorem LENGTH_LkeysSup:
+   !c u k n b. LENGTH(LkeysSup c u k n b)= c 
+Proof
+     Q.X_GEN_TAC ‘c’
+  >> Q.X_GEN_TAC ‘u’
+  >> Q.X_GEN_TAC ‘k’
+  >> Induct_on ‘n’
+  >- (rw[LkeysSup_def]\\
+      rw[LENGTH_LkeysIni])
+  >> rw[LkeysSup_def]
+QED
+
+Theorem LENGTH_Lkeys:
+   !w k. c=lenKeyw k w ==> LENGTH(Lkeys w k)= c 
+Proof
+     rw[lenKeyw_def,Lkeys_def]
+  >> rw[LENGTH_LkeysSup]
+QED
 
 Definition keys_def:
    (keys 0 r c l k w= let Lk=Lkeys w k;Sk=Skeys l r;A=EL 0 Sk;B=EL 0 Lk in (A,B,Lk,Sk,0,0)) /\
@@ -210,17 +238,42 @@ Definition keys_def:
          (Anew= (((EL i Sk)+A+B) #<< 3));
          (Bnew=((EL i Lk)+Anew+B) #<< (w2n (Anew+B)));
          (Sknew= GENLIST (λm. if m=i then (((EL i Sk)+A+B) #<< 3) else EL m Sk) (2*(r+1)));
-         (Lknew= GENLIST (λm. if m=j then (((EL j Lk)+Anew+B)#<< (w2n (Anew+B))) else (EL m Lk)) (((lenW k) DIV 8)-1));
+         (Lknew= GENLIST (λm. if m=j then (((EL j Lk)+Anew+B)#<< (w2n (Anew+B))) else (EL m Lk)) (lenKeyw k w));
          (inew= (i+1) MOD (2*(r+1)));
          (jnew= (j+1) MOD c) in 
-       if ((SUC n) <= 3* (MAX (2*(r+1)) c)) then (Anew,Bnew,Lknew,Sknew,inew,jnew)
-       else (A,B,Lk,Sk,i,j)
+       (Anew,Bnew,Lknew,Sknew,inew,jnew)
 End
+
+Theorem LENGTH_key_Skeys:
+   !n r c l k w A B Lk Sk i j. (l=32 \/ l=64 \/ l=16) /\ (A,B,Lk,Sk,i,j)=keys n r c l k w ==> LENGTH(Sk)= 2*(r+1)
+Proof
+     rpt GEN_TAC
+  >> Cases_on ‘n’
+  >- (rw[keys_def]
+      >> rw[LENGTH_Skeys])
+  >> rw[keys_def]
+  >> Q.ABBREV_TAC ‘X=(keys n' r c l k w)’
+  >> pairarg_tac
+  >> fs[]
+QED
+
+Theorem LENGTH_key_Lkeys:
+   !n r c l k w A B Lk Sk i j. (A,B,Lk,Sk,i,j)=keys n r c l k w ==> LENGTH(Lk)= (lenKeyw k w)
+Proof
+     rpt GEN_TAC
+  >> Cases_on ‘n’
+  >- (rw[keys_def]\\
+      rw[lenKeyw_def,Lkeys_def]\\
+      rw[LENGTH_LkeysSup])
+  >> rw[keys_def]
+  >> Q.ABBREV_TAC ‘X=(keys n' r c l k w)’
+  >> pairarg_tac
+  >> fs[]
+QED
 
 Definition rc5keys_def:
-   rc5keys r c l k w= keys r r c l k w
+   rc5keys r k w= let c=lenKeyw k w; n=3* (MAX (2*(r+1)) c); l=lenW w in keys n r c l k w
 End
-
 
 (* Round function and Encryption *)
 Definition RoundEn_def:
@@ -231,69 +284,74 @@ Definition RoundEn_def:
     in (E+ki,((w2 ⊕ (E+ki))#<<(w2n (E+ki))) +ki2)
 End
 
-Definition RoundEn'_def:
-   RoundEn' r w1 w2 k=let w= Join32(w1,w2);(c=lenKeyw k w); (A,B,Lk,Sk,i,j)=(rc5keys r c (lenW w) k w)
-     in RoundEn r w1 w2 Sk
-End
-
 Definition RoundEn32_def:
-   RoundEn32 r w ks= let (w1,w2)= Split32(w) in
-      RoundEn r w1 w2 ks
+   RoundEn32 r w k= let (w1,w2)= Split32(w);(A,B,Lk,Sk,i,j)=(rc5keys r k w) in
+      Join32(RoundEn r w1 w2 Sk)
 End
 
 Definition RoundEn64_def:
-   RoundEn64 r w ks= let (w1,w2)= Split64(w) in
-      RoundEn r w1 w2 ks
+   RoundEn64 r w k= let (w1,w2)= Split64(w);(A,B,Lk,Sk,i,j)=(rc5keys r k w) in
+      Join64(RoundEn r w1 w2 Sk)
 End
 
 Definition RoundEn128_def:
-   RoundEn128 r w ks= let (w1,w2)= Split128(w) in
-      RoundEn r w1 w2 ks
-End
-
-Definition rc5Encry_def:
-   rc5Encry r w k=
-      if lenW w= 32 then
-         let (c=lenKeyw k w);((A,B,Lk,Sk,i,j)= (rc5keys r c 32 k w)) in
-             RoundEn32 r w Sk
-      else if lenW w= 64 then
-         let (c=lenKeyw k w);((A,B,Lk,Sk,i,j)= (rc5keys r c 64 k w)) in
-             RoundEn64 r w Sk
-      else let (c=lenKeyw k w);((A,B,Lk,Sk,i,j)= (rc5keys r c 128 k w)) in RoundEn128 r w Sk
-End
-
-Definition rc5Encry_def:
-   rc5Encry r w k=
-      if lenW w= 32 then (RoundEn32 r w k)
-      else if lenW w= 64 then (RoundEn64 r w k)
-      else (RoundEn128 r w k)
+   RoundEn128 r w k= let (w1,w2)= Split128(w);(A,B,Lk,Sk,i,j)=(rc5keys r k w) in
+      Join128(RoundEn r w1 w2 Sk)
 End
 
 (* Decryption *)
 Definition RoundDe_def :
-   (RoundDe 0 r ks l w=
-     let (w1,w2)=(Split w l)in (w1,w2))   /\
-   RoundDe (SUC n) r ks l w=
-     let ki=EL (2*(SUC n)) (REVERSE(ks)); ki2=EL (2*(SUC n)+1) (REVERSE(ks)); (w1,w2)= (RoundDe n r ks l w); B=((w2-ki) #>> w2n w1) ⊕ w1 in
-       if SUC n> r then (w1-ki2,w2-ki)
-       else (((w1-ki2)#>>w2n B) ⊕ B , B)
+   (RoundDe 0 r ks w1 w2= (w1,w2))  /\
+   RoundDe (SUC n) r ks w1 w2=
+     let ki=EL (2*n) (REVERSE(ks)); ki2=EL (2*n+1) (REVERSE(ks)); (w1',w2')= (RoundDe n r ks w1 w2); B=((w2'-ki) #>> w2n w1') ⊕ w1' in
+       if SUC n> r then (w1'-ki2,w2'-ki)
+       else (((w1'-ki2)#>>w2n B) ⊕ B , B)
 End
 
-Definition desRoundDe_def :
-    desRoundDe n ks l w= RoundDe (n+1) n ks l w
+Definition RoundDe32_def :
+    RoundDe32 r w k= let (w1,w2)= Split32(w);(A,B,Lk,Sk,i,j)=(rc5keys r k w) in
+       Join32(RoundDe (r+1) r Sk w1 w2)
 End
 
-Definition DES_def :
-   DES n key l w= let keys = Skeys l r in
-     if l=32 then (Join32(RoundEn n ks l w), Join32(desRoundDe n ks l w))
-     else if l=64 then (Join64(RoundEn n ks l w), Join64(desRoundDe n ks l w))
-     else (Join128(RoundEn n ks l w), Join128(desRoundDe n ks l w))
+Definition RoundDe64_def :
+    RoundDe64 r w k= let (w1,w2)= Split64(w);(A,B,Lk,Sk,i,j)=(rc5keys r k w) in
+       Join64(RoundDe (r+1) r Sk w1 w2)
 End
 
-Theorem DES_En0:
-   !key l w. DES 0 key l w=(encrypt,decrypt) /\ Split w=(w1,w2) /\ k1=EL 0 ks; k2=EL 1 ks ==> encrypt= (w1+k1,w2+k2)
+Definition RoundDe128_def :
+    RoundDe128 r w k= let (w1,w2)= Split128(w);(A,B,Lk,Sk,i,j)=(rc5keys r k w) in
+       Join128(RoundDe (r+1) r Sk w1 w2)
+End
+(A,B,Lk,Sk,i,j)=(rc5keys r k w)
+Theorem DES_EnDe:
+   !n (w1:word32) (w2:word32) (key:word64) Sk. (A,B,Lk,Sk,i,j)=(rc5keys n key (Join64(w1,w2))) /\ RoundEn n w1 w2 Sk= (w1',w2') /\ Join64(w1',w2')=encryptW /\ RoundDe (SUC n) n Sk  w1' w2'=decryptW ==> Join64(decryptW)= Join64(w1,w2)
 Proof
+     rw[RoundEn64_def,RoundDe64_def]
+  >> Suff ‘(RoundDe (SUC n) n Sk w1' w2')=(w1,w2)’
+  >- rw[Join64_def]
+  >> Induct_on ‘n’
+  >- (rw[RoundDe_def,RoundEn_def,rc5keys_def]
+      >- (Suff ‘LENGTH(Sk)=2’
+          >- rw[EL_REVERSE]\\
+          POP_ASSUM MP_TAC \\
+          rw[lenW_def,lenKeyw_def]\\
+          rw[LENGTH_key_Skeys] cheat)\\
+       Suff ‘LENGTH(Sk)=2’
+       >- (rw[]\\
+           Know ‘Sk <>[]’
+           >- cheat\\
+           rw[HD_REVERSE]\\
+           rw[LAST_EL])\\
+       POP_ASSUM MP_TAC \\
+       rw[lenW_def,lenKeyw_def]\\
+       rw[LENGTH_key_Skeys] cheat)
 
+  >> rw[RoundDe_def,RoundEn_def,rc5keys_def]
+      
+Know ‘(lenKeyw key (Join64 (w1,w2)))=32’      
+  lenKeyw_def
+keys_def
 QED
+LENGTH_key_Skeys
 val _ = export_theory();
 val _ = html_theory "des_prop";
