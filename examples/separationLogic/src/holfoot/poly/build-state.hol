@@ -13,7 +13,7 @@ open holfootLib;
 
 open separationLogicTheory vars_as_resourceTheory holfootTheory generalHelpersTheory;
 
-use (Globals.HOLDIR ^ "/tools/hol-mode.sml");
+use (Globals.HOLDIR ^ "/tools/editor-modes/emacs/hol-mode.sml");
 
 val _ = Feedback.set_trace "Unicode" 0;
 val _ = Feedback.set_trace "PPBackEnd use annotations" 0;

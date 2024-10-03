@@ -69,7 +69,7 @@ a new buffer that is vertically adjacent and below)."
   (setq holmake-executable filename))
 
 (defvar hol-mode-sml-init-command
-   "use (Globals.HOLDIR ^ \"/tools/editors-modes/emacs/hol-mode.sml\")"
+   "use (Globals.HOLDIR ^ \"/tools/editor-modes/emacs/hol-mode.sml\")"
   "*The command to send to HOL to load the ML-part of hol-mode.")
 
 
