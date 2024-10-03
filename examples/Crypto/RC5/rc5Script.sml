@@ -338,7 +338,8 @@ Proof
           rw[LENGTH_key_Skeys] cheat)\\
        Suff ‘LENGTH(Sk)=2’
        >- (rw[]\\
-           Know ‘Sk <>[]’
+           Know ‘Sk <>[]’ ASM_REWRITE_TAC [GSYM LENGTH_NIL]
+           rw[]
            >- cheat\\
            rw[HD_REVERSE]\\
            rw[LAST_EL])\\
