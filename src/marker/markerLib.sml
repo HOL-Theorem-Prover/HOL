@@ -696,7 +696,7 @@ fun filter_then asms aslPs thltac (gl as (asl0,g)) =
       val asl = apply_aslPs (free_varsl (g::asl0)) aslPs
                             (filter (not o is_label) asl0)
     in
-      thltac (asms @ map ASSUME asl) gl
+      thltac (map ASSUME asl @ asms) gl
     end
 
 fun process_taclist_then {arg} thltac (gl as (asl,g)) =
