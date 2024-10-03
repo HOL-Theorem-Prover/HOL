@@ -1669,8 +1669,6 @@ val _ = export_theory();
 val _ = html_theory "des_prop";
 
 
-GENLIST (λm. if m=j then (((EL j Lk)+Anew+B)#<< (w2n (Anew+B))) else (EL m Lk)) (lenKeyw k w))
-
 
 
 
