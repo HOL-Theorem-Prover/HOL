@@ -1,11 +1,12 @@
 ;;; run with something like
 ;;;  HOLDIR=<dir> emacs -batch -l ert -l holscript-tests.el -f ert-run-tests-batch-and-exit
 
-(load (concat (file-name-as-directory (getenv "HOLDIR")) "tools/hol-mode"))
+(load (concat (file-name-as-directory (getenv "HOLDIR")) "tools/editor-modes/emacs/hol-mode"))
 
 (defun holscript-fixture-in (file sword-arg body)
   (with-temp-buffer
-    (insert-file-contents-literally (concat hol-dir "tools/mode-tests/" file))
+    (insert-file-contents-literally
+     (concat hol-dir "tools/editor-modes/emacs/mode-tests/" file))
     (decode-coding-region (point-min) (point-max) 'utf-8-unix)
     (holscript-mode)
     (set-buffer-modified-p nil)
@@ -104,7 +105,8 @@
      (should (move-check '(4455 4505) 'forward-sexp))
      (should (move-check '(4508 4455 4435) 'backward-sexp))
      (should (move-check '(3943 3959 3999 4046) 'forward-sexp))
-     (should (move-check '(4599 4558) 'backward-sexp)))))
+     (should (move-check '(4599 4558) 'backward-sexp))
+     (should (move-check '(4671 4602) 'backward-sexp)))))
 
 (ert-deftest holscript-sexp-movement ()
   "sexp-moves are made correctly"

@@ -279,4 +279,10 @@ Definition foo:
   foo x = λy z. y + z
 End
 
+
+CoInductive reln:
+[~rule:] ∀x. reln (f x)
+[rule2:] ∀y. reln (y 3)
+End
+
 val _ = export_theory()
