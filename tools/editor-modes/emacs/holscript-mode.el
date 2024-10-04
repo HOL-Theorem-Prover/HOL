@@ -1394,3 +1394,16 @@ class characters.")
 
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
                             auto-mode-alist))
+
+(if (fboundp 'yas-minor-mode)
+    (progn
+      (setq yas-snippet-dirs
+            (append
+             yas-snippet-dirs
+             (list (concat
+                    hol-dir
+                    "tools/editor-modes/emacs/yasnippets"))))
+      (yas-reload-all)
+      (add-hook 'holscript-mode-hook #'yas-minor-mode)
+      (add-hook 'holscript-mode-hook
+                (lambda () (setq yas-also-auto-indent-first-line t)))))

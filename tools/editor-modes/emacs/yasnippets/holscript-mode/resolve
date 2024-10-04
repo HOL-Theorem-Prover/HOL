@@ -2,7 +2,6 @@
 # name: Automatic resolution of a theorem until no resolution possible
 # key: resolve
 # expand-env: ((yas-indent-line 'fixed))
+# group: tactics
 # --
-drule $1
-\\\\ rpt (disch_then drule)
-\\\\ $0
+drule $1 >> rpt (disch_then drule) $0

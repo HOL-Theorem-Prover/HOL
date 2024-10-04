@@ -2,5 +2,6 @@
 # name: Apply first-order prover metis to current goal
 # key: metis_tac
 # expand-env: ((yas-indent-line 'fixed))
+# group: tactics
 # --
-metis_tac [$1] $0
+metis_tac [${1:theorems}] $0
