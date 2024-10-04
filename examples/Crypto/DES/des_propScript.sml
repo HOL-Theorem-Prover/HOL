@@ -35,22 +35,8 @@ Proof
   >>rw[FCP_BETA]
 QED
 
-Theorem compl_E:
-  ∀m. E (¬m)=~ (E m)
-Proof
-    RW_TAC fcp_ss[E_def, bitwise_perm_def,dimindex_64]
-  >>Know ‘ (dimindex (:32) − EL (dimindex (:48) − 1 − i) E_data)<32’
-  >- (fs [dimindex_48] \\
-      POP_ASSUM MP_TAC \\
-      Q.SPEC_TAC (‘i’, ‘n’) \\
-      rpt (CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV list_ss [E_data]))) \\
-      REWRITE_TAC [])
-  >>rw[word_1comp_def]
-  >>rw[FCP_BETA]
-QED
-
 Theorem compl_IP:
-  ∀m. IP (¬m)=~ (IP m)
+  !m. IP (~m) = ~ (IP m)
 Proof
     RW_TAC fcp_ss[IP_def,bitwise_perm_def, dimindex_64]
   >>Know ‘(64 − EL (63 − i) IP_data)<64’
@@ -58,6 +44,20 @@ Proof
       POP_ASSUM MP_TAC \\
       Q.SPEC_TAC (‘i’, ‘n’) \\
       rpt (CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV list_ss [IP_data]))) \\
+      REWRITE_TAC [])
+  >>rw[word_1comp_def]
+  >>rw[FCP_BETA]
+QED
+
+Theorem compl_E:
+  !m. E (~m)= ~ (E m)
+Proof
+    RW_TAC fcp_ss[E_def, bitwise_perm_def,dimindex_64]
+  >>Know ‘ (dimindex (:32) − EL (dimindex (:48) − 1 − i) E_data)<32’
+  >- (fs [dimindex_48] \\
+      POP_ASSUM MP_TAC \\
+      Q.SPEC_TAC (‘i’, ‘n’) \\
+      rpt (CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV list_ss [E_data]))) \\
       REWRITE_TAC [])
   >>rw[word_1comp_def]
   >>rw[FCP_BETA]
@@ -119,7 +119,7 @@ Definition roundk_supp:
 End
 
 Theorem compl_RK_L:
-  !n (k:word64). 17 > n ==>(RK_L n ~k)=~(RK_L n k)
+  !n (k:word64). 17 > n ==>(RK_L n ~k)= ~ (RK_L n k)
 Proof
     rw[]
   >> Induct_on `n`
@@ -157,7 +157,7 @@ Proof
 QED
 
 Theorem compl_RK_R :
-   !n (k:word64). 17 > n ==>(RK_R n ~k)=~(RK_R n k)
+   !n (k:word64). 17 > n ==>(RK_R n ~k)= ~ (RK_R n k)
 Proof
      rw[]
   >> Induct_on `n`
@@ -280,26 +280,26 @@ Proof
   >- (simp [] \\
       Know ‘(M (u',v') keys' 0,M (u',v') keys' (SUC 0))=
             Round 0 keys' (u',v')’
-  >- RW_TAC fcp_ss[Round_alt_half_message']
-  >> Know ‘Round 0 keys' (u',v')= (u',v')’
-  >- rw [Round_def]
-  >> Know ‘(M (u,v) keys 0,M (u,v) keys (SUC 0))=Round 0 keys (u,v)’
-  >- RW_TAC fcp_ss[Round_alt_half_message']
-  >> Know ‘Round 0 keys (u,v)= (u,v)’
-  >- rw [Round_def]
-  >> rw[]
-  >| [ (* goal 1 (of 2) *)
-       rw [Abbr ‘u'’,Abbr ‘u’] \\
-       Know `(IP m)=~(IP (¬m))` \\
-       rw[compl_IP] \\
-       rw [compl_extract_1] \\
-       rw[],
-       (* goal 2 (of 2) *)
-       rw [Abbr ‘v'’,Abbr ‘v’]\\
-       Know `(IP m)=~(IP (¬m))` \\
-       rw[compl_IP]\\
-       rw [compl_extract_2] \\
-       rw[] ])
+      >- RW_TAC fcp_ss[Round_alt_half_message']\\
+      Know ‘Round 0 keys' (u',v')= (u',v')’
+      >- rw [Round_def]\\
+      Know ‘(M (u,v) keys 0,M (u,v) keys (SUC 0))=Round 0 keys (u,v)’
+      >- RW_TAC fcp_ss[Round_alt_half_message']\\
+      Know ‘Round 0 keys (u,v)= (u,v)’
+      >- rw [Round_def]\\
+      rw[]
+      >| [ (* goal 1 (of 2) *)
+           rw [Abbr ‘u'’,Abbr ‘u’] \\
+           Know ‘(IP m)= ~ (IP (¬m))’
+           >- rw[compl_IP] \\
+           rw [compl_extract_1] \\
+           rw[],
+           (* goal 2 (of 2) *)
+           rw [Abbr ‘v'’,Abbr ‘v’]\\
+           Know ‘(IP m)= ~ (IP (¬m))’
+           >- rw[compl_IP]\\
+           rw [compl_extract_2] \\
+           rw[] ])
   >> DISCH_TAC
   >> ‘x <= n’ by rw []
   >> fs []
@@ -324,10 +324,10 @@ Proof
               RoundOp (M (u,v) keys (x + 1)) (EL x keys)’
   >- (rw[WORD_NOT_XOR])
   >> rw[RoundOp_def]
-  >> Know ‘E (~M (u,v) keys (x + 1))=~E (M (u,v) keys (x + 1))’
-  >- (rw[compl_E])
+  >> Know ‘E (~M (u,v) keys (x + 1))= ~ E (M (u,v) keys (x + 1))’
+  >- rw[compl_E]
   >> Rewr'
-  >> Suff ‘EL x keys'=~EL x keys’
+  >> Suff ‘EL x keys'= ~ EL x keys’
   >- rw[WORD_NOT_XOR]
   >> rw [Abbr ‘keys'’, Abbr ‘keys’]
   >> rw[KS_def]
@@ -1455,11 +1455,11 @@ Definition XcauseYF'_def:
      prob word48p {x| S(x) ?? S(x ?? E(X))= Y}
 End
 
-Theorem XcauseYF_convert:
+(*Theorem XcauseYF_convert:
    !X Y. {x:word32|x'=E(x) /\ S(x') ?? S(x' ?? E(X))= Y}= {x:word32| ?k. ((S(E(x)?? k)) ?? (S(E(x)?? E(X)?? k))= Y)}
 Proof
      
-QED
+QED*)
 
 Definition splitXF_def:
    splitXF (Xe:word48)=[(5><0) Xe; (11><6) Xe;(17><12) Xe;(23><18) Xe ;(29><24) Xe;(35><30) Xe ;(41><36) Xe;(47><42) Xe]
@@ -1472,34 +1472,6 @@ End
 Definition S_data_def:
    S_data=[S1_data;S2_data;S3_data;S4_data;S5_data;S6_data;S7_data;S8_data]
 End
-
-(*!X Y. Xe=E(X) /\ Xl= splitXF Xe/\ Yl= splitYF Y  ==>
-   XcauseYF' X Y = EXTREAL_PROD_IMAGE (λi. XcauseY (EL i Xl) (EL i Yl) (SBox(EL i S_data)) ) (count 8))*)
-Theorem XcauseYFp_eq:
-   
-   !X Y. Xe=E(X) /\ x1=(5><0) Xe /\ x2=(11><6) Xe /\x3=(17><12) Xe /\x4=(23><18) Xe /\x5=(29><24) Xe /\x6=(35><30) Xe /\x7=(41><36) Xe /\x8=(47><42) Xe /\y1=(3><0) Y /\y2=(7><4) Y /\y3=(11><8) Y /\y4=(15><12) Y /\y5=(19><16) Y /\y6=(23><20) Y /\y7=(27><24) Y /\y8=(31><28) Y ==>
-   XcauseYF' X Y = (XcauseY x8 y8 S1)*(XcauseY x7 y7 S2)*(XcauseY x6 y6 S3)*(XcauseY x5 y5 S4)*(XcauseY x4 y4 S5)*(XcauseY x3 y3 S6)*(XcauseY x2 y2 S7)*(XcauseY x1 y1 S8)
-Proof
-     rw[XcauseYF'_def,XcauseY_def]
-  >> rw[word6p_def,word48p_def]
-  >> rw[prob_def]
-  >> rw[CARD_eqF]
-  >> rw[F_convert]
-  >> rw[CARD_CROSS]
-  >> Q.ABBREV_TAC ‘n1=CARD {x | S1 x ⊕ S1 (x ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}’
-  >> Q.ABBREV_TAC ‘n2=CARD {x | S2 x ⊕ S2 (x ⊕ (41 >< 36) (E X)) = (27 >< 24) Y}’
-  >> Q.ABBREV_TAC ‘n3=CARD {x | S3 x ⊕ S3 (x ⊕ (35 >< 30) (E X)) = (23 >< 20) Y} ’
-  >>  Q.ABBREV_TAC ‘n4=CARD {x | S4 x ⊕ S4 (x ⊕ (29 >< 24) (E X)) = (19 >< 16) Y}’
-  >>  Q.ABBREV_TAC ‘n5=CARD {x | S5 x ⊕ S5 (x ⊕ (23 >< 18) (E X)) = (15 >< 12) Y}’
-  >>  Q.ABBREV_TAC ‘n6=CARD {x | S6 x ⊕ S6 (x ⊕ (17 >< 12) (E X)) = (11 >< 8) Y}’
-  >> Q.ABBREV_TAC ‘n7= CARD {x | S7 x ⊕ S7 (x ⊕ (11 >< 6) (E X)) = (7 >< 4) Y}’
-  >> Q.ABBREV_TAC ‘n8=CARD {x | S8 x ⊕ S8 (x ⊕ (5 >< 0) (E X)) = (3 >< 0) Y}’
-  >> rw[div_eq_mul_linv]
-  >> rw[extreal_of_num_def]
-  >> rw[extreal_inv_eq]
-  >> rw[extreal_mul_eq]
-QED
-
 
 Theorem F_convert:
    !X Y. {(x8,x7,x6,x5,x4,x3,x2,x1) | S8 x1 ⊕ S8 (x1 ⊕ (5 >< 0) (E X)) = (3 >< 0) Y /\ S7 x2 ⊕ S7 (x2 ⊕ (11 >< 6) (E X)) = (7 >< 4) Y /\S6 x3 ⊕ S6 (x3 ⊕ (17 >< 12) (E X)) = (11 >< 8) Y /\ S5 x4 ⊕ S5 (x4 ⊕ (23 >< 18) (E X)) = (15 >< 12) Y /\ S4 x5 ⊕ S4 (x5 ⊕ (29 >< 24) (E X)) = (19 >< 16) Y /\ S3 x6 ⊕ S3 (x6 ⊕ (35 >< 30) (E X)) = (23 >< 20) Y /\ S2 x7 ⊕ S2 (x7 ⊕ (41 >< 36) (E X)) = (27 >< 24) Y /\S1 x8 ⊕ S1 (x8 ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}=
@@ -1650,6 +1622,35 @@ Proof
   >- rw[]
   >> rw[BIJ_F]
 QED
+
+(*!X Y. Xe=E(X) /\ Xl= splitXF Xe/\ Yl= splitYF Y  ==>
+   XcauseYF' X Y = EXTREAL_PROD_IMAGE (λi. XcauseY (EL i Xl) (EL i Yl) (SBox(EL i S_data)) ) (count 8))*)
+   
+Theorem XcauseYFp_eq:   
+   !X Y. Xe=E(X) /\ x1=(5><0) Xe /\ x2=(11><6) Xe /\x3=(17><12) Xe /\x4=(23><18) Xe /\x5=(29><24) Xe /\x6=(35><30) Xe /\x7=(41><36) Xe /\x8=(47><42) Xe /\y1=(3><0) Y /\y2=(7><4) Y /\y3=(11><8) Y /\y4=(15><12) Y /\y5=(19><16) Y /\y6=(23><20) Y /\y7=(27><24) Y /\y8=(31><28) Y ==>
+   XcauseYF' X Y = (XcauseY x8 y8 S1)*(XcauseY x7 y7 S2)*(XcauseY x6 y6 S3)*(XcauseY x5 y5 S4)*(XcauseY x4 y4 S5)*(XcauseY x3 y3 S6)*(XcauseY x2 y2 S7)*(XcauseY x1 y1 S8)
+Proof
+     rw[XcauseYF'_def,XcauseY_def]
+  >> rw[word6p_def,word48p_def]
+  >> rw[prob_def]
+  >> rw[CARD_eqF]
+  >> rw[F_convert]
+  >> rw[CARD_CROSS]
+  >> Q.ABBREV_TAC ‘n1=CARD {x | S1 x ⊕ S1 (x ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}’
+  >> Q.ABBREV_TAC ‘n2=CARD {x | S2 x ⊕ S2 (x ⊕ (41 >< 36) (E X)) = (27 >< 24) Y}’
+  >> Q.ABBREV_TAC ‘n3=CARD {x | S3 x ⊕ S3 (x ⊕ (35 >< 30) (E X)) = (23 >< 20) Y} ’
+  >>  Q.ABBREV_TAC ‘n4=CARD {x | S4 x ⊕ S4 (x ⊕ (29 >< 24) (E X)) = (19 >< 16) Y}’
+  >>  Q.ABBREV_TAC ‘n5=CARD {x | S5 x ⊕ S5 (x ⊕ (23 >< 18) (E X)) = (15 >< 12) Y}’
+  >>  Q.ABBREV_TAC ‘n6=CARD {x | S6 x ⊕ S6 (x ⊕ (17 >< 12) (E X)) = (11 >< 8) Y}’
+  >> Q.ABBREV_TAC ‘n7= CARD {x | S7 x ⊕ S7 (x ⊕ (11 >< 6) (E X)) = (7 >< 4) Y}’
+  >> Q.ABBREV_TAC ‘n8=CARD {x | S8 x ⊕ S8 (x ⊕ (5 >< 0) (E X)) = (3 >< 0) Y}’
+  >> rw[extreal_of_num_def]
+  >> rw[div_eq_mul_linv]
+  >> rw[extreal_inv_eq]
+  >> rw[extreal_mul_eq]
+QED
+
+
 
 
 Definition charapairDES_def:
