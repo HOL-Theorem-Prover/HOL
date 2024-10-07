@@ -1149,5 +1149,10 @@ Proof
   simp[FUN_REL_def, sfSETREL_def] >> metis_tac[]
 QED
 
+Theorem MEM_fset_REP:
+  MEM x (fset_REP fs) <=> fIN x fs
+Proof
+  rw[fIN_def]
+QED
 
 val _ = export_theory();
