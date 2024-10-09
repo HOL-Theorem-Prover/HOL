@@ -1377,8 +1377,9 @@ Definition XcauseYF_def:
 End
 
 Definition XcauseYFkey_def:
-   XcauseYFkey (X:word32) (Y:word32) =
-     prob word48p {k| ?x. ((S(E(x)?? k)) ?? (S(E(x)?? E(X)?? k))= Y)}
+   XcauseYFkey (X:word32) (Y:word32) (x:word48)=
+     let x'= x?? E(X) in
+        prob word48p {k| S(x ?? k) ?? S(x' ?? k)= Y}
 End
 
 Definition XcauseYF'_def:
@@ -1607,8 +1608,6 @@ Proof
   >> rw[extreal_mul_eq]
 QED
 
-
-
 Theorem XcauseYFp_eq:   
    !X Y. Xe=E(X) /\ x1=(5><0) Xe /\ x2=(11><6) Xe /\x3=(17><12) Xe /\x4=(23><18) Xe /\x5=(29><24) Xe /\x6=(35><30) Xe /\x7=(41><36) Xe /\x8=(47><42) Xe /\y1=(3><0) Y /\y2=(7><4) Y /\y3=(11><8) Y /\y4=(15><12) Y /\y5=(19><16) Y /\y6=(23><20) Y /\y7=(27><24) Y /\y8=(31><28) Y ==>
    XcauseYF' X Y = (XcauseY x8 y8 S1)*(XcauseY x7 y7 S2)*(XcauseY x6 y6 S3)*(XcauseY x5 y5 S4)*(XcauseY x4 y4 S5)*(XcauseY x3 y3 S6)*(XcauseY x2 y2 S7)*(XcauseY x1 y1 S8)
@@ -1634,27 +1633,49 @@ Proof
 QED
 
 Definition transktoxF_def:
-  transktoxF l= x1@@ x2@@ x3@@ x4@@ x5@@ x6@@ x7@@ x8
+  transktoxF (x:word48) k= k ?? x
 End
 
 Definition transxtokF_def:
-  transxtokF l= 
+  transxtokF (x:word48) x'=x ?? x'   
 End
 
-Theorem BIJ_F:
-   !X Y. BIJ transF2 {x | S x ⊕ S (x ⊕ E X) = Y} (XpairF X Y)
+Theorem BIJ_ktox:
+   !X Y x. BIJ (transktoxF x) {k | S (k ⊕ x) ⊕ S (k ⊕ x ⊕ E X) = Y} {x | S x ⊕ S (x ⊕ E X) = Y} 
 Proof
+     rw[BIJ_IFF_INV]
+     
+  >- (rw[transktoxF_def])
+
+  >> Q.EXISTS_TAC‘transxtokF x’
+  >> rw[]
+  >- (rw[transxtokF_def])
+
+  >- rw[transktoxF_def,transxtokF_def]
+
+  >> rw[transktoxF_def,transxtokF_def]
+QED
+
+Theorem CARD_kxeq:
+   !X Y x. CARD {k | S (k ⊕ x) ⊕ S (k ⊕ x ⊕ E X) = Y}=CARD {x | S x ⊕ S (x ⊕ E X) = Y}
+Proof
+     rw[]
+  >> MATCH_MP_TAC FINITE_BIJ_CARD
+  >> Q.EXISTS_TAC ‘transktoxF x’
+  >> CONJ_TAC
+  >- rw[]
+  >> rw[BIJ_ktox]
+QED
 
 Theorem XcauseYF_convert:
-   !X Y. XcauseYFkey X Y= XcauseYF' X Y
+   !X Y x. XcauseYFkey X Y x= XcauseYF' X Y
 Proof
      rw[XcauseYFkey_def,XcauseYF'_def]
   >> rw[word48p_def]
   >> rw[prob_def]
-  >> Suff ‘CARD {k | (∃x. S (k ⊕ E x) ⊕ S (k ⊕ E X ⊕ E x) = Y)}=CARD {x | S x ⊕ S (x ⊕ E X) = Y}’
+  >> Suff ‘CARD {k | S (k ⊕ x) ⊕ S (k ⊕ x ⊕ E X) = Y}=CARD {x | S x ⊕ S (x ⊕ E X) = Y}’
   >- rw[]
-  >> 
-     
+  >> rw[CARD_kxeq]
 QED
 
 Definition charapairDES_def:
