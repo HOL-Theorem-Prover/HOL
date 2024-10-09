@@ -472,8 +472,19 @@ Proof
         GSYM fIN_IN, domain_list_to_num_set, fIN_def]
 QED
 
+val from_sptree_sptree_spt_def = definition "from_sptree_sptree_spt_def";
 val cv_insert_thm = theorem "cv_insert_thm";
 val cv_lookup_thm = theorem "cv_lookup_thm";
+
+Theorem fEMPTY_num_cv_rep[cv_rep]:
+  from_num_fset fEMPTY = Num 0
+Proof
+  rw[from_num_fset_def,
+     Q.ISPEC`from_unit`(CONJUNCT1(GSYM from_sptree_sptree_spt_def))]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[spt_eq_thm]
+  \\ rw[lookup_list_to_num_set, wf_list_to_num_set, MEM_fset_REP]
+QED
 
 Theorem fINSERT_num_cv_rep[cv_rep]:
   from_num_fset (fINSERT e s) =
