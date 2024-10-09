@@ -1110,21 +1110,34 @@ Definition trans2_def:
 End
 
 Theorem BIJ_XORL:
-   BIJ trans1 (AllpairXor 0x0w) univ(:word6)
+   BIJ trans2 univ(:word6) (AllpairXor 0x0w) 
 Proof
      rw[BIJ_IFF_INV]
-  >> EXISTS_TAC “trans2”
+  >- (rw[AllpairXor_def,trans2_def])
+  
+  >> EXISTS_TAC “trans1”
   >> rw[]
 
-  >- (rw[AllpairXor_def,trans2_def])
-  >- (POP_ASSUM MP_TAC\\
-      rw[AllpairXor_def,trans2_def,trans1_def]\\
-      Know ‘x1 ⊕ x1 ⊕ x2=x1 ⊕ 0w’
-      >- RW_TAC fcp_ss[]\\
-      rw[WORD_XOR_CLAUSES]
-      )
+  >- rw[trans2_def,trans1_def]
+  
+  >> POP_ASSUM MP_TAC
+  >> rw[AllpairXor_def,trans2_def,trans1_def]
+  >> Know ‘x1 ⊕ x1 ⊕ x2=x1 ⊕ 0w’
+  >- RW_TAC fcp_ss[]
+  >> rw[WORD_XOR_CLAUSES]
+QED
 
-  >>  rw[trans2_def,trans1_def]
+Theorem AllpairXor_card :
+    CARD (AllpairXor 0x0w) = 2 ** 6
+Proof
+    Suff ‘2 ** 6=CARD (AllpairXor 0x0w)’
+ >- rw[]
+ >> RW_TAC std_ss [GSYM card_word6, BIJ_XORL]
+ >> MATCH_MP_TAC FINITE_BIJ_CARD
+ >> Q.EXISTS_TAC ‘trans2’
+ >> CONJ_TAC
+ >- rw[]
+ >> rw[BIJ_XORL]
 QED
 
 Theorem xor_P:
@@ -1164,88 +1177,6 @@ Proof
   >> Q.EXISTS_TAC ‘0b0w’
   >> Q.EXISTS_TAC ‘0b0w’
   >> EVAL_TAC
-QED
-
-Definition XcauseYkeysS1_def:
-    XcauseYkeysS1 X Y= {k| ?x1 x2. ((x1 ⊕ x2=X) /\ (S1(x1 ⊕ k)) ⊕ (S1 (x2 ⊕ k))=Y)}
-End
-
-Definition XcauseYkeysF_def:
-    XcauseYkeysF X Y= {k| ?x1 x2. ((x1 ⊕ x2=X) /\ (RoundOp x1 k) ⊕ (RoundOp x1 k)=Y)}
-End
-
-Definition XcauseYpairsF_def:
-    XcauseYpairsF X Y={(x1,x2)| ?k.((x1 ⊕ x2=X) /\ (RoundOp x1 k) ⊕ (RoundOp x2 k)=Y)}
-End
-
-Definition XcauseYprobF_def:
-    XcauseYprobF X= {(x1,x2)|(x1 ⊕ x2=X)}
-End
-
-Theorem XcauseYprob_def:
-    ?x.x =0x23w==>x IN (XcauseYkeysS1 0x34w 0xDw)
-Proof
-     rw[XcauseYkeysS1_def]
-  >> Q.EXISTS_TAC ‘0x23w’
-  >> rw[]
-  >> Q.EXISTS_TAC ‘0x1w’
-  >> Q.EXISTS_TAC ‘0x35w’
-  >> EVAL_TAC
-QED
-
-Definition AllpairXor_def:
-    AllpairXor (X:word6)= {(x1,x2)| x1 ⊕ x2=X}
-End
-
-Definition trans1_def:
-  trans1 (x1:word6,x2:word6) = x1
-End
-
-Definition trans2_def:
-  trans2 (x:word6)= (x,x)
-End
-
-Theorem BIJ_XORL:
-   BIJ trans2 univ(:word6) (AllpairXor 0x0w) 
-Proof
-     rw[BIJ_IFF_INV]
-  >- (rw[AllpairXor_def,trans2_def])
-  >> EXISTS_TAC “trans1”
-  >> rw[]
-  
-  >- rw[trans2_def,trans1_def]
-  
-  >> POP_ASSUM MP_TAC
-  >> rw[AllpairXor_def,trans2_def,trans1_def]
-  >> Know ‘x1 ⊕ x1 ⊕ x2=x1 ⊕ 0w’
-  >- RW_TAC fcp_ss[]
-  >> rw[WORD_XOR_CLAUSES]
-QED
-
-Theorem AllpairXor_card :
-    CARD (AllpairXor 0x0w) = 2 ** 6
-Proof
-    Suff ‘2 ** 6=CARD (AllpairXor 0x0w)’
- >- rw[]
- >> RW_TAC std_ss [GSYM card_word6, BIJ_XORL]
- >> MATCH_MP_TAC FINITE_BIJ_CARD
- >> Q.EXISTS_TAC ‘trans2’
- >> CONJ_TAC
- >- rw[]
- >> rw[BIJ_XORL]
-QED
-
-Definition Xorp_def:
-   Xorp X=let p=(univ(:word6 # word6), POW (univ(:word6 # word6)), (\s. (&(CARD s))/(&(2 ** 12)))) in
-   prob p {(x1,x2)|x1 ⊕ x2=X} 
-End
-
-Theorem Xorprob_test:
-   Xorp 0x0w=(&64 / &(2 **12))
-Proof
-     rw[Xorp_def]
-  >> EVAL_TAC
-  >> rw[AllpairXor_card,GSYM AllpairXor_def]
 QED
 
 Theorem prob_uniform_on_finite_set :
@@ -1446,7 +1377,7 @@ Definition XcauseYF_def:
 End
 
 Definition XcauseYFkey_def:
-   XcauseYF (X:word32) (Y:word32) =
+   XcauseYFkey (X:word32) (Y:word32) =
      prob word48p {k| ?x. ((S(E(x)?? k)) ?? (S(E(x)?? E(X)?? k))= Y)}
 End
 
@@ -1454,12 +1385,6 @@ Definition XcauseYF'_def:
    XcauseYF' (X:word32) (Y:word32) =
      prob word48p {x| S(x) ?? S(x ?? E(X))= Y}
 End
-
-(*Theorem XcauseYF_convert:
-   !X Y. {x:word32|x'=E(x) /\ S(x') ?? S(x' ?? E(X))= Y}= {x:word32| ?k. ((S(E(x)?? k)) ?? (S(E(x)?? E(X)?? k))= Y)}
-Proof
-     
-QED*)
 
 Definition splitXF_def:
    splitXF (Xe:word48)=[(5><0) Xe; (11><6) Xe;(17><12) Xe;(23><18) Xe ;(29><24) Xe;(35><30) Xe ;(41><36) Xe;(47><42) Xe]
@@ -1470,11 +1395,15 @@ Definition splitYF_def:
 End
 
 Definition S_data_def:
-   S_data=[S1_data;S2_data;S3_data;S4_data;S5_data;S6_data;S7_data;S8_data]
+   S_data=[S8_data;S7_data;S6_data;S5_data;S4_data;S3_data;S2_data;S1_data]
+End
+
+Definition XpairF_def:
+   XpairF X Y= {(x8,x7,x6,x5,x4,x3,x2,x1) | S8 x1 ⊕ S8 (x1 ⊕ (5 >< 0) (E X)) = (3 >< 0) Y /\ S7 x2 ⊕ S7 (x2 ⊕ (11 >< 6) (E X)) = (7 >< 4) Y /\S6 x3 ⊕ S6 (x3 ⊕ (17 >< 12) (E X)) = (11 >< 8) Y /\ S5 x4 ⊕ S5 (x4 ⊕ (23 >< 18) (E X)) = (15 >< 12) Y /\ S4 x5 ⊕ S4 (x5 ⊕ (29 >< 24) (E X)) = (19 >< 16) Y /\ S3 x6 ⊕ S3 (x6 ⊕ (35 >< 30) (E X)) = (23 >< 20) Y /\ S2 x7 ⊕ S2 (x7 ⊕ (41 >< 36) (E X)) = (27 >< 24) Y /\S1 x8 ⊕ S1 (x8 ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}
 End
 
 Theorem F_convert:
-   !X Y. {(x8,x7,x6,x5,x4,x3,x2,x1) | S8 x1 ⊕ S8 (x1 ⊕ (5 >< 0) (E X)) = (3 >< 0) Y /\ S7 x2 ⊕ S7 (x2 ⊕ (11 >< 6) (E X)) = (7 >< 4) Y /\S6 x3 ⊕ S6 (x3 ⊕ (17 >< 12) (E X)) = (11 >< 8) Y /\ S5 x4 ⊕ S5 (x4 ⊕ (23 >< 18) (E X)) = (15 >< 12) Y /\ S4 x5 ⊕ S4 (x5 ⊕ (29 >< 24) (E X)) = (19 >< 16) Y /\ S3 x6 ⊕ S3 (x6 ⊕ (35 >< 30) (E X)) = (23 >< 20) Y /\ S2 x7 ⊕ S2 (x7 ⊕ (41 >< 36) (E X)) = (27 >< 24) Y /\S1 x8 ⊕ S1 (x8 ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}=
+   !X Y. XpairF X Y =
    ({x | S1 x ⊕ S1 (x ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}) CROSS
    ({x | S2 x ⊕ S2 (x ⊕ (41 >< 36) (E X)) = (27 >< 24) Y}) CROSS
    ({x | S3 x ⊕ S3 (x ⊕ (35 >< 30) (E X)) = (23 >< 20) Y}) CROSS
@@ -1484,7 +1413,8 @@ Theorem F_convert:
    ({x | S7 x ⊕ S7 (x ⊕ (11 >< 6) (E X)) = (7 >< 4) Y} ) CROSS
    ({x | S8 x ⊕ S8 (x ⊕ (5 >< 0) (E X)) = (3 >< 0) Y})
 Proof
-     rw[EXTENSION]
+     rw[XpairF_def]
+  >> rw[EXTENSION]
   >> ONCE_REWRITE_TAC [GSYM PAIR]
   >> rw[]
   >> ONCE_REWRITE_TAC [GSYM PAIR]
@@ -1511,10 +1441,10 @@ Definition transF2_def:
 End
 
 Theorem BIJ_F:
-   !X Y. BIJ transF2 {x | S x ⊕ S (x ⊕ E X) = Y} {(x8,x7,x6,x5,x4,x3,x2,x1) | S8 x1 ⊕ S8 (x1 ⊕ (5 >< 0) (E X)) = (3 >< 0) Y /\ S7 x2 ⊕ S7 (x2 ⊕ (11 >< 6) (E X)) = (7 >< 4) Y /\S6 x3 ⊕ S6 (x3 ⊕ (17 >< 12) (E X)) = (11 >< 8) Y /\ S5 x4 ⊕ S5 (x4 ⊕ (23 >< 18) (E X)) = (15 >< 12) Y /\ S4 x5 ⊕ S4 (x5 ⊕ (29 >< 24) (E X)) = (19 >< 16) Y /\ S3 x6 ⊕ S3 (x6 ⊕ (35 >< 30) (E X)) = (23 >< 20) Y /\ S2 x7 ⊕ S2 (x7 ⊕ (41 >< 36) (E X)) = (27 >< 24) Y /\S1 x8 ⊕ S1 (x8 ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}
-   
+   !X Y. BIJ transF2 {x | S x ⊕ S (x ⊕ E X) = Y} (XpairF X Y)
 Proof
-     rw[BIJ_IFF_INV]
+     rw[XpairF_def]
+  >> rw[BIJ_IFF_INV]
   >- (Q.EXISTS_TAC ‘(47 >< 42) x’\\
       Q.EXISTS_TAC ‘(41 >< 36) x’\\
       Q.EXISTS_TAC ‘(35 >< 30) x’\\
@@ -1612,8 +1542,8 @@ Proof
 QED
 
 Theorem CARD_eqF:
-   !X Y. CARD ({x | S x ⊕ S (x ⊕ E X) = Y} )=
-   CARD ({(x8,x7,x6,x5,x4,x3,x2,x1) | S8 x1 ⊕ S8 (x1 ⊕ (5 >< 0) (E X)) = (3 >< 0) Y /\ S7 x2 ⊕ S7 (x2 ⊕ (11 >< 6) (E X)) = (7 >< 4) Y /\S6 x3 ⊕ S6 (x3 ⊕ (17 >< 12) (E X)) = (11 >< 8) Y /\ S5 x4 ⊕ S5 (x4 ⊕ (23 >< 18) (E X)) = (15 >< 12) Y /\ S4 x5 ⊕ S4 (x5 ⊕ (29 >< 24) (E X)) = (19 >< 16) Y /\ S3 x6 ⊕ S3 (x6 ⊕ (35 >< 30) (E X)) = (23 >< 20) Y /\ S2 x7 ⊕ S2 (x7 ⊕ (41 >< 36) (E X)) = (27 >< 24) Y /\S1 x8 ⊕ S1 (x8 ⊕ (47 >< 42) (E X)) = (31 >< 28) Y})
+   !X Y. CARD ({x | S x ⊕ S (x ⊕ E X) = Y} )= 
+   CARD (XpairF X Y)
 Proof
      rw[]
   >> MATCH_MP_TAC FINITE_BIJ_CARD
@@ -1623,9 +1553,62 @@ Proof
   >> rw[BIJ_F]
 QED
 
-(*!X Y. Xe=E(X) /\ Xl= splitXF Xe/\ Yl= splitYF Y  ==>
-   XcauseYF' X Y = EXTREAL_PROD_IMAGE (λi. XcauseY (EL i Xl) (EL i Yl) (SBox(EL i S_data)) ) (count 8))*)
-   
+Theorem XcauseYFp_eq:  
+   !X Y. Xe=E(X) /\ Xl= splitXF Xe/\ Yl= splitYF Y  ==>
+   XcauseYF' X Y = EXTREAL_PROD_IMAGE (λi. XcauseY (EL i Xl) (EL i Yl) (SBox(EL i S_data))) (count 8)
+Proof
+     rw[]
+  >> Know ‘8=SUC 7’
+  >- rw[]
+  >> Rewr'
+  >> rw[EXTREAL_PROD_IMAGE_COUNT_SUC]
+  >> Know ‘7=SUC 6’
+  >- rw[]
+  >> Rewr'
+  >> rw[EXTREAL_PROD_IMAGE_COUNT_SUC]
+  >> Know ‘6=SUC 5’
+  >- rw[]
+  >> Rewr'
+  >> rw[EXTREAL_PROD_IMAGE_COUNT_SUC]
+  >> Know ‘5=SUC 4’
+  >- rw[]
+  >> Rewr'
+  >> rw[EXTREAL_PROD_IMAGE_COUNT_SUC]
+  >> Know ‘4=SUC 3’
+  >- rw[]
+  >> Rewr'
+  >> rw[EXTREAL_PROD_IMAGE_COUNT_SUC]
+  >> Know ‘3=SUC 2’
+  >- rw[]
+  >> Rewr'
+  >> rw[EXTREAL_PROD_IMAGE_COUNT_SUC]
+  >> Know ‘2=SUC 1’
+  >- rw[]
+  >> Rewr'
+  >> rw[EXTREAL_PROD_IMAGE_COUNT_SUC]
+  >> rw[splitXF_def,splitYF_def,S_data_def]
+  >> rw[XcauseY_def,XcauseYF'_def]
+  >> rw[word6p_def,word48p_def]
+  >> rw[prob_def]
+  >> rw[CARD_eqF]
+  >> rw[F_convert]
+  >> rw[CARD_CROSS]
+  >> Q.ABBREV_TAC ‘n1=CARD {x | S1 x ⊕ S1 (x ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}’
+  >> Q.ABBREV_TAC ‘n2=CARD {x | S2 x ⊕ S2 (x ⊕ (41 >< 36) (E X)) = (27 >< 24) Y}’
+  >> Q.ABBREV_TAC ‘n3=CARD {x | S3 x ⊕ S3 (x ⊕ (35 >< 30) (E X)) = (23 >< 20) Y} ’
+  >>  Q.ABBREV_TAC ‘n4=CARD {x | S4 x ⊕ S4 (x ⊕ (29 >< 24) (E X)) = (19 >< 16) Y}’
+  >>  Q.ABBREV_TAC ‘n5=CARD {x | S5 x ⊕ S5 (x ⊕ (23 >< 18) (E X)) = (15 >< 12) Y}’
+  >>  Q.ABBREV_TAC ‘n6=CARD {x | S6 x ⊕ S6 (x ⊕ (17 >< 12) (E X)) = (11 >< 8) Y}’
+  >> Q.ABBREV_TAC ‘n7= CARD {x | S7 x ⊕ S7 (x ⊕ (11 >< 6) (E X)) = (7 >< 4) Y}’
+  >> Q.ABBREV_TAC ‘n8=CARD {x | S8 x ⊕ S8 (x ⊕ (5 >< 0) (E X)) = (3 >< 0) Y}’
+  >> rw[extreal_of_num_def]
+  >> rw[div_eq_mul_linv]
+  >> rw[extreal_inv_eq]
+  >> rw[extreal_mul_eq]
+QED
+
+
+
 Theorem XcauseYFp_eq:   
    !X Y. Xe=E(X) /\ x1=(5><0) Xe /\ x2=(11><6) Xe /\x3=(17><12) Xe /\x4=(23><18) Xe /\x5=(29><24) Xe /\x6=(35><30) Xe /\x7=(41><36) Xe /\x8=(47><42) Xe /\y1=(3><0) Y /\y2=(7><4) Y /\y3=(11><8) Y /\y4=(15><12) Y /\y5=(19><16) Y /\y6=(23><20) Y /\y7=(27><24) Y /\y8=(31><28) Y ==>
    XcauseYF' X Y = (XcauseY x8 y8 S1)*(XcauseY x7 y7 S2)*(XcauseY x6 y6 S3)*(XcauseY x5 y5 S4)*(XcauseY x4 y4 S5)*(XcauseY x3 y3 S6)*(XcauseY x2 y2 S7)*(XcauseY x1 y1 S8)
@@ -1650,8 +1633,29 @@ Proof
   >> rw[extreal_mul_eq]
 QED
 
+Definition transktoxF_def:
+  transktoxF l= x1@@ x2@@ x3@@ x4@@ x5@@ x6@@ x7@@ x8
+End
 
+Definition transxtokF_def:
+  transxtokF l= 
+End
 
+Theorem BIJ_F:
+   !X Y. BIJ transF2 {x | S x ⊕ S (x ⊕ E X) = Y} (XpairF X Y)
+Proof
+
+Theorem XcauseYF_convert:
+   !X Y. XcauseYFkey X Y= XcauseYF' X Y
+Proof
+     rw[XcauseYFkey_def,XcauseYF'_def]
+  >> rw[word48p_def]
+  >> rw[prob_def]
+  >> Suff ‘CARD {k | (∃x. S (k ⊕ E x) ⊕ S (k ⊕ E X ⊕ E x) = Y)}=CARD {x | S x ⊕ S (x ⊕ E X) = Y}’
+  >- rw[]
+  >> 
+     
+QED
 
 Definition charapairDES_def:
    charapairDES (X:word64) (Yl:32 word list) 0= ((31 >< 0) X, (EL 0 Yl)) /\

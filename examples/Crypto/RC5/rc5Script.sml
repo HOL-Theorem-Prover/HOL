@@ -322,8 +322,8 @@ Definition RoundDe128_def :
     RoundDe128 r w k= let (w1,w2)= Split128(w);(A,B,Lk,Sk,i,j)=(rc5keys r k w) in
        Join128(RoundDe (r+1) r Sk w1 w2)
 End
-(A,B,Lk,Sk,i,j)=(rc5keys r k w)
-Theorem DES_EnDe:
+
+(*Theorem DES_EnDe:
    !n (w1:word32) (w2:word32) (key:word64) Sk. (A,B,Lk,Sk,i,j)=(rc5keys n key (Join64(w1,w2))) /\ RoundEn n w1 w2 Sk= (w1',w2') /\ Join64(w1',w2')=encryptW /\ RoundDe (SUC n) n Sk  w1' w2'=decryptW ==> Join64(decryptW)= Join64(w1,w2)
 Proof
      rw[RoundEn64_def,RoundDe64_def]
@@ -348,11 +348,8 @@ Proof
        rw[LENGTH_key_Skeys] cheat)
 
   >> rw[RoundDe_def,RoundEn_def,rc5keys_def]
-      
-Know ‘(lenKeyw key (Join64 (w1,w2)))=32’      
-  lenKeyw_def
-keys_def
-QED
-LENGTH_key_Skeys
+     
+QED*)
+
 val _ = export_theory();
 val _ = html_theory "des_prop";
