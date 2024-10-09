@@ -477,9 +477,9 @@ val cv_lookup_thm = theorem "cv_lookup_thm";
 
 Theorem fINSERT_num_cv_rep[cv_rep]:
   from_num_fset (fINSERT e s) =
-  cv_insert (Num e) (from_unit ()) (from_num_fset s)
+  cv_insert (Num e) (Num 0) (from_num_fset s)
 Proof
-  rw[from_num_fset_def, GSYM cv_insert_thm]
+  rw[from_num_fset_def, GSYM cv_insert_thm, GSYM from_unit_def]
   \\ AP_TERM_TAC
   \\ DEP_REWRITE_TAC[spt_eq_thm]
   \\ rw[wf_insert, wf_list_to_num_set,
