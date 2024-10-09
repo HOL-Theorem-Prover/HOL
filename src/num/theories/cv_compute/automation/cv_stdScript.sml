@@ -475,6 +475,8 @@ QED
 val from_sptree_sptree_spt_def = definition "from_sptree_sptree_spt_def";
 val cv_insert_thm = theorem "cv_insert_thm";
 val cv_lookup_thm = theorem "cv_lookup_thm";
+val cv_union_thm = theorem "cv_union_thm";
+val cv_list_to_num_set_thm = theorem "cv_list_to_num_set_thm";
 
 Theorem fEMPTY_num_cv_rep[cv_rep]:
   from_num_fset fEMPTY = Num 0
@@ -505,6 +507,29 @@ Theorem fIN_num_cv_rep[cv_rep]:
 Proof
   rw[from_num_fset_def, GSYM cv_lookup_thm, from_option_def,
      lookup_list_to_num_set, MEM_fset_REP]
+QED
+
+Theorem fUNION_num_cv_rep[cv_rep]:
+  from_num_fset (fUNION s1 s2) =
+  cv_union (from_num_fset s1) (from_num_fset s2)
+Proof
+  rw[from_num_fset_def, GSYM cv_union_thm]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[spt_eq_thm]
+  \\ simp[wf_list_to_num_set, wf_union,
+          lookup_list_to_num_set, lookup_union]
+  \\ rw[fUNION_def, MEM_fset_REP] \\ gs[]
+QED
+
+Theorem fset_ABS_num_cv_rep[cv_rep]:
+  from_num_fset (fset_ABS l) =
+  cv_list_to_num_set (from_list Num l)
+Proof
+  rw[from_num_fset_def, GSYM cv_list_to_num_set_thm]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[spt_eq_thm]
+  \\ simp[wf_list_to_num_set, lookup_list_to_num_set, MEM_fset_REP]
+  \\ simp[GSYM fromSet_set, IN_fromSet]
 QED
 
 (*----------------------------------------------------------*

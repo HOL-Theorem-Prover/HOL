@@ -1111,6 +1111,19 @@ Proof
   simp[pred_setTheory.EXTENSION, GSYM fIN_IN, IN_fromSet]
 QED
 
+val fset_QUOTIENT = theorem"fset_QUOTIENT";
+
+Theorem fromSet_set:
+  !l. fromSet (set l) = fset_ABS l
+Proof
+  Induct \\ gvs[GSYM fEMPTY_def, fromSet_INSERT]
+  \\ rw[Once fINSERT_def, fsequiv_def]
+  \\ AP_TERM_TAC
+  \\ mp_tac fset_QUOTIENT
+  \\ rewrite_tac[quotientTheory.QUOTIENT_def] \\ strip_tac
+  \\ metis_tac[fsequiv_def]
+QED
+
 Theorem toSet_Qt:
   Qt (λx y. FINITE x /\ x = y) fromSet toSet (λs fs. s = toSet fs)
 Proof
