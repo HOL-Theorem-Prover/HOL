@@ -1673,7 +1673,8 @@ Proof
      rw[XcauseYFkey_def,XcauseYF'_def]
   >> rw[word48p_def]
   >> rw[prob_def]
-  >> Suff ‘CARD {k | S (k ⊕ x) ⊕ S (k ⊕ x ⊕ E X) = Y}=CARD {x | S x ⊕ S (x ⊕ E X) = Y}’
+  >> Suff ‘CARD {k | S (k ⊕ x) ⊕ S (k ⊕ x ⊕ E X) = Y}=
+           CARD {x | S x ⊕ S (x ⊕ E X) = Y}’
   >- rw[]
   >> rw[CARD_kxeq]
 QED
@@ -1682,7 +1683,8 @@ Definition charapairDES_def:
    charapairDES (X:word64) (Yl:32 word list) 0= ((31 >< 0) X, (EL 0 Yl)) /\
    charapairDES X Yl (SUC n)=
       if (SUC n) = 1 then (((63 >< 32) X) ?? (EL 0 Yl), (EL 1 Yl))
-      else let ((Xin,Xout)= charapairDES X Yl (n-1)) in (Xin ?? (EL n Yl), (EL (SUC n) Yl))
+      else let ((Xin,Xout)= charapairDES X Yl (n-1))
+         in (Xin ?? (EL n Yl), (EL (SUC n) Yl))
 End
 
 Definition characterDES_def:
