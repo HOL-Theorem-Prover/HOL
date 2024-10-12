@@ -448,9 +448,7 @@ Proof
        Rewr'\\
        rw[Join64'_Split64])
 
-   >> 
    
-     cheat
 QED
 
 val _ = export_theory();
