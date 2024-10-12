@@ -424,6 +424,19 @@ val OWHILE_IND = store_thm(
   THEN IMP_RES_TAC prim_recTheory.LESS_MONO THEN RES_TAC
   THEN FULL_SIMP_TAC bool_ss [FUNPOW]);
 
+Theorem WHILE_FUNPOW:
+  (?n. ~P (FUNPOW f n s))
+  ==> WHILE P f s = FUNPOW f (LEAST n. ~P (FUNPOW f n s)) s
+Proof
+  strip_tac
+  \\ `~!n. P (FUNPOW f n s)` by PROVE_TAC[]
+  \\ `?x. OWHILE P f s = SOME x` by PROVE_TAC[OWHILE_EQ_NONE, option_CASES]
+  \\ irule OWHILE_WHILE
+  \\ rewrite_tac[OWHILE_def]
+  \\ IF_CASES_TAC
+  \\ FULL_SIMP_TAC(srw_ss())[]
+QED
+
 Theorem TAILREC_EXISTS[local]:
   ?tailrec.
     !(f:'a -> 'a + 'b) (x:'a).
