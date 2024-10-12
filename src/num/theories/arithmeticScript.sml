@@ -3968,6 +3968,21 @@ Proof
   Induct \\ SRW_TAC[][FUNPOW_SUC]
 QED
 
+Theorem FUNPOW_invariant_index:
+  !m x.
+  P x /\
+  (!n. n < m ==> R (FUNPOW f n x)) /\
+  (!x. P x /\ R x ==> P (f x)) ==>
+  P (FUNPOW f m x)
+Proof
+  Induct >> SRW_TAC[][FUNPOW_SUC]
+  \\ first_assum irule
+  \\ `m < SUC m` by SRW_TAC[][LESS_SUC_REFL]
+  \\ SRW_TAC[][]
+  \\ first_assum irule \\ SRW_TAC[][]
+  \\ first_assum irule \\ SRW_TAC[][LESS_SUC]
+QED
+
 (* Theorem: FUNPOW f m (FUNPOW f n x) = FUNPOW f n (FUNPOW f m x) *)
 (* Proof: by FUNPOW_ADD, ADD_COMM *)
 Theorem FUNPOW_COMM:
