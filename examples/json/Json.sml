@@ -115,13 +115,13 @@ fun lex strm =
      | SOME (#"\"",strm') => getString strm' []
      | SOME (ch,strm') =>
          if Char.isSpace ch then
-	     lex strm'
+             lex strm'
          else
-	     if Char.isDigit ch orelse ch = #"-" then
-		 getNum strm
-	     else raise ERR "lex"
-		    ("unexpected character starts remaining input:\n"^
-		     Substring.string strm)
+             if Char.isDigit ch orelse ch = #"-" then
+                 getNum strm
+             else raise ERR "lex"
+                    ("unexpected character starts remaining input:\n"^
+                     Substring.string strm)
  end
 
 fun lexemes ss acc =
@@ -208,14 +208,14 @@ and
    of SOME (stringLit s,ss') =>
        (case lex ss'
          of SOME(colon, ss'') =>
-	    let val (stk',ss3) = parse (String s::stk,ss'')
+            let val (stk',ss3) = parse (String s::stk,ss'')
             in case lex ss3
-	        of SOME(comma,ss4) => bindings (stk',ss4)
-		 | SOME(rbrace,ss4) => toAList (stk',ss4) []
+                of SOME(comma,ss4) => bindings (stk',ss4)
+                 | SOME(rbrace,ss4) => toAList (stk',ss4) []
                  | other => raise PARSE_ERR "parse_alist: unexpected lexeme" ss3
-	    end
-	  | other => raise PARSE_ERR
-			   "parse_alist: expect a colon after a string literal" ss'
+            end
+          | other => raise PARSE_ERR
+                           "parse_alist: expect a colon after a string literal" ss'
        )
   | other => raise PARSE_ERR "parse_alist: expected a key-value pair" ss
 
