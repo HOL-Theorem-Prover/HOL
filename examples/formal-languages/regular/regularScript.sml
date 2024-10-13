@@ -66,6 +66,12 @@ pred_setTheory.X_LE_MAX_SET (THEOREM)
 (* Local lemmas, possibly of wider use. Start with sets                      *)
 (*---------------------------------------------------------------------------*)
 
+Theorem ELT_SUBSET:
+  a ∈ s ⇔ {a} ⊆ s
+Proof
+ rw[EQ_IMP_THM]
+QED
+
 Theorem SUBSET_SKOLEM_THM :
   (!x. P x ==> ?y. Q x y) <=> ?f. !x. P x ==> Q x (f x)
 Proof
@@ -718,20 +724,7 @@ Theorem nfa_execution_states_closed:
    ==>
    EVERY (λq. q ∈ N.Q) Q
 Proof
-  disch_tac >> ho_match_mp_tac SNOC_INDUCT >> rw[]
-  >- (fs[LENGTH_EQ_NUM_compute,wf_nfa_def,SUBSET_DEF] >> gvs[])
-  >- (‘LENGTH Q = LENGTH w + 2’ by decide_tac >> drule snoc2 >> rw[] >>
-      gvs [GSYM SNOC_APPEND,EVERY_SNOC] >>
-      rename [‘a ∈ N.Sigma’, ‘HD qs ∈ N.Q’] >>
-      ‘SUC (LENGTH w) = LENGTH qs’ by decide_tac >> gvs[EL_LENGTH_SNOC] >>
-      ‘EVERY (λq. q ∈ N.Q) qs’ by
-        (first_x_assum irule >> rw[] >> ‘n < LENGTH qs’ by decide_tac >>
-         first_x_assum drule >> rw [EL_SNOC]) >>
-      ‘LENGTH w < LENGTH qs’ by decide_tac >>
-      first_x_assum drule >> fs [ADD1,EL_SNOC,EL_LENGTH_SNOC] >>
-      ‘EL (LENGTH w) qs ∈ N.Q’ by
-        (rw [EL_LENGTH_LAST] >> drule_all EVERY_LAST >> simp[]) >>
-      metis_tac [wf_nfa_def,SUBSET_DEF])
+  rpt strip_tac >> irule is_exec_states >> rw[is_exec_def] >> metis_tac[]
 QED
 
 Theorem nfa_execution_last_state:
@@ -1679,7 +1672,7 @@ QED
 Theorem TRIVIAL_DOT_TRIVIAL_IN_REGULAR:
  L1 ⊆ {ε} ∧ L2 ⊆ {ε} ∧ FINITE A ⇒ (L1 dot L2,A) ∈ REGULAR
 Proof
-  rw [SUBSET_SING] >> simp [DOT_EMPTYSET, DOT_EMPTYSTRING] >>
+  rw [SUBSET_SING] >> simp [DOT_EMPTYSET, DOT_EPSILON] >>
   metis_tac [EMPTYSET_IN_REGULAR,EPSILON_LANG_IN_REGULAR]
 QED
 
@@ -1691,7 +1684,7 @@ Triviality TRIVIAL_DOT_EPSILON_FREE_IN_REGULAR:
   (L = s1 ∪ (L DIFF {ε}) ⇒ ((L DIFF {ε}) dot s2,A) ∈ REGULAR)
 Proof
   rw [SUBSET_SING] >>
-  fs [DOT_EMPTYSET, DOT_EMPTYSTRING] >>
+  fs [DOT_EMPTYSET, DOT_EPSILON] >>
   metis_tac [EMPTYSET_IN_REGULAR, REGULAR_CLOSED_UNDER_EPSILON_DELETION,
              UNION_COMM,REGULAR_SIGMA_FINITE]
 QED
@@ -2461,12 +2454,6 @@ fun snd_conj th =
    GENL xs (DISCH ant th1)
  end
 
-Triviality ELT_SUBSET:
-  a ∈ s ⇔ {a} ⊆ s
-Proof
- rw[EQ_IMP_THM]
-QED
-
 Theorem cronch_exec:
  ∀M w qs q0 wpref wsuff qpref qsuff.
    is_dfa M ∧
@@ -2674,7 +2661,7 @@ Proof
   strip_tac >>
   strip_assume_tac (isolate_trivial_cases |> Q.ISPEC ‘L:num list->bool’) >>
   rename1 ‘s ⊆ {ε}’ >> ONCE_ASM_REWRITE_TAC[] >>
-  rw [KSTAR_UNION,KSTAR_TRIVIAL,DOT_EMPTYSTRING] >>
+  rw [KSTAR_UNION,KSTAR_TRIVIAL,DOT_EPSILON] >>
   rw [GSYM KPLUS_UNION_EPSILON_EQ_KSTAR] >>
   irule REGULAR_CLOSED_UNDER_UNION >> reverse conj_tac
   >- metis_tac [EPSILON_LANG_IN_REGULAR,REGULAR_SIGMA_FINITE]
@@ -2768,6 +2755,12 @@ Proof
   metis_tac[wf_nfa_def,SUBSET_DEF]
 QED
 
+(* TODO : strengthen to
+
+  w2 ∈ nfa_lang_from N (nfa_eval N qset w1) iff
+  (w1++w2) ∈ nfa_lang_from N qset
+*)
+
 Theorem nfa_eval_lemma:
   qset ⊆ N.Q ∧
   a ∈ N.Sigma ∧ EVERY (λa. a ∈ N.Sigma) w
@@ -2826,19 +2819,24 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* This construction, where states are languages, can't directly be captured *)
-(* by the nfa datatype, in which a state is a number. Since the state set    *)
-(* is by assumption finite, we can nonetheless proceed by creating a         *)
-(* bijection to a finite set of numbers and work through the bijection.      *)
+(* To show that every finite state language is regular, we assume that the   *)
+(* set of left quotients on L, drawing the words from A*, is finite. These   *)
+(* left quotients become states in the construction of an NFA (actually a    *)
+(* DFA). A delta step in the NFA is made by taking the left quotient on the  *)
+(* next symbol in the given word. This construction, where states are        *)
+(* languages, can't directly be captured by the nfa datatype, in which a     *)
+(* state is a number. Since the state set is by assumption finite, we can    *)
+(* nonetheless proceed by creating a bijection to a finite set of numbers    *)
+(* and working through the bijection.                                        *)
 (*---------------------------------------------------------------------------*)
 
-Triviality lemA:
+Triviality LEFT_QUOTIENTS_OF_CONS:
   ∃t. LEFT_QUOTIENTS_OF x L = L::t
 Proof
   Cases_on ‘x’ >> simp[LEFT_QUOTIENTS_OF_def]
 QED
 
-Triviality lemB:
+Triviality LENGTH_LEFT_QUOTIENTS_OF:
   ∀x L. LENGTH (LEFT_QUOTIENTS_OF x L) = LENGTH x + 1
 Proof
   Induct >> simp[LEFT_QUOTIENTS_OF_def]
@@ -2850,11 +2848,10 @@ Triviality LAST_LEFT_QUOTIENTS_OF:
 Proof
   Induct >>
   rw[LEFT_QUOTIENTS_OF_def,LEFT_QUOTIENT_REC,LAST_CONS_cond] >>
-  dty_metis_tac [lemA]
+  dty_metis_tac [LEFT_QUOTIENTS_OF_CONS]
 QED
 
-(* strengthen to n ≤ LENGTH x? *)
-Triviality lemC:
+Triviality LEFT_QUOTIENTS_OF_TAKE:
   ∀x n L.
     n < LENGTH x
     ⇒
@@ -2864,33 +2861,15 @@ Proof
   Cases_on ‘n’ >> gvs[LEFT_QUOTIENT_REC]
 QED
 
-Theorem EL_LEFT_QUOTIENTS_OF:
+Triviality EL_LEFT_QUOTIENTS_OF:
   ∀x n L.
     n < LENGTH x ⇒
     EL (SUC n) (LEFT_QUOTIENTS_OF x L) =
     LEFT_QUOTIENT [EL n x] (EL n (LEFT_QUOTIENTS_OF x L))
 Proof
   Induct >> rw[LEFT_QUOTIENTS_OF_def] >>
-  Cases_on ‘n’ >> gvs[] >> dty_metis_tac [lemA,HD]
+  Cases_on ‘n’ >> gvs[] >> dty_metis_tac [LEFT_QUOTIENTS_OF_CONS,HD]
 QED
-
-(*
-Theorem lemD:
-∀x L qs.
-   EVERY (λa. a ∈ A) x ∧
-   LENGTH qs = LENGTH x + 1 ∧
-   HD qs = numOf L ∧
-   (∀n. n < LENGTH x ⇒
-        EL (n + 1) qs = numOf (LEFT_QUOTIENT [EL n x] (langOf (EL n qs))))
-  ⇒
-   qs = MAP numOf (LEFT_QUOTIENTS_OF x L)
-Proof
-
-  recInduct SNOC_INDUCT >> rw[]
-  >- gvs [LENGTH_EQ_1,LEFT_QUOTIENTS_OF_def]
-  >- (gvs[EVERY_SNOC]
-QED
-*)
 
 Theorem FINITE_STATE_SUBSET_REGULAR:
   FINITE_STATE ⊆ REGULAR
@@ -2901,6 +2880,8 @@ Proof
   ‘∃langOf k. BIJ langOf (count k) Qlangs’ by metis_tac [FINITE_BIJ_COUNT] >>
   imp_res_tac BIJ_LINV_INV >>
   qabbrev_tac ‘numOf = LINV langOf (count k)’ >>
+  ‘INJ numOf Qlangs (count k)’ by
+    (imp_res_tac BIJ_LINV_BIJ >> gvs [BIJ_DEF]) >>
   qexists_tac
    ‘<| Sigma := A;
        Q := IMAGE numOf Qlangs;
@@ -2920,30 +2901,43 @@ Proof
       >- (qexists_tac ‘MAP numOf (LEFT_QUOTIENTS_OF x L)’ >> rw[]
           >- (rpt pop_forget_tac >> map_every qid_spec_tac [‘L’, ‘x’] >>
               Induct >> simp[LEFT_QUOTIENTS_OF_def])
-          >- dty_metis_tac[lemA,HD_MAP,HD]
+          >- dty_metis_tac[LEFT_QUOTIENTS_OF_CONS,HD_MAP,HD]
           >- (qexists_tac ‘LEFT_QUOTIENT x L’ >>
               simp [GSYM LEFT_QUOTIENT_ELT] >>
               qunabbrev_tac ‘Qlangs’ >> gvs[PULL_EXISTS] >>
               irule_at Any EQ_REFL >> simp[] >>
-              dty_metis_tac[LAST_LEFT_QUOTIENTS_OF,lemA,LAST_MAP])
-          >- (‘n+1 < LENGTH (LEFT_QUOTIENTS_OF x L)’ by rw[lemB] >>
+              dty_metis_tac[LAST_LEFT_QUOTIENTS_OF,LEFT_QUOTIENTS_OF_CONS,LAST_MAP])
+          >- (‘n+1 < LENGTH (LEFT_QUOTIENTS_OF x L)’ by rw[LENGTH_LEFT_QUOTIENTS_OF] >>
               rw [EL_MAP] >> AP_TERM_TAC >>
               ‘EL n (LEFT_QUOTIENTS_OF x L) ∈ Qlangs’ by
                 (qunabbrev_tac ‘Qlangs’ >> simp[] >>
                  qexists_tac ‘TAKE n x’ >>
-                 metis_tac [lemC,EVERY_TAKE]) >>
+                 metis_tac [LEFT_QUOTIENTS_OF_TAKE,EVERY_TAKE]) >>
               simp[] >> metis_tac [EL_LEFT_QUOTIENTS_OF,ADD1])
          )
      >- (rename1 ‘Lx ∈ Qlangs’ >>
          rw_tac bool_ss [Once LEFT_QUOTIENT_ELT] >>
          ‘ε ∈ LAST (LEFT_QUOTIENTS_OF x L)’ suffices_by
            metis_tac [LAST_LEFT_QUOTIENTS_OF] >>
-        ‘qs = MAP numOf (LEFT_QUOTIENTS_OF x L)’ by cheat >>
-        ‘LEFT_QUOTIENTS_OF x L ≠ []’ by
-            dty_metis_tac [lemA] >> rw[] >> gvs [LAST_MAP] >>
-         ‘Lx = LAST (LEFT_QUOTIENTS_OF x L)’ by cheat >>  (* numOf is 1-1 *)
-          metis_tac[])
-    )
+         ‘qs = MAP numOf (LEFT_QUOTIENTS_OF x L)’ by
+           (irule LIST_EQ >> simp[LENGTH_LEFT_QUOTIENTS_OF,EL_MAP] >>
+            Induct >> rw[]
+             >- dty_metis_tac[LEFT_QUOTIENTS_OF_CONS,HD]
+             >- (rename1 ‘SUC i < LENGTH x + 1’ >>
+                 ‘i < LENGTH x’ by decide_tac >>
+                 gvs[GSYM ADD1] >> AP_TERM_TAC >>
+                 simp [EL_LEFT_QUOTIENTS_OF] >> AP_TERM_TAC >>
+                 simp[LEFT_QUOTIENTS_OF_TAKE] >>
+                 ‘LEFT_QUOTIENT (TAKE i x) L ∈ Qlangs’ by
+                   (qunabbrev_tac ‘Qlangs’ >> simp[] >>
+                    metis_tac [EVERY_TAKE]) >> simp[])) >> rw[] >>
+         ‘LEFT_QUOTIENTS_OF x L ≠ []’ by
+            dty_metis_tac [LEFT_QUOTIENTS_OF_CONS] >>
+         gvs [LAST_MAP,LAST_LEFT_QUOTIENTS_OF] >>
+         ‘LEFT_QUOTIENT x L ∈ Qlangs’ by
+           (qunabbrev_tac ‘Qlangs’ >> simp[] >> metis_tac[]) >>
+         metis_tac [LEFT_QUOTIENT_ELT,INJ_IFF]
+      ))
 QED
 
 Theorem FINITE_STATE_EQ_REGULAR:
@@ -2954,21 +2948,4 @@ Proof
        FINITE_STATE_SUBSET_REGULAR]
 QED
 
-
 val _ = export_theory();
-
-(*
-fun dty_metis_tac list =
-  let open TypeBasePure
-      val dtys =  TypeBase.elts()
-      val distinct = List.mapPartial distinct_of dtys
-      val one_one  = List.mapPartial one_one_of dtys
-   in metis_tac (list @ distinct @ one_one)
-   end
-
-Triviality foo:
-  a = NONE ==> a = SOME b ==> F
-Proof
- dty_metis_tac[]
-QED
-*)
