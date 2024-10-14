@@ -1,1 +1,8 @@
 INCLUDES = $(HOLDIR)/src/num/theories/cv_compute/automation
+
+ifdef HOLSELFTESTLEVEL
+soundness_check-selftest.log: soundness_check/cv_compute_unSoundScript.sml
+	$(tee cd soundness_check && ! $(protect $(HOLDIR)/bin/Holmake),$@)
+endif
+
+EXTRA_CLEANS = soundness_check/cv_compute_unSoundTheory.sig soundness_check-selftest.log
