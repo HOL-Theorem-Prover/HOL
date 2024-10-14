@@ -13,7 +13,7 @@ sig
  type 'a named = 'a DB_dtype.named
  datatype location = datatype DB_dtype.location
  type hol_type = Type.hol_type
- type thminfo = {private:bool,loc:thm_src_location}
+ type thminfo = {private:bool,loc:thm_src_location,class:class}
 
   val thy         : string -> data list
   val fetch       : string -> string -> thm
@@ -47,7 +47,7 @@ sig
   val local_thm   : string -> thm option
 
   val dest_theory  : string -> theory
-  val bindl : string -> (string * thm * class * thminfo) list -> unit
+  val bindl : string -> (string * thm * thminfo) list -> unit
 
   (* Derived search functions *)
   val find_consts_thy : string list -> hol_type -> term list

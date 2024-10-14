@@ -234,23 +234,8 @@ end; (* structure Graph *)
  * stored in a theory.                                                       *
  *---------------------------------------------------------------------------*)
 
-open ThmKind_dtype
-type thmkind = ThmKind_dtype.t
-
-fun is_axiom (Axiom _) = true  | is_axiom _   = false;
-fun is_theorem (Thm _) = true  | is_theorem _ = false;
-fun is_defn (Defn _)   = true  | is_defn _    = false;
-
-fun drop_thmkind (Axiom(_,th)) = th
-  | drop_thmkind (Thm th)      = th
-  | drop_thmkind (Defn th)     = th;
-
-fun drop_pthmkind (s, (th,{private,loc})) =
-    if private then NONE else SOME (s,drop_thmkind th)
-
-fun drop_Axkind (Axiom rth) = rth
-  | drop_Axkind    _        = raise ERR "drop_Axkind" "";
-
+fun drop_pthmkind (s, (th,{private,loc,class})) =
+    if private then NONE else SOME (s,th)
 
 (*---------------------------------------------------------------------------*
  * The type of HOL theory segments. Lacks fields for the type and term       *
@@ -271,10 +256,10 @@ val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
 
 fun fact_thm (s, (th, _)) = th
 
-type thminfo = {private:bool,loc:thm_src_location}
+type thminfo = DB_dtype.thminfo
 type segment =
      {thid    : thyid,                                         (* unique id  *)
-      facts   : (thmkind * thminfo) Symtab.table,             (* stored thms *)
+      facts   : (thm * thminfo) Symtab.table,                 (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
       adjoin  : thy_addon list,                        (*  extras for export *)
       adjoinpc: (unit -> PP.pretty) list,
@@ -330,16 +315,20 @@ val current_theory = CTname;
  *                  READING FROM THE SEGMENT                                 *
  *---------------------------------------------------------------------------*)
 local
-  fun filter P tab = Symtab.fold (fn nmv => fn A => if P nmv then nmv :: A else A) tab []
+  fun filter P tab =
+      Symtab.fold (fn nmv => fn A => if P nmv then nmv :: A else A) tab []
+  fun is_axiom (n,(th,i:thminfo)) = #class i = Axm
+  fun is_theorem (n,(th,i:thminfo)) = #class i = Thm
+  fun is_defn (n,(th,i:thminfo)) = #class i = Def
 in
 fun thy_types thyname               = Type.thy_types thyname
 fun thy_constants thyname           = Term.thy_consts thyname
 fun thy_parents thyname             = snd (Graph.first
                                            (equal thyname o thyid_name o fst))
-fun thy_axioms (th:segment)         = filter (is_axiom o fact_thm)   (#facts th)
-fun thy_theorems (th:segment)       = filter (is_theorem o fact_thm) (#facts th)
-fun thy_defns (th:segment)          = filter (is_defn o fact_thm)    (#facts th)
-fun thy_addons (th:segment)         = #adjoin th
+fun thy_axioms (th:segment)   = filter is_axiom   (#facts th)
+fun thy_theorems (th:segment) = filter is_theorem (#facts th)
+fun thy_defns (th:segment)    = filter is_defn    (#facts th)
+fun thy_addons (th:segment)   = #adjoin th
 end
 
 fun stamp thyname =
@@ -469,10 +458,10 @@ in
   val add_typeCT        = inCT add_type
   val add_termCT        = inCT add_term
   fun add_axiomCT(r,ax,loc) =
-      add_factCT(Nonce.dest r,(Axiom(r,ax),{private=false,loc=loc}))
+      add_factCT(Nonce.dest r,(ax,{private=false,loc=loc,class=Axm}))
   fun add_defnCT(s,def,loc) =
-      add_factCT(s, (Defn def, {private=false,loc=loc}))
-  fun add_thmCT(s,th,v) = add_factCT(s, (Thm th, v))
+      add_factCT(s, (def, {private=false,loc=loc,class=Def}))
+  fun add_thmCT(s,th,v) = add_factCT(s, (th, v))
   val add_ML_dependency = inCT add_ML_dep
 
   fun delete_type n     = (inCT del_type  (n,CTname());
@@ -571,13 +560,16 @@ fun uptodate_thm thm =
     andalso
     uptodate_axioms (Tag.axioms_of (Thm.tag thm))
 and uptodate_axioms [] = true
-  | uptodate_axioms rlist = let
-      val axs = map (drop_Axkind o fact_thm) (thy_axioms(theCT()))
+  | uptodate_axioms rlist =
+    let
+      fun get_axtag th = hd (Tag.axioms_of (Thm.tag th))
+      val axs = map (fn (_,(th,_)) => (get_axtag th,concl th))
+                    (thy_axioms(theCT()))
     in
       (* tempting to call uptodate_thm here, but this would put us into a loop
          because axioms have themselves as tags, also unnecessary because
          axioms never have hypotheses (check type of new_axiom) *)
-      Lib.all (uptodate_term o Thm.concl o Lib.C Lib.assoc axs) rlist
+      Lib.all (uptodate_term o Lib.C Lib.assoc axs) rlist
     end handle HOL_ERR _ => false
 
 fun tabfilter P tab =
@@ -585,19 +577,16 @@ fun tabfilter P tab =
                 tab
                 Symtab.empty
 fun scrub_ax (s as {facts,...} : segment) =
-   let fun check (Thm _) = true
-         | check (Defn _) = true
-         | check (Axiom(_,th)) = uptodate_term (Thm.concl th)
+   let fun check (nm, (th, i)) =
+           #class i <> Axm orelse uptodate_term (Thm.concl th)
    in
-      update_seg s (U #facts (tabfilter (check o fact_thm) facts)) $$
+      update_seg s (U #facts (tabfilter check facts)) $$
    end
 
 fun scrub_thms (s as {facts,...}: segment) =
-   let fun check (Axiom _) = true
-         | check (Thm th ) = uptodate_thm th
-         | check (Defn th) = uptodate_thm th
+   let fun check (nm, (th, i)) = #class i = Axm orelse uptodate_thm th
    in
-     update_seg s (U #facts (tabfilter (check o fact_thm) facts)) $$
+     update_seg s (U #facts (tabfilter check facts)) $$
    end
 
 fun scrub () = makeCT (scrub_thms (scrub_ax (theCT())))
@@ -650,7 +639,8 @@ in
       val th' = save_dep (CTname ()) th
     in
       check_name true (fnm, name)
-      ; if uptodate_thm th' then add_thmCT (name, th', i)
+      ; if uptodate_thm th' then
+          add_thmCT (name, th', {private=private,loc=loc,class=Thm})
         else raise DATED_ERR fnm name
       ; save_mesg (fmsg th') name
       ; th'
@@ -931,14 +921,6 @@ fun theory_out p ostrm =
    TextIO.closeOut ostrm
  end;
 
-fun unkind facts =
-    let fun foldthis (s,(Axiom (_,th), v)) (A,D,T) = ((s,th,v)::A,D,T)
-          | foldthis (s,(Defn th, v))      (A,D,T) = (A,(s,th,v)::D,T)
-          | foldthis (s,(Thm th, v))       (A,D,T) = (A,D,(s,th,v)::T)
-    in
-      Symtab.fold foldthis facts ([],[],[])
-    end
-
 (* automatically reverses the list, which is what is needed. *)
 
 fun unadjzip [] A = A
@@ -985,16 +967,14 @@ in
 fun export_theory () = let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
   val {thid,facts,adjoin,adjoinpc,thydata,mldeps,...} = scrubCT()
+  val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
   val concat = String.concat
   val thyname = thyid_name thid
   val name = thyname^"Theory"
-  val (A,D,T) = unkind facts
   val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
   val sigthry = {name = thyname,
                  parents = map thyid_name (Graph.fringe()),
-                 axioms = A,
-                 definitions = D,
-                 theorems = T,
+                 all_thms = all_thms,
                  sig_ps = sig_ps}
   fun mungethydata dmap = let
     fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
@@ -1020,9 +1000,7 @@ fun export_theory () = let
        parents = map dest_thyid (Graph.fringe()),
        types = thy_types thyname,
        constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
-       axioms = A,
-       definitions = D,
-       theorems = T,
+       all_thms = all_thms,
        struct_ps = struct_ps,
        struct_pcps = adjoinpc,
        thydata = mungethydata thydata,
@@ -1030,7 +1008,7 @@ fun export_theory () = let
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
                 not (is_temp_binding s)
  in
-   case filter filtP (map #1 A @ map #1 (D@T)) of
+   case filter filtP (map #1 all_thms) of
      [] =>
      (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])

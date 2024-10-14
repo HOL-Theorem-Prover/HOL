@@ -9,8 +9,7 @@ struct
  | NewTypeOp of KernelSig.kernelname
  | DelConstant of KernelSig.kernelname
  | DelTypeOp of KernelSig.kernelname
- | NewBinding of
-   string * (ThmKind_dtype.t * {private:bool,loc:DB_dtype.thm_src_location})
+ | NewBinding of string * (Thm.thm * DB_dtype.thminfo)
  | DelBinding of string
 
 local

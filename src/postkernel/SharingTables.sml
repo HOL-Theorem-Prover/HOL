@@ -434,17 +434,19 @@ fun write_term (SDI{tmtable,...}) =
     Term.write_raw (fn t => Map.find(#termmap tmtable,t))
     handle Map.NotFound => raise SharingTables "write_term: can't find term"
 
-fun enc_thminfo findstr {private,loc} =
+fun enc_thminfo findstr {private,loc,class} =
     let open HOLsexp
         val privtag = Integer (if private then 1 else 0)
+        val classtag = Integer (case class of Axm => 0 | Def => 1 | Thm => 2)
     in
       case loc of
-          Unknown => List [privtag]
+          Unknown => List [classtag, privtag]
         | Located{scriptpath,linenum,exact} =>
           let val {vol,arcs,...} = OS.Path.fromString scriptpath
               val tag = Integer (if exact then 1 else 0)
           in
-            List (privtag :: tag :: Integer linenum :: map findstr (vol::arcs))
+            List (classtag :: privtag :: tag :: Integer linenum ::
+                  map findstr (vol::arcs))
           end
     end
 
@@ -513,19 +515,20 @@ fun translatepath slist =
           [] => OS.Path.toString {arcs = [], isAbs = true, vol = ""}
         | v::arcs => OS.Path.toString {arcs = arcs, isAbs = isAbs, vol = v}
     end
+fun decclass 0 = Axm
+  | decclass 1 = Def
+  | decclass 2 = Thm
+  | decclass i = raise SharingTables ("Bad theorem class: "^Int.toString i)
 
 fun translate_info f ilist =
     case ilist of
-        [] => (* sholdn't happen *){loc = Unknown, private = true}
-      | [privatep] => {loc = Unknown, private = privatep <> 0}
-      | [privatep,exactp] (* shouldn't happen *) =>
-        {loc = Located{scriptpath = translatepath [], exact = (exactp <> 0),
-                       linenum = 0},
-         private = privatep <> 0}
-      | privatep::exactp::lnum::rest =>
-        {loc = Located{scriptpath = translatepath (map f rest),
-                       linenum = lnum, exact = (exactp <> 0)},
-         private = privatep <> 0}
+        [classtag,privtag] =>
+          {loc = Unknown, private = privtag <> 0, class = decclass classtag}
+      | classtag::privatep::exactp::lnum::rest =>
+          {loc = Located{scriptpath = translatepath (map f rest),
+                         linenum = lnum, exact = (exactp <> 0)},
+           private = privatep <> 0, class = decclass classtag}
+      | _ => raise SharingTables "Bad theorem information"
 
 fun read_thm strv tmvector thmrec =
     let

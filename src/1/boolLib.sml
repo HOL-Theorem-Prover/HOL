@@ -115,7 +115,7 @@ fun prove_local privp (n,th) =
    (if not (!Globals.interactive) then
       print ("Proved triviality ___ \"" ^ String.toString n ^ "\"\n")
     else ();
-    DB.store_local {private=privp,loc = Unknown} n th;
+    DB.store_local {private=privp,loc = Unknown,class=DB_dtype.Thm} n th;
     th)
 fun extract_localpriv (loc,priv,rebindok,acc) attrs =
     case attrs of

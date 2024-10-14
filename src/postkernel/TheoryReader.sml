@@ -124,16 +124,11 @@ fun load_thydata thyname path =
     val (fullthy as (thyname, _, _)) = force "thyname" dec_thy thy_data
     val parents = force "parents" (list_decode dec_thy) parents_data
     val _ = Theory.link_parents fullthy parents
-    val (core_data, incorporate_data, classinfo, thydata_data) =
+    val (core_data, incorporate_data, thydata_data) =
         force "toplevel_decode" (
-          pair4_decode (
+          pair3_decode (
             SOME,
             tagged_decode "incorporate" SOME,
-            tagged_decode "thm-classes" (
-              Option.map (fn (a,d,t) => a @ d @ t) o
-              pair3_decode (class_decode DB.Axm,  class_decode DB.Def,
-                            class_decode DB.Thm)
-            ),
             tagged_decode "loadable-thydata" SOME
           )
         ) rest
@@ -160,18 +155,7 @@ fun load_thydata thyname path =
         List.foldl (fn ((n,th,i), D) => Symtab.update (n, (th,i)) D)
                    Symtab.empty
                    named_thms
-    val _ =
-        let
-          fun mapthis (nm_i,c) =
-              let val nm = read_string share_data nm_i
-              in
-                case Symtab.lookup thmdict nm of
-                    NONE => raise TheoryReader ("Couldn't lookup "^nm)
-                  | SOME (th, info) => (nm,th,c,info)
-              end
-        in
-          DB.bindl thyname (map mapthis classinfo)
-        end
+    val _ = DB.bindl thyname named_thms
     val _ =
         app (temp_encoded_update share_data thyname) (
           force "thydata" (

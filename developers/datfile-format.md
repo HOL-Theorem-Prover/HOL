@@ -14,7 +14,6 @@ Top-level format:
     (<theorems>)
   )
   (incorporate ...)
-  (thm-classes ...)
   (loadable-thydata ..)
 )
 
@@ -41,8 +40,9 @@ Top-level format:
    <tag>*
   )
 
-<thm-info> ::= <privatep> :: <locels>
-<privatep> ::= 1 | 0  ; private or not
+<thm-info> ::= <class> :: <privatep> :: <locels>
+<class>    ::= 0 | 1 | 2  ; for axiom, definition, theorem
+<privatep> ::= 1 | 0      ; private or not
 <locels>   ::=
     nil  ; unknown location
 |  <exactp> <encodedvol> <encodedpath_arcs>
