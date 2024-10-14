@@ -6,12 +6,14 @@ sig
  datatype theory = datatype DB_dtype.theory
  datatype class = datatype DB_dtype.class
  datatype selector = datatype DB_dtype.selector
+ datatype thm_src_location = datatype DB_dtype.thm_src_location
  type data = DB_dtype.data
  type public_data = DB_dtype.public_data
  type data_value = DB_dtype.data_value
  type 'a named = 'a DB_dtype.named
  datatype location = datatype DB_dtype.location
  type hol_type = Type.hol_type
+ type thminfo = {private:bool,loc:thm_src_location}
 
   val thy         : string -> data list
   val fetch       : string -> string -> thm
@@ -41,11 +43,11 @@ sig
 
   val polarity_search : bool -> term -> public_data list
 
-  val store_local : {private:bool} -> string -> thm -> unit
+  val store_local : thminfo -> string -> thm -> unit
   val local_thm   : string -> thm option
 
   val dest_theory  : string -> theory
-  val bindl : string -> (string * thm * class * {private:bool}) list -> unit
+  val bindl : string -> (string * thm * class * thminfo) list -> unit
 
   (* Derived search functions *)
   val find_consts_thy : string list -> hol_type -> term list

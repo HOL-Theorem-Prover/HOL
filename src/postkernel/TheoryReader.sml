@@ -101,8 +101,7 @@ fun string_to_class "A" = SOME DB.Axm
   | string_to_class _ = NONE
 
 fun class_decode c =
-    Option.map (List.map (fn i => if i < 0 then (~(i + 1), c, true)
-                                      else (i - 1, c, false))) o
+    Option.map (List.map (fn i => (i, c))) o
     HOLsexp.list_decode HOLsexp.int_decode
 
 fun load_thydata thyname path =
@@ -157,16 +156,18 @@ fun load_thydata thyname path =
         ) core_data
     val {theorems = named_thms,...} = export_from_sharing_data share_data
 
-    val thmdict = HOLdict.fromList String.compare named_thms
+    val thmdict =
+        List.foldl (fn ((n,th,i), D) => Symtab.update (n, (th,i)) D)
+                   Symtab.empty
+                   named_thms
     val _ =
         let
-          fun mapthis (nm_i,c,private) =
+          fun mapthis (nm_i,c) =
               let val nm = read_string share_data nm_i
-                  val th =
-                      HOLdict.find (thmdict,nm)
-                      handle HOLdict.NotFound =>
-                             raise TheoryReader ("Couldn't lookup "^nm)
-              in (nm,th,c,{private=private})
+              in
+                case Symtab.lookup thmdict nm of
+                    NONE => raise TheoryReader ("Couldn't lookup "^nm)
+                  | SOME (th, info) => (nm,th,c,info)
               end
         in
           DB.bindl thyname (map mapthis classinfo)

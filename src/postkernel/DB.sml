@@ -63,13 +63,13 @@ fun updexisting key f m =
    case-sensitive *)
 type submap = (string, data list) Map.dict
 val empty_sdata_map = Map.mkDict String.compare
-
+type thminfo = {private:bool,loc:thm_src_location}
 (* the dbmap contains:
     - a map from theory-name to a submap (as above)
 *)
 datatype dbmap = DB of { namemap : (string, submap) Map.dict,
                          revmap : location list Termtab.table,
-                         localmap : (thm * {private:bool}) Symtab.table
+                         localmap : (thm * thminfo) Symtab.table
                        }
 
 fun namemap (DB{namemap,...}) = namemap
@@ -102,8 +102,8 @@ local val DBref = ref empty_dbmap
                   case Map.peek(namemap, thy) of
                     NONE => empty_sdata_map
                   | SOME m => m
-              fun foldthis ((n,th,cl,vis), m) =
-                  add_to_submap m ((thy,n), (th,cl,vis))
+              fun foldthis ((n,th,cl,info), m) =
+                  add_to_submap m ((thy,n), (th,cl,info))
               val submap' = List.foldl foldthis submap blist
           in
             Map.insert(namemap, thy, submap')
@@ -195,7 +195,7 @@ fun store_local private s th =
                      |> updrevmap (Termtab.cons_list(concl th, Local s)))
 fun local_thm s = case Symtab.lookup (localmap (!DBref)) s of
                       NONE => NONE
-                    | SOME (th,{private}) => if private then NONE else SOME th
+                    | SOME (th,{private,loc}) => if private then NONE else SOME th
 
 end (* local *)
 
@@ -240,7 +240,7 @@ fun find0 incprivatep s =
       fun subfold (k, vs, acc) =
           if check k then
             (if incprivatep then vs
-             else List.filter (fn (_, (_, _, {private=p})) => not p) vs) @
+             else List.filter (fn (_, (_, _, {private=p,...})) => not p) vs) @
             acc
           else acc
       fun fold (thy, m, acc) = Map.foldr subfold acc m
@@ -256,7 +256,7 @@ val find_all = find0 true
  ---------------------------------------------------------------------------*)
 
 fun matchp0 incprivate P thylist =
-    let fun data_P (_, (th, _, {private})) =
+    let fun data_P (_, (th, _, {private,...})) =
             (incprivate orelse not private) andalso P th
         fun subfold (k, v, acc) = List.filter data_P v @ acc
     in

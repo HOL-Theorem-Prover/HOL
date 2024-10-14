@@ -66,6 +66,7 @@ val WARN = HOL_WARNING "Theory";
 
 type thy_addon = {sig_ps    : (unit -> PP.pretty) option,
                   struct_ps : (unit -> PP.pretty) option}
+open DB_dtype
 
 local
   val hooks =
@@ -244,7 +245,7 @@ fun drop_thmkind (Axiom(_,th)) = th
   | drop_thmkind (Thm th)      = th
   | drop_thmkind (Defn th)     = th;
 
-fun drop_pthmkind (s, (th,{private})) =
+fun drop_pthmkind (s, (th,{private,loc})) =
     if private then NONE else SOME (s,drop_thmkind th)
 
 fun drop_Axkind (Axiom rth) = rth
@@ -270,9 +271,10 @@ val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
 
 fun fact_thm (s, (th, _)) = th
 
+type thminfo = {private:bool,loc:thm_src_location}
 type segment =
      {thid    : thyid,                                         (* unique id  *)
-      facts   : (thmkind * {private:bool}) Symtab.table,      (* stored thms *)
+      facts   : (thmkind * thminfo) Symtab.table,             (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
       adjoin  : thy_addon list,                        (*  extras for export *)
       adjoinpc: (unit -> PP.pretty) list,
@@ -466,8 +468,10 @@ local
 in
   val add_typeCT        = inCT add_type
   val add_termCT        = inCT add_term
-  fun add_axiomCT(r,ax) = add_factCT(Nonce.dest r,(Axiom(r,ax),{private=false}))
-  fun add_defnCT(s,def) = add_factCT(s, (Defn def, {private=false}))
+  fun add_axiomCT(r,ax,loc) =
+      add_factCT(Nonce.dest r,(Axiom(r,ax),{private=false,loc=loc}))
+  fun add_defnCT(s,def,loc) =
+      add_factCT(s, (Defn def, {private=false,loc=loc}))
   fun add_thmCT(s,th,v) = add_factCT(s, (Thm th, v))
   val add_ML_dependency = inCT add_ML_dep
 
@@ -641,42 +645,50 @@ local
       msgOut ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
     else msgOut (format_name_message{pfx = "Saved " ^ s, name = name})
 in
-  fun save_thm0 fnm fmsg private (name, th) =
+  fun save_thm0 fnm fmsg (i as {private, loc}) (name, th) =
     let
       val th' = save_dep (CTname ()) th
     in
-      check_name true ("save_thm", name)
-      ; if uptodate_thm th' then add_thmCT (name, th', private)
+      check_name true (fnm, name)
+      ; if uptodate_thm th' then add_thmCT (name, th', i)
         else raise DATED_ERR fnm name
       ; save_mesg (fmsg th') name
       ; th'
     end
-  val save_thm = save_thm0 "save_thm" mesg_str {private=false}
+  val save_thm = save_thm0 "save_thm" mesg_str {private=false, loc = Unknown}
   val save_private_thm =
       save_thm0 "save_private_thm" (fn th => "private " ^ mesg_str th)
-                {private=true}
+                {private=true, loc = Unknown}
+  fun gen_save_thm{name,private,thm,loc} =
+      save_thm0 "gen_save_thm" mesg_str {private=private, loc = loc} (name,thm)
 
-  fun new_axiom (name,tm) =
+  fun new_axiom0 fnm (name,tm,loc) =
     let
       val rname  = Nonce.mk name
       val axiom  = Thm.mk_axiom_thm (rname, tm)
       val axiom' = save_dep (CTname()) axiom
     in
-      check_name false ("new_axiom",name)
-      ; if uptodate_term tm then add_axiomCT (rname, axiom')
+      check_name false (fnm,name)
+      ; if uptodate_term tm then add_axiomCT (rname, axiom',loc)
         else raise DATED_ERR "new_axiom" name
       ; axiom'
     end
+  fun new_axiom (name,tm) = new_axiom0 "new_axiom" (name,tm,Unknown)
+  fun gen_new_axiom (name,tm,loc) = new_axiom0 "gen_new_axiom" (name,tm,loc)
 
-  fun store_definition (name, def) =
+  fun store_definition0 fnm (name, def, loc) =
     let
       val def' = save_dep (CTname ()) def
     in
-      check_name true ("store_definition", name)
-      ; uptodate_thm def' orelse raise DATED_ERR "store_definition" name
-      ; add_defnCT (name, def')
+      check_name true (fnm, name)
+      ; uptodate_thm def' orelse raise DATED_ERR fnm name
+      ; add_defnCT (name, def',loc)
       ; def'
     end
+  fun store_definition(name,def) =
+      store_definition0 "store_definition" (name,def,Unknown)
+  fun gen_store_definition(name,def,loc) =
+      store_definition0 "gen_store_definition" (name,def,loc)
 end;
 
 (*---------------------------------------------------------------------------*
@@ -920,7 +932,7 @@ fun theory_out p ostrm =
  end;
 
 fun unkind facts =
-    let fun foldthis (s,(Axiom (_,th), _)) (A,D,T) = ((s,th)::A,D,T)
+    let fun foldthis (s,(Axiom (_,th), v)) (A,D,T) = ((s,th,v)::A,D,T)
           | foldthis (s,(Defn th, v))      (A,D,T) = (A,(s,th,v)::D,T)
           | foldthis (s,(Thm th, v))       (A,D,T) = (A,D,(s,th,v)::T)
     in

@@ -27,20 +27,29 @@ Top-level format:
 <theorems> ::= <thm> <thm> <thm> ...
 
 <thm> ::=
-
   ($n$ ; number from string-table
     <dependency-info>
+    <thm-info>
     (
      $string$  ; string encoding logical structure
     )
   )
-
 
 <dependency-info> ::=
   (
    <thm-deps>
    <tag>*
   )
+
+<thm-info> ::= <privatep> :: <locels>
+<privatep> ::= 1 | 0  ; private or not
+<locels>   ::=
+    nil  ; unknown location
+|  <exactp> <encodedvol> <encodedpath_arcs>
+
+<exactp>  ::= 1 | 0
+
+<encodedpath_arcs> ::= $number $number $number …   ; numbers are string indexes for path components
 
 <thm-deps> ::=
   (<selfid> <other-dep>*)

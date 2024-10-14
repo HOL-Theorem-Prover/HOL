@@ -2,6 +2,11 @@ structure DB_dtype =
 struct
 
  datatype class = Thm | Axm | Def
+ datatype location = Local of string | Stored of KernelSig.kernelname
+ datatype thm_src_location =
+          Located of {scriptpath: string, linenum : int, exact : bool}
+        | Unknown
+
  datatype theory =
           THEORY of string *
                 {types       : (string * int) list,
@@ -12,8 +17,8 @@ struct
                  theorems    : (string * Thm.thm) list}
 
  datatype selector = SelTM of Term.term | SelNM of string | SelTHY of string
-
- type data_value = (Thm.thm * class * {private:bool})
+ type thminfo = {private: bool, loc:thm_src_location}
+ type data_value = (Thm.thm * class * thminfo)
  type public_data_value = Thm.thm * class
  fun dvdrop_private ((th,c,_) : data_value) : public_data_value = (th,c)
  type 'a named = (string * string) * 'a
@@ -22,8 +27,6 @@ struct
  fun drop_private (nms, dv) = (nms, dvdrop_private dv)
 
 
-
- datatype location = Local of string | Stored of KernelSig.kernelname
 
 
 end

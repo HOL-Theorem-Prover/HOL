@@ -442,7 +442,12 @@ val ya = Av "y"
  *  |- T
  *---------------------------------------------------------------------------*)
 
-val TRUTH = save_thm("TRUTH", EQ_MP (SYM T_DEF) (REFL “\x:bool. x”));
+val TRUTH = gen_save_thm{
+  name = "TRUTH", private = false,
+  loc = Located {exact = true,
+                 scriptpath = "$(HOLDIR)/src/bool/boolScript.sml",
+                 linenum = #(LINE) - 4},
+  thm = EQ_MP (SYM T_DEF) (REFL “\x:bool. x”)};
 
 fun EQT_ELIM th = EQ_MP (SYM th) TRUTH;
 
