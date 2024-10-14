@@ -4,9 +4,6 @@ struct
 open HOLFileSys
 type reader =
      {read : unit -> char option, reset : unit -> unit, eof : unit -> bool}
-fun die s = (output(stdErr, s ^ "\n");
-             OS.Process.exit OS.Process.failure)
-fun exndie e = die ("Exception raised " ^ General.exnMessage e)
 
 fun exhaust_lexer (read, close, _) =
   let
@@ -25,7 +22,7 @@ fun mkstate b = {inscriptp = b, quotefixp = false}
 fun file_to_lexer fname =
   let
 
-    val instrm = openIn fname handle e => exndie e
+    val instrm = openIn fname
     val isscript = String.isSuffix "Script.sml" fname
     val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscript)
     val read = QuoteFilter.makeLexer (fn n => input instrm) qstate
