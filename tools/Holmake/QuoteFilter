@@ -540,6 +540,7 @@ ProofLine =
      ">>- " ^ Int.toString (linenum yyarg) ^ " ??"
    else yytext)
 );
+<INITIAL> "#(LINE)" => (yypos, Int.toString (linenum yyarg));
 <INITIAL,thmval,TERMINATION_VAL>">-" => (
   (yypos,
    if inscript andalso not quotefix then

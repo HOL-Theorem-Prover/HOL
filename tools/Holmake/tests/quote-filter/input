@@ -1,4 +1,4 @@
-"foo \
+#(LINE)"foo \
 	  \bar"
 ``"foo"``
 `foo = #"^`"`
@@ -88,3 +88,5 @@ Quote bar_x:
   another quotation (* with unfinished comment 
   and bare " with ^foo and ^
 End
+
+val x = #(LINE) + 10;
