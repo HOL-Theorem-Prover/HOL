@@ -277,4 +277,83 @@ val pp_json =
 
 val _ = PolyML.addPrettyPrinter (fn d => fn _ => fn json => pp_json json);
 
+
+(* accessors  *)
+
+fun getObject json k =
+  case json of
+      AList al => Option.map #2 (List.find (fn (key, _) => key = k) al)
+    | _ => NONE
+
+fun getObject' json k =
+    case getObject json k of
+        SOME v => v
+     | NONE => raise ERR "getObject'" "expects object."
+
+fun getBool json =
+  case json of
+      Boolean b => SOME b
+   | _ => NONE
+
+fun getBool' json =
+    case getBool json of
+        SOME v => v
+      | NONE => raise ERR "getBool'" "expects boolean."
+
+fun getString json =
+  case json of
+      String str => SOME str
+   | _ => NONE
+
+fun getString' json =
+    case getString json of
+        SOME v => v
+      | NONE => raise ERR "getString'" "expects string."
+
+fun getInt json =
+ case json of
+     Number (Int i) => SOME i
+  | _ => NONE
+
+fun getInt' json =
+    case getInt json of
+        SOME v => v
+      | NONE => raise ERR "getInt'" "expects int."
+
+fun getFloat json =
+ case json of
+     Number (Float f) => SOME f
+  | _ => NONE
+
+fun getFloat' json =
+    case getFloat json of
+        SOME v => v
+      | NONE => raise ERR "getFloat'" "expects float."
+
+fun foldArray json (f: json -> 'a option) =
+    let
+        fun foldSeq acc [] = SOME (List.rev acc)
+          | foldSeq acc (x::xs) =
+            case f x of
+                NONE => NONE
+              | SOME v => foldSeq (v::acc) xs
+    in
+        case json of
+            List l => foldSeq [] l
+          | _ => NONE
+    end
+
+fun foldArray' json (f: json -> 'a) =
+    case foldArray json (SOME o f) of
+        SOME v => v
+      | NONE => raise ERR "foldArray'" "expects value."
+
+(* val json = hd (#1 (parse ([],Substring.full "{\"foo\" : [1, 23, 4], \"bar\" : 2}"))) *)
+(* val foo = getObject json "foo" *)
+(* val foo' = getObject' json "foo" *)
+(* val foo_ints = foldlArray foo' getInt *)
+(* val json_str = getString json *)
+(* val bar = getObject json "bar" *)
+
+
 end (* Json *)
