@@ -290,6 +290,17 @@ fun getObject' json k =
         SOME v => v
      | NONE => raise ERR "getObject'" "expects object."
 
+
+fun getKeys json =
+    case json of
+        AList l => SOME (map #1 l)
+      | _ => NONE
+
+fun getKeys' json =
+    case json of
+        AList l => map #1 l
+      | _ =>  raise ERR "getKeys'" "expects object."
+
 fun getBool json =
   case json of
       Boolean b => SOME b
@@ -349,6 +360,8 @@ fun foldArray' json (f: json -> 'a) =
       | NONE => raise ERR "foldArray'" "expects value."
 
 (* val json = hd (#1 (parse ([],Substring.full "{\"foo\" : [1, 23, 4], \"bar\" : 2}"))) *)
+(* val keys = getKeys json *)
+(* val keys' = getKeys' json *)
 (* val foo = getObject json "foo" *)
 (* val foo' = getObject' json "foo" *)
 (* val foo_ints = foldlArray foo' getInt *)

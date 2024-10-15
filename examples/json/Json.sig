@@ -26,6 +26,9 @@ sig
   val getObject      : json -> string -> json option
   val getObject'     : json -> string -> json
 
+  val getKeys        : json -> (string list) option
+  val getKeys'       : json -> string list
+
   val getBool        : json -> bool option
   val getBool'       : json -> bool
 
