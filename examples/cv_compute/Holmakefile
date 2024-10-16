@@ -1,18 +1,1 @@
 INCLUDES = $(HOLDIR)/src/num/theories/cv_compute/automation
-
-all: $(DEFAULT_TARGETS)
-.PHONY: all
-
-ifdef HOLSELFTESTLEVEL
-all: soundness_check-selftest.log
-
-soundness_check-selftest.log: soundness_check/cv_compute_unsoundScript.sml
-	$(tee cd soundness_check && ! $(protect $(HOLDIR)/bin/Holmake),$@)
-endif
-
-SOUNDNESS_JUNK0 = cv_compute_unsoundTheory.sig $(patsubst %,.hollogs/cv_compute_unsoundTheory.%,dat uo ui sml)
-
-SOUNDNESS_JUNK = $(patsubst %,soundness_check/%,$(SOUNDNESS_JUNK0))
-
-# if the check passes, none of the junk should be generated
-EXTRA_CLEANS = $(SOUNDNESS_JUNK) soundness_check-selftest.log

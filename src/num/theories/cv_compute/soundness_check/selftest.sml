@@ -1,26 +1,8 @@
-open HolKernel boolLib bossLib cvTheory numTheory arithmeticTheory
+open HolKernel boolLib testutils
+open arithmeticTheory cvTheory
+open cv_compute_unsoundTheory
 
-val _ = new_theory "cv_compute_unsound";
-
-Definition bad_cv_fst_def:
-  bad_cv_fst (cv$Num _) = cv$Num 0 ∧
-  bad_cv_fst (cv$Pair p q) = if p = q then p else q
-End
-
-Theorem bad_cv_fst2[local]:
-  bad_cv_fst (cv$Num m) = cv$Num 0
-Proof
-  rw[bad_cv_fst_def]
-QED
-
-Theorem bad_cv_fst1_lemma[local]:
-  p = q ==>
-  bad_cv_fst (cv$Pair p q) = p
-Proof
-  rw[bad_cv_fst_def]
-QED
-
-Theorem bad_cv_fst1[local] = bad_cv_fst1_lemma |> UNDISCH;
+val bad_cv_fst1 = bad_cv_fst1_lemma |> UNDISCH;
 
 val cval_terms = [
     ("truth", boolSyntax.T),
@@ -122,15 +104,15 @@ val char_eqns = [
   ("let", SPEC_ALL LET_THM)
   ];
 
-val cached = Thm.compute {
-    cval_terms = cval_terms,
-    cval_type = cvSyntax.cv,
-    num_type = numSyntax.num,
-    char_eqns = char_eqns
-  };
-
-val th1 = cached [] ``bad_cv_fst (cv$Pair (cv$Num 0) (cv$Num 1))``
-
-Theorem bad = th1 |> SIMP_RULE std_ss [bad_cv_fst_def, Num_11];
-
-val _ = export_theory();
+fun expect(str,fnname,msg) =
+    str = "Thm" andalso fnname = "compute" andalso
+    String.isSubstring "hypotheses" msg
+val _ = shouldfail {checkexn = check_HOL_ERRexn expect,
+                    printarg = K "compute w/bogus characteristic eqns",
+                    printresult = K "returned a conversional",
+                    testfn = Thm.compute}
+                   {cval_terms = cval_terms,
+                    cval_type = cvSyntax.cv,
+                    num_type = numSyntax.num,
+                    char_eqns = char_eqns
+                   };

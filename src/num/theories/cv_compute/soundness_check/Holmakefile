@@ -1,0 +1,7 @@
+EXTRA_CLEANS = soundness_check-selftest.log
+
+soundness_check-selftest.log: selftest.exe
+	$(tee ./$<,$@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
