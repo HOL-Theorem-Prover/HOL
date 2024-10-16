@@ -525,6 +525,14 @@ Proof
   simp[EXTENSION] >> metis_tac[]
 QED
 
+Theorem fIMAGE_fUNION:
+  fIMAGE f (fUNION s1 s2) =
+  fUNION (fIMAGE f s1) (fIMAGE f s2)
+Proof
+  rw[EXTENSION, EQ_IMP_THM]
+  \\ metis_tac[]
+QED
+
 Theorem fIMAGE_ID[simp]:
   fIMAGE (λx. x) s = s /\ fIMAGE I s = s
 Proof
@@ -1124,6 +1132,21 @@ Proof
   \\ metis_tac[fsequiv_def]
 QED
 
+Theorem toSet_fset_ABS:
+  !l. toSet (fset_ABS l) = set l
+Proof
+  gen_tac \\
+  qspec_then`l`(SUBST1_TAC o SYM o Q.AP_TERM`toSet`)fromSet_set
+  \\ irule toSet_fromSet
+  \\ rw[]
+QED
+
+Theorem toSet_fUNION[simp]:
+  toSet (fUNION s1 s2) = (toSet s1) UNION (toSet s2)
+Proof
+  rw[pred_setTheory.EXTENSION, GSYM fIN_IN]
+QED
+
 Theorem toSet_Qt:
   Qt (λx y. FINITE x /\ x = y) fromSet toSet (λs fs. s = toSet fs)
 Proof
@@ -1166,6 +1189,56 @@ Theorem MEM_fset_REP:
   MEM x (fset_REP fs) <=> fIN x fs
 Proof
   rw[fIN_def]
+QED
+
+Theorem fset_ABS_MAP:
+  fset_ABS (MAP f l) = fIMAGE f (fset_ABS l)
+Proof
+  rw[EXTENSION, fIN_IN, toSet_fset_ABS, MEM_MAP]
+  \\ metis_tac[]
+QED
+
+Theorem fset_REP_fEMPTY[simp]:
+  fset_REP fEMPTY = []
+Proof
+  rw[rich_listTheory.NIL_NO_MEM, MEM_fset_REP]
+QED
+
+Theorem fIN_fset_ABS:
+  fIN x (fset_ABS l) <=> MEM x l
+Proof
+  rw[fIN_def]
+  \\ mp_tac fset_QUOTIENT
+  \\ rewrite_tac[quotientTheory.QUOTIENT_def,fsequiv_def]
+  \\ rpt strip_tac
+  \\ `set (fset_REP (fset_ABS l)) = set l`
+  suffices_by (
+    rewrite_tac[pred_setTheory.EXTENSION]
+    \\ metis_tac[] )
+  \\ asm_simp_tac std_ss []
+QED
+
+Theorem fBIGUNION_fset_ABS_FOLDL_aux[local]:
+  !l s. FOLDL fUNION s l = fUNION s (fBIGUNION (fset_ABS l))
+Proof
+  Induct \\ rw[fBIGUNION_def, GSYM fEMPTY_def]
+  \\ rw[GSYM fUNION_ASSOC] \\ AP_TERM_TAC
+  \\ rw[EXTENSION]
+  \\ qmatch_goalsub_abbrev_tac`_ \/ fIN e s <=> fIN e hs`
+  \\ `hs = fUNION h s`
+  by (
+    rw[Once (GSYM toSet_11)]
+    \\ rw[Abbr`hs`, Abbr`s`, toSet_fset_ABS]
+    \\ rw[pred_setTheory.EXTENSION, MEM_FLAT, PULL_EXISTS, MEM_MAP]
+    \\ rw[MEM_fset_REP, fIN_fset_ABS, GSYM fIN_IN]
+    \\ metis_tac[] )
+  \\ rw[]
+QED
+
+Theorem fBIGUNION_fset_ABS_FOLDL:
+  fBIGUNION (fset_ABS l) = FOLDL fUNION fEMPTY l
+Proof
+  rw[fBIGUNION_fset_ABS_FOLDL_aux]
 QED
 
 val _ = export_theory();
