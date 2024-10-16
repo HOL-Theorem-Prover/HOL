@@ -1241,11 +1241,4 @@ Proof
   rw[fBIGUNION_fset_ABS_FOLDL_aux]
 QED
 
-Theorem fIMAGE_MAP:
-  fIMAGE f s = fset_ABS (MAP f (fset_REP s))
-Proof
-  rw[EXTENSION, fIN_fset_ABS, MEM_MAP, MEM_fset_REP]
-  \\ metis_tac[]
-QED
-
 val _ = export_theory();
