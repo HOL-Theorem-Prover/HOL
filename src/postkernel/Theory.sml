@@ -1031,6 +1031,7 @@ fun export_theory () = let
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct structthry) ostrm2;
         theory_out (TheoryPP.pp_thydata structthry) ostrm3;
+        Tracing.trace_theory name structthry;
         mesg "done.\n";
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
