@@ -191,21 +191,11 @@ Definition rc5keys_def:
 End
 
 (* Round function and Encryption *)
-(*Definition RoundEn_def:
-   (RoundEn 0 (w1:word32) w2 (ks:word32 list)=
-      let s0=EL 0 ks;
-          s1=EL 1 ks in
-             (w1+s0,w2+s1))   /\
-   RoundEn (SUC n) w1 w2 ks=
-     let ki=EL (2*(SUC n)) ks; ki2=EL (2*(SUC n)+1) ks; A= ((w1 ⊕ w2) #<< (w2n w2))+ki; B= ((w2 ⊕ (A))#<<(w2n (A))) +ki2
-    in (RoundEn n A B ks)
-End*)
-
 Definition RoundEn_def:
    (RoundEn 0 (w1:word32) w2 (ks:word32 list)=
-      let s0=EL 0 ks;
-          s1=EL 1 ks in
-             (w1+s0,w2+s1))   /\
+     let s0=EL 0 ks;
+         s1=EL 1 ks in
+        (w1,w2))   /\
    RoundEn (SUC n) w1 w2 ks=
      let (w1',w2')=RoundEn n w1 w2 ks;
          ki=EL (2*(SUC n)) ks;
@@ -215,30 +205,31 @@ Definition RoundEn_def:
      in (A,B)
 End
 
-Definition RoundEn64_def:
-   RoundEn64 r (w:word64) k= let (w1,w2)= Split64(w);(A,B,Lk,Sk,i,j)=(rc5keys r k) in
-      Join64'(RoundEn r w1 w2 Sk)
-End
-
 Definition half_messageEn_def :
     half_messageEn (w1:word32) w2 ks n =
       let ki=EL n ks;
-          ki2=EL n ks in
-      if n = 0 then w1+ki
-      else if n = 1 then w2+ki2
-      else if n MOD 2=1 then
-         (((half_messageEn w1 w2 ks (n - 2)) ⊕ (half_messageEn w1 w2 ks (n - 1)))
-         #<< (w2n (half_messageEn w1 w2 ks (n - 1))))+ki
+          ki2=EL (n-1) ks in
+      if n = 0 then w1
+      else if n = 1 then w2
       else
          (((half_messageEn w1 w2 ks (n - 2)) ⊕ (half_messageEn w1 w2 ks (n - 1)))
-         #<<(w2n (half_messageEn w1 w2 ks (n - 1))))+ki2
+         #<<(w2n (half_messageEn w1 w2 ks (n - 1))))+ki
+End
+
+Definition RoundEn64_def:
+   RoundEn64 n (w:word64) k=
+      let (w1,w2)= Split64(w);
+          (A,B,Lk,Sk,i,j)=(rc5keys n k);
+          k0=EL 0 Sk;
+          k1=EL 1 Sk in
+      Join64' (RoundEn n (w1+k0) (w2+k1) Sk)
 End
 
 Theorem RoundEn_alt_half_messageEn:
-    !w1 w2 ks n. RoundEn n w1 w2 ks  =
-     (half_messageEn w1 w2 ks (2*n), half_messageEn w1 w2 ks (2*n+1))
+    !w1 w2 ks n. RoundEn n w1 w2 ks=
+    (half_messageEn w1 w2 ks (2*n), half_messageEn w1 w2 ks (2*n+1))
 Proof
-     NTAC 3 GEN_TAC
+     rw[]
   >> Induct_on ‘n’
   >- (rw[RoundEn_def,Once half_messageEn_def]\\
      rw[Once half_messageEn_def])
@@ -268,8 +259,10 @@ Proof
 QED
 
 Theorem RoundEn64_alt_half_messageEn:
-    !w k r. (w1,w2)=Split64(w) /\ (A,B,Lk,Sk,i,j)=(rc5keys r k) ==>       RoundEn64 r (w:word64) k  =
-       Join64' (half_messageEn w1 w2 Sk (2*r), half_messageEn w1 w2 Sk (2*r+1))
+    !w k r. (w1,w2)=Split64(w) /\ (A,B,Lk,Sk,i,j)=(rc5keys r k)/\
+             k0=EL 0 Sk /\ k1=EL 1 Sk ==>
+             RoundEn64 r (w:word64) k  =
+             Join64' ((half_messageEn (w1+k0) (w2+k1) Sk (2*r)), (half_messageEn (w1+k0) (w2+k1) Sk (2*r+1)))
 Proof
      rw[RoundEn64_def,RoundEn_alt_half_messageEn]
   >> pairarg_tac
@@ -279,55 +272,43 @@ Proof
 QED
 
 (* Decryption *)
-(*Definition RoundDe_def :
-   (RoundDe 0 ks (w1:word32) w2=
-      let s1=EL 0 (REVERSE(ks));
-          s0=EL 1 (REVERSE(ks)) in
-             (w1-s0,w2-s1)) /\
-   RoundDe (SUC n) ks w1 w2=
-     let ki=EL (2*(SUC n)) (REVERSE(ks));
-         ki2=EL (2*(SUC n)+1) (REVERSE(ks));
-         B=((w2 -ki) #>> w2n w1) ⊕ w1;
-         A= ((w1-ki2) #>>w2n B) ⊕ B in
-             (RoundDe n ks A B)
-End*)
-
 Definition RoundDe_def :
-   (RoundDe 0 ks (w1:word32) w2=
-      let s1=EL 0 (REVERSE(ks));
-          s0=EL 1 (REVERSE(ks)) in
-             (w1-s0,w2-s1)) /\
-   RoundDe (SUC n) ks w1 w2=
-     let (w1',w2')=RoundDe n ks w1 w2;
-         ki=EL (2*(SUC n)) (REVERSE(ks));
-         ki2=EL (2*(SUC n)+1) (REVERSE(ks));
+   (RoundDe 0 ks ((w1:word32),w2)=
+      let s1=EL 1 ks;
+          s0=EL 0 ks in
+             (w1,w2)) /\
+   RoundDe (SUC n) ks (w1,w2)=
+     let (w1',w2')=RoundDe n ks (w1, w2);
+         ki=EL (2*(SUC n)-2) (REVERSE(ks));
+         ki2=EL (2*(SUC n)-1) (REVERSE(ks));
          B=((w2' -ki) #>> w2n w1') ⊕ w1';
          A= ((w1'-ki2) #>>w2n B) ⊕ B in
              (A,B)
 End
 
-Definition RoundDe64_def :
-    RoundDe64 r (w:word64) k= let (w1,w2)= Split64(w);(A,B,Lk,Sk,i,j)=(rc5keys r k) in
-       Join64'(RoundDe r Sk w1 w2)
-End
-
 Definition half_messageDe_def :
     half_messageDe (w1:word32) w2 ks n =
-      let ki=EL n (REVERSE(ks));
-          ki2=EL n (REVERSE(ks)) in
-      if n = 0 then w2-ki
-      else if n = 1 then w1-ki2
-      else if n MOD 2=1 then
+      let ki=EL (n-2) (REVERSE(ks));
+          ki2=EL (n-2) (REVERSE(ks)) in
+      if n = 0 then w2
+      else if n = 1 then w1
+      else 
          (((half_messageDe w1 w2 ks (n - 2)) -ki)
          #>> w2n (half_messageDe w1 w2 ks (n - 1))) ⊕ (half_messageDe w1 w2 ks (n - 1))
-         
-      else
-         (((half_messageDe w1 w2 ks (n - 2))-ki2)
-         #>>w2n (half_messageDe w1 w2 ks (n - 1))) ⊕ (half_messageDe w1 w2 ks (n - 1))
+End
+
+Definition RoundDe64_def :
+    RoundDe64 n (w:word64) k=
+      let (w1,w2)= Split64(w);
+          (A,B,Lk,Sk,i,j)=(rc5keys n k);
+          (w1',w2')= RoundDe n Sk (w1,w2);
+          k0= EL 0 Sk;
+          k1= EL 1 Sk in
+       Join64'(w1'-k0,w2'-k1)
 End
 
 Theorem RoundDe_alt_half_messageDe:
-    !w1 w2 ks n. RoundDe n ks w1 w2 =
+    !w1 w2 ks n. RoundDe n ks (w1, w2) =
      (half_messageDe w1 w2 ks (2*n+1), half_messageDe w1 w2 ks (2*n))
 Proof
      NTAC 3 GEN_TAC
@@ -337,29 +318,24 @@ Proof
   >> rw[RoundDe_def]
   >- (Q.ABBREV_TAC ‘m0 = half_messageDe w1 w2 ks (2*n+1)’\\
       Q.ABBREV_TAC ‘m1 = half_messageDe w1 w2 ks (2*n)’\\
-      Know ‘(2 * SUC n+1)= 2*n+3’
+      Know ‘(2 * SUC n)= 2*n+2’
       >- rw[]\\
       Rewr'\\
+      rw[]\\
       rw[Once half_messageDe_def]\\
-      Know ‘m0 ⊕ (m0 + -1w * EL (2 * n + 3) (REVERSE ks)) ⇄
-            w2n (m0 ⊕ (m1 + -1w * EL (2 * SUC n) (REVERSE ks))
-            ⇄ w2n m0) ⊕(m1 + -1w * EL (2 * SUC n) (REVERSE ks))
+      Know ‘m0 ⊕ (m0 + -1w * EL (2 * n +1) (REVERSE ks)) ⇄
+            w2n (m0 ⊕ (m1 + -1w * EL (2 * n) (REVERSE ks))
+            ⇄ w2n m0) ⊕(m1 + -1w * EL (2 * n) (REVERSE ks))
             ⇄ w2n m0=
-            (m0 + -1w * EL (2 * n + 3) (REVERSE ks)) ⇄
-            w2n (m0 ⊕ (m1 + -1w * EL (2 * SUC n) (REVERSE ks))
-            ⇄ w2n m0) ⊕m0 ⊕(m1 + -1w * EL (2 * SUC n) (REVERSE ks))
+            (m0 + -1w * EL (2 * n+1) (REVERSE ks)) ⇄
+            w2n (m0 ⊕ (m1 + -1w * EL (2 * n) (REVERSE ks))
+            ⇄ w2n m0) ⊕m0 ⊕(m1 + -1w * EL (2 * n) (REVERSE ks))
             ⇄ w2n m0’
       >- rw[]\\
       Rewr'\\
-      Know ‘(m0 ⊕ (m1 + -1w * EL (2 * SUC n) (REVERSE ks))
-             ⇄ w2n m0)= half_messageDe w1 w2 ks (2 * SUC n)’
-      >- (Know ‘(2 * SUC n)= 2*n+2’
-          >- rw[]\\
-          Rewr'\\
-          rw[Once half_messageDe_def])\\
-      Rewr'\\
-      Know ‘(2 * SUC n)= 2*n+2’
-      >- rw[]\\
+      Know ‘(m0 ⊕ (m1 + -1w * EL (2 * n) (REVERSE ks))
+             ⇄ w2n m0)= half_messageDe w1 w2 ks (2 * n + 2)’
+      >- (rw[Once half_messageDe_def])\\
       Rewr'\\
       rw[])
   >> Q.ABBREV_TAC ‘m0 = half_messageDe w1 w2 ks (2*n+1)’
@@ -371,85 +347,235 @@ Proof
 QED
 
 Theorem RoundDe64_alt_half_messageDe:
-    !w k r. (w1,w2)=Split64(w) /\ (A,B,Lk,Sk,i,j)=(rc5keys r k) ==>       RoundDe64 r (w:word64) k  =
-       Join64' (half_messageDe w1 w2 Sk (2*r+1), half_messageDe w1 w2 Sk (2*r))
+    !w k r. (w1,w2)=Split64(w) /\ (A,B,Lk,Sk,i,j)=(rc5keys r k)/\
+              k0=EL 0 Sk /\ k1=EL 1 Sk ==>
+             RoundDe64 r (w:word64) k  =
+             Join64' ((half_messageDe w1 w2 Sk (2*r+1))-k0, (half_messageDe w1 w2 Sk (2*r))-k1)
 Proof
      rw[RoundDe64_def,RoundDe_alt_half_messageDe]
   >> pairarg_tac
   >> fs[]
   >> pairarg_tac
   >> fs[]
+  >> rw[]
 QED
-! w1 w2 Sk r. RoundEn r w1 w2 Sk=(w1',w2') ==> RoundDe r Sk w1' w2'=(w1,w2)
-Theorem DES_EnDe:
-   !r (w:word64) (k:word64). RoundDe64 r (RoundEn64 r w k) k= w
+
+(*Theorem RC5_EnDe:
+   !n (w:word64) (k:word64) w1 w2 A B Lk Sk i j. Split64(w)=(w1,w2)/\ rc5keys n k = (A,B,Lk,Sk,i,j) ==>
+   RoundDe64 n (RoundEn64 n w k) k= w
 Proof
-     rpt GEN_TAC
-  >> rw[RoundEn64_def,RoundDe64_def]
-  >> pairarg_tac
-  >> fs[]
-  >> pairarg_tac
-  >> fs[]
-  >> pairarg_tac
-  >> fs[]
-  >> Induct_on ‘r’
-  >- (rw[RoundDe_def,RoundEn_def,rc5keys_def]\\
+
+     simp[rc5keys_def]
+  >> Induct_on ‘n’
+  >- (rw[RoundEn64_def,RoundDe64_def]\\
+      pairarg_tac\\
+      fs[]\\
+      pairarg_tac\\
+      fs[]\\
       POP_ASSUM MP_TAC \\
       POP_ASSUM MP_TAC \\
-      rw[Split64_Join64']\\
-      Know ‘LENGTH(Sk)=2’
-      >- (Know ‘2= 2*(0+1)’
-          >- rw[]\\
-          Rewr'\\
-          MATCH_MP_TAC LENGTH_key_Skeys\\
-          Q.EXISTS_TAC ‘6’\\
-          Q.EXISTS_TAC ‘k’\\
-          rw[])\\
-          
-      rw[EL_REVERSE]\\
-      Know ‘Sk <>[]’
-      >- (ASM_REWRITE_TAC [GSYM LENGTH_NIL]\\
-          rw[])\\
-          
-      rw[HD_REVERSE]\\
-      rw[LAST_EL]\\
-      Know ‘(w1',w2')=Split64 w ’
+      rw[Split64_Join64',RoundDe_def,RoundEn_def,rc5keys_def]\\
+      rw[]\\
+      Know ‘(w1,w2)=Split64 w ’
       >- rw[]\\
       Rewr'\\
-      rw[Join64'_Split64])
-      
+      rw[Join64'_Split64]) cheat
+   >> Suff ‘(half_messageDe (half_messageEn w1 w2 Sk (2 * SUC n))
+             (half_messageEn w1 w2 Sk (2 * SUC n + 1)) Sk (2 * SUC n + 1),
+           half_messageDe (half_messageEn w1 w2 Sk (2 * SUC n))
+             (half_messageEn w1 w2 Sk (2 * SUC n + 1)) Sk (2 * SUC n))=(w1,w2)’
+
+   >> Q.PAT_X_ASSUM ‘!w k w1 w2 A B Lk Sk i j. P’ (MP_TAC o Q.SPECL [‘w’,‘k’,‘w1’,‘w2’])
+   >> DISCH_THEN (MP_TAC o Q.SPECL [])
    >> POP_ASSUM MP_TAC
-   >> rw[Split64_Join64']
+   >> fs[RoundEn64_def,RoundDe64_def]
+   >> POP_ASSUM MP_TAC
+   >> POP_ASSUM MP_TAC
+   >> fs[RoundDe_alt_half_messageDe,RoundEn_alt_half_messageEn]
+   >> Know ‘(half_messageDe (half_messageEn w1 w2 Sk (2 * SUC n))
+             (half_messageEn w1 w2 Sk (2 * SUC n + 1)) Sk (2 * SUC n + 1)= ’
+   >> pairarg_tac
+   >> fs[]
+   >> pairarg_tac
+   >> fs[]
+   >> pairarg_tac
+   >> fs[]
    >> POP_ASSUM MP_TAC
    >> POP_ASSUM MP_TAC
    >> POP_ASSUM MP_TAC
-   >> rw[RoundDe_alt_half_messageDe,RoundEn_alt_half_messageEn,rc5keys_def]
-   >> Q.ABBREV_TAC ‘a=half_messageEn w1' w2' Sk (2 * r)’
-   >> Q.ABBREV_TAC ‘b=half_messageEn w1' w2' Sk (2 * r + 1)’
-   >> Q.ABBREV_TAC ‘c=half_messageEn w1' w2' Sk (2 * SUC r)’
-   >> Q.ABBREV_TAC ‘d=half_messageEn w1' w2' Sk (2 * SUC r + 1)’
+   >> POP_ASSUM MP_TAC
+   >> POP_ASSUM MP_TAC
+   >> rw[Split64_Join64',rc5keys_def]
    >> Know ‘(2 * SUC r)=(2*r+2)’
    >- rw[]
    >> Rewr'
+   >> Suff ‘(half_messageDe (half_messageEn w1 w2 Sk (2 * r + 2))
+             (half_messageEn w1 w2 Sk (2 * r + 2 + 1)) Sk (2 * r + 2
+             + 1),
+             half_messageDe (half_messageEn w1 w2 Sk (2 * r + 2))
+             (half_messageEn w1 w2 Sk (2 * r + 2 + 1)) Sk (2 * r + 2)
+             )= (w1,w2)’
+   >- rw[]
    >> rw[]
-   >- (rw[Once half_messageEn_def]\\
-       rw[Once half_messageDe_def])
-   
-   >> Suff ‘(half_messageDe (half_messageEn w1' w2' Sk
-            (2 * SUC r)) (half_messageEn w1' w2' Sk
-            (2 * SUC r + 1)) Sk (2 * SUC r + 1),
-            half_messageDe (half_messageEn w1' w2' Sk
-            (2 * SUC r)) (half_messageEn w1' w2' Sk
-            (2 * SUC r + 1)) Sk (2 * SUC r))
-            =(w1',w2')’
-   >- (Rewr'\\
-       Know ‘(w1',w2')=Split64 w’
+
+   >- (rw[Once half_messageDe_def]\\
+       Q.ABBREV_TAC ‘a=half_messageEn w1 w2 Sk (2 * r +2)’\\
+       Q.ABBREV_TAC ‘b=half_messageEn w1 w2 Sk (2 * r + 3)’\\
+       Know ‘half_messageDe a b Sk (2 * r + 2)=
+             a’)
+   >> rw[]
+  
+   >> rw[]
+   >- (Q.ABBREV_TAC ‘a=(half_messageDe w1' w2' Sk (2 * r + 1))’\\
+       Q.ABBREV_TAC ‘b=(half_messageDe w1' w2' Sk (2 * r))’\\
+       Know ‘(half_messageEn a b Sk (2 * r + 2))=
+             (((half_messageEn a b Sk (2 * r)) ⊕
+             (half_messageEn a b Sk (2 * r + 1)))
+             #<<(w2n (half_messageEn a b Sk (2 * r + 1))))+EL (2 * r + 2
+             ) Sk’
+
+       >- rw[Once half_messageEn_def]\\
+       Rewr'\\
+       Know ‘(half_messageEn a b Sk (2 * r + 3)) =
+             (((half_messageEn a b Sk (2* r + 1))
+             ⊕ (half_messageEn a b Sk (2* r +2)))
+             #<< (w2n (half_messageEn a b Sk (2 * r + 2))))+EL (2 * r +
+             3) Sk’
+       >- rw[Once half_messageEn_def]\\
+       Rewr'\\
+       Know ‘half_messageEn a b Sk (2 * r) = w1'’
+       >- rw[]\\
+       Rewr'
+       Know ‘half_messageEn a b Sk (2 * r + 1) = w2'’
        >- rw[]\\
        Rewr'\\
-       rw[Join64'_Split64])
+       Q.ABBREV_TAC ‘c=half_messageEn a b Sk (2 * r + 2)’\\
+       Know ‘half_messageDe ((w1' ⊕ w2') ⇆ w2n w2' + EL (2 * r + 2) Sk)
+             ((w2' ⊕ c) ⇆ w2n c + EL (2 * r + 3) Sk) Sk (2 * r + 2)=
+             ’
 
-   
+Q.ABBREV_TAC ‘d=(EL (2 * r + 2) Sk +
+           (half_messageEn a b Sk (2 * r) ⇆
+            w2n (half_messageEn a b Sk (2 * r + 1)) ⊕
+            half_messageEn a b Sk (2 * r + 1) ⇆
+            w2n (half_messageEn a b Sk (2 * r + 1))))’
+     Q.ABBREV_TAC ‘e=(EL (2 * r + 3) Sk +
+            (half_messageEn a b Sk (2 * r + 1) ⇆
+             w2n (half_messageEn a b Sk (2 * r + 2)) ⊕
+             half_messageEn a b Sk (2 * r + 2) ⇆
+             w2n (half_messageEn a b Sk (2 * r + 2))))’     
+cheat
+             )
+
+  Q.ABBREV_TAC ‘a=
+              (EL (2 * n + 2) Sk +
+               (half_messageEn w1 w2 Sk (2 * n) ⇆
+                w2n (half_messageEn w1 w2 Sk (2 * n + 1)) ⊕
+                half_messageEn w1 w2 Sk (2 * n + 1) ⇆
+                w2n (half_messageEn w1 w2 Sk (2 * n + 1))))’
+  Q.ABBREV_TAC ‘a= 2*r’
+  rw[Once half_messageEn_def]
+  rw[Once half_messageEn_def]
+  rw[Once half_messageEn_def]
+  rw[Once half_messageEn_def]
+  rw[Once half_messageDe_def]
+  rw[Once half_messageDe_def]
+  Know ‘(w1,w2)=Split64 w’
+  rw[]
+  Rewr'
+  rw[Join64'_Split64]
+
+QED*)
+
+Definition RoundEnSg_def:
+   RoundEnSg (b) ki ki2=
+     let (w1,w2)=b;
+         A= ((w1 ⊕ w2) #<< (w2n w2))+ki;
+         B= ((w2 ⊕ (A))#<< (w2n (A))) +ki2
+     in (A,B)
+End
+
+Definition RoundDeSg_def :
+   RoundDeSg (b) ki ki2=
+     let (w1,w2)=b;
+         B=((w2 -ki2) #>> w2n w1) ⊕ w1;
+         A= ((w1-ki) #>>w2n B) ⊕ B in
+             (A,B)
+End
+
+Theorem RoundDe_EnSg:
+    !b ki ki2.
+       RoundDeSg (RoundEnSg (b) ki ki2) ki ki2=(b)
+Proof
+     rw[]
+  >> rw[RoundEnSg_def,RoundDeSg_def]
+  >> pairarg_tac
+  >> fs[]
+  >> pairarg_tac
+  >> fs[]
+  >> rw[]      
+QED
+
+Definition RoundEn'_def:
+   (RoundEn' 0 ki ki2 (b)= (b))
+   /\
+   RoundEn' (SUC n) ki ki2 (b)=
+     let (b')= RoundEn' n ki ki2 (b);
+     in (RoundEnSg (b') ki ki2)
+End
+
+Definition RoundDe'_def :
+   (RoundDe' 0 ki ki2 (b:block)= (b))
+   /\
+   RoundDe' (SUC n) ki ki2 (b)=
+     let (b')= RoundDe' n ki ki2 (b)
+     in (RoundDeSg (b') ki ki2)
+End
+
+Theorem RoundDe'_comm:
+    !n b ks ki ki2. RoundDeSg (RoundDe' n ki ki2 (b)) ki ki2
+        = RoundDe' n ki ki2 (RoundDeSg b ki ki2)
+Proof
+     rw[]
+  >> Induct_on ‘n’
+  >- rw[RoundDe'_def,RoundDeSg_def]
+
+  >> rw[RoundDe'_def,RoundDeSg_def]
+QED
+
+Theorem RoundEn'_comm:
+    !n b ks ki ki2. RoundEnSg (RoundEn' n ki ki2 (b)) ki ki2
+        = RoundEn' n ki ki2 (RoundEnSg b ki ki2)
+Proof
+     rw[]
+  >> Induct_on ‘n’
+  >- rw[RoundEn'_def,RoundEnSg_def]
+
+  >> rw[RoundEn'_def,RoundEnSg_def]
+QED
+
+Theorem RoundEe'_De':
+   !n b ki ki2. RoundDe' n ki ki2 (RoundEn' n ki ki2 (b))= (b)
+Proof
+     rw[]
+  >> Induct_on ‘n’
+  >- rw[RoundDe'_def,RoundEn'_def]
+
+  >> rw[RoundEn'_def]
+  >> rw[RoundDe'_def]
+  >> Know ‘RoundDeSg (RoundDe' n ki ki2 (RoundEnSg (RoundEn' n ki ki2
+           b) ki ki2)) ki ki2 =
+           RoundDe' n ki ki2 (RoundDeSg (RoundEnSg (RoundEn' n ki ki2
+           b) ki ki2) ki ki2)’
+  >- rw[RoundDe'_comm]
+  >> Rewr'
+  >> Know ‘RoundDeSg (RoundEnSg (RoundEn' n ki ki2 b) ki ki2) ki ki2
+           = (RoundEn' n ki ki2 b)’
+  >- rw[RoundDe_EnSg]
+  >> Rewr'
+  >> rw[]
 QED
 
 val _ = export_theory();
 val _ = html_theory "RC5";
+
