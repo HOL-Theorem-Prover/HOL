@@ -4964,7 +4964,7 @@ Proof
   \\ Cases_on`dimword(:'a) = 2`
   >- (
     gs[word_mod_def, word_div_def]
-    \\ `w2n b < 2 ∧ w2n e < 2` by metis_tac[w2n_lt]
+    \\ `w2n b < 2 /\ w2n e < 2` by metis_tac[w2n_lt]
     \\ gs[NUMERAL_LESS_THM]
     \\ Cases_on`b` \\ gs[word_mul_n2w] )
   \\ `2 < dimword(:'a)`
