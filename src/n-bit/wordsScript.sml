@@ -261,6 +261,9 @@ val word_add_def = zDefine`
 val word_mul_def = zDefine`
   word_mul (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v * w2n w)`
 
+val word_exp_def = zDefine`
+  word_exp (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v ** w2n w)`
+
 val word_log2_def = zDefine`
   word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`
 
@@ -310,9 +313,6 @@ val word_rem_def = Define`
         word_mod a b`
 
 val word_L2_def = Define `word_L2 = word_mul word_L word_L`
-
-val word_exp_def = Define`
-  word_exp (v:'a word) (w: 'a word) = n2w (w2n v ** w2n w): 'a word`
 
 val () = List.app (fn (s, t) => Parse.overload_on (s, Parse.Term t))
   [("+", `$word_add`),
