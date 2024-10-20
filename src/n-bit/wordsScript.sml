@@ -4977,7 +4977,7 @@ Proof
   \\ Cases_on`e` \\ gs[word_mod_def, word_div_def]
   \\ Cases_on`b` \\ gs[]
   \\ gs[GSYM EXP_EXP_MULT, word_mul_n2w]
-  \\ DEP_REWRITE_TAC[MOD_MOD_LESS]
+  \\ DEP_REWRITE_TAC[MOD_MOD_LESS_EQ]
   \\ gs[]
   \\ IF_CASES_TAC \\ gs[]
   >- (
@@ -5007,7 +5007,7 @@ Termination
           LESS_OR_EQ, ONE_LT_dimword, ZERO_LT_dimword] )
   \\ qx_gen_tac`e` \\ rw[]
   \\ Cases_on`e`
-  \\ gs[word_div_def, word_mod_def, MOD_MOD_LESS]
+  \\ gs[word_div_def, word_mod_def, MOD_MOD_LESS_EQ]
   \\ DEP_REWRITE_TAC[LESS_MOD]
   \\ conj_asm2_tac \\ gs[DIV_LT_X]
 End
@@ -5035,7 +5035,7 @@ Proof
     \\ gs[NOT_LESS, NUMERAL_LESS_THM,
           LESS_OR_EQ, ONE_LT_dimword, ZERO_LT_dimword] )
   \\ Cases_on`e` \\ gs[word_mod_def, word_div_def]
-  \\ reverse IF_CASES_TAC \\ gs[MOD_MOD_LESS]
+  \\ reverse IF_CASES_TAC \\ gs[MOD_MOD_LESS_EQ]
   >- (
     rewrite_tac[GSYM word_sub_def]
     \\ `1 <= n` by simp[]
