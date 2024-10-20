@@ -2466,12 +2466,12 @@ val MOD_LESS = Q.store_thm ("MOD_LESS",
  `!m n. 0 < n ==> m MOD n < n`,
  METIS_TAC [DIVISION]);
 
-Theorem MOD_MOD_LESS:
-  0 < y /\ y < z ==> x MOD y MOD z = x MOD y
+Theorem MOD_MOD_LESS_EQ:
+  0 < y /\ y <= z ==> x MOD y MOD z = x MOD y
 Proof
   strip_tac
   \\ irule LESS_MOD
-  \\ irule LESS_TRANS
+  \\ irule LESS_LESS_EQ_TRANS
   \\ goal_assum(first_assum o mp_then Any mp_tac)
   \\ irule MOD_LESS
   \\ simp[]
