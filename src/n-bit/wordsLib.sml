@@ -376,6 +376,7 @@ local
       Q.SPEC `^n2w n` reduce_or, reduce_xor_def, reduce_xnor_def,
       reduce_nand_def, reduce_nor_def,
       Q.SPECL [`^Na`, `^n2w n`] word_sign_extend_def,
+      word_exp_tailrec, word_exp_tailrec_def,
       word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
       word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
       l2w_def, w2l_def, s2w_def, w2s_def, add_with_carry_def,
