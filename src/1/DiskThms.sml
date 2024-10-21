@@ -2,7 +2,7 @@ structure DiskThms :> DiskThms =
 struct
 
   open HolKernel SharingTables
-  val dflt_info = {loc = Unknown, private = false}
+  val dflt_info = {loc = Unknown, private = false, class = DB_dtype.Thm}
   fun to_sexp thms =
        let
          val ed = {
