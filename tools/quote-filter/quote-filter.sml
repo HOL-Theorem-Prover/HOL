@@ -7,11 +7,13 @@ val _ = catch_interrupt true;
 
 fun read_from_stream is n = TextIO.input is
 
-val (instream, outstream, intp, qfixp, callback) =
+val {instrm=instream, outstrm = outstream, interactive = intp,
+     quotefixp = qfixp, closefn = callback, infilename} =
     processArgs (false,false,false) (CommandLine.arguments())
 
 open QuoteFilter.UserDeclarations
-val state as QFS args = newstate {inscriptp = intp, quotefixp = qfixp}
+val state as QFS args = newstate {inscriptp = intp, quotefixp = qfixp,
+                                  scriptfilename = infilename}
 
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and

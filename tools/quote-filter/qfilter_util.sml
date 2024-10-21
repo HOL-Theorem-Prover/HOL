@@ -32,7 +32,8 @@ fun open_files intp infn outfn =
             (strm, cb)
           end
     in
-      (is, os, intp, false, cb)
+      {instrm = is, outstrm = os, interactive = intp, quotefixp = false,
+       closefn = cb, infilename = infn}
     end
 
 fun usage strm status =
@@ -53,8 +54,19 @@ fun processArgs (nonp, intp, qfixp) args =
     case args of
         [] => if intp then badusage()
               else if qfixp then
-                (TextIO.stdIn, TextIO.stdOut, false, qfixp, nothing)
-              else (TextIO.stdIn, TextIO.stdOut, not intp, false, nothing)
+                {instrm = TextIO.stdIn,
+                 outstrm = TextIO.stdOut,
+                 interactive = false,
+                 quotefixp = qfixp,
+                 closefn = nothing,
+                 infilename = ""}
+              else
+                {instrm = TextIO.stdIn,
+                 outstrm = TextIO.stdOut,
+                 interactive = true,
+                 quotefixp = false,
+                 closefn = nothing,
+                 infilename = ""}
       | ["-h"] => usage TextIO.stdOut success
       | "-h" :: _ => badusage()
       | "-i" :: rest => if nonp orelse qfixp then badusage()

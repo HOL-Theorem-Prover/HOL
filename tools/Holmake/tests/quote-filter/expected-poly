@@ -89,3 +89,6 @@ val thmname = (fn rule => boolLib.save_thm("thmname",rule)) ( expression
 ];
 
 val x = 91 + 10;
+val   y = 11
+val s = ""  
+val s' = "foo.sml" (* #(FNAME) *)

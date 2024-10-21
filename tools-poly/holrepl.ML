@@ -163,7 +163,7 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
         in fn () =>
           let
             (* Create a new lexer for each command block. *)
-            val {read, ...} = QFRead.inputToReader true input;
+            val {read, ...} = QFRead.inputToReader true "" input;
             val endOfBlock = ref false;
             fun read' () = case read () of
                 NONE => (endOfBlock := true; NONE)
@@ -195,7 +195,7 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, zeroTerm,
           fun cgen() = !cgenref()
           fun bind_cgen () =
               let
-                val {read, ...} = QFRead.streamToReader true TextIO.stdIn
+                val {read, ...} = QFRead.streamToReader true "" TextIO.stdIn
               in
                 cgenref := read
               end

@@ -22,7 +22,7 @@ fun use fname = use_reader fname (QFRead.fileToReader fname)
 fun useScript fname =
     let
       val istream = TextIO.openIn fname
-      val reader = QFRead.streamToReader true istream
+      val reader = QFRead.streamToReader true fname istream
       val _ = use_reader fname reader
               handle e => (TextIO.closeIn istream; raise e)
     in
