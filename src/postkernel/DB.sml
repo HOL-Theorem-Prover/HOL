@@ -244,7 +244,7 @@ fun find0 incprivatep s =
       Map.foldr fold [] namemap
     end
 
-fun find s = List.map (fn (n, (th,i)) => (n, (th,#class i))) (find0 false s)
+fun find s = List.map drop_private (find0 false s)
 val find_all = find0 true
 
 (*---------------------------------------------------------------------------

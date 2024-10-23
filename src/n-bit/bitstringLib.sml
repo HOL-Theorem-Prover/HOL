@@ -476,10 +476,10 @@ type bitify_boolify =
 local
    fun findDef s =
       case s |> DB.find
-             |> List.partition (fn ((_, s2), (_, DB.Def)) => s2 = s
+             |> List.partition (fn ((_, s2), (_, DB.Def, _)) => s2 = s
                                  | _ => false)
              |> fst of
-        [((thy, _), (thm, _))] => SOME (thy, thm)
+        [((thy, _), (thm, _, _))] => SOME (thy, thm)
       | _ => NONE
 in
    fun bitify_boolify i =

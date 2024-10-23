@@ -64,9 +64,7 @@ val _ = TeX_notation {hol = "'e",   TeX = ("\\epsilon{}", 1)}
 (* past this point the Greek letters are likely to be more confusing than
    helpful *)
 
-fun mkloc(s,n) =
-  DB_dtype.Located{exact = true, linenum = n,
-                   scriptpath=holpathdb.reverse_lookup{path=s}}
+fun mkloc(s,n) = DB_dtype.mkloc(s,n,true)
 fun def l (n,t) = Definition.located_new_definition {loc=mkloc l,name=n,def=t}
 fun thm l (n,th) = Theory.gen_save_thm{loc=mkloc l,name=n,private=false,thm=th}
 fun ax l (n,t) = Theory.gen_new_axiom(n,t,mkloc l)
