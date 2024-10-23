@@ -390,7 +390,11 @@ ProofLine =
            case List.find (fn (k,v) => k = "induction") kvalist of
               SOME (_, s::_) => s
             | _ => indthm_munge thname
-
+       val qdefine_str =
+           if !scriptfilename = "" then "TotalDefn.qDefine "
+           else "TotalDefn.located_qDefine(DB_dtype.mkloc(\"" ^
+                String.toString (!scriptfilename) ^ "\"," ^
+                Int.toString (linenum yyarg) ^ ",true))"
      in
        mltype_stack := [];
        induction_thm := ind_thm;
@@ -398,7 +402,7 @@ ProofLine =
        labelidxs := [];
        YYBEGIN defnquote;
        ECHO yyarg (pfx ^
-                   "val " ^ thname ^ " = TotalDefn.qDefine \"" ^
+                   "val " ^ thname ^ " = " ^ qdefine_str ^ "\"" ^
                    with_attrs_string ^ "\" [QUOTE \"" ^
                    locpragma yyarg (yytext, yypos) 0)
      end

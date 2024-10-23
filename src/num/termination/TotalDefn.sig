@@ -40,12 +40,16 @@ sig
 
    val defnDefine  : tactic -> defn -> thm * thm option * thm option
    val primDefine  : defn -> thm * thm option * thm option
-   val tailrecDefine: string -> term quotation -> thm
+   val tailrecDefine: DB.thm_src_location -> string -> term quotation -> thm
+   val located_tDefine : DB.thm_src_location -> string -> term quotation ->
+                         tactic -> thm * thm option
    val tDefine     : string -> term quotation -> tactic -> thm * thm option
    val xDefine     : string -> term quotation -> thm * thm option
    val Define      : term quotation -> thm
    val multiDefine : term quotation -> thm list
    val qDefine     : string -> term quotation -> tactic option -> thm
+   val located_qDefine : DB.thm_src_location -> string -> term quotation ->
+                         tactic option -> thm
    datatype phase
         = PARSE of term quotation
         | BUILD of term

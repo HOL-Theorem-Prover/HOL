@@ -698,7 +698,7 @@ end
 (* Version of Define where the termination tactic is explicitly supplied.    *)
 (*---------------------------------------------------------------------------*)
 
-fun tDefine stem q tac =
+fun located_tDefine loc stem q tac =
  let open Defn
      fun thunk() =
        let val defn = Hol_defn stem q
@@ -725,7 +725,9 @@ fun tDefine stem q tac =
   Parse.try_grammar_extension
     (Theory.try_theory_extension thunk) ()
   handle e => render_exn "tDefine" e
- end;
+ end
+
+val tDefine = located_tDefine DB.Unknown
 
 (* ----------------------------------------------------------------------
     version of Define that allows control of options with "attributes"
@@ -742,16 +744,16 @@ fun find_indoption sl =
           set_diff sl [s]
       )
 
-fun tailrecDefine nm q =
+fun tailrecDefine loc nm q =
     let
       val (t, _) = Defn.parse_absyn (Parse.Absyn q)
-      val th = tailrecLib.tailrec_define nm t
+      val th = tailrecLib.gen_tailrec_define {name = nm, def = t, loc = loc}
     in
       Defn.add_defs_to_EVAL [(nm,th)];
       th
     end
 
-fun qDefine stem q tacopt =
+fun located_qDefine loc stem q tacopt =
     let
       val (corename, attrs) = ThmAttribute.extract_attributes stem
       val (nocomp, attrs) = test_remove "nocompute" attrs
@@ -772,7 +774,7 @@ fun qDefine stem q tacopt =
                 else (fn f => f))
       val (thm,indopt) =
           case (tailrecp, tacopt) of
-              (true, NONE) => (fmod (tailrecDefine corename) q, NONE)
+              (true, NONE) => (fmod (tailrecDefine loc corename) q, NONE)
             | (true, SOME _) =>
               raise ERR "qDefine"
                     "Termination tactic for tail-recursive definition makes \
@@ -798,6 +800,8 @@ fun qDefine stem q tacopt =
             DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
       thm
     end
+
+val qDefine = located_qDefine DB.Unknown
 
 fun Define q =
     let
