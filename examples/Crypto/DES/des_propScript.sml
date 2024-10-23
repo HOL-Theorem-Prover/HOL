@@ -691,7 +691,7 @@ QED
 Theorem weakK1_proper2:
   !x. x IN Wtext1 /\  (FullDES Wkey1= (encrypt,decrypt))
    ==>  encrypt x=x
-Proof
+Proof 
      rw[DES_def,Wtext1_def]
   >> Suff ‘desCore 16 (KS Wkey1 16) x=desCore 0 (KS Wkey1 16) x’
   >- rw[desCore_0]
@@ -795,7 +795,7 @@ End
 Theorem BIJ_wtext1:
    BIJ w1trans1 Wtext1 univ(:word32)
 Proof
-     rw[BIJ_IFF_INV]
+     rw[BIJ_IFF_INV] 
   >> EXISTS_TAC “w1trans2”
   >> rw[]
   >- (rw[w1trans2_def,Wtext1_def] \\
@@ -804,35 +804,37 @@ Proof
           EVAL_TAC) \\
       Suff ‘(desCore 8 (KS Wkey1 8) (desCore 8 (KS Wkey1 8) (IIP (Join (x,x))))) =
             (desCore 8 (REVERSE (KS Wkey1 8)) (desCore 8 (KS Wkey1 8) (IIP (Join (x,x)))))’
-  >- (Rewr'\\
-     rw[desCore_CORRECT]\\
-     rw[IP_IIP_Inverse,Split_Join_Inverse])
-  >> Know ‘(REVERSE (KS Wkey1 8))=(KS Wkey1 8)’
-  >- (rw[Wkey1_def]\\
-       EVAL_TAC)
-  >> rw[])
+      >- (Rewr'\\
+          rw[desCore_CORRECT]\\
+          rw[IP_IIP_Inverse,Split_Join_Inverse])
+      >> Know ‘(REVERSE (KS Wkey1 8))=(KS Wkey1 8)’
+         >- (rw[Wkey1_def]\\
+             EVAL_TAC)
+      >> rw[])
+      
   >- (POP_ASSUM MP_TAC
-  >> rw[w1trans2_def,Wtext1_def,w1trans1_def]
-  >> rw[]
-  >> Know ‘(w,w)=Split (IP (desCore 8 (KS Wkey1 8) x))’
-  >- rw[]
-  >> Rewr'
-  >> rw[IIP_IP_Inverse,Join_Split_Inverse]
-  >> Know ‘LENGTH (KS Wkey1 8)=8’
-  >- (rw[Wkey1_def]\\
-     EVAL_TAC)
-  >> Suff ‘(desCore 8 (KS Wkey1 8) (desCore 8 (KS Wkey1 8) x)) =
+      >> rw[w1trans2_def,Wtext1_def,w1trans1_def]
+      >> rw[]
+      >> Know ‘(w,w)=Split (IP (desCore 8 (KS Wkey1 8) x))’
+      >- rw[]
+      >> Rewr'
+      >> rw[IIP_IP_Inverse,Join_Split_Inverse]
+      >> Know ‘LENGTH (KS Wkey1 8)=8’
+      >- (rw[Wkey1_def]\\
+          EVAL_TAC)
+      >> Suff ‘(desCore 8 (KS Wkey1 8) (desCore 8 (KS Wkey1 8) x)) =
            (desCore 8 (REVERSE (KS Wkey1 8)) (desCore 8 (KS Wkey1 8) x))’
-  >- (Rewr'\\
-      rw[desCore_CORRECT])
-  >> Know ‘(REVERSE (KS Wkey1 8))=(KS Wkey1 8)’
-  >- (rw[Wkey1_def]\\
-       EVAL_TAC)
-  >> rw[])
+      >- (Rewr'\\
+          rw[desCore_CORRECT])
+      >> Know ‘(REVERSE (KS Wkey1 8))=(KS Wkey1 8)’
+      >- (rw[Wkey1_def]\\
+          EVAL_TAC)
+      >> rw[])
+      
   >> rw[w1trans1_def,w1trans2_def]
   >> Know ‘LENGTH (KS Wkey1 8)=8’
   >- (rw[Wkey1_def]\\
-     EVAL_TAC)
+      EVAL_TAC)
   >> Suff ‘(desCore 8 (KS Wkey1 8) (desCore 8 (KS Wkey1 8) (IIP (Join (x,x))))) =
            (desCore 8 (REVERSE (KS Wkey1 8)) (desCore 8 (KS Wkey1 8) (IIP (Join (x,x)))))’
   >- (Rewr'\\
@@ -1106,35 +1108,32 @@ Definition trans1_def:
 End
 
 Definition trans2_def:
-  trans2 (x:word6)= (x,x)
+  trans2 X (x:word6)= (x,x?? X)
 End
 
 Theorem BIJ_XORL:
-   BIJ trans2 univ(:word6) (AllpairXor 0x0w) 
+   !X. BIJ (trans2 X) univ(:word6) (AllpairXor X) 
 Proof
      rw[BIJ_IFF_INV]
   >- (rw[AllpairXor_def,trans2_def])
   
-  >> EXISTS_TAC “trans1”
+  >> Q.EXISTS_TAC ‘trans1’
   >> rw[]
 
   >- rw[trans2_def,trans1_def]
   
   >> POP_ASSUM MP_TAC
   >> rw[AllpairXor_def,trans2_def,trans1_def]
-  >> Know ‘x1 ⊕ x1 ⊕ x2=x1 ⊕ 0w’
-  >- RW_TAC fcp_ss[]
-  >> rw[WORD_XOR_CLAUSES]
 QED
 
 Theorem AllpairXor_card :
-    CARD (AllpairXor 0x0w) = 2 ** 6
+    !X. CARD (AllpairXor X) = 2 ** 6
 Proof
-    Suff ‘2 ** 6=CARD (AllpairXor 0x0w)’
+    Suff ‘!X. 2 ** 6=CARD (AllpairXor X)’
  >- rw[]
  >> RW_TAC std_ss [GSYM card_word6, BIJ_XORL]
  >> MATCH_MP_TAC FINITE_BIJ_CARD
- >> Q.EXISTS_TAC ‘trans2’
+ >> Q.EXISTS_TAC ‘trans2 X’
  >> CONJ_TAC
  >- rw[]
  >> rw[BIJ_XORL]
@@ -1170,6 +1169,12 @@ Proof
   >> rw[FCP_BETA]
 QED
 
+Theorem xor_twice:
+   !x1 x2 k. (x1  ?? k) ?? (x2 ?? k) = x1 ?? x2
+Proof
+    rw[WORD_XOR_CLAUSES]
+QED
+
 Theorem xor_S1:
    ?x1 x2. S1(x1) ⊕ S1(x2)<>S1(x1⊕x2)
 Proof
@@ -1177,6 +1182,103 @@ Proof
   >> Q.EXISTS_TAC ‘0b0w’
   >> Q.EXISTS_TAC ‘0b0w’
   >> EVAL_TAC
+QED
+
+Definition S_list_def:
+   S_list= [S1;S2;S3;S4;S5;S6;S7;S8]
+End
+
+Theorem xor_Sbox:
+   !Sbox .?x1 x2.MEM Sbox S_list ==>
+       Sbox(x1) ⊕ Sbox(x2)<>Sbox(x1⊕x2)
+Proof
+     rw[S_list_def]
+  >> Q.EXISTS_TAC ‘0b0w’
+  >> Q.EXISTS_TAC ‘0b0w’
+  >> rw[SBox_def]
+  >- (rw[S1_data]\\
+      EVAL_TAC)
+      
+  >- (rw[S2_data]\\
+      EVAL_TAC)
+
+  >- (rw[S3_data]\\
+      EVAL_TAC)
+
+  >- (rw[S4_data]\\
+      EVAL_TAC)
+
+  >- (rw[S5_data]\\
+      EVAL_TAC)
+
+  >- (rw[S6_data]\\
+      EVAL_TAC)
+
+  >- (rw[S7_data]\\
+      EVAL_TAC)
+
+  >> rw[S8_data]
+  >> EVAL_TAC                         
+QED
+
+Theorem xor_trans:
+   !x x' k. x ?? k= x' ==> x ?? x'=k
+Proof
+     WORD_DECIDE_TAC
+QED
+
+Definition word6_set1_def:
+   word6_set1 (X:word6) (Y:word4) Sb=
+       {x | Sb x ⊕ Sb (x ⊕ X) = Y}
+End
+
+Definition word6_set2_def:
+   word6_set2 (X:word6) (Y:word4) Sb=
+       {(x1,x2) | (x1 ?? x2)= X /\Sb x1 ⊕ Sb (x2) = Y}
+End
+
+Definition word6_trans1_def:
+   (word6_trans1 X) x= (x,x??X)
+End
+
+Definition word6_trans2_def:
+   word6_trans2 (x1,x2)= x1
+End
+
+Theorem BIJ_pairXcY:
+   !X Y Sb. BIJ (word6_trans1 X) (word6_set1 X Y Sb) (word6_set2 X Y Sb) 
+Proof
+     rw[BIJ_IFF_INV]
+  >- (POP_ASSUM MP_TAC\\
+      rw[word6_set2_def,word6_set1_def]\\
+      rw[word6_trans1_def])
+       
+  >> Q.EXISTS_TAC ‘word6_trans2’
+  >> rw[]
+
+  >- (POP_ASSUM MP_TAC\\
+      rw[word6_set2_def,word6_set1_def]\\
+      rw[word6_trans2_def])
+
+  >- (POP_ASSUM MP_TAC\\
+      rw[word6_set1_def]\\
+      rw[word6_trans2_def,word6_trans1_def])
+      
+  >> POP_ASSUM MP_TAC
+  >> rw[word6_set2_def]
+  >> rw[word6_trans2_def,word6_trans1_def]
+QED
+
+Theorem pairXcY_card :
+    ! X Y Sb. CARD (word6_set1 X Y Sb)
+                = CARD (word6_set2 X Y Sb)
+Proof
+    rw[]
+ >> MATCH_MP_TAC FINITE_BIJ_CARD
+ >> Q.EXISTS_TAC ‘(word6_trans1 X)’
+ >> CONJ_TAC
+ >- rw[word6_set1_def]
+ >> rw[BIJ_pairXcY]
 QED
 
 Theorem prob_uniform_on_finite_set :
@@ -1366,6 +1468,7 @@ Proof
   >> rw[p_space_def]
   >> rw[card_word48]
 QED
+
 Definition XcauseYFp_def:
    XcauseYFp (X:word32) (Y:word32) p <=>
      prob word32p {x| ?k. ((S(E(x)?? k)) ?? (S(E(x)?? E(X)?? k))= Y)}=p
@@ -1380,6 +1483,11 @@ Definition XcauseYFkey_def:
    XcauseYFkey (X:word32) (Y:word32) (x:word48)=
      let x'= x?? E(X) in
         prob word48p {k| S(x ?? k) ?? S(x' ?? k)= Y}
+End
+
+Definition XcauseYFp'_def:
+   XcauseYF' (X:word32) (Y:word32) p <=>
+     prob word48p {x| S(x) ?? S(x ?? E(X))= Y}=p
 End
 
 Definition XcauseYF'_def:
@@ -1667,7 +1775,6 @@ Definition characterDES_def:
    characterDES (X:word64) (Y:word64) Yl= let 
       XorR= GENLIST (λi. charapairDES X Yl i) (LENGTH Yl) in (X,XorR,Y)
 End
-
 
 val _ = export_theory();
 val _ = html_theory "des_prop";

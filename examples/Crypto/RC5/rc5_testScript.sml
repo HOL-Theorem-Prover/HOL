@@ -1,9 +1,8 @@
 open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
-     listTheory listLib combinTheory hurdUtils;
+open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib listTheory listLib combinTheory hurdUtils;
 
-open desTheory;
+open RC5Theory;
 
 val _ = new_theory "rc5_test";
 
@@ -14,6 +13,33 @@ Theorem Skeys_l32_r1 :
 Proof
     EVAL_TAC
 QED
+
+Theorem half_messageTest1:
+    half_messageDe
+       (half_messageEn 0x3w 0x2w [0x2w;0x1w;0x3w;0x1w] (2*1))
+       (half_messageEn 0x3w 0x2w [0x2w;0x1w;0x3w;0x1w] (2*1+1))
+       [0x2w;0x1w;0x3w;0x1w] (2*1) = 0x2w
+Proof
+    EVAL_TAC
+QED
+
+Theorem half_messageTest2:
+    half_messageDe
+        (half_messageEn 0x3w 0x2w [0x2w;0x1w] (1))
+        (half_messageEn 0x3w 0x2w [0x2w;0x1w] (1+1))
+        [0x2w;0x1w] (1) = 0x2w
+Proof
+    EVAL_TAC
+QED
+Theorem RoundEn_De_Test:
+    RoundDe 1 [0x2w;0x1w;0x3w;0x1w]
+       (RoundEn 1 0x3w 0x2w [0x2w;0x1w;0x3w;0x1w])= (0x3w,0x2w)
+Proof
+    EVAL_TAC
+QED
+
+
+
 
 
 
