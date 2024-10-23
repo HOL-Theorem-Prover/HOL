@@ -1211,56 +1211,86 @@ fun check_name princ_name name =
 (*                DEFINITION PRINCIPLES                                      *)
 (*---------------------------------------------------------------------------*)
 
-fun new_type_definition (name,thm) = let
+(* new_type_definition *)
+fun located_new_type_definition0 fnm (loc,name,thm) = let
   val Thy = current_theory()
-  val _ = is_temp_binding name orelse check_name "new_type_definition" name
+  val _ = is_temp_binding name orelse check_name fnm name
   val tydef = Thm.prim_type_definition({Thy = Thy, Tyop = name}, thm)
  in
-   store_definition (name^"_TY_DEF", tydef) before
+   gen_store_definition (name^"_TY_DEF", tydef,loc) before
    call_hooks (TheoryDelta.NewTypeOp{Name = name, Thy = Thy})
  end
- handle e => raise (wrap_exn "Theory.Definition" "new_type_definition" e);
+ handle e => raise (wrap_exn "Theory.Definition" fnm e);
 
-fun gen_new_specification(name, th) = let
+fun located_new_type_definition {loc,name,witness} =
+    located_new_type_definition0 "located_new_type_definition"
+                                 (loc,name,witness)
+fun new_type_definition (name,witness) =
+    located_new_type_definition0 "new_type_definition" (Unknown,name,witness)
+
+(* gen_new_specification *)
+fun located_gen_new_specification0 fnm (loc, name, th) = let
   val thy = current_theory()
   val (cnames,def) = Thm.gen_prim_specification thy th
  in
-  store_definition (name, def) before
+  gen_store_definition (name, def,loc) before
   List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy=thy}))
            cnames
  end
- handle e => raise (wrap_exn "Definition" "gen_new_specification" e);
+ handle e => raise (wrap_exn "Definition" fnm e);
 
-fun new_definition(name,M) =
+fun located_gen_new_specification {loc,name,witness} =
+    located_gen_new_specification0
+      "located_gen_new_specification"
+      (loc,name,witness)
+
+fun gen_new_specification (s,thm) =
+    located_gen_new_specification0 "gen_new_specification" (Unknown,s,thm)
+
+(* new specification *)
+fun located_new_specification0 fnm {name, constnames=cnames, witness=th,loc} =
+    let
+      val thy   = current_theory()
+      val _     = is_temp_binding name orelse
+                  List.all (check_name fnm) cnames
+      val def   = Thm.prim_specification thy cnames th
+      val final = gen_store_definition (name, def,loc)
+    in
+      List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy = thy}))
+               cnames
+    ; final
+    end
+    handle e => raise (wrap_exn "Definition" fnm e);
+val located_new_specification =
+    located_new_specification0 "located_new_specification0"
+fun new_specification(n,cnames,th) =
+    located_new_specification0 "new_specification"
+                               {loc = Unknown, constnames = cnames,
+                                witness = th, name = n}
+
+(* new definition *)
+fun located_new_definition0 fnm {name,def=M,loc} =
  let val (dest,post) = !new_definition_hook
      val (V,eq)      = dest M
      val (nm, _)     = eq |> dest_eq |> #1 |> dest_var
                           handle HOL_ERR _ =>
-                                 raise ERR "Definition.new_definition"
+                                 raise ERR ("Definition." ^ fnm)
                                        "Definition not an equality"
-     val _           = is_temp_binding name orelse
-                       check_name "new_definition" nm
+     val _           = is_temp_binding name orelse check_name fnm nm
      val Thy         = current_theory()
      val (cn,def_th) = Thm.gen_prim_specification Thy (Thm.ASSUME eq)
      val Name        = case cn of [Name] => Name | _ => raise Match
  in
-   store_definition (name, post(V,def_th)) before
+   gen_store_definition (name, post(V,def_th),loc) before
    call_hooks (TheoryDelta.NewConstant{Name=Name, Thy=Thy})
  end
- handle e => raise (wrap_exn "Definition" "new_definition" e);
+ handle e => raise (wrap_exn "Definition" fnm e);
+val located_new_definition =
+    located_new_definition0 "located_new_definition"
+fun new_definition(n,def_t) =
+    located_new_definition0 "new_definition" {loc=Unknown,def=def_t,name=n}
 
-fun new_specification (name, cnames, th) = let
-  val thy   = current_theory()
-  val _     = is_temp_binding name orelse
-              List.all (check_name "new_specification") cnames
-  val def   = Thm.prim_specification thy cnames th
-  val final = store_definition (name, def)
- in
-  List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy = thy}))
-           cnames
-  ; final
- end
- handle e => raise (wrap_exn "Definition" "new_specification" e);
+
 
 end (* Definition struct *)
 

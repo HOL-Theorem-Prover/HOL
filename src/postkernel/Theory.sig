@@ -95,9 +95,18 @@ sig
 (* Extensions by definition *)
   structure Definition : sig
     val new_type_definition    : string * thm -> thm
+    val located_new_type_definition :
+        {loc:thm_src_location,name:string,witness:thm} -> thm
     val new_definition         : string * term -> thm
+    val located_new_definition :
+        {loc:thm_src_location,name:string,def:term} -> thm
     val new_specification      : string * string list * thm -> thm
+    val located_new_specification :
+        {loc:thm_src_location,name:string,constnames:string list,
+         witness: thm} -> thm
     val gen_new_specification  : string * thm -> thm
+    val located_gen_new_specification :
+        {name:string,witness:thm, loc: thm_src_location} -> thm
 
     val new_definition_hook    : ((term -> term list * term) *
                                   (term list * thm -> thm)) ref
