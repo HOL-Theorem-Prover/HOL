@@ -1579,11 +1579,11 @@ Definition S_data_def:
 End
 
 Definition XpairF_def:
-   XpairF X Y= {(x8,x7,x6,x5,x4,x3,x2,x1) | S8 x1 ⊕ S8 (x1 ⊕ (5 >< 0) (E X)) = (3 >< 0) Y /\ S7 x2 ⊕ S7 (x2 ⊕ (11 >< 6) (E X)) = (7 >< 4) Y /\S6 x3 ⊕ S6 (x3 ⊕ (17 >< 12) (E X)) = (11 >< 8) Y /\ S5 x4 ⊕ S5 (x4 ⊕ (23 >< 18) (E X)) = (15 >< 12) Y /\ S4 x5 ⊕ S4 (x5 ⊕ (29 >< 24) (E X)) = (19 >< 16) Y /\ S3 x6 ⊕ S3 (x6 ⊕ (35 >< 30) (E X)) = (23 >< 20) Y /\ S2 x7 ⊕ S2 (x7 ⊕ (41 >< 36) (E X)) = (27 >< 24) Y /\S1 x8 ⊕ S1 (x8 ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}
+   XpairF X (Y:word32)= {(x1,x2,x3,x4,x5,x6,x7,x8) | S8 x8 ⊕ S8 (x8 ⊕ (5 >< 0) (E X)) = (3 >< 0) Y /\ S7 x7 ⊕ S7 (x7 ⊕ (11 >< 6) (E X)) = (7 >< 4) Y /\S6 x6 ⊕ S6 (x6 ⊕ (17 >< 12) (E X)) = (11 >< 8) Y /\ S5 x5 ⊕ S5 (x5 ⊕ (23 >< 18) (E X)) = (15 >< 12) Y /\ S4 x4 ⊕ S4 (x4 ⊕ (29 >< 24) (E X)) = (19 >< 16) Y /\ S3 x3 ⊕ S3 (x3 ⊕ (35 >< 30) (E X)) = (23 >< 20) Y /\ S2 x2 ⊕ S2 (x2 ⊕ (41 >< 36) (E X)) = (27 >< 24) Y /\S1 x1 ⊕ S1 (x1 ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}
 End
 
 Theorem F_convert:
-   !X Y. XpairF X Y =
+   !X Y. XpairF X (Y:word32) =
    ({x | S1 x ⊕ S1 (x ⊕ (47 >< 42) (E X)) = (31 >< 28) Y}) CROSS
    ({x | S2 x ⊕ S2 (x ⊕ (41 >< 36) (E X)) = (27 >< 24) Y}) CROSS
    ({x | S3 x ⊕ S3 (x ⊕ (35 >< 30) (E X)) = (23 >< 20) Y}) CROSS
@@ -1642,73 +1642,73 @@ Proof
           
   >- (rw[transF1_def]\\
      rw[S_def]\\
-     Know ‘(5 >< 0) (x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= x1’
+     Know ‘(5 >< 0) (x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= x8’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(11 >< 6)(x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= x2’
+     Know ‘(11 >< 6)(x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= x7’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(17 >< 12) (x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= x3’
+     Know ‘(17 >< 12)(x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= x6’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(23 >< 18) (x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= x4’
+     Know ‘(23 >< 18)(x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= x5’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(29 >< 24) (x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= x5’
+     Know ‘(29 >< 24)(x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= x4’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(35 >< 30) (x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= x6’
+     Know ‘(35 >< 30)(x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= x3’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(41 >< 36) (x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= x7’
+     Know ‘(41 >< 36)(x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= x2’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(47 >< 42) (x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= x8’
+     Know ‘(47 >< 42)(x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= x1’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(5 >< 0) (E X ⊕ x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= (x1 ⊕ (5 >< 0) (E X))’
+     Know ‘(5 >< 0) (E X ⊕ x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= (x8 ⊕ (5 >< 0) (E X))’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(11 >< 6) (E X ⊕ x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= (x2 ⊕ (11 >< 6) (E X))’
+     Know ‘(11 >< 6) (E X ⊕ x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= (x7 ⊕ (11 >< 6) (E X))’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(17 >< 12) (E X ⊕ x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= (x3 ⊕ (17 >< 12) (E X))’
+     Know ‘(17 >< 12) (E X ⊕ x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= (x6 ⊕ (17 >< 12) (E X))’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(23 >< 18) (E X ⊕ x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= (x4 ⊕ (23 >< 18) (E X))’
+     Know ‘(23 >< 18) (E X ⊕ x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= (x5 ⊕ (23 >< 18) (E X))’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(29 >< 24) (E X ⊕ x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= (x5 ⊕ (29 >< 24) (E X))’
+     Know ‘(29 >< 24) (E X ⊕ x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= (x4 ⊕ (29 >< 24) (E X))’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(35 >< 30) (E X ⊕ x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= (x6 ⊕ (35 >< 30) (E X))’
+     Know ‘(35 >< 30) (E X ⊕ x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= (x3 ⊕ (35 >< 30) (E X))’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(41 >< 36) (E X ⊕ x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= (x7 ⊕ (41 >< 36) (E X))’
+     Know ‘(41 >< 36) (E X ⊕ x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= (x2 ⊕ (41 >< 36) (E X))’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘(47 >< 42) (E X ⊕ x8 @@ x7 @@ x6 @@ x5 @@ x4 @@ x3 @@ x2 @@ x1)= (x8 ⊕ (47 >< 42) (E X))’
+     Know ‘(47 >< 42) (E X ⊕ x1 @@ x2 @@ x3 @@ x4 @@ x5 @@ x6 @@ x7 @@ x8)= (x1 ⊕ (47 >< 42) (E X))’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
-     Know ‘((w2w (S8 x1) ‖ w2w (S1 x8) << 28 ‖ w2w (S2 x7) << 24 ‖
-         w2w (S3 x6) << 20 ‖ w2w (S4 x5) << 16 ‖ w2w (S5 x4) << 12 ‖
-         w2w (S6 x3) << 8 ‖ w2w (S7 x2) << 4) ⊕
-        (w2w (S8 (x1 ⊕ (5 >< 0) (E X))) ‖
-         w2w (S1 (x8 ⊕ (47 >< 42) (E X))) << 28 ‖
-         w2w (S2 (x7 ⊕ (41 >< 36) (E X))) << 24 ‖
-         w2w (S3 (x6 ⊕ (35 >< 30) (E X))) << 20 ‖
-         w2w (S4 (x5 ⊕ (29 >< 24) (E X))) << 16 ‖
-         w2w (S5 (x4 ⊕ (23 >< 18) (E X))) << 12 ‖
-         w2w (S6 (x3 ⊕ (17 >< 12) (E X))) << 8 ‖
-         w2w (S7 (x2 ⊕ (11 >< 6) (E X))) << 4))=
-         (w2w (S8 x1) ⊕ w2w (S8 (x1 ⊕ (5 >< 0) (E X))) ‖
-        w2w((S1 x8) ⊕ (S1 (x8 ⊕ (47 >< 42) (E X)))) << 28 ‖
-        w2w((S2 x7) ⊕ (S2 (x7 ⊕ (41 >< 36) (E X)))) << 24 ‖
-        w2w((S3 x6) ⊕ (S3 (x6 ⊕ (35 >< 30) (E X)))) << 20 ‖
-        w2w((S4 x5) ⊕ (S4 (x5 ⊕ (29 >< 24) (E X)))) << 16 ‖
-        w2w((S5 x4) ⊕ (S5 (x4 ⊕ (23 >< 18) (E X)))) << 12 ‖
-        w2w((S6 x3) ⊕ (S6 (x3 ⊕ (17 >< 12) (E X)))) << 8 ‖
-        w2w((S7 x2) ⊕ (S7 (x2 ⊕ (11 >< 6) (E X)))) << 4):word32’
+     Know ‘((w2w (S8 x8) ‖ w2w (S1 x1) << 28 ‖ w2w (S2 x2) << 24 ‖
+         w2w (S3 x3) << 20 ‖ w2w (S4 x4) << 16 ‖ w2w (S5 x5) << 12 ‖
+         w2w (S6 x6) << 8 ‖ w2w (S7 x7) << 4) ⊕
+        (w2w (S8 (x8 ⊕ (5 >< 0) (E X))) ‖
+         w2w (S1 (x1 ⊕ (47 >< 42) (E X))) << 28 ‖
+         w2w (S2 (x2 ⊕ (41 >< 36) (E X))) << 24 ‖
+         w2w (S3 (x3 ⊕ (35 >< 30) (E X))) << 20 ‖
+         w2w (S4 (x4 ⊕ (29 >< 24) (E X))) << 16 ‖
+         w2w (S5 (x5 ⊕ (23 >< 18) (E X))) << 12 ‖
+         w2w (S6 (x6 ⊕ (17 >< 12) (E X))) << 8 ‖
+         w2w (S7 (x7 ⊕ (11 >< 6) (E X))) << 4))=
+         (w2w (S8 x8) ⊕ w2w (S8 (x8 ⊕ (5 >< 0) (E X))) ‖
+        w2w((S1 x1) ⊕ (S1 (x1 ⊕ (47 >< 42) (E X)))) << 28 ‖
+        w2w((S2 x2) ⊕ (S2 (x2 ⊕ (41 >< 36) (E X)))) << 24 ‖
+        w2w((S3 x3) ⊕ (S3 (x3 ⊕ (35 >< 30) (E X)))) << 20 ‖
+        w2w((S4 x4) ⊕ (S4 (x4 ⊕ (29 >< 24) (E X)))) << 16 ‖
+        w2w((S5 x5) ⊕ (S5 (x5 ⊕ (23 >< 18) (E X)))) << 12 ‖
+        w2w((S6 x6) ⊕ (S6 (x6 ⊕ (17 >< 12) (E X)))) << 8 ‖
+        w2w((S7 x7) ⊕ (S7 (x7 ⊕ (11 >< 6) (E X)))) << 4):word32’
      >- WORD_DECIDE_TAC\\
      Rewr'\\
      rw[WORD_w2w_OVER_BITWISE]\\
