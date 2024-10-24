@@ -1,0 +1,2 @@
+INCLUDES = $(HOLDIR)/src/string $(HOLDIR)/src/integer\
+           $(HOLDIR)/examples/fun-op-sem/imp
