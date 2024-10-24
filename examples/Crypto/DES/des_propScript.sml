@@ -1175,6 +1175,14 @@ Proof
     rw[WORD_XOR_CLAUSES]
 QED
 
+Theorem xor_Com:
+    !x1 x2 k X. (x1 ?? x2)=X ==>
+          (E(x1) ?? k) ?? (E(x2) ?? k ) = E(X) 
+Proof
+     rw[xor_twice]
+  >> rw[xor_E]
+QED
+
 Theorem xor_S1:
    ?x1 x2. S1(x1) ⊕ S1(x2)<>S1(x1⊕x2)
 Proof
@@ -1417,30 +1425,103 @@ Proof
   >> rw[word6p_convert]
 QED
 
-Definition word32p_def:
-   word32p=(univ(:word32),
-             POW (univ(:word32)),
-             (\s:(word32) set.
-               (&(CARD s))/(&(2 ** 32)) :extreal))  
+Definition word48Xor_def:
+    word48Xor (X:word48)= {(x1,x2)| x1 ⊕ x2=X}
 End
 
-Theorem prob_space_word32p:
-   prob_space word32p
+Definition trans48_1_def:
+  trans48_1 (x1:word48,x2:word48) = x1
+End
+
+Definition trans48_2_def:
+  trans48_2 X (x:word48)= (x,x?? X)
+End
+
+Theorem BIJ_XOR48:
+   !X. BIJ (trans48_2 X) univ(:word48) (word48Xor X) 
 Proof
-     
-     MATCH_MP_TAC prob_uniform_on_finite_set
-  >> rw[]
+     rw[BIJ_IFF_INV]
+  >- (rw[word48Xor_def,trans48_2_def])
   
-  >- (rw[p_space_def]\\
-      rw[word32p_def])
+  >> Q.EXISTS_TAC ‘trans48_1’
+  >> rw[]
 
-  >- (rw[p_space_def,events_def]\\
-      rw[word32p_def])
+  >- rw[trans48_2_def,trans48_1_def]
+  
+  >> POP_ASSUM MP_TAC
+  >> rw[word48Xor_def,trans48_2_def,trans48_1_def]
+QED
 
-  >> rw[prob_def]
-  >> rw[word32p_def]
-  >> rw[p_space_def]
-  >> rw[card_word32]
+Theorem word48Xor_card :
+    !X. CARD (word48Xor X) = 2 ** 48
+Proof
+    Suff ‘!X. 2 ** 48=CARD (word48Xor X)’
+ >- rw[]
+ >> RW_TAC std_ss [GSYM card_word48, BIJ_XOR48]
+ >> MATCH_MP_TAC FINITE_BIJ_CARD
+ >> Q.EXISTS_TAC ‘trans48_2 X’
+ >> CONJ_TAC
+ >- rw[]
+ >> rw[BIJ_XOR48]
+QED
+
+Definition word48_set1_def:
+   word48_set1 (X:word32) (Y:word32)=
+       {x | S x ⊕ S (x ⊕ E(X)) = Y}
+End
+
+Definition word48_set2_def:
+   word48_set2 (X:word32) (Y:word32)=
+       {(x1,x2) | x1 ?? x2= E(X) /\ S x1 ⊕ S (x2) = Y}
+End
+
+Definition word48_trans1_def:
+   (word48_trans1 X) x= (x,x ?? E(X))
+End
+
+Definition word48_trans2_def:
+   word48_trans2 (x1,x2) = (x1)
+End
+
+Theorem BIJ_pairXcYF:
+   !X Y. BIJ (word48_trans1 X) (word48_set1 X Y) (word48_set2 X Y) 
+Proof
+     rw[BIJ_IFF_INV]
+  >- (POP_ASSUM MP_TAC\\
+      rw[word48_set2_def,word48_set1_def]\\
+      rw[word48_trans1_def])
+       
+  >> Q.EXISTS_TAC ‘word48_trans2’
+  >> rw[]
+
+  >- (POP_ASSUM MP_TAC\\
+      rw[word48_set2_def,word48_set1_def]\\
+      rw[word48_trans2_def]\\
+      Know ‘(x1 ⊕ E X)=x2’
+      >- rw[xor_trans]\\
+      Rewr'\\
+      rw[])
+
+  >- (POP_ASSUM MP_TAC\\
+      rw[word48_set1_def]\\
+      rw[word48_trans2_def,word48_trans1_def])
+      
+  >> POP_ASSUM MP_TAC
+  >> rw[word48_set2_def]
+  >> rw[word48_trans2_def,word48_trans1_def]
+  >> rw[xor_trans]
+QED
+
+Theorem pairXcYF_card :
+    ! X Y. CARD (word48_set1 X Y)
+                = CARD (word48_set2 X Y)
+Proof
+    rw[]
+ >> MATCH_MP_TAC FINITE_BIJ_CARD
+ >> Q.EXISTS_TAC ‘(word48_trans1 X)’
+ >> CONJ_TAC
+ >- rw[word48_set1_def]
+ >> rw[BIJ_pairXcYF]
 QED
 
 Definition word48p_def:
@@ -1468,16 +1549,6 @@ Proof
   >> rw[p_space_def]
   >> rw[card_word48]
 QED
-
-Definition XcauseYFp_def:
-   XcauseYFp (X:word32) (Y:word32) p <=>
-     prob word32p {x| ?k. ((S(E(x)?? k)) ?? (S(E(x)?? E(X)?? k))= Y)}=p
-End
-
-Definition XcauseYF_def:
-   XcauseYF (X:word32) (Y:word32) =
-     prob word32p {x| ?k. ((S(E(x)?? k)) ?? (S(E(x)?? E(X)?? k))= Y)}
-End
 
 Definition XcauseYFkey_def:
    XcauseYFkey (X:word32) (Y:word32) (x:word48)=
