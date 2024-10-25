@@ -808,8 +808,8 @@ end;
 
 exception ParseError;
 
-fun parse() : (string * (int list * exp) list * ((string,string) dictionary)) =
-	let val Accept = ref (create String.<=) : (string,string) dictionary ref
+fun parse() : (string * (int list * exp) list * ((string,string) dictionary * string list)) =
+	let val Accept = ref (create String.<=, []) : ((string,string) dictionary * string list) ref
 	val rec ParseRtns = fn l => case getch(!LexBuf) of
 		  #"%" => let val c = getch(!LexBuf) in
 		    	   if c = #"%" then (implode (rev l))
@@ -880,9 +880,11 @@ fun parse() : (string * (int list * exp) list * ((string,string) dictionary)) =
 		 if !NextTok = ARROW then
 		   (LexState:=2; AdvanceTok();
 		    case GetTok() of ACTION(act) =>
-		      if !NextTok=SEMI then
-		        (Accept:=enter(!Accept) (Int.toString (!LeafNum),act);
-		         ParseRules((s,e)::rules))
+		      if !NextTok=SEMI then let
+			val (dict, ord) = !Accept
+			val key = Int.toString (!LeafNum)
+		        val _ = Accept := (enter dict (key,act), key::ord)
+			in ParseRules((s,e)::rules) end
 		      else (prSynErr "expected ';'")
 		    | _ => raise SyntaxError)
 		  else (prSynErr "expected '=>'")
@@ -1075,19 +1077,21 @@ end
    accepting leaf actions.  The key strings are the leaf #'s, the data strings
    are the actions *)
 
-fun makeaccept ends =
+fun makeaccept (ends, ord) =
     let fun startline f = if f then say "  " else say "| "
         fun stripLWS s =
             Substring.string (Substring.dropl Char.isSpace (Substring.full s))
-	 fun make(nil,f) = (startline f; say "_ => raise Internal.LexerError\n")
-	  | make((x,a)::y,f) = (startline f; say x; say " => ";
-				if Substring.size(#2 (Substring.position "yytext" (Substring.full a))) = 0
- then
-                                     (say "("; say a; say ")")
-                                else (say "let val yytext=yymktext() in ";
-                                      say (stripLWS a); say " end");
-                                say "\n"; make(y,false))
-    in make (listofdict(ends),true)
+	fun make(nil,f) = (startline f; say "_ => raise Internal.LexerError\n")
+	  | make(x::y,f) = let
+            val a = lookup ends x
+            in (startline f; say x; say " => ";
+                if Substring.size(#2 (Substring.position "yytext" (Substring.full a))) = 0 then
+                    (say "("; say a; say ")")
+                else (say "let val yytext=yymktext() in ";
+                    say (stripLWS a); say " end");
+                say "\n"; make(y,false))
+            end
+    in make (List.rev ord,true)
     end
 
 fun leafdata(e:(int list * exp) list) =
