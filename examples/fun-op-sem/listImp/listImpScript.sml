@@ -1,17 +1,12 @@
 
 open HolKernel Parse boolLib bossLib;
 open stringLib integerTheory;
-open listTheory;
-open arithmeticTheory;
+open listTheory arithmeticTheory optionTheory;
 open impTheory;
-
-open optionTheory;
-
-val ect = BasicProvers.EVERY_CASE_TAC;
 
 val _ = new_theory "listImp";
 
-val _ = temp_type_abbrev("vname",``:string``);
+Type vname[local] = ``:string``;
 
 Datatype:
   com = Assign vname imp$aexp
@@ -22,14 +17,14 @@ End
 val com_size_def = fetch "-" "com_size_def";
 
 Definition pval_def:
-  (cval 0 _ _ = NONE) /\
-  (cval (t:num) (Assign v a) s = SOME ((v =+ aval a s) s)) /\
+  (cval (0:num) _ _ = NONE) /\
+  (cval t (Assign v a) s = SOME ((v =+ aval a s) s)) /\
   (cval t (If b cs1 cs2) s = pval t (if bval b s then cs1 else cs2) s) /\
   (cval t (While b cs) s =
     if bval b s then pval (t-1) (cs ++ [(While b cs)]) s
     else SOME s) /\
-  (pval 0 _ _ = NONE) /\
-  (pval (t:num) [] s = SOME s) /\
+  (pval (0:num) _ _ = NONE) /\
+  (pval t [] s = SOME s) /\
   (pval t (c::cs) s = case cval t c s of
     | NONE => NONE
     | SOME s' => pval t cs s')
@@ -40,26 +35,32 @@ Termination
   rw[]
 End
 
-Definition imp_to_listImp_def:
+Definition imp_to_listImp_def[simp]:
   (imp_to_listImp (SKIP:imp$com) = []) /\
-  (imp_to_listImp (Assign v a) = [((Assign v a):com)]) /\
-  (imp_to_listImp (Seq c1 c2) = (imp_to_listImp c1) ++ (imp_to_listImp c2)) /\
+  (imp_to_listImp (Assign v a) = [(Assign v a):com]) /\
+  (imp_to_listImp (Seq c1 c2) = imp_to_listImp c1 ++ imp_to_listImp c2) /\
   (imp_to_listImp (If b c1 c2) =
-    [(If b (imp_to_listImp c1) (imp_to_listImp c2))]) /\
-  (imp_to_listImp (While b c) = [(While b (imp_to_listImp c))])
+    [If b (imp_to_listImp c1) (imp_to_listImp c2)]) /\
+  (imp_to_listImp (While b c) = [While b (imp_to_listImp c)])
 End
 
-Definition listImp_to_imp_def:
+Definition listImp_to_imp_def[simp]:
   (prog_to_imp [] = SKIP) /\
   (prog_to_imp (x::xs) = Seq (com_to_imp x) (prog_to_imp xs)) /\
-  (com_to_imp ((Assign v a):com) = ((Assign v a):imp$com)) /\
-  (com_to_imp (If b c1s c2s) = (If b (prog_to_imp c1s) (prog_to_imp c2s))) /\
-  (com_to_imp (While b cs) = (While b (prog_to_imp cs)))
+  (com_to_imp ((Assign v a):com) = (Assign v a):imp$com) /\
+  (com_to_imp (If b c1s c2s) = If b (prog_to_imp c1s) (prog_to_imp c2s)) /\
+  (com_to_imp (While b cs) = While b (prog_to_imp cs))
 Termination
   WF_REL_TAC `inv_image (measure I) (\r. case r of
     | INR c => com_size c
     | INL cs => com1_size cs)`
 End
+
+Theorem pval_none[simp]:
+    pval 0 cs s = NONE /\ cval 0 c s = NONE
+Proof
+    rw[pval_def]
+QED
 
 Theorem com_lt:
   !c h t. MEM c t ==> com_size c < com1_size (h::t)
@@ -86,8 +87,7 @@ Theorem pval_pos:
   (!t cs s r. pval t cs s = SOME r ==> ?k. t = SUC k)
 Proof
   ho_match_mp_tac pval_ind >>
-  rw[] >>
-  simp[pval_def]
+  rw[]
 QED
 
 Theorem pval_mono:
@@ -142,16 +142,16 @@ Proof
                 disch_then assume_tac >>
                 fs[] >>
                 qexists `SUC t'` >>
-                fs[imp_to_listImp_def, pval_def, CaseEq"option"] >>
+                fs[pval_def, CaseEq"option"] >>
                 disj2_tac >>
                 qexists `FST x` >>
                 simp[]
             ) >>
             fs[Once cval_def] >>
             qexists `SUC k` >>
-            gvs[imp_to_listImp_def, pval_def]
+            gvs[pval_def]
         ) >>
-        simp[cval_def, imp_to_listImp_def] >>~-
+        simp[cval_def] >>~-
         ([`Seq _ _`],
           fs[cval_def, CaseEq"option"] >>
           simp[pval_concat] >>
@@ -184,12 +184,12 @@ QED
 
 Theorem conc_lemma:
   !s t.
-    OPTION_MAP FST (cval (prog_to_imp (cs ++ ds)) s t) =
-    OPTION_MAP FST (cval (Seq (prog_to_imp cs) (prog_to_imp ds)) s t)
+    cval (prog_to_imp (cs ++ ds)) s t =
+    cval (Seq (prog_to_imp cs) (prog_to_imp ds)) s t
 Proof
   Induct_on `cs` >>
   rpt strip_tac >>
-  simp[listImp_to_imp_def, cval_def] >>
+  simp[cval_def] >>
   Cases_on `cval (com_to_imp h) s t` >>
   simp[] >>
   Cases_on `x` >>
@@ -206,7 +206,7 @@ Theorem equiv_exists2:
 Proof
   ho_match_mp_tac pval_ind >>
   rw[] >>
-  fs[pval_def, listImp_to_imp_def] >>~-
+  fs[pval_def] >>~-
   ([`While _ _`],
     gvs[conc_lemma] >>
     Cases_on `bval b s` >>
@@ -216,9 +216,7 @@ Proof
     gvs[] >>
     qexists `SUC t2` >>
     qexists `z` >>
-    simp[Once cval_def] >>
-    fs[listImp_to_imp_def] >>
-    fs[skip_elim]
+    simp[Once cval_def]
   ) >>
   fs[cval_def] >>~-
   ([`if _ then _ else _`],
