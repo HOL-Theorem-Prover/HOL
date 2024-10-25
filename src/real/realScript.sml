@@ -4154,6 +4154,20 @@ QED
 (* backward compatible name of NUM_CEILING_UPPER_BOUND *)
 Theorem CLG_UBOUND = NUM_CEILING_UPPER_BOUND
 
+Theorem NUM_CEILING_NUM[simp]:
+  clg (&n) = n
+Proof
+  simp[NUM_CEILING_def]
+QED
+
+Theorem NUM_CEILING_MONO:
+  !r s. r <= s ==> clg r <= clg s
+Proof
+  rpt strip_tac >> irule NUM_CEILING_LE >> simp[NUM_CEILING_def] >>
+  numLib.LEAST_ELIM_TAC >> simp[SIMP_REAL_ARCH] >>
+  metis_tac[REAL_LE_TRANS]
+QED
+
 (* ----------------------------------------------------------------------
     nonzerop : real -> real
 
