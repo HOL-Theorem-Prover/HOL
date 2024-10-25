@@ -147,7 +147,7 @@ Proof
 QED
 
 Definition keys_def:
-   (keys 0 r k= let Lk=Lkeys k;Sk=Skeys r;A=EL 0 Sk;B=EL 0 Lk in (A,B,Lk,Sk,0,0)) /\
+   (keys 0 r k= let Lk=Lkeys k;Sk=Skeys r;A=0x0w;B=0x0w in (A,B,Lk,Sk,0,0)) /\
    keys (SUC n) r k=
      let ((A,B,Lk,Sk,i,j)= keys n r k);
          (Anew= (((EL i Sk)+A+B) #<< 3));
@@ -513,7 +513,7 @@ Proof
   >> fs[]
   >> pairarg_tac
   >> fs[]
-  >> rw[]      
+  >> rw[]     
 QED
 
 Definition RoundEn'_def:
@@ -554,7 +554,7 @@ Proof
   >> rw[RoundEn'_def,RoundEnSg_def]
 QED
 
-Theorem RoundEe'_De':
+Theorem RoundEn'_De':
    !n b ki ki2. RoundDe' n ki ki2 (RoundEn' n ki ki2 (b))= (b)
 Proof
      rw[]
