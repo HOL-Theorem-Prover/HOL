@@ -105,15 +105,19 @@ val cval_ind = prove(
 Theorem cval_ind[allow_rebind] = cval_ind
 
 Theorem seq_none:
-  cval (Seq c c') s t <> NONE ==> cval c s t <> NONE
+  cval (Seq c c') s t = NONE <=>
+    cval c s t = NONE \/
+    ?s' t'. cval c s t = SOME (s', t') /\ cval c' s' t' = NONE
 Proof
-  rw[] >>
-  fs[cval_def] >>
-  Cases_on `cval c s t` >>
+  simp[EQ_IMP_THM] >>
+  conj_tac >>
+  rw[cval_def, CaseEq"option"] >>
+  simp[] >>
+  Cases_on `v` >>
   fs[]
 QED
 
-Theorem skip_elim:
+Theorem skip_elim[simp]:
   cval (Seq c1 SKIP) s t = cval c1 s t
 Proof
   simp[cval_def] >>
