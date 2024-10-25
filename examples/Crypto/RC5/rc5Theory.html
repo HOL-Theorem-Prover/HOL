@@ -285,13 +285,7 @@
 <pre>
 ⊢ (∀r k.
      keys 0 r k =
-     (let
-        Lk = Lkeys k;
-        Sk = Skeys r;
-        A = EL 0 Sk;
-        B = EL 0 Lk
-      in
-        (A,B,Lk,Sk,0,0))) ∧
+     (let Lk = Lkeys k; Sk = Skeys r; A = 0w; B = 0w in (A,B,Lk,Sk,0,0))) ∧
   ∀n r k.
     keys (SUC n) r k =
     (let
@@ -517,7 +511,7 @@
       ∀v v1 v2 v3. P v v1 (v2,v3)
 </pre>
 
-<DT><span class="strong">RoundEe'_De'</span>
+<DT><span class="strong">RoundEn'_De'</span>
 <DD>
 <pre>
 ⊢ ∀n b ki ki2. RoundDe' n ki ki2 (RoundEn' n ki ki2 b) = b
@@ -688,13 +682,7 @@
 <pre>
 ⊢ (∀r k.
      keys 0 r k =
-     (let
-        Lk = Lkeys k;
-        Sk = Skeys r;
-        A = EL 0 Sk;
-        B = EL 0 Lk
-      in
-        (A,B,Lk,Sk,0,0))) ∧
+     (let Lk = Lkeys k; Sk = Skeys r; A = 0w; B = 0w in (A,B,Lk,Sk,0,0))) ∧
   (∀n r k.
      keys <..num comp'n..> r k =
      (let
