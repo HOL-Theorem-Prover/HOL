@@ -1,0 +1,742 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+<head><title>Theory: rc5</title><meta http-equiv="content-type" content="text/html;charset=UTF-8">
+<style type="text/css">
+<!--
+  body {background: #faf0e6; color: #191970; }
+  span.freevar  { color: blue}
+  span.boundvar { color: green}
+  span.typevar  { color: purple}
+  span.type     { color: teal}
+  span.strong   { color: black; font-weight: bold}
+  span.vstrong  { color: black; 
+                  font-weight: bold;
+                  font-size: larger}
+  h1 {color: black}
+  th {color: crimson}
+-->
+</style>
+</head>
+<body>
+<h1>Theory "rc5"</h1>
+<span class="vstrong">Parents</span>&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href = "wordsTheory.html"><span class="strong">words</span></a>&nbsp;&nbsp;
+    <a href = "sortingTheory.html"><span class="strong">sorting</span></a>
+
+<h1>Signature</h1>
+<center>
+    <table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+    
+    <tr> <th> Constant <th> Type<tr><td>
+    <span class="strong">Join64</span>
+    <td>
+    :block -> word64
+    <tr><td> <span class="strong">Join64'</span> <td> :block -> word64
+    <tr><td> <span class="strong">Lkeys</span> <td> :word64 -> word32 list
+    <tr><td> <span class="strong">LkeysIni</span> <td> :word32 list
+    <tr><td>
+    <span class="strong">LkeysSup</span>
+    <td>
+    :α word -> num -> word32 list
+    <tr><td> <span class="strong">P32_data</span> <td> :α word
+    <tr><td> <span class="strong">Q32_data</span> <td> :α word
+    <tr><td>
+    <span class="strong">RoundDe</span>
+    <td>
+    :num -> word32 list -> block -> block
+    <tr><td>
+    <span class="strong">RoundDe'</span>
+    <td>
+    :num -> word32 -> word32 -> block -> block
+    <tr><td>
+    <span class="strong">RoundDe64</span>
+    <td>
+    :num -> word64 -> word64 -> word64
+    <tr><td>
+    <span class="strong">RoundDeSg</span>
+    <td>
+    :α word # α word -> α word -> α word -> α word # α word
+    <tr><td>
+    <span class="strong">RoundEn</span>
+    <td>
+    :num -> word32 -> word32 -> word32 list -> block
+    <tr><td>
+    <span class="strong">RoundEn'</span>
+    <td>
+    :num -> α word -> α word -> α word # α word -> α word # α word
+    <tr><td>
+    <span class="strong">RoundEn64</span>
+    <td>
+    :num -> word64 -> word64 -> word64
+    <tr><td>
+    <span class="strong">RoundEnSg</span>
+    <td>
+    :α word # α word -> α word -> α word -> α word # α word
+    <tr><td> <span class="strong">Skeys</span> <td> :num -> word32 list
+    <tr><td>
+    <span class="strong">SkeysT32</span>
+    <td>
+    :num -> num -> word32 list
+    <tr><td> <span class="strong">Split64</span> <td> :word64 -> block
+    <tr><td>
+    <span class="strong">half_messageDe</span>
+    <td>
+    :word32 -> word32 -> word32 list -> num -> word32
+    <tr><td>
+    <span class="strong">half_messageEn</span>
+    <td>
+    :word32 -> word32 -> word32 list -> num -> word32
+    <tr><td>
+    <span class="strong">keys</span>
+    <td>
+    :num ->
+    num -> word64 -> word32 # word32 # word32 list # word32 list # num # num
+    <tr><td> <span class="strong">keysIni</span> <td> :α word -> word32 list
+    <tr><td> <span class="strong">lenKeyw</span> <td> :num
+    <tr><td> <span class="strong">lenKinbyt</span> <td> :num
+    <tr><td> <span class="strong">lenWinbyt</span> <td> :num
+    <tr><td>
+    <span class="strong">rc5keys</span>
+    <td>
+    :num -> word64 -> word32 # word32 # word32 list # word32 list # num # num
+    
+</table>
+</center>
+
+<h1>Definitions</h1>
+<DL>
+<DT><span class="strong">Join64'_def</span>
+<DD>
+<pre>
+⊢ ∀b. Join64' b = (let (u,v) = b in u @@ v)
+</pre>
+
+<DT><span class="strong">Join64_def</span>
+<DD>
+<pre>
+⊢ ∀u v. Join64 (u,v) = u @@ v
+</pre>
+
+<DT><span class="strong">LkeysIni_def</span>
+<DD>
+<pre>
+⊢ LkeysIni = [0w; 0w]
+</pre>
+
+<DT><span class="strong">LkeysSup_def</span>
+<DD>
+<pre>
+⊢ (∀k. LkeysSup k 0 =
+       (let
+          ks = LkeysIni;
+          keys = keysIni k
+        in
+          GENLIST
+            (λm. if m = 7 DIV 4 then EL m ks ⇆ 8 + EL 7 keys else EL m ks) 2)) ∧
+  ∀k r.
+    LkeysSup k (SUC r) =
+    (let
+       ks = LkeysSup k r;
+       keys = keysIni k;
+       i = 7 − SUC r
+     in
+       GENLIST (λm. if m = i DIV 4 then EL m ks ⇆ 8 + EL i keys else EL m ks)
+         2)
+</pre>
+
+<DT><span class="strong">Lkeys_def</span>
+<DD>
+<pre>
+⊢ ∀k. Lkeys k = LkeysSup k 7
+</pre>
+
+<DT><span class="strong">P32_data</span>
+<DD>
+<pre>
+⊢ P32_data = 0xB7E15163w
+</pre>
+
+<DT><span class="strong">Q32_data</span>
+<DD>
+<pre>
+⊢ Q32_data = 0x9E3779B9w
+</pre>
+
+<DT><span class="strong">RoundDe'_def</span>
+<DD>
+<pre>
+⊢ (∀ki ki2 b. RoundDe' 0 ki ki2 b = b) ∧
+  ∀n ki ki2 b.
+    RoundDe' (SUC n) ki ki2 b =
+    (let b' = RoundDe' n ki ki2 b in RoundDeSg b' ki ki2)
+</pre>
+
+<DT><span class="strong">RoundDe64_def</span>
+<DD>
+<pre>
+⊢ ∀n w k.
+    RoundDe64 n w k =
+    (let
+       (w1,w2) = Split64 w;
+       (A,B,Lk,Sk,i,j) = rc5keys n k;
+       (w1',w2') = RoundDe n Sk (w1,w2);
+       k0 = EL 0 Sk;
+       k1 = EL 1 Sk
+     in
+       Join64' (w1' − k0,w2' − k1))
+</pre>
+
+<DT><span class="strong">RoundDeSg_def</span>
+<DD>
+<pre>
+⊢ ∀b ki ki2.
+    RoundDeSg b ki ki2 =
+    (let
+       (w1,w2) = b;
+       B = (w2 − ki2) ⇄ w2n w1 ⊕ w1;
+       A = (w1 − ki) ⇄ w2n B ⊕ B
+     in
+       (A,B))
+</pre>
+
+<DT><span class="strong">RoundEn'_def</span>
+<DD>
+<pre>
+⊢ (∀ki ki2 b. RoundEn' 0 ki ki2 b = b) ∧
+  ∀n ki ki2 b.
+    RoundEn' (SUC n) ki ki2 b =
+    (let b' = RoundEn' n ki ki2 b in RoundEnSg b' ki ki2)
+</pre>
+
+<DT><span class="strong">RoundEn64_def</span>
+<DD>
+<pre>
+⊢ ∀n w k.
+    RoundEn64 n w k =
+    (let
+       (w1,w2) = Split64 w;
+       (A,B,Lk,Sk,i,j) = rc5keys n k;
+       k0 = EL 0 Sk;
+       k1 = EL 1 Sk
+     in
+       Join64' (RoundEn n (w1 + k0) (w2 + k1) Sk))
+</pre>
+
+<DT><span class="strong">RoundEnSg_def</span>
+<DD>
+<pre>
+⊢ ∀b ki ki2.
+    RoundEnSg b ki ki2 =
+    (let
+       (w1,w2) = b;
+       A = (w1 ⊕ w2) ⇆ w2n w2 + ki;
+       B = (w2 ⊕ A) ⇆ w2n A + ki2
+     in
+       (A,B))
+</pre>
+
+<DT><span class="strong">RoundEn_def</span>
+<DD>
+<pre>
+⊢ (∀w1 w2 ks. RoundEn 0 w1 w2 ks = (let s0 = EL 0 ks; s1 = EL 1 ks in (w1,w2))) ∧
+  ∀n w1 w2 ks.
+    RoundEn (SUC n) w1 w2 ks =
+    (let
+       (w1',w2') = RoundEn n w1 w2 ks;
+       ki = EL (2 * SUC n) ks;
+       ki2 = EL (2 * SUC n + 1) ks;
+       A = (w1' ⊕ w2') ⇆ w2n w2' + ki;
+       B = (w2' ⊕ A) ⇆ w2n A + ki2
+     in
+       (A,B))
+</pre>
+
+<DT><span class="strong">SkeysT32_def</span>
+<DD>
+<pre>
+⊢ (∀l. SkeysT32 l 0 = [P32_data]) ∧
+  ∀l t.
+    SkeysT32 l (SUC t) =
+    (let ks = SkeysT32 l t; key = HD ks in key + Q32_data::ks)
+</pre>
+
+<DT><span class="strong">Skeys_def</span>
+<DD>
+<pre>
+⊢ ∀r. Skeys r = REVERSE (SkeysT32 32 (2 * (r + 1) − 1))
+</pre>
+
+<DT><span class="strong">Split64_def</span>
+<DD>
+<pre>
+⊢ ∀w. Split64 w = ((63 >< 32) w,(31 >< 0) w)
+</pre>
+
+<DT><span class="strong">keysIni_def</span>
+<DD>
+<pre>
+⊢ ∀k. keysIni k =
+      [(7 >< 0) k; (15 >< 8) k; (23 >< 16) k; (31 >< 24) k; (39 >< 32) k;
+       (47 >< 40) k; (55 >< 48) k; (63 >< 56) k]
+</pre>
+
+<DT><span class="strong">keys_def</span>
+<DD>
+<pre>
+⊢ (∀r k.
+     keys 0 r k =
+     (let
+        Lk = Lkeys k;
+        Sk = Skeys r;
+        A = EL 0 Sk;
+        B = EL 0 Lk
+      in
+        (A,B,Lk,Sk,0,0))) ∧
+  ∀n r k.
+    keys (SUC n) r k =
+    (let
+       (A,B,Lk,Sk,i,j) = keys n r k;
+       Anew = (EL i Sk + A + B) ⇆ 3;
+       Bnew = (EL i Lk + Anew + B) ⇆ w2n (Anew + B);
+       Sknew =
+         GENLIST (λm. if m = i then (EL i Sk + A + B) ⇆ 3 else EL m Sk)
+           (2 * (r + 1));
+       Lknew =
+         GENLIST
+           (λm.
+                if m = j then (EL j Lk + Anew + B) ⇆ w2n (Anew + B)
+                else EL m Lk) 2;
+       inew = (i + 1) MOD (2 * (r + 1));
+       jnew = (j + 1) MOD 2
+     in
+       (Anew,Bnew,Lknew,Sknew,inew,jnew))
+</pre>
+
+<DT><span class="strong">lenKeyw_def</span>
+<DD>
+<pre>
+⊢ lenKeyw = 2
+</pre>
+
+<DT><span class="strong">lenKinbyt_def</span>
+<DD>
+<pre>
+⊢ lenKinbyt = 8
+</pre>
+
+<DT><span class="strong">lenWinbyt_def</span>
+<DD>
+<pre>
+⊢ lenWinbyt = 4
+</pre>
+
+<DT><span class="strong">rc5keys_def</span>
+<DD>
+<pre>
+⊢ ∀r k. rc5keys r k = (let n = 3 * MAX (2 * (r + 1)) 2 in keys n r k)
+</pre>
+
+</DL>
+
+
+<hr>
+
+<hr>
+<h1>Theorems</h1>
+<DL>
+<DT><span class="strong">Join64'_Split64</span>
+<DD>
+<pre>
+⊢ ∀w. Join64' (Split64 w) = w
+</pre>
+
+<DT><span class="strong">Join64_Split64</span>
+<DD>
+<pre>
+⊢ ∀w. Join64 (Split64 w) = w
+</pre>
+
+<DT><span class="strong">LENGTH_Lkeys</span>
+<DD>
+<pre>
+⊢ ∀k. LENGTH (Lkeys k) = 2
+</pre>
+
+<DT><span class="strong">LENGTH_LkeysSup</span>
+<DD>
+<pre>
+⊢ ∀k r. LENGTH (LkeysSup k r) = 2
+</pre>
+
+<DT><span class="strong">LENGTH_Skeys</span>
+<DD>
+<pre>
+⊢ ∀n. LENGTH (Skeys n) = 2 * (n + 1)
+</pre>
+
+<DT><span class="strong">LENGTH_key_Lkeys</span>
+<DD>
+<pre>
+⊢ ∀n r k. (A,B,Lk,Sk,i,j) = keys n r k ⇒ LENGTH Lk = 2
+</pre>
+
+<DT><span class="strong">LENGTH_key_Skeys</span>
+<DD>
+<pre>
+⊢ ∀n r k. (A,B,Lk,Sk,i,j) = keys n r k ⇒ LENGTH Sk = 2 * (r + 1)
+</pre>
+
+<DT><span class="strong">LkeysSup_compute</span>
+<DD>
+<pre>
+⊢ (∀k. LkeysSup k 0 =
+       (let
+          ks = LkeysIni;
+          keys = keysIni k
+        in
+          GENLIST
+            (λm. if m = 7 DIV 4 then EL m ks ⇆ 8 + EL 7 keys else EL m ks) 2)) ∧
+  (∀k r.
+     LkeysSup k <..num comp'n..> =
+     (let
+        ks = LkeysSup k (<..num comp'n..> − 1);
+        keys = keysIni k;
+        i = 7 − <..num comp'n..>
+      in
+        GENLIST (λm. if m = i DIV 4 then EL m ks ⇆ 8 + EL i keys else EL m ks)
+          2)) ∧
+  ∀k r.
+    LkeysSup k <..num comp'n..> =
+    (let
+       ks = LkeysSup k <..num comp'n..> ;
+       keys = keysIni k;
+       i = 7 − <..num comp'n..>
+     in
+       GENLIST (λm. if m = i DIV 4 then EL m ks ⇆ 8 + EL i keys else EL m ks)
+         2)
+</pre>
+
+<DT><span class="strong">RoundDe'_comm</span>
+<DD>
+<pre>
+⊢ ∀n b ks ki ki2.
+    RoundDeSg (RoundDe' n ki ki2 b) ki ki2 =
+    RoundDe' n ki ki2 (RoundDeSg b ki ki2)
+</pre>
+
+<DT><span class="strong">RoundDe'_compute</span>
+<DD>
+<pre>
+⊢ (∀ki ki2 b. RoundDe' 0 ki ki2 b = b) ∧
+  (∀n ki ki2 b.
+     RoundDe' <..num comp'n..> ki ki2 b =
+     (let
+        b' = RoundDe' (<..num comp'n..> − 1) ki ki2 b
+      in
+        RoundDeSg b' ki ki2)) ∧
+  ∀n ki ki2 b.
+    RoundDe' <..num comp'n..> ki ki2 b =
+    (let b' = RoundDe' <..num comp'n..> ki ki2 b in RoundDeSg b' ki ki2)
+</pre>
+
+<DT><span class="strong">RoundDe64_alt_half_messageDe</span>
+<DD>
+<pre>
+⊢ ∀w k r.
+    (w1,w2) = Split64 w ∧ (A,B,Lk,Sk,i,j) = rc5keys r k ∧ k0 = EL 0 Sk ∧
+    k1 = EL 1 Sk ⇒
+    RoundDe64 r w k =
+    Join64'
+      (half_messageDe w1 w2 Sk (2 * r + 1) − k0,
+       half_messageDe w1 w2 Sk (2 * r) − k1)
+</pre>
+
+<DT><span class="strong">RoundDe_EnSg</span>
+<DD>
+<pre>
+⊢ ∀b ki ki2. RoundDeSg (RoundEnSg b ki ki2) ki ki2 = b
+</pre>
+
+<DT><span class="strong">RoundDe_alt_half_messageDe</span>
+<DD>
+<pre>
+⊢ ∀w1 w2 ks n.
+    RoundDe n ks (w1,w2) =
+    (half_messageDe w1 w2 ks (2 * n + 1),half_messageDe w1 w2 ks (2 * n))
+</pre>
+
+<DT><span class="strong">RoundDe_compute</span>
+<DD>
+<pre>
+⊢ (∀w2 w1 ks.
+     RoundDe 0 ks (w1,w2) = (let s1 = EL 1 ks; s0 = EL 0 ks in (w1,w2))) ∧
+  (∀w2 w1 n ks.
+     RoundDe <..num comp'n..> ks (w1,w2) =
+     (let
+        (w1',w2') = RoundDe (<..num comp'n..> − 1) ks (w1,w2);
+        ki = EL (2 * <..num comp'n..> − 2) (REVERSE ks);
+        ki2 = EL (2 * <..num comp'n..> − 1) (REVERSE ks);
+        B = (w2' − ki) ⇄ w2n w1' ⊕ w1';
+        A = (w1' − ki2) ⇄ w2n B ⊕ B
+      in
+        (A,B))) ∧
+  ∀w2 w1 n ks.
+    RoundDe <..num comp'n..> ks (w1,w2) =
+    (let
+       (w1',w2') = RoundDe <..num comp'n..> ks (w1,w2);
+       ki = EL (2 * <..num comp'n..> − 2) (REVERSE ks);
+       ki2 = EL (2 * <..num comp'n..> − 1) (REVERSE ks);
+       B = (w2' − ki) ⇄ w2n w1' ⊕ w1';
+       A = (w1' − ki2) ⇄ w2n B ⊕ B
+     in
+       (A,B))
+</pre>
+
+<DT><span class="strong">RoundDe_def</span>
+<DD>
+<pre>
+⊢ (∀w2 w1 ks.
+     RoundDe 0 ks (w1,w2) = (let s1 = EL 1 ks; s0 = EL 0 ks in (w1,w2))) ∧
+  ∀w2 w1 n ks.
+    RoundDe (SUC n) ks (w1,w2) =
+    (let
+       (w1',w2') = RoundDe n ks (w1,w2);
+       ki = EL (2 * SUC n − 2) (REVERSE ks);
+       ki2 = EL (2 * SUC n − 1) (REVERSE ks);
+       B = (w2' − ki) ⇄ w2n w1' ⊕ w1';
+       A = (w1' − ki2) ⇄ w2n B ⊕ B
+     in
+       (A,B))
+</pre>
+
+<DT><span class="strong">RoundDe_ind</span>
+<DD>
+<pre>
+⊢ ∀P. (∀ks w1 w2. P 0 ks (w1,w2)) ∧
+      (∀n ks w1 w2. P n ks (w1,w2) ⇒ P (SUC n) ks (w1,w2)) ⇒
+      ∀v v1 v2 v3. P v v1 (v2,v3)
+</pre>
+
+<DT><span class="strong">RoundEe'_De'</span>
+<DD>
+<pre>
+⊢ ∀n b ki ki2. RoundDe' n ki ki2 (RoundEn' n ki ki2 b) = b
+</pre>
+
+<DT><span class="strong">RoundEn'_comm</span>
+<DD>
+<pre>
+⊢ ∀n b ks ki ki2.
+    RoundEnSg (RoundEn' n ki ki2 b) ki ki2 =
+    RoundEn' n ki ki2 (RoundEnSg b ki ki2)
+</pre>
+
+<DT><span class="strong">RoundEn'_compute</span>
+<DD>
+<pre>
+⊢ (∀ki ki2 b. RoundEn' 0 ki ki2 b = b) ∧
+  (∀n ki ki2 b.
+     RoundEn' <..num comp'n..> ki ki2 b =
+     (let
+        b' = RoundEn' (<..num comp'n..> − 1) ki ki2 b
+      in
+        RoundEnSg b' ki ki2)) ∧
+  ∀n ki ki2 b.
+    RoundEn' <..num comp'n..> ki ki2 b =
+    (let b' = RoundEn' <..num comp'n..> ki ki2 b in RoundEnSg b' ki ki2)
+</pre>
+
+<DT><span class="strong">RoundEn64_alt_half_messageEn</span>
+<DD>
+<pre>
+⊢ ∀w k r.
+    (w1,w2) = Split64 w ∧ (A,B,Lk,Sk,i,j) = rc5keys r k ∧ k0 = EL 0 Sk ∧
+    k1 = EL 1 Sk ⇒
+    RoundEn64 r w k =
+    Join64'
+      (half_messageEn (w1 + k0) (w2 + k1) Sk (2 * r),
+       half_messageEn (w1 + k0) (w2 + k1) Sk (2 * r + 1))
+</pre>
+
+<DT><span class="strong">RoundEn_alt_half_messageEn</span>
+<DD>
+<pre>
+⊢ ∀w1 w2 ks n.
+    RoundEn n w1 w2 ks =
+    (half_messageEn w1 w2 ks (2 * n),half_messageEn w1 w2 ks (2 * n + 1))
+</pre>
+
+<DT><span class="strong">RoundEn_compute</span>
+<DD>
+<pre>
+⊢ (∀w1 w2 ks. RoundEn 0 w1 w2 ks = (let s0 = EL 0 ks; s1 = EL 1 ks in (w1,w2))) ∧
+  (∀n w1 w2 ks.
+     RoundEn <..num comp'n..> w1 w2 ks =
+     (let
+        (w1',w2') = RoundEn (<..num comp'n..> − 1) w1 w2 ks;
+        ki = EL (2 * <..num comp'n..> ) ks;
+        ki2 = EL (2 * <..num comp'n..> + 1) ks;
+        A = (w1' ⊕ w2') ⇆ w2n w2' + ki;
+        B = (w2' ⊕ A) ⇆ w2n A + ki2
+      in
+        (A,B))) ∧
+  ∀n w1 w2 ks.
+    RoundEn <..num comp'n..> w1 w2 ks =
+    (let
+       (w1',w2') = RoundEn <..num comp'n..> w1 w2 ks;
+       ki = EL (2 * <..num comp'n..> ) ks;
+       ki2 = EL (2 * <..num comp'n..> + 1) ks;
+       A = (w1' ⊕ w2') ⇆ w2n w2' + ki;
+       B = (w2' ⊕ A) ⇆ w2n A + ki2
+     in
+       (A,B))
+</pre>
+
+<DT><span class="strong">SkeysT32_compute</span>
+<DD>
+<pre>
+⊢ (∀l. SkeysT32 l 0 = [P32_data]) ∧
+  (∀l t.
+     SkeysT32 l <..num comp'n..> =
+     (let
+        ks = SkeysT32 l (<..num comp'n..> − 1);
+        key = HD ks
+      in
+        key + Q32_data::ks)) ∧
+  ∀l t.
+    SkeysT32 l <..num comp'n..> =
+    (let ks = SkeysT32 l <..num comp'n..> ; key = HD ks in key + Q32_data::ks)
+</pre>
+
+<DT><span class="strong">Split64_Join64</span>
+<DD>
+<pre>
+⊢ ∀u v. Split64 (Join64 (u,v)) = (u,v)
+</pre>
+
+<DT><span class="strong">Split64_Join64'</span>
+<DD>
+<pre>
+⊢ ∀b. Split64 (Join64' b) = b
+</pre>
+
+<DT><span class="strong">half_messageDe_def</span>
+<DD>
+<pre>
+⊢ ∀w2 w1 n ks.
+    half_messageDe w1 w2 ks n =
+    (let
+       ki = EL (n − 2) (REVERSE ks);
+       ki2 = EL (n − 2) (REVERSE ks)
+     in
+       if n = 0 then w2
+       else if n = 1 then w1
+       else
+         (half_messageDe w1 w2 ks (n − 2) − ki) ⇄
+         w2n (half_messageDe w1 w2 ks (n − 1)) ⊕
+         half_messageDe w1 w2 ks (n − 1))
+</pre>
+
+<DT><span class="strong">half_messageDe_ind</span>
+<DD>
+<pre>
+⊢ ∀P. (∀w1 w2 ks n.
+         (∀ki ki2.
+            ki = EL (n − 2) (REVERSE ks) ∧ ki2 = EL (n − 2) (REVERSE ks) ∧
+            n ≠ 0 ∧ n ≠ 1 ⇒
+            P w1 w2 ks (n − 1)) ∧
+         (∀ki ki2.
+            ki = EL (n − 2) (REVERSE ks) ∧ ki2 = EL (n − 2) (REVERSE ks) ∧
+            n ≠ 0 ∧ n ≠ 1 ⇒
+            P w1 w2 ks (n − 2)) ⇒
+         P w1 w2 ks n) ⇒
+      ∀v v1 v2 v3. P v v1 v2 v3
+</pre>
+
+<DT><span class="strong">half_messageEn_def</span>
+<DD>
+<pre>
+⊢ ∀w2 w1 n ks.
+    half_messageEn w1 w2 ks n =
+    (let
+       ki = EL n ks;
+       ki2 = EL (n − 1) ks
+     in
+       if n = 0 then w1
+       else if n = 1 then w2
+       else
+         (half_messageEn w1 w2 ks (n − 2) ⊕ half_messageEn w1 w2 ks (n − 1)) ⇆
+         w2n (half_messageEn w1 w2 ks (n − 1)) + ki)
+</pre>
+
+<DT><span class="strong">half_messageEn_ind</span>
+<DD>
+<pre>
+⊢ ∀P. (∀w1 w2 ks n.
+         (∀ki ki2.
+            ki = EL n ks ∧ ki2 = EL (n − 1) ks ∧ n ≠ 0 ∧ n ≠ 1 ⇒
+            P w1 w2 ks (n − 1)) ∧
+         (∀ki ki2.
+            ki = EL n ks ∧ ki2 = EL (n − 1) ks ∧ n ≠ 0 ∧ n ≠ 1 ⇒
+            P w1 w2 ks (n − 2)) ⇒
+         P w1 w2 ks n) ⇒
+      ∀v v1 v2 v3. P v v1 v2 v3
+</pre>
+
+<DT><span class="strong">keys_compute</span>
+<DD>
+<pre>
+⊢ (∀r k.
+     keys 0 r k =
+     (let
+        Lk = Lkeys k;
+        Sk = Skeys r;
+        A = EL 0 Sk;
+        B = EL 0 Lk
+      in
+        (A,B,Lk,Sk,0,0))) ∧
+  (∀n r k.
+     keys <..num comp'n..> r k =
+     (let
+        (A,B,Lk,Sk,i,j) = keys (<..num comp'n..> − 1) r k;
+        Anew = (EL i Sk + A + B) ⇆ 3;
+        Bnew = (EL i Lk + Anew + B) ⇆ w2n (Anew + B);
+        Sknew =
+          GENLIST (λm. if m = i then (EL i Sk + A + B) ⇆ 3 else EL m Sk)
+            (2 * (r + 1));
+        Lknew =
+          GENLIST
+            (λm.
+                 if m = j then (EL j Lk + Anew + B) ⇆ w2n (Anew + B)
+                 else EL m Lk) 2;
+        inew = (i + 1) MOD (2 * (r + 1));
+        jnew = (j + 1) MOD 2
+      in
+        (Anew,Bnew,Lknew,Sknew,inew,jnew))) ∧
+  ∀n r k.
+    keys <..num comp'n..> r k =
+    (let
+       (A,B,Lk,Sk,i,j) = keys <..num comp'n..> r k;
+       Anew = (EL i Sk + A + B) ⇆ 3;
+       Bnew = (EL i Lk + Anew + B) ⇆ w2n (Anew + B);
+       Sknew =
+         GENLIST (λm. if m = i then (EL i Sk + A + B) ⇆ 3 else EL m Sk)
+           (2 * (r + 1));
+       Lknew =
+         GENLIST
+           (λm.
+                if m = j then (EL j Lk + Anew + B) ⇆ w2n (Anew + B)
+                else EL m Lk) 2;
+       inew = (i + 1) MOD (2 * (r + 1));
+       jnew = (j + 1) MOD 2
+     in
+       (Anew,Bnew,Lknew,Sknew,inew,jnew))
+</pre>
+
+</DL>
+
+
+
+<hr>
+</body>
+</html>
