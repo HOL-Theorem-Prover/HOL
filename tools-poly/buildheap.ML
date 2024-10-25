@@ -241,6 +241,7 @@ fun maybe_check_load diag (obj,_) =
   in
     case ext of
         SOME "sml" => (diag ("Using "^obj); QUse.use obj)
+      | SOME "sig" => (diag ("Using "^obj); QUse.use obj)
       | SOME "ML" => (diag ("Using "^obj); QUse.use obj)
       | SOME "uo" => (diag ("Loading "^obj); load (fix obj))
       | NONE => (diag ("Loading "^obj); load obj)
