@@ -1,7 +1,7 @@
 signature Arbint =
 sig
 
-  include Arbintcore where type int = Arbintcore.int
+  include Arbintcore
   val pp_int     : int -> HOLPP.pretty
 
 end

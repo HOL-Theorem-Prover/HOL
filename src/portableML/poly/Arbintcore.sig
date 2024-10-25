@@ -1,7 +1,7 @@
 signature Arbintcore =
 sig
 
-  eqtype int
+  type int = IntInf.int
 
   type num = Arbnumcore.num
 
