@@ -631,7 +631,7 @@ QED
 
 (*===========================================================================*)
 (* Left quotient. Brzozowski derivatives (see regular/regexpScript.sml) are  *)
-(* left quotient on regexps.                                                 *)
+(* left quotient in the context of regexps.                                  *)
 (*===========================================================================*)
 
 Definition LEFT_QUOTIENT_def:
@@ -775,8 +775,8 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* The finite state languages are an abstract characterization of the        *)
-(* regular languages.                                                        *)
+(* Definition of the finite state languages. That these characterize the     *)
+(* regular languages is proved in regular/regularTheory.                     *)
 (*---------------------------------------------------------------------------*)
 
 Definition INTRINSIC_STATES_def:
@@ -857,21 +857,23 @@ Proof
   >- rw[]
 QED
 
+Theorem word_alphabet_of:
+  w ∈ L ⇒ EVERY (λa. a ∈ ALPHABET_OF L) w
+Proof
+  rw [ALPHABET_OF_def,PULL_EXISTS,EVERY_MEM] >> metis_tac[]
+QED
+
+
 (*---------------------------------------------------------------------------*)
-(* Essentially the same as "all finite sets are regular"                     *)
+(* Following leads up to FINITE_STATE_FINITE_SET, which is a language-level  *)
+(* version of the "all finite sets are regular" theorem based on automata.   *)
 (*---------------------------------------------------------------------------*)
 
 Definition prefixes_def:
   prefixes w = {w1 | ∃w2. w = w1 ++ w2}
 End
 
-Triviality prefixes_len:
-   w ∈ prefixes x ⇒ LENGTH w ≤ LENGTH x
-Proof
- rw[prefixes_def] >> rw []
-QED
-
-Theorem prefixes_snoc:
+Triviality prefixes_snoc:
   prefixes (SNOC h t) = (SNOC h t) INSERT prefixes t
 Proof
   rw[prefixes_def,EXTENSION,EQ_IMP_THM]
@@ -894,23 +896,25 @@ Definition PREFIXES_def:
 End
 
 Theorem FINITE_PREFIXES:
-  FINITE L ==> FINITE (PREFIXES L)
+  FINITE L ⇒ FINITE (PREFIXES L)
 Proof
   rw [PREFIXES_def] >> metis_tac[FINITE_prefixes]
 QED
 
 Theorem LEFT_QUOTIENT_PREFIXES:
- x ∉ PREFIXES L ⇔ LEFT_QUOTIENT x L = {}
+ w ∉ PREFIXES L ⇔ LEFT_QUOTIENT w L = {}
 Proof
   rw[PREFIXES_def,LEFT_QUOTIENT_def] >>
   rw [GSYM IMP_DISJ_THM,PULL_FORALL,prefixes_def] >>
   rw [EQ_IMP_THM,EXTENSION] >> metis_tac[]
 QED
 
+(* TODO: put in pred_setTheory *)
+
 Theorem finite_image_const:
- s ≠ ∅ ∧ (∀x. x ∈ s ⇒ f x = c) ⇒ FINITE(IMAGE f s)
+ (∀x. x ∈ s ⇒ f x = c) ⇒ FINITE(IMAGE f s)
 Proof
-  rw[] >>
+  Cases_on ‘s = {}’ >> rw[] >>
   ‘IMAGE f s = {c}’ by
     (rw[EXTENSION,EQ_IMP_THM]
      >- metis_tac[]
@@ -918,55 +922,22 @@ Proof
   rw[]
 QED
 
-Triviality lemma:
-  w ∈ L ⇒ EVERY (λa. a ∈ ALPHABET_OF L) w
-Proof
-  rw [ALPHABET_OF_def,PULL_EXISTS,EVERY_MEM] >> metis_tac[]
-QED
-
 Theorem FINITE_STATE_FINITE_SET:
   FINITE L ⇒ FINITE_STATE (L,ALPHABET_OF L)
 Proof
-  strip_tac >>
-  Cases_on ‘L = {} ∨ L = {ε}’ >> rw[]
-  >- metis_tac[FINITE_ALPHABET_OF, FINITE_STATE_EMPTYSET]
-  >- metis_tac[FINITE_ALPHABET_OF, FINITE_STATE_EPSILONSET]
-  >- (gvs [] >>
-      rw[FINITE_STATE_def, INTRINSIC_STATES_def,
-         LEFT_QUOTIENT_EPSILON,IS_FORMAL_LANG_def]
-      >- (rw[ALPHABET_OF_def]
-          >- (drule IMAGE_FINITE >>
-              rw[combinTheory.o_DEF, GSPEC_IMAGE] >>
-              irule IMAGE_FINITE >> rw[IN_DEF] >> metis_tac[])
-          >- rw[])
-      >- (rw [SUBSET_DEF,ALPHABET_OF_def,PULL_EXISTS] >>
-          rw [EVERY_MEM] >> metis_tac[])
-      >- (simp [combinTheory.o_DEF, GSPEC_IMAGE] >>
-          qabbrev_tac ‘words = λw. EVERY (λa. a ∈ ALPHABET_OF L) w’ >>
-          ‘words = (words ∩ PREFIXES L) ∪ (words ∩ COMPL (PREFIXES L))’ by
-              rw[EXTENSION,EQ_IMP_THM] >>
-          qunabbrev_tac ‘words’ >> pop_assum SUBST_ALL_TAC >> rw[] >>
-          qabbrev_tac ‘words = λw. EVERY (λa. a ∈ ALPHABET_OF L) w’
-          >- (irule IMAGE_FINITE >> irule FINITE_INTER >>
-              disj2_tac >> metis_tac[FINITE_PREFIXES])
-          >- (irule finite_image_const >> rw[]
-              >- metis_tac [LEFT_QUOTIENT_PREFIXES]
-              >- (simp[EXTENSION] >>
-                  ‘FINITE (IMAGE LENGTH L)’ by
-                     metis_tac [IMAGE_FINITE] >>
-                  ‘∃maxL. maxL ∈ L ∧ ∀w. w ∈ L ⇒ LENGTH w <= LENGTH maxL’ by
-                     (imp_res_tac in_max_set >>
-                      ‘IMAGE LENGTH L ≠ ∅’ by rw[IMAGE_EQ_EMPTY] >>
-                      drule_all MAX_SET_IN_SET >> rw[IMAGE_DEF] >>
-                      gvs[GSYM IMAGE_DEF] >> first_assum (irule_at Any) >> rw[] >>
-                      first_x_assum irule >> metis_tac[]) >>
-                  ‘∃h t. maxL = h::t’ by
-                     (Cases_on ‘maxL’ >> gvs[EXTENSION] >> metis_tac[]) >>
-                  qexists_tac ‘h::maxL’ >> rw[]
-                  >- (qunabbrev_tac ‘words’ >> drule lemma >> rw[])
-                  >- (rw[PREFIXES_def] >> rw[GSYM IMP_DISJ_THM] >>
-                      strip_tac >> drule prefixes_len >>
-                      first_x_assum drule >> rw[])))))
+  rw[FINITE_STATE_def, INTRINSIC_STATES_def,
+     LEFT_QUOTIENT_EPSILON,IS_FORMAL_LANG_def]
+  >- metis_tac[FINITE_ALPHABET_OF]
+  >- rw[SUBSET_DEF,word_alphabet_of]
+  >- (simp [combinTheory.o_DEF, GSPEC_IMAGE] >>
+      qabbrev_tac ‘words = λw. EVERY (λa. a ∈ ALPHABET_OF L) w’ >>
+      ‘words = words ∩ (PREFIXES L ∪ COMPL (PREFIXES L))’ by
+         rw[EXTENSION,EQ_IMP_THM] >>
+      pop_assum SUBST1_TAC >> rw[UNION_OVER_INTER]
+      >- (irule IMAGE_FINITE >> irule FINITE_INTER >>
+          metis_tac[FINITE_PREFIXES])
+      >- (irule finite_image_const >> rw[] >>
+          metis_tac [LEFT_QUOTIENT_PREFIXES]))
 QED
 
 (*
