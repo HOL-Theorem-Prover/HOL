@@ -475,6 +475,14 @@ in
   val toHexString = toBaseString (fromInt 16)
 end
 
+fun toReal0 f A is =
+    case is of
+        [] => A
+      | i :: rest => toReal0 (Real.*(f,Real.fromInt BASE))
+                             (Real.+(A,Real.*(f,Real.fromInt i)))
+                             rest
+fun toReal an = toReal0 1.0 0.0 an
+
 fun isqrt n =
    if n < two
       then n
