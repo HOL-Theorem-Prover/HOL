@@ -1,13 +1,18 @@
-.PHONY: all
-
+HOL = $(protect $(HOLDIR)/bin/hol.bare) --zero
 INCLUDES = $(HOLDIR)/tools/cmp
 
-HOL = $(protect $(HOLDIR)/bin/hol.bare) --zero
+all: $(DEFAULT_TARGETS)
+
+.PHONY: all
+
+
 # CMP = $(protect $(HOLDIR)/tools/cmp/cmp.exe)
-CMP = diff
+CMP = diff -a
 
 ifdef POLY
 DEPS = test1.out test2.out test3.out test4.out test5.out
+
+all: $(DEPS)
 
 # FIXME: % in targets doesn't work
 test1.out: test1.input test1.expected
@@ -31,7 +36,5 @@ test5.out: test5.input test5.expected
 	$(CMP) $@ $(patsubst %.input,%.expected,$<)
 
 endif
-
-all: $(DEFAULT_TARGETS) $(DEPS)
 
 EXTRA_CLEANS = $(wildcard *.out)
