@@ -61,19 +61,19 @@ signature GetOpt =
       (* Description of a single option *)
 
       val usageInfo : {
-	      header : string,
-	      options : 'a opt_descr list
-	    } -> string
+              header : string,
+              options : 'a opt_descr list
+            } -> string
       (* takes a header string and a list of option descriptions and
        * returns a string explaining the usage information.  A newline will
        * be added following the header, so it should not be newline terminated.
        *)
 
       val getOpt : {
-	      argOrder : 'a arg_order,
-	      options : 'a opt_descr list,
-	      errFn : string -> unit
-	    } -> string list -> ('a list * string list)
+              argOrder : 'a arg_order,
+              options : 'a opt_descr list,
+              errFn : string -> unit
+            } -> string list -> ('a list * string list)
       (* takes as argument an arg_order to specify the non-options
        * handling, a list of option descriptions, an error callback,
        * and a command line containing the options and arguments,

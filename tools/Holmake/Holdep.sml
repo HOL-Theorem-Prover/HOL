@@ -146,14 +146,14 @@ end handle Holdep_Error s => raise Holdep_Error (filename ^ ": " ^ s)
 
 fun processfile {assumes, includes, fname = filename, diag} =
     let
-	val {base, ext} = Path.splitBaseExt filename
+        val {base, ext} = Path.splitBaseExt filename
     in
-	case ext of
-	    SOME "sig" => read {assumes = assumes, srcext = "sig", objext = "ui",
+        case ext of
+            SOME "sig" => read {assumes = assumes, srcext = "sig", objext = "ui",
                                 filename = base, includes = includes}
-	  | SOME "sml" => read {assumes = assumes, srcext = "sml", objext = "uo",
+          | SOME "sml" => read {assumes = assumes, srcext = "sml", objext = "uo",
                                 filename = base, includes = includes}
-	  | _          => {tgt = filename, deps = []}
+          | _          => {tgt = filename, deps = []}
     end
 
 (* assumes parameter is a list of files that we assume can be built in this
