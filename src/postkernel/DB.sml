@@ -41,8 +41,7 @@ fun dataNameEq s d = dataName d = s
    Map keys to canonical case
  ---------------------------------------------------------------------------*)
 
-fun toLower s =
- let open Char CharVector in tabulate(size s, fn i => toLower(sub(s,i))) end
+val toLower = CharVector.map Char.toLower
 
 (*---------------------------------------------------------------------------
      Persistence: bindl is used to populate the database when a theory
@@ -513,6 +512,7 @@ end
 
 fun fetch s1 s2 = #1 (thm_class "fetch" s1 s2);
 fun fetch_knm{Thy,Name} = fetch Thy Name
+fun lookup {Thy,Name} = Lib.total (thm_class "lookup" Thy) Name
 
 fun thm_of ((_,n),dv) = (n,dv_thm dv);
 fun is x (_,dv) = (dv_class dv=x)
