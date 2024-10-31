@@ -29,6 +29,7 @@ struct
 
  fun mkloc(s,i,b) = Located{scriptpath = holpathdb.reverse_lookup{path=s},
                             linenum = i, exact = b}
-
+ fun updsrcloc f {private,loc,class} =
+     {private = private,loc = f loc,class = class}
 
 end

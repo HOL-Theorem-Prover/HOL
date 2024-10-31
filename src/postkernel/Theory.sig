@@ -8,6 +8,7 @@ sig
                     struct_ps : (unit -> HOLPP.pretty) option}
   type num = Arbnum.num
   datatype thm_src_location = datatype DB_dtype.thm_src_location
+  type thminfo = DB_dtype.thminfo
 
 (* Create a new theory *)
 
@@ -32,6 +33,10 @@ sig
   val delete_type        : string -> unit
   val delete_const       : string -> unit
   val delete_binding     : string -> unit
+
+(* Modify binding in the current theory segment *)
+
+  val upd_binding        : string -> (thminfo -> thminfo) -> unit
 
 (* Information on the current theory segment *)
 

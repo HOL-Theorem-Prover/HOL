@@ -403,6 +403,12 @@ fun new_addonpc a (s as {adjoinpc, ...} : segment) =
 fun add_ML_dep s (seg as {mldeps, ...} : segment) =
   update_seg seg (U #mldeps (HOLset.add(mldeps, s))) $$
 
+fun upd_binding_p s f (seg as {facts,...} : segment) : segment option =
+    case Symtab.lookup facts s of
+        NONE => NONE
+      | SOME (th, i) =>
+        SOME (update_seg seg (U #facts (Symtab.update(s,(th, f i)) facts)) $$)
+
 local fun plucky k tab =
           case Symtab.lookup tab k of
               NONE => NONE
@@ -474,6 +480,15 @@ in
   fun delete_binding s  = (inCT del_binding s; call_hooks (DelBinding s))
 
   fun set_MLname s1 s2  = inCT set_MLbind (s1,s2)
+  fun upd_binding s f   = inCT (fn f => fn seg =>
+                                   case upd_binding_p s f seg of
+                                       NONE => raise ERR
+                                                     "upd_binding"
+                                                     ("No such binding: "^s)
+                                     | SOME seg' => seg')
+                               f
+
+
   val adjoin_to_theory  = inCT new_addon
   val adjoin_after_completion = inCT new_addonpc
   val zapCT             = inCT zap_segment
