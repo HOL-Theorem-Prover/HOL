@@ -280,11 +280,16 @@ end;
 (* ADDED: TFM 91.10.26                                                 *)
 (*---------------------------------------------------------------------*)
 
-local val (th1,th2) = CONJ_PAIR (listTheory.APPEND)
-      val th3 = SPECL [%`l1: 'a list`, %`l2: 'a list`] th2
-      val th4 = GENL  [%`l2: 'a list`,  %`l1: 'a list`] th3
+local
+  open Psyntax
+  val l1v = mk_var("l1", listSyntax.mk_list_type alpha)
+  val l2v = mk_var("l2", listSyntax.mk_list_type alpha)
+  val hv = mk_var("h", alpha)
+  val (th1,th2) = CONJ_PAIR (listTheory.APPEND)
+  val th3 = SPECL [hv,l1v,l2v] th2
+  val th4 = GENL  [l2v,l1v,hv] th3
       fun itfn (cns,ath) v th =
-        let val th1 = AP_TERM (mk_comb{Rator=cns,Rand=v}) th
+        let val th1 = AP_TERM (mk_comb(cns,v)) th
             val l = rand(rator(rand(rator(concl th))))
         in TRANS (SPEC v (SPEC l ath)) th1
         end
