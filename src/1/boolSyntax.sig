@@ -170,6 +170,7 @@ sig
                               string * string list * thm ->
                               thm
   val new_definition        : string * term -> thm
+  val new_definition_at     : DB.thm_src_location -> string * term -> thm
   val new_infixl_definition : string * term * int -> thm
   val new_infixr_definition : string * term * int -> thm
   val new_binder_definition : string * term -> thm
