@@ -209,10 +209,7 @@ fun gen_tailrec_define {loc, name, def} =
       val lemma = prove_tailrec_exists def
       val names = lemma |> concl |> strip_exists |> fst |> map (fst o dest_var)
     in
-      Definition.located_new_specification{
-        name=name,constnames=names,
-        witness=lemma,loc = loc
-      }
+      boolSyntax.new_specification_at loc (name,names,lemma)
     end
 
 fun tailrec_define name def =
