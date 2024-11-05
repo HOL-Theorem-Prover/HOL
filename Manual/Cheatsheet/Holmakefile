@@ -1,6 +1,6 @@
 CHEATSHEET_SOURCES = cheatsheet.md cheatsheet.css
 
 cheatsheet.html: $(CHEATSHEET_SOURCES)
-	pandoc -s --toc -c cheatsheet.css -o cheatsheet.html cheatsheet.md
+	pandoc -s --toc -c cheatsheet.css -o cheatsheet.html --from commonmark_x cheatsheet.md
 
 EXTRA_CLEANS = cheatsheet.html
