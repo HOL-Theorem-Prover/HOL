@@ -97,31 +97,72 @@ in
   val cv_one = Num one
 end (* local *)
 
-fun env_lookup n xs =
-  case xs of
-    [] => raise ERR "compute.env_lookup" "Impossible: out of bounds access"
-  | x::xs => if n < 1 then x else env_lookup (n - 1) xs;
-
-fun get_code f funs =
-  Vector.sub (funs, f)
-  handle Subscript =>
-  raise ERR "compute.get_code" "Impossible: out of bounds access";
-
 fun exec funs env ce =
-  case ce of
-    Const n => Num n
-  | Var n => env_lookup n env
-  | Monop (m, x) => m (exec funs env x)
-  | Binop (b, x, y) => b (exec funs env x) (exec funs env y)
-  | App (f, xs) => exec funs (exec_list funs env xs [])
-                             (get_code f funs)
-  | Let (x, y) => exec funs (exec funs env x::env) y
-  | If (x, y, z) =>
-      exec funs env (if exec funs env x = cv_zero then z else y)
-and exec_list funs env xs acc =
-  case xs of
-    [] => List.rev acc
-  | x::xs => exec_list funs env xs (exec funs env x::acc);
+  let
+    fun impossible () = raise ERR "compute.exec" "Impossible case"
+    val default = (fn x => impossible ()) : cval list -> cval
+    val code = Array.tabulate (Vector.length funs, fn k => default)
+    fun env_lookup n =
+      if n = 0 then
+        (fn env => case env of (v :: _) => v | _ => impossible ())
+      else if n = 1 then
+        (fn env => case env of (_ :: v :: _) => v | _ => impossible ())
+      else if n = 2 then
+        (fn env => case env of (_ :: _ :: v :: _) => v | _ => impossible ())
+      else if n = 3 then
+        (fn env => case env of (_ :: _ :: _ :: v :: _) => v | _ => impossible ())
+      else if n = 4 then
+        (fn env => case env of (_ :: _ :: _ :: _ :: v :: _) => v | _ => impossible ())
+      else
+        env_lookup (n - 5) o
+        (fn env => case env of (_ :: _ :: _ :: _ :: _ :: vs) => vs | _ => impossible ())
+    fun run ce =
+      case ce of
+        Const n => K (Num n)
+      | Var n => env_lookup n
+      | Monop (m, x) =>
+          let
+            val run_x = run x
+          in
+            fn env => m (run_x env)
+          end
+      | Binop (b, x, y) =>
+          let
+            val run_x = run x
+            val run_y = run y
+          in
+            fn env => b (run_x env) (run_y env)
+          end
+      | Let (x, y) =>
+          let
+            val run_x = run x
+            val run_y = run y
+          in
+            fn env => run_y (run_x env :: env)
+          end
+      | If (x, y, z) =>
+          let
+            val run_x = run x
+            val run_y = run y
+            val run_z = run z
+          in
+            fn env => if run_x env = cv_zero then run_z env else run_y env
+          end
+      | App (f, xs) =>
+          let
+            val run_xs = map run xs
+          in
+            fn env => (Array.sub (code, f))
+                      (map (fn r => r env) run_xs)
+          end
+    (* populate code array with run functions *)
+    val _ = Vector.appi (fn (i,x) => Array.update(code, i, run x)) funs
+    val run_ce = run ce
+    (* perform the actual execution *)
+    val result = run_ce env
+  in
+    result
+  end;
 
 local
   open Arbnum
