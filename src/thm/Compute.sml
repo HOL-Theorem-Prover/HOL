@@ -97,7 +97,7 @@ in
   val cv_one = Num one
 end (* local *)
 
-fun exec funs env ce =
+fun exec funs =
   let
     fun impossible () = raise ERR "compute.exec" "Impossible case"
     val default = (fn x => impossible ()) : cval list -> cval
@@ -166,11 +166,8 @@ fun exec funs env ce =
           end
     (* populate code array with run functions *)
     val _ = Vector.appi (fn (i,x) => Array.update(code, i, run x)) funs
-    val run_ce = run ce
-    (* perform the actual execution *)
-    val result = run_ce env
   in
-    result
+    fn x => run x []
   end;
 
 local
@@ -678,7 +675,7 @@ fun term_compute {cval_terms, cval_type, num_type, char_eqns } =
         fn tm =>
           let
             val cexp = dest_cexp ct [] eqs tm
-            val cval = exec code [] cexp
+            val cval = exec code cexp
           in
             cv_to_term cval
           end
