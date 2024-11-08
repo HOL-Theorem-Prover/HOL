@@ -150,10 +150,19 @@ fun exec funs env ce =
           end
       | App (f, xs) =>
           let
-            val run_xs = map run xs
+            val run_list_xs = run_list xs
           in
-            fn env => (Array.sub (code, f))
-                      (map (fn r => r env) run_xs)
+            fn env => (Array.sub (code, f)) (run_list_xs env)
+          end
+    and run_list xs =
+      case xs of
+        [] => (fn env => [])
+      | (x::xs) =>
+          let
+            val run_x = run x
+            val run_list_xs = run_list xs
+          in
+            fn env => run_x env :: run_list_xs env
           end
     (* populate code array with run functions *)
     val _ = Vector.appi (fn (i,x) => Array.update(code, i, run x)) funs
