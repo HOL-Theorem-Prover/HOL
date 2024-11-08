@@ -20,6 +20,11 @@ Contents
 New features:
 -------------
 
+-   The simplifier now supports `NoAsms` and `IgnAsm` special forms that allow all assumptions (or those matching the provided pattern, in the case of `IgnAsm`) to be excluded.
+    See the DESCRIPTION and REFERENCE manuals for details.
+    ([GitHub issue](https://github.com/HOL-Theorem-Prover/HOL/issues/1220))
+
+
 Bugs fixed:
 -----------
 
@@ -56,6 +61,19 @@ Incompatibilities:
 
 -   `numLib.prefer_num` has been renamed to `numLib.temp_prefer_num`, which name better describes its semantics.
     The `prefer_num` entry-point is now used to make a change “permanent” (again following the naming convention used by many parsing-related entry-points), which is to say that the overloads made by this function will be exported to child theories.
+
+-   Editor mode implementations have moved in the HOL sources to `tools/editor-modes/{editor-name}`.
+    This may affect editor initialisations/configurations, particularly if they hard-code a reference to a particular path.
+    For example, in the recommended setup for `emacs`, users will need to change
+
+           (load "<path>/HOL/tools/hol-mode")
+           (load "<path>/HOL/tools/hol-unicode")
+
+    to
+
+           (load "<path>/HOL/tools/editor-modes/emacs/hol-mode")
+           (load "<path>/HOL/tools/editor-modes/emacs/hol-unicode")
+
 
 * * * * *
 

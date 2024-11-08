@@ -439,14 +439,15 @@ end;
 
 
 (*---------------------------------------------------------------------------
-    Instantiate tools/hol-mode.src, and put it in tools/hol-mode.el
+    Instantiate tools/editor-modes/emacs/hol-mode.src, and put it into
+    hol-mode.el in the same directory.
  ---------------------------------------------------------------------------*)
 
 val _ =
  let open TextIO
      val _ = echo "Making hol-mode.el (for Emacs)"
-     val src = fullPath [holdir, "tools/hol-mode.src"]
-    val target = fullPath [holdir, "tools/hol-mode.el"]
+     val src = fullPath [holdir, "tools/editor-modes/emacs/hol-mode.src"]
+     val target = fullPath [holdir, "tools/editor-modes/emacs/hol-mode.el"]
  in
     fill_holes (src, target)
       ["(defcustom hol-executable HOL-EXECUTABLE\n"

@@ -69,6 +69,7 @@ sig
    val word_compare_tm : term
    val word_concat_tm : term
    val word_div_tm : term
+   val word_exp_tm : term
    val word_extract_tm : term
    val word_from_bin_list_tm : term
    val word_from_bin_string_tm : term
@@ -177,6 +178,7 @@ sig
    val dest_word_compare : term -> term * term
    val dest_word_concat : term -> term * term
    val dest_word_div : term -> term * term
+   val dest_word_exp : term -> term * term
    val dest_word_extract : term -> term * term * term * hol_type
    val dest_word_from_bin_list : term -> term * hol_type
    val dest_word_from_bin_string : term -> term * hol_type
@@ -285,6 +287,7 @@ sig
    val is_word_compare : term -> bool
    val is_word_concat : term -> bool
    val is_word_div : term -> bool
+   val is_word_exp : term -> bool
    val is_word_extract : term -> bool
    val is_word_from_bin_list : term -> bool
    val is_word_from_bin_string : term -> bool
@@ -393,6 +396,7 @@ sig
    val mk_word_compare : term * term -> term
    val mk_word_concat : term * term -> term
    val mk_word_div : term * term -> term
+   val mk_word_exp : term * term -> term
    val mk_word_extract : term * term * term * hol_type -> term
    val mk_word_from_bin_list : term * hol_type -> term
    val mk_word_from_bin_string : term * hol_type -> term

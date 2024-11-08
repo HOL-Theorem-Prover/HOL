@@ -15,31 +15,31 @@ val _ = use "execompile.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate14 z
+  fun makeUpdateT z = makeUpdate15 z
 in
 fun updateT z = let
   fun from all_forced base_state checkerr checkfors debug defaultout exe
-           extra_data forced_objs help multithread output quietp repl =
+           extra_data forced_objs help multithread output quietp repl z_repl =
     {all_forced = all_forced, base_state = base_state,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
-     output = output, quietp = quietp, repl = repl}
-  fun from' repl quietp output multithread help forced_objs extra_data exe
+     output = output, quietp = quietp, repl = repl, z_repl = z_repl}
+  fun from' z_repl repl quietp output multithread help forced_objs extra_data exe
             defaultout debug checkfors checkerr base_state all_forced =
     {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
      checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
-     output = output, quietp = quietp, repl = repl}
+     output = output, quietp = quietp, repl = repl, z_repl = z_repl}
   fun to f {all_forced, base_state, checkerr, checkfors, debug, defaultout, exe,
             extra_data,
-            forced_objs, help, multithread, output, quietp, repl} =
+            forced_objs, help, multithread, output, quietp, repl, z_repl} =
     f all_forced base_state checkerr checkfors debug defaultout exe extra_data
       forced_objs help multithread
-      output quietp repl
+      output quietp repl z_repl
 in
   makeUpdateT (from, from', to)
 end z
@@ -66,7 +66,8 @@ datatype option_record = OR of {
   multithread : int option,
   output : string option,
   quietp : bool,
-  repl : bool
+  repl : bool,
+  z_repl : bool
 }
 
 local
@@ -136,7 +137,9 @@ val cline_opts = [
   {help = "reduce verbosity", long = ["quiet"], short = "q",
    desc = mkBoolT #quietp},
   {help = "start REPL after loading", long = ["repl"], short = "",
-   desc = mkBoolT #repl}
+   desc = mkBoolT #repl},
+  {help = "use zero-terminated REPL style", long = ["zero"], short = "z",
+   desc = mkBoolT #z_repl}
 ]
 val initial_cline = OR {all_forced = false,
                         base_state = !heapname,
@@ -151,7 +154,8 @@ val initial_cline = OR {all_forced = false,
                         multithread = NONE,
                         output = NONE,
                         quietp = false,
-                        repl = false}
+                        repl = false,
+                        z_repl = false}
 end
 
 fun member s [] = false
@@ -237,6 +241,7 @@ fun maybe_check_load diag (obj,_) =
   in
     case ext of
         SOME "sml" => (diag ("Using "^obj); QUse.use obj)
+      | SOME "sig" => (diag ("Using "^obj); QUse.use obj)
       | SOME "ML" => (diag ("Using "^obj); QUse.use obj)
       | SOME "uo" => (diag ("Loading "^obj); load (fix obj))
       | NONE => (diag ("Loading "^obj); load obj)
@@ -291,8 +296,8 @@ fun main() = let
                      errFn = die}
                     (CommandLine.arguments())
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
-  val {quietp = qp, output, base_state, all_forced, forced_objs, ...} = options
-  val {repl, help, debug, extra_data, defaultout, exe, ...} = options
+  val {quietp = qp, output, base_state, all_forced, forced_objs,
+       repl, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
   val diag = if debug then (fn s => warn ("DIAG: "^s)) else (fn s => ())
   val _ = not help orelse (print usage; OS.Process.exit OS.Process.success)
   val outrepl_error = "Can't simultaneously dump output and start REPL"
@@ -380,6 +385,7 @@ in
                                    exitLoop = fn () => false,
                                    exitOnError = false,
                                    isInteractive = true,
+                                   zeroTerm = z_repl,
                                    nameSpace = PolyML.globalNameSpace} )
         else
           case exe of
@@ -397,4 +403,8 @@ in
         OS.Process.exit OS.Process.success
       end
 end handle e =>
-           BuildHeap_CLINE.die ("Uncaught exception: "^General.exnMessage e)
+      BuildHeap_CLINE.die ("Uncaught exception" ^
+        (case PolyML.Exception.exceptionLocation e of
+            NONE => ""
+          | SOME {file, startLine, ...} => " at " ^ file ^ ":" ^ FixedInt.toString startLine) ^
+        ": " ^ General.exnMessage e)

@@ -10,43 +10,6 @@ val _ = new_theory "keccak";
 
 val _ = numLib.temp_prefer_num();
 
-(* TODO: move *)
-Theorem FUNPOW_COMPOSE_INV:
-  !n x f g h.
-  (!m. m < n ==> h(g(FUNPOW f m x)) = FUNPOW f m x)
-  ==>
-  FUNPOW (g o f o h) n (g x) =
-  g (FUNPOW f n x)
-Proof
-  Induct \\ rw[]
-  \\ rw[FUNPOW_SUC]
-QED
-
-(* TODO: move *)
-Theorem FUNPOW_invariant_index:
-  !m x.
-  P x /\
-  (!n. n < m ==> R (FUNPOW f n x)) /\
-  (!x. P x /\ R x ==> P (f x)) ==>
-  P (FUNPOW f m x)
-Proof
-  Induct>>rw[FUNPOW_SUC]
-QED
-
-(* TODO: move *)
-Theorem WHILE_FUNPOW:
-  (?n. ~P (FUNPOW f n s))
-  ==> WHILE P f s = FUNPOW f (LEAST n. ~P (FUNPOW f n s)) s
-Proof
-  strip_tac
-  \\ `~!n. P (FUNPOW f n s)` by PROVE_TAC[]
-  \\ `?x. OWHILE P f s = SOME x` by PROVE_TAC[OWHILE_EQ_NONE, option_CASES]
-  \\ irule OWHILE_WHILE
-  \\ rewrite_tac[OWHILE_def]
-  \\ IF_CASES_TAC
-  \\ fsrw_tac[][]
-QED
-
 Datatype:
   state_array =
   <| w: num

@@ -12,6 +12,7 @@ tools/mlyacc/mlyacclib
 [poly]src/portableML/poly
 src/portableML
 src/portableML/monads
+[poly]src/portableML/json
 [poly]src/portableML/poly/concurrent
 [mosml]src/portableML/mosml/concurrent
 !src/portableML/testsrc
@@ -32,4 +33,5 @@ src/proofman
 !src/proofman/tests
 !tools/Holmake/tests/preexec
 !tools/Holmake/tests/parallel_tests
+!tools/Holmake/tests/repl
 !src/1/theory_tests

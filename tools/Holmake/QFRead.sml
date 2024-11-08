@@ -4,9 +4,6 @@ struct
 open HOLFileSys
 type reader =
      {read : unit -> char option, reset : unit -> unit, eof : unit -> bool}
-fun die s = (output(stdErr, s ^ "\n");
-             OS.Process.exit OS.Process.failure)
-fun exndie e = die ("Exception raised " ^ General.exnMessage e)
 
 fun exhaust_lexer (read, close, _) =
   let
@@ -25,7 +22,7 @@ fun mkstate b = {inscriptp = b, quotefixp = false}
 fun file_to_lexer fname =
   let
 
-    val instrm = openIn fname handle e => exndie e
+    val instrm = openIn fname
     val isscript = String.isSuffix "Script.sml" fname
     val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscript)
     val read = QuoteFilter.makeLexer (fn n => input instrm) qstate
@@ -43,13 +40,16 @@ fun string_to_lexer isscriptp s =
     (#2 o read, (fn () => ()), reset qstate)
   end
 
-fun stream_to_lexer isscriptp strm =
+fun input_to_lexer isscriptp inp =
   let
     val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp)
-    val read = QuoteFilter.makeLexer (fn n => input strm) qstate
+    val read = QuoteFilter.makeLexer inp qstate
   in
     (#2 o read, (fn () => ()), reset qstate)
   end
+
+fun stream_to_lexer isscriptp strm =
+  input_to_lexer isscriptp (fn n => input strm)
 
 fun inputFile fname = exhaust_lexer (file_to_lexer fname)
 fun fromString b s = exhaust_lexer (string_to_lexer b s)
@@ -72,6 +72,7 @@ end
 
 fun fileToReader fname = mkReaderEOF (file_to_lexer fname)
 fun stringToReader b s = mkReaderEOF (string_to_lexer b s)
+fun inputToReader b inp = mkReaderEOF (input_to_lexer b inp)
 fun streamToReader b strm = mkReaderEOF (stream_to_lexer b strm)
 
 end

@@ -1,8 +1,8 @@
 
 
 functor MlyaccLrValsFun(structure Hdr : HEADER
-		          where type prec = Header.prec
-			structure Token : TOKEN)
+                          where type prec = Header.prec
+                        structure Token : TOKEN)
  =
 struct
 structure ParserData=
@@ -423,8 +423,8 @@ val MPC_DECL as MPC_DECL1=MPC_DECL1 ()
  in (LrTable.NT 5,(result,MPC_DECLS1left,MPC_DECL1right),rest671) end
 | (2,rest671) => let val result=MlyValue.MPC_DECLS(fn _ => (
 DECL {prec=nil,nonterm=NONE,term=NONE,eop=nil,control=nil,
-		   keyword=nil,change=nil,
-		   value=nil}
+                   keyword=nil,change=nil,
+                   value=nil}
 ))
  in (LrTable.NT 5,(result,defaultPos,defaultPos),rest671) end
 | (3,(_,(MlyValue.CONSTR_LIST CONSTR_LIST1,_,CONSTR_LIST1right))::(_,(
@@ -432,9 +432,9 @@ _,TERM1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ =>
 let val CONSTR_LIST as CONSTR_LIST1=CONSTR_LIST1 ()
  in (
 DECL { prec=nil,nonterm=NONE,
-	       term = SOME CONSTR_LIST, eop =nil,control=nil,
-		change=nil,keyword=nil,
-		value=nil}
+               term = SOME CONSTR_LIST, eop =nil,control=nil,
+                change=nil,keyword=nil,
+                value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,TERM1left,CONSTR_LIST1right),rest671) end
@@ -443,8 +443,8 @@ _,NONTERM1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _
  => let val CONSTR_LIST as CONSTR_LIST1=CONSTR_LIST1 ()
  in (
 DECL { prec=nil,control=nil,nonterm= SOME CONSTR_LIST,
-	       term = NONE, eop=nil,change=nil,keyword=nil,
-	       value=nil}
+               term = NONE, eop=nil,change=nil,keyword=nil,
+               value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,NONTERM1left,CONSTR_LIST1right),rest671) end
@@ -454,8 +454,8 @@ MlyValue.MPC_DECL(fn _ => let val PREC as PREC1=PREC1 ()
 val ID_LIST as ID_LIST1=ID_LIST1 ()
  in (
 DECL {prec= [(PREC,ID_LIST)],control=nil,
-	      nonterm=NONE,term=NONE,eop=nil,change=nil,
-	      keyword=nil,value=nil}
+              nonterm=NONE,term=NONE,eop=nil,change=nil,
+              keyword=nil,value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,PREC1left,ID_LIST1right),rest671) end
@@ -463,8 +463,8 @@ DECL {prec= [(PREC,ID_LIST)],control=nil,
  => let val result=MlyValue.MPC_DECL(fn _ => let val ID as ID1=ID1 ()
  in (
 DECL {prec=nil,control=[START_SYM (symbolMake ID)],nonterm=NONE,
-	       term = NONE, eop = nil,change=nil,keyword=nil,
-	       value=nil}
+               term = NONE, eop = nil,change=nil,keyword=nil,
+               value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,START1left,ID1right),rest671) end
@@ -473,8 +473,8 @@ PERCENT_EOP1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn
 _ => let val ID_LIST as ID_LIST1=ID_LIST1 ()
  in (
 DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,
-		eop=ID_LIST, change=nil,keyword=nil,
-	 	value=nil}
+                eop=ID_LIST, change=nil,keyword=nil,
+                value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,PERCENT_EOP1left,ID_LIST1right),rest671) end
@@ -483,8 +483,8 @@ KEYWORD1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _
  => let val ID_LIST as ID_LIST1=ID_LIST1 ()
  in (
 DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
-		change=nil,keyword=ID_LIST,
-	 	value=nil}
+                change=nil,keyword=ID_LIST,
+                value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,KEYWORD1left,ID_LIST1right),rest671) end
@@ -493,8 +493,8 @@ PREFER1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ =>
 let val ID_LIST as ID_LIST1=ID_LIST1 ()
  in (
 DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
-		    change=map (fn i=>([],[i])) ID_LIST,keyword=nil,
-		    value=nil}
+                    change=map (fn i=>([],[i])) ID_LIST,keyword=nil,
+                    value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,PREFER1left,ID_LIST1right),rest671) end
@@ -503,8 +503,8 @@ DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
  => let val CHANGE_DECL as CHANGE_DECL1=CHANGE_DECL1 ()
  in (
 DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
-		change=CHANGE_DECL,keyword=nil,
-		value=nil}
+                change=CHANGE_DECL,keyword=nil,
+                value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,CHANGE1left,CHANGE_DECL1right),rest671) end
@@ -513,8 +513,8 @@ SUBST1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _ =>
 let val SUBST_DECL as SUBST_DECL1=SUBST_DECL1 ()
  in (
 DECL {prec=nil,control=nil,nonterm=NONE,term=NONE,eop=nil,
-		change=SUBST_DECL,keyword=nil,
-		value=nil}
+                change=SUBST_DECL,keyword=nil,
+                value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,SUBST1left,SUBST_DECL1right),rest671) end
@@ -523,8 +523,8 @@ NOSHIFT1left,_))::rest671) => let val result=MlyValue.MPC_DECL(fn _
  => let val ID_LIST as ID_LIST1=ID_LIST1 ()
  in (
 DECL {prec=nil,control=[NSHIFT ID_LIST],nonterm=NONE,term=NONE,
-	            eop=nil,change=nil,keyword=nil,
-		    value=nil}
+                    eop=nil,change=nil,keyword=nil,
+                    value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,NOSHIFT1left,ID_LIST1right),rest671) end
@@ -533,8 +533,8 @@ PERCENT_HEADER1left,_))::rest671) => let val result=MlyValue.MPC_DECL(
 fn _ => let val PROG as PROG1=PROG1 ()
  in (
 DECL {prec=nil,control=[FUNCTOR PROG],nonterm=NONE,term=NONE,
-	            eop=nil,change=nil,keyword=nil,
-		    value=nil}
+                    eop=nil,change=nil,keyword=nil,
+                    value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,PERCENT_HEADER1left,PROG1right),rest671) end
@@ -544,8 +544,8 @@ MlyValue.MPC_DECL(fn _ => let val PROG as PROG1=PROG1 ()
  in (
 DECL {prec=nil,control=[TOKEN_SIG_INFO PROG],
                     nonterm=NONE,term=NONE,
-	            eop=nil,change=nil,keyword=nil,
-		    value=nil}
+                    eop=nil,change=nil,keyword=nil,
+                    value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,PERCENT_TOKEN_SIG_INFO1left,PROG1right),
@@ -554,8 +554,8 @@ rest671) end
  => let val result=MlyValue.MPC_DECL(fn _ => let val ID as ID1=ID1 ()
  in (
 DECL {prec=nil,control=[PARSER_NAME (symbolMake ID)],
-	            nonterm=NONE,term=NONE,
-		    eop=nil,change=nil,keyword=nil, value=nil}
+                    nonterm=NONE,term=NONE,
+                    eop=nil,change=nil,keyword=nil, value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,NAME1left,ID1right),rest671) end
@@ -565,33 +565,33 @@ MlyValue.MPC_DECL(fn _ => let val PROG as PROG1=PROG1 ()
 val TY as TY1=TY1 ()
  in (
 DECL {prec=nil,control=[PARSE_ARG(PROG,TY)],nonterm=NONE,
-	            term=NONE,eop=nil,change=nil,keyword=nil,
-		     value=nil}
+                    term=NONE,eop=nil,change=nil,keyword=nil,
+                     value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,PERCENT_ARG1left,TY1right),rest671) end
 | (17,(_,(_,VERBOSE1left,VERBOSE1right))::rest671) => let val result=
 MlyValue.MPC_DECL(fn _ => (
 DECL {prec=nil,control=[Hdr.VERBOSE],
-	        nonterm=NONE,term=NONE,eop=nil,
-	        change=nil,keyword=nil,
-		value=nil}
+                nonterm=NONE,term=NONE,eop=nil,
+                change=nil,keyword=nil,
+                value=nil}
 ))
  in (LrTable.NT 4,(result,VERBOSE1left,VERBOSE1right),rest671) end
 | (18,(_,(_,NODEFAULT1left,NODEFAULT1right))::rest671) => let val
 result=MlyValue.MPC_DECL(fn _ => (
 DECL {prec=nil,control=[Hdr.NODEFAULT],
-	        nonterm=NONE,term=NONE,eop=nil,
-	        change=nil,keyword=nil,
-		value=nil}
+                nonterm=NONE,term=NONE,eop=nil,
+                change=nil,keyword=nil,
+                value=nil}
 ))
  in (LrTable.NT 4,(result,NODEFAULT1left,NODEFAULT1right),rest671) end
 | (19,(_,(_,PERCENT_PURE1left,PERCENT_PURE1right))::rest671) => let
 val result=MlyValue.MPC_DECL(fn _ => (
 DECL {prec=nil,control=[Hdr.PURE],
-	        nonterm=NONE,term=NONE,eop=nil,
-	        change=nil,keyword=nil,
-		value=nil}
+                nonterm=NONE,term=NONE,eop=nil,
+                change=nil,keyword=nil,
+                value=nil}
 ))
  in (LrTable.NT 4,(result,PERCENT_PURE1left,PERCENT_PURE1right),
 rest671) end
@@ -600,9 +600,9 @@ rest671) => let val result=MlyValue.MPC_DECL(fn _ => let val TY as TY1
 =TY1 ()
  in (
 DECL {prec=nil,control=[Hdr.POS TY],
-	        nonterm=NONE,term=NONE,eop=nil,
-	        change=nil,keyword=nil,
-		value=nil}
+                nonterm=NONE,term=NONE,eop=nil,
+                change=nil,keyword=nil,
+                value=nil}
 ) end
 )
  in (LrTable.NT 4,(result,PERCENT_POS1left,TY1right),rest671) end
@@ -612,9 +612,9 @@ fn _ => let val ID as ID1=ID1 ()
 val PROG as PROG1=PROG1 ()
  in (
 DECL {prec=nil,control=nil,
-	        nonterm=NONE,term=NONE,eop=nil,
-	        change=nil,keyword=nil,
-		value=[(symbolMake ID,PROG)]}
+                nonterm=NONE,term=NONE,eop=nil,
+                change=nil,keyword=nil,
+                value=[(symbolMake ID,PROG)]}
 ) end
 )
  in (LrTable.NT 4,(result,VALUE1left,PROG1right),rest671) end
@@ -699,9 +699,9 @@ MlyValue.G_RULE(fn _ => let val ID as ID1=ID1 ()
 val RHS_LIST as RHS_LIST1=RHS_LIST1 ()
  in (
 map (fn {rhs,code,prec} =>
-    	          Hdr.RULE {lhs=symbolMake ID,rhs=rhs,
-			       code=code,prec=prec})
-	 RHS_LIST
+                  Hdr.RULE {lhs=symbolMake ID,rhs=rhs,
+                               code=code,prec=prec})
+         RHS_LIST
 ) end
 )
  in (LrTable.NT 9,(result,ID1left,RHS_LIST1right),rest671) end
@@ -845,7 +845,7 @@ end
 val void = MlyValue.VOID
 val extract = fn a => (fn MlyValue.BEGIN x => x
 | _ => let exception ParseInternal
-	in raise ParseInternal end) a ()
+        in raise ParseInternal end) a ()
 end
 end
 structure Tokens : Mlyacc_TOKENS =

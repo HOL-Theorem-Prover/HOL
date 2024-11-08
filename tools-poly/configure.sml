@@ -467,14 +467,15 @@ val _ = work_in_dir "genscriptdep"
 end (* local *)
 
 (*---------------------------------------------------------------------------
-    Instantiate tools/hol-mode.src, and put it in tools/hol-mode.el
+    Instantiate tools/editor-modes/emacs/hol-mode.src, and put it into
+    hol-mode.el in the same directory.
  ---------------------------------------------------------------------------*)
 
 val _ =
  let open TextIO
      val _ = echo "Making hol-mode.el (for Emacs)"
-     val src = fullPath [holdir, "tools", "hol-mode.src"]
-    val target = fullPath [holdir, "tools", "hol-mode.el"]
+     val src = fullPath [holdir, "tools", "editor-modes", "emacs", "hol-mode.src"]
+    val target = fullPath [holdir, "tools", "editor-modes", "emacs", "hol-mode.el"]
  in
     fill_holes (src, target)
       ["(defcustom hol-executable HOL-EXECUTABLE\n"
@@ -488,13 +489,13 @@ val _ =
  end;
 
 (*---------------------------------------------------------------------------
-    Instantiate tools/vim/*.src
+    Instantiate tools/editor-modes/vim/*.src
  ---------------------------------------------------------------------------*)
 
 val _ =
   let open TextIO
-    val _ = echo "Making tools/vim/*"
-    val pref = fullPath [holdir, "tools", "vim"]
+    val _ = echo "Making tools/editor-modes/vim/*"
+    val pref = fullPath [holdir, "tools", "editor-modes", "vim"]
     val src1 = fullPath [pref, "hol.src"]
     val tar1 = fullPath [pref, "hol.vim"]
     val src2 = fullPath [pref, "vimhol.src"]

@@ -45,6 +45,7 @@ See
   examples/muddy/muddyC/buddy/README
   examples/machine-code/graph/seL4-kernel/README
   src/HolSat/sat_solvers/minisat
+  src/portableML/json
 
 - Files derived from SML/NJ are governed by the notice in
      doc/copyrights/smlnj.txt

@@ -1,6 +1,7 @@
 
 open HolKernel Parse boolLib bossLib;
 open stringLib integerTheory;
+open listTheory arithmeticTheory;
 val ect = BasicProvers.EVERY_CASE_TAC;
 
 val _ = new_theory "imp";
@@ -102,5 +103,137 @@ val cval_ind = prove(
   \\ `t = t2` by DECIDE_TAC \\ fs []) |> REWRITE_RULE [STOP_def];
 
 Theorem cval_ind[allow_rebind] = cval_ind
+
+Theorem seq_none:
+  cval (Seq c c') s t = NONE <=>
+    cval c s t = NONE \/
+    ?s' t'. cval c s t = SOME (s', t') /\ cval c' s' t' = NONE
+Proof
+  simp[EQ_IMP_THM] >>
+  conj_tac >>
+  rw[cval_def, CaseEq"option"] >>
+  simp[] >>
+  Cases_on `v` >>
+  fs[]
+QED
+
+Theorem skip_elim[simp]:
+  cval (Seq c1 SKIP) s t = cval c1 s t
+Proof
+  simp[cval_def] >>
+  Cases_on `cval c1 s t` >>
+  simp[] >>
+  Cases_on `x` >>
+  simp[]
+QED
+
+Theorem lrg_clk:
+  !c s t t' s1 t1.
+    t ≤ t' ∧ cval c s t = SOME (s1,t1) ==>
+    ?t2. cval c s t' = SOME (s1,t2) ∧ t1 ≤ t2
+Proof
+  recInduct cval_ind >>
+  rw[] >>~-
+  ([`(While _ _)`],
+    Cases_on `t` >>
+    Cases_on `bval b s` >>
+    fs[Once cval_def] >>
+    first_x_assum $ qspecl_then [`t'-1`, `s1`, `t1`] assume_tac >>
+    Cases_on `cval c s n` >>
+    gvs[Once cval_def]
+  ) >>~-
+  ([`(If _ _ _)`],
+    first_x_assum $ qspecl_then [`t'`, `s1`, `t1`] assume_tac >>
+    rfs[cval_def]
+  ) >>
+  gvs[cval_def] >>
+  fs[CaseEq"option"] >>
+  Cases_on `v` >>
+  fs[] >>
+  first_x_assum $ qspec_then `t'` assume_tac >>
+  rfs[]
+QED
+
+Theorem cval_mono:
+  !c s t t'.
+    t ≤ t' ∧ cval c s t ≠ NONE ==>
+    OPTION_MAP FST (cval c s t) = OPTION_MAP FST (cval c s t')
+Proof
+  rpt strip_tac >>
+  Cases_on `cval c s t` >>
+  gs[] >>
+  Cases_on `x` >>
+  rev_drule_all lrg_clk >>
+  rw[] >>
+  simp[]
+QED
+
+Theorem lrg_clk2:
+  !c s t t' s1 t1 t2.
+    t1 ≤ t2 ∧ cval c s t = SOME (s1,t1) ∧ cval c s t' = SOME (s1,t2) ==>
+    t ≤ t'
+Proof
+  recInduct cval_ind >>
+  rw[] >>~-
+  ([`(While _ _)`],
+    fs[Once cval_def] >>
+    Cases_on `bval b s` >>
+    Cases_on `t` >>
+    Cases_on `t'` >>
+    fs[Once cval_def] >>
+    last_x_assum $ qspecl_then [`n'`, `s1`, `t1`, `t2`] assume_tac >>
+    rfs[CaseEq"option"] >>
+    rfs[] >>
+    Cases_on `v` >>
+    Cases_on `v'` >>
+    rfs[Once cval_def] >>
+    pop_assum mp_tac >>
+    simp[Once cval_def]
+  ) >>
+  gvs[cval_def] >>
+  fs[CaseEq"option"] >>
+  first_x_assum irule >>
+  last_x_assum $ irule_at Any >>
+  Cases_on `v` >>
+  Cases_on `v'` >>
+  gvs[] >>
+  qexists `t2` >>
+  Cases_on `t <= t'` >>
+  fs[NOT_LESS_EQUAL] >>
+  imp_res_tac LESS_IMP_LESS_OR_EQ >>
+  drule cval_mono >>
+  disch_then $ qspecl_then [`c1`, `s`] assume_tac >>
+  gvs[]
+QED
+
+Theorem arb_resc:
+  !c s t s1 t1.
+    cval c s t = SOME (s1,t1) ==> !k. ?t'. cval c s t' = SOME (s1,k)
+Proof
+  recInduct cval_ind >>
+  rw[] >>~-
+  ([`(While _ _)`],
+    Cases_on `bval b s` >>
+    Cases_on `t` >>
+    fs[Once cval_def] >>
+    last_x_assum $ qspecl_then [`s1`, `t1`] assume_tac >>
+    rfs[Once cval_def] >>
+    pop_assum $ qspec_then `k` assume_tac >>
+    fs[] >>
+    qexists `t' + 1` >>
+    simp[]
+  ) >>
+  gvs[cval_def] >>
+  fs[CaseEq"option"] >>
+  Cases_on `v` >>
+  fs[] >>
+  last_x_assum $ qspec_then `k` assume_tac >>
+  fs[] >>
+  last_x_assum $ qspec_then `t'` assume_tac >>
+  fs[] >>
+  qexists `t''` >>
+  qexists `(q, t')` >>
+  simp[]
+QED
 
 val _ = export_theory();

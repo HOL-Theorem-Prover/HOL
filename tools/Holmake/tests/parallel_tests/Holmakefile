@@ -24,7 +24,8 @@ DIRNAMES = \
   deps_of_depthys \
   gh604 \
   ignore_errors/j1 \
-  qfreadTheoremsyntax
+  qfreadTheoremsyntax \
+  use-fnf
 
 ifdef POLY
 DIRNAMES += cheatspotting \

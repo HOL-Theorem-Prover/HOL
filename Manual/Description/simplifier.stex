@@ -20,12 +20,9 @@ The basic conversion is
    simpLib.SIMP_CONV : simpLib.simpset -> thm list -> term -> thm
 \end{verbatim}
 \end{hol}
-The first argument, a \simpset, is the standard way of providing a
-collection of rewrite rules (and other data, to be explained below) to
-the simplifier.  There are \simpset{}s accompanying most of \HOL's
-major theories.  For example, the \simpset{} \ml{bool\_ss}
-in \ml{boolSimps} embodies all of the usual rewrite theorems one would want over boolean
-formulas:
+The first argument, a \simpset, is the standard way of providing a collection of rewrite rules (and other data, to be explained below) to the simplifier.
+There are \simpset{}s accompanying most of \HOL's major theories.
+For example, the \simpset{} \ml{bool\_ss} in \ml{boolSimps} embodies all of the usual rewrite theorems one would want over boolean formulas:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
@@ -108,7 +105,7 @@ assumption \holtxt{\~{}P} will be treated as the rewrite \holtxt{$\vdash$ P = F}
 
 \begin{session}
 \begin{alltt}
->>_ g `x < 3 /\ P x ==> x < 20 DIV 2`;
+>>_ g ‘x < 3 /\ P x ==> x < 20 DIV 2’;
 >> e (simp[]);
 \end{alltt}
 \end{session}
@@ -118,7 +115,7 @@ The \ml{simp} tactic is implemented with the low-level tactic \ml{asm\_simp\_tac
 \subsubsection{\ml{rw : thm list -> tactic}}
 \index{rw (simplification tactic)@\ml{rw} (simplification tactic)}
 
-A call to \ml{rw[$\mathit{th}_1\dots,\mathit{th}_n$]} is similar in behaviour to \ml{simp} with the same arguments but does its simplification while interspersing phases of aggressive ``goal-stripping''.
+A call to \ml{rw[$\mathit{th}_1\dots,\mathit{th}_n$]} is similar in behaviour to \ml{simp} with the same arguments but does its simplification while interleaving phases of aggressive ``goal-stripping''.
 In particular, \ml{rw} begins by stripping all outermost universal quantifiers and conjunctions.
 It follows this with elimination of variables \holtxt{v} that appear in assumptions of the form \holtxt{v~=~e} or \holtxt{e~=~v} (where \holtxt{v} cannot be free in \holtxt{e}).
 After a phase of simplification (as \emph{per} \ml{simp}), the \ml{rw} tactic then does a case-split on all free \holtxt{if}-\holtxt{then}-\holtxt{else} subterms within the goal,%
@@ -143,7 +140,6 @@ When no further change occurs among the assumptions, all of the assumptions are 
 When an assumption $A_i$ is simplified, a theorem of the form $\vdash A_i \Leftrightarrow A_i'$ is produced.
 Then $A_i'$ is added to the goal as a new assumption, using the theorem-tactical \ml{strip\_assume\_tac}.
 This latter will (recursively) split conjunctions into multiple assumptions (\emph{i.e.}, an assumption $p \land q$ will turn into two assumptions, $p$ and $q$), will cause a case-split if the assumption is a disjunction, and will choose fresh variable names to eliminate existential quantifiers.
-
 \index{gns (simplification tactic)@\ml{gs} (simplification tactic)}
 If this ``stripping'' is not desired, the \ml{gns} variant of \ml{gs} can be used (`n' for ``no strip'').
 
@@ -192,7 +188,7 @@ It is up to the user to decide which they prefer to see in their proof scripts.
 \index{simp_tac@\ml{simp\_tac}}
 
 The tactic \ml{simp\_tac} is the simplest simplification function: it attempts to simplify the current goal (ignoring the assumptions) using the given \simpset{} and the additional theorems.
-It is no more than the lifting of the underlying \ml{SIMP\_CONV} conversion to the tactic level through the use of the standard function \ml{CONV\_TAC}.
+It is little more than the lifting of the underlying \ml{SIMP\_CONV} conversion to the tactic level through the use of the standard function \ml{CONV\_TAC}.
 
 \subsubsection{\ml{asm\_simp\_tac : simpset -> thm list -> tactic}}
 \index{asm_simp_tac@\ml{asm\_simp\_tac}}
@@ -201,7 +197,7 @@ Like \ml{simp\_tac}, \ml{asm\_simp\_tac} simplifies the current goal (leaving th
 Thus:
 \begin{session}
 \begin{alltt}
->>__ g `(x = 3) ==> P x`;
+>>__ g ‘(x = 3) ==> P x’;
 >>- e strip_tac;
 
 >> e (asm_simp_tac bool_ss []);
@@ -253,7 +249,7 @@ have changed.
 The next session demonstrates more interesting behaviour:
 \begin{session}
 \begin{alltt}
->>__ drop(); g`x <= 4n ==> f x + 1 < 10`;
+>>__ drop(); g‘x <= 4n ==> f x + 1 < 10’;
 >>- e strip_tac;
 
 >> e (full_simp_tac bool_ss [arithmeticTheory.LESS_OR_EQ]);
@@ -321,14 +317,13 @@ arguments.  (One such rule is \holtxt{|- T /\bs{} p = p}.)
 As in the example above, \ml{bool\_ss} also performs
 $\beta$-reductions and one-point unwindings.  The latter turns terms
 of the form \[
-\exists x.\;P(x)\land\dots (x = e) \dots\land Q(x)
+\exists x.\;P(x)\land\dots x = e \dots\land Q(x)
 \]
 into
 \[
 P(e) \land \dots \land Q(e)
 \]
-Similarly, unwinding will turn $\forall x.\;(x = e)
-\Rightarrow P(x)$ into $P(e)$.
+Similarly, unwinding will turn $\forall x.\;x = e \Rightarrow P(x)$ into $P(e)$.
 
 Finally, \ml{bool\_ss} also includes congruence rules that allow
 the simplifier to make additional assumptions when simplifying
@@ -338,9 +333,9 @@ illustrated by some examples (the first also demonstrates unwinding
 under a universal quantifier):
 \begin{session}
 \begin{alltt}
->> SIMP_CONV bool_ss [] ``!x. (x = 3) /\ P x ==> Q x /\ P 3``;
+>> SIMP_CONV bool_ss [] “!x. (x = 3) /\ P x ==> Q x /\ P 3”;
 
->> SIMP_CONV bool_ss [] ``if x <> 3 then P x else Q x``;
+>> SIMP_CONV bool_ss [] “if x <> 3 then P x else Q x”;
 \end{alltt}
 \end{session}
 
@@ -353,9 +348,9 @@ rewrite rules pertinent to the types of sums, pairs, options and
 natural numbers to \ml{bool\_ss}.
 \begin{session}
 \begin{alltt}
->> SIMP_CONV std_ss [] ``FST (x,y) + OUTR (INR z)``;
+>> SIMP_CONV std_ss [] “FST (x,y) + OUTR (INR z)”;
 
->> SIMP_CONV std_ss [] ``case SOME x of NONE => P | SOME y => f y``;
+>> SIMP_CONV std_ss [] “case SOME x of NONE => P | SOME y => f y”;
 \end{alltt}
 \end{session}
 
@@ -364,9 +359,9 @@ with ground values, and also includes a suite of ``obvious rewrites''
 for formulas including variables.
 \begin{session}
 \begin{alltt}
->> SIMP_CONV std_ss [] ``P (0 <= x) /\ Q (y + x - y)``;
+>> SIMP_CONV std_ss [] “P (0 <= x) /\ Q (y + x - y)”;
 
->> SIMP_CONV std_ss [] ``23 * 6 + 7 ** 2 - 31 DIV 3``;
+>> SIMP_CONV std_ss [] “23 * 6 + 7 ** 2 - 31 DIV 3”;
 \end{alltt}
 \end{session}
 
@@ -464,13 +459,14 @@ all situations where the simplifier is used.
 This versatility is illustrated in the following example:
 \begin{session}
 \begin{alltt}
->> Datatype `tree = Leaf | Node num tree tree`;
+>> Datatype: tree = Leaf | Node num tree tree
+   End
 
->> SIMP_CONV (srw_ss()) [] ``Node x Leaf Leaf = Node 3 t1 t2``;
+>> SIMP_CONV (srw_ss()) [] “Node x Leaf Leaf = Node 3 t1 t2”;
 
 >> load "pred_setTheory";
 
->> SIMP_CONV (srw_ss()) [] ``x IN { y | y < 6}``;
+>> SIMP_CONV (srw_ss()) [] “x IN { y | y < 6}”;
 \end{alltt}
 \end{session}
 %
@@ -489,10 +485,10 @@ the underlying \simpset{} in the current session, but they will be
 added in future sessions when the current theory is reloaded.
 \begin{session}
 \begin{alltt}
->> val tsize_def = Define`
+>> Definition tsize_def:
      (tsize Leaf = 0) /\
      (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
-   `;
+   End
 
 >> val _ = BasicProvers.export_rewrites ["tsize_def"];
 
@@ -1371,6 +1367,37 @@ In addition to rewrites, conversions and decision procedures can also be tempora
 \begin{session}
 \begin{alltt}
 >> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”);
+\end{alltt}
+\end{session}
+
+\paragraph{Excluding assumptions}
+\index{NoAsms (simplification theorem modifier)@\ml{NoAsms} (simplification theorem modifier)}
+\index{simplification theorem modifiers!NoAsms@\ml{NoAsms}}
+\index{IgnAsm (simplification theorem modifier)@\ml{IgnAsm} (simplification theorem modifier)}
+\index{simplification theorem modifiers!IgnAsm@\ml{IgnAsm}}
+\index{simplification!removing rewrites}
+It is possible to stop tactics such as \ml{simp} from using assumptions (it otherwise tries to use all of a goal's assumptions) with the \ml{NoAsms} and \ml{IgnAsm} forms.
+The \ml{NoAsms} form prevents the use of all of a goal's assumptions:
+\begin{session}
+\begin{alltt}
+>> simp[NoAsms] ([“x = 3”], “x < 10”);
+##assert (#2(hd(#1(simp[NoAsms]([“x =3”], “x < 10”)))) ~~ “x < 10”)
+\end{alltt}
+\end{session}
+The \ml{IgnAsm} form takes a quotation argument corresponding to a pattern (where free variables in the pattern that also occur in the goal are forced to take on their types in the goal).
+Every assumption that matches the pattern is excluded from further simplification.
+By default, the matching requires the pattern to match the entirety of the assumption statement.
+However, if the pattern concludes with the comment \ml{(* sa *)} (with or without the spaces; ``sa'' stands for ``sub-assumption''), the matching succeeds (and the assumption is excluded) if the pattern matches any sub-term of the assumption.
+Thus:
+\begin{session}
+\begin{alltt}
+>> simp[IgnAsm‘x = _’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
+
+>> simp[IgnAsm‘F’] ([“x = F”, “y = T”], “p ∧ x ∧ y”); (* nothing matches *)
+
+>> simp[IgnAsm‘F(* sa *)’] ([“x = F”, “y = T”], “p ∧ x ∧ y”);
+
+>> simp[IgnAsm‘_ = _’] ([“x = F”, “y = T”, “p:bool”], “p ∧ x ∧ y”);
 \end{alltt}
 \end{session}
 

@@ -1,0 +1,8 @@
+{
+    "fld1" : "¬(∃x. x ≤ 3)",
+    "pi" : 3.1415,
+    "array" : [1,2,3,4,false,{"foo" : null}, true],
+
+
+    "finally" : "another string"
+}

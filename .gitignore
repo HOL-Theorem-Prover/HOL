@@ -6,6 +6,7 @@
 *.ui
 *.o
 .hollogs
+.holobjs
 .HOLMK
 *.lex.sml
 *.grm.sig
@@ -53,14 +54,14 @@ tools/Holmake/Parser.sig
 tools/Holmake/Parser.sml
 
 sigobj/*
-tools/hol-mode.el
 tools/quote-filter/filter.sml
 tools/quote-filter/quote-filter
 tools/quote-filter/selftest
-tools/vim/filetype.vim
-tools/vim/hol-config.sml
-tools/vim/hol.vim
-tools/vim/vimhol.sml
+tools/editor-modes/emacs/hol-mode.el
+tools/editor-modes/vim/filetype.vim
+tools/editor-modes/vim/hol-config.sml
+tools/editor-modes/vim/hol.vim
+tools/editor-modes/vim/vimhol.sml
 tools-poly/build-logs
 tools/build-stamp
 tools/lastbuildoptions

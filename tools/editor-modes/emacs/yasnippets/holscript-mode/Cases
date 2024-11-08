@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: Automatic case distinction for leading universal quantifier
+# key: Cases
+# expand-env: ((yas-indent-line 'fixed))
+# group: tactics
+# --
+Cases $0

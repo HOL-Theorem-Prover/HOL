@@ -601,6 +601,9 @@ fun replace_string {from, to} =
     f [] o Substring.full
   end
 
+val remove_wspace =
+    String.translate (fn c => if Char.isSpace c then "" else str c)
+
 (*---------------------------------------------------------------------------
     System
  ---------------------------------------------------------------------------*)

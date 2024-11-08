@@ -1937,6 +1937,12 @@ Proof
   \\ rw[wf_insert]
 QED
 
+Theorem wf_list_to_num_set[simp]:
+  !ls. wf (list_to_num_set ls)
+Proof
+  Induct \\ rw[list_to_num_set_def, wf_insert]
+QED
+
 Theorem mapi_fromList:
   mapi f (fromList ls) = fromList (MAPi f ls)
 Proof

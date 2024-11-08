@@ -110,6 +110,7 @@ end;
 datatype thm = THM of Tag.tag * term HOLset.set * term * proof ref
 and proof =
   Axiom_prf
+| deleted_prf
 | ASSUME_prf of term
 | REFL_prf of term
 | BETA_CONV_prf of term
@@ -131,6 +132,7 @@ and proof =
 | EQ_IMP_RULE2_prf of thm
 | SPEC_prf of term * thm
 | GEN_prf of term * thm
+| GENL_prf of term list * thm
 | EXISTS_prf of term * term * thm
 | CHOOSE_prf of term * thm * thm
 | CONJ_prf of thm * thm
@@ -151,9 +153,10 @@ and proof =
 | Def_const_list_prf of string * (string * hol_type) list * thm
 | Def_spec_prf of term list * thm
 | deductAntisym_prf of thm * thm
+| compute_prf
 
 fun proof (THM(_,_,_,p)) = !p
-fun delete_proof (THM(_,_,_,p)) = p := Axiom_prf
+fun delete_proof (THM(_,_,_,p)) = p := deleted_prf
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
@@ -652,7 +655,20 @@ fun GEN x th =
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
-val GENL = itlist GEN
+fun GENL vs th = let
+  val (asl,c) = sdest_thm th
+in
+  if exists (fn v => var_occursl v asl) vs then
+    ERR "GENL" "variable occurs free in hypotheses"
+  else
+    make_thm
+      Count.Gen(tag th, asl,
+                list_mk_binder (SOME (prim_mk_const {Thy="bool", Name="!"}))
+                               (vs,c),
+                GENL_prf(vs,th))
+    handle HOL_ERR _ => ERR "GENL" ""
+end
+
 
 
 (*---------------------------------------------------------------------------
@@ -1016,27 +1032,33 @@ fun Beta th =
    handle HOL_ERR _ => ERR "Beta" "";
 
 
-(*---------------------------------------------------------------------------*
- * This rule behaves like a tactic: given a goal (reducing the rhs of thm),  *
- * it returns two subgoals (reducing the rhs of th1 and th2), together       *
- * with a validation (mkthm), that builds the normal form of t from the      *
- * normal forms of u and v.                                                  *
- * NB: we do not have to typecheck the rator u, and we replaced the alpha    *
- * conversion test with pointer equality.                                    *
- *                                                                           *
- *                     |- u = u    (th1)        |- v = v    (th2)            *
- *       (thm)             ...                     ...                       *
- *    A |- t = u v    A' |- u = u' (th1')     A'' |- v = v' (th2')           *
- *  ----------------------------------------------------------------         *
- *                A u A' u A'' |- t = u' v'                                  *
- *                                                                           *
- * Could be implemented outside Thm as:                                      *
- *   fun Mk_comb th =                                                        *
- *     let val {Rator,Rand} = dest_comb(rhs (concl th))                      *
- *         fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in                  *
- *     (REFL Rator, REFL Rand, mka)                                          *
- *     end                                                                   *
- *---------------------------------------------------------------------------*)
+(* --------------------------------------------------------------------------
+    This rule behaves like a tactic: given a goal (reducing the rhs of thm),
+    it returns two subgoals (reducing the rhs of th1 and th2), together
+    with a validation (mkthm), that builds the normal form of t from the
+    normal forms of u and v.
+    NB:
+     1. we do not have to typecheck the rator u,
+     2. there used to just be a pointer equality check in the Assert lines,
+        but this may cause unintended failures as gc-movement of values may
+        make things that are "morally" pointer-equal not compare equal.
+
+        The aconv test uses a pointer equality test as a fast-path option, so
+        this should still be quick most of the time.
+
+                        |- u = u    (th1)        |- v = v    (th2)
+          (thm)             ...                     ...
+       A |- t = u v    A' |- u = u' (th1')     A'' |- v = v' (th2')
+     ----------------------------------------------------------------
+                   A u A' u A'' |- t = u' v'
+
+    Could be implemented outside Thm as:
+      fun Mk_comb th =
+        let val {Rator,Rand} = dest_comb(rhs (concl th))
+            fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in
+        (REFL Rator, REFL Rand, mka)
+        end
+  --------------------------------------------------------------------------- *)
 
 fun Mk_comb thm =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl thm)
@@ -1058,19 +1080,22 @@ fun Mk_comb thm =
    end
    handle HOL_ERR _ => ERR "Mk_comb" "";
 
-(*---------------------------------------------------------------------------*
- *                      |- u = u    (th1)                                    *
- *       (thm)              ...                                              *
- *    A |- t = \x.u    A' |- u = u' (th1')                                   *
- *  ---------------------------------------- x not in FV(A')                 *
- *            A u A' |- t = \x.u'                                            *
- *                                                                           *
- * Could be implemented outside Thm as:                                      *
- *   fun Mk_abs th =                                                         *
- *     let val {Bvar,Body} = dest_abs(rhs (concl th)) in                     *
- *     (Bvar, REFL Body, (fn th1 => TRANS th (ABS Bvar th1)))                *
- *     end                                                                   *
- *---------------------------------------------------------------------------*)
+(* --------------------------------------------------------------------------
+                         |- u = u    (th1)
+          (thm)              ...
+       A |- t = \x.u    A' |- u = u' (th1')
+     ---------------------------------------- x not in FV(A')
+               A u A' |- t = \x.u'
+
+    Could be implemented outside Thm as:
+      fun Mk_abs th =
+        let val {Bvar,Body} = dest_abs(rhs (concl th)) in
+        (Bvar, REFL Body, (fn th1 => TRANS th (ABS Bvar th1)))
+        end
+
+    See comment accompanying Mk_comb for discussion of use of aconv in first
+    Assert.
+   -------------------------------------------------------------------------- *)
 
 fun Mk_abs thm =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl thm)
@@ -1366,10 +1391,53 @@ fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let
 in make_thm Count.Axiom (Tag.merge o1 o2, union_hyp a1' a2', mk_eq_nocheck bool c1 c2, deductAntisym_prf(th1,th2)) end
 
 (* ----------------------------------------------------------------------
-    Disable compute primitive
+    Computing with first-order lisp-style values
    ---------------------------------------------------------------------- *)
 
-  fun compute {cval_terms, cval_type, num_type, char_eqns}  _ _ =
-    raise ERR "compute" "disabled in opentheory kernel";
+local
+  infix ##;
+  fun dest_code_eqn th =
+    case total ((List.null ## I) o dest_thm) th of
+      SOME (true,tm) => tm
+    | _ => raise ERR "compute" "code equation with hypotheses";
+  fun safe_mk_eq l r =
+    let
+      val tyl = type_of l
+    in
+      if tyl = type_of r then
+        Term.prim_mk_eq tyl l r
+      else
+        raise ERR "compute" "types of lhs and rhs disagree"
+    end;
+  val merge_tags = foldr (uncurry Tag.merge)
+in
+  fun compute {cval_terms, cval_type, num_type, char_eqns} =
+    let
+      val tag0 = merge_tags empty_tag (List.map (tag o snd) char_eqns)
+      val char_eqns = List.map (I ## dest_thm) char_eqns
+      val _ = List.all (List.null o fst o snd) char_eqns orelse
+              raise ERR "compute" "Characteristic equation with hypotheses"
+      val tc0 = Compute.term_compute
+                 { cval_terms = cval_terms,
+                   cval_type = cval_type,
+                   num_type = num_type,
+                   char_eqns = List.map (I ## snd) char_eqns }
+    in
+      fn code_eqs =>
+        let
+          val tag1 = merge_tags tag0 (List.map tag code_eqs)
+          val eqs = List.map dest_code_eqn code_eqs
+          val tc1 = tc0 eqs
+        in
+          fn tm =>
+            let
+              val tm' = tc1 tm
+              val eqn = safe_mk_eq tm tm'
+            in
+              make_thm Count.Compute (tag1, empty_hyp, eqn, compute_prf)
+            end
+        end
+    end;
+end (*local *)
 
 end (* Thm *)

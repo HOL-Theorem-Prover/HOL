@@ -1,0 +1,16 @@
+CLINE_OPTIONS = --no_overlay
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe json-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: json-selftest.log
+
+json-selftest.log: selftest.exe
+	$(tee ./$<,$@)
+endif

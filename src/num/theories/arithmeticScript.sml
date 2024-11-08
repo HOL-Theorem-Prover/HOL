@@ -2466,6 +2466,17 @@ val MOD_LESS = Q.store_thm ("MOD_LESS",
  `!m n. 0 < n ==> m MOD n < n`,
  METIS_TAC [DIVISION]);
 
+Theorem MOD_MOD_LESS_EQ:
+  0 < y /\ y <= z ==> x MOD y MOD z = x MOD y
+Proof
+  strip_tac
+  \\ irule LESS_MOD
+  \\ irule LESS_LESS_EQ_TRANS
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ irule MOD_LESS
+  \\ simp[]
+QED
+
 val ADD_MODULUS = Q.store_thm ("ADD_MODULUS",
 `(!n x. 0 < n ==> ((x + n) MOD n = x MOD n)) /\
  (!n x. 0 < n ==> ((n + x) MOD n = x MOD n))`,
@@ -3966,6 +3977,21 @@ Theorem FUNPOW_invariant:
   P (FUNPOW f m x)
 Proof
   Induct \\ SRW_TAC[][FUNPOW_SUC]
+QED
+
+Theorem FUNPOW_invariant_index:
+  !m x.
+  P x /\
+  (!n. n < m ==> R (FUNPOW f n x)) /\
+  (!x. P x /\ R x ==> P (f x)) ==>
+  P (FUNPOW f m x)
+Proof
+  Induct >> SRW_TAC[][FUNPOW_SUC]
+  \\ first_assum irule
+  \\ `m < SUC m` by SRW_TAC[][LESS_SUC_REFL]
+  \\ SRW_TAC[][]
+  \\ first_assum irule \\ SRW_TAC[][]
+  \\ first_assum irule \\ SRW_TAC[][LESS_SUC]
 QED
 
 (* Theorem: FUNPOW f m (FUNPOW f n x) = FUNPOW f n (FUNPOW f m x) *)

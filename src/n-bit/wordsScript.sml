@@ -9,6 +9,7 @@ open HolKernel Parse boolLib bossLib;
 open arithmeticTheory pred_setTheory
 open bitTheory sum_numTheory fcpTheory fcpLib
 open numposrepTheory ASCIInumbersTheory
+open dividesTheory dep_rewrite
 
 val () = new_theory "words"
 val _ = set_grammar_ancestry ["ASCIInumbers", "numeral_bit", "fcp", "sum_num"]
@@ -260,6 +261,9 @@ val word_add_def = zDefine`
 val word_mul_def = zDefine`
   word_mul (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v * w2n w)`
 
+val word_exp_def = zDefine`
+  word_exp (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v ** w2n w)`
+
 val word_log2_def = zDefine`
   word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`
 
@@ -315,6 +319,7 @@ val () = List.app (fn (s, t) => Parse.overload_on (s, Parse.Term t))
    ("-", `$word_sub`),
    ("numeric_negate", `$word_2comp`),
    ("*", `$word_mul`),
+   ("**", `$word_exp`),
    ("CARRY_OUT", `\a b c. FST (SND (add_with_carry (a,b,c)))`),
    ("OVERFLOW",  `\a b c. SND (SND (add_with_carry (a,b,c)))`)]
 
@@ -4921,6 +4926,74 @@ val WORD_SUB_LT = Q.store_thm("WORD_SUB_LT",
 val WORD_SUB_LE = Q.store_thm("WORD_SUB_LE",
   `!x:'a word y. 0w <= y /\ y <= x ==> 0w <= x - y /\ x - y <= x`,
   SIMP_TAC bool_ss [WORD_LE_SUB_UPPER,WORD_ZERO_LE_SUB])
+
+Definition word_exp_tailrec_def:
+  word_exp_tailrec (b:'a word) (e:'a word) a =
+  if e = 0w then a else
+  if word_mod e 2w = 0w then
+    word_exp_tailrec (word_mul b b) (word_div e 2w) a
+  else
+    word_exp_tailrec b (word_sub e 1w) (word_mul b a)
+Termination
+  WF_REL_TAC`measure (w2n o FST o SND)`
+  \\ Cases_on`dimword(:'a) = 2`
+  >- ( `2w = 0w` by simp[] \\ pop_assum SUBST1_TAC \\ gs[word_mod_def] )
+  \\ `2 < dimword(:'a)`
+  by ( CCONTR_TAC
+    \\ gs[NOT_LESS, NUMERAL_LESS_THM,
+          LESS_OR_EQ, ONE_LT_dimword, ZERO_LT_dimword] )
+  \\ qx_gen_tac`e` \\ rw[]
+  \\ Cases_on`e`
+  \\ gs[word_div_def, word_mod_def, MOD_MOD_LESS_EQ]
+  \\ DEP_REWRITE_TAC[LESS_MOD]
+  \\ conj_asm2_tac \\ gs[DIV_LT_X]
+End
+
+Theorem word_exp_tailrec:
+  word_exp b e = word_exp_tailrec b e 1w
+Proof
+  `!b e a. word_exp_tailrec b e a = n2w $ w2n a * w2n b ** w2n e`
+  suffices_by rw[word_exp_def]
+  \\ recInduct word_exp_tailrec_ind
+  \\ rpt strip_tac
+  \\ simp[Once word_exp_tailrec_def]
+  \\ IF_CASES_TAC \\ gs[]
+  \\ Cases_on`dimword(:'a) = 2`
+  >- (
+    `2w = 0w` by simp[] \\ pop_assum SUBST1_TAC
+    \\ gs[word_mod_def]
+    \\ rewrite_tac[GSYM word_sub_def]
+    \\ Cases_on`e`
+    \\ DEP_REWRITE_TAC[GSYM n2w_sub]
+    \\ conj_asm1_tac \\ gs[]
+    \\ Cases_on`n` \\ gs[EXP]
+    \\ Cases_on`a` \\ Cases_on`b`
+    \\ gs[word_mul_n2w])
+  \\ `2 < dimword(:'a)`
+  by ( CCONTR_TAC
+    \\ gs[NOT_LESS, NUMERAL_LESS_THM,
+          LESS_OR_EQ, ONE_LT_dimword, ZERO_LT_dimword] )
+  \\ Cases_on`e` \\ gs[word_mod_def, word_div_def]
+  \\ reverse IF_CASES_TAC \\ gs[MOD_MOD_LESS_EQ]
+  >- (
+    rewrite_tac[GSYM word_sub_def]
+    \\ `1 <= n` by simp[]
+    \\ asm_simp_tac std_ss [GSYM n2w_sub, w2n_n2w]
+    \\ `(n - 1) MOD dimword(:'a) = n - 1`
+    by ( DEP_REWRITE_TAC[LESS_MOD] \\ simp[] )
+    \\ pop_assum SUBST_ALL_TAC
+    \\ Cases_on`a` \\ Cases_on`b`
+    \\ gs[word_mul_n2w]
+    \\ Cases_on`n` \\ gs[EXP] )
+  \\ `(n DIV 2) MOD dimword(:'a) = n DIV 2`
+  by ( DEP_REWRITE_TAC[LESS_MOD] \\ gs[DIV_LT_X] )
+  \\ pop_assum SUBST_ALL_TAC
+  \\ Cases_on`a` \\ Cases_on`b`
+  \\ gs[word_mul_n2w]
+  \\ gs[GSYM EXP_EXP_MULT]
+  \\ DEP_REWRITE_TAC[DIVIDES_DIV]
+  \\ gs[DIVIDES_MOD_0]
+QED
 
 (* -------------------------------------------------------------------------
     More theorems

@@ -1344,7 +1344,8 @@ in
     let
       val tag0 = merge_tags empty_tag (List.map (tag o snd) char_eqns)
       val char_eqns = List.map (I ## dest_thm) char_eqns
-      val _ = List.all (List.null o fst o snd) char_eqns
+      val _ = List.all (List.null o fst o snd) char_eqns orelse
+              raise ERR "compute" "Characteristic equation with hypotheses"
       val tc0 = Compute.term_compute
                  { cval_terms = cval_terms,
                    cval_type = cval_type,
