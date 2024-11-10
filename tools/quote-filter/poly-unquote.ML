@@ -69,4 +69,11 @@ in
   TextIO.closeOut outstream;
   cb();
   exit success
-end;
+end handle e => (
+  TextIO.output (TextIO.stdErr, "Uncaught exception" ^
+    (case PolyML.Exception.exceptionLocation e of
+        NONE => ""
+      | SOME {file, startLine, ...} => " at " ^ file ^ ":" ^ FixedInt.toString startLine) ^
+    ": " ^ General.exnMessage e);
+  PolyML.Exception.reraise e
+);

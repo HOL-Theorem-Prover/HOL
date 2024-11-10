@@ -103,7 +103,7 @@ fun kindToName local_ kind =
 
 (* ("Type"|"Overload"){ws}+({alphaMLid}|{quotedsymbolid})("["{alphaMLid_list}"]")?{ws}*"=" *)
 fun parseBeginType (start, text) parseError = let
-  val s = (Substring.substring(text, 0, size text - 1)) (* drop = *)
+  val s = Substring.substring(text, 0, size text - 1) (* drop = *)
     |> Substring.dropr Char.isSpace (* drop wspace after name *)
   val {keyword, name, attrs, ...} = destMLThmBinding s
   val isOverload = Substring.size keyword = 8
@@ -154,14 +154,14 @@ fun parseDefinitionPfx text = let
 
 (* Quote_pfx = "Quote"{ws}+{QUALalphaMLid}{ws}*":"; *)
 fun parseQuotePfx text = let
-  val name = Substring.substring(text, 6, size text - 1) (* drop :, "Quote" + next ws char *)
+  val name = Substring.substring(text, 6, size text - 7) (* drop :, "Quote" + next ws char *)
     |> Substring.dropl Char.isSpace (* space before name *)
     |> Substring.dropr Char.isSpace (* space after name *)
   in {keyword = Substring.substring(text, 0, 5), name = name} end
 
 (* Quote_eqnpfx = "Quote"{ws}+{alphaMLid}{ws}*"="{ws}*{QUALalphaMLid}{ws}*":"; *)
 fun parseQuoteEqnPfx text = let
-  val (left, right) = Substring.substring(text, 6, size text - 1) (* drop :, Quote, next ws char *)
+  val (left, right) = Substring.substring(text, 6, size text - 7) (* drop :, Quote, next ws char *)
     |> Substring.dropl Char.isSpace (* space before name *)
     |> Substring.dropr Char.isSpace (* space after name *)
     |> Substring.position "="

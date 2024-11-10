@@ -324,15 +324,16 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
       HolStrLitEnd (endpos, endq) =>
         if strlitMatch yytext endq then
           (YYBEGIN quote; continue())
-        else
-          (parseError (endpos, endpos + size endq) "unexpected end quote"; go ())
+        else go ()
     | EOF p => (parseError (yypos, yyend) "unterminated string"; EOF p)
     | _ => raise Unreachable
   in YYBEGIN holstrlit; go () end);
 
-<quote>"^"({symbol}|"^"*{ws}|[`^]) => (continue());
-<quote>"^"+{newline}"End" => (EndTok (yyend-3));
-<quote>"^"+{newline} => (continue());
+<quote>"^"({symbol}|{ws}|"^"+) => (continue());
+<quote>"^"{newline} => (
+  yybufpos := !yybufpos - (yyend - yypos + 1); (* unread newline *)
+  continue()
+);
 <quote>{newline}{DefinitionLabel} => (let
   val ss = Substring.dropl Char.isSpace (Substring.full yytext)
   val n = yypos + #2 (Substring.base ss)
