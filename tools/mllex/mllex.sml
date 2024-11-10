@@ -253,6 +253,7 @@ structure LexGen: LEXGEN =
 	  | REPS of int * int | ID of string | ACTION of string
 	  | BOF | EOF | ASSIGN | SEMI | ARROW | LEXMARK | LEXSTATES
 	  | COUNT | REJECT | FULLCHARSET | STRUCT | HEADER | ARG | POSARG
+	  | EOFPOS
 
    datatype exp = EPS | CLASS of bool array * int | CLOSURE of exp
 		| ALT of exp * exp | CAT of exp * exp | TRAIL of int
@@ -271,6 +272,7 @@ structure LexGen: LEXGEN =
 
    val CountNewLines = ref false;
    val PosArg = ref false;
+   val EofPos = ref false;
    val HaveReject = ref false;
 
    (* Can increase size of character set *)
@@ -287,6 +289,7 @@ structure LexGen: LEXGEN =
 
    val ResetFlags = fn () => (CountNewLines := false; HaveReject := false;
 			      PosArg := false;
+			      EofPos := false;
 			      UsesTrailingContext := false;
 			       CharSetSize := 129; StrName := "Mlex";
 				HeaderCode := ""; HeaderDecl:= false;
@@ -516,6 +519,7 @@ fun AdvanceTok () : unit = let
 				  | "header" => HEADER
 				  | "arg"    => ARG
 				  | "posarg" => POSARG
+				  | "eofpos" => EOFPOS
 			          | _ => prErr "unknown % operator "
 			       end
 			     )
@@ -849,6 +853,7 @@ fun parse() : (string * (int list * exp) list * ((string,string) dictionary * st
 				     HeaderDecl := true; ParseDefs())
 				| _ => raise SyntaxError)
 	        | POSARG => (PosArg := true; ParseDefs())
+	        | EOFPOS => (EofPos := true; ParseDefs())
                 | ARG => (LexState := 2; AdvanceTok();
 			     case GetTok()
 			     of ACTION s =>
@@ -1260,7 +1265,8 @@ fun lexGen infile =
 	 sayln "\t\tcase node of";
 	 sayln "\t\t    Internal.N yyk =>";
 	 sayln "\t\t\t(let fun yymktext() = String.substring(!yyb,i0,i-i0)\n\
-	       \\t\t\t     val yypos: int = i0+ !yygone";
+	       \\t\t\t     val yypos: int = i0+ !yygone\n\
+	       \\t\t\t     val yyend: int = yypos + (i-i0)";
 	 if !CountNewLines
 	    then (sayln "\t\t\tval _ = yylineno := CharVectorSlice.foldli";
 	  	  sayln "\t\t\t\t(fn (_,#\"\\n\", n) => n+1 | (_,_, n) => n) (!yylineno) (CharVectorSlice.slice(!yyb,i0,SOME(i-i0)))")
@@ -1289,7 +1295,8 @@ fun lexGen infile =
 	 sayln "\t    in if (String.size newchars)=0";
 	 sayln "\t\t  then (yydone := true;";
 	 say "\t\t        if (l=i0) then UserDeclarations.eof ";
-	 sayln (case !ArgCode of NONE => "()" | SOME _ => "yyarg");
+	 say (case !ArgCode of NONE => "()" | SOME _ => "yyarg");
+	 sayln (if !EofPos then " (!yygone+i0)" else "");
 	 say   "\t\t                  else action(l,NewAcceptingLeaves";
 	 if !UsesTrailingContext then
 	    sayln ",nil))" else sayln "))";

@@ -973,7 +973,7 @@ fun rm_spaces s =
 
 fun sketch_wrap thy file =
   let
-    val s1 = QFRead.inputFile file
+    val s1 = HolParser.inputFile file
     val s2 = rm_spaces (rm_comment s1)
     val sl = partial_sml_lexer s2
     val lexdir =  tactictoe_dir ^ "/log/lexer"

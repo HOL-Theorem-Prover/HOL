@@ -304,6 +304,8 @@ val _ =
        systeml (pfx @ extras @ [srcobj])
      end
   in
+    print "Calling mllex on HolLex\n";
+    systeml [mllex, "HolLex"];
     print "Calling mllex on QuoteFilter\n";
     systeml [mllex, "QuoteFilter"];
     compile [] "holpathdb.sig";
@@ -323,12 +325,12 @@ val _ =
     compile [] "Holdep_tokens.sml";
     compile [] "AttributeSyntax.sig";
     compile [] "AttributeSyntax.sml";
-    compile [] "QuoteFilter.sml";
+    compile [] "HolLex.sml";
     compile [] "terminal_primitives.sig";
     compile [] "terminal_primitives.sml";
     compile [] "Holmake_tools_dtype.sml";
-    compile [] "QFRead.sig";
-    compile [] "QFRead.sml";
+    compile [] "HolParser.sig";
+    compile [] "HolParser.sml";
     compile ["-I", "mosml"] "Holdep.sig";
     compile ["-I", "mosml"] "Holdep.sml";
     compile [] "Holmake_tools.sig";

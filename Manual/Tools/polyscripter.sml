@@ -17,11 +17,11 @@ fun lnumdie linenum extra exn =
 
 val outputPrompt = ref "> "
 
-val quote = QFRead.fromString
+val quote = HolParser.fromString
 val default_linewidth = 77
 
 fun quoteFile lnum fname =
-  QFRead.inputFile fname handle e => lnumdie lnum "" e
+  HolParser.inputFile fname handle e => lnumdie lnum "" e
 
 datatype lbuf =
          LB of {
@@ -319,7 +319,7 @@ fun process_line debugp umap obuf origline lbuf = let
     end
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
-  val stringCReader = #read o QFRead.stringToReader true
+  val stringCReader = #read o HolParser.stringToReader true
   fun compile exnhandle input =
       (if debugp then
          TextIO.output(TextIO.stdErr, input)

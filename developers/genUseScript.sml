@@ -39,9 +39,9 @@ in
   (push, read, reset)
 end;
 
-val _ = use "../tools/Holmake/QuoteFilter.sml";
-val _ = use "../tools/Holmake/QFRead.sig";
-val _ = use "../tools/Holmake/QFRead.sml";
+val _ = use "../tools/Holmake/HolLex.sml";
+val _ = use "../tools/Holmake/HolParser.sig";
+val _ = use "../tools/Holmake/HolParser.sml";
 val _ = use "../tools/Holmake/Holdep_tokens.sig"
 val _ = use "../tools/Holmake/Holdep_tokens.sml";
 
