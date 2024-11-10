@@ -15,8 +15,8 @@ header-includes:
 
   - Learn how to interact with HOL4 using the [documentation](https://hol-theorem-prover.org/#doc).
     - For Emacs, the [short guide](https://hol-theorem-prover.org/HOL-interaction.pdf) or [complete documentation](https://hol-theorem-prover.org/hol-mode.html).
-    - For Vim, the [plugin documentation](https://github.com/HOL-Theorem-Prover/HOL/blob/master/tools/vim/README.md).
-      At first, you should use the [`vimhol.sh`](https://github.com/HOL-Theorem-Prover/HOL/blob/master/tools/vim/README.md#vimholsh-script) script to run side-by-side Vim and HOL4 using `tmux`.
+    - For Vim, the [plugin documentation](https://github.com/HOL-Theorem-Prover/HOL/blob/master/tools/editor-modes/vim/README.md).
+      At first, you should use the [`vimhol.sh`](https://github.com/HOL-Theorem-Prover/HOL/blob/master/tools/editor-modes/vim/README.md#vimholsh-script) script to run side-by-side Vim and HOL4 using `tmux`.
 
   - Add the following to your `.hol-config.sml` (in your home directory):
     ```
