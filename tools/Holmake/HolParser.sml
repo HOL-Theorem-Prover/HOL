@@ -120,10 +120,10 @@ fun parseBeginType (start, text) parseError = let
     | ("pp", false) => (expectNoArgs vs; pp := true)
     | ("by_nametype", true) => (expectNoArgs vs; by_nametype := true)
     | (sk, _) => parseError (fromSS (start, k)) ("unexpected attribute '"^sk^"'")
+  val _ = app parseAttr (destAttrs attrs)
   val kind =
     if isOverload then OverloadKind {inferior = !inferior, by_nametype = !by_nametype}
     else TypeKind {pp = !pp}
-  val _ = app parseAttr (destAttrs attrs)
   in {local_ = !local_, kind = kind, keyword = keyword, tyname = name} end
 
 (* {Theorempfx}{ws}*":"  or  {Theorempfx}({ws}|{newline})+"="
