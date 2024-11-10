@@ -511,7 +511,7 @@ in
   compile [] "qfilter_util.sig";
   compile [] "qfilter_util.sml";
   compile ["-I", holmakedir] "quote-filter.sml";
-  val _ = echo "Linking quote-filter.uo"
+  echo "Linking quote-filter.uo";
   systeml [compiler, "-o", tgt, "-I", holmakedir,
     "-I", Path.concat(holmakedir, "mosml"),
     "quote-filter.uo"];
