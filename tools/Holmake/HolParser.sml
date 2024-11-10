@@ -24,7 +24,7 @@ in
 
   fun mkParser {read, parseError, pos} = let
     val lex = HolLex.makeLexer (read, pos) (H.STATE {
-      comdepth = ref 0, linecount = ref (0, 0), pardepth = ref 0, parseError = parseError})
+      comdepth = ref 0, pardepth = ref 0, parseError = parseError})
     val lookahead = ref NONE
     fun go () =
       case (case !lookahead of SOME tk => tk | NONE => lex ()) of

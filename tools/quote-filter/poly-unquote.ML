@@ -7,6 +7,7 @@ use "../../tools-poly/Holmake/Systeml.sml";
 use "../Holmake/AttributeSyntax.sig";
 use "../Holmake/AttributeSyntax.sml";
 use "../Holmake/HolLex.sml";
+use "../Holmake/QuoteFilter.sml";
 use "../Holmake/HM_SimpleBuffer.sig";
 use "../Holmake/HM_SimpleBuffer.sml";
 use "../Holmake/HOLFS_dtype.sml";

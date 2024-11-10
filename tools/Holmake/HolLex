@@ -55,24 +55,11 @@ type lexresult = token
 
 datatype state = STATE of {
   parseError: int * int -> string -> unit,
-  linecount: (int * int) ref,
   pardepth: int ref,
   comdepth: int ref
 }
 
 fun noDecls pos = Decls {start = pos, decls = [], stop = pos}
-
-fun linecol linecount pos = let val (line, start) = !linecount in (line, pos - start) end
-
-fun newline linecount pos = linecount := (#1 (!linecount) + 1, pos)
-
-fun newlines text linecount pos = let
-  fun go i =
-    if i < size text then (
-      if String.sub(text, i) = #"\n" then newline linecount (pos + i + 1) else ();
-      go (i+1)
-    ) else ()
-  in go 0 end
 
 exception Unreachable
 datatype 'a test_result = TestOk of 'a | TestBad | TestSkip
@@ -99,13 +86,6 @@ fun parseQuoteBody (STATE {parseError, ...}) continue pos test = let
       | _ => raise Unreachable
     end
   in go [] NONE end
-
-fun token_pos (EOF p) = p
-  | token_pos (EndTok p) = p
-  | token_pos (QED p) = p
-  | token_pos (ProofLine (p, _)) = p
-  | token_pos (TerminationTok p) = p
-  | token_pos _ = raise Unreachable (* only used for pushback tokens *)
 
 fun parseDecls (STATE {parseError, pardepth, ...}) continue pos test = let
   fun go buf lookahead = let
@@ -180,7 +160,7 @@ fun eof (_:state) = EOF
 %%
 %structure HolLex
 %s string stringlbrk comment quote holstrlit holstrlitlbrk ANTIQ;
-%arg (UserDeclarations.STATE {pardepth, comdepth, linecount, parseError});
+%arg (UserDeclarations.STATE {pardepth, comdepth, parseError});
 %full
 %posarg
 %eofpos
@@ -243,7 +223,6 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 <INITIAL>^("Type"|"Overload"){ws}+({alphaMLid}|{quotedsymbolid})("["{alphaMLid_list}"]")?{ws}*"=" =>
   (Decl (BeginType (yypos, yytext), NONE));
 <INITIAL>{Theorempfx}{ws}*":" => (let
-  val _ = newlines yytext linecount yypos
   val _ = YYBEGIN quote
   val (q, proof_tok, stop, extra) =
     parseQuoteBody yyarg continue (yypos, yyend) (fn ProofLine l => TestOk l | _ => TestBad)
@@ -287,10 +266,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   YYBEGIN quote;
   parseQuoteEndDef yyarg continue yypos yytext QuoteEqnDecl before YYBEGIN INITIAL
 );
-<INITIAL>{Theorempfx}({ws}|{newline})+"=" => (
-  newlines yytext linecount yypos;
-  Decl (BeginSimpleThm (yypos, yytext), NONE)
-);
+<INITIAL>{Theorempfx}({ws}|{newline})+"=" => (Decl (BeginSimpleThm (yypos, yytext), NONE));
 <INITIAL>^{Inductivepfx} => (
   YYBEGIN quote;
   parseQuoteEndDef yyarg continue yypos yytext InductiveDecl before YYBEGIN INITIAL
@@ -328,12 +304,10 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   | _ => raise Unreachable);
 <INITIAL>{declforms} => (if !pardepth = 0 then Decl (Chunk yypos, NONE) else continue());
 <INITIAL>{MLid} => (continue());
-<INITIAL>{newline}"End" => (newline linecount (yyend-3); EndTok (yyend-3));
+<INITIAL>{newline}"End" => (EndTok (yyend-3));
 
-<string>"\\\\" => (continue());
-<string>"\\\"" => (continue());
-<string>"\\"{newline} => (newline linecount yyend; YYBEGIN stringlbrk; continue());
-<string>"\\"{ws} => (YYBEGIN stringlbrk; continue());
+<string>"\\\\"|"\\\"" => (continue());
+<string>"\\"({ws}|{newline}) => (YYBEGIN stringlbrk; continue());
 <string>"\"" => (StringEnd yyend);
 <string>[^\\""\n\015]{1,10} => (continue());
 
@@ -357,12 +331,12 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   in YYBEGIN holstrlit; go () end);
 
 <quote>"^"({symbol}|"^"*{ws}|[`^]) => (continue());
-<quote>"^"+{newline}"End" => (newline linecount (yyend-3); EndTok (yyend-3));
-<quote>"^"+{newline} => (newline linecount yyend; continue());
+<quote>"^"+{newline}"End" => (EndTok (yyend-3));
+<quote>"^"+{newline} => (continue());
 <quote>{newline}{DefinitionLabel} => (let
   val ss = Substring.dropl Char.isSpace (Substring.full yytext)
   val n = yypos + #2 (Substring.base ss)
-  in newline linecount n; QDecl (DefinitionLabel (n, Substring.string ss), NONE) end);
+  in QDecl (DefinitionLabel (n, Substring.string ss), NONE) end);
 <quote>"(*" => (
   comdepth := 1; YYBEGIN comment;
   case continue() of
@@ -371,8 +345,8 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   | _ => raise Unreachable
 );
 <quote>{quoteend} => (QuoteEnd (yypos, yytext));
-<quote>{newline}"End" => (newline linecount (yyend-3); EndTok (yyend-3));
-<quote>{newline}"Termination" => (newline linecount (yyend-11); TerminationTok (yyend-11));
+<quote>{newline}"End" => (EndTok (yyend-3));
+<quote>{newline}"Termination" => (TerminationTok (yyend-11));
 <quote>{fullquoteend} => (FullQuoteEnd (yypos, yytext));
 <quote>"^" => (
   YYBEGIN ANTIQ;
@@ -386,7 +360,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 <holstrlit>"\\"{HOLSTRLITend} => (continue());
 <holstrlit>{HOLSTRLITend} => (HolStrLitEnd (yypos, yytext));
 <holstrlit>"\\\\" => (continue());
-<holstrlit>"\\"{newline} => (newline linecount yyend; YYBEGIN holstrlitlbrk; continue());
+<holstrlit>"\\"{newline} => (YYBEGIN holstrlitlbrk; continue());
 <holstrlit>"\\"{ws} => (YYBEGIN holstrlitlbrk; continue());
 <holstrlit>"\\" . => (continue());
 
@@ -398,13 +372,11 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   val (decls, end_tok, stop, extra) =
     parseDecls yyarg continue yyend (fn CloseParen p => SOME p | _ => NONE)
   in Antiq (Paren {start_tok = yypos, decls = decls, end_tok = end_tok, stop = stop}, extra) end);
-<ANTIQ>{ws}+ => (continue());
-<ANTIQ>{newline} => (newline linecount yyend; continue());
+<ANTIQ>({ws}|{newline})+ => (continue());
 <ANTIQ>. => (
   parseError (yypos, yyend) "expected identifier or parenthesized group";
   yybufpos := !yybufpos - 1; (* unread last character *)
   Antiq (BadAntiq yypos, NONE)
 );
 
-{newline} => (newline linecount yyend; continue());
-. => (continue());
+.|{newline} => (continue());
