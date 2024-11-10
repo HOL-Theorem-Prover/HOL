@@ -510,8 +510,11 @@ in
   FileSys.chDir (fullPath [holdir, "tools/quote-filter"]);
   compile [] "qfilter_util.sig";
   compile [] "qfilter_util.sml";
-  compile ["-I", "../Holmake"] "quote-filter.sml";
-  systeml [compiler, "-I", "../Holmake/mosml", "quote-filter.uo", "-o", tgt];
+  compile ["-I", holmakedir] "quote-filter.sml";
+  val _ = echo "Linking quote-filter.uo"
+  systeml [compiler, "-o", tgt, "-I", holmakedir,
+    "-I", Path.concat(holmakedir, "mosml"),
+    "quote-filter.uo"];
   mk_xable tgt;
   print "Quote-filter built\n"
 end handle e => (
