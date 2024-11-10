@@ -19,22 +19,22 @@ structure Simple: sig
 
   val destAttrs: substring -> (substring * substring list) list
   val destMLThmBinding: substring ->
-    {attrs: substring, keyword: substring, name: substring, name_attrs: substring}
+    {keyword: substring, name: substring, attrs: substring, name_attrs: substring}
   val destNameAttrs: substring -> substring * substring
   val fromSS: int * substring -> int * int
   val killEnvelopingSpace: substring -> substring
   val kindToName: bool -> type_kind -> string
   val parseBeginType: int * string -> (int * int -> string -> unit) ->
-    {attrs: unit, keyword: substring, kind: type_kind, local_: bool, tyname: substring}
+    {local_: bool, kind: type_kind, keyword: substring, tyname: substring}
   val parseDefinitionPfx: string ->
-    {attrs: substring, keyword: substring, name: substring, name_attrs: substring}
+    {keyword: substring, name: substring, attrs: substring, name_attrs: substring}
   val parseDefnLabel: string ->
-    {attrs: substring, name: (substring * bool) option, name_attrs: substring}
+    {name: substring option, attrs: substring, name_attrs: substring, tilde: bool}
   val parseInductivePfx: string -> {isCo: bool, keyword: substring, thmname: substring}
   val parseQuoteEqnPfx: string -> {bind: substring, keyword: substring, name: substring}
   val parseQuotePfx: string -> {keyword: substring, name: substring}
   val parseTheoremPfx: string ->
-    {attrs: substring, isTriv: bool, keyword: substring, name_attrs: substring, thmname: substring}
+    {isTriv: bool, keyword: substring, thmname: substring, attrs: substring, name_attrs: substring}
 
   val mkParser:
     {parseError: int * int -> string -> unit, pos: int, read: int -> string} ->

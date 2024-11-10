@@ -1,4 +1,4 @@
-structure HolParser =
+structure HolParser :> HolParser =
 struct
 
 infix |>
