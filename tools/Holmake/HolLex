@@ -331,7 +331,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 
 <quote>"^"({symbol}|{ws}|"^"+) => (continue());
 <quote>"^"{newline} => (
-  yybufpos := !yybufpos - (yyend - yypos + 1); (* unread newline *)
+  yybufpos := !yybufpos - (yyend - yypos) + 1; (* unread newline *)
   continue()
 );
 <quote>{newline}{DefinitionLabel} => (let
