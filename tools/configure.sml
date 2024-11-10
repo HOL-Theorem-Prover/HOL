@@ -510,7 +510,7 @@ in
   compile [] "qfilter_util.sig";
   compile [] "qfilter_util.sml";
   compile ["-I", "../Holmake"] "quote-filter.sml";
-  link{extras = ["-I", "../Holmake/mosml"], srcobj = "quote-filter.uo", tgt = tgt};
+  systeml [compiler, "-I", "../Holmake/mosml", "quote-filter.uo", "-o", tgt];
   mk_xable tgt;
   print "Quote-filter built\n"
 end handle e => (
