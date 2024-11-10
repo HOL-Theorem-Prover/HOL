@@ -16,6 +16,7 @@ datatype decl
       head: int * string, quote: qbody, proof_tok: (int * string) option,
       body: decls, qed: int option, stop: int}
   | Chunk of int
+  | Semi of int
   | FullQuote of {
       head: int * string, type_q: int option,
       quote: qbody, end_tok: (int * string) option, stop: int}
@@ -200,7 +201,7 @@ HOLconjunction = "/\092" | "\226\136\167";
 DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ | {HOLconjunction};
 DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]";
 Definitionpfx = "Definition"{ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?{ws}*":";
-declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
+declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|"infix"[lr]?|"local";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 HOLSTRLITstart = "\"" | "\226\128\185" | "\194\171";
 HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
@@ -302,6 +303,9 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
     parseError (yypos, yyend) "unterminated string";
     YYBEGIN INITIAL; Decl (String (yypos, p), SOME tk))
   | _ => raise Unreachable);
+<INITIAL>";"{newline} =>
+  (if !pardepth = 0 then Decl (Semi yypos, SOME (Decl (Chunk yyend, NONE))) else continue());
+<INITIAL>";" => (if !pardepth = 0 then Decl (Semi yypos, NONE) else continue());
 <INITIAL>{declforms} => (if !pardepth = 0 then Decl (Chunk yypos, NONE) else continue());
 <INITIAL>{MLid} => (continue());
 <INITIAL>{newline}"End" => (EndTok (yyend-3));

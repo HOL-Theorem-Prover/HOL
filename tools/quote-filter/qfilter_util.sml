@@ -63,7 +63,7 @@ fun processArgs (nonp, intp, qfixp, oldp) args =
       | "-n"::rest =>
            if intp orelse qfixp then badusage()
            else processArgs (true, false, false, oldp) rest
-      | "-q"::rest => processArgs (nonp, intp, qfixp, false) rest
+      | "-q"::rest => processArgs (nonp, intp, qfixp, true) rest
       | "--quotefix"::rest =>
            if intp orelse nonp then badusage()
            else processArgs (false, false, true, oldp) rest

@@ -498,6 +498,13 @@ structure ToSML = struct
           (regular (pos, p); p)
         else
           pos
+      | Semi p =>
+        if !inThmVal then
+          (regular (pos, p); aux ")"; inThmVal := false; regular (p, p+1); p+1)
+        else if eager then
+          (regular (pos, p+1); p+1)
+        else
+          pos
       | FullQuote {head = (p, head), type_q, quote, stop, ...} => (
         regular (pos, p);
         aux (case type_q of NONE => "(Parse.Term " | SOME _ => "(Parse.Type ");
