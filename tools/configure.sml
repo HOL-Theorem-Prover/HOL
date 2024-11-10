@@ -503,30 +503,20 @@ val _ = FileSys.remove (fullPath [holdir, "bin", "buildheap"]) handle _ => ()
 
 val _ = let
   val _ = print "Attempting to compile quote filter ... "
-  val tgt0 = fullPath [holdir, "tools/quote-filter/quote-filter"]
   val tgt = fullPath [holdir, "bin/unquote"]
   val cwd = FileSys.getDir()
-  val _ = FileSys.chDir (fullPath [holdir, "tools/quote-filter"])
-  val _ = systeml [fullPath [holdir, "bin/Holmake"], "cleanAll"]
 in
-  if Process.isSuccess (systeml [fullPath [holdir, "bin/Holmake"]]) then let
-      val instrm = BinIO.openIn tgt0
-      val ostrm = BinIO.openOut tgt
-      val v = BinIO.inputAll instrm
-    in
-      BinIO.output(ostrm, v);
-      BinIO.closeIn instrm;
-      BinIO.closeOut ostrm;
-      mk_xable tgt;
-      print "Quote-filter built\n"
-    end handle e =>
-               (print ("Quote-filter build failed: " ^ General.exnMessage e);
-                OS.Process.exit OS.Process.failure)
-  else (
-    print "Quote-filter build failed\n";
-    OS.Process.exit OS.Process.failure
-  )
-end
+  FileSys.chDir (fullPath [holdir, "tools/quote-filter"]);
+  compile [] "qfilter_util.sig";
+  compile [] "qfilter_util.sml";
+  compile ["-I", "../Holmake"] "quote-filter.sml";
+  link{extras = ["-I", "../Holmake/mosml"], srcobj = "quote-filter.uo", tgt = tgt};
+  mk_xable tgt;
+  print "Quote-filter built\n"
+end handle e => (
+  print ("Quote-filter build failed: " ^ General.exnMessage e);
+  OS.Process.exit OS.Process.failure
+)
 
 (*---------------------------------------------------------------------------
     Configure the muddy library.
