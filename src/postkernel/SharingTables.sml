@@ -1,7 +1,7 @@
 structure SharingTables :> SharingTables =
 struct
 
-open Term Type
+open Term Type DB_dtype
 infix |>
 fun x |> f = f x
 
@@ -315,7 +315,7 @@ type extract_data =
   unnamed_terms : Term.term list,
   named_types : (string * Type.hol_type) list,
   unnamed_types : Type.hol_type list,
-  theorems : (string * Thm.thm) list}
+  theorems : (string * Thm.thm * thminfo) list}
 
 datatype sharing_data_in = SDI of {strtable : stringtable,
                                    idtable : idtable,
@@ -391,10 +391,21 @@ fun enc_tag findstr tag =
       pair_encode(enc_dep findstr o dest_dep, list_encode String) (dep,ocl)
     end
 
-fun thm_strings th =
+fun path_strings ps = let val {arcs,vol,...} = OS.Path.fromString ps
+                      in
+                        vol :: arcs
+                      end
+
+fun thminfo_strings ({loc,...}: thminfo) =
+    case loc of
+        Unknown => []
+      | Located {scriptpath,...} => path_strings scriptpath
+
+
+fun thm_strings (_ (* name *),th,i) =
     let val (sn, dl) = dest_dep (Tag.dep_of (Thm.tag th) )
     in
-      #1 sn :: map #1 dl
+      #1 sn :: map #1 dl @ thminfo_strings i
     end
 
 fun build_sharing_data (ed : extract_data) =
@@ -410,7 +421,7 @@ fun build_sharing_data (ed : extract_data) =
     in
       sdi |> add_terms (HOLset.listItems tm_atoms)
           |> add_strings (map #1 theorems)
-          |> add_strings (List.concat (map (thm_strings o #2) theorems))
+          |> add_strings (List.concat (map thm_strings theorems))
     end
 
 fun write_string (SDI{strtable,...}) s =
@@ -423,6 +434,21 @@ fun write_term (SDI{tmtable,...}) =
     Term.write_raw (fn t => Map.find(#termmap tmtable,t))
     handle Map.NotFound => raise SharingTables "write_term: can't find term"
 
+fun enc_thminfo findstr {private,loc,class} =
+    let open HOLsexp
+        val privtag = Integer (if private then 1 else 0)
+        val classtag = Integer (case class of Axm => 0 | Def => 1 | Thm => 2)
+    in
+      case loc of
+          Unknown => List [classtag, privtag]
+        | Located{scriptpath,linenum,exact} =>
+          let val {vol,arcs,...} = OS.Path.fromString scriptpath
+              val tag = Integer (if exact then 1 else 0)
+          in
+            List (classtag :: privtag :: tag :: Integer linenum ::
+                  map findstr (vol::arcs))
+          end
+    end
 
 fun enc_sdata (sd as SDI{strtable,idtable,tytable,tmtable,exp}) =
     let
@@ -432,13 +458,17 @@ fun enc_sdata (sd as SDI{strtable,idtable,tytable,tmtable,exp}) =
       val ty_encode = Integer o write_type sd
       val tm_encode = String o write_term sd
 
-      fun enc_thm(s,th) =
+      fun enc_thm(s,th,info) =
           let
             val (tag, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
             val i = Map.find(#map strtable, s)
           in
-            pair3_encode (Integer,enc_tag find_str,list_encode tm_encode)
-                         (i, tag, w::asl)
+            pair4_encode
+              (Integer,
+               enc_tag find_str,
+               enc_thminfo find_str,
+               list_encode tm_encode)
+              (i, tag, info, w::asl)
           end
     in
 
@@ -474,13 +504,42 @@ type 'a depinfo = {head : 'a * int, deps : ('a * int list) list}
 fun mapdepinfo f ({head = (a,i),deps}:'a depinfo) : 'b depinfo =
     {head = (f a, i), deps = map (fn (a,l) => (f a, l)) deps}
 
-fun read_thm strv tmvector {name,depinfo:int depinfo,tagnames,encoded_hypscon} =
+fun translatepath slist =
     let
-      val depinfo = mapdepinfo (fn i => Vector.sub(strv,i)) depinfo
+      val isAbs = case slist of
+                      _ :: s :: _ => size s < 2 orelse
+                                     String.substring(s,0,2) <> "$("
+                    | _ => true
+    in
+      case slist of
+          [] => OS.Path.toString {arcs = [], isAbs = true, vol = ""}
+        | v::arcs => OS.Path.toString {arcs = arcs, isAbs = isAbs, vol = v}
+    end
+fun decclass 0 = Axm
+  | decclass 1 = Def
+  | decclass 2 = Thm
+  | decclass i = raise SharingTables ("Bad theorem class: "^Int.toString i)
+
+fun translate_info f ilist =
+    case ilist of
+        [classtag,privtag] =>
+          {loc = Unknown, private = privtag <> 0, class = decclass classtag}
+      | classtag::privatep::exactp::lnum::rest =>
+          {loc = Located{scriptpath = translatepath (map f rest),
+                         linenum = lnum, exact = (exactp <> 0)},
+           private = privatep <> 0, class = decclass classtag}
+      | _ => raise SharingTables "Bad theorem information"
+
+fun read_thm strv tmvector thmrec =
+    let
+      val {name,depinfo:int depinfo,tagnames,encoded_hypscon,encodedloc} = thmrec
+      val getstr = (fn i => Vector.sub(strv,i))
+      val depinfo = mapdepinfo getstr depinfo
+      val thminfo = translate_info getstr encodedloc
       val dd = (#head depinfo, #deps depinfo)
       val terms = map (Term.read_raw tmvector) encoded_hypscon
     in
-      (Vector.sub(strv, name), Thm.disk_thm((dd,tagnames), terms))
+      (Vector.sub(strv, name), Thm.disk_thm((dd,tagnames), terms), thminfo)
     end
 
 val dep_decode = let
@@ -497,14 +556,27 @@ end
 val deptag_decode = let open HOLsexp in
                       pair_decode(dep_decode, list_decode string_decode)
                     end
+
+(* really just maps to list of ints that need interpreting once string table
+   is available *)
+fun loc_decode s =
+    let open HOLsexp
+    in
+      case s of
+          Symbol "unknown_loc" => SOME []
+        | _ => list_decode int_decode s
+    end
+
 val thm_decode =
     let
       open HOLsexp
-      fun thmmunge(i,(di,tags),tms) =
-          {name = i, depinfo = di, tagnames = tags, encoded_hypscon = tms}
+      fun thmmunge(i,(di,tags),loc,tms) =
+          {name = i, depinfo = di, tagnames = tags, encoded_hypscon = tms,
+           encodedloc=loc}
     in
       Option.map thmmunge o
-      pair3_decode (int_decode, deptag_decode, list_decode string_decode)
+      pair4_decode (int_decode, deptag_decode, loc_decode,
+                    list_decode string_decode)
     end
 
 val prsexp = HOLPP.pp_to_string 70 HOLsexp.printer

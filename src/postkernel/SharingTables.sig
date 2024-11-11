@@ -7,7 +7,7 @@ sig
   type id = {Thy : string, Other : string}
   datatype shared_type = TYV of string
                        | TYOP of int list
-
+  type thminfo = DB_dtype.thminfo
   val shared_type_decode : shared_type HOLsexp.decoder
   val shared_type_encode : shared_type HOLsexp.encoder
 
@@ -64,7 +64,7 @@ sig
                        unnamed_terms : Term.term list,
                        named_types : (string * Type.hol_type) list,
                        unnamed_types : Type.hol_type list,
-                       theorems : (string * Thm.thm) list}
+                       theorems : (string * Thm.thm * thminfo) list}
   val build_sharing_data : extract_data -> sharing_data_in
   val add_strings : string list -> sharing_data_in -> sharing_data_in
   val add_types : Type.hol_type list -> sharing_data_in -> sharing_data_in

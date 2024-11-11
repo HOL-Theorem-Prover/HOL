@@ -70,7 +70,7 @@ fun map_fail c f [] = c
 (* Check for assumptions                                                      *)
 (******************************************************************************)
 
-fun check_assumptions ((thy, name), (thm, cl)) =
+fun check_assumptions ((thy, name), thm) =
 let
   val hL = hyp thm
 in
@@ -86,7 +86,7 @@ end;
 val accepted_axioms = ref ([]:string list);
 val accepted_oracles = ref (["DISK_THM"]:string list);
 
-fun check_tags ((thy, name), (thm, cl)) =
+fun check_tags ((thy, name), thm) =
 let
   val (oL, aL) = Tag.dest_tag (tag thm);
   val oL' = filter (fn s => not(
@@ -113,7 +113,7 @@ end;
 val check_thm_name_flag = ref true;
 val _ = Feedback.register_btrace ("Sanity Check Thm-Name Clash", check_thm_name_flag);
 
-fun check_thm_name ((thy, name), (thm, cl)) =
+fun check_thm_name ((thy, name), thm) =
 if (!check_thm_name_flag) then
 let
   val dL = DB.listDB ();
@@ -131,7 +131,7 @@ end else false;
 (* Check for problematic variable names                                       *)
 (******************************************************************************)
 
-fun check_var_names___no_ident ((thy, name), (thm, cl)) =
+fun check_var_names___no_ident ((thy, name), thm) =
 let
   val vL = all_varsl ((concl thm)::hyp thm)
   val vL' = filter (fn v => not (Lexis.ok_identifier (fst (dest_var v)))) vL
@@ -146,16 +146,19 @@ end;
 val check_var_names___const_flag = ref true;
 val _ = Feedback.register_btrace ("Sanity Check Var-Const Clash", check_var_names___const_flag);
 
-fun check_var_names___const ((thy, name), (thm, cl)) =
+fun check_var_names___const ((thy, name), thm) =
 if (!check_var_names___const_flag) then
 let
   val vL = all_varsl ((concl thm)::hyp thm)
   val vL' = filter (fn v => Parse.is_constname (fst (dest_var v))) vL
   val vnL = map  (fn v => ("'"^(fst (dest_var v))^"'")) vL'
 in
-  if (null vnL) then false else
-  ((report_sanity_problem thy name ("Variables names clash with constants: "^
-     (concat (commafy vnL))));true)
+  if (null vnL) then false
+  else
+    (report_sanity_problem
+       thy name
+       ("Variables names clash with constants: "^ (concat (commafy vnL)));
+     true)
 end else false;
 
 
@@ -170,7 +173,7 @@ val _ = Feedback.register_trace ("Sanity Check Free Vars", check_free_vars_ref, 
 fun varlist_to_string vL =
   concat (commafy (map (fn v => "'"^(ppstring pp_term v)^"'") vL))
 
-fun check_free_vars ((thy, name), (thm, cl)) =
+fun check_free_vars ((thy, name), thm) =
 let
    val do_check = if (!check_free_vars_ref = 0) then true
                   else (if (!check_free_vars_ref = 1) then
@@ -180,9 +183,12 @@ if (do_check) then
 let
   val fv = free_vars (concl thm)
 in
-  if null fv then false else
-  (report_sanity_problem thy name ("Free top_level vars " ^
-    (varlist_to_string fv) ^ "!");true)
+  if null fv then false
+  else (
+    report_sanity_problem thy name ("Free top_level vars " ^
+                                    (varlist_to_string fv) ^ "!");
+    true
+  )
 end else false end
 
 (******************************************************************************)
@@ -194,7 +200,7 @@ fun is_quant t =
   is_exists t orelse
   is_exists1 t
 
-fun check_redundant_quantors ((thy, name), (thm, cl)) =
+fun check_redundant_quantors ((thy, name), thm) =
 let
    val tL = find_terms is_quant (concl thm);
    fun check_term t =
@@ -215,34 +221,36 @@ end;
 (* A list of all checks                                                       *)
 (******************************************************************************)
 
-val sanity_checks = [
+val sanity_checks : ((string * string) * thm -> bool) list = [
    check_tags,
    check_assumptions,
    check_thm_name,
    check_var_names___no_ident,
    check_var_names___const,
    check_free_vars,
-   check_redundant_quantors]:(DB.public_data -> bool) list
+   check_redundant_quantors
+]
 
-fun sanity_check_data (data:DB.public_data) =
-   (map_fail false (fn ff => ff ( data)) sanity_checks)
+fun extract_thm ((thyn,r) : DB.data) = (thyn,#1 r)
+
+fun sanity_check_data d = map_fail false (fn ff => ff d) sanity_checks
 
 fun sanity_check_theory thy = (
   init_report_sanity_problem ();
-  map_fail false (sanity_check_data o DB_dtype.drop_private) (DB.thy thy)
+  map_fail false (sanity_check_data o extract_thm) (DB.thy thy)
 )
 
 fun sanity_check () = sanity_check_theory "-";
 
 fun sanity_check_all () = (
   init_report_sanity_problem ();
-  map_fail false (sanity_check_data o DB_dtype.drop_private) (DB.listDB ())
+  map_fail false (sanity_check_data o extract_thm) (DB.listDB ())
 )
 
 fun sanity_check_named_thm (name, thm) =
-   sanity_check_data ((Theory.current_theory(), name), (thm, DB.Thm))
+   sanity_check_data ((Theory.current_theory(), name), thm)
 
-fun sanity_check_thm thm = sanity_check_named_thm ("-", thm);
+fun sanity_check_thm thm = sanity_check_named_thm ("-", thm)
 
 (******************************************************************************)
 (* Apply the checks when saving theorems                                      *)
@@ -253,7 +261,8 @@ val _ = Feedback.register_btrace ("Sanity Check Strict", strict_sanity);
 
 exception sanity_exn;
 fun sanity_check_exn_thm (name, thm) =
-   if (not (sanity_check_named_thm (name, thm)) orelse not (!strict_sanity)) then
+   if (not (sanity_check_named_thm (name, thm)) orelse not (!strict_sanity))
+   then
       thm
    else
       (print "\n\n";raise sanity_exn);

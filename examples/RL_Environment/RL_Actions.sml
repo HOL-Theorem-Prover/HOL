@@ -331,10 +331,10 @@ fun search_theorem_by_term NONE = RL_Lib.die("search_theorem with incomplete ter
           val len = List.length(searches)
       in if len < 10
          then
-           (List.map (fn ((s1, s2),(thm,_)) => (s1 ^ "." ^ s2, thm)) searches)
+           (List.map (fn ((s1, s2),(thm,_,_)) => (s1 ^ "." ^ s2, thm)) searches)
            @ List.take(all_theorems, 10 - len)
          else
-           List.map (fn ((s1, s2),(thm,_)) => (s1 ^ "." ^ s2, thm))
+           List.map (fn ((s1, s2),(thm,_,_)) => (s1 ^ "." ^ s2, thm))
            (List.take(searches, 10))
       end
 

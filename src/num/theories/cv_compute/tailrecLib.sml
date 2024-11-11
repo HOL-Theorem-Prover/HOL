@@ -6,6 +6,8 @@ open HolKernel Parse boolLib simpLib boolSimps
 fun mk_HOL_ERR f msg = HOL_ERR {origin_structure = "tailrecLib",
                                 origin_function = f, message = msg}
 
+type thmloc = DB_dtype.thm_src_location
+
 val Cases = BasicProvers.Cases
 val PairCases = pairLib.PairCases
 
@@ -202,9 +204,15 @@ fun prove_tailrec_exists def_tm = let
     that the above function can prove. Same restrictions apply.
  *----------------------------------------------------------------------*)
 
-fun tailrec_define name def_tm = let
-  val lemma = prove_tailrec_exists def_tm
-  val names = lemma |> concl |> strip_exists |> fst |> map (fst o dest_var)
-  in new_specification(name,names,lemma) end
+fun gen_tailrec_define {loc, name, def} =
+    let
+      val lemma = prove_tailrec_exists def
+      val names = lemma |> concl |> strip_exists |> fst |> map (fst o dest_var)
+    in
+      boolSyntax.new_specification_at loc (name,names,lemma)
+    end
+
+fun tailrec_define name def =
+    gen_tailrec_define {loc = Unknown, name = name, def = def}
 
 end
