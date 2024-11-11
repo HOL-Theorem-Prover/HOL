@@ -266,13 +266,13 @@ ProofLine =
        | SOME i => setlinenum i yyarg;
      (yypos, " "))
 );
-<INITIAL> "#(FNAME)" => (
+<INITIAL> "#(FILE)" => (
   if quotefix then (yypos,yytext)
   else (yypos, "\"" ^ !scriptfilename ^ "\"")
 );
-<INITIAL> "#(FNAME="[-A-Za-z0-9/$()_.]+")" => (
+<INITIAL> "#(FILE="[-A-Za-z0-9/$()_.]+")" => (
   if quotefix then (yypos,yytext)
-  else (scriptfilename := String.substring(yytext,8,size yytext-9);
+  else (scriptfilename := String.substring(yytext,7,size yytext-8);
         (yypos, " "))
 );
 <INITIAL,thmval,TERMINATION_VAL>"(*" => (
@@ -322,7 +322,7 @@ ProofLine =
   (yypos,
    if inscript andalso not quotefix then
      let
-       infix |> 
+       infix |>
        fun extract (s,p) l =
            if List.exists (fn (a,_) => a = s) l then
              (p, List.filter (fn (a,_) => a <> s) l)
@@ -354,7 +354,7 @@ ProofLine =
 (
   if inscript andalso not quotefix then
     let
-      infix |> 
+      infix |>
       val pfx = mlswitch (!mltype_stack) "" "" ");"
       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
@@ -828,7 +828,7 @@ ProofLine =
 
 <quote,tmquote,tyquote,defnquote,datatypequote,rawquote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
 <defnquote0>"^"{symbol} => (
-  (yypos, if quotefix then yytext 
+  (yypos, if quotefix then yytext
           else (inc conjcount; YYBEGIN defnquote; yytext))
 );
 <quote,tmquote,tyquote,defnquote0,defnquote,datatypequote,rawquote>{newline} =>
@@ -857,7 +857,7 @@ ProofLine =
      YYBEGIN INITIAL;
      nextline yyarg (yypos + size yytext);
      if quotefix then yytext
-     else 
+     else
        (if !inddefp then ")" else "") ^ "\"\n] NONE; " ^ magic_bind yyarg ^
        String.concat (List.map (extra_binds (!stem)) (!labelidxs))
     )

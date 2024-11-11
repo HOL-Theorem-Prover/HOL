@@ -91,5 +91,5 @@ End
 
 val x = #(LINE) + 10;
 val #(LINE=11) y = #(LINE)
-val s = #(FNAME) #(FNAME=foo.sml)
-val s' = #(FNAME) (* #(FNAME) *)
+val s = #(FILE) #(FILE=foo.sml)
+val s' = #(FILE) (* #(FILE) *)

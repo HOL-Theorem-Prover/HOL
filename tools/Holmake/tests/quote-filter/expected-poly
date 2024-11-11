@@ -92,4 +92,4 @@ val thmname = boolLib.save_thm("thmname", expression
 val x = 92 + 10;
 val   y = 11
 val s = ""  
-val s' = "foo.sml" (* #(FNAME) *)
+val s' = "foo.sml" (* #(FILE) *)

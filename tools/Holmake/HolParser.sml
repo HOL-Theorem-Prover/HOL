@@ -529,10 +529,10 @@ structure ToSML = struct
           | SOME num => line := (fn (_, pos) => (num - 1, pos)) (!line);
           aux " "; p + size text
         end
-      | FilePragma p => (regular (pos, p); aux (mlquote (!filename)); p + 8)
+      | FilePragma p => (regular (pos, p); aux (mlquote (!filename)); p + 7)
       | FilePragmaWith (p, text) => (
           regular (pos, p);
-          filename := String.substring(text, 8, size text - 9);
+          filename := String.substring(text, 7, size text - 8);
           aux " "; p + size text)
     and doDecls start [] stop = regular (start, stop)
       | doDecls start (d :: ds) stop = doDecls (doDecl false start d) ds stop

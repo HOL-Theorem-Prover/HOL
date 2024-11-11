@@ -20,16 +20,16 @@ val _ = new_theory "combin";
 
 fun def (s,l) p = Q.new_definition_at (DB_dtype.mkloc(s,l,false)) p
 
-val K_DEF = def(#(FNAME),#(LINE))("K_DEF",        `K = \x y. x`);
-val S_DEF = def(#(FNAME),#(LINE))("S_DEF",        `S = \f g x. f x (g x)`);
-val I_DEF = def(#(FNAME),#(LINE))("I_DEF",        `I = S K (K:'a->'a->'a)`);
-val C_DEF = def(#(FNAME),#(LINE))("C_DEF",        `C = \f x y. f y x`);
-val W_DEF = def(#(FNAME),#(LINE))("W_DEF",        `W = \f x. f x x`);
-val o_DEF = def(#(FNAME),#(LINE))("o_DEF", `$o f g = \x. f(g x)`);
+val K_DEF = def(#(FILE),#(LINE))("K_DEF",        `K = \x y. x`);
+val S_DEF = def(#(FILE),#(LINE))("S_DEF",        `S = \f g x. f x (g x)`);
+val I_DEF = def(#(FILE),#(LINE))("I_DEF",        `I = S K (K:'a->'a->'a)`);
+val C_DEF = def(#(FILE),#(LINE))("C_DEF",        `C = \f x y. f y x`);
+val W_DEF = def(#(FILE),#(LINE))("W_DEF",        `W = \f x. f x x`);
+val o_DEF = def(#(FILE),#(LINE))("o_DEF", `$o f g = \x. f(g x)`);
 val _ = set_fixity "o" (Infixr 800)
-val APP_DEF = def(#(FNAME),#(LINE)) ("APP_DEF",   `$:> x f = f x`);
+val APP_DEF = def(#(FILE),#(LINE)) ("APP_DEF",   `$:> x f = f x`);
 
-val UPDATE_def = def(#(FNAME),#(LINE))("UPDATE_def",
+val UPDATE_def = def(#(FILE),#(LINE))("UPDATE_def",
    `UPDATE a b = \f c. if a = c then b else f c`);
 
 val _ = set_fixity ":>" (Infixl 310);
