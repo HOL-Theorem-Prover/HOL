@@ -22,12 +22,15 @@ val _ = use "poly/quse.sml";
 
 local
 
-  fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
-               TextIO.flushOut TextIO.stdErr;
-               raise Fail s)
+  val quiet_load = ref false;
+  fun maybeWriteStderr s =
+    if !quiet_load then () else
+    (TextIO.output(TextIO.stdErr, s ^ "\n");
+     TextIO.flushOut TextIO.stdErr);
 
-  fun warn s = (TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n");
-                TextIO.flushOut TextIO.stdErr)
+  fun die s = (maybeWriteStderr s; raise Fail s)
+
+  fun warn s = maybeWriteStderr ("WARNING: " ^ s)
 
   val meta_debug = ref false
 
@@ -53,12 +56,11 @@ fun quse s = let
 in
   QUse.use s ;
   loadpathdb := Binarymap.insert(!loadpathdb,OS.Path.file full,OS.Path.dir full)
-end handle OS.Path.Path => die ("Path exception in quse "^s)
-             | e => (TextIO.output(TextIO.stdErr,
-                                   "error in quse " ^ s ^ " : " ^
-                                   General.exnMessage e ^ "\n");
-                     TextIO.flushOut TextIO.stdErr;
-                     PolyML.Exception.reraise e)
+end handle
+    OS.Path.Path => die ("Path exception in quse "^s)
+  | e => (
+    maybeWriteStderr("error in quse " ^ s ^ " : " ^ General.exnMessage e);
+    PolyML.Exception.reraise e)
 
 fun myuse f =
   let val op ++ = OS.Path.concat
@@ -131,16 +133,18 @@ and load ps modPath =
        handle e =>
               (loadedMods := Binaryset.delete (!loadedMods, modName);
                PolyML.Exception.reraise e))
-  end handle e => (TextIO.output(TextIO.stdErr,
-                                 "error in load " ^ modPath ^ " : " ^
-                                 General.exnMessage e ^ "\n");
-                   TextIO.flushOut TextIO.stdErr;
-                   PolyML.Exception.reraise e)
+  end handle e => (
+    maybeWriteStderr("error in load " ^ modPath ^ " : " ^ General.exnMessage e);
+    PolyML.Exception.reraise e)
 in
 
   structure Meta = struct
     val meta_debug = meta_debug
+    val quiet_load = quiet_load
     val load = load []
+    fun qload s = let
+      val x = !quiet_load
+      in quiet_load := true; load s; quiet_load := x end
     val loadPath = loadPath;
     fun loaded () = Binaryset.listItems (!loadedMods);
     fun fakeload s =
