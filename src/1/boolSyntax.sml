@@ -335,27 +335,35 @@ fun new_thm_with_attributes {call_str, call_f} genth (s, arg) =
       List.app do_attr attrs; th
     end
 
-fun coredef nm =
-    new_thm_with_attributes {call_str = "boolSyntax", call_f = nm}
-                            Definition.new_definition
-val new_definition = coredef "new_definition"
+fun coredef loc nm =
+    new_thm_with_attributes
+      {call_str = "boolSyntax", call_f = nm}
+      (fn (n,t) =>
+          Definition.located_new_definition{loc=loc, name = n, def = t})
+fun new_definition_at loc = coredef loc "new_definition_at"
+val new_definition = coredef DB.Unknown "new_definition"
 
-fun new_specification (nm,cs,th) =
+fun new_specification_at loc (nm,cs,th) =
     new_thm_with_attributes
       {call_str = "boolSyntax", call_f = "new_specification"}
-      (fn (nm, (cs,th)) => Definition.new_specification(nm,cs,th))
+      (fn (nm, (cs,th)) =>
+          Definition.located_new_specification{
+            loc = loc, name = nm, constnames = cs, witness = th
+          })
       (nm, (cs,th))
 
+val new_specification = new_specification_at DB.Unknown
+
 fun new_infixr_definition (s, t, p) =
-   coredef "new_infixr_definition" (s, t) before
+   coredef DB.Unknown "new_infixr_definition" (s, t) before
    set_fixity (defname t) (Infixr p)
 
 fun new_infixl_definition (s, t, p) =
-   coredef "new_infixl_definition" (s, t) before
+   coredef DB.Unknown "new_infixl_definition" (s, t) before
    set_fixity (defname t) (Infixl p)
 
 fun new_binder_definition (s, t) =
-   coredef "new_binder_definition" (s, t) before
+   coredef DB.Unknown "new_binder_definition" (s, t) before
    Parse.set_fixity (defname t) Binder
 
 fun new_type_definition (name, inhab_thm) =

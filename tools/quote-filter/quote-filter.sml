@@ -7,7 +7,8 @@ val _ = catch_interrupt true;
 
 fun read_from_stream is n = TextIO.input is
 
-val (instream, outstream, intp, qfixp, oldp, callback) =
+val {instrm = instream, outstrm = outstream, interactive = intp,
+     quotefixp = qfixp, oldparser = oldp, closefn = callback, infilename} =
     processArgs (false,false,false,false) (CommandLine.arguments())
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
@@ -15,7 +16,8 @@ val (instream, outstream, intp, qfixp, oldp, callback) =
 val loop =
   if oldp orelse qfixp then let
     open QuoteFilter.UserDeclarations
-    val state as QFS args = newstate {inscriptp = intp, quotefixp = qfixp}
+    val state as QFS args = newstate {inscriptp = intp, quotefixp = qfixp,
+                                      scriptfilename = infilename}
 
     fun loop() =
       let
@@ -32,6 +34,7 @@ val loop =
     open HolParser.ToSML
     val read = mkPushTranslator {
       read = read_from_stream instream,
+      filename = infilename,
       parseError = fn (start, stop) => fn s =>
         TextIO.output (TextIO.stdErr,
           "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")

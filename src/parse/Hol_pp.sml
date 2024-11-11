@@ -293,7 +293,7 @@ fun export_theory_as_docfiles dirname =
 
 
 
-fun data_to_string (((th,name),(thm,cl)):DB_dtype.public_data) =
+fun data_to_string (((th,name),(thm,cl,loc)):DB_dtype.public_data) =
 let
    open PPBackEnd Parse
    val cl_s = if cl = Thm then "THEOREM" else
@@ -302,14 +302,19 @@ let
    val th_s = ppstring pp_thm thm
    val name_style = add_style_to_string [Bold] name
 
-   val s = th^"Theory."^name^" ("^cl_s^")\n";
-   val s_style = (th^"Theory.")^name_style^" ("^cl_s^")\n";
+   val s = th^"Theory."^name^" ("^cl_s^")\n"
+   val s_style = (th^"Theory.")^name_style^" ("^cl_s^")\n"
    val size = String.size s
    fun line 0 l = l
      | line n l = line (n-1) ("-"^l)
-   val s = s_style^(line (size-1) "\n")^th_s^"\n";
+   val locstring =
+       case loc of
+           Unknown => ""
+         | Located{scriptpath,linenum,exact} =>
+           "[" ^ scriptpath ^ ":" ^ Int.toString linenum ^
+           (if exact then "" else " (approx)") ^ "]\n"
 in
-   s
+   s_style^(line (size-1) "\n")^th_s^"\n"^locstring
 end;
 
 

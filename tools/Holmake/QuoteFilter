@@ -31,6 +31,7 @@ datatype qfs = QFS of {comdepth : int ref,
                        pardepth : int ref,
                        antiquote_stack : quotetype list ref,
                        mltype_stack : mltype list ref,
+                       scriptfilename : string ref (* use "" for none *),
                        strlitstart : string option ref,
                        induction_thm : string ref,
                        labelidxs : (string * int) list ref,
@@ -48,13 +49,14 @@ fun mlswitch tys init tval thval =
       | inTHMVAL :: _ => thval
       | _ => init
 
-fun newstate {inscriptp,quotefixp}  =
+fun newstate {inscriptp,quotefixp,scriptfilename}  =
   QFS {comdepth = ref 0,
        pardepth = ref 0,
        antiquote_stack = ref [],
        row = ref 0,
        rowstart = ref 0,
        inscript = inscriptp,
+       scriptfilename = ref scriptfilename,
        inddefp = ref false,
        quotefix = quotefixp,
        labelidxs = ref [],
@@ -65,10 +67,10 @@ fun newstate {inscriptp,quotefixp}  =
        strlitstart = ref NONE}
 
 fun linenum (QFS{row,...}) = !row + 1
+fun setlinenum i (QFS{row,...}) = row := (i-1);
 
-fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,
-                    inddefp,
-                    labelidxs, conjcount, stem, strlitstart, ...}) =
+fun resetstate (QFS {comdepth, pardepth, antiquote_stack, mltype_stack,
+                     inddefp, labelidxs, conjcount, stem, strlitstart, ...}) =
     (comdepth := 0; pardepth := 0; antiquote_stack := []; mltype_stack := [];
      conjcount := 0; labelidxs := []; stem := ""; strlitstart := NONE;
      inddefp := false);
@@ -204,7 +206,7 @@ fun eof (QFS {mltype_stack,...}) =
 %%
 %structure QuoteFilter
 %s string comment qcomment tmcomment tycomment defncomment defncomment0 datatypecomment tyquote tmquote quote rawquote defnquote0 defnquote datatypequote ANTIQ thmval TERMINATION_VAL holstrlit holstrlitlbrk;
-%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm, inddefp, labelidxs, conjcount, stem,strlitstart});
+%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, quotefix, mltype_stack, induction_thm, inddefp, labelidxs, conjcount, stem,strlitstart,scriptfilename});
 %full
 
 letter = [A-Za-z];
@@ -254,6 +256,25 @@ ProofLine =
 {locpragma} => ((yypos,
                (dolocpragma yyarg (yytext, yypos))));
 
+<INITIAL> "#(LINE)" => (if quotefix then (yypos, yytext)
+                        else (yypos, Int.toString (linenum yyarg)));
+<INITIAL> "#(LINE="[0-9]+")" => (
+  if quotefix then (yypos,yytext)
+  else
+    (case Int.fromString (String.substring(yytext,7,size yytext-8)) of
+         NONE => ()
+       | SOME i => setlinenum i yyarg;
+     (yypos, " "))
+);
+<INITIAL> "#(FNAME)" => (
+  if quotefix then (yypos,yytext)
+  else (yypos, "\"" ^ !scriptfilename ^ "\"")
+);
+<INITIAL> "#(FNAME="[-A-Za-z0-9/$()_.]+")" => (
+  if quotefix then (yypos,yytext)
+  else (scriptfilename := String.substring(yytext,8,size yytext-9);
+        (yypos, " "))
+);
 <INITIAL,thmval,TERMINATION_VAL>"(*" => (
   (yypos,
    (inc comdepth;
@@ -369,7 +390,11 @@ ProofLine =
            case List.find (fn (k,v) => k = "induction") kvalist of
               SOME (_, s::_) => s
             | _ => indthm_munge thname
-
+       val qdefine_str =
+           if !scriptfilename = "" then "TotalDefn.qDefine "
+           else "TotalDefn.located_qDefine(DB_dtype.mkloc(\"" ^
+                String.toString (!scriptfilename) ^ "\"," ^
+                Int.toString (linenum yyarg) ^ ",true))"
      in
        mltype_stack := [];
        induction_thm := ind_thm;
@@ -377,7 +402,7 @@ ProofLine =
        labelidxs := [];
        YYBEGIN defnquote;
        ECHO yyarg (pfx ^
-                   "val " ^ thname ^ " = TotalDefn.qDefine \"" ^
+                   "val " ^ thname ^ " = " ^ qdefine_str ^ "\"" ^
                    with_attrs_string ^ "\" [QUOTE \"" ^
                    locpragma yyarg (yytext, yypos) 0)
      end

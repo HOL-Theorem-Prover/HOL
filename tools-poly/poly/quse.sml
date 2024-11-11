@@ -22,7 +22,7 @@ fun use fname = use_reader fname (HolParser.fileToReader fname)
 fun useScript fname =
     let
       val istream = TextIO.openIn fname
-      val reader = HolParser.streamToReader true istream
+      val reader = HolParser.streamToReader true fname istream
       val _ = use_reader fname reader
               handle e => (TextIO.closeIn istream; raise e)
     in

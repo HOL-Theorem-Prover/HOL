@@ -12,14 +12,13 @@ type term     = Term.term
 type hol_type = Type.hol_type
 type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
 type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
- type struct_info_record = {
+type thminfo = DB_dtype.thminfo
+type struct_info_record = {
    theory      : string*Arbnum.num*Arbnum.num,
    parents     : (string*Arbnum.num*Arbnum.num) list,
    types       : (string*int) list,
    constants   : (string*hol_type) list,
-   axioms      : (string * thm) list,
-   definitions : (string * thm * {private:bool}) list,
-   theorems    : (string * thm * {private:bool}) list,
+   all_thms    : (string * thm * thminfo) list,
    struct_ps   : (unit -> PP.pretty) option list,
    struct_pcps : (unit -> PP.pretty) list,
    mldeps      : string list,
@@ -31,7 +30,6 @@ open Feedback Lib Portable Dep;
 
 val ERR = mk_HOL_ERR "TheoryPP";
 
-val mk_axms_visible = map (fn (s,th) => (s,th,{private=false}))
 val temp_binding_pfx = "@temp"
 val is_temp_binding = String.isPrefix temp_binding_pfx
 fun temp_binding s = temp_binding_pfx ^ s
@@ -97,16 +95,27 @@ fun pp_type mvartype mtype ty =
 val include_docs = ref true
 val _ = Feedback.register_btrace ("TheoryPP.include_docs", include_docs)
 
+fun classify As Ds Ts [] = (As,Ds,Ts)
+  | classify As Ds Ts ((r as (s,th,i:thminfo))::rest) =
+    let open DB_dtype
+    in
+      case #class i of
+          Axm => classify (r::As) Ds Ts rest
+        | Def => classify As (r::Ds) Ts rest
+        | Thm => classify As Ds (r::Ts) rest
+    end
+
+
 fun pp_sig pp_thm info_record = let
   open PP
-  val {name,parents,axioms,definitions,theorems,sig_ps} = info_record
+  val {name,parents,all_thms,sig_ps} = info_record
   val parents'     = sort parents
   val rm_temp      = List.filter (fn (s, _, _) => not (is_temp_binding s))
-  val axioms0 = axioms and axioms = mk_axms_visible axioms
-  val axioms'      = psort axioms |> rm_temp
-  val definitions' = psort definitions |> rm_temp
-  val theorems'    = psort theorems |> rm_temp
-  val thml         = axioms@definitions@theorems
+  val all_thms'    = rm_temp all_thms
+  val (axioms,definitions,theorems) = classify [] [] [] all_thms'
+  val axioms'      = psort axioms
+  val definitions' = psort definitions
+  val theorems'    = psort theorems
   fun vblock(header, ob_pr, obs) =
     block CONSISTENT 2 [
       add_string ("(*  "^header^ "  *)"), NL,
@@ -148,14 +157,15 @@ fun pp_sig pp_thm info_record = let
               (pr_list (block CONSISTENT 0 o pr_sig_ps) [NL, NL] l)]
 
   val filter_visible =
-      List.mapPartial (fn (s, th, {private=false}) => SOME (s,th) | _ => NONE)
+      List.mapPartial (fn (s, th, {private=false,...}:thminfo) => SOME (s,th)
+                      |            _                 => NONE)
   fun pr_docs() =
       if !include_docs then
         (!pp_sig_hook();
          [block CONSISTENT 3 (
              [add_string "(*", NL] @
              pr_parents parents' @
-             pr_thms "Axiom" axioms0 @
+             pr_thms "Axiom" (filter_visible axioms') @
              pr_thms "Definition" (filter_visible definitions') @
              pr_thms "Theorem" (filter_visible theorems')
            ), NL,
@@ -163,10 +173,11 @@ fun pp_sig pp_thm info_record = let
       else []
   fun pthms (heading, ths) =
     vblock(heading,
-           (fn (s,th,{private}) => block CONSISTENT 0
-                               (if is_temp_binding s orelse private then []
-                                else
-                                  [add_string("val "^ s ^ " : thm")])),
+           (fn (s,th,{private,...}:thminfo) =>
+               block CONSISTENT 0
+                     (if is_temp_binding s orelse private then []
+                      else
+                        [add_string("val "^ s ^ " : thm")])),
            ths)
 in
   block CONSISTENT 0 (
@@ -218,15 +229,11 @@ fun mlower s m =
 
 fun pp_struct (info_record : struct_info_record) = let
   open Term Thm
-  val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, axioms,
-       definitions,theorems,types,constants,struct_ps,
-       struct_pcps} = info_record
+  val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, all_thms,
+       types,constants,struct_ps, struct_pcps} = info_record
   val parents1 =
     List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                     parents0
-  val thml = mk_axms_visible axioms @
-             definitions @
-             theorems
   val jump = add_newline >> add_newline
   fun pblock(ob_pr, obs) =
       case obs of
@@ -242,7 +249,7 @@ fun pp_struct (info_record : struct_info_record) = let
 
   fun pparent (s,i,j) = Thry s
 
-  fun pr_bind(s, th, {private}) = let
+  fun pr_bind(s, th, {private,...}:thminfo) = let
     val addsbl = pr_list add_string (add_break(1,2))
   in
     if is_temp_binding s orelse private then nothing
@@ -257,9 +264,9 @@ fun pp_struct (info_record : struct_info_record) = let
 
   val bind_theorems =
      block CONSISTENT 0 (
-       if null thml then nothing
+       if null all_thms then nothing
        else
-         block CONSISTENT 0 (pr_list pr_bind add_newline thml) >>
+         block CONSISTENT 0 (pr_list pr_bind add_newline all_thms) >>
          add_newline
      )
 
@@ -308,7 +315,7 @@ fun pp_struct (info_record : struct_info_record) = let
                 add_string (mlquote name) >> add_break (1,2) >>
                 add_string ("(holpathdb.subst_pathvars "^datfile^")")
               ) >> add_break(1,2) >>
-              add_string ("fun find s = HOLdict.find (thydata,s)") >>
+              add_string ("fun find s = #1 (valOf (Symtab.lookup thydata s))") >>
               add_break(1,0) >> add_string "end"
             ) >> jump >>
             bind_theorems >>
@@ -330,21 +337,20 @@ end
  *  Print theory data separately.
  *---------------------------------------------------------------------------*)
 
-
 fun pp_thydata (info_record : struct_info_record) = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0,
        thydata = (thydata_strings,thydata_tms, thydata), mldeps,
-       axioms,definitions,theorems,types,constants,...} = info_record
+       all_thms,types,constants,...} = info_record
   val parents1 =
       List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                       parents0
-  val thml = mk_axms_visible axioms @ definitions @ theorems
   open SharingTables
 
   val share_data = build_sharing_data {
         named_terms = [], named_types = [], unnamed_terms = [],
-        unnamed_types = [], theorems = map (fn (s,th,_) => (s,th)) thml
+        unnamed_types = [],
+        theorems = all_thms
       }
   val share_data = add_strings thydata_strings share_data
   val share_data = add_terms thydata_tms share_data
@@ -372,31 +378,6 @@ fun pp_thydata (info_record : struct_info_record) = let
                       constants
       end
 
-  val enc_dblist =
-     let
-       open HOLsexp
-       fun enc_db (nm,privp) =
-           let val i0 = write_string share_data nm
-           in
-             if privp then Integer(~(i0 + 1)) else Integer (i0 + 1)
-           end
-       val enc_dbl = list_encode enc_db
-       val checkth =
-           List.mapPartial (fn (nm, _, {private}) =>
-                               if is_temp_binding nm then NONE
-                               else SOME (nm,private))
-       val checkax =
-           List.mapPartial (fn (nm, _) =>
-                               if is_temp_binding nm then NONE
-                               else SOME (nm,false)) (* axs not private *)
-       val axl  = checkax axioms
-       val defl = checkth definitions
-       val thml = checkth theorems
-     in
-       tagged_encode "thm-classes"
-                     (pair3_encode (enc_dbl, enc_dbl, enc_dbl)) (axl,defl,thml)
-     end
-
   fun chunks w s =
     if String.size s <= w then [s]
     else String.substring(s, 0, w) :: chunks w (String.extract(s, w, NONE))
@@ -423,7 +404,6 @@ fun pp_thydata (info_record : struct_info_record) = let
           tagged_encode "incorporate" (
             pair_encode(enc_incorporate_types, enc_incorporate_constants)
           ) (types, constants),
-          enc_dblist,
           enc_loadable {terms = write_term share_data,
                         strings = write_string share_data}
                        thydata

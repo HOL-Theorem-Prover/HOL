@@ -17,14 +17,15 @@ fun exhaust_lexer (read, close, _) =
 
 fun reset st = fn () => QuoteFilter.UserDeclarations.resetstate st
 
-fun mkstate b = {inscriptp = b, quotefixp = false}
+fun mkstate b fname =
+    {inscriptp = b, quotefixp = false, scriptfilename = fname}
 
 fun file_to_lexer fname =
   let
 
     val instrm = openIn fname
     val isscript = String.isSuffix "Script.sml" fname
-    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscript)
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscript fname)
     val read = QuoteFilter.makeLexer (fn n => input instrm) qstate
   in
     (#2 o read, (fn () => closeIn instrm), reset qstate)
@@ -32,7 +33,7 @@ fun file_to_lexer fname =
 
 fun string_to_lexer isscriptp s =
   let
-    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp)
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp "")
     val sr = ref s
     fun str_read _ = (!sr before sr := "")
     val read = QuoteFilter.makeLexer str_read qstate
@@ -40,16 +41,16 @@ fun string_to_lexer isscriptp s =
     (#2 o read, (fn () => ()), reset qstate)
   end
 
-fun input_to_lexer isscriptp inp =
+fun input_to_lexer isscriptp fname inp =
   let
-    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp)
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp fname)
     val read = QuoteFilter.makeLexer inp qstate
   in
     (#2 o read, (fn () => ()), reset qstate)
   end
 
-fun stream_to_lexer isscriptp strm =
-  input_to_lexer isscriptp (fn n => input strm)
+fun stream_to_lexer isscriptp fname strm =
+  input_to_lexer isscriptp fname (fn n => input strm)
 
 fun inputFile fname = exhaust_lexer (file_to_lexer fname)
 fun fromString b s = exhaust_lexer (string_to_lexer b s)
@@ -72,7 +73,7 @@ end
 
 fun fileToReader fname = mkReaderEOF (file_to_lexer fname)
 fun stringToReader b s = mkReaderEOF (string_to_lexer b s)
-fun inputToReader b inp = mkReaderEOF (input_to_lexer b inp)
-fun streamToReader b strm = mkReaderEOF (stream_to_lexer b strm)
+fun inputToReader b fnm inp = mkReaderEOF (input_to_lexer b fnm inp)
+fun streamToReader b fnm strm = mkReaderEOF (stream_to_lexer b fnm strm)
 
 end

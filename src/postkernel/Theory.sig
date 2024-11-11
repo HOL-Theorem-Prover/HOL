@@ -7,6 +7,8 @@ sig
   type thy_addon = {sig_ps    : (unit -> HOLPP.pretty) option,
                     struct_ps : (unit -> HOLPP.pretty) option}
   type num = Arbnum.num
+  datatype thm_src_location = datatype DB_dtype.thm_src_location
+  type thminfo = DB_dtype.thminfo
 
 (* Create a new theory *)
 
@@ -22,12 +24,19 @@ sig
   val new_axiom          : string * term -> thm
   val save_thm           : string * thm -> thm
   val save_private_thm   : string * thm -> thm
+  val gen_save_thm       : {name:string,private:bool,thm:thm,
+                            loc: thm_src_location} -> thm
+  val gen_new_axiom      : string * term * thm_src_location -> thm
 
 (* Delete from the current theory segment *)
 
   val delete_type        : string -> unit
   val delete_const       : string -> unit
   val delete_binding     : string -> unit
+
+(* Modify binding in the current theory segment *)
+
+  val upd_binding        : string -> (thminfo -> thminfo) -> unit
 
 (* Information on the current theory segment *)
 
@@ -91,9 +100,18 @@ sig
 (* Extensions by definition *)
   structure Definition : sig
     val new_type_definition    : string * thm -> thm
+    val located_new_type_definition :
+        {loc:thm_src_location,name:string,witness:thm} -> thm
     val new_definition         : string * term -> thm
+    val located_new_definition :
+        {loc:thm_src_location,name:string,def:term} -> thm
     val new_specification      : string * string list * thm -> thm
+    val located_new_specification :
+        {loc:thm_src_location,name:string,constnames:string list,
+         witness: thm} -> thm
     val gen_new_specification  : string * thm -> thm
+    val located_gen_new_specification :
+        {name:string,witness:thm, loc: thm_src_location} -> thm
 
     val new_definition_hook    : ((term -> term list * term) *
                                   (term list * thm -> thm)) ref
@@ -119,12 +137,13 @@ sig
 
 (* For internal use *)
 
-  val pp_thm             : (thm -> HOLPP.pretty) ref
-  val link_parents       : string*num*num -> (string*num*num) list -> unit
-  val incorporate_types  : string -> (string*int) list -> unit
+  val pp_thm                 : (thm -> HOLPP.pretty) ref
+  val link_parents           : string*num*num -> (string*num*num) list -> unit
+  val incorporate_types      : string -> (string*int) list -> unit
 
 
-  val store_definition   : string * thm -> thm
+  val store_definition       : string * thm -> thm
+  val gen_store_definition   : string * thm * thm_src_location -> thm
   val incorporate_consts : string -> hol_type Vector.vector ->
                            (string*int) list -> unit
   (* Theory files (which are just SML source code) call this function as

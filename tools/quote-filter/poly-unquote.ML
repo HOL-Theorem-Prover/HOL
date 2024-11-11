@@ -30,25 +30,26 @@ fun main() = let
      linked executable as Interrupt exceptions *)
   val _ = Signal.signal(2, Signal.SIG_HANDLE
                                (fn _ => Thread.Thread.broadcastInterrupt()))
-  val (instream, outstream, intp, qfixp, oldp, cb) =
+  val {instrm, outstrm, interactive, quotefixp, oldparser, closefn, infilename} =
       qfilter_util.processArgs(false,false,false,false) (CommandLine.arguments())
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 
-  val _ = PolyML.print_depth 100;
   val loop =
-    if oldp orelse qfixp then let
+    if oldparser orelse quotefixp then let
       open QuoteFilter.UserDeclarations
-      val state as QFS args = newstate {inscriptp = intp, quotefixp = qfixp}
+      val state as QFS args = newstate {inscriptp = interactive,
+                                        quotefixp = quotefixp,
+                                        scriptfilename = infilename}
 
       fun loop() =
         let
-          val lexer = #2 o QuoteFilter.makeLexer (read_from_stream instream) state
+          val lexer = #2 o QuoteFilter.makeLexer (read_from_stream instrm) state
           fun coreloop () =
             case lexer() of
                 "" => ()
-              | s => (TextIO.output(outstream, s); coreloop())
+              | s => (TextIO.output(outstrm, s); coreloop())
         in
           coreloop() handle Interrupt => (resetstate state; loop())
         end
@@ -56,18 +57,18 @@ fun main() = let
     else let
       open HolParser.ToSML
       val read = mkPushTranslator {
-        read = read_from_stream instream,
+        read = read_from_stream instrm,
+        filename = infilename,
         parseError = fn (start, stop) => fn s =>
           TextIO.output (TextIO.stdErr,
             "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
-      } (mkStrcode (fn s => TextIO.output(outstream, s)))
+      } (mkStrcode (fn s => TextIO.output(outstrm, s)))
 
       fun loop () = if read () then () else loop ()
       in loop end
 in
   loop();
-  TextIO.closeOut outstream;
-  cb();
+  closefn();
   exit success
 end handle e => (
   TextIO.output (TextIO.stdErr, "Uncaught exception" ^

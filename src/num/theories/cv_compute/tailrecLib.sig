@@ -2,10 +2,12 @@ signature tailrecLib =
 sig
 
     include Abbrev
+    type thmloc = DB_dtype.thm_src_location
 
     val mk_sum_term : term -> hol_type -> term -> term
 
     val tailrec_define         : string -> term -> thm
+    val gen_tailrec_define     : {loc:thmloc,name:string,def:term} -> thm
     val prove_tailrec_exists   : term -> thm
 
 end

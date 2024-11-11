@@ -101,8 +101,7 @@ fun string_to_class "A" = SOME DB.Axm
   | string_to_class _ = NONE
 
 fun class_decode c =
-    Option.map (List.map (fn i => if i < 0 then (~(i + 1), c, true)
-                                      else (i - 1, c, false))) o
+    Option.map (List.map (fn i => (i, c))) o
     HOLsexp.list_decode HOLsexp.int_decode
 
 fun load_thydata thyname path =
@@ -125,16 +124,11 @@ fun load_thydata thyname path =
     val (fullthy as (thyname, _, _)) = force "thyname" dec_thy thy_data
     val parents = force "parents" (list_decode dec_thy) parents_data
     val _ = Theory.link_parents fullthy parents
-    val (core_data, incorporate_data, classinfo, thydata_data) =
+    val (core_data, incorporate_data, thydata_data) =
         force "toplevel_decode" (
-          pair4_decode (
+          pair3_decode (
             SOME,
             tagged_decode "incorporate" SOME,
-            tagged_decode "thm-classes" (
-              Option.map (fn (a,d,t) => a @ d @ t) o
-              pair3_decode (class_decode DB.Axm,  class_decode DB.Def,
-                            class_decode DB.Thm)
-            ),
             tagged_decode "loadable-thydata" SOME
           )
         ) rest
@@ -157,20 +151,11 @@ fun load_thydata thyname path =
         ) core_data
     val {theorems = named_thms,...} = export_from_sharing_data share_data
 
-    val thmdict = HOLdict.fromList String.compare named_thms
-    val _ =
-        let
-          fun mapthis (nm_i,c,private) =
-              let val nm = read_string share_data nm_i
-                  val th =
-                      HOLdict.find (thmdict,nm)
-                      handle HOLdict.NotFound =>
-                             raise TheoryReader ("Couldn't lookup "^nm)
-              in (nm,th,c,{private=private})
-              end
-        in
-          DB.bindl thyname (map mapthis classinfo)
-        end
+    val thmdict =
+        List.foldl (fn ((n,th,i), D) => Symtab.update (n, (th,i)) D)
+                   Symtab.empty
+                   named_thms
+    val _ = DB.bindl thyname named_thms
     val _ =
         app (temp_encoded_update share_data thyname) (
           force "thydata" (

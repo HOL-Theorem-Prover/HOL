@@ -22,6 +22,10 @@ datatype decl
       quote: qbody, end_tok: (int * string) option, stop: int}
   | Quote of {head: int * string, quote: qbody, end_tok: (int * string) option, stop: int}
   | String of int * int
+  | LinePragma of int
+  | LinePragmaWith of int * string
+  | FilePragma of int
+  | FilePragmaWith of int * string
 
 and decls = Decls of {start: int, decls: decl list, stop: int}
 
@@ -295,6 +299,10 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   YYBEGIN quote;
   parseQuote yyarg continue yypos yytext before YYBEGIN INITIAL
 );
+<INITIAL>"#(LINE)" => (Decl (LinePragma yypos, NONE));
+<INITIAL>"#(LINE="[0-9]+")" => (Decl (LinePragmaWith (yypos, yytext), NONE));
+<INITIAL>"#(FNAME)" => (Decl (FilePragma yypos, NONE));
+<INITIAL>"#(FNAME="[-A-Za-z0-9/$()_.]+")" => (Decl (FilePragmaWith (yypos, yytext), NONE));
 <INITIAL>"\"" => (
   YYBEGIN string;
   case continue() of

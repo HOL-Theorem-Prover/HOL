@@ -290,11 +290,13 @@ structure ToSML = struct
         | ch => if Char.isPrint ch then NONE else SOME (AttributeSyntax.bslash_escape ch))
     } end
 
-  fun mkPushTranslator {read, parseError} ({regular, aux, strstr, strcode = strcode0}:strcode) = let
+  fun mkPushTranslator {read, filename, parseError}
+      ({regular, aux, strstr, strcode = strcode0}:strcode) = let
     open Simple
     val ss = Substring.string
     val full = Substring.full
     val cat = Substring.concat
+    val filename = ref filename
     val {read, readAt} = mkDoubleReader read 0
     val feed = mkParser {read = read, pos = ~1 (* fix for mllex bug *), parseError = parseError}
     val lookahead = ref NONE
@@ -390,8 +392,13 @@ structure ToSML = struct
             else cat [name, full "_ind"]
         in
           regular (pos, p); finishThmVal ();
-          aux "val "; aux (ss name); aux " = TotalDefn.qDefine \"";
-          strcode' (p, name_attrs); aux "\" "; doQuote quote;
+          aux "val "; aux (ss name); aux " = ";
+          if !filename = "" then aux "TotalDefn.qDefine"
+          else app aux [
+            "TotalDefn.located_qDefine (DB_dtype.mkloc (",
+              mlquote (!filename), ", ",
+              Int.toString (#1 (!line) + 1) ^ ", true))"];
+          aux " \""; strcode' (p, name_attrs); aux "\" "; doQuote quote;
           case termination of
             NONE => aux " NONE;"
           | SOME {decls = Decls {start = dstart, decls = decls, stop = dstop}, ...} =>
@@ -511,6 +518,21 @@ structure ToSML = struct
         stop)
       | Quote {head = (p, _), quote, stop, ...} => (regular (pos, p); doQuote quote; stop)
       | String (start, stop) => (regular (pos, start); strstr (start, stop); stop)
+      | LinePragma p => (regular (pos, p); aux (Int.toString (#1 (!line) + 1)); p + 7)
+      | LinePragmaWith (p, text) => let
+        val num = Substring.substring(text, 7, size text - 8)
+        in
+          regular (pos, p);
+          case Int.fromString (Substring.string num) of
+            NONE => parseError (fromSS (p, num)) "expected an integer"
+          | SOME num => line := (fn (_, pos) => (num - 1, pos)) (!line);
+          aux " "; p + size text
+        end
+      | FilePragma p => (regular (pos, p); aux (mlquote (!filename)); p + 8)
+      | FilePragmaWith (p, text) => (
+          regular (pos, p);
+          filename := String.substring(text, 8, size text - 9);
+          aux " "; p + size text)
     and doDecls start [] stop = regular (start, stop)
       | doDecls start (d :: ds) stop = doDecls (doDecl false start d) ds stop
     val pos = ref 0
@@ -553,21 +575,22 @@ fun mkstate b = {inscriptp = b, quotefixp = false}
 fun file_to_parser fname = let
   val instrm = openIn fname
   (* val isscript = String.isSuffix "Script.sml" fname *)
-  val read = ToSML.mkPullTranslator {read = fn n => input instrm, parseError = K (K ())}
+  val read = ToSML.mkPullTranslator
+    {read = fn n => input instrm, filename = fname, parseError = K (K ())}
   in (read, fn () => closeIn instrm) end
 
 fun string_to_parser isscriptp s = let
   val sr = ref s
   fun str_read _ = (!sr before sr := "")
-  val read = ToSML.mkPullTranslator {read = str_read, parseError = K (K ())}
+  val read = ToSML.mkPullTranslator {read = str_read, filename = "", parseError = K (K ())}
   in (read, I) end
 
-fun input_to_parser isscriptp inp = let
-  val read = ToSML.mkPullTranslator {read = inp, parseError = K (K ())}
+fun input_to_parser isscriptp fname inp = let
+  val read = ToSML.mkPullTranslator {read = inp, filename = fname, parseError = K (K ())}
   in (read, I) end
 
-fun stream_to_parser isscriptp strm =
-  input_to_parser isscriptp (fn n => input strm)
+fun stream_to_parser isscriptp fname strm =
+  input_to_parser isscriptp fname (fn n => input strm)
 
 fun inputFile fname = exhaust_parser (file_to_parser fname)
 fun fromString b s = exhaust_parser (string_to_parser b s)
@@ -588,7 +611,7 @@ fun mkReaderEOF (read, close) = let
 
 fun fileToReader fname = mkReaderEOF (file_to_parser fname)
 fun stringToReader b s = mkReaderEOF (string_to_parser b s)
-fun inputToReader b inp = mkReaderEOF (input_to_parser b inp)
-fun streamToReader b strm = mkReaderEOF (stream_to_parser b strm)
+fun inputToReader b fnm inp = mkReaderEOF (input_to_parser b fnm inp)
+fun streamToReader b fnm strm = mkReaderEOF (stream_to_parser b fnm strm)
 
 end

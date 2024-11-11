@@ -49,7 +49,7 @@ structure ToSML: sig
   val mkDoubleReader: (int -> string) -> int -> double_reader
 
   val mkPullTranslator:
-    {parseError: int * int -> string -> unit, read: int -> string} ->
+    {read: int -> string, filename: string, parseError: int * int -> string -> unit} ->
     unit -> string
 
   type strcode = {
@@ -60,7 +60,7 @@ structure ToSML: sig
   }
   val mkStrcode: (string -> unit) -> strcode
   val mkPushTranslator:
-    {parseError: int * int -> string -> unit, read: int -> string} ->
+    {read: int -> string, filename: string, parseError: int * int -> string -> unit} ->
     strcode -> unit -> bool
 
 end
@@ -72,8 +72,8 @@ val fromString : bool -> string -> string
 
 val fileToReader : string -> reader
 val stringToReader : bool -> string -> reader
-val inputToReader : bool -> (int -> string) -> reader
-val streamToReader : bool -> TextIO.instream -> reader
+val inputToReader : bool -> string -> (int -> string) -> reader
+val streamToReader : bool -> string -> TextIO.instream -> reader
 (* bool is true if the stream corresponds to an interactive session
    (stdin) or a Script file. In both such situations, the magic >- and
    Theorem-syntax transformations should be performed *)

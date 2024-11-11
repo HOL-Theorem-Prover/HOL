@@ -66,6 +66,7 @@ val WARN = HOL_WARNING "Theory";
 
 type thy_addon = {sig_ps    : (unit -> PP.pretty) option,
                   struct_ps : (unit -> PP.pretty) option}
+open DB_dtype
 
 local
   val hooks =
@@ -233,23 +234,8 @@ end; (* structure Graph *)
  * stored in a theory.                                                       *
  *---------------------------------------------------------------------------*)
 
-open ThmKind_dtype
-type thmkind = ThmKind_dtype.t
-
-fun is_axiom (Axiom _) = true  | is_axiom _   = false;
-fun is_theorem (Thm _) = true  | is_theorem _ = false;
-fun is_defn (Defn _)   = true  | is_defn _    = false;
-
-fun drop_thmkind (Axiom(_,th)) = th
-  | drop_thmkind (Thm th)      = th
-  | drop_thmkind (Defn th)     = th;
-
-fun drop_pthmkind (s, (th,{private})) =
-    if private then NONE else SOME (s,drop_thmkind th)
-
-fun drop_Axkind (Axiom rth) = rth
-  | drop_Axkind    _        = raise ERR "drop_Axkind" "";
-
+fun drop_pthmkind (s, (th,{private,loc,class})) =
+    if private then NONE else SOME (s,th)
 
 (*---------------------------------------------------------------------------*
  * The type of HOL theory segments. Lacks fields for the type and term       *
@@ -270,9 +256,10 @@ val empty_datamap : ThyDataMap = Binarymap.mkDict String.compare
 
 fun fact_thm (s, (th, _)) = th
 
+type thminfo = DB_dtype.thminfo
 type segment =
      {thid    : thyid,                                         (* unique id  *)
-      facts   : (thmkind * {private:bool}) Symtab.table,      (* stored thms *)
+      facts   : (thm * thminfo) Symtab.table,                 (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
       adjoin  : thy_addon list,                        (*  extras for export *)
       adjoinpc: (unit -> PP.pretty) list,
@@ -328,16 +315,20 @@ val current_theory = CTname;
  *                  READING FROM THE SEGMENT                                 *
  *---------------------------------------------------------------------------*)
 local
-  fun filter P tab = Symtab.fold (fn nmv => fn A => if P nmv then nmv :: A else A) tab []
+  fun filter P tab =
+      Symtab.fold (fn nmv => fn A => if P nmv then nmv :: A else A) tab []
+  fun is_axiom (n,(th,i:thminfo)) = #class i = Axm
+  fun is_theorem (n,(th,i:thminfo)) = #class i = Thm
+  fun is_defn (n,(th,i:thminfo)) = #class i = Def
 in
 fun thy_types thyname               = Type.thy_types thyname
 fun thy_constants thyname           = Term.thy_consts thyname
 fun thy_parents thyname             = snd (Graph.first
                                            (equal thyname o thyid_name o fst))
-fun thy_axioms (th:segment)         = filter (is_axiom o fact_thm)   (#facts th)
-fun thy_theorems (th:segment)       = filter (is_theorem o fact_thm) (#facts th)
-fun thy_defns (th:segment)          = filter (is_defn o fact_thm)    (#facts th)
-fun thy_addons (th:segment)         = #adjoin th
+fun thy_axioms (th:segment)   = filter is_axiom   (#facts th)
+fun thy_theorems (th:segment) = filter is_theorem (#facts th)
+fun thy_defns (th:segment)    = filter is_defn    (#facts th)
+fun thy_addons (th:segment)   = #adjoin th
 end
 
 fun stamp thyname =
@@ -412,6 +403,12 @@ fun new_addonpc a (s as {adjoinpc, ...} : segment) =
 fun add_ML_dep s (seg as {mldeps, ...} : segment) =
   update_seg seg (U #mldeps (HOLset.add(mldeps, s))) $$
 
+fun upd_binding_p s f (seg as {facts,...} : segment) : segment option =
+    case Symtab.lookup facts s of
+        NONE => NONE
+      | SOME (th, i) =>
+        SOME (update_seg seg (U #facts (Symtab.update(s,(th, f i)) facts)) $$)
+
 local fun plucky k tab =
           case Symtab.lookup tab k of
               NONE => NONE
@@ -466,9 +463,11 @@ local
 in
   val add_typeCT        = inCT add_type
   val add_termCT        = inCT add_term
-  fun add_axiomCT(r,ax) = add_factCT(Nonce.dest r,(Axiom(r,ax),{private=false}))
-  fun add_defnCT(s,def) = add_factCT(s, (Defn def, {private=false}))
-  fun add_thmCT(s,th,v) = add_factCT(s, (Thm th, v))
+  fun add_axiomCT(r,ax,loc) =
+      add_factCT(Nonce.dest r,(ax,{private=false,loc=loc,class=Axm}))
+  fun add_defnCT(s,def,loc) =
+      add_factCT(s, (def, {private=false,loc=loc,class=Def}))
+  fun add_thmCT(s,th,v) = add_factCT(s, (th, v))
   val add_ML_dependency = inCT add_ML_dep
 
   fun delete_type n     = (inCT del_type  (n,CTname());
@@ -481,6 +480,15 @@ in
   fun delete_binding s  = (inCT del_binding s; call_hooks (DelBinding s))
 
   fun set_MLname s1 s2  = inCT set_MLbind (s1,s2)
+  fun upd_binding s f   = inCT (fn f => fn seg =>
+                                   case upd_binding_p s f seg of
+                                       NONE => raise ERR
+                                                     "upd_binding"
+                                                     ("No such binding: "^s)
+                                     | SOME seg' => seg')
+                               f
+
+
   val adjoin_to_theory  = inCT new_addon
   val adjoin_after_completion = inCT new_addonpc
   val zapCT             = inCT zap_segment
@@ -567,13 +575,16 @@ fun uptodate_thm thm =
     andalso
     uptodate_axioms (Tag.axioms_of (Thm.tag thm))
 and uptodate_axioms [] = true
-  | uptodate_axioms rlist = let
-      val axs = map (drop_Axkind o fact_thm) (thy_axioms(theCT()))
+  | uptodate_axioms rlist =
+    let
+      fun get_axtag th = hd (Tag.axioms_of (Thm.tag th))
+      val axs = map (fn (_,(th,_)) => (get_axtag th,concl th))
+                    (thy_axioms(theCT()))
     in
       (* tempting to call uptodate_thm here, but this would put us into a loop
          because axioms have themselves as tags, also unnecessary because
          axioms never have hypotheses (check type of new_axiom) *)
-      Lib.all (uptodate_term o Thm.concl o Lib.C Lib.assoc axs) rlist
+      Lib.all (uptodate_term o Lib.C Lib.assoc axs) rlist
     end handle HOL_ERR _ => false
 
 fun tabfilter P tab =
@@ -581,19 +592,16 @@ fun tabfilter P tab =
                 tab
                 Symtab.empty
 fun scrub_ax (s as {facts,...} : segment) =
-   let fun check (Thm _) = true
-         | check (Defn _) = true
-         | check (Axiom(_,th)) = uptodate_term (Thm.concl th)
+   let fun check (nm, (th, i)) =
+           #class i <> Axm orelse uptodate_term (Thm.concl th)
    in
-      update_seg s (U #facts (tabfilter (check o fact_thm) facts)) $$
+      update_seg s (U #facts (tabfilter check facts)) $$
    end
 
 fun scrub_thms (s as {facts,...}: segment) =
-   let fun check (Axiom _) = true
-         | check (Thm th ) = uptodate_thm th
-         | check (Defn th) = uptodate_thm th
+   let fun check (nm, (th, i)) = #class i = Axm orelse uptodate_thm th
    in
-     update_seg s (U #facts (tabfilter (check o fact_thm) facts)) $$
+     update_seg s (U #facts (tabfilter check facts)) $$
    end
 
 fun scrub () = makeCT (scrub_thms (scrub_ax (theCT())))
@@ -641,42 +649,51 @@ local
       msgOut ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
     else msgOut (format_name_message{pfx = "Saved " ^ s, name = name})
 in
-  fun save_thm0 fnm fmsg private (name, th) =
+  fun save_thm0 fnm fmsg (i as {private, loc}) (name, th) =
     let
       val th' = save_dep (CTname ()) th
     in
-      check_name true ("save_thm", name)
-      ; if uptodate_thm th' then add_thmCT (name, th', private)
+      check_name true (fnm, name)
+      ; if uptodate_thm th' then
+          add_thmCT (name, th', {private=private,loc=loc,class=Thm})
         else raise DATED_ERR fnm name
       ; save_mesg (fmsg th') name
       ; th'
     end
-  val save_thm = save_thm0 "save_thm" mesg_str {private=false}
+  val save_thm = save_thm0 "save_thm" mesg_str {private=false, loc = Unknown}
   val save_private_thm =
       save_thm0 "save_private_thm" (fn th => "private " ^ mesg_str th)
-                {private=true}
+                {private=true, loc = Unknown}
+  fun gen_save_thm{name,private,thm,loc} =
+      save_thm0 "gen_save_thm" mesg_str {private=private, loc = loc} (name,thm)
 
-  fun new_axiom (name,tm) =
+  fun new_axiom0 fnm (name,tm,loc) =
     let
       val rname  = Nonce.mk name
       val axiom  = Thm.mk_axiom_thm (rname, tm)
       val axiom' = save_dep (CTname()) axiom
     in
-      check_name false ("new_axiom",name)
-      ; if uptodate_term tm then add_axiomCT (rname, axiom')
+      check_name false (fnm,name)
+      ; if uptodate_term tm then add_axiomCT (rname, axiom',loc)
         else raise DATED_ERR "new_axiom" name
       ; axiom'
     end
+  fun new_axiom (name,tm) = new_axiom0 "new_axiom" (name,tm,Unknown)
+  fun gen_new_axiom (name,tm,loc) = new_axiom0 "gen_new_axiom" (name,tm,loc)
 
-  fun store_definition (name, def) =
+  fun store_definition0 fnm (name, def, loc) =
     let
       val def' = save_dep (CTname ()) def
     in
-      check_name true ("store_definition", name)
-      ; uptodate_thm def' orelse raise DATED_ERR "store_definition" name
-      ; add_defnCT (name, def')
+      check_name true (fnm, name)
+      ; uptodate_thm def' orelse raise DATED_ERR fnm name
+      ; add_defnCT (name, def',loc)
       ; def'
     end
+  fun store_definition(name,def) =
+      store_definition0 "store_definition" (name,def,Unknown)
+  fun gen_store_definition(name,def,loc) =
+      store_definition0 "gen_store_definition" (name,def,loc)
 end;
 
 (*---------------------------------------------------------------------------*
@@ -919,14 +936,6 @@ fun theory_out p ostrm =
    TextIO.closeOut ostrm
  end;
 
-fun unkind facts =
-    let fun foldthis (s,(Axiom (_,th), _)) (A,D,T) = ((s,th)::A,D,T)
-          | foldthis (s,(Defn th, v))      (A,D,T) = (A,(s,th,v)::D,T)
-          | foldthis (s,(Thm th, v))       (A,D,T) = (A,D,(s,th,v)::T)
-    in
-      Symtab.fold foldthis facts ([],[],[])
-    end
-
 (* automatically reverses the list, which is what is needed. *)
 
 fun unadjzip [] A = A
@@ -973,16 +982,14 @@ in
 fun export_theory () = let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
   val {thid,facts,adjoin,adjoinpc,thydata,mldeps,...} = scrubCT()
+  val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
   val concat = String.concat
   val thyname = thyid_name thid
   val name = thyname^"Theory"
-  val (A,D,T) = unkind facts
   val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
   val sigthry = {name = thyname,
                  parents = map thyid_name (Graph.fringe()),
-                 axioms = A,
-                 definitions = D,
-                 theorems = T,
+                 all_thms = all_thms,
                  sig_ps = sig_ps}
   fun mungethydata dmap = let
     fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
@@ -1008,9 +1015,7 @@ fun export_theory () = let
        parents = map dest_thyid (Graph.fringe()),
        types = thy_types thyname,
        constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
-       axioms = A,
-       definitions = D,
-       theorems = T,
+       all_thms = all_thms,
        struct_ps = struct_ps,
        struct_pcps = adjoinpc,
        thydata = mungethydata thydata,
@@ -1018,7 +1023,7 @@ fun export_theory () = let
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
                 not (is_temp_binding s)
  in
-   case filter filtP (map #1 A @ map #1 (D@T)) of
+   case filter filtP (map #1 all_thms) of
      [] =>
      (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
@@ -1221,56 +1226,86 @@ fun check_name princ_name name =
 (*                DEFINITION PRINCIPLES                                      *)
 (*---------------------------------------------------------------------------*)
 
-fun new_type_definition (name,thm) = let
+(* new_type_definition *)
+fun located_new_type_definition0 fnm (loc,name,thm) = let
   val Thy = current_theory()
-  val _ = is_temp_binding name orelse check_name "new_type_definition" name
+  val _ = is_temp_binding name orelse check_name fnm name
   val tydef = Thm.prim_type_definition({Thy = Thy, Tyop = name}, thm)
  in
-   store_definition (name^"_TY_DEF", tydef) before
+   gen_store_definition (name^"_TY_DEF", tydef,loc) before
    call_hooks (TheoryDelta.NewTypeOp{Name = name, Thy = Thy})
  end
- handle e => raise (wrap_exn "Theory.Definition" "new_type_definition" e);
+ handle e => raise (wrap_exn "Theory.Definition" fnm e);
 
-fun gen_new_specification(name, th) = let
+fun located_new_type_definition {loc,name,witness} =
+    located_new_type_definition0 "located_new_type_definition"
+                                 (loc,name,witness)
+fun new_type_definition (name,witness) =
+    located_new_type_definition0 "new_type_definition" (Unknown,name,witness)
+
+(* gen_new_specification *)
+fun located_gen_new_specification0 fnm (loc, name, th) = let
   val thy = current_theory()
   val (cnames,def) = Thm.gen_prim_specification thy th
  in
-  store_definition (name, def) before
+  gen_store_definition (name, def,loc) before
   List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy=thy}))
            cnames
  end
- handle e => raise (wrap_exn "Definition" "gen_new_specification" e);
+ handle e => raise (wrap_exn "Definition" fnm e);
 
-fun new_definition(name,M) =
+fun located_gen_new_specification {loc,name,witness} =
+    located_gen_new_specification0
+      "located_gen_new_specification"
+      (loc,name,witness)
+
+fun gen_new_specification (s,thm) =
+    located_gen_new_specification0 "gen_new_specification" (Unknown,s,thm)
+
+(* new specification *)
+fun located_new_specification0 fnm {name, constnames=cnames, witness=th,loc} =
+    let
+      val thy   = current_theory()
+      val _     = is_temp_binding name orelse
+                  List.all (check_name fnm) cnames
+      val def   = Thm.prim_specification thy cnames th
+      val final = gen_store_definition (name, def,loc)
+    in
+      List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy = thy}))
+               cnames
+    ; final
+    end
+    handle e => raise (wrap_exn "Definition" fnm e);
+val located_new_specification =
+    located_new_specification0 "located_new_specification0"
+fun new_specification(n,cnames,th) =
+    located_new_specification0 "new_specification"
+                               {loc = Unknown, constnames = cnames,
+                                witness = th, name = n}
+
+(* new definition *)
+fun located_new_definition0 fnm {name,def=M,loc} =
  let val (dest,post) = !new_definition_hook
      val (V,eq)      = dest M
      val (nm, _)     = eq |> dest_eq |> #1 |> dest_var
                           handle HOL_ERR _ =>
-                                 raise ERR "Definition.new_definition"
+                                 raise ERR ("Definition." ^ fnm)
                                        "Definition not an equality"
-     val _           = is_temp_binding name orelse
-                       check_name "new_definition" nm
+     val _           = is_temp_binding name orelse check_name fnm nm
      val Thy         = current_theory()
      val (cn,def_th) = Thm.gen_prim_specification Thy (Thm.ASSUME eq)
      val Name        = case cn of [Name] => Name | _ => raise Match
  in
-   store_definition (name, post(V,def_th)) before
+   gen_store_definition (name, post(V,def_th),loc) before
    call_hooks (TheoryDelta.NewConstant{Name=Name, Thy=Thy})
  end
- handle e => raise (wrap_exn "Definition" "new_definition" e);
+ handle e => raise (wrap_exn "Definition" fnm e);
+val located_new_definition =
+    located_new_definition0 "located_new_definition"
+fun new_definition(n,def_t) =
+    located_new_definition0 "new_definition" {loc=Unknown,def=def_t,name=n}
 
-fun new_specification (name, cnames, th) = let
-  val thy   = current_theory()
-  val _     = is_temp_binding name orelse
-              List.all (check_name "new_specification") cnames
-  val def   = Thm.prim_specification thy cnames th
-  val final = store_definition (name, def)
- in
-  List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy = thy}))
-           cnames
-  ; final
- end
- handle e => raise (wrap_exn "Definition" "new_specification" e);
+
 
 end (* Definition struct *)
 
