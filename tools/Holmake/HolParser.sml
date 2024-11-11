@@ -424,14 +424,13 @@ structure ToSML = struct
           if isCo then ("CoIndDefLib.xHol_coreln", "_coind") else ("IndDefLib.xHol_reln", "_ind")
         val conjIdx = ref 1
         val conjs = ref []
-        fun collect first (p, lab) = let
-          val n = !conjIdx
-          val _ = if first then () else aux ") /\\\\ ("
-          val _ = case parseDefnLabel lab of
-              {tilde, name = SOME name, name_attrs, ...} =>
-              conjs := (n, tilde, name, name_attrs) :: !conjs
-            | _ => ()
-          in conjIdx := n+1 end
+        fun collect first (p, lab) = (
+          if first then () else (aux ") /\\\\ ("; conjIdx := !conjIdx + 1);
+          case parseDefnLabel lab of
+            {tilde, name = SOME name, name_attrs, ...} =>
+            conjs := (!conjIdx, tilde, name, name_attrs) :: !conjs
+          | _ => ()
+        )
         in
           regular (pos, p); finishThmVal ();
           app aux ["val (", ss stem, "_rules,", ss stem, indSuffix, ",",
