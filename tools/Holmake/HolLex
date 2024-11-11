@@ -37,6 +37,7 @@ and antiq
 and qdecl
   = QuoteAntiq of int * antiq
   | DefinitionLabel of int * string
+  | QuoteComment of int * int
 
 and qbody = QBody of {start: int, toks: qdecl list, stop: int}
 
@@ -44,15 +45,15 @@ datatype token
   = Decl of decl * token option (* from INITIAL *)
   | CloseParen of int (* from INITIAL *)
   | QED of int (* from INITIAL *)
-  | EndTok of int (* from INITIAL, quote *)
+  | EndTok of int (* from INITIAL, quote, holcomment *)
   | Comment (* from comment *)
   | Antiq of antiq * token option (* from ANTIQ *)
   | StringEnd of int (* from string *)
   | HolStrLitEnd of int * string (* from holstrlit *)
-  | ProofLine of int * string (* from quote *)
-  | TerminationTok of int (* from quote *)
-  | QuoteEnd of int * string (* from quote *)
-  | FullQuoteEnd of int * string (* from quote *)
+  | ProofLine of int * string (* from quote, holcomment *)
+  | TerminationTok of int (* from quote, holcomment *)
+  | QuoteEnd of int * string (* from quote, holcomment *)
+  | FullQuoteEnd of int * string (* from quote, holcomment *)
   | QDecl of qdecl * token option (* from quote *)
   | EOF of int (* from every state *)
 
@@ -61,7 +62,8 @@ type lexresult = token
 datatype state = STATE of {
   parseError: int * int -> string -> unit,
   pardepth: int ref,
-  comdepth: int ref
+  comdepth: int ref,
+  comstart: (int * int) option ref
 }
 
 fun noDecls pos = Decls {start = pos, decls = [], stop = pos}
@@ -69,10 +71,19 @@ fun noDecls pos = Decls {start = pos, decls = [], stop = pos}
 exception Unreachable
 datatype 'a test_result = TestOk of 'a | TestBad | TestSkip
 
-fun parseQuoteBody (STATE {parseError, ...}) continue pos test = let
+fun forceCloseComment (STATE {parseError, comdepth, comstart, ...}) stop buf =
+  case !comstart of
+    SOME pos => (
+    parseError pos "unterminated comment";
+    comdepth := 0; comstart := NONE;
+    QuoteComment (#1 pos, stop) :: buf)
+  | _ => buf
+
+fun parseQuoteBody (arg as STATE {parseError, ...}) continue pos test = let
   fun go buf lookahead = let
     val tk = case lookahead of SOME tk => tk | NONE => continue()
-    fun finish stop = QBody {start = #2 pos, toks = rev buf, stop = stop}
+    fun finish stop =
+      QBody {start = #2 pos, toks = rev (forceCloseComment arg stop buf), stop = stop}
     fun cont (p, t) strong =
       case test tk of
         TestBad =>
@@ -127,8 +138,11 @@ fun strlitMatch "\"" "\"" = true
   | strlitMatch _ _ = false
 
 fun parseQuoteEndDef yyarg continue pos text mk = let
-  val (q, end_tok, stop, extra) = parseQuoteBody yyarg continue
-    (pos, pos + size text) (fn EndTok p => TestOk p | _ => TestBad)
+  val (q, end_tok, stop, extra) = parseQuoteBody yyarg continue (pos, pos + size text) (fn
+      EndTok p => TestOk p
+    | QuoteEnd _ => TestSkip
+    | FullQuoteEnd _ => TestSkip
+    | _ => TestBad)
   in
     Decl (mk {head = (pos, text), quote = q, end_tok = end_tok, stop = stop}, extra)
   end
@@ -164,8 +178,8 @@ fun eof (_:state) = EOF
 
 %%
 %structure HolLex
-%s string stringlbrk comment quote holstrlit holstrlitlbrk ANTIQ;
-%arg (UserDeclarations.STATE {pardepth, comdepth, parseError});
+%s string stringlbrk comment holcomment quote holstrlit holstrlitlbrk ANTIQ;
+%arg (UserDeclarations.STATE {pardepth, comdepth, comstart, parseError});
 %full
 %posarg
 %eofpos
@@ -230,7 +244,11 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 <INITIAL>{Theorempfx}{ws}*":" => (let
   val _ = YYBEGIN quote
   val (q, proof_tok, stop, extra) =
-    parseQuoteBody yyarg continue (yypos, yyend) (fn ProofLine l => TestOk l | _ => TestBad)
+    parseQuoteBody yyarg continue (yypos, yyend) (fn
+        ProofLine l => TestOk l
+      | QuoteEnd _ => TestSkip
+      | FullQuoteEnd _ => TestSkip
+      | _ => TestBad)
   val _ = YYBEGIN INITIAL
   val (decls, qed, stop, extra) =
     case extra of
@@ -248,6 +266,8 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   val (q, tok, stop, extra) = parseQuoteBody yyarg continue (yypos, yypos + size yytext) (fn
       TerminationTok p => TestOk (p, true)
     | EndTok p => TestOk (p, false)
+    | QuoteEnd _ => TestSkip
+    | FullQuoteEnd _ => TestSkip
     | _ => TestBad)
   val _ = YYBEGIN INITIAL
   val (termination, end_tok, stop, extra) =
@@ -325,7 +345,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 
 <stringlbrk>"\\" => (YYBEGIN string; continue());
 
-<comment>"(*" => (inc comdepth; continue());
+<comment,holcomment>"(*" => (inc comdepth; continue());
 <comment>"*)" => (dec comdepth; if !comdepth < 1 then Comment else continue());
 <comment>[^\n()*]{1,10} => (continue());
 
@@ -350,17 +370,11 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   val ss = Substring.dropl Char.isSpace (Substring.full yytext)
   val n = yypos + #2 (Substring.base ss)
   in QDecl (DefinitionLabel (n, Substring.string ss), NONE) end);
-<quote>"(*" => (
-  comdepth := 1; YYBEGIN comment;
-  case continue() of
-    Comment => (YYBEGIN quote; continue())
-  | EOF p => (parseError (yypos, yyend) "unterminated comment"; EOF p)
-  | _ => raise Unreachable
-);
-<quote>{quoteend} => (QuoteEnd (yypos, yytext));
-<quote>{newline}"End" => (EndTok (yyend-3));
-<quote>{newline}"Termination" => (TerminationTok (yyend-11));
-<quote>{fullquoteend} => (FullQuoteEnd (yypos, yytext));
+<quote>"(*" => (comdepth := 1; comstart := SOME (yypos, yyend); YYBEGIN holcomment; continue());
+<quote,holcomment>{quoteend} => (QuoteEnd (yypos, yytext));
+<quote,holcomment>{newline}"End" => (EndTok (yyend-3));
+<quote,holcomment>{newline}"Termination" => (TerminationTok (yyend-11));
+<quote,holcomment>{fullquoteend} => (FullQuoteEnd (yypos, yytext));
 <quote>"^" => (
   YYBEGIN ANTIQ;
   case continue() of
@@ -369,6 +383,15 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   | _ => raise Unreachable
 );
 <quote>{ws}+ => (continue());
+
+<holcomment>"*)" => (
+  dec comdepth;
+  if !comdepth < 1 then
+    case !comstart of
+      SOME (pos, _) => (comstart := NONE; YYBEGIN quote; QDecl (QuoteComment (pos, yyend), NONE))
+    | _ => raise Unreachable
+  else continue()
+);
 
 <holstrlit>"\\"{HOLSTRLITend} => (continue());
 <holstrlit>{HOLSTRLITend} => (HolStrLitEnd (yypos, yytext));

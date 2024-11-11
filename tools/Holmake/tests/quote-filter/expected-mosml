@@ -4,7 +4,7 @@
 [QUOTE " (*#loc 4 2*)foo = #\"^`\""]
 [QUOTE " (*#loc 5 2*)\"\\\"\""]
 (Parse.Term [QUOTE " (*#loc 6 3*)\009"])
-(Parse.Term [QUOTE " (*#loc 7 3*)(* foo *)"])
+(Parse.Term [QUOTE " (*#loc 7 3*)(* foo"])
 [QUOTE " (*#loc 8 2*)^^"]
 "\"" (Parse.Term [QUOTE " (*#loc 9 8*)foo"])
 "\\" [QUOTE " (*#loc 10 7*)foo"]
@@ -37,7 +37,7 @@ val foo = TotalDefn.qDefine "foo" [QUOTE " (*#loc 34 16*)\n\
 
 val (compile_rel_rules,compile_rel_ind,compile_rel_cases) = IndDefLib.xHol_reln "compile_rel" [QUOTE "( (*#loc 38 23*)\n\
 \  (* (*  *) *)\n\
-\) /\\ ( (*#loc 40 8*)\n\
+\ (*#loc 40 8*)\n\
 \  compile_rel foo bar\n\
 \) /\\ ( (*#loc 42 8*)\n\
 \  compile_rel foo bar\n\
@@ -67,7 +67,7 @@ val (reln_rules,reln_ind,reln_cases) = IndDefLib.xHol_reln "reln" [QUOTE "( (*#l
 \   !x y. reln x y ==> reln y x\n\
 \) /\\ ( (*#loc 68 9*)\n\
 \   !x. reln x 0\n\
-\)"]; val reln_strongind = DB.fetch "-" "reln_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;; val reln_zero = boolLib.save_thm("reln_zero", Drule.cj 2 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);
+\)"]; val reln_strongind = DB.fetch "-" "reln_strongind" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;; val reln_zero = boolLib.save_thm("reln_zero", Drule.cj 3 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);
 
 val (reln_rules,reln_ind,reln_cases) = IndDefLib.xHol_reln "reln" [QUOTE "( (*#loc 72 16*)\n\
 \ (*#loc 73 10*) !x y. x < y ==> reln (x + 1) y\n\
@@ -87,13 +87,9 @@ val thmname = boolLib.save_thm("thmname", expression
 );val _ = bar_x [QUOTE " (*#loc 87 13*)\n\
 \  another quotation (* with unfinished comment\n\
 \  and bare \" with ^foo and ^\n\
-\End\n\
-\\n\
-\Quote another_one:\n\
-\  jk this is the end of the comment *)\n\
 \"];
 
-val x = 91 + 10;
+val x = 92 + 10;
 val   y = 11
-val s = ""
+val s = ""  
 val s' = "foo.sml" (* #(FNAME) *)

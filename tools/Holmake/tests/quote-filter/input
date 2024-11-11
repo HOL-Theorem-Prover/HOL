@@ -4,7 +4,7 @@
 `foo = #"^`"`
 `"\""`
 ``	``
-``(* foo *)``
+``(* foo``
 `^^`
 "\"" ``foo``
 "\\" `foo`
@@ -87,10 +87,6 @@ Theorem thmname = expression
 Quote bar_x:
   another quotation (* with unfinished comment
   and bare " with ^foo and ^
-End
-
-Quote another_one:
-  jk this is the end of the comment *)
 End
 
 val x = #(LINE) + 10;

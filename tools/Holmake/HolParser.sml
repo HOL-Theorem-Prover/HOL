@@ -24,7 +24,7 @@ in
 
   fun mkParser {read, parseError, pos} = let
     val lex = HolLex.makeLexer (read, pos) (H.STATE {
-      comdepth = ref 0, pardepth = ref 0, parseError = parseError})
+      comdepth = ref 0, comstart = ref NONE, pardepth = ref 0, parseError = parseError})
     val lookahead = ref NONE
     fun go () =
       case (case !lookahead of SOME tk => tk | NONE => lex ()) of
@@ -342,6 +342,7 @@ structure ToSML = struct
           aux ",local]")
     fun doQuoteCore start ds stop f = case ds of
         [] => quote (start, stop)
+      | QuoteComment _ :: rest => doQuoteCore start rest stop f
       | QuoteAntiq (_, BadAntiq _) :: rest => doQuoteCore start rest stop f
       | QuoteAntiq (p, Ident (idstart, id)) :: rest => (
         quote (start, p);
@@ -363,20 +364,20 @@ structure ToSML = struct
         | SOME g => (quote (start, p); g l; doQuoteCore (p + size t) rest stop f)
     and doQuote (QBody {start, toks, stop}) =
       (aux "[QUOTE \""; doQuoteCore start toks stop NONE; aux "\"]")
-    and doQuoteConj (QBody {start, toks, stop}) f = (
-      aux "[QUOTE \"(";
-      case toks of
-        DefinitionLabel (l as (p, t)) :: rest => let
-        val _ = locpragma start
-        val first = ref true
-        fun strcode1 (p as (_, s)) = (
-          if !first then first := Substring.isEmpty (Substring.dropl Char.isSpace s) else ();
-          strcode0 p)
-        val _ = wrap strcode1 (start, p)
-        val _ = f (!first) l
-        in doQuoteCore (p + size t) rest stop (SOME (f false)) end
-      | _ => doQuoteCore start toks stop (SOME (f false));
-      aux ")\"]")
+    and doQuoteConj (QBody {start, toks, stop}) f = let
+      val first = ref true
+      val strcode1 = wrap (fn (p as (_, s)) => (
+        if !first then first := Substring.isEmpty (Substring.dropl Char.isSpace s) else ();
+        strcode0 p))
+      fun doQuote0 start toks =
+        case toks of
+          DefinitionLabel (l as (p, t)) :: rest => (
+          strcode1 (start, p); f (!first) l;
+          doQuoteCore (p + size t) rest stop (SOME (f false)))
+        | QuoteComment (p, stop) :: rest =>
+          (strcode1 (start, p); strcode (p, stop); doQuote0 stop rest)
+        | _ => doQuoteCore start toks stop (SOME (f false))
+      in aux "[QUOTE \"("; locpragma start; doQuote0 start toks; aux ")\"]" end
     and doDecl eager pos d = case d of
         DefinitionDecl {head = (p, head), quote, termination, stop, ...} => let
         val {keyword, name, attrs, name_attrs} = parseDefinitionPfx head
