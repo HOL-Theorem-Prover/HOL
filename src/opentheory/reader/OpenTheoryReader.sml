@@ -122,7 +122,7 @@ in
 fun axiom_in_db ths (h,c) =
     from_net base_thms (h,c)
 handle HOL_ERR _ =>
-  fst(snd(Lib.first (fn (_,(th,_)) => eq (h,c) th) (DB.match [] c)))
+  #1(#2(Lib.first (fn (_,(th,_,_)) => eq (h,c) th) (DB.match [] c)))
 handle HOL_ERR _ =>
   from_net ths (h,c)
 handle HOL_ERR e => let
