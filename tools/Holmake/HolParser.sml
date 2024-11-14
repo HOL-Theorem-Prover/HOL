@@ -393,7 +393,7 @@ structure ToSML = struct
             else cat [name, full "_ind"]
         in
           regular (pos, p); finishThmVal ();
-          aux "val "; aux (ss name); aux " = ";
+          aux "val "; regular' (p, name); aux " = ";
           if !filename = "" then aux "TotalDefn.qDefine"
           else app aux [
             "TotalDefn.located_qDefine (DB_dtype.mkloc (",
@@ -466,7 +466,7 @@ structure ToSML = struct
         val {isTriv, keyword, thmname, attrs, name_attrs} = parseTheoremPfx head
         in
           regular (pos, p); finishThmVal ();
-          app aux ["val ", ss thmname, " = boolLib.save_thm(\""];
+          aux "val "; regular' (p, thmname); aux " = boolLib.save_thm(\"";
           doThmAttrs isTriv p attrs name_attrs; aux "\","; inThmVal := true;
           p + size head
         end
@@ -476,7 +476,7 @@ structure ToSML = struct
         val Decls {start = dstart, decls, stop = dstop} = body
         in
           regular (pos, p); finishThmVal ();
-          app aux ["val ", ss thmname, " = Q.store_thm(\""];
+          aux "val "; regular' (p, thmname); aux " = Q.store_thm(\"";
           doThmAttrs isTriv p attrs name_attrs; aux "\", ";
           doQuote quote; aux ", ";
           case proof_tok of
