@@ -6585,7 +6585,7 @@ val MIN_SET_LEM = Q.store_thm
 
 val SUBSET_MIN_SET = Q.store_thm
 ("SUBSET_MIN_SET",
- `!I J n. ~(I={}) /\ ~(J={}) /\ I SUBSET J ==> MIN_SET J <= MIN_SET I`,
+ `!I J. ~(I={}) /\ ~(J={}) /\ I SUBSET J ==> MIN_SET J <= MIN_SET I`,
   METIS_TAC [SUBSET_DEF,MIN_SET_LEM]);
 
 val SUBSET_MAX_SET = Q.store_thm
@@ -8789,9 +8789,11 @@ val is_measure_maximal_def = new_definition("is_measure_maximal_def",
   “is_measure_maximal m s x <=> x IN s /\ !y. y IN s ==> m y <= m x”
 );
 
-val FINITE_is_measure_maximal = Q.store_thm(
-  "FINITE_is_measure_maximal",
-  ‘!s. FINITE s /\ s <> {} ==> ?x. is_measure_maximal m s x’,
+(* cf. arithmeticTheory.WOP_measure for the "is_measure_minimal" of s *)
+Theorem FINITE_is_measure_maximal :
+    !m s. FINITE s /\ s <> {} ==> ?x. is_measure_maximal m s x
+Proof
+  Q.X_GEN_TAC ‘m’ \\
   ‘!s. FINITE s ==> s <> {} ==> ?x. is_measure_maximal m s x’
     suffices_by METIS_TAC[] >>
   Induct_on ‘FINITE’ >> simp[] >> rpt strip_tac >> Cases_on ‘s = {}’ >> simp[]
@@ -8801,7 +8803,8 @@ val FINITE_is_measure_maximal = Q.store_thm(
   Cases_on ‘m e0 <= m e’
   >- (Q.EXISTS_TAC ‘e’ >> SRW_TAC[][] >> simp[] >>
       METIS_TAC[LESS_EQ_TRANS]) >>
-  Q.EXISTS_TAC ‘e0’ >> simp[DISJ_IMP_THM]);
+  Q.EXISTS_TAC ‘e0’ >> simp[DISJ_IMP_THM]
+QED
 
 val is_measure_maximal_SING = Q.store_thm(
   "is_measure_maximal_SING[simp]",
