@@ -58,7 +58,19 @@ structure ToSML: sig
     strcode: int * substring -> unit,
     strstr: int * substring -> unit
   }
+  val strstr: (string -> unit) -> int * substring -> unit
+  val strcode: (string -> unit) -> int * substring -> unit
   val mkStrcode: (string -> unit) -> strcode
+
+  val mkPushTranslatorCore:
+    {read: int -> string, filename: string, parseError: int * int -> string -> unit} ->
+    strcode -> {
+      doDecl: bool -> int -> Simple.decl -> int,
+      feed: unit -> Simple.topdecl,
+      finishThmVal: unit -> unit,
+      regular: int * int -> unit
+    }
+
   val mkPushTranslator:
     {read: int -> string, filename: string, parseError: int * int -> string -> unit} ->
     strcode -> unit -> bool

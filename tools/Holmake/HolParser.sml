@@ -263,8 +263,8 @@ structure ToSML = struct
     strstr: int * substring -> unit
   }
 
-  fun mkStrcode push: strcode = let
-    fun encoder st f (_, s) = let
+  local
+    fun encoder f push (_, s) = let
       val (s, start, len) = Substring.base s
       val stop = start + len
       fun loop start p =
@@ -278,19 +278,24 @@ structure ToSML = struct
             push r;
             loop (p+1) (p+1))
       in loop start start end
-    in {
-      regular = fn s => push (Substring.string (#2 s)),
-      aux = push,
-      strstr = encoder "str" (fn ch =>
-        if ch < #"\128" then NONE else SOME (AttributeSyntax.bslash_escape ch)),
-      strcode = encoder "code" (fn
-          #"\\" => SOME "\\\\"
-        | #"\"" => SOME "\\\""
-        | #"\n" => SOME "\\n\\\n\\"
-        | ch => if Char.isPrint ch then NONE else SOME (AttributeSyntax.bslash_escape ch))
-    } end
+  in
+    val strstr = encoder (fn ch =>
+      if ch < #"\128" then NONE else SOME (AttributeSyntax.bslash_escape ch))
+    val strcode = encoder (fn
+        #"\\" => SOME "\\\\"
+      | #"\"" => SOME "\\\""
+      | #"\n" => SOME "\\n\\\n\\"
+      | ch => if Char.isPrint ch then NONE else SOME (AttributeSyntax.bslash_escape ch))
+  end
 
-  fun mkPushTranslator {read, filename, parseError}
+  fun mkStrcode push: strcode = {
+    regular = fn s => push (Substring.string (#2 s)),
+    aux = push,
+    strstr = strstr push,
+    strcode = strcode push
+  }
+
+  fun mkPushTranslatorCore {read, filename, parseError}
       ({regular, aux, strstr, strcode = strcode0}:strcode) = let
     open Simple
     val ss = Substring.string
@@ -333,12 +338,12 @@ structure ToSML = struct
     fun magicBind name =
       aux (" " ^ Systeml.bindstr (concat ["val ", name, " = DB.fetch \"-\" \"", name,
         "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"]) ^ ";")
-    fun doThmAttrs false p attrs name_attrs = strcode' (p, name_attrs)
+    fun doThmAttrs false p attrs name_attrs = aux (ss name_attrs)
       | doThmAttrs true p attrs name_attrs =
         if Substring.isEmpty attrs then
-          (strcode' (p, name_attrs); aux "[local]")
+          (aux (ss name_attrs); aux "[local]")
         else (
-          strcode' (p, Substring.slice (name_attrs, 0, SOME (Substring.size name_attrs - 1)));
+          aux (ss (Substring.slice (name_attrs, 0, SOME (Substring.size name_attrs - 1))));
           aux ",local]")
     fun doQuoteCore start ds stop f = case ds of
         [] => quote (start, stop)
@@ -399,7 +404,7 @@ structure ToSML = struct
             "TotalDefn.located_qDefine (DB_dtype.mkloc (",
               mlquote (!filename), ", ",
               Int.toString (#1 (!line) + 1) ^ ", true))"];
-          aux " \""; strcode' (p, name_attrs); aux "\" "; doQuote quote;
+          app aux [" \"", ss name_attrs, "\" "]; doQuote quote;
           case termination of
             NONE => aux " NONE;"
           | SOME {decls = Decls {start = dstart, decls = decls, stop = dstop}, ...} =>
@@ -536,25 +541,35 @@ structure ToSML = struct
           aux " "; p + size text)
     and doDecls start [] stop = regular (start, stop)
       | doDecls start (d :: ds) stop = doDecls (doDecl false start d) ds stop
+    in {
+      feed = feed',
+      regular = regular,
+      finishThmVal = finishThmVal,
+      doDecl = doDecl
+    } end
+
+  fun mkPushTranslator args strcode = let
+    open Simple
+    val {feed, regular, finishThmVal, doDecl, ...} = mkPushTranslatorCore args strcode
     val pos = ref 0
     in fn () =>
-      case feed' () of
+      case feed () of
         TopDecl d => (pos := doDecl true (!pos) d; false)
       | Simple.EOF p => (regular (!pos, p); finishThmVal (); pos := p; true)
     end
 
-fun mkPullTranslator args = let
-  val queue = ref []
-  val atEnd = ref false
-  val push = mkPushTranslator args (mkStrcode (fn s => queue := s :: !queue))
-  fun loop () =
-    case !queue of
-      s :: rest => (queue := rest; s)
-    | [] => if !atEnd then "" else (
-      atEnd := push ();
-      queue := rev (!queue);
-      loop ())
-  in loop end
+  fun mkPullTranslator args = let
+    val queue = ref []
+    val atEnd = ref false
+    val push = mkPushTranslator args (mkStrcode (fn s => queue := s :: !queue))
+    fun loop () =
+      case !queue of
+        s :: rest => (queue := rest; s)
+      | [] => if !atEnd then "" else (
+        atEnd := push ();
+        queue := rev (!queue);
+        loop ())
+    in loop end
 
 end
 
