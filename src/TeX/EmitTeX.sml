@@ -174,7 +174,7 @@ in
   let val dtype_thms = matchp is_datatype_thm [s]
       fun dtype_name s = String.extract(s, 9, NONE)
   in
-    map (fn x => (dtype_name (snd (fst x)), fst (snd x))) dtype_thms
+    map (fn ((thy,thname), (th,cl,i)) => (dtype_name thname, th)) dtype_thms
   end
 
   fun non_type_definitions s =

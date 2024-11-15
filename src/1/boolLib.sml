@@ -111,11 +111,11 @@ val def_suffix = ref "_def"
 
 local
 open Feedback Theory
-fun prove_local privp (n,th) =
+fun prove_local loc privp (n,th) =
    (if not (!Globals.interactive) then
       print ("Proved triviality ___ \"" ^ String.toString n ^ "\"\n")
     else ();
-    DB.store_local {private=privp} n th;
+    DB.store_local {private=privp,loc=loc,class=DB_dtype.Thm} n th;
     th)
 fun extract_localpriv (loc,priv,rebindok,acc) attrs =
     case attrs of
@@ -125,12 +125,13 @@ fun extract_localpriv (loc,priv,rebindok,acc) attrs =
       | "allow_rebind" :: rest => extract_localpriv (loc,priv,true,acc) rest
       | a :: rest => extract_localpriv (loc,priv,rebindok,a::acc) rest
 in
-fun save_thm_attrs fname (n, attrs, th) = let
+fun save_thm_attrs loc (n, attrs, th) = let
   val (localp,privp,rebindok,attrs) =
       extract_localpriv (false,false,false,[]) attrs
-  val save = if localp then prove_local privp
-             else if privp then Theory.save_private_thm
-             else Theory.save_thm
+  val save =
+      if localp then prove_local loc privp
+      else
+        fn (n,th) => Theory.gen_save_thm{name=n,private=privp,thm=th,loc=loc}
   val attrf = if localp then ThmAttribute.local_attribute
               else ThmAttribute.store_at_attribute
   val storemod = if rebindok then trace("Theory.allow_rebinds", 1)
@@ -139,19 +140,21 @@ fun save_thm_attrs fname (n, attrs, th) = let
 in
   storemod save(n,th) before app do_attr attrs
 end
-fun store_thm(n0,t,tac) = let
+fun store_thm_at loc (n0,t,tac) = let
   val (n, attrs) = ThmAttribute.extract_attributes n0
   val th = Tactical.prove(t,tac)
               handle e => (print ("Failed to prove theorem " ^ n ^ ".\n");
                            Raise e)
 in
-  save_thm_attrs "store_thm" (n,attrs,th)
+  save_thm_attrs loc (n,attrs,th)
 end
-fun save_thm(n0,th) = let
+val store_thm = store_thm_at DB.Unknown
+fun save_thm_at loc (n0,th) = let
   val (n,attrs) = ThmAttribute.extract_attributes n0
 in
-  save_thm_attrs "save_thm" (n,attrs,th)
+  save_thm_attrs loc (n,attrs,th)
 end
+val save_thm = save_thm_at DB.Unknown
 
 fun new_recursive_definition rcd =
     let val thm = Prim_rec.new_recursive_definition rcd

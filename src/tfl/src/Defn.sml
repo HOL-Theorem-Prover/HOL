@@ -471,10 +471,11 @@ fun indSuffix stem =
     end
 
 
-fun store(stem,eqs,ind) =
+fun store_at loc (stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
       val ind_bind = indSuffix stem
-      fun save x = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm x
+      fun save x = Feedback.trace ("Theory.save_thm_reporting", 0)
+                                  (save_thm_at loc) x
       val   _  = save (ind_bind, ind)
       val eqns = save (eqs_bind, eqs)
       val _ = add_defs_to_EVAL [(eqs_bind,eqs)]
@@ -490,18 +491,31 @@ fun store(stem,eqs,ind) =
                format_name_message{pfx = "Saved induction", name = ind_bind})
     else ()
   end
+
+val store = store_at DB.Unknown
 end
 
 local
   val LIST_CONJ_GEN = LIST_CONJ o map GEN_ALL
 in
-  fun save_defn (ABBREV {bind,eqn, ...})     = been_stored (bind,eqn)
-  | save_defn (PRIMREC{bind,eqs, ...})       = been_stored (bind,eqs)
-  | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
-  | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ_GEN eqs,ind)
-  | save_defn (TAILREC{eqs, ind, stem, ...}) = store(stem,LIST_CONJ_GEN eqs,ind)
-  | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ_GEN eqs,ind)
-  | save_defn (NESTREC{eqs,ind,stem, ...})   = store(stem,LIST_CONJ_GEN eqs,ind)
+  fun save_defn_at loc defn =
+      let
+        val ST = store_at loc
+        fun BS (bind,eqn) = (
+          Theory.upd_binding bind (DB_dtype.updsrcloc (K loc)) ;
+          been_stored (bind,eqn)
+        )
+      in
+        case defn of
+          ABBREV {bind,eqn, ...}       => BS (bind,eqn)
+        | PRIMREC{bind,eqs, ...}       => BS (bind,eqs)
+        | NONREC {eqs, ind, stem, ...} => ST (stem,eqs,ind)
+        | STDREC {eqs, ind, stem, ...} => ST (stem,LIST_CONJ_GEN eqs,ind)
+        | TAILREC{eqs, ind, stem, ...} => ST (stem,LIST_CONJ_GEN eqs,ind)
+        | MUTREC {eqs,ind,stem,...}    => ST (stem,LIST_CONJ_GEN eqs,ind)
+        | NESTREC{eqs,ind,stem, ...}   => ST(stem,LIST_CONJ_GEN eqs,ind)
+      end
+  val save_defn = save_defn_at DB.Unknown
 end
 
 

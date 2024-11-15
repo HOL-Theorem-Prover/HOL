@@ -1,4 +1,4 @@
-"foo \
+1"foo \
 	  \bar"
 (Parse.Term [QUOTE " (*#loc 3 3*)\"foo\""])
 [QUOTE " (*#loc 4 2*)foo = #\"^`\""]
@@ -87,3 +87,8 @@ val thmname = (fn rule => boolLib.save_thm("thmname",rule)) ( expression
 \  another quotation (* with unfinished comment \n\
 \  and bare \" with ", ANTIQUOTE(foo),QUOTE " (*#loc 88 23*) and ^"
 ];
+
+val x = 91 + 10;
+val   y = 11
+val s = ""  
+val s' = "foo.sml" (* #(FNAME) *)

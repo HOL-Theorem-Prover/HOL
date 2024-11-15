@@ -78,11 +78,14 @@ fun interactive_ppbackend () = let
   open PPBackEnd OS.Process
 in
   (* assumes interactive *)
-  case getEnv "TERM" of
-    SOME s => if String.isPrefix "xterm" s orelse
-                 String.isPrefix "tmux" s then vt100_terminal
-              else raw_terminal
-  | _ => raw_terminal
+  case getEnv "COLORTERM" of
+      SOME _ => vt100_terminal
+    | NONE =>
+      case getEnv "TERM" of
+          SOME s => if String.isPrefix "xterm" s orelse
+                       String.isPrefix "tmux" s then vt100_terminal
+                    else raw_terminal
+        | NONE => raw_terminal
 end
 
 val current_backend : PPBackEnd.t ref =

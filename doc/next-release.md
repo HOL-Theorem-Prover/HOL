@@ -74,6 +74,16 @@ Incompatibilities:
            (load "<path>/HOL/tools/editor-modes/emacs/hol-mode")
            (load "<path>/HOL/tools/editor-modes/emacs/hol-unicode")
 
+-   The types of `DB.find` and `DB.match` have changed so that instead of returning
+
+           (string * string) * (thm * class)
+
+    they now return
+
+           (string * string) * (thm * class * thm_src_location)
+
+    Using the `#1 o #2` selector should be future-proof here.
+
 
 * * * * *
 

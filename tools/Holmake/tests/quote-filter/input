@@ -1,4 +1,4 @@
-"foo \
+#(LINE)"foo \
 	  \bar"
 ``"foo"``
 `foo = #"^`"`
@@ -88,3 +88,8 @@ Quote bar_x:
   another quotation (* with unfinished comment 
   and bare " with ^foo and ^
 End
+
+val x = #(LINE) + 10;
+val #(LINE=11) y = #(LINE)
+val s = #(FNAME) #(FNAME=foo.sml)
+val s' = #(FNAME) (* #(FNAME) *)

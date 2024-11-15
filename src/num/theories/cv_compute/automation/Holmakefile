@@ -1,4 +1,5 @@
-INCLUDES = $(HOLDIR)/src/integer $(HOLDIR)/src/rational
+INCLUDES = $(HOLDIR)/src/integer $(HOLDIR)/src/rational \
+           $(HOLDIR)/src/pred_set/src/more_theories
 
 all: $(DEFAULT_TARGETS) selftest.exe
 
