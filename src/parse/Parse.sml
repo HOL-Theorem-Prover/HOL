@@ -474,7 +474,9 @@ fun grammar_typed_parse_in_context gs ty ctxt q =
 
 fun typed_parse_in_context ty ctxt q =
   let
-    fun mkA q = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
+    fun mkA q = let
+      val a = Absyn q
+      in Absyn.TYPED(Absyn.locn_of_absyn a, a, Pretype.fromType ty) end
   in
     case seq.cases (TermParse.prim_ctxt_termS mkA (term_grammar()) ctxt q) of
         SOME (tm, _) => tm
