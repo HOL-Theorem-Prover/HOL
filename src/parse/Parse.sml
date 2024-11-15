@@ -170,6 +170,15 @@ fun update_type_fns () =
 
 val dflt_pinfo = term_pp_utils.dflt_pinfo
 
+fun pp_type_without_colon ty =
+  let
+    open smpp
+    val _ = update_type_fns()
+    val mptr = !type_printer (!current_backend) ty
+  in
+    lower mptr dflt_pinfo |> valOf |> #1
+  end
+
 fun pp_type ty =
   let
     open smpp
