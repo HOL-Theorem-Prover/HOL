@@ -36,13 +36,15 @@ fun mk_HOL_ERRloc s1 s2 locn s3 =
             source_location = locn,
             message = s3}
 
-fun set_origin_function fnm {origin_structure, source_location, message, ...} =
+fun set_origin_function fnm
+    ({origin_structure, source_location, message, ...}:error_record) =
    {origin_structure = origin_structure,
     source_location = source_location,
     origin_function = fnm,
     message = message}
 
-fun set_message msg {origin_structure, source_location, origin_function, ...} =
+fun set_message msg
+    ({origin_structure, source_location, origin_function, ...}:error_record) =
    {origin_structure = origin_structure,
     source_location = source_location,
     origin_function = origin_function,
