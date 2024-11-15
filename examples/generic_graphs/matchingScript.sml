@@ -87,38 +87,63 @@ Proof
   rw [path_def]
 QED
 
-Theorem adj_list_take_lemma:
-  ∀(ls: 'a list) x y n. adjacent (TAKE n ls) x y ⇒ 1 < n ⇒ adjacent ls x y
-Proof
-  rw [adjacent_iff]
-  >> Q.ABBREV_TAC ‘ls_n = TAKE n ls’
-  >> Cases_on ‘LENGTH ls ≤ n’
-  >- gvs [TAKE_LENGTH_TOO_LONG]
+(* Theorem adj_list_take_lemma: *)
+(*   ∀(ls: 'a list) x y n. adjacent (TAKE n ls) x y ⇒ 1 < n ⇒ adjacent ls x y *)
+(* Proof *)
+(*   rw [adjacent_iff] *)
+(*   >> Q.ABBREV_TAC ‘ls_n = TAKE n ls’ *)
+(*   >> Cases_on ‘LENGTH ls ≤ n’ *)
+(*   >- gvs [TAKE_LENGTH_TOO_LONG] *)
 
-  >> ‘ls_n ≠ []’ by METIS_TAC [adjacent_thm]
-  >> qsuff_tac ‘ls ≠ []’
-  >- (rw []
-      >> ‘∃z1 z2 zs. ls = z1::zs ∨ ls = z1::z2::zs’ by METIS_TAC [LIST_NOT_NIL]
-      >- (rw [] >> irule (cj 2 adjacent_rules)
+(*   >> ‘ls_n ≠ []’ by METIS_TAC [adjacent_thm] *)
+(*   >> qsuff_tac ‘ls ≠ []’ *)
+(*   >- (rw [] *)
+(*       >> ‘∃z1 z2 zs. ls = z1::zs ∨ ls = z1::z2::zs’ by METIS_TAC [LIST_NOT_NIL] *)
+(*       >- (rw [] >> irule (cj 2 adjacent_rules) *)
 
-       )
-      >- (
+(*        ) *)
+(*       >- ( *)
 
-       )
-     )
-QED
+(*        ) *)
+(*      ) *)
+(* QED *)
+
 
 Theorem alternating_path_prefix:
-  ∀(G: fsgraph) M P n. alternating_path G M P ⇒ 0 < n ⇒ alternating_path G M (TAKE n P)
+  ∀(G: fsgraph) M P Q. alternating_path G M P ∧ Q <<= P /\ Q <> [] ⇒ alternating_path G M Q
 Proof
-  rw [alternating_path_def]     (* 3 *)
-  >- (rw [path_def, walk_def]   (* 4 *)
-      >- METIS_TAC [path_def, walk_def]
-      >- METIS_TAC [MEM_TAKE, path_def, walk_def]
-      >-
+  rw [alternating_path_def]
+  >- (gvs [path_def, walk_def, GSYM CONJ_ASSOC]
+      >> CONJ_TAC
+      >- (rw [MEM_EL]
+          >> FIRST_X_ASSUM MATCH_MP_TAC
+          >> ‘LENGTH Q <= LENGTH P’ by METIS_TAC [IS_PREFIX_LENGTH]
+          >> sg ‘EL n Q = EL n P’
+          >- (MATCH_MP_TAC is_prefix_el
+              >> rw []
+             )
+          >> rw [EL_MEM]
+         )
+      >> reverse CONJ_TAC
+      >- (gvs [IS_PREFIX_EQ_TAKE]
+          >> rw [ALL_DISTINCT_TAKE]
+         )
+      >> rpt STRIP_TAC
+      >> FIRST_X_ASSUM MATCH_MP_TAC
+      >> gvs [IS_PREFIX_APPEND]
+      >> MATCH_MP_TAC
 
   )
+  (* rw [alternating_path_def]     (* 3 *) *)
+  (* >- (rw [path_def, walk_def]   (* 4 *) *)
+  (*     >- METIS_TAC [path_def, walk_def] *)
+  (*     >- METIS_TAC [MEM_TAKE, path_def, walk_def] *)
+  (*     >- *)
+
+  (* ) *)
 QED
+
+
 
 
 (* Theorem augmenting_path_reversible: *)
