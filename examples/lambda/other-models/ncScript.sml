@@ -612,9 +612,7 @@ fun nc_INDUCT_TAC (A,g) =
       val ith = ISPEC P nc_INDUCTION
       fun bconv tm =
         if rator tm !~ P then
-          raise HOL_ERR{origin_structure = "ncScript.sml",
-                        origin_function = "nc_INDUCT_TAC",
-                        message = "function bconv failed"}
+          raise mk_HOL_ERR "ncScript.sml" "nc_INDUCT_TAC" "function bconv failed"
         else BETA_CONV tm
       val bth = CONV_RULE (ONCE_DEPTH_CONV bconv) ith
   in

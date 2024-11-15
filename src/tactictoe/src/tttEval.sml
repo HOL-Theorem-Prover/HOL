@@ -22,7 +22,7 @@ fun catch_err msg f x =
 fun catch_err_ignore msg f x =
   f x handle HOL_ERR {origin_structure,origin_function,source_location,message} =>
   (print_endline
-    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ^ ":" ^ message))
+    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ":" ^ message))
 
 
 (* -------------------------------------------------------------------------
