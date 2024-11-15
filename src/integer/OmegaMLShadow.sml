@@ -223,9 +223,8 @@ fun term_to_factoid vars tm = let
     case (vlist,slist) of
       ([],[]) => [Arbint.zero]
     | ([],[s]) => [int_of_term s]
-    | ([], _) => raise HOL_ERR { origin_function = "term_to_factoid",
-                                origin_structure = "OmegaMLShadow",
-                                message = "Too many summands in term"}
+    | ([], _) =>
+      raise mk_HOL_ERR "OmegaMLShadow" "term_to_factoid" "Too many summands in term"
     | (v::vs, []) => Arbint.zero :: mk_coeffs vs []
     | (v::vs, s::ss) =>
         if is_mult s then let

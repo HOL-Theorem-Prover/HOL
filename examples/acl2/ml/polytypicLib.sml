@@ -85,8 +85,8 @@ fun isFatal (polyExn(Fatal,_,_)) = true
 
 fun wrapException name (polyExn(level,trace,msg)) = raise polyExn(level,name::trace,msg)
   | wrapException name Interrupt = raise Interrupt
-  | wrapException name (HOL_ERR {origin_structure,origin_function,message}) =
-                                raise polyExn(Standard,[name,origin_structure ^ "." ^ origin_function],message)
+  | wrapException name (HOL_ERR {origin_structure,origin_function,source_location,message}) =
+    raise polyExn(Standard,[name,origin_structure ^ "." ^ origin_function],locn.toString source_location ^ ":\n" ^ message)
   | wrapException name exn = raise polyExn(Standard,[name],exn_to_string exn);
 
 local

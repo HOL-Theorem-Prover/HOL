@@ -26,6 +26,7 @@ exception UNCHANGED
 fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 val ERR = mk_HOL_ERR "Conv"
+val ERRloc = mk_HOL_ERRloc "Conv"
 fun w nm c t = c t handle UNCHANGED => raise UNCHANGED
                    | e as HOL_ERR _ => Portable.reraise e
                    | Fail s => raise Fail (s ^ " --> " ^ nm)
@@ -80,17 +81,20 @@ val REWR_CONV_A  = REWR_CONV0 (PART_MATCH_A,    "REWR_CONV_A")
  *    now passes on information about nested failure                    *
  *----------------------------------------------------------------------*)
 
+fun set_origin fnm
+    {origin_function, origin_structure, source_location, message} =
+  if Lib.mem origin_function ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+      andalso origin_structure = "Conv"
+      then ERRloc fnm source_location message
+  else ERRloc fnm source_location (origin_function ^ ": " ^ message)
+
 fun RAND_CONV conv tm =
    let
       val {Rator, Rand} =
          dest_comb tm handle HOL_ERR _ => raise ERR "RAND_CONV" "not a comb"
       val newrand =
          conv Rand
-         handle HOL_ERR {origin_function, message, origin_structure} =>
-            if Lib.mem origin_function ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-               andalso origin_structure = "Conv"
-               then raise ERR "RAND_CONV" message
-            else raise ERR "RAND_CONV" (origin_function ^ ": " ^ message)
+         handle HOL_ERR e => raise set_origin "RAND_CONV" e
    in
       AP_TERM Rator newrand
       handle HOL_ERR {message, ...} =>
@@ -113,11 +117,7 @@ fun RATOR_CONV conv tm =
          dest_comb tm handle HOL_ERR _ => raise ERR "RATOR_CONV" "not a comb"
       val newrator =
          conv Rator
-         handle HOL_ERR {origin_function, origin_structure, message} =>
-            if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-               andalso origin_structure = "Conv"
-               then raise ERR "RATOR_CONV" message
-            else raise ERR "RATOR_CONV" (origin_function ^ ": " ^ message)
+         handle HOL_ERR e => raise set_origin "RATOR_CONV" e
    in
       AP_THM newrator Rand
       handle HOL_ERR {message, ...} =>
@@ -158,13 +158,7 @@ fun ABS_CONV conv tm =
                  in
                     TRANS (TRANS th1 eq_thm') th2
                  end
-                 handle HOL_ERR {origin_function, origin_structure, message} =>
-                          if Lib.mem origin_function
-                                     ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-                             andalso origin_structure = "Conv"
-                             then raise ERR "ABS_CONV" message
-                          else raise ERR "ABS_CONV"
-                                         (origin_function ^ ": " ^ message)
+                 handle HOL_ERR e => raise set_origin "ABS_CONV" e
         end
     | _ => raise ERR "ABS_CONV" "Term not an abstraction"
 

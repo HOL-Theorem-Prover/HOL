@@ -85,7 +85,7 @@ fun call_hooks td = let
         "Hook "^nm^" failed on event " ^ TheoryDelta.toString td
   in
     f td
-    handle e as HOL_ERR {origin_function,origin_structure,message} =>
+    handle e as HOL_ERR _ =>
            Feedback.HOL_WARNING
                "Theory"
                "callhooks"

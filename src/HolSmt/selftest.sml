@@ -49,10 +49,11 @@ fun expect_thm name smt_tac t =
   let
     open boolLib
     val thm = Tactical.TAC_PROOF (([], t), smt_tac)
-      handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+      handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
         die ("Test of solver '" ^ name ^ "' failed on term '" ^
           term_with_types t ^ "': exception HOL_ERR (in " ^
-          origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
+          origin_structure ^ "." ^ origin_function ^
+          " " ^ locn.toString source_location ^ ", message: " ^ message ^
           ")")
   in
     if null (Thm.hyp thm) andalso Thm.concl thm ~~ t then ()
@@ -75,7 +76,7 @@ fun expect_sat name smt_tac t =
   in
     die ("Test of solver '" ^ name ^ "' failed on term '" ^
       term_with_types t ^ "': exception expected")
-  end handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+  end handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
     if origin_structure = "HolSmtLib" andalso
        origin_function = "GENERIC_SMT_TAC" andalso
        (message = "solver reports negated term to be 'satisfiable'" orelse
@@ -87,7 +88,8 @@ fun expect_sat name smt_tac t =
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         term_with_types t ^
         "': exception HOL_ERR has unexpected argument values (in " ^
-        origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
+        origin_structure ^ "." ^ origin_function ^
+        " " ^ locn.toString source_location ^ ", message: " ^ message ^
         ")")
 
 fun mk_test_fun is_configured expect_fun name smt_tac =

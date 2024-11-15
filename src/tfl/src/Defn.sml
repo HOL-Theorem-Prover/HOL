@@ -1264,8 +1264,8 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
     in TotalDefn.
  ---------------------------------------------------------------------------*)
 
-fun holexnMessage (HOL_ERR {origin_structure,origin_function,message}) =
-      origin_structure ^ "." ^ origin_function ^ ": " ^ message
+fun holexnMessage (HOL_ERR {origin_structure,origin_function,source_location,message}) =
+      origin_structure ^ "." ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ": " ^ message
   | holexnMessage e = General.exnMessage e
 
 fun is_simple_arg t =

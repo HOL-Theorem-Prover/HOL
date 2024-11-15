@@ -209,10 +209,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val size = length fields
 
   val _ = length types = length fields orelse
-    raise HOL_ERR {origin_function = "prove_recordtype_thms",
-                   origin_structure = "RecordType",
-                   message =
-                   "Number of fields doesn't match number of types"}
+    raise mk_HOL_ERR "RecordType" "prove_recordtype_thms"
+      "Number of fields doesn't match number of types"
 
   (* we now have the type actually defined in typthm *)
   fun letgen x y = x @ [variant x (mk_var (app_letter y,y))]

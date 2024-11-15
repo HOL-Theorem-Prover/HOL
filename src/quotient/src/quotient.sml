@@ -635,12 +635,9 @@ fun is_partial_equiv th = is_match_term partial_equiv_tm (concl th);
 
 fun check_equiv th =
     is_equiv th orelse is_partial_equiv th orelse
-         raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "check_equiv",
-                  message = "The following is neither an equivalence nor a partial equivalence theorem:\n" ^
-                                       thm_to_string th ^ "\n"
-                       }
+      raise mk_HOL_ERR "quotient" "check_equiv"
+        ("The following is neither an equivalence nor a partial equivalence theorem:\n" ^
+          thm_to_string th ^ "\n")
 
 fun distinct [] = true
   | distinct (x::xs) = not (mem x xs) andalso distinct xs
@@ -678,12 +675,9 @@ fun check_tyop_equiv th =
        null (Term.free_vars (concl th)) andalso
        is_match_term equiv_tm uncond_tm  orelse raise Match
    end
-   handle e => raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "check_tyop_equiv",
-                  message = "The following does not have the form of a type quotient extension theorem:\n" ^
-                                       thm_to_string th ^ "\n"
-                       }
+   handle e => raise mk_HOL_ERR "quotient" "check_tyop_equiv"
+     ("The following does not have the form of a type quotient extension theorem:\n" ^
+       thm_to_string th ^ "\n")
 
 
 fun dest_QUOTIENT_cond tm =
@@ -722,12 +716,9 @@ fun check_tyop_quotient th =
        null (Term.free_vars (concl th)) andalso
        is_match_term quotient_tm uncond_tm  orelse raise Match
    end
-   handle e => raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "check_tyop_quotient",
-                  message = "The following does not have the form of a quotient type extension theorem:\n" ^
-                                       thm_to_string th ^ "\n"
-                       }
+   handle e => raise mk_HOL_ERR "quotient" "check_tyop_quotient"
+     ("The following does not have the form of a quotient type extension theorem:\n" ^
+       thm_to_string th ^ "\n")
 
 fun check_tyop_simp th =
    let val tm = concl th
@@ -741,12 +732,9 @@ fun check_tyop_simp th =
    in
       true
    end
-   handle e => raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "check_tyop_simp",
-                  message = "The following does not have the form of a simplification theorem for either\nrelation extension simplification or map function extension simplification:\n" ^
-                                       thm_to_string th ^ "\n"
-                       }
+   handle e => raise mk_HOL_ERR "quotient" "check_tyop_simp"
+     ("The following does not have the form of a simplification theorem for either\nrelation extension simplification or map function extension simplification:\n" ^
+       thm_to_string th ^ "\n")
 
 
 fun define_quotient_type tyname abs rep equiv =
@@ -1076,12 +1064,9 @@ fun find_base tm = (find_base o #conseq o dest_imp o snd o strip_forall) tm
 fun equiv_type th =
     (fst o dom_rng o type_of o rand o find_base o concl) th
  (*   (#Ty o dest_var o #Bvar o dest_forall o find_base o concl) th *)
-                  handle e => raise HOL_ERR {
-                     origin_structure = "quotient",
-                     origin_function  = "equiv_type",
-                     message ="Invalid structure of equivalence theorem:\n"
-                                ^ thm_to_string th ^ "\n"
-                  }
+                  handle e => raise mk_HOL_ERR "quotient" "equiv_type"
+                    ("Invalid structure of equivalence theorem:\n"
+                      ^ thm_to_string th ^ "\n")
 
 fun make_equiv equivs tyop_equivs ty =
     let val base_tys = map equiv_type equivs
@@ -1122,13 +1107,8 @@ fun make_equiv equivs tyop_equivs ty =
                handle _ => identity_equiv ty
     in
        main_make_equiv ty
-       handle _ =>raise HOL_ERR {
-                                   origin_structure = "quotient",
-                                   origin_function  = "make_equiv",
-                                   message = "Could not form the " ^
-                                             "equivalence theorem for " ^
-                                             type_to_string ty
-                                }
+       handle _ => raise mk_HOL_ERR "quotient" "make_equiv"
+        ("Could not form the equivalence theorem for " ^ type_to_string ty)
     end;
 
 
@@ -1153,14 +1133,11 @@ fun pth s th = if !chatting then (print s; print_thm th; print "\n"; th)
                             else th;
 (**)
 
-fun quotient_type th = (hd o tl o #Args o dest_type o type_of
-                            o rand o find_base o concl) th
-                       handle e => raise HOL_ERR {
-                          origin_structure = "quotient",
-                          origin_function  = "quotient_type",
-                          message ="Invalid structure of quotient theorem:\n"
-                                     ^ thm_to_string th ^ "\n"
-                       }
+fun quotient_type th =
+  (hd o tl o #Args o dest_type o type_of
+    o rand o find_base o concl) th
+  handle e => raise mk_HOL_ERR "quotient" "quotient_type"
+    ("Invalid structure of quotient theorem:\n" ^ thm_to_string th ^ "\n")
 
 fun make_hyp_quotient hyp_quots quots tyop_quots ty =
     let val base_tys = map quotient_type quots
@@ -1381,16 +1358,14 @@ fun check_quotient_ty tys_quot_ths ty =
                                       (* (#Tyop(dest_type rty) = Tyop) *)
             val ty_qty = tryfind is_ty_qth tys_quot_ths
                          handle HOL_ERR e =>
-                          raise HOL_ERR {
-                           origin_structure = "quotient",
-                           origin_function  = "check_quotient_ty",
-                           message = "Could not lift the type `" ^
+                          raise ERR "check_quotient_ty"
+                              ("Could not lift the type `" ^
                                type_to_string ty ^ "`;\n" ^
                                "Missing quotient extension theorem for type constructor " ^
                                "\"" ^ Tyop ^ "\".\n" ^
                                "Please prove and add to \"tyop_quotients\" inputs for quotient package.\n " (* ^
                                exn_to_string (HOL_ERR e) *)
-                          }
+                              )
          in ty
          end
 
@@ -1664,15 +1639,11 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
                                              handle HOL_ERR _ => false
                                )   tyop_simps
                             orelse
-                          Raise (HOL_ERR {
-                           origin_structure = "quotient",
-                           origin_function  = "check_simp",
-                           message =
-                               "Missing quotient simplification theorem:\n" ^
+                          Raise (mk_HOL_ERR "quotient" "check_simp"
+                              ("Missing quotient simplification theorem:\n" ^
                                with_flag (show_types, true)
                                    thm_to_string (mk_oracle_thm "quotient" ([],tm)) ^ "\n" ^
-                               "Please prove and add to \"tyop_simps\" inputs for quotient package.\n "
-                          })
+                               "Please prove and add to \"tyop_simps\" inputs for quotient package.\n "))
 
         fun check_tyop_simps_present tyop =
             let val (taus,ksis,Rs,abss,reps,conseq) = strip_QUOTIENT_cond (concl tyop)
@@ -1752,11 +1723,7 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
         let val (tmtheta,tytheta) = match_term pat ob
             val pat' = inst tytheta pat
         in if pat' ~~ ob then (tmtheta,tytheta)
-           else raise raise HOL_ERR {
-                               origin_structure = "quotient",
-                               origin_function  = "match_ty_term",
-                               message = "not a match"
-                                    }
+           else raise ERR "match_ty_term" "not a match"
         end
 
 (* For each constant being lifted, check that its respectfulness theorem
@@ -1805,15 +1772,12 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
                in
                    GENL margs (SPEC mterm mrefl)
                end
-               handle e => raise HOL_ERR
-                            { origin_structure = "quotient",
-                              origin_function  = "make_missing_respects",
-                              message = "Missing respectfulness theorem for " ^
+               handle e => raise ERR "make_missing_respects"
+                              ("Missing respectfulness theorem for " ^
                                         term_to_string mfunc ^ ".\n" ^
                                with_flag (show_types, true)
                                    thm_to_string (mk_oracle_thm "quotient" ([], fake_respects mfunc)) ^ "\n" ^
-                               "Please prove and add to \"respects\" inputs for quotient package.\n "
-                            }
+                               "Please prove and add to \"respects\" inputs for quotient package.\n ")
         in
            map make_missing_respects missing @ respects
         end
@@ -2303,24 +2267,18 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
            else if is_var tm then []
            else let val {Name=nm, Ty= ty} = dest_const tm
                     val (atys,rty) = strip_type ty
-                    fun err1 () = HOL_ERR {
-                           origin_structure = "quotient",
-                           origin_function  = "findops",
-                           message = "Missing polymorphic respectfulness theorem for `" ^
+                    fun err1 () = ERR "findops"
+                             ("Missing polymorphic respectfulness theorem for `" ^
                                          term_to_string tm ^ "`.\n" ^
                                with_flag (show_types, true)
                                    thm_to_string (mk_oracle_thm "quotient" ([], fake_poly_respects tm)) ^ "\n" ^
-                               "Please prove and add to \"poly_respects\" inputs for quotient package.\n "
-                        }
-                    fun err2 () = HOL_ERR {
-                           origin_structure = "quotient",
-                           origin_function  = "findops",
-                           message = "Missing polymorphic preservation theorem for `" ^
+                               "Please prove and add to \"poly_respects\" inputs for quotient package.\n ")
+                    fun err2 () = ERR "findops"
+                             ("Missing polymorphic preservation theorem for `" ^
                                          term_to_string tm ^ "`.\n" ^
                                with_flag (show_types, true)
                                    thm_to_string (mk_oracle_thm "quotient" ([], fake_poly_preserves tm)) ^ "\n" ^
-                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
-                        }
+                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n ")
                 in if is_rep_ty ty
                    then if mem (#Name(dest_const tm)) ("respects" :: RELnms @ tyop_RELnms)
                                 orelse exists (can (match_ty_term tm)) newdeffuncs
@@ -2631,12 +2589,9 @@ corresponding quotient theorem antecedents are resolvable.
           in
             tryfind (get_higher_df_op tm) polydfs
           end
-          handle e => raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "MK_DEF_OP",
-                  message = "Missing polymorphic preservation theorem for " ^
-                                term_to_string tm ^ ".\n"
-                }
+          handle e => raise ERR "MK_DEF_OP"
+            ("Missing polymorphic preservation theorem for " ^
+              term_to_string tm ^ ".\n")
 
 (* The tactic LAMBDA_RSP_TAC:
 
@@ -3126,14 +3081,11 @@ R2 (f[x']) (g[y']).
               th
           end
           handle _ =>
-              raise HOL_ERR {
-                    origin_structure = "quotient",
-                    origin_function  = "TRANSFORM_CONV",
-                    message = "Could not convert to higher types the term\n" ^
+              raise ERR "TRANSFORM_CONV"
+                    ("Could not convert to higher types the term\n" ^
                         term_to_string tm ^ "\n" ^
                         "May be missing a respects or a poly_respects theorem"
-                        ^ " for some constant in it."
-                   }
+                        ^ " for some constant in it.")
 
 
 (* ------------------------------------------------------------------------- *)
@@ -3440,14 +3392,11 @@ R2 (f[x']) (g[y']).
                     in
                       MP rth th
                     end
-                    handle _ => raise HOL_ERR {
-                         origin_structure = "quotient",
-                         origin_function  = "REGULARIZE",
-                         message = "Could not lift the irregular theorem\n" ^
+                    handle _ => raise ERR "REGULARIZE"
+                           ("Could not lift the irregular theorem\n" ^
                              thm_to_string th ^ "\n" ^
                              "May try proving and then lifting\n" ^
-                             term_to_string tm'
-                   }
+                             term_to_string tm')
                end
 
 
@@ -3471,14 +3420,11 @@ R2 (f[x']) (g[y']).
                     in () end
              else ();
              if is_rep_ty (type_of tm) then
-                   raise HOL_ERR {
-                         origin_structure = "quotient",
-                         origin_function  = "check_high",
-                         message = "Could not lift the term " ^
-                             term_to_string tm ^ "\n" ^
-                             "May be missing a constant to be lifted, " ^
-                             "or a poly_preserves theorem."
-                   }
+               raise ERR "check_high"
+                 ("Could not lift the term " ^
+                   term_to_string tm ^ "\n" ^
+                   "May be missing a constant to be lifted, " ^
+                   "or a poly_preserves theorem.")
              else ()
             )
 
@@ -3583,13 +3529,10 @@ R2 (f[x']) (g[y']).
                           Ho_Rewrite.PURE_REWRITE_RULE LAM_APP_DEFS o
                           QUOT_REWRITE_RULE [GSYM EQUALS_PRS] o
                           CONV_RULE TRANSFORM_CONV) thr
-                         handle e => raise HOL_ERR {
-                                   origin_structure = "quotient",
-                                   origin_function  = "LIFT_RULE",
-                                   message = "Could not lift the theorem\n" ^
+                         handle e => raise ERR "LIFT_RULE"
+                                   ("Could not lift the theorem\n" ^
                                        thm_to_string th ^ "\n" ^
-                                       exn_to_string e
-                                  }
+                                       exn_to_string e)
                          end)
 
     in
@@ -3639,12 +3582,9 @@ fun check_respects_tm tm =
 fun check_respects th =
    null (Term.free_vars (concl th)) andalso
    check_respects_tm (concl th)
-   handle e => raise HOL_ERR {
-                        origin_structure = "quotient",
-                        origin_function  = "check_respects",
-                        message = "The following theorem is not of the right form for a respectfulness theorem:\n" ^
-                                       thm_to_string th ^ "\n"
-                                  };
+   handle e => raise ERR "check_respects"
+     ("The following theorem is not of the right form for a respectfulness theorem:\n" ^
+       thm_to_string th ^ "\n")
 
 
 (* --------------------------------------------------------------- *)
@@ -3662,12 +3602,9 @@ fun check_poly_respects th =
        null (Term.free_vars (concl th)) andalso
        check_respects_tm uncond_tm
    end
-   handle e => raise HOL_ERR {
-                        origin_structure = "quotient",
-                        origin_function  = "check_poly_respects",
-                        message = "The following theorem is not of the right form for a polymorphic respectfulness\ntheorem:\n" ^
-                                       thm_to_string th ^ "\n"
-                                  };
+   handle e => raise ERR "check_poly_respects"
+     ("The following theorem is not of the right form for a polymorphic respectfulness\ntheorem:\n" ^
+       thm_to_string th ^ "\n")
 
 local
        fun any_type_var_in tyl ty = exists (C type_var_in ty) tyl
@@ -3709,12 +3646,9 @@ fun check_poly_preserves th =
    in
            true
    end
-   handle e => raise HOL_ERR {
-                        origin_structure = "quotient",
-                        origin_function  = "check_poly_preserves",
-                        message = "The following theorem is not of the right form for a polymorphic preservation\ntheorem:\n" ^
-                                       thm_to_string th ^ "\n"
-                                  }
+   handle e => raise ERR "check_poly_preserves"
+     ("The following theorem is not of the right form for a polymorphic preservation\ntheorem:\n" ^
+       thm_to_string th ^ "\n")
 end;
 
 
@@ -4013,12 +3947,9 @@ fun is_inhab th = is_ho_match_term inhab_tm (concl th);
 
 fun check_inhab th =
     is_inhab th orelse
-         raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "check_inhab",
-                  message = "The following is not a predicate inhabitation theorem:\n" ^
-                                       thm_to_string th ^ "\n"
-                       }
+      raise ERR "check_inhab"
+        ("The following is not a predicate inhabitation theorem:\n" ^
+          thm_to_string th ^ "\n")
 
 fun dest_con_inhab c =
       let open Psyntax
@@ -4038,12 +3969,9 @@ fun check_con_inhab th =
    in
        null (Term.free_vars (concl th)) orelse raise Match
    end
-   handle e => raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "check_con_inhab",
-                  message = "The following does not have the form of a constant inhabitation theorem:\n" ^
-                                       thm_to_string th ^ "\n"
-                       }
+   handle e => raise ERR "check_con_inhab"
+     ("The following does not have the form of a constant inhabitation theorem:\n" ^
+       thm_to_string th ^ "\n")
 
 
 fun tryconv f (x:'a) = f x handle HOL_ERR _ => x
@@ -4127,12 +4055,9 @@ fun prove_subset_respects Rdefs =
       val PRs = map dest_Rdef Rdefs
       val (Ps,Rcons) = unzip PRs
       fun find_R [] tm =
-            raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "prove_subset_respects",
-                  message = "Term does not match expected predicates: " ^
-                            term_to_string tm
-                          }
+        raise ERR "prove_subset_respects"
+          ("Term does not match expected predicates: " ^
+            term_to_string tm)
         | find_R ((P,R)::rest) tm =
             let val (x,body) = dest_abs P
                 val (tmS,tyS) = match_term body tm

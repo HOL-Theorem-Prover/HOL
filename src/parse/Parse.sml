@@ -573,9 +573,7 @@ val temp_add_infix_type = mk_temp_tyd add_infix_type0
 val add_infix_type = mk_perm_tyd add_infix_type0
 
 fun replace_exnfn fnm f x =
-  f x handle HOL_ERR {message = m, origin_structure = s, ...} =>
-             raise HOL_ERR {message = m, origin_function = fnm,
-                            origin_structure = s}
+  f x handle HOL_ERR e => raise HOL_ERR (set_origin_function fnm e)
 
 fun thytype_abbrev0 r = [TYABBREV r]
 val temp_thytype_abbrev = mk_temp_tyd thytype_abbrev0

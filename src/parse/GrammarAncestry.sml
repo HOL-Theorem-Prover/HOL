@@ -3,8 +3,7 @@ struct
 
 open HolKernel HOLsexp
 
-fun ERR f s = HOL_ERR {origin_structure = "GrammarAncestry",
-                       origin_function = f, message = s}
+val ERR = mk_HOL_ERR "GrammarAncestry"
 val tag = "GrammarAncestry"
 
 infix >~ >>

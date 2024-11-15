@@ -23,9 +23,7 @@ val lhand = rand o rator
 
 val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV bool_rewrites
 
-fun ERR f msg = HOL_ERR { origin_structure = "OmegaSymbolic",
-                          origin_function = f,
-                          message = msg}
+val ERR = mk_HOL_ERR "OmegaSymbolic"
 
 (* ----------------------------------------------------------------------
     clause_to_evals v t
