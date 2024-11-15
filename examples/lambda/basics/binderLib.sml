@@ -290,9 +290,9 @@ fun check_for_errors tm = let
               "Function being defined must be applied to one argument"
   val dom_ty = #1 (dom_rng (type_of f))
   val recthm = valOf (recthm_for_type dom_ty)
-               handle Option => ERR "prove_recursive_term_function_exists"
-                                    ("No recursion theorem for type "^
-                                     type_to_string dom_ty)
+               handle Option =>
+               raise ERR "prove_recursive_term_function_exists"
+                 ("No recursion theorem for type " ^ type_to_string dom_ty)
   val constructors = map #1 (find_constructors recthm)
   val () =
       case List.find
@@ -507,8 +507,8 @@ fun define_wrapper worker q = let
   val a = Absyn q
   val f = head_sym a
   val fstr = case f of
-               Absyn.IDENT(_, s) => s
-             | x => ERR "define_recursive_term_function" "invalid head symbol"
+      Absyn.IDENT(_, s) => s
+    | x => raise ERR "define_recursive_term_function" "invalid head symbol"
   val restore_this = hide fstr
   fun restore() = Parse.update_overload_maps fstr restore_this
   val tm = Parse.absyn_to_term (Parse.term_grammar()) a

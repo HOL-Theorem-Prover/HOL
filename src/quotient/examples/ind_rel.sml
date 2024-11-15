@@ -55,14 +55,10 @@ in
                   (fst current_goal, new_claim)],
                  fn [goalthm,claimthm] =>
                    MP (DISCH new_claim goalthm) claimthm
-                  | _ => raise HOL_ERR
-                             {origin_structure = "define_inductive_relations",
-                              origin_function = "SUPPOSE_TAC",
-                              message = "invalid application"})
-        else raise HOL_ERR
-                       {origin_structure = "define_inductive_relations",
-                        origin_function = "SUPPOSE_TAC",
-                        message = "The claim doesn't have type :bool"}
+                  | _ => raise mk_HOL_ERR "define_inductive_relations" "SUPPOSE_TAC"
+                           "invalid application")
+        else raise mk_HOL_ERR "define_inductive_relations" "SUPPOSE_TAC"
+               "The claim doesn't have type :bool"
 end
 
 
@@ -122,19 +118,13 @@ fun MP_IMP_TAC imp_thm (thisgoal as (asms,goal)) =
                          fn imp_thm => fn (asms,goal) =>
                            ([(asms,fst(dest_imp(concl imp_thm)))],
                             fn [thm] => MP imp_thm thm
-                             | _ => raise HOL_ERR
-                            {origin_structure = "define_inductive_relations",
-                             origin_function = "MP_IMP_TAC",
-                             message = "invalid application"})}
+                             | _ => raise mk_HOL_ERR "define_inductive_relations" "MP_IMP_TAC"
+                                      "invalid application")}
                       thisgoal
-            else raise HOL_ERR
-                            {origin_structure = "define_inductive_relations",
-                             origin_function = "MP_IMP_TAC",
-                             message = "theorem doesn't imply goal"}
-    else raise HOL_ERR
-                    {origin_structure = "define_inductive_relations",
-                     origin_function = "MP_IMP_TAC",
-                     message = "theorem is not an implication"}
+            else raise mk_HOL_ERR "define_inductive_relations" "MP_IMP_TAC"
+                   "theorem doesn't imply goal"
+    else raise mk_HOL_ERR "define_inductive_relations" "MP_IMP_TAC"
+           "theorem is not an implication"
 
 
 (* This function takes in the rules, checks them, quantifies them, and
@@ -231,38 +221,34 @@ fun check_rule rule_num rule =
                     (* check that the relations don't occur in rands *)
                     if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
                         false rands) then
-                        raise HOL_ERR
-                            {message = "found relation being defined"^
+                        raise mk_HOL_ERR "define_inductive_relations" "check_rule"
+                          ("found relation being defined"^
                              " in arg to "^(fst(dest_var rator))^
                              " in hypothesis ofrule number "^
-                             (Lib.int_to_string rule_num),
-                             origin_function = "check_rule",
-                             origin_structure = "define_inductive_relations"}
+                             (Lib.int_to_string rule_num))
                     else check_hyp hyps
-                else if relations_in_tm hyp1 then raise HOL_ERR
-                    {message = "found relation being defined"^
+                else if relations_in_tm hyp1 then
+                  raise mk_HOL_ERR "define_inductive_relations" "check_rule"
+                    ("found relation being defined"^
                      " in side condition in rule number "^
-                     (Lib.int_to_string rule_num),
-                     origin_function = "check_rule",
-                     origin_structure = "define_inductive_relations"}
-                     else check_hyp hyps
+                     (Lib.int_to_string rule_num))
+                else check_hyp hyps
             end |
             check_hyp [] = true
         fun check_concl tm =
             let val (rator, rands) = strip_comb tm in
-                if not (tmem rator relations) then raise HOL_ERR
-                    {message = "must have relation as operator in "^
-                     "conclusion of rule "^(Lib.int_to_string rule_num),
-                     origin_function = "check_rule",
-                     origin_structure = "define_inductive_relations"} else
-                if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
-                    false rands) then raise HOL_ERR
-                    {message = "found relation being defined"^
+                if not (tmem rator relations) then
+                  raise mk_HOL_ERR "define_inductive_relations" "check_rule"
+                    ("must have relation as operator in "^
+                     "conclusion of rule "^(Lib.int_to_string rule_num))
+                else if
+                  foldr (fn (tm, acc) => relations_in_tm tm orelse acc) false rands
+                then
+                  raise mk_HOL_ERR "define_inductive_relations" "check_rule"
+                    ("found relation being defined"^
                      " in arg to "^(fst(dest_var rator))^
                      " in conclusion of rule number "^
-                     (Lib.int_to_string rule_num),
-                     origin_function = "check_rule",
-                     origin_structure = "define_inductive_relations"}
+                     (Lib.int_to_string rule_num))
                 else true
             end
     in
@@ -478,38 +464,34 @@ fun check_rule rule_num rule =
                     (* check that the relations don't occur in rands *)
                     if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
                         false rands) then
-                        raise HOL_ERR
-                            {message = "found relation being defined"^
-                             " in arg to "^(fst(dest_var rator))^
-                             " in hypothesis ofrule number "^
-                             (Lib.int_to_string rule_num),
-                             origin_function = "check_rule",
-                             origin_structure = "define_inductive_relations"}
+                      raise mk_HOL_ERR "define_inductive_relations" "check_rule"
+                        ("found relation being defined"^
+                          " in arg to "^(fst(dest_var rator))^
+                          " in hypothesis ofrule number "^
+                          (Lib.int_to_string rule_num))
                     else check_hyp hyps
-                else if relations_in_tm hyp1 then raise HOL_ERR
-                    {message = "found relation being defined"^
+                else if relations_in_tm hyp1 then
+                  raise mk_HOL_ERR "define_inductive_relations" "check_rule"
+                    ("found relation being defined"^
                      " in side condition in rule number "^
-                     (Lib.int_to_string rule_num),
-                     origin_function = "check_rule",
-                     origin_structure = "define_inductive_relations"}
-                     else check_hyp hyps
-            end |
-            check_hyp [] = true
+                     (Lib.int_to_string rule_num))
+                else check_hyp hyps
+            end
+          | check_hyp [] = true
         fun check_concl tm =
             let val (rator, rands) = strip_comb tm in
-                if not (tmem rator relations) then raise HOL_ERR
-                    {message = "must have relation as operator in "^
-                     "conclusion of rule "^(Lib.int_to_string rule_num),
-                     origin_function = "check_rule",
-                     origin_structure = "define_inductive_relations"} else
-                if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
-                    false rands) then raise HOL_ERR
-                    {message = "found relation being defined"^
+                if not (tmem rator relations) then
+                  raise mk_HOL_ERR "define_inductive_relations" "check_rule"
+                    ("must have relation as operator in "^
+                     "conclusion of rule "^(Lib.int_to_string rule_num))
+                else if
+                  foldr (fn (tm, acc) => relations_in_tm tm orelse acc) false rands
+                then
+                  raise mk_HOL_ERR "define_inductive_relations" "check_rule"
+                    ("found relation being defined"^
                      " in arg to "^(fst(dest_var rator))^
                      " in conclusion of rule number "^
-                     (Lib.int_to_string rule_num),
-                     origin_function = "check_rule",
-                     origin_structure = "define_inductive_relations"}
+                     (Lib.int_to_string rule_num))
                 else true
             end
     in
@@ -992,10 +974,9 @@ fun simp_rule sfn set vs rul th =
    end
 end;
 
-fun bad_error ftn_name = raise HOL_ERR
-    {message = "this case should never happen, real problem here!",
-     origin_function = ftn_name,
-     origin_structure = "prove_inversion_theorems"}
+fun bad_error ftn_name =
+  raise mk_HOL_ERR "prove_inversion_theorems" ftn_name
+    "this case should never happen, real problem here!"
 
 fun simp set sfn rul th =
    let val vs = fst(strip_forall (dest_neg (concl th)))
@@ -1727,10 +1708,9 @@ local
     fun get_correct_tm ((rel, tm)::more_info) rel2 =
         if rel ~~ rel2 then tm
         else get_correct_tm more_info rel2
-      | get_correct_tm [] rel2 = raise HOL_ERR
-        {origin_structure = "inductive_relations",
-         origin_function = "rule_induct",
-         message = "need term for relation "^(fst (dest_const rel2))}
+      | get_correct_tm [] rel2 =
+        raise mk_HOL_ERR "inductive_relations" "rule_induct"
+          ("need term for relation "^(fst (dest_const rel2)))
 in
     fun rule_induct induct_thm (asms, gl) =
         let val reltns_goals_list = map process_term (strip_conj gl)
