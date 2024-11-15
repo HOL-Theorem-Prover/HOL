@@ -1106,8 +1106,7 @@ fun mk_defn_thm (witness_tag, c) =
     Primitive Definition Principles
    ---------------------------------------------------------------------- *)
 
-fun ERR f msg = HOL_ERR {origin_structure = "Thm",
-                         origin_function = f, message = msg}
+val ERR = mk_HOL_ERR "Thm"
 val TYDEF_ERR = ERR "prim_type_definition"
 val DEF_ERR   = ERR "new_definition"
 val SPEC_ERR  = ERR "new_specification"

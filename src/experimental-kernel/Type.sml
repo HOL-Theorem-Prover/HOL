@@ -6,10 +6,8 @@ open Feedback Lib KernelTypes
 infix |->
 infixr -->
 
-val WARN = HOL_WARNING "Type";
-fun ERR f msg = HOL_ERR {origin_structure = "Type",
-                         origin_function = f,
-                         message = msg}
+val WARN = HOL_WARNING "Type"
+val ERR = mk_HOL_ERR "Type"
 
 type type_key = {Thy : string, Tyop : string }
 type type_info = KernelSig.kernelid * int

@@ -45,9 +45,7 @@ val LEFT_IMP_FORALL_CONV = Conv.LEFT_IMP_FORALL_CONV
 val LEFT_IMP_EXISTS_CONV = Conv.LEFT_IMP_EXISTS_CONV
 val RIGHT_IMP_EXISTS_CONV = Conv.RIGHT_IMP_EXISTS_CONV
 
-fun failwith function = raise HOL_ERR{origin_structure = "Prenex",
-                                      origin_function = function,
-                                      message = ""};
+fun failwith function = raise mk_HOL_ERR "Prenex" function ""
 
 (*---------------------------------------------------------------------------*)
 (* QUANT_EQ_IMP_CONV : conv                                                  *)

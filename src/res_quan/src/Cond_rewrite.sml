@@ -13,9 +13,7 @@ open HolKernel boolLib Rsyntax;
 infix ## THEN THENL ORELSEC;
 
 fun COND_REWR_ERR {function,message} =
-          HOL_ERR{origin_structure = "Cond_rewrite",
-                  origin_function = function,
-                  message = message};
+  mk_HOL_ERR "Cond_rewrite" function message
 
 val frees = rev o Term.free_vars;
 

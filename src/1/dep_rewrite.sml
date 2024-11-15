@@ -180,16 +180,13 @@ fun print_goal (asl,gl) = (print_term gl; print_newline());
 fun pthm th = (print_all_thm th; th);
 (**)
 
-fun TACTIC_ERR{function,message} =
-    Feedback.HOL_ERR{origin_structure = "Tactic",
-                      origin_function = function,
-                      message = message};
+val ERR = mk_HOL_ERR "Tactic"
 
 fun failwith function =
    ( (**) if debug_fail then
          print_string ("Failure in dep_rewrite: "^function^"\n")
      else (); (**)
-    raise TACTIC_ERR{function = function,message = "Failure in dep_rewrite"});
+    raise ERR function "Failure in dep_rewrite");
 
 
 

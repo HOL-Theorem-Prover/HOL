@@ -29,9 +29,7 @@ open Norm_arith;
 open Norm_ineqs;
 open Sol_ranges;
 
-fun failwith function = raise HOL_ERR{origin_structure = "Exists_arith",
-                                      origin_function = function,
-                                      message = ""};
+fun failwith function = raise mk_HOL_ERR "Exists_arith" function ""
 
 
 (*---------------------------------------------------------------------------*)
@@ -116,16 +114,13 @@ fun EXISTS_ARITH_CONV tm =
   let val th = RULE_OF_CONV ARITH_FORM_NORM_CONV
                   (snd (strip_exists (assert (null o free_vars) tm)))
                handle (HOL_ERR _) =>
-               raise HOL_ERR{origin_structure = "Exists_arith",
-                             origin_function = "EXISTS_ARITH_CONV",
-                             message = "formula not in the allowed subset"}
+               raise mk_HOL_ERR "Exists_arith" "EXISTS_ARITH_CONV"
+                 "formula not in the allowed subset"
   in  (let val binding = witness (strip_disj (rhs (concl th)))
        in  EQT_INTRO (WITNESS binding tm)
        end
       ) handle (HOL_ERR _) =>
-        raise HOL_ERR{origin_structure = "Exists_arith",
-                      origin_function = "EXISTS_ARITH_CONV",
-                      message = "cannot prove formula"}
+        raise mk_HOL_ERR "Exists_arith" "EXISTS_ARITH_CONV" "cannot prove formula"
   end
  );
 

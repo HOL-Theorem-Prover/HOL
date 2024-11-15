@@ -20,8 +20,7 @@ open HolKernel Parse boolLib simpLib numLib normalForms defCNFTheory;
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun ERR f s =
-  HOL_ERR {message = s, origin_function = f, origin_structure = "defCNF"};
+val ERR = mk_HOL_ERR "defCNF"
 
 fun distinct [] = true
   | distinct (x :: rest) = not (mem x rest) andalso distinct rest;

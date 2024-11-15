@@ -50,19 +50,19 @@ end
 fun prove t =
   if squolem_installed then
     (HolQbfLib.prove t; print ".")
-    handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+    handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
       die ("Prove failed on term '" ^ Hol_pp.term_to_string t ^
         "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
-        ", message: " ^ message ^ ")")
+        " " ^ locn.toString source_location ^ ", message: " ^ message ^ ")")
   else ()
 
 fun disprove t =
   if squolem_installed then
     (HolQbfLib.disprove t; print ".")
-    handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+    handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
       die ("Disprove failed on term '" ^ Hol_pp.term_to_string t ^
         "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
-        ", message: " ^ message ^ ")")
+        " " ^ locn.toString source_location ^ ", message: " ^ message ^ ")")
   else ()
 
 val thmeq = Lib.pair_eq (Lib.list_eq Term.aconv) Term.aconv
@@ -78,10 +78,10 @@ fun decide t =
             else die ("Decide proved bad theorem on term '" ^
               Hol_pp.term_to_string t ^ "'")
     in print "." end
-    handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
+    handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
       die ("Decide failed on term '" ^ Hol_pp.term_to_string t ^
         "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
-        ", message: " ^ message ^ ")")
+        " " ^ locn.toString source_location ^ ", message: " ^ message ^ ")")
   else ()
 
 local

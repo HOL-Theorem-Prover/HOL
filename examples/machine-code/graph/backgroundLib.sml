@@ -127,9 +127,7 @@ fun auto_conv_prove proof_name goal conv =
 
 fun modify_message f e =
   case e of
-    HOL_ERR e => HOL_ERR { message = f (#message e) ,
-                   origin_function = #origin_function e ,
-                   origin_structure = #origin_structure e }
+    HOL_ERR e => HOL_ERR (set_message (f (#message e)) e)
   | _ => e
 
 fun report_error name e = let

@@ -30,9 +30,7 @@ type thm = Thm.thm
 val ambient_grammars = Parse.current_grammars();
 val _ = Parse.temp_set_grammars boolTheory.bool_grammars;
 
-fun MUT_REC_ERR {function,message} = HOL_ERR{origin_structure = "MutRecDef",
-                                             origin_function = function,
-                                             message = message}
+fun MUT_REC_ERR {function,message} = mk_HOL_ERR "MutRecDef" function message
 
 (* Some general functions and values we need *)
 

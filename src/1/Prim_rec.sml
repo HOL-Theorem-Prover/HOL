@@ -84,10 +84,8 @@ fun mymatch_and_instantiate axth pattern instance = let
     val forall_env = ListPair.map op|-> (patvars, instvars)
     val pateqn = Term.subst forall_env pateqn0
     val _ = aconv (lhs pateqn) (lhs insteqn) orelse
-      raise HOL_ERR {origin_function =
-                "prove_raw_recursive_functions_exist.mymatch_and_instantiate",
-              origin_structure = "Prim_rec",
-              message = ("Failed to match LHSes in clause "^Int.toString cnum)}
+      raise ERR "prove_raw_recursive_functions_exist.mymatch_and_instantiate"
+        ("Failed to match LHSes in clause "^Int.toString cnum)
     val instrhs = rhs insteqn and patrhs = rhs pateqn
     (* last arguments in the pattern will be instances of a function symbol
        being applied to recursive arguments *)
@@ -108,10 +106,8 @@ fun mymatch_and_instantiate axth pattern instance = let
     case (patconjs, instconjs) of
       ([], []) => List.rev acc
     | (p::ps, i::is) => match_eqns ((match_eqn n p i)::acc) (n + 1) ps is
-    | _ => raise
-        HOL_ERR {origin_function = "prove_raw_recursive_functions_exist",
-                 origin_structure = "recursion",
-                 message = "Number of conjuncts not even the same"}
+    | _ => raise ERR "prove_raw_recursive_functions_exist"
+             "Number of conjuncts not even the same"
   val tmsubst = match_eqns [] 1 (strip_conj new_patbody) (strip_conj instbody)
   val axth1 = Thm.INST_TYPE tyinst axth
   val axth2 = Thm.INST tmsubst axth1

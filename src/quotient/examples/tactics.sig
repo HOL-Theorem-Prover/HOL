@@ -56,9 +56,7 @@ val IMP2AND : thm -> thm
 
 (*
 val TACTIC_ERR{function,message} =
-    Exception.HOL_ERR{origin_structure = "Tactic",
-                      origin_function = function,
-                      message = message};
+    Exception.mk_HOL_ERR "Tactic" function message
 *)
 
 val failwith : string -> 'a
