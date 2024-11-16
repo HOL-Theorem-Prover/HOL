@@ -2,6 +2,8 @@
 *Theory.sig
 *Theory.sml
 *Theory.dat
+!Theory.sig
+!Theory.sml
 *.uo
 *.ui
 *.o
