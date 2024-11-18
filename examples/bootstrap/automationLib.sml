@@ -167,7 +167,7 @@ val finalised_mem = ref ([]: (term * thm) list)
 val in_flight_mem = ref ([]: (term * thm) list)
 val trans_thms    = ref (DB.find "auto_"
   |> filter (fn ((thy,_),_) => thy = "automation_lemmas")
-  |> map (CONJUNCTS o fst o snd)
+  |> map (CONJUNCTS o #1 o #2)
   |> flatten |> (fn xs => xs @ [last_bool_if]));
 
 fun update_mem lemma =
