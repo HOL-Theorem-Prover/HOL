@@ -21,6 +21,6 @@ COPY . .
 
 RUN poly < tools/smart-configure.sml && ./bin/build
 
-ENV PATH /HOL/bin:$PATH
+ENV PATH=/HOL/bin:$PATH
 
 ENTRYPOINT ["/HOL/bin/hol"]
