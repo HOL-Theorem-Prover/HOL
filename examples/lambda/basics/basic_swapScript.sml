@@ -292,6 +292,13 @@ Proof
  >> Q.EXISTS_TAC ‘y’ >> rw []
 QED
 
+Theorem ROW_DISJOINT :
+    !r1 r2. r1 <> r2 ==> DISJOINT (ROW r1) (ROW r2)
+Proof
+    rw [DISJOINT_ALT, ROW]
+ >> rw [n2s_11]
+QED
+
 Definition RANK_DEF :
     RANK r = BIGUNION (IMAGE ROW (count r))
 End
@@ -363,6 +370,18 @@ Proof
  >> Q.EXISTS_TAC ‘j’ >> rw []
 QED
 
+Theorem DISJOINT_RNEWS :
+    !r1 r2 n1 n2 s1 s2. FINITE s1 /\ FINITE s2 /\ r1 <> r2 ==>
+        DISJOINT (set (RNEWS r1 n1 s1)) (set (RNEWS r2 n2 s2))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC DISJOINT_SUBSET
+ >> Q.EXISTS_TAC ‘ROW r2’ >> rw [RNEWS_SUBSET_ROW]
+ >> MATCH_MP_TAC DISJOINT_SUBSET'
+ >> Q.EXISTS_TAC ‘ROW r1’ >> rw [RNEWS_SUBSET_ROW]
+ >> MATCH_MP_TAC ROW_DISJOINT >> art []
+QED
+
 Theorem DISJOINT_RANK_RNEWS :
     !r1 r2 n s.
         FINITE s /\ r1 <= r2 ==> DISJOINT (RANK r1) (set (RNEWS r2 n s))
@@ -373,12 +392,22 @@ Proof
  >> rw [RANK_ROW_DISJOINT, RNEWS_SUBSET_ROW]
 QED
 
+(* |- !r1 r2 n s.
+        FINITE s /\ r1 <= r2 ==> DISJOINT (set (RNEWS r2 n s)) (RANK r1)
+ *)
+Theorem DISJOINT_RNEWS_RANK =
+    ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_RANK_RNEWS
+
 Theorem DISJOINT_RANK_RNEWS' :
     !r n s. FINITE s ==> DISJOINT (RANK r) (set (RNEWS r n s))
 Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC DISJOINT_RANK_RNEWS >> rw []
 QED
+
+(* |- !r n s. FINITE s ==> DISJOINT (set (RNEWS r n s)) (RANK r) *)
+Theorem DISJOINT_RNEWS_RANK' =
+    ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_RANK_RNEWS'
 
 Theorem RNEWS_SUBSET_RANK :
     !r1 r2 n s. FINITE s /\ r1 < r2 ==>

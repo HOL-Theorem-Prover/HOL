@@ -8,6 +8,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open BasicProvers boolSimps pred_setTheory listTheory quotientLib;
+open relationTheory;
 
 open binderLib basic_swapTheory nomsetTheory;
 
@@ -176,7 +177,7 @@ val (aeq_rules, aeq_ind, aeq_cases) = Hol_reln`
   (!u v bv z bndts1 bndts2 us1 us2.
       aeql us1 us2 ∧
       aeql (ptpml [(u,z)] bndts1) (ptpml [(v,z)] bndts2) ∧
-      z ∉ allatomsl bndts1 ∧ z ∉  allatomsl bndts2 ∧ z ≠ u ∧ z ≠ v ⇒
+      z ∉ allatomsl bndts1 ∧ z ∉ allatomsl bndts2 ∧ z ≠ u ∧ z ≠ v ⇒
       aeq (lam u bv bndts1 us1) (lam v bv bndts2 us2)) ∧
   aeql [] [] ∧
   (∀h1 h2 t1 t2. aeq h1 h2 ∧ aeql t1 t2 ⇒ aeql (h1::t1) (h2::t2))
@@ -358,7 +359,6 @@ val aeq_trans = store_thm(
     metis_tac [aeq_rules]
   ]);
 
-open relationTheory
 val aeq_equiv = store_thm(
   "aeq_equiv",
   ``!t1 t2. aeq t1 t2 = (aeq t1 = aeq t2)``,

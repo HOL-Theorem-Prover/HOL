@@ -9,7 +9,7 @@ open HolKernel Parse boolLib bossLib;
 
 (* core theories *)
 open arithmeticTheory pred_setTheory listTheory rich_listTheory sortingTheory
-     finite_mapTheory pathTheory relationTheory hurdUtils listLib numpairTheory;
+     finite_mapTheory pathTheory relationTheory hurdUtils listLib pairTheory;
 
 (* lambda theories *)
 open binderLib basic_swapTheory nomsetTheory termTheory appFOLDLTheory
@@ -636,14 +636,28 @@ Proof
 QED
 
 Theorem solvable_tpm[simp] :
-    !pi M. solvable (tpm pi M) <=> solvable M
+    solvable (tpm pi M) <=> solvable M
 Proof
     METIS_TAC [pmact_inverse, solvable_tpm_I]
 QED
 
-(* |- !M N z. solvable ([N/z] M) ==> solvable M *)
-Theorem solvable_from_subst =
-        has_hnf_SUB_E |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
+Theorem unsolvable_subst :
+    !M v N. unsolvable M ==> unsolvable ([N/v] M)
+Proof
+    rw [solvable_iff_has_hnf]
+ >> PROVE_TAC [has_hnf_SUB_E]
+QED
+
+Theorem unsolvable_ISUB :
+    !ss M. unsolvable M ==> unsolvable (M ISUB ss)
+Proof
+    Induct_on ‘ss’ >- rw []
+ >> simp [FORALL_PROD]
+ >> qx_genl_tac [‘N’, ‘v’, ‘M’]
+ >> DISCH_TAC
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC unsolvable_subst >> art []
+QED
 
 (*---------------------------------------------------------------------------*
  *  Principle Head Normal Forms (principle_hnf)
@@ -721,6 +735,7 @@ Proof
       fs [Abbr ‘n’] ]
 QED
 
+(* |- !M N. solvable M ==> (principle_hnf M = N <=> M -h->* N /\ hnf N) *)
 Theorem principle_hnf_thm' =
         principle_hnf_thm |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
@@ -850,25 +865,44 @@ Proof
  >> MATCH_MP_TAC principle_hnf_hreduce1 >> art []
 QED
 
-Theorem principle_hnf_LAMl_appstar_lemma[local] :
+(* NOTE: This theorem doesn't need ‘solvable M’ in antecedents *)
+Theorem hreduces_hnf_imp_principle_hnf :
+    !M N. M -h->* N /\ hnf N ==> principle_hnf M = N
+Proof
+    rpt STRIP_TAC
+ >> Know ‘principle_hnf M = principle_hnf N’
+ >- (MATCH_MP_TAC principle_hnf_hreduce >> art [])
+ >> Rewr'
+ >> MATCH_MP_TAC principle_hnf_reduce >> art []
+QED
+
+Theorem principle_hnf_tpm_reduce_lemma[local] :
     !t. hnf t /\
         ALL_DISTINCT (MAP FST pi) /\
         ALL_DISTINCT (MAP SND pi) /\
         DISJOINT (set (MAP FST pi)) (set (MAP SND pi)) /\
        (!y. MEM y (MAP SND pi) ==> y # t) ==>
+        has_hnf (LAMl (MAP FST pi) t @* MAP VAR (MAP SND pi)) /\
         principle_hnf (LAMl (MAP FST pi) t @* MAP VAR (MAP SND pi)) = tpm pi t
 Proof
     Induct_on ‘pi’
- >- rw [principle_hnf_reduce]
- >> rw []
+ >- (rw [principle_hnf_reduce] \\
+     MATCH_MP_TAC hnf_has_hnf >> art [])
+ >> rpt GEN_TAC >> STRIP_TAC
  >> Cases_on ‘h’ (* ‘x’ *) >> fs []
  >> qabbrev_tac ‘M = LAMl (MAP FST pi) t’
  >> ‘hnf M’ by rw [Abbr ‘M’, hnf_LAMl]
  >> qabbrev_tac ‘args :term list = MAP VAR (MAP SND pi)’
+ >> Know ‘LAM q M @@ VAR r @* args -h-> [VAR r/q] M @* args’
+ >- (MATCH_MP_TAC hreduce1_appstar >> rw [hreduce1_BETA])
+ >> DISCH_TAC
  >> Know ‘principle_hnf (LAM q M @@ VAR r @* args) =
           principle_hnf ([VAR r/q] M @* args)’
- >- (MATCH_MP_TAC principle_hnf_hreduce1 \\
-     MATCH_MP_TAC hreduce1_appstar >> rw [hreduce1_BETA])
+ >- (MATCH_MP_TAC principle_hnf_hreduce1 >> art [])
+ >> Rewr'
+ >> Know ‘has_hnf (LAM q M @@ VAR r @* args) <=>
+          has_hnf ([VAR r/q] M @* args)’
+ >- (MATCH_MP_TAC hreduce1_has_hnf_cong >> art [])
  >> Rewr'
  >> Know ‘[VAR r/q] M = LAMl (MAP FST pi) ([VAR r/q] t)’
  >- (qunabbrev_tac ‘M’ \\
@@ -882,7 +916,8 @@ Proof
  >> Rewr'
  >> qabbrev_tac ‘N' = tpm [(q,r)] t’
  >> ‘hnf N'’ by rw [Abbr ‘N'’, hnf_tpm]
- >> Know ‘principle_hnf (LAMl (MAP FST pi) N' @* args) = tpm pi N'’
+ >> Know ‘has_hnf (LAMl (MAP FST pi) N' @* args) /\
+          principle_hnf (LAMl (MAP FST pi) N' @* args) = tpm pi N'’
  >- (FIRST_X_ASSUM MATCH_MP_TAC >> rw [Abbr ‘N'’] \\
     ‘r <> y’ by PROVE_TAC [] \\
      Cases_on ‘q = y’ >> rw [])
@@ -939,15 +974,16 @@ QED
         ‘NEWS’, and then call [hnf_cases_genX] using ‘ys’ as the new
          excluded list.
  *)
-Theorem principle_hnf_LAMl_appstar :
+Theorem principle_hnf_tpm_reduce :
     !t xs ys. hnf t /\
               ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
               LENGTH xs = LENGTH ys /\
               DISJOINT (set xs) (set ys) /\
               DISJOINT (set ys) (FV t)
-          ==> principle_hnf (LAMl xs t @* MAP VAR ys) = tpm (ZIP (xs,ys)) t
+          ==> has_hnf (LAMl xs t @* MAP VAR ys) /\
+              principle_hnf (LAMl xs t @* MAP VAR ys) = tpm (ZIP (xs,ys)) t
 Proof
-    RW_TAC std_ss []
+    rpt GEN_TAC >> STRIP_TAC
  >> qabbrev_tac ‘n = LENGTH xs’
  >> qabbrev_tac ‘pi = ZIP (xs,ys)’
  >> ‘xs = MAP FST pi’ by rw [Abbr ‘pi’, MAP_ZIP]
@@ -960,8 +996,32 @@ Proof
      Q.EXISTS_TAC ‘n’ >> art [])
  >> DISCH_TAC
  >> simp []
- >> MATCH_MP_TAC principle_hnf_LAMl_appstar_lemma >> rw []
+ >> MATCH_MP_TAC principle_hnf_tpm_reduce_lemma >> rw []
 QED
+
+Theorem hreduce_tpm_reduce :
+    !t xs ys. hnf t /\
+              ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+              LENGTH xs = LENGTH ys /\
+              DISJOINT (set xs) (set ys) /\
+              DISJOINT (set ys) (FV t) ==>
+              LAMl xs t @* MAP VAR ys -h->* tpm (ZIP (xs,ys)) t
+Proof
+    rpt STRIP_TAC
+ >> Know ‘has_hnf (LAMl xs t @* MAP VAR ys) /\
+          principle_hnf (LAMl xs t @* MAP VAR ys) = tpm (ZIP (xs,ys)) t’
+ >- (MATCH_MP_TAC principle_hnf_tpm_reduce >> art [])
+ >> STRIP_TAC
+ >> METIS_TAC [principle_hnf_thm]
+QED
+
+(* |- !t xs ys.
+        hnf t /\ ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+        LENGTH xs = LENGTH ys /\ DISJOINT (set xs) (set ys) /\
+        DISJOINT (set ys) (FV t) ==>
+        principle_hnf (LAMl xs t @* MAP VAR ys) = tpm (ZIP (xs,ys)) t
+ *)
+Theorem principle_hnf_tpm_reduce' = cj 2 principle_hnf_tpm_reduce
 
 Theorem principle_hnf_beta_reduce1 :
     !v t. hnf t ==> principle_hnf (LAM v t @@ VAR v) = t
@@ -1068,7 +1128,7 @@ Proof
  >> rw [lameq_SYM]
 QED
 
-(* NOTE: this proof has used first principles of solvable terms *)
+(* NOTE: This important theorem has used first principles of solvable terms *)
 Theorem lameq_solvable_cong :
     !M N. M == N ==> (solvable M <=> solvable N)
 Proof
