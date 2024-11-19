@@ -2,10 +2,11 @@
 #
 # HOL4 building environment (Docker), base image
 #
-# e.g. docker buildx build --platform linux/386,linux/amd64,linux/arm64 .
+# e.g. docker buildx build --platform linux/amd64,linux/arm64v8 .
 
-# GitHub Actions recommends Debian-based systems as base images
-FROM --platform=$TARGETPLATFORM binghelisp/hol-dev:base
+FROM binghelisp/hol-dev:base
+
+LABEL org.opencontainers.image.authors="Chun Tian (binghe) <binghe.lisp@gmail.com>"
 
 # The following two arguments are supported by "docker buildx"
 ARG TARGETPLATFORM
@@ -106,7 +107,12 @@ fi
 
 ENV HOL4_SMV_EXECUTABLE=/ML/solvers/NuRV
 
-# necessary TeXlive packages for buliding HOL manuals (+pandoc for Markdown)
-RUN apt-get install -qy texlive-latex-recommended pandoc latexmk texlive-latex-extra \
-                        texlive-fonts-extra texlive-science
+# more packages for buliding HOL manuals (+pandoc for Markdown), etc.
+RUN apt-get install -qy texlive-latex-recommended
+RUN apt-get install -qy pandoc latexmk texlive-latex-extra
+RUN apt-get install -qy texlive-fonts-extra texlive-science
+RUN apt-get clean
+
+# z3 and cvc5 as system packages
+RUN apt-get install -qy z3 cvc5
 RUN apt-get clean

@@ -1,0 +1,12 @@
+--- Makefile.inc.orig	2024-11-12 07:10:57.020568891 +0000
++++ Makefile.inc	2024-11-12 07:11:09.550402058 +0000
+@@ -37,7 +37,7 @@
+ 
+ # This works with most systems, including MacOS X with XCode installed:
+ 
+-CC=gcc
++CC=gcc-13
+ # CC=gcc -mmacosx-version-min=10.7 # for building OS X package
+ # CC=/usr/sepp/bin/gcc		# Solaris at KVL
+ 
+
