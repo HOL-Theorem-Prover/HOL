@@ -9,7 +9,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory
-     relationTheory pairTheory hurdUtils;
+     relationTheory pairTheory hurdUtils rich_listTheory;
 
 open generic_termsTheory binderLib nomsetTheory nomdatatype;
 
@@ -326,10 +326,12 @@ Proof
   simp[tpm_eqr]
 QED
 
-val tpm_CONS = store_thm(
-  "tpm_CONS",
-  ``tpm ((x,y)::pi) t = tpm [(x,y)] (tpm pi t)``,
-  SRW_TAC [][GSYM pmact_decompose]);
+(* NOTE: always use Once with it, to prevent infinite rewriting loops *)
+Theorem tpm_CONS :
+  tpm ((x,y)::pi) t = tpm [(x,y)] (tpm pi t)
+Proof
+  SRW_TAC [][GSYM pmact_decompose]
+QED
 
 Theorem tpm_SNOC :
     tpm (SNOC (x,y) pi) t = tpm pi (tpm [(x,y)] t)
@@ -469,6 +471,10 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* |- !t. u # t ==> tpm [(v,u)] t = [VAR u/v] t *)
+Theorem fresh_tpm_subst' =
+    ONCE_REWRITE_RULE [pmact_flip_args] fresh_tpm_subst
+
 Theorem tpm_subst:
   !N. tpm pi ([M/v] N) = [tpm pi M/lswapstr pi v] (tpm pi N)
 Proof
@@ -552,7 +558,7 @@ Proof
 QED
 
 (* ‘tpm pi M’ doesn't change M if all its variables are irrelevant *)
-Theorem lemma14b_tpm :
+Theorem tpm_unchanged :
     !pi M. DISJOINT (set (MAP FST pi)) (FV M) /\
            DISJOINT (set (MAP SND pi)) (FV M) ==> tpm pi M = M
 Proof
@@ -584,6 +590,13 @@ Theorem FV_SUB_SUBSET :
   !t u v. closed t ==> FV ([t/v] u) SUBSET FV u
 Proof
     rw [FV_SUB, closed_def]
+QED
+
+Theorem FV_SUB_upperbound :
+  !t u v. FV ([t/v] u) SUBSET FV u UNION FV t
+Proof
+    rw [FV_SUB]
+ >> ASM_SET_TAC []
 QED
 
 Theorem lemma15a:
@@ -737,6 +750,13 @@ Definition FVS_DEF :
    (FVS ((t,x)::rst) = FV t UNION FVS rst)
 End
 
+Theorem FVS_ALT :
+    !ss. FVS ss = BIGUNION (set (MAP (FV o FST) ss))
+Proof
+    Induct_on ‘ss’
+ >> simp [FORALL_PROD, FVS_DEF]
+QED
+
 Theorem FINITE_DOM[simp] :
     !ss. FINITE (DOM ss)
 Proof
@@ -800,6 +820,21 @@ Proof
  >> rw [ISUB_def, SUB_VAR]
 QED
 
+(* |- !y sub. y NOTIN DOM sub ==> VAR y ISUB sub = VAR y *)
+Theorem ISUB_VAR_FRESH' = REWRITE_RULE [GSYM DOM_ALT_MAP_SND] ISUB_VAR_FRESH
+
+Theorem ISUB_unchanged :
+    !ss t. DISJOINT (FV t) (DOM ss) ==> t ISUB ss = t
+Proof
+    Induct_on ‘ss’
+ >- rw [DOM_DEF]
+ >> simp [FORALL_PROD] >> qx_genl_tac [‘N’, ‘v’]
+ >> rw [DOM_DEF]
+ >> simp [lemma14b]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [Once DISJOINT_SYM]
+QED
+
 Theorem tpm1_ISUB_exists[local] :
     !M x y. ?ss. tpm [(x,y)] M = M ISUB ss
 Proof
@@ -834,7 +869,6 @@ Proof
  >> Q.EXISTS_TAC ‘ss' ++ ss’ >> rw []
 QED
 
-
 Theorem FV_ISUB_SUBSET :
     !sub u. FVS sub = {} ==> FV (u ISUB sub) SUBSET FV u
 Proof
@@ -846,6 +880,64 @@ Proof
  >> CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [])
  >> MATCH_MP_TAC FV_SUB_SUBSET
  >> rw [closed_def]
+QED
+
+Theorem FV_ISUB_upperbound :
+    !sub u. FV (u ISUB sub) SUBSET FV u UNION FVS sub
+Proof
+    Induct_on ‘sub’ >- rw []
+ >> SIMP_TAC std_ss [FORALL_PROD]
+ >> rw [FVS_DEF, ISUB_def]
+ >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV ([p_1/p_2] u) UNION FVS sub’
+ >> simp []
+ >> reverse CONJ_TAC >- SET_TAC []
+ (* applying FV_SUB_upperbound *)
+ >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV u UNION FV p_1’
+ >> simp [FV_SUB_upperbound]
+ >> SET_TAC []
+QED
+
+(* This is a direct generalization of fresh_tpm_subst
+
+   NOTE: cf. fresh_tpm_isub' for another version without REVERSE.
+ *)
+Theorem fresh_tpm_isub :
+    !xs ys t. LENGTH xs = LENGTH ys /\ ALL_DISTINCT ys /\
+              DISJOINT (set ys) (FV t)
+          ==> tpm (ZIP (xs,ys)) t =
+              t ISUB (ZIP (MAP VAR (REVERSE ys), REVERSE xs))
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘pi = ZIP (xs,ys)’
+ >> ‘xs = MAP FST pi /\ ys = MAP SND pi’ by simp [Abbr ‘pi’, MAP_ZIP]
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set ys) (FV t)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘ALL_DISTINCT ys’ MP_TAC
+ >> NTAC 2 POP_ORW
+ >> KILL_TAC
+ >> Q.ID_SPEC_TAC ‘t’
+ >> Induct_on ‘pi’ >- simp []
+ >> simp [FORALL_PROD]
+ >> qx_gen_tac ‘u’
+ >> qx_gen_tac ‘v’
+ >> rw [Once tpm_CONS]
+ >> qabbrev_tac ‘xs = MAP FST pi’
+ >> qabbrev_tac ‘ys = MAP SND pi’
+ >> ‘LENGTH xs = LENGTH ys’ by rw [Abbr ‘xs’, Abbr ‘ys’]
+ >> qabbrev_tac ‘ss = ZIP (MAP VAR (REVERSE ys),REVERSE xs)’
+ >> Know ‘ZIP (MAP VAR (REVERSE ys) ++ [VAR v],REVERSE xs ++ [u]) =
+          ss ++ [(VAR v,u)]’
+ >- simp [GSYM ZIP_APPEND]
+ >> Rewr'
+ >> simp [GSYM ISUB_APPEND]
+ >> MATCH_MP_TAC fresh_tpm_subst'
+ >> Suff ‘v NOTIN (FV t UNION FVS ss)’
+ >- METIS_TAC [FV_ISUB_upperbound, SUBSET_DEF]
+ >> Know ‘FVS ss = set ys’
+ >- (simp [FVS_ALT, Abbr ‘ss’, MAP_ZIP, MAP_MAP_o] \\
+     rw [Once EXTENSION] >> EQ_TAC >> rw [MEM_MAP] >- fs [] \\
+     Q.EXISTS_TAC ‘{x}’ >> simp [])
+ >> Rewr'
+ >> CCONTR_TAC >> gs []
 QED
 
 (* ----------------------------------------------------------------------
@@ -1240,7 +1332,7 @@ Proof
 QED
 
 Theorem fromPairs_DOMSUB_NOT_IN_DOM :
-    !X Xs Ps. ~MEM X Xs /\ (LENGTH Ps = LENGTH Xs) ==>
+    !X Xs Ps. ~MEM X Xs /\ LENGTH Ps = LENGTH Xs ==>
               fromPairs Xs Ps \\ X = fromPairs Xs Ps
 Proof
     rpt STRIP_TAC
@@ -1321,7 +1413,7 @@ Theorem fromPairs_reduce :
     !X Xs P Ps. ~MEM X Xs /\ ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
                 EVERY (\e. X NOTIN (FV e)) Ps /\
                 DISJOINT (set Xs) (FV P) ==>
-         !E. fromPairs (X::Xs) (P::Ps) ' E = [P/X] (fromPairs Xs Ps ' E)
+               !E. fromPairs (X::Xs) (P::Ps) ' E = [P/X] (fromPairs Xs Ps ' E)
 Proof
     rpt STRIP_TAC
  >> Know `fromPairs (X::Xs) (P::Ps) = (fromPairs Xs Ps) |+ (X,P)`
@@ -1425,16 +1517,48 @@ Proof
  >> Q.EXISTS_TAC ‘n’ >> art []
 QED
 
-Theorem fromPairs_FOLDR' :
+Theorem fromPairs_ISUB :
     !Xs Ps E. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
               EVERY (\p. DISJOINT (set Xs) (FV p)) Ps ==>
-              (fromPairs Xs Ps) ' E =
-              FOLDR (\(x,y) e. [y/x] e) E (ZIP (Xs,Ps))
+              (fromPairs Xs Ps) ' E = E ISUB REVERSE (ZIP (Ps,Xs))
 Proof
-    rpt STRIP_TAC
- >> MATCH_MP_TAC fromPairs_FOLDR >> art []
- >> fs [FEVERY_DEF, EVERY_MEM]
- >> RW_TAC std_ss [MEM_ZIP]
+    Induct_on ‘Xs’
+ >- rw [fromPairs_def, FUPDATE_LIST_THM]
+ >> rw []
+ >> Cases_on ‘Ps’ >- fs []
+ >> fs [fromPairs_def] >> rename1 ‘v # P’
+ (* RHS rewriting *)
+ >> REWRITE_TAC [GSYM ISUB_APPEND, GSYM SUB_ISUB_SINGLETON]
+ (* LHS rewriting *)
+ >> rw [fromPairs_def, FUPDATE_LIST_THM]
+ >> Know ‘(FEMPTY :string |-> term) |+ (v,P) |++ ZIP (Xs,t) =
+          (FEMPTY |++ ZIP (Xs,t)) |+ (v,P)’
+ >- (MATCH_MP_TAC FUPDATE_FUPDATE_LIST_COMMUTES \\
+     rw [MAP_ZIP])
+ >> Rewr'
+ >> qabbrev_tac ‘fm = (FEMPTY :string |-> term) |++ ZIP (Xs,t)’
+ >> ‘FDOM fm = set Xs’ by rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, MAP_ZIP]
+ (* applying ssub_update_apply_SUBST' *)
+ >> Know ‘(fm |+ (v,P)) ' E = [fm ' P/v] (fm ' E)’
+ >- (MATCH_MP_TAC ssub_update_apply_SUBST' >> rw [] \\
+    ‘fm = fromPairs Xs t’ by rw [Abbr ‘fm’, fromPairs_def] \\
+     POP_ORW \\
+     Q.PAT_X_ASSUM ‘MEM k Xs’ MP_TAC >> rw [MEM_EL] \\
+     Know ‘fromPairs Xs t ' (EL n Xs) = EL n t’
+     >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘EVERY _ t’ MP_TAC >> rw [EVERY_MEM, MEM_EL] \\
+     POP_ASSUM (MP_TAC o (Q.SPEC ‘EL n t’)) \\
+     impl_tac >- (Q.EXISTS_TAC ‘n’ >> art []) \\
+     rw [DISJOINT_ALT'])
+ >> Rewr'
+ >> Know ‘fm ' P = P’
+ >- (MATCH_MP_TAC ssub_14b \\
+     rw [GSYM DISJOINT_DEF, Once DISJOINT_SYM])
+ >> Rewr'
+ >> Suff ‘fm ' E = E ISUB REVERSE (ZIP (t,Xs))’ >- rw []
+ >> qunabbrev_tac ‘fm’
+ >> FIRST_X_ASSUM irule >> rw []
+ >> fs [EVERY_CONJ]
 QED
 
 Theorem fromPairs_self :
@@ -1562,8 +1686,75 @@ Proof
  >> SET_TAC []
 QED
 
+(* If, additionally, ‘ALL_DISTINCT xs /\ DISJOINT (set xs) (set ys)’ holds,
+   the REVERSE in conclusion can be eliminated.
+ *)
+Theorem fresh_tpm_isub' :
+    !xs ys t. LENGTH xs = LENGTH ys /\
+              ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+              DISJOINT (set xs) (set ys) /\
+              DISJOINT (set ys) (FV t)
+          ==> tpm (ZIP (xs,ys)) t = t ISUB (ZIP (MAP VAR ys, xs))
+Proof
+    rw [fresh_tpm_isub]
+ >> qabbrev_tac ‘Ps = MAP VAR ys’
+ >> ‘LENGTH Ps = LENGTH ys’ by rw [Abbr ‘Ps’]
+ >> simp [MAP_REVERSE, GSYM REVERSE_ZIP]
+ (* applying fromPairs_ISUB *)
+ >> Know ‘t ISUB REVERSE (ZIP (Ps,xs)) = fromPairs xs Ps ' t’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC fromPairs_ISUB >> art [] \\
+     rw [EVERY_MEM, MEM_EL, Abbr ‘Ps’] \\
+     simp [EL_MAP] \\
+     Q.PAT_X_ASSUM ‘DISJOINT (set xs) (set ys)’ MP_TAC \\
+     rw [DISJOINT_ALT'] \\
+     POP_ASSUM MATCH_MP_TAC >> simp [EL_MEM])
+ >> Rewr'
+ >> qabbrev_tac ‘xs' = REVERSE xs’
+ >> qabbrev_tac ‘Ps' = REVERSE Ps’
+ >> ‘xs = REVERSE xs' /\ Ps = REVERSE Ps'’ by rw [Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> NTAC 2 POP_ORW
+ >> ‘LENGTH xs' = LENGTH xs /\ LENGTH Ps' = LENGTH Ps’
+      by rw [Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> simp [GSYM REVERSE_ZIP]
+ >> Know ‘t ISUB REVERSE (ZIP (Ps',xs')) = fromPairs xs' Ps' ' t’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC fromPairs_ISUB >> art [] \\
+     CONJ_TAC >- rw [Abbr ‘xs'’, ALL_DISTINCT_REVERSE] \\
+     rw [EVERY_MEM, MEM_EL, Abbr ‘Ps'’, Abbr ‘Ps’, Abbr ‘xs'’] \\
+     simp [EL_MAP] \\
+     Q.PAT_X_ASSUM ‘DISJOINT (set xs) (set ys)’ MP_TAC \\
+     rw [DISJOINT_ALT'] \\
+     POP_ASSUM MATCH_MP_TAC >> simp [EL_MEM])
+ >> Rewr'
+ >> simp [fromPairs_def, Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> qabbrev_tac ‘fm = FEMPTY |++ ZIP (xs,Ps)’
+ >> qabbrev_tac ‘fm' = FEMPTY |++ ZIP (REVERSE xs,REVERSE Ps)’
+ >> Suff ‘fm = fm'’ >- rw []
+ >> ‘FDOM fm = set xs /\ FDOM fm' = set xs’
+       by rw [Abbr ‘fm’, Abbr ‘fm'’, GSYM fromPairs_def, FDOM_fromPairs,
+              LIST_TO_SET_REVERSE]
+ >> rw [fmap_EXT, MEM_EL]
+ (* applying fromPairs_FAPPLY_EL *)
+ >> simp [Abbr ‘fm’, Abbr ‘fm'’, GSYM fromPairs_def]
+ >> Know ‘fromPairs xs Ps ' (EL n xs) = EL n Ps’
+ >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> art [])
+ >> Rewr'
+ >> qabbrev_tac ‘xs' = REVERSE xs’
+ >> qabbrev_tac ‘Ps' = REVERSE Ps’
+ >> ‘xs = REVERSE xs' /\ Ps = REVERSE Ps'’ by rw [Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> NTAC 2 POP_ORW
+ >> ‘LENGTH xs' = LENGTH xs /\ LENGTH Ps' = LENGTH Ps’
+      by rw [Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> simp [EL_REVERSE, Once EQ_SYM_EQ]
+ >> MATCH_MP_TAC fromPairs_FAPPLY_EL
+ >> simp [Abbr ‘xs'’, Abbr ‘Ps'’, ALL_DISTINCT_REVERSE]
+QED
+
 (*****************************************************************************)
 (*  Simultaneous substitution given by a function containing infinite keys   *)
+(*                                                                           *)
+(*  NOTE: This definition is not used (it doesn't have finite "support").    *)
 (*****************************************************************************)
 
 Definition fssub_def :
