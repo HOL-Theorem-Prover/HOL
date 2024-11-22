@@ -304,6 +304,8 @@ val _ =
        systeml (pfx @ extras @ [srcobj])
      end
   in
+    print "Calling mllex on HolLex\n";
+    systeml [mllex, "HolLex"];
     print "Calling mllex on QuoteFilter\n";
     systeml [mllex, "QuoteFilter"];
     compile [] "holpathdb.sig";
@@ -323,12 +325,13 @@ val _ =
     compile [] "Holdep_tokens.sml";
     compile [] "AttributeSyntax.sig";
     compile [] "AttributeSyntax.sml";
+    compile [] "HolLex.sml";
     compile [] "QuoteFilter.sml";
     compile [] "terminal_primitives.sig";
     compile [] "terminal_primitives.sml";
     compile [] "Holmake_tools_dtype.sml";
-    compile [] "QFRead.sig";
-    compile [] "QFRead.sml";
+    compile [] "HolParser.sig";
+    compile [] "HolParser.sml";
     compile ["-I", "mosml"] "Holdep.sig";
     compile ["-I", "mosml"] "Holdep.sml";
     compile [] "Holmake_tools.sig";
@@ -501,30 +504,23 @@ val _ = FileSys.remove (fullPath [holdir, "bin", "buildheap"]) handle _ => ()
 
 val _ = let
   val _ = print "Attempting to compile quote filter ... "
-  val tgt0 = fullPath [holdir, "tools/quote-filter/quote-filter"]
   val tgt = fullPath [holdir, "bin/unquote"]
   val cwd = FileSys.getDir()
-  val _ = FileSys.chDir (fullPath [holdir, "tools/quote-filter"])
-  val _ = systeml [fullPath [holdir, "bin/Holmake"], "cleanAll"]
 in
-  if Process.isSuccess (systeml [fullPath [holdir, "bin/Holmake"]]) then let
-      val instrm = BinIO.openIn tgt0
-      val ostrm = BinIO.openOut tgt
-      val v = BinIO.inputAll instrm
-    in
-      BinIO.output(ostrm, v);
-      BinIO.closeIn instrm;
-      BinIO.closeOut ostrm;
-      mk_xable tgt;
-      print "Quote-filter built\n"
-    end handle e =>
-               (print ("Quote-filter build failed: " ^ General.exnMessage e);
-                OS.Process.exit OS.Process.failure)
-  else (
-    print "Quote-filter build failed\n";
-    OS.Process.exit OS.Process.failure
-  )
-end
+  FileSys.chDir (fullPath [holdir, "tools/quote-filter"]);
+  compile [] "qfilter_util.sig";
+  compile [] "qfilter_util.sml";
+  compile ["-I", holmakedir] "quote-filter.sml";
+  echo "Linking quote-filter.uo";
+  systeml [compiler, "-o", tgt, "-I", holmakedir,
+    "-I", Path.concat(holmakedir, "mosml"),
+    "quote-filter.uo"];
+  mk_xable tgt;
+  print "Quote-filter built\n"
+end handle e => (
+  print ("Quote-filter build failed: " ^ General.exnMessage e);
+  OS.Process.exit OS.Process.failure
+)
 
 (*---------------------------------------------------------------------------
     Configure the muddy library.

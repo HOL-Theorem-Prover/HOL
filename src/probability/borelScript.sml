@@ -8120,8 +8120,8 @@ Theorem IN_MEASURABLE_BOREL_POW_EXP:
         (!x. x IN space a ==> h x = (f x) pow (g x)) ==> h IN Borel_measurable a
 Proof
     rw[] >> simp[Once IN_MEASURABLE_BOREL_PLUS_MINUS] >>
-    ‘!P. {x | P (g x)} INTER space a IN subsets a` by (rw[] >>
-        `{x | P (g x)} INTER space a = BIGUNION {{x | g x = n} INTER space a | P n}’ by (
+    ‘!P. {x | P (g x)} INTER space a IN subsets a’ by (rw[] >>
+        ‘{x | P (g x)} INTER space a = BIGUNION {{x | g x = n} INTER space a | P n}’ by (
             rw[Once EXTENSION,IN_BIGUNION] >> eq_tac >> strip_tac >> gvs[] >>
             qexists_tac ‘{y | g y = g x} INTER space a’ >> simp[] >> qexists_tac ‘g x’ >> simp[]) >>
         pop_assum SUBST1_TAC >> irule SIGMA_ALGEBRA_COUNTABLE_UNION >>
@@ -8130,11 +8130,11 @@ Proof
     map_every (fn (pos,tm,qex,ths) => irule_at pos tm >> qexistsl_tac qex >> simp ths) [
         (Pos hd,IN_MEASURABLE_BOREL_ADD',[‘λx. fn_minus f x pow g x * indicator_fn {x | EVEN (g x)} x’,
             ‘λx. fn_plus f x pow g x * indicator_fn {x | $< 0 (g x)} x’],[]),
-        (Pos (el 2),IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | EVEN (g x)}`,`λx. fn_minus f x pow g x’],[]),
+        (Pos (el 2),IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | EVEN (g x)}’,‘λx. fn_minus f x pow g x’],[]),
         (Pos (el 2),IN_MEASURABLE_BOREL_INDICATOR,[‘{x | EVEN (g x)} INTER space a’],[]),
-        (Pos (el 3),IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | $< 0 (g x)}`,`λx. fn_plus f x pow g x’],[]),
+        (Pos (el 3),IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | $< 0 (g x)}’,‘λx. fn_plus f x pow g x’],[]),
         (Pos (el 2),IN_MEASURABLE_BOREL_INDICATOR,[‘{x | $< 0 (g x)} INTER space a’],[]),
-        (Pos last,IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | ODD (g x)}`,`λx. fn_minus f x pow g x’],[]),
+        (Pos last,IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | ODD (g x)}’,‘λx. fn_minus f x pow g x’],[]),
         (Pos (el 2),IN_MEASURABLE_BOREL_INDICATOR,[‘{x | ODD (g x)} INTER space a’],[])] >>
     pop_assum kall_tac >>
     ‘!pf. pf IN Borel_measurable a /\ (!x. 0 <= pf x) ==> (λx. pf x pow g x) IN Borel_measurable a’ by (
@@ -8142,7 +8142,7 @@ Proof
         qexistsl_tac [‘λn x. pf x pow n * indicator_fn {x | g x = n} x’] >> simp[pow_pos_le,INDICATOR_FN_POS,le_mul] >>
         simp[RIGHT_AND_FORALL_THM] >> strip_tac >>
         map_every (fn (pos,tm,qex,ths) => irule_at pos tm >> simp[] >> qexistsl_tac qex >> simp ths) [
-            (Any,IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | g x = n}`,`λx. pf x pow n’],[]),
+            (Any,IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | g x = n}’,‘λx. pf x pow n’],[]),
             (Pos hd,IN_MEASURABLE_BOREL_POW',[‘n’,‘pf’],[]),
             (Pos hd,IN_MEASURABLE_BOREL_INDICATOR,[‘{x | g x = n} INTER space a’],[indicator_fn_def])] >>
         rw[] >> qspecl_then [‘g x’,‘pf x pow g x’] mp_tac ext_suminf_sing_general >>

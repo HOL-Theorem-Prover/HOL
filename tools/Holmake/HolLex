@@ -1,0 +1,418 @@
+(* this is an -*- sml -*- file, or near enough *)
+fun inc r = (r := !r + 1)
+fun dec r = (r := !r - 1)
+
+datatype decl
+  = DefinitionDecl of {
+      head: int * string, quote: qbody, termination: {tok: int, decls: decls} option,
+      end_tok: int option, stop: int}
+  | DatatypeDecl of {head: int * string, quote: qbody, end_tok: int option, stop: int}
+  | QuoteDecl of {head: int * string, quote: qbody, end_tok: int option, stop: int}
+  | QuoteEqnDecl of {head: int * string, quote: qbody, end_tok: int option, stop: int}
+  | InductiveDecl of {head: int * string, quote: qbody, end_tok: int option, stop: int}
+  | BeginType of int * string
+  | BeginSimpleThm of int * string
+  | TheoremDecl of {
+      head: int * string, quote: qbody, proof_tok: (int * string) option,
+      body: decls, qed: int option, stop: int}
+  | Chunk of int
+  | Semi of int
+  | FullQuote of {
+      head: int * string, type_q: int option,
+      quote: qbody, end_tok: (int * string) option, stop: int}
+  | Quote of {head: int * string, quote: qbody, end_tok: (int * string) option, stop: int}
+  | String of int * int
+  | LinePragma of int
+  | LinePragmaWith of int * string
+  | FilePragma of int
+  | FilePragmaWith of int * string
+
+and decls = Decls of {start: int, decls: decl list, stop: int}
+
+and antiq
+  = Ident of int * string
+  | Paren of {start_tok: int, decls: decls, end_tok: int option, stop: int}
+  | BadAntiq of int
+
+and qdecl
+  = QuoteAntiq of int * antiq
+  | DefinitionLabel of int * string
+  | QuoteComment of int * int
+
+and qbody = QBody of {start: int, toks: qdecl list, stop: int}
+
+datatype token
+  = Decl of decl * token option (* from INITIAL *)
+  | CloseParen of int (* from INITIAL *)
+  | QED of int (* from INITIAL *)
+  | EndTok of int (* from INITIAL, quote, holcomment *)
+  | Comment (* from comment *)
+  | Antiq of antiq * token option (* from ANTIQ *)
+  | StringEnd of int (* from string *)
+  | HolStrLitEnd of int * string (* from holstrlit *)
+  | ProofLine of int * string (* from quote, holcomment *)
+  | TerminationTok of int (* from quote, holcomment *)
+  | QuoteEnd of int * string (* from quote, holcomment *)
+  | FullQuoteEnd of int * string (* from quote, holcomment *)
+  | QDecl of qdecl * token option (* from quote *)
+  | EOF of int (* from every state *)
+
+type lexresult = token
+
+datatype state = STATE of {
+  parseError: int * int -> string -> unit,
+  pardepth: int ref,
+  comdepth: int ref,
+  comstart: (int * int) option ref
+}
+
+fun noDecls pos = Decls {start = pos, decls = [], stop = pos}
+
+exception Unreachable
+datatype 'a test_result = TestOk of 'a | TestBad | TestSkip
+
+fun forceCloseComment (STATE {parseError, comdepth, comstart, ...}) stop buf =
+  case !comstart of
+    SOME pos => (
+    parseError pos "unterminated comment";
+    comdepth := 0; comstart := NONE;
+    QuoteComment (#1 pos, stop) :: buf)
+  | _ => buf
+
+fun parseQuoteBody (arg as STATE {parseError, ...}) continue pos test = let
+  fun go buf lookahead = let
+    val tk = case lookahead of SOME tk => tk | NONE => continue()
+    fun finish stop =
+      QBody {start = #2 pos, toks = rev (forceCloseComment arg stop buf), stop = stop}
+    fun cont (p, t) strong =
+      case test tk of
+        TestBad =>
+        if strong then (parseError pos "unterminated quote"; (finish p, NONE, p, SOME tk))
+        else (parseError (p, p + size t) ("unexpected '"^t^"'"); go buf NONE)
+      | TestSkip => go buf NONE
+      | TestOk out => (finish p, SOME out, p + size t, NONE)
+    in case tk of
+        QDecl (qd, extra) => go (qd :: buf) extra
+      | QuoteEnd pt => cont pt false
+      | FullQuoteEnd pt => cont pt false
+      | ProofLine pt => cont pt true
+      | TerminationTok p => cont (p, "Termination") true
+      | EndTok p => cont (p, "End") true
+      | EOF p => (parseError pos "unterminated quote"; (finish p, NONE, p, SOME tk))
+      | _ => raise Unreachable
+    end
+  in go [] NONE end
+
+fun parseDecls (STATE {parseError, pardepth, ...}) continue pos test = let
+  fun go buf lookahead = let
+    val tk = case lookahead of SOME tk => tk | NONE => continue()
+    fun finish stop = Decls {start = pos, decls = rev buf, stop = stop}
+    fun cont (p, t) strong =
+      case test tk of
+        NONE =>
+        if strong then (finish p, NONE, p, SOME tk)
+        else (parseError (p, p + size t) ("unexpected '"^t^"'"); go buf NONE)
+      | out => (finish p, out, p + size t, NONE)
+    in case tk of
+        Decl (tk, look) => go (tk :: buf) look
+      | CloseParen p => cont (p, ")") false
+      | EndTok p => cont (p, "End") true
+      | QED p => cont (p, "QED") true
+      | EOF p => (finish p, NONE, p, SOME tk)
+      | _ => raise Unreachable
+    end
+  val n = !pardepth
+  in pardepth := 0; go [] NONE before pardepth := n end
+
+fun fullQuoteMatch "``" "``" = true
+  | fullQuoteMatch "\226\128\156" "\226\128\157" = true
+  | fullQuoteMatch _ _ = false
+
+fun quoteMatch "`" "`" = true
+  | quoteMatch "\226\128\152" "\226\128\153" = true
+  | quoteMatch _ _ = false
+
+fun strlitMatch "\"" "\"" = true
+  | strlitMatch "\226\128\185" "\226\128\186" = true
+  | strlitMatch "\194\171" "\194\187" = true
+  | strlitMatch _ _ = false
+
+fun parseQuoteEndDef yyarg continue pos text mk = let
+  val (q, end_tok, stop, extra) = parseQuoteBody yyarg continue (pos, pos + size text) (fn
+      EndTok p => TestOk p
+    | QuoteEnd _ => TestSkip
+    | FullQuoteEnd _ => TestSkip
+    | _ => TestBad)
+  in
+    Decl (mk {head = (pos, text), quote = q, end_tok = end_tok, stop = stop}, extra)
+  end
+
+fun parseFullQuote (yyarg as STATE {parseError, ...}) continue pos yytext type_q = let
+  val qlen = if String.sub(yytext,0) = #"`" then 2 else 3
+  val text = String.substring (yytext, 0, qlen)
+  val (q, end_tok, stop, extra) = parseQuoteBody yyarg continue (pos, pos + qlen) (fn
+      FullQuoteEnd (tk as (p, t)) => (
+        if fullQuoteMatch text t then () else parseError (p, p + size t) ("unexpected '"^t^"'");
+        TestOk tk)
+    | QuoteEnd _ => TestSkip
+    | _ => TestBad)
+  in
+    Decl (FullQuote {head = (pos, text), type_q = type_q,
+      quote = q, end_tok = end_tok, stop = stop}, extra)
+  end
+
+fun parseQuote (yyarg as STATE {parseError, ...}) continue pos yytext = let
+  val qlen = if String.sub(yytext,0) = #"`" then 1 else 3
+  val text = String.substring (yytext, 0, qlen)
+  val (q, end_tok, stop, extra) = parseQuoteBody yyarg continue (pos, pos + qlen) (fn
+      QuoteEnd (tk as (p, t)) => (
+        if quoteMatch text t then () else parseError (p, p + size t) ("unexpected '"^t^"'");
+        TestOk tk)
+    | FullQuoteEnd _ => TestSkip
+    | _ => TestBad)
+  in
+    Decl (Quote {head = (pos, text), quote = q, end_tok = end_tok, stop = stop}, extra)
+  end
+
+fun eof (_:state) = EOF
+
+%%
+%structure HolLex
+%s string stringlbrk comment holcomment quote holstrlit holstrlitlbrk ANTIQ;
+%arg (UserDeclarations.STATE {pardepth, comdepth, comstart, parseError});
+%full
+%posarg
+%eofpos
+
+letter = [A-Za-z];
+digit = [0-9];
+nonspecial_symbol = [-!%&$+/<>?@~|#*\\^];
+symbol = {nonspecial_symbol} | [=:];
+symbolident = ":" {symbol}+ | "=" {symbol}+ | {nonspecial_symbol} {symbol}*;
+alphaMLid_tailchar = ({letter} | {digit} | _ | "'");
+alphaMLid = {letter} {alphaMLid_tailchar}*;
+alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
+quotedsymbolid = "\"" [^\034]+ "\"";
+ws = [\ \t];
+newline = "\n" | "\013\n";
+optallws = ({ws}|{newline})*;
+forcedallws = ({ws}|{newline})+;
+attributeValue_tailchar = {alphaMLid_tailchar} | ".";
+attributeValue = {letter} {attributeValue_tailchar}*;
+attributeEqnRHS = {attributeValue}({forcedallws}{attributeValue})*;
+defn_attribute =
+  {alphaMLid}{optallws} ("="{optallws}{attributeEqnRHS}{optallws})?;
+defn_attribute_list = {defn_attribute} (","({ws}|{newline})*{defn_attribute})*;
+MLid =  {alphaMLid} | {symbolident};
+QUALMLid = {MLid} ("." {MLid})*;
+QUALalphaMLid = {alphaMLid} ("." {alphaMLid})*;
+locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
+lowergreek = "\206" [\177-\191] | "\207" [\128-\137];
+fullquotebegin = "``" | "\226\128\156";
+fullquoteend = "``" | "\226\128\157";
+quotebegin = "`" | "\226\128\152";
+quoteend = "`" | "\226\128\153";
+Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{alphaMLid_list}"]")?;
+Quote_eqnpfx = "Quote"{ws}+{alphaMLid}{ws}*"="{ws}*{QUALalphaMLid}{ws}*":";
+Quote_pfx = "Quote"{ws}+{QUALalphaMLid}{ws}*":";
+HOLconjunction = "/\092" | "\226\136\167";
+DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ | {HOLconjunction};
+DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]";
+Definitionpfx = "Definition"{ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?{ws}*":";
+declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|"infix"[lr]?|"local";
+Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
+HOLSTRLITstart = "\"" | "\226\128\185" | "\194\171";
+HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
+ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]")?;
+%%
+
+<INITIAL>"(*" => (
+  comdepth := 1; YYBEGIN comment;
+  case continue() of
+    Comment => (YYBEGIN INITIAL; continue())
+  | EOF p => (parseError (yypos, yyend) "unterminated comment"; EOF p)
+  | _ => raise Unreachable
+);
+<INITIAL>"(" => (inc pardepth; continue());
+<INITIAL>")" => (if !pardepth < 1 then CloseParen yypos else (dec pardepth; continue()));
+<INITIAL>^"Datatype"{ws}*":" => (
+  YYBEGIN quote;
+  parseQuoteEndDef yyarg continue yypos yytext DatatypeDecl before YYBEGIN INITIAL
+);
+<INITIAL>^("Type"|"Overload"){ws}+({alphaMLid}|{quotedsymbolid})("["{alphaMLid_list}"]")?{ws}*"=" =>
+  (Decl (BeginType (yypos, yytext), NONE));
+<INITIAL>{Theorempfx}{ws}*":" => (let
+  val _ = YYBEGIN quote
+  val (q, proof_tok, stop, extra) =
+    parseQuoteBody yyarg continue (yypos, yyend) (fn
+        ProofLine l => TestOk l
+      | QuoteEnd _ => TestSkip
+      | FullQuoteEnd _ => TestSkip
+      | _ => TestBad)
+  val _ = YYBEGIN INITIAL
+  val (decls, qed, stop, extra) =
+    case extra of
+      SOME (QED p) => (noDecls stop, SOME p, p + 3, NONE)
+    | SOME _ => (noDecls stop, NONE, stop, extra)
+    | NONE => parseDecls yyarg continue stop (fn QED p => SOME p | _ => NONE)
+  in
+    Decl (TheoremDecl {
+      head = (yypos, yytext), quote = q, proof_tok = proof_tok,
+      body = decls, qed = qed, stop = stop}, extra)
+  end);
+<INITIAL>^"QED" => (QED yypos);
+<INITIAL>^{Definitionpfx} => (let
+  val _ = YYBEGIN quote
+  val (q, tok, stop, extra) = parseQuoteBody yyarg continue (yypos, yypos + size yytext) (fn
+      TerminationTok p => TestOk (p, true)
+    | EndTok p => TestOk (p, false)
+    | QuoteEnd _ => TestSkip
+    | FullQuoteEnd _ => TestSkip
+    | _ => TestBad)
+  val _ = YYBEGIN INITIAL
+  val (termination, end_tok, stop, extra) =
+    case (tok, extra) of
+      (SOME (p, true), NONE) => let
+      val (decls, end_tok, stop, extra) = parseDecls yyarg continue stop
+        (fn EndTok p => SOME p | _ => NONE)
+      in (SOME {tok = p, decls = decls}, end_tok, stop, extra) end
+    | (SOME (p, false), NONE) => (NONE, SOME p, stop, NONE)
+    | _ => (NONE, NONE, stop, extra)
+  in
+    Decl (DefinitionDecl {
+      head = (yypos, yytext), quote = q,
+      termination = termination, end_tok = end_tok, stop = stop}, extra)
+  end);
+<INITIAL>^{Quote_pfx} => (
+  YYBEGIN quote;
+  parseQuoteEndDef yyarg continue yypos yytext QuoteDecl before YYBEGIN INITIAL
+);
+<INITIAL>^{Quote_eqnpfx} => (
+  YYBEGIN quote;
+  parseQuoteEndDef yyarg continue yypos yytext QuoteEqnDecl before YYBEGIN INITIAL
+);
+<INITIAL>{Theorempfx}({ws}|{newline})+"=" => (Decl (BeginSimpleThm (yypos, yytext), NONE));
+<INITIAL>^{Inductivepfx} => (
+  YYBEGIN quote;
+  parseQuoteEndDef yyarg continue yypos yytext InductiveDecl before YYBEGIN INITIAL
+);
+<INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) => (
+  YYBEGIN quote;
+  yybufpos := !yybufpos - 1; (* unread last character *)
+  parseFullQuote yyarg continue yypos yytext (SOME (yyend - 2)) before YYBEGIN INITIAL
+);
+<INITIAL>{fullquotebegin} {ws}* ":" {newline} => (let
+  val _ = YYBEGIN quote
+  val nllen = if String.sub(yytext, size yytext-2) = #":" then 1 else 2
+  val _ = yybufpos := !yybufpos - nllen; (* unread newline *)
+  in parseFullQuote yyarg continue yypos yytext (SOME (yyend - nllen - 1)) before YYBEGIN INITIAL end);
+<INITIAL>{fullquotebegin} {ws}* ":^" => (
+  YYBEGIN quote;
+  yybufpos := !yybufpos - 1; (* unread last character *)
+  parseFullQuote yyarg continue yypos yytext (SOME (yyend - 2)) before YYBEGIN INITIAL
+);
+<INITIAL>{fullquotebegin} => (
+  YYBEGIN quote;
+  parseFullQuote yyarg continue yypos yytext NONE before YYBEGIN INITIAL
+);
+<INITIAL>{quotebegin} => (
+  YYBEGIN quote;
+  parseQuote yyarg continue yypos yytext before YYBEGIN INITIAL
+);
+<INITIAL>"#(LINE)" => (Decl (LinePragma yypos, NONE));
+<INITIAL>"#(LINE="[0-9]+")" => (Decl (LinePragmaWith (yypos, yytext), NONE));
+<INITIAL>"#(FILE)" => (Decl (FilePragma yypos, NONE));
+<INITIAL>"#(FILE="[-A-Za-z0-9/$()_.]+")" => (Decl (FilePragmaWith (yypos, yytext), NONE));
+<INITIAL>"\"" => (
+  YYBEGIN string;
+  case continue() of
+    StringEnd p => (YYBEGIN INITIAL; Decl (String (yypos, p), NONE))
+  | tk as EOF p => (
+    parseError (yypos, yyend) "unterminated string";
+    YYBEGIN INITIAL; Decl (String (yypos, p), SOME tk))
+  | _ => raise Unreachable);
+<INITIAL>";"{newline} =>
+  (if !pardepth = 0 then Decl (Semi yypos, SOME (Decl (Chunk yyend, NONE))) else continue());
+<INITIAL>";" => (if !pardepth = 0 then Decl (Semi yypos, NONE) else continue());
+<INITIAL>{declforms} => (if !pardepth = 0 then Decl (Chunk yypos, NONE) else continue());
+<INITIAL>{MLid} => (continue());
+<INITIAL>{newline}"End" => (EndTok (yyend-3));
+
+<string>"\\\\"|"\\\"" => (continue());
+<string>"\\"({ws}|{newline}) => (YYBEGIN stringlbrk; continue());
+<string>"\"" => (StringEnd yyend);
+<string>[^\\""\n\015]{1,10} => (continue());
+
+<stringlbrk>"\\" => (YYBEGIN string; continue());
+
+<comment,holcomment>"(*" => (inc comdepth; continue());
+<comment>"*)" => (dec comdepth; if !comdepth < 1 then Comment else continue());
+<comment>[^\n()*]{1,10} => (continue());
+
+<quote>{ProofLine} => (ProofLine (yypos, yytext));
+<quote>{HOLSTRLITstart} => (let
+  fun go () =
+    case continue() of
+      HolStrLitEnd (endpos, endq) =>
+        if strlitMatch yytext endq then
+          (YYBEGIN quote; continue())
+        else go ()
+    | EOF p => (parseError (yypos, yyend) "unterminated string"; EOF p)
+    | _ => raise Unreachable
+  in YYBEGIN holstrlit; go () end);
+
+<quote>"^"({symbol}|{ws}|"^"+) => (continue());
+<quote>"^"{newline} => (
+  yybufpos := !yybufpos - (yyend - yypos) + 1; (* unread newline *)
+  continue()
+);
+<quote>{newline}{DefinitionLabel} => (let
+  val ss = Substring.dropl Char.isSpace (Substring.full yytext)
+  val n = yypos + #2 (Substring.base ss)
+  in QDecl (DefinitionLabel (n, Substring.string ss), NONE) end);
+<quote>"(*" => (comdepth := 1; comstart := SOME (yypos, yyend); YYBEGIN holcomment; continue());
+<quote,holcomment>{quoteend} => (QuoteEnd (yypos, yytext));
+<quote,holcomment>{newline}"End" => (EndTok (yyend-3));
+<quote,holcomment>{newline}"Termination" => (TerminationTok (yyend-11));
+<quote,holcomment>{fullquoteend} => (FullQuoteEnd (yypos, yytext));
+<quote>"^" => (
+  YYBEGIN ANTIQ;
+  case continue() of
+    Antiq (aq, extra) => (YYBEGIN quote; QDecl (QuoteAntiq (yypos, aq), extra))
+  | EOF p => (parseError (p, p) "unexpected EOF"; EOF p)
+  | _ => raise Unreachable
+);
+<quote>{ws}+ => (continue());
+
+<holcomment>"*)" => (
+  dec comdepth;
+  if !comdepth < 1 then
+    case !comstart of
+      SOME (pos, _) => (comstart := NONE; YYBEGIN quote; QDecl (QuoteComment (pos, yyend), NONE))
+    | _ => raise Unreachable
+  else continue()
+);
+
+<holstrlit>"\\"{HOLSTRLITend} => (continue());
+<holstrlit>{HOLSTRLITend} => (HolStrLitEnd (yypos, yytext));
+<holstrlit>"\\\\" => (continue());
+<holstrlit>"\\"{newline} => (YYBEGIN holstrlitlbrk; continue());
+<holstrlit>"\\"{ws} => (YYBEGIN holstrlitlbrk; continue());
+<holstrlit>"\\" . => (continue());
+
+<holstrlitlbrk>"\\" => (YYBEGIN holstrlit; continue());
+
+<ANTIQ>{MLid} => (Antiq (Ident (yypos, yytext), NONE));
+<ANTIQ>"(" => (let
+  val _ = YYBEGIN INITIAL
+  val (decls, end_tok, stop, extra) =
+    parseDecls yyarg continue yyend (fn CloseParen p => SOME p | _ => NONE)
+  in Antiq (Paren {start_tok = yypos, decls = decls, end_tok = end_tok, stop = stop}, extra) end);
+<ANTIQ>({ws}|{newline})+ => (continue());
+<ANTIQ>. => (
+  parseError (yypos, yyend) "expected identifier or parenthesized group";
+  yybufpos := !yybufpos - 1; (* unread last character *)
+  Antiq (BadAntiq yypos, NONE)
+);
+
+.|{newline} => (continue());

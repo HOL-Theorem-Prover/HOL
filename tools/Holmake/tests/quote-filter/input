@@ -45,7 +45,7 @@ End
 
 (* next_sym reads the next symbol from a string, returning NONE if at eof *)
 Definition next_sym_def:
-     foo = isPREFIX "(*" (c::str) 
+     foo = isPREFIX "(*" (c::str)
 Termination
   WF_REL_TAC `measure (LENGTH o FST) ` THEN REPEAT STRIP_TAC
 End
@@ -85,11 +85,11 @@ End
 Theorem thmname = expression
 
 Quote bar_x:
-  another quotation (* with unfinished comment 
+  another quotation (* with unfinished comment
   and bare " with ^foo and ^
 End
 
 val x = #(LINE) + 10;
 val #(LINE=11) y = #(LINE)
-val s = #(FNAME) #(FNAME=foo.sml)
-val s' = #(FNAME) (* #(FNAME) *)
+val s = #(FILE) #(FILE=foo.sml)
+val s' = #(FILE) (* #(FILE) *)

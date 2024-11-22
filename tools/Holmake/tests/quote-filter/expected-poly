@@ -3,12 +3,12 @@
 (Parse.Term [QUOTE " (*#loc 3 3*)\"foo\""])
 [QUOTE " (*#loc 4 2*)foo = #\"^`\""]
 [QUOTE " (*#loc 5 2*)\"\\\"\""]
-(Parse.Term [QUOTE " (*#loc 6 3*)\t"])
+(Parse.Term [QUOTE " (*#loc 6 3*)\009"])
 (Parse.Term [QUOTE " (*#loc 7 3*)(* foo"])
-[QUOTE " (*#loc 8 2*)^"]
+[QUOTE " (*#loc 8 2*)^^"]
 "\"" (Parse.Term [QUOTE " (*#loc 9 8*)foo"])
 "\\" [QUOTE " (*#loc 10 7*)foo"]
-[QUOTE " (*#loc 11 2*)putting unescaped backticks into ", ANTIQUOTE ((antiquotes #"`")),QUOTE " (*#loc 11 53*) is fine"]
+[QUOTE " (*#loc 11 2*)putting unescaped backticks into ", ANTIQUOTE (antiquotes #"`"), QUOTE " (*#loc 11 53*) is fine"]
 (Parse.Term [QUOTE " (*#loc 12 3*)foo\n\
 \bar"])
 (Parse.Term [QUOTE " (*#loc 14 3*)\"an embedded string with \\\n\
@@ -21,74 +21,75 @@
 [QUOTE " (*#loc 21 2*)s1 ^^\n\
 \s2"]
 (* ` *)
-[QUOTE " (*#loc 24 2*)", ANTIQUOTE ((fromMLnum nm)),QUOTE " (*#loc 24 17*) (* *) "];
+[QUOTE " (*#loc 24 2*)", ANTIQUOTE (fromMLnum nm), QUOTE " (*#loc 24 17*) (* *) "];
 (* (*  *) `;*)
 
-val (even_rules,even_ind,even_cases) = (fn q => fn _ => IndDefLib.xHol_reln "even" q) [QUOTE "( (*#loc 27 16*)\n\
-\ even 0) /\\ (\n\
-\ (!n. even n ==> odd (n + 1))) /\\ (\n\
-\\n\
-\  (!m. odd m ==> even (m + 1)))"
-] NONE; val _ = CompilerSpecific.quietbind "val even_strongind = DB.fetch \"-\" \"even_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";val even_0 = boolLib.save_thm("even_0[simp]", Drule.cj 1 even_rules handle HOL_ERR _ => boolTheory.TRUTH);val even_suc = boolLib.save_thm("even_suc", Drule.cj 3 even_rules handle HOL_ERR _ => boolTheory.TRUTH);
+val (even_rules,even_ind,even_cases) = IndDefLib.xHol_reln "even" [QUOTE "( (*#loc 27 16*)\n\
+\ (*#loc 28 12*) even 0\n\
+\) /\\ ( (*#loc 29 5*) (!n. even n ==> odd (n + 1))\n\
+\) /\\ ( (*#loc 30 12*)\n\
+\  (!m. odd m ==> even (m + 1))\n\
+\)"]; val _ = CompilerSpecific.quietbind "val even_strongind = DB.fetch \"-\" \"even_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"; val even_0 = boolLib.save_thm("even_0[simp]", Drule.cj 1 even_rules handle HOL_ERR _ => boolTheory.TRUTH); val even_suc = boolLib.save_thm("even_suc", Drule.cj 3 even_rules handle HOL_ERR _ => boolTheory.TRUTH);
 
 val foo = TotalDefn.qDefine "foo" [QUOTE " (*#loc 34 16*)\n\
-\  foo x = if x < 2 then 1 else x * foo (x - 1)"
-] NONE; val _ = CompilerSpecific.quietbind "val foo_ind = DB.fetch \"-\" \"foo_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";
+\  foo x = if x < 2 then 1 else x * foo (x - 1)\n\
+\"] NONE; val _ = CompilerSpecific.quietbind "val foo_ind = DB.fetch \"-\" \"foo_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";
 
-val (compile_rel_rules,compile_rel_ind,compile_rel_cases) = (fn q => fn _ => IndDefLib.xHol_reln "compile_rel" q) [QUOTE "( (*#loc 38 23*)\n\
+val (compile_rel_rules,compile_rel_ind,compile_rel_cases) = IndDefLib.xHol_reln "compile_rel" [QUOTE "( (*#loc 38 23*)\n\
 \  (* (*  *) *)\n\
-\\n\
-\  compile_rel foo bar) /\\ (\n\
-\\n\
-\  compile_rel foo bar)"
-] NONE; val _ = CompilerSpecific.quietbind "val compile_rel_strongind = DB.fetch \"-\" \"compile_rel_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";val compile_rel_Var = boolLib.save_thm("compile_rel_Var", Drule.cj 1 compile_rel_rules handle HOL_ERR _ => boolTheory.TRUTH);val compile_rel_Ret = boolLib.save_thm("compile_rel_Ret", Drule.cj 2 compile_rel_rules handle HOL_ERR _ => boolTheory.TRUTH);
+\ (*#loc 40 8*)\n\
+\  compile_rel foo bar\n\
+\) /\\ ( (*#loc 42 8*)\n\
+\  compile_rel foo bar\n\
+\)"]; val _ = CompilerSpecific.quietbind "val compile_rel_strongind = DB.fetch \"-\" \"compile_rel_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"; val compile_rel_Var = boolLib.save_thm("compile_rel_Var", Drule.cj 1 compile_rel_rules handle HOL_ERR _ => boolTheory.TRUTH); val compile_rel_Ret = boolLib.save_thm("compile_rel_Ret", Drule.cj 2 compile_rel_rules handle HOL_ERR _ => boolTheory.TRUTH);
 
 (* next_sym reads the next symbol from a string, returning NONE if at eof *)
 val next_sym_def = TotalDefn.qDefine "next_sym_def" [QUOTE " (*#loc 47 25*)\n\
-\     foo = isPREFIX \"(*\" (c::str) "] (SOME (
+\     foo = isPREFIX \"(*\" (c::str)\n\
+\"] (SOME (
   WF_REL_TAC [QUOTE " (*#loc 50 15*)measure (LENGTH o FST) "] THEN REPEAT STRIP_TAC
-));val _ = CompilerSpecific.quietbind "val next_sym_ind = DB.fetch \"-\" \"next_sym_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";
+)); val _ = CompilerSpecific.quietbind "val next_sym_ind = DB.fetch \"-\" \"next_sym_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";
 
-(Parse.Term [QUOTE " (*#loc 52 4*)f \226\128\185foo\"\226\128\186"])
+(Parse.Term [QUOTE " (*#loc 53 4*)f \226\128\185foo\"\226\128\186"])
 
-val sexpPEG_def = TotalDefn.qDefine "sexpPEG_def" [QUOTE " (*#loc 54 24*)\n\
-\  #\"\\\\\";"
-] NONE; val _ = CompilerSpecific.quietbind "val sexpPEG_ind = DB.fetch \"-\" \"sexpPEG_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";
+val sexpPEG_def = TotalDefn.qDefine "sexpPEG_def" [QUOTE " (*#loc 55 24*)\n\
+\  #\"\\\\\";\n\
+\"] NONE; val _ = CompilerSpecific.quietbind "val sexpPEG_ind = DB.fetch \"-\" \"sexpPEG_ind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";
 
-val sexpPEG_start = (fn rule => boolLib.save_thm("sexpPEG_start[simp]",rule)) ( SIMP_CONV(srw_ss())[sexpPEG_def](Parse.Term [QUOTE " (*#loc 58 66*)sexpPEG.start"])
+val sexpPEG_start = boolLib.save_thm("sexpPEG_start[simp]", SIMP_CONV(srw_ss())[sexpPEG_def](Parse.Term [QUOTE " (*#loc 59 66*)sexpPEG.start"])
 
-);val _ = bossLib.Datatype [QUOTE " (*#loc 60 11*) foo = bar"
-];
+);val _ = bossLib.Datatype [QUOTE " (*#loc 61 11*) foo = bar\n\
+\"];
 
-val (reln_rules,reln_ind,reln_cases) = (fn q => fn _ => IndDefLib.xHol_reln "reln" q) [QUOTE "( (*#loc 63 16*)\n\
-\   !x y. x < y ==> reln (x + 1) y) /\\ (\n\
-\\n\
-\   !x y. reln x y ==> reln y x) /\\ (\n\
-\\n\
-\   !x. reln x 0)"
-] NONE; val _ = CompilerSpecific.quietbind "val reln_strongind = DB.fetch \"-\" \"reln_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";val reln_zero = boolLib.save_thm("reln_zero", Drule.cj 3 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);
+val (reln_rules,reln_ind,reln_cases) = IndDefLib.xHol_reln "reln" [QUOTE "( (*#loc 64 16*)\n\
+\   !x y. x < y ==> reln (x + 1) y\n\
+\) /\\ ( (*#loc 66 5*)\n\
+\   !x y. reln x y ==> reln y x\n\
+\) /\\ ( (*#loc 68 9*)\n\
+\   !x. reln x 0\n\
+\)"]; val _ = CompilerSpecific.quietbind "val reln_strongind = DB.fetch \"-\" \"reln_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"; val reln_zero = boolLib.save_thm("reln_zero", Drule.cj 3 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);
 
-val (reln_rules,reln_ind,reln_cases) = (fn q => fn _ => IndDefLib.xHol_reln "reln" q) [QUOTE "( (*#loc 71 16*)\n\
-\ !x y. x < y ==> reln (x + 1) y) /\\ (\n\
-\\n\
+val (reln_rules,reln_ind,reln_cases) = IndDefLib.xHol_reln "reln" [QUOTE "( (*#loc 72 16*)\n\
+\ (*#loc 73 10*) !x y. x < y ==> reln (x + 1) y\n\
+\) /\\ ( (*#loc 74 8*)\n\
 \   (!x y. reln x y ==> reln y x) /\\\n\
 \   (!x. reln x 0) /\\\n\
-\   (!y. reln 100 y))"
-] NONE; val _ = CompilerSpecific.quietbind "val reln_strongind = DB.fetch \"-\" \"reln_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;";val reln_name1 = boolLib.save_thm("reln_name1", Drule.cj 1 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);val reln_sym = boolLib.save_thm("reln_sym", Drule.cj 2 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);
+\   (!y. reln 100 y)\n\
+\)"]; val _ = CompilerSpecific.quietbind "val reln_strongind = DB.fetch \"-\" \"reln_strongind\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"; val reln_name1 = boolLib.save_thm("reln_name1", Drule.cj 1 reln_rules handle HOL_ERR _ => boolTheory.TRUTH); val reln_sym = boolLib.save_thm("reln_sym", Drule.cj 2 reln_rules handle HOL_ERR _ => boolTheory.TRUTH);
 
-val foo = ba'r[QUOTE " (*#loc 79 18*)\n\
+val foo = ba'r [QUOTE " (*#loc 80 18*)\n\
 \  this is a quotation with\n\
-\ nested \"string\\n\""
-];
+\ nested \"string\\n\"\n\
+\"];
 
-val thmname = (fn rule => boolLib.save_thm("thmname",rule)) ( expression
+val thmname = boolLib.save_thm("thmname", expression
 
-);val _ = bar_x[QUOTE " (*#loc 86 13*)\n\
-\  another quotation (* with unfinished comment \n\
-\  and bare \" with ", ANTIQUOTE(foo),QUOTE " (*#loc 88 23*) and ^"
-];
+);val _ = bar_x [QUOTE " (*#loc 87 13*)\n\
+\  another quotation (* with unfinished comment\n\
+\  and bare \" with ^foo and ^\n\
+\"];
 
-val x = 91 + 10;
+val x = 92 + 10;
 val   y = 11
 val s = ""  
-val s' = "foo.sml" (* #(FNAME) *)
+val s' = "foo.sml" (* #(FILE) *)

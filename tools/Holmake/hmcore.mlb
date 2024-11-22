@@ -15,9 +15,9 @@ Holdep_tokens.sig
 Holdep_tokens.sml
 AttributeSyntax.sig
 AttributeSyntax.sml
-QuoteFilter.sml
-QFRead.sig
-QFRead.sml
+HolLex.sml
+HolParser.sig
+HolParser.sml
 Holdep.sig
 Holdep.sml
 regexpMatch.sig

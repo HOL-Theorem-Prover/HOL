@@ -425,13 +425,14 @@ val _ = work_in_dir
 val _ = work_in_dir
           "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
           (fn () => (OS.FileSys.chDir "..";
-                     systeml [lexer, "QuoteFilter"] ;
+                     systeml [lexer, "HolLex"];
+                     systeml [lexer, "QuoteFilter"];
                      OS.FileSys.chDir "poly";
                      polyc_compile (SOME "../mlton/Holmake.mlb")
                                    "poly-Holmake.ML" hmakebin))
 
 (* unquote - the quotation filter *)
-val _ = work_in_dir "unquote." qfdir
+val _ = work_in_dir "unquote" qfdir
                     (fn () => (polyc_compile NONE "poly-unquote.ML" qfbin))
 
 (* holdeptool *)

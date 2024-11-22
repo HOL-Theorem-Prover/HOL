@@ -6,6 +6,7 @@ val _ = use "Holmake/Systeml.sml"
 
 val _ = use "../tools/Holmake/AttributeSyntax.sig";
 val _ = use "../tools/Holmake/AttributeSyntax.sml";
+val _ = use "../tools/Holmake/HolLex.sml";
 val _ = use "../tools/Holmake/QuoteFilter.sml";
 val _ = use "../tools/Holmake/HM_SimpleBuffer.sig";
 val _ = use "../tools/Holmake/HM_SimpleBuffer.sml";
@@ -17,6 +18,8 @@ val _ = use "../tools/Holmake/HOLFileSys.sig";
 val _ = use "../tools/Holmake/HOLFileSys.sml";
 val _ = use "../tools/Holmake/QFRead.sig";
 val _ = use "../tools/Holmake/QFRead.sml";
+val _ = use "../tools/Holmake/HolParser.sig";
+val _ = use "../tools/Holmake/HolParser.sml";
 val _ = use "poly/quse.sig";
 val _ = use "poly/quse.sml";
 

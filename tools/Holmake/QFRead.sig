@@ -17,7 +17,7 @@ val streamToReader : bool -> string -> TextIO.instream -> reader
 
    The strings in {input,stream}ToReader allow the specification of the
    filename associated with the stream; the quotation filter will quote
-   this name back to the user with the #(FNAME) directive.
+   this name back to the user with the #(FILE) directive.
 *)
 
 (* In inputFile and fileToReader, the determination is made on whether or
