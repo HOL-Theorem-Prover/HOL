@@ -1068,6 +1068,14 @@ Proof
       MATCH_MP_TAC div_add >> rw [extreal_of_num_def] ]
 QED
 
+(* The same theorem using ‘uniform_distribution’ *)
+Theorem prob_space_on_finite_set' :
+    !p. FINITE (p_space p) /\ p_space p <> {} /\ events p = POW (p_space p) /\
+        prob p = uniform_distribution (p_space p,events p) ==> prob_space p
+Proof
+    simp [uniform_distribution_def, prob_space_on_finite_set]
+QED
+
 (* ************************************************************************* *)
 
 Theorem distribution_distr :
@@ -3368,8 +3376,7 @@ Proof
  >> EQ_TAC >> rw [] (* only one goal remains *)
  >> Q.ABBREV_TAC ‘V = \n. if n IN N then E n else space (A n)’
  (* find the maximal element m of N *)
- >> MP_TAC (FINITE_is_measure_maximal |> Q.GEN ‘m’
-                                      |> INST_TYPE [“:'a” |-> “:num”]
+ >> MP_TAC (FINITE_is_measure_maximal |> INST_TYPE [“:'a” |-> “:num”]
                                       |> Q.SPECL [‘I’, ‘N’])
  >> rw [is_measure_maximal_def] >> rename1 ‘m IN N’
  >> Q.PAT_X_ASSUM ‘!E n. E IN count1 n --> subsets o A ==> P’
@@ -5463,21 +5470,37 @@ Definition converge_def[nocompute] :
     (!n. X n IN lp_space r p) /\ Y IN lp_space r p /\
     ((\n. expectation p (\x. (abs (X n x - Y x)) powr r)) --> 0) sequentially) /\
 
-   (* X(n) converges to Y in distribution (see [4, p.425] or [2, p.96]) *)
+   (* X(n) converges to Y in distribution (see [4, p.425] or [2, p.96])
+
+      NOTE: the bounded and continuous function is limited to ‘:real -> real’ and
+      this implies only ‘real_random_variable’ can be supported, for now.
+    *)
    (converge (X :num -> 'a -> extreal) (Y :'a -> extreal) (in_distribution p) =
-    !f. f bounded_on UNIV /\ (f o Normal) continuous_on UNIV ==>
-        ((\n. expectation p (f o (X n))) --> expectation p (f o Y)) sequentially)
+    !(f :real -> real).
+         bounded (IMAGE f UNIV) /\ f continuous_on UNIV ==>
+        ((\n. expectation p (Normal o f o real o (X n))) -->
+         expectation p (Normal o f o real o Y)) sequentially)
 End
 
 (* "-->" was defined in util_probTheory for IN_DFUNSET *)
 Overload "-->" = “converge”
 
-(* |- !p X Y.
+(* |- !X Y p.
+        (X --> Y) (in_distribution p) <=>
+        !f. bounded (IMAGE f univ(:real)) /\ f continuous_on univ(:real) ==>
+            ((\n. expectation p (Normal o f o real o X n)) -->
+             expectation p (Normal o f o real o Y)) sequentially
+
+   NOTE: This definition will be used in examples/probability/distributionScript.sml.
+   It's here because the above [converge_def] is not exported.
+ *)
+Theorem converge_in_dist_def = cj 4 converge_def
+
+(* |- !X Y p.
         (X --> Y) (almost_everywhere p) <=>
         AE x::p. ((\n. X n x) --> Y x) sequentially
  *)
-Theorem converge_AE =
-   (List.nth (CONJUNCTS converge_def, 0)) |> SPEC_ALL |> (Q.GENL [`p`, `X`, `Y`])
+Theorem converge_AE = cj 1 converge_def
 
 (* The old definition based on LIM_SEQUENTIALLY *)
 Theorem converge_AE_def :
@@ -5492,14 +5515,13 @@ Proof
  >> rw []
 QED
 
-(* |- !p X Y.
+(* |- !X Y p.
         (X --> Y) (in_probability p) <=>
         !e. 0 < e /\ e <> PosInf ==>
             ((\n. prob p {x | x IN p_space p /\ e < abs (X n x - Y x)}) --> 0)
               sequentially
  *)
-Theorem converge_PR =
-   (List.nth (CONJUNCTS converge_def, 1)) |> SPEC_ALL |> (Q.GENL [`p`, `X`, `Y`])
+Theorem converge_PR = cj 2 converge_def
 
 (* The old definition based on LIM_SEQUENTIALLY *)
 Theorem converge_PR_def :
@@ -5555,14 +5577,13 @@ Proof
  >> PROVE_TAC [PROB_FINITE]
 QED
 
-(* |- !p X Y r.
+(* |- !X Y r p.
         (X --> Y) (in_lebesgue r p) <=>
         (!n. X n IN lp_space r p) /\ Y IN lp_space r p /\
         ((\n. expectation p (\x. abs (X n x - Y x) powr r)) --> 0)
           sequentially
  *)
-Theorem converge_LP =
-   (List.nth (CONJUNCTS converge_def, 2)) |> SPEC_ALL |> (Q.GENL [`p`, `X`, `Y`, `r`])
+Theorem converge_LP = cj 3 converge_def
 
 Theorem converge_LP_def :
     !p X Y r. prob_space p /\
@@ -5595,31 +5616,6 @@ Proof
  >> simp [Abbr ‘f’]
  >> MATCH_MP_TAC integral_pos >> rw [powr_pos]
 QED
-
-(* |- !p X Y.
-        (X --> Y) (in_distribution p) <=>
-        !f. f bounded_on univ(:extreal) /\
-            f o Normal continuous_on univ(:real) ==>
-            ((\n. expectation p (f o X n)) --> expectation p (f o Y))
-              sequentially
- *)
-Theorem converge_in_dist =
-   (List.nth (CONJUNCTS converge_def, 3)) |> SPEC_ALL |> (Q.GENL [`p`, `X`, `Y`])
-
-(* tidy up theory exports, learnt from Magnus Myreen *)
-val _ = List.app Theory.delete_binding
-  ["convergence_mode_TY_DEF",
-   "convergence_mode_case_def",
-   "convergence_mode_size_def",
-   "convergence_mode_11",
-   "convergence_mode_Axiom",
-   "convergence_mode_case_cong",
-   "convergence_mode_case_eq",
-   "convergence_mode_distinct",
-   "convergence_mode_induction",
-   "convergence_mode_nchotomy",
-   "datatype_convergence_mode",
-   "converge_def"];
 
 (* alternative definition of converge_LP based on absolute moment *)
 Theorem converge_LP_alt_absolute_moment :
@@ -9104,6 +9100,21 @@ Proof
  >> DISCH_THEN (art o wrap)
 QED
 
+(* tidy up theory exports, learnt from Magnus Myreen *)
+val _ = List.app Theory.delete_binding
+  ["convergence_mode_TY_DEF",
+   "convergence_mode_case_def",
+   "convergence_mode_size_def",
+   "convergence_mode_11",
+   "convergence_mode_Axiom",
+   "convergence_mode_case_cong",
+   "convergence_mode_case_eq",
+   "convergence_mode_distinct",
+   "convergence_mode_induction",
+   "convergence_mode_nchotomy",
+   "datatype_convergence_mode",
+   "converge_def"];
+
 val _ = export_theory ();
 
 (* References:
@@ -9111,7 +9122,7 @@ val _ = export_theory ();
   [1] Kolmogorov, A.N.: Foundations of the Theory of Probability (Grundbegriffe der
       Wahrscheinlichkeitsrechnung). Chelsea Publishing Company, New York. (1950).
   [2] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
-  [3] Rosenthal, J.S.: A First Look at Rigorous Probability Theory (Second Editoin).
+  [3] Rosenthal, J.S.: A First Look at Rigorous Probability Theory (Second Edition).
       World Scientific Publishing Company (2006).
   [4] Shiryaev, A.N.: Probability-1. Springer-Verlag New York (2016).
   [5] Shiryaev, A.N.: Probability-2. Springer-Verlag New York (2019).

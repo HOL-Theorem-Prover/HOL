@@ -1135,8 +1135,7 @@ Proof
       POP_ASSUM (MP_TAC o (Q.SPEC `P`)) \\
       RW_TAC std_ss [SUBSET_REFL] \\
       Cases_on ‘P = {}’ >- rw [] \\
-      MP_TAC (FINITE_is_measure_maximal |> Q.GEN ‘m’
-                                        |> INST_TYPE [“:'a” |-> “:num”]
+      MP_TAC (FINITE_is_measure_maximal |> INST_TYPE [“:'a” |-> “:num”]
                                         |> Q.SPECL [‘I’, ‘P’]) \\
       rw [is_measure_maximal_def, IN_APP] \\
       Q.EXISTS_TAC ‘SUC x’ >> rw [] \\

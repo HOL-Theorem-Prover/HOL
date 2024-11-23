@@ -2713,6 +2713,23 @@ Proof
  >> rw [TAKE_LENGTH_TOO_LONG]
 QED
 
+(* NOTE: This theorem can also be proved by IS_PREFIX_LENGTH_ANTI and
+   prefixes_is_prefix_total, but IS_PREFIX_EQ_TAKE is more natural.
+ *)
+Theorem IS_PREFIX_EQ_REWRITE :
+    !l1 l2 l. l1 <<= l /\ l2 <<= l ==> (l1 = l2 <=> LENGTH l1 = LENGTH l2)
+Proof
+    rw [IS_PREFIX_EQ_TAKE]
+ >> rw [LENGTH_TAKE, TAKE_EQ_REWRITE]
+QED
+
+Theorem IS_PREFIX_ALL_DISTINCT :
+    !l l1. l1 <<= l /\ ALL_DISTINCT l ==> ALL_DISTINCT l1
+Proof
+    rw [IS_PREFIX_EQ_TAKE']
+ >> MATCH_MP_TAC ALL_DISTINCT_TAKE >> rw []
+QED
+
 Theorem IS_PREFIX_FRONT_MONO :
     !l1 l2. l1 <> [] /\ l2 <> [] /\ l1 <<= l2 ==> FRONT l1 <<= FRONT l2
 Proof

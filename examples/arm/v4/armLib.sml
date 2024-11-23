@@ -43,7 +43,7 @@ in
        val X = variant vlist (mk_var("x",type_of M))
        val tm = list_mk_exists(vlist, mk_eq(X,M))
    in
-     GEN_ALL (METIS_PROVE (map (fn (a,(b,c)) => b) (find "nchotomy")) tm)
+     GEN_ALL (METIS_PROVE (map (fn (a,(b,_,_)) => b) (find "nchotomy")) tm)
    end
 end;
 

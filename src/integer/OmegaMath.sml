@@ -11,9 +11,7 @@ val _ = Parse.temp_set_grammars int_arith_grammars
 val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV bool_rewrites
 
 
-fun ERR f msg = HOL_ERR { origin_structure = "OmegaMath",
-                          origin_function = f,
-                          message = msg}
+val ERR = mk_HOL_ERR "OmegaMath"
 val lhand = rand o rator
 
 (* ----------------------------------------------------------------------

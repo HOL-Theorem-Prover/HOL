@@ -15,14 +15,14 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttEval"
 fun catch_err msg f x =
-  f x handle HOL_ERR {origin_structure,origin_function,message} =>
+  f x handle HOL_ERR {origin_structure,origin_function,source_location,message} =>
   (print_endline
-    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ message);
+    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ":" ^ message);
   raise ERR "tttEval" "error caught (see log)")
 fun catch_err_ignore msg f x =
-  f x handle HOL_ERR {origin_structure,origin_function,message} =>
+  f x handle HOL_ERR {origin_structure,origin_function,source_location,message} =>
   (print_endline
-    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ message))
+    (msg ^ ":" ^ origin_structure ^ ":" ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ":" ^ message))
 
 
 (* -------------------------------------------------------------------------

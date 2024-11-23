@@ -252,9 +252,7 @@ in fn {relation,solver,depther,freevars} =>
     if allunch then
       (* note critical link between this exception and traversal code in
          Traverse.FIRSTCQC_CONV *)
-      raise HOL_ERR { origin_structure = "Opening",
-                      origin_function = "CONGPROC",
-                      message = "Congruence gives no change" }
+      raise mk_HOL_ERR "Opening" "CONGPROC" "Congruence gives no change"
     else (trace(3,PRODUCE(tm,"congruence rule",final_thm)); final_thm)
   end
 end;

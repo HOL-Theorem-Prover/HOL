@@ -112,6 +112,9 @@ fun fromInt n =
   if (Int.<(n,0)) then (false, Arbnumcore.fromInt(Int.-(0, n)))
   else (true, Arbnumcore.fromInt n)
 
+fun toReal (true,n) = Arbnumcore.toReal n
+  | toReal (false,n) = Real.~(Arbnumcore.toReal n)
+
 
 fun min (i,j) = if i < j then i else j
 fun max (i,j) = if i < j then j else i

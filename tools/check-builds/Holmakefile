@@ -2,7 +2,7 @@ CLINE_OPTIONS = --no_overlay
 
 ifdef POLY
 ./checkbuilds: poly-check-builds.ML check_builds.sml
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 endif
 
 EXTRA_CLEANS = checkbuilds

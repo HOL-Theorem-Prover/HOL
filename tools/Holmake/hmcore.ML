@@ -21,10 +21,10 @@ in
   myuse (OS.Path.concat(hmakedir, "poly")) "HFS_NameMunge.sml";
   app appthis ["HOLFileSys", "regexpMatch", "parse_glob",
                "Holdep_tokens", "AttributeSyntax"] ;
-  app (myuse hmakedir) ["QuoteFilter.sml", "Holmake_tools_dtype.sml",
+  app (myuse hmakedir) ["HolLex.sml", "Holmake_tools_dtype.sml",
                         "terminal_primitives.sig",
                         "poly-terminal-prims.ML"];
-  app appthis ["QFRead", "Holdep", "Holmake_tools", "internal_functions",
+  app appthis ["HolParser", "Holdep", "Holmake_tools", "internal_functions",
                "Holmake_types",
                "ReadHMF"]
 end;

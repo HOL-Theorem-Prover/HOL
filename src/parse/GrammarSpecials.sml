@@ -88,17 +88,15 @@ struct
   val constructorsfn =
       ref (NONE : ({Thy:string,Tyop:string} -> term list) option)
 
+  val ERR = mk_HOL_ERR "GrammarSpecials"
+
   fun compile_pattern_match t =
       case !compilefn of
-        NONE => raise HOL_ERR {origin_function = "compile_pattern_match",
-                               origin_structure = "GrammarSpecials",
-                               message = "Function not initialised"}
+        NONE => raise ERR "compile_pattern_match" "Function not initialised"
       | SOME f => f t
   fun type_constructors s =
       case !constructorsfn of
-        NONE => raise HOL_ERR {origin_function = "type_constructors",
-                               origin_structure = "GrammarSpecials",
-                               message = "Function not initialised"}
+        NONE => raise ERR "type_constructors" "Function not initialised"
       | SOME f => f s
 
   fun set_case_specials (cmp,cnst) = (compilefn := SOME cmp;

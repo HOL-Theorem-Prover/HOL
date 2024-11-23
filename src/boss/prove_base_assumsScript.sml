@@ -893,6 +893,19 @@ val th59 = store_thm
   conj_tac >- MATCH_ACCEPT_TAC filter_nil
   \\ MATCH_ACCEPT_TAC filter_cons);
 
+val map_nil = hd(amatch``Data_List_map _ Data_List_nil``);
+val map_cons = hd(amatch``Data_List_map _ (Data_List_cons _ _)``);
+
+(* |- (!f. Data_List_map f Data_List_nil = Data_List_nil) /\
+      !f h t.
+          Data_List_map f (Data_List_cons h t) =
+          Data_List_cons (f h) (Data_List_map f t)
+ *)
+val th60 = store_thm
+  ("th60", el 60 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC map_nil
+  \\ MATCH_ACCEPT_TAC map_cons);
+
 val any_nil = hd(amatch``Data_List_any _ Data_List_nil``);
 val any_cons = hd(amatch``Data_List_any _ (Data_List_cons _ _)``);
 
@@ -900,8 +913,8 @@ val any_cons = hd(amatch``Data_List_any _ (Data_List_cons _ _)``);
       !P h t.
           Data_List_any P (Data_List_cons h t) <=> P h \/ Data_List_any P t
  *)
-val th60 = store_thm
-  ("th60", el 60 goals |> concl,
+val th61 = store_thm
+  ("th61", el 61 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL any_nil))
   \\ MATCH_ACCEPT_TAC any_cons);
 
@@ -912,23 +925,10 @@ val all_cons = hd(amatch``Data_List_all _ (Data_List_cons _ _)``);
       !P h t.
           Data_List_all P (Data_List_cons h t) <=> P h /\ Data_List_all P t
  *)
-val th61 = store_thm
-  ("th61", el 61 goals |> concl,
-  conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL all_nil))
-  \\ MATCH_ACCEPT_TAC all_cons);
-
-val map_nil = hd(amatch``Data_List_map _ Data_List_nil``);
-val map_cons = hd(amatch``Data_List_map _ (Data_List_cons _ _)``);
-
-(* |- (!f. Data_List_map f Data_List_nil = Data_List_nil) /\
-      !f h t.
-          Data_List_map f (Data_List_cons h t) =
-          Data_List_cons (f h) (Data_List_map f t)
- *)
 val th62 = store_thm
   ("th62", el 62 goals |> concl,
-  conj_tac >- MATCH_ACCEPT_TAC map_nil
-  \\ MATCH_ACCEPT_TAC map_cons);
+  conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL all_nil))
+  \\ MATCH_ACCEPT_TAC all_cons);
 
 val append_nil = hd(amatch``Data_List_append Data_List_nil``);
 val append_cons =

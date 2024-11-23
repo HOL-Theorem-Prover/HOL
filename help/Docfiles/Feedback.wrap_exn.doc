@@ -9,11 +9,11 @@ Adds supplementary information to an application of {HOL_ERR}.
 exception, error.
 
 \DESCRIBE
-{wrap_exn s1 s2 (HOL_ERR{origin_structure,origin_function,message})}
+{wrap_exn s1 s2 (HOL_ERR{origin_structure,origin_function,source_location,message})}
 where {s1} typically denotes a structure and {s2} typically denotes
 a function, returns
 
-{HOL_ERR{origin_structure=s1,origin_function=s2,message}}
+{HOL_ERR{origin_structure=s1,origin_function=s2,source_location,message}}
 
 where {origin_structure} and {origin_function} have been added to
 the {message} field. This can be used to achieve a kind of backtrace

@@ -2,6 +2,7 @@ signature AttributeSyntax =
 sig
 
   val mk_strsafe : string -> string
+  val bslash_escape : char -> string
   val bslash_escape_s : string -> string
   val dest_ml_thm_binding : string -> {keyword: string, name : string,
                                        name_attr_original : string,

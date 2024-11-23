@@ -122,9 +122,8 @@ open Rsyntax   (* use records *)
         #Name (dest_var tm)
     else if is_const tm then
         #Name (dest_const tm)
-    else raise HOL_ERR {origin_structure = "define_mutual_functions",
-                origin_function = "term_name",
-                message = "term is not constant or var"}
+    else raise mk_HOL_ERR "define_mutual_functions" "term_name"
+           "term is not constant or var"
 
     fun type_name ty = #Tyop (dest_type ty)
 
@@ -304,10 +303,8 @@ open Rsyntax   (* use records *)
        defined. Also, we return a list telling, for each type, which (if any)
        functions is being defined for that type *)
     fun check_error ftn =
-    raise HOL_ERR {origin_structure = "define_mutual_functions",
-               origin_function = "check_def",
-               message = ("only some cases provided for function " ^
-            (term_name ftn))}
+      raise mk_HOL_ERR "define_mutual_functions" "check_def"
+        ("only some cases provided for function " ^ term_name ftn)
     val one_ty = Type`:one`
     val one_tm = Term`one`
 
@@ -664,11 +661,8 @@ open Rsyntax   (* use records *)
             conjs@(mk_Qtm_body (def_data, exists_data2))
         end
         else
-        raise HOL_ERR {origin_structure = "define_mutual_functions",
-                   origin_function = "mk_Qtm_body",
-                   message = ("illegal variable " ^
-                      (term_name constructor) ^
-                      " in definition")}
+        raise mk_HOL_ERR "define_mutual_functions" "mk_Qtm_body"
+          ("illegal variable " ^ term_name constructor ^ " in definition")
     else
         let val (conj, exists_data2) =
         get_conj_for_cons (datum, exists_data)
@@ -716,20 +710,15 @@ open Rsyntax   (* use records *)
           ftn_type_data
 
     val consts =
-    case fixities
-        of SOME fixes => (map2
-                  (fn name => fn fixity => {const_name = name,
-                            fixity = fixity})
-                  new_ftn_names
-                  fixes
-                  handle (HOL_ERR _) => raise
-                  HOL_ERR {origin_structure = "top",
-                       origin_function =
-                       "define_mutual_functions",
-                       message =
-                       "term is not constant or var"})
-      | NONE => map (fn name => {const_name = name, fixity = Prefix})
-                    new_ftn_names
+      case fixities of
+        SOME fixes => (
+          map2 (fn name => fn fixity => {const_name = name, fixity = fixity})
+            new_ftn_names fixes
+          handle HOL_ERR _ =>
+            raise mk_HOL_ERR "top" "define_mutual_functions"
+              "term is not constant or var")
+      | NONE =>
+        map (fn name => {const_name = name, fixity = Prefix}) new_ftn_names
 
     (* Now we do our definition. *)
     val final = new_specification

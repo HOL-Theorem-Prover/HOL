@@ -126,38 +126,30 @@ val list_Axiom_old = store_thm(
      Now some definitions.
  ---------------------------------------------------------------------------*)
 
-val NULL_DEF = new_recursive_definition
-      {name = "NULL_DEF",
-       rec_axiom = list_Axiom,
-       def = “(NULL []     = T) /\
-                (NULL (h::t) = F)”};
+Definition NULL_DEF:
+  (NULL []     = T) /\
+  (NULL (h::t) = F)
+End
 
-val HD = new_recursive_definition
-      {name = "HD",
-       rec_axiom = list_Axiom,
-       def = “HD (h::t) = h”};
-val _ = export_rewrites ["HD"]
+Definition HD[simp]:
+  HD (h::t) = h
+End
 
-val TL_DEF = new_recursive_definition
-      {name = "TL_DEF",
-       rec_axiom = list_Axiom,
-       def = “(TL [] = []) /\
-              (TL (h::t) = t)”};
-val TL = save_thm("TL",CONJUNCT2 TL_DEF);
-val _ = export_rewrites ["TL_DEF"];
+Definition TL_DEF[simp]:
+  TL [] = [] /\
+  TL (h::t) = t
+End
+Theorem TL = CONJUNCT2 TL_DEF
 
-val SUM = new_recursive_definition
-      {name = "SUM",
-       rec_axiom =  list_Axiom,
-       def = “(SUM [] = 0) /\
-          (!h t. SUM (h::t) = h + SUM t)”};
+Definition SUM:
+  SUM [] = 0 /\
+  SUM (h::t) = h + SUM t
+End
 
-val APPEND = new_recursive_definition
-      {name = "APPEND",
-       rec_axiom = list_Axiom,
-       def = “(!l:'a list. APPEND [] l = l) /\
-                  (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)”};
-val _ = export_rewrites ["APPEND"]
+Definition APPEND[simp]:
+  APPEND [] l = l /\
+  APPEND (h::l1) l2 = h::APPEND l1 l2
+End
 
 val _ = set_fixity "++" (Infixl 480);
 val _ = overload_on ("++", Term‘APPEND’);
@@ -165,33 +157,25 @@ val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
                        TeX = ("\\HOLTokenDoublePlus", 1) }
 
-val FLAT = new_recursive_definition
-      {name = "FLAT",
-       rec_axiom = list_Axiom,
-       def = “(FLAT []     = []) /\
-          (!h t. FLAT (h::t) = APPEND h (FLAT t))”};
-val _ = export_rewrites ["FLAT"]
+Definition FLAT[simp]:
+  FLAT []     = [] /\
+  FLAT (h::t) = APPEND h (FLAT t)
+End
 
-val LENGTH = new_recursive_definition
-      {name = "LENGTH",
-       rec_axiom = list_Axiom,
-       def = “(LENGTH []     = 0) /\
-     (!(h:'a) t. LENGTH (h::t) = SUC (LENGTH t))”};
-val _ = export_rewrites ["LENGTH"]
+Definition LENGTH[simp]:
+  LENGTH []     = 0 /\
+  LENGTH (h::t) = SUC (LENGTH t)
+End
 
-val MAP = new_recursive_definition
-      {name = "MAP",
-       rec_axiom = list_Axiom,
-       def = “(!f:'a->'b. MAP f [] = []) /\
-                   (!f h t. MAP f (h::t) = f h::MAP f t)”};
-val _ = export_rewrites ["MAP"]
+Definition MAP[simp]:
+  MAP f [] = [] /\
+  MAP f (h::t) = f h::MAP f t
+End
 
-val LIST_TO_SET_DEF = new_recursive_definition{
-  name = "LIST_TO_SET_DEF",
-  rec_axiom = list_Axiom,
-  def = “(!x:'a. LIST_TO_SET [] x <=> F) /\
-          (!h:'a t x. LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)”}
-val _ = export_rewrites ["LIST_TO_SET_DEF"]
+Definition LIST_TO_SET_DEF[simp]:
+  (LIST_TO_SET [] x <=> F) /\
+  (LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
+End
 
 val _ = overload_on ("set", “LIST_TO_SET”)
 val _ = overload_on ("MEM", “\h:'a l:'a list. h IN LIST_TO_SET l”)
@@ -210,48 +194,35 @@ Proof
   SRW_TAC [] [FUN_EQ_THM, IN_DEF]
 QED
 
-val FILTER = new_recursive_definition
-      {name = "FILTER",
-       rec_axiom = list_Axiom,
-       def = “(!P. FILTER P [] = []) /\
-             (!(P:'a->bool) h t.
-                    FILTER P (h::t) =
-                         if P h then (h::FILTER P t) else FILTER P t)”};
-val _ = export_rewrites ["FILTER"]
+Definition FILTER[simp]:
+  FILTER P [] = [] /\
+  FILTER P (h::t) = if P h then (h::FILTER P t) else FILTER P t
+End
 
-val FOLDR = new_recursive_definition
-      {name = "FOLDR",
-       rec_axiom = list_Axiom,
-       def = “(!f e. FOLDR (f:'a->'b->'b) e [] = e) /\
-            (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))”};
+Definition FOLDR:
+  FOLDR (f:'a->'b->'b) e [] = e /\
+  FOLDR f e (x::l) = f x (FOLDR f e l)
+End
 
-val FOLDL = new_recursive_definition
-      {name = "FOLDL",
-       rec_axiom = list_Axiom,
-       def = “(!f e. FOLDL (f:'b->'a->'b) e [] = e) /\
-            (!f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l)”};
+Definition FOLDL:
+  FOLDL (f:'b->'a->'b) e [] = e /\
+  FOLDL f e (x::l) = FOLDL f (f e x) l
+End
 
-val EVERY_DEF = new_recursive_definition
-      {name = "EVERY_DEF",
-       rec_axiom = list_Axiom,
-       def = “(!P:'a->bool. EVERY P [] = T)  /\
-                (!P h t. EVERY P (h::t) <=> P h /\ EVERY P t)”};
-val _ = export_rewrites ["EVERY_DEF"]
+Definition EVERY_DEF[simp]:
+  (EVERY P [] <=> T) /\
+  (EVERY P (h::t) <=> P h /\ EVERY P t)
+End
 
-val EXISTS_DEF = new_recursive_definition
-      {name = "EXISTS_DEF",
-       rec_axiom = list_Axiom,
-       def = “(!P:'a->bool. EXISTS P [] = F)
-            /\  (!P h t.      EXISTS P (h::t) <=> P h \/ EXISTS P t)”};
-val _ = export_rewrites ["EXISTS_DEF"]
+Definition EXISTS_DEF[simp]:
+  (EXISTS P [] <=> F) /\
+  (EXISTS P (h::t) <=> P h \/ EXISTS P t)
+End
 
-val EL = new_recursive_definition
-      {name = "EL",
-       rec_axiom = num_Axiom,
-       def = “(!l. EL 0 l = (HD l:'a)) /\
-                (!l:'a list. !n. EL (SUC n) l = EL n (TL l))”};
-
-
+Definition EL:
+  EL 0 l = (HD l:'a) /\
+  EL (SUC n) l = EL n (TL l)
+End
 
 (* ---------------------------------------------------------------------*)
 (* Definition of a function                                             *)
@@ -1255,9 +1226,10 @@ val NOT_NULL_MEM = Q.store_thm
   Cases_on ‘l’ THEN SIMP_TAC bool_ss [EXISTS_OR_THM, MEM, NOT_CONS_NIL, NULL]);
 
 (* Computing EL when n is in numeral representation *)
-val EL_compute = store_thm("EL_compute",
-Term ‘!n. EL n l = if n=0 then HD l else EL (PRE n) (TL l)’,
-INDUCT_TAC THEN ASM_REWRITE_TAC [NOT_SUC, EL, PRE]);
+Theorem EL_compute[allow_rebind]:
+  !n. EL n l = if n=0 then HD l else EL (PRE n) (TL l)
+Proof INDUCT_TAC THEN ASM_REWRITE_TAC [NOT_SUC, EL, PRE]
+QED
 
 (* a version of the above that is safe to use in the simplifier *)
 (* only bother with BIT1/2 cases because the zero case is already provided
@@ -4991,6 +4963,57 @@ Proof
   simp[ADD_CLAUSES, adjacent_rules]
 QED
 
+Theorem adjacent_MAP:
+  !xs a b f.
+    adjacent (MAP f xs) a b <=> ?x y. adjacent xs x y /\ a = f x /\ b = f y
+Proof
+  Induct_on ‘xs’ >> simp[] >> Cases_on ‘xs’ >> gvs[] >>
+  simp[adjacent_iff, SF DNF_ss] >> metis_tac[]
+QED
+
+Theorem adjacent_MEM:
+  !xs a b. adjacent xs a b ==> MEM a xs /\ MEM b xs
+Proof
+  simp[MEM_EL, adjacent_EL, PULL_EXISTS] >> rpt strip_tac >>
+  rpt (irule_at Any EQ_REFL) >> simp[]
+QED
+
+Theorem adjacent_ps_append:
+  !xs a b. adjacent xs a b <=> ?p s. xs = p ++ [a;b] ++ s
+Proof
+  simp[adjacent_EL, PULL_EXISTS, EQ_IMP_THM] >> rw[]
+  >- (Q.RENAME_TAC [‘i + 1 < LENGTH xs’] >>
+      MAP_EVERY Q.EXISTS_TAC [‘TAKE i xs’, ‘DROP (i + 2) xs’] >>
+      simp[LIST_EQ_REWRITE, EL_APPEND_EQN, EL_TAKE, EL_DROP] >> rw[] >>
+      Q.RENAME_TAC [‘~(j < i)’, ‘j < i + 2’] >>
+      ‘j = i \/ j = i + 1’ by simp[] >> simp[]) >>
+  Q.EXISTS_TAC ‘LENGTH p’ >> simp[EL_APPEND_EQN]
+QED
+
+Theorem adjacent_append1:
+  !xs ys a b. adjacent xs a b ==> adjacent (xs ++ ys) a b
+Proof
+  Induct_on ‘adjacent’ >> simp[] >> metis_tac[adjacent_rules]
+QED
+
+Theorem adjacent_append2:
+  !xs ys a b. adjacent ys a b ==> adjacent (xs ++ ys) a b
+Proof
+  simp[adjacent_ps_append, PULL_EXISTS, APPEND_ASSOC] >> rpt strip_tac >>
+  irule_at Any EQ_REFL
+QED
+
+Theorem adjacent_REVERSE[simp]:
+  !xs a b. adjacent (REVERSE xs) a b <=> adjacent xs b a
+Proof
+  simp[adjacent_ps_append, EQ_IMP_THM, PULL_EXISTS] >> rw[]
+  >- (pop_assum (mp_tac o Q.AP_TERM ‘REVERSE’) >>
+      REWRITE_TAC[REVERSE_REVERSE] >> simp[REVERSE_APPEND] >>
+      strip_tac >> Q.EXISTS_TAC ‘REVERSE s’ >>
+      simp[GSYM APPEND_ASSOC, APPEND_11]) >>
+  simp[REVERSE_APPEND, APPEND_ASSOC] >>
+  Q.EXISTS_TAC ‘REVERSE s’ >> simp[GSYM APPEND_ASSOC, APPEND_11]
+QED
 
 (* ---------------------------------------------------------------------- *)
 

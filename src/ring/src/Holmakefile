@@ -4,21 +4,21 @@ all: $(DEFAULT_TARGETS) selftest.exe
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES) hol4-ring.art
+all: $(ARTFILES) hol4-eval-ring.art
 
 EVAL_ring.art: EVAL_ring.otd
-EVAL_semi_ring.art: EVAL_semi_ring.otd
+EVAL_semiring.art: EVAL_semiring.otd
 EVAL_quote.art: EVAL_quote.otd
 EVAL_canonical.art: EVAL_canonical.otd
 EVAL_ringNorm.art: EVAL_ringNorm.otd
 
-hol4-ring-unint.art: hol4-eval-ring-unint.thy $(ARTFILES)
+hol4-eval-ring-unint.art: hol4-eval-ring-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 
-hol4-ring.art: hol4-eval-ring.thy hol4-eval-ring-unint.art ../../opentheory/hol4.int
+hol4-eval-ring.art: hol4-eval-ring.thy hol4-eval-ring-unint.art ../../opentheory/hol4.int
 	opentheory info --article -o $@ $<
 
-install: hol4-ring.thy hol4-ring.art
+install: hol4-eval-ring.thy hol4-eval-ring.art
 	opentheory install --reinstall $<
 endif
 

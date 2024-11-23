@@ -2,10 +2,7 @@ ifdef POLY
 HOLHEAP = ../termination/numheap
 endif
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 ifeq ($(KERNELID),otknl)

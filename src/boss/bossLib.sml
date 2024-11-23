@@ -185,14 +185,17 @@ val op >>~-           = Q.>>~-
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 
-(*---------------------------------------------------------------------------*)
-(* Working with abbreviations.                                               *)
-(*---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Working with abbreviations, and other gadgets from markerLib
+   ---------------------------------------------------------------------- *)
 
 val Abbr = markerLib.Abbr
 val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
 val REABBREV_TAC = markerLib.REABBREV_TAC
 val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
+
+val NoAsms = markerLib.NoAsms
+val IgnAsm = markerLib.IgnAsm
 
 local
 fun add_Case_conv x = REWR_CONV (ISPEC x markerTheory.add_Case)

@@ -49,11 +49,11 @@ structure Absyn : ABSYN =
       | idchar c = Char.isAlpha c orelse Char.isDigit c
 
     fun code_to_ids s = let
-	  fun g(nil,r) = r
+          fun g(nil,r) = r
             | g(a as (h::t),r) = if Char.isAlpha h then f(t,[h],r) else g(t,r)
           and f(nil,accum,r)= implode(rev accum)::r
             | f(a as (h::t),accum,r) =
-		if idchar h then f(t,h::accum,r) else g(a,implode (rev accum) :: r)
+                if idchar h then f(t,h::accum,r) else g(a,implode (rev accum) :: r)
           in g(explode s,nil)
           end
 
@@ -80,7 +80,7 @@ structure Absyn : ABSYN =
                           of WILD => WILD
                            | pat' => PAPP(s,pat'))
                      | (PLIST l) =>
-	                  let val l' = map f l
+                          let val l' = map f l
                           in if List.exists(fn WILD=>false | _ => true) l'
                                 then PLIST l'
                              else WILD
@@ -108,7 +108,7 @@ structure Absyn : ABSYN =
                      | f(FN(p,e)) = FN(simplifyPat p,f e)
                      | f(LET(dl,e)) =
                           LET(map (fn VB(p,e) =>
-	                          VB(simplifyPat p,f e)) dl,
+                                  VB(simplifyPat p,f e)) dl,
                               f e)
                      | f(SEQ(a,b)) = SEQ(f a,f b)
                      | f a = a
@@ -118,7 +118,7 @@ structure Absyn : ABSYN =
        end
 
        fun printRule (say : string -> unit, sayln:string -> unit) = let
-	 val lp = ["("]
+         val lp = ["("]
          val rp = [")"]
          val sp = [" "]
          val sm = [";"]
@@ -126,15 +126,15 @@ structure Absyn : ABSYN =
          val cr = ["\n"]
          val unit = ["()"]
           fun printExp c =
-	   let fun f (CODE c) = ["(",c,")"]
+           let fun f (CODE c) = ["(",c,")"]
                  | f (EAPP(EVAR a,UNIT)) = [a," ","()"]
                  | f (EAPP(EVAR a,EINT i)) =  [a," ",Int.toString i]
                  | f (EAPP(EVAR a,EVAR b)) = [a," ",b]
                  | f (EAPP(EVAR a,b)) = List.concat[[a],lp,f b,rp]
                  | f (EAPP(a,b)) = List.concat [lp,f a,rp,lp,f b,rp]
-	         | f (EINT i) = [Int.toString i]
+                 | f (EINT i) = [Int.toString i]
                  | f (ETUPLE (a::r)) =
-	              let fun scan nil = [rp]
+                      let fun scan nil = [rp]
                             | scan (h :: t) = cm :: f h :: scan t
                       in List.concat (lp :: f a :: scan r)
                       end
@@ -143,10 +143,10 @@ structure Absyn : ABSYN =
                  | f (FN (p,b)) = List.concat[["fn "],printPat p,[" => "],f b]
                  | f (LET (nil,body)) = f body
                  | f (LET (dl,body)) =
-	              let fun scan nil = [[" in "],f body,[" end"],cr]
+                      let fun scan nil = [[" in "],f body,[" end"],cr]
                             | scan (h :: t) = printDecl h :: scan t
-	              in List.concat(["let "] :: scan dl)
-	              end
+                      in List.concat(["let "] :: scan dl)
+                      end
                  | f (SEQ (a,b)) = List.concat [lp,f a,sm,f b,rp]
                  | f (UNIT) = unit
           in f c
@@ -154,22 +154,22 @@ structure Absyn : ABSYN =
          and printDecl (VB (pat,exp)) =
                   List.concat[["val "],printPat pat,["="],printExp exp,cr]
          and printPat c =
-	   let fun f (AS(PVAR a,PVAR b)) = [a," as ",b]
+           let fun f (AS(PVAR a,PVAR b)) = [a," as ",b]
                  | f (AS(a,b)) = List.concat [lp,f a,[") as ("],f b,rp]
                  | f (PAPP(a,WILD)) = [a," ","_"]
                  | f (PAPP(a,PINT i)) =  [a," ",Int.toString i]
                  | f (PAPP(a,PVAR b)) = [a," ",b]
                  | f (PAPP(a,b)) = List.concat [lp,[a],sp,f b,rp]
-	         | f (PINT i) = [Int.toString i]
+                 | f (PINT i) = [Int.toString i]
                  | f (PLIST nil) = ["<bogus-list>"]
                  | f (PLIST l) =
-	              let fun scan (h :: nil) = [f h]
+                      let fun scan (h :: nil) = [f h]
                             | scan (h :: t) = f h :: ["::"] :: scan t
-			    | scan _ = raise Fail "scan"
+                            | scan _ = raise Fail "scan"
                       in List.concat (scan l)
                       end
                  | f (PTUPLE (a::r)) =
-	              let fun scan nil = [rp]
+                      let fun scan nil = [rp]
                             | scan (h :: t) = cm :: f h :: scan t
                       in List.concat (lp :: f a :: scan r)
                       end
@@ -178,12 +178,12 @@ structure Absyn : ABSYN =
                  | f WILD = ["_"]
            in f c
            end
-	   fun oursay "\n" = sayln ""
-	     | oursay a = say a
+           fun oursay "\n" = sayln ""
+             | oursay a = say a
          in fn a =>
-	      let val RULE(p,e) = simplifyRule a
+              let val RULE(p,e) = simplifyRule a
               in app oursay (printPat p);
-	         say " => ";
+                 say " => ";
                  app oursay (printExp e)
               end
          end

@@ -12,9 +12,7 @@ struct
 open Lib Abbrev
 
 fun HOL88_ERR {function, message} =
- Feedback.HOL_ERR {origin_structure = "hol88Lib",
-                   origin_function = function,
-                   message = message}
+ Feedback.mk_HOL_ERR "hol88Lib" function message
 
 infix ##
 

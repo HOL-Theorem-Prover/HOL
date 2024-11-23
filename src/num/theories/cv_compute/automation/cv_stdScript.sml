@@ -1,11 +1,11 @@
 (*
   Apply cv translator to standard theories list, pair, sptree, etc.
 *)
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib bossLib dep_rewrite;
 open cv_typeTheory cvTheory cv_typeLib cv_repLib;
 open arithmeticTheory wordsTheory cv_repTheory cv_primTheory cv_transLib;
 open pairTheory listTheory optionTheory sumTheory alistTheory indexedListsTheory;
-open rich_listTheory sptreeTheory;
+open rich_listTheory sptreeTheory finite_setTheory;
 
 val _ = new_theory "cv_std";
 
@@ -444,6 +444,92 @@ Proof
   \\ dep_rewrite.DEP_REWRITE_TAC [sptreeTheory.spt_eq_thm,sptreeTheory.wf_insert]
   \\ gvs [wf_fromAList,lookup_insert,lookup_fromAList,finite_mapTheory.FLOOKUP_SIMP]
   \\ rw []
+QED
+
+(*----------------------------------------------------------*
+   num fset
+ *----------------------------------------------------------*)
+
+val from_to_num_set = from_to_thm_for “:num_set”;
+val to_num_set = from_to_num_set |> concl |> rand;
+val from_num_set = from_to_num_set |> concl |> rator |> rand;
+
+Definition to_num_fset_def:
+  to_num_fset cv = fromSet (domain (^to_num_set cv))
+End
+
+Definition from_num_fset_def:
+  from_num_fset fs = ^from_num_set $ list_to_num_set $ fset_REP fs
+End
+
+Theorem from_to_num_fset[cv_from_to]:
+  from_to from_num_fset to_num_fset
+Proof
+  rw[from_to_def, from_num_fset_def, to_num_fset_def]
+  \\ rw[GSYM toSet_11, toSet_fromSet]
+  \\ mp_tac from_to_num_set
+  \\ gs[from_to_def, pred_setTheory.EXTENSION,
+        GSYM fIN_IN, domain_list_to_num_set, fIN_def]
+QED
+
+val from_sptree_sptree_spt_def = definition "from_sptree_sptree_spt_def";
+val cv_insert_thm = theorem "cv_insert_thm";
+val cv_lookup_thm = theorem "cv_lookup_thm";
+val cv_union_thm = theorem "cv_union_thm";
+val cv_list_to_num_set_thm = theorem "cv_list_to_num_set_thm";
+
+Theorem fEMPTY_num_cv_rep[cv_rep]:
+  from_num_fset fEMPTY = Num 0
+Proof
+  rw[from_num_fset_def,
+     Q.ISPEC`from_unit`(CONJUNCT1(GSYM from_sptree_sptree_spt_def))]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[spt_eq_thm]
+  \\ rw[lookup_list_to_num_set, wf_list_to_num_set, MEM_fset_REP]
+QED
+
+Theorem fINSERT_num_cv_rep[cv_rep]:
+  from_num_fset (fINSERT e s) =
+  cv_insert (Num e) (Num 0) (from_num_fset s)
+Proof
+  rw[from_num_fset_def, GSYM cv_insert_thm, GSYM from_unit_def]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[spt_eq_thm]
+  \\ rw[wf_insert, wf_list_to_num_set,
+        lookup_list_to_num_set, lookup_insert,
+        MEM_fset_REP]
+  \\ gs[]
+QED
+
+Theorem fIN_num_cv_rep[cv_rep]:
+  b2c (fIN e s) =
+  cv_ispair $ (cv_lookup (Num e) (from_num_fset s))
+Proof
+  rw[from_num_fset_def, GSYM cv_lookup_thm, from_option_def,
+     lookup_list_to_num_set, MEM_fset_REP]
+QED
+
+Theorem fUNION_num_cv_rep[cv_rep]:
+  from_num_fset (fUNION s1 s2) =
+  cv_union (from_num_fset s1) (from_num_fset s2)
+Proof
+  rw[from_num_fset_def, GSYM cv_union_thm]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[spt_eq_thm]
+  \\ simp[wf_list_to_num_set, wf_union,
+          lookup_list_to_num_set, lookup_union]
+  \\ rw[fUNION_def, MEM_fset_REP] \\ gs[]
+QED
+
+Theorem fset_ABS_num_cv_rep[cv_rep]:
+  from_num_fset (fset_ABS l) =
+  cv_list_to_num_set (from_list Num l)
+Proof
+  rw[from_num_fset_def, GSYM cv_list_to_num_set_thm]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[spt_eq_thm]
+  \\ simp[wf_list_to_num_set, lookup_list_to_num_set, MEM_fset_REP]
+  \\ simp[GSYM fromSet_set, IN_fromSet]
 QED
 
 (*----------------------------------------------------------*

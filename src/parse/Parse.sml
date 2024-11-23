@@ -78,11 +78,14 @@ fun interactive_ppbackend () = let
   open PPBackEnd OS.Process
 in
   (* assumes interactive *)
-  case getEnv "TERM" of
-    SOME s => if String.isPrefix "xterm" s orelse
-                 String.isPrefix "tmux" s then vt100_terminal
-              else raw_terminal
-  | _ => raw_terminal
+  case getEnv "COLORTERM" of
+      SOME _ => vt100_terminal
+    | NONE =>
+      case getEnv "TERM" of
+          SOME s => if String.isPrefix "xterm" s orelse
+                       String.isPrefix "tmux" s then vt100_terminal
+                    else raw_terminal
+        | NONE => raw_terminal
 end
 
 val current_backend : PPBackEnd.t ref =
@@ -166,6 +169,15 @@ fun update_type_fns () =
   else ()
 
 val dflt_pinfo = term_pp_utils.dflt_pinfo
+
+fun pp_type_without_colon ty =
+  let
+    open smpp
+    val _ = update_type_fns()
+    val mptr = !type_printer (!current_backend) ty
+  in
+    lower mptr dflt_pinfo |> valOf |> #1
+  end
 
 fun pp_type ty =
   let
@@ -471,7 +483,9 @@ fun grammar_typed_parse_in_context gs ty ctxt q =
 
 fun typed_parse_in_context ty ctxt q =
   let
-    fun mkA q = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
+    fun mkA q = let
+      val a = Absyn q
+      in Absyn.TYPED(Absyn.locn_of_absyn a, a, Pretype.fromType ty) end
   in
     case seq.cases (TermParse.prim_ctxt_termS mkA (term_grammar()) ctxt q) of
         SOME (tm, _) => tm
@@ -570,9 +584,7 @@ val temp_add_infix_type = mk_temp_tyd add_infix_type0
 val add_infix_type = mk_perm_tyd add_infix_type0
 
 fun replace_exnfn fnm f x =
-  f x handle HOL_ERR {message = m, origin_structure = s, ...} =>
-             raise HOL_ERR {message = m, origin_function = fnm,
-                            origin_structure = s}
+  f x handle HOL_ERR e => raise HOL_ERR (set_origin_function fnm e)
 
 fun thytype_abbrev0 r = [TYABBREV r]
 val temp_thytype_abbrev = mk_temp_tyd thytype_abbrev0

@@ -1,8 +1,0 @@
-# -*- mode: snippet -*-
-# name: create a new subgoal prove with corresponding by clause
-# key: sg
-# expand-env: ((yas-indent-line 'fixed))
-# --
-\`${1:subgoal}\`
-  by (
-    $0)

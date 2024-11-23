@@ -938,6 +938,20 @@ Proof
  >> gs [GSYM IS_SOME_EQ_NOT_NONE, IS_SOME_EXISTS]
 QED
 
+Theorem ltree_paths_map_cong[simp] :
+    !f t. ltree_paths (ltree_map f t) = ltree_paths t
+Proof
+    rw [ltree_paths_def, Once EXTENSION]
+ >> Q.ID_SPEC_TAC ‘t’
+ >> Q.SPEC_TAC (‘x’, ‘p’)
+ >> Induct_on ‘p’
+ >- rw [ltree_lookup_def]
+ >> rpt GEN_TAC
+ >> Cases_on ‘t’
+ >> rw [ltree_lookup_def, ltree_map]
+ >> Cases_on ‘LNTH h ts’ >> rw []
+QED
+
 (*---------------------------------------------------------------------------*
  *  Rose tree is a finite variant of ltree, defined inductively.
  *---------------------------------------------------------------------------*)

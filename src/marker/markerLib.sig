@@ -96,6 +96,11 @@ sig
   val unhide_x_assum : string -> thm_tactic -> tactic
   val use_hidden_assum : string -> thm_tactic -> tactic
 
+  val IgnAsm : 'a quotation -> thm
+  val NoAsms : thm
+
+  val process_taclist_then : {arg: thm list} -> (thm list -> tactic) -> tactic
+
 end
 
 (*

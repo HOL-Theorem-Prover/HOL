@@ -196,6 +196,7 @@ signature Parse = sig
   val pp_thm : thm pprinter
   val stdprinters : ((term -> string) * (hol_type -> string)) option
 
+  val pp_type_without_colon   : hol_type pprinter
   val term_pp_with_delimiters : term pprinter -> term pprinter
   val type_pp_with_delimiters : hol_type pprinter -> hol_type pprinter
   val get_term_printer : unit -> term pprinter

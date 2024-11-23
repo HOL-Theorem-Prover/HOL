@@ -54,9 +54,7 @@ val _ = computeLib.add_thms [SF_POINTS_TO_LIST_def, SAFE_FILTER_THM, MAP, APPEND
    sf_points_to_list_cs;
 *)
 
-fun SMALLFOOT_ERR s =
-   raise HOL_ERR {message = s, origin_function = "", origin_structure = "decidable_separationLogicLib"}
-
+val SMALLFOOT_ERR s = raise mk_HOL_ERR "decidable_separationLogicLib" "" s
 
 
 (************************************************************

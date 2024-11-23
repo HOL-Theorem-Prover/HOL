@@ -34,9 +34,7 @@ fun gcd (i,j) =
    in  (if ((i < zero) orelse (j < zero))
         then raise non_neg
         else if (i < j) then gcd' (j,i) else gcd' (i,j)
-       ) handle _ => raise HOL_ERR{origin_structure = "Arith",
-                                   origin_function = "gcd",
-                                   message = ""}
+       ) handle _ => raise mk_HOL_ERR "Arith" "gcd" ""
    end;
 
 (*---------------------------------------------------------------------------*)
@@ -44,8 +42,6 @@ fun gcd (i,j) =
 (*---------------------------------------------------------------------------*)
 
 fun lcm (i,j) = (i * j) div (gcd (i,j))
-                handle _ => raise HOL_ERR{origin_structure = "Arith",
-                                          origin_function = "lcm",
-                                          message = ""};
+                handle _ => raise mk_HOL_ERR "Arith" "lcm" ""
 
 end

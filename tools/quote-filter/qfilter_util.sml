@@ -3,7 +3,7 @@ struct
 
 open OS.Process
 fun nothing() = ()
-fun open_files intp infn outfn =
+fun open_files intp oldp infn outfn =
     let
       open TextIO
       val is = TextIO.openIn infn
@@ -32,7 +32,8 @@ fun open_files intp infn outfn =
             (strm, cb)
           end
     in
-      (is, os, intp, false, cb)
+      {instrm = is, outstrm = os, interactive = intp, quotefixp = false,
+       oldparser = oldp, closefn = cb, infilename = infn}
     end
 
 fun usage strm status =
@@ -45,28 +46,43 @@ fun usage strm status =
                    \Other options occur as sole arguments:\n\
                    \   -h : show this message\n\
                    \   -n : don't use \"interactive\" mode\n\
+                   \   -q : use old \"QuoteFilter\" parser\n\
                    \   --quotefix : filter to replace ` with Unicode quotes\n");
      exit status)
 
 fun badusage() = usage TextIO.stdErr failure
-fun processArgs (nonp, intp, qfixp) args =
+fun processArgs (nonp, intp, qfixp, oldp) args =
     case args of
         [] => if intp then badusage()
               else if qfixp then
-                (TextIO.stdIn, TextIO.stdOut, false, qfixp, nothing)
-              else (TextIO.stdIn, TextIO.stdOut, not intp, false, nothing)
+                {instrm = TextIO.stdIn,
+                 outstrm = TextIO.stdOut,
+                 interactive = false,
+                 quotefixp = qfixp,
+                 oldparser = oldp,
+                 closefn = nothing,
+                 infilename = ""}
+              else
+                {instrm = TextIO.stdIn,
+                 outstrm = TextIO.stdOut,
+                 interactive = true,
+                 quotefixp = false,
+                 oldparser = oldp,
+                 closefn = nothing,
+                 infilename = ""}
       | ["-h"] => usage TextIO.stdOut success
       | "-h" :: _ => badusage()
       | "-i" :: rest => if nonp orelse qfixp then badusage()
-                        else processArgs (false, true, false) rest
+                        else processArgs (false, true, false, oldp) rest
       | "-n"::rest =>
            if intp orelse qfixp then badusage()
-           else processArgs (true, false, false) rest
+           else processArgs (true, false, false, oldp) rest
+      | "-q"::rest => processArgs (nonp, intp, qfixp, true) rest
       | "--quotefix"::rest =>
            if intp orelse nonp then badusage()
-           else processArgs (false, false, true) rest
+           else processArgs (false, false, true, oldp) rest
       | [ifile, ofile] => if qfixp orelse nonp then badusage()
-                          else open_files intp ifile ofile
+                          else open_files intp oldp ifile ofile
       | _ => badusage()
 
 end (* struct *)

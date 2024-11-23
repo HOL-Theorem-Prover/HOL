@@ -1,4 +1,5 @@
 %%% -*- Mode: LaTeX; -*-
+\newcommand{\subr}{\sb{\mathsf{r}}}
 \chapter{Core Theories}\label{HOLtheories}
 
 % LaTeX macros in HOL manuals
@@ -1603,12 +1604,12 @@ definitions of the following standard arithmetic operators.
 \index{EXP, the HOL constant@\holtxt{EXP}, the \HOL{} constant}
 \index{ addition, in HOL logic@\holtxt{+} (addition, in \HOL{} logic)}
 \index{ subtraction, in HOL logic@\holtxt{-} (subtraction, in \HOL{} logic)}
-\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)!on natural numbers}
 \index{ exponentiation, in HOL logic@\holtxt{**} (exponentiation, in \HOL{} logic)}
 \index{addition, in HOL logic@addition, in \HOL{} logic}
 \index{subtraction, in HOL logic@subtraction, in \HOL{} logic}
-\index{multiplication, in HOL logic@multiplication, in \HOL{} logic}
-\index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic}
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on natural numbers}
+\index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic!on natural numbers}
 \begin{alltt}
 >>__ open arithmeticTheory
 ##thm ADD
@@ -1753,6 +1754,7 @@ no way to define such infinite families of constants; instead, all
 numerals other than $0$ are actually built up from the constants
 introduced by the following definitions:
 \begin{alltt}
+>>__ val np = valOf (temp_remove_user_printer "num.numeral_computations")
 ##thm NUMERAL_DEF
 
 ##thm BIT1
@@ -1920,6 +1922,8 @@ similar operations on the natural numbers, and on the real numbers.
 The constants defined in the integer theory include those found in the
 following table.
 
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on integers}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)!on integers}
 \begin{center}
 {\small
 \begin{tabular}{@{}cccc}
@@ -2755,6 +2759,7 @@ paths, and finite strings.
 >>__ open listTheory
 >>__ show_numeral_types := false
 
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!constructors}
 \HOL{} lists are inductively defined finite sequences where each
 element in a list has the same type. The theory \ml{list} introduces
 the unary type operator $\alpha \; \konst{list}$ by a type definition
@@ -2795,6 +2800,8 @@ fundamental theorems about lists are proved and stored in the theory
 \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for lists}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
+\index{lists, the HOL theory of@lists the \HOL{} theory of!initiality theorem}
+\index{lists, the HOL theory of@lists the \HOL{} theory of!induction theorem}
 \begin{alltt}
 ##thm list_Axiom
 ##thm list_INDUCT
@@ -3212,6 +3219,22 @@ total relation.
 \end{alltt}
 \end{hol}
 
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!element adjacency}
+The notion of $R$ holding pairwise through a list can be expressed using the predicate \holtxt{adjacent}, where $\holtxt{adjacent}\;\ell\;a\;b$ holds if values $a$ and $b$ appear together (in that order) in list $\ell$.
+Then, we have
+\begin{hol}
+\begin{alltt}
+##thm SORTED_adjacent
+\end{alltt}
+\end{hol}
+where the $\subseteq\subr$ relation is the notion of relation-subset (see below on page~\pageref{def:rsubset}).
+There are a number of other theorems in \ml{listTheory} about adjacency, including for example:
+\begin{hol}
+\begin{alltt}
+##thm adjacent_REVERSE
+##thm adjacent_MAP
+\end{alltt}
+\end{hol}
 
 
 \subsubsection{Indexed lists}
@@ -4451,7 +4474,6 @@ The following basic properties of relations are defined.
 
 \paragraph{Basic operations}
 
-\newcommand{\subr}{\sb{\mathsf{r}}}
 The following basic operations on relations are defined: the empty
 relation (\holtxt{EMPTY\_REL}, or $\emptyset\subr$), relation composition (\holtxt{O}, or $\circ\subr$,
 infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')), domain (\holtxt{RDOM}), and range
@@ -4470,7 +4492,7 @@ infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')),
 \noindent Set operations lifted to work on relations include subset
 (\holtxt{RSUBSET}, or $\subseteq\subr$, infix), union (\holtxt{RUNION}, or $\cup\subr$, infix),
 intersection (\holtxt{RINTER}, or $\cap\subr$, infix), complement (\holtxt{RCOMPL}),
-and universe (\holtxt{RUNIV}, or $\mathbb{U}\subr$).
+and universe (\holtxt{RUNIV}, or $\mathbb{U}\subr$).\label{def:rsubset}
 %
 \begin{hol}
 \begin{alltt}

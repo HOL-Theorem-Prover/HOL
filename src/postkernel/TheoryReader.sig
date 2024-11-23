@@ -2,7 +2,8 @@ signature TheoryReader =
 sig
 
   exception TheoryReader of string
-  val load_thydata : string -> string -> (string, Thm.thm) HOLdict.dict
+  val load_thydata : string -> string ->
+                     (Thm.thm * DB_dtype.thminfo) Symtab.table
 
 end
 

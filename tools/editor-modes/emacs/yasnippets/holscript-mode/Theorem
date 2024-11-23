@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: Theorem statement in HOL4
+# key: Theorem
+# expand-env: ((yas-indent-line 'fixed))
+# --
+Theorem ${1:theorem-name}${2:[${3:attributes}]}:
+  ${4:theorem-statement}
+Proof
+  $0
+QED

@@ -22,9 +22,8 @@ DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 
 all: $(HOLHEAP) selftest.exe
 
-$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/src/num/termination/numheap)
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ \
-		-b $(protect $(HOLDIR)/src/num/termination/numheap) $(BARE_DEPS)
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ $(BARE_DEPS)
 endif
 
 ifeq ($(KERNELID),otknl)

@@ -172,15 +172,13 @@ fun FORALL_ARITH_CONV tm =
     (NEGATE_CONV
       ((fn tm => ARITH_FORM_NORM_CONV tm
                  handle HOL_ERR _ =>
-                 raise HOL_ERR{origin_structure = "Solve",
-                               origin_function = "FORALL_ARITH_CONV",
-                               message = "formula not in the allowed subset"}
+                 raise mk_HOL_ERR "Solve" "FORALL_ARITH_CONV"
+                   "formula not in the allowed subset"
        ) THENC
        (fn tm => DISJ_INEQS_FALSE_CONV tm
                  handle HOL_ERR _ =>
-                 raise HOL_ERR{origin_structure = "Solve",
-                               origin_function = "FORALL_ARITH_CONV",
-                               message = "cannot prove formula"}
+                 raise mk_HOL_ERR "Solve" "FORALL_ARITH_CONV"
+                   "cannot prove formula"
        ))) THENC
    REPEATC FORALL_SIMP_CONV)
   tm

@@ -31,7 +31,7 @@ open listTheory
 (* ttt ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); *)
 val ex2 = store_thm("ex2",
   ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``,
-  asm_simp_tac (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss)) [LIST_EQ_REWRITE] >>
+  asm_simp_tac (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss) [LIST_EQ_REWRITE] >>
   metis_tac [EL_MAP, rich_listTheory.EL_REPLICATE]
   );
 

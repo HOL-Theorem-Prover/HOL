@@ -122,23 +122,23 @@ end
  * Binding occurrences of variables
  *---------------------------------------------------------------------------*)
 
-fun make_binding_occ l s E = let
+fun make_binding_occ lAbs lVar s E = let
   open Preterm
   val (ntv,E') = ptylift Pretype.new_uvar E
   val E'' = add_scope((s,ntv),E')
 in
-  ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv, Locn=l},Body=b,
-                Locn=locn.near (Preterm.locn b)}), E'')
+  ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv, Locn=lVar},Body=b,
+                Locn=locn.near lAbs}), E'')
 end
 
-fun make_aq_binding_occ l aq E = let
+fun make_aq_binding_occ lAbs lVar aq E = let
   val (v as (Name,Ty)) = Term.dest_var aq
   val pty = Pretype.fromType Ty
-  val v' = {Name=Name, Ty=Pretype.fromType Ty, Locn=l}
+  val v' = {Name=Name, Ty=Pretype.fromType Ty, Locn=lVar}
   val E' = add_scope ((Name,pty),E)
   open Preterm
 in
-  ((fn b => Abs{Bvar=Var v', Body=b, Locn=locn.near (Preterm.locn b)}), E')
+  ((fn b => Abs{Bvar=Var v', Body=b, Locn=lAbs}), E')
 end
 
 

@@ -633,7 +633,7 @@ local open Defn
         raise ERR "defnDefine" (msg1 ^ s)
      end
 in
-  fun defnDefine term_tac defn =
+  fun located_defnDefine loc term_tac defn =
     let
        val V = params_of defn
        val _ = if not (null V) then fvs_on_rhs V else ()  (* can fail *)
@@ -647,12 +647,14 @@ in
                   handle HOL_ERR _ => termination_proof_failed defn)
             else (defn,NONE)
     in
-       save_defn defn'
+       save_defn_at loc defn'
        ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)
     end
+  val defnDefine = located_defnDefine DB.Unknown
 end
 
-val primDefine = defnDefine PROVE_TERM_TAC;
+fun located_primDefine loc = located_defnDefine loc PROVE_TERM_TAC
+val primDefine = located_primDefine DB.Unknown
 
 (*---------------------------------------------------------------------------*)
 (* Make a definition, giving the name to store things under. If anything     *)
@@ -662,11 +664,13 @@ val primDefine = defnDefine PROVE_TERM_TAC;
 fun def_n_ind (def, indopt, NONE) = (def, NONE)
   | def_n_ind (def,indopt, SOME _) = (def, indopt)
 
-fun xDefine stem q =
+fun located_xDefine loc stem q =
  Parse.try_grammar_extension
    (Theory.try_theory_extension
-       (def_n_ind o primDefine o Defn.Hol_defn stem)) q
+       (def_n_ind o located_primDefine loc o Defn.Hol_defn stem)) q
   handle e => render_exn "xDefine" e;
+
+val xDefine = located_xDefine DB.Unknown
 
 (*---------------------------------------------------------------------------
      Define
@@ -698,7 +702,7 @@ end
 (* Version of Define where the termination tactic is explicitly supplied.    *)
 (*---------------------------------------------------------------------------*)
 
-fun tDefine stem q tac =
+fun located_tDefine loc stem q tac =
  let open Defn
      fun thunk() =
        let val defn = Hol_defn stem q
@@ -712,12 +716,13 @@ fun tDefine stem q tac =
               val _ = HOL_MESG "Termination argument ignored (term. proved \
                                \automatically)"
           in been_stored (bind,def);
+             Theory.upd_binding bind (DB_dtype.updsrcloc (K loc));
              (def, NONE)
           end
         else let val (def,ind) = with_flag (proofManagerLib.chatting,false)
                                            Defn.tprove0(defn,tac)
                  val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
-             in Defn.store(stem,def,ind) ;
+             in Defn.store_at loc (stem,def,ind) ;
                 (def, SOME ind)
              end
        end
@@ -725,7 +730,9 @@ fun tDefine stem q tac =
   Parse.try_grammar_extension
     (Theory.try_theory_extension thunk) ()
   handle e => render_exn "tDefine" e
- end;
+ end
+
+val tDefine = located_tDefine DB.Unknown
 
 (* ----------------------------------------------------------------------
     version of Define that allows control of options with "attributes"
@@ -742,16 +749,16 @@ fun find_indoption sl =
           set_diff sl [s]
       )
 
-fun tailrecDefine nm q =
+fun tailrecDefine loc nm q =
     let
       val (t, _) = Defn.parse_absyn (Parse.Absyn q)
-      val th = tailrecLib.tailrec_define nm t
+      val th = tailrecLib.gen_tailrec_define {name = nm, def = t, loc = loc}
     in
       Defn.add_defs_to_EVAL [(nm,th)];
       th
     end
 
-fun qDefine stem q tacopt =
+fun located_qDefine loc stem q tacopt =
     let
       val (corename, attrs) = ThmAttribute.extract_attributes stem
       val (nocomp, attrs) = test_remove "nocompute" attrs
@@ -772,13 +779,13 @@ fun qDefine stem q tacopt =
                 else (fn f => f))
       val (thm,indopt) =
           case (tailrecp, tacopt) of
-              (true, NONE) => (fmod (tailrecDefine corename) q, NONE)
+              (true, NONE) => (fmod (tailrecDefine loc corename) q, NONE)
             | (true, SOME _) =>
               raise ERR "qDefine"
                     "Termination tactic for tail-recursive definition makes \
                     \no sense"
-            | (false, NONE) => fmod (xDefine corename) q
-            | (false, SOME tac) => fmod (tDefine corename q) tac
+            | (false, NONE) => fmod (located_xDefine loc corename) q
+            | (false, SOME tac) => fmod (located_tDefine loc corename q) tac
       fun proc_attr a =
           ThmAttribute.store_at_attribute{name = corename, attrname = a,
                                           thm = thm}
@@ -798,6 +805,8 @@ fun qDefine stem q tacopt =
             DefnBase.register_indn (ith, DefnBase.constants_of_defn thm);
       thm
     end
+
+val qDefine = located_qDefine DB.Unknown
 
 fun Define q =
     let

@@ -4,10 +4,7 @@ struct
 open HolKernel Parse boolLib ternaryComparisonsTheory EVAL_quoteTheory
      EVAL_quote computeLib;
 
-fun RING_ERR function message =
-    HOL_ERR{origin_structure = "ringLib",
-                      origin_function = function,
-                      message = message};
+val RING_ERR = mk_HOL_ERR "ringLib"
 
 
 (* reify ring expressions: building a signature, which is the correspondence

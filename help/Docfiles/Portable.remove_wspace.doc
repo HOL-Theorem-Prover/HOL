@@ -1,0 +1,21 @@
+\DOC
+
+\TYPE {remove_wspace : string -> string}
+
+\SYNOPSIS
+Removes all whitespace characters from a string
+
+\KEYWORDS
+
+\DESCRIBE
+A call to {remove_wspace s} returns a string identical to {s} except
+that all of the characters for which {Char.isSpace} is true have been
+removed. The implementation is 
+{
+   String.translate (fn c => if Char.isSpace c then "" else str c) s
+}
+
+\FAILURE
+Never fails.
+
+\ENDDOC

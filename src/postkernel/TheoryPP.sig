@@ -9,6 +9,7 @@ signature TheoryPP =
 sig
  type thm = Thm.thm
  type hol_type = Type.hol_type
+ type thminfo = DB_dtype.thminfo
  type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
  type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
  type struct_info_record = {
@@ -16,9 +17,7 @@ sig
    parents     : (string*Arbnum.num*Arbnum.num) list,
    types       : (string*int) list,
    constants   : (string*hol_type) list,
-   axioms      : (string * thm) list,
-   definitions : (string * thm * {private:bool}) list,
-   theorems    : (string * thm * {private:bool}) list,
+   all_thms    : (string * thm * thminfo) list,
    struct_ps   : (unit -> PP.pretty) option list,
    struct_pcps : (unit -> PP.pretty) list,
    mldeps      : string list,
@@ -33,9 +32,7 @@ sig
  val pp_sig : thm PP.pprinter ->
               {name        : string,
                parents     : string list,
-               axioms      : (string * thm) list,
-               definitions : (string * thm * {private:bool}) list,
-               theorems    : (string * thm * {private:bool}) list,
+               all_thms    : (string * thm * thminfo) list,
                sig_ps      : (unit -> PP.pretty) option list} PP.pprinter
 
  val pp_struct : struct_info_record PP.pprinter

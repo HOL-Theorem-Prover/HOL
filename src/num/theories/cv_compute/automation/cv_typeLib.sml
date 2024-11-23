@@ -429,7 +429,10 @@ fun define_from_to_aux ignore_tyvars ty =
     (* val cons_tm = hd conses *)
     fun check_for_fun_ty cons_tm = let
       val cons_tys = cons_tm |> type_of |> strip_fun_ty
-      val bad_tys = filter contains_fun_ty cons_tys
+      fun not_supported ty = (from_to_for tyvars_alist ty; false)
+                             handle Missing_from_to _ => true
+      fun is_bad ty = not_supported ty andalso contains_fun_ty ty
+      val bad_tys = filter is_bad cons_tys
       in
         if null bad_tys then ()
         else let

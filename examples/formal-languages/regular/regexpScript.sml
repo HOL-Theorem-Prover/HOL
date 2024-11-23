@@ -2188,7 +2188,7 @@ REPEAT CONJ_TAC
  >- (rw [regexp_lang_def] >> metis_tac [DOT_ASSOC])
  >- (rw [regexp_lang_def]
      >> rw_tac list_ss [SimpLHS,Once KSTAR_EQ_EPSILON_UNION_DOT,
-                        DOT_UNION_RDISTRIB,DOT_EMPTYSTRING]
+                        DOT_UNION_RDISTRIB,DOT_EPSILON]
      >> metis_tac [DOT_ASSOC,IN_UNION,IN_DEF])
  >- (simp_tac list_ss [regexp_lang_def]
       >> Induct

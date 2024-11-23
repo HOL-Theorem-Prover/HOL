@@ -13,6 +13,7 @@ struct
 
 type error_record = {origin_structure : string,
                      origin_function  : string,
+                     source_location  : locn.locn,
                      message          : string}
 
 exception HOL_ERR of error_record
@@ -24,6 +25,7 @@ exception HOL_ERR of error_record
 fun mk_HOL_ERR s1 s2 s3 =
    HOL_ERR {origin_structure = s1,
             origin_function = s2,
+            source_location = locn.Loc_Unknown,
             message = s3}
 
 (* Errors with a known location. *)
@@ -31,10 +33,22 @@ fun mk_HOL_ERR s1 s2 s3 =
 fun mk_HOL_ERRloc s1 s2 locn s3 =
    HOL_ERR {origin_structure = s1,
             origin_function = s2,
-            message = locn.toString locn ^ ":\n" ^ s3}
-  (* Would like to be much cleverer, adding a field
-     source_location:locn to error_record, but the pain of fixing all
-     occurrences of HOL_ERR would be too great. *)
+            source_location = locn,
+            message = s3}
+
+fun set_origin_function fnm
+    ({origin_structure, source_location, message, ...}:error_record) =
+   {origin_structure = origin_structure,
+    source_location = source_location,
+    origin_function = fnm,
+    message = message}
+
+fun set_message msg
+    ({origin_structure, source_location, origin_function, ...}:error_record) =
+   {origin_structure = origin_structure,
+    source_location = source_location,
+    origin_function = origin_function,
+    message = msg}
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 
@@ -75,9 +89,13 @@ fun quiet_messages f = Portable.with_flag (emit_MESG, false) f
  * Formatting and output for exceptions, messages, and warnings.             *
  *---------------------------------------------------------------------------*)
 
-fun format_err_rec {message, origin_function, origin_structure} =
+fun format_err_rec {message, origin_function, origin_structure, source_location} =
    String.concat
-      ["at ", origin_structure, ".", origin_function, ":\n", message]
+      ["at ", origin_structure, ".", origin_function, ":\n",
+        case source_location of
+          Loc_Unknown => ""
+        | _ => locn.toString source_location ^ ":\n",
+        message]
 
 fun format_ERR err_rec =
    String.concat ["\nException raised ", format_err_rec err_rec, "\n"]
