@@ -1849,5 +1849,3 @@ End
 
 val _ = export_theory();
 val _ = html_theory "des_prop";
-
- 
