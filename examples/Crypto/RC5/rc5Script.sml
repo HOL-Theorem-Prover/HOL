@@ -609,6 +609,5 @@ Proof
     EVAL_TAC
 QED
 
-
 val _ = export_theory();
 val _ = html_theory "rc5";
