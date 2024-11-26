@@ -1,1 +1,2 @@
-INCLUDES = $(HOLDIR)/src/n-bit $(HOLDIR)/src/res_quan/src
+INCLUDES = $(HOLDIR)/src/n-bit $(HOLDIR)/src/res_quan/src \
+           $(HOLDIR)/src/probability
