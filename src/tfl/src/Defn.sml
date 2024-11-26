@@ -1820,11 +1820,18 @@ fun parse_quote q =
   sort_eqns (fst (parse_absyn (Parse.Absyn q)))
   handle e => raise wrap_exn "Defn" "parse_quote" e;
 
+local
+  val mkstems =
+    List.map (fst o dest_var o fst o strip_comb o lhs o snd o strip_forall o
+              hd o strip_conj)
+in
 fun Hol_defn stem q =
  (case parse_quote q
    of [] => raise ERR "Hol_defn" "no definitions"
     | [eqns] => mk_defn stem eqns
-    | otherwise => raise ERR "Hol_defn" "multiple definitions")
+    | eqnsl => raise ERR "Hol_defn"
+                         ("multiple definitions: "^
+                          String.concatWith ", " (mkstems eqnsl)))
   handle e =>
   raise wrap_exn_loc "Defn" "Hol_defn"
            (Absyn.locn_of_absyn (Parse.Absyn q)) e;
@@ -1836,15 +1843,10 @@ fun Hol_defns stems q =
   handle e => raise wrap_exn_loc "Defn" "Hol_defns"
                  (Absyn.locn_of_absyn (Parse.Absyn q)) e;
 
-local
-  val stems =
-    List.map (fst o dest_var o fst o strip_comb o lhs o snd o strip_forall o
-              hd o strip_conj)
-in
   fun Hol_multi_defns q =
     (case parse_quote q of
        [] => raise ERR "Hol_multi_defns" "no definition"
-      | eqnsl => mk_defns (stems eqnsl) eqnsl)
+      | eqnsl => mk_defns (mkstems eqnsl) eqnsl)
     handle e => raise wrap_exn_loc "Defn" "Hol_multi_defns"
                    (Absyn.locn_of_absyn (Parse.Absyn q)) e
 end
