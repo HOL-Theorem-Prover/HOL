@@ -286,7 +286,7 @@ local
   val l2v = mk_var("l2", listSyntax.mk_list_type alpha)
   val hv = mk_var("h", alpha)
   val (th1,th2) = CONJ_PAIR (listTheory.APPEND)
-  val th3 = SPECL [hv,l1v,l2v] th2
+  val th3 = SPECL [l1v,l2v,hv] th2
   val th4 = GENL  [l2v,l1v,hv] th3
       fun itfn (cns,ath) v th =
         let val th1 = AP_TERM (mk_comb(cns,v)) th

@@ -146,7 +146,7 @@ Definition SUM:
   SUM (h::t) = h + SUM t
 End
 
-Definition APPEND[simp]:
+Definition APPEND_def:
   APPEND [] l = l /\
   APPEND (h::l1) l2 = h::APPEND l1 l2
 End
@@ -156,6 +156,14 @@ val _ = overload_on ("++", Term‘APPEND’);
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
                        TeX = ("\\HOLTokenDoublePlus", 1) }
+
+(* preserving old choice of quantification order *)
+Theorem APPEND[simp]:
+  (!l:'a list.  APPEND [] l = l) /\
+  (!l1 l2 h:'a. APPEND (h::l1) l2 = h::(APPEND l1 l2))
+Proof
+  REWRITE_TAC[APPEND_def]
+QED
 
 Definition FLAT[simp]:
   FLAT []     = [] /\
@@ -219,10 +227,18 @@ Definition EXISTS_DEF[simp]:
   (EXISTS P (h::t) <=> P h \/ EXISTS P t)
 End
 
-Definition EL:
+Definition EL_def:
   EL 0 l = (HD l:'a) /\
   EL (SUC n) l = EL n (TL l)
 End
+
+(* preserving particular variable quantification order *)
+Theorem EL:
+  (!l.    EL 0 l = HD l:'a) /\
+  (!l n.  EL (SUC n) l = EL n (TL l))
+Proof
+  REWRITE_TAC[EL_def]
+QED
 
 (* ---------------------------------------------------------------------*)
 (* Definition of a function                                             *)
