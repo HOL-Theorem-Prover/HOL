@@ -44,7 +44,7 @@ Definition parse_block_def:
   else parse_block ((word_from_bin_list (TAKE 32 bits))::acc) (DROP 32 bits)
 Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
-QED
+End
 
 val () = cv_auto_trans parse_block_def;
 
@@ -54,7 +54,7 @@ Definition parse_message_def:
   parse_message (parse_block [] (TAKE 512 bits) :: acc) (DROP 512 bits)
 Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
-QED
+End
 
 val () = cv_auto_trans parse_message_def;
 
@@ -121,6 +121,7 @@ val () = cv_auto_trans initial_schedule_def;
 
 Definition process_block_def:
   process_block block
+*)
 
 (*
 cv_eval``parse_message [] (pad_message [
