@@ -1,0 +1,2 @@
+gh1353.log: doit.sh testd/bugScript.sml
+	$(tee ./doit.sh $(protect $(HOLDIR)/bin/Holmake), $@)
