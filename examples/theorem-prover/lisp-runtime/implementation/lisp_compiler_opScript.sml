@@ -15,7 +15,8 @@ open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
 
 val _ = let
   val thms = DB.match [] ``SPEC X64_MODEL``
-  val thms = filter (can (find_term (can (match_term ``zLISP``))) o car o concl) (map (fst o snd) thms)
+  val thms = filter (can (find_term (can (match_term ``zLISP``))) o car o concl)
+                    (map (#1 o #2) thms)
   val thms = map (Q.INST [`ddd`|->`SOME F`,`cu`|->`NONE`]) thms
   val _ = map (fn th => add_compiled [th] handle e => ()) thms
   in () end;
@@ -4183,7 +4184,8 @@ val X64_LISP_COMPILE = save_thm("X64_LISP_COMPILE",let
 
 val _ = let (* reload all primitive ops with SOME T for ddd *)
   val thms = DB.match [] ``SPEC X64_MODEL``
-  val thms = filter (can (find_term (can (match_term ``zLISP``))) o car o concl) (map (fst o snd) thms)
+  val thms = filter (can (find_term (can (match_term ``zLISP``))) o car o concl)
+                    (map (#1 o #2) thms)
   val thms = map (Q.INST [`ddd`|->`SOME T`,`cu`|->`NONE`]) thms
   val _ = map (fn th => add_compiled [th] handle e => ()) thms
   in () end;
@@ -4609,7 +4611,8 @@ val X64_LISP_COMPILE_FOR_EVAL = save_thm("X64_LISP_COMPILE_FOR_EVAL",let
 
 val _ = let
   val thms = DB.match [] ``SPEC X64_MODEL``
-  val thms = filter (can (find_term (can (match_term ``zLISP``))) o car o concl) (map (fst o snd) thms)
+  val thms = filter (can (find_term (can (match_term ``zLISP``))) o car o concl)
+                    (map (#1 o #2) thms)
   val _ = map (fn th => add_compiled [th] handle e => ()) thms
   in () end;
 
