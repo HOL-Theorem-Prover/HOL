@@ -2306,6 +2306,13 @@ val ALL_DISTINCT_APPEND = store_thm (
              (!e. MEM e l1 ==> ~(MEM e l2)))”,
   Induct THEN SRW_TAC [] [] THEN PROVE_TAC []);
 
+Theorem ALL_DISTINCT_APPEND' :
+    !l1 l2. ALL_DISTINCT (l1 ++ l2) <=>
+            ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\ DISJOINT (set l1) (set l2)
+Proof
+    RW_TAC std_ss [ALL_DISTINCT_APPEND, DISJOINT_ALT]
+QED
+
 val ALL_DISTINCT_SING = store_thm(
    "ALL_DISTINCT_SING",
    “!x. ALL_DISTINCT [x]”,

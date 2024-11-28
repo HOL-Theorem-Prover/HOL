@@ -2713,6 +2713,13 @@ Proof
  >> rw [TAKE_LENGTH_TOO_LONG]
 QED
 
+Theorem IS_PREFIX_IMP_TAKE :
+    !l l1. l1 <<= l ==> l1 = TAKE (LENGTH l1) l
+Proof
+    rw [IS_PREFIX_EQ_TAKE]
+ >> rw [LENGTH_TAKE]
+QED
+
 (* NOTE: This theorem can also be proved by IS_PREFIX_LENGTH_ANTI and
    prefixes_is_prefix_total, but IS_PREFIX_EQ_TAKE is more natural.
  *)
@@ -3512,6 +3519,74 @@ QED
 
 end
 (* end CakeML lemmas *)
+
+(* BEGIN more lemmas of IS_SUFFIX *)
+Theorem IS_SUFFIX_EQ_DROP :
+    !l l1. IS_SUFFIX l l1 <=> ?n. n <= LENGTH l /\ l1 = DROP n l
+Proof
+    rw [GSYM IS_PREFIX_REVERSE, IS_PREFIX_EQ_TAKE]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q.EXISTS_TAC ‘LENGTH l - n’ >> simp [] \\
+      ONCE_REWRITE_TAC [GSYM REVERSE_11] \\
+      POP_ASSUM (fn th => REWRITE_TAC [th]) \\
+      simp [TAKE_REVERSE, REVERSE_DROP],
+      (* goal 2 (of 2) *)
+      Q.EXISTS_TAC ‘LENGTH l - n’ >> simp [] \\
+      simp [TAKE_REVERSE, REVERSE_DROP] ]
+QED
+
+Theorem IS_SUFFIX_EQ_DROP' :
+    !l l1. IS_SUFFIX l l1 <=> ?n. l1 = DROP n l
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC
+ >- (rw [IS_SUFFIX_EQ_DROP] \\
+     Q.EXISTS_TAC ‘n’ >> REWRITE_TAC [])
+ >> STRIP_TAC
+ >> Cases_on ‘n <= LENGTH l’
+ >- (rw [IS_SUFFIX_EQ_DROP] \\
+     Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC [])
+ >> ‘LENGTH l <= n’ by rw []
+ >> ‘l1 = []’ by rw [DROP_EQ_NIL]
+ >> simp [IS_SUFFIX]
+QED
+
+Theorem IS_SUFFIX_IMP_DROP :
+    !l l1. IS_SUFFIX l l1 ==> l1 = DROP (LENGTH l - LENGTH l1) l
+Proof
+    rw [IS_SUFFIX_EQ_DROP]
+ >> rw [LENGTH_DROP]
+QED
+
+Theorem IS_SUFFIX_IMP_LASTN :
+    !l l1. IS_SUFFIX l l1 ==> l1 = LASTN (LENGTH l1) l
+Proof
+    rw [IS_SUFFIX_EQ_DROP]
+ >> rw [DROP_LASTN]
+QED
+
+Theorem LIST_TO_SET_PREFIX :
+    !l l1. l1 <<= l ==> set l1 SUBSET set l
+Proof
+    rw [IS_PREFIX_EQ_TAKE']
+ >> rw [LIST_TO_SET_TAKE]
+QED
+
+Theorem LIST_TO_SET_SUFFIX :
+    !l l1. IS_SUFFIX l l1 ==> set l1 SUBSET set l
+Proof
+    rw [IS_SUFFIX_EQ_DROP']
+ >> rw [LIST_TO_SET_DROP]
+QED
+
+Theorem IS_SUFFIX_ALL_DISTINCT :
+    !l l1. IS_SUFFIX l l1 /\ ALL_DISTINCT l ==> ALL_DISTINCT l1
+Proof
+    rw [IS_SUFFIX_EQ_DROP']
+ >> MATCH_MP_TAC ALL_DISTINCT_DROP >> rw []
+QED
+(* END more lemmas of IS_SUFFIX *)
 
 Theorem nub_GENLIST:
   nub (GENLIST f n) =

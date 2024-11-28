@@ -11,7 +11,7 @@ open HolKernel Parse boolLib bossLib;
 open arithmeticTheory listTheory rich_listTheory pred_setTheory finite_mapTheory
      hurdUtils listLib pairTheory;
 
-open termTheory binderLib;
+open termTheory binderLib basic_swapTheory;
 
 val _ = new_theory "appFOLDL"
 
@@ -403,6 +403,30 @@ Proof
     Induct_on ‘vs’ >> rw [LAM_eq_thm]
 QED
 
+fun RNEWS_TAC (vs, r, n) X :tactic =
+    qabbrev_tac ‘^vs = RNEWS ^r ^n ^X’
+ >> Know ‘ALL_DISTINCT ^vs /\ DISJOINT (set ^vs) ^X /\ LENGTH ^vs = ^n’
+ >- rw [RNEWS_def, Abbr ‘^vs’]
+ >> DISCH_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [DISJOINT_UNION']));
+
+Theorem LAMl_RNEWS_11 :
+    !X r n1 n2 y1 y2. FINITE X ==>
+       (LAMl (RNEWS r n1 X) (VAR y1) =
+        LAMl (RNEWS r n2 X) (VAR y2) <=> n1 = n2 /\ y1 = y2)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >- (STRIP_TAC >> fs [])
+ >> Q_TAC (RNEWS_TAC (“vs1 :string list”, “r :num”, “n1 :num”)) ‘X’
+ >> Q_TAC (RNEWS_TAC (“vs2 :string list”, “r :num”, “n2 :num”)) ‘X’
+ >> DISCH_TAC
+ >> Know ‘size (LAMl vs1 (VAR y1)) = size (LAMl vs2 (VAR y2))’
+ >- (POP_ORW >> rw [])
+ >> simp [] (* n1 = n2 *)
+ >> DISCH_TAC
+ >> ‘vs1 = vs2’ by simp [Abbr ‘vs1’, Abbr ‘vs2’]
+ >> fs []
+QED
+
 (*---------------------------------------------------------------------------*
  *  funpow for lambda terms (using arithmeticTheory.FUNPOW)
  *---------------------------------------------------------------------------*)
@@ -410,7 +434,8 @@ QED
 Overload funpow = “\f. FUNPOW (APP (f :term))”
 
 Theorem FV_FUNPOW :
-    !(f :term) x n. FV (FUNPOW (APP f) n x) = if n = 0 then FV x else FV f UNION FV x
+    !(f :term) x n. FV (FUNPOW (APP f) n x) =
+                    if n = 0 then FV x else FV f UNION FV x
 Proof
     rpt STRIP_TAC
  >> Q.SPEC_TAC (‘n’, ‘i’)

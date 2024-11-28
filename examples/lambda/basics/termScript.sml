@@ -114,6 +114,12 @@ Theorem FINITE_FV[simp]: FINITE (FV t)
 Proof srw_tac [][supp_tpm, FINITE_GFV]
 QED
 
+Theorem FINITE_BIGUNION_IMAGE_FV[simp] :
+    FINITE (BIGUNION (IMAGE FV (set Ns)))
+Proof
+    rw [] >> rw [FINITE_FV]
+QED
+
 fun supp_clause {con_termP, con_def} = let
   val t = mk_comb(``supp ^t_pmact_t``, lhand (concl (SPEC_ALL con_def)))
 in
