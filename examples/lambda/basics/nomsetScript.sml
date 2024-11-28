@@ -454,6 +454,26 @@ QED
 (* |- !p1 p2 x. lswapstr (p1 ++ p2) x = lswapstr p1 (lswapstr p2 x) *)
 Theorem lswapstr_append = ISPEC “string_pmact” pmact_append
 
+Theorem lswapstr_upperbound :
+    !xs ys v. LENGTH xs = LENGTH ys /\ DISJOINT (set xs) (set ys) /\
+              ALL_DISTINCT xs /\ ALL_DISTINCT ys ==>
+              lswapstr (ZIP (xs,ys)) v IN v INSERT set xs UNION set ys
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘pi = ZIP (xs,ys)’
+ >> Cases_on ‘~MEM v (MAP FST pi) /\ ~MEM v (MAP SND pi)’
+ >- (‘lswapstr pi v = v’ by PROVE_TAC [lswapstr_unchanged'] \\
+     simp [])
+ >> simp [IN_INSERT, IN_UNION] >> DISJ2_TAC
+ >> gs [Abbr ‘pi’, MAP_ZIP]
+ >| [ (* goal 1 (of 2) *)
+      DISJ2_TAC \\
+      MATCH_MP_TAC MEM_lswapstr >> art [],
+      (* goal 2 (of 2) *)
+      DISJ1_TAC \\
+      MATCH_MP_TAC MEM_lswapstr' >> art [] ]
+QED
+
 (*---------------------------------------------------------------------------*
  *  Permutation of a function call (fnpm)
  *---------------------------------------------------------------------------*)
