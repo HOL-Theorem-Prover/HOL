@@ -27,7 +27,7 @@ in
       comdepth = ref 0, comstart = ref NONE, pardepth = ref 0, parseError = parseError})
     val lookahead = ref NONE
     fun go () =
-      case (case !lookahead of SOME tk => tk | NONE => lex ()) of
+      case (case !lookahead of SOME tk => (lookahead := NONE; tk) | NONE => lex ()) of
         H.Decl (td, look) => (lookahead := look; TopDecl td)
       | H.CloseParen p => (parseError (p, p + 1) ("unexpected ')'"); go ())
       | H.EndTok _ => go ()
