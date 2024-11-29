@@ -111,7 +111,7 @@ val () = cv_auto_trans sigma1_def;
 
 Definition initial_schedule_loop_def:
   initial_schedule_loop Ws t =
-  if t >= 64 \/ LENGTH Ws < t then
+  if t ≥ 64 ∨ t < 16 ∨ LENGTH Ws < t then
     REVERSE Ws
   else let
     Wt2  = EL  1 Ws;
@@ -127,9 +127,13 @@ End
 
 val initial_schedule_loop_pre_def = cv_auto_trans_pre initial_schedule_loop_def;
 
-(*
 Theorem initial_schedule_loop_pre[cv_pre]:
-  initial_schedule_loop_pre
+  ∀Ws t. initial_schedule_loop_pre Ws t
+Proof
+  ho_match_mp_tac initial_schedule_loop_ind
+  \\ rw[initial_schedule_loop_def]
+  \\ rw[Once initial_schedule_loop_pre_def]
+QED
 
 Definition initial_schedule_def:
   initial_schedule block =
@@ -138,6 +142,7 @@ End
 
 val () = cv_auto_trans initial_schedule_def;
 
+(*
 Definition process_block_def:
   process_block block
 *)
