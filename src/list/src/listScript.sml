@@ -176,7 +176,7 @@ Definition LENGTH[simp]:
 End
 
 Definition MAP[simp]:
-  MAP f [] = [] /\
+  MAP (f:'a -> 'b) [] = [] /\
   MAP f (h::t) = f h::MAP f t
 End
 
@@ -234,8 +234,8 @@ End
 
 (* preserving particular variable quantification order *)
 Theorem EL:
-  (!l.    EL 0 l = HD l:'a) /\
-  (!l n.  EL (SUC n) l = EL n (TL l))
+  (!(l:'a list).    EL 0 l = HD l:'a) /\
+  (!(l:'a list) n.  EL (SUC n) l = EL n (TL l))
 Proof
   REWRITE_TAC[EL_def]
 QED
