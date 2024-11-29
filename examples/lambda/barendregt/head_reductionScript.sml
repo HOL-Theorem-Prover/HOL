@@ -14,7 +14,7 @@ open boolSimps relationTheory pred_setTheory listTheory finite_mapTheory
 
 open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
      horeductionTheory term_posnsTheory finite_developmentsTheory
-     basic_swapTheory;
+     basic_swapTheory NEWLib;
 
 val _ = new_theory "head_reduction"
 
@@ -1986,15 +1986,6 @@ Proof
  >> MATCH_MP_TAC hreduce_LAMl_appstar_lemma
  >> rw []
 QED
-
-(* This is copied from boehmScript.sml *)
-fun RNEWS_TAC (vs, r, n) X :tactic =
-    qabbrev_tac ‘^vs = RNEWS ^r ^n ^X’
- >> Know ‘ALL_DISTINCT ^vs /\ DISJOINT (set ^vs) ^X /\ LENGTH ^vs = ^n’
- >- rw [RNEWS_def, Abbr ‘^vs’]
- >> DISCH_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [DISJOINT_UNION']));
-
-fun NEWS_TAC (vs, n) = RNEWS_TAC (vs, numSyntax.zero_tm, n);
 
 (* NOTE: A problem of (the next) hreduce_permutator_thm is that, the names
    xs and y asserted, do not have a rank-based allocation. As the result,

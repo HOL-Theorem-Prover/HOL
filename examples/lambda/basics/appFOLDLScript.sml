@@ -11,7 +11,7 @@ open HolKernel Parse boolLib bossLib;
 open arithmeticTheory listTheory rich_listTheory pred_setTheory finite_mapTheory
      hurdUtils listLib pairTheory;
 
-open termTheory binderLib basic_swapTheory;
+open termTheory binderLib basic_swapTheory NEWLib;
 
 val _ = new_theory "appFOLDL"
 
@@ -402,12 +402,6 @@ Theorem LAMl_eq_rewrite[simp] :
 Proof
     Induct_on ‘vs’ >> rw [LAM_eq_thm]
 QED
-
-fun RNEWS_TAC (vs, r, n) X :tactic =
-    qabbrev_tac ‘^vs = RNEWS ^r ^n ^X’
- >> Know ‘ALL_DISTINCT ^vs /\ DISJOINT (set ^vs) ^X /\ LENGTH ^vs = ^n’
- >- rw [RNEWS_def, Abbr ‘^vs’]
- >> DISCH_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [DISJOINT_UNION']));
 
 Theorem LAMl_RNEWS_11 :
     !X r n1 n2 y1 y2. FINITE X ==>
