@@ -1,26 +1,28 @@
 #!/bin/bash
 
-set -e
-
 cd testd
 ulimit -t 2
-if [ "$#" -ne 1 ]
+if [ "$#" -ne 2 ]
 then
-    echo "Need Holmake as arg 1"
+    echo "Usage:"
+    echo "  $0 holstatefile holmake"
     exit 1
 fi
 
-hmake=$1
+holstate=$1
+holmake=$2
+
+echo "Running Holmake in testd directory"
+$holmake --holstate=$holstate
+
 retcode=$?
+echo "Holmake completed with code $retcode"
 
-$hmake
-
-if [ $? -eq 0 ]
+if [ $retcode -eq 0 ]
 then
     exit 1
-elif [ $? -eq 152 ]
+elif [ $retcode -eq 152 ]
 then
-    # shouldn't happen given set -e
     echo "Time limit exceeded"
     exit 1
 else

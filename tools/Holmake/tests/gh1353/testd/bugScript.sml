@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib
+open HolKernel Parse boolLib
 
 val _ = new_theory"bug";
 
