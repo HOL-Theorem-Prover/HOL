@@ -176,8 +176,8 @@ val () = cv_auto_trans Maj_def;
 Definition step3_def:
   step3 Ws (t, (a, b, c, d, e, f, g, h)) = let
     t1 = h + Sigma1 e + Ch e f g +
-         if t < 64 then EL t K else 0w +
-         if t < LENGTH Ws then EL t Ws else 0w;
+         (if t < 64 then EL t K else 0w) +
+         (if t < LENGTH Ws then EL t Ws else 0w);
     t2 = Sigma0 a + Maj a b c;
     h = g;
     g = f;
@@ -234,68 +234,21 @@ End
 
 val () = cv_auto_trans SHA_256_bytes_def;
 
-(*
-
-cv_eval ``
-let blocks =
-  parse_message [] $
-  pad_message $
-  FLAT $ MAP (REVERSE o PAD_RIGHT 0 8 o word_to_bin_list) ([97w; 98w; 99w]: word8 list)
-  ;
-  block = HD blocks;
-  Ws = initial_schedule block;
-  hashi = initial_hash_value;
-  hash0 = step3 Ws (0, hashi)
-in (Ws, hash0)
-``
-
-t1 + t2 should be 5D6AEBCD but currently FC08884D
-d + t1 should be FA2A4622 but currently 98C7E2A2
-d is A54FF53A
-     54DA50E8
-     FA2A4622
-
-     cv_eval``(0xA54FF53Aw:word32) + 0x54DA50E8w``
-     0xFA2A4622
-
-     18-4
-     0xa  +8
-0xFA2A4622 - 0xA54FF53A
-
-correct t1 is 0x54DA50E8w
-current t1 is
-  cv_eval``0x5BE0CD19w + Sigma1 0x510e527fw +
-    Ch 0x510e527fw 0x9b05688cw 0x1f83d9abw``
-
-    cv_eval``Ch 0x510e527fw 0x9b05688cw 0x1f83d9abw``
-
-current t2 is 0x8909AE5w
-  cv_eval``Sigma0 0x6A09E667w + Maj 0x6A09E667w 0xBB67AE85w 0x3C6EF372w``
-
-cv_eval``(0x54DA50E8w:word32) + 0x8909AE5w``
-
-correct t2 is 0xCAA988C3w
-
-cv_eval``(0x54DA50E8w:word32) + 0xCAA988C3w``
-1F83D9AB
-
-
-cv_eval``EL 0 K``
-
 Theorem SHA_256_bytes_abc:
   SHA_256_bytes (MAP (n2w o ORD) "abc") =
   0xBA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015ADw
 Proof
   CONV_TAC(PATH_CONV"lrr"EVAL)
-  \\ (fn g =>
-  top_goal() |> #2 |> lhs |> cv_eval
-  EVAL``ORD #"a"``
-*)
+  \\ (fn g => (g |> #2 |> lhs |> cv_eval |> ACCEPT_TAC) g)
+QED
 
-(*
-cv_eval``parse_message [] (pad_message [
-  F;T;T;F;F;F;F;T; F;T;T;F;F;F;T;F; F;T;T;F;F;F;T;T
-])``
-*)
+Theorem SHA_256_bytes_two_blocks:
+  SHA_256_bytes (MAP (n2w o ORD)
+    "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") =
+  0x248D6A61D20638B8E5C026930C3E6039A33CE45964FF2167F6ECEDD419DB06C1w
+Proof
+  CONV_TAC(PATH_CONV"lrr"EVAL)
+  \\ (fn g => (g |> #2 |> lhs |> cv_eval |> ACCEPT_TAC) g)
+QED
 
 val _ = export_theory();
