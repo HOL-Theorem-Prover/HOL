@@ -966,7 +966,7 @@ region instead. With prefix ARG prompt for a file-name to load."
         (setq hol-buffer-name (buffer-name buf))
         (set-buffer hol-buffer-name)))
 
-    (setq comint-prompt-regexp "^- ")
+    (setq comint-prompt-regexp "^> ")
     ;; must go to ridiculous lengths to ensure that font-lock-mode is
     ;; turned off and stays off
     (font-lock-mode 0)
@@ -977,6 +977,7 @@ region instead. With prefix ARG prompt for a file-name to load."
     (setq comint-preoutput-filter-functions '(holpp-output-filter))
     (setq comint-scroll-show-maximum-output t)
     (setq comint-scroll-to-bottom-on-output t)
+    (setq comint-output-filter-functions '(comint-postoutput-scroll-to-bottom))
     (hol-mode-init-sml)
     (send-raw-string-to-hol
      "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil)
