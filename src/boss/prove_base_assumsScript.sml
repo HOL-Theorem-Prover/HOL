@@ -424,6 +424,8 @@ val th2 = store_thm
   ("th2", el 2 goals |> concl,
   rpt gen_tac \\ MATCH_ACCEPT_TAC (CONJ (SPEC_ALL if_T) (SPEC_ALL if_F)));
 
+val bool_case_lemma = th2;
+
 val cons_11 = hd (amatch ``Data_List_cons  _ _ = Data_List_cons _ _``);
 
 (* |- !a0 a1 a0' a1'.
@@ -1635,7 +1637,7 @@ val BOOL_EQ_DISTINCT = store_thm("BOOL_EQ_DISTINCT", concl boolTheory.BOOL_EQ_DI
  *)
 val bool_case_thm = store_thm
   ("bool_case_thm", concl boolTheory.bool_case_thm,
-  PURE_REWRITE_TAC[th18]
+  PURE_REWRITE_TAC[bool_case_lemma]
   \\ conj_tac \\ rpt gen_tac \\ REFL_TAC);
 
 val forall_bool = hd(amatch``(!b:bool. P b) <=> _``)
