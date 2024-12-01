@@ -14,7 +14,7 @@ open boolSimps relationTheory pred_setTheory listTheory finite_mapTheory
 
 open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
      horeductionTheory term_posnsTheory finite_developmentsTheory
-     basic_swapTheory;
+     basic_swapTheory NEWLib;
 
 val _ = new_theory "head_reduction"
 
@@ -1987,15 +1987,6 @@ Proof
  >> rw []
 QED
 
-(* This is copied from boehmScript.sml *)
-fun RNEWS_TAC (vs, r, n) X :tactic =
-    qabbrev_tac ‘^vs = RNEWS ^r ^n ^X’
- >> Know ‘ALL_DISTINCT ^vs /\ DISJOINT (set ^vs) ^X /\ LENGTH ^vs = ^n’
- >- rw [RNEWS_def, Abbr ‘^vs’]
- >> DISCH_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [DISJOINT_UNION']));
-
-fun NEWS_TAC (vs, n) = RNEWS_TAC (vs, numSyntax.zero_tm, n);
-
 (* NOTE: A problem of (the next) hreduce_permutator_thm is that, the names
    xs and y asserted, do not have a rank-based allocation. As the result,
    two applications of the theorem on two different terms, say, Ns and Ns',
@@ -2005,29 +1996,48 @@ fun NEWS_TAC (vs, n) = RNEWS_TAC (vs, numSyntax.zero_tm, n);
    of names for building xs and y, such that ‘xs ++ [y]’ is the prefix of
    the given list, render them comparable among different applications.
 
-   NOTE: Using [permutator_alt] is a MUST in this proof, for eliminating
-   the ugly antecedent ‘DISJOINT (set L) (set (GENLIST n2s (SUC n)))’, which
-   comes from [permutator_def].
-
    NOTE: Usage of input and self-allocated names:
 
    permutator n @* Ns -h->* LAMl xs (LAM y (VAR y @* Ns @* MAP VAR xs))
 
-                       |<-------------- L ----------------->|
-         (NEWS)        |     (user provided, LENGTH L > n)  |
-   |<----- vs1 ------->+<------ vs2 (xs) ---->|y|
-   |  k = LENGTH Ns    |        n - k         | |
-   |<----------------- Y -------------------->|y|
-   |<----------------- Z -------------------->|z| (permutator_alt)
+   |<---------------------- L ---------------------->|
+        |     TAKE k L      |       DROP k L := L'   |
+        |<----- vs1 ------->+<------ vs2 (xs) ---->|y|
+        |  k = LENGTH Ns    |        n - k         | |
+        |<----------------- Y -------------------->|y|
+        |<----------------- Z -------------------->|z| (permutator_alt)
+
+   NOTE: Now the head variable y is always the LAST of L, while xs from
+   different head reductions still share the same suffix.
  *)
 Theorem hreduce_permutator_shared :
-    !Ns n L. LENGTH Ns <= n /\ n < LENGTH L /\ ALL_DISTINCT L /\
-             DISJOINT (set L) (BIGUNION (IMAGE FV (set Ns))) ==>
-             ?xs y. permutator n @* Ns -h->*
+    !Ns n ls. LENGTH Ns <= n /\ n < LENGTH ls /\ ALL_DISTINCT ls /\
+             DISJOINT (set ls) (BIGUNION (IMAGE FV (set Ns)))
+         ==> ?xs y. permutator n @* Ns -h->*
                     LAMl xs (LAM y (VAR y @* Ns @* MAP VAR xs)) /\
-                    LENGTH xs = n - LENGTH Ns /\ SNOC y xs <<= L
+                    LENGTH xs = n - LENGTH Ns /\
+                    IS_SUFFIX ls (SNOC y xs)
 Proof
     rpt STRIP_TAC
+ >> ‘ls <> []’ by simp [GSYM LENGTH_NON_NIL]
+ >> qabbrev_tac ‘L = LASTN (SUC n) ls’
+ >> Know ‘set L SUBSET set ls’
+ >- (rw [SUBSET_DEF, Abbr ‘L’] \\
+     MATCH_MP_TAC MEM_LASTN \\
+     Q.EXISTS_TAC ‘SUC n’ >> art [])
+ >> DISCH_TAC
+ >> ‘L <> []’ by rw [GSYM LENGTH_NON_NIL, Abbr ‘L’, LENGTH_LASTN]
+ >> ‘LENGTH L = SUC n’ by rw [Abbr ‘L’, LENGTH_LASTN]
+ >> Know ‘ALL_DISTINCT L’
+ >- (qunabbrev_tac ‘L’ \\
+     Know ‘LASTN (SUC n) ls = DROP (LENGTH ls - SUC n) ls’
+     >- (MATCH_MP_TAC LASTN_DROP >> simp []) >> Rewr' \\
+     MATCH_MP_TAC ALL_DISTINCT_DROP >> art [])
+ >> DISCH_TAC
+ >> Know ‘DISJOINT (set L) (BIGUNION (IMAGE FV (set Ns)))’
+ >- (MATCH_MP_TAC DISJOINT_SUBSET' \\
+     Q.EXISTS_TAC ‘set ls’ >> art [])
+ >> DISCH_TAC
  (* allocate vs1 in parallel with L *)
  >> qabbrev_tac ‘X = set L UNION (BIGUNION (IMAGE FV (set Ns)))’
  >> ‘FINITE X’ by (rw [Abbr ‘X’] >> rw [])
@@ -2037,61 +2047,73 @@ Proof
  >> MP_TAC (Q.SPECL [‘X UNION set vs1’, ‘n’] permutator_alt) >> simp []
  >> DISCH_THEN (Q.X_CHOOSE_THEN ‘Z’ (Q.X_CHOOSE_THEN ‘z’ STRIP_ASSUME_TAC))
  >> Q.PAT_X_ASSUM ‘FINITE X’ K_TAC
- >> FULL_SIMP_TAC list_ss [ALL_DISTINCT_SNOC, DISJOINT_UNION, DISJOINT_UNION',
-                           Abbr ‘X’]
+ >> FULL_SIMP_TAC list_ss
+      [Abbr ‘X’, ALL_DISTINCT_SNOC, DISJOINT_UNION, DISJOINT_UNION']
  (* stage work *)
  >> qabbrev_tac ‘M = VAR z @* MAP VAR Z’
- (* preparing for LAMl_ALPHA_ssub *)
- >> qabbrev_tac ‘Y = vs1 ++ TAKE (n - k) L’
- >> qabbrev_tac ‘y = EL (n - k) L’
- >> ‘LENGTH Y = n’ by rw [Abbr ‘Y’]
+ >> qabbrev_tac ‘L' = DROP k L’
+ >> Know ‘ALL_DISTINCT L'’
+ >- (qunabbrev_tac ‘L'’ \\
+     MATCH_MP_TAC ALL_DISTINCT_DROP >> art [])
+ >> DISCH_TAC
+ >> ‘set L' SUBSET set L’ by simp [Abbr ‘L'’, LIST_TO_SET_DROP]
+ >> ‘LENGTH L' = SUC (n - k)’ by simp [Abbr ‘L'’, LENGTH_DROP]
+ >> ‘L' <> []’ by simp [GSYM LENGTH_NON_NIL]
+ >> qabbrev_tac ‘vs2 = FRONT L'’
+ >> qabbrev_tac ‘y = LAST L'’
+ >> Know ‘MEM y L’
+ >- (Suff ‘MEM y L'’ >- ASM_SET_TAC [] \\
+     simp [Abbr ‘y’, MEM_LAST_NOT_NIL])
+ >> DISCH_TAC
+ >> Know ‘ALL_DISTINCT (SNOC y vs2)’
+ >- simp [Abbr ‘y’, Abbr ‘vs2’, SNOC_LAST_FRONT]
+ >> simp [ALL_DISTINCT_SNOC] >> STRIP_TAC
+ (* stage work *)
+ >> qabbrev_tac ‘Y = vs1 ++ vs2’
+ >> ‘LENGTH Y = n’ by simp [Abbr ‘Y’, Abbr ‘vs2’, LENGTH_FRONT]
  >> Know ‘ALL_DISTINCT Y’
  >- (simp [Abbr ‘Y’, ALL_DISTINCT_APPEND] \\
-     CONJ_TAC >- (MATCH_MP_TAC ALL_DISTINCT_TAKE >> art []) \\
-     Suff ‘DISJOINT (set vs1) (set (TAKE (n - k) L))’ >- rw [DISJOINT_ALT] \\
+     Suff ‘DISJOINT (set vs1) (set vs2)’
+     >- rw [DISJOINT_ALT] \\
      MATCH_MP_TAC DISJOINT_SUBSET \\
      Q.EXISTS_TAC ‘set L’ >> art [] \\
-     rw [LIST_TO_SET_TAKE])
+     Q_TAC (TRANS_TAC SUBSET_TRANS) ‘set L'’ >> art [] \\
+    ‘L' = SNOC y vs2’
+       by ASM_SIMP_TAC std_ss [Abbr ‘y’, Abbr ‘vs2’, SNOC_LAST_FRONT] \\
+     POP_ORW \\
+     simp [LIST_TO_SET_SNOC])
  >> DISCH_TAC
  >> Know ‘~MEM y Y’
  >- (simp [Abbr ‘Y’, MEM_APPEND] \\
-     CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘DISJOINT (set vs1) (set L)’ MP_TAC \\
-         simp [DISJOINT_ALT'] \\
-         DISCH_THEN MATCH_MP_TAC \\
-         simp [EL_MEM, Abbr ‘y’]) \\
-     qabbrev_tac ‘i = n - k’ \\
-     Know ‘ALL_DISTINCT (TAKE i L ++ DROP i L)’ >- simp [TAKE_DROP] \\
-     simp [ALL_DISTINCT_APPEND] >> STRIP_TAC \\
-     Suff ‘MEM y (DROP i L)’ >- PROVE_TAC [] \\
-     simp [Abbr ‘y’, Abbr ‘i’, MEM_DROP] \\
-     Q.EXISTS_TAC ‘0’ >> simp [])
+     Q.PAT_X_ASSUM ‘DISJOINT (set vs1) (set L)’ MP_TAC \\
+     simp [DISJOINT_ALT'])
  >> DISCH_TAC
  >> qabbrev_tac ‘Y' = SNOC y Y’
  >> qabbrev_tac ‘Z' = SNOC z Z’
  (* NOTE: We need to prove ‘DISJOINT (set Y') (set Z')’, and the idea is to
-    prove the two parts (‘vs1’ and the prefix of L) are disjoint with Z',
-    separately. For this purpose, it's better to consider put y and Y together
-    and prove that Y' is vs1 appended with a prefix of L.
+    prove parts of Y' (‘vs1’ and a sublist of L) are each disjoint with Z'.
   *)
- >> qabbrev_tac ‘k' = n - k’ (* as the complementation of k *)
- >> Know ‘vs1 ++ TAKE (SUC k') L = Y'’
- >- (simp [Abbr ‘Y'’, Abbr ‘Y’, Abbr ‘y’, TAKE_SUC] \\
-     simp [TAKE1, HD_DROP, Abbr ‘k'’])
- >> DISCH_TAC
  >> Know ‘DISJOINT (set Y') (set Z')’
- >- (POP_ASSUM (REWRITE_TAC o wrap o SYM) \\
-     simp [DISJOINT_UNION] \\
-     MATCH_MP_TAC DISJOINT_SUBSET' \\
-     Q.EXISTS_TAC ‘set L’ >> simp [LIST_TO_SET_TAKE])
+ >- (simp [Abbr ‘Y'’, Abbr ‘Y’, LIST_TO_SET_SNOC, DISJOINT_INSERT] \\
+     Know ‘DISJOINT (set L') (set Z')’
+     >- (MATCH_MP_TAC DISJOINT_SUBSET' \\
+         Q.EXISTS_TAC ‘set L’ >> art []) \\
+    ‘L' = SNOC y vs2’
+       by ASM_SIMP_TAC std_ss [Abbr ‘y’, Abbr ‘vs2’, SNOC_LAST_FRONT] \\
+     POP_ORW \\
+     simp [DISJOINT_INSERT, LIST_TO_SET_SNOC])
  >> DISCH_TAC
  (* stage work *)
- >> Know ‘DISJOINT (set Y') (BIGUNION (IMAGE FV (set Ns)))’
- >- (Q.PAT_X_ASSUM ‘_ = Y'’ (REWRITE_TAC o wrap o SYM) \\
-     ASM_SIMP_TAC list_ss [DISJOINT_UNION] \\
-     MATCH_MP_TAC DISJOINT_SUBSET' \\
-     Q.EXISTS_TAC ‘set L’ \\
-     ASM_SIMP_TAC list_ss [Abbr ‘Y’, LIST_TO_SET_TAKE])
+ >> qabbrev_tac ‘X = BIGUNION (IMAGE FV (set Ns))’
+ >> Know ‘DISJOINT (set Y') X’
+ >- (simp [Abbr ‘Y'’, Abbr ‘Y’, LIST_TO_SET_SNOC, DISJOINT_INSERT] \\
+     Know ‘DISJOINT (set L') X’
+     >- (MATCH_MP_TAC DISJOINT_SUBSET' \\
+         Q.EXISTS_TAC ‘set L’ >> art []) \\
+    ‘L' = SNOC y vs2’
+       by ASM_SIMP_TAC std_ss [Abbr ‘y’, Abbr ‘vs2’, SNOC_LAST_FRONT] \\
+     POP_ORW \\
+     simp [DISJOINT_INSERT, LIST_TO_SET_SNOC])
  >> DISCH_TAC
  >> ASM_SIMP_TAC std_ss [GSYM LAMl_SNOC]
  >> ‘MEM z Z'’ by rw [Abbr ‘Z'’]
@@ -2144,10 +2166,10 @@ Proof
  (* stage work *)
  >> qabbrev_tac ‘t = LAM y (VAR y @* MAP VAR Y)’
  (* now break Y into two parts, the first part will match Ns's length *)
- >> qabbrev_tac ‘vs2 = TAKE k' L’
  >> qunabbrev_tac ‘Y’
  >> REWRITE_TAC [LAMl_APPEND]
  >> qabbrev_tac ‘t1 = LAMl vs2 t’
+ >> qunabbrev_tac ‘X’
  (* applying hreduce_LAMl_appstar *)
  >> Know ‘LAMl vs1 t1 @* Ns -h->* (FEMPTY |++ ZIP (vs1,Ns)) ' t1’
  >- (MATCH_MP_TAC (REWRITE_RULE [fromPairs_def] hreduce_LAMl_appstar) \\
@@ -2175,8 +2197,12 @@ Proof
      Know ‘fromPairs vs1 Ns ' (EL i vs1) = EL i Ns’
      >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> simp []) >> Rewr' \\
      MATCH_MP_TAC DISJOINT_SUBSET \\
-     Q.EXISTS_TAC ‘set L’ \\
-     reverse CONJ_TAC >- rw [Abbr ‘vs2’, LIST_TO_SET_TAKE] \\
+     Q.EXISTS_TAC ‘set L'’ \\
+     reverse CONJ_TAC
+     >- (simp [Abbr ‘vs2’, SUBSET_DEF] \\
+         Cases_on ‘L'’ >> rw [MEM_FRONT]) \\
+     MATCH_MP_TAC DISJOINT_SUBSET \\
+     Q.EXISTS_TAC ‘set L’ >> art [] \\
      MATCH_MP_TAC DISJOINT_SUBSET' \\
      Q.EXISTS_TAC ‘BIGUNION (IMAGE FV (set Ns))’ \\
      ASM_SIMP_TAC std_ss [Once DISJOINT_SYM] \\
@@ -2194,17 +2220,14 @@ Proof
  >- (MATCH_MP_TAC ssub_LAM >> simp [] \\
      CONJ_TAC
      >- (Q.PAT_X_ASSUM ‘DISJOINT (set vs1) (set L)’ MP_TAC \\
-         rw [DISJOINT_ALT'] \\
-         POP_ASSUM MATCH_MP_TAC \\
-         simp [EL_MEM, Abbr ‘y’, Abbr ‘k'’]) \\
+         rw [DISJOINT_ALT']) \\
      Q.X_GEN_TAC ‘v’ >> simp [MEM_EL] \\
      DISCH_THEN (Q.X_CHOOSE_THEN ‘i’ STRIP_ASSUME_TAC) >> POP_ORW \\
      Know ‘fromPairs vs1 Ns ' (EL i vs1) = EL i Ns’
      >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> simp []) >> Rewr' \\
      Q.PAT_X_ASSUM ‘DISJOINT (set L) (BIGUNION (IMAGE FV (set Ns)))’ MP_TAC \\
      rw [DISJOINT_ALT] \\
-     POP_ASSUM irule \\
-     reverse CONJ_TAC >- rw [Abbr ‘y’, Abbr ‘k'’, EL_MEM] \\
+     POP_ASSUM irule >> art [] \\
      Q.EXISTS_TAC ‘EL i Ns’ >> simp [EL_MEM])
  >> Rewr'
  >> Know ‘~MEM y vs1’
@@ -2232,16 +2255,21 @@ Proof
  (* final stage *)
  >> REWRITE_TAC [appstar_APPEND]
  >> DISCH_TAC
- >> qexistsl_tac [‘vs2’, ‘y’] >> art []
+ >> qexistsl_tac [‘vs2’, ‘y’]
+ >> POP_ASSUM (REWRITE_TAC o wrap)
  (* extra goal: LENGTH vs2 = n - k *)
- >> CONJ_TAC >- rw [Abbr ‘vs2’, LENGTH_TAKE, Abbr ‘k'’]
- >> simp [IS_PREFIX_EQ_TAKE']
- >> Q.EXISTS_TAC ‘SUC k'’
- >> simp [Abbr ‘vs2’, TAKE_SUC]
- >> ‘DROP k' L <> []’ by rw [Abbr ‘k'’]
- >> simp [Abbr ‘y’, TAKE1, Once EQ_SYM_EQ]
- >> MATCH_MP_TAC HD_DROP
- >> simp [Abbr ‘k'’]
+ >> CONJ_TAC >- simp [Abbr ‘vs2’, LENGTH_FRONT]
+ >> Know ‘IS_SUFFIX L (SNOC y vs2)’
+ >- (REWRITE_TAC [IS_SUFFIX_EQ_DROP'] \\
+     Q.EXISTS_TAC ‘k’ \\
+     ASM_SIMP_TAC std_ss [Abbr ‘y’, Abbr ‘vs2’, SNOC_LAST_FRONT])
+ >> DISCH_TAC
+ >> Suff ‘IS_SUFFIX ls L’ >- METIS_TAC [IS_SUFFIX_TRANS]
+ >> simp [Abbr ‘L’, IS_SUFFIX_EQ_DROP']
+ >> Know ‘LASTN (SUC n) ls = DROP (LENGTH ls - SUC n) ls’
+ >- (MATCH_MP_TAC LASTN_DROP >> simp [])
+ >> Rewr'
+ >> Q.EXISTS_TAC ‘LENGTH ls - SUC n’ >> rw []
 QED
 
 (* NOTE: ‘permutator n’ contains n + 1 binding variables. Appending at most n
@@ -2254,7 +2282,7 @@ QED
 Theorem hreduce_permutator_thm :
     !X n Ns. FINITE X /\ LENGTH Ns <= n ==>
              ?xs y. permutator n @* Ns -h->*
-                      LAMl xs (LAM y (VAR y @* Ns @* MAP VAR xs)) /\
+                    LAMl xs (LAM y (VAR y @* Ns @* MAP VAR xs)) /\
                     LENGTH xs = n - LENGTH Ns /\
                     ALL_DISTINCT (SNOC y xs) /\
                     DISJOINT X (set (SNOC y xs)) /\
@@ -2267,25 +2295,36 @@ Proof
  >- (rw [Abbr ‘Z’] >> rw [])
  >> DISCH_TAC
  >> Q_TAC (NEWS_TAC (“L :string list”, “SUC n”)) ‘Z’
+ >> ‘L <> []’ by simp [GSYM LENGTH_NON_NIL]
  >> FULL_SIMP_TAC std_ss [Abbr ‘Z’, DISJOINT_UNION']
  (* applying hreduce_permutator_shared *)
  >> MP_TAC (Q.SPECL [‘Ns’, ‘n’, ‘L’] hreduce_permutator_shared) >> rw []
- >> qexistsl_tac [‘xs’, ‘y’] >> simp []
- >> CONJ_TAC
+ >> qexistsl_tac [‘xs’, ‘y’] >> art []
+ (* stage work *)
+ >> POP_ASSUM (MP_TAC o REWRITE_RULE [IS_SUFFIX_compute])
+ >> REWRITE_TAC [REVERSE_SNOC]
+ >> qabbrev_tac ‘l = y::REVERSE xs’
+ >> DISCH_TAC
+ >> qabbrev_tac ‘L' = REVERSE L’
+ >> ‘set l SUBSET set L'’ by fs [IS_PREFIX_EQ_TAKE', LIST_TO_SET_TAKE]
+ >> ‘ALL_DISTINCT L'’ by rw [Abbr ‘L'’, ALL_DISTINCT_REVERSE]
+ >> ‘DISJOINT (set L') X’ by rw [Abbr ‘L'’, LIST_TO_SET_REVERSE]
+ >> ‘DISJOINT (set L') (BIGUNION (IMAGE FV (set Ns)))’
+      by ASM_SIMP_TAC std_ss [Abbr ‘L'’, LIST_TO_SET_REVERSE]
+ >> ‘SNOC y xs = REVERSE l’ by rw [Abbr ‘l’, REVERSE_SNOC] >> POP_ORW
+ >> simp []
+ >> CONJ_TAC (* ALL_DISTINCT l *)
  >- (MATCH_MP_TAC IS_PREFIX_ALL_DISTINCT \\
-     Q.EXISTS_TAC ‘L’ >> art [])
+     Q.EXISTS_TAC ‘L'’ >> art [])
  >> CONJ_TAC
  >- (MATCH_MP_TAC DISJOINT_SUBSET \\
-     Q.EXISTS_TAC ‘set L’ >> rw [Once DISJOINT_SYM] \\
-     FULL_SIMP_TAC std_ss [IS_PREFIX_EQ_TAKE', LIST_TO_SET_TAKE])
+     Q.EXISTS_TAC ‘set L'’ >> rw [Once DISJOINT_SYM])
  >> rpt STRIP_TAC
  >> MATCH_MP_TAC DISJOINT_SUBSET
- >> Q.EXISTS_TAC ‘set L’
- >> reverse CONJ_TAC
- >- FULL_SIMP_TAC std_ss [IS_PREFIX_EQ_TAKE', LIST_TO_SET_TAKE]
- >> ONCE_REWRITE_TAC [DISJOINT_SYM]
- >> MATCH_MP_TAC DISJOINT_SUBSET
- >> Q.EXISTS_TAC ‘BIGUNION (IMAGE FV (set Ns))’ >> art []
+ >> Q.EXISTS_TAC ‘set L'’ >> art []
+ >> MATCH_MP_TAC DISJOINT_SUBSET'
+ >> Q.EXISTS_TAC ‘BIGUNION (IMAGE FV (set Ns))’
+ >> ASM_REWRITE_TAC [Once DISJOINT_SYM]
  >> rw [SUBSET_DEF]
  >> Q.EXISTS_TAC ‘FV N’ >> art []
  >> Q.EXISTS_TAC ‘N’ >> art []
@@ -2363,17 +2402,17 @@ Proof
       impl_tac >- (Q.EXISTS_TAC ‘e’ >> art []) >> rw [] ]
 QED
 
-(* NOTE: ‘EL n l’ is undefined without ‘n < LENGTH l’ *)
+(* NOTE: ‘EL n L’ is undefined without ‘n < LENGTH L’ *)
 Theorem permutator_hreduce_more' :
-    !n l. n < LENGTH l ==>
-          permutator n @* l -h->* EL n l @* TAKE n l @* DROP (SUC n) l
+    !n L. n < LENGTH L ==>
+          permutator n @* L -h->* EL n L @* TAKE n L @* DROP (SUC n) L
 Proof
     rpt STRIP_TAC
- >> Suff ‘permutator n @* l =
-          permutator n @* TAKE n l @@ EL n l @* DROP (SUC n) l’
+ >> Suff ‘permutator n @* L =
+          permutator n @* TAKE n L @@ EL n L @* DROP (SUC n) L’
  >- (Rewr' \\
      MATCH_MP_TAC permutator_hreduce_more >> rw [LENGTH_TAKE])
- >> Suff ‘l = TAKE n l ++ [EL n l] ++ DROP (SUC n) l’
+ >> Suff ‘L = TAKE n L ++ [EL n L] ++ DROP (SUC n) L’
  >- (DISCH_THEN
       (GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites o wrap) \\
      REWRITE_TAC [GSYM SNOC_APPEND] \\

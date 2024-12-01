@@ -1,7 +1,7 @@
 structure NEWLib :> NEWLib =
 struct
 
-open HolKernel boolLib BasicProvers simpLib basic_swapTheory
+open HolKernel boolLib BasicProvers simpLib basic_swapTheory pred_setTheory;
 
 val string_ty = stringSyntax.string_ty
 val strset_finite_t = inst [alpha |-> string_ty] pred_setSyntax.finite_tm
@@ -38,5 +38,21 @@ in
   CONV_TAC (UNBETA_CONV newt) THEN MATCH_MP_TAC NEW_ELIM_RULE THEN
   SIMP_TAC (srw_ss()) []
 end (asl, w)
+
+(* NOTE: “FINITE X” must be present in the assumptions or provable by rw [].
+   If ‘X’ is actually a literal union of sets, they will be broken into several
+  ‘DISJOINT’ assumptions.
+
+   NOTE: Usually the type of "X" is tricky, thus Q_TAC is recommended, e.g.:
+
+   Q_TAC (RNEWS_TAC (“vs :string list”, “r :num”, “n :num”)) ‘FV M UNION FV N’
+ *)
+fun RNEWS_TAC (vs, r, n) X :tactic =
+    Q.ABBREV_TAC ‘^vs = RNEWS ^r ^n ^X’
+ >> Q_TAC KNOW_TAC ‘ALL_DISTINCT ^vs /\ DISJOINT (set ^vs) ^X /\ LENGTH ^vs = ^n’
+ >- ASM_SIMP_TAC (srw_ss()) [RNEWS_def, Abbr ‘^vs’]
+ >> DISCH_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [DISJOINT_UNION']));
+
+fun NEWS_TAC (vs, n) = RNEWS_TAC (vs, numSyntax.zero_tm, n);
 
 end (* struct *)

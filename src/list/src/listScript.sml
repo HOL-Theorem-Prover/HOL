@@ -176,7 +176,7 @@ Definition LENGTH[simp]:
 End
 
 Definition MAP[simp]:
-  MAP f [] = [] /\
+  MAP (f:'a -> 'b) [] = [] /\
   MAP f (h::t) = f h::MAP f t
 End
 
@@ -234,8 +234,8 @@ End
 
 (* preserving particular variable quantification order *)
 Theorem EL:
-  (!l.    EL 0 l = HD l:'a) /\
-  (!l n.  EL (SUC n) l = EL n (TL l))
+  (!(l:'a list).    EL 0 l = HD l:'a) /\
+  (!(l:'a list) n.  EL (SUC n) l = EL n (TL l))
 Proof
   REWRITE_TAC[EL_def]
 QED
@@ -2305,6 +2305,13 @@ val ALL_DISTINCT_APPEND = store_thm (
              (ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\
              (!e. MEM e l1 ==> ~(MEM e l2)))”,
   Induct THEN SRW_TAC [] [] THEN PROVE_TAC []);
+
+Theorem ALL_DISTINCT_APPEND' :
+    !l1 l2. ALL_DISTINCT (l1 ++ l2) <=>
+            ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\ DISJOINT (set l1) (set l2)
+Proof
+    RW_TAC std_ss [ALL_DISTINCT_APPEND, DISJOINT_ALT]
+QED
 
 val ALL_DISTINCT_SING = store_thm(
    "ALL_DISTINCT_SING",
