@@ -1931,6 +1931,13 @@ val REAL_SUP_EXISTS = store_thm("REAL_SUP_EXISTS",
   EXISTS_TAC “s + d” THEN
   MATCH_MP_TAC SUP_LEMMA1 THEN POP_ASSUM ACCEPT_TAC);
 
+Theorem REAL_SUP_EXISTS' :
+    !P. P <> {} /\ (?z. !x. x IN P ==> x < z) ==>
+        (?s. !y. (?x. x IN P /\ y < x) <=> y < s)
+Proof
+    REWRITE_TAC [IN_APP, REAL_SUP_EXISTS, GSYM MEMBER_NOT_EMPTY]
+QED
+
 val sup = new_definition("sup",
    “sup P = @s. !y. (?x. P x /\ y < x) <=> y < s”);
 
@@ -1939,6 +1946,13 @@ val REAL_SUP = store_thm("REAL_SUP",
           (!y. (?x. P x /\ y < x) <=> y < sup P)”,
   GEN_TAC THEN DISCH_THEN(MP_TAC o SELECT_RULE o MATCH_MP REAL_SUP_EXISTS)
   THEN REWRITE_TAC[GSYM sup]);
+
+Theorem REAL_SUP' :
+    !P. P <> {} /\ (?z. !x. x IN P ==> x < z) ==>
+        (!y. (?x. x IN P /\ y < x) <=> y < sup P)
+Proof
+    REWRITE_TAC [IN_APP, REAL_SUP, GSYM MEMBER_NOT_EMPTY]
+QED
 
 val REAL_SUP_UBOUND = store_thm("REAL_SUP_UBOUND",
   “!P. (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
@@ -1949,6 +1963,13 @@ val REAL_SUP_UBOUND = store_thm("REAL_SUP_UBOUND",
   X_GEN_TAC “x:real” THEN RULE_ASSUM_TAC(SPEC “x:real”) THEN
   DISCH_THEN (SUBST_ALL_TAC o EQT_INTRO) THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC[REAL_NOT_LT]);
+
+Theorem REAL_SUP_UBOUND' :
+    !P. P <> {} /\ (?z. !x. x IN P ==> x < z) ==>
+        (!y. y IN P ==> y <= sup P)
+Proof
+    REWRITE_TAC [IN_APP, REAL_SUP_UBOUND, GSYM MEMBER_NOT_EMPTY]
+QED
 
 val SETOK_LE_LT = store_thm("SETOK_LE_LT",
   “!P. (?x. P x) /\ (?z. !x. P x ==> x <= z) <=>
@@ -1964,10 +1985,24 @@ val REAL_SUP_LE = store_thm("REAL_SUP_LE",
            (!y. (?x. P x /\ y < x) <=> y < sup P)”,
   GEN_TAC THEN REWRITE_TAC[SETOK_LE_LT, REAL_SUP]);
 
+Theorem REAL_SUP_LE' :
+    !P. P <> {} /\ (?z. !x. x IN P ==> x <= z) ==>
+        (!y. (?x. x IN P /\ y < x) <=> y < sup P)
+Proof
+    REWRITE_TAC [IN_APP, REAL_SUP_LE, GSYM MEMBER_NOT_EMPTY]
+QED
+
 val REAL_SUP_UBOUND_LE = store_thm("REAL_SUP_UBOUND_LE",
   “!P. (?x. P x) /\ (?z. !x. P x ==> x <= z) ==>
           (!y. P y ==> y <= sup P)”,
   GEN_TAC THEN REWRITE_TAC[SETOK_LE_LT, REAL_SUP_UBOUND]);
+
+Theorem REAL_SUP_UBOUND_LE' :
+    !P. P <> {} /\ (?z. !x. x IN P ==> x <= z) ==>
+        (!y. y IN P ==> y <= sup P)
+Proof
+    REWRITE_TAC [IN_APP, REAL_SUP_UBOUND_LE, GSYM MEMBER_NOT_EMPTY]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Prove the Archimedean property                                            *)
@@ -3051,6 +3086,13 @@ Proof
       ASM_REWRITE_TAC [REAL_LT_NEG] ]
 QED
 
+Theorem REAL_INF' :
+    !P. P <> {} /\ (?z. !x. x IN P ==> z < x) ==>
+        (!y. (?x. x IN P /\ x < y) <=> inf P < y)
+Proof
+    REWRITE_TAC [IN_APP, REAL_INF, GSYM MEMBER_NOT_EMPTY]
+QED
+
 val REAL_SUP_EXISTS_UNIQUE = store_thm
   ("REAL_SUP_EXISTS_UNIQUE",
    ``!p : real -> bool.
@@ -3070,6 +3112,14 @@ val REAL_SUP_EXISTS_UNIQUE = store_thm
           THEN REPEAT STRIP_TAC
           THEN (SUFF_TAC ``~((s : real) < s)`` THEN1 PROVE_TAC [])
           THEN REWRITE_TAC [REAL_LT_REFL]]);
+
+Theorem REAL_SUP_EXISTS_UNIQUE' :
+    !p : real -> bool.
+       p <> {} /\ (?z. !x. x IN p ==> x <= z) ==>
+       ?!s. !y. (?x. x IN p /\ y < x) <=> y < s
+Proof
+    REWRITE_TAC [IN_APP, REAL_SUP_EXISTS_UNIQUE, GSYM MEMBER_NOT_EMPTY]
+QED
 
 val REAL_SUP_MAX = store_thm
   ("REAL_SUP_MAX",
@@ -3091,6 +3141,12 @@ val REAL_SUP_MAX = store_thm
                     (DEPTH_CONV EXISTS_UNIQUE_CONV)) REAL_SUP_EXISTS_UNIQUE)
     THEN RES_TAC);
 
+Theorem REAL_SUP_MAX' :
+    !p z. z IN p /\ (!x. x IN p ==> x <= z) ==> (sup p = z)
+Proof
+    REWRITE_TAC [IN_APP, REAL_SUP_MAX]
+QED
+
 val REAL_IMP_SUP_LE = store_thm
   ("REAL_IMP_SUP_LE",
    ``!p x. (?r. p r) /\ (!r. p r ==> r <= x) ==> sup p <= x``,
@@ -3105,6 +3161,12 @@ val REAL_IMP_SUP_LE = store_thm
           THEN RW_TAC boolSimps.bool_ss []
           THEN PROVE_TAC [real_lte]]);
 
+Theorem REAL_IMP_SUP_LE' :
+    !p x. p <> {} /\ (!r. r IN p ==> r <= x) ==> sup p <= x
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_SUP_LE, GSYM MEMBER_NOT_EMPTY]
+QED
+
 (* NOTE: removed unnecessary ‘(?r. p r)’ from antecedents *)
 Theorem REAL_IMP_LE_SUP :
     !p x. (?z. !r. p r ==> r <= z) /\ (?r. p r /\ x <= r) ==> x <= sup p
@@ -3113,6 +3175,12 @@ Proof
  >> (SUFF_TAC ``!y. p y ==> y <= sup p`` >- PROVE_TAC [REAL_LE_TRANS])
  >> MATCH_MP_TAC REAL_SUP_UBOUND_LE
  >> PROVE_TAC []
+QED
+
+Theorem REAL_IMP_LE_SUP' :
+    !p x. (?z. !r. r IN p ==> r <= z) /\ (?r. r IN p /\ x <= r) ==> x <= sup p
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_LE_SUP]
 QED
 
 Theorem REAL_IMP_LT_SUP :
@@ -3124,6 +3192,12 @@ Proof
  >> reverse CONJ_TAC
  >- (Q.EXISTS_TAC ‘x’ >> ASM_REWRITE_TAC [REAL_LE_REFL])
  >> Q.EXISTS_TAC ‘z’ >> RW_TAC bool_ss []
+QED
+
+Theorem REAL_IMP_LT_SUP' :
+    !p x. (?z. !r. r IN p ==> r <= z) /\ sup p NOTIN p /\ p x ==> x < sup p
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_LT_SUP]
 QED
 
 val REAL_INF_MIN = store_thm
@@ -3140,6 +3214,12 @@ val REAL_INF_MIN = store_thm
    THEN REWRITE_TAC [REAL_NEGNEG]
    THEN PROVE_TAC []);
 
+Theorem REAL_INF_MIN' :
+    !p z. z IN p /\ (!x. x IN p ==> z <= x) ==> (inf p = z)
+Proof
+    REWRITE_TAC [IN_APP, REAL_INF_MIN]
+QED
+
 val REAL_IMP_LE_INF = store_thm
   ("REAL_IMP_LE_INF",
    ``!p r. (?x. p x) /\ (!x. p x ==> r <= x) ==> r <= inf p``,
@@ -3151,6 +3231,12 @@ val REAL_IMP_LE_INF = store_thm
    THEN MATCH_MP_TAC REAL_IMP_SUP_LE
    THEN RW_TAC boolSimps.bool_ss []
    THEN PROVE_TAC [REAL_NEGNEG]);
+
+Theorem REAL_IMP_LE_INF' :
+    !p r. p <> {} /\ (!x. x IN p ==> r <= x) ==> r <= inf p
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_LE_INF, GSYM MEMBER_NOT_EMPTY]
+QED
 
 val REAL_IMP_INF_LE = store_thm
   ("REAL_IMP_INF_LE",
@@ -3164,6 +3250,12 @@ val REAL_IMP_INF_LE = store_thm
    THEN RW_TAC boolSimps.bool_ss []
    THEN PROVE_TAC [REAL_NEGNEG, REAL_LE_NEG]);
 
+Theorem REAL_IMP_INF_LE' :
+    !p r. (?z. !x. x IN p ==> z <= x) /\ (?x. x IN p /\ x <= r) ==> inf p <= r
+Proof
+    REWRITE_TAC [IN_APP, REAL_IMP_INF_LE]
+QED
+
 val REAL_INF_LT = store_thm
   ("REAL_INF_LT",
    ``!p z. (?x. p x) /\ inf p < z ==> (?x. p x /\ x < z)``,
@@ -3176,6 +3268,12 @@ val REAL_INF_LT = store_thm
    THEN MATCH_MP_TAC REAL_IMP_LE_INF
    THEN PROVE_TAC []);
 
+Theorem REAL_INF_LT' :
+    !p z. p <> {} /\ inf p < z ==> ?x. x IN p /\ x < z
+Proof
+    REWRITE_TAC [IN_APP, REAL_INF_LT, GSYM MEMBER_NOT_EMPTY]
+QED
+
 val REAL_INF_CLOSE = store_thm
   ("REAL_INF_CLOSE",
    ``!p e. (?x. p x) /\ 0 < e ==> (?x. p x /\ x < inf p + e)``,
@@ -3183,6 +3281,12 @@ val REAL_INF_CLOSE = store_thm
    THEN MATCH_MP_TAC REAL_INF_LT
    THEN (CONJ_TAC THEN1 PROVE_TAC [])
    THEN RW_TAC boolSimps.bool_ss [REAL_LT_ADDR]);
+
+Theorem REAL_INF_CLOSE' :
+    !p e. p <> {} /\ 0 < e ==> ?x. x IN p /\ x < inf p + e
+Proof
+    REWRITE_TAC [IN_APP, REAL_INF_CLOSE, GSYM MEMBER_NOT_EMPTY]
+QED
 
 val SUP_EPSILON = store_thm
   ("SUP_EPSILON",
@@ -3252,6 +3356,14 @@ val SUP_EPSILON = store_thm
    THEN RW_TAC boolSimps.bool_ss [prim_recTheory.LESS_SUC_REFL, GSYM real_lt]
    THEN PROVE_TAC [REAL_LT_LE]);
 
+Theorem SUP_EPSILON' :
+    !p e.
+       0 < e /\ p <> {} /\ (?z. !x. x IN p ==> x <= z) ==>
+       ?x. x IN p /\ sup p <= x + e
+Proof
+    REWRITE_TAC [IN_APP, SUP_EPSILON, GSYM MEMBER_NOT_EMPTY]
+QED
+
 (* This theorem is slightly more general than SUP_EPSILON (in sense of REAL_LT_IMP_LE)
    but actually can be proved as a corollary of SUP_EPSILON.
  *)
@@ -3274,6 +3386,13 @@ Proof
  >> Q.EXISTS_TAC ‘y + e / 2’ >> ASM_REWRITE_TAC []
  >> MATCH_MP_TAC REAL_LT_IADD
  >> ASM_REWRITE_TAC [REAL_LT_HALF2]
+QED
+
+Theorem SUP_LT_EPSILON' :
+    !p e. 0 < e /\ p <> {} /\ (?z. !x. x IN p ==> x <= z) ==>
+          ?x. x IN p /\ sup p < x + e
+Proof
+    REWRITE_TAC [IN_APP, SUP_LT_EPSILON, GSYM MEMBER_NOT_EMPTY]
 QED
 
 val REAL_LE_SUP = store_thm
@@ -3321,6 +3440,14 @@ val REAL_LE_SUP = store_thm
           THEN DISCH_THEN (fn th => REWRITE_TAC [GSYM th])
           THEN PROVE_TAC [real_lt]]);
 
+Theorem REAL_LE_SUP' :
+    !p x : real.
+       p <> {} /\ (?y. !z. z IN p ==> z <= y) ==>
+       (x <= sup p <=> !y. (!z. z IN p ==> z <= y) ==> x <= y)
+Proof
+    REWRITE_TAC [IN_APP, REAL_LE_SUP, GSYM MEMBER_NOT_EMPTY]
+QED
+
 val REAL_INF_LE = store_thm
   ("REAL_INF_LE",
    ``!p x : real.
@@ -3339,6 +3466,14 @@ val REAL_INF_LE = store_thm
    THEN RW_TAC boolSimps.bool_ss []
    THEN Q.PAT_X_ASSUM `!a. (!b. P a b) ==> Q a` (MP_TAC o Q.SPEC `~y''`)
    THEN PROVE_TAC [REAL_NEGNEG, REAL_LE_NEG]);
+
+Theorem REAL_INF_LE' :
+    !p x : real.
+       p <> {} /\ (?y. !z. z IN p ==> y <= z) ==>
+       (inf p <= x <=> !y. (!z. z IN p ==> y <= z) ==> y <= x)
+Proof
+    REWRITE_TAC [IN_APP, REAL_INF_LE, GSYM MEMBER_NOT_EMPTY]
+QED
 
 val REAL_SUP_CONST = store_thm
   ("REAL_SUP_CONST",
