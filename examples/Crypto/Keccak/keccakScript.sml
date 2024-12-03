@@ -1,14 +1,219 @@
-open HolKernel Parse boolLib bossLib dep_rewrite
+open HolKernel Parse boolLib bossLib dep_rewrite blastLib
      bitLib reduceLib combinLib optionLib sptreeLib wordsLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
      rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
-     logrootTheory sptreeTheory;
+     numposrepTheory logrootTheory sptreeTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
 val _ = new_theory "keccak";
 
 val _ = numLib.temp_prefer_num();
+
+Theorem LENGTH_word_to_bin_list_bound:
+  LENGTH (word_to_bin_list (w:'a word)) <= (dimindex (:'a))
+Proof
+  rw[word_to_bin_list_def, wordsTheory.w2l_def, LENGTH_n2l]
+  \\ Cases_on`w` \\ simp[]
+  \\ fs[dimword_def, GSYM LESS_EQ, LOG2_def, LT_EXP_LOG]
+QED
+
+Theorem chunks_append_divides:
+  ∀n l1 l2.
+    0 < n /\ divides n (LENGTH l1) /\ ~NULL l1 /\ ~NULL l2 ==>
+    chunks n (l1 ++ l2) = chunks n l1 ++ chunks n l2
+Proof
+  recInduct chunks_ind
+  \\ rw[divides_def, PULL_EXISTS]
+  \\ simp[Once chunks_def]
+  \\ Cases_on`q=0` \\ gs[]
+  \\ IF_CASES_TAC
+  >- ( Cases_on`q` \\ gs[ADD1, LEFT_ADD_DISTRIB] \\ gs[LESS_OR_EQ] )
+  \\ simp[DROP_APPEND, TAKE_APPEND]
+  \\ qmatch_goalsub_abbrev_tac`lhs = _`
+  \\ simp[Once chunks_def]
+  \\ Cases_on`q = 1` \\ gs[]
+  >- (
+    simp[Abbr`lhs`]
+    \\ gs[NOT_LESS_EQUAL]
+    \\ simp[DROP_LENGTH_TOO_LONG])
+  \\ simp[Abbr`lhs`]
+  \\ `n - n * q = 0` by simp[]
+  \\ simp[]
+  \\ first_x_assum irule
+  \\ simp[NULL_EQ]
+  \\ qexists_tac`q - 1`
+  \\ simp[]
+QED
+
+Theorem chunks_length:
+  chunks (LENGTH ls) ls = [ls]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem MEM_w2l_less:
+  1 < b /\ MEM x (w2l b w) ==> x < b
+Proof
+  Cases_on`w`
+  \\ rw[wordsTheory.w2l_def]
+  \\ rpt $ pop_assum mp_tac
+  \\ map_every qid_spec_tac [`x`,`n`,`b`]
+  \\ recInduct n2l_ind
+  \\ rw[]
+  \\ pop_assum mp_tac
+  \\ rw[Once n2l_def]
+  >- ( irule MOD_LESS \\ gs[] )
+  \\ first_x_assum irule
+  \\ gs[DIV_LT_X]
+  \\ Cases_on`b` \\ gs[MULT]
+QED
+
+Definition bool_to_bit_def:
+  bool_to_bit b = if b then 1 else 0
+End
+
+Theorem LENGTH_chunks:
+  ∀n ls. 0 < n ∧ ¬NULL ls ⇒
+    LENGTH (chunks n ls) =
+    LENGTH ls DIV n + (bool_to_bit $ ¬divides n (LENGTH ls))
+Proof
+  recInduct chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def, DIV_EQUAL_0, bool_to_bit_def, divides_def]
+  \\ gs[LESS_OR_EQ, ADD1, NULL_EQ, bool_to_bit_def]
+  \\ rw[]
+  \\ gs[divides_def]
+  \\ gs[SUB_DIV]
+  >- (
+    Cases_on`LENGTH ls DIV n = 0` >- gs[DIV_EQUAL_0]
+    \\ simp[] )
+  >- (
+    Cases_on`q` \\ gs[MULT_SUC]
+    \\ qmatch_asmsub_rename_tac`n + n * p`
+    \\ first_x_assum(qspec_then`2 + p`mp_tac)
+    \\ simp[LEFT_ADD_DISTRIB] )
+  >- (
+    first_x_assum(qspec_then`PRE q`mp_tac)
+    \\ Cases_on`q` \\ gs[MULT_SUC] )
+  \\ Cases_on`q` \\ gvs[MULT_SUC]
+  \\ simp[ADD_DIV_RWT]
+QED
+
+Theorem LENGTH_PAD_RIGHT_0_8_word_to_bin_list[simp]:
+  LENGTH (PAD_RIGHT 0 8 (word_to_bin_list (w: word8))) = 8
+Proof
+  rw[word_to_bin_list_def, wordsTheory.w2l_def, PAD_RIGHT, LENGTH_n2l, LOG2_def]
+  \\ Cases_on`w` \\ gs[]
+  \\ rewrite_tac[Once ADD_SYM]
+  \\ irule SUB_ADD
+  \\ `n < 2 ** 8` by simp[]
+  \\ gs[LT_EXP_LOG]
+QED
+
+Theorem l2n_PAD_RIGHT_0[simp]:
+  0 < b ==> l2n b (PAD_RIGHT 0 h ls) = l2n b ls
+Proof
+  Induct_on`ls` \\ rw[l2n_def, PAD_RIGHT, l2n_eq_0, EVERY_GENLIST]
+  \\ gs[PAD_RIGHT, l2n_APPEND]
+  \\ gs[l2n_eq_0, EVERY_GENLIST]
+QED
+
+Theorem BITWISE_COMM:
+  (!m. m <= n ==> op (BIT m x) (BIT m y) = op (BIT m y) (BIT m x))
+  ==> BITWISE n op x y = BITWISE n op y x
+Proof
+  Induct_on`n`
+  \\ rw[BITWISE_def]
+  \\ first_assum(qspec_then`n`mp_tac)
+  \\ impl_tac >- rw[]
+  \\ disch_then SUBST1_TAC
+  \\ simp[]
+  \\ first_x_assum irule
+  \\ rw[]
+  \\ first_x_assum irule
+  \\ simp[]
+QED
+
+Triviality BITWISE_AND_0_lemma:
+  BITWISE w $/\ x 0 = 0
+Proof
+  qid_spec_tac`x`
+  \\ Induct_on`w`
+  \\ rw[BITWISE_def, SBIT_def]
+QED
+
+Theorem BITWISE_AND_0[simp]:
+  BITWISE w $/\ x 0 = 0 /\
+  BITWISE w $/\ 0 x = 0
+Proof
+  qspecl_then[`$/\`,`0`,`x`,`w`]mp_tac(Q.GENL[`op`,`x`,`y`,`n`]BITWISE_COMM)
+  \\ impl_tac >- rw[]
+  \\ disch_then SUBST1_TAC
+  \\ rw[BITWISE_AND_0_lemma]
+QED
+
+Theorem BITWISE_AND_SHIFT_0:
+  !w x y n.
+  x < 2 ** n ==>
+  BITWISE w $/\ x (y * 2 ** n) = 0
+Proof
+  Induct \\ rw[BITWISE_def, SBIT_def]
+  \\ strip_tac
+  \\ Cases_on`w < n`
+  >- ( drule BIT_SHIFT_THM3 \\ simp[]
+       \\ qexists_tac`y` \\ simp[])
+  \\ gs[NOT_LESS]
+  \\ drule TWOEXP_MONO2 \\ strip_tac
+  \\ `x < 2 ** w` by metis_tac[LESS_LESS_EQ_TRANS]
+  \\ drule NOT_BIT_GT_TWOEXP
+  \\ simp[]
+QED
+
+Theorem word_and_lsl_eq_0:
+  w2n w1 < 2 ** n ==> w1 && w2 << n = 0w
+Proof
+  Cases_on`w1` \\ Cases_on`w2`
+  \\ rw[word_and_n2w, word_lsl_n2w]
+  \\ drule BITWISE_AND_SHIFT_0
+  \\ simp[]
+QED
+
+Theorem concat_word_list_bytes_to_64:
+  LENGTH (ls: word8 list) = 8 ⇒
+  concat_word_list ls : word64 =
+  word_from_bin_list (FLAT (MAP (PAD_RIGHT 0 8 o word_to_bin_list) ls))
+Proof
+  simp[LENGTH_EQ_NUM_compute, PULL_EXISTS]
+  \\ qx_genl_tac[`b1`,`b2`,`b3`,`b4`,`b5`,`b6`,`b7`,`b8`]
+  \\ rw[concat_word_list_def]
+  \\ rw[word_from_bin_list_def, l2w_def]
+  \\ rw[l2n_APPEND]
+  \\ rw[word_to_bin_list_def, wordsTheory.w2l_def]
+  \\ simp[l2n_n2l]
+  \\ simp[GSYM word_add_n2w]
+  \\ map_every Cases_on [`b1`,`b2`,`b3`,`b4`,`b5`,`b6`,`b7`,`b8`]
+  \\ gs[]
+  \\ simp[w2w_def]
+  \\ simp[GSYM word_mul_n2w, word_or_n2w]
+  \\ rw(List.tabulate(8, fn i =>
+      WORD_MUL_LSL |> CONV_RULE SWAP_FORALL_CONV
+      |> Q.SPEC`8 * ^(numSyntax.term_of_int i)`
+      |> GSYM |> SIMP_RULE std_ss []))
+  \\ qmatch_goalsub_abbrev_tac `a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8`
+  \\ `∀i m. m < 256 ∧ 8 ≤ i ⇒ ¬BIT i m`
+  by (
+    ntac 3 strip_tac
+    \\ Cases_on`m=0` >- simp[]
+    \\ irule NOT_BIT_GT_LOG2
+    \\ qspecl_then[`m`,`8`]mp_tac LT_TWOEXP
+    \\ simp[] )
+  \\ DEP_REWRITE_TAC[WORD_ADD_OR]
+  \\ rewrite_tac[GSYM WORD_OR_ASSOC]
+  \\ unabbrev_all_tac
+  \\ blastLib.BBLAST_TAC
+  \\ simp[]
+QED
 
 Datatype:
   state_array =
@@ -1791,10 +1996,6 @@ Theorem index_to_triple_100 =
     EVAL``index_to_triple 4 ^(numLib.term_of_int i)``)
   |> LIST_CONJ
 
-Definition bool_to_bit_def:
-  bool_to_bit b = if b then 1 else 0
-End
-
 Definition bools_to_word_def:
   bools_to_word bs =
   word_from_bin_list (MAP bool_to_bit bs)
@@ -1808,6 +2009,136 @@ Definition bools_to_hex_string_def:
       (word_to_hex_string : word8 -> string) o
       bools_to_word
     ) $ chunks 8 bs
+End
+
+Definition pad10s1_136_64w_def:
+  pad10s1_136_64w (zs: word64 list) (m: word8 list) (a: word64 list list) =
+  let lm = LENGTH m in
+  if 136 < lm then let
+    w64s = MAP concat_word_list $ chunks 8 (TAKE 136 m)
+  in pad10s1_136_64w zs (DROP 136 m) ((w64s ++ zs) :: a)
+  else let
+    n = 136 - lm;
+    pad = if n < 1 then [] else
+          if n < 2 then [0x81w] else
+            0x80w::(REPLICATE (n - 2) 0w)++[0x01w];
+    w64s = MAP concat_word_list $ chunks 8 $ m ++ pad
+  in REVERSE $ (w64s ++ zs) :: a
+Termination
+  WF_REL_TAC`measure $ LENGTH o FST o SND`
+  \\ rw[LENGTH_DROP]
+End
+
+(*
+Theorem pad10s1_136_64w_thm:
+  ∀zs bytes acc bools.
+  bools = MAP ((=) 1) $ FLAT $ MAP (PAD_RIGHT 0 8 o word_to_bin_list) bytes ∧
+  zs = REPLICATE (c DIV 64) 0w ∧ c ≠ 0 ∧ divides 64 c
+  ⇒
+  pad10s1_136_64w zs bytes acc =
+  REVERSE acc ++ (
+  MAP (MAP word_from_bin_list o chunks 64) $
+    MAP (λx. MAP bool_to_bit x ++ REPLICATE c 0)
+      (chunks 1088 (bools ++ pad10s1 1088 (LENGTH bools)))
+  )
+Proof
+  recInduct pad10s1_136_64w_ind
+  \\ rw[]
+  \\ simp[Once pad10s1_136_64w_def]
+  \\ IF_CASES_TAC \\ gs[]
+  >- (
+    qmatch_goalsub_abbrev_tac`lhs = _`
+    \\ qspecl_then[`136`,`m`](SUBST1_TAC o SYM)TAKE_DROP
+    \\ qmatch_goalsub_abbrev_tac`MAP _ $ m1 ++ m2`
+    \\ qmatch_goalsub_abbrev_tac`LENGTH bools`
+    \\ qunabbrev_tac`lhs`
+    \\ qmatch_goalsub_abbrev_tac`LENGTH bools2`
+    \\ qmatch_asmsub_abbrev_tac`bools2 = FLAT (MAP fb m2)`
+    \\ `bools = FLAT (MAP fb m1) ++ bools2`
+    by simp[Abbr`bools`]
+    \\ qunabbrev_tac`bools`
+    \\ pop_assum SUBST_ALL_TAC
+    \\ qmatch_goalsub_abbrev_tac`bools1 ++ bools2`
+    \\ `LENGTH m1 = 136` by simp[Abbr`m1`]
+    \\ `LENGTH bools1 = 1088`
+    by (
+      simp[Abbr`bools1`, LENGTH_FLAT, MAP_MAP_o, Abbr`fb`]
+      \\ qmatch_goalsub_abbrev_tac`SUM ls = _`
+      \\ `ls = REPLICATE 136 8`
+      by (
+        simp[Abbr`ls`, LIST_EQ_REWRITE, EL_MAP, EL_REPLICATE]
+        \\ simp[PAD_RIGHT]
+        \\ rpt strip_tac
+        \\ rewrite_tac[Once ADD_SYM]
+        \\ irule SUB_ADD
+        \\ irule LESS_EQ_TRANS
+        \\ qexists_tac`dimindex(:8)`
+        \\ simp[LENGTH_word_to_bin_list_bound] )
+      \\ simp[SUM_REPLICATE] )
+    \\ simp[]
+    \\ rewrite_tac[GSYM APPEND_ASSOC]
+    \\ qmatch_goalsub_abbrev_tac`lhs = _`
+    \\ qmatch_goalsub_abbrev_tac`chunks _ (lm1 ++ lm2)`
+    \\ qspecl_then[`1088`,`lm1`,`lm2`]mp_tac chunks_append_divides
+    \\ impl_tac
+    >- (
+      simp[Abbr`lm1`, NULL_EQ, Abbr`lm2`]
+      \\ conj_tac >- (strip_tac \\ fs[])
+      \\ gs[Abbr`bools2`, pad10s1_def] )
+    \\ disch_then SUBST_ALL_TAC
+    \\ `LENGTH lm1 = 1088` by simp[Abbr`lm1`]
+    \\ first_assum(SUBST1_TAC o SYM)
+    \\ rewrite_tac[chunks_length]
+    \\ simp[Abbr`lhs`]
+    \\ `MAP bool_to_bit lm1 = bools1`
+    by (
+      simp[Abbr`lm1`, MAP_MAP_o, o_DEF]
+      \\ `bools1 = MAP I bools1` by simp[]
+      \\ pop_assum SUBST1_TAC
+      \\ rewrite_tac[MAP_EQ_f, MAP_MAP_o]
+      \\ simp[Abbr`bools1`, MEM_FLAT, PULL_EXISTS, MEM_MAP, Abbr`fb`, PAD_RIGHT,
+              MEM_GENLIST, word_to_bin_list_def]
+      \\ rw[word_to_bin_list_def, bool_to_bit_def]
+      \\ first_assum(mp_then Any mp_tac MEM_w2l_less)
+      \\ simp[] )
+    \\ simp[]
+    \\ qmatch_goalsub_abbrev_tac`bools1 ++ r0`
+    \\ qspecl_then[`64`,`bools1`,`r0`]mp_tac chunks_append_divides
+    \\ impl_tac
+    >- ( simp[NULL_EQ, divides_def, Abbr`r0`] \\ strip_tac \\ gs[] )
+    \\ disch_then SUBST_ALL_TAC
+    \\ simp[Abbr`r0`]
+    \\ qmatch_goalsub_abbrev_tac`l1 ++ l0 = b1 ++ b0`
+    \\ `LENGTH l0 = c DIV 64` by simp[LENGTH_REPLICATE, Abbr`l0`]
+    \\ `LENGTH b0 = c DIV 64` by (
+      simp[Abbr`b0`]
+      \\ DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[LENGTH_REPLICATE, NULL_EQ, bool_to_bit_def] )
+    \\ `LENGTH l1 = 17`
+    by (
+      simp[Abbr`l1`]
+      \\ DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[divides_def, bool_to_bit_def, NULL_EQ]
+      \\ strip_tac \\ gs[] )
+    \\ `LENGTH b1 = 17`
+    by (
+      simp[Abbr`b1`]
+      \\ DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[bool_to_bit_def, divides_def, NULL_EQ]
+      \\ strip_tac \\ gs[] )
+    \\ simp[APPEND_LENGTH_EQ]
+    \\ conj_tac
+    >- (
+      simp[Abbr`l1`, Abbr`b1`, Abbr`bools1`]
+    concat_word_list_bytes_to_64
+*)
+
+Definition Keccak_256_bytes_def:
+  Keccak_256_bytes (bs:word8 list) : word8 list =
+    MAP bools_to_word $ chunks 8 $
+    Keccak_256 $
+    MAP ((=) 1) $ FLAT $
+    MAP (PAD_RIGHT 0 8 o word_to_bin_list) bs
 End
 
 open cv_transLib cv_stdTheory;
