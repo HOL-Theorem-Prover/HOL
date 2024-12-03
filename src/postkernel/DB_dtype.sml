@@ -6,6 +6,9 @@ struct
  datatype thm_src_location =
           Located of {scriptpath: string, linenum : int, exact : bool}
         | Unknown
+ fun inexactify_locn (Located{scriptpath,linenum,exact}) =
+       Located{scriptpath=scriptpath,linenum=linenum,exact=false}
+   | inexactify_locn Unknown = Unknown
 
  datatype theory =
           THEORY of string *
