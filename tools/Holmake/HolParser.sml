@@ -295,6 +295,11 @@ structure ToSML = struct
     strcode = strcode push
   }
 
+
+  fun mk_mkloc_string (fname,i) =
+      String.concat [
+        "(DB_dtype.mkloc (", mlquote fname, ", ", Int.toString (i + 1), ", true))"
+      ]
   fun mkPushTranslatorCore {read, filename, parseError}
       ({regular, aux, strstr, strcode = strcode0}:strcode) = let
     open Simple
@@ -401,9 +406,9 @@ structure ToSML = struct
           aux "val "; regular' (p, name); aux " = ";
           if !filename = "" then aux "TotalDefn.qDefine"
           else app aux [
-            "TotalDefn.located_qDefine (DB_dtype.mkloc (",
-              mlquote (!filename), ", ",
-              Int.toString (#1 (!line) + 1) ^ ", true))"];
+                 "TotalDefn.located_qDefine ",
+                 mk_mkloc_string (!filename,#1 (!line))
+               ];
           app aux [" \"", ss name_attrs, "\" "]; doQuote quote;
           case termination of
             NONE => aux " NONE;"
@@ -481,7 +486,11 @@ structure ToSML = struct
         val Decls {start = dstart, decls, stop = dstop} = body
         in
           regular (pos, p); finishThmVal ();
-          aux "val "; regular' (p, thmname); aux " = Q.store_thm(\"";
+          aux "val "; regular' (p, thmname);
+          if !filename = "" then aux " = Q.store_thm(\""
+          else app aux [" = Q.store_thm_at ",
+                        mk_mkloc_string (!filename, #1 (!line)),
+                        " (\""];
           doThmAttrs isTriv p attrs name_attrs; aux "\", ";
           doQuote quote; aux ", ";
           case proof_tok of
