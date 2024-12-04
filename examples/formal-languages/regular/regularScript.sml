@@ -3160,19 +3160,20 @@ QED
 
 Definition nfa_eval_equiv_def:
   nfa_eval_equiv N x y ⇔
+     x ∈ KSTAR{[a] | a ∈ N.Sigma} ∧
+     y ∈ KSTAR{[a] | a ∈ N.Sigma} ∧
      (nfa_eval N N.initial x = nfa_eval N N.initial y)
 End
 
 Definition lang_equiv_def:
  lang_equiv (L,A) x y ⇔
-   ∀z. z ∈ KSTAR{[a] | a ∈ A} ⇒ (x ++ z ∈ L ⇔ y ++ z ∈ L)
+   x ∈ KSTAR{[a] | a ∈ A} ∧
+   y ∈ KSTAR{[a] | a ∈ A} ∧
+   (∀z. z ∈ KSTAR{[a] | a ∈ A} ⇒ (x ++ z ∈ L ⇔ y ++ z ∈ L))
 End
 
 Theorem nfa_eval_equiv_refines_lang_equiv:
-  wf_nfa N ∧
-  x ∈ KSTAR{[a] | a ∈ N.Sigma} ∧
-  y ∈ KSTAR{[a] | a ∈ N.Sigma} ∧
-  nfa_eval_equiv N x y
+  wf_nfa N ∧ nfa_eval_equiv N x y
   ⇒
   lang_equiv (nfa_lang N,N.Sigma) x y
 Proof
@@ -3312,7 +3313,6 @@ val state_of_class_def =
   new_specification
    ("state_of_class_def", ["state_of_class"], state_of_class_witness);
 
-
 Theorem state_of_class_inj:
   is_dfa M ⇒
   class1 ∈ partition (nfa_eval_equiv M) (KSTAR{[a] | a ∈ M.Sigma}) ∧
@@ -3419,5 +3419,221 @@ Proof
      )
 QED
 
+Triviality forall_emptyset:
+ (∀x. x ∉ s) ⇔ s = ∅
+Proof
+ rw[EXTENSION]
+QED
+
+Triviality in_partition:
+ class ∈ partition R s ⇔
+  ∃x. x ∈ s ∧ ∀y. y ∈ class ⇔ y ∈ s ∧ R x y
+Proof
+  rw [partition_def,EQ_IMP_THM,EXTENSION]
+QED
+
+Triviality in_partition_alt:
+ class ∈ partition R s ⇔ ∃x. x ∈ s ∧ class = equiv_class R s x
+Proof
+  rw [partition_def,EQ_IMP_THM,EXTENSION]
+QED
+
+Triviality partition_empty:
+  partition R s = ∅ ⇔ s = ∅
+Proof
+ rw [EQ_IMP_THM]
+ >- (gvs [EXTENSION,in_partition] >>
+     gen_tac >> disch_tac >> gvs [GSYM IMP_DISJ_THM] >>
+     first_x_assum drule >> simp[] >>
+     qexists_tac ‘equiv_class R s x’ >> simp[])
+ >- simp[partition_def]
+QED
+
+Triviality KSTAR_NONEMPTY:
+  KSTAR A ≠ ∅
+Proof
+ rw[EXTENSION] >> metis_tac[EPSILON_IN_KSTAR]
+QED
+
+Triviality kstar_partition_inhab_word:
+ E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+ class ∈ partition E (KSTAR{[a] | a ∈ A}) ⇒
+ ∃w. w ∈ class ∧ equiv_class E (KSTAR{[a] | a ∈ A}) w = class
+Proof
+ rw[in_partition_alt] >> qexists_tac ‘x’ >>
+ gvs[equiv_on_def]
+QED
+
+Triviality partition_emptylang:
+  partition (lang_equiv({},A)) (KSTAR{[a] | a ∈ A}) = {KSTAR{[a] | a ∈ A}}
+Proof
+ simp [EXTENSION, in_partition, lang_equiv_def] >> rw [EQ_IMP_THM]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- (qexists_tac ‘ε’ >> rw[])
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Every right-invariant equivalence on A* is a refinement of language       *)
+(* equivalence.                                                              *)
+(*---------------------------------------------------------------------------*)
+
+Theorem lang_equiv_refinement:
+  E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+  right_invar (KSTAR{[a] | a ∈ A}) E ∧
+  classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
+  x ∈ KSTAR{[a] | a ∈ A} ∧
+  y ∈ KSTAR{[a] | a ∈ A} ∧
+  E x y
+   ⇒
+  lang_equiv (BIGUNION classes,A) x y
+Proof
+  rw[] >> gvs [right_invar_def] >>
+  ‘∀z. EVERY (λa. a ∈ A) z ⇒ E (x ⧺ z) (y ⧺ z)’ by
+      (gvs [right_invar_def] >> metis_tac[]) >>
+  rw[lang_equiv_def] >>
+  ‘E (x++z) (y++z)’ by metis_tac[] >>
+  rw[EQ_IMP_THM] >> qexists_tac ‘s’ >> simp[] >>
+  ‘s ∈ partition E (KSTAR {[a] | a ∈ A})’ by
+     metis_tac [SUBSET_DEF] >> pop_keep_tac >>
+  rw[in_partition]
+     >- (‘EVERY (λa. a ∈ A) (x++z) ∧ E x' (x++z)’ by metis_tac[] >>
+         simp[] >>
+         qpat_x_assum ‘_ equiv_on _’ mp_tac >>
+         simp[equiv_on_def] >>
+         disch_then (irule o last o CONJUNCTS) >> rw[] >>
+         first_x_assum (irule_at Any) >> simp[])
+     >- (‘EVERY (λa. a ∈ A) (y++z) ∧ E x' (y++z)’ by metis_tac[] >>
+         simp[] >> qpat_x_assum ‘_ equiv_on _’ mp_tac >>
+         simp[equiv_on_def] >> strip_tac >>
+         pop_assum irule >> simp[] >>
+         qexists_tac ‘y ++ z’ >> simp[])
+QED
+
+Theorem equiv_class_subset:
+  E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+  right_invar (KSTAR{[a] | a ∈ A}) E ∧
+  classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
+  w ∈ KSTAR{[a] | a ∈ A}
+  ⇒
+  equiv_class E (KSTAR{[a] | a ∈ A}) w ⊆
+  equiv_class (lang_equiv(BIGUNION classes,A)) (KSTAR{[a] | a ∈ A}) w
+Proof
+  rw[SUBSET_DEF, EXTENSION] >>
+  irule lang_equiv_refinement >> rw[] >>
+  rpt (first_assum (irule_at Any)) >>
+  metis_tac [SUBSET_DEF]
+QED
+
+Triviality finite_image_range:
+  FINITE t ⇒ (∀x. x ∈ s ⇒ f x ∈ t) ⇒ FINITE(IMAGE f s)
+Proof
+  rw [] >>
+  ‘IMAGE f s ⊆ t’ by
+    (rw[SUBSET_DEF] >> metis_tac[]) >>
+  irule SUBSET_FINITE >> metis_tac[]
+QED
+
+Triviality from_above:
+  ∀A classes class'.
+    E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+    right_invar (KSTAR{[a] | a ∈ A}) E ∧
+    classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
+    class' ∈ partition (lang_equiv(BIGUNION classes,A)) (KSTAR{[a] | a ∈ A})
+    ⇒
+    ∃p. p ∈ partition E (KSTAR{[a] | a ∈ A}) ∧ p ⊆ class'
+Proof
+ rw[] >>
+ ‘lang_equiv (BIGUNION classes,A) equiv_on KSTAR{[a] | a ∈ A}’ by
+    metis_tac[equiv_on_lang_equiv] >>
+  drule_all kstar_partition_inhab_word >> strip_tac >>
+  ‘w ∈ KSTAR{[a] | a ∈ A}’ by
+    gvs [in_partition_alt] >>
+  drule_all equiv_class_subset >> ASM_REWRITE_TAC[] >> disch_tac >>
+  first_x_assum (irule_at Any) >> rw[in_partition_alt] >>
+  gvs[] >> metis_tac[]
+QED
+
+Triviality from_above_witness:
+  ∃E_part.
+   ∀A E classes class'.
+    E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+    right_invar (KSTAR{[a] | a ∈ A}) E ∧
+    classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
+    class' ∈ partition (lang_equiv(BIGUNION classes,A)) (KSTAR{[a] | a ∈ A})
+    ⇒
+    E_part A E classes class' ∈ partition E (KSTAR{[a] | a ∈ A}) ∧
+    E_part A E classes class' ⊆ class'
+Proof
+  qexists_tac ‘λA E classes class'.
+                 @part. part ∈ partition E (KSTAR{[a] | a ∈ A}) ∧
+                        part ⊆ class'’ >>
+ rw[] >> SELECT_ELIM_TAC >> metis_tac[from_above]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* So can make an injective map from L-classes to some E-classes             *)
+(*                                                                           *)
+(* E_class_def:                                                              *)
+(* |- ∀A E classes class'.                                                   *)
+(*     E equiv_on KSTAR{[a] | a ∈ A} ∧                                       *)
+(*     right_invar (KSTAR {[a] | a ∈ A}) E ∧                                 *)
+(*     classes ⊆ partition E (KSTAR {[a] | a ∈ A}) ∧                         *)
+(*     class' ∈ partition                                                    *)
+(*                (lang_equiv (BIGUNION classes,A)) (KSTAR {[a] | a ∈ A})    *)
+(*     ==>                                                                   *)
+(*     E_class A E classes class' ∈ partition E (KSTAR {[a] | a ∈ A}) ∧      *)
+(*     E_class A E classes class' ⊆ class'                                   *)
+(*---------------------------------------------------------------------------*)
+
+val E_class_def =
+  new_specification ("E_class_def", ["E_class"], from_above_witness);
+
+Theorem E_class_inj:
+  E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+  right_invar (KSTAR{[a] | a ∈ A}) E ∧
+  classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
+  class1 ∈ partition (lang_equiv (BIGUNION classes,A)) (KSTAR {[a] | a ∈ A}) ∧
+  class2 ∈ partition (lang_equiv (BIGUNION classes,A)) (KSTAR {[a] | a ∈ A}) ∧
+  E_class A E classes class1 = E_class A E classes class2
+  ⇒
+  class1 = class2
+Proof
+  rw[] >>
+  drule_all E_class_def >> rev_drule_all E_class_def >> rw[] >>
+  Cases_on ‘class1 = class2’ >> rw[] >>
+  ‘lang_equiv (BIGUNION classes,A) equiv_on KSTAR{[a] | a ∈ A}’ by
+     metis_tac[equiv_on_lang_equiv] >>
+  drule_all partition_elements_disjoint >> pop_forget_tac >>
+  drule_all kstar_partition_inhab_word >> strip_tac >> pop_forget_tac >>
+  ‘w ∈ class1 ∧ w ∈ class2’ by
+    metis_tac[SUBSET_DEF] >> rw[DISJOINT_DEF,EXTENSION] >> metis_tac[]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* The injection is into a subset of the E-partition, which is finite. Thus  *)
+(* the source L-partition is finite. NB: I was confused for a while about    *)
+(* the role of the "classes" subset of the E-partition in the argument, but  *)
+(* it doesn't figure at this stage. (It does get used in the crucial         *)
+(* lang_equiv_refinement lemma.)                                             *)
+(*---------------------------------------------------------------------------*)
+
+Theorem Myhill_Nerode_B:
+  E equiv_on (KSTAR{[a] | a ∈ A}) ∧
+  right_invar (KSTAR{[a] | a ∈ A}) E ∧
+  FINITE (partition E (KSTAR{[a] | a ∈ A})) ∧
+  classes ⊆ partition E (KSTAR{[a] | a ∈ A}) ∧
+  L = BIGUNION classes
+   ⇒
+  FINITE (partition (lang_equiv(L,A)) (KSTAR{[a] | a ∈ A}))
+Proof
+  rw[] >>
+  irule (iffLR (FINITE_IMAGE_INJ_EQ
+    |> Q.ISPEC ‘f : (α list -> bool) -> (α list -> bool)’)) >>
+  qexists_tac ‘E_class A E classes’ >> rw[]
+  >- (irule E_class_inj >> metis_tac[])
+  >- (irule finite_image_range >> first_x_assum (irule_at Any) >>
+      rw[E_class_def])
+QED
 
 val _ = export_theory();
