@@ -39,6 +39,7 @@ open gcdTheory fracLib ratLib ratTheory;
 (*****************************************************************************)
 (* Start new theory "complex_rational"                                       *)
 (*****************************************************************************)
+
 val _ = new_theory "complex_rational";
 
 (*****************************************************************************)
@@ -46,22 +47,26 @@ val _ = new_theory "complex_rational";
 (* The type ``:complex_rational`` is a datatype isomorphic to                *)
 (* ``:rat # rat``, with curried constructor ``COMPLEX_RATIONAL``.            *)
 (*****************************************************************************)
+
 val _ = Hol_datatype `complex_rational = COMPLEX_RATIONAL of rat => rat`;
 
 (*****************************************************************************)
 (* Abbreviation for the complex rational constructor                         *)
 (*****************************************************************************)
+
 val _ = overload_on("com", ``COMPLEX_RATIONAL``);
 
 (*****************************************************************************)
 (* Complex rationals representing 0 and 1                                    *)
 (*****************************************************************************)
-val com_0_def = Define `com_0 = com rat_0 rat_0`
-and com_1_def = Define `com_1 = com rat_1 rat_0`;
+
+val com_0_def = Define `com_0 = com rat_0 rat_0`;
+val com_1_def = Define `com_1 = com rat_1 rat_0`;
 
 (*****************************************************************************)
 (* Define complex addition                                                   *)
 (*****************************************************************************)
+
 val COMPLEX_ADD_def =
  Define
   `COMPLEX_ADD (com a1 b1) (com a2 b2) =
@@ -70,11 +75,13 @@ val COMPLEX_ADD_def =
 (*****************************************************************************)
 (* Overload "+" onto complex addition                                        *)
 (*****************************************************************************)
+
 val _ = overload_on("+", ``COMPLEX_ADD``);
 
 (*****************************************************************************)
 (* Define complex subtraction                                                *)
 (*****************************************************************************)
+
 val COMPLEX_SUB_def =
  Define
   `COMPLEX_SUB (com a1 b1) (com a2 b2) =
@@ -83,11 +90,13 @@ val COMPLEX_SUB_def =
 (*****************************************************************************)
 (* Overload "-" onto complex subtraction                                     *)
 (*****************************************************************************)
+
 val _ = overload_on("-", ``COMPLEX_SUB``);
 
 (*****************************************************************************)
 (* Complex multiplication                                                    *)
 (*****************************************************************************)
+
 val COMPLEX_MULT_def =
  Define
   `COMPLEX_MULT (com a1 b1) (com a2 b2) =
@@ -96,11 +105,13 @@ val COMPLEX_MULT_def =
 (*****************************************************************************)
 (* Overload "*" onto complex multiplication                                  *)
 (*****************************************************************************)
+
 val _ = overload_on("*", ``COMPLEX_MULT``);
 
 (*****************************************************************************)
 (* Complex reciprocal (1/x)                                                  *)
 (*****************************************************************************)
+
 val COMPLEX_RECIPROCAL_def =
  Define
   `COMPLEX_RECIPROCAL (com a b) = com (a/(a*a + b*b)) ((~b)/(a*a + b*b))`;
@@ -111,22 +122,22 @@ val COMPLEX_RECIPROCAL_def =
 
 val COMPLEX_LT_def =
  Define
-  `COMPLEX_LT (com ra ia) (com rb ib) =
+  `COMPLEX_LT (com ra ia) (com rb ib) <=>
     (ra < rb) \/ ((ra = rb) /\ (ia < ib))`;
 
 val COMPLEX_LE_def =
  Define
-  `COMPLEX_LE (com ra ia) (com rb ib) =
+  `COMPLEX_LE (com ra ia) (com rb ib) <=>
     (ra < rb) \/ ((ra = rb) /\ (ia <= ib))`;
 
 val COMPLEX_GT_def =
  Define
-  `COMPLEX_GT (com ra ia) (com rb ib) =
+  `COMPLEX_GT (com ra ia) (com rb ib) <=>
     (ra > rb) \/ ((ra = rb) /\ (ia > ib))`;
 
 val COMPLEX_GE_def =
  Define
-  `COMPLEX_GE (com ra ia) (com rb ib) =
+  `COMPLEX_GE (com ra ia) (com rb ib) <=>
     (ra > rb) \/ ((ra = rb) /\ (ia >= ib))`;
 
 (*****************************************************************************)
@@ -171,6 +182,7 @@ val _ = overload_on("/",``COMPLEX_DIV``);
 (*  MOD     : num -> num -> num   compute remainder (curried infix)          *)
 (*                                                                           *)
 (*****************************************************************************)
+
 val DIVIDES_def = Define `DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)`;
 
 (*****************************************************************************)
@@ -182,9 +194,10 @@ val DIVIDES_def = Define `DIVIDES m n = (Num(ABS n) MOD Num(ABS m) = 0)`;
 (*  rat_dnm : rat->int          get denominator                              *)
 (*                                                                           *)
 (*****************************************************************************)
+
 val IS_INT_def =
  Define
-  `IS_INT(com a b) = DIVIDES (rat_dnm a) (rat_nmr a) /\ (b = rat_0)`;
+  `IS_INT(com a b) <=> DIVIDES (rat_dnm a) (rat_nmr a) /\ (b = rat_0)`;
 
 (*****************************************************************************)
 (* Need GCD to put a fraction in lowest terms for computing numerator and    *)
@@ -198,6 +211,7 @@ val IS_INT_def =
 (* Divide each component of a pair of integers by their gcd and return       *)
 (* the reduced pair: (x,y) |--> (x/(gcd x y), y/(gcd x y))                   *)
 (*****************************************************************************)
+
 val reduce_def =
  Define
   `reduce(x,y) =
@@ -206,6 +220,7 @@ val reduce_def =
 (*****************************************************************************)
 (* Reduce a rational to lowest terms and return numerator as an integer      *)
 (*****************************************************************************)
+
 val reduced_nmr_def =
  Define
   `reduced_nmr r = FST(reduce(rep_frac(rep_rat r)))`;
@@ -213,6 +228,7 @@ val reduced_nmr_def =
 (*****************************************************************************)
 (* Reduce a rational to lowest terms and return denominator as an integer    *)
 (*****************************************************************************)
+
 val reduced_dnm_def =
  Define
   `reduced_dnm r = SND(reduce(rep_frac(rep_rat r)))`;

@@ -53,6 +53,10 @@ val iff_def =
  acl2Define "ACL2::IFF"
   `iff p q = itel [(p,andl [q; t]); (q,nil)] t`;
 
+(*
+
+FOO
+
 val iff_thm =
  store_thm
   ("iff_thm",
@@ -86,8 +90,9 @@ val implies_ite =
 val implies =
  store_thm
   ("implies",
-   ``(|= implies p q) = (|= p) ==> (|= q)``,
+   ``( |= implies p q) <=> ( |= p) ==> ( |= q)``,
    ACL2_SIMP_TAC[]);
+
 
 (*
      [oracles: DEFUN COMMON-LISP::NOT, DISK_THM] [axioms: ] []
@@ -102,9 +107,11 @@ val not_def =
      [oracles: DEFUN ACL2::HIDE] [axioms: ] [] |- hide x = x,
 *)
 
+
 val hide_def =
  acl2Define "ACL2::HIDE"
   `hide x = x`;
+
 
 (*
      [oracles: DEFUN COMMON-LISP::EQ] [axioms: ] [] |- eq x y = equal x y,
@@ -764,6 +771,8 @@ val (assoc_def,assoc_ind) =
                  chr #"~"]); t],
 *)
 
+(* Special treatment for backslash, caret, and tick *)
+
 val standard_char_p_def =
  acl2Define "COMMON-LISP::STANDARD-CHAR-P"
   `standard_char_p x =
@@ -780,15 +789,13 @@ val standard_char_p_def =
             #"H"; #"I"; #"J"; #"K"; #"L"; #"M";
             #"N"; #"O"; #"P"; #"Q"; #"R"; #"S";
             #"T"; #"U"; #"V"; #"W"; #"X"; #"Y";
-            #"Z"; #"["; #"\\"; #"]"; #"^^"; #"_";
-            #"^`"; #"a"; #"b"; #"c"; #"d"; #"e";
+            #"Z"; #"["; CHR 92; #"]"; CHR 94; #"_";
+            CHR 96; #"a"; #"b"; #"c"; #"d"; #"e";
             #"f"; #"g"; #"h"; #"i"; #"j"; #"k";
             #"l"; #"m"; #"n"; #"o"; #"p"; #"q";
             #"r"; #"s"; #"t"; #"u"; #"v"; #"w";
             #"x"; #"y"; #"z"; #"{"; #"|"; #"}";
             #"~"])); t]`;
-
-
 
 (*
 - REWRITE_RULE [listTheory.MAP]standard_char_p_def;
@@ -4694,6 +4701,7 @@ val (lexorder_def,lexorder_ind) =
                 [asym "SET-DIFFERENCE-THEORIES"; theory;
                  List [csym "QUOTE"; car e_slash_d_list]])
              (cdr e_slash_d_list) t),
+*)
 *)
 
 val _ = export_acl2_theory();

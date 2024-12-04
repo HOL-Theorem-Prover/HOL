@@ -33,6 +33,7 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation: open HOL4 systems modules.
 ******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
@@ -792,7 +793,7 @@ val BASIC_INTERN_def =
 val symbolp_def =
  acl2Define "COMMON-LISP::SYMBOLP"
   `(symbolp (sym p n) =
-     if (BASIC_INTERN n p = sym p n) /\ ~(p = "") then t else nil)
+     (if (BASIC_INTERN n p = sym p n) /\ ~(p = "") then t else nil))
    /\
    (symbolp _ = nil)`;
 
@@ -827,7 +828,7 @@ val symbolp_def =
 val VALID_PKG_TRIPLES =
  store_thm
   ("VALID_PKG_TRIPLES",
-   ``VALID_PKG_TRIPLES triples =
+   ``VALID_PKG_TRIPLES triples <=>
        (triples = [])
        \/
        ((LOOKUP (SND(SND(HD triples))) triples (FST(HD triples)) =
@@ -924,12 +925,12 @@ val LIST_LEX_ORDER_def =
    (LIST_LEX_ORDER R [] (b::bl) = T)
    /\
    (LIST_LEX_ORDER R (a::al) (b::bl) =
-     R a b \/ ((a = b) /\ LIST_LEX_ORDER R al bl))`;
+     (R a b \/ ((a = b) /\ LIST_LEX_ORDER R al bl)))`;
 
 val LIST_LEX_ORDER_IRREFLEXIVE =
  store_thm
   ("LIST_LEX_ORDER_IRREFLEXIVE",
-   ``(!x. ~(R x x)) ==> !xl. ~(LIST_LEX_ORDER R xl xl)``,
+   ``(!x. ~R x x) ==> !xl. ~LIST_LEX_ORDER R xl xl``,
    STRIP_TAC
     THEN Induct
     THEN RW_TAC list_ss [LIST_LEX_ORDER_def]);
@@ -998,7 +999,7 @@ val LIST_LEX_ORDER_TRICHOTOMY =
 (*****************************************************************************)
 val STRING_LESS_def =
  Define
-  `STRING_LESS s1 s2 =
+  `STRING_LESS s1 s2 <=>
     LIST_LEX_ORDER
      ($< : num->num->bool)
      (MAP ORD (EXPLODE s1))
@@ -1006,12 +1007,12 @@ val STRING_LESS_def =
 
 val STRING_LESS_EQ_def =
  Define
-  `STRING_LESS_EQ s1 s2 = STRING_LESS s1 s2 \/ (s1 = s2)`;
+  `STRING_LESS_EQ s1 s2 <=> STRING_LESS s1 s2 \/ (s1 = s2)`;
 
 val STRING_LESS_IRREFLEXIVE =
  store_thm
   ("STRING_LESS_IRREFLEXIVE",
-   ``~(STRING_LESS s s)``,
+   ``~STRING_LESS s s``,
    METIS_TAC
     [STRING_LESS_def,LIST_LEX_ORDER_IRREFLEXIVE,
      DECIDE ``!(m:num). ~(m<m)``]);
@@ -1116,12 +1117,12 @@ val STRING_LESS_EQ_TRANS_NOT =
 
 val SEXP_SYM_LESS_def =
  Define
-  `SEXP_SYM_LESS (sym p1 n1) (sym p2 n2) =
+  `SEXP_SYM_LESS (sym p1 n1) (sym p2 n2) <=>
     STRING_LESS p1 p2 \/ ((p1 = p2) /\ STRING_LESS n1 n2)`;
 
 val SEXP_SYM_LESS_EQ_def =
  Define
-  `SEXP_SYM_LESS_EQ sym1 sym2 = SEXP_SYM_LESS sym1 sym2 \/ (sym1 = sym2)`;
+  `SEXP_SYM_LESS_EQ sym1 sym2 <=> SEXP_SYM_LESS sym1 sym2 \/ (sym1 = sym2)`;
 
 (*****************************************************************************)
 (* In ACL2, bad-atom<= is a non-strict order:                                *)
@@ -1248,16 +1249,24 @@ val intern_in_package_of_symbol_def =
 (*****************************************************************************)
 (* |= t, where t:sexp, means t is a theorem of ACL2                          *)
 (*****************************************************************************)
-val _ = set_fixity "|=" (Prefix 11);        (* Give "|=" weak precedence *)
+
+val ACL2_TRUE_def =
+ xDefine "ACL2_TRUE"
+  `|= p = (ite (equal p nil) nil t = t)`;
+
+(*
 
 val ACL2_TRUE_def =
  xDefine "ACL2_TRUE"
   `(|= p) = (ite (equal p nil) nil t = t)`;
+*)
+
+val _ = set_fixity "|=" (Prefix 11);        (* Give "|=" weak precedence *)
 
 val ACL2_TRUE =
  store_thm
   ("ACL2_TRUE",
-   ``(|= p) = ~(p = nil)``,
+   ``$|= p <=> ~(p = nil)``,
    ACL2_SIMP_TAC [ACL2_TRUE_def]
     THEN PROVE_TAC[fetch "-" "sexp_11",T_NIL]);
 
@@ -1494,7 +1503,7 @@ val ite_CONG2 =
  store_thm
   ("ite_CONG2",
    ``!p q x x' y y'.
-      (p = q) /\ ((|= q) ==> (x = x')) /\ (~(|= q) ==> (y = y'))
+      (p = q) /\ (( $|= q) ==> (x = x')) /\ (~( $|= q) ==> (y = y'))
       ==>
       (ite p x y = ite q x' y')``,
    RW_TAC std_ss [ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]);
@@ -1520,9 +1529,9 @@ val itel_CONG2 =
    ``!p q x x' l l' y y'.
       (p = q)
       /\
-      ((|= q) ==> (x = x'))
+      (( $|= q) ==> (x = x'))
       /\
-      (~(|= q) ==> (itel l y = itel l' y'))
+      (~( $|= q) ==> (itel l y = itel l' y'))
       ==>
       (itel ((p,x)::l) y = itel ((q,x')::l') y')``,
    RW_TAC std_ss [itel_def,ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]);
@@ -1568,6 +1577,7 @@ val sexp_size_cdr =
 (*                (imported-symbol-names pkg-name (cdr triples))))           *)
 (*         (t (imported-symbol-names pkg-name (cdr triples)))))              *)
 (*****************************************************************************)
+
 val imported_symbol_names_def =
  Define
   `(imported_symbol_names pkg_name [] = [])
@@ -1583,16 +1593,15 @@ val _ =
   [fetch "-" "sexp_11",ACL2_TRUE,
    caar_def,cadr_def,cdar_def,cddr_def,
    caaar_def,cdaar_def,cadar_def,cddar_def,caadr_def,cdadr_def,caddr_def,cdddr_def,
-   caaaar_def,cadaar_def,caadar_def,caddar_def,caaadr_def,cadadr_def,caaddr_def,cadddr_def,
-   cdaaar_def,cddaar_def,cdadar_def,cdddar_def,cdaadr_def,cddadr_def,cdaddr_def,cddddr_def,
-   sexp_size_car,sexp_size_cdr,
-   List_def,andl_def];
+   caaaar_def,cadaar_def,caadar_def,caddar_def,caaadr_def,cadadr_def,caaddr_def,
+   cadddr_def,cdaaar_def,cddaar_def,cdadar_def,cdddar_def,cdaadr_def,cddadr_def,
+  cdaddr_def,cddddr_def, sexp_size_car,sexp_size_cdr, List_def,andl_def];
 
 val _ = adjoin_to_theory
          {sig_ps = NONE,
           struct_ps =
-           SOME (fn ppstrm =>
-                  PP.add_string ppstrm
+           SOME (fn _ =>
+                  PP.add_string
                    ("val _ = DefnBase.write_congs" ^
                     "(andl_CONG::\
                      \ite_CONG1::ite_CONG2::\
@@ -1601,4 +1610,3 @@ val _ = adjoin_to_theory
          };
 
 val _ = export_acl2_theory();
-

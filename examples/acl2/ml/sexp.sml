@@ -8,89 +8,50 @@
 (*     to HOL term.                                                          *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
-(* The commented out stuff below should be loaded in interactive sessions
-quietdec := true;
-map
- load
- ["intSyntax","pairSyntax","listSyntax","stringLib","stringSimps",
-  "rich_listTheory","pred_setLib"];
-open pairSyntax listSyntax stringLib numLib stringSimps
-     rich_listTheory pred_setLib Defn;
-printDepth := 1000;
-printLength := 1000;
-Globals.checking_const_names := false;
-quietdec := false;
-*)
-
 structure sexp =
 struct
 
 (******************************************************************************
 * Boilerplate needed for compilation: open HOL4 systems modules
 ******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open intSyntax pairSyntax listSyntax stringLib numLib;
+
+open pairSyntax;
+open numLib;
+open listSyntax;
+open stringLib;
+open intSyntax;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Print utility from Michael Norrish (may not end up being used):           *)
-(*                                                                           *)
-(* > Is there a way of redirecting output from print_term to a file?         *)
-(*                                                                           *)
-(* You need to turn an outstream (the thing you get back from a call to      *)
-(* TextIO.openOut) into a ppstream.  You could do this with                  *)
-(*                                                                           *)
-(*   fun mk_pp_from_out outstream =                                          *)
-(*      PP.mk_ppstream { consumer = (fn s => TextIO.output(outstream,s)),    *)
-(*                       linewidth = 80,                                     *)
-(*                       flush = (fn () => TextIO.flushOut outstream) }      *)
-(*                                                                           *)
-(* where I have chosen the linewidth arbitrarily.  Then you would use the    *)
-(* ppstream based pretty-printer Parse.pp_term.  So a complete solution      *)
-(* for outputting a single term to a given file would be                     *)
-(*****************************************************************************)
-fun mk_pp_from_out outstream =
-   PP.mk_ppstream { consumer = (fn s => TextIO.output(outstream,s)),
-                    linewidth = 80,
-                    flush = (fn () => TextIO.flushOut outstream) };
-
-fun print_term_to_file fname term = let
-  val outstr = TextIO.openOut fname
-  val pps = mk_pp_from_out outstr
-in
-  Parse.pp_term pps term;
-  PP.flush_ppstream pps;
-  TextIO.closeOut outstr
-end;
+fun print_term_to_file fname term =
+ let open TextIO
+     val s = PP.pp_to_string 78 pp_term term
+     val ostrm = openOut fname
+ in
+    output(ostrm,s);
+    closeOut ostrm
+ end
 
 
 (*****************************************************************************)
 (* Swich off warning messages when defining types and constants with         *)
 (* non-standard names (e.g. names originating from ACL2).                    *)
 (*****************************************************************************)
+
 val _ = (Globals.checking_const_names := false);
 
 (*****************************************************************************)
 (* Flag to determine if HOL_ERR exceptions are printed                       *)
 (*****************************************************************************)
+
 val print_err = ref false;
 
 (*****************************************************************************)
@@ -728,9 +689,10 @@ fun dest_mlencap (mlpair(_, mlpair(acl2sig,events))) =
 (*****************************************************************************)
 (* Test for ``nat n`` where n is a numeral                                   *)
 (*****************************************************************************)
+
 fun is_nat tm =
  is_comb tm           andalso
- (rator tm = ``nat``) andalso
+ (aconv (rator tm) ``nat``) andalso
  is_numeral(rand tm);
 
 (*****************************************************************************)
@@ -743,9 +705,9 @@ fun dest_nat tm = Arbnum.toString(dest_numeral(rand tm));
 (*****************************************************************************)
 fun is_integer tm =
  is_comb tm andalso
- (if rator tm = ``int_of_num:num->int``       (* $& overloaded on int_of_num *)
+ (if aconv(rator tm) ``int_of_num:num->int``  (* $& overloaded on int_of_num *)
    then is_numeral(rand tm) else
-  if rator tm = ``int_neg:int->int``          (* $~ overloaded on int_neg    *)
+  if aconv (rator tm) ``int_neg:int->int``    (* $~ overloaded on int_neg    *)
    then is_integer(rand tm) else
   false);
 
@@ -754,7 +716,7 @@ fun is_integer tm =
 (*****************************************************************************)
 fun is_int tm =
  is_comb tm           andalso
- (rator tm = ``int``) andalso
+ aconv (rator tm) ``int`` andalso
  is_integer(rand tm);
 
 (*****************************************************************************)
@@ -766,13 +728,13 @@ fun is_int tm =
 fun dest_integer tm =
  let val (opr,args) = strip_comb tm
  in
-  if opr = ``int_of_num:num->int`` andalso (tl args = [])
+  if same_const opr ``int_of_num:num->int`` andalso null(tl args)
    then (if is_numeral(hd args)
           then Arbnum.toString(dest_numeral(hd args))
           else (print_term tm;
                 print " is not a non-negative integer numeral\n";
                 err "dest_integer" "not a non-negative integer numeral"))
-   else (if opr = ``int_neg:int->int`` andalso (tl args = [])
+   else (if same_const opr ``int_neg:int->int`` andalso null(tl args)
           then ("-" ^ dest_integer(hd args))
           else (print_term tm;
                 print " is not an integer numeral\n";
@@ -819,7 +781,7 @@ fun is_int_string s =
 fun is_cpx tm =
  let val (opr,args) = strip_comb tm
  in
-  (opr = ``cpx``)
+  same_const opr ``cpx``
     andalso (length args = 4)
     andalso is_int_string(dest_integer(el 1 args))
     andalso is_num_string(dest_integer(el 2 args))
@@ -932,7 +894,7 @@ fun abbrevMLstring s =
 (* Version of fromHOLstring that looks up in string_abbrevs.                 *)
 (*****************************************************************************)
 fun abbrevHOLstring c =
- rev_assoc c (!string_abbrevs)
+ op_rev_assoc aconv c (!string_abbrevs)
   handle HOL_ERR _ => fromHOLstring c;
 
 (*****************************************************************************)
@@ -1136,9 +1098,10 @@ fun deftm_to_mlsexp_defun tm =
 (*                                                                           *)
 (*  (defun f (x1 ... xn) ^(term_to_mlsexp e))                                *)
 (*****************************************************************************)
+
 fun def_to_mlsexp_defun th =
  let val (asl, concl) = dest_thm(SPEC_ALL th)
-     val _ = if not(asl = [])
+     val _ = if not(null asl)
                then(print_thm th;
                     print "\n"; print"should not have any assumptions\n";
                     err "mk_mlsexp_defthm" "assumptions not allowed")
@@ -1156,6 +1119,7 @@ fun def_to_mlsexp_defun th =
 (*                                                                           *)
 (*  (defun f (x1 ... xn) ^(term_to_mlsexp e))                                *)
 (*****************************************************************************)
+
 fun pr_mlsexp_defun th = pr_mlsexp(def_to_mlsexp_defun th);
 
 (*****************************************************************************)
@@ -1642,6 +1606,7 @@ fun create_hol_name acl2_name =
 (* defining term (normally an existential quantification) suitable for       *)
 (* processing by new_specification.                                          *)
 (*****************************************************************************)
+
 datatype acl2def =
    defun    of term
  | defaxiom of string * term
@@ -1652,6 +1617,7 @@ datatype acl2def =
 (*****************************************************************************)
 (* Strip ``|=`` from defthms and defaxioms                                   *)
 (*****************************************************************************)
+
 fun dest_ax_or_thm conc =
  let val (con,tm) = dest_comb conc
      val _ = if not(is_const con andalso (fst(dest_const con) = "|="))
@@ -1677,7 +1643,7 @@ exception fail_for_mapfilter
 in
 fun dest_acl2_thm th =
  let val (asl, conc) = dest_thm(SPEC_ALL th)
-     val _ = if not(asl = [])
+     val _ = if not(null asl)
                then(print_thm th;
                     print "\n"; print"should not have any assumptions\n";
                     err "dest_acl2_thm" "assumptions not allowed")
@@ -1820,7 +1786,9 @@ fun mk_sexp_fun_ty n =
 (*                                                                           *)
 (* where v1,...,vn are the free variables in tm not in vl                    *)
 (*****************************************************************************)
-fun mk_closed_event vl tm = list_mk_forall(subtract(free_vars tm)vl, tm);
+
+fun mk_closed_event vl tm =
+  list_mk_forall(op_set_diff aconv (free_vars tm) vl, tm);
 
 (*****************************************************************************)
 (* mk_acl2def converts an ML representation of an ACL2 event into an         *)
@@ -1852,6 +1820,10 @@ fun mk_closed_event vl tm = list_mk_forall(subtract(free_vars tm)vl, tm);
 (* where n1,...,nm are the names of the events introducing v1,...,vm,        *)
 (* respectively                                                              *)
 (*****************************************************************************)
+
+val subtract = op_set_diff aconv;
+val union = op_union aconv;
+
 fun mk_acl2def d =
  if is_mldefun d
   then
@@ -1975,6 +1947,7 @@ val mk_mutual_name = concat_with_spaces o map get_name o get_defined_list;
 (*****************************************************************************)
 (* Print an acl2def                                                          *)
 (*****************************************************************************)
+
 fun print_acl2def out (defun tm) =
      (out "; Defun:    "; out(get_name(get_defined tm)); out "\n";
       print_mlsexp out (deftm_to_mlsexp_defun(spec_all tm));
@@ -2069,6 +2042,7 @@ fun mk_acl2_thm defty acl2_name deftm =
 (* 3. create theorems using mk_oracle_thm then save them with a HOL-friendly *)
 (*    name with suffix "_defun", "_axiom", "_thm", "_mutual" or "_encap"     *)
 (*****************************************************************************)
+
 fun install(defun tm) =
      let val opr = get_defined tm
          val (opr_name,opr_ty) = dest_var opr
@@ -2197,14 +2171,14 @@ fun install_and_print a =
 (* Union a list of lists                                                     *)
 (*****************************************************************************)
 fun union_flatten []      = []
- |  union_flatten (l::ll) = union l (union_flatten ll);;
+ |  union_flatten (l::ll) = Lib.union l (union_flatten ll);;
 
 (*****************************************************************************)
 (* Gets the symbol names from an ML S-expression                             *)
 (*****************************************************************************)
 fun get_package_strings(mlsym(_,s)) = [s]
  |  get_package_strings(mlpair(p1,p2)) =
-     union (get_package_strings p1) (get_package_strings p2)
+     Lib.union (get_package_strings p1) (get_package_strings p2)
  |  get_package_strings _  = [];
 
 (*****************************************************************************)
@@ -2280,6 +2254,7 @@ in
 (* Create a script file for a theory named thy that contains ACL2 DEFUNs ql  *)
 (* and hol names specified in an alist name_alist                            *)
 (*****************************************************************************)
+
 fun print_acl2_defun_script thy ql name_alist=
  let val outstr = TextIO.openOut("header-tmp.ml")
      fun out s = TextIO.output(outstr,s)
@@ -2311,6 +2286,7 @@ fun print_acl2_defun_script thy ql name_alist=
 (*  use (Globals.HOLDIR ^ "/examples/acl2/...");                             *)
 (*  load_imported_acl2_theorems();                                           *)
 (*****************************************************************************)
+
 val imported_acl2_theorems = ref([]:thm list);
 
 fun load_imported_acl2_theorems () =
@@ -2363,8 +2339,8 @@ fun save_acl2_simps () =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
-    SOME(fn ppstrm =>
-          PP.add_string ppstrm
+    SOME(fn _ =>
+          PP.add_string
            ("val _ = (sexp.acl2_simps :="
             ^"  (!sexp.acl2_simps)@(Drule.CONJUNCTS ACL2_SIMPS));"))
  };
@@ -2376,8 +2352,8 @@ fun save_current_package() =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
-    SOME(fn ppstrm =>
-          PP.add_string ppstrm
+    SOME(fn _ =>
+          PP.add_string
            ("val _ = sexp.set_current_package \""
             ^ (!current_package) ^ "\";"))
  };
@@ -2389,8 +2365,8 @@ fun save_acl2_names () =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
-    SOME(fn ppstrm =>
-          PP.add_string ppstrm
+    SOME(fn _ =>
+          PP.add_string
            ("val _ = sexp.add_acl2_names " ^
             string_pair_list_to_string(!acl2_names) ^
             ";"))
@@ -2404,8 +2380,8 @@ fun save_string_abbrevs () =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
-    SOME(fn ppstrm =>
-          PP.add_string ppstrm
+    SOME(fn _ =>
+          PP.add_string
            ("val _ = sexp.add_string_abbrevs " ^
             string_abbrevs_to_string(!string_abbrevs) ^
             ";\n\n"))
@@ -2427,6 +2403,7 @@ fun export_acl2_theory () =
 (* List of events processed. If two events with the same name occur,then the *)
 (* second one is ignored.                                                    *)
 (*****************************************************************************)
+
 val event_names = ref([] : string list);
 
 (*****************************************************************************)

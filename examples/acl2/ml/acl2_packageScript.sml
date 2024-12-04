@@ -49,6 +49,7 @@ open listSyntax pairSyntax stringLib listTheory;
 (*****************************************************************************)
 (* Start new theory "acl2_package"                                           *)
 (*****************************************************************************)
+
 val _ = new_theory "acl2_package";
 
 (*****************************************************************************)
@@ -69,6 +70,7 @@ val _ = new_theory "acl2_package";
 (* abbreviations below (this idea due to Konrad). It is strange that         *)
 (* rewriting the big term is no problem, but compiling it breaks.            *)
 (*****************************************************************************)
+
 val ACL2_CL_def     = Define `ACL2_CL      = ("ACL2", "COMMON-LISP")`;
 val ACL2_USER_def   = Define `ACL2_USER    = ("ACL2-USER" , "ACL2")`;
 val ACL_USER_CL_def = Define `ACL2_USER_CL = ("ACL2-USER" , "COMMON-LISP")`;
@@ -2858,6 +2860,7 @@ val ACL2_PACKAGE_ALIST_def =
 (*    if for all i: ~(sym_name=xi and pkg_name=yi)                           *)
 (*                                                                           *)
 (*****************************************************************************)
+
 val LOOKUP_def =
  Define
   `(LOOKUP pkg_name [] _ = pkg_name)
@@ -2887,11 +2890,12 @@ val LOOKUP_def =
 (*              (not (equal p2 ""))                                          *)
 (*              (valid-pkg-triples-aux (cdr tail) triples)))))               *)
 (*****************************************************************************)
+
 val VALID_PKG_TRIPLES_AUX_def =
  Define
   `(VALID_PKG_TRIPLES_AUX [] triples = T)
    /\
-   (VALID_PKG_TRIPLES_AUX ((sym_name,_,p2)::tail) triples =
+   (VALID_PKG_TRIPLES_AUX ((sym_name,_,p2)::tail) triples <=>
      (LOOKUP p2 triples sym_name = p2) /\
      ~(sym_name = "ACL2-PKG-WITNESS")  /\
      ~(p2 = "")                        /\
@@ -2927,22 +2931,22 @@ val lookup_fast =
         Induct THEN TRY (Cases THEN Cases_on `r`) THEN
         RW_TAC std_ss [LOOKUP_def,LOOKUP_AUX_def]);
 
-val separate_lemma = prove(``!l1 l2. VALID_PKG_TRIPLES_AUX l1 l2 =
-        (EVERY (\ (x,y,z). ~(z = "")) l1) /\
-        (EVERY (\ (x,y,z). ~(x = "ACL2-PKG-WITNESS")) l1) /\
+val separate_lemma = prove(``!l1 l2. VALID_PKG_TRIPLES_AUX l1 l2 <=>
+        (EVERY (\(x,y,z). ~(z = "")) l1) /\
+        (EVERY (\(x,y,z). ~(x = "ACL2-PKG-WITNESS")) l1) /\
         (EVERY (LOOKUP_AUX l2) l1)``,
         Induct THEN TRY (Cases THEN Cases_on `r`) THEN
         RW_TAC std_ss [VALID_PKG_TRIPLES_AUX_def,EVERY_DEF,GSYM lookup_fast] THEN
         METIS_TAC []);
 
-val separate_proof = prove(``!l1. VALID_PKG_TRIPLES l1 =
+val separate_proof = prove(``!l1. VALID_PKG_TRIPLES l1 <=>
         (EVERY (\ (x,y,z). ~(z = "")) l1) /\
         (EVERY (\ (x,y,z). ~(x = "ACL2-PKG-WITNESS")) l1) /\
         (ELOOKUP l1)``,
         RW_TAC std_ss [VALID_PKG_TRIPLES_def,ELOOKUP_def,separate_lemma]);
 
 val every_split =
- prove(``!l. (!x. A x = B x /\ C x) ==> (EVERY A l = EVERY B l /\ EVERY C l)``,
+ prove(``!l. (!x. A x <=> B x /\ C x) ==> (EVERY A l <=> EVERY B l /\ EVERY C l)``,
         Induct THEN RW_TAC std_ss [EVERY_DEF] THEN METIS_TAC []);
 
 val leq_def =
@@ -2950,7 +2954,7 @@ val leq_def =
   (leq "" "" = T) /\
   (leq "" (STRING a b) = T) /\
   (leq (STRING a b) "" = F) /\
-  (leq (STRING a b) (STRING c d) =
+  (leq (STRING a b) (STRING c d) <=>
       if ORD a < ORD c then T else (ORD a = ORD c) /\ leq b d)`;
 
 val LEQ_def =
@@ -2971,14 +2975,14 @@ val leq_f_imp = prove(``!l s x v0 v1. ~LEQ s (x,v0) ==> LOOKUP_AUX (FILTER (LEQ 
         METIS_TAC [leq_only]);
 
 val lookup_split_leq =
-        prove(``!l1 x. LOOKUP_AUX l1 x = LOOKUP_AUX (FILTER (LEQ s) l1) x /\ LOOKUP_AUX (FILTER ($~ o LEQ s) l1) x``,
+        prove(``!l1 x. LOOKUP_AUX l1 x <=> LOOKUP_AUX (FILTER (LEQ s) l1) x /\ LOOKUP_AUX (FILTER ($~ o LEQ s) l1) x``,
         Induct THEN TRY (Cases THEN Cases_on `r` THEN Cases_on `x` THEN Cases_on `r`) THEN
         RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
         METIS_TAC [leq_t_imp,leq_f_imp]);
 
 val every_lookup_split_leq =
       prove(``!s l1 l2.
-        EVERY (LOOKUP_AUX l1) l2 =
+        EVERY (LOOKUP_AUX l1) l2 <=>
         EVERY (LOOKUP_AUX (FILTER (LEQ s) l1)) (FILTER (LEQ s) l2) /\
         EVERY (LOOKUP_AUX (FILTER ($~ o LEQ s) l1)) (FILTER ($~ o LEQ s) l2)``,
         CONV_TAC (STRIP_QUANT_CONV (LAND_CONV (REWR_CONV (MATCH_MP every_split (Q.SPEC `l1` lookup_split_leq))))) THEN
@@ -2987,7 +2991,7 @@ val every_lookup_split_leq =
         METIS_TAC [leq_t_imp,leq_f_imp]);
 
 val EVERY_FILTER =
-   prove(``!l. EVERY P l = EVERY P (FILTER Q l) /\ EVERY P (FILTER ($~ o Q) l)``,
+   prove(``!l. EVERY P l <=> EVERY P (FILTER Q l) /\ EVERY P (FILTER ($~ o Q) l)``,
      Induct THEN RW_TAC arith_ss [EVERY_DEF,FILTER] THEN PROVE_TAC []);
 
 val PLACE_def =
@@ -3012,7 +3016,8 @@ val RFILTER_def =
   `(RFILTER P [] A = A) /\
    (RFILTER P (a::b) A = RFILTER P b (if P a then a::A else A))`;
 
-val partition_lem = prove(``!l A B C D. PARTITION s1 s2 s3 (A,B,C,D) l =
+val partition_lem = prove(
+ ``!l A B C D. PARTITION s1 s2 s3 (A,B,C,D) l =
         (RFILTER (\x. LEQ s1 x /\ LEQ s2 x) l A,
          RFILTER (\x. ~LEQ s1 x /\ LEQ s2 x) l B,
          RFILTER (\x. LEQ s3 x /\ ~LEQ s2 x) l C,
@@ -3039,7 +3044,7 @@ val RPARTITION_def =
         (PARTITION s1 s2 s3 (A,B,C,D) L)`;
 
 val RFILTER_thm =
-  prove(``!A B P. RFILTER P A B = REVERSE (FILTER P A) ++ B``,
+  prove(``!A B P. RFILTER P A B = (REVERSE (FILTER P A) ++ B)``,
   Induct THEN RW_TAC arith_ss
                [RFILTER_def,FILTER,REVERSE_DEF,APPEND,GSYM APPEND_ASSOC]);
 
@@ -3134,7 +3139,7 @@ val LOOKUP_AUX_RWR = prove(``
         (LOOKUP_AUX [] v = T) /\
         (LOOKUP_AUX ((name1,ACL2_CL)::a) (name2,ACL2_CL) = LOOKUP_AUX a (name2,ACL2_CL)) /\
         (LOOKUP_AUX ((name1,ACL2_CL)::a) (name2,ACL2_USER_CL) = LOOKUP_AUX a (name2,ACL2_USER_CL)) /\
-        (LOOKUP_AUX ((name1,ACL2_CL)::a) (name2,ACL2_USER) = ~(name1 = name2) /\ LOOKUP_AUX a (name2,ACL2_USER)) /\
+        (LOOKUP_AUX ((name1,ACL2_CL)::a) (name2,ACL2_USER) <=> ~(name1 = name2) /\ LOOKUP_AUX a (name2,ACL2_USER)) /\
         (LOOKUP_AUX ((name1,ACL2_USER_CL)::a) (name2,ACL2_CL) = LOOKUP_AUX a (name2,ACL2_CL)) /\
         (LOOKUP_AUX ((name1,ACL2_USER_CL)::a) (name2,ACL2_USER_CL) = LOOKUP_AUX a (name2,ACL2_USER_CL)) /\
         (LOOKUP_AUX ((name1,ACL2_USER_CL)::a) (name2,ACL2_USER) = LOOKUP_AUX a (name2,ACL2_USER)) /\
@@ -3144,12 +3149,12 @@ val LOOKUP_AUX_RWR = prove(``
         RW_TAC arith_ss [LOOKUP_AUX_def,ACL2_CL_def,ACL2_USER_def,ACL_USER_CL_def] THEN
         METIS_TAC []);
 
-val CHECK_def = Define `CHECK (x,y,z) = ~(z = "") /\ ~(x = "ACL2-PKG-WITNESS")`;
+val CHECK_def = Define `CHECK (x,y,z) <=> ~(z = "") /\ ~(x = "ACL2-PKG-WITNESS")`;
 
 val VALID_PKG_TRIPLES_RWR = prove(``!l1.
-                VALID_PKG_TRIPLES l1 = EVERY CHECK l1 /\ ELOOKUP l1``,
+                VALID_PKG_TRIPLES l1 <=> EVERY CHECK l1 /\ ELOOKUP l1``,
         STRIP_TAC THEN REWRITE_TAC [separate_proof] THEN
-        MATCH_MP_TAC (DECIDE ``(A = B /\ C) /\ (D = E) ==> (B /\ C /\ E = A /\ D)``) THEN
+        MATCH_MP_TAC (DECIDE ``(A <=> B /\ C) /\ (D = E) ==> (B /\ C /\ E <=> A /\ D)``) THEN
         Induct_on `l1` THEN RW_TAC arith_ss [EVERY_DEF] THEN
         Cases_on `h` THEN Cases_on `r` THEN RW_TAC arith_ss [CHECK_def] THEN
         PROVE_TAC []);
