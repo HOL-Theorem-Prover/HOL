@@ -100,6 +100,31 @@ Proof
   \\ simp[ADD_DIV_RWT]
 QED
 
+Theorem EL_chunks:
+  ∀k ls n.
+  n < LENGTH (chunks k ls) /\ 0 < k /\ ~NULL ls ==>
+  EL n (chunks k ls) = TAKE k (DROP (n * k) ls)
+Proof
+  recInduct chunks_ind \\ rw[NULL_EQ]
+  \\ qpat_x_assum`_ < LENGTH _ `mp_tac
+  \\ rw[Once chunks_def] \\ gs[]
+  >- rw[Once chunks_def]
+  \\ rw[Once chunks_def]
+  \\ qmatch_goalsub_rename_tac`EL m _`
+  \\ Cases_on`m` \\ gs[]
+  \\ pop_assum mp_tac
+  \\ DEP_REWRITE_TAC[LENGTH_chunks]
+  \\ simp[NULL_EQ]
+  \\ strip_tac
+  \\ DEP_REWRITE_TAC[DROP_DROP]
+  \\ simp[MULT_SUC]
+  \\ qmatch_goalsub_rename_tac`n + n * m <= _`
+  \\ `n * m <= LENGTH ls - n` suffices_by simp[]
+  \\ `m <= (LENGTH ls - n) DIV n` suffices_by simp[X_LE_DIV]
+  \\ fs[bool_to_bit_def]
+  \\ pop_assum mp_tac \\ rw[]
+QED
+
 Theorem LENGTH_PAD_RIGHT_0_8_word_to_bin_list[simp]:
   LENGTH (PAD_RIGHT 0 8 (word_to_bin_list (w: word8))) = 8
 Proof
@@ -2130,7 +2155,41 @@ Proof
     \\ conj_tac
     >- (
       simp[Abbr`l1`, Abbr`b1`, Abbr`bools1`]
-    concat_word_list_bytes_to_64
+      \\ reverse conj_tac
+      >- (
+        simp[Abbr`l0`, Abbr`b0`]
+        \\ simp[LIST_EQ_REWRITE, EL_REPLICATE]
+        \\ rpt strip_tac
+        \\ DEP_REWRITE_TAC[EL_MAP]
+        \\ DEP_REWRITE_TAC[LENGTH_chunks]
+        \\ simp[LENGTH_REPLICATE, NULL_EQ]
+        \\ DEP_REWRITE_TAC[EL_chunks]
+        \\ simp[LENGTH_REPLICATE, NULL_EQ]
+        \\ DEP_REWRITE_TAC[LENGTH_chunks]
+        \\ simp[LENGTH_REPLICATE, NULL_EQ]
+        \\ simp[REPLICATE_GENLIST, TAKE_GENLIST]
+        \\ simp[word_from_bin_list_def, l2w_def]
+        \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+        \\ `A = 0` suffices_by simp[]
+        \\ qunabbrev_tac`A`
+        \\ simp[l2n_eq_0, EVERY_GENLIST] )
+      \\ simp[LIST_EQ_REWRITE]
+      \\ rpt strip_tac
+      \\ DEP_REWRITE_TAC[EL_MAP]
+      \\ conj_asm1_tac
+      >- (
+        DEP_REWRITE_TAC[LENGTH_chunks]
+        \\ simp[NULL_EQ]
+        \\ (conj_tac \\ strip_tac \\ gs[]))
+      \\ DEP_REWRITE_TAC[EL_chunks]
+      \\ gs[NULL_EQ]
+      \\ conj_tac >- (conj_tac \\ strip_tac \\ gs[])
+      \\ qmatch_goalsub_abbrev_tac`_ ls = _`
+      \\ `LENGTH ls = 8` by simp[Abbr`ls`]
+      \\ drule concat_word_list_bytes_to_64
+      \\ disch_then SUBST_ALL_TAC
+      \\ AP_TERM_TAC
+      \\ simp[Abbr`ls`]
 *)
 
 Definition Keccak_256_bytes_def:
