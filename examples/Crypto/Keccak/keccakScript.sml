@@ -2054,7 +2054,36 @@ Termination
   \\ rw[LENGTH_DROP]
 End
 
-(*
+Theorem TAKE_FLAT_bytes[local]:
+  ∀n (ls:word8 list). 8 * (n + 1) ≤ LENGTH ls ==>
+  FLAT (MAP (PAD_RIGHT 0 8 o word_to_bin_list) (TAKE 8 (DROP (8 * n) ls))) =
+  TAKE 64 (DROP (64 * n) (FLAT (MAP (PAD_RIGHT 0 8 o word_to_bin_list) ls)))
+Proof
+  Induct \\ rw[]
+  >- (
+    Cases_on`ls` \\ gs[]
+    \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+    \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+    \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+    \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+    \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+    \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+    \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+    \\ simp[TAKE_APPEND]
+    \\ simp[TAKE_LENGTH_TOO_LONG, LENGTH_PAD_RIGHT_0_8_word_to_bin_list] )
+  \\ gs[LEFT_ADD_DISTRIB, MULT_SUC]
+  \\ Cases_on`ls` \\ gs[]
+  \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+  \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+  \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+  \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+  \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+  \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+  \\ qmatch_asmsub_rename_tac`LENGTH ls` \\ Cases_on`ls` \\ gs[]
+  \\ simp[DROP_APPEND, LENGTH_PAD_RIGHT_0_8_word_to_bin_list,
+          DROP_LENGTH_TOO_LONG]
+QED
+
 Theorem pad10s1_136_64w_thm:
   ∀zs bytes acc bools.
   bools = MAP ((=) 1) $ FLAT $ MAP (PAD_RIGHT 0 8 o word_to_bin_list) bytes ∧
@@ -2190,7 +2219,33 @@ Proof
       \\ disch_then SUBST_ALL_TAC
       \\ AP_TERM_TAC
       \\ simp[Abbr`ls`]
-*)
+      \\ qunabbrev_tac`fb`
+      \\ irule TAKE_FLAT_bytes
+      \\ simp[] )
+    \\ simp[Abbr`lm2`]
+    \\ AP_TERM_TAC
+    \\ AP_TERM_TAC
+    \\ AP_TERM_TAC
+    \\ AP_TERM_TAC
+    \\ simp[pad10s1_def]
+    \\ AP_THM_TAC
+    \\ AP_TERM_TAC
+    \\ qmatch_goalsub_abbrev_tac`A MOD N = B MOD N`
+    \\ `B = A + (N - 1) * N`
+    by (
+      qunabbrev_tac`A`
+      \\ qunabbrev_tac`B`
+      \\ qunabbrev_tac`N`
+      \\ simp[LEFT_ADD_DISTRIB] )
+    \\ qunabbrev_tac`B`
+    \\ pop_assum SUBST_ALL_TAC
+    \\ irule EQ_SYM
+    \\ ONCE_REWRITE_TAC[ADD_COMM]
+    \\ irule MOD_TIMES
+    \\ simp[Abbr`N`] )
+  \\ simp[PULL_EXISTS]
+  \\ cheat
+QED
 
 Definition Keccak_256_bytes_def:
   Keccak_256_bytes (bs:word8 list) : word8 list =
