@@ -658,6 +658,19 @@ Proof
   metis_tac[]
 QED
 
+Theorem LENGTH_pad10s1_less:
+  m + 2 ≤ x ==> LENGTH (pad10s1 x m) = x - m
+Proof
+  rw[pad10s1_def, LEFT_ADD_DISTRIB, ADD1]
+  \\ Cases_on`x` \\ gs[]
+  \\ Cases_on`n` \\ gs[ADD1, LEFT_ADD_DISTRIB]
+  \\ qmatch_goalsub_rename_tac`2 * k`
+  \\ `m + (2 * k + (m * k + 2)) = (m + 1) * (k + 2) + (k - m)` by gs[]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ DEP_REWRITE_TAC[MOD_TIMES]
+  \\ simp[]
+QED
+
 Definition Keccak_def:
   Keccak c = sponge (Keccak_p 24) 1600 pad10s1 (1600 - c)
 End
@@ -2042,10 +2055,13 @@ Definition pad10s1_136_64w_def:
   if 136 < lm then let
     w64s = MAP concat_word_list $ chunks 8 (TAKE 136 m)
   in pad10s1_136_64w zs (DROP 136 m) ((w64s ++ zs) :: a)
+  else if lm = 136 then
+    REVERSE $
+      (0x80w::(REPLICATE 134 0w)++(0x01w::zs)) ::
+      ((MAP concat_word_list $ chunks 8 m) ++ zs) :: a
   else let
     n = 136 - lm;
-    pad = if n < 1 then [] else
-          if n < 2 then [0x81w] else
+    pad = if n = 1 then [0x81w] else
             0x80w::(REPLICATE (n - 2) 0w)++[0x01w];
     w64s = MAP concat_word_list $ chunks 8 $ m ++ pad
   in REVERSE $ (w64s ++ zs) :: a
@@ -2243,8 +2259,135 @@ Proof
     \\ ONCE_REWRITE_TAC[ADD_COMM]
     \\ irule MOD_TIMES
     \\ simp[Abbr`N`] )
+  \\ qmatch_goalsub_abbrev_tac`MAP _ $ MAP _ $ chunks _ (l1 ++ l2)`
+  \\ `LENGTH l1 = 8 * LENGTH m`
+  by (
+    simp[Abbr`l1`, LENGTH_FLAT, MAP_MAP_o]
+    \\ qmatch_goalsub_abbrev_tac`SUM ls`
+    \\ `ls = REPLICATE (LENGTH m) 8`
+    by simp[Abbr`ls`, LIST_EQ_REWRITE, EL_MAP, EL_REPLICATE]
+    \\ simp[SUM_REPLICATE] )
+  \\ IF_CASES_TAC \\ gs[]
+  >- (
+    DEP_REWRITE_TAC[chunks_append_divides]
+    \\ simp[NULL_EQ]
+    \\ conj_tac
+    >- (
+      conj_tac >- ( strip_tac \\ gs[] )
+      \\ gs[Abbr`l1`,Abbr`l2`,pad10s1_def] )
+    \\ qpat_assum`LENGTH l1 = _`(SUBST1_TAC o SYM)
+    \\ simp[chunks_length, PULL_EXISTS]
+    \\ `LENGTH l2 = 1088`
+    by ( simp[Abbr`l2`] \\ gs[Abbr`l1`] \\ simp[pad10s1_def] )
+    \\ pop_assum(SUBST1_TAC o SYM)
+    \\ simp[chunks_length]
+    \\ conj_tac
+    >- (
+      DEP_ONCE_REWRITE_TAC[chunks_append_divides]
+      \\ gs[NULL_EQ]
+      \\ conj_tac
+      >- ( conj_tac >- rw[divides_def]
+        \\ strip_tac \\ gs[Abbr`l1`])
+      \\ qmatch_goalsub_abbrev_tac`m1 ++ m2 = m3 ++ m4`
+      \\ `LENGTH m1 = 17`
+      by (
+        simp[Abbr`m1`]
+        \\ DEP_REWRITE_TAC[LENGTH_chunks]
+        \\ simp[divides_def, NULL_EQ, bool_to_bit_def]
+        \\ strip_tac \\ gs[] )
+      \\ `LENGTH m3 = 17`
+      by (
+        simp[Abbr`m3`]
+        \\ DEP_REWRITE_TAC[LENGTH_chunks]
+        \\ gs[bool_to_bit_def, NULL_EQ, divides_def]
+        \\ strip_tac \\ gs[Abbr`l1`]
+        \\ strip_tac \\ gs[] )
+      \\ `LENGTH m2 = c DIV 64` by simp[Abbr`m2`]
+      \\ `LENGTH m4 = c DIV 64` by (
+        simp[Abbr`m4`]
+        \\ DEP_REWRITE_TAC[LENGTH_chunks]
+        \\ simp[bool_to_bit_def, NULL_EQ] )
+      \\ simp[APPEND_LENGTH_EQ]
+      \\ conj_tac
+      >- (
+        gs[Abbr`m1`,Abbr`m3`,LIST_EQ_REWRITE,EL_MAP]
+        \\ rw[]
+        \\ DEP_REWRITE_TAC[EL_chunks]
+        \\ gs[NULL_EQ]
+        \\ conj_tac
+        >- (
+          conj_tac >- (strip_tac \\ gs[])
+          \\ strip_tac \\ gs[Abbr`l1`])
+        \\ gs[Abbr`l1`]
+        \\ simp[MAP_MAP_o, MAP_FLAT]
+        \\ cheat (* TAKE_FLAT_bytes, concat_word_list_bytes_to_64 *) )
+      \\ gs[Abbr`m2`, Abbr`m4`, LIST_EQ_REWRITE, EL_MAP, EL_REPLICATE]
+      \\ rw[]
+      \\ DEP_REWRITE_TAC[EL_chunks]
+      \\ gs[NULL_EQ]
+      \\ simp[word_from_bin_list_def, l2w_def]
+      \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+      \\ `A = 0` suffices_by simp[]
+      \\ qunabbrev_tac`A`
+      \\ simp[l2n_eq_0, EVERY_GENLIST, REPLICATE_GENLIST, TAKE_GENLIST])
+    \\ cheat)
   \\ simp[PULL_EXISTS]
-  \\ cheat
+  \\ `LENGTH (l1 ++ l2) = 1088`
+  by (
+    gs[Abbr`l2`, Abbr`l1`]
+    \\ DEP_REWRITE_TAC[LENGTH_pad10s1_less]
+    \\ gs[] )
+  \\ simp[Once chunks_def]
+  \\ qmatch_goalsub_abbrev_tac`chunks 8 ls`
+  \\ `LENGTH ls = 136` by rw[Abbr`ls`]
+  \\ DEP_ONCE_REWRITE_TAC[chunks_append_divides]
+  \\ gs[NULL_EQ]
+  \\ conj_tac
+  >- (
+    conj_tac >- rw[divides_def]
+    \\ strip_tac \\ gs[Abbr`l1`]
+    \\ strip_tac \\ gs[] )
+  \\ qmatch_goalsub_abbrev_tac`m1 ++ m2 = m3 ++ m4`
+  \\ `LENGTH m1 = 17`
+  by (
+    simp[Abbr`m1`]
+    \\ DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[divides_def, NULL_EQ, bool_to_bit_def]
+    \\ strip_tac \\ gs[] )
+  \\ `LENGTH m3 = 17`
+  by (
+    simp[Abbr`m3`]
+    \\ DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ gs[bool_to_bit_def, NULL_EQ, divides_def]
+    \\ strip_tac \\ gs[Abbr`l1`]
+    \\ strip_tac \\ gs[] )
+  \\ `LENGTH m2 = c DIV 64` by simp[Abbr`m2`]
+  \\ `LENGTH m4 = c DIV 64` by (
+    simp[Abbr`m4`]
+    \\ DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[bool_to_bit_def, NULL_EQ] )
+  \\ simp[APPEND_LENGTH_EQ]
+  \\ conj_tac
+  >- (
+    gs[Abbr`m1`,Abbr`m3`,LIST_EQ_REWRITE,EL_MAP]
+    \\ rw[]
+    \\ DEP_REWRITE_TAC[EL_chunks]
+    \\ gs[NULL_EQ]
+    \\ conj_tac
+    >- (
+      conj_tac >- (strip_tac \\ gs[])
+      \\ strip_tac \\ gs[Abbr`l1`]
+      \\ strip_tac \\ gs[] )
+    \\ cheat (* concat_word_list_bytes_to_64, TAKE_FLAT_bytes or similar *) )
+  \\ gs[Abbr`m2`, Abbr`m4`, LIST_EQ_REWRITE, EL_MAP, EL_REPLICATE]
+  \\ rw[]
+  \\ DEP_REWRITE_TAC[EL_chunks]
+  \\ gs[NULL_EQ]
+  \\ simp[word_from_bin_list_def, l2w_def]
+  \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+  \\ `A = 0` suffices_by simp[]
+  \\ qunabbrev_tac`A`
+  \\ simp[l2n_eq_0, EVERY_GENLIST, REPLICATE_GENLIST, TAKE_GENLIST]
 QED
 
 Definition Keccak_256_bytes_def:
