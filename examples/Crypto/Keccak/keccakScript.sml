@@ -2074,7 +2074,7 @@ Definition pad10s1_136_64w_def:
   else let
     n = 136 - lm;
     pad = if n = 1 then [0x81w] else
-            0x80w::(REPLICATE (n - 2) 0w)++[0x01w];
+            0x01w::(REPLICATE (n - 2) 0w)++[0x80w];
     w64s = MAP concat_word_list $ chunks 8 $ m ++ pad
   in REVERSE $ (w64s ++ zs) :: a
 Termination
@@ -2482,7 +2482,58 @@ Proof
       conj_tac >- (strip_tac \\ gs[])
       \\ strip_tac \\ gs[Abbr`l1`]
       \\ strip_tac \\ gs[] )
-    \\ cheat (* concat_word_list_bytes_to_64, TAKE_FLAT_bytes or similar *) )
+    \\ DEP_REWRITE_TAC[concat_word_list_bytes_to_64]
+    \\ simp[]
+    \\ DEP_REWRITE_TAC[TAKE_FLAT_bytes]
+    \\ simp[]
+    \\ AP_TERM_TAC
+    \\ qunabbrev_tac`ls`
+    \\ AP_TERM_TAC
+    \\ AP_TERM_TAC
+    \\ simp[Abbr`l1`]
+    \\ qmatch_goalsub_abbrev_tac`p1 ++ p2 = p3 ++ p4`
+    \\ `p1 = p3`
+    by (
+      simp[Abbr`p1`,Abbr`p3`,MAP_MAP_o]
+      \\ qmatch_goalsub_abbrev_tac`ls = _`
+      \\ simp[LIST_EQ_REWRITE, EL_MAP, bool_to_bit_def]
+      \\ rw[]
+      \\ qmatch_goalsub_abbrev_tac`b = 0`
+      \\ `MEM b ls` by metis_tac[MEM_EL]
+      \\ pop_assum mp_tac
+      \\ simp[Abbr`ls`, PAD_RIGHT, word_to_bin_list_def,
+              PULL_EXISTS, MEM_GENLIST, MEM_MAP, MEM_FLAT]
+      \\ qx_gen_tac`e` \\ rw[]
+      \\ `b < 2` suffices_by rw[]
+      \\ qspec_then`e`irule(Q.GEN`w`MEM_w2l_less)
+      \\ simp[]
+      \\ metis_tac[])
+    \\ simp[]
+    \\ gs[Abbr`p2`,Abbr`p4`]
+    \\ gs[Abbr`l2`]
+    \\ IF_CASES_TAC
+    >- (
+      `8 * LENGTH m = 1080` by gs[]
+      \\ simp[pad10s1_def, bool_to_bit_def, REPLICATE_GENLIST, PAD_RIGHT] )
+    \\ simp[pad10s1_def, PAD_RIGHT, bool_to_bit_def]
+    \\ simp[REPLICATE_GENLIST]
+    \\ qmatch_goalsub_abbrev_tac`_ = GENLIST _ (n MOD 1088)`
+    \\ gs[]
+    \\ gs[pad10s1_def, ADD1]
+    \\ `n MOD 1088 = 1086 - 8 * LENGTH m` by gs[]
+    \\ pop_assum SUBST1_TAC
+    \\ simp[LIST_EQ_REWRITE, ADD1, LENGTH_FLAT]
+    \\ qmatch_goalsub_abbrev_tac`SUM ls`
+    \\ `ls = REPLICATE (134 - LENGTH m) 8`
+    by simp[Abbr`ls`, LIST_EQ_REWRITE, EL_REPLICATE, EL_MAP]
+    \\ conj_asm1_tac >- simp[SUM_REPLICATE]
+    \\ rw[]
+    \\ qmatch_goalsub_abbrev_tac`EL i ls`
+    \\ `LENGTH ls = 1086 - 8 * LENGTH m`
+    by simp[Abbr`ls`, ADD1, LENGTH_FLAT]
+    \\ `MEM (EL i ls) ls` by metis_tac[MEM_EL]
+    \\ `EVERY (λx. x = 0) ls` suffices_by simp[EVERY_MEM]
+    \\ simp[Abbr`ls`, EVERY_FLAT, EVERY_GENLIST] )
   \\ gs[Abbr`m2`, Abbr`m4`, LIST_EQ_REWRITE, EL_MAP, EL_REPLICATE]
   \\ rw[]
   \\ DEP_REWRITE_TAC[EL_chunks]
