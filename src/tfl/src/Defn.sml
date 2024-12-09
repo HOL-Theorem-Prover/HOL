@@ -1779,7 +1779,7 @@ fun defn_absyn_to_term a = let
       overloading_resolution ptm >- (fn (pt,b) =>
       report_ovl_ambiguity b     >>
       to_term pt                 >- (fn t => fn e => (
-      !Preterm.typecheck_listener pt e;
+      ignore (Listener.call_listener Preterm.typecheck_listener (pt, e));
       return (t |> remove_case_magic |> !post_process_term) e)))
     end
   val M =
