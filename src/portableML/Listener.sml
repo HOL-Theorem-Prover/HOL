@@ -20,7 +20,7 @@ fun remove_listener (r:'a t) s =
     let
       val t = !r
       val (fopt, rest) =
-          Lib.trypluck' (fn (s',f) => if s' = s then SOME f else NONE) t
+          Portable.trypluck' (fn (s',f) => if s' = s then SOME f else NONE) t
     in
       r := rest;
       fopt
@@ -42,7 +42,7 @@ fun without_one (r:'a t) s f x =
     let
       val t = !r
       val (_, t') =
-          Lib.trypluck' (fn (s',f) => if s' = s then SOME () else NONE) t
+          Portable.trypluck' (fn (s',f) => if s' = s then SOME () else NONE) t
     in
       setmp r t' f x
     end
