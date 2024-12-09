@@ -671,6 +671,18 @@ Proof
   \\ simp[]
 QED
 
+Theorem LENGTH_pad10s1_equal:
+  2 < x ==> LENGTH (pad10s1 x x) = x
+Proof
+  rw[pad10s1_def,ADD1,LEFT_ADD_DISTRIB]
+  \\ qmatch_goalsub_abbrev_tac`a MOD x`
+  \\ `a = (x - 2) + (x * x)` by simp[Abbr`a`]
+  \\ pop_assum SUBST1_TAC
+  \\ DEP_ONCE_REWRITE_TAC[GSYM MOD_PLUS]
+  \\ DEP_REWRITE_TAC[MOD_EQ_0]
+  \\ simp[]
+QED
+
 Definition Keccak_def:
   Keccak c = sponge (Keccak_p 24) 1600 pad10s1 (1600 - c)
 End
@@ -2057,7 +2069,7 @@ Definition pad10s1_136_64w_def:
   in pad10s1_136_64w zs (DROP 136 m) ((w64s ++ zs) :: a)
   else if lm = 136 then
     REVERSE $
-      (0x80w::(REPLICATE 134 0w)++(0x01w::zs)) ::
+      (0x01w::(REPLICATE 15 0w)++(0x8000000000000000w::zs)) ::
       ((MAP concat_word_list $ chunks 8 m) ++ zs) :: a
   else let
     n = 136 - lm;
@@ -2320,7 +2332,28 @@ Proof
           \\ strip_tac \\ gs[Abbr`l1`])
         \\ gs[Abbr`l1`]
         \\ simp[MAP_MAP_o, MAP_FLAT]
-        \\ cheat (* TAKE_FLAT_bytes, concat_word_list_bytes_to_64 *) )
+        \\ qmatch_goalsub_abbrev_tac`MAP (f o g)`
+        \\ `MAP (f o g) m = MAP g m`
+        by (
+          rw[Abbr`f`,Abbr`g`, MAP_EQ_f]
+          \\ qmatch_goalsub_abbrev_tac`MAP _ l`
+          \\ rw[LIST_EQ_REWRITE, EL_MAP]
+          \\ rw[bool_to_bit_def]
+          \\ qmatch_goalsub_abbrev_tac`b =0`
+          \\ `MEM b l` by metis_tac[MEM_EL]
+          \\ pop_assum mp_tac
+          \\ simp[Abbr`l`, PAD_RIGHT, word_to_bin_list_def, MEM_GENLIST]
+          \\ rw[]
+          \\ `b < 2` suffices_by rw[]
+          \\ qspec_then`e`irule(Q.GEN`w`MEM_w2l_less)
+          \\ simp[]
+          \\ metis_tac[])
+        \\ pop_assum SUBST_ALL_TAC
+        \\ qunabbrev_tac`g`
+        \\ DEP_REWRITE_TAC[concat_word_list_bytes_to_64]
+        \\ simp[]
+        \\ DEP_REWRITE_TAC[TAKE_FLAT_bytes]
+        \\ simp[] )
       \\ gs[Abbr`m2`, Abbr`m4`, LIST_EQ_REWRITE, EL_MAP, EL_REPLICATE]
       \\ rw[]
       \\ DEP_REWRITE_TAC[EL_chunks]
@@ -2330,7 +2363,78 @@ Proof
       \\ `A = 0` suffices_by simp[]
       \\ qunabbrev_tac`A`
       \\ simp[l2n_eq_0, EVERY_GENLIST, REPLICATE_GENLIST, TAKE_GENLIST])
-    \\ cheat)
+    \\ gs[Abbr`l1`]
+    \\ simp[Abbr`l2`]
+    \\ DEP_REWRITE_TAC[chunks_append_divides]
+    \\ simp[NULL_EQ, LENGTH_pad10s1_equal]
+    \\ conj_tac >- rw[divides_def, pad10s1_def]
+    \\ once_rewrite_tac[CONS_APPEND]
+    \\ rewrite_tac[APPEND_ASSOC]
+    \\ qmatch_goalsub_abbrev_tac`m1 ++ m2 = m3 ++ m4`
+    \\ `LENGTH m2 = c DIV 64` by simp[Abbr`m2`]
+    \\ `LENGTH m4 = c DIV 64` by (
+      simp[Abbr`m4`]
+      \\ DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[bool_to_bit_def, NULL_EQ] )
+    \\ `LENGTH m1 = 17` by simp[Abbr`m1`]
+    \\ `LENGTH m3 = 17` by (
+      simp[Abbr`m3`]
+      \\ DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[bool_to_bit_def, LENGTH_pad10s1_equal, NULL_EQ, divides_def]
+      \\ simp[pad10s1_def] )
+    \\ simp[APPEND_LENGTH_EQ]
+    \\ reverse conj_tac
+    >- (
+      gs[Abbr`m2`, Abbr`m4`, LIST_EQ_REWRITE, EL_MAP, EL_REPLICATE]
+      \\ rw[]
+      \\ DEP_REWRITE_TAC[EL_chunks]
+      \\ gs[NULL_EQ]
+      \\ simp[word_from_bin_list_def, l2w_def]
+      \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+      \\ `A = 0` suffices_by simp[]
+      \\ qunabbrev_tac`A`
+      \\ simp[l2n_eq_0, EVERY_GENLIST, REPLICATE_GENLIST, TAKE_GENLIST] )
+    \\ gs[Abbr`m1`,Abbr`m3`]
+    \\ simp[pad10s1_def, bool_to_bit_def]
+    \\ simp[Once chunks_def]
+    \\ conj_tac
+    >- (
+      simp[TAKE_APPEND]
+      \\ rewrite_tac[REPLICATE_GENLIST, TAKE_GENLIST]
+      \\ simp[] )
+    \\ rewrite_tac[DROP_APPEND, REPLICATE_GENLIST, DROP_GENLIST, LENGTH_GENLIST]
+    \\ qmatch_goalsub_abbrev_tac`chunks _ (GENLIST _ n ++ _)`
+    \\ simp[]
+    \\ simp[Once chunks_def]
+    \\ `~(n + 1 <= 64)` by simp[Abbr`n`]
+    \\ `64 - n = 0` by simp[Abbr`n`]
+    \\ simp[TAKE_APPEND]
+    \\ conj_tac
+    >- (
+      simp[word_from_bin_list_def, l2w_def]
+      \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+      \\ `A = 0` suffices_by simp[]
+      \\ qunabbrev_tac`A`
+      \\ simp[l2n_eq_0, EVERY_GENLIST, REPLICATE_GENLIST, TAKE_GENLIST] )
+    \\ simp[DROP_APPEND, DROP_GENLIST]
+    \\ qunabbrev_tac`n`
+    \\ rpt (
+      qmatch_goalsub_abbrev_tac`chunks _ (GENLIST _ n ++ _)`
+      \\ simp[Once chunks_def]
+      \\ `~(n + 1 <= 64)` by simp[Abbr`n`]
+      \\ `64 - n = 0` by simp[Abbr`n`]
+      \\ simp[TAKE_APPEND]
+      \\ conj_tac
+      >- (
+        simp[word_from_bin_list_def, l2w_def]
+        \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+        \\ `A = 0` suffices_by simp[]
+        \\ qunabbrev_tac`A`
+        \\ simp[l2n_eq_0, EVERY_GENLIST, REPLICATE_GENLIST, TAKE_GENLIST] )
+      \\ simp[DROP_APPEND, DROP_GENLIST]
+      \\ qunabbrev_tac`n`)
+    \\ gs[]
+    \\ simp[Once chunks_def])
   \\ simp[PULL_EXISTS]
   \\ `LENGTH (l1 ++ l2) = 1088`
   by (
