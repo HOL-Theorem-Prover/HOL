@@ -92,10 +92,10 @@ fun quiet_messages f = Portable.with_flag (emit_MESG, false) f
 fun format_err_rec {message, origin_function, origin_structure, source_location} =
    String.concat
       ["at ", origin_structure, ".", origin_function, ":\n",
-        case source_location of
-          Loc_Unknown => ""
-        | _ => locn.toString source_location ^ ":\n",
-        message]
+       case source_location of
+           locn.Loc_Unknown => ""
+         | _ => locn.toString source_location ^ ":\n",
+       message]
 
 fun format_ERR err_rec =
    String.concat ["\nException raised ", format_err_rec err_rec, "\n"]
