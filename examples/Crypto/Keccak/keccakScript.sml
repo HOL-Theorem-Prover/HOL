@@ -2,13 +2,31 @@ open HolKernel Parse boolLib bossLib dep_rewrite blastLib
      bitLib reduceLib combinLib optionLib sptreeLib wordsLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
      rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
-     numposrepTheory logrootTheory sptreeTheory;
+     numposrepTheory numeral_bitTheory logrootTheory sptreeTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
 val _ = new_theory "keccak";
 
 val _ = numLib.temp_prefer_num();
+
+Theorem DIV2_SBIT:
+  DIV2 (SBIT b n) = if n = 0 then 0 else SBIT b (n - 1)
+Proof
+  qspecl_then[`b`,`n`,`1`]mp_tac SBIT_DIV
+  \\ simp[DIV2_def]
+  \\ Cases_on`1 < n` \\ gs[]
+  \\ Cases_on`n=0` \\ gs[SBIT_def]
+  \\ rw[]
+  \\ `n=1` by gs[]
+  \\ gvs[]
+QED
+
+Theorem ODD_SBIT:
+  ODD (SBIT b n) = (b /\ n = 0)
+Proof
+  rw[SBIT_def, ODD_EXP_IFF]
+QED
 
 Theorem LENGTH_word_to_bin_list_bound:
   LENGTH (word_to_bin_list (w:'a word)) <= (dimindex (:'a))
@@ -123,6 +141,34 @@ Proof
   \\ `m <= (LENGTH ls - n) DIV n` suffices_by simp[X_LE_DIV]
   \\ fs[bool_to_bit_def]
   \\ pop_assum mp_tac \\ rw[]
+QED
+
+Theorem chunks_MAP:
+  ∀n ls. chunks n (MAP f ls) = MAP (MAP f) (chunks n ls)
+Proof
+  recInduct chunks_ind \\ rw[]
+  \\ rw[Once chunks_def]
+  >- rw[Once chunks_def]
+  >- rw[Once chunks_def]
+  \\ gs[]
+  \\ simp[GSYM MAP_DROP]
+  \\ simp[Once chunks_def, SimpRHS]
+  \\ simp[MAP_TAKE]
+QED
+
+Theorem chunks_ZIP:
+  ∀n ls l2. LENGTH ls = LENGTH l2 ==>
+  chunks n (ZIP (ls, l2)) = MAP ZIP (ZIP (chunks n ls, chunks n l2))
+Proof
+  recInduct chunks_ind \\ rw[]
+  \\ rw[Once chunks_def]
+  >- ( rw[Once chunks_def] \\ rw[Once chunks_def] )
+  >- rw[Once chunks_def]
+  \\ gs[]
+  \\ simp[GSYM ZIP_DROP]
+  \\ simp[Once chunks_def, SimpRHS]
+  \\ simp[Once chunks_def, SimpR``$,``, SimpRHS]
+  \\ simp[ZIP_TAKE]
 QED
 
 Theorem LENGTH_PAD_RIGHT_0_8_word_to_bin_list[simp]:
@@ -2544,6 +2590,149 @@ Proof
   \\ qunabbrev_tac`A`
   \\ simp[l2n_eq_0, EVERY_GENLIST, REPLICATE_GENLIST, TAKE_GENLIST]
 QED
+
+Definition state_bools_64w_def:
+  state_bools_64w bools (w64s:word64 list) =
+  ((LENGTH bools = 1600) ∧
+   (w64s = MAP word_from_bin_list $ chunks 64 $ MAP bool_to_bit bools))
+End
+
+Definition bytes_to_bools_def:
+  bytes_to_bools (bytes: word8 list) =
+    MAP ((=) 1) (FLAT (MAP (PAD_RIGHT 0 8 o word_to_bin_list) bytes))
+End
+
+Theorem pad10s1_136_64w_sponge_init:
+  let
+    N = bytes_to_bools bytes;
+    r = 1600 - 512;
+    P = N ++ pad10s1 r (LENGTH N);
+    c = 1600 - r;
+    Pis = chunks r P;
+    bs = MAP (λPi. Pi ++ REPLICATE c F) Pis
+  in
+    EVERY2 state_bools_64w bs
+    (pad10s1_136_64w (REPLICATE (c DIV 64) 0w) bytes [])
+Proof
+  rw[]
+  \\ qabbrev_tac`c = 512`
+  \\ qmatch_goalsub_abbrev_tac`LENGTH bools`
+  \\ DEP_REWRITE_TAC[pad10s1_136_64w_thm]
+  \\ simp[GSYM bytes_to_bools_def]
+  \\ simp[Abbr`c`, divides_def]
+  \\ simp[LIST_REL_EL_EQN, EL_MAP]
+  \\ simp[state_bools_64w_def, bool_to_bit_def]
+  \\ rw[]
+  \\ DEP_REWRITE_TAC[EL_chunks]
+  \\ conj_asm1_tac
+  >- ( simp[NULL_EQ] \\ simp[Once pad10s1_def] )
+  \\ DEP_REWRITE_TAC[LENGTH_TAKE]
+  \\ simp[DROP_APPEND]
+  \\ pop_assum mp_tac
+  \\ simp[NULL_EQ] \\ strip_tac
+  \\ qpat_x_assum`n < _`mp_tac
+  \\ DEP_REWRITE_TAC[LENGTH_chunks]
+  \\ simp[NULL_EQ]
+  \\ qspecl_then[`1088`,`LENGTH bools`]mp_tac(Q.GENL[`x`,`m`] LENGTH_pad10s1)
+  \\ simp[] \\ strip_tac \\ simp[bool_to_bit_def]
+QED
+
+Theorem word_xor_bits_neq:
+  LENGTH b1 = LENGTH b2 ==>
+  word_from_bin_list b1 ?? word_from_bin_list b2 =
+  word_from_bin_list (MAP (λ(x,y). (x + y) MOD 2) (ZIP (b1, b2)))
+Proof
+  qid_spec_tac`b2`
+  \\ Induct_on`b1`
+  \\ rw[]
+  >- EVAL_TAC
+  \\ Cases_on`b2` \\ gs[]
+  \\ gs[word_from_bin_list_def, l2w_def, l2n_def]
+  \\ gs[GSYM word_add_n2w, GSYM word_mul_n2w]
+  \\ first_x_assum(qspec_then`t`(mp_tac o GSYM))
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[WORD_ADD_XOR]
+  \\ `n2w 2 = n2w (2 ** 1)` by simp[]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ simp[GSYM WORD_MUL_LSL]
+  \\ rewrite_tac[LSL_BITWISE]
+  \\ DEP_REWRITE_TAC[word_and_lsl_eq_0]
+  \\ simp[]
+  \\ conj_tac
+  >- (
+    rw[]
+    \\ Cases_on`2 < dimword(:'a)` \\ gs[MOD_LESS, MOD_MOD_LESS_EQ]
+    \\ Cases_on`dimword(:'a) = 2` \\ gs[MOD_MOD]
+    \\ `dimword(:'a) = 1` by simp[ZERO_LT_dimword]
+    \\ gs[] )
+  \\ rewrite_tac[GSYM WORD_XOR_ASSOC]
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ qmatch_goalsub_rename_tac`x + y`
+  \\ `x MOD 2 < 2 ∧ y MOD 2 < 2` by simp[]
+  \\ ntac 2 (pop_assum mp_tac)
+  \\ rewrite_tac[NUMERAL_LESS_THM]
+  \\ Cases_on`ODD (x + y)`
+  >- (
+    `(x + y) MOD 2 = 1` by gs[ODD_MOD2_LEM]
+    \\ gs[ODD_ADD]
+    \\ Cases_on`ODD x` \\ gs[ODD_MOD2_LEM] )
+  \\ gs[GSYM EVEN_ODD]
+  \\ drule (iffLR EVEN_ADD)
+  \\ gs[EVEN_MOD2]
+  \\ Cases_on`x MOD 2 = 0` \\ gs[]
+QED
+
+Theorem xor_state_bools_64w:
+  state_bools_64w b1 w1 /\
+  state_bools_64w b2 w2
+  ==>
+  state_bools_64w (MAP2 (λx y. x ≠ y) b1 b2)
+  (MAP2 word_xor w1 w2)
+Proof
+  rw[state_bools_64w_def]
+  \\ DEP_REWRITE_TAC[MAP2_MAP]
+  \\ simp[chunks_MAP]
+  \\ `LENGTH (chunks 64 b1) = 25 ∧ LENGTH (chunks 64 b2) = 25`
+  by (
+    DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[NULL_EQ, bool_to_bit_def, divides_def]
+    \\ rw[] \\ strip_tac \\ gs[] )
+  \\ simp[chunks_ZIP]
+  \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 1 |> DISCH_ALL]
+  \\ simp[]
+  \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 2 |> DISCH_ALL]
+  \\ simp[MAP_MAP_o]
+  \\ simp[MAP_EQ_f, FORALL_PROD, MEM_ZIP, PULL_EXISTS]
+  \\ rw[]
+  \\ qmatch_goalsub_abbrev_tac`bs1,bs2`
+  \\ `LENGTH bs1 = 64 ∧ LENGTH bs2 = 64`
+  by (
+    simp[Abbr`bs1`,Abbr`bs2`]
+    \\ DEP_REWRITE_TAC[EL_chunks]
+    \\ gs[NULL_EQ, bool_to_bit_def, divides_def]
+    \\ rw[] \\ strip_tac \\ gs[] )
+  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ simp[]
+  \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 1 |> DISCH_ALL]
+  \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 2 |> DISCH_ALL]
+  \\ simp[MAP_MAP_o]
+  \\ AP_TERM_TAC
+  \\ simp[MAP_EQ_f, FORALL_PROD]
+  \\ rw[bool_to_bit_def]
+QED
+
+(*
+
+TODO: define Rnd w64 version
+TODO: define (Keccak_p 24) w64 version
+
+Keccak_256_def
+Keccak_def
+sponge_def
+Keccak_p_def
+Rnd_def
+*)
 
 Definition Keccak_256_bytes_def:
   Keccak_256_bytes (bs:word8 list) : word8 list =
