@@ -2999,21 +2999,245 @@ Proof
   \\ simp[]
 QED
 
+Theorem rho_xy_invert:
+  t <= 23 ==>
+  (rho_xy t = (1,0) ==> t = 00) ∧
+  (rho_xy t = (2,0) ==> t = 18) ∧
+  (rho_xy t = (3,0) ==> t = 06) ∧
+  (rho_xy t = (4,0) ==> t = 12) ∧
+  (rho_xy t = (0,1) ==> t = 07) ∧
+  (rho_xy t = (1,1) ==> t = 23) ∧
+  (rho_xy t = (2,1) ==> t = 02) ∧
+  (rho_xy t = (3,1) ==> t = 09) ∧
+  (rho_xy t = (4,1) ==> t = 22) ∧
+  (rho_xy t = (0,2) ==> t = 01) ∧
+  (rho_xy t = (1,2) ==> t = 03) ∧
+  (rho_xy t = (2,2) ==> t = 17) ∧
+  (rho_xy t = (3,2) ==> t = 16) ∧
+  (rho_xy t = (4,2) ==> t = 20) ∧
+  (rho_xy t = (0,3) ==> t = 13) ∧
+  (rho_xy t = (1,3) ==> t = 08) ∧
+  (rho_xy t = (2,3) ==> t = 04) ∧
+  (rho_xy t = (3,3) ==> t = 05) ∧
+  (rho_xy t = (4,3) ==> t = 15) ∧
+  (rho_xy t = (0,4) ==> t = 19) ∧
+  (rho_xy t = (1,4) ==> t = 10) ∧
+  (rho_xy t = (2,4) ==> t = 21) ∧
+  (rho_xy t = (3,4) ==> t = 14) ∧
+  (rho_xy t = (4,4) ==> t = 11)
+Proof
+  simp[LESS_OR_EQ]
+  \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
+  \\ strip_tac
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ EVAL_TAC
+QED
+
+Definition rho_w64_shifts_def:
+  rho_w64_shifts =
+    MAP (λt. (19200 - (((t + 1) * (t + 2)) DIV 2)) MOD 64)
+    [00 ;18 ;06 ;12 ;07 ;23 ;02 ;09 ;22 ;01 ;03 ;17 ;16
+    ;20 ;13 ;08 ;04 ;05 ;15 ;19 ;10 ;21 ;14 ;11]
+End
+
+Definition rho_w64_def:
+  rho_w64 (s: word64 list) =
+  HD s ::
+  GENLIST (λi.
+    word_ror (EL (SUC i) s) (EL i rho_w64_shifts)
+  ) 24
+End
+
+Theorem rho_w64_thm:
+  state_bools_w64 bs ws ∧
+  string_to_state_array bs = s ⇒
+  state_bools_w64 (state_array_to_string (rho s)) (rho_w64 ws)
+Proof
+  simp[state_bools_w64_def]
+  \\ strip_tac
+  \\ conj_asm1_tac
+  >- rw[string_to_state_array_def, b2w_def]
+  \\ rewrite_tac[rho_def, rho_w64_def]
+  \\ qmatch_goalsub_abbrev_tac`GENLIST _ n`
+  \\ rewrite_tac[state_array_to_string_compute]
+  \\ qmatch_goalsub_abbrev_tac`5 * 5 * sw`
+  \\ `sw = s.w` by rw[Abbr`sw`]
+  \\ qabbrev_tac`m = 5 * 5 * sw`
+  \\ simp[restrict_def]
+  \\ qmatch_goalsub_abbrev_tac`GENLIST f m`
+  \\ simp[LIST_EQ_REWRITE]
+  \\ DEP_REWRITE_TAC[LENGTH_chunks]
+  \\ rewrite_tac[NULL_LENGTH, LENGTH_MAP, LENGTH_GENLIST]
+  \\ conj_asm1_tac >- rw[Abbr`m`]
+  \\ conj_asm1_tac >- rw[Abbr`m`, divides_def, bool_to_bit_def, Abbr`n`]
+  \\ pop_assum(assume_tac o SYM)
+  \\ Cases
+  >- (
+    simp[]
+    \\ rewrite_tac[GSYM EL]
+    \\ DEP_REWRITE_TAC[EL_MAP]
+    \\ DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ rewrite_tac[NULL_LENGTH, LENGTH_MAP, LENGTH_GENLIST]
+    \\ simp[] \\ conj_tac >- (strip_tac \\ gs[])
+    \\ AP_TERM_TAC
+    \\ rewrite_tac[GSYM EL]
+    \\ DEP_REWRITE_TAC[EL_chunks]
+    \\ DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ rewrite_tac[NULL_LENGTH, LENGTH_MAP, LENGTH_GENLIST]
+    \\ simp[] \\ conj_tac >- (strip_tac \\ gs[])
+    \\ conj_tac >- (strip_tac \\ gs[])
+    \\ simp[LIST_EQ_REWRITE, LENGTH_TAKE_EQ]
+    \\ conj_tac >- rw[Abbr`m`]
+    \\ rw[]
+    \\ DEP_REWRITE_TAC[EL_TAKE, EL_MAP, EL_GENLIST]
+    \\ conj_tac >- rw[Abbr`m`]
+    \\ simp[Abbr`f`, DIV_EQ_0, DIV_LT_X]
+    \\ rw[string_to_state_array_def, restrict_def, b2w_def] )
+  \\ simp[]
+  \\ strip_tac
+  \\ DEP_REWRITE_TAC[EL_MAP]
+  \\ DEP_REWRITE_TAC[LENGTH_chunks]
+  \\ rewrite_tac[NULL_LENGTH, LENGTH_MAP, LENGTH_GENLIST]
+  \\ simp[] \\ conj_tac >- (strip_tac \\ gs[])
+  \\ conj_tac >- ( rw[bool_to_bit_def, divides_def] \\ gvs[Abbr`n`] )
+  \\ DEP_REWRITE_TAC[EL_chunks]
+  \\ DEP_REWRITE_TAC[LENGTH_chunks]
+  \\ rewrite_tac[NULL_LENGTH, LENGTH_MAP, LENGTH_GENLIST]
+  \\ simp[] \\ conj_tac >- (strip_tac \\ gs[])
+  \\ conj_tac >- ( rw[bool_to_bit_def, divides_def] \\ gvs[Abbr`n`] )
+  \\ simp[GSYM MAP_DROP, GSYM TAKE_DROP, DROP_GENLIST]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_ror]
+  \\ simp[LENGTH_TAKE_EQ]
+  \\ qmatch_asmsub_rename_tac`p < n`
+  \\ `p < 24` by gs[Abbr`n`]
+  \\ simp[]
+  \\ conj_asm1_tac
+  >- (
+    rewrite_tac[rho_w64_shifts_def]
+    \\ DEP_REWRITE_TAC[EL_MAP]
+    \\ simp[] )
+  \\ AP_TERM_TAC
+  \\ simp[LIST_EQ_REWRITE]
+  \\ DEP_REWRITE_TAC[LENGTH_TAKE_EQ, LENGTH_BUTLASTN, LENGTH_LASTN]
+  \\ simp[]
+  \\ conj_tac >- rw[Abbr`m`]
+  \\ rpt strip_tac
+  \\ DEP_REWRITE_TAC[EL_APPEND_EQN]
+  \\ DEP_REWRITE_TAC[LENGTH_TAKE_EQ, LENGTH_BUTLASTN, LENGTH_LASTN]
+  \\ simp[]
+  \\ DEP_REWRITE_TAC[EL_TAKE, EL_MAP, EL_GENLIST]
+  \\ simp[]
+  \\ conj_tac >- (
+    rw[Abbr`m`]
+    \\ qpat_x_assum`p < _`mp_tac
+    \\ simp_tac std_ss [NUMERAL_LESS_THM]
+    \\ strip_tac \\ BasicProvers.VAR_EQ_TAC \\ EVAL_TAC )
+  \\ DEP_REWRITE_TAC[LASTN_DROP, BUTLASTN_TAKE]
+  \\ simp[]
+  \\ `x DIV 64 = 0` by simp[DIV_EQ_0]
+  \\ qunabbrev_tac`f`
+  \\ simp[DIV_LT_X]
+  \\ qmatch_goalsub_abbrev_tac`t + 2`
+  \\ IF_CASES_TAC
+  >- (
+    DEP_REWRITE_TAC[EL_DROP, EL_TAKE, EL_MAP]
+    \\ simp[]
+    \\ AP_TERM_TAC
+    \\ IF_CASES_TAC
+    >- (
+      pop_assum mp_tac
+      \\ qpat_x_assum`p < 24`mp_tac
+      \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
+      \\ strip_tac \\ simp[]
+      \\ simp[Abbr`n`] )
+    \\ qunabbrev_tac`t`
+    \\ numLib.LEAST_ELIM_TAC
+    \\ first_assum(mp_then Any mp_tac rho_xy_exists)
+    \\ impl_tac >- simp[DIV_LT_X]
+    \\ strip_tac
+    \\ conj_tac >- (qexists_tac`t` \\ simp[])
+    \\ qx_gen_tac`t2`
+    \\ strip_tac
+    \\ `¬(t < t2)` by metis_tac[]
+    \\ `t2 <= 23` by gs[]
+    \\ rw[string_to_state_array_def, restrict_def, DIV_LT_X, b2w_def]
+    \\ AP_THM_TAC
+    \\ AP_TERM_TAC
+    \\ qpat_x_assum`_ = _.w`kall_tac
+    \\ qpat_x_assum`x < _ -_`mp_tac
+    \\ rewrite_tac[rho_w64_shifts_def]
+    \\ qunabbrev_tac`n`
+    \\ drule rho_xy_invert \\ strip_tac
+    \\ qpat_x_assum`x < _`mp_tac
+    \\ qpat_x_assum`p < _`mp_tac
+    \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
+    \\ strip_tac
+    \\ BasicProvers.VAR_EQ_TAC
+    \\ qpat_x_assum`rho_xy _ = _`mp_tac
+    \\ simp_tac std_ss [] \\ strip_tac
+    \\ first_x_assum drule
+    \\ strip_tac
+    \\ BasicProvers.VAR_EQ_TAC
+    \\ DEP_REWRITE_TAC[EL_MAP]
+    \\ simp_tac (srw_ss()) []
+    \\ rw[])
+  \\ DEP_REWRITE_TAC[EL_DROP]
+  \\ simp[]
+  \\ AP_TERM_TAC
+  \\ IF_CASES_TAC
+  >- (
+    pop_assum mp_tac
+    \\ qpat_x_assum`p < 24`mp_tac
+    \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
+    \\ strip_tac \\ simp[]
+    \\ simp[Abbr`n`] )
+  \\ qunabbrev_tac`t`
+  \\ numLib.LEAST_ELIM_TAC
+  \\ first_assum(mp_then Any mp_tac rho_xy_exists)
+  \\ impl_tac >- simp[DIV_LT_X]
+  \\ strip_tac
+  \\ conj_tac >- (qexists_tac`t` \\ simp[])
+  \\ qx_gen_tac`t2`
+  \\ strip_tac
+  \\ `¬(t < t2)` by metis_tac[]
+  \\ `t2 <= 23` by gs[]
+  \\ rw[string_to_state_array_def, restrict_def, DIV_LT_X, b2w_def]
+  \\ AP_THM_TAC
+  \\ AP_TERM_TAC
+  \\ qpat_x_assum`_ = _.w`kall_tac
+  \\ qpat_x_assum`~(x < _ -_)`mp_tac
+  \\ rewrite_tac[rho_w64_shifts_def]
+  \\ qunabbrev_tac`n`
+  \\ drule rho_xy_invert \\ strip_tac
+  \\ qpat_x_assum`x < _`mp_tac
+  \\ qpat_x_assum`p < _`mp_tac
+  \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
+  \\ strip_tac
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ qpat_x_assum`rho_xy _ = _`mp_tac
+  \\ simp_tac std_ss [] \\ strip_tac
+  \\ first_x_assum drule
+  \\ strip_tac
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ DEP_REWRITE_TAC[EL_MAP]
+  \\ simp_tac (srw_ss()) []
+  \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
+  \\ strip_tac \\ BasicProvers.VAR_EQ_TAC
+  \\ EVAL_TAC
+QED
+
 (*
 TODO: define Rnd w64 version
 TODO: define (Keccak_p 24) w64 version
-
-Definition rho_w64_def:
-End
 
 Keccak_256_def
 Keccak_def
 sponge_def
 Keccak_p_def
 Rnd_def
-rho_def
-rho_spt_def
-rho_xy_def
+pi_def
+chi_def
+iota_compute
 *)
 
 Definition Keccak_256_bytes_def:
