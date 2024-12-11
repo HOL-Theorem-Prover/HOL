@@ -1,0 +1,33 @@
+{
+  "grammars": [
+    {
+      "name": "holscript",
+      "camelcase": "HOLScript",
+      "scope": "source.holscript",
+      "path": ".",
+      "file-types": null,
+      "injection-regex": "^holscript$"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "HOLScript grammar for tree-sitter",
+    "authors": [
+      {
+        "name": "Daniel Nezamabadi"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/HOL-Theorem-Prover/HOL/"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true
+  }
+}
