@@ -1,5 +1,5 @@
 (* ========================================================================== *)
-(* FILE    : completeScript.sml                                               *)
+(* FILE    : lameta_completeScript.sml (chap10_4Script.sml)                   *)
 (* TITLE   : Completeness of (Untyped) Lambda-Calculus [1, Chapter 10.4]      *)
 (*                                                                            *)
 (* AUTHORS : 2024-2025 The Australian National University (Chun TIAN)         *)
@@ -13,7 +13,7 @@ open termTheory basic_swapTheory appFOLDLTheory chap2Theory chap3Theory
      horeductionTheory solvableTheory head_reductionTheory head_reductionLib
      boehmTheory;
 
-val _ = new_theory "complete";
+val _ = new_theory "lameta_complete";
 
 val _ = temp_delsimps [
    "lift_disj_eq", "lift_imp_disj",
@@ -57,16 +57,14 @@ QED
 
 Theorem agree_upto_lemma :
     !X Ms p r.
-        FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
-        BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
-        EVERY (\M. subterm X M p r <> NONE) Ms ==>
-        ?pi.
-          Boehm_transform pi /\ EVERY is_ready' (MAP (apply pi) Ms) /\
+       FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
+       BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
+       EVERY (\M. subterm X M p r <> NONE) Ms ==>
+      ?pi. Boehm_transform pi /\ EVERY is_ready' (MAP (apply pi) Ms) /\
           (agree_upto X Ms p r ==> agree_upto X (MAP (apply pi) Ms) p r) /\
-          !M N.
-            MEM M Ms /\ MEM N Ms /\
-            subtree_equiv X (apply pi M) (apply pi N) p r ==>
-            subtree_equiv' X M N p r
+          !M N. MEM M Ms /\ MEM N Ms /\
+                subtree_equiv X (apply pi M) (apply pi N) p r ==>
+                subtree_equiv' X M N p r
 Proof
     rpt GEN_TAC
  >> DISCH_THEN (MP_TAC o (MATCH_MP subterm_equiv_lemma))
@@ -585,10 +583,15 @@ Proof
 QED
 
 val _ = export_theory ();
-val _ = html_theory "complete";
+val _ = html_theory "lameta_complete";
 
 (* References:
 
  [1] Barendregt, H.P.: The lambda calculus, its syntax and semantics.
      College Publications, London (1984).
+ [2] https://en.wikipedia.org/wiki/Corrado_Böhm (UOK)
+ [3] Böhm, C.: Alcune proprietà delle forme β-η-normali nel λ-K-calcolo. (UOK)
+     Pubblicazioni dell'IAC 696, 1-19 (1968)
+     English translation: "Some properties of beta-eta-normal forms in the
+     lambda-K-calculus".
  *)
