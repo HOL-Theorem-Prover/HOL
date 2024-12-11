@@ -73,6 +73,19 @@ Proof
   \\ simp[ADD1]
 QED
 
+Theorem word_from_bin_list_rol:
+  x < dimindex(:'a) /\ LENGTH ls = dimindex(:'a)
+  ==>
+  word_rol (word_from_bin_list ls : 'a word) x =
+  word_from_bin_list (LASTN x ls ++ BUTLASTN x ls)
+Proof
+  rw[word_rol_def]
+  \\ Cases_on`x=0` \\ gs[]
+  >- simp[LASTN_DROP, BUTLASTN_TAKE, DROP_LENGTH_TOO_LONG, TAKE_LENGTH_TOO_LONG]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_ror]
+  \\ simp[LASTN_DROP, BUTLASTN_TAKE]
+QED
+
 Theorem chunks_append_divides:
   ∀n l1 l2.
     0 < n /\ divides n (LENGTH l1) /\ ~NULL l1 /\ ~NULL l2 ==>
@@ -2832,7 +2845,6 @@ Proof
   \\ rw[bool_to_bit_def]
 QED
 
-(*
 Definition theta_d_w64_def:
   theta_d_w64 (s:word64 list) =
   let c = theta_c_w64 s in
@@ -2841,7 +2853,7 @@ Definition theta_d_w64_def:
       idx1 = (x + 4) MOD 5;
       idx0 = (x + 1) MOD 5;
       b0 = EL idx0 c;
-    in word_ror b0 63 ?? EL idx1 c
+    in word_rol b0 1 ?? EL idx1 c
   ) 5
 End
 
@@ -2868,32 +2880,113 @@ Proof
   \\ DEP_REWRITE_TAC[theta_c_w64_thm]
   \\ conj_tac >- gs[Abbr`idx0`,Abbr`idx1`, Abbr`m`]
   \\ asm_simp_tac std_ss []
-  \\ DEP_REWRITE_TAC[word_from_bin_list_ror]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_rol]
   \\ simp[]
-  \\ conj_tac >- rw[Abbr`n`]
+  \\ conj_asm1_tac >- rw[Abbr`n`]
+  \\ `MIN (n - 1) n = n - 1` by simp[Abbr`n`]
+  \\ simp[LASTN_DROP, BUTLASTN_TAKE]
   \\ simp[GSYM MAP_DROP, GSYM MAP_TAKE, DROP_GENLIST, TAKE_GENLIST]
   \\ DEP_REWRITE_TAC[word_xor_bits_neq]
   \\ conj_tac >- simp[Abbr`n`]
   \\ AP_TERM_TAC
-  \\ rewrite_tac[GSYM MAP_APPEND]
+  \\ rewrite_tac[GSYM MAP_APPEND, GSYM MAP]
   \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 1 |> DISCH_ALL]
   \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 2 |> DISCH_ALL]
   \\ rpt (conj_tac >- simp[Abbr`n`])
   \\ simp[MAP_MAP_o, o_DEF]
-  \\ DEP_REWRITE_TAC[ZIP_GENLIST]
-  \\ rpt (conj_tac >- simp[Abbr`n`])
-  \\ simp[MAP_GENLIST, o_DEF]
-  \\ simp[LIST_EQ_REWRITE, EL_APPEND_EQN]
-  \\ rpt strip_tac
-  \\ `s.w = n`
-  by (
-    rw[string_to_state_array_def]
-    \\ gs[state_bools_64w_def, b2w_def] )
-  \\ `MIN 63 n = 63` by simp[Abbr`n`]
-  \\ simp[PRE_SUB1]
-  \\ IF_CASES_TAC
-  >- (
+  \\ `s.w = n` by ( rw[string_to_state_array_def] \\ gs[state_bools_64w_def, b2w_def] )
+  \\ simp[LIST_EQ_REWRITE, EL_APPEND_EQN, ADD1, EL_MAP, EL_ZIP, PRE_SUB1]
+  \\ Cases \\ simp[bool_to_bit_def] >- rw[]
+  \\ simp[ADD1] \\ rw[]
+QED
 
+Definition theta_w64_def:
+  theta_w64 s =
+  let t = theta_d_w64 s in
+    GENLIST (λi. EL i s ?? EL (i DIV 5) t) 25
+End
+
+Theorem LENGTH_theta_d_w64[simp]:
+  LENGTH (theta_d_w64 s) = 5
+Proof
+  rw[theta_d_w64_def]
+QED
+
+Theorem LENGTH_theta_w64[simp]:
+  LENGTH (theta_w64 s) = 25
+Proof
+  rw[theta_w64_def]
+QED
+
+(*
+Theorem theta_w64_thm:
+  state_bools_64w bs ws /\
+  string_to_state_array bs = s
+  ==>
+  state_bools_64w (state_array_to_string (theta s))
+    $ theta_w64 ws
+Proof
+  simp[state_bools_64w_def]
+  \\ strip_tac
+  \\ conj_tac
+  >- gvs[string_to_state_array_def, b2w_def]
+  \\ simp[theta_def]
+  \\ simp[LIST_EQ_REWRITE]
+  \\ conj_asm1_tac
+  >- (
+    DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[NULL_EQ]
+    \\ gvs[string_to_state_array_def, b2w_def, divides_def, bool_to_bit_def]
+    \\ rewrite_tac[state_array_to_string_def]
+    \\ disch_then(mp_tac o Q.AP_TERM`LENGTH`)
+    \\ simp[] )
+  \\ simp[EL_MAP]
+  \\ rewrite_tac[theta_w64_def]
+  \\ gen_tac \\ strip_tac
+  \\ BasicProvers.LET_ELIM_TAC
+  \\ DEP_REWRITE_TAC[EL_GENLIST, EL_MAP]
+  \\ conj_tac
+  >- (
+    DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ gs[NULL_EQ]
+    \\ strip_tac \\ gs[] )
+  \\ qunabbrev_tac`t`
+  \\ DEP_REWRITE_TAC[theta_d_w64_thm]
+  \\ conj_tac
+  >- simp[state_bools_64w_def, DIV_LT_X]
+  \\ DEP_REWRITE_TAC[EL_chunks]
+  \\ conj_tac
+  >- (
+    gs[NULL_EQ]
+    \\ DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ gs[NULL_EQ]
+    \\ rpt strip_tac \\ gs[] )
+  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ conj_tac >- simp[]
+  \\ AP_TERM_TAC
+  \\ rewrite_tac[GSYM MAP_DROP, GSYM MAP_TAKE]
+  \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 1 |> DISCH_ALL]
+  \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 2 |> DISCH_ALL]
+  \\ conj_tac >- rw[]
+  \\ conj_tac >- rw[]
+  \\ rewrite_tac[MAP_MAP_o]
+  \\ qmatch_goalsub_abbrev_tac`ZIP ls`
+  \\ `s.w = 64`
+  by ( rw[] \\ simp[string_to_state_array_def, b2w_def])
+  \\ simp[MAP_MAP_o, LIST_EQ_REWRITE, EL_MAP]
+  \\ conj_asm1_tac
+  >- ( simp[Abbr`ls`, LENGTH_TAKE_EQ])
+  \\ simp[EL_MAP, EL_TAKE, EL_ZIP, Abbr`ls`]
+  \\ qx_gen_tac`i` \\ strip_tac
+  \\ DEP_REWRITE_TAC[EL_DROP]
+  \\ simp[]
+  \\ rewrite_tac[state_array_to_string_compute]
+  \\ DEP_REWRITE_TAC[EL_GENLIST]
+  \\ simp[]
+  \\ simp[restrict_def, DIV_LT_X]
+*)
+
+(*
 TODO: define Rnd w64 version
 TODO: define (Keccak_p 24) w64 version
 
