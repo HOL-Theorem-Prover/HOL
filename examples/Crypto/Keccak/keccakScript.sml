@@ -2157,12 +2157,12 @@ Definition bools_to_hex_string_def:
     ) $ chunks 8 bs
 End
 
-Definition pad10s1_136_64w_def:
-  pad10s1_136_64w (zs: word64 list) (m: word8 list) (a: word64 list list) =
+Definition pad10s1_136_w64_def:
+  pad10s1_136_w64 (zs: word64 list) (m: word8 list) (a: word64 list list) =
   let lm = LENGTH m in
   if 136 < lm then let
     w64s = MAP concat_word_list $ chunks 8 (TAKE 136 m)
-  in pad10s1_136_64w zs (DROP 136 m) ((w64s ++ zs) :: a)
+  in pad10s1_136_w64 zs (DROP 136 m) ((w64s ++ zs) :: a)
   else if lm = 136 then
     REVERSE $
       (0x01w::(REPLICATE 15 0w)++(0x8000000000000000w::zs)) ::
@@ -2208,21 +2208,21 @@ Proof
           DROP_LENGTH_TOO_LONG]
 QED
 
-Theorem pad10s1_136_64w_thm:
+Theorem pad10s1_136_w64_thm:
   ∀zs bytes acc bools.
   bools = MAP ((=) 1) $ FLAT $ MAP (PAD_RIGHT 0 8 o word_to_bin_list) bytes ∧
   zs = REPLICATE (c DIV 64) 0w ∧ c ≠ 0 ∧ divides 64 c
   ⇒
-  pad10s1_136_64w zs bytes acc =
+  pad10s1_136_w64 zs bytes acc =
   REVERSE acc ++ (
   MAP (MAP word_from_bin_list o chunks 64) $
     MAP (λx. MAP bool_to_bit x ++ REPLICATE c 0)
       (chunks 1088 (bools ++ pad10s1 1088 (LENGTH bools)))
   )
 Proof
-  recInduct pad10s1_136_64w_ind
+  recInduct pad10s1_136_w64_ind
   \\ rw[]
-  \\ simp[Once pad10s1_136_64w_def]
+  \\ simp[Once pad10s1_136_w64_def]
   \\ IF_CASES_TAC \\ gs[]
   >- (
     qmatch_goalsub_abbrev_tac`lhs = _`
@@ -2641,8 +2641,8 @@ Proof
   \\ simp[l2n_eq_0, EVERY_GENLIST, REPLICATE_GENLIST, TAKE_GENLIST]
 QED
 
-Definition state_bools_64w_def:
-  state_bools_64w bools (w64s:word64 list) =
+Definition state_bools_w64_def:
+  state_bools_w64 bools (w64s:word64 list) =
   ((LENGTH bools = 1600) ∧
    (w64s = MAP word_from_bin_list $ chunks 64 $ MAP bool_to_bit bools))
 End
@@ -2652,7 +2652,7 @@ Definition bytes_to_bools_def:
     MAP ((=) 1) (FLAT (MAP (PAD_RIGHT 0 8 o word_to_bin_list) bytes))
 End
 
-Theorem pad10s1_136_64w_sponge_init:
+Theorem pad10s1_136_w64_sponge_init:
   let
     N = bytes_to_bools bytes;
     r = 1600 - 512;
@@ -2661,17 +2661,17 @@ Theorem pad10s1_136_64w_sponge_init:
     Pis = chunks r P;
     bs = MAP (λPi. Pi ++ REPLICATE c F) Pis
   in
-    EVERY2 state_bools_64w bs
-    (pad10s1_136_64w (REPLICATE (c DIV 64) 0w) bytes [])
+    EVERY2 state_bools_w64 bs
+    (pad10s1_136_w64 (REPLICATE (c DIV 64) 0w) bytes [])
 Proof
   rw[]
   \\ qabbrev_tac`c = 512`
   \\ qmatch_goalsub_abbrev_tac`LENGTH bools`
-  \\ DEP_REWRITE_TAC[pad10s1_136_64w_thm]
+  \\ DEP_REWRITE_TAC[pad10s1_136_w64_thm]
   \\ simp[GSYM bytes_to_bools_def]
   \\ simp[Abbr`c`, divides_def]
   \\ simp[LIST_REL_EL_EQN, EL_MAP]
-  \\ simp[state_bools_64w_def, bool_to_bit_def]
+  \\ simp[state_bools_w64_def, bool_to_bit_def]
   \\ rw[]
   \\ DEP_REWRITE_TAC[EL_chunks]
   \\ conj_asm1_tac
@@ -2733,14 +2733,14 @@ Proof
   \\ Cases_on`x MOD 2 = 0` \\ gs[]
 QED
 
-Theorem xor_state_bools_64w:
-  state_bools_64w b1 w1 /\
-  state_bools_64w b2 w2
+Theorem xor_state_bools_w64:
+  state_bools_w64 b1 w1 /\
+  state_bools_w64 b2 w2
   ==>
-  state_bools_64w (MAP2 (λx y. x ≠ y) b1 b2)
+  state_bools_w64 (MAP2 (λx y. x ≠ y) b1 b2)
   (MAP2 word_xor w1 w2)
 Proof
-  rw[state_bools_64w_def]
+  rw[state_bools_w64_def]
   \\ DEP_REWRITE_TAC[MAP2_MAP]
   \\ simp[chunks_MAP]
   \\ `LENGTH (chunks 64 b1) = 25 ∧ LENGTH (chunks 64 b2) = 25`
@@ -2796,7 +2796,7 @@ Proof
 QED
 
 Theorem theta_c_w64_thm:
-  state_bools_64w bs ws /\
+  state_bools_w64 bs ws /\
   string_to_state_array bs = s /\
   i < 5
   ==>
@@ -2806,7 +2806,7 @@ Theorem theta_c_w64_thm:
 Proof
   strip_tac
   \\ qmatch_goalsub_abbrev_tac`GENLIST _ n`
-  \\ gvs[state_bools_64w_def]
+  \\ gvs[state_bools_w64_def]
   \\ rw[string_to_state_array_def, b2w_def, EL_theta_c_w64]
   \\ DEP_REWRITE_TAC[EL_MAP]
   \\ DEP_REWRITE_TAC[LENGTH_chunks]
@@ -2858,7 +2858,7 @@ Definition theta_d_w64_def:
 End
 
 Theorem theta_d_w64_thm:
-  state_bools_64w bs ws /\
+  state_bools_w64 bs ws /\
   string_to_state_array bs = s /\
   i < 5
   ==>
@@ -2894,7 +2894,7 @@ Proof
   \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 2 |> DISCH_ALL]
   \\ rpt (conj_tac >- simp[Abbr`n`])
   \\ simp[MAP_MAP_o, o_DEF]
-  \\ `s.w = n` by ( rw[string_to_state_array_def] \\ gs[state_bools_64w_def, b2w_def] )
+  \\ `s.w = n` by ( rw[string_to_state_array_def] \\ gs[state_bools_w64_def, b2w_def] )
   \\ simp[LIST_EQ_REWRITE, EL_APPEND_EQN, ADD1, EL_MAP, EL_ZIP, PRE_SUB1]
   \\ Cases \\ simp[bool_to_bit_def] >- rw[]
   \\ simp[ADD1] \\ rw[]
@@ -2919,13 +2919,13 @@ Proof
 QED
 
 Theorem theta_w64_thm:
-  state_bools_64w bs ws /\
+  state_bools_w64 bs ws /\
   string_to_state_array bs = s
   ==>
-  state_bools_64w (state_array_to_string (theta s))
+  state_bools_w64 (state_array_to_string (theta s))
     $ theta_w64 ws
 Proof
-  simp[state_bools_64w_def]
+  simp[state_bools_w64_def]
   \\ strip_tac
   \\ conj_tac
   >- gvs[string_to_state_array_def, b2w_def]
@@ -2952,7 +2952,7 @@ Proof
   \\ qunabbrev_tac`t`
   \\ DEP_REWRITE_TAC[theta_d_w64_thm]
   \\ conj_tac
-  >- simp[state_bools_64w_def, DIV_LT_X]
+  >- simp[state_bools_w64_def, DIV_LT_X]
   \\ DEP_REWRITE_TAC[EL_chunks]
   \\ conj_tac
   >- (
@@ -3003,11 +3003,17 @@ QED
 TODO: define Rnd w64 version
 TODO: define (Keccak_p 24) w64 version
 
+Definition rho_w64_def:
+End
+
 Keccak_256_def
 Keccak_def
 sponge_def
 Keccak_p_def
 Rnd_def
+rho_def
+rho_spt_def
+rho_xy_def
 *)
 
 Definition Keccak_256_bytes_def:
