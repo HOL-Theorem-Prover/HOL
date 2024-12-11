@@ -118,6 +118,8 @@ fun parseDecls (STATE {parseError, pardepth, ...}) continue pos test = let
       | CloseParen p => cont (p, ")") false
       | EndTok p => cont (p, "End") true
       | QED p => cont (p, "QED") true
+      | ProofLine pt => cont pt false
+      | TerminationTok p => cont (p, "Termination") false
       | EOF p => (finish p, NONE, p, SOME tk)
       | _ => raise Unreachable
     end
