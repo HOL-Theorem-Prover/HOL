@@ -2900,17 +2900,17 @@ Proof
   \\ simp[ADD1] \\ rw[]
 QED
 
-Definition theta_w64_def:
-  theta_w64 s =
-  let t = theta_d_w64 s in
-    GENLIST (λi. EL i s ?? EL (i DIV 5) t) 25
-End
-
 Theorem LENGTH_theta_d_w64[simp]:
   LENGTH (theta_d_w64 s) = 5
 Proof
   rw[theta_d_w64_def]
 QED
+
+Definition theta_w64_def:
+  theta_w64 s =
+  let t = theta_d_w64 s in
+    GENLIST (λi. EL i s ?? EL (i MOD 5) t) 25
+End
 
 Theorem LENGTH_theta_w64[simp]:
   LENGTH (theta_w64 s) = 25
@@ -2918,7 +2918,6 @@ Proof
   rw[theta_w64_def]
 QED
 
-(*
 Theorem theta_w64_thm:
   state_bools_64w bs ws /\
   string_to_state_array bs = s
@@ -2984,7 +2983,21 @@ Proof
   \\ DEP_REWRITE_TAC[EL_GENLIST]
   \\ simp[]
   \\ simp[restrict_def, DIV_LT_X]
-*)
+  \\ `i DIV 64 = 0` by simp[DIV_EQ_0]
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`EL ix bs`
+  \\ qmatch_goalsub_abbrev_tac`s.A t`
+  \\ `EL ix bs = s.A t` suffices_by rw[bool_to_bit_def]
+  \\ rw[string_to_state_array_def, b2w_def, Abbr`t`, restrict_def, DIV_LT_X]
+  \\ rw[Abbr`ix`]
+  \\ AP_THM_TAC
+  \\ AP_TERM_TAC
+  \\ simp[]
+  \\ qspec_then`5`mp_tac DIVISION
+  \\ impl_tac >- rw[]
+  \\ disch_then(qspec_then`x`mp_tac)
+  \\ simp[]
+QED
 
 (*
 TODO: define Rnd w64 version
