@@ -3040,6 +3040,12 @@ Definition rho_w64_shifts_def:
     ;20 ;13 ;08 ;04 ;05 ;15 ;19 ;10 ;21 ;14 ;11]
 End
 
+Theorem LENGTH_rho_w64_shifts[simp]:
+  LENGTH rho_w64_shifts = 24
+Proof
+  rw[rho_w64_shifts_def]
+QED
+
 Definition rho_w64_def:
   rho_w64 (s: word64 list) =
   HD s ::
@@ -3224,6 +3230,25 @@ Proof
   \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
   \\ strip_tac \\ BasicProvers.VAR_EQ_TAC
   \\ EVAL_TAC
+QED
+
+Theorem rho_w64_MAP2:
+  LENGTH s = 25 ==>
+  rho_w64 s =
+  case s of h::t =>
+    h :: MAP2 (λx y. word_ror x y) t rho_w64_shifts
+  | _ => []
+Proof
+  strip_tac
+  \\ CASE_TAC >- fs[]
+  \\ rewrite_tac[LIST_EQ_REWRITE]
+  \\ conj_tac >- gs[rho_w64_def, LENGTH_TL, ADD1, MIN_DEF]
+  \\ Cases >- rw[rho_w64_def]
+  \\ strip_tac
+  \\ rewrite_tac[rho_w64_def]
+  \\ DEP_REWRITE_TAC[EL_CONS, EL_GENLIST, EL_MAP2]
+  \\ conj_tac >- fs[rho_w64_def, LENGTH_TL]
+  \\ simp[]
 QED
 
 (*
