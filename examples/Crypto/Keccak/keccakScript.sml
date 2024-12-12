@@ -2,7 +2,8 @@ open HolKernel Parse boolLib bossLib dep_rewrite blastLib
      bitLib reduceLib combinLib optionLib sptreeLib wordsLib computeLib;
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
      rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
-     numposrepTheory numeral_bitTheory logrootTheory sptreeTheory;
+     indexedListsTheory numposrepTheory numeral_bitTheory
+     logrootTheory sptreeTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
@@ -94,6 +95,15 @@ Proof
   \\ DEP_REWRITE_TAC[word_from_bin_list_ror]
   \\ simp[LASTN_DROP, BUTLASTN_TAKE]
 QED
+
+(*
+Theorem word_from_bin_list_and:
+  LENGTH l1 = LENGTH l2 ==>
+  word_from_bin_list l1 && word_from_bin_list l2 =
+  word_from_bin_list (MAP2 (\x y. if (ODD x) /\ (ODD y) then 1 else 0) l1 l2)
+Proof
+  rw[word_from_bin_list_def, l2w_def, word_and_n2w]
+  *)
 
 Theorem chunks_append_divides:
   ∀n l1 l2.
@@ -307,6 +317,109 @@ Proof
   \\ rw[word_and_n2w, word_lsl_n2w]
   \\ drule BITWISE_AND_SHIFT_0
   \\ simp[]
+QED
+
+Theorem l2n_max:
+  0 < b ==>
+  !ls. (l2n b ls = b ** (LENGTH ls) - 1) <=>
+       (EVERY ((=) (b - 1) o flip $MOD b) ls)
+Proof
+  strip_tac
+  \\ Induct
+  \\ rw[l2n_def]
+  \\ rw[EXP]
+  \\ qmatch_goalsub_abbrev_tac`b * l + a`
+  \\ qmatch_goalsub_abbrev_tac`b ** n`
+  \\ gs[EQ_IMP_THM]
+  \\ conj_tac
+  >- (
+    strip_tac
+    \\ Cases_on`n=0` \\ gs[] >- gs[Abbr`n`]
+    \\ `0 < b * b ** n` by simp[]
+    \\ `a + b * l + 1 = b * b ** n` by simp[]
+    \\ `(b * b ** n) DIV b = b ** n` by simp[MULT_TO_DIV]
+    \\ `(b * l + (a + 1)) DIV b = b ** n` by gs[]
+    \\ `(b * l) MOD b = 0` by simp[]
+    \\ `(b * l + (a + 1)) DIV b = (b * l) DIV b + (a + 1) DIV b`
+    by ( irule ADD_DIV_RWT \\ simp[] )
+    \\ pop_assum SUBST_ALL_TAC
+    \\ `(a + 1) DIV b = if a = b - 1 then 1 else 0`
+    by (
+      rw[]
+      \\ `a + 1 < b` suffices_by rw[DIV_EQ_0]
+      \\ simp[Abbr`a`]
+      \\ `h MOD b < b - 1` suffices_by simp[]
+      \\ `h MOD b < b` by simp[]
+      \\ gs[] )
+    \\ `b * l DIV b = l` by simp[MULT_TO_DIV]
+    \\ pop_assum SUBST_ALL_TAC
+    \\ pop_assum SUBST_ALL_TAC
+    \\ `l < b ** n` by ( qunabbrev_tac`l` \\ qunabbrev_tac`n`
+                         \\ irule l2n_lt \\ simp[] )
+    \\ Cases_on`a = b - 1` \\ gs[] )
+  \\ strip_tac
+  \\ rewrite_tac[LEFT_SUB_DISTRIB]
+  \\ qpat_x_assum`_ = a`(SUBST1_TAC o SYM)
+  \\ gs[SUB_LEFT_ADD] \\ rw[]
+  \\ Cases_on`n=0` \\ gs[]
+  \\ `b ** n <= b ** 0` by simp[]
+  \\ gs[EXP_BASE_LE_IFF]
+QED
+
+Theorem l2n_2_neg:
+  !ls.
+  EVERY ($> 2) ls ==>
+  2 ** LENGTH ls - SUC (l2n 2 ls) = l2n 2 (MAP (\x. 1 - x) ls)
+Proof
+  Induct
+  \\ rw[l2n_def]
+  \\ gs[EXP, ADD1]
+  \\ first_x_assum(CHANGED_TAC o SUBST1_TAC o SYM)
+  \\ simp[LEFT_SUB_DISTRIB, LEFT_ADD_DISTRIB, SUB_RIGHT_ADD]
+  \\ qspecl_then[`ls`,`2`]mp_tac l2n_lt
+  \\ simp[]
+QED
+
+Theorem word_not_bits:
+  LENGTH ls = dimindex(:'a) /\ EVERY ($> 2) ls ==>
+  ¬word_from_bin_list ls : 'a word =
+  word_from_bin_list (MAP (λx. 1 - x) ls)
+Proof
+  rw[word_from_bin_list_def, l2w_def]
+  \\ rewrite_tac[word_2comp_n2w]
+  \\ Cases_on`l2n 2 ls = dimword(:'a) - 1`
+  >- (
+    mp_then Any (qspec_then`ls`mp_tac)
+      l2n_max (SIMP_CONV(srw_ss())[]``0 < 2n`` |> EQT_ELIM)
+    \\ `dimword (:'a) = 2 ** LENGTH ls` by simp[dimword_def]
+    \\ first_assum (SUBST_ALL_TAC o SYM)
+    \\ pop_assum kall_tac
+    \\ pop_assum SUBST_ALL_TAC
+    \\ simp[ADD1, ZERO_LT_dimword]
+    \\ strip_tac
+    \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+    \\ `A = 0` suffices_by rw[]
+    \\ rw[Abbr`A`, l2n_eq_0]
+    \\ gs[EVERY_MAP, EVERY_MEM]
+    \\ rw[]
+    \\ `2 > x` by simp[]
+    \\ `x < 2` by simp[]
+    \\ pop_assum mp_tac
+    \\ `x MOD 2 = 1` by simp[]
+    \\ rewrite_tac[NUMERAL_LESS_THM]
+    \\ strip_tac \\ fs[] )
+  \\ `SUC (l2n 2 ls) < dimword(:'a)`
+  by (
+    qspecl_then[`ls`,`2`]mp_tac l2n_lt
+    \\ gs[dimword_def] )
+  \\ qmatch_goalsub_abbrev_tac`_ = n2w $ l2n 2 l1`
+  \\ `l2n 2 l1 < dimword(:'a)`
+  by (
+    qspecl_then[`l1`,`2`]mp_tac l2n_lt
+    \\ gs[dimword_def, Abbr`l1`] )
+  \\ simp[Abbr`l1`]
+  \\ drule l2n_2_neg
+  \\ simp[dimword_def]
 QED
 
 Theorem concat_word_list_bytes_to_64:
@@ -3335,6 +3448,72 @@ Proof
   \\ DEP_REWRITE_TAC[EL_GENLIST]
   \\ simp[]
 QED
+
+Definition chi_w64_def:
+  chi_w64 (s: word64 list) =
+  MAPi (λi w. let y = 5 * (i DIV 5) in
+    w ?? (~(EL (y + ((i + 1) MOD 5)) s) &&
+           (EL (y + ((i + 2) MOD 5)) s))) s
+End
+
+(*
+Theorem chi_w64_thm:
+  state_bools_w64 bs ws ∧
+  string_to_state_array bs = s ⇒
+  state_bools_w64 (state_array_to_string (chi s)) (chi_w64 ws)
+Proof
+  strip_tac
+  \\ gs[state_bools_w64_def]
+  \\ conj_asm1_tac >- rw[string_to_state_array_def, b2w_def]
+  \\ simp[chi_def, chi_w64_def]
+  \\ rewrite_tac[state_array_to_string_compute]
+  \\ qmatch_goalsub_abbrev_tac`5 * 5 * sw`
+  \\ `sw = s.w` by rw[Abbr`sw`]
+  \\ qunabbrev_tac`sw` \\ pop_assum SUBST_ALL_TAC
+  \\ qmatch_goalsub_abbrev_tac`GENLIST f n`
+  \\ simp[MAPi_GENLIST]
+  \\ `LENGTH (chunks 64 (MAP bool_to_bit bs)) = 25`
+  by (
+    DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[NULL_LENGTH]
+    \\ simp[bool_to_bit_def, divides_def]
+    \\ strip_tac \\ gs[] )
+  \\ qmatch_assum_abbrev_tac`m = 25`
+  \\ simp[LIST_EQ_REWRITE]
+  \\ `bs <> []` by (strip_tac \\ gs[])
+  \\ `n <> 0` by gs[Abbr`n`]
+  \\ conj_asm1_tac
+  >- (
+    DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[NULL_LENGTH]
+    \\ simp[bool_to_bit_def, divides_def, Abbr`n`] )
+  \\ rpt strip_tac
+  \\ DEP_REWRITE_TAC[EL_MAP]
+  \\ simp[]
+  \\ `x DIV 5 < 5` by simp[DIV_LT_X]
+  \\ `5 * (x DIV 5) <= 20` by simp[]
+  \\ simp[]
+  \\ conj_asm1_tac
+  >- (
+    `25 = 20 + 5` by simp[]
+    \\ pop_assum SUBST1_TAC
+    \\ conj_tac
+    \\ irule LESS_EQ_LESS_TRANS
+    \\ qmatch_goalsub_abbrev_tac`_ + y <= _`
+    \\ qexists_tac`20 + y`
+    \\ (reverse conj_tac >- simp[])
+    \\ rewrite_tac[LT_ADD_LCANCEL]
+    \\ simp[Abbr`y`] )
+  \\ DEP_REWRITE_TAC[word_not_bits, EL_chunks]
+  \\ simp[NULL_LENGTH]
+  \\ conj_tac
+  >- (
+    irule EVERY_TAKE
+    \\ irule EVERY_DROP
+    \\ simp[EVERY_MAP, bool_to_bit_def]
+    \\ rw[EVERY_MEM] \\ rw[] )
+  \\
+*)
 
 (*
 TODO: define Rnd w64 version
