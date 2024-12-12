@@ -209,6 +209,14 @@ Proof
   rw[Once chunks_def]
 QED
 
+Theorem chunks_not_nil[simp]:
+  !n ls. chunks n ls <> []
+Proof
+  recInduct chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def]
+QED
+
 Theorem MEM_w2l_less:
   1 < b /\ MEM x (w2l b w) ==> x < b
 Proof
@@ -317,12 +325,29 @@ Proof
   \\ gs[LT_EXP_LOG]
 QED
 
+Theorem LENGTH_PAD_RIGHT_0_64_word_to_bin_list[simp]:
+  LENGTH (PAD_RIGHT 0 64 (word_to_bin_list (w: word64))) = 64
+Proof
+  rw[word_to_bin_list_def, wordsTheory.w2l_def, PAD_RIGHT, LENGTH_n2l, LOG2_def]
+  \\ Cases_on`w` \\ gs[]
+  \\ rewrite_tac[Once ADD_SYM]
+  \\ irule SUB_ADD
+  \\ `n < 2 ** 64` by simp[]
+  \\ gs[LT_EXP_LOG]
+QED
+
 Theorem l2n_PAD_RIGHT_0[simp]:
   0 < b ==> l2n b (PAD_RIGHT 0 h ls) = l2n b ls
 Proof
   Induct_on`ls` \\ rw[l2n_def, PAD_RIGHT, l2n_eq_0, EVERY_GENLIST]
   \\ gs[PAD_RIGHT, l2n_APPEND]
   \\ gs[l2n_eq_0, EVERY_GENLIST]
+QED
+
+Theorem l2w_PAD_RIGHT_0[simp]:
+  0 < b ==> l2w b (PAD_RIGHT 0 h ls) = l2w b ls
+Proof
+  rw[l2w_def]
 QED
 
 Theorem BITWISE_COMM:
@@ -3612,6 +3637,161 @@ Proof
   \\ rw[bool_to_bit_def]
 QED
 
+Definition iota_w64_RCz_def:
+  iota_w64_RCz : word64 list = MAP n2w [
+                      1;               32898;
+    9223372036854808714; 9223372039002292224;
+                  32907;          2147483649;
+    9223372039002292353; 9223372036854808585;
+                    138;                 136;
+             2147516425;          2147483658;
+             2147516555; 9223372036854775947;
+    9223372036854808713; 9223372036854808579;
+    9223372036854808578; 9223372036854775936;
+                  32778; 9223372039002259466;
+    9223372039002292353; 9223372036854808704;
+             2147483649; 9223372039002292232
+  ]
+End
+
+Definition iota_w64_def:
+  iota_w64 (s: word64 list) c =
+  case s of [] => [] | h :: t => (c ?? h) :: t
+End
+
+Theorem iota_w64_thm:
+  state_bools_w64 bs ws ∧
+  string_to_state_array bs = s ∧
+  i < 24
+  ⇒
+  state_bools_w64 (state_array_to_string (iota s i))
+    (iota_w64 ws (EL i iota_w64_RCz))
+Proof
+  strip_tac
+  \\ gs[state_bools_w64_def]
+  \\ conj_asm1_tac >- rw[string_to_state_array_def, b2w_def]
+  \\ simp[iota_def, iota_w64_def]
+  \\ rewrite_tac[state_array_to_string_compute]
+  \\ qmatch_goalsub_abbrev_tac`5 * 5 * sw`
+  \\ `sw = s.w` by rw[Abbr`sw`]
+  \\ qunabbrev_tac`sw` \\ pop_assum SUBST_ALL_TAC
+  \\ qmatch_goalsub_abbrev_tac`GENLIST f n`
+  \\ CASE_TAC >- gs[]
+  \\ simp[Once chunks_def]
+  \\ IF_CASES_TAC >- gs[Abbr`n`]
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`t = MAP _ lg`
+  \\ `LENGTH lg = 24`
+  by (
+    simp[Abbr`lg`]
+    \\ DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[NULL_LENGTH]
+    \\ rw[bool_to_bit_def, divides_def, Abbr`n`] )
+  \\ reverse conj_tac
+  >- (
+    BasicProvers.VAR_EQ_TAC
+    \\ qpat_x_assum`_ = h::t`mp_tac
+    \\ simp[Once chunks_def]
+    \\ rw[]
+    \\ simp[LIST_EQ_REWRITE]
+    \\ conj_asm1_tac
+    >- (
+      DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[NULL_LENGTH]
+      \\ rw[bool_to_bit_def, divides_def, Abbr`n`] )
+    \\ simp[EL_MAP] \\ rw[Abbr`lg`]
+    \\ AP_TERM_TAC
+    \\ DEP_REWRITE_TAC[EL_chunks]
+    \\ simp[NULL_EQ]
+    \\ simp[LIST_EQ_REWRITE, LENGTH_TAKE_EQ]
+    \\ reverse IF_CASES_TAC >- (
+      `F` suffices_by rw[]
+      \\ pop_assum mp_tac
+      \\ rw[Abbr`n`] )
+    \\ simp[EL_TAKE, EL_DROP, EL_MAP]
+    \\ qx_gen_tac`j` \\ strip_tac
+    \\ simp[Abbr`f`, restrict_def, DIV_LT_X]
+    \\ simp[string_to_state_array_def, restrict_def, b2w_def]
+    \\ simp[DIV_LT_X]
+    \\ `j DIV 64 = 0` by simp[DIV_EQ_0]
+    \\ IF_CASES_TAC
+    >- (
+      pop_assum mp_tac
+      \\ simp[ADD_DIV_RWT]
+      \\ simp[DIV_EQ_0]
+      \\ Cases_on`x=0` \\ simp[]
+      \\ Cases_on`x=1` \\ simp[]
+      \\ Cases_on`x=2` \\ simp[]
+      \\ Cases_on`x=3` \\ simp[] )
+    \\ AP_TERM_TAC
+    \\ AP_THM_TAC
+    \\ AP_TERM_TAC
+    \\ simp[]
+    \\ simp[ADD_DIV_RWT]
+    \\ qmatch_goalsub_abbrev_tac`5 * (xx DIV 5)`
+    \\ qspec_then`5`mp_tac DIVISION
+    \\ impl_tac >- rw[]
+    \\ disch_then(qspec_then`xx`mp_tac)
+    \\ simp[]
+    \\ disch_then (SUBST1_TAC o SYM)
+    \\ simp[Abbr`xx`] )
+  \\ simp[MAP_GENLIST, TAKE_GENLIST]
+  \\ `MIN 64 n = 64` by simp[Abbr`n`]
+  \\ pop_assum SUBST1_TAC
+  \\ qmatch_goalsub_abbrev_tac`GENLIST _ m`
+  \\ `h = word_from_bin_list (PAD_RIGHT 0 64 $ word_to_bin_list h)`
+  by simp[word_from_bin_list_def, word_to_bin_list_def, l2w_w2l]
+  \\ pop_assum SUBST1_TAC
+  \\ qmatch_goalsub_abbrev_tac`_ ?? g`
+  \\ `g = word_from_bin_list (PAD_RIGHT 0 64 $ word_to_bin_list g)`
+  by simp[word_from_bin_list_def, word_to_bin_list_def, l2w_w2l]
+  \\ pop_assum SUBST1_TAC
+  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ simp[]
+  \\ AP_TERM_TAC
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ qpat_x_assum`_ = h::t`mp_tac
+  \\ simp[Once chunks_def]
+  \\ IF_CASES_TAC >- fs[Abbr`m`]
+  \\ simp[] \\ strip_tac
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ BasicProvers.VAR_EQ_TAC
+  \\ simp[LIST_EQ_REWRITE]
+  \\ conj_tac
+  >- simp[Abbr`m`]
+  \\ qx_gen_tac`z`
+  \\ qmatch_goalsub_abbrev_tac`_ ==> rsh`
+  \\ simp[Abbr`m`] \\ strip_tac
+  \\ qunabbrev_tac`rsh`
+  \\ DEP_REWRITE_TAC[EL_GENLIST, EL_MAP, EL_ZIP]
+  \\ conj_tac >- simp[]
+  \\ simp[]
+  \\ simp[word_to_bin_list_def]
+  \\ simp[word_from_bin_list_def, w2l_l2w]
+  \\ qmatch_goalsub_abbrev_tac`l2n 2 ll MOD xx`
+  \\ qspecl_then[`ll`,`2`]mp_tac l2n_lt
+  \\ simp[Abbr`ll`]
+  \\ strip_tac
+  \\ `z DIV 64 = 0` by simp[DIV_EQ_0]
+  \\ rw[Abbr`f`, restrict_def]
+  \\ rw[string_to_state_array_def, restrict_def, b2w_def]
+  \\ simp[iota_some_elim]
+  \\ DEP_REWRITE_TAC[n2l_l2n]
+  \\ conj_tac
+  >- (
+    simp[]
+    \\ irule EVERY_TAKE
+    \\ simp[EVERY_MAP, EVERY_MEM]
+    \\ rw[bool_to_bit_def] )
+  \\ IF_CASES_TAC
+  >- (
+    pop_assum mp_tac
+    \\ simp[l2n_eq_0]
+    \\ strip_tac
+    \\ cheat )
+  \\ cheat
+QED
+
 (*
 TODO: define Rnd w64 version
 TODO: define (Keccak_p 24) w64 version
@@ -3621,10 +3801,6 @@ Keccak_def
 sponge_def
 Keccak_p_def
 Rnd_def
-iota_compute
-
-Definition iota_w64_def:
-  iota_w64 i (s: word64 list) =
 
 *)
 
