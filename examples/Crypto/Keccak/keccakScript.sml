@@ -11,6 +11,10 @@ val _ = new_theory "keccak";
 
 val _ = numLib.temp_prefer_num();
 
+Definition bool_to_bit_def:
+  bool_to_bit b = if b then 1 else 0n
+End
+
 Theorem GENLIST_EQ_NIL[simp]:
   GENLIST f n = [] <=> n = 0
 Proof
@@ -36,6 +40,13 @@ Theorem ODD_SBIT:
   ODD (SBIT b n) = (b /\ n = 0)
 Proof
   rw[SBIT_def, ODD_EXP_IFF]
+QED
+
+Theorem ODD_bool_to_bit[simp]:
+  ODD (bool_to_bit b) = b /\
+  ODD (1 - bool_to_bit b) = ~b
+Proof
+  rw[bool_to_bit_def]
 QED
 
 Theorem LENGTH_word_to_bin_list_bound:
@@ -96,14 +107,73 @@ Proof
   \\ simp[LASTN_DROP, BUTLASTN_TAKE]
 QED
 
-(*
-Theorem word_from_bin_list_and:
+Theorem ODD_MOD_2[simp]:
+  ODD (x MOD 2) = ODD x
+Proof
+  rw[ODD_MOD2_LEM]
+QED
+
+Theorem bool_to_bit_MOD_2[simp]:
+  bool_to_bit x MOD 2 = bool_to_bit x
+Proof
+  rw[bool_to_bit_def]
+QED
+
+Theorem MOD_DIV_SAME[simp]:
+  0 < y ==> x MOD y DIV y = 0
+Proof
+  strip_tac
+  \\ Cases_on`y=1` \\ gs[]
+  \\ `1 < y` by simp[]
+  \\ rw[DIV_EQ_0]
+QED
+
+Theorem BITWISE_l2n_2:
   LENGTH l1 = LENGTH l2 ==>
-  word_from_bin_list l1 && word_from_bin_list l2 =
-  word_from_bin_list (MAP2 (\x y. if (ODD x) /\ (ODD y) then 1 else 0) l1 l2)
+  BITWISE (LENGTH l1) op (l2n 2 l1) (l2n 2 l2) =
+  l2n 2 (MAP2 (\x y. bool_to_bit $ op (ODD x) (ODD y)) l1 l2)
+Proof
+  qid_spec_tac`l2`
+  \\ Induct_on`l1`
+  \\ simp[BITWISE_EVAL]
+  >- simp[BITWISE_def]
+  \\ qx_gen_tac`b`
+  \\ Cases \\ gs[BITWISE_EVAL]
+  \\ strip_tac
+  \\ gs[l2n_def]
+  \\ simp[SBIT_def, ODD_ADD, ODD_MULT, GSYM bool_to_bit_def]
+QED
+
+Theorem word_from_bin_list_and:
+  LENGTH l1 = dimindex(:'a) /\
+  LENGTH l2 = dimindex(:'a)
+  ==>
+  word_from_bin_list l1 && word_from_bin_list l2 : 'a word =
+  word_from_bin_list (MAP2 (\x y. bool_to_bit $ (ODD x /\ ODD y)) l1 l2)
 Proof
   rw[word_from_bin_list_def, l2w_def, word_and_n2w]
-  *)
+  \\ qmatch_goalsub_abbrev_tac`BITWISE n`
+  \\ qmatch_goalsub_abbrev_tac`a MOD d = b MOD d`
+  \\ `d = 2 ** n`
+  by simp[Abbr`d`, Abbr`n`, dimword_def]
+  \\ `a < d` by (
+    pop_assum SUBST1_TAC
+    \\ qunabbrev_tac`a`
+    \\ irule BITWISE_LT_2EXP )
+  \\ `b < d`
+  by (
+    qunabbrev_tac`b`
+    \\ qmatch_goalsub_abbrev_tac`l2n 2 ls`
+    \\ `n = LENGTH ls` by simp[Abbr`ls`]
+    \\ qunabbrev_tac`d`
+    \\ qpat_x_assum`_ = 2 ** _`SUBST1_TAC
+    \\ pop_assum SUBST1_TAC
+    \\ irule l2n_lt \\ simp[] )
+  \\ simp[]
+  \\ unabbrev_all_tac
+  \\ DEP_REWRITE_TAC[GSYM BITWISE_l2n_2]
+  \\ simp[]
+QED
 
 Theorem chunks_append_divides:
   ∀n l1 l2.
@@ -155,10 +225,6 @@ Proof
   \\ gs[DIV_LT_X]
   \\ Cases_on`b` \\ gs[MULT]
 QED
-
-Definition bool_to_bit_def:
-  bool_to_bit b = if b then 1 else 0
-End
 
 Theorem LENGTH_chunks:
   ∀n ls. 0 < n ∧ ¬NULL ls ⇒
@@ -3456,7 +3522,6 @@ Definition chi_w64_def:
            (EL (y + ((i + 2) MOD 5)) s))) s
 End
 
-(*
 Theorem chi_w64_thm:
   state_bools_w64 bs ws ∧
   string_to_state_array bs = s ⇒
@@ -3512,8 +3577,40 @@ Proof
     \\ irule EVERY_DROP
     \\ simp[EVERY_MAP, bool_to_bit_def]
     \\ rw[EVERY_MEM] \\ rw[] )
-  \\
-*)
+  \\ DEP_REWRITE_TAC[word_from_bin_list_and]
+  \\ simp[]
+  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ simp[]
+  \\ AP_TERM_TAC
+  \\ simp[LIST_EQ_REWRITE, LENGTH_TAKE_EQ]
+  \\ conj_tac >- rw[Abbr`n`]
+  \\ qx_gen_tac`i` \\ strip_tac
+  \\ simp[EL_MAP, EL_TAKE, EL_ZIP, EL_MAP2]
+  \\ DEP_REWRITE_TAC[EL_DROP]
+  \\ simp[]
+  \\ conj_tac >- rw[Abbr`n`]
+  \\ simp[EL_MAP]
+  \\ DEP_REWRITE_TAC[EL_MAP, EL_GENLIST]
+  \\ conj_tac >- rw[Abbr`n`]
+  \\ simp[Abbr`f`, restrict_def]
+  \\ qpat_x_assum`LENGTH _ = 25`kall_tac
+  \\ rw[string_to_state_array_def, restrict_def, b2w_def, DIV_LT_X]
+  \\ `i DIV 64 = 0` by simp[DIV_EQ_0]
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`c <> (~a ∧ b)`
+  \\ `c = EL (i + 64 * x) bs`
+  by (
+    simp[Abbr`c`]
+    \\ AP_THM_TAC \\ AP_TERM_TAC
+    \\ AP_TERM_TAC
+    \\ AP_TERM_TAC
+    \\ qspec_then`5`mp_tac DIVISION
+    \\ impl_tac >- rw[]
+    \\ disch_then(qspec_then`x`mp_tac)
+    \\ simp[] )
+  \\ simp[Abbr`c`]
+  \\ rw[bool_to_bit_def]
+QED
 
 (*
 TODO: define Rnd w64 version
@@ -3524,7 +3621,6 @@ Keccak_def
 sponge_def
 Keccak_p_def
 Rnd_def
-chi_def
 iota_compute
 
 Definition iota_w64_def:
