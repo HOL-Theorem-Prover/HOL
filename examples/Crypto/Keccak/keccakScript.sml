@@ -10,6 +10,15 @@ val _ = new_theory "keccak";
 
 val _ = numLib.temp_prefer_num();
 
+Theorem GENLIST_EQ_NIL[simp]:
+  GENLIST f n = [] <=> n = 0
+Proof
+  rw[EQ_IMP_THM]
+  \\ pop_assum(mp_tac o Q.AP_TERM`LENGTH`)
+  \\ rewrite_tac[LENGTH_GENLIST]
+  \\ rw[]
+QED
+
 Theorem DIV2_SBIT:
   DIV2 (SBIT b n) = if n = 0 then 0 else SBIT b (n - 1)
 Proof
@@ -3251,6 +3260,82 @@ Proof
   \\ simp[]
 QED
 
+Definition pi_w64_indices_def:
+  pi_w64_indices =
+  GENLIST (λi. let
+    x = i MOD 5;
+    y = i DIV 5;
+    x' = (x + 3 * y) MOD 5 in
+      x' + 5 * x) 25
+End
+
+Theorem pi_w64_indices_eq = EVAL ``pi_w64_indices``;
+
+Theorem pi_w64_indices_bound:
+  EVERY ($> 25) pi_w64_indices
+Proof
+  rw[pi_w64_indices_eq]
+QED
+
+Definition pi_w64_def:
+  pi_w64 (s: word64 list) =
+  MAP (λi. EL i s) pi_w64_indices
+End
+
+Theorem pi_w64_thm:
+  state_bools_w64 bs ws ∧
+  string_to_state_array bs = s ⇒
+  state_bools_w64 (state_array_to_string (pi s)) (pi_w64 ws)
+Proof
+  strip_tac
+  \\ gs[state_bools_w64_def]
+  \\ conj_asm1_tac >- rw[string_to_state_array_def, b2w_def]
+  \\ simp[pi_def, pi_w64_def]
+  \\ rewrite_tac[state_array_to_string_compute]
+  \\ qmatch_goalsub_abbrev_tac`5 * 5 * sw`
+  \\ `sw = s.w` by rw[Abbr`sw`]
+  \\ qunabbrev_tac`sw` \\ pop_assum SUBST_ALL_TAC
+  \\ qmatch_goalsub_abbrev_tac`GENLIST f n`
+  \\ `LENGTH pi_w64_indices = 25`
+     by rewrite_tac[pi_w64_indices_def, LENGTH_GENLIST]
+  \\ simp[LIST_EQ_REWRITE]
+  \\ conj_asm1_tac
+  >- (
+    DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[NULL_LENGTH]
+    \\ rw[Abbr`n`, divides_def, bool_to_bit_def] )
+  \\ rpt strip_tac
+  \\ DEP_REWRITE_TAC[EL_MAP]
+  \\ simp[]
+  \\ `LENGTH (chunks 64 (MAP bool_to_bit bs)) = 25`
+  by (
+    DEP_REWRITE_TAC[LENGTH_chunks]
+    \\ simp[NULL_LENGTH]
+    \\ simp[bool_to_bit_def, divides_def]
+    \\ strip_tac \\ gs[] )
+  \\ conj_asm1_tac >- (
+    mp_tac pi_w64_indices_bound
+    \\ simp[EVERY_MEM, MEM_EL, PULL_EXISTS]
+    \\ disch_then drule \\ simp[] )
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[EL_chunks]
+  \\ simp[NULL_LENGTH]
+  \\ conj_asm1_tac >- ( rw[Abbr`n`] \\ strip_tac \\ gs[] )
+  \\ simp[LIST_EQ_REWRITE, LENGTH_TAKE_EQ]
+  \\ reverse IF_CASES_TAC
+  >- ( pop_assum mp_tac \\ simp[Abbr`n`] )
+  \\ simp[] \\ qx_gen_tac`i` \\ strip_tac
+  \\ DEP_REWRITE_TAC[EL_TAKE, EL_DROP, EL_MAP, EL_GENLIST]
+  \\ simp[] \\ AP_TERM_TAC
+  \\ simp[Abbr`f`, restrict_def, DIV_LT_X]
+  \\ ` i DIV 64 = 0` by simp[DIV_EQ_0]
+  \\ rw[string_to_state_array_def, restrict_def, b2w_def]
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ rewrite_tac[pi_w64_indices_def]
+  \\ DEP_REWRITE_TAC[EL_GENLIST]
+  \\ simp[]
+QED
+
 (*
 TODO: define Rnd w64 version
 TODO: define (Keccak_p 24) w64 version
@@ -3260,9 +3345,12 @@ Keccak_def
 sponge_def
 Keccak_p_def
 Rnd_def
-pi_def
 chi_def
 iota_compute
+
+Definition iota_w64_def:
+  iota_w64 i (s: word64 list) =
+
 *)
 
 Definition Keccak_256_bytes_def:
