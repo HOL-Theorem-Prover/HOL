@@ -1,0 +1,4 @@
+INCLUDES = $(HOLDIR)/examples/algebra/field \
+           $(HOLDIR)/src/algebra/construction \
+		   $(HOLDIR)/src/algebra/construction \
+           $(HOLDIR)/src/num/theories
