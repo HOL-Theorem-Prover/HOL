@@ -112,7 +112,7 @@ val osym_def = Define `osym = sym ACL2_OUTPUT_CHANNEL`;
 
 val _ =
  add_string_abbrevs
-  [("ACL2",                lhs(concl ACL2_def )),
+  [("ACL2",                lhs(concl ACL2_def)),
    ("COMMON-LISP",         lhs(concl COMMON_LISP_def)),
    ("KEYWORD",             lhs(concl KEYWORD_def)),
    ("ACL2-OUTPUT-CHANNEL", lhs(concl ACL2_OUTPUT_CHANNEL_def))

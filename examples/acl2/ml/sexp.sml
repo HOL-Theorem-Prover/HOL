@@ -819,7 +819,8 @@ fun mlsym_to_string (sym as mlsym(pkg,nam)) = (pkg^"::"^nam)
 (* constant defined by |- c = "xyz". Used to avoid building terms with       *)
 (* lots of string literals.                                                  *)
 (*****************************************************************************)
-val string_abbrevs = ref([]: (string * term)list);
+
+val string_abbrevs : (string * term) list ref = ref [];
 
 (*****************************************************************************)
 (* Check if an abbreviation already exists                                   *)
@@ -840,7 +841,7 @@ fun add_string_abbrevs tml = (string_abbrevs := (!string_abbrevs) @ tml);
 (* of strings that shouldn't be abbreviated, then it is ignored.             *)
 (*****************************************************************************)
 val string_abbrev_count = ref 0;
-val no_abbrev_list      = ref(["NIL","QUOTE"]);
+val no_abbrev_list      = ref ["NIL","QUOTE"];
 
 fun make_string_abbrevs [] = ()
  |  make_string_abbrevs (s::sl) =
@@ -869,6 +870,7 @@ fun make_string_abbrevs [] = ()
 (* Print !string_abbrevs to a string (used in adjoin_to_theory).             *)
 (* There may be a better way of doing this!                                  *)
 (*****************************************************************************)
+(*
 local
 fun string_abbrevs_to_string_aux [] = ""
  |  string_abbrevs_to_string_aux [(s,c)] =
@@ -880,6 +882,30 @@ in
 fun string_abbrevs_to_string pl =
  ("[" ^ string_abbrevs_to_string_aux pl ^ "]")
 end;
+*)
+
+fun delim_list s1 s2 list = s1::list@[s2]
+val enpair = delim_list "(" ")"  o separate ", "
+val enlist = delim_list "[" "]"  o separate ", "
+val enrecd = delim_list "{" "}"  o separate ", "
+fun string_pair s1 s2 = String.concat (enpair [s1,s2])
+
+fun string_abbrevs_to_string pl =
+ let val thy = Theory.current_theory()
+     fun prim_new_const_as_string n =
+        String.concat
+          ["Term.prim_mk_const{Name = ", Lib.mlquote n,
+           ", ",
+           "Thy = ", Lib.mlquote thy, "}"]
+     fun abbrev_as_string (s,c) =
+        string_pair
+          (Lib.mlquote s)
+          (prim_new_const_as_string (fst(dest_const c)))
+ in
+   String.concat
+     (enlist (map abbrev_as_string pl))
+ end
+
 
 (*****************************************************************************)
 (* Version of fromMLstring that looks up in string_abbrevs. Convert an ML    *)
@@ -2304,10 +2330,12 @@ fun load_imported_acl2_theorems () =
   show_tags := true;
   print "read "; print(Int.toString(length(!acl2_list_ref))); print " defs\n";
   imported_acl2_theorems :=
-   map (install_and_print o mk_acl2def) (!acl2_list_ref);
+(*   map (install_and_print o mk_acl2def) (!acl2_list_ref); *)
+  map (snd o install o mk_acl2def) (!acl2_list_ref);
   print
    "Imported ACL2 stored in assignable variable imported_acl2_theorems.\n\n"
- end;
+ end
+ handle e => raise wrap_exn "sexp" "load_imported_acl2_theorems" e;
 
 (*****************************************************************************)
 (* Print imported imported_acl2_thms, assumed installed in theory named      *)
