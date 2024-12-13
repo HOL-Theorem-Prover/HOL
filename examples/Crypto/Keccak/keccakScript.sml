@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib dep_rewrite blastLib
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
      rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
      indexedListsTheory numposrepTheory numeral_bitTheory
-     logrootTheory sptreeTheory;
+     bitstringTheory logrootTheory sptreeTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
@@ -14,6 +14,35 @@ val _ = numLib.temp_prefer_num();
 Definition bool_to_bit_def:
   bool_to_bit b = if b then 1 else 0n
 End
+
+Theorem dropWhile_id:
+ (dropWhile P ls = ls) <=> NULL ls \/ ~P(HD ls)
+Proof
+  Cases_on`ls` \\ rw[dropWhile_def]
+  \\ disch_then(mp_tac o Q.AP_TERM`LENGTH`)
+  \\ qspecl_then[`P`,`t`]mp_tac LENGTH_dropWhile_LESS_EQ
+  \\ simp[]
+QED
+
+Theorem IS_SUFFIX_dropWhile:
+  IS_SUFFIX ls (dropWhile P ls)
+Proof
+  Induct_on`ls`
+  \\ rw[IS_SUFFIX_CONS]
+QED
+
+Theorem LENGTH_dropWhile_id:
+  (LENGTH (dropWhile P ls) = LENGTH ls) <=> (dropWhile P ls = ls)
+Proof
+  rw[EQ_IMP_THM]
+  \\ rw[dropWhile_id]
+  \\ Cases_on`ls` \\ gs[]
+  \\ strip_tac \\ gs[]
+  \\ `IS_SUFFIX t (dropWhile P t)` by simp[IS_SUFFIX_dropWhile]
+  \\ gs[IS_SUFFIX_APPEND]
+  \\ `LENGTH t = LENGTH l + LENGTH (dropWhile P t)` by metis_tac[LENGTH_APPEND]
+  \\ fs[]
+QED
 
 Theorem GENLIST_EQ_NIL[simp]:
   GENLIST f n = [] <=> n = 0
@@ -45,6 +74,13 @@ QED
 Theorem ODD_bool_to_bit[simp]:
   ODD (bool_to_bit b) = b /\
   ODD (1 - bool_to_bit b) = ~b
+Proof
+  rw[bool_to_bit_def]
+QED
+
+Theorem bool_to_bit_neq_add:
+  bool_to_bit (x <> y) =
+  (bool_to_bit x + bool_to_bit y) MOD 2
 Proof
   rw[bool_to_bit_def]
 QED
@@ -3659,6 +3695,17 @@ Definition iota_w64_def:
   case s of [] => [] | h :: t => (c ?? h) :: t
 End
 
+Theorem iota_w64_RCz_rc_thm:
+  z < 64 /\ i < 24 ==>
+  EL z (PAD_RIGHT 0 64 (w2l 2 (EL i iota_w64_RCz))) =
+  if z = 2 ** LOG 2 (SUC z) - 1 then
+    bool_to_bit $ rc (7 * i + LOG 2 (SUC z))
+  else 0
+Proof
+  simp_tac std_ss [NUMERAL_LESS_THM]
+  \\ strip_tac \\ rpt BasicProvers.VAR_EQ_TAC \\ EVAL_TAC
+QED
+
 Theorem iota_w64_thm:
   state_bools_w64 bs ws ∧
   string_to_state_array bs = s ∧
@@ -3783,13 +3830,73 @@ Proof
     \\ irule EVERY_TAKE
     \\ simp[EVERY_MAP, EVERY_MEM]
     \\ rw[bool_to_bit_def] )
-  \\ IF_CASES_TAC
-  >- (
-    pop_assum mp_tac
-    \\ simp[l2n_eq_0]
+  \\ simp[Abbr`g`]
+  \\ qmatch_goalsub_abbrev_tac`l2n 2 w`
+  \\ `LOG 2 (SUC z) <= w2l 64`
+  by (
+    rewrite_tac[definition"w2l_def"]
+    \\ reverse IF_CASES_TAC >- rw[]
+    \\ rewrite_tac[LOG2_def]
+    \\ irule LOG2_LE_MONO
+    \\ simp[] )
+  \\ simp[LOG2_def]
+  \\ simp[l2n_eq_0]
+  \\ qmatch_goalsub_abbrev_tac`COND b0`
+  \\ `¬b0 ⇒ LOG 2 (l2n 2 w) = PRE (LENGTH (dropWhile ((=) 0) (REVERSE w)))`
+  by (
+    simp[Abbr`b0`]
     \\ strip_tac
+    \\ DEP_REWRITE_TAC[LOG_l2n_dropWhile]
+    \\ pop_assum mp_tac
+    \\ simp[EXISTS_MEM, PULL_EXISTS, EVERY_MEM]
+    \\ qx_gen_tac`e` \\ strip_tac
+    \\ qexists_tac`e` \\ simp[]
+    \\ reverse conj_asm2_tac
+    >- (
+      rw[Abbr`w`, GSYM MAP_TAKE, MEM_MAP, bool_to_bit_def]
+      \\ rw[] )
+    \\ first_x_assum drule
+    \\ Cases_on`e = 0` \\ gs[] )
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`PRE m`
+  \\ `¬b0 ⇒ 0 < m`
+  by (
+    rw[Abbr`b0`, Abbr`m`]
+    \\ CCONTR_TAC \\ fs[dropWhile_eq_nil]
+    \\ rw[]
+    \\ ntac 2 (pop_assum mp_tac)
+    \\ simp[EVERY_MEM, EXISTS_MEM, PULL_EXISTS]
+    \\ qx_gen_tac`e` \\ strip_tac
+    \\ qexists_tac`e` \\ simp[]
+    \\ strip_tac \\ fs[] )
+  \\ simp[iffLR SUC_PRE]
+  \\ qmatch_goalsub_abbrev_tac`_ + EL z ww`
+  \\ `ww = w`
+  by (
+    simp[Abbr`ww`, Abbr`w`]
+    \\ simp[LIST_EQ_REWRITE, length_pad_right]
+    \\ conj_asm1_tac
+    >- (
+      IF_CASES_TAC \\ simp[]
+      \\ IF_CASES_TAC \\ fs[]
+      \\ fs[Abbr`b0`]
+      \\ qunabbrev_tac`m`
+      \\ qmatch_goalsub_abbrev_tac`dropWhile P ls`
+      \\ qspecl_then[`P`,`ls`]mp_tac LENGTH_dropWhile_LESS_EQ
+      \\ simp[Abbr`ls`]
+      \\ simp[LESS_OR_EQ]
+      \\ strip_tac \\ gs[] )
+    \\ simp[EL_TAKE, EL_MAP]
+    \\ qx_gen_tac`x` \\ strip_tac
     \\ cheat )
-  \\ cheat
+  \\ fs[Abbr`ww`]
+  \\ simp[Abbr`w`, EL_TAKE, EL_MAP]
+  \\ simp[bool_to_bit_neq_add]
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ AP_TERM_TAC
+  \\ simp[iota_w64_RCz_rc_thm]
+  \\ rw[bool_to_bit_def]
+  \\ fs[]
 QED
 
 (*
@@ -3801,7 +3908,6 @@ Keccak_def
 sponge_def
 Keccak_p_def
 Rnd_def
-
 *)
 
 Definition Keccak_256_bytes_def:
