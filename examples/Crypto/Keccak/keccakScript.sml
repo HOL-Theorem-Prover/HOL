@@ -3947,13 +3947,74 @@ Proof
   \\ metis_tac[]
 QED
 
-(*
-TODO: define (Keccak_p 24) w64 version
+Definition Keccak_p_24_w64_def:
+  Keccak_p_24_w64 s =
+  FOLDL Rnd_w64 s iota_w64_RCz
+End
 
+Theorem Keccak_p_24_w64_lemma[local]:
+  state_bools_w64 bs ws /\ i <= 24 ==>
+  state_bools_w64
+    (state_array_to_string $
+     FST $ FUNPOW (λ(a,i). (Rnd a i, SUC i)) i
+     (string_to_state_array bs, 0))
+    (FOLDL Rnd_w64 ws (TAKE i iota_w64_RCz))
+Proof
+  Induct_on`i` \\ rw[]
+  >- (
+    DEP_REWRITE_TAC[GEN_ALL string_to_state_array_to_string]
+    \\ gs[state_bools_w64_def, iota_w64_RCz_def] )
+  \\ gs[FUNPOW_SUC, UNCURRY]
+  \\ `LENGTH iota_w64_RCz = 24` by simp[iota_w64_RCz_def]
+  \\ qmatch_goalsub_abbrev_tac`FOLDL _ ws ls`
+  \\ qmatch_asmsub_abbrev_tac`FOLDL _ ws tl`
+  \\ `ls = SNOC (EL i iota_w64_RCz) tl`
+  by(
+    simp[Abbr`ls`, Abbr`tl`]
+    \\ simp[LIST_EQ_REWRITE, EL_TAKE, EL_APPEND]
+    \\ rw[]
+    \\ `i = x` by gs[]
+    \\ rw[] )
+  \\ pop_assum SUBST1_TAC
+  \\ rewrite_tac[FOLDL_SNOC]
+  \\ qmatch_goalsub_abbrev_tac`Rnd s j`
+  \\ `j = i`
+  by (
+    simp[Abbr`j`]
+    \\ qmatch_goalsub_abbrev_tac`FUNPOW f`
+    \\ `∀n x y. SND (FUNPOW f n (x,y)) = n + y` suffices_by simp[]
+    \\ Induct \\ rw[FUNPOW_SUC]
+    \\ rw[Abbr`f`, UNCURRY] )
+  \\ rw[Abbr`j`]
+  \\ irule Rnd_w64_thm
+  \\ rw[]
+  \\ goal_assum(first_assum o mp_then Any mp_tac)
+  \\ DEP_REWRITE_TAC[state_array_to_string_to_state_array]
+  \\ rw[Abbr`s`]
+  \\ qmatch_goalsub_abbrev_tac`FUNPOW f`
+  \\ `∀n x y. wf_state_array x ==> wf_state_array $ FST (FUNPOW f n (x,y))`
+  suffices_by ( disch_then irule \\ fs[state_bools_w64_def] )
+  \\ Induct \\ rw[FUNPOW_SUC]
+  \\ rw[Abbr`f`, UNCURRY]
+QED
+
+Theorem Keccak_p_24_w64_thm:
+  state_bools_w64 bs ws ⇒
+  state_bools_w64 (Keccak_p 24 bs) (Keccak_p_24_w64 ws)
+Proof
+  rw[Keccak_p_def, Keccak_p_24_w64_def]
+  \\ `LENGTH bs = 1600` by fs[state_bools_w64_def]
+  \\ rw[string_to_state_array_w, b2w_def, definition"w2l_def"]
+  \\ drule Keccak_p_24_w64_lemma
+  \\ disch_then(qspec_then`24`mp_tac)
+  \\ `LENGTH iota_w64_RCz = 24` by simp[iota_w64_RCz_def]
+  \\ simp[TAKE_LENGTH_TOO_LONG]
+QED
+
+(*
 Keccak_256_def
 Keccak_def
 sponge_def
-Keccak_p_def
 *)
 
 Definition Keccak_256_bytes_def:
