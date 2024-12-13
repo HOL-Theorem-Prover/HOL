@@ -4011,10 +4011,103 @@ Proof
   \\ simp[TAKE_LENGTH_TOO_LONG]
 QED
 
+Definition absorb_w64_def:
+  absorb_w64 Pis =
+  FOLDL (λSi Pi. Keccak_p_24_w64 (MAP2 word_xor Si Pi))
+    (REPLICATE 25 0w) Pis
+End
+
+Theorem absorb_w64_thm:
+  LIST_REL state_bools_w64 bs ws
+  ==>
+  state_bools_w64
+    (FOLDL (λSi Pi. Keccak_p 24 (MAP2 (λx y. x <> y) Si Pi))
+      (REPLICATE 1600 F) bs)
+    (absorb_w64 ws)
+Proof
+  rw[absorb_w64_def]
+  \\ `REPLICATE 25 (0w:word64) =
+      MAP word_from_bin_list
+        (chunks 64 (MAP bool_to_bit (REPLICATE 1600 F)))`
+  by (
+    simp[LIST_EQ_REWRITE]
+    \\ conj_asm1_tac
+    >- (
+      DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[NULL_LENGTH]
+      \\ EVAL_TAC )
+    \\ rw[EL_REPLICATE, EL_MAP]
+    \\ DEP_REWRITE_TAC[EL_chunks]
+    \\ simp[NULL_LENGTH]
+    \\ rw[word_from_bin_list_def, l2w_def]
+    \\ qmatch_goalsub_abbrev_tac`A MOD B = 0`
+    \\ `A = 0` suffices_by rw[]
+    \\ rw[Abbr`A`, l2n_eq_0]
+    \\ irule EVERY_TAKE
+    \\ rw[REPLICATE_GENLIST, bool_to_bit_def] )
+  \\ pop_assum SUBST1_TAC
+  \\ `LENGTH (REPLICATE 1600 F) = 1600` by simp[]
+  \\ pop_assum mp_tac
+  \\ qspec_tac(`REPLICATE 1600 F`,`s0`)
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac`ws`
+  \\ Induct_on`bs` \\ rw[]
+  >- rw[state_bools_w64_def]
+  \\ first_x_assum drule
+  \\ qmatch_goalsub_abbrev_tac`FOLDL _ sh bs`
+  \\ simp[]
+  \\ disch_then(qspec_then`sh`mp_tac)
+  \\ impl_keep_tac
+  >- (
+    simp[Abbr`sh`, LENGTH_Keccak_p]
+    \\ fs[state_bools_w64_def] )
+  \\ qmatch_goalsub_abbrev_tac`state_bools_w64 s1 (FOLDL f h1 ys)`
+  \\ strip_tac
+  \\ qmatch_goalsub_abbrev_tac`FOLDL f h2 ys`
+  \\ `h1 = h2`
+  by (
+    simp[Abbr`h1`,Abbr`h2`, Abbr`f`, Abbr`sh`]
+    \\ qmatch_goalsub_abbrev_tac`Keccak_p_24_w64 ws`
+    \\ qmatch_goalsub_abbrev_tac`Keccak_p 24 hs`
+    \\ `state_bools_w64 hs ws`
+    by (
+      simp[state_bools_w64_def, Abbr`hs`]
+      \\ gs[Abbr`ws`, state_bools_w64_def]
+      \\ simp[LIST_EQ_REWRITE]
+      \\ DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[NULL_LENGTH]
+      \\ conj_tac >- (rpt strip_tac \\ gs[MAP2_MAP, ZIP_EQ_NIL])
+      \\ simp[divides_def, bool_to_bit_def]
+      \\ rpt strip_tac
+      \\ DEP_REWRITE_TAC[EL_MAP2, EL_MAP]
+      \\ simp[]
+      \\ DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[NULL_LENGTH]
+      \\ conj_tac >- (rpt strip_tac \\ gs[MAP2_MAP, ZIP_EQ_NIL])
+      \\ DEP_REWRITE_TAC[EL_chunks]
+      \\ simp[NULL_LENGTH]
+      \\ DEP_REWRITE_TAC[LENGTH_chunks]
+      \\ simp[NULL_LENGTH]
+      \\ conj_tac >- (rpt strip_tac \\ gs[MAP2_MAP, ZIP_EQ_NIL])
+      \\ conj_tac >- (rpt strip_tac \\ gs[MAP2_MAP, ZIP_EQ_NIL])
+      \\ simp[word_xor_bits_neq]
+      \\ AP_TERM_TAC
+      \\ simp[LIST_EQ_REWRITE]
+      \\ rpt strip_tac
+      \\ DEP_REWRITE_TAC[EL_MAP, EL_ZIP, EL_TAKE, EL_DROP, EL_MAP2]
+      \\ simp[GSYM bool_to_bit_neq_add]
+      \\ rw[bool_to_bit_def] \\ gs[] )
+    \\ drule Keccak_p_24_w64_thm
+    \\ rw[state_bools_w64_def] )
+  \\ rw[]
+QED
+
 (*
 Keccak_256_def
 Keccak_def
 sponge_def
+pad10s1_136_w64_sponge_init
+absorb_w64_thm
 *)
 
 Definition Keccak_256_bytes_def:
