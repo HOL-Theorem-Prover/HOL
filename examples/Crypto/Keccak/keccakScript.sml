@@ -3702,7 +3702,12 @@ Theorem iota_w64_RCz_rc_thm:
     bool_to_bit $ rc (7 * i + LOG 2 (SUC z))
   else 0
 Proof
-  simp_tac std_ss [NUMERAL_LESS_THM]
+  strip_tac
+  \\ qpat_x_assum`i < _`mp_tac
+  \\ simp_tac std_ss [NUMERAL_LESS_THM]
+  \\ strip_tac \\ rpt BasicProvers.VAR_EQ_TAC \\ EVAL_TAC
+  \\ pop_assum mp_tac
+  \\ simp_tac std_ss [NUMERAL_LESS_THM]
   \\ strip_tac \\ rpt BasicProvers.VAR_EQ_TAC \\ EVAL_TAC
 QED
 
@@ -3899,15 +3904,56 @@ Proof
   \\ fs[]
 QED
 
+Definition Rnd_w64_def:
+  Rnd_w64 s =
+  iota_w64 $
+  chi_w64 $
+  pi_w64 $
+  rho_w64 $
+  theta_w64 s
+End
+
+Theorem Rnd_w64_thm:
+  state_bools_w64 bs ws ∧
+  string_to_state_array bs = s ∧
+  i < 24 ⇒
+  state_bools_w64 (state_array_to_string (Rnd s i))
+    (Rnd_w64 ws (EL i iota_w64_RCz))
+Proof
+  rewrite_tac[Rnd_w64_def, Rnd_def]
+  \\ strip_tac
+  \\ irule iota_w64_thm
+  \\ rw[]
+  \\ qmatch_goalsub_abbrev_tac`string_to_state_array _ = s`
+  \\ qexists_tac`state_array_to_string s`
+  \\ DEP_REWRITE_TAC[state_array_to_string_to_state_array]
+  \\ simp[Abbr`s`]
+  \\ irule chi_w64_thm
+  \\ qmatch_goalsub_abbrev_tac`string_to_state_array _ = s`
+  \\ qexists_tac`state_array_to_string s`
+  \\ DEP_REWRITE_TAC[state_array_to_string_to_state_array]
+  \\ simp[Abbr`s`]
+  \\ irule pi_w64_thm
+  \\ qmatch_goalsub_abbrev_tac`string_to_state_array _ = s`
+  \\ qexists_tac`state_array_to_string s`
+  \\ DEP_REWRITE_TAC[state_array_to_string_to_state_array]
+  \\ simp[Abbr`s`]
+  \\ irule rho_w64_thm
+  \\ qmatch_goalsub_abbrev_tac`string_to_state_array _ = s`
+  \\ qexists_tac`state_array_to_string s`
+  \\ DEP_REWRITE_TAC[state_array_to_string_to_state_array]
+  \\ simp[Abbr`s`]
+  \\ irule theta_w64_thm
+  \\ metis_tac[]
+QED
+
 (*
-TODO: define Rnd w64 version
 TODO: define (Keccak_p 24) w64 version
 
 Keccak_256_def
 Keccak_def
 sponge_def
 Keccak_p_def
-Rnd_def
 *)
 
 Definition Keccak_256_bytes_def:
