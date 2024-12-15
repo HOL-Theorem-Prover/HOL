@@ -8,7 +8,7 @@ open HolKernel Parse boolLib BasicProvers;
 open numLib metisLib simpLib combinTheory arithmeticTheory prim_recTheory
      pred_setTheory listTheory pairTheory markerLib TotalDefn;
 
-local open listSimps pred_setSimps in end;
+local open listSimps pred_setSimps dep_rewrite in end;
 
 val FILTER_APPEND = FILTER_APPEND_DISTRIB
 val REVERSE = REVERSE_SNOC_DEF
@@ -3782,6 +3782,26 @@ Proof
  >> MATCH_MP_TAC ALL_DISTINCT_DROP >> rw []
 QED
 (* END more lemmas of IS_SUFFIX *)
+
+Theorem IS_SUFFIX_dropWhile:
+  IS_SUFFIX ls (dropWhile P ls)
+Proof
+  Induct_on`ls`
+  \\ rw[IS_SUFFIX_CONS]
+QED
+
+Theorem LENGTH_dropWhile_id:
+  (LENGTH (dropWhile P ls) = LENGTH ls) <=> (dropWhile P ls = ls)
+Proof
+  rw[EQ_IMP_THM]
+  \\ rw[dropWhile_id]
+  \\ Cases_on`ls` \\ fs[]
+  \\ strip_tac \\ fs[]
+  \\ `IS_SUFFIX t (dropWhile P t)` by simp[IS_SUFFIX_dropWhile]
+  \\ fs[IS_SUFFIX_APPEND]
+  \\ `LENGTH t = LENGTH l + LENGTH (dropWhile P t)` by metis_tac[LENGTH_APPEND]
+  \\ fs[]
+QED
 
 Theorem nub_GENLIST:
   nub (GENLIST f n) =
