@@ -1560,4 +1560,21 @@ Proof
   \\ SRW_TAC[][BITWISE_AND_0_lemma]
 QED
 
+Theorem BITWISE_AND_SHIFT_EQ_0:
+  !w x y n.
+  x < 2 ** n ==>
+  BITWISE w $/\ x (y * 2 ** n) = 0
+Proof
+  Induct \\ SRW_TAC[][BITWISE_def, SBIT_def]
+  \\ strip_tac
+  \\ Cases_on`w < n`
+  >- ( drule BIT_SHIFT_THM3 \\ simp[]
+       \\ Q.EXISTS_TAC`y` \\ simp[])
+  \\ FULL_SIMP_TAC(srw_ss())[NOT_LESS]
+  \\ drule TWOEXP_MONO2 \\ strip_tac
+  \\ `x < 2 ** w` by METIS_TAC[LESS_LESS_EQ_TRANS]
+  \\ drule NOT_BIT_GT_TWOEXP
+  \\ simp[]
+QED
+
 val _ = export_theory()

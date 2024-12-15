@@ -5083,6 +5083,15 @@ Proof
   rw[l2w_def]
 QED
 
+Theorem word_and_lsl_eq_0:
+  w2n w1 < 2 ** n ==> w1 && w2 << n = 0w
+Proof
+  Cases_on`w1` \\ Cases_on`w2`
+  \\ rw[word_and_n2w, word_lsl_n2w]
+  \\ drule BITWISE_AND_SHIFT_EQ_0
+  \\ simp[]
+QED
+
 (* -------------------------------------------------------------------------
     Theorems about word_{to,from}_bin_list
    ------------------------------------------------------------------------- *)
