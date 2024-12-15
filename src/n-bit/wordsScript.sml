@@ -5156,6 +5156,48 @@ Proof
   \\ simp[]
 QED
 
+Theorem word_from_bin_list_not:
+  LENGTH ls = dimindex(:'a) /\ EVERY ($> 2) ls ==>
+  ~word_from_bin_list ls : 'a word =
+  word_from_bin_list (MAP (\x. 1 - x) ls)
+Proof
+  rw[word_from_bin_list_def, l2w_def]
+  \\ rewrite_tac[word_1comp_n2w]
+  \\ Cases_on`l2n 2 ls = dimword(:'a) - 1`
+  >- (
+    mp_then Any (qspec_then`ls`mp_tac)
+      l2n_max (SIMP_CONV(srw_ss())[]``0 < 2n`` |> EQT_ELIM)
+    \\ `dimword (:'a) = 2 ** LENGTH ls` by simp[dimword_def]
+    \\ first_assum (SUBST_ALL_TAC o SYM)
+    \\ pop_assum kall_tac
+    \\ pop_assum SUBST_ALL_TAC
+    \\ simp[ADD1, ZERO_LT_dimword]
+    \\ strip_tac
+    \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+    \\ `A = 0` suffices_by rw[]
+    \\ rw[Abbr`A`, l2n_eq_0]
+    \\ gs[listTheory.EVERY_MAP, listTheory.EVERY_MEM]
+    \\ rw[]
+    \\ `2 > x` by simp[]
+    \\ `x < 2` by simp[]
+    \\ pop_assum mp_tac
+    \\ `x MOD 2 = 1` by simp[]
+    \\ rewrite_tac[NUMERAL_LESS_THM]
+    \\ strip_tac \\ fs[] )
+  \\ `SUC (l2n 2 ls) < dimword(:'a)`
+  by (
+    qspecl_then[`ls`,`2`]mp_tac l2n_lt
+    \\ gs[dimword_def] )
+  \\ qmatch_goalsub_abbrev_tac`_ = n2w $ l2n 2 l1`
+  \\ `l2n 2 l1 < dimword(:'a)`
+  by (
+    qspecl_then[`l1`,`2`]mp_tac l2n_lt
+    \\ gs[dimword_def, Abbr`l1`] )
+  \\ simp[Abbr`l1`]
+  \\ drule l2n_2_neg
+  \\ simp[dimword_def]
+QED
+
 (* -------------------------------------------------------------------------
     Create a few word sizes
    ------------------------------------------------------------------------- *)
