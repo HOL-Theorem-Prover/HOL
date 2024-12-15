@@ -422,4 +422,20 @@ val l2n_11 = Q.store_thm("l2n_11",
         \\ NTAC 2 (POP_ASSUM SUBST1_TAC)
         \\ FULL_SIMP_TAC (srw_ss()) [l2n_APPEND]]);
 
+Theorem BITWISE_l2n_2:
+  LENGTH l1 = LENGTH l2 ==>
+  BITWISE (LENGTH l1) op (l2n 2 l1) (l2n 2 l2) =
+  l2n 2 (MAP2 (\x y. bool_to_bit $ op (ODD x) (ODD y)) l1 l2)
+Proof
+  Q.ID_SPEC_TAC`l2`
+  \\ Induct_on`l1`
+  \\ simp[BITWISE_EVAL]
+  >- simp[BITWISE_def, l2n_def]
+  \\ Q.X_GEN_TAC`b`
+  \\ Cases \\ fs[BITWISE_EVAL]
+  \\ strip_tac
+  \\ fs[l2n_def]
+  \\ simp[SBIT_def, ODD_ADD, ODD_MULT, GSYM bool_to_bit_def]
+QED
+
 val _ = export_theory()

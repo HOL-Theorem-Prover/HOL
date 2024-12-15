@@ -381,6 +381,12 @@ val NOT_MOD2_LEM2 = Q.store_thm("NOT_MOD2_LEM2",
 val ODD_MOD2_LEM = Q.store_thm("ODD_MOD2_LEM",
    `!n. ODD n = ((n MOD 2) = 1)`, RW_TAC arith_ss [ODD_EVEN, MOD_2])
 
+Theorem ODD_MOD_2[simp]:
+  ODD (x MOD 2) = ODD x
+Proof
+  RW_TAC arith_ss [ODD_MOD2_LEM]
+QED
+
 (* ------------------------------------------------------------------------- *)
 
 val DIV_MULT_THM = Q.store_thm("DIV_MULT_THM",

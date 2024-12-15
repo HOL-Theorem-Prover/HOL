@@ -2967,6 +2967,19 @@ Proof
  >> PROVE_TAC []
 QED
 
+Theorem MOD_DIV_SAME[simp]:
+  0 < y ==> x MOD y DIV y = 0
+Proof
+  strip_tac
+  \\ Cases_on`y=1` \\ fs[DIV_1, MOD_1]
+  \\ `1 < y` by (
+    simp[ONE, SUC_LT]
+    \\ Cases_on`y` \\ fs[NOT_LESS_0, ONE]
+    \\ drule (NOT_LT_ZERO_EQ_ZERO |> GSYM |> SPEC_ALL |> iffRL |> CONTRAPOS)
+    \\ rw[] )
+  \\ rw[DIV_EQ_0, MOD_LESS]
+QED
+
 (* ------------------------------------------------------------------------ *)
 (* Some miscellaneous lemmas (from transc.ml)                               *)
 (* ------------------------------------------------------------------------ *)

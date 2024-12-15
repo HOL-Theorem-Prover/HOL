@@ -5125,6 +5125,37 @@ Proof
   \\ simp[rich_listTheory.LASTN_DROP, rich_listTheory.BUTLASTN_TAKE]
 QED
 
+Theorem word_from_bin_list_and:
+  LENGTH l1 = dimindex(:'a) /\
+  LENGTH l2 = dimindex(:'a)
+  ==>
+  word_from_bin_list l1 && word_from_bin_list l2 : 'a word =
+  word_from_bin_list (MAP2 (\x y. bool_to_bit $ (ODD x /\ ODD y)) l1 l2)
+Proof
+  rw[word_from_bin_list_def, l2w_def, word_and_n2w]
+  \\ qmatch_goalsub_abbrev_tac`BITWISE n`
+  \\ qmatch_goalsub_abbrev_tac`a MOD d = b MOD d`
+  \\ `d = 2 ** n`
+  by simp[Abbr`d`, Abbr`n`, dimword_def]
+  \\ `a < d` by (
+    pop_assum SUBST1_TAC
+    \\ qunabbrev_tac`a`
+    \\ irule BITWISE_LT_2EXP )
+  \\ `b < d`
+  by (
+    qunabbrev_tac`b`
+    \\ qmatch_goalsub_abbrev_tac`l2n 2 ls`
+    \\ `n = LENGTH ls` by simp[Abbr`ls`]
+    \\ qunabbrev_tac`d`
+    \\ qpat_x_assum`_ = 2 ** _`SUBST1_TAC
+    \\ pop_assum SUBST1_TAC
+    \\ irule l2n_lt \\ simp[] )
+  \\ simp[]
+  \\ unabbrev_all_tac
+  \\ DEP_REWRITE_TAC[GSYM BITWISE_l2n_2]
+  \\ simp[]
+QED
+
 (* -------------------------------------------------------------------------
     Create a few word sizes
    ------------------------------------------------------------------------- *)
