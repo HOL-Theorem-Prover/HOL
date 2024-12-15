@@ -60,8 +60,8 @@ Definition factc_def:
           (Num 1)
           (cv_mul n (factc (cv_sub n (Num 1))))
 Termination
-  WF_REL_TAC `measure cv_size_alt`
-  \\ Cases \\ simp [cv_size_alt_def, CaseEq "bool", c2b_def]
+  WF_REL_TAC `measure cv_size`
+  \\ Cases \\ simp [CaseEq "bool", c2b_def]
 End
 
 Theorem factc_is_fact:
@@ -109,9 +109,9 @@ Definition isprimec_aux_def:
                  (Num 0))
           (Num 1)
 Termination
-  WF_REL_TAC `measure (\(dvs,n). cv_size_alt (cv_sub n dvs))`
+  WF_REL_TAC `measure (\(dvs,n). cv_size (cv_sub n dvs))`
   \\ Induct \\ simp [PULL_EXISTS, c2b_def]
-  \\ Cases_on `dvs` \\ gs [cv_size_alt_def] \\ rw [] \\ gs []
+  \\ Cases_on `dvs` \\ gs [] \\ rw [] \\ gs []
 End
 
 Definition isprimec_def:
@@ -135,8 +135,8 @@ Definition primes_uptoc_def:
                         (primes_uptoc (cv_sub upto (Num 1))))
                  (Num 0))
 Termination
-  WF_REL_TAC `measure cv_size_alt`
-  \\ conj_tac \\ Cases \\ simp [cv_size_alt_def, c2b_def]
+  WF_REL_TAC `measure cv_size`
+  \\ conj_tac \\ Cases \\ simp [cv_size_def, c2b_def]
 End
 
 (* Here are the corresponding HOL functions, and a proof they compute values

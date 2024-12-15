@@ -47,9 +47,11 @@ sig
   val X_FUN_EQ_CONV          : tmquote -> conv
   val X_SKOLEM_CONV          : tmquote -> conv
   val store_thm              : string * tmquote * tactic -> thm
+  val store_thm_at           : DB.thm_src_location -> string * tmquote * tactic -> thm
   val prove                  : tmquote * tactic -> thm
   val INST                   : (tmquote, tmquote) subst -> thm -> thm
   val new_definition         : string * tmquote -> thm
+  val new_definition_at      : DB.thm_src_location -> string * tmquote -> thm
   val new_infixl_definition  : string * tmquote * int -> thm
   val new_infixr_definition  : string * tmquote * int -> thm
   val INST_TYPE              : (tyquote, tyquote) subst -> thm -> thm

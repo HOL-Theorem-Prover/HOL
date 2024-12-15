@@ -8,7 +8,7 @@
  ---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib bossLib
-open numRingLib;
+open EVAL_numRingLib;
 
 val _ = new_theory "ringExamples"
 

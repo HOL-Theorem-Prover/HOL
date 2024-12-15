@@ -1,19 +1,20 @@
-(* this is an -*- sml -*- file *)
-open HolKernel Parse boolLib
+(* ========================================================================== *)
+(* FILE    : generic_termsScript.sml                                          *)
+(* TITLE   : Theory of generic terms with binders                             *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(* ========================================================================== *)
 
-open bossLib binderLib
-open basic_swapTheory nomsetTheory
-open pred_setTheory
-open BasicProvers
-open quotientLib
-open boolSimps
+open HolKernel Parse boolLib bossLib;
 
-fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
-fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
+open BasicProvers boolSimps pred_setTheory listTheory quotientLib;
+open relationTheory;
 
-val _ = new_theory "generic_terms"
+open binderLib basic_swapTheory nomsetTheory;
 
-val _ = computeLib.auto_import_definitions := false
+val _ = new_theory "generic_terms";
+
+val _ = computeLib.auto_import_definitions := false;
 
 val _ = Datatype `
   pregterm = var string 'v
@@ -97,11 +98,16 @@ val ptpml_listpm = store_thm(
   Induct >> fsrw_tac[][ptpm_raw] >>
   srw_tac [][raw_ptpm_def]);
 
-val ptpm_thm = Save_Thm(
-  "ptpm_thm",
+(* |- (!p s vv. ptpm p (var s vv) = var (lswapstr p s) vv) /\
+      !p v bv bndts unbndts.
+        ptpm p (lam v bv bndts unbndts) =
+        lam (lswapstr p v) bv (listpm pt_pmact p bndts)
+          (listpm pt_pmact p unbndts)
+ *)
+Theorem ptpm_thm[simp] =
   raw_ptpm_def |> CONJUNCTS |> (fn l => List.take(l, 2))
                |> map (SUBS (map GSYM (CONJUNCTS ptpm_raw))) |> LIST_CONJ
-               |> REWRITE_RULE [ptpml_listpm] );
+               |> REWRITE_RULE [ptpml_listpm]
 
 val ptpm_fv = store_thm(
   "ptpm_fv",
@@ -118,11 +124,12 @@ val allatoms_def = Define`
   (allatomsl (t::ts) = allatoms t ∪ allatomsl ts)
 `;
 
-val allatoms_finite = Store_Thm(
-  "allatoms_finite",
-  ``(∀t:(α,β)pregterm. FINITE (allatoms t)) ∧
-    (∀l:(α,β)pregterm list. FINITE (allatomsl l))``,
-  ho_match_mp_tac oldind >> srw_tac [][allatoms_def]);
+Theorem allatoms_finite[simp] :
+    (∀t:(α,β)pregterm. FINITE (allatoms t)) ∧
+    (∀l:(α,β)pregterm list. FINITE (allatomsl l))
+Proof
+  ho_match_mp_tac oldind >> srw_tac [][allatoms_def]
+QED
 
 val allatoms_supports = store_thm(
   "allatoms_supports",
@@ -170,7 +177,7 @@ val (aeq_rules, aeq_ind, aeq_cases) = Hol_reln`
   (!u v bv z bndts1 bndts2 us1 us2.
       aeql us1 us2 ∧
       aeql (ptpml [(u,z)] bndts1) (ptpml [(v,z)] bndts2) ∧
-      z ∉ allatomsl bndts1 ∧ z ∉  allatomsl bndts2 ∧ z ≠ u ∧ z ≠ v ⇒
+      z ∉ allatomsl bndts1 ∧ z ∉ allatomsl bndts2 ∧ z ≠ u ∧ z ≠ v ⇒
       aeq (lam u bv bndts1 us1) (lam v bv bndts2 us2)) ∧
   aeql [] [] ∧
   (∀h1 h2 t1 t2. aeq h1 h2 ∧ aeql t1 t2 ⇒ aeql (h1::t1) (h2::t2))
@@ -243,16 +250,17 @@ val aeq_fv = store_thm(
     ]
   ]);
 
-val aeq_refl = Store_Thm(
-  "aeq_refl",
-  ``(∀t:(α,β)pregterm. aeq t t) ∧ (∀l:(α,β)pregterm list. aeql l l)``,
+Theorem aeq_refl[simp] :
+    (∀t:(α,β)pregterm. aeq t t) ∧ (∀l:(α,β)pregterm list. aeql l l)
+Proof
   ho_match_mp_tac oldind >> asm_simp_tac (srw_ss())[aeq_rules] >>
   REPEAT gen_tac >> strip_tac >>
   MAP_EVERY Q.X_GEN_TAC [`b`, `s`] >>
   MATCH_MP_TAC aeq_lam >>
   SRW_TAC [][aeql_ptpm_eqn, ptpml_listpm] THEN
   Q.SPEC_THEN `s INSERT allatomsl l` MP_TAC NEW_def THEN SRW_TAC [][] THEN
-  METIS_TAC [ pmact_sing_inv]);
+  METIS_TAC [pmact_sing_inv]
+QED
 
 val aeq_sym = store_thm(
   "aeq_sym",
@@ -351,7 +359,6 @@ val aeq_trans = store_thm(
     metis_tac [aeq_rules]
   ]);
 
-open relationTheory
 val aeq_equiv = store_thm(
   "aeq_equiv",
   ``!t1 t2. aeq t1 t2 = (aeq t1 = aeq t2)``,
@@ -567,7 +574,7 @@ val [GFV_thm0, gfvl_thm, GFV_raw_gtpm, simple_induction0,
 
 val simple_induction = save_thm(
   "simple_induction",
-  REWRITE_RULE [listTheory.EVERY_MEM] simple_induction0)
+  REWRITE_RULE [EVERY_MEM] simple_induction0)
 
 val _ = overload_on("gt_pmact",``mk_pmact raw_gtpm``);
 val _ = overload_on("gtpm",``pmact gt_pmact``);
@@ -587,9 +594,6 @@ val MAP_EQ1 = prove(
   ``(MAP f l = l) ⇔ ∀x. MEM x l ⇒ (f x = x)``,
   Induct_on `l` >> srw_tac [][DISJ_IMP_THM, FORALL_AND_THM]);
 
-val MEM_MAP = listTheory.MEM_MAP
-val EL_MAP = listTheory.EL_MAP
-val MEM_EL = listTheory.MEM_EL
 val IN_gfvl = prove(
   ``x ∈ gfvl ts ⇔ ∃t. MEM t ts ∧ x ∈ GFV t``,
   Induct_on `ts` >> srw_tac [][gfvl_thm] >> metis_tac []);
@@ -597,7 +601,7 @@ val IN_gfvl = prove(
 val GFV_apart = prove(
   ``∀t x y. x ∈ GFV t ∧ y ∉ GFV t ⇒ gtpm [(x,y)] t ≠ t``,
   ho_match_mp_tac simple_induction >>
-  srw_tac [][GFV_thm0, gtpm_thm, gterm_11, listTheory.MEM_MAP,
+  srw_tac [][GFV_thm0, gtpm_thm, gterm_11, MEM_MAP,
              MAP_EQ1, GLAM_eq_thm0, IN_gfvl] >>
   srw_tac [][] >> metis_tac[swapstr_def]);
 
@@ -667,10 +671,6 @@ val list_rel_split = prove(
       LIST_REL P l1 l2 ∧ LIST_REL Q l1 l2``,
   qid_spec_tac `l2` >> Induct_on `l1` >> Cases_on `l2` >> srw_tac [][] >>
   metis_tac []);
-
-val LIST_REL_ind = listTheory.LIST_REL_ind
-val LIST_REL_rules = listTheory.LIST_REL_rules
-val LIST_REL_EL_EQN = listTheory.LIST_REL_EL_EQN
 
 (* generic sub-type of a generic term, where one is only allowed to look
    at the data attached to the GLAM and the number of arguments in the lists *)
@@ -1098,7 +1098,7 @@ qabbrev_tac `GGSIZE = gtmsize (GLAM s' bv ts' us)` >>
         (listpm (fn_pmact ppm dpm) [(a,b)] r2 =
          MAP (tmrec A ppm vf lf) (gtpml [(a,b)] us)))`
   by (asm_simp_tac (srw_ss() ++ DNF_ss)
-                   [listpm_tMAP, listTheory.MAP_EQ_f, MEM_listpm_EXISTS,
+                   [listpm_tMAP, MAP_EQ_f, MEM_listpm_EXISTS,
                     Abbr`r1`, Abbr`r2`, fnpm_def, FUN_EQ_THM,
                     pmact_sing_inv]) >>
 map_every qx_gen_tac [`s''`, `bv'`, `ts''`, `us'`] >>
@@ -1149,7 +1149,7 @@ qabbrev_tac `xyus = gtpml [(x,y)] us` >>
        qmatch_abbrev_tac
         `LIST_REL RR TS (MAP f1 TS) ==> LIST_REL RR TS (MAP f2 TS)` >>
        qsuff_tac `MAP f1 TS = MAP f2 TS` >- srw_tac [][] >>
-       srw_tac [][listTheory.MAP_EQ_f] >>
+       srw_tac [][MAP_EQ_f] >>
        map_every qunabbrev_tac [`f1`, `f2`, `TS`] >>
        asm_simp_tac (srw_ss()) [FUN_EQ_THM, fnpm_def] >> gen_tac >>
        ih_commute_tac lhs >> asm_simp_tac (srw_ss()) [pmact_sing_inv] >>
@@ -1181,7 +1181,7 @@ reverse conj_tac >- (
   qsuff_tac `(X1 = X2) ∧ (Y1 = Y2)` >- srw_tac [][] >>
   map_every qunabbrev_tac [`X1`, `X2`, `Y1`, `Y2`] >>
   asm_simp_tac (srw_ss() ++ DNF_ss)
-               [listTheory.MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM, fnpm_def] >>
+               [MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM, fnpm_def] >>
   srw_tac [][] >> (* two similar goals here-on *)
   ih_commute_tac lhs >>
   asm_simp_tac (srw_ss()) [gtmsize_gtpm, pmact_sing_inv] >>
@@ -1201,7 +1201,7 @@ qmatch_abbrev_tac `lf u bv X1 Y1 = lf u bv X2 Y2` >>
 qsuff_tac `(X1 = X2) ∧ (Y1 = Y2)` >- srw_tac [][] >>
 map_every qunabbrev_tac [`X1`,`X2`,`Y1`, `Y2`] >>
 conj_tac >> (* splits in two *)
-srw_tac [][listTheory.MAP_EQ_f, FUN_EQ_THM, fnpm_def] >>
+srw_tac [][MAP_EQ_f, FUN_EQ_THM, fnpm_def] >>
 ih_commute_tac rhs >>
 asm_simp_tac (srw_ss()) [pmact_sing_inv, gtmsize_gtpm] >>
 disch_then (match_mp_tac o GSYM) >>
@@ -1321,7 +1321,7 @@ qx_gen_tac `u` >> strip_tac >>
  LIST_REL (relsupp A dpm ppm) us (MAP (tmrec A ppm vf lf) us)` by (
   assume_tac fresh_I >>
   fsrw_tac [DNF_ss][MEM_EL] >>
-  srw_tac [][LIST_REL_EL_EQN,listTheory.EL_MAP, relsupp_def] >>
+  srw_tac [][LIST_REL_EL_EQN, EL_MAP, relsupp_def] >>
   fsrw_tac [][AND_IMP_INTRO] >>
   first_x_assum match_mp_tac >>
   fsrw_tac [][] >>
@@ -1333,7 +1333,7 @@ qsuff_tac `MAP (tmrec A ppm vf lf) (gtpml [(u,v)] ts) =
            listpm (fn_pmact ppm dpm) [(u,v)] (MAP (tmrec A ppm vf lf) ts)`
   >- (disch_then SUBST1_TAC >> fsrw_tac [][NEWFCB_def] >>
       first_x_assum match_mp_tac >> fsrw_tac [][perm_supp] >> metis_tac []) >>
-srw_tac [][listpm_tMAP, listTheory.MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM,
+srw_tac [][listpm_tMAP, MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM,
            fnpm_def] >>
 srw_tac [][pmact_sing_inv] >>
 assume_tac (eqv_I |> Q.GEN `t`

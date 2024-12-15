@@ -778,8 +778,12 @@ val LAPPEND = new_specification
 val _ = export_rewrites ["LAPPEND"]
 val _ = computeLib.add_persistent_funs ["LAPPEND"]
 
+(* NOTE: The last char is Latin Subscript Small Letter L (U+2097) *)
 val _ = set_mapped_fixity{fixity = Infixl 480, term_name = "LAPPEND",
                           tok = "++ₗ"};                               (* UOK *)
+
+val _ = TeX_notation { hol = "LAPPEND",
+                       TeX = ("\\HOLTokenDoublePlusL", 1) };
 
 (* properties of map and append *)
 
@@ -2183,6 +2187,18 @@ val LNTH_NONE_MONO = Q.store_thm ("LNTH_NONE_MONO",
   `~(m < z)` by metis_tac[LTAKE_LNTH_EL,optionTheory.NOT_SOME_NONE] >>
   rw[] >> decide_tac);
 
+(* cf. This is just another version of lnth_some_down_closed *)
+Theorem LNTH_IS_SOME_MONO :
+   !m n l.
+     IS_SOME (LNTH n l) /\ m <= n
+   ==>
+     IS_SOME (LNTH m l)
+Proof
+    rw [IS_SOME_EXISTS]
+ >> MATCH_MP_TAC lnth_some_down_closed
+ >> qexistsl_tac [‘x’, ‘n’] >> rw []
+QED
+
 (* ------------------------------------------------------------------------ *)
 (* Turning a stream-like linear order into a lazy list                      *)
 (* ------------------------------------------------------------------------ *)
@@ -2929,6 +2945,13 @@ Proof
   llist_CASE_TAC ``x:'a llist`` >> rw[]
 QED
 
+Theorem LLIST_CASE_ELIM:
+  !f'. f'(llist_CASE (x:'a llist) v f) <=>
+  x = [||] /\ f' v \/ ?a l. x = a:::l /\ f'(f a l)
+Proof
+  llist_CASE_TAC ``x:'a llist`` >> rw[FUN_EQ_THM]
+QED
+
 Theorem LLIST_DISTINCT:
   !a1 a0. [||] <> a0:::a1
 Proof
@@ -2969,6 +2992,7 @@ val _ = TypeBase.export
      case_def = llist_CASE_compute,
      case_cong = LLIST_CASE_CONG,
      case_eq = LLIST_CASE_EQ,
+     case_elim = LLIST_CASE_ELIM,
      nchotomy = llist_CASES,
      size = NONE,
      encode = NONE,
@@ -3933,7 +3957,13 @@ Proof
   simp[LFLATTEN_EQ_NIL, every_LGENLIST]
 QED
 
-
-
+Theorem LPREFIX_LAPPEND_fromList:
+  (LPREFIX (LAPPEND (fromList l) l1) (LAPPEND (fromList l) l2))
+  <=> (LPREFIX l1 l2)
+Proof
+  fs[LPREFIX_APPEND]>>
+  fs[Once LAPPEND_ASSOC]>>
+  fs[LFINITE_fromList,LAPPEND11_FINITE1]>>metis_tac[]
+QED
 
 val _ = export_theory();

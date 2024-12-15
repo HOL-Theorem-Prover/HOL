@@ -1,0 +1,33 @@
+\DOC
+
+\TYPE {NoAsms : thm}
+
+\SYNOPSIS
+A special marker theorem that makes the simplifier ignore a goal's assumptions
+
+\KEYWORDS
+simplification
+
+\DESCRIBE
+The {NoAsms} theorem is a special value that causes a variety of
+simplification tactics (those ultimately based on
+{simpLib.ASM_SIMP_TAC}) to ignore a goal's assumptions, even if those
+tactics might otherwise attempt to use those assumptions when
+modifying the goal. 
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+> simp[] ([“x = T”], “p ∧ x”);
+val it = ([([“x ⇔ T”], “p”)], fn): goal list * validation
+
+> simp[NoAsms] ([“x = T”], “p ∧ x”);
+val it = ([([“x ⇔ T”], “p ∧ x”)], fn): goal list * validation
+}
+
+\SEEALSO
+bossLib.IgnAsm.
+
+\ENDDOC

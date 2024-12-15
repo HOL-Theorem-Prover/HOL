@@ -392,7 +392,7 @@ val _ = temp_overload_on ("unit4", ``\( u1:unit,u2:unit,u3:unit,u4:unit). constT
 
 (* mmu_arm_next *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 
 (*val _ = temp_overload_on (parmonadsyntax.monad_bind, ``seqT``);*)

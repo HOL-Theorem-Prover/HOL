@@ -17,7 +17,7 @@ open HolKernel boolLib bossLib Parse;
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 val _ = wordsLib.prefer_word();
 
 val ERR = Feedback.mk_HOL_ERR "arm_evalLib";

@@ -5,7 +5,7 @@ val _ = ParseExtras.temp_loose_equality()
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory;
 
-open addressTheory tailrecLib tailrecTheory;
+open addressTheory mc_tailrecLib tailrecTheory;
 open cheney_gcTheory cheney_allocTheory arm_cheney_gcTheory;
 
 

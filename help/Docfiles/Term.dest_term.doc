@@ -12,7 +12,7 @@ A call to {dest_term t} returns a value of type {lambda}, which has
 SML definition
 {
    datatype lambda =
-      VAR of string * term
+      VAR of string * hol_type
     | CONST of {Name:string, Thy:string, Ty:hol_type}
     | COMB of term * term
     | LAMB of term * term

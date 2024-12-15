@@ -18,7 +18,7 @@ val _ = set_grammar_ancestry [
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 val _ = Globals.show_assums := false;
 val _ = Globals.max_print_depth := 50;
@@ -239,6 +239,7 @@ val asl_cexecute_tac = asl_execute_tac_helper CEVAL;
 
 (***** types *****)
 fun b64 ty = INST_TYPE [ty |-> ``:64``];
+fun b32 ty = INST_TYPE [ty |-> ``:32``];
 
 val one = ``:unit``;
 

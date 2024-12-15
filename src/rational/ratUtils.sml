@@ -3,16 +3,7 @@ struct
 
 open HolKernel boolLib Parse bossLib;
 
-(* interactive mode
-app load ["pairTheory", "pairLib",
-        "integerTheory", "intLib",
-        "jbUtils"];
-*)
-
-open
-        pairTheory pairLib
-        integerTheory intLib
-        jbUtils;
+open pairTheory pairLib integerTheory intLib
 
 structure Parse =
 struct
@@ -39,9 +30,11 @@ fun dest_rat (t1:term) =
           (top_rator, [top_rand])
         else
           let
-            val (this_op, this_first, this_second) = dest_binop_triple t1
+            val (f, xs) = strip_comb t1
+            val _ = length xs = 2 orelse
+                    raise mk_HOL_ERR "ratUtils" "dest_rat" "Not binary"
           in
-            (this_op, [this_first, this_second])
+            (f, xs)
           end
     end
   else (* t1 must be a variable *)
@@ -61,7 +54,11 @@ fun dest_rat (t1:term) =
  *--------------------------------------------------------------------------*)
 
 fun extract_rat (t1:term) =
-        extract_terms_of_type ``:rat`` t1;
+    let val s =
+            find_maximal_terms (fn t => type_of t = “:rat” orelse is_abs t) t1
+    in
+      s |> HOLset.filter (not o is_abs) |> HOLset.listItems
+    end
 
 
 (* ---------- test cases ---------- *

@@ -5,13 +5,14 @@
  * are also defined.                                                         *
  *---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib QLib tautLib mesonLib metisLib
-     simpLib boolSimps BasicProvers;
+open HolKernel Parse boolLib BasicProvers;
+
+open QLib tautLib mesonLib metisLib simpLib boolSimps combinTheory;
 
 (* mention satTheory to work around dependency-analysis flaw in Holmake;
    satTheory is a dependency of BasicProvers, but without explicit mention
    here, Holmake will not rebuild relationTheory when satTheory changes. *)
-local open combinTheory satTheory in end;
+local open satTheory in end;
 
 val _ = new_theory "relation";
 
@@ -182,10 +183,24 @@ Proof REWRITE_TAC [transitive_def] THEN MESON_TAC [RTC_RTC]
 QED
 Theorem transitive_RTC = RTC_TRANSITIVE
 
+val RTC_TRANS = store_thm(
+  "RTC_TRANS",
+  ``R^* x y /\ R^* y z ==> R^* x z``,
+  METIS_TAC[RTC_TRANSITIVE, transitive_def]);
+
 Theorem RTC_REFLEXIVE[simp]: !R:'a->'a->bool. reflexive (RTC R)
 Proof MESON_TAC [reflexive_def, RTC_RULES]
 QED
 Theorem reflexive_RTC = RTC_REFLEXIVE
+
+Theorem RTC_BRACKETS_RTC_EQN:
+  (!x y. R1 x y ==> R2 x y) /\ (!x y. R2 x y ==> RTC R1 x y) ==>
+  (RTC R2 = RTC R1)
+Proof
+  strip_tac >> SIMP_TAC bool_ss [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] >>
+  conj_tac >> Induct_on ‘RTC’ >> simp_tac (srw_ss()) [] >>
+  METIS_TAC[RTC_RTC, RTC_RULES]
+QED
 
 Theorem RC_REFLEXIVE[simp]:
   !R:'a->'a->bool. reflexive (RC R)
@@ -503,6 +518,18 @@ val TC_RC_EQNS = store_thm(
     Q.ID_SPEC_TAC `v` THEN Q.ID_SPEC_TAC `u` THEN
     HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [TC_RULES, RC_DEF]
   ]);
+
+Theorem TC_LEFT1_I:
+  !x y z. R x y /\ TC R y z ==> TC R x z
+Proof
+  METIS_TAC[TC_RULES]
+QED
+
+Theorem TC_RIGHT1_I:
+  !x y z. TC R x y /\ R y z ==> TC R x z
+Proof
+  METIS_TAC[TC_RULES]
+QED
 
 (* can get inductive principles for properties which do not hold generally
   but only for particular cases of x or y in RTC R x y *)
@@ -1098,6 +1125,31 @@ val WF_antisymmetric = store_thm(
   METIS_TAC [TC_RULES]);
 
 (*---------------------------------------------------------------------------
+ * If `f x` remains unchanged in relation `R'` and `f x` always satisfy `P`,
+ * and there is a mapping `g` such that `R' x y ==> R (f x) (g x) (g y)`, then
+ * to prove `WF R'`, it is sufficient to prove that `P (f x) ==> WF (R (f x))`.
+ *---------------------------------------------------------------------------*)
+Theorem WF_PULL:
+  !P f R g R'.
+    (!x. P (f x) ==> WF (R (f x))) /\
+    (!x y. R' x y ==> P (f x) /\ f x = f y /\ R (f x) (g x) (g y)) ==>
+    WF R'
+Proof
+  rw_tac(srw_ss())[WF_DEF] >>
+  Cases_on `?w'. P (f w') /\ B w'`
+  >- (
+    POP_ASSUM STRIP_ASSUME_TAC >>
+    FIRST_X_ASSUM drule >>
+    Q.PAT_X_ASSUM `B w` (K ALL_TAC) >>
+    DISCH_THEN $ Q.SPEC_THEN
+      `\x. ?y. x = g y /\ B y /\ P (f y) /\ f y = f w'`
+      (ASSUME_TAC o SIMP_RULE bool_ss [PULL_EXISTS]) >>
+    FIRST_X_ASSUM (dxrule_then dxrule) >>
+    METIS_TAC[]) >>
+  METIS_TAC[]
+QED
+
+(*---------------------------------------------------------------------------
  * Inverse image theorem: mapping into a wellfounded relation gives a
  * derived well founded relation. A "size" mapping, like "length" for
  * lists is such a relation.
@@ -1172,11 +1224,19 @@ val _ = export_rewrites ["transitive_inv_image"]
  * Gordon's HOL development of the primitive recursion theorem.
  *---------------------------------------------------------------------------*)
 
-val RESTRICT_DEF =
-Q.new_definition
-("RESTRICT_DEF",
-   `RESTRICT (f:'a->'b) R (x:'a) = \y:'a. if R y x then f y else ARB`);
+(* NOTE: Now RESTRICT is based on the new combinTheory.RESTRICTION
 
+   :('a -> 'b) -> ('a -> 'a -> bool) -> 'a -> 'a -> 'b
+ *)
+val RESTRICT = new_definition
+  ("RESTRICT", “RESTRICT (f :'a->'b) R (x :'a) = RESTRICTION (\y. R y x) f”);
+
+(* The old definition of RESTRICT now becomes a theorem *)
+Theorem RESTRICT_DEF :
+    !(f :'a->'b) R x. RESTRICT f R x = \y. if R y x then f y else ARB
+Proof
+    SRW_TAC[][RESTRICT, FUN_EQ_THM, RESTRICTION, IN_DEF]
+QED
 
 (*---------------------------------------------------------------------------
  * Obvious, but crucially useful. Unary case. Handling the n-ary case might
@@ -2349,5 +2409,53 @@ val Newmans_lemma = store_thm(
   `?z2. RTC R z z2 /\ RTC R x0 z2` by PROVE_TAC [] THEN
   `TC R x x0` by PROVE_TAC [EXTEND_RTC_TC] THEN
   PROVE_TAC [RTC_RTC]);
+
+Theorem RUNION_RTC_MONOTONE :
+    !R1 x y. RTC R1 x y ==> !R2. RTC (R1 RUNION R2) x y
+Proof
+  GEN_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN
+  PROVE_TAC [RTC_RULES, RUNION]
+QED
+
+Theorem RTC_RUNION :
+    !R1 R2. RTC (RTC R1 RUNION RTC R2) = RTC (R1 RUNION R2)
+Proof
+  REPEAT GEN_TAC THEN
+  Q_TAC SUFF_TAC
+    `(!x y. RTC (RTC R1 RUNION RTC R2) x y ==> RTC (R1 RUNION R2) x y) /\
+     (!x y. RTC (R1 RUNION R2) x y ==> RTC (RTC R1 RUNION RTC R2) x y)` THEN1
+    (SIMP_TAC (srw_ss()) [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] THEN
+     PROVE_TAC []) THEN CONJ_TAC
+  THEN HO_MATCH_MP_TAC RTC_INDUCT THENL [
+    CONJ_TAC THENL [
+      PROVE_TAC [RTC_RULES],
+      MAP_EVERY Q.X_GEN_TAC [`x`,`y`,`z`] THEN REPEAT STRIP_TAC THEN
+      `RTC R1 x y \/ RTC R2 x y` by PROVE_TAC [RUNION] THEN
+      PROVE_TAC [RUNION_RTC_MONOTONE, RTC_RTC, RUNION_COMM]
+    ],
+    CONJ_TAC THENL [
+      PROVE_TAC [RTC_RULES],
+      MAP_EVERY Q.X_GEN_TAC [`x`,`y`,`z`] THEN REPEAT STRIP_TAC THEN
+      `R1 x y \/ R2 x y` by PROVE_TAC [RUNION] THEN
+      PROVE_TAC [RTC_RULES, RUNION]
+    ]
+  ]
+QED
+
+(* ‘RINSERT’ inserts one more element into an existing relation *)
+val RINSERT = new_definition ("RINSERT",
+   “RINSERT R a b = \x y. R x y \/ (x = a /\ y = b)”);
+
+Theorem RINSERT_IDEM :
+    !R a b. (RINSERT R a b) a b
+Proof
+    SRW_TAC [] [RINSERT]
+QED
+
+Theorem RSUBSET_RINSERT :
+    !R a b. R RSUBSET (RINSERT R a b)
+Proof
+    SRW_TAC [] [RSUBSET, RINSERT]
+QED
 
 val _ = export_theory();

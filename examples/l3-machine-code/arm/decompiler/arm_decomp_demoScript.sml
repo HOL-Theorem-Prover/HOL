@@ -283,7 +283,6 @@ val (PID_C2_cert, PID_C2_def) = core_decompilerLib.core_decompile "PID_C2" `
     edc37a00             (* vstr       s15, [r3]                *)
     e8bd0010             (* pop        {r4}                     *)`;
 
-val _ = save_thm("PID_C2_def",PID_C2_def);
 val _ = save_thm("PID_C2_cert",PID_C2_cert);
 
 val () = export_theory()

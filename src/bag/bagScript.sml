@@ -2061,8 +2061,8 @@ Theorem FINITE_SUB_BAGS:
 Proof
   ho_match_mp_tac STRONG_FINITE_BAG_INDUCT
   \\ rw[]
-  \\ qmatch_asmsub_abbrev_tac`FINITE sb`
-  \\ qmatch_goalsub_abbrev_tac`FINITE eb`
+  \\ qmatch_assum_abbrev_tac`FINITE sb`
+  \\ qmatch_abbrev_tac`FINITE eb`
   \\ `eb = sb UNION (IMAGE (BAG_INSERT e) sb)` suffices_by simp[]
   \\ simp[SET_EQ_SUBSET, SUBSET_DEF, Abbr`sb`, Abbr`eb`, PULL_EXISTS]
   \\ reverse conj_tac
@@ -2073,7 +2073,6 @@ Proof
   \\ imp_res_tac BAG_DECOMPOSE \\ rw[]
   \\ fs[SUB_BAG_INSERT]
 QED
-
 
 (* ----------------------------------------------------------------------
     A "fold"-like operation for bags, ITBAG, by analogy with the set
@@ -3324,7 +3323,66 @@ Theorem unibag_SUB_BAG:
 Proof rw[unibag_thm,SUB_BAG,BAG_IN,BAG_INN]
 QED
 
+Theorem BAG_OF_SET_IMAGE_INJ:
+  !f s.
+  (!x y. x IN s /\ y IN s /\ f x = f y ==> x = y) ==>
+  BAG_OF_SET (IMAGE f s) = BAG_IMAGE f (BAG_OF_SET s)
+Proof
+  rw[FUN_EQ_THM, BAG_OF_SET, BAG_IMAGE_DEF]
+  \\ rw[] \\ gs[GSYM BAG_OF_SET]
+  \\ gs[BAG_FILTER_BAG_OF_SET]
+  \\ simp[BAG_CARD_BAG_OF_SET]
+  >- (
+    irule SING_CARD_1
+    \\ simp[SING_TEST, GSYM pred_setTheory.MEMBER_NOT_EMPTY]
+    \\ metis_tac[] )
+  >- simp[EXTENSION]
+  \\ qmatch_assum_abbrev_tac`INFINITE z`
+  \\ `z = {}` suffices_by metis_tac[FINITE_EMPTY]
+  \\ simp[EXTENSION, Abbr`z`]
+QED
 
+(* Theorem: x IN SET_OF_BAG b <=> b x <> 0 *)
+(* Proof: by definitions *)
+val IN_SET_OF_BAG_NONZERO = store_thm(
+  "IN_SET_OF_BAG_NONZERO",
+  ``!b x. x IN SET_OF_BAG b <=> b x <> 0``,
+  rw[SET_OF_BAG, BAG_IN, BAG_INN]);
+
+(* Theorem: FINITE_BAG b ==> (!e. BAG_IN e b ==> (b e = 1)) ==> (BAG_CARD b = CARD (SET_OF_BAG b)) *)
+(* Proof:
+   By finite induction on b.
+   Base: BAG_CARD {||} = CARD (SET_OF_BAG {||})
+           BAG_CARD {||}
+         = 0                       by BAG_CARD_EMPTY
+         = CARD {}                 by CARD_EMPTY
+         = CARD (SET_OF_BAG {||})  by SET_OF_BAG_EQ_EMPTY
+   Step: (!e. BAG_IN e b ==> (b e = 1)) ==> (BAG_CARD b = CARD (SET_OF_BAG b)) ==>
+         BAG_CARD (BAG_INSERT e b) = CARD (SET_OF_BAG (BAG_INSERT e b))
+         After simplication by BAG_CARD_THM, BAG_INSERT, SET_OF_BAG_INSERT, BAG_IN, BAG_INN,
+         This comes down to:
+         (1) b e >= 1 ==> BAG_CARD b + 1 = CARD (SET_OF_BAG b)
+             In this case, b e + 1 = 1     by implication.
+             Thus b e = 0                  by arithmetic
+             This contradicts b e >= 1.
+         (2) ~(b e >= 1) ==> BAG_CARD b = CARD (SET_OF_BAG b)
+             In this case, !e'. b e' >= 1 ==> (b e' = 1)   by implication
+             Applying induction hypothesis, the result follows.
+*)
+val BAG_CARD_EQ_CARD_SET_OF_BAG = store_thm(
+  "BAG_CARD_EQ_CARD_SET_OF_BAG",
+  ``!b:'a bag. FINITE_BAG b ==> (!e. BAG_IN e b ==> (b e = 1)) ==> (BAG_CARD b = CARD (SET_OF_BAG b))``,
+  Induct_on `FINITE_BAG` >>
+  rpt strip_tac >-
+  rw[] >>
+  rw[BAG_CARD_THM] >>
+  fs[BAG_INSERT, SET_OF_BAG_INSERT] >>
+  fs[BAG_IN, BAG_INN, ADD1] >>
+  rw[] >| [
+    `b e + 1 = 1` by metis_tac[] >>
+    decide_tac,
+    metis_tac[]
+  ]);
 
 (*---------------------------------------------------------------------------*)
 (* Add multiset type to the TypeBase.                                        *)

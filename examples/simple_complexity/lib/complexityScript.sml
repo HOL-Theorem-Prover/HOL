@@ -12,22 +12,19 @@ val _ = new_theory "complexity";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "bitsizeTheory"; *)
-open bitsizeTheory;
-open logrootTheory; (* for LOG_1 *)
-
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-open logPowerTheory; (* for ulog_pos *)
-
 (* open dependent theories *)
-open prim_recTheory pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-open listTheory rich_listTheory;;
+open prim_recTheory pred_setTheory arithmeticTheory dividesTheory gcdTheory
+     listTheory rich_listTheory logrootTheory numberTheory combinatoricsTheory
+     primeTheory;
 
+open bitsizeTheory;
+
+val _ = temp_overload_on("SQ", ``\n. n * n``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Computational Complexity Documentation                                    *)
@@ -1003,11 +1000,6 @@ val poly_O_sum = store_thm(
   "poly_O_sum",
   ``!n. (poly_O n) |+| (poly_O n) = poly_O n``,
   rw[big_O_sum_self]);
-
-(* Derive this theorem *)
-val poly_O_sum = save_thm("poly_O_sum",
-    big_O_sum_self |> SPEC ``POLY n`` |> GEN_ALL);
-(* val poly_O_sum = |- !n. poly_O n |+| poly_O n = poly_O n: thm *)
 
 (* Theorem: poly_O n |+| poly_O m SUBSET poly_O (MAX n m) *)
 (* Proof:

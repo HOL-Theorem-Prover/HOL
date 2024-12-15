@@ -3,9 +3,10 @@
 (* binder.                                                                   *)
 (*===========================================================================*)
 
-open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib
-     combinTheory prim_recTheory arithmeticTheory BasicProvers
-     optionTheory
+open HolKernel boolLib Parse BasicProvers;
+
+open Prim_rec simpLib boolSimps metisLib combinTheory optionTheory sumTheory
+     prim_recTheory arithmeticTheory relationTheory;
 
 val _ = new_theory "while";
 
@@ -17,6 +18,7 @@ in
 end
 
 fun INDUCT_TAC g = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g;
+fun simp ths = asm_simp_tac (srw_ss()) ths
 
 val cond_lemma = prove(
   ``(if ~p then q else r) = (if p then r else q)``,
@@ -95,7 +97,7 @@ val WHILE_INDUCTION = Q.store_thm
  `!B C R.
      WF R /\ (!s. B s ==> R (C s) s)
      ==> !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v`,
- METIS_TAC [relationTheory.WF_INDUCTION_THM]);
+ METIS_TAC [WF_INDUCTION_THM]);
 
 
 val HOARE_SPEC_DEF = new_definition
@@ -265,7 +267,7 @@ val OLEAST_EQNS = store_thm(
     ((OLEAST n. F) = NONE) /\
     ((OLEAST n. T) = SOME 0)``,
   REPEAT STRIP_TAC THEN DEEP_INTRO_TAC OLEAST_INTRO THEN SRW_TAC [][] THEN
-  METIS_TAC [arithmeticTheory.NOT_ZERO_LT_ZERO]);
+  METIS_TAC [NOT_ZERO_LT_ZERO]);
 val _ = export_rewrites ["OLEAST_EQNS"]
 
 val OLEAST_EQ_NONE = Q.store_thm(
@@ -422,9 +424,103 @@ val OWHILE_IND = store_thm(
   THEN IMP_RES_TAC prim_recTheory.LESS_MONO THEN RES_TAC
   THEN FULL_SIMP_TAC bool_ss [FUNPOW]);
 
+Theorem WHILE_FUNPOW:
+  (?n. ~P (FUNPOW f n s))
+  ==> WHILE P f s = FUNPOW f (LEAST n. ~P (FUNPOW f n s)) s
+Proof
+  strip_tac
+  \\ `~!n. P (FUNPOW f n s)` by PROVE_TAC[]
+  \\ `?x. OWHILE P f s = SOME x` by PROVE_TAC[OWHILE_EQ_NONE, option_CASES]
+  \\ irule OWHILE_WHILE
+  \\ rewrite_tac[OWHILE_def]
+  \\ IF_CASES_TAC
+  \\ FULL_SIMP_TAC(srw_ss())[]
+QED
+
+Theorem TAILREC_EXISTS[local]:
+  ?tailrec.
+    !(f:'a -> 'a + 'b) (x:'a).
+      tailrec f x =
+      case f x of
+      | INL z => tailrec f z
+      | INR y => y
+Proof
+  EXISTS_TAC “λ(f:'a -> 'a + 'b) x. OUTR (f (WHILE (ISL o f) (OUTL o f) x))”
+  THEN rpt strip_tac
+  THEN CONV_TAC (DEPTH_CONV BETA_CONV)
+  THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [WHILE]))
+  THEN REWRITE_TAC [combinTheory.o_DEF]
+  THEN CONV_TAC (DEPTH_CONV BETA_CONV)
+  THEN Cases_on ‘f x’
+  THEN ASM_REWRITE_TAC [TypeBase.case_def_of “:'a + 'b”,sumTheory.ISL]
+  THEN CONV_TAC (DEPTH_CONV BETA_CONV)
+  THEN ASM_REWRITE_TAC [sumTheory.OUTL,sumTheory.OUTR]
+QED
+
+val TAILREC = new_specification("TAILREC",["TAILREC"],TAILREC_EXISTS);
+
+val TAILCALL_def = new_definition(
+  "TAILCALL_def",
+  “TAILCALL f k x = case f x of INL cv => k cv | INR tv => tv”);
+
+Theorem TAILREC_TAILCALL:
+  TAILREC f x = TAILCALL f (TAILREC f) x
+Proof
+  ONCE_REWRITE_TAC[TAILCALL_def, TAILREC] >>
+  REWRITE_TAC[]
+QED
+
+(* This theorem can be used to eliminate guards on tail-recursive equations.
+   The recursion equation you don't like is the last assumption:
+     f has an equation but the whole thing is guarded by the annoying P
+   But if the other conditions hold, you can use TAILREC c everywhere you
+   were using f instead.
+   The other two conditions spell out:
+      1. guard actually holds on all recursive calls;
+      2. guard guarantees that something gets smaller with every call (this is
+         super general version of this; an easier version is below)
+*)
+Theorem TAILREC_GUARD_ELIMINATION:
+  (!x y. P x /\ c x = INL y ==> P y) /\
+  (!x. P x ==>
+       ?R. WFP R x /\ !y z. P y /\ R^* y x /\ c y = INL z ==> R z y) /\
+  (!x. P x ==> f x = TAILCALL c f x) ==>
+  (!x. P x ==> f x = TAILREC c x)
+Proof
+  rpt strip_tac >>
+  Q.PAT_X_ASSUM ‘!x. P x ==> ?R. _’ (drule_then strip_assume_tac) >>
+  Q.PAT_X_ASSUM ‘WFP R x’ (fn th => ntac 2 (pop_assum mp_tac) >> mp_tac th) >>
+  Q.ID_SPEC_TAC ‘x’ >>
+  ho_match_mp_tac WFP_STRONG_INDUCT >> rpt strip_tac >>
+  simp[TAILCALL_def] >>
+  Cases_on ‘c x’ >> simp[]
+  >- (simp[TAILREC_TAILCALL] >> simp[TAILCALL_def] >>
+      first_x_assum irule >> simp[] >>
+      rpt strip_tac >> first_assum irule >> simp[]
+      >- METIS_TAC[] >>
+      irule (cj 2 RTC_RULES_RIGHT1) >>
+      first_assum $ irule_at (Pat ‘RTC _ _ _’) >> first_assum irule >>
+      simp[]) >>
+  simp[TAILREC_TAILCALL] >> simp[TAILCALL_def]
+QED
+
+Theorem TAILREC_GUARD_ELIMINATION_SIMPLER:
+  WF R /\
+  (!x y. P x /\ c x = INL y ==> P y) /\
+  (!x y. P x /\ c x = INL y ==> R y x) /\
+  (!x. P x ==> f x = TAILCALL c f x) ==>
+  (!x. P x ==> f x = TAILREC c x)
+Proof
+  strip_tac >> MATCH_MP_TAC TAILREC_GUARD_ELIMINATION >> rpt strip_tac >>
+  simp[]
+  >- METIS_TAC[] >>
+  Q.EXISTS_TAC ‘R’ >> full_simp_tac (srw_ss())[WF_EQ_WFP]
+QED
+
 val _ =
  computeLib.add_persistent_funs
    ["WHILE"
-   ,"LEAST_DEF"];
+   ,"LEAST_DEF"
+   ,"TAILREC"];
 
 val _ = export_theory();

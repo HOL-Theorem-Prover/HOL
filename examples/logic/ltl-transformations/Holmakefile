@@ -1,2 +1,1 @@
-INCLUDES = ../../temporal_deep/src/deep_embeddings ../ltl \
-           $(HOLDIR)/src/temporal/src
+INCLUDES = ../temporal_deep/src/deep_embeddings ../ltl ../temporal/src

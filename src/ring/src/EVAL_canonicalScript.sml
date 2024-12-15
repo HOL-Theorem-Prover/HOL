@@ -6,6 +6,9 @@ val _ = new_theory "EVAL_canonical";
 
 open ternaryComparisonsTheory EVAL_quoteTheory
 
+val _ = app (fn s => temp_overload_on (s, Parse.Term [QUOTE ("semi_ring_"^s)]))
+        ["SR0","SR1","SRP","SRM"];
+
 val sr = “sr:'a semi_ring”;
 val _ = set_assums [ “is_semi_ring ^sr” ];
 val _ = app (C add_impl_param [sr]) ["SR0","SR1","SRP","SRM"];

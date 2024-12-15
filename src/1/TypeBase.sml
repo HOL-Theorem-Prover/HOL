@@ -70,6 +70,11 @@ val bool_info =
            case_def = boolTheory.bool_case_thm,
            nchotomy = boolTheory.BOOL_CASES_AX
          },
+       case_elim =
+         Prim_rec.prove_case_ho_elim_thm{
+           case_def = boolTheory.bool_case_thm,
+           nchotomy = boolTheory.BOOL_CASES_AX
+         },
        case_cong = boolTheory.COND_CONG,
        distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
        nchotomy = boolTheory.BOOL_CASES_AX,
@@ -234,6 +239,29 @@ fun case_rand_of ty = let
 
 val case_pred_disj_of = Prim_rec.prove_case_ho_elim_thm o type_info_of
 val case_pred_imp_of = Prim_rec.prove_case_ho_imp_thm o type_info_of
+
+fun CasePred' tyinfo =
+    let
+      val id = mk_abs(mk_var ("x", bool), mk_var ("x", bool))
+    in
+      case_elim_of tyinfo
+      |> Drule.ISPEC id
+      |> Conv.CONV_RULE (Conv.LHS_CONV Thm.BETA_CONV)
+    end
+
+val CasePred = CasePred' o tyi_from_name
+
+val CasePreds = Drule.LIST_CONJ o map CasePred
+fun AllCasePreds() =
+  let
+    fun foldthis(ty, tyi, acc) =
+      case Lib.total CasePred' tyi of
+          NONE => acc
+        | SOME th => if aconv (concl acc) boolSyntax.T then th
+                     else CONJ th acc
+  in
+    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
+  end
 
 (* ---------------------------------------------------------------------- *
  * Install case transformation function for parser                        *

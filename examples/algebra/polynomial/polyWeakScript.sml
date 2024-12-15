@@ -12,39 +12,19 @@ val _ = new_theory "polyWeak";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "polynomialTheory"; *)
-open monoidTheory gbagTheory groupTheory ringTheory polynomialTheory;
-
-(* Instances for examples. *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
-(* open ringInstancesTheory fieldInstancesTheory; *)
-
 (* open dependent theories *)
-open pairTheory bagTheory pred_setTheory listTheory arithmeticTheory;
-(* (* val _ = load "dividesTheory"; *) *)
-(* (* val _ = load "gcdTheory"; *) *)
-(* open dividesTheory gcdTheory; *)
+open pairTheory bagTheory pred_setTheory listTheory arithmeticTheory
+     numberTheory rich_listTheory combinatoricsTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperListTheory;
-open rich_listTheory; (* for MEM_LAST *)
+open monoidTheory groupTheory ringTheory polynomialTheory;
 
-(* val _ = load "sublistTheory"; *)
-open sublistTheory; (* for sublist_every *)
+(* Overload sublist by infix operator *)
+val _ = temp_overload_on ("<=", ``sublist``);
 
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Weak Polynomials Documentation                                            *)
@@ -1383,7 +1363,7 @@ val weak_cmult_snoc = store_thm(
 (* Proof:
      c o p
    = MAP (\x. c * x) p                          by weak_cmult_map
-   = MAP (\x. c * x) (SNOC (LAST p) (FRONT p))  by SNOC_LAST_FRONT
+   = MAP (\x. c * x) (SNOC (LAST p) (FRONT p))  by SNOC_LAST_FRONT'
    = SNOC (\x. c * x) (LAST p) (MAP (\x. c * x) (FRONT p))
                                                 by MAP_SNOC
    = SNOC (c * LAST p) (c o FRONT p)            by weak_cmult_map
@@ -1397,7 +1377,7 @@ val weak_cmult_front_last = store_thm(
   ntac 4 strip_tac >>
   qabbrev_tac `f = \(x:'a). c * x` >>
   `c o p = MAP f p` by rw[weak_cmult_map, Abbr`f`] >>
-  `_ = MAP f (SNOC (LAST p) (FRONT p))` by metis_tac[SNOC_LAST_FRONT, poly_zero] >>
+  `_ = MAP f (SNOC (LAST p) (FRONT p))` by metis_tac[SNOC_LAST_FRONT', poly_zero] >>
   `_ = SNOC (f (LAST p)) (MAP f (FRONT p))` by rw[MAP_SNOC] >>
   `_ = SNOC (c * LAST p) (c o FRONT p)` by rw[weak_cmult_map, weak_front_last, Abbr`f`] >>
   rw[]);
@@ -2541,7 +2521,7 @@ Proof
   Induct
   \\ rw[] \\ fs[]
   \\ simp[EL_weak_add]
-  \\ simp[helperSetTheory.COUNT_SUC_BY_SUC]
+  \\ simp[COUNT_SUC_BY_SUC]
   \\ simp[Once CROSS_INSERT_LEFT]
   \\ dep_rewrite.DEP_REWRITE_TAC[BAG_OF_SET_DISJOINT_UNION]
   \\ conj_tac >- simp[IN_DISJOINT]
@@ -3289,6 +3269,8 @@ val weak_mult_ladd = store_thm(
 
 val _ = export_rewrites ["weak_mult_radd", "weak_mult_ladd"];
 
+(* Theorem: p o (q || t) = p o q || p o t /\ (p || q) o t = p o t || q o t *)
+(* Proof: by weak_mult_radd and weak_mult_ladd. *)
 Theorem weak_mult_add =
     CONJ (weak_mult_radd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL)
          (weak_mult_ladd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL)
@@ -4235,7 +4217,7 @@ QED
    Note p <> []                         by poly_zero
    If part: lead p = #0 ==> chop (FRONT p) = chop p
       chop p
-    = chop (SNOC (LAST p) (FRONT p))    by SNOC_LAST_FRONT, p <> []
+    = chop (SNOC (LAST p) (FRONT p))    by SNOC_LAST_FRONT', p <> []
     = chop (SNOC (lead p) (FRONT p))    by poly_lead_alt], p <> |0|
     = chop (SNOC #0 (FRONT p))          by given
     = chop (FRONT p)                    by poly_chop_alt
@@ -4257,7 +4239,7 @@ val poly_chop_front = store_thm(
   rpt strip_tac >>
   `p <> []` by metis_tac[poly_zero] >>
   rw_tac std_ss[EQ_IMP_THM] >| [
-    `p = SNOC (LAST p) (FRONT p)` by rw[SNOC_LAST_FRONT] >>
+    `p = SNOC (LAST p) (FRONT p)` by rw[SNOC_LAST_FRONT'] >>
     `LAST p = lead p` by rw[GSYM poly_lead_alt] >>
     metis_tac[poly_chop_alt],
     spose_not_then strip_assume_tac >>
@@ -4620,38 +4602,6 @@ val poly_deg_weak_eq_zero = store_thm(
   metis_tac[poly_deg_def, weak_cons, LENGTH, LENGTH_NIL, list_CASES, poly_zero]);
 
 (* Theorem: deg (neg p) = deg p *)
-(* Proof: by induction on p, the lists are of the same length.
-   Base: weak [] ==> (deg (neg []) = deg [])
-      true since -[] = []  by weak_neg_of_zero.
-   Step: weak p ==> (deg (neg p) = deg p) ==> !h. weak (h::p) ==> (deg (neg (h::p)) = deg (h::p))
-   If p = [], deg - [h] = deg [-h] = 0 = deg [h],  by poly_deg_const
-   If P <> [],
-     deg (neg (h::p))
-   = PRE (LENGTH(-h::neg p))   by poly_deg_def, weak_neg_def
-   = PRE (SUC (LENGTH(neg p))  by LENGTH definition
-   = SUC (PRE (LENGTH(neg p))  by 0 < LENGTH p
-   = SUC (deg (neg p))         by poly_deg_def if p <> []
-   = SUC (deg p)               by induction hypothesis
-   = SUC (PRE (LENGTH p))
-   = PRE (SUC (LENGTH p))
-   = PRE (LENGTH (h::p))
-   = deg (h::p)
-*)
-val poly_deg_weak_neg = store_thm(
-  "poly_deg_weak_neg",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> (deg (neg p) = deg p)``,
-  strip_tac >>
-  strip_tac >>
-  Induct >-
-  rw[] >>
-  rw_tac std_ss[weak_cons, weak_neg_cons] >>
-  Cases_on `p = []` >>
-  rw[weak_neg_eq_of_zero, poly_deg_cons]);
-(* Q: why the last rw[weak_neg_eq_of_zero, poly_deg_cons] when poly_deg_cons is exported? *)
-
-(* Try to prove using bijection of list, or list MAP. *)
-
-(* Theorem: deg (neg p) = deg p *)
 (* Proof: due to lists are of the same length.
    If p = [], deg (neg []) = deg []
       true since neg [] = []  by weak_neg_of_zero.
@@ -4660,7 +4610,7 @@ val poly_deg_weak_neg = store_thm(
       deg (neg (h::t)) = LENGTH (-t)
       By weak_neg_map and LENGTH_MAP, they are equal.
 *)
-Theorem poly_deg_weak_neg[allow_rebind]:
+Theorem poly_deg_weak_neg:
   !r:'a ring. Ring r ==> !p. weak p ==> (deg (neg p) = deg p)
 Proof
   metis_tac[poly_deg_cons_length, weak_neg_map, LENGTH_MAP,

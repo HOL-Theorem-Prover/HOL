@@ -4,18 +4,20 @@ solvers with the HOL theorem prover.
 Files:
 
 COPYRIGHT               Copyright notice, license and disclaimer.
+CVC.sml                 Functions to invoke the cvc5 SMT solver.
 Holmakefile             Makefile for Holmake (to build selftest.exe).
 HolSmtLib.{sig,sml}     Entry point into HolSmtLib. Provides GENERIC_SMT_TAC
                         and derived tactics to call SMT solvers.
 HolSmtScript.sml        Various theorems for HolSmtLib.
 Library.sml             Common auxiliary functions, tracing.
 README                  This file.
-selftest.sml            Unit tests for HolSmtLib.
+selftest.sml            HolSmtLib tests.
 SmtLib_Logics.sml       SMT-LIB 2 logics.
 SmtLib_Parser.sml       Parsing of SMT-LIB 2 benchmarks.
 SmtLib_Theories.sml     SMT-LIB 2 theories.
 SmtLib.sml              Translation of HOL terms into SMT-LIB 2 format.
 SolverSpec.sml          Definition of SMT solvers.
+Unittest.{sig,sml}      Unit tests for HolSmtLib.
 Yices.sml               Functions to invoke the Yices SMT solver.
 Z3.sml                  Functions to invoke the Z3 SMT solver.
 Z3_ProformaThms.sml     Proforma theorems, used for Z3 proof reconstruction.

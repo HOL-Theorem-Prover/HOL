@@ -4,4 +4,4 @@
 [mosml]!examples/muddy
 [mosml]!examples/HolBdd
 [mosml]!!examples/HolCheck
-[mosml]!!examples/temporal_deep/src/model_check
+[mosml]!!examples/logic/temporal_deep/src/model_check

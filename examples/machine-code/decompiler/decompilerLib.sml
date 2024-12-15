@@ -12,7 +12,11 @@ struct
    val (Type, Term) = parse_from_grammars addressTheory.address_grammars
 end
 
-val new_definition = Definition.new_definition (* not boolSyntax! *)
+fun allow_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
+val new_definition =
+    allow_rebinds Definition.new_definition (* not boolSyntax! *)
+val save_thm = allow_rebinds save_thm
+
 
 (* -------------------------------------------------------------------------- *)
 (* Decompilation stages:                                                      *)
@@ -1636,13 +1640,13 @@ fun extract_function name th entry exit function_in_out = let
   val func_name = name
   val tm_option = NONE
   val (main_thm,main_def,pre_thm,pre_def) =
-         tailrecLib.tailrec_define_from_step func_name step_fun tm_option
+         mc_tailrecLib.tailrec_define_from_step func_name step_fun tm_option
   val finalise =
      CONV_RULE (REMOVE_TAGS_CONV THENC DEPTH_CONV (LET_EXPAND_POS_CONV))
   val main_thm = finalise main_thm
   val pre_thm = finalise pre_thm
   (* define temporary abbreviation *)
-  val silly_string = Theory.temp_binding "(( step ))"
+  val silly_string = Theory.temp_binding "((step))"
   val step_def =
      new_definition
         (silly_string,mk_eq(mk_var(silly_string,type_of step_fun),step_fun))

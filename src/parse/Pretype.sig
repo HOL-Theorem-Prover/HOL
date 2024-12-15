@@ -34,6 +34,7 @@ val fromType : Type.hol_type -> pretype
 val remove_made_links : pretype -> pretype in_env
 val replace_null_links :
     pretype -> (Env.t * string list, pretype, error) errormonad.t
+val typecheck_listener : (pretype -> Env.t -> unit) ref
 val clean : pretype -> Type.hol_type
 val toTypeM : pretype -> Type.hol_type in_env
 val toType : pretype -> Type.hol_type

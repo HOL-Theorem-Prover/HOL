@@ -242,6 +242,12 @@ Proof
   THEN ASM_REWRITE_TAC option_rws
 QED
 
+Theorem IS_SOME_EQ_NOT_NONE :
+  !x. IS_SOME x <=> x <> NONE
+Proof
+  REWRITE_TAC [GSYM NOT_IS_SOME_EQ_NONE]
+QED
+
 val IS_SOME_EQ_EXISTS = Q.prove(
  `!x. IS_SOME x = (?v. x = SOME v)`,
     GEN_TAC
@@ -677,6 +683,13 @@ QED
 Theorem OPTREL_SOME:
   (!R x y. OPTREL R (SOME x) y <=> ?z. (y = SOME z) /\ R x z) /\
   (!R x y. OPTREL R x (SOME y) <=> ?z. (x = SOME z) /\ R z y)
+Proof
+  SRW_TAC[][OPTREL_def]
+QED
+
+Theorem OPTREL_NONE[simp]:
+  (OPTREL R NONE y <=> y = NONE) /\
+  (OPTREL R x NONE <=> x = NONE)
 Proof
   SRW_TAC[][OPTREL_def]
 QED

@@ -12,31 +12,17 @@ val _ = new_theory "ffBasic";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* val _ = load "polyFieldModuloTheory"; *)
+open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory
+     combinatoricsTheory;
+
 open polyFieldModuloTheory;
 
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* (* val _ = load "fieldTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open monoidOrderTheory groupOrderTheory;
-open monoidMapTheory groupMapTheory ringMapTheory fieldMapTheory;
 
-(* val _ = load "fieldInstancesTheory"; *)
-open groupInstancesTheory ringInstancesTheory;
+open fieldMapTheory;
 open fieldInstancesTheory; (* for GF_property, in prime field homomorphism *)
 
 (* Note:
@@ -55,7 +41,6 @@ val _ = overload_on ("**", ``(PolyRing r).prod.exp``);
 
 Therefore, keep this file clean by not loading any polynomials.
 *)
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Basic Documentation                                          *)

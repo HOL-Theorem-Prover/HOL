@@ -15,7 +15,7 @@ open realTheory;
 open real_sigmaTheory;
 open transcTheory;
 open boolListsTheory;
-
+local open numposrepTheory in end
 val _ = new_theory "kraft_ineq";
 
 val _ = intLib.deprecate_int()
@@ -360,12 +360,12 @@ Proof
   Cases_on‘y=e’>> fsr[] >> RES_TAC >> fsr[]
 QED
 
-Theorem maxr_set_def = new_specification(
+val maxr_set_def = new_specification(
   "maxr_set_def",["maxr_set"],
   SIMP_RULE(srw_ss() )[SKOLEM_THM,GSYM RIGHT_EXISTS_IMP_THM] max_rs_lemma
   );
 
-Theorem minr_set_def = new_specification(
+val minr_set_def = new_specification(
   "minr_set_def",["minr_set"],
   SIMP_RULE(srw_ss() )[SKOLEM_THM,GSYM RIGHT_EXISTS_IMP_THM] min_rs_lemma);
 
@@ -948,7 +948,7 @@ Proof
 QED
 
 Definition TN2BL_def:
-  TN2BL n = MAP ((=) 1) $ REVERSE $ num_to_bin_list n
+  TN2BL n = MAP ((=) 1) $ num_to_bin_list n
 End
 
 Definition padL_def:

@@ -12,63 +12,28 @@ val _ = new_theory "polyGCD";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "ringUnitTheory"; (* this overloads |/ as r*.inv *) *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* val _ = load "fieldTheory"; (* see poly_roots_mult, this overload |/ as (r.prod excluding #0).inv *) *)
-open monoidTheory groupTheory ringTheory ringUnitTheory fieldTheory;
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory gcdsetTheory;
 
-open subgroupTheory;
-open monoidOrderTheory groupOrderTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* val _ = load "polyDividesTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyDivisionTheory polyDividesTheory;
-
-(* val _ = load "polyRootTheory"; *)
 open polyRootTheory;
 open polyMonicTheory;
-
-(* val _ = load "polyFieldModuloTheory"; *)
 open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
 open polyIrreducibleTheory;
-
-open ringDividesTheory;
-
-(* val _ = load "polyEvalTheory"; *)
 open polyEvalTheory;
-
-(* val _ = load "polyProductTheory"; *)
 open polyProductTheory;
-
-(* val _ = load "polyDerivativeTheory"; *)
 open polyDerivativeTheory;
 
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-(* val _ = load "helperFunctionTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* GCD and LCM of Polynomials Documentation                                  *)
@@ -1022,71 +987,6 @@ val poly_unity_gcd_identity = store_thm(
       ]
     ]
   ]);
-
-(* Theorem: Field r ==> !n m. (unity n) pdivides (unity m) <=> n divides m *)
-(* Proof:
-   If n = 0,
-      Then X ** n - |1| = |1| - |1| = |0|              by poly_exp_0
-        so X ** m - |1| = |0|                          by poly_zero_divides
-      Giving     X ** m = |1|                          by poly_sub_eq_zero
-        thus          m = 0                            by poly_X_exp_eq_one
-         and     0 divides 0                           by ZERO_DIVIDES
-
-   If n <> 0, 0 < n.
-   If part: (X ** n - |1|) pdivides (X ** m - |1|) ==> n divides m
-          (X ** n - |1|) pdivides (X ** m - |1|)
-      <=> pgcd (X ** n - |1|) (X ** m - |1|) ~~ (X ** n - |1|)           by poly_divides_iff_gcd_fix
-      But pgcd (X ** n - |1|) (X ** m - |1|) ~~ X ** (gcd n m) - |1|     by poly_unity_gcd_identity
-      Hence X ** n - |1| ~~ X ** (gcd n m) - |1|       by poly_unit_eq_sym, poly_unit_eq_trans
-      Note gcd n m <> 0 since n <> 0                   by GCD_EQ_0
-      Since monic (X ** n - |1|)                       by poly_monic_X_exp_n_sub_c, 0 < n
-        and monic (X ** (gcd n m) - |1|)               by poly_monic_X_exp_n_sub_c, 0 < gcd n m
-         so X ** n - |1| = X ** (gcd n m) - |1|        by poly_unit_eq_monic_eq
-       Thus       X ** n = X ** (gcd n m)              by poly_sub_add
-      Giving           n = gcd n m                     by poly_X_exp_eq, #1 <> #0
-         or            n divides m                     by divides_iff_gcd_fix
-   Only-if part: n divides m ==> (X ** n - |1|) pdivides (X ** m - |1|)
-      Since n divides m ==> gcd n m = n                by divides_iff_gcd_fix
-      Hence pgcd (X ** n - |1|) (X ** m - |1|)
-         ~~ X ** (gcd n m) - |1|                       by poly_unity_gcd_identity
-          = X ** n - |1|                               by above
-         or (X ** n - |1|) pdivides (X ** m - |1|)     by poly_divides_iff_gcd_fix
-*)
-val poly_unity_divisibility = store_thm(
-  "poly_unity_divisibility",
-  ``!r:'a field. Field r ==> !n m. (unity n) pdivides (unity m) <=> n divides m``,
-  rpt strip_tac >>
-  `Ring r /\ #1 <> #0` by rw[] >>
-  `poly X /\ !k. poly (X ** k) /\ poly (X ** k - |1|)` by rw[] >>
-  Cases_on `n = 0` >| [
-    rw_tac std_ss[poly_exp_0, poly_sub_eq, poly_one_poly, EQ_IMP_THM] >| [
-      `X ** m - |1| = |0|` by rw[GSYM poly_zero_divides] >>
-      `X ** m = |1|` by metis_tac[poly_sub_eq_zero, poly_one_poly] >>
-      metis_tac[poly_X_exp_eq_one, ZERO_DIVIDES],
-      `m = 0` by rw[GSYM ZERO_DIVIDES] >>
-      `X ** m - |1| = |0|` by rw[poly_exp_0, poly_sub_eq] >>
-      rw[poly_zero_divides]
-    ],
-    rw_tac std_ss[EQ_IMP_THM] >| [
-      `gcd n m <> 0` by rw[GCD_EQ_0] >>
-      `0 < n /\ 0 < gcd n m` by decide_tac >>
-      `pgcd (X ** n - |1|) (X ** m - |1|) ~~ (X ** n - |1|)` by rw[GSYM poly_divides_iff_gcd_fix] >>
-      `pgcd (X ** n - |1|) (X ** m - |1|) ~~ X ** (gcd n m) - |1|` by rw[poly_unity_gcd_identity] >>
-      `X ** n - |1| ~~ X ** (gcd n m) - |1|` by metis_tac[poly_unit_eq_sym, poly_unit_eq_trans, poly_gcd_poly] >>
-      `|1| = ###1` by rw[poly_ring_sum_1] >>
-      `monic (X ** n - |1|)` by metis_tac[poly_monic_X_exp_n_sub_c] >>
-      `monic (X ** (gcd n m) - |1|)` by metis_tac[poly_monic_X_exp_n_sub_c] >>
-      `X ** n - |1| = X ** (gcd n m) - |1|` by metis_tac[poly_unit_eq_monic_eq] >>
-      `X ** n = X ** (gcd n m)` by metis_tac[poly_sub_add, poly_one_poly] >>
-      `n = gcd n m` by metis_tac[poly_X_exp_eq] >>
-      rw[divides_iff_gcd_fix],
-      `n = gcd n m` by rw[GSYM divides_iff_gcd_fix] >>
-      `pgcd (X ** n - |1|) (X ** m - |1|) ~~ X ** n - |1|` by metis_tac[poly_unity_gcd_identity] >>
-      rw[poly_divides_iff_gcd_fix]
-    ]
-  ]);
-
-(* This is a direct proof, relaxing to Ring r /\ #1 <> #0 *)
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !n m. (unity n) pdivides (unity m) <=> n divides m *)
 (* Proof:

@@ -64,11 +64,11 @@ end;
 
 (* Define the set of states reachable from any CCS process *)
 val NODES_def = Define `
-    NODES (p :('a, 'b) CCS) = {(q :('a, 'b) CCS) | Reach p q}`;
+    NODES (p :'a CCS) = {(q :'a CCS) | Reach p q}`;
 
 (* Finite-state CCS *)
 val finite_state_def = Define `
-    finite_state (p :('a, 'b) CCS) = FINITE (NODES p)`;
+    finite_state (p :'a CCS) = FINITE (NODES p)`;
 
 val Reach_NODES = store_thm (
    "Reach_NODES", ``!p q. Reach p q ==> q IN (NODES p)``,
@@ -323,7 +323,7 @@ val LRTC_APPEND_CASES = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val _ = overload_on ("epsilon", ``[] :'b Action list``);
+val _ = overload_on ("epsilon", ``[] :'a Action list``);
 
 val _ = Unicode.unicode_version { u = UTF8.chr 0x03B5, tmnm = "epsilon"};
 val _ = TeX_notation { hol = "epsilon",
@@ -332,7 +332,7 @@ val _ = TeX_notation { hol = "epsilon",
 val TRACE_def = Define `TRACE = LRTC TRANS`;
 
 val _ = type_abbrev_pp ("trace",
-      ``:('a, 'b) CCS -> 'b Action list -> ('a, 'b) CCS -> bool``);
+      ``:'a CCS -> 'a Action list -> 'a CCS -> bool``);
 
 local
     val trans = (REWRITE_RULE [SYM TRACE_def]) o (ISPEC ``TRANS``);
@@ -437,18 +437,18 @@ val WEAK_TRANS_TRACE = store_thm (
  >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []);
 
 val NO_LABEL_def = Define `
-    NO_LABEL (L :'b Action list) = ~?l. MEM (label l) L`;
+    NO_LABEL (L :'a Action list) = ~?l. MEM (label l) L`;
 
 val NO_LABEL_cases = store_thm (
    "NO_LABEL_cases",
-  ``!(x :'b Action) xs. NO_LABEL (x :: xs) = (x = tau) /\ NO_LABEL xs``,
+  ``!(x :'a Action) xs. NO_LABEL (x :: xs) = (x = tau) /\ NO_LABEL xs``,
     REWRITE_TAC [NO_LABEL_def]
  >> rpt GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [MEM] \\
       Cases_on `x` >> SIMP_TAC list_ss [Action_distinct_label, IS_LABEL_def] \\
       Q.EXISTS_TAC `x'` >> DISJ1_TAC \\
-      ACCEPT_TAC (REFL ``x' :'b Label``),
+      ACCEPT_TAC (REFL ``x' :'a Label``),
       (* goal 2 (of 2) *)
       REWRITE_TAC [MEM] \\
       rpt STRIP_TAC >- rfs [Action_distinct_label] \\
@@ -498,14 +498,14 @@ val EPS_AND_TRACE = store_thm (
 
 (* u is the unique Label in L, learnt from Robert Beers *)
 val UNIQUE_LABEL_def = Define `
-    UNIQUE_LABEL u (L :'b Action list) =
+    UNIQUE_LABEL u (L :'a Action list) =
         ?L1 L2. (L1 ++ [u] ++ L2 = L) /\ NO_LABEL L1 /\ NO_LABEL L2`;
 
 (* old equivalent definition without using NO_LABEL *)
 val UNIQUE_LABEL_DEF = store_thm (
    "UNIQUE_LABEL_DEF",
-  ``!u (L :'b Action list).
-      UNIQUE_LABEL u (L :'b Action list) =
+  ``!u (L :'a Action list).
+      UNIQUE_LABEL u (L :'a Action list) =
         ?L1 L2. (L1 ++ [u] ++ L2 = L) /\ ~?l. MEM (label l) L1 \/ MEM (label l) L2``,
     Know `!L1 L2. (?l. MEM (label l) L1 \/ MEM (label l) L2) =
                   (?l. MEM (label l) L1) \/ (?l. MEM (label l) L2)`
@@ -527,7 +527,7 @@ val UNIQUE_LABEL_DEF = store_thm (
 
 val UNIQUE_LABEL_IMP_MEM = store_thm (
    "UNIQUE_LABEL_IMP_MEM",
-  ``!u (L :'b Action list). UNIQUE_LABEL u L ==> MEM u L``,
+  ``!u (L :'a Action list). UNIQUE_LABEL u L ==> MEM u L``,
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_LABEL_DEF]
  >> rpt STRIP_TAC
@@ -537,7 +537,7 @@ val UNIQUE_LABEL_IMP_MEM = store_thm (
 
 val UNIQUE_LABEL_NOT_NULL = store_thm (
    "UNIQUE_LABEL_NOT_NULL",
-  ``!u (L :'b Action list). UNIQUE_LABEL u L ==> ~NULL L``,
+  ``!u (L :'a Action list). UNIQUE_LABEL u L ==> ~NULL L``,
     rpt GEN_TAC >> STRIP_TAC
  >> IMP_RES_TAC UNIQUE_LABEL_IMP_MEM
  >> POP_ASSUM MP_TAC
@@ -546,7 +546,7 @@ val UNIQUE_LABEL_NOT_NULL = store_thm (
 
 val UNIQUE_LABEL_cases1 = store_thm (
    "UNIQUE_LABEL_cases1",
-  ``!(l :'b Label) xs. UNIQUE_LABEL (label l) (tau :: xs) = UNIQUE_LABEL (label l) xs``,
+  ``!(l :'a Label) xs. UNIQUE_LABEL (label l) (tau :: xs) = UNIQUE_LABEL (label l) xs``,
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_LABEL_DEF]
  >> EQ_TAC >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -560,7 +560,7 @@ val UNIQUE_LABEL_cases1 = store_thm (
 
 val UNIQUE_LABEL_cases2 = store_thm (
    "UNIQUE_LABEL_cases2",
-  ``!(l :'b Label) l' xs. UNIQUE_LABEL (label l) (label l' :: xs) = (l = l') /\ NO_LABEL xs``,
+  ``!(l :'a Label) l' xs. UNIQUE_LABEL (label l) (label l' :: xs) <=> (l = l') /\ NO_LABEL xs``,
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_LABEL_DEF]
  >> EQ_TAC >> rpt STRIP_TAC (* 3 sub-goals here *)

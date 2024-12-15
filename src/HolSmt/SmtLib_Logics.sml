@@ -35,38 +35,49 @@ local
 
   val BV_extension_tmdict = Library.dict_from_list [
     (* bit-vector constants *)
-    ("_", one_zero (fn token =>
+    ("_", one_zero (fn token => fn n_tm =>
       if String.isPrefix "bv" token then
         let
           val decimal = String.extract (token, 2, NONE)
-          val value = Arbnum.fromString decimal
+          val value = Library.parse_arbnum decimal
+          val n = Arbint.toNat (intSyntax.int_of_term n_tm)
         in
-          Lib.curry wordsSyntax.mk_word value
+          Lib.curry wordsSyntax.mk_word value n
         end
      else
         raise ERR "<BV_extension_dict._>" "not a bit-vector constant")),
+    ("bvand", leftassoc wordsSyntax.mk_word_and),
+    ("bvor", leftassoc wordsSyntax.mk_word_or),
+    ("bvadd", leftassoc wordsSyntax.mk_word_add),
+    ("bvmul", leftassoc wordsSyntax.mk_word_mul),
     ("bvnand", K_zero_two wordsSyntax.mk_word_nand),
     ("bvnor", K_zero_two wordsSyntax.mk_word_nor),
-    ("bvxor", K_zero_two wordsSyntax.mk_word_xor),
-    ("bvxnor", K_zero_two wordsSyntax.mk_word_xnor),
+    ("bvxor", leftassoc wordsSyntax.mk_word_xor),
+    ("bvxnor", leftassoc wordsSyntax.mk_word_xnor),
     ("bvcomp", K_zero_two wordsSyntax.mk_word_compare),
     ("bvsub", K_zero_two wordsSyntax.mk_word_sub),
     ("bvsdiv", K_zero_two wordsSyntax.mk_word_quot),
+    ("bvsdiv_i", K_zero_two wordsSyntax.mk_word_quot),
     ("bvsrem", K_zero_two wordsSyntax.mk_word_rem),
     ("bvsmod", K_zero_two integer_wordSyntax.mk_word_smod),
     ("bvashr", K_zero_two wordsSyntax.mk_word_asr_bv),
     ("repeat", K_one_one
-      (Lib.curry wordsSyntax.mk_word_replicate o numSyntax.mk_numeral)),
+      (Lib.curry wordsSyntax.mk_word_replicate o numSyntax.mk_numeral o
+      Arbint.toNat o intSyntax.int_of_term)),
     ("zero_extend", K_one_one (fn n => fn t => wordsSyntax.mk_w2w (t,
       fcpLib.index_type
-        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
+        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t),
+          Arbint.toNat (intSyntax.int_of_term n)))))),
     ("sign_extend", K_one_one (fn n => fn t => wordsSyntax.mk_sw2sw (t,
       fcpLib.index_type
-        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t), n))))),
+        (Arbnum.+ (fcpLib.index_to_num (wordsSyntax.dim_of t),
+          Arbint.toNat (intSyntax.int_of_term n)))))),
     ("rotate_left", K_one_one
-      (Lib.C (Lib.curry wordsSyntax.mk_word_rol) o numSyntax.mk_numeral)),
+      (Lib.C (Lib.curry wordsSyntax.mk_word_rol) o numSyntax.mk_numeral o
+        Arbint.toNat o intSyntax.int_of_term)),
     ("rotate_right", K_one_one
-      (Lib.C (Lib.curry wordsSyntax.mk_word_ror) o numSyntax.mk_numeral)),
+      (Lib.C (Lib.curry wordsSyntax.mk_word_ror) o numSyntax.mk_numeral o
+        Arbint.toNat o intSyntax.int_of_term)),
     ("bvule", K_zero_two wordsSyntax.mk_word_ls),
     ("bvugt", K_zero_two wordsSyntax.mk_word_hi),
     ("bvuge", K_zero_two wordsSyntax.mk_word_hs),

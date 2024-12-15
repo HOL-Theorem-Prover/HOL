@@ -17,7 +17,7 @@ datatype break_style =
     CONSISTENT
   | INCONSISTENT
 
-datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
+datatype frag = datatype quotation_dtype.frag
 type 'a quotation = 'a frag list
 
 val prettyPrint = PrettyImpl.prettyPrint

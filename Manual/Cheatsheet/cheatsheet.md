@@ -11,12 +11,12 @@ header-includes:
 
 ## Preliminaries
 
-  - Join the `#hol` channel on the [CakeML Slack](https://join.slack.com/t/cakeml/shared_invite/MjM1NjEyODgxODkzLTE1MDQzNjgwMTUtYjI4YTdlM2VmMQ).
+  - Join the `#hol` channel on the [CakeML Discord](https://discord.gg/a8UUs6Ce6m).
 
   - Learn how to interact with HOL4 using the [documentation](https://hol-theorem-prover.org/#doc).
     - For Emacs, the [short guide](https://hol-theorem-prover.org/HOL-interaction.pdf) or [complete documentation](https://hol-theorem-prover.org/hol-mode.html).
-    - For Vim, the [plugin documentation](https://github.com/HOL-Theorem-Prover/HOL/blob/master/tools/vim/README.md).
-      At first, you should use the [`vimhol.sh`](https://github.com/HOL-Theorem-Prover/HOL/blob/master/tools/vim/README.md#vimholsh-script) script to run side-by-side Vim and HOL4 using `tmux`.
+    - For Vim, the [plugin documentation](https://github.com/HOL-Theorem-Prover/HOL/blob/master/tools/editor-modes/vim/README.md).
+      At first, you should use the [`vimhol.sh`](https://github.com/HOL-Theorem-Prover/HOL/blob/master/tools/editor-modes/vim/README.md#vimholsh-script) script to run side-by-side Vim and HOL4 using `tmux`.
 
   - Add the following to your `.hol-config.sml` (in your home directory):
     ```
@@ -164,6 +164,13 @@ Also commonly used when rewriting are:
     using `Cong AND_CONG` allows use of each conjunct in a conjunction to rewrite the others; and
     the goal `(∀ e. MEM e l ==> f e = g e) ==> h (MAP f l) = h (MAP g l)` is solved by `simp[Cong MAP_CONG]`.
 
+<code>oneline <i>theorem</i></code>
+: Converts a definition with multiple clauses into a single clause, turning pattern-matches into `case`-expressions.
+  For example, `oneline listTheory.MAP` gives `⊢ MAP f v = case v of [] => [] | h::t => f h::MAP f t`.
+
+<code>lambdify <i>theorem</i></code>
+: Converts a definition of the form `⊢ ∀ x y z. f x y z = ...` into one of the form `⊢ f = (λx y z. ...)`.
+
 <br>
 Note that the above are termed *rules* - these transform theorems to other theorems, allowing the above to be combined (e.g. `simp[Once $ GSYM thm]`).
 There are many other useful rules - see the HOL4 documentation for more details.
@@ -190,6 +197,13 @@ This is most useful for certain simpset fragments:
 
 `DNF_ss`
 : Rewrites to convert to disjunctive normal form.
+
+<br>
+Conversely, `ExclSF` is like `Excl` above, but can be used to *exclude* a set of rewrites.
+
+<code>ExclSF <i>"simpset fragment name"</i></code>
+: Do not use the supplied simpset fragment when rewriting.
+  This allows temporary exclusion of a fragment from the stateful simpset.
 
 
 ## Provers
@@ -348,6 +362,9 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 `MK_COMB_TAC`
 : Reduces a goal of the form `f x = g y` to two subgoals, `f = g` and `x = y`.
 
+`iff_tac`<br>`eq_tac`
+: Reduces a goal of the form `P <=> Q` to two subgoals, `P ==> Q` and `Q ==> P`.
+
 `impl_tac`
 : For a goal of the form `(A ==> B) ==> C`, splits into the two subgoals `A` and `B ==> C`.
   `impl_keep_tac` is a variant which keeps `A` as an assumption in the `B ==> C` subgoal.
@@ -371,6 +388,12 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 : For a goal of the form `∃ vars . P1 /\ ... /\ Pn` (where the `vars` may be free in the `Pi`), attempts to match the `Pi` against the assumptions.
   If a match is found for some `Pk`, the relevant `vars` are instantiated and `Pk` is removed from the goal.
 
+<code>wlog_tac &grave;<i>term</i>&grave; [&grave;<i>variable</i>&grave;s]</code>
+: Introduces the supplied term as a hypothesis that can be assumed without loss of generality, usually producing two subgoals.
+  The first requires proving that no generality has been lost, i.e. if you can prove the goal equipped with the new hypothesis, then you can prove the goal as-is.
+  The second is the original goal enriched with the new hypothesis.
+  Any variables in the second argument to `wlog_tac` are additionally quantified over in the first subgoal.
+  See <code>help "wlog_tac"</code> for examples.
 
 ## Assumption management
 Managing assumptions is key to making progress in many goal states.

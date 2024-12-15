@@ -254,8 +254,8 @@ Proof
   \\ imp_res_tac eval_clock \\ fs [fix_def]
 QED
 
-Theorem eval_def  = REWRITE_RULE [fix_eval] eval_def;
-Theorem eval_ind  = REWRITE_RULE [fix_eval] eval_ind;
+Theorem eval_def[allow_rebind]  = REWRITE_RULE [fix_eval] eval_def;
+Theorem eval_ind[allow_rebind]  = REWRITE_RULE [fix_eval] eval_ind;
 Theorem evals_ind = REWRITE_RULE [fix_eval] eval_ind
   |> Q.SPECL [‘λenv x s. P env [x] s’,‘P’]
   |> CONV_RULE (DEPTH_CONV BETA_CONV)

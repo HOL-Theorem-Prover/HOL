@@ -284,6 +284,18 @@ Proof
   end
 QED
 
+(* Floor and ceiling (nums) *)
+Definition NUM_FLOOR_def[nocompute] :
+   NUM_FLOOR (x:real) = LEAST (n:num). real_of_num (n+1) > x
+End
+
+Definition NUM_CEILING_def[nocompute] :
+   NUM_CEILING (x:real) = LEAST (n:num). x <= real_of_num n
+End
+
+Overload flr = “NUM_FLOOR”
+Overload clg = “NUM_CEILING”
+
 (* ------------------------------------------------------------------------- *)
 (* Some elementary "bootstrapping" lemmas needed by RealArith.sml            *)
 (*                                                                           *)
@@ -469,6 +481,16 @@ val REAL_ADD = store_thm("REAL_ADD",
 
 (* HOL-Light compatible name of the above theorem *)
 Theorem REAL_OF_NUM_ADD = REAL_ADD;
+
+Theorem REAL_OF_NUM_SUB:
+  !m n. m <= n ==> (&(n-m):real = &n - &m)
+Proof
+  rw[] >> ‘?d. n=m+d’ by (irule LESS_EQUAL_ADD >> simp[])
+  >> simp[SUB_RIGHT_EQ]
+  >> once_rewrite_tac[GSYM REAL_ADD]
+  >> simp[REAL_ADD_RINV, bossLib.AC REAL_ADD_ASSOC REAL_ADD_SYM,
+          real_sub, REAL_ADD_LID]
+QED
 
 val REAL_MUL = store_thm("REAL_MUL",
   “!m n. real_of_num m * real_of_num n = real_of_num(m * n)”,

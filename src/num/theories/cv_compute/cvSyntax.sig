@@ -18,6 +18,7 @@ sig
   val cv_lt_tm : term;
   val cv_if_tm : term;
   val cv_eq_tm : term;
+  val c2b_tm : term;
 
   val mk_cv_pair : term * term -> term;
   val mk_cv_num : term -> term;
@@ -32,6 +33,7 @@ sig
   val mk_cv_lt : term * term -> term;
   val mk_cv_if : term * term * term -> term;
   val mk_cv_eq : term * term -> term;
+  val mk_c2b : term -> term;
 
   val dest_cv_pair : term -> term * term;
   val dest_cv_num : term -> term;
@@ -46,6 +48,7 @@ sig
   val dest_cv_lt : term -> term * term;
   val dest_cv_if : term -> term * term * term;
   val dest_cv_eq : term -> term * term;
+  val dest_c2b : term -> term;
 
   val is_cv_pair : term -> bool;
   val is_cv_num : term -> bool;
@@ -60,5 +63,6 @@ sig
   val is_cv_lt : term -> bool;
   val is_cv_if : term -> bool;
   val is_cv_eq : term -> bool;
+  val is_c2b : term -> bool;
 
 end (* signature *)

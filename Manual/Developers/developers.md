@@ -122,6 +122,13 @@ The details of the required format for sequence files is spelled out in a commen
 
 Past the initial prefix of this process, most directories in the build sequence are actually listed in the `Holmakefile` in `src/parallel_builds/core`.
 This arrangement allows parallel processing of lots of directories at once.
+The sequence file `upto-parallel` gives the sequence of build targets up this point, so is a reasonable argument to `--seq` for tests of the core system.
+
+## Rebuilding
+
+It is often possible to repeat `build` to get the system to rebuild itself in the face of changed source files.
+If source files have moved directories, or disappeared entirely, `build` (more accurately `Holmake` when `build` calls it) may get confused by stale dependency information.
+In this situation, cleaning everything first with `build cleanall` may be necessary.
 
 # Things in `bin`
 
@@ -196,12 +203,16 @@ Unless otherwise noted, they are built by the configuration process.
 `mllex`
 :   The tool from SML/NJ.
 
-`mllyacc`
+`mlyacc`
 :   The tool from SML/NJ.
 
 `quote-filter`
 :   The quotation filter that runs over sources before they are seen by SML implementations.
-    This is used interactively (*via* a Unix filter that preprocesses all user-input), and non-interactively (by being applied to source files).
+    This is used interactively (*via* a Unix filter that preprocesses all user-input under Moscow ML, or built into the Poly/ML REPL), and non-interactively (by being applied to source files).
+
+`unicode-grep`
+:   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
+    The command-line specifies the directories to scan, and options dictate which requirements are enforced/checked for.
 
 ## Other Tools Directories
 
@@ -231,10 +242,31 @@ Unless otherwise noted, they are built by the configuration process.
 `tools/vim`
 :   Implementation of the vim editor mode.
 
+## Coding Standards/Requirements
+
+We are fairly liberal in the style of code we accept, which is almost required given the long history of our sources (see `arithmeticScript.sml` for lots of old comments).
+However, the regression machinery does enforce some coding requirements, and these requirements may tighten over time.
+As of September 2024, the requirements are:
+
+-   No use of Unicode characters under `src/` except for Greek lambda (`U+03BB`), and four quotation marks (“ ” ‘ ’—`U+2018`, `U+2019`, `U+201C` and `U+201D`).
+    Use of all five exceptions is _encouraged_.
+    In some situations, _e.g._, in a comment, it is extremely useful to be able to use Unicode characters.
+    If this is required, the line on which this occurs can be exempted by having that line include the substring `UOK` (typically inside an SML comment).
+    All Unicode is accepted under `examples`.
+
+-   No use of TABs anywhere.
+
+-   No trailing whitespace.
+
+We encourage developers to keep their lines under 80 columns in width.
+
 
 <!-- # Appropriate Idioms  -->
 
 # Glossary of common abbreviations in the source code
+
+These appear with either capitalisation.
+There is a slight tendency to having all upper-case SML identifiers refer to theorems, or functions that returns theorems.
 
 `abs`
 :   Abstraction.
@@ -265,7 +297,7 @@ Unless otherwise noted, they are built by the configuration process.
 
 `l`
 :   - A list.
-:   - Suffix for a variant of a functions whose difference is that it operates on a list instead of a single element. E.g: the tactical `THENL` compared to `THEN`.
+:   - Suffix for a variant of a function whose difference is that it operates on a list instead of a single element. E.g: the tactical `THENL` compared to `THEN`.
 
 `lhs`
 :   Left-hand side of an equation.
@@ -276,8 +308,8 @@ Unless otherwise noted, they are built by the configuration process.
 `prim_`
 :   “primitive”. Optional prefix for the name of internal functions that contain most of the implementation. The function without the prefix is a thin wrapper that implements the public interface.
 
-`q_`
-:   Optional prefix in the name of a tactical to indicates that it takes a term quotation which is parsed in the context of the goal. Example: `q_abbrev_tac`.
+`q_` or just `q`
+:   Optional prefix in the name of a tactical to indicates that it takes a term quotation which is parsed in the context of the goal. Example: `qabbrev_tac`.
 
 `rand`
 :   Ope*rand* of a combination.
@@ -312,3 +344,8 @@ Unless otherwise noted, they are built by the configuration process.
 
 <!--  LocalWords:  executables mosmlc sml categorise
  -->
+<!--
+Local variables:
+compile-command: "Holmake"
+End:
+-->

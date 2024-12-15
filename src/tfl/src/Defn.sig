@@ -13,6 +13,7 @@ sig
   val ind_suffix : string ref
   val def_suffix : string ref
   val const_eq_ref : conv ref
+  val add_defs_to_EVAL : (string * thm) list -> unit
 
   val wfrec_eqns : thry -> term ->
                     {SV : term list,
@@ -51,7 +52,9 @@ sig
 
   val been_stored: string * thm -> unit
   val store      : string * thm * thm -> unit
+  val store_at   : DB.thm_src_location -> string * thm * thm -> unit
   val save_defn  : defn -> unit
+  val save_defn_at : DB.thm_src_location -> defn -> unit
 
   val parse_absyn : absyn -> term * string list
   val parse_quote : term quotation -> term list

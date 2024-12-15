@@ -12,37 +12,14 @@ val _ = new_theory "fieldProduct";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pred_setTheory listTheory arithmeticTheory dividesTheory numberTheory
+     combinatoricsTheory;
 
-(* val _ = load "binomialTheory"; *)
-open binomialTheory;
-open dividesTheory;
-
-(* Get dependent theories local *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "groupInstancesTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "fieldTheory"; *)
-open fieldTheory;
-open ringTheory;
-open groupTheory;
-open monoidTheory;
-
-(* val _ = load "groupProductTheory"; *)
-open groupProductTheory;
-open subgroupTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Product of a set of Field elements Documentation                          *)

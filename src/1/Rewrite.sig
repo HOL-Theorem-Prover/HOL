@@ -37,15 +37,19 @@ sig
   val ONCE_ASM_REWRITE_RULE     : thm list -> thm -> thm
 
   val PURE_REWRITE_TAC          : thm list -> tactic
+  val pure_rewrite_tac          : thm list -> tactic
   val REWRITE_TAC               : thm list -> tactic
   val rewrite_tac               : thm list -> tactic
   val PURE_ONCE_REWRITE_TAC     : thm list -> tactic
+  val pure_once_rewrite_tac     : thm list -> tactic
   val ONCE_REWRITE_TAC          : thm list -> tactic
   val once_rewrite_tac          : thm list -> tactic
   val PURE_ASM_REWRITE_TAC      : thm list -> tactic
+  val pure_asm_rewrite_tac      : thm list -> tactic
   val ASM_REWRITE_TAC           : thm list -> tactic
   val asm_rewrite_tac           : thm list -> tactic
   val PURE_ONCE_ASM_REWRITE_TAC : thm list -> tactic
+  val pure_once_asm_rewrite_tac : thm list -> tactic
   val ONCE_ASM_REWRITE_TAC      : thm list -> tactic
   val once_asm_rewrite_tac      : thm list -> tactic
 

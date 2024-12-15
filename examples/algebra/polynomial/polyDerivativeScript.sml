@@ -12,37 +12,16 @@ val _ = new_theory "polyDerivative";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory;
 
-(* Get dependent theories local *)
-
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* (* val _ = load "polyDivisionTheory"; *) *)
-(* val _ = load "polyRootTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyMonicTheory polyRootTheory;
 
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-open monoidTheory groupTheory ringTheory;
-open fieldTheory;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Formal Derivative of Polynomials Documentation                            *)

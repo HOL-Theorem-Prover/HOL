@@ -12,15 +12,13 @@ val _ = new_theory "ffMinimal";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open arithmeticTheory pred_setTheory listTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory gcdsetTheory;
 
 (* Get dependent theories local *)
-(* val _ = load "ffUnityTheory"; *)
 open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;
@@ -31,45 +29,20 @@ open SpanSpaceTheory;
 open LinearIndepTheory;
 open FiniteVSpaceTheory;
 
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "groupInstancesTheory"; -- in ringInstancesTheory *) *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open monoidOrderTheory groupOrderTheory fieldOrderTheory;
-open subgroupTheory;
-open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
+open fieldOrderTheory;
+open fieldInstancesTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
 open polyMonicTheory polyEvalTheory;
 open polyDividesTheory;
 open polyRootTheory;
 
-(* (* val _ = load "polyFieldDivisionTheory"; *) *)
 open fieldMapTheory;
 open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
 open polyIrreducibleTheory;
-
-(* (* val _ = load "ringBinomialTheory"; *) *)
-open ringBinomialTheory;
-open ringDividesTheory;
-open ringIdealTheory;
-open ringUnitTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Minimal Polynomial Documentation                             *)
@@ -945,7 +918,7 @@ val poly_minimal_divides_subfield_poly_iff = store_thm(
     <=> eval h x = #0             by above
     <=> root h x                  by poly_root_def
     <=> m pdivides h              by poly_minimal_divides_subfield_poly_iff
-    <=> h % m = |0|               by poly_divides_mod_zero, ulead m
+    <=> h % m = |0|               by poly_divides_alt, ulead m
     <=> p % m = q % m             by poly_mod_eq, ulead m
 *)
 val poly_minimal_eval_congruence = store_thm(
@@ -964,7 +937,7 @@ val poly_minimal_eval_congruence = store_thm(
   `_ = (eval h x = #0)` by rw[Abbr`h`] >>
   `_ = root h x` by rw[poly_root_def] >>
   `_ = (m pdivides h)` by rw[poly_minimal_divides_subfield_poly_iff, Abbr`m`] >>
-  `_ = (h % m = |0|)` by rw[poly_divides_mod_zero] >>
+  `_ = (h % m = |0|)` by rw[poly_divides_alt] >>
   `_ = (p % m = q % m)` by rw[poly_mod_eq, Abbr`h`] >>
   rw[]);
 

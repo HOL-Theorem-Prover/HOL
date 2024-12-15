@@ -196,13 +196,7 @@ fun exists_theorem thy x =
     end;*)
 
 fun exists_theorem thy x =
-    let
-        val db_x = DB.find x
-        val res = List.find (fn ((s,t),p) => (t=x)) db_x in
-        case  res of
-            SOME ((s,t),(p,q)) => true
-          |NONE => false
-    end;
+    isSome $ List.find (fn ((s,t),p) => (t=x)) $ DB.find x
 
 
 
@@ -212,7 +206,7 @@ fun find_theorem x =
         val db_x = DB.find x
         val res = List.find (fn ((s,t),p) => (t=x)) db_x in
         case  res of
-            SOME ((s,t),(p,q)) =>
+            SOME ((s,t),(p,_,_)) =>
             let val _ = proof_progress ("The theorem " ^ x ^ " was found\n ") in
                 p
             end

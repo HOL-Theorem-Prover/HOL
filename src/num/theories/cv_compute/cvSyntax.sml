@@ -26,6 +26,7 @@ struct
   val cv_lt_tm = prim_mk_const {Name="cv_lt", Thy="cv"};
   val cv_if_tm = prim_mk_const {Name="cv_if", Thy="cv"};
   val cv_eq_tm = prim_mk_const {Name="cv_eq", Thy="cv"};
+  val c2b_tm = prim_mk_const {Name="c2b", Thy="cv"};
 
 (* -------------------------------------------------------------------------
  * Constructors
@@ -48,6 +49,7 @@ struct
   val mk_cv_lt     = mk_binop cv_lt_tm;
   val mk_cv_if     = mk_triop cv_if_tm;
   val mk_cv_eq     = mk_binop cv_eq_tm;
+  val mk_c2b       = mk_monop c2b_tm;
 
 (* -------------------------------------------------------------------------
  * Destructors
@@ -91,6 +93,7 @@ struct
   val dest_cv_lt     = dest_binop cv_lt_tm;
   val dest_cv_if     = dest_triop cv_if_tm;
   val dest_cv_eq     = dest_binop cv_eq_tm;
+  val dest_c2b       = dest_monop c2b_tm;
 
 (* -------------------------------------------------------------------------
  * Recognizers
@@ -109,5 +112,6 @@ struct
   val is_cv_lt     = can (dest_binop cv_lt_tm);
   val is_cv_if     = can (dest_triop cv_if_tm);
   val is_cv_eq     = can (dest_binop cv_eq_tm);
+  val is_c2b       = can (dest_monop c2b_tm);
 
 end (* struct *)

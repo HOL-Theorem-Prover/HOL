@@ -12,24 +12,10 @@ val _ = new_theory "mapCount";
 
 (* ------------------------------------------------------------------------- *)
 
+open arithmeticTheory pred_setTheory gcdsetTheory numberTheory listTheory
+     rich_listTheory listRangeTheory combinatoricsTheory;
 
-(* open dependent theories *)
-(* arithmeticTheory -- load by default *)
-
-(* val _ = load "combinatoricsTheory"; *)
-open helperCountTheory;
-open helperNumTheory;
-open helperSetTheory;
-open helperFunctionTheory;
-open arithmeticTheory pred_setTheory;
-
-open listTheory rich_listTheory;
-open listRangeTheory;
-open helperListTheory;
-
-open necklaceTheory; (* for necklace_def *)
-open combinatoricsTheory;
-
+val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
 
 (* ------------------------------------------------------------------------- *)
 (* Counting of maps between finite sets Documentation                        *)

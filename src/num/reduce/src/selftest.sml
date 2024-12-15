@@ -15,14 +15,18 @@ val _ = app (fn (n,c,t) => convtest(n,c,lhs t,rhs t)) [
   ("MOD_CONV(1)", MOD_CONV, “3 MOD 10 = 3”),
   ("MOD_CONV(2)", MOD_CONV, “14 MOD 9 = 5”),
   ("MOD_CONV(3)", MOD_CONV, “0 MOD 10 = 0”),
+  (* NOTE: the old Arithconv doesn't support this:
   ("MOD_CONV(4)", MOD_CONV, “4 MOD 0 = 4”),
   ("MOD_CONV(5)", MOD_CONV, “0 MOD 0 = 0”),
+   *)
   ("DIV_CONV(1)", DIV_CONV, “20 DIV 4 = 5”),
   ("DIV_CONV(2)", DIV_CONV, “20 DIV 3 = 6”),
   ("DIV_CONV(3)", DIV_CONV, “1 DIV 4 = 0”),
   ("DIV_CONV(4)", DIV_CONV, “0 DIV 4 = 0”),
+  (* NOTE: the old Arithconv doesn't support this:
   ("DIV_CONV(5)", DIV_CONV, “20 DIV 0 = 0”),
   ("DIV_CONV(6)", DIV_CONV, “0 DIV 0 = 0”),
+   *)
   ("EXP_CONV(1)", EXP_CONV, “2 EXP 6 = 64”),
   ("EXP_CONV(2)", EXP_CONV, “1 EXP 10 = 1”),
   ("LT_CONV(1)", LT_CONV, “3 < 4 <=> T”),
@@ -34,5 +38,10 @@ val _ = app (fn (n,c,t) => convtest(n,c,lhs t,rhs t)) [
   ("EVEN_CONV(3)", EVEN_CONV, “EVEN 0 <=> T”),
   ("ODD_CONV(1)", ODD_CONV, “ODD 106 <=> F”),
   ("ODD_CONV(2)", ODD_CONV, “ODD 103 <=> T”),
-  ("ODD_CONV(3)", ODD_CONV, “ODD 0 <=> F”)
+  ("ODD_CONV(3)", ODD_CONV, “ODD 0 <=> F”),
+
+  ("NOT_CONV(1)", NOT_CONV, “~T <=> F”),
+  ("NOT_CONV(2)", NOT_CONV, “~F <=> T”),
+  ("NOT_CONV(3)", NOT_CONV, “~~p <=> p”),
+  ("NOT_CONV(4)", NOT_CONV, “~~~q <=> ~q”)
 ]

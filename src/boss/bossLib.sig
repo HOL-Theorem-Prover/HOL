@@ -55,6 +55,9 @@ sig
   val CaseEq            : string -> thm
   val CaseEqs           : string list -> thm
   val AllCaseEqs        : unit -> thm
+  val CasePred          : string -> thm
+  val CasePreds         : string list -> thm
+  val AllCasePreds      : unit -> thm
 
   (* Proof automation *)
 
@@ -113,6 +116,12 @@ sig
   val SF             : ssfrag -> thm
   val Req0           : thm -> thm
   val ReqD           : thm -> thm
+  val NoAsms         : thm
+  val IgnAsm         : 'a quotation -> thm
+
+  (* useful rules to use with simplification *)
+  val oneline        : thm -> thm
+  val lambdify       : thm -> thm
 
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
@@ -140,6 +149,7 @@ sig
 
   (* Call-by-value evaluation *)
   val EVAL           : conv
+  val EVALn          : int -> conv
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 

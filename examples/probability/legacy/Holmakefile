@@ -1,0 +1,10 @@
+INCLUDES = $(HOLDIR)/src/real $(HOLDIR)/src/res_quan/src $(HOLDIR)/src/real/analysis \
+	$(HOLDIR)/src/probability
+
+EXTRA_CLEANS = $(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
+
+HOLHEAP = $(protect $(HOLDIR)/src/real/analysis/realheap)
+
+all: $(DEFAULT_TARGETS)
+
+.PHONY: all

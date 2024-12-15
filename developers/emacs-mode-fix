@@ -19,6 +19,7 @@ then
         holdir=$1
 fi
 
+modedir=$holdir/tools/editor-modes/emacs
 
-sed -e "s|HOL-EXECUTABLE|\"$holdir/bin/hol\"|" -e "s|HOLMAKE-EXECUTABLE|\"$holdir/bin/Holmake\"|" < $holdir/tools/hol-mode.src > $holdir/tools/hol-mode.el && \
-  echo "Successfully wrote 'munged' source into $holdir/tools/hol-mode.el"
+sed -e "s|HOL-EXECUTABLE|\"$holdir/bin/hol\"|" -e "s|HOLMAKE-EXECUTABLE|\"$holdir/bin/Holmake\"|" < $modedir/hol-mode.src > $modedir/hol-mode.el && \
+  echo "Successfully wrote 'munged' source into $modedir/hol-mode.el"

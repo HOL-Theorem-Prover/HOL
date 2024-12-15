@@ -19,7 +19,7 @@ val arith_ss = boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ numSimps.ARITH_ss ++
 
 val SSFRAG = simpLib.register_frag o simpLib.SSFRAG
 
-val real_SS = simpLib.SSFRAG
+val real_SS = SSFRAG
   {name = SOME"real",
    ac = [],
    congs = [],
@@ -65,7 +65,7 @@ val real_SS = simpLib.SSFRAG
      "REAL_MAX_REFL", "REAL_LE_MAX1", "REAL_LE_MAX2", "REAL_MAX_ADD",
      "REAL_MAX_SUB"]};
 
-val real_ac_SS = simpLib.SSFRAG {
+val real_ac_SS = SSFRAG {
   name = SOME"real_ac",
   ac = [(SPEC_ALL REAL_ADD_ASSOC, SPEC_ALL REAL_ADD_SYM),
         (SPEC_ALL REAL_MUL_ASSOC, SPEC_ALL REAL_MUL_SYM)],
@@ -229,9 +229,27 @@ val m = mk_var("m", numSyntax.num)
 fun to_numeraln th = INST [n |-> mk_comb(numSyntax.numeral_tm, n),
                            m |-> mk_comb(numSyntax.numeral_tm, m)] th
 
+val ltnb12 = TAC_PROOF(([], “0 < NUMERAL (BIT1 n) /\ 0 < NUMERAL (BIT2 n)”),
+                       REWRITE_TAC[arithmeticTheory.NUMERAL_DEF,
+                                   arithmeticTheory.BIT1,
+                                   arithmeticTheory.BIT2,
+                                   arithmeticTheory.ADD_CLAUSES,
+                                   prim_recTheory.LESS_0])
+val let_id = TAC_PROOF(([], “LET (\n. n) x = x”),
+                       SIMP_TAC boolSimps.bool_ss [LET_THM])
+
+val clg0 = SIMP_RULE boolSimps.bool_ss [flr, LET_THM]
+                     (SPEC “0r” NUM_CEILING_NUM_FLOOR)
 val op_rwts =
-  [to_numeraln mult_ints, to_numeraln add_ints, flr, NUM_CEILING_NUM_FLOOR,
+  [to_numeraln mult_ints, to_numeraln add_ints, flr, clg0,
    REAL_DIV_LZERO, REAL_NEGNEG] @
+  (transform [(x,posneg)] $ SPEC x NUM_CEILING_NUM_FLOOR) @
+  (transform [(x,posneg), (y,nb12)] (
+    SPEC (mk_div(x,y)) NUM_CEILING_NUM_FLOOR)
+             |> map (SIMP_RULE arith_ss [REAL_LE_LDIV_EQ, REAL_LT, REAL_LE,
+                                         REAL_MUL_LZERO, REAL_NEG_LE0,
+                                         ltnb12, flr, let_id])) @
+
    transform [(x,posneg0)] (SPEC_ALL REAL_ADD_LID) @
    transform [(x,posneg)] (SPEC_ALL REAL_ADD_RID) @
    transform [(x,posneg0)] (SPEC_ALL REAL_MUL_LZERO) @
@@ -360,7 +378,7 @@ val REAL_REDUCE_ss = SSFRAG
    ac = [], congs =[],
    convs = simpset_convs,
    dprocs = [], filter = NONE,
-   rewrs = map (fn th => (NONE, th)) rwts}
+   rewrs = map (fn th => (NONE, th)) rwts };
 
 val real_ss = arith_ss ++ real_SS ++ REAL_REDUCE_ss
 
@@ -654,7 +672,8 @@ fun is_literalish t =
       | SOME t0 => is_literalish t0
 
 val NORMLIT_phase1 =
-    PURE_REWRITE_CONV [NEG_FRAC, NEG_DENOM, NEG_INV, REAL_NEGNEG, INV_1OVER]
+    PURE_REWRITE_CONV [NEG_FRAC, NEG_DENOM, NEG_INV, REAL_NEGNEG, INV_1OVER,
+                       REAL_OVER1]
 val GCDELIM = REAL_REDUCE
 
 fun is_real_posliteral t =

@@ -580,5 +580,130 @@ val unhide_assum = unhide_assum0 first_x_assum assume_tac
 val unhide_x_assum = unhide_assum0 first_x_assum (K all_tac)
 val use_hidden_assum = unhide_assum0 first_assum (K all_tac)
 
+val NoAsms = EQT_ELIM markerTheory.NoAsms
+val NoAsms_t = concl NoAsms
+
+fun q2str [] = ""
+  | q2str (QUOTE s :: rest) = s ^ q2str rest
+  | q2str (ANTIQUOTE t :: rest) =
+        raise ERR "IgnAsm"
+              "Pattern quotation must not include antiquotes"
+val IgnAsm_t = mk_thy_const {Thy = "marker", Name = "IgnAsm",
+                             Ty = alpha --> bool}
+fun IgnAsm qpat =
+    let val s = q2str qpat
+        val s_t = mk_var(s, alpha)
+    in
+      EQT_ELIM (SPEC s_t IgnAsm_def)
+    end
+
+fun print_ignasm (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
+    let
+      open term_pp_types smpp
+      val (f, x) = dest_comb tm
+      val {add_string, ...} = ppfns:ppstream_funs
+      val _ = same_const IgnAsm_t f andalso is_var x andalso type_of x = alpha
+              orelse raise UserPP_Failed
+    in
+      add_string ("IgnAsm" ^ UnicodeChars.lsquo ^ #1 (dest_var x) ^
+                  UnicodeChars.rsquo)
+    end
+
+val _ = Parse.temp_add_user_printer("markerLib.IgnAsm",
+                                    mk_comb(IgnAsm_t, mk_var("x", alpha)),
+                                    print_ignasm)
+
+val abbrev_vartype = mk_vartype "'abbrev"
+datatype tacoptions = TO_NoAsms | TO_IgnAsm of string |
+                      TO_Abbr of string | TO_Label of string |
+                      TO_thm of thm
+datatype aslP = AP_NoAsms | AP_Ign of string
+
+fun dest_tacmarked th =
+    let val c = concl th
+        val (f, args) = strip_comb c
+    in
+      (* asm control *)
+      if same_const c NoAsms_t then TO_NoAsms
+      else if same_const f IgnAsm_t then TO_IgnAsm (#1 (dest_var (hd args)))
+      else if same_const equality f then
+        let val arg1 = hd args
+            val arg1ty = type_of (hd args)
+        in
+          if arg1ty = abbrev_vartype then
+            TO_Abbr (#1 (dest_var arg1))
+          else
+            TO_Label (dest_label_ref th)
+        end
+      else TO_thm th
+    end handle HOL_ERR _ => TO_thm th
+
+fun optcons NONE l = l
+  | optcons (SOME x) xs = x::xs
+
+fun matching_asm lnm t =
+    (#1 (dest_label t) = lnm) handle HOL_ERR _ => false
+
+fun process_tacoption to asl =
+    case to of
+        TO_thm th => (NONE, NONE, SOME th)
+      | TO_NoAsms => (NONE, SOME AP_NoAsms, NONE)
+      | TO_IgnAsm s => (NONE, SOME (AP_Ign s), NONE)
+      | TO_Abbr s => (SOME (UNABBREV_TAC s), NONE, NONE)
+      | TO_Label s => (NONE, NONE,
+                       case List.find (matching_asm s) asl of
+                           NONE => raise ERR "process_taclist"
+                                         ("No assumption with label "^s)
+                         | SOME t => SOME (DEST_LABEL (ASSUME t)))
+
+fun asl_match ctxt s =
+    let
+      val q0 = [QUOTE s]
+      val (q, comment_opt) = apsnd (Option.map Portable.remove_wspace)
+                                   (HOLquotation.dest_last_comment q0)
+      val pat = Parse.parse_in_context ctxt q
+      val ctxt_s = HOLset.fromList Term.compare ctxt
+      fun basematch t = Term.raw_match [] ctxt_s pat t ([],[])
+    in
+      case comment_opt of
+          NONE => can basematch
+        | SOME "sa" => can (find_term (can basematch))
+        | SOME s => can basematch
+    end
+
+fun apply_aslPs ctxt aps asl =
+    case aps of
+        [] => asl
+      | (AP_NoAsms :: _) => []
+      | (AP_Ign s :: rest) =>
+        apply_aslPs ctxt rest (List.filter (not o asl_match ctxt s) asl)
+
+fun process_tacoptions tos asl pretacs aslPs asms =
+    case tos of
+        [] => {pre = EVERY (List.rev pretacs), asms = List.rev asms,
+               aslPs = aslPs}
+      | to::rest =>
+        let val (tac_opt, aslP_opt, asm_opt) = process_tacoption to asl
+        in
+          process_tacoptions rest asl
+                             (optcons tac_opt pretacs)
+                             (optcons aslP_opt aslPs)
+                             (optcons asm_opt asms)
+        end
+
+fun filter_then asms aslPs thltac (gl as (asl0,g)) =
+    let
+      val asl = apply_aslPs (free_varsl (g::asl0)) aslPs
+                            (filter (not o is_label) asl0)
+    in
+      thltac (map ASSUME asl @ asms) gl
+    end
+
+fun process_taclist_then {arg} thltac (gl as (asl,g)) =
+    let val tacoptions = map dest_tacmarked arg
+        val {pre,asms,aslPs} = process_tacoptions tacoptions asl [] [] []
+    in
+      Tactical.THEN(pre, filter_then asms aslPs (mk_require_tac thltac)) gl
+    end
 
 end

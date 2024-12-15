@@ -1,6 +1,0 @@
-# -*- mode: snippet -*-
-# name: Automatic case distinction for given expression
-# key: Cases_on
-# expand-env: ((yas-indent-line 'fixed))
-# --
-Cases_on \`$1\` $0

@@ -1219,10 +1219,6 @@ fun work() =
               List.app do_clean_target tgts;
               FileSys.chDir (hmdir.toAbsPath original_dir)
             end
-        fun transform_thy_target s =
-            if String.isSuffix "Theory" s then s ^ ".uo"
-            else s
-        val xs = map transform_thy_target xs
       in
         if not (null cleanTargets) then
           if not cline_recursive_clean then
@@ -1244,7 +1240,46 @@ fun work() =
         else
           let
             val (depgraph, local_incinfo) = toplevel_build_graph()
-            val targets = map filestr_to_tgt xs
+            fun resolve_tgtname diep n =
+                let val {dir,file} = OS.Path.splitDirFile n
+                    val cdir = hmdir.curdir()
+                    open hm_target
+                    fun maybe_die s = if diep then die s else NONE
+                in
+                  if dir <> "" then SOME (filestr_to_tgt n)
+                  else
+                    let
+                      fun foldthis (_, ni) A =
+                          let val tgt = #target ni
+                          in
+                            if fromFile (filepart tgt) = n then tgt :: A else A
+                          end
+                      val candidates = HM_DepGraph.fold foldthis depgraph []
+                    in
+                      case candidates of
+                          [] =>
+                          if isSome (OS.Path.ext n) then
+                            maybe_die ("Can't make sense of target " ^ n)
+                          else
+                            (case resolve_tgtname false (n ^ ".uo") of
+                                 NONE => die ("Can't make sense of target " ^ n)
+                               | SOME c => SOME c)
+                        | [c] => SOME c
+                        | cs =>
+                          case List.find (hmdir.eqdir cdir o dirpart)
+                                         candidates
+                           of
+                              SOME t => SOME t
+                            | NONE =>
+                              maybe_die
+                                ("Target " ^ n ^ " ambiguous; " ^
+                                 "could be from any of the following " ^
+                                 "directories: " ^
+                                 String.concatWith ", "
+                                     (map (hmdir.toString o dirpart) cs))
+                    end
+                end
+            val targets = List.mapPartial (resolve_tgtname true) xs
             val depgraph =
                 if toplevel_no_prereqs then
                   mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)

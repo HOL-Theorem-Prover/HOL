@@ -1,4 +1,5 @@
 %%% -*- Mode: LaTeX; -*-
+\newcommand{\subr}{\sb{\mathsf{r}}}
 \chapter{Core Theories}\label{HOLtheories}
 
 % LaTeX macros in HOL manuals
@@ -19,7 +20,6 @@
 
 \setcounter{sessioncount}{0}
 
-
 \newcommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
 \newcommand{\nil}{\mathbf{[} \;\mathbf{]}}
 \newcommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
@@ -32,6 +32,8 @@ The sections that follow provide an overview of the contents of each theory.
 For a complete list of all the axioms, definitions and theorems in \HOL, see the online resources distributed with the system.
 In particular, the HTML file \url{help/HOLindex.html} is a good place to start browsing the available theories.
 For a graphical picture of the theory hierarchy, see \url{help/theorygraph/theories.html}.
+
+In addition, core theories of higher mathematics are described in Chapter~\ref{ch:math}.
 
 \section{The Theory {\tt min}}\label{minTheory}
 
@@ -1602,12 +1604,12 @@ definitions of the following standard arithmetic operators.
 \index{EXP, the HOL constant@\holtxt{EXP}, the \HOL{} constant}
 \index{ addition, in HOL logic@\holtxt{+} (addition, in \HOL{} logic)}
 \index{ subtraction, in HOL logic@\holtxt{-} (subtraction, in \HOL{} logic)}
-\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)!on natural numbers}
 \index{ exponentiation, in HOL logic@\holtxt{**} (exponentiation, in \HOL{} logic)}
 \index{addition, in HOL logic@addition, in \HOL{} logic}
 \index{subtraction, in HOL logic@subtraction, in \HOL{} logic}
-\index{multiplication, in HOL logic@multiplication, in \HOL{} logic}
-\index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic}
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on natural numbers}
+\index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic!on natural numbers}
 \begin{alltt}
 >>__ open arithmeticTheory
 ##thm ADD
@@ -1752,6 +1754,7 @@ no way to define such infinite families of constants; instead, all
 numerals other than $0$ are actually built up from the constants
 introduced by the following definitions:
 \begin{alltt}
+>>__ val np = valOf (temp_remove_user_printer "num.numeral_computations")
 ##thm NUMERAL_DEF
 
 ##thm BIT1
@@ -1919,6 +1922,8 @@ similar operations on the natural numbers, and on the real numbers.
 The constants defined in the integer theory include those found in the
 following table.
 
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic!on integers}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)!on integers}
 \begin{center}
 {\small
 \begin{tabular}{@{}cccc}
@@ -2010,6 +2015,9 @@ source files.
 \subsection{Real numbers}\label{reals}
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|(}
 
+>>__ load "realTheory"; open realTheory
+>>__ load "real_sigmaTheory"; open real_sigmaTheory  
+
 There is an extensive collection of theories that make up the
 development of real numbers and analysis in HOL, due to John Harrison
 \cite{jrh:thesis}. We will only give a sketchy overview of the
@@ -2049,16 +2057,19 @@ On the basis of {\small\verb+realTheory+}, the following sequence of
 theories is constructed:
 
 \begin{description}
-\item [topology] General topology (ported from HOL Light).
+\item [real_sigma] Summation of real numbers (the $\Sigma$ operator, etc.)
+\item [topology] General topology.
 \item [metric] Metric spaces, including metric on the real line.
-\item [nets] Moore-Smith convergence nets, and special cases like
-sequences.
+\item [nets] Moore-Smith convergence nets, and special cases like sequences.
+\item [real_topology] Topology of one-dimensional Euclidean space (Section~\ref{sec:topology}).
 \item [seq] Sequences and series of real numbers.
-\item [lim] Limits, continuity and differentiation.
+\item [derivative] The \emph{new} univariate differential calculus (Section~\ref{sec:calculus}).
+\item [lim] Limits, continuity and the \emph{old} differentiation.
 \item [powser] Power series.
 \item [transc] Transcendental functions, \eg, exp, sin,
-cos, ln, root, sqrt, pi, tan, asn, acs, atn.
-\item [real_sigma] Summation of real numbers (the $\Sigma$ operator).
+  cos, ln, root, sqrt, pi, tan, asn, acs, atn.
+\item [integration] The \emph{new} univariate integral calculus (Section~\ref{sec:calculus}).
+\item [integral] The \emph{old} univariate integral calculus.
 \end{description}
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|)}
 
@@ -2748,6 +2759,7 @@ paths, and finite strings.
 >>__ open listTheory
 >>__ show_numeral_types := false
 
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!constructors}
 \HOL{} lists are inductively defined finite sequences where each
 element in a list has the same type. The theory \ml{list} introduces
 the unary type operator $\alpha \; \konst{list}$ by a type definition
@@ -2788,6 +2800,8 @@ fundamental theorems about lists are proved and stored in the theory
 \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for lists}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
+\index{lists, the HOL theory of@lists the \HOL{} theory of!initiality theorem}
+\index{lists, the HOL theory of@lists the \HOL{} theory of!induction theorem}
 \begin{alltt}
 ##thm list_Axiom
 ##thm list_INDUCT
@@ -2839,7 +2853,14 @@ The predicate \ml{NULL} and the selectors
 \begin{alltt}
 ##thm NULL
 ##thm HD
-##thm TL
+##thm TL_DEF
+\end{alltt}
+\end{hol}
+The nil-clause for the \holtxt{TL} constant is included to make the function total, but does represent a case that often needs to be excluded.
+For example:
+\begin{hol}
+\begin{alltt}
+##thm LIST_NOT_NIL
 \end{alltt}
 \end{hol}
 
@@ -2947,14 +2968,15 @@ Section~\ref{sec:indexed-lists} below.
 \paragraph {Mapping functions over lists}
 \index{MAP, the HOL constant@\ml{MAP}, the \HOL{} constant}
 \index{MAP2, the HOL constant@\ml{MAP2}, the \HOL{} constant}
+\index{mapPartial, the HOL constant@\ml{mapPartial}, the \HOL{} constant}
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for lists}
 
 There are functions for mapping a function $f : \alpha \to \beta$ over
-a single list (\holtxt{MAP}) or a function $f : \alpha \to \beta
-\to \gamma$ over two lists (\holtxt{MAP2}).
+a single list (\holtxt{MAP}), a ``partial'' function $f : \alpha \to \beta\,\mathsf{option}$ over a list (\holtxt{mapPartial}), or a function $f : \alpha \to \beta \to \gamma$ over two lists (\holtxt{MAP2}):
 \begin{hol}
 \begin{alltt}
 ##thm MAP
+##thm mapPartial_def
 ##thm MAP2_DEF
 \end{alltt}
 \end{hol}
@@ -2963,6 +2985,7 @@ If passed lists of unequal length, \holtxt{MAP2} returns a list of length equal 
 \paragraph {Predicates over lists}
 \index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
 \index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
+\index{nub, the HOL constant@\ml{nub}, the \HOL{} constant}
 \index{ALL_DISTINCT, the HOL constant@\ml{ALL\_DISTINCT}, the \HOL{} constant}
 \index{EXISTS, the HOL constant (over lists)@\ml{EXISTS}, the \HOL{}
   constant (over lists)}
@@ -2983,6 +3006,12 @@ is performed by \holtxt{FILTER}.
 \end{hol}
 The predicate \holtxt{ALL\_DISTINCT} holds on a list just in case no
 element in the list is equal to any other.
+A list can have its duplicates removed through the use of the \holtxt{nub} constant:
+\begin{hol}
+\begin{alltt}
+##thm nub_def
+\end{alltt}
+\end{hol}
 
 \index{EVERY2@\ml{EVERY2}|see{\ml{LIST\_REL}}}
 \index{LIST_REL, the HOL constant@\ml{LIST\_REL}, the \HOL{} constant}
@@ -3013,7 +3042,7 @@ Equally, \holtxt{LIST\_REL} can be seen as a test that checks the relation at al
 ##thm LIST_REL_EL_EQN
 \end{alltt}
 \end{hol}
-Finally, there is a natural induction principle for this constant (as \emph{per} Section~\ref{sec:proofs-with-inductive-relations}, the tactic \ml{Induct_on~\bq{}LIST_REL\bq} applies it):
+Finally, there is a natural induction principle for this constant (as \emph{per} Section~\ref{sec:proofs-with-inductive-relations}, the tactic \ml{Induct_on~\bq{}LIST_REL'} applies it):
 \begin{hol}
 \begin{alltt}
 ##thm LIST_REL_strongind
@@ -3051,14 +3080,6 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
      |- (!acc. REV [] acc = acc) /\
         (!h t acc. REV (h::t) acc = REV t (h::acc))
 \end{verbatim}
-\end{hol}
-
-\paragraph {Removal of duplicates}
-The \holtxt{nub} function removes all duplicate entries from a list.
-\begin{hol}
-\begin{alltt}
-##thm nub_def
-\end{alltt}
 \end{hol}
 
 \paragraph {Conversion to sets}
@@ -3198,6 +3219,22 @@ total relation.
 \end{alltt}
 \end{hol}
 
+\index{lists, the HOL theory of@lists, the \HOL{} theory of!element adjacency}
+The notion of $R$ holding pairwise through a list can be expressed using the predicate \holtxt{adjacent}, where $\holtxt{adjacent}\;\ell\;a\;b$ holds if values $a$ and $b$ appear together (in that order) in list $\ell$.
+Then, we have
+\begin{hol}
+\begin{alltt}
+##thm SORTED_adjacent
+\end{alltt}
+\end{hol}
+where the $\subseteq\subr$ relation is the notion of relation-subset (see below on page~\pageref{def:rsubset}).
+There are a number of other theorems in \ml{listTheory} about adjacency, including for example:
+\begin{hol}
+\begin{alltt}
+##thm adjacent_REVERSE
+##thm adjacent_MAP
+\end{alltt}
+\end{hol}
 
 
 \subsubsection{Indexed lists}
@@ -3649,18 +3686,15 @@ to be doubled.  (See Section~\ref{sec:quotation-antiquotation}.)
 
 As with numerals, string literals can be injected into other types, where it might make sense to have string literals appear to inhabit types in addition to the core system's \holtxt{string} type.
 Such literals can be written with different delimiters to make it clear that such an injection has occurred.
-For more on this facility, see \REFERENCE's description of the \ml{add_strliteral_form} function.
+For more on this facility, see \REFERENCE{}'s description of the \ml{add_strliteral_form} function.
 
-There is also a destructor function {\small\verb+DEST_STRING+} for
-strings which returns an option type.
+There is also a destructor function \holtxt{DEST_STRING} for strings which returns an \holtxt{option} type:
 \begin{hol}
-\begin{verbatim}
-   DEST_STRING
-     |- (DEST_STRING "" = NONE) /\
-        (DEST_STRING (STRING c rst) = SOME(c,rst))
-\end{verbatim}
+\begin{alltt}
+>>__ open stringTheory;
+##thm DEST_STRING_def
+\end{alltt}
 \end{hol}
-
 
 \paragraph{Case expressions}
 \index{case expressions!over strings}
@@ -3696,6 +3730,33 @@ of results from \ml{listTheory}:
         (STRCAT s "" = s) /\
         (STRCAT (STRING c s1) s2 = STRING c (STRCAT s1 s2))
 \end{verbatim}
+\end{hol}
+
+
+\paragraph{Strings into numbers, and \emph{vice versa}}
+\index{strings, the HOL theory of@strings, the \HOL{} theory of!converting to and from numbers}
+\index{numerals, in HOL logic@numerals, in \HOL{} logic!parsing/printing of in the logic}
+>>__ load "ASCIInumbersTheory";
+>>__ open ASCIInumbersTheory
+It is natural to want to convert strings to and from (natural) numbers.
+Constants supporting this for a variety of bases ($2$, $8$, $10$, and $16$) are defined in the theory \ml{ASCIInumbersTheory}.
+There the constants are named according to the scheme
+\[
+\holtxt{num\_}\{\holtxt{to},\holtxt{from}\}\holtxt{\_}\{\holtxt{bin},\holtxt{oct},\holtxt{dec},\holtxt{hex}\}\holtxt{\_string}
+\]
+making for a total of eight constants.
+The two decimal constants are also available under the (overloaded) names \holtxt{toString} and \holtxt{toNum}.
+The natural theorem expressing these last two are inverse is
+\begin{hol}
+\begin{alltt}
+##thm toNum_toString
+\end{alltt}
+\end{hol}
+and there is also a theorem specifying how long the strings produced by \holtxt{toString} will be:
+\begin{hol}
+\begin{alltt}
+##thm LENGTH_num_to_dec_string
+\end{alltt}
 \end{hol}
 
 
@@ -3873,14 +3934,14 @@ The finite sets have an induction theorem:
 %
 \begin{hol}
 \begin{alltt}
-##thm FINITE_INDUCT
+  ##thm FINITE_INDUCT
 \end{alltt}
 \end{hol}
 %
 As mentioned, set operations apply to both finite and infinite
 sets. However, some operations, such as cardinality
-(\holtxt{CARD}), are only defined for finite sets.  The
-cardinality of an infinite set is not specified.
+(\holtxt{CARD}), are only defined for finite sets. (See Section~\ref{ss:cardinals}
+for the theory of cardinality of possibly infinite sets.)
 \index{cardinality of (finite) sets}
 %
 \begin{hol}
@@ -3933,7 +3994,10 @@ f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the set
 in a tail-recursive fashion.
 \begin{hol}
 \begin{alltt}
+  ##thm ITSET_THM
+
   ##thm ITSET_EMPTY
+
   ##thm COMMUTING_ITSET_INSERT
 \end{alltt}
 \end{hol}
@@ -4410,7 +4474,6 @@ The following basic properties of relations are defined.
 
 \paragraph{Basic operations}
 
-\newcommand{\subr}{\sb{\mathsf{r}}}
 The following basic operations on relations are defined: the empty
 relation (\holtxt{EMPTY\_REL}, or $\emptyset\subr$), relation composition (\holtxt{O}, or $\circ\subr$,
 infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')), domain (\holtxt{RDOM}), and range
@@ -4429,7 +4492,7 @@ infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')),
 \noindent Set operations lifted to work on relations include subset
 (\holtxt{RSUBSET}, or $\subseteq\subr$, infix), union (\holtxt{RUNION}, or $\cup\subr$, infix),
 intersection (\holtxt{RINTER}, or $\cap\subr$, infix), complement (\holtxt{RCOMPL}),
-and universe (\holtxt{RUNIV}, or $\mathbb{U}\subr$).
+and universe (\holtxt{RUNIV}, or $\mathbb{U}\subr$).\label{def:rsubset}
 %
 \begin{hol}
 \begin{alltt}
@@ -5271,6 +5334,39 @@ See Figure~\ref{fig:bind-defns} for the bind definitions for a number of differe
 \end{figure}
 
 \index{monads|)}
+
+\section{Other Theories}
+Other theories of interest in \HOL{} are listed and briefly described
+in Figure~\ref{fig:further-hol-theories}.
+
+\begin{figure}[hbtp]
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|p{0.2\textwidth}p{0.7\textwidth}|}
+  \hline
+  \theoryimp{poset} & Partial Orders, Knaster-Tarski theorem
+  \\
+  \theoryimp{divides}, \theoryimp{gcd} &
+  Divisibility and the greatest common divisor.
+  \\
+  \theoryimp{poly} &
+  A theory of polynomials over $\mathbb{R}$, providing
+  a collection of operations on polynomials, and theorems about them.
+  \\
+  \theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
+  &
+  Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
+  \\
+  \theoryimp{ctl}, \theoryimp{mu}
+  &
+  Computation Tree Logic and the $\mu$-calculus. See Hasan Amjad's
+  thesis. \\
+  \theoryimp{lbtree} & Possibly infinitely deep (\ie, co-algebraic) binary trees.\\
+  \theoryimp{inftree} & Possibly infinitely branching, algebraic trees\\
+  \hline
+\end{tabular}
+\caption{A selection of \HOL{} theories}
+\label{fig:further-hol-theories}
+\end{figure}
 
 %%% Local Variables:
 %%% mode: latex

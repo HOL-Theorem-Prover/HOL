@@ -13,6 +13,7 @@ open progTheory set_sepTheory helperLib;
 open prog_x64Theory prog_x64Lib x64_encodeLib;
 open stop_and_copyTheory;
 
+fun allowing_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
 infix \\
 val op \\ = op THEN;
 val RW = REWRITE_RULE;
@@ -83,7 +84,8 @@ val zLISP_INIT_def = Define `
        zCODE_UNCHANGED cu dd d *
         cond (lisp_init (a1,a2,sl,sl1,e,ex,cs) io (df,f,dg,g,dd,d,sp,sa1,sa_len,ds))`;
 
-val zLISP_raw = Define `zLISP = zLISP_ALT (\wsp wi we ds tw2. T)`;
+Definition zLISP_raw: zLISP = zLISP_ALT (\wsp wi we ds tw2. T)
+End
 val zLISP_def = SIMP_CONV std_ss [zLISP_ALT_def,zLISP_raw]
   ``zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,ddd,cu) (x0,x1,x2,x3,x4,x5,xs,xs1,io,xbp,qs,code,amnt,ok)``
 val _ = save_thm("zLISP_def",zLISP_def);
@@ -644,9 +646,12 @@ fun X64_LISP_EQ_VAL n i = let
   val result = prove_spec th imp def pre_tm post_tm
   in save_lisp_thm("X64_LISP_EQ_VAL_" ^ int_to_string n ^ "_" ^ int_to_string i,result) end;
 
+val X64_LISP_EQ_VAL = fn n => fn i => allowing_rebinds (X64_LISP_EQ_VAL n) i
+
 val _ = map (X64_LISP_EQ_VAL 1) all_regs;
 val _ = map (X64_LISP_EQ_VAL 2) all_regs;
 val _ = map (X64_LISP_EQ_VAL 3) all_regs;
+(* does 3 0 a second time *)
 val _ = map (fn n => X64_LISP_EQ_VAL n 0) [3,4,5,6,7,8,9,10,11,12,13,14,15];
 
 (* eq *)
@@ -864,7 +869,7 @@ val all_syms = ilist 0 lisp_inv_sym_tests;
 val _ = map (X64_LISP_SYM 0) all_regs; (* NIL *)
 val _ = map (X64_LISP_SYM 1) all_regs; (* T *)
 val _ = map (X64_LISP_SYM 2) all_regs; (* QUOTE *)
-val _ = map (fn x => X64_LISP_SYM x 0) all_syms;
+val _ = map (fn x => allowing_rebinds (X64_LISP_SYM x) 0) all_syms;
 
 
 (* error *)
@@ -3015,8 +3020,8 @@ val X64_LISP_TEST_CF = let
 
 (* prove a few theorems which imply that the bytecode does the right thing *)
 
-val X64_POP0 = SPEC_COMPOSE_RULE [X64_LISP_TOP 0,X64_LISP_POP]
-val X64_POP1 = SPEC_COMPOSE_RULE [X64_LISP_TOP 1,X64_LISP_POP]
+val X64_POP0 = SPEC_COMPOSE_RULE [allowing_rebinds X64_LISP_TOP 0,X64_LISP_POP]
+val X64_POP1 = SPEC_COMPOSE_RULE [allowing_rebinds X64_LISP_TOP 1,X64_LISP_POP]
 
 val X64_LISP_SWAP1 = let
   val ((th,_,_),_) = x64_spec (x64_encode "xchg r8,r9")

@@ -11,7 +11,7 @@ open HolKernel Parse boolLib bossLib;
 
 open combinTheory tautLib prim_recTheory arithmeticTheory numLib hurdUtils;
 
-open realTheory realLib iterateTheory;
+open realTheory realLib iterateTheory real_sigmaTheory;
 
 val _ = new_theory "extreal_base";
 
@@ -28,7 +28,7 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x2212 ^ UTF8.chr 0x221E,
 val _ = TeX_notation {hol = "+" ^ UTF8.chr 0x221E,
                       TeX = ("\\ensuremath{+\\infty}", 1)};
 
-val _ = TeX_notation {hol = "-" ^ UTF8.chr 0x221E,
+val _ = TeX_notation {hol = UTF8.chr 0x2212 ^ UTF8.chr 0x221E,
                       TeX = ("\\ensuremath{-\\infty}", 1)};
 
 Definition extreal_of_num_def :

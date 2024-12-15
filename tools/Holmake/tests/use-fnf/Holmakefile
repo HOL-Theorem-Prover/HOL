@@ -1,0 +1,4 @@
+use-fnf-selftest.log: test.ML
+	$(tee $(protect $(HOLDIR)/bin/hol.bare) < $<, $@)
+
+EXTRA_CLEANS = use-fnf-selftest.log

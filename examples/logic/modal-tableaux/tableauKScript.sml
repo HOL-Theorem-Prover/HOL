@@ -200,13 +200,13 @@ Inductive tableauR:
 [~conj:]
   (∀p s f1 f2.
       tableauR (p ++ [f1;f2] ++ s) r ⇒
-      tableauR (p ++ [Conj f1 f2] ++ s) r) ∧
+      tableauR (p ++ [Conj f1 f2] ++ s) r)
 [~disj1:]
   (∀p s f1 f2.
-      tableauR (p ++ [f1] ++ s) r ⇒ tableauR (p ++ [Disj f1 f2] ++ s) r) ∧
+      tableauR (p ++ [f1] ++ s) r ⇒ tableauR (p ++ [Disj f1 f2] ++ s) r)
 [~disj2:]
   (∀p s f1 f2.
-      tableauR (p ++ [f2] ++ s) r ⇒ tableauR (p ++ [Disj f1 f2] ++ s) r) ∧
+      tableauR (p ++ [f2] ++ s) r ⇒ tableauR (p ++ [Disj f1 f2] ++ s) r)
 [~diam:]
   (∀G.
       (∀f. MEM f G ⇒ ¬is_conj f ∧ ¬is_disj f) ∧ (∃f. MEM f G ∧ is_dia f) ∧
@@ -215,7 +215,7 @@ Inductive tableauR:
                (FILTER is_dia G)
                rs
      ⇒
-      tableauR G (Nd (unvar G) rs)) ∧
+      tableauR G (Nd (unvar G) rs))
 [~open:]
   (∀G. (∀f. MEM f G ⇒ is_literal f ∨ is_box f) ∧ contradiction G = NONE ⇒
        tableauR G (Nd (unvar G) []))

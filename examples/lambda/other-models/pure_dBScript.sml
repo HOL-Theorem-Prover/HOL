@@ -1,10 +1,16 @@
-open HolKernel boolLib Parse bossLib pred_setTheory termTheory BasicProvers
+(*---------------------------------------------------------------------------*
+   Mechanisation of the type of "pure" de Bruijn terms, following
+   Tobias Nipkow's paper "More Church-Rosser Proofs" [1].  (They are
+   "pure" in contrast with Andy Gordon's de Bruijn terms, which have
+   indices for bound variables and strings for free variables.)
+ *---------------------------------------------------------------------------*)
 
-open arithmeticTheory boolSimps
+open HolKernel boolLib Parse bossLib BasicProvers;
 
-local open string_numTheory chap2Theory chap3Theory in end
+open boolSimps arithmeticTheory pred_setTheory string_numTheory listTheory
+     hurdUtils;
 
-fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+open termTheory appFOLDLTheory chap2Theory horeductionTheory chap3Theory;
 
 val _ = new_theory "pure_dB"
 
@@ -14,36 +20,52 @@ val _ = temp_set_fixity "=" (Infix(NONASSOC, 100))
 val _ = Datatype`pdb = dV num | dAPP pdb pdb | dABS pdb`
 
 (* Definitions of lift and substitution from Nipkow's "More Church-Rosser
-   proofs" *)
-val lift_def = Define`
+   proofs". NOTE: ‘lift s 0’ will forcely lift everything.
+ *)
+Definition lift_def :
   (lift (dV i) k = if i < k then dV i else dV (i + 1)) /\
   (lift (dAPP s t) k = dAPP (lift s k) (lift t k)) /\
   (lift (dABS s) k = dABS (lift s (k + 1)))
-`;
+End
 val _ = export_rewrites ["lift_def"]
 
+(* ‘k = 0’ is a common usage of ‘lift’ *)
+Theorem lift_dV_0[simp] :
+    lift (dV i) 0 = dV (i + 1)
+Proof
+    rw [lift_def]
+QED
+
+Theorem FUNPOW_lift_dV_0[simp] :
+    FUNPOW (\e. lift e 0) n (dV i) = dV (i + n)
+Proof
+    Induct_on ‘n’ >> rw [FUNPOW_SUC]
+QED
+
 (* "Nipkow" substitution *)
-val nsub_def = Define`
+Definition nsub_def :
   (nsub s k (dV i) = if k < i then dV (i - 1)
                        else if i = k then s else dV i) /\
   (nsub s k (dAPP t u) = dAPP (nsub s k t) (nsub s k u)) /\
   (nsub s k (dABS t) = dABS (nsub (lift s 0) (k + 1) t))
-`;
+End
 val _ = export_rewrites ["nsub_def"]
 
 (* substitution that corresponds to substitution in the lambda-calculus;
    no variable decrementing in the dV clause *)
-val sub_def = Define`
+Definition sub_def :
   (sub s k (dV i) = if i = k then s else dV i) /\
   (sub s k (dAPP t u) = dAPP (sub s k t) (sub s k u)) /\
   (sub s k (dABS t) = dABS (sub (lift s 0) (k + 1) t))
-`;
+End
 val _ = export_rewrites ["sub_def"]
 
+Overload SUB = “sub” (* same [./.] syntax as SUB *)
+
 (* a variable-binding lambda-equivalent for dB terms *)
-val dLAM_def = Define`
+Definition dLAM_def :
   dLAM v body = dABS (sub (dV 0) (v + 1) (lift body 0))
-`
+End
 
 (* the set of free indices in a term *)
 val dFV_def = Define`
@@ -170,6 +192,7 @@ val _ = export_rewrites ["dpm_thm"]
 
 (* dFVs gives the free indices of a dB term as strings *)
 val dFVs_def = Define`dFVs t = IMAGE n2s (dFV t)`
+
 val IN_dFVs_thm = store_thm(
   "IN_dFVs_thm",
   ``(s IN dFVs (dV i) = (i = s2n s)) /\
@@ -297,8 +320,6 @@ val sub_15a = store_thm(
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `i + 1` MP_TAC) THEN SRW_TAC [ARITH_ss][]);
 
-open chap2Theory
-
 (* from Nipkow *)
 val nipkow_lift_lemma1 = store_thm(
   "nipkow_lift_lemma1",
@@ -329,6 +350,12 @@ val IN_dFV_lift = store_thm(
   ])
 val _ = export_rewrites ["IN_dFV_lift"]
 
+Theorem dLAM_alt_dpm :
+    !v body. dLAM v body = dABS (dpm [(n2s 0, n2s (v + 1))] (lift body 0))
+Proof
+    RW_TAC arith_ss [dLAM_def, fresh_dpm_sub, IN_dFV_lift]
+QED
+
 (* The substitution lemma, in dB guise *)
 val sub_lemma = store_thm(
   "sub_lemma",
@@ -342,13 +369,14 @@ val sub_lemma = store_thm(
 
 (* which allows us to prove that substitution interacts with dLAM in the way
    we'd expect *)
-val sub_dLAM = store_thm(
-  "sub_dLAM",
-  ``~(i IN dFV N) /\ ~(i = j) ==>
-    (sub N j (dLAM i M) = dLAM i (sub N j M))``,
+Theorem sub_dLAM[simp] :
+    ~(i IN dFV N) /\ ~(i = j) ==>
+    (sub N j (dLAM i M) = dLAM i (sub N j M))
+Proof
   SRW_TAC [][dLAM_def] THEN
   SRW_TAC [][Once sub_lemma] THEN
-  SRW_TAC [][lift_sub]);
+  SRW_TAC [][lift_sub]
+QED
 
 val dFVs_lift = store_thm(
   "dFVs_lift",
@@ -485,17 +513,24 @@ val fromTerm_eqlam = prove(
     SRW_TAC [][] THEN SRW_TAC [][fromTerm_def]
   ])
 
+(* |- ((fromTerm t = dV j <=> t = VAR (n2s j)) /\
+       (dV j = fromTerm t <=> t = VAR (n2s j)) /\
+       (fromTerm t = dAPP d1 d2 <=>
+        ?t1 t2. t = t1 @@ t2 /\ d1 = fromTerm t1 /\ d2 = fromTerm t2)) /\
+      (fromTerm t = dLAM i d <=> ?t0. t = LAM (n2s i) t0 /\ d = fromTerm t0)
+ *)
 val fromTerm_eqn = save_thm(
   "fromTerm_eqn",
   CONJ fromTerm_eq0 fromTerm_eqlam)
 
 (* fromTerm is injective *)
-val fromTerm_11 = store_thm(
-  "fromTerm_11",
-  ``!t1 t2. (fromTerm t1 = fromTerm t2) = (t1 = t2)``,
+Theorem fromTerm_11[simp]:
+  !t1 t2. (fromTerm t1 = fromTerm t2) = (t1 = t2)
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][fromTerm_def] THEN SRW_TAC [][fromTerm_eqn] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 (* an alternative reduction relation that is a stepping stone between
    dbeta and beta-reduction on quotiented terms *)
@@ -506,7 +541,6 @@ val (dbeta'_rules, dbeta'_ind, dbeta'_cases) = Hol_reln`
   (!M N i. dbeta' M N ==> dbeta' (dLAM i M) (dLAM i N))
 `;
 
-open chap3Theory
 val dbeta'_ccbeta = store_thm(
   "dbeta'_ccbeta",
   ``!t u. dbeta' t u ==> !M N. (t = fromTerm M) /\ (u = fromTerm N) ==>
@@ -865,7 +899,6 @@ val dbeta_dbeta'_eqn = store_thm(
 
 (* both of the next two proofs begin by rewriting dbeta to dbeta', using
    dbeta_dbeta'_eqn *)
-open chap3Theory
 val ccbeta_dbeta1 = prove(
   ``!M N. compat_closure beta M N ==> dbeta (fromTerm M) (fromTerm N)``,
   REWRITE_TAC [dbeta_dbeta'_eqn] THEN HO_MATCH_MP_TAC compat_closure_ind THEN
@@ -948,34 +981,37 @@ val toTerm_def = new_specification(
 val fromtoTerm = save_thm("fromtoTerm", GSYM toTerm_def)
 val _ = export_rewrites ["fromtoTerm"]
 
-val toTerm_11 = Store_thm(
-  "toTerm_11",
-  ``(toTerm d1 = toTerm d2) <=> (d1 = d2)``,
+Theorem toTerm_11[simp] :
+  (toTerm d1 = toTerm d2) <=> (d1 = d2)
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN
   POP_ASSUM (MP_TAC o Q.AP_TERM `fromTerm`) THEN
-  SRW_TAC [][]);
+  SRW_TAC [][Excl "fromTerm_11"]
+QED
 
 val toTerm_onto = store_thm(
   "toTerm_onto",
   ``!t. ?d. toTerm d = t``,
   METIS_TAC [fromTerm_11, fromtoTerm]);
 
-val tofromTerm = Store_thm(
-  "tofromTerm",
-  ``toTerm (fromTerm t) = t``,
-  METIS_TAC [toTerm_onto, toTerm_11, fromtoTerm])
+Theorem tofromTerm[simp] :
+    toTerm (fromTerm t) = t
+Proof
+  METIS_TAC [toTerm_onto, toTerm_11, fromtoTerm]
+QED
 
 val toTerm_eqn = store_thm(
   "toTerm_eqn",
   ``(toTerm x = y) <=> (fromTerm y = x)``,
   SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][])
 
-val toTerm_thm = Store_thm(
-  "toTerm_thm",
-  ``(toTerm (dV i) = VAR (n2s i)) /\
+Theorem toTerm_thm[simp] :
+    (toTerm (dV i) = VAR (n2s i)) /\
     (toTerm (dAPP M N) = toTerm M @@ toTerm N) /\
-    (toTerm (dLAM i M) = LAM (n2s i) (toTerm M))``,
-  SRW_TAC [][toTerm_eqn]);
+    (toTerm (dLAM i M) = LAM (n2s i) (toTerm M))
+Proof
+  SRW_TAC [][toTerm_eqn]
+QED
 
 val lemma = prove(
   ``!i j. i + j + 1 NOTIN dFV M ==>
@@ -1015,30 +1051,34 @@ val toTerm_dABS = store_thm(
 
 val _ = overload_on ("is_dABS", ``\d. is_abs (toTerm d)``)
 
-val is_dABS_thm = Store_thm(
-  "is_dABS_thm",
-  ``(is_dABS (dV v) = F) /\
+Theorem is_dABS_thm[simp] :
+    (is_dABS (dV v) = F) /\
     (is_dABS (dAPP d1 d2) = F) /\
     (is_dABS (dABS d) = T) /\
-    (is_dABS (dLAM v d) = T)``,
+    (is_dABS (dLAM v d) = T)
+Proof
   SRW_TAC [][] THEN
   `?i N. dABS d = dLAM i N` by METIS_TAC [dABS_dLAM_exists] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val is_dABS_vnsub_invariant = Store_thm(
-  "is_dABS_vnsub_invariant",
-  ``!d i j. is_dABS (nsub (dV i) j d) <=> is_dABS d``,
-  Induct THEN SRW_TAC [][]);
+Theorem is_dABS_vnsub_invariant[simp] :
+    !d i j. is_dABS (nsub (dV i) j d) <=> is_dABS d
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
-val is_dABS_vsub_invariant = Store_thm(
-  "is_dABS_vsub_invariant",
-  ``!d i j. is_dABS (sub (dV i) j d) <=> is_dABS d``,
-  Induct THEN SRW_TAC [][]);
+Theorem is_dABS_vsub_invariant[simp] :
+    !d i j. is_dABS (sub (dV i) j d) <=> is_dABS d
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
-val is_dABS_lift_invariant = Store_thm(
-  "is_dABS_lift_invariant",
-  ``!d j. is_dABS (lift d j) = is_dABS d``,
-  Induct THEN SRW_TAC [][]);
+Theorem is_dABS_lift_invariant[simp] :
+    !d j. is_dABS (lift d j) = is_dABS d
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
 val dbnf_def = Define`
   (dbnf (dV i) = T) /\
@@ -1047,35 +1087,41 @@ val dbnf_def = Define`
 `;
 val _ = export_rewrites ["dbnf_def"]
 
-val dbnf_vnsub_invariant = Store_thm(
-  "dbnf_vnsub_invariant",
-  ``!d i j. dbnf (nsub (dV i) j d) <=> dbnf d``,
-  Induct THEN SRW_TAC [][]);
+Theorem dbnf_vnsub_invariant[simp] :
+    !d i j. dbnf (nsub (dV i) j d) <=> dbnf d
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
-val dbnf_vsub_invariant = Store_thm(
-  "dbnf_vsub_invariant",
-  ``!d i j. dbnf (sub (dV i) j d) <=> dbnf d``,
-  Induct THEN SRW_TAC [][]);
+Theorem dbnf_vsub_invariant[simp] :
+    !d i j. dbnf (sub (dV i) j d) <=> dbnf d
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
-val dbnf_lift_invariant = Store_thm(
-  "dbnf_lift_invariant",
-  ``!d j. dbnf (lift d j) = dbnf d``,
-  Induct THEN SRW_TAC [][]);
+Theorem dbnf_lift_invariant[simp] :
+    !d j. dbnf (lift d j) = dbnf d
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
-val dbnf_dLAM = Store_thm(
-  "dbnf_dLAM",
-  ``dbnf (dLAM i d) = dbnf d``,
-  SRW_TAC [][dLAM_def]);
+Theorem dbnf_dLAM[simp] :
+    dbnf (dLAM i d) = dbnf d
+Proof
+  SRW_TAC [][dLAM_def]
+QED
 
-val dbnf_fromTerm = Store_thm(
-  "dbnf_fromTerm",
-  ``!t. dbnf (fromTerm t) = bnf t``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem dbnf_fromTerm[simp] :
+    !t. dbnf (fromTerm t) = bnf t
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
-val bnf_toTerm = Store_thm(
-  "bnf_toTerm",
-  ``!d. bnf (toTerm d) = dbnf d``,
-  METIS_TAC [fromTerm_onto, fromtoTerm, dbnf_fromTerm]);
+Theorem bnf_toTerm[simp] :
+    !d. bnf (toTerm d) = dbnf d
+Proof
+  METIS_TAC [fromTerm_onto, fromtoTerm, dbnf_fromTerm]
+QED
 
 (* ----------------------------------------------------------------------
     Eta reduction
@@ -1227,4 +1273,345 @@ val eta_eq_lam_eta = store_thm(
   ``eta (fromTerm M) (fromTerm N) = compat_closure eta M N``,
   METIS_TAC [eta_lam_eta, lam_eta_eta]);
 
+(*---------------------------------------------------------------------------*
+ *  Accumulated operators for dB terms (LAMl, appstar, etc.)
+ *---------------------------------------------------------------------------*)
+
+Overload "@*" = “\f args. FOLDL dAPP f args”
+Overload "dLAMl" = “\vs t. FOLDR dLAM t vs”
+
+Theorem dappstar_APPEND :
+    (x :pdb) @* (Ms1 ++ Ms2) = (x @* Ms1) @* Ms2
+Proof
+    qid_spec_tac ‘x’ >> Induct_on ‘Ms1’ >> simp[]
+QED
+
+Theorem dappstar_SNOC[simp]:
+    (x :pdb) @* (SNOC M Ms) = dAPP (x @* Ms) M
+Proof
+    simp[dappstar_APPEND, SNOC_APPEND]
+QED
+
+Theorem fromTerm_appstar :
+    !args. fromTerm (f @* args) = fromTerm f @* MAP fromTerm args
+Proof
+    Induct_on ‘args’ using SNOC_INDUCT
+ >> simp [dappstar_SNOC, MAP_SNOC]
+QED
+
+Theorem fromTerm_LAMl :
+    !vs. fromTerm (LAMl vs t) = dLAMl (MAP s2n vs) (fromTerm t)
+Proof
+    Induct_on ‘vs’ >> rw []
+QED
+
+(* NOTE: unlike LAMl, there's no need to keep a list of variable names, just the
+         number of nested dABS suffices.
+ *)
+Overload dABSi = “FUNPOW dABS”
+
+Definition isub_def:
+   (isub t [] = (t :pdb)) /\
+   (isub t ((s,x)::rst) = isub ([s/x]t) rst)
+End
+
+Overload ISUB = “isub”
+
+(* NOTE: there's already dFVs_def *)
+Definition dFVS_def :
+   (dFVS [] = {}) /\
+   (dFVS ((t,x)::rst) = dFV t UNION dFVS rst)
+End
+
+Overload FVS = “dFVS”
+
+Theorem FINITE_dFVS[simp] :
+    !phi. FINITE (dFVS phi)
+Proof
+    Induct_on ‘phi’ >| [ALL_TAC, Cases]
+ >> RW_TAC std_ss [dFVS_def, FINITE_EMPTY, FINITE_UNION, FINITE_dFV]
+QED
+
+Theorem dFVS_SNOC :
+    !rst. dFVS (SNOC (t,x) rst) = dFV t UNION dFVS rst
+Proof
+    Induct_on ‘rst’ >- rw [dFVS_def]
+ >> Q.X_GEN_TAC ‘h’ >> Cases_on ‘h’
+ >> rw [dFVS_def]
+ >> SET_TAC []
+QED
+
+Theorem isub_dLAM[simp] :
+    !R x. x NOTIN DOM R /\ x NOTIN dFVS R ==>
+          !t. (dLAM x t) ISUB R = dLAM x (t ISUB R)
+Proof
+    Induct >- rw [isub_def]
+ >> rpt GEN_TAC
+ >> Cases_on ‘h’
+ >> rw [isub_def, pairTheory.FORALL_PROD, DOM_DEF, dFVS_def, sub_def]
+QED
+
+Theorem isub_singleton :
+    !t x u. u ISUB [(t,x)] = [t/x]u:pdb
+Proof
+    SRW_TAC [][isub_def]
+QED
+
+Theorem isub_APPEND :
+    !R1 R2 t:pdb. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)
+Proof
+    Induct
+ >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, isub_def]
+QED
+
+Theorem isub_dAPP :
+    !sub M N. (dAPP M N) ISUB sub = dAPP (M ISUB sub) (N ISUB sub)
+Proof
+    Induct
+ >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, isub_def, sub_def]
+QED
+
+Theorem isub_appstar :
+    !args (t:pdb) sub.
+         t @* args ISUB sub = (t ISUB sub) @* MAP (\t. t ISUB sub) args
+Proof
+    Induct >> SRW_TAC [][isub_dAPP]
+QED
+
+Theorem isub_dV_fresh :
+    !y phi. y NOTIN DOM phi ==> (dV y ISUB phi = dV y)
+Proof
+    Q.X_GEN_TAC ‘x’
+ >> Induct_on ‘phi’ >> rw [isub_def]
+ >> Cases_on ‘h’ >> fs [isub_def, DOM_DEF]
+QED
+
+(* cf. lemma14b, ssub_14b, etc. *)
+Theorem isub_14b :
+    !t phi. DISJOINT (DOM phi) (dFV t) ==> (isub t phi = t)
+Proof
+    Induct_on ‘t’
+ >- (rw [DISJOINT_ALT, isub_def] \\
+     MATCH_MP_TAC isub_dV_fresh >> art [])
+ >- (rw [DISJOINT_ALT, isub_dAPP])
+ >> rw [DISJOINT_ALT]
+ >> POP_ASSUM MP_TAC
+ >> Induct_on ‘phi’
+ >- rw [DOM_DEF, isub_def]
+ >> Q.X_GEN_TAC ‘h’
+ >> Cases_on ‘h’
+ >> rw [DOM_DEF, isub_def]
+ >> Know ‘[lift q 0/r + 1] t = t’
+ >- (MATCH_MP_TAC sub_14b \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> rw [])
+ >> Rewr'
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw []
+QED
+
+Theorem isub_dV_once_lemma[local] :
+    !l i. ALL_DISTINCT (MAP SND l) /\ i < LENGTH l /\
+         (!j. j < LENGTH l ==> EL j (MAP SND l) NOTIN dFVS l) ==>
+         (dV (EL i (MAP SND l)) ISUB l = EL i (MAP FST l))
+Proof
+    Induct_on ‘l’ >- rw [isub_def]
+ >> Q.X_GEN_TAC ‘h’
+ >> Cases_on ‘h’
+ >> Q.X_GEN_TAC ‘i’
+ >> Cases_on ‘i’ >> rw [isub_def, dFVS_def]
+ >- (MATCH_MP_TAC isub_14b \\
+     rw [DOM_ALT_MAP_SND, DISJOINT_ALT, MEM_MAP, MEM_EL] \\
+     Q.PAT_X_ASSUM ‘!j. j < SUC (LENGTH l) ==> P’ (MP_TAC o (Q.SPEC ‘SUC n’)) \\
+     rw [EL_MAP])
+ (* then a contradictory *)
+ >- (fs [MEM_EL] >> METIS_TAC [])
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
+ >> Q.PAT_X_ASSUM ‘!j. j < SUC (LENGTH l) ==> P’ (MP_TAC o (Q.SPEC ‘SUC j’))
+ >> rw [EL_MAP]
+QED
+
+(* The antecedents of this theorem is dirty, as it basically tries to void
+   from more than once substitutions by isub.
+ *)
+Theorem isub_dV_once :
+    !Ms Ns y i. ALL_DISTINCT Ns /\ (LENGTH Ms = LENGTH Ns) /\
+                i < LENGTH Ns /\ (y = EL i Ns) /\
+              (!j. j < LENGTH Ns ==> EL j Ns NOTIN (dFVS (ZIP (Ms,Ns)))) ==>
+               (dV y ISUB (ZIP (Ms,Ns)) = EL i Ms)
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘l = ZIP (Ms,Ns)’
+ >> ‘Ms = MAP FST l’ by rw [Abbr ‘l’, MAP_ZIP]
+ >> ‘Ns = MAP SND l’ by rw [Abbr ‘l’, MAP_ZIP]
+ >> rw []
+ >> MATCH_MP_TAC isub_dV_once_lemma >> fs []
+QED
+
+Theorem lift_appstar :
+    !Ns. lift (M @* Ns) k = lift M k @* MAP (\e. lift e k) Ns
+Proof
+    Induct_on ‘Ns’ using SNOC_INDUCT
+ >> rw [appstar_SNOC, MAP_SNOC]
+QED
+
+Theorem FOLDL_lift_appstar :
+    !ks M Ns. FOLDL lift (M @* Ns) ks = FOLDL lift M ks @* MAP (\e. FOLDL lift e ks) Ns
+Proof
+    Induct_on ‘ks’
+ >> rw [lift_appstar, MAP_MAP_o, combinTheory.o_DEF]
+QED
+
+Theorem lift_dABSi :
+    !n k. lift (dABSi n t) k = dABSi n (lift t (k + n))
+Proof
+    Induct_on ‘n’ >> rw [lift_def, FUNPOW_SUC, ADD1]
+QED
+
+(* cf. sub_def: |- [s/k] (dABS t) = dABS ([lift s 0/k + 1] t) *)
+Theorem sub_dABSi[simp] :
+    !s k. [s/k] (dABSi n t) = dABSi n ([FUNPOW (\e. lift e 0) n s/k + n] t)
+Proof
+    Induct_on ‘n’ >> rw [lift_def]
+ >> rw [FUNPOW_SUC, ADD1]
+ >> KILL_TAC
+ >> Suff ‘FUNPOW (\e. lift e 0) n (lift s 0) =
+          lift (FUNPOW (\e. lift e 0) n s) 0’ >- rw []
+ >> Induct_on ‘n’
+ >- rw [FUNPOW]
+ >> rw [FUNPOW_SUC]
+QED
+
+(* cf. lift_sub:
+
+   |- n <= i ==> lift ([M/i] N) n = [lift M n/i + 1] (lift N n)
+ *)
+Theorem lift_isub_lemma[local] :
+    !l M. EVERY (\i. n <= i) (MAP SND l) ==>
+      (lift (M ISUB l) n =
+       lift M n ISUB ZIP (MAP (\e. lift e n) (MAP FST l),MAP SUC (MAP SND l)))
+Proof
+    Induct_on ‘l’ >- rw [isub_def]
+ >> Q.X_GEN_TAC ‘h’
+ >> Cases_on ‘h’
+ >> rw [isub_def] >> fs []
+ >> rw [lift_sub, ADD1]
+QED
+
+Theorem lift_isub :
+    !M Ms Ns n. EVERY (\i. n <= i) Ns /\ (LENGTH Ms = LENGTH Ns) ==>
+               (lift (M ISUB (ZIP (Ms,Ns))) n =
+                (lift M n) ISUB (ZIP (MAP (\e. lift e n) Ms,MAP SUC Ns)))
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘l = ZIP (Ms,Ns)’
+ >> ‘Ms = MAP FST l’ by rw [Abbr ‘l’, MAP_ZIP]
+ >> ‘Ns = MAP SND l’ by rw [Abbr ‘l’, MAP_ZIP]
+ >> rw []
+ >> MATCH_MP_TAC lift_isub_lemma >> art []
+QED
+
+Theorem isub_SNOC_lemma[local] :
+    !l M. ~MEM k (MAP SND l) ==>
+           (M ISUB ZIP (SNOC s (MAP FST l),SNOC k (MAP SND l)) = [s/k] (M ISUB l))
+Proof
+    Induct_on ‘l’ >- rw [isub_def]
+ >> Q.X_GEN_TAC ‘h’
+ >> Cases_on ‘h’
+ >> rw [isub_def] >> fs []
+QED
+
+Theorem isub_SNOC :
+    !M Ms Ns s k. ~MEM k Ns /\ (LENGTH Ms = LENGTH Ns) ==>
+                 (M ISUB ZIP (SNOC s Ms,SNOC k Ns) = [s/k] (M ISUB ZIP (Ms,Ns)))
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘l = ZIP (Ms,Ns)’
+ >> ‘Ms = MAP FST l’ by rw [Abbr ‘l’, MAP_ZIP]
+ >> ‘Ns = MAP SND l’ by rw [Abbr ‘l’, MAP_ZIP]
+ >> rw []
+ >> MATCH_MP_TAC isub_SNOC_lemma >> art []
+QED
+
+(* Translations from dLAMl to dABSi.
+
+   Some samples for guessing out the statements of this theorem:
+
+> SIMP_CONV arith_ss [dLAM_def, lift_def, sub_def, lift_sub]
+                     “dLAM v1 (dLAM v0 t)”;
+# val it =
+   |- dLAM v1 (dLAM v0 t) =
+      dABS (dABS ([dV 1/v1 + 2] ([dV 0/v0 + 2] (lift (lift t 0) 1)))): thm
+
+> SIMP_CONV arith_ss [dLAM_def, lift_def, sub_def, lift_sub]
+                     “dLAM v2 (dLAM v1 (dLAM v0 t))”;
+# val it =
+   |- dLAM v2 (dLAM v1 (dLAM v0 t)) =
+      dABS
+        (dABS
+           (dABS ([dV 2/v2 + 3]
+                    ([dV 1/v1 + 3]
+                       ([dV 0/v0 + 3]
+                          (lift (lift (lift t 0) 1) 2)))))): thm
+ *)
+Theorem dLAMl_to_dABSi :
+    !vs. ALL_DISTINCT (vs :num list) ==>
+         let n = LENGTH vs;
+             body = FOLDL lift t (GENLIST I n);
+             phi = ZIP (GENLIST dV n, MAP (\i. i + n) (REVERSE vs))
+         in dLAMl vs t = dABSi n (body ISUB phi)
+Proof
+    Induct_on ‘vs’ >- rw [isub_def]
+ >> rw [isub_def, GSYM SNOC_APPEND, MAP_SNOC, FUNPOW_SUC, GENLIST, FOLDL_SNOC,
+        dLAM_def]
+ >> fs []
+ >> qabbrev_tac ‘n = LENGTH vs’
+ >> rw [lift_dABSi]
+ >> Q.PAT_X_ASSUM ‘dLAMl vs t = _’ K_TAC
+ >> qabbrev_tac ‘N = FOLDL lift t (GENLIST I n)’
+ >> qabbrev_tac ‘Ms = GENLIST dV n’
+ >> qabbrev_tac ‘Vs = MAP (\i. i + n) (REVERSE vs)’
+ >> Know ‘lift (N ISUB ZIP (Ms,Vs)) n =
+          (lift N n) ISUB (ZIP (MAP (\e. lift e n) Ms,MAP SUC Vs))’
+ >- (MATCH_MP_TAC lift_isub \\
+     rw [Abbr ‘Ms’, Abbr ‘Vs’, EVERY_MEM, MEM_MAP] >> rw [])
+ >> Rewr'
+ >> ‘MAP SUC Vs = MAP (\i. i + SUC n) (REVERSE vs)’
+       by (rw [LIST_EQ_REWRITE, EL_MAP, Abbr ‘Vs’]) >> POP_ORW
+ >> qunabbrev_tac ‘Vs’ (* now useless *)
+ >> rw [sub_def, GSYM ADD1]
+ >> ‘MAP (\e. lift e n) Ms = Ms’
+       by (rw [LIST_EQ_REWRITE, EL_MAP, Abbr ‘Ms’]) >> POP_ORW
+ >> qabbrev_tac ‘Ns = MAP (\i. i + SUC n) (REVERSE vs)’
+ >> qabbrev_tac ‘N' = lift N n’
+ >> Suff ‘N' ISUB ZIP (SNOC (dV n) Ms,SNOC (h + SUC n) Ns) =
+          [dV n/h + SUC n] (N' ISUB ZIP (Ms,Ns))’ >- rw []
+ >> MATCH_MP_TAC isub_SNOC
+ >> rw [Abbr ‘Ms’, Abbr ‘Ns’, MEM_EL, EL_MAP]
+ >> rename1 ‘~(i < n)’
+ >> ‘LENGTH (REVERSE vs) = n’ by rw [Abbr ‘n’]
+ >> CCONTR_TAC >> gs [EL_MAP]
+ >> ‘h = EL i (REVERSE vs)’ by rw []
+ >> Suff ‘MEM h (REVERSE vs)’ >- rw [MEM_REVERSE]
+ >> Q.PAT_X_ASSUM ‘~MEM h vs’ K_TAC
+ >> ‘LENGTH (REVERSE vs) = n’ by rw [Abbr ‘n’]
+ >> REWRITE_TAC [MEM_EL]
+ >> Q.EXISTS_TAC ‘i’ >> art []
+QED
+
+(* |- !t vs.
+        ALL_DISTINCT vs ==>
+        dLAMl vs t =
+        dABSi (LENGTH vs)
+          (FOLDL lift t (GENLIST I (LENGTH vs)) ISUB
+           ZIP (GENLIST dV (LENGTH vs),MAP (\i. i + LENGTH vs) (REVERSE vs)))
+ *)
+Theorem dLAMl_to_dABSi_applied =
+    GEN_ALL (SIMP_RULE std_ss [LET_DEF] dLAMl_to_dABSi)
+
 val _ = export_theory();
+val _ = html_theory "pure_dB";
+
+(* References:
+
+   [1] Nipkow, T.: More Church-Rosser Proofs. J. Autom. Reason. (2001).
+ *)

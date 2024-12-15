@@ -46,7 +46,7 @@ fun NOT_CONV tm =
  let val xn = dest_neg tm
  in if aconv xn T then c1 else
     if aconv xn F then c2
-    else let val xn' = dest_neg xn in SPEC xn c3 end
+    else let val xn' = dest_neg xn in SPEC xn' c3 end
  end handle HOL_ERR _ => raise ERR "NOT_CONV" ""
 end;
 

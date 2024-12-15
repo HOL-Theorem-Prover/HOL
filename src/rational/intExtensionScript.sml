@@ -9,15 +9,7 @@
 
 open HolKernel boolLib Parse bossLib;
 
-(* interactive mode
-app load ["integerTheory","intLib",
-"ringLib", "pairTheory",
-        "integerRingTheory","integerRingLib",
-        "schneiderUtils"];
-*)
-open
-        arithmeticTheory pairTheory
-        integerTheory intLib
+open arithmeticTheory pairTheory integerTheory intLib
         EVAL_ringTheory EVAL_ringLib integerRingLib
         schneiderUtils;
 
@@ -61,6 +53,19 @@ QED
 Theorem MUL_ABS_SGN: ABS x * SGN x = x
 Proof
   rw[INT_ABS, SGN_def]
+QED
+
+Theorem ABS_SGN:
+  ABS (SGN i) = if i = 0 then 0 else 1
+Proof
+  Cases_on `i` >> gvs[SGN_def]
+QED
+
+Theorem SGN_MUL_Num[simp]:
+  SGN i * &Num i = i
+Proof
+  Cases_on `i` >> gvs[SGN_def] >>
+  simp[INT_MUL_CALCULATE]
 QED
 
 (*--------------------------------------------------------------------------

@@ -878,17 +878,18 @@ fun get_joint_write_body_spc_thm body mode vb =
                                                  ``(ExcVectorBase:bool[32])``]
                                                 constT_spc_thm) wp1_thm);
         val writing_part_abs_spc_thm =
-            store_thm ("writing_part_spc_thm" ,
-                       ``set_pc_to_abs ^r1 ^mode ExcVectorBase``,
+            TAC_PROOF (([], “set_pc_to_abs ^r1 ^mode ExcVectorBase”),
                        MP_TAC writing_part_spc_thm
-                              THEN RW_TAC (srw_ss()) [set_pc_to_def,set_pc_to_abs_def]
-                              THEN PAT_X_ASSUM ``! s1 s2. X`` (fn thm =>
-                                                                ASSUME_TAC (SPECL [``s1:arm_state``,``s2:arm_state``] thm))
-                              THEN PAT_X_ASSUM ``X a s1 = ValueState () s2``
+                       THEN RW_TAC (srw_ss()) [set_pc_to_def,set_pc_to_abs_def]
+                       THEN PAT_X_ASSUM ``! s1 s2. X``
+                               (fn thm =>
+                                  ASSUME_TAC (SPECL [“s1:arm_state”,
+                                                     “s2:arm_state”] thm))
+                       THEN PAT_X_ASSUM ``X a s1 = ValueState () s2``
                               (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
-                              THEN RES_TAC
-                              THEN RW_TAC (srw_ss()) []
-                             );
+                       THEN RES_TAC
+                       THEN RW_TAC (srw_ss()) []
+                      )
 
         val thm = MP (SPECL [r1,l1,
                              mode,

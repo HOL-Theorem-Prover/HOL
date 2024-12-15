@@ -1,7 +1,0 @@
-TEX_STEMS = lassie-tutorial example1 intro libraries HOL4tactics preamble repl \
-            script tipsTricks
-
-TEX_FILES = $(patsubst %,%.tex,$(TEX_STEMS))
-
-lassie-tutorial.pdf: $(TEX_FILES) setup_hol4.sh
-	latexmk -pdf lassie-tutorial

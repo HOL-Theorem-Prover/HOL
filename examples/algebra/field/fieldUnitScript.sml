@@ -12,20 +12,13 @@ val _ = new_theory "fieldUnit";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
 open pred_setTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "fieldTheory"; *)
-(* val _ = load "ringUnitTheory"; *)
 open ringTheory fieldTheory;
-open ringDividesTheory ringUnitTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Field Units Documentation                                                 *)

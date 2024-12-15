@@ -21,6 +21,7 @@ sig
          case_def  : thm,
          case_cong : thm,
          case_eq   : thm,
+         case_elim : thm,
          nchotomy  : thm,
          size      : (term * shared_thm) option,
          encode    : (term * shared_thm) option,
@@ -61,6 +62,7 @@ sig
    val case_cong_of    : tyinfo -> thm
    val case_def_of     : tyinfo -> thm
    val case_eq_of      : tyinfo -> thm
+   val case_elim_of    : tyinfo -> thm
    val nchotomy_of     : tyinfo -> thm
    val distinct_of     : tyinfo -> thm option
    val one_one_of      : tyinfo -> thm option

@@ -1,5 +1,3 @@
-PRE_INCLUDES = ../../algebra/ring
-
-ALGEBRA_INCLUDES = lib monoid group field polynomial finitefield
+ALGEBRA_INCLUDES = field polynomial finitefield
 INCLUDES = $(patsubst %,../../algebra/%,$(ALGEBRA_INCLUDES)) \
            ../../simple_complexity/lib ../compute ../machine

@@ -13,7 +13,7 @@ val _ = new_theory "mips_step"
 (* ------------------------------------------------------------------------ *)
 
 val _ = List.app (fn f => f ())
-   [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths,
+   [numLib.temp_prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths,
     ParseExtras.temp_loose_equality]
 
 (* ------------------------------------------------------------------------ *)

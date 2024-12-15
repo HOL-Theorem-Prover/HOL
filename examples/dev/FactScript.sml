@@ -7,21 +7,6 @@
 (*****************************************************************************)
 
 (******************************************************************************
-* Load theories
-******************************************************************************)
-(*  For working interactively
-quietdec := true;
-loadPath :="dff" :: !loadPath;
-app load  ["compile","vsynth"];
-open arithmeticTheory pairLib pairTheory PairRules combinTheory
-     devTheory composeTheory compileTheory compile vsynth;
-infixr 3 THENR;
-infixr 3 ORELSER;
-val _ = numLib.prefer_num();
-quietdec := false;
-*)
-
-(******************************************************************************
  * Boilerplate needed for compilation. Batch mode.
  ******************************************************************************)
 
@@ -39,7 +24,7 @@ infixr 3 ORELSER;
  * Set default parsing to natural numbers rather than integers
  ******************************************************************************)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)

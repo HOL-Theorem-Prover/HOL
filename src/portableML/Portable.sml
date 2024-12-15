@@ -43,6 +43,7 @@ infix 3 ##
 fun (f ## g) (x, y) = (f x, g y)
 fun apfst f (x, y) = (f x, y)
 fun apsnd f (x, y) = (x, f y)
+fun pair_map f (x, y) = (f x, f y)
 infix |> ||> |>> ||->
 fun x |> f = f x
 fun (x,y) |>> f = (f x, y)
@@ -600,6 +601,9 @@ fun replace_string {from, to} =
     f [] o Substring.full
   end
 
+val remove_wspace =
+    String.translate (fn c => if Char.isSpace c then "" else str c)
+
 (*---------------------------------------------------------------------------
     System
  ---------------------------------------------------------------------------*)
@@ -821,15 +825,9 @@ fun with_ppstream ppstrm =
  ---------------------------------------------------------------------------*)
 
 type 'a quotation = 'a HOLPP.quotation
-open HOLPP
+open HOLPP HOLquotation
 
 fun pprint f x = prettyPrint(TextIO.print, 72) (f x)
-
-fun norm_quote [] = []
-  | norm_quote [x] = [x]
-  | norm_quote (QUOTE s1 :: QUOTE s2 :: rst) =
-      norm_quote (QUOTE (s1 ^ s2) :: rst)
-  | norm_quote (h :: rst) = h :: norm_quote rst
 
 local
   fun strip_comments (d, a) s =

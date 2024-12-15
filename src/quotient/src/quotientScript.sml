@@ -10,7 +10,7 @@ open HolKernel Parse boolLib;
 val _ = new_theory "quotient";
 
 open combinTheory dep_rewrite simpLib boolSimps
-local open Q in end
+local open Q BasicProvers in end
 
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
@@ -269,20 +269,17 @@ val SET_MAP_def =
 
 
 (* The strong version of FUN_REL: *)
+val FUN_REL = new_definition("FUN_REL",
+  “$===> (R1:'a->'b->bool) (R2:'c->'d->bool) f g =
+           !x y. R1 x y ==> R2 (f x) (g y)”);
 
-val FUN_REL =
-    new_infixr_definition
-    ("FUN_REL",
-     (“$===> (R1:'a->'a->bool) (R2:'b->'b->bool) f g =
-           !x y. R1 x y ==> R2 (f x) (g y)”),
-     490);
-
+val _ = set_fixity "===>" (Infixr 490)
 val _ = TeX_notation {hol = "===>", TeX = ("\\HOLTokenLongimp", 2)};
 
 
-val FUN_REL_EQ = store_thm
-   ("FUN_REL_EQ",
-    (“(($= :'a -> 'a -> bool) ===> ($= :'b -> 'b -> bool)) = $=”),
+Theorem FUN_REL_EQ[simp]:
+  (($= :'a -> 'a -> bool) ===> ($= :'b -> 'b -> bool)) = $=
+Proof
     CONV_TAC FUN_EQ_CONV
     THEN GEN_TAC
     THEN CONV_TAC FUN_EQ_CONV
@@ -290,7 +287,7 @@ val FUN_REL_EQ = store_thm
     THEN PURE_ONCE_REWRITE_TAC[FUN_REL]
     THEN CONV_TAC (RAND_CONV FUN_EQ_CONV)
     THEN PROVE_TAC[]
-   );
+QED
 
 val FUN_QUOTIENT = store_thm
    ("FUN_QUOTIENT",

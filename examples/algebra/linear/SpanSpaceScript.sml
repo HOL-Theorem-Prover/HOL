@@ -12,23 +12,14 @@ val _ = new_theory "SpanSpace";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* val _ = load "VectorSpaceTheory"; *)
+(* open dependent theories *)
+open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
+
 open VectorSpaceTheory;
 open monoidTheory groupTheory fieldTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Span Space Documentation                                                  *)

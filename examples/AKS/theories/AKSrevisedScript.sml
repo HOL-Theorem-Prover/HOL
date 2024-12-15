@@ -14,13 +14,16 @@ val _ = new_theory "AKSrevised";
 
 open jcLib;
 
+(* open dependent theories *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
+     combinatoricsTheory dividesTheory gcdTheory primeTheory;
+
 (* Get dependent theories local *)
 open AKStheoremTheory;
 open AKSmapsTheory;
 open AKSsetsTheory;
 open AKSintroTheory;
 open AKSshiftTheory;
-open logPowerTheory;
 open computeParamTheory;
 
 (* Get polynomial theory of Ring *)
@@ -35,42 +38,11 @@ open polyRootTheory;
 open polyDividesTheory;
 
 open monoidTheory groupTheory ringTheory fieldTheory;
-open subgroupTheory;
-open groupOrderTheory;
-open monoidOrderTheory;
 open fieldMapTheory;
-open ringUnitTheory;
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-open helperNumTheory helperSetTheory helperListTheory;
-open helperFunctionTheory;
-
-open dividesTheory gcdTheory;
-
-open triangleTheory;
-open binomialTheory;
-
-open ringBinomialTheory;
-open ringDividesTheory;
-
-open monoidInstancesTheory;
-open groupInstancesTheory;
-open ringInstancesTheory;
 open fieldInstancesTheory;
-open groupOrderTheory;
-open monoidOrderTheory;
-
-open groupCyclicTheory;
-
 open fieldBinomialTheory;
-
 open fieldIdealTheory;
-
 open fieldOrderTheory;
-
 open fieldProductTheory;
 
 open ffBasicTheory;
@@ -84,8 +56,7 @@ open ffConjugateTheory;
 open ffMasterTheory;
 open ffMinimalTheory;
 
-open GaussTheory;
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* AKS parameter k revised (not required to be prime) Documentation          *)

@@ -1,1 +1,1 @@
-INCLUDES = ../folcompactness ../modal-tableaux
+INCLUDES = ../folcompactness ../modal-tableaux $(HOLDIR)/src/finite_maps

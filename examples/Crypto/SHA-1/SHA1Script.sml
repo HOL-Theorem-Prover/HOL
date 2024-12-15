@@ -14,7 +14,7 @@ open HolKernel Parse boolLib bossLib
 
 val _ = new_theory "SHA1";
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (*---------------------------------------------------------------------------*)
 (* Some support stuff on lists, in particular a definition of TAKE.          *)

@@ -84,28 +84,24 @@ Proof
       fs[equiv_on_def,UNION_DEF] >> metis_tac[])
 QED
 
-val equiv_on_INSERT_partition_UNION = store_thm(
-"equiv_on_INSERT_partition_UNION",
-``R equiv_on s ==>  !e p. e INSERT p = partition R s ==> s = e UNION (BIGUNION p)``,
-rw[] >>
-`BIGUNION (e INSERT p) = s` by metis_tac[BIGUNION_partition] >>
-fs[BIGUNION]);
-
 val equiv_on_partition_NOT_R = store_thm(
 "equiv_on_partition_NOT_R",
 ``R equiv_on s ==> !t1 t2. t1 IN partition R s /\ t2 IN partition R s /\ t1 <> t2 ==> !x. x IN t1 ==> !y. y IN t2 ==> ¬R x y``,
 rw[] >> SPOSE_NOT_THEN ASSUME_TAC >>
 metis_tac[equiv_on_same_partition]);
 
-val equiv_on_INSERT_partition = store_thm(
-"equiv_on_INSERT_partition",
-``R equiv_on s ==> !e p. e NOTIN p /\ e INSERT p = partition R s ==> !x. x IN e ==> !y. y IN (BIGUNION p) ==> ¬R x y``,
-rw[] >>
-`!a. a IN p ==>  e <> a` by fs[] >>
-`e <> s'` by metis_tac[] >>
-`e IN partition R s` by fs[INSERT_SUBSET,SET_EQ_SUBSET] >>
-`s' IN partition R s` by fs[INSERT_SUBSET,SET_EQ_SUBSET,SUBSET_DEF] >>
-metis_tac[equiv_on_partition_NOT_R]);
+Theorem equiv_on_INSERT_partition:
+  R equiv_on s ==>
+  !e p. e NOTIN p /\ e INSERT p = partition R s ==>
+        !x. x IN e ==> !y. y IN (BIGUNION p) ==> ¬R x y
+Proof
+  rw[] >>
+  `!a. a IN p ==>  e <> a` by fs[] >>
+  `e <> s'` by metis_tac[] >>
+  `e IN partition R s` by fs[INSERT_SUBSET,SET_EQ_SUBSET] >>
+  `s' IN partition R s` by fs[INSERT_SUBSET,SET_EQ_SUBSET,SUBSET_DEF] >>
+  metis_tac[equiv_on_partition_NOT_R]
+QED
 
 val equiv_on_INSERT_partition_UNION = store_thm(
 "equiv_on_INSERT_partition_UNION",
@@ -113,18 +109,6 @@ val equiv_on_INSERT_partition_UNION = store_thm(
 rw[] >>
 `BIGUNION (e INSERT p) = s` by metis_tac[BIGUNION_partition] >>
 fs[BIGUNION]);
-
-
-val equiv_on_INSERT_partition = store_thm(
-"equiv_on_INSERT_partition",
-``R equiv_on s ==> !e p. e NOTIN p /\ e INSERT p = partition R s ==> !x. x IN e ==> !y. y IN (BIGUNION p) ==> ¬R x y``,
-rw[] >>
-`!a. a IN p ==>  e <> a` by fs[] >>
-`e <> s'` by metis_tac[] >>
-`e IN partition R s` by fs[INSERT_SUBSET,SET_EQ_SUBSET] >>
-`s' IN partition R s` by fs[INSERT_SUBSET,SET_EQ_SUBSET,SUBSET_DEF] >>
-metis_tac[equiv_on_partition_NOT_R]);
-
 
 Theorem FINITE_partition_SUBSET:
   !R s. R equiv_on s ==> FINITE (partition R s) ==>

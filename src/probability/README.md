@@ -19,9 +19,9 @@ This directory contains HOL4's Measure, Lebesgue Integration and Probability the
 
 ## Measure, Integration and Probability Theory defined on reals (obsoleted)
 
-     real_measureScript.sml       * Measure Theory defined on reals
-     real_lebesgueScript.sml      * Lebesgue integration based on reals
-     real_probabilityScript.sml   * Probability Theory based on reals
+     NOTE: The legacy measure, integration and probability theories based on finite measures
+     are moved to `$(HOLDIR)/examples/probability/legacy`. They are needed when building the
+     two examples in `examples/miller` and `examples/diningcryptos`.
 
 ## Further extensions
 

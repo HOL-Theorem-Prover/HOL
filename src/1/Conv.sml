@@ -26,6 +26,7 @@ exception UNCHANGED
 fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 val ERR = mk_HOL_ERR "Conv"
+val ERRloc = mk_HOL_ERRloc "Conv"
 fun w nm c t = c t handle UNCHANGED => raise UNCHANGED
                    | e as HOL_ERR _ => Portable.reraise e
                    | Fail s => raise Fail (s ^ " --> " ^ nm)
@@ -80,17 +81,20 @@ val REWR_CONV_A  = REWR_CONV0 (PART_MATCH_A,    "REWR_CONV_A")
  *    now passes on information about nested failure                    *
  *----------------------------------------------------------------------*)
 
+fun set_origin fnm
+    {origin_function, origin_structure, source_location, message} =
+  if Lib.mem origin_function ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+      andalso origin_structure = "Conv"
+      then ERRloc fnm source_location message
+  else ERRloc fnm source_location (origin_function ^ ": " ^ message)
+
 fun RAND_CONV conv tm =
    let
       val {Rator, Rand} =
          dest_comb tm handle HOL_ERR _ => raise ERR "RAND_CONV" "not a comb"
       val newrand =
          conv Rand
-         handle HOL_ERR {origin_function, message, origin_structure} =>
-            if Lib.mem origin_function ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-               andalso origin_structure = "Conv"
-               then raise ERR "RAND_CONV" message
-            else raise ERR "RAND_CONV" (origin_function ^ ": " ^ message)
+         handle HOL_ERR e => raise set_origin "RAND_CONV" e
    in
       AP_TERM Rator newrand
       handle HOL_ERR {message, ...} =>
@@ -113,11 +117,7 @@ fun RATOR_CONV conv tm =
          dest_comb tm handle HOL_ERR _ => raise ERR "RATOR_CONV" "not a comb"
       val newrator =
          conv Rator
-         handle HOL_ERR {origin_function, origin_structure, message} =>
-            if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-               andalso origin_structure = "Conv"
-               then raise ERR "RATOR_CONV" message
-            else raise ERR "RATOR_CONV" (origin_function ^ ": " ^ message)
+         handle HOL_ERR e => raise set_origin "RATOR_CONV" e
    in
       AP_THM newrator Rand
       handle HOL_ERR {message, ...} =>
@@ -158,13 +158,7 @@ fun ABS_CONV conv tm =
                  in
                     TRANS (TRANS th1 eq_thm') th2
                  end
-                 handle HOL_ERR {origin_function, origin_structure, message} =>
-                          if Lib.mem origin_function
-                                     ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-                             andalso origin_structure = "Conv"
-                             then raise ERR "ABS_CONV" message
-                          else raise ERR "ABS_CONV"
-                                         (origin_function ^ ": " ^ message)
+                 handle HOL_ERR e => raise set_origin "ABS_CONV" e
         end
     | _ => raise ERR "ABS_CONV" "Term not an abstraction"
 
@@ -1778,15 +1772,36 @@ fun SWAP_EXISTS_CONV xyt =
    let
       val {Bvar = x, Body = yt} = dest_exists xyt
       val {Bvar = y, Body = t} = dest_exists yt
-      val xt  = mk_exists {Bvar = x, Body = t}
-      val yxt = mk_exists {Bvar = y, Body = xt}
-      val t_thm = ASSUME t
    in
-      IMP_ANTISYM_RULE
-         (DISCH xyt (CHOOSE (x, ASSUME xyt) (CHOOSE (y, (ASSUME yt))
-          (EXISTS (yxt, y) (EXISTS (xt, x) t_thm)))))
-         (DISCH yxt (CHOOSE (y, ASSUME yxt) (CHOOSE (x, (ASSUME xt))
-         (EXISTS (xyt, x) (EXISTS (yt, y) t_thm)))))
+     if x ~~ y then (* x is vacuous *)
+         (*
+              ?a b. t  =  ?b. t   (1)  (by EXISTS_SIMP)
+                 t     =  ?a. t   (2)  (by EXISTS_SIMP)
+                ?b. t  = ?b a. t  (3)  (from 2 and ABS/MK_COMB)
+              ?a b. t  = ?b a. t       (from 1 and 3 by TRANS)
+         *)
+       let val v' = variant (HOLset.listItems (FVL[t] empty_tmset)) x
+           val exc = rator xyt
+           val th1 = REWR_CONV EXISTS_SIMP xyt
+           val th2 = SYM (REWR_CONV EXISTS_SIMP (Psyntax.mk_exists(v', t)))
+           val th3 = AP_TERM exc (ABS x th2)
+       in
+         TRANS th1 th3
+       end
+     else
+       let
+         val xt  = mk_exists {Bvar = x, Body = t}
+         val yxt = mk_exists {Bvar = y, Body = xt}
+         val t_thm = ASSUME t
+       in
+         IMP_ANTISYM_RULE
+           (DISCH xyt (CHOOSE (x, ASSUME xyt)
+                          (CHOOSE (y, (ASSUME yt))
+                                  (EXISTS (yxt, y) (EXISTS (xt, x) t_thm)))))
+           (DISCH yxt (CHOOSE (y, ASSUME yxt)
+                          (CHOOSE (x, (ASSUME xt))
+                                  (EXISTS (xyt, x) (EXISTS (yt, y) t_thm)))))
+       end
    end
    handle HOL_ERR _ => raise ERR "SWAP_EXISTS_CONV" ""
 
@@ -2530,6 +2545,23 @@ val PAT_CONV = let
 in
   fn pat => PCONV (strip_abs pat)
 end
+
+fun dest_path path =
+  let
+    fun compose f g x = f (g x)
+    fun abs_body tm = #Body (dest_abs tm)
+    fun binder_body tm =
+      if is_abs tm then abs_body tm else abs_body (rand tm)
+    fun loop [] = I
+      | loop (c::cs) =
+         if c = #"a" then compose (loop cs) abs_body else
+         if c = #"b" then compose (loop cs) binder_body else
+         if c = #"l" then compose (loop cs) rator else
+         if c = #"r" then compose (loop cs) rand else
+           failwith ("dest_path does not understand: " ^ str c)
+  in
+    loop (explode path)
+  end;
 
 fun PATH_CONV path c =
   let

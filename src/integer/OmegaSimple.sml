@@ -288,9 +288,8 @@ fun simple_CONV t = let
       | (t::ts) =>
         add_term_to_db db svars t (fn db => fn k => add_ts db ts next k) kont
   open OmegaMLShadow
-  val ordered_vars = Listsort.sort Term.compare vars
 in
-  add_ts (dbempty (length vars + 1)) bcs work (verify_result t ordered_vars)
+  add_ts (dbempty (length vars + 1)) bcs work (verify_result t svars)
 end
 
 (* testing code:

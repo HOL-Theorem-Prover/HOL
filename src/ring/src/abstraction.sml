@@ -4,10 +4,7 @@ struct
 open HolKernel Parse boolLib;
 infix o |->;
 
-fun ABS_ERR function message =
-    HOL_ERR{origin_structure = "abs_tools",
-                      origin_function = function,
-                      message = message};
+val ABS_ERR = mk_HOL_ERR "abs_tools"
 
 val curr_assums = ref ([]:term list);
 val fv_ass = ref ([]:term list);

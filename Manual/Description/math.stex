@@ -1,9 +1,84 @@
 %%% -*- Mode: LaTeX; -*-
+\chapter{Core Theories---Higher Mathematics}
+\label{ch:math}
 
-\section{Higher Mathematics}
-\label{sec:mathematics}
+\section{Ordinals and Cardinals in HOL}
+\label{sec:ordinals}
 
-\subsection{Elementary topology of one-dimensional Euclidean space}
+HOL provides the theory of ordinals and cardinals in \theoryimp{wellorderTheory},
+\theoryimp{cardinalTheory}, and \theoryimp{ordinalTheory}, etc.~\cite{Norrish:2013}.}
+Unfortunately, the typed logic implemented in the various HOL systems (including
+Isabelle/HOL) is not strong enough to define a type for all possible
+ordinal values.  It turns out, however, that for any fixed
+$n \in\mathbb{N}$, we can model all ordinals of cardinality
+$\aleph_n$. The user is thus able to choose an ordinal domain of
+sufficient size for their purposes.
+
+\subsection{Ordinals in HOL}
+\label{ss:ordinals}
+
+The ordinals are an extension of the natural numbers\footnote{Some contents here
+  are taken from~\cite{ACL2approach} (Section~6.3: The Ordinals).
+  Courtesy of ACL2 developers.}.
+The idea is to add new ``numbers'' after the naturals. For example, if we add
+$\omega$, we get $0, 1, 2, \ldots, \omega$, where $0 < 1 < 2 < \cdots < \omega$.
+Notice that this new set extends the naturals and is countable.  In addition,
+under this ordering it has a biggest element $\omega$, is linearly ordered,
+and well-founded.  The ordinals are what you get if you keep adding elements.
+The first few ordinals are: $0, 1, \ldots, \omega, \omega + 1, \ldots, \omega\times 2$.
+Notice that (the ordinals less than) $\omega\times 2$ is what you get if you put two
+copies of (the ordinals less than) $\omega$ next to each other,~i.e., $0,1,\ldots,0,1,\ldots$
+(and then rename the elements in the second copy). Continuing to add ``numbers,''
+we get $\omega, \omega\times 2,\omega\times 3,\ldots,\omega^2$.
+Now we have introduced ordinal exponentiation.  Note that $\omega^2$ is what you get
+if you put $\omega$ copies of $\omega$, one after the other (and rename elements).
+We will pick up where we left off, but will now start extending the ordinals at a faster
+rate: $\omega^2, \omega^2+1, \ldots \omega^2+\omega, \omega^2+\omega +1,\ldots
+\omega^2+(\omega\times 2), \omega^2+(\omega\times 2)+1,\ldots,
+\omega^2+(\omega\times 3), \ldots,
+\omega^2+(\omega\times 4), \ldots,
+\omega^2\times 2,\ldots, \omega^2\times 3, \ldots,
+\omega^3, \omega^4, \ldots,
+\omega^\omega, \ldots,
+\omega^{(\omega^\omega)}, \ldots,
+\omega^{(\omega^{(\omega^\omega)})}, \ldots, \epsilon_0$.
+The set of ordinals less than $\epsilon_0$ is countable.
+
+\begin{hol}
+\begin{alltt}
+>>__ load "ordinalTheory";
+##thm ordinalTheory.ordSUC_def
+\end{alltt}
+\end{hol}
+
+\subsection{Cardinals in HOL}
+\label{ss:cardinals}
+
+In mathematics, a \emph{cardinal number}, or \emph{cardinal} for
+short, is what is commonly called the number of elements of a set. In
+the case of a finite set $s$, its cardinal number, or cardinality is
+therefore a natural number, say $n$. Within \theoryimp{pred_setTheory}
+(Section~\ref{sec:theory-of-sets}),
+this is denoted by either by \holtxt{CARD s = n}, or by \holtxt{s HAS_SIZE n}.
+For dealing with the case of infinite sets, the infinite cardinal numbers have been introduced,
+which are often denoted with the Hebrew letter $\aleph$ marked with subscript
+indicating their rank among the infinite cardinals.
+
+Currently HOL does not have cardinal arithmetic, such as
+those~\cite{IsaCardinals} available in Isabelle/HOL. Nevertheless, it
+is possible to compare the cardinalities of any two infinite sets.
+Cardinality is defined in terms of bijective functions:
+\begin{hol}
+\begin{alltt}
+>>__ load "cardinalTheory";
+##thm cardinalTheory.cardleq_def
+\end{alltt}
+\end{hol}
+
+%\section{General Topology}
+%\label{sec:top}
+
+\section{Topology of One-Dimensional Euclidean Space}
 \label{sec:topology}
 \index{real\_topology, the HOL theory of@real\_topology, the \HOL{} theory of}
 
@@ -47,65 +122,211 @@ Borel-measurable spaces in measure theory:
 >>__ val oldwidth = !Globals.linewidth;
      val _ = Globals.linewidth := 70;
 >>__ load "real_topologyTheory";
->>__ open real_topologyTheory;
-##thm COMPACT_EQ_HEINE_BOREL
+##thm real_topologyTheory.COMPACT_EQ_HEINE_BOREL
 
-##thm COMPACT_EQ_BOUNDED_CLOSED
+##thm real_topologyTheory.COMPACT_EQ_BOUNDED_CLOSED
 \end{alltt}
 \end{hol}
 
 The concept of open (and closed) sets is fundamental and is needed, for example, in the definition of Borel sets (see Section~\ref{sec:borel}):
 \begin{hol}
 \begin{alltt}
-##thm open_def
-##thm closed_def
+##thm real_topologyTheory.open_def
+
+##thm real_topologyTheory.closed_def
 \end{alltt}
 \end{hol}
 
-\subsection{Univariate differential and integral calculus}
+% TODO: open and closed intervals
+
+\section{Univariate Differential and Integral Calculus}
 \label{sec:calculus}
 \index{calculus, the HOL theory of@calculus, the \HOL{} theory of}
 
-An extensive development of (univariate) differential and integral
-calculus, ported from HOL Light, is available in the theory \theoryimp{derivative} and
-\theoryimp{integration}.
+HOL offers two groups of theories for univariate differential and integral calculus.
+The old one consists of \theoryimp{limTheory} (limits of functions, differentiation
+and continuity) and \theoryimp{integralTheory} (integration),
+while the new one consists of \theoryimp{derivativeTheory} and
+\theoryimp{integrationTheory} with fundamental concepts from
+\theoryimp{real_topologyTheory}.
+Both groups of theories were originally developed
+by John Harrison\footnote{The \theoryimp{derivativeTheory} and
+  \theoryimp{integrationTheory} were originally ported from HOL Light in 2015,
+  by Muhammad Qasim and Osman Hasan et al.
+  The corresponding original HOL Light theories
+  are part of HOL Light's formalizations on multivariate calculus.}.
 
-\subsubsection{Derivative}
+These two group of theories are now compatible by having some bridging theorems
+showing the equivalences between their key concepts.
+The old theories align more tightly to conventional textbooks,
+while the new theories usually offer some extra functionalities.
+HOL users can use both of them within the same proof scripts.
+The rest of this section briefly introduce some important concepts
+and theorems, focusing on the bridges between old and new theories\footnote{Some
+  contents below were taken from~\cite{harrison2017hol} and~\cite{Harrison:2012ig}.}.
 
-A quintessentially analytic property is the derivative of a function. One might
-expect to find a higher-order `derivative' function \texttt{deriv}
-$\colon
-(\mathbb{R}\rightarrow\mathbb{R})\rightarrow(\mathbb{R}\rightarrow\mathbb{R})$
+\subsection{Derivative}
+\label{ss:derivative}
+
+A quintessentially analytic property is the \emph{derivative} of a (real-valued) function.
+The concept of derivative is first suggested by the intuitive notion of
+the \emph{tangent to a smooth curve} $y = f(x)$ at a point $P$ with the coordinates
+$x$ and $y$. See Figure~\ref{fig:diffl} for an illustration of this \emph{differentiation process}.
+Mathematically, one shall generally use either the notation of Lagrange, $y' = f'(x)$,
+to denote the derivative, or, as Leibnitz did, the symbol $dy/dx$ or $df(x)/dx$.
+The notation $f'(x)$ indicates the fact that the
+\emph{derivative is itself a function} of $x$ since a value of $f'(x)$ corresponds to
+each value of $x$ (in the interval considered). The
+definition of the derivative appears in several different forms, one of the following:
+\begin{equation}
+  \label{eq:derivative}
+  f'(x) = \lim_{h\rightarrow 0}\frac{f(x+h) - f(x)}{h}
+\end{equation}
+
+One might expect to find a higher-order `derivative' function \texttt{deriv}
+$\colon (\mathbb{R}\rightarrow\mathbb{R})\rightarrow(\mathbb{R}\rightarrow\mathbb{R})$
 mapping a function $f$ to its derivative $f'$. Actually, no such thing
 is defined in HOL, but rather a ternary operator
-\holtxt{has_derivative} where \holtxt{(f has_derivative f') (at x)}
+\holtxt{diffl} (defined in \theoryimp{limTheory}) where \holtxt{(f diffl l) x}
+means `the function $f$ has a derivative with value $l$ at the point $x$'.
+Expanding out the definition, we see that the definition is much as an analyst might expect:
+
+\begin{hol}
+\begin{alltt}
+>>__ load "limTheory";
+##thm limTheory.diffl
+\end{alltt}
+\end{hol}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics{figs/0.mps}
+  \caption{The differentiation process of \holtxt{(f diffl l) x}}
+  \label{fig:diffl}
+\end{figure}
+
+\holtxt{(f has_derivative f') (at x)}
 means `the function $f$ has a derivative $f'$ at the point $x$', or
 \holtxt{(f has_derivative f') (at x within s)} means `the function $f$
 has a derivative $f'$ at the point $x$ within the set $s$'.
-Expanding out the definition, we see that
-the definition is much as an analyst might expect:
+Expanding out the definition, we see that the definition is much as an analyst might expect:
+(cf.~Figure~\ref{fig:hasDerivative} for an illustration of this differentiation process.)
 
 \begin{hol}
 \begin{alltt}
 >>__ load "derivativeTheory";
->>__ open derivativeTheory;
-##thm has_derivative_at
-##thm has_derivative_within
+##thm derivativeTheory.HAS_DERIVATIVE_AT
 \end{alltt}
 \end{hol}
 
-Similarily, \holtxt{(f has_vector_derivative f') (at x)} means that \emph{the function $f$
-has a derivative with value $f'$ at the point $x$}.
-The usual kinds of combining theorems are proved. For example, the derivative
-of a sum is the sum of the derivatives:
+\begin{figure}[ht]
+  \centering
+  \includegraphics{figs/1.mps}
+  \caption{The differentiation process of \holtxt{f has_derivative f'}}
+  \label{fig:hasDerivative}
+\end{figure}
+
 \begin{hol}
 \begin{alltt}
-##thm HAS_DERIVATIVE_ADD
+##thm derivativeTheory.has_vector_derivative
 \end{alltt}
 \end{hol}
 
-\subsubsection{Integration}
-\label{sec:integration}
+Similarly, \holtxt{(f has_vector_derivative f') (at x)} means that \emph{the function $f$
+has a derivative with value $f'$ at the point $x$}.
+The usual kinds of combining theorems are proved. For example, the derivative
+of a sum of two functions is the sum of their derivatives:
+\begin{hol}
+\begin{alltt}
+##thm limTheory.DIFF_ADD   
+
+##thm derivativeTheory.HAS_DERIVATIVE_ADD
+
+##thm limTheory.DIFF_MUL
+
+##thm derivativeTheory.HAS_DERIVATIVE_MUL_AT
+
+##thm limTheory.DIFF_DIV
+\end{alltt}
+\end{hol}
+
+\begin{hol}
+\begin{alltt}
+##thm limTheory.DIFF_CHAIN
+\end{alltt}
+\end{hol}
+
+\begin{hol}
+\begin{alltt}
+##thm limTheory.MVT
+
+##thm derivativeTheory.MVT
+\end{alltt}
+\end{hol}
+
+\begin{hol}
+\begin{alltt}
+##thm limTheory.diffl_has_vector_derivative
+\end{alltt}
+\end{hol}
+
+A function is \emph{differentiable} at certain point if it has derivative at that point.
+
+The continuity of a function is very close with its differentiability.
+The HOL formalization of ``$f$ is (right-)continuous at the point $x$'' is
+\holtxt{f contl x} with \holtxt{contl} (`locally continuous' from \theoryimp{limTheory}),
+or \holtxt{f continuous (at x)} from \theoryimp{real_topologyTheory},
+both are infix binary operators.
+The two operators are equivalent (when \holtxt{continuous} is used with the \holtxt{at} net)
+by the following bridging theorem:
+\begin{hol}
+\begin{alltt}
+##thm limTheory.contl_eq_continuous_at
+\end{alltt}
+\end{hol}
+However, using \holtxt{continuous} it is also possible to express continuity of
+a function at a point \emph{within} a set of points (usually an interval),
+i.e.~\holtxt{f continuous (at x within s)}.
+
+The global version of \holtxt{continuous} for a set of points (usually an open or closed interval)
+is called \holtxt{continuous_on}.\footnote{There is also another closely related
+  \holtxt{uniformly_continuous_on} which implies \holtxt{continuous_on}. See \theoryimp{UNIFORMLY_CONTINUOUS_IMP_CONTINUOUS},
+\theoryimp{COMPACT_UNIFORMLY_CONTINUOUS}, etc.~in \theoryimp{real_topologyTheory}.}
+\begin{hol}
+\begin{alltt}
+##thm real_topologyTheory.continuous_on
+\end{alltt}
+\end{hol}
+
+\begin{hol}
+\begin{alltt}
+##thm real_topologyTheory.CONTINUOUS_ON_EQ_CONTINUOUS_AT
+
+##thm real_topologyTheory.CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN
+\end{alltt}
+\end{hol}
+
+One of the most fundamental facts about continuous functions is the \emph{intermediate
+value property (IVT)}: if a function takes two values then it also somewhere takes any value
+in between. The HOL formulation is that if $f$ is continuous at all points of an interval
+$[a,b]$, and $f(a)\leqslant y\leqslant f(b)$ then there is some point $x$ in the interval where
+$f(x) = y$:
+\begin{hol}
+\begin{alltt}
+##thm limTheory.IVT
+
+##thm real_topologyTheory.CONTINUOUS_ON_IVT
+\end{alltt}
+\end{hol}
+
+\begin{hol}
+\begin{alltt}
+##thm limTheory.IVT2
+\end{alltt}
+\end{hol}
+
+\subsection{Integration}
+\label{ss:integration}
 
 The version of integral calculus formalized in HOL is a
 generalized Riemann integration called \emph{Henstock-Kurzweil Integration},
@@ -116,20 +337,62 @@ only if the function and its absolute value are Henstock-Kurzweil
 integrable.)
 
 \holtxt{f integrable_on s} means that \emph{the function $f$ is integrable on a
-real set $s$}, while \holtxt{f absolutely_integrable_on s} denotes absolute integrability.
-Assuming $f$ is integrable, the usual integration of $f$ on a
-(closed) interval $[a,b]$, \ie,~$\displaystyle\int_a^b f \mathrm{d}x$,
-is expressed as \holtxt{integral (interval [a,b]) f} in HOL. (In
-general, the integration of $f$ on a set $s$ of real numbers is
-\holtxt{integral s f}.)
+  real set $s$} (There is another similar concept called
+\emph{absolute integrability}: \holtxt{f absolutely_integrable_on s}.)
+If $f$ is integrable on a closed interval $[a,b]$,
+then the usual integration of $f$ on $[a,b]$, \ie,~$\displaystyle\int_a^b f \mathrm{d}x$,
+is denoted by \holtxt{integral (interval [a,b]) f} in HOL.
+In general, the integration of $f$ on a set $s$ of real numbers is
+\holtxt{integral s f}.
+
+\begin{hol}
+\begin{alltt}
+>>__ load "integralTheory";
+>>__ open integralTheory;
+##thm integralTheory.gauge
+
+##thm integralTheory.fine
+
+##thm integralTheory.tdiv
+
+##thm integralTheory.division
+
+##thm integralTheory.Dint
+
+##thm integralTheory.integral
+\end{alltt}
+\end{hol}
+
+In \theoryimp{integration}, ported from HOL Light, a more general form of
+Henstock-Kurzweil integration has been defined:
+
+\begin{hol}
+\begin{alltt}
+>>__ load "integrationTheory";
+>>__ open integrationTheory;
+##thm integrationTheory.gauge_def
+
+##thm integrationTheory.FINE
+
+##thm integrationTheory.tagged_partial_division_of
+
+##thm integrationTheory.tagged_division_of
+
+##thm integrationTheory.has_integral_compact_interval
+
+##thm integrationTheory.has_integral_def
+
+##thm integrationTheory.integral_def
+\end{alltt}
+\end{hol}
 
 The fundamental theorem of calculus (in the equivalent forms of
 Riemann integral) is expressed below:
 \begin{hol}
 \begin{alltt}
->>__ load "integrationTheory";
->>__ open integrationTheory;
-##thm FUNDAMENTAL_THEOREM_OF_CALCULUS
+##thm integralTheory.FTC1
+
+##thm integrationTheory.FUNDAMENTAL_THEOREM_OF_CALCULUS
 \end{alltt}
 \end{hol}
 
@@ -141,17 +404,21 @@ improvement, as shown in the following strong version of the
  fundamental theorem of calculus:
 \begin{hol}
 \begin{alltt}
-##thm FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG
+##thm integrationTheory.FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG
 \end{alltt}
 \end{hol}
 
-% \begin{hol}
-% \begin{alltt}
-% ##thm integral
-% \end{alltt}
-% \end{hol}
+Finally, the following two bridging theorems can be used to convert between integrals
+of the \theoryimp{integral} and \theoryimp{integration} theories:
+\begin{hol}
+\begin{alltt}
+##thm integralTheory.integral_old_to_new
 
-\subsection{Measure Theory}
+##thm integralTheory.integral_new_to_old
+\end{alltt}
+\end{hol}
+
+\section{Measure Theory}
 \label{sec:measure}
 \index{measure, the HOL theory of@measure, the \HOL{} theory of}
 \index{sigma_algebra, the HOL theory of@sigma_algebra, the \HOL{} theory of}
@@ -197,6 +464,7 @@ defined below:
 \begin{hol}
 \begin{alltt}
 ##thm algebra_def
+
 ##thm sigma_algebra_def
 \end{alltt}
 \end{hol}
@@ -223,7 +491,9 @@ measure space must be both \holtxt{positive} and \holtxt{countably_additive}:
 >>__ load "measureTheory";
 >>__ open measureTheory;
 ##thm measure_space_def
+
 ##thm positive_def
+
 ##thm countably_additive_def
 \end{alltt}
 \end{hol}
@@ -259,7 +529,9 @@ $\sigma$-algebra containing it (also called the $\sigma$-algebra
 \begin{hol}
 \begin{alltt}
 ##thm sigma_def
+
 ##thm SIGMA_ALGEBRA_SIGMA
+
 ##thm SIGMA_SUBSET_SUBSETS
 \end{alltt}
 \end{hol}
@@ -280,13 +552,14 @@ generators are stable under $\cap$ and $\sigma$-finite:
 >>__ load "martingaleTheory";
 >>__ open martingaleTheory;
 ##thm sigma_finite_def
+
 ##thm sigma_finite_measure_space_def
 
 ##thm UNIQUENESS_OF_MEASURE
 \end{alltt}
 \end{hol}
 
-\subsection{Borel Theory}
+\subsection{Borel measurable function and sets}
 \label{sec:borel}
 \index{borel, the HOL theory of@borel, the \HOL{} theory of}
 \index{real_borel, the HOL theory of@real_borel, the \HOL{} theory of}
@@ -355,6 +628,7 @@ is in \theoryimp{sigma_algebra} theory)
 ##thm measurable_def
 \end{alltt}
 \end{hol}
+
 A function is called \emph{Borel-measurable} if it is a measurable map from
 any measurable space to \holtxt{borel} or \holtxt{Borel}:
 \begin{hol}
@@ -403,7 +677,7 @@ so is its extreal-valued version. The converse also holds.
 \end{alltt}
 \end{hol}
 
-\paragraph{Construction of Borel measure space (\holtxt{lborel})}
+\subsection{Construction of Borel measure space (\holtxt{lborel})}
 
 The Borel measure space \holtxt{lborel} (of the type
 $(\konst{real} \to \konst{bool}) \ \#\  ((\konst{real} \to \konst{bool}) \to
@@ -419,7 +693,9 @@ construction of \holtxt{lborel} is done by extending a premeasure in the followi
 \begin{hol}
 \begin{alltt}
 ##thm right_open_interval
+
 ##thm right_open_intervals
+
 ##thm lambda0_def
 \end{alltt}
 \end{hol}
@@ -438,7 +714,9 @@ eventually a \holtxt{premeasure} (\holtxt{positive} and \holtxt{countably_additi
 \begin{hol}
 \begin{alltt}
 ##thm lborel0_additive
+
 ##thm lborel0_finite_additive
+
 ##thm lborel0_premeasure
 \end{alltt}
 \end{hol}
@@ -459,8 +737,11 @@ typical Borel sets are proved as theorems:
 \begin{hol}
 \begin{alltt}
 ##thm lambda_prop
+
 ##thm lambda_sing
+
 ##thm lambda_open_interval
+
 ##thm lambda_closed_interval
 \end{alltt}
 \end{hol}
@@ -486,7 +767,7 @@ It can be proven that \holtxt{ext_lborel} is indeed a $\sigma$-finite measure sp
 \end{alltt}
 \end{hol}
 
-\paragraph{Construction of Lebesgue measure space (\holtxt{lebesgue})}
+\subsection{Construction of Lebesgue measure space (\holtxt{lebesgue})}
 It is well known that \holtxt{lborel} is not \emph{complete}, in the
 sense that if for
 non-empty set \holtxt{s} we have \holtxt{lambda s = 0}, it's not true
@@ -495,12 +776,13 @@ may not be Borel sets at all. The completion of \holtxt{lborel} is called
 \emph{Lebesgue measure space}, denoted by \holtxt{lebesgue}.
 In \theory{extreal} theory (at \ml{\$(HOLDIR)/examples/probability} directory),
 it is defined directly by Henstock-Kurzweil Integration
-(see Section~\ref{sec:integration}):
+(see Section~\ref{ss:integration}):
 \begin{hol}
 \begin{alltt}
 >>__ load "lebesgue_measureTheory";
 >>__ open lebesgue_measureTheory;
 ##thm lebesgue_def
+
 ##thm line
 \end{alltt}
 \end{hol}
@@ -535,7 +817,7 @@ that \holtxt{lambda} is an abbreviation of \holtxt{measure lborel}):
 \end{alltt}
 \end{hol}
 
-\subsection{Lebesgue Integration Theory}
+\section{Lebesgue Integration Theory}
 \label{sec:lebesgue}
 \index{lebesgue, the HOL theory of@lebesgue, the \HOL{} theory of}
 
@@ -588,7 +870,9 @@ as the supremum of all positive simple functions $g$ which is pointwise smaller 
 \begin{hol}
 \begin{alltt}
 ##thm pos_fn_integral_def
+
 ##thm psfs_def
+
 ##thm psfis_def
 \end{alltt}
 \end{hol}
@@ -611,7 +895,9 @@ by the subtraction of integrations of its positive and negative parts:
 \begin{hol}
 \begin{alltt}
 ##thm integral_def
+
 ##thm fn_plus_def
+
 ##thm fn_minus_def
 \end{alltt}
 \end{hol}
@@ -635,7 +921,8 @@ integrations, including the following famous \emph{Markov's inequality}:
 \end{alltt}
 \end{hol}
 
-\paragraph{Null sets and `almost everywhere'}
+\subsection{Null sets and `almost everywhere'}
+
 A measurable set is called \emph{null set} (with respect to its
 measure space) if its measure is zero:
 \begin{hol}
@@ -666,7 +953,7 @@ integration on null sets are very useful (Theorem 11.2 of~\cite[p.~89-90]{Schill
 \end{alltt}
 \end{hol}
 
-\paragraph{Radon-Nikod\'{y}m theorem}
+\subsection{Radon-Nikod\'{y}m theorem}
 
 So far there is no concept ``derivative''
 being discussed. In Lebesgue integration, \emph{Radon-Nikod\'{y}m (RN) Theorem}
@@ -836,7 +1123,7 @@ For instance, the following theorem is the general version of \texttt{EXISTENCE_
 \end{alltt}
 \end{hol}
 
-\paragraph{$\mathcal{L}^p$ spaces, semi-norm and important inequalities}
+\subsection{$\mathcal{L}^p$ spaces, semi-norm and important inequalities}
 
 \HOL{} provides a minimal formalization of the function spaces $\mathcal{L}^p$,
 currently in \theoryimp{martingaleTheory}.
@@ -908,7 +1195,7 @@ Holder's inequality is useful in Probability Theory, for example, for
 proving that the sum of random variables having finite second moments
 (i.e.~finite variance), has still finite second moments.
 
-\subsection{Probability Theory}
+\section{Probability Theory}
 \label{sec:prob}
 \index{probability, the HOL theory of@probability, the \HOL{} theory of}
 
@@ -923,7 +1210,7 @@ In \HOL{}, the \theoryimp{probability} theory depends on
 \theoryimp{pred_set}, \theoryimp{measure}, \theoryimp{borel} and \theoryimp{lebesgue}
 theories, etc.
 
-\paragraph{Probability space}
+\subsection{Probability space}
 
 Probability theory enables us to give a probabilistic-statistical
 description of experiments with a finite or infinite number of
@@ -995,7 +1282,9 @@ that probability is increasing, additive and countably additive, respectively:
 \begin{hol}
 \begin{alltt}
 ##thm PROB_INCREASING
+
 ##thm PROB_ADDITIVE
+
 ##thm PROB_COUNTABLY_ADDITIVE
 \end{alltt}
 \end{hol}
@@ -1011,7 +1300,7 @@ be infinite, is useful in many proofs (when dealing with extreal arithmetics):
 \end{alltt}
 \end{hol}
 
-\paragraph{Conditional probability}
+\subsection{Conditional probability}
 
 \HOL{} provides a formalization of elementary ``conditional
 probability''~\cite[p.~21]{Shiryaev:2016vm}, originally developed by Liya Liu in 2012, in both
@@ -1037,7 +1326,7 @@ versions)~\cite[Chapter V]{Feller:2004vv} are provided:
 \end{alltt}
 \end{hol}
 
-\paragraph{Random variable}
+\subsection{Random variable}
 
 The concept ``random variable'' (r.v.) serves to
 define quantities describing the results of ``measurements'' in random
@@ -1050,6 +1339,7 @@ They are called \holtxt{real_random_variable}:
 \begin{hol}
 \begin{alltt}
 ##thm random_variable_def
+
 ##thm real_random_variable_def
 \end{alltt}
 \end{hol}
@@ -1061,6 +1351,7 @@ is a special distribution defined on half spaces $(-\infty,x]$:
 \begin{hol}
 \begin{alltt}
 ##thm distribution_def
+
 ##thm distribution_function
 \end{alltt}
 \end{hol}
@@ -1073,7 +1364,7 @@ probability space with its target measurable space:
 \end{alltt}
 \end{hol}
 
-\paragraph{Independence}
+\subsection{Independence}
 
 \begin{quote}\textit{The concept of mutual independence of two or more experiments holds,
 in a certain sense, a central position in the theory of
@@ -1087,6 +1378,7 @@ two of them are independent:
 \begin{hol}
 \begin{alltt}
 ##thm indep_def
+
 ##thm pairwise_indep_events_def
 \end{alltt}
 \end{hol}
@@ -1138,7 +1430,7 @@ respectively. Note that total independence always implies pairwise independence:
 \end{alltt}
 \end{hol}
 
-\paragraph{Limit events}
+\subsection{Limit events}
 
 An important concept in set theory is that of the ``$\limsup$'' and
 ``$\liminf$'' of a sequence of sets. These notions can be defined for
@@ -1152,9 +1444,11 @@ or formally
 \begin{hol}
 \begin{alltt}
 ##thm set_limsup_def
+
 ##thm set_liminf_def
 
 ##thm EVENTS_LIMSUP
+
 ##thm EVENTS_LIMINF
 \end{alltt}
 \end{hol}
@@ -1173,7 +1467,7 @@ in proving other deep results in probability theory:
 \end{alltt}
 \end{hol}
 
-\paragraph{Tail algebra and tail events}
+\subsection{Tail algebra and tail events}
 
 Given a sequence of events $E_1, E_2, \ldots$, we define their
 \emph{tail algebra} (or \emph{tail field}) by
@@ -1200,7 +1494,7 @@ probability of remote events can only be zero or one:
 \end{alltt}
 \end{hol}
 
-\paragraph{Mathematical Expectation}
+\subsection{Mathematical expectation}
 \begin{quote}\textit{
 To achieve reasonable simplicity it is often necessary to describe
 probability distributions rather summarily by a few `typical
@@ -1230,7 +1524,7 @@ denoted by $\mathscr{E}(X)$ in textbooks) exists if and only if the
 random variable as a measurable function is integrable,
 \ie,~\holtxt{integrable p X}.
 
-\paragraph{Second moments and variance}
+\subsection{Second moments and variance}
 
 Let $a$ be extreal, $r$ positive, then $\mathscr{E}(|X - a|^r)$ is
 called the \emph{absolute moment}
@@ -1239,6 +1533,7 @@ $\mathscr{E}((X - a)^r)$ is the corresponding \emph{moment}:
 \begin{hol}
 \begin{alltt}
 ##thm absolute_moment_def
+
 ##thm moment_def
 \end{alltt}
 \end{hol}
@@ -1250,7 +1545,9 @@ denoted by $\sigma^2(X)$ or $\mathrm{var}(X)$:
 \begin{hol}
 \begin{alltt}
 ##thm central_moment_def
+
 ##thm variance_def
+
 ##thm variance_alt
 \end{alltt}
 \end{hol}
@@ -1260,6 +1557,7 @@ probability, so is Chebyshev's inequality:
 \begin{hol}
 \begin{alltt}
 ##thm variance_eq
+
 ##thm chebyshev_ineq_variance
 \end{alltt}
 \end{hol}
@@ -1271,7 +1569,9 @@ Note that, for the above formulae to hold, the r.v.~$X$ must have
 ##thm finite_second_moments_def
 
 ##thm finite_second_moments_literally
+
 ##thm finite_second_moments_eq_integrable_square
+
 ##thm finite_second_moments_eq_finite_variance
 \end{alltt}
 \end{hol}
@@ -1294,7 +1594,7 @@ Finally, for \emph{uncorrelated} r.v.'s (\ie,~$\mathscr{E}(XY) =
 \end{alltt}
 \end{hol}
 
-\paragraph{Convergence of random sequences}
+\subsection{Convergence of random sequences}
 
 Given a (countable) sequence of finite r.v.'s $X_n$ and another finite
 r.v. $Y$, the following three concepts of convergence (from $X_n$ to $Y$)
@@ -1452,8 +1752,6 @@ the Strong and Weak Law of Large Numbers are also proven:
 ##thm WLLN_IID
 
 ##thm SLLN_IID
-or
-##thm SLLN_IID_applied
 \end{alltt}
 \end{hol}
 
@@ -1473,7 +1771,7 @@ is almost-everywhere infinite~\cite[p.133]{Chung:2001}:
 \end{alltt}
 \end{hol}
 
-\subsection{Probability theory (legacy)}
+\section{Probability Theory (legacy)}
 
 The legacy probability theory based on real numbers (and all dependent
 theories) is still available from \theoryimp{real_probability}
@@ -1505,7 +1803,7 @@ n < N$, picked uniformly at random from the available choices. This
 sampling function for the uniform distribution is later used to verify
 the Miller-Rabin primality test.
 
-\subsection{Further theories of higher mathematics}
+\section{Other Theories of Higher Mathematics}
 
 In \ml{\$(HOLDIR)/examples/algebra} there is an abstract algebra
 library for HOL4. The algebraic types
@@ -1521,39 +1819,6 @@ the other \theoryimp{ring} theory in core library),
 \item [linearTheory] for vector spaces, including linear independence, and
 \item [finitefieldTheory] for finite fields, including existence and uniqueness.
 \end{description}
-
-\section{Further Theories}
-Other theories of interest in \HOL{} are listed and briefly described
-in Figure~\ref{fig:further-hol-theories}.
-
-\begin{figure}[hbtp]
-\renewcommand{\arraystretch}{1.5}
-\begin{tabular}{|p{0.2\textwidth}p{0.7\textwidth}|}
-  \hline
-  \theoryimp{poset} & Partial Orders, Knaster-Tarski theorem
-  \\
-  \theoryimp{divides}, \theoryimp{gcd} &
-  Divisibility and the greatest common divisor.
-  \\
-  \theoryimp{poly} &
-  A theory of polynomials over $\mathbb{R}$, providing
-  a collection of operations on polynomials, and theorems about them.
-  \\
-  \theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
-  &
-  Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
-  \\
-  \theoryimp{ctl}, \theoryimp{mu}
-  &
-  Computation Tree Logic and the $\mu$-calculus. See Hasan Amjad's
-  thesis. \\
-  \theoryimp{lbtree} & Possibly infinitely deep (\ie, co-algebraic) binary trees.\\
-  \theoryimp{inftree} & Possibly infinitely branching, algebraic trees\\
-  \hline
-\end{tabular}
-\caption{A selection of \HOL{} theories}
-\label{fig:further-hol-theories}
-\end{figure}
 
 %%% Local Variables:
 %%% mode: latex

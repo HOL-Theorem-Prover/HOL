@@ -16,37 +16,21 @@ GF(p) -- Galois Field of order prime p.
 (* add all dependent libraries for script *)
 open HolKernel boolLib bossLib Parse;
 
+open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory
+     combinatoricsTheory;
+
 (* declare new theory at start *)
 val _ = new_theory "fieldInstances";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "groupTheory"; *) *)
-(* val _ = load "fieldMapTheory"; *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open groupOrderTheory monoidOrderTheory;
+open fieldMapTheory;
 
-open monoidMapTheory groupMapTheory ringMapTheory fieldMapTheory;
-
-(* val _ = load "ringInstancesTheory"; *)
-(* (* val _ = load "groupInstancesTheory"; -- in ringInstancesTheory *) *)
-open monoidInstancesTheory groupInstancesTheory ringInstancesTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Field Instances Documentation                                              *)
@@ -633,17 +617,19 @@ val ZN_finite_field = store_thm(
           Note 0 < p /\ 0 * y = 0 ==> 0 MOD p = 0   by MULT, ZERO_MOD
            and 0 < p /\ x * 0 = 0 ==> 0 MOD p = 0   by MULT_0, ZERO_MOD
 *)
-val ZN_finite_field = store_thm(
-  "ZN_finite_field",
-  ``!p. prime p ==> FiniteField (ZN p)``,
+Theorem ZN_finite_field[allow_rebind]:
+  !p. prime p ==> FiniteField (ZN p)
+Proof
   rpt strip_tac >>
-  (REVERSE (irule finite_field_from_finite_ring >> rpt conj_tac) >> simp[ZN_property]) >-
-  metis_tac[NOT_PRIME_1, ONE_NOT_ZERO] >-
-  rw[ZN_finite_ring, PRIME_POS] >>
-  rw[EQ_IMP_THM] >-
-  metis_tac[EUCLID_LEMMA, LESS_MOD] >-
-  rw[] >>
-  rw[]);
+  (REVERSE (irule finite_field_from_finite_ring >> rpt conj_tac) >>
+   simp[ZN_property])
+  >- metis_tac[NOT_PRIME_1, ONE_NOT_ZERO]
+  >- rw[ZN_finite_ring, PRIME_POS] >>
+  rw[EQ_IMP_THM]
+  >- metis_tac[EUCLID_LEMMA, LESS_MOD]
+  >- rw[] >>
+  rw[]
+QED
 
 (* Theorem: prime p <=> FiniteField (ZN p) *)
 (* Proof:

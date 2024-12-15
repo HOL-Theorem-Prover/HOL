@@ -91,6 +91,7 @@ descendant theories.  Functions making temporary changes are signified
 by a leading \ml{temp\_} in their names.
 
 \subsection{Parsing types}
+\label{sec:parsing-types}
 \index{types, in HOL logic@types, in \HOL{} logic!parsing of|(}
 
 The language of types is a simple one.  An abstract grammar for the
@@ -1114,6 +1115,7 @@ The following session illustrates antiquotation.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+>>_ load "intLib";
 >>__ remove_ovl_mapping "+" {Name = "int_add", Thy = "integer"};
 >> val y = “x+1”;
 
@@ -1149,6 +1151,37 @@ terms, antiquoting a type into a term quotation requires the use of
 \end{alltt}
 \end{session}
 %
+\subsubsection{Generalised Quotation Syntax}
+\label{sec:generalised-quotation-syntax}
+
+\index{special syntactic forms for scripts!Quote@\ml{Quote}}
+In line with various ``modern'' syntaxes (\eg, \ml{Theorem} and \ml{Definition}), it is possible to define custom quotation tooling using the \ml{Quote} keyword.
+There are two forms.
+The first is
+\begin{verbatim}
+Quote ident1 = ident2:
+  ...
+End
+\end{verbatim}
+where the \texttt{Quote} and \texttt{End} keywords must occur in column 1 of the source script-file.
+This is translated to
+\begin{alltt}
+val ident1 = ident2 \mbox{\textrm{`}} ... \mbox{\textrm{'}};
+\end{alltt}
+The other form is a short-cut where the quotation is parsed by the provided function only for its side-effects.
+The surface syntax is
+\begin{verbatim}
+Quote ident:
+  ...
+End
+\end{verbatim}
+which is translated to
+\begin{alltt}
+val _ = ident \mbox{\textrm{`}} ... \mbox{\textrm{'}};
+\end{alltt}
+
+In both forms the identifier immediately before the colon must be a valid SML identifier containing only alpha-numeric characters (but with \ml{structure}-qualification and full-stops also permitted).
+In the first form, \ml{ident1} must be a simple (unqualified) alphanumeric identifier (\eg, \ml{foo}, \ml{bar'}, \ml{Foo_bar}, but not \ml{M.bar}, nor \ml{++}).
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|)}
 
 
@@ -1329,6 +1362,29 @@ proof, or a different proof. The functions that do this are
 \ml{rotate} and \ml{rotate\_proofs}, respectively. The abbreviations
 \ml{r} and \ml{R} are simpler to type in.
 
+\section{Specialised Syntax for Script Files}\label{sec:special-syntax}
+
+\HOL{} supports a number of syntactic sugar forms to make common idioms easier to read \emph{and} write.
+These are wrappers around existing \ML{} functions, and documented in \DESCRIPTION{} alongside those functions.
+Figure~\ref{fig:special-syntax} summarises the complete set of special forms.
+\begin{figure}[hbtp]
+\begin{center}
+\begin{tabular}{lp{0.3\textwidth}}
+Sugar & Underlying \ML{} (Sec.\ ref.)\\\hline
+\ml{Datatype} \ml{:} \dots \ml{End} & \ml{Datatype} (\ref{sec:datatype})\\
+\ml{Definition} \emph{ident} \emph{attrs}$^?$ \ml{:} \dots $($ \ml{Termination} \dots $)^?$ \ml{End} & Function definition\\
+\ml{Overload} \emph{ident} \emph{attrs}$^?$ \ml{=} ``\emph{term}'' & \ml{overload\_on} (\ref{sec:parsing:overloading})\\
+\ml{Quote} \emph{ident} \ml{:} \dots \ml{End} & Quotation~(\ref{sec:generalised-quotation-syntax})\\
+\ml{Quote} \emph{ident} \ml{=} \emph{ident} \ml{:} \dots \ml{End} & Quotation~(\ref{sec:generalised-quotation-syntax})\\
+\ml{Theorem} \emph{ident} \emph{attrs}$^?$ \ml{:} \dots \ml{Proof} \dots \ml{QED} & \ml{store\_thm}~(\ref{theoryprims})\\
+\ml{Theorem} \emph{ident} \emph{attrs}$^?$ \ml{=} \dots & \ml{save\_thm}~(\ref{theoryprims})\\
+\ml{Type} \emph{ident} \emph{attrs}$^?$  \ml{=} ``:\emph{type}'' & \ml{type_abbrev} (\ref{sec:parsing-types})\\
+\end{tabular}
+\end{center}
+\caption{Special syntactic forms available in script files.
+All capitalised keywords must occur in the first column of their respective lines in order to be recognised.}
+\label{fig:special-syntax}
+\end{figure}
 \section{High Level Proof---\texttt{bossLib}}
 % would use \ml{boss} above but it puts LaTeX into fits
 \label{sec:bossLib}
@@ -1829,22 +1885,30 @@ For example, one might write
 \end{alltt}
 \end{session}
 
-\section{Computation with First-Order Terms---\texttt{cv\_computeLib}}
+\section{Computation with First-Order Terms---\texttt{cv\_computeLib} and \texttt{cv\_transLib}}
 \label{sec:cv-computeLib}
 \index{cv\_computeLib@\ml{cv\_computeLib}}
+\index{cv\_transLib@\ml{cv\_transLib}}
 
 The library \ml{cv\_computeLib} supports fast evaluation of \HOL{} terms.
+It exports a single conversion, \ml{cv\_compute}, which accepts terms in a simple, first-order, untyped language built from a recursive datatype of pairs and natural numbers.
+Its accompanying theory, \ml{cvTheory}, defines this type (called \ty{:cv}) and its operations.
 When applicable, \ml{cv\_computeLib} will often execute several orders of magnitude faster than \ml{computeLib} (Section~\ref{sec:computeLib}) on similar inputs.
 Such performance is possible because \ml{cv\_computeLib} relies on an interpreter that is implemented inside the kernel, and that uses native ML datatypes and arbitrary precision integer arithmetic to execute quickly.
 This implementation is a Standard ML adaption of the compute facility in the Candle theorem prover, which has been proved to be sound wrt. the inference rules of higher-order logic~\cite{ITP23}.
 
-The library \ml{cv\_computeLib} exports a single conversion, \ml{cv\_compute}, which accepts terms in a simple, first-order, untyped language built from a recursive datatype of pairs and natural numbers.
-Its accompanying theory, \ml{cvTheory}, defines this type (called \ty{:cv}) and its operations.
+The library \ml{cv\_transLib} provides a user-friendly interface to \ml{cv\_computeLib}.
+It exports automation which translates functional \HOL{} definitions into equivalent functions which operate over the \ty{:cv} type, and a wrapper around \ml{cv\_computeLib.cv\_compute} called \ml{cv\_eval} which can be used much like \ml{computeLib.EVAL}~(Section~\ref{sec:computeLib}).
+Its accompanying theories (\ml{cv\_primTheory} and \ml{cv\_stdTheory}) define and translate various common operations over primitive types.
 
-\subsection{Computing with \ml{cv\_compute}}
+\subsection{Computing with \ml{cv\_compute} directly}
 \label{ssec:cv-exprs}
 
-The following example shows how to define a (very simple) function and use it in a computation with \ml{cv\_compute}:
+The following example shows how to define a (very simple) function and use it in a computation with \ml{cv\_compute}.
+
+\textbf{NB:} this example illustrates how \ml{cv\_compute} works, but is not the recommended workflow for using it.
+Instead, use \ml{cv\_transLib}~(Section~\ref{ssec:cv-trans-lib}).
+
 \begin{session}
 \begin{alltt}
 >> load "cv_computeLib";
@@ -1896,11 +1960,7 @@ Aside from the \ty{:cv} datatype constructors, the following operations can be u
 
 The following holds for the semantics of these operations:
 \begin{itemize}
-\item Arithmetic works as on \HOL{}'s natural numbers, except:
-\begin{itemize}
-  \item \holtxt{cv\_div m (Num 0)} is defined to be \holtxt{Num 0},
-  \item \holtxt{cv\_mod m (Num 0)} is defined to be \holtxt{m}.
-\end{itemize}
+\item Arithmetic works as on \HOL{}'s natural numbers.
 \item Boolean-like expressions (such as \holtxt{cv\_if}) treat \holtxt{Num 1} as true, and all other values as false.
 \item All ill-typed expressions (such as \holtxt{cv\_fst (Num 3)}) are defined as \holtxt{Num 0}.
 \item Function constants must have a corresponding code equation, see below.
@@ -1929,9 +1989,9 @@ The following example is taken from the \ml{cv\_computeLib} examples, available 
              one
              (cv_mul n (fact (cv_sub n one)))
    Termination
-     WF_REL_TAC `measure cv_size_alt` >>
+     WF_REL_TAC `measure cv_size` >>
      Cases >>
-     simp [cv_size_alt_def, CaseEq "bool", c2b_def]
+     simp [cv_size_def, CaseEq "bool", c2b_def]
    End
 
 ##linelen_limit 75
@@ -1978,6 +2038,68 @@ An example instantiation can be seen in the source code of \ml{cv\_computeLib} i
 \paragraph{Further reading}
 For an in-depth explanation of \ml{Thm.compute}, we refer the reader to the Candle theorem prover's \ml{compute} primitive~\cite{ITP23}, on which \ml{Thm.compute} is based.
 
+\subsection{Computing with \ml{cv\_compute} via \ml{cv\_transLib}}
+\label{ssec:cv-trans-lib}
+
+It is also possible to use \ml{cv\_compute} on \HOL{} functions that are not defined using the \ty{:cv} type, using \ml{cv\_transLib}.
+This library supports automatic translation of functions to equivalent versions operating over the \ty{:cv} type, and maintains a database of known translations.
+Then, the \ml{cv\_eval} entrypoint can be used on a regular \HOL{} term: it uses the database to translate the term to an equivalent \ty{:cv} version, invokes \ml{cv\_compute}, and translates the result back from the \ty{:cv} type.
+Note therefore that, like \ml{cv\_compute}, \ml{cv\_eval} accepts only closed terms.
+All constants in its input must also be found in its database of known translations.
+Therefore, the intended workflow for using \ml{cv\_transLib} is as follows:
+\begin{enumerate}
+  \item Define \HOL{} functions in the usual way.
+  \item Invoke \ml{cv\_transLib} to translate these functions to \ty{:cv} versions, populating the database of known translations.
+  \item Use \ml{cv\_transLib.cv\_eval} to evaluate terms composed of known constants efficiently.
+\end{enumerate}
+
+\paragraph{Translation entrypoints}
+There are eight entrypoints in \ml{cv\_transLib} for translating \HOL{} functions to \ty{:cv} equivalents:
+  \ml{cv\_trans}, \ml{cv\_trans\_pre}, \ml{cv\_trans\_rec}, \ml{cv\_trans\_rec\_pre},
+  \ml{cv\_auto\_trans}, \ml{cv\_auto\_trans\_pre}, \ml{cv\_auto\_trans\_rec}, and \ml{cv\_auto\_trans\_rec\_pre}.
+
+All accept a theorem representing a \HOL{} definition.
+Those with prefix \ml{cv\_trans} fail if, during translation, they encounter a constant which does not have a known translation.
+Those with prefix \ml{cv\_auto\_trans} invoke themselves recursively on any such unknown constants.
+
+Translation of some \HOL{} functions give rise to a precondition (for example, \ml{listheory.HD} requires its argument to be non-empty).
+All eight entrypoints will attempt to discharge simple preconditions, but the variants containing \ml{pre} allow a more complex precondition to persist and return its definition to the user.
+Preconditions bubble up through further translations, and must be discharged for any term used with \ml{cv\_eval}.
+The other variants fail if they encounter a precondition they cannot discharge.
+
+Translation of a recursive \HOL{} function produces a recursive \ty{:cv} function, which may require a termination proof.
+All eight entrypoints attempt to discharge simple termination proofs, but the variants containing \ml{rec} accept an additional argument, a tactic which should discharge a more complex termination goal.
+The other variants will fail if they cannot prove termination.
+
+\paragraph{Examples: computing squares and factorials}
+
+The following example mirrors those in Section \ref{ssec:cv-exprs}, but it uses \ml{cv\_transLib} instead of interacting directly with the \ty{:cv} type.
+
+\begin{session}
+\begin{alltt}
+>> load "cv_transLib";
+>> load "cv_stdTheory";
+
+>> Definition square'_def:
+     square' (x:num) = x * x
+   End
+
+>> cv_transLib.cv_trans square'_def;
+
+>> cv_transLib.cv_eval ``square' 7``;
+
+>> arithmeticTheory.FACT;
+
+>> cv_transLib.cv_trans arithmeticTheory.FACT;
+
+##linelen_limit 75
+>> time cv_transLib.cv_eval ``FACT 1234``;
+##nolinelen_limit
+\end{alltt}
+\end{session}
+
+Further usage examples are located in \ml{examples/cv\_compute}.
+
 \section{Arithmetic Libraries---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
 \label{sec:numLib}
 \index{decision procedures!Presburger arithmetic over natural numbers}
@@ -2013,6 +2135,14 @@ procedure is an implementation of the Omega Test, and seems to
 generally perform better than Cooper's algorithm.  There are problems
 for which this is not true however, so it is useful to have both
 procedures available.
+
+In addition, the \ml{intLib.INTEGER_RULE} (and its tactic version \ml{intLib.INTEGER_TAC})
+ported from HOL-Light can solve some simple equations about divisibility of integers,
+e.g.~\holtxt{d int_divides m ==> d int_divides (m * n)}.
+As part of the procedure, multivariate polynomials of integer are expanded to their
+``normal forms'' (with respect to certain ordering), and thus equations between equivalent
+such polynomials can be decided,
+e.g.~\holtxt{w * y + x * z - (w * z + x * y) = (w - x) * (y - z)}.
 
 \paragraph{realLib}
 
@@ -2117,7 +2247,6 @@ The symbols for the standard arithmetic operations (addition, subtraction and mu
 In the above, natural number addition is chosen in preference to word addition.  Conversely, words are preferred over the integers below:
 \begin{session}
 \begin{alltt}
->>_ load "intLib";
 >>__ temp_overload_on("+", ``int_add``);
 
 >> type_of ``a + b``;

@@ -12,7 +12,7 @@ open pairTheory relationTheory prim_recTheory arithmeticTheory pred_setTheory
      combinTheory fcpTheory hurdUtils;
 
 open realTheory realLib seqTheory transcTheory iterateTheory real_sigmaTheory
-     topologyTheory real_topologyTheory;
+     topologyTheory real_topologyTheory metricTheory;
 
 open util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory;
@@ -22,6 +22,9 @@ val _ = new_theory "martingale";
 val _ = hide "S";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
+
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
 
 (* "The theory of martingales as we know it now goes back to Doob and most of
     the material of this and the following chapter can be found in his seminal
@@ -55,12 +58,12 @@ End
 
 (* the set of all filtrations of A *)
 Definition filtration_def :
-   filtration A (a :num -> 'a algebra) =
-     ((!n. sub_sigma_algebra (a n) A) /\
-      (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j)))
+   filtration A (a :num -> 'a algebra) <=>
+      (!n. sub_sigma_algebra (a n) A) /\
+      (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j))
 End
 
-(* usually denoted by (sp,sts,a,m) in textbooks *)
+(* NOTE: This is usually denoted by (sp,sts,a,m) in textbooks *)
 Definition filtered_measure_space_def :
    filtered_measure_space m a =
       (measure_space m /\ filtration (m_space m,measurable_sets m) a)
@@ -1893,6 +1896,12 @@ Proof
  >> reverse CONJ_TAC >- METIS_TAC [FCP_CONCAT_11]
  >> rpt GEN_TAC
  >> PROVE_TAC [FCP_CONCAT_THM]
+QED
+
+Theorem pair_operation_CONS :
+    pair_operation CONS HD TL
+Proof
+    rw [pair_operation_def]
 QED
 
 val general_cross_def = Define
@@ -6151,6 +6160,43 @@ val INFTY_SIGMA_ALGEBRA_MAXIMAL = store_thm
      Q.EXISTS_TAC `n` >> art [])
  >> REWRITE_TAC [SIGMA_SUBSET_SUBSETS]);
 
+(* A construction of sigma-filteration from only measurable functions *)
+Theorem filtration_from_measurable_functions :
+    !m X A. measure_space m /\
+           (!n. X n IN Borel_measurable (measurable_space m)) /\
+           (!n. A n = sigma (m_space m) (\n. Borel) X (count1 n)) ==>
+            filtration (measurable_space m) A
+Proof
+    rw [filtration_def]
+ >- (rw [sub_sigma_algebra_def, space_sigma_functions]
+     >- (MATCH_MP_TAC sigma_algebra_sigma_functions \\
+         rw [IN_FUNSET, SPACE_BOREL]) \\
+     MATCH_MP_TAC (REWRITE_RULE [space_def, subsets_def]
+                    (Q.ISPECL [‘measurable_space m’, ‘\n:num. Borel’]
+                               sigma_functions_subset)) \\
+     rw [MEASURE_SPACE_SIGMA_ALGEBRA, SIGMA_ALGEBRA_BOREL])
+ (* stage work *)
+ >> REWRITE_TAC [Once sigma_functions_def]
+ >> Q.ABBREV_TAC ‘B = (sigma (m_space m) (\n. Borel) X (count1 j))’
+ >> ‘m_space m = space B’ by METIS_TAC [space_sigma_functions]
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_SUBSET
+ >> CONJ_ASM1_TAC
+ >- (Q.UNABBREV_TAC ‘B’ \\
+     MATCH_MP_TAC sigma_algebra_sigma_functions \\
+     rw [IN_FUNSET, SPACE_BOREL])
+ >> rw [SUBSET_DEF, IN_BIGUNION_IMAGE]
+ >> rename1 ‘k < SUC i’
+ >> rename1 ‘t IN subsets Borel’
+ >> ‘k <= i’ by rw []
+ >> ‘k <= j’ by rw []
+ (* applying SIGMA_SIMULTANEOUSLY_MEASURABLE *)
+ >> Suff ‘X k IN measurable B Borel’ >- rw [IN_MEASURABLE]
+ >> MP_TAC (ISPECL [“m_space m”, “\n:num. Borel”, “X :num->'a->extreal”, “count1 j”]
+                   SIGMA_SIMULTANEOUSLY_MEASURABLE)
+ >> rw [SIGMA_ALGEBRA_BOREL, IN_FUNSET, SPACE_BOREL]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Martingale alternative definitions and properties (Chapter 23 of [1])    *)
 (* ------------------------------------------------------------------------- *)
@@ -7656,6 +7702,7 @@ Proof
  >> rw [extreal_abs_def]
  >> ‘0 < abs (a + b) /\ 0 < abs a /\ 0 < abs b’ by rw []
  >> rw [normal_powr, extreal_of_num_def, extreal_add_def, extreal_mul_def, extreal_le_eq]
+ >> ONCE_REWRITE_TAC [REAL_MUL_COMM]
  (* below is real-only *)
  >> MATCH_MP_TAC REAL_LE_TRANS
  >> Q.EXISTS_TAC ‘(max (abs a powr r) (abs b powr r)) * 2 powr r’

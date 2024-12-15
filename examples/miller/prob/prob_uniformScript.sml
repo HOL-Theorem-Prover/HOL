@@ -219,7 +219,7 @@ val PROB_BERN_UNIF_LT = store_thm
        >> RW_TAC real_ss [])
    >> RW_TAC std_ss []
    >> Q.PAT_X_ASSUM `X ==> Y` MP_TAC
-   >> Cond >- RW_TAC arith_ss []
+   >> impl_tac >- RW_TAC arith_ss []
    >> RW_TAC std_ss' [INDEP_FN_PROB_FST_SUC, INDEP_FN_PROB_UNIF]
    >> Know `k < 2 EXP log2 n` >- DECIDE_TAC
    >> POP_ASSUM (fn th => RW_TAC std_ss [th, o_DEF, PROB_BERN_UNIF])
@@ -668,7 +668,7 @@ val PROB_UNIFORM_TERMINATES = store_thm
        >> SET_EQ_TAC
        >> PSET_TAC [o_THM])
    >> MP_TAC (Q.SPECL [`n`, `SUC n`] PROB_BERN_UNIF_LT)
-   >> Cond >- RW_TAC bool_ss [LOG2_LOWER_SUC]
+   >> impl_tac >- RW_TAC bool_ss [LOG2_LOWER_SUC]
    >> Rewr
    >> RW_TAC bool_ss [REAL_ENTIRE, REAL_INJ]
    >> PROVE_TAC [POW_HALF_POS, REAL_LT_LE]);
@@ -688,7 +688,7 @@ val PROB_BERN_UNIFORM = store_thm
        Q.SPECL [`{k}`, `prob_unif n'`, `\x. x < SUC n'`] o
        INST_TYPE [alpha |-> ``:num``])
       PROB_BERN_UNTIL
-   >> Cond >- RW_TAC bool_ss [INDEP_FN_PROB_UNIF, PROB_UNIFORM_TERMINATES]
+   >> impl_tac >- RW_TAC bool_ss [INDEP_FN_PROB_UNIF, PROB_UNIFORM_TERMINATES]
    >> Know
       `{k} o FST o prob_until (prob_unif n') (\x. x < SUC n') =
        {s | FST (prob_until (prob_unif n') (\x. x < SUC n') s) = k}`

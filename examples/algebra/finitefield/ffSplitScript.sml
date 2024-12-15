@@ -12,10 +12,11 @@ val _ = new_theory "ffSplit";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 open jcLib;
 
+(* open dependent theories *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory numberTheory
+     combinatoricsTheory dividesTheory gcdTheory gcdsetTheory primeTheory;
 
 (* Get dependent theories local *)
 open ffBasicTheory;
@@ -29,30 +30,12 @@ open ffUnityTheory;
 open ffExistTheory;
 open ffExtendTheory;
 
-open bagTheory; (* also has MEMBER_NOT_EMPTY *)
-
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory;
-
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-
-open dividesTheory gcdTheory;
+open bagTheory;
 
 open monoidTheory groupTheory ringTheory fieldTheory;
-open monoidInstancesTheory;
-open groupInstancesTheory;
-open ringInstancesTheory;
-open fieldInstancesTheory;
-open ringUnitTheory;
-open ringMapTheory fieldMapTheory;
+open fieldInstancesTheory fieldMapTheory;
 
-open subgroupTheory;
-open groupOrderTheory;
 open fieldOrderTheory;
-
-open groupCyclicTheory;
-
-open ringBinomialTheory;
 
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 open polyDivisionTheory polyBinomialTheory;
@@ -71,8 +54,7 @@ open polyMapTheory;
 
 open polyProductTheory; (* for PPROD *)
 
-open GaussTheory; (* for divisors *)
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Splitting Field Documentation                                             *)
@@ -350,55 +332,8 @@ open GaussTheory; (* for divisors *)
 *)
 
 (* ------------------------------------------------------------------------- *)
-(* Helper                                                                    *)
-(* ------------------------------------------------------------------------- *)
-
-(* Theorem: x IN SET_OF_BAG b <=> b x <> 0 *)
-(* Proof: by definitions *)
-val IN_SET_OF_BAG_NONZERO = store_thm(
-  "IN_SET_OF_BAG_NONZERO",
-  ``!b x. x IN SET_OF_BAG b <=> b x <> 0``,
-  rw[SET_OF_BAG, BAG_IN, BAG_INN]);
-
-(* Theorem: FINITE_BAG b ==> (!e. BAG_IN e b ==> (b e = 1)) ==> (BAG_CARD b = CARD (SET_OF_BAG b)) *)
-(* Proof:
-   By finite induction on b.
-   Base: BAG_CARD {||} = CARD (SET_OF_BAG {||})
-           BAG_CARD {||}
-         = 0                       by BAG_CARD_EMPTY
-         = CARD {}                 by CARD_EMPTY
-         = CARD (SET_OF_BAG {||})  by SET_OF_BAG_EQ_EMPTY
-   Step: (!e. BAG_IN e b ==> (b e = 1)) ==> (BAG_CARD b = CARD (SET_OF_BAG b)) ==>
-         BAG_CARD (BAG_INSERT e b) = CARD (SET_OF_BAG (BAG_INSERT e b))
-         After simplication by BAG_CARD_THM, BAG_INSERT, SET_OF_BAG_INSERT, BAG_IN, BAG_INN,
-         This comes down to:
-         (1) b e >= 1 ==> BAG_CARD b + 1 = CARD (SET_OF_BAG b)
-             In this case, b e + 1 = 1     by implication.
-             Thus b e = 0                  by arithmetic
-             This contradicts b e >= 1.
-         (2) ~(b e >= 1) ==> BAG_CARD b = CARD (SET_OF_BAG b)
-             In this case, !e'. b e' >= 1 ==> (b e' = 1)   by implication
-             Applying induction hypothesis, the result follows.
-*)
-val BAG_CARD_EQ_CARD_SET_OF_BAG = store_thm(
-  "BAG_CARD_EQ_CARD_SET_OF_BAG",
-  ``!b:'a bag. FINITE_BAG b ==> (!e. BAG_IN e b ==> (b e = 1)) ==> (BAG_CARD b = CARD (SET_OF_BAG b))``,
-  Induct_on `FINITE_BAG` >>
-  rpt strip_tac >-
-  rw[] >>
-  rw[BAG_CARD_THM] >>
-  fs[BAG_INSERT, SET_OF_BAG_INSERT] >>
-  fs[BAG_IN, BAG_INN, ADD1] >>
-  rw[] >| [
-    `b e + 1 = 1` by metis_tac[] >>
-    decide_tac,
-    metis_tac[]
-  ]);
-
-(* ------------------------------------------------------------------------- *)
 (* Bag of Roots                                                              *)
 (* ------------------------------------------------------------------------- *)
-
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
             (multiplicity (p * q) = BAG_UNION (multiplicity p) (multiplicity q)) *)

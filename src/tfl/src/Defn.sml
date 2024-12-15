@@ -99,8 +99,7 @@ val imp_elim =
      val th3 = MP th2 th2a
      val th3a = EQ_MP (SPECL[PimpQ, PimpR] boolTheory.EQ_IMP_THM) th3
      val (th4,th5) = (CONJUNCT1 th3a,CONJUNCT2 th3a)
-     fun pmap f (x,y) = (f x, f y)
-     val (th4a,th5a) = pmap (DISCH P o funpow 2 UNDISCH) (th4,th5)
+     val (th4a,th5a) = Lib.pair_map (DISCH P o funpow 2 UNDISCH) (th4,th5)
      val th4b = DISCH PimpQ th4a
      val th5b = DISCH PimpR th5a
      val th6 = DISCH tm1 (IMP_ANTISYM_RULE th4b th5b)
@@ -410,7 +409,7 @@ local fun is_suc tm =
 in
 val SUC_TO_NUMERAL_DEFN_CONV_hook =
       ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
-fun add_persistent_funs l =
+fun add_defs_to_EVAL l =
   if not (!computeLib.auto_import_definitions) then () else
     let val has_lhs_SUC = List.exists
               (can (find_term is_suc) o lhs o #2 o strip_forall)
@@ -440,7 +439,7 @@ local
   val _ = Feedback.register_btrace("Define.storage_message", chatting)
 in
 fun been_stored (s,thm) =
-  (add_persistent_funs [(s,thm)];
+  (add_defs_to_EVAL [(s,thm)];
    if !chatting then
      mesg (if !Globals.interactive then
              "Definition has been stored under " ^ Lib.quote s ^ "\n"
@@ -472,13 +471,14 @@ fun indSuffix stem =
     end
 
 
-fun store(stem,eqs,ind) =
+fun store_at loc (stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
       val ind_bind = indSuffix stem
-      fun save x = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm x
+      fun save x = Feedback.trace ("Theory.save_thm_reporting", 0)
+                                  (save_thm_at loc) x
       val   _  = save (ind_bind, ind)
       val eqns = save (eqs_bind, eqs)
-      val _ = add_persistent_funs [(eqs_bind,eqs)]
+      val _ = add_defs_to_EVAL [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
     if !chatting then
@@ -491,18 +491,31 @@ fun store(stem,eqs,ind) =
                format_name_message{pfx = "Saved induction", name = ind_bind})
     else ()
   end
+
+val store = store_at DB.Unknown
 end
 
 local
   val LIST_CONJ_GEN = LIST_CONJ o map GEN_ALL
 in
-  fun save_defn (ABBREV {bind,eqn, ...})     = been_stored (bind,eqn)
-  | save_defn (PRIMREC{bind,eqs, ...})       = been_stored (bind,eqs)
-  | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
-  | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ_GEN eqs,ind)
-  | save_defn (TAILREC{eqs, ind, stem, ...}) = store(stem,LIST_CONJ_GEN eqs,ind)
-  | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ_GEN eqs,ind)
-  | save_defn (NESTREC{eqs,ind,stem, ...})   = store(stem,LIST_CONJ_GEN eqs,ind)
+  fun save_defn_at loc defn =
+      let
+        val ST = store_at loc
+        fun BS (bind,eqn) = (
+          Theory.upd_binding bind (DB_dtype.updsrcloc (K loc)) ;
+          been_stored (bind,eqn)
+        )
+      in
+        case defn of
+          ABBREV {bind,eqn, ...}       => BS (bind,eqn)
+        | PRIMREC{bind,eqs, ...}       => BS (bind,eqs)
+        | NONREC {eqs, ind, stem, ...} => ST (stem,eqs,ind)
+        | STDREC {eqs, ind, stem, ...} => ST (stem,LIST_CONJ_GEN eqs,ind)
+        | TAILREC{eqs, ind, stem, ...} => ST (stem,LIST_CONJ_GEN eqs,ind)
+        | MUTREC {eqs,ind,stem,...}    => ST (stem,LIST_CONJ_GEN eqs,ind)
+        | NESTREC{eqs,ind,stem, ...}   => ST(stem,LIST_CONJ_GEN eqs,ind)
+      end
+  val save_defn = save_defn_at DB.Unknown
 end
 
 
@@ -1251,8 +1264,8 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
     in TotalDefn.
  ---------------------------------------------------------------------------*)
 
-fun holexnMessage (HOL_ERR {origin_structure,origin_function,message}) =
-      origin_structure ^ "." ^ origin_function ^ ": " ^ message
+fun holexnMessage (HOL_ERR {origin_structure,origin_function,source_location,message}) =
+      origin_structure ^ "." ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ": " ^ message
   | holexnMessage e = General.exnMessage e
 
 fun is_simple_arg t =
@@ -1765,8 +1778,9 @@ fun defn_absyn_to_term a = let
     in
       overloading_resolution ptm >- (fn (pt,b) =>
       report_ovl_ambiguity b     >>
-      to_term pt                 >- (fn t =>
-      return (t |> remove_case_magic |> !post_process_term)))
+      to_term pt                 >- (fn t => fn e => (
+      ignore (Listener.call_listener Preterm.typecheck_listener (pt, e));
+      return (t |> remove_case_magic |> !post_process_term) e)))
     end
   val M =
     ptsM >-
@@ -1807,11 +1821,18 @@ fun parse_quote q =
   sort_eqns (fst (parse_absyn (Parse.Absyn q)))
   handle e => raise wrap_exn "Defn" "parse_quote" e;
 
+local
+  val mkstems =
+    List.map (fst o dest_var o fst o strip_comb o lhs o snd o strip_forall o
+              hd o strip_conj)
+in
 fun Hol_defn stem q =
  (case parse_quote q
    of [] => raise ERR "Hol_defn" "no definitions"
     | [eqns] => mk_defn stem eqns
-    | otherwise => raise ERR "Hol_defn" "multiple definitions")
+    | eqnsl => raise ERR "Hol_defn"
+                         ("multiple definitions: "^
+                          String.concatWith ", " (mkstems eqnsl)))
   handle e =>
   raise wrap_exn_loc "Defn" "Hol_defn"
            (Absyn.locn_of_absyn (Parse.Absyn q)) e;
@@ -1823,15 +1844,10 @@ fun Hol_defns stems q =
   handle e => raise wrap_exn_loc "Defn" "Hol_defns"
                  (Absyn.locn_of_absyn (Parse.Absyn q)) e;
 
-local
-  val stems =
-    List.map (fst o dest_var o fst o strip_comb o lhs o snd o strip_forall o
-              hd o strip_conj)
-in
   fun Hol_multi_defns q =
     (case parse_quote q of
        [] => raise ERR "Hol_multi_defns" "no definition"
-      | eqnsl => mk_defns (stems eqnsl) eqnsl)
+      | eqnsl => mk_defns (mkstems eqnsl) eqnsl)
     handle e => raise wrap_exn_loc "Defn" "Hol_multi_defns"
                    (Absyn.locn_of_absyn (Parse.Absyn q)) e
 end

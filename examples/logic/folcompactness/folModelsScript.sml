@@ -29,7 +29,7 @@ Termination
   WF_REL_TAC ‘measure (term_size o SND o SND)’ >> simp[]
 End
 
-Theorem termval_def[simp] =
+Theorem termval_def[simp,allow_rebind] =
         SIMP_RULE bool_ss [SF ETA_ss] termval_def
 
 Definition holds_def:

@@ -246,12 +246,6 @@ val option_case_eq = prove_case_eq_thm{
   nchotomy = option_CASES
                |> ONCE_REWRITE_RULE [DISJ_COMM]
 };
-val pair_case_eq = prove_case_eq_thm{
-  case_def= TypeBase.case_def_of ``:'a # 'b``
-            |> INST_TYPE [alpha |-> gamma, beta |-> alpha, gamma |-> beta]
-            |> GENL [``x:'a``, ``y:'b``, ``f:'a -> 'b -> 'c``] ,
-  nchotomy = TypeBase.nchotomy_of ``:'a # 'b``
-};
 
 val MCOMP_THM = store_thm ("MCOMP_THM",
   ``MCOMP g f = EXT g o f``,

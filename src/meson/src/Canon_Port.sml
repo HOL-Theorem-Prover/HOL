@@ -18,8 +18,6 @@ val RIGHT_IMP_FORALL_THM = GSYM RIGHT_FORALL_IMP_THM;
 val LEFT_IMP_EXISTS_THM  = boolTheory.LEFT_EXISTS_IMP_THM;
 val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
 
-val freesl = free_varsl
-
 fun is_eqc tm = same_const equality tm
 
 local

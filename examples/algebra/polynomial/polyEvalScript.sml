@@ -12,22 +12,15 @@ val _ = new_theory "polyEval";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "ringUnitTheory"; *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* (* val _ = load "fieldTheory"; *) *)
-open monoidTheory groupTheory ringTheory ringUnitTheory;
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* val _ = load "polyFieldTheory"; *)
+open monoidTheory groupTheory ringTheory;
+
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 
 (* val _ = load "polyMonicTheory"; *)
@@ -35,19 +28,6 @@ open polyMonicTheory;
 
 (* val _ = load "polyRootTheory"; *)
 open polyRootTheory;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Evaluation giving Polynomial Documentation                     *)

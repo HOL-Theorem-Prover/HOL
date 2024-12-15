@@ -9,10 +9,7 @@ struct
   val (Type,Term) = parse_from_grammars EVAL_quoteTheory.EVAL_quote_grammars
 end
 
-fun QUOTE_ERR function message =
-    HOL_ERR{origin_structure = "quote",
-                      origin_function = function,
-                      message = message};
+val QUOTE_ERR = mk_HOL_ERR "quote"
 
 fun mk_comb2 (a,b,c) = mk_comb(mk_comb(a,b),c);
 fun mk_comb3 (a,b,c,d) = mk_comb(mk_comb2(a,b,c),d);

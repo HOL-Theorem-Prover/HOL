@@ -87,6 +87,12 @@ val max_print_depth = ref ~1
 val pp_flags = {show_types = ref false, show_numeral_types = ref false}
 
 (*---------------------------------------------------------------------------*
+ * Controls how many elements to print for list forms. Mirrors print depth.  *
+ *---------------------------------------------------------------------------*)
+
+val max_print_length = ref ~1
+
+(*---------------------------------------------------------------------------*
  * For prettyprinting type information in a term.                            *
  *---------------------------------------------------------------------------*)
 

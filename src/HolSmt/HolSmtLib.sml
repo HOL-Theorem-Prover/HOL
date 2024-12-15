@@ -7,6 +7,8 @@ structure HolSmtLib :> HolSmtLib = struct
 
   open Abbrev
 
+  val op THEN = Tactical.THEN
+
   fun GENERIC_SMT_TAC solver goal =
   let
     val ERR = Feedback.mk_HOL_ERR "HolSmtLib" "GENERIC_SMT_TAC"
@@ -30,14 +32,26 @@ structure HolSmtLib :> HolSmtLib = struct
       raise ERR ("solver reports 'unknown' (" ^ message ^ ")")
   end
 
+  val CVC_ORACLE_TAC = GENERIC_SMT_TAC CVC.CVC_SMT_Oracle
   val YICES_TAC = GENERIC_SMT_TAC Yices.Yices_Oracle
   val Z3_ORACLE_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Oracle
   val Z3_TAC = GENERIC_SMT_TAC Z3.Z3_SMT_Prover
 
+  fun assume_thms thms =
+    Tactical.map_every (Tactic.ASSUME_TAC o Drule.GEN_ALL) thms
+
+  (* The tactics below accept a list of theorems, like metis_tac[] *)
+  fun cvco_tac thms = assume_thms thms THEN CVC_ORACLE_TAC
+  fun z3_tac thms = assume_thms thms THEN Z3_TAC
+  fun z3o_tac thms = assume_thms thms THEN Z3_ORACLE_TAC
+
   fun prove (tm, tac) = Tactical.TAC_PROOF(([], tm), tac)
+  fun CVC_ORACLE_PROVE tm = prove (tm, CVC_ORACLE_TAC)
   fun YICES_PROVE tm = prove (tm, YICES_TAC)
   fun Z3_ORACLE_PROVE tm = prove (tm, Z3_ORACLE_TAC)
   fun Z3_PROVE tm = prove (tm, Z3_TAC)
+
+  val include_theorems = SmtLib.include_theorems
 
   (* report whether solvers are available *)
   val _ =
@@ -53,6 +67,10 @@ structure HolSmtLib :> HolSmtLib = struct
             Feedback.HOL_MESG ("HolSmtLib: " ^ message)
     in
       Feedback.set_trace "HolSmtLib" 0;
+      if CVC.is_configured () then
+        check_available CVC_ORACLE_PROVE "cvc5 (oracle)"
+      else
+        provoke_err CVC_ORACLE_PROVE;
       if Yices.is_configured () then
         check_available YICES_PROVE "Yices"
       else

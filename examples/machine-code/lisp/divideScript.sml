@@ -1,6 +1,6 @@
 
 open HolKernel boolLib bossLib Parse;
-open tailrecTheory tailrecLib compilerLib codegen_x86Lib;
+open tailrecTheory mc_tailrecLib compilerLib codegen_x86Lib;
 open wordsTheory addressTheory wordsLib arithmeticTheory;
 
 open decompilerLib set_sepTheory prog_x86Lib;

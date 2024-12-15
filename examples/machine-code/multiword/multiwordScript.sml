@@ -9,7 +9,7 @@ open pairTheory listTheory rich_listTheory relationTheory pairTheory integerTheo
 open fcpTheory;
 open ASCIInumbersTheory
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;

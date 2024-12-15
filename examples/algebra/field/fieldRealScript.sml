@@ -1,10 +1,12 @@
 (* ------------------------------------------------------------------------- *)
 (* The field of reals.                                                       *)
 (* ------------------------------------------------------------------------- *)
-open HolKernel boolLib bossLib Parse
-     groupTheory fieldTheory ringRealTheory groupRealTheory
 
-val _ = new_theory"fieldReal";
+open HolKernel boolLib bossLib Parse;
+
+open groupTheory fieldTheory real_algebraTheory;
+
+val _ = new_theory "fieldReal";
 
 Theorem FieldReals[simp]:
   Field Reals

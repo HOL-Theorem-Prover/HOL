@@ -37,19 +37,28 @@ struct
                      | DEF_AXIOM of Term.term
                      | ELIM_UNUSED of Term.term
                      | HYPOTHESIS of Term.term
+                     | IFF_FALSE of proofterm * Term.term
                      | IFF_TRUE of proofterm * Term.term
+                     | INTRO_DEF of Term.term
                      | LEMMA of proofterm * Term.term
                      | MONOTONICITY of proofterm list * Term.term
                      | MP of proofterm * proofterm * Term.term
+                     | MP_EQ of proofterm * proofterm * Term.term
+                     | NNF_NEG of proofterm list * Term.term
+                     | NNF_POS of proofterm list * Term.term
                      | NOT_OR_ELIM of proofterm * Term.term
+                     | QUANT_INST of Term.term list * Term.term
                      | QUANT_INTRO of proofterm * Term.term
+                     | REFL of Term.term
                      | REWRITE of Term.term
+                     | SKOLEM of Term.term
                      | SYMM of proofterm * Term.term
                      | TH_LEMMA_ARITH of proofterm list * Term.term
                      | TH_LEMMA_ARRAY of proofterm list * Term.term
                      | TH_LEMMA_BASIC of proofterm list * Term.term
                      | TH_LEMMA_BV of proofterm list * Term.term
                      | TRANS of proofterm * proofterm * Term.term
+                     | TRANS_STAR of proofterm list * Term.term
                      | TRUE_AXIOM of Term.term
                      | UNIT_RESOLUTION of proofterm list * Term.term
                      | ID of int
@@ -58,8 +67,11 @@ struct
   (* The Z3 proof is a directed acyclic graph of inference steps.  A
      unique integer ID is assigned to each inference step.  Note that
      Z3 assigns no ID to the proof's root node, which derives the
-     final theorem "... |- F".  We will use ID 0 for the root node. *)
+     final theorem "... |- F".  We will use ID 0 for the root node.
 
-  type proof = (int, proofterm) Redblackmap.dict
+     Additionally, Z3 also defines variables in proofs, which we keep
+     keep track of in a set, so we can properly replay the proof. *)
+
+  type proof = (int, proofterm) Redblackmap.dict * Term.term HOLset.set
 
 end

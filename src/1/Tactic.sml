@@ -874,6 +874,51 @@ fun irule_at pos thm =
     end
 val IRULE_TAC = irule
 
+(* --------------------------------------------------------------------------*
+ * TRANS_TAC: Takes a 'transitivity' theorem of the form                     *
+ *                                                                           *
+ *       |- !x y z. R1 x y /\ R2 y z ==> R3 x z                              *
+ *                                                                           *
+ * and a term ‘t’, TRANS_TAC produces a tactic that reduces a goal with      *
+ * conclusion of the form ‘R3 s u’ to one with conclusion ‘R1 st /\ R2 t u’: *
+ *                                                                           *
+ *     A |- R3 s u                                                           *
+ * ======================= TRANS_TAC (|- !. R1 x y /\ R2 y z ==> R3 x z) ‘t’ *
+ *  A |- R1 s t /\ R2 t u                                                    *
+ * --------------------------------------------------------------------------*)
+(*
+ NOTE: This tactic was ported from HOL-Light by Chun Tian, 26/4/2024.
+
+"The effect of {TRANS_TAC th t} can often be replicated by the more primitive
+tactic sequence {MATCH_MP_TAC th THEN EXISTS_TAC t}. The use of {TRANS_TAC} is
+not only less verbose, but it is also more general in that it ensures correct
+type-instantiation of the theorem, whereas in highly polymorphic theorems the
+use of {MATCH_MP_TAC} may leave the wrong types for the subsequent {EXISTS_TAC}
+step." -- from HOL-Light's "TRANS_TAC.hlp".
+ *)
+
+(* NOTE: if the ‘op’ of ‘op x y’ is actually an overload of the negation of
+   another constant, e.g. ‘x < y’ is actually an overload of ‘~(y <= x)’, the
+   following versions of lhand and rand will still correctly retrieve x and y,
+   resp. With the original lhand/rand such terms (is_neg) are not valid inputs.
+ *)
+fun lhand' tm =
+    if is_neg tm then rand (dest_neg tm) else lhand tm;
+
+fun rand' tm =
+    if is_neg tm then lhand (dest_neg tm) else rand tm;
+
+fun TRANS_TAC th tm (gl as (asl,w)) = let
+    val ctm = snd(strip_forall(concl th));
+    val (cl,cr) = dest_conj(lhand ctm);
+    val x = lhand' cl and y = rand' cl and z = rand' cr;
+    val l = lhand' w and r = rand' w;
+    val ilist : (hol_type, hol_type)Lib.subst =
+        flatten (map2 match_type (map type_of [x,y,z]) (map type_of [l,tm,r]));
+    val th' = INST_TYPE ilist th
+in
+    (MATCH_MP_TAC th' THEN EXISTS_TAC tm) gl
+end
 
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *

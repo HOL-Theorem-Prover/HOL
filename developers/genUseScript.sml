@@ -1,4 +1,11 @@
 
+use "../tools/Holmake/HFS_NameMunge.sig";
+use "../tools/Holmake/poly/HFS_NameMunge.sml";
+use "../tools/Holmake/HOLFS_dtype.sml";
+use "../tools/Holmake/HOLFileSys.sig";
+use "../tools/Holmake/HOLFileSys.sml";
+use "../tools/Holmake/AttributeSyntax.sig";
+use "../tools/Holmake/AttributeSyntax.sml";
 use "../tools/Holmake/GetOpt.sig";
 use "../tools/Holmake/GetOpt.sml";
 use "../tools-poly/poly/Binaryset.sig";
@@ -32,9 +39,9 @@ in
   (push, read, reset)
 end;
 
-val _ = use "../tools/Holmake/QuoteFilter.sml";
-val _ = use "../tools/Holmake/QFRead.sig";
-val _ = use "../tools/Holmake/QFRead.sml";
+val _ = use "../tools/Holmake/HolLex.sml";
+val _ = use "../tools/Holmake/HolParser.sig";
+val _ = use "../tools/Holmake/HolParser.sml";
 val _ = use "../tools/Holmake/Holdep_tokens.sig"
 val _ = use "../tools/Holmake/Holdep_tokens.sml";
 

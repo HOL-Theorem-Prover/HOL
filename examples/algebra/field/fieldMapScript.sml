@@ -12,37 +12,13 @@ val _ = new_theory "fieldMap";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "fieldOrderTheory"; *)
-open monoidTheory groupTheory;
-open monoidOrderTheory groupOrderTheory;
-open ringTheory ringUnitTheory integralDomainTheory;
-open fieldTheory fieldOrderTheory;
+open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
+     numberTheory combinatoricsTheory;
 
-(* val _ = load "ringDividesTheory"; *)
-open ringDividesTheory;
-
-(* val _ = load "ringMapTheory"; *)
-open monoidMapTheory groupMapTheory ringMapTheory;
-open quotientGroupTheory subgroupTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-
+open monoidTheory groupTheory ringTheory fieldTheory fieldOrderTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Field Maps Documentation                                                  *)
@@ -2264,25 +2240,6 @@ Proof
   qexists_tac `f ( |/ xx)` >>
   rw[field_nonzero_eq, field_mult_rinv, field_mult_linv]
 QED
-
-(* Theorem: Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f) *)
-(* Proof:
-   By Field_def, this is to show:
-   (1) Ring (ring_inj_image r f), true             by ring_inj_image_ring
-   (2) Group ((ring_inj_image r f).prod excluding (ring_inj_image r f).sum.id)
-       Since (ring_inj_image r f).sum.id = f #0    by ring_inj_image_def
-       The result follows                          by field_inj_image_prod_nonzero_group
-*)
-Theorem field_inj_image_field:
-  !(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> Field (ring_inj_image r f)
-Proof
-  rpt strip_tac >>
-  rw[Field_def] >-
-  rw[ring_inj_image_ring] >>
-  `(ring_inj_image r f).sum.id = f #0` by rw[ring_inj_image_def] >>
-  rw[field_inj_image_prod_nonzero_group]
-QED
-(* Another proof of a previous theorem. *)
 
 (* Theorem: Field r /\ INJ f R univ(:'b) ==> FieldHomo f r (ring_inj_image r f) *)
 (* Proof: by ring_inj_image_ring_homo, field_is_ring *)

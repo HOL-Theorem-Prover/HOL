@@ -1,1 +1,1 @@
-\HOLinline{\ensuremath{\alpha} -> \ensuremath{\alpha} -> \HOLTyOp{bool}}
+\HOLinline{\ensuremath{\alpha} \HOLTokenMap{} \ensuremath{\alpha} \HOLTokenMap{} \HOLTyOp{bool}}

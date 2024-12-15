@@ -12,47 +12,26 @@ val _ = new_theory "computePoly";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open pred_setTheory listTheory rich_listTheory arithmeticTheory numberTheory
+     combinatoricsTheory dividesTheory gcdTheory logrootTheory whileTheory;
 
-(* Get dependent theories local *)
+open ringTheory;
 
-(* open dependent theories *)
-(* val _ = load "fieldInstancesTheory"; *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open pred_setTheory listTheory arithmeticTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* val _ = load "polyFieldModuloTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 open polyMonicTheory polyEvalTheory;
 open polyDivisionTheory polyFieldDivisionTheory polyFieldModuloTheory;
-open ringTheory ringInstancesTheory;
-
-(* val _ = load "polyBinomialTheory"; *)
 open polyBinomialTheory;
-open ringBinomialTheory;
 
-(* val _ = load "computeOrderTheory"; *)
 open computeBasicTheory computeOrderTheory;
-open logrootTheory logPowerTheory;
 
-(* val _ = load "whileTheory"; *)
-open whileTheory;
+val _ = intLib.deprecate_int ();
 
-open rich_listTheory; (* for FRONT and LAST *)
-
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Computations Documentation                                     *)
@@ -116,7 +95,7 @@ open rich_listTheory; (* for FRONT and LAST *)
                                                 (turn_exp p n) (DROP n q))
    unity_mod_mult_alt   |- !r. Ring r /\ #1 <> #0 ==> !p q. weak p /\ weak q /\ q <> |0| ==>
                                (unity_mod_mult r p q = psum (GENLIST (\k. q ' k o turn_exp p k) (SUC (deg q))))
-   unity_mod_mult_zero  |- !r p. (unity_mod_mult r p |0| = |0|) /\ (unity_mod_mult r |0| p = |0|)
+   unity_mod_mult_zero_alt  |- !r p. (unity_mod_mult r p |0| = |0|) /\ (unity_mod_mult r |0| p = |0|)
    unity_mod_mult_cons  |- !r. Ring r ==> !p h t. weak p /\ weak (h::t) ==>
                                (unity_mod_mult r p (h::t) = h o p || unity_mod_mult r (turn p) t)
    unity_mod_mult_weak  |- !r. Ring r ==> !p q. weak p /\ weak q ==> weak (unity_mod_mult r p q)
@@ -1232,8 +1211,8 @@ val unity_mod_mult_alt = store_thm(
 
 (* Theorem: (unity_mod_mult r p |0| = |0|) /\ (unity_mod_mult r |0| p = |0|) *)
 (* Proof: by unity_mod_mult_def, poly_slide_zero. *)
-val unity_mod_mult_zero = store_thm(
-  "unity_mod_mult_zero",
+val unity_mod_mult_zero_alt = store_thm(
+  "unity_mod_mult_zero_alt",
   ``!r:'a ring p. (unity_mod_mult r p |0| = |0|) /\ (unity_mod_mult r |0| p = |0|)``,
   rw[unity_mod_mult_def, poly_slide_zero]);
 

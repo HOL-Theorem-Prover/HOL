@@ -1,7 +1,7 @@
-open HolKernel Parse boolLib
+open HolKernel Parse boolLib BasicProvers;
 
 (* bossLib approximation *)
-open BasicProvers TotalDefn simpLib numLib IndDefLib
+open TotalDefn simpLib numLib IndDefLib listTheory rich_listTheory;
 
 fun simp thl = ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
 fun dsimp thl =
@@ -12,12 +12,10 @@ fun kall_tac th = K ALL_TAC th
 val metis_tac = metisLib.METIS_TAC
 val qid_spec_tac = Q.ID_SPEC_TAC
 fun rw thl = SRW_TAC[] thl
-fun fs thl = full_simp_tac (srw_ss()) thl
+fun fs thl = full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) thl;
 val rename1 = Q.RENAME1_TAC
 val qspec_then = Q.SPEC_THEN
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
-
-open listTheory rich_listTheory
 
 val _ = new_theory "indexedLists";
 
@@ -149,6 +147,38 @@ val findi_def = Define`
   findi x (h::t) = if x = h then 0 else 1 + findi x t
 `;
 
+Theorem findi_nil = findi_def |> CONJUNCT1;
+(* val findi_nil = |- !x. findi x [] = 0: thm *)
+
+Theorem findi_cons = findi_def |> CONJUNCT2;
+(* val findi_cons = |- !x h t. findi x (h::t) = if x = h then 0 else 1 + findi x t: thm *)
+
+(* Theorem: ~MEM x ls ==> findi x ls = LENGTH ls *)
+(* Proof:
+   By induction on ls.
+   Base: ~MEM x [] ==> findi x [] = LENGTH []
+         findi x []
+       = 0                         by findi_nil
+       = LENGTH []                 by LENGTH
+   Step:  ~MEM x ls ==> findi x ls = LENGTH ls ==>
+         !h. ~MEM x (h::ls) ==> findi x (h::ls) = LENGTH (h::ls)
+       Note ~MEM x (h::ls)
+        ==> x <> h /\ ~MEM x ls    by MEM
+       Thus findi x (h::ls)
+          = 1 + findi x ls         by findi_cons
+          = 1 + LENGTH ls          by induction hypothesis
+          = SUC (LENGTH ls)        by ADD1
+          = LENGTH (h::ls)         by LENGTH
+*)
+Theorem findi_none:
+  !ls x. ~MEM x ls ==> findi x ls = LENGTH ls
+Proof
+  rpt strip_tac >>
+  Induct_on `ls` >-
+  simp[findi_nil] >>
+  simp[findi_cons]
+QED
+
 val MEM_findi = store_thm(
   "MEM_findi",
   ``MEM x l ==> findi x l < LENGTH l``,
@@ -166,6 +196,69 @@ val EL_findi = store_thm(
   "EL_findi",
   ``!l x. MEM x l ==> EL (findi x l) l = x``,
   Induct_on`l` >> rw[findi_def] >> simp[DECIDE ``1 + x = SUC x``]);
+
+(* Theorem: ALL_DISTINCT ls /\ MEM x ls /\ n < LENGTH ls ==> (x = EL n ls <=> findi x ls = n) *)
+(* Proof:
+   If part: x = EL n ls ==> findi x ls = n
+      Given ALL_DISTINCT ls /\ n < LENGTH ls
+      This is true             by findi_EL
+   Only-if part: findi x ls = n ==> x = EL n ls
+      Given MEM x ls
+      This is true             by EL_findi
+*)
+Theorem findi_EL_iff:
+  !ls x n. ALL_DISTINCT ls /\ MEM x ls /\ n < LENGTH ls ==> (x = EL n ls <=> findi x ls = n)
+Proof
+  metis_tac[findi_EL, EL_findi]
+QED
+
+(* Theorem: findi x (l1 ++ l2) = if MEM x l1 then findi x l1 else LENGTH l1 + findi x l2 *)
+(* Proof:
+   By induction on l1.
+   Base: findi x ([] ++ l2) = if MEM x [] then findi x [] else LENGTH [] + findi x l2
+      Note MEM x [] = F            by MEM
+        so findi x ([] ++ l2)
+         = findi x l2              by APPEND
+         = 0 + findi x l2          by ADD
+         = LENGTH [] + findi x l2  by LENGTH
+   Step: findi x (l1 ++ l2) = if MEM x l1 then findi x l1 else LENGTH l1 + findi x l2 ==>
+         !h. findi x (h::l1 ++ l2) = if MEM x (h::l1) then findi x (h::l1)
+                                     else LENGTH (h::l1) + findi x l2
+
+      Note findi x (h::l1 ++ l2)
+         = if x = h then 0 else 1 + findi x (l1 ++ l2)     by findi_cons
+
+      Case: MEM x (h::l1).
+      To show: findi x (h::l1 ++ l2) = findi x (h::l1).
+      Note MEM x (h::l1)
+       <=> x = h \/ MEM x l1       by MEM
+      If x = h,
+           findi x (h::l1 ++ l2)
+         = 0 = findi x (h::l1)     by findi_cons
+      If x <> h, then MEM x l1.
+           findi x (h::l1 ++ l2)
+         = 1 + findi x (l1 ++ l2)  by x <> h
+         = 1 + findi x l1          by induction hypothesis
+         = findi x (h::l1)         by findi_cons
+
+      Case: ~MEM x (h::l1).
+      To show: findi x (h::l1 ++ l2) = LENGTH (h::l1) + findi x l2.
+      Note ~MEM x (h::l1)
+       <=> x <> h /\ ~MEM x l1     by MEM
+           findi x (h::l1 ++ l2)
+         = 1 + findi x (l1 ++ l2)  by x <> h
+         = 1 + (LENGTH l1 + findi x l2)        by induction hypothesis
+         = (1 + LENGTH l1) + findi x l2        by arithmetic
+         = LENGTH (h::l1) + findi x l2         by LENGTH
+*)
+Theorem findi_APPEND:
+  !l1 l2 x. findi x (l1 ++ l2) = if MEM x l1 then findi x l1 else LENGTH l1 + findi x l2
+Proof
+  rpt strip_tac >>
+  Induct_on `l1` >-
+  simp[] >>
+  (rw[findi_cons] >> fs[])
+QED
 
 val delN_def = Define`
   delN i [] = [] /\

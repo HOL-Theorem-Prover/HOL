@@ -113,35 +113,11 @@ val EL_LUPDATE___NO_COND = store_thm ("EL_LUPDATE___NO_COND",
 SIMP_TAC std_ss [EL_LUPDATE]);
 
 
-val TAKE_LUPDATE = store_thm ("TAKE_LUPDATE",
-``!n1 n2 e l. TAKE n1 (LUPDATE e n2 l) =
-  if (n1 <= n2) then TAKE n1 l else
-  LUPDATE e n2 (TAKE n1 l)``,
-
-Induct_on `n1` THEN
-Cases_on `n2` THEN
-Cases_on `l` THEN
-ASM_SIMP_TAC list_ss [LUPDATE_def,
-  COND_RAND, COND_RATOR])
-
-
 val TAKE_LUPDATE___SIMPLE = store_thm ("TAKE_LUPDATE___SIMPLE",
 ``!n1 n2 e l. TAKE n1 (LUPDATE e n2 l) =
   LUPDATE e n2 (TAKE n1 l)``,
 Induct_on `n1` THEN Cases_on `n2` THEN Cases_on `l` THEN
 ASM_SIMP_TAC list_ss [LUPDATE_def])
-
-
-val DROP_LUPDATE = store_thm ("DROP_LUPDATE",
-``!n1 n2 e l. DROP n1 (LUPDATE e n2 l) =
-   if (n2 < n1) then DROP n1 l else
-  LUPDATE e (n2-n1) (DROP n1 l)``,
-
-Induct_on `n1` THEN
-Cases_on `n2` THEN
-Cases_on `l` THEN
-ASM_SIMP_TAC list_ss [LUPDATE_def]);
-
 
 val LUPDATE_APPEND1 = store_thm ("LUPDATE_APPEND1",
 ``!n l1 l2. n < LENGTH l1 ==> (
@@ -1058,10 +1034,6 @@ val LIST_NUM_STAR_APPEND = store_thm ("LIST_NUM_STAR_APPEND",
 val IMAGE_ABS2 = store_thm ("IMAGE_ABS2",
 ``IMAGE f P = (\x. ?y. (x = f y) /\ y IN P)``,
 SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_ABS]);
-
-val IMAGE_ABS = store_thm ("IMAGE_ABS",
-``IMAGE f (\x. P x) = (\x. ?y. (x = f y) /\ P y)``,
-SIMP_TAC std_ss [IMAGE_ABS2, IN_ABS]);
 
 val IN_ABS2 = store_thm ("IN_ABS2",
         ``(!t. (t IN X = Q t)) = (X = \t. Q t)``,

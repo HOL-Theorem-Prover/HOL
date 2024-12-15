@@ -193,7 +193,7 @@ Theorem Vis_11:
   !x f y g. Vis x f = Vis y g <=> x = y /\ f = g
 Proof
   rw [Vis_def] \\ eq_tac \\ strip_tac \\ fs []
-  \\ qmatch_asmsub_abbrev_tac `_ x1 = _ x2`
+  \\ qmatch_assum_abbrev_tac `_ x1 = _ x2`
   \\ `itree_rep_ok x1 /\ itree_rep_ok x2` by
       (unabbrev_all_tac \\ rw [] \\ match_mp_tac itree_rep_ok_Vis \\ fs [])
   \\ fs [itree_abs_11] \\ unabbrev_all_tac \\ fs [Vis_rep_11]
@@ -322,6 +322,16 @@ Proof
   \\ fs [itree_CASE,itree_11,itree_distinct]
 QED
 
+Theorem itree_CASE_elim:
+  !f.
+  f(itree_CASE t ret div vis) <=>
+    (?r. t = Ret r /\ f(ret r)) \/
+    (t = Div /\ f(div)) \/
+    (?a g. t = Vis a g /\ f(vis a g))
+Proof
+  qspec_then `t` strip_assume_tac itree_cases \\ rw []
+  \\ fs [itree_CASE,itree_11,itree_distinct]
+QED
 
 (* itree unfold *)
 
@@ -559,6 +569,7 @@ val _ = TypeBase.export
       case_def = itree_CASE,
       case_cong = itree_CASE_cong,
       case_eq = itree_CASE_eq,
+      case_elim = itree_CASE_elim,
       nchotomy = itree_cases,
       size = NONE,
       encode = NONE,
@@ -760,9 +771,9 @@ QED
 
 Inductive iset:
 [~ret:]
-  (!e. iset (Ret e) e) /\
+  !e. iset (Ret e) e
 [~vis:]
-  (iset (f i) e  ==> iset (Vis ov f) e)
+  iset (f i) e  ==> iset (Vis ov f) e
 End
 
 Theorem iset_thm[simp]:
@@ -775,11 +786,11 @@ QED
 
 Inductive ifinite:
 [~ret:]
-  ifinite (Ret e) /\
+  ifinite (Ret e)
 [~div:]
-  ifinite Div /\
+  ifinite Div
 [~vis:]
-  ((! iv. ifinite (f iv)) ==> ifinite (Vis ov f))
+  (! iv. ifinite (f iv)) ==> ifinite (Vis ov f)
 End
 
 Definition itruncate_def:
@@ -849,7 +860,7 @@ QED
 
 Inductive at_path:
 [~ret:]
-  at_path (Ret e) [] e /\
+  at_path (Ret e) [] e
 [~vis:]
   (at_path (f i) p e ==> at_path (Vis ov f) ((ov,i)::p) e)
 End
@@ -877,9 +888,9 @@ QED
 
 CoInductive ievery:
 [~div:]
-  (ievery P Div) /\
+  (ievery P Div)
 [~ret:]
-  (P e ==> ievery P (Ret e)) /\
+  (P e ==> ievery P (Ret e))
 [~vis:]
   ((! iv. ievery P (f iv)) ==> ievery P (Vis ov f))
 End
@@ -894,9 +905,9 @@ QED
 
 Inductive iexists:
 [~ret:]
-  (P e ==> iexists P (Ret e)) /\
+  (P e ==> iexists P (Ret e))
 [~vis:]
-  ((? iv. iexists P (f iv)) ==> iexists P (Vis ov f))
+  (? iv. iexists P (f iv)) ==> iexists P (Vis ov f)
 End
 
 Theorem iexists_thm[simp]:

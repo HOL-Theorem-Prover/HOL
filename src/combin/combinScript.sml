@@ -18,15 +18,18 @@ val _ = new_theory "combin";
 (*  Some basic combinators: function composition, S, K, I, W, and C.         *)
 (*---------------------------------------------------------------------------*)
 
-val K_DEF = Q.new_definition("K_DEF",        `K = \x y. x`);
-val S_DEF = Q.new_definition("S_DEF",        `S = \f g x. f x (g x)`);
-val I_DEF = Q.new_definition("I_DEF",        `I = S K (K:'a->'a->'a)`);
-val C_DEF = Q.new_definition("C_DEF",        `C = \f x y. f y x`);
-val W_DEF = Q.new_definition("W_DEF",        `W = \f x. f x x`);
-val o_DEF = Q.new_infixr_definition("o_DEF", `$o f g = \x. f(g x)`, 800);
-val APP_DEF = Q.new_definition ("APP_DEF",   `$:> x f = f x`);
+fun def (s,l) p = Q.new_definition_at (DB_dtype.mkloc(s,l,false)) p
 
-val UPDATE_def = Q.new_definition("UPDATE_def",
+val K_DEF = def(#(FILE),#(LINE))("K_DEF",        `K = \x y. x`);
+val S_DEF = def(#(FILE),#(LINE))("S_DEF",        `S = \f g x. f x (g x)`);
+val I_DEF = def(#(FILE),#(LINE))("I_DEF",        `I = S K (K:'a->'a->'a)`);
+val C_DEF = def(#(FILE),#(LINE))("C_DEF",        `C = \f x y. f y x`);
+val W_DEF = def(#(FILE),#(LINE))("W_DEF",        `W = \f x. f x x`);
+val o_DEF = def(#(FILE),#(LINE))("o_DEF", `$o f g = \x. f(g x)`);
+val _ = set_fixity "o" (Infixr 800)
+val APP_DEF = def(#(FILE),#(LINE)) ("APP_DEF",   `$:> x f = f x`);
+
+val UPDATE_def = def(#(FILE),#(LINE))("UPDATE_def",
    `UPDATE a b = \f c. if a = c then b else f c`);
 
 val _ = set_fixity ":>" (Infixl 310);
@@ -67,6 +70,12 @@ in
   add_user_printer ("combin.updpp", “UPDATE k v f”)
 end;
 
+val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = UnicodeChars.lensel}
+val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = "(|"}
+val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = UnicodeChars.lenser}
+val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = "|)"}
+val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "↦"}       (* UOK *)
+val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "|->"}
 
 local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}
@@ -188,6 +197,8 @@ val UPDATE_APPLY = Q.store_thm("UPDATE_APPLY",
    THEN REWRITE_TAC []
    THEN REPEAT STRIP_TAC
    THEN ASM_REWRITE_TAC [])
+
+Theorem UPDATE_APPLY1 = cj 1 UPDATE_APPLY
 
 val APPLY_UPDATE_THM = Q.store_thm("APPLY_UPDATE_THM",
   `!f a b c. (a =+ b) f c = (if a = c then b else f c)`,
@@ -447,6 +458,102 @@ val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
 Overload flip = “C”
 
 val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
+
+(* ------------------------------------------------------------------------- *)
+(* "Extensional" functions, mapping to a fixed value ARB outside the domain. *)
+(* Even though these are still total, they're a conveniently better model    *)
+(* of the partial function space (e.g. the space has the right cardinality). *)
+(*                                                                           *)
+(* (Ported from HOL-Light's sets.ml by Chun Tian)                            *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: the original definition in HOL-Light was:
+
+   EXTENSIONAL s = {f :'a->'b | !x. x NOTIN s ==> f x = ARB}
+ *)
+val EXTENSIONAL_def = new_definition
+  ("EXTENSIONAL_def",
+   “EXTENSIONAL s (f :'a->'b) <=> !x. ~(x IN s) ==> f x = ARB”);
+
+Theorem IN_EXTENSIONAL :
+    !s (f :'a->'b). f IN EXTENSIONAL s <=> (!x. ~(x IN s) ==> f x = ARB)
+Proof
+    REWRITE_TAC [IN_DEF]
+ >> BETA_TAC
+ >> rpt GEN_TAC
+ >> REWRITE_TAC [FUN_EQ_THM, EXTENSIONAL_def, IN_DEF]
+ >> BETA_TAC
+ >> REWRITE_TAC []
+QED
+
+Theorem IN_EXTENSIONAL_UNDEFINED :
+    !s (f :'a->'b) x. f IN EXTENSIONAL s /\ ~(x IN s) ==> f x = ARB
+Proof
+    REWRITE_TAC [IN_EXTENSIONAL]
+ >> rpt STRIP_TAC
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Restriction of a function to an EXTENSIONAL one on a subset.              *)
+(*                                                                           *)
+(* NOTE: It's put here, so that RESTRICT in relationTheory can be defined    *)
+(*       upon RESTRICTION. More theorems about RESTRICTION and EXTENSIONAL   *)
+(*       are in pred_setTheory.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+val RESTRICTION = new_definition
+  ("RESTRICTION",
+   “RESTRICTION s (f :'a->'b) x = if x IN s then f x else ARB”);
+
+Theorem RESTRICTION_THM :
+    !s (f :'a->'b). RESTRICTION s f = \x. if x IN s then f x else ARB
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC[FUN_EQ_THM, RESTRICTION]
+ >> BETA_TAC
+ >> REWRITE_TAC []
+QED
+
+Theorem RESTRICTION_DEFINED :
+    !s (f :'a->'b) x. x IN s ==> RESTRICTION s f x = f x
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [RESTRICTION]
+ >> COND_CASES_TAC >> REWRITE_TAC []
+QED
+
+Theorem RESTRICTION_UNDEFINED :
+    !s (f :'a->'b) x. ~(x IN s) ==> RESTRICTION s f x = ARB
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [RESTRICTION]
+ >> COND_CASES_TAC >> REWRITE_TAC []
+QED
+
+Theorem RESTRICTION_EQ :
+    !s (f :'a->'b) x y. x IN s /\ f x = y ==> RESTRICTION s f x = y
+Proof
+    rpt STRIP_TAC
+ >> POP_ASSUM (fn th => (ONCE_REWRITE_TAC [SYM th]))
+ >> MATCH_MP_TAC RESTRICTION_DEFINED
+ >> ASM_REWRITE_TAC []
+QED
+
+(* NOTE: HOL-Light doesn't have this theorem. *)
+Theorem EXTENSIONAL_RESTRICTION :
+    !s (f :'a->'b). EXTENSIONAL s (RESTRICTION s (f :'a -> 'b))
+Proof
+    REWRITE_TAC [EXTENSIONAL_def, RESTRICTION, IN_DEF]
+ >> BETA_TAC
+ >> rpt STRIP_TAC
+ >> reverse COND_CASES_TAC >- REFL_TAC
+ >> POP_ASSUM MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
+
+(*---------------------------------------------------------------------------*)
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

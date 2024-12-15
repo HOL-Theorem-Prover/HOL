@@ -20,7 +20,7 @@ QED
 Theorem compiler_compiler_str:
   compiler compiler_str = compiler_asm_str
 Proof
-  fs [compiler_str_def,compilerTheory.compiler_def,
+  fs [compiler_str_def,codegenTheory.compiler_def,
       parser_lexer_prog2str,compiler_asm_str_def,compiler_asm_def]
 QED
 

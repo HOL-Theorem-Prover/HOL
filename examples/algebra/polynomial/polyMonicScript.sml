@@ -12,43 +12,21 @@ val _ = new_theory "polyMonic";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "ringUnitTheory"; *)
-open monoidTheory groupTheory ringTheory ringUnitTheory;
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     rich_listTheory dividesTheory gcdTheory;
 
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* (* val _ = load "fieldTheory"; *) *)
+open monoidTheory groupTheory ringTheory fieldTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* val _ = load "polyDivisionTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyDivisionTheory; (* for ulead, pmonic and poly_mod theorems. *)
 
-(* val _ = load "polyFieldTheory"; *)
 open polyFieldTheory;
-open fieldTheory;
 
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open rich_listTheory; (* for NOT_SNOC_NIL *)
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Monic Polynomial Documentation                                            *)
@@ -936,30 +914,17 @@ val poly_deg_X = store_thm(
   rw[]);
 
 (* Theorem: lead X = #1 *)
-(* Proof: by poly_X_def. *)
-val poly_lead_X = store_thm(
-  "poly_lead_X",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> (lead X = #1)``,
-  rw[]);
-
-(* better than: above poly_lead_X
-   |- !r. Ring r /\ #1 <> #0 ==> (lead X = #1)
-*)
-
-(* Theorem: lead X = #1 *)
 (* Proof:
     lead X
   = lead ( |1| >> 1)   by notation
   = lead |1|          by poly_lead_shift
   = #1                by poly_lead_one
 *)
-val poly_lead_X = store_thm(
-  "poly_lead_X",
-  ``!r:'a ring. Ring r ==> (lead X = #1)``,
-  rw_tac std_ss[poly_lead_shift, poly_lead_one]);
-
-(* export simple result *)
-val _ = export_rewrites ["poly_lead_X"];
+Theorem poly_lead_X[simp]:
+  !r:'a ring. Ring r ==> (lead X = #1)
+Proof
+  rw_tac std_ss[poly_lead_shift, poly_lead_one]
+QED
 
 (* Theorem: monic X *)
 (* Proof:

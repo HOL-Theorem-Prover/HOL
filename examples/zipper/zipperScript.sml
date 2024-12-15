@@ -2,50 +2,64 @@ open HolKernel Parse boolLib bossLib;
 
 open listTheory
 
-fun asimp thl = asm_simp_tac(srw_ss() ++ ARITH_ss) thl
+(* a simple theory of zippers: lists coupled with a privileged index *)
+
+(* final theorem is that there is an appropriate notion of application such
+   that they form an applicative functor; given that lists already do this
+   the "trick" is figuring out what the index of the result zipper should
+   be when you apply a zipper of functions to a zipper of arguments.  *)
 
 val _ = new_theory "zipper";
 
-val _ = ParseExtras.tight_equality()
+Datatype: zipper = Z ('a list) 'a  ('a list)
+End
 
-val _ = Datatype `zipper = Z ('a list) 'a  ('a list)`
+Definition focus_def[simp]: focus (Z p a s) = a
+End
 
-val focus_def = Define`focus (Z p a s) = a`
-val toList_def = Define`toList (Z p a s) = REVERSE p ++ [a] ++ s`
-val size_def = Define`size (Z p a s) = LENGTH p + LENGTH s + 1`
-val index_def = Define`index (Z p a s) = LENGTH p`
-val _ = export_rewrites ["focus_def", "toList_def", "size_def", "index_def"]
+Definition toList_def[simp]: toList (Z p a s) = REVERSE p ++ [a] ++ s
+End
 
-val index_invariant = store_thm(
-  "index_invariant[simp]",
-  ``index z < size z``,
-  Cases_on `z` >> simp[]);
+Definition size_def[simp]: size (Z p a s) = LENGTH p + LENGTH s + 1
+End
 
-val size_nonzero = store_thm(
-  "size_nonzero[simp]",
-  ``0 < size z``,
-  Cases_on `z` >> simp[]);
+Definition index_def[simp]: index (Z p a s) = LENGTH p
+End
 
-val LENGTH_toList = store_thm(
-  "LENGTH_toList[simp]",
-  ``LENGTH (toList z) = size z``,
-  Cases_on `z` >> simp[]);
+Theorem index_invariant[simp]:
+  index z < size z
+Proof
+  Cases_on `z` >> simp[]
+QED
 
-val moveLeft_def = Define`
+Theorem size_nonzero[simp]:
+  0 < size z
+Proof
+  Cases_on `z` >> simp[]
+QED
+
+Theorem LENGTH_toList[simp]:
+  LENGTH (toList z) = size z
+Proof
+  Cases_on `z` >> simp[]
+QED
+
+Definition moveLeft_def:
   (moveLeft (Z [] a s) = Z [] a s) ∧
   (moveLeft (Z (h::t) a s) = Z t h (a::s))
-`
+End
 
-val moveRight_def = Define`
+Definition moveRight_def:
   (moveRight (Z p a []) = Z p a []) ∧
   (moveRight (Z p a (h::t)) = Z (a::p) h t)
-`;
+End
 
-val moveLeft_invariant = store_thm(
-  "moveLeft_invariant[simp]",
-  ``toList (moveLeft z) = toList z ∧ size (moveLeft z) = size z``,
-  `∃p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
-  Cases_on `p` >> rw[moveLeft_def] >> simp[]);
+Theorem moveLeft_invariant[simp]:
+  toList (moveLeft z) = toList z ∧ size (moveLeft z) = size z
+Proof
+  ‘∃p a s. z = Z p a s’ by (Cases_on ‘z’ >> simp[]) >>
+  Cases_on `p` >> rw[moveLeft_def] >> simp[]
+QED
 
 val moveLeft_index_lemma = prove(
   ``index (moveLeft z) = if 0 < index z then index z - 1 else 0``,
@@ -138,30 +152,33 @@ val moveToI_moveToI = store_thm(
   ``moveToI i (moveToI j z) = moveToI i z``,
   simp[zipper_EQ, moveToI_index_COND]);
 
-val zmap_def = Define`
+Definition zmap_def[simp]:
   zmap f (Z p a s) = Z (MAP f p) (f a) (MAP f s)
-`;
-val _ = export_rewrites ["zmap_def"]
+End
 
-val size_zmap = store_thm(
-  "size_zmap[simp]",
-  ``size (zmap f z) = size z``,
-  Cases_on `z` >> simp[]);
+Theorem size_zmap[simp]:
+  size (zmap f z) = size z
+Proof
+  Cases_on `z` >> simp[]
+QED
 
-val index_zmap = store_thm(
-  "index_zmap[simp]",
-  ``index (zmap f z) = index z``,
-  Cases_on `z` >> simp[])
+Theorem index_zmap[simp]:
+  index (zmap f z) = index z
+Proof
+  Cases_on `z` >> simp[]
+QED
 
-val zmap_zmap_o = store_thm(
-  "zmap_zmap_o",
-  ``zmap f (zmap g z) = zmap (f o g) z``,
-  Cases_on `z` >> simp[zmap_def, MAP_MAP_o]);
+Theorem zmap_zmap_o:
+  zmap f (zmap g z) = zmap (f o g) z
+Proof
+  Cases_on `z` >> simp[zmap_def, MAP_MAP_o]
+QED
 
-val zmap_ID = store_thm(
-  "zmap_ID",
-  ``zmap (λx. x) z = z``,
-  Cases_on `z` >> simp[zmap_def]);
+Theorem zmap_ID:
+  zmap (λx. x) z = z
+Proof
+  Cases_on `z` >> simp[zmap_def]
+QED
 
 val MAP_toList = store_thm(
   "MAP_toList",

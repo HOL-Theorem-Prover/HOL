@@ -19,9 +19,7 @@ val tmToString =
         |> trace ("Unicode", 0)
 
 
-fun ERR f msg = raise (HOL_ERR {origin_function = f,
-                                origin_structure = "binderLib",
-                                message = msg})
+val ERR = mk_HOL_ERR "binderLib"
 
 datatype nominaltype_info =
          NTI of { recursion_thm : thm option,
@@ -281,20 +279,20 @@ end
 fun check_for_errors tm = let
   val conjs = map (#2 o strip_forall) (strip_conj tm)
   val _ = List.all is_eq conjs orelse
-          ERR "prove_recursive_term_function_exists"
+          raise ERR "prove_recursive_term_function_exists"
               "All conjuncts must be equations"
   val f = rator (lhs (hd conjs))
   val _ = List.all (fn t => rator (lhs t) ~~ f) conjs orelse
-          ERR "prove_recursive_term_function_exists"
+          raise ERR "prove_recursive_term_function_exists"
               "Must define same constant in all equations"
   val _ = List.all (fn t => length (#2 (strip_comb (lhs t))) = 1) conjs orelse
-          ERR "prove_recursive_term_function_exists"
+          raise ERR "prove_recursive_term_function_exists"
               "Function being defined must be applied to one argument"
   val dom_ty = #1 (dom_rng (type_of f))
   val recthm = valOf (recthm_for_type dom_ty)
-               handle Option => ERR "prove_recursive_term_function_exists"
-                                    ("No recursion theorem for type "^
-                                     type_to_string dom_ty)
+               handle Option =>
+               raise ERR "prove_recursive_term_function_exists"
+                 ("No recursion theorem for type " ^ type_to_string dom_ty)
   val constructors = map #1 (find_constructors recthm)
   val () =
       case List.find
@@ -304,7 +302,7 @@ fun check_for_errors tm = let
                                              (#1 (strip_comb (rand (lhs t))))))
                       constructors) conjs of
         NONE => ()
-      | SOME t => ERR "prove_recursive_term_function_exists"
+      | SOME t => raise ERR "prove_recursive_term_function_exists"
                       ("Unknown constructor "^
                        tmToString (#1 (strip_comb (rand (lhs t)))))
   val () =
@@ -317,7 +315,7 @@ fun check_for_errors tm = let
                     end) conjs of
         NONE => ()
       | SOME (v, c) =>
-        ERR "prove_recursive_term_function_exists"
+        raise ERR "prove_recursive_term_function_exists"
             (#1 (dest_const c)^"^'s argument "^tmToString v^
              " is not a variable")
 in
@@ -427,7 +425,7 @@ fun prove_recursive_term_function_exists0 fin tm = let
       case alist of
         [] => [(c,rhs)]
       | (h as (c',rhs')) :: t => if same_const c c' then
-                                   ERR "prove_recursive_term_function_exists"
+                                   raise ERR "prove_recursive_term_function_exists"
                                        ("Two equations for constructor " ^
                                         #1 (dest_const c))
                                  else h :: insert x t
@@ -509,8 +507,8 @@ fun define_wrapper worker q = let
   val a = Absyn q
   val f = head_sym a
   val fstr = case f of
-               Absyn.IDENT(_, s) => s
-             | x => ERR "define_recursive_term_function" "invalid head symbol"
+      Absyn.IDENT(_, s) => s
+    | x => raise ERR "define_recursive_term_function" "invalid head symbol"
   val restore_this = hide fstr
   fun restore() = Parse.update_overload_maps fstr restore_this
   val tm = Parse.absyn_to_term (Parse.term_grammar()) a

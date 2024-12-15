@@ -17,7 +17,7 @@ val _ = quietdec := false;
 open HolKernel Parse boolLib bossLib boolSyntax;
 open compilerLib;
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (*---------------------------------------------------------------------------*)
 (* Interface Functions.                                                      *)

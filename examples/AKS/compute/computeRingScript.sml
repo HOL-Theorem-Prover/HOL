@@ -12,52 +12,26 @@ val _ = new_theory "computeRing";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open pred_setTheory listTheory rich_listTheory arithmeticTheory numberTheory
+     combinatoricsTheory dividesTheory gcdTheory logrootTheory;
 
-(* Get dependent theories local *)
+open ringTheory;
 
-(* open dependent theories *)
-(* val _ = load "fieldInstancesTheory"; *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open pred_setTheory listTheory arithmeticTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(*
-polyBinomial.hol  polyEval.hol    polyGCD.hol   polyRing.hol
-polyDerivative.hol  polyField.hol   polyIrreducible.hol polyRoot.hol
-polyDivides.hol   polyFieldDivision.hol polyMonic.hol   polyWeak.hol
-polyDivision.hol  polyFieldModulo.hol polyProduct.hol   polynomial.hol
-*)
-
-(* val _ = load "polyFieldModuloTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 open polyMonicTheory polyEvalTheory;
 open polyDivisionTheory polyFieldDivisionTheory polyFieldModuloTheory;
-open ringTheory;
-
-(* val _ = load "polyBinomialTheory"; *)
 open polyBinomialTheory;
-open ringBinomialTheory;
 
-(* val _ = load "computePolyTheory"; *)
 open computeBasicTheory computeOrderTheory computePolyTheory;
-open logrootTheory logPowerTheory;
 
-open ringInstancesTheory;
-open rich_listTheory; (* for FRONT and LAST *)
+val _ = intLib.deprecate_int ();
 
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* Modulo Polynomial Computations in (ZN n) Ring Documentation               *)

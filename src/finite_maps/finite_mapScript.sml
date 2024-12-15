@@ -85,7 +85,6 @@ val _ = add_infix_type
             ParseName = SOME "|->",
             Assoc = RIGHT,
             Name = "fmap"};
-val _ = TeX_notation {hol = "|->", TeX = ("\\HOLTokenMapto{}", 1)}
 
 (* --------------------------------------------------------------------- *)
 (* Define bijections                                                     *)
@@ -789,6 +788,8 @@ val FUNION_DEF = new_specification
    CONV_RULE (ONCE_DEPTH_CONV SKOLEM_CONV) union_lemma);
 val _ = set_mapped_fixity {term_name = "FUNION", tok = UTF8.chr 0x228C,
                            fixity = Infixl 500}
+val _ = TeX_notation {hol = UTF8.chr 0x228C, TeX = ("\\HOLTokenFUNION{}", 1)}
+
 
 Theorem FDOM_FUNION[simp] = FUNION_DEF |> SPEC_ALL |> CONJUNCT1
 
@@ -1102,8 +1103,8 @@ Proof
     ) >>
   rename1 `FLOOKUP _ k` >> Cases_on `FLOOKUP x k` >> Cases_on `FLOOKUP y k`
   >- simp[] >- simp[] >- simp[] >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP x _ = SOME a` >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP y _ = SOME b` >>
+  qmatch_assum_abbrev_tac `FLOOKUP x _ = SOME a` >>
+  qmatch_assum_abbrev_tac `FLOOKUP y _ = SOME b` >>
   last_x_assum $ qspecl_then [`k`,`a`,`b`] assume_tac >> simp[] >> gvs[]
 QED
 
@@ -1120,9 +1121,9 @@ Proof
   rename1 `FLOOKUP _ k` >>
   Cases_on `FLOOKUP x k` >> Cases_on `FLOOKUP y k` >> Cases_on `FLOOKUP z k`
   >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >- simp[] >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP x _ = SOME a` >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP y _ = SOME b` >>
-  qmatch_asmsub_abbrev_tac `FLOOKUP z _ = SOME c` >>
+  qmatch_assum_abbrev_tac `FLOOKUP x _ = SOME a` >>
+  qmatch_assum_abbrev_tac `FLOOKUP y _ = SOME b` >>
+  qmatch_assum_abbrev_tac `FLOOKUP z _ = SOME c` >>
   last_x_assum $ qspecl_then [`k`,`a`,`b`,`c`] assume_tac >> simp[] >> gvs[]
 QED
 
@@ -1476,6 +1477,17 @@ val FLOOKUP_FUN_FMAP = Q.store_thm(
   `FINITE P ==>
    (FLOOKUP (FUN_FMAP f P) k = if k IN P then SOME (f k) else NONE)`,
   SRW_TAC [][FUN_FMAP_DEF,FLOOKUP_DEF]);
+
+Theorem FUN_FMAP_INSERT :
+    !f e s. FINITE s /\ e NOTIN s ==>
+            FUN_FMAP f (e INSERT s) = FUN_FMAP f s |+ (e,f e)
+Proof
+    rw [fmap_EXT]
+ >- rw [FUN_FMAP_DEF]
+ >> ‘x IN e INSERT s’ by ASM_SET_TAC []
+ >> ‘x <> e’ by METIS_TAC []
+ >> rw [FAPPLY_FUPDATE_THM, FUN_FMAP_DEF]
+QED
 
 (*---------------------------------------------------------------------------
          Composition of finite map and function
@@ -2038,7 +2050,7 @@ Proof
 QED
 
 Theorem ITFMAPR_unique:
-  (!k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A)) ==>
+  (!k1 k2 v1 v2 A. k1 <> k2 ==> f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A)) ==>
   !fm A0 A1 A2. ITFMAPR f fm A0 A1 /\ ITFMAPR f fm A0 A2 ==> A1 = A2
 Proof
   strip_tac >> gen_tac >> completeInduct_on ‘CARD (FDOM fm)’ >> rw[] >>
@@ -2085,7 +2097,7 @@ End
 
 Theorem ITFMAP_thm:
   (ITFMAP f FEMPTY A = A) /\
-  ((!k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A))
+  ((!k1 k2 v1 v2 A. k1 <> k2 ==> f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A))
      ==>
    ITFMAP f (fm |+ (k,v)) A = f k v (ITFMAP f (fm\\k) A))
 Proof
@@ -3028,6 +3040,13 @@ val flookup_thm = Q.store_thm ("flookup_thm",
          ((FLOOKUP f x = SOME v) = (x IN FDOM f /\ (f ' x = v)))`,
 rw [FLOOKUP_DEF]);
 
+Theorem FINITE_MAP_LOOKUP_RANGE:
+  (!f x y. FLOOKUP f x = SOME y ==> y IN FRANGE f) /\
+  (!f x. x IN FDOM f ==> FAPPLY f x IN FRANGE f)
+Proof
+  metis_tac [FRANGE_FLOOKUP, flookup_thm]
+QED
+
 val FUPDATE_EQ_FUPDATE_LIST = store_thm("FUPDATE_EQ_FUPDATE_LIST",
   ``!fm kv. fm |+ kv = fm |++ [kv]``,
   rw[FUPDATE_LIST_THM]);
@@ -3111,6 +3130,23 @@ val FDIFF_def = Define `FDIFF f1 s = DRESTRICT f1 (COMPL s)`;
 Theorem FDOM_FDIFF[simp]:
   x IN FDOM (FDIFF refs f2) <=> x IN FDOM refs /\ x NOTIN f2
 Proof   full_simp_tac(srw_ss())[FDIFF_def,DRESTRICT_DEF]
+QED
+
+Theorem FDOM_F_COMP_G_SUBSET_FDOM_G:
+  !f g. FDOM (f f_o_f g) SUBSET (FDOM g)
+Proof
+  fs[f_o_f_DEF]
+QED
+
+Theorem FRANGE_SUBSET_FDOM_COMP_FDOM_EQUALITY:
+  !f g. FRANGE g SUBSET FDOM f ==> FDOM (f f_o_f g) = FDOM g
+Proof
+     rpt strip_tac
+  \\ rw [SET_EQ_SUBSET]
+  >- rw[FDOM_F_COMP_G_SUBSET_FDOM_G]
+  >- ( fs[f_o_f_DEF, SUBSET_DEF]
+       \\ metis_tac [FINITE_MAP_LOOKUP_RANGE]
+     )
 QED
 
 val NUM_NOT_IN_FDOM =

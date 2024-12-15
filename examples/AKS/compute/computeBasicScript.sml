@@ -12,38 +12,18 @@ val _ = new_theory "computeBasic";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
-
-(* Get dependent theories local *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory"; -- in ringTheory *) *)
-(* (* val _ = load "helperListTheory"; -- in polyRingTheory *) *)
-(* val _ = load "logPowerTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-open pred_setTheory listTheory arithmeticTheory;
-
-open logPowerTheory; (* for LOG2, SQRT, and Perfect Power, Power Free *)
-open logrootTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* val _ = load "GaussTheory"; *)
-open EulerTheory;
-open GaussTheory;
+open pred_setTheory listTheory arithmeticTheory logrootTheory dividesTheory
+     gcdTheory gcdsetTheory numberTheory combinatoricsTheory primeTheory;
 
 (* val _ = load "whileTheory"; *)
 open whileTheory;
 
+val _ = temp_overload_on("SQ", ``\n. n * n``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Computations Documentation                                          *)
@@ -928,79 +908,6 @@ val exp_mod_binary_eqn = store_thm(
   Induct_on `n` >-
   simp[exp_mod_binary_0, ONE_MOD, EXP] >>
   metis_tac[exp_mod_binary_suc, MOD_MOD, MOD_TIMES2, EXP]);
-
-(* Another proof of the same result *)
-
-(* Theorem: exp_mod_binary a n m = (a ** n) MOD m *)
-(* Proof:
-   If m = 0, true trivially                  by exp_mod_binary_def
-   If m = 1,
-        exp_mod_binary a n m
-      = 1                                    by exp_mod_binary_def
-      = (a ** n) MOD 1                       by MOD_1
-   If m <> 0 and m <> 1,
-   Then 1 < m.
-   By complete induction on n.
-   Assume: !j. j < n ==> !a. exp_mod_binary a j m = a ** j MOD m
-   To show: exp_mod_binary a n m = a ** n MOD m
-   If n = 0,
-        exp_mod_binary a 0 m
-      = 1                        by exp_mod_binary_0
-      = 1 MOD m                  by ONE_MOD, 1 < m
-      = (a ** 0) MOD m           by EXP
-   If n <> 0,
-      Then HALF n < n            by HALF_LT
-      If EVEN n,
-         Then n MOD 2 = 0        by EVEN_MOD2
-           exp_mod_binary a n m
-         = exp_mod_binary ((a * a) MOD m) (HALF n) m   by exp_mod_binary_def, n MOD 2 = 0
-         = exp_mod_binary ((a ** 2) MOD m) (HALF n) m  by EXP_2
-         = (((a ** 2) MOD m) ** (HALF n)) MOD m        by induction hypothesis, HALF n < n
-         = ((a ** 2) ** (HALF n)) MOD m                by EXP_MOD, 0 < m
-         = (a ** (2 * HALF n)) MOD m                   by EXP_EXP_MULT
-         = (a ** n) MOD m                              by EVEN_HALF
-      If ~EVEN n,
-        Then ODD n                                     by ODD_EVEN
-           exp_mod_binary a n m
-         = (a * exp_mod_binary ((a * a) MOD m) (HALF n) m) MOD m    by exp_mod_binary_def, n MOD 2 <> 0
-         = (a * exp_mod_binary ((a ** 2) MOD m) (HALF n) m) MOD m   by EXP_2
-         = (a * (((a ** 2) MOD m) ** (HALF n)) MOD m) MOD m         by induction hypothesis, HALF n < n
-         = (a * ((a ** 2) ** (HALF n)) MOD m) MOD m                 by EXP_MOD, 0 < m
-         = (a * (a ** (2 * HALF n)) MOD m) MOD m                    by EXP_EXP_MULT
-         = (a * a ** (2 * HALF n)) MOD m                            by MOD_TIMES2, 0 < m
-         = (a ** (1 + 2 * HALF n)) MOD m                            by EXP_ADD
-         = (a ** (2 * HALF n + 1)) MOD m                            by arithmetic
-         = (a ** n) MOD m                                           by ODD_HALF
-*)
-Theorem exp_mod_binary_eqn[allow_rebind]:
-  !m n a. exp_mod_binary a n m = (a ** n) MOD m
-Proof
-  ntac 2 strip_tac >>
-  Cases_on ‘m = 0’ >-
-  rw[Once exp_mod_binary_def] >>
-  Cases_on ‘m = 1’ >-
-  rw[Once exp_mod_binary_def] >>
-  ‘1 < m /\ 0 < m’ by decide_tac >>
-  completeInduct_on ‘n’ >>
-  rpt strip_tac >>
-  Cases_on ‘n = 0’ >-
-  rw[exp_mod_binary_0, EXP] >>
-  ‘0 < m’ by decide_tac >>
-  ‘HALF n < n’ by rw[HALF_LT] >>
-  rw[Once exp_mod_binary_def] >| [
-    ‘((a ** 2) ** HALF n) MOD m = (a ** (2 * HALF n)) MOD m’
-     by rw[EXP_EXP_MULT] >>
-    ‘_ = (a ** n) MOD m’ by rw[GSYM EVEN_HALF, EVEN_MOD2] >>
-    rw[],
-    ‘ODD n’ by rw[ODD_EVEN] >>
-    ‘(a * (a ** 2) ** HALF n) MOD m = (a * (a ** (2 * HALF n) MOD m)) MOD m’
-      by rw[EXP_EXP_MULT] >>
-    ‘_ = (a * a ** (2 * HALF n)) MOD m’ by metis_tac[MOD_TIMES2, MOD_MOD] >>
-    ‘_ = (a ** (2 * HALF n + 1)) MOD m’ by rw[EXP_ADD] >>
-    ‘_ = a ** n MOD m’ by metis_tac[ODD_HALF] >>
-    rw[]
-  ]
-QED
 
 (* Theorem: exp_mod_binary 0 n m = (if n = 0 then 1 else 0) MOD m *)
 (* Proof:

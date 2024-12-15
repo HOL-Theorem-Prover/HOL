@@ -132,11 +132,29 @@ struct
       end
   end
 
+  fun undo_look_ahead symbols get_token =
+  let
+    val buffer = ref symbols
+    fun get_token' () =
+      case !buffer of
+        [] => get_token ()
+      | x::xs => (buffer := xs; x)
+  in
+    get_token'
+  end
+
   fun parse_arbnum (s : string) =
-    Arbnum.fromString s
-      handle Option.Option =>
+    let
+      fun handle_err () =
         raise Feedback.mk_HOL_ERR "Library" "parse_arbnum"
           ("numeral expected, but '" ^ s ^ "' found")
+    in
+      Arbnum.fromString s
+        (* Moscow ML's Arbnum implementation throws Option.Option on error,
+           while Poly/ML's throws the Fail exception *)
+        handle Option.Option => handle_err ()
+             | Fail _ => handle_err ()
+    end
 
   fun expect_token (expected : string) (actual : string) : unit =
     if expected = actual then
@@ -154,6 +172,21 @@ struct
     Redblackmap.insert (dict, key, value :: values)
   end
 
+  (* the same as `extend_dict`, but ensures the key did not contain any
+     associated value in the dictionary prior to this call *)
+  fun extend_dict_unique ((key, value), dict) =
+  let
+    val values = Redblackmap.find (dict, key)
+      handle Redblackmap.NotFound => []
+    val new_dict = Redblackmap.insert (dict, key, value :: values)
+  in
+    if not (List.null values) then
+      raise Feedback.mk_HOL_ERR "Library" "extend_dict_unique"
+          ("key '" ^ key ^ "' already contained a value")
+    else
+      new_dict
+  end
+
   (* entries in 'dict2' are prepended to entries in 'dict1' *)
   fun union_dict dict1 dict2 = Redblackmap.foldl (fn (key, vals, dict) =>
     let
@@ -165,9 +198,35 @@ struct
 
   (* creates a dictionary that maps strings to lists of parsing functions *)
   fun dict_from_list xs
-      : (string, (string -> Arbnum.num list -> 'a list -> 'a) list)
+      : (string, (string -> Term.term list -> 'a list -> 'a) list)
         Redblackmap.dict =
     List.foldl extend_dict (Redblackmap.mkDict String.compare) xs
+
+  (***************************************************************************)
+  (* auxiliary functions                                                     *)
+  (***************************************************************************)
+
+  (* `is_def_oriented` must return false when:
+     1. `lhs` is not a variable in `var_set` but `rhs` is, or
+     2. `lhs` and `rhs` are both variables in `var_set` but `rhs` is smaller
+         than `lhs` (for some definition of "smaller").
+     Otherwise, it must return true. *)
+  fun is_def_oriented var_set (lhs, rhs) =
+    (not (HOLset.member (var_set, rhs))) orelse
+      (HOLset.member (var_set, lhs) andalso
+        Term.var_compare (rhs, lhs) <> LESS)
+
+  (* Orient a definition of the form `lhs = rhs` into `rhs = lhs`, if necessary.
+     This is used to ensure that the `lhs` is a variable in `var_set`. Also, if
+     both the `lhs` and the `rhs` are variables in `var_set`, then the `rhs`
+     must not be "smaller" than the `lhs`. This is done to avoid ending up with
+     circular definitions after they are all aggregated into the final theorem,
+     i.e. we want to avoid ending up with both `var1 = var2` and `var2 = var1`. *)
+  fun orient_def var_set (lhs, rhs) =
+    if is_def_oriented var_set (lhs, rhs) then
+      (lhs, rhs)
+    else
+      (rhs, lhs)
 
   (***************************************************************************)
   (* Derived rules                                                           *)
@@ -254,6 +313,36 @@ struct
     val th2 = conj_elim (thm, neg)
   in
     Thm.MP (Thm.NOT_ELIM th2) th1
+  end
+
+  (* Given two terms ``lhs`` and ``rhs``, find an instantiation of free
+     variables such that a theorem with the conclusion ``lhs = rhs`` can be
+     returned. The instantiations become hypotheses of the returned theorem.
+     e.g.:
+
+     gen_instantiation (``x+1+z2``, ``z1+2``, {``z1``, ``z2``, ``z3``})
+     returns the theorem:
+
+     { z1 = x+1, z2 = 2 } |- x+1+z2 = z1+2
+
+     In cases where we end up with an hypothesis of the form `var1 = var2`,
+     we might orient the hypothesis to become `var2 = var1` to make sure that
+     the left-hand side is a variable in `var_set`. If both `var1` and `var2`
+     are in `var_set`, then we make sure that the left-hand side contains the
+     "smaller" variable. This avoids creating circular definitions across
+     multiple calls of this function (i.e. one call instantiating `z1 = z2`
+     and another instantiating `z2 = z1`). *)
+  fun gen_instantiation (lhs, rhs, var_set) =
+  let
+    val substs = Unify.simp_unify_terms [] lhs rhs
+    fun orient {redex, residue} = orient_def var_set (redex, residue)
+    val oriented_substs = List.map orient substs
+    val asl = List.map boolSyntax.mk_eq oriented_substs
+    val thms = List.map Thm.ASSUME asl
+    val concl = boolSyntax.mk_eq (lhs, rhs)
+  in
+    Tactical.TAC_PROOF ((asl, concl), Tactical.THEN (Tactic.SUBST_TAC thms,
+      Tactic.REFL_TAC))
   end
 
   (***************************************************************************)

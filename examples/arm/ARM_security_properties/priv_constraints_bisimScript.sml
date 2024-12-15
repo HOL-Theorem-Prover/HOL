@@ -25,22 +25,23 @@ val prove_abs_spsr_const_action =
         val unbeta_a = mk_comb (a, a_abs)
         val snd = get_type_inst (type_of(a_body) , false)
         val a_body_type = get_type_inst (snd, true);
-        val proved_unbeta_lemma = store_thm ("proved_unbeta_lemma",
-                                             ``(priv_spsr_constraints ^a_body ^expr ^mode)=
-                                  (priv_spsr_constraints ^unbeta_a ^expr ^mode)``,
-                                             (ASSUME_TAC (SPECL [a_body,``^unbeta_a``, expr,mode]
-                                                                (INST_TYPE [beta |-> a_body_type,
-                                                                            alpha |-> ``:arm_state``]
-                                                                           (List.nth(thms,0)))))
-                                                 THEN ASSUME_TAC unbeta_thm
-                                                 THEN RES_TAC);
+        val proved_unbeta_lemma =
+          TAC_PROOF(([],
+                     “priv_spsr_constraints ^a_body ^expr ^mode =
+                      priv_spsr_constraints ^unbeta_a ^expr ^mode”),
+                     (ASSUME_TAC (SPECL [a_body,``^unbeta_a``, expr,mode]
+                                        (INST_TYPE [beta |-> a_body_type,
+                                                    alpha |-> ``:arm_state``]
+                                                   (List.nth(thms,0)))))
+                     THEN ASSUME_TAC unbeta_thm
+                     THEN RES_TAC)
 
         val proved_preserve_unbeta_a =
-            store_thm ("proved_preserve_unbeta_a",
-                       `` (priv_spsr_constraints ^unbeta_a ^expr ^mode)``,
+            TAC_PROOF (
+                       ([], `` (priv_spsr_constraints ^unbeta_a ^expr ^mode)``),
                        (ASSUME_TAC (proved_unbeta_lemma))
                            THEN (ASSUME_TAC abody_thm)
-                           THEN (FULL_SIMP_TAC (srw_ss()) []));
+                           THEN (FULL_SIMP_TAC (srw_ss()) []))
 
         val abs_type = type_of a_abs
         val (abs_args, abs_body)  = generate_uncurry_abs a

@@ -3,6 +3,12 @@ struct
 
 open terminal_primitives ProcessMultiplexor Holmake_tools
 
+fun nstr_subhandler f nm n s =
+    f n s
+    handle e =>
+           die_with (General.exnName e ^ " raised by " ^ nm ^ " " ^
+                     Int.toString n ^ " \"" ^ String.toString s ^ "\"")
+
 val five_sec = Time.fromSeconds 5
 val W_EXITED = Posix.Process.W_EXITED
 
@@ -71,6 +77,7 @@ fun rtrunc n s =
   if String.size s > n then
     "... " ^ String.substring(s, String.size s - (n - 4), n - 4)
   else StringCvt.padRight #" " n s
+val rtrunc = nstr_subhandler rtrunc "rtrunc"
 
 fun trashsfxes sfxes s =
   case List.find (fn sfx => String.isSuffix sfx s) sfxes of
@@ -94,15 +101,22 @@ fun truncate width s =
           val e = case ext s of NONE => "" | SOME s => s
         in
           if String.size e > 2 then t (base s ^ "..")
-          else String.substring(s,0,width-3) ^ ".."
+          else if width > 3 then
+            String.substring(s,0,width-3) ^ ".."
+          else
+            String.substring(s,0,width)
         end
     end
   else s
+val truncate = nstr_subhandler truncate "truncate"
 
 fun polish tgtw s = StringCvt.padRight #" " tgtw (truncate tgtw (polish0 s))
+val polish = nstr_subhandler polish "polish"
 
-val cheat_string = "Saved CHEAT _"
-val oracle_string = "Saved ORACLE thm _"
+
+val cheat_string =      "Saved CHEAT _"
+val fastcheat_string =  "Saved FAST-CHEAT _"
+val oracle_string =     "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
 
 fun delsml_sfx s =
@@ -153,6 +167,8 @@ fun rlsquash_to wdth s =
       *)
       " ..." ^ String.extract(s, size s + 4 - wdth, NONE)
 
+val rlsquash_to = nstr_subhandler rlsquash_to "rlsquash_to"
+
 fun new {info,warn,genLogFile,time_limit,multidir} =
   let
     val monitor_map =
@@ -188,11 +204,39 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
           let
             val tgtw = width div job_count - 4
           in
-            Binarymap.app (
-              fn (jk as (_, {tag,dir}),{status,...}) =>
-                 print (polish tgtw tag ^ statusString status ^ " ")
-            ) (!monitor_map);
-            print CLR_EOL
+            if tgtw >= 1 then (
+              Binarymap.app (
+                fn (jk as (_, {tag,dir}),{status,...}) =>
+                   print (polish tgtw tag ^ statusString status ^ " ")
+              ) (!monitor_map);
+              print CLR_EOL
+            ) else
+              let fun foldthis ((_, {tag,dir}), {status,...}, worstopt) =
+                      case status of
+                          Stalling t => (case worstopt of
+                                             NONE => SOME (tag,t,status)
+                                           | SOME (tag0,t0,s0) =>
+                                             if Time.<(t0,t) then
+                                               SOME(tag,t,status)
+                                             else worstopt)
+                        | _ => worstopt
+                  val worstopt =
+                      Binarymap.foldl foldthis NONE (!monitor_map)
+                  val pfx = Int.toString job_count ^ " jobs"
+                  val pad = StringCvt.padRight #" " width
+                  val print = print o pad
+              in
+                if width <= size pfx then print "Working"
+                else if width <= size pfx + 25 then
+                  print pfx
+                else
+                  case worstopt of
+                      SOME (tag,_,status) =>
+                      print (pfx ^ ": most stalled = " (* 17 chars *) ^
+                             polish (width - (size pfx + 17))
+                                    (tag ^ statusString status))
+                    | NONE => print (pfx ^ ": all running")
+              end
           end
         else
           case Binarymap.listItems (!monitor_map) of
@@ -250,8 +294,9 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
           let
             val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {
-                  numlines = 10,
-                  patterns = [cheat_string, oracle_string, used_cheat_string]
+                  numlines = 50,
+                  patterns = [cheat_string, oracle_string, used_cheat_string,
+                              fastcheat_string]
                 }
           in
             monitor_map :=
@@ -319,6 +364,8 @@ fun new {info,warn,genLogFile,time_limit,multidir} =
                   if st = W_EXITED then
                     if seen cheat_string orelse seen used_cheat_string then
                       tinfo (boldyellow, "CHEATED")
+                    else if seen fastcheat_string then
+                      tinfo (boldyellow, "F-CHEAT")
                     else
                       tinfo ((if seen oracle_string then boldyellow else green),
                              "OK")

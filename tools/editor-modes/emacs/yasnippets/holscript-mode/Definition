@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: Definition of functions HOL4
+# key: Define
+# expand-env: ((yas-indent-line 'auto))
+# --
+Definition ${1:name}_def${2:[${3:attributes}]}:
+  ${4:equation(s)}
+End

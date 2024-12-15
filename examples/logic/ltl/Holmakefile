@@ -1,1 +1,1 @@
-INCLUDES = ../../generic_finite_graphs $(HOLDIR)/src/monad/more_monads
+INCLUDES = ../../generic_graphs $(HOLDIR)/src/monad/more_monads

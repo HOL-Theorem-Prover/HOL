@@ -1,4 +1,4 @@
-FAKEVAR = $(shell /bin/rm -f base/two base/one)
+FAKEVAR = $(shell rm -f base/two base/one)
 INCLUDES = dir1 dir2 $(FAKEVAR)
 
 .PHONY: all test_callcount

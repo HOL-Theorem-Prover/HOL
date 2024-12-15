@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open tailcallsTheory cvxferExamplesTheory
+open whileTheory cvxferExamplesTheory
 
 val _ = new_theory "tailcallcvexample";
 
@@ -36,7 +36,7 @@ val th1 = cISPRIME_AUX
 
 
 val t = “
-  tcall (λ(uv3:cv, uv1:cv).
+  TAILCALL (λ(uv3:cv, uv1:cv).
            if cv$c2b $ cv_lt uv3 uv1 then
              if cv$c2b (cv_not (cv_eq (cv_mod uv1 uv3) (Num 0)))
              then
@@ -87,7 +87,7 @@ Proof
   rpt COND_CASES_TAC >> gs[]
 QED
 
-val th2 =    SIMP_CONV std_ss [tcall_def,
+val th2 =    SIMP_CONV std_ss [TAILCALL_def,
                                pairTheory.pair_CASE_def, sum_CASE_COND,
                                COND_CONJ
                                ] t;
@@ -96,8 +96,8 @@ val th3 = CONV_RULE (RAND_CONV (REWR_CONV (GSYM th2))) th1
 
 val th4 = cISPRIME_AUX |> CONV_RULE (FORK_CONV(tuplify, REWR_CONV th3))
 |> DISCH_ALL |> REWRITE_RULE[AND_IMP_INTRO]
-|> CONV_RULE (LAND_CONV (UNPBETA_CONV “(UV3:cv,UV1:cv)”))
-|> pairLib.PGEN “p:cv # cv”  “(UV3:cv, UV1:cv)”
+|> CONV_RULE (LAND_CONV (UNPBETA_CONV “(dvs:cv,n:cv)”))
+|> pairLib.PGEN “p:cv # cv”  “(dvs:cv, n:cv)”
 
 Theorem FORALL_CV:
   (!c. P c) <=> (!n. P (Num n)) /\ (!c d. P (Pair c d))
@@ -106,7 +106,8 @@ Proof
 QED
 
 val th5 =
-  PART_MATCH (last o strip_conj o lhand) guard_elimination_simpler (concl th4)
+  PART_MATCH (last o strip_conj o lhand) TAILREC_GUARD_ELIMINATION_SIMPLER
+             (concl th4)
    |> REWRITE_RULE[GSYM AND_IMP_INTRO] |> UNDISCH_ALL |> PROVE_HYP th4
    |> DISCH_ALL |> REWRITE_RULE[AND_IMP_INTRO]
    |> SIMP_RULE std_ss []
@@ -130,7 +131,7 @@ val th6 = MATCH_MP th5 termination_thm
 val newc = th6 |> concl |> strip_forall |> #2 |> rand |> rhs |> rator
 val def = new_definition("aux'_def", “aux' = ^newc”)
 
-val th7 = (AP_THM def “(c,d):cv # cv”) |> ONCE_REWRITE_RULE [trec_thm]
+val th7 = (AP_THM def “(c,d):cv # cv”) |> ONCE_REWRITE_RULE [TAILREC_TAILCALL]
                                        |> REWRITE_RULE[SYM def]
 
 val th3' = th3 |> Q.INST[‘f’ |-> ‘CURRY g’]

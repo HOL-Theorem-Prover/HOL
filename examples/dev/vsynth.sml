@@ -52,7 +52,11 @@ val ERR = mk_HOL_ERR "vsynth";
 (* Date and time                                                             *)
 (*****************************************************************************)
 
-fun date() = Date.fmt "%c" (Date.fromTimeLocal (Time.now ()));
+fun date() = "<UNSPECIFIED DATE>"
+(* used to be: Date.fmt "%c" (Date.fromTimeLocal (Time.now ()));
+   but this leads to occasional segfaults in some glibc environments under
+   Poly/ML.
+*)
 
 (*****************************************************************************)
 (* Convert a term to a string showing types of variables                     *)

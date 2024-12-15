@@ -4,18 +4,6 @@
 (* proves a data refinement result.                                          *)
 (*****************************************************************************)
 
-(* For working interactively
-quietdec := true;
-load "wordsLib";
-open wordsLib arithmeticTheory pairLib pairTheory PairRules combinTheory;
-val _ = numLib.prefer_num();
-quietdec := false;
-*)
-
-(*****************************************************************************)
-(* START BOILERPLATE                                                         *)
-(*****************************************************************************)
-
 (******************************************************************************
  * Open theories
  ******************************************************************************)
@@ -26,7 +14,7 @@ open HolKernel Parse boolLib bossLib wordsLib
  * Set default parsing to natural numbers rather than integers
  ******************************************************************************)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)

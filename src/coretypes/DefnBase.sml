@@ -304,7 +304,8 @@ fun cases_prove case_const_def th k t =
             end
           else if is_exists (concl th) then
             let val (v, bod) = dest_exists (concl th)
-                val v' = variant (free_vars t) v
+                val avoids = op_union aconv (free_vars t) (free_vars (concl th))
+                val v' = variant avoids v
                 val bod' = subst[v |-> v'] bod
                 val t_th = recurse (ASSUME bod')
             in
@@ -527,5 +528,34 @@ fun one_line_ify heuristic def =
               attack_top_case stoppers finisher neweqn
           end
     end handle FastExit th => th
+
+
+
+(* ----------------------------------------------------------------------
+    LIST_HALF_MK_ABS : thm -> thm
+
+    Convert a theorem representing a one-line function definition with an
+    all-variable-argument LHS (as returned by one_line_ify above) into a
+    theorem of the form `constant = \x y z. ...`.
+    Based on jrhUtils.HALF_MK_ABS.
+   ---------------------------------------------------------------------- *)
+
+fun LIST_HALF_MK_ABS th =
+  let
+    val err = mk_HOL_ERR "DefnBase" "LIST_HALF_MK_ABS"
+    val spec = SPEC_ALL th
+    val (left, right) = concl spec |> strip_forall |> snd |> dest_eq
+                        handle _ => raise err "expected an equality"
+    val (func, vars) = strip_comb left
+    fun unique [] = true
+      | unique (x::xs) = not (Lib.op_mem aconv x xs) andalso unique xs
+    val _ = if List.all is_var vars andalso unique vars then ()
+            else raise err "expected application to unique variables"
+    val lam = list_mk_abs (vars, right)
+    val app_eq_lam = list_mk_comb (lam, vars) |> LIST_BETA_CONV |> SYM |>
+                     TRANS spec
+  in
+    List.foldr (fn (v,th) => EXT (GEN v th)) app_eq_lam vars
+  end
 
 end

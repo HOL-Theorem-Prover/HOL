@@ -12,56 +12,26 @@ val _ = new_theory "polyIrreducible";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* val _ = load "fieldTheory"; (* This takes |/ = (r.prod excluding #0).inv *) *)
-open monoidTheory groupTheory ringTheory integralDomainTheory fieldTheory;
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory;
 
-(* (* val _ = load "ringIdealTheory"; *) *)
-(* val _ = load "fieldIdealTheory"; *)
-open ringIdealTheory fieldIdealTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
-(* (* val _ = load "groupOrderTheory"; *) *)
-open monoidOrderTheory groupOrderTheory;
+open fieldIdealTheory;
 
-(* Get polynomial theory of Ring *)
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* (* val _ = load "polyRingTheory"; *) *)
-(* val _ = load "polyFieldTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
 
-(* val _ = load "polyFieldDivisionTheory"; *)
 open polyMonicTheory;
 open polyDivisionTheory;
 open polyFieldDivisionTheory;
-(* open polyFieldModuloTheory; -- let polyFieldModulo use polyIrreducible *)
-
-(* val _ = load "polyRootTheory"; *)
 open polyRootTheory;
+open polyDividesTheory;
 
-(* val _ = load "polyDividesTheory"; *)
-open ringDividesTheory polyDividesTheory;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Irreducible Polynomials Documentation                                     *)
@@ -162,7 +132,7 @@ val poly_irreducible_def = store_thm(
   ``!(r:'a ring) (p:'a poly). ipoly p <=>
         (poly p) /\ (p <> |0|) /\ (~ upoly p) /\
         (!x y. poly x /\ poly y /\ (p = x * y) ==> upoly x \/ upoly y)``,
-  rw_tac std_ss[ringIdealTheory.irreducible_def, ring_nonzero_def, poly_ring_property, IN_DIFF, IN_SING, EQ_IMP_THM]);
+  rw_tac std_ss[irreducible_def, ring_nonzero_def, poly_ring_property, IN_DIFF, IN_SING, EQ_IMP_THM]);
 
 (* Theorem: ipoly p ==> ~ upoly p *)
 (* Proof: by irreducible_def. *)

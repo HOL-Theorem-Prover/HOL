@@ -90,8 +90,8 @@ local
     (intSyntax.minus_tm, apfst_K "-"),
     (intSyntax.plus_tm, apfst_K "+"),
     (intSyntax.mult_tm, apfst_K "*"),
-    (* (..., "div"), *)
-    (* (..., "mod"), *)
+    (Term.prim_mk_const {Thy="integer", Name="ediv"}, apfst_K "div"),
+    (Term.prim_mk_const {Thy="integer", Name="emod"}, apfst_K "mod"),
     (intSyntax.absval_tm, apfst_K "abs"),
     (intSyntax.leq_tm, apfst_K "<="),
     (intSyntax.less_tm, apfst_K "<"),
@@ -118,7 +118,7 @@ local
     (realSyntax.minus_tm, apfst_K "-"),
     (realSyntax.plus_tm, apfst_K "+"),
     (realSyntax.mult_tm, apfst_K "*"),
-    (realSyntax.div_tm, apfst_K "/"),
+    (Term.prim_mk_const {Thy="HolSmt", Name="smt_rdiv"}, apfst_K "/"),
     (realSyntax.leq_tm, apfst_K "<="),
     (realSyntax.less_tm, apfst_K "<"),
     (realSyntax.geq_tm, apfst_K ">="),
@@ -421,18 +421,24 @@ local
     end
     handle Feedback.HOL_ERR _ =>
 
-    (* let binder - somewhat similar to quantifiers, but we only
-       translate one let at a time (so we don't have to worry about
-       semantic differences caused by parallel vs. sequential let) *)
+    (* let binder - somewhat similar to quantifiers *)
     let
-      val (M, N) = boolSyntax.dest_let tm
-      val (var, body) = Term.dest_abs M
-      val (acc, (Ndecls, N)) = translate_term (acc, (bounds, N))
-      val (bounds, name) = create_bound_name (bounds, var)
+      val (bindings, body) = pairSyntax.dest_anylet tm
+      val (vars, bodies) = ListPair.unzip bindings
+      (* we should translate the bodies without first creating the bound names *)
+      val bounds_bodies = List.map (fn body => (bounds, body)) bodies
+      val (acc, decls_bodies) = Lib.foldl_map translate_term (acc, bounds_bodies)
+      (* now we can create the bound names *)
+      val (bounds, smtvars) = Lib.foldl_map create_bound_name (bounds, vars)
+      val decls_bodies_smtvars = ListPair.zipEq (decls_bodies, smtvars)
+      val (decls, smtbinds) = List.foldl (fn (((d, b), v), (decls, smtbinds)) =>
+        (d @ decls, "(" ^ v ^ " " ^ b ^ ")" :: smtbinds)) ([], [])
+          decls_bodies_smtvars
+      val bindings_str = String.concatWith " " (List.rev smtbinds)
       val (acc, (bodydecls, body)) = translate_term (acc, (bounds, body))
     in
-      (acc, (Ndecls @ bodydecls,
-        "(let ((" ^ name ^ " " ^ N ^ ")) " ^ body ^ ")"))
+      (acc, (decls @ bodydecls,
+        "(let (" ^ bindings_str ^ ") " ^ body ^ ")"))
     end
     handle Feedback.HOL_ERR _ =>
 
@@ -524,7 +530,7 @@ local
      arguments to the term.  (Because SMT-LIB is first-order,
      partially applied functions are mapped to different SMT-LIB
      identifiers, depending on the number of actual arguments.) *)
-  fun goal_to_SmtLib_aux (ts, t)
+  fun goal_to_SmtLib_aux logic (ts, t)
     : ((Type.hol_type, string) Redblackmap.dict *
       (Term.term * int, string) Redblackmap.dict) * string list =
   let
@@ -540,9 +546,12 @@ local
        declarations before all assertions) *)
     val smtlibs = List.foldl
       (fn ((xs, s), acc) => acc @ xs @ ["(assert " ^ s ^ ")\n"]) [] smtlibs
+    val set_logic =
+      case logic of
+        NONE => []
+      | SOME l => ["(set-logic " ^ l ^ ")\n"]
   in
-    (acc, [
-      (* "(set-logic AUFBVNIRA)\n", *)
+    (acc, set_logic @ [
       "(set-info :source |Automatically generated from HOL4 by SmtLib.goal_to_SmtLib.\n",
       "Copyright (c) 2011 Tjark Weber. All rights reserved.|)\n",
       "(set-info :smt-lib-version 2.0)\n"
@@ -551,31 +560,235 @@ local
     ])
   end
 
+  (* convert `num` literals into integer literals *)
+  fun NUM_TO_INT_CONV tm =
+  let
+    fun conv_term tm =
+      if numSyntax.is_numeral tm then
+        Thm.SYM (Thm.SPEC tm integerTheory.NUM_OF_INT)
+      else
+        raise Conv.UNCHANGED
+    fun is_builtin_num_sym tm =
+    let
+      val sym = Lib.fst (boolSyntax.strip_comb tm)
+    in
+    (* The following are symbols that take numerals as arguments but which we
+       already have special handlers to convert into SMT-LIB syntax (therefore
+       we don't need to convert their arguments into integer literals) *)
+      List.exists (Term.same_const sym) [
+        wordsSyntax.word_extract_tm, wordsSyntax.word_replicate_tm,
+        wordsSyntax.word_rol_tm, wordsSyntax.word_ror_tm
+      ]
+    end
+  in
+    (* Don't descend when encountering integer, rational, real or word literals,
+       otherwise we'll be inadvertently converting those as well. Also, don't
+       descend when encountering symbols that take numerals as arguments and
+       which we already handle specially. *)
+    if intSyntax.is_int_literal tm orelse ratSyntax.is_literal tm orelse
+       realSyntax.is_real_literal tm orelse wordsSyntax.is_word_literal tm orelse
+       is_builtin_num_sym tm then
+      raise Conv.UNCHANGED
+    else
+      (Conv.THENC (Conv.SUB_CONV NUM_TO_INT_CONV, conv_term)) tm
+  end
+
+  local
+    structure A = arithmeticTheory
+    structure I = integerTheory
+    structure IR = intrealTheory
+    structure R = realTheory
+    structure RA = realaxTheory
+  in
+    fun thms_per_const const =
+    let
+      val { Thy, Name, Ty } = Term.dest_thy_const const
+      val bool = Type.bool
+      val num = numSyntax.num
+      val op--> = Type.-->
+      infixr 3 -->
+    in
+      (* NOTE: when adding a theorem to the list below, make sure that it
+         doesn't have any free var -- otherwise, ASSUME_TAC will specialize
+         the theorem to any free var in the goal that happens to have the same
+         name, which very often is not what is desired. As an example,
+         integerTheory's `INT_POW` should not be added -- instead, add
+         `int_exp`. If no appropriate quantified theorem is available,
+         `Drule.GEN_ALL` can be used to quantify all free vars in a theorem.
+
+         Also, make sure the theorem is really needed -- some theorems seem to
+         cause an explosion in the time needed to solve some goals, often
+         making Z3 unable to solve them -- and it's not always easy to tell a
+         priori which ones do. As an example, arithmeticTheory.EXP_1 doesn't
+         seem to cause issues, but EXP_2 prevents Z3 from solving
+         ``x DIV 42 <= x``. *)
+      case (Thy, Name) of
+        ("arithmetic", "*") => [ I.NUM_INT_MUL ]
+      | ("arithmetic", "+") => [ I.INT_ADD ]
+      | ("arithmetic", "-") => [ int_arithTheory.INT_NUM_SUB ]
+      | ("arithmetic", "<=") => [ I.INT_LE ]
+      | ("arithmetic", ">") => [ A.GREATER_DEF ]
+      | ("arithmetic", ">=") => [ A.GREATER_EQ ]
+      | ("arithmetic", "DIV") => [ I.NUM_INT_EDIV ]
+      | ("arithmetic", "EXP") => [ A.EXP, A.EXP_1, A.EXP_POS ]
+      | ("arithmetic", "MAX") => [ A.MAX_DEF ]
+      | ("arithmetic", "MIN") => [ A.MIN_DEF ]
+      | ("arithmetic", "MOD") => [ I.NUM_INT_EMOD ]
+      | ("integer", "Num") => [ I.INT_OF_NUM, I.NUM_OF_INT ]
+      | ("integer", "int_div") => [ I.INT_DIV_EDIV ]
+      | ("integer", "int_exp") => [ I.int_exp ]
+      | ("integer", "int_max") => [ I.INT_MAX ]
+      | ("integer", "int_min") => [ I.INT_MIN ]
+      | ("integer", "int_mod") => [ I.INT_MOD_EMOD ]
+      | ("integer", "int_of_num") => [ I.INT_OF_NUM, I.INT_POS, I.NUM_OF_INT ]
+      | ("integer", "int_quot") => [ I.INT_QUOT_EDIV ]
+      | ("integer", "int_rem") => [ I.INT_REM_EMOD ]
+      | ("intreal", "INT_CEILING") => [ HolSmtTheory.int_ceiling_floor ]
+      | ("marker", "Abbrev") => [ markerTheory.Abbrev_def ]
+      | ("min", "=") =>
+          if Type.compare (Ty, num --> num --> bool) = EQUAL then
+            [ I.INT_INJ ]
+          else
+            []
+      | ("num", "SUC") => [ I.INT ]
+      | ("prim_rec", "<") => [ I.INT_LT ]
+      | ("realax", "/") => [ HolSmtTheory.real_div_smt_rdiv ]
+      | ("realax", "NUM_CEILING") => [ IR.INT_NUM_CEILING, R.NUM_CEILING_BASE ]
+      | ("realax", "NUM_FLOOR") => [ IR.INT_NUM_FLOOR, R.NUM_FLOOR_BASE ]
+      | ("realax", "abs") => [ R.abs ]
+      | ("realax", "inv") => [ R.REAL_INV_1OVER ]
+      | ("realax", "max") => [ RA.real_max ]
+      | ("realax", "min") => [ RA.real_min ]
+      | ("realax", "pow") => [ R.POW_2, R.POW_ONE, R.REAL_POW_LT, RA.real_pow ]
+      | ("realax", "real_of_num") =>
+          [ Drule.GEN_ALL (Thm.SYM IR.real_of_int_num) ]
+      | _ => []
+    end
+  end
+
+  (* Prepends the conclusion of a theorem to the list of its hypothesis and
+     returns the resulting list of terms *)
+  fun thm_terms thm =
+  let
+    val (hyps, concl) = Thm.dest_thm thm
+  in
+    concl :: hyps
+  end
+
+  (* Compares two theorems *)
+  fun thm_compare (thm1, thm2) =
+    List.collate Term.compare (thm_terms thm1, thm_terms thm2)
+
+  (* An empty set of theorems *)
+  val empty_thmset = HOLset.empty thm_compare
+
+  (* Computes the list of theorems to add to the goal, given a list of all the
+     terms in the goal. Since the resulting list of theorems might require more
+     theorems to be added (for the SMT solvers to properly solve the goal), this
+     function calls itself recursively until no new theorems are needed anymore. *)
+  fun get_thms ([], acc) = HOLset.listItems acc
+    | get_thms (terms, acc) =
+      let
+        (* Create a set of all the constants used in all the provided terms *)
+        val atoms = Term.all_atomsl terms Term.empty_tmset
+        val consts = HOLset.filter Term.is_const atoms
+
+        (* Generate a set of all the theorems we want to add, based on these
+           constants *)
+        fun const_thms (const, acc) = HOLset.addList (acc, thms_per_const const)
+        val wanted_thms = HOLset.foldl const_thms empty_thmset consts
+
+        (* Apply NUM_TO_INT_CONV to these theorems, to convert any num literals
+           they might have into int literals. We do this here because this
+           conversion introduces constants that might trigger new theorems to be
+           added in subsequent iterations *)
+        fun conv_thm (thm, acc) =
+          HOLset.add (acc, Conv.CONV_RULE NUM_TO_INT_CONV thm)
+        val wanted_thms = HOLset.foldl conv_thm empty_thmset wanted_thms
+
+        (* Since some of the theorems might have already been added in a
+           previous recursive call, here we compute the theorems that will
+           actually be newly added in this iteration *)
+        val thms_to_add = HOLset.difference (wanted_thms, acc)
+
+        (* Now we compute the new terms that will have to be analyzed in the
+           next recursive call, which correspond to the terms used in the
+           theorems newly added in this iteration *)
+        fun add_new_terms (thm, acc) = HOLset.addList (acc, thm_terms thm)
+        val new_terms = HOLset.foldl add_new_terms Term.empty_tmset thms_to_add
+      in
+        get_thms (HOLset.listItems new_terms, HOLset.union (acc, thms_to_add))
+      end
+
 in
 
-  val goal_to_SmtLib =
-    Lib.apsnd (fn xs => xs @ ["(exit)\n"]) o goal_to_SmtLib_aux
+  (* Controls whether HolSmt will try to include relevant theorems when trying
+     to prove the goal, including theorems necessary for solving goals that
+     have terms of type `num`. Unfortunately, these theorems may also hinder
+     SMT performance in some cases, hence this escape hatch. *)
+  val include_theorems = ref true
 
-  val goal_to_SmtLib_with_get_proof =
-    Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o goal_to_SmtLib_aux
+  fun goal_to_SmtLib logic =
+    Lib.apsnd (fn xs => xs @ ["(exit)\n"]) o (goal_to_SmtLib_aux logic)
 
-  (* eliminates some HOL terms that are not supported by the SMT-LIB
-     translation *)
+  fun goal_to_SmtLib_with_get_proof logic =
+    Lib.apsnd (fn xs => xs @ ["(get-proof)\n", "(exit)\n"]) o (goal_to_SmtLib_aux logic)
+
+  val NUM_TO_INT_CONV = NUM_TO_INT_CONV
+
+  (* Applies NUM_TO_INT_CONV to both the assumptions and the conclusion *)
+  val NUM_TO_INT_TAC =
+  let
+    open Tactic Tactical
+  in
+    RULE_ASSUM_TAC (Conv.CONV_RULE NUM_TO_INT_CONV) THEN
+    CONV_TAC NUM_TO_INT_CONV
+  end
+
+  (* This tactic calls ASSUME_TAC on theorems that are deemed necessary for SMT
+     solvers to solve the goal (but only if `include_theorems` is true) *)
+  fun ADD_THEOREMS_TAC g =
+  let
+    val (asms, concl) = g
+    val goal_terms = concl :: asms
+
+    val thms_to_add =
+      if !include_theorems then
+        get_thms (goal_terms, empty_thmset)
+      else
+        []
+
+    val tactic = Tactical.MAP_EVERY Tactic.ASSUME_TAC thms_to_add
+  in
+    tactic g
+  end
+
+  (* Eliminates some HOL terms that are not supported by the SMT-LIB
+     translation. It also adds some useful theorems to the list of assumptions
+     so that SMT solvers can reason about some symbols defined in HOL4 theories. *)
   fun SIMP_TAC simp_let =
-    let
-      open Tactical simpLib
-      val INT_ABS = intLib.ARITH_PROVE
-                      ``!x. ABS (x:int) = if x < 0i then 0i - x else x``
-    in
-      REPEAT Tactic.GEN_TAC THEN
-      (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
-      SIMP_TAC pureSimps.pure_ss
-        [integerTheory.INT_MIN, integerTheory.INT_MAX, INT_ABS] THEN
-      Library.WORD_SIMP_TAC THEN
-      Library.SET_SIMP_TAC THEN
-      Tactic.BETA_TAC
-    end
-
+  let
+    open Tactical simpLib
+  in
+    REPEAT Tactic.GEN_TAC THEN
+    (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
+    SIMP_TAC pureSimps.pure_ss [
+      (* FIXME: polymorphic functions seem to be highly problematic at the
+         moment because after HolSmt's translation, the symbols in these
+         theorems (e.g. ``FST``, ``SND``, ``$,``, etc) won't be the same as the
+         ones in the goal, apparently because they have different types (due to
+         type instantiation). This means that currently, passing these theorems
+         as facts/assumptions will be useless in most circumstances. We try to
+         use these theorems in simplification here but this only helps solving
+         the simpler goals. *)
+      pairTheory.PAIR_EQ, pairTheory.FST, pairTheory.SND
+    ] THEN
+    Library.WORD_SIMP_TAC THEN
+    Library.SET_SIMP_TAC THEN
+    Tactic.BETA_TAC THEN
+    NUM_TO_INT_TAC THEN
+    ADD_THEOREMS_TAC
+  end
 end  (* local *)
 
 end

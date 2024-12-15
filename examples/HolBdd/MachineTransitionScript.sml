@@ -990,6 +990,7 @@ val TotalMooreTrans =
     THEN Q.EXISTS_TAC `(q',nextfn(q,r))`
     THEN RW_TAC std_ss [MooreTrans_def]);
 
+(* NOTE: duplicated with the next theorem but let's keep the original code:
 val ReachableMooreTrans =
  save_thm
   ("ReachableMooreTrans",
@@ -997,6 +998,7 @@ val ReachableMooreTrans =
     [``\(input:'a,state:'b). (input = inputs 0) /\ (state = states 0)``,
      ``(input:'a, state:'b)``]
     (MATCH_MP ReachablePath TotalMooreTrans));
+ *)
 
 (*****************************************************************************)
 (*   val ReachableMooreTrans =                                               *)

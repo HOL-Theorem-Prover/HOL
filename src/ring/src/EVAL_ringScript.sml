@@ -13,16 +13,17 @@ fun EQ_TRANS_TAC t = MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC t THEN CONJ_TAC;
 
 val _ = new_theory "EVAL_ring";
 
-val _ = Hol_datatype `ring = <| R0 : 'a;
-                                R1 : 'a;
-                                RP : 'a -> 'a -> 'a;
-                                RM : 'a -> 'a -> 'a;
-                                RN : 'a -> 'a
-                             |>`;
+Datatype: ring = <| R0 : 'a;
+                   R1 : 'a;
+                   RP : 'a -> 'a -> 'a;
+                   RM : 'a -> 'a -> 'a;
+                   RN : 'a -> 'a
+                 |>
+End
 
 val r = “r:'a ring”;
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
-val _ = app (fn s => overload_on (s, Parse.Term [QUOTE ("ring_"^s)]))
+val _ = app (fn s => temp_overload_on (s, Parse.Term [QUOTE ("ring_"^s)]))
             ["R0","R1","RP","RM","RN"];
 
 val p_plus_sym = Term`!n m.  RP n m = RP m n`;
@@ -130,7 +131,5 @@ EQ_TRANS_TAC(Term` RP (RM (RP a (RN a)) b) (RN (RM a b)) `) THENL
     REWRITE_TAC[opp_def,mult_zero_left,plus_zero_left] ] THEN
 ONCE_REWRITE_TAC[plus_permute] THEN
 REWRITE_TAC[opp_def, plus_zero_left]);
-
-
 
 val _ = export_param_theory();

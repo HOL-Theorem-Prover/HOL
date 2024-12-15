@@ -239,14 +239,14 @@ val h2 = Define
     (h2 l (SUC n) = (IMAGE (\s: num state. (\s':string. if s' = "h2" then (SUC n) else s s')) l) UNION
                     (h2 l n))’;
 
-val high = Define
-   ‘high n = h2 (h1 n) n’;
+Definition high[allow_rebind]: high n = h2 (h1 n) n
+End
 
-val low = Define
-   ‘low = {(\s:string. (0:num))}’;
+Definition low[allow_rebind]: low = {(\s:string. (0:num))}
+End
 
-val random = Define
-   ‘random = {(\s:string. (0:num))}’;
+Definition random[allow_rebind]: random = {(\s:string. (0:num))}
+End
 
 val M3 = Define
    ‘M3 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
@@ -330,27 +330,33 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
 (* No leakage                  *)
 (* *************************** *)
 
-val assign1 = Define
-   ‘assign1 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-   then (H s "high") else 0))’;
+Definition assign1[allow_rebind]:
+  assign1 = (\s: ((num,num,num) prog_state).
+               (\s':string. if (s' = "out")
+                            then (H s "high") else 0))
+End
 
-val assign2 = Define
-   ‘assign2 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")
-   then (L s "low") else 0))’;
+Definition assign2[allow_rebind]:
+  assign2 = (\s: ((num,num,num) prog_state).
+               (\s':string. if (s' = "out")
+                            then (L s "low") else 0))
+End
 
 val M5 = Define
    ‘M5 = (\s: ((num,num,num) prog_state). assign2 ((H s, assign1 s), R s))’;
 
-val high = Define
-   ‘(high 0 = {(\s:string. if s = "high" then 0 else 0)}) /\
-    (high (SUC n) = (\s:string. if s = "high" then SUC n else 0)INSERT(high n))’;
+Definition high[allow_rebind]:
+   (high 0 = {(\s:string. if s = "high" then 0 else 0)}) /\
+   (high (SUC n) = (\s:string. if s = "high" then SUC n else 0)INSERT(high n))
+End
 
-val low = Define
-   ‘(low 0 = {(\s:string. if s = "low" then 0 else 0)}) /\
-    (low (SUC n) = (\s:string. if s = "low" then SUC n else 0)INSERT(low n))’;
+Definition low[allow_rebind]:
+  (low 0 = {(\s:string. if s = "low" then 0 else 0)}) /\
+  (low (SUC n) = (\s:string. if s = "low" then SUC n else 0)INSERT(low n))
+End
 
-val random = Define
-   ‘random = {(\s:string. (0:num))}’;
+Definition random[allow_rebind]: random = {(\s:string. (0:num))}
+End
 
 val example5_conv = SIMP_CONV arith_ss [high, low, random, lem1,lem2,lem3];
 
@@ -376,8 +382,11 @@ CONV_TAC (RATOR_CONV (RAND_CONV (LEAKAGE_COMPUTE_CONV (“high (SUC (SUC (SUC 0)
 (* total leakage               *)
 (* *************************** *)
 
-val state_update = Define
-   ‘state_update name value = (\s:(num list) state. (\n:string. if (n=name) then value else s n))’;
+Definition state_update_def:
+   state_update name value =
+   (\s:(num list) state. (\n:string. if (n=name) then value else s n))
+End
+val state_update = state_update_def
 
 Definition state_append:
    state_append name value =
@@ -385,25 +394,32 @@ Definition state_append:
      state_update name ((if (value=[]) then [] else [HD value]) ++ s name) s
 End
 
-val assign1 = Define
-   ‘assign1 = (\s: ((num list,num list,num list) prog_state). state_update "out" (H s "high") (L s))’;
+Definition assign1[allow_rebind]:
+  assign1 = (\s: ((num list,num list,num list) prog_state).
+               state_update "out" (H s "high") (L s))
+End
 
-val assign2 = Define
-   ‘assign2 = (\s: ((num list,num list,num list) prog_state). state_append "out" (L s "low") (L s))’;
+Definition assign2[allow_rebind]:
+  assign2 = (λs: ((num list,num list,num list) prog_state).
+               state_append "out" (L s "low") (L s))
+End
 
 val M5' = Define
    ‘M5' = (\s: ((num list,num list,num list) prog_state). assign2 ((H s, assign1 s), R s))’;
 
-val high = Define
-   ‘(high 0 = {(\s:string. if s = "high" then [0] else [])}) /\
-    (high (SUC n) = (\s:string. if s = "high" then [SUC n] else [])INSERT(high n))’;
+Definition high[allow_rebind]:
+  (high 0 = {(\s:string. if s = "high" then [0] else [])}) /\
+  (high (SUC n) = (\s:string. if s = "high" then [SUC n] else [])INSERT(high n))
+End
 
-val low = Define
-   ‘(low 0 = {(\s:string. if s = "low" then [0] else [])}) /\
-    (low (SUC n) = (\s:string. if s = "low" then [SUC n] else [])INSERT(low n))’;
+Definition low[allow_rebind]:
+  (low 0 = {(\s:string. if s = "low" then [0] else [])}) /\
+  (low (SUC n) = (\s:string. if s = "low" then [SUC n] else [])INSERT(low n))
+End
 
-val random = Define
-   ‘random = {(\s:string. ([]:num list))}’;
+Definition random[allow_rebind]:
+  random = {(\s:string. ([]:num list))}
+End
 
 val example5'_conv = SIMP_CONV list_string_ss [high, low, random, lem7, lem8, APPEND, PAIR_EQ];
 
@@ -435,16 +451,19 @@ PURE_REWRITE_TAC [M5', state_update, state_append, assign1, assign2]
 (* NO LEAKAGE (hidden prob)            *)
 (* *********************************** *)
 
-val high = Define
-   ‘(high 0 = {(\s:string. if s = "high" then 0 else 0)}) /\
-    (high (SUC n) = (\s:string. if s = "high" then SUC n else 0)INSERT(high n))’;
+Definition high[allow_rebind]:
+  (high 0 = {(\s:string. if s = "high" then 0 else 0)}) /\
+  (high (SUC n) = (\s:string. if s = "high" then SUC n else 0)INSERT(high n))
+End
 
-val random = Define
-   ‘(random 0 = {(\s:string. if s = "random" then 0 else 0)}) /\
-    (random (SUC n) = (\s:string. if s = "random" then SUC n else 0)INSERT(random n))’;
+Definition random[allow_rebind]:
+  (random 0 = {(\s:string. if s = "random" then 0 else 0)}) /\
+  (random (SUC n) = (\s:string. if s = "random" then SUC n else 0) INSERT
+                    random n)
+End
 
-val low = Define
-   ‘low = {(\s:string. (0:num))}’;
+Definition low[allow_rebind]: low = {(\s:string. (0:num))}
+End
 
 val M8 = Define
    ‘M8 = (\s: ((num,num,num) prog_state). (\s':string. if (s' = "out")

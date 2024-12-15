@@ -130,7 +130,7 @@ Datatype
     | Neg regexp`
 ;
 
-Theorem regexp_induction :
+Theorem regexp_induction[allow_rebind] :
  !P Q.
      (!cs. P (Chset cs)) /\
      (!r r0. P r /\ P r0 ==> P (Cat r r0)) /\
@@ -138,7 +138,7 @@ Theorem regexp_induction :
      (!r. P r ==> P (Neg r)) /\ Q [] /\ (!r l. P r /\ Q l ==> Q (r::l)) ==>
      (!r. P r) /\ !l. Q l
 Proof
- ACCEPT_TAC (fetch "-" "regexp_induction")
+  ACCEPT_TAC (fetch "-" "regexp_induction")
 QED
 
 Triviality regexp_distinct = fetch "-" "regexp_distinct";
@@ -2188,7 +2188,7 @@ REPEAT CONJ_TAC
  >- (rw [regexp_lang_def] >> metis_tac [DOT_ASSOC])
  >- (rw [regexp_lang_def]
      >> rw_tac list_ss [SimpLHS,Once KSTAR_EQ_EPSILON_UNION_DOT,
-                        DOT_UNION_RDISTRIB,DOT_EMPTYSTRING]
+                        DOT_UNION_RDISTRIB,DOT_EPSILON]
      >> metis_tac [DOT_ASSOC,IN_UNION,IN_DEF])
  >- (simp_tac list_ss [regexp_lang_def]
       >> Induct

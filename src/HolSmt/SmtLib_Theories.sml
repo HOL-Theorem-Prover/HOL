@@ -44,6 +44,8 @@ in
   fun one_zero f x = zero_args o (one_arg (f x))
   fun one_one f x = one_arg o (one_arg (f x))
 
+  fun list_list f x = list_args o (list_args (f x))
+
   fun K_zero_zero x = Lib.K (zero_args (zero_args x))
   fun K_zero_one f = Lib.K (zero_args (one_arg f))
   fun K_zero_two f = Lib.K (zero_args (two_args f))
@@ -54,6 +56,8 @@ in
   fun K_one_one f = Lib.K (one_arg o one_arg f)
 
   fun K_two_one f = Lib.K (one_arg o two_args f)
+
+  fun K_list_one f = Lib.K (one_arg o list_args f)
 
   fun chainable f =
   let
@@ -153,7 +157,8 @@ in
   struct
 
     val tydict = Library.dict_from_list [
-      ("BitVec", K_one_zero (wordsSyntax.mk_word_type o fcpLib.index_type))
+      ("BitVec", K_one_zero (wordsSyntax.mk_word_type o fcpLib.index_type o
+        numSyntax.dest_numeral))
     ]
 
     val tmdict = Library.dict_from_list [
@@ -180,11 +185,12 @@ in
           raise ERR "<Fixed_Size_BitVectors.tmdict._>"
             "not a bit-vector constant")),
       ("concat", K_zero_two wordsSyntax.mk_word_concat),
-      ("extract", K_two_one (fn (m, n) =>
+      ("extract", K_two_one (fn (m_tm, n_tm) =>
         let
+          val (m, n) = Lib.pair_map (Arbint.toNat o intSyntax.int_of_term)
+            (m_tm, n_tm)
           val index_type = fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
-          val m = numSyntax.mk_numeral m
-          val n = numSyntax.mk_numeral n
+          val (m, n) = Lib.pair_map numSyntax.mk_numeral (m, n)
         in
           fn t => wordsSyntax.mk_word_extract (m, n, t, index_type)
         end)),
@@ -192,6 +198,8 @@ in
       ("bvneg", K_zero_one wordsSyntax.mk_word_2comp),
       ("bvand", K_zero_two wordsSyntax.mk_word_and),
       ("bvor", K_zero_two wordsSyntax.mk_word_or),
+      ("bvxor", K_zero_two wordsSyntax.mk_word_xor),
+      ("bvxnor", K_zero_two wordsSyntax.mk_word_xnor),
       ("bvadd", K_zero_two wordsSyntax.mk_word_add),
       ("bvmul", K_zero_two wordsSyntax.mk_word_mul),
       (* SMT-LIB states that division by 0w is unspecified. Thus, any
@@ -262,7 +270,10 @@ in
       ("-", leftassoc intSyntax.mk_minus),
       ("+", leftassoc intSyntax.mk_plus),
       ("*", leftassoc intSyntax.mk_mult),
-      (* FIXME: add parsing of div and mod *)
+      ("div", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="ediv"}, t1), t2))),
+      ("mod", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="emod"}, t1), t2))),
       ("abs", K_zero_one intSyntax.mk_absval),
       ("<=", chainable intSyntax.mk_leq),
       ("<", chainable intSyntax.mk_less),
@@ -294,7 +305,8 @@ in
       ("-", leftassoc realSyntax.mk_minus),
       ("+", leftassoc realSyntax.mk_plus),
       ("*", leftassoc realSyntax.mk_mult),
-      ("/", leftassoc realSyntax.mk_div),
+      ("/", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+          (Term.prim_mk_const {Thy="HolSmt", Name="smt_rdiv"}, t1), t2))),
       ("<=", chainable realSyntax.mk_leq),
       ("<", chainable realSyntax.mk_less),
       (">=", chainable realSyntax.mk_geq),
@@ -324,7 +336,14 @@ in
       ("-", leftassoc intSyntax.mk_minus),
       ("+", leftassoc intSyntax.mk_plus),
       ("*", leftassoc intSyntax.mk_mult),
-      (* FIXME: add parsing of div and mod *)
+      ("div", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="ediv"}, t1), t2))),
+      ("div0", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="ediv"}, t1), t2))),
+      ("mod", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="emod"}, t1), t2))),
+      ("mod0", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+        (Term.prim_mk_const {Thy="integer", Name="emod"}, t1), t2))),
       ("abs", K_zero_one intSyntax.mk_absval),
       ("<=", chainable intSyntax.mk_leq),
       ("<", chainable intSyntax.mk_less),
@@ -336,7 +355,8 @@ in
       ("-", leftassoc realSyntax.mk_minus),
       ("+", leftassoc realSyntax.mk_plus),
       ("*", leftassoc realSyntax.mk_mult),
-      ("/", leftassoc realSyntax.mk_div),
+      ("/", leftassoc (fn (t1, t2) => Term.mk_comb (Term.mk_comb
+          (Term.prim_mk_const {Thy="HolSmt", Name="smt_rdiv"}, t1), t2))),
       ("<=", chainable realSyntax.mk_leq),
       ("<", chainable realSyntax.mk_less),
       (">=", chainable realSyntax.mk_geq),

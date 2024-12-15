@@ -257,6 +257,23 @@ val nterm_case_eq = Q.store_thm(
   ‘∀p. p == c2 <=> p == c1’ suffices_by simp[] >>
   metis_tac[permeq_def]);
 
+val nterm_case_elim = Q.store_thm(
+  "nterm_case_elim",
+  ‘∀f. (f(nterm_CASE n nmf sf tf pf cf) ⇔
+     (∃a. (n = Nom a) ∧ f(nmf a)) ∨
+     (∃p w. (n = Sus p w) ∧ f(sf (@p'. p' == p) w)) ∨
+     (∃a t. (n = Tie a t) ∧ f(tf a t)) ∨
+     (∃t1 t2. (n = nPair t1 t2) ∧ f(pf t1 t2)) ∨
+     (∃c. (n = nConst c) ∧ f(cf c)))’,
+  strip_tac >>
+  Q.ISPEC_THEN ‘n’ STRUCT_CASES_TAC nterm_nchotomy >>
+  simp[nterm_case_rewrites, Sus_case1] >> eq_tac >> rw[]
+  >- (first_x_assum $ irule_at $ Pos last >> rw[]) >>
+  pop_assum mp_tac >>
+  rename [‘_ (_ (@p'. p' == c1) _) ⇒ _(_ (@p'. p' == c2) _)’] >>
+  ‘∀p. p == c2 <=> p == c1’ suffices_by simp[] >>
+  metis_tac[permeq_def]);
+
 local open TypeBase TypeBasePure Drule
 in
 val _ = export [
@@ -268,6 +285,7 @@ val _ = export [
                   in n::Sus_case1::rest end),
       case_cong = nterm_case_cong,
       case_eq = nterm_case_eq,
+      case_elim = nterm_case_elim,
       nchotomy = nterm_nchotomy,
       size = SOME (``nterm_size``,ORIG nterm_size_def),
       encode = NONE,

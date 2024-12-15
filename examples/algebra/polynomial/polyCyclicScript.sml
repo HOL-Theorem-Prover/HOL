@@ -12,29 +12,17 @@ val _ = new_theory "polyCyclic";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
+(* open dependent theories *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory;
+
 (* Get dependet theories local *)
-
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "ringUnitTheory"; *)
-open monoidTheory groupTheory ringTheory ringUnitTheory;
-
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* val _ = load "fieldTheory"; *)
-open integralDomainTheory;
-open fieldTheory;
-
-(* val _ = load "groupCyclicTheory"; *)
-open monoidOrderTheory groupOrderTheory groupCyclicTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* Get polynomial theory of Ring *)
-(* val _ = load "polyIrreducibleTheory"; *)
 open polynomialTheory polyWeakTheory polyRingTheory;
 open polyDivisionTheory;
 open polyMonicTheory;
@@ -43,18 +31,7 @@ open polyRootTheory;
 open polyDividesTheory;
 open polyIrreducibleTheory;
 
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclic Polynomial Documentation                                           *)
@@ -779,7 +756,7 @@ val poly_cyclic_cofactor = store_thm(
        or ~((cyclic n) % (X - |1|) = |0|)     by poly_factor_one
     Since pmonic (X - |1|),                   by poly_pmonic_X_sub_c
       and poly (cyclic n)                     by poly_cyclic_poly
-    hence ~ ((X - |1|) pdivides (cyclic n))   by poly_ulead_divides_alt
+    hence ~ ((X - |1|) pdivides (cyclic n))   by poly_divides_alt
 *)
 val poly_cyclic_has_no_factor_unity_1 = store_thm(
   "poly_cyclic_has_no_factor_unity_1",
@@ -794,7 +771,7 @@ val poly_cyclic_has_no_factor_unity_1 = store_thm(
   `~((cyclic n) % (unity 1) = |0|)` by metis_tac[poly_factor_one, poly_unity_1] >>
   `pmonic (unity 1)` by rw_tac std_ss[poly_unity_pmonic, DECIDE ``0 < 1``] >>
   `poly (cyclic n)` by rw[poly_cyclic_poly] >>
-  metis_tac[poly_ulead_divides_alt]);
+  metis_tac[poly_divides_alt]);
 
 (* Theorem: Field r ==> !n. 1 < n ==> ?h. ipoly h /\ h pdivides (cyclic n) *)
 (* Proof:

@@ -1,2 +1,1 @@
-PRE_INCLUDES = ../ring
-INCLUDES = ../lib ../monoid ../group ../field
+INCLUDES = ../field

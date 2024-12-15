@@ -14,8 +14,6 @@ val dpfx = "comt_"
 
 in
 
-fun pair_map f (x,y) = (f x,f y)
-
 (*********** math **************)
 
 fun ilog2 n = if n=1 then 1 else Real.floor(((Math.ln (Real.fromInt(n)))/(Math.ln 2.0))+1.0); (* NOTE:this is NOT log_2 *)

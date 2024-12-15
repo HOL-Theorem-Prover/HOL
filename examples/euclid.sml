@@ -18,201 +18,235 @@ open arithmeticTheory;
 (* Divisibility.                                                             *)
 (*---------------------------------------------------------------------------*)
 
+set_fixity "divides" (Infix(NONASSOC, 450));
 
 Definition divides_def:
-  divides a b = ?x. b = a * x
-End;
-
-set_fixity "divides" (Infix(NONASSOC, 450));
+  a divides b <=> ?x. b = a * x
+End
 
 (*---------------------------------------------------------------------------*)
 (* Primality.                                                                *)
 (*---------------------------------------------------------------------------*)
 
 Definition prime_def:
-  prime p <=> p<>1 /\ !x. x divides p ==> (x=1) \/ (x=p)
+  prime p <=> p <> 1 /\ !x. x divides p ==> (x = 1) \/ (x = p)
 End
 
 (*---------------------------------------------------------------------------*)
 (* A sequence of basic theorems about the "divides" relation.                *)
 (*---------------------------------------------------------------------------*)
 
-val DIVIDES_0 = store_thm
- ("DIVIDES_0",
-  ``!x. x divides 0``,
-  metis_tac [divides_def,MULT_CLAUSES]);
+Theorem DIVIDES_ZERO:
+  !x. x divides 0
+Proof
+  metis_tac [divides_def,MULT_CLAUSES]
+QED
 
-val DIVIDES_ZERO = store_thm
- ("DIVIDES_ZERO",
-  ``!x. 0 divides x <=> x = 0``,
-  metis_tac [divides_def,MULT_CLAUSES]);
+Theorem ZERO_DIVIDES:
+  !x. 0 divides x <=> x = 0
+Proof
+  metis_tac [divides_def,MULT_CLAUSES]
+QED
 
-val DIVIDES_ONE = store_thm
- ("DIVIDES_ONE",
-  ``!x. x divides 1 <=> x = 1``,
-  metis_tac [divides_def,MULT_CLAUSES,MULT_EQ_1]);
+Theorem DIVIDES_ONE:
+ !x. x divides 1 <=> x = 1
+Proof
+  metis_tac [divides_def,MULT_CLAUSES,MULT_EQ_1]
+QED
 
-val DIVIDES_REFL = store_thm
- ("DIVIDES_REFL",
-  ``!x. x divides x``,
-  metis_tac [divides_def,MULT_CLAUSES]);
+Theorem DIVIDES_REFL :
+ !x. x divides x
+Proof
+  metis_tac [divides_def,MULT_CLAUSES]
+QED
 
-val DIVIDES_TRANS = store_thm
- ("DIVIDES_TRANS",
-  ``!a b c. a divides b /\ b divides c ==> a divides c``,
-  metis_tac [divides_def,MULT_ASSOC]);
+Theorem DIVIDES_TRANS :
+ !a b c. a divides b /\ b divides c ==> a divides c
+Proof
+  metis_tac [divides_def,MULT_ASSOC]
+QED
 
-val DIVIDES_ADD = store_thm
-("DIVIDES_ADD",
- ``!d a b. d divides a /\ d divides b ==> d divides (a + b)``,
- metis_tac[divides_def,LEFT_ADD_DISTRIB]);
+Theorem DIVIDES_ADD :
+ !d a b. d divides a /\ d divides b ==> d divides (a + b)
+Proof
+ metis_tac[divides_def,LEFT_ADD_DISTRIB]
+QED
 
-val DIVIDES_SUB = store_thm
- ("DIVIDES_SUB",
-  ``!d a b. d divides a /\ d divides b ==> d divides (a - b)``,
-  metis_tac [divides_def,LEFT_SUB_DISTRIB]);
+Theorem DIVIDES_SUB :
+  !d a b. d divides a /\ d divides b ==> d divides (a - b)
+Proof
+  metis_tac [divides_def,LEFT_SUB_DISTRIB]
+QED
 
-val DIVIDES_ADDL = store_thm
- ("DIVIDES_ADDL",
-  ``!d a b. d divides a /\ d divides (a + b) ==> d divides b``,
-  metis_tac [ADD_SUB,ADD_SYM,DIVIDES_SUB]);
+Theorem DIVIDES_ADDL :
+  !d a b. d divides a /\ d divides (a + b) ==> d divides b
+Proof
+  metis_tac [ADD_SUB,ADD_SYM,DIVIDES_SUB]
+QED
 
-val DIVIDES_LMUL = store_thm
- ("DIVIDES_LMUL",
-  ``!d a x. d divides a ==> d divides (x * a)``,
-  metis_tac [divides_def,MULT_ASSOC,MULT_SYM]);
+Theorem DIVIDES_LMUL :
+  !d a x. d divides a ==> d divides (x * a)
+Proof
+  metis_tac [divides_def,MULT_ASSOC,MULT_SYM]
+QED
 
-val DIVIDES_RMUL = store_thm
- ("DIVIDES_RMUL",
-  ``!d a x. d divides a ==> d divides (a * x)``,
-  metis_tac [MULT_SYM,DIVIDES_LMUL]);
+Theorem DIVIDES_RMUL :
+  !d a x. d divides a ==> d divides (a * x)
+Proof
+  metis_tac [MULT_SYM,DIVIDES_LMUL]
+QED
 
-val DIVIDES_LE = store_thm
- ("DIVIDES_LE",
-  ``!m n. m divides n ==> m <= n \/ (n = 0)``,
-  rw  [divides_def] >> rw[]);
+Theorem DIVIDES_LE :
+  !a b. a divides b ==> (0 < a ∧ a <= b) \/ b = 0
+Proof
+  rw [divides_def] >> rw[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Various proofs of the same formula                                        *)
 (*---------------------------------------------------------------------------*)
 
-val DIVIDES_FACT = store_thm
- ("DIVIDES_FACT",
-  ``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
-  rw  [LESS_EQ_EXISTS]
+Theorem LE_DIVIDES_FACT :
+  !m n. 0 < m /\ m <= n ==> m divides (FACT n)
+Proof
+  rw [LESS_EQ_EXISTS]
    >> Induct_on `p`
-   >> rw  [FACT,ADD_CLAUSES]
-   >| [Cases_on `m`, ALL_TAC]
+   >> rw [FACT,ADD_CLAUSES]
+   >> Cases_on `m`
    >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,
-                   DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]);
+                 DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]
+QED
 
-val DIVIDES_FACT = prove
- (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
+Theorem DIVIDES_FACT:
+  ∀n. 0 < n ==> n divides (FACT n)
+Proof
+  Cases
+   >> rw[FACT]
+   >> rename1 ‘SUC n’
+   >> irule DIVIDES_LMUL
+   >> metis_tac [DIVIDES_REFL]
+QED
+
+Theorem LE_DIVIDES_FACT :
+  !m n. 0 < m /\ m <= n ==> m divides (FACT n)
+Proof
+  rw [LESS_EQ_EXISTS]
+  >> Induct_on `p`
+  >> fs [FACT,ADD_CLAUSES]
+     >- metis_tac [DIVIDES_FACT]
+     >- metis_tac [DIVIDES_RMUL]
+QED
+
+Theorem LE_DIVIDES_FACT :
+  !m n. 0 < m /\ m <= n ==> m divides (FACT n)
+Proof
   `!m p. 0 < m ==> m divides FACT (m + p)`
      suffices_by metis_tac[LESS_EQ_EXISTS]
    >> Induct_on `p`
-   >> rw  [FACT,ADD_CLAUSES]
+   >> rw [FACT,ADD_CLAUSES]
    >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``, num_CASES,
-                    DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]);
+                 DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]
+QED
 
-val DIVIDES_FACT = prove
- (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
-  rw  [LESS_EQ_EXISTS]
+Theorem LE_DIVIDES_FACT :
+  !m n. 0 < m /\ m <= n ==> m divides (FACT n)
+Proof
+  rw [LESS_EQ_EXISTS]
    >> Induct_on `p`
    >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``, num_CASES,
-                   DIVIDES_RMUL,DIVIDES_LMUL,DIVIDES_REFL,ADD_CLAUSES]);
+                 DIVIDES_RMUL,DIVIDES_LMUL,DIVIDES_REFL,ADD_CLAUSES]
+QED
 
-
-val DIVIDES_FACT = prove
-(``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
-Induct_on `n - m`
- >> rw  [] >|
- [`m = n`         by rw[] >>
-  `?k. m = SUC k` by (Cases_on `m` >> fs[])
-     >> metis_tac[FACT,DIVIDES_RMUL,DIVIDES_REFL],
-  `0 < n`         by rw[] >>
-  `?k. n = SUC k` by (Cases_on `n` >> fs[])
-   >> rw  [FACT, DIVIDES_RMUL]]);
-
+Theorem LE_DIVIDES_FACT :
+  !m n. 0 < m /\ m <= n ==> m divides (FACT n)
+Proof
+  Induct_on `n - m` >> rw []
+  >- metis_tac [EQ_LESS_EQ,DIVIDES_FACT]
+  >- (`?k. n = SUC k` by (Cases_on `n` >> fs[])
+      >> rw [FACT, DIVIDES_RMUL])
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Zero and one are not prime, but two is.  All primes are positive.         *)
 (*---------------------------------------------------------------------------*)
 
-val NOT_PRIME_0 = store_thm
- ("NOT_PRIME_0",
-  ``~prime 0``,
-  rw  [prime_def,DIVIDES_0]);
+Theorem NOT_PRIME_0 :
+  ~prime 0
+Proof
+  rw [prime_def,DIVIDES_ZERO]
+QED
 
-val NOT_PRIME_1 = store_thm
- ("NOT_PRIME_1",
-  ``~prime 1``,
-  rw  [prime_def]);
+Theorem NOT_PRIME_1 :
+  ~prime 1
+Proof
+ rw [prime_def]
+QED
 
-val PRIME_2 = store_thm
- ("PRIME_2",
-  ``prime 2``,
-  rw  [prime_def] >>
-  metis_tac [DIVIDES_LE, DIVIDES_ZERO,
-             DECIDE``~(2=1) /\ ~(2=0) /\ (x<=2 <=> (x=0) \/ (x=1) \/ (x=2))``]);
+Theorem PRIME_2 :
+ prime 2
+Proof
+  rw [prime_def] >> drule DIVIDES_LE >> rw[]
+QED
 
-val PRIME_POS = store_thm
- ("PRIME_POS",
-  ``!p. prime p ==> 0<p``,
-  Cases >> rw [NOT_PRIME_0]);
+Theorem PRIME_POS :
+  !p. prime p ==> 0 < p
+Proof
+  Cases >> rw [NOT_PRIME_0]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Every number has a prime factor, except for 1. The proof proceeds by a    *)
-(* "complete" induction on n, and then considers cases on whether n is       *)
+(* complete induction on n, and then considers cases on whether n is         *)
 (* prime or not. The first case (n is prime) is trivial. In the second case, *)
-(* there must be an "x" that divides n, and x is not 1 or n. By DIVIDES_LE,  *)
+(* there must be an x that divides n, and x is not 1 or n. By DIVIDES_LE,    *)
 (* n=0 or x <= n. If n=0, then 2 is a prime that divides 0. On the other     *)
 (* hand, if x <= n, there are two cases: if x<n then we can use the i.h. and *)
 (* by transitivity of divides we are done; otherwise, if x=n, then we have   *)
 (* a contradiction with the fact that x is not 1 or n.                       *)
 (*---------------------------------------------------------------------------*)
 
-val PRIME_FACTOR = store_thm
- ("PRIME_FACTOR",
-  ``!n. ~(n = 1) ==> ?p. prime p /\ p divides n``,
-  completeInduct_on `n`
-   >> rw  []
-   >> Cases_on `prime n` >|
-   [metis_tac [DIVIDES_REFL],
-    `?x. x divides n /\ x<>1 /\ x<>n` by metis_tac[prime_def] >>
-    metis_tac [LESS_OR_EQ, PRIME_2,
-               DIVIDES_LE, DIVIDES_TRANS, DIVIDES_0]]);
+Theorem PRIME_FACTOR :
+  !n. ~(n = 1) ==> ?p. prime p /\ p divides n
+Proof
+  completeInduct_on `n` >> rw [] >>
+  Cases_on `prime n`
+   >- metis_tac [DIVIDES_REFL]
+   >- (`?x. x divides n /\ x<>1 /\ x<>n` by metis_tac[prime_def]
+       >> metis_tac [LESS_OR_EQ, PRIME_2,
+                     DIVIDES_LE, DIVIDES_TRANS, DIVIDES_ZERO])
+QED
 
 (*---------------------------------------------------------------------------*)
 (* In the following proof, metis_tac automatically considers cases on        *)
 (* whether n is prime or not.                                                *)
 (*---------------------------------------------------------------------------*)
 
-val PRIME_FACTOR = prove
- (``!n. n<>1 ==> ?p. prime p /\ p divides n``,
+Theorem PRIME_FACTOR :
+  !n. n<>1 ==> ?p. prime p /\ p divides n
+Proof
   completeInduct_on `n` >>
-  metis_tac [DIVIDES_REFL,prime_def,LESS_OR_EQ, PRIME_2,
-             DIVIDES_LE, DIVIDES_TRANS, DIVIDES_0]);
-
+  metis_tac [prime_def,LESS_OR_EQ, PRIME_2,
+             DIVIDES_REFL,DIVIDES_LE, DIVIDES_TRANS, DIVIDES_ZERO]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Every number has a prime greater than it.                                 *)
 (* Proof.                                                                    *)
 (* Suppose not; then there's an n such that all p greater than n are not     *)
 (* prime. Consider FACT(n) + 1: it's not equal to 1, so there's a prime q    *)
-(* that divides it. q also divides FACT n because q is less-than-or-equal    *)
-(* to n. By DIVIDES_ADDL, this means that q=1. But then q is not prime,      *)
-(* which is a contradiction.                                                 *)
+(* that divides it. q also divides FACT n because q <= n. By DIVIDES_ADDL,   *)
+(* this means that q=1. But then q is not prime, a contradiction.            *)
 (*---------------------------------------------------------------------------*)
 
-val EUCLID = store_thm
- ("EUCLID",
-  ``!n. ?p. n < p /\ prime p``,
+Theorem EUCLID :
+ !n. ?p. n < p /\ prime p
+Proof
   spose_not_then strip_assume_tac
    >> mp_tac (SPEC ``FACT n + 1`` PRIME_FACTOR)
-   >> rw  [FACT_LESS, DECIDE ``x <> 0 <=> 0 < x``]
-   >> metis_tac [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
-                 NOT_PRIME_1, NOT_LESS, PRIME_POS]);
+   >> rw [FACT_LESS, DECIDE ``x <> 0 <=> 0 < x``]
+   >> metis_tac [LE_DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
+                 NOT_PRIME_1, NOT_LESS, PRIME_POS]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -221,17 +255,19 @@ val EUCLID = store_thm
 (* style allows a presentation that mirrors the informal proof.              *)
 (*---------------------------------------------------------------------------*)
 
-val EUCLID_AGAIN = prove (``!n. ?p. n < p /\ prime p``,
+Theorem EUCLID_AGAIN[local]:
+  !n. ?p. n < p /\ prime p
+Proof
    CCONTR_TAC >>
-   `?n. !p. n < p ==> ~prime p`  by metis_tac[]              >>
-   `~(FACT n + 1 = 1)`           by rw [FACT_LESS,
-                                    DECIDE ``x<>0 <=> 0<x``] >>
-   `?p. prime p /\
-        p divides (FACT n + 1)`  by metis_tac [PRIME_FACTOR] >>
-   `0 < p`                       by metis_tac [PRIME_POS]    >>
-   `p <= n`                      by metis_tac [NOT_LESS]     >>
-   `p divides FACT n`            by metis_tac [DIVIDES_FACT] >>
-   `p divides 1`                 by metis_tac [DIVIDES_ADDL] >>
-   `p = 1`                       by metis_tac [DIVIDES_ONE]  >>
-   `~prime p`                    by metis_tac [NOT_PRIME_1]  >>
-   metis_tac[]);
+   `?n. !p. n < p ==> ~prime p`
+                      by metis_tac[] >>
+   `FACT n + 1 ≠ 1`   by rw [FACT_LESS, DECIDE ``x<>0 <=> 0<x``] >>
+   ‘∃p. prime p ∧ p divides (FACT n + 1)’
+                      by metis_tac [PRIME_FACTOR]    >>
+   `0 < p`            by metis_tac [PRIME_POS]       >>
+   `p divides FACT n` by metis_tac [NOT_LESS,LE_DIVIDES_FACT] >>
+   `p divides 1`      by metis_tac [DIVIDES_ADDL]    >>
+   `p = 1`            by metis_tac [DIVIDES_ONE]     >>
+   `~prime p`         by metis_tac [NOT_PRIME_1]     >>
+   metis_tac[]
+QED

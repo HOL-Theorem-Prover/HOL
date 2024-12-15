@@ -101,13 +101,13 @@ val BOOL_ss = SSFRAG
      ("EXISTS_REFL'", GSYM EXISTS_REFL),
      ("EXISTS_UNIQUE_REFL'", GSYM EXISTS_UNIQUE_REFL),
      ("EXCLUDED_MIDDLE'", ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE),
+     ("NOT_AND'",         ONCE_REWRITE_RULE [CONJ_COMM] NOT_AND),
      ("literal_I_thm", literal_I_thm),
      ("COND_BOOL_CLAUSES", COND_BOOL_CLAUSES),
      ("lift_disj_eq", lift_disj_eq),
      ("lift_imp_disj", lift_imp_disj)
    ],
    congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
-
 
 (*---------------------------------------------------------------------------
    Need to rewrite cong. rules to the iterated implication format assumed

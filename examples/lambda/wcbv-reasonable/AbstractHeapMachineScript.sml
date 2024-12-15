@@ -104,15 +104,15 @@ Inductive step:
 [~pushVal:]
   (∀P P' Q a T V H.
     jumpTarget 0 [] P = SOME (Q, P')
-    ⇒ step (closC (lamT::P) a::T, V, H) (closC P' a::T, closC Q a::V, H)) ∧
+    ⇒ step (closC (lamT::P) a::T, V, H) (closC P' a::T, closC Q a::V, H))
 [~beta:]
   (∀a b g P Q H H' c T V.
     put H (heapEntryC g b) = (H', c)
-    ⇒ step (closC (appT::P) a::T, g::closC Q b::V, H) (closC Q c::closC P a::T, V, H')) ∧
+    ⇒ step (closC (appT::P) a::T, g::closC Q b::V, H) (closC Q c::closC P a::T, V, H'))
 [~load:]
   (∀P a x g T V H.
     lookup H a x = SOME g
-    ⇒ step (closC (varT x::P) a::T, V, H) (closC P a::T, g::V, H)) ∧
+    ⇒ step (closC (varT x::P) a::T, V, H) (closC P a::T, g::V, H))
 [~nil:]
   (∀a T V H.
     step (closC [] a::T, V, H) (T, V, H))
@@ -125,18 +125,18 @@ End
 Inductive unfolds:
 [~Unbound:]
   (∀H k n.
-    n < k ⇒ unfolds H a k (dV n) (dV n)) ∧
+    n < k ⇒ unfolds H a k (dV n) (dV n))
 [~Bound:]
   (∀H k b P s s' n.
     k ≤ n ∧
     lookup H a (n-k) = SOME (closC P b) ∧
     reprP P s ∧
     unfolds H b 0 s s' ⇒
-    unfolds H a k (dV n) s') ∧
+    unfolds H a k (dV n) s')
 [~Lam:]
   (∀H k s s'.
     unfolds H a (SUC k) s s' ⇒
-    unfolds H a k (dABS s) (dABS s')) ∧
+    unfolds H a k (dABS s) (dABS s'))
 [~App:]
   (∀H k s t s' t'.
     unfolds H a k s s' ∧

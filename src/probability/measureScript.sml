@@ -37,6 +37,9 @@ val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = hide "S";
 
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
+
 (* ------------------------------------------------------------------------- *)
 (*  Basic measure theory definitions.                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -966,7 +969,7 @@ val MONOTONE_CONVERGENCE = store_thm
        INST_TYPE [beta |-> ``:num``] o
        Q.SPECL [`m`, `BIGUNION (IMAGE f UNIV)`, `\x. num_CASE x {} f`])
       MEASURE_COUNTABLE_INCREASING
-   >> Cond
+   >> impl_tac
    >- (RW_TAC std_ss [IN_FUNSET, IN_UNIV, num_case_def, measure_space_def] >|
        [Cases_on `x` >|
         [RW_TAC std_ss [num_case_def]
@@ -1757,7 +1760,7 @@ Theorem has_exhausting_sequence_alt =
 
    The new definition based on ‘exhausting_sequence’ (was in martingaleTheory):
  *)
-Definition sigma_finite_def0 :
+Definition sigma_finite :
     sigma_finite m = ?f. exhausting_sequence (m_space m,measurable_sets m) f /\
                          !n. measure m (f n) < PosInf
 End
@@ -1772,7 +1775,7 @@ Theorem sigma_finite_def :
            (BIGUNION (IMAGE f UNIV) = m_space m) /\
            (!n. measure m (f n) < PosInf)
 Proof
-    rw [sigma_finite_def0, exhausting_sequence_def]
+    rw [sigma_finite, exhausting_sequence_def]
  >> METIS_TAC []
 QED
 
@@ -2957,10 +2960,10 @@ val OUTER_MEASURE_SPACE_FINITE_SUBADDITIVE = store_thm
  >> ASM_REWRITE_TAC []);
 
 (* cf. MEASURE_SPACE_RESTRICTED *)
-val MEASURE_SPACE_RESTRICTION = store_thm
-  ("MEASURE_SPACE_RESTRICTION",
-  ``!sp sts m sub. measure_space (sp,sts,m) /\ sub SUBSET sts /\ sigma_algebra (sp,sub) ==>
-                   measure_space (sp,sub,m)``,
+Theorem MEASURE_SPACE_RESTRICTION :
+    !sp sts m sub. measure_space (sp,sts,m) /\ sub SUBSET sts /\ sigma_algebra (sp,sub) ==>
+                   measure_space (sp,sub,m)
+Proof
     RW_TAC std_ss [measure_space_def, m_space_def, measurable_sets_def]
  >- (REWRITE_TAC [positive_def, measure_def, measurable_sets_def] \\
      CONJ_TAC >- PROVE_TAC [positive_def, measure_def, measurable_sets_def] \\
@@ -2969,7 +2972,22 @@ val MEASURE_SPACE_RESTRICTION = store_thm
  >> fs [countably_additive_def, IN_FUNSET, IN_UNIV, measurable_sets_def, measure_def]
  >> RW_TAC std_ss []
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
- >> PROVE_TAC [SUBSET_DEF]);
+ >> PROVE_TAC [SUBSET_DEF]
+QED
+
+(* Any sub-sigma-algebra in a measurable space forms a measurable space
+   cf. martingaleTheory.measure_space_from_sub_sigma_algebra
+ *)
+Theorem MEASURE_SPACE_RESTRICTION':
+   !m sts. measure_space m /\ sts SUBSET (measurable_sets m) /\
+           sigma_algebra (m_space m,sts) ==>
+           measure_space (m_space m,sts,measure m)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC MEASURE_SPACE_RESTRICTION
+ >> Q.EXISTS_TAC ‘measurable_sets m’
+ >> rw [MEASURE_SPACE_REDUCE]
+QED
 
 (* Theorem 18.2 of [1]. Given (sp,sts,m) and u = outer_measure m (countable_covers sts):
 
@@ -3921,7 +3939,7 @@ Proof
  >> `!n. FINITE (g n)`   by PROVE_TAC []
  >> `!n. disjoint (g n)` by PROVE_TAC []
  >> Q.PAT_X_ASSUM `!x. (f x = BIGUNION (g x)) /\ P` K_TAC
- (* applying countable_disjoint_decomposition *)
+ (* applying finite_disjoint_decomposition' *)
  >> Know `!x. ?h n. (!i. i < n ==> h i IN (g x)) /\ (!i. n <= i ==> (h i = {})) /\
                     (g x = IMAGE h (count n)) /\
                     (BIGUNION (g x) = BIGUNION (IMAGE h univ(:num))) /\
@@ -3929,7 +3947,7 @@ Proof
                     (!i j. i < n /\ j < n /\ i <> j ==> DISJOINT (h i) (h j))`
  >- (Q.X_GEN_TAC `n` \\
      Know `FINITE (g n) /\ disjoint (g n)` >- PROVE_TAC [] \\
-     DISCH_THEN (STRIP_ASSUME_TAC o (MATCH_MP countable_disjoint_decomposition)) \\
+     DISCH_THEN (STRIP_ASSUME_TAC o (MATCH_MP finite_disjoint_decomposition')) \\
      Q.EXISTS_TAC `f'` >> Q.EXISTS_TAC `n'` >> art [])
  >> SIMP_TAC std_ss [SKOLEM_THM] >> STRIP_TAC (* skolemization here *)
  >> `!n i. i < f'' n ==> f' n i IN g n` by PROVE_TAC []
@@ -4716,7 +4734,7 @@ Proof
  (* applying UNIQUENESS_OF_MEASURE *)
  >> Know ‘!s. s IN subsets (sigma sp sts) ==> v s = v'' s’
  >- (‘!s. s IN sts ==> v s = v'' s’ by METIS_TAC [] \\
-     MATCH_MP_TAC UNIQUENESS_OF_MEASURE >> simp [sigma_finite_def0] \\
+     MATCH_MP_TAC UNIQUENESS_OF_MEASURE >> simp [sigma_finite] \\
      fs [semiring_def, has_exhausting_sequence] \\
      CONJ_TAC >- (Q.EXISTS_TAC ‘f’ >> art [] \\
                   fs [exhausting_sequence_def, IN_FUNSET]) \\
@@ -4979,6 +4997,12 @@ Proof
  >> FIRST_X_ASSUM irule >> Q.EXISTS_TAC ‘t’ >> art []
 QED
 
+Theorem COMPLETION_STABLE' :
+    !m. complete_measure_space m ==> completion m = measurable_space m
+Proof
+    PROVE_TAC [SPACE, COMPLETION_STABLE]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Alternative definitions of `sigma_finite`                                *)
 (* ------------------------------------------------------------------------- *)
@@ -5032,12 +5056,12 @@ val SIGMA_FINITE_ALT = store_thm (* was: sigma_finite (HVG) *)
  >> CONJ_TAC >- REWRITE_TAC [FINITE_COUNT]
  >> RW_TAC std_ss [o_DEF, lt_infty]);
 
-val SIGMA_FINITE_ALT2 = store_thm (* was: sigma_finite_measure (HVG) *)
-  ("SIGMA_FINITE_ALT2",
-  ``!m. measure_space m ==>
+Theorem SIGMA_FINITE_ALT2 : (* was: sigma_finite_measure (HVG) *)
+    !m. measure_space m ==>
        (sigma_finite m <=> ?A. countable A /\ A SUBSET measurable_sets m /\
                               (BIGUNION A = m_space m) /\
-                              (!a. a IN A ==> measure m a <> PosInf))``,
+                              (!a. a IN A ==> measure m a <> PosInf))
+Proof
     GEN_TAC >> DISCH_TAC
  >> EQ_TAC >> rpt STRIP_TAC
  >- (fs [sigma_finite_def] \\
@@ -5069,9 +5093,11 @@ val SIGMA_FINITE_ALT2 = store_thm (* was: sigma_finite_measure (HVG) *)
       GEN_TAC >> REWRITE_TAC [GSYM lt_infty] \\
       FIRST_X_ASSUM MATCH_MP_TAC \\
       REWRITE_TAC [IN_IMAGE, IN_UNIV] \\
-      Q.EXISTS_TAC `n` >> REWRITE_TAC [] ]);
+      Q.EXISTS_TAC `n` >> REWRITE_TAC [] ]
+QED
 
-Theorem sigma_finite :
+(* NOTE: was ‘sigma_finite’ (name conflicted with its original definition) *)
+Theorem sigma_finite_thm :
     !m. measure_space m /\ sigma_finite m ==>
         ?A. IMAGE A UNIV SUBSET measurable_sets m /\
             (BIGUNION {A i | i IN UNIV} = m_space m) /\
@@ -5103,7 +5129,7 @@ Proof
     RW_TAC std_ss []
  >> `?A. IMAGE A univ(:num) SUBSET measurable_sets m /\
        (BIGUNION {A i | i IN univ(:num)} = m_space m) /\
-       !i. measure m (A i) <> PosInf` by METIS_TAC [sigma_finite]
+       !i. measure m (A i) <> PosInf` by METIS_TAC [sigma_finite_thm]
  >> Know `!i. measure m (disjointed A i) <= measure m (A i)`
  >- (GEN_TAC THEN
      MATCH_MP_TAC INCREASING THEN SIMP_TAC std_ss [disjointed_subset] \\
@@ -5196,7 +5222,7 @@ val lemma1 = prove (
 
 val lemma2 = prove (
   ``!A. (!m n. m <> n ==> DISJOINT (A m) (A n)) <=> disjoint_family A``,
-  STRIP_TAC THEN SIMP_TAC std_ss [disjoint_family, disjoint_family_on] THEN
+  STRIP_TAC THEN SIMP_TAC std_ss [disjoint_family_on] THEN
   SET_TAC []);
 
 val lemma3 = prove (
@@ -5355,12 +5381,11 @@ val measure_liminf = store_thm
       FIRST_X_ASSUM MATCH_MP_TAC \\
       Q.EXISTS_TAC `n'` >> RW_TAC arith_ss [] ]);
 
-(* An extended version of `limsup_suminf_indicator` with spaces (moved from borelTheory) *)
-val limsup_suminf_indicator_space = store_thm
-  ("limsup_suminf_indicator_space",
-  ``!a A. sigma_algebra a /\ (!n. A n IN subsets a) ==>
-         (limsup A = {x | x IN space a /\ (suminf (\n. indicator_fn (A n) x) = PosInf)})``,
- (* proof *)
+(* An extended version of `limsup_suminf_indicator` (now removed) with spaces *)
+Theorem limsup_suminf_indicator_space :
+    !a A. sigma_algebra a /\ (!n. A n IN subsets a) ==>
+         (limsup A = {x | x IN space a /\ (suminf (\n. indicator_fn (A n) x) = PosInf)})
+Proof
     RW_TAC std_ss [EXTENSION, IN_LIMSUP, GSPECIFICATION, indicator_fn_def]
  >> `(?N. INFINITE N /\ !n. n IN N ==> x IN A n) = ~(?m. !n. m <= n ==> x NOTIN A n)`
      by METIS_TAC [Q.SPEC `\n. x IN A n` infinitely_often_lemma]
@@ -5431,7 +5456,8 @@ val limsup_suminf_indicator_space = store_thm
           RW_TAC arith_ss [SUBSET_DEF, IN_COUNT, GSPECIFICATION]) \\
       DISCH_THEN (STRIP_ASSUME_TAC o (Q.SPEC `n`)) \\
       Q.EXISTS_TAC `n'` \\
-      MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `&n` >> art [] ]);
+      MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `&n` >> art [] ]
+QED
 
 (***********************)
 (*   Further Results   *)

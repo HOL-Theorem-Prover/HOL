@@ -23,6 +23,7 @@ sig
   val strictify_thm   : thm -> thm
 
   val CBV_CONV        : compset -> conv
+  val CBVn_CONV       : int -> compset -> conv
   val WEAK_CBV_CONV   : compset -> conv
 
   val the_compset     : compset
@@ -33,6 +34,7 @@ sig
   val del_funs        : thm list -> unit
 
   val EVAL_CONV       : conv
+  val EVALn_CONV      : int -> conv
   val EVAL_RULE       : thm -> thm
   val EVAL_TAC        : tactic
 

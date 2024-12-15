@@ -39,22 +39,13 @@ val _ = new_theory "VectorSpace";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* val _ = load "fieldTheory"; *)
-open groupTheory fieldTheory;
-
-(* Get dependent theories in lib *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory;
-
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory;
 
+open groupTheory fieldTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Vector Space Documentation                                                *)

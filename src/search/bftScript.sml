@@ -9,8 +9,6 @@ open HolKernel boolLib bossLib
 val set_ss = list_ss ++ PRED_SET_ss;
 val dnf_ss = bool_ss ++ boolSimps.DNF_ss ++ rewrites [AND_IMP_INTRO];
 
-val _ = numLib.prefer_num();
-
 val _ = new_theory "bft";
 
 (*---------------------------------------------------------------------------*)

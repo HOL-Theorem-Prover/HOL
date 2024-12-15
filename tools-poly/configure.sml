@@ -237,17 +237,17 @@ in
       ("val POLY_LDFLAGS = [" ^
        String.concatWith ", "
                          (map quote
-                              (if null POLY_LDFLAGS then machine_flags
-                               else POLY_LDFLAGS)) ^
+                              ((if null POLY_LDFLAGS then machine_flags
+                                else POLY_LDFLAGS) @ EXTRA_POLY_LDFLAGS)) ^
        "]\n"),
    "val POLY_LDFLAGS_STATIC =" -->
       ("val POLY_LDFLAGS_STATIC = [" ^
        String.concatWith ", "
                          (map quote
-                              (if null POLY_LDFLAGS_STATIC then
-                                 ("-static" :: machine_flags)
-                               else
-                                 POLY_LDFLAGS_STATIC)) ^
+                              ((if null POLY_LDFLAGS_STATIC then
+                                  ("-static" :: machine_flags)
+                                else
+                                  POLY_LDFLAGS_STATIC) @ EXTRA_POLY_LDFLAGS)) ^
        "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
@@ -425,13 +425,14 @@ val _ = work_in_dir
 val _ = work_in_dir
           "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
           (fn () => (OS.FileSys.chDir "..";
-                     systeml [lexer, "QuoteFilter"] ;
+                     systeml [lexer, "HolLex"];
+                     systeml [lexer, "QuoteFilter"];
                      OS.FileSys.chDir "poly";
                      polyc_compile (SOME "../mlton/Holmake.mlb")
                                    "poly-Holmake.ML" hmakebin))
 
 (* unquote - the quotation filter *)
-val _ = work_in_dir "unquote." qfdir
+val _ = work_in_dir "unquote" qfdir
                     (fn () => (polyc_compile NONE "poly-unquote.ML" qfbin))
 
 (* holdeptool *)
@@ -467,14 +468,15 @@ val _ = work_in_dir "genscriptdep"
 end (* local *)
 
 (*---------------------------------------------------------------------------
-    Instantiate tools/hol-mode.src, and put it in tools/hol-mode.el
+    Instantiate tools/editor-modes/emacs/hol-mode.src, and put it into
+    hol-mode.el in the same directory.
  ---------------------------------------------------------------------------*)
 
 val _ =
  let open TextIO
      val _ = echo "Making hol-mode.el (for Emacs)"
-     val src = fullPath [holdir, "tools", "hol-mode.src"]
-    val target = fullPath [holdir, "tools", "hol-mode.el"]
+     val src = fullPath [holdir, "tools", "editor-modes", "emacs", "hol-mode.src"]
+    val target = fullPath [holdir, "tools", "editor-modes", "emacs", "hol-mode.el"]
  in
     fill_holes (src, target)
       ["(defcustom hol-executable HOL-EXECUTABLE\n"
@@ -488,13 +490,13 @@ val _ =
  end;
 
 (*---------------------------------------------------------------------------
-    Instantiate tools/vim/*.src
+    Instantiate tools/editor-modes/vim/*.src
  ---------------------------------------------------------------------------*)
 
 val _ =
   let open TextIO
-    val _ = echo "Making tools/vim/*"
-    val pref = fullPath [holdir, "tools", "vim"]
+    val _ = echo "Making tools/editor-modes/vim/*"
+    val pref = fullPath [holdir, "tools", "editor-modes", "vim"]
     val src1 = fullPath [pref, "hol.src"]
     val tar1 = fullPath [pref, "hol.vim"]
     val src2 = fullPath [pref, "vimhol.src"]
@@ -517,12 +519,13 @@ val _ =
     closeOut tar3;
     output(tar4,"augroup filetypedetect\n");
     output(tar4,"  au BufRead,BufNewFile *.sml let maplocalleader = \"h\" | source "^tar1^"\n");
+    output(tar4,"  au BufRead,BufNewFile *?Script.sml setlocal filetype=hol4script\n");
     output(tar4,"  \" recognise pre-munger files as latex source\n");
     output(tar4,"  au BufRead,BufNewFile *.htex setlocal filetype=htex syntax=tex\n");
     output(tar4,"  \"Uncomment the line below to automatically load Unicode\n");
     output(tar4,"  \"au BufRead,BufNewFile *?Script.sml source "^fullPath [pref, "holabs.vim"]^"\n");
     output(tar4,"  \"Uncomment the line below to fold proofs\n");
-    output(tar4,"  \"au BufRead,BufNewFile *?Script.sml setlocal foldmethod=marker foldmarker=Proof,QED foldnestmax=1\n");
+    output(tar4,"  \"au BufRead,BufNewFile *?Script.sml setlocal foldmethod=syntax foldnestmax=1\n");
     output(tar4,"augroup END\n");
     closeOut tar4
   end;

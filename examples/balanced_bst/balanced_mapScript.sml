@@ -9,7 +9,7 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 (* ------------------------ Preliminaries ------------------------ *)
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 Triviality list_rel_lem1:
   !f l l'.

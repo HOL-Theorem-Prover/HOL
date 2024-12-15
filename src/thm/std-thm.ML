@@ -1106,8 +1106,7 @@ fun mk_defn_thm (witness_tag, c) =
     Primitive Definition Principles
    ---------------------------------------------------------------------- *)
 
-fun ERR f msg = HOL_ERR {origin_structure = "Thm",
-                         origin_function = f, message = msg}
+val ERR = mk_HOL_ERR "Thm"
 val TYDEF_ERR = ERR "prim_type_definition"
 val DEF_ERR   = ERR "new_definition"
 val SPEC_ERR  = ERR "new_specification"
@@ -1338,27 +1337,35 @@ local
       else
         raise ERR "compute" "types of lhs and rhs disagree"
     end;
+  val merge_tags = foldr (uncurry Tag.merge)
 in
   fun compute {cval_terms, cval_type, num_type, char_eqns} =
     let
+      val tag0 = merge_tags empty_tag (List.map (tag o snd) char_eqns)
       val char_eqns = List.map (I ## dest_thm) char_eqns
-      val _ = List.all (List.null o fst o snd) char_eqns
-      val tc = Compute.term_compute
-                { cval_terms = cval_terms,
-                  cval_type = cval_type,
-                  num_type = num_type,
-                  char_eqns = List.map (I ## snd) char_eqns }
+      val _ = List.all (List.null o fst o snd) char_eqns orelse
+              raise ERR "compute" "Characteristic equation with hypotheses"
+      val tc0 = Compute.term_compute
+                 { cval_terms = cval_terms,
+                   cval_type = cval_type,
+                   num_type = num_type,
+                   char_eqns = List.map (I ## snd) char_eqns }
     in
-      fn code_eqs => fn tm =>
+      fn code_eqs =>
         let
+          val tag1 = merge_tags tag0 (List.map tag code_eqs)
           val eqs = List.map dest_code_eqn code_eqs
-          val tm' = tc eqs tm
-          val eqn = safe_mk_eq tm tm'
+          val tc1 = tc0 eqs
         in
-          make_thm Count.Compute (Tag.empty_tag, empty_hyp, eqn)
+          fn tm =>
+            let
+              val tm' = tc1 tm
+              val eqn = safe_mk_eq tm tm'
+            in
+              make_thm Count.Compute (tag1, empty_hyp, eqn)
+            end
         end
     end;
 end (*local *)
 
 end (* Thm *)
-

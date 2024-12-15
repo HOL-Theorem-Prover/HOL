@@ -31,9 +31,7 @@ type thm_tactic = Abbrev.thm_tactic;
 
 
 fun UTILSLIB_ERR{function,message} =
-    HOL_ERR{origin_structure = "elsaUtils",
-            origin_function = function,
-            message = message};
+    mk_HOL_ERR "elsaUtils" function message
 
 (* Some general-purpose functions *)
 

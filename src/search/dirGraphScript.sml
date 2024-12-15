@@ -7,8 +7,6 @@ open HolKernel boolLib bossLib
 
 val set_ss = list_ss ++ PRED_SET_ss;
 
-val _ = numLib.prefer_num();
-
 val _ = new_theory "dirGraph";
 
 (*---------------------------------------------------------------------------*)

@@ -6,6 +6,7 @@ val _ = use "Holmake/Systeml.sml"
 
 val _ = use "../tools/Holmake/AttributeSyntax.sig";
 val _ = use "../tools/Holmake/AttributeSyntax.sml";
+val _ = use "../tools/Holmake/HolLex.sml";
 val _ = use "../tools/Holmake/QuoteFilter.sml";
 val _ = use "../tools/Holmake/HM_SimpleBuffer.sig";
 val _ = use "../tools/Holmake/HM_SimpleBuffer.sml";
@@ -17,22 +18,27 @@ val _ = use "../tools/Holmake/HOLFileSys.sig";
 val _ = use "../tools/Holmake/HOLFileSys.sml";
 val _ = use "../tools/Holmake/QFRead.sig";
 val _ = use "../tools/Holmake/QFRead.sml";
+val _ = use "../tools/Holmake/HolParser.sig";
+val _ = use "../tools/Holmake/HolParser.sml";
 val _ = use "poly/quse.sig";
 val _ = use "poly/quse.sml";
 
 local
 
-  fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
-               TextIO.flushOut TextIO.stdErr;
-               raise Fail s)
+  val quiet_load = ref false;
+  fun maybeWriteStderr s =
+    if !quiet_load then () else
+    (TextIO.output(TextIO.stdErr, s ^ "\n");
+     TextIO.flushOut TextIO.stdErr);
 
-  fun warn s = (TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n");
-                TextIO.flushOut TextIO.stdErr)
+  fun die s = (maybeWriteStderr s; raise Fail s)
+
+  fun warn s = maybeWriteStderr ("WARNING: " ^ s)
 
   val meta_debug = ref false
 
   fun MDBG s = if !meta_debug then
-                 TextIO.output(TextIO.stdOut, "META_DEBUG: " ^ s() ^ "\n")
+                 TextIO.print("META_DEBUG: " ^ s() ^ "\n")
                else ()
 
   infix ++
@@ -53,12 +59,11 @@ fun quse s = let
 in
   QUse.use s ;
   loadpathdb := Binarymap.insert(!loadpathdb,OS.Path.file full,OS.Path.dir full)
-end handle OS.Path.Path => die ("Path exception in quse "^s)
-             | e => (TextIO.output(TextIO.stdErr,
-                                   "error in quse " ^ s ^ " : " ^
-                                   General.exnMessage e ^ "\n");
-                     TextIO.flushOut TextIO.stdErr;
-                     raise e)
+end handle
+    OS.Path.Path => die ("Path exception in quse "^s)
+  | e => (
+    maybeWriteStderr("error in quse " ^ s ^ " : " ^ General.exnMessage e);
+    PolyML.Exception.reraise e)
 
 fun myuse f =
   let val op ++ = OS.Path.concat
@@ -66,7 +71,7 @@ fun myuse f =
       val pd = !PolyML.Compiler.printDepth
   in
     PolyML.print_depth 0;
-    (quse f handle e => (PolyML.print_depth pd; raise e));
+    (quse f handle e => (PolyML.print_depth pd; PolyML.Exception.reraise e));
     PolyML.print_depth pd
   end handle OS.Path.Path => die ("Path exception in myuse "^f)
 
@@ -130,17 +135,19 @@ and load ps modPath =
        (l ".ui"; l ".uo")
        handle e =>
               (loadedMods := Binaryset.delete (!loadedMods, modName);
-               raise e))
-  end handle e => (TextIO.output(TextIO.stdErr,
-                                 "error in load " ^ modPath ^ " : " ^
-                                 General.exnMessage e ^ "\n");
-                   TextIO.flushOut TextIO.stdErr;
-                   raise e)
+               PolyML.Exception.reraise e))
+  end handle e => (
+    maybeWriteStderr("error in load " ^ modPath ^ " : " ^ General.exnMessage e);
+    PolyML.Exception.reraise e)
 in
 
   structure Meta = struct
     val meta_debug = meta_debug
+    val quiet_load = quiet_load
     val load = load []
+    fun qload s = let
+      val x = !quiet_load
+      in quiet_load := true; load s; quiet_load := x end
     val loadPath = loadPath;
     fun loaded () = Binaryset.listItems (!loadedMods);
     fun fakeload s =

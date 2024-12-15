@@ -1,2 +1,2 @@
-INCDIRS = examples/miller/formalize src/probability src/real/analysis
+INCDIRS = examples/miller/formalize src/probability examples/probability/legacy src/real/analysis
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/%),$(INCDIRS))

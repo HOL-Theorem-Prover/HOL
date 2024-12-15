@@ -12,15 +12,16 @@ val _ = new_theory "countAKS";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
+     rich_listTheory listRangeTheory numberTheory combinatoricsTheory
+     logrootTheory pairTheory optionTheory primeTheory;
+
+open ringTheory;
 
 (* Get dependent theories local *)
-(* val _ = load "countParamTheory"; *)
 open countMonadTheory countMacroTheory;
 open countModuloTheory countOrderTheory;
 open countParamTheory;
@@ -35,33 +36,11 @@ open bitsizeTheory complexityTheory;
 open loopIncreaseTheory loopDecreaseTheory;
 open loopDivideTheory loopListTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory listTheory arithmeticTheory;
-open dividesTheory gcdTheory;
-open rich_listTheory listRangeTheory;
-
-(* (* val _ = load "logPowerTheory"; *) *)
-open logrootTheory logPowerTheory;
-
-(* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
-open pairTheory optionTheory;
 
-(* val _ = load "ringInstancesTheory"; *)
-open ringInstancesTheory; (* for ZN order *)
-
-(* val _ = load "computeAKSTheory"; *)
 open computeParamTheory computeAKSTheory;
 open computeBasicTheory; (* for power_free_check_eqn *)
 
-(* (* val _ = load "computePolyTheory"; *) *)
 open computePolyTheory; (* for unity_mod_monomial *)
 (* Try: import computeRing rather than computePoly *)
 
@@ -70,6 +49,11 @@ open polynomialTheory polyWeakTheory;
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
+val _ = intLib.deprecate_int ();
+
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* AKS computations in monadic style Documentation                           *)
@@ -1223,7 +1207,7 @@ val aksM_steps_base = store_thm(
      so 1 < size n                       by size n <> 0, size n <> 1
     ==> 1 < size n ** 5                  by ONE_LT_EXP
    Thus 1 + HALF (size n ** 5)
-     <= size n ** 5                      by SUC_HALF_LE
+     <= size n ** 5                      by HALF_ADD1_LE
      or c <= size n ** 5                 by above
     and size c <= size (size n ** 5)     by size_monotone_le
                <= 5 * size (size n)      by size_exp_upper_alt
@@ -1282,7 +1266,7 @@ val aksM_steps_upper = store_thm(
   `size n <> 1` by fs[size_eq_1] >>
   `1 < size n` by decide_tac >>
   `1 < size n ** 5` by rw[ONE_LT_EXP] >>
-  `1 + HALF (size n ** 5) <= size n ** 5` by rw[SUC_HALF_LE] >>
+  `1 + HALF (size n ** 5) <= size n ** 5` by rw[HALF_ADD1_LE] >>
   decide_tac) >>
   `size c <= 5 * size n` by
     (`size c <= size (size n ** 5)` by rw[size_monotone_le] >>

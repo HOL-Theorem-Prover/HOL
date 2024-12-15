@@ -16,12 +16,15 @@ open realTheory realLib real_sigmaTheory iterateTheory real_topologyTheory
      seqTheory limTheory transcTheory metricTheory listTheory rich_listTheory
      cardinalTheory;
 
-open extreal_baseTheory; (* Base theorems are moved here (to be re-exported) *)
+open extreal_baseTheory real_of_ratTheory;
 
 val _ = new_theory "extreal";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 val set_ss = std_ss ++ PRED_SET_ss;
+
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
 
 (* ------------------------------------------------------------------------- *)
 (*   Transcendental Operations                                               *)
@@ -4961,8 +4964,11 @@ Definition Q_set :
     Q_set = IMAGE Normal q_set
 End
 
-(* DOUBLE-STRUCK CAPITAL Q *)
-val _ = Unicode.unicode_version {u = UTF8.chr 0x211A, tmnm = "Q_set"};
+(* DOUBLE-STRUCK CAPITAL Q, plus a "star" of superscript *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x211A ^ UTF8.chr 0xA673,
+                                 tmnm = "Q_set"};
+val _ = TeX_notation {hol = "Q_set",
+                      TeX = ("\\ensuremath{\\mathbb{Q}\\HOLTokenSupStar{}}", 1)};
 
 (* old definition as equivalent theorem (not used anywhere) *)
 Theorem Q_set_def :
@@ -4993,8 +4999,7 @@ Proof
      ‘&b <> (0 :real)’ by rw [] \\
      ‘&b <> (0 :extreal)’ by METIS_TAC [extreal_11, extreal_of_num_def] \\
       rw [extreal_div_eq, GSYM extreal_ainv_def] \\
-      qexistsl_tac [‘a’, ‘b’] >> art [] >> simp[]
-    ]
+      qexistsl_tac [‘a’, ‘b’] >> art [] >> simp[] ]
 QED
 
 Theorem Q_not_infty :
@@ -5105,7 +5110,7 @@ Proof
 QED
 
 Theorem Q_DENSE_IN_R_LEMMA :
-    !x y. (0 <= x) /\ (x < y) ==> ?r. (r IN Q_set) /\ (x < r) /\ (r < y)
+    !x y. 0 <= x /\ x < y ==> ?r. r IN Q_set /\ x < r /\ r < y
 Proof
     rw [Q_set]
  >> Cases_on ‘x = PosInf’ >- fs [lt_infty]
@@ -6394,7 +6399,7 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-(* Limits of extreal functions ('a -> extreal)                               *)
+(* Limits of extreal functions ('a -> extreal) and continuous functions      *)
 (* ------------------------------------------------------------------------- *)
 
 Definition ext_tendsto_def :
@@ -6407,6 +6412,33 @@ Definition extreal_lim_def :
     extreal_lim net f = @l. ext_tendsto f l net
 End
 Overload lim = “extreal_lim”
+
+(* NOTE: The type of ‘f’ is “:'a -> extreal”, suitable for any use. *)
+Definition ext_continuous_def :
+    ext_continuous f net <=> ext_tendsto f (f (netlimit net)) net
+End
+Overload continuous = “ext_continuous”
+
+(* NOTE: because of the type of ‘at x within s’, here the type of ‘f’ is
+  “:real -> extreal”. For a function ‘g :extreal -> extreal’, to say it's
+   continuous on a set ‘s’ of (normal) real numbers, one can write:
+
+     (g o Normal) continuous_on s
+
+   I think it's not very meaningful to say a function "continuous at PosInf",
+   thus no need to invent another net "at ... within" for extreals.
+   -- Chun Tian (binghe), 15 ago 2024
+*)
+Definition ext_continuous_on_def :
+    ext_continuous_on f s <=> !x. x IN s ==> ext_continuous f (at x within s)
+End
+Overload continuous_on = “ext_continuous_on”
+
+val _ = set_fixity "bounded_on" (Infix(NONASSOC, 450));
+Definition bounded_on_def :
+    ext_bounded_on f s <=> ?c. !x. x IN s ==> abs x <= Normal c
+End
+Overload bounded_on = “ext_bounded_on”
 
 Theorem EXTREAL_LIM :
     !(f :'a -> extreal) l net.

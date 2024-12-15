@@ -20,16 +20,19 @@ val assert = Lib.assert;              (* conflict with hurdUtils.assert *)
 
 val _ = add_implicit_rewrites pairTheory.pair_rws;
 
+val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
+
 (*---------------------------------------------------------------------------*)
 (* Specialize net theorems to sequences:num->real                            *)
 (*---------------------------------------------------------------------------*)
 
 val geq = Term `$>= : num->num->bool`;
 
-val _ = hide "-->";  (* hide previous definition in quotient library *)
-
-val tends_num_real = new_infixr_definition("tends_num_real",
-  “$--> x x0 = (x tends x0)(mtop(mr1), ^geq)”,750);
+Definition tends_num_real :
+    tends_num_real x x0 = (x tends x0)(mtop(mr1), ^geq)
+End
+Overload "-->" = “tends_num_real”
 
 val SEQ = store_thm("SEQ",
   “!x x0.
@@ -42,7 +45,7 @@ val SEQ = store_thm("SEQ",
 
 (* connection to real_topologyTheory *)
 Theorem LIM_SEQUENTIALLY_SEQ :
-    !s l. (real_topology$--> s l) sequentially <=> (seq$--> s l)
+    !s l. (s --> l) sequentially <=> (s --> l)
 Proof
     REWRITE_TAC [LIM_SEQUENTIALLY, SEQ, GREATER_EQ, dist]
 QED
@@ -104,23 +107,25 @@ Proof
     rw [cauchy_def, dist]
 QED
 
-val _ = hide "lim";
-
-val lim = new_definition("lim",
-  “lim f = @l. f --> l”);
+Definition lim :
+    limseq f = @l. f --> l
+End
+Overload lim = “limseq”
 
 (* connection to real_topologyTheory *)
 Theorem LIM_SEQUENTIALLY_SEQ' :
-    !f. reallim sequentially f = lim f
+    !f. lim sequentially f = lim f
 Proof
     REWRITE_TAC [LIM_SEQUENTIALLY_SEQ, reallim, lim]
 QED
 
-val SEQ_LIM = store_thm("SEQ_LIM",
-  “!f. convergent f = (f --> lim f)”,
+Theorem SEQ_LIM :
+    !f. convergent f <=> f --> lim f
+Proof
   GEN_TAC THEN REWRITE_TAC[convergent] THEN EQ_TAC THENL
    [DISCH_THEN(MP_TAC o SELECT_RULE) THEN REWRITE_TAC[lim],
-    DISCH_TAC THEN EXISTS_TAC “lim f” THEN POP_ASSUM ACCEPT_TAC]);
+    DISCH_TAC THEN EXISTS_TAC “lim f” THEN POP_ASSUM ACCEPT_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define a subsequence                                                      *)

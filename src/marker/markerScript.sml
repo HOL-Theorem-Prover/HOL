@@ -185,8 +185,14 @@ val hideCONG = store_thm(
   “hide nm x = hide nm x”,
   REWRITE_TAC[]);
 
+val NoAsms = new_definition("NoAsms", “NoAsms = T”)
+val IgnAsm_def = new_definition("IgnAsm_def", “IgnAsm (v:'a) = T”)
+
 val _ = Tactic.export_ignore {Name = "hide", Thy = "marker"}
 
 val _ = List.app permahide [“hide”, “AC”, “Req0”, “ReqD”]
+
+
+
 
 val _ = export_theory();

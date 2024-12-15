@@ -1,26 +1,22 @@
-\ensuremath{\alpha} \HOLTyOp{dupop20171208a\$testtype} = \HOLTokenLeftrec{}
-   \HOLFieldName{fld1} : \ensuremath{\alpha};
-   \HOLFieldName{fld2} : \HOLTyOp{num} -> \HOLTyOp{bool}
-\HOLTokenRightrec{}
+\ensuremath{\alpha} \HOLTyOp{dupop20171208a\$testtype} = \HOLTokenLeftrec{} \HOLFieldName{fld1} : \ensuremath{\alpha}; \HOLFieldName{fld2} : \HOLTyOp{num} \HOLTokenMap{} \HOLTyOp{bool} \HOLTokenRightrec{}
 
 (\ensuremath{\gamma}, 'dd) \HOLTyOp{testtype} = \HOLTokenLeftrec{}
    \HOLFieldName{fld0} : \HOLTyOp{num};
    \HOLFieldName{fld1} : \ensuremath{\gamma};
-   \HOLFieldName{fld3} : 'dd -> \HOLTyOp{bool};
+   \HOLFieldName{fld3} : 'dd \HOLTokenMap{} \HOLTyOp{bool};
    \HOLFieldName{fld4} : \HOLTyOp{num};
-   \HOLFieldName{fld5} : \HOLTyOp{num} -> \HOLTyOp{num};
-   \HOLFieldName{fld6} : \HOLTyOp{num} -> \HOLTyOp{bool}
+   \HOLFieldName{fld5} : \HOLTyOp{num} \HOLTokenMap{} \HOLTyOp{num};
+   \HOLFieldName{fld6} : \HOLTyOp{num} \HOLTokenMap{} \HOLTyOp{bool}
 \HOLTokenRightrec{}
 
-\ensuremath{\alpha} \HOLTyOp{dupop20171208a\$testtype} =
-  \HOLTokenLeftrec{} \HOLFieldName{fld1} : \ensuremath{\alpha}; \HOLFieldName{fld2} : \HOLTyOp{num} -> \HOLTyOp{bool} \HOLTokenRightrec{}
+\ensuremath{\alpha} \HOLTyOp{dupop20171208a\$testtype} = \HOLTokenLeftrec{} \HOLFieldName{fld1} : \ensuremath{\alpha}; \HOLFieldName{fld2} : \HOLTyOp{num} \HOLTokenMap{} \HOLTyOp{bool} \HOLTokenRightrec{}
 
 (\ensuremath{\gamma}, 'dd) \HOLTyOp{testtype} =
   \HOLTokenLeftrec{}
     \HOLFieldName{fld0} : \HOLTyOp{num};
     \HOLFieldName{fld1} : \ensuremath{\gamma};
-    \HOLFieldName{fld3} : 'dd -> \HOLTyOp{bool};
+    \HOLFieldName{fld3} : 'dd \HOLTokenMap{} \HOLTyOp{bool};
     \HOLFieldName{fld4} : \HOLTyOp{num};
-    \HOLFieldName{fld5} : \HOLTyOp{num} -> \HOLTyOp{num};
-    \HOLFieldName{fld6} : \HOLTyOp{num} -> \HOLTyOp{bool}
+    \HOLFieldName{fld5} : \HOLTyOp{num} \HOLTokenMap{} \HOLTyOp{num};
+    \HOLFieldName{fld6} : \HOLTyOp{num} \HOLTokenMap{} \HOLTyOp{bool}
   \HOLTokenRightrec{}

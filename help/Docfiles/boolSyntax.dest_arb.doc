@@ -6,7 +6,7 @@
 Extract the type of an instance of the {ARB} constant.
 
 \LIBRARY
-
+boolSyntax
 
 \DESCRIBE
 If {M} is an instance of the constant {ARB} with type {ty}, then

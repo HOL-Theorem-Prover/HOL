@@ -106,25 +106,21 @@ val assert_option_then_thm = store_thm("assert_option_then_thm",
 
 (* -- for fast evaluation -- *)
 
-val DT_DF_then_orelse = prove(
-  ``((DT >> p) (g,[]) = NONE) /\ ((DF >> p) (g,[]) = NONE) /\
-    ((DT >> p) (g,F::b) = NONE) /\ ((DF >> p) (g,T::b) = NONE) /\
-    ((DF >> p) (g,F::b) = p (g,b)) /\ ((DT >> p) (g,T::b) = p (g,b)) /\
-    (((DT >> f) ++ p) (g,[]) = p (g,[])) /\ (((DF >> f) ++ p) (g,[]) = p (g,[])) /\
-    (((DT >> f1) ++ (DF >> f2)) (g,F::b) = f2 (g,b)) /\
-    (((DF >> f2) ++ (DT >> f1)) (g,F::b) = f2 (g,b)) /\
-    (((DT >> f1) ++ (DF >> f2)) (g,T::b) = f1 (g,b)) /\
-    (((DF >> f2) ++ (DT >> f1)) (g,T::b) = f1 (g,b)) /\
-    (((DT >> f) ++ p) (g,F::b) = p (g,F::b)) /\
-    (((DF >> f) ++ p) (g,T::b) = p (g,T::b))``,
-  SIMP_TAC std_ss [DF_def,DT_def,option_then_def,option_orelse_def,LET_DEF] THEN METIS_TAC []);
-
-fun permanently_add_to_compset name thm = let
-  val _ = save_thm(name,thm)
-  val _ = computeLib.add_persistent_funs [name]
-  in print ("Permanently added to compset: "^name^"\n") end;
-
-val _ = permanently_add_to_compset "DT_DF_then_orelse" DT_DF_then_orelse;
+Theorem DT_DF_then_orelse[compute]:
+  ((DT >> p) (g,[]) = NONE) /\ ((DF >> p) (g,[]) = NONE) /\
+  ((DT >> p) (g,F::b) = NONE) /\ ((DF >> p) (g,T::b) = NONE) /\
+  ((DF >> p) (g,F::b) = p (g,b)) /\ ((DT >> p) (g,T::b) = p (g,b)) /\
+  (((DT >> f) ++ p) (g,[]) = p (g,[])) /\ (((DF >> f) ++ p) (g,[]) = p (g,[])) /\
+  (((DT >> f1) ++ (DF >> f2)) (g,F::b) = f2 (g,b)) /\
+  (((DF >> f2) ++ (DT >> f1)) (g,F::b) = f2 (g,b)) /\
+  (((DT >> f1) ++ (DF >> f2)) (g,T::b) = f1 (g,b)) /\
+  (((DF >> f2) ++ (DT >> f1)) (g,T::b) = f1 (g,b)) /\
+  (((DT >> f) ++ p) (g,F::b) = p (g,F::b)) /\
+  (((DF >> f) ++ p) (g,T::b) = p (g,T::b))
+Proof
+  SIMP_TAC std_ss [DF_def,DT_def,option_then_def,option_orelse_def,LET_DEF] >>
+  METIS_TAC []
+QED
 
 val DT_over_DF_lemma = prove(
   ``((DT >> x) ++ ((DF >> y) ++ (DT >> z)) = (DT >> (x ++ z)) ++ (DF >> y)) /\

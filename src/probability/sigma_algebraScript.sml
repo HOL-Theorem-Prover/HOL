@@ -2,8 +2,7 @@
 (* The (shared) theory of sigma-algebra and other systems of sets (ring,     *)
 (* semiring, and dynkin system) used in measureTheory/real_measureTheory     *)
 (*                                                                           *)
-(* Author: Chun Tian (2018-2020)                                             *)
-(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
+(* Author: Chun Tian (2018 - 2023)                                           *)
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Tarek Mhamdi, Osman Hasan, Sofiene Tahar [3]         *)
 (* HVG Group, Concordia University, Montreal (2013, 2015)                    *)
@@ -18,7 +17,7 @@ open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory optionTheory pairTheory combinTheory pred_setTheory
      pred_setLib numLib realLib seqTheory topologyTheory hurdUtils
-     util_probTheory;
+     util_probTheory res_quanTools;
 
 val _ = new_theory "sigma_algebra";
 
@@ -26,6 +25,8 @@ val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 val set_ss = std_ss ++ PRED_SET_ss;
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
+val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
 
 val _ = hide "S";
 
@@ -509,6 +510,14 @@ val SIGMA_ALGEBRA_SIGMA = store_thm
    >> DISCH_THEN MATCH_MP_TAC
    >> RW_TAC std_ss []
    >> PROVE_TAC [SUBSET_DEF]);
+
+Theorem SIGMA_ALGEBRA_SIGMA_UNIV :
+    !sts. sigma_algebra (sigma UNIV sts)
+Proof
+    Q.X_GEN_TAC ‘sts’
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
+ >> rw [subset_class_def]
+QED
 
 (* power set of any space gives the largest possible algebra and sigma-algebra *)
 val POW_ALGEBRA = store_thm
@@ -3224,10 +3233,36 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The smallest sigma-algebra on `sp` that makes `f` measurable *)
-val sigma_function_def = Define
-   `sigma_function sp A f = (sp,IMAGE (\s. PREIMAGE f s INTER sp) (subsets A))`;
+Definition sigma_function_def :
+    sigma_function sp A f = (sp,IMAGE (\s. PREIMAGE f s INTER sp) (subsets A))
+End
 
-val _ = overload_on ("sigma", ``sigma_function``);
+Overload sigma = “sigma_function”
+
+Theorem space_sigma_function :
+    !sp A f. space (sigma_function sp A f) = sp
+Proof
+    rw [sigma_function_def]
+QED
+
+(* For ‘sigma_function sp A f’ to be a sigma_algebra, A must be sigma_algebra *)
+Theorem sigma_algebra_sigma_function :
+    !sp A f. sigma_algebra A /\ f IN (sp -> space A) ==>
+             sigma_algebra (sigma_function sp A f)
+Proof
+    rw [sigma_function_def]
+ >> MATCH_MP_TAC PREIMAGE_SIGMA_ALGEBRA >> art []
+QED
+
+Theorem sigma_function_subset :
+   !A B f. sigma_algebra A /\ f IN measurable A B ==>
+           subsets (sigma (space A) B f) SUBSET subsets A
+Proof
+    rw [sigma_function_def]
+ >> rw [SUBSET_DEF]
+ >> rename1 ‘t IN subsets B’
+ >> FULL_SIMP_TAC std_ss [IN_MEASURABLE]
+QED
 
 Theorem SIGMA_MEASURABLE :
     !sp A f. sigma_algebra A /\ f IN (sp -> space A) ==>
@@ -3239,13 +3274,81 @@ Proof
 QED
 
 (* Definition 7.5 of [7, p.51], The smallest sigma-algebra on `sp` that makes all `f`
-   simultaneously measurable. *)
-val sigma_functions_def = Define
-   `sigma_functions sp A f (J :'index set) =
+   simultaneously measurable.
+ *)
+Definition sigma_functions_def :
+    sigma_functions sp A f (J :'index set) =
       sigma sp (BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp)
-                                           (subsets (A i))) J))`;
+                                           (subsets (A i))) J))
+End
 
-val _ = overload_on ("sigma", ``sigma_functions``);
+Overload sigma = “sigma_functions”
+
+Theorem space_sigma_functions :
+    !sp A f (J :'index set). space (sigma_functions sp A f J) = sp
+Proof
+    rw [sigma_functions_def, SPACE_SIGMA]
+QED
+
+Theorem sigma_algebra_sigma_functions :
+    !sp A f (J :'index set).
+            (!i. f i IN (sp -> space (A i))) ==>
+            sigma_algebra (sigma_functions sp A f J)
+Proof
+    rw [sigma_functions_def, IN_FUNSET]
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
+ >> rw [subset_class_def, IN_BIGUNION_IMAGE]
+ >> rw [PREIMAGE_def]
+QED
+
+(* The sigma algebra generated from A/B-measurable functions does not exceed A *)
+Theorem sigma_functions_subset :
+    !A B f (J :'index set). sigma_algebra A /\
+            (!i. i IN J ==> sigma_algebra (B i)) /\
+            (!i. i IN J ==> f i IN measurable A (B i)) ==>
+            subsets (sigma (space A) B f J) SUBSET subsets A
+Proof
+    rw [sigma_functions_def]
+ >> MATCH_MP_TAC SIGMA_SUBSET >> art []
+ >> rw [SUBSET_DEF, IN_BIGUNION_IMAGE]
+ >> rename1 ‘t IN subsets (B i)’
+ >> Q.PAT_X_ASSUM ‘!i. i IN J ==> f i IN measurable A (B n)’ (MP_TAC o (Q.SPEC ‘i’))
+ >> rw [IN_MEASURABLE]
+QED
+
+(* ‘sigma_functions’ reduce to ‘sigma_function’ when there's only one function *)
+Theorem sigma_functions_1 :
+    !sp A f. sigma_algebra A /\ f 0 IN (sp -> space A) ==>
+             sigma sp (\n. A) f (count 1) = sigma sp A (f 0)
+Proof
+    rw [sigma_functions_def]
+ >> Know ‘BIGUNION
+            (IMAGE (\n. IMAGE (\s. PREIMAGE (f n) s INTER sp) (subsets A)) (count 1)) =
+          IMAGE (\s. PREIMAGE (f 0) s INTER sp) (subsets A)’
+ >- rw [Once EXTENSION, IN_BIGUNION_IMAGE]
+ >> Rewr'
+ >> Know ‘IMAGE (\s. PREIMAGE (f 0) s INTER sp) (subsets A) =
+          subsets (sigma sp A (f 0))’
+ >- rw [sigma_function_def]
+ >> Rewr'
+ >> Q.ABBREV_TAC ‘B = sigma sp A (f 0)’
+ >> ‘sp = space B’ by METIS_TAC [space_sigma_function] >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_STABLE
+ >> Q.UNABBREV_TAC ‘B’
+ >> MATCH_MP_TAC sigma_algebra_sigma_function >> art []
+QED
+
+Theorem sigma_function_alt_sigma_functions :
+    !sp A X. sigma_algebra A /\ X IN (sp -> space A) ==>
+             sigma sp A X = sigma sp (\n. A) (\n x. X x) (count 1)
+Proof
+    rpt STRIP_TAC
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> Q.ABBREV_TAC ‘f = \n:num x. X x’
+ >> ‘X = f 0’ by METIS_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC sigma_functions_1
+ >> rw [Abbr ‘f’, ETA_THM]
+QED
 
 (* Lemma 7.5 of [7, p.51] *)
 Theorem SIGMA_SIMULTANEOUSLY_MEASURABLE :
@@ -3512,6 +3615,120 @@ Proof
             (MP_TAC o REWRITE_RULE [SIGMA_ALGEBRA_ALT]) \\
           rw [IN_FUNSET]) \\
       rw [Once EXTENSION, IN_PREIMAGE, IN_BIGUNION_IMAGE] >> METIS_TAC [] ]
+QED
+
+(* A good corollary of PREIMAGE_SIGMA *)
+Theorem IMAGE_SIGMA :
+    !sp sts f. subset_class sp sts /\ BIJ f sp (IMAGE f sp) ==>
+               IMAGE (IMAGE f) (subsets (sigma sp sts)) =
+               subsets (sigma (IMAGE f sp) (IMAGE (IMAGE f) sts))
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (MATCH_MP BIJ_INV
+                     (ASSUME “BIJ (f :'a -> 'b) (sp :'a -> bool) (IMAGE f sp)”))
+ >> rw []
+ >> qabbrev_tac ‘Z = IMAGE f sp’
+ >> qabbrev_tac ‘H = \s. PREIMAGE g s INTER Z’
+ >> Know ‘IMAGE (IMAGE f) sts = IMAGE H sts’
+ >- (rw [Abbr ‘H’, FUN_EQ_THM, Once EXTENSION, PREIMAGE_def] \\
+     EQ_TAC >> rw [Abbr ‘Z’]
+     >- (rename1 ‘s IN sts’ >> Q.EXISTS_TAC ‘s’ >> rw [] \\
+         EQ_TAC >> rw [] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
+           rename1 ‘g (f y) IN s’ \\
+           Suff ‘g (f y) = y’ >- rw [] \\
+           FIRST_X_ASSUM MATCH_MP_TAC \\
+           POP_ASSUM MP_TAC \\
+           Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+           fs [subset_class_def],
+           (* goal 2 (of 3) *)
+           rename1 ‘y IN s’ >> Q.EXISTS_TAC ‘y’ >> rw [] \\
+           POP_ASSUM MP_TAC \\
+           Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+           fs [subset_class_def],
+           (* goal 3 (of 3) *)
+           rename1 ‘y IN sp’ >> Q.EXISTS_TAC ‘y’ >> rw [] \\
+           Suff ‘g (f y) = y’ >- PROVE_TAC [] \\
+           FIRST_X_ASSUM MATCH_MP_TAC \\
+           POP_ASSUM MP_TAC \\
+           Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+           fs [subset_class_def] ]) \\
+    rename1 ‘s IN sts’ \\
+    Q.EXISTS_TAC ‘s’ >> rw [] \\
+    EQ_TAC >> rw [] >| (* 3 subgoals *)
+    [ (* goal 1 (of 3) *)
+      rename1 ‘y IN sp’ >> Q.EXISTS_TAC ‘y’ >> rw [] \\
+      Suff ‘g (f y) = y’ >- PROVE_TAC [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      POP_ASSUM MP_TAC \\
+      Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+      fs [subset_class_def],
+      (* goal 2 (of 3) *)
+      rename1 ‘g (f y) IN s’ \\
+      Suff ‘g (f y) = y’ >- PROVE_TAC [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      POP_ASSUM MP_TAC \\
+      Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+      fs [subset_class_def],
+      (* goal 3 (of 3) *)
+      rename1 ‘y IN s’ >> Q.EXISTS_TAC ‘y’ >> rw [] \\
+      POP_ASSUM MP_TAC \\
+      Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+      fs [subset_class_def] ])
+ >> Rewr'
+ >> qabbrev_tac ‘a = sigma sp sts’
+ >> ‘sigma_algebra a’ by rw [Abbr ‘a’, SIGMA_ALGEBRA_SIGMA]
+ >> Know ‘IMAGE (IMAGE f) (subsets a) = IMAGE H (subsets a)’
+ >- (rw [Abbr ‘H’, Once EXTENSION, PREIMAGE_def] \\
+     EQ_TAC >> rw [Abbr ‘Z’]
+     >- (rename1 ‘s IN subsets a’ \\
+         Q.EXISTS_TAC ‘s’ >> art [] \\
+         rw [Once EXTENSION] \\
+         EQ_TAC >> rw [] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
+           rename1 ‘g (f y) IN s’ \\
+           Suff ‘g (f y) = y’ >- rw [] \\
+           FIRST_X_ASSUM MATCH_MP_TAC \\
+           POP_ASSUM MP_TAC \\
+           Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+          ‘space a = sp’ by rw [Abbr ‘a’, SPACE_SIGMA] \\
+           fs [sigma_algebra_def, algebra_def, subset_class_def],
+           (* goal 2 (of 3) *)
+           rename1 ‘y IN s’ >> Q.EXISTS_TAC ‘y’ >> rw [] \\
+           POP_ASSUM MP_TAC \\
+           Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+          ‘space a = sp’ by rw [Abbr ‘a’, SPACE_SIGMA] \\
+           fs [sigma_algebra_def, algebra_def, subset_class_def],
+           (* goal 3 (of 3) *)
+           rename1 ‘y IN sp’ >> Q.EXISTS_TAC ‘y’ >> rw [] \\
+           Suff ‘g (f y) = y’ >- PROVE_TAC [] \\
+           FIRST_X_ASSUM MATCH_MP_TAC >> art [] ]) \\
+     rename1 ‘s IN subsets a’ \\
+     Q.EXISTS_TAC ‘s’ >> art [] \\
+     rw [Once EXTENSION] \\
+     EQ_TAC >> rw []
+     >- (rename1 ‘y IN sp’ >> Q.EXISTS_TAC ‘y’ >> art [] \\
+         Suff ‘g (f y) = y’ >- PROVE_TAC [] \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+     >- (rename1 ‘g (f y) IN s’ \\
+         Suff ‘g (f y) = y’ >- rw [] \\
+         FIRST_X_ASSUM MATCH_MP_TAC \\
+         POP_ASSUM MP_TAC \\
+         Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+        ‘space a = sp’ by rw [Abbr ‘a’, SPACE_SIGMA] \\
+         fs [sigma_algebra_def, algebra_def, subset_class_def]) \\
+     rename1 ‘y IN s’ >> Q.EXISTS_TAC ‘y’ >> art [] \\
+     POP_ASSUM MP_TAC \\
+     Suff ‘s SUBSET sp’ >- rw [SUBSET_DEF] \\
+    ‘space a = sp’ by rw [Abbr ‘a’, SPACE_SIGMA] \\
+     fs [sigma_algebra_def, algebra_def, subset_class_def])
+ >> Rewr'
+ >> qunabbrevl_tac [‘H’, ‘a’]
+ >> MATCH_MP_TAC PREIMAGE_SIGMA
+ >> rw [Abbr ‘Z’, IN_FUNSET]
+ >> rename1 ‘g (f y) IN sp’
+ >> Suff ‘g (f y) = y’ >- rw []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
 (* Lemma 2.2.5 of [9, p.177] (moving INTER outside of the sigma generator) *)
@@ -3789,14 +4006,64 @@ Proof
     irule MEASURABLE_PROD_SIGMA' >> simp[o_DEF,ETA_AX]
 QED
 
+Theorem algebra_finite_subsets_imp_sigma_algebra :
+    !a. algebra a /\ FINITE (subsets a) ==> sigma_algebra a
+Proof
+    rw [sigma_algebra_def]
+ >> ‘FINITE c’ by PROVE_TAC [SUBSET_FINITE_I]
+ >> MP_TAC (Q.ISPEC ‘c :('a set) set’ finite_decomposition_simple) >> rw []
+ >> MATCH_MP_TAC ALGEBRA_FINITE_UNION >> art []
+QED
+
+Theorem algebra_finite_space_imp_sigma_algebra :
+    !a. algebra a /\ FINITE (space a) ==> sigma_algebra a
+Proof
+    rw [sigma_algebra_def]
+ >> Know ‘subsets a SUBSET (POW (space a))’
+ >- (rw [Once SUBSET_DEF, IN_POW] \\
+     fs [algebra_def, subset_class_def])
+ >> DISCH_TAC
+ >> ‘FINITE (POW (space a))’ by PROVE_TAC [FINITE_POW]
+ >> ‘c SUBSET (POW (space a))’ by PROVE_TAC [SUBSET_TRANS]
+ >> ‘FINITE c’ by PROVE_TAC [SUBSET_FINITE_I]
+ >> MP_TAC (Q.ISPEC ‘c :('a set) set’ finite_decomposition_simple) >> rw []
+ >> MATCH_MP_TAC ALGEBRA_FINITE_UNION >> art []
+QED
+
+(* NOTE: The trivial algebras below are also sigma-algebra by above lemmas *)
+Theorem trivial_algebra_of_space :
+    !sp. algebra (sp, {{}; sp})
+Proof
+    rw [algebra_def, subset_class_def]
+ >> SET_TAC []
+QED
+
+Theorem trivial_algebra_of_two_sets :
+    !sp s. s SUBSET sp ==> algebra (sp, {{}; s; sp DIFF s; sp})
+Proof
+    rw [algebra_def, subset_class_def]
+ >> ASM_SET_TAC []
+QED
+
+(* NOTE: This is head (h) and tail (t) of one-time coin tossing *)
+Theorem trivial_algebra_of_two_points :
+    !h t. algebra ({h; t}, {{}; {h}; {t}; {h; t}})
+Proof
+    rw [algebra_def, subset_class_def]
+ >> ASM_SET_TAC []
+QED
+
 val _ = export_theory ();
 
 (* References:
 
-  [1] Hurd, J.: Formal verification of probabilistic algorithms. University of Cambridge (2001).
-  [2] Coble, A.R.: Anonymity, information, and machine-assisted proof. University of Cambridge (2010).
-  [3] Mhamdi, T., Hasan, O., Tahar, S.: Formalization of Measure Theory and Lebesgue Integration
-      for Probabilistic Analysis in HOL. ACM Trans. Embedded Comput. Syst. 12, 1--23 (2013).
+  [1] Hurd, J.: Formal verification of probabilistic algorithms. University of
+      Cambridge (2001).
+  [2] Coble, A.R.: Anonymity, information, and machine-assisted proof.
+      University of Cambridge (2010).
+  [3] Mhamdi, T., Hasan, O., Tahar, S.: Formalization of Measure Theory and
+      Lebesgue Integration for Probabilistic Analysis in HOL. ACM Trans.
+      Embedded Comput. Syst. 12, 1--23 (2013).
   [4] Wikipedia: https://en.wikipedia.org/wiki/Ring_of_sets
   [5] Wikipedia: https://en.wikipedia.org/wiki/Eugene_Dynkin
   [6] Wikipedia: https://en.wikipedia.org/wiki/Dynkin_system

@@ -1,5 +1,8 @@
 open Lib Type PP smpp PPBackEnd testutils
 
+val failcount = ref 0
+val _ = diemode := Remember failcount
+
 (* -------------------------------------------------------------------------- *)
 (* Test code for terminal styles                                              *)
 (* -------------------------------------------------------------------------- *)
@@ -926,3 +929,36 @@ in
     ("x {}", "(top x inil)")
   ]
 end;
+
+(* DBSearchParser tests *)
+local val dbsptests = [
+        ("", "", true),
+        ("", "ab", true),
+        ("ab", "", false),
+        ("a*", "", true),
+        ("abc", "ffgabchh", true),
+        ("abc", "ffgabhch", false),
+        ("left~or", "xor_exists_left_thm", true),
+        ("(left~or)_", "xor_exists_left_thm", true),
+        ("left|or", "exists_left_thm_or", true),
+        ("ab(ab)*", "abababc", true),
+        ("abab*", "aba", true),
+        ("ab(ab)?", "aba", true),
+        ("abab*", "ababb", true),
+        ("ababb*", "abab", true),
+        ("ababb*", "aba", false),
+        ("ab~cd~ef", "efabxcd", true)
+]
+
+fun test(p,s,r) =
+  (tprint (Lib.quote (String.toString p) ^ "  w/in  " ^
+           Lib.quote (String.toString s) ^ " = " ^ Bool.toString r);
+   require_msg (check_result (equal r))
+               Bool.toString
+               (fn (p,s) => DBSearchParser.contains_regexp p s)
+               (p,s))
+in
+  val _ = List.app (with_flag(Feedback.emit_WARNING, false) test) dbsptests
+end
+
+val _ = exit_count0 failcount

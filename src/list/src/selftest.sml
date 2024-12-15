@@ -64,6 +64,11 @@ val _ = app(test "LASTN_CONV" Term.compare term_to_string LASTN_CONV)
 val _ = app(test "LIST_EQ_SIMP_CONV" Term.compare term_to_string
                  listSimps.LIST_EQ_SIMP_CONV)
            [(``(l1:'a list ++ [])::t = p ++ q``, ``(l1:'a list)::t = p ++ q``)]
+val _ = app(test "APPEND_CONV" Term.compare term_to_string
+                 ListConv1.APPEND_CONV)
+           [(“[1;2;3] ++ [4;5;6]”, “[1;2;3;4;5;6]”),
+            (“[] ++ [1]”, “[1]”), (“[1;2] ++ []”, “[1;2]”),
+            (“[x;y] ++ [y;x]:'a list”, “[x;y;y;x]:'a list”)]
 
 val _ = Lib.appi (fn i => fn t =>
                      test0 ("EL_CONV "^Int.toString (i+1))

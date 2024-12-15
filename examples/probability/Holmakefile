@@ -1,5 +1,7 @@
 INCLUDES = $(HOLDIR)/src/probability $(HOLDIR)/src/n-bit $(HOLDIR)/src/real \
-	   $(HOLDIR)/src/res_quan/src $(HOLDIR)/src/real/analysis
+	   $(HOLDIR)/src/real/analysis
+
+CLINE_OPTIONS = -r
 
 EXTRA_CLEANS = heap \
 	$(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) \
@@ -10,14 +12,15 @@ EXTRA_CLEANS = heap \
 
 ifdef POLY
 HOLHEAP = heap
-OBJS = real/realLib n-bit/fcpLib res_quan/src/hurdUtils probability/probabilityTheory
+OBJS = real/realLib n-bit/fcpLib probability/probabilityTheory
 FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS)) \
                 $(HOLDIR)/sigobj/posetTheory.uo
 
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(FULL_OBJPATHS)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ \
+            -b $(protect $(HOLDIR)/src/real/analysis/realheap) $(FULL_OBJPATHS)
 endif
 
 all: $(DEFAULT_TARGETS)

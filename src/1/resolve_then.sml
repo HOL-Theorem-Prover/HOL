@@ -92,7 +92,9 @@ fun liftconcl th =
 (* val th2 = prim_recTheory.LESS_REFL
    val th1 = arithmeticTheory.LESS_TRANS
 *)
-fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
+
+
+fun gen_resolve_then mpos th1 th2 kont =
     (* conclusion of th1 unifies with some part of th2 *)
     let
       val th1 = GEN_ALL (GEN_TYVARIFY th1)
@@ -140,7 +142,7 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
                       PROVE_HYP (INSTT sigma th1_ud) (INSTT sigma th2_ud) |>
                       postprocess sigma
               in
-                ttac kth g handle HOL_ERR _ => k()
+                kont kth handle HOL_ERR _ => k()
               end
       val max = length cs2
       val fail = mk_HOL_ERR "Tactic" "resolve_then" "No unifier"
@@ -162,9 +164,7 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
           let
             open TermParse
             val pats =
-                prim_ctxt_termS Parse.Absyn (Parse.term_grammar())
-                                (HOLset.listItems (FVL (w::asl) empty_tmset))
-                                q
+                prim_ctxt_termS Parse.Absyn (Parse.term_grammar()) [] q
             fun doit ps n =
                 if n > max then raise fail
                 else
@@ -179,4 +179,8 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
           end
         | Concl => try con (fn _ => raise fail)
     end
+
+fun resolve_then mpos ttac th1 th2 g =
+    gen_resolve_then mpos th1 th2 (fn th => ttac th g)
+
 end (* struct *)

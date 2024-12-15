@@ -12,38 +12,21 @@ val _ = new_theory "fieldBinomial";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory;
 
-(* val _ = load "binomialTheory"; *)
-open binomialTheory;
-open dividesTheory;
-
-(* Get dependent theories local *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "groupInstancesTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "fieldMapTheory"; *)
 open fieldTheory;
 open ringTheory;
 open groupTheory;
 open monoidTheory;
 
-open monoidMapTheory groupMapTheory ringMapTheory fieldMapTheory;
+open fieldMapTheory;
 
-(* val _ = load "ringBinomialTheory"; *)
-open ringBinomialTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Field Binomial Documentation                                              *)

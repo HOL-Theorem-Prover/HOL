@@ -34,10 +34,16 @@ Proof
   Induct_on ‘n’ >> simp[FACT]
 QED
 
-Theorem cFACT_COND =
-        time (transfer_thm 10 ["FACT"] true (global_ruledb()))
-             FACT_COND
-          |> SPEC_ALL |> UNDISCH_ALL
+fun xfer th =
+  time (transfer_thm
+          10
+          {force_imp=true, cleftp = true, hints = []}
+          (global_ruledb()))
+       th
+
+
+
+Theorem cFACT_COND = xfer FACT_COND |> SPEC_ALL |> UNDISCH_ALL
 
 (* ----------------------------------------------------------------------
     exponentiation (handling of let)
@@ -71,8 +77,25 @@ Proof
   disch_then $ qspec_then ‘e’ mp_tac >> simp[]
 QED
 
-Theorem cEXP = transfer_thm 1 ["EXP"] true (global_ruledb()) (GEN_ALL EXP_COND)
-                 |> repeat (UNDISCH o SPEC_ALL)
+        (*
+val _ = show_assums := true
+val rdb = global_ruledb()
+val cleftp = true
+val cfg = {force_imp=true, cleftp = true, hints = []}:config
+val base = transfer_skeleton cfg (concl $ GEN_ALL EXP_COND)
+val th = base
+
+
+fun fpow f n x = if n <= 0 then x else fpow f (n - 1) (f x)
+
+fun F th = seq.hd $ resolve_relhyps [] cleftp rdb th
+val th = fpow F 22 base
+
+    fpow F 24 th
+*)
+
+
+Theorem cEXP = xfer (GEN_ALL EXP_COND) |> repeat (UNDISCH o SPEC_ALL)
 
 (* ----------------------------------------------------------------------
     primality checking
@@ -103,9 +126,8 @@ Proof
   simp[isprime_auxc_def, NC_def, FUN_REL_def]
 QED
 
-Theorem cISPRIME_AUX = time (transfer_thm 10 [] true (global_ruledb()))
-                            isprime_aux_def
-                        |> repeat (UNDISCH o SPEC_ALL)
+Theorem cISPRIME_AUX = isprime_aux_def |> xfer
+                                       |> repeat (UNDISCH o SPEC_ALL)
 
 Definition isprime_def:
   isprime n =
@@ -126,8 +148,7 @@ Proof
   simp[isprimec_def, FUN_REL_def, NC_def]
 QED
 
-Theorem cISPRIME = transfer_thm 10 [] true (global_ruledb()) isprime_def
-                     |> repeat (UNDISCH o SPEC_ALL)
+Theorem cISPRIME = xfer isprime_def |> repeat (UNDISCH o SPEC_ALL)
 
 (* ----------------------------------------------------------------------
     primes_upto (includes a list)
@@ -155,8 +176,7 @@ Proof
   simp[FUN_REL_def, primes_uptoc_def, NC_def, seq2cl_correct]
 QED
 
-Theorem cPRIMES_UPTO =
-        time (transfer_thm 10 [] true (global_ruledb())) primes_upto_def
+Theorem cPRIMES_UPTO = xfer primes_upto_def
 
 (* ----------------------------------------------------------------------
     pairing example, rather artificial
@@ -207,7 +227,7 @@ Proof
        NC_def, NLC_NC]
 QED
 
-val th = transfer_thm 10 ["addl"] true (global_ruledb()) (GEN_ALL addl_oneline)
+val th = xfer (GEN_ALL addl_oneline)
 
 
 val _ = export_theory()

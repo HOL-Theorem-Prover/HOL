@@ -12,46 +12,17 @@ val _ = new_theory "computeOrder";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory logrootTheory primeTheory;
 
-(* Get dependent theories local *)
+open groupTheory ringTheory fieldInstancesTheory;
 
-(* open dependent theories *)
-(* val _ = load "fieldInstancesTheory"; *)
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory"; -- in ringTheory *) *)
-(* (* val _ = load "helperListTheory"; -- in polyRingTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-open pred_setTheory listTheory arithmeticTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* val _ = load "fieldInstancesTheory"; *)
-open monoidInstancesTheory;
-open groupInstancesTheory;
-open ringInstancesTheory;
-open fieldInstancesTheory;
-open groupOrderTheory;
-open monoidOrderTheory;
-
-(* val _ = load "GaussTheory"; *)
-open EulerTheory;
-open GaussTheory;
-
-(* val _ = load "computeBasicTheory"; *)
 open computeBasicTheory;
-open logrootTheory logPowerTheory;
 
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Order Computations Documentation                                          *)

@@ -19,8 +19,8 @@ open HolKernel Parse boolLib bossLib;
 
 open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
      combinTheory quotientTheory arithmeticTheory pred_setTheory realTheory
-     realLib jrhUtils listTheory mesonLib
-     topologyTheory optionTheory pred_setLib cardinalTheory;
+     realLib jrhUtils listTheory mesonLib real_sigmaTheory metricTheory
+     topologyTheory optionTheory pred_setLib cardinalTheory netsTheory;
 
 open hurdUtils schneiderUtils iterateTheory real_topologyTheory derivativeTheory;
 
@@ -30,7 +30,6 @@ val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
@@ -43,7 +42,6 @@ val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* realLib *)
 val IMP_CONJ           = CONJ_EQ_IMP;        (* cardinalTheory *)
 val FINITE_SUBSET      = SUBSET_FINITE_I;    (* pred_setTheory *)
-val LE_0               = ZERO_LESS_EQ;       (* arithmeticTheory *)
 val SUM_0              = SUM_0';             (* iterateTheory *)
 val SUM_ABS            = SUM_ABS';           (* iterateTheory *)
 val SUM_ABS_LE         = SUM_ABS_LE';        (* iterateTheory *)
@@ -5828,17 +5826,23 @@ Proof
    ``\d. ((x:real) = (A:(real->bool)->real)(d)):bool``
    lemma) THEN
   REPEAT CONJ_TAC THENL
-   [ALL_TAC,
+  [ (* goal 1 (of 3) *)
+    ALL_TAC,
+    (* goal 2 (of 3) *)
     ONCE_REWRITE_TAC [METIS [] ``{k | k IN d /\ content k <> 0 /\ x IN k} =
                             {k | k IN d /\ (\k. content k <> 0 /\ x IN k) k}``] THEN
     MATCH_MP_TAC FINITE_RESTRICT THEN ASM_MESON_TAC[division_of],
+    (* goal 3 (of 3) *)
     MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC ``CARD univ(:bool)`` THEN CONJ_TAC THENL
-     [KNOW_TAC ``(IMAGE (\(d :real -> bool). (x :real) = (A :(real -> bool) -> real) d)
+    [ (* goal 3.1 (of 2) *)
+      KNOW_TAC ``(IMAGE (\(d :real -> bool). (x :real) = (A :(real -> bool) -> real) d)
          {k | k IN (d :(real -> bool) -> bool) /\ content k <> (0 :real) /\
           x IN k}) SUBSET univ(:bool)`` THENL [REWRITE_TAC [SUBSET_UNIV], ALL_TAC] THEN
       MATCH_MP_TAC CARD_SUBSET THEN
       SIMP_TAC std_ss [FINITE_BOOL],
-      SIMP_TAC std_ss [FINITE_BOOL, CARD_CART_UNIV, CARD_BOOL, LESS_EQ_REFL]]] THEN
+      (* goal 3.2 (of 2) *)
+      SIMP_TAC std_ss [FINITE_BOOL, CARD_BOOL, LESS_EQ_REFL] ] ] THEN
+ (* NOTE: below are tactics for goal 1 *)
   MAP_EVERY X_GEN_TAC [``k:real->bool``, ``l:real->bool``] THEN
   SIMP_TAC std_ss [GSPECIFICATION] THEN STRIP_TAC THEN
   UNDISCH_TAC ``d division_of s`` THEN DISCH_TAC THEN

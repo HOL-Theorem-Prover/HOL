@@ -641,25 +641,7 @@ val ALL_DISTINCT___PERM = store_thm ("ALL_DISTINCT___PERM",
       ASM_REWRITE_TAC[PERM_SWAP_AT_FRONT],
       METIS_TAC[DISJOINT_SYM, PERM_MEM_EQ],
       PROVE_TAC [PERM_TRANS, PERM_SYM]
-   ])
-
-
-val ALL_DISJOINT___PERM = store_thm ("ALL_DISJOINT___PERM",
-   “!l1 l2. PERM l1 l2 ==> (ALL_DISJOINT l1 = ALL_DISJOINT l2)”,
-
-   ‘!l1 l2. PERM l1 l2 ==> ((PERM l1 l2) /\ (ALL_DISJOINT l1 = ALL_DISJOINT l2))’ suffices_by (STRIP_TAC THEN
-      METIS_TAC[]
-   ) THEN
-   HO_MATCH_MP_TAC PERM_IND THEN
-   SIMP_TAC list_ss [ALL_DISJOINT_def, EVERY_MEM] THEN
-   REPEAT STRIP_TAC THENL [
-      REWRITE_TAC[PERM_REFL],
-      ASM_REWRITE_TAC[PERM_CONS_IFF],
-      METIS_TAC[PERM_MEM_EQ],
-      ASM_REWRITE_TAC[PERM_SWAP_AT_FRONT],
-      METIS_TAC[DISJOINT_SYM, PERM_MEM_EQ],
-      PROVE_TAC [PERM_TRANS, PERM_SYM]
-   ])
+   ]);
 
 
 (*----------------------------------------------------------------------------------*)

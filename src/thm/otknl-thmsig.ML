@@ -4,6 +4,7 @@ sig
   include FinalThm
   datatype proof =
     Axiom_prf
+  | deleted_prf
   | ABS_prf of term * thm
   | ALPHA_prf of term * term
   | AP_TERM_prf of term * thm
@@ -24,6 +25,7 @@ sig
   | EQ_MP_prf of thm * thm
   | EXISTS_prf of term * term * thm
   | GEN_prf of term * thm
+  | GENL_prf of term list * thm
   | GEN_ABS_prf of term option * term list * thm
   | INST_TYPE_prf of (hol_type,hol_type)Lib.subst * thm
   | INST_prf of (term,term)Lib.subst * thm
@@ -45,6 +47,7 @@ sig
   | Mk_comb_prf of thm * thm * thm
   | Specialize_prf of term * thm
   | deductAntisym_prf of thm * thm
+  | compute_prf
 
   val proof : thm -> proof
   val delete_proof : thm -> unit

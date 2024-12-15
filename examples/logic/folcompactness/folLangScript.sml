@@ -60,7 +60,7 @@ Definition FVT_def:
 Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
-Theorem FVT_def[simp] = SIMP_RULE bool_ss [SF ETA_ss] FVT_def
+Theorem FVT_def[simp,allow_rebind] = SIMP_RULE bool_ss [SF ETA_ss] FVT_def
 
 Theorem FVT_FINITE[simp]:
   ∀t. FINITE (FVT t)
@@ -95,7 +95,7 @@ Termination
   WF_REL_TAC ‘measure (term_size o SND)’ >> simp[]
 End
 
-Theorem termsubst_def[simp] =
+Theorem termsubst_def[simp,allow_rebind] =
         SIMP_RULE bool_ss [SF ETA_ss] termsubst_def
 
 Theorem termsubst_termsubst:
@@ -430,7 +430,8 @@ Definition num_of_term_def:
 Termination
   WF_REL_TAC ‘measure term_size’ >> simp[]
 End
-Theorem num_of_term_def[simp] = SIMP_RULE bool_ss [SF ETA_ss] num_of_term_def
+Theorem num_of_term_def[simp,allow_rebind] =
+        SIMP_RULE bool_ss [SF ETA_ss] num_of_term_def
 
 Theorem num_of_term_11[simp]:
   ∀t1 t2. num_of_term t1 = num_of_term t2 ⇔ t1 = t2

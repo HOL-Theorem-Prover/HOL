@@ -12,22 +12,14 @@ val _ = new_theory "FiniteVSpace";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* val _ = load "LinearIndepTheory"; *)
+(* open dependent theories *)
+open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
+
 open VectorSpaceTheory SpanSpaceTheory LinearIndepTheory;
 open monoidTheory fieldTheory;
-
-(* Get dependent theories in lib *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Vector Space Documentation                                         *)

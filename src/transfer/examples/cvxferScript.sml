@@ -141,10 +141,9 @@ QED
 (* lists of encodable things *)
 Inductive NLC:
 [~nil:]
-  NLC AB [] (Num 0) /\
+  NLC AB [] (Num 0)
 [~cons:]
-  (!n c ns cs. AB n c /\ NLC AB ns cs ==>
-               NLC AB (n::ns) (Pair c cs))
+  !n c ns cs. AB n c /\ NLC AB ns cs ==> NLC AB (n::ns) (Pair c cs)
 End
 
 Theorem NLC_SIMP[simp]:

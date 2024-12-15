@@ -16,10 +16,7 @@ datatype ('a,'b,'c) stack =
   | Zabs of { Bvar : 'c, Ctx : ('a,'b,'c) stack }
 ;
 
-fun RULES_ERR function message =
-    HOL_ERR{origin_structure = "compute_rules",
-                      origin_function = function,
-                      message = message};
+val ERR = mk_HOL_ERR "compute_rules"
 
 (*---------------------------------------------------------------------------
  * Serious anomaly of the code (an internal invariant was broken). We don't
@@ -103,14 +100,14 @@ fun FUNIFY thm =
   let val x = rand (lhs (concl thm)) in
   CONV_RULE (RATOR_CONV (RAND_CONV (REWR_CONV ETA_AX))) (ABS x thm)
   end
-  handle HOL_ERR _ => raise RULES_ERR "FUNIFY" ""
+  handle HOL_ERR _ => raise ERR "FUNIFY" ""
 
 fun UNFUNIFY thm =
   let val (lhs,rhs) = dest_eq (concl thm)
       val x = variant (free_vars lhs) (bvar rhs) in
   CONV_RULE (RAND_CONV BETA_CONV) (AP_THM thm x)
   end
-  handle HOL_ERR _ => raise RULES_ERR "UNFUNIFY" ""
+  handle HOL_ERR _ => raise ERR "UNFUNIFY" ""
 
 end;
 

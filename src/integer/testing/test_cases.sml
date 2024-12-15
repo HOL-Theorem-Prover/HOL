@@ -2,11 +2,16 @@ structure test_cases :> test_cases =
 struct
 
 open Abbrev
-open HolKernel Parse boolLib
+open HolKernel Parse boolLib testutils
 
-fun test_term c (n,t,b) = let
-  val _ = print (StringCvt.padRight #" " 25 n)
+fun test_term c (n,t,b) =
+    let val expected = if b then boolSyntax.T else boolSyntax.F
+    in
+      convtest(n,c,t,expected)
+    end
+(*  val _ = print (StringCvt.padRight #" " 25 n)
   val _ = Profile.reset_all()
+
   val timer = Timer.startCPUTimer ()
   val result = SOME (SOME (c t))
     handle Interrupt => SOME NONE
@@ -32,7 +37,7 @@ fun test_term c (n,t,b) = let
   val _ = print "\n"
 in
   verdict
-end
+end*)
 
 fun A s = ("at."^s, concl (DB.fetch "arithmetic" s), true)
 fun I s = ("it."^s, concl (DB.fetch "integer" s), true)
@@ -250,7 +255,35 @@ val terms_to_test =
   L (``0i < &(Num (f (x:'a) - 1)) + 1``, "Num4a"),
   L (``0i < (if 0 <= f (x:'a) - 1i then f x - 1 else &(g (f x - 1))) + 1``,
      "Num4b"),
-  L (“n MOD 5 = 1  ==> 5 * ((n - 1) DIV 5) + 1 = n”, "Github677")
+  L (“n MOD 5 = 1  ==> 5 * ((n - 1) DIV 5) + 1 = n”, "Github0677"),
+  ("Github1203a", “0n = x * Num 0i”, true),
+  ("Github1203b", “x:num = x * Num 1i”, true),
+  ("Github1203c", “0n = x * 0n”, true),
+  ("Github1203d", “0n = Num 0i”, true),
+  ("Github1207a", “&(x - x:num) = 0i”, true),
+  ("Github1207b", “&(x - a:num) <= &x:int”, true),
+  ("Github1207c", “x <= -42 \/ 1 < (41 * x) % 42 \/ -21 < (41 * x) / 42”, true),
+  ("Github1209a",
+   “! $var$(_ _) q r:int.
+          0 = q * 5 + r /\ 0 <= r /\ r < 5 ==>
+          $var$(_ _) + r = 0”,
+   false),
+  ("Github1209b",
+   “! v q r:int. 0 = q * 5 + r /\ 0 <= r /\ r < 5 ==> v + r = 0”, false),
+  ("Github1209c",
+   “?i q r. ~(~(0i = q * 5 + r /\ 0 <= r /\ r < 5) \/ i + r = 0)”, true),
+  ("asl-equiv1",
+   “~(j > 0) /\ -1 < i + j - k /\ ~(-1 < k - i) /\ -1 < i - k /\ j < 0 /\
+    k <= i ==> Num (1 + (i + j - k)) < Num (1 + (i - k))”, true),
+  ("asl-equiv2",
+   “?k j i.
+     (k < i + j + 1 /\ k + 1 <= i /\ j < 0) /\
+     (1 + i < k /\
+      (1 + (i + j) < k \/
+       k <= 1 + (i + j) /\ 2 * k <= 2 + (2 * i + j)) \/
+     k <= 1 + i /\
+     (1 + (i + j) < k /\ 2 + (2 * i + j) <= 2 * k \/
+      1 + (i + -k) <= 1 + (i + j + -k)))”, false)
 ];
 
 val omega_test_terms = [
@@ -297,34 +330,28 @@ val goals_to_test = [
    ([``n:num < p + 1``, ``!m:num. m < p ==> ~(n < m + 1)``], ``p:num = n``))
 ]
 
-fun test_goal tac (name, g) = let
-  val _ = print (StringCvt.padRight #" " 25 name)
-  val result = SOME (SOME (tac g)) handle Interrupt => SOME NONE
-                                        | _ => NONE
-  val (verdictmsg, verdict) =
-      case result of
-        SOME (SOME (subgoals, _)) => if null subgoals then ("OK", true)
-                                     else ("Subgoals remain", false)
-      | SOME NONE => ("Interrupted", false)
-      | NONE => ("Raised exception", false)
-  val _ = print (verdictmsg ^  "\n")
-in
-  verdict
-end
-
+fun test_goal (tac:tactic) (name, g) =
+    let
+      val _ = tprint name
+    in
+      require (check_result null) (#1 o tac) g
+    end
 
 fun perform_tests conv tactic =
-    (print "Testing terms\n";
-     List.all (test_term conv) terms_to_test) andalso
-    (print "Testing goals\n";
-     List.all (test_goal tactic) goals_to_test)
+    let
+    in
+      print "Testing terms\n";
+      List.app (test_term conv) terms_to_test;
+      print "Testing goals\n";
+      List.app (test_goal tactic) goals_to_test
+    end
 
 fun perform_omega_tests conv =
     (print "Testing Omega terms\n";
-     List.all (test_term conv) omega_test_terms)
+     List.app (test_term conv) omega_test_terms)
 
 fun perform_cooper_tests conv =
     (print "Testing Cooper terms\n";
-     List.all (test_term conv) cooper_test_terms)
+     List.app (test_term conv) cooper_test_terms)
 
 end; (* struct *)

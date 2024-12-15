@@ -34,6 +34,8 @@ sig
  (* into their tyinfo to do inequality resolution.                            *)
  (*---------------------------------------------------------------------------*)
 
+ val typecheck_listener :
+     (string Symtab.table * ParseDatatype.pretype * hol_type) Listener.t
  val build_tyinfos : typeBase
                          -> {induction:thm, recursion:thm}
                            -> tyinfo list

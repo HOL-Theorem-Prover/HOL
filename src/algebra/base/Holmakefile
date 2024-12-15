@@ -1,0 +1,9 @@
+INCLUDES = ../../bag ../../integer ../../pred_set/src/more_theories
+
+ifdef HOLBUILD
+.PHONY: link-to-sigobj
+all: link-to-sigobj
+
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

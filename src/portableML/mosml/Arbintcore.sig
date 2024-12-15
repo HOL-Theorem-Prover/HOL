@@ -16,6 +16,7 @@ sig
   val fromNat    : num -> int
   val toInt      : int -> Int.int
   val toNat      : int -> num
+  val toReal     : int -> real
 
   val +          : (int * int) -> int
   val -          : (int * int) -> int

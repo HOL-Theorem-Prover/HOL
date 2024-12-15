@@ -1,14 +1,14 @@
-open HolKernel boolLib bossLib Parse dep_rewrite
-     pairTheory pred_setTheory listTheory helperListTheory bagTheory ringTheory
-     gbagTheory polynomialTheory polyWeakTheory polyRingTheory polyEvalTheory
-     polyFieldTheory integralDomainTheory
-     monoidMapTheory groupMapTheory ringMapTheory
+open HolKernel boolLib bossLib Parse;
 
-val _ = new_theory"multipoly"
+open dep_rewrite pairTheory pred_setTheory listTheory rich_listTheory bagTheory
+     gcdsetTheory numberTheory combinatoricsTheory;
 
-(* stuff that should be moved *)
+open ringTheory polynomialTheory polyWeakTheory polyRingTheory polyEvalTheory
+     polyFieldTheory;
 
-open monoidTheory groupTheory helperSetTheory
+open monoidTheory groupTheory;
+
+val _ = new_theory "multipoly";
 
 Theorem GBAG_IMAGE_GBAG_BAG_OF_SET:
   AbelianMonoid g ==>
@@ -570,12 +570,12 @@ Proof
   \\ drule BIJ_LINV_BIJ
   \\ qmatch_goalsub_abbrev_tac`BIJ f s` \\ strip_tac
   \\ `∀x. x IN s ==> f x = mpoly_of_poly r v x`
-  suffices_by metis_tac[helperSetTheory.BIJ_CONG]
+  suffices_by metis_tac[BIJ_CONG]
   \\ simp[Abbr`f`]
   \\ rpt strip_tac
   \\ qmatch_goalsub_abbrev_tac`LINV f t x`
   \\ `mpoly_of_poly r v x = mpoly_of_poly r v (f (LINV f t x))`
-  by metis_tac[helperSetTheory.BIJ_LINV_THM]
+  by metis_tac[BIJ_LINV_THM]
   \\ pop_assum SUBST1_TAC
   \\ qunabbrev_tac`f`
   \\ DEP_REWRITE_TAC[mpoly_of_poly_of_mpoly]
@@ -3048,7 +3048,7 @@ Proof
   \\ `1 <= MAX_SET ls <=> MAX_SET ls <> 0` by simp[]
   \\ pop_assum SUBST1_TAC
   \\ `FINITE ls` by simp[Abbr`ls`]
-  \\ simp[helperSetTheory.MAX_SET_EQ_0, Abbr`ls`]
+  \\ simp[MAX_SET_EQ_0, Abbr`ls`]
   \\ simp[IMAGE_EQ_SING]
   \\ Cases_on`monomials r p = {}` \\ simp[]
   \\ rw[BAG_IN, BAG_INN]
@@ -3064,7 +3064,7 @@ Proof
   rw[degree_of_def, monomials_mpoly_of_poly]
   \\ rw[GSYM IMAGE_COMPOSE, combinTheory.o_DEF]
   \\ rw[polynomialTheory.poly_deg_def]
-  \\ DEP_REWRITE_TAC[helperSetTheory.MAX_SET_TEST_IFF]
+  \\ DEP_REWRITE_TAC[MAX_SET_TEST_IFF]
   \\ simp[]
   \\ fs[polyRingTheory.poly_def_alt]
   \\ simp[Once EXTENSION]
@@ -3529,7 +3529,7 @@ Proof
              \\ fs[monomials_def] \\ NO_TAC)
       \\ metis_tac[] )
     \\ simp[]
-    \\ simp[helperSetTheory.INTER_SING] )
+    \\ simp[INTER_SING] )
   \\ qmatch_goalsub_abbrev_tac`CARD s`
   \\ `s = {}` suffices_by rw[]
   \\ simp[Abbr`s`, Once EXTENSION]

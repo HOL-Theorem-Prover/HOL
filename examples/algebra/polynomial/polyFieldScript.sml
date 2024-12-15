@@ -12,37 +12,16 @@ val _ = new_theory "polyField";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-(* val _ = load "fieldTheory"; *)
-open monoidTheory groupTheory ringTheory integralDomainTheory fieldTheory;
-
-(* (* val _ = load "polyWeakTheory"; *) *)
-(* val _ = load "polyRingTheory"; *)
-open polynomialTheory polyWeakTheory polyRingTheory;
-
-
 (* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
+open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
+     dividesTheory gcdTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory;
+open monoidTheory groupTheory ringTheory fieldTheory;
 
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
+open polynomialTheory polyWeakTheory polyRingTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomials over a Field F[x] Documentation                               *)

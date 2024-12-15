@@ -1,0 +1,31 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: bmark							|
+| 									|
+| DESCRIPTION   : A verification of a multiplier circuit. This has      |
+|                 become a standard benchmark for the HOL system.       |
+|									|
+| AUTHOR	: Mike Gordon						|
+| AFFILIATION   : Cambridge University					|
+|									|
++ =====================================================================	+
+
+
++ --------------------------------------------------------------------- +
+|									|
+| FILES: 								|
+|									|
++ --------------------------------------------------------------------- +
+
+There is only one file making up the example: BmarkScript.sml. This
+was previously set up to run interactively and generate a number of
+different theories but for the sake of simplicity there is now just
+one theory file generated (BmarkTheory.*).
+
++ --------------------------------------------------------------------- +
+|									|
+| DOCUMENTATION:							|
+|									|
++ --------------------------------------------------------------------- +
+
+The multiplier was documented in the original LCF-LSM paper.

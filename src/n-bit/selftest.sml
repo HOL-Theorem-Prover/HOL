@@ -663,8 +663,26 @@ val () = qtest_conv "WORD_GROUND_CONV" wordsLib.WORD_GROUND_CONV
 
 val elapsed = Timer.checkRealTimer tt
 
-val _ = print ("\nTotal time: " ^ Lib.time_to_string elapsed ^ "\n");
+val _ = print ("\nTotal time: " ^ Lib.time_to_string elapsed ^
+               "\n\nbitstringLib tests\n\n");
 
+(* bitstringLib tests *)
+val _ = List.app convtest [
+      ("v2w_n2w_CONV (v2w [F; F] : bool[2])", bitstringLib.v2w_n2w_CONV,
+       “v2w [F; F] : bool[2]”, “0w : bool[2]”),
+      ("v2w_n2w_CONV (v2w [T; F] : bool[2])", bitstringLib.v2w_n2w_CONV,
+       “v2w [T; F] : bool[2]”, “2w : bool[2]”),
+      ("v2w_n2w_CONV (v2w [T; F; T] : bool[3])", bitstringLib.v2w_n2w_CONV,
+       “v2w [T; F; T] : bool[3]”, “5w : bool[3]”),
+      ("n2w_v2w_CONV (10w : word4)", bitstringLib.n2w_v2w_CONV,
+       “10w : word4”, “v2w [T; F; T; F] : word4”),
+      ("FIX_CONV (fixwidth 3 [F; T])", bitstringLib.FIX_CONV,
+       “fixwidth 3 [F; T]”, “[F;F;T]”),
+      ("FIX_CONV (fixwidth 3 [T; F; F; T])", bitstringLib.FIX_CONV,
+       “fixwidth 3 [T; F; F; T]”, “[F;F;T]”),
+      ("FIX_v2w_CONV (v2w [F;T] : word4)", bitstringLib.FIX_v2w_CONV,
+       “v2w [F; T] : word4”, “v2w [F; F; F; T] : word4”)
+    ]
 
 
 val _ = OS.Process.exit OS.Process.success

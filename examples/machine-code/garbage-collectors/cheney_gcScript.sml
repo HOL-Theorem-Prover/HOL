@@ -336,18 +336,21 @@ val RANGE_simp = prove(
   ``!i j k. ~(i = j) ==> (RANGE(k,i+1)j = RANGE(k,i)j)``,
   SIMP_TAC bool_ss [RANGE_def,IN_DEF] \\ DECIDE_TAC);
 
-val move_lemma = store_thm("move_lemma",
-  ``cheney_inv (b,b',i,j,j3,e,f,m,w,xx,r) /\ {x} SUBSET0 DR0(ICUT(b,e)m) ==>
-    (move(x,j,m) = (x2,j2,m2)) ==>
-    cheney_inv(b,b',i,j2,j3,e,f,m2,w,xx,r) /\ {x2} SUBSET0 RANGE(b,j2) /\ j <= j2 /\
-    (CUT(b,j)m = CUT(b,j)m2) /\ (DR0 (ICUT(b,e)m) = DR0 (ICUT(b,e)m2)) /\
-    (if x = 0 then x2 = 0 else (m2 x = REF x2) /\ D0 (CUT(b,j2)m2) x2) /\
-    (!a i. (m a = REF i) ==> (m2 a = REF i)) /\
-    (if ~(x = 0) /\ (m2 x = REF j) then j2 = j + 1 else j2 = j) /\
-    (~(x = 0) /\ ~isREF (m x) ==> (abs m = apply (swap j x) (abs m2))) /\ x <= f``,
+Theorem move_lemma:
+  cheney_inv (b,b',i,j,j3,e,f,m,w,xx,r) /\ {x} SUBSET0 DR0(ICUT(b,e)m) ==>
+  (move(x,j,m) = (x2,j2,m2)) ==>
+  cheney_inv(b,b',i,j2,j3,e,f,m2,w,xx,r) /\ {x2} SUBSET0 RANGE(b,j2) /\
+  j <= j2 /\
+  (CUT(b,j)m = CUT(b,j)m2) /\ (DR0 (ICUT(b,e)m) = DR0 (ICUT(b,e)m2)) /\
+  (if x = 0 then x2 = 0 else (m2 x = REF x2) /\ D0 (CUT(b,j2)m2) x2) /\
+  (!a i. (m a = REF i) ==> (m2 a = REF i)) /\
+  (if ~(x = 0) /\ (m2 x = REF j) then j2 = j + 1 else j2 = j) /\
+  (~(x = 0) /\ ~isREF (m x) ==> (abs m = apply (swap j x) (abs m2))) /\ x <= f
+Proof
   Cases_on `x = 0` \\ ASM_SIMP_TAC bool_ss [move_def,PAIR_EQ,LESS_EQ_REFL]
   \\ ASM_SIMP_TAC bool_ss [SUBSET0_DEF,INSERT_SUBSET,EMPTY_SUBSET,IN_INSERT]
-  THEN1 (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC bool_ss [ZERO_LESS_EQ]) \\ STRIP_TAC
+  THEN1 (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC bool_ss [ZERO_LESS_EQ])
+  \\ STRIP_TAC
   \\ `x <= f` by
    (Cases_on `IRANGE (b,e) x` \\ FULL_SIMP_TAC bool_ss [IN_DEF,DR0,D0,R0,
       ICUT_def,heap_type_distinct,cheney_inv_def,DECIDE ``x < j = ~(j <= x:num)``]
@@ -540,7 +543,6 @@ val move_lemma = store_thm("move_lemma",
      (ASM_SIMP_TAC std_ss [DR0,D0,R0,ICUT_def,FUN_EQ_THM,UPDATE_def] \\ STRIP_TAC
       \\ Cases_on `IRANGE (b,e) x'` \\ ASM_REWRITE_TAC []
       \\ Cases_on `x = x'` \\ ASM_SIMP_TAC std_ss [heap_type_11] THEN1 METIS_TAC [])
-  THEN1 (SIMP_TAC bool_ss [UPDATE_def])
   THEN1 (IMP_RES_TAC LESS_EQ_TRANS
          \\ ASM_SIMP_TAC std_ss [D0,CUT_def,RANGE_def,UPDATE_def] \\ METIS_TAC [])
   THEN1
@@ -549,7 +551,7 @@ val move_lemma = store_thm("move_lemma",
       \\ `m j = EMP` by METIS_TAC [LESS_EQ_REFL]
       \\ Cases_on `a = j` \\ FULL_SIMP_TAC bool_ss [] THEN1 METIS_TAC [heap_type_distinct]
       \\ ASM_SIMP_TAC std_ss [UPDATE_def])
-  THEN1 SIMP_TAC std_ss [UPDATE_def]);
+QED
 
 val abs_update_lemma = prove(
   ``!m i x y d x' y'.

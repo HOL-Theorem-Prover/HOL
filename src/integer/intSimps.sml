@@ -1,16 +1,13 @@
 structure intSimps :> intSimps =
 struct
 
-open HolKernel boolLib integerTheory intSyntax simpLib
+open HolKernel boolLib integerTheory intSyntax simpLib intReduce;
 
 val ERR = mk_HOL_ERR "intSimps";
-
-open intReduce
 
 (* ----------------------------------------------------------------------
     integer normalisations
    ---------------------------------------------------------------------- *)
-
 
 local
   open intSyntax integerTheory GenPolyCanon

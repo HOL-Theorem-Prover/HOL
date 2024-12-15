@@ -12,48 +12,28 @@ val _ = new_theory "countMacro";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open pred_setTheory listTheory rich_listTheory arithmeticTheory dividesTheory
+     gcdTheory numberTheory combinatoricsTheory pairTheory optionTheory
+     listRangeTheory primeTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "complexityTheory"; *)
 open bitsizeTheory complexityTheory;
 
-(* val _ = load "loopIncreaseTheory"; *)
-(* val _ = load "loopDecreaseTheory"; *)
-(* val _ = load "loopDivideTheory"; *)
-(* val _ = load "loopMultiplyTheory"; *)
-(* val _ = load "loopListTheory"; *)
-(* pre-load and open here for other count scripts. *)
 open loopIncreaseTheory loopDecreaseTheory;
 open loopDivideTheory loopMultiplyTheory loopListTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open pred_setTheory listTheory arithmeticTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* val _ = load "countMonadTheory"; *)
 open countMonadTheory;
 
-(* val _ = load "monadsyntax"; *)
 open monadsyntax;
-open pairTheory optionTheory;
-open listRangeTheory;
-open logPowerTheory; (* for halves *)
 
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
+val _ = temp_overload_on("SQ", ``\n. n * n``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
 (* ------------------------------------------------------------------------- *)
 (* Macros of Count Monad Documentation                                       *)

@@ -1,8 +1,0 @@
-INCLUDES = ../src/
-CLINE_OPTIONS=-j1
-TACTIC_WORLD = ../sempre/classes/interactive/edu/stanford/nlp/sempre/interactive/lassie/TacticWorld.class
-
-all: $(DEFAULT_TARGETS)
-.PHONY: all
-
-caseStudy1EuclidTheory.sml: $(TACTIC_WORLD)

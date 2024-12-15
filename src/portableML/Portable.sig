@@ -5,6 +5,7 @@ sig
   val ## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
   val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
   val apsnd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
+  val pair_map : ('a -> 'b) -> 'a * 'a -> 'b * 'b
   val $  : ('a -> 'b) * 'a -> 'b
   val ?  : (bool * ('a -> 'a)) -> 'a -> 'a
   val |> : 'a * ('a -> 'b) -> 'b
@@ -202,6 +203,7 @@ sig
   val implode: string list -> string
   val ordof: string * int -> int
   val replace_string : {from:string,to:string} -> string -> string
+  val remove_wspace : string -> string
 
   val time_eq: time -> time -> bool
   val timestamp: unit -> time

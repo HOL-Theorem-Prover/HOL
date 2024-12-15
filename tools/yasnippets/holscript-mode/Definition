@@ -1,8 +1,0 @@
-# -*- mode: snippet -*-
-# name: Definition of functions HOL4
-# key: Define
-# expand-env: ((yas-indent-line 'fixed))
-# --
-Definition $1_def:
-  $2
-End

@@ -21,7 +21,7 @@ val sr = Term`r:'a semi_ring`;
 val _ = add_parameter sr;
 val _ = app (C add_impl_param [sr]) ["SR0","SR1","SRP","SRM"];
 
-val _ = app (fn s => overload_on (s, Parse.Term [QUOTE ("semi_ring_"^s)]))
+val _ = app (fn s => temp_overload_on (s, Parse.Term [QUOTE ("semi_ring_"^s)]))
         ["SR0","SR1","SRP","SRM"];
 
 val sp_plus_sym       = Term`!n m.  SRP n m = SRP m n`;

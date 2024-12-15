@@ -14,26 +14,18 @@ val _ = new_theory "computeParam";
 
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
+     dividesTheory gcdTheory numberTheory combinatoricsTheory primeTheory;
 
 (* Get dependent theories local *)
 open computeOrderTheory;
-open helperFunctionTheory; (* for SQRT_LE *)
-open logPowerTheory; (* for ulog *)
-open ringTheory ringInstancesTheory; (* for ZN_coprime_order_alt *)
-open monoidOrderTheory;
+open monoidTheory ringTheory;
 
-(* Get dependent theories in lib *)
-open helperNumTheory helperSetTheory;
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
 
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory;
-open dividesTheory gcdTheory;
-
-open GaussTheory; (* for phi_pos *)
-open EulerTheory; (* for residue_def *)
-open triangleTheory; (* for list_lcm_pos *)
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Parameter Documentation                                               *)
@@ -66,7 +58,6 @@ open triangleTheory; (* for list_lcm_pos *)
    coprime_candidates_ne_0      |- !n m. 1 < n ==> 0 NOTIN coprime_candidates n m
    coprime_candidates_ne_1      |- !n m. 1 < m ==> 1 NOTIN coprime_candidates n m
    ZN_order_good_enough         |- !n m. 1 < n /\ 1 < m ==> ?k. 1 < k /\ coprime k n /\ m <= ordz k n
-
 
    Smallest Candidate
    least_prime_candidates_property    |- !n m. 1 < n /\ 0 < m ==> !h. prime h /\ coprime h n /\
@@ -277,10 +268,6 @@ open triangleTheory; (* for list_lcm_pos *)
    param_nice_for_prime|- !n k. 1 < n /\ (param n = nice k) ==> (prime n <=> (k = n))
    param_good_range    |- !n k. (param n = good k) ==> 1 < n /\ 1 < k /\ k < n
 *)
-
-(* ------------------------------------------------------------------------- *)
-(* Helper Theorems                                                           *)
-(* ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Parameter                                                             *)

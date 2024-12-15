@@ -1,4 +1,5 @@
-INCLUDES = $(HOLDIR)/examples/fun-op-sem/lprefix_lub
+INCLUDES = $(HOLDIR)/examples/fun-op-sem/lprefix_lub \
+           $(HOLDIR)/src/num/theories/cv_compute/automation
 
 all: $(DEFAULT_TARGETS) compiler_asm.s compiler_prog.txt
 .PHONY: all

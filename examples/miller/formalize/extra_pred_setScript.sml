@@ -11,11 +11,14 @@ open ho_proverTools subtypeTheory subtypeTools boolContext listContext;
 
 val _ = new_theory "extra_pred_set";
 
+val assert = simple_assert;
+
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
 
 val std_pc = precontext_mergel [bool_pc, list_pc];
 val std_c = precontext_compile std_pc;
@@ -289,9 +292,9 @@ val BIJ_ALT_RES = store_thm
     (fn th =>
      MP_TAC (Q.SPEC `(f:'a->'b) x` th)
      >> MP_TAC (Q.SPEC `(f:'a->'b) y` th))
-    >> Cond >- PROVE_TAC []
+    >> impl_tac >- PROVE_TAC []
     >> STRIP_TAC
-    >> Cond >- PROVE_TAC []
+    >> impl_tac >- PROVE_TAC []
     >> STRIP_TAC
     >> PROVE_TAC [],
     PROVE_TAC []]);

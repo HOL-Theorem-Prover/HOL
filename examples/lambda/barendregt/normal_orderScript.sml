@@ -1,14 +1,16 @@
 open HolKernel Parse boolLib bossLib
 
-open boolSimps pred_setTheory pathTheory binderLib
-open chap3Theory standardisationTheory term_posnsTheory termTheory
-     finite_developmentsTheory appFOLDLTheory nomsetTheory
+open boolSimps pred_setTheory pathTheory;
 
-val _ = new_theory "normal_order"
+open chap3Theory standardisationTheory term_posnsTheory termTheory binderLib
+     finite_developmentsTheory appFOLDLTheory nomsetTheory head_reductionTheory
+     horeductionTheory;
 
-val _ = set_trace "Unicode" 1
+val _ = new_theory "normal_order";
 
-fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+val _ = set_trace "Unicode" 1;
+
+val _ = hide "list"; (* from cardinalTheory *)
 
 (* ----------------------------------------------------------------------
     Normal order reduction
@@ -443,14 +445,15 @@ val noreduct_thm = store_thm(
     SRW_TAC [][]
   ]);
 
-val noreduct_Yf = Store_thm(
-  "noreduct_Yf",
-  ``(noreduct (Yf f) = SOME (f @@ Yf f)) ∧
-    (noreduct (Yf f @@ x) = SOME (f @@ Yf f @@ x))``,
+Theorem noreduct_Yf[simp] :
+    (noreduct (Yf f) = SOME (f @@ Yf f)) ∧
+    (noreduct (Yf f @@ x) = SOME (f @@ Yf f @@ x))
+Proof
   Q_TAC (NEW_TAC "z") `FV f` THEN
   `Yf f = LAM z (f @@ (VAR z @@ VAR z)) @@ LAM z (f @@ (VAR z @@ VAR z))`
     by SRW_TAC [][chap2Theory.Yf_fresh] THEN
-  SRW_TAC [][noreduct_thm, termTheory.lemma14b]);
+  SRW_TAC [][noreduct_thm, termTheory.lemma14b]
+QED
 
 val noreduct_characterisation = store_thm(
   "noreduct_characterisation",
@@ -542,23 +545,26 @@ val nopath_def = new_specification(
              |> SIMP_RULE (srw_ss()) [oneTheory.one, pair_case_unit,
                                       option_case_unit]);
 
-val first_nopath = Store_thm(
-  "first_nopath",
-  ``first (nopath M) = M``,
+Theorem first_nopath[simp] :
+    first (nopath M) = M
+Proof
   ONCE_REWRITE_TAC [nopath_def] THEN Cases_on `noreduct M` THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val mem_nopath = Store_thm(
-  "mem_nopath",
-  ``mem M (nopath M)``,
+Theorem mem_nopath[simp] :
+    mem M (nopath M)
+Proof
   ONCE_REWRITE_TAC [nopath_def] THEN Cases_on `noreduct M` THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val mem_nopath_expanded = Store_thm(
-  "mem_nopath_expanded",
-  ``mem M (case v of NONE => stopped_at M
-                   | SOME y => pcons M l (f y))``,
-  Cases_on `v` THEN SRW_TAC [][]);
+Theorem mem_nopath_expanded[simp] :
+    mem M (case v of NONE => stopped_at M
+                   | SOME y => pcons M l (f y))
+Proof
+  Cases_on `v` THEN SRW_TAC [][]
+QED
 
 val nopath_okpath = store_thm(
   "nopath_okpath",
@@ -673,10 +679,12 @@ val nopath_smaller = store_thm(
 
 
 val Omega_def = chap2Theory.Omega_def
-val noreduct_omega = Store_thm(
-  "noreduct_omega",
-  ``noreduct Ω = SOME Ω``,
-  SRW_TAC [][noreduct_thm, Omega_def]);
+
+Theorem noreduct_omega[simp] :
+    noreduct Ω = SOME Ω
+Proof
+  SRW_TAC [][noreduct_thm, Omega_def]
+QED
 
 val Omega_loops = store_thm(
   "Omega_loops",
@@ -691,11 +699,11 @@ val Omega_path_infinite = store_thm(
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN
   ONCE_REWRITE_TAC [nopath_def] THEN SRW_TAC [][]);
 
-
-val Omega_has_no_bnf = Store_thm(
-  "Omega_has_no_bnf",
-  ``¬has_bnf Ω``,
-  SRW_TAC [][has_bnf_finite_nopath, Omega_path_infinite]);
+Theorem Omega_has_no_bnf[simp] :
+    ¬has_bnf Ω
+Proof
+  SRW_TAC [][has_bnf_finite_nopath, Omega_path_infinite]
+QED
 
 val last_of_finite_nopath = store_thm(
   "last_of_finite_nopath",
@@ -821,16 +829,16 @@ val bnf_bnf_of = store_thm(
   ``bnf M ⇒ (bnf_of M = SOME M)``,
   SRW_TAC [][Once bnf_of_thm]);
 
-val bnf_of_Omega = Store_thm(
-  "bnf_of_Omega",
-  ``bnf_of Ω = NONE``,
-  METIS_TAC [Omega_has_no_bnf, bnf_of_NONE]);
+Theorem bnf_of_Omega[simp] :
+    bnf_of Ω = NONE
+Proof
+  METIS_TAC [Omega_has_no_bnf, bnf_of_NONE]
+QED
 
 (* ----------------------------------------------------------------------
     weak head reduction gives a congruence rule for -n->* of sorts
    ---------------------------------------------------------------------- *)
 
-open head_reductionTheory
 val head_normorder = store_thm(
   "head_normorder",
   ``∀M N. M -h-> N ⇒ M -n-> N``,
@@ -864,58 +872,36 @@ val normwhnf_is_abs_rpreserved = store_thm(
   HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][]);
 
 
-val whnf_is_abs_appstr = store_thm(
-  "whnf_is_abs_appstr",
-  ``∀t. whnf t ⇔ is_abs t ∨ ∃v args. t = VAR v ·· args``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THENL [
-    MAP_EVERY Q.EXISTS_TAC [`s`, `[]`] THEN SRW_TAC [][],
-    SRW_TAC [][EQ_IMP_THM] THENL [
-      MAP_EVERY Q.EXISTS_TAC [`v`, `args ++ [t']`] THEN
-      SRW_TAC [][rich_listTheory.FOLDL_APPEND],
-
-      FULL_SIMP_TAC (srw_ss()) [app_eq_varappstar] THEN
-      Q.SPEC_THEN `VAR v ·· FRONT args` MP_TAC term_CASES THEN
-      STRIP_TAC THEN SRW_TAC [][] THEN
-      FULL_SIMP_TAC (srw_ss()) [lam_eq_appstar],
-
-      FULL_SIMP_TAC (srw_ss()) [app_eq_varappstar] THEN METIS_TAC []
-    ]
-  ]);
+Theorem whnf_is_abs_appstr:
+  ∀t. whnf t ⇔ is_abs t ∨ ∃v args. t = VAR v ·· args
+Proof
+  HO_MATCH_MP_TAC simple_induction >> rw[SF CONJ_ss] >>
+  simp[app_eq_varappstar, PULL_EXISTS] >> iff_tac >> rw[] >>
+  gvs[] >>
+  rename [‘Ns = FRONT _’, ‘M = LAST _’] >>
+  qexists ‘SNOC M Ns’ >> simp[rich_listTheory.FRONT_APPEND]
+QED
 
 val normorder_strong_ind =
     IndDefLib.derive_strong_induction (normorder_rules,normorder_ind)
 
-Theorem bnf_appstar[simp]:
-    ∀args f.
-      bnf (f ·· args) ⇔ bnf f ∧ EVERY bnf args ∧ (is_abs f ⇒ (args = []))
-Proof Induct THEN SRW_TAC [][] THEN METIS_TAC []
+Theorem norm_varhead0[local]:
+  ∀M N. M -n-> N ⇒
+        ∀v Ms. (M = VAR v ·· Ms) ⇒
+               ∃p s M0 N0.
+                 (Ms = p ++ [M0] ++ s) ∧
+                 (N = VAR v ·· (p ++ [N0] ++ s)) ∧
+                 EVERY bnf p ∧
+                 M0 -n-> N0
+Proof
+  HO_MATCH_MP_TAC normorder_strong_ind >>
+  rw[lam_eq_appstar, app_eq_appstar_SNOC] >>
+  gvs[]
+  >- (REWRITE_TAC [GSYM listTheory.APPEND_ASSOC] >>
+      rpt $ irule_at Any EQ_REFL >> simp[]) >>
+  first_assum $ irule_at (Pat ‘_ -n-> _’) >>
+  simp[listTheory.EVERY_MEM] >> qexists ‘[]’ >> simp[]
 QED
-
-val norm_varhead0 = prove(
-  ``∀M N. M -n-> N ⇒
-          ∀v Ms. (M = VAR v ·· Ms) ⇒
-                 ∃p s M0 N0.
-                    (Ms = p ++ [M0] ++ s) ∧
-                    (N = VAR v ·· (p ++ [N0] ++ s)) ∧
-                    EVERY bnf p ∧
-                    M0 -n-> N0``,
-  HO_MATCH_MP_TAC normorder_strong_ind THEN
-  SRW_TAC [][lam_eq_appstar, app_eq_varappstar] THENL [
-    FIRST_X_ASSUM (Q.SPECL_THEN [`v`, `FRONT Ms`] MP_TAC) THEN
-    SRW_TAC [][] THEN
-    MAP_EVERY Q.EXISTS_TAC [`p`, `s ++ [LAST Ms]`, `M0`, `N0`] THEN
-    SRW_TAC [][rich_listTheory.FRONT_APPEND, listTheory.FRONT_DEF,
-               rich_listTheory.LAST_APPEND, listTheory.LAST_DEF] THEN
-    IMP_RES_TAC listTheory.APPEND_FRONT_LAST THEN
-    POP_ASSUM (fn th => REWRITE_TAC [Once (GSYM th)]) THEN
-    SRW_TAC [][] THEN
-    REWRITE_TAC [GSYM listTheory.APPEND_ASSOC, listTheory.APPEND],
-
-    MAP_EVERY Q.EXISTS_TAC [`FRONT Ms`, `[]`, `LAST Ms`, `N`] THEN
-    SRW_TAC [][listTheory.APPEND_FRONT_LAST, rich_listTheory.FRONT_APPEND,
-               rich_listTheory.LAST_APPEND] THEN
-    FULL_SIMP_TAC (srw_ss()) []
-  ]);
 
 val norm_varhead = save_thm(
   "norm_varhead",
@@ -1057,3 +1043,4 @@ val normstar_to_vheadbinary_wstar = save_thm(
                  [leneq2, DECIDE ``x < 2 ⇔ (x = 0) ∨ (x = 1)``]);
 
 val _ = export_theory()
+val _ = html_theory "normal_order";

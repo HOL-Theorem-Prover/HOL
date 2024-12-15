@@ -97,12 +97,6 @@ val strict_unt_def = Define `strict_unt (g:word32) s t =    (s.psrs         = t.
                                                          /\ (s.information  = t.information)`;
 
 
-val reflex_priv_mode_similar_thm = store_thm(
-    "reflex_priv_mode_similar_thm",
-    ``refl_rel priv_mode_similar``,
-    RW_TAC (srw_ss()) [refl_rel_def,priv_mode_similar_def] THEN RW_TAC (srw_ss()) []);
-
-
 val reflex_priv_mode_constraints_thm = store_thm("reflex_priv_mode_constraints_thm",
               `` reflexive_comp  priv_mode_constraints (assert_mode 16w)``,
                 RW_TAC (srw_ss()) [reflexive_comp_def,priv_mode_constraints_v1_def,assert_mode_def]);

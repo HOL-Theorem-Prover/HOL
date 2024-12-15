@@ -12,22 +12,14 @@ val _ = new_theory "LinearIndep";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* val _ = load "SpanSpaceTheory"; *)
+(* open dependent theories *)
+open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
+
 open VectorSpaceTheory SpanSpaceTheory;
 open monoidTheory groupTheory fieldTheory;
-
-(* Get dependent theories in lib *)
-(* val _ = load "helperListTheory"; *)
-open helperNumTheory helperSetTheory helperListTheory;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory;
-
 
 (* ------------------------------------------------------------------------- *)
 (* Linear Independence Documentation                                         *)

@@ -10,7 +10,7 @@ fun test l suffp q =
      ``something impossible : bool``,
      (if suffp then q suffices_by ALL_TAC
       else q by ALL_TAC))
-     handle e as HOL_ERR {message, origin_structure, origin_function} =>
+     handle e as HOL_ERR {message, origin_structure, origin_function, ...} =>
             if suffp then
               if message = "suffices_by's tactic failed to prove goal on line "^
                            Int.toString l

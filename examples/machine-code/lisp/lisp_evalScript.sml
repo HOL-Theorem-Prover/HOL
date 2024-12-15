@@ -5,8 +5,11 @@ open lisp_opsTheory;
 
 val _ = let
   val thms = DB.match [] ``SPEC ARM_MODEL``
-  val thms = filter (can (find_term (can (match_term ``aLISP``))) o concl) (map (fst o snd) thms)
-  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`] o INST [``limit:num``|->``l:num``]
+  val thms = filter (can (find_term (can (match_term ``aLISP``))) o concl)
+                    (map (#1 o #2) thms)
+  val renamer = Q.INST [‘x1’|->‘exp’,‘x2’|->‘x’,‘x3’|->‘y’,‘x4’|->‘z’,
+                        ‘x5’|->‘stack’,‘x6’|->‘alist’] o
+                INST [“limit:num”|->“l:num”]
   val thms = map renamer thms
   val _ = add_code_abbrev [arm_alloc_code,arm_equal_code]
   val _ = add_compiled thms
@@ -14,8 +17,11 @@ val _ = let
 
 val _ = let
   val thms = DB.match [] ``SPEC PPC_MODEL``
-  val thms = filter (can (find_term (can (match_term ``pLISP``))) o concl) (map (fst o snd) thms)
-  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`] o INST [``limit:num``|->``l:num``]
+  val thms = filter (can (find_term (can (match_term ``pLISP``))) o concl)
+                    (map (#1 o #2) thms)
+  val renamer = Q.INST [‘x1’|->‘exp’,‘x2’|->‘x’,‘x3’|->‘y’,‘x4’|->‘z’,
+                        ‘x5’|->‘stack’,‘x6’|->‘alist’] o
+                INST [“limit:num”|->“l:num”]
   val thms = map renamer thms
   val _ = add_code_abbrev [ppc_alloc_code,ppc_equal_code]
   val _ = add_compiled thms
@@ -23,9 +29,12 @@ val _ = let
 
 val _ = let
   val thms = DB.match [] ``SPEC X86_MODEL``
-  val thms = filter (can (find_term (can (match_term ``xLISP``))) o concl) (map (fst o snd) thms)
-  val renamer = Q.INST [`x1`|->`exp`,`x2`|->`x`,`x3`|->`y`,`x4`|->`z`,`x5`|->`stack`,`x6`|->`alist`] o
-                INST [``limit:num``|->``l:num``,mk_var("eip",``:word32``) |-> mk_var("p",``:word32``)]
+  val thms = filter (can (find_term (can (match_term ``xLISP``))) o concl)
+                    (map (#1 o #2) thms)
+  val renamer = Q.INST [‘x1’|->‘exp’,‘x2’|->‘x’,‘x3’|->‘y’,‘x4’|->‘z’,
+                        ‘x5’|->‘stack’,‘x6’|->‘alist’] o
+                INST [“limit:num”|->“l:num”,
+                      mk_var("eip",“:word32”) |-> mk_var("p",“:word32”)]
   val thms = map renamer thms
   val _ = add_code_abbrev [x86_alloc_code,x86_equal_code]
   val _ = add_compiled thms

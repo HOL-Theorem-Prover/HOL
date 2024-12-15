@@ -120,6 +120,7 @@ sig
   val turnstile : string
   val iff : string
   val not_iff : string
+  val fwAmpersand : string
 
   (* arithmeticTheory *)
   val leq : string

@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib term_tactic;
 open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
 open source_valuesTheory source_syntaxTheory source_semanticsTheory mp_then
      source_propertiesTheory parsingTheory codegenTheory x64asm_syntaxTheory
-     wordsTheory wordsLib automation_lemmasTheory automationLib compilerTheory;
+     wordsTheory wordsLib automation_lemmasTheory automationLib;
 
 val _ = new_theory "compiler_prog";
 

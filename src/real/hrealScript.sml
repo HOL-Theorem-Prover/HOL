@@ -1015,8 +1015,7 @@ fun rmel i list =
       [] => []
     | h::t => if aconv h i then t else h :: rmel i t
 
-fun ERR s = HOL_ERR{origin_structure = "realaxScript",
-                     origin_function = "CANCEL_CONV", message = s};
+fun ERR s = mk_HOL_ERR "realaxScript" "CANCEL_CONV"s
 
 fun CANCEL_CONV(assoc,sym,lcancelthms) tm =
   let val lcthms = map (intro o SPEC_ALL) lcancelthms

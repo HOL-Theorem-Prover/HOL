@@ -1,0 +1,14 @@
+Code has been adapted (to conform to our style requirements) from
+SML/NJ library at
+
+  https://github.com/smlnj/smlnj/tree/main/smlnj-lib/JSON
+
+with SHA = 8c680015070
+
+The copyright on this code is thus owned by the Fellowship of SML/NJ,
+and governed by their 3-clause BSD licence visible at
+
+  https://github.com/smlnj/smlnj/blob/main/LICENSE
+
+The files generally self-identify though the filenames in the comment
+headers have mostly changed for adoption in HOL.

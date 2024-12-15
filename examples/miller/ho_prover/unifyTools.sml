@@ -1,29 +1,7 @@
-(* non-interactive mode
-*)
 structure unifyTools :> unifyTools =
 struct
-open HolKernel Parse boolLib;
 
-(* interactive mode
-val () = loadPath := union ["..", "../finished"] (!loadPath);
-val () = app load
-  ["bossLib",
-   "realLib",
-   "rich_listTheory",
-   "arithmeticTheory",
-   "numTheory",
-   "pred_setTheory",
-   "pairTheory",
-   "combinTheory",
-   "listTheory",
-   "dividesTheory",
-   "primeTheory",
-   "gcdTheory",
-   "probLib",
-   "prob_extraTools",
-   "HurdUseful"];
-val () = show_assums := true;
-*)
+open HolKernel Parse boolLib;
 
 open hurdUtils;
 
@@ -35,6 +13,8 @@ val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
 val !! = REPEAT;
+
+val assert = simple_assert;
 
 (* ------------------------------------------------------------------------- *)
 (* Type unification.                                                         *)

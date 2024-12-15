@@ -304,7 +304,8 @@ fun shell arg =
    by user lesmana
 *)
 fun tee (cmd, fname) =
-    "{ { { { " ^ cmd ^ " ; echo $? >&3; } | tee " ^ fname ^ " >&4; } 3>&1; } | { read xs; exit $xs; } } 4>&1"
+    "{ { { { " ^ cmd ^ " ; echo $? >&3; } | tee " ^ fname ^ " >&4; } 3>&1; } | \
+    \ { read xs; if [ $xs != \"0\" ] ; then /bin/rm -f " ^ fname ^ " ; fi ; exit $xs; } } 4>&1"
 
 fun hol2fs s =
     case HFS_NameMunge.HOLtoFS s of

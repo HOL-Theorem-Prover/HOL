@@ -18,7 +18,7 @@ open prim_recTheory arithmeticTheory numLib combinTheory res_quanTheory
      res_quanTools pairTheory pred_setTheory pred_setLib relationTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
-     real_topologyTheory listTheory;
+     real_topologyTheory listTheory metricTheory;
 
 open util_probTheory extrealTheory sigma_algebraTheory iterateTheory
      real_borelTheory measureTheory hurdUtils;
@@ -32,6 +32,9 @@ fun METIS ths tm = prove(tm, METIS_TAC ths);
 val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = hide "S";
+
+val _ = intLib.deprecate_int ();
+val _ = ratLib.deprecate_rat ();
 
 (* ************************************************************************* *)
 (*    Borel Space and Measurable functions                                   *)
@@ -2653,6 +2656,27 @@ val BOREL_MEASURABLE_SETS = store_thm
                    BOREL_MEASURABLE_SETS_SING,       (* x = c *)
                    BOREL_MEASURABLE_SETS_NOT_SING]); (* x <> c *)
 
+(* NOTE: This is similar with Borel_eq_le but this generator contains exhausting
+   sequences, which is needed when generating product sigma-algebras.
+ *)
+Theorem Borel_eq_le_ext :
+    Borel = sigma univ(:extreal) (IMAGE (\c. {x | x <= c}) univ(:extreal))
+Proof
+    Suff ‘subsets Borel =
+          subsets (sigma univ(:extreal) (IMAGE (\c. {x | x <= c}) univ(:extreal)))’
+ >- METIS_TAC [SPACE, SPACE_BOREL, SPACE_SIGMA]
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> reverse CONJ_TAC
+ >- (rw [GSYM SPACE_BOREL] \\
+     MATCH_MP_TAC SIGMA_SUBSET \\
+     rw [SPACE_BOREL, SIGMA_ALGEBRA_BOREL] \\
+     rw [SUBSET_DEF] \\
+     rw [BOREL_MEASURABLE_SETS_RC])
+ >> rw [Borel_eq_le]
+ >> MATCH_MP_TAC SIGMA_MONOTONE
+ >> rw [SUBSET_DEF]
+ >> Q.EXISTS_TAC ‘Normal a’ >> rw []
+QED
 
 (* ******************************************* *)
 (*        Borel measurable functions           *)
@@ -8096,8 +8120,8 @@ Theorem IN_MEASURABLE_BOREL_POW_EXP:
         (!x. x IN space a ==> h x = (f x) pow (g x)) ==> h IN Borel_measurable a
 Proof
     rw[] >> simp[Once IN_MEASURABLE_BOREL_PLUS_MINUS] >>
-    ‘!P. {x | P (g x)} INTER space a IN subsets a` by (rw[] >>
-        `{x | P (g x)} INTER space a = BIGUNION {{x | g x = n} INTER space a | P n}’ by (
+    ‘!P. {x | P (g x)} INTER space a IN subsets a’ by (rw[] >>
+        ‘{x | P (g x)} INTER space a = BIGUNION {{x | g x = n} INTER space a | P n}’ by (
             rw[Once EXTENSION,IN_BIGUNION] >> eq_tac >> strip_tac >> gvs[] >>
             qexists_tac ‘{y | g y = g x} INTER space a’ >> simp[] >> qexists_tac ‘g x’ >> simp[]) >>
         pop_assum SUBST1_TAC >> irule SIGMA_ALGEBRA_COUNTABLE_UNION >>
@@ -8106,11 +8130,11 @@ Proof
     map_every (fn (pos,tm,qex,ths) => irule_at pos tm >> qexistsl_tac qex >> simp ths) [
         (Pos hd,IN_MEASURABLE_BOREL_ADD',[‘λx. fn_minus f x pow g x * indicator_fn {x | EVEN (g x)} x’,
             ‘λx. fn_plus f x pow g x * indicator_fn {x | $< 0 (g x)} x’],[]),
-        (Pos (el 2),IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | EVEN (g x)}`,`λx. fn_minus f x pow g x’],[]),
+        (Pos (el 2),IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | EVEN (g x)}’,‘λx. fn_minus f x pow g x’],[]),
         (Pos (el 2),IN_MEASURABLE_BOREL_INDICATOR,[‘{x | EVEN (g x)} INTER space a’],[]),
-        (Pos (el 3),IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | $< 0 (g x)}`,`λx. fn_plus f x pow g x’],[]),
+        (Pos (el 3),IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | $< 0 (g x)}’,‘λx. fn_plus f x pow g x’],[]),
         (Pos (el 2),IN_MEASURABLE_BOREL_INDICATOR,[‘{x | $< 0 (g x)} INTER space a’],[]),
-        (Pos last,IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | ODD (g x)}`,`λx. fn_minus f x pow g x’],[]),
+        (Pos last,IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | ODD (g x)}’,‘λx. fn_minus f x pow g x’],[]),
         (Pos (el 2),IN_MEASURABLE_BOREL_INDICATOR,[‘{x | ODD (g x)} INTER space a’],[])] >>
     pop_assum kall_tac >>
     ‘!pf. pf IN Borel_measurable a /\ (!x. 0 <= pf x) ==> (λx. pf x pow g x) IN Borel_measurable a’ by (
@@ -8118,7 +8142,7 @@ Proof
         qexistsl_tac [‘λn x. pf x pow n * indicator_fn {x | g x = n} x’] >> simp[pow_pos_le,INDICATOR_FN_POS,le_mul] >>
         simp[RIGHT_AND_FORALL_THM] >> strip_tac >>
         map_every (fn (pos,tm,qex,ths) => irule_at pos tm >> simp[] >> qexistsl_tac qex >> simp ths) [
-            (Any,IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | g x = n}`,`λx. pf x pow n’],[]),
+            (Any,IN_MEASURABLE_BOREL_MUL',[‘indicator_fn {x | g x = n}’,‘λx. pf x pow n’],[]),
             (Pos hd,IN_MEASURABLE_BOREL_POW',[‘n’,‘pf’],[]),
             (Pos hd,IN_MEASURABLE_BOREL_INDICATOR,[‘{x | g x = n} INTER space a’],[indicator_fn_def])] >>
         rw[] >> qspecl_then [‘g x’,‘pf x pow g x’] mp_tac ext_suminf_sing_general >>

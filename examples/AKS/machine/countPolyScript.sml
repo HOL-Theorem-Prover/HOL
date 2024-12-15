@@ -12,15 +12,15 @@ val _ = new_theory "countPoly";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
+     rich_listTheory listRangeTheory logrootTheory numberTheory
+     combinatoricsTheory pairTheory optionTheory primeTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "countModuloTheory"; *)
+open ringTheory;
+
 open countMonadTheory countMacroTheory;
 open countModuloTheory;
 
@@ -28,29 +28,8 @@ open bitsizeTheory complexityTheory;
 open loopIncreaseTheory loopDecreaseTheory;
 open loopDivideTheory loopListTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory listTheory arithmeticTheory;
-open dividesTheory gcdTheory;
-open rich_listTheory listRangeTheory;
-
-(* (* val _ = load "logPowerTheory"; *) *)
-open logrootTheory logPowerTheory;
-
-(* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
-open pairTheory optionTheory;
 
-(* val _ = load "ringInstancesTheory"; *)
-open ringInstancesTheory; (* for ZN order *)
-
-(* val _ = load "computeRingTheory"; *)
 open computeRingTheory; (* for ZN_poly_cmult_alt *)
 open computePolyTheory; (* for unity_mod_monomial *)
 
@@ -59,6 +38,14 @@ open polynomialTheory polyWeakTheory;
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
+(* Overload sublist by infix operator *)
+val _ = temp_overload_on ("<=", ``sublist``);
+
+val _ = intLib.deprecate_int ();
+
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial computations in monadic style Documentation                    *)
@@ -2793,36 +2780,6 @@ This puts poly_frontM_steps in the category: list loop with body cover and exit.
         !p. loop p = if (p = []) then c else body p + if exit p then 0 else loop (TL p)
 suitable for: loop_list_count_cover_exit_le
 *)
-
-(* Theorem: stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p *)
-(* Proof:
-   Let body = (\p. 4 + if (TL p = []) then 0 else 1),
-       cover = (\p. 5),
-       exit = (\p. TL p = []),
-       loop = (\p. stepsOf (poly_frontM p)).
-   Then !p. loop p = if (p = []) then 1 else body p + if exit p then 0 else loop (TL p)
-                                                by poly_frontM_steps_thm
-    Now !x. body x <= cover x                   by cases on TL p,
-    and !x y. x <= y ==> cover x <= cover y     by cover being a constant
-   Thus loop p <= 1 + cover p * LENGTH p        by loop_list_count_cover_exit_le
-                = 1 + 5 * LENGTH p
-*)
-val poly_frontM_steps_upper = store_thm(
-  "poly_frontM_steps_upper",
-  ``!p. stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p``,
-  rpt strip_tac >>
-  qabbrev_tac `body = \p. 4 + if (TL p = []) then 0 else 1` >>
-  qabbrev_tac `cover = \p:'a list. 5` >>
-  qabbrev_tac `exit = \p. TL p = []` >>
-  qabbrev_tac `loop = \p. stepsOf (poly_frontM p)` >>
-  `loop p <= 1 + 5 * LENGTH p` suffices_by rw[] >>
-  `!x. loop x = if x = [] then 1 else body x + if exit x then 0 else loop (TL x)` by metis_tac[poly_frontM_steps_thm] >>
-  `!x. body x <= cover x` by rw[Abbr`body`, Abbr`cover`] >>
-  `!x y. x <= y ==> cover x <= cover y` by rw[Abbr`cover`] >>
-  imp_res_tac loop_list_count_cover_exit_le >>
-  metis_tac[]);
-
-(* Michael's proof of the same theorem. *)
 
 (* Theorem: stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p *)
 (* Proof:

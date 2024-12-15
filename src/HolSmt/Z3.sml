@@ -21,15 +21,21 @@ structure Z3 = struct
     end
 
   fun is_configured () =
-    Option.isSome (OS.Process.getEnv "HOL4_Z3_EXECUTABLE")
+      let val v = OS.Process.getEnv "HOL4_Z3_EXECUTABLE" in
+          (Option.isSome v) andalso (Option.valOf v <> "")
+      end;
+
+  val error_msg = "Z3 not configured: set the HOL4_Z3_EXECUTABLE environment variable to point to the Z3 executable file.";
 
   fun mk_Z3_fun name pre cmd_stem post goal =
     case OS.Process.getEnv "HOL4_Z3_EXECUTABLE" of
       SOME file =>
+        if file = "" then
+           raise Feedback.mk_HOL_ERR "Z3" name error_msg
+        else
         SolverSpec.make_solver pre (file ^ cmd_stem) post goal
     | NONE =>
-        raise Feedback.mk_HOL_ERR "Z3" name
-          "Z3 not configured: set the HOL4_Z3_EXECUTABLE environment variable to point to the Z3 executable file."
+        raise Feedback.mk_HOL_ERR "Z3" name error_msg
 
   (* Z3 (Linux/Unix), SMT-LIB file format, no proofs *)
   val Z3_SMT_Oracle =
@@ -37,7 +43,7 @@ structure Z3 = struct
       (fn goal =>
         let
           val (goal, _) = SolverSpec.simplify (SmtLib.SIMP_TAC false) goal
-          val (_, strings) = SmtLib.goal_to_SmtLib goal
+          val (_, strings) = SmtLib.goal_to_SmtLib NONE goal
         in
           ((), strings)
         end)
@@ -58,6 +64,7 @@ structure Z3 = struct
       case OS.Process.getEnv "HOL4_Z3_EXECUTABLE" of
           NONE => "0"
         | SOME p =>
+          if p = "" then "0" else
           let
             val outfile = OS.FileSys.tmpName()
             fun work () = let
@@ -71,23 +78,30 @@ structure Z3 = struct
             Portable.finally finish work ()
           end
 
-  val doproofs =
-      if String.sub(Z3version, 0) = #"2" then true
-      else if String.sub(Z3version, 0) = #"0" then false
-      else
-        (Feedback.HOL_MESG ("Can't replay proofs with Z3 v"^Z3version); false)
+  val is_v4 = String.sub(Z3version, 0) = #"4"
+
+  fun is_v4_configured () = is_configured () andalso is_v4
+
+  val proof_option =
+    if is_v4 then
+      (* disable `pp.simplify_implies` so that Z3's AST pretty-printer doesn't
+         mangle `asserted` proof rules, which would cause a mismatch against the
+         goal's assumption list *)
+      " proof=true pp.simplify_implies=false"
+    else
+      " PROOF_MODE=2"
 
   (* Z3 (Linux/Unix), SMT-LIB file format, with proofs *)
-  val Z3_SMT_Prover = if not doproofs then Z3_SMT_Oracle else
+  val Z3_SMT_Prover =
     mk_Z3_fun "Z3_SMT_Prover"
       (fn goal =>
         let
           val (goal, validation) = SolverSpec.simplify (SmtLib.SIMP_TAC true) goal
-          val (ty_tm_dict, strings) = SmtLib.goal_to_SmtLib_with_get_proof goal
+          val (ty_tm_dict, strings) = SmtLib.goal_to_SmtLib_with_get_proof NONE goal
         in
           (((goal, validation), ty_tm_dict), strings)
         end)
-      " PROOF_MODE=2 -smt2 -file:"
+      (proof_option ^ " -smt2 -file:")
       (fn ((goal, validation), (ty_dict, tm_dict)) =>
         fn outfile =>
           let
@@ -122,8 +136,8 @@ structure Z3 = struct
                 val proof = Z3_ProofParser.parse_stream (ty_dict, tm_dict)
                   instream
                 val _ = TextIO.closeIn instream
-                val thm = Z3_ProofReplay.check_proof proof
                 val (As, g) = goal
+                val thm = Z3_ProofReplay.check_proof (As, g, proof)
                 val thm = Thm.CCONTR g thm
                 val thm = validation [thm]
               in

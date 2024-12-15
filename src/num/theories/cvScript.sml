@@ -55,13 +55,16 @@ Proof
 QED
 
 Inductive iscv:
-[~num:] (!m. iscv (N0 m)) /\
+[~num:] (!m. iscv (N0 m))
 [~pair:] (!c d. iscv c /\ iscv d ==> iscv (P0 c d))
 End
 
-val cv_tydefrec = newtypeTools.rich_new_type("cv",
-  prove(“?cv. iscv cv”,
-        Q.EXISTS_TAC ‘N0 0’ >> REWRITE_TAC[iscv_num]))
+val cv_tydefrec = newtypeTools.rich_new_type
+   {tyname = "cv",
+    exthm  = prove(“?cv. iscv cv”,
+                   Q.EXISTS_TAC ‘N0 0’ >> REWRITE_TAC[iscv_num]),
+    ABS    = "cv_ABS",
+    REP    = "cv_REP"};
 
 val Pair_def = new_definition("Pair_def",
   “Pair c d = cv_ABS (P0 (cv_REP c) (cv_REP d))”);
@@ -107,7 +110,7 @@ Theorem cv_induction =
 
 Inductive cvrel:
 [~num:]
-  (!n. cvrel f g (Num n) (f n)) /\
+  (!n. cvrel f g (Num n) (f n))
 [~pair:]
   (!c d rc rd. cvrel f g c rc /\ cvrel f g d rd ==>
                cvrel f g (Pair c d) (g c d rc rd))
@@ -198,7 +201,7 @@ Overload case = “cv_CASE”
 val cv_size_def = Prim_rec.new_recursive_definition {
   name = "cv_size_def",
   rec_axiom = cv_Axiom,
-  def = “cv_size (Num n) = 1 + n /\
+  def = “cv_size (Num n) = n /\
          cv_size (Pair c d) = 1 + (cv_size c + cv_size d)”};
 
 val _ = TypeBase.export (
@@ -217,7 +220,7 @@ val cv_snd_def = recdef("cv_snd_def",
 val cv_ispair_def = recdef("cv_ispair_def",
                            “cv_ispair (Pair p q) = Num (SUC 0) /\
                             cv_ispair (Num m) = Num 0”);
-val _ = export_rewrites ["cv_fst_def", "cv_snd_def", "cv_ispair_def"];
+val _ = export_rewrites ["cv_fst_def", "cv_snd_def", "cv_ispair_def", "cv_size_def"];
 
 val b2c_def = Prim_rec.new_recursive_definition{
   def = “b2c T = Num (SUC 0) /\ b2c F = Num 0”,
@@ -254,7 +257,7 @@ Proof
 QED
 
 Inductive isnseq:
-[~nil:] isnseq (Num 0) /\
+[~nil:] isnseq (Num 0)
 [~cons:] (!n c. isnseq c ==> isnseq (Pair n c))
 End
 
@@ -331,11 +334,6 @@ Theorem cv_eq[simp]:
 Proof
   simp [cv_eq_def0]
 QED
-
-
-val cv_size_alt_def = recdef("cv_size_alt_def",
-  “(cv_size_alt (Num n) = n) /\
-   (cv_size_alt (Pair p q) = 1 + cv_size_alt p + cv_size_alt q)”);
 
 (* -------------------------------------------------------------------------
  * Extra characteristic theorems

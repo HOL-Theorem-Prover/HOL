@@ -2,11 +2,13 @@ open HolKernel boolLib Parse bossLib
 open binderLib nomsetTheory metisLib termTheory contextlistsTheory
 open chap3Theory
 open sortingTheory
-open appFOLDLTheory standardisationTheory
+open appFOLDLTheory
+open pred_setTheory
 
 val _ = new_theory "stt";
 
 val _ = remove_ovl_mapping "B" {Name="B", Thy="chap2"}
+val _ = remove_ovl_mapping "C" {Name="C", Thy="chap2"}
 
 (* define simple types, the "funspace" constructor will get to be written
    as infix "-->".
@@ -15,7 +17,7 @@ Datatype: stype = base | funspace stype stype
 End
 
 Overload "-->" = “funspace”
-val _ = Unicode.unicode_version{u = Unicode.UChar.rightarrow, tmnm = "-->"}
+val _ = Parse.Unicode.unicode_version{u = Unicode.UChar.rightarrow,tmnm = "-->"}
 
 (* set up parsing/pretty-printing for the typing relation.
    Can't use ":" to the right of the turnstile, because it's already taken
@@ -280,10 +282,36 @@ Proof
   Induct_on ‘A’ >> simp[]
 QED
 
+Theorem subtype_trans:
+  ∀A B C. subtype A B ∧ subtype B C ⇒ subtype A C
+Proof
+  Induct_on ‘C’ >> simp[] >> rw[] >> gvs[] >> metis_tac[]
+QED
+
+Theorem subtype_size:
+  ∀A B. subtype A B ⇒ stype_size A ≤ stype_size B
+Proof
+  Induct_on ‘B’ >> simp[] >> rpt strip_tac >>
+  res_tac >> simp[definition "stype_size_def"]
+QED
+
+Theorem subtype_eqsize:
+  ∀A B. subtype A B ∧ stype_size A = stype_size B ⇒ A = B
+Proof
+  Induct_on ‘B’ >> simp[definition "stype_size_def"] >> rw[] >>
+  drule_then strip_assume_tac subtype_size >> gvs[]
+QED
+
+Theorem subtype_antisym:
+  ∀A B. subtype A B ∧ subtype B A ⇒ B = A
+Proof
+  metis_tac[subtype_eqsize, subtype_size, arithmeticTheory.LESS_EQUAL_ANTISYM]
+QED
+
 Theorem FV_tpm_EQ_EMPTY[simp,local]:
   FV (tpm pi t) = ∅ ⇔ FV t = ∅
 Proof
-  simp[EQ_IMP_THM, pred_setTheory.EXTENSION] >> rpt strip_tac >~
+  simp[EQ_IMP_THM, EXTENSION] >> rpt strip_tac >~
   [‘v ∈ FV M’, ‘π⁻¹ · _ # _’] >>
   first_x_assum $ qspec_then ‘π · v’ mp_tac >> simp[]
 QED
@@ -292,7 +320,7 @@ Theorem FVEMPTY_DELETE_tpm[simp,local]:
   FV (tpm [(x,y)] t) DELETE swapstr x y v = ∅ ⇔
   FV t DELETE v = ∅
 Proof
-  simp[EQ_IMP_THM, pred_setTheory.EXTENSION,basic_swapTheory.swapstr_def] >>
+  simp[EQ_IMP_THM, EXTENSION,basic_swapTheory.swapstr_def] >>
   metis_tac[]
 QED
 
@@ -317,7 +345,7 @@ Proof
   Cases_on ‘u = v’ >> simp[] >> strip_tac >>
   rw[basic_swapTheory.swapstr_def] >>
   rename [‘FV M DELETE v = ∅’] >>
-  ‘∀x. x ≠ v ⇒ x # M’ by (gs[pred_setTheory.EXTENSION] >> metis_tac[]) >>
+  ‘∀x. x ≠ v ⇒ x # M’ by (gs[EXTENSION] >> metis_tac[]) >>
   first_assum $ C (resolve_then Any (assume_tac o GSYM)) tpm_ALPHA >>
   simp[tpm_fresh] >>
   rename [‘LAM y (tpm [(v,y)] M)’] >>
@@ -325,96 +353,192 @@ Proof
   metis_tac[pmact_flip_args]
 QED
 
-val (ground_subterms_def, _) = define_recursive_term_function ‘
-  ground_subterms (VAR s : term) = ∅ ∧
-  ground_subterms (M @@ N) =
-     (if FV (M @@ N) = ∅ then {M @@ N} else ∅) ∪ ground_subterms M ∪
-     ground_subterms N ∧
-  ground_subterms (LAM v M) =
-  (if FV (LAM v M) = ∅ then {LAM v M} else ∅) ∪ ground_subterms M
-’
-val _ = export_rewrites ["ground_subterms_def"]
+Inductive gentype:
+[~VAR:]
+  (∀Γ s τ.
+     valid_ctxt Γ ∧ MEM (s,τ) Γ ⇒ gentype Γ (VAR s : term) τ {(Γ,VAR s,τ)})
+[~APP:]
+  (∀Γ M N A B fs xs.
+     gentype Γ M (A → B) fs ∧ gentype Γ N A xs ⇒
+     gentype Γ (M @@ N) B ({(Γ,M @@ N,B)} ∪ fs ∪ xs))
+[~LAM:]
+  (∀Γ v M A B bs.
+     gentype ((v,A) :: Γ) M B bs ⇒
+     gentype Γ (LAM v M) (A → B) ({(Γ,LAM v M, A → B)} ∪ bs))
+End
 
-Theorem APP_EQ_LAMl[simp]:
-  M @@ N = LAMl vs P ⇔ vs = [] ∧ P = M @@ N
+Theorem gentype_hastype:
+  gentype Γ M τ s ⇒ Γ ⊢ M ⦂ τ
 Proof
-  Cases_on ‘vs’ >> simp[] >> metis_tac[]
+  Induct_on ‘gentype’ >> metis_tac[hastype_rules]
 QED
 
-Theorem is_abs_appstar[simp]:
-  is_abs (M ·· Ms) ⇔ is_abs M ∧ Ms = []
+Theorem gentype_member_set:
+  gentype Γ M τ s ⇒ (Γ,M,τ) ∈ s
 Proof
-  qid_spec_tac ‘M’ >> Induct_on ‘Ms’ >> simp[]
+  Induct_on ‘gentype’ >> simp[]
 QED
 
-Theorem appstar_EQ_LAMl:
-  x ·· Ms = LAMl vs M ⇔ vs = [] ∧ M = x ·· Ms ∨ Ms = [] ∧ x = LAMl vs M
+Theorem gentype_members_hastype:
+  gentype Γ M τ s ⇒ ∀Γ' M' τ'. (Γ',M',τ') ∈ s ⇒ Γ' ⊢ M' ⦂ τ'
 Proof
-  Cases_on ‘vs’ >> simp[] >> Cases_on ‘Ms’ >> simp[] >> metis_tac[]
+  Induct_on ‘gentype’ >> rw[] >>
+  metis_tac[hastype_rules, gentype_member_set]
 QED
 
-Theorem tpm_LAMl:
-  tpm π (LAMl vs M) = LAMl (listpm string_pmact π vs) (tpm π M)
+Theorem hastype_gentype:
+  Γ ⊢ M ⦂ τ ⇒ ∃s. gentype Γ M τ s
 Proof
-  Induct_on ‘vs’ >> simp[]
+  Induct_on ‘hastype’ >> qexists ‘∅’ >> simp[] >> metis_tac[gentype_rules]
 QED
 
-Theorem tpm_appstar:
-  tpm π (M ·· Ms) = tpm π M ·· listpm term_pmact π Ms
+Inductive subterm:
+[~refl:]
+  (∀M:term Γ. FINITE Γ ∧ FV M ⊆ Γ ⇒ (subterm (Γ, M) (Γ, M)))
+[~appL:]
+  (∀Γ Γ₀ M0 M N.
+     FV N ⊆ Γ ∧ subterm (Γ₀, M0) (Γ, M) ⇒ subterm (Γ₀, M0) (Γ, M @@ N))
+[~appR:]
+  (∀Γ₀ Γ N0 M N.
+     FV M ⊆ Γ ∧ subterm (Γ₀, N0) (Γ, N) ⇒ subterm (Γ₀, N0) (Γ, M @@ N))
+[~lam:]
+  (∀Γ₀ Γ v M N.
+     v ∉ Γ ∧
+     subterm (Γ₀, M) (v INSERT Γ, N) ⇒ subterm (Γ₀, M) (Γ, LAM v N))
+End
+
+Theorem subterm_FV:
+  ∀Γ₀ Γ M N. subterm (Γ₀, M) (Γ, N) ⇒ FV N ⊆ Γ ∧ FV M ⊆ Γ₀ ∧ Γ ⊆ Γ₀
 Proof
-  qid_spec_tac ‘M’ >> Induct_on ‘Ms’ >> simp[]
+  Induct_on ‘subterm’ >> simp[] >> rw[] >>
+  rename [‘FV N ⊆ v INSERT Γ’, ‘FV N DELETE v ⊆ Γ’] >>
+  qpat_x_assum ‘FV N ⊆ v INSERT Γ’ mp_tac >>
+  simp[SUBSET_DEF] >> metis_tac[]
 QED
 
-Theorem ALL_DISTINCT_listpm[simp]:
-  ALL_DISTINCT (listpm act π xs) = ALL_DISTINCT xs
+Theorem subterm_VAR[simp]:
+  ∀Γ₁ Γ₂ t s.
+    subterm (Γ₁, t) (Γ₂, VAR s) ⇔ Γ₁ = Γ₂ ∧ t = VAR s ∧ s ∈ Γ₁ ∧ FINITE Γ₁
 Proof
-  Induct_on ‘xs’ >> simp[MEM_listpm]
+  simp[EQ_IMP_THM, FORALL_AND_THM, subterm_refl] >>
+  Induct_on ‘subterm’ >> rw[] >> gvs[]
 QED
 
-Theorem bnf_characterisation:
-  ∀M.
-    bnf M ⇔
-      ∃vs v Ms. ALL_DISTINCT vs ∧ M = LAMl vs (VAR v ·· Ms) ∧
-                (∀M. MEM M Ms ⇒ bnf M)
+Theorem subterm_size:
+  ∀Γ₁ Γ₂ t₁ t₂. subterm (Γ₁, t₁) (Γ₂, t₂) ⇒ size t₁ ≤ size t₂
 Proof
-  ho_match_mp_tac nc_INDUCTION2 >> qexists ‘∅’ >> rw[] >~
-  [‘VAR s = LAMl _ (VAR _ ·· _)’]
-  >- (qexistsl  [‘[]’, ‘s’, ‘[]’] >> simp[]) >~
-  [‘VAR _ ·· _ = M1 @@ M2’]
-  >- (simp[] >> eq_tac >> rpt strip_tac >~
-      [‘M1 = LAMl vs1 _’, ‘M1 @@ M2’]
-      >- (‘vs1 = []’ by (Cases_on ‘vs1’ >> gvs[]) >> gvs[appstar_SNOC] >>
-          metis_tac[]) >>
-      Cases_on ‘Ms’ using rich_listTheory.SNOC_CASES >>
-      gvs[rich_listTheory.SNOC_APPEND, appstar_APPEND] >>
-      dsimp[appstar_EQ_LAMl] >> irule_at Any EQ_REFL >> simp[]) >>
-  pop_assum SUBST_ALL_TAC >> eq_tac >> rpt strip_tac >> gvs[] >~
-  [‘LAM y (LAMl vs _)’]
-  >- (reverse (Cases_on ‘MEM y vs’)
-      >- (qexists ‘y::vs’ >> simp[]) >>
-      ‘y # LAMl vs (VAR v ·· Ms)’ by simp[FV_LAMl] >>
-      Q_TAC (NEW_TAC "z") ‘y INSERT set vs ∪ FV (VAR v ·· Ms)’ >>
-      ‘z # LAMl vs (VAR v ·· Ms)’ by simp[FV_LAMl] >>
-      dxrule_then (qspec_then ‘y’ mp_tac) tpm_ALPHA >>
-      simp[tpm_fresh, FV_LAMl] >> strip_tac >> qexists ‘z::vs’ >> simp[]) >>
-  rename [‘LAM y M = LAMl vs (VAR v ·· Ms)’] >>
-  Cases_on ‘vs’ >> gvs[] >> gvs[LAM_eq_thm]
-  >- metis_tac[] >>
-  simp[tpm_LAMl, tpm_appstar] >> irule_at Any EQ_REFL >>
-  simp[MEM_listpm] >> rpt strip_tac >> first_assum drule >> simp[]
+  Induct_on ‘subterm’ >> rw[]
 QED
 
+Theorem subterm_ID[simp]:
+  subterm (Γ₁, t) (Γ₂, t) ⇔ Γ₁ = Γ₂ ∧ FV t ⊆ Γ₂ ∧ FINITE Γ₂
+Proof
+  simp[Once subterm_cases] >> rw[EQ_IMP_THM, DISJ_IMP_THM] >>
+  drule subterm_size >> simp[]
+QED
 
-(*
+Theorem subterm_FINITE:
+  ∀S0 S1 M0 M1. subterm (S0,M0) (S1,M1) ⇒ FINITE S0 ∧ FINITE S1
+Proof
+  Induct_on ‘subterm’ >> simp[]
+QED
 
+Theorem subterm_perm:
+  ∀G0 M0 G M.
+    subterm (G0,M0) (G,M) ⇒
+    ∀pi. subterm (ssetpm pi G0, tpm pi M0) (ssetpm pi G, tpm pi M)
+Proof
+  Induct_on ‘subterm’ >> simp[] >> rw[]
+  >- gvs[SUBSET_DEF]
+  >- (irule subterm_appL >> gvs[SUBSET_DEF])
+  >- (irule subterm_appR >> gvs[SUBSET_DEF]) >>
+  irule subterm_lam >> gvs[pmact_INSERT]
+QED
 
-Theorem subformula_property:
+Theorem subterm_lam_inv:
+  ∀v Γ Γ0 M M0.
+    v ∉ Γ ⇒
+    (subterm (Γ0, M0) (Γ, LAM v M) ⇔
+       M0 = LAM v M ∧ Γ0 = Γ ∧ FINITE Γ0 ∧ FV (LAM v M) ⊆ Γ0 ∨
+       ∃u. u ∉ Γ ∧ (u = v ∨ u ∉ FV M) ∧
+           subterm (ssetpm [(u,v)] Γ0, tpm [(u,v)] M0) (v INSERT Γ, M))
+Proof
+  simp[SimpLHS, Once subterm_cases] >>
+  rw[] >> iff_tac >> rw[]
+  >- gvs[]
+  >- (rename [‘LAM u M = LAM v N’] >> disj2_tac >>
+      gvs[LAM_eq_thm] >- (first_assum $ irule_at Any >> simp[]) >>
+      drule_then (qspec_then ‘[(v,u)]’ assume_tac) subterm_perm>>
+      ‘tpm [(v,u)] N = tpm [(u,v)] N’ by simp[pmact_flip_args] >>
+      qexists ‘v’ >> simp[] >>
+      ‘ssetpm [(v,u)] (v INSERT Γ) = u INSERT Γ’ suffices_by metis_tac[] >>
+      simp[pmact_INSERT] >>
+      ‘ssetpm [(v,u)] Γ = Γ’ suffices_by simp[] >>
+      irule supp_fresh >> drule subterm_FINITE >> simp[supp_FINITE_strings])
+  >- (gvs[] >> metis_tac[])
+  >- (drule_then (qspec_then ‘[(u,v)]’ mp_tac) subterm_perm >>
+      simp[pmact_INSERT] >> strip_tac >> disj2_tac >>
+      ‘ssetpm [(u,v)] Γ = Γ’ by (irule supp_fresh >> drule subterm_FINITE >>
+                                 simp[supp_FINITE_strings]) >>
+      gvs[] >> first_assum $ irule_at Any >> simp[] >>
+      simp[LAM_eq_thm, SF CONJ_ss] >>
+      simp[pmact_flip_args])
+QED
+
+(* Theorem subformula_property:
   ∀Γ t A.
     Γ ⊢ t ⦂ A ∧ bnf t ⇒
-    ∀t0. t0 ∈ ground_subterms t ⇒
-         ∃B B'. subtype B B' ∧ B' ∈ A INSERT (set $ MAP SND Γ) ∧ Γ ⊢ t0 ⦂ B
-Proof
-  Induct_on ‘hastype’ >> qexists ‘∅’ >> simp[] >> rpt strip_tac >> gvs[] >>~-
+    ∀S0 t0. subterm (S0, t0) (set (MAP FST Γ), t) ⇒
+            ∃Γ0 A0 A1.
+              set (MAP FST Γ0) = S0 ∧ Γ0 ⊢ t0 ⦂ A0 ∧
+              subtype A0 A1 ∧
+              (A1 = A ∨ ∃v. MEM (v,A1) Γ)
+Proof[exclude_simps = subtype_def]
+  completeInduct_on ‘size t’ >> rw[] >> gs[PULL_FORALL] >>
+  Cases_on ‘t0 = t’
+  >- (gvs[] >> dsimp[] >> metis_tac[subtype_refl]) >>
+  qpat_x_assum ‘bnf _’ mp_tac >>
+  ‘FINITE (ctxtFV Γ)’ by simp[] >>
+  drule_then (qspec_then ‘t’ (simp o single o Once)) bnf_characterisation' >>
+  rw[] >> reverse $ Cases_on ‘vs’
+  >- (gvs[] >>
+      qpat_x_assum ‘Γ ⊢ LAM _ (LAMl _ _) ⦂ A’ mp_tac >>
+      simp[hastype_lam_inv, PULL_EXISTS] >> rw[] >>
+      first_x_assum $ drule_at (Pat ‘hastype _ _ _ ’) >>
+      simp[]
+  Induct_on ‘hastype’ >> qexists ‘∅’ >> simp[] >> rw[] >> gvs[]
+  >- (irule_at Any EQ_REFL >> simp[]>> first_assum $ irule_at Any >>
+      simp[] >> rw[] >>
+      gvs[valid_ctxt_ALL_DISTINCT] >>
+      rename [‘subtype A B’, ‘MEM (v,A) Γ’] >>
+      ‘A = B’ suffices_by simp[] >>
+      dxrule_then strip_assume_tac
+          (iffLR listTheory.MEM_SPLIT_APPEND_first) >> gvs[] >>
+      rename [‘MEM (vn,B) lp’] >>
+      qpat_x_assum ‘MEM _ lp’
+        $ mp_then Any strip_assume_tac
+        $ iffLR listTheory.MEM_SPLIT_APPEND_first >>
+      gvs[listTheory.ALL_DISTINCT_APPEND] >> metis_tac[])
+  >- (qpat_x_assum ‘subterm _ _ ’ mp_tac >>
+      ONCE_REWRITE_TAC [subterm_cases] >> rw[] >~
+      [‘FV (M @@ N) ⊆ _’, ‘Γ ⊢ M ⦂ A → B’]
+      >- (
+
+
+      ‘Γ = [(s,A)]’ suffices_by simp[] >>
+      Cases_on ‘Γ’ >> gvs[] >~
+      [‘s # t’]
+      >- (Cases_on ‘t’ >> fs[DISJ_IMP_THM, FORALL_AND_THM] >>
+          rename [‘valid_ctxt (h::ts)’] >> Cases_on ‘h’ >> fs[]) >>
+      rename [‘valid_ctxt (h::t)’] >>
+      Cases_on ‘h’ >> fs[DISJ_IMP_THM, FORALL_AND_THM] >> gvs[] >>
+      rename [‘vn # t’] >> Cases_on ‘t’ >> fs[DISJ_IMP_THM, FORALL_AND_THM] >>
+      rename [‘valid_ctxt (h::t)’] >> Cases_on ‘h’ >> fs[])
+  >- (
+
+valid_ctxt_def
+  >- metis_tac[]
+  >-
   ([‘¬is_abs M’, ‘bnf M’, ‘_ ⊢ M ⦂ τ1 → τ2’],
    drule_all progress >> metis_tac[corollary3_2_1, beta_normal_form_bnf]) >~
 

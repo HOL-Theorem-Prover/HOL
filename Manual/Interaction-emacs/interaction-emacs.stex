@@ -51,8 +51,8 @@ The text assumes that the reader has HOL4 installed. You can download and instal
 HOL comes with emacs modes that make script files look prettier, and help when interacting with HOL sessions.
 To install the scripts, add the following lines to your emacs initialisation file ({\tt .emacs} or \texttt{.emacs.d/init.el}) with {\tt <path>} replaced with the full path to your HOL4 installation:
 \begin{code}
-(load "<path>/HOL/tools/hol-mode")
-(load "<path>/HOL/tools/hol-unicode")
+(load "<path>/HOL/tools/editor-modes/emacs/hol-mode")
+(load "<path>/HOL/tools/editor-modes/emacs/hol-unicode")
 \end{code}
 
 If your version of emacs does not highlight the active region by default,
@@ -413,6 +413,14 @@ Try to write increasingly specific queries if the returned list is long, \eg{}
 does not work since {\tt\small DIV} is an infix operator, but {\tt\small print\_match [] \sq \sq \$DIV\sq \sq} works.
 
 The key-binding \texttt{M-h~m} (and the menu entry ``DB match'') will prompt for the term pattern to search for, and pass this query onto the HOL session (saving the need to type \texttt{print\_match~[]} and the enclosing quotation marks).
+
+It is also possible to search over theorem \emph{names} using the function \texttt{DB.find}, or the key-binding \texttt{M-h~f}.
+The string provided to this name is a regular expression that ignores case and scans all of the known theorems' names, searching for those that include a sub-string matching the regular expression.
+In addition to the standard operators (\texttt{|}, \texttt{*}, \dots), a particularly useful addition is \td{}, which is defined:
+\[ \mathit{re}_1\td\mathit{re}_2 =  (\mathtt{.}^{\mathtt{*}}\mathit{re}_1\mathtt{.}^{\mathtt{*}})\mathtt{\&}(\mathtt{.}^{\mathtt{*}}\mathit{re}_2\mathtt{.}^{\mathtt{*}})
+\]
+where $\mathtt{\&}$ is the regular expression intersection operator.
+Thus, if one writes \texttt{DB.find~"foo\td{}bar"}, one will get back a list of all theorems whose names include both the strings \texttt{"foo"} and \texttt{"bar"}, which is useful if one is not sure about the order in which those substrings occur in the theorem name.
 
 \mysec{Common proof tactics\label{tactics}}
 

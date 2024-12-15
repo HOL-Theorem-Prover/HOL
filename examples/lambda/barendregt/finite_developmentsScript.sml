@@ -1,17 +1,22 @@
-open HolKernel Parse boolLib
+(* ========================================================================== *)
+(* FILE    : finite_developmentsScript.sml                                    *)
+(* TITLE   : Finiteness of developments (Section 11.2 of [Barendregt 1984])   *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(* ========================================================================== *)
 
-open bossLib metisLib boolSimps
+open HolKernel Parse bossLib boolLib;
+
+open BasicProvers metisLib boolSimps pred_setTheory pathTheory relationTheory;
 
 open chap3Theory chap2Theory labelledTermsTheory termTheory binderLib
-open term_posnsTheory chap11_1Theory
-open pathTheory BasicProvers nomsetTheory pred_setTheory
+     term_posnsTheory horeductionTheory chap11_1Theory nomsetTheory;
 
 local open pred_setLib in end
 val _ = augment_srw_ss [boolSimps.LET_ss]
 
 val _ = new_theory "finite_developments";
 
-fun Save_Thm(n, th) = save_thm(n,th) before export_rewrites [n]
 fun Store_Thm(n, t, tac) = store_thm(n, t, tac) before export_rewrites [n]
 
 val _ = hide "set"
@@ -19,7 +24,7 @@ val _ = hide "set"
 val RUNION_COMM = relationTheory.RUNION_COMM
 val RUNION = relationTheory.RUNION
 
-(* finiteness of developments : section 11.2 of Barendregt *)
+val SN_def = pathTheory.SN_def; (* cf. chap3Theory.SN_def, relationTheory.SN_def *)
 
 (* ----------------------------------------------------------------------
     substitutivity etc
@@ -2007,9 +2012,8 @@ val weight_at_def = new_specification(
     Q.ISPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
     SRW_TAC [][term_weight_thm]));
 
-val weight_at_swap = Save_Thm(
-  "weight_at_swap",
-  last (CONJUNCTS weight_at_def));
+(* |- !p w t pi. weight_at p w (tpm pi t) = weight_at p w t *)
+Theorem weight_at_swap[simp] = last (CONJUNCTS weight_at_def)
 
 val weight_at_vsubst = Store_Thm(
   "weight_at_vsubst",
@@ -2331,22 +2335,20 @@ val size_vsubst = prove(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
-val old_induction = prove(
-  ``!P. (!x. P (VAR x)) /\
-        (!t u. P t /\ P u ==> P (t @@ u)) /\
-        (!x u. (!y'. P ([VAR y'/x] u)) ==> P (LAM x u)) ==>
-        !u:term. P u``,
+Theorem old_induction[local]:
+  !P. (!x. P (VAR x)) /\
+      (!t u. P t /\ P u ==> P (t @@ u)) /\
+      (!x u. (!y'. P ([VAR y'/x] u)) ==> P (LAM x u)) ==>
+      !u:term. P u
+Proof
   REPEAT STRIP_TAC THEN
   completeInduct_on `size u` THEN GEN_TAC THEN
   Q.SPEC_THEN `u` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][] THENL [
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-    SRW_TAC [numSimps.ARITH_ss][],
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
-    SRW_TAC [numSimps.ARITH_ss][size_vsubst]
-  ]);
+  SRW_TAC [][] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
+  SRW_TAC [numSimps.ARITH_ss][]
+QED
 
 
 val weight_at_subst = store_thm(

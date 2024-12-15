@@ -90,26 +90,87 @@ local
       ([listSyntax.mk_list_type pt_ty, Type.bool], pt_ty))))) o
       Lib.apfst (Lib.C (Lib.curry listSyntax.mk_list) pt_ty) o Lib.front_last)
 
+  fun list_args_zero_prems name =
+    SmtLib_Theories.K_list_one (fn indices => fn term =>
+      let
+        val arg_types = List.map Term.type_of indices
+        val fn_type = arg_types @ [Type.bool]
+        val t = Term.mk_var (name, boolSyntax.list_mk_fun (fn_type, pt_ty))
+        val args = indices @ [term]
+      in
+        Term.list_mk_comb (t, args)
+      end)
+
+  (* This function is used only to allow some symbols used as indices in indexed
+     identifiers to be parsed (as terms) without the parser erroring out due to
+     not having the symbols in the term dictionary. *)
+  fun builtin_name name =
+    SmtLib_Theories.K_zero_zero (Term.mk_var (name, Type.alpha))
+
   val z3_builtin_dict = Library.dict_from_list [
     ("and-elim",        one_prem "and-elim"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("arith",           builtin_name "arith"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("assign-bounds",   builtin_name "assign-bounds"),
+    (* the following is used in `(_ th-lemma bv ...)` inference rules *)
+    ("bv",              builtin_name "bv"),
     ("asserted",        zero_prems "asserted"),
     ("commutativity",   zero_prems "commutativity"),
     ("def-axiom",       zero_prems "def-axiom"),
     ("elim-unused",     zero_prems "elim-unused"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("eq-propagate",    builtin_name "eq-propagate"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("farkas",          builtin_name "farkas"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("gomory-cut",      builtin_name "gomory-cut"),
     ("hypothesis",      zero_prems "hypothesis"),
+    ("iff-false",       one_prem "iff-false"),
     ("iff-true",        one_prem "iff-true"),
+    ("intro-def",       zero_prems "intro-def"),
     ("lemma",           one_prem "lemma"),
     ("monotonicity",    list_prems "monotonicity"),
     ("mp",              two_prems "mp"),
+    ("mp~",             two_prems "mp~"),
+    ("nnf-neg",         list_prems "nnf-neg"),
+    ("nnf-pos",         list_prems "nnf-pos"),
     ("not-or-elim",     one_prem "not-or-elim"),
+    (* `proof-bind` doesn't seem to have semantic value, despite the Z3 v4.12.4
+       source code implying that it either introduces lambda abstractions or
+       `forall` quantifiers, depending on the interpretation *)
+    ("proof-bind",      SmtLib_Theories.K_zero_one Lib.I),
+    ("quant-inst",      list_args_zero_prems "quant-inst"),
     ("quant-intro",     one_prem "quant-intro"),
-    ("rewrite",         zero_prems "rewrite"),
+    ("refl",            zero_prems "refl"),
+    (* in `rewrite` proof rules, we currently ignore the indices (if they exist) *)
+    ("rewrite",         (fn token => fn indices => fn prems =>
+      zero_prems "rewrite" token [] prems)),
+    ("sk",              zero_prems "sk"),
     ("symm",            one_prem "symm"),
-    ("th-lemma-arith",  list_prems "th-lemma-arith"),
-    ("th-lemma-array",  list_prems "th-lemma-array"),
-    ("th-lemma-basic",  list_prems "th-lemma-basic"),
-    ("th-lemma-bv",     list_prems "th-lemma-bv"),
+    ("th-lemma",        SmtLib_Theories.list_list (fn token => fn indices =>
+      fn prems =>
+        let
+          (* Parsing this rule: (_ |th-lemma| arith farkas 1 1 1)
+             The vertical bars have already been eliminated in the tokenizer, so
+             we're already matching "th-lemma".
+
+             The indices will be passed as [``arith``, ``farkas``, ``1``, ``1``,
+             ``1``] but currently we only care about the first one (the theory
+             name), so we'll discard the rest.
+
+             We'll change the name of the rule to "th-lemma-<theory>" which will
+             later hook into the theory-specific rule processing. *)
+          val theory_tm = List.hd indices
+          val theory_str = Lib.fst (Term.dest_var theory_tm)
+          val name = "th-lemma-" ^ theory_str
+        in
+          list_prems name token [] prems
+        end)),
     ("trans",           two_prems "trans"),
+    ("trans*",          list_prems "trans*"),
+    (* the following is used in `(_ th-lemma arith ...)` inference rules *)
+    ("triangle-eq",     builtin_name "triangle-eq"),
     ("true-axiom",      zero_prems "true-axiom"),
     ("unit-resolution", list_prems "unit-resolution"),
 
@@ -119,8 +180,41 @@ local
        additional parsing functions are no longer necessary. *)
     ("iff", SmtLib_Theories.K_zero_two boolSyntax.mk_eq),
     ("implies", SmtLib_Theories.K_zero_two boolSyntax.mk_imp),
+    (* equivalence modulo naming *)
+    ("~", SmtLib_Theories.K_zero_two boolSyntax.mk_eq),
+    (* the following two are the unary arithmetic negation operator *)
     ("~", SmtLib_Theories.K_zero_one intSyntax.mk_negated),
     ("~", SmtLib_Theories.K_zero_one realSyntax.mk_negated),
+    (* negative numerals and fractions such as `-3` or `1/2`, used in the
+       indices of `th-lemma arith` rules but otherwise invalid SMT-LIB term
+       syntax *)
+    ("_", SmtLib_Theories.zero_zero (fn token =>
+      let
+        val negated = String.isPrefix "-" token
+        val fraction = String.isSubstring "/" token
+      in
+        if negated orelse fraction then
+          let
+            (* convert to a fraction, if it isn't already *)
+            val n_fraction =
+              if fraction then
+                token
+              else
+                token ^ "/1"
+            val (left, right) = Lib.pair_of_list (String.fields (Lib.equal #"/")
+              n_fraction)
+            val numerator = Arbint.fromString left
+            val denominator = Arbint.fromString right
+          in
+            if denominator = Arbint.one then
+              realSyntax.term_of_int numerator
+            else
+              realSyntax.mk_div (realSyntax.term_of_int numerator,
+                realSyntax.term_of_int denominator)
+          end
+        else
+          raise ERR "<z3_builtin_dict._>" "not a negated numeral or fraction"
+      end)),
     (* bit-vector constants: bvm[n] *)
     ("_", SmtLib_Theories.zero_zero (fn token =>
       if String.isPrefix "bv" token then
@@ -159,13 +253,14 @@ local
       else
         raise ERR "<z3_builtin_dict._>" "not extract[m:n]")),
     (* (_ extractm n) t *)
-    ("_", SmtLib_Theories.one_one (fn token => fn n =>
+    ("_", SmtLib_Theories.one_one (fn token => fn n_tm =>
       if String.isPrefix "extract" token then
         let
-          val m = Library.parse_arbnum (String.extract (token, 7, NONE))
+          val m_str = String.extract (token, 7, NONE)
+          val m = Library.parse_arbnum m_str
+          val n = Arbint.toNat (intSyntax.int_of_term n_tm)
           val index_type = fcpLib.index_type (Arbnum.plus1 (Arbnum.- (m, n)))
-          val m = numSyntax.mk_numeral m
-          val n = numSyntax.mk_numeral n
+          val (m, n) = Lib.pair_map numSyntax.mk_numeral (m, n)
         in
           fn t => wordsSyntax.mk_word_extract (m, n, t, index_type)
         end
@@ -257,7 +352,8 @@ local
       handle Redblackmap.NotFound =>
         ID (proofterm_id (Lib.fst (Term.dest_var t)))
       handle Feedback.HOL_ERR _ =>
-        raise ERR "proofterm_of_term" "term does not encode a Z3 proofterm"
+        raise ERR "proofterm_of_term" ("term <" ^ Hol_pp.term_to_string t ^
+          "> does not encode a Z3 proofterm")
   end
 
   val zero_prems_pt = SmtLib_Theories.one_arg
@@ -271,6 +367,8 @@ local
     SmtLib_Theories.two_args (f o Lib.apfst
       (List.map proofterm_of_term o Lib.fst o listSyntax.dest_list))
 
+  fun list_args_zero_prems_pt f = f o Lib.front_last
+
   val _ = pt_dict := List.foldl
     (fn ((key, value), dict) => Redblackmap.insert (dict, key, value))
     (!pt_dict)
@@ -281,19 +379,28 @@ local
       ("def-axiom",       zero_prems_pt DEF_AXIOM),
       ("elim-unused",     zero_prems_pt ELIM_UNUSED),
       ("hypothesis",      zero_prems_pt HYPOTHESIS),
+      ("iff-false",       one_prem_pt IFF_FALSE),
       ("iff-true",        one_prem_pt IFF_TRUE),
+      ("intro-def",       zero_prems_pt INTRO_DEF),
       ("lemma",           one_prem_pt LEMMA),
       ("monotonicity",    list_prems_pt MONOTONICITY),
       ("mp",              two_prems_pt MP),
+      ("mp~",             two_prems_pt MP_EQ),
+      ("nnf-neg",         list_prems_pt NNF_NEG),
+      ("nnf-pos",         list_prems_pt NNF_POS),
       ("not-or-elim",     one_prem_pt NOT_OR_ELIM),
+      ("quant-inst",      list_args_zero_prems_pt QUANT_INST),
       ("quant-intro",     one_prem_pt QUANT_INTRO),
+      ("refl",            zero_prems_pt REFL),
       ("rewrite",         zero_prems_pt REWRITE),
+      ("sk",              zero_prems_pt SKOLEM),
       ("symm",            one_prem_pt SYMM),
       ("th-lemma-arith",  list_prems_pt TH_LEMMA_ARITH),
       ("th-lemma-array",  list_prems_pt TH_LEMMA_ARRAY),
       ("th-lemma-basic",  list_prems_pt TH_LEMMA_BASIC),
       ("th-lemma-bv",     list_prems_pt TH_LEMMA_BV),
       ("trans",           two_prems_pt TRANS),
+      ("trans*",          list_prems_pt TRANS_STAR),
       ("true-axiom",      zero_prems_pt TRUE_AXIOM),
       ("unit-resolution", list_prems_pt UNIT_RESOLUTION)
     ]
@@ -303,16 +410,62 @@ local
   (***************************************************************************)
 
   (* returns an extended proof; 't' must encode a proofterm *)
-  fun extend_proof proof (id, t) =
+  fun extend_proof (steps, vars) (id, t) =
   let
     val _ = if !Library.trace > 0 andalso
-      Option.isSome (Redblackmap.peek (proof, id)) then
+      Option.isSome (Redblackmap.peek (steps, id)) then
         WARNING "extend_proof"
           ("proofterm ID " ^ Int.toString id ^ " defined more than once")
       else ()
   in
-    Redblackmap.insert (proof, id, proofterm_of_term t)
+    (Redblackmap.insert (steps, id, proofterm_of_term t), vars)
   end
+
+  (* Checks whether the `let` bindings are like the ones used in Z3 proof
+     certificates, i.e. that there is only one binding and the name starts with
+     `?x`, `$x` or `@x`. Otherwise, we'll assume it's of a real `let` expression
+     as used in SMT-LIB.
+     Ideally, `@x` bindings nested within `let` definitions would be treated
+     specially like those being bound in the outermost `let` definitions, i.e.
+     we'd create nodes in the proof graph so that we don't have to replay the
+     proofs for these proofterms more than once. However, this would greatly
+     complicate the parser and currently each of these nested proofterms only
+     seem to be used once, so there doesn't seem to be a need to handle them
+     specially. *)
+  fun is_z3_proof_binding ((name, _, _) :: []) =
+        String.isPrefix "?x" name orelse String.isPrefix "$x" name orelse
+          String.isPrefix "@x" name
+    | is_z3_proof_binding _ = false
+
+  (* The Z3 proof certificate version of `mk_let_bindings` checks whether we are
+     parsing a typical Z3 proof certificate `let` binding. If so, it binds the
+     name to the corresponding term. Otherwise, it does what the SMT-LIB version
+     of the parser would do. *)
+  fun z3_mk_let_bindings ((tydict, tmdict), bindings)
+    : Term.term SmtLib_Parser.dict =
+    if is_z3_proof_binding bindings then
+      (* We cannot use `Library.extend_dict_unique` because Z3 does rebind the
+         same name (although when this happened, it assigned the same value). *)
+      List.foldl (fn ((name, _, t), tmdict) => Library.extend_dict
+        ((name, SmtLib_Theories.K_zero_zero t), tmdict)) tmdict bindings
+    else
+      SmtLib_Parser.smtlib_mk_let_bindings ((tydict, tmdict), bindings)
+
+  (* The Z3 proof certificate version of `mk_let` checks whether we are parsing
+     a typical Z3 proof certificate `let` binding. If so, it simply returns the
+     body of the `let` expression, otherwise it does what the SMT-LIB version of
+     the parser would do (i.e. create a HOL4 `let` term). *)
+  fun z3_mk_let (bindings, body) : Term.term =
+    if is_z3_proof_binding bindings then
+      body
+    else
+      SmtLib_Parser.smtlib_mk_let (bindings, body)
+
+  val z3_proof_cfg = {
+    mk_let_bindings = z3_mk_let_bindings,
+    mk_let = z3_mk_let,
+    parse_lambda = true
+  }
 
   (* distinguishes between a term definition and a proofterm
      definition; returns a (possibly extended) dictionary and proof *)
@@ -321,56 +474,120 @@ local
     val _ = Library.expect_token "(" (get_token ())
     val _ = Library.expect_token "(" (get_token ())
     val name = get_token ()
-    val t = SmtLib_Parser.parse_term get_token (tydict, tmdict)
+    val t = SmtLib_Parser.parse_term_with_cfg z3_proof_cfg get_token
+      (tydict, tmdict)
     val _ = Library.expect_token ")" (get_token ())
     val _ = Library.expect_token ")" (get_token ())
   in
     if String.isPrefix "@x" name then
       (* proofterm definition *)
       let
-        val tmdict = Library.extend_dict ((name, SmtLib_Theories.K_zero_zero
-          (Term.mk_var (name, pt_ty))), tmdict)
+        val tmdict = Library.extend_dict_unique ((name,
+          SmtLib_Theories.K_zero_zero (Term.mk_var (name, pt_ty))), tmdict)
         val proof = extend_proof proof (proofterm_id name, t)
       in
         (tmdict, proof)
       end
     else
       (* term definition *)
-      (Library.extend_dict ((name, SmtLib_Theories.K_zero_zero t), tmdict),
-        proof)
+      (Library.extend_dict_unique ((name, SmtLib_Theories.K_zero_zero t),
+        tmdict), proof)
   end
 
-  (* entry point into the parser (i.e., the grammar's start symbol) *)
-  fun parse_proof get_token (tydict, tmdict, proof) (rpars : int) =
+  (* Parses the actual proof expression *)
+  fun parse_proof_expression get_token (tydict, tmdict, proof) (rpars : int) =
   let
-    val _ = Library.expect_token "(" (get_token ())
+    val () = Library.expect_token "(" (get_token ())
     val head = get_token ()
   in
     if head = "let" then
       let
         val (tmdict, proof) = parse_definition get_token (tydict, tmdict, proof)
       in
-        parse_proof get_token (tydict, tmdict, proof) (rpars + 1)
+        parse_proof_expression get_token (tydict, tmdict, proof) (rpars + 1)
+      end
+    else
+      let
+        (* undo look-ahead of 2 tokens *)
+        val get_token' = Library.undo_look_ahead ["(", head] get_token
+        val t = SmtLib_Parser.parse_term_with_cfg z3_proof_cfg get_token'
+          (tydict, tmdict)
+      in
+        (* Z3 assigns no ID to the final proof step; we use ID 0 *)
+        extend_proof proof (0, t) before Lib.funpow rpars
+          (fn () => Library.expect_token ")" (get_token ())) ()
+      end
+  end
+
+  (* Parses the initial proof declarations *)
+  fun parse_proof_decl get_token (tydict, tmdict, proof) (rpars : int) =
+  let
+    val () = Library.expect_token "(" (get_token ())
+    val head = get_token ()
+  in
+    if head = "proof" then
+      parse_proof_expression get_token (tydict, tmdict, proof) (rpars + 1)
+    else if head = "declare-fun" then
+      let
+        val (tm, tmdict) = SmtLib_Parser.parse_declare_fun get_token (tydict, tmdict)
+        val proof = Lib.apsnd (fn set => HOLset.add (set, tm)) proof
+      in
+        parse_proof_decl get_token (tydict, tmdict, proof) rpars
       end
     else if head = "error" then (
       (* some (otherwise valid) proofs are preceded by an error message,
          which we simply ignore *)
       get_token ();
       Library.expect_token ")" (get_token ());
-      parse_proof get_token (tydict, tmdict, proof) rpars
+      parse_proof_decl get_token (tydict, tmdict, proof) rpars
     ) else
       let
         (* undo look-ahead of 2 tokens *)
-        val buffer = ref ["(", head]
-        fun get_token' () =
-          case !buffer of
-            [] => get_token ()
-          | x::xs => (buffer := xs; x)
-        val t = SmtLib_Parser.parse_term get_token' (tydict, tmdict)
+        val get_token' = Library.undo_look_ahead ["(", head] get_token
       in
-        (* Z3 assigns no ID to the final proof step; we use ID 0 *)
-        extend_proof proof (0, t) before Lib.funpow rpars
-          (fn () => Library.expect_token ")" (get_token ())) ()
+        parse_proof_expression get_token' (tydict, tmdict, proof) rpars
+      end
+  end
+
+  (* entry point into the parser (i.e., the grammar's start symbol)
+
+     Z3 v2.19 proofs begin with:
+     ```
+     (error "...")          ; may or may not be present
+     (let ...
+     ```
+
+     Z3 v4 proofs begin with:
+     ```
+     (                      ; note the extra parenthesis
+       (declare-fun ...)    ; any number of these, maybe none
+       (proof
+         (let ...
+     ```
+     We'll try to seamlessly handle both styles of proof here. Namely,
+     for v4 proofs we'll consume the extra parenthesis here and then
+     continue parsing as normal. *)
+  fun parse_proof get_token state =
+  let
+    val () = Library.expect_token "(" (get_token ())
+    val token = get_token ()
+  in
+    if token = "let" orelse token = "error" then
+      (* Z3 v2.19 proof *)
+      let
+        (* undo look-ahead of the 2 tokens *)
+        val get_token' = Library.undo_look_ahead ["(", token] get_token
+      in
+        parse_proof_decl get_token' state 0
+      end
+    else
+      (* Must be a Z3 v4 proof then *)
+      let
+        val () = Library.expect_token "(" token
+        (* leave the 1st parenthesis consumed and undo the 2nd *)
+        val get_token' = Library.undo_look_ahead ["("] get_token
+      in
+        parse_proof_decl get_token' state 1
       end
   end
 
@@ -379,9 +596,8 @@ in
   (* Similar to 'parse_file' below, but for instreams.  Does not close
      the instream. *)
 
-  fun parse_stream (tydict : (string, Type.hol_type SmtLib_Parser.parse_fn list)
-    Redblackmap.dict, tmdict : (string, Term.term SmtLib_Parser.parse_fn list)
-    Redblackmap.dict) (instream : TextIO.instream) : proof =
+  fun parse_stream ((tydict, tmdict): SmtLib_Parser.dicts)
+    (instream : TextIO.instream) : proof =
   let
     (* union of user-declared names and Z3's inference rule names *)
     val tmdict = Library.union_dict tmdict z3_builtin_dict
@@ -390,8 +606,9 @@ in
         Feedback.HOL_MESG "HolSmtLib: parsing Z3 proof"
       else ()
     val get_token = Library.get_token (Library.get_buffered_char instream)
+    val empty_proof = (Redblackmap.mkDict Int.compare, Term.empty_tmset)
     val proof = parse_proof get_token
-      (tydict, tmdict, Redblackmap.mkDict Int.compare) 0
+      (tydict, tmdict, empty_proof)
     val _ = if !Library.trace > 0 then
         WARNING "parse_stream" ("ignoring token '" ^ get_token () ^
           "' (and perhaps others) after proof")

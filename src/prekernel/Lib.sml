@@ -40,6 +40,8 @@ fun try f x = f x handle e => Feedback.Raise e
 
 fun assert P x = assert_exn P x (ERR "assert" "predicate not true")
 
+fun simple_assert b e = if b then () else raise e;
+
 (*---------------------------------------------------------------------------*
  *        Common list operations                                             *
  *---------------------------------------------------------------------------*)

@@ -1661,7 +1661,7 @@ in
          thm |> Thm.INST s
              |> REWRITE_RULE [dual_rwt, v2w_13_15_rwts, v2w_ground4, DecodeVFP]
              |> Conv.RIGHT_CONV_RULE EVAL_DATATYPE_CONV
-             |> SIMP_RULE bool_ss
+             |> SIMP_RULE (bool_ss -* ["lift_disj_eq", "lift_imp_disj"])
                   [pairTheory.UNCURRY_DEF, rand_uncurry, ConditionPassed_enc]
       end
 end

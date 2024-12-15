@@ -14,20 +14,18 @@
 (*                                                                           *)
 (* ========================================================================= *)
 
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory", "real_probabilityTheory", "numTheory", "dep_rewrite",
-          "transcTheory", "rich_listTheory", "pairTheory", "extra_pred_setTools",
-          "combinTheory","limTheory","sortingTheory", "realLib", "optionTheory","satTheory",
-          "util_probTheory", "extrealTheory", "real_measureTheory", "real_lebesgueTheory","real_sigmaTheory",
-          "RBDTheory","FT_deepTheory","VDCTheory","ASN_gatewayTheory"];*)
+open HolKernel boolLib bossLib Parse;
 
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
+open limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
      seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools listTheory transcTheory
      rich_listTheory pairTheory combinTheory realLib  optionTheory dep_rewrite extra_pred_setTools
-      util_probTheory extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory satTheory numTheory
-      RBDTheory FT_deepTheory VDCTheory ASN_gatewayTheory;
-open HolKernel boolLib bossLib Parse;
+     util_probTheory extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory
+     satTheory numTheory;
+
+open RBDTheory FT_deepTheory VDCTheory ASN_gatewayTheory;
+
 val _ = new_theory "smart_grid";
+
 (*--------------------*)
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
@@ -933,7 +931,7 @@ RW_TAC std_ss[]
 >> `Reliability p ESWs t = exp (-C_ESWs * t)` by RW_TAC std_ss[Reliability_def]
 >- (FULL_SIMP_TAC real_ss[exp_distribution_def])
 >> POP_ORW
->> REAL_ARITH_TAC
+>> rw [REAL_NEG_LMUL]
 QED
 
 (*----------------------------------------------*)

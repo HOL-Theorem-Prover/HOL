@@ -12,14 +12,13 @@ val _ = new_theory "ffExist";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+(* open dependent theories *)
+open arithmeticTheory pred_setTheory listTheory numberTheory dividesTheory
+     combinatoricsTheory gcdTheory gcdsetTheory primeTheory cardinalTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "ffConjugateTheory"; *)
 open ffBasicTheory;
 open ffAdvancedTheory;
 open ffPolyTheory;
@@ -29,38 +28,17 @@ open ffMinimalTheory;
 open ffMasterTheory;
 open ffConjugateTheory;
 
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperFunctionTheory"; -- in ringTheory *) *)
-(* (* val _ = load "helperListTheory"; -- in polyRingTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "groupInstancesTheory"; -- in ringInstancesTheory *) *)
-(* (* val _ = load "ringInstancesTheory"; *) *)
-(* (* val _ = load "fieldInstancesTheory"; *) *)
 open monoidTheory groupTheory ringTheory fieldTheory;
-open monoidOrderTheory groupOrderTheory fieldOrderTheory;
-open subgroupTheory;
-open groupInstancesTheory ringInstancesTheory fieldInstancesTheory;
-open groupCyclicTheory;
+open fieldOrderTheory;
+open fieldInstancesTheory;
 
 (* Get polynomial theory of Ring *)
-(* (* val _ = load "polyFieldDivisionTheory"; *) *)
 open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
 open polyMonicTheory polyEvalTheory;
 open polyDividesTheory;
 open polyMonicTheory;
 open polyRootTheory;
 
-(* (* val _ = load "polyFieldModuloTheory"; *) *)
 open polyFieldTheory;
 open polyFieldDivisionTheory;
 open polyFieldModuloTheory;
@@ -68,28 +46,15 @@ open polyRingModuloTheory;
 open polyModuloRingTheory;
 
 open polyMapTheory;
-open monoidMapTheory groupMapTheory ringMapTheory fieldMapTheory;
+open fieldMapTheory;
 
-(* (* val _ = load "polyGCDTheory"; *) *)
 open polyGCDTheory;
 open polyIrreducibleTheory;
 open polyProductTheory;
 
-(* (* val _ = load "ringBinomialTheory"; *) *)
-open ringBinomialTheory;
-open ringDividesTheory;
-open ringIdealTheory;
-open ringUnitTheory;
-
-(* (* val _ = load "fieldBinomialTheory"; *) *)
 open fieldBinomialTheory;
 
-(* val _ = load "MobiusTheory"; *)
-open MobiusTheory; (* for sigma_eq_perfect_power_bounds_2 *)
-
-(* val _ = load "cardinalTheory"; *)
-open cardinalTheory; (* for helpers: A_LIST_BIJ_A *)
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Existence and Uniqueness Documentation                       *)
@@ -2570,7 +2535,7 @@ val monoid_bij_image_group = store_thm(
   rpt strip_tac >>
   rw_tac std_ss[Group_def] >-
   rw[monoid_bij_image_monoid] >>
-  rw[monoidOrderTheory.monoid_invertibles_def, monoid_bij_image_def, EXTENSION, EQ_IMP_THM] >>
+  rw[monoid_invertibles_def, monoid_bij_image_def, EXTENSION, EQ_IMP_THM] >>
   `g.inv x' IN G` by rw[] >>
   qexists_tac `f (g.inv x')` >>
   metis_tac[group_inv_thm]);
@@ -2881,7 +2846,7 @@ val it = |- !r s. FiniteField r /\ s <<= r /\ 1 < (r <:> s) ==>
    Note MAP (LINV up R) (Unity t n) = unity n  by subring_poly_unity, field_iso_poly_unity
      so (MAP (LINV up R) k) pdivides (MAP (LINV up R) (Unity t n))    by field_iso_poly_divides_iff
      or h pdivides (unity n)         by above
-    ==> (unity n) % h = |0|          by poly_divides_mod_zero, ulead h
+    ==> (unity n) % h = |0|          by poly_divides_alt, ulead h
 
    Step 7: setup another field/subfield pair based on h.
    Let u = PolyModRing r h, su = PolyModConst r h.
@@ -2976,7 +2941,7 @@ val poly_unity_special_factor_exists_0 = store_thm(
   `poly_divides st k (Unity t n)` by metis_tac[subring_poly_divides_iff, poly_monic_ulead] >>
   `MAP (LINV up R) (Unity t n) = unity n` by metis_tac[subring_poly_unity, field_iso_poly_unity] >>
   `h pdivides (unity n)` by prove_tac[field_iso_poly_divides_iff] >>
-  rw[GSYM poly_divides_mod_zero]) >-
+  rw[GSYM poly_divides_alt]) >-
   rw_tac std_ss[] >>
   qabbrev_tac `u = PolyModRing r h` >>
   qabbrev_tac `su = PolyModConst r h` >>
@@ -3122,7 +3087,7 @@ val poly_unity_special_factor_exists = store_thm(
    Note MAP (LINV up R) (Unity t n) = unity n  by subring_poly_unity, field_iso_poly_unity
      so (MAP (LINV up R) k) pdivides (MAP (LINV up R) (Unity t n))    by field_iso_poly_divides_iff
      or h pdivides (unity n)         by above
-    ==> (unity n) % h = |0|          by poly_divides_mod_zero, ulead h
+    ==> (unity n) % h = |0|          by poly_divides_alt, ulead h
 
    Step 7: setup another field/subfield pair based on h.
    Let u = PolyModRing r h, su = PolyModConst r h.
@@ -3162,10 +3127,10 @@ val poly_unity_special_factor_exists = store_thm(
      so order (u.prod excluding |0|) (f x) = n        by finite_field_element_mirror_order
     ==> order (u.prod excluding |0|) X = n            by finite_field_conjugates_order
 *)
-val poly_unity_special_factor_exists = store_thm(
-  "poly_unity_special_factor_exists",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n /\ 1 < ordz n (CARD R) ==>
-   ?h. mifactor h (unity n) /\ (deg h = ordz n (CARD R)) /\ (order ((PolyModRing r h).prod excluding |0|) X = n)``,
+Theorem poly_unity_special_factor_exists[allow_rebind]:
+  !r:'a field. FiniteField r ==> !n. 0 < n /\ 1 < ordz n (CARD R) ==>
+   ?h. mifactor h (unity n) /\ (deg h = ordz n (CARD R)) /\ (order ((PolyModRing r h).prod excluding |0|) X = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `d = ordz n (CARD R)` >>
   `0 < d /\ d <> 1` by decide_tac >>
@@ -3212,7 +3177,7 @@ val poly_unity_special_factor_exists = store_thm(
   `poly_divides st k (Unity t n)` by metis_tac[subring_poly_divides_iff, poly_monic_ulead] >>
   `MAP (LINV up R) (Unity t n) = unity n` by metis_tac[subring_poly_unity, field_iso_poly_unity] >>
   `h pdivides (unity n)` by prove_tac[field_iso_poly_divides_iff] >>
-  rw[GSYM poly_divides_mod_zero]) >-
+  rw[GSYM poly_divides_alt]) >-
   rw_tac std_ss[] >>
   qabbrev_tac `u = PolyModRing r h` >>
   qabbrev_tac `su = PolyModConst r h` >>
@@ -3238,7 +3203,8 @@ val poly_unity_special_factor_exists = store_thm(
   `X IN ring_conjugates u su (f x)` by metis_tac[] >>
   `u.sum.id = |0|` by rw[poly_mod_ring_ids, Abbr`u`] >>
   `order (u.prod excluding u.sum.id) (f x) = n` by rw[finite_field_element_mirror_order, Abbr`f`] >>
-  metis_tac[finite_field_conjugates_order]);
+  metis_tac[finite_field_conjugates_order]
+QED
 
 (* This is the much sought-after theorem! *)
 
@@ -3260,7 +3226,7 @@ val poly_unity_special_factor_exists_1 = store_thm(
                                  by poly_unity_special_factor_exists
     Now 0 < deg z                by poly_irreducible_deg_nonzero
     and ulead z                  by poly_monic_pmonic, 0 < deg z
-   Also z pdivides (unity k)     by poly_ulead_divides_alt, unity k % z = |0|
+   Also z pdivides (unity k)     by poly_divides_alt, unity k % z = |0|
    Take this z, and the result follows.
 *)
 val poly_unity_special_factor_exists_alt = store_thm(
@@ -3272,7 +3238,7 @@ val poly_unity_special_factor_exists_alt = store_thm(
   `Ring r /\ poly (unity k)` by rw[] >>
   `?z. mifactor z (unity k) /\ (deg z = ordz k (CARD R)) /\ (forderz X = k)` by metis_tac[poly_unity_special_factor_exists] >>
   `ulead z` by rw_tac std_ss[poly_monic_ulead] >>
-  metis_tac[poly_ulead_divides_alt]);
+  metis_tac[poly_divides_alt]);
 
 (* Note: The existence of this special factor of (unity k)
    is critical in the correctness proof of the AKS algorithm.

@@ -23,32 +23,15 @@ val _ = new_theory "field";
 
 (* ------------------------------------------------------------------------- *)
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "integralDomainTheory"; *)
-open monoidTheory groupTheory ringTheory ringUnitTheory integralDomainTheory;
-open monoidOrderTheory groupOrderTheory;
-open subgroupTheory; (* for field subgroups *)
+open pred_setTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
+     numberTheory combinatoricsTheory;
 
-(* val _ = load "ringDividesTheory"; *)
-open ringDividesTheory;
+open monoidTheory groupTheory ringTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* open dependent theories *)
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
-
+val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
 (* Field Documentation                                                       *)
@@ -1721,7 +1704,7 @@ local
 val fir = field_is_ring |> SPEC_ALL |> UNDISCH
 in
 fun lift_ring_unit_thm_with_goal rsuffix fsuffix goal = let
-   val rth = DB.fetch "ringUnit" ("ring_" ^ rsuffix)
+   val rth = DB.fetch "ring" ("ring_" ^ rsuffix)
    val rth' = rth |> SPEC_ALL |> UNDISCH |> PROVE_HYP fir |> DISCH_ALL |> GEN_ALL
 in
    store_thm("field_" ^ fsuffix, goal, metis_tac[rth', field_nonzero_unit])
@@ -1907,39 +1890,25 @@ val field_inv_mult = store_thm(
 val _ = export_rewrites ["field_inv_mult"];
 
 (* Theorem: Field r ==> |/ #1 = #1 *)
-(* Proof: by group_inv_id and r.prod group. *)
-val field_inv_one = store_thm(
-  "field_inv_one",
-  ``!r:'a field. Field r ==> ( |/ #1 = #1)``,
-  metis_tac[group_inv_id |> SPEC ``f*`` |> UNDISCH_ALL
-   |> PROVE_HYP (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1) |> DISCH_ALL,
-   field_mult_group, field_nonzero_mult_property, group_id_element, field_mult_inv]);
-(* > val field_inv_one = |- !r:'a field. Field r ==> ( |/ #1 = #1) : thm *)
-
-(* Same theorem, simple proof. *)
-
-(* Theorem: Field r ==> |/ #1 = #1 *)
 (* Proof: by ring_inv_one, field_is_ring. *)
-val field_inv_one = store_thm(
-  "field_inv_one",
-  ``!r:'a field. Field r ==> ( |/ #1 = #1)``,
-  metis_tac[ring_inv_one, field_is_ring]);
-
-(* export simple theorem *)
-val _ = export_rewrites ["field_inv_one"];
+Theorem field_inv_one[simp]:
+  !r:'a field. Field r ==> ( |/ #1 = #1)
+Proof metis_tac[ring_inv_one, field_is_ring]
+QED
 
 (* Theorem: |/ ( |/ x) = x *)
 (* Proof: by group_inv_inv and r.prod group. *)
-val field_inv_inv = store_thm(
-  "field_inv_inv",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> ( |/ ( |/ x) = x)``,
-  metis_tac[group_inv_inv |> SPEC ``f*`` |> UNDISCH_ALL
-   |> PROVE_HYP (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1) |> DISCH_ALL,
-   field_mult_group, field_nonzero_mult_property, group_inv_element, field_mult_inv]);
-(* > val field_inv_inv = |- !r:'a field. Field r ==> !x. x IN R+ ==> ( |/ ( |/ x) = x) : thm *)
-
-(* export simple theorem *)
-val _ = export_rewrites ["field_inv_inv"];
+Theorem field_inv_inv[simp]:
+  !r:'a field. Field r ==> !x. x IN R+ ==> ( |/ ( |/ x) = x)
+Proof
+  metis_tac[group_inv_inv
+              |> SPEC ``f*`` |> UNDISCH_ALL
+              |> PROVE_HYP
+                 (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1)
+              |> DISCH_ALL,
+            field_mult_group, field_nonzero_mult_property, group_inv_element,
+            field_mult_inv]
+QED
 
 (* Theorem: x IN R+ ==> - x IN R+ *)
 (* Proof: by contradiction.
@@ -3261,14 +3230,6 @@ val finite_field_fermat_thm = store_thm(
       = x ** (m ** n)           by finite_field_fermat_thm
       = x                       by induction hypothesis
 *)
-val finite_field_fermat_all = store_thm(
-  "finite_field_fermat_all",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> !n. x ** (CARD R ** n) = x``,
-  rpt (stripDup[FiniteField_def]) >>
-  qabbrev_tac `m = CARD R` >>
-  Induct_on `n` >-
-  rw[EXP] >>
-  rw[EXP, field_exp_mult, finite_field_fermat_thm, Abbr`m`]);
 val finite_field_fermat_all = store_thm(
   "finite_field_fermat_all",
   ``!r:'a field. FiniteField r ==> !x. x IN R ==> !n. x ** (CARD R ** n) = x``,

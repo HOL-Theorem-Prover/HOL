@@ -1,12 +1,26 @@
 
 val _ =print "\n";
 
+infix |>
+fun x |> f = f x
+
 fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
 fun tprint s = print (UTF8.padRight #" " 65 s)
 
 fun assert (s, b) =
     (tprint s; if b() then print "OK\n" else die "FAILED!")
+
+fun testf str f x resprint expected =
+    let
+      val _ = tprint str
+      val res = Exn.capture f x
+    in
+      case res of
+          Exn.Exn e => die ("Unexpected exception: " ^ General.exnMessage e)
+        | Exn.Res r => if r = expected then print "OK\n"
+                       else die ("Unexpected result: " ^ resprint r)
+    end
 
 
 open Redblackset
@@ -90,5 +104,29 @@ in
     die ("FAILED, read back:\n  "^
          HOLPP.pp_to_string 70 printer t_in)
 end
+
+val _ = testf "PIntMap size after duplicate add"
+              PIntMap.size
+              (let open PIntMap in
+               empty |> add 10 "a" |> add 5 "c" |> add 10 "b"
+               end)
+              Int.toString
+              2
+
+val _ = testf "PIntMap size after hitting remove"
+              PIntMap.size
+              (let open PIntMap in
+               empty |> add 10 "a" |> add 5 "c" |> remove 10
+               end)
+              Int.toString
+              1
+
+val _ = testf "PIntMap size after missing remove"
+              PIntMap.size
+              (let open PIntMap in
+               empty |> add 10 "a" |> add 5 "c" |> remove 11
+               end)
+              Int.toString
+              2
 
 val _ = OS.Process.exit OS.Process.success

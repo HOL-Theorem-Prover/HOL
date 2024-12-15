@@ -1,8 +1,9 @@
 (*---------------------------------------------------------------------------*)
 (* even(n) predicate realized by regexp                                      *)
 (*---------------------------------------------------------------------------*)
-
+(*
 app load ["numposrepTheory","regexpLib", "wordsLib"];
+*)
 
 open Regexp_Type regexpSyntax regexpTheory FormalLangTheory
      numposrepTheory stringTheory arithmeticTheory;
@@ -11,13 +12,13 @@ open Regexp_Type regexpSyntax regexpTheory FormalLangTheory
 (* Boilerplate                                                               *)
 (*---------------------------------------------------------------------------*)
 
-fun qspec q th = th |> Q.SPEC q 
+fun qspec q th = th |> Q.SPEC q
 fun qspec_arith q th = qspec q th |> SIMP_RULE arith_ss [];
 
-val [regexp_lang_chset,regexp_lang_cat, regexp_lang_star, 
+val [regexp_lang_chset,regexp_lang_cat, regexp_lang_star,
      regexp_lang_neg, regexp_lang_or] = CONJUNCTS regexp_lang_def;
 
-val dot_star_lem = regexp_lang_dot_star 
+val dot_star_lem = regexp_lang_dot_star
   |> SIMP_RULE std_ss [DOT_def,charsetTheory.charset_full_thm]
 ;
 
@@ -37,15 +38,15 @@ val even_regexp_term = regexpSyntax.regexp_to_term even_regexp;
 val lemA = Q.prove
 (`!n. EVEN(n) <=> EVEN (n MOD 256)`,
  metis_tac
-    [DIVISION |> qspec_arith `256` 
-              |> qspec `n` 
-              |> Q.AP_TERM `EVEN` 
+    [DIVISION |> qspec_arith `256`
+              |> qspec `n`
+              |> Q.AP_TERM `EVEN`
               |> SIMP_RULE arith_ss [EVEN_ADD,EVEN_MULT,EVAL ``EVEN 256``]]
 );
 
 val lemB = Q.prove
 (`!n. EVEN(n) <=> HD (n2l 256 n) IN {n | n < 256 /\ EVEN n}`,
- qsuff_tac 
+ qsuff_tac
   `!B n. (B=256) ==> (EVEN(n) <=> HD (n2l B n) IN {n | n < B /\ EVEN(n)})`
   >- metis_tac []
   >- (recInduct n2l_ind
@@ -60,10 +61,10 @@ val lemB = Q.prove
 (*---------------------------------------------------------------------------*)
 
 val lemC = Q.prove
-(`!s. s IN regexp_lang(^(regexp_to_term (Chset sme_charset))) 
-        <=> 
+(`!s. s IN regexp_lang(^(regexp_to_term (Chset sme_charset)))
+        <=>
       ?c. (s = [c]) /\ EVEN(ORD c)`,
- rw_tac (list_ss ++ pred_setLib.PRED_SET_ss ++ regexpLib.charset_conv_ss) 
+ rw_tac (list_ss ++ pred_setLib.PRED_SET_ss ++ regexpLib.charset_conv_ss)
         [EQ_IMP_THM,EVEN_MOD2]
  >> EVAL_TAC
  >> pop_assum mp_tac
@@ -77,12 +78,14 @@ val lemC = Q.prove
 (* The main theorem                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val EVEN_REGEXP_THM = Q.prove
-(`!n. EVEN(n) <=> MAP CHR (n2l 256 n) IN regexp_lang ^even_regexp_term`,
- rw_tac (list_ss ++ pred_setLib.PRED_SET_ss) 
+Theorem EVEN_REGEXP_THM :
+ !n. EVEN(n) <=> MAP CHR (n2l 256 n) IN regexp_lang ^even_regexp_term
+Proof
+ rw_tac (list_ss ++ pred_setLib.PRED_SET_ss)
         [regexp_lang_cat,IN_dot,dot_star_lem,lemC,PULL_EXISTS,Once lemB]
   >> ONCE_REWRITE_TAC [n2l_def]
-  >> rw_tac list_ss [EQ_IMP_THM,ORD_CHR_RWT]);
+  >> rw_tac list_ss [EQ_IMP_THM,ORD_CHR_RWT]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* compile regexp to DFA                                                     *)
@@ -104,19 +107,33 @@ val EVEN_IFF_DFA =
 fun EVEN_BY_DFA_CONV tm =
  let val thm = SPEC tm EVEN_IFF_DFA
      val tm = rhs(concl thm)
-  in 
+  in
     TRANS thm (EVAL tm)
   end;
 
 val even_by_dfa = EVEN_BY_DFA_CONV o numSyntax.mk_numeral o Arbnum.fromLargeInt
 
-(*---------------------------------------------------------------------------
-  map even_by_dfa [0,1,2,4,8,16,32,64,128,256,512,1024,1025, 2048, 65536, 65537,
-                   24524542352452435245452345000929592934535252];
+fun EVEN_BY_EVAL tm = EVAL “EVEN ^tm ”;
 
-  Note that REDUCE_CONV is faster, since it just looks at the last "digit" of 
-  the number, while the DFA has to process the entire string. The DFA could 
-  be optimized so that when it enters a state that is guaranteed to lead to 
+fun even_by_eval n =
+  n |> Arbnum.fromLargeInt
+    |> numSyntax.mk_numeral
+    |> EVEN_BY_EVAL;
+
+(*---------------------------------------------------------------------------
+  Count.apply
+    (map even_by_dfa)
+    [0,1,2,4,8,16,32,64,128,256,512,1024,1025, 2048, 65536, 65537,
+     24524542352452435245452345000929592934535252];
+
+  Count.apply
+    (map even_by_eval)
+    [0,1,2,4,8,16,32,64,128,256,512,1024,1025, 2048, 65536, 65537,
+     24524542352452435245452345000929592934535252];
+
+  Note that EVAL_CONV is faster, since it just looks at the last "digit" of
+  the number, while the DFA has to process the entire string. The DFA could
+  be optimized so that when it enters a state that is guaranteed to lead to
   acceptance (or to rejection), the rest of the string doesn't need
   processing.
  ---------------------------------------------------------------------------*)

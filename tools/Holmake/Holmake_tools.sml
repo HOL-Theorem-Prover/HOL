@@ -219,7 +219,7 @@ type output_functions = {warn : string -> unit,
 
 fun die_with message = let
 in
-  stdErr_out (message ^ "\n");
+  stdErr_out ("\n\nHolmake died: " ^ message ^ "\n");
   OS.Process.exit OS.Process.failure
 end
 

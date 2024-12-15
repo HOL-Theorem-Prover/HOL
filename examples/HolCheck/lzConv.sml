@@ -25,6 +25,7 @@ exception UNCHANGED
 fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 val ERR = mk_HOL_ERR "lzConv";
+val ERRloc = mk_HOL_ERRloc "lzConv";
 
 
 (* ---------------------------------------------------------------------*)
@@ -73,13 +74,13 @@ fun RAND_CONV conv tm = let
   val {Rator,Rand} =
     dest_comb tm handle (HOL_ERR _) => raise ERR "RAND_CONV" "not a comb"
   val newrand = conv Rand
-    handle HOL_ERR {origin_function, message, origin_structure} =>
+    handle HOL_ERR {origin_function, source_location, message, origin_structure} =>
       if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
          andalso origin_structure = "lzConv"
       then
-        raise ERR "RAND_CONV" message
+        raise ERRloc "RAND_CONV" source_location message
       else
-        raise ERR "RAND_CONV" (origin_function ^ ": " ^ message)
+        raise ERRloc "RAND_CONV" source_location (origin_function ^ ": " ^ message)
 in
   AP_TERM Rator newrand handle (HOL_ERR {message,...}) =>
     raise ERR "RAND_CONV" ("Application of AP_TERM failed: "^message)
@@ -100,13 +101,13 @@ fun RATOR_CONV conv tm = let
   val {Rator,Rand} =
     dest_comb tm handle (HOL_ERR _) => raise ERR "RATOR_CONV" "not a comb"
   val newrator = conv Rator
-    handle HOL_ERR {origin_function, origin_structure, message} =>
+    handle HOL_ERR {origin_function, origin_structure, source_location, message} =>
       if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
          andalso origin_structure = "lzConv"
       then
-        raise ERR "RATOR_CONV" message
+        raise ERRloc "RATOR_CONV" source_location message
       else
-        raise ERR "RATOR_CONV" (origin_function ^ ": " ^ message)
+        raise ERRloc "RATOR_CONV" source_location (origin_function ^ ": " ^ message)
 in
   AP_THM newrator Rand handle  (HOL_ERR {message,...}) =>
     raise ERR "RATOR_CONV" ("Application of AP_THM failed: "^message)
@@ -162,14 +163,14 @@ fun ABS_CONV conv tm =
                in
                  TRANS (TRANS th1 eq_thm') th2
                end
-                 handle HOL_ERR {origin_function, origin_structure, message} =>
+                 handle HOL_ERR {origin_function, origin_structure, source_location, message} =>
                         if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV",
                                                      "ABS_CONV"]
                            andalso origin_structure = "lzConv"
                         then
-                          raise ERR "ABS_CONV" message
+                          raise ERRloc "ABS_CONV" source_location message
                         else
-                          raise ERR "ABS_CONV"
+                          raise ERRloc "ABS_CONV" source_location
                                     (origin_function ^ ": " ^ message)
       end
     | _ => raise ERR "ABS_CONV" "Term not an abstraction"

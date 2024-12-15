@@ -253,6 +253,7 @@ structure LexGen: LEXGEN =
 	  | REPS of int * int | ID of string | ACTION of string
 	  | BOF | EOF | ASSIGN | SEMI | ARROW | LEXMARK | LEXSTATES
 	  | COUNT | REJECT | FULLCHARSET | STRUCT | HEADER | ARG | POSARG
+	  | EOFPOS
 
    datatype exp = EPS | CLASS of bool array * int | CLOSURE of exp
 		| ALT of exp * exp | CAT of exp * exp | TRAIL of int
@@ -271,6 +272,7 @@ structure LexGen: LEXGEN =
 
    val CountNewLines = ref false;
    val PosArg = ref false;
+   val EofPos = ref false;
    val HaveReject = ref false;
 
    (* Can increase size of character set *)
@@ -287,6 +289,7 @@ structure LexGen: LEXGEN =
 
    val ResetFlags = fn () => (CountNewLines := false; HaveReject := false;
 			      PosArg := false;
+			      EofPos := false;
 			      UsesTrailingContext := false;
 			       CharSetSize := 129; StrName := "Mlex";
 				HeaderCode := ""; HeaderDecl:= false;
@@ -516,6 +519,7 @@ fun AdvanceTok () : unit = let
 				  | "header" => HEADER
 				  | "arg"    => ARG
 				  | "posarg" => POSARG
+				  | "eofpos" => EOFPOS
 			          | _ => prErr "unknown % operator "
 			       end
 			     )
@@ -808,8 +812,8 @@ end;
 
 exception ParseError;
 
-fun parse() : (string * (int list * exp) list * ((string,string) dictionary)) =
-	let val Accept = ref (create String.<=) : (string,string) dictionary ref
+fun parse() : (string * (int list * exp) list * ((string,string) dictionary * string list)) =
+	let val Accept = ref (create String.<=, []) : ((string,string) dictionary * string list) ref
 	val rec ParseRtns = fn l => case getch(!LexBuf) of
 		  #"%" => let val c = getch(!LexBuf) in
 		    	   if c = #"%" then (implode (rev l))
@@ -849,6 +853,7 @@ fun parse() : (string * (int list * exp) list * ((string,string) dictionary)) =
 				     HeaderDecl := true; ParseDefs())
 				| _ => raise SyntaxError)
 	        | POSARG => (PosArg := true; ParseDefs())
+	        | EOFPOS => (EofPos := true; ParseDefs())
                 | ARG => (LexState := 2; AdvanceTok();
 			     case GetTok()
 			     of ACTION s =>
@@ -880,9 +885,11 @@ fun parse() : (string * (int list * exp) list * ((string,string) dictionary)) =
 		 if !NextTok = ARROW then
 		   (LexState:=2; AdvanceTok();
 		    case GetTok() of ACTION(act) =>
-		      if !NextTok=SEMI then
-		        (Accept:=enter(!Accept) (Int.toString (!LeafNum),act);
-		         ParseRules((s,e)::rules))
+		      if !NextTok=SEMI then let
+			val (dict, ord) = !Accept
+			val key = Int.toString (!LeafNum)
+		        val _ = Accept := (enter dict (key,act), key::ord)
+			in ParseRules((s,e)::rules) end
 		      else (prSynErr "expected ';'")
 		    | _ => raise SyntaxError)
 		  else (prSynErr "expected '=>'")
@@ -1075,19 +1082,21 @@ end
    accepting leaf actions.  The key strings are the leaf #'s, the data strings
    are the actions *)
 
-fun makeaccept ends =
+fun makeaccept (ends, ord) =
     let fun startline f = if f then say "  " else say "| "
         fun stripLWS s =
             Substring.string (Substring.dropl Char.isSpace (Substring.full s))
-	 fun make(nil,f) = (startline f; say "_ => raise Internal.LexerError\n")
-	  | make((x,a)::y,f) = (startline f; say x; say " => ";
-				if Substring.size(#2 (Substring.position "yytext" (Substring.full a))) = 0
- then
-                                     (say "("; say a; say ")")
-                                else (say "let val yytext=yymktext() in ";
-                                      say (stripLWS a); say " end");
-                                say "\n"; make(y,false))
-    in make (listofdict(ends),true)
+	fun make(nil,f) = (startline f; say "_ => raise Internal.LexerError\n")
+	  | make(x::y,f) = let
+            val a = lookup ends x
+            in (startline f; say x; say " => ";
+                if Substring.size(#2 (Substring.position "yytext" (Substring.full a))) = 0 then
+                    (say "("; say a; say ")")
+                else (say "let val yytext=yymktext() in ";
+                    say (stripLWS a); say " end");
+                say "\n"; make(y,false))
+            end
+    in make (List.rev ord,true)
     end
 
 fun leafdata(e:(int list * exp) list) =
@@ -1256,7 +1265,8 @@ fun lexGen infile =
 	 sayln "\t\tcase node of";
 	 sayln "\t\t    Internal.N yyk =>";
 	 sayln "\t\t\t(let fun yymktext() = String.substring(!yyb,i0,i-i0)\n\
-	       \\t\t\t     val yypos: int = i0+ !yygone";
+	       \\t\t\t     val yypos: int = i0+ !yygone\n\
+	       \\t\t\t     val yyend: int = yypos + (i-i0)";
 	 if !CountNewLines
 	    then (sayln "\t\t\tval _ = yylineno := CharVectorSlice.foldli";
 	  	  sayln "\t\t\t\t(fn (_,#\"\\n\", n) => n+1 | (_,_, n) => n) (!yylineno) (CharVectorSlice.slice(!yyb,i0,SOME(i-i0)))")
@@ -1285,7 +1295,8 @@ fun lexGen infile =
 	 sayln "\t    in if (String.size newchars)=0";
 	 sayln "\t\t  then (yydone := true;";
 	 say "\t\t        if (l=i0) then UserDeclarations.eof ";
-	 sayln (case !ArgCode of NONE => "()" | SOME _ => "yyarg");
+	 say (case !ArgCode of NONE => "()" | SOME _ => "yyarg");
+	 sayln (if !EofPos then " (!yygone+i0)" else "");
 	 say   "\t\t                  else action(l,NewAcceptingLeaves";
 	 if !UsesTrailingContext then
 	    sayln ",nil))" else sayln "))";

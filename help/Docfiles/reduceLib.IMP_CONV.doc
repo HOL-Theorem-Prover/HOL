@@ -13,11 +13,11 @@ term of type {bool}, then {IMP_CONV tm} returns the corresponding theorem. Note
 that in the last case the antecedent and consequent need only be
 alpha-equivalent rather than strictly identical.
 {
-   IMP_CONV "T ==> t" = |- T ==> t = t
-   IMP_CONV "t ==> T" = |- t ==> T = T
-   IMP_CONV "F ==> t" = |- F ==> t = T
-   IMP_CONV "t ==> F" = |- t ==> F = ~t
-   IMP_CONV "t ==> t" = |- t ==> t = T
+   IMP_CONV “T ==> t” = |- T ==> t = t
+   IMP_CONV “t ==> T” = |- t ==> T = T
+   IMP_CONV “F ==> t” = |- F ==> t = T
+   IMP_CONV “t ==> F” = |- t ==> F = ~t
+   IMP_CONV “t ==> t” = |- t ==> t = T
 }
 
 \FAILURE
@@ -25,14 +25,14 @@ alpha-equivalent rather than strictly identical.
 
 \EXAMPLE
 {
-#IMP_CONV "T ==> F";;
-|- T ==> F = F
+> IMP_CONV “T ==> F”;
+val it =  ⊢ T ⇒ F ⇔ F : thm
 
-#IMP_CONV "F ==> x";;
-|- F ==> x = T
+> IMP_CONV “F ==> x”;
+val it = ⊢ F ⇒ x ⇔ T : thm
 
-#IMP_CONV "(!z:(num)list. z = z) ==> (!x:(num)list. x = x)";;
-|- (!z. z = z) ==> (!x. x = x) = T
+> IMP_CONV “(!z:(num)list. z = z) ==> (!x:(num)list. x = x)”;
+val it =  ⊢ (∀z. z = z) ⇒ (∀z. z = z) ⇔ T : thm
 }
 
 \ENDDOC

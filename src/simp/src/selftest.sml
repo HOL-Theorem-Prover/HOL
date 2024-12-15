@@ -1,6 +1,9 @@
 open HolKernel Parse boolLib simpLib
 open testutils boolSimps BackchainingLib
 
+val failcount = ref 0
+val _ = diemode := Remember failcount
+
 val _ = Portable.catch_SIGINT()
 
 (* earlier versions of the simplifier would go into an infinite loop on
@@ -55,7 +58,7 @@ val _ =
     infloop_protect
       "Abbreviations + ASM_SIMP_TAC"
       test4P
-      (ASM_SIMP_TAC bool_ss [markerSyntax.Abbr`y`])
+      (VALID (ASM_SIMP_TAC bool_ss [markerSyntax.Abbr`y`]))
       ([``Abbrev (y:'b = f (x : 'a))``, ``P (y:'b) : bool``],
        ``Q (y:'b) : bool``)
 
@@ -426,12 +429,14 @@ val _ = let
         | _ => false
   fun test (msg, tac, ing, outgs) =
       (tprint msg;
-       require_msg (testresult outgs) printgoals (VALID tac) ing)
+       require_msg (testresult outgs) printgoals tac ing)
   val T_t = “?x:'a. p”
   fun gs c = global_simp_tac c
   val fs = full_simp_tac
   val gsc = {droptrues=true,elimvars=false,strip=true,oldestfirst=true}
   val gsc' = {droptrues=true,elimvars=false,strip=true,oldestfirst=false}
+  val bss1 = bool_ss ++ rewrites [ASSUME “x = T”]
+  val bss2 = bss1 ++ rewrites [ASSUME “x = F”]
 in
   List.app (ignore o test) [
     ("Abbrev var not rewritten",
@@ -451,8 +456,35 @@ in
     ("fs + Excl (in assumptions)", fs bool_ss [Excl "EXISTS_SIMP"],
      ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)]),
     ("gs + Excl (in assumptions)", gs gsc bool_ss [Excl "EXISTS_SIMP"],
-     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)])
+     ([“^T_t = X”], “p /\ q”), [([“^T_t = X”], “p /\ q”)]),
+    ("NoAsms",
+     asm_simp_tac bool_ss [markerLib.NoAsms],
+     ([“x = F”], “p /\ x”), [([“x = F”], “p /\ x”)]),
+    ("IgnAsm",
+     asm_simp_tac bool_ss [markerLib.IgnAsm ‘x = _’],
+     ([“x = F”, “y = T”], “p /\ x /\ y”), [([“x = F”, “y = T”], “p /\ x”)]),
+    ("IgnAsm (sub-match)",
+     asm_simp_tac bool_ss [markerLib.IgnAsm ‘F (* sa *)’],
+     ([“x = F”, “y = T”], “p /\ x /\ y”), [([“x = F”, “y = T”], “p /\ x”)]),
+    ("Rewrite competition: ASM vs arg",
+     asm_simp_tac bool_ss [ASSUME “x = T”],
+     ([“x = F”], “P (x:bool):bool”), [([“x = F”], “P F:bool”)]),
+    ("Rewrite competition: ARG1 vs arg2",
+     asm_simp_tac bool_ss [ASSUME “x = T”, ASSUME “x = F”],
+     ([], “P (x:bool):bool”), [([], “P T:bool”)]),
+    ("Rewrite competition: ASM1 vs asm2",
+     asm_simp_tac bool_ss [],
+     ([“x=T”, “x=F”], “P (x:bool):bool”), [([“x=T”,“x=F”], “P T:bool”)]),
+    ("Rewrite competition: ss1 vs SS2",
+     asm_simp_tac bss2 [],
+     ([], “P(x:bool):bool”), [([], “P F:bool”)]),
+    ("Rewrite competition: ARG vs ss",
+     asm_simp_tac bss1 [ASSUME “x = F”],
+     ([], “P(x:bool):bool”), [([], “P F:bool”)]),
+    ("Rewrite competition: ASM vs ss",
+     asm_simp_tac bss1 [],
+    ([“x = F”], “P(x:bool):bool”), [([“x = F”], “P F:bool”)])
   ]
 end
 
-val _ = Process.exit Process.success
+val _ = exit_count0 failcount

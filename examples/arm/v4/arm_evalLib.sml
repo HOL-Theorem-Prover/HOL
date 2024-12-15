@@ -548,9 +548,7 @@ local
         val address =
           Redblackmap.find (!ht, label)
           handle Redblackmap.NotFound =>
-            raise (HOL_ERR {message = "Cannot find ARM label\n",
-                                origin_function = "", origin_structure =
-                                "arm_evalLib"})
+            raise mk_HOL_ERR "arm_evalLib" "" "Cannot find ARM label\n"
           (*Polyhash.find ht label*)
     in
       mk_instruction ("0x" ^ Arbnum.toHexString (mul4 n) ^ ": " ^ s ^ address)

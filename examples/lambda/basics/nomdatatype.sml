@@ -1,9 +1,15 @@
+(* ========================================================================== *)
+(* FILE    : nomdatatype.sml                                                  *)
+(* TITLE   : Nominal datatype package                                         *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(* ========================================================================== *)
+
 structure nomdatatype :> nomdatatype =
 struct
 
-
-open binderLib HolKernel Parse boolLib bossLib generic_termsTheory
-open nomsetTheory
+open HolKernel Parse boolLib bossLib;
+open binderLib generic_termsTheory nomsetTheory;
 
 type coninfo = {con_termP : thm, con_def : thm}
 
@@ -92,8 +98,6 @@ in
   CONV_RULE (ONCE_DEPTH_CONV mainconv)
 end
 
-
-
 val gterm_ty = mk_thy_type {Thy = "generic_terms", Tyop = "gterm",
                             Args = [beta,alpha]}
 
@@ -126,15 +130,14 @@ fun new_type_step1 tyname n {vp, lp} = let
   val (glam_ty, gvar_ty) = first2 (#2 (dest_type gtty))
   val term_exists =
       prove(mk_exists(x, mk_comb(termP, x)),
-            EXISTS_TAC (list_mk_icomb(inst [beta |-> glam_ty] GVAR_t,
-                                      [mk_arb stringSyntax.string_ty,
-                                       mk_arb gvar_ty])) THEN
-            MATCH_MP_TAC (genind_rules |> SPEC_ALL |> CONJUNCT1) THEN
-            BETA_TAC THEN REWRITE_TAC [])
+            irule_at (Pos hd) (cj 1 genind_rules) THEN BETA_TAC THEN
+            REWRITE_TAC[])
   val {absrep_id, newty, repabs_pseudo_id, termP, termP_exists, termP_term_REP,
        term_ABS_t, term_ABS_pseudo11,
        term_REP_t, term_REP_11} =
-      newtypeTools.rich_new_type (tyname, term_exists)
+      newtypeTools.rich_new_type {tyname = tyname, exthm = term_exists,
+                                  ABS = tyname ^ "_ABS",
+                                  REP = tyname ^ "_REP"}
 in
   {term_ABS_pseudo11 = term_ABS_pseudo11, term_REP_11 = term_REP_11,
    term_REP_t = term_REP_t, term_ABS_t = term_ABS_t, absrep_id = absrep_id,
@@ -157,7 +160,7 @@ fun termP_removal (info as {elimth,absrep_id,tpm_def,termP,repty}) t = let
   end t
 
 in
-  if  Type.compare(type_of v, repty) = EQUAL then
+  if Type.compare(type_of v, repty) = EQUAL then
     (SWAP_FORALL_CONV THENC BINDER_CONV (termP_removal info)) ORELSEC
     ELIM_HERE
   else NO_CONV
@@ -324,8 +327,5 @@ in
   {term_REP_tpm = term_REP_tpm, tpm_thm = tpm_thm, t_pmact_t = t_pmact_t,
    tpm_t = tpm_t}
 end
-
-
-
 
 end (* struct *)

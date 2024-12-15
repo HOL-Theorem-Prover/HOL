@@ -175,7 +175,7 @@ fun inst_term sterm stac =
 (*
 load "tttToken"; open tttToken;
 val stac = "EXISTS_TAC ``1:num``";
-val stac' = QFRead.fromString false stac;
+val stac' = HolParser.fromString false stac;
 val (astac,sterm) = valOf (abstract_term stac');
 val istac = inst_term "2:num" astac;
 *)

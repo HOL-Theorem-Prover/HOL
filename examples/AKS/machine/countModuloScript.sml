@@ -12,48 +12,29 @@ val _ = new_theory "countModulo";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* val _ = load "SatisfySimps"; (* for SatisfySimps.SATISFY_ss *) *)
+open pred_setTheory listTheory arithmeticTheory dividesTheory gcdTheory
+     logrootTheory numberTheory combinatoricsTheory pairTheory optionTheory
+     listRangeTheory;
 
-(* Get dependent theories local *)
-(* val _ = load "countMacroTheory"; *)
 open countMonadTheory countMacroTheory;
 
 open bitsizeTheory complexityTheory;
 open loopIncreaseTheory loopDecreaseTheory;
 open loopDivideTheory loopMultiplyTheory;
 
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory helperListTheory;
-open helperFunctionTheory;
-
-(* (* val _ = load "dividesTheory"; -- in helperNumTheory *) *)
-(* (* val _ = load "gcdTheory"; -- in helperNumTheory *) *)
-open pred_setTheory listTheory arithmeticTheory;
-open dividesTheory gcdTheory;
-
-(* (* val _ = load "logPowerTheory"; *) *)
-open logrootTheory logPowerTheory;
-
-(*
-(* val _ = load "computeBasicTheory"; *)
-open computeBasicTheory; (* for exp_mod_eqn *)
-*)
-
-(* (* val _ = load "monadsyntax"; *) *)
 open monadsyntax;
-open pairTheory optionTheory;
-open listRangeTheory;
 
 val _ = monadsyntax.enable_monadsyntax();
 val _ = monadsyntax.enable_monad "Count";
 
+val _ = temp_overload_on("SQ", ``\n. n * n``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
+val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
 
 (* ------------------------------------------------------------------------- *)
 (* Modulo Computations with Count Monad Documentation                        *)
@@ -387,13 +368,6 @@ val mmulM_steps_bound = store_thm(
 val msqM_def = Define`
     msqM m x = mmulM m x x
 `;
-
-(* Theorem: valueOf(msqM m x) = (x * x) MOD m *)
-(* Proof: by msqM_def *)
-val msqM_value = store_thm(
-  "msqM_value[simp]",
-  ``!m x. valueOf(msqM m x) = (x * x) MOD m``,
-  simp[msqM_def]);
 
 (* Obtain theorems *)
 val msqM_value = save_thm("msqM_value[simp]",

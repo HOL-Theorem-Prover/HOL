@@ -12,35 +12,13 @@ val _ = new_theory "fieldIdeal";
 
 (* ------------------------------------------------------------------------- *)
 
-
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
-(* Get dependent theories local *)
-(* (* val _ = load "monoidTheory"; *) *)
-(* (* val _ = load "groupTheory"; *) *)
-(* (* val _ = load "ringTheory"; *) *)
-(* val _ = load "ringUnitTheory"; *)
-(* (* val _ = load "integralDomainTheory"; *) *)
-open monoidTheory groupTheory ringTheory ringUnitTheory;
+open pred_setTheory arithmeticTheory gcdsetTheory numberTheory
+     combinatoricsTheory;
 
-(* (* val _ = load "ringIdealTheory"; *) *)
-(* val _ = load "quotientRingTheory"; *)
-open subgroupTheory quotientGroupTheory;
-open ringIdealTheory quotientRingTheory;
-
-(* val _ = load "fieldTheory"; *)
-open fieldTheory;
-
-(* Get dependent theories in lib *)
-(* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
-(* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
-open helperNumTheory helperSetTheory;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory;
-
+open monoidTheory groupTheory ringTheory fieldTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Ideals in Field Documentation                                             *)

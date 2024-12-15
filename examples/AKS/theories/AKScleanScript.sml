@@ -14,6 +14,10 @@ val _ = new_theory "AKSclean";
 
 open jcLib;
 
+(* open dependent theories *)
+open prim_recTheory pred_setTheory listTheory arithmeticTheory logrootTheory
+     numberTheory combinatoricsTheory dividesTheory gcdTheory primeTheory;
+
 (* Get dependent theories local *)
 open AKSimprovedTheory;
 open AKSrevisedTheory;
@@ -25,22 +29,8 @@ open AKSshiftTheory;
 
 open countAKSTheory; (* for aks0_eq_aks *)
 
-(* open dependent theories *)
-open prim_recTheory pred_setTheory listTheory arithmeticTheory;
-
-(* Get dependent theories in lib *)
-open helperNumTheory helperSetTheory helperListTheory;
-open helperFunctionTheory;
-
-open dividesTheory gcdTheory;
-open logPowerTheory;
-
 open fieldInstancesTheory;
-open ringInstancesTheory;
-open groupInstancesTheory; (* for Estar_group *)
-open monoidTheory; (* for Monoid_def *)
-open subgroupTheory; (* for Subgroup_def *)
-open groupOrderTheory; (* for Generated_subset_group *)
+open monoidTheory groupTheory ringTheory;
 
 open polyRingModuloTheory; (* for poly_mod_ring_has_monomials *)
 open polyFieldModuloTheory; (* for poly_mod_prod_group *)
@@ -53,9 +43,11 @@ open computeRingTheory;
 open computeParamTheory;
 open computeAKSTheory;
 
-open GaussTheory; (* for phi_le *)
+val _ = intLib.deprecate_int ();
 
-
+val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
+val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+val _ = temp_overload_on("TWICE", ``\n. 2 * (n :num)``);
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Clean Presentation Documentation                                      *)

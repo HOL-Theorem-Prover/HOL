@@ -1476,7 +1476,7 @@ val denorm_relative_tac =
   \\ last_assum (mp_then Any mp_tac error_bound_norm_strong)
   \\ disch_then (qspec_then `0` mp_tac)
   \\ impl_tac >- fs[]
-  \\ qmatch_goalsub_abbrev_tac `abs (err_op) <= _ ==> _`
+  \\ qmatch_abbrev_tac `abs (err_op) <= _ ==> _`
   \\ strip_tac
   \\ qexists_tac `err_op`
   \\ unabbrev_all_tac \\ fs[error_def]

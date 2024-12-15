@@ -2,6 +2,9 @@ signature realSyntax =
 sig
   include Abbrev
 
+  val prefer_real    : unit -> unit
+  val deprecate_real : unit -> unit
+
   (* terms and types *)
   val real_ty        : hol_type
   val zero_tm        : term
@@ -12,6 +15,8 @@ sig
   val negate_tm      : term
   val real_injection : term (* the injection from :num -> :real *)
   val inv_tm         : term
+  val NUM_FLOOR_tm   : term
+  val NUM_CEILING_tm : term
 
   (* binary operators *)
   val div_tm         : term

@@ -45,7 +45,7 @@ fun mk_list [] = Absyn.mk_ident "NIL"
   | mk_list (e::es) =
       Absyn.mk_app (Absyn.mk_app (Absyn.mk_ident "CONS", e), mk_list es)
 
-fun absyn2term a = absyn_to_term (term_grammar ()) a
+fun absyn2term a = absyn_to_term (#2 holfootTheory.holfoot_grammars) a
 
 fun string_to_label s = mk_var (s, markerSyntax.label_ty);
 

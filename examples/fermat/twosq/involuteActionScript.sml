@@ -12,27 +12,13 @@ val _ = new_theory "involuteAction";
 
 (* ------------------------------------------------------------------------- *)
 
+open arithmeticTheory pred_setTheory numberTheory dividesTheory;
 
-(* open dependent theories *)
-(* arithmeticTheory -- load by default *)
-
-(* val _ = load "helperTwosqTheory"; *)
 open helperTwosqTheory;
-open helperNumTheory;
-open helperSetTheory;
-open helperFunctionTheory;
-open arithmeticTheory pred_setTheory;
-open dividesTheory; (* for divides_def, prime_def *)
 
-(* val _ = load "involuteTheory"; *)
 open involuteTheory;
 
-(* val _ = load "groupInstancesTheory"; *)
-open groupInstancesTheory; (* for Zadd_def *)
-
-(* val _ = load "groupActionTheory"; *)
-open groupActionTheory; (* for fixed_points_def *)
-
+open groupTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Involution and Action Documentation                                       *)
@@ -188,14 +174,6 @@ val funpow_reach = save_thm("funpow_reach",
 );
 (* val funpow_reach =
 |- !f x y. reach (FUNPOW f) Z2 x y <=> ?a. a < 2 /\ FUNPOW f a x = y: thm *)
-
-val funpow_equiv = save_thm("funpow_equiv",
-   reach_equiv |> ISPEC ``FUNPOW f`` |> ISPEC ``Z2`` |> GEN_ALL
-);
-(* val funpow_equiv =
-|- !f X. Group Z2 /\ (Z2 act X) (FUNPOW f) ==> reach (FUNPOW f) Z2 equiv_on X: thm *)
-
-(* A better version *)
 
 (* Theorem: f involute X ==> reach (FUNPOW f) Z2 equiv_on X *)
 (* Proof:
@@ -420,16 +398,6 @@ val involute_fixed_points_element_element =
 (* ------------------------------------------------------------------------- *)
 (* Involution Target Cardinality                                             *)
 (* ------------------------------------------------------------------------- *)
-
-val involute_target_card_by_types = save_thm("involute_target_card_by_types",
-    target_card_by_orbit_types |> ISPEC ``FUNPOW f`` |> ISPEC ``Z2`` |> GEN_ALL
-);
-(* val involute_target_card_by_types =
-|- !f X. Group Z2 /\ (Z2 act X) (FUNPOW f) /\ FINITE X ==>
-         CARD X = CARD (sing_orbits (FUNPOW f) Z2 X) +
-                  SIGMA CARD (multi_orbits (FUNPOW f) Z2 X): thm *)
-
-(* A better version *)
 
 (* Theorem: FINITE X /\ f involute X ==>
             CARD X = CARD (sing_orbits (FUNPOW f) Z2 X) +

@@ -42,10 +42,10 @@ datatype lang = Ada | C | Java | Sml | Thm;
 
 fun parse_args () =
  let fun to_lang s =
-      if Lib.mem s ["Ada","ada"] then SOME Ada else
+      if Lib.mem s ["ADA", "Ada","ada"] then SOME Ada else
       if Lib.mem s ["C","c"] then SOME C else
-      if Lib.mem s ["Java","java"] then SOME Java else
-      if Lib.mem s ["ML","SML","ml","sml"] then SOME Sml else
+      if Lib.mem s ["JAVA", "Java","java"] then SOME Java else
+      if Lib.mem s ["ML","SML","Ml", "Sml","ml","sml"] then SOME Sml else
       if Lib.mem s ["THM","Thm","thm"] then SOME Thm
       else NONE
      fun check(J,lstring,name,string) =

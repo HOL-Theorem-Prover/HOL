@@ -88,10 +88,7 @@ fun addboolth nm A =
 
 val initial_dstore =
     empty_dstore
-      |> rev_itlist add_thy ["relation", "combin"]
-      |> rev_itlist addboolth ["ONTO_DEF", "ONE_ONE_DEF", "IN_DEF",
-                               "RES_SELECT_DEF", "RES_EXISTS_UNIQUE_DEF",
-                               "RES_FORALL_DEF", "RES_EXISTS_DEF"]
+      |> rev_itlist add_thy ["relation", "combin", "bool"]
 
 
 fun remove_def s dstore =
@@ -268,6 +265,5 @@ fun register_indn delta (* (thm, knms) *) = (
   record_istore_delta delta;
   istore_fupd (register_indn_p delta)
 )
-
 
 end (* struct *)

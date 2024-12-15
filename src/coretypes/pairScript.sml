@@ -273,6 +273,19 @@ val UNCURRY_ONE_ONE_THM =
 
 Theorem UNCURRY_ONE_ONE_THM[simp] = UNCURRY_ONE_ONE_THM;
 
+(* ----------------------------------------------------------------------
+    UNCURRY_EQ = |- UNCURRY f x = y <=> ?a b. x = (a,b) /\ f a b = y
+
+    (given that UNCURRY = flip pair_CASE, this is the "case equality"
+     theorem recast)
+   ---------------------------------------------------------------------- *)
+
+Theorem UNCURRY_EQ:
+  UNCURRY f x = y <=> ?a b. x = (a,b) /\ f a b = y
+Proof
+  Q.SPEC_THEN ‘x’ STRIP_ASSUME_TAC pair_CASES >>
+  ASM_SIMP_TAC bool_ss [UNCURRY_DEF, PAIR_EQ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* pair_Axiom = |- !f. ?fn. !x y. fn (x,y) = f x y                           *)
@@ -547,7 +560,8 @@ RW_TAC bool_ss [EXISTS_UNIQUE_THM]
  ---------------------------------------------------------------------------*)
 
 val pair_CASE_def =
-  new_definition("pair_CASE_def", Term`pair_CASE p f = f (FST p) (SND p)`)
+  new_definition("pair_CASE_def",
+                 “pair_CASE (p:('a#'b)) f = f (FST p) (SND p)”)
 val _ = ot0 "pair_case" "case"
 
 val pair_case_thm = save_thm("pair_case_thm",
@@ -559,13 +573,26 @@ val pair_case_def = save_thm("pair_case_def", pair_case_thm)
 val _ = overload_on("case", ``pair_CASE``)
 
 
+Theorem pair_CASE_UNCURRY:
+  pair_CASE = flip UNCURRY
+Proof
+  SIMP_TAC bool_ss [FUN_EQ_THM, pair_CASE_def, combinTheory.C_DEF, UNCURRY]
+QED
+
 val pair_case_cong = save_thm("pair_case_cong",
   Prim_rec.case_cong_thm pair_CASES pair_case_thm);
 val pair_rws = [PAIR, FST, SND];
 
-val pair_case_eq = Q.store_thm(
-  "pair_case_eq",
-  ‘(pair_CASE p f = v) <=> ?x y. (p = (x,y)) /\ (f x y = v)’,
+Theorem pair_case_eq:
+  (pair_CASE p f = v) <=> ?x y. (p = (x,y)) /\ (f x y = v)
+Proof
+  SIMP_TAC bool_ss [pair_CASE_UNCURRY, UNCURRY_EQ, combinTheory.C_DEF]
+QED
+
+val pair_case_ho_elim = Q.store_thm(
+  "pair_case_ho_elim",
+  ‘!f'. f'(pair_CASE p f) = (?x y. p = (x,y) /\ f'(f x y))’,
+  strip_tac THEN
   Q.ISPEC_THEN ‘p’ STRUCT_CASES_TAC pair_CASES THEN
   SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
 
@@ -575,6 +602,7 @@ val _ = TypeBase.export [
         case_def=pair_case_thm,
         case_cong=pair_case_cong,
         case_eq = pair_case_eq,
+        case_elim = pair_case_ho_elim,
         induction=TypeBasePure.ORIG pair_induction,
         nchotomy=ABS_PAIR_THM,
         size=NONE,

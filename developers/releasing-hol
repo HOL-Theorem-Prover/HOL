@@ -21,8 +21,11 @@ case `uname` in
              if [ -x "/usr/local/opt/gnu-getopt/bin/getopt" ]
              then
                  PATH="/usr/local/opt/gnu-getopt/bin":$PATH
+             elif [ -x "/opt/homebrew/opt/gnu-getopt/bin/getopt" ]
+             then
+                 PATH="/opt/homebrew/opt/gnu-getopt/bin":$PATH
              else
-                 die "Need GNU getopt in /usr/local/opt/gnu-getopt/bin (use brew)"
+                 die "Need GNU getopt in /usr/local/opt/gnu-getopt/bin or /opt/homebrew/opt/gnu-getopt/bin (use brew)"
              fi ;;
     * ) TAR=tar
 esac
@@ -30,17 +33,18 @@ esac
 
 
 usage () {
-  echo "Usage: releasing-hol [--relname=<name>] [--reuse-checkout] <ref> <ML>" >&2
+  echo "Usage: releasing-hol [--relname=<name>] [--reuse-checkout] [--copyconfig] <ref> <ML>" >&2
   echo "  <ref> is a git reference (e.g., HEAD or a tag name)" >&2
   echo "  <ML> is a path to mosml or poly" >&2
   echo "  Use -Lpath to add library paths for Poly" >&2
   echo "  Use --relname=<name> to give the release a name other than <ref>" >&2
   echo "  Use --reuse-checkout to reuse local checkout of <ref>" >&2
+  echo "  Use --copyconfig to use local config-override file" >&2
   exit 1
 }
 
 reusecommit=0
-TEMP=$(getopt -n releasing-hol -o '' -lrelname: -lreuse-checkout -- "$@")
+TEMP=$(getopt -n releasing-hol -o '' -lrelname: -lreuse-checkout -lcopyconfig -- "$@")
 eval set -- "$TEMP"
 
 while true
@@ -48,6 +52,7 @@ do
     case "$1" in
         --reuse-checkout ) reusecommit=1 ; shift 1 ;;
         --relname ) userrelname=$2 ; shift 2 ;;
+        --copyconfig ) copylconfig=1 ; shift 1 ;;
         -- ) shift ; break ;;
         * ) die "Internal getopt error!" ;;
     esac
@@ -84,6 +89,31 @@ else
   echo -n "Cloning into /tmp - "
   (git clone -q ./ /tmp/localhol && echo "done" || die "failed")
 fi
+
+if [ ${copylconfig} -eq 1 ]
+then
+    if [ $MLbase = mosml ]
+    then
+        config="$localholdir/config-override"
+        if [ -r "$config" ]
+        then
+            echo "Copying $config into new tmp HOL dir"
+            /bin/cp $config /tmp/localhol/
+        else
+            die "No local config: $config"
+        fi
+    else
+        config="$localholdir/tools-poly/poly-includes.ML"
+        if [ -r "$config" ]
+        then
+            echo "Copying $config into new tmp HOL dir"
+            /bin/cp $config /tmp/localhol/tools-poly
+        else
+            die "No local config: $config"
+        fi
+    fi
+fi
+
 
 cd /tmp/localhol
 localholdir=/tmp/localhol
@@ -177,7 +207,7 @@ else
 fi
 
 echo ; echo Building documentation
-for man_name in Description Developers Interaction-emacs Lassie-Tutorial Logic Quick Reference Tutorial
+for man_name in Description Developers Interaction-emacs Logic Quick Reference Tutorial
 do
     lcname=$(echo $man_name | tr A-Z a-z)
     echo -n "  $man_name"

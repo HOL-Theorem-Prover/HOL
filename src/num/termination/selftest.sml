@@ -1,6 +1,10 @@
 open HolKernel Parse boolLib
 open testutils TotalDefn
 val _ = Feedback.emit_MESG := false
+
+fun badpp x = HOLPP.add_string "<Can't print this>"
+
+fun EVAL t = computeLib.CBV_CONV computeLib.the_compset t
 val _ = tprint "Testing mutually recursive function definition"
 
 val f_def = require (check_result (K true)) Define`
@@ -110,3 +114,73 @@ val _ = require_msg (check_result lhs_has_two_args)
                                (TotalDefn.qDefine "foo2[schematic]" q)
                                (SOME (WF_REL_TAC ‘$<’)))
                     ‘foo2 x = if x = 0 then y else foo2(x - 1)*2’;
+
+val _ = tprint "tailrecDefine (simple recursion: fact2)"
+val expected_pat = “!A n. ff A n = if n < 1 then A else ff (A * n) (n - 1)”
+fun check1 th =
+    case match_term expected_pat (concl th) of
+        ([{redex,residue}], []) =>
+          aconv redex “ff:num->num->num” andalso
+          #1 (dest_const residue) = "fact2"
+      | _ => false
+fun check2 _ = convtest("fact2 evaluates OK", EVAL, “fact2 1 6”, “720”)
+val _ = require_msgk (check_result check1) pp_thm
+                     (fn q => TotalDefn.qDefine "fact2_def[tailrecursive]"
+                                                q NONE)
+                     check2
+                     ‘fact2 A n = if n < 1 then A else fact2 (A * n) (n-1)’;
+
+val _ = tprint "tailrecDefine (simple recursion + rebind: fact)"
+val expected_pat = “!A n. ff A n = if n < 1 then A else ff (A * n) (n - 1)”
+fun check1 th =
+    case match_term expected_pat (concl th) of
+        ([{redex,residue}], []) =>
+          aconv redex “ff:num->num->num” andalso
+          #1 (dest_const residue) = "fact"
+      | _ => false
+fun check2 _ = convtest("fact evaluates OK", EVAL, “fact 1 5”, “120”)
+val _ = require_msgk (check_result check1) pp_thm
+                     (allquiet
+                        (fn q =>
+                            TotalDefn.qDefine
+                              "fact_def[tailrecursive,allow_rebind]" q NONE))
+                     check2
+                     ‘fact A n = if n < 1 then A else fact (A * n) (n-1)’;
+
+val _ = tprint "tailrecDefine (2-way mutual recursion)"
+val expected_pat = “(!x. ff1 x = if x = 0 then F else ff2 (x + 1)) /\
+                    (!n. ff2 n = if n = 0 then T
+                                else if n = 1 then F
+                                else if n = 2 then T
+                                else ff1 (n - 3))”
+fun check1 th =
+    case match_term expected_pat (concl th) of
+        (tms as [rr1,rr2], []) => List.all (is_const o #residue) tms
+      | _ => false
+fun check2 _ =
+    (tprint "DefnBase has record for even";
+     require_msgk (check_result Option.isSome) badpp DefnBase.lookup_userdef
+                  (fn _ => convtest ("even evaluates OK", EVAL, “even 11”, “F”))
+                  “even”)
+val _ = require_msgk (check_result check1) pp_thm
+                     (allquiet
+                        (fn q =>
+                            TotalDefn.qDefine
+                              "odd_def[tailrecursive]" q NONE))
+                     check2
+                     ‘(odd x = if x = 0 then F else even (x + 1)) /\
+                      (even n = if n = 0 then T
+                                    else if n = 1 then F
+                                    else if n = 2 then T
+                                    else odd (n - 3))’;
+
+val _ = tprint "tailrecDefine (2-way + isolate & nocompute)"
+val _ = require_msgk (check_result (K true)) pp_thm
+                     (fn q =>
+                         TotalDefn.qDefine
+                           "urk_def[tailrecursive,nocompute]" q NONE)
+                     (fn _ => convtest("urk unevals", EVAL,
+                                       “urk x + urk' m”, “urk x + urk' m”))
+                     ‘(urk n = urk2 (n + 1)) /\
+                      (urk' n = n + 1) /\
+                      (urk2 m = if m = 0 then 1 else urk (2 * m))’;

@@ -16,9 +16,9 @@ app load [
 *)
 
 open
-        pairTheory jbUtils schneiderUtils
+        pairTheory schneiderUtils
         arithmeticTheory integerTheory intLib integerRingLib intSyntax
-        intExtensionTheory intExtensionLib fracUtils;
+        intExtensionTheory intExtensionLib
 
 val _ = new_theory "frac";
 val _ = ParseExtras.temp_loose_equality()
@@ -346,6 +346,38 @@ fun frac_dnm_tac (asm_list:term list) (nmr,dnm) =
  *
  *  simplify resp. nmr(abs_frac(a1,b1)) to a1 and frac_dnm(abs_frac(a1,b1)) to b1
  *--------------------------------------------------------------------------*)
+
+fun ttrip_eq (t1,t2,t3) (ta,tb,tc) =
+  pair_eq (pair_eq aconv aconv) aconv ((t1,t2),t3) ((ta,tb),tc)
+
+fun extract_frac_fun (l2:term list) (t1:term) =
+  if is_comb t1 then
+    let
+      val (top_rator, top_rand) = dest_comb t1;
+    in
+      if tmem top_rator l2 andalso is_comb top_rand then
+        let
+          val (second_rator, second_rand) = dest_comb top_rand;
+        in
+          if second_rator ~~ ``abs_frac`` then
+            let
+              val (this_nmr, this_dnm) = dest_pair (second_rand)
+              val sub_fracs =
+                  op_union ttrip_eq
+                           (extract_frac_fun l2 this_nmr)
+                           (extract_frac_fun l2 this_dnm)
+            in
+                [(top_rator,this_nmr,this_dnm)] @ sub_fracs
+            end
+          else (* not second_rator = ``abs_frac`` *)
+            extract_frac_fun l2 top_rand
+        end
+      else (* not (top_rator = l2 andalso is_comb top_rand) *)
+        op_union ttrip_eq (extract_frac_fun l2 top_rator)
+                 (extract_frac_fun l2 top_rand)
+    end
+  else (* not is_comb t1 *)
+    [];
 
 fun FRAC_NMRDNM_TAC (asm_list, goal) =
 let

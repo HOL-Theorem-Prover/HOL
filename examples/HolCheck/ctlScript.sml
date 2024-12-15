@@ -22,7 +22,7 @@ open setLemmasTheory;
 open res_quanLib
 open envTheory
 
-val _ = numLib.prefer_num();
+val _ = numLib.temp_prefer_num();
 
 (* Most of this is cannibalised from MJCG's old Sugar2 theories *)
 

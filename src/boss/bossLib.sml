@@ -80,7 +80,8 @@ val export_rewrites = BasicProvers.export_rewrites
 val delsimps        = BasicProvers.delsimps
 val temp_delsimps   = BasicProvers.temp_delsimps
 
-val EVAL           = computeLib.EVAL_CONV;
+val EVAL           = computeLib.EVAL_CONV
+val EVALn          = computeLib.EVALn_CONV
 val EVAL_RULE      = computeLib.EVAL_RULE
 val EVAL_TAC       = computeLib.EVAL_TAC
 
@@ -158,6 +159,12 @@ val split_pair_case_tac = pairLib.split_pair_case_tac
 val CaseEq            = TypeBase.CaseEq
 val CaseEqs           = TypeBase.CaseEqs
 val AllCaseEqs        = TypeBase.AllCaseEqs
+val CasePred          = TypeBase.CasePred
+val CasePreds         = TypeBase.CasePreds
+val AllCasePreds      = TypeBase.AllCasePreds
+
+val oneline           = DefnBase.one_line_ify NONE
+val lambdify          = DefnBase.LIST_HALF_MK_ABS
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
@@ -178,14 +185,17 @@ val op >>~-           = Q.>>~-
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 
-(*---------------------------------------------------------------------------*)
-(* Working with abbreviations.                                               *)
-(*---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Working with abbreviations, and other gadgets from markerLib
+   ---------------------------------------------------------------------- *)
 
 val Abbr = markerLib.Abbr
 val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
 val REABBREV_TAC = markerLib.REABBREV_TAC
 val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
+
+val NoAsms = markerLib.NoAsms
+val IgnAsm = markerLib.IgnAsm
 
 local
 fun add_Case_conv x = REWR_CONV (ISPEC x markerTheory.add_Case)
@@ -328,26 +338,5 @@ val wlog_then = wlog_then
 
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
-
-(*---------------------------------------------------------------------------*)
-(* Tactic to automate some routine set theory by reduction to FOL            *)
-(* (Ported from HOL Light)                                                   *)
-(*---------------------------------------------------------------------------*)
-
-local open pairTheory pred_setTheory in
-fun SET_TAC L =
-    POP_ASSUM_LIST (K ALL_TAC) \\
-    rpt COND_CASES_TAC \\
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-                         SING_DEF] L) \\
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] \\
-    METIS_TAC [];
-
-fun ASM_SET_TAC L = rpt (POP_ASSUM MP_TAC) >> SET_TAC L;
-
-fun SET_RULE tm = prove (tm, SET_TAC []);
-end (* local *)
 
 end

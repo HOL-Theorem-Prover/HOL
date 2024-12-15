@@ -420,17 +420,16 @@ val Round_Op_def = Define`
   let R1' = (R3 #<< 1) ?? F1
   in (R0', R1', R0, R1)`;
 
-val (en_rnd_def, en_rnd_ind) = Defn.tprove (
-    Hol_defn "en_rnd"
-    `en_rnd i (b:block) k ss =
-     if i=0 then b
-     else en_rnd (i-1) (Round_Op(b,k,ss)) (ROTKEYS(k)) ss`,
-  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
+Definition en_rnd_def:
+  en_rnd i (b:block) k ss =
+    if i=0 then b
+    else en_rnd (i-1) (Round_Op(b,k,ss)) (ROTKEYS(k)) ss
+Termination
+  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC
+End
 
-val _ = save_thm ("en_rnd_def", en_rnd_def);
-val _ = save_thm ("en_rnd_ind", en_rnd_ind);
-
-val fwd_def = Define `fwd(b,k,s) = en_rnd 16 b k s`;
+Definition fwd_def: fwd(b,k,s) = en_rnd 16 b k s
+End
 
 (*---------------------------------------------------------------------------*)
 (*-------------Backward round used by the decrypting function----------------*)
@@ -444,15 +443,13 @@ val InvRound_Op_def = Define`
   let R1' = (R1 ?? F1) #>> 1
   in (R2, R3, R0', R1')`;
 
-val (de_rnd_def, de_rnd_ind) = Defn.tprove (
-    Hol_defn "de_rnd"
-    `de_rnd i (b:block) k ss =
+Definition de_rnd_def:
+  de_rnd i (b:block) k ss =
      if i=0 then b
-     else InvRound_Op(de_rnd (i-1) b (ROTKEYS(k)) ss, k, ss)`,
-  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC);
-
-val _ = save_thm ("en_rnd_def", en_rnd_def);
-val _ = save_thm ("de_rnd__ind", de_rnd_ind);
+     else InvRound_Op(de_rnd (i-1) b (ROTKEYS(k)) ss, k, ss)
+Termination
+  WF_REL_TAC `measure FST` THEN REPEAT PairRules.PGEN_TAC THEN DECIDE_TAC
+End
 
 val bwd_def = Define `bwd(b,k,s) = de_rnd 16 b k s`;
 

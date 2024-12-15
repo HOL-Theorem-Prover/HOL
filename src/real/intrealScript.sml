@@ -215,9 +215,11 @@ Proof
   \\ ARITH_TAC
 QED
 
-val int_floor_1 = Q.prove(
-  `(INT_FLOOR &n = &n) /\ (INT_FLOOR (-&n) = -&n)`,
-  srw_tac[][INT_FLOOR, real_of_int] \\ ARITH_TAC)
+Theorem int_floor_1[simp]:
+  (INT_FLOOR &n = &n) /\ (INT_FLOOR (-&n) = -&n)
+Proof
+  srw_tac[][INT_FLOOR, real_of_int] \\ ARITH_TAC
+QED
 
 val tac =
   imp_res_tac arithmeticTheory.DIVISION
@@ -385,27 +387,43 @@ Proof
   metis_tac [INT_CEILING_BOUNDS, INT_CEILING_IMP]
 QED
 
-local
-  val rule =
-    REWRITE_RULE [numeralTheory.numeral_distrib, numeralTheory.numeral_lt]
-  val r1 = rule o Q.INST [`m` |-> `NUMERAL (BIT1 m)`]
-  val r2 = rule o Q.INST [`m` |-> `NUMERAL (BIT2 m)`]
-  val (t1, t2) = Drule.CONJ_PAIR int_floor_1
-in
-  val INT_FLOOR_EQNS = Theory.save_thm("INT_FLOOR_EQNS",
-    Drule.LIST_CONJ (List.map Drule.GEN_ALL [t1, t2, int_floor_2, int_floor_3]))
-  val INT_FLOOR_compute = Theory.save_thm ("INT_FLOOR_compute",
-    Drule.LIST_CONJ
-      [t1,t2, r1 int_floor_2, r2 int_floor_2, r1 int_floor_3, r2 int_floor_3])
-  val () = computeLib.add_persistent_funs
-             ["INT_FLOOR_compute", "INT_CEILING_INT_FLOOR"]
-end
 
-val real_of_int_num = store_thm("real_of_int_num[simp]",
-  ``real_of_int (& n) = &n``,
+Theorem real_of_int_num[simp]:
+  real_of_int (& n) = &n
+Proof
   rewrite_tac[real_of_int_def]
   \\ Cases_on `(&n):int`
-  \\ fs []);
+  \\ fs []
+QED
+
+local
+ fun crossprod [] ys = []
+   | crossprod (x::xs) ys = map (fn y => [x, y]) ys @ crossprod xs ys
+  val n = mk_var("n", numSyntax.num) and m = mk_var("m", numSyntax.num)
+  fun nb1 v = mk_comb(numSyntax.numeral_tm, mk_comb(numSyntax.bit1_tm, v))
+  fun nb2 v = mk_comb(numSyntax.numeral_tm, mk_comb(numSyntax.bit2_tm, v))
+  val insts = crossprod [n |-> nb1 n, n |-> nb2 n] [m |-> nb1 m, m |-> nb2 m]
+  val rule =
+    REWRITE_RULE [numeralTheory.numeral_distrib, numeralTheory.numeral_lt]
+  fun r th = LIST_CONJ (map (fn i => rule (INST i th)) insts)
+  val (t1, t2) = Drule.CONJ_PAIR int_floor_1
+  val icif = INT_CEILING_INT_FLOOR
+  open realSyntax
+in
+Theorem INT_FLOOR_EQNS =
+        LIST_CONJ (map GEN_ALL [t1, t2, int_floor_2, int_floor_3])
+Theorem INT_FLOOR_compute[compute,simp] =
+        LIST_CONJ [t1,t2, r int_floor_2, r int_floor_3]
+Theorem INT_CEILING_COMPUTE[compute,simp] =
+        LIST_CONJ [SPEC (realSyntax.term_of_int Arbint.zero) icif
+                     |> SIMP_RULE bool_ss [t1, LET_THM, real_of_int_num],
+                   SPEC (mk_injected m) icif,
+                   SPEC (mk_negated (mk_injected m)) icif,
+                   r (SPEC (mk_div (mk_injected m, mk_injected n)) icif),
+                   r (SPEC (mk_div(mk_negated (mk_injected m), mk_injected n))
+                           icif)]
+val () = () (* makes Theorem syntax work *)
+end (* local *)
 
 val real_of_int_add = store_thm("real_of_int_add[simp]",
   ``real_of_int (m + n) = real_of_int m + real_of_int n``,
@@ -526,6 +544,22 @@ Theorem INT_FLOOR_SUM[simp]:
 Proof
   csimp[REAL_ADD_COMM] >>
   Cases_on ‘y’ >> simp[GSYM real_sub, GSYM int_sub]
+QED
+
+Theorem INT_NUM_CEILING:
+  !r. 0 <= r ==> &realax$NUM_CEILING r = INT_CEILING r
+Proof
+  rw[INT_CEILING]
+  >- metis_tac[NUM_CEILING_UPPER_BOUND, REAL_LT_SUB_RADD]
+  >> metis_tac[LE_NUM_CEILING]
+QED
+
+Theorem INT_NUM_FLOOR:
+  !r. 0 <= r ==> &realax$NUM_FLOOR r = INT_FLOOR r
+Proof
+  rw[INT_FLOOR]
+  >- metis_tac[NUM_FLOOR_LE]
+  >> metis_tac[NUM_FLOOR_LT, REAL_ADD, REAL_LT_SUB_RADD]
 QED
 
 Theorem ints_exist_in_gaps:
@@ -671,6 +705,8 @@ Theorem is_int_eq_frac_0 :
 Proof
     rw [frac_def, is_int_def, REAL_SUB_0]
 QED
+
+val _ = add_ML_dependency "intLib"
 
 val _ = export_theory ()
 

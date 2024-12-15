@@ -20,8 +20,8 @@ Functions and proofs about lexing, parsing and pretty printing of source code:
  - [parsing_proofsScript.sml](parsing_proofsScript.sml)
  - [printingScript.sml](printingScript.sml)
 
-Top-level compiler definition as shallow embedding:
- - [compilerScript.sml](compilerScript.sml)
+Top-level compiler definition as shallow embedding is at the bottom of:
+ - [codegenScript.sml](codegenScript.sml)
 
 Automation that converts shallow embeddings into deep embeddings:
  - [automation_lemmasScript.sml](automation_lemmasScript.sml)

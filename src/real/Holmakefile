@@ -1,5 +1,5 @@
 INCLUDES = ../integer ../hol88 ../pred_set/src/more_theories \
-           ../res_quan/src
+           ../res_quan/src ../rational ../algebra
 
 TARGETS = $(subst prove_real_assumsTheory.uo,,$(DEFAULT_TARGETS))
 
@@ -20,7 +20,7 @@ selftest.exe: selftest.uo realSimps.uo
 EXTRA_CLEANS = selftest.exe real-selftest.log
 
 ifeq ($(KERNELID),otknl)
-BARE_THYS = realax real intreal real_sigma metric nets iterate
+BARE_THYS = realax real intreal real_sigma metric nets
 
 base-theorems.art:
 	opentheory info --theorems -o $@ real-1.61
