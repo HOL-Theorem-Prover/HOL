@@ -5061,7 +5061,7 @@ Theorem CARD_WORD = CARD_CART_UNIV |> INST_TYPE [alpha |-> bool]
                                    |> SIMP_RULE bool_ss [CARD_BOOL,FINITE_BOOL]
 
 (* -------------------------------------------------------------------------
-    Theorems about word_to_bin_list
+    Theorems about word_{to,from}_bin_list
    ------------------------------------------------------------------------- *)
 
 Theorem LENGTH_word_to_bin_list_bound:
@@ -5070,6 +5070,59 @@ Proof
   rw[word_to_bin_list_def, w2l_def, LENGTH_n2l]
   \\ Cases_on`w` \\ simp[]
   \\ fs[dimword_def, GSYM LESS_EQ, LOG2_def, logrootTheory.LT_EXP_LOG]
+QED
+
+Theorem word_from_bin_list_ror:
+  x < dimindex(:'a) /\ LENGTH ls = dimindex(:'a)
+  ==>
+  word_ror (word_from_bin_list ls : 'a word) x =
+  word_from_bin_list (DROP x ls ++ TAKE x ls)
+Proof
+  rw[word_from_bin_list_def, l2w_def]
+  \\ Cases_on`x = 0` \\ gs[SHIFT_ZERO]
+  \\ rw[word_ror_n2w, l2n_APPEND]
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ qspecl_then[`x`,`ls`](mp_tac o SYM) listTheory.TAKE_DROP
+  \\ disch_then(SUBST1_TAC o Q.AP_TERM`l2n 2`)
+  \\ rewrite_tac[l2n_APPEND]
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`BITS _ _ (2 ** x * ld + lt)`
+  \\ qspecl_then[`x - 1`,`0`,`ld`,`lt`]mp_tac BITS_SUM2
+  \\ simp[ADD1]
+  \\ disch_then kall_tac
+  \\ qspecl_then[`x-1`,`lt`]mp_tac BITS_ZEROL
+  \\ simp[ADD1]
+  \\ impl_keep_tac
+  >- (
+    qspecl_then[`TAKE x ls`,`2`]mp_tac l2n_lt
+    \\ simp[] )
+  \\ simp[]
+  \\ disch_then kall_tac
+  \\ simp_tac std_ss [Once ADD_COMM, SimpRHS]
+  \\ qmatch_goalsub_abbrev_tac`BITS h x`
+  \\ qspecl_then[`h`,`x`,`ld`,`lt`]mp_tac BITS_SUM
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[BITS_ZERO4]
+  \\ simp[Abbr`h`]
+  \\ DEP_REWRITE_TAC[BITS_ZEROL]
+  \\ qspecl_then[`DROP x ls`,`2`]mp_tac l2n_lt
+  \\ simp[ADD1]
+QED
+
+Theorem word_from_bin_list_rol:
+  x < dimindex(:'a) /\ LENGTH ls = dimindex(:'a)
+  ==>
+  word_rol (word_from_bin_list ls : 'a word) x =
+  word_from_bin_list (LASTN x ls ++ BUTLASTN x ls)
+Proof
+  rw[word_rol_def]
+  \\ Cases_on`x=0`
+  >- (
+    rw[rich_listTheory.LASTN, rich_listTheory.BUTLASTN]
+    \\ ONCE_REWRITE_TAC[GSYM ROR_MOD]
+    \\ rw[SHIFT_ZERO] )
+  \\ DEP_REWRITE_TAC[word_from_bin_list_ror]
+  \\ simp[rich_listTheory.LASTN_DROP, rich_listTheory.BUTLASTN_TAKE]
 QED
 
 (* -------------------------------------------------------------------------
