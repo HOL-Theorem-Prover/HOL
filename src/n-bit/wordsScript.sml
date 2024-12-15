@@ -5061,6 +5061,18 @@ Theorem CARD_WORD = CARD_CART_UNIV |> INST_TYPE [alpha |-> bool]
                                    |> SIMP_RULE bool_ss [CARD_BOOL,FINITE_BOOL]
 
 (* -------------------------------------------------------------------------
+    Theorems about word_to_bin_list
+   ------------------------------------------------------------------------- *)
+
+Theorem LENGTH_word_to_bin_list_bound:
+  LENGTH (word_to_bin_list (w:'a word)) <= (dimindex (:'a))
+Proof
+  rw[word_to_bin_list_def, w2l_def, LENGTH_n2l]
+  \\ Cases_on`w` \\ simp[]
+  \\ fs[dimword_def, GSYM LESS_EQ, LOG2_def, logrootTheory.LT_EXP_LOG]
+QED
+
+(* -------------------------------------------------------------------------
     Create a few word sizes
    ------------------------------------------------------------------------- *)
 
