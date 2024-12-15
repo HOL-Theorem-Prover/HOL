@@ -3,13 +3,33 @@ open HolKernel Parse boolLib bossLib dep_rewrite blastLib
 open optionTheory pairTheory arithmeticTheory combinTheory listTheory
      rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
      indexedListsTheory numposrepTheory numeral_bitTheory
-     bitstringTheory logrootTheory sptreeTheory;
+     bitstringTheory logrootTheory byteTheory sptreeTheory;
+open cv_transLib cvTheory cv_stdTheory;
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
 val _ = new_theory "keccak";
 
 val _ = numLib.temp_prefer_num();
+
+Theorem cv_LEN_add:
+  cv_LEN cv (Num n) =
+  cv_add (Num n) (cv_LEN cv (Num 0))
+Proof
+  qid_spec_tac`n`
+  \\ Induct_on`cv`
+  >- ( rw[Once cv_LEN_def] \\ rw[Once cv_LEN_def] )
+  \\ rewrite_tac[Once cv_LEN_def]
+  \\ simp_tac (srw_ss()) []
+  \\ gen_tac
+  \\ simp_tac std_ss [Once cv_LEN_def, SimpRHS]
+  \\ simp_tac (srw_ss()) []
+  \\ first_assum(qspec_then`n + 1`SUBST1_TAC)
+  \\ first_assum(qspec_then`1`SUBST1_TAC)
+  \\ qmatch_goalsub_abbrev_tac`cv_add _ p`
+  \\ Cases_on`p`
+  \\ simp[]
+QED
 
 Definition bool_to_bit_def:
   bool_to_bit b = if b then 1 else 0n
@@ -350,6 +370,73 @@ Proof
   \\ simp[ZIP_TAKE]
 QED
 
+Theorem chunks_TAKE:
+  !n ls m. divides n m /\ 0 < m ==>
+    chunks n (TAKE m ls) = TAKE (m DIV n) (chunks n ls)
+Proof
+  recInduct chunks_ind \\ rw[]
+  \\ rw[Once chunks_def, SimpRHS]
+  >- (
+    rw[Once chunks_def] \\ gs[LENGTH_TAKE_EQ]
+    \\ gvs[divides_def]
+    \\ qmatch_goalsub_rename_tac`n * m`
+    \\ `n <= n * m` by simp[]
+    \\ DEP_REWRITE_TAC[TAKE_LENGTH_TOO_LONG]
+    \\ simp[MULT_DIV] )
+  >- gs[divides_def]
+  \\ gs[]
+  \\ simp[Once chunks_def, LENGTH_TAKE_EQ]
+  \\ `n <= m` by gs[divides_def]
+  \\ IF_CASES_TAC
+  >- (
+    pop_assum mp_tac \\ rw[]
+    \\ `m = n` by gs[] \\ gvs[] )
+  \\ gs[TAKE_TAKE, DROP_TAKE]
+  \\ first_x_assum(qspec_then`m - n`mp_tac)
+  \\ simp[]
+  \\ impl_keep_tac >- (
+    gs[divides_def]
+    \\ qexists_tac`q - 1`
+    \\ simp[LEFT_SUB_DISTRIB] )
+  \\ rw[]
+  \\ `m DIV n <> 0` by gs[DIV_EQUAL_0]
+  \\ Cases_on`m DIV n` \\ gs[TAKE_TAKE_MIN]
+  \\ `MIN n m = n` by gs[MIN_DEF] \\ rw[]
+  \\ simp[SUB_DIV]
+QED
+
+Definition chunks_tr_aux_def:
+  chunks_tr_aux n ls acc =
+    if LENGTH ls <= SUC n then REVERSE $ ls :: acc
+    else chunks_tr_aux n (DROP (SUC n) ls) (TAKE (SUC n) ls :: acc)
+Termination
+  WF_REL_TAC`measure $ LENGTH o FST o SND`
+  \\ rw[LENGTH_DROP]
+End
+
+Definition chunks_tr_def:
+  chunks_tr n ls = if n = 0 then [ls] else chunks_tr_aux (n - 1) ls []
+End
+
+Theorem chunks_tr_aux_thm:
+  !n ls acc.
+    chunks_tr_aux n ls acc =
+    REVERSE acc ++ chunks (SUC n) ls
+Proof
+  recInduct chunks_tr_aux_ind
+  \\ rw[]
+  \\ rw[Once chunks_tr_aux_def]
+  >- rw[Once chunks_def]
+  \\ simp[Once chunks_def, SimpRHS]
+QED
+
+Theorem chunks_tr_thm:
+  chunks_tr = chunks
+Proof
+  simp[FUN_EQ_THM, chunks_tr_def]
+  \\ Cases \\ rw[chunks_tr_aux_thm]
+QED
+
 Theorem LENGTH_PAD_RIGHT_0_8_word_to_bin_list[simp]:
   LENGTH (PAD_RIGHT 0 8 (word_to_bin_list (w: word8))) = 8
 Proof
@@ -584,6 +671,15 @@ Proof
   \\ blastLib.BBLAST_TAC
   \\ simp[]
 QED
+
+(*
+Theorem word_to_bytes_from_bin_list:
+  word_to_bytes (word_from_bin_list ls :'a word) F =
+  MAP word_from_bin_list (chunks 8 (PAD_RIGHT 0 (dimindex(:'a)) ls))
+Proof
+  cheat
+QED
+*)
 
 Datatype:
   state_array =
@@ -872,7 +968,7 @@ Proof
   rw[chi_def]
 QED
 
-Definition rc_step_def:
+Definition rc_step_def[nocompute]:
   rc_step r =
   let ra = F :: r in
   let re =
@@ -885,6 +981,9 @@ Definition rc_step_def:
   in
     TAKE 8 re
 End
+
+Theorem rc_step_inlined[compute] =
+  “rc_step r” |> SIMP_CONV (srw_ss()) [rc_step_def, LET_THM];
 
 Definition rc_def:
   rc t =
@@ -3707,8 +3806,10 @@ Proof
   \\ simp_tac std_ss [NUMERAL_LESS_THM]
   \\ strip_tac \\ rpt BasicProvers.VAR_EQ_TAC \\ EVAL_TAC
   \\ pop_assum mp_tac
-  \\ simp_tac std_ss [NUMERAL_LESS_THM]
-  \\ strip_tac \\ rpt BasicProvers.VAR_EQ_TAC \\ EVAL_TAC
+  \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
+  \\ strip_tac \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ simp_tac (srw_ss()) []
+  \\ EVAL_TAC
 QED
 
 Theorem iota_w64_thm:
@@ -4102,13 +4203,18 @@ Proof
   \\ rw[]
 QED
 
-(*
-Keccak_256_def
-Keccak_def
-sponge_def
-pad10s1_136_w64_sponge_init
-absorb_w64_thm
-*)
+Definition eight_zeros_w64_def:
+  eight_zeros_w64 = [0w; 0w; 0w; 0w; 0w; 0w; 0w; 0w] : word64 list
+End
+
+Definition Keccak_256_w64_def:
+  Keccak_256_w64 bs =
+  FLAT $
+  MAP (flip word_to_bytes F) $
+  TAKE 4 $
+  absorb_w64 $
+  pad10s1_136_w64 eight_zeros_w64 bs []
+End
 
 Definition Keccak_256_bytes_def:
   Keccak_256_bytes (bs:word8 list) : word8 list =
@@ -4118,7 +4224,283 @@ Definition Keccak_256_bytes_def:
     MAP (PAD_RIGHT 0 8 o word_to_bin_list) bs
 End
 
-open cv_transLib cv_stdTheory;
+Theorem Keccak_256_w64_thm:
+  Keccak_256_w64 = Keccak_256_bytes
+Proof
+  simp[Keccak_256_w64_def, Keccak_256_bytes_def, FUN_EQ_THM]
+  \\ qx_gen_tac`bytes`
+  \\ rw[GSYM bytes_to_bools_def]
+  \\ rw[Keccak_256_def, Keccak_def, sponge_def]
+  \\ mp_tac pad10s1_136_w64_sponge_init
+  \\ rw[]
+  \\ `eight_zeros_w64 = REPLICATE 8 0w`
+  by rw[eight_zeros_w64_def, REPLICATE_GENLIST]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ drule absorb_w64_thm \\ strip_tac
+  \\ qmatch_goalsub_abbrev_tac`absorb_w64 sp`
+  \\ qmatch_asmsub_abbrev_tac`state_bools_w64 bs`
+  \\ qmatch_goalsub_abbrev_tac`([], bs1)`
+  \\ `bs1 = bs` by rw[Abbr`bs1`, Abbr`bs`, FOLDL_MAP]
+  \\ gs[Abbr`bs1`] \\ pop_assum kall_tac
+  \\ rw[Once WHILE]
+  \\ rw[Once WHILE]
+  \\ gs[state_bools_w64_def]
+  \\ simp[TAKE_TAKE]
+  \\ simp[GSYM MAP_TAKE, MAP_MAP_o, o_DEF]
+  \\ simp[chunks_MAP, GSYM MAP_TAKE, MAP_MAP_o, o_DEF]
+  \\ DEP_REWRITE_TAC[chunks_TAKE]
+  \\ conj_tac >- rw[divides_def]
+  \\ simp[EVAL``256 DIV 8``]
+  \\ qmatch_goalsub_abbrev_tac`_ = MAP bw _`
+  \\ `bw = word_from_bin_list o MAP bool_to_bit`
+  by rw[bools_to_word_def, FUN_EQ_THM, Abbr`bw`]
+  \\ simp[Abbr`bw`, GSYM MAP_MAP_o]
+  \\ qmatch_goalsub_abbrev_tac`MAP f ls`
+  \\ `f = flip word_to_bytes F o (word_from_bin_list: num list -> word64) o
+          MAP bool_to_bit` by rw[Abbr`f`, FUN_EQ_THM]
+  \\ simp[Abbr`f`, GSYM MAP_MAP_o, Abbr`ls`]
+  \\ simp[MAP_TAKE, GSYM chunks_MAP]
+  \\ cheat
+QED
+
+(* TODO: move/replace *)
+Definition hex_to_rev_bytes_def:
+    hex_to_rev_bytes acc [] = acc : word8 list
+  ∧ hex_to_rev_bytes acc [c] = CONS (n2w (UNHEX c)) acc
+  ∧ hex_to_rev_bytes acc (c1::c2::rest) =
+    hex_to_rev_bytes (CONS (n2w (16 * UNHEX c1 + UNHEX c2)) acc) rest
+End
+
+val () = cv_auto_trans hex_to_rev_bytes_def;
+
+val () = cv_trans_deep_embedding EVAL eight_zeros_w64_def;
+
+val () = cv_auto_trans chunks_tr_aux_def;
+val () = cv_auto_trans chunks_tr_def;
+
+val pad_pre_def = cv_auto_trans_pre (REWRITE_RULE[GSYM chunks_tr_thm]pad10s1_136_w64_def);
+
+Theorem pad10s1_136_w64_pre[cv_pre]:
+  !zs m a. pad10s1_136_w64_pre zs m a
+Proof
+  ho_match_mp_tac pad10s1_136_w64_ind
+  \\ rw[]
+  \\ rw[Once pad_pre_def]
+  \\ gs[chunks_tr_thm]
+QED
+
+Theorem theta_d_w64_inlined:
+  theta_d_w64 s = let
+    a = EL 0 s ?? EL 5 s ?? EL 10 s ?? EL 15 s ?? EL 20 s;
+    b = EL 1 s ?? EL 6 s ?? EL 11 s ?? EL 16 s ?? EL 21 s;
+    c = EL 2 s ?? EL 7 s ?? EL 12 s ?? EL 17 s ?? EL 22 s;
+    d = EL 3 s ?? EL 8 s ?? EL 13 s ?? EL 18 s ?? EL 23 s;
+    e = EL 4 s ?? EL 9 s ?? EL 14 s ?? EL 19 s ?? EL 24 s
+  in
+    [word_rol b 1 ?? e;
+     word_rol c 1 ?? a;
+     word_rol d 1 ?? b;
+     word_rol e 1 ?? c;
+     word_rol a 1 ?? d]
+Proof
+  rw[theta_d_w64_def, theta_c_w64_def]
+QED
+
+Theorem theta_w64_inlined:
+  LENGTH s = 25 ==>
+  theta_w64 s = let
+    a = EL 0 s ?? EL 5 s ?? EL 10 s ?? EL 15 s ?? EL 20 s;
+    b = EL 1 s ?? EL 6 s ?? EL 11 s ?? EL 16 s ?? EL 21 s;
+    c = EL 2 s ?? EL 7 s ?? EL 12 s ?? EL 17 s ?? EL 22 s;
+    d = EL 3 s ?? EL 8 s ?? EL 13 s ?? EL 18 s ?? EL 23 s;
+    e = EL 4 s ?? EL 9 s ?? EL 14 s ?? EL 19 s ?? EL 24 s;
+    j = word_rol b 1 ?? e;
+    k = word_rol c 1 ?? a;
+    l = word_rol d 1 ?? b;
+    m = word_rol e 1 ?? c;
+    n = word_rol a 1 ?? d;
+  in MAP2 $?? s [j;k;l;m;n;j;k;l;m;n;j;k;l;m;n;j;k;l;m;n;j;k;l;m;n]
+Proof
+  CONV_TAC(LAND_CONV(SIMP_CONV std_ss [LENGTH_EQ_NUM_compute]))
+  \\ strip_tac
+  \\ rewrite_tac[theta_w64_def, theta_d_w64_inlined]
+  \\ BasicProvers.LET_ELIM_TAC
+  \\ gvs[Abbr`t`]
+QED
+
+val theta_w64_pre_def = cv_auto_trans_pre (UNDISCH theta_w64_inlined);
+
+Theorem theta_w64_pre:
+  LENGTH s = 25 ==> theta_w64_pre s
+Proof
+  rw[theta_w64_pre_def]
+  \\ strip_tac \\ fs[]
+QED
+
+val rho_w64_pre_def = cv_auto_trans_pre (UNDISCH rho_w64_MAP2);
+
+Theorem rho_w64_pre:
+  LENGTH s = 25 ==> rho_w64_pre s
+Proof
+  rw[rho_w64_pre_def]
+QED
+
+Theorem pi_w64_inlined = SIMP_RULE std_ss [pi_w64_indices_eq, MAP] pi_w64_def;
+
+val pi_w64_pre_def = cv_auto_trans_pre pi_w64_inlined;
+
+Theorem pi_w64_pre:
+  LENGTH s = 25 ==> pi_w64_pre s
+Proof
+  rw[pi_w64_pre_def]
+  \\ strip_tac \\ fs[]
+QED
+
+Theorem chi_w64_inlined:
+  LENGTH s = 25 ==>
+  chi_w64 s = let
+    h00 = EL  0 s; h01 = EL 1  s; h02 = EL  2 s; h03 = EL  3 s; h04 = EL  4 s;
+    h05 = EL  5 s; h06 = EL 6  s; h07 = EL  7 s; h08 = EL  8 s; h09 = EL  9 s;
+    h10 = EL 10 s; h11 = EL 11 s; h12 = EL 12 s; h13 = EL 13 s; h14 = EL 14 s;
+    h15 = EL 15 s; h16 = EL 16 s; h17 = EL 17 s; h18 = EL 18 s; h19 = EL 19 s;
+    h20 = EL 20 s; h21 = EL 21 s; h22 = EL 22 s; h23 = EL 23 s; h24 = EL 24 s;
+  in
+   [h00 ⊕ h02 && ¬h01; h01 ⊕ h03 && ¬h02; h02 ⊕ h04 && ¬h03;
+    h03 ⊕ h00 && ¬h04; h04 ⊕ h01 && ¬h00; h05 ⊕ h07 && ¬h06;
+    h06 ⊕ h08 && ¬h07; h07 ⊕ h09 && ¬h08; h08 ⊕ h05 && ¬h09;
+    h09 ⊕ h06 && ¬h05; h10 ⊕ h12 && ¬h11; h11 ⊕ h13 && ¬h12;
+    h12 ⊕ h14 && ¬h13; h13 ⊕ h10 && ¬h14; h14 ⊕ h11 && ¬h10;
+    h15 ⊕ h17 && ¬h16; h16 ⊕ h18 && ¬h17; h17 ⊕ h19 && ¬h18;
+    h18 ⊕ h15 && ¬h19; h19 ⊕ h16 && ¬h15; h20 ⊕ h22 && ¬h21;
+    h21 ⊕ h23 && ¬h22; h22 ⊕ h24 && ¬h23; h23 ⊕ h20 && ¬h24;
+    h24 ⊕ h21 && ¬h20]
+Proof
+  CONV_TAC(LAND_CONV(SIMP_CONV std_ss [LENGTH_EQ_NUM_compute]))
+  \\ strip_tac
+  \\ rewrite_tac[chi_w64_def]
+  \\ rw[]
+QED
+
+val chi_w64_pre_def = cv_auto_trans_pre (UNDISCH chi_w64_inlined);
+
+Theorem chi_w64_pre:
+  LENGTH s = 25 ==> chi_w64_pre s
+Proof
+  rw[chi_w64_pre_def]
+  \\ strip_tac \\ fs[]
+QED
+
+val () = cv_auto_trans iota_w64_def;
+
+val Rnd_w64_pre_def = cv_auto_trans_pre Rnd_w64_def;
+
+Theorem Rnd_w64_pre:
+  LENGTH s = 25 ==> Rnd_w64_pre s w
+Proof
+  simp[Rnd_w64_pre_def, theta_w64_pre] \\ strip_tac
+  \\ `LENGTH (theta_w64 s) = 25` by simp[theta_w64_inlined]
+  \\ simp[rho_w64_pre]
+  \\ `LENGTH (rho_w64 (theta_w64 s)) = 25` by (
+    simp[rho_w64_MAP2]
+    \\ CASE_TAC \\ fs[]
+    \\ rw[MIN_DEF] )
+  \\ simp[pi_w64_pre]
+  \\ irule chi_w64_pre
+  \\ simp[pi_w64_inlined]
+QED
+
+Theorem Keccak_p_24_w64_inlined =
+  Keccak_p_24_w64_def |> SIMP_RULE std_ss [iota_w64_RCz_def, MAP, FOLDL];
+
+val Keccak_p_24_w64_pre_def = cv_auto_trans_pre Keccak_p_24_w64_inlined;
+
+Definition absorb_w64_rec_def:
+  absorb_w64_rec s [] = s ∧
+  absorb_w64_rec s (Pi::Pis) =
+    absorb_w64_rec (Keccak_p_24_w64 (MAP2 $?? s Pi)) Pis
+End
+
+Theorem absorb_w64_rec_thm:
+  absorb_w64 = absorb_w64_rec (REPLICATE 25 0w)
+Proof
+  simp[FUN_EQ_THM, absorb_w64_def, absorb_w64_rec_def]
+  \\ qspec_tac(`REPLICATE 25 (0w:word64)`,`s`)
+  \\ CONV_TAC SWAP_FORALL_CONV
+  \\ Induct
+  \\ rw[absorb_w64_rec_def]
+QED
+
+val absorb_w64_rec_pre_def = cv_auto_trans_pre absorb_w64_rec_def;
+
+Theorem LENGTH_Rnd_w64:
+  LENGTH s = 25 ==>
+  LENGTH (Rnd_w64 s w) = 25
+Proof
+  rw[Rnd_w64_def]
+  \\ DEP_REWRITE_TAC[theta_w64_inlined]
+  \\ conj_tac >- rw[]
+  \\ BasicProvers.LET_ELIM_TAC
+  \\ DEP_REWRITE_TAC[rho_w64_MAP2]
+  \\ conj_tac >- simp[]
+  \\ CASE_TAC >- gs[LENGTH_EQ_NUM_compute]
+  \\ rewrite_tac[pi_w64_inlined]
+  \\ DEP_REWRITE_TAC[chi_w64_inlined]
+  \\ qmatch_goalsub_abbrev_tac`EL _ zz`
+  \\ conj_tac >- simp[]
+  \\ BasicProvers.LET_ELIM_TAC
+  \\ rewrite_tac[iota_w64_def]
+  \\ simp[]
+QED
+
+Theorem absorb_w64_rec_pre:
+  ∀v s. LENGTH s = 25 /\ EVERY (((=) 25) o LENGTH) v ==> absorb_w64_rec_pre s v
+Proof
+  Induct
+  \\ simp[Once absorb_w64_rec_pre_def]
+  \\ rpt gen_tac \\ strip_tac
+  \\ qmatch_goalsub_abbrev_tac`absorb_w64_rec_pre x`
+  \\ `LENGTH x = 25`
+  by (
+    qunabbrev_tac`x`
+    \\ simp[Keccak_p_24_w64_inlined]
+    \\ DEP_REWRITE_TAC[LENGTH_Rnd_w64]
+    \\ simp[] )
+  \\ rewrite_tac[Keccak_p_24_w64_pre_def]
+  \\ DEP_REWRITE_TAC[Rnd_w64_pre]
+  \\ DEP_REWRITE_TAC[LENGTH_Rnd_w64]
+  \\ simp[]
+QED
+
+val Keccak_256_w64_pre_def = cv_auto_trans_pre $
+  (Keccak_256_w64_def |> SIMP_RULE std_ss [C_DEF, absorb_w64_rec_thm]);
+
+Theorem Keccak_256_w64_pre[cv_pre]:
+  Keccak_256_w64_pre bytes
+Proof
+  rw[Keccak_256_w64_pre_def]
+  \\ irule absorb_w64_rec_pre
+  \\ conj_tac >- rw[]
+  \\ mp_tac pad10s1_136_w64_sponge_init
+  \\ rw[eight_zeros_w64_def]
+  \\ rw[EVERY_MEM, MEM_EL]
+  \\ gs[LIST_REL_EL_EQN]
+  \\ qmatch_goalsub_abbrev_tac`pad10s1_136_w64 r8`
+  \\ `r8 = REPLICATE 8 0w` by simp[Abbr`r8`, REPLICATE_GENLIST]
+  \\ gs[]
+  \\ first_x_assum drule
+  \\ rw[state_bools_w64_def]
+  \\ DEP_REWRITE_TAC[LENGTH_chunks]
+  \\ gs[NULL_LENGTH, divides_def, bool_to_bit_def]
+  \\ strip_tac \\ fs[]
+QED
+
+Theorem Keccak_256_w64_NIL:
+  Keccak_256_w64 [] =
+  REVERSE $ hex_to_rev_bytes []
+  "C5D2460186F7233C927E7DB2DCC703C0E500B653CA82273B7BFAD8045D85A470"
+Proof
+  CONV_TAC cv_eval
+QED
 
 val _ = cv_trans index_to_triple_def;
 val _ = cv_trans triple_to_index_def;
