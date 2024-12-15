@@ -3232,7 +3232,7 @@ Proof
 QED
 
 Theorem LENGTH_chunks:
-  !n ls. 0 < n ∧ ¬NULL ls ==>
+  !n ls. 0 < n /\ ~NULL ls ==>
     LENGTH (chunks n ls) =
     LENGTH ls DIV n + (bool_to_bit $ ~divides n (LENGTH ls))
 Proof
@@ -3260,7 +3260,7 @@ Proof
 QED
 
 Theorem EL_chunks:
-  ∀k ls n.
+  !k ls n.
   n < LENGTH (chunks k ls) /\ 0 < k /\ ~NULL ls ==>
   EL n (chunks k ls) = TAKE k (DROP (n * k) ls)
 Proof
