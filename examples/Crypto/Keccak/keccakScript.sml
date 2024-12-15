@@ -3994,7 +3994,30 @@ Proof
       \\ strip_tac \\ gs[] )
     \\ simp[EL_TAKE, EL_MAP]
     \\ qx_gen_tac`x` \\ strip_tac
-    \\ cheat )
+    \\ simp[PAD_RIGHT, EL_GENLIST, EL_APPEND_EQN]
+    \\ Cases_on`b0` \\ gs[]
+    >- (
+      rw[bool_to_bit_def]
+      \\ qhdtm_x_assum`EVERY`mp_tac
+      \\ simp[EXISTS_MEM, MEM_EL, PULL_EXISTS]
+      \\ qexists_tac`x`
+      \\ DEP_REWRITE_TAC[EL_TAKE, EL_MAP]
+      \\ simp[bool_to_bit_def] )
+    \\ DEP_REWRITE_TAC[TAKE_TAKE, LENGTH_TAKE]
+    \\ simp[]
+    \\ conj_asm1_tac
+    >- (
+      reverse conj_asm1_tac >- simp[Abbr`m`]
+      \\ simp[Abbr`m`]
+      \\ qmatch_goalsub_abbrev_tac`dropWhile P ls`
+      \\ qspecl_then[`P`,`ls`]mp_tac LENGTH_dropWhile_LESS_EQ
+      \\ simp[Abbr`ls`] )
+    \\ simp[EL_TAKE, EL_MAP]
+    \\ rw[]
+    \\ fs[NOT_LESS]
+    \\ qunabbrev_tac`m`
+    \\ qpat_x_assum`m <= x`(mp_then Any mp_tac EL_LENGTH_dropWhile_REVERSE)
+    \\ simp[EL_TAKE, EL_MAP])
   \\ fs[Abbr`ww`]
   \\ simp[Abbr`w`, EL_TAKE, EL_MAP]
   \\ simp[bool_to_bit_neq_add]
