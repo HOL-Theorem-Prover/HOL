@@ -499,4 +499,12 @@ Proof
   \\ fs[EXP_BASE_LE_IFF]
 QED
 
+Theorem l2n_PAD_RIGHT_0[simp]:
+  0 < b ==> l2n b (PAD_RIGHT 0 h ls) = l2n b ls
+Proof
+  Induct_on`ls` \\ rw[l2n_def, PAD_RIGHT, l2n_eq_0, EVERY_GENLIST]
+  \\ fs[PAD_RIGHT, l2n_APPEND]
+  \\ fs[l2n_eq_0, EVERY_GENLIST]
+QED
+
 val _ = export_theory()

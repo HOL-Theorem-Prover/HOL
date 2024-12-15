@@ -5060,6 +5060,29 @@ QED
 Theorem CARD_WORD = CARD_CART_UNIV |> INST_TYPE [alpha |-> bool]
                                    |> SIMP_RULE bool_ss [CARD_BOOL,FINITE_BOOL]
 
+Theorem MEM_w2l_less:
+  1 < b /\ MEM x (w2l b w) ==> x < b
+Proof
+  Cases_on`w`
+  \\ rw[w2l_def]
+  \\ rpt $ pop_assum mp_tac
+  \\ map_every qid_spec_tac [`x`,`n`,`b`]
+  \\ recInduct n2l_ind
+  \\ rw[]
+  \\ pop_assum mp_tac
+  \\ rw[Once n2l_def]
+  >- ( irule MOD_LESS \\ gs[] )
+  \\ first_x_assum irule
+  \\ gs[DIV_LT_X]
+  \\ Cases_on`b` \\ gs[MULT]
+QED
+
+Theorem l2w_PAD_RIGHT_0[simp]:
+  0 < b ==> l2w b (PAD_RIGHT 0 h ls) = l2w b ls
+Proof
+  rw[l2w_def]
+QED
+
 (* -------------------------------------------------------------------------
     Theorems about word_{to,from}_bin_list
    ------------------------------------------------------------------------- *)
