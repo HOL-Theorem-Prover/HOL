@@ -1526,4 +1526,38 @@ Proof
   simp_tac std_ss []
 QED
 
+Theorem BITWISE_COMM:
+  (!m. m <= n ==> op (BIT m x) (BIT m y) = op (BIT m y) (BIT m x))
+  ==> BITWISE n op x y = BITWISE n op y x
+Proof
+  Induct_on`n`
+  \\ SRW_TAC[][BITWISE_def]
+  \\ first_assum(Q.SPEC_THEN`n`mp_tac)
+  \\ impl_tac >- SRW_TAC[][]
+  \\ disch_then SUBST1_TAC
+  \\ simp[]
+  \\ first_x_assum irule
+  \\ SRW_TAC[][]
+  \\ first_x_assum irule
+  \\ simp[]
+QED
+
+Triviality BITWISE_AND_0_lemma:
+  BITWISE w $/\ x 0 = 0
+Proof
+  Q.ID_SPEC_TAC`x`
+  \\ Induct_on`w`
+  \\ SRW_TAC[][BITWISE_def, SBIT_def, BIT_ZERO]
+QED
+
+Theorem BITWISE_AND_0[simp]:
+  BITWISE w $/\ x 0 = 0 /\
+  BITWISE w $/\ 0 x = 0
+Proof
+  Q.SPECL_THEN[`$/\`,`0`,`x`,`w`]mp_tac(Q.GENL[`op`,`x`,`y`,`n`]BITWISE_COMM)
+  \\ impl_tac >- SRW_TAC[][BIT_ZERO]
+  \\ disch_then SUBST1_TAC
+  \\ SRW_TAC[][BITWISE_AND_0_lemma]
+QED
+
 val _ = export_theory()
