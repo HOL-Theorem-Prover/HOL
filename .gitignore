@@ -135,3 +135,9 @@ examples/l3-machine-code/**/*-heap
 *Script_ttt.sml
 *.tttsave
 /TAGS
+
+# stale file
+hol-mode.el
+
+#Auto-generated files by VIM
+vim/
