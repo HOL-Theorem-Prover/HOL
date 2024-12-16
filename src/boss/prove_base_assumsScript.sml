@@ -222,80 +222,80 @@ val goals =
  29 |- !t. ~t ==> t ==> F,
  30 |- !t. (t ==> F) ==> ~t,
  31 |- !f b x y. f (if b then x else y) = if b then f x else f y,
- 32 |- !f g. f = g <=> !x. f x = g x,
- 33 |- !f g. ?!h.
+ 32 |- !f g M N. M = N /\ (!x. x = N ==> f x = g x) ==> LET f M = LET g N,
+ 33 |- !f g. f = g <=> !x. f x = g x,
+ 34 |- !f g. ?!h.
          Function_o h Data_Sum_left = f /\ Function_o h Data_Sum_right = g,
- 34 |- !P t. (!x. x = t ==> P x) ==> $? P,
- 35 |- !P Q.
+ 35 |- !P t. (!x. x = t ==> P x) ==> $? P,
+ 36 |- !P Q.
          (Q ==> (!x. P x) <=> !x. Q ==> P x) /\
          ((!x. P x) /\ Q <=> !x. P x /\ Q) /\
          (Q /\ (!x. P x) <=> !x. Q /\ P x),
- 36 |- !P Q.
+ 37 |- !P Q.
          ((?x. P x) ==> Q <=> !x. P x ==> Q) /\
          ((?x. P x) /\ Q <=> ?x. P x /\ Q) /\
          (Q /\ (?x. P x) <=> ?x. Q /\ P x),
- 37 |- !P f. RES_EXISTS P f <=> ?x. x IN P /\ f x,
- 38 |- !P f.
+ 38 |- !P f. RES_EXISTS P f <=> ?x. x IN P /\ f x,
+ 39 |- !P f.
          RES_EXISTS_UNIQUE P f <=>
          (?x::P. f x) /\ !x y::P. f x /\ f y ==> x = y,
- 39 |- !P f. RES_FORALL P f <=> !x. x IN P ==> f x,
- 40 |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P),
- 41 |- !f. (!x y z. f x (f y z) = f (f x y) z) ==>
+ 40 |- !P f. RES_FORALL P f <=> !x. x IN P ==> f x,
+ 41 |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P),
+ 42 |- !f. (!x y z. f x (f y z) = f (f x y) z) ==>
            (!x y. f x y = f y x) ==>
            !x y z. f x (f y z) = f y (f x z),
- 42 |- !P. P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==>
+ 43 |- !P. P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==>
            !l. P l,
- 43 |- ~(t /\ ~t),
- 44 |- (!x x'. Data_Sum_left x = Data_Sum_left x' <=> x = x') /\
+ 44 |- ~(t /\ ~t),
+ 45 |- (!x x'. Data_Sum_left x = Data_Sum_left x' <=> x = x') /\
        !y y'. Data_Sum_right y = Data_Sum_right y' <=> y = y',
- 45 |- (!x. Data_Option_isNone (Data_Option_some x) <=> F) /\
+ 46 |- (!x. Data_Option_isNone (Data_Option_some x) <=> F) /\
        (Data_Option_isNone Data_Option_none <=> T),
- 46 |- (!x. Data_Option_isSome (Data_Option_some x) <=> T) /\
+ 47 |- (!x. Data_Option_isSome (Data_Option_some x) <=> T) /\
        (Data_Option_isSome Data_Option_none <=> F),
- 47 |- (!x. Data_Sum_isLeft (Data_Sum_left x) <=> T) /\
+ 48 |- (!x. Data_Sum_isLeft (Data_Sum_left x) <=> T) /\
        !y. Data_Sum_isLeft (Data_Sum_right y) <=> F,
- 48 |- (!x. Data_Sum_isRight (Data_Sum_right x) <=> T) /\
+ 49 |- (!x. Data_Sum_isRight (Data_Sum_right x) <=> T) /\
        !y. Data_Sum_isRight (Data_Sum_left y) <=> F,
- 49 |- (!l. Data_List_append Data_List_nil l = l) /\
+ 50 |- (!l. Data_List_append Data_List_nil l = l) /\
        !h l1 l2.
          Data_List_append (Data_List_cons h l1) l2 =
          Data_List_cons h (Data_List_append l1 l2),
- 50 |- (!n. Number_Natural_plus Number_Natural_zero n = n) /\
+ 51 |- (!n. Number_Natural_plus Number_Natural_zero n = n) /\
        !m n.
          Number_Natural_plus (Number_Natural_suc m) n =
          Number_Natural_suc (Number_Natural_plus m n),
- 51 |- (!m. Number_Natural_power m Number_Natural_zero =
+ 52 |- (!m. Number_Natural_power m Number_Natural_zero =
             Number_Natural_bit1 Number_Natural_zero) /\
        !m n.
          Number_Natural_power m (Number_Natural_suc n) =
          Number_Natural_times m (Number_Natural_power m n),
- 52 |- (!n. Number_Natural_times Number_Natural_zero n = Number_Natural_zero) /\
+ 53 |- (!n. Number_Natural_times Number_Natural_zero n = Number_Natural_zero) /\
        !m n.
          Number_Natural_times (Number_Natural_suc m) n =
          Number_Natural_plus (Number_Natural_times m n) n,
- 53 |- (!t. ~~t <=> t) /\ (~T <=> F) /\ (~F <=> T),
- 54 |- (!f x. Data_Option_map f (Data_Option_some x) = Data_Option_some (f x)) /\
+ 54 |- (!t. ~~t <=> t) /\ (~T <=> F) /\ (~F <=> T),
+ 55 |- (!f x. Data_Option_map f (Data_Option_some x) = Data_Option_some (f x)) /\
        !f. Data_Option_map f Data_Option_none = Data_Option_none,
- 55 |- (!f. Data_List_map f Data_List_nil = Data_List_nil) /\
+ 56 |- (!f. Data_List_map f Data_List_nil = Data_List_nil) /\
        !f h t.
          Data_List_map f (Data_List_cons h t) =
          Data_List_cons (f h) (Data_List_map f t),
- 56 |- (!p m x. x IN p ==> RES_ABSTRACT p m x = m x) /\
+ 57 |- (!p m x. x IN p ==> RES_ABSTRACT p m x = m x) /\
        !p m1 m2.
          (!x. x IN p ==> m1 x = m2 x) ==>
          RES_ABSTRACT p m1 = RES_ABSTRACT p m2,
- 57 |- (!P. Data_List_filter P Data_List_nil = Data_List_nil) /\
+ 58 |- (!P. Data_List_filter P Data_List_nil = Data_List_nil) /\
        !P h t.
          Data_List_filter P (Data_List_cons h t) =
          if P h then Data_List_cons h (Data_List_filter P t)
          else Data_List_filter P t,
- 58 |- (!P. Data_List_all P Data_List_nil <=> T) /\
+ 59 |- (!P. Data_List_all P Data_List_nil <=> T) /\
        !P h t.
          Data_List_all P (Data_List_cons h t) <=> P h /\ Data_List_all P t,
- 59 |- (!P. Data_List_any P Data_List_nil <=> F) /\
+ 60 |- (!P. Data_List_any P Data_List_nil <=> F) /\
        !P h t.
          Data_List_any P (Data_List_cons h t) <=> P h \/ Data_List_any P t,
- 60 |- (T <> F) /\ (F <> T)
  61 |- Data_List_concat Data_List_nil = Data_List_nil /\
        !h t.
          Data_List_concat (Data_List_cons h t) =
@@ -747,11 +747,21 @@ val app_if = hd (amatch ``f (if b then x else y) = if b then f x else f y``);
 val th31 = store_thm
   ("th31", el 31 goals |> concl, MATCH_ACCEPT_TAC app_if);
 
+(* |- !f g M N. M = N /\ (!x. x = N ==> f x = g x) ==> LET f M = LET g N *)
+val th32 = store_thm (* was: LET_CONG *)
+  ("th32", el 32 goals |> concl,
+  rpt strip_tac
+  \\ VAR_EQ_TAC
+  \\ PURE_REWRITE_TAC[LET_DEF]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ first_x_assum match_mp_tac
+  \\ REFL_TAC);
+
 val ext = hd(amatch``(!x. f x = g x) <=> _``);
 
 (* |- !f g. f = g <=> !x. f x = g x *)
-val th32 = store_thm
-  ("th32", el 32 goals |> concl, MATCH_ACCEPT_TAC (GSYM ext));
+val th33 = store_thm
+  ("th33", el 33 goals |> concl, MATCH_ACCEPT_TAC (GSYM ext));
 
 val o_def = hd(amatch``Function_o = _``);
 
@@ -762,8 +772,8 @@ val sum_case_thms = amatch``Data_Sum_case_left_right f g (_ _) = _``;
 (* |- !f g. ?!h. Function_o h Data_Sum_left = f /\
                  Function_o h Data_Sum_right = g
  *)
-val th33 = store_thm
-  ("th33", el 33 goals |> concl,
+val th34 = store_thm
+  ("th34", el 34 goals |> concl,
   rpt gen_tac
   \\ CONV_TAC(HO_REWR_CONV ex_unique_thm)
   \\ PURE_REWRITE_TAC[o_def]
@@ -787,8 +797,8 @@ val ex_def = hd(amatch``$? = _``);
 val select_ax = hd(amatch ``p t ==> p ($@ p)``);
 
 (* |- !P t. (!x. x = t ==> P x) ==> $? P *)
-val th34 = store_thm
-  ("th34", el 34 goals |> concl,
+val th35 = store_thm
+  ("th35", el 35 goals |> concl,
   PURE_REWRITE_TAC[forall_eq,ex_def]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ MATCH_ACCEPT_TAC select_ax);
@@ -803,8 +813,8 @@ val imp_all = hd(amatch``(_ ==> (!x. _)) <=> _``);
           ((!x. P x) /\ Q <=> !x. P x /\ Q) /\
           (Q /\ (!x. P x) <=> !x. Q /\ P x)
  *)
-val th35 = store_thm
-  ("th35", el 35 goals |> concl,
+val th36 = store_thm
+  ("th36", el 36 goals |> concl,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[and_all,all_and,all_imp,imp_all]
   \\ rpt conj_tac \\ REFL_TAC);
@@ -818,8 +828,8 @@ val ex_imp = hd(amatch``((?x. _) ==> _) <=> _``);
           ((?x. P x) /\ Q <=> ?x. P x /\ Q) /\
           (Q /\ (?x. P x) <=> ?y. Q /\ P y)
  *)
-val th36 = store_thm
-  ("th36", el 36 goals |> concl,
+val th37 = store_thm
+  ("th37", el 37 goals |> concl,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[and_ex,ex_and,ex_imp]
   \\ rpt conj_tac \\ REFL_TAC);
@@ -833,8 +843,8 @@ th40: |- !P f. RES_FORALL P f <=> !x. x IN P ==> f x
 val eta_ax = hd(amatch``!f. (\x. f x) = f``);
 
 (* |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P) *)
-val th40 = store_thm
-  ("th40", el 40 goals |> concl,
+val th41 = store_thm
+  ("th41", el 41 goals |> concl,
   PURE_REWRITE_TAC[ex_def]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt strip_tac
@@ -849,8 +859,8 @@ val eq_trans = hd(amatch``(x = y) /\ (y = z) ==> _``);
           (!x y. f x y = f y x) ==>
           !x y z. f x (f y z) = f y (f x z)
  *)
-val th41 = store_thm
-  ("th41", el 41 goals |> concl,
+val th42 = store_thm
+  ("th42", el 42 goals |> concl,
   rpt strip_tac
   \\ first_assum(qspecl_then[`x`,`y`,`z`] SUBST_ALL_TAC)
   \\ last_assum(qspecl_then[`f x y`,`z`] SUBST_ALL_TAC)
@@ -864,8 +874,8 @@ val list_ind = hd(amatch``_ ==> !(l:'a Data_List_list). P l``);
 (* |- !P. P Data_List_nil /\ (!t. P t ==> !h. P (Data_List_cons h t)) ==>
           !l. P l
  *)
-val th42 = store_thm
-  ("th42", el 42 goals |> concl,
+val th43 = store_thm
+  ("th43", el 43 goals |> concl,
   rpt strip_tac
   \\ match_mp_tac list_ind
   \\ conj_tac >- first_assum ACCEPT_TAC
@@ -873,8 +883,8 @@ val th42 = store_thm
   \\ first_assum MATCH_ACCEPT_TAC);
 
 (* |- ~(t /\ ~t) *)
-val th43 = store_thm
-  ("th43", el 43 goals |> concl,
+val th44 = store_thm
+  ("th44", el 44 goals |> concl,
   PURE_REWRITE_TAC[not_and,not_not]
   \\ Q.SPEC_THEN`t`FULL_STRUCT_CASES_TAC bool_cases
   \\ PURE_REWRITE_TAC[or_T,or_F,not_F]);
@@ -885,8 +895,8 @@ val right_11 = hd(amatch``Data_Sum_right _ = Data_Sum_right _``);
 (* |- (!x x'. Data_Sum_left x = Data_Sum_left x' <=> x = x') /\
       !y y'. Data_Sum_right y = Data_Sum_right y' <=> y = y'
  *)
-val th44 = store_thm
-  ("th44", el 44 goals |> concl,
+val th45 = store_thm
+  ("th45", el 45 goals |> concl,
     conj_tac
  >| [ MATCH_ACCEPT_TAC left_11,
       MATCH_ACCEPT_TAC right_11 ]);
@@ -897,8 +907,8 @@ val isNone_none = hd(amatch``Data_Option_isNone (Data_Option_none)``);
 (* |- (!x. Data_Option_isNone (Data_Option_some x) <=> F) /\
       (Data_Option_isNone Data_Option_none <=> T)
  *)
-val th45 = store_thm
-  ("th45", el 45 goals |> concl,
+val th46 = store_thm
+  ("th46", el 46 goals |> concl,
     conj_tac
  >| [ MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL isNone_some)),
       MATCH_ACCEPT_TAC (EQT_INTRO isNone_none) ]);
@@ -909,8 +919,8 @@ val isSome_none = hd(amatch``Data_Option_isSome (Data_Option_none)``);
 (* |- (!x. Data_Option_isSome (Data_Option_some x) <=> T) /\
       (Data_Option_isSome Data_Option_none <=> F)
  *)
-val th46 = store_thm
-  ("th46", el 46 goals |> concl,
+val th47 = store_thm
+  ("th47", el 47 goals |> concl,
     conj_tac
  >| [ MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL isSome_some)),
       MATCH_ACCEPT_TAC (EQF_INTRO isSome_none) ]);
@@ -921,8 +931,8 @@ val isLeft_left = hd(amatch``Data_Sum_isLeft (Data_Sum_left _)``);
 (* |- (!x. Data_Sum_isLeft (Data_Sum_left x) <=> T) /\
       !y. Data_Sum_isLeft (Data_Sum_right y) <=> F
  *)
-val th47 = store_thm
-  ("th47", el 47 goals |> concl,
+val th48 = store_thm
+  ("th48", el 48 goals |> concl,
     conj_tac
  >| [ PURE_REWRITE_TAC [iff_T] >> MATCH_ACCEPT_TAC isLeft_left,
       PURE_REWRITE_TAC [iff_F] >> MATCH_ACCEPT_TAC isLeft_right ]);
@@ -933,8 +943,8 @@ val isRight_left = hd(amatch``Data_Sum_isRight (Data_Sum_left _)``);
 (* |- (!x. Data_Sum_isRight (Data_Sum_right x)) /\
       !y. ~Data_Sum_isRight (Data_Sum_left y)
  *)
-val th48 = store_thm
-  ("th48", el 48 goals |> concl,
+val th49 = store_thm
+  ("th49", el 49 goals |> concl,
     conj_tac
  >| [ PURE_REWRITE_TAC [iff_T] >> MATCH_ACCEPT_TAC isRight_right,
       PURE_REWRITE_TAC [iff_F] >> MATCH_ACCEPT_TAC isRight_left ]);
@@ -949,8 +959,8 @@ val append_cons =
           Data_List_append (Data_List_cons h l1) l2 =
           Data_List_cons h (Data_List_append l1 l2)
  *)
-val th49 = store_thm
-  ("th49", el 49 goals |> concl,
+val th50 = store_thm
+  ("th50", el 50 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC append_nil
   \\ MATCH_ACCEPT_TAC append_cons);
 
@@ -962,8 +972,8 @@ val plus_comm = hd(amatch``Number_Natural_plus x y = Number_Natural_plus y x``);
       !m n. Number_Natural_plus (Number_Natural_suc m) n =
             Number_Natural_suc (Number_Natural_plus m n)
  *)
-val th50 = store_thm
-  ("th50", el 50 goals |> concl,
+val th51 = store_thm
+  ("th51", el 51 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_zero)
   \\ MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_suc));
 
@@ -975,8 +985,8 @@ val power_suc = hd(amatch``Number_Natural_power _ (Number_Natural_suc _)``);
       !m n. Number_Natural_power m (Number_Natural_suc n) =
             Number_Natural_times m (Number_Natural_power m n)
  *)
-val th51 = store_thm
-  ("th51", el 51 goals |> concl,
+val th52 = store_thm
+  ("th52", el 52 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC power_zero
   \\ MATCH_ACCEPT_TAC power_suc);
 
@@ -990,19 +1000,19 @@ val times_zero_comm = PURE_ONCE_REWRITE_RULE [times_comm] times_zero;
           Number_Natural_times (Number_Natural_suc m) n =
           Number_Natural_plus (Number_Natural_times m n) n
  *)
-val th52 = store_thm
-  ("th52", el 52 goals |> concl,
+val th53 = store_thm
+  ("th53", el 53 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC times_zero_comm
   \\ MATCH_ACCEPT_TAC
       (PURE_ONCE_REWRITE_RULE[plus_comm](PURE_ONCE_REWRITE_RULE[times_comm]times_suc)));
 
 (* |- (!t. ~~t <=> t) /\ (~T <=> F) /\ (~F <=> T) *)
-val th53 = store_thm
-  ("th53", el 53 goals |> concl,
+val th54 = store_thm
+  ("th54", el 54 goals |> concl,
   PURE_REWRITE_TAC[not_not,iff_F,iff_T,truth,not_F,and_T]
   \\ gen_tac \\ REFL_TAC);
 
-val NOT_CLAUSES = th53;
+val NOT_CLAUSES = th54;
 
 val map_none = hd(amatch``Data_Option_map _ Data_Option_none = _``)
 val map_some = hd(amatch``Data_Option_map _ (Data_Option_some _) = _``)
@@ -1010,8 +1020,8 @@ val map_some = hd(amatch``Data_Option_map _ (Data_Option_some _) = _``)
 (* |- (!f x. Data_Option_map f (Data_Option_some x) = Data_Option_some (f x)) /\
       !f. Data_Option_map f Data_Option_none = Data_Option_none
  *)
-val th54 = store_thm
-  ("th54", el 54 goals |> concl,
+val th55 = store_thm
+  ("th55", el 55 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC map_some
   \\ MATCH_ACCEPT_TAC map_none);
 
@@ -1023,8 +1033,8 @@ val map_cons = hd(amatch``Data_List_map _ (Data_List_cons _ _)``);
           Data_List_map f (Data_List_cons h t) =
           Data_List_cons (f h) (Data_List_map f t)
  *)
-val th55 = store_thm
-  ("th55", el 55 goals |> concl,
+val th56 = store_thm
+  ("th56", el 56 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC map_nil
   \\ MATCH_ACCEPT_TAC map_cons);
 
@@ -1043,8 +1053,8 @@ val filter_cons = hd(amatch``Data_List_filter _ (Data_List_cons _ _)``);
           if P h then Data_List_cons h (Data_List_filter P t)
           else Data_List_filter P t
  *)
-val th57 = store_thm
-  ("th57", el 57 goals |> concl,
+val th58 = store_thm
+  ("th58", el 58 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC filter_nil
   \\ MATCH_ACCEPT_TAC filter_cons);
 
@@ -1055,8 +1065,8 @@ val all_cons = hd(amatch``Data_List_all _ (Data_List_cons _ _)``);
       !P h t.
           Data_List_all P (Data_List_cons h t) <=> P h /\ Data_List_all P t
  *)
-val th58 = store_thm
-  ("th58", el 58 goals |> concl,
+val th59 = store_thm
+  ("th59", el 59 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL all_nil))
   \\ MATCH_ACCEPT_TAC all_cons);
 
@@ -1067,20 +1077,13 @@ val any_cons = hd(amatch``Data_List_any _ (Data_List_cons _ _)``);
       !P h t.
           Data_List_any P (Data_List_cons h t) <=> P h \/ Data_List_any P t
  *)
-val th59 = store_thm
-  ("th59", el 59 goals |> concl,
+val th60 = store_thm
+  ("th60", el 60 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL any_nil))
   \\ MATCH_ACCEPT_TAC any_cons);
 
 val concat_nil = hd(amatch``Data_List_concat Data_List_nil``);
 val concat_cons = hd(amatch``Data_List_concat (Data_List_cons _ _)``);
-
-(* |- (T <> F) /\ (F <> T) *)
-val th60 = store_thm
-  ("th60",  el 60 goals |> concl,
-  PURE_REWRITE_TAC[eq_imp_thm, not_and, imp_F, not_not]
-  \\ conj_tac >|[disj1_tac, disj2_tac]
-  \\ ACCEPT_TAC truth);
 
 (* |- Data_List_concat Data_List_nil = Data_List_nil /\
       !h t.
