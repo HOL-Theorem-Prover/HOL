@@ -1395,7 +1395,7 @@ class characters.")
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
                             auto-mode-alist))
 
-(if (fboundp 'yas-minor-mode)
+(if (boundp 'yas-snippet-dirs)
     (progn
       (setq yas-snippet-dirs
             (append
