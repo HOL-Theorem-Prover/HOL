@@ -4,54 +4,19 @@
 These theories of abstract algebra form a useful collection of libraries,
 to support in particular the mechanisation of AKS algorithm.
 
+This library is being re-structured,
+see comments in pull requests [#1224](https://github.com/HOL-Theorem-Prover/HOL/pull/1224) and  [#1235](https://github.com/HOL-Theorem-Prover/HOL/pull/1235).
+
 ## Helper Theories
 * __lib__ is the extension of existing HOL libraries.
-    * `lib/helperNum`, more theorems on `arithmeticTheory`, `dividesTheory`, and `gcdTheory`.
-    * `lib/helperSet`, more theorems about sets and mappings, extends `pred_setTheory`.
-    * `lib/helperList`, more theorems about list manipulations, extends `listTheory`.
-    * `lib/helperFunction`, theorems on function equivalence.
-    * `lib/binomial`, properties of Pascal's triangle, for binomial coefficients.
-    * `lib/triangle`, properties of Leibniz's Denominator triangle, for consecutive LCM.
-    * `lib/Euler`, properties of number-theoretic sets, and Euler's φ function.
-    * `lib/Gauss`, more theorems about coprimes, &phi; function, and Gauss' Little Theorem.
-    * `lib/primes`, properties of two-factors, and a primality test.
-    * `lib/primePower`, properties of prime powers and divisors, study for consecutive LCM.
-    * `lib/logPower`, properties of perfect power, power free, and upper logarithm.
-    * `lib/sublist`, order-preserving sublist and properties.
+    * Most scripts are now incorporated into HOL4 theories, the rest are moved to `src/algebra/base`.
 
 ## Basic Theories
 * __monoid__ is an algebraic structure with a useful binary operation.
-    * `monoid/monoid`, properties of a monoid with identity.
-    * `monoid/monoidInstances`, examples of monoids, in particular modulo numbers.
-    * `monoid/monoidOrder`, order of element in a monoid and its properties.
-    * `monoid/monoidMap`, homomorphism and isomorphism between monoids.
-    * `monoid/submonoid`, properties of submonoids of a monoid.
-
 * __group__ is a monoid with all its elements invertible.
-    * `group/group`, properties of group, as an invertible monoid.
-    * `group/groupInstances`, examples of groups, in particular prime modulo systems.
-    * `group/groupOrder`, extends monoidOrder to groupOrder.
-    * `group/groupCyclic`, theorems on cyclic group and generators.
-    * `group/subgroup`, theorems on subgroups, including cosets.
-    * `group/quotientGroup`, theorems of a group partitioned by a normal subgroup.
-    * `group/groupMap`, homomorphism and isomorphism between groups.
-    * `group/congruences`, application to number theory, mainly Fermat's Little Theorem.
-    * `group/corres`, the Correspondence Theorem for group theory.
-    * `group/finiteGroup`, properties of a finite group.
-    * `group/groupAction`, action of a group on a target.
-
 * __ring__ is an algebraic structure with two related binary operations.
-    * `ring/ring`, properties of a ring, made up of a group and a monoid.
-    * `ring/ringInstances`, examples of rings, in particular modulo arithmetic systems.
-    * `ring/ringUnit`, properties of invertible elements in a ring (they form a group).
-    * `ring/ringDivides`, theorems of division for invertible elements in a ring.
-    * `ring/ringIdeal`, the concept of a well-behaved sub-structure, like the normal subgroup.
-    * `ring/quotientRing`, theorems of a ring partitioned by an ideal.
-    * `ring/ringMap`, homomorphism and isomorphism between rings.
-    * `ring/ringInteger`, the similarity of the multiples of ring unity and the integers.
-    * `ring/ringBinomial`, the binomial theorem in terms of ring integers.
-    * `ring/integralDomain`, properties of integral domain, a non-trivial ring without zero divisors.
-    * `ring/integralDomainInstances`, examples of integral domains, e.g. arithmetic in modulo prime.
+    * These theories have been relocated to `src/algebra/construction`.
+    * The `ring` theory here is a port from HOL-light, as a place-holder.
 
 * __field__ is a nontrivial ring with all nonzero elements invertible.
     * `field/field`, properties of a field, as an invertible (zero excluded) ring.
