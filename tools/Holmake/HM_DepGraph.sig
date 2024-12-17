@@ -47,6 +47,7 @@ sig
   val find_runnable : 'a t -> (node * 'a nodeInfo) option
 
   val toString : 'a t -> string
+  val toJSONString : 'a t -> string
 
   val postmortem : Holmake_tools.output_functions -> OS.Process.status * 'a t ->
                    OS.Process.status

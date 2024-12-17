@@ -10,6 +10,7 @@ type t = {
   includes : string list,
   interactive : bool,
   jobs : int,
+  json : bool,
   keep_going : bool,
   no_action : bool,
   no_hmakefile : bool,
