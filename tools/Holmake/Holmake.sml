@@ -196,6 +196,13 @@ fun extend_with_cline_vars env =
     end
 
 
+(* ----------------------------------------------------------------------
+    get_hmf : unit -> "holmakefile data" (as per ReadHMF)
+
+    Utility function to get the Holmakefile in the current directory, but
+    using a cache so that any given file is only ever read once.
+   ---------------------------------------------------------------------- *)
+
 local
   open hm_target
   val base = extend_with_cline_vars (read_holpathdb())
