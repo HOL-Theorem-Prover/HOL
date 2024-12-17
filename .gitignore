@@ -140,4 +140,7 @@ examples/l3-machine-code/**/*-heap
 hol-mode.el
 
 #Auto-generated files by VIM
-vim/
+vim/filetype.vim
+vim/hol-config.sml
+vim/hol.vim
+vim/vimhol.sml
