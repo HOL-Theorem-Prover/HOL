@@ -441,7 +441,7 @@ QED
 Theorem l2n_2_neg:
   !ls.
   EVERY ($> 2) ls ==>
-  2 ** LENGTH ls - SUC (l2n 2 ls) = l2n 2 (MAP (\x. 1 - x) ls)
+  l2n 2 (MAP (\x. 1 - x) ls) = 2 ** LENGTH ls - SUC (l2n 2 ls)
 Proof
   Induct
   \\ rw[l2n_def]
