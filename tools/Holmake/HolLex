@@ -214,7 +214,7 @@ fullquotebegin = "``" | "\226\128\156";
 fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
-Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{alphaMLid_list}"]")?;
+Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?;
 Quote_eqnpfx = "Quote"{ws}+{alphaMLid}{ws}*"="{ws}*{QUALalphaMLid}{ws}*":";
 Quote_pfx = "Quote"{ws}+{QUALalphaMLid}{ws}*":";
 HOLconjunction = "/\092" | "\226\136\167";

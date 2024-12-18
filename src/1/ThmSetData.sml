@@ -205,10 +205,16 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
     export_deltasexp data
   end
 
-  fun store_attrfun {attrname,name,thm} = export (toKName name,thm)
-  fun local_attrfun {attrname,name,thm} =
-    add {named_thm = ({Thy = current_theory(), Name = name},thm),
-         thy = current_theory()}
+  fun store_attrfun {attrname,name,args,thm} =
+      if null args then export (toKName name,thm)
+      else raise ERR "store_attrfun"
+                 ("Arguments not allowed for attribute " ^ attrname)
+  fun local_attrfun {attrname,name,args,thm} =
+      if null args then
+        add {named_thm = ({Thy = current_theory(), Name = name},thm),
+             thy = current_theory()}
+      else raise ERR "local_attrfun"
+                 ("Arguments not allowed for attribute " ^ attrname)
 in
   data_map := Symtab.update(name,(segdata, efns)) (!data_map);
   ThmAttribute.register_attribute (
@@ -252,16 +258,23 @@ fun export_with_ancestry
           AncestryData.fullmake { adinfo = adinfo,
                                   uptodate_delta = uptodate,
                                   sexps = sexps, globinfo = globinfo}
-      fun store_attrfun {attrname,name,thm} =
-          let val d = rADD(lift name)
-          in
-            #record_delta fullresult d;
-            #update_global_value fullresult (raw_apply_global d)
-          end
-      fun local_attrfun {attrname,name,thm} =
+      fun store_attrfun {attrname,name,thm,args} =
+          if null args then
+            let val d = rADD(lift name)
+            in
+              #record_delta fullresult d;
+              #update_global_value fullresult (raw_apply_global d)
+            end
+          else raise ERR "store_attrfun"
+                     ("Arguments not allowed for attribute " ^ attrname)
+      fun local_attrfun {attrname,name,thm,args} =
           (* as this is local, the name is not going to be a valid binding,
              and "cooking" a raw ADD delta will just throw an exception *)
-          #update_global_value fullresult(apply_to_global (ADD(lift name, thm)))
+          if null args then
+            #update_global_value fullresult(apply_to_global (ADD(lift name, thm)))
+          else
+            raise ERR "local_attrfun"
+                  ("Arguments not allowed for attribute " ^ attrname)
       fun efn_add {thy,named_thm} =
           #update_global_value fullresult(raw_apply_global(rADD (#1 named_thm)))
       fun efn_remove {thy,remove} =

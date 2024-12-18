@@ -1315,3 +1315,29 @@ in
            SWAP_EXISTS_CONV,
            t, expected)
 end
+
+fun q s = "\"" ^ String.toString s ^ "\""
+fun kvs_toString (k,vs) =
+    "(" ^ q k ^ ", [" ^ String.concatWith ", " (map q vs) ^ "])"
+fun kvs_alist_toString al =
+    "[" ^ String.concatWith ", " (map kvs_toString al) ^ "]"
+fun attr_result_toString {thmname,attrs,reserved,unknown} =
+    "{ attrs = " ^ kvs_alist_toString attrs ^ ",\n" ^
+    "  reserved = " ^ kvs_alist_toString reserved ^ ",\n" ^
+    "  unknown = " ^ kvs_alist_toString unknown ^ ",\n" ^
+    "  thmname = " ^ q thmname ^ "}"
+
+val _ = let
+  val _ = tprint ("extract_attributes \"" ^
+                  "foo[local,simp=once twice,baz]\"")
+  val expected = {attrs = [] : (string * string list) list,
+                  reserved = [("local", [])],
+                  thmname = "foo",
+                  unknown = [("simp", ["once", "twice"]), ("baz", [])]}
+in
+  require_msg
+    (check_result (equal expected))
+    attr_result_toString
+    ThmAttribute.extract_attributes
+    "foo[local,simp=once twice,baz]"
+end
