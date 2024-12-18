@@ -2470,52 +2470,6 @@ Proof
   \\ simp[] \\ strip_tac \\ simp[bool_to_bit_def]
 QED
 
-Theorem word_xor_bits_neq:
-  LENGTH b1 = LENGTH b2 ==>
-  word_from_bin_list b1 ?? word_from_bin_list b2 =
-  word_from_bin_list (MAP (λ(x,y). (x + y) MOD 2) (ZIP (b1, b2)))
-Proof
-  qid_spec_tac`b2`
-  \\ Induct_on`b1`
-  \\ rw[]
-  >- EVAL_TAC
-  \\ Cases_on`b2` \\ gs[]
-  \\ gs[word_from_bin_list_def, l2w_def, l2n_def]
-  \\ gs[GSYM word_add_n2w, GSYM word_mul_n2w]
-  \\ first_x_assum(qspec_then`t`(mp_tac o GSYM))
-  \\ simp[] \\ disch_then kall_tac
-  \\ DEP_REWRITE_TAC[WORD_ADD_XOR]
-  \\ `n2w 2 = n2w (2 ** 1)` by simp[]
-  \\ pop_assum SUBST_ALL_TAC
-  \\ simp[GSYM WORD_MUL_LSL]
-  \\ rewrite_tac[LSL_BITWISE]
-  \\ DEP_REWRITE_TAC[word_and_lsl_eq_0]
-  \\ simp[]
-  \\ conj_tac
-  >- (
-    rw[]
-    \\ Cases_on`2 < dimword(:'a)` \\ gs[MOD_LESS, MOD_MOD_LESS_EQ]
-    \\ Cases_on`dimword(:'a) = 2` \\ gs[MOD_MOD]
-    \\ `dimword(:'a) = 1` by simp[ZERO_LT_dimword]
-    \\ gs[] )
-  \\ rewrite_tac[GSYM WORD_XOR_ASSOC]
-  \\ AP_THM_TAC \\ AP_TERM_TAC
-  \\ AP_THM_TAC \\ AP_TERM_TAC
-  \\ qmatch_goalsub_rename_tac`x + y`
-  \\ `x MOD 2 < 2 ∧ y MOD 2 < 2` by simp[]
-  \\ ntac 2 (pop_assum mp_tac)
-  \\ rewrite_tac[NUMERAL_LESS_THM]
-  \\ Cases_on`ODD (x + y)`
-  >- (
-    `(x + y) MOD 2 = 1` by gs[ODD_MOD2_LEM]
-    \\ gs[ODD_ADD]
-    \\ Cases_on`ODD x` \\ gs[ODD_MOD2_LEM] )
-  \\ gs[GSYM EVEN_ODD]
-  \\ drule (iffLR EVEN_ADD)
-  \\ gs[EVEN_MOD2]
-  \\ Cases_on`x MOD 2 = 0` \\ gs[]
-QED
-
 Theorem xor_state_bools_w64:
   state_bools_w64 b1 w1 /\
   state_bools_w64 b2 w2
@@ -2545,7 +2499,7 @@ Proof
     \\ DEP_REWRITE_TAC[EL_chunks]
     \\ gs[NULL_EQ, bool_to_bit_def, divides_def]
     \\ rw[] \\ strip_tac \\ gs[] )
-  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_xor]
   \\ simp[]
   \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 1 |> DISCH_ALL]
   \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 2 |> DISCH_ALL]
@@ -2603,7 +2557,7 @@ Proof
   \\ conj_tac >- ( rw[Abbr`n`] \\ strip_tac \\ gs[] )
   \\ conj_tac >- ( rw[Abbr`n`, divides_def] \\ strip_tac \\ gs[] )
   \\ simp[GSYM MAP_DROP, GSYM MAP_TAKE]
-  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_xor]
   \\ conj_tac >- simp[Abbr`n`]
   \\ AP_TERM_TAC
   \\ DEP_REWRITE_TAC[ZIP_MAP |> SPEC_ALL |> UNDISCH |> cj 1 |> DISCH_ALL]
@@ -2669,7 +2623,7 @@ Proof
   \\ `MIN (n - 1) n = n - 1` by simp[Abbr`n`]
   \\ simp[LASTN_DROP, BUTLASTN_TAKE]
   \\ simp[GSYM MAP_DROP, GSYM MAP_TAKE, DROP_GENLIST, TAKE_GENLIST]
-  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_xor]
   \\ conj_tac >- simp[Abbr`n`]
   \\ AP_TERM_TAC
   \\ rewrite_tac[GSYM MAP_APPEND, GSYM MAP]
@@ -2743,7 +2697,7 @@ Proof
     \\ DEP_REWRITE_TAC[LENGTH_chunks]
     \\ gs[NULL_EQ]
     \\ rpt strip_tac \\ gs[] )
-  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_xor]
   \\ conj_tac >- simp[]
   \\ AP_TERM_TAC
   \\ rewrite_tac[GSYM MAP_DROP, GSYM MAP_TAKE]
@@ -3175,7 +3129,7 @@ Proof
     \\ rw[EVERY_MEM] \\ rw[] )
   \\ DEP_REWRITE_TAC[word_from_bin_list_and]
   \\ simp[]
-  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_xor]
   \\ simp[]
   \\ AP_TERM_TAC
   \\ simp[LIST_EQ_REWRITE, LENGTH_TAKE_EQ]
@@ -3335,7 +3289,7 @@ Proof
   \\ `g = word_from_bin_list (PAD_RIGHT 0 64 $ word_to_bin_list g)`
   by simp[word_from_bin_list_def, word_to_bin_list_def, l2w_w2l]
   \\ pop_assum SUBST1_TAC
-  \\ DEP_REWRITE_TAC[word_xor_bits_neq]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_xor]
   \\ simp[]
   \\ AP_TERM_TAC
   \\ BasicProvers.VAR_EQ_TAC
@@ -3650,7 +3604,7 @@ Proof
       \\ simp[NULL_LENGTH]
       \\ conj_tac >- (rpt strip_tac \\ gs[MAP2_MAP, ZIP_EQ_NIL])
       \\ conj_tac >- (rpt strip_tac \\ gs[MAP2_MAP, ZIP_EQ_NIL])
-      \\ simp[word_xor_bits_neq]
+      \\ simp[word_from_bin_list_xor]
       \\ AP_TERM_TAC
       \\ simp[LIST_EQ_REWRITE]
       \\ rpt strip_tac

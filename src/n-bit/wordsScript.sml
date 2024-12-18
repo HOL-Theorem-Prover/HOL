@@ -5230,6 +5230,54 @@ Proof
   \\ simp[dimword_def]
 QED
 
+Theorem word_from_bin_list_xor:
+  LENGTH b1 = LENGTH b2 ==>
+  word_from_bin_list b1 ?? word_from_bin_list b2 =
+  word_from_bin_list (MAP (\(x,y). (x + y) MOD 2) (ZIP (b1, b2)))
+Proof
+  qid_spec_tac`b2`
+  \\ Induct_on`b1`
+  \\ rw[]
+  >- (EVAL_TAC \\ rw[WORD_XOR_CLAUSES])
+  \\ Cases_on`b2` \\ gs[]
+  \\ gs[word_from_bin_list_def, l2w_def, l2n_def]
+  \\ gs[GSYM word_add_n2w, GSYM word_mul_n2w]
+  \\ first_x_assum(qspec_then`t`(mp_tac o GSYM))
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[WORD_ADD_XOR]
+  \\ `n2w 2 = n2w (2 ** 1)` by simp[]
+  \\ pop_assum SUBST_ALL_TAC
+  \\ simp[GSYM WORD_MUL_LSL]
+  \\ rewrite_tac[LSL_BITWISE]
+  \\ DEP_REWRITE_TAC[word_and_lsl_eq_0]
+  \\ simp[]
+  \\ conj_tac
+  >- (
+    rw[]
+    \\ Cases_on`2 < dimword(:'a)` \\ gs[MOD_LESS, MOD_MOD_LESS_EQ]
+    \\ Cases_on`dimword(:'a) = 2` \\ gs[MOD_MOD]
+    \\ `dimword(:'a) = 1` by simp[ZERO_LT_dimword]
+    \\ gs[] )
+  \\ rewrite_tac[GSYM WORD_XOR_ASSOC, GSYM LSL_BITWISE]
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ rewrite_tac[Once WORD_XOR_COMM]
+  \\ rewrite_tac[GSYM WORD_XOR_ASSOC]
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ qmatch_goalsub_rename_tac`x + y`
+  \\ `x MOD 2 < 2 /\ y MOD 2 < 2` by simp[]
+  \\ ntac 2 (pop_assum mp_tac)
+  \\ rewrite_tac[NUMERAL_LESS_THM]
+  \\ Cases_on`ODD (x + y)`
+  >- (
+    `(x + y) MOD 2 = 1` by gs[ODD_MOD2_LEM]
+    \\ gs[ODD_ADD]
+    \\ Cases_on`ODD x` \\ gs[ODD_MOD2_LEM, WORD_XOR_CLAUSES] )
+  \\ gs[GSYM EVEN_ODD]
+  \\ drule (iffLR EVEN_ADD)
+  \\ gs[EVEN_MOD2]
+  \\ Cases_on`x MOD 2 = 0` \\ gs[WORD_XOR_CLAUSES]
+QED
+
 (* -------------------------------------------------------------------------
     Create a few word sizes
    ------------------------------------------------------------------------- *)
