@@ -1,0 +1,25 @@
+\DOC
+
+\TYPE {remove_external_wspace : string -> string}
+
+\SYNOPSIS
+Removes trailing and leading whitespace characters from a string
+
+\KEYWORDS
+
+\DESCRIBE
+A call to {remove_external_wspace s} returns a string identical to {s}
+except that all leading and trailing characters for which
+{Char.isSpace} is true have been removed. The implementation is (with
+the Basis's {Substring} structure open):
+{
+   string (dropl Char.isSpace (dropr Char.isSpace (full s)))
+}
+
+\FAILURE
+Never fails.
+
+\SEEALSO
+Portable.remove_wspace.
+
+\ENDDOC
