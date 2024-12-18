@@ -3683,6 +3683,7 @@ Definition Keccak_256_bytes_def:
     MAP (PAD_RIGHT 0 8 o word_to_bin_list) bs
 End
 
+(*
 Theorem Keccak_256_w64_thm:
   Keccak_256_w64 = Keccak_256_bytes
 Proof
@@ -3721,6 +3722,7 @@ Proof
   \\ simp[MAP_TAKE, GSYM chunks_MAP]
   \\ cheat
 QED
+*)
 
 (* TODO: move/replace *)
 Definition hex_to_rev_bytes_def:
