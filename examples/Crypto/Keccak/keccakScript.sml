@@ -12,431 +12,6 @@ val _ = new_theory "keccak";
 
 val _ = numLib.temp_prefer_num();
 
-Theorem cv_LEN_add:
-  cv_LEN cv (Num n) =
-  cv_add (Num n) (cv_LEN cv (Num 0))
-Proof
-  qid_spec_tac`n`
-  \\ Induct_on`cv`
-  >- ( rw[Once cv_LEN_def] \\ rw[Once cv_LEN_def] )
-  \\ rewrite_tac[Once cv_LEN_def]
-  \\ simp_tac (srw_ss()) []
-  \\ gen_tac
-  \\ simp_tac std_ss [Once cv_LEN_def, SimpRHS]
-  \\ simp_tac (srw_ss()) []
-  \\ first_assum(qspec_then`n + 1`SUBST1_TAC)
-  \\ first_assum(qspec_then`1`SUBST1_TAC)
-  \\ qmatch_goalsub_abbrev_tac`cv_add _ p`
-  \\ Cases_on`p`
-  \\ simp[]
-QED
-
-Definition bool_to_bit_def:
-  bool_to_bit b = if b then 1 else 0n
-End
-
-Theorem dropWhile_id:
- (dropWhile P ls = ls) <=> NULL ls \/ ~P(HD ls)
-Proof
-  Cases_on`ls` \\ rw[dropWhile_def]
-  \\ disch_then(mp_tac o Q.AP_TERM`LENGTH`)
-  \\ qspecl_then[`P`,`t`]mp_tac LENGTH_dropWhile_LESS_EQ
-  \\ simp[]
-QED
-
-Theorem IS_SUFFIX_dropWhile:
-  IS_SUFFIX ls (dropWhile P ls)
-Proof
-  Induct_on`ls`
-  \\ rw[IS_SUFFIX_CONS]
-QED
-
-Theorem LENGTH_dropWhile_id:
-  (LENGTH (dropWhile P ls) = LENGTH ls) <=> (dropWhile P ls = ls)
-Proof
-  rw[EQ_IMP_THM]
-  \\ rw[dropWhile_id]
-  \\ Cases_on`ls` \\ gs[]
-  \\ strip_tac \\ gs[]
-  \\ `IS_SUFFIX t (dropWhile P t)` by simp[IS_SUFFIX_dropWhile]
-  \\ gs[IS_SUFFIX_APPEND]
-  \\ `LENGTH t = LENGTH l + LENGTH (dropWhile P t)` by metis_tac[LENGTH_APPEND]
-  \\ fs[]
-QED
-
-Theorem GENLIST_EQ_NIL[simp]:
-  GENLIST f n = [] <=> n = 0
-Proof
-  rw[EQ_IMP_THM]
-  \\ pop_assum(mp_tac o Q.AP_TERM`LENGTH`)
-  \\ rewrite_tac[LENGTH_GENLIST]
-  \\ rw[]
-QED
-
-Theorem DIV2_SBIT:
-  DIV2 (SBIT b n) = if n = 0 then 0 else SBIT b (n - 1)
-Proof
-  qspecl_then[`b`,`n`,`1`]mp_tac SBIT_DIV
-  \\ simp[DIV2_def]
-  \\ Cases_on`1 < n` \\ gs[]
-  \\ Cases_on`n=0` \\ gs[SBIT_def]
-  \\ rw[]
-  \\ `n=1` by gs[]
-  \\ gvs[]
-QED
-
-Theorem ODD_SBIT:
-  ODD (SBIT b n) = (b /\ n = 0)
-Proof
-  rw[SBIT_def, ODD_EXP_IFF]
-QED
-
-Theorem ODD_bool_to_bit[simp]:
-  ODD (bool_to_bit b) = b /\
-  ODD (1 - bool_to_bit b) = ~b
-Proof
-  rw[bool_to_bit_def]
-QED
-
-Theorem bool_to_bit_neq_add:
-  bool_to_bit (x <> y) =
-  (bool_to_bit x + bool_to_bit y) MOD 2
-Proof
-  rw[bool_to_bit_def]
-QED
-
-Theorem LENGTH_word_to_bin_list_bound:
-  LENGTH (word_to_bin_list (w:'a word)) <= (dimindex (:'a))
-Proof
-  rw[word_to_bin_list_def, wordsTheory.w2l_def, LENGTH_n2l]
-  \\ Cases_on`w` \\ simp[]
-  \\ fs[dimword_def, GSYM LESS_EQ, LOG2_def, LT_EXP_LOG]
-QED
-
-Theorem word_from_bin_list_ror:
-  x < dimindex(:'a) /\ LENGTH ls = dimindex(:'a)
-  ==>
-  word_ror (word_from_bin_list ls : 'a word) x =
-  word_from_bin_list (DROP x ls ++ TAKE x ls)
-Proof
-  rw[word_from_bin_list_def, l2w_def]
-  \\ Cases_on`x = 0` \\ gs[]
-  \\ rw[word_ror_n2w, l2n_APPEND]
-  \\ AP_THM_TAC \\ AP_TERM_TAC
-  \\ qspecl_then[`x`,`ls`](mp_tac o SYM) TAKE_DROP
-  \\ disch_then(SUBST1_TAC o Q.AP_TERM`l2n 2`)
-  \\ rewrite_tac[l2n_APPEND]
-  \\ simp[]
-  \\ qmatch_goalsub_abbrev_tac`BITS _ _ (2 ** x * ld + lt)`
-  \\ qspecl_then[`x - 1`,`0`,`ld`,`lt`]mp_tac BITS_SUM2
-  \\ simp[ADD1]
-  \\ disch_then kall_tac
-  \\ qspecl_then[`x-1`,`lt`]mp_tac BITS_ZEROL
-  \\ simp[ADD1]
-  \\ impl_keep_tac
-  >- (
-    qspecl_then[`TAKE x ls`,`2`]mp_tac l2n_lt
-    \\ simp[] )
-  \\ simp[]
-  \\ disch_then kall_tac
-  \\ simp_tac std_ss [Once ADD_COMM, SimpRHS]
-  \\ qmatch_goalsub_abbrev_tac`BITS h x`
-  \\ qspecl_then[`h`,`x`,`ld`,`lt`]mp_tac BITS_SUM
-  \\ simp[] \\ disch_then kall_tac
-  \\ DEP_REWRITE_TAC[BITS_ZERO4]
-  \\ simp[Abbr`h`]
-  \\ DEP_REWRITE_TAC[BITS_ZEROL]
-  \\ qspecl_then[`DROP x ls`,`2`]mp_tac l2n_lt
-  \\ simp[ADD1]
-QED
-
-Theorem word_from_bin_list_rol:
-  x < dimindex(:'a) /\ LENGTH ls = dimindex(:'a)
-  ==>
-  word_rol (word_from_bin_list ls : 'a word) x =
-  word_from_bin_list (LASTN x ls ++ BUTLASTN x ls)
-Proof
-  rw[word_rol_def]
-  \\ Cases_on`x=0` \\ gs[]
-  >- simp[LASTN_DROP, BUTLASTN_TAKE, DROP_LENGTH_TOO_LONG, TAKE_LENGTH_TOO_LONG]
-  \\ DEP_REWRITE_TAC[word_from_bin_list_ror]
-  \\ simp[LASTN_DROP, BUTLASTN_TAKE]
-QED
-
-Theorem ODD_MOD_2[simp]:
-  ODD (x MOD 2) = ODD x
-Proof
-  rw[ODD_MOD2_LEM]
-QED
-
-Theorem bool_to_bit_MOD_2[simp]:
-  bool_to_bit x MOD 2 = bool_to_bit x
-Proof
-  rw[bool_to_bit_def]
-QED
-
-Theorem MOD_DIV_SAME[simp]:
-  0 < y ==> x MOD y DIV y = 0
-Proof
-  strip_tac
-  \\ Cases_on`y=1` \\ gs[]
-  \\ `1 < y` by simp[]
-  \\ rw[DIV_EQ_0]
-QED
-
-Theorem BITWISE_l2n_2:
-  LENGTH l1 = LENGTH l2 ==>
-  BITWISE (LENGTH l1) op (l2n 2 l1) (l2n 2 l2) =
-  l2n 2 (MAP2 (\x y. bool_to_bit $ op (ODD x) (ODD y)) l1 l2)
-Proof
-  qid_spec_tac`l2`
-  \\ Induct_on`l1`
-  \\ simp[BITWISE_EVAL]
-  >- simp[BITWISE_def]
-  \\ qx_gen_tac`b`
-  \\ Cases \\ gs[BITWISE_EVAL]
-  \\ strip_tac
-  \\ gs[l2n_def]
-  \\ simp[SBIT_def, ODD_ADD, ODD_MULT, GSYM bool_to_bit_def]
-QED
-
-Theorem word_from_bin_list_and:
-  LENGTH l1 = dimindex(:'a) /\
-  LENGTH l2 = dimindex(:'a)
-  ==>
-  word_from_bin_list l1 && word_from_bin_list l2 : 'a word =
-  word_from_bin_list (MAP2 (\x y. bool_to_bit $ (ODD x /\ ODD y)) l1 l2)
-Proof
-  rw[word_from_bin_list_def, l2w_def, word_and_n2w]
-  \\ qmatch_goalsub_abbrev_tac`BITWISE n`
-  \\ qmatch_goalsub_abbrev_tac`a MOD d = b MOD d`
-  \\ `d = 2 ** n`
-  by simp[Abbr`d`, Abbr`n`, dimword_def]
-  \\ `a < d` by (
-    pop_assum SUBST1_TAC
-    \\ qunabbrev_tac`a`
-    \\ irule BITWISE_LT_2EXP )
-  \\ `b < d`
-  by (
-    qunabbrev_tac`b`
-    \\ qmatch_goalsub_abbrev_tac`l2n 2 ls`
-    \\ `n = LENGTH ls` by simp[Abbr`ls`]
-    \\ qunabbrev_tac`d`
-    \\ qpat_x_assum`_ = 2 ** _`SUBST1_TAC
-    \\ pop_assum SUBST1_TAC
-    \\ irule l2n_lt \\ simp[] )
-  \\ simp[]
-  \\ unabbrev_all_tac
-  \\ DEP_REWRITE_TAC[GSYM BITWISE_l2n_2]
-  \\ simp[]
-QED
-
-Theorem chunks_append_divides:
-  ∀n l1 l2.
-    0 < n /\ divides n (LENGTH l1) /\ ~NULL l1 /\ ~NULL l2 ==>
-    chunks n (l1 ++ l2) = chunks n l1 ++ chunks n l2
-Proof
-  recInduct chunks_ind
-  \\ rw[divides_def, PULL_EXISTS]
-  \\ simp[Once chunks_def]
-  \\ Cases_on`q=0` \\ gs[]
-  \\ IF_CASES_TAC
-  >- ( Cases_on`q` \\ gs[ADD1, LEFT_ADD_DISTRIB] \\ gs[LESS_OR_EQ] )
-  \\ simp[DROP_APPEND, TAKE_APPEND]
-  \\ qmatch_goalsub_abbrev_tac`lhs = _`
-  \\ simp[Once chunks_def]
-  \\ Cases_on`q = 1` \\ gs[]
-  >- (
-    simp[Abbr`lhs`]
-    \\ gs[NOT_LESS_EQUAL]
-    \\ simp[DROP_LENGTH_TOO_LONG])
-  \\ simp[Abbr`lhs`]
-  \\ `n - n * q = 0` by simp[]
-  \\ simp[]
-  \\ first_x_assum irule
-  \\ simp[NULL_EQ]
-  \\ qexists_tac`q - 1`
-  \\ simp[]
-QED
-
-Theorem chunks_length:
-  chunks (LENGTH ls) ls = [ls]
-Proof
-  rw[Once chunks_def]
-QED
-
-Theorem chunks_not_nil[simp]:
-  !n ls. chunks n ls <> []
-Proof
-  recInduct chunks_ind
-  \\ rw[]
-  \\ rw[Once chunks_def]
-QED
-
-Theorem MEM_w2l_less:
-  1 < b /\ MEM x (w2l b w) ==> x < b
-Proof
-  Cases_on`w`
-  \\ rw[wordsTheory.w2l_def]
-  \\ rpt $ pop_assum mp_tac
-  \\ map_every qid_spec_tac [`x`,`n`,`b`]
-  \\ recInduct n2l_ind
-  \\ rw[]
-  \\ pop_assum mp_tac
-  \\ rw[Once n2l_def]
-  >- ( irule MOD_LESS \\ gs[] )
-  \\ first_x_assum irule
-  \\ gs[DIV_LT_X]
-  \\ Cases_on`b` \\ gs[MULT]
-QED
-
-Theorem LENGTH_chunks:
-  ∀n ls. 0 < n ∧ ¬NULL ls ⇒
-    LENGTH (chunks n ls) =
-    LENGTH ls DIV n + (bool_to_bit $ ¬divides n (LENGTH ls))
-Proof
-  recInduct chunks_ind
-  \\ rw[]
-  \\ rw[Once chunks_def, DIV_EQUAL_0, bool_to_bit_def, divides_def]
-  \\ gs[LESS_OR_EQ, ADD1, NULL_EQ, bool_to_bit_def]
-  \\ rw[]
-  \\ gs[divides_def]
-  \\ gs[SUB_DIV]
-  >- (
-    Cases_on`LENGTH ls DIV n = 0` >- gs[DIV_EQUAL_0]
-    \\ simp[] )
-  >- (
-    Cases_on`q` \\ gs[MULT_SUC]
-    \\ qmatch_asmsub_rename_tac`n + n * p`
-    \\ first_x_assum(qspec_then`2 + p`mp_tac)
-    \\ simp[LEFT_ADD_DISTRIB] )
-  >- (
-    first_x_assum(qspec_then`PRE q`mp_tac)
-    \\ Cases_on`q` \\ gs[MULT_SUC] )
-  \\ Cases_on`q` \\ gvs[MULT_SUC]
-  \\ simp[ADD_DIV_RWT]
-QED
-
-Theorem EL_chunks:
-  ∀k ls n.
-  n < LENGTH (chunks k ls) /\ 0 < k /\ ~NULL ls ==>
-  EL n (chunks k ls) = TAKE k (DROP (n * k) ls)
-Proof
-  recInduct chunks_ind \\ rw[NULL_EQ]
-  \\ qpat_x_assum`_ < LENGTH _ `mp_tac
-  \\ rw[Once chunks_def] \\ gs[]
-  >- rw[Once chunks_def]
-  \\ rw[Once chunks_def]
-  \\ qmatch_goalsub_rename_tac`EL m _`
-  \\ Cases_on`m` \\ gs[]
-  \\ pop_assum mp_tac
-  \\ DEP_REWRITE_TAC[LENGTH_chunks]
-  \\ simp[NULL_EQ]
-  \\ strip_tac
-  \\ DEP_REWRITE_TAC[DROP_DROP]
-  \\ simp[MULT_SUC]
-  \\ qmatch_goalsub_rename_tac`n + n * m <= _`
-  \\ `n * m <= LENGTH ls - n` suffices_by simp[]
-  \\ `m <= (LENGTH ls - n) DIV n` suffices_by simp[X_LE_DIV]
-  \\ fs[bool_to_bit_def]
-  \\ pop_assum mp_tac \\ rw[]
-QED
-
-Theorem chunks_MAP:
-  ∀n ls. chunks n (MAP f ls) = MAP (MAP f) (chunks n ls)
-Proof
-  recInduct chunks_ind \\ rw[]
-  \\ rw[Once chunks_def]
-  >- rw[Once chunks_def]
-  >- rw[Once chunks_def]
-  \\ gs[]
-  \\ simp[GSYM MAP_DROP]
-  \\ simp[Once chunks_def, SimpRHS]
-  \\ simp[MAP_TAKE]
-QED
-
-Theorem chunks_ZIP:
-  ∀n ls l2. LENGTH ls = LENGTH l2 ==>
-  chunks n (ZIP (ls, l2)) = MAP ZIP (ZIP (chunks n ls, chunks n l2))
-Proof
-  recInduct chunks_ind \\ rw[]
-  \\ rw[Once chunks_def]
-  >- ( rw[Once chunks_def] \\ rw[Once chunks_def] )
-  >- rw[Once chunks_def]
-  \\ gs[]
-  \\ simp[GSYM ZIP_DROP]
-  \\ simp[Once chunks_def, SimpRHS]
-  \\ simp[Once chunks_def, SimpR``$,``, SimpRHS]
-  \\ simp[ZIP_TAKE]
-QED
-
-Theorem chunks_TAKE:
-  !n ls m. divides n m /\ 0 < m ==>
-    chunks n (TAKE m ls) = TAKE (m DIV n) (chunks n ls)
-Proof
-  recInduct chunks_ind \\ rw[]
-  \\ rw[Once chunks_def, SimpRHS]
-  >- (
-    rw[Once chunks_def] \\ gs[LENGTH_TAKE_EQ]
-    \\ gvs[divides_def]
-    \\ qmatch_goalsub_rename_tac`n * m`
-    \\ `n <= n * m` by simp[]
-    \\ DEP_REWRITE_TAC[TAKE_LENGTH_TOO_LONG]
-    \\ simp[MULT_DIV] )
-  >- gs[divides_def]
-  \\ gs[]
-  \\ simp[Once chunks_def, LENGTH_TAKE_EQ]
-  \\ `n <= m` by gs[divides_def]
-  \\ IF_CASES_TAC
-  >- (
-    pop_assum mp_tac \\ rw[]
-    \\ `m = n` by gs[] \\ gvs[] )
-  \\ gs[TAKE_TAKE, DROP_TAKE]
-  \\ first_x_assum(qspec_then`m - n`mp_tac)
-  \\ simp[]
-  \\ impl_keep_tac >- (
-    gs[divides_def]
-    \\ qexists_tac`q - 1`
-    \\ simp[LEFT_SUB_DISTRIB] )
-  \\ rw[]
-  \\ `m DIV n <> 0` by gs[DIV_EQUAL_0]
-  \\ Cases_on`m DIV n` \\ gs[TAKE_TAKE_MIN]
-  \\ `MIN n m = n` by gs[MIN_DEF] \\ rw[]
-  \\ simp[SUB_DIV]
-QED
-
-Definition chunks_tr_aux_def:
-  chunks_tr_aux n ls acc =
-    if LENGTH ls <= SUC n then REVERSE $ ls :: acc
-    else chunks_tr_aux n (DROP (SUC n) ls) (TAKE (SUC n) ls :: acc)
-Termination
-  WF_REL_TAC`measure $ LENGTH o FST o SND`
-  \\ rw[LENGTH_DROP]
-End
-
-Definition chunks_tr_def:
-  chunks_tr n ls = if n = 0 then [ls] else chunks_tr_aux (n - 1) ls []
-End
-
-Theorem chunks_tr_aux_thm:
-  !n ls acc.
-    chunks_tr_aux n ls acc =
-    REVERSE acc ++ chunks (SUC n) ls
-Proof
-  recInduct chunks_tr_aux_ind
-  \\ rw[]
-  \\ rw[Once chunks_tr_aux_def]
-  >- rw[Once chunks_def]
-  \\ simp[Once chunks_def, SimpRHS]
-QED
-
-Theorem chunks_tr_thm:
-  chunks_tr = chunks
-Proof
-  simp[FUN_EQ_THM, chunks_tr_def]
-  \\ Cases \\ rw[chunks_tr_aux_thm]
-QED
-
 Theorem LENGTH_PAD_RIGHT_0_8_word_to_bin_list[simp]:
   LENGTH (PAD_RIGHT 0 8 (word_to_bin_list (w: word8))) = 8
 Proof
@@ -457,183 +32,6 @@ Proof
   \\ irule SUB_ADD
   \\ `n < 2 ** 64` by simp[]
   \\ gs[LT_EXP_LOG]
-QED
-
-Theorem l2n_PAD_RIGHT_0[simp]:
-  0 < b ==> l2n b (PAD_RIGHT 0 h ls) = l2n b ls
-Proof
-  Induct_on`ls` \\ rw[l2n_def, PAD_RIGHT, l2n_eq_0, EVERY_GENLIST]
-  \\ gs[PAD_RIGHT, l2n_APPEND]
-  \\ gs[l2n_eq_0, EVERY_GENLIST]
-QED
-
-Theorem l2w_PAD_RIGHT_0[simp]:
-  0 < b ==> l2w b (PAD_RIGHT 0 h ls) = l2w b ls
-Proof
-  rw[l2w_def]
-QED
-
-Theorem BITWISE_COMM:
-  (!m. m <= n ==> op (BIT m x) (BIT m y) = op (BIT m y) (BIT m x))
-  ==> BITWISE n op x y = BITWISE n op y x
-Proof
-  Induct_on`n`
-  \\ rw[BITWISE_def]
-  \\ first_assum(qspec_then`n`mp_tac)
-  \\ impl_tac >- rw[]
-  \\ disch_then SUBST1_TAC
-  \\ simp[]
-  \\ first_x_assum irule
-  \\ rw[]
-  \\ first_x_assum irule
-  \\ simp[]
-QED
-
-Triviality BITWISE_AND_0_lemma:
-  BITWISE w $/\ x 0 = 0
-Proof
-  qid_spec_tac`x`
-  \\ Induct_on`w`
-  \\ rw[BITWISE_def, SBIT_def]
-QED
-
-Theorem BITWISE_AND_0[simp]:
-  BITWISE w $/\ x 0 = 0 /\
-  BITWISE w $/\ 0 x = 0
-Proof
-  qspecl_then[`$/\`,`0`,`x`,`w`]mp_tac(Q.GENL[`op`,`x`,`y`,`n`]BITWISE_COMM)
-  \\ impl_tac >- rw[]
-  \\ disch_then SUBST1_TAC
-  \\ rw[BITWISE_AND_0_lemma]
-QED
-
-Theorem BITWISE_AND_SHIFT_0:
-  !w x y n.
-  x < 2 ** n ==>
-  BITWISE w $/\ x (y * 2 ** n) = 0
-Proof
-  Induct \\ rw[BITWISE_def, SBIT_def]
-  \\ strip_tac
-  \\ Cases_on`w < n`
-  >- ( drule BIT_SHIFT_THM3 \\ simp[]
-       \\ qexists_tac`y` \\ simp[])
-  \\ gs[NOT_LESS]
-  \\ drule TWOEXP_MONO2 \\ strip_tac
-  \\ `x < 2 ** w` by metis_tac[LESS_LESS_EQ_TRANS]
-  \\ drule NOT_BIT_GT_TWOEXP
-  \\ simp[]
-QED
-
-Theorem word_and_lsl_eq_0:
-  w2n w1 < 2 ** n ==> w1 && w2 << n = 0w
-Proof
-  Cases_on`w1` \\ Cases_on`w2`
-  \\ rw[word_and_n2w, word_lsl_n2w]
-  \\ drule BITWISE_AND_SHIFT_0
-  \\ simp[]
-QED
-
-Theorem l2n_max:
-  0 < b ==>
-  !ls. (l2n b ls = b ** (LENGTH ls) - 1) <=>
-       (EVERY ((=) (b - 1) o flip $MOD b) ls)
-Proof
-  strip_tac
-  \\ Induct
-  \\ rw[l2n_def]
-  \\ rw[EXP]
-  \\ qmatch_goalsub_abbrev_tac`b * l + a`
-  \\ qmatch_goalsub_abbrev_tac`b ** n`
-  \\ gs[EQ_IMP_THM]
-  \\ conj_tac
-  >- (
-    strip_tac
-    \\ Cases_on`n=0` \\ gs[] >- gs[Abbr`n`]
-    \\ `0 < b * b ** n` by simp[]
-    \\ `a + b * l + 1 = b * b ** n` by simp[]
-    \\ `(b * b ** n) DIV b = b ** n` by simp[MULT_TO_DIV]
-    \\ `(b * l + (a + 1)) DIV b = b ** n` by gs[]
-    \\ `(b * l) MOD b = 0` by simp[]
-    \\ `(b * l + (a + 1)) DIV b = (b * l) DIV b + (a + 1) DIV b`
-    by ( irule ADD_DIV_RWT \\ simp[] )
-    \\ pop_assum SUBST_ALL_TAC
-    \\ `(a + 1) DIV b = if a = b - 1 then 1 else 0`
-    by (
-      rw[]
-      \\ `a + 1 < b` suffices_by rw[DIV_EQ_0]
-      \\ simp[Abbr`a`]
-      \\ `h MOD b < b - 1` suffices_by simp[]
-      \\ `h MOD b < b` by simp[]
-      \\ gs[] )
-    \\ `b * l DIV b = l` by simp[MULT_TO_DIV]
-    \\ pop_assum SUBST_ALL_TAC
-    \\ pop_assum SUBST_ALL_TAC
-    \\ `l < b ** n` by ( qunabbrev_tac`l` \\ qunabbrev_tac`n`
-                         \\ irule l2n_lt \\ simp[] )
-    \\ Cases_on`a = b - 1` \\ gs[] )
-  \\ strip_tac
-  \\ rewrite_tac[LEFT_SUB_DISTRIB]
-  \\ qpat_x_assum`_ = a`(SUBST1_TAC o SYM)
-  \\ gs[SUB_LEFT_ADD] \\ rw[]
-  \\ Cases_on`n=0` \\ gs[]
-  \\ `b ** n <= b ** 0` by simp[]
-  \\ gs[EXP_BASE_LE_IFF]
-QED
-
-Theorem l2n_2_neg:
-  !ls.
-  EVERY ($> 2) ls ==>
-  2 ** LENGTH ls - SUC (l2n 2 ls) = l2n 2 (MAP (\x. 1 - x) ls)
-Proof
-  Induct
-  \\ rw[l2n_def]
-  \\ gs[EXP, ADD1]
-  \\ first_x_assum(CHANGED_TAC o SUBST1_TAC o SYM)
-  \\ simp[LEFT_SUB_DISTRIB, LEFT_ADD_DISTRIB, SUB_RIGHT_ADD]
-  \\ qspecl_then[`ls`,`2`]mp_tac l2n_lt
-  \\ simp[]
-QED
-
-Theorem word_not_bits:
-  LENGTH ls = dimindex(:'a) /\ EVERY ($> 2) ls ==>
-  ¬word_from_bin_list ls : 'a word =
-  word_from_bin_list (MAP (λx. 1 - x) ls)
-Proof
-  rw[word_from_bin_list_def, l2w_def]
-  \\ rewrite_tac[word_2comp_n2w]
-  \\ Cases_on`l2n 2 ls = dimword(:'a) - 1`
-  >- (
-    mp_then Any (qspec_then`ls`mp_tac)
-      l2n_max (SIMP_CONV(srw_ss())[]``0 < 2n`` |> EQT_ELIM)
-    \\ `dimword (:'a) = 2 ** LENGTH ls` by simp[dimword_def]
-    \\ first_assum (SUBST_ALL_TAC o SYM)
-    \\ pop_assum kall_tac
-    \\ pop_assum SUBST_ALL_TAC
-    \\ simp[ADD1, ZERO_LT_dimword]
-    \\ strip_tac
-    \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
-    \\ `A = 0` suffices_by rw[]
-    \\ rw[Abbr`A`, l2n_eq_0]
-    \\ gs[EVERY_MAP, EVERY_MEM]
-    \\ rw[]
-    \\ `2 > x` by simp[]
-    \\ `x < 2` by simp[]
-    \\ pop_assum mp_tac
-    \\ `x MOD 2 = 1` by simp[]
-    \\ rewrite_tac[NUMERAL_LESS_THM]
-    \\ strip_tac \\ fs[] )
-  \\ `SUC (l2n 2 ls) < dimword(:'a)`
-  by (
-    qspecl_then[`ls`,`2`]mp_tac l2n_lt
-    \\ gs[dimword_def] )
-  \\ qmatch_goalsub_abbrev_tac`_ = n2w $ l2n 2 l1`
-  \\ `l2n 2 l1 < dimword(:'a)`
-  by (
-    qspecl_then[`l1`,`2`]mp_tac l2n_lt
-    \\ gs[dimword_def, Abbr`l1`] )
-  \\ simp[Abbr`l1`]
-  \\ drule l2n_2_neg
-  \\ simp[dimword_def]
 QED
 
 Theorem concat_word_list_bytes_to_64:
@@ -670,6 +68,43 @@ Proof
   \\ unabbrev_all_tac
   \\ blastLib.BBLAST_TAC
   \\ simp[]
+QED
+
+Theorem cv_LEN_add:
+  cv_LEN cv (Num n) =
+  cv_add (Num n) (cv_LEN cv (Num 0))
+Proof
+  qid_spec_tac`n`
+  \\ Induct_on`cv`
+  >- ( rw[Once cv_LEN_def] \\ rw[Once cv_LEN_def] )
+  \\ rewrite_tac[Once cv_LEN_def]
+  \\ simp_tac (srw_ss()) []
+  \\ gen_tac
+  \\ simp_tac std_ss [Once cv_LEN_def, SimpRHS]
+  \\ simp_tac (srw_ss()) []
+  \\ first_assum(qspec_then`n + 1`SUBST1_TAC)
+  \\ first_assum(qspec_then`1`SUBST1_TAC)
+  \\ qmatch_goalsub_abbrev_tac`cv_add _ p`
+  \\ Cases_on`p`
+  \\ simp[]
+QED
+
+Theorem DIV2_SBIT:
+  DIV2 (SBIT b n) = if n = 0 then 0 else SBIT b (n - 1)
+Proof
+  qspecl_then[`b`,`n`,`1`]mp_tac SBIT_DIV
+  \\ simp[DIV2_def]
+  \\ Cases_on`1 < n` \\ gs[]
+  \\ Cases_on`n=0` \\ gs[SBIT_def]
+  \\ rw[]
+  \\ `n=1` by gs[]
+  \\ gvs[]
+QED
+
+Theorem ODD_SBIT:
+  ODD (SBIT b n) = (b /\ n = 0)
+Proof
+  rw[SBIT_def, ODD_EXP_IFF]
 QED
 
 (*
@@ -3641,7 +3076,7 @@ Proof
   \\ conj_asm1_tac
   >- (
     DEP_REWRITE_TAC[LENGTH_chunks]
-    \\ simp[NULL_LENGTH]
+    \\ simp[NULL_GENLIST, MAP_GENLIST]
     \\ rw[Abbr`n`, divides_def, bool_to_bit_def] )
   \\ rpt strip_tac
   \\ DEP_REWRITE_TAC[EL_MAP]
@@ -3658,8 +3093,8 @@ Proof
     \\ disch_then drule \\ simp[] )
   \\ AP_TERM_TAC
   \\ DEP_REWRITE_TAC[EL_chunks]
-  \\ simp[NULL_LENGTH]
-  \\ conj_asm1_tac >- ( rw[Abbr`n`] \\ strip_tac \\ gs[] )
+  \\ simp[NULL_GENLIST, MAP_GENLIST]
+  \\ conj_asm1_tac >- ( rw[Abbr`n`, NULL_LENGTH] \\ strip_tac \\ gs[] )
   \\ simp[LIST_EQ_REWRITE, LENGTH_TAKE_EQ]
   \\ reverse IF_CASES_TAC
   >- ( pop_assum mp_tac \\ simp[Abbr`n`] )
@@ -3710,7 +3145,7 @@ Proof
   \\ conj_asm1_tac
   >- (
     DEP_REWRITE_TAC[LENGTH_chunks]
-    \\ simp[NULL_LENGTH]
+    \\ simp[MAP_GENLIST, NULL_GENLIST]
     \\ simp[bool_to_bit_def, divides_def, Abbr`n`] )
   \\ rpt strip_tac
   \\ DEP_REWRITE_TAC[EL_MAP]
@@ -3729,7 +3164,8 @@ Proof
     \\ (reverse conj_tac >- simp[])
     \\ rewrite_tac[LT_ADD_LCANCEL]
     \\ simp[Abbr`y`] )
-  \\ DEP_REWRITE_TAC[word_not_bits, EL_chunks]
+  \\ DEP_REWRITE_TAC[word_from_bin_list_not, EL_chunks]
+  \\ simp[NULL_GENLIST, MAP_GENLIST]
   \\ simp[NULL_LENGTH]
   \\ conj_tac
   >- (
@@ -3808,7 +3244,7 @@ Proof
   \\ pop_assum mp_tac
   \\ CONV_TAC(LAND_CONV(SIMP_CONV std_ss [NUMERAL_LESS_THM]))
   \\ strip_tac \\ rpt BasicProvers.VAR_EQ_TAC
-  \\ simp_tac (srw_ss()) []
+  \\ simp_tac (srw_ss()) [bool_to_bit_def]
   \\ EVAL_TAC
 QED
 
@@ -4159,7 +3595,7 @@ Proof
     >- (
       DEP_REWRITE_TAC[LENGTH_chunks]
       \\ simp[NULL_LENGTH]
-      \\ EVAL_TAC )
+      \\ EVAL_TAC \\ rw[bool_to_bit_def] )
     \\ rw[EL_REPLICATE, EL_MAP]
     \\ DEP_REWRITE_TAC[EL_chunks]
     \\ simp[NULL_LENGTH]
@@ -4723,12 +4159,6 @@ Theorem toSortedAList_EQ_NIL:
   ∀t. toSortedAList t = [] ⇔ size t = 0
 Proof
   rewrite_tac [GSYM sptreeTheory.LENGTH_toSortedAList] \\ rw []
-QED
-
-Triviality GENLIST_EQ_NIL:
-  GENLIST f n = [] ⇔ n = 0
-Proof
-  Cases_on ‘n’ \\ gvs [GENLIST]
 QED
 
 Triviality size_while1_neq_0:
