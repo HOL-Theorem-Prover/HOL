@@ -3217,7 +3217,7 @@ Proof
   \\ simp[]
 QED
 
-Theorem chunks_length:
+Theorem chunks_length[simp]:
   chunks (LENGTH ls) ls = [ls]
 Proof
   rw[Once chunks_def]
