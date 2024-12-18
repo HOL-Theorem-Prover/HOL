@@ -446,7 +446,6 @@ Proof
   Induct
   \\ rw[l2n_def]
   \\ fs[EXP, ADD1]
-  \\ first_x_assum(CHANGED_TAC o SUBST1_TAC o SYM)
   \\ simp[LEFT_SUB_DISTRIB, LEFT_ADD_DISTRIB, SUB_RIGHT_ADD]
   \\ Q.SPECL_THEN[`ls`,`2`]mp_tac l2n_lt
   \\ simp[]
