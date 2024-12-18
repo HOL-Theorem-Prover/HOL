@@ -1089,9 +1089,7 @@ val concat_cons = hd(amatch``Data_List_concat (Data_List_cons _ _)``);
 (* |- (T <> F) /\ (F <> T) *)
 val th61 = store_thm
   ("th61",  el 61 goals |> concl,
-  PURE_REWRITE_TAC[eq_imp_thm, not_and, imp_F, not_not]
-  \\ conj_tac >|[disj1_tac, disj2_tac]
-  \\ ACCEPT_TAC truth);
+  PURE_REWRITE_TAC[iff_F,not_not,iff_T,not_F,and_T]);
 
 (* |- Data_List_concat Data_List_nil = Data_List_nil /\
       !h t.
@@ -1637,8 +1635,7 @@ val LET_RAND = store_thm("LET_RAND", concl boolTheory.LET_RAND,
   \\ REFL_TAC)
 
 (* |- (T <=/=> F) /\ (F <=/=> T) *)
-val BOOL_EQ_DISTINCT = store_thm("BOOL_EQ_DISTINCT", concl boolTheory.BOOL_EQ_DISTINCT,
-  PURE_REWRITE_TAC[iff_F,not_not,iff_T,not_F,and_T]);
+val BOOL_EQ_DISTINCT = th61;
 
 (* |- (!t1 t2. (if T then t1 else t2) = t1) /\
       !t1 t2. (if F then t1 else t2) = t2
