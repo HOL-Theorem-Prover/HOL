@@ -422,4 +422,88 @@ val l2n_11 = Q.store_thm("l2n_11",
         \\ NTAC 2 (POP_ASSUM SUBST1_TAC)
         \\ FULL_SIMP_TAC (srw_ss()) [l2n_APPEND]]);
 
+Theorem BITWISE_l2n_2:
+  LENGTH l1 = LENGTH l2 ==>
+  BITWISE (LENGTH l1) op (l2n 2 l1) (l2n 2 l2) =
+  l2n 2 (MAP2 (\x y. bool_to_bit $ op (ODD x) (ODD y)) l1 l2)
+Proof
+  Q.ID_SPEC_TAC`l2`
+  \\ Induct_on`l1`
+  \\ simp[BITWISE_EVAL]
+  >- simp[BITWISE_def, l2n_def]
+  \\ Q.X_GEN_TAC`b`
+  \\ Cases \\ fs[BITWISE_EVAL]
+  \\ strip_tac
+  \\ fs[l2n_def]
+  \\ simp[SBIT_def, ODD_ADD, ODD_MULT, GSYM bool_to_bit_def]
+QED
+
+Theorem l2n_2_neg:
+  !ls.
+  EVERY ($> 2) ls ==>
+  l2n 2 (MAP (\x. 1 - x) ls) = 2 ** LENGTH ls - SUC (l2n 2 ls)
+Proof
+  Induct
+  \\ rw[l2n_def]
+  \\ fs[EXP, ADD1]
+  \\ simp[LEFT_SUB_DISTRIB, LEFT_ADD_DISTRIB, SUB_RIGHT_ADD]
+  \\ Q.SPECL_THEN[`ls`,`2`]mp_tac l2n_lt
+  \\ simp[]
+QED
+
+Theorem l2n_max:
+  0 < b ==>
+  !ls. (l2n b ls = b ** (LENGTH ls) - 1) <=>
+       (EVERY ((=) (b - 1) o flip $MOD b) ls)
+Proof
+  strip_tac
+  \\ Induct
+  \\ rw[l2n_def]
+  \\ rw[EXP]
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`b * l + a`
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`b ** n`
+  \\ fs[EQ_IMP_THM]
+  \\ conj_tac
+  >- (
+    strip_tac
+    \\ Cases_on`n=0` \\ fs[] >- (fs[Abbr`n`] \\ rw[])
+    \\ `0 < b * b ** n` by simp[]
+    \\ `a + b * l + 1 = b * b ** n` by simp[]
+    \\ `(b * b ** n) DIV b = b ** n` by simp[MULT_TO_DIV]
+    \\ `(b * l + (a + 1)) DIV b = b ** n` by fs[]
+    \\ `(b * l) MOD b = 0` by simp[]
+    \\ `(b * l + (a + 1)) DIV b = (b * l) DIV b + (a + 1) DIV b`
+    by ( irule ADD_DIV_RWT \\ simp[] )
+    \\ pop_assum SUBST_ALL_TAC
+    \\ `(a + 1) DIV b = if a = b - 1 then 1 else 0`
+    by (
+      rw[]
+      \\ `a + 1 < b` suffices_by rw[DIV_EQ_0]
+      \\ simp[Abbr`a`]
+      \\ `h MOD b < b - 1` suffices_by simp[]
+      \\ `h MOD b < b` by simp[]
+      \\ fs[] )
+    \\ `b * l DIV b = l` by simp[MULT_TO_DIV]
+    \\ pop_assum SUBST_ALL_TAC
+    \\ pop_assum SUBST_ALL_TAC
+    \\ `l < b ** n` by ( map_every Q.UNABBREV_TAC[`l`,`n`]
+                         \\ irule l2n_lt \\ simp[] )
+    \\ Cases_on`a = b - 1` \\ fs[] )
+  \\ strip_tac
+  \\ rewrite_tac[LEFT_SUB_DISTRIB]
+  \\ Q.PAT_X_ASSUM`_ = a`(SUBST1_TAC o SYM)
+  \\ fs[SUB_LEFT_ADD] \\ rw[]
+  \\ Cases_on`n=0` \\ fs[]
+  \\ `b ** n <= b ** 0` by simp[]
+  \\ fs[EXP_BASE_LE_IFF]
+QED
+
+Theorem l2n_PAD_RIGHT_0[simp]:
+  0 < b ==> l2n b (PAD_RIGHT 0 h ls) = l2n b ls
+Proof
+  Induct_on`ls` \\ rw[l2n_def, PAD_RIGHT, l2n_eq_0, EVERY_GENLIST]
+  \\ fs[PAD_RIGHT, l2n_APPEND]
+  \\ fs[l2n_eq_0, EVERY_GENLIST]
+QED
+
 val _ = export_theory()

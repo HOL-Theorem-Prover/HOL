@@ -534,7 +534,7 @@ starts >%s%s<"
         (old-mark-active (is-region-active)))
     (unwind-protect
         (with-temp-buffer
-          (holscript-mode)
+          (let ((holscript-mode-hook nil)) (holscript-mode))
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
           (insert string)

@@ -350,11 +350,13 @@ end
 fun hide_tynames q G0 =
   List.foldl (uncurry type_grammar.hide_tyop) G0 (extract_tynames q)
 
+val parse_listener : AST list Listener.t = Listener.new_listener ()
 
 fun core_parse G0 phrase_p q = let
   val G = hide_tynames q G0
   val qb = qbuf.new_buffer q
   val result = termsepby1 ";" base_tokens.BT_EOI (parse_g G phrase_p) qb
+  val _ = Listener.call_listener parse_listener result
 in
   case qbuf.current qb of
       (base_tokens.BT_EOI,_) => result

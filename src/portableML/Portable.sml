@@ -603,6 +603,12 @@ fun replace_string {from, to} =
 
 val remove_wspace =
     String.translate (fn c => if Char.isSpace c then "" else str c)
+fun remove_external_wspace s =
+    let
+      open Substring
+    in
+      string (dropl Char.isSpace (dropr Char.isSpace (full s)))
+    end
 
 (*---------------------------------------------------------------------------
     System

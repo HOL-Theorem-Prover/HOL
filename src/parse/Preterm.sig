@@ -70,7 +70,7 @@ sig
     ((term -> string) * (hol_type -> string)) option -> preterm -> term errM
   val typecheckS : preterm -> term seqM
 
-  val typecheck_listener : (preterm -> Pretype.Env.t -> unit) ref
+  val typecheck_listener : (preterm * Pretype.Env.t) Listener.t
   val last_tcerror : (tcheck_error * locn.locn) option ref
 
 end

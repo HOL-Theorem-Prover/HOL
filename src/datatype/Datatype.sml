@@ -179,6 +179,9 @@ fun ast_tyvar_strings (dAQ ty) = map dest_vartype $ type_vars ty
   | ast_tyvar_strings (dTyop {Args, ...}) =
       List.concat (map ast_tyvar_strings Args)
 
+val typecheck_listener : (string Symtab.table * pretype * hol_type) Listener.t =
+    Listener.new_listener()
+
 local
   fun strvariant avoids s = if mem s avoids then strvariant avoids (s ^ "a")
                             else s
@@ -221,6 +224,7 @@ fun to_tyspecs ASTs =
                                        Args = map (mk_hol_ty d) Args}
      fun mk_hol_type d pty = let
        val ty = mk_hol_ty d pty
+       val _ = Listener.call_listener typecheck_listener (d, pty, ty)
      in
        if Theory.uptodate_type ty then ty
        else let val tyname = #1 (dest_type ty)

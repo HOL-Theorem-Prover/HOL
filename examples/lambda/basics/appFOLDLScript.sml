@@ -202,17 +202,21 @@ Proof
  >> simp [LIST_TO_SET_SNOC] >> SET_TAC []
 QED
 
+Theorem BIGUNION_IMAGE_FV_MAP_VAR[simp] :
+    BIGUNION (IMAGE FV (set (MAP VAR vs))) = set vs
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE]
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC ‘VAR x’ >> rw [MEM_MAP])
+ >> rename1 ‘x IN FV t’
+ >> gs [MEM_MAP]
+QED
+
 (* A special case of FV_appstar *)
 Theorem FV_appstar_MAP_VAR[simp] :
     FV (M @* MAP VAR vs) = FV M UNION set vs
 Proof
     rw [FV_appstar]
- >> Suff ‘BIGUNION (IMAGE FV (set (MAP VAR vs))) = set vs’ >- rw []
- >> rw [Once EXTENSION, IN_BIGUNION_IMAGE]
- >> reverse EQ_TAC >> rpt STRIP_TAC
- >- (Q.EXISTS_TAC ‘VAR x’ >> rw [MEM_MAP])
- >> rename1 ‘x IN FV t’
- >> gs [MEM_MAP]
 QED
 
 (*---------------------------------------------------------------------------*

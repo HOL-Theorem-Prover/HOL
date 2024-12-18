@@ -381,6 +381,12 @@ val NOT_MOD2_LEM2 = Q.store_thm("NOT_MOD2_LEM2",
 val ODD_MOD2_LEM = Q.store_thm("ODD_MOD2_LEM",
    `!n. ODD n = ((n MOD 2) = 1)`, RW_TAC arith_ss [ODD_EVEN, MOD_2])
 
+Theorem ODD_MOD_2[simp]:
+  ODD (x MOD 2) = ODD x
+Proof
+  RW_TAC arith_ss [ODD_MOD2_LEM]
+QED
+
 (* ------------------------------------------------------------------------- *)
 
 val DIV_MULT_THM = Q.store_thm("DIV_MULT_THM",
@@ -1518,6 +1524,57 @@ Proof
   simp[] >>
   disch_then(Q.SPECL_THEN[‘2 * SUC n’,‘1’]mp_tac) >>
   simp_tac std_ss []
+QED
+
+Theorem BITWISE_COMM:
+  (!m. m <= n ==> op (BIT m x) (BIT m y) = op (BIT m y) (BIT m x))
+  ==> BITWISE n op x y = BITWISE n op y x
+Proof
+  Induct_on`n`
+  \\ SRW_TAC[][BITWISE_def]
+  \\ first_assum(Q.SPEC_THEN`n`mp_tac)
+  \\ impl_tac >- SRW_TAC[][]
+  \\ disch_then SUBST1_TAC
+  \\ simp[]
+  \\ first_x_assum irule
+  \\ SRW_TAC[][]
+  \\ first_x_assum irule
+  \\ simp[]
+QED
+
+Triviality BITWISE_AND_0_lemma:
+  BITWISE w $/\ x 0 = 0
+Proof
+  Q.ID_SPEC_TAC`x`
+  \\ Induct_on`w`
+  \\ SRW_TAC[][BITWISE_def, SBIT_def, BIT_ZERO]
+QED
+
+Theorem BITWISE_AND_0[simp]:
+  BITWISE w $/\ x 0 = 0 /\
+  BITWISE w $/\ 0 x = 0
+Proof
+  Q.SPECL_THEN[`$/\`,`0`,`x`,`w`]mp_tac(Q.GENL[`op`,`x`,`y`,`n`]BITWISE_COMM)
+  \\ impl_tac >- SRW_TAC[][BIT_ZERO]
+  \\ disch_then SUBST1_TAC
+  \\ SRW_TAC[][BITWISE_AND_0_lemma]
+QED
+
+Theorem BITWISE_AND_SHIFT_EQ_0:
+  !w x y n.
+  x < 2 ** n ==>
+  BITWISE w $/\ x (y * 2 ** n) = 0
+Proof
+  Induct \\ SRW_TAC[][BITWISE_def, SBIT_def]
+  \\ strip_tac
+  \\ Cases_on`w < n`
+  >- ( drule BIT_SHIFT_THM3 \\ simp[]
+       \\ Q.EXISTS_TAC`y` \\ simp[])
+  \\ FULL_SIMP_TAC(srw_ss())[NOT_LESS]
+  \\ drule TWOEXP_MONO2 \\ strip_tac
+  \\ `x < 2 ** w` by METIS_TAC[LESS_LESS_EQ_TRANS]
+  \\ drule NOT_BIT_GT_TWOEXP
+  \\ simp[]
 QED
 
 val _ = export_theory()

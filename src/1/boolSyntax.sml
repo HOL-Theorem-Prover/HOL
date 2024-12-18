@@ -300,9 +300,12 @@ fun defname t =
       fst (dest_var head handle HOL_ERR _ => dest_const head)
    end
 
-fun test_remove s [] = (false, [])
-  | test_remove s (t::ts) = if s = t then (true, Lib.set_diff ts [s])
-                            else apsnd (cons t) $ test_remove s ts
+fun test_remove s kvs =
+    let
+      val (ss,rest) = Portable.partition (fn (k,_) => k = s) kvs
+    in
+      (not (null ss), rest)
+    end
 fun bogus_attr cstr cnm a =
     HOL_WARNING cstr cnm
                 ("No sense in " ^ a ^ " attribute on def'n")
@@ -310,27 +313,34 @@ fun bogus_attr cstr cnm a =
 fun remove_junk cstr cnm junkas attrs0 =
     let
       fun recurse [] = []
-        | recurse (a::t) = if mem a junkas then (bogus_attr cstr cnm a;
-                                                 recurse t)
-                           else a::recurse t
+        | recurse ((a as (k,_))::t) =
+          if mem k junkas then (bogus_attr cstr cnm k; recurse t)
+          else a::recurse t
     in
       recurse attrs0
     end
 
+val _ = List.app ThmAttribute.reserve_word ["notuserdef"]
 fun new_thm_with_attributes {call_str, call_f} genth (s, arg) =
     let open ThmAttribute
-        val (s0,attrs) = ThmAttribute.extract_attributes s
-        val (notuserdefp, attrs) = test_remove "notuserdef" attrs
-        val attrs = remove_junk call_str call_f
-                                ["local", "schematic", "nocompute", "unlisted"]
-                                attrs
+        val {thmname=s0,reserved=R,unknown=U,attrs=attrs} =
+            ThmAttribute.extract_attributes s
+        val (notuserdefp, R) = test_remove "notuserdef" R
+        val R = remove_junk call_str call_f
+                            ["local", "schematic", "nocompute", "unlisted"]
+                            R
+        val _ = null R orelse
+                raise mk_HOL_ERR "boolSyntax" call_str
+                      ("Unhandled reserved attribute(s): " ^
+                       String.concatWith ", " (map #1 R))
         val attrs = if notuserdefp orelse not (is_attribute "userdef") orelse
                        Theory.is_temp_binding s0
                     then
                       attrs
-                    else "userdef" :: attrs
+                    else ("userdef",[]) :: attrs
         val th = genth (s0, arg)
-        fun do_attr a = store_at_attribute {thm = th, name = s0, attrname = a}
+        fun do_attr (k,vs) =
+            store_at_attribute {thm = th, name = s0, attrname = k, args = vs}
     in
       List.app do_attr attrs; th
     end

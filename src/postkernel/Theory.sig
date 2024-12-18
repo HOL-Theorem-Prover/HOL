@@ -60,11 +60,9 @@ sig
 
 (* Make hooks available so that theory changes can be seen by
    "interested parties" *)
+  val delta_hook : TheoryDelta.t Listener.t
   val register_hook : string * (TheoryDelta.t -> unit) -> unit
-  val delete_hook : string -> unit
-  val get_hooks : unit -> (string * (TheoryDelta.t -> unit)) list
-  val disable_hook : string -> ('a -> 'b) -> 'a -> 'b
-  val enable_hook : string -> ('a -> 'b) -> 'a -> 'b
+    (* alias for Listener.add_listener delta_hook *)
 
 (* -- and persistent data added to theories *)
   structure LoadableThyData : sig

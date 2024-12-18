@@ -204,6 +204,7 @@ sig
   val ordof: string * int -> int
   val replace_string : {from:string,to:string} -> string -> string
   val remove_wspace : string -> string
+  val remove_external_wspace : string -> string
 
   val time_eq: time -> time -> bool
   val timestamp: unit -> time

@@ -35,6 +35,11 @@ datatype command =
          NoCmd
        | SomeCmd of string
        | BuiltInCmd of builtincmd * Holmake_tools.include_info
+
+fun command_toString NoCmd = ""
+  | command_toString (SomeCmd s) = s
+  | command_toString (BuiltInCmd(bic,_)) = bic_toString bic
+
 type dir = Holmake_tools.hmdir.t
 type 'a nodeInfo = { target : dep, status : target_status, extra : 'a,
                      command : command, phony : bool,
@@ -171,6 +176,42 @@ fun nodeInfo_toString (nI : 'a nodeInfo) =
        | NoCmd => "<no command>")
   end
 
+datatype 'a applist = apNIL | apSING of 'a | ++ of ('a applist * 'a applist)
+infix ++
+fun ap2list apNIL A = A
+  | ap2list (apSING x) A = x::A
+  | ap2list (a ++ b) A = ap2list a (ap2list b A)
+
+
+fun pr_list s [] = apNIL
+  | pr_list s [x] = x
+  | pr_list s (x::xs) = x ++ apSING s ++ pr_list s xs
+
+fun nodeInfo_toJSON (n, nI : 'a nodeInfo) =
+    let
+      open Holmake_tools
+      val {target,status,command,dependencies,seqnum,phony,dir,...} = nI
+      fun field fnm f v = apSING ("  \"" ^ fnm ^ "\" : " ^ f v)
+      fun quote f x = "\"" ^ f x ^ "\""
+    in
+      apSING "{\n" ++
+      pr_list ",\n" [
+        field "node_id" Int.toString n,
+        field "target" (quote hm_target.toString) target,
+        field "seqnum" Int.toString seqnum,
+        field "phony" Bool.toString phony,
+        field "dependencies"
+              (fn ds =>
+                  "[" ^
+                  String.concatWith ", " (map (Int.toString o #1) ds) ^ "]")
+              dependencies,
+        field "command" (fn c => "\"" ^ command_toString c ^ "\"") command,
+        field "dir" (quote hmdir.toString) dir,
+        field "needs_rebuild" (fn s => Bool.toString (s <> Succeeded)) status
+      ] ++
+      apSING "\n}"
+    end
+
 fun mkneeded tgts g =
     let
       fun setneeded f n g = updnode(n,f{needed=true}) g
@@ -249,6 +290,17 @@ fun toString g =
       "{Already built " ^
       indentedlist prSuccess successes ^ " Others:\n  " ^
       String.concatWith ",\n  " (map prNode others) ^ "\n}"
+    end
+
+fun toJSONString g =
+    let
+      val ns = listNodes g
+      val ap = apSING "[\n" ++
+               pr_list ",\n" (map nodeInfo_toJSON ns) ++
+               apSING "\n]"
+      val ss = ap2list ap []
+    in
+      String.concat ss
     end
 
 fun postmortem (outs : Holmake_tools.output_functions) (status,g) =

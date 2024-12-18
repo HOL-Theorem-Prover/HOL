@@ -858,7 +858,8 @@ fun remove_case_magic tm =
     else tm
 
 val post_process_term = ref (I : term -> term);
-val typecheck_listener = ref (fn _:preterm => fn _:Pretype.Env.t => ());
+val typecheck_listener : (preterm * Pretype.Env.t) Listener.t =
+    Listener.new_listener()
 
 fun typecheck pfns ptm0 =
   let
@@ -869,7 +870,7 @@ fun typecheck pfns ptm0 =
           overloading_resolution ptm0 >-                     (fn (ptm,b) =>
           (report_ovl_ambiguity b >> to_term ptm) >-         (fn t =>
          fn e => (
-          !typecheck_listener ptm e;
+          ignore (Listener.call_listener typecheck_listener (ptm, e));
           errormonad.Some(e, !post_process_term t)))))
   end
 
@@ -881,7 +882,7 @@ fun typecheckS ptm =
     lift (!post_process_term o remove_case_magic)
          (fromErr TC' >> overloading_resolutionS ptm >-
           (fn ptm' => fromErr (errormonad.bind (to_term ptm', fn t => fn e => (
-            !typecheck_listener ptm' e;
+            ignore (Listener.call_listener typecheck_listener (ptm', e));
             errormonad.Some(e, t))))))
   end
 

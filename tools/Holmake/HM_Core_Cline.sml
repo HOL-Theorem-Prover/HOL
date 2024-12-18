@@ -3,12 +3,12 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate23 z
+  fun makeUpdateT z = makeUpdate24 z
 in
 fun updateT z = let
   fun from debug do_logging fast help hmakefile holdir includes
-           interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
-           no_overlay
+           interactive jobs json keep_going no_action no_hmakefile
+           no_lastmaker_check no_overlay
            no_preexecs no_prereqs opentheory quiet
            quit_on_failure rebuild_deps recursive_build recursive_clean
            verbose =
@@ -16,7 +16,7 @@ fun updateT z = let
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
-      keep_going = keep_going,
+      json = json, keep_going = keep_going,
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
@@ -26,17 +26,16 @@ fun updateT z = let
       recursive_clean = recursive_clean, verbose = verbose
     }
   fun from' verbose recursive_clean recursive_build rebuild_deps quit_on_failure
-            quiet opentheory
-            no_prereqs no_preexecs
+            quiet opentheory no_prereqs no_preexecs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
-            jobs interactive
+            json jobs interactive
             includes holdir
             hmakefile help fast do_logging debug =
     {
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
-      keep_going = keep_going,
+      json = json, keep_going = keep_going,
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_preexecs = no_preexecs, no_prereqs = no_prereqs,
@@ -46,14 +45,14 @@ fun updateT z = let
       recursive_clean = recursive_clean, verbose = verbose
     }
   fun to f {debug, do_logging, fast, help, hmakefile, holdir,
-            includes, interactive, jobs, keep_going, no_action, no_hmakefile,
-            no_lastmaker_check,
+            includes, interactive, jobs, json, keep_going, no_action,
+            no_hmakefile, no_lastmaker_check,
             no_overlay, no_preexecs, no_prereqs, opentheory,
             quiet, quit_on_failure, rebuild_deps, recursive_build,
             recursive_clean, verbose} =
     f debug do_logging fast help hmakefile holdir includes
-      interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
-      no_overlay no_preexecs
+      interactive jobs json keep_going no_action no_hmakefile
+      no_lastmaker_check no_overlay no_preexecs
       no_prereqs opentheory quiet
       quit_on_failure rebuild_deps recursive_build recursive_clean verbose
 in
@@ -76,6 +75,7 @@ type t = {
   includes : string list,
   interactive : bool,
   jobs : int,
+  json : bool,
   keep_going : bool,
   no_action : bool,
   no_hmakefile : bool,
@@ -103,6 +103,7 @@ val default_core_options : t =
   includes = [],
   interactive = false,
   jobs = 4,
+  json = false,
   keep_going = false,
   no_action = false,
   no_hmakefile = false,
@@ -203,6 +204,8 @@ val core_option_descriptions = [
     desc = ReqArg (cons_includes, "directory") },
   { help = "max number of parallel jobs", long = ["jobs"], short = "j",
     desc = ReqArg (change_jobs, "n") },
+  { help = "emit JSON of dep. graph (then stop)", long = ["json"],
+    short = "", desc = mkBoolT #json },
   { help = "try to build all targets", long = ["keep-going"], short = "k",
     desc = mkBoolT #keep_going },
   { help = "enable time logging", long = ["logging"], short = "",

@@ -32,7 +32,7 @@ ifdef HOLSELFTESTLEVEL
 # example directories to build at selftest level 1
 EXDIRS = algebra/aat \
          arm/arm6-verification arm/armv8-memory-model arm/experimental \
-         CCS Crypto/RSA Hoare-for-divergence MLsyntax \
+         CCS Crypto/RSA Crypto/SHA-2 Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
 	 STE algorithms computability countchars dependability dev \
          developers/ThmSetData \

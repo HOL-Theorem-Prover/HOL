@@ -18,4 +18,7 @@ removed. The implementation is
 \FAILURE
 Never fails.
 
+\SEEALSO
+Portable.remove_external_wspace.
+
 \ENDDOC

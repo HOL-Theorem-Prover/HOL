@@ -94,9 +94,9 @@ end;
 val nolocn = locn.Loc_None  (* i.e., compiler-generated text *)
 fun mk_AQ x        = AQ   (nolocn,x)
 fun mk_ident s     = IDENT(nolocn,s)
-fun mk_app (M,N)   = APP  (nolocn,M,N)
-fun mk_lam (v,M)   = LAM  (nolocn,v,M)
-fun mk_typed(M,ty) = TYPED(nolocn,M,ty);
+fun mk_app (M,N)   = APP  (locn.between (locn_of_absyn M) (locn_of_absyn N),M,N)
+fun mk_lam (v,M)   = LAM  (locn.between (locn_of_vstruct v) (locn_of_absyn M),v,M)
+fun mk_typed(M,ty) = TYPED(locn.near (locn_of_absyn M),M,ty);
 
 fun binAQ f x locn err = let val (t1,t2) = f x
                          in
@@ -121,13 +121,13 @@ fun dest_AQ (AQ (_,x)) = x
 fun dest_typed (TYPED (_,M,ty)) = (M,ty)
   | dest_typed  t = raise ERRloc "dest_typed" (locn_of_absyn t) "Expected a typed thing";
 
-fun tuple_to_vstruct tm =
+fun tuple_to_vstruct locn tm =
   if Term.is_var tm
-  then VIDENT(nolocn,fst(Term.dest_var tm))
+  then VIDENT(locn,fst(Term.dest_var tm))
   else let val (M,N) = dest_comb tm
            val (M1,M2) = dest_comb M
        in if fst(Term.dest_const M1) = ","
-            then VPAIR(nolocn,tuple_to_vstruct M2,tuple_to_vstruct N)
+            then VPAIR(locn,tuple_to_vstruct locn M2,tuple_to_vstruct locn N)
             else raise ERR "tuple_to_vstruct" ""
        end;
 
@@ -139,7 +139,7 @@ fun dest_lam (LAM (_,v,M)) = (v,M)
            in (VIDENT (locn,id), AQ (locn,Body))
            end
       else let val (vstr,body) = dest_pabs x
-           in (tuple_to_vstruct vstr, AQ (locn,body))
+           in (tuple_to_vstruct locn vstr, AQ (locn,body))
            end
   | dest_lam t = raise ERRloc "dest_lam" (locn_of_absyn t) "Expected an abstraction"
 
@@ -214,17 +214,17 @@ val list_mk_exists1 = list_mk_binder mk_exists1
 val list_mk_select  = list_mk_binder mk_select;
 
 local fun err0 str locn = ERRloc "dest_binder" locn ("Expected a "^Lib.quote str)
-      fun dest_term_binder s tm ex =
+      fun dest_term_binder s locn tm ex =
        let val (c,lam) = dest_comb tm
        in if fst(Term.dest_const c) <> s
             then raise ex
-            else dest_lam (AQ (nolocn,lam))
+            else dest_lam (AQ (locn, lam))
        end handle HOL_ERR _ => raise ex
 in
 fun dest_binder str =
  let fun err locn = err0 str locn
      fun dest (APP(_,IDENT (locn,s),M)) = if s=str then dest_lam M else raise err locn
-       | dest (AQ (locn,x)) = dest_term_binder str x (err locn)
+       | dest (AQ (locn,x)) = dest_term_binder str locn x (err locn)
        | dest  t = raise err (locn_of_absyn t)
  in dest end
 end;

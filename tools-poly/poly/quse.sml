@@ -24,7 +24,7 @@ fun useScript fname =
       val istream = TextIO.openIn fname
       val reader = HolParser.streamToReader true fname istream
       val _ = use_reader fname reader
-              handle e => (TextIO.closeIn istream; raise e)
+              handle e => (TextIO.closeIn istream; PolyML.Exception.reraise e)
     in
       TextIO.closeIn istream
     end
