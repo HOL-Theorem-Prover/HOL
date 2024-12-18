@@ -1239,9 +1239,6 @@ Proof
   \\ completeInduct_on ‘m’
   \\ simp [Once cv_word_and_loop_def]
   \\ Cases_on ‘m = 0’ \\ fs [wordsTheory.WORD_AND_CLAUSES]
-  >-
-   (qsuff_tac ‘!l n. BITWISE l $/\ 0 n = 0’ >- fs []
-    \\ Induct \\ fs [BITWISE])
   \\ gvs [PULL_FORALL,AND_IMP_INTRO] \\ rw []
   \\ Cases_on ‘l’ \\ gvs []
   \\ rename [‘n < 2 ** SUC l’]

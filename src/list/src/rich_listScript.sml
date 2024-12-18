@@ -8,7 +8,7 @@ open HolKernel Parse boolLib BasicProvers;
 open numLib metisLib simpLib combinTheory arithmeticTheory prim_recTheory
      pred_setTheory listTheory pairTheory markerLib TotalDefn;
 
-local open listSimps pred_setSimps in end;
+local open listSimps pred_setSimps dep_rewrite in end;
 
 val FILTER_APPEND = FILTER_APPEND_DISTRIB
 val REVERSE = REVERSE_SNOC_DEF
@@ -3189,6 +3189,201 @@ Proof
   \\ Cases_on`q` \\ fs[ADD1]
 QED
 
+Theorem chunks_append_divides:
+  !n l1 l2.
+    0 < n /\ divides n (LENGTH l1) /\ ~NULL l1 /\ ~NULL l2 ==>
+    chunks n (l1 ++ l2) = chunks n l1 ++ chunks n l2
+Proof
+  HO_MATCH_MP_TAC chunks_ind
+  \\ rw[dividesTheory.divides_def, PULL_EXISTS]
+  \\ simp[Once chunks_def]
+  \\ Cases_on`q=0` \\ fs[] \\ rfs[]
+  \\ IF_CASES_TAC
+  >- ( Cases_on`q` \\ fs[ADD1, LEFT_ADD_DISTRIB] \\ fs[LESS_OR_EQ] )
+  \\ simp[DROP_APPEND, TAKE_APPEND]
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`lhs = _`
+  \\ simp[Once chunks_def]
+  \\ Cases_on`q = 1` \\ fs[]
+  >- (
+    simp[Abbr`lhs`]
+    \\ fs[NOT_LESS_EQUAL]
+    \\ simp[DROP_LENGTH_TOO_LONG])
+  \\ simp[Abbr`lhs`]
+  \\ `n - n * q = 0` by simp[]
+  \\ simp[]
+  \\ first_x_assum irule
+  \\ simp[NULL_EQ]
+  \\ qexists_tac`q - 1`
+  \\ simp[]
+QED
+
+Theorem chunks_length[simp]:
+  chunks (LENGTH ls) ls = [ls]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem chunks_not_nil[simp]:
+  !n ls. chunks n ls <> []
+Proof
+  HO_MATCH_MP_TAC chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def]
+QED
+
+Theorem LENGTH_chunks:
+  !n ls. 0 < n /\ ~NULL ls ==>
+    LENGTH (chunks n ls) =
+    LENGTH ls DIV n + (bool_to_bit $ ~divides n (LENGTH ls))
+Proof
+  HO_MATCH_MP_TAC chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def, dividesTheory.DIV_EQUAL_0, bool_to_bit_def,
+        dividesTheory.divides_def]
+  \\ fs[LESS_OR_EQ, ADD1, NULL_EQ, bool_to_bit_def] \\ rfs[]
+  \\ rw[]
+  \\ fs[dividesTheory.divides_def, dividesTheory.SUB_DIV]
+  \\ rfs[]
+  >- (
+    Cases_on`LENGTH ls DIV n = 0` >- rfs[dividesTheory.DIV_EQUAL_0]
+    \\ simp[] )
+  >- (
+    Cases_on`q` \\ fs[MULT_SUC]
+    \\ Q.MATCH_ASMSUB_RENAME_TAC`n + n * p`
+    \\ first_x_assum(Q.SPEC_THEN`2 + p`mp_tac)
+    \\ simp[LEFT_ADD_DISTRIB] )
+  >- (
+    first_x_assum(Q.SPEC_THEN`PRE q`mp_tac)
+    \\ Cases_on`q` \\ fs[MULT_SUC] )
+  \\ Cases_on`q` \\ fs[MULT_SUC]
+  \\ simp[ADD_DIV_RWT]
+QED
+
+Theorem EL_chunks:
+  !k ls n.
+  n < LENGTH (chunks k ls) /\ 0 < k /\ ~NULL ls ==>
+  EL n (chunks k ls) = TAKE k (DROP (n * k) ls)
+Proof
+  HO_MATCH_MP_TAC chunks_ind \\ rw[NULL_EQ]
+  \\ Q.PAT_X_ASSUM`_ < LENGTH _ `mp_tac
+  \\ rw[Once chunks_def] \\ fs[]
+  \\ rw[Once chunks_def]
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`EL m _`
+  \\ Cases_on`m` \\ fs[]
+  \\ pop_assum mp_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[LENGTH_chunks]
+  \\ simp[NULL_EQ]
+  \\ strip_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[DROP_DROP]
+  \\ simp[MULT_SUC]
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`k + k * m <= _`
+  \\ `k * m <= LENGTH ls - k` suffices_by simp[]
+  \\ `m <= (LENGTH ls - k) DIV k` suffices_by simp[X_LE_DIV]
+  \\ fs[bool_to_bit_def]
+  \\ pop_assum mp_tac \\ rw[]
+QED
+
+Theorem chunks_MAP:
+  !n ls. chunks n (MAP f ls) = MAP (MAP f) (chunks n ls)
+Proof
+  HO_MATCH_MP_TAC chunks_ind \\ rw[]
+  \\ rw[Once chunks_def]
+  >- rw[Once chunks_def]
+  >- rw[Once chunks_def]
+  \\ fs[]
+  \\ simp[GSYM MAP_DROP]
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ simp[MAP_TAKE]
+QED
+
+Theorem chunks_ZIP:
+  !n ls l2. LENGTH ls = LENGTH l2 ==>
+  chunks n (ZIP (ls, l2)) = MAP ZIP (ZIP (chunks n ls, chunks n l2))
+Proof
+  HO_MATCH_MP_TAC chunks_ind \\ rw[]
+  \\ rw[Once chunks_def]
+  >- ( rw[Once chunks_def] \\ rw[Once chunks_def] )
+  >- rw[Once chunks_def]
+  \\ fs[]
+  \\ simp[GSYM ZIP_DROP]
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ CONV_TAC(PATH_CONV"rrrr"(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ simp[ZIP_TAKE]
+QED
+
+Theorem chunks_TAKE:
+  !n ls m. divides n m /\ 0 < m ==>
+    chunks n (TAKE m ls) = TAKE (m DIV n) (chunks n ls)
+Proof
+  HO_MATCH_MP_TAC chunks_ind \\ rw[]
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ rw[]
+  >- (
+    rw[Once chunks_def] \\ fs[LENGTH_TAKE_EQ]
+    \\ fs[dividesTheory.divides_def]
+    \\ BasicProvers.VAR_EQ_TAC
+    \\ Q.MATCH_GOALSUB_RENAME_TAC`n * m`
+    \\ fs[ZERO_LESS_MULT]
+    \\ `n <= n * m` by simp[LE_MULT_CANCEL_LBARE]
+    \\ dep_rewrite.DEP_REWRITE_TAC[TAKE_LENGTH_TOO_LONG]
+    \\ simp[MULT_DIV] )
+  >- fs[dividesTheory.divides_def]
+  \\ fs[]
+  \\ simp[Once chunks_def, LENGTH_TAKE_EQ]
+  \\ `n <= m` by (
+    rfs[dividesTheory.divides_def] \\ rw[]
+    \\ fs[ZERO_LESS_MULT] )
+  \\ IF_CASES_TAC
+  >- (
+    pop_assum mp_tac \\ rw[]
+    \\ `m = n` by fs[] \\ rw[] )
+  \\ fs[TAKE_TAKE, DROP_TAKE]
+  \\ first_x_assum(Q.SPEC_THEN`m - n`mp_tac)
+  \\ simp[]
+  \\ impl_keep_tac >- (
+    fs[dividesTheory.divides_def]
+    \\ qexists_tac`q - 1`
+    \\ simp[LEFT_SUB_DISTRIB] )
+  \\ rw[]
+  \\ `m DIV n <> 0` by fs[dividesTheory.DIV_EQUAL_0]
+  \\ Cases_on`m DIV n` \\ fs[TAKE_TAKE_MIN]
+  \\ `MIN n m = n` by fs[MIN_DEF] \\ rw[]
+  \\ simp[dividesTheory.SUB_DIV]
+QED
+
+Definition chunks_tr_aux_def:
+  chunks_tr_aux n ls acc =
+    if LENGTH ls <= SUC n then REVERSE $ ls :: acc
+    else chunks_tr_aux n (DROP (SUC n) ls) (TAKE (SUC n) ls :: acc)
+Termination
+  WF_REL_TAC`measure $ LENGTH o FST o SND`
+  \\ rw[LENGTH_DROP]
+End
+
+Definition chunks_tr_def:
+  chunks_tr n ls = if n = 0 then [ls] else chunks_tr_aux (n - 1) ls []
+End
+
+Theorem chunks_tr_aux_thm:
+  !n ls acc.
+    chunks_tr_aux n ls acc =
+    REVERSE acc ++ chunks (SUC n) ls
+Proof
+  HO_MATCH_MP_TAC chunks_tr_aux_ind
+  \\ rw[]
+  \\ rw[Once chunks_tr_aux_def]
+  >- rw[Once chunks_def]
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ rw[]
+QED
+
+Theorem chunks_tr_thm:
+  chunks_tr = chunks
+Proof
+  simp[FUN_EQ_THM, chunks_tr_def]
+  \\ Cases \\ rw[chunks_tr_aux_thm]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
@@ -3587,6 +3782,26 @@ Proof
  >> MATCH_MP_TAC ALL_DISTINCT_DROP >> rw []
 QED
 (* END more lemmas of IS_SUFFIX *)
+
+Theorem IS_SUFFIX_dropWhile:
+  IS_SUFFIX ls (dropWhile P ls)
+Proof
+  Induct_on`ls`
+  \\ rw[IS_SUFFIX_CONS]
+QED
+
+Theorem LENGTH_dropWhile_id:
+  (LENGTH (dropWhile P ls) = LENGTH ls) <=> (dropWhile P ls = ls)
+Proof
+  rw[EQ_IMP_THM]
+  \\ rw[dropWhile_id]
+  \\ Cases_on`ls` \\ fs[]
+  \\ strip_tac \\ fs[]
+  \\ `IS_SUFFIX t (dropWhile P t)` by simp[IS_SUFFIX_dropWhile]
+  \\ fs[IS_SUFFIX_APPEND]
+  \\ `LENGTH t = LENGTH l + LENGTH (dropWhile P t)` by metis_tac[LENGTH_APPEND]
+  \\ fs[]
+QED
 
 Theorem nub_GENLIST:
   nub (GENLIST f n) =

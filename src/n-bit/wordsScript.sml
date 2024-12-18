@@ -5060,6 +5060,176 @@ QED
 Theorem CARD_WORD = CARD_CART_UNIV |> INST_TYPE [alpha |-> bool]
                                    |> SIMP_RULE bool_ss [CARD_BOOL,FINITE_BOOL]
 
+Theorem MEM_w2l_less:
+  1 < b /\ MEM x (w2l b w) ==> x < b
+Proof
+  Cases_on`w`
+  \\ rw[w2l_def]
+  \\ rpt $ pop_assum mp_tac
+  \\ map_every qid_spec_tac [`x`,`n`,`b`]
+  \\ recInduct n2l_ind
+  \\ rw[]
+  \\ pop_assum mp_tac
+  \\ rw[Once n2l_def]
+  >- ( irule MOD_LESS \\ gs[] )
+  \\ first_x_assum irule
+  \\ gs[DIV_LT_X]
+  \\ Cases_on`b` \\ gs[MULT]
+QED
+
+Theorem l2w_PAD_RIGHT_0[simp]:
+  0 < b ==> l2w b (PAD_RIGHT 0 h ls) = l2w b ls
+Proof
+  rw[l2w_def]
+QED
+
+Theorem word_and_lsl_eq_0:
+  w2n w1 < 2 ** n ==> w1 && w2 << n = 0w
+Proof
+  Cases_on`w1` \\ Cases_on`w2`
+  \\ rw[word_and_n2w, word_lsl_n2w]
+  \\ drule BITWISE_AND_SHIFT_EQ_0
+  \\ simp[]
+QED
+
+(* -------------------------------------------------------------------------
+    Theorems about word_{to,from}_bin_list
+   ------------------------------------------------------------------------- *)
+
+Theorem LENGTH_word_to_bin_list_bound:
+  LENGTH (word_to_bin_list (w:'a word)) <= (dimindex (:'a))
+Proof
+  rw[word_to_bin_list_def, w2l_def, LENGTH_n2l]
+  \\ Cases_on`w` \\ simp[]
+  \\ fs[dimword_def, GSYM LESS_EQ, LOG2_def, logrootTheory.LT_EXP_LOG]
+QED
+
+Theorem word_from_bin_list_ror:
+  x < dimindex(:'a) /\ LENGTH ls = dimindex(:'a)
+  ==>
+  word_ror (word_from_bin_list ls : 'a word) x =
+  word_from_bin_list (DROP x ls ++ TAKE x ls)
+Proof
+  rw[word_from_bin_list_def, l2w_def]
+  \\ Cases_on`x = 0` \\ gs[SHIFT_ZERO]
+  \\ rw[word_ror_n2w, l2n_APPEND]
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ qspecl_then[`x`,`ls`](mp_tac o SYM) listTheory.TAKE_DROP
+  \\ disch_then(SUBST1_TAC o Q.AP_TERM`l2n 2`)
+  \\ rewrite_tac[l2n_APPEND]
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`BITS _ _ (2 ** x * ld + lt)`
+  \\ qspecl_then[`x - 1`,`0`,`ld`,`lt`]mp_tac BITS_SUM2
+  \\ simp[ADD1]
+  \\ disch_then kall_tac
+  \\ qspecl_then[`x-1`,`lt`]mp_tac BITS_ZEROL
+  \\ simp[ADD1]
+  \\ impl_keep_tac
+  >- (
+    qspecl_then[`TAKE x ls`,`2`]mp_tac l2n_lt
+    \\ simp[] )
+  \\ simp[]
+  \\ disch_then kall_tac
+  \\ simp_tac std_ss [Once ADD_COMM, SimpRHS]
+  \\ qmatch_goalsub_abbrev_tac`BITS h x`
+  \\ qspecl_then[`h`,`x`,`ld`,`lt`]mp_tac BITS_SUM
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[BITS_ZERO4]
+  \\ simp[Abbr`h`]
+  \\ DEP_REWRITE_TAC[BITS_ZEROL]
+  \\ qspecl_then[`DROP x ls`,`2`]mp_tac l2n_lt
+  \\ simp[ADD1]
+QED
+
+Theorem word_from_bin_list_rol:
+  x < dimindex(:'a) /\ LENGTH ls = dimindex(:'a)
+  ==>
+  word_rol (word_from_bin_list ls : 'a word) x =
+  word_from_bin_list (LASTN x ls ++ BUTLASTN x ls)
+Proof
+  rw[word_rol_def]
+  \\ Cases_on`x=0`
+  >- (
+    rw[rich_listTheory.LASTN, rich_listTheory.BUTLASTN]
+    \\ ONCE_REWRITE_TAC[GSYM ROR_MOD]
+    \\ rw[SHIFT_ZERO] )
+  \\ DEP_REWRITE_TAC[word_from_bin_list_ror]
+  \\ simp[rich_listTheory.LASTN_DROP, rich_listTheory.BUTLASTN_TAKE]
+QED
+
+Theorem word_from_bin_list_and:
+  LENGTH l1 = dimindex(:'a) /\
+  LENGTH l2 = dimindex(:'a)
+  ==>
+  word_from_bin_list l1 && word_from_bin_list l2 : 'a word =
+  word_from_bin_list (MAP2 (\x y. bool_to_bit $ (ODD x /\ ODD y)) l1 l2)
+Proof
+  rw[word_from_bin_list_def, l2w_def, word_and_n2w]
+  \\ qmatch_goalsub_abbrev_tac`BITWISE n`
+  \\ qmatch_goalsub_abbrev_tac`a MOD d = b MOD d`
+  \\ `d = 2 ** n`
+  by simp[Abbr`d`, Abbr`n`, dimword_def]
+  \\ `a < d` by (
+    pop_assum SUBST1_TAC
+    \\ qunabbrev_tac`a`
+    \\ irule BITWISE_LT_2EXP )
+  \\ `b < d`
+  by (
+    qunabbrev_tac`b`
+    \\ qmatch_goalsub_abbrev_tac`l2n 2 ls`
+    \\ `n = LENGTH ls` by simp[Abbr`ls`]
+    \\ qunabbrev_tac`d`
+    \\ qpat_x_assum`_ = 2 ** _`SUBST1_TAC
+    \\ pop_assum SUBST1_TAC
+    \\ irule l2n_lt \\ simp[] )
+  \\ simp[]
+  \\ unabbrev_all_tac
+  \\ DEP_REWRITE_TAC[GSYM BITWISE_l2n_2]
+  \\ simp[]
+QED
+
+Theorem word_from_bin_list_not:
+  LENGTH ls = dimindex(:'a) /\ EVERY ($> 2) ls ==>
+  ~word_from_bin_list ls : 'a word =
+  word_from_bin_list (MAP (\x. 1 - x) ls)
+Proof
+  rw[word_from_bin_list_def, l2w_def]
+  \\ rewrite_tac[word_1comp_n2w]
+  \\ Cases_on`l2n 2 ls = dimword(:'a) - 1`
+  >- (
+    mp_then Any (qspec_then`ls`mp_tac)
+      l2n_max (SIMP_CONV(srw_ss())[]``0 < 2n`` |> EQT_ELIM)
+    \\ `dimword (:'a) = 2 ** LENGTH ls` by simp[dimword_def]
+    \\ first_assum (SUBST_ALL_TAC o SYM)
+    \\ pop_assum kall_tac
+    \\ pop_assum SUBST_ALL_TAC
+    \\ simp[ADD1, ZERO_LT_dimword]
+    \\ strip_tac
+    \\ qmatch_goalsub_abbrev_tac`A MOD N = 0`
+    \\ `A = 0` suffices_by rw[]
+    \\ rw[Abbr`A`, l2n_eq_0]
+    \\ gs[listTheory.EVERY_MAP, listTheory.EVERY_MEM]
+    \\ rw[]
+    \\ `2 > x` by simp[]
+    \\ `x < 2` by simp[]
+    \\ pop_assum mp_tac
+    \\ `x MOD 2 = 1` by simp[]
+    \\ rewrite_tac[NUMERAL_LESS_THM]
+    \\ strip_tac \\ fs[] )
+  \\ `SUC (l2n 2 ls) < dimword(:'a)`
+  by (
+    qspecl_then[`ls`,`2`]mp_tac l2n_lt
+    \\ gs[dimword_def] )
+  \\ qmatch_goalsub_abbrev_tac`_ = n2w $ l2n 2 l1`
+  \\ `l2n 2 l1 < dimword(:'a)`
+  by (
+    qspecl_then[`l1`,`2`]mp_tac l2n_lt
+    \\ gs[dimword_def, Abbr`l1`] )
+  \\ simp[Abbr`l1`]
+  \\ drule l2n_2_neg
+  \\ simp[dimword_def]
+QED
+
 (* -------------------------------------------------------------------------
     Create a few word sizes
    ------------------------------------------------------------------------- *)
