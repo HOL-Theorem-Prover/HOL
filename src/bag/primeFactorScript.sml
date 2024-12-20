@@ -8,7 +8,6 @@ open simpLib BasicProvers metisLib bagTheory dividesTheory arithmeticTheory;
 
 val _ = new_theory "primeFactor";
 
-infix ++;
 val std_ss =
      (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
       numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ combinSimps.COMBIN_ss ++

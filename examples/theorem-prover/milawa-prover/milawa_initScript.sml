@@ -11,8 +11,6 @@ open lisp_sexpTheory lisp_semanticsTheory lisp_parseTheory;
 open milawa_coreTheory;
 val _ = max_print_depth := 20;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

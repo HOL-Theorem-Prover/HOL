@@ -6,7 +6,7 @@ open transferTheory FullUnify simpLib
 open pred_setTheory
 
 val op $ = Portable.$
-infix ++
+infix ++ |> ~> +++
 
 type config = {cleftp:bool,force_imp:bool,hints:string list}
 
@@ -31,7 +31,6 @@ fun relconstraint_tm t =
       | _ => false
 fun is_relconstraint t = relconstraint_tm (rator t)
 
-infix ~> +++
 fun sq ~> f = seq.flatten (seq.map f sq)
 fun sqreturn x = seq.fromList [x]
 fun sq1 +++ sq2 =

@@ -293,7 +293,6 @@ val DATATYPE_TAG_DEF = def (#(FILE), #(LINE))
  *---------------------------------------------------------------------------*)
 
 val op --> = Type.-->
-infix ## |->;
 
 val ERR = Feedback.mk_HOL_ERR "boolScript"
 

@@ -18,8 +18,6 @@ val _ = let
 
 (* --- *)
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

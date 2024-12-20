@@ -7,8 +7,6 @@ open optionTheory arithmeticTheory relationTheory pairTheory;
 open lisp_bytecodeTheory;
 open lisp_sexpTheory lisp_semanticsTheory lisp_alt_semanticsTheory
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

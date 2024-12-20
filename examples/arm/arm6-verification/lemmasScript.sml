@@ -18,11 +18,6 @@ val _ = new_theory "lemmas";
 
 (* ------------------------------------------------------------------------- *)
 
-infix << >>
-
-val op << = op THENL;
-val op >> = op THEN1;
-
 val std_ss = std_ss ++ boolSimps.LET_ss;
 val arith_ss = arith_ss ++ boolSimps.LET_ss;
 
@@ -392,15 +387,15 @@ val lem = prove(
 val SLICE_ROR_THM = store_thm("SLICE_ROR_THM",
   `!h l a. ((h '' l) a) #>> l = (h -- l) a`,
   REPEAT STRIP_TAC \\ Cases_on `l = 0`
-    >> ASM_REWRITE_TAC [WORD_SLICE_BITS_THM,SHIFT_ZERO]
+    >- ASM_REWRITE_TAC [WORD_SLICE_BITS_THM,SHIFT_ZERO]
     \\ Cases_on `a`
     \\ RW_TAC arith_ss [MIN_DEF,word_slice_n2w,word_bits_n2w,BITS_COMP_THM2,
          SLICE_THM,w2n_n2w]
-    << [
-      Cases_on `h < l` >> ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]
+    THENL [
+      Cases_on `h < l` >- ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]
         \\ `l <= dimindex (:'a) - 1` by DECIDE_TAC,
       Cases_on `dimindex (:'a) - 1 < l`
-        >> ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]]
+        >- ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]]
     \\ RW_TAC arith_ss [BITS_ZERO3,ADD1,lem,word_ror_n2w,
          ZERO_LT_TWOEXP,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
     \\ ASM_SIMP_TAC arith_ss [BITS_SLICE_THM2,

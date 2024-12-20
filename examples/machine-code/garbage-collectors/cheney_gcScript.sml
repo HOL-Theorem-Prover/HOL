@@ -5,8 +5,7 @@ open pred_setTheory arithmeticTheory pairTheory listTheory combinTheory finite_m
 
 val _ = new_theory "cheney_gc";
 val _ = ParseExtras.temp_loose_equality()
-infix \\
-val op \\ = op THEN;
+
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 val bool_ss = bool_ss -* ["lift_disj_eq", "list_imp_disj"]

@@ -16,10 +16,6 @@ structure Parse = struct
 end
 open Parse
 
-
-infix \\
-val op \\ = op THEN;
-
 val use_stack = ref false;
 fun arm_use_stack b = (use_stack := b);
 

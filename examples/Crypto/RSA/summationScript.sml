@@ -6,8 +6,6 @@ app load ["bossLib", "arithmeticTheory", "numLib"];
 
 open bossLib arithmeticTheory numLib;
 
-infix THEN THENC THENL;
-infix 8 by;
 val ARW = RW_TAC arith_ss;
 
 val _ = new_theory "summation";

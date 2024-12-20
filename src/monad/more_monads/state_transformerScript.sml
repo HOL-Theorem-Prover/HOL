@@ -2,9 +2,6 @@ open HolKernel Parse boolLib pairTheory pairSyntax combinTheory listTheory;
 
 val _ = new_theory "state_transformer"
 
-infixr 0 ||
-infix 1 >>;
-
 val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 
 (* ------------------------------------------------------------------------- *)

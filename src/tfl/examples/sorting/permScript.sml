@@ -3,9 +3,6 @@
  ---------------------------------------------------------------------------*)
 open HolKernel Parse boolLib bossLib listTheory;
 
-infix THEN THENL |-> ;
-infix 8 by;
-
 val _ = new_theory "perm";
 
 (*---------------------------------------------------------------------------*

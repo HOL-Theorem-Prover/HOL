@@ -6,8 +6,6 @@ open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_soundness";
 open helperLib set_sepTheory progTheory;
 open lisp_correctnessTheory milawa_proofpTheory lisp_semanticsTheory;
 
-infix \\ val op \\ = op THEN
-
 val R_exec_T_11 = prove(
   ``!x y. R_exec x y ==> !z. SND y /\ R_exec x z ==> (y = z)``,
   HO_MATCH_MP_TAC R_exec_ind \\ STRIP_TAC

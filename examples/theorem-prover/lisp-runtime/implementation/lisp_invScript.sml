@@ -9,8 +9,6 @@ open set_sepTheory bitTheory fcpTheory;
 open lisp_sexpTheory lisp_consTheory stop_and_copyTheory lisp_bytecodeTheory;
 
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 fun SUBGOAL q = REVERSE (sg q)

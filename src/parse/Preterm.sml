@@ -4,6 +4,8 @@ struct
 open Feedback Lib GrammarSpecials;
 open errormonad typecheck_error
 
+infix >> >-
+
 val ERR = mk_HOL_ERR "Preterm"
 val ERRloc = mk_HOL_ERRloc "Preterm"
 
