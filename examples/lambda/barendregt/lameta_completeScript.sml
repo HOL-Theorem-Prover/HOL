@@ -7,7 +7,8 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open hurdUtils arithmeticTheory pred_setTheory listTheory rich_listTheory;
+open hurdUtils arithmeticTheory pred_setTheory listTheory rich_listTheory
+     ltreeTheory llistTheory;
 
 open termTheory basic_swapTheory appFOLDLTheory chap2Theory chap3Theory
      horeductionTheory solvableTheory head_reductionTheory head_reductionLib
@@ -37,13 +38,13 @@ val _ = hide "Y";
  *)
 Definition agree_upto_def :
     agree_upto X Ms p r <=>
-      !M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==> subtree_equiv X M N q r
+    !M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==> subtree_equiv X M N q r
 End
 
-(* NOTE: subterm_equiv_lemma and this theorem together implies the original
+(* NOTE: subtree_equiv_lemma and this theorem together implies the original
    agree_upto_lemma (see below).
  *)
-Theorem subterm_equiv_imp_agree_upto :
+Theorem subtree_equiv_imp_agree_upto :
     !X Ms p r pi.
       (!M N q.
          MEM M Ms /\ MEM N Ms /\ q <<= p /\ subtree_equiv X M N q r ==>
@@ -55,22 +56,28 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
+(* Lemma 10.3.11 [1. p.251] *)
 Theorem agree_upto_lemma :
     !X Ms p r.
        FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
        BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
        EVERY (\M. subterm X M p r <> NONE) Ms ==>
-      ?pi. Boehm_transform pi /\ EVERY is_ready' (MAP (apply pi) Ms) /\
-          (agree_upto X Ms p r ==> agree_upto X (MAP (apply pi) Ms) p r) /\
-          !M N. MEM M Ms /\ MEM N Ms /\
-                subtree_equiv X (apply pi M) (apply pi N) p r ==>
-                subtree_equiv' X M N p r
+       ?pi. Boehm_transform pi /\ EVERY is_ready' (MAP (apply pi) Ms) /\
+           (agree_upto X Ms p r ==> agree_upto X (MAP (apply pi) Ms) p r) /\
+            !M N. MEM M Ms /\ MEM N Ms /\
+                  subtree_equiv X (apply pi M) (apply pi N) p r ==>
+                  subtree_equiv X M N p r
 Proof
     rpt GEN_TAC
- >> DISCH_THEN (MP_TAC o (MATCH_MP subterm_equiv_lemma))
+ >> DISCH_THEN (MP_TAC o (MATCH_MP subtree_equiv_lemma))
  >> rpt STRIP_TAC
- >> Q.EXISTS_TAC ‘pi’ >> rw []
- >> MATCH_MP_TAC subterm_equiv_imp_agree_upto >> art []
+ >> Q.EXISTS_TAC ‘pi’
+ >> RW_TAC std_ss []
+ >- (MATCH_MP_TAC subtree_equiv_imp_agree_upto >> rw [] \\
+     METIS_TAC [])
+ >> Q.PAT_X_ASSUM ‘!M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==> _’
+      (MP_TAC o Q.SPECL [‘M’, ‘N’, ‘p’])
+ >> simp []
 QED
 
 (*---------------------------------------------------------------------------*
