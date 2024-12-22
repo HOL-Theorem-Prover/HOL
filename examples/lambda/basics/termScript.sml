@@ -742,6 +742,16 @@ Definition DOM_DEF :
    (DOM ((x,y)::rst) = {y} UNION DOM rst)
 End
 
+Theorem DOM_SNOC :
+    !x y rst. DOM (SNOC (x,y) rst) = {y} UNION DOM rst
+Proof
+    NTAC 2 GEN_TAC
+ >> Induct_on ‘rst’ >- rw [DOM_DEF]
+ >> simp [FORALL_PROD]
+ >> rw [DOM_DEF]
+ >> SET_TAC []
+QED
+
 Theorem DOM_ALT_MAP_SND :
     !phi. DOM phi = set (MAP SND phi)
 Proof
@@ -755,6 +765,16 @@ Definition FVS_DEF :
    (FVS [] = {}) /\
    (FVS ((t,x)::rst) = FV t UNION FVS rst)
 End
+
+Theorem FVS_SNOC :
+    !t x rst. FVS (SNOC (t,x) rst) = FV t UNION FVS rst
+Proof
+    NTAC 2 GEN_TAC
+ >> Induct_on ‘rst’ >- rw [FVS_DEF]
+ >> simp [FORALL_PROD]
+ >> rw [FVS_DEF]
+ >> SET_TAC []
+QED
 
 Theorem FVS_ALT :
     !ss. FVS ss = BIGUNION (set (MAP (FV o FST) ss))
@@ -944,6 +964,14 @@ Proof
      Q.EXISTS_TAC ‘{x}’ >> simp [])
  >> Rewr'
  >> CCONTR_TAC >> gs []
+QED
+
+Theorem ISUB_SNOC :
+    !s x rst t. t ISUB SNOC (s,x) rst = [s/x] (t ISUB rst)
+Proof
+    NTAC 2 GEN_TAC
+ >> Induct_on ‘rst’ >- rw []
+ >> simp [FORALL_PROD]
 QED
 
 (* ----------------------------------------------------------------------
