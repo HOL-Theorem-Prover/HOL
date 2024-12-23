@@ -444,13 +444,13 @@ Proof
  >> qunabbrev_tac ‘M'’
  >> qabbrev_tac ‘Y  = RANK r’
  >> qabbrev_tac ‘Y' = RANK (SUC r)’
- (* #1 *)
+ (* transitivity no.1 *)
  >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M1’
  >> CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> rw [])
- (* #2 *)
+ (* transitivity no.2 *)
  >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M0 UNION set vs’
  >> CONJ_TAC >- simp [FV_LAMl]
- (* #3 *)
+ (* transitivity no.3 *)
  >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M UNION set vs’
  >> CONJ_TAC
  >- (Suff ‘FV M0 SUBSET FV M’ >- SET_TAC [] \\
@@ -611,7 +611,7 @@ Proof
  >> MATCH_MP_TAC EL_MEM >> art []
 QED
 
-(* NOTE: This lemma is suitable for doing induction. A better estimate is
+(* NOTE: This lemma is suitable for doing induction. A better upper bound is
    given by the next [subterm_headvar_lemma'].
  *)
 Theorem subterm_headvar_lemma :
@@ -1814,7 +1814,7 @@ Proof
  >> qabbrev_tac ‘N' = tpm p1 N’ >> T_TAC
  (* finally, using IH in a bulk way *)
  >> FIRST_X_ASSUM MATCH_MP_TAC
- (* extra goal #1 (easy) *)
+ (* extra goal no.1 (easy) *)
  >> CONJ_TAC
  >- (simp [Abbr ‘N'’, SUBSET_DEF, FV_tpm] \\
      rpt STRIP_TAC \\
@@ -1863,7 +1863,7 @@ Proof
      DISJ2_TAC \\
      qunabbrev_tac ‘p1’ \\
      MATCH_MP_TAC MEM_lswapstr >> rw [])
-  (* extra goal #2 (hard) *)
+  (* extra goal no.2 (hard) *)
  >> CONJ_TAC
  >- (simp [Abbr ‘N'’, FV_tpm, SUBSET_DEF] \\
      simp [GSYM lswapstr_append, GSYM REVERSE_APPEND] \\
@@ -3310,6 +3310,14 @@ Proof
  >> qexistsl_tac [‘X’, ‘r’, ‘d’] >> art []
 QED
 
+(* NOTE: This is the first of a series of lemmas of increasing permutators.
+   In theory the proof works if each permutator is larger than the previous
+   one, not necessary increased just by one (which is enough for now).
+
+   In other words, ‘ss = GENLIST (\i. (permutator (d + i),y i)) k’ can be
+   replaced by ‘ss = GENLIST (\i. (permutator (f i),y i)) k’ where ‘f’ is
+   increasing (or non-decreasing).
+ *)
 Theorem solvable_isub_permutator_alt :
     !X r d y k ss M.
        FINITE X /\ FV M SUBSET X UNION RANK r /\
@@ -4235,9 +4243,9 @@ Proof
  >> simp [] >> DISCH_THEN K_TAC
  (* applying SUBSET_MAX_SET *)
  >> MATCH_MP_TAC SUBSET_MAX_SET
- >> CONJ_TAC (* FINITE #1 *)
+ >> CONJ_TAC (* FINITE _ *)
  >- (MATCH_MP_TAC IMAGE_FINITE >> rw [FINITE_prefix])
- >> CONJ_TAC (* FINITE #2 *)
+ >> CONJ_TAC (* FINITE _ *)
  >- (MATCH_MP_TAC IMAGE_FINITE >> rw [FINITE_prefix])
  >> rw [SUBSET_DEF] (* this asserts q' <<= q *)
  >> Know ‘q' <<= t’
@@ -5915,11 +5923,26 @@ QED
 Theorem ltree_equiv_some_bot_imp' =
     ONCE_REWRITE_RULE [ltree_equiv_comm] ltree_equiv_some_bot_imp
 
-(* Definition 10.2.32 (v) [1, p.245] *)
+(* Definition 10.2.32 (v) [1, p.245]
+
+   NOTE: It's assumed that ‘X SUBSET FV M UNION FV N’ in applications.
+ *)
 Definition subtree_equiv_def :
     subtree_equiv X M N p r =
     ltree_equiv (ltree_el (BT' X M r) p) (ltree_el (BT' X N r) p)
 End
+
+Theorem subtree_equiv_refl[simp] :
+    subtree_equiv X M M p r
+Proof
+    rw [subtree_equiv_def]
+QED
+
+Theorem subtree_equiv_comm :
+    !X M N p r. subtree_equiv X M N p r <=> subtree_equiv X N M p r
+Proof
+    rw [subtree_equiv_def, Once ltree_equiv_comm]
+QED
 
 (* This HUGE theorem is an improved version of Lemma 10.3.11 [1. p.251], to be
    proved later in ‘lameta_completeTheory’ as [agree_upto_lemma].
@@ -5940,8 +5963,8 @@ End
    on the construction of Boehm transform ‘pi’.
 
    NOTE: This is the LAST theorem of the current theory, because this proof is
-   so long. Further results (plus users of this lemma) are to be found in next
-   theory (lameta_complete).
+   so long. Further results (plus users of this lemma) are to be found in the
+   next lameta_completeTheory.
  *)
 Theorem subtree_equiv_lemma :
     !X Ms p r.
@@ -6244,7 +6267,7 @@ Proof
      qunabbrev_tac ‘vs’ \\
      MATCH_MP_TAC RNEWS_SUBSET_RANK >> rw [])
  >> DISCH_TAC
- (* A better estimate on ‘y i’ using subterm_headvar_lemma_alt *)
+ (* A better upper bound on ‘y i’ using subterm_headvar_lemma_alt *)
  >> Know ‘!i. i < k ==> y i IN Y UNION set (TAKE (n i) vs)’
  >- (rpt STRIP_TAC \\
      Know ‘FV (M i) SUBSET Y’
@@ -6272,7 +6295,7 @@ Proof
      POP_ASSUM (REWRITE_TAC o wrap) \\
      simp [UNION_SUBSET])
  >> DISCH_TAC
- (* A better estimate on BIGUNION (IMAGE FV (set (args i))) *)
+ (* a better upper bound of BIGUNION (IMAGE FV (set (args i))) *)
  >> Know ‘!i. i < k ==> BIGUNION (IMAGE FV (set (args i))) SUBSET
                         FV (M i) UNION set (TAKE (n i) vs)’
  >- (rpt STRIP_TAC \\

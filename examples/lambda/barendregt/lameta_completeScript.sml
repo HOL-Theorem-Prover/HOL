@@ -81,7 +81,7 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*
- *  Separability of terms
+ *  Separability of lambda terms
  *---------------------------------------------------------------------------*)
 
 Theorem separability_lemma0_case2[local] :
