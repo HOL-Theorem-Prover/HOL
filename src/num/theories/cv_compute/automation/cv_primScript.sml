@@ -904,10 +904,16 @@ QED
 Theorem cv_rep_word_lsr[cv_rep]:
   from_word (word_lsr (w:'a word) n)
   =
-  cv_div (from_word w) (cv_exp (Num 2) (Num n))
+  let k = Num n in
+  cv_if (cv_lt k (Num (dimindex (:'a))))
+    (cv_div (from_word w) (cv_exp (Num 2) k))
+    (Num 0)
 Proof
   gvs [cv_rep_def] \\ rw [] \\ gvs []
-  \\ gvs [from_word_def,cv_exp_def,w2n_lsr]
+  >- gvs [from_word_def,cv_exp_def,w2n_lsr]
+  \\ gvs[from_word_def]
+  \\ irule LSR_LIMIT
+  \\ pop_assum mp_tac \\ rw[]
 QED
 
 Theorem word_asr_add[cv_inline]:
