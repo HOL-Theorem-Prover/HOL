@@ -904,8 +904,9 @@ QED
 Theorem cv_rep_word_lsr[cv_rep]:
   from_word (word_lsr (w:'a word) n)
   =
-  cv_if (cv_lt (Num n) (Num (dimindex (:'a))))
-    (cv_div (from_word w) (cv_exp (Num 2) (Num n)))
+  let k = Num n in
+  cv_if (cv_lt k (Num (dimindex (:'a))))
+    (cv_div (from_word w) (cv_exp (Num 2) k))
     (Num 0)
 Proof
   gvs [cv_rep_def] \\ rw [] \\ gvs []
