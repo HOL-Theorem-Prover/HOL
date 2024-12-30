@@ -11,6 +11,8 @@ open combinTheory pairTheory listTheory
      rich_listTheory prim_recTheory
      arithmeticTheory FormalLangTheory;
 
+open dirGraphTheory dftTheory;
+
 infix byA;
 val op byA = BasicProvers.byA;
 
@@ -2250,30 +2252,26 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Closure under Kleene                                                      *)
+(* Closure under Kleene Star. From                                           *)
+(*                                                                           *)
+(*  wlist = [w1 ; ... ; wn]                                                  *)
+(*                                                                           *)
+(* obtain                                                                    *)
+(*                                                                           *)
+(*  qslist = [qs1 ; ... ; qsn]                                               *)
+(*                                                                           *)
+(* where                                                                     *)
+(*                                                                           *)
+(*  is_accepting_exec qsi wi holds, for i < LENGTH wlist                     *)
+(*                                                                           *)
+(* To then build the execution for the nfa_plus machine, we basically want   *)
+(* to build the full nfa_plus state list as "FLAT qslist". But, as for the   *)
+(* nfa_dot pasting lemma, we have to arrange for the branching back from     *)
+(* accept states to skip over the initial state. Thus for every qsi,         *)
+(* i > 1, drop the HD:                                                       *)
+(*                                                                           *)
+(*  nfa_plus_qs = qs1 ++ TL qs2 ++ ... ++ TL qsn                             *)
 (*---------------------------------------------------------------------------*)
-
-(*
-  From
-
-    wlist = [w1 ; ... ; wn]
-
-  obtain
-
-    qslist = [qs1 ; ... ; qsn]
-
-  where
-
-    is_accepting_exec qsi wi holds, for i < LENGTH wlist
-
-  To then build the execution for the nfa_plus machine, we basically want
-  to build the full nfa_plus state list as "FLAT qslist". But, as for the
-  nfa_dot pasting lemma, we have to arrange for the branching back from
-  accept states to skip over the initial state. Thus for every qsi, i > 1,
-  drop the HD:
-
-        nfa_plus_qs = qs1 ++ TL qs2 ++ ... ++ TL qsn
-*)
 
 Triviality qslist_length:
   ∀wlist qslist.
@@ -2431,44 +2429,6 @@ Proof
   drule is_accepting_exec_nfa_plus >> rw_tac bool_ss [Once (GSYM FLAT)] >>
   irule is_accepting_exec_nfa_plus_paste_list >> rw[]
 QED
-
-(*
-Triviality SPLITP_EXISTS:
-  EXISTS P list ⇒ ∃prefix h t. SPLITP P list = (prefix,h::t)
-Proof
-  Induct_on ‘list’ >> rw[SPLITP] >> gvs[]
-QED
-
-Theorem zip_expand_id:
- ZIP (MAP FST plist, MAP SND plist) = plist
-Proof
- Induct_on ‘plist’ >> rw[]
-QED
-
-Theorem pair_list_as_zip:
-  ∀plist:('a # 'b) list. ∃l1 l2. LENGTH l1 = LENGTH l2 ∧ plist = ZIP (l1,l2)
-Proof
- Induct_on ‘plist’ >> rw[]
- >- (ntac 2 (qexists_tac ‘[]’) >> rw[])
- >- (namedCases_on ‘h’ ["a b"] >>
-     qexists_tac ‘a::l1’ >> qexists_tac ‘b::l2’ >> rw[])
-QED
-
-Triviality UNZIP_APPEND:
- ∀L1 L2. UNZIP (L1 ++ L2) = (FST (UNZIP L1) ++ FST (UNZIP L2),
-                             SND (UNZIP L1) ++ SND (UNZIP L2))
-Proof
- Induct >> rw[]
-QED
-
-Theorem ZIP_EQ_NIL_OR:
- ZIP(l1,l2) = [] ⇔ l1 = [] ∨ l2 = []
-Proof
- Induct_on ‘l1’ >> Induct_on ‘l2’ >> rw[ZIP_def]
-QED
-
-
-*)
 
 Triviality nfa_plus_diff:
   is_dfa M ∧
@@ -3176,7 +3136,7 @@ QED
 (*===========================================================================*)
 
 (*---------------------------------------------------------------------------*)
-(* Work with relations relativized to sets, typically A*                     *)
+(* Work with relations relativized to A*                                     *)
 (*---------------------------------------------------------------------------*)
 
 Definition nfa_eval_equiv_def:
@@ -3193,7 +3153,7 @@ Definition lang_equiv_def:
    (∀z. z ∈ KSTAR{[a] | a ∈ A} ⇒ (x ++ z ∈ L ⇔ y ++ z ∈ L))
 End
 
-Theorem nfa_eval_equiv_refines_lang_equiv:
+Theorem nfa_eval_equiv_refines_lang_equiv[local]:
   wf_nfa N ∧ nfa_eval_equiv N x y
   ⇒
   lang_equiv (nfa_lang N,N.Sigma) x y
@@ -3765,5 +3725,101 @@ Theorem Myhill_Nerode:
 Proof
   metis_tac [Myhill_Nerode_A,Myhill_Nerode_B,Myhill_Nerode_C]
 QED
+
+(*===========================================================================*)
+(* DFA state minimization. This is accomplished by, first, removing all      *)
+(* non-accessible states, then coalescing all non-distinguishable states.    *)
+(* Both of these operations preserve the language originally recognized.     *)
+(*===========================================================================*)
+
+Definition accessible_state_def:
+  accessible_state M q ⇔
+    ∃w. w ∈ KSTAR {[a] | a ∈ M.Sigma} ∧
+        nfa_eval M M.initial w = {q}
+End
+
+Definition accessible_nfa_def:
+  accessible_nfa M ⇔ ∀q. q ∈ M.Q ⇒ accessible_state M q
+End
+
+(*---------------------------------------------------------------------------*)
+(* States q1 and q2 are distinguishable if there is at least one string w    *)
+(* s.t. executing M on w from one of q1 or q2 ends in an accepting state but *)
+(* executing from the other ends in a non-accepting state.                   *)
+(*---------------------------------------------------------------------------*)
+
+Definition distinguishable_states_def:
+  distinguishable_states M q1 q2 ⇔
+    {q1; q2} ⊆ M.Q ∧
+    ∃w. w ∈ KSTAR {[a] | a ∈ M.Sigma} ∧
+        (nfa_eval M {q1} w ⊆ M.final
+         ⇔
+         ~(nfa_eval M {q2} w ⊆ M.final))
+End
+
+Definition distinguishable_nfa_def:
+  distinguishable_nfa M ⇔
+    ∀q1 q2. {q1; q2} ⊆ M.Q ∧ q1 ≠ q2 ⇒ distinguishable_states M q1 q2
+End
+
+(*---------------------------------------------------------------------------*)
+(* Accessibility is computed by an instance of depth-first traversal.        *)
+(*---------------------------------------------------------------------------*)
+
+Definition kidlist_def:
+  kidlist N q =
+    if q ∈ N.Q then
+      SET_TO_LIST(BIGUNION{N.delta q a | a | a ∈ N.Sigma})
+    else []
+End
+
+Theorem nfa_parents_finite:
+  wf_nfa N ⇒ FINITE (Parents (kidlist N))
+Proof
+  strip_tac >> irule SUBSET_FINITE >>
+  qexists_tac ‘N.Q’ >>
+  gvs [wf_nfa_def] >>
+  rw[Parents_def, kidlist_def,SUBSET_DEF] >>
+  pop_keep_tac >> IF_CASES_TAC >> rw[]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Invocation:  reachable_states N [] (SET_TO_LIST N.initial) []             *)
+(*---------------------------------------------------------------------------*)
+
+Definition reachable_states_def:
+  reachable_states N = DFT (kidlist N) (list$CONS)
+End
+
+Theorem reachable_states_eqns:
+  wf_nfa N
+  ⇒
+  reachable_states N seen [] acc = acc ∧
+  reachable_states N seen (h::t) acc =
+   if MEM h seen
+     then reachable_states N seen t acc
+     else reachable_states N (h::seen) (kidlist N h ++ t) (h::acc)
+Proof
+  PURE_REWRITE_TAC[reachable_states_def] >> strip_tac >>
+  imp_res_tac nfa_parents_finite >>
+  rw[DFT_def]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* A state is reachable iff reachable_states finds it                        *)
+(*---------------------------------------------------------------------------*)
+
+Theorem reachable_states_spec:
+  wf_nfa N ⇒
+  ∀q. q ∈ REACH_LIST (kidlist N) (SET_TO_LIST N.initial)
+      ⇔
+      q ∈ set(reachable_states N [] (SET_TO_LIST N.initial) [])
+Proof
+  PURE_REWRITE_TAC[reachable_states_def] >>
+  strip_tac >>
+  imp_res_tac nfa_parents_finite >>
+  irule DFT_REACH_THM >> metis_tac[]
+QED
+
 
 val _ = export_theory();
