@@ -3715,15 +3715,11 @@ Proof
 QED
 
 Theorem Myhill_Nerode:
-  ((L,A) ∈ REGULAR
-     ⇒ FINITE (partition (lang_equiv (L,A)) (KSTAR {[a] | a ∈ A})))
-  ∧
-  (IS_FORMAL_LANG (L,A) ∧
-   FINITE (partition (lang_equiv (L,A)) (KSTAR {[a] | a ∈ A}))
-   ⇒
-   (L,A) ∈ REGULAR)
+  IS_FORMAL_LANG (L,A)
+  ⇒
+  ((L,A) ∈ REGULAR ⇔ FINITE(partition(lang_equiv(L,A)) (KSTAR{[a] | a ∈ A})))
 Proof
-  metis_tac [Myhill_Nerode_A,Myhill_Nerode_B,Myhill_Nerode_C]
+  metis_tac [Myhill_Nerode_A,Myhill_Nerode_B, Myhill_Nerode_C]
 QED
 
 (*===========================================================================*)
