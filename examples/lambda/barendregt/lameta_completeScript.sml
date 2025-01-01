@@ -12,9 +12,7 @@ open hurdUtils arithmeticTheory pred_setTheory listTheory rich_listTheory
 
 open termTheory basic_swapTheory appFOLDLTheory chap2Theory chap3Theory
      horeductionTheory solvableTheory head_reductionTheory head_reductionLib
-     boehmTheory;
-
-val _ = new_theory "lameta_complete";
+     standardisationTheory boehmTheory;
 
 val _ = temp_delsimps [
    "lift_disj_eq", "lift_imp_disj",
@@ -31,9 +29,30 @@ val _ = hide "C";
 val _ = hide "W";
 val _ = hide "Y";
 
+val _ = new_theory "lameta_complete";
+
+Theorem subtree_equiv_lemma_explicit'[local] =
+        subtree_equiv_lemma_explicit |> SIMP_RULE std_ss [LET_DEF]
+
+Theorem subtree_equiv_lemma :
+    !X Ms p r.
+       FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
+       BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
+       EVERY (\M. subterm X M p r <> NONE) Ms ==>
+      ?pi. Boehm_transform pi /\ EVERY is_ready' (MAP (apply pi) Ms) /\
+           EVERY (\M. p IN ltree_paths (BT' X M r)) (MAP (apply pi) Ms) /\
+          !M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==>
+                 (subtree_equiv X M N q r <=>
+                  subtree_equiv X (apply pi M) (apply pi N) q r)
+Proof
+    rpt STRIP_TAC
+ >> Q.EXISTS_TAC ‘Boehm_construction X Ms p’
+ >> MATCH_MP_TAC subtree_equiv_lemma_explicit' >> art []
+QED
+
 (* Definition 10.3.10 (iii) and (iv) [1, p.251]
 
-   NOTE: The purpose of X is to make sure all terms in Ms share the same excluded
+   NOTE: The purpose of X is to make sure all terms in Ms share the same exclude
          set (and thus perhaps also the same initial binding list).
  *)
 Definition agree_upto_def :
@@ -78,6 +97,93 @@ Proof
  >> Q.PAT_X_ASSUM ‘!M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==> _’
       (MP_TAC o Q.SPECL [‘M’, ‘N’, ‘p’])
  >> simp []
+QED
+
+(* Definition 10.3.10 (ii) [1, p.251] *)
+Definition is_faithful_def :
+    is_faithful p X Ms pi r <=>
+   (!M. MEM M Ms ==>
+       (solvable (apply pi M) <=> p IN ltree_paths (BT' X M r))) /\
+    !M N. MEM M Ms /\ MEM N Ms ==>
+         (subtree_equiv X M N p r <=> equivalent (apply pi M) (apply pi N))
+End
+
+Overload is_faithful' = “is_faithful []”
+
+(* |- !N M. solvable (M @@ N) ==> solvable M *)
+Theorem solvable_APP_E[local] =
+        has_hnf_APP_E |> REWRITE_RULE [GSYM solvable_iff_has_hnf] |> GEN_ALL
+
+Theorem Boehm_transform_of_unsolvables :
+    !pi M. Boehm_transform pi /\ unsolvable M ==> unsolvable (apply pi M)
+Proof
+    Induct_on ‘pi’ using SNOC_INDUCT
+ >- rw []
+ >> simp [FOLDR_SNOC, Boehm_transform_SNOC]
+ >> qx_genl_tac [‘t’, ‘M’]
+ >> reverse (rw [solving_transform_def])
+ >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [] \\
+     MATCH_MP_TAC unsolvable_subst >> art [])
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> simp []
+ >> PROVE_TAC [solvable_APP_E]
+QED
+
+Theorem is_faithful' :
+    !X Ms pi r. Boehm_transform pi ==>
+               (is_faithful' X Ms pi r <=>
+                EVERY solvable Ms /\ EVERY solvable (MAP (apply pi) Ms) /\
+                !M N. MEM M Ms /\ MEM N Ms ==>
+                     (subtree_equiv X M N [] r <=>
+                      equivalent (apply pi M) (apply pi N)))
+Proof
+    rw [ltree_paths_def, is_faithful_def, EVERY_MEM]
+ >> reverse EQ_TAC
+ >- (rw [MEM_MAP] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘M’ >> art [])
+ >> simp [MEM_MAP]
+ >> STRIP_TAC
+ >> ONCE_REWRITE_TAC [CONJ_COMM]
+ >> CONJ_ASM1_TAC
+ >- (rw [] >> FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> Q.X_GEN_TAC ‘M’
+ >> DISCH_TAC
+ >> Suff ‘solvable (apply pi M)’
+ >- METIS_TAC [Boehm_transform_of_unsolvables]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘M’ >> art []
+QED
+
+Theorem is_faithful_two :
+    !p X M N pi r.
+       is_faithful p X [M; N] pi r <=>
+         (solvable (apply pi M) <=> p IN ltree_paths (BT' X M r)) /\
+         (solvable (apply pi N) <=> p IN ltree_paths (BT' X N r)) /\
+         (subtree_equiv X M N p r <=> equivalent (apply pi M) (apply pi N))
+Proof
+    rw [is_faithful_def]
+ >> EQ_TAC >> rw [] (* 6 subgoals here *)
+ >> rw [] (* only one subgoal is left *)
+ >> rw [Once subtree_equiv_comm, Once equivalent_comm]
+QED
+
+Theorem is_faithful_two' :
+    !p X M N pi r.
+       p IN ltree_paths (BT' X M r) /\
+       p IN ltree_paths (BT' X N r) ==>
+      (is_faithful p X [M; N] pi r <=>
+       solvable (apply pi M) /\
+       solvable (apply pi N) /\
+      (subtree_equiv X M N p r <=> equivalent (apply pi M) (apply pi N)))
+Proof
+    rw [is_faithful_two]
+QED
+
+Theorem is_faithful_swap :
+    !p X M N pi r. is_faithful p X [M; N] pi r <=> is_faithful p X [N; M] pi r
+Proof
+    rw [is_faithful_def]
+ >> METIS_TAC []
 QED
 
 (*---------------------------------------------------------------------------*
