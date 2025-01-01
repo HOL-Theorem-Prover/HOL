@@ -879,7 +879,7 @@ Proof
 QED
 
 Theorem ltree_paths_alt :
-    !t. ltree_paths A = {p | ltree_el A p <> NONE}
+    !t. ltree_paths t = {p | ltree_el t p <> NONE}
 Proof
     rw [ltree_paths_def, Once EXTENSION, ltree_lookup_iff_ltree_el]
 QED
