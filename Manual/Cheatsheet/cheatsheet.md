@@ -140,6 +140,7 @@ These are used when rewriting: they modify the rewrite behaviour of the theorem 
   This is most useful for ensuring that conditional rewrites have fired.
 
 <br>
+
 Also commonly used when rewriting are:
 
 <code>GSYM <i>theorem</i></code>
@@ -172,6 +173,7 @@ Also commonly used when rewriting are:
 : Converts a definition of the form `⊢ ∀ x y z. f x y z = ...` into one of the form `⊢ f = (λx y z. ...)`.
 
 <br>
+
 Note that the above are termed *rules* - these transform theorems to other theorems, allowing the above to be combined (e.g. `simp[Once $ GSYM thm]`).
 There are many other useful rules - see the HOL4 documentation for more details.
 
@@ -182,6 +184,7 @@ One way to do this is to use the `SF` modifier in our list of rewrites, e.g. `si
 : Turns the simpset fragment into a theorem encapsulating its rewrite behaviour, which can be passed in a list of rewrites.
 
 <br>
+
 This is most useful for certain simpset fragments:
 
 `CONJ_ss`
@@ -199,6 +202,7 @@ This is most useful for certain simpset fragments:
 : Rewrites to convert to disjunctive normal form.
 
 <br>
+
 Conversely, `ExclSF` is like `Excl` above, but can be used to *exclude* a set of rewrites.
 
 <code>ExclSF <i>"simpset fragment name"</i></code>
@@ -506,6 +510,7 @@ There are positional variants of `irule` and `drule`.
 : Applies <code>drule <i>theorem</i></code>, but attempts to match/instantiate the conjunct given by *`position`*.
 
 <br>
+
 The <code><i>position</i></code> is expressed as a value of type `match_position`, with values and meanings:
 
 `Any`
@@ -522,6 +527,7 @@ The <code><i>position</i></code> is expressed as a value of type `match_position
 : Match against the negated conclusion, i.e. use the implication in a contrapositive way.
 
 <br>
+
 By way of example, given a goal `∃x y. P x /\ Q y` and a theorem `thm = ⊢ R a b ==> P b`, `irule_at Any thm` produces the goal `∃a y. R a b /\ Q y`.
 `irule_at (Pos hd) thm` is equivalent in this case.
 
