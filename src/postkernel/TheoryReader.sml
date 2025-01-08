@@ -41,8 +41,9 @@ val dep_decode = let
         | (n,[i]) :: rest => SOME{head = (n,i), deps = rest}
         | _ => NONE
 in
-  Option.mapPartial depmunge o
-  list_decode (pair_decode(string_decode, list_decode int_decode))
+  bind_decode (
+    list_decode (pair_decode(string_decode, list_decode int_decode))
+  ) depmunge
 end
 val deptag_decode = let open HOLsexp in
                       pair_decode(dep_decode, list_decode string_decode)
@@ -53,8 +54,9 @@ val thm_decode =
       fun thmmunge(s,(di,tags),tms) =
           {name = s, depinfo = di, tagnames = tags, encoded_hypscon = tms}
     in
-      Option.map thmmunge o
-      pair3_decode (string_decode, deptag_decode, list_decode string_decode)
+      map_decode thmmunge (
+        pair3_decode (string_decode, deptag_decode, list_decode string_decode)
+      )
     end
 
 exception TheoryReader of string
@@ -101,8 +103,9 @@ fun string_to_class "A" = SOME DB.Axm
   | string_to_class _ = NONE
 
 fun class_decode c =
-    Option.map (List.map (fn i => (i, c))) o
-    HOLsexp.list_decode HOLsexp.int_decode
+    HOLsexp.map_decode (List.map (fn i => (i, c))) (
+      HOLsexp.list_decode HOLsexp.int_decode
+    )
 
 fun load_thydata thyname path =
   let

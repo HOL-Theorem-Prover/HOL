@@ -30,6 +30,8 @@ sig
                      ('a * 'b * 'c * 'd) decoder
   val list_decode : 'a decoder -> 'a list decoder
   val tagged_decode : string -> 'a decoder -> 'a decoder
+  val map_decode : ('a -> 'b) -> 'a decoder -> 'b decoder
+  val bind_decode : 'a decoder -> ('a -> 'b option) -> 'b decoder
 
 
   val printer : t HOLPP.pprinter
