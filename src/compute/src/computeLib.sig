@@ -15,6 +15,8 @@ sig
   val add_conv        : term * int * conv -> compset -> unit
   val add_thmset      : string -> compset -> unit
   val set_skip        : compset -> term -> int option -> unit
+  val set_EVAL_skip   : term -> int option -> unit
+  val temp_set_EVAL_skip : term -> int option -> unit
 
   val scrub_const     : compset -> term -> unit
   val scrub_thms      : thm list -> compset -> unit
