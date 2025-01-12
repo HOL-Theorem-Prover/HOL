@@ -738,16 +738,17 @@ val tDefine = located_tDefine DB.Unknown
     version of Define that allows control of options with "attributes"
     attached to the name, and provides an optional termination tactic
    ---------------------------------------------------------------------- *)
-fun test_remove n sl =
-    if mem n sl then (true, set_diff sl [n]) else (false, sl)
+fun test_remove n kvl =
+    let val (ns, rest) = Lib.partition (fn (k,_) => k = n) kvl
+    in
+      (not (null ns), rest)
+    end
 
-fun find_indoption sl =
-    case List.find (String.isPrefix "induction=") sl of
-        NONE => (NONE, sl)
-      | SOME s => (
-          SOME (String.extract(s,size "induction=",NONE)),
-          set_diff sl [s]
-      )
+fun find_indoption kvl =
+    case Lib.partition (fn (k,_) => k = "induction") kvl of
+        ([], _) => (NONE, kvl)
+      | ([(k,[v])], rest) => (SOME v, rest)
+      | _ => raise ERR "Definition" "multiple induction attribute-values"
 
 fun tailrecDefine loc nm q =
     let
@@ -757,16 +758,22 @@ fun tailrecDefine loc nm q =
       Defn.add_defs_to_EVAL [(nm,th)];
       th
     end
-
+val _ = List.app ThmAttribute.reserve_word
+                 ["nocompute", "schematic", "tailrecursive"]
 fun located_qDefine loc stem q tacopt =
     let
-      val (corename, attrs) = ThmAttribute.extract_attributes stem
-      val (nocomp, attrs) = test_remove "nocompute" attrs
-      val (svarsok, attrs) = test_remove "schematic" attrs
-      val (notuserdef, attrs) = test_remove "notuserdef" attrs
-      val (rebindok, attrs) = test_remove "allow_rebind" attrs
-      val (tailrecp, attrs) = test_remove "tailrecursive" attrs
-      val (indopt,attrs) = find_indoption attrs
+      val {thmname=corename, attrs=attrs,reserved=R,unknown} =
+          ThmAttribute.extract_attributes stem
+      val (nocomp, R) = test_remove "nocompute" R
+      val (svarsok, R) = test_remove "schematic" R
+      val (notuserdef, R) = test_remove "notuserdef" R
+      val (rebindok, R) = test_remove "allow_rebind" R
+      val (tailrecp, R) = test_remove "tailrecursive" R
+      val (indopt, R) = find_indoption R
+      val _ = null unknown orelse
+              raise ERR "Definition"
+                    ("Unknown attributes: " ^
+                     String.concatWith ", " (map #1 unknown))
       fun fmod f =
           f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
                 else (fn f => f))
@@ -786,10 +793,10 @@ fun located_qDefine loc stem q tacopt =
                     \no sense"
             | (false, NONE) => fmod (located_xDefine loc corename) q
             | (false, SOME tac) => fmod (located_tDefine loc corename q) tac
-      fun proc_attr a =
-          ThmAttribute.store_at_attribute{name = corename, attrname = a,
-                                          thm = thm}
-      val attrs = if notuserdef then attrs else "userdef" :: attrs
+      fun proc_attr (k,vs) =
+          ThmAttribute.store_at_attribute{name = corename, attrname = k,
+                                          args = vs, thm = thm}
+      val attrs = if notuserdef then attrs else ("userdef",[]) :: attrs
       val gen_ind =
           if tailrecp then (fn th => raise ERR "Unseen" "")
           else Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}

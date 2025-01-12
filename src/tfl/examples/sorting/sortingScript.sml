@@ -4,9 +4,6 @@
 
 open HolKernel Parse boolLib bossLib listTheory permTheory;
 
-infix THEN THENL
-infix 8 by;
-
 val MEM_APPEND_DISJ = Q.prove
 (`!x l1 l2. MEM x (APPEND l1 l2) = MEM x l1 \/ MEM x l2`,
 Induct_on `l1` THEN RW_TAC list_ss [APPEND,MEM] THEN PROVE_TAC[]);

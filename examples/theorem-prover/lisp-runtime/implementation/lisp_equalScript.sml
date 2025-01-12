@@ -12,8 +12,6 @@ open set_sepTheory bitTheory fcpTheory stringTheory;
 open codegenLib decompilerLib prog_x64Lib;
 open lisp_consTheory stop_and_copyTheory;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 fun SUBGOAL q = REVERSE (sg q)

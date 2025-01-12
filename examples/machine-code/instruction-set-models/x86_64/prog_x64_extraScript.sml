@@ -10,8 +10,6 @@ open helperLib progTheory set_sepTheory addressTheory temporalTheory;
 open wordsTheory wordsLib listTheory arithmeticTheory;
 open whileTheory pairTheory relationTheory combinTheory optionTheory;
 
-infix \\ val op \\ = op THEN;
-
 (* generic code gen infrastructure *)
 
 val zCODE_HEAP_RAX_def = Define `

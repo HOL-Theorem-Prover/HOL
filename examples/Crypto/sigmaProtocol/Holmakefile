@@ -1,0 +1,6 @@
+INCLUDES = $(HOLDIR)/examples/Crypto/pedersenCommitment \
+           $(HOLDIR)/examples/computability/register \
+           $(HOLDIR)/examples/set-theory/vbg \
+           $(HOLDIR)/src/algebra/construction 
+
+

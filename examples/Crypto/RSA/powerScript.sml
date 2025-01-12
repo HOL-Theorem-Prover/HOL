@@ -10,9 +10,6 @@ open HolKernel Parse boolLib
 quietdec := false;
 *)
 
-infix THEN THENC THENL;
-infix 8 by;
-
 val _ = new_theory "power";
 
 val ARW = RW_TAC arith_ss;

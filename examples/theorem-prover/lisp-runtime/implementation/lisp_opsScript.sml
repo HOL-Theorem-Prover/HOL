@@ -14,8 +14,6 @@ open prog_x64Theory prog_x64Lib x64_encodeLib;
 open stop_and_copyTheory;
 
 fun allowing_rebinds f x = Feedback.trace ("Theory.allow_rebinds", 1) f x
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

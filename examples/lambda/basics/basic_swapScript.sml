@@ -222,6 +222,16 @@ Proof
     rw [RNEWS, alloc_prefix]
 QED
 
+Theorem TAKE_RNEWS :
+    !r m n s. FINITE s /\ m <= n ==> TAKE m (RNEWS r n s) = RNEWS r m s
+Proof
+    rw [RNEWS, alloc_def]
+ >> qabbrev_tac ‘z = string_width s’
+ >> simp [Once LIST_EQ_REWRITE, listRangeLHI_def]
+ >> Q.X_GEN_TAC ‘i’ >> DISCH_TAC
+ >> simp [EL_TAKE, EL_MAP]
+QED
+
 Theorem RNEWS_set :
     !r n s. set (RNEWS r n s) =
             {v | ?j. v = n2s (r *, j) /\

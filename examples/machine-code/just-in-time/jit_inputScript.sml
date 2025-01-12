@@ -6,8 +6,6 @@ open wordsLib;
 
 val _ = new_theory "jit_input";
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

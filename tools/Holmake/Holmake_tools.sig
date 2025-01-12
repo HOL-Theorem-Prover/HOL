@@ -80,6 +80,11 @@ sig
                            chatty : string -> unit,
                            tgtfatal : string -> unit,
                            diag : string -> (unit -> string) -> unit}
+  type 'a ofn_update = ('a -> 'a) -> output_functions -> output_functions
+  val fupd_info_inline : (string -> unit) ofn_update
+  val fupd_info_inline_end : (unit -> unit) ofn_update
+  val fupd_info : (string -> unit) ofn_update
+  val quieten_info : output_functions -> output_functions
   (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
   val output_functions :
       {chattiness:int,

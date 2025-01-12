@@ -190,7 +190,7 @@ Definition from_list_def:
   from_list f (x::xs) = Pair (f x) (from_list f xs)
 End
 
-Definition to_list_def:
+Definition to_list_def[nocompute]:
   to_list f (Num n) = [] /\
   to_list f (Pair x y) = f x :: to_list f y
 End
@@ -201,6 +201,23 @@ Theorem from_to_list:
 Proof
   fs [from_to_def] \\ strip_tac
   \\ Induct \\ fs [from_list_def,to_list_def]
+QED
+
+Definition to_list_tr_def:
+  to_list_tr f (Num n) acc = REVERSE acc /\
+  to_list_tr f (Pair x y) acc = to_list_tr f y (f x :: acc)
+End
+
+Theorem to_list_tr_eq_lemma[local]:
+  !v acc. to_list_tr f v acc = REVERSE acc ++ to_list f v
+Proof
+  Induct \\ rw[to_list_def, to_list_tr_def]
+QED
+
+Theorem to_list_tr_eq[compute]:
+  to_list f v = to_list_tr f v []
+Proof
+  rw[to_list_tr_eq_lemma]
 QED
 
 (* used in definitions of to-functions of user-defined datatype *)

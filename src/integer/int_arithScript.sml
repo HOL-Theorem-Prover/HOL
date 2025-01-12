@@ -1026,7 +1026,6 @@ val positive_mod_part = prove(
   REPEAT STRIP_TAC THEN MATCH_MP_TAC INT_MOD_UNIQUE THEN
   ASM_SIMP_TAC bool_ss [INT_LT_GT] THEN PROVE_TAC []);
 
-infix 8 on
 val int_ss = srw_ss() ++ numSimps.ARITH_ss
 val tac1 =
     Q.EXISTS_TAC `&n - r` THEN
@@ -1035,9 +1034,8 @@ val tac1 =
     `0 < r` by FULL_SIMP_TAC bool_ss [INT_LE_LT] THEN
     FULL_SIMP_TAC int_ss [GSYM INT_ADD_ASSOC, INT_SUB_ADD2,
                            less_to_leq_samer, INT_ADD_COMM] THEN
-    SUBST_ALL_TAC on
-      (`&n + q * &n = (q + 1) * &n`,
-       SIMP_TAC bool_ss [INT_ADD_COMM, INT_RDISTRIB, INT_MUL_LID]) THEN
+    Q.SUBGOAL_THEN `&n + q * &n = (q + 1) * &n` SUBST_ALL_TAC
+    >- SIMP_TAC bool_ss [INT_ADD_COMM, INT_RDISTRIB, INT_MUL_LID] THEN
     ASM_SIMP_TAC int_ss [INT_MOD_COMMON_FACTOR]
 val tac2 =
     STRIP_TAC THEN REPEAT VAR_EQ_TAC THEN
@@ -1047,6 +1045,7 @@ val tac2 =
     `i < &n` by ASM_SIMP_TAC bool_ss [less_to_leq_samel, GSYM int_sub] THEN
     ASM_SIMP_TAC bool_ss [positive_mod_part] THEN
     STRIP_TAC THEN VAR_EQ_TAC THEN FULL_SIMP_TAC int_ss []
+
 val NOT_INT_DIVIDES = store_thm(
   "NOT_INT_DIVIDES",
   ``!c d. ~(c = 0) ==>

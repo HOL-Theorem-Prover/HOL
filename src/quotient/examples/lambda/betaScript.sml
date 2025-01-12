@@ -1,8 +1,4 @@
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
-
-
 
 val _ = new_theory "beta";
 

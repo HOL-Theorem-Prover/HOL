@@ -13,10 +13,6 @@ open jit_inputTheory jit_opsTheory;
 open compilerLib;
 open export_codeLib;
 
-infix \\
-val op \\ = op THEN;
-
-
 val _ = new_theory "jit_codegen";
 
 

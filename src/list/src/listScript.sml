@@ -4734,6 +4734,16 @@ val EL_LENGTH_dropWhile_REVERSE = Q.store_thm("EL_LENGTH_dropWhile_REVERSE",
    >> fs [NOT_EVERY, dropWhile_APPEND_EXISTS, arithmeticTheory.ADD1])
 end
 
+Theorem dropWhile_id:
+ (dropWhile P ls = ls) <=> NULL ls \/ ~P(HD ls)
+Proof
+  Cases_on`ls` \\ rw[dropWhile_def, NULL]
+  \\ disch_then(mp_tac o Q.AP_TERM`LENGTH`)
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`dropWhile P l`
+  \\ Q.SPECL_THEN[`P`,`l`]mp_tac LENGTH_dropWhile_LESS_EQ
+  \\ simp[]
+QED
+
 val IMP_EVERY_LUPDATE = store_thm("IMP_EVERY_LUPDATE",
   “!xs h i. P h /\ EVERY P xs ==> EVERY P (LUPDATE h i xs)”,
   Induct THEN fs [LUPDATE_def] THEN REPEAT STRIP_TAC

@@ -5,6 +5,8 @@ open Portable HolKernel term_grammar
      HOLtokens HOLgrammars GrammarSpecials
      PrecAnalysis
 
+infix >> >-
+
 val PP_ERR = mk_HOL_ERR "term_pp";
 
 fun PRINT s = print (s ^ "\n")

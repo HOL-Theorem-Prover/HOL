@@ -11,8 +11,6 @@ open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
 open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

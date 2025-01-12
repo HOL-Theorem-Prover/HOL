@@ -6,10 +6,6 @@ open wordsLib x86_encodeLib helperLib;
 
 open jit_inputTheory;
 
-infix \\
-val op \\ = op THEN;
-
-
 val _ = new_theory "jit_ops";
 
 val _ = prog_x86Lib.set_x86_code_write_perm_flag true;

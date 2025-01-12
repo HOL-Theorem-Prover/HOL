@@ -6,8 +6,6 @@ open combinTheory finite_mapTheory stringTheory addressTheory;
 open lisp_gcTheory cheney_gcTheory cheney_allocTheory;
 open lisp_typeTheory divideTheory;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

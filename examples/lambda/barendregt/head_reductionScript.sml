@@ -2531,6 +2531,21 @@ Proof
  >> PROVE_TAC [hreduce_abs] (* is_abs N *)
 QED
 
+(* NOTE: This theorem depends on LAMl_size and cannot move to chap2Theory *)
+Theorem permutator_11[simp] :
+    permutator m = permutator n <=> m = n
+Proof
+    reverse EQ_TAC >- rw []
+ >> rw [permutator_def, GENLIST]
+ >> qabbrev_tac ‘vs1 = GENLIST n2s m’
+ >> qabbrev_tac ‘vs2 = GENLIST n2s n’
+ >> ‘LENGTH vs1 = m /\ LENGTH vs2 = n’ by rw [Abbr ‘vs1’, Abbr ‘vs2’]
+ >> Q.PAT_X_ASSUM ‘LAMl vs1 _ = LAMl vs2 _’
+      (MP_TAC o AP_TERM “LAMl_size :term -> num”)
+ >> REWRITE_TAC [GSYM LAMl_SNOC, LAMl_size_hnf]
+ >> simp []
+QED
+
 val _ = export_theory()
 val _ = html_theory "head_reduction";
 

@@ -6,10 +6,6 @@ open optionTheory arithmeticTheory relationTheory combinTheory;
 open lisp_sexpTheory lisp_semanticsTheory;
 open milawa_logicTheory milawa_defsTheory;
 
-infix \\
-val op \\ = op THEN;
-
-
 (* We define an intermediate language MR_ev -- a language which is
    very much like the runtime's specification R_ev. The difference is
    that MR_ev is deterministic, functions that are simply just Error

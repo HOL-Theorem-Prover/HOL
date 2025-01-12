@@ -93,3 +93,12 @@ val x = 92 + 10;
 val   y = 11
 val s = ""  
 val s' = "foo.sml" (* #(FILE) *)
+
+val thm = Q.store_thm_at (DB_dtype.mkloc ("foo.sml", 15, true)) ("thm[foo, simp , key = val1 val2]", [QUOTE " (*#loc 15 42*)\n\
+\  p /\\ q"], (fn HOL__GOAL__foo => (
+
+  cheat
+) HOL__GOAL__foo));
+
+val thm2 = boolLib.save_thm("thm2[foo, simp , key = val1 val2]", exp
+);

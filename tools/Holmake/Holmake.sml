@@ -196,6 +196,13 @@ fun extend_with_cline_vars env =
     end
 
 
+(* ----------------------------------------------------------------------
+    get_hmf : unit -> "holmakefile data" (as per ReadHMF)
+
+    Utility function to get the Holmakefile in the current directory, but
+    using a cache so that any given file is only ever read once.
+   ---------------------------------------------------------------------- *)
+
 local
   open hm_target
   val base = extend_with_cline_vars (read_holpathdb())
@@ -301,6 +308,7 @@ val (outputfns as {warn,tgtfatal,diag,info,chatty,info_inline,info_inline_end})=
 val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
+val show_json = #json coption_value
 val quit_on_failure = #quit_on_failure coption_value
 val toplevel_no_prereqs = #no_prereqs coption_value
 val toplevel_no_overlay = #no_overlay coption_value
@@ -309,6 +317,10 @@ val cline_always_rebuild_deps = #rebuild_deps coption_value
 val cline_nobuild = #no_action coption_value
 val cline_recursive_build = #recursive_build coption_value
 val cline_recursive_clean = #recursive_clean coption_value
+val scan_output_functions =
+    if show_json andalso chattiness_level coption_value <= 1 then
+      quieten_info outputfns
+    else outputfns
 
 (* make the cline includes = [] so that these are only looked at once
    (when the cline_additional_includes value is folded into dirinfo values
@@ -429,7 +441,8 @@ fun 'a recursively getnewincs dsopt {outputfns,verb,hm,dirinfo,dir,data} =
 let
   val {incdirmap,visited,ancestors} = dirinfo : dirinfo
   val hm : 'a hmfold = hm
-  val {warn,diag,info,chatty,...} : output_functions = outputfns
+  val {warn,diag,info,chatty,info_inline_end, info_inline,...} : output_functions =
+      outputfns
   val {includes=incset, preincludes = preincset} = getnewincs dir
   val incdirmap =
       incdirmap |> extend_idmap dir {incs = incset, pres = preincset}
@@ -1086,7 +1099,7 @@ fun create_complete_graph cline_incs idm =
       val d = hmdir.curdir()
       val {data = g, incdirmap, visited, ...} =
           recursively getnewincs (SOME cline_incs) {
-            outputfns = outputfns, verb = "Scanning",
+            outputfns = scan_output_functions, verb = "Scanning",
             hm=extend_graph_in_dir,
             dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare,
                      ancestors = [original_dir]},
@@ -1095,9 +1108,10 @@ fun create_complete_graph cline_incs idm =
           }
       val numScanned = Binaryset.numItems visited
       val _ = if numScanned > 1 then
-                (#info_inline outputfns ("Scanned " ^ Int.toString numScanned ^
-                                         " directories");
-                 #info_inline_end outputfns())
+                (#info_inline scan_output_functions
+                              ("Scanned " ^ Int.toString numScanned ^
+                               " directories");
+                 #info_inline_end scan_output_functions())
               else ()
       val diag = diag "builddepgraph"
     in
@@ -1205,7 +1219,10 @@ fun work() =
           in
             OS.Process.success
           end
-        else
+        else if show_json then (
+          info (HM_DepGraph.toJSONString depgraph);
+          OS.Process.exit OS.Process.success
+        ) else (* actually build default targets *)
           postmortem outputfns (build_graph depgraph)
           handle e => die ("Exception: "^General.exnMessage e)
       end

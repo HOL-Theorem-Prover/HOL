@@ -7,8 +7,6 @@
  * First, make standard environment available.                               *
  *---------------------------------------------------------------------------*)
 open HolKernel Parse boolLib;
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
 (*---------------------------------------------------------------------------*
  * Next, bring in extra tools used.                                          *

@@ -9,8 +9,6 @@ open mc_tailrecLib tailrecTheory cheney_gcTheory cheney_allocTheory;
 open lisp_gcTheory lisp_typeTheory lisp_invTheory;
 
 
-infix \\
-val op \\ = op THEN;
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;

@@ -1,9 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 open integerTheory arithmeticTheory bitTheory intLib listTheory;
 
-infix \\
-val op \\ = op THEN;
-
 val _ = new_theory "int_bitwise";
 val _ = ParseExtras.temp_loose_equality()
 

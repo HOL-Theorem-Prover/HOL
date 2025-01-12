@@ -71,6 +71,7 @@ val tag_encode : string -> ('a -> t) -> ('a -> t)
 val tag_decode : string -> 'a dec -> 'a dec
 
 val || : 'a dec * 'a dec -> 'a dec
+val >> : 'a dec * ('a -> 'b) -> 'b dec
 val first : 'a dec list -> 'a dec
 
 end

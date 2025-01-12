@@ -13,8 +13,6 @@ open bossLib numLib arithmeticTheory prim_recTheory
 quietdec := false;
 *)
 
-infix THEN THENC THENL;
-infix 8 by;
 val ARW = RW_TAC arith_ss;
 
 val _ = new_theory "fermat";

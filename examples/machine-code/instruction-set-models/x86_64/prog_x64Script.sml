@@ -10,9 +10,6 @@ open temporalTheory;
 val _ = new_theory "prog_x64";
 val _ = ParseExtras.temp_loose_equality()
 
-infix \\
-val op \\ = op THEN;
-
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

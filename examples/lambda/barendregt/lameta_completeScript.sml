@@ -7,13 +7,12 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open hurdUtils arithmeticTheory pred_setTheory listTheory rich_listTheory;
+open hurdUtils arithmeticTheory pred_setTheory listTheory rich_listTheory
+     ltreeTheory llistTheory relationTheory;
 
 open termTheory basic_swapTheory appFOLDLTheory chap2Theory chap3Theory
      horeductionTheory solvableTheory head_reductionTheory head_reductionLib
-     boehmTheory;
-
-val _ = new_theory "lameta_complete";
+     standardisationTheory boehmTheory;
 
 val _ = temp_delsimps [
    "lift_disj_eq", "lift_imp_disj",
@@ -30,24 +29,286 @@ val _ = hide "C";
 val _ = hide "W";
 val _ = hide "Y";
 
+val _ = new_theory "lameta_complete";
+
+(*---------------------------------------------------------------------------*
+ *  ltreeTheory extras
+ *---------------------------------------------------------------------------*)
+
+(* ltree_subset A B <=> A results from B by "cutting off" some subtrees. Thus,
+
+   1) The paths of A is a subset of paths of B
+   2) The node contents for all paths of A is identical to those of B, but the number
+      of successors at those nodes of B may be different (B may have more successors)
+
+   NOTE: Simply defining ‘ltree_subset A B <=> subtrees A SUBSET subtrees B’ is wrong,
+         as A may appear as a non-root subtree of B, i.e. ‘A IN subtrees B’ but there's
+         no way to "cut off" B to get A, the resulting subtree in B always have some
+         more path prefixes.
+ *)
+Definition ltree_subset_def :
+    ltree_subset A B <=>
+       (ltree_paths A) SUBSET (ltree_paths B) /\
+       !p. p IN ltree_paths A ==>
+           ltree_node (THE (ltree_lookup A p)) =
+           ltree_node (THE (ltree_lookup B p))
+End
+
+(*---------------------------------------------------------------------------*
+ *  Equivalent terms
+ *---------------------------------------------------------------------------*)
+
+(* Definition 10.2.19 [1, p. 238]
+
+   M = LAMl v1 (y  @* Ms) @@ (MAP VAR v1) == y  @* Ms'
+   N = LAMl v2 (y' @* Ns) @@ (MAP VAR v2) == y' @* Ns'
+
+   LENGTH Ms  = n /\ LENGTH Ns  = n'
+   LENGTH Ms' = m /\ LENGTH Ns' = m'
+
+   y = y'
+   n - m = n' - m' (possibly negative) <=> n + m' = n' + m (non-negative)
+ *)
+Definition equivalent_def :
+    equivalent (M :term) (N :term) =
+        if solvable M /\ solvable N then
+           let M0 = principle_hnf M;
+               N0 = principle_hnf N;
+               n  = LAMl_size M0;
+               n' = LAMl_size N0;
+               vs = NEWS (MAX n n') (FV M UNION FV N);
+              vsM = TAKE n  vs;
+              vsN = TAKE n' vs;
+               M1 = principle_hnf (M0 @* MAP VAR vsM);
+               N1 = principle_hnf (N0 @* MAP VAR vsN);
+               y  = hnf_head M1;
+               y' = hnf_head N1;
+               m  = LENGTH (hnf_children M1);
+               m' = LENGTH (hnf_children N1);
+           in
+               y = y' /\ n + m' = n' + m
+        else
+           ~solvable M /\ ~solvable N
+End
+
+Theorem equivalent_reflexive :
+    reflexive equivalent
+Proof
+    rw [reflexive_def, equivalent_def]
+QED
+
+(* |- equivalent x x *)
+Theorem equivalent_refl[simp] =
+    SPEC_ALL (REWRITE_RULE [reflexive_def] equivalent_reflexive)
+
+Theorem equivalent_symmetric :
+    symmetric equivalent
+Proof
+    RW_TAC std_ss [symmetric_def, equivalent_def, Once MAX_COMM, Once UNION_COMM]
+ >> reverse (Cases_on ‘solvable x /\ solvable y’) >- fs []
+ >> simp []
+ >> rename1 ‘y1 = y2 /\ m1 + n = m + n1 <=> y3 = y4 /\ m3 + n1 = m2 + n3’
+ >> ‘n3 = n’ by rw [Abbr ‘n3’, Abbr ‘n’] >> gs []
+ >> EQ_TAC >> rw []
+QED
+
+(* |- !x y. equivalent x y <=> equivalent y x *)
+Theorem equivalent_comm = REWRITE_RULE [symmetric_def] equivalent_symmetric
+
+Theorem equivalent_of_solvables :
+    !M N. solvable M /\ solvable N ==>
+         (equivalent M N <=>
+          let M0 = principle_hnf M;
+              N0 = principle_hnf N;
+              n  = LAMl_size M0;
+              n' = LAMl_size N0;
+              vs = NEWS (MAX n n') (FV M UNION FV N);
+             vsM = TAKE n  vs;
+             vsN = TAKE n' vs;
+              M1 = principle_hnf (M0 @* MAP VAR vsM);
+              N1 = principle_hnf (N0 @* MAP VAR vsN);
+              y  = hnf_head M1;
+              y' = hnf_head N1;
+              m  = LENGTH (hnf_children M1);
+              m' = LENGTH (hnf_children N1);
+           in
+              y = y' /\ n + m' = n' + m)
+Proof
+    RW_TAC std_ss [equivalent_def]
+QED
+
+(* beta-equivalent terms are also equivalent here *)
+Theorem lameq_imp_equivalent :
+    !M N. M == N ==> equivalent M N
+Proof
+    rpt STRIP_TAC
+ >> reverse (Cases_on ‘solvable M’)
+ >- (‘unsolvable N’ by METIS_TAC [lameq_solvable_cong] \\
+     rw [equivalent_def])
+ >> ‘solvable N’ by METIS_TAC [lameq_solvable_cong]
+ >> qabbrev_tac ‘X = FV M UNION FV N’
+ >> ‘FINITE X’ by rw [Abbr ‘X’]
+ >> ‘LAMl_size (principle_hnf M) = LAMl_size (principle_hnf N)’
+       by METIS_TAC [lameq_principle_hnf_size_eq']
+ (* stage work *)
+ >> RW_TAC std_ss [equivalent_of_solvables] (* 2 subgoals, same tactics *)
+ >> ‘ALL_DISTINCT vs /\ DISJOINT (set vs) X /\ LENGTH vs = n’
+       by (rw [Abbr ‘vs’, NEWS_def])
+ >> ‘vsM = vs’ by rw [Abbr ‘vsM’, TAKE_LENGTH_ID_rwt]
+ >> POP_ASSUM (fs o wrap)
+ >> Q.PAT_X_ASSUM ‘vs = vsN’ (fs o wrap o SYM)
+ >> MP_TAC (Q.SPECL [‘X’, ‘M’, ‘N’, ‘M0’, ‘N0’, ‘n’, ‘vs’, ‘M1’, ‘N1’]
+                    lameq_principle_hnf_thm_simple)
+ >> simp [Abbr ‘X’, GSYM solvable_iff_has_hnf]
+QED
+
+(* NOTE: the initial calls of ‘principle_hnf’ get eliminated if the involved
+         terms are already in head normal forms.
+ *)
+Theorem equivalent_of_hnf :
+    !M N. hnf M /\ hnf N ==>
+         (equivalent M N <=>
+          let n  = LAMl_size M;
+              n' = LAMl_size N;
+              vs = NEWS (MAX n n') (FV M UNION FV N);
+             vsM = TAKE n  vs;
+             vsN = TAKE n' vs;
+              M1 = principle_hnf (M @* MAP VAR vsM);
+              N1 = principle_hnf (N @* MAP VAR vsN);
+              y  = hnf_head M1;
+              y' = hnf_head N1;
+              m  = LENGTH (hnf_children M1);
+              m' = LENGTH (hnf_children N1)
+           in
+              y = y' /\ n + m' = n' + m)
+Proof
+    rpt STRIP_TAC
+ >> ‘solvable M /\ solvable N’ by PROVE_TAC [hnf_has_hnf, solvable_iff_has_hnf]
+ >> RW_TAC std_ss [equivalent_def, principle_hnf_reduce]
+ >> METIS_TAC []
+QED
+
+(* From [1, p.238]. This concerte example shows that dB encoding is not easy in
+   defining this "concept": the literal encoding of inner head variables are not
+   the same for equivalent terms.
+ *)
+Theorem not_equivalent_example :
+    !x y. x <> y ==> ~equivalent (LAM x (VAR y @@ t)) (LAM y (VAR y @@ t))
+Proof
+    qx_genl_tac [‘x’, ‘v’] >> DISCH_TAC
+ >> ‘hnf (LAM x (VAR v @@ t)) /\ hnf (LAM v (VAR v @@ t))’ by rw []
+ >> ‘solvable (LAM x (VAR v @@ t)) /\ solvable (LAM v (VAR v @@ t))’
+       by rw [solvable_iff_has_hnf, hnf_has_hnf]
+ >> RW_TAC std_ss [equivalent_of_solvables, principle_hnf_reduce]
+ (* fix M0 *)
+ >> qunabbrev_tac ‘M0’ >> qabbrev_tac ‘M0 = LAM x (VAR v @@ t)’
+ >> ‘ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M0 UNION FV N0) /\
+     LENGTH vs = MAX n n'’ by rw [Abbr ‘vs’, NEWS_def]
+ >> ‘DISJOINT (set vs) (FV M0) /\ DISJOINT (set vs) (FV N0)’
+      by METIS_TAC [DISJOINT_SYM, DISJOINT_UNION]
+ >> Q_TAC (HNF_TAC (“M0 :term”, “vs :string list”,
+                    “y1 :string”, “args1 :term list”)) ‘M1’
+ >> Q_TAC (HNF_TAC (“N0 :term”, “vs :string list”,
+                    “y2 :string”, “args2 :term list”)) ‘N1’
+ >> ‘TAKE (LAMl_size M0) vs = vsM’ by rw [Abbr ‘vsM’, Abbr ‘n’]
+ >> ‘TAKE (LAMl_size N0) vs = vsN’ by rw [Abbr ‘vsN’, Abbr ‘n'’]
+ >> NTAC 2 (POP_ASSUM (rfs o wrap))
+ (* reshaping and reordering assumptions *)
+ >> qunabbrev_tac ‘M1’
+ >> qabbrev_tac ‘M1 = principle_hnf (M0 @* MAP VAR vsM)’
+ >> qunabbrev_tac ‘N1’
+ >> qabbrev_tac ‘N1 = principle_hnf (N0 @* MAP VAR vsN)’
+ >> Q.PAT_X_ASSUM ‘M0 = _’ ASSUME_TAC
+ >> Q.PAT_X_ASSUM ‘N0 = _’ ASSUME_TAC
+ >> Q.PAT_X_ASSUM ‘M1 = _’ ASSUME_TAC
+ >> Q.PAT_X_ASSUM ‘N1 = _’ ASSUME_TAC
+ >> ‘VAR y1 = y’  by rw [Abbr ‘y’ , absfree_hnf_head]
+ >> ‘VAR y2 = y'’ by rw [Abbr ‘y'’, absfree_hnf_head]
+ >> qunabbrevl_tac [‘n’, ‘n'’]
+ >> Know ‘LAMl_size M0 = 1 /\ LAMl_size N0 = 1’
+ >- (rw [Abbr ‘M0’, Abbr ‘N0’, LAMl_size_def])
+ >> DISCH_THEN (rfs o wrap)
+ >> ‘vsN = vs’ by rw [Abbr ‘vsN’, TAKE_LENGTH_ID_rwt]
+ >> POP_ASSUM (rfs o wrap)
+ >> Q.PAT_X_ASSUM ‘vs = vsM’ (rfs o wrap o SYM)
+ >> qunabbrev_tac ‘vsN’
+ (* stage work *)
+ >> qabbrev_tac ‘z = HD vs’
+ >> ‘vs = [z]’ by METIS_TAC [SING_HD]
+ >> POP_ASSUM (rfs o wrap)
+ >> qunabbrevl_tac [‘M0’, ‘N0’]
+ >> DISJ1_TAC
+ >> qunabbrevl_tac [‘y’, ‘y'’]
+ >> Q.PAT_X_ASSUM ‘VAR y1 = hnf_head M1’ (rfs o wrap o SYM)
+ >> Q.PAT_X_ASSUM ‘_ = LAM z (VAR y1 @* args1)’ (rfs o wrap o SYM)
+ >> Q.PAT_X_ASSUM ‘_ = LAM z (VAR y2 @* args2)’ (rfs o wrap o SYM)
+ (* now the goal is ‘y1 <> y2’ *)
+ >> qabbrev_tac ‘u = VAR v @@ t’
+ >> ‘hnf u’ by rw [Abbr ‘u’]
+ >> Know ‘M1 = [VAR z/x] u’
+ >- (qunabbrev_tac ‘M1’ \\
+     Cases_on ‘z = x’ >- (POP_ASSUM (gs o wrap) \\
+                          fs [principle_hnf_beta_reduce1]) \\
+     MATCH_MP_TAC principle_hnf_beta >> simp [Abbr ‘u’] \\
+     rfs [FV_thm])
+ >> DISCH_THEN (rfs o wrap)
+ >> Know ‘N1 = [VAR z/v] u’
+ >- (qunabbrev_tac ‘N1’ \\
+     Cases_on ‘z = v’ >- (POP_ASSUM (rfs o wrap)) \\
+     MATCH_MP_TAC principle_hnf_beta >> simp [Abbr ‘u’] \\
+     rfs [FV_thm])
+ >> DISCH_THEN (rfs o wrap)
+ >> qunabbrevl_tac [‘M1’, ‘N1’]
+ >> rfs [Abbr ‘u’, app_eq_appstar]
+ >> METIS_TAC []
+QED
+
+Theorem equivalent_of_unsolvables :
+    !M N. unsolvable M /\ unsolvable N ==> equivalent M N
+Proof
+    rw [equivalent_def]
+QED
+
+(*---------------------------------------------------------------------------*
+ *  subtree_equiv_lemma
+ *---------------------------------------------------------------------------*)
+
+Theorem subtree_equiv_lemma_explicit'[local] =
+        subtree_equiv_lemma_explicit |> SIMP_RULE std_ss [LET_DEF]
+
+Theorem subtree_equiv_lemma :
+    !X Ms p r.
+       FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
+       BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
+       EVERY (\M. subterm X M p r <> NONE) Ms ==>
+      ?pi. Boehm_transform pi /\ EVERY is_ready (MAP (apply pi) Ms) /\
+           EVERY (\M. p IN ltree_paths (BT' X M r)) (MAP (apply pi) Ms) /\
+          !M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==>
+                 (subtree_equiv X M N q r <=>
+                  subtree_equiv X (apply pi M) (apply pi N) q r)
+Proof
+    rpt STRIP_TAC
+ >> Q.EXISTS_TAC ‘Boehm_construction X Ms p’
+ >> MATCH_MP_TAC subtree_equiv_lemma_explicit' >> art []
+QED
+
 (* Definition 10.3.10 (iii) and (iv) [1, p.251]
 
-   NOTE: The purpose of X is to make sure all terms in Ms share the same excluded
+   NOTE: The purpose of X is to make sure all terms in Ms share the same exclude
          set (and thus perhaps also the same initial binding list).
  *)
 Definition agree_upto_def :
     agree_upto X Ms p r <=>
-      !M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==> subtree_equiv X M N q r
+    !M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==> subtree_equiv X M N q r
 End
 
-(* NOTE: subterm_equiv_lemma and this theorem together implies the original
+(* NOTE: subtree_equiv_lemma and this theorem together implies the original
    agree_upto_lemma (see below).
  *)
-Theorem subterm_equiv_imp_agree_upto :
+Theorem subtree_equiv_imp_agree_upto :
     !X Ms p r pi.
-      (!M N q.
-         MEM M Ms /\ MEM N Ms /\ q <<= p /\ subtree_equiv X M N q r ==>
-         subtree_equiv X (apply pi M) (apply pi N) q r) /\
+      (!M N q. MEM M Ms /\ MEM N Ms /\ q <<= p /\ subtree_equiv X M N q r ==>
+               subtree_equiv X (apply pi M) (apply pi N) q r) /\
        agree_upto X Ms p r ==> agree_upto X (MAP (apply pi) Ms) p r
 Proof
     RW_TAC std_ss [agree_upto_def, MEM_MAP]
@@ -55,26 +316,102 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
+(* Lemma 10.3.11 [1. p.251] *)
 Theorem agree_upto_lemma :
     !X Ms p r.
        FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
        BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
        EVERY (\M. subterm X M p r <> NONE) Ms ==>
-      ?pi. Boehm_transform pi /\ EVERY is_ready' (MAP (apply pi) Ms) /\
-          (agree_upto X Ms p r ==> agree_upto X (MAP (apply pi) Ms) p r) /\
-          !M N. MEM M Ms /\ MEM N Ms /\
-                subtree_equiv X (apply pi M) (apply pi N) p r ==>
-                subtree_equiv' X M N p r
+       ?pi. Boehm_transform pi /\ EVERY is_ready (MAP (apply pi) Ms) /\
+           (agree_upto X Ms p r ==> agree_upto X (MAP (apply pi) Ms) p r) /\
+            !M N. MEM M Ms /\ MEM N Ms /\
+                  subtree_equiv X (apply pi M) (apply pi N) p r ==>
+                  subtree_equiv X M N p r
 Proof
     rpt GEN_TAC
- >> DISCH_THEN (MP_TAC o (MATCH_MP subterm_equiv_lemma))
+ >> DISCH_THEN (MP_TAC o (MATCH_MP subtree_equiv_lemma))
  >> rpt STRIP_TAC
- >> Q.EXISTS_TAC ‘pi’ >> rw []
- >> MATCH_MP_TAC subterm_equiv_imp_agree_upto >> art []
+ >> Q.EXISTS_TAC ‘pi’
+ >> RW_TAC std_ss []
+ >- (MATCH_MP_TAC subtree_equiv_imp_agree_upto >> rw [] \\
+     METIS_TAC [])
+ >> Q.PAT_X_ASSUM ‘!M N q. MEM M Ms /\ MEM N Ms /\ q <<= p ==> _’
+      (MP_TAC o Q.SPECL [‘M’, ‘N’, ‘p’])
+ >> simp []
+QED
+
+(* Definition 10.3.10 (ii) [1, p.251] *)
+Definition is_faithful_def :
+    is_faithful p X Ms pi r <=>
+   (!M. MEM M Ms ==>
+       (solvable (apply pi M) <=> p IN ltree_paths (BT' X M r))) /\
+    !M N. MEM M Ms /\ MEM N Ms ==>
+         (subtree_equiv X M N p r <=> equivalent (apply pi M) (apply pi N))
+End
+
+Overload is_faithful' = “is_faithful []”
+
+Theorem is_faithful' :
+    !X Ms pi r. Boehm_transform pi ==>
+               (is_faithful' X Ms pi r <=>
+                EVERY solvable Ms /\
+                EVERY solvable (MAP (apply pi) Ms) /\
+                !M N. MEM M Ms /\ MEM N Ms ==>
+                     (subtree_equiv X M N [] r <=>
+                      equivalent (apply pi M) (apply pi N)))
+Proof
+    rw [ltree_paths_def, is_faithful_def, EVERY_MEM]
+ >> reverse EQ_TAC
+ >- (rw [MEM_MAP] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘M’ >> art [])
+ >> simp [MEM_MAP]
+ >> STRIP_TAC
+ >> ONCE_REWRITE_TAC [CONJ_COMM]
+ >> CONJ_ASM1_TAC
+ >- (rw [] >> FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> Q.X_GEN_TAC ‘M’
+ >> DISCH_TAC
+ >> Suff ‘solvable (apply pi M)’
+ >- METIS_TAC [Boehm_transform_of_unsolvables]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘M’ >> art []
+QED
+
+Theorem is_faithful_two :
+    !p X M N pi r.
+       is_faithful p X [M; N] pi r <=>
+         (solvable (apply pi M) <=> p IN ltree_paths (BT' X M r)) /\
+         (solvable (apply pi N) <=> p IN ltree_paths (BT' X N r)) /\
+         (subtree_equiv X M N p r <=> equivalent (apply pi M) (apply pi N))
+Proof
+    rw [is_faithful_def]
+ >> EQ_TAC >> rw [] (* 6 subgoals here *)
+ >> rw [] (* only one subgoal is left *)
+ >> rw [Once subtree_equiv_comm, Once equivalent_comm]
+QED
+
+Theorem is_faithful_two' :
+    !p X M N pi r.
+       p IN ltree_paths (BT' X M r) /\
+       p IN ltree_paths (BT' X N r) ==>
+      (is_faithful p X [M; N] pi r <=>
+       solvable (apply pi M) /\
+       solvable (apply pi N) /\
+      (subtree_equiv X M N p r <=> equivalent (apply pi M) (apply pi N)))
+Proof
+    rw [is_faithful_two]
+QED
+
+Theorem is_faithful_swap :
+    !p X M N pi r. is_faithful p X [M; N] pi r <=> is_faithful p X [N; M] pi r
+Proof
+    rw [is_faithful_def]
+ >> METIS_TAC []
 QED
 
 (*---------------------------------------------------------------------------*
- *  Separability of terms
+ *  Separability of lambda terms
  *---------------------------------------------------------------------------*)
 
 Theorem separability_lemma0_case2[local] :
@@ -555,9 +892,9 @@ Proof
  >> STRONG_CONJ_TAC
  >- rw [Abbr ‘pi’, Boehm_transform_def, EVERY_SNOC, EVERY_MAP]
  >> DISCH_TAC
- (* applying Boehm_apply_unsolvable *)
+ (* applying Boehm_transform_of_unsolvables *)
  >> reverse CONJ_TAC
- >- (MATCH_MP_TAC Boehm_apply_unsolvable >> art [])
+ >- (MATCH_MP_TAC Boehm_transform_of_unsolvables >> art [])
  (* stage work *)
  >> MATCH_MP_TAC lameq_TRANS
  >> Q.EXISTS_TAC ‘apply pi M0’

@@ -3,9 +3,6 @@ open set_sepTheory progTheory temporalTheory stateTheory
 
 val _ = new_theory "temporal_state"
 
-infix \\
-val op \\ = op THEN;
-
 (* ------------------------------------------------------------------------ *)
 
 val TEMPORAL_NEXT_def = Define`

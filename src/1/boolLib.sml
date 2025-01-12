@@ -117,17 +117,27 @@ fun prove_local loc privp (n,th) =
     else ();
     DB.store_local {private=privp,loc=loc,class=DB_dtype.Thm} n th;
     th)
+val _ = app ThmAttribute.reserve_word ["local", "unlisted", "allow_rebind"]
 fun extract_localpriv (loc,priv,rebindok,acc) attrs =
     case attrs of
         [] => (loc,priv,rebindok,List.rev acc)
-      | "unlisted" :: rest => extract_localpriv (loc,true,rebindok,acc) rest
-      | "local" :: rest => extract_localpriv (true,priv,rebindok,acc) rest
-      | "allow_rebind" :: rest => extract_localpriv (loc,priv,true,acc) rest
+      | ("unlisted",_) :: rest => extract_localpriv (loc,true,rebindok,acc) rest
+      | ("local",_) :: rest => extract_localpriv (true,priv,rebindok,acc) rest
+      | ("allow_rebind",_) :: rest => extract_localpriv (loc,priv,true,acc) rest
       | a :: rest => extract_localpriv (loc,priv,rebindok,a::acc) rest
 in
-fun save_thm_attrs loc (n, attrs, th) = let
-  val (localp,privp,rebindok,attrs) =
-      extract_localpriv (false,false,false,[]) attrs
+fun save_thm_attrs loc (attrblock, th) = let
+  val {thmname=n,attrs,unknown,reserved} = attrblock
+  val _ = null unknown orelse
+          raise mk_HOL_ERR "boolLib" "save_thm_attrs"
+                ("Unknown attributes: " ^
+                 String.concatWith ", " (map #1 unknown))
+  val (localp,privp,rebindok,reserved_leftover) =
+      extract_localpriv (false,false,false,[]) reserved
+  val _ = null reserved_leftover orelse
+          raise mk_HOL_ERR "boolLib" "save_thm_attrs"
+                ("Unhandled attributes: " ^
+                 String.concatWith ", " (map #1 reserved_leftover))
   val save =
       if localp then prove_local loc privp
       else
@@ -136,24 +146,21 @@ fun save_thm_attrs loc (n, attrs, th) = let
               else ThmAttribute.store_at_attribute
   val storemod = if rebindok then trace("Theory.allow_rebinds", 1)
                  else (fn f => f)
-  fun do_attr a = attrf {thm = th, name = n, attrname = a}
+  fun do_attr (k,vs) = attrf {thm = th, name = n, attrname = k, args = vs}
 in
   storemod save(n,th) before app do_attr attrs
 end
 fun store_thm_at loc (n0,t,tac) = let
-  val (n, attrs) = ThmAttribute.extract_attributes n0
+  val attrblock = ThmAttribute.extract_attributes n0
   val th = Tactical.prove(t,tac)
-              handle e => (print ("Failed to prove theorem " ^ n ^ ".\n");
+              handle e => (print ("Failed to prove theorem " ^ #thmname attrblock ^ ".\n");
                            Raise e)
 in
-  save_thm_attrs loc (n,attrs,th)
+  save_thm_attrs loc (attrblock,th)
 end
 val store_thm = store_thm_at DB.Unknown
-fun save_thm_at loc (n0,th) = let
-  val (n,attrs) = ThmAttribute.extract_attributes n0
-in
-  save_thm_attrs loc (n,attrs,th)
-end
+fun save_thm_at loc (n0,th) =
+  save_thm_attrs loc (ThmAttribute.extract_attributes n0,th)
 val save_thm = save_thm_at DB.Unknown
 
 fun new_recursive_definition rcd =

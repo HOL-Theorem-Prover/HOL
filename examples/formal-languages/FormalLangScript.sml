@@ -281,6 +281,12 @@ Proof
   RW_TAC basic_ss [IN_KSTAR] >> METIS_TAC [DOTn_def,IN_INSERT]
 QED
 
+Triviality KSTAR_NONEMPTY:
+  KSTAR A ≠ ∅
+Proof
+ rw[EXTENSION] >> metis_tac[EPSILON_IN_KSTAR]
+QED
+
 Theorem KSTAR_SING:
   x ∈ KSTAR {x}
 Proof
