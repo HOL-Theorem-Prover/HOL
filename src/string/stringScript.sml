@@ -167,6 +167,16 @@ REPEAT STRIP_TAC
 
 val char_size_def = Define `char_size (c:char) = 0`;
 
+val _ = TypeBase.export [
+    TypeBasePure.mk_nondatatype_info (
+      “:char”,
+      {nchotomy = SOME ranged_char_nchotomy,
+       induction = NONE,
+       size = SOME(“char_size”,char_size_def),
+       encode = NONE}
+    )
+  ]
+
 (*---------------------------------------------------------------------------
     Some facts about the set of all characters and relations between them.
  ---------------------------------------------------------------------------*)
@@ -634,6 +644,8 @@ QED
 val _ = computeLib.add_persistent_funs
           ["IMPLODE_EXPLODE_I", "ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
 
+
+
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
   struct_ps = SOME (fn _ =>
                        PP.block PP.CONSISTENT 0
@@ -646,12 +658,6 @@ val _ = adjoin_to_theory_struct [
   "    val char_size_tm = fst(strip_comb(lhs M))",
   "in",
   " TypeBase.write",
-  " [TypeBasePure.mk_nondatatype_info",
-  "  (type_of v, ",
-  "    {nchotomy = SOME ranged_char_nchotomy,",
-  "     induction = NONE,",
-  "     size = SOME(char_size_tm,char_size_def),",
-  "     encode = NONE})]",
   "end;"];
 
 val _ = export_theory();
