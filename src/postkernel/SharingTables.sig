@@ -5,16 +5,12 @@ sig
   exception SharingTables of string
 
   type id = {Thy : string, Other : string}
-  datatype shared_type = TYV of string
-                       | TYOP of int list
+  datatype shared_type = datatype TheoryReader_dtype.encoded_type
   type thminfo = DB_dtype.thminfo
   val shared_type_decode : shared_type HOLsexp.decoder
   val shared_type_encode : shared_type HOLsexp.encoder
 
-  datatype shared_term = TMV of string * int
-                       | TMC of int * int
-                       | TMAp of int * int
-                       | TMAbs of int * int
+  datatype shared_term = datatype TheoryReader_dtype.encoded_term
   val shared_term_decode : shared_term HOLsexp.decoder
   val shared_term_encode : shared_term HOLsexp.encoder
 
@@ -75,9 +71,8 @@ sig
   val enc_sdata : sharing_data_in HOLsexp.encoder
 
   val dec_sdata :
-      {with_strings: (int -> string) -> unit,
-       with_stridty:
-         (int -> string) * (int -> id) * Type.hol_type Vector.vector -> unit} ->
+      {before_types: unit -> unit,
+       before_terms: Type.hol_type Vector.vector -> unit} ->
       sharing_data_out HOLsexp.decoder
   val export_from_sharing_data : sharing_data_out -> extract_data
   val read_term : sharing_data_out -> string -> Term.term

@@ -133,17 +133,22 @@ sig
 
   val format_name_message : {pfx:string,name:string} -> string
 
-(* For internal use *)
+(* For internal use
 
-  val pp_thm                 : (thm -> HOLPP.pretty) ref
+    incorporate_types and incorporate_consts are versions of new_type and new_constant
+    used in loaded theory files from disk.
+
+    Similarly, link_parents is used when a theory is declared so that
+    its ancestors are identified.
+
+ *)
+
   val link_parents           : string*num*num -> (string*num*num) list -> unit
   val incorporate_types      : string -> (string*int) list -> unit
+  val incorporate_consts     : string -> (string*hol_type) list -> unit
+  val pp_thm                 : (thm -> HOLPP.pretty) ref
 
 
-  val store_definition       : string * thm -> thm
-  val gen_store_definition   : string * thm * thm_src_location -> thm
-  val incorporate_consts : string -> hol_type Vector.vector ->
-                           (string*int) list -> unit
   (* Theory files (which are just SML source code) call this function as
      the last thing done when they load.  This will in turn cause a
      TheoryDelta event to be sent to all registered listeners *)

@@ -13,7 +13,7 @@ type thm      = Thm.thm;
 type term     = Term.term
 type hol_type = Type.hol_type
 
-open HolKernel SharingTables
+open HolKernel SharingTables TheoryReader_dtype
 
 fun temp_encoded_update sdata thyname {data,ty} =
     Theory.LoadableThyData.temp_encoded_update {
@@ -146,11 +146,13 @@ fun load_thydata thyname path =
             )
           )
         ) incorporate_data
-    fun with_strings _ = Theory.incorporate_types thyname new_types
-    fun with_stridty (str,id,tyv) =
-        Theory.incorporate_consts thyname tyv new_consts
+    fun before_types () = Theory.incorporate_types thyname new_types
+    fun before_terms tyv =
+        Theory.incorporate_consts
+          thyname
+          (map (fn (n,i) => (n,Vector.sub(tyv,i))) new_consts)
     val share_data = force "decoding core-data" (
-          dec_sdata {with_strings = with_strings, with_stridty = with_stridty}
+          dec_sdata {before_types = before_types, before_terms = before_terms}
         ) core_data
     val {theorems = named_thms,...} = export_from_sharing_data share_data
 

@@ -662,10 +662,8 @@ fun incorporate_types thy tys =
   in List.app itype tys
   end;
 
-fun incorporate_consts thy tyvector consts =
-  let fun iconst(s,i) = (install_const(s,Vector.sub(tyvector,i),thy);())
-  in List.app iconst consts
-  end;
+fun incorporate_consts thy consts =
+    List.app (fn (s,ty) => ignore (install_const(s,ty,thy))) consts
 
 (* ----------------------------------------------------------------------
     Theory data functions

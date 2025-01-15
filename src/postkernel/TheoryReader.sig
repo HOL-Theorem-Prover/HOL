@@ -5,6 +5,8 @@ sig
   val load_thydata : string -> string ->
                      (Thm.thm * DB_dtype.thminfo) Symtab.table
 
+  type raw = TheoryReader_dtype.raw
+
 end
 
 (* [load_thydata thyname fname] loads the filename and makes the appropriate
