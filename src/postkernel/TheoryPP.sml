@@ -311,9 +311,18 @@ fun pp_struct (info_record : struct_info_record) = let
               add_string "structure TDB = struct" >> add_break(1,2) >>
               add_string "val thydata = " >> add_break(1,4) >>
               block INCONSISTENT 0 (
-                add_string "TheoryReader.load_thydata" >> add_break (1,2) >>
-                add_string (mlquote name) >> add_break (1,2) >>
-                add_string ("(holpathdb.subst_pathvars "^datfile^")")
+                add_string "TheoryReader.load_thydata {" >> add_break (1,2) >>
+                block CONSISTENT 0 (
+                  block INCONSISTENT 2 (
+                    add_string "thyname =" >> add_break(1,2) >>
+                    add_string (mlquote name ^ ",")
+                  ) >> add_break (1,0) >>
+                  block INCONSISTENT 2 (
+                    add_string "path =" >> add_break(1,2) >>
+                    add_string ("holpathdb.subst_pathvars "^datfile)
+                  ) >>
+                  add_break(1,~2) >> add_string "}"
+                )
               ) >> add_break(1,2) >>
               add_string ("fun find s = #1 (valOf (Symtab.lookup thydata s))") >>
               add_break(1,0) >> add_string "end"

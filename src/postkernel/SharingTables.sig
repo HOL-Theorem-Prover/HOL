@@ -72,8 +72,10 @@ sig
 
   val dec_sdata :
       {before_types: unit -> unit,
-       before_terms: Type.hol_type Vector.vector -> unit} ->
-      sharing_data_out HOLsexp.decoder
+       before_terms: Type.hol_type Vector.vector -> unit,
+       tables : TheoryReader_dtype.sharing_tables,
+       exports : TheoryReader_dtype.raw_exports} ->
+      sharing_data_out
   val export_from_sharing_data : sharing_data_out -> extract_data
   val read_term : sharing_data_out -> string -> Term.term
   val read_string : sharing_data_out -> int -> string
