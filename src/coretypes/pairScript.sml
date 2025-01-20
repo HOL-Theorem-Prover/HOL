@@ -20,6 +20,8 @@
 open HolKernel Parse boolLib relationTheory mesonLib metisLib
 open quotientLib simpLib boolSimps BasicProvers
 
+local open computeLib in end
+
 val _ = new_theory "pair";
 
 fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta-reduce *)
@@ -101,7 +103,7 @@ val PAIR_EQ = Q.store_thm
    THEN REWRITE_TAC[],
   STRIP_TAC THEN ASM_REWRITE_TAC[]]);
 
-Theorem CLOSED_PAIR_EQ[simp] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
+Theorem CLOSED_PAIR_EQ[simp,compute] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
 
 
 (*---------------------------------------------------------------------------
@@ -140,8 +142,8 @@ val PAIR =
 local val th1 = REWRITE_RULE [PAIR_EQ] (SPEC (Term`(x,y):'a#'b`) PAIR)
       val (th2,th3) = (CONJUNCT1 th1, CONJUNCT2 th1)
 in
-Theorem FST[simp] = itlist Q.GEN [`x`,`y`] th2;
-Theorem SND[simp] = itlist Q.GEN [`x`,`y`] th3;
+Theorem FST[simp,compute] = itlist Q.GEN [`x`,`y`] th2;
+Theorem SND[simp,compute] = itlist Q.GEN [`x`,`y`] th3;
 end;
 val _ = ot0 "FST" "fst"
 val _ = ot0 "SND" "snd"
@@ -186,7 +188,7 @@ val ELIM_UNCURRY = Q.store_thm(
   REWRITE_TAC [UNCURRY] THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
   REFL_TAC);
 
-Theorem UNCURRY_DEF[simp]:
+Theorem UNCURRY_DEF[simp,compute]:
     !f x y. UNCURRY f (x,y) :'c = f x y
 Proof
   REWRITE_TAC [UNCURRY,FST,SND]
@@ -359,12 +361,10 @@ val PROD_ALL_def = new_definition(
   "PROD_ALL_def",
   ``PROD_ALL (P:'a -> bool) (Q : 'b -> bool) p <=> P (FST p) /\ Q (SND p)``);
 
-val PROD_ALL_THM = store_thm(
-  "PROD_ALL_THM",
-  ``PROD_ALL P Q (x:'a,y:'b) <=> P x /\ Q y``,
-  REWRITE_TAC [PROD_ALL_def, FST, SND]);
-val _ = BasicProvers.export_rewrites ["PROD_ALL_THM"]
-val _ = computeLib.add_persistent_funs ["PROD_ALL_THM"]
+Theorem PROD_ALL_THM[simp,compute]:
+  PROD_ALL P Q (x:'a,y:'b) <=> P x /\ Q y
+Proof REWRITE_TAC [PROD_ALL_def, FST, SND]
+QED
 
 val PROD_ALL_MONO = store_thm(
   "PROD_ALL_MONO",
@@ -449,7 +449,7 @@ val PAIR_MAP = Q.new_infixr_definition
  ("PAIR_MAP",
   `$## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 490);
 
-Theorem PAIR_MAP_THM[simp]:
+Theorem PAIR_MAP_THM[simp,compute]:
   !f g x y. (f##g) (x,y) = (f x, g y)
 Proof REWRITE_TAC [PAIR_MAP,FST,SND]
 QED
@@ -564,13 +564,13 @@ val pair_CASE_def =
                  “pair_CASE (p:('a#'b)) f = f (FST p) (SND p)”)
 val _ = ot0 "pair_case" "case"
 
-val pair_case_thm = save_thm("pair_case_thm",
-  pair_CASE_def |> Q.SPEC `(x,y)` |> REWRITE_RULE [FST, SND] |> SPEC_ALL)
+Theorem pair_case_thm =
+  pair_CASE_def |> Q.SPEC ‘(x,y)’ |> REWRITE_RULE [FST, SND] |> SPEC_ALL
 
 (* and, to be consistent with what would be generated if we could use
    Hol_datatype to generate the pair type: *)
-val pair_case_def = save_thm("pair_case_def", pair_case_thm)
-val _ = overload_on("case", ``pair_CASE``)
+Theorem pair_case_def = pair_case_thm
+Overload case = “pair_CASE”
 
 
 Theorem pair_CASE_UNCURRY:
@@ -1058,14 +1058,20 @@ QED
     It adds relevant rewrites into the global compset.
  ---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn _ => B[
-      S "val _ = let open computeLib",                                   NL,
-      S "        in add_funs (map lazyfy_thm",                           NL,
-      S "              [CLOSED_PAIR_EQ,FST,SND,pair_case_thm,SWAP_def,", NL,
-      S "               CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM])",           NL,
-      S "        end;",                                                  NL])}
+fun stA s =
+  let
+    val nm = s ^ "_lazyfied"
+    val th = save_thm(nm, computeLib.lazyfy_thm $ DB.fetch "-" s)
+  in
+    ThmAttribute.store_at_attribute {
+      name = nm, attrname = "compute", args = [], thm = th
+    }
+  end
+
+(* not super apparent to me why these need to be lazyfied, with possible
+   exception of pair_case_thm, which gives us some evaluation order control
+*)
+val _ = app stA ["pair_case_thm", "SWAP_def", "CURRY_DEF"]
 
 (*---------------------------------------------------------------------------
     Some messiness in order to teach the definition principle about
