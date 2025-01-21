@@ -9,8 +9,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open boolSimps arithmeticTheory stringTheory pred_setTheory numLib hurdUtils
-     listTheory rich_listTheory pairTheory numpairTheory
-     string_numTheory listRangeTheory;
+     listTheory rich_listTheory pairTheory numpairTheory string_numTheory;
 
 val _ = new_theory "basic_swap";
 
@@ -164,28 +163,25 @@ QED
 
 (* The primitive ‘alloc’ allocates a ranged list of variables in the row *)
 Definition alloc_def :
-    alloc r m n = MAP (n2s o npair r) [m ..< n]
+    alloc r z n = GENLIST (\i. n2s (npair r (z + i))) n
 End
 
-Theorem alloc_NIL[simp] :
-    alloc r n n = []
+Theorem alloc_0[simp] :
+    alloc r z 0 = []
 Proof
     rw [alloc_def]
 QED
 
 Theorem alloc_thm :
-    !r m n. ALL_DISTINCT (alloc r m n) /\ LENGTH (alloc r m n) = n - m
+    !r z n. ALL_DISTINCT (alloc r z n) /\ LENGTH (alloc r z n) = n
 Proof
-    rw [alloc_def]
- >> MATCH_MP_TAC ALL_DISTINCT_MAP_INJ >> rw []
+    rw [alloc_def, ALL_DISTINCT_GENLIST]
 QED
 
 Theorem alloc_prefix :
     !r m n n'. n <= n' ==> alloc r m n <<= alloc r m n'
 Proof
-    rw [alloc_def]
- >> MATCH_MP_TAC isPREFIX_MAP
- >> MATCH_MP_TAC isPREFIX_listRangeLHI >> art []
+    rw [alloc_def, isPREFIX_GENLIST]
 QED
 
 (* ----------------------------------------------------------------------
@@ -193,7 +189,7 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition RNEWS :
-    RNEWS r n s = let d = SUC (string_width s) in alloc r d (d + n)
+    RNEWS r n s = let z = SUC (string_width s) in alloc r z n
 End
 
 Theorem RNEWS_0[simp] :
@@ -204,16 +200,15 @@ QED
 
 Theorem RNEWS_def :
     !r n s.
-        FINITE s ==>
-        ALL_DISTINCT (RNEWS r n s) /\ DISJOINT (set (RNEWS r n s)) s /\
-        LENGTH (RNEWS r n s) = n
+       FINITE s ==>
+       ALL_DISTINCT (RNEWS r n s) /\ DISJOINT (set (RNEWS r n s)) s /\
+       LENGTH (RNEWS r n s) = n
 Proof
     rw [RNEWS, alloc_thm]
- >> rw [DISJOINT_ALT', alloc_def, MEM_MAP]
- >> rw [Once DISJ_COMM]
- >> STRONG_DISJ_TAC
- >> MP_TAC (Q.SPECL [‘n2s (r *, y)’, ‘s’] string_width_thm)
- >> rw []
+ >> rw [DISJOINT_ALT', alloc_def, MEM_MAP, MEM_GENLIST]
+ >> qabbrev_tac ‘x = n2s (r *, (i + SUC (string_width s)))’
+ >> MP_TAC (Q.SPECL [‘x’, ‘s’] string_width_thm)
+ >> simp [Abbr ‘x’]
 QED
 
 Theorem RNEWS_prefix :
@@ -227,7 +222,7 @@ Theorem TAKE_RNEWS :
 Proof
     rw [RNEWS, alloc_def]
  >> qabbrev_tac ‘z = string_width s’
- >> simp [Once LIST_EQ_REWRITE, listRangeLHI_def]
+ >> simp [Once LIST_EQ_REWRITE]
  >> Q.X_GEN_TAC ‘i’ >> DISCH_TAC
  >> simp [EL_TAKE, EL_MAP]
 QED
@@ -238,9 +233,10 @@ Theorem RNEWS_set :
                      string_width s < j /\ j <= string_width s + n}
 Proof
     rw [RNEWS, alloc_def, Once EXTENSION, MEM_GENLIST, MEM_MAP]
+ >> qabbrev_tac ‘z = string_width s’
  >> EQ_TAC >> rw []
- >- (Q.EXISTS_TAC ‘y’ >> rw [])
- >> Q.EXISTS_TAC ‘j’ >> rw []
+ >- (Q.EXISTS_TAC ‘i + SUC z’ >> rw [])
+ >> Q.EXISTS_TAC ‘j - SUC z’ >> rw []
 QED
 
 Theorem RNEWS_11 :
@@ -298,8 +294,8 @@ QED
 Theorem alloc_SUBSET_ROW :
     !r m n. set (alloc r m n) SUBSET ROW r
 Proof
-    rw [alloc_def, ROW, SUBSET_DEF, MEM_MAP]
- >> Q.EXISTS_TAC ‘y’ >> rw []
+    rw [alloc_def, ROW, SUBSET_DEF, MEM_GENLIST]
+ >> Q.EXISTS_TAC ‘i + m’ >> art []
 QED
 
 Theorem ROW_DISJOINT :

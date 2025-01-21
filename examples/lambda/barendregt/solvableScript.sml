@@ -659,6 +659,20 @@ Proof
  >> MATCH_MP_TAC unsolvable_subst >> art []
 QED
 
+Theorem solvable_hnf[simp] :
+    solvable (LAMl vs (VAR y @* args))
+Proof
+    REWRITE_TAC [solvable_iff_has_hnf]
+ >> MATCH_MP_TAC hnf_has_hnf >> rw []
+QED
+
+Theorem solvable_absfree_hnf[simp] :
+    solvable (VAR y @* args)
+Proof
+    REWRITE_TAC [solvable_iff_has_hnf]
+ >> MATCH_MP_TAC hnf_has_hnf >> rw []
+QED
+
 (*---------------------------------------------------------------------------*
  *  Principle Head Normal Forms (principle_hnf)
  *---------------------------------------------------------------------------*)
@@ -1146,6 +1160,14 @@ Proof
  >> ‘solvable N <=> solvable N0’ by (rw [Abbr ‘N0’]) >> POP_ORW
  >> ‘M0 == N0’ by (rw [Abbr ‘M0’, Abbr ‘N0’, lameq_LAMl_cong])
  >> MATCH_MP_TAC lameq_solvable_cong_lemma >> art []
+QED
+
+Theorem hreduce_solvable_cong :
+    !M N. M -h->* N ==> (solvable M <=> solvable N)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC lameq_solvable_cong
+ >> MATCH_MP_TAC hreduces_lameq >> art []
 QED
 
 Theorem lameq_principle_hnf :

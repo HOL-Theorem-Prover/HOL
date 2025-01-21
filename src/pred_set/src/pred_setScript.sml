@@ -4669,6 +4669,16 @@ Proof
   PROVE_TAC []
 QED
 
+Theorem BIGUNION_IMAGE_SUBSET :
+    !f s t. BIGUNION (IMAGE f s) SUBSET t <=> !x. x IN s ==> f x SUBSET t
+Proof
+    RW_TAC std_ss [BIGUNION_SUBSET, IN_IMAGE]
+ >> reverse EQ_TAC >> rw []
+ >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘x’ >> art []
+QED
+
 val BIGUNION_IMAGE_UNIV = store_thm (* from util_prob *)
   ("BIGUNION_IMAGE_UNIV",
    ``!f N.

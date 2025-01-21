@@ -1454,6 +1454,48 @@ QED
 (* |- !i n. i < n ==> FV (selector i n) = {} *)
 Theorem FV_selector[simp] = REWRITE_RULE [closed_def] closed_selector
 
+Theorem selector_alt :
+    !X i n. FINITE X /\ i < n ==>
+            ?vs v. LENGTH vs = n /\ ALL_DISTINCT vs /\ DISJOINT X (set vs) /\
+                   v = EL i vs /\ selector i n = LAMl vs (VAR v)
+Proof
+    RW_TAC std_ss [selector_def]
+ >> qabbrev_tac ‘Z = GENLIST n2s n’
+ >> ‘ALL_DISTINCT Z /\ LENGTH Z = n’ by rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST]
+ >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> qabbrev_tac ‘z = EL i Z’
+ >> ‘MEM z Z’ by rw [Abbr ‘z’, EL_MEM]
+ >> ‘n2s i = z’ by rw [Abbr ‘z’, Abbr ‘Z’, EL_GENLIST]
+ >> POP_ORW
+ (* preparing for LAMl_ALPHA_ssub *)
+ >> qabbrev_tac ‘Y = NEWS n (set Z UNION X)’
+ >> ‘FINITE (set Z UNION X)’ by rw []
+ >> ‘ALL_DISTINCT Y /\ DISJOINT (set Y) (set Z UNION X) /\ LENGTH Y = n’
+       by rw [NEWS_def, Abbr ‘Y’]
+ >> fs []
+ >> qabbrev_tac ‘M = VAR z’
+ >> Know ‘LAMl Z M = LAMl Y ((FEMPTY |++ ZIP (Z,MAP VAR Y)) ' M)’
+ >- (MATCH_MP_TAC LAMl_ALPHA_ssub >> rw [Abbr ‘M’] \\
+     Q.PAT_X_ASSUM ‘DISJOINT (set Z) (set Y)’ MP_TAC \\
+     rw [DISJOINT_ALT])
+ >> Rewr'
+ >> ‘Y <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> REWRITE_TAC [GSYM fromPairs_def]
+ >> qabbrev_tac ‘fm = fromPairs Z (MAP VAR Y)’
+ >> ‘FDOM fm = set Z’ by rw [FDOM_fromPairs, Abbr ‘fm’]
+ >> qabbrev_tac ‘y = EL i Y’
+ >> Know ‘fm ' M = VAR y’
+ >- (simp [Abbr ‘M’, ssub_appstar] \\
+     rw [Abbr ‘fm’, Abbr ‘z’] \\
+     Know ‘fromPairs Z (MAP VAR Y) ' (EL i Z) = EL i (MAP VAR Y)’
+     >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
+     rw [EL_MAP, Abbr ‘y’])
+ >> Rewr'
+ >> Q.EXISTS_TAC ‘Y’
+ >> rw [Abbr ‘y’]
+QED
+
+(* TODO: rework this proof by (the new) selector_alt *)
 Theorem selector_thm :
     !i n Ns. i < n /\ LENGTH Ns = n ==> selector i n @* Ns == EL i Ns
 Proof
