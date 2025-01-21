@@ -639,6 +639,12 @@ Proof
   dsimp[SF CONJ_ss] >> metis_tac[]
 QED
 
+Theorem hnf_absfree_hnf[simp] :
+    hnf (VAR y @* args)
+Proof
+    rw [hnf_appstar]
+QED
+
 (* NOTE: ‘ALL_DISTINCT vs’ has been added to RHS. *)
 Theorem hnf_cases :
     !M : term. hnf M <=> ?vs args y. ALL_DISTINCT vs /\ (M = LAMl vs (VAR y @* args))
@@ -2544,6 +2550,33 @@ Proof
       (MP_TAC o AP_TERM “LAMl_size :term -> num”)
  >> REWRITE_TAC [GSYM LAMl_SNOC, LAMl_size_hnf]
  >> simp []
+QED
+
+(* This theorem is more general than selector_thm *)
+Theorem hreduce_selector :
+    !i n Ns. i < n /\ LENGTH Ns = n ==> selector i n @* Ns -h->* EL i Ns
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘X = BIGUNION (IMAGE FV (set Ns))’
+ >> ‘FINITE X’ by rw [Abbr ‘X’]
+ >> MP_TAC (Q.SPECL [‘X’, ‘i’, ‘n’] selector_alt) >> rw []
+ >> POP_ORW
+ >> qabbrev_tac ‘t :term = VAR (EL i vs)’
+ >> qabbrev_tac ‘fm = fromPairs vs Ns’
+ >> ‘FDOM fm = set vs’ by rw [Abbr ‘fm’, FDOM_fromPairs]
+ >> Know ‘EL i Ns = fm ' t’
+ >- (simp [ssub_thm, Abbr ‘t’, EL_MEM] \\
+     simp [Abbr ‘fm’, Once EQ_SYM_EQ] \\
+     MATCH_MP_TAC fromPairs_FAPPLY_EL >> art [])
+ >> Rewr'
+ >> qunabbrev_tac ‘fm’
+ >> MATCH_MP_TAC hreduce_LAMl_appstar
+ >> rw [EVERY_MEM]
+ >> Q.PAT_X_ASSUM ‘DISJIONT X (set vs)’ MP_TAC
+ >> rw [DISJOINT_ALT, Abbr ‘X’]
+ >> FIRST_X_ASSUM irule
+ >> Q.EXISTS_TAC ‘FV e’ >> art []
+ >> Q.EXISTS_TAC ‘e’ >> art []
 QED
 
 val _ = export_theory()

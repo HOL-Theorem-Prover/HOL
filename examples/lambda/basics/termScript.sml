@@ -494,6 +494,7 @@ Theorem tpm_subst_out:
 Proof SRW_TAC [][tpm_subst]
 QED
 
+(* Lemma 1.15 (a) [2, p.8] (NOTE: It was Lemma 1.14 (a) of 1st edition of [2]) *)
 Theorem lemma14a[simp]:
   !t. [VAR v/v] t = t
 Proof
@@ -501,6 +502,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* Lemma 1.15 (b) [2, p.8] *)
 Theorem lemma14b:
   !M. ~(v IN FV M) ==> ([N/v] M = M)
 Proof
@@ -605,6 +607,7 @@ Proof
  >> ASM_SET_TAC []
 QED
 
+(* Lemma 1.16 (a) [2, p.9] *)
 Theorem lemma15a:
   !M. v ∉ FV M ==> [N/v]([VAR v/x]M) = [N/x]M
 Proof
@@ -612,6 +615,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* Lemma 1.16 (b) [2, p.9] *)
 Theorem lemma15b:
   v ∉ FV M ==> [VAR u/v]([VAR v/u] M) = M
 Proof SRW_TAC [][lemma15a]
@@ -1928,3 +1932,11 @@ val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
 
 val _ = export_theory()
 val _ = html_theory "term";
+
+(* References:
+
+ [1] Barendregt, H.P.: The lambda calculus, its syntax and semantics.
+     College Publications, London (1984).
+ [2] Hindley, J.R., Seldin, J.P.: Lambda-calculus and combinators, an introduction.
+     Second Edition. Cambridge University Press, Cambridge (2008).
+ *)

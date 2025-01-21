@@ -308,10 +308,18 @@ Proof
 QED
 
 Theorem tpm_LAMl:
-  tpm π (LAMl vs M) = LAMl (listpm string_pmact π vs) (tpm π M)
+    !vs pi M. tpm pi (LAMl vs M) = LAMl (listpm string_pmact pi vs) (tpm pi M)
 Proof
-  Induct_on ‘vs’ >> simp[]
+    Induct_on ‘vs’ >> simp[]
 QED
+
+(* |- !vs pi M.
+        LAMl vs (tpm pi M) =
+        tpm pi (LAMl (listpm string_pmact (REVERSE pi) vs) M)
+ *)
+Theorem LAMl_tpm = tpm_LAMl |> Q.SPECL [‘vs’, ‘REVERSE pi’, ‘tpm pi M’]
+                            |> SRULE [tpm_eql]
+                            |> Q.GENL [‘vs’, ‘pi’, ‘M’]
 
 Theorem tpm_appstar:
   tpm π (M ·· Ms) = tpm π M ·· listpm term_pmact π Ms
@@ -375,10 +383,23 @@ Proof
   ]
 QED
 
+Theorem LAMl_ALPHA_tpm :
+    !xs ys M. LENGTH xs = LENGTH ys /\ ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+              DISJOINT (set ys) (set xs UNION FV M) ==>
+              LAMl xs M = LAMl ys (tpm (ZIP (xs,ys)) M)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘LAMl xs M = LAMl ys (M ISUB REVERSE (ZIP (MAP VAR ys, xs)))’
+ >- (MATCH_MP_TAC LAMl_ALPHA >> art [])
+ >> Rewr'
+ >> fs [DISJOINT_UNION']
+ >> simp [fresh_tpm_isub, REVERSE_ZIP, MAP_REVERSE]
+QED
+
 Theorem LAMl_ALPHA_ssub :
     !vs vs' M.
        LENGTH vs = LENGTH vs' /\ ALL_DISTINCT vs /\ ALL_DISTINCT vs' /\
-       DISJOINT (LIST_TO_SET vs') (LIST_TO_SET vs UNION FV M) ==>
+       DISJOINT (set vs') (set vs UNION FV M) ==>
        LAMl vs M = LAMl vs' ((FEMPTY |++ ZIP (vs, MAP VAR vs')) ' M)
 Proof
     rpt STRIP_TAC
