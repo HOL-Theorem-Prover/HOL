@@ -56,10 +56,11 @@ val ORD_CHR_RWT = Q.store_thm
  PROVE_TAC [ORD_CHR]);
 val _ = export_rewrites ["ORD_CHR_RWT"]
 
-val ORD_CHR_COMPUTE = Q.store_thm("ORD_CHR_COMPUTE",
-  `!n. ORD (CHR n) =
-         if n < 256 then n else FAIL ORD ^(mk_var("> 255", bool)) (CHR n)`,
-  SRW_TAC [] [combinTheory.FAIL_THM]);
+Theorem ORD_CHR_COMPUTE[compute]:
+  !n. ORD (CHR n) =
+      if n < 256 then n else FAIL ORD ^(mk_var("> 255", bool)) (CHR n)
+Proof SRW_TAC [] [combinTheory.FAIL_THM]
+QED
 
 val ORD_BOUND = Q.store_thm
 ("ORD_BOUND",
@@ -150,13 +151,10 @@ Overload ">="[inferior] = “char_ge”
     equality of chars.
  ---------------------------------------------------------------------------*)
 
-val CHAR_EQ_THM = Q.store_thm
-("CHAR_EQ_THM",
- `!c1 c2. (c1 = c2) = (ORD c1 = ORD c2)`,
- REPEAT GEN_TAC
-   THEN EQ_TAC
-   THEN RW_TAC bool_ss [ORD_11]);
-
+Theorem CHAR_EQ_THM[compute]:
+  !c1 c2. (c1 = c2) = (ORD c1 = ORD c2)
+Proof REPEAT GEN_TAC THEN EQ_TAC THEN RW_TAC bool_ss [ORD_11]
+QED
 
 val CHAR_INDUCT_THM = Q.store_thm
 ("CHAR_INDUCT_THM",
@@ -293,10 +291,11 @@ val EXPLODE_def = Define`
 `;
 val _ = export_rewrites ["EXPLODE_def"]
 
-val IMPLODE_EXPLODE_I = store_thm(
-  "IMPLODE_EXPLODE_I",
-  ``(EXPLODE s = s) /\ (IMPLODE s = s)``,
-  Induct_on `s` THEN SRW_TAC [][]);
+Theorem IMPLODE_EXPLODE_I[compute]:
+  (EXPLODE s = s) /\ (IMPLODE s = s)
+Proof
+  Induct_on `s` THEN SRW_TAC [][]
+QED
 
 val IMPLODE_EXPLODE = store_thm(
   "IMPLODE_EXPLODE",
@@ -640,25 +639,6 @@ QED
 (*---------------------------------------------------------------------------
     Exportation
  ---------------------------------------------------------------------------*)
-
-val _ = computeLib.add_persistent_funs
-          ["IMPLODE_EXPLODE_I", "ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
-
-
-
-fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn _ =>
-                       PP.block PP.CONSISTENT 0
-                                (PP.pr_list PP.add_string [PP.NL] l))};
-
-val _ = adjoin_to_theory_struct [
-  "val _ =",
-  "let open Lib boolSyntax",
-  "    val (v,M) = dest_forall(concl char_size_def)",
-  "    val char_size_tm = fst(strip_comb(lhs M))",
-  "in",
-  " TypeBase.write",
-  "end;"];
 
 val _ = export_theory();
 
