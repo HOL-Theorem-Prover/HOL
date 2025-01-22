@@ -2,9 +2,9 @@ signature TheoryReader =
 sig
 
   exception TheoryReader of string
-  type raw_theory = TheoryReader_dtype.raw_theory
-  type sharing_tables = TheoryReader_dtype.sharing_tables
-  type raw_exports = TheoryReader_dtype.raw_exports
+  type raw_theory = RawTheory_dtype.raw_theory
+  type sharing_tables = RawTheory_dtype.sharing_tables
+  type raw_exports = RawTheory_dtype.raw_exports
   type raw_core = {tables : sharing_tables, exports : raw_exports}
   val load_thydata : {thyname:string,path:string} ->
                      (Thm.thm * DB_dtype.thminfo) Symtab.table
