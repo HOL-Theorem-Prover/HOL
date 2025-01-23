@@ -417,33 +417,31 @@ val ISFINITE = Q.store_thm ("ISFINITE",
 
 (*--------------------------------------*)
 
-val REAL_ABS_INV = Q.prove (
-  `!x. abs (inv x) = inv (abs x)`,
+Theorem REAL_ABS_INV[local]:
+  !x. abs (inv x) = inv (abs x)
+Proof
   gen_tac
   \\ Cases_on `x = 0r`
   \\ simp [REAL_INV_0, REAL_ABS_0, ABS_INV]
-  )
+QED
 
-val REAL_ABS_DIV = Q.prove (
-  `!x y. abs (x / y) = abs x / abs y`,
-  rewrite_tac [real_div, REAL_ABS_INV, REAL_ABS_MUL])
+Theorem REAL_ABS_DIV[local]:
+  !x y. abs (x / y) = abs x / abs y
+Proof
+  rewrite_tac [real_div, REAL_ABS_INV, REAL_ABS_MUL]
+QED
 
-val REAL_POW_LE_1 = Q.prove (
-  `!n x. 1r <= x ==> 1 <= x pow n`,
+Theorem REAL_POW_LE_1[local]:
+  !n x. 1r <= x ==> 1 <= x pow n
+Proof
   Induct
   \\ rw [pow]
   \\ GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_LID]
   \\ match_mp_tac REAL_LE_MUL2
   \\ simp []
-  )
+QED
 
-val REAL_POW_MONO = Q.prove (
-  `!m n x. 1r <= x /\ m <= n ==> x pow m <= x pow n`,
-  rw [LESS_EQ_EXISTS]
-  \\ simp [REAL_POW_ADD]
-  \\ GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID]
-  \\ metis_tac [REAL_LE_LMUL_IMP, REAL_POW_LE_1, POW_POS, REAL_LE_TRANS,
-                REAL_LE_01])
+Theorem REAL_POW_MONO[local] = realTheory.REAL_POW_MONO
 
 Theorem VAL_FINITE:
   !a. Finite a ==> abs (Val a) <= largest float_format

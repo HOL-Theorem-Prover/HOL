@@ -490,11 +490,13 @@ val SLICE_ZERO_THM = save_thm("SLICE_ZERO_THM",
    (GEN_ALL o REWRITE_RULE [MULT_RIGHT_1, EXP] o Q.SPECL [`n`, `h`, `0`])
       SLICE_THM)
 
-val MOD_2EXP_MONO = Q.store_thm("MOD_2EXP_MONO",
-   `!n h l. l <= h ==> n MOD 2 ** l <= n MOD 2 ** SUC h`,
+Theorem MOD_2EXP_MONO:
+  !n h l. l <= h ==> n MOD 2 ** l <= n MOD 2 ** SUC h
+Proof
    REPEAT STRIP_TAC
-   \\ IMP_RES_TAC LESS_EQ_EXISTS
-   \\ ASM_SIMP_TAC arith_ss [SUC_ADD_SYM, SLICE_LEM2])
+   \\ drule_then (Q.X_CHOOSE_THEN ‘p’ assume_tac) (iffLR LESS_EQ_EXISTS)
+   \\ ASM_SIMP_TAC arith_ss [SLICE_LEM2, SUC_ADD_SYM]
+QED
 
 val SLICE_COMP_THM = Q.store_thm("SLICE_COMP_THM",
   `!h m l n.
@@ -1400,14 +1402,15 @@ val SUB1_EXP_MOD2 = Q.prove(
    \\ ASM_SIMP_TAC std_ss [MOD_TIMES]
    \\ FULL_SIMP_TAC arith_ss [])
 
-val BIT_SIGN_EXTEND = Q.store_thm("BIT_SIGN_EXTEND",
-  `!l h n i.
+Theorem BIT_SIGN_EXTEND:
+  !l h n i.
      ~(l = 0) ==>
      (BIT i (SIGN_EXTEND l h n) =
         if (l <= h) ==> i < l then
           BIT i (n MOD 2 ** l)
         else
-          i < h /\ BIT (l - 1) n)`,
+          i < h /\ BIT (l - 1) n)
+Proof
    REPEAT STRIP_TAC
    \\ SRW_TAC [boolSimps.LET_ss] [IMP_DISJ_THM, SIGN_EXTEND_def]
    \\ FULL_SIMP_TAC std_ss [NOT_LESS, NOT_LESS_EQUAL, TWOEXP_MONO,
@@ -1416,12 +1419,12 @@ val BIT_SIGN_EXTEND = Q.store_thm("BIT_SIGN_EXTEND",
       Cases_on `h < l`
       \\ FULL_SIMP_TAC std_ss [NOT_LESS, TWOEXP_MONO, BIT_def,
                                DECIDE ``a < b ==> (a - b + c = c:num)``]
-      \\ IMP_RES_TAC LESS_EQ_EXISTS
+      \\ drule_then (Q.X_CHOOSE_THEN ‘p’ ASSUME_TAC) (iffLR LESS_EQ_EXISTS)
       \\ ASM_SIMP_TAC arith_ss [EXP_ADD, ZERO_LT_TWOEXP,
                                 DECIDE ``0 < b ==> (a * b - a = (b - 1) * a)``]
       \\ `?q. l = q + SUC i` by (IMP_RES_TAC LESS_ADD_1
-      \\ Q.EXISTS_TAC `p'`
-      \\ DECIDE_TAC)
+                                 \\ Q.EXISTS_TAC `p'`
+                                 \\ DECIDE_TAC)
       \\ ASM_SIMP_TAC arith_ss [EXP_ADD, BITS_SUM2],
       Cases_on `l`
       \\ FULL_SIMP_TAC arith_ss [GSYM BITS_ZERO3, BIT_def, BITS_COMP_THM2]
@@ -1456,7 +1459,8 @@ val BIT_SIGN_EXTEND = Q.store_thm("BIT_SIGN_EXTEND",
       Cases_on `l`
       \\ FULL_SIMP_TAC arith_ss
             [MIN_DEF, GSYM BITS_ZERO3, BITS_ZERO, BIT_def, BITS_COMP_THM2]
-   ])
+   ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

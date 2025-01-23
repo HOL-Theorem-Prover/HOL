@@ -1891,12 +1891,16 @@ val expbound_add = store_thm(
   `y < omega ** b` by metis_tac [ordlte_TRANS] >>
   metis_tac[])
 
-val downduct = prove(
-  ``(!n. n <= m /\ P (SUC n) ==> P n) /\ P m ==>
-    (!n. n <= m ==> P n)``,
-  strip_tac >> fs[arithmeticTheory.LESS_EQ_EXISTS] >>
-  full_simp_tac (srw_ss() ++ DNF_ss) [] >> CONV_TAC SWAP_FORALL_CONV >>
-  Induct >> rw[] >> simp[]);
+Theorem downduct[local]:
+  (!n. n <= m /\ P (SUC n) ==> P n) /\ P m ==>
+  (!n. n <= m ==> P n)
+Proof
+  strip_tac >> fs[arithmeticTheory.LESS_EQ_EXISTS, PULL_EXISTS] >>
+  CONV_TAC SWAP_FORALL_CONV >>
+  Induct >> rw[] >> simp[] >>
+  gvs[DECIDE “n + SUC d = d + m <=> m = SUC n”] >>
+  metis_tac[arithmeticTheory.ADD_COMM]
+QED
 
 val addL_fixpoint_iff = store_thm(
   "addL_fixpoint_iff",

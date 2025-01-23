@@ -1763,13 +1763,6 @@ val REAL_POW_LT2 = store_thm("REAL_POW_LT2",
    [MATCH_MP_TAC POW_POS THEN ASM_REWRITE_TAC[],
     FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);;
 
-val LT_EXISTS = prove
- (Term`!m n. m < n <=> ?d. n = m + SUC d`,
-  REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
-  [IMP_RES_TAC LESS_ADD_1 THEN ASM_REWRITE_TAC[]
-     THEN EXISTS_TAC (Term`p:num`) THEN REWRITE_TAC [ADD1],
-   ASM_REWRITE_TAC[LESS_ADD_SUC]]);
-
 Theorem REAL_POW_INV :
     !x n. (inv x) pow n = inv(x pow n)
 Proof

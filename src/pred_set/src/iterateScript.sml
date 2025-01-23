@@ -137,19 +137,6 @@ Proof
   rpt strip_tac >> irule X_LE_MAX_SET >> simp[]
 QED
 
-Theorem LE_EXISTS :
-  !m n:num. (m <= n) <=> (?d. n = m + d)
-Proof
-    simp[EQ_IMP_THM, PULL_EXISTS] >> rw[]
- >> qexists_tac ‘n - m’ >> simp[]
-QED
-
-Theorem LT_EXISTS :
-  !m n. (m < n) <=> (?d. n = m + SUC d)
-Proof
-  simp[EQ_IMP_THM] >> rw[] >> qexists_tac ‘n - (m + 1)’ >> simp[]
-QED
-
 val BOUNDS_LINEAR = store_thm ("BOUNDS_LINEAR",
  ``!A B C. (!n:num. A * n <= B * n + C) <=> A <= B``,
   REPEAT GEN_TAC THEN EQ_TAC THENL
@@ -633,11 +620,11 @@ QED
 Theorem CARD_NUMSEG:
   !m n. CARD {m..n} = n + 1 - m
 Proof
-    REPEAT GEN_TAC >> Cases_on ‘m <= n’
- >- fs[LESS_EQ_EXISTS, CARD_NUMSEG_LEMMA]
- >> fs[NOT_LESS_EQUAL]
- >> drule_then assume_tac (iffRL NUMSEG_EMPTY)
- >> simp[]
+  REPEAT GEN_TAC >> Cases_on ‘m <= n’
+  >- (full_simp_tac bool_ss [LE_EXISTS, CARD_NUMSEG_LEMMA] >> simp[])
+  >> fs[NOT_LESS_EQUAL]
+  >> drule_then assume_tac (iffRL NUMSEG_EMPTY)
+  >> simp[]
 QED
 
 val HAS_SIZE_NUMSEG = store_thm ("HAS_SIZE_NUMSEG",

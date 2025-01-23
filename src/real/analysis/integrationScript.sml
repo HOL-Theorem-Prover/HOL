@@ -1979,18 +1979,19 @@ val lemma1 = Q.prove (`!n. 2 pow n <> 0:real`,
   MATCH_MP_TAC REAL_LT_IMP_NE THEN MATCH_MP_TAC REAL_LET_TRANS THEN
   EXISTS_TAC ``&n:real`` THEN SIMP_TAC std_ss [REAL_POS, POW_2_LT]);
 
-val INTERVAL_BISECTION = store_thm ("INTERVAL_BISECTION",
- ``!P. P {} /\
-       (!s t. P s /\ P t /\ (interior(s) INTER interior(t) = {})
-              ==> P(s UNION t))
-       ==> !a b:real.
-                ~(P(interval[a,b]))
-                ==> ?x. x IN interval[a,b] /\
-                        !e. &0 < e
-                            ==> ?c d. x IN interval[c,d] /\
-                                      interval[c,d] SUBSET ball(x,e) /\
-                                      interval[c,d] SUBSET interval[a,b] /\
-                                      ~P(interval[c,d])``,
+Theorem INTERVAL_BISECTION:
+ !P. P {} /\
+     (!s t. P s /\ P t /\ (interior(s) INTER interior(t) = {})
+            ==> P(s UNION t))
+     ==> !a b:real.
+           ~(P(interval[a,b]))
+           ==> ?x. x IN interval[a,b] /\
+                   !e. &0 < e
+                       ==> ?c d. x IN interval[c,d] /\
+                                 interval[c,d] SUBSET ball(x,e) /\
+                                 interval[c,d] SUBSET interval[a,b] /\
+                                 ~P(interval[c,d])
+Proof
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
    ``?A B. (A(0) = a:real) /\ (B(0) = b) /\
@@ -2073,7 +2074,7 @@ val INTERVAL_BISECTION = store_thm ("INTERVAL_BISECTION",
     SIMP_TAC std_ss [GSYM LEFT_IMP_EXISTS_THM, EXISTS_REFL] THEN
     INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES, SUBSET_REFL] THEN
     MATCH_MP_TAC SUBSET_TRANS THEN
-    EXISTS_TAC ``interval[A(m + d:num):real,B(m + d)]`` THEN
+    first_assum $ irule_at Any THEN
     ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[SUBSET_DEF, IN_INTERVAL] THEN ASM_MESON_TAC[REAL_LE_TRANS],
     ALL_TAC] THEN
@@ -2096,7 +2097,8 @@ val INTERVAL_BISECTION = store_thm ("INTERVAL_BISECTION",
                                       interval [(A m,B m)]) m n``] THEN
   MATCH_MP_TAC TRANSITIVE_STEPWISE_LE THEN
   REPEAT(CONJ_TAC THENL [SET_TAC[], ALL_TAC]) THEN
-  REWRITE_TAC[SUBSET_INTERVAL] THEN ASM_MESON_TAC[]);
+  REWRITE_TAC[SUBSET_INTERVAL] THEN ASM_MESON_TAC[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cousin's lemma.                                                           *)

@@ -705,13 +705,13 @@ val SEL_REC0 = store_thm
    ``!n p. SEL_REC (n + 1) 0 p = SEL p (0,n)``,
    RW_TAC arith_ss [SEL_def]);
 
-val S_FLEX_AND_SEL_REC = store_thm
-  ("S_FLEX_AND_SEL_REC",
-   ``!p f g.
-       (?n. US_SEM (SEL_REC n 0 p) (S_FLEX_AND (f,g))) =
-       ?n.
-         US_SEM (SEL_REC n 0 p)
-         (S_AND (S_CAT (f, S_REPEAT S_TRUE), S_CAT (g, S_REPEAT S_TRUE)))``,
+Theorem S_FLEX_AND_SEL_REC:
+  !p f g.
+    (?n. US_SEM (SEL_REC n 0 p) (S_FLEX_AND (f,g))) =
+    ?n.
+      US_SEM (SEL_REC n 0 p)
+             (S_AND (S_CAT (f, S_REPEAT S_TRUE), S_CAT (g, S_REPEAT S_TRUE)))
+Proof
    RW_TAC std_ss [S_FLEX_AND_def, GSYM S_TRUE_def]
    >> EQ_TAC
    >- (CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [US_SEM_def]))
@@ -752,6 +752,7 @@ val S_FLEX_AND_SEL_REC = store_thm
         >> Know `LENGTH w1' + LENGTH w2' = LENGTH w1 + LENGTH w2`
         >- METIS_TAC [listTheory.LENGTH_APPEND, LENGTH_SEL_REC]
         >> STRIP_TAC
+        >> rename [‘LENGTH w1 + p' = LENGTH w1'’]
         >> Know `p' + LENGTH w2' = LENGTH w2`
         >- DECIDE_TAC
         >> POP_ASSUM (K ALL_TAC)
@@ -781,6 +782,7 @@ val S_FLEX_AND_SEL_REC = store_thm
         >> Know `LENGTH w1' + LENGTH w2' = LENGTH w1 + LENGTH w2`
         >- METIS_TAC [listTheory.LENGTH_APPEND, LENGTH_SEL_REC]
         >> STRIP_TAC
+        >> rename [‘LENGTH w1' + p' = LENGTH w1’]
         >> Know `p' + LENGTH w2 = LENGTH w2'`
         >- DECIDE_TAC
         >> POP_ASSUM (K ALL_TAC)
@@ -794,7 +796,8 @@ val S_FLEX_AND_SEL_REC = store_thm
         >> ONCE_REWRITE_TAC [US_SEM_def]
         >> RW_TAC arith_ss
            [US_SEM_REPEAT_TRUE, APPEND_LENGTH_EQ, LENGTH_SEL_REC]
-        >> PROVE_TAC []]);
+        >> PROVE_TAC []]
+QED
 
 val S_FLEX_AND_SEL = store_thm
   ("S_FLEX_AND_SEL",
@@ -1202,9 +1205,9 @@ val boolean_safety_violation = store_thm
 
 (* The basic constraint on simple formulas *)
 
-val simple_safety = store_thm
-  ("simple_safety",
-   ``!f p. simple f /\ IS_INFINITE p ==> (safety_violation p f = ~UF_SEM p f)``,
+Theorem simple_safety:
+   !f p. simple f /\ IS_INFINITE p ==> (safety_violation p f = ~UF_SEM p f)
+Proof
    RW_TAC std_ss []
    >> EQ_TAC >- METIS_TAC [safety_violation_refl]
    >> REPEAT (POP_ASSUM MP_TAC)
@@ -1284,6 +1287,7 @@ val simple_safety = store_thm
        >> RW_TAC std_ss
             [SEL_REC_SPLIT, GSYM CAT_APPEND, RESTN_CAT, LENGTH_SEL_REC]
        >> RW_TAC arith_ss []
+       >> rename [‘j + SUC n = k + p'’]
        >> Cases_on `p'` >- FULL_SIMP_TAC arith_ss []
        >> RW_TAC std_ss [SEL_REC_SUC, CAT_def, HEAD_CONS, ELEM_def],
 
@@ -1305,6 +1309,7 @@ val simple_safety = store_thm
        >> RW_TAC std_ss [safety_violation_def]
        >> Know `n <= n' \/ n' <= n` >- DECIDE_TAC
        >> RW_TAC std_ss [LESS_EQ_EXISTS]
+       >> rename [‘SEL_REC (_ + p')’]
        >| [Q.EXISTS_TAC `n + p'`
            >> RW_TAC std_ss []
            >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -1315,6 +1320,7 @@ val simple_safety = store_thm
            >> ONCE_REWRITE_TAC [ADD_COMM]
            >> RW_TAC std_ss [SEL_REC_SPLIT, GSYM CAT_APPEND]
            >> METIS_TAC [IS_INFINITE_CAT]],
+
        RW_TAC std_ss [safety_violation_def]
        >> Q.PAT_X_ASSUM `~UF_SEM X Y` MP_TAC
        >> ONCE_REWRITE_TAC [UF_SEM_def]
@@ -1332,6 +1338,7 @@ val simple_safety = store_thm
        >> RW_TAC std_ss [safety_violation_def]
        >> Know `n <= n' \/ n' <= n` >- DECIDE_TAC
        >> RW_TAC std_ss [LESS_EQ_EXISTS]
+       >> rename [‘SEL_REC (_ + p')’]
        >| [Q.EXISTS_TAC `n + p'`
            >> RW_TAC std_ss []
            >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -1342,6 +1349,7 @@ val simple_safety = store_thm
            >> ONCE_REWRITE_TAC [ADD_COMM]
            >> RW_TAC std_ss [SEL_REC_SPLIT, GSYM CAT_APPEND]
            >> METIS_TAC [IS_INFINITE_CAT]],
+
        RW_TAC std_ss [safety_violation_def]
        >> Q.PAT_X_ASSUM `~UF_SEM X Y` MP_TAC
        >> ONCE_REWRITE_TAC [UF_SEM_def]
@@ -1359,6 +1367,7 @@ val simple_safety = store_thm
        >> RW_TAC std_ss [safety_violation_def]
        >> Know `n <= n' \/ n' <= n` >- DECIDE_TAC
        >> RW_TAC std_ss [LESS_EQ_EXISTS]
+       >> rename [‘SEL_REC (_ + p')’]
        >| [Q.EXISTS_TAC `n + p'`
            >> RW_TAC std_ss []
            >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -1369,6 +1378,7 @@ val simple_safety = store_thm
            >> ONCE_REWRITE_TAC [ADD_COMM]
            >> RW_TAC std_ss [SEL_REC_SPLIT, GSYM CAT_APPEND]
            >> METIS_TAC [IS_INFINITE_CAT]],
+
        RW_TAC std_ss [safety_violation_def]
        >> Q.PAT_X_ASSUM `~UF_SEM X Y` MP_TAC
        >> ONCE_REWRITE_TAC [UF_SEM_def]
@@ -1386,6 +1396,7 @@ val simple_safety = store_thm
        >> RW_TAC std_ss [safety_violation_def]
        >> Know `n <= n' \/ n' <= n` >- DECIDE_TAC
        >> RW_TAC std_ss [LESS_EQ_EXISTS]
+       >> rename [‘SEL_REC (_ + p')’]
        >| [Q.EXISTS_TAC `n + p'`
            >> RW_TAC std_ss []
            >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -1396,6 +1407,7 @@ val simple_safety = store_thm
            >> ONCE_REWRITE_TAC [ADD_COMM]
            >> RW_TAC std_ss [SEL_REC_SPLIT, GSYM CAT_APPEND]
            >> METIS_TAC [IS_INFINITE_CAT]],
+
        RW_TAC std_ss [safety_violation_def]
        >> Q.PAT_X_ASSUM `~UF_SEM X Y` MP_TAC
        >> ONCE_REWRITE_TAC [UF_SEM_def]
@@ -1413,6 +1425,7 @@ val simple_safety = store_thm
        >> RW_TAC std_ss [safety_violation_def]
        >> Know `n <= n' \/ n' <= n` >- DECIDE_TAC
        >> RW_TAC std_ss [LESS_EQ_EXISTS]
+       >> rename [‘SEL_REC (_ + p')’]
        >| [Q.EXISTS_TAC `n + p'`
            >> RW_TAC std_ss []
            >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -1423,6 +1436,7 @@ val simple_safety = store_thm
            >> ONCE_REWRITE_TAC [ADD_COMM]
            >> RW_TAC std_ss [SEL_REC_SPLIT, GSYM CAT_APPEND]
            >> METIS_TAC [IS_INFINITE_CAT]],
+
        RW_TAC std_ss [safety_violation_def]
        >> Q.PAT_X_ASSUM `~UF_SEM X Y` MP_TAC
        >> ONCE_REWRITE_TAC [UF_SEM_def]
@@ -1440,6 +1454,7 @@ val simple_safety = store_thm
        >> RW_TAC std_ss [safety_violation_def]
        >> Know `n <= n' \/ n' <= n` >- DECIDE_TAC
        >> RW_TAC std_ss [LESS_EQ_EXISTS]
+       >> rename [‘SEL_REC (_ + p')’]
        >| [Q.EXISTS_TAC `n + p'`
            >> RW_TAC std_ss []
            >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -1450,6 +1465,7 @@ val simple_safety = store_thm
            >> ONCE_REWRITE_TAC [ADD_COMM]
            >> RW_TAC std_ss [SEL_REC_SPLIT, GSYM CAT_APPEND]
            >> METIS_TAC [IS_INFINITE_CAT]],
+
        RW_TAC std_ss [safety_violation_def]
        >> Q.PAT_X_ASSUM `~UF_SEM X Y` MP_TAC
        >> ONCE_REWRITE_TAC [UF_SEM_def]
@@ -1467,6 +1483,7 @@ val simple_safety = store_thm
        >> RW_TAC std_ss [safety_violation_def]
        >> Know `n <= n' \/ n' <= n` >- DECIDE_TAC
        >> RW_TAC std_ss [LESS_EQ_EXISTS]
+       >> rename [‘SEL_REC (_ + p')’]
        >| [Q.EXISTS_TAC `n + p'`
            >> RW_TAC std_ss []
            >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -1544,7 +1561,8 @@ val simple_safety = store_thm
        >> Q.SPEC_TAC (`j + 1`,`j`)
        >> Induct
        >> RW_TAC std_ss [SEL_REC_def, CAT_def, HEAD_CONS, REST_CONS]
-       >> PROVE_TAC []]);
+       >> PROVE_TAC []]
+QED
 
 (* The regexp checker *)
 
@@ -1705,9 +1723,8 @@ val checker_CLOCK_FREE = store_thm
                      boolean_checker_CLOCK_FREE, S_FLEX_AND_def, S_FALSE_def]
    >> PROVE_TAC [boolean_def, boolean_checker_CLOCK_FREE]);
 
-val checker_NOT_AND = store_thm
-  ("checker_NOT_AND",
-   ``!f g.
+Theorem checker_NOT_AND:
+   !f g.
        (!p.
           simple (F_NOT f) /\ IS_INFINITE p ==>
           (safety_violation p (F_NOT f) =
@@ -1721,13 +1738,15 @@ val checker_NOT_AND = store_thm
          (safety_violation p (F_NOT (F_AND (f,g))) =
           ?n.
             US_SEM (SEL_REC n 0 p)
-              (S_FLEX_AND (checker (F_NOT f),checker (F_NOT g))))``,
+              (S_FLEX_AND (checker (F_NOT f),checker (F_NOT g))))
+Proof
    RW_TAC std_ss [safety_violation_alt, UF_SEM_def, S_FLEX_AND]
    >> REPEAT (Q.PAT_X_ASSUM `!x. P x` (fn th => RW_TAC std_ss [GSYM th]))
    >> EQ_TAC >- PROVE_TAC []
    >> RW_TAC std_ss []
    >> Know `n <= n' \/ n' <= n` >- DECIDE_TAC
    >> RW_TAC std_ss [LESS_EQ_EXISTS]
+   >> rename [‘SEL_REC (_ + p')’]
    >| [Q.EXISTS_TAC `n + p'`
        >> RW_TAC std_ss []
        >> ONCE_REWRITE_TAC [ADD_COMM]
@@ -1737,7 +1756,8 @@ val checker_NOT_AND = store_thm
        >> RW_TAC std_ss []
        >> ONCE_REWRITE_TAC [ADD_COMM]
        >> RW_TAC arith_ss [SEL_REC_SPLIT, GSYM CAT_APPEND]
-       >> PROVE_TAC [IS_INFINITE_CAT, IS_INFINITE_EXISTS]]);
+       >> PROVE_TAC [IS_INFINITE_CAT, IS_INFINITE_EXISTS]]
+QED
 
 val checker_AND = store_thm
   ("checker_AND",

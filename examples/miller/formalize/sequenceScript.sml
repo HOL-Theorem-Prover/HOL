@@ -127,12 +127,14 @@ val SDROP_ADD = store_thm
    Induct_on `y` >- RW_TAC list_ss [sdrop_def, I_THM]
    >> RW_TAC std_ss [ADD_CLAUSES, sdrop_def, o_THM]);
 
-val SDROP_EQ_MONO = store_thm
-  ("SDROP_EQ_MONO",
-   ``!m n x y. (sdrop m x = sdrop m y) /\ m <= n ==> (sdrop n x = sdrop n y)``,
+Theorem SDROP_EQ_MONO:
+   !m n x y. (sdrop m x = sdrop m y) /\ m <= n ==> (sdrop n x = sdrop n y)
+Proof
    RW_TAC std_ss [LESS_EQ_EXISTS]
+   >> rename [‘sdrop (m + p) x = sdrop (m + p) y’]
    >> Induct_on `p` >- RW_TAC arith_ss []
-   >> RW_TAC std_ss [ADD_CLAUSES, GSYM STL_o_SDROP, o_THM]);
+   >> RW_TAC std_ss [ADD_CLAUSES, GSYM STL_o_SDROP, o_THM]
+QED
 
 val EVENTUALLY_REFL = store_thm
   ("EVENTUALLY_REFL",

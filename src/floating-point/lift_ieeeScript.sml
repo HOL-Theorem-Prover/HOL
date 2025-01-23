@@ -164,14 +164,7 @@ val REAL_POW_LE_1 = Q.prove(
   \\ simp []
   );
 
-val REAL_POW_MONO = Q.prove(
-  `!m n x. 1r <= x /\ m <= n ==> x pow m <= x pow n`,
-  rw [arithmeticTheory.LESS_EQ_EXISTS]
-  \\ simp [REAL_POW_ADD]
-  \\ Ho_Rewrite.GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID]
-  \\ metis_tac [REAL_LE_LMUL_IMP, REAL_POW_LE_1, POW_POS, REAL_LE_TRANS,
-                REAL_LE_01]
-  );
+val REAL_POW_MONO = realTheory.REAL_POW_MONO
 
 val exponent_le = Q.prove(
   `!e : 'a word. e <> -1w ==> (w2n e <= UINT_MAX (:'a) - 1)`,

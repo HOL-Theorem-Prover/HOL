@@ -357,6 +357,15 @@ val LESS_ADD = store_thm ("LESS_ADD",
     RES_THEN (STRIP_THM_THEN (SUBST1_TAC o SYM)) THEN
     EXISTS_TAC (“SUC p”) THEN REWRITE_TAC [ADD]]);
 
+Theorem LT_EXISTS:
+  !m n. m < n <=> ?d. n = m + SUC d
+Proof
+  CONV_TAC (SWAP_FORALL_CONV) >>
+  INDUCT_TAC >> simp [LT_SUC, NOT_LESS_0, ADD_CLAUSES, NOT_SUC] >>
+  GEN_TAC >> Q.SPEC_THEN ‘m’ strip_assume_tac num_CASES >>
+  simp[ADD_CLAUSES, LESS_0]
+QED
+
 val transitive_LESS = store_thm(
   "transitive_LESS[simp]",
   “transitive $<”,
