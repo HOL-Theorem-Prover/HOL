@@ -1,7 +1,11 @@
+(* ===================================================================== *)
+(* FILE          : llistScript.sml                                       *)
+(* DESCRIPTION   : Possibly infinite sequences (llist)                   *)
+(* ===================================================================== *)
 
 open HolKernel boolLib Parse bossLib
 
-open BasicProvers boolSimps markerLib optionTheory ;
+open BasicProvers boolSimps markerLib optionTheory hurdUtils;
 
 val _ = new_theory "llist";
 
@@ -3220,6 +3224,15 @@ Theorem LMAP_fromList:
   LMAP f (fromList l) = fromList(MAP f l)
 Proof
   Induct_on `l` >> fs[]
+QED
+
+Theorem MAP_toList :
+    !ll f. LFINITE ll ==> MAP f (THE (toList ll)) = THE (toList (LMAP f ll))
+Proof
+    rpt STRIP_TAC
+ >> ‘ll = fromList (THE (toList ll))’ by METIS_TAC [to_fromList]
+ >> POP_ORW
+ >> simp [LMAP_fromList, to_fromList, from_toList]
 QED
 
 Theorem exists_fromSeq[simp]:
