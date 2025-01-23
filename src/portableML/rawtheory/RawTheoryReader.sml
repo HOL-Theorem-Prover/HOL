@@ -94,9 +94,9 @@ fun raw_term_decode s =
     decoding raw theorems
    ---------------------------------------------------------------------- *)
 
-fun decclass 0 = DB_dtype.Axm
-  | decclass 1 = DB_dtype.Def
-  | decclass 2 = DB_dtype.Thm
+fun decclass 0 = Axm
+  | decclass 1 = Def
+  | decclass 2 = Thm
   | decclass i = raise TheoryReader ("Bad theorem class: "^Int.toString i)
 
 val dep_decode : int raw_dep decoder = let
