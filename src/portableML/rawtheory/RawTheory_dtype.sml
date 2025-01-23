@@ -28,9 +28,9 @@ type 'thy raw_dep = {
 datatype raw_loc =
          rlUnknown | rlLocated of {path:int list, linenum : int, exact:bool}
 
-type raw_thm = {
-  name : string, (* reference to string table *)
-  deps : string raw_dep,
+type 'a raw_thm = {
+  name : 'a , (* reference to string table *)
+  deps : 'a raw_dep,
   tags : string list,
   class : class (* Thm | Axm | Def *),
   private : bool,
@@ -39,17 +39,17 @@ type raw_thm = {
   hyps : string list (* encoded terms, as above *)
 }
 
-type raw_exports = {
+type 'a raw_exports = {
   (* for types, ints are references into accompanying type-vector *)
   unnamed_types : int list,
   named_types : (string * int) list,
   (* for terms, strings are encoded with write_raw *)
   unnamed_terms : string list,
   named_terms : {name:string, encoded_term: string} list,
-  thms : raw_thm list
+  thms : 'a raw_thm list
 }
 
-type raw_core = {tables : sharing_tables, exports : raw_exports}
+type 'a raw_core = {tables : sharing_tables, exports : 'a raw_exports}
 
 type raw_theory = {
   name : raw_name,
@@ -59,7 +59,7 @@ type raw_theory = {
     types : (string * int) list, (* names and arities *)
     consts : (string * int) list (* names and (encoded) types *)
   },
-  exports : raw_exports,
+  exports : string raw_exports,
   thydata : HOLsexp.t
 }
 

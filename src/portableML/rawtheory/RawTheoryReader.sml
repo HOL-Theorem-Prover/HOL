@@ -106,10 +106,17 @@ val dep_decode : int raw_dep decoder = let
         | (n,[i]) :: rest => SOME{me = (n,i), deps = rest}
         | _ => NONE
 in
-  Option.mapPartial depmunge o
-  list_decode (pair_decode(int_decode, list_decode int_decode))
+  bind_decode
+    (list_decode (pair_decode(int_decode, list_decode int_decode)))
+    depmunge
 end
 val deptag_decode = pair_decode(dep_decode, list_decode string_decode)
+
+fun munge_dep_strings lookup {me,deps} =
+    let fun mfst (x,y) = (lookup x, y)
+    in
+      {me = mfst me, deps = map mfst deps}
+    end
 
 fun loc_decode ilist =
     case ilist of
@@ -132,7 +139,7 @@ in
   bind_decode (list_decode int_decode) bind
 end
 
-val thm_decode : raw_thm decoder =
+val thm_decode : int raw_thm decoder =
     let
       fun thmmunge(i,(di,tags),{class,private,loc},tms) =
           case tms of
@@ -146,6 +153,19 @@ val thm_decode : raw_thm decoder =
       Option.mapPartial thmmunge o
       pair4_decode (int_decode, deptag_decode, info_decode,
                     list_decode string_decode)
+    end
+
+fun munge_thm_strings lookup (rthm : int raw_thm) =
+    let val {name,deps,tags,class,private,loc,concl,hyps} = rthm
+    in
+      {name = lookup name,
+       deps = munge_dep_strings lookup deps,
+       tags = tags,
+       class = class,
+       private = private,
+       loc = loc,
+       concl = concl,
+       hyps = hyps}
     end
 
 val dec_strings =
@@ -162,7 +182,7 @@ val core_decode =
                unnamed_terms = utms,
                named_terms =
                  map (fn (n,t) => {name = n, encoded_term = t}) ntms,
-               thms = map (munge_thm_strings strt) thms
+               thms = map (munge_thm_strings (fn i => Vector.sub(strt,i))) thms
              }
         })
         (tagged_decode "core-data" (

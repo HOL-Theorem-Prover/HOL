@@ -487,17 +487,16 @@ fun translate_loc f rloc =
           exact = exact
         }
 
-fun read_thm strv tmvector (thmrec:raw_thm) =
+fun read_thm strv tmvector (thmrec:string raw_thm) =
     let
       val {name,deps,tags,class,private,loc,concl,hyps} = thmrec
       val getstr = (fn i => Vector.sub(strv,i))
-      val depinfo = mapdepinfo getstr deps
       val loc' = translate_loc getstr loc
-      val dd = (#me depinfo, #deps depinfo)
+      val dd = (#me deps, #deps deps)
       val terms = map (Term.read_raw tmvector) (concl::hyps)
       val thminfo = {private=private,loc=loc',class=class}
     in
-      (Vector.sub(strv, name), Thm.disk_thm((dd,tags), terms), thminfo)
+      (name, Thm.disk_thm((dd,tags), terms), thminfo)
     end
 
 

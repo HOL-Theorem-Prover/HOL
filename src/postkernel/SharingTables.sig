@@ -68,7 +68,7 @@ sig
       {before_types: unit -> unit,
        before_terms: Type.hol_type Vector.vector -> unit,
        tables : RawTheory_dtype.sharing_tables,
-       exports : RawTheory_dtype.raw_exports} ->
+       exports : string RawTheory_dtype.raw_exports} ->
       sharing_data_out
   val export_from_sharing_data : sharing_data_out -> extract_data
   val read_term : sharing_data_out -> string -> Term.term
