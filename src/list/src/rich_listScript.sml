@@ -2302,14 +2302,7 @@ val TAKE_SEG_DROP = Q.store_thm("TAKE_SEG_DROP",
   first_x_assum (Q.SPECL_THEN [‘SUC n’, ‘m’] mp_tac) >>
   SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [ADD1]);
 
-val EL_MEM = Q.store_thm ("EL_MEM",
-   `!n l. n < LENGTH l ==> (MEM (EL n l) l)`,
-   INDUCT_TAC
-   THEN LIST_INDUCT_TAC
-   THEN ASM_REWRITE_TAC [LENGTH, EL, HD, TL, NOT_LESS_0, LESS_MONO_EQ, MEM]
-   THEN REPEAT STRIP_TAC
-   THEN DISJ2_TAC
-   THEN RES_TAC);
+Theorem EL_MEM = listTheory.EL_MEM
 
 val TL_SNOC = Q.store_thm ("TL_SNOC",
    `!x l. TL (SNOC x l) = if NULL l then [] else SNOC x (TL l)`,
@@ -4423,6 +4416,13 @@ Theorem HD_APPEND:
   !h t ls. HD (h::t ++ ls) = h
 Proof
   simp[]
+QED
+
+Theorem HD_APPEND_NOT_NIL :
+  !l1 l2. l1 <> [] ==> HD (l1 ++ l2) = HD l1
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘l1’ >> rw [HD_APPEND]
 QED
 
 (* Theorem: 0 <> n ==> (EL (n-1) t = EL n (h::t)) *)
