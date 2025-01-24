@@ -960,6 +960,14 @@ Datatype:
   rose_tree = Rose 'a (rose_tree list)
 End
 
+Definition rose_node_def[simp] :
+    rose_node (Rose a ts) = a
+End
+
+Definition rose_children_def[simp] :
+    rose_children (Rose a ts) = ts
+End
+
 Definition from_rose_def:
   from_rose (Rose a ts) = Branch a (fromList (MAP from_rose ts))
 Termination
@@ -967,6 +975,24 @@ Termination
 End
 
 Theorem rose_tree_induction[allow_rebind] = from_rose_ind;
+
+Theorem from_rose_11 :
+    !r1 r2. from_rose r1 = from_rose r2 <=> r1 = r2
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC >- simp []
+ >> qid_spec_tac ‘r2’
+ >> qid_spec_tac ‘r1’
+ >> HO_MATCH_MP_TAC rose_tree_induction
+ >> rpt STRIP_TAC
+ >> Cases_on ‘r2’
+ >> fs [from_rose_def]
+ >> POP_ASSUM MP_TAC
+ >> rw [LIST_EQ_REWRITE, EL_MAP]
+ >> rename1 ‘n < LENGTH l’
+ >> Q.PAT_X_ASSUM ‘!r1. MEM r1 ts ==> P’ (MP_TAC o Q.SPEC ‘EL n ts’)
+ >> rw [EL_MEM, EL_MAP]
+QED
 
 Theorem ltree_finite_from_rose:
   ltree_finite t <=> ?r. from_rose r = t
@@ -987,6 +1013,71 @@ Proof
   \\ fs [EVERY_MEM,MEM_MAP,PULL_EXISTS]
 QED
 
+(* The previous theorem induces a new constant “to_rose” for finite ltrees *)
+local
+  val thm = Q.prove (‘!t. ltree_finite t ==> ?r. from_rose r = t’,
+                     METIS_TAC [ltree_finite_from_rose]);
+in
+  (* |- !t. ltree_finite t ==> from_rose (to_rose t) = t *)
+  val to_rose_def = new_specification
+    ("to_rose_def", ["to_rose"],
+      SIMP_RULE bool_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] thm);
+end;
+
+Theorem to_rose_thm :
+    !r. to_rose (from_rose r) = r
+Proof
+    Q.X_GEN_TAC ‘r’
+ >> qabbrev_tac ‘t = from_rose r’
+ >> ‘ltree_finite t’ by METIS_TAC [ltree_finite_from_rose]
+ >> rw [GSYM from_rose_11, to_rose_def]
+QED
+
+Theorem rose_node_to_rose :
+    !t. ltree_finite t ==> rose_node (to_rose t) = ltree_node t
+Proof
+    rw [ltree_finite_from_rose]
+ >> rw [to_rose_thm]
+ >> Cases_on ‘r’
+ >> rw [rose_node_def, from_rose_def, ltree_node_def]
+QED
+
+Theorem rose_children_to_rose :
+    !t. ltree_finite t ==>
+        rose_children (to_rose t) = MAP to_rose (THE (toList (ltree_children t)))
+Proof
+    rw [ltree_finite_from_rose]
+ >> rw [to_rose_thm]
+ >> Cases_on ‘r’
+ >> rw [rose_node_def, from_rose_def, ltree_node_def]
+ >> simp [from_toList, MAP_MAP_o]
+ >> simp [o_DEF, to_rose_thm]
+QED
+
+Theorem rose_children_to_rose' :
+    !t. ltree_finite t ==>
+        rose_children (to_rose t) = THE (toList (LMAP to_rose (ltree_children t)))
+Proof
+    rpt STRIP_TAC
+ >> ‘finite_branching t’ by PROVE_TAC [ltree_finite_imp_finite_branching]
+ >> Suff ‘LFINITE (ltree_children t)’
+ >- (DISCH_TAC >> simp [GSYM MAP_toList] \\
+     MATCH_MP_TAC rose_children_to_rose >> art [])
+ >> Suff ‘finite_branching (Branch (ltree_node t) (ltree_children t))’ >- rw []
+ >> ASM_REWRITE_TAC [ltree_node_children_reduce]
+QED
+
+(* This is a general recursive reduction function for rose trees. The type of
+   f is “:'a -> 'b list -> 'b”, where 'b is the type of reductions of trees.
+
+   See examples/lambda/barendregt/lameta_complateTheory.rose_to_term_def for
+   an application.
+ *)
+Definition rose_reduce_def :
+    rose_reduce f ((Rose a ts) :'a rose_tree) = f a (MAP (rose_reduce f) ts)
+Termination
+    WF_REL_TAC ‘measure (rose_tree_size (K 0) o SND)’
+End
 
 (* tidy up theory exports *)
 

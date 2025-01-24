@@ -1767,6 +1767,13 @@ val MEM_EL = store_thm(
     ASM_MESON_TAC []
   ]);
 
+Theorem EL_MEM :
+    !n l. n < LENGTH l ==> MEM (EL n l) l
+Proof
+    RW_TAC std_ss [MEM_EL]
+ >> Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC []
+QED
+
 val SUM_MAP_PLUS_ZIP = store_thm(
   "SUM_MAP_PLUS_ZIP",
   “!ls1 ls2.
