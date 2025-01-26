@@ -255,6 +255,9 @@ Many proofs rely on induction, and there are several ways to induct in HOL4.
 <code>recInduct <i>theorem</i></code><br><code>ho_match_mp_tac <i>theorem</i></code>
 : Induction using the supplied theorem, which usually arises from definition of a recursive function or an inductive relation.
 
+<code>name_ind_cases <i>theorem</i></code>
+: Attempts to name each case of an induction theorem, simplifying [goal selection](#subgoal-management) (e.g. using `>~`).
+
 
 ## Case splits
 It is often useful to perform case splits over the course of a proof.
@@ -342,8 +345,8 @@ Maintainable and readable files require organised proofs - in particular, carefu
 In many cases, we may want to state exactly how the goal should be taken apart (rather than simply applying `rw[]` or similar).
 
 `strip_tac`
-: Splits a top-level conjunct into two subgoals, *or* move a top-level implication antecedent into the assumptions, *or* remove a top-level `∀`-quantified variable.
-  Often `rpt strip_tac` (which repeats `strip_tac` as many times as possible) is used.
+: Moves a top-level implication antecedent into the assumptions, *or* removes a top-level `∀`-quantified variable, *or* splits a top-level conjunct into two subgoals.
+  When stripping an implication, `strip_tac` breaks apart conjunctions, disjunctions, and existentials (e.g. stripping `P /\ Q` introduces two assumptions, `P` and `Q`).
 
 `conj_tac`
 : Splits a top-level conjunct into two subgoals.
@@ -411,6 +414,9 @@ The latter usually have a `"_x_"` in their names.
 <code>assume_tac <i>theorem</i></code>
 : Introduces the supplied theorem into the assumptions.
 
+<code>strip_assume_tac <i>theorem</i></code>
+: A combination of `assume_tac` and [`strip_tac`](#goal-deconstruction): introduces the supplied theorem into the assumptions after deconstructing its conjunctions, disjunctions, and existentials.
+
 <code>mp_tac <i>theorem</i></code>
 : Introduces the supplied theorem into the goal as an implication (i.e. transforms the `goal` into <code><i>theorem</i> ==> goal</code>).
 
@@ -469,9 +475,15 @@ In some cases, it is useful to generalise a goal in order to use a suitable indu
 
 <code>drule_all <i>theorem</i></code>
 : A variant of `drule` which attempts to match all the conjuncts `P1, ..., Pn`.
+  This has a `rev_drule_all` variant.
 
 <code>drule_then <i>theorem thm_tactic</i></code>
 : A variant of `drule` which processes the resulting instantiated theorem using a theorem-tactic, rather than adding it as an implication to the goal.
+  This has a `rev_drule_then` variant.
+
+<code>dxrule <i>theorem</i></code> <br> <code>dxrule_all <i>theorem</i></code> <br> <code>dxrule_then <i>theorem thm_tactic</i></code>
+: Variants of the above which remove the matching assumption(s).
+  They also have `rev_*` variants.
 
 <code>irule <i>theorem</i></code>
 : Attempts to convert the supplied theorem into the form `∀vars. P1 /\ ... /\ Pn ==> Q`, matches `Q` against the goal, and if successful instantiates the necessary variables to turn the goal into `∃vars'. P1 /\ ... /\ Pn`.
