@@ -26,8 +26,6 @@
 (* Import External Theories *)
 open HolKernel boolLib bossLib Parse;
 open jcLib;
-open vbgsetTheory;
-open rmToPairTheory;
 open ringTheory;
 open groupTheory;
 open arithmeticTheory;
