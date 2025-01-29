@@ -1243,7 +1243,7 @@ fun dxrule_at_then p k     = dGEN first_x_assum     p       k
 fun rev_drule_at_then p k  = dGEN last_assum        p       k
 fun rev_dxrule_at_then p k = dGEN last_x_assum      p       k
 
-fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp
+fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp_only
 fun dall_prim k fa ith0 g =
   REPEAT_GTCL (fn ttcl => fn th => fa (mp_then (Pos hd) ttcl th))
               (k o assert (not o isfa_imp))

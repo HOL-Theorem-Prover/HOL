@@ -1147,21 +1147,30 @@ val _ = let
   val asl = [“Q (a:ind) (b:'b):bool”,  “P (a:ind):bool”, “R T : bool”,
              “!x:ind. P x ==> !c:'b. Q x c ==> F”]
   val g = (asl, “p /\ q”)
-  val eres = Exn.capture (#1 o VALID (first_x_assum drule_all)) g
   val (asl', _) = front_last asl
   val expected = (asl', “F ==> p /\ q”)
 in
-  case eres of
-      Exn.Res res =>
-      if ListPair.allEq goal_equal ([expected], res) then OK()
-      else die ("Unexpected result:\n  " ^
-                PP.pp_to_string 70
-                                (fn r => PP.block PP.CONSISTENT 2 [pp_goals r])
-                                res
-               )
-    | Exn.Exn e => die ("Unexpected exception: " ^ General.exnMessage e)
+  require_pretty_msg
+    (check_result (fn r => ListPair.allEq goal_equal ([expected], r)))
+    pp_goals
+    (#1 o VALID (first_x_assum drule_all))
+    g
 end
 
+val _ = let
+  val _ = tprint "drule_all 3 (ith with negated concl.)"
+  val asl = [“Q(a:ind) (b:'b):bool”, “P (a:ind):bool”,
+             “!x:ind. P x ==> !c:'b. Q x c ==> !z:'b. ~R c z”]
+  val g = (asl, “p /\ q”)
+  val (asl', _) = front_last asl
+  val expected = (asl', “(!z:'b. ~R (b:'b) z) ==> p /\ q”)
+in
+  require_pretty_msg
+    (check_result (fn r => ListPair.allEq goal_equal ([expected], r)))
+    pp_goals
+    (#1 o VALID (first_x_assum drule_all))
+    g
+end
 
 val _ = let
   val _ = tprint "dxrule_all 1"
