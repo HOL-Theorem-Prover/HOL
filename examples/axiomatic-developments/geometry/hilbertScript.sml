@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib;
 open pred_setTheory;
 open listTheory;
 
-val _ = new_theory "Hilbert";
+val _ = new_theory "hilbert";
 
 (* Useful definition/s *)
 Definition only_one_def:
