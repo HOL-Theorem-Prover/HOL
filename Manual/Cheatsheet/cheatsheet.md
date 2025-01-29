@@ -496,7 +496,7 @@ In some cases, it is useful to generalise a goal in order to use a suitable indu
 <code>qspec_then &grave;<i>tm&grave; thm_tactic thm</i></code>
 : Instantiates the supplied (`∀`-quantified) theorem with the given term, and applies the theorem-tactic to the result.
 
-<code>qspecl_then [&grave;<i>tm&grave;s] thm_tactic thm</i></code>
+<code>qspecl_then [&grave;<i>tm</i>&grave;s] <i>thm_tactic thm</i></code>
 : Like `qspec_then`, but instantiates multiple `∀`-quantified variables.
 
 <code>imp_res_tac <i>theorem</i></code>
