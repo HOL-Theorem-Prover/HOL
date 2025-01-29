@@ -29,10 +29,15 @@ endif
 
 ifdef HOLSELFTESTLEVEL
 
+AXIOMATIC_THYDIRS = set-theory/vbg set-theory/zfset geometry
+AXIOMATIC_EXAMPLES = $(patsubst %,axiomatic-developments/%,$(AXIOMATIC_THYDIRS))
+
 # example directories to build at selftest level 1
 EXDIRS = algebra/aat \
          arm/arm6-verification arm/armv8-memory-model arm/experimental \
-         CCS Crypto/RSA Crypto/SHA-2 Crypto/pedersenCommitment Crypto/sigmaProtocol \
+         $(AXIOMATIC_EXAMPLES) \
+         CCS Crypto/RSA Crypto/SHA-2 \
+         Crypto/pedersenCommitment Crypto/sigmaProtocol \
          Crypto/Keccak Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
 	 STE algorithms computability countchars dependability dev \
@@ -51,7 +56,7 @@ EXDIRS = algebra/aat \
          logic/temporal/src \
          misc \
          padics parity \
-         rings set-theory/zfset set-theory/vbg \
+         rings \
          zipper
 
 # selftest directories under src/quotient

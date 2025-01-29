@@ -1,2 +1,2 @@
-OPTIONS = QUIT_ON_FAILURE
-INCLUDES = $(protect $(HOLDIR)/examples/set-theory/zfset)
+CLINE_OPTIONS = --qof
+INCLUDES = $(protect $(HOLDIR)/examples/axiomatic-developments/set-theory/zfset)
