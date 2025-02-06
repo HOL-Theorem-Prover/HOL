@@ -21,7 +21,8 @@ val ERR = mk_HOL_ERR "tautLib"
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+  val bool_grammars = Option.valOf $ grammarDB {thyname="bool"}
+  val (Type,Term) = parse_from_grammars bool_grammars
 end
 open Parse
 
