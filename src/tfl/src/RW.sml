@@ -33,7 +33,8 @@ fun lztrace(i,fname,msgf) = if i <= !monitoring then
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+val SOME bool_grammars = Parse.grammarDB {thyname="bool"}
+val _ = Parse.temp_set_grammars bool_grammars
 
 
 (*----------------------------------------------------------------------------
