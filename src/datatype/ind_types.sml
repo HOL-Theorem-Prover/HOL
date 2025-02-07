@@ -27,7 +27,8 @@ val ERR = mk_HOL_ERR "ind_types";
 (* Fix the grammar used by this file *)
 structure Parse = struct
 open Parse
-val (Type,Term) = parse_from_grammars ind_typeTheory.ind_type_grammars
+val SOME ind_type_grammars = grammarDB {thyname="ind_type"}
+val (Type,Term) = parse_from_grammars ind_type_grammars
 end
 open Parse;
 

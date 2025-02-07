@@ -67,7 +67,8 @@ type tyspec = hol_type * constructor list
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars;
+val SOME arithmetic_grammars = Parse.grammarDB {thyname="arithmetic"};
+val _ = Parse.temp_set_grammars arithmetic_grammars;
 
 val ERR = mk_HOL_ERR "Datatype";
 
