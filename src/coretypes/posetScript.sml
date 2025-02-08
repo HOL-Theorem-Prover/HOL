@@ -39,6 +39,11 @@ val function_def = new_definition
   ("function_def",
    ``function a b (f : 'a -> 'b) = !x. a x ==> b (f x)``);
 
+val function_in = store_thm
+  ("function_in",
+   “function s s t /\ s x ==> s (t x)”,
+   RW_TAC (srw_ss()) [function_def]);
+
 (* ------------------------------------------------------------------------- *)
 (* A HOL type of partial orders                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -266,6 +271,13 @@ val continuous_def = new_definition
   ("continuous_def",
    “continuous (p : 'a poset) f <=> up_continuous p f /\ down_continuous p f”);
 
+
+val monotonic_comp = store_thm
+  ("monotonic_comp",
+   ``monotonic (s,r) f /\ monotonic (s,r) g /\ function s s g
+     ==> monotonic (s,r) (f o g)``,
+   RW_TAC (srw_ss()) [monotonic_def, function_def]);
+
 (* ------------------------------------------------------------------------- *)
 (* Least and greatest fixed points.                                          *)
 (* ------------------------------------------------------------------------- *)
@@ -299,6 +311,18 @@ val gfp_unique = store_thm
    >> Know `?s r. p = (s,r)` >- pair_cases_tac
    >> STRIP_TAC
    >> RW_TAC bool_ss [poset_def, gfp_def]);
+
+val lfp_induct = store_thm
+  ("lfp_induct",
+   “lfp (s,r) b lfix /\ s x /\ r (b x) x
+    ==> r lfix x”,
+   RW_TAC bool_ss [lfp_def]);
+
+val gfp_coinduct = store_thm
+  ("gfp_coinduct",
+   “gfp (s,r) b gfix /\ s x /\ r x (b x)
+   ==> r x gfix”,
+   RW_TAC bool_ss [gfp_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* The Knaster-Tarski theorem                                                *)
