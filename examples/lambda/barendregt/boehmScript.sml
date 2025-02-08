@@ -85,6 +85,31 @@ Definition BT_generator_def :
             (NONE, LNIL)
 End
 
+(* M0 is not needed if M is already an hnf *)
+Theorem BT_generator_of_hnf :
+    !X M r. FINITE X /\ hnf M ==>
+            BT_generator X (M,r) =
+           (let
+             n = LAMl_size M;
+             vs = RNEWS r n X;
+             M1 = principle_hnf (M @* MAP VAR vs);
+             Ms = hnf_children M1;
+             y = hnf_headvar M1;
+             l = MAP (\e. (e,SUC r)) Ms
+           in
+             (SOME (vs,y),fromList l))
+Proof
+    rpt STRIP_TAC
+ >> ‘solvable M’ by PROVE_TAC [hnf_solvable]
+ >> RW_TAC std_ss [BT_generator_def]
+ >> ‘M0 = M’ by rw [Abbr ‘M0’, principle_hnf_reduce]
+ >> POP_ASSUM (fs o wrap)
+ >> Q.PAT_X_ASSUM ‘n' = n’   (fs o wrap o SYM)
+ >> Q.PAT_X_ASSUM ‘vs' = vs’ (fs o wrap o SYM)
+ >> Q.PAT_X_ASSUM ‘M1' = M1’ (fs o wrap o SYM)
+ >> Q.PAT_X_ASSUM ‘Ms' = Ms’ (fs o wrap o SYM)
+QED
+
 Definition BT_def[nocompute] :
     BT X = ltree_unfold (BT_generator X)
 End
@@ -211,8 +236,7 @@ Proof
  >> DISCH_TAC
  >> ‘M0 @* MAP VAR vs == t @* l’ by PROVE_TAC [lameq_TRANS]
  >> Suff ‘solvable (t @* l)’ >- PROVE_TAC [lameq_solvable_cong]
- >> REWRITE_TAC [solvable_iff_has_hnf]
- >> MATCH_MP_TAC hnf_has_hnf
+ >> MATCH_MP_TAC hnf_solvable
  >> simp [Abbr ‘t’, GSYM appstar_APPEND, hnf_appstar]
 QED
 
@@ -309,13 +333,6 @@ Proof
  >> qexistsl_tac [‘X’, ‘M’, ‘r’, ‘n’, ‘vs’, ‘M1’] >> simp []
 QED
 
-(* This is the meaning of Boehm tree nodes, ‘fromNote’ translated from BT nodes
-   to lambda terms in form of ‘SOME (LAMl vs (VAR y))’ or ‘NONE’.
- *)
-Definition fromNode_def :
-    fromNode = OPTION_MAP (\(vs,y). LAMl vs (VAR y))
-End
-
 (* Boehm tree of a single (free) variable ‘VAR y’ *)
 Definition BT_VAR_def :
     BT_VAR y :boehm_tree = Branch (SOME ([],y)) LNIL
@@ -354,9 +371,8 @@ Theorem BT_of_principle_hnf :
 Proof
     reverse (RW_TAC std_ss [BT_def, BT_generator_def, ltree_unfold])
  >- (Q.PAT_X_ASSUM ‘unsolvable M0’ MP_TAC >> simp [] \\
-     rw [Abbr ‘M0’, solvable_iff_has_hnf] \\
-     MATCH_MP_TAC hnf_has_hnf \\
-     MATCH_MP_TAC hnf_principle_hnf' >> art [])
+     MATCH_MP_TAC hnf_solvable \\
+     rw [Abbr ‘M0’, hnf_principle_hnf'])
  >> ‘M0' = M0’ by rw [Abbr ‘M0'’, Abbr ‘M0’, principle_hnf_stable']
  >> qunabbrev_tac ‘M0'’
  >> POP_ASSUM (rfs o wrap)
@@ -588,7 +604,7 @@ Proof
  >> POP_ASSUM (rfs o wrap)
  >> Know ‘FV (principle_hnf (M0 @* MAP VAR vs)) SUBSET FV (M0 @* MAP VAR vs)’
  >- (MATCH_MP_TAC principle_hnf_FV_SUBSET' \\
-    ‘solvable M1’ by rw [solvable_iff_has_hnf, hnf_has_hnf] \\
+    ‘solvable M1’ by rw [hnf_solvable] \\
      Suff ‘M0 @* MAP VAR vs == M1’ >- PROVE_TAC [lameq_solvable_cong] \\
      rw [])
  >> simp []
@@ -713,7 +729,7 @@ Proof
  >> DISCH_THEN (ASSUME_TAC o SYM)
  >> Know ‘FV (principle_hnf (M0 @* MAP VAR xs)) SUBSET FV (M0 @* MAP VAR xs)’
  >- (MATCH_MP_TAC principle_hnf_FV_SUBSET' \\
-    ‘solvable M1'’ by rw [solvable_iff_has_hnf, hnf_has_hnf, hnf_appstar] \\
+    ‘solvable M1'’ by rw [hnf_solvable, hnf_appstar] \\
      Suff ‘M0 @* MAP VAR xs == M1'’ >- PROVE_TAC [lameq_solvable_cong] \\
      Q.PAT_X_ASSUM ‘_ = M0’ (REWRITE_TAC o wrap o SYM) \\
      simp [])
@@ -802,7 +818,6 @@ QED
  *  More subterm properties
  *---------------------------------------------------------------------------*)
 
-(* M0 is not needed if M is already an hnf *)
 Theorem subterm_of_hnf :
     !X M h p r. FINITE X /\ hnf M ==>
       subterm X M (h::p) r =
@@ -815,7 +830,7 @@ Theorem subterm_of_hnf :
             if h < m then subterm X (EL h Ms) p (SUC r) else NONE
 Proof
     rpt STRIP_TAC
- >> ‘solvable M’ by PROVE_TAC [solvable_iff_has_hnf, hnf_has_hnf]
+ >> ‘solvable M’ by PROVE_TAC [hnf_solvable]
  >> RW_TAC std_ss [subterm_of_solvables]
  >> ‘M0 = M’ by rw [Abbr ‘M0’, principle_hnf_reduce]
  >> POP_ASSUM (fs o wrap)
@@ -837,7 +852,7 @@ Theorem subterm_of_hnf_alt :
             if h < m then subterm X (EL h Ms) p (SUC r) else NONE
 Proof
     rpt GEN_TAC >> STRIP_TAC
- >> ‘solvable M’ by PROVE_TAC [solvable_iff_has_hnf, hnf_has_hnf]
+ >> ‘solvable M’ by PROVE_TAC [hnf_solvable]
  >> RW_TAC std_ss [subterm_alt]
  >> ‘M0 = M’ by rw [Abbr ‘M0’, principle_hnf_reduce]
  >> POP_ASSUM (fs o wrap)
@@ -859,7 +874,7 @@ Theorem subterm_of_absfree_hnf :
            if h < m then subterm X (EL h Ms) p (SUC r) else NONE
 Proof
     rpt STRIP_TAC
- >> ‘solvable M’ by PROVE_TAC [solvable_iff_has_hnf, hnf_has_hnf]
+ >> ‘solvable M’ by PROVE_TAC [hnf_solvable]
  >> RW_TAC std_ss [subterm_of_solvables]
  >> ‘M0 = M’ by rw [Abbr ‘M0’, principle_hnf_reduce]
  >> fs [Abbr ‘M0’]
@@ -1657,10 +1672,7 @@ Proof
      ‘FV M0 UNION set vs2 = FV (M0 @* MAP VAR vs2)’ by rw [] >> POP_ORW \\
       qunabbrev_tac ‘M2’ \\
       MATCH_MP_TAC principle_hnf_FV_SUBSET' \\
-      Know ‘solvable (VAR y @* args)’
-      >- (rw [solvable_iff_has_hnf] \\
-          MATCH_MP_TAC hnf_has_hnf \\
-          rw [hnf_appstar]) >> DISCH_TAC \\
+      ‘solvable (VAR y @* args)’ by rw [hnf_solvable, hnf_appstar] \\
       Suff ‘M0 @* MAP VAR vs2 == VAR y @* args’
       >- PROVE_TAC [lameq_solvable_cong] \\
       rw []))
@@ -1735,7 +1747,7 @@ Proof
      qabbrev_tac ‘x' = lswapstr (REVERSE p1) x’ \\
     ‘x' IN FV M2’ by METIS_TAC [SUBSET_DEF] \\
      Know ‘FV M2 SUBSET FV (M0 @* MAP VAR vs2)’
-     >- (‘solvable M2’ by rw [solvable_iff_has_hnf, hnf_has_hnf] \\
+     >- (‘solvable M2’ by rw [hnf_solvable] \\
          ‘M0 @* MAP VAR vs2 == M2’ by rw [] \\
          qunabbrev_tac ‘M2’ \\
          MATCH_MP_TAC principle_hnf_FV_SUBSET' \\
@@ -1788,7 +1800,7 @@ Proof
      DISCH_TAC (* x' IN FV N *) \\
     ‘x' IN FV M2’ by METIS_TAC [SUBSET_DEF] \\
      Know ‘FV M2 SUBSET FV (M0 @* MAP VAR vs2)’
-     >- (‘solvable M2’ by rw [solvable_iff_has_hnf, hnf_has_hnf] \\
+     >- (‘solvable M2’ by rw [hnf_solvable] \\
          ‘M0 @* MAP VAR vs2 == M2’ by rw [] \\
          qunabbrev_tac ‘M2’ \\
          MATCH_MP_TAC principle_hnf_FV_SUBSET' \\
@@ -2229,8 +2241,7 @@ Proof
     ‘LAMl vs (VAR y @* args) @* MAP VAR vs == VAR y @* args’
        by PROVE_TAC [lameq_LAMl_appstar_VAR] \\
      Suff ‘solvable (VAR y @* args)’ >- PROVE_TAC [lameq_solvable_cong] \\
-     REWRITE_TAC [solvable_iff_has_hnf] \\
-     MATCH_MP_TAC hnf_has_hnf >> simp [hnf_appstar])
+     MATCH_MP_TAC hnf_solvable >> simp [hnf_appstar])
  >> Rewr'
  >> simp [principle_hnf_beta_reduce, hnf_appstar, tpm_appstar]
  >> rw [Abbr ‘f’]
@@ -2306,8 +2317,7 @@ Proof
     ‘LAMl vs (VAR y @* args) @* MAP VAR vs == VAR y @* args’
        by PROVE_TAC [lameq_LAMl_appstar_VAR] \\
      Suff ‘solvable (VAR y @* args)’ >- PROVE_TAC [lameq_solvable_cong] \\
-     REWRITE_TAC [solvable_iff_has_hnf] \\
-     MATCH_MP_TAC hnf_has_hnf \\
+     MATCH_MP_TAC hnf_solvable \\
      simp [hnf_appstar])
  >> Rewr'
  >> simp [principle_hnf_beta_reduce, hnf_appstar, tpm_appstar]
@@ -2919,8 +2929,8 @@ Proof
  >- (Suff ‘solvable ([P/v] M0)’ >- PROVE_TAC [lameq_solvable_cong] \\
      simp [LAMl_SUB, appstar_SUB] \\
      reverse (Cases_on ‘y = v’)
-     >- (simp [SUB_THM, solvable_iff_has_hnf] \\
-         MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar]) \\
+     >- (simp [SUB_THM] \\
+         MATCH_MP_TAC hnf_solvable >> rw [hnf_appstar]) \\
      simp [solvable_iff_has_hnf, has_hnf_thm] \\
      qabbrev_tac ‘args' = MAP [P/v] args’ \\
      qabbrev_tac ‘m = LENGTH args’ \\
@@ -5134,8 +5144,8 @@ Proof
  >> Know ‘solvable (apply pi M)’
  >- (Suff ‘solvable (VAR b @* args' @* MAP VAR as)’
      >- METIS_TAC [lameq_solvable_cong] \\
-     simp [solvable_iff_has_hnf, GSYM appstar_APPEND] \\
-     MATCH_MP_TAC hnf_has_hnf >> simp [hnf_appstar])
+     MATCH_MP_TAC hnf_solvable \\
+     simp [GSYM appstar_APPEND, hnf_appstar])
  >> DISCH_TAC
  (* stage work *)
  >> Know ‘principle_hnf (apply pi M) = VAR b @* args' @* MAP VAR as’
@@ -5194,14 +5204,12 @@ Proof
            by rw [lameq_appstar_cong] \\
          Suff ‘solvable (M1 @* MAP VAR (SNOC b as))’
          >- PROVE_TAC [lameq_solvable_cong] \\
-         REWRITE_TAC [solvable_iff_has_hnf] \\
-         MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar]) \\
+         MATCH_MP_TAC hnf_solvable >> rw [hnf_appstar]) \\
      CONJ_TAC (* has_hnf #2 *)
      >- (REWRITE_TAC [GSYM solvable_iff_has_hnf] \\
          Suff ‘solvable (VAR b @* args' @* MAP VAR as)’
          >- PROVE_TAC [lameq_solvable_cong] \\
-         REWRITE_TAC [solvable_iff_has_hnf] \\
-         MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar]) \\
+         MATCH_MP_TAC hnf_solvable >> rw [hnf_appstar]) \\
      CONJ_TAC (* has_hnf # 3 *)
      >- (simp [appstar_SUB, MAP_SNOC] \\
          Know ‘MAP [P/y] (MAP VAR as) = MAP VAR as’
@@ -5219,8 +5227,7 @@ Proof
          >- (MATCH_MP_TAC permutator_thm >> rw []) >> DISCH_TAC \\
          Suff ‘solvable (VAR b @* (args' ++ MAP VAR as))’
          >- PROVE_TAC [lameq_solvable_cong] \\
-         REWRITE_TAC [solvable_iff_has_hnf] \\
-         MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar]) \\
+         MATCH_MP_TAC hnf_solvable >> rw [hnf_appstar]) \\
   (* applying the celebrating principle_hnf_denude_thm
 
      NOTE: here ‘DISJOINT (set vs) (FV M)’ is required, and this means that
@@ -6070,8 +6077,7 @@ Proof
         ‘M0 i @* MAP VAR vs = apply p1 (M0 i)’
             by rw [Abbr ‘p1’, Boehm_apply_MAP_rightctxt'] >> POP_ORW \\
          Suff ‘solvable (M1 i)’ >- METIS_TAC [lameq_solvable_cong] \\
-         REWRITE_TAC [solvable_iff_has_hnf] \\
-         MATCH_MP_TAC hnf_has_hnf \\
+         MATCH_MP_TAC hnf_solvable \\
          rw [GSYM appstar_APPEND, hnf_appstar]) \\
      REWRITE_TAC [FV_appstar_MAP_VAR] \\
      Know ‘y i IN FV (M1 i) /\
@@ -6135,9 +6141,7 @@ Proof
      MP_TAC (Q.SPEC ‘M0 (i :num) @* MAP VAR vs'’ principle_hnf_FV_SUBSET') \\
      impl_tac >- (Suff ‘solvable (VAR (y i) @* args i)’
                   >- METIS_TAC [lameq_solvable_cong] \\
-                  REWRITE_TAC [solvable_iff_has_hnf] \\
-                  MATCH_MP_TAC hnf_has_hnf \\
-                  simp [hnf_appstar]) \\
+                  MATCH_MP_TAC hnf_solvable >> simp [hnf_appstar]) \\
      POP_ORW \\
      REWRITE_TAC [FV_appstar_MAP_VAR, FV_appstar, FV_thm] \\
      SET_TAC [])
@@ -6325,8 +6329,7 @@ Proof
                P (f i) @* Ns i @@ VAR (b i) @* tl i == VAR (b i) @* Ns i @* tl i’
          >- (METIS_TAC [lameq_solvable_cong]) \\
          reverse CONJ_TAC >- (MATCH_MP_TAC hreduces_lameq >> rw []) \\
-         REWRITE_TAC [solvable_iff_has_hnf] \\
-         MATCH_MP_TAC hnf_has_hnf >> art []) >> Rewr' \\
+         MATCH_MP_TAC hnf_solvable >> art []) >> Rewr' \\
      Know ‘P (f i) @* args' i @* args2 i @* MAP VAR xs = M1 i @* MAP VAR xs ISUB ss’
      >- (REWRITE_TAC [appstar_ISUB, Once EQ_SYM_EQ] \\
          Q.PAT_X_ASSUM ‘!i. i < k ==> apply p2 (M1 i) = _’
@@ -6350,14 +6353,12 @@ Proof
         ‘M0' == M1 i’ by rw [Abbr ‘M0'’] \\
         ‘M0' @* MAP VAR xs == M1 i @* MAP VAR xs’ by rw [lameq_appstar_cong] \\
          Suff ‘solvable (M1 i @* MAP VAR xs)’ >- PROVE_TAC [lameq_solvable_cong] \\
-         REWRITE_TAC [solvable_iff_has_hnf] \\
-         MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar]) \\
+         MATCH_MP_TAC hnf_solvable >> rw [hnf_appstar]) \\
      CONJ_TAC (* has_hnf #2 *)
      >- (REWRITE_TAC [GSYM solvable_iff_has_hnf] \\
          Suff ‘solvable (VAR (b i) @* Ns i @* tl i)’
          >- PROVE_TAC [lameq_solvable_cong] \\
-         REWRITE_TAC [solvable_iff_has_hnf] \\
-         MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar]) \\
+         MATCH_MP_TAC hnf_solvable >> rw [hnf_appstar]) \\
      CONJ_TAC (* has_hnf # 3 *)
      >- (simp [appstar_ISUB, MAP_DROP] \\
          ASM_SIMP_TAC bool_ss [has_hnf_thm] \\
@@ -6395,8 +6396,7 @@ Proof
  >- (rpt STRIP_TAC \\
      Suff ‘solvable (VAR (b i) @* Ns i @* tl i)’
      >- METIS_TAC [lameq_solvable_cong] \\
-     REWRITE_TAC [solvable_iff_has_hnf] \\
-     MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar, GSYM appstar_APPEND])
+     MATCH_MP_TAC hnf_solvable >> rw [hnf_appstar, GSYM appstar_APPEND])
  >> DISCH_TAC
  >> PRINT_TAC "stage work on subtree_equiv_lemma: L6433"
  >> CONJ_TAC (* EVERY is_ready ... *)
@@ -6815,8 +6815,8 @@ Proof
  (* ‘H i’ is the head reduction of apply pi (M i) *)
  >> qabbrev_tac ‘H = \i. VAR (b i) @* Ns i @* tl i’
  >> Know ‘!i. solvable (H i)’
- >- (rw [Abbr ‘H’, solvable_iff_has_hnf] \\
-     MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar])
+ >- (rw [Abbr ‘H’] \\
+     MATCH_MP_TAC hnf_solvable >> rw [hnf_appstar])
  >> DISCH_TAC
  >> Know ‘!i. i < k ==> FV (H i) SUBSET X UNION RANK r’
  >- (simp [Abbr ‘H’, GSYM appstar_APPEND, FV_appstar] \\

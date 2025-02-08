@@ -211,6 +211,14 @@ Proof
  >> Q.EXISTS_TAC ‘M0’ >> rw []
 QED
 
+Theorem hreduce_LAM :
+    !v M1 M2. LAM v M1 -h->* LAM v M2 <=> M1 -h->* M2
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘[v]’, ‘M1’, ‘M2’] hreduce_LAMl)
+ >> REWRITE_TAC [LAMl_thm]
+QED
+
 Theorem hreduce1_abs :
     !M N. M -h-> N ==> is_abs M ==> is_abs N
 Proof
@@ -1639,9 +1647,13 @@ Theorem hnf_head_hnf[simp] :
 Proof
     CONJ_TAC
  >- NTAC 2 (rw [Once hnf_head_def])
- >> MATCH_MP_TAC hnf_head_appstar
- >> rw []
+ >> MATCH_MP_TAC hnf_head_appstar >> rw []
 QED
+
+(* |- hnf_head (VAR y) = VAR y *)
+Theorem hnf_head_VAR[simp] =
+    (cj 2 hnf_head_hnf) |> Q.GEN ‘args’ |> Q.SPEC ‘[]’
+                        |> REWRITE_RULE [appstar_empty]
 
 Overload hnf_headvar = “\t. THE_VAR (hnf_head t)”
 
@@ -1677,6 +1689,10 @@ Proof
     rpt GEN_TAC
  >> MATCH_MP_TAC hnf_children_appstar >> rw []
 QED
+
+(* |- hnf_children (VAR y) = [] *)
+Theorem hnf_children_VAR[simp] =
+        hnf_children_hnf |> Q.SPECL [‘y’, ‘[]’] |> REWRITE_RULE [appstar_empty]
 
 Theorem absfree_hnf_cases :
     !M. hnf M /\ ~is_abs M <=> ?y args. M = VAR y @* args

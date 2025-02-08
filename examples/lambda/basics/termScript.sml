@@ -654,6 +654,15 @@ Proof
   SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]
 QED
 
+(* cf. appFOLDLTheory.LAMl_ALPHA_tpm *)
+Theorem SIMPLE_ALPHA_tpm :
+    !x y u. y # u ==> LAM x u = LAM y (tpm [(y,x)] u)
+Proof
+    rpt STRIP_TAC
+ >> simp [fresh_tpm_subst]
+ >> MATCH_MP_TAC SIMPLE_ALPHA >> art []
+QED
+
 (* ----------------------------------------------------------------------
     size function
    ---------------------------------------------------------------------- *)
