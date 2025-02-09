@@ -1443,6 +1443,24 @@ Proof
  >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M’ >> art []
 QED
 
+Theorem ltree_finite_BT_has_benf :
+    !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ has_benf M ==>
+            ltree_finite (BT' X M r)
+Proof
+    rw [has_benf_has_bnf]
+ >> MATCH_MP_TAC ltree_finite_BT_has_bnf >> art []
+QED
+
+Theorem ltree_finite_BT_benf :
+    !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ benf M ==>
+            ltree_finite (BT' X M r)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC ltree_finite_BT_has_benf
+ >> rw [has_benf_def]
+ >> Q.EXISTS_TAC ‘M’ >> rw [lameta_REFL]
+QED
+
 (*---------------------------------------------------------------------------*
  *  Separability of (two) lambda terms
  *---------------------------------------------------------------------------*)
