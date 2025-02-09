@@ -3132,12 +3132,8 @@ QED
 (*                                                                           *)
 (* This theorem is about various equivalences over A*, and how they relate.  *)
 (* The two principal equivalences are based on (1) nfa evaluation and (2)    *)
-(* a purely language-level operation (concatenation).                        *)
+(* a purely language-level operation.                                        *)
 (*===========================================================================*)
-
-(*---------------------------------------------------------------------------*)
-(* Work with relations relativized to A*                                     *)
-(*---------------------------------------------------------------------------*)
 
 Definition nfa_eval_equiv_def:
   nfa_eval_equiv N x y ⇔
@@ -3723,7 +3719,7 @@ Proof
 QED
 
 (*===========================================================================*)
-(* DFA state minimization. This is accomplished by, first, removing all      *)
+(* DFA state minimization. This is accomplished by removing all              *)
 (* non-accessible states, then coalescing all non-distinguishable states.    *)
 (* Both of these operations preserve the language originally recognized.     *)
 (*===========================================================================*)
@@ -3750,7 +3746,7 @@ Definition distinguishable_states_def:
     ∃w. w ∈ KSTAR {[a] | a ∈ M.Sigma} ∧
         (nfa_eval M {q1} w ⊆ M.final
          ⇔
-         ~(nfa_eval M {q2} w ⊆ M.final))
+         nfa_eval M {q2} w ⊈ M.final)
 End
 
 Definition distinguishable_nfa_def:
@@ -3802,10 +3798,10 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* A state is reachable iff reachable_states finds it                        *)
+(* A state is accessible iff reachable_states finds it                        *)
 (*---------------------------------------------------------------------------*)
 
-Theorem reachable_states_spec:
+Theorem reachable_states:
   wf_nfa N ⇒
   ∀q. q ∈ REACH_LIST (kidlist N) (SET_TO_LIST N.initial)
       ⇔
@@ -3817,5 +3813,158 @@ Proof
   irule DFT_REACH_THM >> metis_tac[]
 QED
 
+Theorem goolr[local]:
+  is_dfa M ⇒
+  ∀p q. (λx y. set (kidlist M x) y)꙳ p q ⇒ p ∈ M.initial ⇒ accessible_state M q
+Proof
+ strip_tac >>
+ ho_match_mp_tac RTC_INDUCT_RIGHT1 >>
+ gvs [is_dfa_def] >> rw[accessible_state_def]
+ >- (qexists_tac ‘ε’ >> rw[nfa_eval_eqns])
+ >- (qpat_x_assum ‘set(kidlist M x) q’ mp_tac >>
+     ‘FINITE(BIGUNION {M.delta x a | a | a ∈ M.Sigma})’ by
+       (rw[GSPEC_IMAGE,combinTheory.o_DEF]
+        >- (irule IMAGE_FINITE >> rw[IN_DEF] >> metis_tac[wf_nfa_def])
+        >- (irule SUBSET_FINITE >> drule nfa_eval_states_closed >>
+            disch_then drule >>
+            ‘{q_0} ⊆ M.Q’ by metis_tac [wf_nfa_def] >>
+            disch_then drule >> rw[] >> metis_tac[wf_nfa_def])) >>
+     rw [kidlist_def,SET_TO_LIST_INV] >>
+     qexists_tac ‘w ++ [a]’ >>
+     ‘{q_0} ⊆ M.Q’ by metis_tac [wf_nfa_def] >>
+     rw [nfa_eval_append] >> rw [nfa_eval_eqns] >>
+     first_x_assum drule_all >> rw[] >> gvs[] >>
+     pop_assum sym_subst_all_tac >>
+     rw[EXTENSION,GSPECIFICATION] >> metis_tac[])
+QED
+
+Theorem goorl[local]:
+  ∀w p q.
+    is_dfa M ∧
+    M.initial = {p} ∧
+    accessible_state M q
+    ⇒
+    (λx y. set (kidlist M x) y)꙳ p q
+Proof
+   simp [accessible_state_def,PULL_EXISTS] >>
+   CONV_TAC (RESORT_FORALL_CONV List.rev) >>
+   recInduct SNOC_INDUCT >> rw[]
+   >- gvs [nfa_eval_eqns] >>
+   gvs [EVERY_SNOC,SNOC_APPEND] >>
+   pop_keep_tac >>
+   ‘{p} ⊆ M.Q’ by
+      metis_tac [is_dfa_def,wf_nfa_def] >>
+   drule_all dfa_eval_final_state >>
+   gvs [is_dfa_def] >> rw[nfa_eval_append] >> gvs[] >>
+   simp [Once RTC_CASES2] >> disj2_tac >>
+   first_x_assum (irule_at Any) >>
+   rw [kidlist_def]
+   >- (‘FINITE(BIGUNION {M.delta q' a | a | a ∈ M.Sigma})’ by
+         (rw[GSPEC_IMAGE,combinTheory.o_DEF]
+          >- (irule IMAGE_FINITE >> rw[IN_DEF] >> metis_tac[wf_nfa_def])
+          >- (irule SUBSET_FINITE >> drule nfa_eval_states_closed >>
+              disch_then drule >>
+              ‘{p} ⊆ M.Q’ by metis_tac [wf_nfa_def] >>
+              disch_then drule >> rw[] >> metis_tac[wf_nfa_def])) >>
+      rw [SET_TO_LIST_INV,PULL_EXISTS] >>
+      first_assum (irule_at Any) >>
+      qpat_x_assum ‘nfa_eval _ _ [_] = _’ mp_tac >>
+      simp [nfa_eval_eqns,EXTENSION] >> metis_tac[])
+  >- (‘{p} ⊆ M.Q’ by
+         metis_tac [wf_nfa_def] >>
+      drule_all nfa_eval_states_closed >> rw[])
+QED
+
+Theorem accessible_state_reach_list:
+  is_dfa M
+  ⇒
+  (accessible_state M q
+    ⇔
+   REACH_LIST (kidlist M) (SET_TO_LIST M.initial) q)
+Proof
+  rw [REACH_LIST_def,REACH_def,MEM_SET_TO_LIST,IN_DEF] >>
+  rw [EQ_IMP_THM]
+  >- (‘∃p. M.initial = {p}’ by
+         metis_tac [is_dfa_def] >>
+      irule_at Any goorl >>
+      first_assum (irule_at Any) >> simp[])
+  >- (irule goolr >> simp [] >>
+      first_x_assum (irule_at Any) >> simp[IN_DEF] >>
+      gvs [is_dfa_def, wf_nfa_def,SET_TO_LIST_INV])
+QED
+
+Theorem accessible_state_eq_reachable_states:
+  is_dfa M ⇒
+  (accessible_state M
+    =
+   set(reachable_states M [] (SET_TO_LIST M.initial) []))
+Proof
+  metis_tac [accessible_state_reach_list,reachable_states,
+             is_dfa_def, EXTENSION,IN_DEF]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Remove inaccessible states from a DFA. Note that this can yield an NFA.   *)
+(*---------------------------------------------------------------------------*)
+
+Definition mk_accessible_def:
+ mk_accessible M =
+   let accQ = accessible_state M
+   in
+    M with
+      <| Q := accQ;
+         initial := M.initial ∩ accQ;
+         final   := M.final ∩ accQ;
+         delta := (λq a. if q ∈ accQ then M.delta q a else {})
+       |>
+End
+
+Theorem is_dfa_mk_accessible:
+ is_dfa M ⇒ is_dfa (mk_accessible M)
+Proof
+  rw [mk_accessible_def,is_dfa_def] >>
+  rw[wf_nfa_def] >> FOO
+  rw[IN_DEF,accessible_state_def] >>
+  qexists_tac ‘ε’ >> rw[nfa_eval_eqns]
+QED
+
+Theorem mk_accessible_initial[simp]:
+ is_dfa M ⇒ (mk_accessible M).initial = M.initial
+Proof
+  rw [mk_accessible_def,is_dfa_def] >>
+  rw[EXTENSION,EQ_IMP_THM] >>
+  rw[IN_DEF,accessible_state_def] >>
+  qexists_tac ‘ε’ >> rw[nfa_eval_eqns]
+QED
+
+Theorem nfa_eval_mk_accessible:
+  is_dfa M ⇒
+  ∀w.
+    w ∈ KSTAR {[a] | a ∈ M.Sigma}
+    ⇒
+    nfa_eval (mk_accessible M) (mk_accessible M).initial w = nfa_eval M M.initial w
+Proof
+  disch_tac >> recInduct SNOC_INDUCT >> rw[]
+  >- rw[nfa_eval_eqns] >>
+  gvs [EVERY_SNOC,SNOC_APPEND] >>
+  rename1 ‘a ∈ M.Sigma’ >>
+  gvs [is_dfa_def] >>
+  ‘{q_0} ⊆ M.Q’ by
+     metis_tac [wf_nfa_def] >>
+  ‘{q_0} ⊆ (mk_accessible M).Q’ by
+     (rw [mk_accessible_def,IN_DEF,accessible_state_def] >>
+      qexists_tac ‘ε’ >> rw[nfa_eval_eqns]) >>
+  rev_drule_all nfa_eval_append
+  simp[nfa_eval_append]
+
+QED
+
+Theorem dfa_mk_accessible_is_accessible:
+  is_dfa M ⇒ accessible_nfa (mk_accessible M)
+Proof
+  rw [accessible_nfa_def,mk_accessible_def] >>
+  gvs [accessible_state_def,IN_DEF] >>
+  first_assum (irule_at Any)
+QED
 
 val _ = export_theory();
