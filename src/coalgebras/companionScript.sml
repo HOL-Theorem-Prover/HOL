@@ -4,7 +4,7 @@
 *)
 open HolKernel Parse boolLib bossLib;
 open pred_setTheory;
-open posetTheory;
+open fixedPointTheory posetTheory;
 
 val _ = new_theory "companion";
 
@@ -698,6 +698,231 @@ Proof
    (fs[B_join_def, endo_def, endo_lift_def]) >-
    (fs[endo_lift_def]) >-
    (fs[B_join_def, endo_lift_def])
+QED
+
+(* set helpers *)
+
+Definition set_compatible_def:
+  set_compatible b f = (monotone f /\ !X. f (b X) SUBSET b (f X))
+End
+
+Theorem set_compatible:
+  set_compatible b f ==> compatible (UNIV,$SUBSET) b f
+Proof
+  rw[set_compatible_def, compatible_def, lift_rel, function_def]
+QED
+
+Theorem set_compatible_self:
+  monotone b ==> set_compatible b b
+Proof
+  rw[set_compatible_def, monotone_def]
+QED
+
+Theorem set_compatible_id:
+  monotone b ==> set_compatible b I
+Proof
+  rw[set_compatible_def, monotone_def]
+QED
+
+Theorem set_compatible_compose:
+  monotone b ==>
+  set_compatible b f /\ set_compatible b g
+  ==> set_compatible b (f o g)
+Proof
+  rw[monotone_def, set_compatible_def] >>
+  metis_tac[SUBSET_DEF]
+QED
+
+Definition set_companion_def:
+  set_companion b X = BIGUNION { f X | f | set_compatible b f }
+End
+
+Theorem set_companion:
+  companion (UNIV,$SUBSET) b (set_companion b)
+Proof
+  rw[companion_def, set_companion_def, function_def] >>
+  rw[lub_def, compatible_def, set_compatible_def, lift_rel, function_def] >>
+  fs[SUBSET_DEF, BIGUNION, IN_DEF] >>
+  metis_tac[]
+QED
+
+Theorem set_companion_compatible:
+  monotone b ==> set_compatible b (set_companion b)
+Proof
+  rw[] >>
+  subgoal ‘compatible (UNIV,$SUBSET) b (set_companion b)’ >-
+   (irule compatible_companion >>
+    rw[set_companion, function_def]) >>
+  fs[compatible_def, lift_rel, set_compatible_def]
+QED
+
+Theorem set_companion_coinduct:
+  monotone b /\
+  X SUBSET (b o set_companion b) X
+  ==> X SUBSET gfp b
+Proof
+  rw[] >>
+  irule companion_coinduct >>
+  qexistsl_tac [‘b’, ‘UNIV’, ‘set_companion b’] >>
+  rw[function_def, gfp_poset_gfp, set_companion]
+QED
+
+Theorem set_compatible_enhance:
+  monotone b /\ set_compatible b f /\
+  Y SUBSET f X
+  ==> Y SUBSET set_companion b X
+Proof
+  rw[] >>
+  drule_then irule SUBSET_TRANS >>
+  irule (SRULE [lift_rel] compatible_below_companion) >>
+  qexistsl_tac [‘b’, ‘UNIV’] >>
+  rw[set_compatible, set_companion]
+QED
+
+Theorem set_gfp_sub_companion:
+  monotone b ==> gfp b ⊆ set_companion b x
+Proof
+  rw[] >>
+  irule set_compatible_enhance >> rw[] >>
+  qexists_tac ‘K (gfp b)’ >> rw[] >>
+  rw[set_compatible_def, monotone_def, gfp_greatest_fixedpoint]
+QED
+
+(* to prove X is in a coinductive set from b, consider t⊥ *)
+Theorem set_param_coind_init:
+  monotone b /\
+  X SUBSET set_companion b {}
+  ==> X SUBSET gfp b
+Proof
+  rw[] >>
+  drule_at_then Any irule param_coind_init >>
+  qexistsl_tac [‘b’, ‘UNIV’] >>
+  rw[bottom_def, set_companion, function_def, gfp_poset_gfp]
+QED
+
+(* pull f out of tX *)
+Theorem set_param_coind_upto_f:
+  monotone b /\
+  (!X. f X SUBSET set_companion b X) /\
+  Y SUBSET f (set_companion b X)
+  ==> Y SUBSET set_companion b X
+Proof
+  rw[] >>
+  drule_at_then Any irule param_coind_upto_f >> rw[] >>
+  qexistsl_tac [‘b’, ‘UNIV’] >>
+  rw[set_companion, function_def]
+QED
+
+(* conclude: X is a safe deduction from Y *)
+Theorem set_param_coind_done:
+  monotone b /\
+  Y SUBSET X ==> Y SUBSET set_companion b X
+Proof
+  rw[] >>
+  irule param_coind_done >> rw[] >>
+  qexistsl_tac [‘b’, ‘UNIV’] >>
+  rw[set_companion, function_def]
+QED
+
+Definition set_B_def:
+  set_B b = λg X. BIGUNION { f X | f | monotone f /\ !Y. f (b Y) SUBSET b (g Y) }
+End
+
+Definition higher_monotone:
+  higher_monotone fn = !f g. monotone f /\ monotone g /\
+                             (!X. f X SUBSET g X) ==> (!X. (fn f) X SUBSET (fn g) X)
+End
+
+Definition higher_compat_def:
+  higher_compat fn b =
+  ((!f. monotone f ==> monotone (fn f)) /\ higher_monotone fn /\
+   !f X. monotone f ==> (fn (set_B b f)) X SUBSET (set_B b (fn f)) X)
+End
+
+Definition set_T_def:
+  set_T b = λf X. BIGUNION { (fn f) X | fn | monotone (fn f) /\ higher_compat fn b }
+End
+
+Theorem set_higher_complete:
+  complete (endo_lift (univ(:'a -> bool),$SUBSET))
+Proof
+  rw[complete_def, endo_lift_def] >-
+   (qexists_tac ‘λX. BIGUNION { f X | f | monotone f /\ c f }’ >>
+    rw[lub_def] >-
+     (rw[endo_def, monotone_def] >>
+      rw[BIGUNION_SUBSET] >>
+      rw[BIGUNION, Once SUBSET_DEF] >>
+      qexists_tac ‘f X'’ >> rw[] >> metis_tac[SUBSET_DEF]) >-
+     (fs[endo_def, lift_rel, BIGUNION, Once SUBSET_DEF] >> metis_tac[]) >>
+    fs[lift_rel, endo_def] >> rw[] >>
+    irule (iffRL BIGUNION_SUBSET) >> rw[] >> metis_tac[]) >>
+  (qexists_tac ‘λX. BIGINTER { f X | f | monotone f /\ c f }’ >>
+   rw[glb_def] >-
+    (rw[endo_def, monotone_def] >>
+     rw[SUBSET_BIGINTER] >>
+     rw[BIGINTER, Once SUBSET_DEF] >>
+     metis_tac[SUBSET_DEF]) >-
+    (fs[endo_def, lift_rel, BIGINTER, Once SUBSET_DEF] >> metis_tac[]) >>
+   fs[lift_rel, endo_def] >> rw[] >>
+   irule (iffRL SUBSET_BIGINTER) >> rw[] >> metis_tac[])
+QED
+
+(* do a deduction step, Y must step to itself or conclude with X *)
+(* proof: functionals on sets form a complete lattice under pointwise inclusion
+ * B is monotone with that ordering, and it can be defined via lub = BIGUNION
+ * hence B has a greatest fixpoint and we can instantiate
+ *)
+Theorem set_param_coind:
+  monotone b
+  ==> Y SUBSET b (set_companion b (X UNION Y))
+  ==> Y SUBSET set_companion b X
+Proof
+  rw[] >>
+  drule_at_then Any irule param_coind >>
+  qexistsl_tac [‘set_B b’, ‘set_T b’, ‘gfp b’, ‘UNIV’] >>
+  rw[endo_def, set_companion, gfp_poset_gfp, set_higher_complete] >-
+   (metis_tac[set_companion_compatible, set_compatible_def]) >-
+   (rw[B_join_def, set_B_def, endo_lift_def, endo_def, function_def] >-
+     (rw[monotone_def, lift_rel] >>
+      rw[BIGUNION_SUBSET] >>
+      rw[BIGUNION, Once SUBSET_DEF] >>
+      qexists_tac ‘f X''’ >> rw[] >>
+      metis_tac[SUBSET_DEF, SUBSET_TRANS]) >-
+     (rw[monotonic_def, lift_rel] >>
+      rw[BIGUNION_SUBSET] >>
+      rw[BIGUNION, Once SUBSET_DEF] >>
+      qexists_tac ‘f X'’ >> rw[] >>
+      metis_tac[SUBSET_TRANS, monotone_def]) >-
+     (rw[lub_def, lift_rel] >-
+       (rw[BIGUNION, Once SUBSET_DEF] >> metis_tac[]) >>
+      rw[BIGUNION_SUBSET])) >-
+   (rw[companion_def, endo_lift_def, set_B_def, set_T_def] >-
+     (rw[function_def, endo_def, monotone_def] >>
+      rw[BIGUNION_SUBSET] >>
+      rw[BIGUNION, Once SUBSET_DEF] >>
+      qexists_tac ‘fn f X''’ >> metis_tac[SUBSET_DEF]) >>
+    rw[lub_def, endo_def, lift_rel]
+    >- (rw[monotone_def, BIGUNION_SUBSET] >>
+        rw[BIGUNION, Once SUBSET_DEF] >>
+        qexists_tac ‘fn f X''’ >> metis_tac[SUBSET_DEF])
+    >- (rw[BIGUNION, Once SUBSET_DEF] >>
+        qexists_tac ‘f' f X'’ >> rw[] >>
+        qexists_tac ‘f'’ >> rw[] >>
+        rw[higher_compat_def, higher_monotone] >-
+         (fs[compatible_def, function_def, endo_def, monotonic_def, lift_rel]) >>
+        fs[GSYM set_B_def] >>
+        fs[compatible_def, lift_rel, endo_def, monotonic_def])
+    >- (rw[BIGUNION_SUBSET] >>
+        first_x_assum irule >> rw[] >>
+        qexists_tac ‘fn’ >> rw[compatible_def] >-
+         (rw[function_def, endo_def] >>
+          fs[higher_compat_def, higher_monotone]) >-
+         (fs[higher_compat_def, higher_monotone] >>
+          rw[monotonic_def, lift_rel, endo_def]) >-
+         (rw[GSYM set_B_def] >>
+          rw[lift_rel] >>
+          fs[higher_compat_def, endo_def]))) >>
+     (rw[lub_def] >> rw[SUBSET_UNION])
 QED
 
 val _ = export_theory();
