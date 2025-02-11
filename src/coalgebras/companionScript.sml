@@ -1,6 +1,6 @@
 (*
   This development is based on Damien Pous' "Coinduction All the Way Up,
-  including the derivation of parameterized coinduction system.
+  including the derivation of parameterized coinduction
 *)
 open HolKernel Parse boolLib bossLib;
 open pred_setTheory;
@@ -780,7 +780,7 @@ Proof
 QED
 
 Theorem set_gfp_sub_companion:
-  monotone b ==> gfp b ⊆ set_companion b x
+  monotone b ==> gfp b SUBSET set_companion b x
 Proof
   rw[] >>
   irule set_compatible_enhance >> rw[] >>
