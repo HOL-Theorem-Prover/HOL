@@ -22,6 +22,7 @@ open HolKernel Parse boolLib bossLib term_tactic;
 open arithmeticTheory listTheory llistTheory alistTheory optionTheory;
 open mp_then pred_setTheory relationTheory pairTheory combinTheory;
 open itreeTheory;
+open companionTheory fixedPointTheory;
 
 val _ = new_theory "itreeTau";
 
@@ -791,6 +792,50 @@ CoInductive itree_wbisim:
   (strip_tau t (Ret r) /\ strip_tau t' (Ret r) ==> itree_wbisim t t')
 End
 
+Definition wbisim_functional_def:
+  wbisim_functional R =
+  ({ (t,t') | ?r. strip_tau t (Ret r) /\ strip_tau t' (Ret r)} UNION
+   { (t,t') | ?e k k'. strip_tau t (Vis e k) /\ strip_tau t' (Vis e k') /\
+              !r. (k r, k' r) IN R } UNION
+   { (Tau t, Tau t') | (t,t') IN R })
+End
+
+Theorem wbisim_functional_mono[simp]:
+  monotone wbisim_functional
+Proof
+  rw[monotone_def, wbisim_functional_def, SUBSET_DEF] >>
+  metis_tac[]
+QED
+
+Theorem wbisim_functional_cancel:
+  X SUBSET Y ==>
+  wbisim_functional X SUBSET wbisim_functional Y
+Proof
+  metis_tac[wbisim_functional_mono, monotone_def]
+QED
+
+Theorem wbisim_functional_gfp:
+  gfp wbisim_functional = UNCURRY itree_wbisim
+Proof
+  simp[SET_EQ_SUBSET] >>
+  conj_tac >-
+   (simp[SUBSET_DEF, Once FUN_EQ_THM] >> Cases >>
+    strip_tac >> gvs[IN_DEF] >>
+    irule itree_wbisim_coind >>
+    qexists_tac ‘CURRY $ gfp wbisim_functional’ >> rw[] >>
+    last_x_assum kall_tac >>
+    pop_assum mp_tac >>
+    dep_rewrite.DEP_ONCE_REWRITE_TAC [GSYM $ cj 1 gfp_greatest_fixedpoint] >>
+    conj_tac >- rw[] >>
+    rw[Once wbisim_functional_def] >>
+    simp[cj 1 gfp_greatest_fixedpoint] >> metis_tac[IN_DEF]) >>
+  irule $ MP_CANON gfp_coinduction >>
+  simp[SUBSET_DEF] >>
+  Cases \\ rw[] \\
+  simp[wbisim_functional_def] \\
+  metis_tac[itree_wbisim_cases]
+QED
+
 Theorem itree_wbisim_refl:
   itree_wbisim t (t:('a,'b,'c) itree)
 Proof
@@ -872,6 +917,24 @@ Proof
   fs[] >>
   pop_assum kall_tac >>
   metis_tac[itree_wbisim_coind_upto_equiv]
+QED
+
+(* more compositional variant using the enhanced functional (bt)
+ * proof: x < gfp \/ btx < b(K gfp \/ t)x < btx *)
+Theorem itree_wbisim_coind_upto':
+  !R. UNCURRY R SUBSET
+              UNCURRY itree_wbisim UNION
+              wbisim_functional (set_companion wbisim_functional (UNCURRY R))
+      ==> UNCURRY R SUBSET UNCURRY itree_wbisim
+Proof
+  rw[] >>
+  fs[Once $ GSYM wbisim_functional_gfp] >>
+  irule set_companion_coinduct >> rw[] >>
+  drule_then irule SUBSET_TRANS >>
+  dep_rewrite.DEP_ONCE_REWRITE_TAC [GSYM $ cj 1 gfp_greatest_fixedpoint] >> rw[] >>
+  ‘gfp wbisim_functional SUBSET set_companion wbisim_functional (UNCURRY R)’
+    suffices_by metis_tac[monotone_def, wbisim_functional_mono] >>
+  rw[set_gfp_sub_companion]
 QED
 
 Theorem itree_wbisim_vis:
@@ -1171,9 +1234,60 @@ Inductive after_taus:
   (after_taus R x y ==> after_taus R (Tau x) y)
 [~tauR:]
   (after_taus R x y ==> after_taus R x (Tau y))
-[~vis:]
-  ((!r. after_taus R (k r) (k' r)) ==> after_taus R (Vis e k) (Vis e k'))
 End
+
+Definition upto_taus_func_def:
+  upto_taus_func R = R UNION UNCURRY (after_taus (CURRY R))
+End
+
+Theorem upto_taus_compatible:
+  set_compatible wbisim_functional upto_taus_func
+Proof
+  rw[set_compatible_def, wbisim_functional_def, upto_taus_func_def, monotone_def] >-
+   (metis_tac[SUBSET_TRANS, SUBSET_UNION]) >-
+   (irule SUBSET_TRANS >>
+    qexists_tac ‘UNCURRY (after_taus (CURRY Y))’ >>
+    rw[SUBSET_DEF, IN_DEF] >>
+    Cases_on ‘x’ >> fs[] >>
+    pop_assum mp_tac >>
+    Induct_on ‘after_taus’ >> rw[] >>
+    rw[Once after_taus_cases, CURRY_DEF] >>
+    metis_tac[IN_DEF, SUBSET_DEF, FST, SND]) >-
+   (metis_tac[SUBSET_TRANS, SUBSET_UNION]) >-
+   (irule SUBSET_TRANS >>
+    qmatch_goalsub_abbrev_tac ‘_ UNION x UNION _’ >>
+    qexists_tac ‘x’ >>
+    rw[Abbr ‘x’, SUBSET_DEF] >> metis_tac[]) >-
+   (irule SUBSET_TRANS >>
+    qexists_tac ‘{(Tau t,Tau t') | (t,t') IN X \/ after_taus (CURRY X) t t'}’ >>
+    rw[SUBSET_DEF]) >>
+  rw[GSYM wbisim_functional_def] >>
+  rw[SUBSET_DEF, IN_DEF] >>
+  Cases_on ‘x’ >> fs[] >>
+  pop_assum mp_tac >>
+  Induct_on ‘after_taus’ >>
+  fs[wbisim_functional_def, IN_DEF] >>
+  metis_tac[after_taus_cases, CURRY_DEF]
+QED
+
+(* example: compatibility can be used like so to get the same as below *)
+(* Theorem itree_coind_upto_taus: *)
+(*   !R. *)
+(*     UNCURRY R SUBSET *)
+(*             UNCURRY itree_wbisim UNION *)
+(*             wbisim_functional (upto_taus_func (UNCURRY R) UNION *)
+(*                                               UNCURRY itree_wbisim) *)
+(*     ==> UNCURRY R SUBSET UNCURRY itree_wbisim *)
+(* Proof *)
+(*   rw[] >> *)
+(*   irule itree_wbisim_coind_upto' >> *)
+(*   dxrule_then irule SUBSET_TRANS >> *)
+(*   rw[UNION_SUBSET] >> *)
+(*   irule wbisim_functional_cancel >> rw[] >- *)
+(*    (irule set_compatible_enhance >> rw[] >> *)
+(*     metis_tac[upto_taus_compatible, SUBSET_REFL]) >> *)
+(*   metis_tac[set_gfp_sub_companion,wbisim_functional_mono,wbisim_functional_gfp]*)
+(* QED *)
 
 Theorem itree_coind_after_taus:
   !R. (!t t'.
