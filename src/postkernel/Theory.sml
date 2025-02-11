@@ -886,6 +886,8 @@ val new_theory_time = ref (total_cpu (Timer.checkCPUTimer Globals.hol_clock))
 val report_times = ref true
 val _ = Feedback.register_btrace ("report_thy_times", report_times)
 
+val disable_export_theory = ref false
+
 local
   val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
   fun maybe_log_time_to_disk thyname timestr = let
@@ -909,7 +911,7 @@ local
     | NONE => ()
   end
 in
-fun export_theory () = let
+fun export_theory () = if !disable_export_theory then () else let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
   val {thid,facts,adjoin,adjoinpc,thydata,mldeps,...} = scrubCT()
   val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
