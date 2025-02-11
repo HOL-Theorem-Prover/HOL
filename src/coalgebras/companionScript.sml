@@ -179,7 +179,7 @@ Proof
   drule_then irule poset_antisym >> rw[]
   >- (fs[companion_def, function_in, bottom_def])
   >- (fs[gfp_def])
-  (* t⊥ <= tb⊥ <= bt⊥ *)
+  (* t0 <= tb0 <= bt0 *)
   >- (match_mp_tac gfp_coinduct >>
       ‘function s s t’ by fs[companion_def] >>
       fs[function_in, bottom_def] >>
@@ -685,7 +685,8 @@ Proof
           drule_then irule poset_trans >>
           rw[SF SFY_ss, endo_in, endo_function] >-
            (metis_tac[companion_def, function_def, endo_def]) >>
-          qexists_tac ‘t x'³'’ >> rw[SF SFY_ss, endo_in] >-
+          rename1 ‘_ /\ r (b a) _ /\ _’ >>
+          qexists_tac ‘t a’ >> rw[SF SFY_ss, endo_in] >-
            (‘lift_rel (s,r) b t’ suffices_by rw[lift_rel] >>
             drule_then irule compatible_below_companion >>
             metis_tac[compatible_self, function_def, endo_def, lift_rel]) >>
@@ -788,7 +789,7 @@ Proof
   rw[set_compatible_def, monotone_def, gfp_greatest_fixedpoint]
 QED
 
-(* to prove X is in a coinductive set from b, consider t⊥ *)
+(* to prove X is in a coinductive set from b, consider t0 *)
 Theorem set_param_coind_init:
   monotone b /\
   X SUBSET set_companion b {}
