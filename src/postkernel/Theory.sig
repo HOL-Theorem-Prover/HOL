@@ -57,6 +57,7 @@ sig
   val adjoin_after_completion: (unit -> HOLPP.pretty) -> unit
   val quote_adjoin_to_theory : string quotation -> string quotation -> unit
   val export_theory          : unit -> unit
+  val disable_export_theory  : bool ref
 
 (* Make hooks available so that theory changes can be seen by
    "interested parties" *)
