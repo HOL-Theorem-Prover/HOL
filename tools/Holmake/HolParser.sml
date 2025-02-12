@@ -595,8 +595,6 @@ fun exhaust_parser (read, close) =
     recurse []
   end
 
-fun mkstate b = {inscriptp = b, quotefixp = false}
-
 fun file_to_parser fname = let
   val instrm = openIn fname
   (* val isscript = String.isSuffix "Script.sml" fname *)

@@ -697,14 +697,6 @@ a store_thm equivalent.")
         (hol-movement-backward-sexp (1- arg)))
     (backward-sexp arg)))
 
-(defun holscript-fix-quotations (start end)
-  (interactive "r")
-  (shell-command-on-region start end
-                           (concat (file-name-directory hol-executable)
-                                   "unquote --quotefix")
-                           nil
-                           t))
-
 (defun holscript-mode-variables ()
   (set-syntax-table holscript-mode-syntax-table)
   (setq local-abbrev-table holscript-mode-abbrev-table)
