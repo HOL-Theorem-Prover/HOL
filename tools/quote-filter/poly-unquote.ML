@@ -7,7 +7,6 @@ use "../../tools-poly/Holmake/Systeml.sml";
 use "../Holmake/AttributeSyntax.sig";
 use "../Holmake/AttributeSyntax.sml";
 use "../Holmake/HolLex.sml";
-use "../Holmake/QuoteFilter.sml";
 use "../Holmake/HM_SimpleBuffer.sig";
 use "../Holmake/HM_SimpleBuffer.sml";
 use "../Holmake/HOLFS_dtype.sml";
@@ -30,42 +29,22 @@ fun main() = let
      linked executable as Interrupt exceptions *)
   val _ = Signal.signal(2, Signal.SIG_HANDLE
                                (fn _ => Thread.Thread.broadcastInterrupt()))
-  val {instrm, outstrm, interactive, quotefixp, oldparser, closefn, infilename} =
-      qfilter_util.processArgs(false,false,false,false) (CommandLine.arguments())
+  val {instrm, outstrm, interactive, closefn, infilename} =
+      qfilter_util.processArgs(false,false) (CommandLine.arguments())
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 
-  val loop =
-    if oldparser orelse quotefixp then let
-      open QuoteFilter.UserDeclarations
-      val state as QFS args = newstate {inscriptp = interactive,
-                                        quotefixp = quotefixp,
-                                        scriptfilename = infilename}
+  open HolParser.ToSML
+  val read = mkPushTranslator {
+    read = read_from_stream instrm,
+    filename = infilename,
+    parseError = fn (start, stop) => fn s =>
+      TextIO.output (TextIO.stdErr,
+        "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
+  } (mkStrcode (fn s => TextIO.output(outstrm, s)))
 
-      fun loop() =
-        let
-          val lexer = #2 o QuoteFilter.makeLexer (read_from_stream instrm) state
-          fun coreloop () =
-            case lexer() of
-                "" => ()
-              | s => (TextIO.output(outstrm, s); coreloop())
-        in
-          coreloop() handle Interrupt => (resetstate state; loop())
-        end
-      in loop end
-    else let
-      open HolParser.ToSML
-      val read = mkPushTranslator {
-        read = read_from_stream instrm,
-        filename = infilename,
-        parseError = fn (start, stop) => fn s =>
-          TextIO.output (TextIO.stdErr,
-            "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
-      } (mkStrcode (fn s => TextIO.output(outstrm, s)))
-
-      fun loop () = if read () then () else loop ()
-      in loop end
+  fun loop () = if read () then () else loop ()
 in
   loop();
   closefn();
