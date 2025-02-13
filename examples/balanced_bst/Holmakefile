@@ -1,3 +1,5 @@
 INCLUDES = \
   $(HOLDIR)/src/finite_maps \
-  $(HOLDIR)/src/string
+  $(HOLDIR)/src/string \
+  $(HOLDIR)/src/integer \
+  $(HOLDIR)/src/real
