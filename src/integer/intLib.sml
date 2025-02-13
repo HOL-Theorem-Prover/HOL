@@ -52,6 +52,11 @@ val ARITH_CONV = Omega.OMEGA_CONV
 val ARITH_TAC = Omega.OMEGA_TAC
 val ARITH_PROVE = Omega.OMEGA_PROVE
 
+val ASM_ARITH_TAC =
+    REPEAT (FIRST_X_ASSUM
+              (fn th => if not(is_forall (concl th)) then MP_TAC th
+                        else ALL_TAC)) THEN ARITH_TAC;
+
 (* ------------------------------------------------------------------------- *)
 (* A tactic for simple divisibility/congruence/coprimality goals.            *)
 (* ------------------------------------------------------------------------- *)

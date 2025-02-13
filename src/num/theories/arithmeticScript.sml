@@ -13,7 +13,8 @@
 
 open HolKernel boolLib Parse BasicProvers;
 
-open simpLib boolSimps mesonLib metisLib numTheory prim_recTheory;
+open simpLib boolSimps mesonLib metisLib numTheory prim_recTheory
+     combinTheory relationTheory;
 
 local open SatisfySimps DefnBase in end
 
@@ -3723,6 +3724,21 @@ val transitive_monotone = Q.store_thm ("transitive_monotone",
      Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
      METIS_TAC [LESS_0,relationTheory.transitive_def]) THEN
    METIS_TAC [LESS_THM,relationTheory.transitive_def])
+
+Theorem TRANSITIVE_STEPWISE_LE :
+    !R. (!x. R x x) /\
+        (!x y z. R x y /\ R y z ==> R x z) /\
+        (!n. R n (SUC n)) ==> (!m n. m <= n ==> R m n)
+Proof
+    rpt STRIP_TAC
+ >> ‘m = n \/ m < n’ by PROVE_TAC [LE_LT]
+ >- ASM_REWRITE_TAC []
+ >> irule (REWRITE_RULE [I_THM]
+            (ISPECL [“R :num -> num -> bool”, “I :num -> num”] transitive_monotone))
+ >> RW_TAC std_ss [transitive_def]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘y’ >> ASM_REWRITE_TAC []
+QED
 
 val STRICTLY_INCREASING_TC = save_thm ("STRICTLY_INCREASING_TC",
    (* !f. (!n. f n < f (SUC n)) ==> !m n. m < n ==> f m < f n *)
