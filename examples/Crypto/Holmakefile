@@ -1,4 +1,4 @@
 INCLUDES = \
   AES DES IDEA Keccak MARS RC6 Serpent/Bitslice Serpent/Reference SHA-1 TEA \
-  TWOFISH
+  TWOFISH SHA-2
 CLINE_OPTIONS = -r

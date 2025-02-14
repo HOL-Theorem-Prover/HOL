@@ -1,1 +1,1 @@
-INCLUDES = $(HOLDIR)/src/num/theories/cv_compute/automation
+INCLUDES = ../MD $(HOLDIR)/src/num/theories/cv_compute/automation
