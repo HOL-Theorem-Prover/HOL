@@ -6,6 +6,7 @@ datatype decl
   = DefinitionDecl of {
       head: int * string, quote: qbody, termination: {tok: int, decls: decls} option,
       end_tok: int option, stop: int}
+  | OpenDecl of {head: int, toks: (int * string) list, stop: int}
   | DatatypeDecl of {head: int * string, quote: qbody, end_tok: int option, stop: int}
   | QuoteDecl of {head: int * string, quote: qbody, end_tok: int option, stop: int}
   | QuoteEqnDecl of {head: int * string, quote: qbody, end_tok: int option, stop: int}
@@ -55,6 +56,8 @@ datatype token
   | QuoteEnd of int * string (* from quote, holcomment *)
   | FullQuoteEnd of int * string (* from quote, holcomment *)
   | QDecl of qdecl * token option (* from quote *)
+  | OpenId of int * string (* from opens *)
+  | OpenEnd of int (* from opens *)
   | EOF of int (* from every state *)
 
 type lexresult = token
@@ -180,7 +183,7 @@ fun eof (_:state) = EOF
 
 %%
 %structure HolLex
-%s string stringlbrk comment holcomment quote holstrlit holstrlitlbrk ANTIQ;
+%s string stringlbrk comment holcomment quote holstrlit holstrlitlbrk ANTIQ opens;
 %arg (UserDeclarations.STATE {pardepth, comdepth, comstart, parseError});
 %full
 %posarg
@@ -221,6 +224,7 @@ HOLconjunction = "/\092" | "\226\136\167";
 DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ | {HOLconjunction};
 DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]";
 Definitionpfx = "Definition"{ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?{ws}*":";
+holstartkeyword = "Datatype"|"Type"|"Overload"|"Definition"|"Theorem"|"Triviality"|"Quote"|("Co")?"Inductive";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|"infix"[lr]?|"local";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 HOLSTRLITstart = "\"" | "\226\128\185" | "\194\171";
@@ -336,6 +340,20 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 <INITIAL>";"{newline} =>
   (if !pardepth = 0 then Decl (Semi yypos, SOME (Decl (Chunk yyend, NONE))) else continue());
 <INITIAL>";" => (if !pardepth = 0 then Decl (Semi yypos, NONE) else continue());
+<INITIAL>"open" => (
+  if !pardepth = 0 then let
+    val _ = YYBEGIN opens
+    fun finish ls p tok =
+      (YYBEGIN INITIAL; Decl (OpenDecl {head = yypos, toks = rev ls, stop = p}, tok))
+    fun parse ls =
+      case continue() of
+        OpenEnd p => finish ls p NONE
+      | OpenId p => parse (p :: ls)
+      | tk as EOF p => finish ls p (SOME tk)
+      | _ => raise Unreachable
+    in parse [] end
+  else continue()
+);
 <INITIAL>{declforms} => (if !pardepth = 0 then Decl (Chunk yypos, NONE) else continue());
 <INITIAL>{MLid} => (continue());
 <INITIAL>{newline}"End" => (EndTok (yyend-3));
@@ -415,6 +433,24 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   parseError (yypos, yyend) "expected identifier or parenthesized group";
   yybufpos := !yybufpos - 1; (* unread last character *)
   Antiq (BadAntiq yypos, NONE)
+);
+
+<opens>"(*" => (
+  comdepth := 1; YYBEGIN comment;
+  case continue() of
+    Comment => (YYBEGIN opens; continue())
+  | EOF p => (parseError (yypos, yyend) "unterminated comment"; EOF p)
+  | _ => raise Unreachable
+);
+<opens>({ws}|{newline})+ => (continue());
+<opens>({holstartkeyword}|{declforms}) => (
+  yybufpos := !yybufpos - (yyend - yypos); (* unread token *)
+  OpenEnd yypos
+);
+<opens>{alphaMLid} => (OpenId (yypos, yytext));
+<opens>. => (
+  yybufpos := !yybufpos - 1; (* unread token *)
+  OpenEnd yypos
 );
 
 .|{newline} => (continue());

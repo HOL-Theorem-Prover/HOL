@@ -17,12 +17,12 @@ fun use_reader fname (reader as {read = infn0, eof}) =
                            Compiler.CPLineNo (fn () => !lineNo)]) ()
   end
 
-fun use fname = use_reader fname (HolParser.fileToReader fname)
+fun use fname = use_reader fname (HolParser.fileToReader {quietOpen = false} fname)
 
 fun useScript fname =
     let
       val istream = TextIO.openIn fname
-      val reader = HolParser.streamToReader true fname istream
+      val reader = HolParser.streamToReader {quietOpen = false} fname istream
       val _ = use_reader fname reader
               handle e => (TextIO.closeIn istream; PolyML.Exception.reraise e)
     in

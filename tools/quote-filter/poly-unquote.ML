@@ -29,8 +29,8 @@ fun main() = let
      linked executable as Interrupt exceptions *)
   val _ = Signal.signal(2, Signal.SIG_HANDLE
                                (fn _ => Thread.Thread.broadcastInterrupt()))
-  val {instrm, outstrm, interactive, quotefixp, closefn, infilename} =
-      qfilter_util.processArgs(false,false,false) (CommandLine.arguments())
+  val {instrm, outstrm, interactive, quotefixp, quietOpen, closefn, infilename} =
+      qfilter_util.processArgs(false,false,false,false) (CommandLine.arguments())
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
@@ -46,7 +46,8 @@ fun main() = let
       filename = infilename,
       parseError = fn (start, stop) => fn s =>
         TextIO.output (TextIO.stdErr,
-          "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
+          "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n"),
+      quietOpen = quietOpen
     } (mkStrcode write)
 
     fun loop () = if read () then () else loop ()
