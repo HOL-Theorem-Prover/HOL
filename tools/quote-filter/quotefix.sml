@@ -26,6 +26,7 @@ fun run read write = let
     | QuoteEqnDecl {quote, ...} => doQuote quote
     | InductiveDecl {quote, ...} => doQuote quote
     | TheoremDecl {quote, body, ...} => (doQuote quote; doDecls body)
+    | OpenDecl _ => ()
     | BeginType _ => ()
     | BeginSimpleThm _ => ()
     | Chunk _ => ()

@@ -296,11 +296,18 @@ structure ToSML = struct
   }
 
 
+  type args = {
+    read: int -> string,
+    filename: string,
+    parseError: int * int -> string -> unit,
+    quietOpen: bool
+  }
+
   fun mk_mkloc_string (fname,i) =
       String.concat [
         "(DB_dtype.mkloc (", mlquote fname, ", ", Int.toString (i + 1), ", true))"
       ]
-  fun mkPushTranslatorCore {read, filename, parseError}
+  fun mkPushTranslatorCore ({read, filename, parseError, quietOpen}:args)
       ({regular, aux, strstr, strcode = strcode0}:strcode) = let
     open Simple
     val ss = Substring.string
@@ -387,7 +394,13 @@ structure ToSML = struct
         | _ => doQuoteCore start toks stop (SOME (f false))
       in aux "[QUOTE \"("; locpragma start; doQuote0 start toks; aux ")\"]" end
     and doDecl eager pos d = case d of
-        DefinitionDecl {head = (p, head), quote, termination, stop, ...} => let
+        OpenDecl {head = p, toks, stop} => (
+          regular (pos, p); finishThmVal ();
+          if quietOpen then aux "val _ = HOL_Interactive.toggle_quietdec () " else ();
+          regular (p, stop);
+          if quietOpen then aux " val _ = HOL_Interactive.toggle_quietdec ()" else ();
+          stop)
+      | DefinitionDecl {head = (p, head), quote, termination, stop, ...} => let
         val {keyword, name, attrs, name_attrs} = parseDefinitionPfx head
         val attrs = destAttrs attrs
         val indThm =
@@ -593,28 +606,32 @@ fun exhaust_parser (read, close) =
     recurse []
   end
 
-fun file_to_parser fname = let
+type args = {quietOpen: bool}
+
+fun file_to_parser ({quietOpen}:args) fname = let
   val instrm = openIn fname
   (* val isscript = String.isSuffix "Script.sml" fname *)
   val read = ToSML.mkPullTranslator
-    {read = fn n => input instrm, filename = fname, parseError = K (K ())}
+    {read = fn n => input instrm, filename = fname, parseError = K (K ()), quietOpen = quietOpen}
   in (read, fn () => closeIn instrm) end
 
-fun string_to_parser isscriptp s = let
+fun string_to_parser ({quietOpen}:args) s = let
   val sr = ref s
   fun str_read _ = (!sr before sr := "")
-  val read = ToSML.mkPullTranslator {read = str_read, filename = "", parseError = K (K ())}
+  val read = ToSML.mkPullTranslator
+    {read = str_read, filename = "", parseError = K (K ()), quietOpen = quietOpen}
   in (read, I) end
 
-fun input_to_parser isscriptp fname inp = let
-  val read = ToSML.mkPullTranslator {read = inp, filename = fname, parseError = K (K ())}
+fun input_to_parser ({quietOpen}:args) fname inp = let
+  val read = ToSML.mkPullTranslator
+    {read = inp, filename = fname, parseError = K (K ()), quietOpen = quietOpen}
   in (read, I) end
 
-fun stream_to_parser isscriptp fname strm =
-  input_to_parser isscriptp fname (fn n => input strm)
+fun stream_to_parser args fname strm =
+  input_to_parser args fname (fn n => input strm)
 
-fun inputFile fname = exhaust_parser (file_to_parser fname)
-fun fromString b s = exhaust_parser (string_to_parser b s)
+fun inputFile args fname = exhaust_parser (file_to_parser args fname)
+fun fromString args s = exhaust_parser (string_to_parser args s)
 
 fun mkReaderEOF (read, close) = let
   val i = ref 0
@@ -630,9 +647,9 @@ fun mkReaderEOF (read, close) = let
   fun eof () = !eofp
   in {read = doit, eof = eof} end
 
-fun fileToReader fname = mkReaderEOF (file_to_parser fname)
-fun stringToReader b s = mkReaderEOF (string_to_parser b s)
-fun inputToReader b fnm inp = mkReaderEOF (input_to_parser b fnm inp)
-fun streamToReader b fnm strm = mkReaderEOF (stream_to_parser b fnm strm)
+fun fileToReader args fname = mkReaderEOF (file_to_parser args fname)
+fun stringToReader args s = mkReaderEOF (string_to_parser args s)
+fun inputToReader args fnm inp = mkReaderEOF (input_to_parser args fnm inp)
+fun streamToReader args fnm strm = mkReaderEOF (stream_to_parser args fnm strm)
 
 end
