@@ -309,8 +309,6 @@ structure ToSML = struct
     val filename = ref filename
     val {read, readAt} = mkDoubleReader read 0
     val feed = mkParser {read = read, pos = ~1 (* fix for mllex bug *), parseError = parseError}
-    val lookahead = ref NONE
-    fun feed' () = case !lookahead of SOME tk => tk | NONE => feed ()
     val inThmVal = ref false
     fun finishThmVal () = if !inThmVal then (aux ");"; inThmVal := false) else ()
     val line = ref (0, 0)
@@ -551,7 +549,7 @@ structure ToSML = struct
     and doDecls start [] stop = regular (start, stop)
       | doDecls start (d :: ds) stop = doDecls (doDecl false start d) ds stop
     in {
-      feed = feed',
+      feed = feed,
       regular = regular,
       finishThmVal = finishThmVal,
       doDecl = doDecl

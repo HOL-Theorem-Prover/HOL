@@ -32,43 +32,45 @@ fun open_files intp infn outfn =
             (strm, cb)
           end
     in
-      {instrm = is, outstrm = os, interactive = intp,
+      {instrm = is, outstrm = os, interactive = intp, quotefixp = false,
        closefn = cb, infilename = infn}
     end
 
 fun usage strm status =
     (TextIO.output(strm,
                    "Usage:\n  " ^ CommandLine.name() ^
-                   " [-i] <inputfile> <outputfile> | -h | -n\n\n\
+                   " [-i] <inputfile> <outputfile> | -h | -n | --quotefix\n\n\
                    \With two files:\n\
                    \   -i : use \"interactive\" mode, and wrap *Script.sml \
                    \with structure decl\n\n\
                    \Other options occur as sole arguments:\n\
                    \   -h : show this message\n\
-                   \   -n : don't use \"interactive\" mode\n");
+                   \   -n : don't use \"interactive\" mode\n\
+                   \   --quotefix : filter to replace ` with Unicode quotes\n");
      exit status)
 
 fun badusage() = usage TextIO.stdErr failure
-fun processArgs (nonp, intp) args =
+fun processArgs (nonp, intp, qfixp) args =
     case args of
         [] => if intp then badusage()
               else
                 {instrm = TextIO.stdIn,
                  outstrm = TextIO.stdOut,
-                 interactive = true,
+                 interactive = not qfixp,
+                 quotefixp = qfixp,
                  closefn = nothing,
                  infilename = ""}
       | ["-h"] => usage TextIO.stdOut success
       | "-h" :: _ => badusage()
-      | "-i" :: rest => if nonp then badusage()
-                        else processArgs (false, true) rest
+      | "-i" :: rest => if nonp orelse qfixp then badusage()
+                        else processArgs (false, true, false) rest
       | "-n"::rest =>
-           if intp then badusage()
-           else processArgs (true, false) rest
-      | "--quotefix"::rest => (
-        TextIO.output (TextIO.stdErr, "unquote --quotefix is no longer supported\n");
-        exit failure)
-      | [ifile, ofile] => if nonp then badusage()
+           if intp orelse qfixp then badusage()
+           else processArgs (true, false, false) rest
+      | "--quotefix"::rest =>
+           if intp orelse nonp then badusage()
+           else processArgs (false, false, true) rest
+      | [ifile, ofile] => if qfixp orelse nonp then badusage()
                           else open_files intp ifile ofile
       | _ => badusage()
 
