@@ -48,9 +48,14 @@ structure ToSML: sig
     {read: int -> string, readAt: int -> int -> (int * substring -> unit) -> unit}
   val mkDoubleReader: (int -> string) -> int -> double_reader
 
-  val mkPullTranslator:
-    {read: int -> string, filename: string, parseError: int * int -> string -> unit} ->
-    unit -> string
+  type args = {
+    read: int -> string,
+    filename: string,
+    parseError: int * int -> string -> unit,
+    quietOpen: bool
+  }
+
+  val mkPullTranslator: args -> unit -> string
 
   type strcode = {
     aux: string -> unit,
@@ -63,34 +68,26 @@ structure ToSML: sig
   val mkStrcode: (string -> unit) -> strcode
 
   val mkPushTranslatorCore:
-    {read: int -> string, filename: string, parseError: int * int -> string -> unit} ->
-    strcode -> {
+    args -> strcode -> {
       doDecl: bool -> int -> Simple.decl -> int,
       feed: unit -> Simple.topdecl,
       finishThmVal: unit -> unit,
       regular: int * int -> unit
     }
 
-  val mkPushTranslator:
-    {read: int -> string, filename: string, parseError: int * int -> string -> unit} ->
-    strcode -> unit -> bool
+  val mkPushTranslator: args -> strcode -> unit -> bool
 
 end
 
 type reader = {read : unit -> char option, eof : unit -> bool}
+type args = {quietOpen: bool}
 
-val inputFile : string -> string
-val fromString : bool -> string -> string
+val inputFile : args -> string -> string
+val fromString : args -> string -> string
 
-val fileToReader : string -> reader
-val stringToReader : bool -> string -> reader
-val inputToReader : bool -> string -> (int -> string) -> reader
-val streamToReader : bool -> string -> TextIO.instream -> reader
-(* bool is true if the stream corresponds to an interactive session
-   (stdin) or a Script file. In both such situations, the magic >- and
-   Theorem-syntax transformations should be performed *)
-
-(* In inputFile and fileToReader, the determination is made on whether or
-   not the filename ends in "Script.sml" *)
+val fileToReader : args -> string -> reader
+val stringToReader : args -> string -> reader
+val inputToReader : args -> string -> (int -> string) -> reader
+val streamToReader : args -> string -> TextIO.instream -> reader
 
 end

@@ -319,7 +319,7 @@ fun process_line debugp umap obuf origline lbuf = let
     end
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
-  val stringCReader = #read o HolParser.stringToReader true
+  val stringCReader = #read o HolParser.stringToReader {quietOpen = false} true
   fun compile exnhandle input =
       (if debugp then
          TextIO.output(TextIO.stdErr, input)
