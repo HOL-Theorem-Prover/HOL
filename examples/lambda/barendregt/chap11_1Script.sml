@@ -8,8 +8,6 @@ open nomsetTheory labelledTermsTheory termTheory horeductionTheory chap3Theory
 
 val _ = new_theory "chap11_1";
 
-fun Store_Thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
-
 (* ----------------------------------------------------------------------
     phi function for reducing all labelled redexes
    ---------------------------------------------------------------------- *)
@@ -34,11 +32,12 @@ val FV_phi = store_thm(
     FULL_SIMP_TAC (srw_ss()) [FV_SUB] THEN METIS_TAC [IN_UNION, IN_DELETE]
   ]);
 
-val NOT_IN_lSUB_I = Store_Thm(
-  "NOT_IN_lSUB_I",
-  ``∀M:lterm. v ∉ FV N ∧ v ≠ u ∧ v ∉ FV M ==> v ∉ FV ([N/u]M)``,
+Theorem NOT_IN_lSUB_I[simp] :
+    ∀M:lterm. v ∉ FV N ∧ v ≠ u ∧ v ∉ FV M ==> v ∉ FV ([N/u]M)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `FV N ∪ {u;v}` THEN
-  SRW_TAC [][lSUB_VAR]);
+  SRW_TAC [][lSUB_VAR]
+QED
 
 val phi_vsubst_commutes = store_thm(
   "phi_vsubst_commutes",
@@ -63,10 +62,11 @@ val (strip_label_thm,_) = define_recursive_term_function
    (strip_label (LAMi n v M N) = (LAM v (strip_label M) @@ strip_label N))`
 val _ = export_rewrites ["strip_label_thm"]
 
-val FV_strip_label = Store_Thm(
-  "FV_strip_label",
-  ``!M. FV (strip_label M) = FV M``,
-  HO_MATCH_MP_TAC simple_lterm_induction THEN SRW_TAC [][]);
+Theorem FV_strip_label[simp] :
+    !M. FV (strip_label M) = FV M
+Proof
+  HO_MATCH_MP_TAC simple_lterm_induction THEN SRW_TAC [][]
+QED
 
 val strip_label_vsubst_commutes = store_thm(
   "strip_label_vsubst_commutes",
@@ -119,10 +119,11 @@ val _ = export_rewrites ["null_labelling_thm"]
 
 val _ = diminish_srw_ss ["alphas"]
 
-val FV_null_labelling = Store_Thm(
-  "FV_null_labelling",
-  ``!M. FV (null_labelling M) = FV M``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem FV_null_labelling[simp] :
+    !M. FV (null_labelling M) = FV M
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
 val null_labelling_subst = store_thm(
   "null_labelling_subst",
@@ -130,15 +131,17 @@ val null_labelling_subst = store_thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV N` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
-val strip_null_labelling = Store_Thm(
-  "strip_null_labelling",
-  ``!M. strip_label (null_labelling M) = M``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem strip_null_labelling[simp] :
+    !M. strip_label (null_labelling M) = M
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
-val phi_null_labelling = Store_Thm(
-  "phi_null_labelling",
-  ``!M. phi (null_labelling M) = M``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem phi_null_labelling[simp] :
+    !M. phi (null_labelling M) = M
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
 (* ----------------------------------------------------------------------
     substitution lemma
@@ -530,9 +533,13 @@ val strip_lemma = store_thm(
   `reduction beta N (phi Ntilde)` by PROVE_TAC [lemma11_1_8] THEN
   PROVE_TAC []);
 
-val beta_CR_2 = store_thm(
-  "beta_CR_2",
-  ``CR beta``,
+(* Theorem 11.1.10 [1, p. 282] (the 2nd version)
+
+   NOTE: cf. chap2Theory.beta_CR and finite_developmentsTheory.corollary11_2_29.
+ *)
+Theorem beta_CR_2 :
+    CR beta
+Proof
   SIMP_TAC (srw_ss())[CR_def, diamond_property_def] THEN
   Q_TAC SUFF_TAC
         `!M M1. RTC (compat_closure beta) M M1 ==>
@@ -540,6 +547,14 @@ val beta_CR_2 = store_thm(
                      ?M3. reduction beta M1 M3 /\ reduction beta M2 M3`
         THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  PROVE_TAC [reduction_rules, strip_lemma]);
+  PROVE_TAC [reduction_rules, strip_lemma]
+QED
 
-val _ = export_theory()
+val _ = export_theory();
+val _ = html_theory "chap11_1";
+
+(* References:
+
+   [1] Barendregt, H.P.: The Lambda Calculus, Its Syntax and Semantics.
+       College Publications, London (1984).
+ *)

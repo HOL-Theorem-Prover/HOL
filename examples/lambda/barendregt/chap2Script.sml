@@ -722,6 +722,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* cf. LAMl_ALPHA_tpm *)
 Theorem EQ_LAML_bodies_permute:
   ∀us vs M N. (LAMl us M = LAMl vs N) ∧ ¬is_abs M ∧ ¬is_abs N ⇒
               ∃pi. N = tpm pi M
@@ -757,25 +758,6 @@ Proof
     Q.X_GEN_TAC ‘t’
  >> Q.SPEC_THEN ‘t’ STRUCT_CASES_TAC term_CASES
  >> SRW_TAC [][]
-QED
-
-(* accessor for retrieving ‘y’ from ‘VAR y’ *)
-local
-    val th1 = prove (“!t. is_var t ==> ?y. t = VAR y”, rw [is_var_cases]);
-    val th2 = SIMP_RULE std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] th1;
-in
-   (* |- !t. is_var t ==> t = VAR (THE_VAR t) *)
-    val THE_VAR_def = new_specification ("THE_VAR_def", ["THE_VAR"], th2);
-end;
-
-Theorem THE_VAR_thm[simp] :
-    !y. THE_VAR (VAR y) = y
-Proof
-    rpt STRIP_TAC
- >> qabbrev_tac ‘t = (VAR y :term)’ >> simp []
- >> ‘is_var t’ by rw [Abbr ‘t’]
- >> Suff ‘VAR (THE_VAR t) = (VAR y :term)’ >- rw []
- >> ASM_SIMP_TAC std_ss [GSYM THE_VAR_def]
 QED
 
 Theorem term_cases :
@@ -1642,11 +1624,18 @@ Definition solvable_def :
     solvable (M :term) = ?M' Ns. M' IN closures M /\ M' @* Ns == I
 End
 
+Theorem closures_alt_closed :
+    !M. closed M ==> closures M = {M}
+Proof
+    rw [closures_def, closed_def]
+ >> rw [Once EXTENSION]
+QED
+
 (* 8.3.1 (i) [1, p.171] *)
 Theorem solvable_alt_closed :
     !M. closed M ==> (solvable M <=> ?Ns. M @* Ns == I)
 Proof
-    rw [solvable_def, closed_def]
+    rw [solvable_def, closures_alt_closed]
 QED
 
 (* 8.3.1 (iii) [1, p.171] *)

@@ -603,10 +603,16 @@ Proof
   simp[GSYM TC_RC_EQNS, theorem3_17]
 QED
 
-val beta_CR = store_thm(
-  "beta_CR",
-  ``CR beta``,
-  PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]);
+(* Theorem 3.2.8 [1, p.62] (1st version)
+
+   NOTE: This is the short proof due to Tait and Martin-Löf.
+   cf. chap11_1Theory.beta_CR_2 and finite_developmentsTheory.corollary11_2_29.
+ *)
+Theorem beta_CR :
+    CR beta
+Proof
+  PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]
+QED
 
 val betaCR_square = store_thm(
   "betaCR_square",

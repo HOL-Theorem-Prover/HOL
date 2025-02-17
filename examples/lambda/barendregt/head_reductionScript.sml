@@ -13,12 +13,16 @@ open boolSimps relationTheory pred_setTheory listTheory finite_mapTheory
      hurdUtils pairTheory;
 
 open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
-     horeductionTheory term_posnsTheory finite_developmentsTheory
-     basic_swapTheory NEWLib;
+     horeductionTheory term_posnsTheory finite_developmentsTheory NEWLib
+     basic_swapTheory;
 
 val _ = new_theory "head_reduction"
 
 val _ = hide "Y";
+
+(* Disable some conflicting overloads from labelledTermsTheory *)
+Overload FV  = “supp term_pmact”
+Overload VAR = “term$VAR”
 
 Inductive hreduce1 :
 [~BETA:]
@@ -1655,7 +1659,21 @@ Theorem hnf_head_VAR[simp] =
     (cj 2 hnf_head_hnf) |> Q.GEN ‘args’ |> Q.SPEC ‘[]’
                         |> REWRITE_RULE [appstar_empty]
 
-Overload hnf_headvar = “\t. THE_VAR (hnf_head t)”
+Definition var_name_def :
+    var_name t = @s. VAR s = t
+End
+
+Theorem var_name_thm[simp] :
+    var_name (VAR s) = s
+Proof
+    REWRITE_TAC [var_name_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC ‘s’ >> art [])
+ >> rw []
+QED
+
+Overload hnf_headvar = “\t. var_name (hnf_head t)”
 
 (* hnf_children retrives the ‘args’ part of absfree hnf *)
 Definition hnf_children_def :
