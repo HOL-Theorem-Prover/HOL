@@ -4085,6 +4085,10 @@ val lemma11_2_28ii = store_thm(
     Q.EXISTS_TAC `residuals s2 FS1`
   ] THEN PROVE_TAC [Cpl_complete_development]);
 
+(* Corollary 11.2.29 [1, p. 293] (the 3rd version)
+
+   NOTE: cf. chap2Theory.beta_CR and chap11_1Theory.beta_CR_2
+ *)
 val corollary11_2_29 = store_thm(
   "corollary11_2_29",
   ``CR beta``,
@@ -4092,3 +4096,10 @@ val corollary11_2_29 = store_thm(
              relationTheory.diamond_TC_diamond]);
 
 val _ = export_theory();
+val _ = html_theory "finite_developments";
+
+(* References:
+
+   [1] Barendregt, H.P.: The Lambda Calculus, Its Syntax and Semantics.
+       College Publications, London (1984).
+ *)
