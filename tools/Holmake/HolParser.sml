@@ -396,9 +396,9 @@ structure ToSML = struct
     and doDecl eager pos d = case d of
         OpenDecl {head = p, toks, stop} => (
           regular (pos, p); finishThmVal ();
-          if quietOpen then aux "val _ = HOL_Interactive.toggle_quietdec () " else ();
+          if quietOpen then aux "val _ = HOL_Interactive.toggle_quietdec ();" else ();
           regular (p, stop);
-          if quietOpen then aux " val _ = HOL_Interactive.toggle_quietdec ()" else ();
+          if quietOpen then aux " val _ = HOL_Interactive.toggle_quietdec ();" else ();
           stop)
       | DefinitionDecl {head = (p, head), quote, termination, stop, ...} => let
         val {keyword, name, attrs, name_attrs} = parseDefinitionPfx head
