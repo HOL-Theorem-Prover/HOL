@@ -574,6 +574,7 @@ Termination
   >> fs[]
 End
 
+(* TODO: Some metatheory
 Theorem lex_json_to_string_eq_json_to_tok:
   !obj. lex (FLAT $ json_to_string obj) [] = INL $ json_to_tok obj
 Proof
@@ -603,6 +604,7 @@ Theorem json_to_tok_parse_eq_ID:
 Proof
   cheat
 QED
+*)
 
 (*
 Examples:
