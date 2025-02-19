@@ -6,7 +6,7 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory hurdUtils numLib realTheory realLib intLib;
+open arithmeticTheory hurdUtils numLib realTheory realLib;
 
 val _ = intLib.deprecate_int ();
 val _ = numLib.prefer_num ();
@@ -41,7 +41,7 @@ Proof
   ONCE_REWRITE_TAC [fib_def] >> rw[] >>
   gs[EVEN_ADD, ADD1] >>
   Cases_on ‘n’ >> gs [ADD1] \\
-  Cases_on ‘n'’ >> gs [fib, ADD1] >> ARITH_TAC
+  Cases_on ‘n'’ >> gs [fib, ADD1] >> intLib.ARITH_TAC
 QED
 
 Theorem FIB_EQ_0 :
@@ -89,7 +89,7 @@ Proof
   reverse CONJ_TAC
   >- (MATCH_MP_TAC FIB_INCREASES_LE >> rw []) \\
   REWRITE_TAC[fib, ARITH_RULE “m < m + n <=> ~(n = 0)”, FIB_EQ_0] THEN
-  CCONTR_TAC >> fs []
+  Q.PAT_X_ASSUM ‘2 <= m + 1’ MP_TAC THEN ARITH_TAC
 QED
 
 val _ = export_theory ();
