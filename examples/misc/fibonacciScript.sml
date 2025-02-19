@@ -89,7 +89,7 @@ Proof
   reverse CONJ_TAC
   >- (MATCH_MP_TAC FIB_INCREASES_LE >> rw []) \\
   REWRITE_TAC[fib, ARITH_RULE “m < m + n <=> ~(n = 0)”, FIB_EQ_0] THEN
-  ASM_ARITH_TAC
+  CCONTR_TAC >> fs []
 QED
 
 val _ = export_theory ();
@@ -97,4 +97,5 @@ val _ = export_theory ();
 (* References:
 
   [1] https://en.wikipedia.org/wiki/Fibonacci_sequence
-*)
+
+ *)

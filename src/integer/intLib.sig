@@ -12,7 +12,6 @@ sig
   val ARITH_CONV     : conv
   val ARITH_PROVE    : conv
   val ARITH_TAC      : tactic
-  val ASM_ARITH_TAC  : tactic
 
   val COOPER_CONV    : conv
   val COOPER_PROVE   : conv
