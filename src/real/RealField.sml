@@ -36,7 +36,7 @@ list_mk_abs([x, y],
 end
 structure Parse = struct
   open Parse
-  local val (rtyg, rtmg0) = realTheory.real_grammars
+  local val (rtyg, rtmg0) = valOf $ grammarDB {thyname = "real"}
         val rtmg = term_grammar.fupdate_overload_info
                      (Overload.add_overloading("DECIMAL", decimal_tm))
                      rtmg0

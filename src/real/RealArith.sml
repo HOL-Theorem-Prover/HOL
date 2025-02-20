@@ -38,7 +38,8 @@ structure Parse = struct
   open Parse
   val (Type,Term) =
       parse_from_grammars
-        (apsnd ParseExtras.grammar_loose_equality realax_grammars)
+        (apsnd ParseExtras.grammar_loose_equality $ valOf $
+           grammarDB {thyname = "realax"})
 end
 
 open Parse

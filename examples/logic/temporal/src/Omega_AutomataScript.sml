@@ -7,7 +7,7 @@ open HolKernel Parse boolLib Rsyntax schneiderUtils
      Temporal_LogicTheory Past_Temporal_LogicTheory;
 open tautLib bossLib
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 
 val ZERO_LEMMA = ARITH_PROVE“~(x<x) /\ (0<SUC x) /\ ~(SUC x=0)”;
 

@@ -8,7 +8,7 @@ open pairSyntax progSyntax temporalTheory;
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars progTheory.prog_grammars
+   val (Type, Term) = parse_from_grammars $ valOf $ grammarDB {thyname="prog"}
 end
 open Parse
 

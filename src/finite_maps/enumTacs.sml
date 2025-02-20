@@ -19,7 +19,7 @@ open totoTheory reduceLib bossLib
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars enumeralTheory.enumeral_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="enumeral"}
 end
 open Parse
 
