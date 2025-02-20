@@ -4,6 +4,8 @@ struct
 open HolKernel Parse boolLib ternaryComparisonsTheory EVAL_quoteTheory
      EVAL_quote computeLib;
 
+local open EVAL_ringNormTheory in end
+
 val RING_ERR = mk_HOL_ERR "ringLib"
 
 
@@ -84,58 +86,50 @@ fun is_ring_thm th =
 (* name is a prefix for the new constant names. *)
 fun import_ring name th =
   let val ring = rand (concl th)
-      val { ics_aux_def, interp_cs_def, interp_m_def, interp_vl_def,
-            ivl_aux_def, interp_p_def,
-            canonical_sum_merge_def, monom_insert_def,
-            varlist_insert_def, canonical_sum_scalar_def,
-            canonical_sum_scalar2_def, canonical_sum_scalar3_def,
-            canonical_sum_prod_def, canonical_sum_simplify_def,
-            polynom_normalize_def, polynom_simplify_def,
-            polynom_simplify_ok,... } =
-        EVAL_ringNormTheory.IMPORT
+      val rntable =
+        abstraction.IMPORT_THY
           { Vals = [ring],
             Inst = [th],
             Rule = REWRITE_RULE[EVAL_ringTheory.ring_accessors ],
             Rename = fn s => SOME(name^"_"^s) }
+          "EVAL_ringNorm"
+      fun TAB s = valOf $ Symtab.lookup rntable s
   in LIST_CONJ
     [ th,
-      GSYM polynom_simplify_ok,
-      LIST_CONJ [ interp_p_def, varmap_find_def ],
+      GSYM $ TAB "polynom_simplify_ok",
+      LIST_CONJ [ TAB "interp_p_def", varmap_find_def ],
       LIST_CONJ
-        [ canonical_sum_merge_def, monom_insert_def,
-          varlist_insert_def, canonical_sum_scalar_def,
-          canonical_sum_scalar2_def, canonical_sum_scalar3_def,
-          canonical_sum_prod_def, canonical_sum_simplify_def,
-          ivl_aux_def, interp_vl_def, interp_m_def, ics_aux_def, interp_cs_def,
-          polynom_normalize_def, polynom_simplify_def ] ]
+        [ TAB "canonical_sum_merge_def", TAB "monom_insert_def",
+          TAB "varlist_insert_def", TAB "canonical_sum_scalar_def",
+          TAB "canonical_sum_scalar2_def", TAB "canonical_sum_scalar3_def",
+          TAB "canonical_sum_prod_def", TAB "canonical_sum_simplify_def",
+          TAB "ivl_aux_def", TAB "interp_vl_def", TAB "interp_m_def",
+          TAB "ics_aux_def",
+          TAB "interp_cs_def",
+          TAB "polynom_normalize_def", TAB "polynom_simplify_def" ] ]
   end;
 
 fun import_semi_ring name th =
   let val sring = rand (concl th)
-      val { ics_aux_def, interp_cs_def, interp_m_def, interp_vl_def,
-            ivl_aux_def, interp_sp_def,
-            canonical_sum_merge_def, monom_insert_def,
-            varlist_insert_def, canonical_sum_scalar_def,
-            canonical_sum_scalar2_def, canonical_sum_scalar3_def,
-            canonical_sum_prod_def, canonical_sum_simplify_def,
-            spolynom_normalize_def, spolynom_simplify_def,
-            spolynomial_simplify_ok, ... } =
-        EVAL_canonicalTheory.IMPORT
+      val canontable =
+        abstraction.IMPORT_THY
           { Vals = [sring],
             Inst = [th],
             Rule = REWRITE_RULE[EVAL_semiringTheory.semi_ring_accessors ],
-            Rename = fn s => SOME(name^"_"^s) }
+            Rename = fn s => SOME(name^"_"^s) } "EVAL_canonical"
+      fun TAB s = valOf $ Symtab.lookup canontable s
   in LIST_CONJ
     [ th,
-      GSYM spolynomial_simplify_ok,
-      LIST_CONJ [ interp_sp_def, varmap_find_def ],
+      GSYM (TAB "spolynomial_simplify_ok"),
+      LIST_CONJ [ TAB "interp_sp_def", varmap_find_def ],
       LIST_CONJ
-        [ canonical_sum_merge_def, monom_insert_def,
-          varlist_insert_def, canonical_sum_scalar_def,
-          canonical_sum_scalar2_def, canonical_sum_scalar3_def,
-          canonical_sum_prod_def, canonical_sum_simplify_def,
-          ivl_aux_def, interp_vl_def, interp_m_def, ics_aux_def, interp_cs_def,
-          spolynom_normalize_def, spolynom_simplify_def ] ]
+        [ TAB "canonical_sum_merge_def", TAB "monom_insert_def",
+          TAB "varlist_insert_def", TAB "canonical_sum_scalar_def",
+          TAB "canonical_sum_scalar2_def", TAB "canonical_sum_scalar3_def",
+          TAB "canonical_sum_prod_def", TAB "canonical_sum_simplify_def",
+          TAB "ivl_aux_def", TAB "interp_vl_def", TAB "interp_m_def", TAB "ics_aux_def",
+          TAB "interp_cs_def",
+          TAB "spolynom_normalize_def", TAB "spolynom_simplify_def" ] ]
   end;
 
 fun mk_ring_thm nm th =

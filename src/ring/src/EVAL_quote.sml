@@ -6,7 +6,7 @@ open HolKernel Parse boolLib EVAL_quoteTheory;
 structure Parse =
 struct
   open Parse
-  val (Type,Term) = parse_from_grammars EVAL_quoteTheory.EVAL_quote_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB{thyname="EVAL_quote"}
 end
 
 val QUOTE_ERR = mk_HOL_ERR "quote"

@@ -45,6 +45,7 @@ val is_semi_ring_def = Define `
     /\ ^sp_distr_left `;
 
 (* We work on an abstract semi ring r *)
+val _ = record_terms [rator “is_semi_ring”]
 val _ = set_assums [ Term`is_semi_ring ` ];
 
 
@@ -132,4 +133,4 @@ ONCE_REWRITE_TAC [mult_rotate] THEN APP_DIFF THEN
 PROVE_TAC[mult_sym]);
 
 
-val _ = export_param_theory();
+val _ = export_theory();

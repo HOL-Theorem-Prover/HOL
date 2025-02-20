@@ -217,76 +217,36 @@ fun inst_thm_fun { Inst=inst, Rule=f, Csts=ctab, Defs=thms } =
 
 (* --> abs_tools ? *)
 
-val pr_list_sep = PP.pr_list
+fun IMPORT (P as {Vals,Inst,Rule,Rename}) tms named_thms =
+    let fun sing [x] = x | sing _ = raise Match
+        val sr = sing Vals
+        val ctab = map (fn t => mk_icomb(t,sr)) tms
+        val inst_fun = inst_thm_fun (compute_inst_infos ctab P)
+        val empty = Symtab.empty
+    in
+      itlist (fn (n,th) => Symtab.update (n,inst_fun th)) named_thms empty
+    end
 
-val S = PP.add_string;
-val NL = PP.add_newline;
-val N = PP.add_string o int_to_string;
-val SPC = PP.add_break(1,0)
-val B = PP.block PP.CONSISTENT 0
-
-
-val functor_header = [S "fun IMPORT P =", NL]
-;
-
-fun compute_cst_arg_map (fv,impargs) =
-  let val thcsts = map (#Name o dest_thy_const) (constants(current_theory()))
-      fun is_param_cst (x,iargs) =
-        mem x thcsts andalso all (C tmem fv) iargs
-      val ptab = filter is_param_cst impargs
-      val pr_var = S o fst o dest_var
-      val sep = [S ",", NL, S "          "]
-  in
-     B [
-      S "  let open Parse abstraction",              NL,
-      S "      fun sing [x] = x | sing _ = raise Match", NL,
-      S "      val ",
-      B (pr_list_sep pr_var [S","] (!fv_ass)),
-      S " = sing (#Vals P)", NL,
-      S "      val ctab =", NL,
-      S "        [ ",
-      B (pr_list_sep (fn (x,iargs) =>
-                      B [
-                          S ("Term`"^x^" "),
-                          B (pr_list_sep (fn v => S ("^"^fst(dest_var v)))
-                                         [S " "] iargs),
-                          S "`"
-                        ])
-                  sep ptab),
-      S " ]",  NL,
-      S "      val inst_fun = inst_thm_fun (compute_inst_infos ctab P) in",
-      NL]
-  end
-;
-
-fun export_param_theory () = let
-  val _ = Theory.scrub()
-  val defs = rev (map fst (definitions"-"))
-  val thms = rev (map fst (theorems"-"))
-  fun struct_line thn = B [S thn, SPC, S "= inst_fun ", S thn]
-  fun sig_line thn = B [S thn, S " : thm"]
-  val sep = [S ",", NL, S "    "]
-  val adj = {
-    sig_ps =
-      SOME (fn _ => B[
-                     S "val IMPORT : abstraction.inst_infos ->", NL,
-                     S "  { ",
-                     B (pr_list_sep sig_line [S ",", SPC] (defs@thms)),
-                     S " }", NL
-                   ]),
-    struct_ps =
-      SOME (fn _ => B (
-                     functor_header @
-                     [compute_cst_arg_map (!fv_ass, !impl_param_cstr),
-                      S "  { ",
-                      B (pr_list_sep struct_line sep (defs@thms)),
-                      S " }", NL,
-                      S "  end", NL]))
-  }
+local
+  val adinfo = {tag = "bbabstraction",
+                initial_values = [("min", [])],
+                apply_delta = fn (t:term) => fn ts => t::ts}
+  val makeinfo = {adinfo = adinfo,
+                  uptodate_delta = uptodate_term,
+                  sexps = {dec = ThyDataSexp.term_decode,
+                           enc = ThyDataSexp.Term},
+                  globinfo = { apply_to_global = cons,
+                               thy_finaliser = NONE,
+                               initial_value = [] }
+                 }
+  val result = AncestryData.fullmake makeinfo
 in
-  adjoin_to_theory adj;
-  export_theory()
-end;
+  fun thyTerms x = #get_deltas result x
+  fun record_terms ts = List.app (#record_delta result) ts
 
+end
+
+fun IMPORT_THY P thy =
+  IMPORT P (thyTerms {thyname = thy}) (definitions thy @ theorems thy)
 
 end;

@@ -20,27 +20,52 @@ val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
 val _ = app (fn s => temp_overload_on (s, Parse.Term [QUOTE ("ring_"^s)]))
             ["R0","R1","RP","RM","RN"];
 
-val rth = EVAL_ringTheory.IMPORT
+val rth = IMPORT_THY
     { Vals = [r],
       Inst = map ASSUME (get_assums()),
       Rule = REWRITE_RULE[ring_accessors],
-      Rename = K NONE };
+      Rename = K NONE }
+    "EVAL_ring"
+fun rTAB s = valOf $ Symtab.lookup rth s
 
-val { canonical_sum_merge_ok, canonical_sum_prod_ok,
+val canontable =
+  (* { canonical_sum_merge_ok, canonical_sum_prod_ok,
       canonical_sum_scalar3_ok, canonical_sum_simplify_ok,
       ics_aux_def, interp_cs_def, interp_m_def, interp_vl_def,
       ivl_aux_def, interp_sp_def, canonical_sum_merge_def,
       monom_insert_def, varlist_insert_def, canonical_sum_scalar_def,
       canonical_sum_scalar2_def, canonical_sum_scalar3_def,
       canonical_sum_prod_def, canonical_sum_simplify_def,
-      spolynom_normalize_def, spolynom_simplify_def, ... } =
-  EVAL_canonicalTheory.IMPORT
+      spolynom_normalize_def, spolynom_simplify_def, ... } = *)
+  IMPORT_THY
     { Vals = [sr],
-      Inst = [#ring_is_semi_ring rth],
+      Inst = [rTAB "ring_is_semi_ring"],
       Rule = REWRITE_RULE[ semi_ring_of_def,
                            EVAL_semiringTheory.semi_ring_accessors ],
-      Rename = fn x => SOME ("r_"^x) };
+      Rename = fn x => SOME ("r_"^x) }
+    "EVAL_canonical"
 
+fun cTAB s = valOf $ Symtab.lookup canontable s
+val interp_sp_def = cTAB "interp_sp_def"
+val canonical_sum_merge_def = cTAB "canonical_sum_merge_def"
+val monom_insert_def = cTAB "monom_insert_def"
+val varlist_insert_def = cTAB "varlist_insert_def"
+val canonical_sum_scalar3_def = cTAB "canonical_sum_scalar3_def"
+val canonical_sum_scalar2_def = cTAB "canonical_sum_scalar2_def"
+val canonical_sum_scalar_def = cTAB "canonical_sum_scalar_def"
+val canonical_sum_prod_def = cTAB "canonical_sum_prod_def"
+val canonical_sum_simplify_def = cTAB "canonical_sum_simplify_def"
+val ivl_aux_def = cTAB "ivl_aux_def"
+val interp_vl_def = cTAB "interp_vl_def"
+val interp_m_def = cTAB "interp_m_def"
+val ics_aux_def = cTAB "ics_aux_def"
+val interp_cs_def = cTAB "interp_cs_def"
+val spolynom_normalize_def = cTAB "spolynom_normalize_def"
+val spolynom_simplify_def = cTAB "spolynom_simplify_def"
+val canonical_sum_scalar3_ok = cTAB "canonical_sum_scalar3_ok"
+val canonical_sum_prod_ok = cTAB "canonical_sum_prod_ok"
+val canonical_sum_simplify_ok = cTAB "canonical_sum_simplify_ok"
+val canonical_sum_merge_ok = cTAB "canonical_sum_merge_ok"
 
 val _ = asm_save_thm("interp_sp_def", interp_sp_def);
 val _ = asm_save_thm("canonical_sum_merge_def",
@@ -64,9 +89,9 @@ val _ = asm_save_thm("spolynom_simplify_def", spolynom_simplify_def);
 
 
 fun ARW_TAC l = RW_TAC bool_ss
-    ([ #mult_one_left rth, #mult_one_right rth,
-       #plus_zero_left rth, #plus_zero_right rth,
-       #mult_zero_left rth, #mult_zero_right rth ]@l);
+    ([ rTAB "mult_one_left", rTAB "mult_one_right",
+       rTAB "plus_zero_left", rTAB "plus_zero_right",
+       rTAB "mult_zero_left", rTAB "mult_zero_right" ]@l);
 
 
 
@@ -113,7 +138,7 @@ Induct_on `p` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ polynom_normalize_def, interp_cs_def, interp_p_def,
           ics_aux_def, canonical_sum_merge_ok, canonical_sum_prod_ok,
           canonical_sum_scalar3_ok, interp_m_def, interp_vl_def,
-          ivl_aux_def, #neg_mult rth ]);
+          ivl_aux_def, rTAB "neg_mult" ]);
 
 
 val polynom_simplify_ok = asm_store_thm
@@ -125,4 +150,4 @@ ARW_TAC [ polynom_simplify_def,
           polynom_normalize_ok ]);
 
 
-val _ = export_param_theory();
+val _ = export_theory();
