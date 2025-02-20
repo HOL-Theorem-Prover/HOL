@@ -10,7 +10,7 @@ open stringSyntax
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars wordsTheory.words_grammars
+val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname = "words"}
 
 val () = ignore (Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ())
 

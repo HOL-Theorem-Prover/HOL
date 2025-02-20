@@ -9,7 +9,7 @@ open nomsetTheory
 open NEWLib
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars nomsetTheory.nomset_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="nomset"}
 end
 open Parse
 

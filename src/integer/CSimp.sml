@@ -6,7 +6,7 @@ open HolKernel boolLib CooperThms intSyntax integerTheory int_arithTheory
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="bool"}
 end
 open Parse
 
