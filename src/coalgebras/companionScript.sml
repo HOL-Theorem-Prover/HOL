@@ -140,7 +140,7 @@ Proof
   metis_tac[function_in]
 QED
 
-Theorem companion_gt:
+Theorem companion_expansive:
   poset (s,r) /\ function s s b /\ monotonic (s,r) b /\
   companion (s,r) b t /\
   s x ==> r x (t x)
@@ -166,7 +166,7 @@ Proof
     rw[function_def, GSYM combinTheory.o_DEF] >>
     irule compatible_compose >>
     rw[compatible_companion]) >-
-   (metis_tac[companion_def, function_def, companion_gt])
+   (metis_tac[companion_def, function_def, companion_expansive])
 QED
 
 Theorem companion_bot_gfp:
@@ -209,7 +209,7 @@ Proof
   drule_then match_mp_tac poset_trans >>
   qexists_tac ‘t x’ >> rw[function_in]
   >- (fs[gfp_def])
-  >- (ho_match_mp_tac companion_gt >> rw[]) >>
+  >- (ho_match_mp_tac companion_expansive >> rw[]) >>
   match_mp_tac gfp_coinduct >>
   rw[function_in] >>
   drule_all compatible_companion >> strip_tac >>
@@ -239,7 +239,7 @@ Proof
   irule gfp_coinduct >>
   qexistsl_tac [‘(b o t)’, ‘s’] >>
   fs[gfp_def] >>
-  metis_tac[monotonic_def, function_def, companion_gt]
+  metis_tac[monotonic_def, function_def, companion_expansive]
 QED
 
 (*
@@ -264,7 +264,7 @@ Proof
   ‘function s s t’ by fs[companion_def] >>
   drule_then match_mp_tac poset_trans >>
   qexists_tac ‘x’ >> rw[function_in] >>
-  metis_tac[companion_gt]
+  metis_tac[companion_expansive]
 QED
 
 Theorem param_coind_upto_f:
@@ -546,7 +546,7 @@ Proof
     drule_then irule poset_trans >> rw[] >-
      (metis_tac[companion_def, function_def, endo_def]) >>
     qexists_tac ‘t x’ >> rw[SF SFY_ss, endo_in] >>
-    drule_then irule companion_gt >>
+    drule_then irule companion_expansive >>
     metis_tac[function_def, endo_def])
 QED
 
@@ -678,7 +678,7 @@ Proof
          (metis_tac[companion_def, function_def, endo_def]) >-
          (metis_tac[companion_def, function_def, endo_def]) >-
          (metis_tac[companion_def, function_def, endo_def]) >-
-         (irule companion_gt >>
+         (irule companion_expansive >>
           qexistsl_tac [‘B’, ‘endo (s,r)’] >> rw[] >>
           metis_tac[endo_poset, endo_lift_def]) >-
          (rw[lift_rel] >>
