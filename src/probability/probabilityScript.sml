@@ -3,8 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (*                                                                           *)
-(* Further enriched by Chun Tian <binghe.lisp@gmail.com> (2019 - 2023)       *)
-(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
+(* Further enriched by Chun Tian (2019 - 2025)                               *)
 (* ------------------------------------------------------------------------- *)
 (* Originally based on the work of Joe Hurd [7] and Aaron Coble [8]          *)
 (* Cambridge University.                                                     *)
@@ -13,7 +12,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory combinTheory optionTheory prim_recTheory arithmeticTheory
-     pred_setTheory pred_setLib topologyTheory hurdUtils;
+     pred_setTheory pred_setLib topologyTheory hurdUtils numLib;
 
 open realTheory realLib iterateTheory seqTheory transcTheory real_sigmaTheory
      real_topologyTheory metricTheory;
@@ -400,16 +399,20 @@ val EVENTS_COMPL = store_thm
  >> PROVE_TAC [PROB_SPACE, SIGMA_ALGEBRA_ALGEBRA]);
 
 Theorem EVENTS_BIGUNION :
-    !p f n. prob_space p /\ (f IN ((count n) -> events p)) ==>
+    !p f n. prob_space p /\ f IN (count n -> events p) ==>
             BIGUNION (IMAGE f (count n)) IN events p
 Proof
     RW_TAC std_ss [IN_FUNSET, IN_COUNT]
- >> `BIGUNION (IMAGE f (count n)) = BIGUNION (IMAGE (\m. (if m < n then f m else {})) UNIV)`
-     by (RW_TAC std_ss [EXTENSION,IN_BIGUNION_IMAGE, IN_COUNT, IN_UNIV] >> METIS_TAC [NOT_IN_EMPTY])
+ >> `BIGUNION (IMAGE f (count n)) =
+     BIGUNION (IMAGE (\m. (if m < n then f m else {})) UNIV)`
+      by (RW_TAC std_ss [EXTENSION,IN_BIGUNION_IMAGE, IN_COUNT, IN_UNIV] \\
+          METIS_TAC [NOT_IN_EMPTY])
  >> POP_ORW
  >> (MATCH_MP_TAC o REWRITE_RULE [subsets_def, space_def] o
-        Q.SPECL [`(p_space p, events p)`,`(\m. if m < n then A m else {})`]) SIGMA_ALGEBRA_ENUM
- >> RW_TAC std_ss [EVENTS_SIGMA_ALGEBRA] >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, DISJOINT_EMPTY]
+     Q.SPECL [`(p_space p, events p)`,`(\m. if m < n then A m else {})`])
+       SIGMA_ALGEBRA_ENUM
+ >> RW_TAC std_ss [EVENTS_SIGMA_ALGEBRA]
+ >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, DISJOINT_EMPTY]
  >> METIS_TAC [EVENTS_EMPTY]
 QED
 
@@ -420,6 +423,15 @@ val EVENTS_COUNTABLE_UNION = store_thm
  >> (MATCH_MP_TAC o REWRITE_RULE [subsets_def, space_def] o
      Q.SPEC `(p_space p, events p)`) SIGMA_ALGEBRA_COUNTABLE_UNION
  >> RW_TAC std_ss [EVENTS_SIGMA_ALGEBRA]);
+
+Theorem EVENTS_BIGUNION_ENUM :
+    !p f. prob_space p /\ f IN (univ(:num) -> events p) ==>
+          BIGUNION (IMAGE f univ(:num)) IN events p
+Proof
+    rw [IN_FUNSET]
+ >> MATCH_MP_TAC EVENTS_COUNTABLE_UNION
+ >> rw [SUBSET_DEF] >> art []
+QED
 
 val PROB_ZERO_UNION = store_thm
   ("PROB_ZERO_UNION",
@@ -3289,16 +3301,7 @@ Definition old_indep_vars_def :
           indep_events p (\n. (PREIMAGE (X n) (E n)) INTER p_space p) J
 End
 
-> REWRITE_RULE [indep_events_def] old_indep_vars_def;
-val it =
-  |- !p X A J.
-        old_indep_vars p X A J <=>
-        !E. E IN J --> subsets o A ==>
-            !N. N SUBSET J /\ N <> {} /\ FINITE N ==>
-                prob p (BIGINTER (IMAGE (\n. PREIMAGE (X n) (E n) INTER p_space p) N)) =
-                PI (prob p o (\n. PREIMAGE (X n) (E n) INTER p_space p)) N:
-
-  new definition:
+  new definition is moved to martingaleTheory.indep_functions_def
  *)
 Definition indep_vars_def :
     indep_vars p X A (J :'index set) =
@@ -3449,10 +3452,11 @@ val indep_function_def = Define
    {f | indep_families p (IMAGE (PREIMAGE (FST o f)) UNIV)
                          (IMAGE (PREIMAGE (SND o f)) (events p))}`;
 
-val PROB_INDEP = store_thm
-  ("PROB_INDEP",
-  ``!p s t u. indep p s t /\ (u = s INTER t) ==> (prob p u = prob p s * prob p t)``,
-    RW_TAC std_ss [indep_def]);
+Theorem PROB_INDEP :
+  !p s t u. indep p s t /\ (u = s INTER t) ==> (prob p u = prob p s * prob p t)
+Proof
+  RW_TAC std_ss [indep_def]
+QED
 
 Theorem INDEP :
   !p a b. a IN events p /\ b IN events p /\
@@ -3461,13 +3465,11 @@ Proof
   rw [indep_def]
 QED
 
-val INDEP_EMPTY = store_thm
-  ("INDEP_EMPTY", ``!p s. prob_space p /\ s IN events p ==> indep p {} s``,
-    RW_TAC std_ss [indep_def, EVENTS_EMPTY, PROB_EMPTY, INTER_EMPTY, mul_lzero]);
-
-val INDEP_SPACE = store_thm
-  ("INDEP_SPACE", ``!p s. prob_space p /\ s IN events p ==> indep p (p_space p) s``,
-    RW_TAC std_ss [indep_def, EVENTS_SPACE, PROB_UNIV, INTER_PSPACE,mul_lone]);
+Theorem INDEP_EMPTY :
+    !p s. prob_space p /\ s IN events p ==> indep p {} s
+Proof
+    RW_TAC std_ss [indep_def, EVENTS_EMPTY, PROB_EMPTY, INTER_EMPTY, mul_lzero]
+QED
 
 (* `prob_space p` is not needed here *)
 val INDEP_SYM = store_thm
@@ -3479,6 +3481,25 @@ val INDEP_SYM_EQ = store_thm
   ("INDEP_SYM_EQ", ``!p a b. indep p a b <=> indep p b a``,
     rpt GEN_TAC >> EQ_TAC >> rpt STRIP_TAC
  >> MATCH_MP_TAC INDEP_SYM >> art []);
+
+Theorem INDEP_SPACE :
+    !p s. prob_space p /\ s IN events p ==> indep p (p_space p) s
+Proof
+    RW_TAC std_ss [indep_def, EVENTS_SPACE, PROB_UNIV, INTER_PSPACE, mul_lone]
+QED
+
+Theorem INDEP_SPACE' :
+    !p s. prob_space p /\ s IN events p ==> indep p s (p_space p)
+Proof
+    rw [Once INDEP_SYM_EQ, INDEP_SPACE]
+QED
+
+Theorem INDEP_EMPTY' :
+    !p s. prob_space p /\ s IN events p ==> indep p s {}
+Proof
+    RW_TAC std_ss [Once INDEP_SYM_EQ]
+ >> MATCH_MP_TAC INDEP_EMPTY >> art []
+QED
 
 val INDEP_FAMILIES_SYM = store_thm
   ("INDEP_FAMILIES_SYM", ``!p q r. indep_families p q r ==> indep_families p r q``,
@@ -3495,11 +3516,12 @@ val INDEP_REFL = store_thm (* the simplest "0-1 law" *)
  >> RW_TAC std_ss [extreal_mul_def, extreal_of_num_def, extreal_11]
  >> METIS_TAC [REAL_MUL_IDEMPOT]);
 
-val INDEP_COMPL = store_thm
-  ("INDEP_COMPL",
-  ``!p s t. prob_space p /\ indep p s t ==> indep p s (p_space p DIFF t)``,
+Theorem INDEP_COMPL :
+    !p s t. prob_space p /\ indep p s t ==> indep p s (p_space p DIFF t)
+Proof
     RW_TAC std_ss [indep_def, EVENTS_COMPL, PROB_COMPL]
- >> `s SUBSET (p_space p) /\ t SUBSET (p_space p)` by PROVE_TAC [PROB_SPACE_SUBSET_PSPACE]
+ >> `s SUBSET (p_space p) /\ t SUBSET (p_space p)`
+       by PROVE_TAC [PROB_SPACE_SUBSET_PSPACE]
  >> `s INTER (p_space p DIFF t) = s DIFF (s INTER t)` by ASM_SET_TAC []
  >> POP_ORW
  >> `(s INTER t) SUBSET s` by PROVE_TAC [INTER_SUBSET]
@@ -3511,17 +3533,100 @@ val INDEP_COMPL = store_thm
  >- (MATCH_MP_TAC sub_ldistrib \\
      REWRITE_TAC [extreal_of_num_def, extreal_not_infty] \\
      PROVE_TAC [PROB_FINITE])
- >> Rewr' >> REWRITE_TAC [mul_rone]);
+ >> Rewr' >> REWRITE_TAC [mul_rone]
+QED
 
-val INDEP_COMPL2 = store_thm
-  ("INDEP_COMPL2",
-  ``!p s t. prob_space p /\ indep p s t ==> indep p (p_space p DIFF s) (p_space p DIFF t)``,
+Theorem INDEP_COMPL' :
+    !p s t. prob_space p /\ indep p s t ==> indep p (p_space p DIFF s) t
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC INDEP_SYM
+ >> MATCH_MP_TAC INDEP_COMPL >> art []
+ >> MATCH_MP_TAC INDEP_SYM >> art []
+QED
+
+Theorem INDEP_COMPL2 :
+    !p s t. prob_space p /\ indep p s t ==>
+            indep p (p_space p DIFF s) (p_space p DIFF t)
+Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC INDEP_COMPL >> art []
  >> Suff `indep p t (p_space p DIFF s)`
  >- (DISCH_TAC >> MATCH_MP_TAC INDEP_SYM >> art [])
  >> MATCH_MP_TAC INDEP_COMPL >> art []
- >> MATCH_MP_TAC INDEP_SYM >> art []);
+ >> MATCH_MP_TAC INDEP_SYM >> art []
+QED
+
+Theorem INDEP_DISJOINT_UNION :
+    !p A B C. prob_space p /\ indep p A B /\ indep p A C /\ DISJOINT B C ==>
+              indep p A (B UNION C)
+Proof
+    rw [indep_def, UNION_OVER_INTER]
+ >- (MATCH_MP_TAC EVENTS_UNION >> art [])
+ >> Know ‘prob p (B UNION C) = prob p B + prob p C’
+ >- (MATCH_MP_TAC PROB_ADDITIVE >> art [])
+ >> Rewr'
+ >> Know ‘prob p (A INTER B UNION A INTER C) =
+          prob p (A INTER B) + prob p (A INTER C)’
+ >- (MATCH_MP_TAC PROB_ADDITIVE >> rw [EVENTS_INTER] \\
+     MATCH_MP_TAC DISJOINT_RESTRICT_R >> art [])
+ >> Rewr'
+ >> simp [Once EQ_SYM_EQ]
+ >> MATCH_MP_TAC add_ldistrib
+ >> simp [PROB_POSITIVE]
+QED
+
+Theorem INDEP_DISJOINT_UNION' :
+    !p A B C. prob_space p /\ indep p A C /\ indep p B C /\ DISJOINT A B ==>
+              indep p (A UNION B) C
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC INDEP_SYM
+ >> MATCH_MP_TAC INDEP_DISJOINT_UNION >> art []
+ >> CONJ_TAC >> rw [Once INDEP_SYM_EQ]
+QED
+
+Theorem INDEP_COUNTABLE_DUNION :
+    !p A E. prob_space p /\ E IN events p /\ disjoint_family A /\
+           (!i. indep p E (A i)) ==> indep p E (BIGUNION (IMAGE A univ(:num)))
+Proof
+    rpt GEN_TAC >> simp [indep_def]
+ >> STRIP_TAC
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC EVENTS_BIGUNION_ENUM >> rw [IN_FUNSET])
+ >> DISCH_TAC
+ >> REWRITE_TAC [BIGUNION_OVER_INTER_R]
+ >> Know ‘prob p (BIGUNION (IMAGE A univ(:num))) = suminf (prob p o A)’
+ >- (MATCH_MP_TAC PROB_COUNTABLY_ADDITIVE >> rw [IN_FUNSET] \\
+     fs [disjoint_family_def])
+ >> Rewr'
+ >> qabbrev_tac ‘A' = \i. E INTER A i’
+ >> Know ‘disjoint_family A'’
+ >- (rw [disjoint_family_def, Abbr ‘A'’] \\
+     MATCH_MP_TAC DISJOINT_RESTRICT_R \\
+     fs [disjoint_family_def])
+ >> DISCH_TAC
+ >> ‘!i. A' i IN events p’ by rw [Abbr ‘A'’, EVENTS_INTER]
+ >> Know ‘BIGUNION (IMAGE A' UNIV) IN events p’
+ >- (MATCH_MP_TAC EVENTS_BIGUNION_ENUM >> rw [IN_FUNSET])
+ >> DISCH_TAC
+ >> Know ‘prob p (BIGUNION (IMAGE A' univ(:num))) = suminf (prob p o A')’
+ >- (MATCH_MP_TAC PROB_COUNTABLY_ADDITIVE >> rw [IN_FUNSET] \\
+     fs [disjoint_family_def])
+ >> Rewr'
+ >> rw [Abbr ‘A'’, o_DEF]
+ >> HO_MATCH_MP_TAC ext_suminf_cmul >> rw [PROB_POSITIVE]
+QED
+
+Theorem INDEP_COUNTABLE_DUNION' :
+    !p A E. prob_space p /\ E IN events p /\ disjoint_family A /\
+           (!i. indep p (A i) E) ==> indep p (BIGUNION (IMAGE A univ(:num))) E
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC INDEP_SYM
+ >> MATCH_MP_TAC INDEP_COUNTABLE_DUNION
+ >> rw [Once INDEP_SYM_EQ]
+QED
 
 (* total ==> pairwise independence (of events) *)
 Theorem total_imp_pairwise_indep_events :
@@ -8098,7 +8203,8 @@ QED
 
 (* Theorem 3.1.5 [2, p.38] *)
 Theorem fundamental_theorem_of_random_vectors :
-    !p X Y f. prob_space p /\ random_variable X p Borel /\ random_variable Y p Borel /\
+    !p X Y f. prob_space p /\
+              random_variable X p Borel /\ random_variable Y p Borel /\
               f IN measurable (Borel CROSS Borel) Borel ==>
               random_variable (\x. f (X x,Y x)) p Borel
 Proof
@@ -8201,6 +8307,341 @@ Proof
  >> rw [o_DEF]
 QED
 
+(* Theorem 3.3.2 [2, p.54] (a simple version of four r.v.'s)
+
+   This proof is based on repeated applications of SIGMA_PROPERTY_DYNKIN,
+   a rare direct application of Dynkin systems in probability proofs. For
+   a more general results which (may) imply the present theorem, see
+   Scholium 23.4 (on independent functions) [9, p.280]. Note also that the
+   proof doesn't work if “indep_vars” is weaken to “pairwise_indep_vars”.
+
+   NOTE: The textbook says "The proof of the next (the present) theorem is
+   similar (with Theorem 3.3.1) and is left as an exercise." [2, p.54]
+
+   See stochastic_processTheory.indep_functions_of_vars for a more general
+   version of two finite lists of r.v.'s.
+ *)
+Theorem indep_functions_of_four_vars_lemma[local] :
+    !p. prob_space p /\
+        random_variable A p Borel /\
+        random_variable B p Borel /\
+        random_variable C p Borel /\
+        random_variable D p Borel /\
+        indep_vars p (\i. EL i [A; B; C; D]) (\n. Borel) (count 4) ==>
+        !a. a IN subsets (Borel CROSS Borel) ==>
+            !b. b IN subsets (Borel CROSS Borel) ==>
+                indep p (PREIMAGE (\x. (A x,B x)) a INTER p_space p)
+                        (PREIMAGE (\x. (C x,D x)) b INTER p_space p)
+Proof
+    NTAC 2 STRIP_TAC
+ (* NOTE: P is not a sigma-algebra *)
+ >> qabbrev_tac ‘P = \a. a IN subsets (Borel CROSS Borel) /\
+                         !b. b IN subsets (Borel CROSS Borel) ==>
+                             indep p (PREIMAGE (\x. (A x,B x)) a INTER p_space p)
+                                     (PREIMAGE (\x. (C x,D x)) b INTER p_space p)’
+ (* applying SIGMA_SUBSET (1st round) *)
+ >> Suff ‘subsets (Borel CROSS Borel) SUBSET P’
+ >- rw [SUBSET_DEF, IN_APP, Abbr ‘P’]
+ >> simp [prod_sigma_def]
+ >> qabbrev_tac ‘X = space Borel CROSS space Borel’
+ >> qabbrev_tac ‘b = (X,P)’
+ >> ‘P = subsets b’ by rw [Abbr ‘b’] >> POP_ORW
+ >> ‘X = space b’   by rw [Abbr ‘b’] >> POP_ORW
+ >> qabbrev_tac ‘sts = prod_sets (subsets Borel) (subsets Borel)’
+ >> MATCH_MP_TAC SIGMA_PROPERTY_DYNKIN
+ >> CONJ_TAC (* subset_class (space b) sts *)
+ >- (rw [subset_class_def, Abbr ‘b’, Abbr ‘X’, SPACE_PROD_SIGMA, SPACE_BOREL] \\
+     rw [SUBSET_DEF, IN_CROSS])
+ (* sts is closed under intersection *)
+ >> STRONG_CONJ_TAC
+ >- (rw [Abbr ‘sts’, IN_PROD_SETS] \\
+     rename1 ‘?x y. a1 CROSS a2 INTER a3 CROSS a4 = x CROSS y /\
+                    x IN subsets Borel /\ y IN subsets Borel’ \\
+     simp [INTER_CROSS] \\
+     qexistsl_tac [‘a1 INTER a3’, ‘a2 INTER a4’] >> rw [] \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> rw [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> fs [Abbr ‘b’]
+ (* NOTE: ‘sigma_algebra (X,P)’ doesn't hold, but ‘dynkin_system (X,P)’ is true *)
+ >> reverse CONJ_TAC
+ >- (rw [dynkin_system_def] >| (* 4 subgoals *)
+     [ (* goal 1 (of 4) *)
+       rw [subset_class_def, SUBSET_DEF, Abbr ‘X’, SPACE_PROD_SIGMA, SPACE_BOREL],
+       (* goal 2 (of 4) *)
+       simp [Abbr ‘P’, Abbr ‘X’, GSYM SPACE_PROD_SIGMA] \\
+       CONJ_TAC
+       >- (MATCH_MP_TAC SIGMA_ALGEBRA_SPACE \\
+           REWRITE_TAC [SIGMA_ALGEBRA_BOREL_2D]) \\
+       rw [SPACE_BOREL_2D] \\
+       MATCH_MP_TAC INDEP_SPACE >> art [] \\
+       MP_TAC (Q.SPEC ‘(p_space p,events p)’
+                      (REWRITE_RULE [IN_MEASURABLE]
+                                    IN_MEASURABLE_BOREL_2D_VECTOR)) \\
+       rw [SPACE_BOREL, IN_FUNSET, EVENTS_SIGMA_ALGEBRA] \\
+       POP_ASSUM (MP_TAC o Q.SPECL [‘C’, ‘D’]) \\
+       fs [random_variable_def, IN_MEASURABLE],
+       (* goal 3 (of 4) *)
+       simp [Abbr ‘P’] \\
+       POP_ASSUM (MP_TAC o BETA_RULE o ONCE_REWRITE_RULE [IN_APP]) \\
+       STRIP_TAC \\
+       CONJ_TAC
+       >- (‘X = space (Borel CROSS Borel)’ by rw [Abbr ‘X’, SPACE_PROD_SIGMA] \\
+           POP_ORW \\
+           MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [] \\
+           REWRITE_TAC [SIGMA_ALGEBRA_BOREL_2D]) \\
+       rw [PREIMAGE_DIFF] \\
+       qabbrev_tac ‘e  = PREIMAGE (\x. (A x,B x)) s’ \\
+       qabbrev_tac ‘sp = PREIMAGE (\x. (A x,B x)) X’ \\
+      ‘(sp DIFF e) INTER p_space p =
+       (sp INTER p_space p) DIFF (e INTER p_space p)’ by SET_TAC [] >> POP_ORW \\
+       Know ‘sp INTER p_space p = p_space p’
+       >- (Suff ‘p_space p SUBSET sp’ >- SET_TAC [] \\
+           rw [Abbr ‘sp’, SUBSET_DEF, IN_PREIMAGE] \\
+           simp [Abbr ‘X’, SPACE_PROD_SIGMA, SPACE_BOREL]) >> Rewr' \\
+       MATCH_MP_TAC INDEP_COMPL' >> art [] \\
+       FIRST_X_ASSUM MATCH_MP_TAC >> art [],
+       (* goal 4 (of 4) *)
+       simp [Abbr ‘P’] \\
+       fs [IN_FUNSET] \\
+       STRONG_CONJ_TAC
+       >- (MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION \\
+           rw [SIGMA_ALGEBRA_BOREL_2D, SUBSET_DEF] \\
+           simp []) >> DISCH_TAC \\
+       rw [PREIMAGE_BIGUNION, IMAGE_IMAGE, o_DEF, BIGUNION_OVER_INTER_L] \\
+       MATCH_MP_TAC INDEP_COUNTABLE_DUNION' >> simp [] \\
+       CONJ_TAC
+       >- (MP_TAC (Q.SPEC ‘(p_space p,events p)’
+                          (REWRITE_RULE [IN_MEASURABLE]
+                                        IN_MEASURABLE_BOREL_2D_VECTOR)) \\
+           rw [SPACE_BOREL, IN_FUNSET, EVENTS_SIGMA_ALGEBRA] \\
+           POP_ASSUM (MP_TAC o Q.SPECL [‘C’, ‘D’]) \\
+           fs [random_variable_def, IN_MEASURABLE]) \\
+       rw [disjoint_family_def] \\
+       MATCH_MP_TAC DISJOINT_RESTRICT_L \\
+       MATCH_MP_TAC PREIMAGE_DISJOINT \\
+       FIRST_X_ASSUM MATCH_MP_TAC >> art [] ])
+ (* stage work *)
+ >> simp [SUBSET_DEF, Abbr ‘sts’, Abbr ‘P’, Abbr ‘X’]
+ >> NTAC 2 STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘x = t CROSS u’ (REWRITE_TAC o wrap)
+ >> CONJ_TAC
+ >- (simp [prod_sigma_def] \\
+     MATCH_MP_TAC IN_SIGMA >> rw [IN_PROD_SETS] \\
+     qexistsl_tac [‘t’, ‘u’] >> art [])
+ (* stage work *)
+ >> qabbrev_tac ‘P = \b. b IN subsets (Borel CROSS Borel) /\
+                         indep p
+                           (PREIMAGE (\x. (A x,B x)) (t CROSS u) INTER p_space p)
+                           (PREIMAGE (\x. (C x,D x)) b INTER p_space p)’
+ >> Suff ‘subsets (Borel CROSS Borel) SUBSET P’
+ >- rw [SUBSET_DEF, IN_APP, Abbr ‘P’]
+ >> REWRITE_TAC [prod_sigma_def]
+ >> qabbrev_tac ‘X = space Borel CROSS space Borel’
+ >> qabbrev_tac ‘b = (X,P)’
+ >> ‘P = subsets b’ by rw [Abbr ‘b’] >> POP_ORW
+ >> ‘X = space b’   by rw [Abbr ‘b’] >> POP_ORW
+ >> qabbrev_tac ‘sts = prod_sets (subsets Borel) (subsets Borel)’
+ >> MATCH_MP_TAC SIGMA_PROPERTY_DYNKIN >> art []
+ >> CONJ_TAC (* subset_class (space b) sts *)
+ >- (rw [subset_class_def, Abbr ‘b’, Abbr ‘X’, SPACE_PROD_SIGMA, SPACE_BOREL] \\
+     rw [SUBSET_DEF, IN_CROSS])
+ >> fs [Abbr ‘b’]
+ (* another proof of “dynkin_system (X,P)” *)
+ >> reverse CONJ_TAC
+ >- (rw [dynkin_system_def] >| (* 4 subgoals *)
+     [ (* goal 1 (of 4) *)
+       rw [subset_class_def, SUBSET_DEF, Abbr ‘X’, SPACE_PROD_SIGMA, SPACE_BOREL],
+       (* goal 2 (of 4) *)
+       simp [Abbr ‘P’, Abbr ‘X’, GSYM SPACE_PROD_SIGMA] \\
+       CONJ_TAC
+       >- (MATCH_MP_TAC SIGMA_ALGEBRA_SPACE \\
+           REWRITE_TAC [SIGMA_ALGEBRA_BOREL_2D]) \\
+       rw [SPACE_BOREL_2D] \\
+       MATCH_MP_TAC INDEP_SPACE' >> art [] \\
+       MP_TAC (Q.SPEC ‘(p_space p,events p)’
+                      (REWRITE_RULE [IN_MEASURABLE]
+                                    IN_MEASURABLE_BOREL_2D_VECTOR)) \\
+       rw [SPACE_BOREL, IN_FUNSET, EVENTS_SIGMA_ALGEBRA] \\
+       POP_ASSUM (MP_TAC o Q.SPECL [‘A’, ‘B’]) \\
+       fs [random_variable_def, IN_MEASURABLE, SPACE_BOREL_2D] \\
+       DISCH_THEN MATCH_MP_TAC \\
+       simp [prod_sigma_def] \\
+       MATCH_MP_TAC IN_SIGMA >> rw [IN_PROD_SETS, Abbr ‘sts’] \\
+       qexistsl_tac [‘t’, ‘u’] >> art [],
+       (* goal 3 (of 4) *)
+       simp [Abbr ‘P’] \\
+       POP_ASSUM (MP_TAC o BETA_RULE o ONCE_REWRITE_RULE [IN_APP]) \\
+       STRIP_TAC \\
+       CONJ_TAC
+       >- (‘X = space (Borel CROSS Borel)’ by rw [Abbr ‘X’, SPACE_PROD_SIGMA] \\
+           POP_ORW \\
+           MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [] \\
+           REWRITE_TAC [SIGMA_ALGEBRA_BOREL_2D]) \\
+       rw [PREIMAGE_DIFF] \\
+       qabbrev_tac ‘e  = PREIMAGE (\x. (C x,D x)) s’ \\
+       qabbrev_tac ‘sp = PREIMAGE (\x. (C x,D x)) X’ \\
+      ‘(sp DIFF e) INTER p_space p =
+       (sp INTER p_space p) DIFF (e INTER p_space p)’ by SET_TAC [] >> POP_ORW \\
+       Know ‘sp INTER p_space p = p_space p’
+       >- (Suff ‘p_space p SUBSET sp’ >- SET_TAC [] \\
+           rw [Abbr ‘sp’, SUBSET_DEF, IN_PREIMAGE] \\
+           simp [Abbr ‘X’, SPACE_PROD_SIGMA, SPACE_BOREL]) >> Rewr' \\
+       MATCH_MP_TAC INDEP_COMPL >> art [],
+       (* goal 4 (of 4) *)
+       simp [Abbr ‘P’] \\
+       fs [IN_FUNSET] \\
+       STRONG_CONJ_TAC
+       >- (MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION \\
+           rw [SIGMA_ALGEBRA_BOREL_2D, SUBSET_DEF] \\
+           simp []) >> DISCH_TAC \\
+       rw [PREIMAGE_BIGUNION, IMAGE_IMAGE, o_DEF, BIGUNION_OVER_INTER_L] \\
+       MATCH_MP_TAC INDEP_COUNTABLE_DUNION >> simp [] \\
+       CONJ_TAC
+       >- (MP_TAC (Q.SPEC ‘(p_space p,events p)’
+                          (REWRITE_RULE [IN_MEASURABLE]
+                                        IN_MEASURABLE_BOREL_2D_VECTOR)) \\
+           rw [SPACE_BOREL, IN_FUNSET, EVENTS_SIGMA_ALGEBRA] \\
+           POP_ASSUM (MP_TAC o Q.SPECL [‘A’, ‘B’]) \\
+           fs [random_variable_def, IN_MEASURABLE, SPACE_BOREL_2D] \\
+           DISCH_THEN MATCH_MP_TAC \\
+           simp [prod_sigma_def] \\
+           MATCH_MP_TAC IN_SIGMA >> rw [IN_PROD_SETS, Abbr ‘sts’] \\
+           qexistsl_tac [‘t’, ‘u’] >> art []) \\
+       rw [disjoint_family_def] \\
+       MATCH_MP_TAC DISJOINT_RESTRICT_L \\
+       MATCH_MP_TAC PREIMAGE_DISJOINT \\
+       FIRST_X_ASSUM MATCH_MP_TAC >> art [] ])
+ (* stage work *)
+ >> rw [SUBSET_DEF, Abbr ‘sts’, Abbr ‘P’, Abbr ‘X’]
+ >- (rename1 ‘c CROSS d IN subsets (Borel CROSS Borel)’ \\
+     simp [prod_sigma_def] \\
+     MATCH_MP_TAC IN_SIGMA >> rw [IN_PROD_SETS] \\
+     qexistsl_tac [‘c’, ‘d’] >> art [])
+ >> rename1 ‘indep p (PREIMAGE (\x. (A x,B x)) (a CROSS b) INTER p_space p)
+                     (PREIMAGE (\x. (C x,D x)) (c CROSS d) INTER p_space p)’
+ >> simp [PREIMAGE_CROSS, o_DEF]
+ >> ‘PREIMAGE (\x. A x) a INTER PREIMAGE (\x. B x) b INTER p_space p =
+      (PREIMAGE A a INTER p_space p) INTER
+      (PREIMAGE B b INTER p_space p)’ by SET_TAC [ETA_AX]
+ >> POP_ORW
+ >> ‘PREIMAGE (\x. C x) c INTER PREIMAGE (\x. D x) d INTER p_space p =
+      (PREIMAGE C c INTER p_space p) INTER
+      (PREIMAGE D d INTER p_space p)’ by SET_TAC [ETA_AX]
+ >> POP_ORW
+ >> qabbrev_tac ‘e1 = PREIMAGE A a INTER p_space p’
+ >> qabbrev_tac ‘e2 = PREIMAGE B b INTER p_space p’
+ >> qabbrev_tac ‘e3 = PREIMAGE C c INTER p_space p’
+ >> qabbrev_tac ‘e4 = PREIMAGE D d INTER p_space p’
+ >> Know ‘e1 IN events p’
+ >- (Q.PAT_X_ASSUM ‘random_variable A p Borel’ MP_TAC \\
+     rw [Abbr ‘e1’, random_variable_def, IN_MEASURABLE])
+ >> DISCH_TAC
+ >> Know ‘e2 IN events p’
+ >- (Q.PAT_X_ASSUM ‘random_variable B p Borel’ MP_TAC \\
+     rw [Abbr ‘e2’, random_variable_def, IN_MEASURABLE])
+ >> DISCH_TAC
+ >> Know ‘e3 IN events p’
+ >- (Q.PAT_X_ASSUM ‘random_variable C p Borel’ MP_TAC \\
+     rw [Abbr ‘e3’, random_variable_def, IN_MEASURABLE])
+ >> DISCH_TAC
+ >> Know ‘e4 IN events p’
+ >- (Q.PAT_X_ASSUM ‘random_variable D p Borel’ MP_TAC \\
+     rw [Abbr ‘e4’, random_variable_def, IN_MEASURABLE])
+ >> DISCH_TAC
+ >> rw [indep_def]
+ >- (MATCH_MP_TAC EVENTS_INTER >> art [])
+ >- (MATCH_MP_TAC EVENTS_INTER >> art [])
+ >> qabbrev_tac ‘X = \i. EL i [A; B; C; D]’
+ >> Know ‘pairwise_indep_vars p X (\n. Borel) (count 4)’
+ >- (MATCH_MP_TAC total_imp_pairwise_indep_vars \\
+     rw [SIGMA_ALGEBRA_BOREL] \\
+     POP_ASSUM MP_TAC \\
+     qid_spec_tac ‘i’ \\
+     simp [Abbr ‘X’] \\
+     rpt (CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV (srw_ss()) [])) >> art []))
+ >> rw [pairwise_indep_vars_def]
+ >> Know ‘prob p (e1 INTER e2) = prob p e1 * prob p e2’
+ >- (Suff ‘indep p e1 e2’ >- rw [indep_def] \\
+     POP_ASSUM (MP_TAC o Q.SPECL [‘0’, ‘1’]) >> rw [Abbr ‘X’, indep_rv_def] \\
+     rw [Abbr ‘e1’, Abbr ‘e2’])
+ >> Rewr'
+ >> Know ‘prob p (e3 INTER e4) = prob p e3 * prob p e4’
+ >- (Suff ‘indep p e3 e4’ >- rw [indep_def] \\
+     POP_ASSUM (MP_TAC o Q.SPECL [‘2’, ‘3’]) >> rw [Abbr ‘X’, indep_rv_def] \\
+     rw [Abbr ‘e3’, Abbr ‘e4’])
+ >> Rewr'
+ >> POP_ASSUM K_TAC (* useless now *)
+ >> REWRITE_TAC [mul_assoc, INTER_ASSOC]
+ >> Q.PAT_X_ASSUM ‘indep_vars p X (\n. Borel) (count 4)’ MP_TAC
+ >> rw [indep_vars_def]
+ >> POP_ASSUM (MP_TAC o Q.SPECL [‘\i. EL i [a; b; c; d]’, ‘count 4’])
+ >> simp []
+ >> impl_tac
+ >- (simp [IN_COUNT, o_DEF, IN_DFUNSET] \\
+     rpt (CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV (srw_ss()) [])) >> art []))
+ >> Know ‘BIGINTER (IMAGE (\n. PREIMAGE (X n) (EL n [a; b; c; d]) INTER p_space p)
+                          (count 4)) = e1 INTER e2 INTER e3 INTER e4’
+ >- (rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
+     reverse EQ_TAC
+     >- (STRIP_TAC \\
+         simp [Abbr ‘X’] \\
+         rpt (CONV_TAC (BOUNDED_FORALL_CONV (SIMP_CONV (srw_ss()) [])) \\
+              CONJ_TAC
+              >- fs [Abbr ‘e1’, Abbr ‘e2’, Abbr ‘e3’, Abbr ‘e4’, IN_PREIMAGE]) \\
+         simp []) \\
+     DISCH_TAC \\
+     rpt CONJ_TAC >| (* 4 subgoals *)
+     [ (* goal 1 (of 4) *)
+       rw [Abbr ‘e1’, IN_PREIMAGE] \\
+       POP_ASSUM (MP_TAC o Q.SPEC ‘0’) >> simp [Abbr ‘X’],
+       (* goal 2 (of 4) *)
+       rw [Abbr ‘e2’, IN_PREIMAGE] \\
+       POP_ASSUM (MP_TAC o Q.SPEC ‘1’) >> simp [Abbr ‘X’],
+       (* goal 3 (of 4) *)
+       rw [Abbr ‘e3’, IN_PREIMAGE] \\
+       POP_ASSUM (MP_TAC o Q.SPEC ‘2’) >> simp [Abbr ‘X’],
+       (* goal 4 (of 4) *)
+       rw [Abbr ‘e4’, IN_PREIMAGE] \\
+       POP_ASSUM (MP_TAC o Q.SPEC ‘3’) >> simp [Abbr ‘X’] ])
+ >> Rewr'
+ >> Rewr'
+ >> simp [EXTREAL_PROD_IMAGE_COUNT, Abbr ‘X’]
+QED
+
+(* NOTE: This is a test before the general version.
+
+   Note also that ‘indep_vars’ in concl. is overload of ‘indep_rv’.
+ *)
+Theorem indep_functions_of_four_vars :
+    !p f g A B C D.
+        prob_space p /\
+        random_variable A p Borel /\
+        random_variable B p Borel /\
+        random_variable C p Borel /\
+        random_variable D p Borel /\
+        f IN measurable (Borel CROSS Borel) Borel /\
+        g IN measurable (Borel CROSS Borel) Borel /\
+        indep_vars p (\i. EL i [A; B; C; D]) (\n. Borel) (count 4) ==>
+        indep_vars p (\x. f (A x,B x)) (\x. g (C x,D x)) Borel Borel
+Proof
+    rw [indep_rv_def, IN_MEASURABLE, IN_FUNSET, SPACE_BOREL_2D, SPACE_BOREL]
+ >> Know ‘(\x. f (A x,B x)) = f o (\x. (A x,B x))’
+ >- rw [o_DEF]
+ >> Rewr
+ >> Know ‘(\x. g (C x,D x)) = g o (\x. (C x,D x))’
+ >- rw [o_DEF]
+ >> Rewr
+ >> simp [PREIMAGE_o, GSYM PREIMAGE_ALT]
+ >> qabbrev_tac ‘c = PREIMAGE f a’
+ >> qabbrev_tac ‘d = PREIMAGE g b’
+ >> ‘c IN subsets (Borel CROSS Borel) /\
+     d IN subsets (Borel CROSS Borel)’ by METIS_TAC []
+ >> NTAC 2 (Q.PAT_X_ASSUM ‘!s. s IN subsets Borel ==> _’ K_TAC)
+ >> NTAC 2 (Q.PAT_X_ASSUM ‘_ IN subsets Borel’ K_TAC)
+ (* now f and g are irrelevant *)
+ >> irule indep_functions_of_four_vars_lemma >> art []
+QED
+
 (* Theorem 3.3.3 [2, p.54], depending on Fubini and UNIQUENESS_OF_PROD_MEASURE
 
    This is the last theorem in Isabelle's Independent_Family.thy but in extreals.
@@ -8210,8 +8651,8 @@ Theorem indep_vars_expectation :
             indep_rv p X Y Borel Borel /\ integrable p X /\ integrable p Y ==>
             expectation p (\x. X x * Y x) = expectation p X * expectation p Y
 Proof
-    rw [indep_rv_def, real_random_variable_def, prob_space_def, p_space_def, events_def,
-        real_random_variable_def, random_variable_def, expectation_def]
+    rw [indep_rv_def, real_random_variable_def, prob_space_def, p_space_def,
+        events_def, real_random_variable_def, random_variable_def, expectation_def]
  >> Q.ABBREV_TAC ‘f = \x. (X x,Y x)’
  >> Q.ABBREV_TAC ‘u = \(x,y). x * (y :extreal)’
  >> ‘(\x. X x * Y x) = u o f’ by rw [Abbr ‘u’, Abbr ‘f’, o_DEF] >> POP_ORW
@@ -8229,7 +8670,8 @@ Proof
  >> DISCH_TAC
  (* applying integral_distr and SIGMA_ALGEBRA_BOREL_2D *)
  >> Know ‘integral p (u o f) =
-          integral (space (Borel CROSS Borel),subsets (Borel CROSS Borel),distr p f) u’
+          integral (space (Borel CROSS Borel),
+                    subsets (Borel CROSS Borel),distr p f) u’
  >- (MP_TAC (ISPECL [“p :'a m_space”,
                      “Borel CROSS Borel”,
                      “f :'a -> extreal # extreal”,
