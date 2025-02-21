@@ -6689,7 +6689,8 @@ Proof
  >> Know `pos_simple_fn m (fn_plus f)
             (count n) (\i. PREIMAGE f {Normal (c i)} INTER m_space m)
             (\i. if 0 <= (c i) then c i else 0)`
- >- (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT, FN_PLUS_POS, FN_MINUS_POS] >| (* 4 subgoals *)
+ >- (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT, FN_PLUS_POS,
+                    FN_MINUS_POS] >| (* 4 subgoals *)
      [ (* goal 1 (of 4) *)
        reverse (RW_TAC real_ss [fn_plus_def])
        >- (FULL_SIMP_TAC std_ss [extreal_lt_def, indicator_fn_def, IN_INTER]
@@ -6785,7 +6786,8 @@ Proof
            >- RW_TAC std_ss [extreal_of_num_def]
            >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_COUNT, IN_IMAGE,
                                     IN_PREIMAGE, IN_SING]
-           >> METIS_TAC [REAL_LE_ANTISYM, extreal_of_num_def, REAL_NEG_0, extreal_le_def, IN_COUNT])
+           >> METIS_TAC [REAL_LE_ANTISYM, extreal_of_num_def, REAL_NEG_0,
+                         extreal_le_def, IN_COUNT])
        >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
        >> `?i. i IN count n /\ (f t = Normal (c i))` by METIS_TAC []
        >> `count n = i INSERT ((count n) DELETE i)`
@@ -7162,7 +7164,8 @@ Proof
  >> Know `SIGMA (\i. Normal (if 0 <= x i then x i else 0) * measure m {c i}) (count n) -
           SIGMA (\i. Normal (if x i <= 0 then (-x i) else 0) * measure m {c i}) (count n) =
           SIGMA (\j. (\i. Normal (if 0 <= x i then x i else 0) * measure m {c i}) j -
-                     (\i. Normal (if x i <= 0 then (-x i) else 0) * measure m {c i}) j) (count n)`
+                     (\i. Normal (if x i <= 0 then (-x i) else 0) *
+                          measure m {c i}) j) (count n)`
  >- (MATCH_MP_TAC EQ_SYM \\
      irule EXTREAL_SUM_IMAGE_SUB >> art [] \\
      DISJ1_TAC \\ (* or DISJ2_TAC, doesn't matter *)
@@ -7340,6 +7343,37 @@ Proof
  >> rw [MEASURE_SPACE_SIGMA_ALGEBRA]
 QED
 
+(* ‘density_of’ is like ‘density’ but automatically apply ‘fn_plus’, and the measure
+   part of the returned measure space is total returning 0 for non-measurable sets.
+ *)
+Definition density_of :
+    density_of M f = (m_space M, measurable_sets M,
+      (\A. if A IN measurable_sets M then
+           pos_fn_integral M (\x. max 0 (f x * indicator_fn A x)) else 0))
+End
+
+(* This was HVG's measure_space_density *)
+Theorem measure_space_density_of :
+    !M f. measure_space M /\ f IN measurable (m_space M, measurable_sets M) Borel
+      ==> measure_space (density_of M f)
+Proof
+    rpt STRIP_TAC
+ >> ‘measure_space (density M (fn_plus f))’ by PROVE_TAC [measure_space_density']
+ >> MATCH_MP_TAC measure_space_eq
+ >> Q.EXISTS_TAC ‘density M f^+’ >> art []
+ >> simp [density_of, density_def, density_measure_def]
+ >> rpt STRIP_TAC
+ >> MATCH_MP_TAC pos_fn_integral_cong >> simp [le_max1]
+ >> rpt STRIP_TAC
+ >- (MATCH_MP_TAC le_mul >> simp [FN_PLUS_POS, INDICATOR_FN_POS])
+ >> ‘max 0 (f x * indicator_fn s x) = (\x. f x * indicator_fn s x)^+ x’
+       by rw [Once max_comm, FN_PLUS_ALT]
+ >> POP_ORW
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> MATCH_MP_TAC fn_plus_fmul
+ >> simp [INDICATOR_FN_POS]
+QED
+
 val suminf_measure = prove (
   ``!M A. measure_space M /\ IMAGE (\i:num. A i) UNIV SUBSET measurable_sets M /\
           disjoint_family A ==>
@@ -7367,7 +7401,7 @@ Proof
       by (FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def, SUBSET_DEF] \\
           FULL_SIMP_TAC std_ss [IN_IMAGE, IN_UNIV] >> METIS_TAC [])
  >> `BIGUNION {PREIMAGE t (A i) INTER m_space M | i IN UNIV} IN measurable_sets M`
-      by (FULL_SIMP_TAC std_ss [sigma_algebra_alt])
+      by (FULL_SIMP_TAC std_ss [sigma_algebra_alt_eq])
  >> `disjoint_family (\i. PREIMAGE t (A i) INTER m_space M)`
       by (FULL_SIMP_TAC std_ss [disjoint_family_on, IN_UNIV] \\
           FULL_SIMP_TAC std_ss [PREIMAGE_def] THEN ASM_SET_TAC [])
