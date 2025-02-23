@@ -61,8 +61,7 @@ in
   action 0; loop 0
 end;
 
-fun determining s =
-    (print (s^" "); delay 1 (fn _ => ()));
+fun determining s = print (s^" ");
 
 (* action starts here *)
 print "\nHOL smart configuration.\n\n";
