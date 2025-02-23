@@ -506,7 +506,7 @@ val _ = let
 in
   FileSys.chDir (fullPath [holdir, "tools/quote-filter"]);
   compile [] "quotefix.sig";
-  compile [] "quotefix.sml";
+  compile ["-I", holmakedir] "quotefix.sml";
   compile [] "qfilter_util.sig";
   compile [] "qfilter_util.sml";
   compile ["-I", holmakedir] "quote-filter.sml";
