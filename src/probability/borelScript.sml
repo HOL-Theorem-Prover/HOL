@@ -2035,6 +2035,20 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
+Theorem IN_MEASURABLE_BOREL_EQ_SYM :
+    !a f g. (!x. x IN space a ==> (f x = g x)) ==>
+            (f IN measurable a Borel <=> g IN measurable a Borel)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ' \\
+      Q.EXISTS_TAC ‘f’ >> rw [],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ' \\
+      Q.EXISTS_TAC ‘g’ >> rw [] ]
+QED
+
 (* changed quantifier orders (was: f g m) for applications in martingaleTheory *)
 Theorem IN_MEASURABLE_BOREL_EQ :
     !m f g. (!x. x IN m_space m ==> (f x = g x)) /\
@@ -7485,8 +7499,8 @@ QED
 
 (* NOTE: ‘Borel’ here can be generalized to any sigma_algebra
 
-   cf. stochastic_processTheory.random_variable_sigma_of_dimension for a generalization
-       of this theorem to arbitrary finite dimensions.
+   cf. stochastic_processTheory.random_variable_sigma_of_dimension for a
+   generalization of this theorem to arbitrary finite dimensions.
  *)
 Theorem IN_MEASURABLE_BOREL_2D_VECTOR :
     !a X Y. sigma_algebra a /\
@@ -7511,8 +7525,7 @@ Proof
     ‘PREIMAGE X t INTER PREIMAGE Y u INTER space a =
        (PREIMAGE X t INTER space a) INTER (PREIMAGE Y u INTER space a)’
       by SET_TAC [] >> POP_ORW \\
-     MATCH_MP_TAC SIGMA_ALGEBRA_INTER \\
-     fs [IN_MEASURABLE])
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> fs [IN_MEASURABLE])
  >> DISCH_TAC
  (* applying SIGMA_SUBSET *)
  >> Know ‘subsets (sigma (space a)
@@ -7643,9 +7656,11 @@ Proof
      [ (* goal 1 (of 6) *)
        Cases_on ‘q’ >> Cases_on ‘r’ >> Cases_on ‘0 < r'’ \\
        rw [extreal_mul_def, extreal_of_num_def, extreal_lt_eq, lt_infty, le_infty] \\
-       fs [extreal_mul_def, lt_infty, le_infty, extreal_of_num_def] >| (* 10 subgoals *)
+       fs [extreal_mul_def, lt_infty, le_infty,
+           extreal_of_num_def] >| (* 10 subgoals *)
        [ (* goal 1 (of 10) *)
-        ‘r' <> 0’ by PROVE_TAC [REAL_LT_IMP_NE] >> fs [le_infty, lt_infty, extreal_of_num_def],
+        ‘r' <> 0’ by PROVE_TAC [REAL_LT_IMP_NE] \\
+         fs [le_infty, lt_infty, extreal_of_num_def],
          (* goal 2 (of 10) *)
         ‘r' = 0 \/ (r' <> 0 /\ r' < 0)’ by PROVE_TAC [REAL_LT_TOTAL]
          >- fs [real_lte, extreal_lt_eq, extreal_le_eq] \\
