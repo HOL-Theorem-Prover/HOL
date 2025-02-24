@@ -1270,46 +1270,25 @@ Proof
   metis_tac[after_taus_cases, CURRY_DEF]
 QED
 
-(* example: compatibility can be used like so to get the same as below *)
-(* Theorem itree_coind_upto_taus: *)
-(*   !R. *)
-(*     UNCURRY R SUBSET *)
-(*             UNCURRY itree_wbisim UNION *)
-(*             wbisim_functional (upto_taus_func (UNCURRY R) UNION *)
-(*                                               UNCURRY itree_wbisim) *)
-(*     ==> UNCURRY R SUBSET UNCURRY itree_wbisim *)
-(* Proof *)
-(*   rw[] >> *)
-(*   irule itree_wbisim_coind_upto' >> *)
-(*   dxrule_then irule SUBSET_TRANS >> *)
-(*   rw[UNION_SUBSET] >> *)
-(*   irule wbisim_functional_cancel >> rw[] >- *)
-(*    (irule set_compatible_enhance >> rw[] >> *)
-(*     metis_tac[upto_taus_compatible, SUBSET_REFL]) >> *)
-(*   metis_tac[set_gfp_sub_companion,wbisim_functional_mono,wbisim_functional_gfp]*)
-(* QED *)
-
-Theorem itree_coind_after_taus:
-  !R. (!t t'.
-         R t t' ==>
-         (?t2 t3.
-           t = Tau t2 /\ t' = Tau t3 /\
-             (after_taus R t2 t3 \/ itree_wbisim t2 t3)) \/
-         (?e k k'.
-            strip_tau t (Vis e k) /\ strip_tau t' (Vis e k') /\
-            !r. after_taus R (k r) (k' r) \/ itree_wbisim (k r) (k' r)) \/
-         (?r. strip_tau t (Ret r) /\ strip_tau t' (Ret r)) \/
-         itree_wbisim t t') ==>
-      !t t'. R t t' ==> itree_wbisim t t'
+(* example: compatibility can be used like so *)
+Theorem itree_coind_upto_taus:
+  !R.
+    UNCURRY R SUBSET
+            UNCURRY itree_wbisim UNION
+            wbisim_functional (upto_taus_func (UNCURRY R) UNION
+                                              UNCURRY itree_wbisim)
+    ==> UNCURRY R SUBSET UNCURRY itree_wbisim
 Proof
-  rpt strip_tac >>
-  irule itree_wbisim_coind_upto >>
-  qexists ‘after_taus R’ >>
-  reverse conj_tac
-  >- rw[after_taus_rel] >>
-  Induct_on ‘after_taus’ >>
   rw[] >>
-  metis_tac[after_taus_rules]
+  irule itree_wbisim_coind_upto' >>
+  dxrule_then irule SUBSET_TRANS >>
+  rw[UNION_SUBSET] >>
+  irule SUBSET_TRANS >>
+  irule_at (Pos last) (cj 2 SUBSET_UNION) >>
+  irule wbisim_functional_cancel >> rw[] >-
+   (irule set_compatible_enhance >> rw[] >>
+    metis_tac[upto_taus_compatible, SUBSET_REFL]) >>
+  metis_tac[set_gfp_sub_companion,wbisim_functional_mono,wbisim_functional_gfp]
 QED
 
 (* misc *)
