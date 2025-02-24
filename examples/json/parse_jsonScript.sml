@@ -2,31 +2,100 @@
  This JSON parser has been validated using the "Parsing JSON is a Minefield" test suite: https://github.com/nst/JSONTestSuite
 
  A few caveats apply:
- * Unicode characters are represented as their UTF-8 encoding. Backslashes are represented by \u005C, while quotes (") are represented by \".
-* "e" vs. "E" in exponential representation is not kept track of: "E" is always used in serialisation. Also, serialisation always prints an explicit "+" for positive exponents.
+ * Unicode characters are represented as their four-digit hexadecimal UTF-8 encoding prefixed by "\u". Backslashes are represented by \u005C, while quotation marks (") are represented by \".
+ * "e" vs. "E" in exponential representation is not kept track of: "E" is always used in serialisation. Also, serialisation never prints an explicit "+" for positive exponents.
+ * Leading zeroes in the exponent are not kept track of.
 *)
 
 open HolKernel boolLib Parse bossLib ;
 open BasicProvers boolSimps markerLib optionTheory ;
 open listTheory rich_listTheory ;
 open stringTheory ASCIInumbersTheory arithmeticTheory ;
+open integerTheory ratTheory;
 
 val _ = new_theory "parse_json";
 
-(* TODO: Nums are used to store JSON numbers. The first two parameters of the constructor
- * can be replaced with integers and/or rationals. The third might want to store
- * the choice of uppercase/lowercase used in the E notation. *)
+(* JSON numbers are arbitrary-precision numbers in the format s * 10 ^ e,
+   where s is a rational number with finite decimal expansion and e is an integer.
+   A few details about how JSON numbers are represented as strings:
+   * No leading zeroes are used when representing s.
+   * Leading zeroes in e are not disallowed (in both ECMA-404 and RFC 8259).
+   * The decimal separator in s is a dot, with no other separators allowed.
+   * The base 10-exponentiation is denoted using either "e" or "E".
+   * The exponent e, if positive, may be prefixed with an explicit "+".
+
+   When representing JSON numbers in HOL4, 0 and -0 must be kept distinct, since
+   they may be treated differently by the external tools that read the JSON.
+   Since 0 = -0 for int and rat, we must keep track of the sign explicitly.
+   It is probably also a good idea to keep track of trailing zeroes in the decimal
+   expansion, which may be eaten by HOL4 if rat is used (may be used to infer precision).
+
+   Accordingly, json_num is defined as a tuple of
+   the integer component of s: (sign # num);
+   the decimal expansion of s: ((num # num) option), where the first number signifies
+                               the number of leading zeroes;
+   and the exponent e: ((sign # num) option). *)
+
+(* TODO: json_num could be swapped out, in whole or in part, for a more generic
+   number representation elsewhere in HOL4, so long as this conserves minus zero
+   and trailing decimal zeroes. *)
+
 Datatype:
   sign =
      Positive
    | Negative
 End
+Type json_num = “:((sign # num) # ((num # num) option) # ((sign # num) option))”
+
+Definition sign_num_to_int_def:
+  sign_num_to_int (sign, n) =
+  case sign of
+    Positive => int_of_num n
+  | Negative => - int_of_num n
+End
+
+Definition json_num_to_int_def:
+  json_num_to_int (((sign, n), frac_opt, exp_opt):json_num) =
+  let i = sign_num_to_int (sign, n) in
+    case frac_opt of
+      NONE =>
+        (case exp_opt of
+           SOME (exp_sign, exp_n) =>
+             (case exp_sign of
+                Positive => SOME $ i * (&(10 ** exp_n))
+              | Negative => SOME $ FUNPOW (\i'. i' / 10) exp_n i)
+         | NONE => SOME i)
+    | SOME _ => NONE
+End
+
+Definition zeroes_num_to_rat_def:
+  (zeroes_num_to_rat (0:num, n:num) = rat_of_num n) /\
+  (zeroes_num_to_rat (SUC n_zeroes, n) =
+   zeroes_num_to_rat (n_zeroes, n DIV 10))
+End
+
+Definition json_num_to_rat_def:
+  json_num_to_int (((sign, n), frac_opt, exp_opt):json_num) =
+  let i = rat_of_int $ sign_num_to_int (sign, n) in
+  let r = case frac_opt of
+      NONE => 0
+    | SOME (n_zeroes, f) => zeroes_num_to_rat (n_zeroes + (LOG 10 f + 1), f) in
+    case exp_opt of
+      SOME (exp_sign, exp_n) =>
+        (case exp_sign of
+           Positive =>
+             FUNPOW (\i'. i' * 10) exp_n (i + r)
+         | Negative =>
+             FUNPOW (\i'. i' / 10) exp_n (i + r))
+    | NONE => i + r
+End
+
 Datatype:
   json =
      Object ((string # json) list)
    | Array (json list)
    | String string
-   | Number (sign # num) ((num # num) option) ((sign # num) option)
+   | Number json_num
    | Bool bool
    | Null
 End
@@ -138,7 +207,7 @@ Definition json_to_string_list_def:
    | Array obs =>
        ["["] ++ concat_with (MAP json_to_string_list obs) [","] ++ ["]"]
    | String s => [CONCAT ["\""; encode_str T s; "\""]]
-   | Number (sign, integer) frac_opt exp_opt =>
+   | Number ((sign, integer), frac_opt, exp_opt) =>
        [if sign = Negative then CONCAT ["-"; toString' integer] else toString' integer;
         (case frac_opt of
          | SOME (n_zeroes, fraction) =>
@@ -178,7 +247,7 @@ Datatype:
   | NULL
   | BOOL bool
   | Str string
-  | NUM (sign # num) ((num # num) option) ((sign # num) option)
+  | NUM json_num
 End
 
 Definition MEM'_def:
@@ -335,7 +404,7 @@ Definition lex_leading_zeroes_def:
     if c = #"0"
     then lex_leading_zeroes cs (acc+1)
     else
-      (( \ (a, b). (SOME (acc, a), b)) (lex_num (c::cs) 0)))
+      (( \ (a, b). if a = 0 then (if acc > 0 then (SOME (acc-1, a), b) else (NONE, b)) else (SOME (acc, a), b)) (lex_num (c::cs) 0)))
 End
 Definition lex_frac_def:
   lex_frac [] = (NONE, []) /\
@@ -446,9 +515,13 @@ Proof
     >> qexists_tac ‘STRCAT "0" l’
     >> gvs[])
   >> fs[IS_SUFFIX_APPEND,lex_leading_zeroes_def]
+  >> Cases_on ‘n > 0’
+  >> (fs[])
   >> Cases_on `lex_num (STRING h cs) 0`
   >> imp_res_tac lex_num_SUFFIX
   >> gvs[IS_SUFFIX_APPEND]
+  >> Cases_on ‘q = 0’
+  >> (fs[])
 QED
 
 Theorem lex_leading_zeroes_LENGTH:
@@ -580,10 +653,10 @@ Definition lex_def:
      | NONE => INR ("unexpected characters: " ++ TAKE 10 (c::cs))
    else
      case lex_sci (c::cs) of
-     | SOME ((integer,frac_opt,exp_opt), cs') =>
+     | SOME (json_num, cs') =>
          if cs' = c::cs then
            INR $ "unexpected characters: " ++ TAKE 10 (c::cs)
-         else lex cs' ((NUM integer frac_opt exp_opt)::acc)
+         else lex cs' ((NUM json_num)::acc)
      | NONE => INR $ "unexpected characters: " ++ TAKE 10 (c::cs)
   )
 Termination
@@ -623,11 +696,11 @@ Definition parse_def:
     | (OBJ acc)::ns => parse ts ((OBJV (String s) acc)::ns) F
     | (ARR acc)::ns => parse ts ((ARR $ (String s)::acc)::ns) F
     | ns => INR (String s, ts, ns))
-  /\ parse ((NUM i frac_opt exp_opt)::ts) ns T =
+  /\ parse ((NUM json_num)::ts) ns T =
     (case ns of
-    | (OBJ acc)::ns => parse ts ((OBJV (Number i frac_opt exp_opt) acc)::ns) F
-    | (ARR acc)::ns => parse ts ((ARR $ (Number i frac_opt exp_opt)::acc)::ns) F
-    | ns => INR (Number i frac_opt exp_opt, ts, ns))
+    | (OBJ acc)::ns => parse ts ((OBJV (Number json_num) acc)::ns) F
+    | (ARR acc)::ns => parse ts ((ARR $ (Number json_num)::acc)::ns) F
+    | ns => INR (Number json_num, ts, ns))
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((ARR acc)::ns) T
     = parse ts ((ARR $ (Object [])::acc)::ns) F
   /\ parse (OBJCLOSE::OBJOPEN::ts) ((OBJ acc)::ns) T
@@ -669,7 +742,7 @@ Definition json_to_tok_def:
        (REVERSE $ concat_with (MAP json_to_tok obs) [COMMA]) ++
        [ARROPEN]
    | String s => [Str s]
-   | Number i frac_opt exp_opt => [NUM i frac_opt exp_opt]
+   | Number json_num => [NUM json_num]
    | Bool b => [BOOL b]
    | Null => [NULL])
   /\
