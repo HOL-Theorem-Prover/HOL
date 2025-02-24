@@ -33,17 +33,16 @@ datatype nominaltype_info =
                   binders : (term * int * thm) list }
 
 local
-  open HOLsexp ThyDataSexp
+  open ThyDataSexp
 in
 fun enc_nti (NTI r) =
     let
       val {recursion_thm,nullfv,binders,...} = r
       val {pm_constant, pm_rewrites, fv_rewrites,...} = r
       val null_pmc_pmrs_fvrs =
-          pair4_encode (Term,Term,list_encode Thm,list_encode Thm)
+          pair4_encode (Term,Term,mk_list Thm,mk_list Thm)
       val recthm_binders =
-          pair_encode (option_encode Thm,
-                       list_encode (pair3_encode(Term,Int,Thm)))
+          pair_encode (option_encode Thm, mk_list (pair3_encode(Term,Int,Thm)))
     in
       pair_encode(null_pmc_pmrs_fvrs, recthm_binders)
                  ((nullfv,pm_constant,pm_rewrites,fv_rewrites),
@@ -66,7 +65,7 @@ val dec_nti =
                fv_rewrites = fvths,
                binders = binders}
     in
-      map_decode mapthis (pair_decode nppf_dec rbs)
+      pair_decode(nppf_dec, rbs) >> mapthis
     end
 end
 
