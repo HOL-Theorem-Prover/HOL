@@ -6,9 +6,9 @@ sig
                      outstrm: TextIO.outstream,
                      interactive: bool,
                      quotefixp: bool,
-                     oldparser: bool,
                      closefn: unit -> unit,
-                     infilename: string
+                     infilename: string,
+                     quietOpen: bool
                     }
 
 end

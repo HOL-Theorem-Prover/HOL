@@ -1300,11 +1300,11 @@ fun lexGen infile =
 	 say   "\t\t                  else action(l,NewAcceptingLeaves";
 	 if !UsesTrailingContext then
 	    sayln ",nil))" else sayln "))";
-	 sayln "\t\t  else (if i0=l then yyb := newchars";
-	 sayln "\t\t     else yyb := String.substring(!yyb,i0,l-i0)^newchars;";
-	 sayln "\t\t     yygone := !yygone+i0;";
+	 sayln "\t\t  else (";
+	 sayln "\t\t     yyb := String.substring(!yyb,i0-1,l-i0+1)^newchars;";
+	 sayln "\t\t     yygone := !yygone+i0-1;";
 	 sayln "\t\t     yybl := String.size (!yyb);";
-	 sayln "\t\t     scan (s,AcceptingLeaves,l-i0,0))";
+	 sayln "\t\t     scan (s,AcceptingLeaves,l-i0+1,1))";
 	 sayln "\t    end";
 	 sayln "\t  else let val NewChar = Char.ord (CharVector.sub (!yyb,l))";
          if !CharSetSize=129
