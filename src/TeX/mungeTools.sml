@@ -12,12 +12,13 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | AlignedDef
              | NoDefSym
              | Inst of string * string
              | OverrideUpd of (string * int) * string
+             | Overload of string * string
              | TraceSet of string * int
              | NoTurnstile | Width of int
              | Mathmode of string | NoMath
              | AllTT | ShowTypes of int
              | Conj of int
-             | Rule | StackedRule
+             | Rule | StackedRule | IndRules
              | RuleName of string
              | NoDollarParens
              | Merge | NoMerge
@@ -43,14 +44,23 @@ fun usage() =
          "[overridesfile]\nor\n  "^
          CommandLine.name()^" -index filename")
 
-fun stringOpt pos s =
-  case s of
+fun isNotChar a b = a <> b
+
+fun stringOpt pos tok =
+  let
+    open Substring
+    fun rmws s = s |> dropl Char.isSpace |> dropr Char.isSpace
+    val ss = rmws (full tok)
+    val s = string ss
+  in case s of
     "|-" => SOME Turnstile
   | "aligneddef" => SOME AlignedDef
   | "alltt" => SOME AllTT
   | "case" => SOME Case
   | "def" => SOME Def
+  | "indrules" => SOME IndRules
   | "K" => SOME TermThm
+  | "m" => SOME (Mathmode "")
   | "merge" => SOME Merge
   | "nodefsym" => SOME NoDefSym
   | "nodollarparens" => SOME NoDollarParens
@@ -60,98 +70,42 @@ fun stringOpt pos s =
   | "nostile" => SOME NoTurnstile
   | "of" => SOME TypeOf
   | "rule" => SOME Rule
+  | "showtypes" => SOME (ShowTypes 1)
   | "spaceddef" => SOME SpacedDef
   | "stackedrule" => SOME StackedRule
   | "tt" => SOME TT
-  | _ => let
-    in
-      if String.isPrefix "showtypes" s then let
-        val numpart_s = String.extract(s,9,NONE)
-      in
-        if numpart_s = "" then SOME (ShowTypes 1) else
-        case Int.fromString numpart_s of
-          NONE => (warn(pos, s ^ " is not a valid option"); NONE)
-        | SOME i => SOME (ShowTypes i)
-      end
-      else if String.isPrefix "tr'" s then let
-        val sfx = String.extract(s, 3, NONE)
-        val (pfx,eqsfx) = Substring.position "'=" (Substring.full sfx)
-      in
-        if Substring.size eqsfx = 0 then
-          (warn(pos, s ^ " is not a valid option"); NONE)
-        else
-          let
-            val numpart_s = String.extract (Substring.string eqsfx, 2, NONE)
-          in
-            case Int.fromString numpart_s of
-                NONE => (warn(pos, s ^ " is not a valid option"); NONE)
-              | SOME i => SOME(TraceSet(Substring.string pfx, i))
-          end
-      end
-      else if String.isPrefix ">>" s then
-        let
-          val (addsp, num_i) =
-              if size s > 2 andalso String.sub(s,2) = #"~" then (false, 3)
-              else (true, 2)
-          val numpart_s = String.extract(s,num_i,NONE)
-        in
-          if numpart_s = "" then SOME (Indent (2, addsp))
-          else
-            case Int.fromString numpart_s of
-              NONE => (warn(pos, s ^ " is not a valid option"); NONE)
-            | SOME i => if i < 0 then
-                          (warn(pos, "Negative indents illegal"); NONE)
-                        else SOME (Indent (i, addsp))
-        end
-      else if String.isPrefix "rulename=" s then let
-        val name = String.extract(s,9,NONE)
-        in SOME (RuleName name) end
-      else if String.isPrefix "width=" s then let
-          val numpart_s = String.extract(s,6,NONE)
-        in
-          case Int.fromString numpart_s of
-            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
-          | SOME i => SOME (Width i)
-        end
-      else if String.isPrefix "depth=" s then let
-          val numpart_s = String.extract(s,6,NONE)
-        in
-          case Int.fromString numpart_s of
-            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
-          | SOME i => SOME (Depth i)
-        end
-      else if String.isPrefix "conj" s then let
-          val numpart_s = String.extract(s,4,NONE)
-        in
-          case Int.fromString numpart_s of
-            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
-          | SOME i => if i <= 0 then
-                        (warn(pos, "Negative/zero conj specs illegal"); NONE)
-                      else SOME (Conj i)
-        end
-      else let
-          open Substring
-          val ss = full s
-          val (pfx,sfx) = position "/" ss
-          fun rmws ss = ss |> dropl Char.isSpace |> dropr Char.isSpace |> string
-        in
-          if size sfx < 2 then
-            if String.isPrefix "m" s then
-              SOME (Mathmode (String.extract(s,1,NONE)))
-            else if String.isPrefix "-" s then
-              if String.size s >= 2 then
-                SOME (Unoverload (String.extract(s,1,NONE)))
-              else
-                (warn (pos, s ^ " is not a valid option"); NONE)
-            else
-              (warn (pos, s ^ " is not a valid option"); NONE)
-          else if size sfx > 2 andalso sub(sfx,1) = #"/" then
-            SOME(OverrideUpd((rmws pfx, size sfx - 2),rmws (slice(sfx,2,NONE))))
-          else
-            SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
-        end
+  | ">>" => SOME (Indent (2, true))
+  | ">>~" => SOME (Indent (2, false))
+  | _ => let val (pfx,sfx) = splitl (isNotChar #"/") ss in
+    if isPrefix "///" sfx then SOME (OverrideUpd ((string (rmws pfx), size sfx - 3), string (rmws (triml 3 sfx))))
+    else if isPrefix "//" sfx then SOME (Overload (string (rmws pfx), string (rmws (triml 2 sfx))))
+    else if isPrefix "/" sfx then SOME (Inst (string (rmws pfx), string (rmws (triml 1 sfx))))
+    else let
+      val (spfx,ssfx) = splitl (isNotChar #"=") ss
+      val pfx = rmws spfx
+      val sfx = string (rmws (triml 1 ssfx))
+      fun numarg cont arg =
+        case Int.fromString arg of
+          SOME i => cont i
+        | NONE => (warn(pos, s ^ " option invalid, equal sign should be followed by a number"); NONE)
+    in if isPrefix "=" ssfx then
+      case string pfx of
+        "rulename" => SOME (RuleName sfx)
+      | "width" => numarg (fn i => SOME (Width i)) sfx
+      | "depth" => numarg (fn i => SOME (Depth i)) sfx
+      | "showtypes" => numarg (fn i => SOME (ShowTypes i)) sfx
+      | "conj" => numarg (fn i => SOME (Conj i)) sfx
+      | "m" => SOME (Mathmode sfx)
+      | ">>" => numarg (fn i => SOME (Indent (i, true))) sfx
+      | ">>~" => numarg (fn i => SOME (Indent (i, false))) sfx
+      | _ => if isPrefix "tr'" pfx andalso isSuffix "'" pfx then
+          numarg (fn i => SOME (TraceSet (string (trimr 1 (triml 3 pfx)), i))) sfx
+        else (warn (pos, s ^ " option invalid"); NONE)
+    else if isPrefix "-" ss then SOME (Unoverload (string (triml 1 ss)))
+    else (warn (pos, s ^ " option invalid"); NONE)
     end
-
+    end
+  end
 
 
 type override_map = (string,(string * int))Binarymap.dict
@@ -241,7 +195,22 @@ fun optset_rulename s = get_first (fn RuleName s => SOME s | _ => NONE) s
 fun optset_nomath s = OptSet.has NoMath s
 
 val optset_unoverloads =
-    OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
+  OptSet.fold (fn
+    (Unoverload s,l) => if String.isPrefix ":" s then l else s :: l
+  | (_,l) => l) []
+val optset_unabbrevs =
+  OptSet.fold (fn
+    (Unoverload s,l) => if String.isPrefix ":" s then s :: l else l
+  | (_,l) => l) []
+
+val optset_overloads =
+  OptSet.fold (fn
+    (Overload (n,t),l) => if String.isPrefix ":" t then l else (n,Parse.Term [QUOTE t]) :: l
+  | (_,l) => l) []
+val optset_abbrevs =
+  OptSet.fold (fn
+    (Overload (n,t),l) => if String.isPrefix ":" t then (n,Parse.Type [QUOTE t]) :: l else l
+  | (_,l) => l) []
 
 fun optset_traces opts f =
     OptSet.fold (fn (e, f) => case e of TraceSet p => trace p f | _ => f) f opts
@@ -400,15 +369,19 @@ in
       ]
     end
 
-    fun clear_overloads slist f = let
-      val tyg = type_grammar()
-      val oldg = term_grammar()
-      val _ = List.app temp_clear_overloads_on slist
-      val _ = List.map hide slist
-      val newg = term_grammar()
+    fun modify_grammar unoverloads unabbrevs overloads abbrevs f = let
+      val oldtyg = type_grammar()
+      val oldtmg = term_grammar()
+      val _ = List.app temp_clear_overloads_on unoverloads
+      val _ = List.map hide unoverloads
+      val _ = List.app temp_disable_tyabbrev_printing unabbrevs
+      val _ = List.app temp_type_abbrev_pp abbrevs
+      val _ = List.app temp_overload_on overloads
+      val newtmg = term_grammar()
+      val newtyg = type_grammar()
     in
-      (fn x => (temp_set_grammars(tyg,newg);
-                f x before temp_set_grammars(tyg,oldg)))
+      (fn x => (temp_set_grammars(newtyg,newtmg);
+                f x before temp_set_grammars(oldtyg,oldtmg)))
     end
 
     fun optprintermod f =
@@ -428,9 +401,8 @@ in
           |> (if OptSet.has Merge opts then
                 trace ("pp_avoids_symbol_merges", 1)
               else (fn f => f))
-          |> (case optset_unoverloads opts of
-                  [] => (fn f => f)
-                | slist => clear_overloads slist)
+          |> (modify_grammar (optset_unoverloads opts) (optset_unabbrevs opts)
+                             (optset_overloads opts) (optset_abbrevs opts))
           |> optset_traces opts
 
     val overrides = let
@@ -443,20 +415,9 @@ in
     end
     fun stdtermprint t = optprintermod (raw_pp_term_as_tex overrides) t
 
-    fun clear_abbrevs slist f = let
-      val oldg = type_grammar()
-      val tmg = term_grammar()
-      val _ = List.app temp_disable_tyabbrev_printing slist
-      val newg = type_grammar()
-    in
-      (fn x => (temp_set_grammars(newg,tmg);
-                f x before temp_set_grammars(oldg,tmg)))
-    end
-
     fun opttyprintermod f =
-      f |> (case optset_unoverloads opts of
-                [] => (fn f => f)
-              | slist => clear_abbrevs slist)
+      f |> (modify_grammar (optset_unoverloads opts) (optset_unabbrevs opts)
+                           (optset_overloads opts) (optset_abbrevs opts))
 
     fun stdtypeprint t = opttyprintermod (raw_pp_type_as_tex overrides) t
 
@@ -512,6 +473,10 @@ in
                 block_list (block INCONSISTENT 0) pr newline lines
               )
             end
+          else if OptSet.has IndRules opts then
+            ind_bl (
+              block_list (block INCONSISTENT 0) (rule_print stdtermprint) add_newline
+                (map (concl o SPEC_ALL) (CONJUNCTS thm)))
           else if rulep then ind_bl (rule_print stdtermprint (concl thm))
           else let
               val base = raw_pp_theorem_as_tex overrides
