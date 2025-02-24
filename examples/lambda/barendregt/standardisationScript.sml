@@ -1663,11 +1663,16 @@ val standard_reduction_under_LAMl = prove(
     METIS_TAC [standard_reduction_under_LAM]
   ]);
 
-val standardisation_theorem = store_thm(
-  "standardisation_theorem",
-  ``!M N. reduction beta M N ==>
+(* Theorem 11.4.7 [1, p.300]
+
+   NOTE: both this theorem and the next Corollary 11.4.8 are proved by Lemma
+   11.4.6 (Main Lemma).
+ *)
+Theorem standardisation_theorem :
+    !M N. reduction beta M N ==>
           ?s. (first s = M) /\ finite s /\ (last s = N) /\
-              standard_reduction s``,
+              standard_reduction s
+Proof
   CONV_TAC SWAP_VARS_CONV THEN GEN_TAC THEN completeInduct_on `size N` THEN
   FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
   SRW_TAC [][] THEN
@@ -1736,7 +1741,8 @@ val standardisation_theorem = store_thm(
            ASM_REWRITE_TAC []) THEN
     Q.EXISTS_TAC `plink hr sr2` THEN
     SRW_TAC [][head_standard_is_standard]
-  ]);
+  ]
+QED
 
 val hnf_preserved = store_thm(
   "hnf_preserved",
@@ -1758,10 +1764,10 @@ val hnf_reflected_over_ireduction = store_thm(
   SRW_TAC [][hnf_no_head_redex, i_reduce1_def] THEN
   METIS_TAC [lemma11_4_3ii]);
 
-(* NOTE: This is also Theorem 8.3.11 [1, p.174] *)
-val corollary11_4_8 = store_thm(
-  "corollary11_4_8",
-  ``!M. has_hnf M = finite (head_reduction_path M)``,
+(* Corollary 11.4.8 [1, p.299] (also Theorem 8.3.11 [1, p.174]) *)
+Theorem corollary11_4_8 :
+    !M. has_hnf M = finite (head_reduction_path M)
+Proof
   GEN_TAC THEN EQ_TAC THENL [
     SRW_TAC [][has_hnf_def] THEN
     `?Z. reduction beta M Z /\ reduction beta N Z`
@@ -1780,7 +1786,8 @@ val corollary11_4_8 = store_thm(
     Q.EXISTS_TAC `last (head_reduction_path M)` THEN
     METIS_TAC [head_reduces_reduction_beta, conversion_rules,
                head_reduces_def]
-  ]);
+  ]
+QED
 
 (* named by analogy with has_bnf_thm in chap3Theory *)
 val has_hnf_thm = store_thm(
@@ -2011,7 +2018,8 @@ Proof
            rw [Abbr ‘l0’, EL_MAP] ]) \\
      (* Case 1.2: all APP, some LAM:
 
-        M @@ N -h-> M1 @@ N -h->* (M2 = LAM v M') @@ N [EL n l] -h-> [N/v] M2' -h->* hnf
+        M @@ N -h-> M1 @@ N -h->* (M2 = LAM v M') @@ N [EL n l]
+                            -h-> [N/v] M2' -h->* hnf
       *)
      FULL_SIMP_TAC std_ss [NOT_EVERY_EXISTS_FIRST] \\
      Q.PAT_X_ASSUM ‘EVERY is_comb l’ (STRIP_ASSUME_TAC o (REWRITE_RULE [EVERY_EL])) \\
@@ -2062,7 +2070,8 @@ Proof
     ‘has_hnf M2’ by METIS_TAC [has_hnf_LAM_E] \\
      Cases_on ‘n = 0’ >- gs [] \\
   (* constructing a new head reduction list *)
-     rw [Once corollary11_4_8, Once finite_head_reduction_path_to_list_last_has_hnf] \\
+     rw [Once corollary11_4_8,
+         Once finite_head_reduction_path_to_list_last_has_hnf] \\
      qabbrev_tac ‘l0 = MAP rator l’ \\
     ‘(LENGTH l0 = LENGTH l) /\ l0 <> []’ by rw [Abbr ‘l0’] \\
     ‘0 < LENGTH l /\ 0 < LENGTH l0’ by rw [GSYM NOT_NIL_EQ_LENGTH_NOT_0] \\

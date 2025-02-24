@@ -5136,7 +5136,7 @@ Proof
      reverse CONJ_TAC
      >- (reverse CONJ_TAC >- ASM_SET_TAC [] \\
         `IMAGE (\n. disjointed A n) UNIV SUBSET measurable_sets m`
-           by METIS_TAC [measure_space_def, sigma_algebra_alt, algebra_alt,
+           by METIS_TAC [measure_space_def, sigma_algebra_alt_eq, algebra_alt,
                          ring_disjointed_sets] \\
          ASM_SET_TAC []) \\
      FULL_SIMP_TAC std_ss [MEASURE_SPACE_INCREASING])
@@ -5147,7 +5147,7 @@ Proof
  >> Q.EXISTS_TAC `\n. disjointed A n` >> RW_TAC std_ss []
  >| [ (* goal 1 (of 3) *)
       MATCH_MP_TAC ring_disjointed_sets THEN Q.EXISTS_TAC `m_space m` THEN
-      FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_alt, algebra_alt],
+      FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_alt_eq, algebra_alt],
       (* goal 2 (of 3) *)
       ASM_SIMP_TAC std_ss [BIGUNION_disjointed],
       (* goal 3 (of 3) *)
@@ -5246,6 +5246,71 @@ Proof
   POP_ASSUM MATCH_MP_TAC THEN
   fs [IN_IMAGE, IN_UNIV, IN_FUNSET] >> RW_TAC std_ss [] >> art []
 QED
+
+(* ------------------------------------------------------------------------- *)
+(* Measure type (from HVG's legesgue_measure_hvgTheory)                      *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: According to [countably_additive_alt_eq], ‘countably_additive (sp,M,u)’
+   doesn't use sp. This alternative definition ‘countably_additive_alt’ involves
+   only M and u. (Ported from HVG's legesgue_measure_hvgTheory.)
+ *)
+Definition countably_additive_alt :
+    countably_additive_alt M (u:('a->bool)->extreal) <=>
+    !A. IMAGE A UNIV SUBSET M ==> disjoint_family A ==>
+        BIGUNION {A i | i IN UNIV} IN M ==>
+        u (BIGUNION {A i | i IN univ(:num)}) = suminf (u o A)
+End
+
+(* connection between ‘countably_additive’ and ‘countably_additive_alt’ *)
+Theorem countably_additive_eq_alt :
+    !sp M u. countably_additive (sp,M,u) <=> countably_additive_alt M u
+Proof
+    REWRITE_TAC [countably_additive_alt, countably_additive_alt_eq]
+QED
+
+Definition positive_alt :
+    positive_alt M u <=> (u {} = 0:extreal) /\ !a. a IN M ==> 0 <= u a
+End
+
+Theorem positive_eq_alt :
+    !sp M u. positive (sp,M,u) <=> positive_alt M u
+Proof
+    rw [positive_def, positive_alt]
+QED
+
+Theorem positive_alt_eq :
+    !sp M u. positive (sp,M,u) <=> u {} = 0 /\ !a. a IN M ==> 0 <= u a
+Proof
+    REWRITE_TAC [positive_eq_alt, positive_alt]
+QED
+
+Definition measure_space_alt :
+    measure_space_alt sp A u <=> sigma_algebra_alt sp A /\ positive_alt A u /\
+                                 countably_additive_alt A u
+End
+
+Theorem measure_space_alt_eq :
+    !sp M u. measure_space (sp,M,u) <=>
+             sigma_algebra_alt sp M /\ positive_alt M u /\
+             countably_additive_alt M u
+Proof
+  SIMP_TAC std_ss [measure_space_def, m_space_def, measurable_sets_def] THEN
+  SIMP_TAC std_ss [sigma_algebra_alt_eq, sigma_algebra_alt] THEN
+  SIMP_TAC std_ss [positive_alt_eq, positive_alt] THEN
+  SIMP_TAC std_ss [countably_additive_alt_eq, countably_additive_alt]
+QED
+
+(* NOTE: ‘measure_of’ takes a space, a generator and a measure, and returns a
+   measure space with a total-version of the measure function, returning 0 on
+   non-measurable sets. (cf. sigma_sets_sigma)
+ *)
+Definition measure_of :
+    measure_of (sp,A,u) = (sp,
+     (if A SUBSET POW sp then (sigma_sets sp A) else {{};sp}),
+     (\a. if a IN sigma_sets sp A /\ measure_space (sp, sigma_sets sp A, u)
+        then u a else 0))
+End
 
 val sets_eq_imp_space_eq = store_thm ("sets_eq_imp_space_eq",
   ``!M M'. measure_space M /\ measure_space M' /\

@@ -13,12 +13,16 @@ open boolSimps relationTheory pred_setTheory listTheory finite_mapTheory
      hurdUtils pairTheory;
 
 open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
-     horeductionTheory term_posnsTheory finite_developmentsTheory
-     basic_swapTheory NEWLib;
+     horeductionTheory term_posnsTheory finite_developmentsTheory NEWLib
+     basic_swapTheory;
 
 val _ = new_theory "head_reduction"
 
 val _ = hide "Y";
+
+(* Disable some conflicting overloads from labelledTermsTheory *)
+Overload FV  = “supp term_pmact”
+Overload VAR = “term$VAR”
 
 Inductive hreduce1 :
 [~BETA:]
@@ -209,6 +213,14 @@ Proof
  >> rename1 ‘M1 -h-> M0’
  >> ONCE_REWRITE_TAC [RTC_CASES1] >> DISJ2_TAC
  >> Q.EXISTS_TAC ‘M0’ >> rw []
+QED
+
+Theorem hreduce_LAM :
+    !v M1 M2. LAM v M1 -h->* LAM v M2 <=> M1 -h->* M2
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘[v]’, ‘M1’, ‘M2’] hreduce_LAMl)
+ >> REWRITE_TAC [LAMl_thm]
 QED
 
 Theorem hreduce1_abs :
@@ -1639,11 +1651,29 @@ Theorem hnf_head_hnf[simp] :
 Proof
     CONJ_TAC
  >- NTAC 2 (rw [Once hnf_head_def])
- >> MATCH_MP_TAC hnf_head_appstar
+ >> MATCH_MP_TAC hnf_head_appstar >> rw []
+QED
+
+(* |- hnf_head (VAR y) = VAR y *)
+Theorem hnf_head_VAR[simp] =
+    (cj 2 hnf_head_hnf) |> Q.GEN ‘args’ |> Q.SPEC ‘[]’
+                        |> REWRITE_RULE [appstar_empty]
+
+Definition var_name_def :
+    var_name t = @s. VAR s = t
+End
+
+Theorem var_name_thm[simp] :
+    var_name (VAR s) = s
+Proof
+    REWRITE_TAC [var_name_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC ‘s’ >> art [])
  >> rw []
 QED
 
-Overload hnf_headvar = “\t. THE_VAR (hnf_head t)”
+Overload hnf_headvar = “\t. var_name (hnf_head t)”
 
 (* hnf_children retrives the ‘args’ part of absfree hnf *)
 Definition hnf_children_def :
@@ -1677,6 +1707,10 @@ Proof
     rpt GEN_TAC
  >> MATCH_MP_TAC hnf_children_appstar >> rw []
 QED
+
+(* |- hnf_children (VAR y) = [] *)
+Theorem hnf_children_VAR[simp] =
+        hnf_children_hnf |> Q.SPECL [‘y’, ‘[]’] |> REWRITE_RULE [appstar_empty]
 
 Theorem absfree_hnf_cases :
     !M. hnf M /\ ~is_abs M <=> ?y args. M = VAR y @* args

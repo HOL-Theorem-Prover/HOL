@@ -30,4 +30,5 @@ val _ = if msg = "" then print "No message\n"
 
 val _ = save_thm("MFB", TRUTH)
 
+val _ = Globals.interactive := false
 val _ = export_theory();

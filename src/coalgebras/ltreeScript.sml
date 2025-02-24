@@ -46,9 +46,7 @@ val repabs_fns = define_new_type_bijections
     REP  = "ltree_rep",
     tyax = ltree_tydef};
 
-
 (* prove basic theorems about rep and abs functions *)
-
 val ltree_absrep = CONJUNCT1 repabs_fns
 val ltree_repabs = CONJUNCT2 repabs_fns
 
@@ -104,9 +102,7 @@ Proof
   \\ Induct_on `l` \\ fs [ltree_repabs]
 QED
 
-
 (* define the only constructor: Branch *)
-
 Definition Branch_rep_def:
   Branch_rep (x:'a) (xs:('a ltree_rep) llist) =
     \path. case path of
@@ -154,9 +150,7 @@ Proof
   fs [ltree_rep_ok_Branch_rep_every]
 QED
 
-
 (* prove injectivity *)
-
 Theorem Branch_rep_11[local]:
   !a1 a2 ts1 ts2. Branch_rep a1 ts1 = Branch_rep a2 ts2 <=> a1 = a2 /\ ts1 = ts2
 Proof
@@ -189,9 +183,7 @@ Proof
   \\ fs [LMAP_ltree_rep_11,Branch_rep_11]
 QED
 
-
 (* prove cases theorem *)
-
 Theorem Branch_rep_exists[local]:
   ltree_rep_ok f ==> ?a ts. f = Branch_rep a ts
 Proof
@@ -222,9 +214,7 @@ Proof
   \\ fs [LMAP_ltree_rep_ltree_abs,ltree_repabs]
 QED
 
-
 (* define ltree_CASE constant *)
-
 Definition dest_Branch_rep_def:
   dest_Branch_rep (l:'a ltree_rep) =
     let (x,len) = l [] in
@@ -277,7 +267,6 @@ Proof
 QED
 
 (* ltree generator *)
-
 Definition path_ok_def:
   path_ok path f <=>
     !xs n ys k a.
@@ -356,7 +345,6 @@ QED
 
 
 (* ltree unfold *)
-
 Definition make_unfold_def:
   make_unfold f seed [] =
     (let (a,seeds) = f seed in (a,LLENGTH seeds)) /\
@@ -393,9 +381,7 @@ Proof
   \\ fs [make_unfold_def,LNTH_fromList]
 QED
 
-
-(* lemmas for proving equivalences *)
-
+(* ltree_el returns the tree node (with the number of children) at given path *)
 Definition ltree_el_def:
   ltree_el t [] =
     ltree_CASE t (\a ts. SOME (a, LLENGTH ts)) /\
@@ -416,7 +402,6 @@ Proof
   qspec_then `t` strip_assume_tac ltree_cases
   \\ fs [ltree_el_def,ltree_CASE]
 QED
-
 
 Theorem ltree_el_eqv:
   !t1 t2. t1 = t2 <=> !path. ltree_el t1 path = ltree_el t2 path
@@ -517,9 +502,7 @@ Proof
   \\ rw [] \\ fs [LNTH_fromList]
 QED
 
-
-(* misc *)
-
+(* ltree_lookup returns the subtree after passing the given path, cf. ltree_el *)
 Definition ltree_lookup_def:
   ltree_lookup t [] = SOME t /\
   ltree_lookup t (n::ns) =
@@ -632,9 +615,7 @@ Proof
   \\ fs [UNCURRY] \\ metis_tac []
 QED
 
-
 (* update TypeBase *)
-
 Theorem ltree_CASE_cong:
   !M M' f f'.
     M = M' /\
@@ -646,6 +627,7 @@ Proof
 QED
 
 Overload "case" = “ltree_CASE”
+
 val _ = TypeBase.export
   [TypeBasePure.mk_datatype_info
     { ax = TypeBasePure.ORIG TRUTH,
@@ -672,9 +654,7 @@ Proof
   rw [boolTheory.DATATYPE_TAG_THM]
 QED
 
-
 (* prove that every finite ltree is an inductively defined rose tree *)
-
 Inductive ltree_finite:
   EVERY ltree_finite ts ==> ltree_finite (Branch a (fromList ts))
 End
@@ -691,8 +671,46 @@ Theorem ltree_finite:
 Proof
   simp [Once ltree_finite_cases]
   \\ qspec_then `ts` strip_assume_tac fromList_fromSeq
-  \\ fs [LSET_def,IN_DEF,LNTH_fromList,PULL_EXISTS,LFINITE_fromList,EVERY_EL]
+  \\ fs [IN_LSET,LNTH_fromList,PULL_EXISTS,LFINITE_fromList,EVERY_EL]
 QED
+
+(* ltree created by finite steps of unfolding is finite
+
+   If the ltree is generated from a seed, whose resulting seeds after one-step
+   unfolding is finite with smaller "measure", then there must be only finite
+   steps of the unfolding process and the resulting ltree is finite.
+ *)
+Theorem ltree_finite_by_unfolding :
+    !P f. (?(m :'a -> num).
+           !seed. P seed ==>
+                  let (a,seeds) = f seed in
+                    LFINITE seeds /\
+                    every (\e. P e /\ m e < m seed) seeds) ==>
+          !seed. P seed ==> ltree_finite (ltree_unfold f seed)
+Proof
+    NTAC 3 STRIP_TAC
+ >> measureInduct_on ‘m seed’
+ >> DISCH_TAC
+ >> LAST_X_ASSUM (drule o Q.SPEC ‘seed’)
+ >> rw [Once ltree_unfold]
+ >> qabbrev_tac ‘t = f seed’
+ >> Cases_on ‘t’ >> fs []
+ >> rw [Once ltree_finite, IN_LSET]
+ >> FIRST_X_ASSUM irule
+ >> fs [every_LNTH]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+(* |- !f. (?m. !seed.
+             (let
+                (a,seeds) = f seed
+              in
+                LFINITE seeds /\ every (\e. m e < m seed) seeds)) ==>
+          !seed. ltree_finite (ltree_unfold f seed)
+ *)
+Theorem ltree_finite_by_unfolding' =
+        ltree_finite_by_unfolding |> Q.SPEC ‘\x. T’ |> SRULE []
 
 CoInductive ltree_every :
     P a ts /\ every (ltree_every P) ts ==> (ltree_every P (Branch a ts))
@@ -716,7 +734,6 @@ Proof
     rw [finite_branching_def, EVERY_MEM]
  >> qabbrev_tac ‘P = \(a :'a) (ts :'a ltree llist). LFINITE ts’
  >> rw [Once ltree_every_cases]
- >- rw [Abbr ‘P’, LFINITE_fromList]
  >> rw [every_fromList_EVERY, EVERY_MEM]
 QED
 
@@ -950,6 +967,37 @@ Proof
  >> Cases_on ‘t’
  >> rw [ltree_lookup_def, ltree_map]
  >> Cases_on ‘LNTH h ts’ >> rw []
+QED
+
+(*---------------------------------------------------------------------------*
+ *  ltree_finite and (finite) ltree_paths
+ *---------------------------------------------------------------------------*)
+
+Theorem ltree_finite_imp_finite_ltree_paths :
+    !t. ltree_finite t ==> FINITE (ltree_paths t)
+Proof
+    HO_MATCH_MP_TAC ltree_finite_ind
+ >> rw [ltree_paths_alt, EVERY_EL]
+ >> qabbrev_tac ‘k = LENGTH ts’
+ >> Know ‘{p | ltree_el (Branch a (fromList ts)) p <> NONE} =
+           [] INSERT
+              BIGUNION (IMAGE (\i. {i::q | q | ltree_el (EL i ts) q <> NONE})
+                              (count k))’
+ >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+     Cases_on ‘x’ >> simp [ltree_el_def, LNTH_fromList] \\
+     Cases_on ‘h < k’ >> rw [])
+ >> Rewr'
+ >> REWRITE_TAC [FINITE_INSERT]
+ >> MATCH_MP_TAC FINITE_BIGUNION
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC IMAGE_FINITE >> rw [FINITE_COUNT])
+ >> rw []
+ >> Know ‘{i::q | q | ltree_el (EL i ts) q <> NONE} =
+           IMAGE (\q. i::q) {q | q | ltree_el (EL i ts) q <> NONE}’
+ >- rw [Once EXTENSION]
+ >> Rewr'
+ >> MATCH_MP_TAC IMAGE_FINITE
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
 (*---------------------------------------------------------------------------*

@@ -376,6 +376,9 @@ fun type_decode (Type ty) = SOME ty
 fun term_decode (Term tm) = SOME tm
   | term_decode _ = NONE
 
+fun thm_decode (Thm th) = SOME th
+  | thm_decode _ = NONE
+
 fun bool_decode (Bool b) = SOME b
   | bool_decode _ = NONE
 

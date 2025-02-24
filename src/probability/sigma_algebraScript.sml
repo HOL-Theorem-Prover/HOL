@@ -1813,8 +1813,9 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     >> RW_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY]
     >> PROVE_TAC [] ]);
 
-(* If an algebra is contained in a dynkin system, then the smallest sigma-algebra generated
-   from it is also contained in the dynkin system. *)
+(* If an algebra is contained in a dynkin system, then the smallest sigma-algebra
+   generated from it is also contained in the dynkin system.
+ *)
 val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
   ("SIGMA_PROPERTY_DISJOINT_LEMMA",
    ``!sp a d. algebra (sp,a) /\ a SUBSET d /\ dynkin_system (sp,d)
@@ -2096,6 +2097,29 @@ val DYNKIN_THM = store_thm
  >> `DISJOINT (f i) (f j)` by PROVE_TAC []
  >> BETA_TAC >> ASM_SET_TAC []);
 
+(* This theorem is a stronger version of SIGMA_PROPERTY_DISJOINT_LEMMA, requiring
+   only closure of (finite) intersections instead of a full algebra.
+ *)
+Theorem SIGMA_PROPERTY_DYNKIN :
+    !sp sts d.
+          subset_class sp sts /\
+         (!s t. s IN sts /\ t IN sts ==> s INTER t IN sts) /\
+          sts SUBSET d /\ dynkin_system (sp,d) ==>
+          subsets (sigma sp sts) SUBSET d
+Proof
+    rpt STRIP_TAC
+ (* applying DYNKIN_THM *)
+ >> Know ‘sigma sp sts = dynkin sp sts’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC DYNKIN_THM >> art [])
+ >> Rewr'
+ (* applying DYNKIN_SUBSET *)
+ >> qabbrev_tac ‘b = (sp,d)’
+ >> ‘d = subsets b’ by rw [Abbr ‘b’] >> POP_ORW
+ >> ‘sp = space b’ by rw [Abbr ‘b’] >> POP_ORW
+ >> MATCH_MP_TAC DYNKIN_SUBSET
+ >> simp [Abbr ‘b’]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Some further additions by Concordia HVG (M. Qasim & W. Ahmed)            *)
@@ -2508,7 +2532,7 @@ Proof
                                (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_INTER)) >> art []
 QED
 
-Theorem sigma_algebra_alt : (* was: sigma_algebra_alt_eq *)
+Theorem sigma_algebra_alt_eq :
     !sp sts. sigma_algebra (sp,sts) <=>
              algebra (sp,sts) /\
              !A. IMAGE A UNIV SUBSET sts ==> BIGUNION {A i | i IN univ(:num)} IN sts
@@ -2521,6 +2545,18 @@ Proof
   SRW_TAC[] [IN_UNIV,SUBSET_DEF,IN_FUNSET] THEN METIS_TAC[]
 QED
 
+Definition sigma_algebra_alt :
+    sigma_algebra_alt sp sts <=>
+     algebra (sp,sts) /\
+     !A. IMAGE A UNIV SUBSET sts ==> BIGUNION {A i | i IN univ(:num)} IN sts
+End
+
+Theorem sigma_algebra_eq_alt :
+    !sp sts. sigma_algebra (sp,sts) <=> sigma_algebra_alt sp sts
+Proof
+    REWRITE_TAC [sigma_algebra_alt, sigma_algebra_alt_eq]
+QED
+
 Theorem sigma_algebra_alt_pow : (* was: sigma_algebra_iff2 *)
     !sp sts. sigma_algebra (sp,sts) <=>
              sts SUBSET POW sp /\ {} IN sts /\
@@ -2528,7 +2564,7 @@ Theorem sigma_algebra_alt_pow : (* was: sigma_algebra_iff2 *)
             (!A. IMAGE A UNIV SUBSET sts ==>
                  BIGUNION {(A :num->'a->bool) i | i IN UNIV} IN sts)
 Proof
-  SIMP_TAC std_ss [sigma_algebra_alt, algebra_def, space_def, subsets_def] THEN
+  SIMP_TAC std_ss [sigma_algebra_alt_eq, algebra_def, space_def, subsets_def] THEN
   rpt GEN_TAC THEN SIMP_TAC std_ss [subset_class_def, POW_DEF] THEN
   EQ_TAC THENL [ASM_SET_TAC [], ALL_TAC] THEN
   rpt STRIP_TAC THENL [ASM_SET_TAC [], ASM_SET_TAC [], ASM_SET_TAC [],
@@ -2552,7 +2588,7 @@ Proof
   THENL [POP_ASSUM MP_TAC THEN
    SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE] THEN REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [] THEN COND_CASES_TAC THENL [METIS_TAC [], ALL_TAC] THEN
-   FULL_SIMP_TAC std_ss [sigma_algebra_alt, algebra_def, ring_alt, semiring_alt,
+   FULL_SIMP_TAC std_ss [sigma_algebra_alt_eq, algebra_def, ring_alt, semiring_alt,
     subsets_def], ALL_TAC] THEN DISCH_TAC THEN KNOW_TAC
     ``BIGUNION {(\i. if i IN X then (A:num->'a->bool) i else {}) x | x IN UNIV}
        IN sts``
@@ -2619,11 +2655,11 @@ Proof
   [ASM_SET_TAC [], DISCH_TAC] THEN
   KNOW_TAC ``sp DIFF BIGUNION {sp DIFF (A:num->'a->bool) x | x IN X} IN sts`` THENL
   [MATCH_MP_TAC RING_DIFF_ALT THEN EXISTS_TAC ``sp:'a->bool`` THEN
-   FULL_SIMP_TAC std_ss [sigma_algebra_alt, algebra_alt] THEN
+   FULL_SIMP_TAC std_ss [sigma_algebra_alt_eq, algebra_alt] THEN
    ONCE_REWRITE_TAC [METIS [] ``sp DIFF A x = (\x. sp DIFF A x) x``] THEN
 
    MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UN THEN EXISTS_TAC ``sp:'a->bool`` THEN
-   FULL_SIMP_TAC std_ss [sigma_algebra_alt, algebra_alt] THEN
+   FULL_SIMP_TAC std_ss [sigma_algebra_alt_eq, algebra_alt] THEN
    SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE] THEN REPEAT STRIP_TAC THEN
    ASM_REWRITE_TAC [] THEN MATCH_MP_TAC RING_DIFF_ALT THEN EXISTS_TAC ``sp:'a->bool`` THEN
    ASM_SET_TAC [], DISCH_TAC] THEN
@@ -2631,7 +2667,7 @@ Proof
              sp DIFF BIGUNION {sp DIFF A x | x IN X}`` THENL
   [ALL_TAC, METIS_TAC []] THEN SIMP_TAC std_ss [EXTENSION] THEN GEN_TAC THEN
   KNOW_TAC ``sts SUBSET POW sp`` THENL
-  [FULL_SIMP_TAC std_ss [sigma_algebra_alt, algebra_alt, ring_alt, semiring_alt,
+  [FULL_SIMP_TAC std_ss [sigma_algebra_alt_eq, algebra_alt, ring_alt, semiring_alt,
     subset_class_def] THEN ASM_SET_TAC [POW_DEF], RW_TAC std_ss [POW_DEF]] THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL
   [SIMP_TAC std_ss [IN_DIFF] THEN CONJ_TAC THENL [ASM_SET_TAC [], ALL_TAC] THEN
@@ -2697,7 +2733,7 @@ val sigma_sets_subset = store_thm ("sigma_sets_subset",
   ``!sp sts st. sigma_algebra (sp,sts) /\ st SUBSET sts ==>
                 sigma_sets sp st SUBSET sts``,
   rpt STRIP_TAC THEN SIMP_TAC std_ss [SPECIFICATION, SUBSET_DEF] THEN
-  HO_MATCH_MP_TAC sigma_sets_ind THEN FULL_SIMP_TAC std_ss [sigma_algebra_alt,
+  HO_MATCH_MP_TAC sigma_sets_ind THEN FULL_SIMP_TAC std_ss [sigma_algebra_alt_eq,
     algebra_alt, ring_def, space_def, subsets_def, subset_class_def] THEN
   rpt STRIP_TAC THENL
   [ASM_SET_TAC [],
@@ -2725,7 +2761,7 @@ Proof
    MATCH_MP_TAC sigma_sets_BIGUNION THEN ASM_SET_TAC []]
 QED
 
-(* NOTE: this indicates that `sigma_sets = sigma` *)
+(* NOTE: this indicates that `sigma_sets = sigma`, see next theorem *)
 Theorem sigma_sets_least_sigma_algebra :
     !sp A. A SUBSET POW sp ==>
           (sigma_sets sp A =
@@ -2755,6 +2791,12 @@ Proof
   FULL_SIMP_TAC std_ss [AND_IMP_INTRO] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
   ASM_SIMP_TAC std_ss [sigma_algebra_sigma_sets] THEN
   ASM_SIMP_TAC std_ss [SUBSET_DEF, sigma_sets_basic]
+QED
+
+Theorem sigma_sets_sigma :
+    !sp A. A SUBSET POW sp ==> sigma_sets sp A = subsets (sigma sp A)
+Proof
+    rw [sigma_sets_least_sigma_algebra, sigma_def]
 QED
 
 val sigma_sets_top = store_thm ("sigma_sets_top",

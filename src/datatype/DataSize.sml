@@ -202,8 +202,8 @@ fun size_def_to_comb (db : TypeBasePure.typeBase) opt_ind_rec size_def =
         val th1 = prove (eqs,
                 ho_match_mp_tac ind
                 \\ REWRITE_TAC (size_def' :: aux_size_eqs @ aux_size_rules @ useful_ths)
+                \\ rpt (CHANGED_TAC BETA_TAC)
                 \\ rpt strip_tac
-                \\ BETA_TAC
                 \\ ASSUM_LIST REWRITE_TAC)
         val th2 = prove (list_mk_conj aux_eqs, REWRITE_TAC [FUN_EQ_THM, th1])
       in SOME th2 end

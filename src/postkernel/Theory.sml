@@ -873,7 +873,7 @@ local
     | NONE => ()
   end
 in
-fun export_theory () = let
+fun export_theory () = if !Globals.interactive then () else let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
   val {thid,facts,thydata,mldeps,...} = scrubCT()
   val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []

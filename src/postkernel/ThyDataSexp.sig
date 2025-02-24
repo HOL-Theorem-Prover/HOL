@@ -47,6 +47,7 @@ val string_decode : string dec
 val int_decode    : int dec
 val type_decode   : Type.hol_type dec
 val term_decode   : Term.term dec
+val thm_decode    : Thm.thm dec
 val char_decode   : char dec
 val list_decode   : 'a dec -> 'a list dec
 val kname_decode  : KernelSig.kernelname dec

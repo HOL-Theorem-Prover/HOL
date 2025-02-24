@@ -1,15 +1,20 @@
+(* ========================================================================== *)
+(* FILE    : chap3Script.sml                                                  *)
+(* TITLE   : Theory of reductions (Chapter 3 of Barendregt 1984 [1])          *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(*         : 2023-2025 Michael Norrish and Chun Tian                          *)
+(* ========================================================================== *)
+
 open HolKernel Parse boolLib bossLib;
 
-open boolSimps metisLib basic_swapTheory relationTheory listTheory hurdUtils;
+open boolSimps metisLib basic_swapTheory relationTheory listTheory hurdUtils
+     pred_setTheory pred_setLib BasicProvers;
 
-local open pred_setLib in end;
-
-open binderLib BasicProvers nomsetTheory termTheory chap2Theory appFOLDLTheory;
-open horeductionTheory
+open binderLib nomsetTheory termTheory chap2Theory appFOLDLTheory
+     horeductionTheory;
 
 val _ = new_theory "chap3";
-
-val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
 (* definition from p30 *)
 val beta_def = Define`beta M N = ?x body arg. (M = LAM x body @@ arg) /\
@@ -124,6 +129,14 @@ val cc_beta_FV_SUBSET = store_thm(
   ``!M N. M -b-> N ==> FV N SUBSET FV M``,
   HO_MATCH_MP_TAC ccbeta_ind THEN Q.EXISTS_TAC `{}` THEN
   SRW_TAC [][SUBSET_DEF, FV_SUB] THEN PROVE_TAC []);
+
+Theorem betastar_FV_SUBSET :
+    !M N. M -b->* N ==> FV N SUBSET FV M
+Proof
+    HO_MATCH_MP_TAC RTC_INDUCT >> rw []
+ >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M'’ >> art []
+ >> MATCH_MP_TAC cc_beta_FV_SUBSET >> art []
+QED
 
 Theorem cc_beta_tpm:
   !M N. M -b-> N ==> !p. tpm p M -b-> tpm p N
@@ -590,10 +603,16 @@ Proof
   simp[GSYM TC_RC_EQNS, theorem3_17]
 QED
 
-val beta_CR = store_thm(
-  "beta_CR",
-  ``CR beta``,
-  PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]);
+(* Theorem 3.2.8 [1, p.62] (1st version)
+
+   NOTE: This is the short proof due to Tait and Martin-Löf.
+   cf. chap11_1Theory.beta_CR_2 and finite_developmentsTheory.corollary11_2_29.
+ *)
+Theorem beta_CR :
+    CR beta
+Proof
+  PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]
+QED
 
 val betaCR_square = store_thm(
   "betaCR_square",

@@ -9,11 +9,15 @@ Write a theory segment to disk.
 theory, export, file.
 
 \DESCRIBE
-An invocation {export_theory()} saves the current theory segment to disk.
-All parents, definitions, axioms, and stored theorems of the segment
-are saved in such a way that, when the theory is loaded from disk
-in a later session, the full theory in place at the time
-{export_theory} was called is re-instated.
+If the {Globals.interactive} flag is false, an invocation
+{export_theory()} saves the current theory segment to disk. All
+parents, definitions, axioms, and stored theorems of the segment are
+saved in such a way that, when the theory is loaded from disk in a
+later session, the full theory in place at the time {export_theory}
+was called is re-instated.
+
+If the {Globals.interactive} flag is true, the call {export_theory()}
+does nothing, returning unit {()} instantly.
 
 If the current theory segment is named {thy}, then {export_theory()}
 will create ML files {thyTheory.sig} and {thyTheory.sml}, in
@@ -26,7 +30,6 @@ for use. It can be brought into an interactive proof session via
 {
    load "thyTheory";
 }
-
 When the segment is loaded, its parents, axioms, theorems, and
 definitions are incorporated into the current theory (recall that this
 notion is different than the current theory segment).
@@ -40,21 +43,26 @@ the name of the binding is not a valid ML identifier. In that case,
 
 \EXAMPLE
 {
-- save_thm("foo", REFL (Term `x:bool`));
-> val it = |- x = x : thm
+> save_thm("foo", REFL “x:bool”);
+val it = |- x = x : thm
 
-- export_theory();
+> Globals.interactive := false;
+val it = () : unit
+
+> export_theory();
 Exporting theory "scratch" ... done.
-> val it = () : unit
+val it = () : unit
 }
 
-
 \COMMENTS
-Note that {export_theory} exports the state of the
-theory, and not that of the ML environment. If one wants to restore
-the state of the ML environment in existence at the time
-{export_theory()} is invoked, special steps have to be taken;
-see {adjoin_to_theory}.
+Note that {export_theory} exports the state of the theory (which can
+include other user-definable data in addition to the logical content
+(theorems, definitions, etc.), but not the state of the SML session.
+
+When theories are developed interactively, the {interactive} flag will
+typically be set to {true}; preventing {export_theory()} from doing
+anything in this situation reserves special behaviours for when
+theories are built with {Holmake}.
 
 \SEEALSO
 Theory.new_theory, Theory.adjoin_to_theory, Theory.set_MLname.

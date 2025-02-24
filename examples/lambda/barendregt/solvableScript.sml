@@ -452,7 +452,8 @@ Proof
             MATCH_MP_TAC lameq_appstar_cong \\
             MATCH_MP_TAC lameq_ssub_cong >> art [] \\
            ‘M = [I/x] M’ by rw [lemma14b] \\
-            POP_ASSUM (GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites o wrap) \\
+            POP_ASSUM (GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV)
+                                       empty_rewrites o wrap) \\
             rw [lameq_rules]) \\
         REWRITE_TAC [ssub_thm, appstar_CONS] \\
        ‘fm ' I = I’ by rw [ssub_value] >> POP_ORW \\
@@ -659,19 +660,36 @@ Proof
  >> MATCH_MP_TAC unsolvable_subst >> art []
 QED
 
-Theorem solvable_hnf[simp] :
-    solvable (LAMl vs (VAR y @* args))
+Theorem hnf_solvable :
+    !M. hnf M ==> solvable M
 Proof
-    REWRITE_TAC [solvable_iff_has_hnf]
- >> MATCH_MP_TAC hnf_has_hnf >> rw []
+    rw [solvable_iff_has_hnf]
+ >> MATCH_MP_TAC hnf_has_hnf >> art []
 QED
 
-Theorem solvable_absfree_hnf[simp] :
-    solvable (VAR y @* args)
+Theorem bnf_solvable :
+    !M. bnf M ==> solvable M
 Proof
-    REWRITE_TAC [solvable_iff_has_hnf]
- >> MATCH_MP_TAC hnf_has_hnf >> rw []
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC hnf_solvable
+ >> MATCH_MP_TAC bnf_hnf >> art []
 QED
+
+Theorem solvable_hnf :
+    !vs y args. solvable (LAMl vs (VAR y @* args))
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC hnf_solvable >> rw []
+QED
+
+(* |- solvable (VAR y @* args) *)
+Theorem solvable_absfree_hnf[simp] =
+        solvable_hnf |> Q.SPECL [‘[]’, ‘y’, ‘args’] |> REWRITE_RULE [LAMl_thm]
+
+(* |- solvable (VAR y) *)
+Theorem solvable_VAR[simp] =
+        solvable_hnf |> Q.SPECL [‘[]’, ‘y’, ‘[]’]
+                     |> REWRITE_RULE [LAMl_thm, appstar_empty]
 
 (*---------------------------------------------------------------------------*
  *  Principle Head Normal Forms (principle_hnf)

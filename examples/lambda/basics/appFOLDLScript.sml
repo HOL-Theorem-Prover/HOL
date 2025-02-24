@@ -219,6 +219,13 @@ Proof
     rw [FV_appstar]
 QED
 
+Theorem size_appstar :
+    !args. size (t @* args) = size t + SUM (MAP size args) + LENGTH args
+Proof
+    SNOC_INDUCT_TAC
+ >> rw [size_thm, MAP_SNOC, SUM_SNOC]
+QED
+
 (*---------------------------------------------------------------------------*
  *  LAMl (was in standardisationTheory)
  *---------------------------------------------------------------------------*)

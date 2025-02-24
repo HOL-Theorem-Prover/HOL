@@ -2097,33 +2097,40 @@ Proof
  >> fs [Abbr ‘f'’]
 QED
 
-val EXTREAL_SUM_IMAGE_COUNT = store_thm
-  ("EXTREAL_SUM_IMAGE_COUNT",
-  ``!f. (!x. f x <> PosInf) \/ (!x. f x <> NegInf) ==>
+Theorem EXTREAL_SUM_IMAGE_COUNT :
+    !f. (!x. f x <> PosInf) \/ (!x. f x <> NegInf) ==>
         (EXTREAL_SUM_IMAGE f (count 2) = f 0 + f 1) /\
         (EXTREAL_SUM_IMAGE f (count 3) = f 0 + f 1 + f 2) /\
         (EXTREAL_SUM_IMAGE f (count 4) = f 0 + f 1 + f 2 + f 3) /\
-        (EXTREAL_SUM_IMAGE f (count 5) = f 0 + f 1 + f 2 + f 3 + f 4)``,
-    RW_TAC std_ss []
- >> `count 2 = {0;1}` by RW_TAC real_ss [EXTENSION, IN_COUNT, IN_INSERT, IN_SING]
- >> `count 3 = {0;1;2}` by RW_TAC real_ss [EXTENSION, IN_COUNT, IN_INSERT, IN_SING]
- >> `count 4 = {0;1;2;3}` by RW_TAC real_ss [EXTENSION, IN_COUNT, IN_INSERT, IN_SING]
- >> `count 5 = {0;1;2;3;4}` by RW_TAC real_ss [EXTENSION, IN_COUNT, IN_INSERT, IN_SING]
+        (EXTREAL_SUM_IMAGE f (count 5) = f 0 + f 1 + f 2 + f 3 + f 4)
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> DISCH_TAC
+ >> `count 2 = {0;1} /\
+     count 3 = {0;1;2} /\
+     count 4 = {0;1;2;3} /\
+     count 5 = {0;1;2;3;4}`
+       by RW_TAC real_ss [EXTENSION, IN_COUNT, IN_INSERT, IN_SING]
  >> `{1:num} DELETE 0 = {1}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
  >> `{2:num} DELETE 1 = {2}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
  >> `{3:num} DELETE 2 = {3}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
  >> `{4:num} DELETE 3 = {4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
- >> `{2:num; 3} DELETE 1 = {2;3}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
- >> `{3:num; 4} DELETE 2 = {3;4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
- >> `{2:num; 3; 4} DELETE 1 = {2;3;4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
- >> `{1:num; 2} DELETE 0 = {1;2}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
- >> `{1:num; 2; 3} DELETE 0 = {1;2;3}` by RW_TAC real_ss [EXTENSION, IN_DELETE,IN_SING,IN_INSERT]
+ >> `{2:num; 3} DELETE 1 = {2;3}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> `{3:num; 4} DELETE 2 = {3;4}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> `{2:num; 3; 4} DELETE 1 = {2;3;4}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> `{1:num; 2} DELETE 0 = {1;2}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> `{1:num; 2; 3} DELETE 0 = {1;2;3}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
  >> `{1:num; 2; 3; 4} DELETE 0 = {1;2;3;4}`
-     by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
  >> FULL_SIMP_TAC real_ss [FINITE_SING, FINITE_INSERT, EXTREAL_SUM_IMAGE_INSERT,
                            EXTREAL_SUM_IMAGE_SING, IN_INSERT, NOT_IN_EMPTY,
                            add_assoc, add_not_infty]
- >> DECIDE_TAC);
+QED
 
 val _ = overload_on ("SIGMA", ``EXTREAL_SUM_IMAGE``);
 
@@ -5403,6 +5410,39 @@ Proof
  >> rw [monoidal_mul]
 QED
 
+Theorem EXTREAL_PROD_IMAGE_COUNT :
+    !f. (EXTREAL_PROD_IMAGE f (count 2) = f 0 * f 1) /\
+        (EXTREAL_PROD_IMAGE f (count 3) = f 0 * f 1 * f 2) /\
+        (EXTREAL_PROD_IMAGE f (count 4) = f 0 * f 1 * f 2 * f 3) /\
+        (EXTREAL_PROD_IMAGE f (count 5) = f 0 * f 1 * f 2 * f 3 * f 4)
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> `count 2 = {0;1} /\
+     count 3 = {0;1;2} /\
+     count 4 = {0;1;2;3} /\
+     count 5 = {0;1;2;3;4}`
+       by RW_TAC real_ss [EXTENSION, IN_COUNT, IN_INSERT, IN_SING]
+ >> `{1:num} DELETE 0 = {1}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
+ >> `{2:num} DELETE 1 = {2}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
+ >> `{3:num} DELETE 2 = {3}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
+ >> `{4:num} DELETE 3 = {4}` by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING]
+ >> `{2:num; 3} DELETE 1 = {2;3}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> `{3:num; 4} DELETE 2 = {3;4}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> `{2:num; 3; 4} DELETE 1 = {2;3;4}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> `{1:num; 2} DELETE 0 = {1;2}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> `{1:num; 2; 3} DELETE 0 = {1;2;3}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE,IN_SING,IN_INSERT]
+ >> `{1:num; 2; 3; 4} DELETE 0 = {1;2;3;4}`
+        by RW_TAC real_ss [EXTENSION, IN_DELETE, IN_SING, IN_INSERT]
+ >> ASM_SIMP_TAC real_ss [FINITE_SING, FINITE_INSERT, EXTREAL_PROD_IMAGE_PROPERTY,
+                          EXTREAL_PROD_IMAGE_SING, IN_INSERT, NOT_IN_EMPTY,
+                          mul_assoc]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Maximal values of a sequence of functions at the same point              *)
 (* ------------------------------------------------------------------------- *)
@@ -5740,14 +5780,17 @@ val FN_PLUS_CMUL = store_thm
  >> METIS_TAC [le_mul_neg, extreal_of_num_def, extreal_le_def, lt_imp_le, extreal_lt_def,
                le_antisym]);
 
-val FN_PLUS_CMUL_full = store_thm
-  ("FN_PLUS_CMUL_full",
-  ``!f c. (0 <= c ==> (fn_plus (\x. c * f x) = (\x. c * fn_plus f x))) /\
-          (c <= 0 ==> (fn_plus (\x. c * f x) = (\x. -c * fn_minus f x)))``,
+(* NOTE: This (new) lemma is more general than FN_PLUS_CMUL_full because sometimes ‘c’
+   depends on ‘x’. But the proof is the same.
+ *)
+Theorem fn_plus_cmul :
+    !f c x. (0 <= c ==> fn_plus (\x. c * f x) x = c * fn_plus f x) /\
+            (c <= 0 ==> fn_plus (\x. c * f x) x = -c * fn_minus f x)
+Proof
     rpt GEN_TAC
  >> Cases_on `c`
  >- (SIMP_TAC std_ss [le_infty, extreal_not_infty, extreal_of_num_def] \\
-     FUN_EQ_TAC >> RW_TAC std_ss [fn_plus_def, fn_minus_def] >| (* 4 subgoals *)
+     RW_TAC std_ss [fn_plus_def, fn_minus_def] >| (* 4 subgoals *)
      [ (* goal 1 (of 4) *)
        REWRITE_TAC [neg_mul2],
        (* goal 2 (of 4) *)
@@ -5761,7 +5804,7 @@ val FN_PLUS_CMUL_full = store_thm
        (* goal 4 (of 4) *)
        REWRITE_TAC [mul_rzero] ])
  >- (SIMP_TAC std_ss [le_infty, extreal_not_infty, extreal_of_num_def] \\
-     FUN_EQ_TAC >> RW_TAC std_ss [fn_plus_def] >| (* 3 subgoals *)
+     RW_TAC std_ss [fn_plus_def] >| (* 3 subgoals *)
      [ (* goal 1 (of 3) *)
       `f x <= 0` by PROVE_TAC [extreal_lt_def] \\
        fs [le_lt] \\
@@ -5779,7 +5822,15 @@ val FN_PLUS_CMUL_full = store_thm
       METIS_TAC [FN_PLUS_CMUL],
       (* goal 2 (of 2) *)
      `r <= 0` by PROVE_TAC [extreal_le_eq, extreal_of_num_def] \\
-      METIS_TAC [FN_PLUS_CMUL] ]);
+      METIS_TAC [FN_PLUS_CMUL] ]
+QED
+
+Theorem FN_PLUS_CMUL_full :
+    !f c. (0 <= c ==> (fn_plus (\x. c * f x) = (\x. c * fn_plus f x))) /\
+          (c <= 0 ==> (fn_plus (\x. c * f x) = (\x. -c * fn_minus f x)))
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, fn_plus_cmul]
+QED
 
 val FN_MINUS_CMUL = store_thm
   ("FN_MINUS_CMUL",
@@ -5797,14 +5848,14 @@ val FN_MINUS_CMUL = store_thm
  >> METIS_TAC [mul_le, extreal_of_num_def, extreal_le_def, lt_imp_le, extreal_lt_def,
                le_antisym, neg_eq0, mul_comm]);
 
-val FN_MINUS_CMUL_full = store_thm
-  ("FN_MINUS_CMUL_full",
-  ``!f c. (0 <= c ==> (fn_minus (\x. c * f x) = (\x. c * fn_minus f x))) /\
-          (c <= 0 ==> (fn_minus (\x. c * f x) = (\x. -c * fn_plus f x)))``,
+Theorem fn_minus_cmul :
+    !f c x. (0 <= c ==> fn_minus (\x. c * f x) x = c * fn_minus f x) /\
+            (c <= 0 ==> fn_minus (\x. c * f x) x = -c * fn_plus f x)
+Proof
     rpt GEN_TAC
  >> Cases_on `c`
  >- (SIMP_TAC std_ss [le_infty, extreal_not_infty, extreal_of_num_def] \\
-     FUN_EQ_TAC >> RW_TAC std_ss [fn_plus_def, fn_minus_def] >| (* 4 subgoals *)
+     RW_TAC std_ss [fn_plus_def, fn_minus_def] >| (* 4 subgoals *)
      [ (* goal 1 (of 4) *)
        REWRITE_TAC [GSYM mul_lneg],
        (* goal 2 (of 4) *)
@@ -5818,7 +5869,7 @@ val FN_MINUS_CMUL_full = store_thm
        (* goal 4 (of 4) *)
        REWRITE_TAC [mul_rzero] ])
  >- (SIMP_TAC std_ss [le_infty, extreal_not_infty, extreal_of_num_def] \\
-     FUN_EQ_TAC >> RW_TAC std_ss [fn_minus_def] >| (* 4 subgoals *)
+     RW_TAC std_ss [fn_minus_def] >| (* 4 subgoals *)
      [ (* goal 1 (of 4) *)
        REWRITE_TAC [GSYM mul_rneg],
        (* goal 2 (of 4) *)
@@ -5837,24 +5888,41 @@ val FN_MINUS_CMUL_full = store_thm
       METIS_TAC [FN_MINUS_CMUL],
       (* goal 2 (of 2) *)
      `r <= 0` by PROVE_TAC [extreal_le_eq, extreal_of_num_def] \\
-      METIS_TAC [FN_MINUS_CMUL] ]);
+      METIS_TAC [FN_MINUS_CMUL] ]
+QED
 
-val FN_PLUS_FMUL = store_thm
-  ("FN_PLUS_FMUL",
-  ``!f c. (!x. 0 <= c x) ==> (fn_plus (\x. c x * f x) = (\x. c x * fn_plus f x))``,
-    RW_TAC std_ss [fn_plus_def, FUN_EQ_THM]
+Theorem FN_MINUS_CMUL_full :
+    !f c. (0 <= c ==> (fn_minus (\x. c * f x) = (\x. c * fn_minus f x))) /\
+          (c <= 0 ==> (fn_minus (\x. c * f x) = (\x. -c * fn_plus f x)))
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, fn_minus_cmul]
+QED
+
+Theorem fn_plus_fmul :
+    !f c x. (!x. 0 <= c x) ==> fn_plus (\x. c x * f x) x = c x * fn_plus f x
+Proof
+    rpt GEN_TAC >> DISCH_TAC
+ >> simp [fn_plus_def]
  >> Cases_on `0 < f x`
  >- (`0 <= c x * f x` by PROVE_TAC [let_mul] \\
      fs [le_lt])
  >> `f x <= 0` by PROVE_TAC [extreal_lt_def]
  >> `c x * f x <= 0` by PROVE_TAC [mul_le]
  >> `~(0 < c x * f x)` by PROVE_TAC [extreal_lt_def]
- >> fs [mul_rzero]);
+ >> fs [mul_rzero]
+QED
 
-val FN_MINUS_FMUL = store_thm
-  ("FN_MINUS_FMUL",
-  ``!f c. (!x. 0 <= c x) ==> (fn_minus (\x. c x * f x) = (\x. c x * fn_minus f x))``,
-    RW_TAC std_ss [fn_minus_def, FUN_EQ_THM]
+Theorem FN_PLUS_FMUL :
+    !f c. (!x. 0 <= c x) ==> fn_plus (\x. c x * f x) = (\x. c x * fn_plus f x)
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, fn_plus_fmul]
+QED
+
+Theorem fn_minus_fmul :
+    !f c x. (!x. 0 <= c x) ==> fn_minus (\x. c x * f x) x = c x * fn_minus f x
+Proof
+    rpt GEN_TAC >> DISCH_TAC
+ >> simp [fn_minus_def]
  >> Cases_on `0 < f x`
  >- (`0 <= c x * f x` by PROVE_TAC [let_mul] \\
      `~(c x * f x < 0)` by PROVE_TAC [extreal_lt_def] \\
@@ -5865,7 +5933,14 @@ val FN_MINUS_FMUL = store_thm
  >> `~(0 < c x * f x)` by PROVE_TAC [extreal_lt_def]
  >> fs [le_lt, lt_refl, mul_rzero, neg_0]
  >- REWRITE_TAC [GSYM mul_rneg]
- >> fs [entire, neg_0]);
+ >> fs [entire, neg_0]
+QED
+
+Theorem FN_MINUS_FMUL :
+    !f c. (!x. 0 <= c x) ==> fn_minus (\x. c x * f x) = (\x. c x * fn_minus f x)
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, fn_minus_fmul]
+QED
 
 val FN_PLUS_ADD_LE = store_thm
   ("FN_PLUS_ADD_LE",
