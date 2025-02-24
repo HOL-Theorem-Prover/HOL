@@ -876,7 +876,7 @@ fun cv_eqs_for tm = let
 
 val _ = computeLib.add_funs [cv_fst_def,cv_snd_def];
 
-fun cv_eval_raw tm = let
+fun cv_eval_raw_gen tm save_name = let
   val _ = List.null (free_vars tm) orelse failwith "cv_eval needs input to be closed"
   val th = cv_rep_for [] tm
   val ty = type_of tm
@@ -887,13 +887,34 @@ fun cv_eval_raw tm = let
   val cv_eqs = cv_time cv_eqs_for cv_tm
   val _ = cv_print Verbose ("Found " ^ int_to_string (length cv_eqs) ^ " cv code equations to use.\n")
   val cv_conv = cv_computeLib.cv_compute cv_eqs
-  val th1 = MATCH_MP cv_rep_eval th
+  val _ = cv_print Verbose "Calling cv_compute.\n"
+  val th0 = th |> CONV_RULE ((RATOR_CONV o RATOR_CONV o RAND_CONV) cv_conv)
+  val (abbrev_def,thA) =
+    case save_name of NONE => (TRUTH,th0) | SOME name => let
+    fun cv_def_conv tm = let
+      val cv_ty = cvSyntax.cv
+      val name_tm = mk_var("cv_" ^ name, mk_type("fun",[cv_ty,cv_ty]))
+      val num_0 = cvSyntax.mk_cv_num(numSyntax.term_of_int 0)
+      val def_eq = mk_eq(mk_comb(name_tm,mk_var("x",cv_ty)),tm)
+      val cv_def = new_definition("cv_" ^ name ^ "_def", def_eq)
+      in SPEC num_0 cv_def |> SYM end
+    val th0a = th0 |> CONV_RULE ((RATOR_CONV o RATOR_CONV o RAND_CONV) cv_def_conv)
+    val tm = th0a |> concl |> rand
+    val abbrev_def = new_definition(name ^ "_def",mk_eq(mk_var(name,type_of tm),tm))
+    val th0b = th0a |> CONV_RULE (RAND_CONV (fn tm => SYM abbrev_def))
+    val th0c = th0b |> CONV_RULE (REWR_CONV cv_rep_def)
+    val th0d = remove_T_IMP (DISCH_ALL th0c) handle HOL_ERR _ => th0c
+    val _ = save_thm("cv_" ^ name ^ "_thm[cv_rep]",th0d)
+    in (abbrev_def,th0b) end
+  val th1 = MATCH_MP cv_rep_eval thA
   val th2 = MATCH_MP th1 from_to_thm
   val th3 = th2 |> UNDISCH_ALL
-  val _ = cv_print Verbose "Calling cv_compute.\n"
-  val th4 = cv_time (CONV_RULE (RAND_CONV (RAND_CONV cv_conv))) th3
-  val th5 = remove_T_IMP (DISCH_ALL th4)
-  in th5 end;
+  val th4 = remove_T_IMP (DISCH_ALL th3)
+  in (abbrev_def,th4) end;
+
+fun cv_eval_raw_save save_name tm = cv_eval_raw_gen tm (SOME save_name);
+
+fun cv_eval_raw tm = snd (cv_eval_raw_gen tm NONE);
 
 fun cv_eval tm = let
   val th = cv_eval_raw tm
