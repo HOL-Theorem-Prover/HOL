@@ -20,6 +20,8 @@ sig
                   pm_rewrites : thm list,
                   fv_rewrites : thm list,
                   binders : (term * int * thm) list }
+  val enc_nti : nominaltype_info HOLsexp.encoder
+  val dec_nti : nominaltype_info HOLsexp.decoder
   val nameless_nti : nominaltype_info
 
   (* stores information per type *)

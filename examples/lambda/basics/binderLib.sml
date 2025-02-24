@@ -32,6 +32,48 @@ datatype nominaltype_info =
                   fv_rewrites : thm list,
                   binders : (term * int * thm) list }
 
+local
+  open HOLsexp ThyDataSexp
+in
+fun enc_nti (NTI r) =
+    let
+      val {recursion_thm,nullfv,binders,...} = r
+      val {pm_constant, pm_rewrites, fv_rewrites,...} = r
+      val null_pmc_pmrs_fvrs =
+          pair4_encode (Term,Term,list_encode Thm,list_encode Thm)
+      val recthm_binders =
+          pair_encode (option_encode Thm,
+                       list_encode (pair3_encode(Term,Int,Thm)))
+    in
+      pair_encode(null_pmc_pmrs_fvrs, recthm_binders)
+                 ((nullfv,pm_constant,pm_rewrites,fv_rewrites),
+                  (recursion_thm,binders))
+    end
+
+val dec_nti =
+    let
+      val thml = list_decode thm_decode
+      val nppf_dec = pair4_decode
+                       (term_decode, term_decode, thml, thml)
+      val rbs = pair_decode (
+            option_decode thm_decode,
+            list_decode (pair3_decode (term_decode,int_decode,thm_decode))
+          )
+      fun mapthis ((nc,pc,pths,fvths), (rthm,binders)) =
+          NTI {recursion_thm = rthm,
+               nullfv = nc, pm_constant = pc,
+               pm_rewrites = pths,
+               fv_rewrites = fvths,
+               binders = binders}
+    in
+      map_decode mapthis (pair_decode nppf_dec rbs)
+    end
+end
+
+
+
+
+
 fun nti_null_fv (NTI{nullfv, ...}) = nullfv
 fun nti_perm_t (NTI{pm_constant,...}) = pm_constant
 fun nti_recursion (NTI{recursion_thm,...}) = recursion_thm
