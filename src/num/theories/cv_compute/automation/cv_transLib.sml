@@ -946,7 +946,7 @@ fun cv_eval_pat pat tm = let
         val th2 = CONJUNCT2 th0
         in MATCH_MP IMP_to_option (CONJ th1 th2) end
   val th5 = use_abbrevs pat th4
-  in th5 end;
+  in UNDISCH_ALL th5 end;
 
 fun cv_eval_raw tm = cv_eval_pat Raw tm;
 
