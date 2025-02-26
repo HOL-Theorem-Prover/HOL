@@ -7,33 +7,18 @@ open HolKernel Parse boolLib;
 structure Parse = struct
   open Parse
   val (Type,Term) =
-      valOf (grammarDB {thyname = "pred_set"}
+      valOf (grammarDB {thyname = "pred_set"})
         |> apsnd ParseExtras.grammar_loose_equality
         |> parse_from_grammars
 end
 open Parse
 
-(* interactive mode
-if !show_assums then () else
- (loadPath := ".."::"../../prob"::(!loadPath);
-  load "bossLib";
-  load "pred_setTheory";
-  load "millerTools";
-  load "miller_extraTheory";
-  show_assums := true);
-*)
-
 open pairTheory pred_setTheory
      res_quanTheory hurdUtils ho_proverTools res_quanTools subtypeTools
      subtypeTheory;
 
-infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL;
-infix 1 >>;
 nonfix THEN THENL ORELSE;
 
-val op++ = op THEN;
-val op|| = op ORELSE;
-val op>> = op THEN1;
 
 (* --------------------------------------------------------------------- *)
 (* Subtype checking.                                                     *)
