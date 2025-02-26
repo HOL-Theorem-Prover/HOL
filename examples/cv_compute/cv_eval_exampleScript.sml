@@ -12,7 +12,7 @@ End
 
 val _ = cv_trans test_def;
 
-val pat = Some (Pair (Eval EVAL, Pair (Raw, Name "big_replicate")));
+val pat = Some (Tuple [Eval EVAL, Raw, Name "big_replicate"]);
 
 val res = cv_eval_pat pat “test 10000”;
 (* returns:

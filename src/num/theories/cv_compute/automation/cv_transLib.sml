@@ -879,7 +879,7 @@ val _ = computeLib.add_funs [cv_fst_def,cv_snd_def];
 datatype pat = Raw
              | Eval of conv
              | Name of string
-             | Pair of pat * pat
+             | Tuple of pat list
              | Some of pat;
 
 fun cv_eval_pat pat tm = let
@@ -916,10 +916,12 @@ fun cv_eval_pat pat tm = let
         val th3 = remove_T_IMP (DISCH_ALL th2) handle HOL_ERR _ => th2
         val _ = save_thm("cv_" ^ name ^ "_thm[cv_rep]",th3)
         in th1 end
-    | make_abbrevs (Pair (x,y)) th = let
+    | make_abbrevs (Tuple []) th = failwith "Empty Tuples are not supported"
+    | make_abbrevs (Tuple [x]) th = make_abbrevs x th
+    | make_abbrevs (Tuple (x::xs)) th = let
         val th0 = MATCH_MP from_pair_eq_IMP th
         val th1 = make_abbrevs x (CONJUNCT1 th0)
-        val th2 = make_abbrevs y (CONJUNCT2 th0)
+        val th2 = make_abbrevs (Tuple xs) (CONJUNCT2 th0)
         in MATCH_MP IMP_from_pair_eq (CONJ th1 th2) end
     | make_abbrevs (Some x) th = let
         val th0 = MATCH_MP from_option_eq_IMP th
@@ -935,10 +937,12 @@ fun cv_eval_pat pat tm = let
         CONV_RULE (RAND_CONV (QCONV conv)) th
     | use_abbrevs (Name name) th =
         snd (first (fn (n,th) => n = name) (!abbrev_defs)) |> SYM
-    | use_abbrevs (Pair (x,y)) th = let
+    | use_abbrevs (Tuple []) th = failwith "Empty Tuples are not supported"
+    | use_abbrevs (Tuple [x]) th = use_abbrevs x th
+    | use_abbrevs (Tuple (x::xs)) th = let
         val th0 = MATCH_MP to_pair_IMP th
         val th1 = use_abbrevs x (CONJUNCT1 th0)
-        val th2 = use_abbrevs y (CONJUNCT2 th0)
+        val th2 = use_abbrevs (Tuple xs) (CONJUNCT2 th0)
         in MATCH_MP IMP_to_pair (CONJ th1 th2) end
     | use_abbrevs (Some x) th = let
         val th0 = MATCH_MP to_option_IMP th
