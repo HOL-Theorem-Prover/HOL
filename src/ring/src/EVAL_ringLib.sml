@@ -6,7 +6,7 @@ open HolKernel Parse boolLib ternaryComparisonsTheory EVAL_quoteTheory
 
 local open EVAL_ringNormTheory in end
 
-val RING_ERR = mk_HOL_ERR "ringLib"
+val RING_ERR = mk_HOL_ERR "EVAL_ringLib"
 
 
 (* reify ring expressions: building a signature, which is the correspondence
@@ -201,6 +201,8 @@ fun no_such_ring f ty =
 
 val rings =
   ref (Redblackmap.mkDict Type.compare) : (hol_type, convs) Redblackmap.dict ref;
+
+fun ring_data() = !rings
 
 fun add_ring ty rng =
   rings := Redblackmap.insert (!rings, ty,rng);

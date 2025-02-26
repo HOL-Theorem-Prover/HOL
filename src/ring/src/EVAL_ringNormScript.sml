@@ -150,4 +150,16 @@ ARW_TAC [ polynom_simplify_def,
           polynom_normalize_ok ]);
 
 
+val _ = record_terms (
+  map rator [
+    “interp_p”, “polynom_simplify”, “polynom_normalize”,
+    “r_canonical_sum_merge”, “r_monom_insert”, “r_varlist_insert”,
+    “r_canonical_sum_scalar”, “r_canonical_sum_scalar2”,
+    “r_canonical_sum_scalar3”, “r_canonical_sum_prod”,
+    “r_canonical_sum_simplify”, “r_ivl_aux”, “r_interp_vl”,
+    “r_interp_m”, “r_ics_aux”, “r_interp_cs”, “r_spolynom_normalize”,
+    “r_spolynom_simplify”, “r_interp_sp”
+  ]
+)
+
 val _ = export_theory();
