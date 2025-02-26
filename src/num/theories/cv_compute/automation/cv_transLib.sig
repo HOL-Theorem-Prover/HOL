@@ -18,7 +18,7 @@ sig
   datatype pat = Raw
                | Eval of conv
                | Name of string
-               | Pair of pat * pat
+               | Tuple of pat list
                | Some of pat;
 
   val cv_eqs_for  : term -> thm list
