@@ -5,7 +5,7 @@ open HolKernel boolLib simpLib
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars brackabsTheory.brackabs_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB{thyname="brackabs"}
 end
 open Parse
 

@@ -67,11 +67,57 @@ val dec_nti =
     in
       pair_decode(nppf_dec, rbs) >> mapthis
     end
+fun nti_uptodate (NTI r) =
+    let
+      val {recursion_thm = rthm, nullfv, binders, ...} = r
+      val {pm_constant, pm_rewrites, fv_rewrites,...} = r
+    in
+      (not (isSome rthm) orelse uptodate_thm (valOf rthm)) andalso
+      List.all (fn (t,_,th) => uptodate_thm th andalso uptodate_term t)
+               binders andalso
+      List.all uptodate_thm fv_rewrites andalso
+      List.all uptodate_thm pm_rewrites andalso
+      List.all uptodate_term [pm_constant,nullfv]
+    end
+type dbdelta = KernelSig.kernelname * nominaltype_info
+type db = nominaltype_info KNametab.table
+val enc_delta = pair_encode (KName, enc_nti)
+val dec_delta = pair_decode (kname_decode, dec_nti)
 end
 
+val adata = {apply_delta = KNametab.update,
+             initial_values = [("min", KNametab.empty)],
+             tag = "binderLib"}
 
+val adr as {
+  get_global_value = getTypeDB,
+  record_delta = export_nomtype0,
+  update_global_value, ...
+} =
+    AncestryData.fullmake {
+      adinfo = adata,
+      globinfo = {
+        apply_to_global = KNametab.update,
+        initial_value = KNametab.empty,
+        thy_finaliser = NONE
+      },
+      sexps = {dec = dec_delta, enc = enc_delta},
+      uptodate_delta = (fn (knm,nti) =>
+                           nti_uptodate nti andalso
+                           Type.uptodate_kname knm)
+    }
 
+fun export_nomtype (ty,nti) =
+    let val {Thy,Tyop,Args} = dest_thy_type ty
+    in
+      export_nomtype0 ({Thy=Thy,Name=Tyop}, nti)
+    end
 
+fun local_update (ty, nti) =
+    let val {Thy,Tyop,Args} = dest_thy_type ty
+    in
+      update_global_value (KNametab.update ({Thy=Thy,Name=Tyop}, nti))
+    end
 
 fun nti_null_fv (NTI{nullfv, ...}) = nullfv
 fun nti_perm_t (NTI{pm_constant,...}) = pm_constant
@@ -102,9 +148,6 @@ fun nti_recursion (NTI{recursion_thm,...}) = recursion_thm
 
    ---------------------------------------------------------------------- *)
 
-val type_db =
-    ref (Binarymap.mkDict KernelSig.name_compare :
-         (KernelSig.kernelname,nominaltype_info) Binarymap.dict)
 
 val string_ty = stringSyntax.string_ty
 val stringset_ty = pred_setSyntax.mk_set_type string_ty
@@ -137,13 +180,13 @@ end
 fun isdbty ty = let
   val {Thy,Tyop,...} = dest_thy_type ty
 in
-  isSome (Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}))
+  KNametab.defined (getTypeDB()) {Thy=Thy,Name=Tyop}
 end handle HOL_ERR _ => false
 
 fun tylookup ty = let
   val {Thy,Tyop,...} = dest_thy_type ty
 in
-  Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop})
+  KNametab.lookup(getTypeDB()) {Thy=Thy,Name=Tyop}
 end handle HOL_ERR _ => NONE
 
 fun get_pm_rewrites ty =
@@ -196,7 +239,7 @@ fun find_avoids (t, (strs, sets)) = let
     val {Thy,Tyop,...} = dest_thy_type ty
   in
     if is_var t then
-      case Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}) of
+      case KNametab.lookup(getTypeDB()) {Thy=Thy,Name=Tyop} of
         NONE => NONE
       | SOME (NTI data) => SOME (mk_icomb(mk_icomb(supp_t, #pm_constant data),
                                           t))
@@ -294,11 +337,11 @@ end
 
 fun recthm_for_type ty = let
   val {Tyop,Thy,...} = dest_thy_type ty
-  val NTI {recursion_thm,...} = Binarymap.find(!type_db, {Name=Tyop,Thy=Thy})
 in
-  recursion_thm
-end handle HOL_ERR _ => NONE
-         | Binarymap.NotFound => NONE
+  case KNametab.lookup(getTypeDB()) {Name=Tyop,Thy=Thy} of
+      NONE => NONE
+    | SOME (NTI {recursion_thm,...}) => recursion_thm
+end
 
 fun find_constructors recthm = let
   val (_, c) = dest_imp (concl recthm)
@@ -487,7 +530,7 @@ in
   case Lib.total dest_thy_type rng_ty of
     SOME {Tyop, Thy, ...} => let
     in
-      case Binarymap.peek(!type_db, {Name=Tyop,Thy=Thy}) of
+      case KNametab.lookup(getTypeDB()) {Name=Tyop,Thy=Thy} of
         NONE => callthis nameless_nti |> REWRITE_RULE [discretepm_thm]
       | SOME i => callthis i
         handle InfoProofFailed tm =>
