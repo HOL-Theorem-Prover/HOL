@@ -1774,7 +1774,7 @@ QED
 
 (* |- !sp A f J.
         (!i. i IN J ==> sigma_algebra (A i)) /\
-        (!i. f i IN (sp -> space (A i))) ==>
+        (!i. i IN J ==> f i IN (sp -> space (A i))) ==>
         !i. i IN J ==> f i IN measurable (sigma sp A f J) (A i)
  *)
 val lemma =
@@ -1783,9 +1783,9 @@ val lemma =
                                     |> INST_TYPE [“:'index” |-> “:num”]
                                     |> INST_TYPE [“:'temp” |-> “:'a”];
 
-Theorem sigma_lists_simultaneously_measurable :
+Theorem sigma_lists_simultaneously_measurable[local] :
     !B N. sigma_algebra B /\
-         (!i. (EL i) IN (rectangle (\n. space B) N -> space B)) ==>
+         (!i. i < N ==> (EL i) IN (rectangle (\n. space B) N -> space B)) ==>
           !i. i < N ==> (EL i) IN measurable (sigma_lists B N) B
 Proof
     rw [sigma_lists_def]
@@ -1799,6 +1799,17 @@ Theorem IN_MEASURABLE_BOREL_EL =
         SRULE [SPACE_BOREL, SIGMA_ALGEBRA_BOREL, IN_FUNSET, GSYM Borel_lists_def]
               (ISPEC “Borel” sigma_lists_simultaneously_measurable)
 
+(* cf. sigma_algebraTheory.MEASURABLE_FST and MEASURABLE_SND *)
+Theorem MEASURABLE_EL :
+    !B N. sigma_algebra B ==>
+          !i. i < N ==> (EL i) IN measurable (sigma_lists B N) B
+Proof
+    NTAC 3 STRIP_TAC
+ >> MATCH_MP_TAC sigma_lists_simultaneously_measurable >> art []
+ >> rw [IN_FUNSET, IN_list_rectangle]
+QED
+
+(* cf. sigma_algebraTheory.MEASURABLE_FST *)
 Theorem IN_MEASURABLE_BOREL_HD :
     !N. 0 < N ==> HD IN Borel_measurable (Borel_lists N)
 Proof
