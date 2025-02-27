@@ -447,7 +447,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   yybufpos := !yybufpos - (yyend - yypos); (* unread token *)
   OpenEnd yypos
 );
-<opens>{alphaMLid} => (OpenId (yypos, yytext));
+<opens>{QUALalphaMLid} => (OpenId (yypos, yytext));
 <opens>. => (
   yybufpos := !yybufpos - 1; (* unread token *)
   OpenEnd yypos
