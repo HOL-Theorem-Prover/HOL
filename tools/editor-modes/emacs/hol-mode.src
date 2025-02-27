@@ -727,6 +727,11 @@ file to \"use\" first."
   (interactive)
   (send-raw-string-to-hol "proofManagerLib.b()" hol-echo-commands-p))
 
+(defun hol-redo ()
+  "Perform a HOL redo."
+  (interactive)
+  (send-raw-string-to-hol "proofManagerLib.rd()" hol-echo-commands-p))
+
 (defun hol-user-backup ()
   "Perform a HOL backup to a user-defined save-point."
   (interactive)
@@ -1282,7 +1287,7 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (interactive "sTerm to match on: ")
   (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p))
-                          
+
 (defun hol-db-polarity-match (p tm)
   "Does a DB.polarity_match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
   (interactive "P\nsTerm to polarity match on: ")

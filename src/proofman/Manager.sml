@@ -83,6 +83,10 @@ val backup = apfst backup
 fun set_backup i (PF(GOALSTACK s, tm)) = PF(GOALSTACK(set_limit s i),tm)
   | set_backup i (PF(GOALTREE t, tm)) = PF(GOALTREE (set_limit t i), tm)
 
+fun redo (GOALSTACK s) = GOALSTACK(History.redo s)
+  | redo (GOALTREE  t) = GOALTREE (History.redo t);
+val redo = apfst redo
+
 fun restore (GOALSTACK s) = GOALSTACK(History.restore s)
   | restore (GOALTREE  t) = GOALTREE (History.restore t);
 val restore = apfst restore
