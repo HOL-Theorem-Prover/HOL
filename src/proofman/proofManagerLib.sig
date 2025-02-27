@@ -20,11 +20,13 @@ sig
     (* Undo *)
 
     val b             : unit -> proof
+    val rd            : unit -> proof
     val drop          : unit -> proofs
     val dropn         : int -> proofs
     val drop_all      : unit -> proofs
     val restart       : unit -> proof
     val backup        : unit -> proof
+    val redo          : unit -> proof
     val restore       : unit -> proof
     val save          : unit -> proof
     val set_backup    : int -> unit

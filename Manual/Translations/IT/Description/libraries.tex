@@ -1283,9 +1283,11 @@ Per espandere una tattica si può anche usare l'abbreviazione \verb+e+.
 \begin{hol}
 \begin{verbatim}
    b          : unit -> goalstack
+   rd         : unit -> goalstack
    drop       : unit -> proofs
    dropn      : int  -> proofs
    backup     : unit -> goalstack
+   redo       : unit -> goalstack
    restart    : unit -> goalstack
    set_backup : int  -> unit
 \end{verbatim}
@@ -1294,8 +1296,9 @@ Per espandere una tattica si può anche usare l'abbreviazione \verb+e+.
 Spesso (siamo tentati di dire {\it di solito}!) si prende una strada sbagliata
 nel fare una dimostrazione, o si fa un errore nell'impostare un goal. Per annullare un passo
 nel goalstack, sono usate la funzione \ml{backup} e la sua abbreviazione
-\ml{b}. Questo ripristinerà il goalstack al suo stato
-precedente.
+\ml{b}. Questo ripristinerà il goalstack al suo stato precedente.
+Per rifare un passaggio nel goalstack, si usa la funzione \ml{redo},
+abbreviata come \ml{rd}.
 
 
 Per eseguire il backup completo al goal originale, può essere usata
