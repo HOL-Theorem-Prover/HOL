@@ -3396,7 +3396,7 @@ QED
 Theorem SIGMA_SIMULTANEOUSLY_MEASURABLE :
     !sp A f (J :'index set).
             (!i. i IN J ==> sigma_algebra (A i)) /\
-            (!i. f i IN (sp -> space (A i))) ==>
+            (!i. i IN J ==> f i IN (sp -> space (A i))) ==>
              !i. i IN J ==> f i IN measurable (sigma sp A f J) (A i)
 Proof
     RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, sigma_functions_def, IN_MEASURABLE]
