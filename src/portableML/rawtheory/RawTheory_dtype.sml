@@ -2,6 +2,9 @@ structure RawTheory_dtype =
 struct
 
 datatype class = Thm | Axm | Def
+fun class_toString Thm = "Thm"
+  | class_toString Axm = "Axm"
+  | class_toString Def = "Def"
 
 
 type raw_name = {thy : string, tstamp1 : Arbnum.num, tstamp2 : Arbnum.num}
