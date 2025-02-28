@@ -3534,6 +3534,64 @@ in
            COND_CLAUSES |> SPECL vs |> CONJUNCTS |> map (GENL vs) |> LIST_CONJ)
 end
 
+
+(*---------------------------------------------------------------------------
+    bool_case_eq =
+        |- (bool_case t1 t2 x = v) <=>
+        (x <=> T) /\ t1 = v \/ (x <=> F) /\ t2 = v
+ ---------------------------------------------------------------------------*)
+val bool_case_eq = thm (#(FILE), #(LINE))("bool_case_eq",
+let val x    = “x:bool”
+    val t1   = “t1:'a”
+    val t2   = “t2:'a”
+    val v    = “v:'a”
+    val eq = “$=”
+    val conj = “$/\”
+    val disj = “$\/”
+    val tm1 = “t1 = v”
+    val tm2 = “t2 = v”
+    val [COND1, COND2] = (CONJUNCTS (SPEC t2 (SPEC t1 COND_CLAUSES)))
+    and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
+    and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
+    val thmT1 = AP_THM (AP_TERM eq COND1) v
+    val thmF1 = AP_THM (AP_TERM eq COND2) v
+    val [TF,FT] = map EQF_INTRO (CONJUNCTS BOOL_EQ_DISTINCT)
+    val [TT,FF] = map (EQT_INTRO o REFL) [“T”,“F”]
+    val thmT2 =
+      let
+          val thml1 = AP_THM (AP_TERM conj TT) tm1
+          val thml2 = SPEC tm1 AND1
+          val thml = TRANS thml1 thml2
+          val thmr1 = AP_THM (AP_TERM conj TF) tm2
+          val thmr2 = SPEC tm2 AND3
+          val thmr = TRANS thmr1 thmr2
+          val thm1 = MK_COMB (AP_TERM disj thml, thmr)
+      in
+          TRANS thm1 (SPEC tm1 OR4)
+      end
+    val thmF2 =
+      let
+          val thmr1 = AP_THM (AP_TERM conj FF) tm2
+          val thmr2 = SPEC tm2 AND1
+          val thmr = TRANS thmr1 thmr2
+          val thml1 = AP_THM (AP_TERM conj FT) tm1
+          val thml2 = SPEC tm1 AND3
+          val thml = TRANS thml1 thml2
+          val thm1 = MK_COMB (AP_TERM disj thml, thmr)
+      in
+          TRANS thm1 (SPEC tm2 OR3)
+      end
+    val thmT3 = TRANS thmT1 (SYM thmT2)
+    val thmF3 = TRANS thmF1 (SYM thmF2)
+    val tm = “(if x then t1 else t2) = v <=> (((x <=> T) /\ t1 = v) \/ ((x <=> F) /\ t2 = v))”
+    val thT4 = SUBST_CONV [x |-> ASSUME “x = T”] tm tm
+    and thF4 = SUBST_CONV [x |-> ASSUME “x = F”] tm tm
+    val thmT = EQ_MP (SYM thT4) thmT3
+    val thmF = EQ_MP (SYM thF4) thmF3
+ in
+    DISJ_CASES (SPEC x BOOL_CASES_AX) thmT thmF
+ end);
+
 (* ------------------------------------------------------------------------- *)
 (*    bool_case_ID = |- !x b. bool_case x x b = x                            *)
 (* ------------------------------------------------------------------------- *)
