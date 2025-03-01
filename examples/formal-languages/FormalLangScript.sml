@@ -221,6 +221,9 @@ Definition KPLUS_def:
   KPLUS(L:'a lang) = BIGUNION {DOTn L n | 0 < n}
 End
 
+val _ = temp_overload_on ("RTC", ``KSTAR``);
+val _ = temp_overload_on ("TC", ``KPLUS``);
+
 Theorem IN_KSTAR:
   x IN KSTAR(L) <=> ?n. x IN DOTn L n
 Proof
@@ -240,9 +243,9 @@ Proof
 QED
 
 Theorem IN_KSTAR_THM:
-  w IN KSTAR L
+  w IN L^*
   <=>
-  w = ε \/ ?w1 w2. (w = w1++w2) /\ w1 IN L /\ w2 IN KSTAR L
+  w = ε \/ ?w1 w2. (w = w1++w2) /\ w1 IN L /\ w2 IN L^*
 Proof
   simp[SimpLHS, Once KSTAR_EQ_EPSILON_UNION_DOT] >>
   rw[EQ_IMP_THM] >> gvs[IN_dot] >> metis_tac[]
