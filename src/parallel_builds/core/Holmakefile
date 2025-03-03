@@ -38,7 +38,7 @@ EXDIRS = algebra/aat \
          $(AXIOMATIC_EXAMPLES) \
          CCS Crypto/RSA Crypto/SHA-2 \
          Crypto/pedersenCommitment Crypto/sigmaProtocol \
-         Crypto/Keccak Hoare-for-divergence MLsyntax \
+         Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
 	 STE algorithms computability countchars dependability dev \
          developers/ThmSetData \
