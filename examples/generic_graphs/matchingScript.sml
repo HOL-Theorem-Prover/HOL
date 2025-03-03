@@ -32,6 +32,12 @@ Proof
   >> simp []
 QED
 
+Theorem IN_EDGE_lemma:
+  ∀e a b. (∀x. x ∈ e ⇔ x = a ∨ x = b) ⇔ (e = {a; b})
+Proof
+  SET_TAC []
+QED
+
 (* fsg lemma *)
 Theorem alledges_valid_alt:
   ∀(G: fsgraph) n1 n2. {n1; n2} ∈ E ⇒ n1 ∈ V ∧ n2 ∈ V ∧ n1 ≠ n2
@@ -145,7 +151,7 @@ Overload E'[local] = “fsgedges (G' :fsgraph)”;
 Overload V''[local] = “nodes (G'' :fsgraph)”;
 Overload E''[local] = “fsgedges (G'' :fsgraph)”;
 
-Definition subgraph_def[simp]:
+Definition subgraph_def:
   subgraph (G': fsgraph) (G: fsgraph) <=> V' SUBSET V /\ E' SUBSET E
 End
 
@@ -897,9 +903,48 @@ Definition edges_in_path_def:
                                     adjacent G v1 v2}
 End
 
+(* not so useful compatibility *)
+Theorem edges_in_path_eq_adjpairs:
+  ∀G p. path G p ⇒ edges_in_path G p = set $ adjpairs p
+Proof
+  rw [walk_def, path_def]
+  >> Induct_on ‘p’ using adjpairs_ind
+  >- rw []
+  >- rw [edges_in_path_def]
+  >> rw [EXTENSION] >> eq_tac
+  >- (rw [edges_in_path_def]
+      >> gvs [IN_EDGE_lemma]
+      >> Cases_on ‘{v1; v2} = {x; y}’
+      >- simp []
+      >> rw []
+      >> ‘∀v. v = y ∨ MEM v p ⇒ v ∈ V’ by METIS_TAC []
+      >> qpat_x_assum ‘(∀v. v = y ∨ MEM v p ⇒ v ∈ V) ⇒ _’ (drule_then assume_tac)
+      >> pop_assum (irule o iffLR) >> STRONG_CONJ_TAC
+      >- (rw []
+          >> sg ‘adjacent (x::y::p) v1' v2'’
+          >- (drule (CONJUNCT2 adjacent_rules) >> rw []
+             )
+          >> gvs [path_def]
+         )
+      >> rw [edges_in_path_def]
+      >> qexistsl_tac [‘v1’, ‘v2’]
+      >> rw [path_def, walk_def]
+      >- (ASM_SET_TAC [])
+      >- (ASM_SET_TAC [])
+      >> gvs [INSERT2_lemma]
+      >> cheat
+     )
+  >> rw [IN_EDGE_lemma]
+  >- (POP_ORW >> rw [edges_in_path_def]
+      >> qexistsl_tac [‘x’,‘y’] >> (rw [path_def, walk_def] >> simp [])
+     )
+  >> cheat
+QED
+
 Theorem edges_in_path_alt:
-  ∀G p. edges_in_path (G: fsgraph) p = {e | path G p ∧ e ∈ E ∧ ∃v1 v2. list$adjacent p v1 v2
-                                              ∧ v1 ∈ e ∧ v2 ∈ e}
+  ∀G p. edges_in_path (G: fsgraph)
+                      p = {e | path G p ∧ e ∈ E ∧ ∃v1 v2. list$adjacent p v1 v2
+                                                          ∧ v1 ∈ e ∧ v2 ∈ e}
 Proof
   rw [edges_in_path_def, EXTENSION] >> iff_tac >> disch_tac
   >- (gvs [] >> reverse CONJ_TAC
@@ -917,6 +962,13 @@ Proof
      )
   >> gvs [path_def, walk_def]
 QED
+
+Theorem edges_in_path_in_fsgedges:
+  ∀G p e. path G p ∧ e ∈ edges_in_path G p ⇒ e ∈ E
+Proof
+  rw [edges_in_path_alt]
+QED
+
 
 
 Definition path_xor_def:
@@ -939,21 +991,128 @@ Theorem augmenting_path_augments_matching:
   ∀(G: fsgraph) M P. bipartite G ∧ augmenting_path G M P ⇒ ∃M'. matching G M' ∧ CARD M < CARD M'
 Proof
   rpt STRIP_TAC >> gvs [augmenting_path_def, alternating_path_def, bipartite_alt]
-  >> qabbrev_tac ‘M' = {e | e ∈ E ∧ ((e ∈ (edges_in_path G P) ∧ e ∉ M) ∨ (e ∈ M ∧ e ∉ (edges_in_path G P)))}’
-  >> ‘M' ⊆ E’ by ASM_SET_TAC []
-  >> qexists_tac ‘M'’
-  >> reverse $ rw [GSPEC_OR, GSPEC_AND, edges_in_path_def] (* 2 *)
-  >- (‘FINITE M’ by (irule finite_matching >> qexists_tac ‘G’ >> rw [])
-      >> sg ‘FINITE M'’
-      >- (‘FINITE E’ by METIS_TAC [GEN_ALL FINITE_fsgedges]
-          >> irule SUBSET_FINITE_I >> qexists_tac ‘E’ >> rw []
-         )
-      >> irule $ iffRL CARD_LT_DIFF_lemma >> ONCE_REWRITE_TAC [DIFF_DEF] >> rw []
-      >> ‘M ⊆ E’ by gvs [matching_def] >> rw [GSPEC_AND]
-      >> gvs [GSPEC_AND, GSPEC_OR]
-      >> cheat
+  >> ‘M ⊆ E’ by gvs [matching_def]
+  >> qabbrev_tac ‘M1 = M ∩ edges_in_path G P’
+  >> qabbrev_tac ‘M2 = M DIFF edges_in_path G P’
+  >> sg ‘M = M1 ∪ M2’
+  >- (gvs [Abbr ‘M1’, Abbr ‘M2’] >> SET_TAC []
      )
-  >> cheat
+  >> sg ‘DISJOINT M1 M2’
+  >- (rw [Abbr ‘M1’, Abbr ‘M2’] >> SET_TAC []
+     )
+  >> sg ‘M1 = {{EL n P; EL (SUC n) P} | n | ODD n ∧ SUC n < LENGTH P}’
+  >- (gvs [Abbr ‘M1’] >> rw [EXTENSION] >> ORW [IN_EDGE_lemma]
+      >> iff_tac
+      >- (rw [edges_in_path_def] >> rw []
+          >> gvs [adjacent_EL]
+          >> qexists_tac ‘i’ >> rw [ADD1]
+         )
+      >> rw []
+      >- (first_x_assum drule >> rw [])
+      >> rw [edges_in_path_def]
+      >> qexistsl_tac [‘EL n P’, ‘EL (SUC n) P’] >> simp []
+      >> STRONG_CONJ_TAC
+      >- (rw [adjacent_EL] >> qexists_tac ‘n’ >> simp [ADD1])
+      >> gvs [path_def, walk_def]
+     )
+  >> qabbrev_tac ‘M1' = {{EL n P; EL (SUC n) P} | n | EVEN n ∧ SUC n < LENGTH P}’
+  >> sg ‘DISJOINT M1' M2’
+  >- (‘M1' ⊆ edges_in_path G P’ suffices_by ASM_SET_TAC []
+      >> simp [edges_in_path_def, SUBSET_DEF, Abbr ‘M1'’] >> rw []
+      >> qexistsl_tac [‘EL n P’, ‘EL (SUC n) P’] >> simp []
+      >> STRONG_CONJ_TAC
+      >- (rw [adjacent_EL] >> qexists_tac ‘n’ >> simp [ADD1])
+      >> gvs [path_def, walk_def]
+     )
+  >> qexists_tac ‘M1' ∪ M2’ >> reverse CONJ_TAC
+  >- (qpat_x_assum ‘M = _ ∪ _’ (fn t => ORW [t])
+      >> ‘M1 ⊆ M ∧ M2 ⊆ M’ by ASM_SET_TAC []
+      >> sg ‘FINITE M1 ∧ FINITE M2’
+      >- (drule_then assume_tac finite_matching
+          >> drule SUBSET_FINITE >> rw []
+         )
+      >> drule_all CARD_UNION_DISJOINT >> disch_tac >> POP_ORW
+      >> sg ‘FINITE M1'’
+      >- (qsuff_tac ‘M1' ⊆ E’
+          >- (ASSUME_TAC $ (Q.SPEC ‘G’ o GEN_ALL) FINITE_fsgedges
+              >> disch_tac >> drule SUBSET_FINITE_I >> rw []
+             )
+          >> gvs [path_def, walk_def] >> rw [Abbr ‘M1'’, SUBSET_DEF]
+          >> ORW [GSYM adjacent_fsg]
+          >> first_x_assum irule >> rw [adjacent_EL]
+          >> qexists_tac ‘n’ >> simp [ADD1]
+         )
+      >> drule_all CARD_UNION_DISJOINT >> disch_tac >> POP_ORW
+      >> simp [] >> qpat_assum ‘M1 = _’ (fn t => ORW [GSYM t])
+      >> qabbrev_tac ‘M1'' = {{EL n P; EL (SUC n) P} | n | EVEN n ∧ SUC (SUC n) < LENGTH P}’
+      >> sg ‘M1'' ⊆ M1'’
+      >- (rw [Abbr ‘M1''’, Abbr ‘M1'’, SUBSET_DEF]
+          >> qexists_tac ‘n’ >> simp []
+         )
+      >> sg ‘M1'' ≠ M1'’
+      >- (‘∃x. x ∈ M1' ∧ x ∉ M1''’ suffices_by SET_TAC []
+          >> qexists_tac ‘{EL (LENGTH P - 2) P; EL (LENGTH P - 1) P}’
+          >> rw [Abbr ‘M1''’, Abbr ‘M1'’]
+          >- (qexists_tac ‘LENGTH P - 2’ >> ORW [ADD1]
+             )
+         )
+      >> ‘CARD M1 = CARD M1''’
+
+
+
+
+
+
+
+
+
+  (* >> qabbrev_tac ‘E_P =  (edges_in_path G P)’ *)
+  (* >> qabbrev_tac ‘E_P' = {{EL n P; EL (SUC n) P} | n | ~ODD n ∧ (SUC n) < LENGTH P}’ *)
+  (* >> qabbrev_tac ‘M' = (M DIFF (E_P)) ∪ E_P'’ *)
+  (* >> qexists_tac ‘M'’ >> gvs [DIFF_DEF] *)
+  (* >> sg ‘DISJOINT E_P' M’ *)
+  (* >- (rw [DISJOINT_ALT, Abbr ‘E_P'’] *)
+  (*     >> first_x_assum drule >> gvs [] *)
+  (*    ) *)
+  (* >> sg ‘E_P' ⊆ E_P’ *)
+  (* >- (gvs [Abbr ‘E_P'’, Abbr ‘E_P’] >> rw [edges_in_path_def, SUBSET_DEF] *)
+  (*     >> qexistsl_tac [‘EL n P’, ‘EL (SUC n) P’] >> simp [] *)
+  (*     >> STRONG_CONJ_TAC *)
+  (*     >- (ORW [adjacent_EL] >> qexists_tac ‘n’ >> simp [ADD1]) *)
+  (*     >> rw [] >> gvs [path_def, walk_def] *)
+  (*    ) *)
+  (* >> ‘E_P ⊆ E’ by (gvs [Abbr ‘E_P’, edges_in_path_alt] >> SET_TAC []) *)
+  (* >> ‘E_P' ⊆ E’ by ASM_SET_TAC [] *)
+  (* >> CONJ_TAC           (* 2 *) *)
+  (* >- (rw [matching_def] (* 2 *) *)
+  (*     >- (rw [Abbr ‘M'’, UNION_SUBSET] (* 2 *) *)
+  (*         >- ASM_SET_TAC [matching_def] *)
+  (*         >> rw [SUBSET_DEF, Abbr ‘E_P'’] >> ORW [GSYM adjacent_fsg] *)
+  (*         >> ‘walk G P’ by gvs [path_def] >> gvs [walk_def] *)
+  (*         >> first_x_assum irule >> ORW [adjacent_EL] *)
+  (*         >> qexists_tac ‘n’ >> simp [ADD1] *)
+  (*        ) *)
+  (*     >> rw [Abbr ‘M'’] >> gs [] (* 4 *) *)
+  (*     (* e1, e2 ∈ M *) *)
+  (*     >- gvs [matching_def] *)
+  (*     (* e1 ∈ M, e2 ∉ M *) *)
+  (*     >- (‘e1 ∈ E ∧ e2 ∈ E’ by ASM_SET_TAC [] *)
+  (*         >> gvs [Abbr ‘E_P'’, Abbr ‘E_P’, edges_in_path_def] *)
+  (*         >> pop_assum mp_tac >> drule_all alledges_valid *)
+  (*         >> NTAC 2 strip_tac *)
+  (*         >> first_x_assum drule *)
+  (*         >> ‘adjacent G a b’ by gvs [adjacent_fsg] >> disch_tac *)
+  (*         >> ORW [CONJ_SYM] >> STRONG_CONJ_TAC *)
+  (*         >- (CCONTR_TAC >> gvs [] *)
+  (*            ) *)
+  (*        ) *)
+  (*    ) *)
+
+
+
+
+
+
   (* rpt STRIP_TAC >> gvs [augmenting_path_def, alternating_path_def, bipartite_alt] *)
   (* >> gvs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] *)
   (* >> rename [‘_ = {Aend _; Bend _}’] *)
@@ -1617,7 +1776,7 @@ Proof
          )
       >> rw [] >> drule INJ_CARD >> rw []
      )
-  >> (* TODO: subgoals: |A| ≤ |B|;  *)
+   (* TODO: subgoals: |A| ≤ |B|;  *)
   >> drule konig_matching_thm >> rw []
   >> ASSUME_TAC $ SPEC “(G :fsgraph)” max_matching_exists >> gvs []
   >> cheat                      (* TODO *)
