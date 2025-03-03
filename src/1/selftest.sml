@@ -1350,3 +1350,22 @@ in
     ThmAttribute.extract_attributes
     "foo[local,simp=once twice,baz]"
 end
+
+val _ = let
+  val _ = tprint "attribute abbreviation \"foo[A1=v1  v3,*]\""
+  val expected = {attrs = [],
+                  reserved = [("local", [])],
+                  thmname = "foo",
+                  unknown = [("A1",["v1", "v3"]),
+                             ("A2",[]), ("A3", ["vv"])]}
+  val _ = ThmAttribute.define_abbreviation{
+        abbrev = "*",
+        expansion = [("A2", []), ("local", []), ("A3", ["vv"])]
+      }
+in
+  require_msg
+    (check_result (equal expected))
+    attr_result_toString
+    ThmAttribute.extract_attributes
+    "foo[A1=v1  v3,*]"
+end
