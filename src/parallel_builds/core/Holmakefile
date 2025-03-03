@@ -44,7 +44,7 @@ EXDIRS = algebra/aat \
          developers/ThmSetData \
 	 fermat \
 	 formal-languages formal-languages/context-free \
-         formal-languages/contig \
+         formal-languages/contig formal-languages/json \
          formal-languages/lambek formal-languages/regular/regular-play \
          fun-op-sem/lprefix_lub fun-op-sem/for \
          hardware hfs \
