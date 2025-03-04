@@ -1249,7 +1249,7 @@ Proof
          MATCH_MP_TAC BT_of_principle_hnf >> simp []) >> Rewr' \\
      Q.PAT_X_ASSUM ‘M1 0 = _’ (REWRITE_TAC o wrap) \\
      simp [BT_def, Once ltree_unfold, BT_generator_def, LMAP_fromList,
-           ltree_paths_alt, ltree_el_def] \\
+           ltree_paths_alt_ltree_el, ltree_el_def] \\
      simp [GSYM BT_def, LNTH_fromList, MAP_MAP_o] \\
      Cases_on ‘h < m’ >> rw [])
  >> DISCH_TAC
@@ -1365,7 +1365,7 @@ Proof
     ‘!i. principle_hnf (VAR y @* f i) = VAR y @* f i’ by rw [] \\
      Q_TAC (UNBETA_TAC [BT_def, Once ltree_unfold, BT_generator_def])
            ‘BT' X (M1 (n :num)) r’ \\
-     simp [LMAP_fromList, ltree_paths_alt, ltree_el_def, GSYM BT_def] \\
+     simp [LMAP_fromList, ltree_paths_alt_ltree_el, ltree_el_def, GSYM BT_def] \\
      simp [Abbr ‘M0’, GSYM appstar_APPEND, LNTH_fromList, EL_MAP,
            Abbr ‘y'’, Abbr ‘Ms'’, Abbr ‘n'’, Abbr ‘l’, Abbr ‘M1'’, Abbr ‘vs’])
  >> DISCH_TAC
