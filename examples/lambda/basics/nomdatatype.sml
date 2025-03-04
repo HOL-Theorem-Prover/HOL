@@ -130,8 +130,13 @@ fun new_type_step1 tyname n {vp, lp} = let
   val (glam_ty, gvar_ty) = first2 (#2 (dest_type gtty))
   val term_exists =
       prove(mk_exists(x, mk_comb(termP, x)),
-            irule_at (Pos hd) (cj 1 genind_rules) THEN BETA_TAC THEN
-            REWRITE_TAC[])
+            ((* does type use GVAR constructor? *)
+             irule_at (Pos hd) (cj 1 genind_rules) THEN BETA_TAC THEN
+             REWRITE_TAC[] THEN NO_TAC) ORELSE
+            ((* hope type uses GLAM in base-case way *)
+             irule_at (Pos hd) (cj 2 genind_rules) THEN
+             simpLib.SIMP_TAC (list_ss ++ boolSimps.DNF_ss) [] THEN
+             simpLib.SIMP_TAC list_ss [sumTheory.EXISTS_SUM]))
   val {absrep_id, newty, repabs_pseudo_id, termP, termP_exists, termP_term_REP,
        term_ABS_t, term_ABS_pseudo11,
        term_REP_t, term_REP_11} =
