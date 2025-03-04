@@ -19,7 +19,6 @@ sig
   val cv_inline_thms  : unit -> thm list
   val cv_from_to_thms : unit -> thm list
 
-  val cv_rep_add      : thm -> unit
   val cv_pre_add      : thm -> unit
   val cv_inline_add   : thm -> unit
   val cv_from_to_add  : thm -> unit

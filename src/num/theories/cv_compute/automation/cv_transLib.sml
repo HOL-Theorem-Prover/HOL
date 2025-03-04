@@ -805,7 +805,7 @@ fun cv_trans_deep_embedding eval_conv th =
       val _ = DefnBase.register_defn {tag="user", thmname=eq_name}
       val num_0 = cvSyntax.mk_cv_num (numSyntax.term_of_int 0)
       val cv_trans_thm = defn_thm |> INST [x |-> num_0] |> SYM
-      val _ = cv_memLib.cv_rep_add cv_trans_thm
+      val _ = save_thm(nm ^ "_cv_thm[cv_rep]",cv_trans_thm)
   in () end
 
 (*--------------------------------------------------------------------------*
