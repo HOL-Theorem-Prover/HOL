@@ -971,7 +971,7 @@ Theorem BT_ltree_paths_thm :
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r ==>
              (p IN ltree_paths (BT' X M r) <=> subterm X M p r <> NONE)
 Proof
-    rw [ltree_paths_alt, BT_ltree_el_eq_none]
+    rw [ltree_paths_alt_ltree_el, BT_ltree_el_eq_none]
 QED
 
 (* NOTE: p <> [] is required as ‘[] IN ltree_paths (BT' X M r)’ always holds. *)
