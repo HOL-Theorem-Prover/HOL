@@ -11,7 +11,8 @@ open listTheory listSyntax;
 structure Parse =
 struct
  open Parse
- val (Type,Term) = parse_from_grammars listTheory.list_grammars
+ val SOME list_grammars = grammarDB {thyname="list"}
+ val (Type,Term) = parse_from_grammars list_grammars
  fun == q x = Type q
 end
 open Parse

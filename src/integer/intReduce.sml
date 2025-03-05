@@ -7,7 +7,7 @@ open integerTheory intSyntax simpLib Arithconv numeralTheory tautLib;
 
 structure Parse = struct
   open Parse arithmeticTheory
-  val (Type,Term) = parse_from_grammars integer_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="integer"}
 end
 
 open Parse;

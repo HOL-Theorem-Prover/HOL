@@ -13,7 +13,7 @@ open HolKernel Parse boolLib bossLib;
 open hurdUtils head_reductionTheory solvableTheory;
 
 structure Parse = struct
-  val (Type,Term) = parse_from_grammars solvableTheory.solvable_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB{thyname="solvable"}
 end
 open Parse;
 
