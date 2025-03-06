@@ -29,7 +29,7 @@ tactic {ABS_TAC} strips away the lambda abstractions:
 Fails unless the goal has the above form, namely an equation both sides of
 which consist of a lamdba abstraction.
 
-\COMMENT
+\COMMENTS
 When the lambda abstractions' bound variables conflict with existing
 free variables in the goal, variants of those names may occur in the
 goal that results.
