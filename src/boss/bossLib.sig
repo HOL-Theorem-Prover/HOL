@@ -175,6 +175,8 @@ sig
                        ('a,'b)gentactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
+  val CONG_TAC       : int -> tactic
+  val cong_tac       : int -> tactic
 
   (* Abbreviations  (see also Q structure) *)
 

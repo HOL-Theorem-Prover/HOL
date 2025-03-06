@@ -185,6 +185,56 @@ val op >>~-           = Q.>>~-
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 
+fun variantl avoids t =
+    (* t a (possibly tupled) var *)
+    if is_var t then (variant avoids t, t::avoids)
+    else
+      let val (l,r) = pairSyntax.dest_pair t
+          val (l',avoids) = variantl avoids l
+          val (r',avoids) = variantl avoids r
+      in
+        (pairSyntax.mk_pair(l',r'), avoids)
+      end
+
+fun GEN_CONG_TAC {fn_ext,usercongs,setcomp,depth,first} (g as (asl,w)) =
+    if depth <= 0 then ALL_TAC g
+    else if not (is_eq w) then
+      if first then raise ERR "CONG_TAC" "Goal not an equality"
+      else ALL_TAC g
+    else
+      let
+        open pairSyntax
+        val (l,r) = dest_eq w
+        val next = {fn_ext=fn_ext,usercongs=usercongs,setcomp=setcomp,
+                    depth = depth - 1,first = false}
+      in
+        if fn_ext andalso (is_pabs l orelse is_pabs r) then
+          let
+            (* complicated because of possibility of paired abstractions *)
+            open HOLset
+            val b_tms = ([#1 (dest_pabs l)] handle HOL_ERR _ => [])@
+                        ([#1 (dest_pabs r)] handle HOL_ERR _ => [])
+            val frees = FVL (w::asl) empty_tmset
+            fun genv [] = #1 (variantl (listItems frees) (hd b_tms))
+              | genv (v::vs) =
+                if isEmpty (intersection(frees, FVL [v] empty_tmset)) then v
+                else genv vs
+            val usethis = genv b_tms
+          in
+            CONV_TAC (REWR_CONV FUN_EQ_THM) THEN pairLib.PGEN_TAC usethis THEN
+            CONV_TAC (BINOP_CONV (TRY_CONV pairLib.GEN_BETA_CONV)) THEN
+            GEN_CONG_TAC next
+          end
+        else
+          TRY (MK_COMB_TAC THEN
+               TRY (FIRST [REFL_TAC, FIRST_ASSUM MATCH_ACCEPT_TAC])) THEN
+          GEN_CONG_TAC next
+      end g
+
+fun mkdefault d = {fn_ext=true,usercongs=true,setcomp=true,first=true,depth=d}
+fun CONG_TAC d = GEN_CONG_TAC (mkdefault d)
+val cong_tac = CONG_TAC
+
 (* ----------------------------------------------------------------------
     Working with abbreviations, and other gadgets from markerLib
    ---------------------------------------------------------------------- *)
