@@ -3,6 +3,17 @@ open HolKernel Parse boolTheory boolLib
 open testutils
 val _ = set_trace "Unicode" 0
 
+val goal_compare = pair_compare(list_compare Term.compare, Term.compare)
+val goals_compare = list_compare goal_compare
+fun goals_eq gs1 gs2 = goals_compare (gs1, gs2) = EQUAL
+
+fun listp p xs = "[" ^ String.concatWith ", " (map p xs) ^ "]"
+fun pairp (p1, p2) (x,y) = "(" ^ p1 x ^ ", " ^ p2 y ^ ")"
+
+val goal_toString =
+    pairp (listp term_to_string, term_to_string)
+val goals_toString = listp goal_toString
+
 val _ = tprint "Preterm free variables 1"
 val _ = require (check_result null) (Preterm.ptfvs o Parse.Preterm) ‘\x. x’
 
@@ -1368,4 +1379,16 @@ in
     attr_result_toString
     ThmAttribute.extract_attributes
     "foo[A1=v1  v3,*]"
+end
+
+val _ = let
+  val _ = tprint "ABS_TAC with name conflation"
+  val t = “(\a:bool. T = T) = (\b. (a:bool) = a)”
+  val expected = [([], “(T = T) = (a = a:bool)”)]
+in
+  require_msg
+    (check_result (goals_eq expected o fst))
+    (goals_toString o fst)
+    (VALID ABS_TAC)
+    ([], t)
 end
