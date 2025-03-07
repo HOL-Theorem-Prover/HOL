@@ -196,7 +196,24 @@ fun variantl avoids t =
         (pairSyntax.mk_pair(l',r'), avoids)
       end
 
-fun GEN_CONG_TAC {fn_ext,usercongs,setcomp,depth,first} (g as (asl,w)) =
+local
+  open FunctionalRecordUpdate
+  fun mkUpdateT z = makeUpdate4 z
+in
+fun updateT z = let
+  fun from first fn_ext setcomp usercongs =
+      {first = first, fn_ext = fn_ext, setcomp = setcomp, usercongs = usercongs}
+  fun from' usercongs setcomp fn_ext first =
+      {first = first, fn_ext = fn_ext, setcomp = setcomp, usercongs = usercongs}
+  fun to f {first,fn_ext,setcomp,usercongs} = f first fn_ext setcomp usercongs
+in
+  mkUpdateT (from,from',to)
+end z
+val U = U
+val op $$ = op $$
+end
+
+fun GEN_CONG_TAC (cfg as {fn_ext,usercongs,setcomp,first}) depth (g as (asl,w)) =
     if depth <= 0 then ALL_TAC g
     else if not (is_eq w) then
       if first then raise ERR "CONG_TAC" "Goal not an equality"
@@ -205,8 +222,16 @@ fun GEN_CONG_TAC {fn_ext,usercongs,setcomp,depth,first} (g as (asl,w)) =
       let
         open pairSyntax
         val (l,r) = dest_eq w
-        val next = {fn_ext=fn_ext,usercongs=usercongs,setcomp=setcomp,
-                    depth = depth - 1,first = false}
+        val (f1,args) = strip_comb l and (f2, _) = strip_comb r
+        val post = TRY (FIRST [REFL_TAC, FIRST_ASSUM MATCH_ACCEPT_TAC])
+        val stdfinisher =
+            if aconv f1 f2 then
+              let fun strip n = if n <= 0 then ALL_TAC
+                                else MK_COMB_TAC THENL [strip (n - 1), ALL_TAC]
+              in
+                strip (length args) THEN post THEN GEN_CONG_TAC cfg (depth - 1)
+              end
+            else TRY (MK_COMB_TAC THEN post) THEN GEN_CONG_TAC cfg (depth - 1)
       in
         if fn_ext andalso (is_pabs l orelse is_pabs r) then
           let
@@ -223,16 +248,20 @@ fun GEN_CONG_TAC {fn_ext,usercongs,setcomp,depth,first} (g as (asl,w)) =
           in
             CONV_TAC (REWR_CONV FUN_EQ_THM) THEN pairLib.PGEN_TAC usethis THEN
             CONV_TAC (BINOP_CONV (TRY_CONV pairLib.GEN_BETA_CONV)) THEN
-            GEN_CONG_TAC next
+            GEN_CONG_TAC cfg (depth - 1)
           end
-        else
-          TRY (MK_COMB_TAC THEN
-               TRY (FIRST [REFL_TAC, FIRST_ASSUM MATCH_ACCEPT_TAC])) THEN
-          GEN_CONG_TAC next
+        else if usercongs then
+          let val candidates = DefnBase.read_congs()
+              fun user_tac cth = irule cth THEN REPEAT STRIP_TAC THEN
+                                 post THEN GEN_CONG_TAC cfg (depth - 1)
+          in
+            FIRST (map user_tac candidates) ORELSE stdfinisher
+          end
+        else stdfinisher
       end g
 
-fun mkdefault d = {fn_ext=true,usercongs=true,setcomp=true,first=true,depth=d}
-fun CONG_TAC d = GEN_CONG_TAC (mkdefault d)
+val default = {fn_ext=true,usercongs=true,setcomp=true,first=true}
+fun CONG_TAC d = GEN_CONG_TAC default d
 val cong_tac = CONG_TAC
 
 (* ----------------------------------------------------------------------
