@@ -7,16 +7,7 @@ Note: events are run as synchronized action within a dedicated thread
 and should finish quickly without further ado.
 *)
 
-signature EVENT_TIMER =
-sig
-  eqtype request
-  val request: Time.time -> (unit -> unit) -> request
-  val cancel: request -> bool
-  val future: Time.time -> unit Future.future
-  val shutdown: unit -> unit
-end;
-
-structure Event_Timer:> EVENT_TIMER =
+structure Event_Timer :> Event_Timer =
 struct
 
 open Portable

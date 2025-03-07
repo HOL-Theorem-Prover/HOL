@@ -281,6 +281,11 @@ fun assoc2 item =
       assc
    end
 
+fun get_first f l =
+   case l of
+      [] => NONE
+    | h :: t => (case f h of NONE => get_first f t | some => some)
+
 type 'a cmp = 'a * 'a -> order
 
 fun flip_order LESS = GREATER
