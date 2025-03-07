@@ -120,7 +120,11 @@ fun first2 l =
       (x::y::_) => (x,y)
     | _ => raise Fail "first2: list doesn't have at least two elements"
 
-fun new_type_step1 tyname n {vp, lp} = let
+(* NOTE: In case multiple mutually recursive nominal types are being defined, "witnesses"
+   argument takes a list of [genind_exists] theorems generated from previous calls to the
+   current function, otherwise the proof of term_exists may not succeed.
+ *)
+fun new_type_step1 tyname n witnesses {vp, lp} = let
   val list_mk_icomb = uncurry (List.foldl (mk_icomb o swap))
   val termP =
       list_mk_icomb (genind_t, [vp,lp,numSyntax.mk_numeral (Arbnum.fromInt n)])
@@ -136,7 +140,8 @@ fun new_type_step1 tyname n {vp, lp} = let
             ((* hope type uses GLAM in base-case way *)
              irule_at (Pos hd) (cj 2 genind_rules) THEN
              simpLib.SIMP_TAC (list_ss ++ boolSimps.DNF_ss) [] THEN
-             simpLib.SIMP_TAC list_ss [sumTheory.EXISTS_SUM]))
+             simpLib.SIMP_TAC list_ss [sumTheory.EXISTS_SUM] THEN
+             simpLib.SIMP_TAC list_ss witnesses))
   val {absrep_id, newty, repabs_pseudo_id, termP, termP_exists, termP_term_REP,
        term_ABS_t, term_ABS_pseudo11,
        term_REP_t, term_REP_11} =
