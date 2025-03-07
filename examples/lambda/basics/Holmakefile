@@ -4,7 +4,7 @@ INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/src/%),$(SRCDIRS))
 
 EXTRA_CLEANS = $(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
 
-all: $(DEFAULT_TARGETS)
+all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 selftest.exe: selftest.uo
