@@ -163,9 +163,8 @@ structure HOL_Interactive : sig
   val noisy_open : bool ref
 end =
 struct
-  val last_quiet = ref true
+  val last_quiet = ref [true]
   fun toggle_quietdec () = (
-    last_quiet := Meta.quietdec;
     Meta.quietdec := not (!Meta.quietdec) ;
     !Meta.quietdec
   )
