@@ -1564,10 +1564,12 @@ Proof
  >> Cases_on ‘LNTH h ts’ >> fs []
 QED
 
-Theorem ltree_insert_delete' :
-    !n p t t0. ltree_lookup t (SNOC n p) = SOME t0 /\
-               ltree_branching t p = SOME (SUC n) ==>
-               ltree_insert' (ltree_delete' t p) p t0 = t
+Theorem ltree_insert_delete :
+    !n p t t0 f g d len.
+       ltree_branching t p = SOME (SUC n) /\
+       ltree_lookup t (SNOC n p) = SOME t0 /\
+       ltree_el t p = SOME (d,len) /\ f (g d) = d ==>
+       ltree_insert f (ltree_delete g t p) p t0 = t
 Proof
     rpt STRIP_TAC
  (* initial preparation (for induction) *)
@@ -1593,7 +1595,8 @@ Proof
  >> fs [ltree_branching_def]
  >> MP_TAC (Q.SPECL [‘p’, ‘t’] ltree_el_alt_ltree_lookup)
  >> rw [ltree_paths_def]
- >> POP_ASSUM (fs o wrap)
+ >> POP_ASSUM (ASSUME_TAC o SYM) (* LLENGTH ts = SOME (SUC n) *)
+ >> Q.PAT_X_ASSUM ‘ltree_el t p = _’ K_TAC
  (* stage work *)
  >> rpt (POP_ASSUM MP_TAC)
  >> qid_spec_tac ‘t0’
@@ -1607,10 +1610,9 @@ Proof
   (* 1. eliminating ltree_delete *)
      simp [ltree_delete_def] \\
      simp [Once gen_ltree, ltree_el_def] \\
-     qmatch_abbrev_tac ‘ltree_insert' t' [] t0 = _’ \\
-     Know ‘t' = Branch a (LGENLIST (\i. THE (LNTH i ts)) (SOME n))’
-     >- (simp [Abbr ‘t'’] \\
-         simp [LNTH_EQ, LNTH_LGENLIST] \\
+     qmatch_abbrev_tac ‘ltree_insert f t' [] t0 = _’ \\
+     Know ‘t' = Branch (g a) (LGENLIST (\i. THE (LNTH i ts)) (SOME n))’
+     >- (simp [Abbr ‘t'’, LNTH_EQ, LNTH_LGENLIST] \\
          Q.X_GEN_TAC ‘i’ \\
          Cases_on ‘i < n’ >> simp [] \\
          Cases_on ‘LNTH i ts’ >> simp []
@@ -1618,11 +1620,7 @@ Proof
              >- (MATCH_MP_TAC LNTH_IS_SOME_MONO \\
                  Q.EXISTS_TAC ‘n’ >> simp [IS_SOME_EXISTS]) \\
              rw [IS_SOME_EXISTS]) \\
-         Know ‘!p. (\(d,len). (d,len)) (THE (ltree_el x p)) = THE (ltree_el x p)’
-         >- (rpt GEN_TAC \\
-             qabbrev_tac ‘a = THE (ltree_el x p)’ \\
-             Cases_on ‘a’ >> simp []) >> Rewr' \\
-         simp [gen_ltree_unchanged]) >> Rewr' \\
+         simp [ltree_el_lemma, gen_ltree_unchanged]) >> Rewr' \\
      qunabbrev_tac ‘t'’ \\
   (* 2. eliminating ltree_insert *)
      simp [ltree_insert_def] \\
@@ -1637,10 +1635,7 @@ Proof
     ‘i = n \/ i < n’ by rw [] >> simp [] >- rw [gen_ltree_unchanged] \\
   (* so far so good ... *)
      qabbrev_tac ‘t1 = THE (LNTH i ts)’ \\
-     Know ‘!p. (\(d,len). (d,len)) (THE (ltree_el t1 p)) = THE (ltree_el t1 p)’
-     >- (rpt GEN_TAC \\
-         qabbrev_tac ‘a = THE (ltree_el t1 p)’ \\
-         Cases_on ‘a’ >> simp []) >> Rewr' \\
+     simp [ltree_el_lemma] \\
   (* so far so good ... *)
     ‘IS_SOME (LNTH i ts)’ by rw [LFINITE_LNTH_IS_SOME] \\
      fs [IS_SOME_EXISTS, Abbr ‘t1’] \\
@@ -1650,9 +1645,9 @@ Proof
  >> Cases_on ‘t’ >> simp [ltree_lookup_def]
  >> Cases_on ‘LNTH h ts'’ >> rw []
  (* applying ltree_delete_CONS *)
- >> Know ‘ltree_delete' (Branch a' ts') (h::p) =
+ >> Know ‘ltree_delete g (Branch a' ts') (h::p) =
           Branch a' (LGENLIST (\i. if i = h then
-                                      ltree_delete' (THE (LNTH h ts')) p
+                                      ltree_delete g (THE (LNTH h ts')) p
                                    else
                                       THE (LNTH i ts'))
                               (LLENGTH ts'))’
@@ -1662,24 +1657,24 @@ Proof
      rw [ltree_paths_alt_ltree_el])
  >> Rewr'
  >> simp []
- >> qmatch_abbrev_tac ‘ltree_insert' (Branch a' ts1) (h::p) t0 = _’
+ >> qmatch_abbrev_tac ‘ltree_insert f (Branch a' ts1) (h::p) t0 = _’
  (* applying ltree_insert_CONS *)
- >> Know ‘ltree_insert' (Branch a' ts1) (h::p) t0 =
+ >> Know ‘ltree_insert f (Branch a' ts1) (h::p) t0 =
           Branch a' (LGENLIST (\i. if i = h then
-                                      ltree_insert' (THE (LNTH h ts1)) p t0
+                                      ltree_insert f (THE (LNTH h ts1)) p t0
                                    else
                                       THE (LNTH i ts1)) (LLENGTH ts1))’
  >- (MATCH_MP_TAC ltree_insert_CONS \\
      simp [Abbr ‘ts1’, LNTH_LGENLIST] \\
      Cases_on ‘LLENGTH ts'’ >> simp []
-     >- (MP_TAC (Q.SPECL [‘I’, ‘p’, ‘x’] ltree_delete_path_stable) \\
+     >- (MP_TAC (Q.SPECL [‘g’, ‘p’, ‘x’] ltree_delete_path_stable) \\
          simp [ltree_paths_alt_ltree_el, GSYM ltree_lookup_iff_ltree_el]) \\
      STRONG_CONJ_TAC
      >- (Know ‘IS_SOME (LNTH h ts')’ >- rw [IS_SOME_EXISTS] \\
          simp [LNTH_IS_SOME] \\
          impl_tac >- rw [LFINITE_LLENGTH] >> simp []) >> DISCH_TAC \\
      rename1 ‘h < N’ \\
-     MP_TAC (Q.SPECL [‘I’, ‘p’, ‘x’] ltree_delete_path_stable) \\
+     MP_TAC (Q.SPECL [‘g’, ‘p’, ‘x’] ltree_delete_path_stable) \\
      simp [ltree_paths_alt_ltree_el, GSYM ltree_lookup_iff_ltree_el])
  >> Rewr'
  >> simp [LNTH_EQ, LNTH_LGENLIST, Abbr ‘ts1’]
@@ -1697,6 +1692,24 @@ Proof
  >> Cases_on ‘i = h’ >> simp []
  >> Suff ‘IS_SOME (LNTH i ts')’ >- (rw [IS_SOME_EXISTS] >> simp [])
  >> rw [LNTH_IS_SOME]
+QED
+
+Theorem ltree_insert_delete' :
+    !n p t t0.
+       ltree_branching t p = SOME (SUC n) /\
+       ltree_lookup t (SNOC n p) = SOME t0 ==>
+       ltree_insert' (ltree_delete' t p) p t0 = t
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC ltree_insert_delete >> simp []
+ >> Know ‘p IN ltree_paths t’
+ >- (MATCH_MP_TAC ltree_paths_inclusive \\
+     Q.EXISTS_TAC ‘SNOC n p’ \\
+     simp [isPREFIX_SNOC, ltree_paths_def])
+ >> rw [ltree_paths_alt_ltree_el, GSYM IS_SOME_EQ_NOT_NONE, IS_SOME_EXISTS]
+ >> rename1 ‘ltree_el t p = SOME y’
+ >> Cases_on ‘y’
+ >> qexistsl_tac [‘q’, ‘r’] >> rw []
 QED
 
 (*---------------------------------------------------------------------------*
