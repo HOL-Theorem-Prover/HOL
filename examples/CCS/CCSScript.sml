@@ -304,20 +304,19 @@ val APPLY_RELAB_THM = save_thm (
                   (Q.SPEC `labl` IS_RELABELING))));
 
 (******************************************************************************)
-(*                                                                            *)
 (*             Syntax of pure CCS (general formalization)                     *)
-(*                                                                            *)
 (******************************************************************************)
 
-(* The (equivalent) old way (no alpha conversion)
-Datatype: CCS = nil
-              | var string
+(* The nominal datatype with alpha conversion on recursion variables
+Nominal_datatype :
+          CCS = nil
+              | var name
               | prefix ('a Action) CCS
               | sum CCS CCS
               | par CCS CCS
               | restr ('a Label set) CCS
               | relab CCS ('a Relabeling)
-              | rec string CCS
+              | rec ''name CCS
 End
  *)
 
@@ -345,19 +344,20 @@ val lp =
               tns = [] /\ uns = [0;0] \/                          (* 3. par *)
      n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
               ISL (OUTR (OUTR (OUTR d))) /\
-              tns = [] /\ uns = [0] \/                          (* 4. restr *)
+              tns = [] /\ uns = [0] \/                            (* 4. restr *)
      n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
               ISR (OUTR (OUTR (OUTR d))) /\
               ISL (OUTR (OUTR (OUTR (OUTR d)))) /\
-              tns = [] ∧ uns = [0] \/                           (* 5. relab *)
+              tns = [] /\ uns = [0] \/                            (* 5. relab *)
      n = 0 /\ ISR d /\ ISR (OUTR d) /\ ISR (OUTR (OUTR d)) /\
               ISR (OUTR (OUTR (OUTR d))) /\
               ISR (OUTR (OUTR (OUTR (OUTR d)))) /\
-              tns = [0] /\ uns = [])”;                          (* 6. rec *)
+              tns = [0] /\ uns = []                               (* 6. rec *)
+    )”;
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 {vp = vp, lp = lp};
+    new_type_step1 tyname 0 [] {vp = vp, lp = lp};
 
 (* ----------------------------------------------------------------------
     CCS operators

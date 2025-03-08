@@ -19,10 +19,10 @@ val lp =
 
 val _ = tprint "Deriving type 0"
 val _ = require (check_result (K true))
-                (new_type_step1 tyname0 0)
+                (new_type_step1 tyname0 0 [])
                 {vp = vp, lp = lp}
 
 val _ = tprint "Deriving type 1"
 val _ = require (check_result (K true))
-                (new_type_step1 tyname1 1)
+                (new_type_step1 tyname1 1 [])
                 {vp = vp, lp = lp}
