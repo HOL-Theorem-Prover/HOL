@@ -2613,6 +2613,49 @@ Proof
  >> Q.EXISTS_TAC ‘e’ >> art []
 QED
 
+Theorem hnf_children_bnf :
+    !vs y args. ALL_DISTINCT vs /\ bnf (LAMl vs (VAR y @* args)) /\
+                i < LENGTH args ==> bnf (EL i args)
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘M1 = VAR y @* args’
+ >> qabbrev_tac ‘N = LAMl vs M1’
+ >> qabbrev_tac ‘n = LENGTH vs’
+ >> qabbrev_tac ‘m = LENGTH args’
+ >> MP_TAC (Q.SPECL [‘N’, ‘FV M1 UNION set vs’] bnf_characterisation_X)
+ >> simp []
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘ys’
+                 (Q.X_CHOOSE_THEN ‘v’
+                   (Q.X_CHOOSE_THEN ‘args'’ STRIP_ASSUME_TAC)))
+ >> Know ‘LAMl_size N = n’
+ >- (qunabbrevl_tac [‘N’, ‘M1’] >> simp [])
+ >> DISCH_TAC
+ >> Know ‘LENGTH ys = n’
+ >- (POP_ASSUM (REWRITE_TAC o wrap o SYM) \\
+     Q.PAT_X_ASSUM ‘N = _’ (REWRITE_TAC o wrap) >> simp [])
+ >> DISCH_TAC
+ >> Know ‘hnf_children_size N = m’
+ >- (qunabbrevl_tac [‘N’, ‘M1’] >> simp [])
+ >> DISCH_TAC
+ >> Know ‘LENGTH args' = m’
+ >- (POP_ASSUM (REWRITE_TAC o wrap o SYM) \\
+     Q.PAT_X_ASSUM ‘N = _’ (REWRITE_TAC o wrap) \\
+     simp [])
+ >> DISCH_TAC
+ (* applying LAMl_ALPHA_tpm *)
+ >> Q.PAT_X_ASSUM ‘N = _’ MP_TAC
+ >> Know ‘N = LAMl ys (tpm (ZIP (vs,ys)) M1)’
+ >- (qunabbrev_tac ‘N’ \\
+     MATCH_MP_TAC LAMl_ALPHA_tpm >> simp [Once DISJOINT_SYM])
+ >> Rewr'
+ >> simp [Abbr ‘M1’]
+ >> qabbrev_tac ‘pi = ZIP (vs,ys)’
+ >> simp [Once tpm_eql]
+ >> qabbrev_tac ‘pi' = REVERSE pi’
+ >> rw [tpm_appstar]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> simp [EL_MEM]
+QED
+
 val _ = export_theory()
 val _ = html_theory "head_reduction";
 
