@@ -617,17 +617,7 @@ starts >%s%s<"
                             (endm (make-marker)))
                         ; (message "Handling an open")
                         (if hol-auto-load-p
-                            (hol-load-modules-in-region start end))
-                        (if leave-loud-opens nil
-                            ;; now bracket the open decl with quietdec toggles
-                          (set-marker endm end)
-                          (goto-char end)
-                          (insert
-                           ";val _ = HOL_Interactive.toggle_quietdec();\n")
-                          (goto-char open-start)
-                          (insert
-                           "val _ = HOL_Interactive.toggle_quietdec();\n")
-                          (goto-char endm) (set-marker endm nil))))
+                            (hol-load-modules-in-region start end))))
                      (t
                       ; (message "Saw \"%s\"; position = %d; loading: %s"
                       ;           ms (point) (match-string 6))
@@ -1270,17 +1260,21 @@ argument N, sets the trace to that value in particular."
 
 (defun hol-open-string (prefixp)
   "Opens HOL modules, prompting for the name of the module to load.
-With prefix ARG, toggles quietdec variable before and after opening,
-potentially saving a great deal of time as tediously large modules are
-printed out.  (That's assuming that quietdec is false to start with.)"
+With prefix ARG, makes output loud, letting the module contents
+appear as printed declarations in the REPL. The noisy-open flag is then
+(re)set to false.  Noisiness is overridden if HOL's quietdec flag is true."
   (interactive "P")
   (let* ((prompt0 "Name of module to (load and) open")
-         (prompt (concat prompt0 (if prefixp " (toggling quietness)") ": "))
+         (prompt (concat prompt0 (if prefixp " (printing decls)") ": "))
          (module-name (read-string prompt)))
     (hol-load-string module-name)
-    (if prefixp (hol-toggle-quietdec))
+    (if prefixp
+        (send-raw-string-to-hol "HOL_Interactive.noisy_open := true;"
+                                hol-echo-commands-p))
     (send-raw-string-to-hol (concat "open " module-name) hol-echo-commands-p)
-    (if prefixp (hol-toggle-quietdec))))
+    (if prefixp
+        (send-raw-string-to-hol "HOL_Interactive.noisy_open := false;"
+                                hol-echo-commands-p))))
 
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
