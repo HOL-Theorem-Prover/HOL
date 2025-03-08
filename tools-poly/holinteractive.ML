@@ -11,11 +11,17 @@ structure HOL_Interactive :>
     val toggle_quietdec : unit -> bool
     val amquiet : unit -> bool
     val print_banner : unit -> unit
+    val setquietp : bool -> bool (* returns old value *)
+    val pushquietp : bool -> unit
+    val popquietp : unit -> bool
+    val noisy_open : bool ref
   end =
 struct
   infix ++
   val op ++ = OS.Path.concat
   val qd = ref true
+  val noisy_open = ref false
+  val last_quiet = ref [true]
   fun toggle_quietdec () =
     if !qd then
       ( PolyML.Compiler.prompt1 := "> "
@@ -58,6 +64,18 @@ struct
       "     For introductory HOL help, type: help \"hol\";\n" ^
       "     " ^ exit_string ^
       line)
+
+  fun setquietp b = if b = amquiet() then b else (toggle_quietdec(); not b)
+  fun pushquietp b =
+      let val old = setquietp b
+      in
+        last_quiet := old :: (!last_quiet)
+      end
+  fun popquietp () = (
+    setquietp (hd (!last_quiet));
+    last_quiet := tl (!last_quiet);
+    amquiet()
+  )
 end;
 
 end (* local *)

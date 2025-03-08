@@ -396,9 +396,23 @@ structure ToSML = struct
     and doDecl eager pos d = case d of
         OpenDecl {head = p, toks, stop} => (
           regular (pos, p); finishThmVal ();
-          if quietOpen then aux "val _ = HOL_Interactive.toggle_quietdec ();" else ();
+          (* two bools  :  interactively  "quiet"   "noisy-open"     verdict
+                                             T          _               T
+                                             F          T               F
+                                             F          F               T *)
+          if quietOpen then
+            aux "val _ = let open HOL_Interactive \
+                \val verdict = amquiet() orelse not (!noisy_open)\
+                \in pushquietp verdict end;"
+            (* semicolon is needed to make sure this is evaluated before the
+               open-s hit *)
+          else ();
           regular (p, stop);
-          if quietOpen then aux " val _ = HOL_Interactive.toggle_quietdec ();" else ();
+          if quietOpen then
+            (* implicitly: opened structures can't define HOL_Interactive
+               structures of their own; or call HOL_Interactive.popquietp! *)
+            aux " val _ = HOL_Interactive.popquietp()"
+          else ();
           stop)
       | DefinitionDecl {head = (p, head), quote, termination, stop, ...} => let
         val {keyword, name, attrs, name_attrs} = parseDefinitionPfx head
