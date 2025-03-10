@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib BasicProvers;
 
 open arithmeticTheory dividesTheory pred_setTheory gcdTheory simpLib metisLib
-     TotalDefn;
+     pred_setSimps TotalDefn;
 
 local open numSimps; in end;
 

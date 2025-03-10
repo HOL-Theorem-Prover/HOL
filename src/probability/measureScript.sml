@@ -31,7 +31,7 @@ open hurdUtils util_probTheory extrealTheory sigma_algebraTheory;
 val _ = new_theory "measure";
 
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
-val SET_SPEC_TAC = SIMP_TAC (std_ss ++ SET_SPEC_ss);
+val SET_SPEC_TAC = SIMP_TAC (std_ss ++ pred_setSimps.SET_SPEC_ss);
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 val set_ss = std_ss ++ PRED_SET_ss;
 

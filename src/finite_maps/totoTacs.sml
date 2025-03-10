@@ -17,7 +17,7 @@ open Parse HolKernel boolLib bossLib;
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars totoTheory.toto_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname = "toto"}
 end
 open Parse
 

@@ -7,7 +7,7 @@ open numposrepLib ASCIInumbersTheory
 structure Parse = struct
   open Parse
   val (Type, Term) =
-     parse_from_grammars ASCIInumbersTheory.ASCIInumbers_grammars
+     parse_from_grammars $ valOf $ grammarDB {thyname = "ASCIInumbers"}
 end
 open Parse
 

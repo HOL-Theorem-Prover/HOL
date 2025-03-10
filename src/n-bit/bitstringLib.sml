@@ -6,7 +6,7 @@ open listLib wordsLib bitstringSyntax
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars bitstringTheory.bitstring_grammars
+  val (Type, Term) = parse_from_grammars $ valOf $ grammarDB{thyname="bitstring"}
 end
 open Parse
 
