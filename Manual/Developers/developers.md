@@ -112,6 +112,9 @@ The experimental kernel can be selected by passing the `--expk` option to `build
 The *OpenTheory kernel* is based on the experimental kernel, but adds proof-logging to the primitive inference rules so that OpenTheory theory packages can be exported from HOL.
 This kernel can be selected by passing the `--otknl` option to `build`.
 
+The *tracing kernel* uses the same proof-logging to the primitive inference rules as OpenTheory, but exports inference rules without additional translation.
+This kernel can be selected by passing the `--trknl` option to `build`.
+
 ## Build Sequences
 
 When `build` runs, it choreographs its calls to `Holmake` by referring to a specified sequence of directories.

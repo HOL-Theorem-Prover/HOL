@@ -263,4 +263,5 @@ sig
   end
 
   val reraise : exn -> 'a
+  val export : string * 'a -> unit
 end
