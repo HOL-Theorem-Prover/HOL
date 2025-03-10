@@ -131,9 +131,6 @@ These are used when rewriting: they modify the rewrite behaviour of the theorem 
 : Do not use the supplied theorem/conversion when rewriting.
   This allows temporary exclusion of theorems/conversions from the stateful simpset.
 
-<code>Simp{L,R}HS <i>theorem</i></code>
-: Uses the supplied theorem to simplify on the left-/right-hand side of equalities.
-
 <code>Req{0,D} <i>theorem</i></code>
 : Requires the supplied theorem to be used a number of times, by checking the number of subterms matching the LHS of the rewrite *after* simplification.
   `Req0` requires no matching subterms after simplification, `ReqD` requires the number to have strictly decreased - otherwise, an exception is thrown.
@@ -142,6 +139,10 @@ These are used when rewriting: they modify the rewrite behaviour of the theorem 
 <br>
 
 Also commonly used when rewriting are:
+
+<code>Simp{L,R}HS</code>
+: Passed as an argument to a simplifier (i.e. in the list of rewrites).
+  Simplifies on the left-/right-hand side of equalities.
 
 <code>GSYM <i>theorem</i></code>
 : Flips equalities in the conclusion of the theorem.
@@ -477,11 +478,11 @@ In some cases, it is useful to generalise a goal in order to use a suitable indu
 : A variant of `drule` which attempts to match all the conjuncts `P1, ..., Pn`.
   This has a `rev_drule_all` variant.
 
-<code>drule_then <i>theorem thm_tactic</i></code>
+<code>drule_then <i>thm_tactic theorem</i></code>
 : A variant of `drule` which processes the resulting instantiated theorem using a theorem-tactic, rather than adding it as an implication to the goal.
   This has a `rev_drule_then` variant.
 
-<code>dxrule <i>theorem</i></code> <br> <code>dxrule_all <i>theorem</i></code> <br> <code>dxrule_then <i>theorem thm_tactic</i></code>
+<code>dxrule <i>theorem</i></code> <br> <code>dxrule_all <i>theorem</i></code> <br> <code>dxrule_then <i>thm_tactic theorem</i></code>
 : Variants of the above which remove the matching assumption(s).
   They also have `rev_*` variants.
 
