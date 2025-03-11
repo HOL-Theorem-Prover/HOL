@@ -15,6 +15,10 @@ Type vertex = “:unit + num”;
 Type edge = “:vertex set”
 
 val ORW = ONCE_REWRITE_TAC;
+val POP_ORW' = pop_assum (fn t => ORW [GSYM t])
+val Keep_last_assum = (fn n => NTAC n (pop_assum mp_tac) >> KILL_TAC)
+val Keep_last_assum_disch = (fn n => Keep_last_assum n >> rpt disch_tac)
+
 
 (* List lemmas *)
 
@@ -402,6 +406,28 @@ Proof
   >> ‘x = {m; n}’ by ASM_SET_TAC [] >> gvs []
 QED
 
+Theorem matching_SUBSET:
+  ∀G M. matching G M ⇒ ∀M'. M' ⊆ M ⇒ matching G M'
+Proof
+  ASM_SET_TAC [matching_def]
+QED
+
+Theorem matching_UNION:
+  ∀(G :fsgraph) M1 M2. matching G M1 ∧ matching G M2 ∧ DISJOINT (BIGUNION M1) (BIGUNION M2) ⇒ matching G (M1 ∪ M2)
+Proof
+  (rw [matching_def] >> METIS_TAC [DISJOINT_SYM])
+QED
+
+Theorem matching_DISJOINT_UNION_EQ:
+  ∀(G :fsgraph) M1 M2. DISJOINT M1 M2 ⇒ (matching G (M1 ∪ M2) ⇔ matching G M1 ∧ matching G M2 ∧ DISJOINT (BIGUNION M1) (BIGUNION M2))
+Proof
+  rpt strip_tac >> reverse eq_tac
+  >- simp [matching_UNION]
+  >> rw [matching_def]
+  >> first_x_assum irule >> rw []
+  >> ASM_SET_TAC []
+QED
+
 Definition matched:
   matched (G: fsgraph) M v ⇔ matching G M ⇒ v ∈ BIGUNION M
 End
@@ -443,48 +469,6 @@ Proof
   ASM_SET_TAC [matched_set_def]
 QED
 
-(* Theorem matched_set_inj_f: *)
-(*   ∀G M U. matching G M ∧ U ⊆ V ∧ matched_set G M U ⇒ (∃f. INJ f U V) *)
-(* Proof *)
-(*   rw [matched_set_def, matched] >> gvs [] *)
-(*   >> Cases_on ‘U = ∅’ *)
-(*   >- gvs [] *)
-(*   >> ‘∃f. ∀v. v ∈ U ⇒ v ∈ (f v) ∧ (f v) ∈ M’ by METIS_TAC [SKOLEM_THM] *)
-(*   >> qexists_tac ‘λv. paired_v (f v) v’ *)
-(*   >> rw [INJ_DEF] *)
-(*   >- (first_x_assum $ drule_then assume_tac >> gvs [] *)
-(*       >> ‘f v ∈ E’ by ASM_SET_TAC [matching_def] *)
-(*       >> drule alledges_valid >> rw [] *)
-(*       >> rw [paired_v_def'] >> gvs [] *)
-(*       >- (drule paired_v_thm >> simp []) *)
-(*       >> drule paired_v_thm2 >> simp [] *)
-(*      ) *)
-(*   >> gvs [matching_def] *)
-(*   >> Cases_on ‘f v = f v'’ *)
-(*   >- (‘v ∈ f v ∧ v ∈ f v'’ by ASM_SET_TAC [] *)
-(*       >> ‘f v ∈ M ∧ f v' ∈ M’ by ASM_SET_TAC [] *)
-(*       >> irule $ iffRL paired_v_INJ *)
-(*       >> qexistsl_tac [‘G’, ‘f v’] >> rw [] >> ASM_SET_TAC [] *)
-(*      ) *)
-(*   >> ‘f v ∈ M ∧ f v' ∈ M’ by ASM_SET_TAC [] *)
-(*   >> last_x_assum drule_all *)
-(*   >> ‘~DISJOINT (f v) (f v')’ suffices_by rw [] *)
-(*   >> rw [DISJOINT_DEF] *)
-(*   >> qabbrev_tac ‘u = paired_v (f v) v’ *)
-(*   >> ‘u ∈ f v’ by ( *)
-(*     qunabbrev_tac ‘u’ *)
-(*     >> irule paired_v_IN *)
-(*     >> qexists_tac ‘G’ *)
-(*     >> gvs [SUBSET_DEF] *)
-(*     ) *)
-(*   >> ‘u ∈ f v'’ by ( *)
-(*     qpat_x_assum ‘u = _’ (fn t => rw [Once t]) *)
-(*     >> irule paired_v_IN *)
-(*     >> qexists_tac ‘G’ *)
-(*     >> gvs [SUBSET_DEF] *)
-(*     ) *)
-(*   >> ASM_SET_TAC [] *)
-(* QED *)
 
 Theorem matched_set_inj_f_neighbour:
   ∀G M U. matching G M ∧ U ⊆ V ∧ matched_set G M U ⇒ (∃f. INJ f U (N U))
@@ -609,6 +593,10 @@ Proof
   >> drule finite_matching >> rw []
 QED
 
+
+
+
+
 (* Theorem matched_set_bipartite_CARD: *)
 (*   ∀G A B M U. gen_bipartite G A B ∧ U ⊆ A ∧ matching G M ∧ matched_set G M U ⇒ ∃W. W ⊆ B ∧ CARD U = CARD W *)
 (* Proof *)
@@ -692,36 +680,38 @@ QED
 
 
 (* Alternating & Augmenting Path *)
-Definition alternating_path_def:
+Definition alternating_path:
   alternating_path G M P <=> matching G M /\ path G P /\
-                           unmatched G M (HD P) /\
-                           !(n: num). SUC n < LENGTH P ==> (ODD n <=> {EL n P; EL (SUC n) P} IN M)
+                             unmatched G M (HD P) /\
+                             !(n: num). SUC n < LENGTH P ==> ({EL n P; EL (SUC n) P} IN M ⇔ ODD n)
 End
+
+Theorem alternating_path_def:
+  ∀G M P. alternating_path G M P <=> matching G M /\ path G P /\
+                             unmatched G M (HD P) /\
+                             !(n: num). SUC n < LENGTH P ==> (ODD n <=> {EL n P; EL (SUC n) P} IN M)
+Proof
+  METIS_TAC [alternating_path]
+QED
 
 Theorem adjacent_reversible[simp]: (* TODO: chuck this elsewhere *)
   !l a b. adjacent (REVERSE l) a b <=> adjacent l b a
 Proof
   ‘!l a b. adjacent l b a ==> adjacent (REVERSE l) a b’ suffices_by METIS_TAC [REVERSE_REVERSE]
-  >> Induct_on ‘list$adjacent’ >> ONCE_REWRITE_TAC [CONS_APPEND]
+  >> Induct_on ‘list$adjacent’ >> ORW [CONS_APPEND]
   >> rw [adjacent_append2]
 QED
 
 Theorem adjacent_fsg_reversible[simp]:
   !(G: fsgraph) a b. adjacent G a b <=> adjacent G b a
 Proof
-  rw [adjacent_fsg]
-  >> ‘{a; b} = {b; a}’ by rw [INSERT2_lemma]
-  >> pop_assum (fn t => rw [Once t])
+  rw [adjacent_SYM]
 QED
 
 (* tautLib *)
 Definition XOR:                 (* boolTheory may need this, could not find *)
   $XOR = (\t1 t2. (t1 ∧ ~t2) ∨ (~t1 ∧ t2))
 End
-
-(* Definition path_xor: *)
-(*   path_xor (G: fsgraph) es p = {e | XOR (e IN es) (?v1 v2. adjacent p v1 v2 /\ v1 IN e /\ v2 IN e)} *)
-(* End *)
 
 Theorem walk_reversible[simp]:
   !(G: fsgraph) P. walk G (REVERSE P) <=> walk G P
@@ -952,7 +942,7 @@ Proof
   >> irule $ iffRL ODD_SUB >> simp [GSYM EVEN_ODD]
 QED
 
-Theorem augmenting_path_reversible: (* TODO *)
+Theorem augmenting_path_reversible:
   ∀G M P. bipartite G ⇒ (augmenting_path G M P ⇔ augmenting_path G M (REVERSE P))
 Proof
   rw []
@@ -962,32 +952,27 @@ Proof
       >> ‘P = REVERSE $ REVERSE P’ by rw [REVERSE_REVERSE]
       >> POP_ORW >> rw []
      )
-  >> rw [augmenting_path_def, alternating_path_def]
-  >- (gvs [alternating_path_def, path_def, walk_def] >> rw [HD_REVERSE])
-  >- (rw [EL_REVERSE]
-      >> qabbrev_tac ‘l = LENGTH P’
-      >> simp [PRE_SUB1, ADD1] >> ORW [SUB_PLUS]
-      >> last_assum $ drule_all_then assume_tac
-      >> pop_assum (fn t => ORW [GSYM ADD1] >> ORW [GSYM t])
-      >> qabbrev_tac ‘m = l - n - 2’
-      >> ‘l - n - 1 = m + 1’ by gvs [Abbr ‘m’] >> POP_ORW
-      >> ORW [PAIR_SYM_lemma] >> ORW [GSYM ADD1]
-      >> ‘SUC m < l’ by simp [Abbr ‘m’]
-      >> last_assum $ drule_all_then assume_tac
-      >> pop_assum (fn t => ORW [GSYM ADD1] >> ORW [GSYM t])
-      >> ‘augmenting_path G M P’ by rw [augmenting_path_def, alternating_path_def]
-      >> drule_all augmenting_path_even_length
-      >> qpat_x_assum ‘∀n. _’ (fn t => all_tac)
-      >> gvs [Abbr ‘m’]
-      >> ‘n + 2 ≤ l’ by gvs []
-      >> ‘l = n + (l - n)’ by simp []
-      >> POP_ORW >> ORW [EVEN_ADD]
-      >> rw [EVEN_ODD] >> ORW [SUB_PLUS]
-      >> qabbrev_tac ‘x = l - n’
-      >> ‘2 ≤ x’ by simp [Abbr ‘x’]
-      >> rw [Once ODD_SUB]
-     )
-  >> gvs [alternating_path_def, path_def, walk_def] >> rw [LAST_REVERSE]
+  >> rw [augmenting_path_def, alternating_path_def] >~
+  [‘unmatched _ _ (HD _) (*g*)’]
+  >- (gvs [alternating_path_def, path_def, walk_def] >> rw [HD_REVERSE]) >~
+  [‘unmatched _ _ (LAST _) (*g*)’]
+  >- (gvs [alternating_path_def, path_def, walk_def] >> rw [LAST_REVERSE])
+  >> rw [EL_REVERSE]
+  >> qabbrev_tac ‘l = LENGTH P’
+  >> simp [PRE_SUB1, ADD1] >> ORW [SUB_PLUS]
+  >> last_assum $ drule_all_then assume_tac
+  >> pop_assum (fn t => ORW [GSYM ADD1] >> ORW [GSYM t])
+  >> qabbrev_tac ‘m = l - n - 2’
+  >> ‘l - n - 1 = m + 1’ by gvs [Abbr ‘m’] >> POP_ORW
+  >> ORW [PAIR_SYM_lemma] >> ORW [GSYM ADD1]
+  >> ‘SUC m < l’ by simp [Abbr ‘m’]
+  >> last_assum $ drule_all_then assume_tac
+  >> pop_assum (fn t => ORW [GSYM ADD1] >> ORW [GSYM t])
+  >> ‘augmenting_path G M P’ by rw [augmenting_path_def, alternating_path_def]
+  >> drule_all augmenting_path_even_length
+  >> qpat_x_assum ‘∀n. _’ (fn t => all_tac)
+  >> gvs [Abbr ‘m’]
+  >> intLib.ARITH_TAC
 QED
 
 
@@ -1119,30 +1104,76 @@ Proof
   rw [edges_in_path_alt]
 QED
 
+Theorem edges_in_path_iff:
+  ∀G p v. path G p ∧ 1 < LENGTH p ⇒ ((∃e. e ∈ edges_in_path G p ∧ v ∈ e) ⇔ MEM v p)
+Proof
+  rw [edges_in_path_alt] >> eq_tac
+  >- (strip_tac
+      >> drule alledges_valid >> rw []
+      >> drule adjacent_MEM
+      >> strip_tac
+      >> Suff ‘v1 ≠ v2’
+      >- (gs []
+         )
+      >> last_x_assum mp_tac
+      >> qpat_x_assum ‘adjacent _ _ _’ mp_tac
+      >> KILL_TAC
+      >> rw [path_def, adjacent_EL]
+      >> rw [ALL_DISTINCT_EL_IMP]
+     )
+  >> last_x_assum mp_tac >> rw [path_def, walk_def, MEM_EL]
+  >> Cases_on ‘n = 0’
+  >- (qexists_tac ‘{EL 0 p; EL 1 p}’
+      >> rw [GSYM adjacent_fsg]
+      >- (first_x_assum irule
+          >> rw [adjacent_EL]
+          >> qexists_tac ‘0’
+          >> simp []
+         )
+      >> qexistsl_tac [‘HD p’, ‘EL 1 p’] >> simp []
+      >> rw [adjacent_EL]
+      >> qexists_tac ‘0’
+      >> simp []
+     )
+  >> qexists_tac ‘{EL (PRE n) p; EL n p}’
+  >> rw [GSYM adjacent_fsg]
+  >- (ORW [adjacent_fsg_reversible]
+      >> first_x_assum irule
+      >> rw [adjacent_EL]
+      >> qexists_tac ‘PRE n’
+      >> simp [PRE_SUB1]
+     )
+  >> qexistsl_tac [‘EL (PRE n) p’, ‘EL n p’] >> simp []
+  >> rw [adjacent_EL]
+  >> qexists_tac ‘PRE n’
+  >> simp [PRE_SUB1]
+QED
 
+Theorem edges_in_path_imp:
+  ∀G p e v. path G p ∧ e ∈ edges_in_path G p ⇒ ∀v. v ∈ e ⇒ MEM v p
+Proof
+  rw [path_def, walk_def, edges_in_path_alt]
+  >> drule alledges_valid >> rpt strip_tac
+  >> ‘v1 <> v2’ by gvs [ALL_DISTINCT_EL_IMP, adjacent_EL]
+  >> drule adjacent_MEM >> ASM_SET_TAC []
+QED
 
-Definition path_xor_def:
-  path_xor (G: fsgraph) es p = {e | XOR (e ∈ es) (e ∈ edges_in_path G p)}
-End
-
-
-
-(* TODO *)
 Theorem augmenting_path_augments_matching:
   ∀(G: fsgraph) M P. bipartite G ∧ augmenting_path G M P ⇒ ∃M'. matching G M' ∧ CARD M < CARD M'
 Proof
-  rpt STRIP_TAC >> gvs [augmenting_path_def, alternating_path_def, bipartite_alt]
+  rpt STRIP_TAC
+  >> drule_all_then assume_tac augmenting_path_even_length
+  (* >> qabbrev_tac ‘l = LENGTH P’ *)
+  >> gvs [augmenting_path_def, alternating_path_def, bipartite_alt]
   >> ‘M ⊆ E’ by gvs [matching_def]
   >> qabbrev_tac ‘M1 = M ∩ edges_in_path G P’
   >> qabbrev_tac ‘M2 = M DIFF edges_in_path G P’
-  >> sg ‘M = M1 ∪ M2’
+  >> sg ‘M = M1 ∪ M2 ∧ DISJOINT M1 M2’
   >- (gvs [Abbr ‘M1’, Abbr ‘M2’] >> SET_TAC []
      )
-  >> sg ‘DISJOINT M1 M2’
-  >- (rw [Abbr ‘M1’, Abbr ‘M2’] >> SET_TAC []
-     )
-  >> sg ‘M1 = {{EL n P; EL (SUC n) P} | n | ODD n ∧ SUC n < LENGTH P}’
-  >- (gvs [Abbr ‘M1’] >> rw [EXTENSION] >> ORW [IN_EDGE_lemma]
+  >> sg ‘{{EL n P; EL (SUC n) P} | n | ODD n ∧ SUC n < LENGTH P} = M1’
+  >- (ORW [EQ_SYM_EQ]
+      >> gvs [Abbr ‘M1’] >> rw [EXTENSION] >> ORW [IN_EDGE_lemma]
       >> iff_tac
       >- (rw [edges_in_path_def] >> rw []
           >> gvs [adjacent_EL]
@@ -1165,75 +1196,195 @@ Proof
       >- (rw [adjacent_EL] >> qexists_tac ‘n’ >> simp [ADD1])
       >> gvs [path_def, walk_def]
      )
+  >> sg ‘M1' ⊆ E’
+  >- (gvs [path_def, walk_def] >> rw [Abbr ‘M1'’, SUBSET_DEF]
+      >> ORW [GSYM adjacent_fsg]
+      >> first_x_assum irule >> rw [adjacent_EL]
+      >> qexists_tac ‘n’ >> simp [ADD1])
+  >> ASSUME_TAC $ (Q.SPEC ‘G’ o GEN_ALL) FINITE_fsgedges
+  >> ‘FINITE M’ by METIS_TAC [finite_matching]
+  >> ‘FINITE M ∧ FINITE M1'’ by PROVE_TAC [SUBSET_FINITE]
+  >> sg ‘FINITE M1 ∧ FINITE M2’
+  >- (‘M1 ⊆ M ∧ M2 ⊆ M’ by ASM_SET_TAC []
+       >> PROVE_TAC [SUBSET_FINITE]
+     )
   >> qexists_tac ‘M1' ∪ M2’ >> reverse CONJ_TAC
   >- (qpat_x_assum ‘M = _ ∪ _’ (fn t => ORW [t])
       >> ‘M1 ⊆ M ∧ M2 ⊆ M’ by ASM_SET_TAC []
-      >> sg ‘FINITE M1 ∧ FINITE M2’
-      >- (drule_then assume_tac finite_matching
-          >> drule SUBSET_FINITE >> rw []
-         )
-      >> drule_all CARD_UNION_DISJOINT >> disch_tac >> POP_ORW
-      >> sg ‘FINITE M1'’
-      >- (qsuff_tac ‘M1' ⊆ E’
-          >- (ASSUME_TAC $ (Q.SPEC ‘G’ o GEN_ALL) FINITE_fsgedges
-              >> disch_tac >> drule SUBSET_FINITE_I >> rw []
-             )
-          >> gvs [path_def, walk_def] >> rw [Abbr ‘M1'’, SUBSET_DEF]
-          >> ORW [GSYM adjacent_fsg]
-          >> first_x_assum irule >> rw [adjacent_EL]
-          >> qexists_tac ‘n’ >> simp [ADD1]
-         )
-      >> drule_all CARD_UNION_DISJOINT >> disch_tac >> POP_ORW
-      >> simp [] >> qpat_assum ‘M1 = _’ (fn t => ORW [GSYM t])
-      (* >> qabbrev_tac ‘M1'' = {{EL (n+1) P; EL (n+2) P} | n | EVEN n ∧ SUC n < LENGTH P}’ *)
+      >> ASSUME_TAC $ (Q.SPEC ‘G’ o GEN_ALL) FINITE_fsgedges
+      >> simp [CARD_UNION_DISJOINT]
       >> qabbrev_tac ‘M1'' = {{EL n P; EL (SUC n) P} | n | 0 < n ∧ EVEN n ∧ SUC n < LENGTH P}’
-      >> sg ‘M1' = IMAGE (λi. {EL i P; EL (SUC i) P}) {n | EVEN n ∧ SUC n < LENGTH P}’
+      >> qabbrev_tac ‘f = (λi. {EL i P; EL (SUC i) P})’
+      >> sg ‘M1' = IMAGE f {n | EVEN n ∧ SUC n < LENGTH P}’
       >- (rw [Abbr ‘M1'’, Once EXTENSION]
          )
-      >> qabbrev_tac ‘f = (λi. {EL i P; EL (SUC i) P}) ’
-
       >> sg ‘M1'' = IMAGE f {n | 0 < n ∧ EVEN n ∧ SUC n < LENGTH P}’
       >- (rw [Abbr ‘M1''’, Once EXTENSION]
          )
-
       >> sg ‘M1 = IMAGE f {n | ODD n ∧ SUC n < LENGTH P}’
       >- (rw [Once EXTENSION]
          )
-      >> sg ‘ (∀x y. f x = f y ⇔ x = y)’
-      >- (rw [Abbr ‘f’] >> reverse eq_tac
-          >- (rw [])
-          >> rw [INSERT2_lemma]
-          >- (cheat)            (* ALL_DISTINCT_EL_IMP *)
-          >- cheat
-          >> cheat
-         )
-      >> sg ‘CARD {n | ODD n ∧ SUC n < LENGTH P}
-                               = CARD {n | 0 < n ∧ EVEN n ∧ SUC n < LENGTH P}’
-      >- (rw [EXTENSION]
-         )
-
-
-
-
-
-
-      >> sg ‘M1'' ⊆ M1'’
-      >- (rw [Abbr ‘M1''’, Abbr ‘M1'’, SUBSET_DEF]
-          >> qexists_tac ‘n’ >> simp []
-         )
-      >> sg ‘M1'' ≠ M1'’
-      >- (‘∃x. x ∈ M1' ∧ x ∉ M1''’ suffices_by SET_TAC []
-          >> qexists_tac ‘{EL (LENGTH P - 2) P; EL (LENGTH P - 1) P}’
-          >> rw [Abbr ‘M1''’, Abbr ‘M1'’]
-          >- (qexists_tac ‘LENGTH P - 2’ >> ORW [ADD1]
+      >> sg ‘INJ f {(n :num) | SUC n < LENGTH P} E’
+      >- (rw [INJ_DEF, Abbr ‘f’]
+          >- (simp [GSYM adjacent_fsg]
+              >> gvs [path_def, walk_def]
+              >> last_x_assum irule >> ORW [adjacent_EL]
+              >> qexists_tac ‘i’ >> PROVE_TAC [ADD1]
              )
+          >> qpat_x_assum ‘path G P’ mp_tac >> NTAC 3 $ pop_assum mp_tac >> KILL_TAC
+          >> rw [path_def]
+          >> ‘i < LENGTH P ∧ i' < LENGTH P’ by intLib.ARITH_TAC
+          (* irule $ INST_TYPE [alpha |-> “:vertex”] $ iffLR ALL_DISTINCT_EL_IMP does not work: No parse *)
+          >> ‘EL i P = EL i' P’ suffices_by PROVE_TAC [EL_ALL_DISTINCT_EL_EQ]
+          >> gvs [Once INSERT2_lemma, EL_ALL_DISTINCT_EL_EQ]
          )
-      >> ‘CARD M1 = CARD M1''’
-
-
-
-
+      >> ‘∀x y. SUC x < LENGTH P ∧ SUC y < LENGTH P ⇒ f x = f y ⇒ x = y’ by gs [INJ_DEF]
+      >> qabbrev_tac ‘N1 = {n | ODD n ∧ SUC n < LENGTH P}’
+      >> qabbrev_tac ‘N1' = {n | EVEN n ∧ SUC n < LENGTH P}’
+      >> qabbrev_tac ‘N0 = {(n :num) | SUC n < LENGTH P}’
+      >> sg ‘INJ f N1 E ∧ INJ f N1' E’
+      >- (‘N1 ⊆ N0 ∧ N1' ⊆ N0’ by ASM_SET_TAC []
+          >> (CONJ_TAC >> irule INJ_SUBSET >> qexists_tac ‘N0’)
+          >- (qexists_tac ‘E’ >> rw [])
+          >> qexists_tac ‘E’ >> rw []
+         )
+      >> ‘FINITE N1 ∧ FINITE N1'’ by METIS_TAC [FINITE_INJ]
+      >> Suff ‘CARD N1 < CARD N1'’
+      >- (simp [] >> PROVE_TAC [GEN_ALL INJ_CARD_IMAGE])
+      >> sg ‘CARD N1 = CARD $ IMAGE PRE N1’
+      >- (irule FINITE_BIJ_CARD
+          >> simp []
+          >> qexists_tac ‘PRE’ >> simp [BIJ_ALT, IN_FUNSET, PULL_EXISTS, EXISTS_UNIQUE_ALT]
+          >> rw []
+          >> qexists_tac ‘x’ >> simp [EQ_IMP_THM, FORALL_AND_THM]
+          >> qx_gen_tac ‘y’
+          >> strip_tac
+          >> sg ‘x ≠ 0 ∧ y ≠ 0’
+          >- (rpt STRIP_TAC
+              >> qpat_x_assum ‘x ∈ N1’ MP_TAC
+              >> qpat_x_assum ‘y ∈ N1’ MP_TAC
+              >>  qpat_x_assum ‘∀n. SUC n < LENGTH P ⇒ _’ kall_tac
+              >> simp [Abbr ‘N1’]
+             )
+          >> intLib.ARITH_TAC
+         )
+      >> POP_ORW
+      >> irule CARD_PSUBSET >> simp []
+      >> simp [PSUBSET_DEF] >> CONJ_TAC
+      >- (rw [SUBSET_DEF, Abbr ‘N1’, Abbr ‘N1'’]
+          >- (qpat_x_assum ‘ODD _’ mp_tac
+              >> KILL_TAC
+              >> intLib.ARITH_TAC
+             )
+          >> NTAC 2 $ pop_assum mp_tac
+          >> KILL_TAC
+          >> intLib.ARITH_TAC
+         )
+      >> simp [EXTENSION]
+      >> qexists_tac ‘LENGTH P - 2’
+      >> simp [Abbr ‘N1’, Abbr ‘N1'’, EVEN_SUB]
+      >> qpat_x_assum ‘∀n. SUC n < LENGTH P ⇒ _’ kall_tac
+      >> simp [DECIDE ``x = PRE y <=> x = 0 /\ y = 0 \/ y = x + 1``, DISJ_IMP_THM, FORALL_AND_THM]
+     )
+  >> irule matching_UNION
+  >> STRONG_CONJ_TAC
+  >- (Suff ‘BIGUNION M1' = HD P INSERT ((LAST P) INSERT (BIGUNION M1))’
+      >- (‘DISJOINT (BIGUNION M1) (BIGUNION M2)’ by gvs [matching_DISJOINT_UNION_EQ]
+          >> Rewr >> simp [DISJOINT_INSERT, Abbr ‘M2’]
+          >> simp [GSYM IMP_DISJ_THM]
+          >> reverse $ rpt strip_tac >> gvs [unmatched_def]
+         )
+      >> simp [EXTENSION] >> rpt strip_tac >> reverse eq_tac
+      >- (‘P ≠ []’ by gvs [path_def, walk_def]
+          >> qpat_x_assum ‘_ = M1’ (fn t => simp [GSYM t])
+          >> rpt strip_tac
+          >- (qexists_tac ‘{EL 0 P; EL 1 P}’ >> simp [Abbr ‘M1'’]
+              >> qexists_tac ‘0’ >> simp []
+             )
+          >- (qexists_tac ‘{EL (LENGTH P - 2) P; EL (LENGTH P - 1) P}’
+              >> drule LAST_EL
+              >> ORW [DECIDE “LENGTH P - 1 = PRE $ LENGTH P”]
+              >> rw [Abbr ‘M1'’]
+              >> qexists_tac ‘LENGTH P - 2’
+              >> simp [DECIDE “1 < LENGTH P ⇒ PRE (LENGTH P) = SUC (LENGTH P − 2)”]
+              >> rw [EVEN_SUB]
+             )
+          >> Cases_on ‘x = EL n P’
+          >- (qexists_tac ‘{EL (n - 1) P; EL n P}’ >> rw [Abbr ‘M1'’]
+              >> qexists_tac ‘n - 1’ >> CONJ_TAC
+              >- (‘SUC (n - 1) = n’ suffices_by Rewr
+                  >> drule ODD_POS >> simp []
+                 )
+              >> ‘1 ≤ n’ by (drule ODD_POS >> simp [])
+              >> rw [EVEN_SUB] >> ORW [EVEN_ODD] >> simp []
+             )
+          >> ‘x = EL (SUC n) P’ by gvs []
+          >> qpat_x_assum ‘x ≠ _’ K_TAC
+          >> qexists_tac ‘{EL (SUC n) P; EL (n + 2) P}’ >> rw [Abbr ‘M1'’]
+          >> qexists_tac ‘SUC n’ >> simp [ADD1, EVEN_ADD] >> simp [EVEN_ODD]
+          >> ‘1 < LENGTH P - SUC n’ suffices_by simp []
+          >> ‘EVEN $ SUC n’ by (NTAC 2 $ pop_assum mp_tac >> KILL_TAC >> intLib.ARITH_TAC)
+          >> ‘EVEN (LENGTH P - SUC n)’ by gvs [EVEN_SUB]
+          >> (Keep_last_assum 3 >> intLib.ARITH_TAC)
+         )
+      >> simp [Abbr ‘M1'’] >> rpt strip_tac
+      >> Cases_on ‘x = HD P’
+      >- (rw [])
+      >> Cases_on ‘LENGTH P = 2’
+      >- (simp []
+          >> ‘n = 0’ by gvs []
+          >> ‘x = EL (SUC n) P’ by gvs [] >> DISJ1_TAC
+          >> fs [path_def, walk_def] >> drule LAST_EL >> Rewr
+          >> simp []
+         )
+      >> ‘2 < LENGTH P’ by simp [] >> qpat_x_assum ‘_ ≠ 2’ K_TAC
+      >> Cases_on ‘n = 0’
+      >- (‘x = EL 1 P’ by gvs [] >> rpt DISJ2_TAC
+          >> qexists_tac ‘{EL 1 P; EL 2 P}’ >> rw []
+          >> qexists_tac ‘1’
+          >> pop_assum mp_tac >> KILL_TAC >> simp []
+         )
+      >> Cases_on ‘n = LENGTH P - 2’
+      >- (qpat_x_assum ‘x ∈ s’ mp_tac >> qpat_x_assum ‘s = _’ (fn t => ORW [t])
+          >> simp [] >> reverse $ rpt strip_tac
+          >- (pop_assum mp_tac
+              >> simp [DECIDE “2 < a ⇒ SUC (a − 2) = PRE a”]
+              >> disch_then K_TAC
+              >> DISJ1_TAC >> irule $ GSYM LAST_EL
+              >> gvs [path_def, walk_def]
+             )
+          >> DISJ2_TAC
+          >> qexists_tac ‘{EL (LENGTH P - 3) P; EL (LENGTH P - 2) P}’ >> rw []
+          >> qpat_x_assum ‘EVEN (LENGTH P)’ mp_tac >> Keep_last_assum_disch 5
+          >> qexists_tac ‘LENGTH P - 3’
+          >> rw [DECIDE “2 < a ⇒ a - 2 = SUC (a - 3)”]
+          >> ‘ODD (LENGTH P - 2 - 1)’ suffices_by simp []
+          >> rw [ODD_SUB, ODD_EVEN]
+         )
+      >> rpt DISJ2_TAC
+      >> qpat_x_assum ‘x ∈ s’ mp_tac >> qpat_x_assum ‘s = _’ (fn t => ORW [t])
+      >> simp [] >> rpt strip_tac
+      >- (qexists_tac ‘{EL (n-1) P; EL n P}’ >> rw []
+          >> qexists_tac ‘n - 1’ >> Keep_last_assum_disch 6
+          >> simp [ODD_SUB, ODD_EVEN, ADD1]
+         )
+      >> qexists_tac ‘{EL (SUC n) P; EL (n+2) P}’ >> rw []
+      >> qexists_tac ‘n+1’ >> Keep_last_assum_disch 6
+      >> simp [EVEN_ADD, ODD_SUB, ODD_EVEN, ADD1]
+     )
+  >> simp [matching_SUBSET] >> reverse $ rpt strip_tac
+  >- (‘M2 ⊆ M’ by gvs [] >> drule_all matching_SUBSET >> rw []
+     )
+  >> simp [matching_def, Abbr ‘M1'’] >> rpt strip_tac
+  >> Cases_on ‘n = n'’
+  >- gvs []
+  >> ‘ALL_DISTINCT P’ by gvs [path_def]
+  >> Keep_last_assum_disch 9
+  >> ‘n < LENGTH P ∧ n' < LENGTH P’ by simp []
+  >> simp [ALL_DISTINCT_EL_IMP]
+  >> CCONTR_TAC >> gvs [EVEN_ODD, ODD]
 QED
+
 
 Theorem alternating_path_append: (* TODO *)
   ∀G M A B p q. gen_bipartite G A B ∧ alternating_path G M p ∧
@@ -1243,6 +1394,10 @@ Theorem alternating_path_append: (* TODO *)
                 (LAST p ∈ B ⇒ {q; LAST p} ∈ M)
                 ⇒ alternating_path G M (p ++ [q])
 Proof
+  rpt strip_tac >> rw [alternating_path_def]
+  >- gvs [alternating_path_def]
+  >> simp [path_def]
+
   (* rw [] >> Cases_on ‘LAST p ∈ B’ *)
   (* >- (gvs [gen_bipartite_def] >> rw [alternating_path_def] *)
   (*     >- gvs [alternating_path_def] *)
