@@ -2614,8 +2614,8 @@ Proof
 QED
 
 Theorem hnf_children_bnf :
-    !vs y args. ALL_DISTINCT vs /\ bnf (LAMl vs (VAR y @* args)) /\
-                i < LENGTH args ==> bnf (EL i args)
+    !vs y args i. ALL_DISTINCT vs /\ bnf (LAMl vs (VAR y @* args)) /\
+                  i < LENGTH args ==> bnf (EL i args)
 Proof
     rpt STRIP_TAC
  >> qabbrev_tac ‘M1 = VAR y @* args’
@@ -2627,9 +2627,7 @@ Proof
  >> DISCH_THEN (Q.X_CHOOSE_THEN ‘ys’
                  (Q.X_CHOOSE_THEN ‘v’
                    (Q.X_CHOOSE_THEN ‘args'’ STRIP_ASSUME_TAC)))
- >> Know ‘LAMl_size N = n’
- >- (qunabbrevl_tac [‘N’, ‘M1’] >> simp [])
- >> DISCH_TAC
+ >> ‘LAMl_size N = n’ by simp [Abbr ‘N’, Abbr ‘M1’]
  >> Know ‘LENGTH ys = n’
  >- (POP_ASSUM (REWRITE_TAC o wrap o SYM) \\
      Q.PAT_X_ASSUM ‘N = _’ (REWRITE_TAC o wrap) >> simp [])

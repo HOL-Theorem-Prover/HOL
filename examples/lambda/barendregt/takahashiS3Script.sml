@@ -785,6 +785,5 @@ Proof
   simp[benf_def] >> metis_tac[RTC_CASES_RTC_TWICE, takahashi_3_7star]
 QED
 
-
-
 val _ = export_theory();
+val _ = html_theory "takahashiS3";
