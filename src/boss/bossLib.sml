@@ -213,7 +213,8 @@ val U = U
 val op $$ = op $$
 end
 
-fun GEN_CONG_TAC (cfg as {fn_ext,usercongs,setcomp,first}) depth (g as (asl,w)) =
+
+fun GEN_CONG_TAC (cfg as {fn_ext,usercongs,setcomp:bool,first}) depth (g as (asl,w)) =
     if depth <= 0 then ALL_TAC g
     else if not (is_eq w) then
       if first then raise ERR "CONG_TAC" "Goal not an equality"
@@ -261,6 +262,9 @@ fun GEN_CONG_TAC (cfg as {fn_ext,usercongs,setcomp,first}) depth (g as (asl,w)) 
       end g
 
 val default = {fn_ext=true,usercongs=true,setcomp=true,first=true}
+val cfg_cong =
+  fn z => FunctionalRecordUpdate.Fold.post (updateT default, GEN_CONG_TAC) z
+
 fun CONG_TAC d = GEN_CONG_TAC default d
 val cong_tac = CONG_TAC
 
