@@ -627,6 +627,27 @@ val map_every = MAP_EVERY
 fun MAP_FIRST tacf lst = FIRST (map tacf lst)
 
 (* ----------------------------------------------------------------------
+    IF : tactic -> tactic -> tactic -> tactic
+
+    IF g t e runs g on the goal; if it succeeds it continues with t,
+    if it fails it continues with e. This is not the same as
+
+      (g THEN t) ORELSE e
+
+    which catches errors in t as well as g.
+   ---------------------------------------------------------------------- *)
+
+fun IF gt tt et goal =
+      case Lib.total gt goal of
+          NONE => et goal
+        | SOME (sgs, vf) =>
+          let
+            val (gll,vfl) = unzip (map tt sgs)
+          in
+            (List.concat gll, vf o mapshape (map length gll) vfl)
+          end
+
+(* ----------------------------------------------------------------------
     FIRST_LT : tactic -> list_tactic
 
     Given a list of goals, tries to apply tactic argument to all of
