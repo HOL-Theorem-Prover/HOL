@@ -618,6 +618,18 @@ fun REFL_TAC (asl, g) =
       else raise ERR "REFL_TAC" "lhs and rhs not alpha-equivalent"
    end
 
+(* ----------------------------------------------------------------------
+    SYM_TAC : flips the direction of an equality goal
+
+        G ?- x = y
+      ==============
+        G ?- y = x
+   ---------------------------------------------------------------------- *)
+
+fun SYM_TAC g = CONV_TAC (REWR_CONV EQ_SYM_EQ) g
+                handle HOL_ERR _ => raise ERR "SYM_TAC" "Term not an equality"
+val sym_tac = SYM_TAC
+
 (*---------------------------------------------------------------------------*
  * UNDISCH_TAC - moves one of the assumptions as LHS of an implication       *
  * to the goal (fails if named assumption not in assumptions)                *
