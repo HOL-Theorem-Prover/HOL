@@ -3952,6 +3952,41 @@ Proof
  >> Induct_on ‘x’ >> rw [SHORTLEX_def]
 QED
 
+Theorem SHORTLEX_same_lengths :
+    !R h1 h2 t1 t2. LENGTH t1 = LENGTH t2 ==>
+                   (SHORTLEX R (h1::t1) (h2::t2) <=>
+                    R h1 h2 \/ h1 = h2 /\ SHORTLEX R t1 t2)
+Proof
+    rw [SHORTLEX_THM]
+QED
+
+(* NOTE: ‘antisymmetric’ (together with ‘transitive’) is sufficient for using
+   iterateTheory.TOPOLOGICAL_SORT' to sort a list of lists w.r.t. ‘SHORTLEX R’.
+
+   The antecedent ‘irreflexive R’ is necessary.
+ *)
+Theorem SHORTLEX_antisymmetric :
+    !R. irreflexive R /\ antisymmetric R ==> antisymmetric (SHORTLEX R)
+Proof
+    rw [antisymmetric_def, irreflexive_def]
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> qid_spec_tac ‘y’
+ >> qid_spec_tac ‘x’
+ >> Induct_on ‘x’
+ >- rw [SHORTLEX_THM]
+ >> rpt STRIP_TAC
+ >> Cases_on ‘y’ >- fs [SHORTLEX_THM]
+ >> Q.RENAME_TAC [‘h1::t1 = h2::t2’]
+ >> ‘LENGTH (h1::t1) <= LENGTH (h2::t2)’ by PROVE_TAC [SHORTLEX_LENGTH_LE]
+ >> ‘LENGTH (h2::t2) <= LENGTH (h1::t1)’ by PROVE_TAC [SHORTLEX_LENGTH_LE]
+ >> ‘LENGTH (h1::t1) = LENGTH (h2::t2)’ by PROVE_TAC [LESS_EQUAL_ANTISYM]
+ >> FULL_SIMP_TAC arith_ss [LENGTH]
+ >> Q.PAT_X_ASSUM ‘SHORTLEX R (h1::t1) (h2::t2)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘SHORTLEX R (h2::t2) (h1::t1)’ MP_TAC
+ >> rw [SHORTLEX_same_lengths] (* 5 subgoals *)
+ >> PROVE_TAC []
+QED
+
 val WF_SHORTLEX_same_lengths = Q.store_thm(
   "WF_SHORTLEX_same_lengths",
   ‘WF R ==>
