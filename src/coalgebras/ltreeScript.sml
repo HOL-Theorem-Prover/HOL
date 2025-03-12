@@ -12,7 +12,7 @@ open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory listTheory rich_listTheory llistTheory alistTheory optionTheory
      pred_setTheory relationTheory pairTheory combinTheory set_relationTheory
-     hurdUtils;
+     hurdUtils iterateTheory tautLib;
 
 open monadsyntax;
 val _ = enable_monadsyntax ();
@@ -1065,6 +1065,7 @@ Definition ltree_delete_def :
                     else
                       (d,len))
 End
+Overload ltree_delete' = “ltree_delete I”
 
 Theorem ltree_delete_NIL :
     !f a ts.
@@ -1388,9 +1389,10 @@ Definition ltree_insert_def :
                     else
                        THE (ltree_el t0 (DROP (LENGTH p + 1) ns)))
 End
+Overload ltree_insert' = “ltree_insert I”
 
 Theorem ltree_insert_NIL :
-    !f a ts.
+    !f a ts t0.
          ltree_insert f (Branch a ts) [] t0 =
          if LFINITE ts then
             Branch (f a)
@@ -1475,7 +1477,7 @@ Proof
  >> rw [gen_ltree_unchanged_extra]
 QED
 
-Theorem ltree_finite_insert :
+Theorem ltree_finite_ltree_insert_lemma[local] :
     !f p t t0 d len.
        ltree_finite t /\ ltree_el t p = SOME (d,len) /\
        ltree_finite t0 ==> ltree_finite (ltree_insert f t p t0)
@@ -1526,9 +1528,214 @@ Proof
  >> simp []
 QED
 
-(* NOTE: These are simple versions not modifying ltree node data. *)
-Overload ltree_delete' = “ltree_delete I”
-Overload ltree_insert' = “ltree_insert I”
+Theorem ltree_finite_ltree_insert :
+    !f p t t0.
+       ltree_finite t /\ p IN ltree_paths t /\ ltree_finite t0 ==>
+       ltree_finite (ltree_insert f t p t0)
+Proof
+    rw [ltree_paths_alt_ltree_el, GSYM IS_SOME_EQ_NOT_NONE, IS_SOME_EXISTS]
+ >> rename1 ‘ltree_el t p = SOME y’
+ >> Cases_on ‘y’
+ >> MATCH_MP_TAC ltree_finite_ltree_insert_lemma
+ >> qexistsl_tac [‘q’, ‘r’] >> art []
+QED
+
+Theorem ltree_insert_path_stable :
+    !f p t t0. p IN ltree_paths t ==> p IN ltree_paths (ltree_insert f t p t0)
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> Induct_on ‘p’ >- rw []
+ >> rpt STRIP_TAC
+ >> fs [ltree_paths_alt_ltree_el]
+ >> POP_ASSUM MP_TAC
+ >> Cases_on ‘t’ >> simp [ltree_el_def]
+ >> Cases_on ‘LNTH h ts’ >> simp []
+ >> STRIP_TAC
+ (* applying ltree_delete_CONS *)
+ >> MP_TAC (Q.SPECL [‘f’, ‘a’, ‘ts’, ‘h’, ‘p’, ‘x’, ‘t0’] ltree_insert_CONS)
+ >> simp []
+ >> DISCH_THEN K_TAC
+ >> rw [ltree_el_def, LNTH_LGENLIST]
+ >> Cases_on ‘LLENGTH ts’ >> simp []
+ >> rename1 ‘LLENGTH ts = SOME n’
+ >> Know ‘IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EXISTS]
+ >> rw [LNTH_IS_SOME, LFINITE_LLENGTH]
+QED
+
+Theorem ltree_el_ltree_insert :
+    !f p t t0. ltree_el t p = SOME (a,SOME n) ==>
+               ltree_el (ltree_insert f t p t0) p = SOME (f a,SOME (SUC n))
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> Induct_on ‘p’
+ >- (rpt STRIP_TAC \\
+     Cases_on ‘t’ >> fs [ltree_el_def, ltree_insert_NIL] \\
+    ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+     simp [ltree_el_def])
+ >> rpt STRIP_TAC
+ >> Cases_on ‘t’ >> fs [ltree_el_def]
+ >> Cases_on ‘LNTH h ts’ >> fs []
+ >> MP_TAC (Q.SPECL [‘f’, ‘a'’, ‘ts’, ‘h’, ‘p’, ‘x’, ‘t0’] ltree_insert_CONS)
+ >> simp []
+ >> DISCH_THEN K_TAC
+ >> rw [ltree_el_def, LNTH_LGENLIST]
+ >> Cases_on ‘LLENGTH ts’ >> simp []
+ >> rename1 ‘LLENGTH ts = SOME N’
+ >> Know ‘IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EXISTS]
+ >> rw [LNTH_IS_SOME, LFINITE_LLENGTH]
+QED
+
+(* |- !p t t0.
+        ltree_el t p = SOME (a,SOME n) ==>
+        ltree_el (ltree_insert I t p t0) p = SOME (a,SOME (SUC n))
+ *)
+Theorem ltree_el_ltree_insert' =
+        ltree_el_ltree_insert |> Q.SPEC ‘I’ |> SRULE []
+
+Theorem ltree_insert_paths :
+    !f p t a n.
+       ltree_el t p = SOME (a,SOME n) ==>
+       ltree_paths (ltree_insert f t p t0) =
+       ltree_paths t UNION (IMAGE (\q. SNOC n p ++ q) (ltree_paths t0))
+Proof
+    Q.X_GEN_TAC ‘f’
+ >> Induct_on ‘p’
+ >- (rw [ltree_paths_alt_ltree_el] \\
+     Cases_on ‘t’ >> fs [ltree_el_def, ltree_lookup_def] \\
+     Q.PAT_X_ASSUM ‘a' = a’ K_TAC \\
+    ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+     MP_TAC (Q.SPECL [‘f’, ‘a’, ‘ts’, ‘t0’] ltree_insert_NIL) >> simp [] \\
+     DISCH_THEN K_TAC \\
+     rw [Once EXTENSION] \\
+     EQ_TAC >> rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Cases_on ‘x’ >> fs [ltree_el_def, LNTH_LGENLIST] \\
+       Cases_on ‘h < n + 1’ >> fs [] \\
+      ‘h = n \/ h < n’ by rw [] >- fs [] \\
+       fs [] \\
+       Know ‘IS_SOME (LNTH h ts)’ >- rw [LFINITE_LNTH_IS_SOME] \\
+       REWRITE_TAC [IS_SOME_EXISTS] \\
+       rw [] \\
+       CCONTR_TAC >> fs [],
+       (* goal 2 (of 2) *)
+       Cases_on ‘x’ >> fs [ltree_el_def, LNTH_LGENLIST] \\
+       Cases_on ‘LNTH h ts’ >> fs [] \\
+       Know ‘IS_SOME (LNTH h ts)’ >- rw [] \\
+       rw [LFINITE_LNTH_IS_SOME] \\
+       CCONTR_TAC >> fs [] ])
+ (* stage work *)
+ >> rpt STRIP_TAC
+ >> ‘!q. SNOC n (h::p) ++ q = h::(SNOC n p ++ q)’ by rw []
+ >> POP_ORW
+ >> ‘SNOC n (h::p) = h::SNOC n p’ by rw []
+ >> POP_ORW
+ >> Cases_on ‘t’
+ >> POP_ASSUM MP_TAC
+ >> simp [ltree_el_def, ltree_lookup_def]
+ >> Cases_on ‘LNTH h ts’ >> simp []
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘f’, ‘a'’, ‘ts’, ‘h’, ‘p’, ‘x’, ‘t0’] ltree_insert_CONS)
+ >> simp []
+ >> DISCH_THEN K_TAC
+ >> simp [Once ltree_paths_alt_ltree_el]
+ >> simp [Once EXTENSION]
+ >> Q.X_GEN_TAC ‘ns’
+ >> EQ_TAC >> rw []
+ >| [ (* goal 1 (of 3) *)
+      Cases_on ‘ns’ >> fs [ltree_el_def, LNTH_LGENLIST] \\
+      POP_ASSUM MP_TAC \\
+      Cases_on ‘LLENGTH ts’ >> simp []
+      >- (Cases_on ‘h' = h’ >> simp []
+          >- (POP_ASSUM K_TAC \\
+              DISCH_TAC \\
+              Know ‘t IN ltree_paths (ltree_insert f x p t0)’
+              >- rw [ltree_paths_alt_ltree_el] \\
+              Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
+              simp [] >> DISCH_THEN K_TAC \\
+              rw [ltree_paths_alt_ltree_el, ltree_el_def]) \\
+          rw [ltree_paths_alt_ltree_el, ltree_el_def] \\
+          Cases_on ‘LNTH h' ts’ >> simp []
+          >- (Know ‘~LFINITE ts’ >- rw [LFINITE_LLENGTH] \\
+              DISCH_TAC \\
+              fs [infinite_lnth_some] \\
+              POP_ASSUM (MP_TAC o Q.SPEC ‘h'’) >> rw []) \\
+          fs []) \\
+      rename1 ‘LLENGTH ts = SOME N’ \\
+      Cases_on ‘h' < N’ >> simp [] \\
+      Cases_on ‘h' = h’ >> simp []
+      >- (POP_ASSUM (fs o wrap) \\
+          DISCH_TAC \\
+          Know ‘t IN ltree_paths (ltree_insert f x p t0)’
+          >- rw [ltree_paths_alt_ltree_el] \\
+          Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
+          simp [] >> DISCH_THEN K_TAC \\
+          rw [ltree_paths_alt_ltree_el, ltree_el_def]) \\
+      rw [ltree_paths_alt_ltree_el, ltree_el_def] \\
+      Cases_on ‘LNTH h' ts’ >> simp []
+      >- (‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+          Know ‘IS_SOME (LNTH h' ts)’ >- rw [LFINITE_LNTH_IS_SOME] \\
+          rw [IS_SOME_EXISTS]) \\
+      fs [],
+      (* goal 2 (of 3) *)
+      Cases_on ‘ns’ >> fs []
+      >- (simp [ltree_el_def, LNTH_LGENLIST]) \\
+      simp [ltree_el_def, LNTH_LGENLIST] \\
+      Cases_on ‘LLENGTH ts’ >> simp []
+      >- (Cases_on ‘h' = h’ >> simp []
+          >- (POP_ASSUM (fs o wrap) \\
+              Know ‘ltree_el (ltree_insert f x p t0) t <> NONE <=>
+                    t IN ltree_paths (ltree_insert f x p t0)’
+              >- rw [ltree_paths_alt_ltree_el] >> Rewr' \\
+              Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
+              simp [] >> DISCH_THEN K_TAC \\
+              Q.PAT_X_ASSUM ‘h::t IN ltree_paths (Branch a' ts)’ MP_TAC \\
+              simp [ltree_paths_alt_ltree_el, ltree_el_def]) \\
+          fs [] \\
+          Q.PAT_X_ASSUM ‘h'::t IN ltree_paths (Branch a' ts)’ MP_TAC \\
+          simp [ltree_paths_alt_ltree_el, ltree_el_def] \\
+          Cases_on ‘LNTH h' ts’ >> simp []) \\
+      rename1 ‘LLENGTH ts = SOME N’ \\
+      Cases_on ‘h' < N’ >> simp []
+      >- (Cases_on ‘h' = h’ >> simp []
+          >- (POP_ASSUM (fs o wrap) \\
+              Know ‘ltree_el (ltree_insert f x p t0) t <> NONE <=>
+                    t IN ltree_paths (ltree_insert f x p t0)’
+              >- rw [ltree_paths_alt_ltree_el] >> Rewr' \\
+              Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
+              simp [] >> DISCH_THEN K_TAC \\
+              Q.PAT_X_ASSUM ‘h::t IN ltree_paths (Branch a' ts)’ MP_TAC \\
+              rw [ltree_paths_alt_ltree_el, ltree_el_def]) \\
+          fs [] \\
+          Q.PAT_X_ASSUM ‘h'::t IN ltree_paths (Branch a' ts)’ MP_TAC \\
+          simp [ltree_paths_alt_ltree_el, ltree_el_def] \\
+          Cases_on ‘LNTH h' ts’ >> simp []) \\
+     ‘N <= h'’ by rw [] \\
+      Q.PAT_X_ASSUM ‘h'::t IN ltree_paths (Branch a' ts)’ MP_TAC \\
+      simp [ltree_paths_alt_ltree_el, ltree_el_def] \\
+      Cases_on ‘LNTH h' ts’ >> simp [] \\
+     ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+      Know ‘IS_SOME (LNTH h' ts)’ >- rw [IS_SOME_EXISTS] \\
+      simp [LFINITE_LNTH_IS_SOME],
+      (* goal 3 (of 3) *)
+      simp [ltree_el_def, LNTH_LGENLIST] \\
+      Cases_on ‘LLENGTH ts’ >> simp []
+      >- (Know ‘ltree_el (ltree_insert f x p t0) (p ++ [n] ++ q) <> NONE <=>
+                p ++ [n] ++ q IN ltree_paths (ltree_insert f x p t0)’
+          >- rw [ltree_paths_alt_ltree_el] >> Rewr' \\
+          Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
+          simp []) \\
+      rename1 ‘LLENGTH ts = SOME N’ \\
+      Cases_on ‘h < N’ >> simp []
+      >- (Know ‘ltree_el (ltree_insert f x p t0) (p ++ [n] ++ q) <> NONE <=>
+                p ++ [n] ++ q IN ltree_paths (ltree_insert f x p t0)’
+          >- rw [ltree_paths_alt_ltree_el] >> Rewr' \\
+          Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
+          simp []) \\
+     ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+      Know ‘IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EXISTS] \\
+      ASM_SIMP_TAC bool_ss [LFINITE_LNTH_IS_SOME] \\
+      simp [] ]
+QED
 
 (* This is the number of children at certain ltree node (NONE means infinite).
    NOTE: It makes the statements of the [ltree_insert_delete], slightly nicer.
@@ -1554,7 +1761,13 @@ Proof
  >> rw [ltree_paths_def]
 QED
 
-Theorem ltree_branching_thm :
+Theorem ltree_branching_NIL :
+    !a ts. ltree_branching (Branch a ts) [] = LLENGTH ts
+Proof
+    rw [ltree_branching_def, ltree_el_def]
+QED
+
+Theorem ltree_branching_CONS :
     !h p a ts. h::p IN ltree_paths (Branch a ts) ==>
                ltree_branching (Branch a ts) (h::p) =
                ltree_branching (THE (LNTH h ts)) p
@@ -1562,6 +1775,36 @@ Proof
     rpt GEN_TAC
  >> rw [ltree_paths_alt_ltree_el, ltree_el_def, ltree_branching_def]
  >> Cases_on ‘LNTH h ts’ >> fs []
+QED
+
+Theorem ltree_branching_ltree_paths :
+    !p t m. p IN ltree_paths t /\ ltree_branching t p = SOME m ==>
+            !h. h < m <=> SNOC h p IN ltree_paths t
+Proof
+    Induct_on ‘p’
+ >- (rpt GEN_TAC \\
+     Cases_on ‘t’ \\
+     rw [ltree_el_def, ltree_branching_NIL, ltree_paths_alt_ltree_el] \\
+     Cases_on ‘LNTH h ts’ >> simp [ltree_el] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+      ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+       Know ‘~IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EQ_NOT_NONE] \\
+       ASM_SIMP_TAC bool_ss [LFINITE_LNTH_IS_SOME] \\
+       simp [],
+       (* goal 2 (of 2) *)
+      ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+       Know ‘IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EXISTS] \\
+       ASM_SIMP_TAC bool_ss [LFINITE_LNTH_IS_SOME] \\
+       simp [] ])
+ >> rpt STRIP_TAC
+ >> Cases_on ‘t’
+ >> POP_ASSUM MP_TAC
+ >> simp [ltree_branching_CONS]
+ >> POP_ASSUM MP_TAC
+ >> simp [ltree_paths_alt_ltree_el, ltree_el_def]
+ >> Cases_on ‘LNTH h ts’ >> simp []
+ >> rpt STRIP_TAC
+ >> fs [ltree_paths_alt_ltree_el]
 QED
 
 Theorem ltree_insert_delete :
@@ -1886,7 +2129,7 @@ Proof
  >> Rewr'
  (* final goal: ltree_finite t' ==> ltree_finite (ltree_insert' t' p t0) *)
  >> ‘ltree_finite t0’ by simp [ltree_finite, Abbr ‘t0’]
- >> irule ltree_finite_insert >> art []
+ >> irule ltree_finite_ltree_insert_lemma >> art []
  >> qexistsl_tac [‘a'’, ‘SOME i’]
  >> qunabbrev_tac ‘t'’
  >> MATCH_MP_TAC ltree_el_ltree_delete' >> art []
@@ -1930,6 +2173,21 @@ Definition from_rose_def:
 Termination
   WF_REL_TAC `measure (rose_tree_size (K 0))` \\ rw []
 End
+
+Theorem from_rose_def[allow_rebind] :
+    !ts a. from_rose (Rose a ts) = Branch a (fromList (MAP from_rose ts))
+Proof
+    rw [from_rose_def, LIST_EQ_REWRITE, EL_MAP]
+QED
+
+Theorem from_rose :
+    !t. from_rose t =
+        Branch (rose_node t) (fromList (MAP from_rose (rose_children t)))
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘t’
+ >> simp [Once from_rose_def]
+QED
 
 Theorem rose_tree_induction[allow_rebind] = from_rose_ind;
 
@@ -2035,6 +2293,303 @@ Definition rose_reduce_def :
 Termination
     WF_REL_TAC ‘measure (rose_tree_size (K 0) o SND)’
 End
+
+Theorem rose_reduce_def[allow_rebind] :
+    !f a ts. rose_reduce f (Rose a ts) = f a (MAP (rose_reduce f) ts)
+Proof
+    rw [rose_reduce_def]
+ >> AP_TERM_TAC
+ >> rw [LIST_EQ_REWRITE, EL_MAP]
+QED
+
+Theorem rose_reduce :
+    !f t. rose_reduce f t = f (rose_node t) (MAP (rose_reduce f) (rose_children t))
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘t’
+ >> simp [Once rose_reduce_def]
+QED
+
+(*---------------------------------------------------------------------------*
+ *  index function of ltree paths
+ *---------------------------------------------------------------------------*)
+
+Overload ltree_path_lt = “SHORTLEX ($< :num -> num -> bool)”
+
+Theorem ltree_path_lt =
+        SHORTLEX_THM |> Q.GEN ‘R’ |> ISPEC “($< :num -> num -> bool)”
+
+(* The first two properties are required by TOPOLOGICAL_SORT' *)
+Theorem ltree_path_lt_transitive :
+    transitive ltree_path_lt
+Proof
+    rw [SHORTLEX_transitive]
+QED
+
+Theorem ltree_path_lt_antisymmetric :
+    antisymmetric ltree_path_lt
+Proof
+    MATCH_MP_TAC SHORTLEX_antisymmetric
+ >> rw [relationTheory.irreflexive_def,
+        relationTheory.antisymmetric_def]
+QED
+
+Theorem ltree_path_lt_irreflexive :
+    irreflexive ltree_path_lt
+Proof
+    MATCH_MP_TAC SHORTLEX_irreflexive
+ >> rw [relationTheory.irreflexive_def]
+QED
+
+(* “path_index” sorts the ltree paths set and index it from smaller elements *)
+Theorem path_index_exists[local] :
+    !s. FINITE s ==>
+        ?f. s = IMAGE f (count (CARD s)) /\
+            !j k. j < CARD s /\ k < CARD s /\ j < k ==> ~ltree_path_lt (f k) (f j)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC TOPOLOGICAL_SORT'
+ >> rw [HAS_SIZE, ltree_path_lt_transitive, ltree_path_lt_antisymmetric]
+QED
+
+(* |- !s. FINITE s ==>
+          s = IMAGE (path_index s) (count (CARD s)) /\
+          !j k.
+            j < CARD s /\ k < CARD s /\ j < k ==>
+            ~ltree_path_lt (path_index s k) (path_index s j)
+ *)
+val path_index_def = new_specification
+  ("path_index_def", ["path_index"],
+    SIMP_RULE std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] path_index_exists);
+
+Theorem path_index_in_paths :
+    !s i. FINITE s /\ i < CARD s ==> path_index s i IN s
+Proof
+    rpt STRIP_TAC
+ >> drule path_index_def >> rw []
+ >> Suff ‘path_index s i IN IMAGE (path_index s) (count (CARD s))’
+ >- (Q.PAT_X_ASSUM ‘s = _’ (REWRITE_TAC o wrap o SYM))
+ >> rw []
+ >> Q.EXISTS_TAC ‘i’ >> simp []
+QED
+
+Overload ltree_path_le = “RC ltree_path_lt”
+
+Theorem ltree_path_le_total :
+    total ltree_path_le
+Proof
+    MATCH_MP_TAC SHORTLEX_total
+ >> rw [total_def, RC_DEF]
+QED
+
+(* NOTE: A more complete picture of ‘path_index’. Now SHORTLEX_total is involved
+   in addition to transitive and antisymmetric.
+ *)
+Theorem path_index_thm :
+    !s n. s HAS_SIZE n ==>
+          BIJ (path_index s) (count n) s /\
+         !j k. j < n /\ k < n ==>
+              (ltree_path_lt (path_index s j) (path_index s k) <=> j < k)
+Proof
+    rpt GEN_TAC >> simp [HAS_SIZE]
+ >> STRIP_TAC
+ >> MP_TAC (Q.SPEC ‘s’ path_index_def) >> simp []
+ >> STRIP_TAC
+ >> STRONG_CONJ_TAC (* BIJ *)
+ >- (rw [BIJ_ALT, IN_FUNSET, path_index_in_paths] \\
+     rw [EXISTS_UNIQUE_ALT] \\
+     qabbrev_tac ‘n = CARD s’ \\
+     Know ‘y IN IMAGE (path_index s) (count n)’ >- METIS_TAC [] \\
+     rw [IN_IMAGE] \\
+     Q.PAT_X_ASSUM ‘s = IMAGE _ _’ (ASSUME_TAC o SYM) \\
+     Q.EXISTS_TAC ‘x’ >> art [] \\
+     Q.X_GEN_TAC ‘y’ \\
+     reverse EQ_TAC >- rw [] \\
+     rpt STRIP_TAC \\
+     CCONTR_TAC \\
+  (* In this case, we found at least one duplicated index (x or y), thus
+     it should be CARD s < n, conflicting with CARD = n.
+   *)
+     Know ‘s = IMAGE (path_index s) (count n DELETE y)’
+     >- (Q.PAT_X_ASSUM ‘_ = s’ (fn th => REWRITE_TAC [Once (SYM th)]) \\
+         rw [Once EXTENSION] \\
+         EQ_TAC >> rw [] >| (* 2 subgoals *)
+         [ (* goal 1 (of 2) *)
+           rename1 ‘i < n’ \\
+           Cases_on ‘i = y’ >- (Q.EXISTS_TAC ‘x’ >> art []) \\
+           Q.EXISTS_TAC ‘i’ >> art [],
+           (* goal 2 (of 2) *)
+           rename1 ‘i <> y’ \\
+           Q.EXISTS_TAC ‘i’ >> art [] ]) \\
+     DISCH_THEN (MP_TAC o AP_TERM “CARD :num list set -> num”) \\
+     simp [] \\
+     Suff ‘CARD (IMAGE (path_index s) (count n DELETE y)) < n’ >- rw [] \\
+     MATCH_MP_TAC LESS_EQ_LESS_TRANS \\
+     Q.EXISTS_TAC ‘CARD (count n DELETE y)’ >> simp [CARD_IMAGE])
+ >> rw [BIJ_DEF, INJ_DEF]
+ >> qabbrev_tac ‘n = CARD s’
+ (* applying ltree_path_le_total *)
+ >> MP_TAC ltree_path_le_total
+ >> simp [total_def, RC_DEF]
+ >> simp [Once EQ_SYM_EQ, GSYM DISJ_ASSOC]
+ >> simp [TAUT ‘P \/ Q \/ P \/ R <=> Q \/ R \/ P’]
+ >> STRIP_TAC
+ >> reverse EQ_TAC
+ >- (Q.PAT_X_ASSUM ‘!j k. j < n /\ k < n /\ j < k ==> _’
+      (MP_TAC o Q.SPECL [‘j’, ‘k’]) >> rw [] \\
+    ‘j <> k’ by rw [] \\
+     METIS_TAC [])
+ >> STRIP_TAC
+ >> CCONTR_TAC
+ >> fs [NOT_LESS]
+ >> ‘k = j \/ k < j’ by rw []
+ >- (ASSUME_TAC ltree_path_lt_irreflexive \\
+     gs [relationTheory.irreflexive_def])
+ >> Q.PAT_X_ASSUM ‘!j k. j < n /\ k < n /\ j < k ==> _’ (MP_TAC o Q.SPECL [‘k’, ‘j’])
+ >> rw []
+QED
+
+Definition parent_inclusive_def :
+    parent_inclusive (s :num list set) <=>
+    !p q. p IN s /\ q <<= p ==> q IN s
+End
+
+Definition sibling_inclusive_def :
+    sibling_inclusive (s :num list set) <=>
+    !p q. p IN s /\ p <> [] /\ q <> [] /\
+          FRONT q = FRONT p /\ LAST q < LAST p ==> q IN s
+End
+
+Theorem ltree_paths_parent_inclusive :
+    !t. parent_inclusive (ltree_paths t)
+Proof
+    rw [parent_inclusive_def]
+ >> MATCH_MP_TAC ltree_paths_inclusive
+ >> Q.EXISTS_TAC ‘p’ >> art []
+QED
+
+Theorem ltree_paths_parent_inclusive_union :
+    !t1 t2. parent_inclusive (ltree_paths t1 UNION ltree_paths t2)
+Proof
+    rw [parent_inclusive_def, IN_UNION]
+ >| [ (* goal 1 (of 2) *)
+      DISJ1_TAC \\
+      MATCH_MP_TAC ltree_paths_inclusive \\
+      Q.EXISTS_TAC ‘p’ >> art [],
+      (* goal 2 (of 2) *)
+      DISJ2_TAC \\
+      MATCH_MP_TAC ltree_paths_inclusive \\
+      Q.EXISTS_TAC ‘p’ >> art [] ]
+QED
+
+Theorem ltree_paths_sibling_inclusive_lemma[local] :
+    !p t. p IN ltree_paths t /\ p <> [] ==>
+         !q. q <> [] /\ FRONT q = FRONT p /\ LAST q < LAST p ==>
+             q IN ltree_paths t
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘xs = FRONT p’
+ >> qabbrev_tac ‘x = LAST p’
+ >> ‘p = SNOC x xs’ by METIS_TAC [SNOC_LAST_FRONT]
+ >> ‘xs <<= p’ by METIS_TAC [isPREFIX_SNOC]
+ >> Know ‘xs IN ltree_paths t’
+ >- (MATCH_MP_TAC ltree_paths_inclusive \\
+     Q.EXISTS_TAC ‘p’ >> art [])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘p IN ltree_paths t’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘p = SNOC x xs’ (REWRITE_TAC o wrap)
+ >> qabbrev_tac ‘y = LAST q’
+ >> ‘q = SNOC y xs’ by METIS_TAC [SNOC_LAST_FRONT]
+ >> POP_ORW
+ >> fs [ltree_paths_def]
+ >> simp [ltree_lookup_SNOC]
+ >> Q.PAT_X_ASSUM ‘ltree_lookup t xs <> NONE’
+      (MP_TAC o REWRITE_RULE [GSYM IS_SOME_EQ_NOT_NONE])
+ >> simp [IS_SOME_EXISTS]
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘t0’ STRIP_ASSUME_TAC)
+ >> simp []
+ >> Cases_on ‘t0’
+ >> simp [ltree_lookup_def]
+ >> Cases_on ‘LNTH x ts’ >> simp []
+ >> Know ‘IS_SOME (LNTH y ts)’
+ >- (MATCH_MP_TAC LNTH_IS_SOME_MONO \\
+     Q.EXISTS_TAC ‘x’ >> rw [IS_SOME_EXISTS])
+ >> rw [IS_SOME_EXISTS]
+ >> simp []
+QED
+
+Theorem ltree_paths_sibling_inclusive :
+    !t. sibling_inclusive (ltree_paths t)
+Proof
+    rw [sibling_inclusive_def]
+ >> irule ltree_paths_sibling_inclusive_lemma >> art []
+ >> Q.EXISTS_TAC ‘p’ >> art []
+QED
+
+Theorem ltree_paths_sibling_inclusive_union :
+    !t1 t2. sibling_inclusive (ltree_paths t1 UNION ltree_paths t2)
+Proof
+    rw [sibling_inclusive_def, IN_UNION]
+ >| [ (* goal 1 (of 2) *)
+      DISJ1_TAC \\
+      irule ltree_paths_sibling_inclusive_lemma >> art [] \\
+      Q.EXISTS_TAC ‘p’ >> art [],
+      (* goal 2 (of 2) *)
+      DISJ2_TAC \\
+      irule ltree_paths_sibling_inclusive_lemma >> art [] \\
+      Q.EXISTS_TAC ‘p’ >> art [] ]
+QED
+
+Theorem ltree_path_lt_sibling :
+    !p q. p <> [] /\ q <> [] /\ FRONT p = FRONT q /\ LAST p < LAST q ==>
+          ltree_path_lt p q
+Proof
+    Induct_on ‘p’ >> rw []
+ >> Cases_on ‘q’ >> gs []
+ >> Know ‘LENGTH p = LENGTH t’
+ >- (Q.PAT_X_ASSUM ‘FRONT (h::p) = FRONT (h'::t)’
+       (MP_TAC o AP_TERM “LENGTH :num list -> num”) \\
+     simp [])
+ >> rw []
+ >> Know ‘h <= h'’
+ >- (Cases_on ‘p’ >> gs [] \\
+     Cases_on ‘t’ >> gs [])
+ >> DISCH_TAC
+ >> ‘h < h' \/ h = h'’ by rw []
+ >> simp []
+ >> Cases_on ‘p = []’ >> gs []
+ >> Cases_on ‘t = []’ >> gs []
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Cases_on ‘p’ >> gs []
+ >> Cases_on ‘t’ >> gs []
+QED
+
+Theorem ltree_path_lt_sibling' :
+    !x y xs. x < y ==> ltree_path_lt (SNOC x xs) (SNOC y xs)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC ltree_path_lt_sibling
+ >> REWRITE_TAC [FRONT_SNOC, LAST_SNOC]
+ >> simp []
+QED
+
+Theorem finite_branching_ltree_el_cases :
+    !p t. finite_branching t /\ p IN ltree_paths t ==>
+          ?d m. ltree_el t p = SOME (d,SOME m)
+Proof
+    Induct_on ‘p’
+ >- (Q.X_GEN_TAC ‘t’ >> Cases_on ‘t’ \\
+     rw [ltree_el_def, ltree_paths_alt_ltree_el] \\
+     fs [LFINITE_LLENGTH])
+ >> rw [ltree_paths_alt_ltree_el]
+ >> Cases_on ‘t’ >> fs [ltree_el_def]
+ >> Cases_on ‘LNTH h ts’ >> fs []
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> simp [ltree_paths_alt_ltree_el]
+ >> fs [every_LNTH]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘h’ >> art []
+QED
 
 (* tidy up theory exports *)
 

@@ -333,11 +333,6 @@ Proof
  >> qexistsl_tac [‘X’, ‘M’, ‘r’, ‘n’, ‘vs’, ‘M1’] >> simp []
 QED
 
-(* Boehm tree of a single (free) variable ‘VAR y’ *)
-Definition BT_VAR_def :
-    BT_VAR y :boehm_tree = Branch (SOME ([],y)) LNIL
-End
-
 (* Remarks 10.1.3 (iii) [1, p.216]: unsolvable terms all have the same Boehm
    tree (‘bot’). The following overloaded ‘bot’ may be returned by
   ‘THE (ltree_lookup A p)’ when looking up a terminal node of the Boehm tree.

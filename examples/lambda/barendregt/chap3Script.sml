@@ -1621,6 +1621,28 @@ Theorem betastar_TRANS =
         RTC_TRANSITIVE |> Q.ISPEC ‘compat_closure beta’
                        |> REWRITE_RULE [transitive_def]
 
+Theorem lameq_imp_lameta :
+    !M N. M == N ==> lameta M N
+Proof
+    rw [GSYM beta_eta_lameta]
+ >> Know ‘conversion beta RSUBSET conversion (beta RUNION eta)’
+ >- (MATCH_MP_TAC conversion_monotone \\
+     simp [RSUBSET, RUNION])
+ >> rw [RSUBSET]
+ >> POP_ASSUM MATCH_MP_TAC
+ >> rw [GSYM lameq_betaconversion]
+QED
+
+Theorem etaconversion_imp_lameta :
+    !M N. conversion eta M N ==> lameta M N
+Proof
+    rw [GSYM beta_eta_lameta]
+ >> Know ‘conversion eta RSUBSET conversion (beta RUNION eta)’
+ >- (MATCH_MP_TAC conversion_monotone \\
+     simp [RSUBSET, RUNION])
+ >> rw [RSUBSET]
+QED
+
 val _ = export_theory();
 val _ = html_theory "chap3";
 
