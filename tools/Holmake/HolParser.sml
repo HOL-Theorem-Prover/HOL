@@ -401,17 +401,15 @@ structure ToSML = struct
                                              F          T               F
                                              F          F               T *)
           if quietOpen then
-            aux "val _ = let open HOL_Interactive \
-                \val verdict = amquiet() orelse not (!noisy_open)\
-                \in pushquietp verdict end;"
+            aux "val _ = HOL_Interactive.start_open();"
             (* semicolon is needed to make sure this is evaluated before the
                open-s hit *)
           else ();
           regular (p, stop);
           if quietOpen then
             (* implicitly: opened structures can't define HOL_Interactive
-               structures of their own; or call HOL_Interactive.popquietp! *)
-            aux " val _ = HOL_Interactive.popquietp()"
+               structures of their own; or call HOL_Interactive.end_open! *)
+            aux " val _ = HOL_Interactive.end_open();"
           else ();
           stop)
       | DefinitionDecl {head = (p, head), quote, termination, stop, ...} => let
