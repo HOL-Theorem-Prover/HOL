@@ -159,11 +159,11 @@ structure HOL_Interactive : sig
   val print_banner : unit -> unit
   val setquietp : bool -> bool (* returns old value *)
   val start_open : unit -> unit
-  val end_open : unit -> bool
+  val end_open : unit -> unit
   val noisy_open : bool ref
 end =
 struct
-  val last_quiet = ref [true]
+  val quietp_stack = ref [true]
   fun toggle_quietdec () = (
     Meta.quietdec := not (!Meta.quietdec) ;
     !Meta.quietdec
