@@ -198,14 +198,17 @@ fun variantl avoids t =
 
 local
   open FunctionalRecordUpdate
-  fun mkUpdateT z = makeUpdate4 z
+  fun mkUpdateT z = makeUpdate5 z
 in
 fun updateT z = let
-  fun from first fn_ext setcomp usercongs =
-      {first = first, fn_ext = fn_ext, setcomp = setcomp, usercongs = usercongs}
-  fun from' usercongs setcomp fn_ext first =
-      {first = first, fn_ext = fn_ext, setcomp = setcomp, usercongs = usercongs}
-  fun to f {first,fn_ext,setcomp,usercongs} = f first fn_ext setcomp usercongs
+  fun from first flip fn_ext setcomp usercongs =
+      {first = first, flip = flip, fn_ext = fn_ext, setcomp = setcomp,
+       usercongs = usercongs}
+  fun from' usercongs setcomp fn_ext flip first =
+      {first = first, flip = flip, fn_ext = fn_ext, setcomp = setcomp,
+       usercongs = usercongs}
+  fun to f {first,flip,fn_ext,setcomp,usercongs} =
+      f first flip fn_ext setcomp usercongs
 in
   mkUpdateT (from,from',to)
 end z
@@ -214,8 +217,9 @@ val op $$ = op $$
 end
 
 
-fun GEN_CONG_TAC (cfg as {fn_ext,usercongs,setcomp:bool,first}) depth (g as (asl,w)) =
-    if depth <= 0 then ALL_TAC g
+fun GEN_CONG_TAC (cfg as {fn_ext,flip,usercongs,setcomp:bool,first}) depth
+                 (g as (asl,w)) =
+    if depth <= 0 then (if flip then SYM_TAC else ALL_TAC) g
     else if not (is_eq w) then
       if first then raise ERR "CONG_TAC" "Goal not an equality"
       else ALL_TAC g
@@ -224,15 +228,19 @@ fun GEN_CONG_TAC (cfg as {fn_ext,usercongs,setcomp:bool,first}) depth (g as (asl
         open pairSyntax
         val (l,r) = dest_eq w
         val (f1,args) = strip_comb l and (f2, _) = strip_comb r
-        val post = TRY (FIRST [REFL_TAC, FIRST_ASSUM MATCH_ACCEPT_TAC])
+        val post = TRY (FIRST [REFL_TAC, FIRST_ASSUM MATCH_ACCEPT_TAC,
+                               SYM_TAC THEN FIRST_ASSUM MATCH_ACCEPT_TAC])
+        fun FAIL g = raise ERR "CONG_TAC" "Goal not an eliminable equality"
+        val cfg' = updateT cfg (U #first false) $$
         val stdfinisher =
             if aconv f1 f2 then
               let fun strip n = if n <= 0 then ALL_TAC
                                 else MK_COMB_TAC THENL [strip (n - 1), ALL_TAC]
               in
-                strip (length args) THEN post THEN GEN_CONG_TAC cfg (depth - 1)
+                strip (length args) THEN post THEN GEN_CONG_TAC cfg' (depth - 1)
               end
-            else TRY (MK_COMB_TAC THEN post) THEN GEN_CONG_TAC cfg (depth - 1)
+            else IF (MK_COMB_TAC THEN post) (GEN_CONG_TAC cfg' (depth - 1))
+                    (if first then FAIL else ALL_TAC)
       in
         if fn_ext andalso (is_pabs l orelse is_pabs r) then
           let
@@ -249,19 +257,20 @@ fun GEN_CONG_TAC (cfg as {fn_ext,usercongs,setcomp:bool,first}) depth (g as (asl
           in
             CONV_TAC (REWR_CONV FUN_EQ_THM) THEN pairLib.PGEN_TAC usethis THEN
             CONV_TAC (BINOP_CONV (TRY_CONV pairLib.GEN_BETA_CONV)) THEN
-            GEN_CONG_TAC cfg (depth - 1)
+            GEN_CONG_TAC cfg' (depth - 1)
           end
         else if usercongs then
           let val candidates = DefnBase.read_congs()
-              fun user_tac cth = irule cth THEN REPEAT STRIP_TAC THEN
-                                 post THEN GEN_CONG_TAC cfg (depth - 1)
+              fun user_tac cth = irule cth THEN REPEAT STRIP_TAC THEN post
           in
-            FIRST (map user_tac candidates) ORELSE stdfinisher
+            IF (FIRST (map user_tac candidates))
+               (GEN_CONG_TAC cfg' (depth - 1))
+               stdfinisher
           end
         else stdfinisher
       end g
 
-val default = {fn_ext=true,usercongs=true,setcomp=true,first=true}
+val default = {fn_ext=true,usercongs=true,setcomp=true,first=true,flip=false}
 val cfg_cong =
   fn z => FunctionalRecordUpdate.Fold.post (updateT default, GEN_CONG_TAC) z
 
