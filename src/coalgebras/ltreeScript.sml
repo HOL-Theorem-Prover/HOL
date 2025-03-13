@@ -1049,6 +1049,76 @@ Proof
  >> Cases_on ‘t0’ >> simp []
 QED
 
+(* This is the number of children at certain ltree node (NONE means infinite).
+   NOTE: It makes the statements of the [ltree_insert_delete], slightly nicer.
+ *)
+Definition ltree_branching_def :
+    ltree_branching t p = SND (THE (ltree_el t p))
+End
+
+Theorem ltree_branching_alt_ltree_lookup :
+    !p t. p IN ltree_paths t ==>
+          ltree_branching t p = LLENGTH (ltree_children (THE (ltree_lookup t p)))
+Proof
+    Induct_on ‘p’
+ >- rw [ltree_branching_def, ltree_el, ltree_lookup]
+ >> rpt STRIP_TAC
+ >> ‘ltree_lookup t (h::p) <> NONE’ by fs [ltree_paths_def]
+ >> ‘ltree_el     t (h::p) <> NONE’ by fs [ltree_paths_alt_ltree_el]
+ >> Cases_on ‘t’
+ >> fs [ltree_branching_def, ltree_el, ltree_lookup]
+ >> qabbrev_tac ‘t0 = LNTH h ts’
+ >> Cases_on ‘t0’ >> fs []
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [ltree_paths_def]
+QED
+
+Theorem ltree_branching_NIL :
+    !a ts. ltree_branching (Branch a ts) [] = LLENGTH ts
+Proof
+    rw [ltree_branching_def, ltree_el_def]
+QED
+
+Theorem ltree_branching_CONS :
+    !h p a ts. h::p IN ltree_paths (Branch a ts) ==>
+               ltree_branching (Branch a ts) (h::p) =
+               ltree_branching (THE (LNTH h ts)) p
+Proof
+    rpt GEN_TAC
+ >> rw [ltree_paths_alt_ltree_el, ltree_el_def, ltree_branching_def]
+ >> Cases_on ‘LNTH h ts’ >> fs []
+QED
+
+Theorem ltree_branching_ltree_paths :
+    !p t m. p IN ltree_paths t /\ ltree_branching t p = SOME m ==>
+            !h. h < m <=> SNOC h p IN ltree_paths t
+Proof
+    Induct_on ‘p’
+ >- (rpt GEN_TAC \\
+     Cases_on ‘t’ \\
+     rw [ltree_el_def, ltree_branching_NIL, ltree_paths_alt_ltree_el] \\
+     Cases_on ‘LNTH h ts’ >> simp [ltree_el] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+      ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+       Know ‘~IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EQ_NOT_NONE] \\
+       ASM_SIMP_TAC bool_ss [LFINITE_LNTH_IS_SOME] \\
+       simp [],
+       (* goal 2 (of 2) *)
+      ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
+       Know ‘IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EXISTS] \\
+       ASM_SIMP_TAC bool_ss [LFINITE_LNTH_IS_SOME] \\
+       simp [] ])
+ >> rpt STRIP_TAC
+ >> Cases_on ‘t’
+ >> POP_ASSUM MP_TAC
+ >> simp [ltree_branching_CONS]
+ >> POP_ASSUM MP_TAC
+ >> simp [ltree_paths_alt_ltree_el, ltree_el_def]
+ >> Cases_on ‘LNTH h ts’ >> simp []
+ >> rpt STRIP_TAC
+ >> fs [ltree_paths_alt_ltree_el]
+QED
+
 (*---------------------------------------------------------------------------*
  *  ltree_delete: delete the rightmost children at a subtree
  *---------------------------------------------------------------------------*)
@@ -1221,7 +1291,7 @@ Theorem ltree_el_ltree_delete' =
 (* NOTE: “ltree_el t p = SOME (a,SOME (SUC n)” indicates that “SNOC n p” is the
    subtree to be deleted.
  *)
-Theorem ltree_delete_paths :
+Theorem ltree_delete_paths_lemma[local] :
     !f p t a n.
        ltree_el t p = SOME (a,SOME (SUC n)) ==>
        ltree_paths (ltree_delete f t p) =
@@ -1373,6 +1443,24 @@ Proof
      ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
       Know ‘IS_SOME (LNTH h' ts)’ >- rw [IS_SOME_EXISTS] \\
       simp [LFINITE_LNTH_IS_SOME] ]
+QED
+
+Theorem ltree_delete_paths :
+    !f p t n.
+       p IN ltree_paths t /\ ltree_branching t p = SOME (SUC n) ==>
+       ltree_paths (ltree_delete f t p) =
+       ltree_paths t DIFF
+       IMAGE (\q. SNOC n p ++ q) (ltree_paths (THE (ltree_lookup t (SNOC n p))))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC ltree_delete_paths_lemma
+ >> Cases_on ‘t’
+ >> fs [ltree_paths_alt_ltree_el, ltree_branching_def]
+ >> Cases_on ‘p’ >> fs [ltree_el_def]
+ >> Cases_on ‘LNTH h ts’ >> fs []
+ >> Cases_on ‘ltree_el x t’ >> fs []
+ >> rename1 ‘SND y = SOME (SUC n)’
+ >> Cases_on ‘y’ >> fs []
 QED
 
 (* NOTE: “ltree_insert f t p t0” inserts t0 as the right-most children of the
@@ -1592,7 +1680,7 @@ QED
 Theorem ltree_el_ltree_insert' =
         ltree_el_ltree_insert |> Q.SPEC ‘I’ |> SRULE []
 
-Theorem ltree_insert_paths :
+Theorem ltree_insert_paths_lemma[local] :
     !f p t a n.
        ltree_el t p = SOME (a,SOME n) ==>
        ltree_paths (ltree_insert f t p t0) =
@@ -1737,74 +1825,21 @@ Proof
       simp [] ]
 QED
 
-(* This is the number of children at certain ltree node (NONE means infinite).
-   NOTE: It makes the statements of the [ltree_insert_delete], slightly nicer.
- *)
-Definition ltree_branching_def :
-    ltree_branching t p = SND (THE (ltree_el t p))
-End
-
-Theorem ltree_branching_alt_ltree_lookup :
-    !p t. p IN ltree_paths t ==>
-          ltree_branching t p = LLENGTH (ltree_children (THE (ltree_lookup t p)))
+Theorem ltree_insert_paths :
+    !f p t n t0.
+       p IN ltree_paths t /\ ltree_branching t p = SOME n ==>
+       ltree_paths (ltree_insert f t p t0) =
+       ltree_paths t UNION (IMAGE (\q. SNOC n p ++ q) (ltree_paths t0))
 Proof
-    Induct_on ‘p’
- >- rw [ltree_branching_def, ltree_el, ltree_lookup]
- >> rpt STRIP_TAC
- >> ‘ltree_lookup t (h::p) <> NONE’ by fs [ltree_paths_def]
- >> ‘ltree_el     t (h::p) <> NONE’ by fs [ltree_paths_alt_ltree_el]
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC ltree_insert_paths_lemma
  >> Cases_on ‘t’
- >> fs [ltree_branching_def, ltree_el, ltree_lookup]
- >> qabbrev_tac ‘t0 = LNTH h ts’
- >> Cases_on ‘t0’ >> fs []
- >> FIRST_X_ASSUM MATCH_MP_TAC
- >> rw [ltree_paths_def]
-QED
-
-Theorem ltree_branching_NIL :
-    !a ts. ltree_branching (Branch a ts) [] = LLENGTH ts
-Proof
-    rw [ltree_branching_def, ltree_el_def]
-QED
-
-Theorem ltree_branching_CONS :
-    !h p a ts. h::p IN ltree_paths (Branch a ts) ==>
-               ltree_branching (Branch a ts) (h::p) =
-               ltree_branching (THE (LNTH h ts)) p
-Proof
-    rpt GEN_TAC
- >> rw [ltree_paths_alt_ltree_el, ltree_el_def, ltree_branching_def]
+ >> fs [ltree_paths_alt_ltree_el, ltree_branching_def]
+ >> Cases_on ‘p’ >> fs [ltree_el_def]
  >> Cases_on ‘LNTH h ts’ >> fs []
-QED
-
-Theorem ltree_branching_ltree_paths :
-    !p t m. p IN ltree_paths t /\ ltree_branching t p = SOME m ==>
-            !h. h < m <=> SNOC h p IN ltree_paths t
-Proof
-    Induct_on ‘p’
- >- (rpt GEN_TAC \\
-     Cases_on ‘t’ \\
-     rw [ltree_el_def, ltree_branching_NIL, ltree_paths_alt_ltree_el] \\
-     Cases_on ‘LNTH h ts’ >> simp [ltree_el] >| (* 2 subgoals *)
-     [ (* goal 1 (of 2) *)
-      ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
-       Know ‘~IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EQ_NOT_NONE] \\
-       ASM_SIMP_TAC bool_ss [LFINITE_LNTH_IS_SOME] \\
-       simp [],
-       (* goal 2 (of 2) *)
-      ‘LFINITE ts’ by rw [LFINITE_LLENGTH] \\
-       Know ‘IS_SOME (LNTH h ts)’ >- rw [IS_SOME_EXISTS] \\
-       ASM_SIMP_TAC bool_ss [LFINITE_LNTH_IS_SOME] \\
-       simp [] ])
- >> rpt STRIP_TAC
- >> Cases_on ‘t’
- >> POP_ASSUM MP_TAC
- >> simp [ltree_branching_CONS]
- >> POP_ASSUM MP_TAC
- >> simp [ltree_paths_alt_ltree_el, ltree_el_def]
- >> Cases_on ‘LNTH h ts’ >> simp []
- >> rpt STRIP_TAC
- >> fs [ltree_paths_alt_ltree_el]
+ >> Cases_on ‘ltree_el x t’ >> fs []
+ >> rename1 ‘SND y = SOME n’
+ >> Cases_on ‘y’ >> fs []
 QED
 
 Theorem ltree_insert_delete :
@@ -2110,7 +2145,7 @@ Proof
  >> rename1 ‘ltree_lookup t x = SOME t1’
  >> rpt (Q.PAT_X_ASSUM ‘T’ K_TAC)
  (* applying ltree_delete_paths *)
- >> MP_TAC (Q.SPECL [‘I’, ‘p’, ‘t’, ‘a'’, ‘i’] ltree_delete_paths)
+ >> MP_TAC (Q.SPECL [‘I’, ‘p’, ‘t’, ‘a'’, ‘i’] ltree_delete_paths_lemma)
  >> simp []
  >> DISCH_TAC
  >> Q.PAT_X_ASSUM ‘!t. ltree_paths t HAS_SIZE n ==> ltree_finite t’
@@ -2460,7 +2495,7 @@ Definition sibling_inclusive_def :
           FRONT q = FRONT p /\ LAST q < LAST p ==> q IN s
 End
 
-Theorem ltree_paths_parent_inclusive :
+Theorem parent_inclusive_ltree_paths :
     !t. parent_inclusive (ltree_paths t)
 Proof
     rw [parent_inclusive_def]
@@ -2468,21 +2503,22 @@ Proof
  >> Q.EXISTS_TAC ‘p’ >> art []
 QED
 
-Theorem ltree_paths_parent_inclusive_union :
-    !t1 t2. parent_inclusive (ltree_paths t1 UNION ltree_paths t2)
+Theorem parent_inclusive_union :
+    !s1 s2. parent_inclusive s1 /\ parent_inclusive s2 ==>
+            parent_inclusive (s1 UNION s2)
 Proof
     rw [parent_inclusive_def, IN_UNION]
  >| [ (* goal 1 (of 2) *)
       DISJ1_TAC \\
-      MATCH_MP_TAC ltree_paths_inclusive \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
       Q.EXISTS_TAC ‘p’ >> art [],
       (* goal 2 (of 2) *)
       DISJ2_TAC \\
-      MATCH_MP_TAC ltree_paths_inclusive \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
       Q.EXISTS_TAC ‘p’ >> art [] ]
 QED
 
-Theorem ltree_paths_sibling_inclusive_lemma[local] :
+Theorem sibling_inclusive_ltree_paths_lemma[local] :
     !p t. p IN ltree_paths t /\ p <> [] ==>
          !q. q <> [] /\ FRONT q = FRONT p /\ LAST q < LAST p ==>
              q IN ltree_paths t
@@ -2518,25 +2554,26 @@ Proof
  >> simp []
 QED
 
-Theorem ltree_paths_sibling_inclusive :
+Theorem sibling_inclusive_ltree_paths :
     !t. sibling_inclusive (ltree_paths t)
 Proof
     rw [sibling_inclusive_def]
- >> irule ltree_paths_sibling_inclusive_lemma >> art []
+ >> irule sibling_inclusive_ltree_paths_lemma >> art []
  >> Q.EXISTS_TAC ‘p’ >> art []
 QED
 
-Theorem ltree_paths_sibling_inclusive_union :
-    !t1 t2. sibling_inclusive (ltree_paths t1 UNION ltree_paths t2)
+Theorem sibling_inclusive_union :
+    !s1 s2. sibling_inclusive s1 /\ sibling_inclusive s2 ==>
+            sibling_inclusive (s1 UNION s2)
 Proof
     rw [sibling_inclusive_def, IN_UNION]
  >| [ (* goal 1 (of 2) *)
       DISJ1_TAC \\
-      irule ltree_paths_sibling_inclusive_lemma >> art [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
       Q.EXISTS_TAC ‘p’ >> art [],
       (* goal 2 (of 2) *)
       DISJ2_TAC \\
-      irule ltree_paths_sibling_inclusive_lemma >> art [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
       Q.EXISTS_TAC ‘p’ >> art [] ]
 QED
 
