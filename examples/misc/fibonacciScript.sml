@@ -6,7 +6,7 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open arithmeticTheory hurdUtils numLib realTheory realLib;
+open arithmeticTheory hurdUtils numLib realTheory realLib iterateTheory;
 
 val _ = intLib.deprecate_int ();
 val _ = numLib.prefer_num ();
