@@ -3253,8 +3253,6 @@ QED
 
    Outputs: FINITE X /\ FV N (SUBSET FV M) SUBSET X UNION RANK r /\ has_bnf N
            lameta M N /\ BT_paths N = p INSERT BT_paths M
-
-   needs: cc_eta_FV_EQN, takahashi_3_6_0
  *)
 Theorem BT_expand_lemma2 :
     !X M p r B N.
@@ -3307,16 +3305,18 @@ QED
    and ‘LAST p = m’ always hold when adding the new path p.
  *)
 Theorem ltree_paths_BT_expand :
-    !X M p r vs y m.
+    !X M p r m.
        FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
        p IN ltree_paths (BT' X M r) /\
-       ltree_el (BT' X M r) p = SOME (SOME (vs,y),SOME m) ==>
+       ltree_branching (BT' X M r) p = SOME m ==>
        ltree_paths (BT_expand X (BT' X M r) p r) =
        SNOC m p INSERT ltree_paths (BT' X M r)
 Proof
     rw [BT_expand_def]
- >> qabbrev_tac ‘n = LENGTH vs’
  >> qabbrev_tac ‘r' = r + LENGTH p’
+ >> MP_TAC (Q.SPECL [‘X’, ‘M’, ‘p’, ‘r’] BT_ltree_el_cases) >> rw []
+ >> simp []
+ >> qabbrev_tac ‘n = LENGTH vs’
  >> Q_TAC (RNEWS_TAC (“vs' :string list”, “r' :num”, “SUC n”)) ‘X’
  >> qabbrev_tac ‘v = LAST vs'’
  >> qmatch_abbrev_tac
@@ -3325,7 +3325,7 @@ Proof
  >> qabbrev_tac ‘t = BT' X M r’
  >> qabbrev_tac ‘a = SOME (vs,y)’
  (* applying ltree_insert_paths *)
- >> MP_TAC (Q.SPECL [‘f’, ‘p’, ‘t’, ‘a’, ‘m’]
+ >> MP_TAC (Q.SPECL [‘f’, ‘p’, ‘t’, ‘m’, ‘t0’]
                     (INST_TYPE [alpha |-> “:BT_node”] ltree_insert_paths))
  >> simp []
  >> DISCH_THEN K_TAC
@@ -3334,10 +3334,10 @@ Proof
 QED
 
 Theorem ltree_paths_BT_expand' :
-    !X M p r vs y m.
+    !X M p r m.
        FINITE X /\ FV M SUBSET X UNION RANK r /\ has_bnf M /\
        p IN ltree_paths (BT' X M r) /\
-       ltree_el (BT' X M r) p = SOME (SOME (vs,y),SOME m) ==>
+       ltree_branching (BT' X M r) p = SOME m ==>
        ltree_paths (BT_expand X (BT' X M r) p r) =
        SNOC m p INSERT ltree_paths (BT' X M r)
 Proof
@@ -3350,7 +3350,7 @@ Proof
  >> Know ‘BT' X M r = BT' X N r’
  >- (MATCH_MP_TAC lameq_BT_cong >> art [])
  >> DISCH_THEN (fs o wrap)
- >> MP_TAC (Q.SPECL [‘X’, ‘N’, ‘p’, ‘r’, ‘vs’, ‘y’, ‘m’] ltree_paths_BT_expand)
+ >> MP_TAC (Q.SPECL [‘X’, ‘N’, ‘p’, ‘r’, ‘m’] ltree_paths_BT_expand)
  >> simp []
 QED
 
@@ -3487,7 +3487,7 @@ Proof
  >> STRIP_TAC
  >> Suff ‘p = SNOC m p'’
  >- (Rewr' >> MATCH_MP_TAC ltree_paths_BT_expand' \\
-     qexistsl_tac [‘vs’, ‘y’] >> simp [] \\
+     simp [ltree_branching_def] \\
      Q.PAT_X_ASSUM ‘_ = ltree_paths (BT' X N r)’ (simp o wrap o SYM))
  (* final goal: p = SNOC m p' *)
  >> ‘p = SNOC (LAST p) (FRONT p)’
@@ -3595,7 +3595,7 @@ QED
 
 (* Corollary 10.4.3 (ii) [1, p.256]
 
-   Also know as "Hilbert-Post completeness of lambda(beta)+eta".
+   Also known as "Hilbert-Post completeness of lambda(beta)+eta".
  *)
 Theorem lameta_complete :
     !X M N r. FINITE X /\ has_bnf M /\ has_bnf N /\ 0 < r /\
@@ -3613,12 +3613,16 @@ Proof
  >> ‘ltree_paths (BT' X M r) SUBSET paths /\
      ltree_paths (BT' X N r) SUBSET paths’
       by (qunabbrev_tac ‘paths’ >> SET_TAC [])
- >> ‘parent_inclusive paths’
-      by METIS_TAC [ltree_paths_parent_inclusive,
-                    ltree_paths_parent_inclusive_union]
- >> ‘sibling_inclusive paths’
-      by METIS_TAC [ltree_paths_sibling_inclusive,
-                    ltree_paths_sibling_inclusive_union]
+ >> Know ‘parent_inclusive paths’
+ >- (qunabbrev_tac ‘paths’ \\
+     MATCH_MP_TAC parent_inclusive_union \\
+     rw [parent_inclusive_ltree_paths])
+ >> DISCH_TAC
+ >> Know ‘sibling_inclusive paths’
+ >- (qunabbrev_tac ‘paths’ \\
+     MATCH_MP_TAC sibling_inclusive_union \\
+     rw [sibling_inclusive_ltree_paths])
+ >> DISCH_TAC
  >> qabbrev_tac ‘M0 = eta_expand_upto X M r paths’
  >> qabbrev_tac ‘N0 = eta_expand_upto X N r paths’
  >> MP_TAC (Q.SPECL [‘X’, ‘M’, ‘M0’, ‘r’, ‘paths’] eta_expand_upto_thm)
