@@ -175,8 +175,32 @@ sig
                        ('a,'b)gentactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
-  val CONG_TAC       : int -> tactic
-  val cong_tac       : int -> tactic
+  val CONG_TAC       : int option -> tactic
+  val cong_tac       : int option -> tactic
+  val cfg_cong       :
+  (* This function needs to be used with FunctionalRecordUpdate's
+     optional labelled arguments tech.  Ignore the scary type behind the
+     curtain.
+     In particular,
+        cfg_cong (Fld#<fld1> v1) (Fld#<fld2> v2) .. (Fld#<fldn> vn) $$
+     where <fldi> is one of the fields
+        flip, fn_ext, setcomp, or usercongs
+     (all visible at the end of the type below).  n can be 0, meaning that
+     cfg_cong $$ works (and is equal to cong_tac)
+  *)
+   ((((bool -> bool -> bool -> bool -> 'a) -> 'a) *
+   (unit ->
+     {flip: ('b -> 'c) * ('d -> 'b) -> 'd -> 'c,
+       fn_ext: ('e -> 'f -> 'g) * ('h -> 'f) -> 'e -> 'h -> 'g,
+       setcomp: ('i -> 'j -> 'k -> 'l) * ('m -> 'k) -> 'i -> 'j -> 'm -> 'l,
+       usercongs:
+       ('n -> 'o -> 'p -> 'q -> 'r) * ('s -> 'q) ->
+         'n -> 'o -> 'p -> 's -> 'r})) *
+   ((('t ->
+     'u -> 'v -> 'w -> {flip: 't, fn_ext: 'u, setcomp: 'v, usercongs: 'w}) ->
+     {flip: bool, fn_ext: bool, setcomp: bool, usercongs: bool}) * 'x ->
+     int option -> tactic) -> 'y) -> 'y
+  val EQ_MP_CONG_TAC : int option -> thm -> tactic
 
   (* Abbreviations  (see also Q structure) *)
 

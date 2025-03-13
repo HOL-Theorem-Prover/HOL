@@ -240,6 +240,7 @@ fun tyvar_sequence n =
       pretty [] n
     end
 
-
+val Fld = FunctionalRecordUpdate.U
+val $$ = FunctionalRecordUpdate.$$
 
 end;
