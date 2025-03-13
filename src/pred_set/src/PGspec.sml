@@ -18,7 +18,8 @@ open HolKernel boolLib pairSyntax PairedLambda
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars pairTheory.pair_grammars
+  val SOME pair_grammars = grammarDB {thyname="pair"}
+  val (Type,Term) = parse_from_grammars pair_grammars
 end
 open Parse
 

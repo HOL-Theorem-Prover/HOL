@@ -18,7 +18,7 @@ val num_EQ_CONV = Arithconv.NEQ_CONV;
 val EXACT_CONV = jrhUtils.EXACT_CONV; (* conflict with hurdUtils.EXACT_CONV *)
 val assert = Lib.assert;              (* conflict with hurdUtils.assert *)
 
-val _ = add_implicit_rewrites pairTheory.pair_rws;
+val _ = add_implicit_rewrites pairLib.pair_rws;
 
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
 val Strip = S_TAC;

@@ -5,7 +5,7 @@
 open HolKernel Parse boolLib BasicProvers;
 
 open arithmeticTheory TotalDefn simpLib numSimps numLib listTheory metisLib
-     pred_setTheory listSimps dividesTheory;
+     pred_setTheory pred_setSimps listSimps dividesTheory;
 
 val _ = new_theory "listRange";
 

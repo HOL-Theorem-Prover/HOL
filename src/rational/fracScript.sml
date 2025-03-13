@@ -16,7 +16,7 @@ app load [
 *)
 
 open
-        pairTheory schneiderUtils
+        pairTheory pairSyntax schneiderUtils
         arithmeticTheory integerTheory intLib integerRingLib intSyntax
         intExtensionTheory intExtensionLib
 

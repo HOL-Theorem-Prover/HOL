@@ -11,7 +11,8 @@ infix THEN THENC ORELSE ORELSE_TCL;
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+val SOME bool_grammars = Parse.grammarDB {thyname="bool"};
+val _ = Parse.temp_set_grammars bool_grammars
 
 (*---------------------------------------------------------------------------*
  * Miscellaneous bits.                                                       *

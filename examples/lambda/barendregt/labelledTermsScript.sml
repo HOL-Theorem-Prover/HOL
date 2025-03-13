@@ -434,27 +434,19 @@ val l15a = store_thm(
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC ‘{x;v} UNION FV u’ THEN
   SRW_TAC [][lSUB_VAR]);
 
-val ltm_recursion_nosideset = save_thm(
-  "ltm_recursion_nosideset",
-  tm_recursion |> Q.INST [‘A’ |-> ‘{}’] |> REWRITE_RULE [NOT_IN_EMPTY, FINITE_EMPTY])
+Theorem ltm_recursion_nosideset =
+  tm_recursion |> Q.INST [‘A’ |-> ‘{}’]
+               |> REWRITE_RULE [NOT_IN_EMPTY, FINITE_EMPTY]
 
-val term_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \val term_info = \n\
-    \   {nullfv = ``labelledTerms$LAM \"\" (VAR \"\")``,\n\
-    \    pm_rewrites = [],\n\
-    \    pm_constant = ``nomset$mk_pmact labelledTerms$raw_ltpm``,\n\
-    \    fv_rewrites = [],\n\
-    \    recursion_thm = SOME ltm_recursion_nosideset,\n\
-    \    binders = [(``labelledTerms$LAM``, 0, ltpm_ALPHA),\n\
-    \               (``labelledTerms$LAMi``, 1, ltpm_ALPHAi)]}\n\
-    \val _ = binderLib.type_db :=\n\
-    \          Binarymap.insert(!binderLib.type_db, \n\
-    \                           {Thy = \"labelledTerms\", Name=\"lterm\"},\n\
-    \                           binderLib.NTI term_info)\n\
-    \in end;\n"
-
-val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
+val nti = NTI {
+  nullfv = “labelledTerms$LAM "" (VAR "")”,
+  pm_rewrites = [],
+  pm_constant = “nomset$mk_pmact labelledTerms$raw_ltpm”,
+  fv_rewrites = [],
+  recursion_thm = SOME ltm_recursion_nosideset,
+  binders = [(“labelledTerms$LAM”, 0, ltpm_ALPHA),
+             (“labelledTerms$LAMi”, 1, ltpm_ALPHAi)]
+}
+val _ = binderLib.export_nomtype (“:lterm”, nti)
 
 val _ = export_theory()
