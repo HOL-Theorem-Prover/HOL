@@ -13,7 +13,8 @@ open hurdUtils combinTheory tautLib arithmeticTheory pred_setTheory listTheory
 
 open nomsetTheory basic_swapTheory NEWLib termTheory appFOLDLTheory chap2Theory
      chap3Theory horeductionTheory reductionEval solvableTheory takahashiS3Theory
-     head_reductionTheory head_reductionLib standardisationTheory boehmTheory;
+     head_reductionTheory head_reductionLib standardisationTheory boehmTheory
+     chap4Theory;
 
 (* enable basic monad support *)
 open monadsyntax;
@@ -3687,6 +3688,14 @@ Proof
  >> simp []
  >> DISCH_THEN MATCH_MP_TAC
  >> SET_TAC []
+QED
+
+Theorem HP_complete_lameta :
+    HP_complete (UNCURRY eta) has_benf
+Proof
+    RW_TAC std_ss [HP_complete_def, GSYM eta_extend_alt_conversion,
+                   GSYM lameta_asmlam]
+ >> MATCH_MP_TAC lameta_complete_final >> art []
 QED
 
 val _ = export_theory ();
