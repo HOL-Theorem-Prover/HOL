@@ -3,8 +3,8 @@
   including the derivation of parameterized coinduction
 *)
 open HolKernel Parse boolLib bossLib;
-open pred_setTheory;
-open fixedPointTheory posetTheory;
+open pred_setTheory fixedPointTheory;
+open posetTheory;
 
 val _ = new_theory "companion";
 
@@ -103,9 +103,9 @@ Proof
   pop_assum match_mp_tac >> rw[] >>
   (* establish fx < ty *)
   last_x_assum $ qspec_then ‘y’ strip_assume_tac >> pop_assum kall_tac >>
-  pop_assum $ qspec_then ‘f’ strip_assume_tac >>
-  fs[compatible_def, poset_def, function_def] >>
-  metis_tac[compatible_def, monotonic_def]
+  drule_then irule poset_trans >>
+  rw[function_def] >>
+  metis_tac[compatible_def, monotonic_def, function_def]
 QED
 
 Theorem compatible_companion:
@@ -123,8 +123,8 @@ Proof
   fs[compatible_def] >>
   drule_then irule poset_trans >>
   rw[function_in] >>
-  qexists_tac ‘b (f x)’ >>
-  gvs[function_def, monotonic_def, lift_rel]
+  gvs[function_def, monotonic_def, lift_rel] >>
+  metis_tac[]
 QED
 
 Theorem compatible_compose:
@@ -243,7 +243,7 @@ Proof
 QED
 
 (*
- * parameterized coinduction
+ * parameterized formalization following the cawu paper with 2nd order lattice
  *)
 
 Theorem param_coind_init:
@@ -281,10 +281,6 @@ Proof
   simp[function_in] >>
   metis_tac[companion_idem]
 QED
-
-(*
- * parameterized formalization following the cawu paper with 2nd order lattice
- *)
 
 Definition endo_def:
   endo (s,r) f = (monotonic (s,r) f /\ !x. if s x then s (f x) else f x = @y. ~(s y))
@@ -550,9 +546,9 @@ Proof
     metis_tac[function_def, endo_def])
 QED
 
-(* only needs finite lubs aside from t, B and T, completeness is just convenient
-   maybe somehow B_join and the higher companion forces the boundedness?
- *)
+(* only needs finite lubs aside from t, B and T, completeness is just convenient *)
+(*    maybe somehow B_join and the higher companion forces the boundedness? *)
+(*  *)
 Theorem param_coind:
   complete (s,r) /\ complete (endo_lift (s,r)) /\
   poset (s,r) /\ endo (s,r) b /\
@@ -585,7 +581,7 @@ Proof
   rw[endo_lift_def] >>
   irule companion_coinduct >>
   qexistsl_tac [‘B’, ‘endo (s,r)’, ‘T'’] >> rw[] >-
-   (* begin *)
+   (* begin indent *)
    (metis_tac[endo_poset, endo_lift_def]) >-
    (‘?fxl. lub (s,r) { f x ; x } fxl’ by metis_tac[complete_def] >>
     subgoal ‘xy = fxl’ >-
@@ -619,7 +615,7 @@ Proof
     drule_then irule poset_trans >> rw[] >- (metis_tac[lub_def, endo_in]) >>
     ‘?fbxl. lub (s,r) { f (b x') ; b x' } fbxl’ by metis_tac[complete_def] >>
     qexists_tac ‘b (t fbxl)’ >> rw[] >-
-     (* cases *)
+     (* split *)
      (metis_tac[endo_in, lub_def]) >-
      (‘r (t fxl) (t fbxl)’ suffices_by metis_tac[monotonic_def, lub_def,
                                                  endo_def, endo_in] >>
@@ -868,11 +864,10 @@ Proof
    irule (iffRL SUBSET_BIGINTER) >> rw[] >> metis_tac[])
 QED
 
-(* do a deduction step, Y must step to itself or conclude with X *)
-(* proof: functionals on sets form a complete lattice under pointwise inclusion
+(* do a deduction step, Y must step to itself or reach X
+ * proof: functionals on sets form a complete lattice under pointwise inclusion
  * B is monotone with that ordering, and it can be defined via lub = BIGUNION
- * hence B has a greatest fixpoint and we can instantiate
- *)
+ * hence B has a greatest fixpoint and we can instantiate *)
 Theorem set_param_coind:
   monotone b
   ==> Y SUBSET b (set_companion b (X UNION Y))
@@ -901,13 +896,13 @@ Proof
      (rw[function_def, endo_def, monotone_def] >>
       rw[BIGUNION_SUBSET] >>
       rw[BIGUNION, Once SUBSET_DEF] >>
-      qexists_tac ‘fn f X''’ >> metis_tac[SUBSET_DEF]) >>
+      metis_tac[SUBSET_DEF]) >>
     rw[lub_def, endo_def, lift_rel]
     >- (rw[monotone_def, BIGUNION_SUBSET] >>
         rw[BIGUNION, Once SUBSET_DEF] >>
-        qexists_tac ‘fn f X''’ >> metis_tac[SUBSET_DEF])
+        metis_tac[SUBSET_DEF])
     >- (rw[BIGUNION, Once SUBSET_DEF] >>
-        qexists_tac ‘f' f X'’ >> rw[] >>
+        pop_assum $ irule_at Any >>
         qexists_tac ‘f'’ >> rw[] >>
         rw[higher_compat_def, higher_monotone] >-
          (fs[compatible_def, function_def, endo_def, monotonic_def, lift_rel]) >>
@@ -922,8 +917,8 @@ Proof
           rw[monotonic_def, lift_rel, endo_def]) >-
          (rw[GSYM set_B_def] >>
           rw[lift_rel] >>
-          fs[higher_compat_def, endo_def]))) >>
-     (rw[lub_def] >> rw[SUBSET_UNION])
+          fs[higher_compat_def, endo_def]))) >-
+   (rw[lub_def] >> rw[SUBSET_UNION])
 QED
 
 val _ = export_theory();

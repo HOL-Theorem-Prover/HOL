@@ -919,8 +919,8 @@ Proof
   metis_tac[itree_wbisim_coind_upto_equiv]
 QED
 
-(* more compositional variant using the enhanced functional (bt)
- * proof: x < gfp \/ btx < b(K gfp \/ t)x < btx *)
+(* more compositional variant using the enhanced functional (bt) *)
+(* proof: x < gfp \/ btx < b(K gfp \/ t)x < btx *)
 Theorem itree_wbisim_coind_upto':
   !R. UNCURRY R SUBSET
               UNCURRY itree_wbisim UNION
