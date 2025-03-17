@@ -64,8 +64,6 @@ type num = Arbnum.num
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
 
-type thy_addon = {sig_ps    : (unit -> PP.pretty) option,
-                  struct_ps : (unit -> PP.pretty) option}
 open DB_dtype
 
 val delta_hook : TheoryDelta.t Listener.t = Listener.new_listener()
@@ -193,23 +191,21 @@ type segment =
      {thid    : thyid,                                         (* unique id  *)
       facts   : (thm * thminfo) Symtab.table,                 (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
-      adjoin  : thy_addon list,                        (*  extras for export *)
-      adjoinpc: (unit -> PP.pretty) list,
       mldeps  : string HOLset.set}
 local
   open FunctionalRecordUpdate
-  fun seg_mkUp z = makeUpdate6 z
+  fun seg_mkUp z = makeUpdate4 z
 in
   fun update_seg z = let
-    fun from adjoin adjoinpc facts mldeps thid thydata =
-      {adjoin=adjoin, adjoinpc = adjoinpc, facts=facts, mldeps=mldeps,
+    fun from facts mldeps thid thydata =
+      {facts=facts, mldeps=mldeps,
        thid=thid, thydata=thydata}
     (* fields in reverse order to above *)
-    fun from' thydata thid mldeps facts adjoinpc adjoin =
-      {adjoin=adjoin, adjoinpc = adjoinpc, facts=facts, mldeps=mldeps,
+    fun from' thydata thid mldeps facts =
+      {facts=facts, mldeps=mldeps,
        thid=thid, thydata=thydata}
-    fun to f {adjoin, adjoinpc, facts, mldeps, thid, thydata} =
-      f adjoin adjoinpc facts mldeps thid thydata
+    fun to f {facts, mldeps, thid, thydata} =
+      f facts mldeps thid thydata
   in
     seg_mkUp (from, from', to)
   end z
@@ -228,7 +224,7 @@ end (* local *)
  *---------------------------------------------------------------------------*)
 
 fun empty_segment_value thid =
-    {adjoin=[], adjoinpc = [], facts=Symtab.empty, thid=thid, thydata = empty_datamap,
+    {facts=Symtab.empty, thid=thid, thydata = empty_datamap,
      mldeps = HOLset.empty String.compare}
 
 fun fresh_segment s :segment = empty_segment_value (new_thyid s)
@@ -260,7 +256,6 @@ fun thy_parents thyname             = snd (Graph.first
 fun thy_axioms (th:segment)   = filter is_axiom   (#facts th)
 fun thy_theorems (th:segment) = filter is_theorem (#facts th)
 fun thy_defns (th:segment)    = filter is_defn    (#facts th)
-fun thy_addons (th:segment)   = #adjoin th
 end
 
 fun stamp thyname =
@@ -325,12 +320,6 @@ fun add_fact th (seg : segment) =
     in
       update_seg seg (U #facts (updator th (#facts seg))) $$
     end
-
-fun new_addon a (s as {adjoin, ...} : segment) =
-  update_seg s (U #adjoin (a::adjoin)) $$
-
-fun new_addonpc a (s as {adjoinpc, ...} : segment) =
-    update_seg s (U #adjoinpc (a::adjoinpc)) $$
 
 fun add_ML_dep s (seg as {mldeps, ...} : segment) =
   update_seg seg (U #mldeps (HOLset.add(mldeps, s))) $$
@@ -435,27 +424,9 @@ in
       end
 
 
-  val adjoin_to_theory  = inCT new_addon
-  val adjoin_after_completion = inCT new_addonpc
   val zapCT             = inCT zap_segment
 
 end;
-
-local
-  structure PP = HOLPP
-  fun pp_lines l =
-    PP.block PP.CONSISTENT 0
-       (List.concat (map (fn s => [PP.add_string s, PP.NL]) l))
-  val is_empty =
-    fn [] => true
-     | [s] => s = "none" orelse List.all Char.isSpace (String.explode s)
-     | _ => false
-  fun pp l = if is_empty l then NONE else SOME (fn _ => pp_lines l)
-  val qpp = pp o Portable.quote_to_string_list
-in
-  fun quote_adjoin_to_theory q1 q2 =
-    adjoin_to_theory {sig_ps = qpp q1, struct_ps = qpp q2}
-end
 
 (*---------------------------------------------------------------------------*
  *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *
@@ -880,13 +851,6 @@ fun theory_out p ostrm =
    TextIO.closeOut ostrm
  end;
 
-(* automatically reverses the list, which is what is needed. *)
-
-fun unadjzip [] A = A
-  | unadjzip ({sig_ps,struct_ps}::t) (l1,l2) =
-       unadjzip t (sig_ps::l1, struct_ps::l2)
-
-
 (*---------------------------------------------------------------------------
     We always export the theory, except if it is the initial theory (named
     "scratch") and the initial theory is empty. If the initial theory is
@@ -925,16 +889,14 @@ local
 in
 fun export_theory () = if !Globals.interactive then () else let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
-  val {thid,facts,adjoin,adjoinpc,thydata,mldeps,...} = scrubCT()
+  val {thid,facts,thydata,mldeps,...} = scrubCT()
   val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
   val concat = String.concat
   val thyname = thyid_name thid
   val name = thyname^"Theory"
-  val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
   val sigthry = {name = thyname,
                  parents = map thyid_name (Graph.fringe()),
-                 all_thms = all_thms,
-                 sig_ps = sig_ps}
+                 all_thms = all_thms}
   fun mungethydata dmap = let
     fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
         case v of
@@ -960,8 +922,6 @@ fun export_theory () = if !Globals.interactive then () else let
        types = thy_types thyname,
        constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
        all_thms = all_thms,
-       struct_ps = struct_ps,
-       struct_pcps = adjoinpc,
        thydata = mungethydata thydata,
        mldeps = HOLset.listItems mldeps}
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
@@ -1046,9 +1006,9 @@ fun new_theory str =
     Function f tries to extend current theory. If that fails then
     revert to previous state.
 
-    We do not (yet) track changes to the state used by adjoin_to_theory or
-    any hooks, though the hooks should see the changes adding and
-    removing things from the "signature".
+    We do not (yet) track changes to the state used by any hooks, though the
+    hooks should see the changes adding and removing things from the
+    "signature".
    ---------------------------------------------------------------------- *)
 
 fun try_theory_extension f x =

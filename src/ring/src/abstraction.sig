@@ -16,8 +16,6 @@ sig
 
   val param_eq : term -> term
 
-  val export_param_theory : unit -> unit
-
   (*----------------------*)
   type inst_infos =
     { Vals : term list,
@@ -29,5 +27,10 @@ sig
 
   val compute_inst_infos : term list -> inst_infos -> cinst_infos
   val inst_thm_fun : cinst_infos -> thm -> thm
+  val IMPORT : inst_infos -> term list -> (string * thm) list ->
+               thm Symtab.table
+  val IMPORT_THY : inst_infos -> string -> thm Symtab.table
+  val thyTerms : {thyname:string} -> term list
+  val record_terms : term list -> unit
 
 end

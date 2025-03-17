@@ -191,40 +191,16 @@ val inftree_nchotomy = store_thm(
   ``!t. (?a. t = iLf a) \/ (?b d. t = iNd b d)``,
   HO_MATCH_MP_TAC inftree_ind THEN SRW_TAC [][]);
 
-val tyinfo = let
+val _ = let
   open TypeBasePure
 in
-  gen_datatype_info { ax = inftree_Axiom,
-                      ind = inftree_ind,
-                      case_defs = [inftree_case_def]}
+  TypeBase.export (
+    gen_datatype_info {
+      ax = inftree_Axiom,
+      ind = inftree_ind,
+      case_defs = [inftree_case_def]
+    }
+  )
 end
-
-val _ = adjoin_to_theory {
-  sig_ps = NONE,
-  struct_ps = SOME(
-    fn _ => let
-         val bblock = PP.block PP.CONSISTENT 0
-         fun string s = PP.add_string s
-         fun break n = PP.add_break (1,n)
-       in
-         bblock [
-           string "val _ = let",                            break 2,
-           bblock [
-             string    "open TypeBasePure",                   break 0,
-             string    "val tyinfo = gen_datatype_info {",    break 2,
-             bblock [
-               string       "ax = inftree_Axiom,",              break 0,
-               string       "ind = inftree_ind,",               break 0,
-               string       "case_defs = [inftree_case_def]"
-             ], break 0,
-             string    "}"
-           ], break 0,
-           string "in",                                     break 2,
-           string   "TypeBase.write tyinfo",                break 0,
-           string "end"
-         ]
-       end)
-  };
-
 
 val _ = export_theory()

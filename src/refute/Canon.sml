@@ -11,7 +11,8 @@ fun WRAP_ERR x = STRUCT_WRAP "Canon" x;
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars combinTheory.combin_grammars
+val combin_grammars = Option.valOf $ grammarDB {thyname="combin"}
+val _ = Parse.temp_set_grammars combin_grammars
 
 val INST  = HolKernel.INST;
 val subst = HolKernel.subst;

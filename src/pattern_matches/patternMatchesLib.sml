@@ -16,8 +16,9 @@ open oneSyntax
 structure Parse =
 struct
   open Parse
+  val SOME patternMatches_grammars = grammarDB {thyname="patternMatches"}
   val (Type,Term) =
-      parse_from_grammars patternMatchesTheory.patternMatches_grammars
+      parse_from_grammars patternMatches_grammars
 end
 open Parse
 

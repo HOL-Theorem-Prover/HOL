@@ -4,6 +4,8 @@ sig
 
  val add_pair_compset : computeLib.compset -> unit
 
+ val pair_rws : thm list
+
  (* from pairSyntax *)
 
  val mk_prod          : hol_type * hol_type -> hol_type
