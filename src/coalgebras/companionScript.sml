@@ -8,24 +8,6 @@ open posetTheory;
 
 val _ = new_theory "companion";
 
-Theorem glb_unique:
-  poset (s,r) /\
-  glb (s,r) P x /\ glb (s,r) P y
-  ==> x = y
-Proof
-  rw[glb_def] >>
-  drule_then irule poset_antisym >> simp[]
-QED
-
-Theorem lub_unique:
-  poset (s,r) /\
-  lub (s,r) P x /\ lub (s,r) P y
-  ==> x = y
-Proof
-  rw[lub_def] >>
-  drule_then irule poset_antisym >> simp[]
-QED
-
 Theorem lub_is_gfp:
   poset (s,r) /\ function s s f /\ monotonic (s,r) f /\
   lub (s,r) { x | r x (f x) } l
