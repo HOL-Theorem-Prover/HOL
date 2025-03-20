@@ -324,6 +324,20 @@ val gfp_coinduct = store_thm
    ==> r x gfix”,
    RW_TAC bool_ss [gfp_def]);
 
+val glb_unique = Q.store_thm("glb_unique",`
+  poset (s,r) /\
+  glb (s,r) P x /\ glb (s,r) P y
+  ==> x = y`,
+  RW_TAC bool_ss [glb_def] >>
+  drule_then irule poset_antisym >> RW_TAC bool_ss[]);
+
+val lub_unique = Q.store_thm("lub_unique",`
+  poset (s,r) /\
+  lub (s,r) P x /\ lub (s,r) P y
+  ==> x = y`,
+  RW_TAC bool_ss [lub_def] >>
+  drule_then irule poset_antisym >> RW_TAC bool_ss[]);
+
 (* ------------------------------------------------------------------------- *)
 (* The Knaster-Tarski theorem                                                *)
 (* ------------------------------------------------------------------------- *)
