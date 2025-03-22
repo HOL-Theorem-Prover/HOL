@@ -27,7 +27,7 @@ val monitoring = ref 0
 val _ = register_trace ("TFL rewrite monitoring", monitoring, 20);
 
 fun lztrace(i,fname,msgf) = if i <= !monitoring then
-                         Lib.say ("RW."^fname^": "^ msgf() ^ "\n")
+                         Lib.say ("\nRW."^fname^": "^ msgf() ^ "\n")
                       else ()
 
 
@@ -301,10 +301,10 @@ fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm = let
           (set_trace "assumptions" 1;
            case drop_opt (map match rst) of
              [] => (Lib.say (String.concat
-                                 ["RW_STEP:\n", Parse.thm_to_string th]);
+                                 ["\nRW_STEP:\n", Parse.thm_to_string th]);
                     th before set_trace "assumptions" 0)
            | L => (Lib.say (String.concat
-                                ["RW_STEP: multiple rewrites possible \
+                                ["\nRW_STEP: multiple rewrites possible \
                                  \(first taken):\n",
                                  String.concat
                                     (stringulate Parse.thm_to_string (th::L))]);
@@ -600,8 +600,8 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
           (* or paired-lambda term f. In that case, the extraction has  *)
           (* first done a beta-reduction and then extraction, so the    *)
           (* derived rhs needs to be "un-beta-expanded" in order that   *)
-          (* the existential var on the rhs (g)be filled in with a thing*)
-          (* that has function syntax. This will allow the final        *)
+          (* the existential var on the rhs (g) be filled in with a     *)
+          (* lambda abstraction. This will allow the final              *)
           (* MATCH_MP icong ... to  succeed.                            *)
           (*------------------------------------------------------------*)
          fun drop n list =
@@ -722,6 +722,11 @@ fun TOP_DEPTH_QCONV cnv cps tm =
        (THENQC (CHANGED_QCONV (SUB_QCONV (TOP_DEPTH_QCONV cnv)))
                (TRY_QCONV (THENQC cnv (TOP_DEPTH_QCONV cnv)))))
   cps tm;
+
+(*---------------------------------------------------------------------------*)
+(* Actually sweeps down from top of term, unlike DEPTH_QCONV which sweeps up *)
+(* from leaves.                                                              *)
+(*---------------------------------------------------------------------------*)
 
 fun ONCE_DEPTH_QCONV cnv cps tm =
    TRY_QCONV (ORELSEQC cnv (SUB_QCONV (ONCE_DEPTH_QCONV cnv))) cps tm;
