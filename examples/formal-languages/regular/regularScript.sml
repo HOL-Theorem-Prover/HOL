@@ -3901,6 +3901,7 @@ Proof
   gvs [INJ_DEF] >> rw[SURJ_DEF]
 QED
 
+(*
 Theorem sub_nfas_initial:
   wf_nfa N1 ∧ wf_nfa N2 ∧
   sub_nfa N1 N2 ∧ sub_nfa N2 N1
@@ -3920,11 +3921,6 @@ Proof
       >- metis_tac[wf_nfa_def,SUBSET_DEF]
       >- (qabbrev_tac ‘a = LINV fn N1.Q q’ >>
           ‘a ∈ N1.initial’ by metis_tac[] >>
-
-
-‘∃a. a ∈ N1.Q ∧ f a = q’ by
-          metis_tac [
-
 QED
 
 Triviality finite_initial_final[simp]:
@@ -3932,6 +3928,8 @@ Triviality finite_initial_final[simp]:
 Proof
   metis_tac [wf_nfa_def,SUBSET_FINITE]
 QED
+
+STOP
 
 Theorem sub_nfas_isomorphic:
   wf_nfa N1 ∧ wf_nfa N2 ∧
@@ -3980,12 +3978,8 @@ Proof
       >- metis_tac[wf_nfa_def,SUBSET_DEF]
       >- (qabbrev_tac ‘a = LINV fn N1.Q q’ >>
           ‘a ∈ N1.initial’ by metis_tac[] >>
-
-
-‘∃a. a ∈ N1.Q ∧ f a = q’ by
-          metis_tac [
-
 QED
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Accessibility is computed by an instance of depth-first traversal. Here   *)
