@@ -149,6 +149,12 @@ val uniform_distribution_def = Define
 (*  Basic probability theorems                                               *)
 (* ------------------------------------------------------------------------- *)
 
+Theorem PROB_SPACE_REDUCE :
+    !p. (p_space p,events p,prob p) = p
+Proof
+    RW_TAC std_ss [p_space_def, events_def, prob_def, MEASURE_SPACE_REDUCE]
+QED
+
 val POSITIVE_PROB = store_thm
   ("POSITIVE_PROB",
   ``!p. positive p <=> (prob p {} = 0) /\ !s. s IN events p ==> 0 <= prob p s``,
@@ -3641,7 +3647,7 @@ Proof
  >> Know `{i; j} <> {}` >- SET_TAC []
  >> Know `FINITE {i; j}` >- PROVE_TAC [FINITE_INSERT, FINITE_SING]
  >> Know `BIGINTER (IMAGE E {i; j}) = E i INTER E j`
- >- (RW_TAC std_ss [Once EXTENSION, IN_BIGINTER_IMAGE, IN_SING, IN_INSERT, IN_INTER] \\
+ >- (rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
      METIS_TAC [])
  >> RW_TAC std_ss []
  >> `!i. prob p (E i) = (prob p o E) i` by PROVE_TAC [o_DEF] >> POP_ORW
@@ -3664,7 +3670,7 @@ Proof
  >> Know `{i; j} <> {}` >- SET_TAC []
  >> Know `FINITE {i; j}` >- PROVE_TAC [FINITE_INSERT, FINITE_SING]
  >> Know `!E. BIGINTER (IMAGE E {i; j}) = E i INTER E j`
- >- (RW_TAC std_ss [Once EXTENSION, IN_BIGINTER_IMAGE, IN_SING, IN_INSERT, IN_INTER] \\
+ >- (rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
      METIS_TAC [])
  >> Know `!E. PI (prob p o E) {i; j} = prob p (E i) * prob p (E j)`
  >- (GEN_TAC \\
