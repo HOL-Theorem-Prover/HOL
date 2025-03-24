@@ -2248,6 +2248,51 @@ Proof
  >> Q.EXISTS_TAC ‘h o SUC’ >> rw []
 QED
 
+(* Another version with both E and h as universal quantifier *)
+Theorem existence_of_multidimensional_prob_space' :
+    !p N. prob_space p /\ 0 < N ==>
+         ?pp. prob_space pp /\
+             !E h. E = rectangle h N /\ (!i. i < N ==> h i IN events p) ==>
+                   E IN events pp /\ prob pp E = PI (prob p o h) (count N)
+Proof
+    rpt STRIP_TAC
+ >> drule_all_then STRIP_ASSUME_TAC existence_of_multidimensional_prob_space
+ >> Q.EXISTS_TAC ‘pp’ >> art []
+ >> rpt GEN_TAC
+ >> STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!E. _ ==> E IN events pp /\ _’ (MP_TAC o Q.SPEC ‘E’)
+ >> impl_tac
+ >- (Q.EXISTS_TAC ‘h’ >> rw [])
+ >> rw []
+ >> Cases_on ‘!i. i < N ==> h i <> {}’
+ >- (MATCH_MP_TAC EXTREAL_PROD_IMAGE_EQ \\
+     Q.X_GEN_TAC ‘i’ >> rw [o_DEF] \\
+     AP_TERM_TAC \\
+     rw [Once EXTENSION, IN_list_rectangle] \\
+     EQ_TAC >> rw [] >> rw [] \\
+     Know ‘!j. j < N /\ j <> i ==> ?y. y IN h j’
+     >- (rpt STRIP_TAC \\
+         rw [MEMBER_NOT_EMPTY]) \\
+     simp [EXT_SKOLEM_THM'] >> STRIP_TAC \\
+     Q.EXISTS_TAC ‘GENLIST (\j. if j = i then x else f j) N’ \\
+     simp [] \\
+     Q.X_GEN_TAC ‘j’ >> rw [])
+ >> fs []
+ >> qabbrev_tac ‘s = count N DELETE i’
+ >> ‘i IN count N’ by rw []
+ >> ‘count N = i INSERT s’ by ASM_SET_TAC []
+ >> POP_ORW
+ >> qmatch_abbrev_tac ‘PI f (i INSERT s) = PI g (i INSERT s)’
+ >> ‘s DELETE i = s’ by ASM_SET_TAC []
+ >> ‘FINITE s’ by rw [Abbr ‘s’]
+ >> simp [EXTREAL_PROD_IMAGE_PROPERTY]
+ >> Suff ‘f i = 0 /\ g i = 0’ >- rw []
+ >> simp [Abbr ‘f’, Abbr ‘g’, PROB_EMPTY]
+ >> Suff ‘IMAGE (EL i) (rectangle h N) = h i’ >- rw [PROB_EMPTY]
+ >> rw [Once EXTENSION, IN_list_rectangle]
+ >> Q.EXISTS_TAC ‘i’ >> rw [NOT_IN_EMPTY]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Independence of functions of independent r.v.'s                          *)
 (*                                                                           *)
