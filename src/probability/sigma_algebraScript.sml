@@ -3773,6 +3773,123 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
+Theorem IMAGE_SIGMA_ALGEBRA :
+    !sp sts f. sigma_algebra (sp,sts) /\ BIJ f sp (IMAGE f sp) ==>
+               sigma_algebra (IMAGE f sp,IMAGE (IMAGE f) sts)
+Proof
+    rw [sigma_algebra_alt_pow]
+ >| [ (* goal 1 (of 3) *)
+      rw [SUBSET_DEF, IN_POW] \\
+      rename1 ‘y IN IMAGE f s’ >> fs [IN_IMAGE] \\
+      Q.EXISTS_TAC ‘x’ >> art [] \\
+      Q.PAT_X_ASSUM ‘sts SUBSET POW sp’ MP_TAC \\
+      rw [SUBSET_DEF, IN_POW] \\
+      POP_ASSUM irule \\
+      Q.EXISTS_TAC ‘s’ >> art [],
+      (* goal 2 (of 3) *)
+      rename1 ‘s IN sts’ \\
+      Q.EXISTS_TAC ‘sp DIFF s’ \\
+      reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+      rw [Once EXTENSION] \\
+      EQ_TAC >> rw [] >| (* 3 subgoals *)
+      [ (* goal 2.1 (of 3) *)
+        rename1 ‘y IN sp’ \\
+        Q.EXISTS_TAC ‘y’ >> art [] \\
+        POP_ASSUM MATCH_MP_TAC >> art [],
+        (* goal 2.2 (of 3) *)
+        rename1 ‘y IN sp’ \\
+        Q.EXISTS_TAC ‘y’ >> art [],
+        (* goal 2.3 (of 3) *)
+        rename1 ‘f x = f y’ \\
+        Q.PAT_X_ASSUM ‘BIJ f sp _’ MP_TAC \\
+        simp [BIJ_ALT, IN_FUNSET, EXISTS_UNIQUE_ALT] \\
+        DISCH_THEN (MP_TAC o Q.SPEC ‘f x’) \\
+        impl_tac >- (Q.EXISTS_TAC ‘y’ >> art []) \\
+        DISCH_THEN (Q.X_CHOOSE_THEN ‘z’ STRIP_ASSUME_TAC) \\
+        CCONTR_TAC >> fs [] \\
+        Suff ‘x IN sp’ >- METIS_TAC [] \\
+        Q.PAT_X_ASSUM ‘sts SUBSET POW sp’ MP_TAC \\
+        rw [SUBSET_DEF, IN_POW] \\
+        POP_ASSUM irule \\
+        Q.EXISTS_TAC ‘s’ >> art [] ],
+      (* goal 3 (of 3) *)
+      Know ‘BIGUNION {A i | i | T} = BIGUNION (IMAGE A UNIV)’
+      >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+          EQ_TAC >> rw [] >- (Q.EXISTS_TAC ‘i’ >> art []) \\
+          rename1 ‘x IN A i’ \\
+          Q.EXISTS_TAC ‘A i’ >> art [] \\
+          Q.EXISTS_TAC ‘i’ >> art []) >> Rewr' \\
+      POP_ASSUM MP_TAC >> rw [SUBSET_DEF] \\
+      IMP_RES_TAC BIJ_INV \\
+      Q.EXISTS_TAC ‘BIGUNION (IMAGE (IMAGE g o A) UNIV)’ \\
+      simp [IMAGE_BIGUNION, IMAGE_IMAGE] \\
+      CONJ_TAC
+      >- (AP_TERM_TAC >> AP_THM_TAC >> AP_TERM_TAC \\
+          rw [Once EXTENSION, o_DEF, FUN_EQ_THM] \\
+          reverse EQ_TAC >> rw []
+          >- (rename1 ‘f (g y) IN A i’ \\
+              fs [o_DEF] \\
+              Suff ‘f (g y) = y’ >- rw [] \\
+              FIRST_ASSUM MATCH_MP_TAC \\
+              Q.PAT_X_ASSUM ‘!x. _ ==> ?x. _’ (MP_TAC o Q.SPEC ‘A (i :num)’) \\
+              impl_tac >- (Q.EXISTS_TAC ‘i’ >> art []) \\
+              DISCH_THEN (Q.X_CHOOSE_THEN ‘j’ STRIP_ASSUME_TAC) \\
+              Q.PAT_X_ASSUM ‘A i = IMAGE f j’ (fs o wrap) \\
+              Q.EXISTS_TAC ‘x’ >> art [] \\
+              Q.PAT_X_ASSUM ‘sts SUBSET POW sp’ MP_TAC \\
+              rw [SUBSET_DEF, IN_POW] \\
+              POP_ASSUM irule \\
+              Q.EXISTS_TAC ‘j’ >> art []) \\
+          rename1 ‘y IN A i’ \\
+          fs [o_DEF] \\
+          Q.EXISTS_TAC ‘g y’ \\
+          reverse CONJ_TAC >- (Q.EXISTS_TAC ‘y’ >> art []) \\
+          ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+          FIRST_ASSUM MATCH_MP_TAC \\
+          Q.PAT_X_ASSUM ‘!x. _ ==> ?x. _’ (MP_TAC o Q.SPEC ‘A (i :num)’) \\
+          impl_tac >- (Q.EXISTS_TAC ‘i’ >> art []) \\
+          DISCH_THEN (Q.X_CHOOSE_THEN ‘j’ STRIP_ASSUME_TAC) \\
+          Q.PAT_X_ASSUM ‘A i = IMAGE f j’ (fs o wrap) \\
+          Q.EXISTS_TAC ‘x’ >> art [] \\
+          Q.PAT_X_ASSUM ‘sts SUBSET POW sp’ MP_TAC \\
+          rw [SUBSET_DEF, IN_POW] \\
+          POP_ASSUM irule \\
+          Q.EXISTS_TAC ‘j’ >> art []) \\
+      qabbrev_tac ‘B = IMAGE g o A’ \\
+      Know ‘BIGUNION {B i | i | T} = BIGUNION (IMAGE B UNIV)’
+      >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+          EQ_TAC >> rw [] >- (Q.EXISTS_TAC ‘i’ >> art []) \\
+          rename1 ‘x IN B i’ \\
+          Q.EXISTS_TAC ‘B i’ >> art [] \\
+          Q.EXISTS_TAC ‘i’ >> art []) \\
+      DISCH_THEN (REWRITE_TAC o wrap o SYM) \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      rw [Abbr ‘B’, SUBSET_DEF] \\
+      rename1 ‘IMAGE g (A i) IN sts’ \\
+      Q.PAT_X_ASSUM ‘!x. _ ==> ?x. _’ (MP_TAC o Q.SPEC ‘A (i :num)’) \\
+      impl_tac >- (Q.EXISTS_TAC ‘i’ >> art []) \\
+      DISCH_THEN (Q.X_CHOOSE_THEN ‘s’ STRIP_ASSUME_TAC) \\
+      Q.PAT_X_ASSUM ‘A i = IMAGE f s’ (fs o wrap) \\
+      Suff ‘IMAGE g (IMAGE f s) = s’ >- rw [] \\
+      rw [Once EXTENSION] \\
+      reverse EQ_TAC >> rw []
+      >- (Q.EXISTS_TAC ‘f x’ \\
+          reverse CONJ_TAC >- (Q.EXISTS_TAC ‘x’ >> art []) \\
+          ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+          FIRST_X_ASSUM MATCH_MP_TAC \\
+          Q.PAT_X_ASSUM ‘sts SUBSET POW sp’ MP_TAC \\
+          rw [SUBSET_DEF, IN_POW] \\
+          POP_ASSUM irule \\
+          Q.EXISTS_TAC ‘s’ >> art []) \\
+      rename1 ‘g (f y) IN s’ \\
+      Suff ‘g (f y) = y’ >- rw [] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      Q.PAT_X_ASSUM ‘sts SUBSET POW sp’ MP_TAC \\
+      rw [SUBSET_DEF, IN_POW] \\
+      POP_ASSUM irule \\
+      Q.EXISTS_TAC ‘s’ >> art [] ]
+QED
+
 (* Lemma 2.2.5 of [9, p.177] (moving INTER outside of the sigma generator) *)
 Theorem SIGMA_RESTRICT :
     !sp sts B. subset_class sp sts /\ B SUBSET sp ==>

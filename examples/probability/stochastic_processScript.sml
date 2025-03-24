@@ -1057,6 +1057,16 @@ Proof
  >> Q.EXISTS_TAC ‘x’ >> art []
 QED
 
+Theorem BIJ_wrap :
+    !sp. BIJ wrap sp (IMAGE wrap sp)
+Proof
+    rw [BIJ_THM, EXISTS_UNIQUE_ALT]
+ >> Q.EXISTS_TAC ‘x’
+ >> Q.X_GEN_TAC ‘y’
+ >> reverse EQ_TAC >> rw [] >> rw []
+ >> fs [wrap_def]
+QED
+
 Theorem sigma_lists_1 :
     !b. sigma_algebra b ==>
         sigma_lists b 1 = (IMAGE wrap (space b), IMAGE (IMAGE wrap) (subsets b))
@@ -2045,6 +2055,200 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
+(*  Probability space constructed by sigma_lists of (the same) prob space    *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem existence_of_multidimensional_prob_space :
+    !p N. prob_space p /\ 0 < N ==>
+         ?pp. prob_space pp /\
+             !E. (?h. E = rectangle h N /\ !i. i < N ==> h i IN events p) ==>
+                 E IN events pp /\
+                 prob pp E = PI (\i. prob p (IMAGE (EL i) E)) (count N)
+Proof
+    rpt STRIP_TAC
+ >> ‘sigma_algebra (p_space p,events p)’ by PROVE_TAC [EVENTS_SIGMA_ALGEBRA]
+ >> qabbrev_tac ‘a = (p_space p,events p)’
+ >> Q.PAT_X_ASSUM ‘0 < N’ MP_TAC
+ >> Cases_on ‘N’ >> rw []
+ >> Induct_on ‘n’
+ >- (qabbrev_tac ‘a' = sigma_lists a 1’ \\
+     qabbrev_tac ‘f = \s. prob p (IMAGE unwrap s)’ \\
+     Q.EXISTS_TAC ‘(space a',subsets a',f)’ \\
+     CONJ_TAC (* prob_space *)
+     >- (simp [prob_space_def] \\
+         reverse CONJ_TAC
+         >- (rw [Abbr ‘f’, Abbr ‘a'’, sigma_lists_1, Abbr ‘a’] \\
+             MATCH_MP_TAC PROB_UNIV >> art []) \\
+         simp [measure_space_def, Abbr ‘f’, Abbr ‘a'’, sigma_lists_1, Abbr ‘a’] \\
+         CONJ_TAC (* sigma_algebra *)
+         >- (MATCH_MP_TAC IMAGE_SIGMA_ALGEBRA \\
+             rw [BIJ_wrap]) \\
+         CONJ_TAC (* positive *)
+         >- (rw [positive_def, PROB_EMPTY] \\
+             rename1 ‘e IN events p’ \\
+             Suff ‘IMAGE unwrap (IMAGE wrap e) = e’ >- rw [PROB_POSITIVE] \\
+             rw [IMAGE_unwrap_wrap]) \\
+      (* countably_additive *)
+         rw [countably_additive_def, IN_FUNSET] \\
+         rename1 ‘s IN events p’ \\
+         REWRITE_TAC [IMAGE_BIGUNION] \\
+         simp [IMAGE_IMAGE, o_DEF] \\
+         qabbrev_tac ‘g = \x. IMAGE unwrap (f x)’ \\
+         Know ‘prob p (BIGUNION (IMAGE g univ(:num))) = suminf (prob p o g)’
+         >- (MATCH_MP_TAC PROB_COUNTABLY_ADDITIVE >> art [] \\
+             rw [IN_FUNSET, Abbr ‘g’]
+             >- (Q.PAT_X_ASSUM ‘!x. ?y. f x = IAMGE wrap y /\ _’
+                   (MP_TAC o Q.SPEC ‘x’) \\
+                 rw [] >> simp [IMAGE_unwrap_wrap]) \\
+             rw [DISJOINT_ALT] \\
+             rename1 ‘unwrap y = unwrap x’ \\
+             CCONTR_TAC >> fs [] \\
+            ‘?a. f m = IMAGE wrap a /\ a IN events p’ by METIS_TAC [] \\
+            ‘?b. f n = IMAGE wrap b /\ b IN events p’ by METIS_TAC [] \\
+            ‘x NOTIN f n’ by METIS_TAC [DISJOINT_ALT] \\
+             gvs []) >> Rewr' \\
+         AP_TERM_TAC >> simp [o_DEF, Abbr ‘g’]) \\
+     rw [count_def, prob_def, Abbr ‘f’, unwrap_def, events_def] \\
+     simp [Abbr ‘a'’, sigma_lists_1, Abbr ‘a’, subsets_def] \\
+     fs [GSYM events_def] \\
+     Q.EXISTS_TAC ‘h 0’ >> art [] \\
+     rw [Once EXTENSION, list_rectangle_def] \\
+     EQ_TAC >> rw [wrap_def] >> rw [] \\
+     Cases_on ‘x’ >> fs [])
+ (* stage work *)
+ >> POP_ASSUM (Q.X_CHOOSE_THEN ‘p1’ STRIP_ASSUME_TAC)
+ >> qabbrev_tac ‘N = SUC n’
+ >> qunabbrev_tac ‘a’
+ (* applying existence_of_prod_measure_general *)
+ >> ‘sigma_finite_measure_space p /\
+     sigma_finite_measure_space p1’
+       by PROVE_TAC [prob_space_def, PROB_SPACE_SIGMA_FINITE,
+                     sigma_finite_measure_space_def]
+ >> qabbrev_tac ‘X = p_space p’
+ >> qabbrev_tac ‘A = events p’
+ >> qabbrev_tac ‘u = prob p’
+ >> qabbrev_tac ‘Y = p_space p1’
+ >> qabbrev_tac ‘B = events p1’
+ >> qabbrev_tac ‘v = prob p1’
+ >> MP_TAC (Q.SPECL [‘CONS’, ‘HD’, ‘TL’, ‘X’, ‘Y’, ‘A’, ‘B’, ‘u’, ‘v’]
+                    (INST_TYPE [beta |-> “:'a list”, gamma |-> “:'a list”]
+                               existence_of_prod_measure_general))
+ >> simp [pair_operation_CONS, PROB_SPACE_REDUCE,
+          Abbr ‘X’, Abbr ‘Y’, Abbr ‘A’, Abbr ‘B’, Abbr ‘u’, Abbr ‘v’]
+ >> qabbrev_tac ‘m0 = \x. prob p (IMAGE HD x) * prob p1 (IMAGE TL x)’
+ >> DISCH_THEN (MP_TAC o Q.SPEC ‘m0’)
+ >> Know ‘!s t.
+            s IN events p /\ t IN events p1 ==>
+            m0 (general_cross CONS s t) = prob p s * prob p1 t’
+ >- (rw [general_cross_def, Abbr ‘m0’] \\
+     Cases_on ‘s = {}’ >> rw [PROB_EMPTY] \\
+     Cases_on ‘t = {}’ >> rw [PROB_EMPTY] \\
+     Know ‘IMAGE HD {a::b | a IN s /\ b IN t} = s’
+     >- (rw [Once EXTENSION] \\
+         EQ_TAC >> rw [] >> rw [] \\
+        ‘?y. y IN t’ by rw [MEMBER_NOT_EMPTY] \\
+         Q.EXISTS_TAC ‘x::y’ >> simp []) >> Rewr' \\
+     Know ‘IMAGE TL {a::b | a IN s /\ b IN t} = t’
+     >- (rw [Once EXTENSION] \\
+         EQ_TAC >> rw [] >> rw [] \\
+        ‘?y. y IN s’ by rw [MEMBER_NOT_EMPTY] \\
+         Q.EXISTS_TAC ‘y::x’ >> simp []) >> Rewr)
+ >> simp []
+ >> DISCH_TAC
+ >> STRIP_TAC
+ >> qabbrev_tac ‘Z = general_cross CONS (p_space p) (p_space p1)’
+ >> qabbrev_tac
+      ‘a = general_sigma CONS (p_space p,events p) (p_space p1,events p1)’
+ >> qabbrev_tac ‘p2 = (Z,subsets a,m)’
+ >> Q.EXISTS_TAC ‘p2’
+ >> CONJ_TAC
+ >- (simp [prob_space_def] \\
+     fs [sigma_finite_measure_space_def] \\
+     simp [GSYM prob_def, GSYM p_space_def] \\
+     simp [Abbr ‘p2’, prob_def, p_space_def] \\
+     Know ‘m Z = m0 Z’
+     >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+         simp [Abbr ‘Z’, IN_general_prod] \\
+         qexistsl_tac [‘p_space p’, ‘p_space p1’] \\
+         simp [EVENTS_SPACE]) >> Rewr' \\
+     simp [Abbr ‘Z’] \\
+     Know ‘m0 (general_cross CONS (p_space p) (p_space p1)) =
+           prob p (p_space p) * prob p1 (p_space p1)’
+     >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+         simp [EVENTS_SPACE]) >> Rewr' \\
+     simp [PROB_UNIV])
+ (* stage work *)
+ >> Q.X_GEN_TAC ‘E’ >> simp [list_rectangle_SUC]
+ >> STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘E = _’ (REWRITE_TAC o wrap)
+ >> qabbrev_tac ‘s2 = cons_cross (h 0) (rectangle (h o SUC) N)’
+ (* applying EXTREAL_PROD_IMAGE_PROPERTY *)
+ >> ‘0 IN count1 N’ by rw [Abbr ‘N’]
+ >> ‘count1 N = 0 INSERT (count1 N DELETE 0)’ by ASM_SET_TAC [] >> POP_ORW
+ >> POP_ASSUM K_TAC
+ >> qabbrev_tac ‘J = count1 N DELETE 0’
+ >> qmatch_abbrev_tac ‘s2 IN events p2 /\ prob p2 s2 = PI g (0 INSERT J)’
+ >> Know ‘PI g (0 INSERT J) = g 0 * PI g (J DELETE 0)’
+ >- (MATCH_MP_TAC EXTREAL_PROD_IMAGE_PROPERTY >> rw [Abbr ‘J’])
+ >> Rewr'
+ >> ‘J DELETE 0 = J’ by ASM_SET_TAC [] >> POP_ORW
+ >> simp [Abbr ‘J’]
+ >> Know ‘count1 N DELETE 0 = IMAGE SUC (count N)’
+ >- (rw [Once EXTENSION] \\
+     EQ_TAC >> rw [] \\
+     Cases_on ‘x’ >> fs [])
+ >> Rewr'
+ (* EXTREAL_PROD_IMAGE_IMAGE *)
+ >> Know ‘PI g (IMAGE SUC (count N)) = PI (g o SUC) (count N)’
+ >- (MATCH_MP_TAC EXTREAL_PROD_IMAGE_IMAGE >> rw [INJ_DEF])
+ >> Rewr'
+ >> qabbrev_tac ‘s3 = IMAGE TL s2’
+ >> Know ‘PI (g o SUC) (count N) = PI (\i. prob p (IMAGE (EL i) s3)) (count N)’
+ >- (MATCH_MP_TAC EXTREAL_PROD_IMAGE_EQ \\
+     Q.X_GEN_TAC ‘i’ >> rw [o_DEF, Abbr ‘g’] \\
+     simp [Abbr ‘s3’, IMAGE_IMAGE, o_DEF] \\
+     AP_TERM_TAC >> rw [Once EXTENSION] \\
+     EQ_TAC >> rw [EL])
+ >> Rewr'
+ >> STRONG_CONJ_TAC
+ >- (simp [Abbr ‘s2’, Abbr ‘p2’, events_def] \\
+     simp [Abbr ‘a’, general_sigma_def] \\
+     MATCH_MP_TAC IN_SIGMA \\
+     rw [IN_general_prod, cons_cross_alt_gen] \\
+     qexistsl_tac [‘h 0’, ‘rectangle (h o SUC) N’] >> simp [] \\
+     FIRST_X_ASSUM (MATCH_MP_TAC o cj 1) \\
+     Q.EXISTS_TAC ‘h o SUC’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘PI (\i. prob p (IMAGE (EL i) s3)) (count N) = prob p1 s3’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     FIRST_X_ASSUM (MATCH_MP_TAC o cj 2) \\
+     simp [Abbr ‘s3’] \\
+     Cases_on ‘h 0 = {}’
+     >- (Q.EXISTS_TAC ‘\i. h 0’ >> simp [EVENTS_EMPTY] \\
+         rw [Once EXTENSION, Abbr ‘s2’, cons_cross_def, IN_list_rectangle] \\
+         Q.PAT_X_ASSUM ‘SUC n = LENGTH x’ (REWRITE_TAC o wrap o SYM) \\
+         Q.EXISTS_TAC ‘0’ >> rw []) \\
+     Q.EXISTS_TAC ‘h o SUC’ \\
+     reverse CONJ_TAC >- simp [o_DEF] \\
+     rw [Abbr ‘s2’, Once EXTENSION, cons_cross_def, list_rectangle_def] \\
+     EQ_TAC >> rw [] >> rw [LENGTH_TL] \\
+     fs [GSYM MEMBER_NOT_EMPTY] \\
+     rename1 ‘y IN h 0’ \\
+     Q.EXISTS_TAC ‘y::x’ >> simp [])
+ >> Rewr'
+ >> simp [Abbr ‘g’, Abbr ‘s3’]
+ >> Suff ‘m0 s2 = m s2’ >- simp [Abbr ‘p2’, prob_def]
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> POP_ASSUM MP_TAC (* s2 IN events p2 *)
+ >> rw [IN_general_prod, Abbr ‘s2’, Abbr ‘p2’, events_def]
+ >> qexistsl_tac [‘h 0’, ‘rectangle (h o SUC) N’]
+ >> simp [cons_cross_alt_gen, GSYM events_def]
+ >> FIRST_X_ASSUM (MATCH_MP_TAC o cj 1)
+ >> Q.EXISTS_TAC ‘h o SUC’ >> rw []
+QED
+
+(* ------------------------------------------------------------------------- *)
 (*  Independence of functions of independent r.v.'s                          *)
 (*                                                                           *)
 (*  By "functions", here we mean those who taking lists of numbers returning *)
@@ -2555,8 +2759,6 @@ QED
 
    NOTE: The "bottom" of this cylinder is always a rectangle, thus is not the
    general cylinder sets.
-
-   ARB-version: (!n. n < N ==> f n IN h n) /\ !n. N <= n ==> f n = ARB
  *)
 Definition cylinder_def :
     cylinder (h :num -> 'a set) N =
