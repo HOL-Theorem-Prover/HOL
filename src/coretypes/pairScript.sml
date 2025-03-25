@@ -464,6 +464,16 @@ Theorem SND_PAIR_MAP[simp]:
 Proof REWRITE_TAC [PAIR_MAP, SND]
 QED
 
+Theorem FST_o_PAIR_MAP[simp]:
+  FST o (g ## f) = (g o FST)
+Proof simp [FUN_EQ_THM]
+QED
+
+Theorem SND_o_PAIR_MAP[simp]:
+  SND o (g ## f) = (f o SND)
+Proof simp [FUN_EQ_THM]
+QED
+
 Theorem PAIR_MAP_I[simp,quotient_simp]:
   (I ## I) = (I : 'a # 'b -> 'a # 'b)
 Proof
