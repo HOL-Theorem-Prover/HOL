@@ -265,10 +265,10 @@ We encourage developers to keep their lines under 80 columns in width.
 
 <!-- # Appropriate Idioms  -->
 
-# Glossary of common abbreviations in the source code
+# Glossary of Common Abbreviations in the Source Code
 
 These appear with either capitalisation.
-There is a slight tendency to having all upper-case SML identifiers refer to theorems, or functions that returns theorems.
+There is a slight tendency to having all upper-case SML identifiers refer to theorems, or functions that return theorems.
 
 `abs`
 :   Abstraction.
@@ -276,8 +276,8 @@ There is a slight tendency to having all upper-case SML identifiers refer to the
 `ant`
 :   Antecedent of an implication.
 
-`asm`
-:   Assumptions of a theorem or goal.
+`asl`, `asm`
+:   Assumptions of a theorem or goal.  The `asl` name is particularly commonly used to name a goal’s assumptions (used, *e.g.,* when writing tactics).
 
 `conseq`
 :   Consequent of an implication.
