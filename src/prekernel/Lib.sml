@@ -156,11 +156,6 @@ fun end_itlist f =
       endit
    end
 
-fun get_first f l =
-   case l of
-      [] => NONE
-    | h :: t => (case f h of NONE => get_first f t | some => some)
-
 fun zip [] [] = []
   | zip (a :: b) (c :: d) = (a, c) :: zip b d
   | zip _ _ = raise ERR "zip" "different length lists"

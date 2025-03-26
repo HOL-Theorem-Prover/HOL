@@ -72,4 +72,12 @@ sig
 
   val SUC_TO_NUMERAL_DEFN_CONV_hook : (term -> thm) ref
 
+  val build_eqns
+     : term quotation -> term list * thm list * (term * term) * (term * thm) list
+  val build_eqns_from_term
+     : term -> term list * thm list * (term * term) * (term * thm) list
+
+  val extract_tcs : term quotation -> (thm * term list * bool) list
+  val extract_tcs_from_term : term -> (thm * term list * bool) list
+
 end

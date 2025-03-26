@@ -21,6 +21,11 @@ sig
 
   val insert_attribute : {attr: string} -> string -> string
 
+  type abbrevinfo = {abbrev:string,expansion:(string * string list)list}
+  val define_abbreviation : abbrevinfo -> unit
+  val remove_abbreviation : string -> unit
+  val current_abbreviations : unit -> abbrevinfo list
+
 end
 
 (*

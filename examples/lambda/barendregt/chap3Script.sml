@@ -1621,6 +1621,49 @@ Theorem betastar_TRANS =
         RTC_TRANSITIVE |> Q.ISPEC ‘compat_closure beta’
                        |> REWRITE_RULE [transitive_def]
 
+Theorem lameq_imp_lameta :
+    !M N. M == N ==> lameta M N
+Proof
+    rw [GSYM beta_eta_lameta]
+ >> Know ‘conversion beta RSUBSET conversion (beta RUNION eta)’
+ >- (MATCH_MP_TAC conversion_monotone \\
+     simp [RSUBSET, RUNION])
+ >> rw [RSUBSET]
+ >> POP_ASSUM MATCH_MP_TAC
+ >> rw [GSYM lameq_betaconversion]
+QED
+
+Theorem etaconversion_imp_lameta :
+    !M N. conversion eta M N ==> lameta M N
+Proof
+    rw [GSYM beta_eta_lameta]
+ >> Know ‘conversion eta RSUBSET conversion (beta RUNION eta)’
+ >- (MATCH_MP_TAC conversion_monotone \\
+     simp [RSUBSET, RUNION])
+ >> rw [RSUBSET]
+QED
+
+Theorem lameta_asmlam :
+    !M N. lameta M N <=> asmlam (UNCURRY eta) M N
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC
+ >> qid_spec_tac ‘N’
+ >> qid_spec_tac ‘M’
+ >- (HO_MATCH_MP_TAC lameta_ind >> rw [asmlam_rules] (* 2 goals left *)
+     >- (MATCH_MP_TAC asmlam_trans \\
+         Q.EXISTS_TAC ‘M'’ >> art []) \\
+     MATCH_MP_TAC asmlam_eqn \\
+     rw [eta_def] \\
+     Q.EXISTS_TAC ‘x’ >> art [])
+ >> HO_MATCH_MP_TAC asmlam_ind >> rw [lameta_rules] (* 2 goals left *)
+ >- (MATCH_MP_TAC etaconversion_imp_lameta \\
+     MATCH_MP_TAC EQC_R \\
+     MATCH_MP_TAC compat_closure_R >> art [])
+ >> MATCH_MP_TAC lameta_TRANS
+ >> Q.EXISTS_TAC ‘N’ >> art []
+QED
+
 val _ = export_theory();
 val _ = html_theory "chap3";
 

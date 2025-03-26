@@ -1091,6 +1091,15 @@ Proof
   THEN PROVE_TAC [FINITE_WF_noloops]
 QED
 
+Theorem WF_acyclic :
+    !r. WF (reln_to_rel r) ==> acyclic r
+Proof
+    rpt STRIP_TAC
+ >> SRW_TAC [][acyclic_def, tc_to_rel_conv, in_rel_to_reln]
+ >> Q.ABBREV_TAC ‘R = reln_to_rel r’
+ >> METIS_TAC [WF_noloops]
+QED
+
 (* ------------------------------------------------------------------------ *)
 (* Minimal and maximal elements                                             *)
 (* ------------------------------------------------------------------------ *)

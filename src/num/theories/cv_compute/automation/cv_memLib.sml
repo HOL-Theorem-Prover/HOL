@@ -116,7 +116,7 @@ fun prepare th = let
  *--------------------------------------------------------------------------*)
 
 fun insert_cv_rep th = prepare th;
-val (cv_rep_thms, cv_rep_add) = register_ThmSetData_list "cv_rep" insert_cv_rep;
+val (cv_rep_thms, _) = register_ThmSetData_list "cv_rep" insert_cv_rep;
 
 fun insert_cv_pre th = (
   cv_print Verbose "\ncv_pre:\n\n";

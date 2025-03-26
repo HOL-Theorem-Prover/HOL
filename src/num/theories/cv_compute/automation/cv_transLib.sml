@@ -805,7 +805,7 @@ fun cv_trans_deep_embedding eval_conv th =
       val _ = DefnBase.register_defn {tag="user", thmname=eq_name}
       val num_0 = cvSyntax.mk_cv_num (numSyntax.term_of_int 0)
       val cv_trans_thm = defn_thm |> INST [x |-> num_0] |> SYM
-      val _ = cv_memLib.cv_rep_add cv_trans_thm
+      val _ = save_thm(nm ^ "_cv_thm[cv_rep]",cv_trans_thm)
   in () end
 
 (*--------------------------------------------------------------------------*
@@ -876,7 +876,13 @@ fun cv_eqs_for tm = let
 
 val _ = computeLib.add_funs [cv_fst_def,cv_snd_def];
 
-fun cv_eval_raw tm = let
+datatype pat = Raw
+             | Eval of conv
+             | Name of string
+             | Tuple of pat list
+             | Some of pat;
+
+fun cv_eval_pat pat tm = let
   val _ = List.null (free_vars tm) orelse failwith "cv_eval needs input to be closed"
   val th = cv_rep_for [] tm
   val ty = type_of tm
@@ -887,19 +893,67 @@ fun cv_eval_raw tm = let
   val cv_eqs = cv_time cv_eqs_for cv_tm
   val _ = cv_print Verbose ("Found " ^ int_to_string (length cv_eqs) ^ " cv code equations to use.\n")
   val cv_conv = cv_computeLib.cv_compute cv_eqs
-  val th1 = MATCH_MP cv_rep_eval th
-  val th2 = MATCH_MP th1 from_to_thm
-  val th3 = th2 |> UNDISCH_ALL
   val _ = cv_print Verbose "Calling cv_compute.\n"
-  val th4 = cv_time (CONV_RULE (RAND_CONV (RAND_CONV cv_conv))) th3
-  val th5 = remove_T_IMP (DISCH_ALL th4)
-  in th5 end;
+  val th0 = th |> CONV_RULE ((RATOR_CONV o RATOR_CONV o RAND_CONV) cv_conv)
+               |> CONV_RULE (REWR_CONV cv_rep_def) |> UNDISCH
+  val _ = cv_print Verbose "Abbreviating result.\n"
+  val abbrev_defs = ref ([] : (string * thm) list)
+  fun make_abbrevs Raw th = th
+    | make_abbrevs (Eval _) th = th
+    | make_abbrevs (Name name) th = let
+        val (tm1,tm2) = concl th |> dest_eq
+        val cv_ty = cvSyntax.cv
+        val name_tm = mk_var("cv_" ^ name, mk_type("fun",[cv_ty,cv_ty]))
+        val num_0 = cvSyntax.mk_cv_num(numSyntax.term_of_int 0)
+        val def_eq = mk_eq(mk_comb(name_tm,mk_var("x",cv_ty)),tm2)
+        val cv_def = new_definition("cv_" ^ name ^ "_def", def_eq)
+        val th1 = th |> CONV_RULE (RAND_CONV (fn tm => SPEC num_0 cv_def |> SYM))
+        val tm3 = tm1 |> rand
+        val abbrev_def = new_definition(name ^ "_def", mk_eq(mk_var(name,type_of tm3),tm3))
+        val _ = (abbrev_defs := (name,abbrev_def) :: (!abbrev_defs))
+        val th2 = th1 |> CONV_RULE ((RATOR_CONV o RAND_CONV o RAND_CONV)
+                           (fn tm => abbrev_def |> SYM))
+        val th3 = remove_T_IMP (DISCH_ALL th2) handle HOL_ERR _ => th2
+        val _ = save_thm("cv_" ^ name ^ "_thm[cv_rep]",th3)
+        in th1 end
+    | make_abbrevs (Tuple []) th = failwith "Empty Tuples are not supported"
+    | make_abbrevs (Tuple [x]) th = make_abbrevs x th
+    | make_abbrevs (Tuple (x::xs)) th = let
+        val th0 = MATCH_MP from_pair_eq_IMP th
+        val th1 = make_abbrevs x (CONJUNCT1 th0)
+        val th2 = make_abbrevs (Tuple xs) (CONJUNCT2 th0)
+        in MATCH_MP IMP_from_pair_eq (CONJ th1 th2) end
+    | make_abbrevs (Some x) th = let
+        val th0 = MATCH_MP from_option_eq_IMP th
+        val th1 = make_abbrevs x (CONJUNCT1 th0)
+        val th2 = CONJUNCT2 th0
+        in MATCH_MP IMP_from_option_eq (CONJ th1 th2) end
+  val th1 = make_abbrevs pat th0
+  val th2 = CONV_RULE (REWR_CONV (GSYM cv_rep_def)) (DISCH T th1)
+  val th3 = MATCH_MP cv_rep_eval th2
+  val th4 = MATCH_MP (MATCH_MP th3 from_to_thm) TRUTH
+  fun use_abbrevs Raw th = th
+    | use_abbrevs (Eval conv) th =
+        CONV_RULE (RAND_CONV (QCONV conv)) th
+    | use_abbrevs (Name name) th =
+        snd (first (fn (n,th) => n = name) (!abbrev_defs)) |> SYM
+    | use_abbrevs (Tuple []) th = failwith "Empty Tuples are not supported"
+    | use_abbrevs (Tuple [x]) th = use_abbrevs x th
+    | use_abbrevs (Tuple (x::xs)) th = let
+        val th0 = MATCH_MP to_pair_IMP th
+        val th1 = use_abbrevs x (CONJUNCT1 th0)
+        val th2 = use_abbrevs (Tuple xs) (CONJUNCT2 th0)
+        in MATCH_MP IMP_to_pair (CONJ th1 th2) end
+    | use_abbrevs (Some x) th = let
+        val th0 = MATCH_MP to_option_IMP th
+        val th1 = use_abbrevs x (CONJUNCT1 th0)
+        val th2 = CONJUNCT2 th0
+        in MATCH_MP IMP_to_option (CONJ th1 th2) end
+  val th5 = use_abbrevs pat th4
+  in DISCH_ALL th5 end;
 
-fun cv_eval tm = let
-  val th = cv_eval_raw tm
-  val _ = cv_print Verbose "Using EVAL to convert from cv to original types.\n"
-  val th = cv_time (CONV_RULE (RAND_CONV EVAL)) (UNDISCH_ALL th)
-  val th = th |> DISCH_ALL |> remove_T_IMP
-  in th end;
+fun cv_eval_raw tm = cv_eval_pat Raw tm;
+
+fun cv_eval tm = cv_eval_pat (Eval EVAL) tm;
 
 end

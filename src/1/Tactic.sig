@@ -66,6 +66,8 @@ sig
   val FILTER_STRIP_TAC      : term -> tactic
   val ASM_CASES_TAC         : term -> tactic
   val REFL_TAC              : tactic
+  val SYM_TAC               : tactic
+  val sym_tac               : tactic
   val UNDISCH_TAC           : term -> tactic
   val AP_TERM_TAC           : tactic
   val AP_THM_TAC            : tactic

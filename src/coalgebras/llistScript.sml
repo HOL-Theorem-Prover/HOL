@@ -2164,8 +2164,9 @@ val toList_LAPPEND_APPEND = Q.store_thm("toList_LAPPEND_APPEND",
   fs[LTAKE_LAPPEND2,Abbr`n`] >>
   simp[toList]);
 
-val LNTH_LLENGTH_NONE = Q.store_thm("LNTH_LLENGTH_NONE",
-  `(LLENGTH l = SOME x) /\ x <= n ==> (LNTH n l = NONE)`,
+Theorem LNTH_LLENGTH_NONE :
+    !x n l. (LLENGTH l = SOME x) /\ x <= n ==> (LNTH n l = NONE)
+Proof
   rw[LESS_OR_EQ] >- (
     metis_tac[LTAKE_LLENGTH_NONE,LTAKE_EQ_NONE_LNTH] ) >>
   `LFINITE l` by metis_tac[NOT_LFINITE_NO_LENGTH,NOT_NONE_SOME] >>
@@ -2175,7 +2176,8 @@ val LNTH_LLENGTH_NONE = Q.store_thm("LNTH_LLENGTH_NONE",
   simp[] >>
   CASE_TAC >> simp[] >>
   CASE_TAC >> simp[] >>
-  metis_tac[LTAKE_EQ_NONE_LNTH,NOT_NONE_SOME])
+  metis_tac[LTAKE_EQ_NONE_LNTH,NOT_NONE_SOME]
+QED
 
 val LNTH_NONE_MONO = Q.store_thm ("LNTH_NONE_MONO",
   `!m n l.
@@ -2190,7 +2192,7 @@ val LNTH_NONE_MONO = Q.store_thm ("LNTH_NONE_MONO",
   `~(m < z)` by metis_tac[LTAKE_LNTH_EL,NOT_SOME_NONE] >>
   rw[] >> decide_tac);
 
-(* cf. This is just another version of lnth_some_down_closed *)
+(* NOTE: this is just another version of lnth_some_down_closed *)
 Theorem LNTH_IS_SOME_MONO :
    !m n l.
      IS_SOME (LNTH n l) /\ m <= n
@@ -2200,6 +2202,42 @@ Proof
     rw [IS_SOME_EXISTS]
  >> MATCH_MP_TAC lnth_some_down_closed
  >> qexistsl_tac [‘x’, ‘n’] >> rw []
+QED
+
+val LFINITE_strongind = DB.fetch "-" "LFINITE_strongind";
+
+Theorem LNTH_IS_SOME_lemma[local] :
+    !ll. LFINITE ll ==> !n. n < THE (LLENGTH ll) ==> IS_SOME (LNTH n ll)
+Proof
+    HO_MATCH_MP_TAC LFINITE_strongind >> rw []
+ >> gs [LFINITE_LLENGTH]
+ >> Cases_on ‘n’ >> rw [LNTH_THM]
+QED
+
+Theorem LNTH_IS_SOME :
+    !n ll. IS_SOME (LNTH n ll) <=> (LFINITE ll ==> n < THE (LLENGTH ll))
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC
+ >- (rpt STRIP_TAC \\
+     reverse (Cases_on ‘LFINITE ll’)
+     >- (fs [LFINITE_LNTH_NONE] \\
+         POP_ASSUM (MP_TAC o Q.SPEC ‘n’) \\
+         rw [IS_SOME_EQ_NOT_NONE]) \\
+     irule LNTH_IS_SOME_lemma >> simp [])
+ >> rw [LFINITE_LLENGTH] >> rw []
+ >> rename1 ‘i < N’
+ >> fs [IS_SOME_EXISTS]
+ >> CCONTR_TAC
+ >> ‘N <= i’ by rw []
+ >> ‘LNTH i ll = NONE’ by PROVE_TAC [LNTH_LLENGTH_NONE]
+ >> fs []
+QED
+
+Theorem LFINITE_LNTH_IS_SOME :
+    !n ll. LFINITE ll ==> (IS_SOME (LNTH n ll) <=> n < THE (LLENGTH ll))
+Proof
+    rw [LNTH_IS_SOME]
 QED
 
 (* ------------------------------------------------------------------------ *)

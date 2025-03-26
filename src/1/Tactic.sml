@@ -618,6 +618,18 @@ fun REFL_TAC (asl, g) =
       else raise ERR "REFL_TAC" "lhs and rhs not alpha-equivalent"
    end
 
+(* ----------------------------------------------------------------------
+    SYM_TAC : flips the direction of an equality goal
+
+        G ?- x = y
+      ==============
+        G ?- y = x
+   ---------------------------------------------------------------------- *)
+
+fun SYM_TAC g = CONV_TAC (REWR_CONV EQ_SYM_EQ) g
+                handle HOL_ERR _ => raise ERR "SYM_TAC" "Term not an equality"
+val sym_tac = SYM_TAC
+
 (*---------------------------------------------------------------------------*
  * UNDISCH_TAC - moves one of the assumptions as LHS of an implication       *
  * to the goal (fails if named assumption not in assumptions)                *
@@ -713,15 +725,17 @@ end
 
 val BINOP_TAC = MK_COMB_TAC THENL [AP_TERM_TAC, ALL_TAC]
 
-(*---------------------------------------------------------------------------*
- * ABS_TAC: inverts the ABS inference rule.                                  *
- *                                                                           *
- *   \x. f x = \x. g x                                                       *
- * =====================                                                     *
- *       f x = g x                                                           *
- *                                                                           *
- * Added: TT 2009.12.23                                                      *
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    ABS_TAC: inverts the ABS inference rule.
+
+       G ?-  (\x. M) = (\y. N)
+      ========================== (x and y may or may not appear in M, N)
+       G ?-  M[x:=v] = N[y:=v]
+
+    v chosen to be x, y, or some variant as necessary to avoid clashing
+    with existing free variables.
+
+   ---------------------------------------------------------------------- *)
 
 local
    fun ER s = ERR "ABS_TAC" s
@@ -731,12 +745,21 @@ in
          val (lhs, rhs) = with_exn dest_eq gl (ER "not an equation")
          val (x, g) = with_exn dest_abs lhs (ER "lhs not an abstraction")
          val (y, f) = with_exn dest_abs rhs (ER "rhs not an abstraction")
-         val f_thm = if aconv x y then REFL rhs else ALPHA_CONV x rhs
-         val (_, f') = dest_abs (rand (concl f_thm))
+         val avoids = FVL (gl::asl) empty_tmset
+         val var_to_use =
+             if HOLset.member(avoids, x) then
+               if HOLset.member(avoids, y) then
+                 variant (HOLset.listItems avoids) x
+               else y
+             else x
+         val (dty,rty) = dom_rng (type_of lhs)
+         val funeq_rwt = FUN_EQ_THM
+                           |> INST_TYPE [alpha |-> dty, beta |-> rty]
+                           |> SPECL [lhs, rhs]
       in
-         ([(asl, mk_eq (g, f'))],
-          CONV_RULE (RHS_CONV (K (GSYM f_thm))) o ABS x o Lib.trye hd)
-      end
+        CONV_TAC (K funeq_rwt) THEN X_GEN_TAC var_to_use THEN
+        CONV_TAC (BINOP_CONV BETA_CONV)
+      end (asl,gl)
 end
 
 (*---------------------------------------------------------------------------*

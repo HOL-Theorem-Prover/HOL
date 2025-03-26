@@ -184,3 +184,15 @@ val _ = require_msgk (check_result (K true)) pp_thm
                      ‘(urk n = urk2 (n + 1)) /\
                       (urk' n = n + 1) /\
                       (urk2 m = if m = 0 then 1 else urk (2 * m))’;
+
+val _ = tprint "DB doesn't pick up location-info"
+val _ = let
+  val loc = DB_dtype.mkloc("foo", 11, true)
+  val expected = {loc = loc, class = DB_dtype.Def, private = false}
+in
+  require_msg (check_result (equal expected o #2))
+              (DB_dtype.thminfo_toString o #2)
+              (fn () => (TotalDefn.located_qDefine loc "bar" `bar=1` NONE;
+                         valOf $ DB.lookup{Thy="-", Name = "bar"}))
+              ()
+end

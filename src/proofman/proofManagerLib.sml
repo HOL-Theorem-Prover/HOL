@@ -44,6 +44,10 @@ fun backup () =
    (the_proofs := Manager.hd_opr Manager.backup (proofs());
     top_proof());
 
+fun redo () =
+   (the_proofs := Manager.hd_opr Manager.redo (proofs());
+    top_proof());
+
 fun restore () =
    (the_proofs := Manager.hd_opr Manager.restore (proofs());
     top_proof());
@@ -53,6 +57,7 @@ fun save () =
     top_proof());
 
 val b = backup;
+val rd = redo;
 
 fun set_backup i =
   (the_proofs := Manager.hd_opr (Manager.set_backup i) (proofs()));

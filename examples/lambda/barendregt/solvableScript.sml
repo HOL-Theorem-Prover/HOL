@@ -837,6 +837,14 @@ Proof
  >> gs [is_head_reduction_thm, hnf_no_head_redex]
 QED
 
+Theorem principle_hnf_bnf :
+    !M. bnf M ==> principle_hnf M = M
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC principle_hnf_reduce
+ >> rw [bnf_hnf]
+QED
+
 Theorem principle_hnf_absfree_hnf[simp] :
     principle_hnf (VAR y @* args) = VAR y @* args
 Proof

@@ -78,6 +78,7 @@ sig
   val split : ('a * 'b) list -> 'a list * 'b list
   val mapfilter : ('a -> 'b) -> 'a list -> 'b list
   val flatten : 'a list list -> 'a list
+  val get_first : ('a -> 'b option) -> 'a list -> 'b option
   val trypluck': ('a -> 'b option) -> 'a list -> ('b option * 'a list)
   val plucki : ('a -> bool) -> 'a list -> ('a * int * 'a list) option
   val funpow : int -> ('a -> 'a) -> 'a -> 'a

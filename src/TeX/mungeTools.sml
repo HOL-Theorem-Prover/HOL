@@ -377,6 +377,7 @@ in
       end handle HOL_ERR _ => ([], term)
       open Portable
       fun addz s = add_stringsz (s, 0)
+      fun noBreak f = addz (pp_to_string 200000 I f)
       val (sep,hypbegin,hypend) =
           if OptSet.has StackedRule opts then
             (addz "\\\\", addz "\\begin{array}{c}", addz "\\end{array}")
@@ -387,7 +388,7 @@ in
               NONE => nothing
             | SOME s => B [addz"[\\HOLRuleName{", addz s, addz"}]"]
     in
-      B [
+      noBreak (B [
         addz "\\infer", rulename, addz "{\\HOLinline{",
         printer c,
         addz "}}{",
@@ -397,7 +398,7 @@ in
                   [sep] hs
         ),
         hypend, addz "}"
-      ]
+      ])
     end
 
     fun clear_overloads slist f = let

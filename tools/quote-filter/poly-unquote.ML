@@ -7,7 +7,6 @@ use "../../tools-poly/Holmake/Systeml.sml";
 use "../Holmake/AttributeSyntax.sig";
 use "../Holmake/AttributeSyntax.sml";
 use "../Holmake/HolLex.sml";
-use "../Holmake/QuoteFilter.sml";
 use "../Holmake/HM_SimpleBuffer.sig";
 use "../Holmake/HM_SimpleBuffer.sml";
 use "../Holmake/HOLFS_dtype.sml";
@@ -18,57 +17,43 @@ use "../Holmake/HOLFileSys.sig";
 use "../Holmake/HOLFileSys.sml";
 use "../Holmake/HolParser.sig";
 use "../Holmake/HolParser.sml";
-open OS.Process
-
-fun read_from_stream is n = TextIO.input is;
-
+use "quotefix.sig";
+use "quotefix.sml";
 use "qfilter_util.sig";
 use "qfilter_util.sml";
+
+open OS.Process
 
 fun main() = let
   (* magic to ensure that interruptions (SIGINTs) are actually seen by the
      linked executable as Interrupt exceptions *)
   val _ = Signal.signal(2, Signal.SIG_HANDLE
                                (fn _ => Thread.Thread.broadcastInterrupt()))
-  val {instrm, outstrm, interactive, quotefixp, oldparser, closefn, infilename} =
+  val {instrm, outstrm, interactive, quotefixp, quietOpen, closefn, infilename} =
       qfilter_util.processArgs(false,false,false,false) (CommandLine.arguments())
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 
-  val loop =
-    if oldparser orelse quotefixp then let
-      open QuoteFilter.UserDeclarations
-      val state as QFS args = newstate {inscriptp = interactive,
-                                        quotefixp = quotefixp,
-                                        scriptfilename = infilename}
+  fun read _ = TextIO.input instrm
+  fun write s = TextIO.output (outstrm, s)
+  val _ = if quotefixp then
+    quotefix.run read write
+  else let
+    open HolParser.ToSML
+    val read = mkPushTranslator {
+      read = read,
+      filename = infilename,
+      parseError = fn (start, stop) => fn s =>
+        TextIO.output (TextIO.stdErr,
+          "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n"),
+      quietOpen = quietOpen
+    } (mkStrcode write)
 
-      fun loop() =
-        let
-          val lexer = #2 o QuoteFilter.makeLexer (read_from_stream instrm) state
-          fun coreloop () =
-            case lexer() of
-                "" => ()
-              | s => (TextIO.output(outstrm, s); coreloop())
-        in
-          coreloop() handle Interrupt => (resetstate state; loop())
-        end
-      in loop end
-    else let
-      open HolParser.ToSML
-      val read = mkPushTranslator {
-        read = read_from_stream instrm,
-        filename = infilename,
-        parseError = fn (start, stop) => fn s =>
-          TextIO.output (TextIO.stdErr,
-            "parse error at " ^ Int.toString start ^ "-" ^ Int.toString stop ^ ": " ^ s ^ "\n")
-      } (mkStrcode (fn s => TextIO.output(outstrm, s)))
-
-      fun loop () = if read () then () else loop ()
-      in loop end
+    fun loop () = if read () then () else loop ()
+    in loop () end
 in
-  loop();
-  closefn();
+  closefn ();
   exit success
 end handle e => (
   TextIO.output (TextIO.stdErr, "Uncaught exception" ^

@@ -3945,6 +3945,48 @@ val SHORTLEX_total = store_thm(
   MAP_EVERY Cases_on [‘LENGTH l1 < LENGTH l2’, ‘h1 = h2’, ‘l1 = l2’] >>
   simp[] >> metis_tac[arithmeticTheory.LESS_LESS_CASES]);
 
+Theorem SHORTLEX_irreflexive :
+    !R. irreflexive R ==> irreflexive (SHORTLEX R)
+Proof
+    rw [irreflexive_def]
+ >> Induct_on ‘x’ >> rw [SHORTLEX_def]
+QED
+
+Theorem SHORTLEX_same_lengths :
+    !R h1 h2 t1 t2. LENGTH t1 = LENGTH t2 ==>
+                   (SHORTLEX R (h1::t1) (h2::t2) <=>
+                    R h1 h2 \/ h1 = h2 /\ SHORTLEX R t1 t2)
+Proof
+    rw [SHORTLEX_THM]
+QED
+
+(* NOTE: ‘antisymmetric’ (together with ‘transitive’) is sufficient for using
+   iterateTheory.TOPOLOGICAL_SORT' to sort a list of lists w.r.t. ‘SHORTLEX R’.
+
+   The antecedent ‘irreflexive R’ is necessary.
+ *)
+Theorem SHORTLEX_antisymmetric :
+    !R. irreflexive R /\ antisymmetric R ==> antisymmetric (SHORTLEX R)
+Proof
+    rw [antisymmetric_def, irreflexive_def]
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> qid_spec_tac ‘y’
+ >> qid_spec_tac ‘x’
+ >> Induct_on ‘x’
+ >- rw [SHORTLEX_THM]
+ >> rpt STRIP_TAC
+ >> Cases_on ‘y’ >- fs [SHORTLEX_THM]
+ >> Q.RENAME_TAC [‘h1::t1 = h2::t2’]
+ >> ‘LENGTH (h1::t1) <= LENGTH (h2::t2)’ by PROVE_TAC [SHORTLEX_LENGTH_LE]
+ >> ‘LENGTH (h2::t2) <= LENGTH (h1::t1)’ by PROVE_TAC [SHORTLEX_LENGTH_LE]
+ >> ‘LENGTH (h1::t1) = LENGTH (h2::t2)’ by PROVE_TAC [LESS_EQUAL_ANTISYM]
+ >> FULL_SIMP_TAC arith_ss [LENGTH]
+ >> Q.PAT_X_ASSUM ‘SHORTLEX R (h1::t1) (h2::t2)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘SHORTLEX R (h2::t2) (h1::t1)’ MP_TAC
+ >> rw [SHORTLEX_same_lengths] (* 5 subgoals *)
+ >> PROVE_TAC []
+QED
+
 val WF_SHORTLEX_same_lengths = Q.store_thm(
   "WF_SHORTLEX_same_lengths",
   ‘WF R ==>
@@ -4018,6 +4060,14 @@ val WF_SHORTLEX = Q.store_thm(
   ‘LENGTH bb <= LENGTH a0’ by metis_tac[SHORTLEX_LENGTH_LE] >>
   ‘LENGTH a0 = LENGTH a’ by metis_tac[] >>
   full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) []);
+
+Theorem SHORTLEX_SNOC :
+    !R l h1 h2. R h1 h2 ==> SHORTLEX R (SNOC h1 l) (SNOC h2 l)
+Proof
+    Q.X_GEN_TAC ‘R’
+ >> HO_MATCH_MP_TAC list_induction
+ >> rw []
+QED
 
 val LLEX_def = Define‘
   (LLEX R [] l2 <=> l2 <> []) /\

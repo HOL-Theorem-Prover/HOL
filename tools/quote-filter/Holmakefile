@@ -1,8 +1,8 @@
 CLINE_OPTIONS = --no_overlay --no_prereqs
 INCLUDES = $(HOLDIR)/tools/Holmake
 EXTRA_CLEANS = filter.sml quote-filter selftest
-QF_STEM = $(dprot $(HOLDIR)/tools/Holmake/QuoteFilter)
-DEPS = $(if $(MOSMLC),quote-filter.uo $(QF_STEM).uo qfilter_util.uo,poly-unquote.ML $(QF_STEM).sml)
+HL_STEM = $(dprot $(HOLDIR)/tools/Holmake/HolLex)
+DEPS = $(if $(MOSMLC),quote-filter.uo $(HL_STEM).uo quotefix.uo qfilter_util.uo,poly-unquote.ML $(HL_STEM).sml)
 
 all: quote-filter
 .PHONY: all

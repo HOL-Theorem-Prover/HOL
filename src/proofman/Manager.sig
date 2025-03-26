@@ -23,6 +23,7 @@ sig
   (* Undo *)
   val backup         : proof -> proof
   val set_backup     : int -> proof -> proof
+  val redo           : proof -> proof
   val restore        : proof -> proof
   val save           : proof -> proof
   val forget_history : proof -> proof

@@ -38,13 +38,13 @@ EXDIRS = algebra/aat \
          $(AXIOMATIC_EXAMPLES) \
          CCS Crypto/RSA Crypto/SHA-2 \
          Crypto/pedersenCommitment Crypto/sigmaProtocol \
-         Crypto/Keccak Hoare-for-divergence MLsyntax \
+         Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
 	 STE algorithms computability countchars dependability dev \
          developers/ThmSetData \
 	 fermat \
 	 formal-languages formal-languages/context-free \
-         formal-languages/contig \
+         formal-languages/contig formal-languages/json \
          formal-languages/lambek formal-languages/regular/regular-play \
          fun-op-sem/lprefix_lub fun-op-sem/for \
          hardware hfs \
@@ -66,7 +66,8 @@ SRCTESTDIRS = \
   integer/testing \
   string/theorytesting \
   TeX/theory_tests TeX/theory_tests/proj1paper \
-  tfl/examples transfer/examples
+  tfl/examples transfer/examples \
+  finite_maps/theory_tests
 
 ifdef POLY
 SRCTESTDIRS += n-bit/interactive_tests
