@@ -248,12 +248,6 @@ We are fairly liberal in the style of code we accept, which is almost required g
 However, the regression machinery does enforce some coding requirements, and these requirements may tighten over time.
 As of September 2024, the requirements are:
 
--   No use of Unicode characters under `src/` except for Greek lambda (`U+03BB`), and four quotation marks (“ ” ‘ ’—`U+2018`, `U+2019`, `U+201C` and `U+201D`).
-    Use of all five exceptions is _encouraged_.
-    In some situations, _e.g._, in a comment, it is extremely useful to be able to use Unicode characters.
-    If this is required, the line on which this occurs can be exempted by having that line include the substring `UOK` (typically inside an SML comment).
-    All Unicode is accepted under `examples`.
-
 -   No use of TABs anywhere.
 
 -   No trailing whitespace.

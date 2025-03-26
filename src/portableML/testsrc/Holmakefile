@@ -6,7 +6,7 @@ CLINE_OPTIONS = --no_overlay
 .PHONY: all
 
 all: $(dprot $(HOLDIR)/tools/unicode-grep/unicode-grep)
-	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen $(protect $(HOLDIR)/src) $(protect $(HOLDIR)/help/Docfiles)
+	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen -u $(protect $(HOLDIR)/src) $(protect $(HOLDIR)/help/Docfiles)
 	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen -u $(protect $(HOLDIR)/examples)
 
 endif
