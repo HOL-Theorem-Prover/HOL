@@ -9,13 +9,13 @@ type 'a cline_result = {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate10 z
+  fun makeUpdateT z = makeUpdate11 z
 in
 fun updateT z = let
   fun from build_theory_graph debug help jobcount keepgoing kernelspec
            multithread
            relocbuild selftest
-           seqname =
+           seqname timelimit =
     {build_theory_graph = build_theory_graph,
      debug = debug,
      help = help,
@@ -25,8 +25,10 @@ fun updateT z = let
      multithread = multithread,
      relocbuild = relocbuild,
      selftest = selftest,
-     seqname = seqname}
-  fun from' seqname selftest relocbuild multithread kernelspec keepgoing
+     seqname = seqname,
+     timelimit = timelimit}
+  fun from' timelimit seqname selftest relocbuild multithread kernelspec
+            keepgoing
             jobcount help
             debug
             build_theory_graph =
@@ -39,15 +41,17 @@ fun updateT z = let
      multithread = multithread,
      relocbuild = relocbuild,
      selftest = selftest,
-     seqname = seqname}
+     seqname = seqname,
+     timelimit = timelimit}
   fun to f {build_theory_graph, debug, help, jobcount, keepgoing, kernelspec,
             multithread,
             relocbuild,
-            selftest, seqname} =
+            selftest, seqname, timelimit} =
     f build_theory_graph debug help jobcount keepgoing kernelspec multithread
       relocbuild
       selftest
       seqname
+      timelimit
 in
   makeUpdateT (from, from', to)
 end z
@@ -153,7 +157,9 @@ val cline_opt_descrs = [
   {help = "build this directory sequence", long = ["seq"], short = "",
    desc = setSeqNameOnce},
   {help = "build with standard kernel", long = ["stdknl"], short = "",
-   desc = setKname "--stdknl"}
+   desc = setKname "--stdknl"},
+  {help = "Holmake -t timelimit (in seconds)", long = ["time_limit"],
+   short = "", desc = mkIntOpt "--timelimit" #timelimit}
 ]
 
 end (* struct *)
