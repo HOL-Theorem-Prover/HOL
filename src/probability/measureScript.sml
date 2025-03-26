@@ -1541,6 +1541,12 @@ Definition restrict_space :
      measure M)
 End
 
+Theorem measure_restrict_space[simp] :
+    measure (restrict_space M sp) = measure M
+Proof
+    rw [restrict_space, measure_def]
+QED
+
 Theorem space_restrict_space :
     !M sp. m_space (restrict_space M sp) = (sp INTER m_space M)
 Proof
