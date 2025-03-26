@@ -72,7 +72,7 @@ The most frequently used options to build are those to do with “selftest” le
 The build program’s `--selftest` option can be given as is (in which case the selftest level is 1), or followed by a positive number, which gives the selftest level explicitly.
 The higher the number, the more regression tests are executed.
 Developers are expected to categorise their tests so that those at level 1 will complete quickly, those at level 2 will execute in moderate time, and those at level 3 can take as long as is necessary.[^selftestnote]
-As of 2022, there are no regression tests that require a level greater than 3,and we will likely keep things this way.
+As of 2022, there are no regression tests that require a level greater than 3, and we will likely keep things this way.
 
 [^selftestnote]: As of 2022, our automatic testing infrastructure runs one selftest at level 3 each day, and one at level 2, with the latter testing the experimental kernel. Yes, this means that things only in level 3 are not getting tested for the experimental kernel.
 
