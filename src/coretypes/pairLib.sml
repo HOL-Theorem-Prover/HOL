@@ -17,7 +17,7 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
    gen_new_specification. This occurs here because the derivation
    depends on pairs. *)
 
-(* given (λ(x,y,...) ...) arg                            (UOK)
+(* given (λ(x,y,...) ...) arg
   produces an assumption:
   arg = (x,y,...)
   where the variables may be primed if necessary *)

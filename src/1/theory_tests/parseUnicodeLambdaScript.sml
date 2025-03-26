@@ -4,7 +4,7 @@ val _ = new_theory "parseUnicodeLambda";
 
 val _ = set_grammar_ancestry ["bool"]
 
-val t = ``λi. P i``;      (* UOK *)
+val t = ``λi. P i``;
 
 val th = save_thm("made_it", TRUTH);
 
