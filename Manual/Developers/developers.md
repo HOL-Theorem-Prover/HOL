@@ -188,31 +188,39 @@ Unless otherwise noted, they are built by the configuration process.
 :   Described [above](#build).
     The top-level driver code is in files called `build.sml` in `tools` and `tools-poly`.
     Shared code is in `tools/buildutils.sml`.
+    The executable is in `bin/`.
 
 `cmp`
 :   A simple-minded tool for comparing two files, returning (*via* exit code) 0 (success) if the two command-line arguments are byte-for-byte identical.
     Useful in regression testing of other tools.
     Built on demand *via* a Holmakefile.
+    The executable is in `tools/cmp`.
 
 `Holmake`
 :   The user-facing tool for building HOL developments.
     Use of this tool is described in the Description manual.
     The `tools/Holmake` directory contains almost all of the sources, but the Poly/ML-specific implementation of the `Systeml` module (on top of which everything else in the system is built) is in `tools-poly/Holmake`.
     The Poly/ML specific code implementing concurrent `Holmake` is in `tools/Holmake/poly`.
+    The executable is in `bin/`.
 
-`mllex`
+`mllex.exe`
 :   The tool from SML/NJ.
+    The executable is in `tools/mllex`.
 
-`mlyacc`
+`mlyacc.exe`
 :   The tool from SML/NJ.
+    The executable is in `tools/mlyacc/src/`.
 
-`quote-filter`
+`unquote`
 :   The quotation filter that runs over sources before they are seen by SML implementations.
     This is used interactively (*via* a Unix filter that preprocesses all user-input under Moscow ML, or built into the Poly/ML REPL), and non-interactively (by being applied to source files).
+    The core sources are in `tools/Holmake`, but the standalone executable is built in `tools/quote-filter` and it is moved to `bin/` as part of configuration.
 
 `unicode-grep`
 :   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
     The command-line specifies the directories to scan, and options dictate which requirements are enforced/checked for.
+    The enforcing of style is done by the `Holmakefile` in `src/portableML/testsrc`.
+    The executable is in `tools/unicode-grep`.
 
 ## Other Tools Directories
 
@@ -239,14 +247,14 @@ Unless otherwise noted, they are built by the configuration process.
 :   Build sequence files.
     These are “modularised” so that, in principle, custom build sequences can be constructed more easily.
 
-`tools/vim`
-:   Implementation of the vim editor mode.
+`tools/editor-modes`
+:   Implementation of the editor modes.
 
 ## Coding Standards/Requirements
 
 We are fairly liberal in the style of code we accept, which is almost required given the long history of our sources (see `arithmeticScript.sml` for lots of old comments).
 However, the regression machinery does enforce some coding requirements, and these requirements may tighten over time.
-As of September 2024, the requirements are:
+As of March 2025, the requirements are:
 
 -   No use of TABs anywhere.
 
