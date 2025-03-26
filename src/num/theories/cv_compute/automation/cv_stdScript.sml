@@ -152,22 +152,21 @@ Proof
   \\ Cases_on ‘xs’ \\ gvs []
 QED
 
-Definition list_mem_def:
-  list_mem y [] = F /\
-  list_mem y (x::xs) = if x = y then T else list_mem y xs
-End
-
-val res = cv_trans list_mem_def;
-
-val lemma = cv_rep_for [] “list_mem x xs” |> DISCH_ALL
-
-Theorem cv_rep_MEM[cv_rep]:
-  from_to f_a t_a ==>
-  cv_rep T (cv_list_mem (f_a x) (from_list f_a xs)) b2c (MEM (x:'a) xs)
+Triviality set_eq:
+  set [] (x:'a) = F ∧
+  set (y::ys) (x:'a) = if x = y then T else set ys x
 Proof
-  qsuff_tac ‘MEM x xs = list_mem x xs’
-  >- (simp [] \\ mp_tac lemma \\ fs [])
-  \\ Induct_on ‘xs’ \\ gvs [list_mem_def] \\ metis_tac []
+  assume_tac LIST_TO_SET
+  \\ gvs [pred_setTheory.EXTENSION]
+QED
+
+val _ = cv_trans set_eq;
+
+Theorem cv_rep_IN[cv_rep]:
+  cv_rep b cv a (s x) ==>
+  cv_rep b cv a ((x:'a) IN s)
+Proof
+  simp [IN_DEF]
 QED
 
 Triviality conj_eq_if:
