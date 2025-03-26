@@ -52,7 +52,7 @@ fun sptree_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
       val _ = if null alist then raise UserPP_Failed else ()
       val setp = type_of (snd (hd sorted)) = oneSyntax.one_ty
       val (llense, arrow, rlense) =
-          if unicodep then ("⦕", "↦", "⦖") (* UOK *)
+          if unicodep then ("⦕", "↦", "⦖")
           else ("(|SPT|", "|->", "|)")
       val arrow_grav = Prec(100, "  sptreepp.arrow")
       val {add_string,add_break,...} = ppfns : term_pp_types.ppstream_funs
