@@ -24,7 +24,20 @@ fun pp_terms ts =
  in block CONSISTENT 0 (pr_list pp_term [NL] ts)
  end
 
-exception EXTRACTION_ERROR of thm list * term
+exception EXTRACTION_ERROR of term list * term
+
+fun map2_total f (h1::t1) (h2::t2) = f h1 h2 :: map2_total f t1 t2
+  | map2_total f other wise = [];
+
+val dest_combn = let
+  fun dest acc tm 0 = (tm,acc)
+    | dest acc tm n =
+       let val (M,N) = dest_comb tm
+       in dest (N::acc) M (n-1)
+       end handle _ => raise ERR "dest_combn" ""
+  in
+    dest []
+  end
 
 (*----------------------------------------------------------------------------
  * |- !x y z. w   --->  |- w[x|->g1][y|->g2][z|->g3]
@@ -37,23 +50,6 @@ fun GSPEC_ALL th =
           GSPEC_ALL (SPEC (genvar (#1(dom_rng(#1(dom_rng Ty))))) th)
      | _ => th)
     handle HOL_ERR _ => th;
-
-fun gvterm tm =
-  case dest_term tm
-   of COMB(t1,t2) => mk_comb(gvterm t1,gvterm t2)
-    | LAMB(v,M) =>
-       let val gv = genvar (type_of v)
-           val M' = gvterm(subst [v |-> gv] M)
-       in mk_abs(gv,M')
-       end
-    | otherwise => tm;
-
-fun GENVAR_THM th =
- let val M = concl th
-     val M' = gvterm M
- in
-  EQ_MP (ALPHA M M') th
- end;
 
 (* ---------------------------------------------------------------------------
  * Split a theorem into a list of theorems suitable for rewriting:
@@ -139,6 +135,9 @@ fun PRIM_RW_CONV th =
  * certainly exist.
  *---------------------------------------------------------------------------*)
 
+(* TODO: check that all congs added to cong rules DB are in right form:
+    ant1 /\ ... /\ antn ==> fn vbar = fn vbar'
+ *)
 fun CONGR th =
    let val (ants,eq) = strip_imp_only (concl th)
        (* TODO: Check that it is a congruence rule *)
@@ -172,7 +171,8 @@ fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
     rw_net = itlist Net.insert
              (map (fn th => let val left = lhs(#2(strip_imp_only(concl th)))
                             in  (left,  PRIM_RW_CONV th) end)
-                  (flatten (map MK_RULES_APART thl)))        rw_net}
+                  (flatten (map MK_RULES_APART thl)))
+             rw_net}
  handle HOL_ERR _
  => raise ERR "add_rws" "Unable to deal with input";
 
@@ -187,47 +187,10 @@ fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
                 in
                    (lhs eq,  CONGR th)
                 end)
-              (map (GSPEC_ALL o GEN_ALL) thl))         cong_net}
+              (map (GSPEC_ALL o GEN_ALL) thl))
+         cong_net}
   handle HOL_ERR _ =>
   raise ERR"add_congs" "Unable to deal with input"
-
-(*----------------------------------------------------------------------------
- *                          Prettyprinting
- *---------------------------------------------------------------------------*)
-
-local open Portable PP
-in
-fun pp_simpls (RW{thms,congs,...}) =
-   let val pp_thm = Parse.pp_thm
-       val thms' = mk_simplsl SPEC_ALL (rev(flatten thms))
-       val congs' = rev(flatten congs)
-       val how_many_thms = length thms'
-       val how_many_congs = length congs'
-       val B = block CONSISTENT 0
-   in
-     block PP.CONSISTENT 0 [
-       if how_many_thms = 0
-       then add_string "<empty simplification set>"
-       else B [add_string"Rewrite Rules:", NL,
-               add_string"--------------", NL,
-               block PP.INCONSISTENT 0 (
-                 pr_list pp_thm [add_string";", add_break(2,0)] thms')
-              ],
-       NL,
-       add_string("Number of rewrite rules = "^Lib.int_to_string how_many_thms),
-       NL,
-       B (if (how_many_congs = 0) then []
-          else [
-            NL,
-            add_string"Congruence Rules", NL,
-            add_string"----------------", NL,
-            B (pr_list pp_thm [add_string";", add_break(2,0)] congs'), NL,
-            add_string("Number of congruence rules = "
-                       ^Lib.int_to_string how_many_congs), NL
-         ])
-     ]
-   end
-end;
 
 (*----------------------------------------------------------------------------
  * In RW_STEP, we find the list of matching rewrites, and choose the first
@@ -325,62 +288,58 @@ datatype delta
 fun unchanged (NO_CHANGE _) = true
   | unchanged _ = false;
 
+fun dest_change (NO_CHANGE th) = th
+  | dest_change (CHANGE th) = th
 
-(*---------------------------------------------------------------------------
- * Support for rewriting with congruence rules.
- *---------------------------------------------------------------------------*)
-
-fun variants away0 vlist =
-  rev(fst (rev_itlist (fn v => fn (V,away) =>
-             let val v' = variant away v in (v'::V, v'::away) end)
-           vlist ([],away0)));
-
-fun variants_theta away0 vlist =
- rev_itlist (fn v => fn (V,away) =>
-    let val v' = variant away v
-    in if aconv v v' then (V,away) else ((v|->v')::V, v'::away) end)
- vlist ([],away0);
-
-fun rename_forall_prefix frees tm =
- let val (vs,t) = strip_forall tm
-     val theta = fst (variants_theta frees vs)
- in
+fun rename_forall_prefix frees =
+ let fun variants_theta away0 vlist =
+       rev_itlist (fn v => fn (V,away) =>
+         let val v' = variant away v
+         in if aconv v v' then
+              (V,away)
+            else ((v|->v')::V, v'::away)
+         end) vlist ([],away0)
+ in fn tm =>
+  let val (vs,t) = strip_forall tm
+      val theta = fst (variants_theta frees vs)
+  in
    list_mk_forall(map (subst theta) vs, subst theta t)
- end
+ end end
 
-(*---------------------------------------------------------------------------
- * Takes a list of free variables and a list of pairs. If any of
- * the free variables are in the pairs, they are replaced in the pairs
- * by variants.  The final pairs are returned.
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Takes a list of free variables and a list of tuples, representing         *)
+(* varstructs. If any of the free variables are in the tuples, they are      *)
+(* replaced in the tuples by variants. More can be done since the list of    *)
+(* varstructs represents an iterated abstraction. Therefore, there should be *)
+(* no duplicate variables in the varstructs; any duplicates should be        *)
+(* renamed as well.                                                          *)
+(*---------------------------------------------------------------------------*)
 
-fun vstrl_variants away0 vstrl =
-  let val fvl = free_varsl vstrl
-      val clashes = op_intersect aconv away0 fvl
-  in if null clashes then vstrl
-     else let val theta =
-               #1(rev_itlist (fn v => fn (theta, pool) =>
-                     let val v' = variant pool v
-                     in
-                       if aconv v v' then (theta,pool)
-                       else ((v|->v')::theta, v'::pool)
-                     end) clashes ([], op_union aconv away0 fvl))
-          in map (subst theta) vstrl
-          end
+fun vary away v =
+  let val v' = variant away v
+  in if aconv v v' then (v,v::away) else (v',v'::away)
   end;
 
-fun thml_fvs thl =
-   Lib.op_U aconv (map (fn th => let val (asl,c) = dest_thm th
-                                 in free_varsl (c::asl)
-                                 end) thl);
-val dest_combn = let
-  fun dest acc tm 0 = (tm,acc)
-    | dest acc tm n =
-       let val (M,N) = dest_comb tm
-       in dest (N::acc) M (n-1)
-       end handle _ => raise ERR "dest_combn" ""
+fun variant_tuple away tuple =
+ if is_var tuple then
+     vary away tuple
+ else
+ if is_pair tuple then
+   let val (p1,p2) = dest_pair tuple
+       val (p1',away1) = variant_tuple away p1
+       val (p2',away2) = variant_tuple away1 p2
+   in (mk_pair(p1',p2'), away2)
+   end
+ else
+  (tuple,away)
+
+fun vstruct_variants away vstructs =
+  let fun iterFn vstruct (vstructs,away) =
+        let val (vstruct',away') = variant_tuple away vstruct
+        in (vstruct'::vstructs, away')
+        end
   in
-    dest []
+  itlist iterFn vstructs ([],away)
   end
 
 (*---------------------------------------------------------------------------*)
@@ -448,23 +407,24 @@ val dest_combn = let
 (* variables above.                                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun map2_total f (h1::t1) (h2::t2) = f h1 h2 :: map2_total f t1 t2
-  | map2_total f other wise = [];
-
 fun push_context L {simpls,context,prover} =
- let open HOLPP in
-   lztrace(6,"push_context", fn () =>
+ let open HOLPP
+     val trace_level = if null L then 10 else 6
+ in
+  lztrace(trace_level,"push_context", fn () =>
     if null L then
       ppstring add_string "<no context to push>"
     else ppstring pp_terms L)
   ;
-   {context = map ASSUME L @ context,
+   {context = L @ context,
     simpls = simpls, prover = prover}
  end
 
 fun pop_context L th =
- let open HOLPP in
-    lztrace(6,"pop_context", fn () =>
+ let open HOLPP
+     val trace_level = if null L then 10 else 6
+ in
+    lztrace(trace_level,"pop_context", fn () =>
       if null L then
         ppstring add_string "<no context to pop>"
       else ppstring pp_terms L)
@@ -503,20 +463,6 @@ fun simple cnv cps (ant,rst) =
           | NO_CHANGE _ => (outcome, map (subst [rhs |-> lhs]) rst)
        end
 
-(*---------------------------------------------------------------------------*)
-(* Congruence rule antecedent of the form !vs. P vs ==> f vs = f' vs         *)
-(* The f' is a variable found by recursively extracting from the beta-reduct *)
-(* of "f vs". If f is a lambda term (\p1..pk. M[p1,...,pk]) where the pi can *)
-(* be varstructs then                                                        *)
-(*                                                                           *)
-(*   vs = v1 .. vk v(k+1) .. vn                                              *)
-(*      = vs1 @ vs2                                                          *)
-(*                                                                           *)
-(* In order to use the names given in the original recursion equations, we   *)
-(* replace the vs1 variables by their corrresponding ps and rebuild the      *)
-(* antecedent. Does this work?                                               *)
-(*---------------------------------------------------------------------------*)
-
 (*
 fun complex cnv cps (ant,rst) =
   let val context_frees = free_varsl (map concl (#context cps))
@@ -529,24 +475,37 @@ fun complex cnv cps (ant,rst) =
     val (vs1,vs2) = (List.take(vs,nuvs),List.drop(vs,nuvs))
 *)
 
+(*---------------------------------------------------------------------------*)
+(* Congruence rule antecedent of the form !vs. P vs ==> f vs = f' vs         *)
+(* The f' is a variable found by recursively extracting from the beta-reduct *)
+(* of "f vs". f can be a lambda term (\p1..pk. M[p1,...,pk]) where the pi    *)
+(* can be varstructs. In order to use the names given in the original        *)
+(* input, there is a step where v1...vk are replaced by the corrresponding   *)
+(* p1,...,pk before extraction occurs. This has to be undone, ie, the pi are *)
+(* replaced by the corresponding vi, in the last step of proving the         *)
+(* antecedent.                                                               *)
+(*---------------------------------------------------------------------------*)
+
 fun complex cnv cps (ant,rst) =
-  let val context_frees = free_varsl (map concl (#context cps))
+  let val context_frees = free_varsl (#context cps)
     val ant' = rename_forall_prefix context_frees ant
-    val ant_frees = free_vars ant'
+    val ant_frees = Term.free_vars ant'
     val (vlist,ceqn) = strip_forall ant'
     val (_,eq) = strip_imp_only ceqn
     val (lhs,rhs) = dest_eq eq
-    val (rhsFn,args) = strip_comb rhs
-    val nvars = length args
-    val f = fst(dest_combn lhs nvars)
-    val vstrl = #1(strip_pabs f)
-    val vstructs = vstrl_variants (op_union aconv ant_frees context_frees) vstrl
+    val (rhsFnVar,args) = strip_comb rhs
+    val nargs = length args
+    val lhsFn = fst(dest_combn lhs nargs)
+    val vstructs =
+       fst(vstruct_variants
+             (op_union aconv ant_frees context_frees)
+             (fst(strip_pabs lhsFn)))
 
-    (* Version of ant with user-given names (and tuple introduction) *)
-    val ceqn' = if null vstrl then ceqn
-                 else subst (map2_total (curry op|->) args vstructs) ceqn
-
+    (* Adopt user-given names and introduce tuple args *)
+    val theta = map2_total (curry op|->) args vstructs
+    val ceqn' = subst theta ceqn
     val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
+
     (* TODO: we can't just push the context, since it can have
        beta-reducts that need to be unbeta'ed in order for this antecedent
        to be proved. *)
@@ -570,84 +529,45 @@ fun complex cnv cps (ant,rst) =
        end
   in
   case outcome
-   of NO_CHANGE _ => (outcome, map (subst [rhsFn |-> f]) rst)
+   of NO_CHANGE _ => (outcome, map (subst [rhsFnVar |-> lhsFn]) rst)
     | CHANGE th =>
       let (*------------------------------------------------------------*)
           (* Function eta_rhs packages up the new rhs, eta-expanding it *)
-          (* if need be, i.e. if the lhs is an application of a lambda  *)
-          (* or paired-lambda term f. In that case, the extraction has  *)
-          (* first done a beta-reduction and then extraction, so the    *)
-          (* derived rhs needs to be "un-beta-expanded" in order that   *)
-          (* the existential var on the rhs (g)be filled in with a thing*)
-          (* that has function syntax. This will allow the final        *)
-          (* MATCH_MP icong ... to  succeed.                            *)
+          (* if need be, i.e. if lhsFn is an application of a lambda or *)
+          (* paired-lambda term f. In that case, the extraction has     *)
+	  (* first done a beta-reduction, so the post-extraction rhs    *)
+	  (* needs to be "beta-expanded" in order that rhsFnVar be      *)
+	  (* filled in with a term that has function syntax. This       *)
+	  (* is needed for the final MATCH_MP icong ... to  succeed.    *)
           (*------------------------------------------------------------*)
-         fun drop n list =
-             if n <= 0 orelse null list then list else drop (n-1) (tl list)
-
-         (*-------------------------------------------------------------*)
-         (* if fewer vstructs than args, this means that the body       *)
-         (* (rcore below) has a function type and will be eta-expanded  *)
-         (*-------------------------------------------------------------*)
-         val pbeta_reductions = Int.min(length vstructs,length args)
-         val rhs_arg_vstructs = snd (strip_comb rhs)
-         (* At this point th has form
-
-            A |- (\v1 ... vk. M [v1, ..., vk]) x1 ... xk x(k+1) ... xn
-                 =
-            M'[x1,...,xk] x(k+1) ... xn
-
-           (1) If the head term of M' is not a lambda we expect
-
-            A |- M x1 ... xn = M' x1 ... xn
-
-           Note that the head term in this case could be a partial application,
-           thus M x1 ... xi, i < n, might embody the new function. This is
-           already handled. For the lambda case, we need to build something like
-
-             (\v1 ... vk. M' [x1,...,xk |-> v1,...,vk]) x1 ... xn
-
-           (2) M' is a lambda. Then all of the x1,..,xn have been consumed,
-           and we don't have to do any special processing, just make
-
-             (\x1 ... xn. M' [x1,...,xn]) x1 ... xn
-         *)
+         val nbetas = Int.min(length vstructs,nargs)
+         val rhs_args = snd (strip_comb rhs)
 
          fun eta_rhs th =
            let val r = boolSyntax.rhs(concl th)
-               val (f', f'app) =
-                   if null vstrl then (* f is not a lambda term *)
-                     let val (rcore,end_vars) = dest_combn r nvars
-                         val f' = list_mk_pabs(vstructs,rcore)
-                     in (f',list_mk_comb(f',vstructs@end_vars))
-                     end else
-                  if is_pabs r then (* all args consumed, maybe some vstructs left *)
-                    let val etas = List.take(vstructs, pbeta_reductions)
-                         val f' = list_mk_pabs(etas,r)
-                     in
-                       (f',list_mk_comb(f',rhs_arg_vstructs))
-                     end
-                  else  (* a pabs-headed comb, but not all args consumed *)
-                  let val (rcore,end_vars) = dest_combn r (nvars - length vstrl)
-                      val f' = list_mk_pabs(vstructs,rcore)
-                  in (f',list_mk_comb(f',vstructs@end_vars))
+               val (rhsFn, rhsFnapp) =
+                  if null vstructs then (* lhsFn is not a lambda term *)
+                     (fst(dest_combn r nargs),r)
+                  else
+                  let val fnbody =
+                         if is_pabs r then r else fst(dest_combn r (nargs - nbetas))
+                      val etas = List.take(vstructs, nbetas)
+                      val rhsFn = list_mk_pabs(etas,fnbody)
+                  in
+                    (rhsFn,list_mk_comb(rhsFn,rhs_args))
                   end
                val rhs_eq =
-                  if null vstrl then
-                    REFL f'app
-                  else SYM(Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) f'app)
+                  if null vstructs then
+                    REFL rhsFnapp
+                  else SYM(Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) rhsFnapp)
 
-               val th1 = TRANS th rhs_eq (* |- f vstructs = f' vstructs *)
-                         handle HOL_ERR _ => th
-            in (f',th1)
+               val th1 = TRANS th rhs_eq (* |- lhsFn vstructs = rhsFn vstructs *)
+            in
+              (rhsFn,th1)
             end
 
-         val (f',th1) = eta_rhs th
+         val (rhsFn,th1) = eta_rhs th
          val th2 = pop_context L th1
-         val unconsumed = drop (length vstructs) args
-         val vstructs' = vstructs @ unconsumed
-         val pairs = zip args vstructs' handle HOL_ERR _ => []
-(*         val pairs = zip args vstructs handle HOL_ERR _ => [] *)
 
          fun genfail vs th =
             case op_intersect term_eq (free_varsl vs) (free_varsl (hyp th))
@@ -660,27 +580,20 @@ fun complex cnv cps (ant,rst) =
                  Lib.with_flag(show_assums, true) (ppstring pp_thm) th, "\n\n"])
 
          fun generalize v thm =
-            (case op_assoc1 aconv v pairs
+            (case subst_assoc (aconv v) theta
               of SOME tup => pairTools.PGEN v tup thm
                | NONE => GEN v thm)
             handle e => (genfail [v] thm; raise e)
 
          val th3 = itlist generalize vlist th2
       in
-        (CHANGE th3, map (subst [rhsFn |-> f']) rst)
+        (CHANGE th3, map (subst [rhsFnVar |-> rhsFn]) rst)
       end
   end
   handle HOL_ERR _ => raise EXTRACTION_ERROR (#context cps, ant)
 
  (* complex *)
 
-(* NB: any HOL_ERR exception being raised in try_cong will get
-   trapped in SUB_QCONV and then recursion into subterms will
-   be attempted. Will need an uncatchable exception!
-
-  TODO: check that all congs added to cong rules DB are in right form:
-    ant1 /\ ... /\ antn ==> fn vbar = fn vbar'
- *)
 fun try_cong cnv cps tm =
  let val icong = CONG_STEP (#simpls cps) tm
   val ants = strip_conj (fst (dest_imp (concl icong)))
@@ -701,8 +614,6 @@ fun try_cong cnv cps tm =
         outcome::loop rst'
       end
   val outcomes = loop ants
-  fun dest_change (NO_CHANGE th) = th
-    | dest_change (CHANGE th) = th
  in
    if Lib.all unchanged outcomes
      then raise UNCHANGED
@@ -779,7 +690,7 @@ fun capture (restrf,f,G,nref) context tm =
       val antl =
          case rcontext
            of [] => []
-            | _  => [list_mk_conj(map concl rcontext)]
+            | _  => [list_mk_conj rcontext]
       val TC = genl(list_mk_imp(antl, tm))
       val (R,arg,pat) = wfrecUtils.dest_relation tm
   in
@@ -789,7 +700,8 @@ fun capture (restrf,f,G,nref) context tm =
                       then nref := true else ()
           in case rcontext
               of [] => SPEC_ALL(ASSUME TC)
-               | _  => MATCH_MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
+               | _  => MATCH_MP (SPEC_ALL (ASSUME TC))
+                                (LIST_CONJ (map ASSUME rcontext))
           end
   end
 end
@@ -803,14 +715,13 @@ fun extract FV congs (proto_def,WFR) =
      val f = boolSyntax.lhs proto_def
      val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
      val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
-     fun mk_restr p = mk_comb(restr_fR, p)
      val cut_simpls = add_rws empty_simpls [CUT_LEM]
      val init_simpls = add_congs cut_simpls congs
  in fn (p,th) =>
     let val nested_ref = ref false
         val FV' = FV@free_vars(concl th)
-        val cps0 = {simpls = init_simpls,context = []:thm list,
-                    prover = capture (mk_restr p, f, FV', nested_ref)}
+        val cps0 = {simpls = init_simpls,context = []:term list,
+                    prover = capture (mk_comb(restr_fR, p), f, FV', nested_ref)}
 (*        val th' = CONV_RULE (QCONV EXTRACT_QCONV cps0) th *)
         val th' = CONV_RULE (QCONV RE_EXTRACT_QCONV cps0) th
     in
