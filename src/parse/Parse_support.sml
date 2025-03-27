@@ -132,7 +132,7 @@ fun make_binding_occ lAbs lVar s0 E = let
   open Preterm
   val (ntv,E') = ptylift Pretype.new_uvar E
   val (s,E'') = if all_uscores s0 then
-                  ("_" ^ Int.toString (#uscore_cnt E), new_uscore E)
+                  ("_" ^ Int.toString (#uscore_cnt E'), new_uscore E')
                 else (s0, add_scope((s0,ntv),E'))
 in
   ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv, Locn=lVar},Body=b,
