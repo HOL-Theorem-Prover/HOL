@@ -707,7 +707,8 @@ file to \"use\" first."
                        (setq hol-mode-to-delete nil)))
             ; below, use visit parameter = 1 to stop message in mini-buffer
             (write-region (point-min) (point-max) fname nil 1)
-            (send-raw-string-to-hol (format "use \"%s\"" fname) nil)
+            (send-raw-string-to-hol
+             (format "QUse.prim_use {quietOpen = true} \"%s\"" fname) nil)
             (setq hol-mode-to-delete fname))
     (send-raw-string-to-hol (buffer-string) echoit)))
 

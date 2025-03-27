@@ -17,7 +17,11 @@ fun use_reader fname (reader as {read = infn0, eof}) =
                            Compiler.CPLineNo (fn () => !lineNo)]) ()
   end
 
-fun use fname = use_reader fname (HolParser.fileToReader {quietOpen = false} fname)
+fun prim_use cfg fname =
+    use_reader fname (HolParser.fileToReader cfg fname)
+
+val use = prim_use {quietOpen = false}
+
 
 fun useScript fname =
     let

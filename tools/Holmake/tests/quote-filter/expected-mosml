@@ -101,4 +101,9 @@ val thm = Q.store_thm_at (DB_dtype.mkloc ("foo.sml", 15, true)) ("thm[foo, simp 
 ) HOL__GOAL__foo));
 
 val thm2 = boolLib.save_thm("thm2[foo, simp , key = val1 val2]", exp
-);
+
+);val th3 = Q.store_thm_at (DB_dtype.mkloc ("foo.sml", 23, true)) ("th3[*,bar]", [QUOTE " (*#loc 23 20*)\n\
+\  stmt"], (fn HOL__GOAL__foo => (
+
+tac
+) HOL__GOAL__foo));
