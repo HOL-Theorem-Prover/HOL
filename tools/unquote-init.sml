@@ -3,7 +3,9 @@
  * of "use" is found in the "Meta" structure.                                *
  *---------------------------------------------------------------------------*)
 
-local
+structure QUse =
+struct
+  local
   (* used to stand for "has double quote", but the same analysis is necessary
      even for files that contain single quotes because of the special
      treatment that the filter gives to things like `s1 ^ s2`
@@ -23,6 +25,17 @@ local
   fun p1 ++ p2 = Path.concat (p1, p2)
   fun unquote_to file1 file2 =
       Systeml.systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2]
+  fun with_flag (r,v) f x =
+      let val old = !r
+      in
+        let
+          val _ = r := v
+          val res = f x
+        in
+          r := old;
+          res
+        end handle e => (r := old; raise e)
+      end
 in
 fun use s =
   if has_dq s then
@@ -37,4 +50,10 @@ fun use s =
             raise Fail "use")
     end
   else Meta.use s
-end;
+
+fun prim_use {quietOpen} s =
+    with_flag (Meta.quietdec, quietOpen) use s
+end; (* local *)
+
+end; (* struct *)
+val use = QUse.use;
