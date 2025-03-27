@@ -12,7 +12,7 @@ val {instrm = instream, outstrm = outstream, interactive = intp,
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 fun read _ = TextIO.input instream
-fun write s = TextIO.output (outstream, s)
+fun write s = (TextIO.output (outstream, s); TextIO.flushOut outstream)
 
 val _ = if qfixp then
   quotefix.run read write

@@ -7,7 +7,7 @@ val ERR = mk_HOL_ERR "Extract";
 
 val monitoring = ref 0
 
-val _ = register_trace ("TFL rewrite monitoring", monitoring, 20);
+val _ = register_trace ("TFL TC-extraction monitoring", monitoring, 20);
 
 fun lztrace(i,fname,msgf) =
   if i <= !monitoring then
