@@ -36,7 +36,7 @@ AXIOMATIC_EXAMPLES = $(patsubst %,axiomatic-developments/%,$(AXIOMATIC_THYDIRS))
 EXDIRS = algebra/aat \
          arm/arm6-verification arm/armv8-memory-model arm/experimental \
          $(AXIOMATIC_EXAMPLES) \
-         CCS Crypto/RSA Crypto/SHA-2 \
+         CCS Crypto/RSA Crypto/SHA-2 Crypto/MD5 \
          Crypto/pedersenCommitment Crypto/sigmaProtocol \
          Hoare-for-divergence MLsyntax \
          PSL/1.01/executable-semantics PSL/1.1/official-semantics \
