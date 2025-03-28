@@ -2,6 +2,7 @@
    Functional definition of md5 hash based on HOL/src/portableML/poly/MD5.sml
 *)
 open HolKernel Parse boolLib bossLib;
+open wordsLib
 open listTheory wordsTheory stringSyntax;
 
 val _ = new_theory "md5";
