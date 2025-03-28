@@ -318,7 +318,7 @@ fun gen_variant vfn avoids s =
 
 (* pc = "prime count", i.e. count of number of prime characters *)
 (* a variable whose name is actually what gets printed to abbreviate a
-   big prime count, e.g., v'4', or v'⁴' are abbreviations for v'''', have  (UOK)
+   big prime count, e.g., v'4', or v'⁴' are abbreviations for v'''', have
    to be treated as "bad" *)
 fun badpc_encode s =
     let val sz = String.size s

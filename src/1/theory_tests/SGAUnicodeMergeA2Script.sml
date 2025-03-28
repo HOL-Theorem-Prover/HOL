@@ -6,7 +6,7 @@ val INTER_def = new_definition(
   "INTER_def",
   ``INTER P Q x <=> P x /\ Q x``);
 
-val _ = Unicode.unicode_version { u = "∩", tmnm = "INTER"};  (* UOK *)
+val _ = Unicode.unicode_version { u = "∩", tmnm = "INTER"};
 
 val FUNION_def = new_definition(
   "FUNION_def",

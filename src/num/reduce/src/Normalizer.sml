@@ -803,6 +803,6 @@ end; (* structure *)
 
 (* References:
 
-   [1] https://en.wikipedia.org/wiki/Gröbner_basis                           UOK
+   [1] https://en.wikipedia.org/wiki/Gröbner_basis
    [2] https://en.wikipedia.org/wiki/Buchberger%27s_algorithm
  *)

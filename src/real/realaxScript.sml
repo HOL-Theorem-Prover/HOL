@@ -97,7 +97,7 @@ val _ = overload_on ("<", natless);
 
 Overload "~" = “$real_neg”
 Overload "~" = bool_not
-Overload "¬" = bool_not                                               (* UOK *)
+Overload "¬" = bool_not
 Overload "numeric_negate" = “$real_neg”
 
 val _ = overload_on ("+", Term`$real_add`);

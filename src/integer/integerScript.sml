@@ -521,7 +521,7 @@ val bool_not = “$~ : bool -> bool”
 Overload "~" = “int_neg”
 Overload "~" = bool_not
 Overload numeric_negate = “int_neg”
-Overload "¬" = bool_not                                              (* UOK *)
+Overload "¬" = bool_not
 
 (*--------------------------------------------------------------------------*)
 (* Define subtraction and the other orderings                               *)

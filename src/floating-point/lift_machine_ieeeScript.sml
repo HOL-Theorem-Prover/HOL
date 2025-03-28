@@ -20,8 +20,8 @@ val _ = add_rule {
   block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
   paren_style = OnlyIfNecessary};
 
-(* I.e., [1,2) looks like ⦋1 ⬝ 2⟯                                         UOK *)
-(* which is perhaps a bit gross really                                        *)
+(* I.e., [1,2) looks like ⦋1 ⬝ 2⟯ *)
+(* which is perhaps a bit gross really *)
 
 (* --------------------------------------------------------------------- *)
 

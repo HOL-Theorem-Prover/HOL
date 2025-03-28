@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* Generic Gröbner basis algorithm [1]. (HOL-Light's grobner.ml)         UOK *)
+(* Generic Gröbner basis algorithm [1]. (HOL-Light's grobner.ml)             *)
 (*                                                                           *)
 (* Whatever the instantiation, it basically solves the universal theory of   *)
 (* the complex numbers, or equivalently something like the theory of all     *)
@@ -1007,10 +1007,10 @@ end; (* structure *)
 
 (* References:
 
- [1] https://en.wikipedia.org/wiki/Gröbner_basis                             UOK
+ [1] https://en.wikipedia.org/wiki/Gröbner_basis
  [2] https://en.wikipedia.org/wiki/Buchberger%27s_algorithm
  [3] Davenport, J.H., Siret, Y., Tournier, E.: Computer algebra - systems and
      algorithms for algebraic computation. Academic Press (1993). (Chapter 3)
- [4] Adams, W.W., Loustaunau, P.: An Introduction to Gröbner Bases.          UOK
+ [4] Adams, W.W., Loustaunau, P.: An Introduction to Gröbner Bases.
      American Mathematical Soc. (1994).
  *)

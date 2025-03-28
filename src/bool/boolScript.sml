@@ -162,7 +162,7 @@ val TYPE_DEFINITION = def (#(FILE), #(LINE))
 
 open Portable;
 Overload "~" = “~”
-Overload "¬" = “~”                                                     (* UOK *)
+Overload "¬" = “~”
 val _ = add_rule {term_name   = "~",
                   fixity      = Prefix 900,
                   pp_elements = [TOK "~"],

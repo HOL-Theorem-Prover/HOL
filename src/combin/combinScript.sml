@@ -61,7 +61,7 @@ in
                      tok = "|->"};
   set_mapped_fixity {fixity = Infix(NONASSOC,100),
                      term_name = mapsto_special,
-                     tok = "↦"}; (* UOK *)
+                     tok = "↦"};
   addlform "(|" "|)";
   addlform UnicodeChars.lensel UnicodeChars.lenser;
   add_ML_dependency "combinpp";
@@ -74,7 +74,7 @@ val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = UnicodeChars.lensel}
 val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = "(|"}
 val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = UnicodeChars.lenser}
 val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = "|)"}
-val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "↦"}       (* UOK *)
+val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "↦"}
 val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "|->"}
 
 local open OpenTheoryMap in
