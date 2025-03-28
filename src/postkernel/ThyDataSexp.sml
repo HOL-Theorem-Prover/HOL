@@ -444,4 +444,24 @@ fun tag_encode s e x =
       | List els => List (Sym s :: els)
       | t => List [Sym s, t]
 
+type 'a ed = ('a enc * 'a dec)
+val string_ed = (String, string_decode)
+val int_ed = (Int, int_decode)
+val type_ed = (Type, type_decode)
+val term_ed = (Term, term_decode)
+val thm_ed = (Thm, thm_decode)
+val char_ed = (Char, char_decode)
+val kname_ed = (KName, kname_decode)
+val bool_ed = (Bool, bool_decode)
+
+fun list_ed (e,d) = (mk_list e, list_decode d)
+fun option_ed (e,d) = (option_encode e, option_decode d)
+fun pair_ed ((e1,d1), (e2,d2)) = (pair_encode(e1,e2), pair_decode(d1,d2))
+fun pair3_ed ((e1,d1), (e2,d2), (e3,d3)) = (pair3_encode(e1,e2,e3),pair3_decode(d1,d2,d3))
+fun pair4_ed ((e1,d1), (e2,d2), (e3,d3), (e4,d4)) =
+    (pair4_encode(e1,e2,e3,e4),pair4_decode(d1,d2,d3,d4))
+
+fun bij_ed (a2b, b2a) (be,bd) = (be o a2b, Option.map b2a o bd)
+fun inj_ed (a2b, b2a_opt) (be, bd) = (be o a2b, Option.mapPartial b2a_opt o bd)
+
 end
