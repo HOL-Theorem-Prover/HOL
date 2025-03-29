@@ -9,7 +9,7 @@ open HolKernel Parse boolLib realTheory simpLib realSyntax
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars realTheory.real_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname = "real"}
 end
 
 open Parse

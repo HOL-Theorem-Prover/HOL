@@ -10,7 +10,8 @@ open HolKernel Parse boolLib pairLib basicSize DefnBase numSyntax
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+  val SOME arithmetic_grammars = grammarDB {thyname="arithmetic"}
+  val (Type,Term) = parse_from_grammars arithmetic_grammars
 end
 open Parse
 

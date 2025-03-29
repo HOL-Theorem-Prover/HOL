@@ -6,7 +6,7 @@ open integerTheory int_arithTheory
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars integer_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="integer"}
 end
 open Parse
 

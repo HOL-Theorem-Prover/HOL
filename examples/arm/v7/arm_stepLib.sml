@@ -13,7 +13,8 @@ open arm_stepTheory;
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = arm_stepTheory.arm_step_grammars
+  val (Type,Term) = grammarDB {thyname="arm_step"}
+                      |> valOf
                       |> apsnd ParseExtras.grammar_loose_equality
                       |> parse_from_grammars
 

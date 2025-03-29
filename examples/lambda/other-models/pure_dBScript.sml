@@ -245,15 +245,17 @@ val _ = export_rewrites ["dpm_supp"]
 (* this is enough to establish de Bruijn terms as a nominal type for the
    purposes of function definition.  I.e., now we can define functions
    that have dB terms as their range *)
-val _ = binderLib.type_db :=
-        Binarymap.insert(!binderLib.type_db, {Thy="pure_dB", Name = "pdb"},
-                         binderLib.NTI {
-                         nullfv = ``dABS (dV 0)``,
-                         pm_rewrites = [],
-                         pm_constant = ``d_pmact``,
-                         fv_rewrites = [],
-                         recursion_thm = NONE,
-                         binders = []})
+val _ = binderLib.local_update (
+  “:pdb”,
+  binderLib.NTI {
+    nullfv = “dABS (dV 0)”,
+    pm_rewrites = [],
+    pm_constant = “d_pmact”,
+    fv_rewrites = [],
+    recursion_thm = NONE,
+    binders = []
+  }
+)
 
 (* substitution of a fresh variable is actually a permutation *)
 val fresh_dpm_sub = store_thm(

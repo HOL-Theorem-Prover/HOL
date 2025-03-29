@@ -6,7 +6,7 @@ open bitTheory numeral_bitTheory
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars bitTheory.bit_grammars
+  val (Type, Term) = parse_from_grammars $ valOf $ grammarDB {thyname="bit"}
 end
 open Parse
 

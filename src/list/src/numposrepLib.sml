@@ -6,7 +6,8 @@ open bitLib numposrepTheory
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars numposrepTheory.numposrep_grammars
+  val (Type, Term) =
+      parse_from_grammars $ valOf $ grammarDB {thyname="numposrep"}
 end
 open Parse
 

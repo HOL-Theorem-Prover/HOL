@@ -23,6 +23,7 @@ local open HolKernel Ho_Rewrite  (* signature control *)
       structure Parse =
       struct
         open Parse
+        val bool_grammars = Option.valOf $ grammarDB {thyname="bool"}
         val (Type,Term) = parse_from_grammars bool_grammars
       end
       open Parse

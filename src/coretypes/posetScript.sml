@@ -3,7 +3,7 @@
 (* Originally created by Joe Hurd to support the pGCL formalization.         *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib BasicProvers metisLib simpLib pairTheory;
+open HolKernel Parse boolLib pairLib BasicProvers metisLib simpLib pairTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "poset"                                         *)
