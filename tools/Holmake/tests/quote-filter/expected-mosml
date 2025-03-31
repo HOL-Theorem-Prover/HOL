@@ -107,3 +107,5 @@ val thm2 = boolLib.save_thm("thm2[foo, simp , key = val1 val2]", exp
 
 tac
 ) HOL__GOAL__foo));
+
+val _ = Parse.overload_on("", term);

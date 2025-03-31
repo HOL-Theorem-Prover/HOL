@@ -198,6 +198,7 @@ alphaMLid_tailchar = ({letter} | {digit} | _ | "'");
 alphaMLid = {letter} {alphaMLid_tailchar}*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
 quotedsymbolid = "\"" [^\034]+ "\"";
+emptystrlit = "\"\"";
 ws = [\ \t];
 newline = "\n" | "\013\n";
 optallws = ({ws}|{newline})*;
@@ -246,7 +247,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   YYBEGIN quote;
   parseQuoteEndDef yyarg continue yypos yytext DatatypeDecl before YYBEGIN INITIAL
 );
-<INITIAL>^("Type"|"Overload"){ws}+({alphaMLid}|{quotedsymbolid})("["{alphaMLid_list}"]")?{ws}*"=" =>
+<INITIAL>^("Type"|"Overload"){ws}+({alphaMLid}|{quotedsymbolid}|{emptystrlit})("["{alphaMLid_list}"]")?{ws}*"=" =>
   (Decl (BeginType (yypos, yytext), NONE));
 <INITIAL>{Theorempfx}{ws}*":" => (let
   val _ = YYBEGIN quote

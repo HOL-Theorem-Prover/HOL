@@ -107,3 +107,5 @@ Theorem th3[*,bar]:
 Proof
 tac
 QED
+
+Overload "" = term;

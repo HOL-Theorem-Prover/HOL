@@ -1490,11 +1490,11 @@ val MEASURE_COMPL_SUBSET = save_thm (* old name for compatibility purposes *)
   ("MEASURE_COMPL_SUBSET", MEASURE_DIFF_SUBSET);
 
 (* cf. MEASURE_SPACE_RESTRICTION *)
-val MEASURE_SPACE_RESTRICTED = store_thm
-  ("MEASURE_SPACE_RESTRICTED",
-  ``!m s. measure_space m /\ s IN measurable_sets m ==>
-          measure_space (s, IMAGE (\t. s INTER t) (measurable_sets m), measure m)``,
-  RW_TAC std_ss []
+Theorem MEASURE_SPACE_RESTRICTED :
+    !m s. measure_space m /\ s IN measurable_sets m ==>
+          measure_space (s, IMAGE (\t. s INTER t) (measurable_sets m), measure m)
+Proof
+    RW_TAC std_ss []
   >> `positive (s,IMAGE (\t. s INTER t) (measurable_sets m),measure m)`
         by (RW_TAC std_ss [positive_def,measure_def,measurable_sets_def,IN_IMAGE]
             >> METIS_TAC [MEASURE_SPACE_POSITIVE,MEASURE_SPACE_INTER,positive_def])
@@ -1506,14 +1506,14 @@ val MEASURE_SPACE_RESTRICTED = store_thm
                  by METIS_TAC [MEASURE_SPACE_INTER]
             >> `countably_additive m` by METIS_TAC [measure_space_def]
             >> FULL_SIMP_TAC std_ss [countably_additive_def,IN_FUNSET,IN_UNIV])
-  >> RW_TAC std_ss [measure_space_def,sigma_algebra_def,measurable_sets_def,subsets_def,
-                    m_space_def,IN_IMAGE]
+  >> RW_TAC std_ss [measure_space_def,sigma_algebra_def,measurable_sets_def,
+                    subsets_def, m_space_def, IN_IMAGE]
   >- (RW_TAC std_ss [algebra_def,space_def,subsets_def,subset_class_def,IN_IMAGE]
       >| [RW_TAC std_ss [INTER_SUBSET],
           METIS_TAC [INTER_EMPTY,MEASURE_SPACE_EMPTY_MEASURABLE],
           Q.EXISTS_TAC `m_space m DIFF t`
-          >> RW_TAC std_ss [MEASURE_SPACE_DIFF,MEASURE_SPACE_MSPACE_MEASURABLE,EXTENSION,
-                            IN_DIFF,IN_INTER]
+          >> RW_TAC std_ss [MEASURE_SPACE_DIFF,MEASURE_SPACE_MSPACE_MEASURABLE,
+                            EXTENSION, IN_DIFF,IN_INTER]
           >> METIS_TAC [MEASURE_SPACE_SUBSET_MSPACE,SUBSET_DEF],
           Q.EXISTS_TAC `t' UNION t''`
           >> RW_TAC std_ss [MEASURE_SPACE_UNION,UNION_OVER_INTER]])
@@ -1530,21 +1530,70 @@ val MEASURE_SPACE_RESTRICTED = store_thm
   >> RW_TAC std_ss [subsets_def]
   >- FULL_SIMP_TAC std_ss [measure_space_def]
   >> FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_IMAGE]
-  >> METIS_TAC [MEASURE_SPACE_INTER]);
+  >> METIS_TAC [MEASURE_SPACE_INTER]
+QED
+
+(* from HVG's normal_rvScript.sml *)
+Definition restrict_space :
+  restrict_space M sp =
+    (sp INTER m_space M,
+     IMAGE (\a. a INTER sp) (measurable_sets M),
+     measure M)
+End
+
+Theorem measure_restrict_space[simp] :
+    measure (restrict_space M sp) = measure M
+Proof
+    rw [restrict_space, measure_def]
+QED
+
+Theorem space_restrict_space :
+    !M sp. m_space (restrict_space M sp) = (sp INTER m_space M)
+Proof
+  SIMP_TAC std_ss [restrict_space, m_space_def]
+QED
+
+Theorem space_restrict_space2 :
+    !M sp. measure_space M /\ sp IN measurable_sets M ==>
+         (m_space (restrict_space M sp) = sp)
+Proof
+  RW_TAC std_ss [restrict_space, m_space_def] THEN
+  `sp SUBSET m_space M` by METIS_TAC [MEASURABLE_SETS_SUBSET_SPACE] THEN
+  ASM_SET_TAC []
+QED
+
+Theorem sets_restrict_space :
+    !M sp. measurable_sets (restrict_space M sp) =
+           IMAGE (\a. a INTER sp) (measurable_sets M)
+Proof
+  RW_TAC std_ss [restrict_space, measurable_sets_def]
+QED
+
+Theorem measure_space_restrict_space :
+    !M sp. measure_space M /\ sp IN measurable_sets M ==>
+           measure_space (restrict_space M sp)
+Proof
+    RW_TAC std_ss [restrict_space]
+ >> ‘sp SUBSET m_space M’
+      by fs [measure_space_def, sigma_algebra_def, algebra_def, subset_class_def]
+ >> ‘sp INTER m_space M = sp’ by ASM_SET_TAC [] >> POP_ORW
+ >> ONCE_REWRITE_TAC [INTER_COMM]
+ >> MATCH_MP_TAC MEASURE_SPACE_RESTRICTED >> art []
+QED
 
 (* Another way to restrict a measure space *)
-val MEASURE_SPACE_RESTRICTED_MEASURE = store_thm
-  ("MEASURE_SPACE_RESTRICTED_MEASURE",
-  ``!m s. measure_space m /\ s IN measurable_sets m ==>
-          measure_space (m_space m,measurable_sets m,(\a. measure m (s INTER a)))``,
- (* proof *)
-    RW_TAC std_ss [measure_space_def, m_space_def, measurable_sets_def, measure_def, positive_def,
-                   INTER_EMPTY]
+Theorem MEASURE_SPACE_RESTRICTED_MEASURE :
+    !m s. measure_space m /\ s IN measurable_sets m ==>
+          measure_space (m_space m,measurable_sets m,(\a. measure m (s INTER a)))
+Proof
+    RW_TAC std_ss [measure_space_def, m_space_def, measurable_sets_def,
+                   measure_def, positive_def, INTER_EMPTY]
  >- (FIRST_ASSUM MATCH_MP_TAC \\
      MATCH_MP_TAC (REWRITE_RULE [subsets_def]
-                                (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_INTER)) \\
+                    (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_INTER)) \\
      fs [sigma_algebra_def])
- >> fs [countably_additive_def, measurable_sets_def, measure_def, m_space_def, IN_FUNSET, IN_UNIV]
+ >> fs [countably_additive_def, measurable_sets_def, measure_def, m_space_def,
+        IN_FUNSET, IN_UNIV]
  >> RW_TAC std_ss [o_DEF]
  >> Know `(\x. measure m (s INTER f x)) = measure m o (\x. s INTER f x)`
  >- (FUN_EQ_TAC >> SIMP_TAC std_ss [o_DEF]) >> Rewr'
@@ -1553,15 +1602,16 @@ val MEASURE_SPACE_RESTRICTED_MEASURE = store_thm
  >> RW_TAC std_ss [o_DEF, GSYM BIGUNION_OVER_INTER_R] (* 3 subgoals *)
  >| [ (* goal 1 (of 3) *)
       MATCH_MP_TAC (REWRITE_RULE [subsets_def]
-                                 (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_INTER)) \\
+                     (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_INTER)) \\
       fs [sigma_algebra_def],
       (* goal 2 (of 3) *)
       MATCH_MP_TAC DISJOINT_RESTRICT_R \\
       FIRST_X_ASSUM MATCH_MP_TAC >> art [],
       (* goal 3 (of 3) *)
       MATCH_MP_TAC (REWRITE_RULE [subsets_def]
-                                 (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_INTER)) \\
-      fs [sigma_algebra_def] ]);
+                     (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_INTER)) \\
+      fs [sigma_algebra_def] ]
+QED
 
 val MEASURE_SPACE_CMUL = store_thm
   ("MEASURE_SPACE_CMUL",

@@ -48,9 +48,10 @@ type binder_in_env = string -> bvar_in_env
  * Top level parse terms                                                     *
  *---------------------------------------------------------------------------*)
 
-fun make_preterm (tm_in_e : preterm_in_env) =
+fun make_preterm {next_uscore} (tm_in_e : preterm_in_env) =
   fn e => let
-    val (pt, env:env) = tm_in_e (fupd_ptyE (K e) empty_env)
+    val (pt, env:env) =
+        tm_in_e (fupd_ptyE (K e) $ fupd_uscore_cnt (K next_uscore) $ empty_env)
   in
     errormonad.Some(#ptyE env, pt)
   end

@@ -5143,6 +5143,24 @@ Proof
     RW_TAC std_ss [SUBSET_DEF, IN_CROSS]
 QED
 
+Theorem IMAGE_FST_CROSS :
+    !s t. t <> {} ==> IMAGE FST (s CROSS t) = s
+Proof
+    rw [EXTENSION]
+ >> EQ_TAC >> rw [] >> rw []
+ >> Q.RENAME_TAC [‘y IN s’]
+ >> Q.EXISTS_TAC ‘(y,x)’ >> rw []
+QED
+
+Theorem IMAGE_SND_CROSS :
+    !s t. s <> {} ==> IMAGE SND (s CROSS t) = t
+Proof
+    rw [EXTENSION]
+ >> EQ_TAC >> rw [] >> rw []
+ >> Q.RENAME_TAC [‘y IN t’]
+ >> Q.EXISTS_TAC ‘(x,y)’ >> rw []
+QED
+
 (* sums *)
 
 val SUM_UNIV = store_thm(
