@@ -316,10 +316,13 @@ fun ustore_thm (s, t, tac) = usave_as s (Q.prove (t, tac))
 
 local
   val names = ref ([] : string list)
-  fun add (n, th) = (names := n :: !names; Theory.save_thm (n, th))
+
+  val rwts_thmset_opns = ThmSetData.export_alist {
+        settype = "l3Utils_rwt", initial = []
+      }
+  fun add (n, th) = (Theory.save_thm (n, th) before #export rwts_thmset_opns n)
   val add_list = List.map add
 in
-  fun reset_thms () = names := []
   fun save_thms name l =
     add_list
      (case l of
@@ -328,20 +331,6 @@ in
        | _ => ListPair.zip
                  (List.tabulate
                     (List.length l, fn i => name ^ "_" ^ Int.toString i), l))
-  fun adjoin_thms () =
-    Theory.adjoin_to_theory
-      { sig_ps = SOME (fn _ => PP.add_string ("val rwts : string list")),
-        struct_ps =
-          SOME (fn _ =>
-                   PP.block PP.INCONSISTENT 12 (
-                     [PP.add_string "val rwts = ["] @
-                     PP.pr_list (PP.add_string o Lib.quote)
-                                [PP.add_string ",", PP.add_break (1, 0)]
-                                (!names) @
-                     [PP.add_string "]", PP.add_newline]
-                   )
-               )
-      }
 end
 
 

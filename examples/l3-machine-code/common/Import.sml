@@ -10,63 +10,54 @@ val ERR = mk_HOL_ERR "Import"
 
 (* ------------------------------------------------------------------------ *)
 
-local
-   val boolify_vals = ref (Redblackset.empty Int.compare)
-   val type_names = ref []
-   val const_names = ref []
-   fun decl s = "val " ^ s
-   val typ = "{Thy: string, T: string list, C: string list, N: int list}"
-   val B = PP.block PP.CONSISTENT 0
-in
-   fun log_boolify n = boolify_vals := Redblackset.add (!boolify_vals, n)
-   fun log_type s = type_names := s :: !type_names
-   fun log_constant s = const_names := (s ^ "_def") :: !const_names
-   fun start thy =
-      (type_names := []
-       ; const_names := []
-       ; new_theory thy)
-   fun finish i =
-      (Theory.adjoin_to_theory {
-         sig_ps =
-           SOME (fn _ => B[PP.add_string (decl "inventory:"),
-                           PP.add_break (1, 2),
-                           PP.add_string typ]),
-         struct_ps =
-           SOME (fn _ =>
-                    let
-                       val name = Lib.quote (Theory.current_theory ())
-                       fun bl f s l = B [
-                           PP.add_break (1, 0),
-                           PP.add_string (s ^ " ["),
-                           PP.block PP.INCONSISTENT 0 (
-                             PP.pr_list (PP.add_string o f)
-                                        [PP.add_string ",", PP.add_break (1, 0)]
-                                        l
-                           ),
-                           PP.add_string "]"
-                         ]
-                    in
-                      B [
-                        PP.add_string (decl "inventory = {"),
-                        PP.add_break (0, 2),
-                        B  [
-                          PP.add_string ("Thy = " ^ name ^ ","),
-                          bl Lib.quote "T =" (!type_names),
-                          PP.add_string (","),
-                          bl Lib.quote "C =" (!const_names),
-                          PP.add_string (","),
-                          bl Int.toString "N ="
-                             (Redblackset.listItems (!boolify_vals)),
-                          PP.add_string "}"
-                        ],
-                        PP.add_newline
-                      ]
-                    end)}
-       ; Feedback.set_trace "TheoryPP.include_docs" i
-       ; export_theory ()
-       ; type_names := []
-       ; const_names := [])
-end
+fun addint_s i s = Redblackset.add(s,i)
+fun adslist tagnm = {
+  adinfo = {
+    tag = tagnm,
+    initial_values = [("min", [])],
+    apply_delta = cons
+  },
+  uptodate_delta = K true,
+  sexps = {dec = ThyDataSexp.string_decode, enc = ThyDataSexp.String},
+  globinfo = {
+    apply_to_global = cons,
+    thy_finaliser = NONE,
+    initial_value = []
+  }
+}
+val boolify_opns = AncestryData.fullmake {
+      adinfo = {
+        tag = "l3Import.boolify_vals",
+        initial_values = [("min", Redblackset.empty Int.compare)],
+        apply_delta = addint_s
+      },
+      uptodate_delta = K true,
+      sexps = {dec = ThyDataSexp.int_decode, enc = ThyDataSexp.Int},
+      globinfo = {
+        apply_to_global = addint_s,
+        thy_finaliser = NONE,
+        initial_value = Redblackset.empty Int.compare
+      }
+    }
+val type_opns = AncestryData.fullmake (adslist "l3Import.type_names")
+val const_opns = AncestryData.fullmake (adslist "l3Import.const_names")
+fun log_boolify n = (
+   #record_delta boolify_opns n;
+   #update_global_value boolify_opns (addint_s n)
+)
+fun log_type s = (
+  #record_delta type_opns s ;
+  #update_global_value type_opns (cons s)
+)
+fun log_constant s = (
+   #record_delta const_opns s ;
+   #update_global_value type_opns (cons s)
+)
+fun start thy = new_theory thy
+fun finish i = (
+  Feedback.set_trace "TheoryPP.include_docs" i;
+  export_theory ()
+)
 
 (* ------------------------------------------------------------------------ *)
 

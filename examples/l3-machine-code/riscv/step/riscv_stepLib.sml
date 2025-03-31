@@ -10,7 +10,8 @@ open blastLib riscvTheory riscv_stepTheory
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars riscv_stepTheory.riscv_step_grammars
+  val (Type, Term) =
+      parse_from_grammars $ valOf $ grammarDB {thyname="riscv_step"}
 end
 open Parse
 
