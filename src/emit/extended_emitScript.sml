@@ -285,19 +285,6 @@ val B = PP.block PP.CONSISTENT 0
 val S = PP.add_string
 val NL = PP.NL
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps =
- SOME (fn _ =>
-         B [S "fun insert_const c = let val t = Parse.Term [QUOTE c] in", NL,
-            S "  ConstMapML.prim_insert(t, (false, \"\", c, type_of t))", NL,
-            S "end", NL,
-            S "val _ = insert_const \"llcases\"", NL,
-            S "val _ = insert_const \"LLCONS\"", NL,
-            S "val _ = insert_const \"LCONS\"", NL,
-            S "val _ = insert_const \"LNIL\"", NL,
-            S "val _ = insert_const \"LUNFOLD\""])}
-
 val _ = eSML "llist"
         (MLSIG "type 'a llist" ::
          MLSIG "val LNIL : 'a llist" ::
@@ -385,18 +372,15 @@ val _ = eSML "patricia_casts"
           ADDs_def, fun_rule ADD_LISTs_def, REMOVEs_def, TRAVERSEs_def,
           KEYSs_def, IN_PTREEs_def, INSERT_PTREEs_def]);
 
-fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn _ => B (List.concat (map (fn s => [S s, NL]) l)))}
-
-val _ = adjoin_to_theory_struct
-  ["val _ = ConstMapML.insert (\
-   \Term.prim_mk_const{Name=\"SKIP1\",Thy=\"patricia_casts\"});",
-   "val _ = ConstMapML.insert (\
-   \Term.prim_mk_const{Name=\"string_to_num\",Thy=\"patricia_casts\"});"];
+val _ = ConstMapML.insert (
+  Term.prim_mk_const{Name="SKIP1",Thy="patricia_casts"});
+val _ = ConstMapML.insert (
+  Term.prim_mk_const{Name="string_to_num",Thy="patricia_casts"});
 
 (* == State transformer ==================================================== *)
 
-val defs = map DEFN [UNIT_DEF, BIND_DEF, IGNORE_BIND_DEF, MMAP_DEF, JOIN_DEF, READ_def, WRITE_def]
+val defs = map DEFN [UNIT_DEF, BIND_DEF, IGNORE_BIND_DEF, MMAP_DEF, JOIN_DEF,
+                     READ_def, WRITE_def]
 
 val _ = eSML "state_transformer" defs
 val _ = eCAML "state_transformer" defs;
