@@ -1379,7 +1379,7 @@ in
     attr_result_toString
     ThmAttribute.extract_attributes
     "foo[A1=v1  v3,*]"
-end
+end;
 
 val _ = let
   val _ = tprint "ABS_TAC with name conflation"
@@ -1391,4 +1391,30 @@ in
     (goals_toString o fst)
     (VALID ABS_TAC)
     ([], t)
-end
+end;
+
+val _ = let
+  val _ = tprint "EQ_MP_TAC(1)"
+  val t = “p /\ q”
+  val th = ASSUME “r \/ s”
+  val expected = [([], “r \/ s <=> p /\ q”)]
+in
+  require_msg
+    (check_result (goals_eq expected o fst))
+    (goals_toString o fst)
+    (EQ_MP_TAC th)
+    ([], t)
+end;
+
+val _ = let
+  val _ = tprint "EQ_MP_TAC(2)"
+  val t = “p /\ q”
+  val expected = [([], “T /\ T <=> p /\ q”)]
+  val th = CONJ TRUTH TRUTH
+in
+  require_msg
+    (check_result (goals_eq expected o fst))
+    (goals_toString o fst)
+    (VALID (EQ_MP_TAC th))
+    ([], t)
+end;
