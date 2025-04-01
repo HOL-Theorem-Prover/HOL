@@ -49,15 +49,25 @@ fun log_type s = (
   #record_delta type_opns s ;
   #update_global_value type_opns (cons s)
 )
-fun log_constant s = (
-   #record_delta const_opns s ;
-   #update_global_value type_opns (cons s)
-)
+fun log_constant s0 =
+    let val s = s0 ^ "_def"
+    in
+      #record_delta const_opns s ;
+      #update_global_value type_opns (cons s)
+    end
 fun start thy = new_theory thy
 fun finish i = (
   Feedback.set_trace "TheoryPP.include_docs" i;
   export_theory ()
 )
+
+fun valOrNil f NONE = []
+  | valOrNil f (SOME xs) = f xs
+fun gen_inventory(r as {thyname}) =
+    {Thy = thyname,
+     T = valOrNil I (#DB type_opns r),
+     C = valOrNil I (#DB const_opns r),
+     N = valOrNil Redblackset.listItems (#DB boolify_opns r)}
 
 (* ------------------------------------------------------------------------ *)
 
