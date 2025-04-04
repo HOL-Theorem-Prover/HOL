@@ -28,7 +28,7 @@ open HolKernel Parse basicHol90Lib TypeInfo;
 type thm = Thm.thm
 
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars;
+val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname="bool"}
 
 fun MUT_REC_ERR {function,message} = mk_HOL_ERR "MutRecDef" function message
 

@@ -9,7 +9,7 @@ open helperLib progSyntax temporalSyntax temporal_stateSyntax
 structure Parse = struct
   open Parse
   val (Type, Term) =
-      temporal_stateTheory.temporal_state_grammars
+      valOf (grammarDB {thyname="temporal_state"})
         |> apsnd ParseExtras.grammar_loose_equality
         |> parse_from_grammars
 end

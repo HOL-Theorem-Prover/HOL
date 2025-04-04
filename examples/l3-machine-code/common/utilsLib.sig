@@ -46,7 +46,6 @@ sig
    val add_to_rw_net:
       (thm -> term) -> thm * thm LVTermNet.lvtermnet -> thm LVTermNet.lvtermnet
    val add_to_the_compset: (thm list * inventory) -> unit
-   val adjoin_thms: unit -> unit
    val augment: term frag list * term list -> cover -> cover
    val avoid_name_clashes: term -> term -> term
    val cache: int -> ('a * 'a -> order) -> ('a -> 'b) -> 'a -> 'b
@@ -89,7 +88,6 @@ sig
    val qm_tac: thm list -> tactic
    val removeSpaces: string -> string
    val resetStepConv: unit -> unit
-   val reset_thms: unit -> unit
    val rev_endian: 'a list -> 'a list
    val rhsc: thm -> term
    val rng: hol_type -> hol_type

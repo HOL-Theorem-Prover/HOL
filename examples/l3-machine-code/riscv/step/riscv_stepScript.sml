@@ -780,7 +780,6 @@ local
   val hyp_eq_rule =
     utilsLib.ALL_HYP_CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
 in
-  val () = utilsLib.reset_thms()
   fun class args avoid n =
     let
       val name = "dfn'" ^ n
@@ -894,6 +893,5 @@ val SB  = store [] "SB"
 (* ------------------------------------------------------------------------ *)
 
 val () = ( Theory.delete_const "select"
-         ; utilsLib.adjoin_thms ()
          ; export_theory ()
          )

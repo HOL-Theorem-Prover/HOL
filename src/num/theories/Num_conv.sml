@@ -18,7 +18,8 @@ struct
 
 open HolKernel Parse boolLib;
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+val SOME arithmetic_grammars = grammarDB {thyname="arithmetic"}
+val (Type,Term) = parse_from_grammars arithmetic_grammars
 
 (* |- !m n. 0 < n ==> ((m = PRE n) = SUC m = n) *)
 

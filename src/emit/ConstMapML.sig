@@ -7,6 +7,9 @@ sig
   type term     = Term.term
 
   val theConstMap : unit -> constmap
+  val cmap_items  :
+      constmap ->
+      (KernelSig.kernelname * (hol_type * (bool * string * string * hol_type)) list) list
   val prim_insert : term * (bool * string * string * hol_type) -> unit
   val insert      : term -> unit
   val insert_cons : term -> unit

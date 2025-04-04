@@ -13,7 +13,7 @@ local open mips in end
 val ambient_grammars = (type_grammar(), term_grammar())
 
 val _ = temp_set_grammars
-      (mipsTheory.mips_grammars
+      (valOf (grammarDB{thyname="mips"})
         |> apsnd (#1 o term_grammar.mfupdate_overload_info
                          (Overload.remove_overloaded_form "add"))
         |> apsnd ParseExtras.grammar_loose_equality)

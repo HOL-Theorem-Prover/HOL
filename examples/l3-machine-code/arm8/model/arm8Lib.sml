@@ -5,5 +5,5 @@ open HolKernel boolLib bossLib
 open utilsLib arm8Theory
 val () = (numLib.temp_prefer_num (); wordsLib.prefer_word ())
 fun arm8_compset thms =
-   utilsLib.theory_compset (thms, arm8Theory.inventory)
+   utilsLib.theory_compset (thms, Import.gen_inventory{thyname="arm8"})
 end

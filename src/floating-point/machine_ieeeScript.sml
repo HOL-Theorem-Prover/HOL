@@ -71,57 +71,6 @@ val fp64_to_fp32_def = Define `fp64_to_fp32 m = SND o fp64_to_fp32_with_flags m`
 val fp64_to_fp16_def = Define `fp64_to_fp16 m = SND o fp64_to_fp16_with_flags m`
 val fp32_to_fp16_def = Define `fp32_to_fp16 m = SND o fp32_to_fp16_with_flags m`
 
-(* ------------------------------------------------------------------------
-   Support 64-bit native evaluation
-   (Controlled by the trace "native IEEE". Off by default.)
-   ------------------------------------------------------------------------ *)
 
-val () = Theory.quote_adjoin_to_theory
-`val sqrt_CONV: Conv.conv ref
-val add_CONV: Conv.conv ref
-val sub_CONV: Conv.conv ref
-val mul_CONV: Conv.conv ref
-val div_CONV: Conv.conv ref
-val compare_CONV: Conv.conv ref
-val eq_CONV: Conv.conv ref
-val lt_CONV: Conv.conv ref
-val le_CONV: Conv.conv ref
-val gt_CONV: Conv.conv ref
-val ge_CONV: Conv.conv ref`
-`val native_eval = ref false(* off by default *)
-val () = Feedback.register_btrace ("native IEEE", native_eval)
-val sqrt_CONV = ref Conv.NO_CONV
-val add_CONV = ref Conv.NO_CONV
-val sub_CONV = ref Conv.NO_CONV
-val mul_CONV = ref Conv.NO_CONV
-val div_CONV = ref Conv.NO_CONV
-val compare_CONV = ref Conv.NO_CONV
-val eq_CONV = ref Conv.NO_CONV
-val lt_CONV = ref Conv.NO_CONV
-val le_CONV = ref Conv.NO_CONV
-val gt_CONV = ref Conv.NO_CONV
-val ge_CONV = ref Conv.NO_CONV
-fun native cnv1 s =
-  let
-    val cnv2 =
-      Conv.QCHANGED_CONV
-        (Rewrite.PURE_REWRITE_CONV [DB.fetch "machine_ieee" ("fp64_" ^  s)])
-  in
-    fn tm => (if !native_eval then !cnv1 else cnv2) tm
-  end
-fun mk s = Term.prim_mk_const {Name = "fp64_" ^ s, Thy = "machine_ieee"}
-val () = computeLib.add_convs
-  [(mk "sqrt", 2, native sqrt_CONV "sqrt"),
-   (mk "add", 3, native add_CONV "add"),
-   (mk "sub", 3, native sub_CONV "sub"),
-   (mk "mul", 3, native mul_CONV "mul"),
-   (mk "div", 3, native div_CONV "div"),
-   (mk "compare", 2, native compare_CONV "compare"),
-   (mk "equal", 2, native eq_CONV "equal"),
-   (mk "lessThan", 2, native lt_CONV "lessThan"),
-   (mk "lessEqual", 2, native le_CONV "lessEqual"),
-   (mk "greaterThan", 2, native gt_CONV "greaterThan"),
-   (mk "greaterEqual", 2, native ge_CONV "greaterEqual")
-  ]`
 
 val () = export_theory ()

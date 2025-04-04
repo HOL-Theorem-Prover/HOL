@@ -4,7 +4,7 @@ open pred_setTheory optionTheory basicSizeTheory listTheory rich_listTheory;
 open stringTheory sumTheory finite_mapTheory sortingTheory;
 open bitTheory numeral_bitTheory fcpTheory fcpLib wordsTheory
 open integerTheory integer_wordTheory intSyntax;
-open numposrepTheory ASCIInumbersTheory
+open numposrepTheory ASCIInumbersTheory pre_emitTheory
 
 val _ = new_theory "basis_emit";
 
@@ -26,12 +26,7 @@ val _ = eCAML "pair" defs;
 val B = PP.block PP.CONSISTENT 0
 val S = PP.add_string
 val NL = PP.NL
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (
-     fn _ =>
-        B [S "val _ = ConstMapML.insert pairSyntax.comma_tm;", NL]
-   )};
+val _ = ConstMapML.insert pairSyntax.comma_tm;
 
 (* == Num ================================================================= *)
 
@@ -79,10 +74,6 @@ val defs = map DEFN
    DIVMOD_THM,div_eqns, mod_eqns,
    numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp,DIV_2EXP,
    prim_recTheory.measure_thm]
-
-val _ = EmitML.reshape_thm_hook :=
-    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o
-     !EmitML.reshape_thm_hook);
 
 val _ = eSML "num"
     (EQDATATYPE ([], `num = ZERO | BIT1 num | BIT2 num`)
@@ -353,21 +344,9 @@ val _ = eCAML "num"
 (*---------------------------------------------------------------------------*)
 (* Map 0 and ZERO to the same thing in generated ML.                         *)
 (*---------------------------------------------------------------------------*)
-val _ = adjoin_to_theory
-{sig_ps = NONE, struct_ps = SOME (fn _ =>
-  B [S "val _ = ConstMapML.prim_insert ", NL,
-     S "         (Term.prim_mk_const{Name=\"0\",Thy=\"num\"},", NL,
-     S "          (true,\"num\",\"ZERO\",Type.mk_type(\"num\",[])));",NL])};
-
-(*---------------------------------------------------------------------------*)
-(* Automatic rewrite for definitions                                         *)
-(*---------------------------------------------------------------------------*)
-
-val _ = adjoin_to_theory {sig_ps = NONE,
-   struct_ps = SOME (fn _ =>
-     B[S "val _ = EmitML.reshape_thm_hook :=  ", NL,
-       S "    (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o ",
-       NL, S "     !EmitML.reshape_thm_hook);", NL, NL])}
+val _ = ConstMapML.prim_insert
+                  (Term.prim_mk_const{Name="0",Thy="num"},
+                   (true,"num","ZERO",Type.mk_type("num",[])));
 
 
 (* == Set ================================================================= *)
@@ -515,15 +494,6 @@ val _ = eSML "option"
 
 val _ = eCAML "option" defs;
 
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME
-     (fn _ =>
-        B [S "val _ = ConstMapML.insert_cons\
-             \(Term.prim_mk_const{Name=\"SOME\",Thy=\"option\"});", NL,
-           S "val _ = ConstMapML.insert_cons\
-             \(Term.prim_mk_const{Name=\"NONE\",Thy=\"option\"});", NL, NL])};
-
 (* == Option ============================================================== *)
 
 val defs =
@@ -610,13 +580,8 @@ val _ = eCAML "list"
    OPEN ["Num"] ::
    defs)
 
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn _ =>
-     B [S "val _ = ConstMapML.insert\
-        \ (Term.prim_mk_const{Name=\"CONS\",Thy=\"list\"});", NL,
-        S "val _ = ConstMapML.insert\
-        \ (Term.prim_mk_const{Name=\"NIL\",Thy=\"list\"});", NL, NL])};
+val _ = ConstMapML.insert(Term.prim_mk_const{Name="CONS",Thy="list"});
+val _ = ConstMapML.insert(Term.prim_mk_const{Name="NIL",Thy="list"});
 
 (* == Rich list =========================================================== *)
 
@@ -794,17 +759,9 @@ val _ = eCAML "string"
         char_lt_def, char_le_def, char_gt_def, char_ge_def,
         string_le_def, string_gt_def, string_ge_def])
 
-fun adjoin_to_theory_struct l =
-  adjoin_to_theory {
-    sig_ps = NONE,
-    struct_ps = SOME (fn _ => B (List.concat (map (fn s => [S s, NL]) l)))
-  };
-
-val _ = adjoin_to_theory_struct [
-  "val _ = app (fn n => ConstMapML.insert\
-  \ (prim_mk_const{Name=n,Thy=\"string\"}))",
-  "      [\"CHR\",\"ORD\",\"DEST_STRING\",\"string_lt\",\
-  \       \"IMPLODE\",\"EXPLODE\"]"];
+val _ = app (fn n => ConstMapML.insert
+                               (prim_mk_const{Name=n,Thy="string"}))
+            ["CHR","ORD","DEST_STRING","string_lt","IMPLODE","EXPLODE"];
 
 (* == Finite map ========================================================== *)
 
@@ -1128,20 +1085,6 @@ val _ = eCAML "fcp"
 
 (* == Words =============================================================== *)
 
-val word_index_def = Define `word_index (w:'a word) n = w ' n`;
-val w2w_itself_def = Define `w2w_itself (:'a) w = (w2w w): 'a word`;
-val sw2sw_itself_def = Define `sw2sw_itself (:'a) w = (sw2sw w): 'a word`;
-val word_eq_def = Define `word_eq (v: 'a word) w = (v = w)`;
-
-val word_extract_itself_def = Define`
-  word_extract_itself (:'a) h l w = (word_extract h l w): bool ** 'a`;
-
-val word_concat_itself_def = Define`
-  word_concat_itself (:'a) v w = (word_concat v w): bool ** 'a`;
-
-val fromNum_def = Define`
-  fromNum (n, (:'a)) = n2w_itself (n MOD dimword (:'a),(:'a))`;
-
 val _ = ConstMapML.insert_cons ``n2w_itself``;
 
 val sizes = [1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64, 128, 256]
@@ -1285,49 +1228,6 @@ val _ = eCAML "words"
    OPEN ["sum", "num", "fcp", "bit"] ::
    defs true)
 
-fun WORDS_EMIT_RULE thm =
-let
-  val rws = List.map Conv.GSYM [word_index_def, n2w_itself_def, word_eq_def,
-              w2w_itself_def, sw2sw_itself_def, word_concat_itself_def,
-              word_extract_itself_def, literal_case_DEF] @
-             [BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def,
-              literal_case_THM]
-  val rule = Conv.CONV_RULE (Conv.STRIP_QUANT_CONV
-               (Conv.RHS_CONV (Rewrite.PURE_REWRITE_CONV rws)))
-  val thm = Rewrite.PURE_REWRITE_RULE [Conv.GSYM n2w_itself_def] thm
-in
-  Drule.LIST_CONJ (List.map (Conv.BETA_RULE o rule) (Drule.CONJUNCTS thm))
-end
-
-val _ = EmitML.reshape_thm_hook := (WORDS_EMIT_RULE o !EmitML.reshape_thm_hook)
-
-local
-  val lines = [
-"val _ = ConstMapML.insert_cons",
-"          (Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"})",
-"fun WORDS_EMIT_RULE thm = let",
-"  open boolTheory wordsTheory",
-"  val rws = List.map Conv.GSYM [word_index_def, n2w_itself_def, word_eq_def,",
-"              w2w_itself_def, sw2sw_itself_def, word_concat_itself_def,",
-"              word_extract_itself_def, literal_case_DEF] @",
-"             [BIT_UPDATE, fcp_n2w, word_T_def, word_L_def, word_H_def,",
-"              literal_case_THM]",
-"  val rule = Conv.CONV_RULE (Conv.STRIP_QUANT_CONV",
-"               (Conv.RHS_CONV (Rewrite.PURE_REWRITE_CONV rws)))",
-"  val thm = Rewrite.PURE_REWRITE_RULE [Conv.GSYM n2w_itself_def] thm",
-"in",
-"  Drule.LIST_CONJ (List.map (Conv.BETA_RULE o rule) (Drule.CONJUNCTS thm))",
-"end",
-"val _ = EmitML.reshape_thm_hook :=\
-\ (WORDS_EMIT_RULE o !EmitML.reshape_thm_hook)"]
-in
-  val _ = adjoin_to_theory
-   {sig_ps = SOME (fn _ =>
-               B [S "val WORDS_EMIT_RULE : thm -> thm", NL]),
-    struct_ps = SOME (fn _ =>
-      B (List.concat (map (fn s => [S s, NL]) lines)))}
-end
-
 (* == Integer ============================================================= *)
 
 val neg_int_of_num_def = Define `neg_int_of_num n = ~ int_of_num (n + 1)`;
@@ -1420,9 +1320,6 @@ val INT_REM_EMIT = Q.prove(
         ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_rem)`,
   SRW_TAC [] [combinTheory.FAIL_THM, int_rem]);
 
-val _ = EmitML.is_int_literal_hook := intSyntax.is_int_literal;
-val _ = EmitML.int_of_term_hook := intSyntax.int_of_term;
-
 val _ = temp_clear_overloads_on "&";
 val _ = temp_overload_on("int_of_num", ``integer$int_of_num``);
 
@@ -1484,20 +1381,6 @@ val _ = eCAML "int"
        INT_ABS, INT_ADD_EMIT, INT_SUB_EMIT, INT_MUL_EMIT, INT_EXP_EMIT,
        INT_DIV_EMIT, INT_MOD_EMIT, INT_QUOTE_EMIT, INT_REM_EMIT,
        INT_MAX_def, INT_MIN_def, UINT_MAX_def, i2w_itself, w2i_def])
-
-(*---------------------------------------------------------------------------*)
-(* Remind ML code generator about integer literals and how to take them apart*)
-(*---------------------------------------------------------------------------*)
-
-val _ =
-    adjoin_to_theory {
-      sig_ps = NONE,
-      struct_ps = SOME (fn _ =>
-         B [S "val _ = EmitML.is_int_literal_hook := intSyntax.is_int_literal;",
-            NL,
-            S "val _ = EmitML.int_of_term_hook := intSyntax.int_of_term;", NL,
-            NL])
-    };
 
 (* == Sorting ============================================================= *)
 

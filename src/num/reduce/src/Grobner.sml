@@ -22,7 +22,7 @@ open boolSimps simpLib arithmeticTheory Num_conv numSyntax mesonLib metisLib
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars arithmetic_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB{thyname="arithmetic"}
 end
 
 open Parse

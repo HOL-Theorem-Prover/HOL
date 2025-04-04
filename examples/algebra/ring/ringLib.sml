@@ -23,7 +23,7 @@ open pred_setTheory cardinalTheory ringTheory ringLibTheory Grobner Normalizer
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars ringLib_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="ringLib"}
 end
 
 open Parse;

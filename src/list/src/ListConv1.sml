@@ -47,7 +47,8 @@ val ERR = mk_HOL_ERR "List_conv";
 structure Parse =
 struct
  open Parse
- val (Type,Term) = parse_from_grammars rich_listTheory.rich_list_grammars
+ val SOME rich_list_grammars = grammarDB {thyname="rich_list"}
+ val (Type,Term) = parse_from_grammars rich_list_grammars
  fun == q x = Type q
 end
 open Parse

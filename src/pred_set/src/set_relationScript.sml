@@ -1,5 +1,5 @@
 open HolKernel boolLib BasicProvers simpLib numLib metisLib markerLib
-open pred_setTheory pairTheory arithmeticTheory
+open pred_setTheory pred_setSimps pairTheory arithmeticTheory
 open optionTheory relationTheory;
 
 val _ = new_theory "set_relation";

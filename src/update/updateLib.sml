@@ -6,7 +6,7 @@ open wordsLib updateSyntax;
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars updateTheory.update_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="update"}
 end
 open Parse
 

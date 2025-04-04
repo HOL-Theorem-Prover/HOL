@@ -9,7 +9,8 @@ structure Parse = struct
   open Parse
   val (Type,Term) =
       parse_from_grammars
-        (apsnd ParseExtras.grammar_loose_equality blast_grammars)
+        (apsnd ParseExtras.grammar_loose_equality $
+          valOf $ grammarDB {thyname="blast"})
 end
 
 open Parse

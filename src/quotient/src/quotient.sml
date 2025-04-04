@@ -50,6 +50,7 @@ open simpLib boolSimps
 structure Parse =
 struct
   open Parse
+  val SOME quotient_grammars = grammarDB {thyname="quotient"}
   val (Type,Term) = parse_from_grammars(quotient_grammars)
   fun == q _ = Type q
 end

@@ -5,5 +5,5 @@ open HolKernel boolLib bossLib
 open utilsLib mipsTheory
 val () = (numLib.temp_prefer_num (); wordsLib.prefer_word ())
 fun mips_compset thms =
-   utilsLib.theory_compset (thms, mipsTheory.inventory)
+   utilsLib.theory_compset (thms, Import.gen_inventory{thyname="mips"})
 end
