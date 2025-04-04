@@ -782,25 +782,6 @@ val SEG_SPLIT =
    SIMP_TAC list_ss [SUC_ONE_ADD] THEN
    PROVE_TAC[EL_SEG]);
 
-
-
-val EL_FIRSTN =
- store_thm
-  ("EL_FIRSTN",
-   ``!m n l. (m <= LENGTH l /\ n < m) ==> (EL n (FIRSTN m l) = EL n l)``,
-
-   Induct_on `m` THENL [
-      SIMP_TAC arith_ss [],
-
-      REPEAT STRIP_TAC THEN
-      Cases_on `l` THEN FULL_SIMP_TAC list_ss [] THEN
-      SIMP_TAC std_ss [FIRSTN] THEN
-      Cases_on `n` THEN SIMP_TAC list_ss [] THEN
-      `n' < m` by DECIDE_TAC THEN
-      PROVE_TAC[]
-   ]);
-
-
 val LENGTH_CAT_SEL_TOP_OMEGA =
  store_thm
   ("LENGTH_CAT_SEL_TOP_OMEGA",
