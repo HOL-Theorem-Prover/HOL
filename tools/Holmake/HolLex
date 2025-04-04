@@ -445,7 +445,11 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   | _ => raise Unreachable
 );
 <opens>({ws}|{newline})+ => (continue());
-<opens>({holstartkeyword}|{declforms}) => (
+<opens>^{holstartkeyword} => (
+  yybufpos := !yybufpos - (yyend - yypos); (* unread token *)
+  OpenEnd yypos
+);
+<opens>{declforms} => (
   yybufpos := !yybufpos - (yyend - yypos); (* unread token *)
   OpenEnd yypos
 );
