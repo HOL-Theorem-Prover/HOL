@@ -528,54 +528,6 @@ fun extraction_thms constset thy =
  in (case_rewrites, case_congs@read_congs())
  end;
 
-(*---------------------------------------------------------------------------
-         Capturing termination conditions.
- ----------------------------------------------------------------------------*)
-
-
-local fun !!v M = mk_forall(v, M)
-      val mem = Lib.op_mem aconv
-      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
-in
-fun solver (restrf,f,G,nref) _ context tm =
-  let val globals = f::G  (* not to be generalized *)
-      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
-      val rcontext = rev context
-      val antl = case rcontext of [] => []
-                               | _   => [list_mk_conj(map concl rcontext)]
-      val TC = genl(list_mk_imp(antl, tm))
-      val (R,arg,pat) = wfrecUtils.dest_relation tm
-  in
-     if can(find_term (aconv restrf)) arg
-     then (nref := true; raise ERR "solver" "nested function")
-     else let val _ = if can(find_term (aconv f)) TC
-                      then nref := true else ()
-          in case rcontext
-              of [] => SPEC_ALL(ASSUME TC)
-               | _  => MATCH_MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
-          end
-  end
-end;
-
-fun extract FV congs f (proto_def,WFR) =
- let val R = rand WFR
-     val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
-     val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
-     fun mk_restr p = mk_comb(restr_fR, p)
- in fn (p,th) =>
-    let val nested_ref = ref false
-        val FV' = FV@free_vars(concl th)
-        val rwArgs = (RW.Pure [CUT_LEM],
-                      RW.Context ([],RW.DONT_ADD),
-                      RW.Congs congs,
-                      RW.Solver (solver (mk_restr p, f, FV', nested_ref)))
-        val th' = CONV_RULE (RW.Rewrite RW.Fully rwArgs) th
-    in
-      (th', Lib.op_set_diff aconv (hyp th') [proto_def,WFR], !nested_ref)
-    end
-end;
-
-
 (*---------------------------------------------------------------------------*
  * Perform TC extraction without making a definition.                        *
  *---------------------------------------------------------------------------*)
@@ -658,7 +610,7 @@ fun instantiate_wfrec_thm facts tup_eqs =
     Listsort.sort Term.compare SV,
     WFR,
     pats,
-    congs,
+    Extract.simpls_of_congs congs,
     zip given_pats corollaries')
  end
 
@@ -666,8 +618,6 @@ fun wfrec_eqns facts tup_eqs =
  let val (proto_def,SV,WFR,pats,congs,pcs) =
           instantiate_wfrec_thm facts tup_eqs
     val extractFn = Extract.extract [rand WFR] congs (proto_def,WFR)
-(*    val extractFn =
-        extract [rand WFR] congs (boolSyntax.lhs proto_def) (proto_def,WFR) *)
   in
      {proto_def=proto_def,
       SV=SV,WFR=WFR,pats=pats,
@@ -1278,7 +1228,8 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
  ---------------------------------------------------------------------------*)
 
 fun holexnMessage (HOL_ERR {origin_structure,origin_function,source_location,message}) =
-      origin_structure ^ "." ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ": " ^ message
+      origin_structure ^ "." ^ origin_function ^
+      ":" ^ locn.toShortString source_location ^ ": " ^ message
   | holexnMessage e = General.exnMessage e
 
 fun is_simple_arg t =

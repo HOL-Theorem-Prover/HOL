@@ -20,7 +20,7 @@ sig
   val LEFT_EXISTS      : thm -> thm
 
   val SUBS             : thm list -> thm -> thm
-  val simpl_conv       : thm list -> term -> thm
+
   val simplify         : thm list -> thm -> thm
 
 end

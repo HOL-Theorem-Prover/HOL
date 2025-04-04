@@ -5,26 +5,34 @@ open HolKernel Parse boolLib pairLib Rules;
 
 val ERR = mk_HOL_ERR "Extract";
 
-val monitoring = ref 0
-
-val _ = register_trace ("TFL TC-extraction monitoring", monitoring, 20);
-
-fun lztrace(i,fname,msgf) =
-  if i <= !monitoring then
-     Lib.say ("\nExtract."^fname^": "^ msgf() ^ "\n")
-  else ()
-
 (* Fix the grammar used by this file *)
 val ambient_grammars =
   Parse.current_grammars()
   before Parse.temp_set_grammars boolTheory.bool_grammars;
 
+(* For debugging extraction failures *)
+exception EXTRACTION_ERROR of term list * term
+
+val monitoring = ref 0;
+val max_trace_val = 5;
+val no_trace = max_trace_val + 1;
+val _ = register_trace ("TFL rewrite monitoring", monitoring, max_trace_val);
+
+fun lztrace(i,title,msgf) =
+  if i <= !monitoring then
+     Lib.say (String.concat ["\n", title, msgf(), "\n"])
+  else ()
+
+fun indent_pp n pp =
+ let open HOLPP String List
+     val s = implode (tabulate (n,K #" "))
+ in block INCONSISTENT 0 [add_string s, pp]
+ end
+
 fun pp_terms ts =
  let open HOLPP
  in block CONSISTENT 0 (pr_list pp_term [NL] ts)
  end
-
-exception EXTRACTION_ERROR of term list * term
 
 fun map2_total f (h1::t1) (h2::t2) = f h1 h2 :: map2_total f t1 t2
   | map2_total f other wise = [];
@@ -39,108 +47,38 @@ val dest_combn = let
     dest []
   end
 
-(*----------------------------------------------------------------------------
- * |- !x y z. w   --->  |- w[x|->g1][y|->g2][z|->g3]
- * This belongs in Drule.sml.
- *---------------------------------------------------------------------------*)
-
 fun GSPEC_ALL th =
-   (case (dest_thy_const(rator (concl th)))
+   (case dest_thy_const(rator (concl th))
      of {Name = "!",Thy="bool",Ty} =>
           GSPEC_ALL (SPEC (genvar (#1(dom_rng(#1(dom_rng Ty))))) th)
      | _ => th)
     handle HOL_ERR _ => th;
 
-(* ---------------------------------------------------------------------------
- * Split a theorem into a list of theorems suitable for rewriting:
- *
- *   Apply the following transformations:
- *
- *        |t1 /\ t2|     -->    |t1| @ |t2|
- *        |t1 ==> t2|    -->    (t1 |- |t2|)
- *        |!x.tm|        -->    |{x |-> newvar}tm|
- *
- *   Bottom-out with |- t --> |- t = T and |- ~t --> |- t = F
- *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* TC extraction is an application of conversions. The "simps" type supports *)
+(* a simplification set having a single conditional rewrite rule, namely     *)
+(* relationTheory.RESTRICT_LEMMA:                                            *)
+(*                                                                           *)
+(*   |- R y z ⇒ RESTRICT f R z y = f y                                       *)
+(*                                                                           *)
+(* along with a collection of congruence rules.                              *)
+(*---------------------------------------------------------------------------*)
 
- fun mk_simpls SPECer =
-  let fun mk_rewrs th =
-      let val tm = Thm.concl th
-      in  if (is_eq tm) then [th] else
-          if (is_neg tm) then [EQF_INTRO th] else
-          if (is_conj tm)
-          then (op @ o (mk_rewrs ## mk_rewrs) o Drule.CONJ_PAIR) th else
-          if (is_imp tm)
-          then let val ant = list_mk_conj (fst(strip_imp_only tm))
-                   fun step imp cnj =
-                       step (MP imp (CONJUNCT1 cnj)) (CONJUNCT2 cnj)
-                       handle HOL_ERR _ => MP imp cnj
-               in EQT_INTRO th
-                  ::map (DISCH ant) (mk_rewrs (step th (ASSUME ant)))
-               end else
-          if (is_forall tm) then mk_rewrs (SPECer th) else
-          if aconv tm boolSyntax.T then [] else
-          [EQT_INTRO th]
-      end
-      handle HOL_ERR _ => raise ERR "mk_simpls" ""
-  in
-    mk_rewrs
-  end;
+datatype simpls =
+    RW of {thms     : thm list,
+           congs    : thm list,
+           rw_net   : (term -> thm) Net.net,
+           cong_net : (term -> thm) Net.net};
 
- fun mk_simplsl SPECer = flatten o map (mk_simpls SPECer);
-
- local val MK_FRESH = mk_simpls GSPEC_ALL        (* partly apply *)
-       val MK_READABLE = mk_simpls SPEC_ALL      (* partly apply *)
- in
- fun MK_RULES_APART th = MK_FRESH (GEN_ALL th)
- and MK_RULES th = MK_READABLE (GEN_ALL th)
- end;
-
-
-(* Provides a quick way of telling if a rewrite rule is conditional or not. *)
-datatype choice = COND of thm | UNCOND of thm;
-
-fun dest_choice (COND th)   = th
-  | dest_choice (UNCOND th) = th;
-
-(*----------------------------------------------------------------------------
- * Takes a rewrite rule and applies it to a term, which, if it is an instance
- * of the left-hand side of the rule, results in the return of the
- * instantiated rule. Handles conditional rules.
- *---------------------------------------------------------------------------*)
-
-fun PRIM_RW_CONV th =
- let val (has_condition,eq) = ((not o null)##I)(strip_imp_only (concl th))
-     val pat = lhs eq
-     val matcher = Term.match_term pat
-     fun match_then_inst tm =
-        let val (tm_theta, ty_theta) = matcher tm
-            val th' = INST tm_theta (INST_TYPE ty_theta th)
-        in
-          if has_condition then (COND th') else (UNCOND th')
-        end
- in match_then_inst
- end;
-
-
-(*----------------------------------------------------------------------------
- * Match and instantiate a congruence rule. A congruence rule looks like
- *
- *        (c1 ==> (M1 = M1')) /\ .../\ (cm ==> (Mn = Mn'))
- *       -------------------------------------------------
- *                    f M1...Mn = f M1'...Mn'
- *
- * The ci do not have to be there, i.e., unconditional antecedents can
- * certainly exist.
- *---------------------------------------------------------------------------*)
+val empty_simpls =
+   RW{thms = [], congs = [],
+      rw_net=Net.empty, cong_net=Net.empty}
 
 (* TODO: check that all congs added to cong rules DB are in right form:
     ant1 /\ ... /\ antn ==> fn vbar = fn vbar'
  *)
 fun CONGR th =
    let val (ants,eq) = strip_imp_only (concl th)
-       (* TODO: Check that it is a congruence rule *)
        val pat = lhs eq
        val matcher = Term.match_term pat
        fun match_then_inst tm =
@@ -148,38 +86,11 @@ fun CONGR th =
           in INST tm_theta (INST_TYPE ty_theta th) end
    in
      match_then_inst
-   end;
+   end
 
-datatype simpls = RW of {thms     : thm list list,
-                        congs    : thm list list,
-                        rw_net   : (term -> choice) Net.net,
-                        cong_net : (term -> thm) Net.net};
-
-val empty_simpls = RW{thms = [[]],  congs = [[]],
-                      rw_net = Net.empty,
-                      cong_net = Net.empty};
-
-fun dest_simpls (RW{thms, congs,...}) =
-   {rws = rev(flatten thms),
-    congs = rev(flatten congs)};
-
-
-fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
- RW{thms   = thl::thms,
-    congs  = congs,
-  cong_net = cong_net,
-    rw_net = itlist Net.insert
-             (map (fn th => let val left = lhs(#2(strip_imp_only(concl th)))
-                            in  (left,  PRIM_RW_CONV th) end)
-                  (flatten (map MK_RULES_APART thl)))
-             rw_net}
- handle HOL_ERR _
- => raise ERR "add_rws" "Unable to deal with input";
-
-
-fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
+fun insert_congs (RW{cong_net, congs, thms, rw_net}) thl =
   RW{thms = thms, rw_net = rw_net,
-     congs = thl::congs,
+     congs = thl @ congs,
      cong_net = itlist Net.insert
          (map (fn th =>
                 let val c = concl th
@@ -190,21 +101,32 @@ fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
               (map (GSPEC_ALL o GEN_ALL) thl))
          cong_net}
   handle HOL_ERR _ =>
-  raise ERR"add_congs" "Unable to deal with input"
+  raise ERR "insert_congs" "Unable to deal with input"
+
+fun simpls_of_congs congs = insert_congs empty_simpls congs;
+
+fun CONG_STEP (RW{cong_net,...}) tm = Lib.trye hd (Net.match tm cong_net) tm;
+
+fun insert_cut_lem (RW{thms,rw_net,congs, cong_net}) cut_lem =
+  let val cut_lem' = GSPEC_ALL cut_lem
+      val pat = lhs(snd(strip_imp_only(concl cut_lem')))
+      val matcher = Term.match_term pat
+      fun match_then_inst tm =
+        let val (tm_theta, ty_theta) = matcher tm
+        in INST tm_theta (INST_TYPE ty_theta cut_lem') end
+  in
+   RW{thms   = [cut_lem],
+      congs  = congs,
+    cong_net = cong_net,
+      rw_net = Net.insert (pat, match_then_inst) rw_net}
+  end
 
 (*----------------------------------------------------------------------------
- * In RW_STEP, we find the list of matching rewrites, and choose the first
- * one that succeeds. Conditional rules succeed if they can solve their
- * antecedent by applying the prover (it gets to use the context and the
- * supplied simplifications).
- * Note.
- * "ant_vars_fixed" is true when the instantiated rewrite rule has no
- * uninstantiated variables in its antecedent. If "ant_vars_fixed" is not
- * true, we get the instantiation from the context.
- *
- * Note.
- * "sys_var" could be more rigorous in its check, but we don't
- * have a defined notion of the syntax of system variables.
+  In RW_STEP, we find the list of matching rewrites, and choose the first
+  one that succeeds. But we only have a single, conditional, rule. The
+  rule fires when the antecedent can be proved, and this is done by invoking
+  the special "TC capture" prover (see the end of the present file) which
+  packages up the termination conditions.
  *---------------------------------------------------------------------------*)
 
 local
@@ -212,40 +134,23 @@ local
      is_var tm andalso
      not (Lexis.is_clean_varname (fst (dest_var tm)))
 in
-fun RW_STEP {simpls as RW{rw_net,...},context,prover} tm = let
-  fun match f =
-      (case f tm of
-         UNCOND th => SOME th
-       | COND th => let
-           val condition = fst(dest_imp(concl th))
-           val cond_thm = prover context condition
-          val ant_vars_fixed = not(can(find_term sys_var) condition)
-         in
-           SOME ((if ant_vars_fixed then MP else MATCH_MP) th cond_thm)
-         end)
-      handle HOL_ERR _ => NONE
-  fun try [] = raise ERR "RW_STEP" "all applications failed"
-    | try (f::rst) =
-      case match f of
-        NONE => try rst
-      | SOME th =>
-        if !monitoring > 0 then
-          (set_trace "assumptions" 1;
-           Lib.say (String.concat
-              ["\nTC Capture:\n", Parse.thm_to_string th, "\n\n"]);
-           th before
-           set_trace "assumptions" 0)
-        else th
-in
-   try (Net.match tm rw_net)
-end end
-
-(*---------------------------------------------------------------------------
- * It should be a mistake to have more than one applicable congruence rule for
- * a constant, but I don't currently check that.
- *---------------------------------------------------------------------------*)
-
-fun CONG_STEP (RW{cong_net,...}) tm = Lib.trye hd (Net.match tm cong_net) tm;
+fun RW_STEP {simpls as RW{rw_net,...},context,prover} tm =
+ case Net.match tm rw_net
+  of [matchFn] =>
+     let val th = matchFn tm
+        val condition = fst(dest_imp(concl th))
+        val cond_thm = prover context condition
+        val ant_vars_fixed = not(can(find_term sys_var) condition)
+        val th1 = (if ant_vars_fixed then MP else MATCH_MP) th cond_thm
+        val _ = if !monitoring <= 0 then ()
+                else
+                 (set_trace "assumptions" 1;
+                  Lib.say (String.concat
+                    ["\nTC Capture:\n", Parse.thm_to_string th1, "\n\n"]);
+                  set_trace "assumptions" 0)
+      in th1 end
+   | otherwise => raise ERR "RW_STEP" ""
+end
 
 (*---------------------------------------------------------------------------*)
 (*                             TERM TRAVERSAL                                *)
@@ -281,24 +186,23 @@ end;
 
 fun TRY_QCONV cnv = ORELSEQC cnv ALL_QCONV;
 
-datatype delta
-  = CHANGE of thm
-  | NO_CHANGE of thm
+(*---------------------------------------------------------------------------*)
+(* Name handling support                                                     *)
+(*---------------------------------------------------------------------------*)
 
-fun unchanged (NO_CHANGE _) = true
-  | unchanged _ = false;
+fun vary away v =
+  let val v' = variant away v
+  in if aconv v v' then (v,v::away) else (v',v'::away)
+  end;
 
-fun dest_change (NO_CHANGE th) = th
-  | dest_change (CHANGE th) = th
+fun vary_theta v (theta,away) =
+  let val v' = variant away v
+  in if aconv v v' then (theta,away) else ((v|->v')::theta, v'::away)
+  end
 
 fun rename_forall_prefix frees =
  let fun variants_theta away0 vlist =
-       rev_itlist (fn v => fn (V,away) =>
-         let val v' = variant away v
-         in if aconv v v' then
-              (V,away)
-            else ((v|->v')::V, v'::away)
-         end) vlist ([],away0)
+         rev_itlist vary_theta vlist ([],away0)
  in fn tm =>
   let val (vs,t) = strip_forall tm
       val theta = fst (variants_theta frees vs)
@@ -309,16 +213,8 @@ fun rename_forall_prefix frees =
 (*---------------------------------------------------------------------------*)
 (* Takes a list of free variables and a list of tuples, representing         *)
 (* varstructs. If any of the free variables are in the tuples, they are      *)
-(* replaced in the tuples by variants. More can be done since the list of    *)
-(* varstructs represents an iterated abstraction. Therefore, there should be *)
-(* no duplicate variables in the varstructs; any duplicates should be        *)
-(* renamed as well.                                                          *)
+(* replaced in the tuples by variants.                                       *)
 (*---------------------------------------------------------------------------*)
-
-fun vary away v =
-  let val v' = variant away v
-  in if aconv v v' then (v,v::away) else (v',v'::away)
-  end;
 
 fun variant_tuple away tuple =
  if is_var tuple then
@@ -330,7 +226,8 @@ fun variant_tuple away tuple =
        val (p2',away2) = variant_tuple away1 p2
    in (mk_pair(p1',p2'), away2)
    end
- else
+
+else
   (tuple,away)
 
 fun vstruct_variants away vstructs =
@@ -341,6 +238,21 @@ fun vstruct_variants away vstructs =
   in
   itlist iterFn vstructs ([],away)
   end
+
+(*---------------------------------------------------------------------------*)
+(* For non-rewriter code interacting with the rewriter (which utilizes the   *)
+(* UNCHANGED exception)                                                      *)
+(*---------------------------------------------------------------------------*)
+
+datatype delta
+  = CHANGE of thm
+  | NO_CHANGE of thm
+
+fun unchanged (NO_CHANGE _) = true
+  | unchanged _ = false;
+
+fun dest_change (NO_CHANGE th) = th
+  | dest_change (CHANGE th) = th
 
 (*---------------------------------------------------------------------------*)
 (* A congruence rule can have two kinds of antecedent: universally           *)
@@ -404,17 +316,15 @@ fun vstruct_variants away vstructs =
 (* prefix is free in Gamma. Since the algorithm is going top-down, Gamma     *)
 (* gets augmented in the descent. Thus each cong rule application in the     *)
 (* traversal will have its local context addition renamed away from the      *)
-(* variables above.                                                          *)
+(* variables in the existing context.                                        *)
 (*---------------------------------------------------------------------------*)
 
 fun push_context L {simpls,context,prover} =
  let open HOLPP
-     val trace_level = if null L then 10 else 6
+     val trace_level = if null L then no_trace else 2
  in
-  lztrace(trace_level,"push_context", fn () =>
-    if null L then
-      ppstring add_string "<no context to push>"
-    else ppstring pp_terms L)
+  lztrace(trace_level,"push_context:\n",
+    fn () => ppstring (indent_pp 3 o pp_terms) L)
   ;
    {context = L @ context,
     simpls = simpls, prover = prover}
@@ -422,12 +332,9 @@ fun push_context L {simpls,context,prover} =
 
 fun pop_context L th =
  let open HOLPP
-     val trace_level = if null L then 10 else 6
+     val trace_level = if null L then no_trace else 4
  in
-    lztrace(trace_level,"pop_context", fn () =>
-      if null L then
-        ppstring add_string "<no context to pop>"
-      else ppstring pp_terms L)
+    lztrace(trace_level,"pop_context:\n  ", fn () => ppstring pp_terms L)
    ;
     itlist DISCH L th
  end
@@ -436,23 +343,29 @@ fun no_change V L tm =
   NO_CHANGE (itlist GEN V (pop_context L (REFL tm)))
 
 (*---------------------------------------------------------------------------*)
-(* Applied to every antecedent that is not universally quantified.           *)
+(* Extraction on an antecedent that is not universally quantified.           *)
 (*---------------------------------------------------------------------------*)
+
+fun entering fname tm =
+  lztrace(2, "Extracting from:\n\n",
+      fn () => ppstring (indent_pp 3 o pp_term) tm)
 
 fun simple cnv cps (ant,rst) =
   case total ((I##dest_eq) o strip_imp_only) ant
    of NONE (* Not an equality, so just assume *)
          => (CHANGE(ASSUME ant), rst)
     | SOME (L,(lhs,rhs)) =>
-       let val outcome =
+      let val outcome =
           if aconv lhs rhs then
             no_change [] L lhs
           else
             let val cps' = push_context L cps
-            in CHANGE(cnv cps' lhs)
-               handle HOL_ERR _ => no_change [] L lhs
-                    | UNCHANGED => no_change [] L lhs
+                val _ = entering "simple" lhs
+                val extracted = cnv cps' lhs
+            in CHANGE extracted
             end
+            handle HOL_ERR _ => no_change [] L lhs
+                 | UNCHANGED => no_change [] L lhs
        in
         case outcome
          of CHANGE th =>
@@ -462,18 +375,6 @@ fun simple cnv cps (ant,rst) =
               end
           | NO_CHANGE _ => (outcome, map (subst [rhs |-> lhs]) rst)
        end
-
-(*
-fun complex cnv cps (ant,rst) =
-  let val context_frees = free_varsl (map concl (#context cps))
-    val (vlist,ceqn) = strip_forall ant
-    val (l,r) = dest_eq (snd (strip_imp_only ceqn))
-    val nvars = length (snd (strip_comb rhs))
-    val (f,vs) = dest_combn l nvars
-    val (user_vstructs,M) = strip_pabs f
-    val nuvs = length user_vstructs
-    val (vs1,vs2) = (List.take(vs,nuvs),List.drop(vs,nuvs))
-*)
 
 (*---------------------------------------------------------------------------*)
 (* Congruence rule antecedent of the form !vs. P vs ==> f vs = f' vs         *)
@@ -515,35 +416,39 @@ fun complex cnv cps (ant,rst) =
        else
        let val lhs_beta_maybe = Conv.QCONV (Conv.DEPTH_CONV GEN_BETA_CONV) lhs
            val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
-           val cps' = push_context L cps
-       in CHANGE(TRANS lhs_beta_maybe (cnv cps' lhs'))
-          handle
-            HOL_ERR _ =>
-               if aconv lhs lhs' then
-                 no_change vlist L lhs
-               else CHANGE lhs_beta_maybe
-          | UNCHANGED =>
-               if aconv lhs lhs' then
-                 no_change vlist L lhs
-               else CHANGE lhs_beta_maybe
+           fun nothing_extracted() = (* invoked post-extraction attempt *)
+                if aconv lhs lhs' then
+                   no_change vlist L lhs
+                else CHANGE lhs_beta_maybe
+       in
+          let val cps' = push_context L cps
+              val _ = entering "complex" lhs'
+              val th1 = cnv cps' lhs'   (* recursively extract *)
+              val th2 = TRANS lhs_beta_maybe th1
+          in
+             CHANGE th2
+          end
+          handle UNCHANGED => nothing_extracted()
+               | HOL_ERR _ => nothing_extracted()
        end
   in
   case outcome
    of NO_CHANGE _ => (outcome, map (subst [rhsFnVar |-> lhsFn]) rst)
     | CHANGE th =>
       let (*------------------------------------------------------------*)
-          (* Function eta_rhs packages up the new rhs, eta-expanding it *)
-          (* if need be, i.e. if lhsFn is an application of a lambda or *)
-          (* paired-lambda term f. In that case, the extraction has     *)
-          (* first done a beta-reduction, so the post-extraction rhs    *)
-          (* needs to be "beta-expanded" in order that rhsFnVar be      *)
-          (* filled in with a term that has function syntax. This       *)
-          (* is needed for the final MATCH_MP icong ... to  succeed.    *)
+          (* Function unbeta_rhs packages up the new rhs,               *)
+          (* beta-expanding it if need be, i.e. if lhsFn is an          *)
+          (* application of a lambda or paired-lambda term f. In that   *)
+          (* case, the extraction was preceded by a beta-reduction, so  *)
+          (* the post-extraction rhs needs to be beta-expanded in order *)
+          (* that rhsFnVar be filled in with a term that has function   *)
+          (* syntax. This is needed for the final MATCH_MP icong to     *)
+          (* succeed.                                                   *)
           (*------------------------------------------------------------*)
          val nbetas = Int.min(length vstructs,nargs)
          val rhs_args = snd (strip_comb rhs)
 
-         fun eta_rhs th =
+         fun unbeta_rhs th =
            let val r = boolSyntax.rhs(concl th)
                val (rhsFn, rhsFnapp) =
                   if null vstructs then (* lhsFn is not a lambda term *)
@@ -566,24 +471,13 @@ fun complex cnv cps (ant,rst) =
               (rhsFn,th1)
             end
 
-         val (rhsFn,th1) = eta_rhs th
+         val (rhsFn,th1) = unbeta_rhs th
          val th2 = pop_context L th1
-
-         fun genfail vs th =
-            case op_intersect term_eq (free_varsl vs) (free_varsl (hyp th))
-             of [] => ()
-              | overlaps =>
-                lztrace(6,"complex: ... FAILED generalization step", fn () =>
-                String.concat [" variable(s)\n ",
-                 ppstring pp_term (pairSyntax.list_mk_pair overlaps),
-                 "\n to be generalized occur free in assums of antecedent theorem: \n",
-                 Lib.with_flag(show_assums, true) (ppstring pp_thm) th, "\n\n"])
 
          fun generalize v thm =
             (case subst_assoc (aconv v) theta
               of SOME tup => pairTools.PGEN v tup thm
                | NONE => GEN v thm)
-            handle e => (genfail [v] thm; raise e)
 
          val th3 = itlist generalize vlist th2
       in
@@ -591,35 +485,31 @@ fun complex cnv cps (ant,rst) =
       end
   end
   handle HOL_ERR _ => raise EXTRACTION_ERROR (#context cps, ant)
-
  (* complex *)
 
 fun try_cong cnv cps tm =
  let val icong = CONG_STEP (#simpls cps) tm
-  val ants = strip_conj (fst (dest_imp (concl icong)))
-  val _ = lztrace(6,"Congruence Step", fn () =>
-    String.concat ["\n", ppstring pp_thm icong])
+  val _ = lztrace(4,"Congruence Step:\n", fn () => ppstring pp_thm icong)
 
   (* loop proves each antecedent in turn and propagates
      instantiations to the remainder. *)
   fun loop [] = []
     | loop (ant::rst) =
-      let val _ = lztrace(6,"Congruence antecedent\n",
-              fn () => ppstring pp_term ant)
-          val (outcome,rst') =
+      let val (outcome,rst') =
            if is_forall ant
              then complex cnv cps (ant,rst)
              else simple cnv cps (ant,rst)
       in
         outcome::loop rst'
       end
+  val ants = strip_conj (fst (dest_imp (concl icong)))
   val outcomes = loop ants
  in
    if Lib.all unchanged outcomes
      then raise UNCHANGED
      else
      let val ant_conj_thm = LIST_CONJ (map dest_change outcomes)
-         val _ = lztrace(6,"Proven congruence antecedents\n",
+         val _ = lztrace(4,"All congruence antecedents proved\n",
                  fn () => ppstring pp_thm ant_conj_thm)
      in
        MATCH_MP icong ant_conj_thm  (* should not fail *)
@@ -661,7 +551,6 @@ fun SUB_QCONV cnv cps tm =
           end
       end
    | otherwise => raise UNCHANGED     (* Constants and  variables *)
-
 
 fun RE_EXTRACT_QCONV cps tm =
  THENQC
@@ -706,19 +595,16 @@ fun capture (restrf,f,G,nref) context tm =
   end
 end
 
-(*---------------------------------------------------------------------------*)
-(* TODO: repeatedly call EXTRACT_CONV for nested recursions.                 *)
-(*---------------------------------------------------------------------------*)
-
-fun extract FV congs (proto_def,WFR) =
+fun extract FV cong_simpls (proto_def,WFR) =
  let val R = rand WFR
      val f = boolSyntax.lhs proto_def
      val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
      val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
-     val cut_simpls = add_rws empty_simpls [CUT_LEM]
-     val init_simpls = add_congs cut_simpls congs
+     val init_simpls = insert_cut_lem cong_simpls CUT_LEM
  in fn (p,th) =>
-    let val nested_ref = ref false
+    let val _ = lztrace(3,"------------------------\nTC extraction on clause:\n\n",
+                fn () => ppstring pp_term (concl th))
+        val nested_ref = ref false
         val FV' = FV@free_vars(concl th)
         val cps0 = {simpls = init_simpls,context = []:term list,
                     prover = capture (mk_comb(restr_fR, p), f, FV', nested_ref)}

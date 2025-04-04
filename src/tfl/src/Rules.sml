@@ -6,34 +6,15 @@ open HolKernel boolLib pairLib wfrecUtils;
 
 val ERR = mk_HOL_ERR "Rules";
 
-fun sthat P x = P x handle Interrupt => raise Interrupt
-                         |     _     => false;
-
-fun simpl_conv thl =
-  let open RW
-      val RWC = Rewrite Fully
-                   (Simpls(std_simpls,thl),
-                    Context([],DONT_ADD),
-                    Congs[boolTheory.IMP_CONG],
-                    Solver always_fails)
-      fun simpl tm =
-       let val th = Conv.THENC(RWC,Conv.DEPTH_CONV GEN_BETA_CONV) tm
-           val (lhs,rhs) = dest_eq(concl th)
-       in if aconv lhs rhs then th else TRANS th (simpl rhs)
-       end
-  in simpl
-  end;
-
-fun is_triv_rw tm = uncurry aconv (dest_eq tm) handle HOL_ERR _ => false;
-
-fun non_triv thl = filter (not o is_triv_rw o concl) thl
-
 (*---------------------------------------------------------------------------*)
 (* PURE_REWRITE_RULE plus generalized beta conversion.                       *)
 (*---------------------------------------------------------------------------*)
 
+fun is_triv_rw tm = uncurry aconv (dest_eq tm) handle HOL_ERR _ => false;
+fun non_triv thl = filter (not o is_triv_rw o concl) thl
+
 fun simplify thl =
- let val rewrite = PURE_REWRITE_RULE (non_triv thl) (* PURE_ONCE_REWRITE_RULE *)
+ let val rewrite = PURE_REWRITE_RULE (non_triv thl)
      fun simpl th =
       let val th' = GEN_BETA_RULE (rewrite th)
           val (_,c1) = dest_thm th
@@ -44,6 +25,10 @@ fun simplify thl =
  end;
 
 val RIGHT_ASSOC = PURE_REWRITE_RULE [GSYM boolTheory.DISJ_ASSOC];
+
+fun sthat P x =
+  P x handle Interrupt => raise Interrupt
+           |     _     => false;
 
 fun FILTER_DISCH_ALL P th = itlist DISCH (filter (sthat P) (Thm.hyp th)) th;
 
