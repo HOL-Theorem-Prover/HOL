@@ -22,6 +22,7 @@ sig
   val disj2_tac             : tactic
   val MP_TAC                : thm_tactic
   val mp_tac                : thm_tactic
+  val EQ_MP_TAC             : thm_tactic
   val EQ_TAC                : tactic
   val eq_tac                : tactic (* alias for EQ_TAC *)
   val iff_tac               : tactic (* alias for EQ_TAC *)

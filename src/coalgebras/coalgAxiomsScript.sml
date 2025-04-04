@@ -37,11 +37,11 @@ val map_CONG = new_axiom (
 
 val _ = add_rule{block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  fixity = Suffix 2100, paren_style = OnlyIfNecessary,
-                 pp_elements = [TOK "ᴾ"], term_name = "UNCURRY"}       (* UOK *)
+                 pp_elements = [TOK "ᴾ"], term_name = "UNCURRY"}
 
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  fixity = Suffix 2100, paren_style = OnlyIfNecessary,
-                 pp_elements = [TOK "⟨",TM,TOK"⟩"], term_name = "restr"}(* UOK*)
+                 pp_elements = [TOK "⟨",TM,TOK"⟩"], term_name = "restr"}
 
 Definition relF_def:
   relF R x y <=> ?z. setF z SUBSET UNCURRY R /\ mapF FST z = x /\ mapF SND z = y

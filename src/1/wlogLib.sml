@@ -1,6 +1,6 @@
 (* wlogLib.sml - Without loss of generality tacticals
 
-   by Mario Castelán Castro                                                  UOK
+   by Mario Castelán Castro
       (see doc/copyrights/public-domain-contributions.txt)
 *)
 
@@ -19,7 +19,7 @@ fun LIST_SPLICE l =
   | (t::l) =>
     let
       val deep_thm = LIST_SPLICE l
-      (* If “deep_thm” is «l ⇔ r», “lifted_deep_thm” is «t ∧ l ⇔ t ∧ r». UOK *)
+      (* If “deep_thm” is «l ⇔ r», “lifted_deep_thm” is «t ∧ l ⇔ t ∧ r». *)
       val lifted_deep_thm = AP_TERM (mk_comb (conjunction, t)) deep_thm
     in
       RIGHT_CONV_RULE SPLICE_CONJ_CONV lifted_deep_thm
@@ -60,10 +60,10 @@ fun UNDISCH_CONJ l thm =
   handle HOL_ERR _ => raise ERR "UNDISCH_CONJ" ""
 
 (* Proves
-  ⊢ (¬P ⇒ (∀(vars). P_hyp ⇒ t) ⇒ t) ⇒   (* “wlog_thm”. *)                  UOK
-     (∀(vars). P ∧ hyp ⇒ t) ⇒           (* “new_sg_thm”. *)                UOK
-     hyp ⇒                                                                 UOK
-     t»                                                                    UOK
+  ⊢ (¬P ⇒ (∀(vars). P_hyp ⇒ t) ⇒ t) ⇒   (* “wlog_thm”. *)
+     (∀(vars). P ∧ hyp ⇒ t) ⇒           (* “new_sg_thm”. *)
+     hyp ⇒
+     t»
 except that when "hyp" is "NONE", it is omitted the obvious way. If "hyp" is
 none then "p_hyp" is just "hyp" else it is the splice of "p" with "hyp". The
 tuple returned is the aforementioned theorem and "P_hyp". *)

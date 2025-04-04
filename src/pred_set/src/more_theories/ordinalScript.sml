@@ -785,7 +785,7 @@ val allNats_dwardclosedetc = prove(
 val omega_def = Define`
   omega = sup { fromNat i | T }
 `;
-val _ = overload_on ("ω", ``omega``)   (* UOK *)
+val _ = overload_on ("ω", ``omega``)
 
 val lt_omega0 =
   MATCH_MP preds_sup_thm allNats_dwardclosedetc
@@ -1761,7 +1761,7 @@ val epsilon0_def = Define`
   epsilon0 = oleast x. omega ** x = x
 `
 
-val _ = overload_on("ε₀", ``epsilon0``)  (* UOK *)
+val _ = overload_on("ε₀", ``epsilon0``)
 
 val epsilon0_fixpoint = store_thm(
   "epsilon0_fixpoint",
@@ -2781,7 +2781,7 @@ QED
 Definition omega1_def:
   omega1 : 'a ucord = sup { a | countableOrd a }
 End
-Overload "ω₁" = “omega1”  (* UOK *)
+Overload "ω₁" = “omega1”
 
 Theorem x_lt_omega1_countable: x < omega1 <=> countableOrd x
 Proof

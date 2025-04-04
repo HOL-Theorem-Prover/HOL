@@ -173,3 +173,9 @@ val equiv =
     (!i:int. 7<i ==> ?j k. i = 3*j + 5*k)”;
 
 val _ = print "Thery interactive script DONE\n"
+val _ = let
+  val ostrm = TextIO.openOut "thery-done"
+in
+  TextIO.output(ostrm, "Thery interactive script DONE\n");
+  TextIO.closeOut ostrm
+end

@@ -197,6 +197,17 @@ fun MP_TAC thb (asl, w) =
    ([(asl, mk_imp (concl thb, w))], sing (fn thimp => MP thimp thb))
 val mp_tac = MP_TAC
 
+(* ----------------------------------------------------------------------
+    EQ_MP_TAC : thm -> tactic
+
+    |- B           A
+           ==================
+                 B = A
+   ---------------------------------------------------------------------- *)
+
+fun EQ_MP_TAC thB (asl, w) =
+    ([(asl, mk_eq (concl thB, w))], sing (fn eqth => EQ_MP eqth thB))
+
 (*---------------------------------------------------------------------------*
  * Equality Introduction                                                     *
  *                                                                           *
