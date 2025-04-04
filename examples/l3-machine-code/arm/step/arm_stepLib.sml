@@ -12,7 +12,7 @@ open state_transformerSyntax blastLib Parse
 
 val ambient_grammars = (type_grammar(), term_grammar())
 val _ = temp_set_grammars
-          (arm_stepTheory.arm_step_grammars
+          (valOf (grammarDB{thyname="arm"})
              |> apsnd (#1 o term_grammar.mfupdate_overload_info
                               (Overload.remove_overloaded_form "add") o
                        ParseExtras.grammar_loose_equality))

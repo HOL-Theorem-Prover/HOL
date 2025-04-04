@@ -12,7 +12,7 @@ open state_transformerSyntax blastLib
 open Parse
 
 val ambient_grammars = (type_grammar(), term_grammar())
-val _ = temp_set_grammars m0_stepTheory.m0_step_grammars
+val _ = temp_set_grammars $ valOf $ grammarDB {thyname="m0_step"}
 
 val ERR = Feedback.mk_HOL_ERR "m0_stepLib"
 val WARN = Feedback.HOL_WARNING "m0_stepLib"
