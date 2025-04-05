@@ -590,7 +590,7 @@ datatype tac_frag_mid
 
 datatype tac_frag_close
   = FClose
-  | FCloseTry
+  | FCloseFirst
   | FCloseRepeat
 
 datatype tac_frag
@@ -622,7 +622,7 @@ fun linearize isAtom e = let
     | First (e::ls) =>
       asTac (mbracket FClose FNextFirst FOpenFirst (fn one =>
         map (fn e => snd (go e (one, []))) (e::ls))) acc
-    | Try e => asTac (bracket2 FCloseTry (fn one => go e (one, [])) FOpenFirst) acc
+    | Try e => asTac (bracket (fn one => go e (one, [])) FOpenFirst) acc
     | Repeat e => asTac (bracket2 FCloseRepeat (fn one => go e (one, [])) FOpenRepeat) acc
     | MapEvery (_, []) => acc
     | MapFirst (_, []) => (true, FAtom (First []) :: acc')
@@ -635,7 +635,7 @@ fun linearize isAtom e = let
     | LNullOk e => bracket (fn one => go e (one, [])) FOpenNullOk acc
     | LFirst [] => (true, FAtom (LFirst []) :: acc')
     | LFirst (e::ls) =>
-      mbracket FClose FNextFirst FOpenFirst (fn one =>
+      mbracket FCloseFirst FNextFirst FOpenFirst (fn one =>
         map (fn e => snd (go e (one, []))) (e::ls)) acc
     | LAllGoals e => go e acc
     | LNthGoal (e, n) => bracket (fn _ => go e (false, [])) (FOpenNthGoal n) acc
@@ -645,7 +645,7 @@ fun linearize isAtom e = let
       mbracket FClose FNextSplit (FOpenSplit n) (fn _ =>
         map (fn e => snd (go e (false, []))) [e1, e2]) acc
     | LReverse => (one, FAtom LReverse :: acc')
-    | LTry e => bracket2 FCloseTry (fn one => go e (one, [])) FOpenFirst acc
+    | LTry e => bracket (fn one => go e (one, [])) FOpenFirst acc
     | LRepeat e => bracket (fn one => go e (one, [])) FOpenRepeat acc
     | LSelectThen (e1, e2) =>
       mbracket FClose FNextSelect FOpenSelect (fn _ =>

@@ -86,7 +86,7 @@ datatype tac_frag_mid
 
 datatype tac_frag_close
   = FClose
-  | FCloseTry
+  | FCloseFirst
   | FCloseRepeat
 
 datatype tac_frag
