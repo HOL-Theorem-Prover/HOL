@@ -5,6 +5,7 @@ sig
   datatype proof0
        = GOALSTACK of goalStack.gstk History.history
        | GOALTREE of goalTree.gtree History.history
+       | GOALFRAG of goalFrag.goalstate History.history
   type tacmodifier = {tacm: tactic -> tactic,
                       ltacm : list_tactic -> list_tactic}
 

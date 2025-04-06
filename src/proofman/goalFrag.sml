@@ -55,12 +55,30 @@ fun concatMapV f (ls, v: list_validation) = let
   val (gs, v1) = go ls
   in (gs, v o v1: list_validation) end
 
-fun tactic (tac:tactic) (n, g) =
+fun expandf (tac:tactic) (n, g) =
   (n, apply (fn (gs, v) =>
     Base (concatMapV ((fn (gs, v) => (gs, single o v)) o tac) (gs, v))) g)
+val expand = expandf o Tactical.VALID
 
-fun list_tactic (ltac:list_tactic) (n, g) =
+fun expand_listf (ltac:list_tactic) (n, g) =
   (n, apply (fn (gs, v) => (fn (gs', v') => Base (gs', v o v')) (ltac gs)) g)
+val expand_list = expand_listf o Tactical.VALID_LT
+
+fun top_goals (n, Base (gs, _)) = gs
+  | top_goals (n, g) = let
+    fun go (Base (gs, _)) acc = List.revAppend (gs, acc)
+      | go (Parallel (gs, _)) acc = goList gs acc
+      | go (Stashed (gs, _)) acc = go gs acc
+      | go (Try (gs, _)) acc = goHandled gs acc
+      | go (Repeat (gs, _, _)) acc = goHandled gs acc
+      | go (Done _) acc = acc
+    and goHandled (Running gs) acc = go gs acc
+      | goHandled (Failed _) acc = acc
+    and goList [] acc = acc
+      | goList (g::gs) acc = goList gs (go g acc)
+    in rev $ go g [] end
+
+val top_goal = hd o top_goals
 
 fun open_paren (n, g) = (n+1, apply (fn (gs, v) =>
   Parallel (map (fn g => Base ([g], I)) gs, v)) g)
@@ -194,5 +212,61 @@ fun next_select_lt (n, g) = let
     | f _ = raise Bind
   in (n-1, applyN f (n-2) g) end
 
+fun pp_goalstate ((n,g):goalstate) : PolyML.pretty =
+  raise Bind
+
+fun pp_goalstate gs = let
+  open smpp
+  val pr_goal = goalStack.pr_goal
+  val show_nsubgoals = current_trace "Goalstack.howmany_printed_subgoals"
+  val other_subgoals_pretty_limit =
+    current_trace "Goalstack.other_subgoals_pretty_limit"
+  val show_stack_subgoal_count =
+    current_trace "Goalstack.show_stack_subgoal_count" = 1
+  in
+    case top_goals gs of
+      [] =>
+      (case total finish gs of
+        SOME th =>
+        block Portable.CONSISTENT 0 (
+          add_string "Initial goal proved." >>
+          add_newline >>
+          lift Parse.pp_thm th)
+      | NONE =>
+        add_string "No subgoals but proof incomplete (try close_paren)." >>
+        add_newline)
+    | goals => let
+      val (ellipsis_action, goals_to_print) =
+        if length goals > show_nsubgoals then let
+          val num_elided = length goals - show_nsubgoals
+          in
+            (add_string (
+              "..." ^ Int.toString num_elided ^ " subgoal"^
+              (if num_elided = 1 then "" else "s") ^ " elided...") >>
+            add_newline >> add_newline,
+            rev (List.take (goals, show_nsubgoals)))
+          end
+        else
+          (add_newline, rev goals)
+      val (pfx, lastg) = front_last goals_to_print
+      fun start () = (
+        ellipsis_action >>
+        pr_list pr_goal (add_newline >> add_newline) pfx)
+      val size = List.foldl (fn (g,acc) => goalStack.goal_size g + acc) 0 pfx
+      in
+        block Portable.CONSISTENT 0 (
+          (if size > other_subgoals_pretty_limit then
+            with_flag (Parse.current_backend, PPBackEnd.raw_terminal) start ()
+          else start ()) >>
+          (if not (null pfx) then add_newline >> add_newline else nothing) >>
+          pr_goal lastg >>
+          (if length goals > 1 andalso show_stack_subgoal_count then
+            add_string ("\n\n" ^ Int.toString (length goals) ^ " subgoals") >>
+            add_newline
+          else add_newline >> add_newline))
+      end
+  end
+
+val pp_goalstate = Parse.mlower o pp_goalstate
 
 end
