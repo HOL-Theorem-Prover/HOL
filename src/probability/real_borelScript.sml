@@ -26,7 +26,7 @@ open metisLib arithmeticTheory pred_setTheory pred_setLib numTheory numLib
 
 open cardinalTheory real_topologyTheory iterateTheory real_of_ratTheory;
 
-open hurdUtils util_probTheory sigma_algebraTheory;
+open hurdUtils sigma_algebraTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "borel" (renamed to "real_borel")               *)
@@ -43,6 +43,26 @@ val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
+
+val PREIMAGE_REAL_COMPL1 = store_thm
+  ("PREIMAGE_REAL_COMPL1", ``!c:real. COMPL {x | c < x} = {x | x <= c}``,
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
+
+val PREIMAGE_REAL_COMPL2 = store_thm
+  ("PREIMAGE_REAL_COMPL2", ``!c:real. COMPL {x | c <= x} = {x | x < c}``,
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
+
+val PREIMAGE_REAL_COMPL3 = store_thm
+  ("PREIMAGE_REAL_COMPL3", ``!c:real. COMPL {x | x <= c} = {x | c < x}``,
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
+
+val PREIMAGE_REAL_COMPL4 = store_thm
+  ("PREIMAGE_REAL_COMPL4", ``!c:real. COMPL {x | x < c} = {x | c <= x}``,
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)

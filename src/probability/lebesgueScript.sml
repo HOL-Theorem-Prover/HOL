@@ -18,7 +18,6 @@
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
 (* Note: This theory is inspired by Isabelle/HOL                             *)
-(*                                                                           *)
 (* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
@@ -29,8 +28,8 @@ open arithmeticTheory prim_recTheory optionTheory pairTheory combinTheory
 open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
      jrhUtils cardinalTheory iterateTheory;
 
-open hurdUtils util_probTheory extrealTheory sigma_algebraTheory measureTheory
-     borelTheory real_topologyTheory;
+open hurdUtils extrealTheory sigma_algebraTheory measureTheory borelTheory
+     real_topologyTheory;
 
 val _ = new_theory "lebesgue";
 

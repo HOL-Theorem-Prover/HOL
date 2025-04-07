@@ -13,7 +13,7 @@ open extra_boolTheory extra_pred_setTheory extra_realTheory extra_listTheory
 
 open real_sigmaTheory;
 
-open hurdUtils util_probTheory real_measureTheory real_lebesgueTheory
+open hurdUtils sigma_algebraTheory real_measureTheory real_lebesgueTheory
      real_probabilityTheory;
 
 val _ = new_theory "basic_leakage_examples";

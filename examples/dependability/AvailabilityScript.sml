@@ -1,8 +1,5 @@
 (* ========================================================================= *)
-(* File Name: Availability.sml                                               *)
-(*---------------------------------------------------------------------------*)
 (* Description: Formal Availability Analysis using Theorem Proving           *)
-(*                                                                           *)
 (*                                                                           *)
 (*                HOL4-Kananaskis                                            *)
 (*                                                                           *)
@@ -10,36 +7,24 @@
 (*                                                                           *)
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
-(*                                                                           *)
-(*                                                                           *)
 (* ========================================================================= *)
 
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
-          "probabilityTheory", "numTheory", "transcTheory", "rich_listTheory",
-          "pairTheory", "combinTheory","limTheory","sortingTheory", "realLib",
-          "optionTheory","satTheory", "util_probTheory", "extrealTheory", "measureTheory",
-          "lebesgueTheory","real_sigmaTheory","dep_rewrite","RBDTheory","FT_deepTheory","VDCTheory",
-          "seqTheory", "extra_pred_setTools"];*)
+open HolKernel Parse boolLib bossLib;
 
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory
-     prim_recTheory real_probabilityTheory
-      pred_setTheory res_quanTheory sortingTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib  optionTheory
-      util_probTheory extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory satTheory numTheory dep_rewrite
-      RBDTheory FT_deepTheory VDCTheory seqTheory extra_pred_setTools;
+open limTheory arithmeticTheory realTheory  prim_recTheory real_probabilityTheory
+     pred_setTheory res_quanTheory sortingTheory res_quanTools listTheory
+     transcTheory rich_listTheory pairTheory combinTheory realLib optionTheory
+     extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory
+     satTheory numTheory dep_rewrite
+     RBDTheory FT_deepTheory VDCTheory seqTheory extra_pred_setTools;
 
 fun K_TAC _ = ALL_TAC;
 
-open HolKernel boolLib bossLib Parse;
 val _ = new_theory "Availability";
 
-(*--------------------*)
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
-(*----------------------------*)
 Definition avail_event_def :
 avail_event (L:(('a->extreal) # ('a->extreal)) list) n t =
 {x |
@@ -48,7 +33,7 @@ avail_event (L:(('a->extreal) # ('a->extreal)) list) n t =
  EXTREAL_SUM_IMAGE (\a. (FST (EL a L)) x + (SND (EL a L)) x) (count n) +
  (FST (EL (n) L)) x)}
 End
-(*----------------------------*)
+
 Definition union_avail_events_def :
 union_avail_events L n t =
 (BIGUNION (IMAGE (\a. avail_event L a (Normal t)) (count n)))

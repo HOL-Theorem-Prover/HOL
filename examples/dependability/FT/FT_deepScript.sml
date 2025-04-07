@@ -1,6 +1,4 @@
 (* ========================================================================= *)
-(* File Name: FTdeepScript.sml                                               *)
-(*---------------------------------------------------------------------------*)
 (* Description: Formalization of Fault Trees in                              *)
 (*                   Higher-order Logic                                      *)
 (*                                                                           *)
@@ -10,39 +8,26 @@
 (*                                                                           *)
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
-(*                                                                           *)
-(*                                                                           *)
 (* ========================================================================= *)
 
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
-          "real_probabilityTheory", "numTheory", "dep_Rewrite",
-          "Transctheory", "rich_listTheory", "pairTheory", "extra_pred_setTools",
-          "combinTheory","limTheory","sortingTheory", "realLib", "optionTheory",
-          "satTheory", "util_probTheory", "extrealTheory", "real_measureTheory",
-          "real_lebesgueTheory","real_sigmaTheory", "RBDTheory"];
-*)
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory
-    prim_recTheory real_probabilityTheory seqTheory pred_setTheory res_quanTheory
-    sortingTheory res_quanTools listTheory transcTheory
-    rich_listTheory pairTheory combinTheory realLib  optionTheory dep_rewrite
-    util_probTheory extrealTheory real_measureTheory real_lebesgueTheory
-    real_sigmaTheory satTheory numTheory RBDTheory extra_pred_setTools;
+open HolKernel Parse boolLib bossLib;
 
-open HolKernel boolLib bossLib Parse;
+open limTheory arithmeticTheory realTheory prim_recTheory
+     real_probabilityTheory seqTheory pred_setTheory res_quanTheory
+     sortingTheory res_quanTools listTheory transcTheory
+     rich_listTheory pairTheory combinTheory realLib  optionTheory dep_rewrite
+     extrealTheory real_measureTheory real_lebesgueTheory
+     real_sigmaTheory satTheory numTheory RBDTheory extra_pred_setTools;
+
 val _ = new_theory "FT_deep";
-(*--------------------*)
+
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
-
-(*--------------------*)
 (*------------------------------*)
-(*      Fault Tree Gates datatypes           *)
+(*  Fault Tree Gates datatypes  *)
 (*------------------------------*)
 val _ = type_abbrev( "event" , ``:'a ->bool``);
-
 
 val _ = Hol_datatype` gate = AND of gate list
                             | OR of gate list
@@ -65,22 +50,16 @@ Definition FTree_def :
                  FTree p (x:'a gate) UNION FTree p (OR (xs)))
 End
 
-
 (*---gate list from atomic events---*)
-
 Definition gate_list_def :
 
     (gate_list [] = []) /\
     (gate_list (h::t) =  atomic h::gate_list t)
 End
 
-(**)
 (* -------------------- *)
 (*      Definitions     *)
 (* -------------------- *)
-
-(*-------AND_gate_eq_big_inter---*)
-
 
 Theorem AND_gate_eq_big_inter :
 !p L. FTree p (AND (gate_list L)) =
@@ -91,8 +70,6 @@ GEN_TAC
 >- (RW_TAC std_ss[gate_list_def,FTree_def,big_inter_def])
 >> RW_TAC std_ss[gate_list_def,FTree_def,big_inter_def]
 QED
-
-
 
 (*-------------------------------------*)
 (*              AND Gate               *)
@@ -137,7 +114,6 @@ MATCH_MP_TAC LESS_OR THEN
 RW_TAC std_ss[],
 FULL_SIMP_TAC std_ss[TAKE_LENGTH_ID]]]
 QED
-
 
 (*------------------------------------*)
 (*      OR Fault Tree Gate            *)
@@ -718,17 +694,16 @@ RW_TAC std_ss[]
                                INTER_COMM)]
 >> REAL_ARITH_TAC
 QED
-(*--------------------*)
+
 Definition XOR_FT_gate_def :
-XOR_FT_gate p A B =
+   XOR_FT_gate p A B =
      FTree p (OR [AND [NOT A; B] ; AND [A;NOT B]])
 End
+
 (* -------------------------------------------------------------------------- *)
-(*                                                                            *)
 (*    XOR Fault Tree Gate                                                     *)
-(*                                                                            *)
 (* -------------------------------------------------------------------------- *)
-(*--------------------XOR_FT_gate Theorem------------------------------------*)
+
 Theorem XOR_FT_gate_thm :
 !a b p.  prob_space p /\ a IN events p /\
               b IN events p /\ indep p a b ==>
@@ -786,7 +761,7 @@ RW_TAC std_ss[mutual_indep_def]
 >- (FULL_SIMP_TAC list_ss[])
 >> FULL_SIMP_TAC std_ss[]
 QED
-(*-----------------------------*)
+
 Theorem indep_compl_event_nevents :
 !p A B C. prob_space p /\  A IN events p /\
               B IN events p /\ C IN events p /\
@@ -827,7 +802,7 @@ RW_TAC std_ss[]
 >> RW_TAC real_ss[]
 >> REAL_ARITH_TAC
 QED
-(*-----------------------------*)
+
 Theorem inhibit_FT_gate_thm :
 !p A B C.  prob_space p /\ A IN events p /\
               B IN events p /\ C IN events p /\
@@ -899,7 +874,6 @@ Definition comp_FT_gate_def :
 comp_FT_gate p A B = FTree p (OR [AND [A; B]; NOT (OR [A;B])])
 End
 
-
 Theorem comp_FT_gate_thm :
 !p A B. prob_space p /\ A IN events p /\
               B IN events p /\
@@ -933,15 +907,12 @@ RW_TAC std_ss[comp_FT_gate_def,FTree_def,UNION_EMPTY]
 >> REAL_ARITH_TAC
 QED
 
-(*-----------------------------------------------------*)
 (* ----------------------------------------------------*)
 (*      K-out-N RBD                                    *)
 (* ----------------------------------------------------*)
 
-
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
-
 
 Definition binomial_def :
 (binomial n 0 = (1:num)) /\
@@ -949,17 +920,15 @@ Definition binomial_def :
         (binomial (SUC n) (SUC k) = binomial n (SUC k) + binomial n k)
 End
 
-(*--------------------sum_set------------------------------------*)
-
 Definition sum_set_def :
 sum_set s f =  REAL_SUM_IMAGE f s
 End
-(* ------------------------------------------------------------------------- *)
+
 (* ------------------------------------------------------------------------- *)
 (* Definition:         K_out_N_struct_def                                    *)
 (* ------------------------------------------------------------------------- *)
-Definition K_out_N_struct_def :
 
+Definition K_out_N_struct_def :
 K_out_N_struct p X k n =
 (BIGUNION (IMAGE (\x. PREIMAGE X {Normal (&x)} INTER p_space p)
           ({x|(k:num) <= x /\ x < SUC n})))
@@ -1298,10 +1267,7 @@ Proof
 RW_TAC std_ss[sum_set_def,EXP_PASCAL_REAL]
 QED
 
-(*------------------------------------------------------------*)
-
-(*-----------------num_neq------------------------------------*)
- Theorem num_neq :
+Theorem num_neq :
 !a b:num.  (a ≠ b) = (a < b \/ b < a)
 Proof
 RW_TAC std_ss []
@@ -1319,7 +1285,6 @@ RW_TAC std_ss [DISJOINT_ALT]
 >> RW_TAC std_ss [DISJOINT_ALT]
 >> FULL_SIMP_TAC real_ss [IN_INTER,IN_PREIMAGE,IN_SING]
 QED
-
 
 (*--------------k_out_n_lemma1--------------------------*)
 Theorem k_out_n_lemma1 :

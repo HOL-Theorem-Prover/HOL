@@ -1,6 +1,4 @@
 (* ========================================================================= *)
-(* File Name: frogp.sml                                                      *)
-(*---------------------------------------------------------------------------*)
 (* Description: Formal Reliability Analysis of Oil and Gas Pipelines         *)
 (*               using Theorem Proving                                       *)
 (*                                                                           *)
@@ -10,41 +8,27 @@
 (*                                                                           *)
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
-(*                                                                           *)
-(*                                                                           *)
 (* ========================================================================= *)
 
+open HolKernel Parse boolLib bossLib;
 
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
-          "real_probabilityTheory", "numTheory", "extra_pred_setTools",
-          "transcTheory", "rich_listTheory", "pairTheory",
-          "combinTheory","limTheory","sortingTheory", "realLib", "optionTheory","satTheory",
-          "util_probTheory", "extrealTheory", "real_measureTheory",
-          "real_lebesgueTheory","real_sigmaTheory","dep_rewrite","RBDTheory",
-          "FT_deepTheory","VDCTheory","ASN_gatewayTheory"];*)
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory
+open limTheory arithmeticTheory realTheory
      prim_recTheory real_probabilityTheory seqTheory pred_setTheory res_quanTheory
      sortingTheory res_quanTools listTheory transcTheory rich_listTheory pairTheory
-     combinTheory realLib  optionTheory util_probTheory extrealTheory real_measureTheory
+     combinTheory realLib optionTheory extrealTheory real_measureTheory
      real_lebesgueTheory real_sigmaTheory satTheory numTheory dep_rewrite
      extra_pred_setTools RBDTheory VDCTheory FT_deepTheory ASN_gatewayTheory;
 
 fun K_TAC _ = ALL_TAC;
 
-open HolKernel boolLib bossLib Parse;
 val _ = new_theory "frogp";
 
-(*--------------------*)
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
-
 
 (*---------------------------------------------------*)
 (*-----Case Study: Oil and Gas Pipeline-------------*)
 (*--------------------------------------------------*)
-(* ------------------------------------------------------------------------- *)
 
 Definition pipeline_def :
 pipeline p L  = prob p (rbd_struct p (series (rbd_list L)))

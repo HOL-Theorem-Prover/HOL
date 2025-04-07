@@ -1614,20 +1614,6 @@ val INCREASING_SEQ = store_thm
 Theorem X_LE_MAX[local] = cj 1 MAX_LE
 Theorem MAX_LE_X[local] = cj 2 MAX_LE
 
-val TRANSFORM_2D_NUM = store_thm
-  ("TRANSFORM_2D_NUM",
-   ``!P. (!m n : num. P m n ==> P n m) /\ (!m n. P m (m + n)) ==> (!m n. P m n)``,
-   Strip
-   >> Know `m <= n \/ n <= m` >- DECIDE_TAC
-   >> RW_TAC std_ss [LESS_EQ_EXISTS]
-   >> PROVE_TAC []);
-
-val TRIANGLE_2D_NUM = store_thm
-  ("TRIANGLE_2D_NUM",
-   ``!P. (!d n. P n (d + n)) ==> (!m n : num. m <= n ==> P m n)``,
-   RW_TAC std_ss [LESS_EQ_EXISTS]
-   >> PROVE_TAC [ADD_COMM]);
-
 val SEQ_SANDWICH = store_thm
   ("SEQ_SANDWICH",
    ``!f g h l.

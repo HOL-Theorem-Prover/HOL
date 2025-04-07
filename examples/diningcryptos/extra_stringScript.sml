@@ -2,29 +2,13 @@
 (* Create "extra_stringTheory" for toString automation and definitions       *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* Load and open relevant theories                                           *)
-(* (Comment out "load" and "loadPath"s for compilation)                      *)
-(* ------------------------------------------------------------------------- *)
-(*
+open HolKernel Parse boolLib bossLib;
 
-app load ["bossLib", "metisLib", "arithmeticTheory",
-          "listTheory", "hurdUtils", "combinTheory", "pairTheory",
-          "extra_boolTheory", "jrhUtils", "numTheory", "simpLib",
-          "stringTheory", "rich_listTheory",
-          "stringSimps", "listSimps", "extra_numTheory"];
-
-*)
-
-open HolKernel Parse boolLib bossLib metisLib arithmeticTheory
+open metisLib arithmeticTheory
      listTheory hurdUtils extra_numTheory combinTheory pairTheory
      extra_boolTheory jrhUtils numTheory simpLib
      stringTheory rich_listTheory stringSimps
      listSimps;
-
-(* ------------------------------------------------------------------------- *)
-(* Start a new theory called "information"                                   *)
-(* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "extra_string";
 

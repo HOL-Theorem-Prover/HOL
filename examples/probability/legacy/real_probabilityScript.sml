@@ -21,7 +21,7 @@ open arithmeticTheory prim_recTheory seqTheory res_quanTheory res_quanTools
      optionTheory transcTheory real_sigmaTheory pred_setTheory pred_setLib
      mesonLib hurdUtils iterateTheory topologyTheory;
 
-open util_probTheory sigma_algebraTheory real_measureTheory real_lebesgueTheory;
+open sigma_algebraTheory real_measureTheory real_lebesgueTheory;
 
 val set_ss = std_ss ++ PRED_SET_ss;
 

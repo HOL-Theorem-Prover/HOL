@@ -10,7 +10,7 @@ open metisLib numTheory arithmeticTheory pred_setTheory listTheory combinTheory
 open realTheory realLib realSimps seqTheory real_sigmaTheory transcTheory
      limTheory iterateTheory;
 
-open util_probTheory sigma_algebraTheory real_measureTheory real_borelTheory;
+open sigma_algebraTheory real_measureTheory real_borelTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "lebesgue"                                      *)

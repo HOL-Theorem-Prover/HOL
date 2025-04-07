@@ -13,8 +13,8 @@ open metisLib arithmeticTheory pred_setTheory pred_setLib
 open extra_boolTheory extra_numTheory extra_listTheory extra_stringLib
      extra_stringTheory extra_realTheory leakageLib;
 
-open hurdUtils util_probTheory sigma_algebraTheory
-     real_measureTheory real_lebesgueTheory real_probabilityTheory;
+open hurdUtils sigma_algebraTheory real_measureTheory real_lebesgueTheory
+     real_probabilityTheory;
 
 val _ = new_theory "dining_cryptos";
 

@@ -12,8 +12,8 @@ open combinTheory arithmeticTheory pred_setTheory pred_setLib numLib hurdUtils
 open realTheory realLib iterateTheory real_sigmaTheory real_topologyTheory
      extreal_baseTheory extrealTheory;
 
-open util_probTheory sigma_algebraTheory real_borelTheory borelTheory
-     measureTheory lebesgueTheory martingaleTheory probabilityTheory;
+open sigma_algebraTheory real_borelTheory borelTheory measureTheory
+     lebesgueTheory martingaleTheory probabilityTheory;
 
 val _ = new_theory "stochastic_process";
 
