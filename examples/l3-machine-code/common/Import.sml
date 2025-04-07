@@ -63,10 +63,13 @@ fun finish i = (
 
 fun valOrNil f NONE = []
   | valOrNil f (SOME xs) = f xs
+(* the List.rev ensures backwards compatibility with the way these lists were
+   presented previously (using adjoin_to_theory tech.)
+*)
 fun gen_inventory(r as {thyname}) =
     {Thy = thyname,
-     T = valOrNil I (#DB type_opns r),
-     C = valOrNil I (#DB const_opns r),
+     T = List.rev $ valOrNil I (#DB type_opns r),
+     C = List.rev $ valOrNil I (#DB const_opns r),
      N = valOrNil Redblackset.listItems (#DB boolify_opns r)}
 
 (* ------------------------------------------------------------------------ *)
