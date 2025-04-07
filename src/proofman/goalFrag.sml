@@ -135,7 +135,7 @@ fun next_first (n, g) = let
 
 fun close_first (n, g) = let
   fun go (Try (Running gs, _)) = Base (asBase gs)
-    | go (Try (Failed e, _)) = PolyML.Exception.reraise e
+    | go (Try (Failed e, _)) = Portable.reraise e
     | go (Done gs) = Base gs
     | go _ = raise Bind
   in (n-1, applyN go (n-1) g) end
