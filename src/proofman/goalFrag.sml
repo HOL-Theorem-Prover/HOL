@@ -212,9 +212,6 @@ fun next_select_lt (n, g) = let
     | f _ = raise Bind
   in (n-1, applyN f (n-2) g) end
 
-fun pp_goalstate ((n,g):goalstate) : PolyML.pretty =
-  raise Bind
-
 fun pp_goalstate gs = let
   open smpp
   val pr_goal = goalStack.pr_goal
