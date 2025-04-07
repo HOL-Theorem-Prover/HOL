@@ -11,10 +11,13 @@ sig
 
     val g             : term quotation -> proofs
     val gt            : term quotation -> proofs
+    val gf            : term quotation -> proofs
     val set_goal      : goal -> proofs
     val set_goaltree  : goal -> proofs
+    val set_goalfrag  : goal -> proofs
     val new_goalstack : goal -> tacmodifier -> (thm -> thm) -> proofs
     val new_goaltree  : goal -> tacmodifier -> proofs
+    val new_goalfrag  : goal -> tacmodifier -> proofs
     val add           : proof -> proofs
 
     (* Undo *)
@@ -36,6 +39,7 @@ sig
 
     val e             : tactic -> proof
     val elt           : list_tactic -> proof
+    val ef            : goalFrag.frag_tactic -> proof
     val eall          : tactic -> proof
     val eta           : tactic -> proof
     val enth          : tactic -> int -> proof
@@ -44,6 +48,7 @@ sig
     val expandf       : tactic -> proof
     val expand_list   : list_tactic -> proof
     val expand_listf  : list_tactic -> proof
+    val expand_frag   : goalFrag.frag_tactic -> proof
     val expandv       : string * tactic -> proof
 
     (* Seeing what the state of the proof manager is *)

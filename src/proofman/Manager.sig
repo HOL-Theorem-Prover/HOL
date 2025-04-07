@@ -18,6 +18,7 @@ sig
   (* Starting a proof *)
   val new_goalstack  : goal -> tacmodifier -> (thm->thm) -> proof
   val new_goaltree   : goal -> tacmodifier -> proof
+  val new_goalfrag   : goal -> tacmodifier -> proof
   val set_goal       : goal -> tacmodifier -> proof
   val add            : proof -> proofs -> proofs
 
@@ -36,6 +37,7 @@ sig
   val expandf        : tactic -> proof -> proof
   val expand_list    : list_tactic -> proof -> proof
   val expand_listf   : list_tactic -> proof -> proof
+  val expand_frag    : goalFrag.frag_tactic -> proof -> proof
   val expandv        : string * tactic -> proof -> proof
 
   (* Seeing what the state of the proof manager is *)
