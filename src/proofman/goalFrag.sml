@@ -103,7 +103,7 @@ fun close_paren (n, g) = let
           in v (ths1 @ v' ths2 @ ths3) end
         in Base (lo @ gs' @ hi, validation) end)
     | go (Try (Running gs, _)) = Base (asBase gs)
-    | go (Try (Failed e, _)) = Exn.reraise e
+    | go (Try (Failed e, _)) = Portable.reraise e
     | go (Repeat (Running gs, v, _)) = let
       fun repeat gs = case v (asBase gs) of Failed _ => gs | Running gs => repeat gs
       in repeat gs end
