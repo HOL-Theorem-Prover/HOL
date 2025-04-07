@@ -129,7 +129,7 @@ fun eta tac = expand_list (Tactical.TRYALL tac) ;
 fun enth tac i = expand_list (Tactical.NTH_GOAL tac i) ;
 val e = expand;
 val et = expandv;
-val e = expand_frag;
+val ef = expand_frag;
 
 val top_thm      = Manager.hd_proj Manager.top_thm o proofs;
 val initial_goal = Manager.hd_proj Manager.initial_goal o proofs;
