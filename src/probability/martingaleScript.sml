@@ -1,20 +1,17 @@
 (* ------------------------------------------------------------------------- *)
 (* The Theory of Martingales for Sigma-Finite Measure Spaces                 *)
 (* (Lebesgue Integration Extras, Product Measure and Fubini-Tonelli Theorem) *)
-(*                                                                           *)
-(* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2019 - 2022)          *)
-(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory relationTheory prim_recTheory arithmeticTheory pred_setTheory
-     combinTheory fcpTheory hurdUtils;
+     combinTheory fcpTheory hurdUtils jrhUtils;
 
 open realTheory realLib seqTheory transcTheory iterateTheory real_sigmaTheory
-     topologyTheory real_topologyTheory metricTheory;
+     topologyTheory real_topologyTheory metricTheory netsTheory;
 
-open util_probTheory extrealTheory sigma_algebraTheory measureTheory
+open extreal_baseTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory;
 
 val _ = new_theory "martingale";

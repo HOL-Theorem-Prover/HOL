@@ -17,8 +17,8 @@ open pairTheory combinTheory optionTheory prim_recTheory arithmeticTheory
 open realTheory realLib iterateTheory seqTheory transcTheory real_sigmaTheory
      real_topologyTheory metricTheory;
 
-open util_probTheory extrealTheory sigma_algebraTheory measureTheory
-     real_borelTheory borelTheory lebesgueTheory martingaleTheory;
+open extrealTheory sigma_algebraTheory measureTheory real_borelTheory
+     borelTheory lebesgueTheory martingaleTheory;
 
 val _ = new_theory "probability";
 

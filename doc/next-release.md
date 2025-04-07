@@ -84,6 +84,7 @@ Incompatibilities:
 
     Using the `#1 o #2` selector should be future-proof here.
 
+-   `util_probTheory` has been merged into `sigma_algebraTheory`.
 
 * * * * *
 

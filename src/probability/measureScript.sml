@@ -21,12 +21,12 @@
 open HolKernel Parse boolLib bossLib;
 
 open prim_recTheory arithmeticTheory optionTheory pairTheory combinTheory
-     pred_setTheory pred_setLib topologyTheory;
+     pred_setTheory pred_setLib topologyTheory jrhUtils iterateTheory numLib;
 
 open realTheory realLib metricTheory seqTheory transcTheory real_sigmaTheory
      real_topologyTheory;
 
-open hurdUtils util_probTheory extrealTheory sigma_algebraTheory;
+open hurdUtils extrealTheory sigma_algebraTheory;
 
 val _ = new_theory "measure";
 

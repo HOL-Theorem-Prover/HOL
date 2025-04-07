@@ -13,26 +13,23 @@
 (*                                                                           *)
 (*                                                                           *)
 (* ========================================================================= *)
-(*---------------------*)
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
-          "real_probabilityTheory", "numTheory", "dep_rewrite", "transcTheory",
-          "rich_listTheory", "pairTheory", "combinTheory","limTheory","sortingTheory",
-          "realLib", "optionTheory","satTheory", "util_probTheory", "extrealTheory",
-          "real_measureTheory", "real_lebesgueTheory","real_sigmaTheory","RBDTheory",
-          "FT_deepTheory","VDCTheory","ASN_gatewayTheory","extra_pred_setTools"];*)
 
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
-     seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib  optionTheory dep_rewrite
-      util_probTheory extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory satTheory numTheory
-      RBDTheory FT_deepTheory VDCTheory ASN_gatewayTheory extra_pred_setTools;
-open HolKernel boolLib bossLib Parse;
+open HolKernel Parse boolLib bossLib;
+
+open limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
+     seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools
+     listTheory transcTheory rich_listTheory pairTheory combinTheory realLib
+     optionTheory dep_rewrite;
+
+open extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory
+     satTheory numTheory;
+
+open RBDTheory FT_deepTheory VDCTheory ASN_gatewayTheory extra_pred_setTools;
+
 val _ = new_theory "transform_FT_RBD";
-(*--------------------*)
+
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
 (*--------AND_to_series-------------------*)
 Theorem AND_to_series :

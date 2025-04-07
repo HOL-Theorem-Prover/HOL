@@ -8,18 +8,19 @@
 (*                       Concordia University                                *)
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
-(*   Enriched by Chun TIAN (The Australian National University, 2024)        *)
+(*   Enriched by Chun Tian (Australian National University, 2024 - 2025)     *)
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
 
 open combinTheory arithmeticTheory numLib logrootTheory hurdUtils pred_setLib
-     pred_setTheory realTheory realLib seqTheory transcTheory real_sigmaTheory
-     iterateTheory topologyTheory real_topologyTheory derivativeTheory;
+     pred_setTheory topologyTheory pairTheory tautLib;
 
-open util_probTheory sigma_algebraTheory extrealTheory real_borelTheory
-     measureTheory borelTheory lebesgueTheory martingaleTheory
-     probabilityTheory;
+open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
+     real_topologyTheory derivativeTheory;
+
+open sigma_algebraTheory extreal_baseTheory extrealTheory real_borelTheory
+     measureTheory borelTheory lebesgueTheory martingaleTheory probabilityTheory;
 
 val _ = new_theory "distribution"; (* was: "normal_rv" *)
 

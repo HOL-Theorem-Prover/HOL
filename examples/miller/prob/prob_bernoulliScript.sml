@@ -9,7 +9,7 @@ open arithmeticTheory pred_setTheory
      simpLib seqTheory res_quanTheory;
 
 open sequenceTheory sequenceTools subtypeTheory;
-open util_probTheory real_measureTheory real_probabilityTheory;
+open real_measureTheory real_probabilityTheory;
 open prob_algebraTheory probTheory;
 
 val _ = new_theory "prob_bernoulli";

@@ -2461,11 +2461,26 @@ Proof
 QED
 
 Theorem NSUM_PERMUTE_NUMSEG :
-   !f p m n.
-  p permutes (count n DIFF count m) ==>
-   (nsum (count n DIFF count m) f = nsum (count n DIFF count m) (f o p))
+   !f p m n. p permutes (count n DIFF count m) ==>
+            (nsum (count n DIFF count m) f = nsum (count n DIFF count m) (f o p))
 Proof
   PROVE_TAC[NSUM_PERMUTE, FINITE_COUNT, FINITE_DIFF]
+QED
+
+Theorem TRANSFORM_2D_NUM :
+    !P. (!m n : num. P m n ==> P n m) /\ (!m n. P m (m + n)) ==> (!m n. P m n)
+Proof
+    rpt STRIP_TAC
+ >> Know `m <= n \/ n <= m` >- DECIDE_TAC
+ >> RW_TAC std_ss [LESS_EQ_EXISTS]
+ >> PROVE_TAC []
+QED
+
+Theorem TRIANGLE_2D_NUM :
+    !P. (!d n. P n (d + n)) ==> (!m n : num. m <= n ==> P m n)
+Proof
+    RW_TAC std_ss [LESS_EQ_EXISTS]
+ >> PROVE_TAC [ADD_COMM]
 QED
 
 val _ = export_theory();

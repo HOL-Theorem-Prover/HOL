@@ -1,6 +1,4 @@
 (* ========================================================================= *)
-(* File Name: RailwayScript.sml                                              *)
-(*---------------------------------------------------------------------------*)
 (* Description: Formal Fault Tree based Dependability Analysis of            *)
 (*                Railway Level Crossing using Theorem Proving               *)
 (*                HOL4-Kananaskis                                            *)
@@ -9,49 +7,36 @@
 (*                                                                           *)
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
-(*                                                                           *)
-(*                                                                           *)
 (* ========================================================================= *)
 
-(*app load ["arithmeticTheory", "realTheory", "prim_recTheory", "seqTheory",
-          "pred_setTheory","res_quanTheory", "res_quanTools", "listTheory",
-          "real_probabilityTheory", "numTheory", "transcTheory",
-          "rich_listTheory", "pairTheory", "extra_pred_setTools",
-          "combinTheory","limTheory","sortingTheory", "realLib", "optionTheory","satTheory",
-          "util_probTheory", "extrealTheory", "real_measureTheory", "real_lebesgueTheory",
-          "real_sigmaTheory","dep_rewrite","RBDTheory","FT_deepTheory","VDCTheory",
-          "smart_gridTheory","ASN_gatewayTheory"];*)
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory
+open HolKernel Parse boolLib bossLib;
+
+open limTheory arithmeticTheory realTheory
      prim_recTheory real_probabilityTheory seqTheory pred_setTheory res_quanTheory
      sortingTheory res_quanTools listTheory transcTheory rich_listTheory pairTheory
-     combinTheory realLib  optionTheory util_probTheory extrealTheory real_measureTheory
+     combinTheory realLib optionTheory extrealTheory real_measureTheory
      real_lebesgueTheory real_sigmaTheory satTheory numTheory dep_rewrite
-      RBDTheory FT_deepTheory VDCTheory smart_gridTheory ASN_gatewayTheory
-      extra_pred_setTools;
+     RBDTheory FT_deepTheory VDCTheory smart_gridTheory ASN_gatewayTheory
+     extra_pred_setTools;
 
 fun K_TAC _ = ALL_TAC;
 
-open HolKernel boolLib bossLib Parse;
 val _ = new_theory "railway";
 
-(*--------------------*)
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
-(*--------------------------------------*)
 Definition in_events_def :
 in_events p L = (!z. MEM z L ==> z IN events p)
 End
-(*--------------------------------------*)
+
 Definition two_dim_fail_event_list_def :
 two_dim_fail_event_list p L t = MAP (\a. fail_event_list p a t) L
 End
-(*--------------------------------------*)
+
 Definition three_dim_fail_event_list_def :
 three_dim_fail_event_list p L t = MAP (\a. two_dim_fail_event_list p a t) L
 End
-(*--------------------------------------*)
 
 Theorem railway_FT_equi_RBD :
  prob_space p /\ in_events p (fail_event_list p [x1;x2;x3;x4;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15;x16] t) ==>

@@ -24,8 +24,7 @@ open prim_recTheory arithmeticTheory numTheory numLib pred_setTheory pred_setLib
 open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
      topologyTheory metricTheory real_topologyTheory integrationTheory;
 
-open util_probTheory sigma_algebraTheory extrealTheory real_borelTheory
-     measureTheory borelTheory;
+open sigma_algebraTheory extrealTheory real_borelTheory measureTheory borelTheory;
 
 val theory_name = "lebesgue_measure";
 val _ = new_theory theory_name;
