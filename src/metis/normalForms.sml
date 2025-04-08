@@ -12,7 +12,8 @@ open HolKernel Parse boolLib simpLib Canon;
 structure Parse =
 struct
   open Parse
-  val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
+  val SOME combin_grammars = grammarDB {thyname="combin"}
+  val (Type,Term) = parse_from_grammars combin_grammars
 end
 open Parse
 

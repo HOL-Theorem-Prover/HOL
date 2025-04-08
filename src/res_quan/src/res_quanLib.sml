@@ -14,9 +14,10 @@ open HolKernel Parse Drule Conv Tactic Tactical Thm_cont
 
 infix THENR ORELSER ++ ||;
 
+
 local  (* Fix the grammar used by this file *)
   val ambient_grammars = Parse.current_grammars();
-  val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+  val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname = "bool"}
 in
 
 val bool_ss = boolSimps.bool_ss;

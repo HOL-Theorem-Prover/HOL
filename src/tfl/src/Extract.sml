@@ -8,7 +8,7 @@ val ERR = mk_HOL_ERR "Extract";
 (* Fix the grammar used by this file *)
 val ambient_grammars =
   Parse.current_grammars()
-  before Parse.temp_set_grammars boolTheory.bool_grammars;
+  before Parse.temp_set_grammars $ valOf $ grammarDB {thyname="bool"}
 
 (* For debugging extraction failures *)
 exception EXTRACTION_ERROR of term list * term

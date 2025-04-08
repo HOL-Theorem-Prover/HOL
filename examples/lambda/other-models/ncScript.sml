@@ -336,7 +336,7 @@ GEN_TAC THEN CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
   [Q.EXISTS_TAC `FST o f, SND o f`
     THEN RW_TAC std_ss [combinTheory.o_THM,ETA_THM],
    Cases_on `p` THEN Cases_on `p'`
-     THEN RULE_ASSUM_TAC (REWRITE_RULE pairTheory.pair_rws)
+     THEN RULE_ASSUM_TAC (REWRITE_RULE pairLib.pair_rws)
      THEN `(\a:'A. (q a, r a):'B#'C) =  \a:'A. (q' a, r' a)` by RES_TAC
      THEN PROVE_TAC [pairTheory.PAIR_EQ,EQ_EXT],
    PROVE_TAC[],
@@ -386,7 +386,7 @@ RW_TAC std_ss [DECIDE (Term
                   `(a /\ b /\ c /\ d) /\ (e /\ f /\ g /\ h)
                         ⇔
                    (a /\ e) /\ (b /\ f) /\ (c /\ g) /\ (d /\ h)`),
-               REWRITE_RULE pairTheory.pair_rws COPY_BUILD_lemma]);
+               REWRITE_RULE pairLib.pair_rws COPY_BUILD_lemma]);
 
 val lemma =
   let
@@ -458,7 +458,7 @@ val COPY_THEOREM =
      val th3 = Q.INST [`lam'` |-> `lam`, `app'` |-> `app`] th3_0
      val th4 = REWRITE_RULE [] (BETA_RULE th3)
   in
-    REWRITE_RULE pairTheory.pair_rws (BETA_RULE th4)
+    REWRITE_RULE pairLib.pair_rws (BETA_RULE th4)
   end;
 
 val nc_RECURSION = Q.store_thm ("nc_RECURSION",

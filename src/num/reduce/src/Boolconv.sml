@@ -26,7 +26,8 @@ val ERR = mk_HOL_ERR "Boolconv";
 fun failwith function = raise (ERR function "");
 
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+val SOME bool_grammars = Parse.grammarDB {thyname="bool"}
+val _ = Parse.temp_set_grammars bool_grammars
 val _ = ParseExtras.temp_loose_equality()
 
 val zv    = mk_var("z",bool)

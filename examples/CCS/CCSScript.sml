@@ -2893,24 +2893,15 @@ val lemma = prove(
 Theorem tm_recursion_nosideset =
   tm_recursion |> Q.INST [‘A’ |-> ‘{}’] |> SIMP_RULE (srw_ss()) [lemma]
 
-val term_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \open binderLib\n\
-    \val term_info = \n\
-    \   {nullfv = “rec \"\" (var \"\") :'a CCS”,\n\
-    \    pm_rewrites = [],\n\
-    \    pm_constant = “(nomset$mk_pmact CCS$raw_tpm) :'a CCS pmact”,\n\
-    \    fv_rewrites = [],\n\
-    \    recursion_thm = SOME tm_recursion_nosideset,\n\
-    \    binders = [(“CCS$rec :string -> 'a CCS -> 'a CCS”, 0, tpm_ALPHA)]}\n\
-    \val _ = binderLib.type_db :=\n\
-    \          Binarymap.insert(!binderLib.type_db,\n\
-    \                           {Thy=\"CCS\", Name = \"CCS\"},\n\
-    \                           binderLib.NTI term_info)\n\
-    \in end;\n";
-
-val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string);
+val nti = binderLib.NTI {
+  nullfv = “rec "" (var "") :'a CCS”,
+  pm_rewrites = [],
+  pm_constant = “(nomset$mk_pmact CCS$raw_tpm) :'a CCS pmact”,
+  fv_rewrites = [],
+  recursion_thm = SOME tm_recursion_nosideset,
+  binders = [(“CCS$rec :string -> 'a CCS -> 'a CCS”, 0, tpm_ALPHA)]
+  }
+val _ = binderLib.export_nomtype(“:'a CCS”, nti)
 
 val _ = export_theory ();
 val _ = html_theory "CCS";

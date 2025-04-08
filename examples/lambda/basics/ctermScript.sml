@@ -999,24 +999,14 @@ val lemma = prove(
 Theorem ctm_recursion_nosideset =
   ctm_recursion |> Q.INST [`A` |-> `{}`] |> SIMP_RULE (srw_ss()) [lemma]
 
-val term_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \open binderLib\n\
-    \val term_info = \n\
-    \   NTI {nullfv = ``LAM \"\" (VAR \"\")``,\n\
-    \        pm_rewrites = [],\n\
-    \        pm_constant = ``nomset$mk_pmact cterm$raw_ctpm``,\n\
-    \        fv_rewrites = [],\n\
-    \        recursion_thm = SOME ctm_recursion_nosideset,\n\
-    \        binders = [(``cterm$LAM``, 0, ctpm_ALPHA)]}\n\
-    \val _ = type_db :=\n\
-    \          Binarymap.insert(!type_db,\n\
-    \                           {Name = \"cterm\",Thy=\"cterm\"},\n\
-    \                           term_info)\n\
-    \in end;\n"
+val term_info =
+  NTI {nullfv = “LAM "" (VAR "")”,
+       pm_rewrites = [],
+       pm_constant = “nomset$mk_pmact cterm$raw_ctpm”,
+       fv_rewrites = [],
+       recursion_thm = SOME ctm_recursion_nosideset,
+       binders = [(``cterm$LAM``, 0, ctpm_ALPHA)]}
 
-val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
-
+val _ = binderLib.export_nomtype (“:α cterm”, term_info)
 
 val _ = export_theory()

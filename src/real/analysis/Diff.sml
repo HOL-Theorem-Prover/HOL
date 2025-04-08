@@ -8,7 +8,8 @@ structure Parse = struct
   open Parse
   val (Type, Term) =
       parse_from_grammars
-        (apsnd ParseExtras.grammar_loose_equality limTheory.lim_grammars)
+        (apsnd ParseExtras.grammar_loose_equality $
+           valOf $ grammarDB {thyname="lim"})
 end
 open Parse
 

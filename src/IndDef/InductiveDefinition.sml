@@ -13,7 +13,8 @@ open HolKernel boolLib liteLib refuteLib AC Ho_Rewrite;
 structure Parse =
 struct
   open Parse
-  val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
+  val SOME bool_grammars = grammarDB {thyname="bool"}
+  val (Type,Term) = Parse.parse_from_grammars bool_grammars
   fun == q x = Type q
 end
 open Parse

@@ -1919,25 +1919,14 @@ val tm_recursion_nosideset = save_thm(
   "tm_recursion_nosideset",
   tm_recursion |> Q.INST [`A` |-> `{}`] |> SIMP_RULE (srw_ss()) [lemma])
 
-val term_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \open binderLib\n\
-    \val term_info = \n\
-    \   NTI {nullfv = ``LAM \"\" (VAR \"\")``,\n\
-    \        pm_rewrites = [],\n\
-    \        pm_constant = ``nomset$mk_pmact term$raw_tpm``,\n\
-    \        fv_rewrites = [],\n\
-    \        recursion_thm = SOME tm_recursion_nosideset,\n\
-    \        binders = [(``term$LAM``, 0, tpm_ALPHA)]}\n\
-    \val _ = type_db :=\n\
-    \          Binarymap.insert(!type_db,\n\
-    \                           {Name = \"term\",Thy=\"term\"},\n\
-    \                           term_info)\n\
-    \in end;\n"
-
-val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
-
+val nti =
+  NTI {nullfv = “LAM "" (VAR "")”,
+       pm_rewrites = [],
+       pm_constant = “nomset$mk_pmact term$raw_tpm”,
+       fv_rewrites = [],
+       recursion_thm = SOME tm_recursion_nosideset,
+       binders = [(``term$LAM``, 0, tpm_ALPHA)]}
+val _ = binderLib.export_nomtype(“:term”, nti)
 
 val _ = export_theory()
 val _ = html_theory "term";

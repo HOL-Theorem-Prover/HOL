@@ -3,7 +3,8 @@ open riscv_decompLib
 
 val () = new_theory "riscv_decomp_demo";
 
-val () = utilsLib.add_to_the_compset ([], riscvTheory.inventory)
+val () =
+  utilsLib.add_to_the_compset ([], Import.gen_inventory {thyname="riscv"})
 
 local
   fun assemble1 tm =

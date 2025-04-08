@@ -8,10 +8,22 @@ open integerTheory intSimps Omega Cooper intSyntax intReduce Canon hurdUtils
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars integer_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="integer"}
 end
 
 open Parse;
+
+val () =
+    Literal.add_literal
+      (fn tm =>
+          case Lib.total boolSyntax.dest_strip_comb tm of
+              SOME ("integer$int_of_num", [n]) => numSyntax.is_numeral n
+            | SOME ("integer$int_neg", [n]) =>
+              (case Lib.total boolSyntax.dest_strip_comb n of
+                   SOME ("integer$int_of_num", [n]) => numSyntax.is_numeral n
+                 | _ => false)
+            | _ => false)
+
 
 val ERR = mk_HOL_ERR "intLib";
 fun failwith function = raise (ERR function "");

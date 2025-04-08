@@ -24,6 +24,9 @@ sig
   val store_ring   : { Name : string, Theory : thm } -> thm
   val declare_ring : { RingThm : thm, IsConst : term -> bool,
                        Rewrites : thm list} -> unit
+  type convs = { NormConv : conv, EqConv : conv,
+                 Reify : term list -> {Metamap : term, Poly : term list} }
+  val ring_data : unit -> (hol_type,convs)Redblackmap.dict
 
   (*  - RING_NORM_CONV is a conversion to simplify a ring term (i.e. its
    *    type has been declared as a ring structure).

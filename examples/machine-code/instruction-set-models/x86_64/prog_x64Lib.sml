@@ -10,7 +10,7 @@ open prog_x64Theory wordsTheory x64_encodeLib;
 structure Parse = struct
   open Parse
   val (Type,Term) =
-      prog_x64Theory.prog_x64_grammars
+      valOf (grammarDB {thyname="prog_x64"})
         |> apsnd ParseExtras.grammar_loose_equality
         |> parse_from_grammars
 end

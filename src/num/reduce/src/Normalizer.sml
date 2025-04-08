@@ -17,7 +17,8 @@ open arithmeticTheory numSyntax Num_conv tautLib Arithconv simpLib
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars arithmetic_grammars
+  val (Type,Term) =
+      parse_from_grammars $ valOf $ grammarDB {thyname = "arithmetic"}
 end
 
 open Parse

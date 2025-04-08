@@ -49,7 +49,7 @@ fun qxchl [] ttac = ttac
 
 val _ = new_theory "list";
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
 val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define
 val bDefine = Lib.with_flag (Defn.def_suffix, "") Define

@@ -8,7 +8,7 @@ EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 BARE_THYS = common/utilsLib ../machine-code/decompiler/decompilerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
-$(HOLHEAP): $(DEPS)
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state)
 	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
 
 endif

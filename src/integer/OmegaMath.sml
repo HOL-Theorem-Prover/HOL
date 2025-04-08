@@ -6,7 +6,7 @@ local open OmegaTheory in end
 
 (* Fix the grammar used by this file *)
 val ctxt_grammars = (Parse.type_grammar(), Parse.term_grammar())
-val _ = Parse.temp_set_grammars int_arith_grammars
+val _ = Parse.temp_set_grammars $ valOf $ Parse.grammarDB {thyname="int_arith"}
 
 val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV bool_rewrites
 

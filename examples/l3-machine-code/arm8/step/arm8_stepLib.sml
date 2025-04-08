@@ -14,7 +14,7 @@ struct
    open Parse
    fun remove (s, tmg) = fst (term_grammar.mfupdate_overload_info
                                 (Overload.remove_overloaded_form s) tmg)
-   val (tyg, tmg) = arm8_stepTheory.arm8_step_grammars
+   val (tyg, tmg) = valOf $ grammarDB {thyname="arm8_step"}
    val tmg = List.foldl remove tmg ["cond", "size"]
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end

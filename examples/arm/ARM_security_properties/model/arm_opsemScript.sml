@@ -3899,18 +3899,6 @@ val instructions =
 val _ = map save_thm instructions;
 val _ = computeLib.add_persistent_funs (map fst instructions);
 
-val instructions = map fst (List.drop (instructions,2));
-
-val instructions_list =
-   "val instruction_list =\n  [" ^
-   foldl (fn (t,s) => quote t ^ ",\n   " ^ s)
-      (quote (hd instructions) ^ "]\n")  (tl instructions);
-
-val _ = adjoin_to_theory
-  {sig_ps = SOME (fn _ =>
-     PP.add_string "val instruction_list : string list"),
-   struct_ps = SOME (fn _ => PP.add_string instructions_list)};
-
 (* ------------------------------------------------------------------------ *)
 
 val _ = export_theory ();

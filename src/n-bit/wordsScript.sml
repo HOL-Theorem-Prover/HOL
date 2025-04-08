@@ -5315,8 +5315,6 @@ val _ = List.app mk_word_size sizes
    Write some code into wordsTheory.sml
    ------------------------------------------------------------------------- *)
 
-val _ = Theory.quote_adjoin_to_theory `none`
-`
 val _ =
   let
     open Lib boolSyntax numSyntax Drule
@@ -5328,14 +5326,14 @@ val _ =
                     mk_var ("v3", word_type)],
                     mk_comb (w2n_tm, mk_var("v3" ,word_type)))
   in
-    TypeBase.write
+    TypeBase.export
      [TypeBasePure.mk_nondatatype_info
       (word_type,
        {nchotomy = SOME ranged_word_nchotomy,
         induction = NONE,
         size = SOME (w2n_abs, CONJUNCT1 (SPEC_ALL boolTheory.AND_CLAUSES)),
         encode = NONE})]
-  end;`
+  end;
 
 (* ------------------------------------------------------------------------- *)
 (* For use with EmitML                                                       *)

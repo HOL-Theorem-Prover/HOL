@@ -7,8 +7,8 @@ open pairTheory pairLib integerTheory intLib
 
 structure Parse =
 struct
- open Parse
- val (Type,Term) = parse_from_grammars fracTheory.frac_grammars
+  open Parse
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="frac"}
 end;
 
 

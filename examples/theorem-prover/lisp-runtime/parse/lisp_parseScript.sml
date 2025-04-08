@@ -528,7 +528,7 @@ fun FORCE_PBETA_CONV tm = let
   val vs = fst (pairSyntax.dest_pabs tm1)
   fun expand_pair_conv tm = ISPEC tm (GSYM pairTheory.PAIR)
   fun get_conv vs = let
-    val (x,y) = dest_pair vs
+    val (x,y) = pairSyntax.dest_pair vs
     in expand_pair_conv THENC (RAND_CONV (get_conv y)) end
     handle e => ALL_CONV
   in (RAND_CONV (get_conv vs) THENC PairRules.PBETA_CONV) tm end;

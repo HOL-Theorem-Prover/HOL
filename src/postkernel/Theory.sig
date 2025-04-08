@@ -4,8 +4,6 @@ sig
   type hol_type  = Type.hol_type
   type term      = Term.term
   type thm       = Thm.thm
-  type thy_addon = {sig_ps    : (unit -> HOLPP.pretty) option,
-                    struct_ps : (unit -> HOLPP.pretty) option}
   type num = Arbnum.num
   datatype thm_src_location = datatype DB_dtype.thm_src_location
   type thminfo = DB_dtype.thminfo
@@ -53,9 +51,6 @@ sig
 
 (* Support for persistent theories *)
 
-  val adjoin_to_theory       : thy_addon -> unit
-  val adjoin_after_completion: (unit -> HOLPP.pretty) -> unit
-  val quote_adjoin_to_theory : string quotation -> string quotation -> unit
   val export_theory          : unit -> unit
 
 (* Make hooks available so that theory changes can be seen by

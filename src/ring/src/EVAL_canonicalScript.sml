@@ -13,17 +13,37 @@ val sr = “sr:'a semi_ring”;
 val _ = set_assums [ “is_semi_ring ^sr” ];
 val _ = app (C add_impl_param [sr]) ["SR0","SR1","SRP","SRM"];
 
-val { plus_sym, plus_assoc, mult_sym, mult_assoc, distr_left,
+val srtable
+  (*
+   plus_sym, plus_assoc, mult_sym, mult_assoc, distr_left,
       plus_permute, plus_rotate, mult_permute, mult_rotate, distr_right,
       plus_zero_left, plus_zero_right, mult_one_left, mult_one_right,
-      mult_zero_left, mult_zero_right,... } =
-  EVAL_semiringTheory.IMPORT
+      mult_zero_left, mult_zero_right,...
+   *) =
+  IMPORT_THY
     { Vals = [sr],
       Inst = map ASSUME (get_assums()),
       Rule = REWRITE_RULE[EVAL_semiringTheory.semi_ring_accessors],
       Rename = K NONE }
-;
+    "EVAL_semiring" ;
+fun TAB s = valOf $ Symtab.lookup srtable s
 
+val mult_one_left = TAB "mult_one_left"
+val mult_one_right = TAB "mult_one_right"
+val plus_zero_left = TAB "plus_zero_left"
+val plus_zero_right = TAB "plus_zero_right"
+val mult_zero_left = TAB "mult_zero_left"
+val mult_zero_right = TAB "mult_zero_right"
+val mult_assoc = TAB "mult_assoc"
+val mult_rotate = TAB "mult_rotate"
+val mult_permute = TAB "mult_permute"
+val mult_sym = TAB "mult_sym"
+val distr_left = TAB "distr_left"
+val distr_right = TAB "distr_right"
+val plus_assoc = TAB "plus_assoc"
+val plus_permute = TAB "plus_permute"
+val plus_rotate = TAB "plus_rotate"
+val plus_sym = TAB "plus_sym"
 
 (* useful tacs *)
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
@@ -354,5 +374,15 @@ ARW_TAC [ spolynom_simplify_def,
           canonical_sum_simplify_ok,
           spolynomial_normalize_ok ]);
 
+val _ = record_terms (
+  map rator [
+      “interp_sp”, “spolynom_simplify”, “spolynom_normalize”,
+      “interp_cs”, “ics_aux”, “interp_m”, “interp_vl”, “ivl_aux”,
+      “canonical_sum_simplify”, “canonical_sum_prod”,
+      “canonical_sum_scalar3”, “canonical_sum_scalar2”,
+      “canonical_sum_scalar”, “varlist_insert”, “monom_insert”,
+      “canonical_sum_merge”
+    ]
+  )
 
-val _ = export_param_theory();
+val _ = export_theory();

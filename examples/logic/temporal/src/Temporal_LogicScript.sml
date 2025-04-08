@@ -12,7 +12,7 @@ val _ = ParseExtras.temp_loose_equality()
 
 fun TAC_PROOF(g,t) = Tactical.TAC_PROOF(g,t) handle e => Raise e;
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 
 
 

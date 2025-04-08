@@ -13,7 +13,7 @@ val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 (* Fix the grammar used by this file *)
 structure Parse :> Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars listTheory.list_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="list"}
 end
 open Parse
 

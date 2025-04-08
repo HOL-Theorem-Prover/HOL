@@ -98,6 +98,7 @@ REWRITE_TAC [mult_zero_left]);
 
 (* A ring is a semi_ring *)
 val semi_ring_of_def = Define `semi_ring_of = (semi_ring R0 R1 RP RM) `;
+val _ = record_terms [rator “semi_ring_of”]
 
 val ring_is_semi_ring = asm_store_thm
     ("ring_is_semi_ring",
@@ -110,16 +111,19 @@ MAP_FIRST MATCH_ACCEPT_TAC
 
 (* Thus, we import the thms of semi_ringTheory *)
 (* TODO: reexport these lemmas *)
-val { plus_permute, plus_rotate, mult_permute, mult_rotate, distr_right,
-      mult_one_right,...} =
-  EVAL_semiringTheory.IMPORT
+val srtable =
+  (* { plus_permute, plus_rotate, mult_permute, mult_rotate, distr_right,
+      mult_one_right,...} *)
+  IMPORT_THY
     { Vals=[Term`semi_ring_of`],
       Inst=[ring_is_semi_ring],
       Rule=REWRITE_RULE[ semi_ring_of_def,
                          EVAL_semiringTheory.semi_ring_accessors],
       Rename=K NONE }
+    "EVAL_semiring"
 ;
-val _ = asm_save_thm("mult_one_right",mult_one_right);
+fun TAB s = valOf (Symtab.lookup srtable s)
+val _ = asm_save_thm("mult_one_right", TAB "mult_one_right");
 
 
 val neg_mult = asm_store_thm
@@ -127,9 +131,9 @@ val neg_mult = asm_store_thm
      Term`!a b. RM (RN a) b = RN (RM a b)`,
 REPEAT GEN_TAC THEN
 EQ_TRANS_TAC(Term` RP (RM (RP a (RN a)) b) (RN (RM a b)) `) THENL
-  [ REWRITE_TAC[distr_left],
-    REWRITE_TAC[opp_def,mult_zero_left,plus_zero_left] ] THEN
-ONCE_REWRITE_TAC[plus_permute] THEN
-REWRITE_TAC[opp_def, plus_zero_left]);
+  [ REWRITE_TAC[TAB "distr_left"],
+    REWRITE_TAC[opp_def,TAB "mult_zero_left",TAB "plus_zero_left"] ] THEN
+ONCE_REWRITE_TAC[TAB "plus_permute"] THEN
+REWRITE_TAC[opp_def, TAB "plus_zero_left"]);
 
-val _ = export_param_theory();
+val _ = export_theory();

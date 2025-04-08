@@ -215,37 +215,6 @@ val fcp_tyinfo =
 
 val _ = TypeBase.write fcp_tyinfo
 
-local (* and here the palaver to make this persistent; this should be easier
-         (even without the faff I went through with PP-blocks etc to make it
-         look pretty) *)
-   fun out _ =
-      let
-         val S = PP.add_string
-         val Brk = PP.add_break
-         val Blk = PP.block PP.CONSISTENT
-      in
-         Blk 2 [
-           S "val _ = let", Brk (1,0),
-           Blk 2 [
-             S "val tyi = ", Brk (0,0),
-             Blk 2 [
-               S "TypeBasePure.gen_datatype_info {", Brk (0,0),
-               S "ax = fcp_Axiom,", Brk (1,0),
-               S "ind = fcp_ind,",  Brk (1,0),
-               S "case_defs = [fcp_case_def]", Brk (1,~2),
-               S "}"
-             ]
-           ],
-           Brk (1,~2),
-           S "in", Brk(1,0),
-           S "TypeBase.write tyi", Brk(1,~2),
-           S "end"
-         ]
-      end
-in
-   val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME out}
-end
-
 val CART_EQ = Q.store_thm("CART_EQ",
    `!(x:'a ** 'b) y. (x = y) = (!i. i < dimindex(:'b) ==> (x ' i = y ' i))`,
    REPEAT GEN_TAC

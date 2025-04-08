@@ -18,7 +18,8 @@ open NumRelNorms
 structure Parse = (* Fix the grammar used by this file *)
 struct
   open Parse
-  val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+  val SOME arithmetic_grammars = grammarDB {thyname="arithmetic"}
+  val (Type,Term) = parse_from_grammars arithmetic_grammars
 end
 open Parse
 

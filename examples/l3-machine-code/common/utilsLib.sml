@@ -11,7 +11,7 @@ val WARN = Feedback.HOL_WARNING "utilsLib"
 structure Parse =
 struct
    open Parse
-   val (Type,Term) = parse_from_grammars wordsTheory.words_grammars
+   val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="words"}
 end
 open Parse
 
@@ -315,11 +315,27 @@ fun usave_as s = save_as s o STRIP_UNDISCH
 fun ustore_thm (s, t, tac) = usave_as s (Q.prove (t, tac))
 
 local
-  val names = ref ([] : string list)
-  fun add (n, th) = (names := n :: !names; Theory.save_thm (n, th))
+
+  val rwts_thmset_opns = AncestryData.fullmake {
+        adinfo = {tag = "l3Utils_rwt",
+                  initial_values = [("min", [])],
+                  apply_delta = cons},
+        uptodate_delta = K true,
+        sexps = {dec = ThyDataSexp.string_decode, enc = ThyDataSexp.String},
+        globinfo = {
+          apply_to_global = cons,
+          thy_finaliser = NONE,
+          initial_value = []
+        }
+      }
+  fun add (n, th) = (
+    Theory.save_thm (n, th) ;
+    #record_delta rwts_thmset_opns n;
+    #update_global_value rwts_thmset_opns (cons n);
+    th
+  )
   val add_list = List.map add
 in
-  fun reset_thms () = names := []
   fun save_thms name l =
     add_list
      (case l of
@@ -328,20 +344,7 @@ in
        | _ => ListPair.zip
                  (List.tabulate
                     (List.length l, fn i => name ^ "_" ^ Int.toString i), l))
-  fun adjoin_thms () =
-    Theory.adjoin_to_theory
-      { sig_ps = SOME (fn _ => PP.add_string ("val rwts : string list")),
-        struct_ps =
-          SOME (fn _ =>
-                   PP.block PP.INCONSISTENT 12 (
-                     [PP.add_string "val rwts = ["] @
-                     PP.pr_list (PP.add_string o Lib.quote)
-                                [PP.add_string ",", PP.add_break (1, 0)]
-                                (!names) @
-                     [PP.add_string "]", PP.add_newline]
-                   )
-               )
-      }
+  val get_rewrites = Option.map List.rev o #DB rwts_thmset_opns
 end
 
 
