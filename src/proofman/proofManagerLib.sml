@@ -30,11 +30,17 @@ fun new_goaltree g tm =
    (the_proofs := Manager.add (Manager.new_goaltree g tm) (proofs());
     proofs());
 
+fun new_goalfrag g tm =
+   (the_proofs := Manager.add (Manager.new_goalfrag g tm) (proofs());
+    proofs());
+
 fun set_goal g = new_goalstack g Manager.id_tacm Lib.I;
 fun set_goaltree g = new_goaltree g Manager.id_tacm;
+fun set_goalfrag g = new_goalfrag g Manager.id_tacm;
 
 fun g q = set_goal([],Parse.Term q);
 fun gt q = set_goaltree([],Parse.Term q);
+fun gf q = set_goalfrag([],Parse.Term q);
 
 fun add g = (say"Adding new proof..\n";
              the_proofs := Manager.add g (proofs());
@@ -105,6 +111,12 @@ fun expand_list ltac =
     top_proof())
   handle e => Raise e;
 
+fun expand_frag ftac =
+   (say "OK..\n";
+    the_proofs := Manager.hd_opr (Manager.expand_frag ftac) (proofs());
+    top_proof())
+  handle e => Raise e;
+
 fun expandv (s,tac) =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expandv (s,tac)) (proofs());
@@ -117,6 +129,7 @@ fun eta tac = expand_list (Tactical.TRYALL tac) ;
 fun enth tac i = expand_list (Tactical.NTH_GOAL tac i) ;
 val e = expand;
 val et = expandv;
+val ef = expand_frag;
 
 val top_thm      = Manager.hd_proj Manager.top_thm o proofs;
 val initial_goal = Manager.hd_proj Manager.initial_goal o proofs;
