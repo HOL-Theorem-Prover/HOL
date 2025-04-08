@@ -257,7 +257,7 @@ val fetch_inst =
 
 local
   val rwts = List.map (full_state_rule o fetch_inst o DB.fetch "riscv_step")
-               riscv_stepTheory.rwts
+               (valOf (utilsLib.get_rewrites{thyname="riscv_step"}))
   val fnd = utilsLib.find_rw (utilsLib.mk_rw_net utilsLib.lhsc rwts)
   val rule = Conv.DEPTH_CONV wordsLib.word_EQ_CONV
              THENC REWRITE_CONV [riscv_stepTheory.v2w_0_rwts]

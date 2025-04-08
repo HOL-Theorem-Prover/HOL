@@ -93,6 +93,7 @@ sig
    val rng: hol_type -> hol_type
    val save_as: string -> thm -> thm
    val save_thms: string -> thm list -> thm list
+   val get_rewrites : {thyname:string} -> string list option
    val setStepConv: conv -> unit
    val specialized: string -> conv * term list -> thm list -> thm list
    val splitAtChar: (char -> bool) -> string -> string * string

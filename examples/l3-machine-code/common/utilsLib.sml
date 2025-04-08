@@ -315,12 +315,25 @@ fun usave_as s = save_as s o STRIP_UNDISCH
 fun ustore_thm (s, t, tac) = usave_as s (Q.prove (t, tac))
 
 local
-  val names = ref ([] : string list)
 
-  val rwts_thmset_opns = ThmSetData.export_alist {
-        settype = "l3Utils_rwt", initial = []
+  val rwts_thmset_opns = AncestryData.fullmake {
+        adinfo = {tag = "l3Utils_rwt",
+                  initial_values = [("min", [])],
+                  apply_delta = cons},
+        uptodate_delta = K true,
+        sexps = {dec = ThyDataSexp.string_decode, enc = ThyDataSexp.String},
+        globinfo = {
+          apply_to_global = cons,
+          thy_finaliser = NONE,
+          initial_value = []
+        }
       }
-  fun add (n, th) = (Theory.save_thm (n, th) before #export rwts_thmset_opns n)
+  fun add (n, th) = (
+    Theory.save_thm (n, th) ;
+    #record_delta rwts_thmset_opns n;
+    #update_global_value rwts_thmset_opns (cons n);
+    th
+  )
   val add_list = List.map add
 in
   fun save_thms name l =
@@ -331,6 +344,7 @@ in
        | _ => ListPair.zip
                  (List.tabulate
                     (List.length l, fn i => name ^ "_" ^ Int.toString i), l))
+  val get_rewrites = Option.map List.rev o #DB rwts_thmset_opns
 end
 
 

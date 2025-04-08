@@ -8,7 +8,7 @@ structure Parse =
 struct
    open Parse
    val (Type, Term) =
-       riscv_progTheory.riscv_prog_grammars
+       valOf (grammarDB {thyname="riscv_prog"})
          |> apsnd ParseExtras.grammar_loose_equality
          |> parse_from_grammars
 end
@@ -20,7 +20,7 @@ val ERR = Feedback.mk_HOL_ERR "riscv_progLib"
 (* ------------------------------------------------------------------------ *)
 
 val riscv_proj_def = riscv_progTheory.riscv_proj_def
-val riscv_comp_defs = riscv_progTheory.component_defs
+val riscv_comp_defs = stateLib.sep_components {thyname="riscv_prog"}
 
 fun syn n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "riscv_prog"
 val riscv_1 = syn 2 HolKernel.dest_monop HolKernel.mk_monop
