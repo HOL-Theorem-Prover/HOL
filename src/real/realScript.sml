@@ -1286,6 +1286,12 @@ Proof
   REWRITE_TAC[REAL_LE_REFL]
 QED
 
+Theorem ABS_EQ_NEG :
+    !(x :real). x < 0 ==> abs x = -x
+Proof
+    RW_TAC std_ss [real_lt, real_abs]
+QED
+
 (* |- !n. abs (&n) = &n *)
 Theorem ABS_N[simp] = REAL_ABS_NUM
 

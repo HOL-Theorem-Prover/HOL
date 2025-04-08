@@ -752,6 +752,15 @@ val in_borel_measurable = store_thm
             >> RW_TAC std_ss [subset_class_def, SUBSET_DEF, IN_UNIV])
    >> ASM_REWRITE_TAC []);
 
+Theorem in_borel_measurable_I :
+    (\x. x) IN measurable borel borel
+Proof
+    ‘(\x :real. x) = I’ by METIS_TAC [I_THM]
+ >> POP_ORW
+ >> MATCH_MP_TAC MEASURABLE_I
+ >> REWRITE_TAC [sigma_algebra_borel]
+QED
+
 val borel_measurable_indicator = store_thm
   ("borel_measurable_indicator",
    ``!s a. sigma_algebra s /\ a IN subsets s ==>

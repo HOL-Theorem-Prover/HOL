@@ -14,9 +14,7 @@ open metisLib combinTheory pred_setTheory res_quanTools pairTheory jrhUtils
 
 open realTheory realLib real_sigmaTheory iterateTheory real_topologyTheory
      seqTheory limTheory transcTheory metricTheory listTheory rich_listTheory
-     cardinalTheory;
-
-open extreal_baseTheory real_of_ratTheory;
+     cardinalTheory netsTheory extreal_baseTheory real_of_ratTheory;
 
 val _ = new_theory "extreal";
 
@@ -917,12 +915,12 @@ val tactics =
       POP_ASSUM SUBST_ALL_TAC \\ (* all `s` disappeared *)
       FULL_SIMP_TAC bool_ss [FINITE_INSERT, CARD_INSERT, DELETE_INSERT,IN_INSERT] \\
       (* now we start using properties of extreal *)
-     `f x + b <> limit /\ f y + b <> limit` by METIS_TAC [add_not_infty] \\
+     `f x + b <> li /\ f y + b <> li` by METIS_TAC [add_not_infty] \\
       Q.PAT_X_ASSUM `!s' x' b'. (CARD s' < SUC (SUC (CARD u)) /\ FINITE s') /\ X ==> Y`
         (ASSUME_TAC o (Q.SPEC `u`)) \\
       FULL_SIMP_TAC arith_ss [] \\
-     `!z. (z = x) \/ z IN u ==> f z <> limit` by METIS_TAC [] \\
-     `!z. (z = y) \/ z IN u ==> f z <> limit` by METIS_TAC [] \\
+     `!z. (z = x) \/ z IN u ==> f z <> li` by METIS_TAC [] \\
+     `!z. (z = y) \/ z IN u ==> f z <> li` by METIS_TAC [] \\
       rpt STRIP_TAC \\
       Q.PAT_ASSUM `!x' b'. FINITE u /\ X ==> Y` (MP_TAC o (Q.SPECL [`x`, `f y + b`])) \\
       Q.PAT_ASSUM `!x' b'. FINITE u /\ X ==> Y` (MP_TAC o (Q.SPECL [`y`, `f x + b`])) \\
@@ -950,12 +948,12 @@ val tactics =
           (FULL_SIMP_TAC bool_ss [EXTENSION, IN_INSERT] THEN PROVE_TAC []) \\
       ASM_REWRITE_TAC [] \\
       (* now we start using properties of extreal *)
-     `f x + b <> limit /\ f y + b <> limit` by METIS_TAC [add_not_infty] \\
+     `f x + b <> li /\ f y + b <> li` by METIS_TAC [add_not_infty] \\
       Q.PAT_X_ASSUM `!s x' b'. (CARD s < SUC (CARD u) /\ FINITE s') /\ X ==> Y`
         (ASSUME_TAC o (Q.SPEC `u`)) \\
       FULL_SIMP_TAC arith_ss [] \\
-     `!z. (z = x) \/ z IN u ==> f z <> limit` by METIS_TAC [] \\
-     `!z. (z = y) \/ z IN u ==> f z <> limit` by METIS_TAC [] \\
+     `!z. (z = x) \/ z IN u ==> f z <> li` by METIS_TAC [] \\
+     `!z. (z = y) \/ z IN u ==> f z <> li` by METIS_TAC [] \\
       Q.PAT_ASSUM `!x' b'. FINITE u /\ X ==> Y` (MP_TAC o (Q.SPECL [`x`, `f y + b`])) \\
       Q.PAT_ASSUM `!x' b'. FINITE u /\ X ==> Y` (MP_TAC o (Q.SPECL [`y`, `f x + b`])) \\
       Q.PAT_X_ASSUM `!x' b'. FINITE u /\ X ==> Y` K_TAC \\
@@ -964,10 +962,10 @@ val tactics =
       METIS_TAC [add_assoc, add_comm, add_not_infty] ] ];
 
 Triviality lem:
-  !limit.
-     limit = PosInf ==>
+  !li.
+     li = PosInf ==>
      !f s. FINITE s ==>
-           !x b. (!z. z IN (x INSERT s) ==> f z <> limit) /\ b <> limit ==>
+           !x b. (!z. z IN (x INSERT s) ==> f z <> li) /\ b <> li ==>
                  ITSET (\e acc. f e + acc) (x INSERT s) b =
                  ITSET (\e acc. f e + acc) (s DELETE x)
                        ((\e acc. f e + acc) x b)
@@ -975,9 +973,9 @@ Proof tactics
 QED
 
 val lem' = Q.prove (
-   `!limit. (limit = NegInf) ==>
+   `!li. (li = NegInf) ==>
         !f s. FINITE s ==>
-              !x b. (!z. z IN (x INSERT s) ==> f z <> limit) /\ b <> limit ==>
+              !x b. (!z. z IN (x INSERT s) ==> f z <> li) /\ b <> li ==>
                     (ITSET (\e acc. f e + acc) (x INSERT s) b =
                      ITSET (\e acc. f e + acc) (s DELETE x) ((\e acc. f e + acc) x b))`,
     tactics);
@@ -6666,6 +6664,195 @@ Proof
  >> Q.EXISTS_TAC ‘N’ >> rw []
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  Preliminary for Radon-Nikodym Theorem                                    *)
+(* ------------------------------------------------------------------------- *)
+
+Definition seq_sup_def :
+   (seq_sup P 0       = @r. r IN P /\ sup P < r + 1) /\
+   (seq_sup P (SUC n) = @r. r IN P /\ sup P < r + Normal ((1 / 2) pow (SUC n)) /\
+                           (seq_sup P n) < r /\ r < sup P)
+End
+
+Theorem EXTREAL_SUP_SEQ :
+   !P. (?x. P x) /\ (?z. z <> PosInf /\ !x. P x ==> x <= z) ==>
+        ?x. (!n. x n IN P) /\ (!n. x n <= x (SUC n)) /\ (sup (IMAGE x UNIV) = sup P)
+Proof
+  RW_TAC std_ss []
+  >> Cases_on `?z. P z /\ (z = sup P)`
+  >- (Q.EXISTS_TAC `(\i. sup P)`
+      >> RW_TAC std_ss [le_refl,SPECIFICATION]
+      >> `IMAGE (\i:num. sup P) UNIV = (\i. i = sup P)`
+           by RW_TAC std_ss [EXTENSION,IN_IMAGE,IN_UNIV,IN_ABS]
+      >> RW_TAC std_ss [sup_const])
+  >> Cases_on `!x. P x ==> (x = NegInf)`
+  >- (`sup P = NegInf` by METIS_TAC [sup_const_alt]
+      >> Q.EXISTS_TAC `(\n. NegInf)`
+      >> FULL_SIMP_TAC std_ss [le_refl]
+      >> RW_TAC std_ss []
+      >- METIS_TAC []
+      >> METIS_TAC [UNIV_NOT_EMPTY,sup_const_over_set])
+  >> FULL_SIMP_TAC std_ss []
+  >> Q.EXISTS_TAC `seq_sup P`
+  >> FULL_SIMP_TAC std_ss []
+  >> `sup P <> PosInf` by METIS_TAC [sup_le,lt_infty,let_trans]
+  >> `!x. P x ==> x < sup P` by METIS_TAC [lt_le,le_sup_imp]
+  >> `!e. 0 < e ==> ?x. P x /\ sup P < x + e`
+       by (RW_TAC std_ss [] >> MATCH_MP_TAC sup_lt_epsilon >> METIS_TAC [])
+  >> `!n. 0:real < (1 / 2) pow n` by METIS_TAC [HALF_POS,REAL_POW_LT]
+  >> `!n. 0 < Normal ((1 / 2) pow n)` by METIS_TAC [extreal_lt_eq,extreal_of_num_def]
+  >> `!n. seq_sup P n IN P`
+      by (Induct
+          >- (RW_TAC std_ss [seq_sup_def]
+              >> SELECT_ELIM_TAC
+              >> RW_TAC std_ss []
+              >> METIS_TAC [lt_01,SPECIFICATION])
+          >> RW_TAC std_ss [seq_sup_def]
+          >> SELECT_ELIM_TAC
+          >> RW_TAC std_ss []
+          >> `?x. P x /\ seq_sup P n < x` by METIS_TAC [sup_lt,SPECIFICATION]
+          >> rename1 `seq_sup P n < x2`
+          >> `?x. P x /\ sup P < x + Normal ((1 / 2) pow (SUC n))` by METIS_TAC []
+          >> rename1 `sup P < x3 + _`
+          >> Q.EXISTS_TAC `max x2 x3`
+          >> RW_TAC std_ss [extreal_max_def,SPECIFICATION]
+          >- (`x3 < x2` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
+              >> `x3 +  Normal ((1 / 2) pow (SUC n)) <= x2 +  Normal ((1 / 2) pow (SUC n))`
+                  by METIS_TAC [lt_radd,lt_le,extreal_not_infty]
+              >> METIS_TAC [lte_trans])
+          >> METIS_TAC [lte_trans])
+  >> `!n. seq_sup P n <= seq_sup P (SUC n)`
+      by (RW_TAC std_ss [seq_sup_def]
+          >> SELECT_ELIM_TAC
+          >> RW_TAC std_ss []
+          >- (`?x. P x /\ seq_sup P n < x` by METIS_TAC [sup_lt,SPECIFICATION]
+              >> rename1 `sup_sup P n < x2`
+              >> `?x. P x /\ sup P < x + Normal ((1 / 2) pow (SUC n))` by METIS_TAC []
+              >> rename1 `sup P < x3 + _`
+              >> Q.EXISTS_TAC `max x2 x3`
+              >> RW_TAC std_ss [extreal_max_def,SPECIFICATION]
+              >- (`x3 < x2` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
+                  >> `x3 + Normal ((1 / 2) pow (SUC n)) <= x2 + Normal ((1 / 2) pow (SUC n))`
+                      by METIS_TAC [lt_radd,lt_le,extreal_not_infty]
+                  >> METIS_TAC [lte_trans])
+              >> METIS_TAC [lte_trans])
+          >> METIS_TAC [lt_le])
+  >> RW_TAC std_ss []
+  >> `!n. sup P <= seq_sup P n + Normal ((1 / 2) pow n)`
+      by (Induct
+          >- (RW_TAC std_ss [seq_sup_def,pow,GSYM extreal_of_num_def]
+              >> SELECT_ELIM_TAC
+              >> RW_TAC std_ss []
+              >- METIS_TAC [lt_01,SPECIFICATION]
+              >> METIS_TAC [lt_le])
+          >> RW_TAC std_ss [seq_sup_def]
+          >> SELECT_ELIM_TAC
+          >> RW_TAC std_ss []
+          >- (`?x. P x /\ seq_sup P n < x` by METIS_TAC [sup_lt,SPECIFICATION]
+              >> rename1 `sup_sup P n < x2`
+              >> `?x. P x /\ sup P < x + Normal ((1 / 2) pow (SUC n))` by METIS_TAC []
+              >> rename1 `sup P < x3 + _`
+              >> Q.EXISTS_TAC `max x2 x3`
+              >> RW_TAC std_ss [extreal_max_def,SPECIFICATION]
+              >- (`x3 < x2` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
+                  >> `x3 + Normal ((1 / 2) pow (SUC n)) <= x2 + Normal ((1 / 2) pow (SUC n))`
+                      by METIS_TAC [lt_radd,lt_le,extreal_not_infty]
+                  >> METIS_TAC [lte_trans])
+              >> METIS_TAC [lte_trans])
+          >> METIS_TAC [lt_le])
+  >> RW_TAC std_ss [sup_eq]
+  >- (POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
+      >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
+      >> METIS_TAC [SPECIFICATION,lt_le])
+  >> MATCH_MP_TAC le_epsilon
+  >> RW_TAC std_ss []
+  >> `e <> NegInf` by METIS_TAC [lt_infty,extreal_of_num_def,lt_trans]
+  >> `?r. e = Normal r` by METIS_TAC [extreal_cases]
+  >> FULL_SIMP_TAC std_ss []
+  >> `?n. Normal ((1 / 2) pow n) < Normal r` by METIS_TAC [EXTREAL_ARCH_POW2_INV]
+  >> MATCH_MP_TAC le_trans
+  >> Q.EXISTS_TAC `seq_sup P n + Normal ((1 / 2) pow n)`
+  >> RW_TAC std_ss []
+  >> MATCH_MP_TAC le_add2
+  >> FULL_SIMP_TAC std_ss [lt_le]
+  >> Q.PAT_X_ASSUM `!z. IMAGE (seq_sup P) UNIV z ==> z <= y` MATCH_MP_TAC
+  >> ONCE_REWRITE_TAC [GSYM SPECIFICATION]
+  >> RW_TAC std_ss [IN_UNIV,IN_IMAGE]
+  >> METIS_TAC []
+QED
+
+Theorem EXTREAL_SUP_FUN_SEQ_IMAGE :
+    !(P:extreal->bool) (P':('a->extreal)->bool) f.
+       (?x. P x) /\ (?z. z <> PosInf /\ !x. P x ==> x <= z) /\ (P = IMAGE f P')
+           ==> ?g. (!n:num. g n IN P') /\
+                   (sup (IMAGE (\n. f (g n)) UNIV) = sup P)
+Proof
+  rpt STRIP_TAC
+  >> `?y. (!n. y n IN P) /\ (!n. y n <= y (SUC n)) /\ (sup (IMAGE y UNIV) = sup P)`
+     by METIS_TAC [EXTREAL_SUP_SEQ]
+  >> Q.EXISTS_TAC `(\n. @r. (r IN P') /\ (f r  = y n))`
+  >> `(\n. f (@(r :'a -> extreal). r IN (P' :('a -> extreal) -> bool) /\
+                                  ((f :('a -> extreal) -> extreal) r = (y :num -> extreal) n))) = y`
+  by (rw [FUN_EQ_THM] >> SELECT_ELIM_TAC
+      >> RW_TAC std_ss []
+      >> METIS_TAC [IN_IMAGE])
+  >> ASM_SIMP_TAC std_ss []
+  >> RW_TAC std_ss []
+  >> SELECT_ELIM_TAC
+  >> RW_TAC std_ss []
+  >> METIS_TAC [IN_IMAGE]
+QED
+
+Theorem EXTREAL_SUP_FUN_SEQ_MONO_IMAGE :
+    !f (P :extreal->bool) (P' :('a->extreal)->bool).
+       (?x. P x) /\ (?z. z <> PosInf /\ !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
+       (!g1 g2. (g1 IN P' /\ g2 IN P' /\ (!x. g1 x <= g2 x))  ==> f g1 <= f g2) /\
+       (!g1 g2. g1 IN P' /\ g2 IN P' ==> (\x. max (g1 x) (g2 x)) IN P')
+      ==>
+       ?g. (!n. g n IN P') /\ (!x n. g n x <= g (SUC n) x) /\
+           (sup (IMAGE (\n. f (g n)) UNIV) = sup P)
+Proof
+    rpt STRIP_TAC
+  >> `?g. (!n:num. g n IN P') /\ (sup (IMAGE (\n. f (g n)) UNIV) = sup P)`
+      by METIS_TAC [EXTREAL_SUP_FUN_SEQ_IMAGE]
+  >> Q.EXISTS_TAC `max_fn_seq g`
+  >> `!n. max_fn_seq g n IN P'`
+      by (Induct
+          >- (`max_fn_seq g 0 = g 0` by RW_TAC std_ss [FUN_EQ_THM,max_fn_seq_def]
+              >> METIS_TAC [])
+              >> `max_fn_seq g (SUC n) = (\x. max (max_fn_seq g n x) (g (SUC n) x))`
+                  by RW_TAC std_ss [FUN_EQ_THM,max_fn_seq_def]
+              >> RW_TAC std_ss []
+              >> METIS_TAC [])
+  >> `!g n x. max_fn_seq g n x <= max_fn_seq g (SUC n) x`
+      by RW_TAC real_ss [max_fn_seq_def,extreal_max_def,le_refl]
+  >> CONJ_TAC >- RW_TAC std_ss []
+  >> CONJ_TAC >- RW_TAC std_ss []
+  >> `!n. (!x. g n x <= max_fn_seq g n x)`
+      by (Induct >- RW_TAC std_ss [max_fn_seq_def,le_refl]
+          >> METIS_TAC [le_max2,max_fn_seq_def])
+  >> `!n. f (g n) <= f (max_fn_seq g n)` by METIS_TAC []
+  >> `sup (IMAGE (\n. f (g n)) UNIV) <= sup (IMAGE (\n. f (max_fn_seq g n)) UNIV)`
+      by (MATCH_MP_TAC sup_le_sup_imp
+          >> RW_TAC std_ss []
+          >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
+          >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
+          >> Q.EXISTS_TAC `f (max_fn_seq g n)`
+          >> RW_TAC std_ss []
+          >> ONCE_REWRITE_TAC [GSYM SPECIFICATION]
+          >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
+          >> METIS_TAC [])
+  >> `sup (IMAGE (\n. f (max_fn_seq g n)) UNIV) <= sup P`
+      by (RW_TAC std_ss [sup_le]
+          >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
+          >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
+          >> MATCH_MP_TAC le_sup_imp
+          >> ONCE_REWRITE_TAC [GSYM SPECIFICATION]
+          >> RW_TAC std_ss [IN_IMAGE]
+          >> METIS_TAC [])
+  >> METIS_TAC [le_antisym]
+QED
+
 (************************************************************************)
 (*   Miscellaneous Results (generally for use in descendent theories)   *)
 (************************************************************************)
@@ -6894,7 +7081,8 @@ Proof
 QED
 
 Theorem ext_suminf_nested:
-    !f. (!m n. 0 <= f m n) ==> suminf (λn. suminf (λm. f m n)) = suminf (λm. suminf (λn. f m n))
+    !f. (!m n. 0 <= f m n) ==>
+        suminf (λn. suminf (λm. f m n)) = suminf (λm. suminf (λn. f m n))
 Proof
     rw[] >>
     map_every (fn tms => qspecl_then tms assume_tac ext_suminf_2d_full)
@@ -6963,6 +7151,67 @@ Theorem eqle_trans:
     !x:extreal y z. x = y /\ y <= z ==> x <= z
 Proof
     simp[]
+QED
+
+Theorem seq_le_imp_lim_le :
+    !x y (f :num->real). (!n. f n <= x) /\ (f --> y) sequentially ==> y <= x
+Proof
+    RW_TAC bool_ss [LIM_SEQUENTIALLY]
+ >> MATCH_MP_TAC REAL_LE_EPSILON
+ >> RW_TAC bool_ss []
+ >> Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+ >> RW_TAC bool_ss []
+ >> POP_ASSUM (MP_TAC o Q.SPEC `N`)
+ >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+ >> REWRITE_TAC [dist]
+ >> (RW_TAC bool_ss [GREATER_EQ, LESS_EQ_REFL, abs, REAL_LE_SUB_LADD, REAL_ADD_LID] \\
+     FULL_SIMP_TAC bool_ss [REAL_NOT_LE, REAL_NEG_SUB, REAL_LT_SUB_RADD])
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC REAL_LE_TRANS \\
+      Q.EXISTS_TAC `x` \\
+      CONJ_TAC >- PROVE_TAC [REAL_LE_TRANS] \\
+      PROVE_TAC [REAL_LE_ADDR, REAL_LT_LE],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC REAL_LE_TRANS \\
+      Q.EXISTS_TAC `f N + e` \\
+      CONJ_TAC >- PROVE_TAC [REAL_LT_LE, REAL_ADD_SYM] \\
+      PROVE_TAC [REAL_LE_ADD2, REAL_LE_REFL] ]
+QED
+
+(* cf. seqTheory.SEQ_MONO_LE *)
+Theorem seq_mono_le :
+    !(f :num->real) x n. (!n. f n <= f (n + 1)) /\ (f --> x) sequentially ==> f n <= x
+Proof
+   RW_TAC bool_ss [LIM_SEQUENTIALLY] THEN MATCH_MP_TAC REAL_LE_EPSILON THEN
+   RW_TAC bool_ss [] THEN Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`) THEN
+   RW_TAC bool_ss [GREATER_EQ] THEN MP_TAC (Q.SPECL [`N`, `n`] LESS_EQ_CASES) THEN
+   STRIP_TAC THENL
+   [Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`) THEN ASM_REWRITE_TAC [dist] THEN
+    REAL_ARITH_TAC, ALL_TAC] THEN FULL_SIMP_TAC std_ss [dist] THEN
+   (SUFF_TAC ``!i : num. f (N - i) <= x + (e : real)`` THEN1
+    PROVE_TAC [LESS_EQUAL_DIFF]) THEN
+   INDUCT_TAC
+   THENL [Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+          THEN RW_TAC bool_ss [abs, LESS_EQ_REFL, SUB_0]
+          THEN simpLib.FULL_SIMP_TAC bool_ss
+               [REAL_LT_SUB_RADD, REAL_NEG_SUB, REAL_NOT_LE, REAL_ADD_LID,
+                REAL_LE_SUB_LADD]
+          THEN PROVE_TAC
+               [REAL_LT_LE, REAL_ADD_SYM, REAL_LE_TRANS, REAL_LE_ADDR],
+          MP_TAC (ARITH_PROVE
+                  ``(N - i = N - SUC i) \/ (N - i = (N - SUC i) + 1)``)
+          THEN PROVE_TAC [REAL_LE_REFL, REAL_LE_TRANS]]
+QED
+
+Theorem sup_seq' : (* was: sup_sequence *)
+    !f l. mono_increasing f ==> ((f --> l) sequentially =
+          (sup (IMAGE (\n. Normal (f n)) UNIV) = Normal l))
+Proof
+    rpt STRIP_TAC
+ >> Suff ‘(f --> l) sequentially <=> (f --> l)’
+ >- (Rewr' \\
+     MATCH_MP_TAC sup_seq >> art [])
+ >> REWRITE_TAC [LIM_SEQUENTIALLY_SEQ]
 QED
 
 (* ------------------------------------------------------------------------- *)

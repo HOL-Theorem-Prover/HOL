@@ -1076,10 +1076,10 @@ Proof
       (* goal 3 (of 3) *)
       rw [additive_def] \\
       Know ‘CARD (s UNION t) = CARD s + CARD t’
-      >- (MATCH_MP_TAC CARD_UNION_DISJOINT >> art [] \\
-          fs [IN_POW] \\
+      >- (MATCH_MP_TAC CARD_UNION_DISJOINT >> fs [IN_POW] \\
           CONJ_TAC \\ (* 2 subgoals, same tactics *)
-          MATCH_MP_TAC FINITE_SUBSET >> Q.EXISTS_TAC ‘m_space p’ >> art []) >> Rewr' \\
+          MATCH_MP_TAC FINITE_SUBSET \\
+          Q.EXISTS_TAC ‘m_space p’ >> art []) >> Rewr' \\
       Know ‘&(CARD s + CARD t) = &CARD s + (&CARD t :extreal)’
       >- rw [extreal_of_num_def, extreal_add_def] >> Rewr' \\
       ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
@@ -3452,11 +3452,16 @@ Proof
  >> simp [o_DEF, PROB_UNIV, EXTREAL_PROD_IMAGE_ONE]
 QED
 
-(* not used *)
+(* This is an old (possibly also wrong) definition not used anywhere,
+
+   cf. ‘martingale$indep_functions’ (or ‘indep_vars’) for a set of independent
+   (measurable) functions, including r.v.'s.
+
 val indep_function_def = Define
    `indep_function p =
    {f | indep_families p (IMAGE (PREIMAGE (FST o f)) UNIV)
                          (IMAGE (PREIMAGE (SND o f)) (events p))}`;
+ *)
 
 Theorem PROB_INDEP :
   !p s t u. indep p s t /\ (u = s INTER t) ==> (prob p u = prob p s * prob p t)
@@ -9479,11 +9484,11 @@ Proof
 QED
 
 (* ========================================================================= *)
-(*   Probability Density Function                                            *)
-(*  (see examples/probability/normal_rvScript.sml for the ‘lborel’ version)  *)
+(*   Probability Density Function (PDF)                                      *)
+(*  (see examples/probability/distributionScript.sml for ‘lborel’ version)   *)
 (* ========================================================================= *)
 
-(* extreal version, was: pdf *)
+(* This is the recommmended ext_lborel version (was: pdf) *)
 Definition prob_density_function_def :
     prob_density_function p X = RN_deriv (distribution p X) ext_lborel
 End
@@ -9499,8 +9504,8 @@ Proof
     rpt STRIP_TAC
  >> `measure_space (space Borel, subsets Borel, distribution p X)`
        by PROVE_TAC [distribution_prob_space, prob_space_def, SIGMA_ALGEBRA_BOREL]
- >> ASSUME_TAC SIGMA_FINITE_LBOREL
- >> ASSUME_TAC MEASURE_SPACE_LBOREL
+ >> ASSUME_TAC sigma_finite_ext_lborel
+ >> ASSUME_TAC measure_space_ext_lborel
  >> MP_TAC (ISPECL [(* m *) ``ext_lborel``,
                     (* v *) ``distribution (p :'a m_space) (X :'a -> extreal)``]
                    Radon_Nikodym')
@@ -9510,28 +9515,30 @@ Proof
  >> METIS_TAC [SPACE_BOREL, IN_UNIV]
 QED
 
-Theorem expectation_pdf_1 :
+Theorem expectation_pdf[local] :
     !p X. prob_space p /\ random_variable X p Borel /\
           distribution p X << ext_lborel ==>
+          pdf p X IN Borel_measurable Borel /\
           expectation ext_lborel (pdf p X) = 1
 Proof
-    rpt STRIP_TAC
+    rpt GEN_TAC >> STRIP_TAC
  >> `prob_space (space Borel, subsets Borel, distribution p X)`
        by PROVE_TAC [distribution_prob_space, SIGMA_ALGEBRA_BOREL]
  >> NTAC 2 (POP_ASSUM MP_TAC) >> KILL_TAC
- >> RW_TAC std_ss [prob_space_def, p_space_def, m_space_def, measure_def,
-                   expectation_def]
- >> ASSUME_TAC SIGMA_FINITE_LBOREL
- >> ASSUME_TAC MEASURE_SPACE_LBOREL
+ >> simp [prob_space_def, p_space_def, m_space_def, measure_def, expectation_def]
+ >> NTAC 2 STRIP_TAC
+ >> ASSUME_TAC sigma_finite_ext_lborel
+ >> ASSUME_TAC measure_space_ext_lborel
  >> MP_TAC (ISPECL [(* m *) ``ext_lborel``,
                     (* v *) ``distribution (p :'a m_space) (X :'a -> extreal)``]
                    Radon_Nikodym')
- >> rw [ext_lborel_def]
  >> fs [pdf_def, RN_deriv_def, SPACE, ext_lborel_def]
+ >> STRIP_TAC
  >> SELECT_ELIM_TAC
  >> CONJ_TAC >- METIS_TAC []
  >> Q.X_GEN_TAC `g`
- >> RW_TAC std_ss [density_measure_def]
+ >> STRIP_TAC
+ >> fs [density_measure_def]
  >> POP_ASSUM (MP_TAC o Q.SPEC `space Borel`)
  >> Know `space Borel IN subsets Borel`
  >- (MATCH_MP_TAC SIGMA_ALGEBRA_SPACE \\
@@ -9547,6 +9554,20 @@ Proof
      rw [indicator_fn_def, mul_rone, mul_rzero, le_refl, SPACE_BOREL])
  >> DISCH_THEN (art o wrap)
 QED
+
+(* |- !p X.
+        prob_space p /\ random_variable X p Borel /\
+        distribution p X << ext_lborel ==>
+        expectation ext_lborel (pdf p X) = 1
+ *)
+Theorem expectation_pdf_1 = cj 2 expectation_pdf
+
+(* |- !p X.
+        prob_space p /\ random_variable X p Borel /\
+        distribution p X << ext_lborel ==>
+        pdf p X IN Borel_measurable Borel
+ *)
+Theorem pdf_in_measurable_borel = cj 1 expectation_pdf
 
 (* ========================================================================= *)
 (*  Two canonical probability spaces                                         *)
@@ -9564,12 +9585,24 @@ Proof
         lambda_closed_interval]
 QED
 
+Theorem prob_space_lborel_01' :
+    prob_space (restrict_space lborel (interval (0,1)))
+Proof
+    rw [prob_space_def]
+ >- (MATCH_MP_TAC measure_space_restrict_space \\
+     rw [lborel_def, sets_lborel] \\
+     rw [borel_measurable_sets, OPEN_interval])
+ >> simp [space_restrict_space]
+ >> rw [restrict_space, measure_def, m_space_def, space_lborel,
+        lambda_open_interval]
+QED
+
 Theorem prob_space_ext_lborel_01 :
     prob_space (restrict_space ext_lborel {x | 0 <= x /\ x <= 1})
 Proof
     rw [prob_space_def]
  >- (MATCH_MP_TAC measure_space_restrict_space \\
-     rw [MEASURE_SPACE_LBOREL] \\
+     rw [measure_space_ext_lborel] \\
      rw [ext_lborel_def, measurable_sets_def] \\
      rw [BOREL_MEASURABLE_SETS])
  >> simp [space_restrict_space]
@@ -9644,8 +9677,7 @@ Proof
  >> rpt GEN_TAC
  >> STRIP_TAC
  >> CONJ_TAC
- >- (MATCH_MP_TAC IN_SIGMA \\
-     rw [IN_PROD_SETS] \\
+ >- (MATCH_MP_TAC IN_SIGMA >> rw [IN_PROD_SETS] \\
      qexistsl_tac [‘e1’, ‘e2’] >> art [])
  >> Cases_on ‘e1 = {}’ >- simp [PROB_EMPTY]
  >> Cases_on ‘e2 = {}’ >- simp [PROB_EMPTY]

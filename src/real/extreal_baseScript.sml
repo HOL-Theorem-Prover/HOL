@@ -2371,13 +2371,21 @@ Proof
  >> MATCH_MP_TAC REAL_EQ_RDIV_EQ >> art []
 QED
 
+Theorem eq_rdiv :
+    !x y z. 0 < z ==> ((x = y / Normal z) <=> (x * Normal z = y))
+Proof
+    rpt STRIP_TAC >> MATCH_MP_TAC rdiv_eq
+ >> RW_TAC std_ss [extreal_of_num_def, extreal_lt_eq, lt_infty]
+QED
+
 (* NOTE: ‘x <> PosInf /\ x <> NegInf’ cannot be removed when ‘y = PosInf’ *)
 Theorem div_eq_mul_linv :
     !x y. x <> PosInf /\ x <> NegInf /\ 0 < y ==> (x / y = (inv y) * x)
 Proof
     RW_TAC std_ss []
  >> Cases_on `y = PosInf`
- >- ASM_SIMP_TAC std_ss [div_infty, extreal_inv_def, GSYM extreal_of_num_def, mul_lzero]
+ >- ASM_SIMP_TAC std_ss [div_infty, extreal_inv_def, GSYM extreal_of_num_def,
+                         mul_lzero]
  >> Know `0 < y /\ y < PosInf` >- art [GSYM lt_infty]
  >> DISCH_THEN (REWRITE_TAC o wrap o (MATCH_MP ldiv_eq))
  >> REWRITE_TAC [GSYM mul_assoc, Once mul_comm]
@@ -2504,7 +2512,7 @@ QED
 (* cf. REAL_EQ_MUL_LCANCEL *)
 Theorem mul_lcancel :
     !x y (z :extreal). x <> PosInf /\ x <> NegInf ==>
-                     ((x * y = x * z) <=> (x = 0) \/ (y = z))
+                      (x * y = x * z <=> x = 0 \/ y = z)
 Proof
     rpt STRIP_TAC
  >> `?r. x = Normal r` by METIS_TAC [extreal_cases]
@@ -2519,7 +2527,7 @@ QED
 Theorem mul_rcancel = ONCE_REWRITE_RULE [mul_comm] mul_lcancel
 
 Theorem inv_mul :
-    !x y. x <> 0 /\ y <> 0 ==> (inv (x * y) = inv x * inv y)
+    !x y. x <> 0 /\ y <> 0 ==> inv (x * y) = inv x * inv y
 Proof
   rpt STRIP_TAC
   >> Cases_on `x` >> Cases_on `y`
@@ -2529,7 +2537,7 @@ Proof
 QED
 
 Theorem abs_div :
-  !x y. x <> PosInf /\ x <> NegInf /\ y <> 0 ==> (abs (x / y) = abs x / abs y)
+    !x y. x <> PosInf /\ x <> NegInf /\ y <> 0 ==> abs (x / y) = abs x / abs y
 Proof
   rpt STRIP_TAC
   >> Cases_on `x` >> Cases_on `y`
@@ -2541,12 +2549,13 @@ Proof
 QED
 
 Theorem abs_div_normal :
-    !x y. y <> 0 ==> (abs (x / Normal y) = abs x / Normal (abs y))
+    !x y. y <> 0 ==> abs (x / Normal y) = abs x / Normal (abs y)
 Proof
     rpt STRIP_TAC
  >> ‘abs y <> 0’ by PROVE_TAC [ABS_ZERO]
  >> Cases_on `x`
- >> RW_TAC std_ss [extreal_div_def, abs_mul, extreal_inv_def, extreal_abs_def, ABS_INV]
+ >> RW_TAC std_ss [extreal_div_def, abs_mul, extreal_inv_def, extreal_abs_def,
+                   ABS_INV]
 QED
 
 (* cf. REAL_INVINV *)
@@ -2770,7 +2779,7 @@ QED
 
 Theorem add_pow2_pos : (* was: add_pow02 *)
     !x y. 0 < x /\ x <> PosInf /\ 0 <= y ==>
-         ((x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y)
+         (x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y
 Proof
     RW_TAC std_ss []
  >> `x <> NegInf` by METIS_TAC [lt_trans, lt_infty, num_not_infty]
@@ -2792,7 +2801,7 @@ QED
 
 Theorem sub_pow2 :
     !x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
-        ((x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y)
+         (x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y
 Proof
     NTAC 2 Cases
  >> RW_TAC real_ss [extreal_pow_def, extreal_mul_def, extreal_add_def,
@@ -2830,8 +2839,7 @@ QED
 Theorem pow_not_infty :
     !n x. x <> NegInf /\ x <> PosInf ==> x pow n <> NegInf /\ x pow n <> PosInf
 Proof
-    Cases
- >> METIS_TAC [extreal_pow_def, extreal_not_infty, extreal_cases]
+    Cases >> METIS_TAC [extreal_pow_def, extreal_not_infty, extreal_cases]
 QED
 
 Theorem pow_inv : (* cf. REAL_POW_INV *)
@@ -2849,7 +2857,7 @@ QED
 
 Theorem pow_div : (* cf. REAL_POW_DIV *)
     !n x y. x <> PosInf /\ x <> NegInf /\ 0 < y ==>
-           ((x / y) pow n = x pow n / y pow n)
+           (x / y) pow n = x pow n / y pow n
 Proof
     rpt STRIP_TAC
  >> `x pow n <> PosInf /\ x pow n <> NegInf` by METIS_TAC [pow_not_infty]
@@ -2890,13 +2898,15 @@ Proof
          >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_refl, le_01]) \\
          REWRITE_TAC [add_rzero, pow_2] \\
         `x = 1 * x` by PROVE_TAC [mul_lone] \\
-         POP_ASSUM ((GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites) o wrap) \\
+         POP_ASSUM
+          ((GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites) o wrap) \\
          MATCH_MP_TAC le_rmul_imp >> art [] \\
          MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `1` >> art [le_01]) \\
     fs [GSYM extreal_lt_def] \\
     Know `x <= x pow 2 + 1 <=> x - 1 <= x pow 2`
     >- (MATCH_MP_TAC EQ_SYM \\
-        MATCH_MP_TAC sub_le_eq >> REWRITE_TAC [extreal_of_num_def, extreal_not_infty]) \\
+        MATCH_MP_TAC sub_le_eq \\
+        REWRITE_TAC [extreal_of_num_def, extreal_not_infty]) \\
     Rewr' \\
    `x - 1 < 0` by PROVE_TAC [sub_lt_zero] \\
    `0 <= x pow 2` by PROVE_TAC [le_pow2] \\
@@ -2908,7 +2918,8 @@ Proof
  >- (`-x < 1` by PROVE_TAC [neg_neg, GSYM lt_neg] \\
      Know `-x <= x pow 2 + 1 <=> -x - 1 <= x pow 2`
      >- (MATCH_MP_TAC EQ_SYM \\
-         MATCH_MP_TAC sub_le_eq >> REWRITE_TAC [extreal_of_num_def, extreal_not_infty]) \\
+         MATCH_MP_TAC sub_le_eq \\
+         REWRITE_TAC [extreal_of_num_def, extreal_not_infty]) \\
      Rewr' \\
     `-x - 1 < 0` by PROVE_TAC [sub_lt_zero] \\
     `0 <= x pow 2` by PROVE_TAC [le_pow2] \\
@@ -3349,6 +3360,12 @@ Proof
  >> MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC `0` >> art []
  >> POP_ASSUM (REWRITE_TAC o wrap o
                 (REWRITE_RULE [Once (GSYM lt_neg), neg_0]))
+QED
+
+Theorem max_0_reduce :
+    !x. 0 <= x ==> max 0 x = (x :extreal)
+Proof
+    rw [extreal_max_def]
 QED
 
 (* ------------------------------------------------------------------------- *)
