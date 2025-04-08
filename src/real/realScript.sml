@@ -454,7 +454,7 @@ val REAL_LE_RMUL = store_thm("REAL_LE_RMUL",
    MATCH_ACCEPT_TAC REAL_LE_LMUL);
 
 (* recovered from transc.ml *)
-Theorem REAL_LE_LCANCEL_IMP :
+Theorem REAL_LE_LCANCEL_IMP:
     !x y z. 0 < x /\ x * y <= x * z ==> y <= z
 Proof
     rpt STRIP_TAC
@@ -463,7 +463,7 @@ Proof
 QED
 
 (* dual theorem of the above *)
-Theorem REAL_LE_RCANCEL_IMP :
+Theorem REAL_LE_RCANCEL_IMP:
     !x y z. 0 < z /\ x * z <= y * z ==> x <= y
 Proof
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN REWRITE_TAC[REAL_LE_LCANCEL_IMP]
@@ -879,7 +879,7 @@ Proof
   MATCH_MP_TAC REAL_INV_MUL THEN ASM_REWRITE_TAC []
 QED
 
-Theorem REAL_INV_DIV :
+Theorem REAL_INV_DIV:
     !x y. x <> 0 /\ y <> 0 ==> (inv (x / y) = y * inv x)
 Proof
     rpt STRIP_TAC
@@ -1002,7 +1002,7 @@ val REAL_LT_1 = store_thm("REAL_LT_1",
       EXISTS_TAC “x:real” THEN ASM_REWRITE_TAC[],
       ASM_REWRITE_TAC[REAL_MUL_LID]]]);
 
-Theorem REAL_LE_LMUL_IMP :
+Theorem REAL_LE_LMUL_IMP:
     !x y z. 0 <= x /\ y <= z ==> x * y <= x * z
 Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN
@@ -1012,7 +1012,7 @@ QED
 (* HOL-light compatibility, moved from iterateTheory *)
 Theorem REAL_LE_LMUL1 = REAL_LE_LMUL_IMP
 
-Theorem REAL_LE_RMUL_IMP :
+Theorem REAL_LE_RMUL_IMP:
     !x y z. 0 <= x /\ y <= z ==> y * x <= z * x
 Proof
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN MATCH_ACCEPT_TAC REAL_LE_LMUL_IMP
@@ -1358,7 +1358,7 @@ val ABS_DIV = store_thm("ABS_DIV",
   POP_ASSUM(fn th => REWRITE_TAC[MATCH_MP ABS_INV th]));
 
 (* HOL-Light compatible, use with cautions *)
-Theorem REAL_ABS_DIV :
+Theorem REAL_ABS_DIV:
     !x y. abs (x / y) = abs x / abs y
 Proof
     rpt GEN_TAC
@@ -1479,7 +1479,7 @@ val ABS_BOUNDS = store_thm("ABS_BOUNDS",
     REWRITE_TAC[REAL_LE_NEGR] THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
     ASM_REWRITE_TAC[GSYM REAL_NOT_LE]]);
 
-Theorem ABS_BOUNDS_LT :
+Theorem ABS_BOUNDS_LT:
     !(x :real) k. abs(x) < k <=> -k < x /\ x < k
 Proof
     RW_TAC std_ss [abs]
@@ -1509,7 +1509,7 @@ Theorem pow = real_pow
 val _ = overload_on (UnicodeChars.sup_2, “\x. x pow 2”);
 val _ = overload_on (UnicodeChars.sup_3, “\x. x pow 3”);
 
-Theorem REAL_POW : (* from examples/miller *)
+Theorem REAL_POW: (* from examples/miller *)
     !m n. &m pow n = &(m EXP n)
 Proof
     REWRITE_TAC [REAL_OF_NUM_POW]
@@ -1704,7 +1704,7 @@ val REAL_POW_LT = store_thm("REAL_POW_LT",
   INDUCT_TAC THEN REWRITE_TAC[pow, REAL_LT_01] THEN
   MATCH_MP_TAC REAL_LT_MUL THEN ASM_REWRITE_TAC[]);;
 
-Theorem REAL_POW_LE_1 :
+Theorem REAL_POW_LE_1:
     !(n:num) (x:real). (&1:real) <= x ==> (&1:real) <= x pow n
 Proof
   INDUCT_TAC THENL
@@ -1715,7 +1715,7 @@ Proof
     FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]
 QED
 
-Theorem REAL_POW_1_LE :
+Theorem REAL_POW_1_LE:
     !n x:real. &0 <= x /\ x <= &1 ==> x pow n <= &1
 Proof
   REPEAT STRIP_TAC THEN
@@ -1742,7 +1742,7 @@ val POW_ZERO = store_thm("POW_ZERO",
   DISCH_THEN(DISJ_CASES_THEN2 ACCEPT_TAC ASSUME_TAC) THEN
   FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
-Theorem REAL_POW_EQ_0 :
+Theorem REAL_POW_EQ_0:
    !x n. (x pow n = &0) <=> (x = &0) /\ ~(n = 0)
 Proof
   GEN_TAC THEN INDUCT_TAC THEN
@@ -1763,7 +1763,7 @@ val REAL_POW_LT2 = store_thm("REAL_POW_LT2",
    [MATCH_MP_TAC POW_POS THEN ASM_REWRITE_TAC[],
     FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);;
 
-Theorem REAL_POW_INV :
+Theorem REAL_POW_INV:
     !x n. (inv x) pow n = inv(x pow n)
 Proof
   Induct_on `n` THEN REWRITE_TAC [pow] THENL
@@ -1775,20 +1775,20 @@ Proof
     IMP_RES_TAC REAL_INV_MUL THEN ASM_REWRITE_TAC []]]
 QED
 
-Theorem REAL_POW_DIV :
+Theorem REAL_POW_DIV:
     !x y n. (x / y) pow n = (x pow n) / (y pow n)
 Proof
   REWRITE_TAC[real_div, POW_MUL, REAL_POW_INV]
 QED
 
-Theorem REAL_POW_ADD :
+Theorem REAL_POW_ADD:
     !x m n. x pow (m + n) = x pow m * x pow n
 Proof
   Induct_on `m` THEN
   ASM_REWRITE_TAC[ADD_CLAUSES, pow, REAL_MUL_LID, REAL_MUL_ASSOC]
 QED
 
-Theorem REAL_POW_MONO :
+Theorem REAL_POW_MONO:
     !m n x. &1 <= x /\ m <= n ==> x pow m <= x pow n
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[LESS_EQ_EXISTS] THEN
@@ -1803,7 +1803,7 @@ Proof
     MATCH_MP_TAC REAL_POW_LE_1 THEN ASM_REWRITE_TAC[]]
 QED
 
-Theorem REAL_POW_MONO_LT :
+Theorem REAL_POW_MONO_LT:
     !m n x. &1 < x /\ m < n ==> x pow m < x pow n
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[LT_EXISTS] THEN
@@ -1823,7 +1823,7 @@ Proof
     ASM_REWRITE_TAC[REAL_LT,prim_recTheory.LESS_0, ONE]]
 QED
 
-Theorem REAL_POW_POW :
+Theorem REAL_POW_POW:
     !x m n. (x pow m) pow n = x pow (m * n)
 Proof
   GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN
@@ -2050,7 +2050,7 @@ val REAL_ARCH_LEAST = store_thm("REAL_ARCH_LEAST",
     ASM_REWRITE_TAC[] THEN FIRST_ASSUM MATCH_MP_TAC THEN
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[PRE, LESS_SUC_REFL]]);
 
-Theorem SIMP_REAL_ARCH :
+Theorem SIMP_REAL_ARCH:
     !x:real. ?n. x <= &n
 Proof
     REWRITE_TAC [REAL_LE_LT]
@@ -2062,7 +2062,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem REAL_BIGNUM :
+Theorem REAL_BIGNUM:
     !r : real. ?n : num. r < &n
 Proof
    GEN_TAC
@@ -2071,7 +2071,7 @@ Proof
    THEN PROVE_TAC []
 QED
 
-Theorem REAL_ARCH_INV :
+Theorem REAL_ARCH_INV:
     !e. &0 < e <=> ?n. ~(n = 0) /\ &0:real < inv(&n) /\ inv(&n) < e:real
 Proof
   GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[REAL_LT_TRANS]] THEN
@@ -2126,7 +2126,7 @@ val SUM_LE = store_thm("SUM_LE",
   ASM_REWRITE_TAC[ADD_CLAUSES, LESS_EQ_ADD, LESS_SUC_REFL]);
 
 (* moved here from seqTheory *)
-Theorem SUM_LT :
+Theorem SUM_LT:
     !f g m n.
        (!r. m <= r /\ r < n + m ==> f r < g r) /\ 0 < n ==>
        sum (m,n) f < sum (m,n) g
@@ -2145,7 +2145,7 @@ Proof
 QED
 
 (* moved here from seqTheory *)
-Theorem SUM_PICK :
+Theorem SUM_PICK:
     !n k x. sum (0, n) (\m. if m = k then x else 0) = if k < n then x else 0
 Proof
     Induct >- RW_TAC arith_ss [sum]
@@ -2432,7 +2432,7 @@ val SUM_CANCEL = store_thm("SUM_CANCEL",
   REWRITE_TAC[GSYM REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_RID]);
 
 (* moved here from integralTheory, added missing quantifier ‘m’ *)
-Theorem SUM_SPLIT :
+Theorem SUM_SPLIT:
     !f m n p. sum(m,n) f + sum(m + n,p) f = sum(m,n + p) f
 Proof
   REPEAT GEN_TAC THEN
@@ -2448,7 +2448,7 @@ Proof
 QED
 
 (* moved here from integralTheory, added missing quantifier ‘d’ *)
-Theorem SUM_DIFFS :
+Theorem SUM_DIFFS:
     !d m n. sum(m,n) (\i. d(SUC i) - d(i)) = d(m + n) - d m
 Proof
   NTAC 2 GEN_TAC THEN INDUCT_TAC THEN
@@ -2673,7 +2673,7 @@ val REAL_DIV_ADD = store_thm
    ``!x y z : real. y / x + z / x = (y + z) / x``,
    RW_TAC boolSimps.bool_ss [real_div, REAL_ADD_RDISTRIB]);
 
-Theorem REAL_DIV_SUB :
+Theorem REAL_DIV_SUB:
     !x y z :real. y / x - z / x = (y - z) / x
 Proof
     RW_TAC bool_ss [real_div, REAL_SUB_RDISTRIB]
@@ -2995,7 +2995,7 @@ val REAL_MAX_ACI = store_thm
       PROVE_TAC [REAL_LT_ANTISYM, REAL_LET_TRANS] ]);
 
 (* extracted from integrationTheory *)
-Theorem REAL_MIN_LE_MAX :
+Theorem REAL_MIN_LE_MAX:
     !x:real y. min x y <= max x y
 Proof
     rpt GEN_TAC
@@ -3005,14 +3005,14 @@ Proof
 QED
 
 (* extracted from integrationTheory *)
-Theorem REAL_MAX_SUB_MIN :
+Theorem REAL_MAX_SUB_MIN:
     !x:real y. max x y - min x y = abs (y - x)
 Proof
     RW_TAC std_ss [min_def, max_def, abs, REAL_SUB_LE, REAL_NEG_SUB]
 QED
 
 (* extracted from integrationTheory *)
-Theorem ABS_BOUNDS_MIN_MAX :
+Theorem ABS_BOUNDS_MIN_MAX:
    !a b x B:real. abs(x) <= B ==> min a (-B) <= x /\ x <= max b B
 Proof
     rpt GEN_TAC
@@ -3026,7 +3026,7 @@ QED
 
 val inf_def = Define `inf p = ~(sup (\r. p (~r)))`;
 
-Theorem inf_alt :
+Theorem inf_alt:
     !p. inf p = ~(sup (IMAGE $~ p))
 Proof
     RW_TAC std_ss [inf_def]
@@ -3038,7 +3038,7 @@ Proof
  >> rw [REAL_NEG_NEG]
 QED
 
-Theorem INF_DEF_ALT :
+Theorem INF_DEF_ALT:
     !p. inf p = ~(sup (\r. ~r IN p)):real
 Proof
     RW_TAC std_ss []
@@ -3049,7 +3049,7 @@ Proof
 QED
 
 (* dual theorem of REAL_SUP *)
-Theorem REAL_INF :
+Theorem REAL_INF:
     !P. (?x. P x) /\ (?z. !x. P x ==> z < x) ==>
         (!y. (?x. P x /\ x < y) <=> inf P < y)
 Proof
@@ -3161,7 +3161,7 @@ Proof
 QED
 
 (* NOTE: removed unnecessary ‘(?r. p r)’ from antecedents *)
-Theorem REAL_IMP_LE_SUP :
+Theorem REAL_IMP_LE_SUP:
     !p x. (?z. !r. p r ==> r <= z) /\ (?r. p r /\ x <= r) ==> x <= sup p
 Proof
     RW_TAC bool_ss []
@@ -3176,7 +3176,7 @@ Proof
     REWRITE_TAC [IN_APP, REAL_IMP_LE_SUP]
 QED
 
-Theorem REAL_IMP_LT_SUP :
+Theorem REAL_IMP_LT_SUP:
     !p x. (?z. !r. p r ==> r <= z) /\ ~p (sup p) /\ p x ==> x < sup p
 Proof
     reverse (RW_TAC bool_ss [REAL_LT_LE])
@@ -3360,7 +3360,7 @@ QED
 (* This theorem is slightly more general than SUP_EPSILON (in sense of REAL_LT_IMP_LE)
    but actually can be proved as a corollary of SUP_EPSILON.
  *)
-Theorem SUP_LT_EPSILON :
+Theorem SUP_LT_EPSILON:
     !p e. 0 < e /\ (?x. p x) /\ (?z. !x. p x ==> x <= z) ==>
           ?x. p x /\ sup p < x + e
 Proof
@@ -3979,7 +3979,7 @@ val NUM_FLOOR_LE2 = store_thm
     FULL_SIMP_TAC (srw_ss() ++ old_ARITH_ss) []
   ]);
 
-Theorem NUM_FLOOR_MONO :
+Theorem NUM_FLOOR_MONO:
     !x y. 0 <= x /\ 0 <= y /\ x <= y ==> NUM_FLOOR x <= NUM_FLOOR y
 Proof
     rpt STRIP_TAC
@@ -4006,7 +4006,7 @@ val NUM_FLOOR_LET = store_thm
     FULL_SIMP_TAC (srw_ss() ++ old_ARITH_ss) []
   ]);
 
-Theorem NUM_FLOOR_LT :
+Theorem NUM_FLOOR_LT:
     !x :real. x - 1 < &(NUM_FLOOR x)
 Proof
     RW_TAC std_ss [REAL_LT_SUB_RADD, GSYM NUM_FLOOR_LET]
@@ -4120,7 +4120,7 @@ Proof
  >> rw [NUM_FLOOR_upper_bound, REAL_SUB_ADD]
 QED
 
-Theorem NUM_FLOOR_POS :
+Theorem NUM_FLOOR_POS:
     !x. 0 < NUM_FLOOR x <=> 1 <= x
 Proof
     Q.X_GEN_TAC ‘x’
@@ -4135,7 +4135,7 @@ Proof
  >> rw [NUM_FLOOR_upper_bound', REAL_SUB_LE]
 QED
 
-Theorem NUM_FLOOR_lower_bound :
+Theorem NUM_FLOOR_lower_bound:
     !x. 1 <= x ==> x / 2 < &NUM_FLOOR(x)
 Proof
     rpt STRIP_TAC
@@ -4155,7 +4155,7 @@ Proof
  >> RW_TAC arith_ss [REAL_MUL, REAL_LT, real_of_num]
 QED
 
-Theorem NUM_FLOOR_MUL_LOWERBOUND : (* cf. NUM_FLOOR_DIV_LOWERBOUND *)
+Theorem NUM_FLOOR_MUL_LOWERBOUND: (* cf. NUM_FLOOR_DIV_LOWERBOUND *)
     !(n :num) (x :real). 1 < n /\ 1 <= x ==> x < &(n * flr x)
 Proof
     RW_TAC std_ss [GSYM REAL_MUL]
@@ -4256,7 +4256,7 @@ val NUM_CEILING_LE = store_thm
    THEN numLib.LEAST_ELIM_TAC
    THEN METIS_TAC [NOT_LESS_EQUAL]);
 
-Theorem NUM_CEILING_UPPER_BOUND :
+Theorem NUM_CEILING_UPPER_BOUND:
     !x. 0 <= x ==> &(clg x) < x + 1
 Proof
     RW_TAC std_ss [NUM_CEILING_def]
@@ -4493,7 +4493,7 @@ Proof
 QED
 
 (* recovered from transc.ml *)
-Theorem REAL_POW_LE :
+Theorem REAL_POW_LE:
     !x n. 0 <= x ==> 0 <= x pow n
 Proof
     RW_TAC std_ss [REAL_POW_GE0]
@@ -4547,7 +4547,7 @@ Proof
 QED
 
 (* for HOL-Light compatibility *)
-Theorem REAL_LE_INV2 :
+Theorem REAL_LE_INV2:
     !x y. (&0:real) < x /\ x <= y ==> inv(y) <= inv(x)
 Proof
     rpt STRIP_TAC
@@ -4558,14 +4558,14 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem REAL_INV_LE_1 :
+Theorem REAL_INV_LE_1:
     !x:real. &1 <= x ==> inv(x) <= &1
 Proof
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV1] THEN
   MATCH_MP_TAC REAL_LE_INV2 THEN ASM_REWRITE_TAC[REAL_LT_01]
 QED
 
-Theorem REAL_INV_1_LE :
+Theorem REAL_INV_1_LE:
     !x:real. &0 < x /\ x <= &1 ==> &1 <= inv(x)
 Proof
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV1] THEN
@@ -4607,7 +4607,7 @@ Proof
 QED
 
 (* cf. REAL_POW_MONO *)
-Theorem REAL_POW_ANTIMONO :
+Theorem REAL_POW_ANTIMONO:
     !(m :num) n (x :real). 0 < x /\ x <= 1 /\ m <= n ==> x pow n <= x pow m
 Proof
     rpt STRIP_TAC
@@ -4625,7 +4625,7 @@ Proof
 QED
 
 (* cf. REAL_POW_MONO_LT *)
-Theorem REAL_POW_ANTIMONO_LT :
+Theorem REAL_POW_ANTIMONO_LT:
     !(m :num) n (x :real). 0 < x /\ x < 1 /\ m < n ==> x pow n < x pow m
 Proof
     rpt STRIP_TAC
@@ -4643,7 +4643,7 @@ Proof
 QED
 
 (* cf. REAL_LT_RDIV *)
-Theorem REAL_LE_RDIV_CANCEL :
+Theorem REAL_LE_RDIV_CANCEL:
     !x y (z :real). 0 < z ==> (x / z <= y / z <=> x <= y)
 Proof
     rpt STRIP_TAC
@@ -4655,7 +4655,7 @@ QED
 (* More variants of the Archimedian property and useful consequences.        *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem REAL_POW_LBOUND :
+Theorem REAL_POW_LBOUND:
     !x n. &0 <= x ==> &1 + &n * x <= (&1 + x) pow n
 Proof
     Q.X_GEN_TAC ‘x’
@@ -4680,7 +4680,7 @@ Proof
  >> ASM_SIMP_TAC arith_ss [real_of_num, REAL_OF_NUM_LE]
 QED
 
-Theorem REAL_ARCH_POW :
+Theorem REAL_ARCH_POW:
     !x y. &1 < x ==> ?n. y < x pow n
 Proof
     rpt STRIP_TAC
@@ -4703,7 +4703,7 @@ Proof
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> ASM_REWRITE_TAC []
 QED
 
-Theorem REAL_ARCH_POW_INV :
+Theorem REAL_ARCH_POW_INV:
     !x:real y. &0 < y /\ x < &1 ==> ?n. x pow n < y
 Proof
     rpt STRIP_TAC
@@ -4719,14 +4719,14 @@ Proof
  >> ASM_SIMP_TAC std_ss [GSYM REAL_POW_INV, REAL_LT_INV_EQ, REAL_LT_INV]
 QED
 
-Theorem REAL_ARCH_POW2 : (* was: REAL_ARCH_POW *)
+Theorem REAL_ARCH_POW2: (* was: REAL_ARCH_POW *)
     !x. ?n. x < &2 pow n
 Proof
     SIMP_TAC arith_ss[REAL_ARCH_POW, REAL_LT]
 QED
 
 (* moved here from util_probTheory, needed below and also in metricTheory *)
-Theorem ADD_POW_2 :
+Theorem ADD_POW_2:
     !x y :real. (x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y
 Proof
     RW_TAC std_ss [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
@@ -4739,7 +4739,7 @@ Proof
 QED
 
 (* moved here from util_probTheory *)
-Theorem SUB_POW_2 :
+Theorem SUB_POW_2:
     !x y :real. (x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y
 Proof
     rpt GEN_TAC
@@ -4754,50 +4754,50 @@ QED
 (* The sign of a real number, as a real number. (ported from HOL-Light)      *)
 (* ------------------------------------------------------------------------- *)
 
-Definition real_sgn :
+Definition real_sgn:
   (real_sgn:real->real) x =
         if &0 < x then &1 else if x < &0 then ~&1 else &0
 End
 
 Overload sgn = “real_sgn”
 
-Theorem REAL_SGN_0 :
+Theorem REAL_SGN_0:
    real_sgn(&0) = &0
 Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGN_NEG :
+Theorem REAL_SGN_NEG:
    !x. real_sgn(~x) = ~(real_sgn x)
 Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGN_ABS :
+Theorem REAL_SGN_ABS:
    !x. real_sgn(x) * abs(x) = x
 Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGN_ABS_ALT :
+Theorem REAL_SGN_ABS_ALT:
    !x. real_sgn x * x = abs x
 Proof
   GEN_TAC THEN REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_EQ_SGN_ABS :
+Theorem REAL_EQ_SGN_ABS:
    !x y:real. x = y <=> real_sgn x = real_sgn y /\ abs x = abs y
 Proof
   MESON_TAC[REAL_SGN_ABS]
 QED
 
-Theorem REAL_ABS_SGN :
+Theorem REAL_ABS_SGN:
    !x. abs(real_sgn x) = real_sgn(abs x)
 Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGN :
+Theorem REAL_SGN:
    !x. real_sgn x = x / abs x
 Proof
     GEN_TAC THEN ASM_CASES_TAC “x = &0”
@@ -4807,21 +4807,21 @@ Proof
                          REAL_MUL_RINV, REAL_MUL_RID]
 QED
 
-Theorem REAL_SGN_MUL :
+Theorem REAL_SGN_MUL:
    !x y. real_sgn(x * y) = real_sgn(x) * real_sgn(y)
 Proof
   REWRITE_TAC[REAL_SGN, REAL_ABS_MUL, real_div, REAL_INV_MUL'] THEN
   REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGN_INV :
+Theorem REAL_SGN_INV:
    !x. real_sgn(inv x) = real_sgn x
 Proof
   REWRITE_TAC[real_sgn, REAL_LT_INV_EQ, GSYM REAL_INV_NEG,
               REAL_ARITH “x < &0 <=> &0 < ~x”]
 QED
 
-Theorem REAL_SGN_DIV :
+Theorem REAL_SGN_DIV:
    !x y. real_sgn(x / y) = real_sgn(x) / real_sgn(y)
 Proof
   REWRITE_TAC[REAL_SGN, REAL_ABS_DIV] THEN
@@ -4829,7 +4829,7 @@ Proof
   REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGN_EQ :
+Theorem REAL_SGN_EQ:
    (!x. real_sgn x = &0 <=> x = &0) /\
    (!x. real_sgn x = &1 <=> x > &0) /\
    (!x. real_sgn x = ~ &1 <=> x < &0)
@@ -4837,13 +4837,13 @@ Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGN_CASES :
+Theorem REAL_SGN_CASES:
    !x. real_sgn x = &0 \/ real_sgn x = &1 \/ real_sgn x = ~&1
 Proof
   REWRITE_TAC[real_sgn] THEN METIS_TAC[] (* was: MESON_TAC *)
 QED
 
-Theorem REAL_SGN_INEQS :
+Theorem REAL_SGN_INEQS:
    (!x. &0 <= real_sgn x <=> &0 <= x) /\
    (!x. &0 < real_sgn x <=> &0 < x) /\
    (!x. &0 >= real_sgn x <=> &0 >= x) /\
@@ -4858,7 +4858,7 @@ Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGN_POW :
+Theorem REAL_SGN_POW:
    !x n. real_sgn(x pow n) = real_sgn(x) pow n
 Proof
   GEN_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[REAL_SGN_MUL, real_pow] THEN
@@ -4867,7 +4867,7 @@ QED
 
 val REAL_LE_POW_2 = REAL_LE_POW2;
 
-Theorem REAL_SGN_POW_2 :
+Theorem REAL_SGN_POW_2:
    !x. real_sgn(x pow 2) = real_sgn(abs x)
 Proof
   REWRITE_TAC[real_sgn] THEN
@@ -4876,13 +4876,13 @@ Proof
   SIMP_TAC arith_ss [REAL_POW_EQ_0, REAL_ABS_ZERO]
 QED
 
-Theorem REAL_SGN_REAL_SGN :
+Theorem REAL_SGN_REAL_SGN:
    !x. real_sgn(real_sgn x) = real_sgn x
 Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_INV_SGN :
+Theorem REAL_INV_SGN:
    !x. inv(real_sgn x) = real_sgn x
 Proof
   GEN_TAC THEN REWRITE_TAC[real_sgn] THEN
@@ -4891,14 +4891,14 @@ Proof
 QED
 
 (* NOTE: REAL_ARITH_TAC takes quite long steps to prove this theorem *)
-Theorem REAL_SGN_EQ_INEQ :
+Theorem REAL_SGN_EQ_INEQ:
    !x y. real_sgn x = real_sgn y <=>
          x = y \/ abs(x - y) < max (abs x) (abs y)
 Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGNS_EQ :
+Theorem REAL_SGNS_EQ:
    !x y. real_sgn x = real_sgn y <=>
          (x = &0 <=> y = &0) /\
          (x > &0 <=> y > &0) /\
@@ -4907,7 +4907,7 @@ Proof
   REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC
 QED
 
-Theorem REAL_SGNS_EQ_ALT :
+Theorem REAL_SGNS_EQ_ALT:
    !x y. real_sgn x = real_sgn y <=>
          (x = &0 ==> y = &0) /\
          (x > &0 ==> y > &0) /\
@@ -4923,13 +4923,13 @@ QED
 val sqrt_def = new_definition
   ("sqrt_def", “sqrt x = @u. (0 < x ==> 0 < u) /\ (u pow 2 = x)”);
 
-Theorem SQRT_0 :
+Theorem SQRT_0:
     sqrt(&0) = &0
 Proof
     rw [sqrt_def]
 QED
 
-Theorem SQRT_1 :
+Theorem SQRT_1:
     sqrt(&1) = &1
 Proof
     REWRITE_TAC [sqrt_def]
@@ -4946,7 +4946,7 @@ Proof
 QED
 
 (* NOTE: adding quantifier may break isqrtLib *)
-Theorem POW_2_SQRT :
+Theorem POW_2_SQRT:
     &0 <= x ==> (sqrt(x pow 2) = x)
 Proof
     RW_TAC std_ss [sqrt_def]
@@ -4964,7 +4964,7 @@ Proof
  >> MATCH_MP_TAC REAL_POW_LT >> rw []
 QED
 
-Theorem SQRT_POS_UNIQ :
+Theorem SQRT_POS_UNIQ:
     !x y. &0 <= x /\ &0 <= y /\ (y pow 2 = x) ==> (sqrt x = y)
 Proof
     RW_TAC std_ss [sqrt_def]
@@ -5090,7 +5090,7 @@ Proof
       Q.EXISTS_TAC ‘g - inv (&N)’ >> rw [] ]
 QED
 
-Theorem SQRT_POS_LT :
+Theorem SQRT_POS_LT:
     !x. &0 < x ==> &0 < sqrt(x)
 Proof
     RW_TAC std_ss [sqrt_def]
@@ -5098,7 +5098,7 @@ Proof
  >> rw [SQRT_EXISTS]
 QED
 
-Theorem SQRT_POS_NE :
+Theorem SQRT_POS_NE:
     !(x :real). &0 < x ==> sqrt(x) <> &0
 Proof
     Q.X_GEN_TAC ‘x’
@@ -5108,7 +5108,7 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem SQRT_POS_LE :
+Theorem SQRT_POS_LE:
    !x. &0 <= x ==> &0 <= sqrt(x)
 Proof
     rpt STRIP_TAC
@@ -5118,7 +5118,7 @@ Proof
  >> MATCH_MP_TAC SQRT_POS_LT >> rw []
 QED
 
-Theorem SQRT_POW2 :
+Theorem SQRT_POW2:
     !x. (sqrt(x) pow 2 = x) <=> &0 <= x
 Proof
     GEN_TAC
@@ -5134,13 +5134,13 @@ Proof
  >> rw [SQRT_EXISTS]
 QED
 
-Theorem SQRT_POW_2 :
+Theorem SQRT_POW_2:
     !x. &0 <= x ==> (sqrt(x) pow 2 = x)
 Proof
     REWRITE_TAC[SQRT_POW2]
 QED
 
-Theorem SQRT_MUL :
+Theorem SQRT_MUL:
     !x y. &0 <= x /\ &0 <= y ==> (sqrt(x * y) = sqrt x * sqrt y)
 Proof
     rpt STRIP_TAC
@@ -5165,7 +5165,7 @@ Proof
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> rw []
 QED
 
-Theorem SQRT_INV :
+Theorem SQRT_INV:
     !x. &0 <= x ==> (sqrt (inv x) = inv(sqrt x))
 Proof
     rpt STRIP_TAC
@@ -5194,7 +5194,7 @@ Proof
       >- (MATCH_MP_TAC POW_LT >> rw [REAL_LE_LT]) >> rw [] ]
 QED
 
-Theorem SQRT_MONO_LE :
+Theorem SQRT_MONO_LE:
     !x y. &0 <= x /\ x <= y ==> sqrt(x) <= sqrt(y)
 Proof
     rpt STRIP_TAC
@@ -5212,7 +5212,7 @@ Proof
  >> rw [real_lt]
 QED
 
-Theorem SQRT_MONO_LT :
+Theorem SQRT_MONO_LT:
     !x y. &0 <= x /\ x < y ==> sqrt(x) < sqrt(y)
 Proof
     rpt STRIP_TAC
@@ -5223,7 +5223,7 @@ Proof
  >> METIS_TAC [SQRT_POW2]
 QED
 
-Theorem SQRT_DIV :
+Theorem SQRT_DIV:
     !x y. &0 <= x /\ &0 <= y ==> (sqrt (x / y) = sqrt x / sqrt y)
 Proof
     rpt STRIP_TAC
@@ -5253,7 +5253,7 @@ Proof
       >- (MATCH_MP_TAC POW_LT >> rw [REAL_LE_LT]) >> rw [] ]
 QED
 
-Theorem SQRT_EQ :
+Theorem SQRT_EQ:
     !x y. (x pow 2 = y) /\ &0 <= x ==> (x = sqrt y)
 Proof
     rpt STRIP_TAC
@@ -5292,7 +5292,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* cf. REAL_ADD_RAT *)
-Theorem RAT_LEMMA1 :
+Theorem RAT_LEMMA1:
    ~(y1 = &0) /\ ~(y2 = &0) ==>
       ((x1 / y1) + (x2 / y2) = (x1 * y2 + x2 * y1) * inv(y1) * inv(y2))
 Proof
@@ -5300,7 +5300,7 @@ Proof
  >> METIS_TAC [REAL_ADD_RAT, REAL_MUL_COMM]
 QED
 
-Theorem RAT_LEMMA2 :
+Theorem RAT_LEMMA2:
     &0 < y1 /\ &0 < y2 ==>
       ((x1 / y1) + (x2 / y2) = (x1 * y2 + x2 * y1) * inv(y1) * inv(y2))
 Proof
@@ -5308,7 +5308,7 @@ Proof
 QED
 
 (* cf. REAL_SUB_RAT *)
-Theorem RAT_LEMMA3 :
+Theorem RAT_LEMMA3:
     &0 < y1 /\ &0 < y2 ==>
       ((x1 / y1) - (x2 / y2) = (x1 * y2 - x2 * y1) * inv(y1) * inv(y2))
 Proof
@@ -5343,7 +5343,7 @@ Theorem REAL_LT_INV2 = REAL_LT_INV
 (* |- !x. 0 < x ==> 0 < inv x *)
 Theorem REAL_LT_INV' = REAL_INV_POS
 
-Theorem RAT_LEMMA4 :
+Theorem RAT_LEMMA4:
    &0 < y1 /\ &0 < y2 ==> (x1 / y1 <= x2 / y2 <=> x1 * y2 <= x2 * y1)
 Proof
   ONCE_REWRITE_TAC[CONJ_SYM] THEN DISCH_TAC THEN
@@ -5356,7 +5356,7 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
-Theorem RAT_LEMMA5 :
+Theorem RAT_LEMMA5:
    &0 < y1 /\ &0 < y2 ==> ((x1 / y1 = x2 / y2) <=> (x1 * y2 = x2 * y1))
 Proof
   REPEAT DISCH_TAC THEN REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
@@ -5380,13 +5380,13 @@ Proof
 QED
 
 (* The following common used HALF theorems were moved from seqTheory *)
-Theorem HALF_POS :
+Theorem HALF_POS:
     0:real < 1/2
 Proof
     PROVE_TAC [REAL_LT_01, REAL_LT_HALF1]
 QED
 
-Theorem HALF_LT_1 :
+Theorem HALF_LT_1:
     1 / 2 < 1:real
 Proof
     ONCE_REWRITE_TAC [GSYM REAL_INV_1OVER, GSYM REAL_INV1]
@@ -5394,14 +5394,14 @@ Proof
  >> RW_TAC arith_ss [REAL_LT]
 QED
 
-Theorem HALF_CANCEL :
+Theorem HALF_CANCEL:
     2 * (1 / 2) = 1:real
 Proof
     Suff `2 * inv 2 = 1:real` >- PROVE_TAC [REAL_INV_1OVER]
  >> PROVE_TAC [REAL_MUL_RINV, REAL_ARITH ``~(2:real = 0)``]
 QED
 
-Theorem X_HALF_HALF :
+Theorem X_HALF_HALF:
     !x:real. 1/2 * x + 1/2 * x = x
 Proof
     STRIP_TAC
@@ -5410,7 +5410,7 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
-Theorem ONE_MINUS_HALF :
+Theorem ONE_MINUS_HALF:
     (1:real) - 1 / 2 = 1 / 2
 Proof
     MP_TAC (Q.SPEC `1` X_HALF_HALF)
@@ -5419,7 +5419,7 @@ Proof
  >> RW_TAC std_ss [REAL_SUB_ADD]
 QED
 
-Theorem POW_HALF_POS :
+Theorem POW_HALF_POS:
     !n. 0:real < (1/2) pow n
 Proof
     STRIP_TAC
@@ -5428,7 +5428,7 @@ Proof
 QED
 
 (* NOTE: This theorem shows that the ring of real numbers is an intergal domain. *)
-Theorem REAL_INTEGRAL :
+Theorem REAL_INTEGRAL:
     (!(x :real). &0 * x = &0) /\
     (!(x :real) y z. (x + y = x + z) <=> (y = z)) /\
     (!(w :real) x y z. (w * y + x * z = w * z + x * y) <=> (w = x) \/ (y = z))
@@ -5440,7 +5440,7 @@ QED
 (* NOTE: Perhaps this theorem is related to "Rabinowitsch trick". See also
    https://en.wikipedia.org/wiki/Rabinowitsch_trick
  *)
-Theorem REAL_RABINOWITSCH :
+Theorem REAL_RABINOWITSCH:
     !x y:real. ~(x = y) <=> ?z. (x - y) * z = &1
 Proof
     REWRITE_TAC[EQ_IMP_THM]

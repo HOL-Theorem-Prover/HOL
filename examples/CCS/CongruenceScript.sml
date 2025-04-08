@@ -36,38 +36,38 @@ val _ = temp_remove_rules_for_term "listRangeINC";
 
 val _ = type_abbrev_pp ("context", ``:'a CCS -> 'a CCS``);
 
-Definition IS_CONST_def :
+Definition IS_CONST_def:
     IS_CONST (e :'a context) <=> !t1 t2. e t1 = e t2
 End
 
-Theorem IS_CONST_alt :
+Theorem IS_CONST_alt:
     !e. IS_CONST e <=> ?p. !t. e t = p
 Proof
     RW_TAC std_ss [IS_CONST_def]
  >> METIS_TAC []
 QED
 
-Theorem IS_CONST_thm :
+Theorem IS_CONST_thm:
     !e. IS_CONST e <=> ?p. e = \t. p
 Proof
     rw [IS_CONST_alt, FUN_EQ_THM]
 QED
 
 (* not used *)
-Definition closed_const :
+Definition closed_const:
     closed_const (e :'a context) <=> IS_CONST e /\ !t. closed (e t)
 End
 
 Theorem closed_const_def = closed_const |> REWRITE_RULE [IS_CONST_def]
 
-Theorem closed_const_alt :
+Theorem closed_const_alt:
     !e. closed_const e <=> ?p. closed p /\ !t. e t = p
 Proof
     rw [closed_const_def, IS_CONST_alt]
  >> METIS_TAC []
 QED
 
-Theorem closed_const_thm :
+Theorem closed_const_thm:
     !e. closed_const e <=> ?p. closed p /\ e = \t. p
 Proof
     rw [closed_const_alt, FUN_EQ_THM]
@@ -134,7 +134,7 @@ val [CONTEXT1, CONTEXT2, CONTEXT3, CONTEXT4, CONTEXT5, CONTEXT6, CONTEXT7] =
                    "CONTEXT6", "CONTEXT7"],
                   CONJUNCTS CONTEXT_rules));
 
-Theorem CONTEXT3a :
+Theorem CONTEXT3a:
     !a :'a Action. CONTEXT (\t. prefix a t)
 Proof
     ASSUME_TAC CONTEXT1
@@ -143,7 +143,7 @@ Proof
  >> BETA_TAC >> REWRITE_TAC []
 QED
 
-Theorem CONTEXT_CONST :
+Theorem CONTEXT_CONST:
     !e. IS_CONST e ==> CONTEXT e
 Proof
     rw [IS_CONST_def]
@@ -151,7 +151,7 @@ Proof
  >> POP_ORW >> rw [CONTEXT2]
 QED
 
-Theorem NO_CONTEXT8 :
+Theorem NO_CONTEXT8:
     !e X. ~IS_CONST e ==> ~CONTEXT (\t. rec X (e t))
 Proof
     rpt GEN_TAC
@@ -165,13 +165,13 @@ Proof
  >> Cases_on ‘X = Y’ >> fs [rec_eq_thm]
 QED
 
-Theorem CONTEXT8_IMP_CONST :
+Theorem CONTEXT8_IMP_CONST:
     !e X. CONTEXT (\t. rec X (e t)) ==> IS_CONST e
 Proof
     METIS_TAC [NO_CONTEXT8]
 QED
 
-Theorem CONTEXT3_backward :
+Theorem CONTEXT3_backward:
     !e u. CONTEXT (\t. prefix u (e t)) ==> CONTEXT e
 Proof
     rpt STRIP_TAC
@@ -188,7 +188,7 @@ Proof
       METIS_TAC [] ]
 QED
 
-Theorem CONTEXT3_full :
+Theorem CONTEXT3_full:
     !e u. CONTEXT (\t. prefix u (e t)) <=> CONTEXT e
 Proof
     rpt GEN_TAC
@@ -197,7 +197,7 @@ Proof
  >> REWRITE_TAC [CONTEXT3]
 QED
 
-Theorem CONTEXT4_backward :
+Theorem CONTEXT4_backward:
     !e e'. CONTEXT (\t. sum (e t) (e' t)) ==> CONTEXT e /\ CONTEXT e'
 Proof
     rpt STRIP_TAC
@@ -227,7 +227,7 @@ Proof
         METIS_TAC [] ] ]
 QED
 
-Theorem CONTEXT4_full :
+Theorem CONTEXT4_full:
     !e e'. CONTEXT (\t. sum (e t) (e' t)) <=> CONTEXT e /\ CONTEXT e'
 Proof
     rpt GEN_TAC
@@ -237,7 +237,7 @@ Proof
 QED
 
 (* NOTE: This proof is identical with CONTEXT4_backward *)
-Theorem CONTEXT5_backward :
+Theorem CONTEXT5_backward:
     !e e'. CONTEXT (\t. par (e t) (e' t)) ==> CONTEXT e /\ CONTEXT e'
 Proof
     rpt STRIP_TAC
@@ -267,7 +267,7 @@ Proof
         METIS_TAC [] ] ]
 QED
 
-Theorem CONTEXT5_full :
+Theorem CONTEXT5_full:
     !e e'. CONTEXT (\t. par (e t) (e' t)) <=> CONTEXT e /\ CONTEXT e'
 Proof
     rpt GEN_TAC
@@ -276,7 +276,7 @@ Proof
  >> REWRITE_TAC [CONTEXT5]
 QED
 
-Theorem CONTEXT6_backward :
+Theorem CONTEXT6_backward:
     !e L. CONTEXT (\t. restr L (e t)) ==> CONTEXT e
 Proof
     rpt STRIP_TAC
@@ -292,7 +292,7 @@ Proof
       METIS_TAC [] ]
 QED
 
-Theorem CONTEXT6_full :
+Theorem CONTEXT6_full:
     !e L. CONTEXT (\t. restr L (e t)) <=> CONTEXT e
 Proof
     rpt GEN_TAC
@@ -301,7 +301,7 @@ Proof
  >> REWRITE_TAC [CONTEXT6]
 QED
 
-Theorem CONTEXT7_backward :
+Theorem CONTEXT7_backward:
     !e rf. CONTEXT (\t. relab (e t) rf) ==> CONTEXT e
 Proof
     rpt STRIP_TAC
@@ -318,7 +318,7 @@ Proof
       METIS_TAC [] ]
 QED
 
-Theorem CONTEXT7_full :
+Theorem CONTEXT7_full:
     !e rf. CONTEXT (\t. relab (e t) rf) <=> CONTEXT e
 Proof
     rpt GEN_TAC
@@ -327,7 +327,7 @@ Proof
  >> REWRITE_TAC [CONTEXT7]
 QED
 
-Theorem CONTEXT8_backward :
+Theorem CONTEXT8_backward:
     !e X. CONTEXT (\t. rec X (e t)) ==> CONTEXT e
 Proof
     rpt STRIP_TAC
@@ -336,7 +336,7 @@ Proof
  >> Q.EXISTS_TAC `X` >> art []
 QED
 
-Theorem CONTEXT_combin :
+Theorem CONTEXT_combin:
     !c1 c2. CONTEXT c1 /\ CONTEXT c2 ==> CONTEXT (c1 o c2)
 Proof
     REPEAT STRIP_TAC
@@ -356,7 +356,7 @@ Proof
 QED
 
 (* One-hole contexts are also multi-hole contexts *)
-Theorem OH_CONTEXT_IMP_CONTEXT :
+Theorem OH_CONTEXT_IMP_CONTEXT:
     !c. OH_CONTEXT c ==> CONTEXT c
 Proof
     Induct_on `OH_CONTEXT`
@@ -391,7 +391,7 @@ Proof
       MATCH_MP_TAC CONTEXT7 >> art [] ]
 QED
 
-Theorem STRONG_EQUIV_SUBST_CONTEXT :
+Theorem STRONG_EQUIV_SUBST_CONTEXT:
     !P Q. STRONG_EQUIV P Q ==> !E. CONTEXT E ==> STRONG_EQUIV (E P) (E Q)
 Proof
     rpt GEN_TAC >> DISCH_TAC
@@ -409,7 +409,7 @@ Proof
       MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art [] ]
 QED
 
-Theorem OBS_CONGR_SUBST_CONTEXT :
+Theorem OBS_CONGR_SUBST_CONTEXT:
     !P Q. OBS_CONGR P Q ==> !E. CONTEXT E ==> OBS_CONGR (E P) (E Q)
 Proof
     rpt GEN_TAC >> DISCH_TAC
@@ -454,7 +454,7 @@ val [GCONTEXT1, GCONTEXT2, GCONTEXT3, GCONTEXT4, GCONTEXT5,
                    "GCONTEXT5", "GCONTEXT6", "GCONTEXT7"],
                   CONJUNCTS GCONTEXT_rules));
 
-Theorem GCONTEXT3a :
+Theorem GCONTEXT3a:
     !a :'a Action. GCONTEXT (\t. prefix a t)
 Proof
     ASSUME_TAC GCONTEXT1
@@ -463,7 +463,7 @@ Proof
  >> BETA_TAC >> REWRITE_TAC []
 QED
 
-Theorem GCONTEXT_combin :
+Theorem GCONTEXT_combin:
     !c1 c2. GCONTEXT c1 /\ GCONTEXT c2 ==> GCONTEXT (c1 o c2)
 Proof
     rpt STRIP_TAC
@@ -482,7 +482,7 @@ Proof
       FULL_SIMP_TAC std_ss [GCONTEXT7] ]
 QED
 
-Theorem GCONTEXT_IMP_CONTEXT :
+Theorem GCONTEXT_IMP_CONTEXT:
     !c. GCONTEXT c ==> CONTEXT c
 Proof
     HO_MATCH_MP_TAC GCONTEXT_strongind
@@ -510,7 +510,7 @@ Proof
       MATCH_MP_TAC CONTEXT7 >> art [] ]
 QED
 
-Theorem WEAK_EQUIV_SUBST_GCONTEXT :
+Theorem WEAK_EQUIV_SUBST_GCONTEXT:
     !P Q. WEAK_EQUIV P Q ==> !E. GCONTEXT E ==> WEAK_EQUIV (E P) (E Q)
 Proof
     rpt GEN_TAC >> DISCH_TAC
@@ -536,7 +536,7 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-Definition precongruence :
+Definition precongruence:
     precongruence R <=> PreOrder R /\
         !x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)
 End
@@ -548,7 +548,7 @@ Definition precongruence' :
 End
 
 (* The definition of congruence for CCS, TODO: use precongruence *)
-Definition congruence :
+Definition congruence:
     congruence R <=> equivalence R /\
         !x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)
 End
@@ -559,21 +559,21 @@ Definition congruence' :
         !x y ctx. GCONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)
 End
 
-Theorem STRONG_EQUIV_congruence :
+Theorem STRONG_EQUIV_congruence:
     congruence STRONG_EQUIV
 Proof
     REWRITE_TAC [congruence, STRONG_EQUIV_equivalence]
  >> PROVE_TAC [STRONG_EQUIV_SUBST_CONTEXT]
 QED
 
-Theorem WEAK_EQUIV_congruence :
+Theorem WEAK_EQUIV_congruence:
     congruence' WEAK_EQUIV
 Proof
     REWRITE_TAC [congruence', WEAK_EQUIV_equivalence]
  >> PROVE_TAC [WEAK_EQUIV_SUBST_GCONTEXT]
 QED
 
-Theorem OBS_CONGR_congruence :
+Theorem OBS_CONGR_congruence:
     congruence OBS_CONGR
 Proof
     REWRITE_TAC [congruence, OBS_CONGR_equivalence]
@@ -649,7 +649,7 @@ val CC_is_coarsest = store_thm (
     REWRITE_TAC [congruence, RSUBSET, CC_def]
  >> RW_TAC std_ss []);
 
-Theorem PCC_is_coarsest :
+Theorem PCC_is_coarsest:
     !R R'. precongruence R' /\ R' RSUBSET R ==> R' RSUBSET (CC R)
 Proof
     REWRITE_TAC [precongruence, RSUBSET, CC_def]
@@ -675,7 +675,7 @@ val [WG2, WG3, WG4, WG5, WG6, WG7] =
     map save_thm
         (combine (["WG2", "WG3", "WG4", "WG5", "WG6", "WG7"], CONJUNCTS WG_rules));
 
-Theorem WG1 :
+Theorem WG1:
     !a. WG (\t. prefix a t)
 Proof
     ASSUME_TAC CONTEXT1
@@ -684,7 +684,7 @@ Proof
  >> BETA_TAC >> art []
 QED
 
-Theorem NO_WG0 :
+Theorem NO_WG0:
     ~WG (\t. t)
 Proof
     ONCE_REWRITE_TAC [WG_cases] >> rpt STRIP_TAC (* 6 subgoals *)
@@ -695,7 +695,7 @@ Proof
  >> fs [CCS_distinct']
 QED
 
-Theorem WG_CONST :
+Theorem WG_CONST:
     !e. IS_CONST e ==> WG e
 Proof
     rw [IS_CONST_def]
@@ -703,7 +703,7 @@ Proof
  >> POP_ORW >> rw [WG2]
 QED
 
-Theorem NO_WG8 :
+Theorem NO_WG8:
     !e X. ~IS_CONST e ==> ~WG (\t. rec X (e t))
 Proof
     rpt GEN_TAC >> ONCE_REWRITE_TAC [WG_cases]
@@ -715,13 +715,13 @@ Proof
  >> Cases_on ‘X = Y’ >> fs [rec_eq_thm]
 QED
 
-Theorem WG8_IMP_CONST :
+Theorem WG8_IMP_CONST:
     !e X. WG (\t. rec X (e t)) ==> IS_CONST e
 Proof
     METIS_TAC [NO_WG8]
 QED
 
-Theorem WG3_backward :
+Theorem WG3_backward:
     !e u. WG (\t. prefix u (e t)) ==> CONTEXT e
 Proof
     rpt GEN_TAC
@@ -735,7 +735,7 @@ Proof
       METIS_TAC [] ]
 QED
 
-Theorem WG4_backward :
+Theorem WG4_backward:
     !e e'. WG (\t. sum (e t) (e' t)) ==> WG e /\ WG e'
 Proof
     rpt STRIP_TAC
@@ -759,7 +759,7 @@ Proof
         METIS_TAC [] ] ]
 QED
 
-Theorem WG5_backward :
+Theorem WG5_backward:
     !e e'. WG (\t. par (e t) (e' t)) ==> WG e /\ WG e'
 Proof
     rpt STRIP_TAC
@@ -783,7 +783,7 @@ Proof
         METIS_TAC [] ] ]
 QED
 
-Theorem WG6_backward :
+Theorem WG6_backward:
     !e L. WG (\t. restr L (e t)) ==> WG e
 Proof
     rpt STRIP_TAC
@@ -796,7 +796,7 @@ Proof
       METIS_TAC [] ]
 QED
 
-Theorem WG7_backward :
+Theorem WG7_backward:
     !e rf. WG (\t. relab (e t) rf) ==> WG e
 Proof
     rpt STRIP_TAC
@@ -809,7 +809,7 @@ Proof
       METIS_TAC [] ]
 QED
 
-Theorem WG8_backward :
+Theorem WG8_backward:
     !e X. WG (\t. rec X (e t)) ==> WG e
 Proof
     rpt STRIP_TAC
@@ -819,7 +819,7 @@ Proof
 QED
 
 (* Weakly guarded expressions are also expressions *)
-Theorem WG_IMP_CONTEXT :
+Theorem WG_IMP_CONTEXT:
     !e. WG e ==> CONTEXT e
 Proof
     HO_MATCH_MP_TAC WG_ind
@@ -832,7 +832,7 @@ Proof
       MATCH_MP_TAC CONTEXT7 >> art [] ]
 QED
 
-Theorem CONTEXT_WG_combin :
+Theorem CONTEXT_WG_combin:
     !c e. CONTEXT c /\ WG e ==> WG (c o e)
 Proof
     rpt STRIP_TAC
@@ -888,7 +888,7 @@ val [SG1, SG2, SG3, SG4, SG5, SG6, SG7] =
         (combine (["SG1", "SG2", "SG3", "SG4", "SG5", "SG6", "SG7"],
                   CONJUNCTS SG_rules));
 
-Theorem SG_CONST :
+Theorem SG_CONST:
     !e. IS_CONST e ==> SG e
 Proof
     rw [IS_CONST_def]
@@ -923,7 +923,7 @@ val SG_IMP_WG = store_thm (
       MATCH_MP_TAC WG7 >> art [] ]);
 
 (* an important backward property of SG *)
-Theorem SG3_backward :
+Theorem SG3_backward:
     !e. SG (\t. prefix tau (e t)) ==> SG e
 Proof
     rpt STRIP_TAC
@@ -964,7 +964,7 @@ Proof
 QED
 
 (* another important backward property of SG *)
-Theorem SG4_backward :
+Theorem SG4_backward:
     !e e'. SG (\t. sum (e t) (e' t)) ==> SG e /\ SG e'
 Proof
     rpt STRIP_TAC \\ (* 2 sub-goals here, same tacticals *)
@@ -1005,7 +1005,7 @@ Proof
       PROVE_TAC [CCS_distinct'] ] )
 QED
 
-Theorem SG10 :
+Theorem SG10:
     !e e'. SG (\t. sum (prefix tau (e t)) (prefix tau (e' t))) ==> SG e /\ SG e'
 Proof
     rpt STRIP_TAC
@@ -1095,7 +1095,7 @@ Proof
         PROVE_TAC [CCS_distinct'] ] ]
 QED
 
-Theorem SG11 :
+Theorem SG11:
     !e e' L. SG (\t. sum (prefix tau (e t)) (prefix (label L) (e' t))) ==> SG e
 Proof
     rpt STRIP_TAC
@@ -1214,7 +1214,7 @@ val SEQ3a = store_thm ("SEQ3a",
  >> POP_ASSUM MP_TAC
  >> BETA_TAC >> REWRITE_TAC []);
 
-Theorem SEQ_IMP_CONTEXT :
+Theorem SEQ_IMP_CONTEXT:
     !e. SEQ e ==> CONTEXT e
 Proof
     HO_MATCH_MP_TAC SEQ_ind
@@ -1277,7 +1277,7 @@ val GSEQ3a = store_thm ("GSEQ3a",
  >> POP_ASSUM MP_TAC
  >> BETA_TAC >> REWRITE_TAC []);
 
-Theorem GSEQ_CONST :
+Theorem GSEQ_CONST:
     !e. IS_CONST e ==> GSEQ e
 Proof
     RW_TAC std_ss [IS_CONST_def]
@@ -1285,7 +1285,7 @@ Proof
  >> Rewr' >> REWRITE_TAC [GSEQ2]
 QED
 
-Theorem GSEQ_IMP_CONTEXT :
+Theorem GSEQ_IMP_CONTEXT:
     !e. GSEQ e ==> CONTEXT e
 Proof
     HO_MATCH_MP_TAC GSEQ_ind
@@ -1334,7 +1334,7 @@ val WEAK_EQUIV_SUBST_GSEQ = store_thm (
    this induction theorem than defining another combined inductive relation SG_SEQ and
    prove SG /\ SEQ = SQ_SEQ, which is a combinatorial explosion of cases.
  *)
-Theorem SG_SEQ_strong_induction :
+Theorem SG_SEQ_strong_induction:
     !R. (!p. R (\t. p)) /\
         (!(l :'a Label) e. SEQ e ==> R (\t. prefix (label l) (e t))) /\
         (!(a :'a Action) e. SG e /\ SEQ e /\ R e ==> R (\t. prefix a (e t))) /\
@@ -1377,7 +1377,7 @@ Proof
       MATCH_MP_TAC SG4_backward >> art [] ]
 QED
 
-Theorem SG_GSEQ_strong_induction :
+Theorem SG_GSEQ_strong_induction:
     !R. (!p. R (\t. p)) /\
         (!(l :'a Label) e. GSEQ e ==> R (\t. prefix (label l) (e t))) /\
         (!(a :'a Action) e. SG e /\ GSEQ e /\ R e ==> R (\t. prefix a (e t))) /\
@@ -1445,7 +1445,7 @@ Proof
         ASM_REWRITE_TAC [] ] ]
 QED
 
-Theorem SG_SEQ_combin :
+Theorem SG_SEQ_combin:
     !E. SG E /\ SEQ E ==> !H. SEQ H ==> (SG (H o E) /\ SEQ (H o E))
 Proof
     HO_MATCH_MP_TAC SG_SEQ_strong_induction
@@ -1541,7 +1541,7 @@ Proof
       BETA_TAC >> REWRITE_TAC [] ]
 QED
 
-Theorem SG_GSEQ_combin :
+Theorem SG_GSEQ_combin:
     !E. SG E /\ GSEQ E ==> !H. GSEQ H ==> (SG (H o E) /\ GSEQ (H o E))
 Proof
     HO_MATCH_MP_TAC SG_GSEQ_strong_induction
@@ -1803,7 +1803,7 @@ val [WGS2, WGS3, WGS4, WGS5, WGS6, WGS7] =
         (combine (["WGS2", "WGS3", "WGS4", "WGS5", "WGS6", "WGS7"],
                   CONJUNCTS WGS_rules));
 
-Theorem WGS_CONST :
+Theorem WGS_CONST:
     !e. IS_CONST e ==> WGS e
 Proof
     RW_TAC std_ss [IS_CONST_def]
@@ -1837,7 +1837,7 @@ val WGS_IMP_CONTEXT = store_thm (
  >> MATCH_MP_TAC GCONTEXT_IMP_CONTEXT
  >> IMP_RES_TAC WGS_IMP_GCONTEXT);
 
-Theorem GCONTEXT_WGS_combin :
+Theorem GCONTEXT_WGS_combin:
     !c e. GCONTEXT c /\ WGS e ==> WGS (c o e)
 Proof
     rpt STRIP_TAC

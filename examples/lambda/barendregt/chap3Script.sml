@@ -130,7 +130,7 @@ val cc_beta_FV_SUBSET = store_thm(
   HO_MATCH_MP_TAC ccbeta_ind THEN Q.EXISTS_TAC `{}` THEN
   SRW_TAC [][SUBSET_DEF, FV_SUB] THEN PROVE_TAC []);
 
-Theorem betastar_FV_SUBSET :
+Theorem betastar_FV_SUBSET:
     !M N. M -b->* N ==> FV N SUBSET FV M
 Proof
     HO_MATCH_MP_TAC RTC_INDUCT >> rw []
@@ -199,7 +199,7 @@ val ccbeta_rwt = store_thm(
     FULL_SIMP_TAC (srw_ss()) []
   ]);
 
-Theorem ccbeta_LAMl_rwt :
+Theorem ccbeta_LAMl_rwt:
     !vs M N. LAMl vs M -b-> N <=> ?M'. N = LAMl vs M' /\ M -b-> M'
 Proof
     Induct_on ‘vs’
@@ -608,7 +608,7 @@ QED
    NOTE: This is the short proof due to Tait and Martin-Löf.
    cf. chap11_1Theory.beta_CR_2 and finite_developmentsTheory.corollary11_2_29.
  *)
-Theorem beta_CR :
+Theorem beta_CR:
     CR beta
 Proof
   PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]
@@ -649,7 +649,7 @@ Proof
  >> Q.EXISTS_TAC ‘N'’ >> rw []
 QED
 
-Theorem Omega_app_starloops :
+Theorem Omega_app_starloops:
     Omega @@ A -β->* N ⇒ ∃A'. N = Omega @@ A'
 Proof
     Suff ‘!M N. M -b->* N ==> !A. M = Omega @@ A ==> ?A'. N = Omega @@ A'’
@@ -674,7 +674,7 @@ Proof
  >> Q.EXISTS_TAC ‘SNOC N' Ms’ >> rw []
 QED
 
-Theorem Omega_appstar_starloops :
+Theorem Omega_appstar_starloops:
     Omega @* Ms -b->* N ==> ?Ms'. N = Omega @* Ms'
 Proof
     Suff ‘!M N. M -b->* N ==> !Ms. M = Omega @* Ms ==> ?Ms'. N = Omega @* Ms'’
@@ -732,7 +732,7 @@ val betastar_lameq_bnf = store_thm(
              lameq_betaconversion]);
 
 (* moved here from churchnumScript.sml *)
-Theorem lameq_triangle :
+Theorem lameq_triangle:
     M == N ∧ M == P ∧ bnf N ∧ bnf P ⇒ (N = P)
 Proof
   METIS_TAC [betastar_lameq_bnf, lameq_rules, bnf_reduction_to_self]
@@ -743,7 +743,7 @@ Theorem grandbeta_imp_betastar =
     (REWRITE_RULE [theorem3_17] (Q.ISPEC ‘grandbeta’ TC_SUBSET))
  |> (Q.SPECL [‘M’, ‘N’]) |> (Q.GENL [‘M’, ‘N’])
 
-Theorem grandbeta_imp_lameq :
+Theorem grandbeta_imp_lameq:
     !M N. M =b=> N ==> M == N
 Proof
     rpt STRIP_TAC
@@ -754,7 +754,7 @@ QED
 (* |- !R x y z. R^+ x y /\ R^+ y z ==> R^+ x z *)
 Theorem TC_TRANS[local] = REWRITE_RULE [transitive_def] TC_TRANSITIVE
 
-Theorem abs_betastar :
+Theorem abs_betastar:
     !x M Z. LAM x M -b->* Z <=> ?N'. (Z = LAM x N') /\ M -b->* N'
 Proof
     rpt GEN_TAC
@@ -1621,7 +1621,7 @@ Theorem betastar_TRANS =
         RTC_TRANSITIVE |> Q.ISPEC ‘compat_closure beta’
                        |> REWRITE_RULE [transitive_def]
 
-Theorem lameq_imp_lameta :
+Theorem lameq_imp_lameta:
     !M N. M == N ==> lameta M N
 Proof
     rw [GSYM beta_eta_lameta]
@@ -1633,7 +1633,7 @@ Proof
  >> rw [GSYM lameq_betaconversion]
 QED
 
-Theorem etaconversion_imp_lameta :
+Theorem etaconversion_imp_lameta:
     !M N. conversion eta M N ==> lameta M N
 Proof
     rw [GSYM beta_eta_lameta]
@@ -1643,7 +1643,7 @@ Proof
  >> rw [RSUBSET]
 QED
 
-Theorem lameta_asmlam :
+Theorem lameta_asmlam:
     !M N. lameta M N <=> asmlam (UNCURRY eta) M N
 Proof
     rpt GEN_TAC

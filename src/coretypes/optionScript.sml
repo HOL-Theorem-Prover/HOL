@@ -242,7 +242,7 @@ Proof
   THEN ASM_REWRITE_TAC option_rws
 QED
 
-Theorem IS_SOME_EQ_NOT_NONE :
+Theorem IS_SOME_EQ_NOT_NONE:
   !x. IS_SOME x <=> x <> NONE
 Proof
   REWRITE_TAC [GSYM NOT_IS_SOME_EQ_NONE]

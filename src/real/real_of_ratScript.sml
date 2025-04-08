@@ -349,11 +349,11 @@ QED
 (*    (was in util_probTheory and then in real_sigmaTheory)                  *)
 (* ========================================================================= *)
 
-Definition Q_SET :
+Definition Q_SET:
     real_rat_set = IMAGE real_of_rat UNIV
 End
 
-Theorem real_rat_set :
+Theorem real_rat_set:
     real_rat_set = {r | ?q. r = real_of_rat q}
 Proof
     rw [Q_SET, Once EXTENSION]
@@ -365,7 +365,7 @@ Overload q_set = “real_rat_set”
 val _ = Unicode.unicode_version {u = UTF8.chr 0x211A, tmnm = "q_set"};
 val _ = TeX_notation {hol = "q_set", TeX = ("\\ensuremath{\\mathbb{Q}}", 1)};
 
-Theorem q_set_def :
+Theorem q_set_def:
     q_set = {x:real | ?a b. (x = (&a/(&b))) /\ (0:real < &b)} UNION
             {x:real | ?a b. (x = -(&a/(&b))) /\ (0:real < &b)}
 Proof
@@ -411,7 +411,7 @@ QED
 
 Theorem real_rat_set_def = q_set_def
 
-Theorem QSET_COUNTABLE :
+Theorem QSET_COUNTABLE:
     countable q_set
 Proof
   RW_TAC std_ss [q_set_def] THEN
@@ -441,7 +441,7 @@ QED
 
 Theorem countable_real_rat_set = QSET_COUNTABLE
 
-Theorem NUM_IN_QSET :
+Theorem NUM_IN_QSET:
     !n. &n IN q_set /\ -&n IN q_set
 Proof
     rw [real_rat_set]
@@ -450,7 +450,7 @@ Proof
  >> rw [Once EQ_SYM_EQ, REAL_OF_RAT_NUM_CLAUSES]
 QED
 
-Theorem OPP_IN_QSET :
+Theorem OPP_IN_QSET:
     !x. x IN q_set ==> -x IN q_set
 Proof
     rw [real_rat_set]
@@ -458,7 +458,7 @@ Proof
  >> rw [REAL_OF_RAT_NEG]
 QED
 
-Theorem INV_IN_QSET :
+Theorem INV_IN_QSET:
     !x. x IN q_set /\ x <> 0 ==> 1/x IN q_set
 Proof
     rw [real_rat_set]
@@ -468,7 +468,7 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem ADD_IN_QSET :
+Theorem ADD_IN_QSET:
     !x y. x IN q_set /\ y IN q_set ==> x + y IN q_set
 Proof
     rw [real_rat_set]
@@ -476,7 +476,7 @@ Proof
  >> rw [REAL_OF_RAT_ADD]
 QED
 
-Theorem SUB_IN_QSET :
+Theorem SUB_IN_QSET:
     !x y. x IN q_set /\ y IN q_set ==> x - y IN q_set
 Proof
     rw [real_rat_set]
@@ -484,7 +484,7 @@ Proof
  >> rw [REAL_OF_RAT_SUB]
 QED
 
-Theorem MUL_IN_QSET :
+Theorem MUL_IN_QSET:
     !x y. x IN q_set /\ y IN q_set ==> x * y IN q_set
 Proof
     rw [real_rat_set]
@@ -492,7 +492,7 @@ Proof
  >> rw [REAL_OF_RAT_MUL]
 QED
 
-Theorem DIV_IN_QSET :
+Theorem DIV_IN_QSET:
     !x y. x IN q_set /\ y IN q_set /\ y <> 0 ==> x / y IN q_set
 Proof
     rw [real_rat_set]
@@ -501,7 +501,7 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem Q_DENSE_IN_REAL :
+Theorem Q_DENSE_IN_REAL:
     !x y. x < y ==> ?r. r IN q_set /\ x < r /\ r < y
 Proof
     rw [real_rat_set]
@@ -510,7 +510,7 @@ Proof
  >> Q.EXISTS_TAC ‘q’ >> rw []
 QED
 
-Theorem Q_DENSE_IN_REAL_LEMMA :
+Theorem Q_DENSE_IN_REAL_LEMMA:
     !x y. 0 <= x /\ x < y ==> ?r. r IN q_set /\ x < r /\ r < y
 Proof
     rpt STRIP_TAC

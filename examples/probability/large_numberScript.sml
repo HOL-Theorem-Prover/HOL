@@ -63,7 +63,7 @@ Overload clg = “realax$NUM_CEILING”
 
    NOTE: changed ‘Z’ such that Z(0) = X(0), Z(1) = X(0) + X(1), ...
  *)
-Definition LLN_def :
+Definition LLN_def:
     LLN p X convergence_mode =
     let Z n x = SIGMA (\i. X i x) (count1 n) in
       ((\n x. (Z n x - expectation p (Z n)) / &SUC n) --> (\x. 0))
@@ -80,17 +80,17 @@ Overload WLLN = “\p X. LLN p X in_probability”
     In order to drop any assumption on the second moment, we need a new device,
     that of 'equivalent sequences', due to Khintchine (1894-1959)." [2, p.113]
  *)
-Definition equivalent_def :
+Definition equivalent_def:
     equivalent p (X :num -> 'a -> extreal) Y =
       (suminf (\n. prob p {x | x IN p_space p /\ X n x <> Y n x}) < PosInf)
 End
 
-Definition truncated_def :
+Definition truncated_def:
     truncated (X :num -> 'a -> extreal) =
       \n x. if &SUC n <= abs (X n x) then 0 else X n x
 End
 
-Definition pow_seq_def :
+Definition pow_seq_def:
     pow_seq a n = flr (a pow n)
 End
 
@@ -98,7 +98,7 @@ End
 (*  Theorems                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem real_random_variable_LLN_general :
+Theorem real_random_variable_LLN_general:
     !p X Z b. prob_space p /\
              (!n. real_random_variable (X n) p) /\ (!n. integrable p (X n)) /\
              (!n x. x IN p_space p ==> Z n x = SIGMA (\i. X i x) (count n)) /\
@@ -179,7 +179,7 @@ Proof
       MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST' >> art [] ]
 QED
 
-Theorem real_random_variable_LLN :
+Theorem real_random_variable_LLN:
     !p X Z. prob_space p /\
            (!n. real_random_variable (X n) p) /\
            (!n. integrable p (X n)) /\
@@ -270,7 +270,7 @@ QED
 
    (uncorrelated random sequence with a common bound of variances)
  *)
-Theorem WLLN_uncorrelated_L2 :
+Theorem WLLN_uncorrelated_L2:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
          (!i j. i <> j ==> uncorrelated p (X i) (X j)) /\
          (?c. c <> PosInf /\ !n. variance p (X n) <= c) ==>
@@ -465,7 +465,7 @@ QED
    we need to show that `(S (SUC n) x - M (SUC n)) / &SUC n` is indeed
    a (real-valued) random variable.
  *)
-Theorem WLLN_uncorrelated :
+Theorem WLLN_uncorrelated:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
          (!i j. i <> j ==> uncorrelated p (X i) (X j)) /\
          (?c. c <> PosInf /\ !n. variance p (X n) <= c) ==>
@@ -592,7 +592,7 @@ Proof
                           FINITE_COUNT]
 QED
 
-Theorem SLLN_uncorrelated :
+Theorem SLLN_uncorrelated:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
          (!i j. i <> j ==> uncorrelated p (X i) (X j)) /\
          (?c. c <> PosInf /\ !n. variance p (X n) <= c) ==>
@@ -1744,7 +1744,7 @@ QED
 (*  The Weak Law of Large Numbers for IID random variables                   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem equivalent_comm :
+Theorem equivalent_comm:
     !X Y. equivalent p (X :num -> 'a -> extreal) Y <=> equivalent p Y X
 Proof
     rw [equivalent_def]
@@ -1754,7 +1754,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem equivalent_events :
+Theorem equivalent_events:
     !p X Y. prob_space p /\
             (!n. real_random_variable (X n) p) /\
             (!n. real_random_variable (Y n) p) ==>
@@ -1786,7 +1786,7 @@ Proof
                           random_variable_def, p_space_def, events_def]
 QED
 
-Theorem equivalent_lemma :
+Theorem equivalent_lemma:
     !p X Y. prob_space p /\ equivalent p X Y /\
             (!n. real_random_variable (X n) p) /\
             (!n. real_random_variable (Y n) p) ==>
@@ -1816,7 +1816,7 @@ Proof
 QED
 
 (* Theorem 5.2.1 (1) [2, p.113] (not used anywhere) *)
-Theorem equivalent_thm1 :
+Theorem equivalent_thm1:
     !p X Y. prob_space p /\ equivalent p X Y /\
            (!n. real_random_variable (X n) p) /\
            (!n. real_random_variable (Y n) p) ==>
@@ -1978,7 +1978,7 @@ Proof
  >> rw []
 QED
 
-Theorem mono_increasing_passing_zero :
+Theorem mono_increasing_passing_zero:
    !a. mono_increasing a /\ sup (IMAGE a UNIV) = PosInf ==> ?n. 0 < a n
 Proof
     rw [ext_mono_increasing_def]
@@ -2153,7 +2153,7 @@ Proof
 QED
 
 (* Theorem 5.2.1 (2) [2, p.113], the original version *)
-Theorem equivalent_thm2 :
+Theorem equivalent_thm2:
     !a p X Y. prob_space p /\ equivalent p X Y /\
              (!n. real_random_variable (X n) p) /\
              (!n. real_random_variable (Y n) p) /\
@@ -2169,7 +2169,7 @@ Proof
 QED
 
 (* Corollary of Theorem 5.2.1 [2, p.113] *)
-Theorem equivalent_thm3 :
+Theorem equivalent_thm3:
     !a p X Y Z. prob_space p /\ equivalent p X Y /\
                (!n. real_random_variable (X n) p) /\
                (!n. real_random_variable (Y n) p) /\
@@ -2341,7 +2341,7 @@ Proof
       Q.EXISTS_TAC ‘n’ >> REWRITE_TAC [] ]
 QED
 
-Theorem equivalent_thm4 :
+Theorem equivalent_thm4:
     !p X Y Z a b. prob_space p /\ equivalent p X Y /\
                  (!n. real_random_variable (X n) p) /\
                  (!n. real_random_variable (Y n) p) /\
@@ -2489,7 +2489,7 @@ Proof
 QED
 
 (* This lemma will eliminate ‘LLN’ in WLLN_IID *)
-Theorem LLN_alt_converge_PR_IID :
+Theorem LLN_alt_converge_PR_IID:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
          (LLN p X in_probability <=>
@@ -2589,7 +2589,7 @@ Proof
  >> rw [extreal_of_num_def, extreal_not_infty, extreal_lt_eq]
 QED
 
-Theorem LLN_alt_converge_AE_IID :
+Theorem LLN_alt_converge_AE_IID:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
          (LLN p X almost_everywhere <=>
@@ -2690,7 +2690,7 @@ Proof
                     extreal_mul_def, real_normal]
 QED
 
-Theorem IN_MEASURABLE_BOREL_BOREL_truncated :
+Theorem IN_MEASURABLE_BOREL_BOREL_truncated:
     !c. (\x. if c <= abs x then 0 else x) IN measurable Borel Borel
 Proof
     RW_TAC std_ss [IN_MEASURABLE, SIGMA_ALGEBRA_BOREL, SPACE_BOREL,
@@ -2764,7 +2764,7 @@ Proof
 QED
 
 (* alternative definition of ‘truncated’ from [3, p.62] *)
-Theorem truncated_alt :
+Theorem truncated_alt:
     !p X n x. prob_space p /\ random_variable (X n) p Borel /\ x IN p_space p ==>
              (truncated X n x =
               X n x * indicator_fn {x | x IN p_space p /\ abs (X n x) < &SUC n} x)
@@ -2773,13 +2773,13 @@ Proof
                    mul_rone, mul_rzero]
 QED
 
-Theorem truncated_le_abs :
+Theorem truncated_le_abs:
     !X n x. abs (truncated X n x) <= abs (X n x)
 Proof
     rw [truncated_def, abs_0, abs_pos]
 QED
 
-Theorem random_variable_truncated :
+Theorem random_variable_truncated:
     !p X n. prob_space p /\ random_variable (X n) p Borel ==>
             random_variable (truncated X n) p Borel
 Proof
@@ -2792,7 +2792,7 @@ Proof
  >> MATCH_MP_TAC random_variable_comp >> art []
 QED
 
-Theorem real_random_variable_truncated :
+Theorem real_random_variable_truncated:
     !p X n. prob_space p /\ real_random_variable (X n) p ==>
             real_random_variable (truncated X n) p
 Proof
@@ -2811,7 +2811,7 @@ Proof
  >> MATCH_MP_TAC random_variable_truncated >> art []
 QED
 
-Theorem integrable_truncated :
+Theorem integrable_truncated:
     !p X n. prob_space p /\ random_variable (X n) p Borel /\ integrable p (X n) ==>
             integrable p (truncated X n)
 Proof
@@ -2825,7 +2825,7 @@ Proof
 QED
 
 (* this theorem requires lebesgue_dominated_convergence *)
-Theorem truncated_vars_expectation :
+Theorem truncated_vars_expectation:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
          ((\n. real (expectation p (truncated X n))) -->
@@ -3120,7 +3120,7 @@ val LLN_IID_shared_tactics =
  - truncated_vars_expectation' (truncated_vars_expectation,
        which depends on lebesgue_dominated_convergence)      [martingaleTheory]
  *)
-Theorem WLLN_IID :
+Theorem WLLN_IID:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           pairwise_indep_vars p X (\n. Borel) UNIV /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0)
@@ -4182,7 +4182,7 @@ Theorem WLLN_IID_applied = SIMP_RULE std_ss [LLN_alt_converge_PR_IID] WLLN_IID
 (*  The Strong Law of Large Numbers for IID random variables                 *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem pow_seq_pos_lt :
+Theorem pow_seq_pos_lt:
     !a n. 1 < a ==> 0 < pow_seq a n
 Proof
     RW_TAC std_ss [pow_seq_def]
@@ -4197,7 +4197,7 @@ Proof
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> art []
 QED
 
-Theorem pow_seq_lower_bound :
+Theorem pow_seq_lower_bound:
     !a n. 1 < a ==> a pow n / 2 < &pow_seq a n
 Proof
     RW_TAC std_ss [pow_seq_def]
@@ -4206,7 +4206,7 @@ Proof
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> art []
 QED
 
-Theorem pow_seq_unbounded :
+Theorem pow_seq_unbounded:
     !a (x :real). 1 < a ==> ?n. x < &pow_seq a (SUC n)
 Proof
     rpt STRIP_TAC
@@ -4237,7 +4237,7 @@ Proof
  >> MATCH_MP_TAC REAL_POW_LE_1 >> art []
 QED
 
-Theorem pow_seq_monotone :
+Theorem pow_seq_monotone:
     !a i j. 1 < a /\ i <= j ==> pow_seq a i <= pow_seq a j
 Proof
     RW_TAC std_ss [pow_seq_def]
@@ -4250,7 +4250,7 @@ Proof
  >> RW_TAC arith_ss []
 QED
 
-Theorem pow_seq_complete :
+Theorem pow_seq_complete:
     !a k. 1 < a /\ 0 < k ==> ?n. pow_seq a n <= k /\ k <= pow_seq a (SUC n)
 Proof
     rpt STRIP_TAC
@@ -4269,7 +4269,7 @@ Proof
  >> ‘0 < n’ by DECIDE_TAC >> fs [SUC_PRE]
 QED
 
-Theorem pow_seq_limit :
+Theorem pow_seq_limit:
     !a. 1 < a ==> ((\n. &pow_seq a (SUC n) / &pow_seq a n) --> a) sequentially
 Proof
     rpt STRIP_TAC
@@ -4405,7 +4405,7 @@ QED
    while after this part a non-trivial fix is done by Chun Tian at mathematical levels.
    (see SLLN_IID_wlog for more details.)
  *)
-Theorem SLLN_IID_lemma :
+Theorem SLLN_IID_lemma:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           pairwise_indep_vars p X (\n. Borel) UNIV /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
@@ -5889,7 +5889,7 @@ Theorem SLLN_IID_wlog'[local] =
    The proof depends on SLLN_IID_wlog and follows the first sentence of the proof of
    Theorem 22.1 [6, p.282]: "If the theorem holds for nonnegative random variables, ..."
  *)
-Theorem SLLN_IID :
+Theorem SLLN_IID:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           pairwise_indep_vars p X (\n. Borel) UNIV /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0)
@@ -6036,7 +6036,7 @@ Theorem SLLN_IID_applied = SIMP_RULE std_ss [LLN_alt_converge_AE_IID] SLLN_IID
    Borel-Cantelli Lemma (Part 2), which also has a version for pairwise independence
   (Borel_Cantelli_Lemma2p).
  *)
-Theorem SLLN_IID_diverge :
+Theorem SLLN_IID_diverge:
     !p X. prob_space p /\ (!n. real_random_variable (X n) p) /\
           pairwise_indep_vars p X (\n. Borel) UNIV /\
           identical_distribution p X Borel UNIV /\

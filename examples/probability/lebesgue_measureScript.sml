@@ -37,7 +37,7 @@ fun METIS ths tm = prove(tm, METIS_TAC ths);
 (*  Lebesgue sigma-algebra with the household Lebesgue measure (lebesgue)    *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem absolutely_integrable_on_indicator :
+Theorem absolutely_integrable_on_indicator:
     !A X. indicator A absolutely_integrable_on X <=>
           indicator A integrable_on X
 Proof
@@ -48,7 +48,7 @@ Proof
  >> RW_TAC real_ss [indicator]
 QED
 
-Theorem has_integral_indicator_UNIV :
+Theorem has_integral_indicator_UNIV:
     !s A x. (indicator (s INTER A) has_integral x) UNIV =
             (indicator s has_integral x) A
 Proof
@@ -72,7 +72,7 @@ val integrable_indicator_UNIV = store_thm ("integrable_indicator_UNIV",
   RW_TAC std_ss [integrable_on] THEN AP_TERM_TAC THEN
   ABS_TAC THEN METIS_TAC [has_integral_indicator_UNIV]);
 
-Theorem integral_one : (* was: MEASURE_HOLLIGHT_EQ_ISABELLE *)
+Theorem integral_one: (* was: MEASURE_HOLLIGHT_EQ_ISABELLE *)
     !A. integral A (\x. 1) = integral univ(:real) (indicator A)
 Proof
     ONCE_REWRITE_TAC [METIS [SET_RULE ``A = A INTER A``]
@@ -84,7 +84,7 @@ QED
 
 val indicator_fn_pos_le = INDICATOR_FN_POS;
 
-Theorem has_integral_interval_cube :
+Theorem has_integral_interval_cube:
     !a b n. (indicator (interval [a,b]) has_integral
                content (interval [a,b] INTER (line n))) (line n)
 Proof
@@ -101,19 +101,19 @@ QED
 
    Named after Henri Lebesgue (1875-1941), a French mathematician [5]
  *)
-Definition lebesgue_def :
+Definition lebesgue_def:
   lebesgue = (univ(:real),
               {A | !n. (indicator A) integrable_on (line n)},
               (\A. sup {Normal (integral (line n) (indicator A)) | n IN UNIV}))
 End
 
-Theorem space_lebesgue :
+Theorem space_lebesgue:
     m_space lebesgue = univ(:real)
 Proof
     SIMP_TAC std_ss [lebesgue_def, m_space_def]
 QED
 
-Theorem in_sets_lebesgue : (* was: lebesgueI *)
+Theorem in_sets_lebesgue: (* was: lebesgueI *)
     !A. (!n. indicator A integrable_on line n) ==> A IN measurable_sets lebesgue
 Proof
     SIMP_TAC std_ss [lebesgue_def, measurable_sets_def] THEN SET_TAC []
@@ -121,7 +121,7 @@ QED
 
 val lebesgueI = in_sets_lebesgue;
 
-Theorem limseq_indicator_BIGUNION : (* was: LIMSEQ_indicator_UN *)
+Theorem limseq_indicator_BIGUNION: (* was: LIMSEQ_indicator_UN *)
     !A x. ((\k. indicator (BIGUNION {(A:num->real->bool) i | i < k}) x) -->
            (indicator (BIGUNION {A i | i IN UNIV}) x)) sequentially
 Proof
@@ -148,7 +148,7 @@ QED
 
 val LIMSEQ_indicator_UN = limseq_indicator_BIGUNION;
 
-Theorem sigma_algebra_lebesgue :
+Theorem sigma_algebra_lebesgue:
     sigma_algebra (UNIV, {A | !n. (indicator A) integrable_on (line n)})
 Proof
     RW_TAC std_ss [sigma_algebra_alt_pow]
@@ -213,13 +213,13 @@ Proof
       METIS_TAC [LIMSEQ_indicator_UN] ]
 QED
 
-Theorem sets_lebesgue :
+Theorem sets_lebesgue:
     measurable_sets lebesgue = {A | !n. (indicator A) integrable_on (line n)}
 Proof
     SIMP_TAC std_ss [lebesgue_def, measurable_sets_def]
 QED
 
-Theorem in_sets_lebesgue_imp : (* was: lebesgueD *)
+Theorem in_sets_lebesgue_imp: (* was: lebesgueD *)
     !A n. A IN measurable_sets lebesgue ==> indicator A integrable_on line n
 Proof
     SIMP_TAC std_ss [sets_lebesgue, GSPECIFICATION]
@@ -227,14 +227,14 @@ QED
 
 val lebesgueD = in_sets_lebesgue_imp;
 
-Theorem measure_lebesgue :
+Theorem measure_lebesgue:
     measure lebesgue =
       (\A. sup {Normal (integral (line n) (indicator A)) | n IN UNIV})
 Proof
     SIMP_TAC std_ss [measure_def, lebesgue_def]
 QED
 
-Theorem positive_lebesgue :
+Theorem positive_lebesgue:
     positive lebesgue
 Proof
   SIMP_TAC std_ss [lebesgue_def, positive_def, sets_lebesgue, measure_lebesgue] THEN
@@ -246,7 +246,7 @@ Proof
   SIMP_TAC std_ss [REAL_NEG_0, INTEGRAL_REFL]
 QED
 
-Theorem countably_additive_lebesgue :
+Theorem countably_additive_lebesgue:
     countably_additive lebesgue
 Proof
     RW_TAC std_ss [countably_additive_def]
@@ -383,7 +383,7 @@ Proof
   METIS_TAC [LIMSEQ_indicator_UN, IMAGE_DEF]
 QED
 
-Theorem measure_space_lebesgue :
+Theorem measure_space_lebesgue:
     measure_space lebesgue
 Proof
     SIMP_TAC std_ss [measure_space_def, positive_lebesgue]
@@ -391,7 +391,7 @@ Proof
  >> SIMP_TAC std_ss [countably_additive_lebesgue]
 QED
 
-Theorem borel_imp_lebesgue_sets : (* was: lebesgueI_borel *)
+Theorem borel_imp_lebesgue_sets: (* was: lebesgueI_borel *)
     !s. s IN subsets borel ==> s IN measurable_sets lebesgue
 Proof
     RW_TAC std_ss [borel_eq_ge_le]
@@ -420,14 +420,14 @@ val lebesgueI_borel = borel_imp_lebesgue_sets;
 (* TODO: prove this theorem with PSUBSET, i.e. the existence of non-Borel
    Lebesgue-measurable sets.
  *)
-Theorem lborel_subset_lebesgue :
+Theorem lborel_subset_lebesgue:
     (measurable_sets lborel) SUBSET (measurable_sets lebesgue)
 Proof
     RW_TAC std_ss [SUBSET_DEF, sets_lborel]
  >> MATCH_MP_TAC lebesgueI_borel >> art []
 QED
 
-Theorem borel_imp_lebesgue_measurable : (* was: borel_measurable_lebesgueI *)
+Theorem borel_imp_lebesgue_measurable: (* was: borel_measurable_lebesgueI *)
     !f. f IN borel_measurable (space borel, subsets borel) ==>
         f IN borel_measurable (m_space lebesgue, measurable_sets lebesgue)
 Proof
@@ -446,7 +446,7 @@ val borel_measurable_lebesgueI = borel_imp_lebesgue_measurable;
 Theorem borel_imp_lebesgue_measurable' =
     REWRITE_RULE [SPACE] borel_imp_lebesgue_measurable
 
-Theorem negligible_in_lebesgue : (* was: lebesgueI_negligible *)
+Theorem negligible_in_lebesgue: (* was: lebesgueI_negligible *)
     !s. negligible s ==> s IN measurable_sets lebesgue
 Proof
     RW_TAC std_ss [negligible]
@@ -456,7 +456,7 @@ QED
 
 val lebesgueI_negligible = negligible_in_lebesgue;
 
-Theorem lebesgue_of_negligible : (* was: lmeasure_eq_0 *)
+Theorem lebesgue_of_negligible: (* was: lmeasure_eq_0 *)
     !s. negligible s ==> (measure lebesgue s = 0)
 Proof
     RW_TAC std_ss [measure_lebesgue]
@@ -473,7 +473,7 @@ QED
 
 val lmeasure_eq_0 = lebesgue_of_negligible;
 
-Theorem lebesgue_measure_iff_LIMSEQ : (* was: lmeasure_iff_LIMSEQ *)
+Theorem lebesgue_measure_iff_LIMSEQ: (* was: lmeasure_iff_LIMSEQ *)
     !A m. A IN measurable_sets lebesgue /\ 0 <= m ==>
          ((measure lebesgue A = Normal m) <=>
           ((\n. integral (line n) (indicator A)) --> m) sequentially)
@@ -499,7 +499,7 @@ val lmeasure_iff_LIMSEQ = lebesgue_measure_iff_LIMSEQ;
 
    Most steps are from "lborel_eqI" (HVG's lebesgue_measure_hvgScript.sml).
  *)
-Theorem lebesgue_closed_interval :
+Theorem lebesgue_closed_interval:
     !a b. a <= b ==> (measure lebesgue (interval [a,b]) = Normal (b - a))
 Proof
     RW_TAC std_ss [lebesgue_def, measure_def, GSYM CONTENT_CLOSED_INTERVAL]
@@ -544,14 +544,14 @@ Theorem lebesgue_sing =
     (SIMP_RULE real_ss [REAL_LE_REFL, GSYM extreal_of_num_def, INTERVAL_SING]) o
     (Q.SPECL [`c`,`c`])) lebesgue_closed_interval;
 
-Theorem lebesgue_empty :
+Theorem lebesgue_empty:
     measure lebesgue {} = 0
 Proof
     MATCH_MP_TAC lebesgue_of_negligible
  >> REWRITE_TAC [NEGLIGIBLE_EMPTY]
 QED
 
-Theorem lebesgue_closed_interval_content :
+Theorem lebesgue_closed_interval_content:
     !a b. measure lebesgue (interval [a,b]) = Normal (content (interval [a,b]))
 Proof
     rpt STRIP_TAC
@@ -572,7 +572,7 @@ val lemma =
       (Q.SPEC `(space borel, subsets borel, measure lebesgue)` lambda_eq);
 
 (* final theorem (in this section): lborel and lebesgue coincide on borel *)
-Theorem lambda_eq_lebesgue :
+Theorem lambda_eq_lebesgue:
     !s. s IN subsets borel ==> lambda s = measure lebesgue s
 Proof
     MATCH_MP_TAC lemma
@@ -592,7 +592,7 @@ QED
 Theorem lebesgue_eq_lambda = GSYM lambda_eq_lebesgue;
 
 (* a sample application of "lebesgue_eq_lambda" *)
-Theorem lebesgue_open_interval :
+Theorem lebesgue_open_interval:
     !a b. a <= b ==> measure lebesgue (interval (a,b)) = Normal (b - a)
 Proof
     rpt STRIP_TAC

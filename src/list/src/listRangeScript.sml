@@ -1100,19 +1100,19 @@ val listRangeLHI_has_divisors = store_thm(
 (*  isPREFIX-related theorems (by Chun Tian)                                 *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem isPREFIX_listRangeLHI :
+Theorem isPREFIX_listRangeLHI:
     !m n m' n'. m = m' /\ n <= n' ==> [m ..< n] <<= [m' ..< n']
 Proof
     rw [listRangeLHI_def, isPREFIX_GENLIST]
 QED
 
-Theorem isPREFIX_listRangeINC :
+Theorem isPREFIX_listRangeINC:
     !m n m' n'. m = m' /\ n <= n' ==> [m .. n] <<= [m' .. n']
 Proof
     rw [listRangeINC_def, isPREFIX_GENLIST]
 QED
 
-Theorem listRangeLHI_11 :
+Theorem listRangeLHI_11:
     !m n m' n'. m < n /\ m' < n' ==>
                ([m ..< n] = [m' ..< n'] <=> m = m' /\ n = n')
 Proof
@@ -1126,7 +1126,7 @@ Proof
  >> POP_ASSUM (MP_TAC o Q.SPEC ‘0’)
  >> rw []
 QED
-Theorem listRangeINC_11 :
+Theorem listRangeINC_11:
     !m n m' n'. m <= n /\ m' <= n' ==>
                ([m .. n] = [m' .. n'] <=> m = m' /\ n = n')
 Proof
@@ -1137,7 +1137,7 @@ Proof
  >> rw []
 QED
 
-Theorem isPREFIX_listRangeLHI_EQ :
+Theorem isPREFIX_listRangeLHI_EQ:
     !m n m' n'. m < n /\ m' < n' ==>
                ([m ..< n] <<= [m' ..< n'] <=> m = m' /\ n <= n')
 Proof
@@ -1158,7 +1158,7 @@ Proof
  >> rw []
 QED
 
-Theorem isPREFIX_listRangeINC_EQ :
+Theorem isPREFIX_listRangeINC_EQ:
     !m n m' n'. m <= n /\ m' <= n' ==>
                ([m .. n] <<= [m' .. n'] <=> m = m' /\ n <= n')
 Proof

@@ -4,7 +4,7 @@ sig
 include Abbrev;
 
 (*Contains theorems that state that the universe of
-  some type is infinite. This theorem for :num is
+  some type is infinite. This Theorem for:num is
   added automatically. If you are interested to
   use ds_inference_UNROLL_COLLAPSE with other types
   as values, a theorem should be added to this list.*)

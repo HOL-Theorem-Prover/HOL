@@ -30,7 +30,7 @@ val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
 val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
 val FINITE_SUBSET = SUBSET_FINITE_I; (* pred_setTheory *)
 
-Theorem REAL_LT_BETWEEN :
+Theorem REAL_LT_BETWEEN:
   !a b:real. a < b <=> ?x. a < x /\ x < b
 Proof
   metis_tac[REAL_MEAN, REAL_LT_TRANS]
@@ -51,7 +51,7 @@ Proof
   METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
 QED
 
-Theorem REAL_LE_SQUARE_ABS :
+Theorem REAL_LE_SQUARE_ABS:
   !x y:real. abs(x) <= abs(y) <=> x pow 2 <= y pow 2
 Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_POW2_ABS] THEN
@@ -62,13 +62,13 @@ Proof
    ASM_REAL_ARITH_TAC]
 QED
 
-Theorem REAL_EQ_SQUARE_ABS :
+Theorem REAL_EQ_SQUARE_ABS:
    !x y:real. (abs x = abs y) <=> (x pow 2 = y pow 2)
 Proof
   REWRITE_TAC[GSYM REAL_LE_ANTISYM, REAL_LE_SQUARE_ABS]
 QED
 
-Theorem REAL_HALF :
+Theorem REAL_HALF:
    (!e:real. &0 < e / &2 <=> &0 < e) /\
    (!e:real. e / &2 + e / &2 = e) /\
    (!e:real. &2 * (e / &2) = e)
@@ -77,31 +77,31 @@ Proof
                    REAL_ARITH ``2 <> 0:real``]
 QED
 
-Theorem REAL_BOUNDS_LT :
+Theorem REAL_BOUNDS_LT:
     !x k:real. -k < x /\ x < k <=> abs(x) < k
 Proof
   REAL_ARITH_TAC
 QED
 
-Theorem REAL_LE_BETWEEN :
+Theorem REAL_LE_BETWEEN:
     !a b. a <= b <=> ?x:real. a <= x /\ x <= b
 Proof
   MESON_TAC[REAL_LE_TRANS, REAL_LE_REFL]
 QED
 
-Theorem ABS_LE_0 :
+Theorem ABS_LE_0:
     !x:real. abs x <= &0 <=> (x = 0)
 Proof
   MESON_TAC[REAL_LE_ANTISYM, ABS_ZERO, ABS_POS]
 QED
 
-Theorem REAL_OF_NUM_GE :
+Theorem REAL_OF_NUM_GE:
     !m n. &m >= (&n:real) <=> m >= n
 Proof
   REWRITE_TAC[GE, real_ge, REAL_OF_NUM_LE]
 QED
 
-Theorem REAL_LT_LCANCEL_IMP :
+Theorem REAL_LT_LCANCEL_IMP:
     !x y z:real. &0 < x /\ x * y < x * z ==> y < z
 Proof
   METIS_TAC [REAL_LT_LMUL]
@@ -424,7 +424,7 @@ Proof
     REWRITE_TAC [IN_APP, REAL_IMP_LE_SUP]
 QED
 
-Theorem REAL_LE_SUP_EQ :
+Theorem REAL_LE_SUP_EQ:
     !p x : real.
        (?y. y IN p) /\ (?y. !z. z IN p ==> z <= y) ==>
        (x <= sup p <=> !y. (!z. z IN p ==> z <= y) ==> x <= y)
@@ -433,7 +433,7 @@ Proof
 QED
 
 (* This requires REAL_SUP_LE_EQ + REAL_LE_SUP_EQ *)
-Theorem SUP_MONO :
+Theorem SUP_MONO:
     !p q. (?b. !n. p n <= b) /\ (?c. !n. q n <= c) /\
           (!n:num. p n <= q n) ==> sup (IMAGE p UNIV) <= sup (IMAGE q UNIV)
 Proof
@@ -470,7 +470,7 @@ val inf_tm = ``@a:real. (!x. x IN s ==> a <= x) /\
 val inf_criteria = ``s <> {} /\ (?b. !x. x IN s ==> b <= x)``;
 
 (* alternative definition of `inf` *)
-Theorem inf_alt :
+Theorem inf_alt:
     !s. ^inf_criteria ==> (inf s = ^inf_tm)
 Proof
     RW_TAC std_ss []
@@ -507,7 +507,7 @@ QED
 (* added `s <> EMPTY /\ (?b. !x. x IN s ==> b <= x) /\
           t <> EMPTY /\ (?b. !x. x IN t ==> b <= x)`
    to make sure that both `inf s` and `inf t` exist. *)
-Theorem INF_EQ :
+Theorem INF_EQ:
     !s t:real->bool. s <> EMPTY /\ (?b. !x. x IN s ==> b <= x) /\
                      t <> EMPTY /\ (?b. !x. x IN t ==> b <= x) /\
                     (!a. (!x. x IN s ==> a <= x) <=> (!x. x IN t ==> a <= x))
@@ -726,7 +726,7 @@ Proof
 QED
 val SUM_ADD = SUM_ADD';
 
-Theorem SUM_ADD_COUNT :
+Theorem SUM_ADD_COUNT:
     !f g n. sum (count n) (\x. f(x) + g(x)) = sum (count n) f + sum (count n) g
 Proof
     rpt GEN_TAC
@@ -861,7 +861,7 @@ Proof
 QED
 val SUM_EQ = SUM_EQ';
 
-Theorem SUM_EQ_COUNT :
+Theorem SUM_EQ_COUNT:
     !f g n. (!i. i < n ==> (f i = g i)) ==> (sum (count n) f = sum (count n) g)
 Proof
     rpt STRIP_TAC
@@ -990,7 +990,7 @@ val SUM_SWAP = store_thm ("SUM_SWAP",
   THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   FULL_SIMP_TAC std_ss [SUM_CLAUSES, SUM_0] THEN METIS_TAC [SUM_ADD, ETA_AX]);
 
-Theorem SUM_SWAP_COUNT :
+Theorem SUM_SWAP_COUNT:
    !(f:num->num->real) m n.
       sum (count m) (\i. sum (count n) (f i)) = sum (count n) (\j. sum (count m) (\i. f i j))
 Proof
@@ -1461,7 +1461,7 @@ val SUM_PAIR = store_thm ("SUM_PAIR",
   REWRITE_TAC[sum_def, NEUTRAL_REAL_ADD]);
 
 (* connection to realTheory.sum *)
-Theorem sum_real :
+Theorem sum_real:
     !f n. sum{0..n} f = real$sum(0,SUC n) f
 Proof
     GEN_TAC
@@ -1575,7 +1575,7 @@ val SUM_ABS_TRIANGLE = store_thm ("SUM_ABS_TRIANGLE",
  ``!s f b. FINITE s /\ sum s (\a. abs(f a)) <= b ==> abs(sum s f) <= b``,
   METIS_TAC[SUM_ABS, REAL_LE_TRANS]);
 
-Theorem REAL_MUL_SUM :
+Theorem REAL_MUL_SUM:
    !s t f g.
         FINITE s /\ FINITE t
         ==> sum s f * sum t g = sum s (\i. sum t (\j. f(i) * g(j)))
@@ -1586,7 +1586,7 @@ Proof
  >> SIMP_TAC std_ss [SUM_LMUL]
 QED
 
-Theorem REAL_MUL_SUM_NUMSEG :
+Theorem REAL_MUL_SUM_NUMSEG:
    !f g m n p q. sum{m..n} f * sum{p..q} g =
                 sum{m..n} (\i. sum{p..q} (\j. f(i) * g(j)))
 Proof
@@ -2046,7 +2046,7 @@ val PRODUCT_EQ = store_thm ("PRODUCT_EQ",
   REWRITE_TAC[product] THEN MATCH_MP_TAC ITERATE_EQ THEN
   REWRITE_TAC[MONOIDAL_REAL_MUL]);
 
-Theorem PRODUCT_EQ_COUNT :
+Theorem PRODUCT_EQ_COUNT:
     !f g n. (!i. i < n ==> (f i = g i)) ==>
              product (count n) f = product (count n) g
 Proof
@@ -2070,7 +2070,7 @@ val PRODUCT_EQ_0 = store_thm ("PRODUCT_EQ_0",
            NOT_IN_EMPTY] THEN
   MESON_TAC[]);
 
-Theorem PRODUCT_EQ_0_COUNT :
+Theorem PRODUCT_EQ_0_COUNT:
     !f n. product (count n) f = &0 <=> ?i. i < n /\ (f(i) = &0)
 Proof
     rpt GEN_TAC
@@ -2105,7 +2105,7 @@ val PRODUCT_EQ_1 = store_thm ("PRODUCT_EQ_1",
   REWRITE_TAC[product, GSYM NEUTRAL_REAL_MUL] THEN
   SIMP_TAC std_ss [ITERATE_EQ_NEUTRAL, MONOIDAL_REAL_MUL]);
 
-Theorem PRODUCT_EQ_1_COUNT :
+Theorem PRODUCT_EQ_1_COUNT:
     !f n. (!i. i < n ==> f i = &1) ==> product (count n) f = &1
 Proof
     rpt GEN_TAC
@@ -2135,7 +2135,7 @@ val PRODUCT_MUL = store_thm ("PRODUCT_MUL",
   SIMP_TAC std_ss [PRODUCT_CLAUSES, REAL_MUL_ASSOC, REAL_MUL_LID] THEN
   METIS_TAC [REAL_ARITH ``a * b * c * d = a * c * b * d:real``]);
 
-Theorem PRODUCT_MUL_COUNT :
+Theorem PRODUCT_MUL_COUNT:
     !f g n. product (count n) (\x. f x * g x) =
             product (count n) f * product (count n) g
 Proof
@@ -2279,7 +2279,7 @@ val PRODUCT_DELTA = store_thm ("PRODUCT_DELTA",
 (* Extend congruences.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem PRODUCT_CONG :
+Theorem PRODUCT_CONG:
     (!f g s.   (!x. x IN s ==> (f(x) = g(x)))
            ==> (product s (\i. f(i)) = product s g)) /\
     (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
@@ -2297,41 +2297,41 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* This is originally from HOL Light (Multivariate/vectors.ml). Generalized. *)
-Definition indicator :
+Definition indicator:
     indicator (s :'a -> bool) :'a -> real = \x. if x IN s then 1 else 0
 End
 
-Theorem DROP_INDICATOR :
+Theorem DROP_INDICATOR:
     !s x. (indicator s x) = if x IN s then &1 else &0
 Proof
     SIMP_TAC std_ss [indicator]
 QED
 
-Theorem DROP_INDICATOR_POS_LE :
+Theorem DROP_INDICATOR_POS_LE:
     !s x. &0 <= (indicator s x)
 Proof
     RW_TAC real_ss [DROP_INDICATOR]
 QED
 
-Theorem DROP_INDICATOR_LE_1 :
+Theorem DROP_INDICATOR_LE_1:
     !s x. (indicator s x) <= &1
 Proof
     RW_TAC real_ss [DROP_INDICATOR]
 QED
 
-Theorem DROP_INDICATOR_ABS_LE_1 :
+Theorem DROP_INDICATOR_ABS_LE_1:
     !s x. abs(indicator s x) <= &1
 Proof
     RW_TAC real_ss [DROP_INDICATOR]
 QED
 
-Theorem INDICATOR_EMPTY :
+Theorem INDICATOR_EMPTY:
     indicator {} = (\x. 0)
 Proof
     SET_TAC [indicator]
 QED
 
-Theorem INDICATOR_COMPLEMENT :
+Theorem INDICATOR_COMPLEMENT:
     !s. indicator (UNIV DIFF s) = \x. 1 - indicator s x
 Proof
     rw [FUN_EQ_THM, indicator]
@@ -2476,7 +2476,7 @@ val INF_CLOSE = store_thm
    >> POP_ASSUM MP_TAC
    >> REAL_ARITH_TAC);
 
-Theorem REAL_NEG_NZ :
+Theorem REAL_NEG_NZ:
     !x:real. x < 0 ==> x <> 0
 Proof
     GEN_TAC >> DISCH_TAC
@@ -2575,33 +2575,33 @@ val POW_NEG_ODD = store_thm
   >> `0 < x pow n` by METIS_TAC [REAL_LT_LE]
   >> METIS_TAC [REAL_NEG_GT0, REAL_MUL_LNEG, REAL_LT_MUL]);
 
-Theorem REAL_MAX_REDUCE :
+Theorem REAL_MAX_REDUCE:
     !x y :real. x <= y \/ x < y ==> (max x y = y) /\ (max y x = y)
 Proof
     PROVE_TAC [REAL_LT_IMP_LE, REAL_MAX_ACI, max_def]
 QED
 
-Theorem REAL_MIN_REDUCE :
+Theorem REAL_MIN_REDUCE:
     !x y :real. x <= y \/ x < y ==> (min x y = x) /\ (min y x = x)
 Proof
     PROVE_TAC [REAL_LT_IMP_LE, REAL_MIN_ACI, min_def]
 QED
 
-Theorem REAL_LT_MAX_BETWEEN :
+Theorem REAL_LT_MAX_BETWEEN:
     !x b d :real. x < max b d /\ b <= x ==> x < d
 Proof
     RW_TAC std_ss [max_def]
  >> fs [real_lte]
 QED
 
-Theorem REAL_MIN_LE_BETWEEN :
+Theorem REAL_MIN_LE_BETWEEN:
     !x a c :real. min a c <= x /\ x < a ==> c <= x
 Proof
     RW_TAC std_ss [min_def]
  >> PROVE_TAC [REAL_LET_ANTISYM]
 QED
 
-Theorem REAL_ARCH_INV_SUC : (* was: reals_Archimedean *)
+Theorem REAL_ARCH_INV_SUC: (* was: reals_Archimedean *)
     !x:real. 0 < x ==> ?n. inv &(SUC n) < x
 Proof
   RW_TAC real_ss [REAL_INV_1OVER] THEN SIMP_TAC real_ss [REAL_LT_LDIV_EQ] THEN
@@ -2658,7 +2658,7 @@ Proof
  >> rw [GSYM REAL_NEG_RMUL, REAL_LT_NEG]
 QED
 
-Theorem REAL_LT_LDIV_CANCEL :
+Theorem REAL_LT_LDIV_CANCEL:
     !x y (z :real). 0 < x /\ 0 < y /\ 0 < z ==> (z / x < z / y <=> y < x)
 Proof
     RW_TAC bool_ss [real_div, REAL_LT_LMUL]
@@ -2666,7 +2666,7 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem REAL_LE_LDIV_CANCEL :
+Theorem REAL_LE_LDIV_CANCEL:
     !x y (z :real). 0 < x /\ 0 < y /\ 0 < z ==> (z / x <= z / y <=> y <= x)
 Proof
     RW_TAC bool_ss [real_div, REAL_LE_LMUL]
@@ -2675,7 +2675,7 @@ Proof
 QED
 
 (* moved here from extrealTheory *)
-Theorem ABS_LE_HALF_POW2 :
+Theorem ABS_LE_HALF_POW2:
   !x y :real. abs (x * y) <= 1/2 * (x pow 2 + y pow 2)
 Proof
     rpt GEN_TAC
@@ -2707,7 +2707,7 @@ Proof
 QED
 
 (* moved here from extrealTheory *)
-Theorem REAL_LE_MUL_EPSILON :
+Theorem REAL_LE_MUL_EPSILON:
     !x y:real. (!z. 0 < z /\ z < 1 ==> z * x <= y) ==> x <= y
 Proof
     rpt STRIP_TAC
@@ -2741,20 +2741,20 @@ Proof
  >> METIS_TAC [REAL_NEG_GT0, REAL_LT_TOTAL, REAL_LE_REFL, REAL_HALF_BETWEEN, REAL_LE_RMUL]
 QED
 
-Theorem SUM_PERMUTE :
+Theorem SUM_PERMUTE:
    !f p s. p permutes s ==> (sum s f = sum s (f o p))
 Proof
   REWRITE_TAC[sum_def] THEN MATCH_MP_TAC ITERATE_PERMUTE THEN
   REWRITE_TAC[MONOIDAL_REAL_ADD]
 QED
 
-Theorem SUM_PERMUTE_COUNT :
+Theorem SUM_PERMUTE_COUNT:
    !f p n. p permutes (count n) ==> (sum (count n) f = sum (count n) (f o p))
 Proof
   PROVE_TAC[SUM_PERMUTE, FINITE_COUNT]
 QED
 
-Theorem SUM_PERMUTE_NUMSEG :
+Theorem SUM_PERMUTE_NUMSEG:
    !f p m n.
   p permutes (count n DIFF count m) ==>
    (sum (count n DIFF count m) f = sum (count n DIFF count m) (f o p))
@@ -2762,21 +2762,21 @@ Proof
   PROVE_TAC[SUM_PERMUTE, FINITE_COUNT, FINITE_DIFF]
 QED
 
-Theorem PRODUCT_PERMUTE :
+Theorem PRODUCT_PERMUTE:
    !f p s. p permutes s ==> (product s f = product s (f o p))
 Proof
   REWRITE_TAC[product] THEN MATCH_MP_TAC ITERATE_PERMUTE THEN
   REWRITE_TAC[MONOIDAL_REAL_MUL]
 QED
 
-Theorem PRODUCT_PERMUTE_COUNT :
+Theorem PRODUCT_PERMUTE_COUNT:
    !f p n.
     p permutes (count n) ==> (product (count n) f = product (count n) (f o p))
 Proof
   PROVE_TAC[PRODUCT_PERMUTE, FINITE_COUNT]
 QED
 
-Theorem PRODUCT_PERMUTE_NUMSEG :
+Theorem PRODUCT_PERMUTE_NUMSEG:
   !f p m n.
     p permutes (count n DIFF count m) ==>
     (product (count n DIFF count m) f = product (count n DIFF count m) (f o p))
@@ -2784,13 +2784,13 @@ Proof
   PROVE_TAC[PRODUCT_PERMUTE, FINITE_COUNT, FINITE_DIFF]
 QED
 
-Theorem PERMUTES_IN_NUMSEG :
+Theorem PERMUTES_IN_NUMSEG:
    !p n i. p permutes {1 .. n} /\ i IN {1 .. n} ==> 1 <= p(i) /\ p(i) <= n
 Proof
   REWRITE_TAC[permutes, IN_NUMSEG] THEN PROVE_TAC[]
 QED
 
-Theorem SUM_PERMUTATIONS_INVERSE :
+Theorem SUM_PERMUTATIONS_INVERSE:
    !f n. sum {p | p permutes count n } f =
          sum {p | p permutes count n } (\p. f(inverse p))
 Proof
@@ -2808,7 +2808,7 @@ Proof
   PROVE_TAC[PERMUTES_INVERSE_INVERSE]
 QED
 
-Theorem SUM_PERMUTATIONS_COMPOSE_L :
+Theorem SUM_PERMUTATIONS_COMPOSE_L:
    !f s q. q permutes s ==>
            sum {p | p permutes s} f =
            sum {p | p permutes s} (\p. f(q o p))
@@ -2830,7 +2830,7 @@ Proof
   REWRITE_TAC[I_o_ID]
 QED
 
-Theorem SUM_PERMUTATIONS_COMPOSE_L_COUNT :
+Theorem SUM_PERMUTATIONS_COMPOSE_L_COUNT:
    !f n q. q permutes count n ==>
            sum {p | p permutes count n} f =
            sum {p | p permutes count n} (\p. f(q o p))
@@ -2838,7 +2838,7 @@ Proof
   REWRITE_TAC[SUM_PERMUTATIONS_COMPOSE_L]
 QED
 
-Theorem SUM_PERMUTATIONS_COMPOSE_L_NUMSEG :
+Theorem SUM_PERMUTATIONS_COMPOSE_L_NUMSEG:
    !f m n q.
         q permutes (count n DIFF count m)
         ==> sum {p | p permutes (count n DIFF count m)} f =
@@ -2861,7 +2861,7 @@ Proof
   REWRITE_TAC[I_o_ID]
 QED
 
-Theorem SUM_PERMUTATIONS_COMPOSE_R :
+Theorem SUM_PERMUTATIONS_COMPOSE_R:
    !f s q.
         q permutes s
         ==> sum {p | p permutes s} f =
@@ -2884,7 +2884,7 @@ Proof
   REWRITE_TAC[I_o_ID]
 QED
 
-Theorem SUM_PERMUTATIONS_COMPOSE_R_COUNT :
+Theorem SUM_PERMUTATIONS_COMPOSE_R_COUNT:
    !f n q.
         q permutes count n
         ==> sum {p | p permutes count n} f =
@@ -2893,7 +2893,7 @@ Proof
   REWRITE_TAC[SUM_PERMUTATIONS_COMPOSE_R]
 QED
 
-Theorem SUM_PERMUTATIONS_COMPOSE_R_NUMSEG :
+Theorem SUM_PERMUTATIONS_COMPOSE_R_NUMSEG:
    !f m n q.
         q permutes (count n DIFF count m)
         ==> sum {p | p permutes (count n DIFF count m)} f =
@@ -2926,7 +2926,7 @@ QED
     Where f's range is the real numbers and P is finite.
    ---------------------------------------------------------------------- *)
 
-Definition REAL_SUM_IMAGE_DEF :
+Definition REAL_SUM_IMAGE_DEF:
     REAL_SUM_IMAGE f s = ITSET (\e acc. f e + acc) s (0:real)
 End
 
@@ -2938,7 +2938,7 @@ Proof
     simp[REAL_SUM_IMAGE_DEF]
 QED
 
-Theorem REAL_SUM_IMAGE_THM :
+Theorem REAL_SUM_IMAGE_THM:
     !f. (REAL_SUM_IMAGE f {} = 0) /\
         (!e s. FINITE s ==>
                (REAL_SUM_IMAGE f (e INSERT s) =
@@ -2958,7 +2958,7 @@ Proof
 QED
 
 (* An equivalent theorem linking REAL_SUM_IMAGE and Sum *)
-Theorem REAL_SUM_IMAGE_sum :
+Theorem REAL_SUM_IMAGE_sum:
     !f s. FINITE s ==> REAL_SUM_IMAGE f s = Sum s f
 Proof
     Q.X_GEN_TAC ‘f’
@@ -2978,14 +2978,14 @@ Proof
     SRW_TAC [][REAL_SUM_IMAGE_THM]
 QED
 
-Theorem REAL_SUM_IMAGE_POS :
+Theorem REAL_SUM_IMAGE_POS:
     !f s. FINITE s /\ (!x. x IN s ==> 0 <= f x) ==>
           0 <= REAL_SUM_IMAGE f s
 Proof
     rw [REAL_SUM_IMAGE_sum, SUM_POS_LE]
 QED
 
-Theorem REAL_SUM_IMAGE_SPOS :
+Theorem REAL_SUM_IMAGE_SPOS:
     !s. FINITE s /\ (~(s = {})) ==>
         !f. (!x. x IN s ==> 0 < f x) ==>
             0 < REAL_SUM_IMAGE f s
@@ -3000,7 +3000,7 @@ QED
 (* ‘?x. x IN P’ already indicates ‘P <> {}’, thus the actual conclusion is just
    ‘SIGMA f P <> 0’
  *)
-Theorem REAL_SUM_IMAGE_NONZERO :
+Theorem REAL_SUM_IMAGE_NONZERO:
     !P. FINITE P ==>
         !f. (!x. x IN P ==> 0 <= f x) /\ (?x. x IN P /\ ~(f x = 0)) ==>
             ((~(REAL_SUM_IMAGE f P = 0)) <=> (~(P = {})))
@@ -3091,7 +3091,7 @@ val REAL_SUM_IMAGE_FINITE_CONST2 = store_thm (* from "examples/diningcryptos" *)
    >> POP_ASSUM MATCH_MP_TAC
    >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [IN_INSERT]);
 
-Theorem REAL_SUM_IMAGE_FINITE_CONST3 :
+Theorem REAL_SUM_IMAGE_FINITE_CONST3:
     !P. FINITE P ==>
         !c. (REAL_SUM_IMAGE (\x. c) P = (&(CARD P)) * c)
 Proof
@@ -3120,21 +3120,21 @@ val REAL_SUM_IMAGE_IN_IF = store_thm
         !f. REAL_SUM_IMAGE f P = REAL_SUM_IMAGE (\x. if x IN P then f x else 0) P``,
    METIS_TAC [REAL_SUM_IMAGE_IN_IF_lem]);
 
-Theorem REAL_SUM_IMAGE_CMUL :
+Theorem REAL_SUM_IMAGE_CMUL:
     !P. FINITE P ==>
         !f c. (REAL_SUM_IMAGE (\x. c * f x) P = c * (REAL_SUM_IMAGE f P))
 Proof
     rw [REAL_SUM_IMAGE_sum, SUM_LMUL]
 QED
 
-Theorem REAL_SUM_IMAGE_NEG :
+Theorem REAL_SUM_IMAGE_NEG:
     !P. FINITE P ==>
         !f. (REAL_SUM_IMAGE (\x. ~ f x) P = ~ (REAL_SUM_IMAGE f P))
 Proof
     rw [REAL_SUM_IMAGE_sum, SUM_NEG']
 QED
 
-Theorem REAL_SUM_IMAGE_IMAGE :
+Theorem REAL_SUM_IMAGE_IMAGE:
     !P. FINITE P ==>
         !f'. INJ f' P (IMAGE f' P) ==>
              !f. REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P
@@ -3143,7 +3143,7 @@ Proof
  >> MATCH_MP_TAC SUM_IMAGE >> rw []
 QED
 
-Theorem REAL_SUM_IMAGE_DISJOINT_UNION :
+Theorem REAL_SUM_IMAGE_DISJOINT_UNION:
     !P P'. FINITE P /\ FINITE P' /\ DISJOINT P P' ==>
                 (!f. REAL_SUM_IMAGE f (P UNION P') =
                      REAL_SUM_IMAGE f P +
@@ -3254,7 +3254,7 @@ val REAL_SUM_IMAGE_COUNT = store_thm
                             DECIDE ``!(x:num) (y:num). x < y ==> ~(x = y)``]
    >> RW_TAC std_ss [REAL_ADD_SYM]);
 
-Theorem REAL_SUM_IMAGE_MONO :
+Theorem REAL_SUM_IMAGE_MONO:
     !P. FINITE P ==>
         !f f'. (!x. x IN P ==> f x <= f' x) ==>
                REAL_SUM_IMAGE f P <= REAL_SUM_IMAGE f' P
@@ -3341,7 +3341,7 @@ val REAL_SUM_IMAGE_CONST_EQ_1_EQ_INV_CARD = store_thm
    >> REPEAT (POP_ASSUM (K ALL_TAC))
    >> METIS_TAC [REAL_NZ_IMP_LT, GSYM REAL_EQ_RDIV_EQ, REAL_INV_1OVER, SUC_NOT]);
 
-Theorem REAL_SUM_IMAGE_ADD :
+Theorem REAL_SUM_IMAGE_ADD:
     !s. FINITE s ==>
         !f f'. REAL_SUM_IMAGE (\x. f x + f' x) s =
                REAL_SUM_IMAGE f s + REAL_SUM_IMAGE f' s
@@ -3383,7 +3383,7 @@ val REAL_SUM_IMAGE_REAL_SUM_IMAGE = store_thm
         INST_TYPE [``:'b``|->``:'c``]) REAL_SUM_IMAGE_IMAGE
    >> RW_TAC std_ss [INJ_DEF, IN_IMAGE, o_DEF] >> METIS_TAC []);
 
-Theorem REAL_SUM_IMAGE_0 :
+Theorem REAL_SUM_IMAGE_0:
     !s. FINITE s ==> (REAL_SUM_IMAGE (\x. 0) s = 0)
 Proof
     rw [REAL_SUM_IMAGE_sum, SUM_0']
@@ -3435,7 +3435,7 @@ val REAL_SUM_IMAGE_POW = store_thm
   >> RW_TAC std_ss [REAL_SUM_IMAGE_CMUL]
   >> RW_TAC std_ss [Once REAL_MUL_COMM,REAL_SUM_IMAGE_CMUL,POW_2]);
 
-Theorem REAL_SUM_IMAGE_EQ :
+Theorem REAL_SUM_IMAGE_EQ:
     !s (f:'a->real) f'. FINITE s /\ (!x. x IN s ==> (f x = f' x))
                     ==> (REAL_SUM_IMAGE f s = REAL_SUM_IMAGE f' s)
 Proof
@@ -3449,7 +3449,7 @@ val REAL_SUM_IMAGE_IN_IF_ALT = store_thm
   >> MATCH_MP_TAC REAL_SUM_IMAGE_EQ
   >> RW_TAC std_ss []);
 
-Theorem REAL_SUM_IMAGE_SUB :
+Theorem REAL_SUM_IMAGE_SUB:
     !s (f:'a -> real) f'. FINITE s ==>
                  (REAL_SUM_IMAGE (\x. f x - f' x) s =
                   REAL_SUM_IMAGE f s - REAL_SUM_IMAGE f' s)
@@ -3492,7 +3492,7 @@ val REAL_SUM_IMAGE_CROSS_SYM = store_thm
            >> RW_TAC std_ss [])
   >> RW_TAC std_ss []);
 
-Theorem REAL_SUM_IMAGE_ABS_TRIANGLE :
+Theorem REAL_SUM_IMAGE_ABS_TRIANGLE:
     !f s. FINITE s ==> abs (REAL_SUM_IMAGE f s) <= REAL_SUM_IMAGE (abs o f) s
 Proof
     rw [REAL_SUM_IMAGE_sum, SUM_ABS', o_DEF]
@@ -3502,7 +3502,7 @@ Theorem REAL_SUM_IMAGE_DELETE = translate SUM_DELETE
 Theorem REAL_SUM_IMAGE_SWAP = translate SUM_SWAP
 Theorem REAL_SUM_IMAGE_BOUND = translate SUM_BOUND'
 
-Theorem REAL_SUM_IMAGE_IMAGE_LE :
+Theorem REAL_SUM_IMAGE_IMAGE_LE:
     !f:'a->'b g s.
         FINITE s /\
         (!x. x IN s ==> (0:real) <= g (f x))
@@ -3514,7 +3514,7 @@ Proof
  >> MATCH_MP_TAC SUM_IMAGE_LE >> art []
 QED
 
-Theorem REAL_SUM_IMAGE_PERMUTES :
+Theorem REAL_SUM_IMAGE_PERMUTES:
     !f p s:'a->bool. FINITE s /\ p PERMUTES s ==>
                      REAL_SUM_IMAGE f s = REAL_SUM_IMAGE (f o p) s
 Proof
@@ -3570,22 +3570,22 @@ QED
 (* ---- jensen's inequality (from "miller" example)             ------------ *)
 (* ------------------------------------------------------------------------- *)
 
-Definition convex_fn :
+Definition convex_fn:
     convex_fn =
       {f | !x y t. (0 <= t /\ t <= 1) ==>
                    f (t * x + (1 - t) * y) <= t * f x + (1 - t) * f y}
 End
 
-Definition concave_fn :
+Definition concave_fn:
     concave_fn = {f | (\x. ~(f x)) IN convex_fn}
 End
 
-Definition pos_convex_fn :
+Definition pos_convex_fn:
     pos_convex_fn = {f | !x y t. (0 < x /\ 0 < y /\ 0 <= t /\ t <= 1) ==>
                                  f (t * x + (1 - t) * y) <= t * f x + (1 - t) * f y}
 End
 
-Definition pos_concave_fn :
+Definition pos_concave_fn:
     pos_concave_fn = {f | (\x. ~ (f x)) IN pos_convex_fn}
 End
 

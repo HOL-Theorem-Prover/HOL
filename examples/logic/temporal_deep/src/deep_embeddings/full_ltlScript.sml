@@ -218,7 +218,7 @@ Theorem IS_LTL_THM = LIST_CONJ
     IS_LTL_PREFIX_def,
     IS_LTL_STREET_def];
 
-Theorem IS_LTL_RELATIONS :
+Theorem IS_LTL_RELATIONS:
     !f. (IS_LTL_F f = IS_LTL_G (LTL_NOT f)) /\
         (IS_LTL_G f = IS_LTL_F (LTL_NOT f)) /\
         (IS_LTL_FG f = IS_LTL_GF (LTL_NOT f)) /\
@@ -246,7 +246,7 @@ val LTL_USED_VARS_def = Define
    (LTL_USED_VARS (LTL_PSNEXT f) = LTL_USED_VARS f) /\
    (LTL_USED_VARS (LTL_PSUNTIL(f,g)) = (LTL_USED_VARS f UNION LTL_USED_VARS g))`;
 
-Theorem LTL_USED_VARS_INTER_SUBSET_THM :
+Theorem LTL_USED_VARS_INTER_SUBSET_THM:
     !f t v S. (LTL_USED_VARS f) SUBSET S ==>
               (LTL_SEM_TIME t v f = LTL_SEM_TIME t (PATH_RESTRICT v S) f)
 Proof
@@ -268,13 +268,13 @@ Proof
    ]
 QED
 
-Theorem LTL_USED_VARS_INTER_THM :
+Theorem LTL_USED_VARS_INTER_THM:
     !f t v. (LTL_SEM_TIME t v f = LTL_SEM_TIME t (PATH_RESTRICT v (LTL_USED_VARS f)) f)
 Proof
     METIS_TAC [LTL_USED_VARS_INTER_SUBSET_THM, SUBSET_REFL]
 QED
 
-Theorem FINITE___LTL_USED_VARS :
+Theorem FINITE___LTL_USED_VARS:
     !l. FINITE (LTL_USED_VARS l)
 Proof
     INDUCT_THEN ltl_induct ASSUME_TAC
@@ -282,7 +282,7 @@ Proof
  >> ASM_REWRITE_TAC [LTL_USED_VARS_def, FINITE_UNION]
 QED
 
-Theorem LTL_USED_VARS_EVAL :
+Theorem LTL_USED_VARS_EVAL:
     !p r r1 r2.
     (LTL_USED_VARS (LTL_PROP p) = P_USED_VARS p) /\
     (LTL_USED_VARS (LTL_NOT r) = LTL_USED_VARS r) /\
@@ -335,7 +335,7 @@ val LTL_VAR_RENAMING_def = Define
    (LTL_VAR_RENAMING f (LTL_PSUNTIL(r1,r2)) =
     LTL_PSUNTIL(LTL_VAR_RENAMING f r1, LTL_VAR_RENAMING f r2))`;
 
-Theorem LTL_SEM_TIME___VAR_RENAMING___NOT_INJ :
+Theorem LTL_SEM_TIME___VAR_RENAMING___NOT_INJ:
     !f' t v f. LTL_SEM_TIME t v (LTL_VAR_RENAMING f f') =
                LTL_SEM_TIME t (\n x. f x IN v n) f'
 Proof
@@ -344,7 +344,7 @@ Proof
                          P_SEM___VAR_RENAMING___NOT_INJ]
 QED
 
-Theorem LTL_SEM_TIME___VAR_RENAMING :
+Theorem LTL_SEM_TIME___VAR_RENAMING:
     !f' t v f. INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f') UNIV ==>
               (LTL_SEM_TIME t v f' =
                LTL_SEM_TIME t (PATH_VAR_RENAMING f v) (LTL_VAR_RENAMING f f'))
@@ -420,7 +420,7 @@ Proof
       PROVE_TAC [] ]
 QED
 
-Theorem LTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT :
+Theorem LTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT:
     !f' t v f. INJ f (LTL_USED_VARS f') UNIV ==>
               (LTL_SEM_TIME t v f' =
                LTL_SEM_TIME t (PATH_VAR_RENAMING f (PATH_RESTRICT v (LTL_USED_VARS f')))
@@ -436,7 +436,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem FUTURE_LTL_CONSIDERS_ONLY_FUTURE :
+Theorem FUTURE_LTL_CONSIDERS_ONLY_FUTURE:
     !f t v. IS_FUTURE_LTL f ==> (LTL_SEM_TIME t v f <=> LTL_SEM (\t'. v (t'+t)) f)
 Proof
     INDUCT_THEN ltl_induct ASSUME_TAC
@@ -459,7 +459,7 @@ Proof
         FULL_SIMP_TAC arith_ss [] ] ]
 QED
 
-Theorem FUTURE_LTL_EQUIVALENT_INIT_IS_EQUIVALENT :
+Theorem FUTURE_LTL_EQUIVALENT_INIT_IS_EQUIVALENT:
     !l1 l2. IS_FUTURE_LTL l1 /\ IS_FUTURE_LTL l2 ==>
            (LTL_EQUIVALENT_INITIAL l1 l2 <=> LTL_EQUIVALENT l1 l2)
 Proof
@@ -471,7 +471,7 @@ Proof
  >> ASM_SIMP_TAC std_ss [ETA_THM]
 QED
 
-Theorem LTL_OR_SEM :
+Theorem LTL_OR_SEM:
     !v f1 f2 t. LTL_SEM_TIME t v (LTL_OR(f1,f2)) <=>
                 LTL_SEM_TIME t v f1 \/ LTL_SEM_TIME t v f2
 Proof
@@ -479,7 +479,7 @@ Proof
  >> SIMP_TAC arith_ss []
 QED
 
-Theorem LTL_IMPL_SEM :
+Theorem LTL_IMPL_SEM:
     !v f1 f2 t. LTL_SEM_TIME t v (LTL_IMPL(f1,f2)) <=>
                (LTL_SEM_TIME t v f1 ==> LTL_SEM_TIME t v f2)
 Proof
@@ -487,7 +487,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem LTL_EQUIV_SEM :
+Theorem LTL_EQUIV_SEM:
     !v f1 f2 t. LTL_SEM_TIME t v (LTL_EQUIV(f1,f2)) <=>
                (LTL_SEM_TIME t v f1 <=> LTL_SEM_TIME t v f2)
 Proof
@@ -495,7 +495,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem LTL_SBEFORE_SEM :
+Theorem LTL_SBEFORE_SEM:
     !v f1 f2 t. LTL_SEM_TIME t v (LTL_SBEFORE(f1,f2)) <=>
        ?k. k >= t /\ (LTL_SEM_TIME k v f1) /\
            !j. t <= j /\ j <= k ==> ~(LTL_SEM_TIME j v f2)
@@ -520,7 +520,7 @@ Proof
    ]
 QED
 
-Theorem LTL_PSBEFORE_SEM :
+Theorem LTL_PSBEFORE_SEM:
     !v f1 f2 t. LTL_SEM_TIME t v (LTL_PSBEFORE(f1,f2)) <=>
                 ?k. k <= t /\ LTL_SEM_TIME k v f1 /\
                     !j. k <= j /\ j <= t ==> ~(LTL_SEM_TIME j v f2)
@@ -543,33 +543,33 @@ Proof
       PROVE_TAC [] ]
 QED
 
-Theorem LTL_EVENTUAL_SEM :
+Theorem LTL_EVENTUAL_SEM:
     !v f t. LTL_SEM_TIME t v (LTL_EVENTUAL f) = ?k. k >= t /\ LTL_SEM_TIME k v f
 Proof
     EVAL_TAC >> SIMP_TAC arith_ss [P_SEM_THM]
 QED
 
-Theorem LTL_ALWAYS_SEM :
+Theorem LTL_ALWAYS_SEM:
     !v f t. LTL_SEM_TIME t v (LTL_ALWAYS f) = !k. k >= t ==> LTL_SEM_TIME k v f
 Proof
     EVAL_TAC >> SIMP_TAC arith_ss [P_SEM_THM]
  >> PROVE_TAC []
 QED
 
-Theorem LTL_PEVENTUAL_SEM :
+Theorem LTL_PEVENTUAL_SEM:
     !v f t. LTL_SEM_TIME t v (LTL_PEVENTUAL f) =
             ?k:num. (0 <= k /\ k <= t) /\ LTL_SEM_TIME k v f
 Proof
     EVAL_TAC >> SIMP_TAC arith_ss [P_SEM_THM]
 QED
 
-Theorem LTL_PALWAYS_SEM :
+Theorem LTL_PALWAYS_SEM:
     !v f t. LTL_SEM_TIME t v (LTL_PALWAYS f) = !k. k <= t ==> LTL_SEM_TIME k v f
 Proof
     EVAL_TAC >> SIMP_TAC arith_ss [P_SEM_THM] >> PROVE_TAC []
 QED
 
-Theorem LTL_PNEXT_SEM :
+Theorem LTL_PNEXT_SEM:
     !v f t. LTL_SEM_TIME t v (LTL_PNEXT f) = ((t = 0) \/ LTL_SEM_TIME (PRE t) v f)
 Proof
     EVAL_TAC >> SIMP_TAC arith_ss [P_SEM_THM]
@@ -577,19 +577,19 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem LTL_TRUE_SEM :
+Theorem LTL_TRUE_SEM:
     !v t. LTL_SEM_TIME t v LTL_TRUE
 Proof
     REWRITE_TAC [LTL_TRUE_def, LTL_SEM_TIME_def, P_SEM_THM]
 QED
 
-Theorem LTL_FALSE_SEM :
+Theorem LTL_FALSE_SEM:
     !v t. ~(LTL_SEM_TIME t v LTL_FALSE)
 Proof
     REWRITE_TAC [LTL_FALSE_def, LTL_SEM_TIME_def, P_SEM_THM]
 QED
 
-Theorem LTL_INIT_SEM :
+Theorem LTL_INIT_SEM:
     !t v. (LTL_SEM_TIME t v LTL_INIT) = (t = 0)
 Proof
     REWRITE_TAC [LTL_INIT_def, LTL_SEM_TIME_def, P_SEM_def]
@@ -612,7 +612,7 @@ Theorem LTL_SEM_THM = LIST_CONJ
     LTL_SBEFORE_SEM,
     LTL_PSBEFORE_SEM];
 
-Theorem LTL_VAR_RENAMING_EVAL :
+Theorem LTL_VAR_RENAMING_EVAL:
     (LTL_VAR_RENAMING f (LTL_PROP p) = LTL_PROP (P_VAR_RENAMING f p)) /\
     (LTL_VAR_RENAMING f (LTL_NOT r) = LTL_NOT (LTL_VAR_RENAMING f r)) /\
     (LTL_VAR_RENAMING f (LTL_AND (r1,r2)) = LTL_AND(LTL_VAR_RENAMING f r1, LTL_VAR_RENAMING f r2)) /\
@@ -653,7 +653,7 @@ QED
    Thus, the simplifier may loop. Therefore, here are direct definitions of ALWAYS
    and PALWAYS to use with the nnf rewrites.
  *)
-Theorem LTL_ALWAYS_PALWAYS_ALTERNATIVE_DEFS :
+Theorem LTL_ALWAYS_PALWAYS_ALTERNATIVE_DEFS:
     (!l. LTL_ALWAYS l = LTL_NOT (LTL_SUNTIL (LTL_TRUE, LTL_NOT l))) /\
     (!l. LTL_PALWAYS l = LTL_NOT (LTL_PSUNTIL (LTL_TRUE, LTL_NOT l)))
 Proof
@@ -667,7 +667,7 @@ val LTL_IS_CONTRADICTION_def = Define
 val LTL_IS_TAUTOLOGY_def = Define
    `LTL_IS_TAUTOLOGY l = !v. LTL_SEM v l`;
 
-Theorem LTL_TAUTOLOGY_CONTRADICTION_DUAL :
+Theorem LTL_TAUTOLOGY_CONTRADICTION_DUAL:
     (!l. LTL_IS_CONTRADICTION (LTL_NOT l) <=> LTL_IS_TAUTOLOGY l) /\
     (!l. LTL_IS_TAUTOLOGY (LTL_NOT l) <=> LTL_IS_CONTRADICTION l)
 Proof
@@ -675,7 +675,7 @@ Proof
                  LTL_SEM_TIME_def, LTL_SEM_def]
 QED
 
-Theorem LTL_TAUTOLOGY_CONTRADICTION___TO___EQUIVALENT_INITIAL :
+Theorem LTL_TAUTOLOGY_CONTRADICTION___TO___EQUIVALENT_INITIAL:
     (!l. LTL_IS_CONTRADICTION l <=> LTL_EQUIVALENT_INITIAL l LTL_FALSE) /\
     (!l. LTL_IS_TAUTOLOGY l <=> LTL_EQUIVALENT_INITIAL l LTL_TRUE)
 Proof
@@ -684,7 +684,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem LTL_EQUIVALENT_INITIAL___TO___TAUTOLOGY :
+Theorem LTL_EQUIVALENT_INITIAL___TO___TAUTOLOGY:
     !l1 l2. LTL_EQUIVALENT_INITIAL l1 l2 <=> LTL_IS_TAUTOLOGY (LTL_EQUIV(l1, l2))
 Proof
     REWRITE_TAC [LTL_IS_TAUTOLOGY_def, LTL_SEM_THM,
@@ -692,7 +692,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem LTL_EQUIVALENT_INITIAL___TO___CONTRADICTION :
+Theorem LTL_EQUIVALENT_INITIAL___TO___CONTRADICTION:
     !l1 l2. LTL_EQUIVALENT_INITIAL l1 l2 <=>
             LTL_IS_CONTRADICTION (LTL_NOT (LTL_EQUIV(l1, l2)))
 Proof
@@ -700,7 +700,7 @@ Proof
                  LTL_EQUIVALENT_INITIAL___TO___TAUTOLOGY]
 QED
 
-Theorem LTL_EQUIVALENT___TO___CONTRADICTION :
+Theorem LTL_EQUIVALENT___TO___CONTRADICTION:
     !l1 l2. LTL_EQUIVALENT l1 l2 <=>
             LTL_IS_CONTRADICTION (LTL_EVENTUAL (LTL_NOT (LTL_EQUIV (l1,l2))))
 Proof
@@ -708,7 +708,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem LTL_CONTRADICTION___VAR_RENAMING :
+Theorem LTL_CONTRADICTION___VAR_RENAMING:
     !f' f. INJ f (LTL_USED_VARS f') UNIV ==>
           (LTL_IS_CONTRADICTION f' <=> LTL_IS_CONTRADICTION (LTL_VAR_RENAMING f f'))
 Proof
@@ -718,7 +718,7 @@ Proof
       PROVE_TAC[LTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT] ]
 QED
 
-Theorem LTL_KS_SEM___VAR_RENAMING :
+Theorem LTL_KS_SEM___VAR_RENAMING:
     !f' M f. INJ f (LTL_USED_VARS f' UNION (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M)) UNIV ==>
             (LTL_KS_SEM M f' <=> LTL_KS_SEM (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f M)
                                             (LTL_VAR_RENAMING f f'))
@@ -805,7 +805,7 @@ Proof
     ]
 QED
 
-Theorem LTL_RECURSION_LAWS___LTL_ALWAYS :
+Theorem LTL_RECURSION_LAWS___LTL_ALWAYS:
     !f. LTL_EQUIVALENT (LTL_ALWAYS f)
                        (LTL_AND(f, LTL_NEXT(LTL_ALWAYS f)))
 Proof
@@ -820,7 +820,7 @@ Proof
         PROVE_TAC [] ] ]
 QED
 
-Theorem LTL_RECURSION_LAWS___LTL_EVENTUAL :
+Theorem LTL_RECURSION_LAWS___LTL_EVENTUAL:
     !f. LTL_EQUIVALENT (LTL_EVENTUAL f)
                        (LTL_OR(f, LTL_NEXT(LTL_EVENTUAL f)))
 Proof
@@ -834,7 +834,7 @@ Proof
      `k >= t` by DECIDE_TAC >> PROVE_TAC [] ]
 QED
 
-Theorem LTL_RECURSION_LAWS___LTL_SUNTIL :
+Theorem LTL_RECURSION_LAWS___LTL_SUNTIL:
     !l1 l2. LTL_EQUIVALENT (LTL_SUNTIL (l1, l2))
                            (LTL_OR(l2, LTL_AND(l1, LTL_NEXT(LTL_SUNTIL (l1, l2)))))
 Proof
@@ -870,7 +870,7 @@ Proof
 ]
 QED
 
-Theorem LTL_RECURSION_LAWS___LTL_PSUNTIL :
+Theorem LTL_RECURSION_LAWS___LTL_PSUNTIL:
     !l1 l2. LTL_EQUIVALENT (LTL_PSUNTIL (l1, l2))
                            (LTL_OR(l2, LTL_AND(l1, LTL_PSNEXT(LTL_PSUNTIL (l1, l2)))))
 Proof
@@ -907,7 +907,7 @@ Proof
 ]
 QED
 
-Theorem LTL_EVENTUAL___PALWAYS :
+Theorem LTL_EVENTUAL___PALWAYS:
     !k w p. LTL_SEM_TIME k w (LTL_EVENTUAL p) ==>
             !l. l <= k ==> LTL_SEM_TIME l w (LTL_EVENTUAL p)
 Proof
@@ -918,7 +918,7 @@ Proof
  >> DECIDE_TAC
 QED
 
-Theorem LTL_WEAK_UNTIL___ALTERNATIVE_DEF :
+Theorem LTL_WEAK_UNTIL___ALTERNATIVE_DEF:
     !f1 f2. LTL_EQUIVALENT (LTL_UNTIL(f1,f2))
                            (LTL_NOT (LTL_SUNTIL(LTL_NOT f2, LTL_AND(LTL_NOT f1, LTL_NOT f2))))
 Proof
@@ -966,7 +966,7 @@ Proof
    ]
 QED
 
-Theorem LTL_PAST_WEAK_UNTIL___ALTERNATIVE_DEF :
+Theorem LTL_PAST_WEAK_UNTIL___ALTERNATIVE_DEF:
     !f1 f2. LTL_EQUIVALENT (LTL_PUNTIL(f1,f2))
                            (LTL_NOT (LTL_PSUNTIL(LTL_NOT f2, LTL_AND(LTL_NOT f1, LTL_NOT f2))))
 Proof
@@ -1018,7 +1018,7 @@ Proof
   ]
 QED
 
-Theorem LTL_STRONG___WEAK__IMPL___UNTIL :
+Theorem LTL_STRONG___WEAK__IMPL___UNTIL:
     !k w p1 p2. LTL_SEM_TIME k w (LTL_SUNTIL(p1, p2)) ==>
                 LTL_SEM_TIME k w (LTL_UNTIL(p1, p2))
 Proof
@@ -1026,7 +1026,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem LTL_COND___OR :
+Theorem LTL_COND___OR:
     !k w c p1 p2. LTL_SEM_TIME k w (LTL_COND (c, p1, p2)) ==>
                   LTL_SEM_TIME k w (LTL_OR (p1, p2))
 Proof
@@ -1034,7 +1034,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem LTL_MONOTICITY_LAWS :
+Theorem LTL_MONOTICITY_LAWS:
     !As Aw Bs Bw v. (!t. LTL_SEM_TIME t v Aw ==> LTL_SEM_TIME t v As) /\
                     (!t. LTL_SEM_TIME t v Bw ==> LTL_SEM_TIME t v Bs) ==>
          (!t. LTL_SEM_TIME t v (LTL_NOT As) ==> LTL_SEM_TIME t v (LTL_NOT Aw)) /\

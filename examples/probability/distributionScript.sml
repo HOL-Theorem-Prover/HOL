@@ -29,7 +29,7 @@ val _ = new_theory "distribution"; (* was: "normal_rv" *)
    NOTE: In some textbooks, g is said to be in "C_B" (the class of bounded
    continuous functions).
  *)
-Definition weak_converge_def :
+Definition weak_converge_def:
     weak_converge (fi :num -> extreal measure) (f :extreal measure) =
     !(g :real -> real).
         bounded (IMAGE g UNIV) /\ g continuous_on UNIV ==>
@@ -39,7 +39,7 @@ End
 
 Overload "-->" = “weak_converge”
 
-Theorem real_in_borel_measurable :
+Theorem real_in_borel_measurable:
     real IN borel_measurable Borel
 Proof
     rw [in_borel_measurable_le, SIGMA_ALGEBRA_BOREL, SPACE_BOREL, IN_FUNSET]
@@ -112,7 +112,7 @@ val converge_in_dist_tactic2 =
 (* IMPORTANT: convergence of r.v. in distribution is equivalent to weak convergence of
    their distribution functions.
  *)
-Theorem converge_in_dist_alt :
+Theorem converge_in_dist_alt:
     !p X Y. prob_space p /\
            (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
            ((X --> Y) (in_distribution p) <=>
@@ -153,11 +153,11 @@ QED
 
    cf. probabilityTheory.prob_density_function_def (extreal-based)
  *)
-Definition PDF_def :
+Definition PDF_def:
     PDF p X = RN_deriv (distribution p X) lborel
 End
 
-Theorem PDF_LE_POS :
+Theorem PDF_LE_POS:
     !p X. prob_space p /\ random_variable X p borel /\
           distribution p X << lborel ==> !x. 0 <= PDF p X x
 Proof
@@ -175,7 +175,7 @@ Proof
  >> SELECT_ELIM_TAC >> METIS_TAC []
 QED
 
-Theorem EXPECTATION_PDF_1 : (* was: INTEGRAL_PDF_1 *)
+Theorem EXPECTATION_PDF_1: (* was: INTEGRAL_PDF_1 *)
     !p X. prob_space p /\ random_variable X p borel /\
           distribution p X << lborel ==>
           expectation lborel (PDF p X) = 1
@@ -221,21 +221,21 @@ QED
 (* NOTE: ‘normal_density m s’ is a function of “:real -> real”, where m is the
    expectation, s is the standard deviation.
  *)
-Definition normal_density :
+Definition normal_density:
     normal_density mu sig x =
       (1 / sqrt (2 * pi * sig pow 2)) * exp (-((x - mu) pow 2) / (2 * sig pow 2))
 End
 
 Overload std_normal_density = “normal_density 0 1”
 
-Theorem std_normal_density_def :
+Theorem std_normal_density_def:
     !x. std_normal_density x = (1 / sqrt (2 * pi)) * exp (-(x pow 2) / 2)
 Proof
     RW_TAC std_ss [normal_density]
  >> SIMP_TAC real_ss [REAL_SUB_RZERO, POW_ONE]
 QED
 
-Theorem normal_density_nonneg :
+Theorem normal_density_nonneg:
     !mu sig x. 0 <= normal_density mu sig x
 Proof
   RW_TAC std_ss [normal_density] THEN MATCH_MP_TAC REAL_LE_MUL THEN
@@ -246,7 +246,7 @@ Proof
   SIMP_TAC real_ss [REAL_LE_POW2]
 QED
 
-Theorem normal_density_pos :
+Theorem normal_density_pos:
     !mu sig. 0 < sig ==> 0 < normal_density mu sig x
 Proof
   RW_TAC std_ss [normal_density] THEN MATCH_MP_TAC REAL_LT_MUL THEN
@@ -256,7 +256,7 @@ Proof
   MATCH_MP_TAC REAL_POW_LT >> art []
 QED
 
-Theorem normal_density_continuous_on :
+Theorem normal_density_continuous_on:
     !mu sig s. normal_density mu sig continuous_on s
 Proof
     rpt GEN_TAC
@@ -282,7 +282,7 @@ Proof
  >> rw [CONTINUOUS_ON_ID, CONTINUOUS_ON_CONST]
 QED
 
-Theorem in_measurable_borel_normal_density :
+Theorem in_measurable_borel_normal_density:
     !mu sig. normal_density mu sig IN borel_measurable borel
 Proof
     rpt GEN_TAC
@@ -290,7 +290,7 @@ Proof
  >> rw [normal_density_continuous_on]
 QED
 
-Theorem IN_MEASURABLE_BOREL_normal_density :
+Theorem IN_MEASURABLE_BOREL_normal_density:
     !mu sig. Normal o normal_density mu sig IN Borel_measurable borel
 Proof
     rpt GEN_TAC

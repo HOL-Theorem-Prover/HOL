@@ -2016,7 +2016,7 @@ source files.
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|(}
 
 >>__ load "realTheory"; open realTheory
->>__ load "real_sigmaTheory"; open real_sigmaTheory  
+>>__ load "real_sigmaTheory"; open real_sigmaTheory
 
 There is an extensive collection of theories that make up the
 development of real numbers and analysis in HOL, due to John Harrison
@@ -4220,7 +4220,7 @@ lemmas in \theoryimp{pred_setTheory}. For instance, a simple lemma
 from \theoryimp{util_probTheory}:
 \begin{hol}
 \begin{verbatim}
-Theorem DISJOINT_RESTRICT_L :
+Theorem DISJOINT_RESTRICT_L:
   !s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c)
 Proof SET_TAC []
 QED

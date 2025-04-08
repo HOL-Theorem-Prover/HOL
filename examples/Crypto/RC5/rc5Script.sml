@@ -23,11 +23,11 @@ Definition Q32_data:
 End
 
 (* function *)
-Definition Split64_def :
+Definition Split64_def:
    Split64 (w:word64)= ((63 >< 32)w:word32, (31 >< 0)w:word32)
 End
 
-Definition Join64_def :
+Definition Join64_def:
    Join64 (u:word32,v:word32) = (u @@ v) :word64
 End
 
@@ -206,7 +206,7 @@ Definition RoundEn_def:
      in (A,B)
 End
 
-Definition half_messageEn_def :
+Definition half_messageEn_def:
     half_messageEn (w1:word32) w2 ks n =
       let ki=EL n ks;
           ki2=EL (n-1) ks in
@@ -273,7 +273,7 @@ Proof
 QED
 
 (* Decryption *)
-Definition RoundDe_def :
+Definition RoundDe_def:
    (RoundDe 0 ks ((w1:word32),w2)=
       let s1=EL 1 ks;
           s0=EL 0 ks in
@@ -287,7 +287,7 @@ Definition RoundDe_def :
              (A,B)
 End
 
-Definition half_messageDe_def :
+Definition half_messageDe_def:
     half_messageDe (w1:word32) w2 ks n =
       let ki=EL (n-2) (REVERSE(ks));
           ki2=EL (n-2) (REVERSE(ks)) in
@@ -298,7 +298,7 @@ Definition half_messageDe_def :
          #>> w2n (half_messageDe w1 w2 ks (n - 1))) ⊕ (half_messageDe w1 w2 ks (n - 1))
 End
 
-Definition RoundDe64_def :
+Definition RoundDe64_def:
     RoundDe64 n (w:word64) k=
       let (w1,w2)= Split64(w);
           (A,B,Lk,Sk,i,j)=(rc5keys n k);
@@ -496,7 +496,7 @@ Definition RoundEnSg_def:
      in (A,B)
 End
 
-Definition RoundDeSg_def :
+Definition RoundDeSg_def:
    RoundDeSg (b) ki ki2=
      let (w1,w2)=b;
          B=((w2 -ki2) #>> w2n w1) ⊕ w1;
@@ -578,7 +578,7 @@ Proof
 QED
 
 (* TEST *)
-Theorem Skeys_l32_r1 :
+Theorem Skeys_l32_r1:
     (Skeys 1):word32 list= [0xB7E15163w;0x15618CB1Cw;0x1F45044D5w;0x29287BE8Ew]
 Proof
     EVAL_TAC

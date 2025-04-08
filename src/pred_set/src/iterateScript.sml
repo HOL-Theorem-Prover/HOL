@@ -228,7 +228,7 @@ val FUN_IN_IMAGE = store_thm ("FUN_IN_IMAGE",
  ``!f s x. x IN s ==> f(x) IN IMAGE f s``,
   SET_TAC[]);
 
-Theorem DIFF_BIGINTER2 : (* was: DIFF_BIGINTER *)
+Theorem DIFF_BIGINTER2: (* was: DIFF_BIGINTER *)
     !u s. u DIFF BIGINTER s = BIGUNION {u DIFF t | t IN s}
 Proof
   SIMP_TAC std_ss [BIGUNION_GSPEC] THEN SET_TAC[]
@@ -332,7 +332,7 @@ val FINREC_FUN_LEMMA = store_thm ("FINREC_FUN_LEMMA",
   MATCH_MP_TAC SELECT_UNIQUE THEN ASM_MESON_TAC[],
   DISCH_THEN(SUBST1_TAC o SYM) THEN CONV_TAC SELECT_CONV THEN ASM_MESON_TAC[]]);
 
-Theorem FINREC_FUN :
+Theorem FINREC_FUN:
     !(f:'a->'b->'b) b.
         (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
         ==> ?g. (g {} = b) /\
@@ -394,7 +394,7 @@ val SET_RECURSION_LEMMA = store_thm ("SET_RECURSION_LEMMA",
       EVAL_TAC THEN FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT, SUBSET_REFL]]]);
 
 (* This is HOL Light's definition of ‘ITSET’ *)
-Theorem ITSET_alt :
+Theorem ITSET_alt:
     !(f:'a->'b->'b) s b.
         (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
          ITSET f s b =
@@ -422,7 +422,7 @@ Proof
  >> rw [GSYM DELETE_NON_ELEMENT]
 QED
 
-Theorem FINITE_RECURSION :
+Theorem FINITE_RECURSION:
     !(f:'a->'b->'b) b.
         (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
         ==> (ITSET f {} b = b) /\
@@ -553,7 +553,7 @@ Proof
 QED
 
 (* ‘count n’ re-expressed by numseg *)
-Theorem COUNT_NUMSEG :
+Theorem COUNT_NUMSEG:
     !n. 0 < n ==> count n = {0..n-1}
 Proof
     rw [Once EXTENSION]
@@ -749,14 +749,14 @@ val UNION_FROM_COUNT = store_thm
   ("UNION_FROM_COUNT", ``!n. (from n) UNION (count n) = UNIV``,
     RW_TAC std_ss [Once UNION_COMM, UNION_COUNT_FROM]);
 
-Theorem FROM_NOT_EMPTY :
+Theorem FROM_NOT_EMPTY:
     !n. from n <> {}
 Proof
     RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY, from_def, GSPECIFICATION]
  >> Q.EXISTS_TAC `n` >> REWRITE_TAC [LESS_EQ_REFL]
 QED
 
-Theorem COUNTABLE_FROM :
+Theorem COUNTABLE_FROM:
     !n. COUNTABLE (from n)
 Proof
     PROVE_TAC [COUNTABLE_NUM]
@@ -1230,7 +1230,7 @@ val ITERATE_BIJECTION = store_thm ("ITERATE_BIJECTION",
    [AP_THM_TAC THEN AP_TERM_TAC THEN SIMP_TAC std_ss[EXTENSION, IN_IMAGE] THEN METIS_TAC [],
     METIS_TAC[ITERATE_IMAGE]]);
 
-Theorem ITERATE_PERMUTES :
+Theorem ITERATE_PERMUTES:
     !op. monoidal op
          ==> !(f:'a->'b) p s. p PERMUTES s
                 ==> (iterate op s f = iterate op s (f o p))
@@ -1496,7 +1496,7 @@ val ITERATE_PAIR = store_thm ("ITERATE_PAIR",
 (* Sums of natural numbers.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-Definition nsum :
+Definition nsum:
    (nsum :('a->bool)->('a->num)->num) = iterate (+)
 End
 
@@ -2151,7 +2151,7 @@ val CARD_BIGUNION = store_thm ("CARD_BIGUNION",
 (*     Products of natural numbers and real numbers (productScript.sml)      *)
 (* ========================================================================= *)
 
-Definition nproduct :
+Definition nproduct:
    nproduct = iterate(( * ):num->num->num)
 End
 
@@ -2364,7 +2364,7 @@ val NPRODUCT_DELTA = store_thm ("NPRODUCT_DELTA",
 (* Extend congruences.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem NPRODUCT_CONG :
+Theorem NPRODUCT_CONG:
     (!f g s.   (!x. x IN s ==> (f(x) = g(x)))
            ==> (nproduct s (\i. f(i)) = nproduct s g)) /\
     (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
@@ -2382,7 +2382,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* moved here from integrationTheory *)
-Definition lifted :
+Definition lifted:
    (lifted op NONE _ = NONE) /\
    (lifted op _ NONE = NONE) /\
    (lifted op (SOME x) (SOME y) = SOME(op x y))
@@ -2437,7 +2437,7 @@ val ITERATE_AND = store_thm ("ITERATE_AND",
 (* Permutations of index set for iterated operations.                        *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem ITERATE_PERMUTE :
+Theorem ITERATE_PERMUTE:
   !op. monoidal op ==>
        !(f:'a -> 'b) p s. p permutes s ==>
                           (iterate op s f = iterate op s (f o p))
@@ -2447,27 +2447,27 @@ Proof
   PROVE_TAC[permutes]
 QED
 
-Theorem NSUM_PERMUTE :
+Theorem NSUM_PERMUTE:
    !f p s. p permutes s ==> (nsum s f = nsum s (f o p))
 Proof
   REWRITE_TAC[nsum] THEN MATCH_MP_TAC ITERATE_PERMUTE THEN
   REWRITE_TAC[MONOIDAL_ADD]
 QED
 
-Theorem NSUM_PERMUTE_COUNT :
+Theorem NSUM_PERMUTE_COUNT:
    !f p n. p permutes (count n) ==> (nsum (count n) f = nsum (count n) (f o p))
 Proof
   PROVE_TAC[NSUM_PERMUTE, FINITE_COUNT]
 QED
 
-Theorem NSUM_PERMUTE_NUMSEG :
+Theorem NSUM_PERMUTE_NUMSEG:
    !f p m n. p permutes (count n DIFF count m) ==>
             (nsum (count n DIFF count m) f = nsum (count n DIFF count m) (f o p))
 Proof
   PROVE_TAC[NSUM_PERMUTE, FINITE_COUNT, FINITE_DIFF]
 QED
 
-Theorem TRANSFORM_2D_NUM :
+Theorem TRANSFORM_2D_NUM:
     !P. (!m n : num. P m n ==> P n m) /\ (!m n. P m (m + n)) ==> (!m n. P m n)
 Proof
     rpt STRIP_TAC
@@ -2476,7 +2476,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem TRIANGLE_2D_NUM :
+Theorem TRIANGLE_2D_NUM:
     !P. (!d n. P n (d + n)) ==> (!m n : num. m <= n ==> P m n)
 Proof
     RW_TAC std_ss [LESS_EQ_EXISTS]

@@ -195,7 +195,7 @@ val is_variant_TRANS = store_thm
     RW_TAC arith_ss [is_variant]
    );
 
-Theorem is_variant_SOME_mk_variant :
+Theorem is_variant_SOME_mk_variant:
    !x y. y is_variant x <=> (?k. y = mk_variant x k)
 Proof
     Induct

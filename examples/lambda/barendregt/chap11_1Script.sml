@@ -537,7 +537,7 @@ val strip_lemma = store_thm(
 
    NOTE: cf. chap2Theory.beta_CR and finite_developmentsTheory.corollary11_2_29.
  *)
-Theorem beta_CR_2 :
+Theorem beta_CR_2:
     CR beta
 Proof
   SIMP_TAC (srw_ss())[CR_def, diamond_property_def] THEN

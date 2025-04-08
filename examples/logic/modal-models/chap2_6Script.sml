@@ -45,7 +45,7 @@ folm2mm FM = <| frame := <| world := FM.Dom ;
                  valt := \v w. (FM.Pred v [w] /\ w IN FM.Dom) |>`;
 
 
-Theorem MAP_LIST_EQ :
+Theorem MAP_LIST_EQ:
   !l f g. (!m. MEM m l ==> f m = g m) ==> MAP f l = MAP g l
 Proof
   rw[] >> irule LIST_EQ >> rw[EL_MAP] >> metis_tac[EL_MEM]

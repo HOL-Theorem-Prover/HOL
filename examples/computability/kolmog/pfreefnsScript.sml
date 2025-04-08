@@ -21,7 +21,7 @@ Proof
   ACCEPT_TAC normal_orderTheory.lameq_bnf_of_SOME_I
 QED
 
-Definition calc_fn_alist_def :
+Definition calc_fn_alist_def:
   calc_fn_alist =
   LAM "M" (
     LAM "s" (

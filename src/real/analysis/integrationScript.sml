@@ -197,7 +197,7 @@ val INTER_INTERIOR_BIGUNION_INTERVALS = store_thm ("INTER_INTERIOR_BIGUNION_INTE
    on certain points: an indicator function can be used to replace unspecified
    fuction values to zero.                        -- Chun Tian, April 16, 2022
  *)
-Definition gauge_def :
+Definition gauge_def:
    Gauge d <=> !x. x IN d(x) /\ open(d(x))
 End
 Overload gauge = “Gauge”
@@ -219,7 +219,7 @@ val GAUGE_INTER = store_thm ("GAUGE_INTER",
  ``!d1 d2. gauge d1 /\ gauge d2 ==> gauge (\x. (d1 x) INTER (d2 x))``,
   SIMP_TAC std_ss [gauge_def, IN_INTER, OPEN_INTER]);
 
-Theorem GAUGE_BIGINTER :
+Theorem GAUGE_BIGINTER:
     !f s. FINITE s /\ (!d. d IN s ==> gauge (f d)) ==>
           gauge (\x. BIGINTER {f d x | d IN s})
 Proof
@@ -228,7 +228,7 @@ Proof
  >> SIMP_TAC std_ss [FORALL_IN_IMAGE, OPEN_BIGINTER, IMAGE_FINITE]
 QED
 
-Theorem GAUGE_EXISTENCE_LEMMA :
+Theorem GAUGE_EXISTENCE_LEMMA:
     !p q. (!x:real. ?d:real. p x ==> &0 < d /\ q d x) <=>
           (!x:real. ?d:real. &0 < d /\ (p x ==> q d x))
 Proof
@@ -250,7 +250,7 @@ val division_of = new_definition ("division_of",
                  ==> (interior(k1) INTER interior(k2) = {})) /\
         (BIGUNION s = i)``);
 
-Theorem DIVISION_OF :
+Theorem DIVISION_OF:
     !s i. s division_of i <=>
         FINITE s /\
         (!k. k IN s ==> ~(k = {}) /\ ?a b. k = interval[a,b]) /\
@@ -1300,7 +1300,7 @@ val ELEMENTARY_COMPACT = store_thm ("ELEMENTARY_COMPACT",
   REWRITE_TAC[division_of] THEN
   MESON_TAC[COMPACT_BIGUNION, COMPACT_INTERVAL]);
 
-Theorem DIVISION_1_SORT :
+Theorem DIVISION_1_SORT:
     !d s:real->bool. d division_of s /\
      (!k. k IN d ==> ~(interior k = {}))
       ==> ?n t. (IMAGE t { 1n..n} = d) /\
@@ -1412,7 +1412,7 @@ val TAGGED_DIVISION_OF_FINITE = store_thm ("TAGGED_DIVISION_OF_FINITE",
  ``!s i. s tagged_division_of i ==> FINITE s``,
   SIMP_TAC std_ss [tagged_division_of, tagged_partial_division_of]);
 
-Theorem TAGGED_DIVISION_OF :
+Theorem TAGGED_DIVISION_OF:
     !s i. s tagged_division_of i <=>
         FINITE s /\
         (!x k. (x,k) IN s
@@ -1689,7 +1689,7 @@ val _ = set_fixity "has_integral_compact_interval" (Infix(NONASSOC, 450));
 val _ = set_fixity "has_integral" (Infix(NONASSOC, 450));
 val _ = set_fixity "integrable_on" (Infix(NONASSOC, 450));
 
-Definition has_integral_compact_interval :
+Definition has_integral_compact_interval:
    (f has_integral_compact_interval y) i <=>
         !e. &0 < e
             ==> ?d. gauge d /\
@@ -1697,7 +1697,7 @@ Definition has_integral_compact_interval :
                         ==> abs(sum p (\(x,k). content(k) * f(x)) - y) < e
 End
 
-Definition has_integral_def :
+Definition has_integral_def:
    (f has_integral y) i <=>
         if ?a b. i = interval[a,b] then (f has_integral_compact_interval y) i
         else !e. &0 < e
@@ -1708,7 +1708,7 @@ Definition has_integral_def :
                                         (interval[a,b]) /\ abs(z - y) < e
 End
 
-Theorem has_integral :
+Theorem has_integral:
    !f y a b.
      (f has_integral y) (interval[a,b]) <=>
         !e. &0 < e
@@ -1721,7 +1721,7 @@ Proof
   METIS_TAC[]
 QED
 
-Theorem has_integral_alt :
+Theorem has_integral_alt:
    !f i y.
      (f has_integral y) i <=>
         if ?a b. i = interval[a,b] then (f has_integral y) i
@@ -1738,12 +1738,12 @@ Proof
   REWRITE_TAC[has_integral_compact_interval, has_integral]
 QED
 
-Definition integrable_on :
+Definition integrable_on:
    f integrable_on i <=> ?y. (f has_integral y) i
 End
 
 val _ = hide "integral";
-Definition integral_def : (* was: integral *)
+Definition integral_def: (* was: integral *)
     integral i f = @y. (f has_integral y) i
 End
 val integral = integral_def;
@@ -2706,7 +2706,7 @@ val INTERVAL_SPLIT = store_thm ("INTERVAL_SPLIT",
   SIMP_TAC std_ss [LEFT_AND_FORALL_THM, real_ge] THEN CONJ_TAC THEN
   ASM_MESON_TAC[REAL_MAX_LE, REAL_LE_MIN]);
 
-Theorem CONTENT_SPLIT :
+Theorem CONTENT_SPLIT:
     !a b:real k. content(interval[a,b]) =
                  content(interval[a,b] INTER {x | x <= c}) +
                  content(interval[a,b] INTER {x | x >= c})
@@ -3379,7 +3379,7 @@ val DIVISION_POINTS_PSUBSET = store_thm ("DIVISION_POINTS_PSUBSET",
 (* Preservation by divisions and tagged divisions.                           *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem OPERATIVE_DIVISION :
+Theorem OPERATIVE_DIVISION:
     !op d a b f:(real->bool)->'a.
         monoidal op /\ operative op f /\ d division_of interval[a,b]
     ==> (iterate(op) d f = f(interval[a,b]))
@@ -4244,7 +4244,7 @@ val SUM_NONZERO_IMAGE_LEMMA = store_thm ("SUM_NONZERO_IMAGE_LEMMA",
     ASM_SIMP_TAC std_ss [sum_def] THEN MATCH_MP_TAC ITERATE_NONZERO_IMAGE_LEMMA THEN
     ASM_REWRITE_TAC[NEUTRAL_REAL_ADD, MONOIDAL_REAL_ADD]]);
 
-Theorem INTERVAL_DOUBLESPLIT :
+Theorem INTERVAL_DOUBLESPLIT:
     !e a b c. interval[a,b] INTER {x:real | abs(x - c) <= e} =
               interval[(max (a) (c - e)), (min (b) (c + e))]
 Proof
@@ -4280,7 +4280,7 @@ val DIVISION_DOUBLESPLIT = store_thm ("DIVISION_DOUBLESPLIT",
   ONCE_REWRITE_TAC[TAUT `a /\ b /\ c /\ d <=> c /\ a /\ b /\ d`] THEN
   SIMP_TAC std_ss [UNWIND_THM2] THEN AP_TERM_TAC THEN ABS_TAC THEN SET_TAC[]);
 
-Theorem CONTENT_DOUBLESPLIT :
+Theorem CONTENT_DOUBLESPLIT:
     !a b:real c e.
         &0 < e ==> ?d. &0 < d /\
                 content(interval[a,b] INTER {x | abs(x - c) <= d}) < e
@@ -5687,7 +5687,7 @@ val INTEGRABLE_AFFINITY = store_thm ("INTEGRABLE_AFFINITY",
 (* Special case of stretching coordinate axes separately.                    *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem CONTENT_IMAGE_STRETCH_INTERVAL :
+Theorem CONTENT_IMAGE_STRETCH_INTERVAL:
     !a b:real m.
         content(IMAGE (\x. m 1 * x) (interval[a,b]):real->bool) =
         abs(product{ 1n.. 1n} m) * content(interval[a,b])
@@ -5707,7 +5707,7 @@ Proof
                          REAL_ARITH ``a <= b ==> (abs(b - a) = b - a:real)``]
 QED
 
-Theorem HAS_INTEGRAL_STRETCH :
+Theorem HAS_INTEGRAL_STRETCH:
     !f:real->real i m a b.
         (f has_integral i) (interval[a,b]) /\
         ~(m  1n = &0)
@@ -5812,7 +5812,7 @@ val lemma = prove (
            ==> CARD(s) <= n``,
     MESON_TAC[CARD_IMAGE_INJ]);
 
-Theorem DIVISION_COMMON_POINT_BOUND :
+Theorem DIVISION_COMMON_POINT_BOUND:
     !d s:real->bool x.
         d division_of s
         ==> CARD {k | k IN d /\ ~(content k = &0) /\ x IN k}
@@ -6597,7 +6597,7 @@ val INTEGRABLE_ON_SUBINTERVAL = store_thm ("INTEGRABLE_ON_SUBINTERVAL",
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] INTEGRABLE_EQ) THEN
   ASM_SET_TAC[]);
 
-Theorem INTEGRAL_SPLIT :
+Theorem INTEGRAL_SPLIT:
     !f:real->real a b t.
         f integrable_on interval[a,b]
         ==> (integral (interval[a,b]) f =
@@ -6614,7 +6614,7 @@ Proof
  >> rpt STRIP_TAC >> ASM_REAL_ARITH_TAC
 QED
 
-Theorem INTEGRAL_SPLIT_SIGNED :
+Theorem INTEGRAL_SPLIT_SIGNED:
     !f:real->real a b t.
         a <= t /\ a <= b /\
         f integrable_on interval[a,(@f. f = max (b) t)]
@@ -6890,7 +6890,7 @@ val lemma = prove (
   ``&0:real <= x /\ x <= y ==> abs x <= abs y``,
    REAL_ARITH_TAC);
 
-Theorem INTEGRABLE_STRADDLE :
+Theorem INTEGRABLE_STRADDLE:
     !f:real->real s.
         (!e. &0 < e
              ==> ?g h i j. (g has_integral i) s /\
@@ -8069,7 +8069,7 @@ val MONOTONE_CONVERGENCE_INTERVAL = store_thm ("MONOTONE_CONVERGENCE_INTERVAL",
   FIRST_ASSUM(SUBST1_TAC o MATCH_MP INTEGRAL_UNIQUE) THEN
   ASM_SIMP_TAC std_ss []);
 
-Theorem MONOTONE_CONVERGENCE_INCREASING :
+Theorem MONOTONE_CONVERGENCE_INCREASING:
     !f:num->real->real g s.
         (!k. (f k) integrable_on s) /\
         (!k x. x IN s ==> (f k x) <= (f (SUC k) x)) /\
@@ -8765,7 +8765,7 @@ val INTEGRABLE_ON_ALL_INTERVALS_INTEGRABLE_BOUND =  store_thm ("INTEGRABLE_ON_AL
 (* Explicit limit statement for integrals over [0,inf].                      *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem HAS_INTEGRAL_LIM_AT_POSINFINITY :
+Theorem HAS_INTEGRAL_LIM_AT_POSINFINITY:
     !f l:real.
         (f has_integral l) {t | &0 <= t} <=>
         (!a. f integrable_on interval[0,a]) /\
@@ -8849,7 +8849,7 @@ val FLOOR_POS = store_thm ("FLOOR_POS",
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC [NUM_FLOOR_def] THEN
   METIS_TAC []);
 
-Theorem HAS_INTEGRAL_LIM_SEQUENTIALLY :
+Theorem HAS_INTEGRAL_LIM_SEQUENTIALLY:
     !f:real->real l.
            (f --> 0) at_posinfinity /\
            (!n. f integrable_on interval[0,&n]) /\
@@ -9203,7 +9203,7 @@ val HAS_BOUNDED_SETVARIATION_ON_SUBSET = store_thm ("HAS_BOUNDED_SETVARIATION_ON
   REWRITE_TAC[has_bounded_setvariation_on] THEN
   METIS_TAC[SUBSET_TRANS]);
 
-Theorem HAS_BOUNDED_SETVARIATION_ON_IMP_BOUNDED_ON_SUBINTERVALS :
+Theorem HAS_BOUNDED_SETVARIATION_ON_IMP_BOUNDED_ON_SUBINTERVALS:
     !f:(real->bool)->real s.
         f has_bounded_setvariation_on s
         ==> bounded { f(interval[c,d]) | interval[c,d] SUBSET s}
@@ -10095,7 +10095,7 @@ val lemma = prove (
   MATCH_MP_TAC SUM_LE THEN ASM_SIMP_TAC std_ss [] THEN
   REPEAT STRIP_TAC THEN REAL_ARITH_TAC);
 
-Theorem BOUNDED_SETVARIATION_ABSOLUTELY_INTEGRABLE_INTERVAL :
+Theorem BOUNDED_SETVARIATION_ABSOLUTELY_INTEGRABLE_INTERVAL:
     !f:real->real a b.
         f integrable_on interval[a,b] /\
         (\k. integral k f) has_bounded_setvariation_on interval[a,b]
@@ -11115,7 +11115,7 @@ val ABSOLUTELY_INTEGRABLE_SUM = store_thm ("ABSOLUTELY_INTEGRABLE_SUM",
                   (\x. (\x. f e x) x + (\x. sum s' (\a. f a x)) x)``] THEN
   MATCH_MP_TAC ABSOLUTELY_INTEGRABLE_ADD THEN METIS_TAC [ETA_AX]);
 
-Theorem ABSOLUTELY_INTEGRABLE_MAX :
+Theorem ABSOLUTELY_INTEGRABLE_MAX:
     !f:real->real g:real->real s.
         f absolutely_integrable_on s /\ g absolutely_integrable_on s
         ==> (\x. (max (f(x)) (g(x))):real)
@@ -11138,7 +11138,7 @@ Proof
   Cases_on `f x <= g x` >> rw [] >> REAL_ASM_ARITH_TAC
 QED
 
-Theorem ABSOLUTELY_INTEGRABLE_MIN :
+Theorem ABSOLUTELY_INTEGRABLE_MIN:
     !f:real->real g:real->real s.
         f absolutely_integrable_on s /\ g absolutely_integrable_on s
         ==> (\x. (min (f(x)) (g(x))):real)
@@ -11383,7 +11383,7 @@ val ABSOLUTELY_INTEGRABLE_CONTINUOUS = store_thm ("ABSOLUTELY_INTEGRABLE_CONTINU
   EXISTS_TAC ``\x:real. (B:real)`` THEN
   ASM_SIMP_TAC std_ss [INTEGRABLE_CONST, INTEGRABLE_CONTINUOUS]);
 
-Theorem INTEGRABLE_MIN_CONST :
+Theorem INTEGRABLE_MIN_CONST:
     !f s t.
         &0 <= t /\ (!x. x IN s ==> &0 <= f x) /\
         (\x:real. (f x)) integrable_on s
@@ -12359,7 +12359,7 @@ val INTEGRAL_ABS_BOUND_INTEGRAL_AE = store_thm ("INTEGRAL_ABS_BOUND_INTEGRAL_AE"
 (* Beppo Levi theorem.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem BEPPO_LEVI_INCREASING :
+Theorem BEPPO_LEVI_INCREASING:
     !f:num->real->real s.
         (!k. (f k) integrable_on s) /\
         (!k x. x IN s ==> (f k x) <= (f (SUC k) x)) /\
@@ -14762,7 +14762,7 @@ val lemma = prove (
      (!x k. (x,k) IN s ==> Q (f x k) (g x k))``,
   SIMP_TAC std_ss [IN_IMAGE, PAIR_EQ, EXISTS_PROD] THEN SET_TAC[]);
 
-Theorem EQUIINTEGRABLE_REFLECT :
+Theorem EQUIINTEGRABLE_REFLECT:
     !(fs :(real->real)->bool) a b.
         fs equiintegrable_on interval[a,b]
         ==> {(\x. f(-x)) | f IN fs} equiintegrable_on interval[-b,-a]
@@ -15067,7 +15067,7 @@ val lemma1 = prove (
         ASM_MESON_TAC[],
         ASM_SIMP_TAC std_ss []]]);
 
-Theorem SUM_CONTENT_AREA_OVER_THIN_DIVISION :
+Theorem SUM_CONTENT_AREA_OVER_THIN_DIVISION:
     !d a b:real s c.
         d division_of s /\ s SUBSET interval[a,b] /\
                  a <= c /\ c <= b /\
@@ -15391,7 +15391,7 @@ Proof
     SIMP_TAC std_ss [REAL_DIV_REFL] ]
 QED
 
-Theorem BOUNDED_EQUIINTEGRAL_OVER_THIN_TAGGED_PARTIAL_DIVISION :
+Theorem BOUNDED_EQUIINTEGRAL_OVER_THIN_TAGGED_PARTIAL_DIVISION:
   !fs f:real->real a b e.
     fs equiintegrable_on interval[a,b] /\ f IN fs /\
     (!h x. h IN fs /\ x IN interval[a,b] ==> abs(h x) <= abs(f x)) /\
@@ -15663,7 +15663,7 @@ val lemma = prove (
      (!x k. (x,k) IN s ==> Q (f x k) (g x k))``,
     SIMP_TAC std_ss [IN_IMAGE, PAIR_EQ, EXISTS_PROD] THEN SET_TAC[]);
 
-Theorem EQUIINTEGRABLE_HALFSPACE_RESTRICTIONS_LE :
+Theorem EQUIINTEGRABLE_HALFSPACE_RESTRICTIONS_LE:
     !fs f:real->real a b.
         fs equiintegrable_on interval[a,b] /\ f IN fs /\
         (!h x. h IN fs /\ x IN interval[a,b] ==> abs(h x) <= abs(f x))
@@ -17838,7 +17838,7 @@ val HAS_BOUNDED_VARIATION_ON_ABS = store_thm ("HAS_BOUNDED_VARIATION_ON_ABS",
   MATCH_MP_TAC SUM_LE THEN SIMP_TAC std_ss [] THEN
   CONJ_TAC THENL [ASM_MESON_TAC[DIVISION_OF_FINITE], REAL_ARITH_TAC]);
 
-Theorem HAS_BOUNDED_VARIATION_ON_MAX :
+Theorem HAS_BOUNDED_VARIATION_ON_MAX:
     !f g s. f has_bounded_variation_on s /\ g has_bounded_variation_on s
            ==> (\x. (max ((f x)) ((g x))))
                has_bounded_variation_on s
@@ -17866,7 +17866,7 @@ Proof
   MATCH_MP_TAC HAS_BOUNDED_VARIATION_ON_SUB THEN ASM_REWRITE_TAC[]
 QED
 
-Theorem HAS_BOUNDED_VARIATION_ON_MIN :
+Theorem HAS_BOUNDED_VARIATION_ON_MIN:
     !f g s. f has_bounded_variation_on s /\ g has_bounded_variation_on s
            ==> (\x. (min ((f x)) ((g x)))) has_bounded_variation_on s
 Proof
@@ -18133,7 +18133,7 @@ val HAS_BOUNDED_VARIATION_SUM_LE = store_thm ("HAS_BOUNDED_VARIATION_SUM_LE",
             <= sum k (\i. vector_variation s (f i)))``,
   REWRITE_TAC [HAS_BOUNDED_VARIATION_ON_SUM_AND_SUM_LE]);
 
-Theorem OPERATIVE_FUNCTION_ENDPOINT_DIFF :
+Theorem OPERATIVE_FUNCTION_ENDPOINT_DIFF:
     !f:real->real.
       operative (+) (\k. f (interval_upperbound k) - f (interval_lowerbound k))
 Proof
@@ -18233,7 +18233,7 @@ val HAS_BOUNDED_VARIATION_ON_COMBINE = store_thm ("HAS_BOUNDED_VARIATION_ON_COMB
     REPEAT(COND_CASES_TAC THEN
            ASM_SIMP_TAC std_ss [NOT_NONE_SOME, lifted])]);
 
-Theorem VECTOR_VARIATION_COMBINE :
+Theorem VECTOR_VARIATION_COMBINE:
     !f:real->real a b c.
         a <= c /\ c <= b /\
         f has_bounded_variation_on interval[a,b]
@@ -18433,7 +18433,7 @@ val DECREASING_BOUNDED_VARIATION_GEN = store_thm ("DECREASING_BOUNDED_VARIATION_
   DISCH_THEN(MP_TAC o MATCH_MP HAS_BOUNDED_VARIATION_ON_NEG) THEN
   METIS_TAC[o_DEF, REAL_NEG_NEG, ETA_AX]);
 
-Theorem INCREASING_BOUNDED_VARIATION :
+Theorem INCREASING_BOUNDED_VARIATION:
     !f a b.
         (!x y. x IN interval[a,b] /\ y IN interval[a,b] /\ x <= y
                ==> (f x) <= (f y))

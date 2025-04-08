@@ -326,7 +326,7 @@ Overload clg = “NUM_CEILING”
           a copy in "prove_real_assumsScript.sml" where “real_of_num” is
           interpreted differently.
  *)
-Theorem REAL_ADD_AC :
+Theorem REAL_ADD_AC:
    (m + n = n + m) /\
    ((m + n) + p = m + (n + p)) /\
    (m + (n + p) = n + (m + p))
@@ -334,7 +334,7 @@ Proof
   MESON_TAC[REAL_ADD_ASSOC, REAL_ADD_SYM]
 QED
 
-Theorem REAL_MUL_AC :
+Theorem REAL_MUL_AC:
    (m * n = n * m) /\
    ((m * n) * p = m * (n * p)) /\
    (m * (n * p) = n * (m * p))
@@ -502,7 +502,7 @@ val REAL_MUL = store_thm("REAL_MUL",
 (* HOL-Light compatible name of the above theorem *)
 Theorem REAL_OF_NUM_MUL = REAL_MUL;
 
-Theorem REAL_OF_NUM_POW :
+Theorem REAL_OF_NUM_POW:
     !x n. (real_of_num x) pow n = real_of_num(x EXP n)
 Proof
   GEN_TAC THEN INDUCT_TAC THEN
@@ -510,7 +510,7 @@ Proof
 QED
 
 (* NOTE: realTheory.REAL_POW_NEG has different statements! *)
-Theorem REAL_POW_NEG :
+Theorem REAL_POW_NEG:
    !x n. (~x) pow n = if EVEN n then x pow n else ~(x pow n)
 Proof
   GEN_TAC THEN INDUCT_TAC THEN
@@ -597,7 +597,7 @@ val REAL_LE_RADD = store_thm("REAL_LE_RADD",
   REPEAT GEN_TAC THEN REWRITE_TAC[real_lte] THEN
   AP_TERM_TAC THEN MATCH_ACCEPT_TAC REAL_LT_RADD);
 
-Theorem REAL_NEG_LT0 :
+Theorem REAL_NEG_LT0:
   !x. ~x < 0r <=> 0r < x
 Proof
   GEN_TAC THEN
@@ -613,7 +613,7 @@ Proof
   ASM_REWRITE_TAC[SYM(REWRITE_RULE[REAL_NEG_NEG] (Q.SPEC ‘~x’ REAL_NEG_LT0))]
 QED
 
-Theorem REAL_LE_NEGTOTAL :
+Theorem REAL_LE_NEGTOTAL:
   !x. 0r <= x \/ 0r <= ~x
 Proof
   GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
@@ -660,7 +660,7 @@ val REAL_LT_01 = store_thm("REAL_LT_01",
   CONV_TAC(RAND_CONV SYM_CONV) THEN
   REWRITE_TAC[REAL_10]);
 
-Theorem REAL_LE_ADDR :
+Theorem REAL_LE_ADDR:
   !x y. x <= x + y <=> 0r <= y
 Proof
   REPEAT GEN_TAC THEN
@@ -697,7 +697,7 @@ Theorem REAL_OF_NUM_LE = REAL_LE;
 (* |- !n. 0 <= n *)
 val LE_0 = ZERO_LESS_EQ; (* arithmeticTheory *)
 
-Theorem REAL_ABS_NUM :
+Theorem REAL_ABS_NUM:
    !n. abs(real_of_num n) = real_of_num n
 Proof
   REWRITE_TAC[real_abs, REAL_OF_NUM_LE, LE_0]
@@ -788,7 +788,7 @@ val REAL_POW_2 = store_thm("REAL_POW_2",
   REWRITE_TAC[real_pow, REAL_MUL_RID]);
 
 (* This actually shows that real numbers and (+,*,0,1) form a semi-ring *)
-Theorem REAL_POLY_CLAUSES :
+Theorem REAL_POLY_CLAUSES:
    (!x y z. x + (y + z) = (x + y) + z) /\
    (!x y. x + y = y + x) /\
    (!x. 0r + x = x) /\
@@ -805,7 +805,7 @@ Proof
   REWRITE_TAC[Once REAL_ADD_AC] THEN REWRITE_TAC[Once REAL_MUL_SYM]
 QED
 
-Theorem REAL_POLY_NEG_CLAUSES :
+Theorem REAL_POLY_NEG_CLAUSES:
    (!x. ~x = ~(1r) * x) /\
    (!x y. x - y = x + ~(1r) * y)
 Proof
@@ -818,7 +818,7 @@ val REAL_LE_TOTAL = store_thm("REAL_LE_TOTAL",
   REWRITE_TAC[real_lte, GSYM DE_MORGAN_THM, REAL_LT_ANTISYM]);
 
 (* NOTE: MESON_TAC (original proof) doesn't work here. METIS_TAC is used *)
-Theorem REAL_ABS_NEG :
+Theorem REAL_ABS_NEG:
    !x. abs(~x) = abs x
 Proof
   GEN_TAC THEN
@@ -846,7 +846,7 @@ val REAL_INJ = store_thm("REAL_INJ",
 Theorem REAL_OF_NUM_EQ = REAL_INJ;
 
 (* This theorem is mainly for RealArith.REAL_LINEAR_PROVER *)
-Theorem REAL_POS_LT :
+Theorem REAL_POS_LT:
     !n. 0r < real_of_num (SUC n)
 Proof
     GEN_TAC

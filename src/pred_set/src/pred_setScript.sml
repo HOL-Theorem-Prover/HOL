@@ -498,7 +498,7 @@ val EQ_SUBSET_SUBSET = store_thm (* from util_prob *)
    ``!(s :'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
 
-Theorem SUBSET_ANTISYM_EQ : (* from HOL Light *)
+Theorem SUBSET_ANTISYM_EQ: (* from HOL Light *)
     !(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)
 Proof
    REPEAT GEN_TAC THEN EQ_TAC THENL
@@ -890,7 +890,7 @@ Theorem DISJOINT_UNION_BOTH:
 Proof PROVE_TAC [DISJOINT_UNION, DISJOINT_SYM]
 QED
 
-Theorem DISJOINT_SUBSET :
+Theorem DISJOINT_SUBSET:
    !s t u. DISJOINT s t /\ u SUBSET t ==> DISJOINT s u
 Proof
   REWRITE_TAC [DISJOINT_DEF, SUBSET_DEF, IN_INTER, NOT_IN_EMPTY,
@@ -898,7 +898,7 @@ Proof
   PROVE_TAC []
 QED
 
-Theorem SUBSET_DISJOINT :
+Theorem SUBSET_DISJOINT:
     !s t u v. DISJOINT s t /\ u SUBSET s /\ v SUBSET t ==> DISJOINT u v
 Proof
     RW_TAC std_ss [DISJOINT_ALT]
@@ -1806,7 +1806,7 @@ val IMAGE_I = store_thm("IMAGE_I[simp]",
   ``IMAGE I s = s``,
   full_simp_tac(srw_ss())[EXTENSION]);
 
-Theorem IMAGE_o :
+Theorem IMAGE_o:
      !(f :'b -> 'c) (g :'a -> 'b) s. IMAGE (f o g) s = IMAGE f (IMAGE g s)
 Proof
   REWRITE_TAC[EXTENSION, IN_IMAGE, o_THM] THEN MESON_TAC[]
@@ -1935,7 +1935,7 @@ val IMAGE_SING = store_thm (* from measureTheory *)
     RW_TAC std_ss [EXTENSION,IN_SING,IN_IMAGE] >> METIS_TAC []);
 val _ = export_rewrites ["IMAGE_SING"];
 
-Theorem SUBSET_IMAGE : (* from topologyTheory *)
+Theorem SUBSET_IMAGE: (* from topologyTheory *)
     !f:'a->'b s t. s SUBSET (IMAGE f t) <=> ?u. u SUBSET t /\ (s = IMAGE f u)
 Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[IMAGE_SUBSET]] THEN
@@ -1945,7 +1945,7 @@ Proof
   MESON_TAC[]
 QED
 
-Theorem IMAGE_CONST : (* from HOL-Light *)
+Theorem IMAGE_CONST: (* from HOL-Light *)
     !(s:'a->bool) (c:'b). IMAGE (\x. c) s = if s = {} then {} else {c}
 Proof
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN
@@ -2837,7 +2837,7 @@ Proof
 QED
 
 (* HOL-Light compatible name. It's not stronger than the above FINITE_INDUCT. *)
-Theorem FINITE_INDUCT_STRONG :
+Theorem FINITE_INDUCT_STRONG:
     !P. P {} /\ (!x s. P s /\ ~(x IN s) /\ FINITE s ==> P (x INSERT s))
          ==> (!s. FINITE s ==> P s)
 Proof
@@ -3096,7 +3096,7 @@ Proof
   POP_ASSUM SUBST1_TAC THEN ASM_SIMP_TAC (srw_ss())[]
 QED
 
-Theorem FINITE_IMAGE_INJ_EQ :
+Theorem FINITE_IMAGE_INJ_EQ:
  !(f:'a->'b) s.
    (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) ==>
    (FINITE(IMAGE f s) <=> FINITE s)
@@ -3533,7 +3533,7 @@ val CARD_DIFF =
        RES_TAC THEN ASM_REWRITE_TAC [DIFF_INSERT]]]);
 
 (* Improved version of the above - DIFF's second argument can be infinite *)
-Theorem CARD_DIFF_EQN :
+Theorem CARD_DIFF_EQN:
     !t s. FINITE s ==> (CARD (s DIFF t) = CARD s - CARD (s INTER t))
 Proof
   GEN_TAC THEN
@@ -3816,7 +3816,7 @@ val _ = set_fixity "HAS_SIZE" (Infix(NONASSOC, 450));
 val HAS_SIZE = new_definition ("HAS_SIZE",
    “s HAS_SIZE n <=> FINITE s /\ (CARD s = n)”);
 
-Theorem HAS_SIZE_CARD :
+Theorem HAS_SIZE_CARD:
     !s n. s HAS_SIZE n ==> (CARD s = n)
 Proof
     SIMP_TAC std_ss [HAS_SIZE]
@@ -3830,7 +3830,7 @@ Proof
  >> Induct_on ‘FINITE’ >> simp []
 QED
 
-Theorem HAS_SIZE_SUC :
+Theorem HAS_SIZE_SUC:
     !(s:'a->bool) n. s HAS_SIZE (SUC n) <=>
                      s <> {} /\ !a. a IN s ==> (s DELETE a) HAS_SIZE n
 Proof
@@ -3854,7 +3854,7 @@ Proof
       ASM_REWRITE_TAC [IN_DELETE] ]
 QED
 
-Theorem FINITE_HAS_SIZE :
+Theorem FINITE_HAS_SIZE:
     !s. FINITE s <=> s HAS_SIZE CARD s
 Proof
     REWRITE_TAC [HAS_SIZE]
@@ -3894,7 +3894,7 @@ Proof
   COND_CASES_TAC THENL [ASM_MESON_TAC[IN_INSERT], ASM_MESON_TAC[IN_INSERT]]]]
 QED
 
-Theorem HAS_SIZE_IMAGE_INJ :
+Theorem HAS_SIZE_IMAGE_INJ:
    !(f:'a->'b) s n.
         (!x y. x IN s /\ y IN s /\ f(x) = f(y) ==> x = y) /\ (s HAS_SIZE n)
         ==> ((IMAGE f s) HAS_SIZE n)
@@ -3902,7 +3902,7 @@ Proof
   SIMP_TAC std_ss [HAS_SIZE, IMAGE_FINITE] THEN PROVE_TAC[CARD_IMAGE_INJ]
 QED
 
-Theorem HAS_SIZE_INDEX :
+Theorem HAS_SIZE_INDEX:
     !s n.
       (s HAS_SIZE n) ==>
       ?f:num->'a. (!m. m < n ==> f(m) IN s) /\
@@ -3940,7 +3940,7 @@ Proof
    THEN PROVE_TAC [LT_REFL, IN_DELETE]
 QED
 
-Theorem HAS_SIZE_UNION :
+Theorem HAS_SIZE_UNION:
     !(s:'a->bool) t m n.
         s HAS_SIZE m /\ t HAS_SIZE n /\ DISJOINT s t
         ==> (s UNION t) HAS_SIZE (m + n)
@@ -3961,7 +3961,7 @@ Proof
     REWRITE_TAC [AND_IMP_INTRO]
 QED
 
-Theorem HAS_SIZE_PRODUCT_DEPENDENT :
+Theorem HAS_SIZE_PRODUCT_DEPENDENT:
     !s m t n.
          s HAS_SIZE m /\ (!x. x IN s ==> t(x) HAS_SIZE n)
          ==> {(x:'a,y:'b) | x IN s /\ y IN t(x)} HAS_SIZE (m * n)
@@ -3990,7 +3990,7 @@ Proof
   rw [Once EXTENSION] >> EQ_TAC >> rw []
 QED
 
-Theorem FINITE_PRODUCT_DEPENDENT :
+Theorem FINITE_PRODUCT_DEPENDENT:
     !f:'a->'b->'c s t.
         FINITE s /\ (!x. x IN s ==> FINITE(t x))
         ==> FINITE {f x y | x IN s /\ y IN (t x)}
@@ -4022,13 +4022,13 @@ Proof
   rw [Once EXTENSION, NOT_IN_EMPTY]
 QED
 
-Theorem FINITE_PRODUCT :
+Theorem FINITE_PRODUCT:
     !s t. FINITE s /\ FINITE t ==> FINITE {(x:'a,y:'b) | x IN s /\ y IN t}
 Proof
   SIMP_TAC std_ss [FINITE_PRODUCT_DEPENDENT]
 QED
 
-Theorem CARD_PRODUCT :
+Theorem CARD_PRODUCT:
     !s t. FINITE s /\ FINITE t
          ==> (CARD {(x:'a,y:'b) | x IN s /\ y IN t} = CARD s * CARD t)
 Proof
@@ -4038,7 +4038,7 @@ Proof
   ASM_SIMP_TAC std_ss[HAS_SIZE]
 QED
 
-Theorem HAS_SIZE_PRODUCT :
+Theorem HAS_SIZE_PRODUCT:
     !s m t n. s HAS_SIZE m /\ t HAS_SIZE n
              ==> {(x:'a,y:'b) | x IN s /\ y IN t} HAS_SIZE (m * n)
 Proof
@@ -4064,7 +4064,7 @@ Proof
  >> CONV_TAC Arith.ARITH_CONV
 QED
 
-Theorem COUNT_SUC :
+Theorem COUNT_SUC:
     !n. count (SUC n) = n INSERT count n
 Proof
     RW_TAC bool_ss [EXTENSION, IN_INSERT, IN_COUNT]
@@ -4072,7 +4072,7 @@ Proof
 QED
 
 (* This lemma may appear at the induction base of ‘!n. P (count (SUC n))’ *)
-Theorem COUNT_ONE :
+Theorem COUNT_ONE:
     count 1 = {0}
 Proof
     RW_TAC bool_ss [ONE, COUNT_SUC, COUNT_ZERO]
@@ -4201,7 +4201,7 @@ val INFINITE_INJ = store_thm (* from util_prob *)
    ``!f s t. INJ f s t /\ INFINITE s ==> INFINITE t``,
    PROVE_TAC [FINITE_INJ]);
 
-Theorem num_FINITE :
+Theorem num_FINITE:
     !s:num->bool. FINITE s <=> ?a. !x. x IN s ==> x <= a
 Proof
   GEN_TAC THEN EQ_TAC THENL
@@ -4219,13 +4219,13 @@ Proof
     SIMP_TAC std_ss [FINITE_UNION, FINITE_SING, GSYM count_def, FINITE_COUNT]]]
 QED
 
-Theorem num_FINITE_AVOID :
+Theorem num_FINITE_AVOID:
     !s:num->bool. FINITE(s) ==> ?a. ~(a IN s)
 Proof
   MESON_TAC[num_FINITE, LESS_THM, NOT_LESS]
 QED
 
-Theorem num_INFINITE :
+Theorem num_INFINITE:
    INFINITE univ(:num)
 Proof
   MESON_TAC[num_FINITE_AVOID, IN_UNIV]
@@ -4429,7 +4429,7 @@ Proof
   rw [SUBSET_DEF]
 QED
 
-Theorem INFINITE_DIFF_FINITE :
+Theorem INFINITE_DIFF_FINITE:
     !s t. (INFINITE s /\ FINITE t) ==> ~(s DIFF t = ({}:'a set))
 Proof
   PROVE_TAC [INFINITE_DIFF_FINITE', INFINITE_INHAB, MEMBER_NOT_EMPTY]
@@ -4669,7 +4669,7 @@ Proof
   PROVE_TAC []
 QED
 
-Theorem BIGUNION_IMAGE_SUBSET :
+Theorem BIGUNION_IMAGE_SUBSET:
     !f s t. BIGUNION (IMAGE f s) SUBSET t <=> !x. x IN s ==> f x SUBSET t
 Proof
     RW_TAC std_ss [BIGUNION_SUBSET, IN_IMAGE]
@@ -4789,13 +4789,13 @@ val DISJOINT_COUNT = store_thm (* from util_prob *)
    >> Know `~(x':num = n)` >- DECIDE_TAC
    >> PROVE_TAC []);
 
-Theorem FORALL_IN_BIGUNION : (* from iterateTheory *)
+Theorem FORALL_IN_BIGUNION: (* from iterateTheory *)
     !P s. (!x. x IN BIGUNION s ==> P x) <=> !t x. t IN s /\ x IN t ==> P x
 Proof
     REWRITE_TAC [IN_BIGUNION] >> PROVE_TAC []
 QED
 
-Theorem INTER_BIGUNION : (* from probabilityTheory *)
+Theorem INTER_BIGUNION: (* from probabilityTheory *)
     (!s t. BIGUNION s INTER t = BIGUNION {x INTER t | x IN s}) /\
     (!s t. t INTER BIGUNION s = BIGUNION {t INTER x | x IN s})
 Proof
@@ -4804,7 +4804,7 @@ Proof
  >> MESON_TAC [IN_INTER]
 QED
 
-Theorem SUBSET_BIGUNION : (* from real_topologyTheory *)
+Theorem SUBSET_BIGUNION: (* from real_topologyTheory *)
     !f g. f SUBSET g ==> BIGUNION f SUBSET BIGUNION g
 Proof
     RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION]
@@ -5112,14 +5112,14 @@ Proof
   FULL_SIMP_TAC (srw_ss()) [CROSS_UNIV]
 QED
 
-Theorem INTER_CROSS :
+Theorem INTER_CROSS:
     !A B C D. (A CROSS B) INTER (C CROSS D) = (A INTER C) CROSS (B INTER D)
 Proof
     RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_CROSS]
  >> PROVE_TAC []
 QED
 
-Theorem BIGUNION_CROSS :
+Theorem BIGUNION_CROSS:
     !f s t. (BIGUNION (IMAGE f s)) CROSS t = BIGUNION (IMAGE (\n. f n CROSS t) s)
 Proof
     RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_CROSS]
@@ -5128,7 +5128,7 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem CROSS_BIGUNION :
+Theorem CROSS_BIGUNION:
     !f s t. s CROSS (BIGUNION (IMAGE f t)) = BIGUNION (IMAGE (\n. s CROSS f n) t)
 Proof
     RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_CROSS]
@@ -5137,13 +5137,13 @@ Proof
  >> Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC []
 QED
 
-Theorem SUBSET_CROSS :
+Theorem SUBSET_CROSS:
     !a b c d. a SUBSET b /\ c SUBSET d ==> (a CROSS c) SUBSET (b CROSS d)
 Proof
     RW_TAC std_ss [SUBSET_DEF, IN_CROSS]
 QED
 
-Theorem IMAGE_FST_CROSS :
+Theorem IMAGE_FST_CROSS:
     !s t. t <> {} ==> IMAGE FST (s CROSS t) = s
 Proof
     rw [EXTENSION]
@@ -5152,7 +5152,7 @@ Proof
  >> Q.EXISTS_TAC ‘(y,x)’ >> rw []
 QED
 
-Theorem IMAGE_SND_CROSS :
+Theorem IMAGE_SND_CROSS:
     !s t. s <> {} ==> IMAGE SND (s CROSS t) = t
 Proof
     rw [EXTENSION]
@@ -6681,13 +6681,13 @@ val MAX_SET_UNION = Q.store_thm
         by SRW_TAC[][EXTENSION,AC DISJ_COMM DISJ_ASSOC]
    THEN FULL_SIMP_TAC (srw_ss()) [MAX_SET_THM, AC MAX_COMM MAX_ASSOC]);
 
-Theorem FINITE_INTER :
+Theorem FINITE_INTER:
     !s1 s2. ((FINITE s1) \/ (FINITE s2)) ==> FINITE (s1 INTER s2)
 Proof
   METIS_TAC[INTER_COMM, INTER_FINITE]
 QED
 
-Theorem MAX_SET_INTER :
+Theorem MAX_SET_INTER:
     !A B. FINITE A /\ FINITE B ==>
           MAX_SET (A INTER B) <= MIN (MAX_SET A) (MAX_SET B)
 Proof
@@ -7671,7 +7671,7 @@ val pairwise_SUBSET = Q.store_thm(
 `!R s t. pairwise R t /\ s SUBSET t ==> pairwise R s`,
 SRW_TAC [][SUBSET_DEF,pairwise_def]);
 
-Theorem pairwise_EMPTY :
+Theorem pairwise_EMPTY:
     !r. pairwise r {}
 Proof
   REWRITE_TAC[pairwise_def, NOT_IN_EMPTY] THEN MESON_TAC[]
@@ -7681,55 +7681,55 @@ QED
 (*  Disjoint system of sets (‘disjoint’, originally from Isabelle/HOL)       *)
 (* ------------------------------------------------------------------------- *)
 
-Definition disjoint :
+Definition disjoint:
     disjoint = pairwise (RC DISJOINT)
 End
 
-Theorem disjoint_def :
+Theorem disjoint_def:
     !A. disjoint A = !a b. a IN A /\ b IN A /\ (a <> b) ==> DISJOINT a b
 Proof
     RW_TAC std_ss [disjoint, pairwise_def, RC_DEF]
  >> METIS_TAC []
 QED
 
-Theorem disjointI :
+Theorem disjointI:
     !A. (!a b . a IN A ==> b IN A ==> (a <> b) ==> DISJOINT a b) ==> disjoint A
 Proof
     METIS_TAC [disjoint_def]
 QED
 
-Theorem disjointD :
+Theorem disjointD:
     !A a b. disjoint A ==> a IN A ==> b IN A ==> (a <> b) ==> DISJOINT a b
 Proof
     METIS_TAC [disjoint_def]
 QED
 
-Theorem disjoint_empty :
+Theorem disjoint_empty:
     disjoint {}
 Proof
     rw [disjoint, pairwise_EMPTY]
 QED
 
-Theorem disjoint_sing :
+Theorem disjoint_sing:
     !a. disjoint {a}
 Proof
     rw [disjoint_def]
 QED
 
-Theorem disjoint_same :
+Theorem disjoint_same:
     !s t. (s = t) ==> disjoint {s; t}
 Proof
     RW_TAC std_ss [IN_INSERT, IN_SING, disjoint_def]
 QED
 
-Theorem disjoint_two :
+Theorem disjoint_two:
     !s t. s <> t /\ DISJOINT s t ==> disjoint {s; t}
 Proof
     RW_TAC std_ss [IN_INSERT, IN_SING, disjoint_def]
  >> ASM_REWRITE_TAC [DISJOINT_SYM]
 QED
 
-Theorem disjoint_union :
+Theorem disjoint_union:
     !A B. disjoint A /\ disjoint B /\ (BIGUNION A INTER BIGUNION B = {}) ==>
           disjoint (A UNION B)
 Proof
@@ -7739,7 +7739,7 @@ Proof
      rw [Once EXTENSION] >> METIS_TAC [])
 QED
 
-Theorem disjoint_image :
+Theorem disjoint_image:
     !f. (!i j. i <> j ==> DISJOINT (f i) (f j)) ==> disjoint (IMAGE f UNIV)
 Proof
     rw [disjoint_def, DISJOINT_DEF]
@@ -7747,13 +7747,13 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem disjoint_insert_imp :
+Theorem disjoint_insert_imp:
     !e c. disjoint (e INSERT c) ==> disjoint c
 Proof
     rw [disjoint_def, DISJOINT_DEF]
 QED
 
-Theorem disjoint_insert_notin :
+Theorem disjoint_insert_notin:
     !e c. disjoint (e INSERT c) /\ e NOTIN c ==> !s. s IN c ==> DISJOINT e s
 Proof
     rw [disjoint_def, DISJOINT_DEF]
@@ -7761,7 +7761,7 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem disjoint_insert :
+Theorem disjoint_insert:
     !e c. disjoint c /\ (!x. x IN c ==> DISJOINT x e) ==> disjoint (e INSERT c)
 Proof
     rw [disjoint_def, DISJOINT_DEF] >> rw []
@@ -7769,7 +7769,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
 QED
 
-Theorem disjoint_restrict :
+Theorem disjoint_restrict:
     !e c. disjoint c ==> disjoint (IMAGE ($INTER e) c)
 Proof
     rw [disjoint_def, o_DEF, DISJOINT_DEF]
@@ -8678,7 +8678,7 @@ Theorem X_LE_MAX[local] = cj 1 MAX_LE
 Theorem MAX_LE_X[local] = cj 2 MAX_LE
 
 (* moved here from seqTheory (originally from util_probTheory) *)
-Theorem NUM_2D_BIJ_BIG_SQUARE :
+Theorem NUM_2D_BIJ_BIG_SQUARE:
     !(f : num -> num # num) N.
        BIJ f UNIV (UNIV CROSS UNIV) ==>
        ?k. IMAGE f (count N) SUBSET count k CROSS count k
@@ -8696,7 +8696,7 @@ Proof
  >> PROVE_TAC [X_LE_MAX, LESS_EQ_REFL, LESS_IMP_LESS_OR_EQ]
 QED
 
-Theorem NUM_2D_BIJ_SMALL_SQUARE :
+Theorem NUM_2D_BIJ_SMALL_SQUARE:
     !(f : num -> num # num) k.
        BIJ f UNIV (UNIV CROSS UNIV) ==>
        ?N. count k CROSS count k SUBSET IMAGE f (count N)
@@ -8719,7 +8719,7 @@ Proof
 QED
 
 (* NOTE: The original proofs by Joe Hurd depend on “ind_type$NUMPAIR” *)
-Theorem NUM_2D_BIJ :
+Theorem NUM_2D_BIJ:
     ?f. BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
               (UNIV : num -> bool)
 Proof
@@ -8727,14 +8727,14 @@ Proof
  >> REWRITE_TAC [BIJ_PAIR_TO_NUM]
 QED
 
-Theorem NUM_2D_BIJ_INV :
+Theorem NUM_2D_BIJ_INV:
     ?f. BIJ f (UNIV : num -> bool)
               ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
 Proof
    PROVE_TAC [NUM_2D_BIJ, BIJ_SYM]
 QED
 
-Theorem NUM_2D_BIJ_NZ :
+Theorem NUM_2D_BIJ_NZ:
     ?f. BIJ f ((UNIV : num -> bool) CROSS ((UNIV : num -> bool) DIFF {0}))
               (UNIV : num -> bool)
 Proof
@@ -8752,7 +8752,7 @@ Proof
  >> RW_TAC std_ss [UNCURRY_DEF, npair_11]
 QED
 
-Theorem NUM_2D_BIJ_NZ_INV :
+Theorem NUM_2D_BIJ_NZ_INV:
     ?f. BIJ f (UNIV : num -> bool)
               ((UNIV : num -> bool) CROSS ((UNIV : num -> bool) DIFF {0}))
 Proof
@@ -8771,14 +8771,14 @@ Proof
  >> simp[INJ_IFF, FORALL_PROD]
 QED
 
-Theorem NUM_2D_BIJ_NZ_ALT_INV :
+Theorem NUM_2D_BIJ_NZ_ALT_INV:
     ?f. BIJ f ((UNIV : num -> bool) DIFF {0})
               ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
 Proof
     PROVE_TAC [NUM_2D_BIJ_NZ_ALT, BIJ_SYM]
 QED
 
-Theorem NUM_2D_BIJ_NZ_ALT2 :
+Theorem NUM_2D_BIJ_NZ_ALT2:
     ?f. BIJ f (((UNIV : num -> bool) DIFF {0}) CROSS ((UNIV : num -> bool) DIFF {0}))
               (UNIV : num -> bool)
 Proof
@@ -8796,7 +8796,7 @@ Proof
  >> RW_TAC std_ss [UNCURRY_DEF, npair_11]
 QED
 
-Theorem NUM_2D_BIJ_NZ_ALT2_INV :
+Theorem NUM_2D_BIJ_NZ_ALT2_INV:
     ?f. BIJ f (UNIV : num -> bool)
               (((UNIV : num -> bool) DIFF {0}) CROSS ((UNIV : num -> bool) DIFF {0}))
 Proof
@@ -8822,7 +8822,7 @@ val is_measure_maximal_def = new_definition("is_measure_maximal_def",
 );
 
 (* cf. arithmeticTheory.WOP_measure for the "is_measure_minimal" of s *)
-Theorem FINITE_is_measure_maximal :
+Theorem FINITE_is_measure_maximal:
     !m s. FINITE s /\ s <> {} ==> ?x. is_measure_maximal m s x
 Proof
   Q.X_GEN_TAC ‘m’ \\
@@ -8895,26 +8895,26 @@ val _ = export_rewrites
 (* (Ported from HOL-Light's sets.ml by Chun Tian)                            *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem EXTENSIONAL :
+Theorem EXTENSIONAL:
     !s. EXTENSIONAL s = {f :'a->'b | !x. x NOTIN s ==> f x = ARB}
 Proof
     RW_TAC std_ss [IN_APP, EXTENSIONAL_def, Once EXTENSION, GSPECIFICATION]
 QED
 
-Theorem EXTENSIONAL_EMPTY :
+Theorem EXTENSIONAL_EMPTY:
     EXTENSIONAL {} = {\x:'a. ARB:'b}
 Proof
   RW_TAC std_ss [EXTENSION, IN_EXTENSIONAL, IN_SING, NOT_IN_EMPTY] THEN
   REWRITE_TAC[FUN_EQ_THM]
 QED
 
-Theorem EXTENSIONAL_UNIV :
+Theorem EXTENSIONAL_UNIV:
     !f. EXTENSIONAL univ(:'a) f
 Proof
   RW_TAC std_ss [EXTENSIONAL_def, IN_UNIV]
 QED
 
-Theorem EXTENSIONAL_EQ :
+Theorem EXTENSIONAL_EQ:
     !s f (g :'a->'b).
      f IN EXTENSIONAL s /\ g IN EXTENSIONAL s /\ (!x. x IN s ==> f x = g x)
      ==> f = g
@@ -8925,13 +8925,13 @@ Proof
    ASM_MESON_TAC[IN_EXTENSIONAL_UNDEFINED]]
 QED
 
-Theorem RESTRICTION_IN_EXTENSIONAL :
+Theorem RESTRICTION_IN_EXTENSIONAL:
     !s (f :'a->'b). RESTRICTION s f IN EXTENSIONAL s
 Proof
   SIMP_TAC std_ss [IN_EXTENSIONAL, RESTRICTION]
 QED
 
-Theorem RESTRICTION_EXTENSION :
+Theorem RESTRICTION_EXTENSION:
     !s f (g :'a->'b). RESTRICTION s f = RESTRICTION s g <=>
                 (!x. x IN s ==> f x = g x)
 Proof
@@ -8941,7 +8941,7 @@ Proof
   RW_TAC std_ss []
 QED
 
-Theorem RESTRICTION_FIXPOINT :
+Theorem RESTRICTION_FIXPOINT:
     !s (f :'a->'b). RESTRICTION s f = f <=> f IN EXTENSIONAL s
 Proof
     REWRITE_TAC[IN_EXTENSIONAL, FUN_EQ_THM, RESTRICTION]
@@ -8951,7 +8951,7 @@ Proof
  >> Cases_on ‘x IN s’ >> RW_TAC std_ss []
 QED
 
-Theorem RESTRICTION_RESTRICTION :
+Theorem RESTRICTION_RESTRICTION:
     !s t (f :'a->'b).
         s SUBSET t ==> RESTRICTION s (RESTRICTION t f) = RESTRICTION s f
 Proof
@@ -8959,13 +8959,13 @@ Proof
  >> RW_TAC std_ss [SUBSET_DEF]
 QED
 
-Theorem RESTRICTION_IDEMP :
+Theorem RESTRICTION_IDEMP:
     !s (f :'a->'b). RESTRICTION s (RESTRICTION s f) = RESTRICTION s f
 Proof
   REWRITE_TAC[RESTRICTION_FIXPOINT, RESTRICTION_IN_EXTENSIONAL]
 QED
 
-Theorem IMAGE_RESTRICTION :
+Theorem IMAGE_RESTRICTION:
     !(f :'a->'b) s t. s SUBSET t ==> IMAGE (RESTRICTION t f) s = IMAGE f s
 Proof
     RW_TAC std_ss [Once EXTENSION, IN_IMAGE, RESTRICTION, SUBSET_DEF]
@@ -8982,7 +8982,7 @@ Proof
       Q.EXISTS_TAC ‘y’ >> RW_TAC std_ss [] ]
 QED
 
-Theorem RESTRICTION_COMPOSE_RIGHT :
+Theorem RESTRICTION_COMPOSE_RIGHT:
     !(f :'a->'b) (g :'b->'c) s.
         RESTRICTION s (g o RESTRICTION s f) =
         RESTRICTION s (g o f)
@@ -8990,7 +8990,7 @@ Proof
     RW_TAC std_ss [FUN_EQ_THM, o_DEF, RESTRICTION]
 QED
 
-Theorem RESTRICTION_COMPOSE_LEFT :
+Theorem RESTRICTION_COMPOSE_LEFT:
     !(f :'a->'b) (g :'b->'c) s t.
         IMAGE f s SUBSET t
         ==> RESTRICTION s (RESTRICTION t g o f) =
@@ -9004,7 +9004,7 @@ Proof
  >> ASM_SIMP_TAC std_ss []
 QED
 
-Theorem RESTRICTION_COMPOSE :
+Theorem RESTRICTION_COMPOSE:
     !(f :'a->'b) (g :'b->'c) s t.
         IMAGE f s SUBSET t
         ==> RESTRICTION s (RESTRICTION t g o RESTRICTION s f) =
@@ -9013,7 +9013,7 @@ Proof
   SIMP_TAC std_ss [RESTRICTION_COMPOSE_LEFT, RESTRICTION_COMPOSE_RIGHT]
 QED
 
-Theorem RESTRICTION_UNIQUE :
+Theorem RESTRICTION_UNIQUE:
     !s (f :'a->'b) g.
         RESTRICTION s f = g <=> EXTENSIONAL s g /\ !x. x IN s ==> f x = g x
 Proof
@@ -9030,7 +9030,7 @@ Proof
       Cases_on ‘x IN s’ >> RW_TAC std_ss [] ]
 QED
 
-Theorem RESTRICTION_UNIQUE_ALT :
+Theorem RESTRICTION_UNIQUE_ALT:
     !s (f :'a->'b) g.
         f = RESTRICTION s g <=> EXTENSIONAL s f /\ !x. x IN s ==> f x = g x
 Proof
@@ -9045,7 +9045,7 @@ QED
 (* Classic result on function of finite set into itself.                     *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SURJECTIVE_IFF_INJECTIVE_GEN :
+Theorem SURJECTIVE_IFF_INJECTIVE_GEN:
    !s t f:'a->'b.
         FINITE s /\ FINITE t /\ (CARD s = CARD t) /\ (IMAGE f s) SUBSET t
         ==> ((!y. y IN t ==> ?x. x IN s /\ (f x = y)) <=>
@@ -9074,7 +9074,7 @@ Proof
   METIS_TAC [CARD_IMAGE_INJ, SUBSET_EQ_CARD, IMAGE_FINITE]]
 QED
 
-Theorem SURJECTIVE_IFF_INJECTIVE :
+Theorem SURJECTIVE_IFF_INJECTIVE:
    !s f:'a->'a. FINITE s /\ (IMAGE f s) SUBSET s
      ==> ((!y. y IN s ==> ?x. x IN s /\ (f x = y)) <=>
      (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)))

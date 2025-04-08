@@ -25,37 +25,37 @@ val _ = new_theory "smart_grid";
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
-Definition in_events_def :
+Definition in_events_def:
 in_events p L = (!x. MEM x L ==>  x IN events p)
 End
 
-Definition not_null_def :
+Definition not_null_def:
 not_null L = (!x. MEM x L ==> ~NULL x)
 End
 
-Definition in_events_k_out_n_def :
+Definition in_events_k_out_n_def:
     in_events_k_out_n p X n =
       ((\x. PREIMAGE X {Normal(&x)}) IN ((count (SUC n)) -> events p))
 End
 
-Definition k_out_n_event_def :
+Definition k_out_n_event_def:
 k_out_n_event p X k n = PREIMAGE X (BIGUNION {{Normal (&x)} | k <= x /\ x < SUC n})
 End
 
-Definition binomial_distr_def :
+Definition binomial_distr_def:
 binomial_distr p X n pr = (!x. distribution p X {Normal (&x)} =
         &binomial n x * pr pow x * (1 - pr) pow (n - x))
 End
 
 (*----------------casc_series_RBD_def------------------------*)
-Definition casc_series_RBD_def :
+Definition casc_series_RBD_def:
 casc_series_RBD p PIED ESW_list CIED t =
  rbd_struct p (series (rbd_list (rel_event_list p
                         ([PIED]++ESW_list++[CIED]) t)))
 End
 
 (*----------------rel_casc_seriesRBD------------------------*)
-Theorem rel_casc_seriesRBD :
+Theorem rel_casc_seriesRBD:
 !p t PIED ESW_list CIED C_PIED C_ESW_list C_CIED.
               (0 <= t) /\
               prob_space p /\
@@ -81,7 +81,7 @@ RW_TAC std_ss[casc_series_RBD_def]
 QED
 
 (*----------------redund_star_ring_RBD------------------------*)
-Definition redund_star_ring_RBD_def :
+Definition redund_star_ring_RBD_def:
 redund_star_ring_RBD p PIED list_ESW_list CIED t =
  rbd_struct p
    ((series of (\a. parallel (rbd_list (rel_event_list p a t))))
@@ -89,7 +89,7 @@ redund_star_ring_RBD p PIED list_ESW_list CIED t =
 End
 
 (*---------------------------------------*)
-Theorem len_EL_lem1 :
+Theorem len_EL_lem1:
 !h1 h2 c1 c2 L C n.
      (LENGTH L = LENGTH C) /\
      (n < LENGTH L + 2) /\
@@ -132,7 +132,7 @@ NTAC 4 (GEN_TAC)
 >> FULL_SIMP_TAC std_ss[]
 QED
 (*----------------rel_redund_star_ringRBD------------------------*)
-Theorem rel_redund_star_ringRBD :
+Theorem rel_redund_star_ringRBD:
 !p (t:real)  PIED list_ESW_list CIED C_PIED C_list_ESW_list C_CIED.
         (!z. MEM z list_ESW_list  ==>  ~NULL z) /\
          (0 <=  (t:real)) /\ prob_space p /\
@@ -166,7 +166,7 @@ QED
 
 (*--------G1_FT------------------------------*)
 
-Definition G1_FT_def :
+Definition G1_FT_def:
 G1_FT p t SW1 L1_220 L2_220 L3_220 L4_220 =
 AND (gate_list (fail_event_list p [SW1;L1_220;L2_220;L3_220;L4_220] t))
 End
@@ -174,7 +174,7 @@ End
 
 (*--------G2_FT------------------------------*)
 
-Definition G2_FT_def :
+Definition G2_FT_def:
 G2_FT p t SW1 L1_220 L2_220 L3_220 L4_220 =
 AND (gate_list (fail_event_list p [SW1;L1_220;L2_220;L3_220;L4_220] t))
 End
@@ -182,7 +182,7 @@ End
 
 (*--------G3_FT------------------------------*)
 
-Definition G3_FT_def :
+Definition G3_FT_def:
 G3_FT p t SW2 T1_220 T2_220 BUS_220 SS_220 =
 AND (gate_list (fail_event_list p [SW2;T1_220;T2_220;BUS_220;SS_220] t))
 End
@@ -190,13 +190,13 @@ End
 
 (*--------G4_FT------------------------------*)
 
-Definition G4_FT_def :
+Definition G4_FT_def:
 G4_FT p t SW2 T1_220 T2_220 BUS_220 SS_220 =
 AND (gate_list (fail_event_list p [SW2;T1_220;T2_220;BUS_220;SS_220] t))
 End
 
 (*-----------SABP_FT----------------------*)
-Definition SABP_FT_def :
+Definition SABP_FT_def:
 SABP_FT p t SW1 SW2 L1_220 L2_220 L3_220 L4_220 T1_220 T2_220 BUS_220 SS_220 =
 FTree p (AND [OR [G1_FT p t SW1 L1_220 L2_220 L3_220 L4_220;
                  G2_FT p t SW1 L1_220 L2_220 L3_220 L4_220];
@@ -205,7 +205,7 @@ FTree p (AND [OR [G1_FT p t SW1 L1_220 L2_220 L3_220 L4_220;
 End
 
 (*---------------------------------*)
-Theorem SABP_FT_alt_form :
+Theorem SABP_FT_alt_form:
 !A B C D. (A UNION B) INTER (C UNION D) = (A INTER C) UNION (A INTER D) UNION (B INTER C) UNION (B INTER D)
 Proof
 RW_TAC std_ss[]
@@ -214,7 +214,7 @@ RW_TAC std_ss[]
 QED
 
 (*---------------------------------*)
-Theorem SABP_FT_alt_form1 :
+Theorem SABP_FT_alt_form1:
 !p t SW1 SW2 L1_220 L2_220 L3_220 L4_220 T1_220 T2_220 BUS_220 SS_220.
 prob_space p ==>
 (SABP_FT p t SW1 SW2 L1_220 L2_220 L3_220 L4_220 T1_220 T2_220 BUS_220 SS_220 =
@@ -234,7 +234,7 @@ RW_TAC std_ss[of_DEF,o_THM]
 QED
 
 (*---------------------------------*)
-Theorem fail_prob_SABP_FT_lem1 :
+Theorem fail_prob_SABP_FT_lem1:
 !p t SW1 SW2 L1_220 L2_220 L3_220 L4_220 T1_220 T2_220 BUS_220 SS_220 C_SW1 C_SW2 C_L1_220 C_L2_220 C_L3_220 C_L4_220 C_T1_220 C_T2_220 C_BUS_220 C_SS_220.
 0 <= t /\ prob_space p /\
      list_exp p
@@ -271,7 +271,7 @@ RW_TAC list_ss[list_exp_def,exp_distribution_def,distribution_def,CDF_def,list_f
 >> RW_TAC real_ss[]
 QED
 (*---------------------------------*)
-Theorem fail_prob_SABP_FT :
+Theorem fail_prob_SABP_FT:
 !p t SW1 SW2 L1_220 L2_220 L3_220 L4_220 T1_220 T2_220 BUS_220 SS_220 C_SW1 C_SW2 C_L1_220 C_L2_220 C_L3_220 C_L4_220 C_T1_220 C_T2_220 C_BUS_220 C_SS_220.
 (0 <= t) /\ prob_space p  /\
  (!x'.
@@ -318,7 +318,7 @@ RW_TAC std_ss[]
 QED
 
 (*------------------------------------------*)
-Theorem k_out_n_alt :
+Theorem k_out_n_alt:
 !p X k n.
        prob_space p /\
        (\x. PREIMAGE X {Normal(&x)}) IN ((count (SUC n)) -> events p) ==>
@@ -359,7 +359,7 @@ QED
 
 (*----------------------------------------------*)
 
-Theorem k_out_n_RBD_v2 :
+Theorem k_out_n_RBD_v2:
 !p n k X pr.
        prob_space p /\ (k < (SUC n)) /\
        (\x. PREIMAGE X {Normal(&x)}) IN
@@ -385,7 +385,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[]
 QED
 (*-------------------bigunion_in_events---------------------------*)
-Theorem bigunion_in_events :
+Theorem bigunion_in_events:
 !p n k X. prob_space p /\
     (\x. PREIMAGE X {Normal(&x)}) IN ((count (SUC n)) -> events p) ==>
  (BIGUNION
@@ -412,7 +412,7 @@ RW_TAC std_ss []
 >> RW_TAC std_ss [FINITE_COUNT]
 QED
 (*----------------------------------------------*)
-Theorem series_rbd_indep_k_out_n_rbd :
+Theorem series_rbd_indep_k_out_n_rbd:
 !p L n k X pr.
        prob_space p /\
        ~NULL L /\
@@ -474,23 +474,23 @@ RW_TAC std_ss[K_out_N_struct_def]
 QED
 
 (*----------------------------------------------*)
-(* Definition binomial_events_conds_def :
+(* Definition binomial_events_conds_def:
 (binomial_events_conds p [] k n pr = T) /\
 (binomial_events_conds p (h::t) k n pr = binomial_event_conds p h k n pr /\
                                         binomial_events_conds p t k n pr)
 End
 *)
 (*----------------------------------------------*)
-Definition binomial_event_def :
+Definition binomial_event_def:
 binomial_event (X:'a->extreal) a = PREIMAGE X {Normal (&a)}
 End
 
 (*----------------------------------------------*)
-Definition binomial_event_list_def :
+Definition binomial_event_list_def:
 binomial_event_list L m = MAP (\a. binomial_event a m) L
 End
 (*----------------------------------------------*)
-Definition binomial_conds_def :
+Definition binomial_conds_def:
 binomial_conds p X X1 k n L t  =
  ((k < (SUC n)) /\
  (!x.
@@ -502,12 +502,12 @@ binomial_conds p X X1 k n L t  =
         (1 - Reliability p X1 t) pow (n - x)))
 End
 (*----------------------------------------------*)
-Definition K_out_N_struct_list_def :
+Definition K_out_N_struct_list_def:
 K_out_N_struct_list p L k n = MAP (\a. K_out_N_struct p a k n) L
 End
 
 (*----------------------------------------------*)
-Definition rbd_conds_def :
+Definition rbd_conds_def:
 rbd_conds p L =
 ( prob_space p /\
  in_events p L /\
@@ -515,7 +515,7 @@ rbd_conds p L =
 End
 
 (*----------------------------------------------*)
-(*Theorem parallel_rbd_indep_k_out_n_rbd :
+(*Theorem parallel_rbd_indep_k_out_n_rbd:
 !p L n k X1 X2  pr.
        prob_space p /\
        (!z. MEM z L ==> ~NULL z) /\
@@ -536,7 +536,7 @@ RW_TAC list_ss[of_DEF,o_THM,rbd_struct_def,rbd_list_def] *)
 (*----------------------------------------------*)
 
 (*----------------------------------------------*)
-Theorem parallel_rbd_indep_k_out_n_rbd :
+Theorem parallel_rbd_indep_k_out_n_rbd:
 !p L1 L n k  pr.
        prob_space p /\
        mutual_indep p ((FLAT (K_out_N_struct_list p L1 k n::L))) /\
@@ -613,7 +613,7 @@ Proof
 >> RW_TAC std_ss[]
 QED
 (*----------------------------------------------*)
-Theorem parallel_rbd_indep_k_out_n_rbd_v1 :
+Theorem parallel_rbd_indep_k_out_n_rbd_v1:
 !p L1 L n k  pr.
        prob_space p /\
        mutual_indep p ((FLAT (K_out_N_struct_list p L1 k n::L))) /\
@@ -683,7 +683,7 @@ Proof
 >> RW_TAC std_ss[]
 QED
 (*----------------------------------------------*)
-Theorem series_parallel_rbd_indep_k_out_n_rbd_exp_dist :
+Theorem series_parallel_rbd_indep_k_out_n_rbd_exp_dist:
 !p PIED ESW1 ESW2 ESW3 ESW4 ESWs CIED  C_PIED C_ESW1 C_ESW2 C_ESW3 C_ESW4 C_ESWs C_CIED   pr t.
        0 <= t /\
        prob_space p /\
@@ -801,7 +801,7 @@ QED
 
 (*---------------------------------------------*)
 (*----------------------------------------------*)
-Theorem series_parallel_rbd_indep_k_out_n_rbd_exp_dist_eval :
+Theorem series_parallel_rbd_indep_k_out_n_rbd_exp_dist_eval:
 !p PIED ESW1 ESW2 ESW3 ESW4 ESWs CIED X_bino C_PIED C_ESW1 C_ESW2 C_ESW3 C_ESW4 C_ESWs C_CIED t.
        0 <= t /\
        prob_space p /\

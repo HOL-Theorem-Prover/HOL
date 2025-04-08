@@ -17,14 +17,14 @@ val num_INDUCTION = numTheory.INDUCTION;
 val ARITH_RULE    = numLib.DECIDE;
 
 (* 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, ... *)
-Definition fib_def :
+Definition fib_def:
     fib (n :num) = if n = 0 then (0 :num) else
                    if n = 1 then 1 else fib (n - 1) + fib (n - 2)
 End
 
 Overload Fibonacci[inferior] = “fib”
 
-Theorem fib :
+Theorem fib:
     fib 0 = 0 /\ fib 1 = 1 /\ !n. fib(n + 2) = fib(n + 1) + fib(n)
 Proof
     rpt STRIP_TAC
@@ -44,7 +44,7 @@ Proof
   Cases_on ‘n'’ >> gs [fib, ADD1] >> intLib.ARITH_TAC
 QED
 
-Theorem FIB_EQ_0 :
+Theorem FIB_EQ_0:
     !n. fib n = 0 <=> n = 0
 Proof
   HO_MATCH_MP_TAC num_INDUCTION THEN REWRITE_TAC[fib] THEN
@@ -53,7 +53,7 @@ Proof
   SIMP_TAC arith_ss[ADD1, ADD_EQ_0, fib]
 QED
 
-Theorem FIB_EQ_1 :
+Theorem FIB_EQ_1:
     !n. fib n = 1 <=> n = 1 \/ n = 2
 Proof
   HO_MATCH_MP_TAC num_INDUCTION THEN SIMP_TAC arith_ss[fib] THEN
@@ -63,7 +63,7 @@ Proof
    “m + n = 1 <=> m = 0 /\ n = 1 \/ m = 1 /\ n = 0”]
 QED
 
-Theorem FIB_MONO_SUC :
+Theorem FIB_MONO_SUC:
     !n. fib n <= fib (SUC n)
 Proof
     rpt STRIP_TAC
@@ -74,14 +74,14 @@ Proof
  >> rw [ADD1, fib]
 QED
 
-Theorem FIB_INCREASES_LE :
+Theorem FIB_INCREASES_LE:
     !m n. m <= n ==> fib m <= fib n
 Proof
   HO_MATCH_MP_TAC TRANSITIVE_STEPWISE_LE THEN
   REWRITE_TAC[LE_REFL, LE_TRANS, FIB_MONO_SUC]
 QED
 
-Theorem FIB_INCREASES_LT :
+Theorem FIB_INCREASES_LT:
     !m n. 2 <= m /\ m < n ==> fib m < fib n
 Proof
   INDUCT_TAC THEN RW_TAC arith_ss [ADD1] THEN

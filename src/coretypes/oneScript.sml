@@ -145,7 +145,7 @@ val FORALL_ONE = store_thm(
   simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]);
 
 (* This (and the next) was in examples/lambda/basics/termSceipt.sml, etc. *)
-Theorem FORALL_ONE_FN :
+Theorem FORALL_ONE_FN:
     (!uf : one -> 'a. P uf) = !a. P (\u. a)
 Proof
   SRW_TAC [][EQ_IMP_THM] THEN
@@ -154,7 +154,7 @@ Proof
   SRW_TAC [][FUN_EQ_THM, one]
 QED
 
-Theorem EXISTS_ONE_FN :
+Theorem EXISTS_ONE_FN:
     (?f : 'a -> one -> 'b. P f) = (?f : 'a -> 'b. P (\x u. f x))
 Proof
   SRW_TAC [][EQ_IMP_THM] THENL [

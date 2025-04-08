@@ -274,7 +274,7 @@ Proof
   Induct >> simp[]
 QED
 
-Definition VARIANT_def :
+Definition VARIANT_def:
   VARIANT s = MAX_SET s + 1
 End
 
@@ -324,7 +324,7 @@ Proof
   first_x_assum irule >> simp[combinTheory.APPLY_UPDATE_THM]
 QED
 
-Theorem formsubst_FV :
+Theorem formsubst_FV:
   ∀i. FV (formsubst i p) = { x | ∃y. y ∈ FV p ∧ x ∈ FVT (i y) }
 Proof
   Induct_on ‘p’ >>

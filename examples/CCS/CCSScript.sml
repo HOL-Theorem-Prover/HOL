@@ -145,7 +145,7 @@ val COMPL_ACT_def = Define `
 val _ = overload_on ("COMPL", ``COMPL_ACT``);
 val _ = export_rewrites ["COMPL_ACT_def"];
 
-Theorem COMPL_COMPL_ACT :
+Theorem COMPL_COMPL_ACT:
     !(a :'a Action). COMPL_ACT (COMPL_ACT a) = a
 Proof
     Induct_on `a`
@@ -154,7 +154,7 @@ Proof
 QED
 
 (* auxiliary theorem about complementary labels. *)
-Theorem COMPL_THM :
+Theorem COMPL_THM:
     !(l :'a Label) s. (l <> name s ==> COMPL l <> coname s) /\
                       (l <> coname s ==> COMPL l <> name s)
 Proof
@@ -212,7 +212,7 @@ val [ABS_Relabeling_one_one, ABS_Relabeling_onto,
         [prove_abs_fn_one_one, prove_abs_fn_onto,
          prove_rep_fn_one_one, prove_rep_fn_onto];
 
-Theorem REP_Relabeling_THM :
+Theorem REP_Relabeling_THM:
     !rf :'a Relabeling. Is_Relabeling (REP_Relabeling rf)
 Proof
     GEN_TAC
@@ -227,7 +227,7 @@ val relabel_def = Define `
    (relabel rf (label l) = label (REP_Relabeling rf l))`;
 
 (* If the renaming of an action is a label, that action is a label. *)
-Theorem Relab_label :
+Theorem Relab_label:
     !(rf :'a Relabeling) u l. (relabel rf u = label l) ==> ?l'. u = label l'
 Proof
     Induct_on `u`
@@ -239,7 +239,7 @@ Proof
 QED
 
 (* If the renaming of an action is tau, that action is tau. *)
-Theorem Relab_tau :
+Theorem Relab_tau:
     !(rf :'a Relabeling) u. (relabel rf u = tau) ==> (u = tau)
 Proof
     Induct_on `u`
@@ -256,7 +256,7 @@ val Apply_Relab_def = Define `
      else if (COMPL (SND newold) = l) then (COMPL (FST newold))
      else (Apply_Relab ls l))`;
 
-Theorem Apply_Relab_COMPL_THM :
+Theorem Apply_Relab_COMPL_THM:
     !labl (s: 'a). Apply_Relab labl (coname s) =
             COMPL (Apply_Relab labl (name s))
 Proof
@@ -270,7 +270,7 @@ Proof
  >> IMP_RES_TAC COMPL_THM >> art []
 QED
 
-Theorem IS_RELABELING :
+Theorem IS_RELABELING:
     !labl :('a Label # 'a Label) list. Is_Relabeling (Apply_Relab labl)
 Proof
     Induct
@@ -510,19 +510,19 @@ val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
                         cons_info = cons_info, newty = newty,
                         genind_term_REP = genind_term_REP};
 
-Theorem tpm_eqr :
+Theorem tpm_eqr:
     t = tpm pi u <=> tpm (REVERSE pi) t = (u :'a CCS)
 Proof
     METIS_TAC [pmact_inverse]
 QED
 
-Theorem tpm_eql :
+Theorem tpm_eql:
     tpm pi t = u <=> t = tpm (REVERSE pi) (u :'a CCS)
 Proof
     simp[tpm_eqr]
 QED
 
-Theorem tpm_CONS :
+Theorem tpm_CONS:
     tpm ((x,y)::pi) (t :'a CCS) = tpm [(x,y)] (tpm pi t)
 Proof
   SRW_TAC [][GSYM pmact_decompose]
@@ -574,7 +574,7 @@ Proof
     srw_tac [][supp_tpm, FINITE_GFV]
 QED
 
-Theorem FV_EMPTY :
+Theorem FV_EMPTY:
     FV t = {} <=> !v. v NOTIN FV (t :'a CCS)
 Proof
     SIMP_TAC (srw_ss()) [EXTENSION]
@@ -596,7 +596,7 @@ Theorem FV_thm[simp] = LIST_CONJ (map supp_clause cons_info)
  *  The "I combinator" of CCS, or nil (deadlock)
  *---------------------------------------------------------------------------*)
 
-Definition nil_def :
+Definition nil_def:
     nil = rec "s" (var "s")
 End
 val _ = TeX_notation { hol = "nil", TeX = ("\\ensuremath{\\mathbf{0}}", 1) };
@@ -675,7 +675,7 @@ Theorem nc_INDUCTION[local] = mkX_ind term_ind
 (* The recommended induction theorem containing correctly named
    binding variables (L, rf, y, etc.)
  *)
-Theorem nc_INDUCTION2 :
+Theorem nc_INDUCTION2:
     !P X.
         (!s. P (var s)) /\ (!u E. P E ==> P (u..E)) /\
         (!E1 E2. P E1 /\ P E2 ==> P (E1 + E2)) /\
@@ -702,7 +702,7 @@ Theorem rec_eq_thm =
                               GSYM supp_tpm]
      |> Q.GENL [‘u’, ‘v’, ‘t1’, ‘t2’]
 
-Theorem tpm_ALPHA :
+Theorem tpm_ALPHA:
     v # (u :'a CCS) ==> rec x u = rec v (tpm [(v,x)] u)
 Proof
     SRW_TAC [boolSimps.CONJ_ss][rec_eq_thm, pmact_flip_args]
@@ -834,7 +834,7 @@ Theorem tm_recursion =
     cases, distinct and one-one theorems
    ---------------------------------------------------------------------- *)
 
-Theorem CCS_cases :
+Theorem CCS_cases:
     !t. (?a. t = var a) \/ (?u E. t = prefix u E) \/
         (?E1 E2. t = sum E1 E2) \/ (?E1 E2. t = par E1 E2) \/
         (?L E. t = restr L E) \/ (?E rf. t = relab E rf) \/
@@ -909,7 +909,7 @@ Proof
  >> rw [Once CONJ_COMM]
 QED
 
-Theorem CCS_distinct_exists :
+Theorem CCS_distinct_exists:
     !(p :'a CCS). ?q. q <> p
 Proof
     Q.X_GEN_TAC ‘p’
@@ -919,7 +919,7 @@ Proof
  >> rw [CCS_distinct]
 QED
 
-Theorem CCS_distinct_exists_FV :
+Theorem CCS_distinct_exists_FV:
     !X (p :'a CCS). FINITE X ==> ?q. q <> p /\ DISJOINT (FV q) X
 Proof
     rpt STRIP_TAC
@@ -930,19 +930,19 @@ Proof
  >> rw [CCS_distinct]
 QED
 
-Theorem sum_acyclic :
+Theorem sum_acyclic:
     !t1 t2 :'a CCS. t1 <> t1 + t2 /\ t1 <> t2 + t1
 Proof
     HO_MATCH_MP_TAC simple_induction >> SRW_TAC [][]
 QED
 
-Theorem par_acyclic :
+Theorem par_acyclic:
     !t1 t2 :'a CCS. t1 <> t1 || t2 /\ t1 <> t2 || t1
 Proof
     HO_MATCH_MP_TAC simple_induction >> SRW_TAC [][]
 QED
 
-Theorem FORALL_TERM :
+Theorem FORALL_TERM:
     (!(t :'a CCS). P t) <=>
     (!s. P (var s)) /\ (!u t. P (prefix u t)) /\
     (!t1 t2. P (t1 + t2)) /\ (!t1 t2. P (t1 || t2)) /\
@@ -963,13 +963,13 @@ Proof
     SRW_TAC [][]
 QED
 
-Theorem tpm_apart :
+Theorem tpm_apart:
     !(t :'a CCS). x NOTIN FV t /\ y IN FV t ==> tpm [(x,y)] t <> t
 Proof
     metis_tac[supp_apart, pmact_flip_args]
 QED
 
-Theorem tpm_fresh :
+Theorem tpm_fresh:
     !(t :'a CCS) x y. x NOTIN FV t /\ y NOTIN FV t ==> tpm [(x,y)] t = t
 Proof
     srw_tac [][supp_fresh]
@@ -1053,14 +1053,14 @@ Theorem SUB_REC = List.nth (CONJUNCTS SUB_DEF, 6)
     Results about substitution
    ---------------------------------------------------------------------- *)
 
-Theorem fresh_tpm_subst :
+Theorem fresh_tpm_subst:
     !t. u # (t :'a CCS) ==> (tpm [(u,v)] t = [var u/v] t)
 Proof
     HO_MATCH_MP_TAC nc_INDUCTION >> Q.EXISTS_TAC ‘{u;v}’
  >> SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
-Theorem tpm_subst :
+Theorem tpm_subst:
     !N :'a CCS. tpm pi ([M/v] N) = [tpm pi M/lswapstr pi v] (tpm pi N)
 Proof
     HO_MATCH_MP_TAC nc_INDUCTION
@@ -1068,7 +1068,7 @@ Proof
  >> SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
-Theorem tpm_subst_out :
+Theorem tpm_subst_out:
     [M/v] (tpm pi (N :'a CCS)) =
     tpm pi ([tpm (REVERSE pi) M/lswapstr (REVERSE pi) v] N)
 Proof
@@ -1082,7 +1082,7 @@ Proof
  >> SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
-Theorem lemma14b :
+Theorem lemma14b:
     !M. v # M ==> [N/v] M = (M :'a CCS)
 Proof
     HO_MATCH_MP_TAC nc_INDUCTION >> Q.EXISTS_TAC ‘v INSERT FV N’
@@ -1090,7 +1090,7 @@ Proof
 QED
 
 (* Note: this is the opposite direction of lemma14b *)
-Theorem SUB_FIX_IMP_NOTIN_FV :
+Theorem SUB_FIX_IMP_NOTIN_FV:
     !x t. (!u. [u/x] t = t) ==> x NOTIN FV t
 Proof
     rpt GEN_TAC
@@ -1107,7 +1107,7 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem lemma14b_ext1 :
+Theorem lemma14b_ext1:
     !v M. v # M <=> !N. ([N/v] M = M)
 Proof
     rpt GEN_TAC
@@ -1116,7 +1116,7 @@ Proof
  >> rw [SUB_FIX_IMP_NOTIN_FV]
 QED
 
-Theorem SUB_EQ_IMP_NOTIN_FV :
+Theorem SUB_EQ_IMP_NOTIN_FV:
     !x t. (!t1 t2. [t1/x] t = [t2/x] t) ==> x NOTIN FV t
 Proof
     rpt GEN_TAC
@@ -1136,7 +1136,7 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem lemma14b_ext2 :
+Theorem lemma14b_ext2:
     !v M. v # M <=> !N1 N2. [N1/v] M = [N2/v] M
 Proof
     rpt GEN_TAC
@@ -1144,7 +1144,7 @@ Proof
  >> rw [SUB_EQ_IMP_NOTIN_FV]
 QED
 
-Theorem lemma14c :
+Theorem lemma14c:
     !t x u :'a CCS. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))
 Proof
     NTAC 2 GEN_TAC
@@ -1154,27 +1154,27 @@ Proof
  >> METIS_TAC [lemma14b]
 QED
 
-Theorem FV_SUB :
+Theorem FV_SUB:
     !(t :'a CCS) u v. FV ([t/v] u) =
                       if v IN FV u then FV t UNION (FV u DELETE v) else FV u
 Proof
     PROVE_TAC [lemma14b, lemma14c]
 QED
 
-Theorem lemma15a :
+Theorem lemma15a:
     !M :'a CCS. v # M ==> [N/v] ([var v/x] M) = [N/x] M
 Proof
     HO_MATCH_MP_TAC nc_INDUCTION >> Q.EXISTS_TAC ‘{x;v} UNION FV N’
  >> SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
-Theorem lemma15b :
+Theorem lemma15b:
     v # (M :'a CCS) ==> [var u/v] ([var v/u] M) = M
 Proof
     SRW_TAC [][lemma15a]
 QED
 
-Theorem SUB_TWICE_ONE_VAR :
+Theorem SUB_TWICE_ONE_VAR:
     !M :'a CCS. [x/v] ([y/v] M) = [[x/v] y/v] M
 Proof
     HO_MATCH_MP_TAC nc_INDUCTION
@@ -1185,7 +1185,7 @@ Proof
  >> SRW_TAC [][SUB_THM, lemma14c, lemma14b]
 QED
 
-Theorem swap_eq_3substs :
+Theorem swap_eq_3substs:
     z # (M :'a CCS) /\ x <> z /\ y <> z ==>
     tpm [(x,y)] M = [var y/z] ([var x/y] ([var z/x] M))
 Proof
@@ -1202,14 +1202,14 @@ QED
     alpha-convertibility results
    ---------------------------------------------------------------------- *)
 
-Theorem SIMPLE_ALPHA :
+Theorem SIMPLE_ALPHA:
     y # (u :'a CCS) ==> !x. rec x u = rec y ([var y/x] u)
 Proof
     SRW_TAC [][GSYM fresh_tpm_subst]
  >> SRW_TAC [boolSimps.CONJ_ss][rec_eq_thm, pmact_flip_args]
 QED
 
-Theorem nil_thm :
+Theorem nil_thm:
     !X. nil = rec X (var X)
 Proof
     rw [nil_def, Once EQ_SYM_EQ]
@@ -1222,7 +1222,7 @@ Proof
     rw [lemma14b]
 QED
 
-Theorem nil_eq_cases :
+Theorem nil_eq_cases:
     !X E. nil = rec X E <=> E = var X
 Proof
     qx_genl_tac [‘Y’, ‘P’]
@@ -1256,7 +1256,7 @@ Theorem size_thm[simp] = CONJUNCT1 size_def
 
 Theorem size_tpm[simp] = GSYM (CONJUNCT2 size_def)
 
-Theorem size_nonzero :
+Theorem size_nonzero:
     !t :'a CCS. 0 < CCS_size t
 Proof
     HO_MATCH_MP_TAC simple_induction
@@ -1278,12 +1278,12 @@ QED
     CCS_Subst
    ---------------------------------------------------------------------- *)
 
-Definition CCS_Subst :
+Definition CCS_Subst:
     CCS_Subst E E' X = [E'/X] (E :'a CCS)
 End
 
 (* NOTE: “Y # E'” is additionally required in case of ‘rec’ *)
-Theorem CCS_Subst_def :
+Theorem CCS_Subst_def:
    (CCS_Subst nil          E' X = nil) /\
    (CCS_Subst (prefix u E) E' X = prefix u (CCS_Subst E E' X)) /\
    (CCS_Subst (sum E1 E2)  E' X = sum (CCS_Subst E1 E' X)
@@ -1332,7 +1332,7 @@ QED
 (* !t1 t2. (if T then t1 else t2) = t1) /\ (if F then t1 else t2) = t2) *)
 Theorem CCS_COND_CLAUSES = INST_TYPE [“:'a” |-> “:'a CCS”] COND_CLAUSES
 
-Theorem FV_SUBSET :
+Theorem FV_SUBSET:
     !X E E'. FV (CCS_Subst E E' X) SUBSET (FV E) UNION (FV E')
 Proof
     rw [CCS_Subst, FV_SUB]
@@ -1348,7 +1348,7 @@ Proof
  >> ASM_SET_TAC []
 QED
 
-Theorem FV_SUBSET_REC :
+Theorem FV_SUBSET_REC:
     !X E. FV (CCS_Subst E (rec X E) X) SUBSET (FV E)
 Proof
     rpt GEN_TAC
@@ -1365,14 +1365,14 @@ Proof
  >> ASM_SET_TAC [FV_thm]
 QED
 
-Theorem CCS_Subst_elim :
+Theorem CCS_Subst_elim:
     !X E. X # E ==> !E'. (CCS_Subst E E' X = E)
 Proof
     rw [CCS_Subst]
  >> MATCH_MP_TAC lemma14b >> art []
 QED
 
-Theorem CCS_Subst_FIX_IMP_NOTIN_FV :
+Theorem CCS_Subst_FIX_IMP_NOTIN_FV:
     !X E. (!E'. CCS_Subst E E' X = E) ==> X NOTIN (FV E)
 Proof
     rw [CCS_Subst]
@@ -1380,35 +1380,35 @@ Proof
 QED
 
 (* If E[t/X] = E[t'/X] for all t t', X must not be free in E *)
-Theorem CCS_Subst_EQ_IMP_NOTIN_FV :
+Theorem CCS_Subst_EQ_IMP_NOTIN_FV:
     !X E. (!E1 E2. CCS_Subst E E1 X = CCS_Subst E E2 X) ==> X NOTIN (FV E)
 Proof
     rw [CCS_Subst]
  >> MATCH_MP_TAC SUB_EQ_IMP_NOTIN_FV >> rw []
 QED
 
-Theorem FV_REC_PREF :
+Theorem FV_REC_PREF:
     !X E u E'. FV (CCS_Subst E (rec X (prefix u E')) X) =
                FV (CCS_Subst E (rec X E') X)
 Proof
     rw [CCS_Subst, FV_SUB]
 QED
 
-Theorem FV_REC_SUM :
+Theorem FV_REC_SUM:
     !X E E1 E2. FV (CCS_Subst E (rec X (E1 + E2)) X) =
                (FV (CCS_Subst E (rec X E1) X)) UNION (FV (CCS_Subst E (rec X E2) X))
 Proof
     rw [CCS_Subst, FV_SUB] >> SET_TAC []
 QED
 
-Theorem FV_REC_PAR :
+Theorem FV_REC_PAR:
     !X E E1 E2. FV (CCS_Subst E (rec X (par E1 E2)) X) =
                (FV (CCS_Subst E (rec X E1) X)) UNION (FV (CCS_Subst E (rec X E2) X))
 Proof
     rw [CCS_Subst, FV_SUB] >> SET_TAC []
 QED
 
-Theorem FV_SUBSET_lemma :
+Theorem FV_SUBSET_lemma:
     !P X Y. FV P SUBSET {X} /\ Y <> X ==> Y # P
 Proof
     rpt STRIP_TAC
@@ -1417,18 +1417,18 @@ Proof
 QED
 
 (* i.e. closed term *)
-Definition IS_PROC_def :
+Definition IS_PROC_def:
     IS_PROC E <=> (FV E = EMPTY)
 End
 
 Overload closed = “IS_PROC”
 Theorem closed_def = IS_PROC_def
 
-Definition ALL_PROC_def :
+Definition ALL_PROC_def:
     ALL_PROC Es <=> EVERY IS_PROC Es
 End
 
-Theorem IS_PROC_EL :
+Theorem IS_PROC_EL:
     !Es n. ALL_PROC Es /\ n < LENGTH Es ==> IS_PROC (EL n Es)
 Proof
     RW_TAC list_ss [ALL_PROC_def, EVERY_MEM, MEM_EL]
@@ -1627,7 +1627,7 @@ val _ = overload_on ("'", “ssub”);
 
 val tpm_ssub = save_thm("tpm_ssub", CONJUNCT2 ssub_def);
 
-Theorem single_ssub :
+Theorem single_ssub:
     !N. (FEMPTY |+ (s,M)) ' N = [M/s] N
 Proof
     HO_MATCH_MP_TAC nc_INDUCTION >> Q.EXISTS_TAC `s INSERT FV M`
@@ -1657,7 +1657,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem ssub_value :
+Theorem ssub_value:
     FV t = EMPTY ==> (phi : string |-> 'a CCS) ' t = t
 Proof
     SRW_TAC [][ssub_14b]
@@ -1679,7 +1679,7 @@ Proof
     HO_MATCH_MP_TAC simple_induction >> SRW_TAC [][]
 QED
 
-Theorem FV_ssub :
+Theorem FV_ssub:
     !fm N. (!y. y IN FDOM fm ==> FV (fm ' y) = {}) ==>
            FV (fm ' N) = FV N DIFF FDOM fm
 Proof
@@ -1698,7 +1698,7 @@ Proof
  >> qexists ‘fmFV fm’ >> rw [] >> metis_tac[]
 QED
 
-Theorem ssub_SUBST :
+Theorem ssub_SUBST:
     !M. (!k. k IN FDOM fm ==> v # fm ' k) /\ v NOTIN FDOM fm ==>
         fm ' ([N/v] M) = [fm ' N/v] (fm ' M)
 Proof
@@ -1717,7 +1717,7 @@ QED
  *)
 Theorem ssub_rec = List.nth(CONJUNCTS ssub_thm, 6)
 
-Theorem ssub_update_apply_SUBST :
+Theorem ssub_update_apply_SUBST:
     !M. (!k. k IN FDOM fm ==> v # fm ' k) /\ v NOTIN FDOM fm /\
         DISJOINT (FDOM fm) (FV N) ==>
         (fm |+ (v,N)) ' M = fm ' ([N/v] M)
@@ -1748,7 +1748,7 @@ Proof
  >> MATCH_MP_TAC ssub_update_apply_SUBST >> art []
 QED
 
-Theorem FEMPTY_update_apply :
+Theorem FEMPTY_update_apply:
     !M. (FEMPTY |+ (v,N)) ' M = [N/v] M
 Proof
     Q.X_GEN_TAC ‘M’
@@ -1757,7 +1757,7 @@ Proof
  >> MATCH_MP_TAC ssub_update_apply_SUBST >> rw []
 QED
 
-Theorem ssub_reduce_thm :
+Theorem ssub_reduce_thm:
     !t. FV t INTER FDOM fm = {s} ==> fm ' t = [fm ' s/s] t
 Proof
     HO_MATCH_MP_TAC nc_INDUCTION2
@@ -1795,7 +1795,7 @@ Proof
  >> ASM_SET_TAC []
 QED
 
-Theorem ssub_reduce :
+Theorem ssub_reduce:
     !t. FV t = {s} /\ s IN FDOM fm ==> fm ' t = [fm ' s/s] t
 Proof
     rpt STRIP_TAC
@@ -1808,24 +1808,24 @@ QED
    ---------------------------------------------------------------------- *)
 
 (* from a key list and a value list (of same length) to an alist *)
-Definition fromPairs_def :
+Definition fromPairs_def:
     fromPairs (Xs :string list) (Ps :'a CCS list) = FEMPTY |++ ZIP (Xs,Ps)
 End
 
-Theorem fromPairs_single :
+Theorem fromPairs_single:
     !X E E'. ssub (fromPairs [X] [E']) E = CCS_Subst E E' X
 Proof
     RW_TAC list_ss [fromPairs_def, ZIP, FUPDATE_LIST_THM]
  >> rw [FEMPTY_update_apply, CCS_Subst]
 QED
 
-Theorem fromPairs_EMPTY :
+Theorem fromPairs_EMPTY:
     fromPairs [] [] = FEMPTY
 Proof
     SRW_TAC [] [fromPairs_def, FUPDATE_LIST_THM]
 QED
 
-Theorem fromPairs_HD :
+Theorem fromPairs_HD:
     !X Xs P Ps. ~MEM X Xs /\ LENGTH Ps = LENGTH Xs ==>
                 fromPairs (X::Xs) (P::Ps) = fromPairs Xs Ps |+ (X,P)
 Proof
@@ -1834,13 +1834,13 @@ Proof
  >> METIS_TAC [MAP_ZIP]
 QED
 
-Theorem FDOM_fromPairs :
+Theorem FDOM_fromPairs:
     !Xs Ps. LENGTH Ps = LENGTH Xs ==> FDOM (fromPairs Xs Ps) = set Xs
 Proof
     SRW_TAC [] [fromPairs_def, FDOM_FUPDATE_LIST, MAP_ZIP]
 QED
 
-Theorem fromPairs_DOMSUB_NOT_IN_DOM :
+Theorem fromPairs_DOMSUB_NOT_IN_DOM:
     !X Xs Ps. ~MEM X Xs /\ (LENGTH Ps = LENGTH Xs) ==>
               (fromPairs Xs Ps) \\ X = fromPairs Xs Ps
 Proof
@@ -1849,14 +1849,14 @@ Proof
  >> fs [FDOM_fromPairs]
 QED
 
-Theorem fromPairs_FAPPLY_HD :
+Theorem fromPairs_FAPPLY_HD:
     !X Xs P Ps n. ~MEM X Xs /\ ALL_DISTINCT Xs /\ (LENGTH Ps = LENGTH Xs) ==>
                   ((fromPairs (X::Xs) (P::Ps)) ' X = P)
 Proof
     RW_TAC std_ss [fromPairs_HD, FAPPLY_FUPDATE]
 QED
 
-Theorem fromPairs_FAPPLY_EL :
+Theorem fromPairs_FAPPLY_EL:
     !Xs Ps n. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\ n < LENGTH Xs ==>
               (fromPairs Xs Ps) ' (EL n Xs) = EL n Ps
 Proof
@@ -1889,7 +1889,7 @@ Proof
  >> METIS_TAC [ALL_DISTINCT_EL_IMP]
 QED
 
-Theorem fromPairs_elim :
+Theorem fromPairs_elim:
     !Xs Ps E. DISJOINT (FV E) (set Xs) /\ LENGTH Ps = LENGTH Xs ==>
               (fromPairs Xs Ps) ' E = E
 Proof
@@ -1915,7 +1915,7 @@ QED
 
    NOTE: added ‘DISJOINT (set Xs) (FV P)’ when switching to ‘ssub’
  *)
-Theorem fromPairs_reduce :
+Theorem fromPairs_reduce:
     !X Xs P Ps. ~MEM X Xs /\ ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
                 EVERY (\e. X NOTIN (FV e)) Ps /\
                 DISJOINT (set Xs) (FV P) ==>
@@ -2000,7 +2000,7 @@ Proof
 QED
 
 (* lemma2 in another form; this is less general than fromPairs_reduce *)
-Theorem fromPairs_FOLDR :
+Theorem fromPairs_FOLDR:
     !Xs Ps E. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
               EVERY (\p. DISJOINT (set Xs) (FV p)) Ps ==>
               (fromPairs Xs Ps) ' E =
@@ -2044,7 +2044,7 @@ Proof
 QED
  *)
 
-Theorem fromPairs_self :
+Theorem fromPairs_self:
     !E Xs. ALL_DISTINCT Xs ==> fromPairs Xs (MAP var Xs) ' E = E
 Proof
     GEN_TAC >> Induct_on `Xs`
@@ -2059,7 +2059,7 @@ Proof
  >> rw [EVERY_MAP, EVERY_MEM, FV_thm]
 QED
 
-Theorem fromPairs_nested :
+Theorem fromPairs_nested:
     !Xs Ps Es E.
         ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\ LENGTH Es = LENGTH Xs ==>
         fromPairs Xs Ps ' (fromPairs Xs Es ' E) =
@@ -2116,7 +2116,7 @@ Proof
 QED
 
 (* A (non-trivial) generalization of FV_SUBSET *)
-Theorem FV_fromPairs :
+Theorem FV_fromPairs:
     !Xs Ps E. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs ==>
               FV (fromPairs Xs Ps ' E) SUBSET
                  (FV E) UNION BIGUNION (IMAGE FV (set Ps))
@@ -2171,7 +2171,7 @@ QED
 (* KEY result *)
 val lset_ss = list_ss ++ PRED_SET_ss; (* list + pred_set *)
 
-Theorem fromPairs_closed :
+Theorem fromPairs_closed:
     !Xs Ps E. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
               ALL_PROC Ps /\ FV E SUBSET (set Xs) ==>
               closed (fromPairs Xs Ps ' E)
@@ -2187,7 +2187,7 @@ Proof
  >> REWRITE_TAC [UNION_EMPTY]
 QED
 
-Theorem fromPairs_elim_closed :
+Theorem fromPairs_elim_closed:
     !Xs Ps P. LENGTH Ps = LENGTH Xs /\ closed P ==> fromPairs Xs Ps ' P = P
 Proof
     RW_TAC std_ss [IS_PROC_def]
@@ -2245,7 +2245,7 @@ Theorem REC' = REWRITE_RULE [CCS_Subst] REC
 val TRANS_IND = save_thm ("TRANS_IND",
     TRANS_ind |> (Q.SPEC `P`) |> GEN_ALL);
 
-Theorem TRANS_tpm :
+Theorem TRANS_tpm:
     !pi E u E'. TRANS E u E' ==> TRANS (tpm pi E) u (tpm pi E')
 Proof
     Q.X_GEN_TAC ‘pi’
@@ -2269,7 +2269,7 @@ Proof
  >> fs [tpm_eqr]
 QED
 
-Theorem TRANS_tpm_eq :
+Theorem TRANS_tpm_eq:
     !pi E u E'. TRANS E u E' <=> TRANS (tpm pi E) u (tpm pi E')
 Proof
     rpt GEN_TAC
@@ -2313,7 +2313,7 @@ val [PREFIXn, SUM1n, SUM2n, PAR1n, PAR2n, PAR3n, RESTRn, RELABELINGn, RECn] =
                    "RESTRn", "RELABELINGn", "RECn"],
                   CONJUNCTS TRANSn_rules));
 
-Theorem TRANS0_cases :
+Theorem TRANS0_cases:
     !E u E0. TRANSn 0 E u E0 <=> E = prefix u E0
 Proof
     rw [Once TRANSn_cases]
@@ -2327,13 +2327,13 @@ Theorem RECn_cases_EQ =
 
 Theorem RECn_cases = EQ_IMP_LR RECn_cases_EQ
 
-Theorem TRANS0_REC_EQ :
+Theorem TRANS0_REC_EQ:
     !X E u E'. TRANSn 0 (rec X E) u E' <=> F
 Proof
     rw [TRANS0_cases]
 QED
 
-Theorem TRANSn_REC_EQ :
+Theorem TRANSn_REC_EQ:
     !n X E u E'. TRANSn (SUC n) (rec X E) u E' <=>
                  TRANSn n (CCS_Subst E (rec X E) X) u E'
 Proof
@@ -2375,7 +2375,7 @@ QED
 (* |- !u E n. ~TRANSn n nil u E *)
 Theorem NIL_NO_TRANSn = NIL_NO_TRANSn_lemma |> REWRITE_RULE [GSYM nil_thm]
 
-Theorem TRANS_imp_TRANSn :
+Theorem TRANS_imp_TRANSn:
     !E u E'. TRANS E u E' ==> ?n. TRANSn n E u E'
 Proof
     HO_MATCH_MP_TAC TRANS_ind >> rw [] (* 10 subgoals *)
@@ -2392,7 +2392,7 @@ Proof
  >> (Q.EXISTS_TAC ‘SUC n’ >> rw [RECn])
 QED
 
-Theorem TRANSn_imp_TRANS :
+Theorem TRANSn_imp_TRANS:
     !n E u E'. TRANSn n E u E' ==> TRANS E u E'
 Proof
     HO_MATCH_MP_TAC TRANSn_ind >> rw [] (* 10 subgoals *)
@@ -2408,7 +2408,7 @@ Proof
  >> (rw [REC])
 QED
 
-Theorem TRANS_iff_TRANSn :
+Theorem TRANS_iff_TRANSn:
     !E u E'. TRANS E u E' <=> ?n. TRANSn n E u E'
 Proof
     rpt GEN_TAC >> EQ_TAC
@@ -2419,7 +2419,7 @@ Proof
 QED
 
 (* NOTE: This proof method based on ‘TRANSn’ is learnt from Ian Shillito. *)
-Theorem NIL_NO_TRANS :
+Theorem NIL_NO_TRANS:
     !u E. ~TRANS nil u E
 Proof
     rw [TRANS_iff_TRANSn, NIL_NO_TRANSn]
@@ -2431,7 +2431,7 @@ val NIL_NO_TRANS_EQF = save_thm (
     Q.GENL [`u`, `E`] (EQF_INTRO (SPEC_ALL NIL_NO_TRANS)));
 
 (* If a process can do an action, the process is not `nil`. *)
-Theorem TRANS_IMP_NO_NIL :
+Theorem TRANS_IMP_NO_NIL:
     !E u E'. TRANS E u E' ==> E <> nil
 Proof
     PROVE_TAC [NIL_NO_TRANS]
@@ -2450,7 +2450,7 @@ val REC_cases_EQ = save_thm
 
 val REC_cases = save_thm ("REC_cases", EQ_IMP_LR REC_cases_EQ);
 
-Theorem TRANS_REC_EQ :
+Theorem TRANS_REC_EQ:
     !X E u E'. TRANS (rec X E) u E' <=> TRANS (CCS_Subst E (rec X E) X) u E'
 Proof
     rpt GEN_TAC
@@ -2486,7 +2486,7 @@ Theorem TRANS_REC = EQ_IMP_LR TRANS_REC_EQ
 (* |- !X E u E'. rec X E --u-> E' ==> [rec X E/X] E --u-> E' *)
 Theorem TRANS_REC' = EQ_IMP_LR TRANS_REC_EQ'
 
-Theorem REC_VAR_NO_TRANS :
+Theorem REC_VAR_NO_TRANS:
     !X Y u E. ~TRANS (rec X (var Y)) u E
 Proof
     rpt GEN_TAC
@@ -2531,7 +2531,7 @@ Theorem SUM_cases_EQ =
 val SUM_cases = save_thm (
    "SUM_cases", EQ_IMP_LR SUM_cases_EQ);
 
-Theorem TRANS_SUM_EQ :
+Theorem TRANS_SUM_EQ:
     !E E' u E''. TRANS (sum E E') u E'' <=> TRANS E u E'' \/ TRANS E' u E''
 Proof
     rpt GEN_TAC
@@ -2638,7 +2638,7 @@ val PAR_cases = save_thm ("PAR_cases", EQ_IMP_LR PAR_cases_EQ);
 (* NOTE: the shape of this theorem can be easily derived from above definition
    by replacing REWRITE_RULE with SIMP_RULE, however the inner existential
    variable (E1) has a different name. *)
-Theorem TRANS_PAR_EQ :
+Theorem TRANS_PAR_EQ:
     !E E' u E''. TRANS (par E E') u E'' <=>
                  (?E1. (E'' = par E1 E') /\ TRANS E u E1) \/
                  (?E1. (E'' = par E E1) /\ TRANS E' u E1) \/
@@ -2699,7 +2699,7 @@ val RESTR_cases_EQ = save_thm (
 val RESTR_cases = save_thm (
    "RESTR_cases", EQ_IMP_LR RESTR_cases_EQ);
 
-Theorem TRANS_RESTR_EQ :
+Theorem TRANS_RESTR_EQ:
     !E L u E'.
      TRANS (restr L E) u E' <=>
      ?E'' l. (E' = restr L E'') /\ TRANS E u E'' /\
@@ -2820,7 +2820,7 @@ val RELAB_cases_EQ = save_thm
 
 val RELAB_cases = save_thm ("RELAB_cases", EQ_IMP_LR RELAB_cases_EQ);
 
-Theorem TRANS_RELAB_EQ :
+Theorem TRANS_RELAB_EQ:
     !E rf u E'. TRANS (relab E rf) u E' <=>
                 ?u' E''. (u = relabel rf u') /\
                          (E' = relab E'' rf) /\ TRANS E u' E''
@@ -2855,7 +2855,7 @@ val RELAB_NIL_NO_TRANS = store_thm ("RELAB_NIL_NO_TRANS",
    do not need this theorem). Thus, if ‘TRANS’ were defined by CoInductive,
   "almost all" CCS theorems in this work, still hold.  -- Chun Tian, 11 gen 2024
  *)
-Theorem TRANS_FV :
+Theorem TRANS_FV:
     !E u E'. TRANS E u E' ==> FV E' SUBSET (FV E)
 Proof
     HO_MATCH_MP_TAC TRANS_IND (* strongind is useless *)
@@ -2866,7 +2866,7 @@ Proof
  >> ASM_REWRITE_TAC [FV_SUBSET_REC']
 QED
 
-Theorem TRANS_PROC :
+Theorem TRANS_PROC:
     !E u E'. TRANS E u E' /\ IS_PROC E ==> IS_PROC E'
 Proof
     RW_TAC std_ss [IS_PROC_def]

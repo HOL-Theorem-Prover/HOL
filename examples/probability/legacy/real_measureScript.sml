@@ -1610,7 +1610,7 @@ val MEASURE_SPACE_REDUCE = store_thm
    >> Cases
    >> RW_TAC std_ss [m_space_def, measurable_sets_def, measure_def]);
 
-Theorem MONOTONE_CONVERGENCE :
+Theorem MONOTONE_CONVERGENCE:
     !m s f.
        measure_space m /\ f IN (UNIV -> measurable_sets m) /\
        (!n. f n SUBSET f (SUC n)) /\
@@ -2170,7 +2170,7 @@ val MEASURE_SPACE_CMUL = store_thm
   >> RW_TAC std_ss [countably_additive_def,measure_def,measurable_sets_def,o_DEF]
   >> METIS_TAC [SER_CMUL,countably_additive_def]);
 
-Theorem borel_measurable_le_iff :
+Theorem borel_measurable_le_iff:
     !m. measure_space m ==>
         !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
             !a. {w | w IN m_space m /\ f w <= a} IN measurable_sets m
@@ -2179,7 +2179,7 @@ Proof
                    space_def, subsets_def, IN_FUNSET, IN_UNIV]
 QED
 
-Theorem borel_measurable_gr_iff :
+Theorem borel_measurable_gr_iff:
     !m. measure_space m ==>
         !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
             !a. {w | w IN m_space m /\ a < f w} IN measurable_sets m
@@ -2188,7 +2188,7 @@ Proof
                    space_def, subsets_def, IN_FUNSET, IN_UNIV]
 QED
 
-Theorem borel_measurable_less_iff :
+Theorem borel_measurable_less_iff:
     !m. measure_space m ==>
         !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
             !a. {w | w IN m_space m /\ f w < a} IN measurable_sets m
@@ -2197,7 +2197,7 @@ Proof
                    space_def, subsets_def, IN_FUNSET, IN_UNIV]
 QED
 
-Theorem borel_measurable_ge_iff :
+Theorem borel_measurable_ge_iff:
     !m. measure_space m ==>
         !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
             !a. {w | w IN m_space m /\ a <= f w} IN measurable_sets m

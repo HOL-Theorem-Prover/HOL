@@ -54,49 +54,49 @@ Proof
   metis_tac [divides_def,MULT_CLAUSES,MULT_EQ_1]
 QED
 
-Theorem DIVIDES_REFL :
+Theorem DIVIDES_REFL:
  !x. x divides x
 Proof
   metis_tac [divides_def,MULT_CLAUSES]
 QED
 
-Theorem DIVIDES_TRANS :
+Theorem DIVIDES_TRANS:
  !a b c. a divides b /\ b divides c ==> a divides c
 Proof
   metis_tac [divides_def,MULT_ASSOC]
 QED
 
-Theorem DIVIDES_ADD :
+Theorem DIVIDES_ADD:
  !d a b. d divides a /\ d divides b ==> d divides (a + b)
 Proof
  metis_tac[divides_def,LEFT_ADD_DISTRIB]
 QED
 
-Theorem DIVIDES_SUB :
+Theorem DIVIDES_SUB:
   !d a b. d divides a /\ d divides b ==> d divides (a - b)
 Proof
   metis_tac [divides_def,LEFT_SUB_DISTRIB]
 QED
 
-Theorem DIVIDES_ADDL :
+Theorem DIVIDES_ADDL:
   !d a b. d divides a /\ d divides (a + b) ==> d divides b
 Proof
   metis_tac [ADD_SUB,ADD_SYM,DIVIDES_SUB]
 QED
 
-Theorem DIVIDES_LMUL :
+Theorem DIVIDES_LMUL:
   !d a x. d divides a ==> d divides (x * a)
 Proof
   metis_tac [divides_def,MULT_ASSOC,MULT_SYM]
 QED
 
-Theorem DIVIDES_RMUL :
+Theorem DIVIDES_RMUL:
   !d a x. d divides a ==> d divides (a * x)
 Proof
   metis_tac [MULT_SYM,DIVIDES_LMUL]
 QED
 
-Theorem DIVIDES_LE :
+Theorem DIVIDES_LE:
   !a b. a divides b ==> (0 < a ∧ a <= b) \/ b = 0
 Proof
   rw [divides_def] >> rw[]
@@ -106,7 +106,7 @@ QED
 (* Various proofs of the same formula                                        *)
 (*---------------------------------------------------------------------------*)
 
-Theorem LE_DIVIDES_FACT :
+Theorem LE_DIVIDES_FACT:
   !m n. 0 < m /\ m <= n ==> m divides (FACT n)
 Proof
   rw [LESS_EQ_EXISTS]
@@ -127,7 +127,7 @@ Proof
    >> metis_tac [DIVIDES_REFL]
 QED
 
-Theorem LE_DIVIDES_FACT :
+Theorem LE_DIVIDES_FACT:
   !m n. 0 < m /\ m <= n ==> m divides (FACT n)
 Proof
   rw [LESS_EQ_EXISTS]
@@ -137,7 +137,7 @@ Proof
      >- metis_tac [DIVIDES_RMUL]
 QED
 
-Theorem LE_DIVIDES_FACT :
+Theorem LE_DIVIDES_FACT:
   !m n. 0 < m /\ m <= n ==> m divides (FACT n)
 Proof
   `!m p. 0 < m ==> m divides FACT (m + p)`
@@ -148,7 +148,7 @@ Proof
                  DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]
 QED
 
-Theorem LE_DIVIDES_FACT :
+Theorem LE_DIVIDES_FACT:
   !m n. 0 < m /\ m <= n ==> m divides (FACT n)
 Proof
   rw [LESS_EQ_EXISTS]
@@ -157,7 +157,7 @@ Proof
                  DIVIDES_RMUL,DIVIDES_LMUL,DIVIDES_REFL,ADD_CLAUSES]
 QED
 
-Theorem LE_DIVIDES_FACT :
+Theorem LE_DIVIDES_FACT:
   !m n. 0 < m /\ m <= n ==> m divides (FACT n)
 Proof
   Induct_on `n - m` >> rw []
@@ -170,25 +170,25 @@ QED
 (* Zero and one are not prime, but two is.  All primes are positive.         *)
 (*---------------------------------------------------------------------------*)
 
-Theorem NOT_PRIME_0 :
+Theorem NOT_PRIME_0:
   ~prime 0
 Proof
   rw [prime_def,DIVIDES_ZERO]
 QED
 
-Theorem NOT_PRIME_1 :
+Theorem NOT_PRIME_1:
   ~prime 1
 Proof
  rw [prime_def]
 QED
 
-Theorem PRIME_2 :
+Theorem PRIME_2:
  prime 2
 Proof
   rw [prime_def] >> drule DIVIDES_LE >> rw[]
 QED
 
-Theorem PRIME_POS :
+Theorem PRIME_POS:
   !p. prime p ==> 0 < p
 Proof
   Cases >> rw [NOT_PRIME_0]
@@ -205,7 +205,7 @@ QED
 (* a contradiction with the fact that x is not 1 or n.                       *)
 (*---------------------------------------------------------------------------*)
 
-Theorem PRIME_FACTOR :
+Theorem PRIME_FACTOR:
   !n. ~(n = 1) ==> ?p. prime p /\ p divides n
 Proof
   completeInduct_on `n` >> rw [] >>
@@ -221,7 +221,7 @@ QED
 (* whether n is prime or not.                                                *)
 (*---------------------------------------------------------------------------*)
 
-Theorem PRIME_FACTOR :
+Theorem PRIME_FACTOR:
   !n. n<>1 ==> ?p. prime p /\ p divides n
 Proof
   completeInduct_on `n` >>
@@ -238,7 +238,7 @@ QED
 (* this means that q=1. But then q is not prime, a contradiction.            *)
 (*---------------------------------------------------------------------------*)
 
-Theorem EUCLID :
+Theorem EUCLID:
  !n. ?p. n < p /\ prime p
 Proof
   spose_not_then strip_assume_tac

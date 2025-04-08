@@ -27,7 +27,7 @@ Proof
 QED
 
 (* NOTE: no more [simp] for this theorem *)
-Theorem appstar_thm :
+Theorem appstar_thm:
     (M @* [] = M) /\
     (M @* (h::t) = M @@ h @* t)
 Proof
@@ -161,7 +161,7 @@ Proof
   Cases_on ‘Ms’ using listTheory.SNOC_CASES >> simp[] >> metis_tac[]
 QED
 
-Theorem appstar_CONS :
+Theorem appstar_CONS:
     M @@ N @* Ns = M @* (N::Ns)
 Proof
     ‘N::Ns = [N] ++ Ns’ by rw []
@@ -175,14 +175,14 @@ Proof
     rw [GSYM appstar_CONS]
 QED
 
-Theorem ssub_appstar :
+Theorem ssub_appstar:
     !Ns. fm ' (M @* Ns) = (fm ' M) @* MAP (ssub fm) Ns
 Proof
     SNOC_INDUCT_TAC
  >> rw [appstar_SNOC, MAP_SNOC]
 QED
 
-Theorem appstar_SUB :
+Theorem appstar_SUB:
     !args. [N/v] (t @* args) = [N/v] t @* MAP [N/v] args
 Proof
     SNOC_INDUCT_TAC
@@ -192,7 +192,7 @@ QED
 (* |- !args t sub. t @* args ISUB sub = (t ISUB sub) @* MAP (\t. t ISUB sub) args *)
 Theorem appstar_ISUB = FOLDL_APP_ISUB
 
-Theorem FV_appstar :
+Theorem FV_appstar:
     !M Ns. FV (M @* Ns) = FV M UNION (BIGUNION (IMAGE FV (set Ns)))
 Proof
     Q.X_GEN_TAC ‘M’
@@ -219,7 +219,7 @@ Proof
     rw [FV_appstar]
 QED
 
-Theorem size_appstar :
+Theorem size_appstar:
     !args. size (t @* args) = size t + SUM (MAP size args) + LENGTH args
 Proof
     SNOC_INDUCT_TAC
@@ -253,7 +253,7 @@ Proof
   Induct THEN SRW_TAC [numSimps.ARITH_ss][size_thm]
 QED
 
-Theorem FV_LAMl :
+Theorem FV_LAMl:
     !vs M. FV (LAMl vs M) = FV M DIFF LIST_TO_SET vs
 Proof
   Induct THEN SRW_TAC [][] THEN
@@ -280,7 +280,7 @@ Proof
   metis_tac[]
 QED
 
-Theorem LAMl_SUB :
+Theorem LAMl_SUB:
     !M N v vs. ~MEM v vs /\ DISJOINT (set vs) (FV N) ==>
               ([N/v] (LAMl vs M) = LAMl vs ([N/v] M))
 Proof
@@ -288,7 +288,7 @@ Proof
  >> Induct_on ‘vs’ >> rw []
 QED
 
-Theorem LAMl_ISUB :
+Theorem LAMl_ISUB:
     !ss vs M. DISJOINT (set vs) (FVS ss) /\
               DISJOINT (set vs) (DOM ss) ==>
              ((LAMl vs M) ISUB ss = LAMl vs (M ISUB ss))
@@ -306,7 +306,7 @@ Proof
 QED
 
 (* LAMl_ssub = ssub_LAM + LAMl_SUB *)
-Theorem LAMl_ssub :
+Theorem LAMl_ssub:
     !vs fm t. DISJOINT (FDOM fm) (set vs) /\
              (!y. y IN FDOM fm ==> DISJOINT (FV (fm ' y)) (set vs)) ==>
               fm ' (LAMl vs t) = LAMl vs (fm ' t)
@@ -334,7 +334,7 @@ Proof
   qid_spec_tac ‘M’ >> Induct_on ‘Ms’ >> simp[]
 QED
 
-Theorem LAMl_vsub :
+Theorem LAMl_vsub:
     !vs u v M.
         ~MEM u vs /\ ~MEM v vs ==>
         ([VAR v/u] (LAMl vs M) = LAMl vs ([VAR v/u] M))
@@ -349,7 +349,7 @@ Proof
   SRW_TAC [][SUB_THM]
 QED
 
-Theorem LAMl_vsub_disappears :
+Theorem LAMl_vsub_disappears:
    !vs u v M. MEM u vs ==> ([VAR v/u] (LAMl vs M) = LAMl vs M)
 Proof
   Induct THEN SRW_TAC [][] THENL [
@@ -361,7 +361,7 @@ Proof
   ]
 QED
 
-Theorem LAMl_ALPHA :
+Theorem LAMl_ALPHA:
     !vs vs' M.
        (LENGTH vs = LENGTH vs') /\ ALL_DISTINCT vs' /\
        DISJOINT (LIST_TO_SET vs') (LIST_TO_SET vs UNION FV M) ==>
@@ -390,7 +390,7 @@ Proof
   ]
 QED
 
-Theorem LAMl_ALPHA_tpm :
+Theorem LAMl_ALPHA_tpm:
     !xs ys M. LENGTH xs = LENGTH ys /\ ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
               DISJOINT (set ys) (set xs UNION FV M) ==>
               LAMl xs M = LAMl ys (tpm (ZIP (xs,ys)) M)
@@ -403,7 +403,7 @@ Proof
  >> simp [fresh_tpm_isub, REVERSE_ZIP, MAP_REVERSE]
 QED
 
-Theorem LAMl_ALPHA_ssub :
+Theorem LAMl_ALPHA_ssub:
     !vs vs' M.
        LENGTH vs = LENGTH vs' /\ ALL_DISTINCT vs /\ ALL_DISTINCT vs' /\
        DISJOINT (set vs') (set vs UNION FV M) ==>
@@ -435,7 +435,7 @@ Proof
     Induct_on ‘vs’ >> rw [LAM_eq_thm]
 QED
 
-Theorem LAMl_RNEWS_11 :
+Theorem LAMl_RNEWS_11:
     !X r n1 n2 y1 y2. FINITE X ==>
        (LAMl (RNEWS r n1 X) (VAR y1) =
         LAMl (RNEWS r n2 X) (VAR y2) <=> n1 = n2 /\ y1 = y2)
@@ -459,7 +459,7 @@ QED
 
 Overload funpow = “\f. FUNPOW (APP (f :term))”
 
-Theorem FV_FUNPOW :
+Theorem FV_FUNPOW:
     !(f :term) x n. FV (FUNPOW (APP f) n x) =
                     if n = 0 then FV x else FV f UNION FV x
 Proof
@@ -473,7 +473,7 @@ Proof
 QED
 
 (* moved here from churchnumScript.sml *)
-Theorem size_funpow :
+Theorem size_funpow:
     size (FUNPOW (APP f) n x) = (size f + 1) * n + size x
 Proof
   Induct_on `n` THEN

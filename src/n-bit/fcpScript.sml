@@ -227,7 +227,7 @@ val FCP = new_binder_definition("FCP",
    ``($FCP) = \g.  @(f:'a ** 'b). (!i. i < dimindex(:'b) ==> (f ' i = g i))``)
 
 (* NOTE: generalizing ‘g’ will break blastLib.sml *)
-Theorem FCP_BETA :
+Theorem FCP_BETA:
     !i. i < dimindex(:'b) ==> (((FCP) g:'a ** 'b) ' i = g i)
 Proof
     SIMP_TAC std_ss [FCP]
@@ -251,7 +251,7 @@ val FCP_ETA = Q.store_thm("FCP_ETA",
    `!g. (FCP i. g ' i) = g`,
    SIMP_TAC std_ss [CART_EQ, FCP_BETA])
 
-Theorem card_dimindex :
+Theorem card_dimindex:
     FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))
 Proof
     METIS_TAC [dimindex_def]
@@ -683,7 +683,7 @@ val FCP_EXISTS_def = zDefine`
 val FCP_EVERY_def = zDefine`
    FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v ' i)`
 
-Definition FCP_CONCAT_def :
+Definition FCP_CONCAT_def:
    FCP_CONCAT (a:'a ** 'b) (b:'a ** 'c) =
    (FCP i. if i < dimindex(:'c) then
               b ' i
@@ -692,12 +692,12 @@ Definition FCP_CONCAT_def :
 End
 
 (* FCP_FST returns the "higher" dimensional part (:'a['b]) of ‘v :'a['b + 'c]’ *)
-Definition FCP_FST_def :
+Definition FCP_FST_def:
    FCP_FST (v :'a ** ('b + 'c)) = (FCP i. v ' (i + dimindex (:'c))) :'a ** 'b
 End
 
 (* FCP_SND returns the "lower" dimensional part (:'a['c]) of ‘v :'a['b + 'c]’ *)
-Definition FCP_SND_def :
+Definition FCP_SND_def:
    FCP_SND (v :'a ** ('b + 'c)) = (FCP i. v ' i) :'a ** 'c
 End
 
@@ -791,7 +791,7 @@ val fcp_subst_comp = Q.store_thm("fcp_subst_comp",
 val () = computeLib.add_persistent_funs ["FCP_EXISTS", "FCP_EVERY"]
 
 (* Connections between FCP_CONCAT, FCP_FST and FCP_SND *)
-Theorem FCP_CONCAT_THM :
+Theorem FCP_CONCAT_THM:
     !(a :'a['b]) (b :'a['c]).
         FINITE univ(:'b) /\ FINITE univ(:'c) ==>
        (FCP_FST (FCP_CONCAT a b) = a) /\ (FCP_SND (FCP_CONCAT a b) = b)
@@ -805,7 +805,7 @@ Proof
       REWRITE_TAC [FCP_CONCAT_def, index_comp] >> simp [index_sum] ]
 QED
 
-Theorem FCP_CONCAT_11 :
+Theorem FCP_CONCAT_11:
     !(a :'a['b]) (b :'a['c]) c d.
         FINITE univ(:'b) /\ FINITE univ(:'c) /\
        (FCP_CONCAT a b = FCP_CONCAT c d) ==> (a = c) /\ (b = d)
@@ -824,7 +824,7 @@ Proof
       simp [FCP_BETA] ]
 QED
 
-Theorem FCP_CONCAT_REDUCE :
+Theorem FCP_CONCAT_REDUCE:
     !(x :'a['b + 'c]). FINITE univ(:'b) /\ FINITE univ(:'c) ==>
                        FCP_CONCAT (FCP_FST x) (FCP_SND x) = x
 Proof
@@ -838,14 +838,14 @@ Proof
 QED
 
 (* from HOL-Light's "Multivariate/vector.ml" *)
-Theorem COND_COMPONENT :
+Theorem COND_COMPONENT:
     !b x y. (if b then x else y) ' i = if b then x ' i else y ' i
 Proof
     PROVE_TAC []
 QED
 
 (* from HOL-Light's "Library/products.ml" *)
-Theorem HAS_SIZE_CART :
+Theorem HAS_SIZE_CART:
     !P m. FINITE univ(:'N) /\
           (!i. i < dimindex(:'N) ==> {x | P i x} HAS_SIZE m i)
       ==> {v :'a['N] | !i. i < dimindex(:'N) ==> P i (v ' i)} HAS_SIZE
@@ -918,7 +918,7 @@ Proof
  >> simp []
 QED
 
-Theorem CARD_CART :
+Theorem CARD_CART:
     !P. FINITE univ(:'N) /\ (!i. i < dimindex(:'N) ==> FINITE {x | P i x}) ==>
         CARD {v :'a['N] | !i. i < dimindex(:'N) ==> P i (v ' i)} =
         nproduct {0 .. dimindex(:'N) - 1} (\i. CARD {x | P i x})
@@ -933,7 +933,7 @@ QED
     More cardinality results for whole universe.
    ---------------------------------------------------------------------- *)
 
-Theorem HAS_SIZE_CART_UNIV :
+Theorem HAS_SIZE_CART_UNIV:
     !m. univ(:'a) HAS_SIZE m /\ FINITE univ(:'N) ==>
         univ(:'a['N]) HAS_SIZE m ** dimindex(:'N)
 Proof
@@ -950,14 +950,14 @@ Proof
  >> DISCH_THEN (art o wrap o SYM)
 QED
 
-Theorem CARD_CART_UNIV :
+Theorem CARD_CART_UNIV:
     FINITE univ(:'a) /\ FINITE univ(:'N) ==>
     CARD univ(:'a['N]) = CARD univ(:'a) ** dimindex(:'N)
 Proof
   MESON_TAC[HAS_SIZE_CART_UNIV, HAS_SIZE]
 QED
 
-Theorem FINITE_CART_UNIV :
+Theorem FINITE_CART_UNIV:
     FINITE univ(:'a) /\ FINITE univ(:'N) ==> FINITE univ(:'a['N])
 Proof
   MESON_TAC[HAS_SIZE_CART_UNIV, HAS_SIZE]

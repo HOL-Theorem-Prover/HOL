@@ -25,7 +25,7 @@ val _ = new_theory "Availability";
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
-Definition avail_event_def :
+Definition avail_event_def:
 avail_event (L:(('a->extreal) # ('a->extreal)) list) n t =
 {x |
 (EXTREAL_SUM_IMAGE (\a. (FST (EL a L)) x + (SND (EL a L)) x) (count n)  <= t) /\
@@ -34,76 +34,76 @@ avail_event (L:(('a->extreal) # ('a->extreal)) list) n t =
  (FST (EL (n) L)) x)}
 End
 
-Definition union_avail_events_def :
+Definition union_avail_events_def:
 union_avail_events L n t =
 (BIGUNION (IMAGE (\a. avail_event L a (Normal t)) (count n)))
 End
 (*----------------------------*)
-Definition union_avail_events1_def :
+Definition union_avail_events1_def:
 union_avail_events1 L t =
 (BIGUNION (IMAGE (\a. avail_event L a (Normal t)) (count (LENGTH L))))
 End
 (*----------------------------*)
-Definition union_avail_event_list_def :
+Definition union_avail_event_list_def:
 union_avail_event_list L n t =
  MAP (\a. union_avail_events a n t) L
 End
 (*----------------------------*)
-Definition union_avail_event_list1_def :
+Definition union_avail_event_list1_def:
 union_avail_event_list1 L t =
  MAP (\a. union_avail_events1 a t) L
 End
 (*----------------------------*)
-Definition list_union_avail_event_list_def :
+Definition list_union_avail_event_list_def:
 list_union_avail_event_list L t =
  MAP (\a. union_avail_event_list1 a t) L
 End
 (*----------------------------*)
-Definition avail_event_list_def :
+Definition avail_event_list_def:
 avail_event_list L n t =
  MAP (\a. avail_event a n t) L
 End
 (*---------------------------------*)
-Definition expec_avail_def :
+Definition expec_avail_def:
 expec_avail p (L:(('a->extreal) # ('a->extreal)) list) n t =
  sum (0,n) (\a. prob p (avail_event L a t))
 End
 
 (*---------------------------------*)
-Definition expec_avail1_def :
+Definition expec_avail1_def:
 expec_avail1 p (L:(('a->extreal) # ('a->extreal)) list) n t =
  sum (0,n) (prob p o (\a. avail_event L a t))
 End
 
 (*---------------------------------*)
-Definition cdf_def :
+Definition cdf_def:
 cdf p X t = distribution p X {y| y <= t}
 End
 
 (*---------------------------------*)
-Definition reliability_def :
+Definition reliability_def:
 reliability p X t = 1 - cdf p X t
 End
 
 
 (*---------------------------------*)
-Definition rel_event_def :
+Definition rel_event_def:
 rel_event1 p X t = PREIMAGE X {y | t < y} INTER p_space p
 End
 (*-------------------------*)
-Definition expec_def :
+Definition expec_def:
 expec n f = sum (0,n) f
 End
 
 (*-------------------------*)
-Definition inst_avail_exp_def :
+Definition inst_avail_exp_def:
 inst_avail_exp p L n m =
  !(t:real). (expec n (\a. prob p (avail_event L a (Normal t))) =
             (SND (m) / (SND m + FST m)) + (FST m /(SND m + FST m)) *
             exp (-((SND m + FST m))*t))
 End
 (*-------------------------*)
-Definition inst_avail_exp1_def :
+Definition inst_avail_exp1_def:
 inst_avail_exp1 p L n m =
  !t. (prob p ( union_avail_events L n &t) =
      (SND m / (SND m + FST m)) +
@@ -111,78 +111,78 @@ inst_avail_exp1 p L n m =
 End
 (*-------------------------*)
 (*-------------------------*)
-Definition inst_avail_exp2_def :
+Definition inst_avail_exp2_def:
 inst_avail_exp2 p L m =
  !t. (prob p ( union_avail_events1 L &t)  =
      (SND (m) / (SND m + FST m)) +
      (FST m /(SND m + FST m)) * exp (-((SND m + FST m)) * &t))
 End
 (*-------------------------*)
-Definition inst_avail_exp3_def :
+Definition inst_avail_exp3_def:
 inst_avail_exp3 p L m =
  !t. (prob p ( union_avail_events1 L &t INTER p_space p)  =
      (SND (m) / (SND m + FST m)) +
      (FST m /(SND m + FST m)) * exp (-((SND m + FST m))* &t))
 End
 (*-------------------------*)
-Definition inst_avail_exp_list_def :
+Definition inst_avail_exp_list_def:
 (inst_avail_exp_list p [] n M = T) /\
  (inst_avail_exp_list p (h::t) n M = (inst_avail_exp p h n (HD M) /\
   inst_avail_exp_list p t n (TL M) ))
 End
 (*-------------------------*)
-Definition inst_avail_exp_list1_def :
+Definition inst_avail_exp_list1_def:
 (inst_avail_exp_list1 p [] M = T) /\
  (inst_avail_exp_list1 p (h::t) M = (inst_avail_exp2 p h (HD M) /\
   inst_avail_exp_list1 p t (TL M) ))
 End
 (*-------------------------*)
-Definition inst_avail_exp_list2_def :
+Definition inst_avail_exp_list2_def:
 (inst_avail_exp_list2 p [] M = T) /\
  (inst_avail_exp_list2 p (h::t) M = (inst_avail_exp3 p h (HD M) /\
   inst_avail_exp_list2 p t (TL M) ))
 End
 (*-------------------------*)
-Definition two_dim_inst_avail_exp_def :
+Definition two_dim_inst_avail_exp_def:
 (two_dim_inst_avail_exp p [] M = T) /\
  (two_dim_inst_avail_exp p (h::t) M = (inst_avail_exp_list1 p h (HD M) /\
   two_dim_inst_avail_exp p t (TL M) ))
 End
 (*-------------------------*)
-Definition steady_state_avail_def :
+Definition steady_state_avail_def:
 steady_state_avail m = (SND (m:real#real) / (SND m + FST m))
 End
 (*-------------------------*)
-Definition steady_state_avail_list_def :
+Definition steady_state_avail_list_def:
 (steady_state_avail_list [] = []) /\
  (steady_state_avail_list (h::t) =  steady_state_avail h :: steady_state_avail_list t)
 End
 (*-------------------------*)
-Definition two_dim_steady_state_avail_list_def :
+Definition two_dim_steady_state_avail_list_def:
 (two_dim_steady_state_avail_list [] = []) /\
  (two_dim_steady_state_avail_list (h::t) =
   steady_state_avail_list h :: two_dim_steady_state_avail_list t)
 End
 (*-------------------------*)
-Definition steady_state_avail_prod_def :
+Definition steady_state_avail_prod_def:
 (steady_state_avail_prod [] = (1:real)) /\
  (steady_state_avail_prod (h::t) =
   steady_state_avail h * steady_state_avail_prod t)
 End
 (*-------------------------*)
-Definition two_dim_steady_state_avail_prod_def :
+Definition two_dim_steady_state_avail_prod_def:
 (two_dim_steady_state_avail_prod [] = (1:real)) /\
  (two_dim_steady_state_avail_prod (h::t) =
   steady_state_avail_prod h * two_dim_steady_state_avail_prod t)
 End
 (*-----------------------------------*)
-Definition compl_steady_state_avail_def :
+Definition compl_steady_state_avail_def:
 (compl_steady_state_avail [] = 1) /\
  (compl_steady_state_avail (h::t) =
  (1 - steady_state_avail h) * compl_steady_state_avail (t))
 End
 (*---------------------------------*)
-Theorem compl_rel_event_eq_fail_event1 :
+Theorem compl_rel_event_eq_fail_event1:
 !p t s. prob_space p ==>
             ((p_space p DIFF PREIMAGE s {y | t < y} INTER p_space p) =
              (PREIMAGE s {y | y <= t} INTER p_space p))
@@ -191,7 +191,7 @@ SRW_TAC[][PREIMAGE_def,DIFF_DEF,EXTENSION,GSPECIFICATION,REAL_NOT_LT]
 >> SET_TAC[extreal_not_le]
 QED
 (*---------------------------------*)
-Theorem compl_fail_event_eq_rel_event1 :
+Theorem compl_fail_event_eq_rel_event1:
 !X t p. p_space p DIFF PREIMAGE X {y | y ≤ t} INTER p_space p =
             rel_event1 p X t
 Proof
@@ -203,7 +203,7 @@ QED
 (*--------------------------------*)
 
 (*---------------------------------*)
-Theorem avail_ge_rel :
+Theorem avail_ge_rel:
 !p t L.
         (0 ≤ t) /\
         (~NULL L) /\
@@ -267,7 +267,7 @@ NTAC 2 (GEN_TAC)
 >> FULL_SIMP_TAC std_ss[count_def]
 QED
 (*-------------------------------*)
-Theorem avail_ge_rel1 :
+Theorem avail_ge_rel1:
 !p t L.
        (0 ≤ Normal t) /\
        (~NULL L) /\
@@ -295,7 +295,7 @@ QED
 
 
 (*-------------------------neg_exp_tend0_new-------------------------------------------*)
-Theorem neg_exp_tend0_new :
+Theorem neg_exp_tend0_new:
 !t (c:real). (0 < c) ==> (\t. exp (&t*(-c)))--> 0
 Proof
 GEN_TAC
@@ -327,14 +327,14 @@ GEN_TAC
 >> RW_TAC real_ss[EXP_POS_LT]
 QED
 (*-----------------steady_avail_temp------------------------------------------*)
-Theorem steady_avail_temp :
+Theorem steady_avail_temp:
 !a b:real. 0 < a /\ 0 < b ==> 0 < a + b
 Proof
 REAL_ARITH_TAC
 QED
 
 (*---------------------------------------------*)
-Theorem steady_state_avail :
+Theorem steady_state_avail:
 !p L n m t.
       ((0 < FST m) /\ (0 < SND m)) /\ inst_avail_exp p L n m ==>
       (lim (\t.  (expec_avail p L n (Normal &t))) =
@@ -417,7 +417,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[steady_avail_temp]
 QED
 (*---------------------------------------------*)
-Theorem steady_state_avail1 :
+Theorem steady_state_avail1:
 !p L n m. prob_space p /\
               (!t. (!a b. (a <> b) ==>
                    DISJOINT (avail_event L a (Normal (t)))
@@ -448,7 +448,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 (*                 EXT_LE_LT               *)
 (* ------------------------------------------------------------------------- *)
-Theorem EXT_LE_LT :
+Theorem EXT_LE_LT:
 !x y: extreal. ((x <=  y) \/ y < x) = ((x = y) \/ x < y \/ y < x)
 Proof
 RW_TAC std_ss []
@@ -468,14 +468,14 @@ QED
 (* ------------------------------------------------------------------------- *)
 (*                 LET_ANTISYM               *)
 (* ------------------------------------------------------------------------- *)
-Theorem LET_ANTISYM :
+Theorem LET_ANTISYM:
 !x y. ~(x < y /\ y <=  x)
 Proof
 RW_TAC std_ss[extreal_not_le]
 QED
 
 (*---------not_null_leng-------------*)
-Theorem not_null_leng :
+Theorem not_null_leng:
 ! L1 . ~NULL L1  ==> 1 <= LENGTH L1
 Proof
 FULL_SIMP_TAC list_ss[GSYM LENGTH_NOT_NULL]
@@ -484,7 +484,7 @@ QED
 (*---------------------------*)
 
 (*----------------------------*)
-Theorem series_expec_tends_prod_avail :
+Theorem series_expec_tends_prod_avail:
 !p L M.
        prob_space p /\
        (!z. MEM z M ==> (0 < FST z /\ 0 < SND z)) /\
@@ -545,7 +545,7 @@ GEN_TAC
 >> FULL_SIMP_TAC list_ss[ inst_avail_exp_list1_def]
 QED
 (*------------------------------*)
-Theorem series_rbd_avail :
+Theorem series_rbd_avail:
 !p L M.
        prob_space p /\
        (!z. MEM z M ==> 0 < FST z /\ 0 < SND z) /\
@@ -581,7 +581,7 @@ RW_TAC std_ss[]
 QED
 
 (*-------------------------*)
-Theorem lim_inst_parall_tend_steady :
+Theorem lim_inst_parall_tend_steady:
 !p L M.
   prob_space p /\
   (!z. MEM z M ==> (0 < FST z /\ 0 < SND z)) /\
@@ -650,7 +650,7 @@ GEN_TAC
 QED
 
 (*---compl_steady_state_avail_equi---------------------------*)
-Theorem compl_steady_state_avail_equi :
+Theorem compl_steady_state_avail_equi:
 !M. compl_steady_state_avail M =
         list_prod (one_minus_list (steady_state_avail_list M))
 Proof
@@ -659,7 +659,7 @@ Induct
 >> RW_TAC list_ss[compl_steady_state_avail_def,steady_state_avail_list_def,one_minus_list_def,list_prod_def]
 QED
 (*---parallel_steady_state_avail---------------------------*)
-Theorem parallel_rbd_avail :
+Theorem parallel_rbd_avail:
 !p L M.
        prob_space p /\
        (!z. MEM z M ==> 0 < FST z /\ 0 < SND z) /\
@@ -721,7 +721,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[]
 QED
 (*--------lim_inst_parall_series_tend_steady-----------------------------*)
-Theorem lim_inst_parall_series_tend_steady :
+Theorem lim_inst_parall_series_tend_steady:
 !p L M.
        prob_space p /\
        (!z. MEM z (FLAT M) ==> 0 < FST z /\ 0 < SND z) /\
@@ -786,7 +786,7 @@ GEN_TAC
 >> RW_TAC std_ss[GSYM list_union_avail_event_list_def]
 QED
 (*-------------parallel-series ABD--------*)
-Theorem steady_state_parallel_series_ABD :
+Theorem steady_state_parallel_series_ABD:
 !p L M .  prob_space p /\
               (!z. MEM z (FLAT M) ==> 0 < FST z /\ 0 < SND z) /\
               ((LENGTH L = LENGTH M)) /\
@@ -869,7 +869,7 @@ QED
 
 
 (*------------------------*)
-Theorem lim_inst_series_parall_tend_steady :
+Theorem lim_inst_series_parall_tend_steady:
 !p L M.
      prob_space p /\ (!z. MEM z (FLAT M) ==> 0 < FST z /\ 0 < SND z) /\
      (LENGTH L = LENGTH M) /\
@@ -937,7 +937,7 @@ GEN_TAC
 QED
 (*-------------Series_parallel ABD---------------------------------*)
 
-Theorem steady_state_series_parallel_avail :
+Theorem steady_state_series_parallel_avail:
 !p L M.
        prob_space p /\
        (!z. MEM z (FLAT M) ==> 0 < FST z /\ 0 < SND z) /\
@@ -980,35 +980,35 @@ QED
 (*--------------------------------------------------------*)
 (* Definition. Unavailability Event       *)
 (* ------------------------------------------------------------------------- *)
-Definition unavail_event_def :
+Definition unavail_event_def:
 unavail_event p L n t  =
 p_space p DIFF (avail_event L n t INTER p_space p)
 End
 (*--------------------------------------------------------*)
 (* Definition. Union Unavailability Event       *)
 (* ------------------------------------------------------------------------- *)
-Definition union_unavail_events_def :
+Definition union_unavail_events_def:
 union_unavail_events p L t  =
 p_space p DIFF (union_avail_events1 L t INTER p_space p)
 End
 (*---------------------------------------------------------*)
 (* Definition : Unavailability event list                   *)
 (* ------------------------------------------------------------------------- *)
-Definition union_unavail_event_list_def :
+Definition union_unavail_event_list_def:
 union_unavail_event_list p L t  =
 MAP (\a. union_unavail_events p a t) L
 End
 (* ------------------------------------------------------------------------- *)
 (* Definition: steady state unavailiabilility with failure and repair rate                               *)
 (* ------------------------------------------------------------------------- *)
-Definition steady_state_unavail_def :
+Definition steady_state_unavail_def:
 ( steady_state_unavail (m:real#real) = FST m / (SND m + FST m))
 End
 
 (* ------------------------------------------------------------------------- *)
 (* Definition: steady state unavailiabilility with failure and repair rate  list                             *)
 (* ------------------------------------------------------------------------- *)
-Definition steady_state_unavail_list_def :
+Definition steady_state_unavail_list_def:
 ( steady_state_unavail_list M = MAP (\a. steady_state_unavail a) M)
 End
 
@@ -1016,20 +1016,20 @@ End
 (* Definition: Instantenous Unavailability pair                  *)
 (* ------------------------------------------------------------------------- *)
 (*-------------------------*)
-Definition inst_unavail_exp_def :
+Definition inst_unavail_exp_def:
 inst_unavail_exp p L m =
  !(t). (prob p ( union_unavail_events p L &t)  =
        (FST (m) / (SND m + FST m)) -
        (FST m /(SND m + FST m)) * exp (-((SND m + FST m))* &t))
 End
 (*-------------------------*)
-Definition inst_unavail_exp_list_def :
+Definition inst_unavail_exp_list_def:
 (inst_unavail_exp_list p [] M = T) /\
 (inst_unavail_exp_list p (h::t) M =
 (inst_unavail_exp p h (HD M) /\ inst_unavail_exp_list p t (TL M) ))
 End
 (*-------------------------*)
-Definition two_dim_inst_unavail_exp_def :
+Definition two_dim_inst_unavail_exp_def:
 (two_dim_inst_unavail_exp p [] M = T) /\
  (two_dim_inst_unavail_exp p (h::t) M =
   (inst_unavail_exp_list p h (HD M) /\ two_dim_inst_unavail_exp p t (TL M) ))
@@ -1041,28 +1041,28 @@ End
 (* ------------------------------------------------------------------------- *)
 (*--- Definition. AND unavail FT gate     ----  *)
 (* ------------------------------------------------------------------------- *)
-Definition AND_unavail_FT_gate_def :
+Definition AND_unavail_FT_gate_def:
  AND_unavail_FT_gate p L t =
        FTree p (AND (gate_list (union_unavail_event_list p L t)))
 End
 (* ------------------------------------------------------------------------- *)
 (* Definition. OR unavail FT gate                                 *)
 (* ------------------------------------------------------------------------- *)
-Definition OR_unavail_FT_gate_def :
+Definition OR_unavail_FT_gate_def:
  OR_unavail_FT_gate p L t =
        FTree p (OR (gate_list (union_unavail_event_list p L t)))
 End
 (* ------------------------------------------------------------------------- *)
 (* Definition. NOR unavail FT gate                                 *)
 (* ------------------------------------------------------------------------- *)
-Definition NOR_unavail_FT_gate_def :
+Definition NOR_unavail_FT_gate_def:
  NOR_unavail_FT_gate p L t  =
        p_space p DIFF FTree p (OR (gate_list (union_unavail_event_list p L t)))
 End
 (* ------------------------------------------------------------------------- *)
 (* Definition. NAND unavail FT gate                                 *)
 (* ------------------------------------------------------------------------- *)
-Definition NAND_unavail_FT_gate_def :
+Definition NAND_unavail_FT_gate_def:
  NAND_unavail_FT_gate p L1 L2 t  =
              FTree p
                (AND (gate_list (compl_list p (union_unavail_event_list p L1 t) ++
@@ -1072,14 +1072,14 @@ End
 (* ------------------------------------------------------------------------- *)
 (* Definition. XOR unavail FT gate                                 *)
 (* ------------------------------------------------------------------------- *)
-Definition XOR_unavail_FT_gate_def :
+Definition XOR_unavail_FT_gate_def:
  XOR_unavail_FT_gate p X Y t  =
            (XOR_FT_gate p (atomic (union_unavail_events p X t))
                           (atomic (union_unavail_events p Y t)))
 End
 
 (*---------------------------------------*)
-Theorem AND_inst_avail_prod_tends_steady :
+Theorem AND_inst_avail_prod_tends_steady:
  !p L M.
      prob_space p /\ (!z. MEM z M ==> 0 < FST z /\ 0 < SND z) /\
      (LENGTH L = LENGTH M) /\ inst_unavail_exp_list p L M ==>
@@ -1139,7 +1139,7 @@ GEN_TAC
 QED
 
 (*---------------------------*)
-Theorem AND_gate_unavail :
+Theorem AND_gate_unavail:
 !p L M.  prob_space p /\
              (!z. MEM z M ==> 0 < FST z /\ 0 < SND z) /\
              (LENGTH L = LENGTH M) /\
@@ -1173,7 +1173,7 @@ RW_TAC std_ss[]
 QED
 
 (*-------------------*)
-Theorem lim_inst_OR_tend_steady0 :
+Theorem lim_inst_OR_tend_steady0:
 !p L M. prob_space p /\
             (!z. MEM z M ==> (0 < FST z /\ 0 < SND z)) /\
             (LENGTH L = LENGTH M) /\
@@ -1243,7 +1243,7 @@ GEN_TAC
 QED
 
 (*----------------------------*)
-Theorem OR_steady_state_unavail :
+Theorem OR_steady_state_unavail:
 !p L M. prob_space p /\
             (!z. MEM z M ==> 0 < FST z /\ 0 < SND z) /\
             (LENGTH L = LENGTH M) /\
@@ -1301,7 +1301,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[]
 QED
 (*------------------------------------*)
-Theorem steady_state_NOR_unavail_FT_gate :
+Theorem steady_state_NOR_unavail_FT_gate:
 !p L M.
        prob_space p /\ (!z. MEM z M ==> 0 < FST z /\ 0 < SND z) /\
        (LENGTH L = LENGTH M) /\
@@ -1342,7 +1342,7 @@ RW_TAC std_ss[NOR_unavail_FT_gate_def]
 >> RW_TAC std_ss[]
 QED
 (*------------------------*)
-Theorem in_events_normal_events :
+Theorem in_events_normal_events:
 !p A t. prob_space p /\ (p_space p DIFF (A INTER p_space p) IN events p) ==> (A INTER p_space p IN events p)
 Proof
  REPEAT GEN_TAC
@@ -1357,7 +1357,7 @@ QED
 
 
 (*-------------------------*)
-Theorem lim_inst_OR_tend_steady :
+Theorem lim_inst_OR_tend_steady:
 !p L M. prob_space p /\
             (!z. MEM z M ==> (0 < FST z /\ 0 < SND z)) /\
             (LENGTH L = LENGTH M) /\
@@ -1439,7 +1439,7 @@ QED
 
 
 (*-------------------------*)
-Theorem NAND_steady_state_avail :
+Theorem NAND_steady_state_avail:
 !p L1 L2 M1 M2.
           prob_space p /\
           (!z. MEM z (M1++M2) ==> 0 < FST z /\ 0 < SND z) /\
@@ -1511,7 +1511,7 @@ RW_TAC std_ss[]
    >> FULL_SIMP_TAC list_ss[]
 QED
 (*---------------------*)
-Theorem inst_XOR_tends_steady :
+Theorem inst_XOR_tends_steady:
 !p X1 m1.
        inst_unavail_exp p X1 m1 /\
        (0 < FST m1 /\ 0 < SND m1) ==>
@@ -1548,7 +1548,7 @@ QED
 
 (*--------------------*)
 
-Theorem XOR_steady_unavail :
+Theorem XOR_steady_unavail:
 !p X1 X2 m1 m2 t.
      prob_space p  /\
      (!t'.

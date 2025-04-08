@@ -36,29 +36,29 @@ val _ =
 
 val _ = overload_on("mkNT", ``INL : reNT -> reNT inf``)
 
-Definition sumID_def :
+Definition sumID_def:
   sumID (INL x) = x /\
   sumID (INR y) = y
 End
 
-Definition choicel_def :
+Definition choicel_def:
   choicel [] = not (empty NONE) NONE /\
   choicel (h::t) = choice h (choicel t) sumID
 End
 
-Definition pegf_def :
+Definition pegf_def:
   pegf sym f = seq sym (empty NONE) (\l1 l2. OPTION_MAP f l1)
 End
 
-Definition try_def :
+Definition try_def:
   try sym = choicel [sym; empty NONE]
 End
 
-Definition pnt_def :
+Definition pnt_def:
   pnt sym = nt (mkNT sym) I
 End
 
-Definition igLeft_def :
+Definition igLeft_def:
   igLeft s1 s2 = seq s1 s2 (\l1 l2. l2)
 End
 
@@ -67,7 +67,7 @@ val _ =
     {tok = "*>",
      term_name = "igLeft", fixity = Infixl 500 }
 
-Definition igRight_def :
+Definition igRight_def:
   igRight s1 s2 = seq s1 s2 (\l1 l2. l1)
 End
 
@@ -75,34 +75,34 @@ val _ =
  set_mapped_fixity
     {tok = "<*", term_name = "igRight", fixity = Infixl 500 }
 
-Definition igtok_def :
+Definition igtok_def:
   igtok P = tok P (K NONE)
 End
 
-Definition DigitSet_def :
+Definition DigitSet_def:
   DigitSet = charset_string "0123456789"
 End
 
-Definition EscapableChar_def :
+Definition EscapableChar_def:
   EscapableChar c <=> MEM c "\\.^$*+?|~{}[]()" \/ ORD c = 96
 End
 
-Definition OrM_def :
+Definition OrM_def:
   OrM roptlist = OPTION_MAP Or (OPT_MMAP I roptlist)
 End
 
 
 (* breaks abstraction, see TODO on mkNT Charset below *)
-Definition charset_char_def :
+Definition charset_char_def:
   charset_char c = Chset (Charset (n2w (ORD c)) 0w 0w 0w)
 End
 
-Definition uncharset_char_def :
+Definition uncharset_char_def:
   (uncharset_char (Chset (Charset w _ _ _)) = CHR (w2n (w && 255w))) /\
   (uncharset_char _ = CHR 0)
 End
 
-Theorem uncharset_char_charset_char :
+Theorem uncharset_char_charset_char:
  uncharset_char (charset_char c) = c
 Proof
   rw[charset_char_def,uncharset_char_def]
@@ -113,7 +113,7 @@ Proof
   \\ rw[stringTheory.CHR_ORD]
 QED
 
-Definition rePEG_def :
+Definition rePEG_def:
   rePEG = <|
     start := pnt Top ;
     tokFALSE := "Failed to see expected token";
@@ -182,49 +182,49 @@ End
 
 Theorem FDOM_rePEG = EVAL``FDOM rePEG.rules``;
 
-Theorem wfpeg_BslashSpecial_applied :
+Theorem wfpeg_BslashSpecial_applied:
  wfpeg rePEG (rePEG.rules ' (mkNT BslashSpecial))
 Proof
   CONV_TAC(RAND_CONV EVAL)
   \\ rpt(rw[Once wfpeg_cases])
 QED
 
-Theorem wfpeg_BslashSpecial :
+Theorem wfpeg_BslashSpecial:
  wfpeg rePEG (nt (mkNT BslashSpecial) I)
 Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
   \\ rw[wfpeg_BslashSpecial_applied]
 QED
 
-Theorem wfpeg_CharSet_applied :
+Theorem wfpeg_CharSet_applied:
  wfpeg rePEG (rePEG.rules ' (mkNT CharSet))
 Proof
   CONV_TAC(RAND_CONV EVAL)
   \\ ntac 2 (rw[Once wfpeg_cases])
 QED
 
-Theorem wfpeg_CharSet :
+Theorem wfpeg_CharSet:
  wfpeg rePEG (nt (mkNT CharSet) I)
 Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
   \\ rw[wfpeg_CharSet_applied]
 QED
 
-Theorem wfpeg_Atom_applied :
+Theorem wfpeg_Atom_applied:
  wfpeg rePEG (rePEG.rules ' (mkNT Atom))
 Proof
   CONV_TAC(RAND_CONV EVAL)
   \\ rpt(rw[Once wfpeg_cases])
 QED
 
-Theorem wfpeg_Atom :
+Theorem wfpeg_Atom:
  wfpeg rePEG (nt (mkNT Atom) I)
 Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
   \\ rw[wfpeg_Atom_applied]
 QED
 
-Theorem wfpeg_Star_applied :
+Theorem wfpeg_Star_applied:
  wfpeg rePEG (rePEG.rules ' (mkNT Star))
 Proof
   CONV_TAC(RAND_CONV EVAL)
@@ -232,14 +232,14 @@ Proof
   \\ rpt(rw[Once wfpeg_cases])
 QED
 
-Theorem wfpeg_Star :
+Theorem wfpeg_Star:
  wfpeg rePEG (nt (mkNT Star) I)
 Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
   \\ rw[wfpeg_Star_applied]
 QED
 
-Theorem wfpeg_Concat_applied :
+Theorem wfpeg_Concat_applied:
  wfpeg rePEG (rePEG.rules ' (mkNT Concat))
 Proof
   CONV_TAC(RAND_CONV EVAL)
@@ -254,14 +254,14 @@ Proof
   \\ fs[Once peg0_cases]
 QED
 
-Theorem wfpeg_Concat :
+Theorem wfpeg_Concat:
  wfpeg rePEG (nt (mkNT Concat) I)
 Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
   \\ rw[wfpeg_Concat_applied]
 QED
 
-Theorem wfpeg_Alt_applied :
+Theorem wfpeg_Alt_applied:
  wfpeg rePEG (rePEG.rules ' (mkNT Alt))
 Proof
   CONV_TAC(RAND_CONV EVAL)
@@ -269,28 +269,28 @@ Proof
   \\ ntac 3 (rw[Once wfpeg_cases])
 QED
 
-Theorem wfpeg_Alt :
+Theorem wfpeg_Alt:
  wfpeg rePEG (nt (mkNT Alt) I)
 Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
   \\ rw[wfpeg_Alt_applied]
 QED
 
-Theorem wfpeg_Top_applied :
+Theorem wfpeg_Top_applied:
  wfpeg rePEG (rePEG.rules ' (mkNT Top))
 Proof
   CONV_TAC(RAND_CONV EVAL)
   \\ rw[wfpeg_Alt]
 QED
 
-Theorem wfpeg_Top :
+Theorem wfpeg_Top:
  wfpeg rePEG (nt (mkNT Top) I)
 Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
   \\ rw[wfpeg_Top_applied]
 QED
 
-Theorem wfG_rePEG :
+Theorem wfG_rePEG:
  wfG rePEG
 Proof
   simp[wfG_def,Gexprs_def,finite_mapTheory.IN_FRANGE,PULL_EXISTS,FDOM_rePEG]
@@ -307,12 +307,12 @@ Proof
             wfpeg_Concat,wfpeg_Star,wfpeg_Atom])
 QED
 
-Definition add_loc_def :
+Definition add_loc_def:
   add_loc c = (c, Locs (POSN 0 0) (POSN 0 0))
 End
 
 
-Definition parse_regexp_def :
+Definition parse_regexp_def:
   parse_regexp s =
     case peg_exec rePEG rePEG.start (MAP add_loc s) [] fail [] done failed
     of Result (Success [] (SOME r) _) => SOME r | _ => NONE

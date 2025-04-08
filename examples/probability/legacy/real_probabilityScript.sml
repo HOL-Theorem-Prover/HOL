@@ -1307,7 +1307,7 @@ val marginal_distribution2 = store_thm
   >> RW_TAC std_ss [EXTENSION, IN_INTER, GSPECIFICATION]
   >> METIS_TAC []);
 
-Theorem joint_distribution_sums_1 :
+Theorem joint_distribution_sums_1:
     !p X Y. prob_space p /\ FINITE (p_space p) /\
            (events p = POW (p_space p)) ==>
            (SIGMA (λ(x,y). joint_distribution p X Y {(x,y)})
@@ -1346,7 +1346,7 @@ Proof
  >> METIS_TAC [PROB, PSPACE]
 QED
 
-Theorem joint_distribution_sum_mul1 :
+Theorem joint_distribution_sum_mul1:
     !p X Y f. prob_space p /\ FINITE (p_space p) /\
              (events p = POW (p_space p))
          ==> (SIGMA (λ(x,y). joint_distribution p X Y {(x,y)} * (f x))
@@ -1448,7 +1448,7 @@ val COND_PROB_INCREASING = store_thm
  >> METIS_TAC [PROB_POSITIVE, REAL_LT_LE, REAL_INV_POS, PROB_INCREASING,
     EVENTS_INTER, REAL_LE_RMUL]);
 
-Theorem COND_PROB_POS_IMP_PROB_NZ :
+Theorem COND_PROB_POS_IMP_PROB_NZ:
     !A B p. prob_space p /\ A IN events p /\ B IN events p /\
           (0 < cond_prob p A B) ==> (prob p (A INTER B) <> 0)
 Proof
@@ -1580,7 +1580,7 @@ val COND_PROB_UNION = prove
         by (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION] THEN PROVE_TAC [])
  >> RW_TAC std_ss []);
 
-Theorem PROB_FINITE_ADDITIVE :
+Theorem PROB_FINITE_ADDITIVE:
     !p s f t. prob_space p /\ FINITE s /\ (!x. x IN s ==> f x IN events p) /\
        (!a b. (a:'b) IN s /\ b IN s /\ ~(a = b) ==> DISJOINT (f a) (f b)) /\
        (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)

@@ -38,7 +38,7 @@ Theorem indicator_fn_def[local] = indicator
 
    BIGUNION and DISJOINT indicate that this is a standard representation.
  *)
-Definition pos_simple_fn_def :
+Definition pos_simple_fn_def:
     pos_simple_fn m f (s :num set) (a :num -> 'a set) (x :num -> real) =
        ((!t. 0 <= f t) /\
         (!t. t IN m_space m ==> (f t = SIGMA (\i. (x i) * (indicator_fn (a i) t)) s)) /\
@@ -50,14 +50,14 @@ Definition pos_simple_fn_def :
 End
 
 (* The integral of a positive simple function *)
-Definition pos_simple_fn_integral_def :
+Definition pos_simple_fn_integral_def:
     pos_simple_fn_integral (m :'a m_space)
                            (s :num set) (a :num -> 'a set) (x :num -> real) =
         SIGMA (\i. (x i) * (measure m (a i))) s
 End
 
 (* ‘psfs m f’ is the set of all positive simple functions equivalent to f *)
-Definition psfs_def :
+Definition psfs_def:
     psfs m f = {(s,a,x) | pos_simple_fn m f s a x}
 End
 
@@ -2379,7 +2379,7 @@ val markov_ineq = store_thm
    >> `0 <= f t` by METIS_TAC [REAL_LE_TRANS, REAL_LT_IMP_LE]
    >> RW_TAC real_ss [abs, REAL_LT_IMP_LE]);
 
-Theorem finite_space_integral_reduce :
+Theorem finite_space_integral_reduce:
     !m f. measure_space m /\
           f IN borel_measurable (m_space m, measurable_sets m) /\
           FINITE (m_space m) ==> (integral m f = finite_space_integral m f)
@@ -2808,7 +2808,7 @@ val finite_space_POW_integral_reduce = store_thm
             >> METIS_TAC [])
    >> RW_TAC std_ss []);
 
-Theorem finite_POW_RN_deriv_reduce :
+Theorem finite_POW_RN_deriv_reduce:
     !m v. measure_space m /\
           FINITE (m_space m) /\
           measure_space (m_space m, measurable_sets m, v) /\
@@ -3170,7 +3170,7 @@ val measure_space_finite_prod_measure_POW2 = store_thm
         ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_UNION, IN_PREIMAGE] ]);
 
 (* from examples/diningcryptos *)
-Theorem countable_space_integral_reduce :
+Theorem countable_space_integral_reduce:
     !m f p n. measure_space m /\ positive m /\
               f IN borel_measurable (m_space m, measurable_sets m) /\
               countable (IMAGE f (m_space m)) /\
@@ -3377,7 +3377,7 @@ QED
 (* Below are old theorems (including Radon-Nikodym) found in K13 and prior   *)
 (* ************************************************************************* *)
 
-Theorem finite_prod_measure_space_POW :
+Theorem finite_prod_measure_space_POW:
     !s1 s2 u v. FINITE s1 /\ FINITE s2  ==>
           (prod_measure_space (s1, POW s1, u) (s2, POW s2, v) =
           (s1 CROSS s2, POW (s1 CROSS s2), prod_measure (s1, POW s1, u) (s2, POW s2, v)))
@@ -3416,7 +3416,7 @@ Proof
  >> METIS_TAC [PAIR_EQ, PAIR, FST, SND]
 QED
 
-Theorem finite_POW_prod_measure_reduce3 :
+Theorem finite_POW_prod_measure_reduce3:
     !m0 m1 m2. measure_space m0 /\ measure_space m1 /\ measure_space m2 /\
                FINITE (m_space m0) /\ FINITE (m_space m1) /\ FINITE (m_space m2) /\
               (POW (m_space m0) = measurable_sets m0) /\
@@ -3450,7 +3450,7 @@ Proof
   >> METIS_TAC [finite_POW_prod_measure_reduce, REAL_MUL_ASSOC]
 QED
 
-Theorem measure_space_finite_prod_measure_POW3 :
+Theorem measure_space_finite_prod_measure_POW3:
     !m0 m1 m2. measure_space m0 /\ measure_space m1 /\ measure_space m2 /\
                FINITE (m_space m0) /\ FINITE (m_space m1) /\ FINITE (m_space m2) /\
               (POW (m_space m0) = measurable_sets m0) /\
@@ -3542,7 +3542,7 @@ Proof
   >> RW_TAC std_ss [EXTENSION,IN_PREIMAGE,IN_UNION]
 QED
 
-Theorem finite_prod_measure_space_POW3 :
+Theorem finite_prod_measure_space_POW3:
     !s1 s2 s3 u v w.
          FINITE s1 /\ FINITE s2 /\ FINITE s3 ==>
          (prod_measure_space3 (s1,POW s1,u) (s2,POW s2,v) (s3,POW s3,w) =
@@ -3593,14 +3593,14 @@ QED
 (* The Radon-Nikodym Theorem (for real_lebesgueTheory)                       *)
 (* ------------------------------------------------------------------------- *)
 
-Definition seq_sup_def :
+Definition seq_sup_def:
    (seq_sup P 0       = @r. r IN P /\ sup P < r + 1) /\
    (seq_sup P (SUC n) = @r. r IN P /\ sup P < r + (1 / 2) pow (SUC n) /\
                                       seq_sup P n < r /\ r < sup P)
 End
 
 (* This theorem is general, the antecedents only assert that ‘sup P’ exists *)
-Theorem REAL_SUP_SEQ :
+Theorem REAL_SUP_SEQ:
     !P. (?x. P x) /\ (?z. !x. P x ==> x <= z) ==>
         ?x. (!n. x n IN P) /\ (!n. x n <= x (SUC n)) /\ (sup (IMAGE x UNIV) = sup P)
 Proof
@@ -3745,7 +3745,7 @@ Proof
       Q.EXISTS_TAC ‘n’ >> REWRITE_TAC [] ]
 QED
 
-Theorem REAL_SUP_FUN_SEQ_IMAGE :
+Theorem REAL_SUP_FUN_SEQ_IMAGE:
     !(P:real->bool) (P':('a->real)->bool) f.
          (?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P')
       ==> ?g. (!n:num. g n IN P') /\
@@ -3766,18 +3766,18 @@ Proof
  >> METIS_TAC [IN_IMAGE]
 QED
 
-Definition max_fn_seq_def :
+Definition max_fn_seq_def:
    (max_fn_seq g       0 x = g 0 x) /\
    (max_fn_seq g (SUC n) x = max (max_fn_seq g n x) (g (SUC n) x))
 End
 
-Theorem max_fn_seq_mono :
+Theorem max_fn_seq_mono:
     !g n x. max_fn_seq g n x <= max_fn_seq g (SUC n) x
 Proof
     RW_TAC std_ss [max_fn_seq_def, max_def, REAL_LE_REFL]
 QED
 
-Theorem REAL_SUP_FUN_SEQ_MONO_IMAGE :
+Theorem REAL_SUP_FUN_SEQ_MONO_IMAGE:
     !(P:real->bool) (P':('a->real)->bool) f.
        (?x. P x) /\ (?z. !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
        (!g1 g2. (g1 IN P' /\ g2 IN P' /\ (!x. g1 x <= g2 x))  ==> f g1 <= f g2) /\

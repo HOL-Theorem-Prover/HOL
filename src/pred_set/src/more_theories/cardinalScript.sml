@@ -715,7 +715,7 @@ Definition set_exp_def:
 End
 Overload "**" = “set_exp”
 
-Theorem exp_c :
+Theorem exp_c:
     !(s :'a set) (t :'b set).
          s ** t =
          {f | (!x. x IN t ==> f x IN s) /\ (!x. ~(x IN t) ==> f x = ARB)}
@@ -1571,7 +1571,7 @@ QED
 (* misc.                                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem FORALL_IN_GSPEC :
+Theorem FORALL_IN_GSPEC:
    (!P f. (!z. z IN {f x | P x} ==> Q z) <=> (!x. P x ==> Q(f x))) /\
    (!P f. (!z. z IN {f x y | P x y} ==> Q z) <=>
           (!x y. P x y ==> Q(f x y))) /\
@@ -1581,7 +1581,7 @@ Proof
    SRW_TAC [][] THEN SET_TAC []
 QED
 
-Theorem EXISTS_IN_GSPEC :
+Theorem EXISTS_IN_GSPEC:
    (!P f. (?z. z IN {f x | P x} /\ Q z) <=> (?x. P x /\ Q(f x))) /\
    (!P f. (?z. z IN {f x y | P x y} /\ Q z) <=>
           (?x y. P x y /\ Q(f x y))) /\
@@ -1608,13 +1608,13 @@ val RIGHT_IMP_FORALL_THM = store_thm ("RIGHT_IMP_FORALL_THM",
  REWRITE_TAC [GSYM RIGHT_FORALL_IMP_THM]);
 
 (* old name IMP_CONJ seems to be a conv function *)
-Theorem CONJ_EQ_IMP :
+Theorem CONJ_EQ_IMP:
     !p q r. p /\ q ==> r <=> p ==> q ==> r
 Proof
     REWRITE_TAC [AND_IMP_INTRO]
 QED
 
-Theorem IMP_CONJ_ALT :
+Theorem IMP_CONJ_ALT:
     !p q r. p /\ q ==> r <=> q ==> p ==> r
 Proof
     METIS_TAC [AND_IMP_INTRO]
@@ -2040,7 +2040,7 @@ val COUNTABLE = store_thm
 (* Relational variant of =_c is sometimes useful.                            *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem EQ_C_BIJECTIONS :
+Theorem EQ_C_BIJECTIONS:
     !(s :'a -> bool) (t :'b -> bool).
         s =_c t <=> ?f g. (!x. x IN s ==> f x IN t /\ g(f x) = x) /\
                           (!y. y IN t ==> g y IN s /\ f(g y) = y)
@@ -2687,20 +2687,20 @@ Proof
   simp[EXTENSION, POW_DEF]
 QED
 
-Theorem CARD_EXP_SING :
+Theorem CARD_EXP_SING:
     !(s :'a -> bool) (b :'b). (s ** {b}) =_c s
 Proof
     REWRITE_TAC [SING_set_exp_CARD]
 QED
 
-Theorem CARD_EXP_CONG :
+Theorem CARD_EXP_CONG:
     !(s:'a->bool) (s':'b->bool) (t:'c->bool) (t':'d->bool).
       s =_c s' /\ t =_c t' ==> s ** t =_c s' ** t'
 Proof
     rw [set_exp_card_cong]
 QED
 
-Theorem CARD_LE_EXP_LEFT :
+Theorem CARD_LE_EXP_LEFT:
     !(s :'a -> bool) (s' :'b -> bool) (t :'c -> bool).
         s <=_c s' ==> s ** t <=_c s' ** t
 Proof
@@ -2712,14 +2712,14 @@ Proof
   METIS_TAC []
 QED
 
-Theorem CARD_EXP_MUL :
+Theorem CARD_EXP_MUL:
     !(s:'a->bool) (t:'b->bool) (u:'c->bool).
         s ** (t *_c u) =_c (s ** t) ** u
 Proof
     rw [Once cardeq_SYM, set_exp_product]
 QED
 
-Theorem CARD_EXP_POWERSET :
+Theorem CARD_EXP_POWERSET:
     !s :'a -> bool. univ(:bool) ** s =_c {t | t SUBSET s}
 Proof
     GEN_TAC
@@ -2730,7 +2730,7 @@ Proof
  >> SET_TAC []
 QED
 
-Theorem CARD_EXP_CANTOR :
+Theorem CARD_EXP_CANTOR:
     !s :'a -> bool. s <_c univ(:bool) ** s
 Proof
   GEN_TAC THEN
@@ -2740,7 +2740,7 @@ Proof
   ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN REWRITE_TAC[CARD_EXP_POWERSET]
 QED
 
-Theorem CARD_EXP_ABSORB :
+Theorem CARD_EXP_ABSORB:
     !(s :'a -> bool) (t :'b -> bool).
         INFINITE t /\ univ(:bool) <=_c s /\ s <=_c univ(:bool) ** t
         ==> s ** t =_c univ(:bool) ** t
@@ -2774,7 +2774,7 @@ val COUNTABLE_CASES = store_thm ("COUNTABLE_CASES",
  >> METIS_TAC [CARD_LE_LT]);
 
 (* changed ‘t:'a->bool’ to ‘t:'b->bool’ *)
-Theorem CARD_LE_COUNTABLE :
+Theorem CARD_LE_COUNTABLE:
     !s:'a->bool t:'b->bool. COUNTABLE t /\ s <=_c t ==> COUNTABLE s
 Proof
     REWRITE_TAC [COUNTABLE, ge_c]
@@ -2817,14 +2817,14 @@ Proof
 QED
 
 (* NOTE: Changed the type of ‘t’ to ‘:'b->bool’ (was: 'a->bool) *)
-Theorem CARD_EQ_COUNTABLE :
+Theorem CARD_EQ_COUNTABLE:
     !s:'a->bool t:'b->bool. COUNTABLE t /\ s =_c t ==> COUNTABLE s
 Proof
   REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_COUNTABLE]
 QED
 
 (* NOTE: Changed the type of ‘t’ to ‘:'b->bool’ (was: 'a->bool) *)
-Theorem CARD_COUNTABLE_CONG :
+Theorem CARD_COUNTABLE_CONG:
     !s:'a->bool t:'b->bool. s =_c t ==> (COUNTABLE s <=> COUNTABLE t)
 Proof
   REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_COUNTABLE]
@@ -3005,7 +3005,7 @@ Proof
 QED
 
 (* cf. listTheory.INFINITE_LIST_UNIV |- INFINITE univ(:'a list) *)
-Theorem COUNTABLE_LIST_UNIV :
+Theorem COUNTABLE_LIST_UNIV:
     countable univ(:'a) ==> countable univ(:'a list)
 Proof
     rw [UNIV_list]
@@ -3286,19 +3286,19 @@ QED
 (* Misc lemmas from HOL-Light's card.ml                                      *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem MUL_C_UNIV :
+Theorem MUL_C_UNIV:
     univ(:'a) *_c univ(:'b) = univ(:'a # 'b)
 Proof
   REWRITE_TAC[CROSS_UNIV]
 QED
 
-Theorem CARD_MUL_FINITE_EQ :
+Theorem CARD_MUL_FINITE_EQ:
     !s t. FINITE (s *_c t) <=> s = {} \/ t = {} \/ FINITE s /\ FINITE t
 Proof
   REWRITE_TAC [FINITE_CROSS_EQ]
 QED
 
-Theorem INJECTIVE_ON_ALT :
+Theorem INJECTIVE_ON_ALT:
     !P (f :'a -> 'b).
         (!x y. P x /\ P y /\ f x = f y ==> x = y) <=>
         (!x y. P x /\ P y ==> (f x = f y <=> x = y))
@@ -3306,7 +3306,7 @@ Proof
   MESON_TAC[]
 QED
 
-Theorem INJECTIVE_ALT :
+Theorem INJECTIVE_ALT:
     !f :'a -> 'b. (!x y. f x = f y ==> x = y) <=> (!x y. f x = f y <=> x = y)
 Proof
   MESON_TAC[]

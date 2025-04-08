@@ -32,7 +32,7 @@ val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
 (*--------AND_to_series-------------------*)
-Theorem AND_to_series :
+Theorem AND_to_series:
 !p L. FTree p (AND (gate_list L)) =
           rbd_struct p (series (rbd_list L))
 Proof
@@ -40,7 +40,7 @@ RW_TAC std_ss[series_rbd_eq_big_inter,AND_gate_eq_big_inter]
 QED
 
 (*---------OR_to_parallel-----------------------------*)
-Theorem OR_to_parallel :
+Theorem OR_to_parallel:
 !p L. FTree p (OR (gate_list L)) =
           rbd_struct p (parallel (rbd_list L))
 Proof
@@ -50,7 +50,7 @@ GEN_TAC >> Induct
 QED
 
 (*-----------AND-OR-to-series-parallel----------------------------*)
-Theorem AND_OR_to_series_parallel :
+Theorem AND_OR_to_series_parallel:
 !p L. (FTree p ((AND of (\a. OR (gate_list a))) L) =
           rbd_struct p ((series of (\a. parallel (rbd_list a))) L))
 Proof
@@ -61,7 +61,7 @@ GEN_TAC >> Induct
 QED
 
 (*-----------------------OR_AND_to_parallel_series---------------------------------------*)
-Theorem OR_AND_to_parallel_series :
+Theorem OR_AND_to_parallel_series:
 !p L. (FTree p ((OR of (\a. AND (gate_list a))) L) =
           rbd_struct p ((parallel of (\a. series (rbd_list a))) L))
 Proof
@@ -73,7 +73,7 @@ GEN_TAC >> Induct
 QED
 
 (*-------------NAND_gate_transform------------------------*)
-Theorem NAND_gate_transform :
+Theorem NAND_gate_transform:
 !L1 L2 n p. (FTree p (AND (gate_list (compl_list p L1 ++ L2)))) =
                  (rbd_struct p (series (rbd_list (compl_list p L1 ++ L2))))
 Proof
@@ -83,7 +83,7 @@ RW_TAC std_ss[]
 QED
 
 (*-------------NOR_gate_transform------------------------*)
-Theorem NOR_gate_transform :
+Theorem NOR_gate_transform:
 !p L. p_space p DIFF FTree p (OR (gate_list L)) =
           p_space p DIFF rbd_struct p (parallel (rbd_list L))
 Proof
@@ -94,7 +94,7 @@ GEN_TAC >> Induct
 >> RW_TAC std_ss[OR_to_parallel]
 QED
 (*-------------Inhibit_gate_transform------------------------*)
-Theorem Inhibit_gate_transform :
+Theorem Inhibit_gate_transform:
 !p A B C. prob_space p /\ C IN events p ==>
               (FTree p (AND [OR [atomic A; atomic B]; NOT (atomic C)]) =
               (rbd_struct p (parallel [atomic A; atomic B]) INTER
@@ -108,7 +108,7 @@ RW_TAC list_ss[FTree_def,rbd_struct_def, UNION_EMPTY]
 >> RW_TAC std_ss[]
 QED
 (*-------------comp_gate_transform------------------------*)
-Theorem comp_gate_transform :
+Theorem comp_gate_transform:
 !p A B. prob_space p /\ A IN events p /\ B IN events p ==>
             (FTree p (OR [AND [atomic A; atomic B]; NOT (OR [atomic A; atomic B])]) =
             rbd_struct p (series [atomic A; atomic B]) UNION
@@ -117,7 +117,7 @@ Proof
 RW_TAC list_ss[FTree_def,rbd_struct_def, UNION_EMPTY]
 QED
 (*-------------k_out_N_to_majority_voting_gate------------------------*)
-Theorem k_out_N_to_majority_voting_gate :
+Theorem k_out_N_to_majority_voting_gate:
 !p X k n.
       majority_voting_FT_gate p X k n = K_out_N_struct p X k n
 Proof

@@ -86,7 +86,7 @@ val _ = new_constant("inv", “:real -> real”);
    accepts division-by-zero, while the later does not. Thus the following
    definition serves as a link to OT's existing definition of “inv”
  *)
-Definition inv0_def :
+Definition inv0_def:
    inv0 x = if x = 0r then 0r else prove_real_assums$inv x
 End
 
@@ -118,7 +118,7 @@ val _ = new_constant("/", “:real -> real -> real”);
    | const_name (["HOL4","realax"],"/") = {Thy=Thy,Name="real_div"}
 
  *)
-Definition real_div_def :
+Definition real_div_def:
    real_div x y = if y = 0r then 0r else prove_real_assums$/ x y
 End
 

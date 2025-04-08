@@ -27,26 +27,26 @@ val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 (* ------------------------------------------- *)
 (* Definition                                  *)
 (* ------------------------------------------- *)
-Definition fail_event_list_def :
+Definition fail_event_list_def:
 fail_event_list p L t =
   MAP (\a. fail_event p a t) L
 End
 
-Definition list_fail_event_list_def :
+Definition list_fail_event_list_def:
 list_fail_event_list p L t =
   MAP (\a. fail_event_list p a t) L
 End
 (* ------------------------------------------- *)
 (*                      exp_func               *)
 (* --------------------------------------------*)
-Definition exp_func_def :
+Definition exp_func_def:
 exp_func (x:real) (c:real) = exp(-(c * x))
 End
 
 (* --------------------------------------------*)
 (*  One Minus exponential                      *)
 (* --------------------------------------------*)
-Definition one_minus_exp_def :
+Definition one_minus_exp_def:
     one_minus_exp t C =
     MAP (\c. 1 - exp(-(t * (c:real)))) C
 End
@@ -54,7 +54,7 @@ End
 (* --------------------------------------------*)
 (*  One Minus exponential product              *)
 (* --------------------------------------------*)
-Definition one_minus_exp_prod_def :
+Definition one_minus_exp_prod_def:
 (one_minus_exp_prod t C =
   MAP (\a. 1- list_prod (one_minus_list (exp_func_list a t))) C )
 End
@@ -62,7 +62,7 @@ End
 (*                      list_sum               *)
 (* --------------------------------------------*)
 
-Definition list_sum_def :
+Definition list_sum_def:
 (list_sum [] = 0) /\
 ( list_sum (h::t) =
 ((h:real) + list_sum(t)))
@@ -71,20 +71,20 @@ End
 (* ----------------------------------------------------*)
 (* Definition : Exponential Distribution Function      *)
 (* ----------------------------------------------------*)
-Definition exp_distribution_def :
+Definition exp_distribution_def:
 exp_dist p X l =
    !x:real. CDF p X (x) = (if (0 <=  x) then 1 - exp(-l * x) else 0)
 End
 (* ------------------------------------------------------------*)
 (* Definition : List of Exponential Distribution Functions     *)
 (* ------------------------------------------------------------*)
-Definition list_exp_def :
+Definition list_exp_def:
 (list_exp p [] L = T ) /\
 (list_exp p (h::t) L = ((exp_dist p (HD(L)) (h)) /\ (list_exp p (t) (TL L))))
 End
 
 (*=================probability of B1=====================================*)
-Definition B1_FT_def :
+Definition B1_FT_def:
 B1_FT p t D1 D4 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E21 =
  (OR
      [OR
@@ -98,7 +98,7 @@ End
 
 (*=================probability of B2=====================================*)
 
-Definition B2_FT_def :
+Definition B2_FT_def:
 B2_FT p t D7 D10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21 =
  (OR
      [OR
@@ -111,7 +111,7 @@ End
 
 
 (*=================probability of A=====================================*)
-Definition A_FT_def :
+Definition A_FT_def:
  A_FT p t D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12
        E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 =
  (OR
@@ -119,13 +119,13 @@ Definition A_FT_def :
         B2_FT p t D7 D10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21; AND [OR (gate_list (fail_event_list p [C5; C6; C7] t )); atomic (fail_event p C8 t)]])
 End
 (*=================probability of RT=====================================*)
-Definition RT_FT_def :
+Definition RT_FT_def:
 RT_FT p t AL SL PD Others time =  AND [OR (gate_list (fail_event_list p [AL; SL; PD; Others] t)) ; atomic (fail_event p time t)]
 End
 
 (*=================probability of internal=====================================*)
 
-Definition Internal_FT_def :
+Definition Internal_FT_def:
 Internal_FT p t FD AP FF1 D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 notshw AL SL PD Others time = OR[AND [OR (gate_list(fail_event_list p [FD; AP] t));  atomic (fail_event p FF1 t)]; OR
        [A_FT p t D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12
           E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8;  atomic (fail_event p notshw t);
@@ -134,7 +134,7 @@ End
 
 
 (*=================probability of ASN gateway =====================================*)
-Definition ASN_gateway_FT_def :
+Definition ASN_gateway_FT_def:
 ASN_gateway_FT p t FD AP FF1 D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13
 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 notshw AL SL PD Others time ED EQ1 EN1
 EN2 EN3 EN4 human =
@@ -147,7 +147,7 @@ FTree p (OR
           C6 C7 C8 notshw AL SL PD Others time])
 End
 (*================= =====================================*)
-Theorem ASN_FT_eq_parallel_series_RBD :
+Theorem ASN_FT_eq_parallel_series_RBD:
 !p t FD AP FF1 D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12
       E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 notshw AL SL PD
       Others time ED EQ1 EN1 EN2 EN3 EN4 human.
@@ -160,26 +160,26 @@ RW_TAC list_ss[ASN_gateway_FT_def,Internal_FT_def,A_FT_def,B1_FT_def,B2_FT_def,R
 QED
 
 (*======================================================*)
-Theorem B1_FT_lemma2 :
+Theorem B1_FT_lemma2:
 ! a b c d e f g h i j k l:real. 1 - (a *b *c *d *e *f *g *h *i *j *k * l) = (1 - (a * b * e * f * g * j * k * l * c * d * h* i))
 Proof
 REAL_ARITH_TAC
 QED
 (*======================================================*)
-Theorem B1_FT_lemma2_new :
+Theorem B1_FT_lemma2_new:
 ! a b c d e f g h i j k l:real.  (a *b *c *d *e *f *g *h *i *j *k * l) = ( (a * b * e * f * g * j * k * l * c * d * h* i))
 Proof
 REAL_ARITH_TAC
 QED
 (*======================================================*)
-Theorem B1_FT_lemma5 :
+Theorem B1_FT_lemma5:
 ! a b c d e f g h i j k l:real. (a *b *c *d *e *f *g *h *i *j *k * l) = ((a * b * e * f * g * j * k * l * c * d * h* i))
 Proof
 REAL_ARITH_TAC
 QED
 (*======================================================*)
 
-Theorem B1_FT_lemma3 :
+Theorem B1_FT_lemma3:
 !p D1 D4 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E21 t.
 (1 - list_prod
     (one_minus_list
@@ -206,7 +206,7 @@ RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_
 QED
 
 (*=================*)
-Theorem B1_FT_lemma3_new :
+Theorem B1_FT_lemma3_new:
 !p D1 D4 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E21 t.
 (list_prod
     (one_minus_list
@@ -232,7 +232,7 @@ RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_
 QED
 
 (*======================================================*)
-Theorem B1_FT_lemma6 :
+Theorem B1_FT_lemma6:
 ! p t  E1 E2  E6 E7  E21 C_E1 C_E2 C_E6 C_E7  C_E21.
 (0<= t) /\ prob_space p /\ (list_exp p (FLAT [[C_E1; C_E21]; [C_E2; C_E21]; [C_E6; C_E21]; [C_E7; C_E21]]) (FLAT [[E1; E21]; [E2; E21]; [E6; E21]; [E7; E21]])) ==>
 (list_prod
@@ -252,7 +252,7 @@ QED
 
 
 (*=====================================================================*)
-Theorem RT_FT_lemma2 :
+Theorem RT_FT_lemma2:
 !p t AL SL PD Others time C_AL C_SL C_PD C_Others C_time.
 (0<= t) /\ prob_space p/\
  (list_exp p (FLAT [[C_AL;C_time]; [C_SL;C_time]; [C_PD;C_time]; [C_Others;C_time]]) (FLAT [[AL;time]; [SL;time]; [PD;time]; [Others;time]]))
@@ -273,7 +273,7 @@ QED
 (*======================================================*)
 
 
-Theorem B1_FT_lemma4 :
+Theorem B1_FT_lemma4:
 ! p t D1 D4 E1  E3 E4 E5 E8 E9 E10 C_D1 C_D4 C_E3 C_E4 C_E5 C_E8 C_E9 C_E10.
 (0<= t) /\ prob_space p /\ (list_exp p ([C_D1; C_D4; C_E3; C_E4; C_E5; C_E8; C_E9; C_E10]) (FLAT [[D1]; [D4]; [E3]; [E4]; [E5];
                [E8]; [E9]; [E10]])) ==>
@@ -302,7 +302,7 @@ QED
 
 
 (*================================================*)
-Theorem A_FT_lemma1 :
+Theorem A_FT_lemma1:
 !p t D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 notshw AL time SL PD Others. list_prod
   (one_minus_list
      (list_prod_rel p
@@ -342,7 +342,7 @@ QED
 
 
 (*================================================*)
-Theorem Internal_FT_lemma1 :
+Theorem Internal_FT_lemma1:
 !p t FD AP FF1 D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12
       E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 notshw AL SL PD
       Others time.
@@ -375,7 +375,7 @@ RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_
 >> RW_TAC real_ss[REAL_MUL_ASSOC]
 QED
 
-Theorem Internal_FT_lemma2 :
+Theorem Internal_FT_lemma2:
 ! p t FD AP FF1 C_FD C_AP C_FF1.
 (0<= t) /\ prob_space p /\ (list_exp p (FLAT [[C_FD;C_FF1];[C_AP;C_FF1]]) (FLAT [[FD;FF1];[AP;FF1]])) ==>
 (list_prod
@@ -391,7 +391,7 @@ RW_TAC list_ss[list_exp_def,exp_distribution_def,distribution_def,CDF_def,list_f
 >> REAL_ARITH_TAC
 QED
 
-Theorem ASN_gateway_lemma1 :
+Theorem ASN_gateway_lemma1:
 !p t FD AP FF1 D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12
       E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 notshw AL SL PD
       Others time ED EQ1 EN1 EN2 EN3 EN4 human.
@@ -426,7 +426,7 @@ RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_
 >> RW_TAC real_ss[REAL_MUL_ASSOC]
 QED
 
-Theorem ASN_gateway_lemma2 :
+Theorem ASN_gateway_lemma2:
 !p t ED EQ1 EN1 EN2 EN3 EN4 human C_ED C_EQ1 C_EN1 C_EN2 C_EN3 C_EN4 C_human.
 (0 <= t) /\  prob_space p /\ (list_exp p
        (FLAT
@@ -448,7 +448,7 @@ RW_TAC list_ss[list_exp_def,exp_distribution_def,distribution_def,CDF_def,list_f
 >> RW_TAC real_ss[]
 QED
 
-Theorem ASN_gateway_lem5 :
+Theorem ASN_gateway_lem5:
 ! p t C5 C6 C7 C8 notshw AL time SL PD Others.
 (list_prod
   (one_minus_list
@@ -471,7 +471,7 @@ RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_
 >> RW_TAC real_ss[REAL_MUL_ASSOC]
 QED
 
-Theorem ASN_gateway_lem6 :
+Theorem ASN_gateway_lem6:
 ! p t C5 C6 C7 C8 C_C5 C_C6 C_C7 C_C8.
 (0<= t) /\ prob_space p /\ (list_exp p (FLAT [[C_C5;C_C8]; [C_C6;C_C8]; [C_C7;C_C8]]) (FLAT [[C5;C8]; [C6;C8]; [C7;C8]])) ==>
 (list_prod
@@ -492,7 +492,7 @@ QED
 
 (*=========================================================================*)
 
-Theorem ASN_gateway_thm :
+Theorem ASN_gateway_thm:
 !p t FD AP FF1 D1 D4 D7 D10 E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12
       E13 E14 E15 E16 E17 E18 E19 E20 E21 C5 C6 C7 C8 notshw AL SL PD
       Others time ED EQ1 EN1 EN2 EN3 EN4 human C_ED C_EQ1 C_EN1 C_EN2 C_EN3 C_EN4 C_human C_FD C_AP C_FF1 C_notshw C_AL C_SL C_PD C_Others C_time C_C5 C_C6 C_C7 C_C8 C_E1 C_E2

@@ -140,7 +140,7 @@ val measure_preserving_def = Define
 (* This substitutes HVG's ‘measure_of’ methodology: instead of writing things like
    ‘measure_of m1 = measure_of m2’ now we write ‘measure_space_eq m1 m2’ instead.
  *)
-Definition measure_space_eq_def :
+Definition measure_space_eq_def:
     measure_space_eq m1 m2 =
       (m_space m1 = m_space m2 /\
        measurable_sets m1 = measurable_sets m2 /\
@@ -432,7 +432,7 @@ val COUNTABLY_ADDITIVE_ADDITIVE = store_thm
    (* now use the lemma instead *)
    >> MATCH_MP_TAC COUNTABLY_ADDITIVE_ADDITIVE_lemma >> art []);
 
-Theorem COUNTABLY_SUBADDITIVE_SUBADDITIVE :
+Theorem COUNTABLY_SUBADDITIVE_SUBADDITIVE:
     !m. {} IN measurable_sets m /\ positive m /\ countably_subadditive m ==>
         subadditive m
 Proof
@@ -535,7 +535,7 @@ val COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma = Q.prove (
  >> Q.EXISTS_TAC `n`
  >> METIS_TAC []);
 
-Theorem COUNTABLY_ADDITIVE_FINITE_ADDITIVE :
+Theorem COUNTABLY_ADDITIVE_FINITE_ADDITIVE:
     !m. {} IN measurable_sets m /\ positive m /\ countably_additive m ==>
         finite_additive m
 Proof
@@ -567,7 +567,7 @@ Proof
  >> MATCH_MP_TAC COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma >> art []
 QED
 
-Theorem COUNTABLY_SUBADDITIVE_FINITE_SUBADDITIVE :
+Theorem COUNTABLY_SUBADDITIVE_FINITE_SUBADDITIVE:
     !m. {} IN measurable_sets m /\ positive m /\ countably_subadditive m ==>
         finite_subadditive m
 Proof
@@ -691,7 +691,7 @@ val MEASURE_SPACE_INCREASING = store_thm
  >> `additive m` by RW_TAC real_ss [MEASURE_SPACE_ADDITIVE]
  >> FULL_SIMP_TAC real_ss [measure_space_def,sigma_algebra_def,ADDITIVE_INCREASING]);
 
-Theorem MEASURE_INCREASING :
+Theorem MEASURE_INCREASING:
     !m s t. measure_space m /\ s SUBSET t /\
             s IN measurable_sets m /\ t IN measurable_sets m ==>
             measure m s <= measure m t
@@ -705,7 +705,7 @@ val MEASURE_SPACE_POSITIVE = store_thm
   ("MEASURE_SPACE_POSITIVE",``!m. measure_space m ==> positive m``,
    PROVE_TAC [measure_space_def]);
 
-Theorem MEASURE_POSITIVE :
+Theorem MEASURE_POSITIVE:
     !m s. measure_space m /\ s IN measurable_sets m ==> 0 <= measure m s
 Proof
     rpt STRIP_TAC
@@ -713,7 +713,7 @@ Proof
  >> fs [positive_def]
 QED
 
-Theorem measure_space_eq :
+Theorem measure_space_eq:
     !m1 m2. measure_space m1 /\
            (m_space m2 = m_space m1) /\
            (measurable_sets m2 = measurable_sets m1) /\
@@ -744,13 +744,13 @@ Proof
  >> Q.EXISTS_TAC ‘m1’ >> rw []
 QED
 
-Theorem measure_space_eq_comm :
+Theorem measure_space_eq_comm:
     !m1 m2. measure_space_eq m1 m2 ==> measure_space_eq m2 m1
 Proof
     RW_TAC std_ss [measure_space_eq_def]
 QED
 
-Theorem measure_space_eq_trans :
+Theorem measure_space_eq_trans:
     !m1 m2 m3. measure_space_eq m1 m2 /\ measure_space_eq m2 m3 ==>
                measure_space_eq m1 m3
 Proof
@@ -778,7 +778,7 @@ val MEASURE_SPACE_DIFF = store_thm
    METIS_TAC [measure_space_def,sigma_algebra_def,subsets_def,
               (REWRITE_RULE [subsets_def] (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_DIFF))]);
 
-Theorem MEASURE_SPACE_MSPACE_MEASURABLE :
+Theorem MEASURE_SPACE_MSPACE_MEASURABLE:
     !m. measure_space m ==> (m_space m) IN measurable_sets m
 Proof
     RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, subsets_def, space_def]
@@ -787,7 +787,7 @@ QED
 
 Theorem MEASURE_SPACE_SPACE = MEASURE_SPACE_MSPACE_MEASURABLE
 
-Theorem MEASURE_SPACE_COMPL :
+Theorem MEASURE_SPACE_COMPL:
     !m s. measure_space m /\ s IN measurable_sets m ==>
           (m_space m) DIFF s IN measurable_sets m
 Proof
@@ -806,14 +806,14 @@ val MEASURE_SPACE_BIGUNION = store_thm
  >> METIS_TAC [measure_space_def]);
 
 (* NOTE: changed order of universal quantifiers *)
-Theorem MEASURE_SPACE_SUBSET_MSPACE :
+Theorem MEASURE_SPACE_SUBSET_MSPACE:
     !m s. measure_space m /\ s IN measurable_sets m ==> s SUBSET m_space m
 Proof
     RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
                    subset_class_def, subsets_def, space_def]
 QED
 
-Theorem MEASURE_SPACE_IN_MSPACE :
+Theorem MEASURE_SPACE_IN_MSPACE:
    !m s. measure_space m /\ s IN measurable_sets m ==> (!x. x IN s ==> x IN m_space m)
 Proof
    METIS_TAC [MEASURE_SPACE_SUBSET_MSPACE, SUBSET_DEF]
@@ -833,7 +833,7 @@ val MEASURE_SPACE_BIGINTER = store_thm
   >> METIS_TAC [measure_space_def]);
 
 (* use MONOTONE_CONVERGENCE when `f 0 = {}` doesn't hold *)
-Theorem MEASURE_COUNTABLE_INCREASING :
+Theorem MEASURE_COUNTABLE_INCREASING:
     !m s f.
        measure_space m /\ f IN (UNIV -> measurable_sets m) /\
        (f 0 = {}) /\ (!n. f n SUBSET f (SUC n)) /\
@@ -1114,7 +1114,7 @@ val IN_MEASURE_PRESERVING = store_thm
    Furthermore, due to the changes to [0,+inf]-measure, now the theorem requires
    that both m1 and m2 are finite measure spaces.
  *)
-Theorem MEASURE_PRESERVING_LIFT :
+Theorem MEASURE_PRESERVING_LIFT:
     !m1 m2 a f.
        measure_space m1 /\ measure_space m2 /\
        measure_space (m_space m2,a,measure m2) /\
@@ -1281,7 +1281,7 @@ val MEASURE_PRESERVING_UP_SUBSET = store_thm
 
    This requirement is very basic, just to make ‘sigma (m_space m1) a’ meaningful.
  *)
-Theorem MEASURE_PRESERVING_UP_SIGMA :
+Theorem MEASURE_PRESERVING_UP_SIGMA:
     !m1 m2 a. subset_class (m_space m1) a /\
        (measurable_sets m1 = subsets (sigma (m_space m1) a)) ==>
        measure_preserving (m_space m1, a, measure m1) m2 SUBSET measure_preserving m1 m2
@@ -1372,7 +1372,7 @@ val MEASURE_EXTREAL_SUM_IMAGE = store_thm
    >> RW_TAC std_ss [IN_DISJOINT, IN_SING, Once INSERT_SING_UNION]
    >> FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]);
 
-Theorem finite_additivity_sufficient_for_finite_spaces :
+Theorem finite_additivity_sufficient_for_finite_spaces:
     !s m. sigma_algebra s /\ FINITE (space s) /\
           positive (space s, subsets s, m) /\
           additive (space s, subsets s, m) ==>
@@ -1490,7 +1490,7 @@ val MEASURE_COMPL_SUBSET = save_thm (* old name for compatibility purposes *)
   ("MEASURE_COMPL_SUBSET", MEASURE_DIFF_SUBSET);
 
 (* cf. MEASURE_SPACE_RESTRICTION *)
-Theorem MEASURE_SPACE_RESTRICTED :
+Theorem MEASURE_SPACE_RESTRICTED:
     !m s. measure_space m /\ s IN measurable_sets m ==>
           measure_space (s, IMAGE (\t. s INTER t) (measurable_sets m), measure m)
 Proof
@@ -1534,7 +1534,7 @@ Proof
 QED
 
 (* from HVG's normal_rvScript.sml *)
-Definition restrict_space :
+Definition restrict_space:
   restrict_space M sp =
     (sp INTER m_space M,
      IMAGE (\a. a INTER sp) (measurable_sets M),
@@ -1547,13 +1547,13 @@ Proof
     rw [restrict_space, measure_def]
 QED
 
-Theorem space_restrict_space :
+Theorem space_restrict_space:
     !M sp. m_space (restrict_space M sp) = (sp INTER m_space M)
 Proof
   SIMP_TAC std_ss [restrict_space, m_space_def]
 QED
 
-Theorem space_restrict_space2 :
+Theorem space_restrict_space2:
     !M sp. measure_space M /\ sp IN measurable_sets M ==>
          (m_space (restrict_space M sp) = sp)
 Proof
@@ -1562,14 +1562,14 @@ Proof
   ASM_SET_TAC []
 QED
 
-Theorem sets_restrict_space :
+Theorem sets_restrict_space:
     !M sp. measurable_sets (restrict_space M sp) =
            IMAGE (\a. a INTER sp) (measurable_sets M)
 Proof
   RW_TAC std_ss [restrict_space, measurable_sets_def]
 QED
 
-Theorem measure_space_restrict_space :
+Theorem measure_space_restrict_space:
     !M sp. measure_space M /\ sp IN measurable_sets M ==>
            measure_space (restrict_space M sp)
 Proof
@@ -1582,7 +1582,7 @@ Proof
 QED
 
 (* Another way to restrict a measure space *)
-Theorem MEASURE_SPACE_RESTRICTED_MEASURE :
+Theorem MEASURE_SPACE_RESTRICTED_MEASURE:
     !m s. measure_space m /\ s IN measurable_sets m ==>
           measure_space (m_space m,measurable_sets m,(\a. measure m (s INTER a)))
 Proof
@@ -1761,13 +1761,13 @@ val measure_split = store_thm
 (* ------------------------------------------------------------------------- *)
 
 (* an "exhausting" sequence in a system of sets, moved from martingaleTheory *)
-Definition exhausting_sequence_def :
+Definition exhausting_sequence_def:
     exhausting_sequence (a :'a algebra) (f :num -> 'a -> bool) =
       (f IN (UNIV -> subsets a) /\ (!n. f n SUBSET f (SUC n)) /\
        BIGUNION (IMAGE f UNIV) = space a)
 End
 
-Theorem exhausting_sequence_alt :
+Theorem exhausting_sequence_alt:
    !a f. exhausting_sequence a f <=>
          f IN (univ(:num) -> subsets a) /\ (!m n. m <= n ==> f m SUBSET f n) /\
          BIGUNION (IMAGE f univ(:num)) = space a
@@ -1783,7 +1783,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-Definition has_exhausting_sequence :
+Definition has_exhausting_sequence:
     has_exhausting_sequence a = ?f. exhausting_sequence a f
 End
 
@@ -1810,14 +1810,14 @@ Theorem has_exhausting_sequence_alt =
 
    The new definition based on ‘exhausting_sequence’ (was in martingaleTheory):
  *)
-Definition sigma_finite :
+Definition sigma_finite:
     sigma_finite m = ?f. exhausting_sequence (m_space m,measurable_sets m) f /\
                          !n. measure m (f n) < PosInf
 End
 (* another characterisation again appears much later with name "sigma_finite" *)
 
 (* The old definition now becomes an equivalent theorem: *)
-Theorem sigma_finite_def :
+Theorem sigma_finite_def:
     !m. sigma_finite m <=>
         ?f :num -> 'a set.
            f IN (UNIV -> measurable_sets m) /\
@@ -1830,7 +1830,7 @@ Proof
 QED
 
 (* This definition is sometimes useful for not repeating ‘m’ *)
-Definition sigma_finite_measure_space_def :
+Definition sigma_finite_measure_space_def:
     sigma_finite_measure_space m = (measure_space m /\ sigma_finite m)
 End
 
@@ -1840,7 +1840,7 @@ val premeasure_def = Define `
     premeasure m <=> positive m /\ countably_additive m`;
 
 (* connection with ‘sigma_finite’ *)
-Theorem sigma_finite_has_exhausting_sequence :
+Theorem sigma_finite_has_exhausting_sequence:
     !sp sts u. sigma_finite (sp,sts,u) ==> has_exhausting_sequence (sp,sts)
 Proof
     RW_TAC std_ss [sigma_finite_def, has_exhausting_sequence_def,
@@ -1849,7 +1849,7 @@ Proof
 QED
 
 (* alternative definition of ‘sigma_finite’ *)
-Theorem sigma_finite_alt_exhausting_sequence :
+Theorem sigma_finite_alt_exhausting_sequence:
     !m. sigma_finite m <=>
         ?f. exhausting_sequence (m_space m,measurable_sets m) f /\
             !n. measure m (f n) < PosInf
@@ -2445,7 +2445,7 @@ val outer_measure_space_def = Define `
 
    Notice that `BIGUNION (IMAGE f UNIV)` needs not be disjoint or in `sts`.
  *)
-Definition metric_countable_covers_def :
+Definition metric_countable_covers_def:
     metric_countable_covers (d :'a metric) (e :extreal) (sts :'a set set) =
       \a. {f | f IN (univ(:num) -> sts) /\ a SUBSET (BIGUNION (IMAGE f UNIV)) /\
                !i. Normal (set_diameter d (f i)) <= e}
@@ -2453,7 +2453,7 @@ End
 
 Overload countable_covers = “metric_countable_covers ARB PosInf”
 
-Theorem countable_covers_def :
+Theorem countable_covers_def:
     !sts. countable_covers (sts :'a set set) =
           \a. {f | f IN (univ(:num) -> sts) /\ a SUBSET (BIGUNION (IMAGE f UNIV))}
 Proof
@@ -2488,7 +2488,7 @@ val SEMIRING_PREMEASURE_FINITE_ADDITIVE = store_thm
  >> MATCH_MP_TAC COUNTABLY_ADDITIVE_FINITE_ADDITIVE
  >> PROVE_TAC [SEMIRING_EMPTY, subsets_def, premeasure_def]);
 
-Theorem SEMIRING_PREMEASURE_INCREASING :
+Theorem SEMIRING_PREMEASURE_INCREASING:
     !m. semiring (m_space m, measurable_sets m) /\ premeasure m ==> increasing m
 Proof
     rpt STRIP_TAC
@@ -2610,7 +2610,7 @@ val ALGEBRA_PREMEASURE_COMPL = store_thm
  >> CONJ_TAC >- PROVE_TAC [ALGEBRA_SPACE, space_def, subsets_def]
  >> fs [algebra_def, subset_class_def, space_def, subsets_def]);
 
-Theorem RING_ADDITIVE_STRONG_ADDITIVE :
+Theorem RING_ADDITIVE_STRONG_ADDITIVE:
     !m s t. ring (m_space m, measurable_sets m) /\ additive m /\ positive m /\
             s IN measurable_sets m /\ t IN measurable_sets m ==>
            (measure m (s UNION t) + measure m (s INTER t) = measure m s + measure m t)
@@ -2669,7 +2669,7 @@ val MEASURE_SPACE_STRONG_ADDITIVE = store_thm
 
 (* This is a more general version of MEASURE_COUNTABLE_INCREASING,
    `s IN measurable_sets m` must be added into antecedents. *)
-Theorem RING_PREMEASURE_COUNTABLE_INCREASING :
+Theorem RING_PREMEASURE_COUNTABLE_INCREASING:
     !m s f.
        ring (m_space m, measurable_sets m) /\ premeasure m /\
        f IN (UNIV -> measurable_sets m) /\
@@ -2733,7 +2733,7 @@ val ALGEBRA_PREMEASURE_COUNTABLE_INCREASING = store_thm
  >> MATCH_MP_TAC RING_PREMEASURE_COUNTABLE_INCREASING >> art []
  >> MATCH_MP_TAC ALGEBRA_IMP_RING >> art []);
 
-Theorem RING_ADDITIVE_SUBADDITIVE :
+Theorem RING_ADDITIVE_SUBADDITIVE:
     !m. ring (m_space m, measurable_sets m) /\ positive m /\ additive m ==>
         subadditive m
 Proof
@@ -2746,7 +2746,7 @@ Proof
  >> PROVE_TAC [positive_def]
 QED
 
-Theorem RING_ADDITIVE_FINITE_ADDITIVE :
+Theorem RING_ADDITIVE_FINITE_ADDITIVE:
     !m. ring (m_space m, measurable_sets m) /\ positive m /\ additive m ==>
         finite_additive m
 Proof
@@ -2783,7 +2783,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> rw [DISJOINT_SYM]
 QED
 
-Theorem RING_SUBADDITIVE_FINITE_SUBADDITIVE :
+Theorem RING_SUBADDITIVE_FINITE_SUBADDITIVE:
     !m. ring (m_space m, measurable_sets m) /\ positive m /\
         subadditive m ==> finite_subadditive m
 Proof
@@ -2909,7 +2909,7 @@ val MEASURE_SPACE_FINITE_SUBADDITIVE = store_thm
  >> PROVE_TAC [SIGMA_ALGEBRA_ALGEBRA, premeasure_def]);
 
 (* This non-trivial result is needed by CARATHEODORY_SEMIRING *)
-Theorem RING_PREMEASURE_COUNTABLY_SUBADDITIVE :
+Theorem RING_PREMEASURE_COUNTABLY_SUBADDITIVE:
     !m. ring (m_space m, measurable_sets m) /\ premeasure m ==>
         countably_subadditive m
 Proof
@@ -2962,7 +2962,7 @@ val MEASURE_SPACE_COUNTABLY_SUBADDITIVE = store_thm
  >> ASM_REWRITE_TAC [premeasure_def]
  >> MATCH_MP_TAC ALGEBRA_IMP_RING >> art []);
 
-Theorem RING_ADDITIVE_INCREASING :
+Theorem RING_ADDITIVE_INCREASING:
     !m. ring (m_space m, measurable_sets m) /\ positive m /\ additive m ==>
         increasing m
 Proof
@@ -2977,7 +2977,7 @@ Proof
  >> ASM_SET_TAC []
 QED
 
-Theorem RING_ADDITIVE_EVERYTHING :
+Theorem RING_ADDITIVE_EVERYTHING:
     !m. ring (m_space m, measurable_sets m) /\ positive m /\ additive m ==>
         finite_additive m /\ increasing m /\
         subadditive m /\ finite_subadditive m
@@ -3010,7 +3010,7 @@ val OUTER_MEASURE_SPACE_FINITE_SUBADDITIVE = store_thm
  >> ASM_REWRITE_TAC []);
 
 (* cf. MEASURE_SPACE_RESTRICTED *)
-Theorem MEASURE_SPACE_RESTRICTION :
+Theorem MEASURE_SPACE_RESTRICTION:
     !sp sts m sub. measure_space (sp,sts,m) /\ sub SUBSET sts /\ sigma_algebra (sp,sub) ==>
                    measure_space (sp,sub,m)
 Proof
@@ -3049,7 +3049,7 @@ QED
    NOTE: there's no structual requirements on `sts` and `mu` (except for `{} IN sts`);
          and (*3*) is not needed by CARATHEODORY_SEMIRING.
  *)
-Theorem OUTER_MEASURE_CONSTRUCTION :
+Theorem OUTER_MEASURE_CONSTRUCTION:
     !sp sts m u. subset_class sp sts /\ {} IN sts /\ positive (sp,sts,m) /\
                  (u = outer_measure m (countable_covers sts)) ==>
          outer_measure_space (sp,POW sp,u) /\ (!x. x IN sts ==> u x <= m x) /\
@@ -3609,7 +3609,7 @@ Proof
 QED
 
 (* extracted from CARATHEODORY_SEMIRING for `lborel` construction *)
-Theorem SEMIRING_FINITE_ADDITIVE_EXTENSION :
+Theorem SEMIRING_FINITE_ADDITIVE_EXTENSION:
     !m0. semiring (m_space m0, measurable_sets m0) /\
          positive m0 /\ finite_additive m0 ==>
          ?m. ((m_space m, measurable_sets m) =
@@ -3920,7 +3920,7 @@ Proof
 QED
 
 (* extracted from CARATHEODORY_SEMIRING *)
-Theorem SEMIRING_PREMEASURE_EXTENSION :
+Theorem SEMIRING_PREMEASURE_EXTENSION:
     !m0. semiring (m_space m0, measurable_sets m0) /\ premeasure m0 ==>
          ?m. ((m_space m, measurable_sets m) =
               smallest_ring (m_space m0) (measurable_sets m0)) /\
@@ -4290,7 +4290,7 @@ QED
    named after Constantin Caratheodory, a Greek mathematician who spent most
    of his professional career in Germany. [9]
  *)
-Theorem CARATHEODORY_SEMIRING :
+Theorem CARATHEODORY_SEMIRING:
     !m0. semiring (m_space m0, measurable_sets m0) /\ premeasure m0 ==>
          ?m. (!s. s IN measurable_sets m0 ==> (measure m s = measure m0 s)) /\
              ((m_space m, measurable_sets m) =
@@ -4616,7 +4616,7 @@ Proof
 QED
 
 (* The "ring" version (weaker) of Caratheodory theorem *)
-Theorem CARATHEODORY_RING :
+Theorem CARATHEODORY_RING:
     !m0. ring (m_space m0, measurable_sets m0) /\
          positive m0 /\ countably_additive m0 ==>
          ?m. (!s. s IN measurable_sets m0 ==> (measure m s = measure m0 s)) /\
@@ -4631,7 +4631,7 @@ QED
 
 (* The "algebra" version (weakest) of Caratheodory theorem
    cf. real_measureTheory.CARATHEODORY *)
-Theorem CARATHEODORY :
+Theorem CARATHEODORY:
     !m0. algebra (m_space m0, measurable_sets m0) /\
          positive m0 /\ countably_additive m0 ==>
          ?m. (!s. s IN measurable_sets m0 ==> (measure m s = measure m0 s)) /\
@@ -4644,7 +4644,7 @@ Proof
  >> fs [algebra_def, space_def, subsets_def]
 QED
 
-Theorem measure_space_add :
+Theorem measure_space_add:
     !sp sts u v. measure_space (sp,sts,u) /\ measure_space (sp,sts,v) ==>
                  measure_space (sp,sts,\s. u s + v s)
 Proof
@@ -4666,7 +4666,7 @@ QED
    This theorem is used by sub|super_martingale_alt_generator (martingaleTheory).
    It's also a nice application of CARATHEODORY_SEMIRING + UNIQUENESS_OF_MEASURE.
  *)
-Theorem SEMIRING_SIGMA_MONOTONE :
+Theorem SEMIRING_SIGMA_MONOTONE:
     !sp sts u v. semiring (sp,sts) /\ has_exhausting_sequence (sp,sts) /\
                  measure_space (sp,subsets (sigma sp sts),u) /\
                  measure_space (sp,subsets (sigma sp sts),v) /\
@@ -4810,7 +4810,7 @@ val null_set_def = Define
    `null_set m s <=> s IN measurable_sets m /\ (measure m s = 0)`;
 
 (* NOTE: the type of ‘completion m’ is “:'a algebra” *)
-Definition completion_def :
+Definition completion_def:
     completion (m :'a m_space) =
       (m_space m, {s UNION n | s IN measurable_sets m /\
                                ?t. n SUBSET t /\ null_set m t})
@@ -4828,7 +4828,7 @@ val IN_NULL_SET = store_thm
     GEN_TAC >> SIMP_TAC std_ss [IN_APP]);
 
 (* This is HVG's original definition of "null_sets" *)
-Theorem null_sets :
+Theorem null_sets:
     null_set M = {N | N IN measurable_sets M /\ (measure M N = 0)}
 Proof
     RW_TAC std_ss [Once EXTENSION, GSPECIFICATION, IN_NULL_SET, null_set_def]
@@ -4880,7 +4880,7 @@ val COMPLETE_MEASURE_THM = store_thm
     RW_TAC std_ss [complete_measure_space_def]
  >> PROVE_TAC [NULL_SET_THM, IN_NULL_SET]);
 
-Theorem NULL_SET_UNION :
+Theorem NULL_SET_UNION:
     !m N1 N2. measure_space m /\ N1 IN null_set m /\ N2 IN null_set m ==>
         (N1 UNION N2) IN null_set m
 Proof
@@ -4899,7 +4899,7 @@ Proof
 QED
 Theorem NULL_SET_UNION' = REWRITE_RULE [IN_NULL_SET] NULL_SET_UNION
 
-Theorem NULL_SET_INTER :
+Theorem NULL_SET_INTER:
     !m N1 N2. measure_space m /\ N1 IN null_set m /\ N2 IN null_set m ==>
         (N1 INTER N2) IN null_set m
 Proof
@@ -4918,7 +4918,7 @@ Proof
 QED
 Theorem NULL_SET_INTER' = REWRITE_RULE [IN_NULL_SET] NULL_SET_INTER
 
-Theorem NULL_SET_BIGUNION :
+Theorem NULL_SET_BIGUNION:
     !m f. measure_space m /\ (!n. f n IN null_set m) ==>
           BIGUNION (IMAGE f univ(:num)) IN null_set m
 Proof
@@ -4941,7 +4941,7 @@ Proof
 QED
 Theorem NULL_SET_BIGUNION' = REWRITE_RULE [IN_NULL_SET] NULL_SET_BIGUNION
 
-Theorem SIGMA_ALGEBRA_COMPLETION :
+Theorem SIGMA_ALGEBRA_COMPLETION:
     !m. measure_space m ==> sigma_algebra (completion m)
 Proof
     rw [completion_def, sigma_algebra_alt_pow]
@@ -5023,7 +5023,7 @@ Proof
       Q.EXISTS_TAC ‘i’ >> METIS_TAC [SUBSET_DEF] ]
 QED
 
-Theorem COMPLETION_SUBSET_SUBSETS :
+Theorem COMPLETION_SUBSET_SUBSETS:
     !m. measure_space m ==> measurable_sets m SUBSET subsets (completion m)
 Proof
     rw [completion_def, SUBSET_DEF]
@@ -5032,7 +5032,7 @@ Proof
 QED
 
 (* ‘completion’ is stable for complete measure spaces *)
-Theorem COMPLETION_STABLE :
+Theorem COMPLETION_STABLE:
     !m. complete_measure_space m ==> space (completion m) = m_space m /\
                                    subsets (completion m) = measurable_sets m
 Proof
@@ -5057,7 +5057,7 @@ QED
 (*  Alternative definitions of `sigma_finite`                                *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem FINITE_IMP_SIGMA_FINITE :
+Theorem FINITE_IMP_SIGMA_FINITE:
     !m. measure_space m /\ measure m (m_space m) <> PosInf ==> sigma_finite m
 Proof
     RW_TAC std_ss [sigma_finite_def]
@@ -5106,7 +5106,7 @@ val SIGMA_FINITE_ALT = store_thm (* was: sigma_finite (HVG) *)
  >> CONJ_TAC >- REWRITE_TAC [FINITE_COUNT]
  >> RW_TAC std_ss [o_DEF, lt_infty]);
 
-Theorem SIGMA_FINITE_ALT2 : (* was: sigma_finite_measure (HVG) *)
+Theorem SIGMA_FINITE_ALT2: (* was: sigma_finite_measure (HVG) *)
     !m. measure_space m ==>
        (sigma_finite m <=> ?A. countable A /\ A SUBSET measurable_sets m /\
                               (BIGUNION A = m_space m) /\
@@ -5147,7 +5147,7 @@ Proof
 QED
 
 (* NOTE: was ‘sigma_finite’ (name conflicted with its original definition) *)
-Theorem sigma_finite_thm :
+Theorem sigma_finite_thm:
     !m. measure_space m /\ sigma_finite m ==>
         ?A. IMAGE A UNIV SUBSET measurable_sets m /\
             (BIGUNION {A i | i IN UNIV} = m_space m) /\
@@ -5170,7 +5170,7 @@ Proof
  >> SET_TAC []
 QED
 
-Theorem sigma_finite_disjoint :
+Theorem sigma_finite_disjoint:
     !m. measure_space m /\ sigma_finite m ==>
         ?A. IMAGE A UNIV SUBSET measurable_sets m /\
            (BIGUNION {A i | i IN UNIV} = m_space m) /\
@@ -5207,7 +5207,7 @@ QED
 (* NOTE: added ‘sigma_algebra (m_space N, measurable_sets N)’ into antecedents
          due to changes in ‘measurable’.
  *)
-Theorem MEASURABLE_IF : (* was: measurable_If *)
+Theorem MEASURABLE_IF: (* was: measurable_If *)
     !f g M N P. f IN measurable (m_space M, measurable_sets M)
                                 (m_space N, measurable_sets N) /\
                 g IN measurable (m_space M, measurable_sets M)
@@ -5243,7 +5243,7 @@ QED
 (* NOTE: added ‘sigma_algebra (m_space N, measurable_sets N)’ into antecedents
          due to changes in ‘measurable’.
  *)
-Theorem MEASURABLE_IF_SET : (* was: measurable_If_set *)
+Theorem MEASURABLE_IF_SET: (* was: measurable_If_set *)
     !f g M N A. f IN measurable (m_space M, measurable_sets M)
                                 (m_space N, measurable_sets N) /\
                 g IN measurable (m_space M, measurable_sets M)
@@ -5280,7 +5280,7 @@ val lemma3 = prove (
                BIGUNION {A i | i IN UNIV} IN M``,
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def, IMAGE_DEF]);
 
-Theorem countably_additive_alt_eq :
+Theorem countably_additive_alt_eq:
     !sp M u. countably_additive (sp,M,u) <=>
              !A. IMAGE A UNIV SUBSET M ==> disjoint_family A ==>
                  BIGUNION {A i | i IN UNIV} IN M ==>
@@ -5305,7 +5305,7 @@ QED
    doesn't use sp. This alternative definition ‘countably_additive_alt’ involves
    only M and u. (Ported from HVG's legesgue_measure_hvgTheory.)
  *)
-Definition countably_additive_alt :
+Definition countably_additive_alt:
     countably_additive_alt M (u:('a->bool)->extreal) <=>
     !A. IMAGE A UNIV SUBSET M ==> disjoint_family A ==>
         BIGUNION {A i | i IN UNIV} IN M ==>
@@ -5313,34 +5313,34 @@ Definition countably_additive_alt :
 End
 
 (* connection between ‘countably_additive’ and ‘countably_additive_alt’ *)
-Theorem countably_additive_eq_alt :
+Theorem countably_additive_eq_alt:
     !sp M u. countably_additive (sp,M,u) <=> countably_additive_alt M u
 Proof
     REWRITE_TAC [countably_additive_alt, countably_additive_alt_eq]
 QED
 
-Definition positive_alt :
+Definition positive_alt:
     positive_alt M u <=> (u {} = 0:extreal) /\ !a. a IN M ==> 0 <= u a
 End
 
-Theorem positive_eq_alt :
+Theorem positive_eq_alt:
     !sp M u. positive (sp,M,u) <=> positive_alt M u
 Proof
     rw [positive_def, positive_alt]
 QED
 
-Theorem positive_alt_eq :
+Theorem positive_alt_eq:
     !sp M u. positive (sp,M,u) <=> u {} = 0 /\ !a. a IN M ==> 0 <= u a
 Proof
     REWRITE_TAC [positive_eq_alt, positive_alt]
 QED
 
-Definition measure_space_alt :
+Definition measure_space_alt:
     measure_space_alt sp A u <=> sigma_algebra_alt sp A /\ positive_alt A u /\
                                  countably_additive_alt A u
 End
 
-Theorem measure_space_alt_eq :
+Theorem measure_space_alt_eq:
     !sp M u. measure_space (sp,M,u) <=>
              sigma_algebra_alt sp M /\ positive_alt M u /\
              countably_additive_alt M u
@@ -5355,7 +5355,7 @@ QED
    measure space with a total-version of the measure function, returning 0 on
    non-measurable sets. (cf. sigma_sets_sigma)
  *)
-Definition measure_of :
+Definition measure_of:
     measure_of (sp,A,u) = (sp,
      (if A SUBSET POW sp then (sigma_sets sp A) else {{};sp}),
      (\a. if a IN sigma_sets sp A /\ measure_space (sp, sigma_sets sp A, u)
@@ -5374,7 +5374,7 @@ val sets_eq_imp_space_eq = store_thm ("sets_eq_imp_space_eq",
   ASM_SET_TAC []);
 
 (* Any sigma-algebra induce a trivial (sigma-finite) measure space with (\s. 0) *)
-Theorem measure_space_trivial :
+Theorem measure_space_trivial:
     !a. sigma_algebra a ==> sigma_finite_measure_space (space a,subsets a,(\s. 0))
 Proof
     rpt STRIP_TAC
@@ -5497,7 +5497,7 @@ val measure_liminf = store_thm
       Q.EXISTS_TAC `n'` >> RW_TAC arith_ss [] ]);
 
 (* An extended version of `limsup_suminf_indicator` (now removed) with spaces *)
-Theorem limsup_suminf_indicator_space :
+Theorem limsup_suminf_indicator_space:
     !a A. sigma_algebra a /\ (!n. A n IN subsets a) ==>
          (limsup A = {x | x IN space a /\ (suminf (\n. indicator_fn (A n) x) = PosInf)})
 Proof
@@ -5587,7 +5587,7 @@ val _ = reveal "C";
 
 (*** measure_space Theorems ***)
 
-Theorem measure_space_measure_eq :
+Theorem measure_space_measure_eq:
     !sp sts u v. measure_space (sp,sts,u) /\ (!s. s IN sts ==> u s = v s) ==>
                  measure_space (sp,sts,v)
 Proof

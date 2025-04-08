@@ -45,7 +45,7 @@ Theorem IMP_CONJ      = cardinalTheory.CONJ_EQ_IMP
 Theorem IMP_IMP       = boolTheory.AND_IMP_INTRO
 Theorem FINITE_SUBSET = pred_setTheory.SUBSET_FINITE_I
 
-Theorem FINITE_INDUCT_STRONG :
+Theorem FINITE_INDUCT_STRONG:
    !P:('a->bool)->bool.
         P {} /\ (!x s. P s /\ ~(x IN s) /\ FINITE s ==> P(x INSERT s))
         ==> !s. FINITE s ==> P s
@@ -61,7 +61,7 @@ val REPLICATE_TAC = NTAC;
 (*---------------------------------------------------------------------------*)
 
 (* localized notion of open sets (one set being open in another) *)
-Definition istopology :
+Definition istopology:
     istopology L =
       ({} IN L /\
        (!s t. s IN L /\ t IN L ==> (s INTER t) IN L) /\
@@ -205,7 +205,7 @@ Proof
   simp[SUBSET_REFL, OPEN_IN_SUBSET]
 QED
 
-Theorem OPEN_UNOPEN :
+Theorem OPEN_UNOPEN:
     !S' top. open_in(top) S' <=>
              (BIGUNION {P | open_in(top) P /\ P SUBSET S'} = S')
 Proof
@@ -592,11 +592,11 @@ val HULL_P_AND_Q = store_thm ("HULL_P_AND_Q",
 (* Subspace topology (from real_topologyTheory)                              *)
 (* ------------------------------------------------------------------------- *)
 
-Definition subtopology :
+Definition subtopology:
     subtopology top u = topology {s INTER u | open_in top s}
 End
 
-Theorem ISTOPOLOGY_SUBTOPOLOGY :
+Theorem ISTOPOLOGY_SUBTOPOLOGY:
     !top u:'a->bool. istopology {s INTER u | open_in top s}
 Proof
   REWRITE_TAC[istopology, SET_RULE
@@ -615,7 +615,7 @@ Proof
     ASM_SIMP_TAC std_ss [OPEN_IN_BIGUNION, INTER_BIGUNION] THEN SET_TAC[]]
 QED
 
-Theorem OPEN_IN_SUBTOPOLOGY :
+Theorem OPEN_IN_SUBTOPOLOGY:
   !top u s. open_in (subtopology top u) s <=>
             ?t. open_in top t /\ (s = t INTER u)
 Proof
@@ -633,7 +633,7 @@ Proof
   METIS_TAC []
 QED
 
-Theorem CLOSED_IN_SUBTOPOLOGY :
+Theorem CLOSED_IN_SUBTOPOLOGY:
     !top u s. closed_in (subtopology top u) s <=>
               ?t:'a->bool. closed_in top t /\ (s = t INTER u)
 Proof
@@ -684,7 +684,7 @@ Proof
     SET_TAC[]]
 QED
 
-Theorem SUBTOPOLOGY_SUPERSET :
+Theorem SUBTOPOLOGY_SUPERSET:
     !top s:'a->bool. topspace top SUBSET s ==> (subtopology top s = top)
 Proof
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [TOPOLOGY_EQ, OPEN_IN_SUBTOPOLOGY] THEN
@@ -711,19 +711,19 @@ Proof
   SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_UNIV]
 QED
 
-Theorem OPEN_IN_IMP_SUBSET :
+Theorem OPEN_IN_IMP_SUBSET:
     !top s t. open_in (subtopology top s) t ==> t SUBSET s
 Proof
   REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN SET_TAC[]
 QED
 
-Theorem CLOSED_IN_IMP_SUBSET :
+Theorem CLOSED_IN_IMP_SUBSET:
     !top s t. closed_in (subtopology top s) t ==> t SUBSET s
 Proof
   REWRITE_TAC[closed_in, TOPSPACE_SUBTOPOLOGY] THEN SET_TAC[]
 QED
 
-Theorem OPEN_IN_SUBTOPOLOGY_UNION :
+Theorem OPEN_IN_SUBTOPOLOGY_UNION:
    !top s t u:'a->bool.
         open_in (subtopology top t) s /\ open_in (subtopology top u) s
         ==> open_in (subtopology top (t UNION u)) s
@@ -736,7 +736,7 @@ Proof
   REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
 QED
 
-Theorem CLOSED_IN_SUBTOPOLOGY_UNION :
+Theorem CLOSED_IN_SUBTOPOLOGY_UNION:
     !top s t u:'a->bool.
         closed_in (subtopology top t) s /\ closed_in (subtopology top u) s
         ==> closed_in (subtopology top (t UNION u)) s
@@ -764,7 +764,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* moved here from util_probTheory *)
-Theorem EXT_SKOLEM_THM :
+Theorem EXT_SKOLEM_THM:
     !P Q. (!x. x IN P ==> ?y. Q x y) <=> ?f. !x. x IN P ==> Q x (f x)
 Proof
     rpt STRIP_TAC
@@ -798,27 +798,27 @@ Theorem UNIONS_UNION         = BIGUNION_UNION
 Theorem UNIONS_INSERT        = BIGUNION_INSERT
 Theorem UNIONS_SUBSET        = BIGUNION_SUBSET
 
-Theorem EMPTY_GSPEC :
+Theorem EMPTY_GSPEC:
    {x | F} = {}
 Proof SET_TAC[]
 QED
 
-Theorem UNIV_GSPEC :
+Theorem UNIV_GSPEC:
    {x | T} = UNIV
 Proof SET_TAC[]
 QED
 
-Theorem SING_GSPEC :
+Theorem SING_GSPEC:
    (!a. {x | x = a} = {a}) /\ (!a. {x | a = x} = {a})
 Proof SET_TAC[]
 QED
 
-Theorem IN_GSPEC :
+Theorem IN_GSPEC:
    !s. {x | x IN s} = s
 Proof SET_TAC[]
 QED
 
-Theorem SUBSET_RESTRICT :
+Theorem SUBSET_RESTRICT:
    !s P. {x | x IN s /\ P x} SUBSET s
 Proof SET_TAC []
 QED
@@ -832,7 +832,7 @@ Theorem COMPL_COMPL_applied = REWRITE_RULE [COMPL_DEF] COMPL_COMPL
 (* |- !f s. {f x | x IN s} = IMAGE f s *)
 Theorem SIMPLE_IMAGE = GSYM IMAGE_DEF
 
-Theorem UNIONS_IMAGE :
+Theorem UNIONS_IMAGE:
    !f s. UNIONS (IMAGE f s) = {y | ?x. x IN s /\ y IN f x}
 Proof
     rpt GEN_TAC
@@ -843,7 +843,7 @@ Proof
  >> Q.EXISTS_TAC ‘t’ >> rw []
 QED
 
-Theorem INTERS_IMAGE :
+Theorem INTERS_IMAGE:
    !f s. INTERS (IMAGE f s) = {y | !x. x IN s ==> y IN f x}
 Proof
     rpt GEN_TAC
@@ -854,7 +854,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
 QED
 
-Theorem DIFF_INTERS :
+Theorem DIFF_INTERS:
    !u s. u DIFF INTERS s = UNIONS {u DIFF t | t IN s}
 Proof
     rpt GEN_TAC
@@ -866,7 +866,7 @@ Proof
  >> Q.EXISTS_TAC ‘t’ >> fs []
 QED
 
-Theorem INTERS_GSPEC :
+Theorem INTERS_GSPEC:
    (!P f. INTERS {f x | P x} = {a | !x. P x ==> a IN (f x)}) /\
    (!P f. INTERS {f x y | P x y} = {a | !x y. P x y ==> a IN (f x y)}) /\
    (!P f. INTERS {f x y z | P x y z} =
@@ -876,7 +876,7 @@ Proof
   rw [IN_INTERS] >> MESON_TAC []
 QED
 
-Theorem UNIONS_GSPEC :
+Theorem UNIONS_GSPEC:
    (!P f. UNIONS {f x | P x} = {a | ?x. P x /\ a IN (f x)}) /\
    (!P f. UNIONS {f x y | P x y} = {a | ?x y. P x y /\ a IN (f x y)}) /\
    (!P f. UNIONS {f x y z | P x y z} =
@@ -886,7 +886,7 @@ Proof
   rw [IN_UNIONS] >> MESON_TAC []
 QED
 
-Theorem INTER_INTERS :
+Theorem INTER_INTERS:
    (!f s:'a->bool. s INTER INTERS f =
            if f = {} then s else INTERS {s INTER t | t IN f}) /\
    (!f s:'a->bool. INTERS f INTER s =
@@ -901,13 +901,13 @@ Proof
  >> POP_ASSUM (ACCEPT_TAC o (ONCE_REWRITE_RULE [INTER_COMM]))
 QED
 
-Theorem INTERS_UNIONS :
+Theorem INTERS_UNIONS:
    !s. INTERS s = UNIV DIFF (UNIONS {UNIV DIFF t | t IN s})
 Proof
   REWRITE_TAC[GSYM DIFF_INTERS] THEN SET_TAC[]
 QED
 
-Theorem UNIONS_INTERS :
+Theorem UNIONS_INTERS:
    !s. UNIONS s = UNIV DIFF (INTERS {UNIV DIFF t | t IN s})
 Proof
     GEN_TAC
@@ -921,7 +921,7 @@ Proof
 QED
 
 (* NOTE: HOL4's BIGINTER_SUBSET doesn't have ‘u <> {}’ *)
-Theorem INTERS_SUBSET :
+Theorem INTERS_SUBSET:
    !u s:'a->bool.
     ~(u = {}) /\ (!t. t IN u ==> t SUBSET s) ==> INTERS u SUBSET s
 Proof
@@ -929,19 +929,19 @@ Proof
 QED
 
 (* essentially same as HOL4's BIGINTER_SUBSET but looks more reasonable *)
-Theorem INTERS_SUBSET_STRONG :
+Theorem INTERS_SUBSET_STRONG:
    !u s:'a->bool. (?t. t IN u /\ t SUBSET s) ==> INTERS u SUBSET s
 Proof
   SET_TAC[]
 QED
 
-Theorem DIFF_UNIONS :
+Theorem DIFF_UNIONS:
    !u s. u DIFF UNIONS s = u INTER INTERS {u DIFF t | t IN s}
 Proof
   SIMP_TAC std_ss [INTERS_GSPEC] THEN SET_TAC[]
 QED
 
-Theorem DIFF_UNIONS_NONEMPTY :
+Theorem DIFF_UNIONS_NONEMPTY:
    !u s. ~(s = {}) ==> u DIFF UNIONS s = INTERS {u DIFF t | t IN s}
 Proof
   SIMP_TAC std_ss [INTERS_GSPEC] THEN SET_TAC[]
@@ -961,26 +961,26 @@ Overload pairwiseD        = “topology$pairwise”
 Overload pairwiseN[local] = “pred_set$pairwise”
 
 (* connection between pairwiseD and pairwiseN, originally by Michael Norrish *)
-Theorem pairwiseD_alt_pairwiseN :
+Theorem pairwiseD_alt_pairwiseN:
     !R. pairwiseD R = pairwiseN (RC R)
 Proof
     RW_TAC std_ss [FUN_EQ_THM, pairwise, pairwise_def, RC_DEF]
  >> METIS_TAC []
 QED
 
-Theorem PAIRWISE_EMPTY :
+Theorem PAIRWISE_EMPTY:
    !r. pairwise r {} <=> T
 Proof
    rw [pairwiseD_alt_pairwiseN, pairwise_EMPTY]
 QED
 
-Theorem PAIRWISE_SING :
+Theorem PAIRWISE_SING:
    !r x. pairwise r {x} <=> T
 Proof
   REWRITE_TAC[pairwise, IN_SING] THEN MESON_TAC[]
 QED
 
-Theorem PAIRWISE_IMP :
+Theorem PAIRWISE_IMP:
    !P Q s.
         pairwise P s /\
         (!x y. x IN s /\ y IN s /\ P x y /\ ~(x = y) ==> Q x y)
@@ -989,20 +989,20 @@ Proof
   REWRITE_TAC[pairwise] THEN SET_TAC[]
 QED
 
-Theorem PAIRWISE_MONO :
+Theorem PAIRWISE_MONO:
    !r s t. pairwise r s /\ t SUBSET s ==> pairwise r t
 Proof
   REWRITE_TAC[pairwise] THEN SET_TAC[]
 QED
 
-Theorem PAIRWISE_AND :
+Theorem PAIRWISE_AND:
    !R R' s. pairwise R s /\ pairwise R' s <=>
             pairwise (\x y. R x y /\ R' x y) s
 Proof
   REWRITE_TAC[pairwise] THEN SET_TAC[]
 QED
 
-Theorem PAIRWISE_INSERT :
+Theorem PAIRWISE_INSERT:
    !r x s.
         pairwise r (x INSERT s) <=>
         (!y. y IN s /\ ~(y = x) ==> r x y /\ r y x) /\
@@ -1011,14 +1011,14 @@ Proof
   REWRITE_TAC[pairwise, IN_INSERT] THEN MESON_TAC[]
 QED
 
-Theorem PAIRWISE_IMAGE :
+Theorem PAIRWISE_IMAGE:
    !r f. pairwise r (IMAGE f s) <=>
          pairwise (\x y. ~(f x = f y) ==> r (f x) (f y)) s
 Proof
   REWRITE_TAC[pairwise, IN_IMAGE] THEN MESON_TAC[]
 QED
 
-Theorem PAIRWISE_UNION :
+Theorem PAIRWISE_UNION:
    !R s t. pairwise R (s UNION t) <=>
            pairwise R s /\ pairwise R t /\
            (!x y. x IN s DIFF t /\ y IN t DIFF s ==> R x y /\ R y x)
@@ -1034,36 +1034,36 @@ QED
 val _ = set_fixity "UNION_OF"        (Infixr 601);
 val _ = set_fixity "INTERSECTION_OF" (Infixr 601);
 
-Definition UNION_OF :
+Definition UNION_OF:
    P UNION_OF Q = \s. ?u. P u /\ (!c. c IN u ==> Q c) /\ UNIONS u = s
 End
 
-Definition INTERSECTION_OF :
+Definition INTERSECTION_OF:
    P INTERSECTION_OF Q = \s. ?u. P u /\ (!c. c IN u ==> Q c) /\ INTERS u = s
 End
 
-Theorem UNION_OF_INC :
+Theorem UNION_OF_INC:
    !P Q s:'a->bool. P {s} /\ Q s ==> (P UNION_OF Q) s
 Proof
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [UNION_OF] THEN
   Q.EXISTS_TAC `{s:'a->bool}` THEN ASM_SIMP_TAC std_ss [UNIONS_1, IN_SING]
 QED
 
-Theorem INTERSECTION_OF_INC :
+Theorem INTERSECTION_OF_INC:
    !P Q s:'a->bool. P {s} /\ Q s ==> (P INTERSECTION_OF Q) s
 Proof
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [INTERSECTION_OF] THEN
   Q.EXISTS_TAC `{s:'a->bool}` THEN ASM_SIMP_TAC std_ss [INTERS_1, IN_SING]
 QED
 
-Theorem UNION_OF_MONO :
+Theorem UNION_OF_MONO:
    !P Q Q' s:'a->bool.
         (P UNION_OF Q) s /\ (!x. Q x ==> Q' x) ==> (P UNION_OF Q') s
 Proof
   SIMP_TAC std_ss [UNION_OF] THEN MESON_TAC[]
 QED
 
-Theorem INTERSECTION_OF_MONO :
+Theorem INTERSECTION_OF_MONO:
    !P Q Q' s:'a->bool.
         (P INTERSECTION_OF Q) s /\ (!x. Q x ==> Q' x)
         ==> (P INTERSECTION_OF Q') s
@@ -1071,21 +1071,21 @@ Proof
   SIMP_TAC std_ss [INTERSECTION_OF] THEN MESON_TAC[]
 QED
 
-Theorem FORALL_UNION_OF :
+Theorem FORALL_UNION_OF:
    (!s. (P UNION_OF Q) s ==> R s) <=>
    (!t. P t /\ (!c. c IN t ==> Q c) ==> R(UNIONS t))
 Proof
   SIMP_TAC std_ss [UNION_OF] THEN MESON_TAC[]
 QED
 
-Theorem FORALL_INTERSECTION_OF :
+Theorem FORALL_INTERSECTION_OF:
    (!s. (P INTERSECTION_OF Q) s ==> R s) <=>
    (!t. P t /\ (!c. c IN t ==> Q c) ==> R(INTERS t))
 Proof
   SIMP_TAC std_ss [INTERSECTION_OF] THEN MESON_TAC[]
 QED
 
-Theorem UNION_OF_EMPTY :
+Theorem UNION_OF_EMPTY:
    !P Q:('a->bool)->bool. P {} ==> (P UNION_OF Q) {}
 Proof
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [UNION_OF] THEN
@@ -1093,7 +1093,7 @@ Proof
   ASM_SIMP_TAC std_ss [UNIONS_0, NOT_IN_EMPTY]
 QED
 
-Theorem INTERSECTION_OF_EMPTY :
+Theorem INTERSECTION_OF_EMPTY:
    !P Q:('a->bool)->bool. P {} ==> (P INTERSECTION_OF Q) UNIV
 Proof
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [INTERSECTION_OF] THEN
@@ -1105,11 +1105,11 @@ QED
 (* The ARBITRARY and FINITE cases of UNION_OF / INTERSECTION_OF              *)
 (* ------------------------------------------------------------------------- *)
 
-Definition ARBITRARY :
+Definition ARBITRARY:
     ARBITRARY (s:('a->bool)->bool) <=> T
 End
 
-Theorem ARBITRARY_UNION_OF_ALT :
+Theorem ARBITRARY_UNION_OF_ALT:
    !B s:'a->bool.
         (ARBITRARY UNION_OF B) s <=>
         !x. x IN s ==>  ?u. u IN B /\ x IN u /\ u SUBSET s
@@ -1123,31 +1123,31 @@ Proof
   Q.EXISTS_TAC `{u:'a->bool | u IN B /\ u SUBSET s}` THEN ASM_SET_TAC[]
 QED
 
-Theorem ARBITRARY_UNION_OF_EMPTY :
+Theorem ARBITRARY_UNION_OF_EMPTY:
    !P:('a->bool)->bool. (ARBITRARY UNION_OF P) {}
 Proof
   SIMP_TAC std_ss [UNION_OF_EMPTY, ARBITRARY]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_EMPTY :
+Theorem ARBITRARY_INTERSECTION_OF_EMPTY:
    !P:('a->bool)->bool. (ARBITRARY INTERSECTION_OF P) UNIV
 Proof
   SIMP_TAC std_ss [INTERSECTION_OF_EMPTY, ARBITRARY]
 QED
 
-Theorem ARBITRARY_UNION_OF_INC :
+Theorem ARBITRARY_UNION_OF_INC:
    !P s:'a->bool. P s ==> (ARBITRARY UNION_OF P) s
 Proof
   SIMP_TAC std_ss [UNION_OF_INC, ARBITRARY]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_INC :
+Theorem ARBITRARY_INTERSECTION_OF_INC:
    !P s:'a->bool. P s ==> (ARBITRARY INTERSECTION_OF P) s
 Proof
   SIMP_TAC std_ss [INTERSECTION_OF_INC, ARBITRARY]
 QED
 
-Theorem ARBITRARY_UNION_OF_COMPLEMENT :
+Theorem ARBITRARY_UNION_OF_COMPLEMENT:
    !P s. (ARBITRARY UNION_OF P) s <=>
          (ARBITRARY INTERSECTION_OF (\s. P(univ(:'a) DIFF s))) (univ(:'a) DIFF s)
 Proof
@@ -1161,7 +1161,7 @@ Proof
   ASM_SIMP_TAC std_ss [IMAGE_ID, COMPL_COMPL_applied]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_COMPLEMENT :
+Theorem ARBITRARY_INTERSECTION_OF_COMPLEMENT:
    !P s. (ARBITRARY INTERSECTION_OF P) s <=>
          (ARBITRARY UNION_OF (\s. P(univ(:'a) DIFF s))) (univ(:'a) DIFF s)
 Proof
@@ -1169,7 +1169,7 @@ Proof
   SIMP_TAC std_ss [ETA_AX, COMPL_COMPL_applied]
 QED
 
-Theorem ARBITRARY_UNION_OF_IDEMPOT :
+Theorem ARBITRARY_UNION_OF_IDEMPOT:
    !P:('a->bool)->bool.
         ARBITRARY UNION_OF ARBITRARY UNION_OF P = ARBITRARY UNION_OF P
 Proof
@@ -1188,7 +1188,7 @@ Proof
   SIMP_TAC std_ss [EXISTS_IN_GSPEC] THEN ASM_SET_TAC[]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_IDEMPOT :
+Theorem ARBITRARY_INTERSECTION_OF_IDEMPOT:
    !P:('a->bool)->bool.
         ARBITRARY INTERSECTION_OF ARBITRARY INTERSECTION_OF P =
         ARBITRARY INTERSECTION_OF P
@@ -1198,7 +1198,7 @@ Proof
  >> SIMP_TAC std_ss [ARBITRARY_UNION_OF_IDEMPOT]
 QED
 
-Theorem ARBITRARY_UNION_OF_UNIONS :
+Theorem ARBITRARY_UNION_OF_UNIONS:
    !P u:('a->bool)->bool.
         (!s. s IN u ==> (ARBITRARY UNION_OF P) s)
         ==> (ARBITRARY UNION_OF P) (UNIONS u)
@@ -1208,7 +1208,7 @@ Proof
   Q.EXISTS_TAC `u:('a->bool)->bool` THEN ASM_SIMP_TAC std_ss [ARBITRARY]
 QED
 
-Theorem ARBITRARY_UNION_OF_UNION :
+Theorem ARBITRARY_UNION_OF_UNION:
    !P s t. (ARBITRARY UNION_OF P) s /\ (ARBITRARY UNION_OF P) t
            ==> (ARBITRARY UNION_OF P) (s UNION t)
 Proof
@@ -1218,7 +1218,7 @@ Proof
   SIMP_TAC std_ss [ARBITRARY, NOT_IN_EMPTY]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_INTERS :
+Theorem ARBITRARY_INTERSECTION_OF_INTERS:
    !P u:('a->bool)->bool.
         (!s. s IN u ==> (ARBITRARY INTERSECTION_OF P) s)
         ==> (ARBITRARY INTERSECTION_OF P) (INTERS u)
@@ -1229,7 +1229,7 @@ Proof
   Q.EXISTS_TAC `u:('a->bool)->bool` THEN ASM_SIMP_TAC std_ss [ARBITRARY]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_INTER :
+Theorem ARBITRARY_INTERSECTION_OF_INTER:
    !P s t. (ARBITRARY INTERSECTION_OF P) s /\ (ARBITRARY INTERSECTION_OF P) t
            ==> (ARBITRARY INTERSECTION_OF P) (s INTER t)
 Proof
@@ -1239,7 +1239,7 @@ Proof
   SIMP_TAC std_ss [ARBITRARY, NOT_IN_EMPTY]
 QED
 
-Theorem ARBITRARY_UNION_OF_INTER_EQ :
+Theorem ARBITRARY_UNION_OF_INTER_EQ:
    !P:('a->bool)->bool.
         (!s t. (ARBITRARY UNION_OF P) s /\ (ARBITRARY UNION_OF P) t
                ==> (ARBITRARY UNION_OF P) (s INTER t)) <=>
@@ -1257,7 +1257,7 @@ Proof
     REPEAT STRIP_TAC)
 QED
 
-Theorem ARBITRARY_UNION_OF_INTER :
+Theorem ARBITRARY_UNION_OF_INTER:
    !P:('a->bool)->bool.
         (!s t. P s /\ P t ==> P(s INTER t))
         ==> (!s t. (ARBITRARY UNION_OF P) s /\ (ARBITRARY UNION_OF P) t
@@ -1267,7 +1267,7 @@ Proof
                  ARBITRARY_UNION_OF_INC]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_UNION_EQ :
+Theorem ARBITRARY_INTERSECTION_OF_UNION_EQ:
    !P:('a->bool)->bool.
         (!s t. (ARBITRARY INTERSECTION_OF P) s /\
                (ARBITRARY INTERSECTION_OF P) t
@@ -1285,7 +1285,7 @@ Proof
   SIMP_TAC std_ss [COMPL_COMPL_applied]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_UNION :
+Theorem ARBITRARY_INTERSECTION_OF_UNION:
    !P:('a->bool)->bool.
         (!s t. P s /\ P t ==> P(s UNION t))
         ==> (!s t. (ARBITRARY INTERSECTION_OF P) s /\
@@ -1296,31 +1296,31 @@ Proof
   MESON_TAC[ARBITRARY_INTERSECTION_OF_INC]
 QED
 
-Theorem FINITE_UNION_OF_EMPTY :
+Theorem FINITE_UNION_OF_EMPTY:
    !P:('a->bool)->bool. (FINITE UNION_OF P) {}
 Proof
   SIMP_TAC std_ss [UNION_OF_EMPTY, FINITE_EMPTY]
 QED
 
-Theorem FINITE_INTERSECTION_OF_EMPTY :
+Theorem FINITE_INTERSECTION_OF_EMPTY:
    !P:('a->bool)->bool. (FINITE INTERSECTION_OF P) UNIV
 Proof
   SIMP_TAC std_ss [INTERSECTION_OF_EMPTY, FINITE_EMPTY]
 QED
 
-Theorem FINITE_UNION_OF_INC :
+Theorem FINITE_UNION_OF_INC:
    !P s:'a->bool. P s ==> (FINITE UNION_OF P) s
 Proof
   SIMP_TAC std_ss [UNION_OF_INC, FINITE_SING]
 QED
 
-Theorem FINITE_INTERSECTION_OF_INC :
+Theorem FINITE_INTERSECTION_OF_INC:
    !P s:'a->bool. P s ==> (FINITE INTERSECTION_OF P) s
 Proof
   SIMP_TAC std_ss [INTERSECTION_OF_INC, FINITE_SING]
 QED
 
-Theorem FINITE_UNION_OF_COMPLEMENT :
+Theorem FINITE_UNION_OF_COMPLEMENT:
    !P s. (FINITE UNION_OF P) s <=>
          (FINITE INTERSECTION_OF (\s. P(univ(:'a) DIFF s))) (univ(:'a) DIFF s)
 Proof
@@ -1334,7 +1334,7 @@ Proof
   ASM_SIMP_TAC std_ss [IMAGE_ID, COMPL_COMPL_applied]
 QED
 
-Theorem FINITE_INTERSECTION_OF_COMPLEMENT :
+Theorem FINITE_INTERSECTION_OF_COMPLEMENT:
    !P s. (FINITE INTERSECTION_OF P) s <=>
          (FINITE UNION_OF (\s. P(univ(:'a) DIFF s))) (univ(:'a) DIFF s)
 Proof
@@ -1342,7 +1342,7 @@ Proof
   SIMP_TAC (std_ss ++ ETA_ss) [COMPL_COMPL_applied]
 QED
 
-Theorem FINITE_UNION_OF_IDEMPOT :
+Theorem FINITE_UNION_OF_IDEMPOT:
    !P:('a->bool)->bool.
         FINITE UNION_OF FINITE UNION_OF P = FINITE UNION_OF P
 Proof
@@ -1362,7 +1362,7 @@ Proof
   SIMP_TAC std_ss [EXISTS_IN_GSPEC] THEN ASM_SET_TAC[]
 QED
 
-Theorem FINITE_INTERSECTION_OF_IDEMPOT :
+Theorem FINITE_INTERSECTION_OF_IDEMPOT:
    !P:('a->bool)->bool.
         FINITE INTERSECTION_OF FINITE INTERSECTION_OF P =
         FINITE INTERSECTION_OF P
@@ -1372,7 +1372,7 @@ Proof
   SIMP_TAC std_ss [FINITE_UNION_OF_IDEMPOT]
 QED
 
-Theorem FINITE_UNION_OF_UNIONS :
+Theorem FINITE_UNION_OF_UNIONS:
    !P u:('a->bool)->bool.
         FINITE u /\ (!s. s IN u ==> (FINITE UNION_OF P) s)
         ==> (FINITE UNION_OF P) (UNIONS u)
@@ -1382,7 +1382,7 @@ Proof
   Q.EXISTS_TAC `u:('a->bool)->bool` THEN ASM_SIMP_TAC std_ss []
 QED
 
-Theorem FINITE_UNION_OF_UNION :
+Theorem FINITE_UNION_OF_UNION:
     !P s t. (FINITE UNION_OF P) s /\ (FINITE UNION_OF P) t
            ==> (FINITE UNION_OF P) (s UNION t)
 Proof
@@ -1392,7 +1392,7 @@ Proof
   SIMP_TAC std_ss [FINITE_EMPTY, NOT_IN_EMPTY]
 QED
 
-Theorem FINITE_INTERSECTION_OF_INTERS :
+Theorem FINITE_INTERSECTION_OF_INTERS:
    !P u:('a->bool)->bool.
         FINITE u /\ (!s. s IN u ==> (FINITE INTERSECTION_OF P) s)
         ==> (FINITE INTERSECTION_OF P) (INTERS u)
@@ -1403,7 +1403,7 @@ Proof
   Q.EXISTS_TAC `u:('a->bool)->bool` THEN ASM_SIMP_TAC std_ss []
 QED
 
-Theorem FINITE_INTERSECTION_OF_INTER :
+Theorem FINITE_INTERSECTION_OF_INTER:
    !P s t. (FINITE INTERSECTION_OF P) s /\ (FINITE INTERSECTION_OF P) t
            ==> (FINITE INTERSECTION_OF P) (s INTER t)
 Proof
@@ -1413,7 +1413,7 @@ Proof
   SIMP_TAC std_ss [FINITE_EMPTY, NOT_IN_EMPTY]
 QED
 
-Theorem FINITE_UNION_OF_INTER_EQ :
+Theorem FINITE_UNION_OF_INTER_EQ:
    !P:('a->bool)->bool.
         (!s t. (FINITE UNION_OF P) s /\ (FINITE UNION_OF P) t
                    ==> (FINITE UNION_OF P) (s INTER t)) <=>
@@ -1431,7 +1431,7 @@ Proof
     REPEAT STRIP_TAC)
 QED
 
-Theorem FINITE_UNION_OF_INTER :
+Theorem FINITE_UNION_OF_INTER:
     !P:('a->bool)->bool.
         (!s t. P s /\ P t ==> P(s INTER t))
         ==> (!s t. (FINITE UNION_OF P) s /\ (FINITE UNION_OF P) t
@@ -1441,7 +1441,7 @@ Proof
   MESON_TAC[FINITE_UNION_OF_INC]
 QED
 
-Theorem FINITE_INTERSECTION_OF_UNION_EQ :
+Theorem FINITE_INTERSECTION_OF_UNION_EQ:
     !P:('a->bool)->bool.
         (!s t. (FINITE INTERSECTION_OF P) s /\
                (FINITE INTERSECTION_OF P) t
@@ -1459,7 +1459,7 @@ Proof
   SIMP_TAC std_ss [COMPL_COMPL_applied]
 QED
 
-Theorem FINITE_INTERSECTION_OF_UNION :
+Theorem FINITE_INTERSECTION_OF_UNION:
    !P:('a->bool)->bool.
         (!s t. P s /\ P t ==> P(s UNION t))
         ==> (!s t. (FINITE INTERSECTION_OF P) s /\
@@ -1470,31 +1470,31 @@ Proof
   MESON_TAC[FINITE_INTERSECTION_OF_INC]
 QED
 
-Theorem COUNTABLE_UNION_OF_EMPTY :
+Theorem COUNTABLE_UNION_OF_EMPTY:
    !P:('a->bool)->bool. (COUNTABLE UNION_OF P) {}
 Proof
   SIMP_TAC std_ss [UNION_OF_EMPTY, COUNTABLE_EMPTY]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_EMPTY :
+Theorem COUNTABLE_INTERSECTION_OF_EMPTY:
    !P:('a->bool)->bool. (COUNTABLE INTERSECTION_OF P) UNIV
 Proof
   SIMP_TAC std_ss [INTERSECTION_OF_EMPTY, COUNTABLE_EMPTY]
 QED
 
-Theorem COUNTABLE_UNION_OF_INC :
+Theorem COUNTABLE_UNION_OF_INC:
    !P s:'a->bool. P s ==> (COUNTABLE UNION_OF P) s
 Proof
   SIMP_TAC std_ss [UNION_OF_INC, COUNTABLE_SING]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_INC :
+Theorem COUNTABLE_INTERSECTION_OF_INC:
    !P s:'a->bool. P s ==> (COUNTABLE INTERSECTION_OF P) s
 Proof
   SIMP_TAC std_ss [INTERSECTION_OF_INC, COUNTABLE_SING]
 QED
 
-Theorem COUNTABLE_UNION_OF_COMPLEMENT :
+Theorem COUNTABLE_UNION_OF_COMPLEMENT:
    !P s. (COUNTABLE UNION_OF P) s <=>
          (COUNTABLE INTERSECTION_OF (\s. P(univ(:'a) DIFF s))) (univ(:'a) DIFF s)
 Proof
@@ -1511,7 +1511,7 @@ Proof
   rw [Abbr ‘g’, IMAGE_ID, COMPL_COMPL_applied]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_COMPLEMENT :
+Theorem COUNTABLE_INTERSECTION_OF_COMPLEMENT:
    !P s. (COUNTABLE INTERSECTION_OF P) s <=>
          (COUNTABLE UNION_OF (\s. P(univ(:'a) DIFF s))) (univ(:'a) DIFF s)
 Proof
@@ -1519,7 +1519,7 @@ Proof
   SIMP_TAC (std_ss ++ ETA_ss) [COMPL_COMPL_applied]
 QED
 
-Theorem COUNTABLE_UNION_OF_EXPLICIT :
+Theorem COUNTABLE_UNION_OF_EXPLICIT:
    !P s:'a->bool.
         P {}
         ==> ((COUNTABLE UNION_OF P) s <=>
@@ -1548,7 +1548,7 @@ Proof
     ASM_REWRITE_TAC [] ]
 QED
 
-Theorem COUNTABLE_UNION_OF_ASCENDING :
+Theorem COUNTABLE_UNION_OF_ASCENDING:
    !P s:'a->bool.
         P {} /\ (!t u. P t /\ P u ==> P(t UNION u))
         ==> ((COUNTABLE UNION_OF P) s <=>
@@ -1581,7 +1581,7 @@ Proof
     qexistsl_tac [‘n’, ‘n’] >> rw [] ]
 QED
 
-Theorem COUNTABLE_UNION_OF_IDEMPOT :
+Theorem COUNTABLE_UNION_OF_IDEMPOT:
    !P:('a->bool)->bool.
         COUNTABLE UNION_OF COUNTABLE UNION_OF P = COUNTABLE UNION_OF P
 Proof
@@ -1601,7 +1601,7 @@ Proof
   REWRITE_TAC[EXISTS_IN_GSPEC] THEN ASM_SET_TAC[]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_IDEMPOT :
+Theorem COUNTABLE_INTERSECTION_OF_IDEMPOT:
    !P:('a->bool)->bool.
         COUNTABLE INTERSECTION_OF COUNTABLE INTERSECTION_OF P =
         COUNTABLE INTERSECTION_OF P
@@ -1611,7 +1611,7 @@ Proof
   REWRITE_TAC[COUNTABLE_UNION_OF_IDEMPOT]
 QED
 
-Theorem COUNTABLE_UNION_OF_UNIONS :
+Theorem COUNTABLE_UNION_OF_UNIONS:
    !P u:('a->bool)->bool.
         COUNTABLE u /\ (!s. s IN u ==> (COUNTABLE UNION_OF P) s)
         ==> (COUNTABLE UNION_OF P) (UNIONS u)
@@ -1621,7 +1621,7 @@ Proof
   Q.EXISTS_TAC `u:('a->bool)->bool` THEN ASM_REWRITE_TAC[]
 QED
 
-Theorem COUNTABLE_UNION_OF_UNION :
+Theorem COUNTABLE_UNION_OF_UNION:
    !P s t. (COUNTABLE UNION_OF P) s /\ (COUNTABLE UNION_OF P) t
            ==> (COUNTABLE UNION_OF P) (s UNION t)
 Proof
@@ -1631,7 +1631,7 @@ Proof
   REWRITE_TAC[COUNTABLE_EMPTY, NOT_IN_EMPTY]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_INTERS :
+Theorem COUNTABLE_INTERSECTION_OF_INTERS:
    !P u:('a->bool)->bool.
         COUNTABLE u /\ (!s. s IN u ==> (COUNTABLE INTERSECTION_OF P) s)
         ==> (COUNTABLE INTERSECTION_OF P) (INTERS u)
@@ -1642,7 +1642,7 @@ Proof
   Q.EXISTS_TAC `u:('a->bool)->bool` THEN ASM_REWRITE_TAC[]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_INTER :
+Theorem COUNTABLE_INTERSECTION_OF_INTER:
    !P s t. (COUNTABLE INTERSECTION_OF P) s /\ (COUNTABLE INTERSECTION_OF P) t
            ==> (COUNTABLE INTERSECTION_OF P) (s INTER t)
 Proof
@@ -1652,7 +1652,7 @@ Proof
   REWRITE_TAC[COUNTABLE_EMPTY, NOT_IN_EMPTY]
 QED
 
-Theorem COUNTABLE_UNION_OF_INTER_EQ :
+Theorem COUNTABLE_UNION_OF_INTER_EQ:
    !P:('a->bool)->bool.
         (!s t. (COUNTABLE UNION_OF P) s /\ (COUNTABLE UNION_OF P) t
                    ==> (COUNTABLE UNION_OF P) (s INTER t)) <=>
@@ -1670,7 +1670,7 @@ Proof
     REPEAT STRIP_TAC)
 QED
 
-Theorem COUNTABLE_UNION_OF_INTER :
+Theorem COUNTABLE_UNION_OF_INTER:
    !P:('a->bool)->bool.
         (!s t. P s /\ P t ==> P(s INTER t))
         ==> (!s t. (COUNTABLE UNION_OF P) s /\ (COUNTABLE UNION_OF P) t
@@ -1680,7 +1680,7 @@ Proof
   MESON_TAC[COUNTABLE_UNION_OF_INC]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_UNION_EQ :
+Theorem COUNTABLE_INTERSECTION_OF_UNION_EQ:
    !P:('a->bool)->bool.
         (!s t. (COUNTABLE INTERSECTION_OF P) s /\
                (COUNTABLE INTERSECTION_OF P) t
@@ -1698,7 +1698,7 @@ Proof
   REWRITE_TAC[COMPL_COMPL_applied]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_UNION :
+Theorem COUNTABLE_INTERSECTION_OF_UNION:
    !P:('a->bool)->bool.
         (!s t. P s /\ P t ==> P(s UNION t))
         ==> (!s t. (COUNTABLE INTERSECTION_OF P) s /\
@@ -1709,7 +1709,7 @@ Proof
   MESON_TAC[COUNTABLE_INTERSECTION_OF_INC]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_UNIONS_NONEMPTY :
+Theorem COUNTABLE_INTERSECTION_OF_UNIONS_NONEMPTY:
    !P u:('a->bool)->bool.
         (!s t. P s /\ P t ==> P (s UNION t)) /\
         FINITE u /\ ~(u = {}) /\
@@ -1730,7 +1730,7 @@ Proof
   ASM_SIMP_TAC std_ss []
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_UNIONS :
+Theorem COUNTABLE_INTERSECTION_OF_UNIONS:
    !P u:('a->bool)->bool.
         (COUNTABLE INTERSECTION_OF P) {} /\
         (!s t. P s /\ P t ==> P (s UNION t)) /\
@@ -1746,7 +1746,7 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
-Theorem COUNTABLE_UNION_OF_INTERS_NONEMPTY :
+Theorem COUNTABLE_UNION_OF_INTERS_NONEMPTY:
    !P u:('a->bool)->bool.
         (!s t. P s /\ P t ==> P (s INTER t)) /\
         FINITE u /\ ~(u = {}) /\
@@ -1767,7 +1767,7 @@ Proof
   ASM_SIMP_TAC std_ss []
 QED
 
-Theorem COUNTABLE_UNION_OF_INTERS :
+Theorem COUNTABLE_UNION_OF_INTERS:
    !P u:('a->bool)->bool.
         (COUNTABLE UNION_OF P) univ(:'a) /\
         (!s t. P s /\ P t ==> P (s INTER t)) /\
@@ -1783,7 +1783,7 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
-Theorem COUNTABLE_DISJOINT_UNION_OF_IDEMPOT :
+Theorem COUNTABLE_DISJOINT_UNION_OF_IDEMPOT:
    !P:('a->bool)->bool.
         ((COUNTABLE INTER pairwise DISJOINT) UNION_OF
          (COUNTABLE INTER pairwise DISJOINT) UNION_OF P) =
@@ -1820,43 +1820,43 @@ QED
 
 val _ = set_fixity "relative_to" (Infixl 500);
 
-Definition relative_to :
+Definition relative_to:
    (P relative_to s) t = ?u. P u /\ s INTER u = t
 End
 
-Theorem RELATIVE_TO_UNIV :
+Theorem RELATIVE_TO_UNIV:
     !P s. (P relative_to univ(:'a)) s <=> P s
 Proof
   REWRITE_TAC[relative_to, INTER_UNIV] THEN MESON_TAC[]
 QED
 
-Theorem RELATIVE_TO_IMP_SUBSET :
+Theorem RELATIVE_TO_IMP_SUBSET:
    !P s t. (P relative_to s) t ==> t SUBSET s
 Proof
   REWRITE_TAC[relative_to] THEN SET_TAC[]
 QED
 
-Theorem FORALL_RELATIVE_TO :
+Theorem FORALL_RELATIVE_TO:
    (!s. (P relative_to u) s ==> Q s) <=>
    (!s. P s ==> Q(u INTER s))
 Proof
   REWRITE_TAC[relative_to] THEN MESON_TAC[]
 QED
 
-Theorem RELATIVE_TO_INC :
+Theorem RELATIVE_TO_INC:
    !P u s. P s ==> (P relative_to u) (u INTER s)
 Proof
   REWRITE_TAC[relative_to] THEN MESON_TAC[]
 QED
 
-Theorem RELATIVE_TO :
+Theorem RELATIVE_TO:
    (P relative_to u) = {u INTER s | P s}
 Proof
     rw [Once EXTENSION, relative_to, IN_APP]
  >> SET_TAC []
 QED
 
-Theorem RELATIVE_TO_RELATIVE_TO :
+Theorem RELATIVE_TO_RELATIVE_TO:
    !P:('a->bool)->bool s t.
         P relative_to s relative_to t = P relative_to (s INTER t)
 Proof
@@ -1868,7 +1868,7 @@ Proof
  >> Q.EXISTS_TAC ‘u’ >> rw []
 QED
 
-Theorem RELATIVE_TO_COMPL :
+Theorem RELATIVE_TO_COMPL:
    !P u s:'a->bool.
         s SUBSET u
         ==> ((P relative_to u) (u DIFF s) <=>
@@ -1884,14 +1884,14 @@ Proof
  >> ASM_SET_TAC []
 QED
 
-Theorem RELATIVE_TO_SUBSET :
+Theorem RELATIVE_TO_SUBSET:
    !P s t:'a->bool. s SUBSET t /\ P s ==> (P relative_to t) s
 Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[relative_to] THEN
   Q.EXISTS_TAC `s:'a->bool` THEN ASM_SET_TAC[]
 QED
 
-Theorem RELATIVE_TO_SUBSET_TRANS :
+Theorem RELATIVE_TO_SUBSET_TRANS:
    !P u s t:'a->bool.
       (P relative_to u) s /\ s SUBSET t /\ t SUBSET u ==> (P relative_to t) s
 Proof
@@ -1900,14 +1900,14 @@ Proof
   HO_MATCH_MP_TAC MONO_EXISTS THEN ASM_SET_TAC[]
 QED
 
-Theorem RELATIVE_TO_MONO :
+Theorem RELATIVE_TO_MONO:
    !P Q.
      (!s. P s ==> Q s) ==> !u. (P relative_to u) s ==> (Q relative_to u) s
 Proof
   REWRITE_TAC[relative_to] THEN MESON_TAC[]
 QED
 
-Theorem RELATIVE_TO_SUBSET_INC :
+Theorem RELATIVE_TO_SUBSET_INC:
    !P u s:'a->bool.
         s SUBSET u /\ P s ==> (P relative_to u) s
 Proof
@@ -1915,7 +1915,7 @@ Proof
   MESON_TAC[SET_RULE ``s SUBSET u ==> u INTER s = s``]
 QED
 
-Theorem RELATIVE_TO_INTER :
+Theorem RELATIVE_TO_INTER:
    !P s. (!c d:'a->bool. P c /\ P d ==> P(c INTER d))
          ==> !c d. (P relative_to s) c /\ (P relative_to s) d
                    ==> (P relative_to s) (c INTER d)
@@ -1928,7 +1928,7 @@ Proof
   ASM_SIMP_TAC std_ss [] THEN ASM_SET_TAC[]
 QED
 
-Theorem RELATIVE_TO_UNION :
+Theorem RELATIVE_TO_UNION:
    !P s. (!c d:'a->bool. P c /\ P d ==> P(c UNION d))
          ==> !c d. (P relative_to s) c /\ (P relative_to s) d
                    ==> (P relative_to s) (c UNION d)
@@ -1941,7 +1941,7 @@ Proof
   ASM_SIMP_TAC std_ss [] THEN ASM_SET_TAC[]
 QED
 
-Theorem ARBITRARY_UNION_OF_RELATIVE_TO :
+Theorem ARBITRARY_UNION_OF_RELATIVE_TO:
    !P u:'a->bool.
         ((ARBITRARY UNION_OF P) relative_to u) =
         (ARBITRARY UNION_OF (P relative_to u))
@@ -1969,7 +1969,7 @@ Proof
     ASM_SIMP_TAC std_ss [ARBITRARY, FORALL_IN_IMAGE] ]
 QED
 
-Theorem FINITE_UNION_OF_RELATIVE_TO :
+Theorem FINITE_UNION_OF_RELATIVE_TO:
    !P u:'a->bool.
         ((FINITE UNION_OF P) relative_to u) =
         (FINITE UNION_OF (P relative_to u))
@@ -1997,7 +1997,7 @@ Proof
     ASM_SIMP_TAC std_ss [FINITE_IMAGE, FORALL_IN_IMAGE] ]
 QED
 
-Theorem COUNTABLE_UNION_OF_RELATIVE_TO :
+Theorem COUNTABLE_UNION_OF_RELATIVE_TO:
    !P u:'a->bool.
         ((COUNTABLE UNION_OF P) relative_to u) =
         (COUNTABLE UNION_OF (P relative_to u))
@@ -2025,7 +2025,7 @@ Proof
     ASM_SIMP_TAC std_ss [COUNTABLE_IMAGE, FORALL_IN_IMAGE] ]
 QED
 
-Theorem ARBITRARY_INTERSECTION_OF_RELATIVE_TO :
+Theorem ARBITRARY_INTERSECTION_OF_RELATIVE_TO:
    !P u:'a->bool.
         ((ARBITRARY INTERSECTION_OF P) relative_to u) =
         ((ARBITRARY INTERSECTION_OF (P relative_to u)) relative_to u)
@@ -2060,7 +2060,7 @@ Proof
     ASM_SIMP_TAC std_ss [ARBITRARY, FORALL_IN_IMAGE] ]
 QED
 
-Theorem FINITE_INTERSECTION_OF_RELATIVE_TO :
+Theorem FINITE_INTERSECTION_OF_RELATIVE_TO:
    !P u:'a->bool.
         ((FINITE INTERSECTION_OF P) relative_to u) =
         ((FINITE INTERSECTION_OF (P relative_to u)) relative_to u)
@@ -2095,7 +2095,7 @@ Proof
     ASM_SIMP_TAC std_ss [FINITE_IMAGE, FORALL_IN_IMAGE] ]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_RELATIVE_TO :
+Theorem COUNTABLE_INTERSECTION_OF_RELATIVE_TO:
    !P u:'a->bool.
         ((COUNTABLE INTERSECTION_OF P) relative_to u) =
         ((COUNTABLE INTERSECTION_OF (P relative_to u)) relative_to u)
@@ -2127,7 +2127,7 @@ Proof
     ASM_SIMP_TAC std_ss [COUNTABLE_IMAGE, FORALL_IN_IMAGE] ]
 QED
 
-Theorem FINITE_INTERSECTION_OF_RELATIVE_TO_ALT :
+Theorem FINITE_INTERSECTION_OF_RELATIVE_TO_ALT:
    !P u s:'a->bool.
         P u ==> ((FINITE INTERSECTION_OF P relative_to u) s <=>
                  (FINITE INTERSECTION_OF P) s /\ s SUBSET u)
@@ -2141,7 +2141,7 @@ Proof
   ASM_SIMP_TAC std_ss [FINITE_INTERSECTION_OF_INC]
 QED
 
-Theorem COUNTABLE_INTERSECTION_OF_RELATIVE_TO_ALT :
+Theorem COUNTABLE_INTERSECTION_OF_RELATIVE_TO_ALT:
    !P u s:'a->bool.
         P u ==> ((COUNTABLE INTERSECTION_OF P relative_to u) s <=>
                  (COUNTABLE INTERSECTION_OF P) s /\ s SUBSET u)
@@ -2155,7 +2155,7 @@ Proof
   ASM_SIMP_TAC std_ss [COUNTABLE_INTERSECTION_OF_INC]
 QED
 
-Theorem ARBITRARY_UNION_OF_NONEMPTY_FINITE_INTERSECTION :
+Theorem ARBITRARY_UNION_OF_NONEMPTY_FINITE_INTERSECTION:
    !u:('a->bool)->bool.
         ARBITRARY UNION_OF ((\s. FINITE s /\ ~(s = {})) INTERSECTION_OF u) =
         ARBITRARY UNION_OF (FINITE INTERSECTION_OF u relative_to UNIONS u)
@@ -2190,7 +2190,7 @@ Proof
       Q.EXISTS_TAC `t:('a->bool)->bool` THEN ASM_SET_TAC[] ] ]
 QED
 
-Theorem OPEN_IN_RELATIVE_TO :
+Theorem OPEN_IN_RELATIVE_TO:
    !top s:'a->bool.
         (open_in top relative_to s) = open_in (subtopology top s)
 Proof
@@ -2198,7 +2198,7 @@ Proof
   MESON_TAC[INTER_COMM]
 QED
 
-Theorem CLOSED_IN_RELATIVE_TO :
+Theorem CLOSED_IN_RELATIVE_TO:
    !top s:'a->bool.
         (closed_in top relative_to s) = closed_in (subtopology top s)
 Proof
@@ -2213,14 +2213,14 @@ QED
 (* NOTE: This makes REWRITE_TAC below behave like in HOL-Light *)
 open Ho_Rewrite;
 
-Definition continuous_map :
+Definition continuous_map:
     continuous_map (top,top') (f :'a -> 'b) <=>
      (!x. x IN topspace top ==> f x IN topspace top') /\
      (!u. open_in top' u
           ==> open_in top {x | x IN topspace top /\ f x IN u})
 End
 
-Theorem CONTINUOUS_MAP :
+Theorem CONTINUOUS_MAP:
    !top top' f.
         continuous_map (top,top') f <=>
        (IMAGE f (topspace top) SUBSET topspace top' /\
@@ -2230,20 +2230,20 @@ Proof
   REWRITE_TAC[continuous_map, SUBSET_DEF, FORALL_IN_IMAGE]
 QED
 
-Theorem CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE :
+Theorem CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE:
   !top top' (f :'a->'b). continuous_map (top,top')  f
                      ==> IMAGE f (topspace top) SUBSET topspace top'
 Proof
   REWRITE_TAC[continuous_map] THEN SET_TAC[]
 QED
 
-Theorem CONTINUOUS_MAP_ON_EMPTY :
+Theorem CONTINUOUS_MAP_ON_EMPTY:
    !top top' (f :'a->'b). topspace top = {} ==> continuous_map(top,top') f
 Proof
   SIMP_TAC std_ss[continuous_map, NOT_IN_EMPTY, EMPTY_GSPEC, OPEN_IN_EMPTY]
 QED
 
-Theorem CONTINUOUS_MAP_INTO_EMPTY :
+Theorem CONTINUOUS_MAP_INTO_EMPTY:
    !top top' (f :'a->'b).
         topspace top' = {}
         ==> (continuous_map(top,top') f <=> topspace top = {})

@@ -20,21 +20,21 @@ val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 (*---------------------------------------------------------------------------*)
 
 (* This example is from [1, p.23] *)
-Theorem S5_001101 :
+Theorem S5_001101:
     S5 (n2w 0b001101) = (n2w 0b1101)
 Proof
     EVAL_TAC
 QED
 
 (* This example is from [2] *)
-Theorem S1_011011 :
+Theorem S1_011011:
     S1 (n2w 0b011011) = (n2w 0b0101)
 Proof
     EVAL_TAC
 QED
 
 (* This example is also from [2], ever exposed a bug in SBox_def *)
-Theorem S4_111010 :
+Theorem S4_111010:
     S4 (n2w 0b111010) = (n2w 0b0010)
 Proof
     EVAL_TAC
@@ -49,7 +49,7 @@ val _ = output_words_as_padded_bin();
 (* A test key
    |- Test_K = 0b1001100110100010101110111100110011011101111001101111111110001w
  *)
-Definition Test_K :
+Definition Test_K:
    Test_K :word64 = 0x133457799BBCDFF1w
 End
 
@@ -64,7 +64,7 @@ QED
 
    NOTE: All literal values copied as theorem statements are correct w.r.t. [2]
  *)
-Theorem Test_K_RoundKey_16 :
+Theorem Test_K_RoundKey_16:
     REVERSE (RoundKey 16 Test_K) =
     [(0b1111000011001100101010101111w,0b0101010101100110011110001111w); (* CD0 *)
      (0b1110000110011001010101011111w,0b1010101011001100111100011110w); (* CD1 *)
@@ -110,18 +110,18 @@ Proof
     EVAL_TAC
 QED
 
-Definition Test_KS :
+Definition Test_KS:
     Test_KS = KS Test_K 16
 End
 
 (* A test message (cleartext)
    |- Test_M = 0b100100011010001010110011110001001101010111100110111101111w
  *)
-Definition Test_M :
+Definition Test_M:
     Test_M :word64 = 0x0123456789ABCDEFw
 End
 
-Theorem Test_M_by_IP :
+Theorem Test_M_by_IP:
     IP Test_M = 0b1100110000000000110011001111111111110000101010101111000010101010w
 Proof
     EVAL_TAC
@@ -137,32 +137,32 @@ Proof
 QED
 
 (* These two values are taken from Test_Round_0 *)
-Definition L0_def :
+Definition L0_def:
     L0 :word32 = 0b11001100000000001100110011111111w
 End
 
-Definition R0_def :
+Definition R0_def:
     R0 :word32 = 0b11110000101010101111000010101010w
 End
 
-Theorem Test_E_R0 :
+Theorem Test_E_R0:
     E R0 = 0b11110100001010101010101011110100001010101010101w
 Proof
     EVAL_TAC
 QED
 
-Definition K1_def :
+Definition K1_def:
     K1 :word48 = 0b000110110000001011101111111111000111000001110010w
 End
 
-Theorem Test_K1_X_E_R0 :
+Theorem Test_K1_X_E_R0:
     K1 ?? E R0 = 0b11000010001011110111010100001100110010100100111w
 Proof
     EVAL_TAC
 QED
 
 (* EVAL “S (K1 ?? E R0)” *)
-Theorem Test_S_K1_X_E_R0 :
+Theorem Test_S_K1_X_E_R0:
     S (K1 ?? E R0) = 0b01011100100000101011010110010111w
 Proof
     EVAL_TAC
@@ -184,7 +184,7 @@ Proof
     EVAL_TAC
 QED
 
-Definition R1_def :
+Definition R1_def:
     R1 :word32 = 0b11101111010010100110010101000100w
 End
 
@@ -221,19 +221,19 @@ QED
    FullDESEnc Test_K Test_M = IIP(R16 @@ L16) =
      10000101 11101000 00010011 01010100 00001111 00001010 10110100 00000101
  *)
-Definition Test_C :
+Definition Test_C:
     Test_C :word64 =
       0b1000010111101000000100110101010000001111000010101011010000000101w
 End
 
-Theorem Test_FullDES_K_M :
+Theorem Test_FullDES_K_M:
     let (encrypt,decrypt) = FullDES Test_K in encrypt Test_M = Test_C
 Proof
     EVAL_TAC
 QED
 
 (* EVAL “FullDESDec Test_K Test_C” *)
-Theorem Test_FullDES_K_C :
+Theorem Test_FullDES_K_C:
     let (encrypt,decrypt) = FullDES Test_K in decrypt Test_C = Test_M
 Proof
     EVAL_TAC
@@ -243,7 +243,7 @@ QED
 val _ = output_words_as_padded_hex();
 
 (* EVAL “FullDESEnc 0w 0w”, Encrypted text: "8c a6 4d e9 c1 b1 23 a7" [3] *)
-Theorem Test_FullDES_0 :
+Theorem Test_FullDES_0:
     let (encrypt,decrypt) = FullDES 0w in encrypt 0w = 0x8CA64DE9C1B123A7w
 Proof
     EVAL_TAC
@@ -256,14 +256,14 @@ Proof
 QED
 
 (* DES reduced to 4 rounds *)
-Theorem Test_DES_4 :
+Theorem Test_DES_4:
     let (encrypt,decrypt) = DES 4 Test_K in decrypt (encrypt 0w) = 0w
 Proof
     EVAL_TAC
 QED
 
 (* DES reduced to 5 rounds (thus odd round also works) *)
-Theorem Test_DES_5 :
+Theorem Test_DES_5:
     let (encrypt,decrypt) = DES 4 Test_K in decrypt (encrypt 0w) = 0w
 Proof
     EVAL_TAC

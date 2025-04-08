@@ -69,7 +69,7 @@ val probably_def = Define
 val possibly_def = Define
    `possibly p e <=> e IN events p /\ prob p e <> 0`;
 
-Definition random_variable_def :
+Definition random_variable_def:
     random_variable X p s <=> X IN measurable (p_space p, events p) s
 End
 
@@ -77,7 +77,7 @@ End
 
     NOTE: ‘x IN p_space p’ was wrongly removed in k14 release.
  *)
-Definition real_random_variable_def :
+Definition real_random_variable_def:
     real_random_variable X p <=>
          random_variable X p Borel /\
          !x. x IN p_space p ==> X x <> NegInf /\ X x <> PosInf
@@ -95,18 +95,18 @@ val distribution_function_def = Define
    `distribution_function p X = (\x. prob p ({w | X w <= x} INTER p_space p))`;
 
 (* NOTE (fixes after k14): changed ‘i IN J’ to ‘j IN J’ *)
-Definition identical_distribution_def :
+Definition identical_distribution_def:
     identical_distribution p X E (J :'index set) =
       !i j s. s IN subsets E /\ i IN J /\ j IN J ==>
              (distribution p (X i) s = distribution p (X j) s)
 End
 
-Definition joint_distribution_def :
+Definition joint_distribution_def:
     joint_distribution (p :'a p_space) X Y =
       (\a. prob p (PREIMAGE (\x. (X x,Y x)) a INTER p_space p))
 End
 
-Definition joint_distribution3_def :
+Definition joint_distribution3_def:
     joint_distribution3 (p :'a p_space) X Y Z =
       (\a. prob p (PREIMAGE (\x. (X x,Y x,Z x)) a INTER p_space p))
 End
@@ -115,7 +115,7 @@ val conditional_distribution_def = Define
    `conditional_distribution (p :'a p_space) X Y a b =
       joint_distribution p X Y (a CROSS b) / distribution p Y b`;
 
-Definition expectation_def :
+Definition expectation_def:
     expectation = lebesgue$integral
 End
 
@@ -149,7 +149,7 @@ val uniform_distribution_def = Define
 (*  Basic probability theorems                                               *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem PROB_SPACE_REDUCE :
+Theorem PROB_SPACE_REDUCE:
     !p. (p_space p,events p,prob p) = p
 Proof
     RW_TAC std_ss [p_space_def, events_def, prob_def, MEASURE_SPACE_REDUCE]
@@ -204,7 +204,7 @@ val PROB_UNIV = store_thm
   ("PROB_UNIV", ``!p. prob_space p ==> (prob p (p_space p) = 1)``,
     RW_TAC std_ss [PROB_SPACE]);
 
-Theorem PROB_SPACE_NOT_EMPTY :
+Theorem PROB_SPACE_NOT_EMPTY:
     !p. prob_space p ==> p_space p <> {}
 Proof
     METIS_TAC [PROB_EMPTY, PROB_UNIV, ne_01]
@@ -242,7 +242,7 @@ val PROB_SPACE_SUBSET_PSPACE = store_thm
   ``!p s. prob_space p /\ s IN events p ==> s SUBSET p_space p``,
     RW_TAC std_ss [prob_space_def, events_def, p_space_def, MEASURE_SPACE_SUBSET_MSPACE]);
 
-Theorem PROB_SPACE_IN_PSPACE :
+Theorem PROB_SPACE_IN_PSPACE:
     !p E. prob_space p /\ E IN events p ==> !x. x IN E ==> x IN p_space p
 Proof
     RW_TAC std_ss [prob_space_def, events_def, p_space_def]
@@ -251,7 +251,7 @@ Proof
 QED
 
 (* Thus TONELLI and FUBINI theorems are applicable *)
-Theorem PROB_SPACE_SIGMA_FINITE :
+Theorem PROB_SPACE_SIGMA_FINITE:
     !p. prob_space p ==> sigma_finite p
 Proof
     RW_TAC std_ss [prob_space_def]
@@ -404,7 +404,7 @@ val EVENTS_COMPL = store_thm
      Q.SPEC `(p_space p, events p)`) ALGEBRA_COMPL
  >> PROVE_TAC [PROB_SPACE, SIGMA_ALGEBRA_ALGEBRA]);
 
-Theorem EVENTS_BIGUNION :
+Theorem EVENTS_BIGUNION:
     !p f n. prob_space p /\ f IN (count n -> events p) ==>
             BIGUNION (IMAGE f (count n)) IN events p
 Proof
@@ -430,7 +430,7 @@ val EVENTS_COUNTABLE_UNION = store_thm
      Q.SPEC `(p_space p, events p)`) SIGMA_ALGEBRA_COUNTABLE_UNION
  >> RW_TAC std_ss [EVENTS_SIGMA_ALGEBRA]);
 
-Theorem EVENTS_BIGUNION_ENUM :
+Theorem EVENTS_BIGUNION_ENUM:
     !p f. prob_space p /\ f IN (univ(:num) -> events p) ==>
           BIGUNION (IMAGE f univ(:num)) IN events p
 Proof
@@ -460,7 +460,7 @@ val PROB_ZERO_UNION = store_thm
  >> RW_TAC std_ss [DISJOINT_DEF, DIFF_DEF, EXTENSION, IN_UNION, IN_DIFF, NOT_IN_EMPTY, IN_INTER]
  >> PROVE_TAC []);
 
-Theorem PROB_INTER_ZERO :
+Theorem PROB_INTER_ZERO:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\ (prob p B = 0) ==>
            (prob p (A INTER B) = 0)
 Proof
@@ -471,7 +471,7 @@ Proof
  >> METIS_TAC [le_antisym]
 QED
 
-Theorem PROB_ZERO_INTER :
+Theorem PROB_ZERO_INTER:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\ (prob p A = 0) ==>
            (prob p (A INTER B) = 0)
 Proof
@@ -569,7 +569,7 @@ val PROB_LE_1 = store_thm
  >> RW_TAC std_ss [GSYM PROB_COMPL]
  >> RW_TAC std_ss [EVENTS_COMPL, PROB_POSITIVE]);
 
-Theorem PROB_EQ_BIGUNION_IMAGE :
+Theorem PROB_EQ_BIGUNION_IMAGE:
     !p f g. prob_space p /\ f IN (UNIV -> events p) /\ g IN (UNIV -> events p) /\
            (!m n. m <> n ==> DISJOINT (f m) (f n)) /\
            (!m n. m <> n ==> DISJOINT (g m) (g n)) /\
@@ -624,7 +624,7 @@ val PROB_SUBADDITIVE = store_thm
    >> MATCH_MP_TAC PROB_INCREASING
    >> RW_TAC std_ss [DIFF_DEF, SUBSET_DEF, GSPECIFICATION]);
 
-Theorem PROB_COUNTABLY_SUBADDITIVE :
+Theorem PROB_COUNTABLY_SUBADDITIVE:
     !p f. prob_space p /\ (IMAGE f UNIV) SUBSET events p ==>
           prob p (BIGUNION (IMAGE f UNIV)) <= suminf (prob p o f)
 Proof
@@ -679,7 +679,7 @@ Proof
  >> METIS_TAC [DECIDE ``n < SUC n``, LESS_TRANS]
 QED
 
-Theorem PROB_COUNTABLY_ZERO :
+Theorem PROB_COUNTABLY_ZERO:
     !p c. prob_space p /\ countable c /\ c SUBSET events p /\
           (!x. x IN c ==> (prob p x = 0)) ==> (prob p (BIGUNION c) = 0)
 Proof
@@ -713,7 +713,7 @@ QED
 
   `f :'b -> 'a -> bool` has an finite index set of type ('b set)
  *)
-Theorem PROB_FINITE_ADDITIVE :
+Theorem PROB_FINITE_ADDITIVE:
     !p s f t. prob_space p /\ FINITE s /\ (!x. x IN s ==> f x IN events p) /\
              (!a b. (a :'b) IN s /\ b IN s /\ a <> b ==> DISJOINT (f a) (f b)) /\
              (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)
@@ -1053,7 +1053,7 @@ QED
 (* NOTE: This is one of the rare theorems having ‘prob_space p’ at the conclusion.
          It's most common uniform distribution over discrete sample space.
  *)
-Theorem prob_space_on_finite_set :
+Theorem prob_space_on_finite_set:
     !p. FINITE (p_space p) /\ p_space p <> {} /\ events p = POW (p_space p) /\
         (!s. s IN events p ==> prob p s = &CARD s / &CARD (p_space p)) ==>
         prob_space p
@@ -1096,14 +1096,14 @@ QED
 
 (* ************************************************************************* *)
 
-Theorem distribution_distr :
+Theorem distribution_distr:
     distribution = distr
 Proof
     rpt FUN_EQ_TAC >> qx_genl_tac [`p`, `X`, `s`]
  >> RW_TAC std_ss [distribution_def, distr_def, prob_def, p_space_def]
 QED
 
-Theorem distribution_GSPEC :
+Theorem distribution_GSPEC:
     !s. distribution p X s = prob p {x | x IN p_space p /\ X x IN s}
 Proof
     rw [distribution_def, PREIMAGE_def]
@@ -1111,13 +1111,13 @@ Proof
 QED
 
 (* alternative definition of ‘distribution_function’ *)
-Theorem distribution_function :
+Theorem distribution_function:
     !p X t. distribution_function p X t = distribution p X {x | x <= t}
 Proof
     rw [distribution_function_def, distribution_def, PREIMAGE_def]
 QED
 
-Theorem joint_distribution_alt :
+Theorem joint_distribution_alt:
    !p X Y. joint_distribution p X Y = distribution p (\x. (X x,Y x))
 Proof
    rw [joint_distribution_def, distribution_def]
@@ -1126,7 +1126,7 @@ QED
 (* See "stochastic_processTheory.finite_dimensional_distribution_def" for the joint
    distribution of a finite sequence of random variables.
  *)
-Theorem joint_distribution3_alt :
+Theorem joint_distribution3_alt:
    !p X Y Z. joint_distribution3 p X Y Z = distribution p (\x. (X x,Y x,Z x))
 Proof
    rw [joint_distribution3_def, distribution_def]
@@ -1134,7 +1134,7 @@ QED
 
 (* ************************************************************************* *)
 
-Theorem marginal_joint_zero :
+Theorem marginal_joint_zero:
     !p X Y s t. prob_space p /\ (events p = POW (p_space p)) /\
                 ((distribution p X s = 0) \/ (distribution p Y t = 0))
             ==> (joint_distribution p X Y (s CROSS t) = 0)
@@ -1156,7 +1156,7 @@ Proof
  >> METIS_TAC [PROB_POSITIVE, INTER_SUBSET, IN_POW, le_antisym]
 QED
 
-Theorem marginal_joint_zero3 :
+Theorem marginal_joint_zero3:
     !p X Y Z s t u. prob_space p /\ (events p = POW (p_space p)) /\
                    ((distribution p X s = 0) \/
                     (distribution p Y t = 0) \/
@@ -1210,7 +1210,7 @@ val distribution_le_1 = store_thm
 
    NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’
  *)
-Theorem distribution_prob_space : (* was: prob_space_distr *)
+Theorem distribution_prob_space: (* was: prob_space_distr *)
     !p X s. prob_space p /\ sigma_algebra s /\ random_variable X p s ==>
             prob_space (space s, subsets s, distribution p X)
 Proof
@@ -1250,7 +1250,7 @@ QED
 
    NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’
  *)
-Theorem uniform_distribution_prob_space :
+Theorem uniform_distribution_prob_space:
     !X p s. prob_space p /\ FINITE (p_space p) /\
             FINITE (space s) /\ sigma_algebra s /\ random_variable X p s ==>
             prob_space (space s, subsets s, uniform_distribution s)
@@ -1295,7 +1295,7 @@ Proof
  >> ASM_SIMP_TAC real_ss [extreal_div_eq, extreal_add_def]
 QED
 
-Theorem distribution_partition :
+Theorem distribution_partition:
     !p X. prob_space p /\ (!x. x IN p_space p ==> {x} IN events p) /\
           FINITE (p_space p) /\ random_variable X p Borel ==>
          (SIGMA (\x. distribution p X {x}) (IMAGE X (p_space p)) = 1)
@@ -1324,7 +1324,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem distribution_space_eq_1 : (* was: lemma1 (normal_rvScript.sml) *)
+Theorem distribution_space_eq_1: (* was: lemma1 (normal_rvScript.sml) *)
     !p X. prob_space p ==> (distribution p X (IMAGE X (p_space p)) = 1)
 Proof
     RW_TAC std_ss [prob_space_def, p_space_def]
@@ -1336,7 +1336,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’ (‘random_variable’) *)
-Theorem distribution_lebesgue_thm1 :
+Theorem distribution_lebesgue_thm1:
    !X p s A. prob_space p /\ sigma_algebra s /\
              random_variable X p s /\ A IN subsets s ==>
       (distribution p X A = integral p (indicator_fn (PREIMAGE X A INTER p_space p)))
@@ -1347,7 +1347,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra s’ due to changes in ‘measurable’ (‘random_variable’) *)
-Theorem distribution_lebesgue_thm2 :
+Theorem distribution_lebesgue_thm2:
     !X p s A. prob_space p /\ sigma_algebra s /\
               random_variable X p s /\ A IN subsets s ==>
       (distribution p X A = integral (space s, subsets s, distribution p X) (indicator_fn A))
@@ -1377,7 +1377,7 @@ QED
 Theorem real_random_variable =
        (REWRITE_RULE [random_variable_def] real_random_variable_def)
 
-Theorem real_random_variable_zero :
+Theorem real_random_variable_zero:
     !p. prob_space p ==> real_random_variable (\x. 0) p
 Proof
     RW_TAC std_ss [prob_space_def, real_random_variable_def,
@@ -1386,7 +1386,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [measure_space_def]
 QED
 
-Theorem real_random_variable_const :
+Theorem real_random_variable_const:
     !p m. prob_space p /\ m <> PosInf /\ m <> NegInf ==>
           real_random_variable (\x. m) p
 Proof
@@ -1395,7 +1395,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [prob_space_def, measure_space_def]
 QED
 
-Theorem real_random_variable_add :
+Theorem real_random_variable_add:
     !p X Y. prob_space p /\ real_random_variable X p /\
             real_random_variable Y p ==> real_random_variable (\x. X x + Y x) p
 Proof
@@ -1414,7 +1414,7 @@ Proof
       rw [extreal_not_infty, extreal_add_def] ]
 QED
 
-Theorem real_random_variable_sub :
+Theorem real_random_variable_sub:
     !p X Y. prob_space p /\ real_random_variable X p /\
             real_random_variable Y p ==> real_random_variable (\x. X x - Y x) p
 Proof
@@ -1433,7 +1433,7 @@ Proof
       rw [extreal_not_infty, extreal_sub_def] ]
 QED
 
-Theorem real_random_variable_ainv :
+Theorem real_random_variable_ainv:
     !p X. prob_space p /\ real_random_variable X p ==> real_random_variable (\x. -X x) p
 Proof
     rpt STRIP_TAC
@@ -1442,7 +1442,7 @@ Proof
  >> RW_TAC std_ss [sub_lzero]
 QED
 
-Theorem real_random_variable_cmul :
+Theorem real_random_variable_cmul:
     !p X r. prob_space p /\ real_random_variable X p ==>
             real_random_variable (\x. Normal r * X x) p
 Proof
@@ -1459,7 +1459,7 @@ Proof
  >> rw [extreal_mul_def]
 QED
 
-Theorem real_random_variable_cdiv :
+Theorem real_random_variable_cdiv:
     !p X c. prob_space p /\ real_random_variable X p /\ c <> 0 ==>
             real_random_variable (\x. X x / Normal c) p
 Proof
@@ -1467,7 +1467,7 @@ Proof
  >> MATCH_MP_TAC real_random_variable_cmul >> art []
 QED
 
-Theorem real_random_variable_sum :
+Theorem real_random_variable_sum:
     !p X (J :'index set). prob_space p /\ FINITE J /\
          (!i. i IN J ==> real_random_variable (X i) p) ==>
           real_random_variable (\x. SIGMA (\n. X n x) J) p
@@ -1488,7 +1488,7 @@ Proof
 QED
 
 (* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
-Theorem real_random_variable_fn_plus :
+Theorem real_random_variable_fn_plus:
     !p X. prob_space p /\ real_random_variable X p ==>
           real_random_variable (fn_plus X) p
 Proof
@@ -1504,7 +1504,7 @@ Proof
 QED
 
 (* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
-Theorem real_random_variable_fn_minus :
+Theorem real_random_variable_fn_minus:
     !p X. prob_space p /\ real_random_variable X p ==>
           real_random_variable (fn_minus X) p
 Proof
@@ -1519,7 +1519,7 @@ Proof
  >> MATCH_MP_TAC FN_MINUS_NOT_INFTY >> rw []
 QED
 
-Theorem real_random_variable_mul_indicator :
+Theorem real_random_variable_mul_indicator:
     !p E X. prob_space p /\ E IN events p /\ real_random_variable X p ==>
             real_random_variable (\x. X x * indicator_fn E x) p
 Proof
@@ -1532,7 +1532,7 @@ Proof
  >> METIS_TAC [mul_not_infty]
 QED
 
-Theorem random_variable_cong :
+Theorem random_variable_cong:
     !p X Y A. (!x. x IN p_space p ==> X x = Y x) ==>
               (random_variable X p A <=> random_variable Y p A)
 Proof
@@ -1553,7 +1553,7 @@ Proof
       rw [Once EXTENSION] >> METIS_TAC [] ]
 QED
 
-Theorem real_random_variable_cong :
+Theorem real_random_variable_cong:
     !p X Y. (!x. x IN p_space p ==> X x = Y x) ==>
             (real_random_variable X p <=> real_random_variable Y p)
 Proof
@@ -1675,7 +1675,7 @@ val finite_marginal_product_space_POW2 = store_thm
  >> RW_TAC std_ss [Once EXTENSION, IN_UNION, IN_PREIMAGE, IN_INTER]
  >> METIS_TAC []);
 
-Theorem finite_marginal_product_space_POW3 :
+Theorem finite_marginal_product_space_POW3:
     !p s1 s2 s3 X Y Z.
        prob_space p /\ FINITE (p_space p) /\ (POW (p_space p) = events p) /\
        random_variable X p (s1, POW s1) /\
@@ -1720,7 +1720,7 @@ val prob_x_eq_1_imp_prob_y_eq_0 = store_thm
  >> METIS_TAC [PROB_EMPTY]);
 
 (* NOTE: this is the last theorem in HVG's "probability_hvgScript.sml" *)
-Theorem distribution_x_eq_1_imp_distribution_y_eq_0 :
+Theorem distribution_x_eq_1_imp_distribution_y_eq_0:
     !X p x. prob_space p /\
             random_variable X p (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
            (distribution p X {x} = 1)
@@ -1780,7 +1780,7 @@ val joint_distribution_le_1 = store_thm
  >> MATCH_MP_TAC PROB_LE_1
  >> RW_TAC std_ss [IN_POW, INTER_SUBSET]);
 
-Theorem joint_distribution_not_infty :
+Theorem joint_distribution_not_infty:
     !p X Y a. prob_space p /\ (events p = POW (p_space p)) ==>
               joint_distribution p X Y a <> NegInf /\
               joint_distribution p X Y a <> PosInf
@@ -1812,7 +1812,7 @@ val joint_distribution_le2 = store_thm
  >> RW_TAC std_ss [IN_POW, INTER_SUBSET]
  >> RW_TAC std_ss [SUBSET_DEF, IN_PREIMAGE, IN_CROSS,IN_INTER]);
 
-Theorem distribution_not_infty :
+Theorem distribution_not_infty:
     !p X a. prob_space p /\ (events p = POW (p_space p)) ==>
             distribution p X a <> NegInf /\
             distribution p X a <> PosInf
@@ -1826,7 +1826,7 @@ Proof
  >> REWRITE_TAC [extreal_of_num_def, lt_infty]
 QED
 
-Theorem joint_conditional :
+Theorem joint_conditional:
     !p X Y a b. prob_space p /\ (events p = POW (p_space p)) ==>
                (joint_distribution p X Y (a CROSS b) =
                 conditional_distribution p Y X b a * distribution p X a)
@@ -1845,7 +1845,7 @@ QED
 
 (* add `distribution p Y b <> 0` as divide-by-zero is not
    supported by (new) extreals *)
-Theorem conditional_distribution_pos :
+Theorem conditional_distribution_pos:
     !p X Y a b. prob_space p /\ (events p = POW (p_space p)) /\
                 distribution p Y b <> 0 ==>
                 0 <= conditional_distribution p X Y a b
@@ -1872,7 +1872,7 @@ QED
 
 (* add `distribution p Y b <> 0` as divide-by-zero is not
    supported by (new) extreals *)
-Theorem conditional_distribution_le_1 :
+Theorem conditional_distribution_le_1:
     !p X Y a b. prob_space p /\ (events p = POW (p_space p)) /\
                 distribution p Y b <> 0 ==>
                 conditional_distribution p X Y a b <= 1
@@ -1900,7 +1900,7 @@ Proof
  >> fs [extreal_le_eq]
 QED
 
-Theorem marginal_distribution1 :
+Theorem marginal_distribution1:
     !p X Y a. prob_space p /\ FINITE (p_space p) /\ (events p = POW (p_space p)) ==>
              (distribution p X a =
               SIGMA (\x. joint_distribution p X Y (a CROSS {x})) (IMAGE Y (p_space p)))
@@ -1932,7 +1932,7 @@ Proof
  >> SET_TAC []
 QED
 
-Theorem marginal_distribution2 :
+Theorem marginal_distribution2:
     !p X Y b. prob_space p /\ FINITE (p_space p) /\ (events p = POW (p_space p)) ==>
              (distribution p Y b =
               SIGMA (\x. joint_distribution p X Y ({x} CROSS b)) (IMAGE X (p_space p)))
@@ -1964,7 +1964,7 @@ Proof
  >> SET_TAC []
 QED
 
-Theorem joint_distribution_sums_1 :
+Theorem joint_distribution_sums_1:
   !p X Y. prob_space p /\ FINITE (p_space p) /\ (events p = POW (p_space p)) ==>
          (SIGMA (\(x,y). joint_distribution p X Y {(x,y)})
                 ((IMAGE X (p_space p)) CROSS (IMAGE Y (p_space p))) = 1)
@@ -2011,7 +2011,7 @@ Proof
 QED
 
 (* added `!x. f x <> PosInf /\ f x <> NegInf` into antecedents *)
-Theorem joint_distribution_sum_mul1 :
+Theorem joint_distribution_sum_mul1:
     !p X Y f. prob_space p /\ FINITE (p_space p) /\
               (events p = POW (p_space p)) /\
               (!x. f x <> PosInf /\ f x <> NegInf) ==>
@@ -2125,7 +2125,7 @@ val integrable_from_square = store_thm
 
 (* In general, if X has a finite absolute moment of order k, then it has finite absolute
    moments of orders 1,2,...k-1 as well. [6, p.274] *)
-Theorem integrable_absolute_moments :
+Theorem integrable_absolute_moments:
     !p X n. prob_space p /\ real_random_variable X p /\
             integrable p (\x. (abs (X x)) pow n) ==>
             !m. m <= n ==> integrable p (\x. (abs (X x)) pow m)
@@ -2158,7 +2158,7 @@ val variance_alt = store_thm
   ``!p X. variance p X = expectation p (\x. (X x - expectation p X) pow 2)``,
     RW_TAC std_ss [variance_def, central_moment_def, moment_def]);
 
-Theorem variance_pos :
+Theorem variance_pos:
     !p X. prob_space p ==> 0 <= variance p X
 Proof
     RW_TAC std_ss [variance_alt, expectation_def, prob_space_def]
@@ -2166,7 +2166,7 @@ Proof
  >> RW_TAC std_ss [le_pow2]
 QED
 
-Theorem second_moment_pos :
+Theorem second_moment_pos:
     !p X a. prob_space p ==> 0 <= second_moment p X a
 Proof
     RW_TAC std_ss [second_moment_def, moment_def, expectation_def, prob_space_def]
@@ -2180,7 +2180,7 @@ QED
 
    `integrable p X` is not needed due to "integrable_from_square"
  *)
-Theorem variance_eq :
+Theorem variance_eq:
     !p X. prob_space p /\ real_random_variable X p /\
           integrable p (\x. X x pow 2) ==>
           variance p X = expectation p (\x. X x pow 2) - (expectation p X) pow 2
@@ -2282,7 +2282,7 @@ Proof
 QED
 
 (* A corollary: Var(X) is always less or equal than E[X^2] *)
-Theorem variance_le :
+Theorem variance_le:
     !p X. prob_space p /\ real_random_variable X p /\ integrable p (\x. X x pow 2) ==>
           variance p X <= expectation p (\x. X x pow 2)
 Proof
@@ -2316,7 +2316,7 @@ val finite_variance_imp_finite_second_moments = Q.prove (
  >> Q.EXISTS_TAC `expectation p X` >> art []);
 
 (* TODO: extend `Normal c` to all extreals (not possible for integral_cmul) *)
-Theorem expectation_cmul :
+Theorem expectation_cmul:
     !p X c. prob_space p /\ integrable p X ==>
             expectation p (\x. Normal c * X x) = Normal c * expectation p X
 Proof
@@ -2324,7 +2324,7 @@ Proof
  >> MATCH_MP_TAC integral_cmul >> art []
 QED
 
-Theorem expectation_cdiv :
+Theorem expectation_cdiv:
     !p X c. prob_space p /\ integrable p X /\ c <> 0 ==>
             expectation p (\x. X x / Normal c) = expectation p X / Normal c
 Proof
@@ -2333,7 +2333,7 @@ Proof
  >> MATCH_MP_TAC expectation_cmul >> art []
 QED
 
-Theorem expectation_pos :
+Theorem expectation_pos:
     !p X. prob_space p /\ (!x. x IN p_space p ==> 0 <= X x) ==>
           0 <= expectation p X
 Proof
@@ -2356,7 +2356,7 @@ Proof
 QED
 
 (* NOTE: the type of ‘c’ has changed from “:real” to “:extreal” *)
-Theorem expectation_const :
+Theorem expectation_const:
     !p c. prob_space p ==> expectation p (\x. c) = c
 Proof
     rpt STRIP_TAC
@@ -2375,7 +2375,7 @@ QED
 Theorem expectation_zero =
     Q.GEN ‘p’ (Q.SPECL [‘p’, ‘0’] expectation_const)
 
-Theorem variance_const :
+Theorem variance_const:
     !p c. prob_space p ==> variance p (\x. Normal c) = 0
 Proof
     rpt STRIP_TAC
@@ -2383,7 +2383,7 @@ Proof
  >> rw [extreal_pow_def, expectation_zero]
 QED
 
-Theorem expectation_sum :
+Theorem expectation_sum:
     !p X J.
         FINITE J /\ prob_space p /\ (!i. i IN J ==> integrable p (X i)) /\
        (!i. i IN J ==> real_random_variable (X i) p) ==>
@@ -2400,7 +2400,7 @@ Theorem variance_zero =
                        |> REWRITE_RULE [GSYM extreal_of_num_def]
                        |> Q.GEN ‘p’
 
-Theorem expectation_cong :
+Theorem expectation_cong:
     !p f g. prob_space p /\ (!x. x IN p_space p ==> f x = g x) ==>
             expectation p f = expectation p g
 Proof
@@ -2408,7 +2408,7 @@ Proof
  >> MATCH_MP_TAC integral_cong >> art []
 QED
 
-Theorem variance_cong :
+Theorem variance_cong:
     !p f g. prob_space p /\ (!x. x IN p_space p ==> f x = g x) ==>
             variance p f = variance p g
 Proof
@@ -2421,7 +2421,7 @@ Proof
 QED
 
 (* Deep lemma: all second moments are finite iff one of them is finite *)
-Theorem finite_second_moments_all :
+Theorem finite_second_moments_all:
     !p X. prob_space p /\ real_random_variable X p ==>
          (finite_second_moments p X <=> !r. second_moment p X (Normal r) < PosInf)
 Proof
@@ -2542,7 +2542,7 @@ Proof
       MATCH_MP_TAC integrable_const >> art [extreal_of_num_def, lt_infty] ]
 QED
 
-Theorem finite_second_moments_eq_finite_variance :
+Theorem finite_second_moments_eq_finite_variance:
     !p X. prob_space p /\ real_random_variable X p ==>
          (finite_second_moments p X <=> variance p X < PosInf)
 Proof
@@ -2600,7 +2600,7 @@ Proof
 QED
 
 (* alternative definition of `finite_second_moments` for easier verification *)
-Theorem finite_second_moments_alt :
+Theorem finite_second_moments_alt:
     !p X. prob_space p /\ real_random_variable X p ==>
          (finite_second_moments p X <=> second_moment p X 0 < PosInf)
 Proof
@@ -2616,7 +2616,7 @@ QED
 Theorem finite_second_moments_literally =
     REWRITE_RULE [second_moment_def, moment_def, sub_rzero] finite_second_moments_alt
 
-Theorem finite_second_moments_eq_integrable_square :
+Theorem finite_second_moments_eq_integrable_square:
     !p X. prob_space p /\ real_random_variable X p ==>
          (finite_second_moments p X <=> integrable p (\x. X x pow 2))
 Proof
@@ -2654,7 +2654,7 @@ Proof
 QED
 
 (* more general version *)
-Theorem finite_second_moments_eq_integrable_squares :
+Theorem finite_second_moments_eq_integrable_squares:
     !p X. prob_space p /\ real_random_variable X p ==>
          (finite_second_moments p X <=> !c. integrable p (\x. (X x - Normal c) pow 2))
 Proof
@@ -2699,7 +2699,7 @@ Proof
       METIS_TAC [integrable_imp_finite_expectation] ]
 QED
 
-Theorem bounded_imp_finite_second_moments :
+Theorem bounded_imp_finite_second_moments:
     !p X. prob_space p /\ random_variable X p Borel /\
          (?r. !x. x IN p_space p ==> abs (X x) <= Normal r) ==> finite_second_moments p X
 Proof
@@ -2799,7 +2799,7 @@ Proof
       REAL_ARITH_TAC ]
 QED
 
-Theorem finite_second_moments_imp_integrable :
+Theorem finite_second_moments_imp_integrable:
     !p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
           integrable p X
 Proof
@@ -2809,7 +2809,7 @@ Proof
 QED
 
 (* This theorem doesn't hold for general measure spaces (cf. integrable_bounded) *)
-Theorem bounded_imp_integrable :
+Theorem bounded_imp_integrable:
     !p X. prob_space p /\ random_variable X p Borel /\
          (?r. !x. x IN p_space p ==> abs (X x) <= Normal r) ==> integrable p X
 Proof
@@ -2828,7 +2828,7 @@ Proof
       Q.EXISTS_TAC  ‘Normal r’ >> rw [lt_infty, extreal_ainv_def] ]
 QED
 
-Theorem finite_second_moments_imp_finite_expectation :
+Theorem finite_second_moments_imp_finite_expectation:
     !p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
           expectation p X <> PosInf /\ expectation p X <> NegInf
 Proof
@@ -2837,7 +2837,7 @@ Proof
  >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []
 QED
 
-Theorem finite_second_moments_cmul :
+Theorem finite_second_moments_cmul:
     !p X c. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
             finite_second_moments p (\x. Normal c * X x)
 Proof
@@ -2861,7 +2861,7 @@ Proof
  >> rw [extreal_mul_def]
 QED
 
-Theorem finite_second_moments_ainv :
+Theorem finite_second_moments_ainv:
     !p X. prob_space p /\ real_random_variable X p /\ finite_second_moments p X ==>
           finite_second_moments p (\x. -X x)
 Proof
@@ -2872,7 +2872,7 @@ Proof
  >> MATCH_MP_TAC finite_second_moments_cmul >> art []
 QED
 
-Theorem finite_second_moments_cdiv :
+Theorem finite_second_moments_cdiv:
     !p X c. prob_space p /\ real_random_variable X p /\
             finite_second_moments p X /\ c <> 0 ==>
             finite_second_moments p (\x. X x / Normal c)
@@ -2881,7 +2881,7 @@ Proof
  >> MATCH_MP_TAC finite_second_moments_cmul >> art []
 QED
 
-Theorem finite_second_moments_cong :
+Theorem finite_second_moments_cong:
     !p X Y. prob_space p /\ (!x. x IN p_space p ==> X x = Y x) ==>
            (finite_second_moments p X <=> finite_second_moments p Y)
 Proof
@@ -2893,7 +2893,7 @@ Proof
 QED
 
 (* An easy corollary of Minkowski_inequality *)
-Theorem finite_second_moments_add :
+Theorem finite_second_moments_add:
     !p X Y. prob_space p /\
             real_random_variable X p /\ real_random_variable Y p /\
             finite_second_moments p X /\ finite_second_moments p Y ==>
@@ -2911,7 +2911,7 @@ Proof
  >> rw [L2_space_alt_integrable_square]
 QED
 
-Theorem finite_second_moments_sum :
+Theorem finite_second_moments_sum:
     !p X (J :'index set). prob_space p /\ FINITE J /\
          (!i. i IN J ==> real_random_variable (X i) p) /\
          (!i. i IN J ==> finite_second_moments p (X i)) ==>
@@ -2945,7 +2945,7 @@ Proof
       METIS_TAC [] ]
 QED
 
-Theorem finite_second_moments_sub :
+Theorem finite_second_moments_sub:
     !p X Y. prob_space p /\
             real_random_variable X p /\ real_random_variable Y p /\
             finite_second_moments p X /\ finite_second_moments p Y ==>
@@ -2965,7 +2965,7 @@ Proof
 QED
 
 (* An easy corollary of Cauchy_Schwarz_inequality *)
-Theorem finite_second_moments_imp_integrable_mul :
+Theorem finite_second_moments_imp_integrable_mul:
     !p X Y. prob_space p /\
             real_random_variable X p /\ real_random_variable Y p /\
             finite_second_moments p X /\ finite_second_moments p Y ==>
@@ -2978,7 +2978,7 @@ Proof
  >> rw [L2_space_alt_integrable_square]
 QED
 
-Theorem expectation_real_affine :
+Theorem expectation_real_affine:
     !p X c. prob_space p /\ real_random_variable X p /\ integrable p X /\
             c <> PosInf /\ c <> NegInf ==>
            (expectation p (\x. X x + c) = expectation p X + c)
@@ -2994,7 +2994,7 @@ Proof
  >> rw [integral_const, extreal_add_def, extreal_sub_def]
 QED
 
-Theorem expectation_normal :
+Theorem expectation_normal:
     !p X. prob_space p /\ integrable p X ==> ?r. expectation p X = Normal r
 Proof
     fs [prob_space_def, expectation_def, integrable_normal_integral]
@@ -3002,7 +3002,7 @@ QED
 
 Theorem expectation_finite = integrable_imp_finite_expectation
 
-Theorem variance_real_affine :
+Theorem variance_real_affine:
     !p X c. prob_space p /\ real_random_variable X p /\ integrable p X /\
             c <> PosInf /\ c <> NegInf ==> (variance p (\x. X x + c) = variance p X)
 Proof
@@ -3032,7 +3032,7 @@ Proof
  >> rw [extreal_ainv_def, extreal_not_infty]
 QED
 
-Theorem variance_cmul :
+Theorem variance_cmul:
     !p X c. prob_space p /\ real_random_variable X p /\
             finite_second_moments p X ==>
            (variance p (\x. Normal c * X x) = Normal (c pow 2) * variance p X)
@@ -3058,7 +3058,7 @@ Proof
  >> METIS_TAC [finite_second_moments_eq_integrable_squares]
 QED
 
-Theorem variance_cdiv :
+Theorem variance_cdiv:
     !p X c. prob_space p /\ real_random_variable X p /\
             finite_second_moments p X /\ c <> 0 ==>
            (variance p (\x. X x / Normal c) = variance p X / Normal (c pow 2))
@@ -3073,7 +3073,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Markov's inequality (probability version) *)
-Theorem prob_markov_inequality :
+Theorem prob_markov_inequality:
     !p X a c. prob_space p /\ integrable p X /\ 0 < c /\ a IN events p ==>
               prob p ({x | c <= abs (X x)} INTER a) <=
                 inv c * (expectation p (\x. abs (X x) * indicator_fn a x))
@@ -3083,7 +3083,7 @@ Proof
 QED
 
 (* The special version with `a = p_space p`, c.f. PROB_GSPEC for moving `a` outside *)
-Theorem prob_markov_ineq :
+Theorem prob_markov_ineq:
     !p X c. prob_space p /\ integrable p X /\ 0 < c ==>
             prob p ({x | c <= abs (X x)} INTER p_space p) <= inv c * expectation p (abs o X)
 Proof
@@ -3092,7 +3092,7 @@ Proof
 QED
 
 (* Chebyshev's inequality (probability version) *)
-Theorem chebyshev_inequality :
+Theorem chebyshev_inequality:
     !p X a t c. prob_space p /\ real_random_variable X p /\
                 finite_second_moments p X /\ 0 < t /\ a IN events p ==>
        prob p ({x | t <= abs (X x - Normal c)} INTER a) <=
@@ -3115,7 +3115,7 @@ Proof
 QED
 
 (* The special version with `a = p_space p` *)
-Theorem chebyshev_ineq :
+Theorem chebyshev_ineq:
     !p X t c. prob_space p /\ real_random_variable X p /\
               finite_second_moments p X /\ 0 < t ==>
          prob p ({x | t <= abs (X x - Normal c)} INTER p_space p) <=
@@ -3132,7 +3132,7 @@ Proof
 QED
 
 (* The special version with `a = p_space p` and `m = expectation p X` *)
-Theorem chebyshev_ineq_variance :
+Theorem chebyshev_ineq_variance:
     !p X t. prob_space p /\ real_random_variable X p /\
             finite_second_moments p X /\ 0 < t ==>
          prob p ({x | t <= abs (X x - expectation p X)} INTER p_space p) <=
@@ -3200,7 +3200,7 @@ QED
   -- A. N. Kolmogorov, "Foundations of the Theory of Probability." [1] *)
 
 (* 1. independence of two events: (DO NOT CHANGE) *)
-Definition indep_def :
+Definition indep_def:
     indep p a b = (a IN events p /\ b IN events p /\
                    (prob p (a INTER b) = prob p a * prob p b))
 End
@@ -3210,12 +3210,12 @@ End
    new definition based on real_topologyTheory.pairwise, users may use
   `pairwise (indep p) E` if possible (for any two different events in E).
  *)
-Definition pairwise_indep_events :
+Definition pairwise_indep_events:
     pairwise_indep_events p E (J :'index set) =
       pairwise (\i j. indep p (E i) (E j)) J
 End
 
-Theorem pairwise_indep_events_def :
+Theorem pairwise_indep_events_def:
     !p E (J :'index set).
        pairwise_indep_events p E J <=>
        !i j. i IN J /\ j IN J /\ i <> j ==> indep p (E i) (E j)
@@ -3224,26 +3224,26 @@ Proof
 QED
 
 (* 3. extension of `indep`: a sequence of total independent events *)
-Definition indep_events_def :
+Definition indep_events_def:
     indep_events p E (J :'index set) =
       !N. N SUBSET J /\ N <> {} /\ FINITE N ==>
          (prob p (BIGINTER (IMAGE E N)) = PI (prob p o E) N)
 End
 
 (* 4. independence of two sets/collections of events: (DO NOT CHANGE) *)
-Definition indep_families_def :
+Definition indep_families_def:
     indep_families p q r = !s t. s IN q /\ t IN r ==> indep p s t
 End
 
 Overload indep_sets = “indep_families”
 
 (* 5. extension of `indep_families`: pairwise independent sets/collections of events *)
-Definition pairwise_indep_sets :
+Definition pairwise_indep_sets:
     pairwise_indep_sets p A (J :'index set) =
       pairwise (\i j. indep_families p (A i) (A j)) J
 End
 
-Theorem pairwise_indep_sets_def :
+Theorem pairwise_indep_sets_def:
     !p A (J :'index set).
        pairwise_indep_sets p A J <=>
        !i j. i IN J /\ j IN J /\ i <> j ==> indep_families p (A i) (A j)
@@ -3252,14 +3252,14 @@ Proof
 QED
 
 (* 6. extension of `indep_families`: total independent sets/collections of events *)
-Definition indep_sets_def :
+Definition indep_sets_def:
     indep_sets p A (J :'index set) =
       !N. N SUBSET J /\ N <> {} /\ FINITE N ==>
          !E. E IN (N --> A) ==> (prob p (BIGINTER (IMAGE E N)) = PI (prob p o E) N)
 End
 
 (* 7. independence of two r.v.'s, added `INTER p_space p` after taking the PREIMAGE *)
-Definition indep_rv_def :
+Definition indep_rv_def:
     indep_rv (p :'a p_space) (X :'a -> 'b) (Y :'a -> 'b) s t =
       !a b. (a IN subsets s) /\ (b IN subsets t) ==>
             indep p ((PREIMAGE X a) INTER p_space p)
@@ -3269,12 +3269,12 @@ End
 Overload indep_vars = “indep_rv”
 
 (* 8. extension of `indep_rv`: pairwise independent random variables *)
-Definition pairwise_indep_vars :
+Definition pairwise_indep_vars:
     pairwise_indep_vars p X A (J :'index set) =
       pairwise (\i j. indep_rv p (X i) (X j) (A i) (A j)) J
 End
 
-Theorem pairwise_indep_vars_def :
+Theorem pairwise_indep_vars_def:
     !p X A (J :'index set).
        pairwise_indep_vars p X A J <=>
        !i j. i IN J /\ j IN J /\ i <> j ==> indep_rv p (X i) (X j) (A i) (A j)
@@ -3282,7 +3282,7 @@ Proof
     RW_TAC std_ss [pairwise_indep_vars, pairwise]
 QED
 
-Theorem pairwise_indep_vars_subset :
+Theorem pairwise_indep_vars_subset:
     !p X A (s :'index set) (t :'index set).
        pairwise_indep_vars p X A t /\ s SUBSET t ==>
        pairwise_indep_vars p X A s
@@ -3301,7 +3301,7 @@ QED
 
   old definition:
 
-Definition old_indep_vars_def :
+Definition old_indep_vars_def:
     old_indep_vars p X A (J :'index set) =
       !E. E IN (J --> (subsets o A)) ==>
           indep_events p (\n. (PREIMAGE (X n) (E n)) INTER p_space p) J
@@ -3309,7 +3309,7 @@ End
 
   new definition is moved to martingaleTheory.indep_functions_def
  *)
-Definition indep_vars_def :
+Definition indep_vars_def:
     indep_vars p X A (J :'index set) =
       !E N. N SUBSET J /\ N <> {} /\ FINITE N /\
             E IN (N --> subsets o A) ==>
@@ -3320,7 +3320,7 @@ End
 (* NOTE: If a set of r.v.'s is (totally) independent, so is any subset of them.
          With the new definition of ‘indep_vars’, this proof is very easy now.
  *)
-Theorem indep_vars_subset :
+Theorem indep_vars_subset:
     !p X A (s :'index set) (t :'index set).
        indep_vars p X A t /\ s SUBSET t ==> indep_vars p X A s
 Proof
@@ -3333,7 +3333,7 @@ QED
    a sigma-algebra (which can be actually weakened to ‘?x. x IN subsets (A n)’), or
    ring, semiring, algebra, etc.
  *)
-Theorem indep_vars_alt_indep_events :
+Theorem indep_vars_alt_indep_events:
     !p X A (J :'index set).
        (!n. n IN J ==> sigma_algebra (A n)) ==>
        (indep_vars p X A (J :'index set) <=>
@@ -3373,7 +3373,7 @@ QED
    It's sufficient that the increasing first n r.v.'s are mutually independent,
    and no need for arbitrary (non-empty) subset N of univ(:num).
  *)
-Theorem indep_vars_alt_univ :
+Theorem indep_vars_alt_univ:
     !p X A. prob_space p /\ (!n. sigma_algebra (A n)) /\
            (!n. random_variable (X n) p (A n)) ==>
        (indep_vars p X A univ(:num) <=>
@@ -3458,20 +3458,20 @@ val indep_function_def = Define
    {f | indep_families p (IMAGE (PREIMAGE (FST o f)) UNIV)
                          (IMAGE (PREIMAGE (SND o f)) (events p))}`;
 
-Theorem PROB_INDEP :
+Theorem PROB_INDEP:
   !p s t u. indep p s t /\ (u = s INTER t) ==> (prob p u = prob p s * prob p t)
 Proof
   RW_TAC std_ss [indep_def]
 QED
 
-Theorem INDEP :
+Theorem INDEP:
   !p a b. a IN events p /\ b IN events p /\
           prob p (a INTER b) = prob p a * prob p b ==> indep p a b
 Proof
   rw [indep_def]
 QED
 
-Theorem INDEP_EMPTY :
+Theorem INDEP_EMPTY:
     !p s. prob_space p /\ s IN events p ==> indep p {} s
 Proof
     RW_TAC std_ss [indep_def, EVENTS_EMPTY, PROB_EMPTY, INTER_EMPTY, mul_lzero]
@@ -3488,7 +3488,7 @@ val INDEP_SYM_EQ = store_thm
     rpt GEN_TAC >> EQ_TAC >> rpt STRIP_TAC
  >> MATCH_MP_TAC INDEP_SYM >> art []);
 
-Theorem INDEP_SPACE :
+Theorem INDEP_SPACE:
     !p s. prob_space p /\ s IN events p ==> indep p (p_space p) s
 Proof
     RW_TAC std_ss [indep_def, EVENTS_SPACE, PROB_UNIV, INTER_PSPACE, mul_lone]
@@ -3522,7 +3522,7 @@ val INDEP_REFL = store_thm (* the simplest "0-1 law" *)
  >> RW_TAC std_ss [extreal_mul_def, extreal_of_num_def, extreal_11]
  >> METIS_TAC [REAL_MUL_IDEMPOT]);
 
-Theorem INDEP_COMPL :
+Theorem INDEP_COMPL:
     !p s t. prob_space p /\ indep p s t ==> indep p s (p_space p DIFF t)
 Proof
     RW_TAC std_ss [indep_def, EVENTS_COMPL, PROB_COMPL]
@@ -3551,7 +3551,7 @@ Proof
  >> MATCH_MP_TAC INDEP_SYM >> art []
 QED
 
-Theorem INDEP_COMPL2 :
+Theorem INDEP_COMPL2:
     !p s t. prob_space p /\ indep p s t ==>
             indep p (p_space p DIFF s) (p_space p DIFF t)
 Proof
@@ -3563,7 +3563,7 @@ Proof
  >> MATCH_MP_TAC INDEP_SYM >> art []
 QED
 
-Theorem INDEP_DISJOINT_UNION :
+Theorem INDEP_DISJOINT_UNION:
     !p A B C. prob_space p /\ indep p A B /\ indep p A C /\ DISJOINT B C ==>
               indep p A (B UNION C)
 Proof
@@ -3592,7 +3592,7 @@ Proof
  >> CONJ_TAC >> rw [Once INDEP_SYM_EQ]
 QED
 
-Theorem INDEP_COUNTABLE_DUNION :
+Theorem INDEP_COUNTABLE_DUNION:
     !p A E. prob_space p /\ E IN events p /\ disjoint_family A /\
            (!i. indep p E (A i)) ==> indep p E (BIGUNION (IMAGE A univ(:num)))
 Proof
@@ -3635,7 +3635,7 @@ Proof
 QED
 
 (* total ==> pairwise independence (of events) *)
-Theorem total_imp_pairwise_indep_events :
+Theorem total_imp_pairwise_indep_events:
     !p E (J :'index set).
            (!n. n IN J ==> (E n) IN events p) /\ indep_events p E J ==>
             pairwise_indep_events p E J
@@ -3655,7 +3655,7 @@ Proof
 QED
 
 (* total ==> pairwise independence (of sets of events) *)
-Theorem total_imp_pairwise_indep_sets :
+Theorem total_imp_pairwise_indep_sets:
     !p A (J :'index set).
       (!n. n IN J ==> (A n) SUBSET events p) /\ indep_sets p A J ==>
        pairwise_indep_sets p A J
@@ -3693,7 +3693,7 @@ QED
    NOTE: added ‘prob_space p /\ !i. i IN J ==> sigma_algebra (A i)’ due to
          changes of ‘measurable’
  *)
-Theorem total_imp_pairwise_indep_vars :
+Theorem total_imp_pairwise_indep_vars:
     !p X A (J :'index set). prob_space p /\
         (!i. i IN J ==> random_variable (X i) p (A i)) /\
         (!i. i IN J ==> sigma_algebra (A i)) /\
@@ -3729,7 +3729,7 @@ Proof
 QED
 
 (* alternative definition of ‘indep_rv’ in ‘indep_vars’ *)
-Theorem indep_rv_alt_indep_vars :
+Theorem indep_rv_alt_indep_vars:
     !p X Y A B. random_variable (X :'a -> 'b) p A /\
                 random_variable (Y :'a -> 'b) p B ==>
                (indep_rv p X Y A B <=> indep_vars p (binary X Y) (binary A B) {0; 1})
@@ -4120,7 +4120,7 @@ Proof
 QED
 
 (* Corollary 3.5.3 of [3, p.37], Part II (futhermore, ...) *)
-Theorem INDEP_FAMILIES_SIGMA :
+Theorem INDEP_FAMILIES_SIGMA:
     !p A (M :'index set) N.
        prob_space p /\ (IMAGE A (M UNION N)) SUBSET events p /\
        indep_events p A (M UNION N) /\ DISJOINT M N /\ M <> {} /\ N <> {} ==>
@@ -4174,7 +4174,7 @@ Overload tail_algebra = “tail_algebra_of_rv”
   ([5, p.3] or [2, p.264]) under a different definition of "tail field" generated by
   `sigma_functions` (martingaleTheory).
  *)
-Theorem Kolmogorov_0_1_Law :
+Theorem Kolmogorov_0_1_Law:
     !p E. prob_space p /\ (!n. E n IN events p) /\ indep_events p E UNIV ==>
           !e. e IN subsets (tail_algebra p E) ==> (prob p e = 0) \/ (prob p e = 1)
 Proof
@@ -4392,14 +4392,14 @@ val covariance_def = Define
    `covariance p X Y =
       expectation p (\x. (X x - expectation p X) * (Y x - expectation p Y))`;
 
-Theorem covariance_self :
+Theorem covariance_self:
     !p X. covariance p X X = variance p X
 Proof
     RW_TAC std_ss [variance_alt, covariance_def, pow_2]
 QED
 
 (* i.e. `covariance p X Y` is zero if X and Y are uncorelated *)
-Theorem uncorrelated_thm :
+Theorem uncorrelated_thm:
     !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
             uncorrelated p X Y ==>
            (expectation p (\s. (X s - expectation p X) * (Y s - expectation p Y)) = 0)
@@ -4548,7 +4548,7 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
-Theorem uncorrelated_covariance :
+Theorem uncorrelated_covariance:
     !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
             uncorrelated p X Y ==> (covariance p X Y = 0)
 Proof
@@ -4556,7 +4556,7 @@ Proof
  >> MATCH_MP_TAC uncorrelated_thm >> art []
 QED
 
-Theorem uncorrelated_orthogonal :
+Theorem uncorrelated_orthogonal:
     !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
             (expectation p X = 0) /\ (expectation p Y = 0) ==>
             (uncorrelated p X Y <=> orthogonal p X Y)
@@ -4565,7 +4565,7 @@ Proof
 QED
 
 (* Fundamental relation of uncorrelated r.v.'s [2, p.108] *)
-Theorem variance_sum :
+Theorem variance_sum:
     !p X (J :'index set).
             prob_space p /\ FINITE J /\ (!i. i IN J ==> real_random_variable (X i) p) /\
             uncorrelated_vars p X J ==>
@@ -4997,7 +4997,7 @@ val expectation_indicator = store_thm
    remainders of `suminf (prob p o E)`, which the latter part is not easy to
    formalize as is.
  *)
-Theorem Borel_Cantelli_Lemma1 :
+Theorem Borel_Cantelli_Lemma1:
     !p E. prob_space p /\ (!n. E n IN events p) /\
           suminf (prob p o E) < PosInf ==> (prob p (limsup E) = 0)
 Proof
@@ -5077,7 +5077,7 @@ val finite_second_moments_indicator_fn = store_thm
  >> MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `1`
  >> METIS_TAC [PROB_LE_1, extreal_of_num_def, lt_infty]);
 
-Theorem variance_eq_indicator_fn :
+Theorem variance_eq_indicator_fn:
     !p s. prob_space p /\ s IN events p ==>
          (variance p (indicator_fn s) =
           expectation p (indicator_fn s) - (expectation p (indicator_fn s)) pow 2)
@@ -5097,7 +5097,7 @@ Proof
  >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []
 QED
 
-Theorem variance_le_indicator_fn :
+Theorem variance_le_indicator_fn:
     !p s. prob_space p /\ s IN events p ==>
           variance p (indicator_fn s) <= expectation p (indicator_fn s)
 Proof
@@ -5116,7 +5116,7 @@ Proof
 QED
 
 (* for indicator_fn r.v.'s, pairwise independence implies additive of variances *)
-Theorem variance_sum_indicator_fn :
+Theorem variance_sum_indicator_fn:
     !p E J. prob_space p /\ (!n. n IN J ==> (E n) IN events p) /\
             pairwise_indep_events p E J /\ FINITE J ==>
            (variance p (\x. SIGMA (\n. (indicator_fn o E) n x) J) =
@@ -5132,7 +5132,7 @@ Proof
 QED
 
 (* The harder part of Borel-Cantelli Lemma (of pairwise independence) *)
-Theorem Borel_Cantelli_Lemma2p :
+Theorem Borel_Cantelli_Lemma2p:
     !p E. prob_space p /\ (!n. (E n) IN events p) /\
           pairwise_indep_events p E univ(:num) /\
          (suminf (prob p o E) = PosInf) ==> (prob p (limsup E) = 1)
@@ -5527,7 +5527,7 @@ QED
 
    TODO: prove it directly without using Borel_Cantelli_Lemma2p
  *)
-Theorem Borel_Cantelli_Lemma2 :
+Theorem Borel_Cantelli_Lemma2:
     !p E. prob_space p /\ (!n. (E n) IN events p) /\
           indep_events p E univ(:num) /\
          (suminf (prob p o E) = PosInf) ==> (prob p (limsup E) = 1)
@@ -5538,7 +5538,7 @@ Proof
 QED
 
 (* An easy corollary of Borel-Cantelli Lemma [2, p.82] *)
-Theorem Borel_0_1_Law :
+Theorem Borel_0_1_Law:
     !p E. prob_space p /\ (!n. (E n) IN events p) /\
           pairwise_indep_events p E univ(:num) ==>
          (prob p (limsup E) = 0) \/ (prob p (limsup E) = 1)
@@ -5614,7 +5614,7 @@ Theorem converge_in_dist_def = cj 4 converge_def
 Theorem converge_AE = cj 1 converge_def
 
 (* The old definition based on LIM_SEQUENTIALLY *)
-Theorem converge_AE_def :
+Theorem converge_AE_def:
     !p X Y. (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
             ((X --> Y) (almost_everywhere p) <=>
              AE x::p. ((\n. real (X n x)) --> real (Y x)) sequentially)
@@ -5635,7 +5635,7 @@ QED
 Theorem converge_PR = cj 2 converge_def
 
 (* The old definition based on LIM_SEQUENTIALLY *)
-Theorem converge_PR_def :
+Theorem converge_PR_def:
     !p X Y. prob_space p /\
            (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
            ((X --> Y) (in_probability p) <=>
@@ -5696,7 +5696,7 @@ QED
  *)
 Theorem converge_LP = cj 3 converge_def
 
-Theorem converge_LP_def :
+Theorem converge_LP_def:
     !p X Y r. prob_space p /\
              (!n. real_random_variable (X n) p) /\ real_random_variable Y p /\
               0 < r /\ r <> PosInf ==>
@@ -5729,7 +5729,7 @@ Proof
 QED
 
 (* alternative definition of converge_LP based on absolute moment *)
-Theorem converge_LP_alt_absolute_moment :
+Theorem converge_LP_alt_absolute_moment:
    !p X Y k. prob_space p /\ (!n. real_random_variable (X n) p) /\
              real_random_variable Y p /\ 0 < k ==>
        ((X --> Y) (in_lebesgue (&k :extreal) p) <=>
@@ -5764,7 +5764,7 @@ Theorem converge_LP_alt_pow =
                   converge_LP_alt_absolute_moment
 
 (* Theorem 4.1.1 [1, p.69] (2) *)
-Theorem converge_AE_alt_sup :
+Theorem converge_AE_alt_sup:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p ==>
        ((X --> Y) (almost_everywhere p) <=>
@@ -5977,7 +5977,7 @@ Proof
 QED
 
 (* Theorem 4.1.1 [1, p.69] (2') *)
-Theorem converge_AE_alt_inf :
+Theorem converge_AE_alt_inf:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p ==>
        ((X --> Y) (almost_everywhere p) <=>
@@ -6096,7 +6096,7 @@ Proof
 QED
 
 (* Theorem 4.1.2 [1, p.70]: convergence a.e. implies convergence in pr. *)
-Theorem converge_AE_imp_PR :
+Theorem converge_AE_imp_PR:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p /\
            (X --> Y) (almost_everywhere p) ==> (X --> Y) (in_probability p)
@@ -6208,7 +6208,7 @@ Proof
 QED
 
 (* converge_AE_alt_sup restated by liminf, cf. PROB_LIMINF *)
-Theorem converge_AE_alt_liminf :
+Theorem converge_AE_alt_liminf:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p ==>
        ((X --> Y) (almost_everywhere p) <=>
@@ -6262,7 +6262,7 @@ QED
 
    Theorem 4.2.2 [1, p.77] (extended version), also see Borel_Cantelli_Lemma1.
  *)
-Theorem converge_AE_alt_limsup :
+Theorem converge_AE_alt_limsup:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p ==>
        ((X --> Y) (almost_everywhere p) <=>
@@ -6331,7 +6331,7 @@ Proof
  >> RW_TAC std_ss [sub_rzero]
 QED
 
-Theorem converge_AE_to_zero :
+Theorem converge_AE_to_zero:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p ==>
        ((X --> Y) (almost_everywhere p) <=>
@@ -6346,7 +6346,7 @@ Proof
  >> RW_TAC std_ss [converge_AE_alt_limsup, sub_rzero]
 QED
 
-Theorem converge_PR_to_zero :
+Theorem converge_PR_to_zero:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p ==>
        ((X --> Y) (in_probability p) <=>
@@ -6527,7 +6527,7 @@ Proof
  >> ASM_REWRITE_TAC [Once mul_comm]
 QED
 
-Theorem converge_AE_cong_full :
+Theorem converge_AE_cong_full:
     !p X Y A B m. (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) /\
                   (!x. x IN p_space p ==> A x = B x) ==>
                   ((X --> A) (almost_everywhere p) <=> (Y --> B) (almost_everywhere p))
@@ -6548,7 +6548,7 @@ Proof
       Q.EXISTS_TAC ‘MAX N' m’ >> rw [MAX_LE] ]
 QED
 
-Theorem converge_AE_cong :
+Theorem converge_AE_cong:
     !p X Y Z m. (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) ==>
                 ((X --> Z) (almost_everywhere p) <=> (Y --> Z) (almost_everywhere p))
 Proof
@@ -6557,7 +6557,7 @@ Proof
  >> Q.EXISTS_TAC ‘m’ >> rw []
 QED
 
-Theorem converge_PR_cong_full :
+Theorem converge_PR_cong_full:
     !p X Y A B m. (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) /\
                   (!x. x IN p_space p ==> A x = B x) ==>
                   ((X --> A) (in_probability p) <=> (Y --> B) (in_probability p))
@@ -6586,7 +6586,7 @@ Proof
       FIRST_X_ASSUM MATCH_MP_TAC >> art [] ]
 QED
 
-Theorem converge_PR_cong :
+Theorem converge_PR_cong:
     !p X Y Z m. (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) ==>
                 ((X --> Z) (in_probability p) <=> (Y --> Z) (in_probability p))
 Proof
@@ -6595,7 +6595,7 @@ Proof
  >> Q.EXISTS_TAC ‘m’ >> rw []
 QED
 
-Theorem converge_LP_cong :
+Theorem converge_LP_cong:
     !p X Y Z r. prob_space p /\ (!n x. x IN p_space p ==> X n x = Y n x) /\
                 0 < r /\ r <> PosInf ==>
                ((X --> Z) (in_lebesgue r p) <=> (Y --> Z) (in_lebesgue r p))
@@ -6627,7 +6627,7 @@ Proof
 QED
 
 (*
-Theorem WLLN_uncorrelated_L2 :
+Theorem WLLN_uncorrelated_L2:
 
     has been moved to examples/probability/large_numberTheory with improved statements.
  *)
@@ -6654,7 +6654,7 @@ Proof
  >> Q.EXISTS_TAC ‘0’ >> rw []
 QED
 
-Theorem converge_AE_alt_shift :
+Theorem converge_AE_alt_shift:
     !D p X Y. (X               --> Y) (almost_everywhere p) <=>
               ((\n. X (n + D)) --> Y) (almost_everywhere p)
 Proof
@@ -6679,7 +6679,7 @@ Proof
       Q.PAT_X_ASSUM ‘!n. N <= n ==> P’ (MP_TAC o (Q.SPEC ‘n - D’)) >> rw [] ]
 QED
 
-Theorem converge_PR_alt_shift :
+Theorem converge_PR_alt_shift:
     !D p X Y. (X               --> Y) (in_probability p) <=>
               ((\n. X (n + D)) --> Y) (in_probability p)
 Proof
@@ -6726,7 +6726,7 @@ Theorem converge_PR_shift =
                               |> (REWRITE_RULE [GSYM ADD1])
                               |> Q.GENL [‘p’, ‘X’, ‘Y’]
 
-Theorem converge_AE_const :
+Theorem converge_AE_const:
     !p c. prob_space p ==> ((\x n. c) --> (\x. c)) (almost_everywhere p)
 Proof
     rw [converge_AE, EXTREAL_LIM_SEQUENTIALLY, AE_DEF, IN_NULL_SET, METRIC_SAME]
@@ -6747,7 +6747,7 @@ Proof
  >> MATCH_MP_TAC converge_AE_const >> art []
 QED
 
-Theorem converge_PR_add_to_zero :
+Theorem converge_PR_add_to_zero:
     !p X Y. prob_space p /\
            (!n. real_random_variable (X n) p) /\
            (!n. real_random_variable (Y n) p) /\
@@ -6879,7 +6879,7 @@ Proof
  >> REWRITE_TAC [REAL_HALF_DOUBLE]
 QED
 
-Theorem converge_PR_add :
+Theorem converge_PR_add:
     !p X Y A B. prob_space p /\
                (!n. real_random_variable (X n) p) /\
                 real_random_variable A p /\ (X --> A) (in_probability p) /\
@@ -6925,14 +6925,14 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
-Theorem converge_PR_ainv_to_zero :
+Theorem converge_PR_ainv_to_zero:
     !p X. (X --> (\x. 0)) (in_probability p) ==>
           ((\n x. -X n x) --> (\x. 0)) (in_probability p)
 Proof
     rw [converge_PR, EXTREAL_LIM_SEQUENTIALLY]
 QED
 
-Theorem converge_PR_ainv :
+Theorem converge_PR_ainv:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p /\
             (X --> Y) (in_probability p) ==>
@@ -6964,7 +6964,7 @@ Proof
  >> MATCH_MP_TAC real_random_variable_sub >> art []
 QED
 
-Theorem converge_PR_sub :
+Theorem converge_PR_sub:
     !p X Y A B. prob_space p /\
                (!n. real_random_variable (X n) p) /\
                 real_random_variable A p /\ (X --> A) (in_probability p) /\
@@ -7000,7 +7000,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem converge_PR_to_limit :
+Theorem converge_PR_to_limit:
     !p X M m. prob_space p /\ (!n. real_random_variable (X n) p) /\
               (M --> m) sequentially /\
               ((\n x. X n x - Normal (M n)) --> (\x. 0)) (in_probability p) ==>
@@ -7057,7 +7057,7 @@ Proof
  >> Q.EXISTS_TAC ‘0’ >> rw [normal_real]
 QED
 
-Theorem converge_AE_add_to_zero :
+Theorem converge_AE_add_to_zero:
     !p X Y. prob_space p /\
            (!n. real_random_variable (X n) p) /\
            (!n. real_random_variable (Y n) p) /\
@@ -7109,7 +7109,7 @@ Proof
  >> MATCH_MP_TAC REAL_LT_ADD2 >> art []
 QED
 
-Theorem converge_AE_add :
+Theorem converge_AE_add:
     !p X Y A B. prob_space p /\
                (!n. real_random_variable (X n) p) /\
                 real_random_variable A p /\ (X --> A) (almost_everywhere p) /\
@@ -7155,7 +7155,7 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
-Theorem converge_AE_ainv_to_zero :
+Theorem converge_AE_ainv_to_zero:
     !p X. (!n. real_random_variable (X n) p) /\
           (X --> (\x. 0)) (almost_everywhere p) ==>
           ((\n x. -X n x) --> (\x. 0)) (almost_everywhere p)
@@ -7179,7 +7179,7 @@ Proof
  >> rw [extreal_ainv_def, extreal_mr1_normal]
 QED
 
-Theorem converge_AE_ainv :
+Theorem converge_AE_ainv:
     !p X Y. prob_space p /\ (!n. real_random_variable (X n) p) /\
             real_random_variable Y p /\
             (X --> Y) (almost_everywhere p) ==>
@@ -7211,7 +7211,7 @@ Proof
  >> MATCH_MP_TAC real_random_variable_sub >> art []
 QED
 
-Theorem converge_AE_sub :
+Theorem converge_AE_sub:
     !p X Y A B. prob_space p /\
                (!n. real_random_variable (X n) p) /\
                 real_random_variable A p /\ (X --> A) (almost_everywhere p) /\
@@ -7247,7 +7247,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem converge_AE_to_limit :
+Theorem converge_AE_to_limit:
     !p X M m. prob_space p /\ (!n. real_random_variable (X n) p) /\
               (M --> m) sequentially /\
               ((\n x. X n x - Normal (M n)) --> (\x. 0)) (almost_everywhere p) ==>
@@ -7305,7 +7305,7 @@ QED
 (*                  Advanced estimations of expectations                     *)
 (* ========================================================================= *)
 
-Theorem PROB_ZERO_AE :
+Theorem PROB_ZERO_AE:
     !p E. prob_space p /\ E IN events p /\ (prob p E = 0) ==> AE x::p. x NOTIN E
 Proof
     RW_TAC std_ss [AE_DEF, null_set_def]
@@ -7313,7 +7313,7 @@ Proof
  >> fs [prob_space_def, events_def, prob_def]
 QED
 
-Theorem PROB_ZERO_AE_EQ :
+Theorem PROB_ZERO_AE_EQ:
     !p E. prob_space p /\ E IN events p ==> (prob p E = 0 <=> AE x::p. x NOTIN E)
 Proof
     rpt STRIP_TAC
@@ -7333,7 +7333,7 @@ Proof
  >> MATCH_MP_TAC MEASURE_SPACE_INCREASING >> art []
 QED
 
-Theorem PROB_ONE_AE :
+Theorem PROB_ONE_AE:
     !p E. prob_space p /\ E IN events p /\ (prob p E = 1) ==> AE x::p. x IN E
 Proof
     RW_TAC std_ss [AE_DEF, null_set_def]
@@ -7348,7 +7348,7 @@ Proof
  >> MATCH_MP_TAC MEASURE_SPACE_COMPL >> art []
 QED
 
-Theorem PROB_ONE_AE_EQ :
+Theorem PROB_ONE_AE_EQ:
     !p E. prob_space p /\ E IN events p ==> (prob p E = 1 <=> AE x::p. x IN E)
 Proof
     rpt STRIP_TAC
@@ -7384,7 +7384,7 @@ Proof
 QED
 
 (* Theorem 3.2.1, Part I [2, p.45] *)
-Theorem expectation_bounds :
+Theorem expectation_bounds:
     !p X. prob_space p /\ real_random_variable X p ==>
           suminf (\n. prob p {x | x IN p_space p /\ &SUC n <= abs (X x)}) <=
           expectation p (abs o X) /\ expectation p (abs o X) <= 1 +
@@ -7929,7 +7929,7 @@ Proof
 QED
 
 (* Theorem 3.2.1, Part II [2, p.45] *)
-Theorem expectation_converge :
+Theorem expectation_converge:
     !p X. prob_space p /\ real_random_variable X p ==>
          (expectation p (abs o X) < PosInf <=>
           suminf (\n. prob p {x | x IN p_space p /\ &SUC n <= abs (X x)}) < PosInf)
@@ -7975,7 +7975,7 @@ Proof
 QED
 
 (* Theorem 3.2.2 [2, p.47], probability-specific version of integral_distr *)
-Theorem expectation_distribution :
+Theorem expectation_distribution:
     !p X f. prob_space p /\ random_variable X p Borel /\ f IN measurable Borel Borel ==>
            (expectation p (f o X) =
             integral (space Borel,subsets Borel,distribution p X) f) /\
@@ -7990,7 +7990,7 @@ Proof
  >> rw [SIGMA_ALGEBRA_BOREL]
 QED
 
-Theorem identical_distribution_alt_prob :
+Theorem identical_distribution_alt_prob:
     !p X E J i j s. identical_distribution p X E J /\
                     s IN subsets E /\ i IN J /\ j IN J ==>
         (prob p {x | x IN p_space p /\ X i x IN s} =
@@ -8004,7 +8004,7 @@ Proof
 QED
 
 (* alternative definition of identical distribution, see [3, p.62, Definition 5.4.1] *)
-Theorem identical_distribution_alt :
+Theorem identical_distribution_alt:
     !p X (J :'index set). prob_space p /\
          (!n. n IN J ==> random_variable (X n) p Borel) ==>
          (identical_distribution p X Borel J <=>
@@ -8072,7 +8072,7 @@ Proof
 QED
 
 (* Theorem 3.1.4 [2, p.37], slightly generalized *)
-Theorem random_variable_comp :
+Theorem random_variable_comp:
     !p X A f. random_variable X p A /\ f IN measurable A A ==>
               random_variable (f o X) p A
 Proof
@@ -8081,7 +8081,7 @@ Proof
  >> Q.EXISTS_TAC `A` >> art []
 QED
 
-Theorem identical_distribution_cong :
+Theorem identical_distribution_cong:
     !p X f. prob_space p /\ (!n. random_variable (X n) p Borel) /\
             identical_distribution p X Borel univ(:num) /\
             f IN measurable Borel Borel ==>
@@ -8112,7 +8112,7 @@ QED
    NOTE: fixes after k14: changed ‘identical_distribution p X Borel UNIV’
                                to ‘identical_distribution p X Borel J’
  *)
-Theorem identical_distribution_integrable_general :
+Theorem identical_distribution_integrable_general:
     !p X (J :'index set). prob_space p /\
          (!n. n IN J ==> random_variable (X n) p Borel) /\
           identical_distribution p X Borel J /\
@@ -8141,7 +8141,7 @@ Proof
  >> fs [prob_space_def]
 QED
 
-Theorem identical_distribution_integrable :
+Theorem identical_distribution_integrable:
     !p X. prob_space p /\ (!n. random_variable (X n) p Borel) /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
           !(n :num). integrable p (X n)
@@ -8162,7 +8162,7 @@ QED
 
          also removed unnecessary ‘J <> {}’ from antecedents.
  *)
-Theorem identical_distribution_expectation_general :
+Theorem identical_distribution_expectation_general:
     !p X (J :'index set). prob_space p /\
          (!n. n IN J ==> random_variable (X n) p Borel) /\
           identical_distribution p X Borel J ==>
@@ -8195,7 +8195,7 @@ Proof
  >> fs [prob_space_def]
 QED
 
-Theorem identical_distribution_expectation :
+Theorem identical_distribution_expectation:
     !p X. prob_space p /\ (!n. random_variable (X n) p Borel) /\
           identical_distribution p X Borel UNIV ==>
           !(n :num). expectation p (X n) = expectation p (X 0)
@@ -8208,7 +8208,7 @@ Proof
 QED
 
 (* Theorem 3.1.5 [2, p.38] *)
-Theorem fundamental_theorem_of_random_vectors :
+Theorem fundamental_theorem_of_random_vectors:
     !p X Y f. prob_space p /\
               random_variable X p Borel /\ random_variable Y p Borel /\
               f IN measurable (Borel CROSS Borel) Borel ==>
@@ -8219,7 +8219,7 @@ Proof
  >> fs [measure_space_def]
 QED
 
-Theorem indep_vars_comm : (* was: INDEP_RV_SYM *)
+Theorem indep_vars_comm: (* was: INDEP_RV_SYM *)
     !p X Y s t. indep_rv p X Y s t ==> indep_rv p Y X t s
 Proof
     RW_TAC std_ss [indep_rv_def]
@@ -8228,7 +8228,7 @@ Proof
 QED
 
 (* Theorem 3.3.1 [2, p.54], slightly generalized to arbitrary index set *)
-Theorem indep_vars_cong :
+Theorem indep_vars_cong:
     !p X B (J :'index set) f.
          indep_vars p (X :'index -> 'a -> 'b) B (J :'index set) /\
         (!n. n IN J ==> random_variable (X n) p (B n)) /\
@@ -8273,7 +8273,7 @@ Proof
 QED
 
 (* A specialized version of previous theorem for only two r.v.'s *)
-Theorem indep_rv_cong :
+Theorem indep_rv_cong:
     !p X Y A B f g. indep_rv p X Y A B /\
                     random_variable X p A /\ random_variable Y p B /\
                     f IN measurable A A /\ g IN measurable B B ==>
@@ -8298,7 +8298,7 @@ Proof
 QED
 
 (* Another version of "indep_vars_cong" for pairwise independent r.v.'s *)
-Theorem pairwise_indep_vars_cong :
+Theorem pairwise_indep_vars_cong:
     !p X B (J :'index set) f.
          pairwise_indep_vars p (X :'index -> 'a -> 'b) B (J :'index set) /\
         (!n. n IN J ==> random_variable (X n) p (B n)) /\
@@ -8618,7 +8618,7 @@ QED
 
    Note also that ‘indep_vars’ in concl. is overload of ‘indep_rv’.
  *)
-Theorem indep_functions_of_four_vars :
+Theorem indep_functions_of_four_vars:
     !p f g A B C D.
         prob_space p /\
         random_variable A p Borel /\
@@ -8652,7 +8652,7 @@ QED
 
    This is the last theorem in Isabelle's Independent_Family.thy but in extreals.
  *)
-Theorem indep_vars_expectation :
+Theorem indep_vars_expectation:
     !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
             indep_rv p X Y Borel Borel /\ integrable p X /\ integrable p Y ==>
             expectation p (\x. X x * Y x) = expectation p X * expectation p Y
@@ -8930,7 +8930,7 @@ Proof
 QED
 
 (* An easy corollary of Theorem 3.3.3 *)
-Theorem indep_vars_imp_uncorrelated :
+Theorem indep_vars_imp_uncorrelated:
     !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
             finite_second_moments p X /\ finite_second_moments p Y /\
             indep_rv p X Y Borel Borel ==> uncorrelated p X Y
@@ -8941,7 +8941,7 @@ Proof
  >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []
 QED
 
-Theorem pairwise_indep_vars_imp_uncorrelated :
+Theorem pairwise_indep_vars_imp_uncorrelated:
     !p X A (J :'index set). prob_space p /\
            (!i. i IN J ==> real_random_variable (X i) p) /\
            (!i. i IN J ==> finite_second_moments p (X i)) /\
@@ -8974,21 +8974,21 @@ QED
 (*                      Condition Probability Library                        *)
 (* ========================================================================= *)
 
-Theorem COND_PROB_ZERO :
+Theorem COND_PROB_ZERO:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\
            (prob p A = 0) /\ prob p B <> 0 ==> (cond_prob p A B = 0)
 Proof
     RW_TAC std_ss [cond_prob_def, PROB_ZERO_INTER, zero_div]
 QED
 
-Theorem COND_PROB_ZERO_INTER :
+Theorem COND_PROB_ZERO_INTER:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\
            (prob p (A INTER B) = 0) /\ prob p B <> 0 ==> (cond_prob p A B = 0)
 Proof
     RW_TAC std_ss [cond_prob_def, zero_div]
 QED
 
-Theorem COND_PROB_INCREASING :
+Theorem COND_PROB_INCREASING:
     !p A B C. prob_space p /\ A IN events p /\ B IN events p /\ C IN events p /\
               prob p C <> 0 ==> cond_prob p (A INTER B) C <= cond_prob p A C
 Proof
@@ -9002,7 +9002,7 @@ Proof
  >> MATCH_MP_TAC PROB_INCREASING >> art []
 QED
 
-Theorem COND_PROB_POS_IMP_PROB_NZ : (* was: POS_COND_PROB_IMP_POS_PROB *)
+Theorem COND_PROB_POS_IMP_PROB_NZ: (* was: POS_COND_PROB_IMP_POS_PROB *)
     !A B p. prob_space p /\ A IN events p /\ B IN events p /\
             0 < cond_prob p A B /\ prob p B <> 0 ==> prob p (A INTER B) <> 0
 Proof
@@ -9014,7 +9014,7 @@ Proof
  >> METIS_TAC [lt_refl]
 QED
 
-Theorem COND_PROB_BOUNDS :
+Theorem COND_PROB_BOUNDS:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\
             prob p B <> 0 ==> 0 <= cond_prob p A B /\ cond_prob p A B <= 1
 Proof
@@ -9039,7 +9039,7 @@ Proof
  >> ASM_SIMP_TAC std_ss [INTER_SUBSET]
 QED
 
-Theorem COND_PROB_FINITE : (* new *)
+Theorem COND_PROB_FINITE: (* new *)
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\
             prob p B <> 0 ==> cond_prob p A B <> PosInf /\ cond_prob p A B <> NegInf
 Proof
@@ -9052,7 +9052,7 @@ Proof
  >> Q.EXISTS_TAC `1` >> art [num_not_infty, GSYM lt_infty]
 QED
 
-Theorem COND_PROB_ITSELF :
+Theorem COND_PROB_ITSELF:
     !p B. prob_space p /\ B IN events p /\ prob p B <> 0 ==> (cond_prob p B B = 1)
 Proof
     RW_TAC real_ss [cond_prob_def, INTER_IDEMPOT]
@@ -9061,7 +9061,7 @@ Proof
  >> METIS_TAC [PROB_FINITE]
 QED
 
-Theorem prob_div_mul_refl :
+Theorem prob_div_mul_refl:
   !p A x. prob_space p /\ A IN events p /\ prob p A <> 0 ==>
           x / prob p A * prob p A = x
 Proof
@@ -9074,7 +9074,7 @@ Proof
   >> MATCH_MP_TAC div_mul_refl >> art []
 QED
 
-Theorem COND_PROB_COMPL :
+Theorem COND_PROB_COMPL:
     !p A B. prob_space p /\ A IN events p /\ COMPL A IN events p /\
             B IN events p /\ prob p B <> 0 ==>
            (cond_prob p (COMPL A) B = 1 - cond_prob p A B)
@@ -9108,7 +9108,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem COND_PROB_DIFF :
+Theorem COND_PROB_DIFF:
     !p A1 A2 B. prob_space p /\ A1 IN events p /\ A2 IN events p /\
                 B IN events p /\ prob p B <> 0 ==>
                (cond_prob p (A1 DIFF A2) B =
@@ -9152,7 +9152,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem COND_PROB_MUL_RULE :
+Theorem COND_PROB_MUL_RULE:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\ prob p B <> 0 ==>
            (prob p (A INTER B) = (prob p B) * (cond_prob p A B))
 Proof
@@ -9166,7 +9166,7 @@ Proof
  >> MATCH_MP_TAC div_mul_refl >> art []
 QED
 
-Theorem COND_PROB_MUL_EQ :
+Theorem COND_PROB_MUL_EQ:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\
             prob p A <> 0 /\ prob p B <> 0 ==>
            (cond_prob p A B * prob p B = cond_prob p B A * prob p A)
@@ -9184,7 +9184,7 @@ Proof
  >- simp[prob_div_mul_refl] >> rw[]
 QED
 
-Theorem COND_PROB_UNION :
+Theorem COND_PROB_UNION:
     !p A1 A2 B.
        prob_space p /\ A1 IN events p /\ A2 IN events p /\ B IN events p /\
        prob p B <> 0 ==>
@@ -9240,7 +9240,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem COND_PROB_FINITE_ADDITIVE :
+Theorem COND_PROB_FINITE_ADDITIVE:
     !p A B n s. prob_space p /\ B IN events p /\ A IN ((count n) -> events p) /\
                 (s = BIGUNION (IMAGE A (count n))) /\ prob p B <> 0 /\
                 (!a b. a <> b ==> DISJOINT (A a) (A b)) ==>
@@ -9285,7 +9285,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem BAYES_RULE :
+Theorem BAYES_RULE:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\
             prob p A <> 0 /\ prob p B <> 0 ==>
            (cond_prob p B A = (cond_prob p A B) * (prob p B) / (prob p A))
@@ -9309,7 +9309,7 @@ Proof
  >> REWRITE_TAC [Once INTER_COMM]
 QED
 
-Theorem TOTAL_PROB_SIGMA :
+Theorem TOTAL_PROB_SIGMA:
     !p A B s. prob_space p /\ A IN events p /\ FINITE s /\
              (!x. x IN s ==> B x IN events p /\ prob p (B x) <> 0) /\
              (!a b. a IN s /\ b IN s /\ ~(a = b) ==> DISJOINT (B a) (B b)) /\
@@ -9337,7 +9337,7 @@ Proof
  >> RW_TAC std_ss [EVENTS_INTER, INTER_IDEMPOT]
 QED
 
-Theorem BAYES_RULE_GENERAL_SIGMA :
+Theorem BAYES_RULE_GENERAL_SIGMA:
     !p A B s k. prob_space p /\ A IN events p /\ prob p A <> 0 /\ FINITE s /\
         (!x . x IN s ==> B x IN events p /\ prob p (B x) <> 0) /\
          k IN s /\ (!a b. a IN s /\ b IN s /\ ~(a = b) ==> DISJOINT (B a) (B b)) /\
@@ -9350,7 +9350,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem COND_PROB_ADDITIVE :
+Theorem COND_PROB_ADDITIVE:
     !p A B s. prob_space p /\ FINITE s /\ B IN events p /\
              (!x. x IN s ==> A x IN events p) /\ prob p B <> 0 /\
              (!x y. x IN s /\ y IN s /\ x <> y ==> DISJOINT (A x) (A y)) /\
@@ -9377,7 +9377,7 @@ Proof
  >> RW_TAC std_ss [INTER_IDEMPOT, EVENTS_INTER]
 QED
 
-Theorem COND_PROB_SWAP :
+Theorem COND_PROB_SWAP:
     !p A B C.
        prob_space p /\ A IN events p /\ B IN events p /\ C IN events p /\
        prob p (B INTER C) <> 0 /\ prob p (A INTER C) <> 0 ==>
@@ -9408,7 +9408,7 @@ Proof
  >> RW_TAC std_ss [real_div, REAL_MUL_LINV, REAL_MUL_LID, REAL_MUL_RID]
 QED
 
-Theorem PROB_INTER_SPLIT :
+Theorem PROB_INTER_SPLIT:
     !p A B C.
        prob_space p /\ A IN events p /\ B IN events p /\ C IN events p /\
        prob p (B INTER C) <> 0 ==>
@@ -9436,7 +9436,7 @@ Proof
  >> RW_TAC std_ss [real_div, REAL_MUL_LINV, REAL_MUL_LID, REAL_MUL_RID]
 QED
 
-Theorem COND_PROB_INTER_SPLIT :
+Theorem COND_PROB_INTER_SPLIT:
     !p A B C.
         prob_space p /\ A IN events p /\ B IN events p /\ C IN events p /\
         prob p (B INTER C) <> 0 ==>
@@ -9467,7 +9467,7 @@ QED
 (*  Additional theorems of conditional probabilities on independent events   *)
 (* ========================================================================= *)
 
-Theorem indep_alt_cond_prob :
+Theorem indep_alt_cond_prob:
     !p A B. prob_space p /\ A IN events p /\ B IN events p /\ prob p B <> 0 ==>
            (indep p A B <=> cond_prob p A B = prob p A)
 Proof
@@ -9484,7 +9484,7 @@ QED
 (* ========================================================================= *)
 
 (* extreal version, was: pdf *)
-Definition prob_density_function_def :
+Definition prob_density_function_def:
     prob_density_function p X = RN_deriv (distribution p X) ext_lborel
 End
 Overload pdf[local] = “prob_density_function”
@@ -9492,7 +9492,7 @@ Overload pdf[local] = “prob_density_function”
 (* local backward compatibility *)
 Theorem pdf_def[local] = prob_density_function_def
 
-Theorem pdf_le_pos :
+Theorem pdf_le_pos:
     !p X x. prob_space p /\ random_variable X p Borel /\
             distribution p X << ext_lborel ==> 0 <= pdf p X x
 Proof
@@ -9510,7 +9510,7 @@ Proof
  >> METIS_TAC [SPACE_BOREL, IN_UNIV]
 QED
 
-Theorem expectation_pdf_1 :
+Theorem expectation_pdf_1:
     !p X. prob_space p /\ random_variable X p Borel /\
           distribution p X << ext_lborel ==>
           expectation ext_lborel (pdf p X) = 1
@@ -9552,7 +9552,7 @@ QED
 (*  Two canonical probability spaces                                         *)
 (* ========================================================================= *)
 
-Theorem prob_space_lborel_01 :
+Theorem prob_space_lborel_01:
     prob_space (restrict_space lborel (interval [0,1]))
 Proof
     rw [prob_space_def]
@@ -9564,7 +9564,7 @@ Proof
         lambda_closed_interval]
 QED
 
-Theorem prob_space_ext_lborel_01 :
+Theorem prob_space_ext_lborel_01:
     prob_space (restrict_space ext_lborel {x | 0 <= x /\ x <= 1})
 Proof
     rw [prob_space_def]
@@ -9592,7 +9592,7 @@ Proof
       Q.EXISTS_TAC ‘Normal x’ >> rw [] ]
 QED
 
-Theorem existence_of_prod_prob_space :
+Theorem existence_of_prod_prob_space:
     !p1 p2. prob_space p1 /\ prob_space p2 ==>
             ?p. prob_space p /\
                 !e1 e2. e1 IN events p1 /\ e2 IN events p2 ==>

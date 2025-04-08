@@ -59,7 +59,7 @@ val cos_ser =
 
 val exp_ser = “\n. inv(&(FACT n))”;
 
-Theorem exp :
+Theorem exp:
     !x. exp(x) = suminf (\n. (^exp_ser) n * (x pow n))
 Proof
     REWRITE_TAC [exp_def, suminf_univ]
@@ -75,7 +75,7 @@ val sin = new_definition("sin",
 (* Show the series for exp converges, using the ratio test                   *)
 (*---------------------------------------------------------------------------*)
 
-Theorem EXP_CONVERGES :
+Theorem EXP_CONVERGES:
     !x. (\n. (^exp_ser) n * (x pow n)) sums exp(x)
 Proof
     RW_TAC std_ss [Once REAL_MUL_COMM, GSYM real_div]
@@ -477,7 +477,7 @@ val EXP_TOTAL = store_thm("EXP_TOTAL",
     MATCH_MP_TAC REAL_LT_IMP_NE THEN ASM_REWRITE_TAC[]]);
 
 (* recovered from transc.ml *)
-Theorem REAL_EXP_BOUND_LEMMA :
+Theorem REAL_EXP_BOUND_LEMMA:
     !x. &0 <= x /\ x <= inv(&2) ==> exp(x) <= &1 + &2 * x
 Proof
   GEN_TAC THEN STRIP_TAC THEN
@@ -650,7 +650,7 @@ val LN_LT_X = store_thm("LN_LT_X",
   REWRITE_TAC[REAL_LT_RADD, REAL_LT_01] THEN
   REWRITE_TAC[REAL_ADD_LID, REAL_LE_REFL]);
 
-Theorem LN_POS_LT :
+Theorem LN_POS_LT:
     !(x :real). 1 < x ==> 0 < ln x
 Proof
     RW_TAC std_ss [GSYM LN_1]
@@ -659,7 +659,7 @@ Proof
  >> RW_TAC std_ss [LN_MONO_LT]
 QED
 
-Theorem LN_POS :
+Theorem LN_POS:
     !(x :real). 1 <= x ==> 0 <= ln x
 Proof
     rpt STRIP_TAC
@@ -668,7 +668,7 @@ Proof
  >> MATCH_MP_TAC LN_POS_LT >> art []
 QED
 
-Theorem LN_NEG_LT :
+Theorem LN_NEG_LT:
     !(x :real). 0 < x /\ x < 1 ==> ln x < 0
 Proof
     rpt STRIP_TAC
@@ -685,7 +685,7 @@ Proof
  >> MATCH_MP_TAC LN_POS_LT >> art []
 QED
 
-Theorem LN_NEG :
+Theorem LN_NEG:
     !(x :real). 0 < x /\ x <= 1 ==> ln x <= 0
 Proof
     rpt STRIP_TAC
@@ -716,7 +716,7 @@ Definition root:
     root(n) x = @u. (&0 < x ==> &0 < u) /\ (u pow n = x)
 End
 
-Theorem sqrt :
+Theorem sqrt:
     !x. sqrt(x) = root(2) x
 Proof
     REWRITE_TAC [sqrt_def, root]
@@ -786,7 +786,7 @@ val ROOT_POW_POS = store_thm("ROOT_POW_POS",
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[ROOT_0] THEN
     MATCH_ACCEPT_TAC POW_0]);
 
-Theorem ROOT_11 :
+Theorem ROOT_11:
     !n x y. &0 <= x /\ &0 <= y /\ root(SUC n) x = root(SUC n) y ==> x = y
 Proof
     rpt STRIP_TAC
@@ -823,7 +823,7 @@ val ROOT_POS = store_thm("ROOT_POS",
     POP_ASSUM ACCEPT_TAC,
     POP_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[ROOT_0, REAL_LE_REFL]]);
 
-Theorem ROOT_POS_UNIQ :
+Theorem ROOT_POS_UNIQ:
    !n x y. &0 <= x /\ &0 <= y /\ (y pow (SUC n) = x)
            ==> (root (SUC n) x = y)
 Proof
@@ -832,7 +832,7 @@ Proof
   REWRITE_TAC[POW_ROOT_POS]
 QED
 
-Theorem ROOT_MUL :
+Theorem ROOT_MUL:
    !n x y. &0 <= x /\ &0 <= y
            ==> (root(SUC n) (x * y) = root(SUC n) x * root(SUC n) y)
 Proof
@@ -844,7 +844,7 @@ Proof
    IMP_RES_TAC ROOT_POW_POS THEN ASM_REWRITE_TAC[]]
 QED
 
-Theorem ROOT_INV :
+Theorem ROOT_INV:
    !n x. &0 <= x ==> (root(SUC n) (inv x) = inv(root(SUC n) x))
 Proof
  REPEAT STRIP_TAC THEN MATCH_MP_TAC ROOT_POS_UNIQ THEN REPEAT CONJ_TAC THENL
@@ -860,7 +860,7 @@ Proof
       THEN ASM_REWRITE_TAC[REAL_INV_0,POW_0]]]
 QED
 
-Theorem ROOT_DIV :
+Theorem ROOT_DIV:
    !n x y. &0 <= x /\ &0 <= y
            ==> (root(SUC n) (x / y) = root(SUC n) x / root(SUC n) y)
 Proof
@@ -872,7 +872,7 @@ Proof
 QED
 
 (* added ‘n’ into quantifiers *)
-Theorem ROOT_MONO_LE :
+Theorem ROOT_MONO_LE:
    !n x y. &0 <= x /\ x <= y ==> root(SUC n) x <= root(SUC n) y
 Proof
   REPEAT STRIP_TAC THEN SUBGOAL_THEN (Term`&0 <= y`) ASSUME_TAC THENL
@@ -887,7 +887,7 @@ Proof
   ASM_REWRITE_TAC[NOT_SUC] THEN MATCH_MP_TAC ROOT_POS THEN ASM_REWRITE_TAC[]
 QED
 
-Theorem ROOT_MONO_LE_EQ :
+Theorem ROOT_MONO_LE_EQ:
    !n x y. &0 <= x /\ &0 <= y ==> (root (SUC n) x <= root (SUC n) y <=> x <= y)
 Proof
     rpt STRIP_TAC
@@ -913,7 +913,7 @@ Proof
      ASM_REWRITE_TAC [ADD_CLAUSES]]
 QED
 
-Theorem SQRT_EVEN_POW2 :
+Theorem SQRT_EVEN_POW2:
     !n. EVEN n ==> (sqrt(&2 pow n) = &2 pow (n DIV 2))
 Proof
   GEN_TAC THEN REWRITE_TAC[EVEN_MOD] THEN DISCH_TAC THEN
@@ -926,7 +926,7 @@ Proof
    THEN REFL_TAC]
 QED
 
-Theorem REAL_DIV_SQRT :
+Theorem REAL_DIV_SQRT:
     !x. &0 <= x ==> (x / sqrt(x) = sqrt(x))
 Proof
   GEN_TAC THEN ASM_CASES_TAC (Term`x = &0`) THENL
@@ -1792,7 +1792,7 @@ Proof
   REWRITE_TAC[GSYM POW_2, SIN_CIRCLE, GSYM REAL_INV_1OVER]
 QED
 
-Theorem TAN_TOTAL_LEMMA :
+Theorem TAN_TOTAL_LEMMA:
   !y. &0 < y ==> ?x. &0 < x /\ x < pi / &2 /\ y < tan(x)
 Proof
   GEN_TAC THEN DISCH_TAC THEN
@@ -2222,7 +2222,7 @@ val EXT_CONV =  SYM o uncurry X_FUN_EQ_CONV o
 
 val _ = Parse.hide "B";
 
-Theorem MCLAURIN :
+Theorem MCLAURIN:
    !f diff h n.
     &0 < h /\ 0 < n /\ (diff(0) = f) /\
     (!m t. m < n /\ &0 <= t /\ t <= h ==>
@@ -2499,7 +2499,7 @@ QED
 (* Simple strong form if a function is differentiable everywhere.            *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem MCLAURIN_ALL_LT :
+Theorem MCLAURIN_ALL_LT:
    !f diff.
       (diff 0 = f) /\
       (!m x. ((diff m) diffl (diff(SUC m) x)) x)
@@ -2530,7 +2530,7 @@ Proof
     THEN REAL_ARITH_TAC]
 QED
 
-Theorem MCLAURIN_ZERO :
+Theorem MCLAURIN_ZERO:
    !diff n x. (x = &0) /\ 0 < n ==>
        (sum(0,n) (\m. (diff m (&0) / &(FACT m)) * x pow m) = diff 0 (&0))
 Proof
@@ -2567,7 +2567,7 @@ Proof
     EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]]
 QED
 
-Theorem MCLAURIN_ALL_LE :
+Theorem MCLAURIN_ALL_LE:
    !f diff.
       (diff 0 = f) /\
       (!m x. ((diff m) diffl (diff(SUC m) x)) x)
@@ -2607,7 +2607,7 @@ Proof
   REWRITE_TAC[DIFF_EXP]
 QED
 
-Theorem MCLAURIN_EXP_LT :
+Theorem MCLAURIN_EXP_LT:
    !x n. ~(x = &0) /\ 0 < n
          ==> ?t. &0 < abs(t) /\
                  abs(t) < abs(x) /\
@@ -2623,7 +2623,7 @@ Proof
   THEN REFL_TAC
 QED
 
-Theorem MCLAURIN_EXP_LE :
+Theorem MCLAURIN_EXP_LE:
    !x n. ?t. abs(t) <= abs(x) /\
              (exp(x) = sum(0,n)(\m. x pow m / &(FACT m)) +
                        (exp(t) / &(FACT n)) * x pow n)
@@ -2710,7 +2710,7 @@ val rpow = rpow_def;
 
 (* Properties of ‘powr’ / ‘rpow’ *)
 
-Theorem GEN_RPOW :
+Theorem GEN_RPOW:
     !a n. 0 < a ==> (a pow n = a rpow &n)
 Proof
     rw [rpow, powr_lemma]
@@ -2726,21 +2726,21 @@ val  RPOW_SUC_N = store_thm
        RW_TAC std_ss [GEN_RPOW]) ;
 
 (* NOTE: removed ‘0 < a’ under the new definition *)
-Theorem RPOW_0 :
+Theorem RPOW_0:
     !a. a rpow &0 = &1
 Proof
     rw [powr_def]
 QED
 
 (* NOTE: removed ‘0 < a’ under the new definition *)
-Theorem RPOW_1 :
+Theorem RPOW_1:
     !a. a rpow &1 = a
 Proof
     rw [powr_def]
 QED
 
 (* NOTE: removed ‘0 < a’ (even under the old definition) *)
-Theorem ONE_RPOW :
+Theorem ONE_RPOW:
     !a. 1 rpow a = 1
 Proof
     rw [rpow, LN_1, EXP_0]
@@ -2752,7 +2752,7 @@ val  RPOW_POS_LT= store_thm
               RW_TAC std_ss [rpow, EXP_POS_LT]);
 
 (* NOTE: the antecedent has changed from ‘0 <> a’ to ‘0 < a’ *)
-Theorem RPOW_NZ :
+Theorem RPOW_NZ:
     !a b. 0 < a ==> a rpow b <> 0
 Proof
     RW_TAC std_ss [rpow, EXP_NZ]
@@ -2764,14 +2764,14 @@ val  LN_RPOW= store_thm
  RW_TAC std_ss [rpow,LN_EXP]);
 
 (* NOTE: added antecedent ‘0 < a’ under the new definition *)
-Theorem RPOW_ADD :
+Theorem RPOW_ADD:
     !a b c. 0 < a ==> a rpow (b + c)= (a rpow  b)*(a rpow  c)
 Proof
     RW_TAC std_ss [rpow, EXP_ADD, REAL_RDISTRIB]
 QED
 
 (* NOTE: added antecedent ‘0 < a’ under the new definition *)
-Theorem RPOW_ADD_MUL :
+Theorem RPOW_ADD_MUL:
     !a b c. 0 < a ==> a rpow (b + c)* a rpow (-b)= (a rpow c)
 Proof
  RW_TAC std_ss [rpow, REAL_RDISTRIB, GSYM EXP_ADD]THEN
@@ -2784,13 +2784,13 @@ Proof
 QED
 
 (* NOTE: added antecedent ‘0 < a’ under the new definition *)
-Theorem RPOW_SUB :
+Theorem RPOW_SUB:
     !a b c. 0 < a ==> a rpow (b - c) = (a rpow b)/(a rpow c)
 Proof
     RW_TAC std_ss [rpow, REAL_SUB_RDISTRIB, EXP_SUB]
 QED
 
-Theorem RPOW_DIV :
+Theorem RPOW_DIV:
     !a b c. 0 < a /\ 0 < b ==> ((a/b) rpow  c = (a rpow c)/(b rpow c))
 Proof
     rpt STRIP_TAC
@@ -2804,7 +2804,7 @@ val  RPOW_INV= store_thm
 
 RW_TAC real_ss [rpow, REAL_INV_1OVER, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB, LN_1, EXP_0]);
 
-Theorem RPOW_MUL :
+Theorem RPOW_MUL:
     !a b c. 0 < a /\ 0 < b ==> (((a*b) rpow c) = (a rpow c)*(b rpow c))
 Proof
     rpt STRIP_TAC
@@ -2812,7 +2812,7 @@ Proof
  >> RW_TAC std_ss [rpow, LN_MUL, REAL_LDISTRIB, EXP_ADD]
 QED
 
-Theorem RPOW_RPOW :
+Theorem RPOW_RPOW:
     !a b c. 0 < a ==> ((a rpow b) rpow c = a rpow (b*c))
 Proof
     rpt STRIP_TAC
@@ -2821,7 +2821,7 @@ Proof
  >> PROVE_TAC [REAL_MUL_COMM]
 QED
 
-Theorem RPOW_LT :
+Theorem RPOW_LT:
    !(a:real) (b:real) (c:real). 1 < a ==> (a rpow b < a rpow c <=> b < c)
 Proof
     rpt STRIP_TAC
@@ -2849,7 +2849,7 @@ Proof
             RW_TAC real_ss []]
 QED
 
-Theorem RPOW_LE :
+Theorem RPOW_LE:
     !a b c. 1 < a ==> (a rpow b <= a rpow c <=> b <= c)
 Proof
     rpt STRIP_TAC
@@ -2878,7 +2878,7 @@ Proof
  RW_TAC real_ss []]
 QED
 
-Theorem BASE_RPOW_LE :
+Theorem BASE_RPOW_LE:
    !a b c. 0 < a /\ 0 < c /\ 0 < b ==> (a rpow b <= c rpow b <=> a <= c)
 Proof
 RW_TAC std_ss [rpow, EXP_MONO_LE] THEN
@@ -2890,7 +2890,7 @@ KNOW_TAC`` (((b:real) * ln a) <= ((b:real) * ln c)) <=> ((ln a <= ln c))`` THENL
   RW_TAC real_ss [LN_MONO_LE]]
 QED
 
-Theorem BASE_RPOW_LT :
+Theorem BASE_RPOW_LT:
    !a b c. 0 < a /\ 0 < c /\ 0 < b ==> (a rpow b < c rpow b <=> a < c)
 Proof
  RW_TAC std_ss [rpow, EXP_MONO_LT]  THEN
@@ -2902,7 +2902,7 @@ Proof
        RW_TAC real_ss [LN_MONO_LT] ]
 QED
 
-Theorem RPOW_UNIQ_BASE :
+Theorem RPOW_UNIQ_BASE:
    !a b c. 0 < a /\ 0 < c /\ 0 <> b /\ (a rpow b = c rpow b) ==> (a = c)
 Proof
     rpt STRIP_TAC
@@ -2916,7 +2916,7 @@ Proof
      FULL_SIMP_TAC real_ss[REAL_EQ_MUL_LCANCEL]
 QED
 
-Theorem RPOW_UNIQ_EXP :
+Theorem RPOW_UNIQ_EXP:
    !a b c. 1 < a /\ 0 < c /\ 0 < b /\ (a rpow b = a rpow c) ==> (b = c)
 Proof
     rpt STRIP_TAC
@@ -2948,7 +2948,7 @@ Proof
  FULL_SIMP_TAC real_ss[REAL_POS_NZ] ]
 QED
 
-Theorem RPOW_DIV_BASE :
+Theorem RPOW_DIV_BASE:
    !x t. 0 < x ==> ((x rpow t)/x = x rpow (t-1))
 Proof
 RW_TAC std_ss [rpow, REAL_SUB_RDISTRIB, EXP_SUB, REAL_MUL_LID] THEN
@@ -2960,7 +2960,7 @@ QED
 (* Convert ‘root’ to ‘rpow’,
    NOTE: hol-light's version is more general: ‘0 <= x \/ ODD n’
   *)
-Theorem REAL_ROOT_RPOW :
+Theorem REAL_ROOT_RPOW:
     !n x. ~(n = 0) /\ &0 < x ==> root n x = x rpow inv (&n)
 Proof
     rpt STRIP_TAC
@@ -2969,7 +2969,7 @@ Proof
  >> rw [ROOT_LN, rpow, real_div]
 QED
 
-Theorem SQRT_RPOW :
+Theorem SQRT_RPOW:
     !(x :real). 0 < x ==> sqrt x = x rpow (inv 2)
 Proof
     rw [sqrt, REAL_ROOT_RPOW]
@@ -2979,13 +2979,13 @@ QED
 (* Differentiability of real powers                               *)
 (*----------------------------------------------------------------*)
 
-Theorem DIFF_COMPOSITE_EXP :
+Theorem DIFF_COMPOSITE_EXP:
    !g m x. ((g diffl m) x ==> ((\x. exp (g x)) diffl (exp (g x) * m)) x)
 Proof
   RW_TAC std_ss [DIFF_COMPOSITE]
 QED
 
-Theorem DIFF_RPOW :
+Theorem DIFF_RPOW:
     !x y. 0 < x ==> ((\x. x rpow y) diffl (y * (x rpow (y - 1)))) x
 Proof
     RW_TAC real_ss [rpow, GSYM RPOW_DIV_BASE]
@@ -3036,7 +3036,7 @@ val real_pow = pow;
 val REAL_POW_2 = POW_2;
 val REAL_INV_1 = REAL_INV1;
 
-Theorem MCLAURIN_LN_POS :
+Theorem MCLAURIN_LN_POS:
    !x n.
      &0 < x /\ 0 < n
      ==> ?t. &0 < t /\
@@ -3151,7 +3151,7 @@ Proof
       Q.UNDISCH_TAC `&0 <= u` THEN REAL_ARITH_TAC ] ]
 QED
 
-Theorem MCLAURIN_LN_NEG :
+Theorem MCLAURIN_LN_NEG:
    !x n. &0 < x /\ x < &1 /\ 0 < n
          ==> ?t. &0 < t /\
                  t < x /\
@@ -3379,7 +3379,7 @@ val exp_convex = store_thm
 (* ------------ ln and lg are concave on (0,infty] ------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem pos_concave_ln :
+Theorem pos_concave_ln:
     ln IN pos_concave_fn
 Proof
    RW_TAC std_ss [pos_concave_fn, pos_convex_fn, EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
@@ -3420,7 +3420,7 @@ Proof
 QED
 
 (* inv is pos_convex *)
-Theorem pos_convex_inv :
+Theorem pos_convex_inv:
     inv IN pos_convex_fn
 Proof
     simp [pos_convex_fn]
@@ -3481,7 +3481,7 @@ val lemma =
                                     (Q.SPECL [‘-x’, ‘1’] MCLAURIN_LN_NEG));
 
 (* An extended version of EXP_LE_X to entire reals, based on MCLAURIN_LN_NEG *)
-Theorem EXP_LE_X_FULL :
+Theorem EXP_LE_X_FULL:
     !x :real. &1 + x <= exp x
 Proof
     Q.X_GEN_TAC ‘x’
@@ -3516,7 +3516,7 @@ QED
 (*   Transcendental functions and ‘product’                                  *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem LN_PRODUCT :
+Theorem LN_PRODUCT:
     !f s. FINITE s /\ (!x. x IN s ==> &0 < f x) ==>
           ln (product s f) = sum s (\x. ln (f x))
 Proof
@@ -3531,7 +3531,7 @@ Proof
 QED
 
 (* NOTE: added ‘n <> 0 /\ (!x. x IN s ==> &0 <= f x)’ to hol-light's statements *)
-Theorem ROOT_PRODUCT :
+Theorem ROOT_PRODUCT:
     !n f s. FINITE s /\ n <> 0 /\ (!x. x IN s ==> &0 <= f x)
         ==> root n (product s f) = product s (\i. root n (f i))
 Proof
@@ -3554,7 +3554,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* NOTE: changed ‘0 <= x i’ (hol-light) to ‘0 < x i’ *)
-Theorem AGM_GEN :
+Theorem AGM_GEN:
     !a x s. FINITE s /\ sum s a = &1 /\ (!i. i IN s ==> &0 <= a i /\ &0 < x i)
         ==> product s (\i. x i rpow a i) <= sum s (\i. a i * x i)
 Proof
@@ -3604,7 +3604,7 @@ Proof
 QED
 
 (* NOTE: changed ‘0 <= x i’ (hol-light) to ‘0 < x i’ *)
-Theorem AGM_RPOW :
+Theorem AGM_RPOW:
     !s x n. s HAS_SIZE n /\ ~(n = 0) /\ (!i. i IN s ==> &0 < x(i))
         ==> product s (\i. x(i) rpow (&1 / &n)) <= sum s (\i. x(i) / &n)
 Proof
@@ -3613,7 +3613,7 @@ Proof
  >> rw [SUM_CONST, GSYM real_div]
 QED
 
-Theorem AGM_ROOT :
+Theorem AGM_ROOT:
     !s x n. s HAS_SIZE n /\ ~(n = 0) /\ (!i. i IN s ==> &0 <= x(i))
         ==> root n (product s x) <= sum s x / &n
 Proof
@@ -3640,7 +3640,7 @@ Proof
  >> MATCH_MP_TAC SUM_POS_LE >> rw []
 QED
 
-Theorem AGM_SQRT :
+Theorem AGM_SQRT:
     !x y. &0 <= x /\ &0 <= y ==> sqrt(x * y) <= (x + y) / &2
 Proof
     rpt STRIP_TAC
@@ -3653,7 +3653,7 @@ Proof
  >> rw [HAS_SIZE]
 QED
 
-Theorem AGM :
+Theorem AGM:
     !s x n. s HAS_SIZE n /\ ~(n = 0) /\ (!i. i IN s ==> &0 <= x(i))
         ==> product s x <= (sum s x / &n) pow n
 Proof
@@ -3675,7 +3675,7 @@ Proof
 QED
 
 (* NOTE: changed ‘0 <= x /\ 0 <= y’ (hol-light) to ‘0 < x /\ 0 < y’ *)
-Theorem AGM_2 :
+Theorem AGM_2:
     !x y u v. &0 < x /\ &0 < y /\ &0 <= u /\ &0 <= v /\ u + v = &1
           ==> x rpow u * y rpow v <= u * x + v * y
 Proof
@@ -3688,7 +3688,7 @@ Proof
 QED
 
 (* NOTE: changed ‘0 <= a /\ 0 <= b’ (hol-light) to ‘0 < a /\ 0 < b’ *)
-Theorem YOUNG_INEQUALITY :
+Theorem YOUNG_INEQUALITY:
     !a b p q. &0 < a /\ &0 < b /\ &0 < p /\ &0 < q /\ inv(p) + inv(q) = &1
           ==> a * b <= a rpow p / p + b rpow q / q
 Proof
@@ -3703,27 +3703,27 @@ QED
 (*  Real-valued power, log, and log base 2 functions (from util_probTheory)  *)
 (* ------------------------------------------------------------------------- *)
 
-Definition logr_def :
+Definition logr_def:
     logr a x = ln x / ln a
 End
 
-Definition lg_def :
+Definition lg_def:
     lg x = logr 2 x
 End
 
-Theorem lg_1 :
+Theorem lg_1:
     lg 1 = 0
 Proof
     RW_TAC real_ss [lg_def, logr_def, LN_1]
 QED
 
-Theorem logr_1 :
+Theorem logr_1:
     !b. logr b 1 = 0
 Proof
     RW_TAC real_ss [logr_def, LN_1]
 QED
 
-Theorem lg_nonzero :
+Theorem lg_nonzero:
     !x. x <> 0 /\ 0 <= x ==> (lg x <> 0 <=> x <> 1)
 Proof
     RW_TAC std_ss [REAL_ARITH ``x <> 0 /\ 0 <= x <=> 0 < x``]
@@ -3735,19 +3735,19 @@ Proof
  >> RW_TAC real_ss []
 QED
 
-Theorem lg_mul :
+Theorem lg_mul:
     !x y. 0 < x /\ 0 < y ==> (lg (x * y) = lg x + lg y)
 Proof
     RW_TAC real_ss [lg_def, logr_def, LN_MUL]
 QED
 
-Theorem logr_mul :
+Theorem logr_mul:
     !b x y. 0 < x /\ 0 < y ==> (logr b (x * y) = logr b x + logr b y)
 Proof
     RW_TAC real_ss [logr_def, LN_MUL]
 QED
 
-Theorem lg_2 :
+Theorem lg_2:
     lg 2 = 1
 Proof
     RW_TAC real_ss [lg_def, logr_def]
@@ -3758,25 +3758,25 @@ Proof
  >> MATCH_MP_TAC REAL_LT_IMP_NE >> art []
 QED
 
-Theorem lg_inv :
+Theorem lg_inv:
     !x. 0 < x ==> (lg (inv x) = ~lg x)
 Proof
     RW_TAC real_ss [lg_def, logr_def, LN_INV, real_div]
 QED
 
-Theorem logr_inv :
+Theorem logr_inv:
     !b x. 0 < x ==> (logr b (inv x) = ~ logr b x)
 Proof
     RW_TAC real_ss [logr_def, LN_INV, real_div]
 QED
 
-Theorem logr_div :
+Theorem logr_div:
     !b x y. 0 < x /\ 0 < y ==> (logr b (x/y) = logr b x - logr b y)
 Proof
     RW_TAC real_ss [real_div, logr_mul, logr_inv, GSYM real_sub]
 QED
 
-Theorem neg_lg :
+Theorem neg_lg:
     !x. 0 < x ==> ((~(lg x)) = lg (inv x))
 Proof
     RW_TAC real_ss [lg_def, logr_def, real_div]
@@ -3787,7 +3787,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem neg_logr :
+Theorem neg_logr:
     !b x. 0 < x ==> ((~(logr b x)) = logr b (inv x))
 Proof
     RW_TAC real_ss [logr_def, real_div]
@@ -3798,7 +3798,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem lg_pow :
+Theorem lg_pow:
     !n. lg (2 pow n) = &n
 Proof
     RW_TAC real_ss [lg_def, logr_def, LN_POW]
@@ -3810,7 +3810,7 @@ Proof
 QED
 
 (* cf. LN_MONO_LT *)
-Theorem LOGR_MONO_LT :
+Theorem LOGR_MONO_LT:
     !x :real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x < logr b y <=> x < y)
 Proof
     RW_TAC std_ss [logr_def,real_div]
@@ -3818,7 +3818,7 @@ Proof
  >> METIS_TAC [REAL_LT_INV_EQ, REAL_LT_RMUL, LN_MONO_LT]
 QED
 
-Theorem LOGR_MONO_LE :
+Theorem LOGR_MONO_LE:
     !x:real y b. 0 < x /\ 0 < y /\ 1 < b ==> (logr b x <= logr b y <=> x <= y)
 Proof
   RW_TAC std_ss [logr_def,real_div]
@@ -3826,7 +3826,7 @@ Proof
   >> METIS_TAC [REAL_LT_INV_EQ, REAL_LE_RMUL, LN_MONO_LE]
 QED
 
-Theorem LOGR_MONO_LE_IMP :
+Theorem LOGR_MONO_LE_IMP:
     !x:real y b. 0 < x /\ x <= y /\ 1 <= b ==> (logr b x <= logr b y)
 Proof
     RW_TAC std_ss [logr_def,real_div]
@@ -3835,7 +3835,7 @@ Proof
 QED
 
 (* from extra_realScript.sml of "miller" example *)
-Theorem pos_concave_lg :
+Theorem pos_concave_lg:
     lg IN pos_concave_fn
 Proof
     RW_TAC std_ss [lg_def, logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,
@@ -3854,7 +3854,7 @@ Proof
 QED
 
 (* from extra_realScript.sml of "miller" example *)
-Theorem pos_concave_logr :
+Theorem pos_concave_logr:
     !b. 1 <= b ==> (logr b) IN pos_concave_fn
 Proof
     RW_TAC std_ss [logr_def, pos_concave_fn, pos_convex_fn, EXTENSION,

@@ -45,7 +45,7 @@ val SEMI_AUTOMATON_USED_VARS_def = Define
    `SEMI_AUTOMATON_USED_VARS A = (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION A.S`;
 
 (* all used vars = all used vars in (S0,R) + all state vars (S) *)
-Theorem SEMI_AUTOMATON_USED_VARS___DIRECT_DEF :
+Theorem SEMI_AUTOMATON_USED_VARS___DIRECT_DEF:
     !A. SEMI_AUTOMATON_USED_VARS A = P_USED_VARS A.S0 UNION XP_USED_VARS A.R UNION A.S
 Proof
     SIMP_TAC std_ss [SEMI_AUTOMATON_USED_VARS_def, EXTENSION, IN_UNION,
@@ -57,7 +57,7 @@ val SEMI_AUTOMATON_VAR_RENAMING_def = Define
    `SEMI_AUTOMATON_VAR_RENAMING (f:'a->'b) (symbolic_semi_automaton S S0 R) =
       (symbolic_semi_automaton (IMAGE f S) (P_VAR_RENAMING f S0) (XP_VAR_RENAMING f R))`;
 
-Theorem SEMI_AUTOMATON_VAR_RENAMING_REWRITES :
+Theorem SEMI_AUTOMATON_VAR_RENAMING_REWRITES:
     !A f. ((SEMI_AUTOMATON_VAR_RENAMING f A).S = IMAGE f A.S) /\
           ((SEMI_AUTOMATON_VAR_RENAMING f A).S0 = P_VAR_RENAMING f A.S0) /\
           ((SEMI_AUTOMATON_VAR_RENAMING f A).R = XP_VAR_RENAMING f A.R)
@@ -131,7 +131,7 @@ val IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_def = Define
 (* Total+deterministric: for each input trace there's exactly one "compatible" trace
    satisfying initial state and transition relation.
  *)
-Theorem IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_THM :
+Theorem IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_THM:
     !A. IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A =
        (!i. ?!s. ((s SUBSET A.S) /\ (P_SEM (INPUT_RUN_STATE_UNION A i s) A.S0))) /\
        (!s1 i1 i2. ?!s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))
@@ -159,7 +159,7 @@ val IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_def = Define
 (* In case of simple symbolic semi-automaton, the normal symbolic run is
    also the "simple" symbolic run.
  *)
-Theorem IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_THM :
+Theorem IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_THM:
     !A. IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON A ==>
         !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
               IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON A i w
@@ -197,7 +197,7 @@ val PRODUCT_SEMI_AUTOMATON_def = Define
                            (symbolic_semi_automaton S_2 S0_2 R_2) =
       symbolic_semi_automaton (S_1 UNION S_2) (P_AND(S0_1, S0_2)) (XP_AND(R_1, R_2))`;
 
-Theorem PRODUCT_SEMI_AUTOMATON_THM :
+Theorem PRODUCT_SEMI_AUTOMATON_THM:
     !A B C. (PRODUCT_SEMI_AUTOMATON A B = C) <=> (C.S  = (A.S UNION B.S)) /\
                                                  (C.S0 = (P_AND(A.S0, B.S0))) /\
                                                  (C.R  = (XP_AND(A.R, B.R)))
@@ -206,7 +206,7 @@ Proof
  >> EVAL_TAC >> PROVE_TAC []
 QED
 
-Theorem PRODUCT_SEMI_AUTOMATON_REWRITES :
+Theorem PRODUCT_SEMI_AUTOMATON_REWRITES:
     !A B. ((PRODUCT_SEMI_AUTOMATON A B).S  = (A.S UNION B.S)) /\
           ((PRODUCT_SEMI_AUTOMATON A B).S0 = (P_AND(A.S0,B.S0))) /\
           ((PRODUCT_SEMI_AUTOMATON A B).R  = (XP_AND(A.R, B.R)))
@@ -218,13 +218,13 @@ QED
 val ID_SEMI_AUTOMATON_def = Define
    `ID_SEMI_AUTOMATON = symbolic_semi_automaton EMPTY P_TRUE XP_TRUE`;
 
-Theorem ID_SEMI_AUTOMATON_RUN :
+Theorem ID_SEMI_AUTOMATON_RUN:
     !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON ID_SEMI_AUTOMATON i w <=> (w = EMPTY_PATH)
 Proof
     EVAL_TAC >> PROVE_TAC [SUBSET_EMPTY]
 QED
 
-Theorem ID_SEMI_AUTOMATON_REWRITES :
+Theorem ID_SEMI_AUTOMATON_REWRITES:
     (ID_SEMI_AUTOMATON.S  = EMPTY) /\
     (ID_SEMI_AUTOMATON.S0 = P_TRUE) /\
     (ID_SEMI_AUTOMATON.R  = XP_TRUE)
@@ -232,13 +232,13 @@ Proof
     EVAL_TAC
 QED
 
-Theorem SYMBOLIC_SEMI_AUTOMATON___REWRITE :
+Theorem SYMBOLIC_SEMI_AUTOMATON___REWRITE:
     !A. symbolic_semi_automaton A.S A.S0 A.R = A
 Proof
     Cases_on `A` >> EVAL_TAC
 QED
 
-Theorem FINITE___SEMI_AUTOMATON_USED_INPUT_VARS :
+Theorem FINITE___SEMI_AUTOMATON_USED_INPUT_VARS:
     !A. FINITE (SEMI_AUTOMATON_USED_INPUT_VARS A)
 Proof
     Cases_on `A`
@@ -246,7 +246,7 @@ Proof
  >> METIS_TAC [FINITE___P_USED_VARS, FINITE___XP_USED_VARS, FINITE_UNION, FINITE_DIFF]
 QED
 
-Theorem SEMI_AUTOMATON_VAR_RENAMING___USED_VARS :
+Theorem SEMI_AUTOMATON_VAR_RENAMING___USED_VARS:
     !A f. SEMI_AUTOMATON_USED_VARS (SEMI_AUTOMATON_VAR_RENAMING f A) =
           IMAGE f (SEMI_AUTOMATON_USED_VARS A)
 Proof
@@ -258,7 +258,7 @@ Proof
  >> REWRITE_TAC [IMAGE_UNION, P_VAR_RENAMING___USED_VARS, XP_VAR_RENAMING___USED_VARS]
 QED
 
-Theorem SEMI_AUTOMATON_VAR_RENAMING___USED_INPUT_VARS :
+Theorem SEMI_AUTOMATON_VAR_RENAMING___USED_INPUT_VARS:
     !A f. INJ f (SEMI_AUTOMATON_USED_VARS A) UNIV ==>
          (SEMI_AUTOMATON_USED_INPUT_VARS (SEMI_AUTOMATON_VAR_RENAMING f A) =
          (IMAGE f (SEMI_AUTOMATON_USED_INPUT_VARS A)))
@@ -274,7 +274,7 @@ QED
 (* for total automata (at least one next state), there exist a transition function
    which picks one next state given the last state and inputs.
  *)
-Theorem TOTAL_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC :
+Theorem TOTAL_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC:
     !A. IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A ==>
         ?R_FUNC. !s1 s2 i1 i2. (R_FUNC s1 i1 i2 = s2) ==>
                                s2 SUBSET A.S /\ IS_TRANSITION A s1 i1 s2 i2
@@ -289,7 +289,7 @@ QED
 (* for deterministic automata (at most one next state), there exists a transition
    function such that, if a transition exists, it picks that exact next state.
  *)
-Theorem DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC :
+Theorem DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC:
     !A. IS_DET_SYMBOLIC_SEMI_AUTOMATON A ==>
         ?R_FUNC. !s1 s2 i1 i2. s2 SUBSET A.S /\ IS_TRANSITION A s1 i1 s2 i2 ==>
                                (R_FUNC s1 i1 i2 = s2)
@@ -304,7 +304,7 @@ Proof
 QED
 
 (* `==>` becomes `<=>` if the deterministic automata is also total *)
-Theorem TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC :
+Theorem TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC:
     !A. IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A ==>
         ?R_FUNC. !s1 s2 i1 i2. s2 SUBSET A.S /\ IS_TRANSITION A s1 i1 s2 i2 <=>
                                (R_FUNC s1 i1 i2 = s2)
@@ -319,7 +319,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem DET_SYMBOLIC_SEMI_AUTOMATON_EXISTS_AT_MOST_ONE_RUN :
+Theorem DET_SYMBOLIC_SEMI_AUTOMATON_EXISTS_AT_MOST_ONE_RUN:
     !A i. IS_DET_SYMBOLIC_SEMI_AUTOMATON A ==>
           EXISTS_AT_MOST_ONE w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w
 Proof
@@ -332,7 +332,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem TOTAL_SYMBOLIC_SEMI_AUTOMATON_EXISTS_RUN :
+Theorem TOTAL_SYMBOLIC_SEMI_AUTOMATON_EXISTS_RUN:
     !A i. IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A ==>
           ?w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w
 Proof
@@ -353,7 +353,7 @@ Proof
       METIS_TAC[] ]
 QED
 
-Theorem TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_UNIQUE_RUN :
+Theorem TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_UNIQUE_RUN:
     !A i. IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A ==>
           ?!w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w
 Proof
@@ -364,7 +364,7 @@ Proof
                  EXISTS_AT_MOST_ONE_def] ]
 QED
 
-Theorem PRODUCT_SEMI_AUTOMATON_COMM_RUN :
+Theorem PRODUCT_SEMI_AUTOMATON_COMM_RUN:
     !A B v w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (PRODUCT_SEMI_AUTOMATON A B) v w =
               IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (PRODUCT_SEMI_AUTOMATON B A) v w
 Proof
@@ -378,7 +378,7 @@ Proof
 QED
 
 (* symbolic run of product semi-automaton requires disjointness of all vars *)
-Theorem PRODUCT_SEMI_AUTOMATON_RUN :
+Theorem PRODUCT_SEMI_AUTOMATON_RUN:
     !A1 A2. DISJOINT A1.S A2.S /\
             DISJOINT A1.S (SEMI_AUTOMATON_USED_INPUT_VARS A2) /\
             DISJOINT A2.S (SEMI_AUTOMATON_USED_INPUT_VARS A1) ==>
@@ -426,7 +426,7 @@ Proof
 QED
 
 (* symbolic run of product semi-automaton implies run of the 1st semi-automaton *)
-Theorem PRODUCT_SEMI_AUTOMATON_RUN2___FIRST :
+Theorem PRODUCT_SEMI_AUTOMATON_RUN2___FIRST:
     !A1 A2. DISJOINT A1.S A2.S /\
             DISJOINT A2.S (SEMI_AUTOMATON_USED_INPUT_VARS A1) ==>
            !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (PRODUCT_SEMI_AUTOMATON A1 A2) i w ==>
@@ -463,7 +463,7 @@ Proof
 QED
 
 (* symbolic run of product semi-automaton implies run of the 2nd semi-automaton *)
-Theorem PRODUCT_SEMI_AUTOMATON_RUN2___SECOND :
+Theorem PRODUCT_SEMI_AUTOMATON_RUN2___SECOND:
     !A1 A2. DISJOINT A1.S A2.S /\
             DISJOINT A1.S (SEMI_AUTOMATON_USED_INPUT_VARS A2) ==>
            !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (PRODUCT_SEMI_AUTOMATON A1 A2) i w ==>
@@ -474,7 +474,7 @@ Proof
 QED
 
 (* symbolic run restricted to a superset of input vars is still a symbolic run *)
-Theorem SEMI_AUTOMATON_USED_INPUT_VARS_INTER_SUBSET_THM :
+Theorem SEMI_AUTOMATON_USED_INPUT_VARS_INTER_SUBSET_THM:
     !A S. (SEMI_AUTOMATON_USED_INPUT_VARS A) SUBSET S ==>
           !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
                 IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A (PATH_RESTRICT i S) w
@@ -497,7 +497,7 @@ Proof
 QED
 
 (* special case: symbolic run restricted to input vars is still a symbolic run *)
-Theorem SEMI_AUTOMATON_USED_INPUT_VARS_INTER_THM :
+Theorem SEMI_AUTOMATON_USED_INPUT_VARS_INTER_THM:
     !A i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
             IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A
               (PATH_RESTRICT i (SEMI_AUTOMATON_USED_INPUT_VARS A)) w
@@ -506,7 +506,7 @@ Proof
 QED
 
 (* A = f(A') *)
-Theorem IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUN_INPUT_VARS :
+Theorem IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUN_INPUT_VARS:
     !A A' f w i. IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON A A' f /\
                  IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w ==>
        !i'. i' IN SEMI_AUTOMATON_USED_INPUT_VARS A' ==> !n. i' IN i n <=> f i' IN w n
@@ -538,7 +538,7 @@ Proof
  >> ASM_SIMP_TAC std_ss []
 QED
 
-Theorem IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS :
+Theorem IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS:
     !A A' f. IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON A A' f ==>
              IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON A /\
              !w i. PATH_SUBSET w A'.S ==>
@@ -775,7 +775,7 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2 =
       METIS_TAC[]
   ]);
 
-Theorem INPUT_RUN_PATH_UNION___SPLIT :
+Theorem INPUT_RUN_PATH_UNION___SPLIT:
     !A p. INPUT_RUN_PATH_UNION A p (PATH_RESTRICT p A.S) = p
 Proof
     rpt GEN_TAC
@@ -786,7 +786,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem INPUT_RUN_STATE_UNION___SPLIT :
+Theorem INPUT_RUN_STATE_UNION___SPLIT:
     !A s. INPUT_RUN_STATE_UNION A s (s INTER A.S) = s
 Proof
     rpt GEN_TAC
@@ -795,7 +795,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___SPLIT :
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___SPLIT:
     !S S0 R i w.
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 R) i w <=>
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 XP_TRUE) i w /\
@@ -808,7 +808,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT :
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT:
     !S S0 R1 R2 i w.
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 (XP_AND(R1, R2))) i w <=>
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 R1) i w /\
@@ -820,7 +820,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT_MINIMAL :
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT_MINIMAL:
     !S S0 R1 R2 i w.
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 (XP_AND(R1, R2))) i w <=>
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 XP_TRUE) i w /\
@@ -831,7 +831,7 @@ Proof
                IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___SPLIT]
 QED
 
-Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT :
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT:
     !S S0_1 S0_2 R i w.
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S (P_AND(S0_1, S0_2)) R) i w
        <=>
@@ -844,7 +844,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT_MINIMAL :
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT_MINIMAL:
     !S S0_1 S0_2 R i w.
         IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S (P_AND(S0_1, S0_2)) R) i w
        <=>
@@ -858,7 +858,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S_EXTENSION :
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S_EXTENSION:
     !S1 S2 S' S0 R i w.
        (S2 = S1 UNION S') /\ DISJOINT S' (P_USED_VARS S0 UNION XP_USED_VARS R) /\
         PATH_SUBSET w S2 ==>
@@ -880,7 +880,7 @@ Proof
  >> PROVE_TAC [P_USED_VARS_INTER_SUBSET_THM, XP_USED_VARS_INTER_SUBSET_BOTH_THM]
 QED
 
-Theorem SEMI_AUTOMATON___VAR_RENAMING :
+Theorem SEMI_AUTOMATON___VAR_RENAMING:
     !A v f w. INJ f ((PATH_USED_VARS v) UNION (PATH_USED_VARS w) UNION (SEMI_AUTOMATON_USED_VARS A))
                     UNIV ==>
       (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A v w =
@@ -922,7 +922,7 @@ Proof
       METIS_TAC [XP_SEM___VAR_RENAMING] ]
 QED
 
-Theorem SEMI_AUTOMATON___STATE_VAR_RENAMING :
+Theorem SEMI_AUTOMATON___STATE_VAR_RENAMING:
     !A f. (INJ f UNIV UNIV) /\ (!x. x IN (SEMI_AUTOMATON_USED_INPUT_VARS A) ==> (f x = x)) ==>
           !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
                 IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (SEMI_AUTOMATON_VAR_RENAMING f A)
@@ -951,7 +951,7 @@ Proof
                SEMI_AUTOMATON_USED_INPUT_VARS_INTER_THM]
 QED
 
-Theorem P_SEM_AUTOMATON_RUN___STATE_VAR_RENAMING :
+Theorem P_SEM_AUTOMATON_RUN___STATE_VAR_RENAMING:
     !A p f. INJ f UNIV UNIV /\
             (!x. x IN (SEMI_AUTOMATON_USED_INPUT_VARS A UNION (P_USED_VARS p DIFF A.S)) ==> (f x = x)) ==>
       !i w t. (P_SEM (INPUT_RUN_PATH_UNION A i w t) p =
@@ -982,7 +982,7 @@ Proof
  >> PROVE_TAC [P_USED_VARS_INTER_THM]
 QED
 
-Theorem TRANSITION_CURRENT_STATE_CLEANING :
+Theorem TRANSITION_CURRENT_STATE_CLEANING:
     !A s1 i1 s2 i2. IS_TRANSITION A s1 i1 s2 i2 =
                     IS_TRANSITION A (s1 INTER A.S) (i1 UNION s1) s2 i2
 Proof
@@ -994,7 +994,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem TRANSITION_NEXT_STATE_CLEANING :
+Theorem TRANSITION_NEXT_STATE_CLEANING:
     !A s1 i1 s2 i2. IS_TRANSITION A s1 i1 s2 i2 =
                     IS_TRANSITION A s1 i1 (s2 INTER A.S) (i2 UNION s2)
 Proof
@@ -1006,7 +1006,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem TRANSITION_STATE_CLEANING :
+Theorem TRANSITION_STATE_CLEANING:
     !A s1 i1 s2 i2. IS_TRANSITION A s1 i1 s2 i2 =
                     IS_TRANSITION A (s1 INTER A.S) (i1 UNION s1) (s2 INTER A.S) (i2 UNION s2)
 Proof

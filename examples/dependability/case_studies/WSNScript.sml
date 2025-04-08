@@ -28,7 +28,7 @@ val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
 (*--------------------------------------*)
-Theorem E2W_WSN :
+Theorem E2W_WSN:
 !p t X_fil X_aggr X_rout C_fil C_aggr C_rout.
               (0 <= t) /\
               prob_space p /\
@@ -56,7 +56,7 @@ RW_TAC std_ss[]
 QED
 
 (*------------------------------------*)
-Theorem one_minus_exp_equi :
+Theorem one_minus_exp_equi:
 !t c. (one_minus_list (exp_func_list c t)) =
           (one_minus_exp t c)
 Proof
@@ -69,7 +69,7 @@ GEN_TAC
 QED
 (*-------------------------------------*)
 
-Theorem ESRT_WSN :
+Theorem ESRT_WSN:
 !p t X_routing_list C_routing_list.
               (0 <= t) /\
               prob_space p /\
@@ -95,7 +95,7 @@ RW_TAC std_ss[]
 QED
 
 (*-------------------------------------*)
-Theorem parallel_series_struct_rbd_v2 :
+Theorem parallel_series_struct_rbd_v2:
 !p L.  (!z. MEM z L ==> ~NULL z) /\ prob_space p /\
      (!x'. MEM x' (FLAT L) ==> x' IN events p) /\ mutual_indep p (FLAT L) ==>
      (prob p
@@ -116,7 +116,7 @@ QED
 
 (*---------------------------------------*)
 
-Theorem parallel_series_exp_fail_rate :
+Theorem parallel_series_exp_fail_rate:
 !p t L C.
      (!z. MEM z L ==> ~NULL z) /\ 0 <= t /\ prob_space p /\
      (!x'.
@@ -166,7 +166,7 @@ GEN_TAC >> GEN_TAC
 QED
 
 (*------------------------------------------------*)
-Theorem rel_parallel_series_exp_fail_rate :
+Theorem rel_parallel_series_exp_fail_rate:
 !p t L C.
      (!z. MEM z L ==> ~NULL z) /\ 0 <= t /\ prob_space p /\
      (!x'.
@@ -195,13 +195,13 @@ REPEAT GEN_TAC >> REPEAT STRIP_TAC
 QED
 
 (*------------------------------------------------*)
-Definition RMST_fail_rate_list_def :
+Definition RMST_fail_rate_list_def:
 (RMST_fail_rate_list a b 0 = []) /\
  (RMST_fail_rate_list a b (SUC n) = [a;b]::(RMST_fail_rate_list a b n))
 End
 
 (*------------------------------------------------*)
-Theorem RMST_WSN :
+Theorem RMST_WSN:
 !p (t:real)  X_rout X_MLD C_rout C_MLD n.
         (!z. MEM z (RMST_fail_rate_list X_rout X_MLD n)  ==>  ~NULL z) /\
          (0 <=  (t:real)) /\ prob_space p /\

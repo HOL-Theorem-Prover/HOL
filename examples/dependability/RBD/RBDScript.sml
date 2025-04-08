@@ -38,7 +38,7 @@ val _ = Hol_datatype
 (*      RBD Structures Semantic Function        *)
 (*----------------------------------------------*)
 
-Definition rbd_struct_def :
+Definition rbd_struct_def:
     (rbd_struct p ( atomic a)  = a) /\
     (rbd_struct p (series []) = p_space p) /\
     (rbd_struct p (series (x::xs)) =
@@ -50,7 +50,7 @@ End
 
 (*---rbd list from atomic events---*)
 
-Definition rbd_list_def :
+Definition rbd_list_def:
     (rbd_list [] = []) /\
     (rbd_list (h::t) =  atomic h::rbd_list t)
 End
@@ -62,7 +62,7 @@ End
 val of_DEF = Q.new_infixr_definition("of_DEF", `$of g f = (g o (\a. MAP f a))`, 800);
 
 
-Definition big_inter_def :
+Definition big_inter_def:
  (big_inter p []= p_space p) /\
   ( big_inter p (h ::t)  = ( h  INTER big_inter p t ))
 End
@@ -70,7 +70,7 @@ End
 (*      list_prod        *)
 (* --------------------- *)
 
-Definition list_prod_def :
+Definition list_prod_def:
 (list_prod ([]) =  1:real ) /\
  ( list_prod (h :: t)  =   (h:real) * (list_prod t ))
 End
@@ -78,7 +78,7 @@ End
 (* --------------------------- *)
 (*      list_prob              *)
 (* --------------------------- *)
-Definition list_prob_def :
+Definition list_prob_def:
  (list_prob p [] = []) /\
  (list_prob p (h::t) =  prob p (h) :: list_prob p t )
 End
@@ -86,7 +86,7 @@ End
 (* --------------------------------------- *)
 (*  Mutual Independence of Events          *)
 (* --------------------------------------- *)
-Definition mutual_indep_def :
+Definition mutual_indep_def:
 mutual_indep p (L) = !L1 n. (PERM L L1 /\
                        (1 <=  n /\ n <=  LENGTH L) ==>
  (prob p (big_inter p (TAKE n L1)) = list_prod (list_prob p (TAKE n L1 ))))
@@ -95,13 +95,13 @@ End
 (* Compliment of a List of Sets                                *)
 (* ------------------------------------------------------------------------- *)
 
-Definition compl_list_def :
+Definition compl_list_def:
  compl_list p L = MAP (\a. p_space p DIFF a) L
 End
 (* ---------------------------------------------- *)
 (*      one_minus_list                                  *)
 (* --------------------------------------------- *)
-Definition one_minus_list_def :
+Definition one_minus_list_def:
 (one_minus_list [] = []) /\
 ( one_minus_list (h::t) = (1 - (h:real)):: one_minus_list t)
 End
@@ -109,13 +109,13 @@ End
 (* ----------------------------------------- *)
 (*      complement prob space                      *)
 (* ----------------------------------------- *)
-Definition compl_pspace_def :
+Definition compl_pspace_def:
 compl_pspace p s = p_space p DIFF s
 End
 (* ----------------------------------------- *)
 (*  Product of Complement of Reliabilities   *)
 (* ----------------------------------------- *)
-Definition list_prod_one_minus_rel_def :
+Definition list_prod_one_minus_rel_def:
 list_prod_one_minus_rel p L =
  MAP (\a. list_prod (one_minus_list (list_prob p a)) ) L
 End
@@ -128,7 +128,7 @@ End
 (*                                                                            *)
 (* -------------------------------------------------------------------------- *)
 
-Definition list_prod_rel_def :
+Definition list_prod_rel_def:
 list_prod_rel p L = MAP (\a. list_prod (list_prob p a) ) L
 End
 
@@ -142,7 +142,7 @@ End
 (*      Series Structure Lemma        *)
 (*------------------------------------*)
 
-Theorem mutual_indep_cons :
+Theorem mutual_indep_cons:
 !L h p. mutual_indep p (h::L) ==> mutual_indep p L
 Proof
 RW_TAC std_ss[mutual_indep_def]THEN
@@ -177,7 +177,7 @@ QED
 (*-------series_rbd_eq_big_inter---*)
 
 
-Theorem series_rbd_eq_big_inter :
+Theorem series_rbd_eq_big_inter:
 !p L. rbd_struct p (series (rbd_list L)) = big_inter p L
 Proof
 GEN_TAC
@@ -192,7 +192,7 @@ QED
 (*   Reliability of Series Structure   *)
 (*-------------------------------------*)
 
-Theorem series_struct_thm :
+Theorem series_struct_thm:
 !p L. prob_space p /\ ~NULL L /\ (!x'. MEM x' L ==> x'  IN  events p ) /\
  mutual_indep p L ==>
 (prob p (rbd_struct p (series (rbd_list L))) =  list_prod (list_prob p L))
@@ -238,7 +238,7 @@ QED
 (*      Lemmma's                      *)
 (*------------------------------------*)
 
-Theorem parallel_rbd_lem1 :
+Theorem parallel_rbd_lem1:
 !p L. prob_space p /\
    (!x'. MEM x' L ==> x'  IN  events p)   ==>
    (one_minus_list (list_prob p L) = list_prob p ( compl_list p L))
@@ -253,7 +253,7 @@ RW_TAC std_ss[]
 QED
 
 (*----------in_events_big_inter-----------------------*)
-Theorem in_events_big_inter :
+Theorem in_events_big_inter:
 !L p. (!x. MEM x L ==> x IN events p) /\
 prob_space p ==>
   (big_inter p L IN events p)
@@ -266,13 +266,13 @@ THEN MATCH_MP_TAC EVENTS_INTER
 THEN RW_TAC std_ss []]
 QED
 (*-------parallel_rbd_lem2---------*)
-Theorem parallel_rbd_lem2 :
+Theorem parallel_rbd_lem2:
 !L1 (L2:('a ->bool)list) Q. (LENGTH (L1 ++ ((Q::L2))) = LENGTH ((Q::L1) ++ (L2)))
 Proof
 RW_TAC list_ss[LENGTH_APPEND]
 QED
 (*-------parallel_rbd_lem3---------*)
-Theorem parallel_rbd_lem3 :
+Theorem parallel_rbd_lem3:
 !A B C D. A INTER B INTER C INTER D = (B INTER C) INTER D INTER A
 Proof
 SRW_TAC[][IN_INTER,EXTENSION,GSPECIFICATION]
@@ -280,7 +280,7 @@ THEN METIS_TAC[]
 
 QED
 (*--------------parallel_rbd_lem4---------*)
-Theorem parallel_rbd_lem4 :
+Theorem parallel_rbd_lem4:
 !A C. A INTER (p_space p DIFF C) = (A INTER p_space p DIFF (A INTER C))
 Proof
 SRW_TAC[][IN_INTER,EXTENSION,GSPECIFICATION]
@@ -288,7 +288,7 @@ THEN METIS_TAC[]
 
 QED
 (*--------------parallel_rbd_lem5---------*)
-Theorem parallel_rbd_lem5 :
+Theorem parallel_rbd_lem5:
 !m (L:('a ->bool)list) x. MEM x (TAKE m L) ==> MEM x L
 Proof
 Induct
@@ -303,14 +303,14 @@ THEN POP_ASSUM (MP_TAC o Q.SPEC `L`)
 THEN RW_TAC std_ss[]
 QED
 (*-------------parallel_rbd_lem6----------------*)
-Theorem parallel_rbd_lem6 :
+Theorem parallel_rbd_lem6:
 !A C. A INTER (p_space p DIFF C) = (A INTER p_space p DIFF (A INTER C))
 Proof
 SRW_TAC[][IN_INTER,EXTENSION,GSPECIFICATION]
 THEN METIS_TAC[]
 QED
 (*-------------parallel_rbd_lem7----------------*)
-Theorem parallel_rbd_lem7 :
+Theorem parallel_rbd_lem7:
 !(L1:('a ->bool) list) p.
  prob_space p /\
  (!x. MEM x (L1) ==> x IN events p ) ==>
@@ -335,7 +335,7 @@ Induct
 QED
 
 (*--------prob_B-------------------*)
-Theorem prob_B :
+Theorem prob_B:
 !p a b.
   prob_space p /\  (a IN events p /\  b IN events p)  ==>
   ( prob p b = prob p ( a   INTER b) + prob p (compl_pspace p a  INTER b ))
@@ -388,7 +388,7 @@ QED
 
 
 (*-------Prob_Incl_excl--------------------*)
-Theorem Prob_Incl_excl :
+Theorem Prob_Incl_excl:
 !p a b. prob_space p /\ a IN events p /\ b IN events p ==>
         ( prob p ((a ) UNION (b )) = prob p (a) + prob p (b) - prob p ((a) INTER (b)))
 Proof
@@ -435,7 +435,7 @@ RW_TAC std_ss[] THEN
 REAL_ARITH_TAC]
 QED
 (*----------prob_compl_subset-----------------*)
-Theorem prob_compl_subset :
+Theorem prob_compl_subset:
 !p s t. prob_space p /\ s IN events p /\ t IN events p /\ t SUBSET s ==>
         (prob p (s DIFF t) = prob p s - prob p t)
 Proof
@@ -443,7 +443,7 @@ METIS_TAC [MEASURE_COMPL_SUBSET,prob_space_def,events_def,prob_def,p_space_def]
 QED
 
 (*-----------mutual_indep_cons_append----------------*)
-Theorem mutual_indep_cons_append :
+Theorem mutual_indep_cons_append:
 !L1 L2 h p.  mutual_indep p (h::L1 ++ L2) ==>  mutual_indep p (L1 ++ h::L2)
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -465,7 +465,7 @@ THEN (` n <= LENGTH (h::((L1):('a  -> bool)list) ++ L2)` by (FULL_SIMP_TAC list_
 QED
 
 (*---------mutual_indep_cons_append1------------------*)
-Theorem mutual_indep_cons_append1 :
+Theorem mutual_indep_cons_append1:
 !L1 L2 Q h p.
   mutual_indep p (h::L1 ++ Q::L2) ==>  mutual_indep p (L1 ++ Q::h::L2)
 Proof
@@ -489,7 +489,7 @@ THEN (` n <= LENGTH (h::L1 ++ Q::L2)` by (FULL_SIMP_TAC list_ss[LENGTH_APPEND]))
 QED
 
 (*--------mutual_indep_cons_swap---------------------*)
-Theorem mutual_indep_cons_swap :
+Theorem mutual_indep_cons_swap:
 !p L1 h.  mutual_indep p (h::L1) ==>  mutual_indep p (L1 ++ [h])
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -511,7 +511,7 @@ THEN FULL_SIMP_TAC list_ss[LENGTH]
 QED
 
 (*-----------prob_indep_compl_event_big_inter_list-----------------*)
-Theorem prob_indep_compl_event_big_inter_list :
+Theorem prob_indep_compl_event_big_inter_list:
   !L1 n h p.
     mutual_indep p (h::L1) /\ (!x.  MEM x (h::L1)  ==>  x  IN  events p) /\
     prob_space p /\ LENGTH L1 = 1 ==>
@@ -573,7 +573,7 @@ Proof
 QED
 
 (*-----------prob_indep_big_inter1------------------*)
-Theorem prob_indep_big_inter1 :
+Theorem prob_indep_big_inter1:
 !(L1:('a ->bool) list) (L2:('a ->bool) list) Q n p.
            prob_space p  /\
            mutual_indep p (L1 ++ (Q::L2)) /\
@@ -791,7 +791,7 @@ QED
 
 
 (*-------------prob_big_inter_compl_list--------------*)
-Theorem prob_big_inter_compl_list :
+Theorem prob_big_inter_compl_list:
 !(L1:('a ->bool) list) n p .
         prob_space p  /\ mutual_indep p (L1) /\ (!x. MEM x (L1) ==> x IN events p ) /\
         1 <=  (LENGTH (L1)) ==>
@@ -913,7 +913,7 @@ Induct
 QED
 
 (*---------------mutual_indep_compl_event_imp_norm_event-------------*)
-Theorem mutual_indep_compl_event_imp_norm_event :
+Theorem mutual_indep_compl_event_imp_norm_event:
 !(L1:('a ->bool) list) p.
            prob_space p /\
            mutual_indep p (compl_list p L1) /\
@@ -963,7 +963,7 @@ RW_TAC std_ss[mutual_indep_def]
 QED
 
 (*--------mutual_indep_compl--------------------*)
-Theorem mutual_indep_compl :
+Theorem mutual_indep_compl:
 !(L1:('a ->bool) list) p.
            prob_space p /\
            mutual_indep p L1 /\
@@ -989,14 +989,14 @@ QED
 (*------------------------------------*)
 
 (*------Parallel_Lemma1----*)
-Theorem parallel_lem1 :
+Theorem parallel_lem1:
 !p s t. p_space p DIFF (s UNION t) = (p_space p DIFF s) INTER (p_space p DIFF t)
 Proof
 SRW_TAC [][EXTENSION,GSPECIFICATION]
 >> METIS_TAC[]
 QED
 (*----------- parallel_lem2---------------*)
-Theorem parallel_lem2 :
+Theorem parallel_lem2:
 !p  (L:('a  -> bool) list).  prob_space p /\ (!x. MEM x L ==> x IN  events p)  ==>
          ( rbd_struct p (series (rbd_list (compl_list p L))) =
          p_space p DIFF (rbd_struct p ( parallel (rbd_list L)) ))
@@ -1013,7 +1013,7 @@ GEN_TAC
 >> RW_TAC std_ss[parallel_lem1]
 QED
 (*------------parallel_lem3-------------*)
-Theorem parallel_lem3 :
+Theorem parallel_lem3:
 !L p. (!x. MEM x L ==> x IN events p) /\
 prob_space p ==>
   (rbd_struct p (parallel (rbd_list L)) IN events p)
@@ -1028,7 +1028,7 @@ RW_TAC std_ss[]
 >> FULL_SIMP_TAC list_ss[]
 QED
 (*----------------parallel_lem4----------------------*)
-Theorem parallel_lem4 :
+Theorem parallel_lem4:
 !p L. (!x. MEM x L ==> x IN events p) /\
       prob_space p /\
         ((rbd_struct p (parallel (rbd_list L))) IN events p) ==>
@@ -1052,7 +1052,7 @@ GEN_TAC
 QED
 
 (*----------------parallel_lem5----------------------*)
-Theorem parallel_lem5 :
+Theorem parallel_lem5:
 !p L. rbd_struct p (series (rbd_list L)) = big_inter p L
 Proof
 RW_TAC std_ss[]
@@ -1063,7 +1063,7 @@ QED
 
 (*-----------------parallel_lem6---------------------*)
 
-Theorem parallel_lem6 :
+Theorem parallel_lem6:
 !p x L.  prob_space p /\ (!x'. MEM x' L ==> x' IN events p) ==>
         (prob p (rbd_struct p (parallel (rbd_list L))) =
         1 - prob p (rbd_struct p (series (rbd_list (compl_list p ( L))))))
@@ -1088,7 +1088,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[DIFF_DIFF_SUBSET]
 QED
 (*--------------parallel_lem7----------------------*)
-Theorem parallel_lem7 :
+Theorem parallel_lem7:
 !p (L). prob_space p /\ (!x'. MEM x' L ==> x'  IN  events p )   ==>
         (one_minus_list (list_prob p L) = list_prob p ( compl_list p L))
 Proof
@@ -1104,7 +1104,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[GSYM compl_list_def]
 QED
 (*------------------------------------*)
-Theorem parallel_lem8 :
+Theorem parallel_lem8:
  !L. one_minus_list L =  MAP (\a. 1 - a) L
 Proof
 Induct
@@ -1113,7 +1113,7 @@ QED
 (*------------------------------------*)
 (*-----------Parallel_struct_thm------*)
 (*------------------------------------*)
-Theorem parallel_struct_thm :
+Theorem parallel_struct_thm:
 !p L . ~NULL L /\ (!x'. MEM x' L ==> x' IN events p) /\ prob_space p  /\ mutual_indep p L  ==>
       (prob p (rbd_struct p (parallel (rbd_list L))) =
        1 -  list_prod (one_minus_list (list_prob p L)))
@@ -1145,7 +1145,7 @@ QED
 (*------Parallel-Series Lemma's-------*)
 (*------------------------------------*)
 (*------parallel_series_lem1---------*)
-Theorem parallel_series_lem1 :
+Theorem parallel_series_lem1:
 !l1 l2 l3 l4.
 (PERM l1 = PERM (l2++l3)) ==>
 (PERM (l1 ++ l4) = PERM (l2++(l4++l3)))
@@ -1159,7 +1159,7 @@ REPEAT STRIP_TAC
 >> RW_TAC list_ss[PERM_APPEND_IFF,PERM_APPEND]
 QED
 (*-----mutual_indep_flat_cons1------------*)
-Theorem mutual_indep_flat_cons1 :
+Theorem mutual_indep_flat_cons1:
 !L1 h L p. mutual_indep p (FLAT ((h::L1)::L)) ==> mutual_indep p (FLAT (L1::[h]::L))
 Proof
 RW_TAC list_ss[mutual_indep_def]
@@ -1176,7 +1176,7 @@ RW_TAC list_ss[mutual_indep_def]
 >> FULL_SIMP_TAC arith_ss[]
 QED
 (*-----------mutual_indep_flat_cons2-------------------------*)
-Theorem mutual_indep_flat_cons2 :
+Theorem mutual_indep_flat_cons2:
 !L1 h L p.  mutual_indep p (FLAT (L1::h::L)) ==> mutual_indep p (FLAT (h::L))
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1207,7 +1207,7 @@ RW_TAC std_ss[mutual_indep_def]
 >> RW_TAC std_ss[]
 QED
 (*----mutual_indep_flat_append--------*)
-Theorem mutual_indep_flat_append :
+Theorem mutual_indep_flat_append:
 !L L1 L2 p.  mutual_indep p (FLAT (L1::L2::L)) ==>  mutual_indep p ((L1 ++ L2))
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1234,7 +1234,7 @@ RW_TAC std_ss[mutual_indep_def]
 >> FULL_SIMP_TAC std_ss[]
 QED
 (*------------mutual_indep_flat_cons3-----------------*)
-Theorem mutual_indep_flat_cons3_0 :
+Theorem mutual_indep_flat_cons3_0:
 !L L1 L2 p.  mutual_indep p (FLAT (L1::L2::L)) ==>  mutual_indep p ((L1))
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1262,7 +1262,7 @@ RW_TAC std_ss[mutual_indep_def]
 QED
 
 (*-------mutual_indep_flat_cons3---*)
-Theorem mutual_indep_flat_cons3 :
+Theorem mutual_indep_flat_cons3:
   !L1 h L p. mutual_indep p (FLAT (L1::h::L)) ==> mutual_indep p (FLAT (L1::L))
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1297,7 +1297,7 @@ RW_TAC std_ss[mutual_indep_def]
 QED
 
 (*---------mutual_indep_flat_append1----*)
-Theorem mutual_indep_flat_append1 :
+Theorem mutual_indep_flat_append1:
 !L h L1 p. mutual_indep p (FLAT (L1::h::L)) ==> mutual_indep p (FLAT ((h ++ L1)::L))
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1318,7 +1318,7 @@ RW_TAC std_ss[mutual_indep_def]
 QED
 
 (*-------mutual_indep_front_append------*)
-Theorem mutual_indep_front_append :
+Theorem mutual_indep_front_append:
 !L1 L p.  mutual_indep p (L1 ++ L) ==> mutual_indep p L
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1345,7 +1345,7 @@ RW_TAC std_ss[mutual_indep_def]
 QED
 (*--------mutual_indep_FLAT_front_cons----*)
 
-Theorem mutual_indep_FLAT_front_cons :
+Theorem mutual_indep_FLAT_front_cons:
 !h L p.  mutual_indep p (FLAT (h::L)) ==> mutual_indep p (FLAT (L))
 Proof
 RW_TAC list_ss[]
@@ -1354,7 +1354,7 @@ RW_TAC list_ss[]
 >> RW_TAC std_ss[]
 QED
 (*--------mutual_indep_append1------*)
-Theorem mutual_indep_append1 :
+Theorem mutual_indep_append1:
 !L1 L2 L p.  mutual_indep p (L1++L2++L) ==> mutual_indep p (L2++L1++L)
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1374,7 +1374,7 @@ RW_TAC std_ss[mutual_indep_def]
 >> FULL_SIMP_TAC std_ss[]
 QED
 (*----------mutual_indep_flat_cons4-------*)
-Theorem mutual_indep_flat_cons4 :
+Theorem mutual_indep_flat_cons4:
 !L1 h L p.  mutual_indep p (FLAT (L1::h::L)) ==> mutual_indep p (FLAT (L1::L))
 Proof
 RW_TAC list_ss[]
@@ -1385,7 +1385,7 @@ RW_TAC list_ss[]
 >> RW_TAC list_ss[]
 QED
 (*----------mutual_indep_append_sym------*)
-Theorem mutual_indep_append_sym :
+Theorem mutual_indep_append_sym:
 !L1 L p.  mutual_indep p (L1++L) ==> mutual_indep p (L++L1)
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1405,7 +1405,7 @@ RW_TAC std_ss[mutual_indep_def]
 >> FULL_SIMP_TAC std_ss[]
 QED
 (*-------mutual_indep_flat_cons5--------*)
-Theorem mutual_indep_flat_cons5 :
+Theorem mutual_indep_flat_cons5:
 !L L1 L2 p.  mutual_indep p (FLAT (L1::L2::L)) ==>  mutual_indep p ((L1))
 Proof
 RW_TAC list_ss[]
@@ -1416,7 +1416,7 @@ RW_TAC list_ss[]
 >> RW_TAC std_ss[APPEND_ASSOC]
 QED
 (*-----------mutual_indep_flat_append1----*)
-Theorem mutual_indep_FLAT_append1 :
+Theorem mutual_indep_FLAT_append1:
 !L L1 L2 p.  mutual_indep p (FLAT (L1::L2::L)) ==>  mutual_indep p ((L1 ++ L2))
 Proof
 RW_TAC list_ss[]
@@ -1426,7 +1426,7 @@ RW_TAC list_ss[]
 >> RW_TAC std_ss[]
 QED
 (*--------------mutual_indep_cons_append10----*)
-Theorem mutual_indep_cons_append10 :
+Theorem mutual_indep_cons_append10:
 !L1 h L p.  mutual_indep p (FLAT (L1::h::L)) ==> mutual_indep p (FLAT (h::L))
 Proof
 RW_TAC list_ss[]
@@ -1435,7 +1435,7 @@ RW_TAC list_ss[]
 >> RW_TAC list_ss[]
 QED
 (*------------mutual_indep_cons_append11-----------------------*)
-Theorem mutual_indep_cons_append11 :
+Theorem mutual_indep_cons_append11:
 !h L1 L2 L p. mutual_indep p (L1 ++ h::(L2 ++ L)) ==>
 mutual_indep p (h::(L1 ++ L))
 Proof
@@ -1473,7 +1473,7 @@ QED
 
 (*--------mutual_indep_cons_append12---*)
 
-Theorem mutual_indep_cons_append12 :
+Theorem mutual_indep_cons_append12:
 !h L1 L2 L p.  mutual_indep p (FLAT (L1::(h::L2)::L)) ==> mutual_indep p (FLAT ((h::L1)::L))
 Proof
 RW_TAC list_ss[]
@@ -1483,7 +1483,7 @@ RW_TAC list_ss[]
 QED
 
 (*--------mutual_indep_cons_append13---*)
-Theorem mutual_indep_cons_append13 :
+Theorem mutual_indep_cons_append13:
 !L L1 L2 p.  mutual_indep p (FLAT (L1::L2::L)) ==>  mutual_indep p ((L1 ++ L2))
 Proof
 RW_TAC list_ss[]
@@ -1494,7 +1494,7 @@ RW_TAC list_ss[]
 QED
 
 (*--------mutual_indep_cons_append14---*)
-Theorem mutual_indep_cons_append14 :
+Theorem mutual_indep_cons_append14:
 !h L1 L p.  mutual_indep p (L1 ++ h::L) ==> mutual_indep p (L1 ++ L)
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -1531,7 +1531,7 @@ RW_TAC std_ss[mutual_indep_def]
 QED
 
 (*--------mutual_indep_cons_append15---*)
-Theorem mutual_indep_cons_append15 :
+Theorem mutual_indep_cons_append15:
 !h L1 L2 L p.  mutual_indep p (FLAT (L1::(h::L2)::L)) ==> mutual_indep p (FLAT ([(h)]::L))
 Proof
 RW_TAC list_ss[]
@@ -1546,7 +1546,7 @@ RW_TAC list_ss[]
 QED
 
 (*--------mutual_indep_cons_append16---*)
-Theorem mutual_indep_cons_append16 :
+Theorem mutual_indep_cons_append16:
 !h L1 L2 L p.  mutual_indep p (FLAT (L1::(h::L2)::L)) ==> mutual_indep p (FLAT ([(h)]::L2::L))
 Proof
 RW_TAC list_ss[]
@@ -1557,7 +1557,7 @@ QED
 
 (*-------mutual_indep_cons_append17-----------*)
 
-Theorem mutual_indep_cons_append17 :
+Theorem mutual_indep_cons_append17:
 !h L1 L p.  mutual_indep p (FLAT ((h::L1)::L)) ==> mutual_indep p (FLAT ([(h)]::L))
 Proof
 RW_TAC list_ss[]
@@ -1568,7 +1568,7 @@ RW_TAC list_ss[]
 >> RW_TAC list_ss[]
 QED
 (*-------mutual_indep_cons_append18-----------*)
-Theorem mutual_indep_cons_append18 :
+Theorem mutual_indep_cons_append18:
 !h L1 L p.  mutual_indep p (FLAT ((h::L1)::L)) ==> mutual_indep p (FLAT (L1::L))
 Proof
 RW_TAC list_ss[]
@@ -1578,7 +1578,7 @@ RW_TAC list_ss[]
 QED
 
 (*-------mutual_indep_cons_append19-----------*)
-Theorem mutual_indep_cons_append19 :
+Theorem mutual_indep_cons_append19:
 !h L1 L p.  mutual_indep p (FLAT ((h::L1)::L)) ==> mutual_indep p (FLAT (L1::[h]::L))
 Proof
 RW_TAC list_ss[]
@@ -1587,7 +1587,7 @@ RW_TAC list_ss[]
 QED
 
 (*---------------------------------*)
-Theorem mutual_indep_flat_cons6 :
+Theorem mutual_indep_flat_cons6:
  !h L1 L p.  mutual_indep p (FLAT ((h::L1)::L)) ==> mutual_indep p (FLAT [L1;[h]])
 Proof
 RW_TAC list_ss[]
@@ -1599,7 +1599,7 @@ RW_TAC list_ss[]
 >> FULL_SIMP_TAC list_ss[]
 QED
 (*--------in_events_parallel_rbd---*)
-Theorem in_events_parallel_rbd :
+Theorem in_events_parallel_rbd:
 !p L. prob_space p /\ (!x. MEM x L ==> x IN events p )==>
 (rbd_struct p (parallel (rbd_list L)) IN events p)
 Proof
@@ -1619,7 +1619,7 @@ QED
 (*   Parallel-Series RBD Lemmas              *)
 (*-------------------------------------------*)
 
-Theorem in_events_parallel_series :
+Theorem in_events_parallel_series:
  !p L. prob_space p /\ (!x. MEM x (FLAT L) ==> x IN events p )==>
       (rbd_struct p (parallel (MAP (\a. series (rbd_list a)) L)) IN events p)
 Proof
@@ -1640,7 +1640,7 @@ RW_TAC std_ss[]
 QED
 
 (*-------series_rbd_append----*)
-Theorem series_rbd_append :
+Theorem series_rbd_append:
 !p h L1. prob_space p /\ (!x. MEM x (h++L1) ==> x IN events p )==>
         (rbd_struct p (series (rbd_list h)) INTER
         rbd_struct p (series (rbd_list L1)) =
@@ -1664,7 +1664,7 @@ REPEAT GEN_TAC
 QED
 
 (*-------inter_set_arrang1----*)
-Theorem inter_set_arrang1 :
+Theorem inter_set_arrang1:
 !a b c d. a INTER b INTER c INTER d = a INTER (b INTER c) INTER d
 Proof
 SRW_TAC [][IN_INTER,GSPECIFICATION,EXTENSION]
@@ -1672,7 +1672,7 @@ SRW_TAC [][IN_INTER,GSPECIFICATION,EXTENSION]
 QED
 
 (*---MEM_NULL_arrang1--------*)
-Theorem MEM_NULL_arrang1 :
+Theorem MEM_NULL_arrang1:
 !L1 L2 L. (!x. MEM x ((L1::L2::L):('a ->bool) list list)==> ~NULL x ) ==> (!x. MEM x ((L1++L2)::L)  ==>  ~NULL x)
 Proof
 RW_TAC list_ss[]
@@ -1683,7 +1683,7 @@ QED
 
 (*----series_rbd_append2----------*)
 
-Theorem series_rbd_append2 :
+Theorem series_rbd_append2:
 !p h L1. prob_space p /\ (!x. MEM x (h++L1) ==> x IN events p ) /\
         (~NULL h) /\ (~NULL L1) /\ mutual_indep p (h++L1) ==>
         (prob p (rbd_struct p (series (rbd_list (h ++ L1)))) =
@@ -1770,7 +1770,7 @@ GEN_TAC
 QED
 
 (*----series_rbd_indep_parallel_series_rbd---*)
-Theorem series_rbd_indep_parallel_series_rbd :
+Theorem series_rbd_indep_parallel_series_rbd:
 !p L L1. prob_space p /\(!x. MEM x (L1::L) ==> ~NULL x) /\
         (!x. MEM x (FLAT ((L1::L):'a  event list list)) ==> x IN events p) /\
         mutual_indep p (FLAT (L1::L)) ==>
@@ -1930,7 +1930,7 @@ QED
 (*   Parallel-Series RBD Theorem             *)
 (*-------------------------------------------*)
 
-Theorem Parallel_Series_struct_thm :
+Theorem Parallel_Series_struct_thm:
 !p L.  (!z. MEM z (L)  ==>  ~NULL z) /\
         prob_space p /\ (!x'. MEM x' (FLAT (L)) ==> (x' IN events p)) /\
         ( mutual_indep p (FLAT L)) ==>
@@ -1982,7 +1982,7 @@ GEN_TAC
 QED
 
 (*-------------rel_parallel_series_rbd----------*)
-Theorem rel_parallel_series_rbd :
+Theorem rel_parallel_series_rbd:
 !p L.  (!z. MEM z (L)  ==>  ~NULL z) /\
         prob_space p /\ (!x'. MEM x' (FLAT (L)) ==> (x' IN events p)) /\ ( mutual_indep p (FLAT L)) ==>
         (prob p (rbd_struct p ((parallel of (\a. series (rbd_list a))) L)) =
@@ -1993,7 +1993,7 @@ RW_TAC list_ss[of_DEF,o_DEF]
 >> RW_TAC std_ss[]
 QED
 (*-------------------------------*)
-Theorem one_minus_eq_lemm :
+Theorem one_minus_eq_lemm:
  ! p L. prob_space p ==>
  (list_prod
   (one_minus_list
@@ -2012,7 +2012,7 @@ QED
 (* ========================================================================== *)
 
 
-Theorem parallel_series_struct_rbd_v2 :
+Theorem parallel_series_struct_rbd_v2:
 !p L.  (∀z. MEM z L ⇒ ¬NULL z) ∧ prob_space p ∧
      (∀x'. MEM x' (FLAT L) ⇒ x' ∈ events p) ∧ mutual_indep p (FLAT L) ⇒
      (prob p
@@ -2035,7 +2035,7 @@ QED
 
 (*---------------------------*)
 
-Theorem in_events_series_parallel :
+Theorem in_events_series_parallel:
  !p L. prob_space p /\ (!x. MEM x (FLAT L) ==> x IN events p ) ==>
       (rbd_struct p (series (MAP (\a. parallel (rbd_list a)) L)) IN events p)
 Proof
@@ -2056,7 +2056,7 @@ GEN_TAC
 QED
 
 (*-------series_rbd_indep_series_parallel_rbd-------*)
-Theorem series_rbd_indep_series_parallel_rbd :
+Theorem series_rbd_indep_series_parallel_rbd:
 !p L L1.
   prob_space p /\
   (!x. MEM x (L1::L) ==> ~NULL x) /\
@@ -2294,7 +2294,7 @@ prob p (rbd_struct p (series (rbd_list [h'])) INTER rbd_struct p (parallel (rbd_
 QED
 
 (*-----parallel_rbd_indep_series_parallel_rbd----------*)
-Theorem parallel_rbd_indep_series_parallel_rbd :
+Theorem parallel_rbd_indep_series_parallel_rbd:
 !p L1 L.
   prob_space p /\
   (!x. MEM x (L1::L) ==> ~NULL x) /\
@@ -2460,7 +2460,7 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-Theorem series_parallel_struct_thm :
+Theorem series_parallel_struct_thm:
 !p L.
   prob_space p /\
   (!z. MEM z L  ==>  ~NULL z) /\
@@ -2504,7 +2504,7 @@ QED
 
 (*-------------------------*)
 (*-------------------------*)
-Theorem series_parallel_struct_thm_v2 :
+Theorem series_parallel_struct_thm_v2:
 !p L.
   (!z. MEM z L  ==>  ~NULL z) /\
   prob_space p /\
@@ -2529,7 +2529,7 @@ QED
 (*                                                                            *)
 (* -------------------------------------------------------------------------- *)
 
-Theorem in_events_parallel_of_series_parallel :
+Theorem in_events_parallel_of_series_parallel:
 !p L.
   prob_space p /\
   (!x'. MEM x' (FLAT (FLAT L)) ==> (x' IN events p)) ==>
@@ -2556,7 +2556,7 @@ QED
 
 (*---in_events_series_parallel_of_series_parallel -----------*)
 
-Theorem in_events_series_parallel_of_series_parallel :
+Theorem in_events_series_parallel_of_series_parallel:
 !p L.
   prob_space p /\
   (!x'. MEM x' (FLAT (FLAT (FLAT L))) ==> (x' IN events p)) ==>
@@ -2584,7 +2584,7 @@ QED
 
 (*---------------------------*)
 
-Theorem series_rbd_indep_series_parallel_inter_series_parallel_of_series_parallel :
+Theorem series_rbd_indep_series_parallel_inter_series_parallel_of_series_parallel:
  !p h' L1 L.
   prob_space p /\
   (!z. MEM z ((FLAT (FLAT ([[[L1]]] ++ [(h')]::L)))) ==> ~NULL z) /\
@@ -2990,7 +2990,7 @@ GEN_TAC
 QED
 
 (*--------------------------*)
-Theorem series_rbd_indep_series_parallel_of_series_parallel :
+Theorem series_rbd_indep_series_parallel_of_series_parallel:
 !p L L1.
   prob_space p /\
   (!z. MEM z (FLAT (FLAT( [[[L1]]]++L))) ==> ~NULL z) /\
@@ -3142,7 +3142,7 @@ GEN_TAC
 >> RW_TAC std_ss[INTER_COMM]
 QED
 (*-------------------------*)
-Theorem series_parallel_rbd_indep_series_parallel_of_series_parallel :
+Theorem series_parallel_rbd_indep_series_parallel_of_series_parallel:
 !p L1 L.
   prob_space p /\
   (!z. MEM z (FLAT (FLAT ([L1]::L))) ==> ~NULL z) /\
@@ -3446,7 +3446,7 @@ GEN_TAC
 QED
 
 (*-------------------------*)
-Theorem parallel_series_parallel_rbd_indep_series_parallel_of_series_parallel_rbd :
+Theorem parallel_series_parallel_rbd_indep_series_parallel_of_series_parallel_rbd:
 !p L1 L.
   prob_space p /\
   (!z.  MEM z (FLAT (FLAT (L1::L))) ==>  ~NULL z) /\
@@ -3591,7 +3591,7 @@ QED
 
 (*-----------------------------------*)
 
-Theorem rel_parallel_of_series_parallel_rbd :
+Theorem rel_parallel_of_series_parallel_rbd:
 !p L1 L.
      prob_space p /\
      (!z. MEM z (FLAT (FLAT ((L1::L))))  ==> ~NULL z) /\
@@ -3684,7 +3684,7 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-Theorem rel_nested_series_parallel_rbd :
+Theorem rel_nested_series_parallel_rbd:
 !p L.
   prob_space p /\
   (!z. MEM z (FLAT (FLAT L)) ==> ~NULL z) /\

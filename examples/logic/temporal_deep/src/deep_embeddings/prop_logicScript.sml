@@ -136,7 +136,7 @@ val P_NEGATE_VARS_def = Define
    (P_NEGATE_VARS (P_NOT b) = (P_NOT(P_NEGATE_VARS b))) /\
    (P_NEGATE_VARS (P_AND(b1,b2)) = P_AND(P_NEGATE_VARS b1, P_NEGATE_VARS b2))`;
 
-Theorem P_NEGATE_VARS_SEM :
+Theorem P_NEGATE_VARS_SEM:
     !p s. (P_SEM s (P_NEGATE_VARS p)) = (P_SEM (UNIV DIFF s) p)
 Proof
     INDUCT_THEN prop_logic_induct ASSUME_TAC THEN

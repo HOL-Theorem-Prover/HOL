@@ -1351,7 +1351,7 @@ val PREFIX_COVER_APPEND = store_thm
                      image_countable, o_THM]
    >> RW_TAC std_ss [EVENTS_BERN_PREFIX_SET]);
 
-Theorem INDEP_FN_BIND :
+Theorem INDEP_FN_BIND:
     !f g. f IN indep_fn /\ (!x. g x IN indep_fn) ==> BIND f g IN indep_fn
 Proof
   RW_TAC std_ss [indep_fn_def, GSPECIFICATION] >| (* 4 goals here *)

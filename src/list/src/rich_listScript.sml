@@ -1192,7 +1192,7 @@ val TAKE_SNOC = Q.store_thm ("TAKE_SNOC",
    THEN RES_TAC
    THEN ASM_REWRITE_TAC []);
 
-Theorem TAKE_FRONT :
+Theorem TAKE_FRONT:
     !l n. l <> [] /\ n < LENGTH l ==> TAKE n (FRONT l) = TAKE n l
 Proof
     HO_MATCH_MP_TAC SNOC_INDUCT
@@ -2401,7 +2401,7 @@ Proof
 QED
 
 (* from examples/lambda/basics/appFOLDLScript.sml *)
-Theorem DROP_PREn_LAST_CONS :
+Theorem DROP_PREn_LAST_CONS:
     !l n. 0 < n /\ n <= LENGTH l ==>
           (DROP (n - 1) l = LAST (TAKE n l) :: DROP n l)
 Proof
@@ -2562,7 +2562,7 @@ Theorem IS_PREFIX_REFL[simp] = isPREFIX_REFL
 Theorem IS_PREFIX_ANTISYM = isPREFIX_ANTISYM
 
 (* |- !x y z. y <<= x /\ z <<= y ==> z <<= x *)
-Theorem IS_PREFIX_TRANS :
+Theorem IS_PREFIX_TRANS:
     !x y z. IS_PREFIX x y /\ IS_PREFIX y z ==> IS_PREFIX x z
 Proof
     rpt STRIP_TAC
@@ -2654,7 +2654,7 @@ val prefixes_is_prefix_total = Q.store_thm("prefixes_is_prefix_total",
   Cases THEN SRW_TAC[][])
 
 (* NOTE: By using LENGTH_TAKE, this ‘n’ is actually ’LENGTH l1’ *)
-Theorem IS_PREFIX_EQ_TAKE :
+Theorem IS_PREFIX_EQ_TAKE:
     !l l1. l1 <<= l <=> ?n. n <= LENGTH l /\ l1 = TAKE n l
 Proof
     rpt GEN_TAC
@@ -2706,7 +2706,7 @@ Proof
  >> rw [TAKE_LENGTH_TOO_LONG]
 QED
 
-Theorem IS_PREFIX_IMP_TAKE :
+Theorem IS_PREFIX_IMP_TAKE:
     !l l1. l1 <<= l ==> l1 = TAKE (LENGTH l1) l
 Proof
     rw [IS_PREFIX_EQ_TAKE]
@@ -2716,21 +2716,21 @@ QED
 (* NOTE: This theorem can also be proved by IS_PREFIX_LENGTH_ANTI and
    prefixes_is_prefix_total, but IS_PREFIX_EQ_TAKE is more natural.
  *)
-Theorem IS_PREFIX_EQ_REWRITE :
+Theorem IS_PREFIX_EQ_REWRITE:
     !l1 l2 l. l1 <<= l /\ l2 <<= l ==> (l1 = l2 <=> LENGTH l1 = LENGTH l2)
 Proof
     rw [IS_PREFIX_EQ_TAKE]
  >> rw [LENGTH_TAKE, TAKE_EQ_REWRITE]
 QED
 
-Theorem IS_PREFIX_ALL_DISTINCT :
+Theorem IS_PREFIX_ALL_DISTINCT:
     !l l1. l1 <<= l /\ ALL_DISTINCT l ==> ALL_DISTINCT l1
 Proof
     rw [IS_PREFIX_EQ_TAKE']
  >> MATCH_MP_TAC ALL_DISTINCT_TAKE >> rw []
 QED
 
-Theorem IS_PREFIX_FRONT_MONO :
+Theorem IS_PREFIX_FRONT_MONO:
     !l1 l2. l1 <> [] /\ l2 <> [] /\ l1 <<= l2 ==> FRONT l1 <<= FRONT l2
 Proof
     rw [IS_PREFIX_EQ_TAKE]
@@ -2743,7 +2743,7 @@ Proof
  >> rw []
 QED
 
-Theorem IS_PREFIX_FRONT_CASES :
+Theorem IS_PREFIX_FRONT_CASES:
     !l l1. l <> [] ==> (l1 <<= l <=> l = l1 \/ l1 <<= FRONT l)
 Proof
     rpt GEN_TAC
@@ -3050,7 +3050,7 @@ val MEM_FRONT = Q.store_thm ("MEM_FRONT",
    `!l e y. MEM y (FRONT (e::l)) ==> MEM y (e::l)`,
    Induct_on `l` THEN FULL_SIMP_TAC list_ss [DISJ_IMP_THM, MEM]);
 
-Theorem MEM_FRONT_NOT_NIL :
+Theorem MEM_FRONT_NOT_NIL:
     !l y. l <> [] /\ MEM y (FRONT l) ==> MEM y l
 Proof
     rpt STRIP_TAC
@@ -3062,7 +3062,7 @@ val FRONT_APPEND = Q.store_thm ("FRONT_APPEND",
    `!l1 l2 e. FRONT (l1 ++ e::l2) = l1 ++ FRONT (e::l2)`,
    Induct_on `l1` THEN ASM_SIMP_TAC list_ss [FRONT_DEF])
 
-Theorem FRONT_APPEND_NOT_NIL :
+Theorem FRONT_APPEND_NOT_NIL:
     !l1 l2. l2 <> [] ==> FRONT (l1 ++ l2) = l1 ++ FRONT l2
 Proof
     rpt STRIP_TAC
@@ -3070,7 +3070,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [FRONT_APPEND]
 QED
 
-Theorem LAST_APPEND_NOT_NIL :
+Theorem LAST_APPEND_NOT_NIL:
     !l1 l2. l2 <> [] ==> LAST (l1 ++ l2) = LAST l2
 Proof
     rpt STRIP_TAC
@@ -3091,7 +3091,7 @@ val MEM_LAST = Q.store_thm ("MEM_LAST",
    `!e l. MEM (LAST (e::l)) (e::l)`,
    Induct_on `l` THEN ASM_SIMP_TAC arith_ss [LAST_CONS, Once MEM]);
 
-Theorem MEM_LAST_NOT_NIL :
+Theorem MEM_LAST_NOT_NIL:
     !e l. l <> [] ==> MEM (LAST l) l
 Proof
     rpt STRIP_TAC
@@ -3423,7 +3423,7 @@ QED
    here for backwards compatibility *)
 Theorem ALL_DISTINCT_TAKE = listTheory.ALL_DISTINCT_TAKE
 
-Theorem ALL_DISTINCT_FRONT :
+Theorem ALL_DISTINCT_FRONT:
     !l. l <> [] /\ ALL_DISTINCT l ==> ALL_DISTINCT (FRONT l)
 Proof
     rpt STRIP_TAC
@@ -3709,7 +3709,7 @@ end
 (* end CakeML lemmas *)
 
 (* BEGIN more lemmas of IS_SUFFIX *)
-Theorem IS_SUFFIX_EQ_DROP :
+Theorem IS_SUFFIX_EQ_DROP:
     !l l1. IS_SUFFIX l l1 <=> ?n. n <= LENGTH l /\ l1 = DROP n l
 Proof
     rw [GSYM IS_PREFIX_REVERSE, IS_PREFIX_EQ_TAKE]
@@ -3740,35 +3740,35 @@ Proof
  >> simp [IS_SUFFIX]
 QED
 
-Theorem IS_SUFFIX_IMP_DROP :
+Theorem IS_SUFFIX_IMP_DROP:
     !l l1. IS_SUFFIX l l1 ==> l1 = DROP (LENGTH l - LENGTH l1) l
 Proof
     rw [IS_SUFFIX_EQ_DROP]
  >> rw [LENGTH_DROP]
 QED
 
-Theorem IS_SUFFIX_IMP_LASTN :
+Theorem IS_SUFFIX_IMP_LASTN:
     !l l1. IS_SUFFIX l l1 ==> l1 = LASTN (LENGTH l1) l
 Proof
     rw [IS_SUFFIX_EQ_DROP]
  >> rw [DROP_LASTN]
 QED
 
-Theorem LIST_TO_SET_PREFIX :
+Theorem LIST_TO_SET_PREFIX:
     !l l1. l1 <<= l ==> set l1 SUBSET set l
 Proof
     rw [IS_PREFIX_EQ_TAKE']
  >> rw [LIST_TO_SET_TAKE]
 QED
 
-Theorem LIST_TO_SET_SUFFIX :
+Theorem LIST_TO_SET_SUFFIX:
     !l l1. IS_SUFFIX l l1 ==> set l1 SUBSET set l
 Proof
     rw [IS_SUFFIX_EQ_DROP']
  >> rw [LIST_TO_SET_DROP]
 QED
 
-Theorem IS_SUFFIX_ALL_DISTINCT :
+Theorem IS_SUFFIX_ALL_DISTINCT:
     !l l1. IS_SUFFIX l l1 /\ ALL_DISTINCT l ==> ALL_DISTINCT l1
 Proof
     rw [IS_SUFFIX_EQ_DROP']
@@ -3942,13 +3942,13 @@ in
 end
 
 (* moved here from examples/CCS/CCSScript.sml, originally by Chun Tian *)
-Definition DELETE_ELEMENT :
+Definition DELETE_ELEMENT:
     (DELETE_ELEMENT e [] = []) /\
     (DELETE_ELEMENT e (x :: l) = if (e = x) then DELETE_ELEMENT e l
                                  else x :: DELETE_ELEMENT e l)
 End
 
-Theorem NOT_IN_DELETE_ELEMENT :
+Theorem NOT_IN_DELETE_ELEMENT:
     !e L. ~MEM e (DELETE_ELEMENT e L)
 Proof
     GEN_TAC >> Induct_on `L`
@@ -3957,7 +3957,7 @@ Proof
  >> Cases_on `e = h` >> fs []
 QED
 
-Theorem DELETE_ELEMENT_FILTER :
+Theorem DELETE_ELEMENT_FILTER:
     !e L. DELETE_ELEMENT e L = FILTER ((<>) e) L
 Proof
     GEN_TAC >> Induct_on `L`
@@ -3966,7 +3966,7 @@ Proof
  >> Cases_on `e = h` >> fs []
 QED
 
-Theorem LENGTH_DELETE_ELEMENT_LEQ :
+Theorem LENGTH_DELETE_ELEMENT_LEQ:
     !e L. LENGTH (DELETE_ELEMENT e L) <= LENGTH L
 Proof
     rpt GEN_TAC
@@ -3978,7 +3978,7 @@ QED
 fun K_TAC _ = ALL_TAC;
 val KILL_TAC = POP_ASSUM_LIST K_TAC;
 
-Theorem LENGTH_DELETE_ELEMENT_LE :
+Theorem LENGTH_DELETE_ELEMENT_LE:
     !e L. MEM e L ==> LENGTH (DELETE_ELEMENT e L) < LENGTH L
 Proof
     rpt GEN_TAC >> Induct_on `L`
@@ -3989,7 +3989,7 @@ Proof
  >> KILL_TAC >> RW_TAC arith_ss []
 QED
 
-Theorem EVERY_DELETE_ELEMENT :
+Theorem EVERY_DELETE_ELEMENT:
     !e L P. P e /\ EVERY P (DELETE_ELEMENT e L) ==> EVERY P L
 Proof
     GEN_TAC >> Induct_on `L`
@@ -3998,7 +3998,7 @@ Proof
  >> Cases_on `e = h` >> fs []
 QED
 
-Theorem DELETE_ELEMENT_APPEND :
+Theorem DELETE_ELEMENT_APPEND:
     !a L L'. DELETE_ELEMENT a (L ++ L') =
              DELETE_ELEMENT a L ++ DELETE_ELEMENT a L'
 Proof
@@ -4418,7 +4418,7 @@ Proof
   simp[]
 QED
 
-Theorem HD_APPEND_NOT_NIL :
+Theorem HD_APPEND_NOT_NIL:
   !l1 l2. l1 <> [] ==> HD (l1 ++ l2) = HD l1
 Proof
     rpt GEN_TAC
@@ -4935,7 +4935,7 @@ val TAKE_DROP_SWAP = store_thm(
   ]);
 
 (* cf. TAKE_DROP |- !n l. TAKE n l ++ DROP n l = l *)
-Theorem TAKE_DROP_SUC :
+Theorem TAKE_DROP_SUC:
     !n l. n < LENGTH l ==> TAKE n l ++ [EL n l] ++ DROP (SUC n) l = l
 Proof
     rpt STRIP_TAC

@@ -69,7 +69,7 @@ Type boehm_tree[pp] = “:BT_node ltree”
    or something stronger ‘FV M SUBSET X UNION (RANK r X)’ for induction,
    must be assumed in antecedents.
  *)
-Definition BT_generator_def :
+Definition BT_generator_def:
     BT_generator X (M,r) =
       if solvable M then
          let M0 = principle_hnf M;
@@ -86,7 +86,7 @@ Definition BT_generator_def :
 End
 
 (* M0 is not needed if M is already an hnf *)
-Theorem BT_generator_of_hnf :
+Theorem BT_generator_of_hnf:
     !X M r. FINITE X /\ hnf M ==>
             BT_generator X (M,r) =
            (let
@@ -123,7 +123,7 @@ Overload BT' = “\X M r. BT X (M,r)”
    Defining ‘m = hnf_children_size M0’ instead of ‘LENGTH Ms’ has extra
    benefits in proving subterm_tpm lemmas.
  *)
-Definition subterm_def :
+Definition subterm_def:
     subterm X M     [] r = SOME (M,r) /\
     subterm X M (h::p) r =
       if solvable M then
@@ -152,7 +152,7 @@ Proof
     rw [subterm_NIL]
 QED
 
-Theorem subterm_disjoint_lemma :
+Theorem subterm_disjoint_lemma:
     !X M r n vs.
            FINITE X /\ FV M SUBSET X UNION RANK r /\ vs = RNEWS r n X
        ==> DISJOINT (set vs) (FV M)
@@ -187,7 +187,7 @@ QED
 (* NOTE: In general ‘solvable M’ doesn't imply ‘solvable (M @* args)’. The
    present lemma is a special case.
  *)
-Theorem solvable_appstar :
+Theorem solvable_appstar:
     !X M r M0 n n' vs.
            FINITE X /\ FV M SUBSET X UNION RANK r /\
            solvable M /\
@@ -257,7 +257,7 @@ QED
 (* Essentially, ‘hnf_children_size (principle_hnf M)’ is irrelevant with
    the excluding list. This lemma shows the equivalence in defining ‘m’.
  *)
-Theorem hnf_children_size_alt :
+Theorem hnf_children_size_alt:
     !X M r M0 n vs M1 Ms.
          FINITE X /\ FV M SUBSET X UNION RANK r /\ solvable M /\
          M0 = principle_hnf M /\
@@ -279,7 +279,7 @@ Proof
  >> POP_ASSUM (rfs o wrap)
 QED
 
-Theorem subterm_of_solvables :
+Theorem subterm_of_solvables:
     !X M h p r. solvable M ==>
        subterm X M (h::p) r =
          let M0 = principle_hnf M;
@@ -294,7 +294,7 @@ Proof
     rw [subterm_def]
 QED
 
-Theorem subterm_of_unsolvables :
+Theorem subterm_of_unsolvables:
     !X M p r. unsolvable M /\ p <> [] ==> subterm X M p r = NONE
 Proof
     rpt STRIP_TAC
@@ -305,7 +305,7 @@ QED
 (* NOTE: With [hnf_children_size_alt] now we are ready to prove this alternative
          definition of ‘subterm’.
  *)
-Theorem subterm_alt :
+Theorem subterm_alt:
     !X M h p r. FINITE X /\ FV M SUBSET X UNION RANK r ==>
        subterm X M (h::p) r =
        if solvable M then
@@ -349,19 +349,19 @@ Overload bot = “(NONE, SOME 0) :(BT_node # num option)”
 val _ = Unicode.unicode_version {u = UTF8.chr 0x22A5, tmnm = "bot"};
 val _ = TeX_notation {hol = "bot", TeX = ("\\ensuremath{\\bot}", 1)};
 
-Theorem BT_of_unsolvables :
+Theorem BT_of_unsolvables:
     !X M r. unsolvable M ==> BT' X M r = bot
 Proof
     rw [BT_def, BT_generator_def, ltree_unfold, ltree_map]
 QED
 
-Theorem BT_of_unsolvables_cong :
+Theorem BT_of_unsolvables_cong:
     !X M N r. unsolvable M /\ unsolvable N ==> BT' X M r = BT' X N r
 Proof
     rw [BT_of_unsolvables]
 QED
 
-Theorem BT_of_principle_hnf :
+Theorem BT_of_principle_hnf:
     !X M r. solvable M ==> BT' X (principle_hnf M) r = BT' X M r
 Proof
     reverse (RW_TAC std_ss [BT_def, BT_generator_def, ltree_unfold])
@@ -376,7 +376,7 @@ Proof
 QED
 
 (* This proof without other antecedents is based on principle_hnf_hreduce *)
-Theorem hreduce_BT_cong :
+Theorem hreduce_BT_cong:
     !X M N r. M -h->* N ==> BT' X M r = BT' X N r
 Proof
     rpt STRIP_TAC
@@ -390,7 +390,7 @@ Proof
  >> Q_TAC (UNBETA_TAC [BT_def, BT_generator_def, Once ltree_unfold]) ‘BT' X N r’
 QED
 
-Theorem BT_finite_branching :
+Theorem BT_finite_branching:
     !X M r. finite_branching (BT' X M r)
 Proof
     rpt GEN_TAC
@@ -419,7 +419,7 @@ Proof
  >> qexistsl_tac [‘X’, ‘N’, ‘SUC r’] >> rw [BT_def]
 QED
 
-Theorem subterm_rank_lemma :
+Theorem subterm_rank_lemma:
     !p X M N r r'. FINITE X /\ FV M SUBSET X UNION RANK r /\
                    subterm X M p r = SOME (N,r')
                ==> r' = r + LENGTH p /\ FV N SUBSET X UNION RANK r'
@@ -476,7 +476,7 @@ Proof
  >> MATCH_MP_TAC RNEWS_SUBSET_RANK >> rw []
 QED
 
-Theorem subterm_induction_lemma :
+Theorem subterm_induction_lemma:
     !X M r M0 n n' m vs M1 Ms h.
            FINITE X /\ FV M SUBSET X UNION RANK r /\
            solvable M /\
@@ -566,7 +566,7 @@ Proof
  >> qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp []
 QED
 
-Theorem FV_subterm_lemma :
+Theorem FV_subterm_lemma:
     !X M r M0 n m vs M1 Ms h.
            FINITE X /\ FV M SUBSET X UNION RANK r /\
            solvable M /\
@@ -621,7 +621,7 @@ QED
 (* NOTE: This lemma is suitable for doing induction. A better upper bound is
    given by the next [subterm_headvar_lemma'].
  *)
-Theorem subterm_headvar_lemma :
+Theorem subterm_headvar_lemma:
     !X M r M0 n vs M1.
            FINITE X /\ FV M SUBSET X UNION RANK r /\
            solvable M /\
@@ -670,7 +670,7 @@ QED
 (* NOTE: If ‘vs’ is longer than ‘n’, then ‘hnf_headvar M1’ uses at most
    variables from ‘set (TAKE n vs). This result generalizes above lemmas.
  *)
-Theorem subterm_headvar_lemma_alt :
+Theorem subterm_headvar_lemma_alt:
     !X M r M0 n n' vs M1.
            FINITE X /\ FV M SUBSET X UNION RANK r /\
            solvable M /\
@@ -825,7 +825,7 @@ QED
    proof (because no induction is involved), only ‘FV M SUBSET X’ is enough.
    But later applications needs the ranked antecedents.
  *)
-Theorem lameq_BT_cong :
+Theorem lameq_BT_cong:
     !X M N r. FINITE X /\
               FV M SUBSET X UNION RANK r /\
               FV N SUBSET X UNION RANK r /\
@@ -929,7 +929,7 @@ QED
  *  More subterm properties
  *---------------------------------------------------------------------------*)
 
-Theorem subterm_of_hnf :
+Theorem subterm_of_hnf:
     !X M h p r. FINITE X /\ hnf M ==>
       subterm X M (h::p) r =
         let  n = LAMl_size M;
@@ -951,7 +951,7 @@ Proof
  >> Q.PAT_X_ASSUM ‘Ms' = Ms’ (fs o wrap o SYM)
 QED
 
-Theorem subterm_of_hnf_alt :
+Theorem subterm_of_hnf_alt:
     !X M h p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ hnf M ==>
       subterm X M (h::p) r =
         let  n = LAMl_size M;
@@ -976,7 +976,7 @@ QED
 (* In the extreme case, M is a absfree hnf (i.e. VAR y @* args), and the
    definition of subterm can be greatly simplified.
  *)
-Theorem subterm_of_absfree_hnf :
+Theorem subterm_of_absfree_hnf:
     !X M h p r. hnf M /\ ~is_abs M ==>
        subterm X M (h::p) r =
        let Ms = hnf_children M;
@@ -997,7 +997,7 @@ Proof
  >> Q.PAT_X_ASSUM ‘Ms' = Ms’ (fs o wrap o SYM)
 QED
 
-Theorem subterm_of_absfree_hnf_explicit :
+Theorem subterm_of_absfree_hnf_explicit:
     !X y Ms h p r.
        subterm X (VAR y @* Ms) (h::p) r =
        if h < LENGTH Ms then
@@ -1010,7 +1010,7 @@ Proof
  >> rw [hnf_appstar, is_abs_appstar]
 QED
 
-Theorem subterm_of_principle_hnf :
+Theorem subterm_of_principle_hnf:
     !X M p r. solvable M /\ p <> [] ==>
               subterm X (principle_hnf M) p r = subterm X M p r
 Proof
@@ -1028,7 +1028,7 @@ Proof
  >> Q.PAT_X_ASSUM ‘Ms = Ms'’ (fs o wrap o SYM)
 QED
 
-Theorem hreduce_subterm_cong :
+Theorem hreduce_subterm_cong:
     !X M N p r. M -h->* N /\ p <> [] ==> subterm X M p r = subterm X N p r
 Proof
     rpt STRIP_TAC
@@ -1042,7 +1042,7 @@ Proof
  >> rw [subterm_def]
 QED
 
-Theorem BT_ltree_el_eq_none :
+Theorem BT_ltree_el_eq_none:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r ==>
              (ltree_el (BT' X M r) p = NONE <=> subterm X M p r = NONE)
 Proof
@@ -1078,7 +1078,7 @@ Proof
  >> qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp []
 QED
 
-Theorem BT_ltree_paths_thm :
+Theorem BT_ltree_paths_thm:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r ==>
              (p IN ltree_paths (BT' X M r) <=> subterm X M p r <> NONE)
 Proof
@@ -1086,7 +1086,7 @@ Proof
 QED
 
 (* NOTE: p <> [] is required as ‘[] IN ltree_paths (BT' X M r)’ always holds. *)
-Theorem ltree_paths_imp_solvable :
+Theorem ltree_paths_imp_solvable:
     !p X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ p <> [] /\
               p IN ltree_paths (BT' X M r) ==> solvable M
 Proof
@@ -1111,7 +1111,7 @@ Theorem BT_ltree_el_thm =
                                   |> Q.GENL [‘X’, ‘M’, ‘p’, ‘r’]
 
 (* Lemma 10.1.15 [1, p.222] (subterm and ltree_lookup) *)
-Theorem BT_subterm_lemma :
+Theorem BT_subterm_lemma:
     !p X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               subterm X M p r <> NONE ==>
               ltree_lookup (BT' X M r) p <> NONE /\
@@ -1155,7 +1155,7 @@ QED
    Then ‘subterm' X M (FRONT p)’ must be an unsolvable term. This result can be
    even improved to an iff, as the present theorem shows.
  *)
-Theorem subterm_is_none_iff_parent_unsolvable :
+Theorem subterm_is_none_iff_parent_unsolvable:
     !p X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               p IN ltree_paths (BT' X M r) ==>
              (subterm X M p r = NONE <=>
@@ -1220,7 +1220,7 @@ QED
 (* NOTE: for whatever reasons such that ‘subterm X M p = NONE’, even when
         ‘p NOTIN ltree_paths (BT X M)’, the conclusion (rhs) always holds.
  *)
-Theorem subterm_is_none_inclusive :
+Theorem subterm_is_none_inclusive:
     !X M p r. subterm X M p r = NONE <=>
               !q. p <<= q ==> subterm X M q r = NONE
 Proof
@@ -1236,7 +1236,7 @@ Proof
  >> Cases_on ‘q’ >> fs [subterm_def]
 QED
 
-Theorem subterm_solvable_lemma :
+Theorem subterm_solvable_lemma:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               p <> [] /\ subterm X M p r <> NONE ==>
             (!q. q <<= p ==> subterm X M q r <> NONE) /\
@@ -1290,7 +1290,7 @@ QED
    and ‘LENGTH Ms = k’ (NOTE: vs, y and k come from ‘ltree_el (BT X M) p’.
 
  *)
-Theorem BT_subterm_thm :
+Theorem BT_subterm_thm:
     !p X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               subterm X M p r <> NONE /\ solvable (subterm' X M p r)
         ==> do (N,r') <- subterm X M p r;
@@ -1348,7 +1348,7 @@ Proof
 QED
 
 (* This stronger lemma does not require ‘subterm X M p r <> NONE’ *)
-Theorem subterm_valid_path_lemma :
+Theorem subterm_valid_path_lemma:
     !X p M r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               p IN ltree_paths (BT' X M r) /\ p <> [] ==>
               !q. q <<= FRONT p ==> subterm X M q r <> NONE
@@ -1362,7 +1362,7 @@ Proof
  >> Q.EXISTS_TAC ‘FRONT p’ >> rw [IS_PREFIX_BUTLAST']
 QED
 
-Theorem BT_ltree_el_eq_some_none :
+Theorem BT_ltree_el_eq_some_none:
     !X M p r m. FINITE X /\ FV M SUBSET X UNION RANK r /\
                 ltree_el (BT' X M r) p = SOME (NONE, m) ==> m = SOME 0
 Proof
@@ -1400,7 +1400,7 @@ QED
   (subterm' X M q)’, and the following theorem deals with the case of
   ‘unsolvable (subterm' X M p)’.
  *)
-Theorem BT_ltree_el_of_unsolvables :
+Theorem BT_ltree_el_of_unsolvables:
     !p X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               subterm X M p r <> NONE ==>
              (unsolvable (subterm' X M p r) <=>
@@ -1454,7 +1454,7 @@ QED
 (* NOTE: This proof is almost identical with the above lemma. Also note that
          the actual term behind ‘bot’ is different with the one above.
  *)
-Theorem BT_ltree_lookup_of_unsolvables :
+Theorem BT_ltree_lookup_of_unsolvables:
     !p X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               subterm X M p r <> NONE ==>
              (unsolvable (subterm' X M p r) <=>
@@ -1506,7 +1506,7 @@ Proof
  >> qexistsl_tac [‘M’, ‘M0’, ‘n’, ‘m’, ‘vs’, ‘M1’] >> simp []
 QED
 
-Theorem lameq_subterm_cong_none :
+Theorem lameq_subterm_cong_none:
     !p X M N r. FINITE X /\
                 FV M SUBSET X UNION RANK r /\
                 FV N SUBSET X UNION RANK r /\ M == N ==>
@@ -1523,7 +1523,7 @@ Proof
  >> PROVE_TAC [lameq_BT_cong]
 QED
 
-Theorem lameq_subterm_cong :
+Theorem lameq_subterm_cong:
     !p X M N r. FINITE X /\
                 FV M SUBSET X UNION RANK r /\
                 FV N SUBSET X UNION RANK r /\
@@ -1596,7 +1596,7 @@ QED
 (*****************************************************************************)
 
 (* NOTE: cf. subterm_fresh_tpm_cong for the easier case of fresh tpm *)
-Theorem subterm_tpm_lemma :
+Theorem subterm_tpm_lemma:
     !X Y p M pi r r'.
        FINITE X /\ FINITE Y /\ FV M SUBSET X UNION RANK r /\
        FV (tpm pi M) SUBSET Y UNION RANK r' /\
@@ -1991,7 +1991,7 @@ Proof
       CCONTR_TAC >> METIS_TAC [SUBSET_DEF] ]
 QED
 
-Theorem FV_tpm_lemma :
+Theorem FV_tpm_lemma:
     !X M pi r r'. FINITE X /\ FV M SUBSET X UNION RANK r /\
                   set (MAP FST pi) SUBSET X UNION RANK r /\
                   set (MAP SND pi) SUBSET X UNION RANK r' /\
@@ -2039,7 +2039,7 @@ QED
 (* NOTE: M may contain free variables from xs, but after the fresh tpm
    there's no more xs variables, thus is disjoint with xs.
  *)
-Theorem FV_renaming_disjoint :
+Theorem FV_renaming_disjoint:
     !xs ys M. ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
               LENGTH xs = LENGTH ys /\
               DISJOINT (set xs) (set ys) /\
@@ -2108,7 +2108,7 @@ QED
 (* NOTE: M is disjoint with zs, and the tpm (not a fresh tpm) is irrelevant
    with zs, thus after the tpm the resulting term is still disjoint with zs.
  *)
-Theorem FV_tpm_disjoint :
+Theorem FV_tpm_disjoint:
     !zs xs ys M. ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
                  LENGTH xs = LENGTH ys /\
                  DISJOINT (set xs) (set ys) /\
@@ -2177,7 +2177,7 @@ Proof
 QED
 
 (* NOTE: ‘r <= r'’ is removed now. This is the final strong version. *)
-Theorem subterm_tpm_cong :
+Theorem subterm_tpm_cong:
     !X Y M p r r'. FINITE X /\ FINITE Y /\
          FV M SUBSET X UNION RANK r /\
          FV M SUBSET Y UNION RANK r'
@@ -2194,7 +2194,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem subterm_solvable_cong :
+Theorem subterm_solvable_cong:
     !X Y M p r r'. FINITE X /\ FINITE Y /\
          FV M SUBSET X UNION RANK r /\
          FV M SUBSET Y UNION RANK r' /\
@@ -2220,7 +2220,7 @@ Proof
  >> fs [tpm_rel_alt, solvable_tpm]
 QED
 
-Theorem subterm_hnf_children_size_cong :
+Theorem subterm_hnf_children_size_cong:
     !X Y M p r r'. FINITE X /\ FINITE Y /\
          FV M SUBSET X UNION RANK r /\
          FV M SUBSET Y UNION RANK r' /\
@@ -2297,7 +2297,7 @@ Proof
  >> rw [Abbr ‘f’]
 QED
 
-Theorem BT_tpm_thm :
+Theorem BT_tpm_thm:
     !X M pi r. FINITE X /\ FV M SUBSET X UNION RANK r /\
                set (MAP FST pi) SUBSET RANK r /\
                set (MAP SND pi) SUBSET RANK r
@@ -2391,7 +2391,7 @@ QED
 
    NOTE: ‘FV (tpm pi M) SUBSET X UNION RANK r’ is derivable from other antecedents.
  *)
-Theorem BT_ltree_paths_tpm :
+Theorem BT_ltree_paths_tpm:
     !X M pi r. FINITE X /\ FV M SUBSET X UNION RANK r /\
                set (MAP FST pi) SUBSET RANK r /\
                set (MAP SND pi) SUBSET RANK r
@@ -2400,7 +2400,7 @@ Proof
     RW_TAC std_ss [BT_tpm_thm, ltree_paths_map_cong]
 QED
 
-Theorem BT_ltree_paths_cong :
+Theorem BT_ltree_paths_cong:
     !X Y M r r'. FINITE X /\ FINITE Y /\
                  FV M SUBSET X UNION RANK r /\
                  FV M SUBSET Y UNION RANK r'
@@ -2418,7 +2418,7 @@ QED
 Type transform[pp] = “:(term -> term) list”
 
 (* Definition 10.3.3 (ii) *)
-Definition solving_transform_def :
+Definition solving_transform_def:
     solving_transform (f :term -> term) <=>
       (?x. f = \p. p @@ VAR x) \/ (?x N. f = [N/x])
 End
@@ -2438,7 +2438,7 @@ Proof
  >> Q.EXISTS_TAC ‘x’ >> rw [rightctxt_thm]
 QED
 
-Theorem solving_transform_lameq :
+Theorem solving_transform_lameq:
     !f M N. solving_transform f /\ M == N ==> f M == f N
 Proof
     rw [solving_transform_def, FUN_EQ_THM]
@@ -2454,7 +2454,7 @@ QED
    Here we just define "Boehm transform" as a list of solving transforms,
    thus always finite. The "composition" part depends on how this list is used.
  *)
-Definition Boehm_transform_def :
+Definition Boehm_transform_def:
     Boehm_transform pi = EVERY solving_transform pi
 End
 
@@ -2486,7 +2486,7 @@ QED
 
    NOTE: ‘apply [f3;f2;f1] M = (f3 o f2 o f1) M = f3 (f2 (f1 M))’. [] = id.
  *)
-Definition apply_transform_def :
+Definition apply_transform_def:
     apply_transform (pi :transform) = FOLDR $o I pi
 End
 
@@ -2498,7 +2498,7 @@ Overload apply = “\pi (Ms :term set).  IMAGE (apply pi) Ms”
          but FOLDR seems more natural requiring natural list induction in
          the next proof(s), while FOLDL would require SNOC_INDUCT.
  *)
-Theorem apply_transform_alt :
+Theorem apply_transform_alt:
     !pi. apply pi = FOLDL $o I pi
 Proof
     REWRITE_TAC [apply_transform_def]
@@ -2519,7 +2519,7 @@ Proof
 QED
 
 (* Lemma 10.3.4 (i) [1, p.246] *)
-Theorem Boehm_transform_lameq_ctxt :
+Theorem Boehm_transform_lameq_ctxt:
     !pi. Boehm_transform pi ==> ?c. ctxt c /\ !M. apply pi M == c M
 Proof
     Induct_on ‘pi’
@@ -2540,7 +2540,7 @@ Proof
 QED
 
 (* Lemma 10.3.4 (ii) [1, p.246] *)
-Theorem Boehm_transform_lameq_LAMl_appstar :
+Theorem Boehm_transform_lameq_LAMl_appstar:
     !pi. Boehm_transform pi ==>
          ?c. ctxt c /\ (!M. apply pi M == c M) /\
              !vs. ALL_DISTINCT vs ==>
@@ -2589,7 +2589,7 @@ Proof
 QED
 
 (* An corollary of the above lemma with ‘xs = {}’ *)
-Theorem Boehm_transform_lameq_appstar :
+Theorem Boehm_transform_lameq_appstar:
     !pi. Boehm_transform pi ==>
          ?Ns. !M. closed M ==> apply pi M == M @* Ns
 Proof
@@ -2601,7 +2601,7 @@ Proof
  >> RW_TAC (betafy (srw_ss())) []
 QED
 
-Theorem Boehm_apply_asmlam_cong :
+Theorem Boehm_apply_asmlam_cong:
     !pi M N. Boehm_transform pi /\ asmlam eqns M N ==>
              asmlam eqns (apply pi M) (apply pi N)
 Proof
@@ -2612,7 +2612,7 @@ Proof
  >> MATCH_MP_TAC asmlam_subst >> art []
 QED
 
-Theorem Boehm_apply_lameq_cong :
+Theorem Boehm_apply_lameq_cong:
     !pi M N. Boehm_transform pi /\ M == N ==> apply pi M == apply pi N
 Proof
     SNOC_INDUCT_TAC >> rw []
@@ -2620,13 +2620,13 @@ Proof
  >> MATCH_MP_TAC solving_transform_lameq >> art []
 QED
 
-Theorem Boehm_transform_APPEND :
+Theorem Boehm_transform_APPEND:
     !p1 p2. Boehm_transform p1 /\ Boehm_transform p2 ==> Boehm_transform (p1 ++ p2)
 Proof
     rw [Boehm_transform_def]
 QED
 
-Theorem Boehm_apply_APPEND :
+Theorem Boehm_apply_APPEND:
     !p1 p2 (M :term). apply (p1 ++ p2) M = apply p1 (apply p2 M)
 Proof
     Q.X_GEN_TAC ‘p1’
@@ -2634,13 +2634,13 @@ Proof
  >> rw [APPEND_SNOC]
 QED
 
-Theorem Boehm_apply_SNOC_SUB :
+Theorem Boehm_apply_SNOC_SUB:
     !(N :term) v p M. apply (SNOC [N/v] p) M = apply p ([N/v] M)
 Proof
     rw [apply_transform_def, FOLDR_SNOC]
 QED
 
-Theorem Boehm_apply_MAP_rightctxt :
+Theorem Boehm_apply_MAP_rightctxt:
     !Ns t. apply (MAP rightctxt Ns) t = t @* (REVERSE Ns)
 Proof
     Induct_on ‘Ns’ >> rw [rightctxt_thm]
@@ -2661,7 +2661,7 @@ Theorem solvable_APP_E[local] =
         has_hnf_APP_E |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
                       |> Q.GENL [‘M’, ‘N’]
 
-Theorem unsolvable_apply :
+Theorem unsolvable_apply:
     !pi M. Boehm_transform pi /\ unsolvable M ==> unsolvable (apply pi M)
 Proof
     Induct_on ‘pi’ using SNOC_INDUCT >- rw []
@@ -2674,14 +2674,14 @@ Proof
  >> PROVE_TAC [solvable_APP_E]
 QED
 
-Theorem solvable_apply_imp :
+Theorem solvable_apply_imp:
     !pi M. Boehm_transform pi /\ solvable (apply pi M) ==> solvable M
 Proof
     METIS_TAC [unsolvable_apply]
 QED
 
 (* Definition 10.3.5 (ii) *)
-Definition head_original_def :
+Definition head_original_def:
     head_original M0 =
        let n = LAMl_size M0;
           vs = NEWS n (FV M0);
@@ -2696,7 +2696,7 @@ End
    is not enough for us, for the purposes of reduce ‘subterm X M p’ to
   ‘subterm X N p’, if only ‘M == N’ is known.
  *)
-Definition is_ready_def :
+Definition is_ready_def:
     is_ready M <=> unsolvable M \/
                    ?N. M -h->* N /\ hnf N /\ ~is_abs N /\ head_original N
 End
@@ -2709,7 +2709,7 @@ End
 (* NOTE: This alternative definition of ‘is_ready’ consumes ‘head_original’
          and eliminated the ‘principle_hnf’ inside it.
  *)
-Theorem is_ready_alt :
+Theorem is_ready_alt:
     !M. is_ready M <=>
         unsolvable M \/ ?y Ns. M -h->* VAR y @* Ns /\ EVERY (\e. y # e) Ns
 Proof
@@ -2775,7 +2775,7 @@ Definition subterm_length_def[nocompute] :
                         else 0) {q | q <<= p})
 End
 
-Theorem subterm_width_nil :
+Theorem subterm_width_nil:
     !M. subterm_width M [] = if solvable M then
                                 hnf_children_size (principle_hnf M)
                              else 0
@@ -2783,7 +2783,7 @@ Proof
     rw [subterm_width_def]
 QED
 
-Theorem subterm_length_nil :
+Theorem subterm_length_nil:
     !M. subterm_length M [] = if solvable M then
                                  LAMl_size (principle_hnf M)
                               else 0
@@ -2791,7 +2791,7 @@ Proof
     rw [subterm_length_def]
 QED
 
-Theorem subterm_width_inclusive :
+Theorem subterm_width_inclusive:
     !M p q. q <<= p /\ subterm_width M p <= d ==> subterm_width M q <= d
 Proof
     simp [subterm_width_def]
@@ -2811,7 +2811,7 @@ Proof
  >> Q_TAC (TRANS_TAC isPREFIX_TRANS) ‘q’ >> art []
 QED
 
-Theorem subterm_length_inclusive :
+Theorem subterm_length_inclusive:
     !M p q. q <<= p /\ subterm_length M p <= d ==> subterm_length M q <= d
 Proof
     simp [subterm_length_def]
@@ -2831,7 +2831,7 @@ Proof
  >> Q_TAC (TRANS_TAC isPREFIX_TRANS) ‘q’ >> art []
 QED
 
-Theorem subterm_width_thm :
+Theorem subterm_width_thm:
     !X M p r.
        FINITE X /\ FV M SUBSET X UNION RANK r ==>
        subterm_width M p =
@@ -2856,7 +2856,7 @@ Proof
       simp [principle_hnf_tpm'] ]
 QED
 
-Theorem subterm_length_thm :
+Theorem subterm_length_thm:
     !X M p r.
        FINITE X /\ FV M SUBSET X UNION RANK r ==>
        subterm_length M p =
@@ -2881,7 +2881,7 @@ Proof
       simp [principle_hnf_tpm'] ]
 QED
 
-Theorem subterm_width_first :
+Theorem subterm_width_first:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ solvable M
           ==> hnf_children_size (principle_hnf M) <= subterm_width M p
 Proof
@@ -2895,7 +2895,7 @@ Proof
  >> Q.EXISTS_TAC ‘[]’ >> rw []
 QED
 
-Theorem subterm_length_first :
+Theorem subterm_length_first:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ solvable M
           ==> LAMl_size (principle_hnf M) <= subterm_length M p
 Proof
@@ -2909,7 +2909,7 @@ Proof
  >> Q.EXISTS_TAC ‘[]’ >> rw []
 QED
 
-Theorem subterm_width_last :
+Theorem subterm_width_last:
     !X M p q r.
        FINITE X /\ FV M SUBSET X UNION RANK r /\ q <<= p /\
        subterm X M q r <> NONE /\
@@ -2926,7 +2926,7 @@ Proof
  >> Q.EXISTS_TAC ‘q’ >> rw []
 QED
 
-Theorem subterm_length_last :
+Theorem subterm_length_last:
     !X M p q r.
        FINITE X /\ FV M SUBSET X UNION RANK r /\ q <<= p /\
        subterm X M q r <> NONE /\
@@ -2943,7 +2943,7 @@ Proof
  >> Q.EXISTS_TAC ‘q’ >> rw []
 QED
 
-Theorem solvable_subst_permutator :
+Theorem solvable_subst_permutator:
     !X M r P v d.
        FINITE X /\ FV M SUBSET X UNION RANK r /\
        v IN X UNION RANK r /\ P = permutator d /\
@@ -3041,7 +3041,7 @@ Proof
  >> simp [Abbr ‘args2’]
 QED
 
-Theorem solvable_subst_permutator_cong :
+Theorem solvable_subst_permutator_cong:
     !X M r P v d.
        FINITE X /\ FV M SUBSET X UNION RANK r /\
        v IN X UNION RANK r /\ P = permutator d /\
@@ -3055,7 +3055,7 @@ Proof
  >> qexistsl_tac [‘X’, ‘r’, ‘d’] >> art []
 QED
 
-Theorem solvable_isub_permutator :
+Theorem solvable_isub_permutator:
     !X r d ss M.
        FINITE X /\ FV M SUBSET X UNION RANK r /\
        DOM ss SUBSET X UNION RANK r /\
@@ -3081,7 +3081,7 @@ Proof
  >> qexistsl_tac [‘X’, ‘r’] >> simp []
 QED
 
-Theorem solvable_isub_permutator_cong :
+Theorem solvable_isub_permutator_cong:
     !X M r ss d.
        FINITE X /\ FV M SUBSET X UNION RANK r /\
        subterm_width M [] <= d /\
@@ -3104,7 +3104,7 @@ QED
    replaced by ‘ss = GENLIST (\i. (permutator (f i),y i)) k’ where ‘f’ is
    increasing (or non-decreasing).
  *)
-Theorem solvable_isub_permutator_alt :
+Theorem solvable_isub_permutator_alt:
     !X r d y k ss M.
        FINITE X /\ FV M SUBSET X UNION RANK r /\
       (!i. i < k ==> y i IN X UNION RANK r) /\
@@ -3145,7 +3145,7 @@ Proof
  >> rw []
 QED
 
-Theorem subterm_width_induction_lemma :
+Theorem subterm_width_induction_lemma:
     !X M h p r M0 n n' m vs' M1 Ms d.
          FINITE X /\ FV M SUBSET X UNION RANK r /\
          solvable M /\
@@ -4053,7 +4053,7 @@ Proof
 QED
 
 (* This theorem can be repeatedly applied for ‘M ISUB ss’ *)
-Theorem subterm_subst_permutator_cong :
+Theorem subterm_subst_permutator_cong:
     !p X M r y P d. FINITE X /\ FV M SUBSET X UNION RANK r /\
                     subterm X M p r <> NONE /\
                     P = permutator d /\ y IN X UNION RANK r /\
@@ -4082,7 +4082,7 @@ Proof
  >> rw []
 QED
 
-Theorem subterm_isub_permutator_cong :
+Theorem subterm_isub_permutator_cong:
     !ys p X M r P d ss.
         FINITE X /\ FV M SUBSET X UNION RANK r /\
         subterm X M p r <> NONE /\
@@ -4116,7 +4116,7 @@ Proof
  >> rw [Abbr ‘P’, FV_permutator]
 QED
 
-Theorem subterm_isub_permutator_cong_alt :
+Theorem subterm_isub_permutator_cong_alt:
     !X p r d y k ss M.
         FINITE X /\ FV M SUBSET X UNION RANK r /\
        (!i. i < k ==> y i IN X UNION RANK r) /\
@@ -4388,7 +4388,7 @@ Proof
  >> simp []
 QED
 
-Theorem subterm_fresh_subst_cong :
+Theorem subterm_fresh_subst_cong:
     !p X M r v v'. FINITE X /\ FV M SUBSET X UNION RANK r /\
                    subterm X M p r <> NONE /\
                    v  IN X UNION RANK r /\
@@ -4405,7 +4405,7 @@ QED
          hold. Instead, we need to consider certain p and ‘d <= subterm_width M p’.
          This theorem holds even when M is not solvable.
  *)
-Theorem subterm_width_subst_permutator_cong :
+Theorem subterm_width_subst_permutator_cong:
     !X P d v p M r.
          FINITE X /\ FV M SUBSET X UNION RANK r /\ v IN X UNION RANK r /\
          P = permutator d /\ subterm_width M p <= d /\
@@ -4735,7 +4735,7 @@ Proof
  >> rw [RANK_MONO]
 QED
 
-Theorem subterm_width_isub_permutator_cong :
+Theorem subterm_width_isub_permutator_cong:
     !ys p X M r P d ss.
         FINITE X /\ FV M SUBSET X UNION RANK r /\
         P = permutator d /\
@@ -4763,7 +4763,7 @@ Proof
  >> rw [Abbr ‘P’, FV_permutator]
 QED
 
-Theorem subterm_width_isub_permutator_cong_alt :
+Theorem subterm_width_isub_permutator_cong_alt:
     !X p r d y k ss M.
         FINITE X /\ FV M SUBSET X UNION RANK r /\
        (!i. i < k ==> y i IN X UNION RANK r) /\
@@ -4810,7 +4810,7 @@ QED
   ‘v IN RANK r’, each deeper subterm only adds FV from ROW r onwards,
    thus ‘v # subterm X M p r’ still holds.
  *)
-Theorem FV_subterm_thm :
+Theorem FV_subterm_thm:
     !X v p M r. FINITE X /\ FV M SUBSET X UNION RANK r /\
                 subterm X M p r <> NONE /\
                 v # M /\ v IN X UNION RANK r ==> v # (subterm' X M p r)
@@ -4927,7 +4927,7 @@ Proof
  >> simp [MAP_REVERSE, MEM_REVERSE]
 QED
 
-Theorem subterm_fresh_tpm_cong :
+Theorem subterm_fresh_tpm_cong:
     !pi X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\
                  set (MAP FST pi) SUBSET X UNION RANK r /\
                  set (MAP SND pi) SUBSET X UNION RANK r /\
@@ -5015,7 +5015,7 @@ QED
 
    which is impossible if M is not already "is_ready".
  *)
-Theorem Boehm_transform_exists_lemma :
+Theorem Boehm_transform_exists_lemma:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               p <> [] /\ subterm X M p r <> NONE ==>
        ?pi. Boehm_transform pi /\
@@ -5466,7 +5466,7 @@ Proof
 QED
 
 (* Proposition 10.3.7 (i) [1, p.248] (Boehm out lemma) *)
-Theorem Boehm_out_lemma :
+Theorem Boehm_out_lemma:
     !X p M r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               subterm X M p r <> NONE ==>
               ?pi. Boehm_transform pi /\
@@ -5573,7 +5573,7 @@ QED
    share the same prefix, i.e. either vs1 <<= vs2 or vs2 <<= vs1. In reality,
    we have ‘vs1 = RNEWS r n1 X /\ vs2 = RNEWS r n2 X’ for some X and r.
  *)
-Definition head_equivalent_def :
+Definition head_equivalent_def:
     head_equivalent ((a1,m1) :BT_node # num option)
                     ((a2,m2) :BT_node # num option) =
     case (a1,a2) of
@@ -5592,7 +5592,7 @@ Proof
  >> Cases_on ‘x’ >> rw []
 QED
 
-Theorem head_equivalent_sym :
+Theorem head_equivalent_sym:
     !A B. head_equivalent A B ==> head_equivalent B A
 Proof
     qx_genl_tac [‘A’, ‘B’]
@@ -5601,7 +5601,7 @@ Proof
  >> Cases_on ‘x’ >> Cases_on ‘x'’ >> simp []
 QED
 
-Theorem head_equivalent_comm :
+Theorem head_equivalent_comm:
     !A B. head_equivalent A B <=> head_equivalent B A
 Proof
     rpt GEN_TAC
@@ -5617,7 +5617,7 @@ Proof
     MATCH_MP_TAC OPTREL_refl >> rw []
 QED
 
-Theorem ltree_equiv_sym :
+Theorem ltree_equiv_sym:
     !A B. ltree_equiv A B ==> ltree_equiv B A
 Proof
     rpt GEN_TAC
@@ -5625,14 +5625,14 @@ Proof
  >> rw [Once head_equivalent_comm]
 QED
 
-Theorem ltree_equiv_comm :
+Theorem ltree_equiv_comm:
     !A B. ltree_equiv A B <=> ltree_equiv B A
 Proof
     rpt STRIP_TAC
  >> EQ_TAC >> rw [ltree_equiv_sym]
 QED
 
-Theorem ltree_equiv_some_bot_imp :
+Theorem ltree_equiv_some_bot_imp:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\
               ltree_equiv (SOME bot) (ltree_el (BT' X M r) p) ==>
               ltree_el (BT' X M r) p = SOME bot
@@ -5652,7 +5652,7 @@ Theorem ltree_equiv_some_bot_imp' =
     ONCE_REWRITE_RULE [ltree_equiv_comm] ltree_equiv_some_bot_imp
 
 (* Definition 10.2.32 (v) [1, p.245] *)
-Definition subtree_equiv_def :
+Definition subtree_equiv_def:
     subtree_equiv X M N p r =
     ltree_equiv (ltree_el (BT' X M r) p) (ltree_el (BT' X N r) p)
 End
@@ -5663,13 +5663,13 @@ Proof
     rw [subtree_equiv_def]
 QED
 
-Theorem subtree_equiv_comm :
+Theorem subtree_equiv_comm:
     !X M N p r. subtree_equiv X M N p r <=> subtree_equiv X N M p r
 Proof
     rw [subtree_equiv_def, Once ltree_equiv_comm]
 QED
 
-Theorem hreduce_subtree_equiv_cong :
+Theorem hreduce_subtree_equiv_cong:
     !X M M' N N' p r. M -h->* M' /\ N -h->* N' ==>
                      (subtree_equiv X M N p r <=> subtree_equiv X M' N' p r)
 Proof
@@ -5686,7 +5686,7 @@ QED
    2) BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r (0 < r)
    3) EVERY solvable Ms
  *)
-Definition Boehm_construction_def :
+Definition Boehm_construction_def:
     Boehm_construction X (Ms :term list) p =
     let n_max = MAX_LIST (MAP (\e. subterm_length e p) Ms);
         d_max = MAX_LIST (MAP (\e. subterm_width e p)  Ms) + n_max;
@@ -5707,7 +5707,7 @@ Definition Boehm_construction_def :
         p3 ++ p2 ++ p1
 End
 
-Theorem Boehm_construction_transform :
+Theorem Boehm_construction_transform:
     !X Ms p. Boehm_transform (Boehm_construction X Ms p)
 Proof
     RW_TAC std_ss [Boehm_construction_def]
@@ -5748,7 +5748,7 @@ QED
          (solvable (subterm' X M q r) <=>
           solvable (subterm' X (apply pi M) q r))
  *)
-Theorem subtree_equiv_lemma_explicit :
+Theorem subtree_equiv_lemma_explicit:
     !X Ms p r.
        FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
        BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\

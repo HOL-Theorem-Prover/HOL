@@ -24,20 +24,20 @@ fun METIS ths tm = prove(tm,METIS_TAC ths);
 (* (originally from hol-light's misc.ml, line 747-772)                       *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem FORALL_POS_MONO :
+Theorem FORALL_POS_MONO:
    !P. (!d e:real. d < e /\ P d ==> P e) /\ (!n. ~(n = 0) ==> P(inv(&n)))
        ==> !e. &0 < e ==> P e
 Proof
   MESON_TAC[REAL_ARCH_INV, REAL_LT_TRANS]
 QED
 
-Theorem FORALL_SUC :
+Theorem FORALL_SUC:
    (!n. n <> 0 ==> P n) <=> !n. P (SUC n)
 Proof
    MESON_TAC[num_CASES, NOT_SUC]
 QED
 
-Theorem FORALL_POS_MONO_1 :
+Theorem FORALL_POS_MONO_1:
    !P. (!d e. d < e /\ P d ==> P e) /\ (!n. P(inv(&n + &1)))
        ==> !e. &0 < e ==> P e
 Proof
@@ -48,7 +48,7 @@ Proof
  >> ASM_SIMP_TAC std_ss [FORALL_SUC]
 QED
 
-Theorem FORALL_POS_MONO_EQ :
+Theorem FORALL_POS_MONO_EQ:
    !P. (!d e. d < e /\ P d ==> P e)
        ==> ((!e. &0 < e ==> P e) <=> (!n. ~(n = 0) ==> P(inv(&n))))
 Proof
@@ -56,7 +56,7 @@ Proof
             REAL_OF_NUM_LT]
 QED
 
-Theorem FORALL_POS_MONO_1_EQ :
+Theorem FORALL_POS_MONO_1_EQ:
    !P. (!d e. d < e /\ P d ==> P e)
        ==> ((!e. &0 < e ==> P e) <=> (!n. P(inv(&n + &1))))
 Proof
@@ -69,7 +69,7 @@ QED
 (* Characterize an (alpha)metric                                             *)
 (*---------------------------------------------------------------------------*)
 
-Definition ismet :
+Definition ismet:
    ismet (m :'a # 'a -> real) =
      ((!x y. (m(x,y) = &0) <=> (x = y)) /\
       (!x y z. m(y,z) <= m(x,y) + m(x,z)))
@@ -154,7 +154,7 @@ val METRIC_NZ = store_thm("METRIC_NZ",
 
 val bmetric_tm = “(dist m)(x,y) / (1 + (dist m)(x,y))”;
 
-Definition bounded_metric_def :
+Definition bounded_metric_def:
     bounded_metric (m :'a metric) = metric (\(x,y). ^bmetric_tm)
 End
 
@@ -174,7 +174,7 @@ Proof
  >> rw [real_div, REAL_SUB_RDISTRIB, REAL_MUL_RINV]
 QED
 
-Theorem bounded_metric_ismet :
+Theorem bounded_metric_ismet:
     !m. ismet (\(x,y). ^bmetric_tm)
 Proof
     rw [ismet]
@@ -238,7 +238,7 @@ Proof
  >> MATCH_MP_TAC REAL_LE_MUL >> rw [METRIC_POS]
 QED
 
-Theorem bounded_metric_thm :
+Theorem bounded_metric_thm:
     !m x y. dist (bounded_metric m) (x,y) = ^bmetric_tm
 Proof
     rw [bounded_metric_def]
@@ -247,7 +247,7 @@ Proof
  >> rw []
 QED
 
-Theorem bounded_metric_lt_1 :
+Theorem bounded_metric_lt_1:
     !(m :'a metric) x y. dist (bounded_metric m) (x,y) < 1
 Proof
     rw [bounded_metric_thm]
@@ -264,7 +264,7 @@ QED
 (* Now define metric topology and prove equivalent definition of "open"      *)
 (*---------------------------------------------------------------------------*)
 
-Definition mtop :
+Definition mtop:
     mtop (m :'a metric) =
     topology (\S'. !x. S' x ==> ?e. &0 < e /\ !y. (dist m)(x,y) < e ==> S' y)
 End
@@ -274,14 +274,14 @@ Overload mtopology[inferior] = “mtop”
 Overload mdist[inferior] = “dist”
 
 (* NOTE: HOL4's ‘mspace’ definition is different with HOL-Light *)
-Definition mspace :
+Definition mspace:
     mspace m = topspace (mtop m)
 End
 
 (* |- !m. topspace (mtop m) = mspace m *)
 Theorem TOPSPACE_MTOPOLOGY = GEN_ALL (GSYM mspace)
 
-Theorem mtop_istopology :
+Theorem mtop_istopology:
     !m:('a)metric.
       istopology (\S'. !x. S' x ==>
                            ?e. &0 < e /\
@@ -328,7 +328,7 @@ val MTOP_OPEN = store_thm("MTOP_OPEN",
 (* Define open ball in metric space + prove basic properties                 *)
 (*---------------------------------------------------------------------------*)
 
-Definition ball :
+Definition ball:
     B(m)(x,e) = \y. (dist m)(x,y) < e
 End
 
@@ -371,13 +371,13 @@ val BALL_NEIGH = store_thm("BALL_NEIGH",
 (* HOL-Light compatibile theorems                                            *)
 (*---------------------------------------------------------------------------*)
 
-Theorem MDIST_REFL :
+Theorem MDIST_REFL:
    !m x:'a. x IN mspace m ==> mdist m (x,x) = &0
 Proof
    rw [mspace, METRIC_SAME]
 QED
 
-Theorem mtopology :
+Theorem mtopology:
    !m. mtopology (m:'a metric) =
        topology {u | u SUBSET mspace m /\
                      !x:'a. x IN u ==> ?r. &0 < r /\ mball m (x,r) SUBSET u}
@@ -387,14 +387,14 @@ Proof
  >> rw [Once EXTENSION, IN_APP, SUBSET_DEF]
 QED
 
-Theorem mball :
+Theorem mball:
    !m x r. mball m (x:'a,r) =
           {y | x IN mspace m /\ y IN mspace m /\ mdist m (x,y) < r}
 Proof
    rw [mspace, ball, Once EXTENSION]
 QED
 
-Theorem IS_TOPOLOGY_METRIC_TOPOLOGY :
+Theorem IS_TOPOLOGY_METRIC_TOPOLOGY:
     !m. istopology {u | u SUBSET mspace m /\
                         !x:'a. x IN u ==> ?r. &0 < r /\ mball m (x,r) SUBSET u}
 Proof
@@ -408,7 +408,7 @@ Proof
  >> rw [mspace, ball, SUBSET_DEF, IN_APP, Once EXTENSION]
 QED
 
-Theorem OPEN_IN_MTOPOLOGY :
+Theorem OPEN_IN_MTOPOLOGY:
    !(m:'a metric) u.
      open_in (mtopology m) u <=>
      u SUBSET mspace m /\
@@ -417,7 +417,7 @@ Proof
     rw [MTOP_OPEN, mspace, ball, SUBSET_DEF, IN_APP]
 QED
 
-Theorem IN_MBALL :
+Theorem IN_MBALL:
    !m x y:'a r.
      y IN mball m (x,r) <=>
      x IN mspace m /\ y IN mspace m /\ mdist m (x,y) < r
@@ -477,7 +477,7 @@ val ISMET_R1 = store_thm("ISMET_R1",
       “(a + b) + (c + d) = (d + a) + (c + b):real”] THEN
     REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]]);
 
-Definition mr1 :
+Definition mr1:
     mr1 = metric(\(x,y). abs(y - x))
 End
 
@@ -543,12 +543,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* new definition based on metricTheory *)
-Definition dist_def :
+Definition dist_def:
     real_dist = dist mr1
 End
 
 (* old definition (now becomes a theorem) *)
-Theorem dist :
+Theorem dist:
     !x y. real_dist(x:real,y:real) = abs(x - y)
 Proof
     RW_TAC std_ss [dist_def, MR1_DEF]
@@ -664,7 +664,7 @@ val REAL_CHOOSE_DIST = store_thm ("REAL_CHOOSE_DIST",
    countable intersection of nothing", and ‘BIGINTER {} = UNIV’, which may
    go beyond the scope of ‘topspace top’. -- Chun Tian, 28 nov 2021
  *)
-Definition gdelta_in :
+Definition gdelta_in:
     gdelta_in (top:'a topology) =
         (COUNTABLE INTERSECTION_OF open_in top) relative_to topspace top
 End
@@ -675,11 +675,11 @@ End
    The greek letter "sigma" stands for a countable union or sum (in German,
    "Summe").
  *)
-Definition fsigma_in :
+Definition fsigma_in:
     fsigma_in (top:'a topology) = COUNTABLE UNION_OF closed_in top
 End
 
-Theorem FSIGMA_IN_ASCENDING :
+Theorem FSIGMA_IN_ASCENDING:
    !top s:'a->bool.
         fsigma_in top s <=>
         ?c. (!n. closed_in top (c n)) /\
@@ -691,7 +691,7 @@ Proof
   REWRITE_TAC[ADD1]
 QED
 
-Theorem GDELTA_IN_ALT :
+Theorem GDELTA_IN_ALT:
    !top s:'a->bool.
         gdelta_in top s <=>
         s SUBSET topspace top /\ (COUNTABLE INTERSECTION_OF open_in top) s
@@ -701,26 +701,26 @@ Proof
   REWRITE_TAC[Once CONJ_ACI]
 QED
 
-Theorem FSIGMA_IN_SUBSET :
+Theorem FSIGMA_IN_SUBSET:
    !top s:'a->bool. fsigma_in top s ==> s SUBSET topspace top
 Proof
   GEN_TAC THEN SIMP_TAC std_ss [fsigma_in, FORALL_UNION_OF, UNIONS_SUBSET] THEN
   SIMP_TAC std_ss [CLOSED_IN_SUBSET]
 QED
 
-Theorem GDELTA_IN_SUBSET :
+Theorem GDELTA_IN_SUBSET:
    !top s:'a->bool. gdelta_in top s ==> s SUBSET topspace top
 Proof
   SIMP_TAC std_ss [GDELTA_IN_ALT]
 QED
 
-Theorem CLOSED_IMP_FSIGMA_IN :
+Theorem CLOSED_IMP_FSIGMA_IN:
    !top s:'a->bool. closed_in top s ==> fsigma_in top s
 Proof
   SIMP_TAC std_ss [fsigma_in, COUNTABLE_UNION_OF_INC]
 QED
 
-Theorem OPEN_IMP_GDELTA_IN :
+Theorem OPEN_IMP_GDELTA_IN:
    !top s:'a->bool. open_in top s ==> gdelta_in top s
 Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[gdelta_in] THEN
@@ -730,31 +730,31 @@ Proof
   ASM_SIMP_TAC std_ss [COUNTABLE_INTERSECTION_OF_INC]
 QED
 
-Theorem FSIGMA_IN_EMPTY :
+Theorem FSIGMA_IN_EMPTY:
    !top:'a topology. fsigma_in top {}
 Proof
   SIMP_TAC std_ss [CLOSED_IMP_FSIGMA_IN, CLOSED_IN_EMPTY]
 QED
 
-Theorem GDELTA_IN_EMPTY :
+Theorem GDELTA_IN_EMPTY:
    !top:'a topology. gdelta_in top {}
 Proof
   SIMP_TAC std_ss [OPEN_IMP_GDELTA_IN, OPEN_IN_EMPTY]
 QED
 
-Theorem FSIGMA_IN_TOPSPACE :
+Theorem FSIGMA_IN_TOPSPACE:
    !top:'a topology. fsigma_in top (topspace top)
 Proof
   SIMP_TAC std_ss [CLOSED_IMP_FSIGMA_IN, CLOSED_IN_TOPSPACE]
 QED
 
-Theorem GDELTA_IN_TOPSPACE :
+Theorem GDELTA_IN_TOPSPACE:
    !top:'a topology. gdelta_in top (topspace top)
 Proof
   SIMP_TAC std_ss [OPEN_IMP_GDELTA_IN, OPEN_IN_TOPSPACE]
 QED
 
-Theorem FSIGMA_IN_UNIONS :
+Theorem FSIGMA_IN_UNIONS:
    !top t:('a->bool)->bool.
         COUNTABLE t /\ (!s. s IN t ==> fsigma_in top s)
         ==> fsigma_in top (UNIONS t)
@@ -762,14 +762,14 @@ Proof
   REWRITE_TAC[fsigma_in, COUNTABLE_UNION_OF_UNIONS]
 QED
 
-Theorem FSIGMA_IN_UNION :
+Theorem FSIGMA_IN_UNION:
    !top s t:'a->bool.
         fsigma_in top s /\ fsigma_in top t ==> fsigma_in top (s UNION t)
 Proof
   REWRITE_TAC[fsigma_in, COUNTABLE_UNION_OF_UNION]
 QED
 
-Theorem FSIGMA_IN_INTER :
+Theorem FSIGMA_IN_INTER:
    !top s t:'a->bool.
         fsigma_in top s /\ fsigma_in top t ==> fsigma_in top (s INTER t)
 Proof
@@ -778,7 +778,7 @@ Proof
   REWRITE_TAC[CLOSED_IN_INTER]
 QED
 
-Theorem GDELTA_IN_INTERS :
+Theorem GDELTA_IN_INTERS:
    !top t:('a->bool)->bool.
         COUNTABLE t /\ ~(t = {}) /\ (!s. s IN t ==> gdelta_in top s)
         ==> gdelta_in top (INTERS t)
@@ -788,7 +788,7 @@ Proof
   ASM_SIMP_TAC std_ss [COUNTABLE_INTERSECTION_OF_INTERS]
 QED
 
-Theorem GDELTA_IN_INTER :
+Theorem GDELTA_IN_INTER:
    !top s t:'a->bool.
         gdelta_in top s /\ gdelta_in top t ==> gdelta_in top (s INTER t)
 Proof
@@ -796,7 +796,7 @@ Proof
            NOT_INSERT_EMPTY, FORALL_IN_INSERT, NOT_IN_EMPTY]
 QED
 
-Theorem GDELTA_IN_UNION :
+Theorem GDELTA_IN_UNION:
    !top s t:'a->bool.
         gdelta_in top s /\ gdelta_in top t ==> gdelta_in top (s UNION t)
 Proof
@@ -804,7 +804,7 @@ Proof
   MESON_TAC[COUNTABLE_INTERSECTION_OF_UNION, OPEN_IN_UNION]
 QED
 
-Theorem FSIGMA_IN_DIFF :
+Theorem FSIGMA_IN_DIFF:
    !top s t:'a->bool.
         fsigma_in top s /\ gdelta_in top t ==> fsigma_in top (s DIFF t)
 Proof
@@ -826,7 +826,7 @@ Proof
     FIRST_ASSUM(MP_TAC o MATCH_MP FSIGMA_IN_SUBSET) THEN ASM_SET_TAC[] ]
 QED
 
-Theorem GDELTA_IN_DIFF :
+Theorem GDELTA_IN_DIFF:
    !top s t:'a->bool.
         gdelta_in top s /\ fsigma_in top t ==> gdelta_in top (s DIFF t)
 Proof
@@ -847,7 +847,7 @@ Proof
     FIRST_ASSUM(MP_TAC o MATCH_MP GDELTA_IN_SUBSET) THEN ASM_SET_TAC[] ]
 QED
 
-Theorem GDELTA_IN_FSIGMA_IN :
+Theorem GDELTA_IN_FSIGMA_IN:
    !top s:'a->bool.
        gdelta_in top s <=>
        s SUBSET topspace top /\ fsigma_in top (topspace top DIFF s)
@@ -859,7 +859,7 @@ Proof
   ASM_SIMP_TAC std_ss [GDELTA_IN_DIFF, GDELTA_IN_TOPSPACE]
 QED
 
-Theorem FSIGMA_IN_GDELTA_IN :
+Theorem FSIGMA_IN_GDELTA_IN:
    !top s:'a->bool.
         fsigma_in top s <=>
         s SUBSET topspace top /\ gdelta_in top (topspace top DIFF s)
@@ -871,7 +871,7 @@ Proof
   ASM_SIMP_TAC std_ss [FSIGMA_IN_DIFF, FSIGMA_IN_TOPSPACE]
 QED
 
-Theorem GDELTA_IN_DESCENDING :
+Theorem GDELTA_IN_DESCENDING:
    !top s:'a->bool.
         gdelta_in top s <=>
         ?c. (!n. open_in top (c n)) /\
@@ -906,7 +906,7 @@ Proof
   ASM_SIMP_TAC std_ss [OPEN_IN_SUBSET, FORALL_IN_GSPEC] THEN SET_TAC[]
 QED
 
-Theorem FSIGMA_IN_RELATIVE_TO :
+Theorem FSIGMA_IN_RELATIVE_TO:
    !top s:'a->bool.
         (fsigma_in top relative_to s) = fsigma_in (subtopology top s)
 Proof
@@ -914,13 +914,13 @@ Proof
   REWRITE_TAC[CLOSED_IN_RELATIVE_TO]
 QED
 
-Theorem FSIGMA_IN_RELATIVE_TO_TOPSPACE :
+Theorem FSIGMA_IN_RELATIVE_TO_TOPSPACE:
    !top:'a topology. fsigma_in top relative_to (topspace top) = fsigma_in top
 Proof
    rw [FSIGMA_IN_RELATIVE_TO, SUBTOPOLOGY_TOPSPACE]
 QED
 
-Theorem FSIGMA_IN_SUBTOPOLOGY :
+Theorem FSIGMA_IN_SUBTOPOLOGY:
    !top u s:'a->bool.
          fsigma_in (subtopology top u) s <=>
          ?t. fsigma_in top t /\ s = t INTER u
@@ -929,7 +929,7 @@ Proof
   REWRITE_TAC[relative_to] THEN MESON_TAC[INTER_COMM]
 QED
 
-Theorem GDELTA_IN_RELATIVE_TO :
+Theorem GDELTA_IN_RELATIVE_TO:
    !top s:'a->bool.
         (gdelta_in top relative_to s) = gdelta_in (subtopology top s)
 Proof
@@ -940,7 +940,7 @@ Proof
   SIMP_TAC std_ss [SET_RULE ``s INTER (u INTER s) = u INTER s``]
 QED
 
-Theorem GDELTA_IN_SUBTOPOLOGY :
+Theorem GDELTA_IN_SUBTOPOLOGY:
    !top u s:'a->bool.
          gdelta_in (subtopology top u) s <=>
          ?t. gdelta_in top t /\ s = t INTER u
@@ -949,7 +949,7 @@ Proof
   REWRITE_TAC[relative_to] THEN MESON_TAC[INTER_COMM]
 QED
 
-Theorem FSIGMA_IN_FSIGMA_SUBTOPOLOGY :
+Theorem FSIGMA_IN_FSIGMA_SUBTOPOLOGY:
    !top s t:'a->bool.
         fsigma_in top s
         ==> (fsigma_in (subtopology top s) t <=>
@@ -960,7 +960,7 @@ Proof
   Q.EXISTS_TAC `t:'a->bool` THEN ASM_REWRITE_TAC[] THEN ASM_SET_TAC[]
 QED
 
-Theorem GDELTA_IN_GDELTA_SUBTOPOLOGY :
+Theorem GDELTA_IN_GDELTA_SUBTOPOLOGY:
    !top s t:'a->bool.
         gdelta_in top s
         ==> (gdelta_in (subtopology top s) t <=>
@@ -975,31 +975,31 @@ QED
 (* Metrizable spaces (ported from HOL Light)                                 *)
 (* ------------------------------------------------------------------------- *)
 
-Definition metrizable_space :
+Definition metrizable_space:
     metrizable_space top = ?m. top = mtopology m
 End
 
-Theorem METRIZABLE_SPACE_MTOPOLOGY :
+Theorem METRIZABLE_SPACE_MTOPOLOGY:
    !m. metrizable_space (mtopology m)
 Proof
   REWRITE_TAC[metrizable_space] THEN MESON_TAC[]
 QED
 
-Theorem FORALL_METRIC_TOPOLOGY :
+Theorem FORALL_METRIC_TOPOLOGY:
    !P. (!m:'a metric. P (mtopology m) (mspace m)) <=>
        !top. metrizable_space top ==> P top (topspace top)
 Proof
   SIMP_TAC std_ss [metrizable_space, LEFT_IMP_EXISTS_THM, Once TOPSPACE_MTOPOLOGY]
 QED
 
-Theorem FORALL_METRIZABLE_SPACE :
+Theorem FORALL_METRIZABLE_SPACE:
    !P. (!top. metrizable_space top ==> P top (topspace top)) <=>
        (!m:'a metric. P (mtopology m) (mspace m))
 Proof
   REWRITE_TAC[FORALL_METRIC_TOPOLOGY]
 QED
 
-Theorem EXISTS_METRIZABLE_SPACE :
+Theorem EXISTS_METRIZABLE_SPACE:
    !P. (?top. metrizable_space top /\ P top (topspace top)) <=>
        (?m:'a metric. P (mtopology m) (mspace m))
 Proof
@@ -1008,7 +1008,7 @@ Proof
 QED
 
 (* key result *)
-Theorem CLOSED_IMP_GDELTA_IN :
+Theorem CLOSED_IMP_GDELTA_IN:
    !top s:'a->bool.
         metrizable_space top /\ closed_in top s ==> gdelta_in top s
 Proof
@@ -1065,7 +1065,7 @@ Proof
     METIS_TAC [REAL_LT_SUB_LADD, METRIC_SYM, REAL_ADD_COMM] ]
 QED
 
-Theorem OPEN_IMP_FSIGMA_IN :
+Theorem OPEN_IMP_FSIGMA_IN:
    !top s:'a->bool.
         metrizable_space top /\ open_in top s ==> fsigma_in top s
 Proof
@@ -1161,7 +1161,7 @@ Proof
  >> Rewr
 QED
 
-Theorem ISMET_R2 :
+Theorem ISMET_R2:
     ismet ^mr2_tm
 Proof
     Q.ABBREV_TAC ‘d = ^mr2_tm’
@@ -1199,18 +1199,18 @@ Proof
  >> METIS_TAC [MR2_lemma1]
 QED
 
-Definition mr2 :
+Definition mr2:
     mr2 = metric ^mr2_tm
 End
 
-Theorem MR2_DEF :
+Theorem MR2_DEF:
     !x1 x2 y1 y2. (dist mr2) ((x1,x2),(y1,y2)) =
                   sqrt ((x1 - y1) pow 2 + (x2 - y2) pow 2)
 Proof
     rw [mr2, REWRITE_RULE [metric_tybij] ISMET_R2]
 QED
 
-Theorem MR2_MIRROR :
+Theorem MR2_MIRROR:
     !x1 x2 y1 y2. (dist mr2) ((-x1,-x2),(-y1,-y2)) = (dist mr2) ((x1,x2),(y1,y2))
 Proof
     rw [MR2_DEF, REAL_ARITH “-x - -y = -(x - y)”]

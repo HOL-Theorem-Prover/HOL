@@ -77,7 +77,7 @@ val Ring_ABSREP = DB.fetch "-" "Ring_ABSREP";
 (* NOTE: HOL-Light's ring constructor takes an explicit ring_neg function, while
          in HOL4's it's derived from other slots.
  *)
-Definition raw_ring_def :
+Definition raw_ring_def:
     raw_ring ((c :'a set),zero,uno,add,mul) =
         let g = <| carrier := c; op := add; id := zero |>;
             m = <| carrier := c; op := mul; id := uno  |>
@@ -85,7 +85,7 @@ Definition raw_ring_def :
            <| carrier := c; sum := g; prod := m |>
 End
 
-Definition ring_def :
+Definition ring_def:
     ring = toRing o raw_ring
 End
 
@@ -93,40 +93,40 @@ End
 (* The ring operations, primitive plus subtraction as a derived operation.   *)
 (* ------------------------------------------------------------------------- *)
 
-Definition ring_carrier_def :
+Definition ring_carrier_def:
     ring_carrier (r :'a Ring) = (fromRing r).carrier
 End
 
-Definition ring_0_def :
+Definition ring_0_def:
     ring_0 (r :'a Ring) = (fromRing r).sum.id
 End
 
-Definition ring_1_def :
+Definition ring_1_def:
     ring_1 (r :'a Ring) = (fromRing r).prod.id
 End
 
-Definition ring_neg_def :
+Definition ring_neg_def:
     ring_neg (r :'a Ring) = (fromRing r).sum.inv
 End
 
-Definition ring_add_def :
+Definition ring_add_def:
     ring_add (r :'a Ring) = (fromRing r).sum.op
 End
 
 val _ = hide "ring_sub";
-Definition ring_sub_def :
+Definition ring_sub_def:
     ring_sub (r :'a Ring) = ring$ring_sub (fromRing r)
 End
 
-Definition ring_mul_def :
+Definition ring_mul_def:
     ring_mul (r :'a Ring) = (fromRing r).prod.op
 End
 
-Definition ring_pow_def :
+Definition ring_pow_def:
     ring_pow (r :'a Ring) = (fromRing r).prod.exp
 End
 
-Theorem ring_pow :
+Theorem ring_pow:
     ring_pow r x 0 = ring_1 r /\
     ring_pow r x (SUC n) = ring_mul r x (ring_pow r x n)
 Proof
@@ -141,19 +141,19 @@ QED
 
    |- !r. ring_inv r = Inv (fromRing r)
  *)
-Definition ring_inv_def :
+Definition ring_inv_def:
     ring_inv (r :'a Ring) = (Invertibles ((fromRing r).prod)).inv
 End
 
 (* NOTE: not used *)
-Definition ring_div_def :
+Definition ring_div_def:
     ring_div r (a :'a) b = ring_mul r a (ring_inv r b)
 End
 
 (* NOTE: Now the following theorems have exactly the same statements with their
          corresponding theorems in HOL-Light.
  *)
-Theorem RING_0 :
+Theorem RING_0:
     !r. ring_0 r IN ring_carrier (r :'a Ring)
 Proof
     Q.X_GEN_TAC ‘r0’
@@ -163,7 +163,7 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Theorem RING_1 :
+Theorem RING_1:
     !r. ring_1 r IN ring_carrier (r :'a Ring)
 Proof
     Q.X_GEN_TAC ‘r0’
@@ -173,7 +173,7 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Theorem RING_NEG :
+Theorem RING_NEG:
     !r x. x IN ring_carrier r ==> ring_neg r x IN ring_carrier (r :'a Ring)
 Proof
     Q.X_GEN_TAC ‘r0’
@@ -183,7 +183,7 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Theorem RING_NEG_0 :
+Theorem RING_NEG_0:
     !r. ring_neg r (ring_0 r) = ring_0 (r :'a Ring)
 Proof
     Q.X_GEN_TAC ‘r0’
@@ -193,7 +193,7 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Theorem ring_sub :
+Theorem ring_sub:
     !r x y. ring_sub r x y = ring_add r x (ring_neg r y)
 Proof
     Q.X_GEN_TAC ‘r0’
@@ -209,7 +209,7 @@ fun xfer th :tactic =
  >> irule th
  >> rw [Abbr ‘r’];
 
-Theorem RING_NEG_EQ_0 :
+Theorem RING_NEG_EQ_0:
     !r (x :'a).
         x IN ring_carrier r
         ==> (ring_neg r x = ring_0 r <=> x = ring_0 r)
@@ -217,65 +217,65 @@ Proof
     xfer ring_neg_eq_zero
 QED
 
-Theorem RING_POW :
+Theorem RING_POW:
     !r x n. x IN ring_carrier r ==> ring_pow r x n IN ring_carrier (r :'a Ring)
 Proof
     xfer ring_exp_element
 QED
 
-Theorem RING_ADD :
+Theorem RING_ADD:
     !r x y. x IN ring_carrier r /\ y IN ring_carrier (r :'a Ring) ==>
             ring_add r x y IN ring_carrier r
 Proof
     xfer ring_add_element
 QED
 
-Theorem RING_SUB :
+Theorem RING_SUB:
     !r x y. x IN ring_carrier r /\ y IN ring_carrier (r :'a Ring) ==>
             ring_sub r x y IN ring_carrier r
 Proof
     xfer ring_sub_element
 QED
 
-Theorem RING_MUL :
+Theorem RING_MUL:
     !r x y. x IN ring_carrier r /\ y IN ring_carrier (r :'a Ring) ==>
             ring_mul r x y IN ring_carrier r
 Proof
     xfer ring_mult_element
 QED
 
-Theorem RING_ADD_LZERO :
+Theorem RING_ADD_LZERO:
     !r x. x IN ring_carrier (r :'a Ring) ==> ring_add r (ring_0 r) x = x
 Proof
     xfer ring_add_lzero
 QED
 
-Theorem RING_ADD_RZERO :
+Theorem RING_ADD_RZERO:
     !r x. x IN ring_carrier (r :'a Ring) ==> ring_add r x (ring_0 r) = x
 Proof
     xfer ring_add_rzero
 QED
 
-Theorem RING_ADD_SYM :
+Theorem RING_ADD_SYM:
     !r x y. x IN ring_carrier r /\ y IN ring_carrier (r :'a Ring)
              ==> ring_add r x y = ring_add r y x
 Proof
     xfer ring_add_comm
 QED
 
-Theorem RING_ADD_LNEG :
+Theorem RING_ADD_LNEG:
     !r x. x IN ring_carrier (r :'a Ring) ==> ring_add r (ring_neg r x) x = ring_0 r
 Proof
     xfer ring_add_lneg
 QED
 
-Theorem RING_ADD_RNEG :
+Theorem RING_ADD_RNEG:
     !r (x :'a). x IN ring_carrier r ==> ring_add r x (ring_neg r x) = ring_0 r
 Proof
     xfer ring_add_rneg
 QED
 
-Theorem RING_ADD_ASSOC :
+Theorem RING_ADD_ASSOC:
     !r x y (z :'a).
         x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
         ==> ring_add r x (ring_add r y z) = ring_add r (ring_add r x y) z
@@ -283,25 +283,25 @@ Proof
     xfer (GSYM ring_add_assoc)
 QED
 
-Theorem RING_MUL_LID :
+Theorem RING_MUL_LID:
     !r (x :'a). x IN ring_carrier r ==> ring_mul r (ring_1 r) x = x
 Proof
     xfer ring_mult_lone
 QED
 
-Theorem RING_MUL_LZERO :
+Theorem RING_MUL_LZERO:
     !r (x :'a). x IN ring_carrier r ==> ring_mul r (ring_0 r) x = ring_0 r
 Proof
     xfer ring_mult_lzero
 QED
 
-Theorem RING_MUL_RZERO :
+Theorem RING_MUL_RZERO:
     !r (x :'a). x IN ring_carrier r ==> ring_mul r x (ring_0 r) = ring_0 r
 Proof
     xfer ring_mult_rzero
 QED
 
-Theorem RING_MUL_LNEG :
+Theorem RING_MUL_LNEG:
     !r x (y :'a).
         x IN ring_carrier r /\ y IN ring_carrier r
         ==> ring_mul r (ring_neg r x) y = ring_neg r (ring_mul r x y)
@@ -309,7 +309,7 @@ Proof
     xfer ring_mult_lneg
 QED
 
-Theorem RING_MUL_RNEG :
+Theorem RING_MUL_RNEG:
     !r x (y :'a).
         x IN ring_carrier r /\ y IN ring_carrier r
         ==> ring_mul r x (ring_neg r y) = ring_neg r (ring_mul r x y)
@@ -317,14 +317,14 @@ Proof
     xfer ring_mult_rneg
 QED
 
-Theorem RING_MUL_SYM :
+Theorem RING_MUL_SYM:
     !r x y. x IN ring_carrier r /\ y IN ring_carrier (r :'a Ring)
              ==> ring_mul r x y = ring_mul r y x
 Proof
     xfer ring_mult_comm
 QED
 
-Theorem RING_MUL_ASSOC :
+Theorem RING_MUL_ASSOC:
     !r x y z. x IN ring_carrier r /\ y IN ring_carrier r /\
               z IN ring_carrier (r :'a Ring)
           ==> ring_mul r x (ring_mul r y z) = ring_mul r (ring_mul r x y) z
@@ -332,7 +332,7 @@ Proof
     xfer (GSYM ring_mult_assoc)
 QED
 
-Theorem RING_ADD_LDISTRIB :
+Theorem RING_ADD_LDISTRIB:
     !r x y (z :'a).
         x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
         ==>  ring_mul r x (ring_add r y z) =
@@ -341,7 +341,7 @@ Proof
     xfer ring_mult_radd
 QED
 
-Theorem RING_ADD_RDISTRIB :
+Theorem RING_ADD_RDISTRIB:
     !r x y (z :'a).
         x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
         ==> ring_mul r (ring_add r x y) z =
@@ -350,7 +350,7 @@ Proof
     xfer ring_mult_ladd
 QED
 
-Theorem RING_ADD_EQ_0 :
+Theorem RING_ADD_EQ_0:
     !r x y.
         x IN ring_carrier r /\ y IN ring_carrier (r :'a Ring)
         ==> (ring_add r x y = ring_0 r <=> ring_neg r x = y)
@@ -363,7 +363,7 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Theorem RING_LNEG_UNIQUE :
+Theorem RING_LNEG_UNIQUE:
     !r x y. x IN ring_carrier r /\ y IN ring_carrier r /\
             ring_add r x y = ring_0 (r :'a Ring)
         ==> ring_neg r x = y
@@ -371,20 +371,20 @@ Proof
   MESON_TAC[RING_ADD_EQ_0]
 QED
 
-Theorem RING_RNEG_UNIQUE :
+Theorem RING_RNEG_UNIQUE:
     !r x y. x IN ring_carrier r /\ y IN ring_carrier (r :'a Ring) /\
             ring_add r x y = ring_0 r ==> ring_neg r y = x
 Proof
   MESON_TAC[RING_ADD_EQ_0, RING_ADD_SYM]
 QED
 
-Theorem RING_NEG_NEG :
+Theorem RING_NEG_NEG:
     !r (x :'a). x IN ring_carrier r ==> ring_neg r (ring_neg r x) = x
 Proof
     xfer ring_neg_neg
 QED
 
-Theorem RING_NEG_ADD :
+Theorem RING_NEG_ADD:
     !r x (y :'a).
         x IN ring_carrier r /\ y IN ring_carrier r
         ==> ring_neg r (ring_add r x y) =
@@ -393,7 +393,7 @@ Proof
     xfer ring_neg_add
 QED
 
-Theorem RING_ADD_LCANCEL :
+Theorem RING_ADD_LCANCEL:
     !r x y (z :'a).
         x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
         ==> (ring_add r x y = ring_add r x z <=> y = z)
@@ -401,7 +401,7 @@ Proof
     xfer ring_add_lcancel
 QED
 
-Theorem RING_ADD_RCANCEL :
+Theorem RING_ADD_RCANCEL:
     !r x y (z :'a).
         x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
         ==> (ring_add r x z = ring_add r y z <=> x = y)
@@ -409,7 +409,7 @@ Proof
     xfer ring_add_rcancel
 QED
 
-Theorem RING_ADD_EQ_RIGHT :
+Theorem RING_ADD_EQ_RIGHT:
     !r x (y :'a).
         x IN ring_carrier r /\ y IN ring_carrier r
         ==> (ring_add r x y = y <=> x = ring_0 r)
@@ -417,7 +417,7 @@ Proof
   MESON_TAC[RING_ADD_RCANCEL, RING_NEG, RING_0, RING_ADD_LZERO]
 QED
 
-Theorem RING_ADD_EQ_LEFT :
+Theorem RING_ADD_EQ_LEFT:
     !r x (y :'a).
         x IN ring_carrier r /\ y IN ring_carrier r
         ==> (ring_add r x y = x <=> y = ring_0 r)
@@ -425,7 +425,7 @@ Proof
   MESON_TAC[RING_ADD_EQ_RIGHT, RING_ADD_SYM]
 QED
 
-Theorem RING_LZERO_UNIQUE :
+Theorem RING_LZERO_UNIQUE:
     !r x (y :'a).
         x IN ring_carrier r /\ y IN ring_carrier r /\ ring_add r x y = y
         ==> x = ring_0 r
@@ -433,7 +433,7 @@ Proof
   MESON_TAC[RING_ADD_EQ_RIGHT]
 QED
 
-Theorem RING_RZERO_UNIQUE :
+Theorem RING_RZERO_UNIQUE:
     !r x (y :'a).
         x IN ring_carrier r /\ y IN ring_carrier r /\ ring_add r x y = x
         ==> y = ring_0 r
@@ -441,13 +441,13 @@ Proof
   MESON_TAC[RING_ADD_EQ_LEFT]
 QED
 
-Theorem RING_CARRIER_NONEMPTY :
+Theorem RING_CARRIER_NONEMPTY:
     !(r:'a Ring). ~(ring_carrier r = {})
 Proof
   MESON_TAC[MEMBER_NOT_EMPTY, RING_0]
 QED
 
-Theorem RING_SUB_EQ_0 :
+Theorem RING_SUB_EQ_0:
     !r x (y :'a).
         x IN ring_carrier r /\ y IN ring_carrier r
         ==> (ring_sub r x y = ring_0 r <=> x = y)
@@ -455,19 +455,19 @@ Proof
     xfer ring_sub_eq_zero
 QED
 
-Theorem RING_SUB_LZERO :
+Theorem RING_SUB_LZERO:
     !r (x :'a). x IN ring_carrier r ==> ring_sub r (ring_0 r) x = ring_neg r x
 Proof
     xfer ring_zero_sub
 QED
 
-Theorem RING_SUB_RZERO :
+Theorem RING_SUB_RZERO:
     !r (x :'a). x IN ring_carrier r ==> ring_sub r x (ring_0 r) = x
 Proof
     xfer ring_sub_zero
 QED
 
-Theorem RING_EQ_SUB_LADD :
+Theorem RING_EQ_SUB_LADD:
     !r x y (z :'a).
          x IN ring_carrier r /\ y IN ring_carrier r /\ z IN ring_carrier r
          ==> (x = ring_sub r y z <=> ring_add r x z = y)
@@ -482,7 +482,7 @@ Proof
  >> METIS_TAC [ring_add_comm]
 QED
 
-Theorem RING_ADD_AC :
+Theorem RING_ADD_AC:
     !(r :'a Ring).
         (!x y. x IN ring_carrier r /\ y IN ring_carrier r
                ==> ring_add r x y = ring_add r y x) /\
@@ -498,7 +498,7 @@ Proof
   MESON_TAC[RING_ADD_SYM, RING_ADD_ASSOC, RING_ADD]
 QED
 
-Theorem RING_MUL_AC :
+Theorem RING_MUL_AC:
     !(r :'a Ring).
         (!x y. x IN ring_carrier r /\ y IN ring_carrier r
                ==> ring_mul r x y = ring_mul r y x) /\
@@ -519,11 +519,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* ##n *)
-Definition ring_of_num_def :
+Definition ring_of_num_def:
     ring_of_num (r :'a Ring) = (fromRing r).sum.exp (ring_1 r)
 End
 
-Theorem ring_of_num :
+Theorem ring_of_num:
     ring_of_num r (0 :num) = ring_0 (r :'a Ring) /\
     ring_of_num r (SUC n) = ring_add r (ring_of_num r n) (ring_1 r)
 Proof
@@ -539,7 +539,7 @@ Proof
  >> MATCH_MP_TAC ring_num_SUC >> art []
 QED
 
-Theorem RING_OF_NUM :
+Theorem RING_OF_NUM:
     !r n. ring_of_num r n IN ring_carrier (r :'a Ring)
 Proof
     qx_genl_tac [‘r0’, ‘n’]
@@ -549,19 +549,19 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Theorem RING_OF_NUM_0 :
+Theorem RING_OF_NUM_0:
     !(r :'a Ring). ring_of_num r 0 = ring_0 r
 Proof
   REWRITE_TAC[ring_of_num]
 QED
 
-Theorem RING_OF_NUM_1 :
+Theorem RING_OF_NUM_1:
     !(r :'a Ring). ring_of_num r 1 = ring_1 r
 Proof
   SIMP_TAC bool_ss[num_CONV “1:num”, ring_of_num, RING_ADD_LZERO, RING_1]
 QED
 
-Theorem RING_OF_NUM_ADD :
+Theorem RING_OF_NUM_ADD:
     !(r :'a Ring) m n.
       ring_of_num r (m + n) = ring_add r (ring_of_num r m) (ring_of_num r n)
 Proof
@@ -572,7 +572,7 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Theorem RING_OF_NUM_MUL :
+Theorem RING_OF_NUM_MUL:
     !(r :'a Ring) m n.
       ring_of_num r (m * n) = ring_mul r (ring_of_num r m) (ring_of_num r n)
 Proof
@@ -583,13 +583,13 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Definition ring_of_int :
+Definition ring_of_int:
     ring_of_int (r :'a Ring) (n :int) =
         if &0 <= n then ring_of_num r (num_of_int n)
         else ring_neg r (ring_of_num r (num_of_int (-n)))
 End
 
-Theorem RING_OF_INT :
+Theorem RING_OF_INT:
      !r n. ring_of_int r n IN ring_carrier (r :'a Ring)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[ring_of_int] THEN COND_CASES_TAC THEN
@@ -599,14 +599,14 @@ QED
 (* |- !n. num_of_int(&n) = n *)
 Theorem NUM_OF_INT_OF_NUM = NUM_OF_INT;
 
-Theorem RING_OF_INT_OF_NUM :
+Theorem RING_OF_INT_OF_NUM:
     !r n. ring_of_int r (&n) = ring_of_num (r :'a Ring) n
 Proof
   REWRITE_TAC[ring_of_int, INT_POS, NUM_OF_INT_OF_NUM]
 QED
 
 (* NOTE: The proof is a direct translation from OCaml to SML *)
-Theorem RING_OF_INT_CASES :
+Theorem RING_OF_INT_CASES:
    (!r n. ring_of_int r (&n) = ring_of_num (r : 'a Ring) n) /\
    (!r n. ring_of_int r (-&n) = ring_neg r (ring_of_num r n))
 Proof
@@ -616,7 +616,7 @@ Proof
   COND_CASES_TAC THEN ASM_REWRITE_TAC[ring_of_num, RING_NEG_0]
 QED
 
-Theorem RING_OF_INT_NEG :
+Theorem RING_OF_INT_NEG:
     !(r :'a Ring) n. ring_of_int r (-n) = ring_neg r (ring_of_int r n)
 Proof
   SIMP_TAC std_ss[FORALL_INT_CASES, RING_OF_INT_CASES, INT_NEG_NEG,
@@ -628,7 +628,7 @@ val lemma1 =
      “!x y. x IN ring_carrier r /\ y IN ring_carrier r
          ==> ring_add r (ring_neg r x) y = ring_add r y (ring_neg r x)”;
 
-Theorem RING_OF_INT_ADD :
+Theorem RING_OF_INT_ADD:
     !(r :'a Ring) m n.
       ring_of_int r (m + n) = ring_add r (ring_of_int r m) (ring_of_int r n)
 Proof
@@ -700,7 +700,7 @@ Proof
  >> SIMP_TAC std_ss[Once RING_ADD_SYM, RING_OF_NUM]
 QED
 
-Theorem RING_OF_INT_SUB :
+Theorem RING_OF_INT_SUB:
     !(r :'a Ring) m n.
       ring_of_int r (m - n) = ring_sub r (ring_of_int r m) (ring_of_int r n)
 Proof
@@ -708,7 +708,7 @@ Proof
                   RING_NEG, RING_OF_INT]
 QED
 
-Theorem RING_OF_INT_MUL :
+Theorem RING_OF_INT_MUL:
     !(r :'a Ring) m n.
       ring_of_int r (m * n) = ring_mul r (ring_of_int r m) (ring_of_int r n)
 Proof
@@ -718,19 +718,19 @@ Proof
                   RING_NEG_NEG, RING_MUL]
 QED
 
-Theorem RING_OF_INT_0 :
+Theorem RING_OF_INT_0:
     !(r :'a Ring). ring_of_int r (&0) = ring_0 r
 Proof
   REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0]
 QED
 
-Theorem RING_OF_INT_1 :
+Theorem RING_OF_INT_1:
     !(r :'a Ring). ring_of_int r (&1) = ring_1 r
 Proof
   REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_1]
 QED
 
-Theorem RING_OF_INT_POW :
+Theorem RING_OF_INT_POW:
     !(r :'a Ring) x n.
         ring_of_int r (x ** n) = ring_pow r (ring_of_int r x) n
 Proof
@@ -743,11 +743,11 @@ QED
 (* Characteristic of a ring, characterized by RING_OF_NUM_EQ_0.              *)
 (* ------------------------------------------------------------------------- *)
 
-Definition ring_char_def :
+Definition ring_char_def:
     ring_char (r :'a Ring) = char (fromRing r)
 End
 
-Theorem RING_OF_NUM_EQ_0 :
+Theorem RING_OF_NUM_EQ_0:
     !(r :'a Ring) n. ring_of_num r n = ring_0 r <=> ring_char r divides n
 Proof
     Q.X_GEN_TAC ‘r0’
@@ -757,7 +757,7 @@ Proof
  >> rw [Abbr ‘r’]
 QED
 
-Theorem RING_OF_INT_EQ_0 :
+Theorem RING_OF_INT_EQ_0:
     !(r :'a Ring) n.
         ring_of_int r n = ring_0 r <=> &(ring_char r) int_divides n
 Proof
@@ -772,7 +772,7 @@ QED
    NOTE: In HOL-Light, ‘(m == n) f’ (cong) means ‘f m n’ (int.ml). But this
    syntax is now used by ‘fequiv’, which means ‘f m = f n’ (fequiv_def).
  *)
-Theorem RING_OF_INT_EQ :
+Theorem RING_OF_INT_EQ:
     !(r :'a Ring) m n.
         ring_of_int r m = ring_of_int r n <=>
         &(ring_char r) int_divides (m - n)
@@ -787,12 +787,12 @@ QED
 (* Homomorphisms etc.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-Definition ring_homomorphism_def :
+Definition ring_homomorphism_def:
     ring_homomorphism (r,r') (f :'a -> 'b) <=> RingHomo f (fromRing r) (fromRing r')
 End
 
 (* NOTE: This theorem is a definition in HOL-Light (ringtheory.ml, L4708) *)
-Theorem ring_homomorphism :
+Theorem ring_homomorphism:
     !f r r'.
        (ring_homomorphism (r,r') (f :'a -> 'b) <=>
         IMAGE f (ring_carrier r) SUBSET ring_carrier r' /\
@@ -833,21 +833,21 @@ Proof
         FIRST_X_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘x’ >> art [] ] ]
 QED
 
-Theorem RING_HOMOMORPHISM_0 :
+Theorem RING_HOMOMORPHISM_0:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f ==> f(ring_0 r) = ring_0 r'
 Proof
     qx_genl_tac [‘r0’, ‘r1’, ‘f’]
  >> rw [ring_homomorphism_def, ring_0_def]
 QED
 
-Theorem RING_HOMOMORPHISM_1 :
+Theorem RING_HOMOMORPHISM_1:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f ==> f(ring_1 r) = ring_1 r'
 Proof
     qx_genl_tac [‘r0’, ‘r1’, ‘f’]
  >> rw [ring_homomorphism_def, ring_1_def]
 QED
 
-Theorem RING_HOMOMORPHISM_NEG :
+Theorem RING_HOMOMORPHISM_NEG:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !x. x IN ring_carrier r
                 ==> f(ring_neg r x) = ring_neg r' (f x)
@@ -860,7 +860,7 @@ Proof
  >> irule ring_homo_neg >> art []
 QED
 
-Theorem RING_HOMOMORPHISM_ADD :
+Theorem RING_HOMOMORPHISM_ADD:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !x y. x IN ring_carrier r /\ y IN ring_carrier r
                   ==> f(ring_add r x y) = ring_add r' (f x) (f y)
@@ -873,7 +873,7 @@ Proof
  >> irule ring_homo_add >> art []
 QED
 
-Theorem RING_HOMOMORPHISM_MUL :
+Theorem RING_HOMOMORPHISM_MUL:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !x y. x IN ring_carrier r /\ y IN ring_carrier r
                   ==> f(ring_mul r x y) = ring_mul r' (f x) (f y)
@@ -889,7 +889,7 @@ QED
 val lemma = REWRITE_RULE [ringTheory.ring_sub_def, ring_add_def, ring_neg_def]
                          (Q.SPECL [‘r’, ‘r'’] ring_homo_sub);
 
-Theorem RING_HOMOMORPHISM_SUB :
+Theorem RING_HOMOMORPHISM_SUB:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !x y. x IN ring_carrier r /\ y IN ring_carrier r
                   ==> f(ring_sub r x y) = ring_sub r' (f x) (f y)
@@ -903,7 +903,7 @@ Proof
  >> irule lemma >> art []
 QED
 
-Theorem RING_HOMOMORPHISM_POW :
+Theorem RING_HOMOMORPHISM_POW:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !x n. x IN ring_carrier r
                   ==> f(ring_pow r x n) = ring_pow r' (f x) n
@@ -916,7 +916,7 @@ Proof
  >> irule ring_homo_exp >> art []
 QED
 
-Theorem RING_HOMOMORPHISM_RING_OF_NUM :
+Theorem RING_HOMOMORPHISM_RING_OF_NUM:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !n. f(ring_of_num r n) = ring_of_num r' n
 Proof
@@ -929,7 +929,7 @@ Proof
 QED
 
 (* NOTE: The proof is a direct translation from OCaml to SML *)
-Theorem RING_HOMOMORPHISM_RING_OF_INT :
+Theorem RING_HOMOMORPHISM_RING_OF_INT:
     !r r' (f :'a -> 'b). ring_homomorphism(r,r') f
         ==> !n. f(ring_of_int r n) = ring_of_int r' n
 Proof
@@ -941,14 +941,14 @@ Proof
    ASM_SIMP_TAC std_ss [MATCH_MP RING_HOMOMORPHISM_RING_OF_NUM th])
 QED
 
-Definition ring_monomorphism :
+Definition ring_monomorphism:
     ring_monomorphism (r,r') (f :'a -> 'b) <=>
         ring_homomorphism (r,r') f /\
         !x y. x IN ring_carrier r /\ y IN ring_carrier r /\ f x = f y ==> x = y
 End
 
 (* NOTE: This theorem was part of HOL-Light's RING_MONOMORPHIC_IMAGE_RULE *)
-Theorem RING_MONOMORPHIC_IMAGE_RULE_THM :
+Theorem RING_MONOMORPHIC_IMAGE_RULE_THM:
     !r r' (f :'a -> 'b).
           ring_monomorphism(r,r') f
           ==> (!x x' y y'.
@@ -1003,7 +1003,7 @@ QED
 (* Relation of isomorphism.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-Definition ring_isomorphisms :
+Definition ring_isomorphisms:
     ring_isomorphisms (r,r') ((f:'a->'b),g) <=>
         ring_homomorphism (r,r') f /\
         ring_homomorphism (r',r) g /\
@@ -1011,12 +1011,12 @@ Definition ring_isomorphisms :
         (!y. y IN ring_carrier r' ==> f(g y) = y)
 End
 
-Definition ring_isomorphism_def :
+Definition ring_isomorphism_def:
     ring_isomorphism (r,r') (f :'a -> 'b) <=> RingIso f (fromRing r) (fromRing r')
 End
 
 (* NOTE: This theorem is the definition of ‘ring_isomorphism’ in HOL-Light *)
-Theorem ring_isomorphism :
+Theorem ring_isomorphism:
     !(f :'a -> 'b) r r'.
       ring_isomorphism (r,r') (f:'a->'b) <=> ?g. ring_isomorphisms (r,r') (f,g)
 Proof
@@ -1054,11 +1054,11 @@ Proof
 QED
 
 val _ = set_fixity "isomorphic_ring" (Infixr 490);
-Definition isomorphic_ring :
+Definition isomorphic_ring:
     r isomorphic_ring r' <=> ?(f :'a -> 'b). ring_isomorphism (r,r') f
 End
 
-Theorem CARD_LE_RING_MONOMORPHIC_IMAGE :
+Theorem CARD_LE_RING_MONOMORPHIC_IMAGE:
     !r r' (f :'a -> 'b).
         ring_monomorphism(r,r') f ==> ring_carrier r <=_c ring_carrier r'
 Proof
@@ -1066,13 +1066,13 @@ Proof
   REPEAT STRIP_TAC THEN EXISTS_TAC “f :'a -> 'b” THEN ASM_SET_TAC[]
 QED
 
-Definition ring_epimorphism :
+Definition ring_epimorphism:
     ring_epimorphism (r,r') (f :'a -> 'b) <=>
         ring_homomorphism (r,r') f /\
         IMAGE f (ring_carrier r) = ring_carrier r'
 End
 
-Theorem CARD_LE_RING_EPIMORPHIC_IMAGE :
+Theorem CARD_LE_RING_EPIMORPHIC_IMAGE:
     !r r' (f :'a -> 'b).
         ring_epimorphism(r,r') f ==> ring_carrier r' <=_c ring_carrier r
 Proof
@@ -1080,7 +1080,7 @@ Proof
   REPEAT STRIP_TAC THEN EXISTS_TAC “f :'a -> 'b” THEN ASM_SET_TAC[]
 QED
 
-Theorem FORALL_IN_IMAGE_2 :
+Theorem FORALL_IN_IMAGE_2:
     !(f :'a -> 'b) P s.
                  (!x y. x IN IMAGE f s /\ y IN IMAGE f s ==> P x y) <=>
                  (!x y. x IN s /\ y IN s ==> P (f x) (f y))
@@ -1088,7 +1088,7 @@ Proof
   SET_TAC[]
 QED
 
-Theorem RING_ISOMORPHISM :
+Theorem RING_ISOMORPHISM:
     !r r' (f :'a -> 'b).
       ring_isomorphism (r,r') (f :'a -> 'b) <=>
       ring_homomorphism (r,r') f /\
@@ -1108,7 +1108,7 @@ Proof
   ASM_MESON_TAC[RING_0, RING_ADD, RING_MUL, RING_1, RING_NEG]
 QED
 
-Theorem RING_MONOMORPHISM_EPIMORPHISM :
+Theorem RING_MONOMORPHISM_EPIMORPHISM:
     !r r' (f :'a -> 'b).
         ring_monomorphism (r,r') f /\ ring_epimorphism (r,r') f <=>
         ring_isomorphism (r,r') f
@@ -1117,14 +1117,14 @@ Proof
   MESON_TAC[]
 QED
 
-Theorem RING_ISOMORPHISM_IMP_MONOMORPHISM :
+Theorem RING_ISOMORPHISM_IMP_MONOMORPHISM:
     !r r' (f :'a -> 'b).
         ring_isomorphism (r,r') f ==> ring_monomorphism (r,r') f
 Proof
   SIMP_TAC std_ss[GSYM RING_MONOMORPHISM_EPIMORPHISM]
 QED
 
-Theorem CARD_EQ_RING_ISOMORPHIC_IMAGE :
+Theorem CARD_EQ_RING_ISOMORPHIC_IMAGE:
     !r r' (f :'a -> 'b).
         ring_isomorphism(r,r') f ==> ring_carrier r =_c ring_carrier r'
 Proof
@@ -1132,7 +1132,7 @@ Proof
   MESON_TAC[CARD_LE_RING_MONOMORPHIC_IMAGE, CARD_LE_RING_EPIMORPHIC_IMAGE]
 QED
 
-Theorem ISOMORPHIC_RING_CARD_EQ :
+Theorem ISOMORPHIC_RING_CARD_EQ:
     !(r :'a Ring) (r' :'b Ring).
         r isomorphic_ring r' ==> ring_carrier r =_c ring_carrier r'
 Proof
@@ -1141,7 +1141,7 @@ Proof
  >> Q.EXISTS_TAC ‘f’ >> art []
 QED
 
-Theorem ISOMORPHIC_COPY_OF_RING :
+Theorem ISOMORPHIC_COPY_OF_RING:
     !(r :'a Ring) (s :'b -> bool).
         (?r'. ring_carrier r' = s /\ r isomorphic_ring r') <=> ring_carrier r =_c s
 Proof
@@ -1301,22 +1301,22 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* NOTE: ringTheory.trivial_ring is a theorem *)
-Definition trivial_ring :
+Definition trivial_ring:
     trivial_ring (r :'a Ring) <=> ring_carrier r = {ring_0 r}
 End
 
-Theorem TRIVIAL_RING_10 :
+Theorem TRIVIAL_RING_10:
     !r :'a Ring. trivial_ring r <=> ring_1 r = ring_0 r
 Proof
   REWRITE_TAC[trivial_ring, EXTENSION, IN_SING] THEN
   MESON_TAC[RING_1, RING_0, RING_MUL_LID, RING_MUL_LZERO]
 QED
 
-Definition singleton_ring :
+Definition singleton_ring:
     singleton_ring (a :'a) = toRing (ring$trivial_ring a)
 End
 
-Theorem RING_HOMOMORPHISM :
+Theorem RING_HOMOMORPHISM:
     !r r' (f :'a -> 'b).
         ring_homomorphism (r,r') (f :'a -> 'b) <=>
         IMAGE f (ring_carrier r) SUBSET ring_carrier r' /\
@@ -1341,7 +1341,7 @@ Proof
     ASM_SIMP_TAC std_ss[RING_NEG, RING_ADD_RNEG] ]
 QED
 
-Theorem RING_HOMOMORPHISM_FROM_TRIVIAL_RING :
+Theorem RING_HOMOMORPHISM_FROM_TRIVIAL_RING:
     !(f :'a -> 'b) r r'.
         trivial_ring r
         ==> (ring_homomorphism(r,r') f <=>
@@ -1363,7 +1363,7 @@ Proof
     MP_TAC(ISPEC “r':'b Ring” RING_1) THEN ASM_SET_TAC[] ]
 QED
 
-Theorem RING_MONOMORPHISM_FROM_TRIVIAL_RING :
+Theorem RING_MONOMORPHISM_FROM_TRIVIAL_RING:
     !(f :'a -> 'b) r r'.
         trivial_ring r
         ==> (ring_monomorphism (r,r') f <=> ring_homomorphism (r,r') f)
@@ -1372,7 +1372,7 @@ Proof
 QED
 
 (* NOTE: Similar with the case of PRODUCT_RING, the ring_neg part is out *)
-Theorem SINGLETON_RING :
+Theorem SINGLETON_RING:
    (!a :'a. ring_carrier(singleton_ring a) = {a}) /\
    (!a :'a. ring_0(singleton_ring a) = a) /\
    (!a :'a. ring_1(singleton_ring a) = a) /\
@@ -1388,7 +1388,7 @@ Proof
  >> rw [trivial_ring_def]
 QED
 
-Theorem TRIVIAL_RING_SINGLETON_RING :
+Theorem TRIVIAL_RING_SINGLETON_RING:
     !a :'a. trivial_ring(singleton_ring a)
 Proof
   REWRITE_TAC[trivial_ring, SINGLETON_RING]
@@ -1398,12 +1398,12 @@ QED
 (* General Cartesian product / dependent function space (sets.ml/card.ml)    *)
 (* ------------------------------------------------------------------------- *)
 
-Definition cartesian_product :
+Definition cartesian_product:
     cartesian_product k (s :'k -> 'a -> bool) =
         {f :'k -> 'a | EXTENSIONAL k f /\ !i. i IN k ==> f i IN s i}
 End
 
-Theorem IN_CARTESIAN_PRODUCT :
+Theorem IN_CARTESIAN_PRODUCT:
     !k s (x :'k -> 'a).
         x IN cartesian_product k s <=>
         EXTENSIONAL k x /\ (!i. i IN k ==> x i IN s i)
@@ -1414,7 +1414,7 @@ QED
 (* NOTE: HOL-Light's set_exp is denoted by "^_c", which cannot be parsed in
          HOL-Light. HOL-Light's theorem [exp_c] is HOL4's [set_exp_def].
  *)
-Theorem CARTESIAN_PRODUCT_CONST :
+Theorem CARTESIAN_PRODUCT_CONST:
     !(s :'a -> bool) (t :'b -> bool).
         cartesian_product t (\i. s) = s ** t
 Proof
@@ -1422,7 +1422,7 @@ Proof
  >> SET_TAC []
 QED
 
-Theorem RESTRICTION_IN_CARTESIAN_PRODUCT :
+Theorem RESTRICTION_IN_CARTESIAN_PRODUCT:
     !k s (f :'k -> 'a).
         RESTRICTION k f IN cartesian_product k s <=>
         !i. i IN k ==> (f i) IN (s i)
@@ -1434,7 +1434,7 @@ QED
 (* Direct products of rings                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-Definition raw_product_ring_def :
+Definition raw_product_ring_def:
     raw_product_ring k (r :'k -> 'a Ring) =
         let c = cartesian_product k (\i. ring_carrier ((r :'k -> 'a Ring) i));
             g = <| carrier := c;
@@ -1517,7 +1517,7 @@ Proof
  >> rw [RESTRICTION_DEFINED, RING_NEG, RING_ADD_EQ_0, RING_NEG_NEG]
 QED
 
-Definition product_ring :
+Definition product_ring:
     product_ring k (r :'k -> 'a Ring) = toRing (raw_product_ring k r)
 End
 
@@ -1525,7 +1525,7 @@ End
   ‘ring_neg’, but in HOL4 it cannot be proved as .inv is a derived operator.
    See PRODUCT_RING_NEG for the modified theorem corresponding to that part.
  *)
-Theorem PRODUCT_RING :
+Theorem PRODUCT_RING:
    (!k (r :'k -> 'a Ring).
         ring_carrier(product_ring k r) =
           cartesian_product k (\i. ring_carrier(r i))) /\
@@ -1552,7 +1552,7 @@ Proof
  >> rw [raw_product_ring_def]
 QED
 
-Theorem PRODUCT_RING_NEG :
+Theorem PRODUCT_RING_NEG:
     !k (r :'k -> 'a Ring).
        !x. x IN ring_carrier (product_ring k r) ==>
            ring_neg (product_ring k r) x =
@@ -1612,7 +1612,7 @@ QED
 Theorem PRODUCT_RING_NEG' =
         PRODUCT_RING_NEG |> SIMP_RULE std_ss [PRODUCT_RING, IN_CARTESIAN_PRODUCT]
 
-Theorem RING_MONOMORPHISM_COMPOSE :
+Theorem RING_MONOMORPHISM_COMPOSE:
     !r1 r2 r3 (f :'a -> 'b) (g :'b -> 'c).
         ring_monomorphism(r1,r2) f /\ ring_monomorphism(r2,r3) g
         ==> ring_monomorphism(r1,r3) (g o f)
@@ -1621,7 +1621,7 @@ Proof
   SIMP_TAC std_ss[SUBSET_DEF, FORALL_IN_IMAGE, IMAGE_o, o_THM]
 QED
 
-Theorem RING_HOMOMORPHISM_COMPONENTWISE :
+Theorem RING_HOMOMORPHISM_COMPONENTWISE:
     !r k s (f :'a -> 'k -> 'b).
         ring_homomorphism(r,product_ring k s) f <=>
         IMAGE f (ring_carrier r) SUBSET EXTENSIONAL k /\
@@ -1656,7 +1656,7 @@ Proof
     fs [EXTENSIONAL_def, RING_NEG] ]
 QED
 
-Theorem RING_HOMOMORPHISM_COMPONENTWISE_UNIV :
+Theorem RING_HOMOMORPHISM_COMPONENTWISE_UNIV:
     !r s (f :'a -> 'k -> 'b).
         ring_homomorphism(r,product_ring univ(:'k) s) f <=>
         !i. ring_homomorphism (r,s i) (\x. f x i)
@@ -1666,13 +1666,13 @@ Proof
   REWRITE_TAC[EXTENSIONAL_UNIV]
 QED
 
-Theorem RING_HOMOMORPHISM_ID :
+Theorem RING_HOMOMORPHISM_ID:
     !r :'a Ring. ring_homomorphism (r,r) (\x. x)
 Proof
   SIMP_TAC std_ss[ring_homomorphism, IMAGE_ID, SUBSET_REFL]
 QED
 
-Theorem RING_HOMOMORPHISM_DIAGONAL_UNIV :
+Theorem RING_HOMOMORPHISM_DIAGONAL_UNIV:
     !(r :'a Ring).
         ring_homomorphism (r,product_ring univ(:'k) (\i. r)) (\x i. x)
 Proof
@@ -1680,7 +1680,7 @@ Proof
   SIMP_TAC std_ss[RING_HOMOMORPHISM_ID]
 QED
 
-Theorem RING_MONOMORPHISM_DIAGONAL_UNIV :
+Theorem RING_MONOMORPHISM_DIAGONAL_UNIV:
    !(r :'a Ring).
         ring_monomorphism (r,product_ring univ(:'k) (\i. r)) (\x i. x)
 Proof
@@ -1714,7 +1714,7 @@ Proof
       SIMP_TAC std_ss[CARD_EXP_CANTOR, CARD_LT_IMP_LE] ]
 QED
 
-Theorem RING_TOTALIZATION :
+Theorem RING_TOTALIZATION:
     !r :'a Ring.
           (?r' f. ring_carrier r' = univ(:unit) /\
                   ring_monomorphism(r,r') f) \/
@@ -1758,11 +1758,11 @@ QED
 (* Integral domain and field.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-Definition integral_domain_def :
+Definition integral_domain_def:
     integral_domain (r :'a Ring) = IntegralDomain (fromRing r)
 End
 
-Theorem integral_domain :
+Theorem integral_domain:
     integral_domain (r :'a Ring) <=>
         ~(ring_1 r = ring_0 r) /\
         (!x y. x IN ring_carrier r /\
@@ -1785,7 +1785,7 @@ Proof
       rw [ring_mult_rzero] ]
 QED
 
-Theorem INTEGRAL_DOMAIN_MUL_EQ_0 :
+Theorem INTEGRAL_DOMAIN_MUL_EQ_0:
     !r a (b :'a).
         integral_domain r /\ a IN ring_carrier r /\ b IN ring_carrier r
         ==> (ring_mul r a b = ring_0 r <=> a = ring_0 r \/ b = ring_0 r)
@@ -1794,7 +1794,7 @@ Proof
   MESON_TAC[RING_MUL_LZERO, RING_MUL_RZERO]
 QED
 
-Theorem RING_INTEGRAL_LEMMA :
+Theorem RING_INTEGRAL_LEMMA:
     integral_domain r
      ==> ring_carrier r = univ(:'a)
          ==> (!x. ring_mul r (ring_of_int r (&0)) x = ring_of_int r (&0)) /\

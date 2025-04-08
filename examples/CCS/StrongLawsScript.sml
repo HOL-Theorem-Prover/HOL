@@ -215,7 +215,7 @@ val STRONG_LEFT_SUM_MID_IDEMP = save_thm (
         (SPECL [``E' :'a CCS``, ``sum E E''``] STRONG_SUM_MID_IDEMP)));
 
 (* Unused recursion variables have the same behavior as `nil` *)
-Theorem STRONG_EQUIV_NIL_VAR :
+Theorem STRONG_EQUIV_NIL_VAR:
     !X. STRONG_EQUIV nil (var X)
 Proof
     GEN_TAC
@@ -1109,7 +1109,7 @@ val STRONG_RELAB_PREFIX = store_thm (
 
    where A is ‘rec X E’, P is ‘CCS_Subst E (rec X E) X’ (instead of just E)
  *)
-Theorem STRONG_UNFOLDING :
+Theorem STRONG_UNFOLDING:
     !X E. STRONG_EQUIV (rec X E) (CCS_Subst E (rec X E) X)
 Proof
     rpt GEN_TAC
@@ -1145,7 +1145,7 @@ QED
 (* Prove the theorem STRONG_PREF_REC_EQUIV:
    |- ∀u s v. u..rec s (v..u..var s) ~ rec s (u..v..var s):
  *)
-Theorem STRONG_PREF_REC_EQUIV :
+Theorem STRONG_PREF_REC_EQUIV:
     !(u :'a Action) s v.
         STRONG_EQUIV (prefix u (rec s (prefix v (prefix u (var s)))))
                      (rec s (prefix u (prefix v (var s))))
@@ -1221,7 +1221,7 @@ Theorem STRONG_UNFOLDING' = REWRITE_RULE [CCS_Subst] STRONG_UNFOLDING
 (* Prove the theorem STRONG_REC_ACT2:
    |- ∀s u. rec s (u..u..var s) ~ rec s (u..var s)
  *)
-Theorem STRONG_REC_ACT2 :
+Theorem STRONG_REC_ACT2:
     !s u. STRONG_EQUIV (rec s (prefix u (prefix u (var s))))
                        (rec s (prefix u (var s)))
 Proof
@@ -1293,7 +1293,7 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-Theorem STRONG_EQUIV_REC_ELIM :
+Theorem STRONG_EQUIV_REC_ELIM:
     !X E. X # E ==> STRONG_EQUIV (rec X E) E
 Proof
     rw [Once PROPERTY_STAR]
@@ -1309,7 +1309,7 @@ Proof
       >- (MATCH_MP_TAC lemma14b >> art []) >> rw [] ]
 QED
 
-Theorem STRONG_EQUIV_REC_REC_ELIM :
+Theorem STRONG_EQUIV_REC_REC_ELIM:
     !X E. STRONG_EQUIV (rec X (rec X E)) (rec X E)
 Proof
     rpt GEN_TAC
@@ -1445,7 +1445,7 @@ val LESS_EQ_LESS_EQ_SUC = Q.prove (
  >> IMP_RES_TAC LESS_EQ_IMP_LESS_SUC
  >> IMP_RES_TAC LESS_IMP_LESS_OR_EQ);
 
-Theorem SIGMA_TRANS_THM_EQ :
+Theorem SIGMA_TRANS_THM_EQ:
     !n f (u :'a Action) E. TRANS (SIGMA f n) u E <=> ?k. k <= n /\ TRANS (f k) u E
 Proof
     Induct (* 2 sub-goals here *)
@@ -1495,7 +1495,7 @@ QED
 val SIGMA_TRANS_THM = save_thm (
    "SIGMA_TRANS_THM", EQ_IMP_LR SIGMA_TRANS_THM_EQ);
 
-Theorem SYNC_TRANS_THM_EQ :
+Theorem SYNC_TRANS_THM_EQ:
     !m (u :'a Action) P f v Q. TRANS (SYNC u P f m) v Q <=>
           ?j l. j <= m /\
                 (u = label l) /\ (PREF_ACT (f j) = label (COMPL l)) /\

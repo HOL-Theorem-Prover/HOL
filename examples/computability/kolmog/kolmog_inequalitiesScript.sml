@@ -677,7 +677,7 @@ Proof
   metis_tac[rich_listTheory.TAKE_LENGTH_APPEND, APPEND_ASSOC, APPEND_11]
 QED
 
-Theorem pfi_rUMi :
+Theorem pfi_rUMi:
   pfi rUMi
 Proof
   simp[pfi_def, rUMi_def, prefix_free_def, PULL_EXISTS] >>

@@ -278,7 +278,7 @@ val pmact_flip_args = store_thm(
   ``pmact pm ((x,y)::t) a = pmact pm ((y,x)::t) a``,
   METIS_TAC [is_pmact_pmact, is_pmact_def, permeq_flip_args]);
 
-Theorem pmact_append :
+Theorem pmact_append:
     !f p1 p2 x. pmact f (p1 ++ p2) x = pmact f p1 (pmact f p2 x)
 Proof
     rpt GEN_TAC
@@ -286,7 +286,7 @@ Proof
  >> METIS_TAC [is_pmact_def]
 QED
 
-Theorem pmact_flip_args_all :
+Theorem pmact_flip_args_all:
     !pm xs ys a. LENGTH xs = LENGTH ys ==>
                  pmact pm (ZIP (xs,ys)) a = pmact pm (ZIP (ys,xs)) a
 Proof
@@ -384,7 +384,7 @@ Proof
     Induct_on ‘pi’ >> rw []
 QED
 
-Theorem lswapstr_apply_EL :
+Theorem lswapstr_apply_EL:
     !vs vs' i. LENGTH vs = LENGTH vs' /\
                DISJOINT (set vs) (set vs') /\
                ALL_DISTINCT vs /\
@@ -426,7 +426,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem MEM_lswapstr :
+Theorem MEM_lswapstr:
     !vs vs' x. LENGTH vs = LENGTH vs' /\
                DISJOINT (set vs) (set vs') /\
                ALL_DISTINCT vs /\ ALL_DISTINCT vs' /\
@@ -454,7 +454,7 @@ QED
 (* |- !p1 p2 x. lswapstr (p1 ++ p2) x = lswapstr p1 (lswapstr p2 x) *)
 Theorem lswapstr_append = ISPEC “string_pmact” pmact_append
 
-Theorem lswapstr_upperbound :
+Theorem lswapstr_upperbound:
     !xs ys v. LENGTH xs = LENGTH ys /\ DISJOINT (set xs) (set ys) /\
               ALL_DISTINCT xs /\ ALL_DISTINCT ys ==>
               lswapstr (ZIP (xs,ys)) v IN v INSERT set xs UNION set ys
@@ -582,7 +582,7 @@ Proof
  >> MATCH_MP_TAC lswapstr_unchanged' >> art []
 QED
 
-Theorem ssetpm_unchanged :
+Theorem ssetpm_unchanged:
     !pi s. FINITE s /\ DISJOINT (set (MAP FST pi)) s /\
                        DISJOINT (set (MAP SND pi)) s ==>
                        ssetpm pi s = s
@@ -1512,7 +1512,7 @@ val gen_avoidance_lemma = store_thm(
     ]
   ]);
 
-Theorem lswapstr_IN_RANK :
+Theorem lswapstr_IN_RANK:
     !x ys zs r. LENGTH ys = LENGTH zs /\
                 DISJOINT (set ys) (set zs) /\
                 ALL_DISTINCT ys /\ ALL_DISTINCT zs /\

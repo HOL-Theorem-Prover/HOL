@@ -41,13 +41,13 @@ val _ = overload_on ("unknown", ``SOME LTL3_U``);
 val _ = overload_on ("out_of_model", ``NONE :ABRV_LTL``);
  *)
 
-Theorem THE_LTL3 :
+Theorem THE_LTL3:
    (THE LTL3_T = T) /\ (THE LTL3_F = F)
 Proof
    RW_TAC std_ss []
 QED
 
-Theorem LTL3_nchotomy :
+Theorem LTL3_nchotomy:
     !a. (a = LTL3_T) \/ (a = LTL3_F) \/ (a = LTL3_U)
 Proof
     GEN_TAC
@@ -58,7 +58,7 @@ Proof
  >> Cases_on `x` >> PROVE_TAC []
 QED
 
-Theorem LTL3_distinct :
+Theorem LTL3_distinct:
     LTL3_T <> LTL3_F /\ LTL3_T <> LTL3_U /\ LTL3_F <> LTL3_U
 Proof
     rpt CONJ_TAC
@@ -66,7 +66,7 @@ Proof
  >> METIS_TAC [NOT_SOME_NONE]
 QED
 
-Theorem LTL3_NOT_U :
+Theorem LTL3_NOT_U:
     !x. x <> LTL3_U <=> (x = LTL3_T) \/ (x = LTL3_F)
 Proof
     METIS_TAC [LTL3_nchotomy, LTL3_distinct]
@@ -77,14 +77,14 @@ QED
    PSLPath.CAL is similar, but the result is of type ``:'a path`` that
    cannot be used by LTL_SEM_TIME. Also cf. FinitePSLPath.CONCAT .
  *)
-Definition concat_def :
+Definition concat_def:
    concat (u :'a list) (v :num -> 'a) =
      \i. if i < LENGTH u then EL i u else (v (i - LENGTH u))
 End
 
 val _ = overload_on ("++", ``concat``);
 
-Theorem concat_assoc :
+Theorem concat_assoc:
     !(u :'a list) (v :'a list) (w :num -> 'a). (u ++ v) ++ w = u ++ (v ++ w)
 Proof
     rpt GEN_TAC
@@ -101,38 +101,38 @@ Proof
 QED
 
 (* access of the finite part of a concatenation *)
-Theorem concat_finite :
+Theorem concat_finite:
     !i u w. i < LENGTH u ==> (u ++ w) i = EL i u
 Proof
     RW_TAC std_ss [concat_def]
 QED
 
 (* LTL3 semantics [1] *)
-Definition LTL3_SEM_TIME_def :
+Definition LTL3_SEM_TIME_def:
     LTL3_SEM_TIME t (u :'a set list) f =
              if (!w.  LTL_SEM_TIME t (concat u w) f) then LTL3_T
         else if (!w. ~LTL_SEM_TIME t (concat u w) f) then LTL3_F
         else LTL3_U
 End
 
-Definition LTL3_SEM_def :
+Definition LTL3_SEM_def:
     LTL3_SEM u f = LTL3_SEM_TIME 0 u f
 End
 
-Theorem LTL3_SEM_TIME_T :
+Theorem LTL3_SEM_TIME_T:
     !t u f. (LTL3_SEM_TIME t u f = LTL3_T) <=> !v. LTL_SEM_TIME t (u ++ v) f
 Proof
     RW_TAC std_ss [LTL3_SEM_TIME_def]
 QED
 
-Theorem LTL3_SEM_TIME_F :
+Theorem LTL3_SEM_TIME_F:
     !t u f. (LTL3_SEM_TIME t u f = LTL3_F) <=> !v. ~LTL_SEM_TIME t (u ++ v) f
 Proof
     RW_TAC std_ss [LTL3_SEM_TIME_def]
 QED
 
 (* full definition of LTL3_SEM *)
-Theorem LTL3_SEM_DEF :
+Theorem LTL3_SEM_DEF:
     !u f. LTL3_SEM u f = if (!v.  LTL_SEM (u ++ v) f) then LTL3_T
                     else if (!v. ~LTL_SEM (u ++ v) f) then LTL3_F
                     else LTL3_U
@@ -153,14 +153,14 @@ val LTL3_SEM_F = save_thm
     REWRITE_RULE [GSYM LTL3_SEM_def, GSYM LTL_SEM_def]
                  (Q.SPEC `0` LTL3_SEM_TIME_F));
 
-Theorem LTL3_SEM_TIME_MONO_T :
+Theorem LTL3_SEM_TIME_MONO_T:
     !t u f. (LTL3_SEM_TIME t u f = LTL3_T) ==>
             !v. (LTL3_SEM_TIME t (u ++ v) f = LTL3_T)
 Proof
     RW_TAC std_ss [LTL3_SEM_TIME_T] >> art [concat_assoc]
 QED
 
-Theorem LTL3_SEM_TIME_MONO_F :
+Theorem LTL3_SEM_TIME_MONO_F:
     !t u f. (LTL3_SEM_TIME t u f = LTL3_F) ==>
             !v. (LTL3_SEM_TIME t (u ++ v) f = LTL3_F)
 Proof
@@ -168,7 +168,7 @@ Proof
 QED
 
 (* main theorem on the monotonicity of LTL3 *)
-Theorem LTL3_SEM_TIME_MONO :
+Theorem LTL3_SEM_TIME_MONO:
     !t u f. (LTL3_SEM_TIME t u f <> LTL3_U) ==>
         !v. (LTL3_SEM_TIME t (u ++ v) f = LTL3_SEM_TIME t u f)
 Proof
@@ -183,7 +183,7 @@ val LTL3_SEM_MONO = save_thm
     REWRITE_RULE [GSYM LTL3_SEM_def] (Q.SPEC `0` LTL3_SEM_TIME_MONO));
 
 (* Standard semantics of ptLTL [2] *)
-Definition PTLTL_SEM_def :
+Definition PTLTL_SEM_def:
    (PTLTL_SEM u (LTL_PROP p)        = (P_SEM (LAST u) p)) /\
    (PTLTL_SEM u (LTL_NOT f)         = ~PTLTL_SEM u f) /\
    (PTLTL_SEM u (LTL_AND (f1,f2))   = (PTLTL_SEM u f1 /\ PTLTL_SEM u f2)) /\
@@ -196,7 +196,7 @@ Definition PTLTL_SEM_def :
 End
 
 (* Alternative semantics of ptLTL [2], the only difference is at LTL_PREV *)
-Definition PTLTL_SEM_ALT_def :
+Definition PTLTL_SEM_ALT_def:
    (PTLTL_SEM_ALT u (LTL_PROP p)        = (P_SEM (LAST u) p)) /\
    (PTLTL_SEM_ALT u (LTL_NOT f)         = ~PTLTL_SEM_ALT u f) /\
    (PTLTL_SEM_ALT u (LTL_AND (f1,f2))   = (PTLTL_SEM_ALT u f1 /\
@@ -209,7 +209,7 @@ Definition PTLTL_SEM_ALT_def :
 End
 
 (* key result: PTLTL doesn't access the future part of the trace *)
-Theorem PTLTL_SEM_THM :
+Theorem PTLTL_SEM_THM:
     !u w w' i. i < LENGTH u ==>
            !f. IS_PAST_LTL f ==>
               (LTL_SEM_TIME i (u ++ w) f = LTL_SEM_TIME i (u ++ w') f)
@@ -231,19 +231,19 @@ Proof
       METIS_TAC [] )
 QED
 
-Definition IS_CONCL_def :
+Definition IS_CONCL_def:
     IS_CONCL x = ((x = LTL3_T) \/ (x = LTL3_F))
 End
 
 (* LTL3 semantic of ptLTL is always conclusive *)
-Theorem PTLTL_SEM_LTL3_CONCL :
+Theorem PTLTL_SEM_LTL3_CONCL:
     !f u i. i < LENGTH u /\ IS_PAST_LTL f ==> IS_CONCL (LTL3_SEM_TIME i u f)
 Proof
     RW_TAC std_ss [IS_CONCL_def, LTL3_SEM_TIME_def]
  >> METIS_TAC [PTLTL_SEM_THM]
 QED
 
-Theorem PTLTL_SEM_LTL3_AND :
+Theorem PTLTL_SEM_LTL3_AND:
     !i u f1 f2. i < LENGTH u /\ IS_PAST_LTL f1 /\ IS_PAST_LTL f2 ==>
                (THE (LTL3_SEM_TIME i u (LTL_AND (f1,f2))) <=>
                 THE (LTL3_SEM_TIME i u f1) /\ THE (LTL3_SEM_TIME i u f2))
@@ -268,7 +268,7 @@ Proof
 QED
 
 (* target result: alternative ptLTL semantics expressed in LTL3 semantics *)
-Theorem PTLTL_SEM_ALT_LTL3 :
+Theorem PTLTL_SEM_ALT_LTL3:
     !f u. IS_PAST_LTL f /\ 0 < LENGTH u ==>
          (PTLTL_SEM_ALT u f = THE (LTL3_SEM_TIME (LENGTH u - 1) u f))
 Proof

@@ -69,7 +69,7 @@ val conditional_mutual_information_def = Define
 (* ************************************************************************* *)
 
 (* NOTE: added ‘prob_space p’ into antecedents due to changes of ‘measurable’ *)
-Theorem finite_mutual_information_reduce :
+Theorem finite_mutual_information_reduce:
     !b p s1 s2 X Y. prob_space p /\ (POW (p_space p) = events p) /\
              random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) /\
              random_variable Y p (IMAGE Y (p_space p), POW (IMAGE Y (p_space p))) /\
@@ -485,7 +485,7 @@ Proof
 QED
 
 (* NOTE: added ‘prob_space p’ into antecedents due to changes of ‘measurable’ *)
-Theorem finite_entropy_reduce :
+Theorem finite_entropy_reduce:
     !b p X. prob_space p /\ (POW (p_space p) = events p) /\
              random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) /\
                     FINITE (p_space p) ==>
@@ -577,7 +577,7 @@ Proof
 QED
 
 (* NOTE: added ‘prob_space p’ into antecedents due to changes of ‘measurable’ *)
-Theorem finite_mutual_information_reduce2 :
+Theorem finite_mutual_information_reduce2:
     !b p s1 s2 X Y Z. prob_space p /\ (POW (p_space p) = events p) /\
              random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) /\
              random_variable Y p (IMAGE Y (p_space p), POW (IMAGE Y (p_space p))) /\
@@ -1008,7 +1008,7 @@ Proof
 QED
 
 (* NOTE: added ‘prob_space p’ into antecedents due to changes of ‘measurable’ *)
-Theorem finite_conditional_mutual_information_reduce :
+Theorem finite_conditional_mutual_information_reduce:
     !b p X Y Z. prob_space p /\ (POW (p_space p) = events p) /\
                random_variable X p (IMAGE X (p_space p), POW (IMAGE X (p_space p))) /\
                random_variable Y p (IMAGE Y (p_space p), POW (IMAGE Y (p_space p))) /\
@@ -1526,7 +1526,7 @@ QED
 (* -------------Entropy of a RV with a certain event is zero---------------- *)
 
 (* NOTE: added ‘prob_space p’ due to changes of ‘measurable’ *)
-Theorem finite_entropy_certainty_eq_0 :
+Theorem finite_entropy_certainty_eq_0:
     !b p X. prob_space p /\ (POW (p_space p) = events p) /\
          random_variable X p
            (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
@@ -1553,7 +1553,7 @@ QED
 
 (* --------------- upper bound on entropy for a rv ------------------------- *)
 
-Theorem finite_entropy_le_card :
+Theorem finite_entropy_le_card:
     !b p X. 1 <= b /\ prob_space p /\ (POW (p_space p) = events p) /\
          random_variable X p
            (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\
@@ -1655,7 +1655,7 @@ QED
 
 (* --------------- entropy is maximal for a uniform rv --------------------- *)
 
-Theorem finite_entropy_uniform_max :
+Theorem finite_entropy_uniform_max:
     !b p X. prob_space p /\ (POW (p_space p) = events p) /\
          random_variable X p
            (IMAGE X (p_space p),POW (IMAGE X (p_space p))) /\

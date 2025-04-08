@@ -44,7 +44,7 @@ val _ = temp_overload_on (epsilon,listSyntax.nil_tm);
 
 val _ = set_fixity "dot" (Infixr 675);
 
-Definition dot_def :
+Definition dot_def:
   A dot B = {x ++ y | x IN A /\ y IN B}
 End
 

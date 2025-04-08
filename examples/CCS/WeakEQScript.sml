@@ -28,20 +28,20 @@ val _ = set_mapped_fixity { fixity = Infix (NONASSOC, 450),
 val _ = TeX_notation { hol = ("=" ^ (UTF8.chr 0x03B5) ^ "=>"),
                        TeX = ("\\HOLTokenEPS", 1) };
 
-Theorem EPS_ETS :
+Theorem EPS_ETS:
     EPS = ETS TRANS tau
 Proof
     REWRITE_TAC [ETS_def, EPS_def]
 QED
 
-Theorem ONE_TAU :
+Theorem ONE_TAU:
     !E E'. TRANS E tau E' ==> EPS E E'
 Proof
     RW_TAC std_ss [EPS_ETS]
  >> MATCH_MP_TAC TS_IMP_ETS >> art []
 QED
 
-Theorem EPS_REFL :
+Theorem EPS_REFL:
     !E. EPS E E
 Proof
     REWRITE_TAC [EPS_ETS, ETS_REFL]
@@ -153,14 +153,14 @@ val _ =
 val _ = TeX_notation { hol = "==", TeX = ("\\HOLTokenWeakTransBegin", 1) };
 val _ = TeX_notation { hol = "=>", TeX = ("\\HOLTokenWeakTransEnd", 1) };
 
-Theorem WEAK_TRANS_WTS :
+Theorem WEAK_TRANS_WTS:
     WEAK_TRANS = WTS TRANS tau
 Proof
     ASM_SIMP_TAC std_ss [WTS_def, WEAK_TRANS, FUN_EQ_THM, EPS_ETS]
 QED
 
 (* A transition is a particular weak transition. *)
-Theorem TRANS_IMP_WEAK_TRANS :
+Theorem TRANS_IMP_WEAK_TRANS:
     !E u E'. TRANS E u E' ==> WEAK_TRANS E u E'
 Proof
     RW_TAC std_ss [WEAK_TRANS_WTS]
@@ -403,7 +403,7 @@ val WEAK_SUM2 = store_thm ((* NEW *)
 val WEAK_BISIM_def = Define
    `WEAK_BISIM (R :'a simulation) = WBISIM TRANS tau R`;
 
-Theorem WEAK_BISIM :
+Theorem WEAK_BISIM:
     WEAK_BISIM (Wbsm: 'a simulation) =
     !E E'. Wbsm E E' ==>
        (!l.
@@ -426,13 +426,13 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem IDENTITY_WEAK_BISIM :
+Theorem IDENTITY_WEAK_BISIM:
     WEAK_BISIM Id
 Proof
     REWRITE_TAC [WEAK_BISIM_def, WBISIM_ID]
 QED
 
-Theorem CONVERSE_WEAK_BISIM :
+Theorem CONVERSE_WEAK_BISIM:
     !Wbsm. WEAK_BISIM Wbsm ==> WEAK_BISIM (inv Wbsm)
 Proof
     REWRITE_TAC [WEAK_BISIM_def, WBISIM_INV]
@@ -544,14 +544,14 @@ val WEAK_TRANS_AUX_SYM = store_thm (
  >> EXISTS_TAC ``E2' :'a CCS`` >> art []);
 
 (* The composition of two weak bisimulations is a weak bisimulation. *)
-Theorem COMP_WEAK_BISIM :
+Theorem COMP_WEAK_BISIM:
     !Wbsm1 Wbsm2. WEAK_BISIM Wbsm1 /\ WEAK_BISIM Wbsm2 ==> WEAK_BISIM (Wbsm2 O Wbsm1)
 Proof
     REWRITE_TAC [WEAK_BISIM_def, WBISIM_O]
 QED
 
 (* The union of two weak bisimulations is a weak bisimulation. *)
-Theorem UNION_WEAK_BISIM :
+Theorem UNION_WEAK_BISIM:
     !Wbsm1 Wbsm2. WEAK_BISIM Wbsm1 /\ WEAK_BISIM Wbsm2 ==>
                   WEAK_BISIM (Wbsm1 RUNION Wbsm2)
 Proof
@@ -611,7 +611,7 @@ val WEAK_EQUIV = store_thm ((* NEW *)
       HO_MATCH_MP_TAC WEAK_EQUIV_coind \\ (* co-induction used here! *)
       PROVE_TAC [WEAK_BISIM] ]);
 
-Theorem WEAK_EQUIV_IS_WBISIM_REL :
+Theorem WEAK_EQUIV_IS_WBISIM_REL:
     WEAK_EQUIV = WBISIM_REL TRANS tau
 Proof
     RW_TAC std_ss [FUN_EQ_THM, WBISIM_REL_def, WEAK_EQUIV, WEAK_BISIM_def]
@@ -620,27 +620,27 @@ Proof
       Q.EXISTS_TAC `R` >> art [] ]
 QED
 
-Theorem WEAK_EQUIV_equivalence :
+Theorem WEAK_EQUIV_equivalence:
     equivalence WEAK_EQUIV
 Proof
     REWRITE_TAC [WEAK_EQUIV_IS_WBISIM_REL, WBISIM_REL_IS_EQUIV_REL]
 QED
 
-Theorem WEAK_EQUIV_REFL :
+Theorem WEAK_EQUIV_REFL:
     !E. WEAK_EQUIV E E
 Proof
     PROVE_TAC [REWRITE_RULE [equivalence_def, reflexive_def]
                             WEAK_EQUIV_equivalence]
 QED
 
-Theorem WEAK_EQUIV_SYM :
+Theorem WEAK_EQUIV_SYM:
     !E E'. WEAK_EQUIV E E' ==> WEAK_EQUIV E' E
 Proof
     PROVE_TAC [REWRITE_RULE [equivalence_def, symmetric_def]
                             WEAK_EQUIV_equivalence]
 QED
 
-Theorem WEAK_EQUIV_TRANS :
+Theorem WEAK_EQUIV_TRANS:
     !E E' E''. WEAK_EQUIV E E' /\ WEAK_EQUIV E' E'' ==> WEAK_EQUIV E E''
 Proof
     PROVE_TAC [REWRITE_RULE [equivalence_def, transitive_def]
@@ -743,7 +743,7 @@ val STABLE_cases = store_thm (
 
 (* Properties of stable agents with respect to the epsilon and weak transition
    relations. *)
-Theorem EPS_STABLE :
+Theorem EPS_STABLE:
     !E E'. EPS E E' ==> (STABLE E ==> (E' = E))
 Proof
     EPS_INDUCT_TAC (* 3 sub-goals here *)
@@ -1622,14 +1622,14 @@ val WEAK_EQUIV_SUBST_RELAB = store_thm (
 (******************************************************************************)
 
 (* A strong bisimulation is a particular weak bisimulation. *)
-Theorem STRONG_IMP_WEAK_BISIM :
+Theorem STRONG_IMP_WEAK_BISIM:
     !Bsm. STRONG_BISIM Bsm ==> WEAK_BISIM Bsm
 Proof
     REWRITE_TAC [STRONG_BISIM_def, WEAK_BISIM_def, BISIM_IMP_WBISIM]
 QED
 
 (* Strong equivalence implies weak/observation equivalence. *)
-Theorem STRONG_IMP_WEAK_EQUIV :
+Theorem STRONG_IMP_WEAK_EQUIV:
     !E E'. STRONG_EQUIV E E' ==> WEAK_EQUIV E E'
 Proof
     REWRITE_TAC [STRONG_EQUIV_def, WEAK_EQUIV_IS_WBISIM_REL,

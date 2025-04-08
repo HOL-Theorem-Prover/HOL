@@ -189,11 +189,11 @@ val OBS_CONGR_IMP_WEAK_CONGR = store_thm ((* NEW *)
  >> IMP_RES_TAC CC_is_coarsest
  >> ASM_REWRITE_TAC []);
 
-Definition SUM_EQUIV :
+Definition SUM_EQUIV:
     SUM_EQUIV = (\p q. !r. WEAK_EQUIV (sum p r) (sum q r))
 End
 
-Theorem WEAK_CONGR_IMP_SUM_EQUIV :
+Theorem WEAK_CONGR_IMP_SUM_EQUIV:
     !p q. WEAK_CONGR p q ==> SUM_EQUIV p q
 Proof
     rw [WEAK_CONGR, SUM_EQUIV, CC_def]
@@ -212,7 +212,7 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-Theorem COARSEST_CONGR_LR :
+Theorem COARSEST_CONGR_LR:
     !p q. OBS_CONGR p q ==> !r. WEAK_EQUIV (sum p r) (sum q r)
 Proof
     rpt STRIP_TAC
@@ -221,11 +221,11 @@ Proof
 QED
 
 (* The property as assumptions on processes in COARSEST_CONGR_THM *)
-Definition free_action_def :
+Definition free_action_def:
     free_action p = ?a. !p'. ~(WEAK_TRANS p (label a) p')
 End
 
-Theorem COARSEST_CONGR_RL :
+Theorem COARSEST_CONGR_RL:
     !p q. free_action p /\ free_action q ==>
           (!r. WEAK_EQUIV (sum p r) (sum q r)) ==> OBS_CONGR p q
 Proof
@@ -371,7 +371,7 @@ val COARSEST_CONGR_THM = store_thm ((* NEW *)
 (******************************************************************************)
 
 (* The shared core lemma used in PROP3's proof *)
-Theorem PROP3_COMMON :
+Theorem PROP3_COMMON:
     !p q. (?k. STABLE k /\ closed k /\
                (!p' u. WEAK_TRANS p u p' ==> ~(WEAK_EQUIV p' k)) /\
                (!q' u. WEAK_TRANS q u q' ==> ~(WEAK_EQUIV q' k))) ==>
@@ -533,7 +533,7 @@ val KLOP_def = Define `
    (KLOP (a: 'a Label) (0 :num) = nil) /\
    (KLOP a (SUC n) = sum (KLOP a n) (prefix (label a) (KLOP a n))) `;
 
-Theorem KLOP_closed :
+Theorem KLOP_closed:
     !a n. closed (KLOP a n)
 Proof
     Q.X_GEN_TAC ‘a’
@@ -774,7 +774,7 @@ val INFINITE_EXISTS_LEMMA = store_thm ((* NEW *)
         RES_TAC ] ) >> DISCH_TAC
  >> ASM_REWRITE_TAC []);
 
-Theorem KLOP_LEMMA_FINITE :
+Theorem KLOP_LEMMA_FINITE:
     !p q. finite_state p /\ finite_state q ==>
           ?k. STABLE k /\ closed k /\
               (!p' u. WEAK_TRANS p u p' ==> ~(WEAK_EQUIV p' k)) /\

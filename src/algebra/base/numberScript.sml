@@ -91,7 +91,7 @@ val INTER_DIFF = store_thm(
     and SING s ==> ?y. s = {y}            by SING_DEF
    Thus x IN {y} ==> x = y                by IN_SING
 *)
-Theorem SING_SUBSET :
+Theorem SING_SUBSET:
     !s x. {x} SUBSET s /\ SING s <=> (s = {x})
 Proof
     metis_tac[SING_DEF, IN_SING, SUBSET_DEF]
@@ -7807,7 +7807,7 @@ val in_preimage = store_thm(
   rw[preimage_def]);
 (* same as theorem above. *)
 
-Theorem preimage_alt :
+Theorem preimage_alt:
     !f s y. preimage f s y = PREIMAGE f {y} INTER s
 Proof
     rw [Once EXTENSION, in_preimage, IN_PREIMAGE, Once CONJ_SYM]

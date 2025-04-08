@@ -370,7 +370,7 @@ Proof
 QED
 
 (* NOTE: This theorem is provided by Chun TIAN *)
-Theorem minimal_avl_node_count :
+Theorem minimal_avl_node_count:
   ∀k (t :num avl_tree). minimal_avl t ∧ height t = k
                                     ⇒ node_count t = N k
 Proof

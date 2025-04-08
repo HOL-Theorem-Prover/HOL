@@ -27,7 +27,7 @@ val _ = new_theory "UniqueSolutions";
    If the variable X is weakly guarded in E, and E{P/X} --a-> P', then P' takes the form
    E'{P/X} (for some expression E'), and moreover, for any Q, E{Q/X} --a-> E'{Q/X}.
  *)
-Theorem STRONG_UNIQUE_SOLUTION_LEMMA :
+Theorem STRONG_UNIQUE_SOLUTION_LEMMA:
     !E. WG E ==>
         !P a P'. TRANS (E P) a P' ==>
                  ?E'. CONTEXT E' /\ (P' = E' P) /\ !Q. TRANS (E Q) a (E' Q)
@@ -107,7 +107,7 @@ Proof
 QED
 
 (* NOTE: This is a generalization of STRONG_UNIQUE_SOLUTION with the same proof. *)
-Theorem STRONG_UNIQUE_SOLUTION_EXT :
+Theorem STRONG_UNIQUE_SOLUTION_EXT:
     !C1 C2 P Q. WG C1 /\ WG C2 /\ (!t. STRONG_EQUIV (C1 t) (C2 t)) /\
                 STRONG_EQUIV P (C1 P) /\ STRONG_EQUIV Q (C2 Q) ==> STRONG_EQUIV P Q
 Proof
@@ -522,7 +522,7 @@ QED
    weakly guarded in E, then:
         If P ~ E{P/X} and Q ~ E{Q/X} then P ~ Q.
  *)
-Theorem STRONG_UNIQUE_SOLUTION :
+Theorem STRONG_UNIQUE_SOLUTION:
     !E P Q. WG E /\ STRONG_EQUIV P (E P) /\ STRONG_EQUIV Q (E Q) ==> STRONG_EQUIV P Q
 Proof
     rpt STRIP_TAC
@@ -706,7 +706,7 @@ val GSEQ_EPS_lemma = Q.prove (
    in E, then:
         If P = E{P/X} and Q = E{Q/X} then P = Q. (here "=" means WEAK_EQUIV)
  *)
-Theorem WEAK_UNIQUE_SOLUTION :
+Theorem WEAK_UNIQUE_SOLUTION:
     !E P Q. SG E /\ GSEQ E /\ WEAK_EQUIV P (E P) /\ WEAK_EQUIV Q (E Q)
         ==> WEAK_EQUIV P Q
 Proof
@@ -959,7 +959,7 @@ val SEQ_EPS_lemma = Q.prove (
    constructed a bisimulation directly and then verify it against
    OBS_CONGR_BY_WEAK_BISIM.
  *)
-Theorem OBS_UNIQUE_SOLUTION :
+Theorem OBS_UNIQUE_SOLUTION:
     !E P Q. SG E /\ SEQ E /\ OBS_CONGR P (E P) /\ OBS_CONGR Q (E Q)
         ==> OBS_CONGR P Q
 Proof
@@ -1218,13 +1218,13 @@ val unfolding_lemma1 = store_thm (
 (* These can be merged to HOL's arithmeticTheory (not used here any more).
    The word "LEFT" or "RIGHT" indicate the position of `FUNPOW` w.r.t `o`.
  *)
-Theorem FUNPOW_SUC_RIGHT :
+Theorem FUNPOW_SUC_RIGHT:
     !f n. FUNPOW f (SUC n) = f o (FUNPOW f n)
 Proof
     RW_TAC std_ss [o_DEF, FUNPOW_SUC, FUN_EQ_THM]
 QED
 
-Theorem FUNPOW_SUC_LEFT :
+Theorem FUNPOW_SUC_LEFT:
     !f n. FUNPOW f (SUC n) = (FUNPOW f n) o f
 Proof
     rpt GEN_TAC
@@ -1445,7 +1445,7 @@ val UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA = store_thm (
 (* Theorem 3.10 of [2], the proof relies on above lemma, and "contracts_IMP_WEAK_EQUIV",
    the definition of contraction is not used.
  *)
-Theorem UNIQUE_SOLUTION_OF_CONTRACTIONS :
+Theorem UNIQUE_SOLUTION_OF_CONTRACTIONS:
     !E P Q. WGS E /\ P contracts (E P) /\ Q contracts (E Q) ==> WEAK_EQUIV P Q
 Proof
     rpt STRIP_TAC
@@ -1649,7 +1649,7 @@ val UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA = store_thm (
       MATCH_MP_TAC expands_IMP_WEAK_EQUIV >> art [] ]); (* extra steps *)
 
 (* The proof is essentially the same with UNIQUE_SOLUTION_OF_CONTRACTIONS *)
-Theorem UNIQUE_SOLUTION_OF_EXPANSIONS :
+Theorem UNIQUE_SOLUTION_OF_EXPANSIONS:
     !E P Q. WGS E /\ P expands (E P) /\ Q expands (E Q) ==> WEAK_EQUIV P Q
 Proof
     rpt STRIP_TAC
@@ -1774,7 +1774,7 @@ val UNIQUE_SOLUTION_OF_EXPANSIONS' = store_thm (
 (******************************************************************************)
 
 (* NOTE: the lemma works for any precongruence relation *)
-Theorem OBS_unfolding_lemma1 :
+Theorem OBS_unfolding_lemma1:
     !E C P. CONTEXT E /\ CONTEXT C /\ OBS_contracts P (E P) ==>
         !n. OBS_contracts (C P) ((C o (FUNPOW E n)) P)
 Proof
@@ -1791,7 +1791,7 @@ Proof
 QED
 
 (* A single transition from WG E[P] will not touch the variable P *)
-Theorem OBS_unfolding_lemma2 :
+Theorem OBS_unfolding_lemma2:
     !E. WG E ==>
        !P u P'. TRANS (E P) u P' ==>
                ?C'. CONTEXT C' /\ (P' = C' P) /\ !Q. TRANS (E Q) u (C' Q)
@@ -1878,7 +1878,7 @@ Proof
 QED
 
 (* In this proof, we combine C and E into a single WG and call previous lemma *)
-Theorem OBS_unfolding_lemma3 :
+Theorem OBS_unfolding_lemma3:
     !C E. CONTEXT C /\ WG E ==>
           !P x P'. TRANS (C (E P)) x P' ==>
                    ?C'. CONTEXT C' /\ (P' = C' P) /\ !Q. TRANS (C (E Q)) x (C' Q)
@@ -1898,7 +1898,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem OBS_unfolding_lemma4 :
+Theorem OBS_unfolding_lemma4:
     !C E n xs P' P. CONTEXT C /\ WG E /\
         TRACE ((C o FUNPOW E n) P) xs P' /\ (LENGTH xs <= n) ==>
         ?C'. CONTEXT C' /\ (P' = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs (C' Q)
@@ -2106,7 +2106,7 @@ val shared_lemma = Q.prove (
       IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
       PROVE_TAC [WEAK_EQUIV_TRANS] ]);
 
-Theorem UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS :
+Theorem UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS:
     !E P Q. WG E /\ OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==> WEAK_EQUIV P Q
 Proof
     rpt STRIP_TAC
@@ -2128,7 +2128,7 @@ QED
 (* This is a stronger version of previous theorem: conclusion is `OBS_CONGR P Q`
    OBS_CONGR_BY_WEAK_BISIM and STRONG_UNIQUE_SOLUTION_LEMMA must be used here.
  *)
-Theorem UNIQUE_SOLUTION_OF_ROOTED_CONTRACTIONS :
+Theorem UNIQUE_SOLUTION_OF_ROOTED_CONTRACTIONS:
     !E P Q. WG E /\ OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==> OBS_CONGR P Q
 Proof
     rpt STRIP_TAC

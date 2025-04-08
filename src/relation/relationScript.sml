@@ -1232,7 +1232,7 @@ val RESTRICT = new_definition
   ("RESTRICT", “RESTRICT (f :'a->'b) R (x :'a) = RESTRICTION (\y. R y x) f”);
 
 (* The old definition of RESTRICT now becomes a theorem *)
-Theorem RESTRICT_DEF :
+Theorem RESTRICT_DEF:
     !(f :'a->'b) R x. RESTRICT f R x = \y. if R y x then f y else ARB
 Proof
     SRW_TAC[][RESTRICT, FUN_EQ_THM, RESTRICTION, IN_DEF]
@@ -2410,14 +2410,14 @@ val Newmans_lemma = store_thm(
   `TC R x x0` by PROVE_TAC [EXTEND_RTC_TC] THEN
   PROVE_TAC [RTC_RTC]);
 
-Theorem RUNION_RTC_MONOTONE :
+Theorem RUNION_RTC_MONOTONE:
     !R1 x y. RTC R1 x y ==> !R2. RTC (R1 RUNION R2) x y
 Proof
   GEN_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN
   PROVE_TAC [RTC_RULES, RUNION]
 QED
 
-Theorem RTC_RUNION :
+Theorem RTC_RUNION:
     !R1 R2. RTC (RTC R1 RUNION RTC R2) = RTC (R1 RUNION R2)
 Proof
   REPEAT GEN_TAC THEN
@@ -2446,13 +2446,13 @@ QED
 val RINSERT = new_definition ("RINSERT",
    “RINSERT R a b = \x y. R x y \/ (x = a /\ y = b)”);
 
-Theorem RINSERT_IDEM :
+Theorem RINSERT_IDEM:
     !R a b. (RINSERT R a b) a b
 Proof
     SRW_TAC [] [RINSERT]
 QED
 
-Theorem RSUBSET_RINSERT :
+Theorem RSUBSET_RINSERT:
     !R a b. R RSUBSET (RINSERT R a b)
 Proof
     SRW_TAC [] [RSUBSET, RINSERT]

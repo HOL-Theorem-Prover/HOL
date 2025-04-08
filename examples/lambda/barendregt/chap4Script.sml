@@ -203,7 +203,7 @@ Proof
 QED
 *)
 
-Theorem eta_extend_alt_conversion :
+Theorem eta_extend_alt_conversion:
     !M N. conversion (RINSERT (beta RUNION eta) M N) = eta_extend {(M,N)}
 Proof
     rw [FUN_EQ_THM]
@@ -281,7 +281,7 @@ QED
 
    NOTE: In particular, asmlam ((UNCURRY eta) UNION {(M,N)}) := eta_extend {(M,N)}
  *)
-Definition HP_complete_def :
+Definition HP_complete_def:
     HP_complete thy P <=>
       !M N. P M /\ P N ==>
             asmlam thy M N \/ inconsistent (asmlam (thy UNION {(M,N)}))

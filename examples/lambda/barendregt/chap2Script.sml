@@ -213,7 +213,7 @@ val lameq_sub_cong = save_thm(
   "lameq_sub_cong",
   REWRITE_RULE [GSYM AND_IMP_INTRO] (last (CONJUNCTS lemma2_12)));
 
-Theorem lameq_isub_cong :
+Theorem lameq_isub_cong:
     !ss M N. M == N ==> M ISUB ss == N ISUB ss
 Proof
     Induct_on ‘ss’
@@ -233,7 +233,7 @@ val lemma2_13 = store_thm( (* p.20 *)
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `c` THEN
   HO_MATCH_MP_TAC ctxt_indn THEN PROVE_TAC [lameq_rules]);
 
-Theorem lameq_LAMl_cong :
+Theorem lameq_LAMl_cong:
     !vs M N. M == N ==> LAMl vs M == LAMl vs N
 Proof
     Induct_on ‘vs’ >> rw [lameq_ABS]
@@ -295,19 +295,19 @@ val lemma2_14 = store_thm(
    formulas. Then tt is consistent (notation Con(tt)) if tt does not prove every
    closed equation. In the opposite case tt is consistent.
  *)
-Definition consistent_def :
+Definition consistent_def:
     consistent (thy:term -> term -> bool) = ?M N. ~thy M N
 End
 
 Overload inconsistent = “\thy. ~consistent thy”
 
-Theorem inconsistent_def :
+Theorem inconsistent_def:
     !thy. inconsistent thy <=> !M N. thy M N
 Proof
     rw [consistent_def]
 QED
 
-Theorem inconsistent_mono :
+Theorem inconsistent_mono:
     !t1 t2. t1 RSUBSET t2 /\ inconsistent t1 ==> inconsistent t2
 Proof
     rw [relationTheory.RSUBSET, inconsistent_def]
@@ -340,7 +340,7 @@ Inductive asmlam :
   !x M M'. asmlam eqns M M' ==> asmlam eqns (LAM x M) (LAM x M')
 End
 
-Theorem asmlam_subst :
+Theorem asmlam_subst:
     !M N P x. asmlam eqns M N ==> asmlam eqns ([P/x] M) ([P/x] N)
 Proof
     rpt STRIP_TAC
@@ -361,7 +361,7 @@ QED
 
    This explains why ‘asmlam’ is involved in the definition of ‘incompatible’.
 *)
-Definition incompatible_def :
+Definition incompatible_def:
     incompatible x y = ~consistent (asmlam {(x,y)})
 End
 
@@ -388,7 +388,7 @@ Theorem FV_I[simp]: FV I = {}
 Proof SRW_TAC [][I_def]
 QED
 
-Theorem I_thm :
+Theorem I_thm:
     !s. I = LAM s (VAR s)
 Proof
     rw [I_def, Once EQ_SYM_EQ]
@@ -401,13 +401,13 @@ Proof
     rw [lemma14b]
 QED
 
-Theorem ssub_I :
+Theorem ssub_I:
     ssub fm I = I
 Proof
     rw [ssub_value]
 QED
 
-Theorem I_cases :
+Theorem I_cases:
     !Y t. I = LAM Y t ==> t = VAR Y
 Proof
     rw [I_def]
@@ -477,7 +477,7 @@ Proof
   >> ASM_SIMP_TAC (betafy (srw_ss())) [lameq_I]
 QED
 
-Theorem I_appstar :
+Theorem I_appstar:
     I @* (GENLIST (\i. I) n) == I
 Proof
     qabbrev_tac ‘Is = GENLIST (\i. I) n’
@@ -592,7 +592,7 @@ val Yf_cong = store_thm(
   METIS_TAC [lameq_rules]);
 
 (* This is Example 2.1.33 [1, p.33] and Example 2.18 [2, p23] *)
-Theorem SK_incompatible :
+Theorem SK_incompatible:
     incompatible S K
 Proof
   Q_TAC SUFF_TAC `!M N. asmlam {(S,K)} M N`
@@ -668,7 +668,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
-Theorem is_abs_cases :
+Theorem is_abs_cases:
     !t. is_abs t <=> ?v t0. t = LAM v t0
 Proof
     Q.X_GEN_TAC ‘t’
@@ -677,7 +677,7 @@ Proof
  >> qexistsl_tac [‘v’, ‘t0’] >> REWRITE_TAC []
 QED
 
-Theorem is_abs_cases_genX :
+Theorem is_abs_cases_genX:
     !v t. is_abs t /\ v # t <=> ?t0. t = LAM v t0
 Proof
     rpt GEN_TAC
@@ -752,7 +752,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
-Theorem is_var_cases :
+Theorem is_var_cases:
     !t. is_var t <=> ?y. t = VAR y
 Proof
     Q.X_GEN_TAC ‘t’
@@ -760,7 +760,7 @@ Proof
  >> SRW_TAC [][]
 QED
 
-Theorem term_cases :
+Theorem term_cases:
     !t. is_var t \/ is_comb t \/ is_abs t
 Proof
     Q.X_GEN_TAC ‘t’
@@ -768,7 +768,7 @@ Proof
  >> SRW_TAC [][]
 QED
 
-Theorem term_cases_disjoint :
+Theorem term_cases_disjoint:
     !t. ~(is_comb t /\ is_abs t) /\
         ~(is_comb t /\ is_var t) /\
         ~(is_abs t /\ is_var t)
@@ -918,7 +918,7 @@ val is_comb_APP_EXISTS = store_thm(
   ``!t. is_comb t = (?u v. t = u @@ v)``,
   PROVE_TAC [term_CASES, is_comb_thm]);
 
-Theorem is_comb_appstar_exists :
+Theorem is_comb_appstar_exists:
     !M. is_comb M <=> ?t args. (M = t @* args) /\ args <> [] /\ ~is_comb t
 Proof
     HO_MATCH_MP_TAC simple_induction >> rw []
@@ -1000,7 +1000,7 @@ End
 Definition has_benf_def: has_benf t = ?t'. lameta t t' /\ benf t'
 End
 
-Theorem lameq_ssub_cong :
+Theorem lameq_ssub_cong:
   !M N. M == N ==> ∀fm. fm ' M == fm ' N
 Proof
   HO_MATCH_MP_TAC lameq_ind_genX >> qexists ‘fmFV’ >>
@@ -1008,7 +1008,7 @@ Proof
   simp[ssub_SUBST, lameq_BETA] >> metis_tac[lameq_rules]
 QED
 
-Theorem lameq_appstar_cong :
+Theorem lameq_appstar_cong:
     !M N Ns. M == N ==> M @* Ns == N @* Ns
 Proof
   Induct_on ‘Ns’ using SNOC_INDUCT >> rw [appstar_SNOC, lameq_APPL]
@@ -1027,7 +1027,7 @@ Proof
  >> DISJ1_TAC >> qexistsl_tac [‘h’, ‘M’] >> rw []
 QED
 
-Theorem lameq_LAMl_appstar_reduce :
+Theorem lameq_LAMl_appstar_reduce:
     !xs t args. DISJOINT (set xs) (FV t) /\ LENGTH xs = LENGTH args ==>
                 LAMl xs t @* args == t
 Proof
@@ -1051,7 +1051,7 @@ QED
    guarantee that the iterate substitution at LHS is equivalent to the
    simultaneous substitution at RHS.
  *)
-Theorem lameq_LAMl_appstar_ssub :
+Theorem lameq_LAMl_appstar_ssub:
     !vs M Ns. ALL_DISTINCT vs /\ (LENGTH vs = LENGTH Ns) /\
               DISJOINT (set vs) (BIGUNION (IMAGE FV (set Ns))) ==>
               LAMl vs M @* Ns == (FEMPTY |++ ZIP (vs,Ns)) ' M
@@ -1117,7 +1117,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-Theorem lameq_LAMl_appstar_ssub_closed :
+Theorem lameq_LAMl_appstar_ssub_closed:
     !vs M Ns. ALL_DISTINCT vs /\ (LENGTH vs = LENGTH Ns) /\ EVERY closed Ns ==>
               LAMl vs M @* Ns == (FEMPTY |++ ZIP (vs,Ns)) ' M
 Proof
@@ -1132,7 +1132,7 @@ QED
 
    This proof is now based on the newly added "term_laml_cases".
  *)
-Theorem strange_cases :
+Theorem strange_cases:
     !M : term. (?vs M'. (M = LAMl vs M') /\ (size M' = 1) /\ ALL_DISTINCT vs) \/
                (?vs args t.
                          (M = LAMl vs (t @* args)) /\
@@ -1166,14 +1166,14 @@ val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
  *---------------------------------------------------------------------------*)
 
 (* permutator [1, p.247] *)
-Definition permutator_def :
+Definition permutator_def:
     permutator n = let Z = GENLIST n2s (SUC n);
                        z = LAST Z;
                    in
                        LAMl Z (VAR z @* MAP VAR (FRONT Z))
 End
 
-Theorem closed_permutator :
+Theorem closed_permutator:
     !n. closed (permutator n)
 Proof
     rw [closed_def, permutator_def, FV_LAMl]
@@ -1194,7 +1194,7 @@ Theorem FV_permutator[simp] =
 (* NOTE: The default permutator binding variables can be exchanged to another
    fresh list excluding any given set X.
  *)
-Theorem permutator_alt :
+Theorem permutator_alt:
     !X n. FINITE X ==>
           ?vs v. LENGTH vs = n /\ ALL_DISTINCT (SNOC v vs) /\
                  DISJOINT X (set (SNOC v vs)) /\
@@ -1264,7 +1264,7 @@ Proof
 QED
 
 (* TODO: The proof can be simplified using the previous permutator_alt *)
-Theorem permutator_thm :
+Theorem permutator_thm:
     !n N Ns. LENGTH Ns = n ==> permutator n @* Ns @@ N == N @* Ns
 Proof
     RW_TAC std_ss [permutator_def]
@@ -1422,11 +1422,11 @@ Proof
  >> rw [Abbr ‘y’, MEM_LAST_NOT_NIL]
 QED
 
-Definition selector_def :
+Definition selector_def:
     selector i n = LAMl (GENLIST n2s n) (VAR (n2s i))
 End
 
-Theorem closed_selector :
+Theorem closed_selector:
     !i n. i < n ==> closed (selector i n)
 Proof
     rw [closed_def, selector_def, FV_LAMl]
@@ -1436,7 +1436,7 @@ QED
 (* |- !i n. i < n ==> FV (selector i n) = {} *)
 Theorem FV_selector[simp] = REWRITE_RULE [closed_def] closed_selector
 
-Theorem selector_alt :
+Theorem selector_alt:
     !X i n. FINITE X /\ i < n ==>
             ?vs v. LENGTH vs = n /\ ALL_DISTINCT vs /\ DISJOINT X (set vs) /\
                    v = EL i vs /\ selector i n = LAMl vs (VAR v)
@@ -1478,7 +1478,7 @@ Proof
 QED
 
 (* TODO: rework this proof by (the new) selector_alt *)
-Theorem selector_thm :
+Theorem selector_thm:
     !i n Ns. i < n /\ LENGTH Ns = n ==> selector i n @* Ns == EL i Ns
 Proof
     RW_TAC std_ss [selector_def]
@@ -1556,11 +1556,11 @@ QED
 (* By prefixing a list of abstractions of FVs, any term can be "closed". The
    set ‘closures M’ represent such closures with different order of FVs.
  *)
-Definition closures_def :
+Definition closures_def:
     closures M = {LAMl vs M | vs | ALL_DISTINCT vs /\ set vs = FV M}
 End
 
-Theorem closures_not_empty :
+Theorem closures_not_empty:
     !M. closures M <> {}
 Proof
     Q.X_GEN_TAC ‘M’
@@ -1578,7 +1578,7 @@ Proof
  >> rw [Once EXTENSION]
 QED
 
-Theorem closures_of_open_sing :
+Theorem closures_of_open_sing:
     !M v. FV M = {v} ==> closures M = {LAM v M}
 Proof
     rw [closures_def, LIST_TO_SET_SING]
@@ -1588,7 +1588,7 @@ QED
 (* ‘closure M’ is just one arbitrary element in ‘closures M’. *)
 Overload closure = “\M. CHOICE (closures M)”
 
-Theorem closure_in_closures :
+Theorem closure_in_closures:
     !M. closure M IN closures M
 Proof
     rw [CHOICE_DEF, closures_not_empty]
@@ -1600,7 +1600,7 @@ Proof
     rw [closures_of_closed]
 QED
 
-Theorem closure_open_sing :
+Theorem closure_open_sing:
     !M v. FV M = {v} ==> closure M = LAM v M
 Proof
     rpt STRIP_TAC
@@ -1620,11 +1620,11 @@ QED
  *---------------------------------------------------------------------------*)
 
 (* 8.3.1 (ii) [1, p.171] *)
-Definition solvable_def :
+Definition solvable_def:
     solvable (M :term) = ?M' Ns. M' IN closures M /\ M' @* Ns == I
 End
 
-Theorem closures_alt_closed :
+Theorem closures_alt_closed:
     !M. closed M ==> closures M = {M}
 Proof
     rw [closures_def, closed_def]
@@ -1632,7 +1632,7 @@ Proof
 QED
 
 (* 8.3.1 (i) [1, p.171] *)
-Theorem solvable_alt_closed :
+Theorem solvable_alt_closed:
     !M. closed M ==> (solvable M <=> ?Ns. M @* Ns == I)
 Proof
     rw [solvable_def, closures_alt_closed]

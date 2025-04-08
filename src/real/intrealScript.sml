@@ -109,7 +109,7 @@ val lem5 = Q.prove(
 (* cf. INT_FLOOR_BOUNDS' for another form where ‘real_of_int (INT_FLOOR r)’
        stays in the middle.
  *)
-Theorem INT_FLOOR_BOUNDS :
+Theorem INT_FLOOR_BOUNDS:
     !r. real_of_int (INT_FLOOR r) <= r /\ r < real_of_int (INT_FLOOR r + 1)
 Proof
   srw_tac[][INT_FLOOR_def, LEAST_INT_DEF] \\ SELECT_ELIM_TAC \\ (
@@ -370,7 +370,7 @@ val INT_CEILING_INT_FLOOR = Q.store_thm("INT_CEILING_INT_FLOOR",
 (* cf. INT_CEILING_BOUNDS' for another form where ‘real_of_int (INT_CEILING r)’
        stays in the middle.
  *)
-Theorem INT_CEILING_BOUNDS :
+Theorem INT_CEILING_BOUNDS:
     !r. real_of_int (INT_CEILING r - 1) < r /\ r <= real_of_int (INT_CEILING r)
 Proof
   lrw [INT_CEILING_INT_FLOOR, INT_FLOOR_BOUNDS, REAL_LT_IMP_LE,
@@ -571,7 +571,7 @@ Proof
 QED
 
 (* Alternative definition of is_int by INT_CEILING *)
-Theorem is_int_alt :
+Theorem is_int_alt:
     !x. is_int x <=> x = real_of_int (INT_CEILING x)
 Proof
     rw [is_int_def]
@@ -596,13 +596,13 @@ Proof
  >> rw [INT_LT_ADDR]
 QED
 
-Theorem is_int_thm :
+Theorem is_int_thm:
     !x. is_int x <=> INT_FLOOR x = INT_CEILING x
 Proof
     rw [is_int_thm_lemma, real_of_int_11]
 QED
 
-Theorem INT_CEILING_ADD_NUM :
+Theorem INT_CEILING_ADD_NUM:
     INT_CEILING (x + &n) = INT_CEILING x + &n /\
     INT_CEILING (&n + x) = INT_CEILING x + &n
 Proof
@@ -617,7 +617,7 @@ Proof
       simp [] >> ARITH_TAC ]
 QED
 
-Theorem INT_CEILING_SUB_NUM :
+Theorem INT_CEILING_SUB_NUM:
     INT_CEILING (x - &n) = INT_CEILING x - &n /\
     INT_CEILING (&n - x) = INT_CEILING (-x) + &n
 Proof
@@ -669,7 +669,7 @@ Proof
 QED
 
 (* https://proofwiki.org/wiki/Floor_of_Negative_equals_Negative_of_Ceiling *)
-Theorem INT_FLOOR_NEG :
+Theorem INT_FLOOR_NEG:
     !x. INT_FLOOR (~x) = ~INT_CEILING x
 Proof
     Q.X_GEN_TAC ‘x’
@@ -678,7 +678,7 @@ Proof
  >> simp [REAL_LT_NEG, INT_CEILING_BOUNDS']
 QED
 
-Theorem INT_CEILING_NEG :
+Theorem INT_CEILING_NEG:
     !x. INT_CEILING (~x) = ~INT_FLOOR x
 Proof
     Q.X_GEN_TAC ‘x’
@@ -696,11 +696,11 @@ QED
    NOTE: For the negative numbers, here it is defined in the same way as for
    positive numbers [2] (thus ‘frac 3.6 = 0.6’ but ‘frac ~3.6 = 0.4’.)
  *)
-Definition frac_def :
+Definition frac_def:
     frac x = x - real_of_int (INT_FLOOR x)
 End
 
-Theorem is_int_eq_frac_0 :
+Theorem is_int_eq_frac_0:
     !x. is_int x <=> frac x = 0
 Proof
     rw [frac_def, is_int_def, REAL_SUB_0]

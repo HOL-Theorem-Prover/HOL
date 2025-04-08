@@ -22,7 +22,7 @@ val _ = Datatype`pdb = dV num | dAPP pdb pdb | dABS pdb`
 (* Definitions of lift and substitution from Nipkow's "More Church-Rosser
    proofs". NOTE: ‘lift s 0’ will forcely lift everything.
  *)
-Definition lift_def :
+Definition lift_def:
   (lift (dV i) k = if i < k then dV i else dV (i + 1)) /\
   (lift (dAPP s t) k = dAPP (lift s k) (lift t k)) /\
   (lift (dABS s) k = dABS (lift s (k + 1)))
@@ -43,7 +43,7 @@ Proof
 QED
 
 (* "Nipkow" substitution *)
-Definition nsub_def :
+Definition nsub_def:
   (nsub s k (dV i) = if k < i then dV (i - 1)
                        else if i = k then s else dV i) /\
   (nsub s k (dAPP t u) = dAPP (nsub s k t) (nsub s k u)) /\
@@ -53,7 +53,7 @@ val _ = export_rewrites ["nsub_def"]
 
 (* substitution that corresponds to substitution in the lambda-calculus;
    no variable decrementing in the dV clause *)
-Definition sub_def :
+Definition sub_def:
   (sub s k (dV i) = if i = k then s else dV i) /\
   (sub s k (dAPP t u) = dAPP (sub s k t) (sub s k u)) /\
   (sub s k (dABS t) = dABS (sub (lift s 0) (k + 1) t))
@@ -63,7 +63,7 @@ val _ = export_rewrites ["sub_def"]
 Overload SUB = “sub” (* same [./.] syntax as SUB *)
 
 (* a variable-binding lambda-equivalent for dB terms *)
-Definition dLAM_def :
+Definition dLAM_def:
   dLAM v body = dABS (sub (dV 0) (v + 1) (lift body 0))
 End
 
@@ -352,7 +352,7 @@ val IN_dFV_lift = store_thm(
   ])
 val _ = export_rewrites ["IN_dFV_lift"]
 
-Theorem dLAM_alt_dpm :
+Theorem dLAM_alt_dpm:
     !v body. dLAM v body = dABS (dpm [(n2s 0, n2s (v + 1))] (lift body 0))
 Proof
     RW_TAC arith_ss [dLAM_def, fresh_dpm_sub, IN_dFV_lift]
@@ -1282,7 +1282,7 @@ val eta_eq_lam_eta = store_thm(
 Overload "@*" = “\f args. FOLDL dAPP f args”
 Overload "dLAMl" = “\vs t. FOLDR dLAM t vs”
 
-Theorem dappstar_APPEND :
+Theorem dappstar_APPEND:
     (x :pdb) @* (Ms1 ++ Ms2) = (x @* Ms1) @* Ms2
 Proof
     qid_spec_tac ‘x’ >> Induct_on ‘Ms1’ >> simp[]
@@ -1294,14 +1294,14 @@ Proof
     simp[dappstar_APPEND, SNOC_APPEND]
 QED
 
-Theorem fromTerm_appstar :
+Theorem fromTerm_appstar:
     !args. fromTerm (f @* args) = fromTerm f @* MAP fromTerm args
 Proof
     Induct_on ‘args’ using SNOC_INDUCT
  >> simp [dappstar_SNOC, MAP_SNOC]
 QED
 
-Theorem fromTerm_LAMl :
+Theorem fromTerm_LAMl:
     !vs. fromTerm (LAMl vs t) = dLAMl (MAP s2n vs) (fromTerm t)
 Proof
     Induct_on ‘vs’ >> rw []
@@ -1320,7 +1320,7 @@ End
 Overload ISUB = “isub”
 
 (* NOTE: there's already dFVs_def *)
-Definition dFVS_def :
+Definition dFVS_def:
    (dFVS [] = {}) /\
    (dFVS ((t,x)::rst) = dFV t UNION dFVS rst)
 End
@@ -1334,7 +1334,7 @@ Proof
  >> RW_TAC std_ss [dFVS_def, FINITE_EMPTY, FINITE_UNION, FINITE_dFV]
 QED
 
-Theorem dFVS_SNOC :
+Theorem dFVS_SNOC:
     !rst. dFVS (SNOC (t,x) rst) = dFV t UNION dFVS rst
 Proof
     Induct_on ‘rst’ >- rw [dFVS_def]
@@ -1353,34 +1353,34 @@ Proof
  >> rw [isub_def, pairTheory.FORALL_PROD, DOM_DEF, dFVS_def, sub_def]
 QED
 
-Theorem isub_singleton :
+Theorem isub_singleton:
     !t x u. u ISUB [(t,x)] = [t/x]u:pdb
 Proof
     SRW_TAC [][isub_def]
 QED
 
-Theorem isub_APPEND :
+Theorem isub_APPEND:
     !R1 R2 t:pdb. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)
 Proof
     Induct
  >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, isub_def]
 QED
 
-Theorem isub_dAPP :
+Theorem isub_dAPP:
     !sub M N. (dAPP M N) ISUB sub = dAPP (M ISUB sub) (N ISUB sub)
 Proof
     Induct
  >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, isub_def, sub_def]
 QED
 
-Theorem isub_appstar :
+Theorem isub_appstar:
     !args (t:pdb) sub.
          t @* args ISUB sub = (t ISUB sub) @* MAP (\t. t ISUB sub) args
 Proof
     Induct >> SRW_TAC [][isub_dAPP]
 QED
 
-Theorem isub_dV_fresh :
+Theorem isub_dV_fresh:
     !y phi. y NOTIN DOM phi ==> (dV y ISUB phi = dV y)
 Proof
     Q.X_GEN_TAC ‘x’
@@ -1389,7 +1389,7 @@ Proof
 QED
 
 (* cf. lemma14b, ssub_14b, etc. *)
-Theorem isub_14b :
+Theorem isub_14b:
     !t phi. DISJOINT (DOM phi) (dFV t) ==> (isub t phi = t)
 Proof
     Induct_on ‘t’
@@ -1435,7 +1435,7 @@ QED
 (* The antecedents of this theorem is dirty, as it basically tries to void
    from more than once substitutions by isub.
  *)
-Theorem isub_dV_once :
+Theorem isub_dV_once:
     !Ms Ns y i. ALL_DISTINCT Ns /\ (LENGTH Ms = LENGTH Ns) /\
                 i < LENGTH Ns /\ (y = EL i Ns) /\
               (!j. j < LENGTH Ns ==> EL j Ns NOTIN (dFVS (ZIP (Ms,Ns)))) ==>
@@ -1449,21 +1449,21 @@ Proof
  >> MATCH_MP_TAC isub_dV_once_lemma >> fs []
 QED
 
-Theorem lift_appstar :
+Theorem lift_appstar:
     !Ns. lift (M @* Ns) k = lift M k @* MAP (\e. lift e k) Ns
 Proof
     Induct_on ‘Ns’ using SNOC_INDUCT
  >> rw [appstar_SNOC, MAP_SNOC]
 QED
 
-Theorem FOLDL_lift_appstar :
+Theorem FOLDL_lift_appstar:
     !ks M Ns. FOLDL lift (M @* Ns) ks = FOLDL lift M ks @* MAP (\e. FOLDL lift e ks) Ns
 Proof
     Induct_on ‘ks’
  >> rw [lift_appstar, MAP_MAP_o, combinTheory.o_DEF]
 QED
 
-Theorem lift_dABSi :
+Theorem lift_dABSi:
     !n k. lift (dABSi n t) k = dABSi n (lift t (k + n))
 Proof
     Induct_on ‘n’ >> rw [lift_def, FUNPOW_SUC, ADD1]
@@ -1499,7 +1499,7 @@ Proof
  >> rw [lift_sub, ADD1]
 QED
 
-Theorem lift_isub :
+Theorem lift_isub:
     !M Ms Ns n. EVERY (\i. n <= i) Ns /\ (LENGTH Ms = LENGTH Ns) ==>
                (lift (M ISUB (ZIP (Ms,Ns))) n =
                 (lift M n) ISUB (ZIP (MAP (\e. lift e n) Ms,MAP SUC Ns)))
@@ -1522,7 +1522,7 @@ Proof
  >> rw [isub_def] >> fs []
 QED
 
-Theorem isub_SNOC :
+Theorem isub_SNOC:
     !M Ms Ns s k. ~MEM k Ns /\ (LENGTH Ms = LENGTH Ns) ==>
                  (M ISUB ZIP (SNOC s Ms,SNOC k Ns) = [s/k] (M ISUB ZIP (Ms,Ns)))
 Proof
@@ -1555,7 +1555,7 @@ QED
                        ([dV 0/v0 + 3]
                           (lift (lift (lift t 0) 1) 2)))))): thm
  *)
-Theorem dLAMl_to_dABSi :
+Theorem dLAMl_to_dABSi:
     !vs. ALL_DISTINCT (vs :num list) ==>
          let n = LENGTH vs;
              body = FOLDL lift t (GENLIST I n);

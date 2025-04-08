@@ -241,7 +241,7 @@ in
           (Term.prim_mk_const {Thy="HolSmt", Name="xor"}, t1), t2))),
       ("=", chainable boolSyntax.mk_eq),
       (* "distinct" is declared as :pairwise in SMT-LIB, but rather
-         than unfolding the definition of :pairwise, we use
+         than unfolding the Definition of:pairwise, we use
          'mk_all_distinct' *)
       ("distinct", K_zero_list (fn ts => listSyntax.mk_all_distinct
         (listSyntax.mk_list (ts, Term.type_of (List.hd ts))))),

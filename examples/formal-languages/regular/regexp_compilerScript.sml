@@ -107,13 +107,13 @@ val _ = new_theory "regexp_compiler";
 
 val _ = Hol_datatype `vector = Vector of 'a list`;
 
-Definition fromList_def : fromList l = Vector l
+Definition fromList_def: fromList l = Vector l
 End
 
-Definition sub_def : sub (Vector l) n = EL n l
+Definition sub_def: sub (Vector l) n = EL n l
 End
 
-Definition length_def : length (Vector l) = LENGTH l
+Definition length_def: length (Vector l) = LENGTH l
 End
 
 Theorem fromList_Vector = SIMP_RULE list_ss [GSYM FUN_EQ_THM] fromList_def;
@@ -124,12 +124,12 @@ Theorem fromList_Vector = SIMP_RULE list_ss [GSYM FUN_EQ_THM] fromList_def;
 
 val _ = Parse.type_abbrev("regexp_set", ``:(regexp,unit)balanced_map``);
 
-Definition insert_regexp_def :
+Definition insert_regexp_def:
   insert_regexp r seen =
       balanced_map$insert regexp_compare r () seen
 End
 
-Definition mem_regexp_def :
+Definition mem_regexp_def:
   mem_regexp r seen =
     balanced_map$member regexp_compare r seen
 End
@@ -138,7 +138,7 @@ End
 (* Transitions out of a state (regexp).                                      *)
 (*---------------------------------------------------------------------------*)
 
-Definition transitions_def :
+Definition transitions_def:
   transitions r = MAP (\c. (c,smart_deriv c r)) ALPHABET
 End
 
@@ -146,7 +146,7 @@ End
 (* Special case for Empty (failure state)                                    *)
 (*---------------------------------------------------------------------------*)
 
-Definition Empty_arcs_def :
+Definition Empty_arcs_def:
  Empty_arcs =
   [(0,Empty);  (1,Empty);  (2,Empty);  (3,Empty);
    (4,Empty);  (5,Empty);  (6,Empty);  (7,Empty);
@@ -215,7 +215,7 @@ Definition Empty_arcs_def :
    (254,Empty); (255,Empty)]
 End;
 
-Theorem Empty_arcs_thm :
+Theorem Empty_arcs_thm:
   MAP (\c. (c,smart_deriv c Empty)) ALPHABET = Empty_arcs
 Proof
   rw_tac (srw_ss())
@@ -223,7 +223,7 @@ Proof
      Empty_def,Epsilon_def,charset_mem_empty]
 QED
 
-Theorem transitions_thm :
+Theorem transitions_thm:
   transitions r = if r = Empty then Empty_arcs
                   else MAP (\c. (c,smart_deriv c r)) ALPHABET
 Proof
@@ -236,7 +236,7 @@ QED
 (* (c_i, state_map(r_i)) pairs                                               *)
 (*---------------------------------------------------------------------------*)
 
-Definition extend_states_def :
+Definition extend_states_def:
  (extend_states next_state state_map row [] = (next_state,state_map,row)) /\
  (extend_states next_state state_map row ((c,r')::t) =
    case lookup regexp_compare r' state_map
@@ -253,7 +253,7 @@ End
 (* under construction. Also keep the state_map uptodate.                     *)
 (*---------------------------------------------------------------------------*)
 
-Definition build_table_def :
+Definition build_table_def:
  build_table arcs r (next_state,state_map,table) =
    let (next_state',state_map',row) =
              extend_states next_state state_map [] arcs
@@ -270,7 +270,7 @@ End
 (* step-index used to ensure that the function terminates.                   *)
 (*---------------------------------------------------------------------------*)
 
-Definition Brz_def :
+Definition Brz_def:
   Brz seen work acc n =
      if n <= 0n then
        NONE
@@ -290,7 +290,7 @@ Definition Brz_def :
                     (n-1)
 End
 
-Definition MAXNUM_32_def :
+Definition MAXNUM_32_def:
   MAXNUM_32 = 2147483647n
 End
 
@@ -302,7 +302,7 @@ End
 (* Domain of the function.                                                   *)
 (*---------------------------------------------------------------------------*)
 
-Definition dom_Brz_def :
+Definition dom_Brz_def:
   dom_Brz seen work acc = ?d. IS_SOME(Brz seen work acc d)
 End
 
@@ -356,7 +356,7 @@ val rdepth_thm =
 (* Define Brzozo                                                             *)
 (*---------------------------------------------------------------------------*)
 
-Definition Brzozo_def :
+Definition Brzozo_def:
   Brzozo seen work acc =
       THE (Brz seen work acc (rdepth seen work acc))
 End
@@ -416,7 +416,7 @@ Proof
   METIS_TAC [Brz_monotone,rdepth_thm]
 QED
 
-Theorem Brz_determ :
+Theorem Brz_determ:
  !d1 d2 seen work acc.
     IS_SOME(Brz seen work acc d1) /\ IS_SOME(Brz seen work acc d2)
        ==> (Brz seen work acc d1 = Brz seen work acc d2)
@@ -507,7 +507,7 @@ QED
 (* Equational characterization of dom.                                       *)
 (*---------------------------------------------------------------------------*)
 
-Theorem dom_Brz_eqns :
+Theorem dom_Brz_eqns:
  dom_Brz seen work acc =
     if null work then
       T
@@ -537,7 +537,7 @@ QED
 (* replaced by a version that doesn't have it.                               *)
 (*---------------------------------------------------------------------------*)
 
-Definition dom_Brz_alt_def :
+Definition dom_Brz_alt_def:
   dom_Brz_alt seen work = dom_Brz seen work ARB
 End
 
@@ -554,14 +554,14 @@ Proof
         >> metis_tac[])
 QED
 
-Theorem dom_Brz_alt_equal :
+Theorem dom_Brz_alt_equal:
  !seen work acc.
      dom_Brz seen work acc = dom_Brz_alt seen work
 Proof
   rw [dom_Brz_def, dom_Brz_alt_def] >> metis_tac [acc_irrelevant]
 QED
 
-Theorem dom_Brz_alt_eqns :
+Theorem dom_Brz_alt_eqns:
  dom_Brz_alt seen work =
     if null work then
       T
@@ -753,7 +753,7 @@ rpt strip_tac
  >> fs [FORALL_PROD]
 QED
 
-Theorem Brzozowski_ind :
+Theorem Brzozowski_ind:
  !P.
    (!seen work acc.
        dom_Brz seen work acc /\
@@ -786,7 +786,7 @@ QED
 (* Efficient executable version of Brzozo                                    *)
 (*---------------------------------------------------------------------------*)
 
-Definition exec_Brz_def :
+Definition exec_Brz_def:
   exec_Brz seen work acc d =
     if d=0n then
        (if dom_Brz seen work acc then Brzozo seen work acc else ARB)
@@ -827,7 +827,7 @@ QED
 (* The final definition of the core functionality of the compiler            *)
 (*---------------------------------------------------------------------------*)
 
-Definition Brzozowski_def :
+Definition Brzozowski_def:
   Brzozowski seen work acc =
       if dom_Brz seen work acc then
          Brzozo seen work acc
@@ -840,7 +840,7 @@ End
 (* In order to evaluate Brzozowski, we can dispatch to exec_Brz.             *)
 (*---------------------------------------------------------------------------*)
 
-Theorem Brzozowski_exec_Brz :
+Theorem Brzozowski_exec_Brz:
    Brzozowski seen work acc = exec_Brz seen work acc MAXNUM_32
 Proof
  rw_tac std_ss [Brzozowski_def,exec_Brz_equals_Brzozo]
@@ -850,7 +850,7 @@ QED
 (* In order to reason about Brzozowski, we use the following theorem.        *)
 (*---------------------------------------------------------------------------*)
 
-Theorem Brzozowski_eqns :
+Theorem Brzozowski_eqns:
  dom_Brz seen work acc
   ==>
  Brzozowski seen work acc =
@@ -881,7 +881,7 @@ QED
 (* vector form.                                                              *)
 (*---------------------------------------------------------------------------*)
 
-Definition get_accepts_def :
+Definition get_accepts_def:
   get_accepts fmap =
     mergesort (\a b:num. a <= b)
        (balanced_map$foldrWithKey
@@ -907,7 +907,7 @@ End
 (* The basic regexp compiler function                                        *)
 (*---------------------------------------------------------------------------*)
 
-Definition compile_regexp_def :
+Definition compile_regexp_def:
   compile_regexp r =
     let r' = normalize r ;
         (states,last_state,state_numbering,table)
@@ -924,7 +924,7 @@ End
 (* DFA evaluator                                                             *)
 (*---------------------------------------------------------------------------*)
 
-Definition exec_dfa_def :
+Definition exec_dfa_def:
  exec_dfa finals table n s =
    case s of
     | "" => sub finals n
@@ -934,7 +934,7 @@ Definition exec_dfa_def :
        | SOME k => exec_dfa finals table k t
 End
 
-Theorem exec_dfa_thm :
+Theorem exec_dfa_thm:
   (exec_dfa finals table n [] = sub finals n) /\
   (exec_dfa finals table n (c::t) =
     case sub (sub table n) (ORD c) of
@@ -950,7 +950,7 @@ QED
 (* Set of strings accepted by DFA generated from regexp r                    *)
 (*---------------------------------------------------------------------------*)
 
-Definition Brz_lang_def :
+Definition Brz_lang_def:
   Brz_lang r =
     let (state_map,table_vec,finals_vec) = compile_regexp r ;
         tableV = fromList (MAP fromList table_vec) ;
@@ -966,7 +966,7 @@ End
 (* type :string -> bool                                                      *)
 (*---------------------------------------------------------------------------*)
 
-Definition regexp_matcher_def :
+Definition regexp_matcher_def:
  regexp_matcher r =
     let (state_map,delta,accepts) = compile_regexp r ;
         start_state = THE (lookup regexp_compare (normalize r) state_map) ;
@@ -980,7 +980,7 @@ End
 (* Properties of get_accepts                                                 *)
 (*---------------------------------------------------------------------------*)
 
-Theorem sorted_get_accepts :
+Theorem sorted_get_accepts:
   !fmap.
      SORTED $<= (get_accepts fmap)
 Proof
@@ -1063,7 +1063,7 @@ QED
 (* Properties of extend_states                                               *)
 (*---------------------------------------------------------------------------*)
 
-Definition extend_states_inv_def :
+Definition extend_states_inv_def:
   extend_states_inv next_state state_map table =
      (invariant regexp_compare state_map /\
       fmap_inj regexp_compare state_map /\
@@ -1106,7 +1106,7 @@ Proof
 QED
 
 
-Theorem extend_states_thm :
+Theorem extend_states_thm:
  !next_state state_map table states next_state' state_map' table'.
     (extend_states next_state state_map table states
        = (next_state',state_map',table')) /\
@@ -1155,7 +1155,7 @@ QED
 (* What it means to be a good table                                          *)
 (*---------------------------------------------------------------------------*)
 
-Definition good_table_def :
+Definition good_table_def:
   good_table state_map table =
      (ALL_DISTINCT (MAP FST table) /\
      (!n table2.
@@ -1177,28 +1177,28 @@ End
 (* Some abbreviations                                                        *)
 (*---------------------------------------------------------------------------*)
 
-Definition invar_def : invar = invariant regexp_compare
+Definition invar_def: invar = invariant regexp_compare
 End
 
 Definition dom_def   : dom = fdom regexp_compare
 End
 
-Definition range_def : range = frange regexp_compare
+Definition range_def: range = frange regexp_compare
 End
 
-Definition union_def : union = ounion regexp_compare
+Definition union_def: union = ounion regexp_compare
 End
 
 Definition set_def   : set = oset regexp_compare
 End
 
-Definition image_def : image = oimage regexp_compare
+Definition image_def: image = oimage regexp_compare
 End
 
-Definition apply_def : apply = fapply regexp_compare
+Definition apply_def: apply = fapply regexp_compare
 End
 
-Definition set_of_def : set_of oset = fapply regexp_compare
+Definition set_of_def: set_of oset = fapply regexp_compare
 End
 
 Theorem dom_union[local] :
@@ -1214,7 +1214,7 @@ QED
 (* Invariants on regexp compilation                                          *)
 (*---------------------------------------------------------------------------*)
 
-Definition Brz_invariant_def :
+Definition Brz_invariant_def:
  Brz_invariant seen todo (next_state,state_map,table) <=>
     invar todo /\ invar state_map /\ invar seen /\
     (!r. oin regexp_compare r todo ==> is_normalized r) /\
@@ -1555,7 +1555,7 @@ QED
 (* table_lang parallels the definition of exec_dfa                           *)
 (*---------------------------------------------------------------------------*)
 
-Definition table_lang_def :
+Definition table_lang_def:
   (table_lang final_states table n [] = MEM n final_states) /\
   (table_lang final_states table n (c::t) =
      case ALOOKUP table n of
@@ -1774,7 +1774,7 @@ QED
 (* Well-formedness of final state vector                                     *)
 (*---------------------------------------------------------------------------*)
 
-Definition good_vec_def :
+Definition good_vec_def:
  good_vec vec final_states
       <=>
     (!l c. MEM c ALPHABET /\ MEM l vec ==> c < LENGTH l) /\
@@ -1830,7 +1830,7 @@ Proof
        >> metis_tac [THE_DEF])
 QED
 
-Theorem compile_regexp_good_vec :
+Theorem compile_regexp_good_vec:
  !r state_map table final_states.
     dom_Brz empty (singleton (normalize r) ())
                  (1,singleton (normalize r) 0,[]) /\
@@ -1887,7 +1887,7 @@ Proof
          >> metis_tac [submap_def])
 QED
 
-Theorem vec_lang_correct :
+Theorem vec_lang_correct:
  !table final_states max_char vec final_states'.
    (max_char = alphabet_size) /\
    SORTED $<= final_states /\
@@ -1953,7 +1953,7 @@ QED
 (* specified by regexp r                                                     *)
 (*---------------------------------------------------------------------------*)
 
-Theorem Brzozowski_correct :
+Theorem Brzozowski_correct:
  !r s.
    dom_Brz empty (singleton (normalize r) ())
            (1,singleton (normalize r) 0,[]) /\
@@ -2088,7 +2088,7 @@ Proof
         >> metis_tac [IN_COUNT])
 QED
 
-Theorem Brzozowski_correct_alt :
+Theorem Brzozowski_correct_alt:
  !r s.
     dom_Brz empty (singleton (normalize r) ())
             (1,singleton (normalize r) 0,[]) /\
@@ -2103,7 +2103,7 @@ Proof
   >> rw [Brz_lang_def, regexp_matcher_def, LET_THM,apply_def,fapply_def]
 QED
 
-Theorem Brzozowski_partial_eval :
+Theorem Brzozowski_partial_eval:
  !r state_numbering delta accepts deltaV acceptsV start_state.
     (compile_regexp r = (state_numbering,delta,accepts)) /\
     (deltaV = fromList (MAP fromList delta)) /\
@@ -2124,7 +2124,7 @@ Proof
 QED
 
 
-Theorem Brzozowski_partial_eval_conseq :
+Theorem Brzozowski_partial_eval_conseq:
  !r state_numbering delta accepts deltaV acceptsV start_state.
     (compile_regexp r = (state_numbering,delta,accepts)) /\
     (deltaV = fromList (MAP fromList delta)) /\

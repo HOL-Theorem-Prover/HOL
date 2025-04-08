@@ -31,14 +31,14 @@ val _ = TeX_notation {hol = "+" ^ UTF8.chr 0x221E,
 val _ = TeX_notation {hol = UTF8.chr 0x2212 ^ UTF8.chr 0x221E,
                       TeX = ("\\ensuremath{-\\infty}", 1)};
 
-Definition extreal_of_num_def :
+Definition extreal_of_num_def:
     extreal_of_num n = Normal (&n)
 End
 
 (* from now on, ``0x`` is intepreted as ``0 :extreal`` *)
 val _ = add_numeral_form (#"x", SOME "extreal_of_num");
 
-Definition real_def :
+Definition real_def:
     real x = if (x = NegInf) \/ (x = PosInf) then (0 :real)
              else @r. x = Normal r
 End
@@ -49,7 +49,7 @@ Proof
     RW_TAC std_ss [real_def]
 QED
 
-Theorem normal_real :
+Theorem normal_real:
     !x. x <> NegInf /\ x <> PosInf ==> (Normal (real x) = x)
 Proof
     RW_TAC std_ss [real_def]
@@ -59,7 +59,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem extreal_cases :
+Theorem extreal_cases:
     !x. (x = NegInf) \/ (x = PosInf) \/ (?r. x = Normal r)
 Proof
     Cases >> RW_TAC std_ss []
@@ -106,7 +106,7 @@ val extreal_add_def = Define
 
    new definition:
  *)
-Definition extreal_add_def :
+Definition extreal_add_def:
    (extreal_add (Normal x) (Normal y) = Normal (x + y)) /\
    (extreal_add (Normal _) a = a) /\
    (extreal_add b (Normal _) = b) /\
@@ -115,7 +115,7 @@ Definition extreal_add_def :
 End
 
 (* This definition never changed but is moved here to be used by extreal_sub *)
-Definition extreal_ainv_def :
+Definition extreal_ainv_def:
    (extreal_ainv NegInf = PosInf) /\
    (extreal_ainv PosInf = NegInf) /\
    (extreal_ainv (Normal x) = Normal (- x))
@@ -134,12 +134,12 @@ val extreal_sub_def = Define
 
    new definition:
  *)
-Definition extreal_sub :
+Definition extreal_sub:
     extreal_sub x y = extreal_add x (extreal_ainv y)
 End
 
 (* The previous definition now becomes a theorem *)
-Theorem extreal_sub_def :
+Theorem extreal_sub_def:
    (extreal_sub (Normal x) (Normal y) = Normal (x - y)) /\
    (extreal_sub PosInf (Normal x) = PosInf) /\
    (extreal_sub NegInf (Normal x) = NegInf) /\
@@ -151,7 +151,7 @@ Proof
    rw [extreal_sub, extreal_add_def, extreal_ainv_def, real_sub]
 QED
 
-Definition extreal_le_def :
+Definition extreal_le_def:
    (extreal_le (Normal x) (Normal y) = (x <= y)) /\
    (extreal_le NegInf _ = T) /\
    (extreal_le _ PosInf = T) /\
@@ -159,7 +159,7 @@ Definition extreal_le_def :
    (extreal_le PosInf _ = F)
 End
 
-Definition extreal_lt_def :
+Definition extreal_lt_def:
    extreal_lt x y = ~extreal_le y x
 End
 
@@ -173,7 +173,7 @@ End
     become `lim (a_n - b_n)` or `lim a_n / lim b_n` where two
     sequences compete and do not lead to unique results." [1, p.58]
  *)
-Definition extreal_mul_def :
+Definition extreal_mul_def:
    (extreal_mul NegInf NegInf = PosInf) /\
    (extreal_mul NegInf PosInf = NegInf) /\
    (extreal_mul PosInf NegInf = NegInf) /\
@@ -249,19 +249,19 @@ in
     ("extreal_div_def", ["extreal_div"], thm);
 end;
 
-Definition extreal_abs_def :
+Definition extreal_abs_def:
    (extreal_abs (Normal x) = Normal (abs x)) /\
    (extreal_abs _ = PosInf)
 End
 
-Definition extreal_pow_def :
+Definition extreal_pow_def:
    (extreal_pow (Normal a) n = Normal (a pow n)) /\
    (extreal_pow PosInf n = (if n = 0 then Normal 1 else PosInf)) /\
    (extreal_pow NegInf n =
        (if n = 0 then Normal 1 else (if (EVEN n) then PosInf else NegInf)))
 End
 
-Definition extreal_sqrt_def :
+Definition extreal_sqrt_def:
    (extreal_sqrt (Normal x) = Normal (sqrt x)) /\
    (extreal_sqrt PosInf = PosInf)
 End
@@ -295,11 +295,11 @@ val _ = overload_on (UnicodeChars.sup_4, “\x :extreal. x pow 4”);
 val _ = TeX_notation {hol = UnicodeChars.sup_4,
                       TeX = ("\\HOLTokenSupFour{}", 1)};
 
-Definition extreal_min_def :
+Definition extreal_min_def:
     extreal_min (x :extreal) y = if x <= y then x else y
 End
 
-Definition extreal_max_def :
+Definition extreal_max_def:
     extreal_max (x :extreal) y = if x <= y then y else x
 End
 
@@ -310,7 +310,7 @@ Overload max = “extreal_max”
 (*   Addition                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem extreal_add_eq :
+Theorem extreal_add_eq:
     !x y. Normal x + Normal y = Normal (x + y)
 Proof
     rw [extreal_add_def]
@@ -319,7 +319,7 @@ QED
 (* added two antecedents due to new definition of ``extreal_add``, excluded cases are:
    1. x = NegInf /\ y = PosInf
    2. x = PosInf /\ y = NegInf *)
-Theorem add_comm :
+Theorem add_comm:
     !x y. (x <> NegInf /\ y <> NegInf) \/ (x <> PosInf /\ y <> PosInf) ==>
           (x + y = y + x)
 Proof
@@ -327,7 +327,7 @@ Proof
  >> RW_TAC std_ss [extreal_add_def, REAL_ADD_COMM]
 QED
 
-Theorem add_comm_normal :
+Theorem add_comm_normal:
     !x y. Normal x + y = y + Normal x
 Proof
     rpt STRIP_TAC
@@ -338,7 +338,7 @@ QED
 (* added two antecedents due to new definition of ``extreal_add``, excluded cases are:
    - all mixes of PosInf and NegInf in x, y and z.
  *)
-Theorem add_assoc :
+Theorem add_assoc:
     !x y z. (x <> NegInf /\ y <> NegInf /\ z <> NegInf) \/
             (x <> PosInf /\ y <> PosInf /\ z <> PosInf) ==>
             (x + (y + z) = x + y + z)
@@ -360,7 +360,7 @@ Proof
 QED
 
 (* added one antecedent in the first part due to new definition of ``extreal_add`` *)
-Theorem add_infty :
+Theorem add_infty:
     (!x. x <> NegInf ==> ((x + PosInf = PosInf) /\ (PosInf + x = PosInf))) /\
     (!x. x <> PosInf ==> ((x + NegInf = NegInf) /\ (NegInf + x = NegInf)))
 Proof
@@ -368,28 +368,28 @@ Proof
  >> RW_TAC std_ss [extreal_add_def, extreal_not_infty]
 QED
 
-Theorem add_not_infty :
+Theorem add_not_infty:
     !x y. (x <> NegInf /\ y <> NegInf ==> x + y <> NegInf) /\
           (x <> PosInf /\ y <> PosInf ==> x + y <> PosInf)
 Proof
     NTAC 2 Cases >> RW_TAC std_ss [extreal_add_def]
 QED
 
-Theorem EXTREAL_EQ_LADD :
+Theorem EXTREAL_EQ_LADD:
     !x y z. x <> NegInf /\ x <> PosInf ==> ((x + y = x + z) <=> (y = z))
 Proof
     NTAC 3 Cases
  >> RW_TAC std_ss [extreal_add_def, REAL_EQ_LADD]
 QED
 
-Theorem EXTREAL_EQ_RADD :
+Theorem EXTREAL_EQ_RADD:
     !x y z. z <> NegInf /\ z <> PosInf ==> ((x + z = y + z) <=> (x = y))
 Proof
     NTAC 3 Cases
  >> RW_TAC std_ss [extreal_add_def, REAL_EQ_RADD]
 QED
 
-Theorem extreal_double : (* cf. realTheory.REAL_DOUBLE *)
+Theorem extreal_double: (* cf. realTheory.REAL_DOUBLE *)
     !(x :extreal). x + x = 2 * x
 Proof
     Cases
@@ -400,20 +400,20 @@ QED
 (*    Ordering                                                               *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem extreal_not_lt :
+Theorem extreal_not_lt:
     !x y:extreal. ~(x < y) <=> y <= x
 Proof
     REWRITE_TAC [TAUT `(~a <=> b) <=> (a <=> ~b)`] THEN
     SIMP_TAC std_ss [extreal_lt_def]
 QED
 
-Theorem extreal_lt_eq :
+Theorem extreal_lt_eq:
     !x y. Normal x < Normal y <=> x < y
 Proof
     METIS_TAC [extreal_lt_def, extreal_le_def, real_lt]
 QED
 
-Theorem extreal_le_eq :
+Theorem extreal_le_eq:
     !x y. Normal x <= Normal y <=> x <= y
 Proof
     METIS_TAC [extreal_le_def]
@@ -431,7 +431,7 @@ Proof
     RW_TAC std_ss [extreal_lt_def, le_refl]
 QED
 
-Theorem le_infty :
+Theorem le_infty:
    (!x. NegInf <= x /\ x <= PosInf) /\
    (!x. x <= NegInf <=> (x = NegInf)) /\
    (!x. PosInf <= x <=> (x = PosInf))
@@ -448,7 +448,7 @@ QED
             NegInf < PosInf /\ ~(x < NegInf) /\ ~(PosInf < x) /\
            (x <> PosInf <=> x < PosInf) /\ (x <> NegInf <=> NegInf < x)
  *)
-Theorem lt_infty :
+Theorem lt_infty:
     NegInf < PosInf /\
    (!x. NegInf < Normal x /\ Normal x < PosInf) /\
    (!x. ~(x < NegInf) /\ ~(PosInf < x)) /\
@@ -461,7 +461,7 @@ Proof
  >> fs [extreal_lt_def, extreal_le_def, lt_refl]
 QED
 
-Theorem lt_imp_le :
+Theorem lt_imp_le:
     !x y :extreal. x < y ==> x <= y
 Proof
     NTAC 2 Cases
@@ -469,7 +469,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LT_IMP_LE]
 QED
 
-Theorem lt_imp_ne :
+Theorem lt_imp_ne:
     !x y :extreal. x < y ==> x <> y
 Proof
     NTAC 2 Cases
@@ -477,7 +477,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LT_IMP_NE]
 QED
 
-Theorem le_trans :
+Theorem le_trans:
     !x y z :extreal. x <= y /\ y <= z ==> x <= z
 Proof
     NTAC 3 Cases
@@ -485,7 +485,7 @@ Proof
  >> METIS_TAC [REAL_LE_TRANS]
 QED
 
-Theorem lt_trans :
+Theorem lt_trans:
     !x y z :extreal. x < y /\ y < z ==> x < z
 Proof
     NTAC 3 Cases
@@ -493,7 +493,7 @@ Proof
  >> METIS_TAC [REAL_LT_TRANS]
 QED
 
-Theorem let_trans :
+Theorem let_trans:
     !x y z:extreal. x <= y /\ y < z ==> x < z
 Proof
     NTAC 3 Cases
@@ -501,14 +501,14 @@ Proof
  >> METIS_TAC [real_lt,REAL_LET_TRANS]
 QED
 
-Theorem le_antisym :
+Theorem le_antisym:
     !x y :extreal. (x <= y /\ y <= x) <=> (x = y)
 Proof
     NTAC 2 Cases
  >> RW_TAC std_ss [extreal_le_def, le_refl, REAL_LE_ANTISYM]
 QED
 
-Theorem lt_antisym :
+Theorem lt_antisym:
     !x y. ~(x < y /\ y < x)
 Proof
     NTAC 2 Cases
@@ -516,7 +516,7 @@ Proof
  >> METIS_TAC [REAL_LT_ANTISYM, DE_MORGAN_THM]
 QED
 
-Theorem lte_trans :
+Theorem lte_trans:
     !x y z:extreal. x < y /\ y <= z ==> x < z
 Proof
     NTAC 3 Cases
@@ -524,7 +524,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LTE_TRANS]
 QED
 
-Theorem let_antisym :
+Theorem let_antisym:
     !x y. ~(x < y /\ y <= x)
 Proof
     rpt GEN_TAC
@@ -538,7 +538,7 @@ QED
 
    |- !x. (0 <= x ==> x <> NegInf) /\ (x <= 0 ==> x <> PosInf)
 *)
-Theorem le_not_infty :
+Theorem le_not_infty:
    (!x. 0 <= x ==> x <> NegInf) /\
    (!x. x <= 0 ==> x <> PosInf)
 Proof
@@ -558,14 +558,14 @@ Theorem pos_not_neginf = CONJUNCT1 le_not_infty
 (* |- !x. x <= 0 ==> x <> PosInf *)
 Theorem neg_not_posinf = CONJUNCT2 le_not_infty
 
-Theorem le_total :
+Theorem le_total:
     !x y. x <= y \/ y <= x
 Proof
     NTAC 2 Cases
  >> RW_TAC std_ss [extreal_le_def, REAL_LE_TOTAL]
 QED
 
-Theorem lt_total :
+Theorem lt_total:
     !x y. (x = y) \/ x < y \/ y < x
 Proof
     NTAC 2 Cases
@@ -620,21 +620,21 @@ Proof
     RW_TAC std_ss [extreal_of_num_def, lt_infty]
 QED
 
-Theorem lt_le :
+Theorem lt_le:
     !x y. x < y <=> (x <= y /\ x <> y)
 Proof
     NTAC 2 Cases
  >> RW_TAC std_ss [extreal_lt_eq, extreal_le_def, lt_infty, le_infty, REAL_LT_LE]
 QED
 
-Theorem le_lt :
+Theorem le_lt:
     !x y. (x <= y) <=> x < y \/ (x = y)
 Proof
     NTAC 2 Cases
  >> RW_TAC std_ss [extreal_lt_eq, extreal_le_def, lt_infty, le_infty, REAL_LE_LT]
 QED
 
-Theorem le_neg :
+Theorem le_neg:
     !x y. -x <= -y <=> y <= x
 Proof
     NTAC 2 Cases
@@ -642,7 +642,7 @@ Proof
                    REAL_LE_NEG]
 QED
 
-Theorem lt_neg :
+Theorem lt_neg:
     !x y. -x < -y <=> y < x
 Proof
     NTAC 2 Cases
@@ -650,14 +650,14 @@ Proof
                    REAL_LT_NEG]
 QED
 
-Theorem le_add :
+Theorem le_add:
     !x y :extreal. 0 <= x /\ 0 <= y ==> 0 <= x + y
 Proof
     NTAC 2 Cases
  >> RW_TAC std_ss [extreal_le_def, extreal_add_def, extreal_of_num_def, REAL_LE_ADD]
 QED
 
-Theorem lt_add :
+Theorem lt_add:
     !x y :extreal. 0 < x /\ 0 < y ==> 0 < x + y
 Proof
     NTAC 2 Cases
@@ -665,7 +665,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LT_ADD]
 QED
 
-Theorem let_add :
+Theorem let_add:
     !x y:extreal. 0 <= x /\ 0 < y ==> 0 < x + y
 Proof
     NTAC 2 Cases
@@ -673,7 +673,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LET_ADD]
 QED
 
-Theorem lte_add :
+Theorem lte_add:
     !x y:extreal. 0 < x /\ 0 <= y ==> 0 < x + y
 Proof
     NTAC 2 Cases
@@ -681,7 +681,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LTE_ADD]
 QED
 
-Theorem le_add2 :
+Theorem le_add2:
     !w x y z. w <= x /\ y <= z ==> w + y <= x + z
 Proof
     NTAC 4 Cases
@@ -689,14 +689,14 @@ Proof
  >> METIS_TAC [REAL_LE_ADD2]
 QED
 
-Theorem lt_add2 :
+Theorem lt_add2:
     !w x y z. w < x /\ y < z ==> w + y < x + z
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_lt_eq, lt_infty, REAL_LT_ADD2]
 QED
 
-Theorem let_add2 :
+Theorem let_add2:
     !w x y z. w <> NegInf /\ w <> PosInf /\ w <= x /\ y < z ==> w + y < x + z
 Proof
     NTAC 4 Cases
@@ -704,7 +704,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LET_ADD2]
 QED
 
-Theorem let_add2_alt :
+Theorem let_add2_alt:
     !w x y z. x <> NegInf /\ x <> PosInf /\ w <= x /\ y < z ==> w + y < x + z
 Proof
     NTAC 4 Cases
@@ -713,7 +713,7 @@ Proof
 QED
 
 (* This theorem is newly added in extreal_baseTheory *)
-Theorem le_addl :
+Theorem le_addl:
     !x y. y <> NegInf /\ y <> PosInf ==> (y <= x + y <=> (0 <= x))
 Proof
     rpt Cases
@@ -721,7 +721,7 @@ Proof
                    extreal_not_infty, REAL_LE_ADDL]
 QED
 
-Theorem le_addr :
+Theorem le_addr:
     !x y. x <> NegInf /\ x <> PosInf ==> (x <= x + y <=> (0 <= y))
 Proof
     rpt Cases
@@ -729,7 +729,7 @@ Proof
                    extreal_not_infty, REAL_LE_ADDR]
 QED
 
-Theorem le_addl_imp :
+Theorem le_addl_imp:
     !x y. 0 <= x ==> y <= x + y
 Proof
     rpt Cases
@@ -737,7 +737,7 @@ Proof
                    extreal_not_infty, REAL_LE_ADDL]
 QED
 
-Theorem le_addr_imp :
+Theorem le_addr_imp:
     !x y. 0 <= y ==> x <= x + y
 Proof
     rpt Cases
@@ -745,49 +745,49 @@ Proof
                    extreal_not_infty, REAL_LE_ADDR]
 QED
 
-Theorem le_ladd :
+Theorem le_ladd:
     !x y z. x <> NegInf /\ x <> PosInf ==> (x + y <= x + z <=> y <= z)
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_le_def, REAL_LE_LADD]
 QED
 
-Theorem le_radd :
+Theorem le_radd:
     !x y z. x <> NegInf /\ x <> PosInf ==> (y + x <= z + x <=> y <= z)
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_le_def, REAL_LE_RADD]
 QED
 
-Theorem le_radd_imp :
+Theorem le_radd_imp:
     !x y z. y <= z ==> y + x <= z + x
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_le_def, REAL_LE_RADD, le_infty, le_refl]
 QED
 
-Theorem le_ladd_imp :
+Theorem le_ladd_imp:
     !x y z. y <= z ==> x + y <= x + z
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_le_def, REAL_LE_LADD, le_infty, le_refl]
 QED
 
-Theorem lt_ladd :
+Theorem lt_ladd:
     !x y z. x <> NegInf /\ x <> PosInf ==> (x + y < x + z <=> y < z)
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_le_def, extreal_lt_def, REAL_LE_LADD]
 QED
 
-Theorem lt_radd :
+Theorem lt_radd:
     !x y z. x <> NegInf /\ x <> PosInf ==> (y + x < z + x <=> y < z)
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_le_def, extreal_lt_def, REAL_LE_RADD]
 QED
 
-Theorem lt_addl :
+Theorem lt_addl:
     !x y. y <> NegInf /\ y <> PosInf ==> (y < x + y <=> 0 < x)
 Proof
     rpt Cases
@@ -797,7 +797,7 @@ Proof
 QED
 
 (* This theorem is newly added in extreal_baseTheory *)
-Theorem lt_addr :
+Theorem lt_addr:
     !x y. x <> NegInf /\ x <> PosInf ==> (x < x + y <=> 0 < y)
 Proof
     rpt Cases
@@ -807,7 +807,7 @@ Proof
 QED
 
 (* NOTE: two antecedents were added due to new definitions of ‘extreal_add’ *)
-Theorem le_lneg :
+Theorem le_lneg:
     !x y. ((x <> NegInf /\ y <> NegInf) \/
            (x <> PosInf /\ y <> PosInf)) ==> (-x <= y <=> 0 <= x + y)
 Proof
@@ -816,7 +816,7 @@ Proof
                    le_infty, extreal_of_num_def, extreal_not_infty, REAL_LE_LNEG]
 QED
 
-Theorem let_total :
+Theorem let_total:
     !x y :extreal. x <= y \/ y < x
 Proof
     rpt GEN_TAC
@@ -826,7 +826,7 @@ Proof
  >> DISJ2_TAC >> art []
 QED
 
-Theorem lte_total :
+Theorem lte_total:
     !x y :extreal. x < y \/ y <= x
 Proof
     rpt GEN_TAC
@@ -853,7 +853,7 @@ Theorem lt_addr_imp =
 (*   Substraction (often with order)                                         *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem extreal_sub_eq :
+Theorem extreal_sub_eq:
     !x y. Normal x - Normal y = Normal (x - y)
 Proof
     rw [extreal_sub_def]
@@ -872,7 +872,7 @@ Proof
  >> METIS_TAC [extreal_ainv_def, extreal_sub_def, extreal_of_num_def, REAL_SUB_LZERO]
 QED
 
-Theorem sub_le_imp :
+Theorem sub_le_imp:
     !x y z. x <> NegInf /\ x <> PosInf /\ y <= z + x ==> y - x <= z
 Proof
     rpt Cases
@@ -880,7 +880,7 @@ Proof
                    REAL_LE_SUB_RADD]
 QED
 
-Theorem sub_le_imp2 :
+Theorem sub_le_imp2:
     !x y z. y <> NegInf /\ y <> PosInf /\ y <= z + x ==> y - x <= z
 Proof
     rpt Cases
@@ -888,7 +888,7 @@ Proof
                    REAL_LE_SUB_RADD]
 QED
 
-Theorem le_sub_imp :
+Theorem le_sub_imp:
     !x y z. x <> NegInf /\ x <> PosInf /\ y + x <= z ==> y <= z - x
 Proof
     rpt Cases
@@ -896,7 +896,7 @@ Proof
                    REAL_LE_SUB_LADD]
 QED
 
-Theorem le_sub_imp2 : (* new *)
+Theorem le_sub_imp2: (* new *)
     !x y z. z <> NegInf /\ z <> PosInf /\ y + x <= z ==> y <= z - x
 Proof
     rpt Cases
@@ -904,7 +904,7 @@ Proof
                    REAL_LE_SUB_LADD]
 QED
 
-Theorem lt_sub_imp :
+Theorem lt_sub_imp:
     !x y z. x <> NegInf /\ y <> NegInf /\ y + x < z ==> y < z - x
 Proof
     rpt Cases
@@ -920,7 +920,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [GSYM real_lt, REAL_LT_ADD_SUB]
 QED
 
-Theorem lt_sub_imp2 : (* new *)
+Theorem lt_sub_imp2: (* new *)
     !x y z. x <> NegInf /\ x <> PosInf /\ y + x < z ==> y < z - x
 Proof
     rpt Cases
@@ -928,7 +928,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [GSYM real_lt, REAL_LT_ADD_SUB]
 QED
 
-Theorem sub_lt_imp :
+Theorem sub_lt_imp:
     !x y z. x <> NegInf /\ x <> PosInf /\ y < z + x ==> y - x < z
 Proof
     rpt Cases
@@ -936,7 +936,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [GSYM real_lt, REAL_LT_SUB_RADD]
 QED
 
-Theorem sub_lt_eq :
+Theorem sub_lt_eq:
     !x y z. x <> NegInf /\ x <> PosInf ==> (y - x < z <=> y < z + x)
 Proof
     rpt STRIP_TAC
@@ -946,7 +946,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [GSYM real_lt, REAL_LT_SUB_RADD]
 QED
 
-Theorem sub_lt_imp2 :
+Theorem sub_lt_imp2:
     !x y z. z <> NegInf /\ z <> PosInf /\ y < z + x ==> y - x < z
 Proof
     rpt Cases
@@ -954,7 +954,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [GSYM real_lt, REAL_LT_SUB_RADD]
 QED
 
-Theorem sub_zero_lt :
+Theorem sub_zero_lt:
     !x y. x < y ==> 0 < y - x
 Proof
     rpt Cases
@@ -962,7 +962,7 @@ Proof
                     lt_infty, extreal_of_num_def, extreal_not_infty, REAL_SUB_LT]
 QED
 
-Theorem sub_zero_lt2 :
+Theorem sub_zero_lt2:
     !x y. x <> NegInf /\ x <> PosInf /\ 0 < y - x ==> x < y
 Proof
     rpt Cases
@@ -970,7 +970,7 @@ Proof
                     lt_infty, extreal_of_num_def, extreal_not_infty, REAL_SUB_LT]
 QED
 
-Theorem sub_lt_zero :
+Theorem sub_lt_zero:
     !x y. x < y ==> x - y < 0
 Proof
     rpt Cases
@@ -978,7 +978,7 @@ Proof
                     lt_infty, extreal_of_num_def, extreal_not_infty, REAL_LT_SUB_RADD]
 QED
 
-Theorem sub_lt_zero2 :
+Theorem sub_lt_zero2:
     !x y. y <> NegInf /\ y <> PosInf /\ x - y < 0 ==> x < y
 Proof
     rpt Cases
@@ -987,7 +987,7 @@ Proof
 QED
 
 (* more antecedents added *)
-Theorem sub_zero_le :
+Theorem sub_zero_le:
     !x y. x <> NegInf /\ x <> PosInf ==> (x <= y <=> 0 <= y - x)
 Proof
     rpt Cases
@@ -995,7 +995,7 @@ Proof
                     lt_infty, extreal_of_num_def, extreal_not_infty, REAL_SUB_LE]
 QED
 
-Theorem sub_le_zero :
+Theorem sub_le_zero:
     !x y. y <> NegInf /\ y <> PosInf ==> (x <= y <=> x - y <= 0)
 Proof
     rpt Cases
@@ -1003,13 +1003,13 @@ Proof
                     lt_infty, extreal_of_num_def, extreal_not_infty, REAL_LE_SUB_RADD]
 QED
 
-Theorem le_sub_eq :
+Theorem le_sub_eq:
     !x y z. x <> NegInf /\ x <> PosInf ==> (y <= z - x <=> y + x <= z)
 Proof
     METIS_TAC [le_sub_imp, sub_lt_imp, extreal_lt_def]
 QED
 
-Theorem le_sub_eq2 :
+Theorem le_sub_eq2:
     !x y z. z <> NegInf /\ z <> PosInf /\ x <> NegInf /\ y <> NegInf ==>
            (y <= z - x <=> y + x <= z)
 Proof
@@ -1018,13 +1018,13 @@ Proof
                     extreal_of_num_def, extreal_not_infty, REAL_LE_SUB_LADD]
 QED
 
-Theorem sub_le_eq :
+Theorem sub_le_eq:
     !x y z. x <> NegInf /\ x <> PosInf ==> (y - x <= z <=> y <= z + x)
 Proof
     METIS_TAC [sub_le_imp, lt_sub_imp2, extreal_lt_def]
 QED
 
-Theorem sub_le_eq2 :
+Theorem sub_le_eq2:
     !x y z. y <> NegInf /\ y <> PosInf /\ x <> NegInf /\ z <> NegInf ==>
            (y - x <= z <=> y <= z + x)
 Proof
@@ -1033,7 +1033,7 @@ Proof
                     extreal_of_num_def, extreal_not_infty, REAL_LE_SUB_RADD]
 QED
 
-Theorem sub_le_switch :
+Theorem sub_le_switch:
     !x y z. x <> NegInf /\ x <> PosInf /\ z <> NegInf /\ z <> PosInf ==>
            (y - x <= z <=> y - z <= x)
 Proof
@@ -1042,7 +1042,7 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
-Theorem sub_le_switch2 :
+Theorem sub_le_switch2:
     !x y z. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
            (y - x <= z <=> y - z <= x)
 Proof
@@ -1052,7 +1052,7 @@ Proof
 QED
 
 (* more antecedents ‘x <> NegInf /\ y <> NegInf’ added *)
-Theorem lt_sub :
+Theorem lt_sub:
     !x y z. x <> NegInf /\ y <> NegInf /\ z <> NegInf /\ z <> PosInf ==>
            (y + x < z <=> y < z - x)
 Proof
@@ -1072,14 +1072,14 @@ Proof
  >> METIS_TAC [REAL_LE_SUB_RADD]
 QED
 
-Theorem sub_add2 :
+Theorem sub_add2:
     !x y. x <> NegInf /\ x <> PosInf ==> (x + (y - x) = y)
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_le_def, extreal_add_def, extreal_sub_def, REAL_SUB_ADD2]
 QED
 
-Theorem add_sub :
+Theorem add_sub:
     !x y. y <> NegInf /\ y <> PosInf ==> (x + y - y = x)
 Proof
     rpt Cases
@@ -1095,7 +1095,7 @@ Proof
  >> REWRITE_TAC [extreal_not_infty]
 QED
 
-Theorem add_sub2 :
+Theorem add_sub2:
     !x y. y <> NegInf /\ y <> PosInf ==> (y + x - y = x)
 Proof
    rpt Cases
@@ -1103,7 +1103,7 @@ Proof
                   extreal_sub_def, REAL_ADD_SUB]
 QED
 
-Theorem sub_add :
+Theorem sub_add:
     !x y. y <> NegInf /\ y <> PosInf ==> (x - y + y = x)
 Proof
     rpt Cases
@@ -1120,7 +1120,7 @@ Proof
 QED
 
 (* NOTE: this theorem is for compatibility purposes only, cf. extreal_sub *)
-Theorem extreal_sub_add :
+Theorem extreal_sub_add:
     !x y. (x <> NegInf /\ y <> PosInf) \/ (x <> PosInf /\ y <> NegInf) ==>
           (x - y = x + -y)
 Proof
@@ -1128,13 +1128,13 @@ Proof
  >> RW_TAC std_ss [extreal_ainv_def, extreal_sub_def, extreal_add_def, real_sub]
 QED
 
-Theorem sub_0 :
+Theorem sub_0:
     !x y :extreal. (x - y = 0) ==> (x = y)
 Proof
     rpt Cases >> simp[extreal_sub_def]
 QED
 
-Theorem sub_eq_0 :
+Theorem sub_eq_0:
     !x y. x <> PosInf /\ x <> NegInf /\ (x = y) ==> (x - y = 0)
 Proof
   RW_TAC std_ss []
@@ -1142,7 +1142,7 @@ Proof
   >> simp[extreal_of_num_def, extreal_sub_def, REAL_SUB_REFL]
 QED
 
-Theorem sub_not_infty :
+Theorem sub_not_infty:
     !x y. (x <> NegInf /\ y <> PosInf ==> x - y <> NegInf) /\
           (x <> PosInf /\ y <> NegInf ==> x - y <> PosInf)
 Proof
@@ -1181,7 +1181,7 @@ QED
 (* NOTE: using this theorem directly in any rewriting tactics will cause a self loop,
          while (GSYM neg_minus1) is more useful in turning ‘-1 * x’ to -x.
  *)
-Theorem neg_minus1 :
+Theorem neg_minus1:
     !x. -x = -1 * x
 Proof
     Cases
@@ -1189,13 +1189,13 @@ Proof
 QED
 
 (* NOTE: the original unconditional statement is recovered *)
-Theorem sub_rneg :
+Theorem sub_rneg:
     !x y :extreal. x - -y = x + y
 Proof
     rw [extreal_sub, neg_neg]
 QED
 
-Theorem sub_lneg :
+Theorem sub_lneg:
     !x y. (x <> NegInf /\ y <> NegInf) \/ (x <> PosInf /\ y <> PosInf) ==>
           (-x - y = -(x + y))
 Proof
@@ -1203,7 +1203,7 @@ Proof
  >> RW_TAC std_ss [extreal_sub_def, extreal_add_def, extreal_ainv_def, REAL_SUB_LNEG]
 QED
 
-Theorem neg_add :
+Theorem neg_add:
     !x y. (x <> NegInf /\ y <> NegInf) \/ (x <> PosInf /\ y <> PosInf) ==>
           (-(x + y) = -x + -y)
 Proof
@@ -1211,7 +1211,7 @@ Proof
  >> RW_TAC std_ss [extreal_sub_def, extreal_add_def, extreal_ainv_def, REAL_NEG_ADD]
 QED
 
-Theorem neg_sub :
+Theorem neg_sub:
     !x y. (x <> NegInf /\ x <> PosInf) \/ (y <> NegInf /\ y <> PosInf) ==>
           (-(x - y) = y - x)
 Proof
@@ -1219,7 +1219,7 @@ Proof
  >> RW_TAC std_ss [extreal_sub_def, extreal_ainv_def, REAL_NEG_SUB]
 QED
 
-Theorem le_lsub_imp :
+Theorem le_lsub_imp:
     !x y z. y <= z ==> x - z <= x - y
 Proof
     rpt Cases
@@ -1227,7 +1227,7 @@ Proof
  >> METIS_TAC [real_sub, REAL_LE_ADD2, REAL_LE_NEG, REAL_LE_REFL]
 QED
 
-Theorem lt_lsub_imp :
+Theorem lt_lsub_imp:
     !x y z. x <> PosInf /\ x <> NegInf /\ y < z ==> x - z < x - y
 Proof
     rpt STRIP_TAC
@@ -1239,7 +1239,7 @@ Proof
  >> RealArith.REAL_ASM_ARITH_TAC
 QED
 
-Theorem le_rsub_imp :
+Theorem le_rsub_imp:
     !x y z. x <= y ==> x - z <= y - z
 Proof
     rpt Cases
@@ -1247,7 +1247,7 @@ Proof
  >> METIS_TAC [real_sub, REAL_LE_ADD2, REAL_LE_NEG, REAL_LE_REFL]
 QED
 
-Theorem lt_rsub_imp :
+Theorem lt_rsub_imp:
     !x y z. z <> PosInf /\ z <> NegInf /\ x < y ==> x - z < y - z
 Proof
     rpt STRIP_TAC
@@ -1259,7 +1259,7 @@ Proof
  >> RealArith.REAL_ASM_ARITH_TAC
 QED
 
-Theorem eq_sub_ladd_normal :
+Theorem eq_sub_ladd_normal:
     !x y z. (x = y - Normal z) <=> (x + Normal z = y)
 Proof
     NTAC 2 Cases
@@ -1267,21 +1267,21 @@ Proof
                    extreal_add_def, REAL_EQ_SUB_LADD]
 QED
 
-Theorem eq_sub_radd :
+Theorem eq_sub_radd:
     !x y z. y <> NegInf /\ y <> PosInf ==> ((x - y = z) <=> (x = z + y))
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_sub_def, REAL_EQ_SUB_RADD]
 QED
 
-Theorem eq_sub_ladd :
+Theorem eq_sub_ladd:
     !x y z. z <> NegInf /\ z <> PosInf ==> ((x = y - z) <=> (x + z = y))
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_add_def, extreal_sub_def, REAL_EQ_SUB_LADD]
 QED
 
-Theorem eq_sub_switch :
+Theorem eq_sub_switch:
     !x y z. (x = Normal z - y) <=> (y = Normal z - x)
 Proof
     NTAC 2 Cases
@@ -1289,7 +1289,7 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
-Theorem eq_add_sub_switch :
+Theorem eq_add_sub_switch:
     !a b c d. b <> NegInf /\ b <> PosInf /\ c <> NegInf /\ c <> PosInf ==>
              ((a + b = c + d) <=> (a - c = d - b))
 Proof
@@ -1298,13 +1298,13 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
-Theorem sub_refl :
+Theorem sub_refl:
     !x. x <> NegInf /\ x <> PosInf ==> x - x = 0
 Proof
     Cases >> RW_TAC real_ss [extreal_sub_def, extreal_of_num_def]
 QED
 
-Theorem sub_infty :
+Theorem sub_infty:
    (!x. x <> NegInf ==> (x - NegInf = PosInf)) /\
    (!x. x <> PosInf ==> (x - PosInf = NegInf)) /\
    (!x. x <> PosInf ==> (PosInf - x = PosInf)) /\
@@ -1318,20 +1318,20 @@ QED
 (*     Multiplication                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem extreal_mul_eq :
+Theorem extreal_mul_eq:
     !x y. extreal_mul (Normal x) (Normal y) = Normal (x * y)
 Proof
     rw [extreal_mul_def]
 QED
 
-Theorem mul_comm :
+Theorem mul_comm:
     !x y:extreal. x * y = y * x
 Proof
     NTAC 2 Cases
  >> RW_TAC std_ss [extreal_mul_def, REAL_MUL_COMM]
 QED
 
-Theorem mul_assoc :
+Theorem mul_assoc:
     !x y z:extreal. x * (y * z) = x * y * z
 Proof
     NTAC 3 Cases
@@ -1379,7 +1379,7 @@ Proof
   rpt Cases >> rw[extreal_mul_def]
 QED
 
-Theorem le_mul :
+Theorem le_mul:
     !x y :extreal. 0 <= x /\ 0 <= y ==> 0 <= x * y
 Proof
     NTAC 2 Cases
@@ -1388,7 +1388,7 @@ Proof
  >> METIS_TAC [REAL_LT_LE, real_lte]
 QED
 
-Theorem let_mul :
+Theorem let_mul:
     !x y :extreal. 0 <= x /\ 0 < y ==> 0 <= x * y
 Proof
     rpt Cases
@@ -1397,7 +1397,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LT_LE, REAL_LT_IMP_LE, REAL_LE_MUL]
 QED
 
-Theorem lte_mul :
+Theorem lte_mul:
     !x y :extreal. 0 < x /\ 0 <= y ==> 0 <= x * y
 Proof
     rpt Cases
@@ -1406,7 +1406,7 @@ Proof
  >> METIS_TAC [real_lt, REAL_LT_LE, REAL_LT_IMP_LE, REAL_LE_MUL]
 QED
 
-Theorem le_mul_neg :
+Theorem le_mul_neg:
     !x y :extreal. x <= 0 /\ y <= 0 ==> 0 <= x * y
 Proof
     NTAC 2 Cases
@@ -1416,7 +1416,7 @@ Proof
                REAL_LE_MUL]
 QED
 
-Theorem mul_le :
+Theorem mul_le:
     !x y :extreal. 0 <= x /\ y <= 0 ==> x * y <= 0
 Proof
     NTAC 2 Cases
@@ -1427,7 +1427,7 @@ Proof
  >> METIS_TAC [REAL_LE_NEG, REAL_NEG_0, REAL_LE_MUL, REAL_MUL_RNEG]
 QED
 
-Theorem lt_mul :
+Theorem lt_mul:
     !x y:extreal. 0 < x /\ 0 < y ==> 0 < x * y
 Proof
     NTAC 2 Cases
@@ -1435,7 +1435,7 @@ Proof
                    REAL_LT_MUL, lt_infty]
 QED
 
-Theorem lt_mul_neg :
+Theorem lt_mul_neg:
     !x y :extreal. x < 0 /\ y < 0 ==> 0 < x * y
 Proof
     rpt Cases
@@ -1444,7 +1444,7 @@ Proof
                REAL_LT_MUL]
 QED
 
-Theorem mul_lt :
+Theorem mul_lt:
     !x y:extreal. 0 < x /\ y < 0 ==> x * y < 0
 Proof
     NTAC 2 Cases
@@ -1455,7 +1455,7 @@ Proof
  >> METIS_TAC [REAL_MUL_RNEG, REAL_LT_MUL, REAL_LT_NEG, REAL_NEG_0]
 QED
 
-Theorem mul_let :
+Theorem mul_let:
     !x y :extreal. 0 <= x /\ y < 0 ==> x * y <= 0
 Proof
     NTAC 2 Cases
@@ -1465,7 +1465,7 @@ Proof
                REAL_MUL_RNEG, REAL_NEG_NEG, REAL_LE_NEG, REAL_LT_LE]
 QED
 
-Theorem mul_lte :
+Theorem mul_lte:
     !x y :extreal. 0 < x /\ y <= 0 ==> x * y <= 0
 Proof
     NTAC 2 Cases
@@ -1475,7 +1475,7 @@ Proof
                REAL_MUL_RNEG, REAL_NEG_NEG, REAL_LE_NEG, real_lt, REAL_LT_LE]
 QED
 
-Theorem lt_rmul :
+Theorem lt_rmul:
     !x y z. 0 < z /\ z <> PosInf ==> (x * z < y * z <=> x < y)
 Proof
     rpt Cases
@@ -1483,13 +1483,13 @@ Proof
                     REAL_LT_REFL, REAL_LT_RMUL, extreal_of_num_def]
 QED
 
-Theorem lt_rmul_imp :
+Theorem lt_rmul_imp:
     !x y z. x < y /\ 0 < z /\ z <> PosInf ==> x * z < y * z
 Proof
     METIS_TAC [lt_rmul]
 QED
 
-Theorem le_rmul :
+Theorem le_rmul:
     !x y z. 0 < z /\ z <> PosInf ==> (x * z <= y * z <=> x <= y)
 Proof
     rpt Cases
@@ -1497,7 +1497,7 @@ Proof
                     REAL_LE_REFL, REAL_LE_RMUL, lt_infty, extreal_lt_eq]
 QED
 
-Theorem le_rmul_imp :
+Theorem le_rmul_imp:
     !x y z :extreal. 0 <= z /\ x <= y ==> x * z <= y * z
 Proof
     RW_TAC std_ss []
@@ -1513,7 +1513,7 @@ Proof
  >> METIS_TAC [REAL_LT_LE, REAL_LTE_TRANS, extreal_le_eq, REAL_LET_ANTISYM]
 QED
 
-Theorem lt_mul2 :
+Theorem lt_mul2:
     !x1 x2 y1 y2. 0 <= x1 /\ 0 <= y1 /\ x1 <> PosInf /\ y1 <> PosInf /\
                   x1 < x2 /\ y1 < y2 ==> x1 * y1 < x2 * y2
 Proof
@@ -1527,21 +1527,21 @@ Proof
  >> METIS_TAC [extreal_not_infty,lt_infty]
 QED
 
-Theorem mul_lposinf :
+Theorem mul_lposinf:
     !x. 0 < x ==> (PosInf * x = PosInf)
 Proof
    Cases >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, lt_infty,
                             num_not_infty, extreal_lt_eq]
 QED
 
-Theorem mul_rposinf :
+Theorem mul_rposinf:
     !x. 0 < x ==> (x * PosInf = PosInf)
 Proof
    Cases >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, lt_infty,
                             num_not_infty, extreal_lt_eq]
 QED
 
-Theorem mul_infty :
+Theorem mul_infty:
     !x. 0 < x ==> (PosInf * x = PosInf) /\ (x * PosInf = PosInf) /\
                   (NegInf * x = NegInf) /\ (x * NegInf = NegInf)
 Proof
@@ -1577,7 +1577,7 @@ Proof
  >> REWRITE_TAC [Once mul_comm]
 QED
 
-Theorem mul_not_infty :
+Theorem mul_not_infty:
    (!c y. 0 <= c /\ y <> NegInf ==> Normal (c) * y <> NegInf) /\
    (!c y. 0 <= c /\ y <> PosInf ==> Normal (c) * y <> PosInf) /\
    (!c y. c <= 0 /\ y <> NegInf ==> Normal (c) * y <> PosInf) /\
@@ -1588,7 +1588,7 @@ Proof
  >> METIS_TAC [real_lte, REAL_LE_ANTISYM]
 QED
 
-Theorem mul_not_infty2 :
+Theorem mul_not_infty2:
     !x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
          (x * y <> NegInf) /\ (x * y <> PosInf)
 Proof
@@ -1596,19 +1596,19 @@ Proof
  >> RW_TAC std_ss [extreal_mul_def, extreal_not_infty]
 QED
 
-Theorem mul_lt2 :
+Theorem mul_lt2:
     !x y :extreal. x < 0 /\ 0 < y ==> x * y < 0
 Proof
     METIS_TAC [mul_comm, mul_lt]
 QED
 
-Theorem mul_le2 :
+Theorem mul_le2:
     !x y :extreal. x <= 0 /\ 0 <= y ==> x * y <= 0
 Proof
     METIS_TAC [mul_comm, mul_le]
 QED
 
-Theorem add_ldistrib_pos :
+Theorem add_ldistrib_pos:
     !x y z. 0 <= y /\ 0 <= z ==> (x * (y + z) = x * y + x * z)
 Proof
     NTAC 3 Cases
@@ -1620,7 +1620,7 @@ Proof
                REAL_LT_LE, REAL_ADD_LDISTRIB]
 QED
 
-Theorem add_ldistrib_neg :
+Theorem add_ldistrib_neg:
     !x y z. y <= 0 /\ z <= 0 ==> (x * (y + z) = x * y + x * z)
 Proof
     NTAC 3 Cases (* 27 sub-goals here *)
@@ -1635,7 +1635,7 @@ Proof
 QED
 
 (* changed var name from `x` to `r` *)
-Theorem add_ldistrib_normal :
+Theorem add_ldistrib_normal:
     !r y z. (y <> PosInf /\ z <> PosInf) \/ (y <> NegInf /\ z <> NegInf)
         ==> (Normal r * (y + z) = Normal r * y + Normal r * z)
 Proof
@@ -1648,7 +1648,7 @@ QED
 
 Theorem add_ldistrib_normal2 = add_ldistrib_normal (* backward compatible *)
 
-Theorem add_rdistrib_normal :
+Theorem add_rdistrib_normal:
     !x y z. (y <> PosInf /\ z <> PosInf) \/ (y <> NegInf /\ z <> NegInf) ==>
             ((y + z) * Normal x = y * Normal x + z * Normal x)
 Proof
@@ -1662,21 +1662,21 @@ QED
 
 Theorem add_rdistrib_normal2 = add_rdistrib_normal (* backward compatible *)
 
-Theorem add_ldistrib :
+Theorem add_ldistrib:
     !x y z. (0 <= y /\ 0 <= z) \/ (y <= 0 /\ z <= 0) ==>
             (x * (y + z) = x * y + x * z)
 Proof
     METIS_TAC [add_ldistrib_pos, add_ldistrib_neg]
 QED
 
-Theorem add_rdistrib :
+Theorem add_rdistrib:
     !x y z. (0 <= y /\ 0 <= z) \/ (y <= 0 /\ z <= 0) ==>
             ((y + z) * x = y * x + z * x)
 Proof
     METIS_TAC [add_ldistrib, mul_comm]
 QED
 
-Theorem mul_lneg :
+Theorem mul_lneg:
     !x y. -x * y = -(x * y)
 Proof
     NTAC 2 Cases
@@ -1684,7 +1684,7 @@ Proof
  >> METIS_TAC [REAL_NEG_GT0, REAL_LT_REFL, REAL_LT_TRANS, real_lte, REAL_LE_ANTISYM]
 QED
 
-Theorem mul_rneg :
+Theorem mul_rneg:
     !x y. x * -y = -(x * y)
 Proof
     NTAC 2 Cases
@@ -1692,7 +1692,7 @@ Proof
  >> METIS_TAC [REAL_NEG_GT0, REAL_LT_REFL, REAL_LT_TRANS, real_lte, REAL_LE_ANTISYM]
 QED
 
-Theorem neg_mul2 :
+Theorem neg_mul2:
     !x y. -x * -y = x * y
 Proof
     rpt Cases >> RW_TAC real_ss [extreal_mul_def, extreal_ainv_def, REAL_NEG_EQ0]
@@ -1700,14 +1700,14 @@ Proof
 QED
 
 (* NOTE: the number of necessary antecedents are reduced *)
-Theorem add2_sub2 :
+Theorem add2_sub2:
     !a b c d. a <> NegInf /\ b <> PosInf /\ c <> NegInf /\ d <> PosInf
           ==> a - b + (c - d) = a + c - (b + d)
 Proof
     rpt Cases >> rw [extreal_sub_def, extreal_add_def, REAL_ADD2_SUB2]
 QED
 
-Theorem sub_ldistrib :
+Theorem sub_ldistrib:
     !x y z. x <> NegInf /\ x <> PosInf /\
             y <> NegInf /\ y <> PosInf /\
             z <> NegInf /\ z <> PosInf ==> (x * (y - z) = x * y - x * z)
@@ -1717,7 +1717,7 @@ Proof
                     REAL_SUB_LDISTRIB]
 QED
 
-Theorem sub_rdistrib :
+Theorem sub_rdistrib:
     !x y z. x <> NegInf /\ x <> PosInf /\
             y <> NegInf /\ y <> PosInf /\
             z <> NegInf /\ z <> PosInf ==> ((x - y) * z = x * z - y * z)
@@ -1727,7 +1727,7 @@ Proof
                     REAL_SUB_RDISTRIB]
 QED
 
-Theorem mul_linv :
+Theorem mul_linv:
     !x. x <> 0 /\ x <> PosInf /\ x <> NegInf ==> (inv x * x = 1)
 Proof
     Cases
@@ -1735,7 +1735,7 @@ Proof
                     extreal_not_infty, extreal_of_num_def, REAL_MUL_LINV]
 QED
 
-Theorem mul_linv_pos :
+Theorem mul_linv_pos:
     !x. 0 < x /\ x <> PosInf ==> (inv x * x = 1)
 Proof
     rpt STRIP_TAC
@@ -1743,32 +1743,32 @@ Proof
  >> MATCH_MP_TAC pos_not_neginf >> art []
 QED
 
-Theorem le_lmul :
+Theorem le_lmul:
     !x y z. 0 < x /\ x <> PosInf ==> (x * y <= x * z <=> y <= z)
 Proof
     METIS_TAC [mul_comm, le_rmul]
 QED
 
-Theorem le_lmul_imp :
+Theorem le_lmul_imp:
     !x y z :extreal. 0 <= z /\ x <= y ==> z * x <= z * y
 Proof
     METIS_TAC [mul_comm, le_rmul_imp]
 QED
 
-Theorem lt_lmul :
+Theorem lt_lmul:
     !x y z. 0 < x /\ x <> PosInf ==> (x * y < x * z <=> y < z)
 Proof
     METIS_TAC [mul_comm, lt_rmul]
 QED
 
-Theorem lt_lmul_imp :
+Theorem lt_lmul_imp:
     !x y z. 0 < x /\ x <> PosInf /\ y < z ==> x * y < x * z
 Proof
     METIS_TAC [lt_lmul]
 QED
 
 (* cf. REAL_LE_MUL2 *)
-Theorem le_mul2 :
+Theorem le_mul2:
     !x1 x2 y1 y2. 0 <= x1 /\ 0 <= y1 /\ x1 <= x2 /\ y1 <= y2 ==> x1 * y1 <= x2 * y2
 Proof
     rpt STRIP_TAC
@@ -1798,7 +1798,7 @@ Proof
                    extreal_of_num_def, le_infty]
 QED
 
-Theorem abs_neg :
+Theorem abs_neg:
     !x :extreal. x < 0 ==> (abs x = -x)
 Proof
     RW_TAC std_ss [extreal_lt_def]
@@ -1817,7 +1817,7 @@ Proof
  >> REWRITE_TAC [abs_0, neg_0]
 QED
 
-Theorem abs_refl :
+Theorem abs_refl:
     !x :extreal. (abs x = x) <=> (0 <= x)
 Proof
     Cases
@@ -1831,13 +1831,13 @@ Proof
     RW_TAC std_ss [abs_refl, abs_pos]
 QED
 
-Theorem abs_real :
+Theorem abs_real:
     !x. x <> PosInf /\ x <> NegInf ==> abs (real x) = real (abs x)
 Proof
     Cases >> rw [extreal_abs_def, real_normal]
 QED
 
-Theorem abs_bounds :
+Theorem abs_bounds:
     !x k :extreal. abs x <= k <=> -k <= x /\ x <= k
 Proof
     NTAC 2 Cases
@@ -1845,7 +1845,7 @@ Proof
                    le_infty, extreal_ainv_def, ABS_BOUNDS]
 QED
 
-Theorem abs_bounds_lt :
+Theorem abs_bounds_lt:
     !x k :extreal. abs x < k <=> -k < x /\ x < k
 Proof
     NTAC 2 Cases
@@ -1853,20 +1853,20 @@ Proof
                    extreal_ainv_def, ABS_BOUNDS_LT]
 QED
 
-Theorem lt_abs_bounds :
+Theorem lt_abs_bounds:
    !k x :extreal. k < abs x <=> x < -k \/ k < x
 Proof
     RW_TAC std_ss [extreal_lt_def]
  >> PROVE_TAC [abs_bounds]
 QED
 
-Theorem le_abs_bounds :
+Theorem le_abs_bounds:
    !k x :extreal. k <= abs x <=> x <= -k \/ k <= x
 Proof
    METIS_TAC [extreal_lt_def, abs_bounds_lt]
 QED
 
-Theorem abs_not_infty :
+Theorem abs_not_infty:
     !x. x <> PosInf /\ x <> NegInf ==> abs x <> PosInf /\ abs x <> NegInf
 Proof
     Q.X_GEN_TAC ‘x’ >> STRIP_TAC
@@ -1875,13 +1875,13 @@ Proof
 QED
 
 (* NOTE: cf. le_abs_bounds for a better version without antecedents *)
-Theorem abs_unbounds :
+Theorem abs_unbounds:
     !x k :extreal. 0 <= k ==> (k <= abs x <=> x <= -k \/ k <= x)
 Proof
     rw [le_abs_bounds]
 QED
 
-Theorem le_abs :
+Theorem le_abs:
     !x :extreal. x <= abs x /\ -x <= abs x
 Proof
     GEN_TAC
@@ -1911,7 +1911,7 @@ Proof
  >> fs [REWRITE_RULE [neg_0, le_antisym] (Q.SPECL [`x`, `0`] abs_bounds)]
 QED
 
-Theorem abs_not_zero :
+Theorem abs_not_zero:
     !x. abs x <> 0 <=> x <> 0
 Proof
     PROVE_TAC [abs_eq_0]
@@ -1932,7 +1932,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [lt_refl]
 QED
 
-Theorem abs_triangle :
+Theorem abs_triangle:
     !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
           abs(x + y) <= abs(x) + abs(y)
 Proof
@@ -1944,7 +1944,7 @@ QED
 (* NOTE: although is possible that ‘x + y’ may be unspecific, this unspecific
          value is indeed <= PosInf
  *)
-Theorem abs_triangle_full :
+Theorem abs_triangle_full:
     !x y. abs(x + y) <= abs(x) + abs(y)
 Proof
     rpt GEN_TAC
@@ -1961,7 +1961,7 @@ Proof
  >> MATCH_MP_TAC pos_not_neginf >> rw [abs_pos]
 QED
 
-Theorem abs_triangle_sub :
+Theorem abs_triangle_sub:
     !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
           abs(x) <= abs(y) + abs(x - y)
 Proof
@@ -1971,7 +1971,7 @@ Proof
         ABS_TRIANGLE_SUB]
 QED
 
-Theorem abs_triangle_sub_full :
+Theorem abs_triangle_sub_full:
     !x y. abs(x) <= abs(y) + abs(x - y)
 Proof
     rpt GEN_TAC
@@ -1995,7 +1995,7 @@ Proof
       MATCH_MP_TAC pos_not_neginf >> rw [abs_pos] ]
 QED
 
-Theorem abs_sub :
+Theorem abs_sub:
     !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
           abs(x - y) = abs(y - x)
 Proof
@@ -2045,7 +2045,7 @@ Proof
 QED
 
 (* cf. realTheory.ABS_TRIANGLE_NEG *)
-Theorem abs_triangle_neg :
+Theorem abs_triangle_neg:
     !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
           abs(x - y) <= abs(x) + abs(y)
 Proof
@@ -2058,7 +2058,7 @@ Proof
  >> Cases_on ‘y’ >> rw [extreal_ainv_def]
 QED
 
-Theorem abs_triangle_neg_full :
+Theorem abs_triangle_neg_full:
     !x y. abs(x - y) <= abs(x) + abs(y)
 Proof
     rpt GEN_TAC
@@ -2075,7 +2075,7 @@ Proof
  >> MATCH_MP_TAC pos_not_neginf >> rw [abs_pos]
 QED
 
-Theorem abs_mul :
+Theorem abs_mul:
     !x y :extreal. abs (x * y) = abs x * abs y
 Proof
     rpt STRIP_TAC
@@ -2090,7 +2090,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* added antecedent `y <> 0` *)
-Theorem extreal_div_eq :
+Theorem extreal_div_eq:
     !x y. y <> 0 ==> (Normal x / Normal y = Normal (x / y))
 Proof
     rpt Cases
@@ -2098,19 +2098,19 @@ Proof
 QED
 
 (* added antecedent ``m <> 0`` *)
-Theorem quotient_normal :
+Theorem quotient_normal:
     !n m. m <> 0 ==> (&n / &m = Normal (&n / &m))
 Proof
     RW_TAC std_ss [extreal_div_eq, extreal_of_num_def, REAL_OF_NUM_EQ]
 QED
 
-Theorem extreal_inv_eq :
+Theorem extreal_inv_eq:
     !x. x <> 0 ==> (inv (Normal x) = Normal (inv x))
 Proof
     METIS_TAC [extreal_inv_def]
 QED
 
-Theorem normal_inv_eq :
+Theorem normal_inv_eq:
     !x. x <> 0 ==> (Normal (inv x) = inv (Normal x))
 Proof
     METIS_TAC [extreal_inv_def]
@@ -2122,7 +2122,7 @@ Proof
     RW_TAC std_ss [extreal_inv_def, extreal_of_num_def, REAL_10, REAL_INV1]
 QED
 
-Theorem inv_1over : (* was: div_lone *)
+Theorem inv_1over: (* was: div_lone *)
     !x. x <> 0 ==> (inv x = 1 / x)
 Proof
     rpt Cases
@@ -2137,7 +2137,7 @@ Proof
  >> REWRITE_TAC [REAL_INV1, GSYM extreal_of_num_def, mul_rone]
 QED
 
-Theorem div_refl :
+Theorem div_refl:
     !x :extreal. x <> 0 /\ x <> PosInf /\ x <> NegInf ==> (x / x = 1)
 Proof
     Cases
@@ -2145,7 +2145,7 @@ Proof
                     extreal_not_infty, extreal_of_num_def, REAL_MUL_RINV]
 QED
 
-Theorem div_refl_pos :
+Theorem div_refl_pos:
     !x :extreal. 0 < x /\ x <> PosInf ==> (x / x = 1)
 Proof
     rpt STRIP_TAC
@@ -2153,7 +2153,7 @@ Proof
  >> MATCH_MP_TAC pos_not_neginf >> art []
 QED
 
-Theorem inv_pos :
+Theorem inv_pos:
     !x. 0 < x /\ x <> PosInf ==> 0 < 1 / x
 Proof
     Cases
@@ -2176,7 +2176,7 @@ QED
 (* due to new definition of extreal_inv, `0 <= x` is changed to `0 < x`,
    `x <> 0` is added as an antecedent.
  *)
-Theorem inv_pos_eq : (* was: ereal_0_gt_inverse *)
+Theorem inv_pos_eq: (* was: ereal_0_gt_inverse *)
     !x. x <> 0 ==> (0 < inv x <=> x <> PosInf /\ 0 <= x)
 Proof
     rpt STRIP_TAC
@@ -2199,7 +2199,7 @@ Proof
       METIS_TAC [le_lt] ]
 QED
 
-Theorem rinv_uniq :
+Theorem rinv_uniq:
     !x y. (x * y = 1) ==> (y = inv x)
 Proof
     rpt Cases
@@ -2210,13 +2210,13 @@ Proof
  >> METIS_TAC [extreal_inv_def]
 QED
 
-Theorem linv_uniq :
+Theorem linv_uniq:
     !x y. (x * y = 1) ==> (x = inv y)
 Proof
     RW_TAC std_ss [rinv_uniq, mul_comm]
 QED
 
-Theorem le_rdiv :
+Theorem le_rdiv:
     !x y z. 0 < x ==> (y * Normal x <= z <=> y <= z / Normal x)
 Proof
     STRIP_TAC >> rpt Cases
@@ -2226,7 +2226,7 @@ Proof
  >> METIS_TAC [REAL_NEG_NZ, REAL_LE_RDIV_EQ, real_div]
 QED
 
-Theorem le_ldiv :
+Theorem le_ldiv:
     !x y z. 0 < x ==> (y <= z * Normal x <=> y / Normal x <= z)
 Proof
     STRIP_TAC >> rpt Cases
@@ -2236,7 +2236,7 @@ Proof
  >> METIS_TAC [REAL_NEG_NZ, REAL_LE_LDIV_EQ, real_div]
 QED
 
-Theorem lt_rdiv :
+Theorem lt_rdiv:
     !x y z. 0 < z ==> (x < y / Normal z <=> x * Normal z < y)
 Proof
     NTAC 2 Cases
@@ -2246,7 +2246,7 @@ Proof
                    extreal_div_eq, extreal_mul_def, REAL_LT_IMP_NE]
 QED
 
-Theorem lt_div : (* cf. REAL_LT_DIV *)
+Theorem lt_div: (* cf. REAL_LT_DIV *)
     !y z. 0 < y /\ 0 < z ==> 0 < y / Normal z
 Proof
     rpt STRIP_TAC
@@ -2254,7 +2254,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem le_div : (* cf. REAL_LE_DIV *)
+Theorem le_div: (* cf. REAL_LE_DIV *)
     !y z. 0 <= y /\ 0 < z ==> 0 <= y / Normal z
 Proof
     rpt STRIP_TAC
@@ -2262,7 +2262,7 @@ Proof
  >> RW_TAC std_ss [mul_lzero]
 QED
 
-Theorem lt_ldiv :
+Theorem lt_ldiv:
     !x y z. 0 < z ==> (x / Normal z < y <=> x < y * Normal z)
 Proof
     NTAC 2 Cases
@@ -2272,7 +2272,7 @@ Proof
                    extreal_div_eq, extreal_mul_def, REAL_LT_IMP_NE]
 QED
 
-Theorem lt_rdiv_neg :
+Theorem lt_rdiv_neg:
     !x y z. z < 0 ==> (y / Normal z < x <=> x * Normal z < y)
 Proof
     NTAC 2 Cases >> RW_TAC std_ss []
@@ -2286,7 +2286,7 @@ Proof
 QED
 
 (* `x, y` must be reals, `z <> 0` *)
-Theorem div_add :
+Theorem div_add:
     !x y z. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf /\ z <> 0 ==>
            (x / z + y / z = (x + y) / z)
 Proof
@@ -2297,7 +2297,7 @@ Proof
 QED
 
 (* `z` must be non-zero normal reals, `x + y` must be defined *)
-Theorem div_add2 :
+Theorem div_add2:
     !x y z. ((x <> PosInf /\ y <> PosInf) \/ (x <> NegInf /\ y <> NegInf)) /\
              z <> 0 /\ z <> PosInf /\ z <> NegInf ==>
             (x / z + y / z = (x + y) / z)
@@ -2308,7 +2308,7 @@ Proof
  >> REAL_ARITH_TAC
 QED
 
-Theorem div_sub :
+Theorem div_sub:
     !x y z. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf /\ z <> 0 ==>
            (x / z - y / z = (x - y) / z)
 Proof
@@ -2319,7 +2319,7 @@ Proof
 QED
 
 (* NOTE: `0 <= x` is changed to `0 < x` otherwise `inv x` is not defined *)
-Theorem le_inv :
+Theorem le_inv:
     !x. 0 < x ==> 0 <= inv x
 Proof
     Cases >> RW_TAC real_ss [extreal_inv_def, extreal_of_num_def, extreal_le_def,
@@ -2328,14 +2328,14 @@ Proof
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> art []
 QED
 
-Theorem div_infty :
+Theorem div_infty:
     !x. x <> PosInf /\ x <> NegInf ==> (x / PosInf = 0) /\ (x / NegInf = 0)
 Proof
     Cases
  >> RW_TAC std_ss [extreal_div_def, extreal_inv_def, GSYM extreal_of_num_def, mul_rzero]
 QED
 
-Theorem infty_div :
+Theorem infty_div:
     !r. 0 < r ==> (PosInf / Normal r = PosInf) /\ (NegInf / Normal r = NegInf)
 Proof
     GEN_TAC >> DISCH_TAC
@@ -2344,14 +2344,14 @@ Proof
                     extreal_mul_def, mul_rzero, REAL_INV_POS, REAL_INV_EQ_0]
 QED
 
-Theorem zero_div : (* cf. REAL_DIV_LZERO *)
+Theorem zero_div: (* cf. REAL_DIV_LZERO *)
     !x :extreal. x <> 0 ==> (0 / x = 0)
 Proof
     Cases
  >> RW_TAC std_ss [extreal_div_def, mul_lzero, extreal_of_num_def]
 QED
 
-Theorem ldiv_eq : (* REAL_EQ_LDIV_EQ *)
+Theorem ldiv_eq: (* REAL_EQ_LDIV_EQ *)
     !x y z. 0 < z /\ z < PosInf ==> ((x / z = y) <=> (x = y * z))
 Proof
     NTAC 3 Cases
@@ -2361,7 +2361,7 @@ Proof
  >> MATCH_MP_TAC REAL_EQ_LDIV_EQ >> art []
 QED
 
-Theorem rdiv_eq : (* REAL_EQ_RDIV_EQ *)
+Theorem rdiv_eq: (* REAL_EQ_RDIV_EQ *)
     !x y z. 0 < z /\ z < PosInf ==> ((x = y / z) <=> (x * z = y))
 Proof
     NTAC 3 Cases
@@ -2372,7 +2372,7 @@ Proof
 QED
 
 (* NOTE: ‘x <> PosInf /\ x <> NegInf’ cannot be removed when ‘y = PosInf’ *)
-Theorem div_eq_mul_linv :
+Theorem div_eq_mul_linv:
     !x y. x <> PosInf /\ x <> NegInf /\ 0 < y ==> (x / y = (inv y) * x)
 Proof
     RW_TAC std_ss []
@@ -2420,7 +2420,7 @@ Proof
         lt_infty, extreal_lt_eq]
 QED
 
-Theorem inv_le_antimono :
+Theorem inv_le_antimono:
     !x y :extreal. 0 < x /\ 0 < y ==> (inv x <= inv y <=> y <= x)
 Proof
     rpt STRIP_TAC
@@ -2432,7 +2432,7 @@ Proof
       DISJ2_TAC >> PROVE_TAC [inv_inj] ]
 QED
 
-Theorem inv_le_antimono_imp :
+Theorem inv_le_antimono_imp:
     !x y :extreal. 0 < y /\ y <= x ==> inv x <= inv y
 Proof
     rpt STRIP_TAC
@@ -2442,19 +2442,19 @@ Proof
  >> Q.EXISTS_TAC ‘y’ >> art []
 QED
 
-Theorem inv_not_infty :
+Theorem inv_not_infty:
   !x :extreal. x <> 0 ==> inv x <> PosInf /\ inv x <> NegInf
 Proof
   Cases >> rw[extreal_inv_def]
 QED
 
-Theorem inv_infty :
+Theorem inv_infty:
     inv PosInf = 0 /\ inv NegInf = 0
 Proof
     rw [extreal_of_num_def, extreal_inv_def]
 QED
 
-Theorem div_not_infty :
+Theorem div_not_infty:
   !x y:extreal. y <> 0 ==> Normal x / y <> PosInf /\ Normal x / y <> NegInf
 Proof
   rpt GEN_TAC
@@ -2464,7 +2464,7 @@ Proof
   >> simp[extreal_mul_def]
 QED
 
-Theorem div_mul_refl :
+Theorem div_mul_refl:
     !(x :extreal) r. r <> 0 ==> x = x / Normal r * Normal r
 Proof
   RW_TAC std_ss [extreal_div_def, extreal_inv_def, GSYM mul_assoc,
@@ -2473,7 +2473,7 @@ Proof
 QED
 
 (* NOTE: removed ‘x <> PosInf /\ x <> NegInf’; changed ‘0 < r’ to ‘r <> 0’ *)
-Theorem mul_div_refl :
+Theorem mul_div_refl:
     !(x :extreal) r. r <> 0 ==> x = x * Normal r / Normal r
 Proof
     rpt STRIP_TAC
@@ -2488,7 +2488,7 @@ Proof
  >> MATCH_MP_TAC div_mul_refl >> art []
 QED
 
-Theorem ldiv_le_imp :
+Theorem ldiv_le_imp:
     !x y (z :extreal). 0 < z /\ z <> PosInf /\ x <= y ==> x / z <= y / z
 Proof
     RW_TAC std_ss []
@@ -2502,7 +2502,7 @@ Proof
 QED
 
 (* cf. REAL_EQ_MUL_LCANCEL *)
-Theorem mul_lcancel :
+Theorem mul_lcancel:
     !x y (z :extreal). x <> PosInf /\ x <> NegInf ==>
                      ((x * y = x * z) <=> (x = 0) \/ (y = z))
 Proof
@@ -2518,7 +2518,7 @@ QED
 (* |- !x y z. x <> PosInf /\ x <> NegInf ==> (y * x = z * x <=> x = 0 \/ y = z) *)
 Theorem mul_rcancel = ONCE_REWRITE_RULE [mul_comm] mul_lcancel
 
-Theorem inv_mul :
+Theorem inv_mul:
     !x y. x <> 0 /\ y <> 0 ==> (inv (x * y) = inv x * inv y)
 Proof
   rpt STRIP_TAC
@@ -2528,7 +2528,7 @@ Proof
   >> rw[extreal_inv_def]
 QED
 
-Theorem abs_div :
+Theorem abs_div:
   !x y. x <> PosInf /\ x <> NegInf /\ y <> 0 ==> (abs (x / y) = abs x / abs y)
 Proof
   rpt STRIP_TAC
@@ -2540,7 +2540,7 @@ Proof
   >> simp[extreal_div_eq, ABS_MUL, real_div, ABS_INV]
 QED
 
-Theorem abs_div_normal :
+Theorem abs_div_normal:
     !x y. y <> 0 ==> (abs (x / Normal y) = abs x / Normal (abs y))
 Proof
     rpt STRIP_TAC
@@ -2550,7 +2550,7 @@ Proof
 QED
 
 (* cf. REAL_INVINV *)
-Theorem inv_inv :
+Theorem inv_inv:
     !x. x <> 0 /\ x <> PosInf /\ x <> NegInf ==> inv (inv x) = x
 Proof
     Cases >> rw [extreal_of_num_def, extreal_inv_eq]
@@ -2568,7 +2568,7 @@ Proof
 QED
 
 (* an equivalent "recursive" definition like realTheory.pow *)
-Theorem extreal_pow :
+Theorem extreal_pow:
    (!x :extreal. x pow 0 = 1) /\ !(x :extreal) n. x pow SUC n = x * x pow n
 Proof
     rw [] >> Cases_on ‘x’
@@ -2577,7 +2577,7 @@ Proof
  >> PROVE_TAC []
 QED
 
-Theorem zero_pow : (* POW_0 *)
+Theorem zero_pow: (* POW_0 *)
     !n. 0 < n ==> (extreal_pow 0 n = 0)
 Proof
     rw[extreal_of_num_def, extreal_pow_def]
@@ -2595,7 +2595,7 @@ Proof
   rw[extreal_of_num_def, extreal_pow_def, POW_ONE]
 QED
 
-Theorem pow_2 :
+Theorem pow_2:
     !x. x pow 2 = x * x
 Proof
     Cases >> RW_TAC std_ss [extreal_pow_def, extreal_mul_def, POW_2]
@@ -2616,7 +2616,7 @@ Proof
  >> METIS_TAC [POW_ZERO]
 QED
 
-Theorem le_pow2 :
+Theorem le_pow2:
     !x. 0 <= x pow 2
 Proof
     Cases
@@ -2631,14 +2631,14 @@ Proof
  >> fs [GSYM extreal_lt_def, abs_neg, pow_2, neg_mul2]
 QED
 
-Theorem pow_2_abs :
+Theorem pow_2_abs:
     !x. x pow 2 = abs x * abs x
 Proof
     RW_TAC std_ss [Once (GSYM abs_pow2), pow_2]
 QED
 
 (* NOTE: ‘!n’ is moved to top-level *)
-Theorem pow_pos_le :
+Theorem pow_pos_le:
     !n x. 0 <= x ==> 0 <= x pow n
 Proof
     Q.X_GEN_TAC ‘n’
@@ -2648,7 +2648,7 @@ Proof
 QED
 
 (* NOTE: ‘!n’ is moved to top-level *)
-Theorem pow_pos_lt :
+Theorem pow_pos_lt:
     !n x. 0 < x ==> 0 < x pow n
 Proof
     NTAC 2 Cases
@@ -2657,7 +2657,7 @@ Proof
  >> METIS_TAC [pow, REAL_LT_01]
 QED
 
-Theorem pow_le :
+Theorem pow_le:
     !n x y. 0 <= x /\ x <= y ==> x pow n <= y pow n
 Proof
     STRIP_TAC >> NTAC 2 Cases
@@ -2665,7 +2665,7 @@ Proof
                    lt_infty, le_infty, extreal_not_infty, REAL_LE_REFL, pow]
 QED
 
-Theorem pow_lt :
+Theorem pow_lt:
     !n x y. 0 <= x /\ x < y ==> x pow SUC n < y pow SUC n
 Proof
     STRIP_TAC >> NTAC 2 Cases
@@ -2673,7 +2673,7 @@ Proof
                    lt_infty, le_infty, extreal_not_infty, extreal_lt_eq]
 QED
 
-Theorem pow_lt2 :
+Theorem pow_lt2:
     !n x y. n <> 0 /\ 0 <= x /\ x < y ==> x pow n < y pow n
 Proof
     STRIP_TAC >> NTAC 2 Cases
@@ -2681,7 +2681,7 @@ Proof
                    lt_infty, le_infty, extreal_not_infty, extreal_lt_eq]
 QED
 
-Theorem pow_le_full :
+Theorem pow_le_full:
     !n x y :extreal. n <> 0 /\ 0 <= x /\ 0 <= y ==>
                     (x <= y <=> x pow n <= y pow n)
 Proof
@@ -2693,7 +2693,7 @@ Proof
  >> METIS_TAC [let_antisym]
 QED
 
-Theorem pow_eq :
+Theorem pow_eq:
     !n x y. n <> 0 /\ 0 <= x /\ 0 <= y ==> ((x = y) <=> (x pow n = y pow n))
 Proof
     rpt STRIP_TAC
@@ -2702,7 +2702,7 @@ Proof
  >> METIS_TAC [pow_le_full]
 QED
 
-Theorem pow_le_mono :
+Theorem pow_le_mono:
     !x n m. 1 <= x /\ n <= m ==> x pow n <= x pow m
 Proof
     Cases
@@ -2722,7 +2722,7 @@ Proof
  >> RW_TAC real_ss []
 QED
 
-Theorem pow_pos_even :
+Theorem pow_pos_even:
     !x. x < 0 ==> ((0 < x pow n) <=> (EVEN n))
 Proof
     Cases
@@ -2730,7 +2730,7 @@ Proof
                    le_infty, lt_infty, extreal_lt_eq, REAL_LT_01, POW_POS_EVEN]
 QED
 
-Theorem pow_neg_odd :
+Theorem pow_neg_odd:
     !x. x < 0 ==> ((x pow n < 0) <=> (ODD n))
 Proof
     Cases
@@ -2741,7 +2741,7 @@ Proof
 QED
 
 (* antecedents added due to new definition of `extreal_add` *)
-Theorem add_pow2 :
+Theorem add_pow2:
     !x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
           ((x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y)
 Proof
@@ -2768,7 +2768,7 @@ Proof
     rw [pow_2, extreal_mul_def]
 QED
 
-Theorem add_pow2_pos : (* was: add_pow02 *)
+Theorem add_pow2_pos: (* was: add_pow02 *)
     !x y. 0 < x /\ x <> PosInf /\ 0 <= y ==>
          ((x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y)
 Proof
@@ -2790,7 +2790,7 @@ Proof
  >> ASM_SIMP_TAC real_ss [GSYM extreal_lt_eq, normal_real, GSYM extreal_of_num_def]
 QED
 
-Theorem sub_pow2 :
+Theorem sub_pow2:
     !x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
         ((x - y) pow 2 = x pow 2 + y pow 2 - 2 * x * y)
 Proof
@@ -2800,7 +2800,7 @@ Proof
  >> REWRITE_TAC [SUB_POW_2]
 QED
 
-Theorem pow_add :
+Theorem pow_add:
     !x n m. x pow (n + m) = x pow n * x pow m
 Proof
     Cases
@@ -2809,7 +2809,7 @@ Proof
  >> METIS_TAC [ADD_CLAUSES, EVEN_ADD]
 QED
 
-Theorem pow_mul :
+Theorem pow_mul:
     !n x y. (x * y) pow n = x pow n * y pow n
 Proof
     Cases >- RW_TAC std_ss [pow_0,mul_lone]
@@ -2827,14 +2827,14 @@ Proof
     RW_TAC std_ss [extreal_of_num_def, extreal_ainv_def, extreal_pow_def, POW_MINUS1]
 QED
 
-Theorem pow_not_infty :
+Theorem pow_not_infty:
     !n x. x <> NegInf /\ x <> PosInf ==> x pow n <> NegInf /\ x pow n <> PosInf
 Proof
     Cases
  >> METIS_TAC [extreal_pow_def, extreal_not_infty, extreal_cases]
 QED
 
-Theorem pow_inv : (* cf. REAL_POW_INV *)
+Theorem pow_inv: (* cf. REAL_POW_INV *)
     !n y. y <> 0 ==> inv (y pow n) = (inv y) pow n
 Proof
     rpt STRIP_TAC
@@ -2847,7 +2847,7 @@ Proof
  >> simp[extreal_inv_eq, extreal_pow_def]
 QED
 
-Theorem pow_div : (* cf. REAL_POW_DIV *)
+Theorem pow_div: (* cf. REAL_POW_DIV *)
     !n x y. x <> PosInf /\ x <> NegInf /\ 0 < y ==>
            ((x / y) pow n = x pow n / y pow n)
 Proof
@@ -2860,7 +2860,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [lt_le]
 QED
 
-Theorem pow_pow : (* cf. REAL_POW_POW *)
+Theorem pow_pow: (* cf. REAL_POW_POW *)
     !(x :extreal) m n. (x pow m) pow n = x pow (m * n)
 Proof
     rpt GEN_TAC
@@ -2878,7 +2878,7 @@ Proof
       rw [extreal_pow_def, REAL_POW_POW] ]
 QED
 
-Theorem abs_le_square_plus1 :
+Theorem abs_le_square_plus1:
     !(x :extreal). abs x <= x pow 2 + 1
 Proof
     GEN_TAC
@@ -2928,7 +2928,7 @@ Proof
  >> MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `1` >> art [le_01]
 QED
 
-Theorem abs_pow_le_mono :
+Theorem abs_pow_le_mono:
     !(x :extreal) n m. n <= m ==> (abs x) pow n <= 1 + (abs x) pow m
 Proof
     rpt STRIP_TAC
@@ -2963,7 +2963,7 @@ Proof
 QED
 
 (* This result is needed for proving Cauchy-Schwarz inequality *)
-Theorem abs_le_half_pow2 :
+Theorem abs_le_half_pow2:
     !x y :extreal. abs (x * y) <= Normal (1 / 2) * (x pow 2 + y pow 2)
 Proof
     NTAC 2 Cases
@@ -2976,14 +2976,14 @@ QED
 (*         SQRT                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem sqrt_pos_le :
+Theorem sqrt_pos_le:
     !x. 0 <= x ==> 0 <= sqrt x
 Proof
     Cases
  >> RW_TAC std_ss [extreal_sqrt_def, extreal_of_num_def, extreal_le_def, SQRT_POS_LE]
 QED
 
-Theorem sqrt_pos_lt :
+Theorem sqrt_pos_lt:
     !x. 0 < x ==> 0 < sqrt x
 Proof
     Cases
@@ -2991,7 +2991,7 @@ Proof
                    extreal_lt_eq, lt_infty, SQRT_POS_LT]
 QED
 
-Theorem sqrt_pos_ne :
+Theorem sqrt_pos_ne:
     !x. 0 < x ==> sqrt x <> 0
 Proof
     Q.X_GEN_TAC ‘x’
@@ -3000,7 +3000,7 @@ Proof
  >> MATCH_MP_TAC lt_imp_ne >> art []
 QED
 
-Theorem pow2_sqrt :
+Theorem pow2_sqrt:
     !x. 0 <= x ==> (sqrt (x pow 2) = x)
 Proof
     Cases
@@ -3008,19 +3008,19 @@ Proof
                     extreal_le_def]
 QED
 
-Theorem sqrt_0 :
+Theorem sqrt_0:
     sqrt 0 = 0
 Proof
     rw [extreal_of_num_def, extreal_sqrt_def, SQRT_0]
 QED
 
-Theorem sqrt_1 :
+Theorem sqrt_1:
     sqrt 1 = 1
 Proof
     rw [extreal_of_num_def, extreal_sqrt_def, SQRT_1]
 QED
 
-Theorem sqrt_pow2 :
+Theorem sqrt_pow2:
     !x. ((sqrt x) pow 2 = x) <=> 0 <= x
 Proof
     Cases
@@ -3029,7 +3029,7 @@ Proof
  >> METIS_TAC [le_pow2, lt_infty, extreal_of_num_def, extreal_not_infty, lte_trans]
 QED
 
-Theorem sqrt_mono_le :
+Theorem sqrt_mono_le:
     !x y. 0 <= x /\ x <= y ==> sqrt x <= sqrt y
 Proof
     NTAC 2 Cases
@@ -3037,7 +3037,7 @@ Proof
                     extreal_of_num_def, extreal_le_def, le_infty, extreal_not_infty]
 QED
 
-Theorem pow2_le_eq :
+Theorem pow2_le_eq:
     !x y. 0 <= x /\ 0 <= y ==> (x <= y <=> x pow 2 <= y pow 2)
 Proof
     rpt STRIP_TAC
@@ -3047,7 +3047,7 @@ Proof
  >> METIS_TAC [GSYM pow2_sqrt]
 QED
 
-Theorem sqrt_le_x :
+Theorem sqrt_le_x:
     !(x :extreal). 1 <= x ==> sqrt x <= x
 Proof
     rpt STRIP_TAC
@@ -3063,7 +3063,7 @@ Proof
 QED
 
 (* In sqrt_le_x, if ‘x’ is an integer then ‘1 <= x’ can be dropped. *)
-Theorem sqrt_le_n :
+Theorem sqrt_le_n:
     !n. sqrt (&n :extreal) <= &n
 Proof
     Q.X_GEN_TAC ‘n’
@@ -3072,7 +3072,7 @@ Proof
  >> rw [extreal_of_num_def, extreal_le_eq]
 QED
 
-Theorem sqrt_mul :
+Theorem sqrt_mul:
     !x y. 0 <= x /\ 0 <= y ==> sqrt (x * y) = sqrt x * sqrt y
 Proof
     rpt STRIP_TAC
@@ -3143,7 +3143,7 @@ Proof
                     GSYM real_lt, extreal_mul_def, REAL_INV_1OVER]
 QED
 
-Theorem half_cancel :
+Theorem half_cancel:
     2 * (1 / 2) = 1
 Proof
     RW_TAC real_ss [extreal_of_num_def, extreal_mul_def, extreal_div_eq,
@@ -3151,7 +3151,7 @@ Proof
 QED
 
 (* cf. realTheory.REAL_HALF_DOUBLE *)
-Theorem half_double :
+Theorem half_double:
     !x :extreal. x / 2 + x / 2 = x
 Proof
    ‘0 < (2 :real)’ by rw []
@@ -3163,7 +3163,7 @@ Proof
 QED
 
 (* cf. seqTheory.X_HALF_HALF *)
-Theorem x_half_half :
+Theorem x_half_half:
     !x :extreal. 1 / 2 * x + 1 / 2 * x = x
 Proof
     STRIP_ASSUME_TAC half_between
@@ -3175,14 +3175,14 @@ Proof
  >> MATCH_MP_TAC (GSYM add_rdistrib) >> rw []
 QED
 
-Theorem third_cancel :
+Theorem third_cancel:
     3 * (1 / 3) = 1
 Proof
     RW_TAC real_ss [extreal_of_num_def, extreal_mul_def, extreal_div_eq,
                     EVAL ``3 <> 0:real``, REAL_MUL_RINV, real_div]
 QED
 
-Theorem fourth_cancel :
+Theorem fourth_cancel:
     4 * (1 / 4) = 1
 Proof
     RW_TAC real_ss [extreal_of_num_def, extreal_mul_def, extreal_div_eq,
@@ -3193,86 +3193,86 @@ QED
 (*   Minimum and maximum                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem min_le :
+Theorem min_le:
     !z x y. min x y <= z <=> x <= z \/ y <= z
 Proof
     RW_TAC std_ss [extreal_min_def]
  >> PROVE_TAC [le_total, le_trans]
 QED
 
-Theorem min_le1 :
+Theorem min_le1:
     !x y. min x y <= x
 Proof
     PROVE_TAC [min_le, le_refl]
 QED
 
-Theorem min_le2 :
+Theorem min_le2:
     !x y. min x y <= y
 Proof
     PROVE_TAC [min_le, le_refl]
 QED
 
-Theorem le_min :
+Theorem le_min:
     !z x y. z <= min x y <=> z <= x /\ z <= y
 Proof
     RW_TAC std_ss [extreal_min_def]
  >> PROVE_TAC [le_total, le_trans]
 QED
 
-Theorem min_le2_imp :
+Theorem min_le2_imp:
     !x1 x2 y1 y2. x1 <= y1 /\ x2 <= y2 ==> min x1 x2 <= min y1 y2
 Proof
     RW_TAC std_ss [le_min]
  >> RW_TAC std_ss [min_le]
 QED
 
-Theorem min_refl :
+Theorem min_refl:
     !x. min x x = x
 Proof
     RW_TAC std_ss [extreal_min_def, le_refl]
 QED
 
-Theorem min_comm :
+Theorem min_comm:
     !x y. min x y = min y x
 Proof
     RW_TAC std_ss [extreal_min_def]
  >> PROVE_TAC [le_antisym, le_total]
 QED
 
-Theorem min_infty :
+Theorem min_infty:
     !x. (min x PosInf = x) /\ (min PosInf x = x) /\
         (min NegInf x = NegInf) /\ (min x NegInf = NegInf)
 Proof
     RW_TAC std_ss [extreal_min_def, le_infty]
 QED
 
-Theorem le_max :
+Theorem le_max:
     !z x y. z <= max x y <=> z <= x \/ z <= y
 Proof
     RW_TAC std_ss [extreal_max_def]
  >> PROVE_TAC [le_total, le_trans]
 QED
 
-Theorem le_max1 :
+Theorem le_max1:
     !x y. x <= max x y
 Proof
     PROVE_TAC [le_max, le_refl]
 QED
 
-Theorem le_max2 :
+Theorem le_max2:
     !x y. y <= max x y
 Proof
     PROVE_TAC [le_max, le_refl]
 QED
 
-Theorem max_le :
+Theorem max_le:
     !z x y. max x y <= z <=> x <= z /\ y <= z
 Proof
     RW_TAC std_ss [extreal_max_def]
  >> PROVE_TAC [le_total, le_trans]
 QED
 
-Theorem max_le2_imp :
+Theorem max_le2_imp:
     !x1 x2 y1 y2. x1 <= y1 /\ x2 <= y2 ==> max x1 x2 <= max y1 y2
 Proof
     RW_TAC std_ss [max_le]
@@ -3280,7 +3280,7 @@ Proof
 QED
 
 (* cf. REAL_LT_MAX *)
-Theorem lt_max :
+Theorem lt_max:
     !x y z :extreal. x < max y z <=> x < y \/ x < z
 Proof
     rw [extreal_lt_def]
@@ -3293,7 +3293,7 @@ Proof
     RW_TAC std_ss [extreal_max_def, le_refl]
 QED
 
-Theorem max_comm :
+Theorem max_comm:
     !x y. max x y = max y x
 Proof
     RW_TAC std_ss [extreal_max_def]
@@ -3307,19 +3307,19 @@ Proof
     RW_TAC std_ss [extreal_max_def, le_infty]
 QED
 
-Theorem max_reduce :
+Theorem max_reduce:
     !x y :extreal. x <= y \/ x < y ==> (max x y = y) /\ (max y x = y)
 Proof
     PROVE_TAC [lt_imp_le, extreal_max_def, max_comm]
 QED
 
-Theorem min_reduce :
+Theorem min_reduce:
     !x y :extreal. x <= y \/ x < y ==> (min x y = x) /\ (min y x = x)
 Proof
     PROVE_TAC [lt_imp_le, extreal_min_def, min_comm]
 QED
 
-Theorem lt_max_between :
+Theorem lt_max_between:
     !x b d. x < max b d /\ b <= x ==> x < d
 Proof
     RW_TAC std_ss [extreal_max_def]
@@ -3327,14 +3327,14 @@ Proof
  >> PROVE_TAC [let_antisym]
 QED
 
-Theorem min_le_between :
+Theorem min_le_between:
     !x a c. min a c <= x /\ x < a ==> c <= x
 Proof
     RW_TAC std_ss [extreal_min_def]
  >> PROVE_TAC [let_antisym]
 QED
 
-Theorem abs_max :
+Theorem abs_max:
     !x :extreal. abs x = max x (-x)
 Proof
     GEN_TAC >> `0 <= x \/ x < 0` by PROVE_TAC [let_total]
@@ -3356,7 +3356,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* This is proved by REAL_MEAN, SIMP_REAL_ARCH and SIMP_REAL_ARCH_NEG *)
-Theorem extreal_mean :
+Theorem extreal_mean:
     !x y :extreal. x < y ==> ?z. x < z /\ z < y
 Proof
     rpt STRIP_TAC
@@ -3384,7 +3384,7 @@ Proof
  >> Q.EXISTS_TAC `Normal z` >> art [extreal_lt_eq]
 QED
 
-Theorem EXTREAL_ARCH :
+Theorem EXTREAL_ARCH:
     !x. 0 < x ==> !y. y <> PosInf ==> ?n. y < &n * x
 Proof
     Cases
@@ -3404,7 +3404,7 @@ Proof
       RW_TAC real_ss [extreal_lt_eq, REAL_LE_MUL, extreal_of_num_def, extreal_mul_def] ]
 QED
 
-Theorem SIMP_EXTREAL_ARCH :
+Theorem SIMP_EXTREAL_ARCH:
     !x. x <> PosInf ==> ?n. x <= &n
 Proof
     Cases
@@ -3414,7 +3414,7 @@ Proof
  >> RW_TAC real_ss [extreal_of_num_def,extreal_le_def]
 QED
 
-Theorem SIMP_EXTREAL_ARCH_NEG :
+Theorem SIMP_EXTREAL_ARCH_NEG:
     !x. x <> NegInf ==> ?n. - &n <= x
 Proof
     Cases
@@ -3424,7 +3424,7 @@ Proof
  >> RW_TAC real_ss [extreal_of_num_def, extreal_le_eq, extreal_ainv_def]
 QED
 
-Theorem EXTREAL_ARCH_INV :
+Theorem EXTREAL_ARCH_INV:
     !(x :extreal). 0 < x ==> ?n. inv (&SUC n) < x
 Proof
     rpt STRIP_TAC

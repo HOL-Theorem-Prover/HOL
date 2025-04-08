@@ -1088,7 +1088,7 @@ val i_reduces_to_LAMl = prove(
 
 val _ = augment_srw_ss [rewrites [size_vsubst, size_ISUB]]
 
-Theorem FRESH_lists :
+Theorem FRESH_lists:
     !n s : string set.
        FINITE s ==> ?l'. ALL_DISTINCT l' /\ DISJOINT (LIST_TO_SET l') s /\
                          (LENGTH l' = n)
@@ -1668,7 +1668,7 @@ val standard_reduction_under_LAMl = prove(
    NOTE: both this theorem and the next Corollary 11.4.8 are proved by Lemma
    11.4.6 (Main Lemma).
  *)
-Theorem standardisation_theorem :
+Theorem standardisation_theorem:
     !M N. reduction beta M N ==>
           ?s. (first s = M) /\ finite s /\ (last s = N) /\
               standard_reduction s
@@ -1765,7 +1765,7 @@ val hnf_reflected_over_ireduction = store_thm(
   METIS_TAC [lemma11_4_3ii]);
 
 (* Corollary 11.4.8 [1, p.299] (also Theorem 8.3.11 [1, p.174]) *)
-Theorem corollary11_4_8 :
+Theorem corollary11_4_8:
     !M. has_hnf M = finite (head_reduction_path M)
 Proof
   GEN_TAC THEN EQ_TAC THENL [
@@ -1841,7 +1841,7 @@ Proof
 QED
 
 (* Proposition 8.3.13 (ii) [1, p.174] *)
-Theorem has_hnf_SUB_E :
+Theorem has_hnf_SUB_E:
     !M N z. has_hnf ([N/z] M) ==> has_hnf M
 Proof
     rpt STRIP_TAC
@@ -1871,7 +1871,7 @@ QED
 
    |- unsolvable M ==> unsolvable (M ISUB ss)
  *)
-Theorem has_hnf_ISUB_E :
+Theorem has_hnf_ISUB_E:
     !M ss. has_hnf (M ISUB ss) ==> has_hnf M
 Proof
     rpt STRIP_TAC
@@ -1898,7 +1898,7 @@ Proof
 QED
 
 (* additionally, each list element has hnf: ‘EVERY has_hnf l’ *)
-Theorem finite_head_reduction_path_to_list_every_has_hnf :
+Theorem finite_head_reduction_path_to_list_every_has_hnf:
     !M. finite (head_reduction_path M) <=>
         ?l. l <> [] /\ (HD l = M) /\ hnf (LAST l) /\ EVERY has_hnf l /\
             !i. SUC i < LENGTH l ==> EL i l -h-> EL (SUC i) l
@@ -1918,7 +1918,7 @@ Proof
 QED
 
 (* alternatively, the list is incomplete but the last element has hnf *)
-Theorem finite_head_reduction_path_to_list_last_has_hnf :
+Theorem finite_head_reduction_path_to_list_last_has_hnf:
     !M. finite (head_reduction_path M) <=>
         ?l. l <> [] /\ (HD l = M) /\ has_hnf (LAST l) /\
             !i. SUC i < LENGTH l ==> EL i l -h-> EL (SUC i) l
@@ -1971,7 +1971,7 @@ Proof
 QED
 
 (* Proposition 8.3.13 (iii) [1, p.174], cf. has_whnf_APP_E *)
-Theorem has_hnf_APP_E :
+Theorem has_hnf_APP_E:
     has_hnf (M @@ N) ==> has_hnf M
 Proof
     rpt STRIP_TAC

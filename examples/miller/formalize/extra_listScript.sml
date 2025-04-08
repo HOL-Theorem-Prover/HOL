@@ -230,7 +230,7 @@ val LIST_COMBS = Define
   `(LIST_COMBS [] _ = []) /\
    (LIST_COMBS (x::xs) l = (MAP (\y. (x, y)) l) ++ (LIST_COMBS xs l))`;
 
-Theorem MEM_LIST_COMBS :
+Theorem MEM_LIST_COMBS:
     !l l' x. MEM x (LIST_COMBS l l') <=> (MEM (FST x) l /\ MEM (SND x) l')
 Proof
     Induct
@@ -240,7 +240,7 @@ Proof
  >> DECIDE_TAC
 QED
 
-Theorem LENGTH_LIST_COMBS :
+Theorem LENGTH_LIST_COMBS:
     !x y. LENGTH (LIST_COMBS x y) = LENGTH x * LENGTH y
 Proof
     Induct
@@ -252,14 +252,14 @@ Proof
  >> RW_TAC arith_ss [GSYM RIGHT_ADD_DISTRIB, ADD1]
 QED
 
-Theorem LIST_COMBS_EQ_NIL :
+Theorem LIST_COMBS_EQ_NIL:
     !x y. (LIST_COMBS x y = []) <=> ((x = []) \/ (y = []))
 Proof
     Induct >> RW_TAC list_ss [LIST_COMBS]
  >> DECIDE_TAC
 QED
 
-Theorem ALL_DISTINCT_APPEND :
+Theorem ALL_DISTINCT_APPEND:
     !l l'. ALL_DISTINCT l /\ ALL_DISTINCT l' /\ (!x. ~(MEM x l /\ MEM x l')) ==>
            ALL_DISTINCT (l ++ l')
 Proof
@@ -269,7 +269,7 @@ Proof
  >> METIS_TAC [APPEND, ALL_DISTINCT, MEM, MEM_APPEND]
 QED
 
-Theorem ALL_DISTINCT_MAP :
+Theorem ALL_DISTINCT_MAP:
     !l f. ALL_DISTINCT l /\ (!x y. (f x = f y) = (x = y)) ==>
           ALL_DISTINCT (MAP f l)
 Proof
@@ -277,7 +277,7 @@ Proof
  >> RW_TAC std_ss [MAP, ALL_DISTINCT, MEM_MAP]
 QED
 
-Theorem ALL_DISTINCT_MAP2 :
+Theorem ALL_DISTINCT_MAP2:
     !l f. ALL_DISTINCT l /\ (!x y. MEM x l /\ MEM y l /\ (f x = f y) ==> (x = y)) ==>
           ALL_DISTINCT (MAP f l)
 Proof
@@ -285,7 +285,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem ALL_DISTINCT_LIST_COMBS :
+Theorem ALL_DISTINCT_LIST_COMBS:
     !l l'. ALL_DISTINCT l /\ ALL_DISTINCT l' ==> ALL_DISTINCT (LIST_COMBS l l')
 Proof
     Induct

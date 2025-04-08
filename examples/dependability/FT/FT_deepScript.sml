@@ -38,7 +38,7 @@ val _ = Hol_datatype` gate = AND of gate list
 (*----------------------------------------------*)
 (*      Fault Tree  Semantic Function        *)
 (*----------------------------------------------*)
-Definition FTree_def :
+Definition FTree_def:
 
     (FTree p (atomic a)  = a) /\
     (FTree p (NOT a) =  p_space p DIFF FTree p a)/\
@@ -51,7 +51,7 @@ Definition FTree_def :
 End
 
 (*---gate list from atomic events---*)
-Definition gate_list_def :
+Definition gate_list_def:
 
     (gate_list [] = []) /\
     (gate_list (h::t) =  atomic h::gate_list t)
@@ -61,7 +61,7 @@ End
 (*      Definitions     *)
 (* -------------------- *)
 
-Theorem AND_gate_eq_big_inter :
+Theorem AND_gate_eq_big_inter:
 !p L. FTree p (AND (gate_list L)) =
           big_inter p L
 Proof
@@ -75,7 +75,7 @@ QED
 (*              AND Gate               *)
 (*-------------------------------------*)
 
-Theorem AND_gate_thm :
+Theorem AND_gate_thm:
 !p L. prob_space p /\
           ~NULL L /\
           (!x'. MEM x' L ==> x' IN events p) /\
@@ -123,7 +123,7 @@ QED
 (*      Lemmma's                      *)
 (*------------------------------------*)
 
-Theorem OR_gate_lem1 :
+Theorem OR_gate_lem1:
 !p L. prob_space p /\
            (!x'. MEM x' L ==> x'  IN  events p) ==>
            (one_minus_list (list_prob p L) =
@@ -139,27 +139,27 @@ RW_TAC std_ss[]
 QED
 
 (*-------OR_gate_lem2---------*)
-Theorem OR_gate_lem2 :
+Theorem OR_gate_lem2:
 !L1 (L2:('a ->bool)list) Q. (LENGTH (L1 ++ ((Q::L2))) = LENGTH ((Q::L1) ++ (L2)))
 Proof
 RW_TAC list_ss[LENGTH_APPEND]
 QED
 (*-------OR_gate_lem3---------*)
-Theorem OR_gate_lem3 :
+Theorem OR_gate_lem3:
 !A B C D. A INTER B INTER C INTER D = (B INTER C) INTER D INTER A
 Proof
 SRW_TAC[][IN_INTER,EXTENSION,GSPECIFICATION]
 THEN METIS_TAC[]
 QED
 (*--------------OR_gate_lem4---------*)
-Theorem OR_gate_lem4 :
+Theorem OR_gate_lem4:
 !p A C. A INTER (p_space p DIFF C) = (A INTER p_space p DIFF (A INTER C))
 Proof
 SRW_TAC[][IN_INTER,EXTENSION,GSPECIFICATION]
 THEN METIS_TAC[]
 QED
 (*--------------OR_gate_lem5---------*)
-Theorem OR_gate_lem5 :
+Theorem OR_gate_lem5:
 !m (L:('a ->bool)list) x. MEM x (TAKE m L) ==> MEM x L
 Proof
 Induct
@@ -174,14 +174,14 @@ THEN POP_ASSUM (MP_TAC o Q.SPEC `L`)
 THEN RW_TAC std_ss[]
 QED
 (*-------------OR_gate_lem6----------------*)
-Theorem OR_gate_lem6 :
+Theorem OR_gate_lem6:
 !A C. A INTER (p_space p DIFF C) = (A INTER p_space p DIFF (A INTER C))
 Proof
 SRW_TAC[][IN_INTER,EXTENSION,GSPECIFICATION]
 THEN METIS_TAC[]
 QED
 (*-------------OR_gate_lem7----------------*)
-Theorem OR_gate_lem7 :
+Theorem OR_gate_lem7:
 !(L1:('a ->bool) list) p.
    prob_space p /\
    (!x. MEM x L1 ==> x IN events p) ==>
@@ -206,7 +206,7 @@ Induct
 QED
 
 (*--------------------------*)
-Theorem prob_indep_big_inter2 :
+Theorem prob_indep_big_inter2:
 !(L1:('a ->bool) list) (L2:('a ->bool) list) n p.
            prob_space p  /\ mutual_indep p (L1 ++ (L2)) /\
            (!x. MEM x (L1 ++ (L2)) ==> x IN events p ) /\
@@ -369,14 +369,14 @@ QED
 (*------------------------------------*)
 
 (*------OR_Lemma1----*)
-Theorem OR_lem1 :
+Theorem OR_lem1:
 !p s t. p_space p DIFF (s UNION t) = (p_space p DIFF s) INTER (p_space p DIFF t)
 Proof
 SRW_TAC [][EXTENSION,GSPECIFICATION]
 >> METIS_TAC[]
 QED
 (*----------- OR_lem2---------------*)
-Theorem OR_lem2 :
+Theorem OR_lem2:
 !p  (L:('a  -> bool) list).  prob_space p /\ (!x. MEM x L ==> x IN  events p)  ==>
          ( FTree p (AND (gate_list (compl_list p L))) = p_space p DIFF (FTree p ( OR (gate_list L)) ))
 Proof
@@ -392,7 +392,7 @@ GEN_TAC
 >> RW_TAC std_ss[OR_lem1]
 QED
 (*------------OR_lem3-------------*)
-Theorem OR_lem3 :
+Theorem OR_lem3:
 !L p. (!x. MEM x L ==> x IN events p) /\
 prob_space p ==>
   (FTree p (OR (gate_list L)) IN events p)
@@ -407,7 +407,7 @@ RW_TAC std_ss[]
 >> FULL_SIMP_TAC list_ss[]
 QED
 (*----------------OR_lem4----------------------*)
-Theorem OR_lem4 :
+Theorem OR_lem4:
 !p L. (!x. MEM x L ==> x IN events p) /\
       prob_space p /\
       ((FTree p (OR (gate_list L))) IN events p) ==>
@@ -430,7 +430,7 @@ GEN_TAC
 >> FULL_SIMP_TAC std_ss[OR_lem3]
 QED
 (*----------------OR_lem5----------------------*)
-Theorem OR_lem5 :
+Theorem OR_lem5:
 !p L. FTree p (AND (gate_list L)) = big_inter p L
 Proof
  RW_TAC std_ss[]
@@ -441,7 +441,7 @@ QED
 
 (*-----------------OR_lem6---------------------*)
 
-Theorem OR_lem6 :
+Theorem OR_lem6:
 !p x L.  prob_space p /\ (!x'. MEM x' L ==> x' IN events p) ==>
         (prob p (FTree p (OR (gate_list L))) =
         1 - prob p (FTree p (AND (gate_list (compl_list p ( L))))))
@@ -466,7 +466,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[DIFF_DIFF_SUBSET]
 QED
 (*--------------OR_lem7----------------------*)
-Theorem OR_lem7 :
+Theorem OR_lem7:
 !p (L). prob_space p /\ (!x'. MEM x' L ==> x'  IN  events p ) ==>
         (one_minus_list (list_prob p L) = list_prob p ( compl_list p L))
 Proof
@@ -482,7 +482,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[GSYM compl_list_def]
 QED
 (*------------------------------------*)
-Theorem OR_lem8 :
+Theorem OR_lem8:
  !L. one_minus_list L =  MAP (\a. 1 - a) L
 Proof
 Induct
@@ -491,7 +491,7 @@ QED
 (*------------------------------------*)
 (*-----------OR_gate_thm------*)
 (*------------------------------------*)
-Theorem OR_gate_thm :
+Theorem OR_gate_thm:
 !p L . ~NULL L /\ (!x'. MEM x' L ==> x' IN events p) /\ prob_space p  /\ mutual_indep p L  ==>
       (prob p (FTree p (OR (gate_list L))) =
        1 -  list_prod (one_minus_list (list_prob p L)))
@@ -518,7 +518,7 @@ QED
 (*  NAND Fault Tree Gate      *)
 (*----------------------------*)
 (*-------AND_gate_append----*)
-Theorem AND_gate_append :
+Theorem AND_gate_append:
 !p h L1. prob_space p /\ (!x. MEM x (h++L1) ==> x IN events p) ==>
             (FTree p (AND (gate_list h)) INTER
               FTree p (AND (gate_list L1)) =
@@ -542,7 +542,7 @@ REPEAT GEN_TAC
 QED
 
 (*----------------------------*)
-Theorem NAND_eq_big_inter_alt_form :
+Theorem NAND_eq_big_inter_alt_form:
 !p L1 L2. (prob_space p ∧ ∀x. MEM x (compl_list p L1 ++ L2) ⇒ x ∈ events p) ==>
                         ((big_inter p (compl_list p L1) ∩ big_inter p L2) =
                         (FTree p (AND (gate_list (compl_list p L1 ++ L2)))))
@@ -555,7 +555,7 @@ QED
 
 
 (*---------------------------*)
-Theorem NAND_FT_gate :
+Theorem NAND_FT_gate:
 !p L1 L2.
        prob_space p /\
        (1 ≤ LENGTH (L1 ++ L2)) /\
@@ -580,12 +580,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 (*                 NOR_FT gate Theorem     *)
 (* ------------------------------------------------------------------------- *)
-Definition NOR_FT_gate_def :
+Definition NOR_FT_gate_def:
 NOR_FT_gate p L = (p_space p DIFF FTree p (OR (gate_list L)))
 End
 
 (*-------------------*)
-Theorem NOR_gate_thm :
+Theorem NOR_gate_thm:
 !p L . ~NULL L /\ (!x'. MEM x' L ==> x' IN events p) /\ prob_space p  /\ mutual_indep p L  ==>
        (prob p (NOR_FT_gate p L) =
        list_prod (one_minus_list (list_prob p L)))
@@ -601,28 +601,28 @@ QED
 
 (*----------------------------------------------------*)
 (*---------------------xor_gate_temp1-----------------------------------*)
-Theorem xor_gate_temp1 :
+Theorem xor_gate_temp1:
 !A B. ((COMPL A INTER B) UNION (COMPL B INTER A)) = (A DIFF B) UNION (B DIFF A)
 Proof
 SRW_TAC[][COMPL_DEF,EXTENSION,GSPECIFICATION]
 >> METIS_TAC[]
 QED
 (*----------------------- xor_gate_temp2---------------------------------*)
-Theorem xor_gate_temp2 :
+Theorem xor_gate_temp2:
 !A B . A DIFF B = A DIFF (A INTER B)
 Proof
 SRW_TAC[][COMPL_DEF,EXTENSION,GSPECIFICATION]
 >> METIS_TAC[]
 QED
 (*----------------------PROB_COMPL_SUBSET----------------------------------*)
-Theorem PROB_COMPL_SUBSET :
+Theorem PROB_COMPL_SUBSET:
 !p s t. prob_space p /\ s IN events p /\ t IN events p /\ t SUBSET s ==>
         (prob p (s DIFF t) = prob p s - prob p t)
 Proof
 METIS_TAC [MEASURE_COMPL_SUBSET,prob_space_def,events_def,prob_def,p_space_def]
 QED
 (*--------------------PROB_XOR_GATE------------------------------------*)
-Theorem PROB_XOR_GATE :
+Theorem PROB_XOR_GATE:
 !A B p .  prob_space p /\ A IN events p /\ B IN events p ==>
           (prob p  ((COMPL A INTER B) UNION (COMPL B INTER A)) = prob p A + prob p B - 2 *prob p (A INTER B))
 Proof
@@ -648,7 +648,7 @@ RW_TAC std_ss[xor_gate_temp1]
 >> REAL_ARITH_TAC
 QED
 (*-----prob_compl_A_INTER_B-----------------*)
-Theorem prob_compl_A_INTER_B :
+Theorem prob_compl_A_INTER_B:
 !a b p. prob_space p ∧ a ∈ events p ∧ b ∈ events p ⇒
      (prob p (compl_pspace p a ∩ b) = prob p b - prob p (a ∩ b))
 Proof
@@ -659,7 +659,7 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[prob_B]
 QED
 (*-----compl_event_nevent_empty-----------------*)
-Theorem compl_event_nevent_empty :
+Theorem compl_event_nevent_empty:
 !p A. compl_pspace p A INTER A = EMPTY
 Proof
 RW_TAC std_ss[compl_pspace_def]
@@ -668,7 +668,7 @@ RW_TAC std_ss[compl_pspace_def]
 QED
 
 (*--------------------PROB_XOR_GATE1------------------------------------*)
-Theorem PROB_XOR_GATE1 :
+Theorem PROB_XOR_GATE1:
 !A B p .  prob_space p /\ A IN events p /\ B IN events p ==>
 (prob p  (((p_space p DIFF A) INTER B) UNION ((p_space p DIFF B) INTER A)) =
 prob p A + prob p B - 2 *prob p (A INTER B))
@@ -695,7 +695,7 @@ RW_TAC std_ss[]
 >> REAL_ARITH_TAC
 QED
 
-Definition XOR_FT_gate_def :
+Definition XOR_FT_gate_def:
    XOR_FT_gate p A B =
      FTree p (OR [AND [NOT A; B] ; AND [A;NOT B]])
 End
@@ -704,7 +704,7 @@ End
 (*    XOR Fault Tree Gate                                                     *)
 (* -------------------------------------------------------------------------- *)
 
-Theorem XOR_FT_gate_thm :
+Theorem XOR_FT_gate_thm:
 !a b p.  prob_space p /\ a IN events p /\
               b IN events p /\ indep p a b ==>
             (prob p  (XOR_FT_gate p (atomic a) (atomic b)) =
@@ -736,13 +736,13 @@ QED
 (*  Inhibit Gate                                                              *)
 (*                                                                            *)
 (******************************************************************************)
-Definition inhibit_FT_gate_def :
+Definition inhibit_FT_gate_def:
 inhibit_FT_gate p A B C =
      FTree p (AND [OR [A;B]; NOT C])
 End
 
 (*----------mutual_indep_append_sym------*)
-Theorem mutual_indep_append_sym :
+Theorem mutual_indep_append_sym:
 !L1 L p.  mutual_indep p (L1++L) ==> mutual_indep p (L++L1)
 Proof
 RW_TAC std_ss[mutual_indep_def]
@@ -762,7 +762,7 @@ RW_TAC std_ss[mutual_indep_def]
 >> FULL_SIMP_TAC std_ss[]
 QED
 
-Theorem indep_compl_event_nevents :
+Theorem indep_compl_event_nevents:
 !p A B C. prob_space p /\  A IN events p /\
               B IN events p /\ C IN events p /\
               mutual_indep p [A;B;C] ==>
@@ -803,7 +803,7 @@ RW_TAC std_ss[]
 >> REAL_ARITH_TAC
 QED
 
-Theorem inhibit_FT_gate_thm :
+Theorem inhibit_FT_gate_thm:
 !p A B C.  prob_space p /\ A IN events p /\
               B IN events p /\ C IN events p /\
               mutual_indep p [A;B;C] ==>
@@ -870,11 +870,11 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-Definition comp_FT_gate_def :
+Definition comp_FT_gate_def:
 comp_FT_gate p A B = FTree p (OR [AND [A; B]; NOT (OR [A;B])])
 End
 
-Theorem comp_FT_gate_thm :
+Theorem comp_FT_gate_thm:
 !p A B. prob_space p /\ A IN events p /\
               B IN events p /\
               indep p A B ==>
@@ -914,13 +914,13 @@ QED
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 
-Definition binomial_def :
+Definition binomial_def:
 (binomial n 0 = (1:num)) /\
         (binomial 0 (SUC k) = (0:num)) /\
         (binomial (SUC n) (SUC k) = binomial n (SUC k) + binomial n k)
 End
 
-Definition sum_set_def :
+Definition sum_set_def:
 sum_set s f =  REAL_SUM_IMAGE f s
 End
 
@@ -928,7 +928,7 @@ End
 (* Definition:         K_out_N_struct_def                                    *)
 (* ------------------------------------------------------------------------- *)
 
-Definition K_out_N_struct_def :
+Definition K_out_N_struct_def:
 K_out_N_struct p X k n =
 (BIGUNION (IMAGE (\x. PREIMAGE X {Normal (&x)} INTER p_space p)
           ({x|(k:num) <= x /\ x < SUC n})))
@@ -938,7 +938,7 @@ End
 (* SUM_0_SUM_1                                                               *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SUM_0_SUM_1 :
+Theorem SUM_0_SUM_1:
 !n f. (sum (0,SUC n) f = f (0) + sum (1,n) f )
 Proof
 Induct_on `n` THEN
@@ -947,7 +947,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 (* SUM_0_SUM_2                                                               *)
 (* ------------------------------------------------------------------------- *)
-Theorem SUM_0_SUM_2 :
+Theorem SUM_0_SUM_2:
 !n f. sum (0,SUC (SUC n)) f = f(0) + f(1)+ sum (2,n) f
 Proof
 Induct_on `n`
@@ -958,7 +958,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 (* SUM_1_SUM_2                                                               *)
 (* ------------------------------------------------------------------------- *)
-Theorem SUM_1_SUM_2 :
+Theorem SUM_1_SUM_2:
 !n f. sum (1,SUC n) f = f (1) + sum (2,n) f
 Proof
 Induct_on `n`
@@ -968,7 +968,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 (* SUM_SHIFT                                                                 *)
 (* ------------------------------------------------------------------------- *)
-Theorem SUM_SHIFT :
+Theorem SUM_SHIFT:
 !n f. sum (0, n) f = sum (1, n) (\i. f (i-1))
 Proof
 Induct_on `n` THEN RW_TAC real_ss [sum]
@@ -976,7 +976,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 (* SUM_SHIFT_P                                                               *)
 (* ------------------------------------------------------------------------- *)
-Theorem SUM_SHIFT_P :
+Theorem SUM_SHIFT_P:
 !n p f. sum (p, n) (\i. f ((i+1))) = sum (p+1, n) f
 Proof
 RW_TAC std_ss []
@@ -987,7 +987,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 (* SUM_C_EQ                                                                  *)
 (* ------------------------------------------------------------------------- *)
-Theorem SUM_C_EQ :
+Theorem SUM_C_EQ:
 !n m (c:real). sum (n,SUC m) (\i. c)= &(m + 1)*c
 Proof
 RW_TAC std_ss []
@@ -1003,7 +1003,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 (* SUM_SWITCH_SUM                                                            *)
 (* ------------------------------------------------------------------------- *)
-Theorem SUM_SWITCH_SUM :
+Theorem SUM_SWITCH_SUM:
 !f n1 n2 m1 m2.
        sum (n1,m1) (\i. sum (n2,m2)(\j. f i j)) =
        sum (n2,m2) (\j. sum (n1,m1)(\i. f i j))
@@ -1019,7 +1019,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 (*      SUM_POS_LT                                                   *)
 (* ------------------------------------------------------------------------- *)
-Theorem SUM_POS_LT :
+Theorem SUM_POS_LT:
 !f. (!n. 0 < f n) ==> (!m n. 0 < sum (m,SUC n) f)
 Proof
 RW_TAC std_ss []
@@ -1032,7 +1032,7 @@ QED
 (* ---------------------------------------------------*)
 (*      BINOMIAL_DEF1                                 *)
 (* -------------------------------------------------- *)
-Theorem BINOMIAL_DEF1 :
+Theorem BINOMIAL_DEF1:
 !n. binomial n  0 = 1
 Proof
 Cases_on `n` THEN REWRITE_TAC [binomial_def]
@@ -1040,7 +1040,7 @@ QED
 (* -------------------------------------------------- *)
 (*      BINOMIAL_DEF2                                 *)
 (* -------------------------------------------------- *)
-Theorem BINOMIAL_DEF2 :
+Theorem BINOMIAL_DEF2:
 !n k. n < k ==> (binomial n k = 0)
 Proof
 Induct_on `n`
@@ -1054,7 +1054,7 @@ QED
 (* -------------------------------------------------- *)
 (*      BINOMIAL_DEF3                                 *)
 (* -------------------------------------------------- *)
-Theorem BINOMIAL_DEF3 :
+Theorem BINOMIAL_DEF3:
 !n. (binomial n n = 1)
 Proof
 Induct_on `n` THEN
@@ -1064,7 +1064,7 @@ QED
 (* -------------------------------------------------- *)
 (*      BINOMIAL_DEF4                                 *)
 (* -------------------------------------------------- *)
-Theorem BINOMIAL_DEF4 :
+Theorem BINOMIAL_DEF4:
 !n k. (binomial (SUC n) (SUC k) =
            binomial n (SUC k) + binomial n k)
 Proof
@@ -1073,7 +1073,7 @@ QED
 (* -------------------------------------------------- *)
 (*      BINOMIAL_DEF5                                 *)
 (* -------------------------------------------------- *)
-Theorem BINOMIAL_DEF5 :
+Theorem BINOMIAL_DEF5:
 !n k. k <= n ==> (binomial n k <> 0)
 Proof
 Induct_on `n`
@@ -1089,7 +1089,7 @@ QED
 (* -------------------------------------------------- *)
 (*      BINOMIAL_FACT                                 *)
 (* -------------------------------------------------- *)
-Theorem BINOMIAL_FACT :
+Theorem BINOMIAL_FACT:
 !a b. binomial (a+b) b * (FACT a * FACT b) = FACT (a+b)
 Proof
 Induct_on `b`
@@ -1118,7 +1118,7 @@ QED
 (* --------------------------------------------------- *)
 (*      BINOMIAL_DEF6                                  *)
 (* --------------------------------------------------- *)
-Theorem BINOMIAL_DEF6 :
+Theorem BINOMIAL_DEF6:
 !n. (binomial (SUC n) 1 = SUC n)
 Proof
 RW_TAC std_ss []
@@ -1136,7 +1136,7 @@ QED
 (* --------------------------------------------------- *)
 (*      BINOMIAL_DEF7                                  *)
 (* --------------------------------------------------- *)
-Theorem BINOMIAL_DEF7 :
+Theorem BINOMIAL_DEF7:
 !n k. 0 <= binomial n k
 Proof
 Induct_on `n`
@@ -1147,7 +1147,7 @@ QED
 (* --------------------------------------------------------- *)
 (*      EXP_PASCAL_REAL                                      *)
 (* --------------------------------------------------------- *)
-Theorem EXP_PASCAL_REAL :
+Theorem EXP_PASCAL_REAL:
 !(a:real) (b:real) n.
 ((a + b) pow n = REAL_SUM_IMAGE (\x. &(binomial n x) * a pow (n - x) * b pow x) (count (SUC n)))
 Proof
@@ -1259,7 +1259,7 @@ QED
 (* ---------------------------------------------------------- *)
 (*      EXP_PASCAL_REAL1                                      *)
 (* ---------------------------------------------------------- *)
-Theorem EXP_PASCAL_REAL1 :
+Theorem EXP_PASCAL_REAL1:
 !(a:real) (b:real) n.
 ((a + b) pow n =
  sum_set (count (SUC n))  (\x. &(binomial n x) * a pow (n - x) * b pow x))
@@ -1267,7 +1267,7 @@ Proof
 RW_TAC std_ss[sum_set_def,EXP_PASCAL_REAL]
 QED
 
-Theorem num_neq :
+Theorem num_neq:
 !a b:num.  (a ≠ b) = (a < b \/ b < a)
 Proof
 RW_TAC std_ss []
@@ -1277,7 +1277,7 @@ RW_TAC std_ss []
 >> RW_TAC arith_ss[]
 QED
 (*------------------disj_thm---------------------------------*)
-Theorem disj_thm :
+Theorem disj_thm:
 !X (m:num) (n:num).(m <> n)==>  DISJOINT ((PREIMAGE X {Normal &m} INTER p_space p) ) ((PREIMAGE X {Normal &n} INTER p_space p) )
 Proof
 RW_TAC std_ss [DISJOINT_ALT]
@@ -1287,7 +1287,7 @@ RW_TAC std_ss [DISJOINT_ALT]
 QED
 
 (*--------------k_out_n_lemma1--------------------------*)
-Theorem k_out_n_lemma1 :
+Theorem k_out_n_lemma1:
 !p s n k.
        prob_space p /\
        ((\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN ((count n) -> events p)) ==>
@@ -1299,14 +1299,14 @@ FULL_SIMP_TAC real_ss [IN_IMAGE,IN_FUNSET,IN_COUNT]
 >> FULL_SIMP_TAC real_ss [IN_IMAGE,IN_FUNSET,IN_COUNT]
 QED
 (*------------------k_out_n_lemma2---------------------*)
-Theorem k_out_n_lemma2 :
+Theorem k_out_n_lemma2:
 !k n:num.
        {x |  k<= x /\ x < n} = {x |  k<= x } INTER {x |x < n}
 Proof
 SRW_TAC[][EXTENSION,GSPECIFICATION,IN_INSERT]
 QED
 (*----------------------k_out_ntemp1-------------------*)
-Theorem k_out_ntemp1 :
+Theorem k_out_ntemp1:
 !k n:num.
        n INSERT {x |  k <= x /\ x < n} =
        n INSERT {x | x < n /\  k <= x }
@@ -1315,14 +1315,14 @@ SRW_TAC[][EXTENSION,GSPECIFICATION,IN_INSERT]
 >> METIS_TAC[]
 QED
 (*--------------------------k_out_n_temp2--------------*)
-Theorem k_out_n_temp2 :
+Theorem k_out_n_temp2:
 !k n:num.
        {x | x < n /\ k <= x} = {x |x < n} INTER {x | k <= x}
 Proof
 SRW_TAC[][EXTENSION,GSPECIFICATION,IN_INSERT]
 QED
 (*-------------------------------------------------------*)
-(*Theorem k_out_n_temp1 :
+(*Theorem k_out_n_temp1:
 !k n:num.  {x |  k <= x /\ x < (SUC n)}  = n INSERT  {x | k <= x /\ x < n}
 Proof
 RW_TAC std_ss[k_out_ntemp1]
@@ -1351,7 +1351,7 @@ drop(
 QED
 *)
 (*---------------------k_out_n_lemma3---------------------*)
-Theorem k_out_n_lemma3 :
+Theorem k_out_n_lemma3:
 !k n:num. FINITE {x | k <= x /\ x < n}
 Proof
 GEN_TAC
@@ -1363,7 +1363,7 @@ GEN_TAC
 >> RW_TAC std_ss[FINITE_COUNT]
 QED
 (*------------------k_out_n_lemma4------------------------*)
-Theorem k_out_n_lemma4 :
+Theorem k_out_n_lemma4:
 !k (n:num). (k < n) ==>  (({x | k <= x /\ x < n} UNION count k) = count n)
 Proof
 SRW_TAC[][EXTENSION,IN_COUNT,GSPECIFICATION,IN_UNION]
@@ -1372,7 +1372,7 @@ SRW_TAC[][EXTENSION,IN_COUNT,GSPECIFICATION,IN_UNION]
 >> RW_TAC arith_ss[]
 QED
 (*---------------------k_out_n_temp5---------------------*)
-Theorem k_out_n_temp5 :
+Theorem k_out_n_temp5:
 !p n k X.
        prob_space p /\
        (k < (SUC n)) /\
@@ -1437,7 +1437,7 @@ prob p (BIGUNION (IMAGE (\x. PREIMAGE X {Normal &x} INTER p_space p) (count (SUC
 QED
 
 (*---------------------k_out_n_lemma5---------------------*)
-Theorem k_out_n_lemma5 :
+Theorem k_out_n_lemma5:
 !p s n k X.
        prob_space p /\ (k < n) /\ (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN ((count n) -> events p) /\
        (s = BIGUNION (IMAGE (\x. PREIMAGE X {Normal (&x)} INTER p_space p) ({x|(k:num) <= x /\ x < n}))) ==>
@@ -1452,7 +1452,7 @@ REPEAT GEN_TAC
 QED
 
 (*-------------------k_out_n_lemma6_new-----------------------*)
-Theorem k_out_n_lemma6_new :
+Theorem k_out_n_lemma6_new:
 !p s n k X pr.
        prob_space p /\ (k < SUC n) /\
        (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN
@@ -1479,7 +1479,7 @@ RW_TAC std_ss[]
 QED
 
 (*------------------k_out_n_lemma6_new1------------------------*)
-Theorem k_out_n_lemma6_new1 :
+Theorem k_out_n_lemma6_new1:
 !p s n k X pr.
        prob_space p /\ (k < SUC n) /\ (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN ((count (SUC n)) -> events p) /\
        (s = BIGUNION (IMAGE (\x. PREIMAGE X {Normal (&x)} INTER p_space p) ({x|(k:num) <= x /\ x < (SUC n)}))) /\ (!x. (distribution p X {Normal (&x)} = ((& binomial (n) x)* (pr pow x) * ((1- pr) pow ((n)-x)))))==>
@@ -1498,7 +1498,7 @@ RW_TAC std_ss []
 >> FULL_SIMP_TAC std_ss[distribution_def,o_DEF]
 QED
 (*-------------------k_out_n_lemma6-----------------------*)
-Theorem k_out_n_lemma6 :
+Theorem k_out_n_lemma6:
 !p s n k X pr.
        prob_space p /\ (k < n) /\ (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN ((count n) -> events p) /\
        (s = BIGUNION (IMAGE (\x. PREIMAGE X {Normal (&x)} INTER p_space p) ({x|(k:num) <= x /\ x < n}))) /\ (!x. (distribution p X {Normal (&x)} = ((& binomial n x)* (pr pow x) * ((1- pr) pow (n-x)))))==>
@@ -1519,7 +1519,7 @@ QED
 (*--------------------------------------------------------*)
 (*---------------------K-out_N Stucture Theorem-----------*)
 (*--------------------------------------------------------*)
-Theorem k_out_n_RBD :
+Theorem k_out_n_RBD:
 !p n k X pr.
        prob_space p /\ (k < (SUC n)) /\
        (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN
@@ -1540,7 +1540,7 @@ RW_TAC std_ss []
 QED
 
 (*----------------------------*)
-Theorem k_out_n_RBD_v1 :
+Theorem k_out_n_RBD_v1:
 !p n k X pr.
        prob_space p /\ (k < (SUC n)) /\
        (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN
@@ -1561,7 +1561,7 @@ QED
 (*---------------------Case: When k = 1, Parallel Structure components with
  -----------------------Identical Reliabilities-----------*)
 (*--------------------------------------------------------*)
-Theorem K_out_N_Parallel_Struct :
+Theorem K_out_N_Parallel_Struct:
 !p n X pr.
        prob_space p /\ (1 < (SUC n)) /\
        (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN
@@ -1609,7 +1609,7 @@ QED
 (*---------------------Case: When k = n, Series Structure components with
  -----------------------Identical Reliabilities-----------*)
 (*--------------------------------------------------------*)
-Theorem K_out_N_Series_Struct :
+Theorem K_out_N_Series_Struct:
 !p n X pr.
        prob_space p /\  (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN ((count (SUC n)) -> events p) /\
         (!x. (distribution p X {Normal (&x)} = ((& binomial ( n) x)* (pr pow x) * ((1- pr) pow ((n)-x)))))==>
@@ -1637,13 +1637,13 @@ QED
 (*            Majority Voting Gate                                            *)
 (*                                                                            *)
 (* -------------------------------------------------------------------------- *)
-Definition majority_voting_FT_gate_def :
+Definition majority_voting_FT_gate_def:
 majority_voting_FT_gate p X k n = BIGUNION
         (IMAGE (λx. PREIMAGE X {Normal (&x)} ∩ p_space p)
            {x | k ≤ x ∧ x < SUC n})
 End
 
-Theorem majority_voting_FT_gate_thm :
+Theorem majority_voting_FT_gate_thm:
 !p n k X pr.
        prob_space p /\ (k < (SUC n)) /\
        (\x. PREIMAGE X {Normal(&x)} INTER p_space p) IN
@@ -1664,26 +1664,26 @@ QED
 (*                                                                            *)
 (* -------------------------------------------------------------------------- *)
 (*--------------------HAS_SIZE------------------------------------*)
-Definition has_size_def :
+Definition has_size_def:
 has_size s n  =  (FINITE (s) /\ (CARD s = (n)))
 End
 
 (* ------------------------------------------------------------------------- *)
 (*                      inter_list                                  *)
 (* ------------------------------------------------------------------------- *)
-Definition inter_list_def :
+Definition inter_list_def:
  (inter_list p ([]) = (p_space p  )) /\
           ( inter_list p (h ::t)  = ( (h)  INTER (inter_list p t )))
 End
 
 (*--------------------union list def------------------------------------*)
-Definition union_list_def :
+Definition union_list_def:
  (union_list ([]) = {} ) /\
           ( union_list (h ::t)  =  h  UNION (union_list t ))
 End
 
 (*------------SUBSET_INSERT_EXISTS_NEW------------------------------------------ *)
-Theorem SUBSET_INSERT_EXISTS_NEW :
+Theorem SUBSET_INSERT_EXISTS_NEW:
 !s x t. (s SUBSET (x INSERT t)) =
             ((s SUBSET t) \/
                (?u. u SUBSET t /\ (s = x INSERT u)))
@@ -1701,7 +1701,7 @@ RW_TAC std_ss[]
 >> METIS_TAC[]
 QED
 (*----------------------FINITE_SUBSETS_RESTRICT_NEW----------------------------------*)
-Theorem FINITE_SUBSETS_RESTRICT_NEW :
+Theorem FINITE_SUBSETS_RESTRICT_NEW:
 !s:'a->bool p. FINITE s ==> FINITE {t | t SUBSET s /\ p t}
 Proof
 REPEAT STRIP_TAC
@@ -1713,7 +1713,7 @@ REPEAT STRIP_TAC
 >> METIS_TAC[]
 QED
 (*----------------------FINITE_SUBSETS_RESTRICT_NEW1----------------------------------*)
-Theorem FINITE_SUBSETS_RESTRICT_NEW1 :
+Theorem FINITE_SUBSETS_RESTRICT_NEW1:
 !s:'a->bool p. FINITE s ==> FINITE {t | t SUBSET s}
 Proof
 REPEAT STRIP_TAC
@@ -1724,7 +1724,7 @@ REPEAT STRIP_TAC
 >> SRW_TAC[][SUBSET_DEF,POW_DEF,EXTENSION,GSPECIFICATION]
 QED
 (*------------------lemma_NEW--------------------------------*)
-Theorem lemma_NEW :
+Theorem lemma_NEW:
 {t | t SUBSET (a INSERT s) /\ P t} =
      {t | t SUBSET s /\ P t} UNION
      {a INSERT t |t| t SUBSET s /\ P(a INSERT t)}
@@ -1735,13 +1735,13 @@ RW_TAC std_ss[SUBSET_INSERT_EXISTS_NEW]
 >> METIS_TAC[]
 QED
 (*-------------------temp1--------------------------------*)
-Theorem temp1 :
+Theorem temp1:
 !P. (!s n. has_size s n ==> P s) ==> (!s. FINITE s ==> P s)
 Proof
 RW_TAC std_ss[has_size_def]
 QED
 (*-----------------------temp3----------------------------*)
-Theorem temp3 :
+Theorem temp3:
 !P. (!n. (!m. (m:num) < n ==> P m) ==> P n) ==> (!n. P n)
 Proof
 GEN_TAC
@@ -1758,7 +1758,7 @@ GEN_TAC
 >> METIS_TAC[LT_SUC]
 QED
 (*-----------------------temp2---------------------------*)
-Theorem temp2 :
+Theorem temp2:
 (!P (f:('a->bool) -> real) (A:'b->bool) (x:'b->('a->bool)) (n:num).
       (!s t. P s /\ P t /\ DISJOINT s t
                ==> (f(s UNION t) = f(s) + f(t))) /\
@@ -1780,7 +1780,7 @@ Proof
 RW_TAC std_ss[has_size_def]
 QED
 (*-----------------------temp4---------------------------*)
-Theorem temp4 :
+Theorem temp4:
 !A:'a->bool.  has_size s 0 =  (s = {})
 Proof
 RW_TAC std_ss[has_size_def]
@@ -1788,7 +1788,7 @@ RW_TAC std_ss[has_size_def]
 QED
 
 (*-------------------has_size_suc-------------------------------*)
-Theorem has_size_suc :
+Theorem has_size_suc:
 !(s:'a->bool) n. (has_size s (SUC n) =
                    (~(s = EMPTY) /\ ( !a. (a IN s) ==> has_size (s DELETE a) n )))
 Proof
@@ -1827,7 +1827,7 @@ RW_TAC std_ss[has_size_def]
 >> RW_TAC std_ss[MEMBER_NOT_EMPTY]
 QED
 (*------------------FORALL_INSERT--------------------------------*)
-Theorem FORALL_INSERT :
+Theorem FORALL_INSERT:
 !P a s. (!x. x IN a INSERT s ==> P x) <=> P a /\ (!x. x IN s ==> P x)
 Proof
 RW_TAC std_ss[IN_INSERT]
@@ -1838,7 +1838,7 @@ RW_TAC std_ss[IN_INSERT]
 >> RW_TAC std_ss[]
 QED
 (*------------------INTER_BIGUNION--------------------------------*)
-Theorem INTER_BIGUNION :
+Theorem INTER_BIGUNION:
 (!s t. BIGUNION s INTER t = BIGUNION {x INTER t | x IN s}) /\
    (!s t. t INTER BIGUNION s = BIGUNION {t INTER x | x IN s})
 Proof
@@ -1851,7 +1851,7 @@ ONCE_REWRITE_TAC[EXTENSION]
 >> METIS_TAC[IN_INTER]
 QED
 (*------------------has_size_clauses--------------------------------*)
-Theorem has_size_clauses :
+Theorem has_size_clauses:
 (has_size (s:'a->bool) 0 = (s = {})) /\
     (has_size s (SUC n) =
         ?a t. has_size t n /\ ~(a IN t) /\ (s = a INSERT t))
@@ -1873,7 +1873,7 @@ REWRITE_TAC[temp4]
 >> FULL_SIMP_TAC std_ss[has_size_def,CARD_DEF,FINITE_INSERT]
 QED
 (*--------------------temp5------------------------------*)
-Theorem temp5 :
+Theorem temp5:
 !s t. s UNION (t DIFF s):'a->bool = s UNION t
 Proof
 RW_TAC std_ss[]
@@ -1894,13 +1894,13 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[]
 QED
 (*----------------incl_excl_temp1----------------------------------*)
-Theorem incl_excl_temp1 :
+Theorem incl_excl_temp1:
 !fa fas s  s'. ((fa + s) - fas:real = s + s') = (fa - fas = s')
 Proof
 REAL_ARITH_TAC
 QED
 (*--------------temp6------------------------------------*)
-Theorem temp6 :
+Theorem temp6:
 !s t. (s INTER t) UNION (t DIFF s) = t
 Proof
 RW_TAC std_ss[]
@@ -1910,14 +1910,14 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[]
 QED
 (*-----------------simple_image_gen---------------------------------*)
-Theorem simple_image_gen :
+Theorem simple_image_gen:
 ! f P. {f s| P s} = IMAGE f {s | P s}
 Proof
 RW_TAC std_ss[IMAGE_DEF]
 >> RW_TAC std_ss[EXTENSION,GSPECIFICATION]
 QED
 (*------------------FINITE_RESTRICT--------------------------------*)
-Theorem FINITE_RESTRICT :
+Theorem FINITE_RESTRICT:
 !(s:'a->bool) P. {x | x IN s /\ P x} SUBSET s
 Proof
 RW_TAC std_ss[SUBSET_DEF]
@@ -1925,13 +1925,13 @@ RW_TAC std_ss[SUBSET_DEF]
 >> RW_TAC std_ss[EXTENSION,GSPECIFICATION]
 QED
 (*---------------------incl_excl_temp2-----------------------------*)
-Theorem incl_excl_temp2 :
+Theorem incl_excl_temp2:
 !a b x. (x - a:real = x + b) = (b = -a)
 Proof
 REAL_ARITH_TAC
 QED
 (*------------------incl_excl_temp3--------------------------------*)
-Theorem incl_excl_temp3 :
+Theorem incl_excl_temp3:
 !f s. BIGINTER (IMAGE f s) = {y | !x. x IN s ==> y IN f x}
 Proof
 RW_TAC std_ss[IMAGE_DEF,BIGINTER]
@@ -1941,47 +1941,47 @@ RW_TAC std_ss[IMAGE_DEF,BIGINTER]
 >> METIS_TAC[]
 QED
 (*-----------------incl_excl_temp4---------------------------------*)
-Theorem incl_excl_temp4 :
+Theorem incl_excl_temp4:
 !P e. {s | P s /\ ~(s = e)} = {s | P s} DELETE e
 Proof
 RW_TAC std_ss[]
 >> SRW_TAC[][DELETE_DEF,DIFF_DEF,EXTENSION,GSPECIFICATION]
 QED
 (*----------------incl_excl_temp5----------------------------------*)
-Theorem incl_excl_temp5 :
+Theorem incl_excl_temp5:
 !x s. (x IN s) ==>  (x INSERT s =  s)
 Proof
 SRW_TAC[][INSERT_DEF,EXTENSION,GSPECIFICATION]
 >> METIS_TAC[]
 QED
 (*-----------------incl_excl_temp6---------------------------------*)
-Theorem incl_excl_temp6 :
+Theorem incl_excl_temp6:
 !s. EMPTY IN {B| B SUBSET s}
 Proof
 RW_TAC std_ss[GSYM POW_DEF,IN_POW,EMPTY_SUBSET]
 QED
 (*------------incl_excl_temp7--------------------------------------*)
-Theorem incl_excl_temp7 :
+Theorem incl_excl_temp7:
 !a b c:real. (a = b - c) = (b = c + a)
 Proof
 REAL_ARITH_TAC
 QED
 (*---------------incl_excl_temp8-----------------------------------*)
-Theorem incl_excl_temp8 :
+Theorem incl_excl_temp8:
 !f e s. FINITE s ==> (sum_set (s DELETE e) f = sum_set (e INSERT s) f - f e)
 Proof
 RW_TAC std_ss[incl_excl_temp7]
 >> RW_TAC std_ss[sum_set_def,REAL_SUM_IMAGE_THM]
 QED
 (*------------------------incl_excl_temp9--------------------------*)
-Theorem incl_excl_temp9 :
+Theorem incl_excl_temp9:
 !f e s. e IN s /\ FINITE s ==> (sum_set (s DELETE e) f = sum_set (s) f - f e)
 Proof
 RW_TAC std_ss[incl_excl_temp8]
 >> RW_TAC std_ss[incl_excl_temp5]
 QED
 (*-----------------BIGINTER_SET------------------------------------------------------*)
-Theorem BIGINTER_SET :
+Theorem BIGINTER_SET:
 !s p. FINITE s /\ prob_space p  ==> ( BIGINTER (s) INTER p_space p  =  inter_list p  (SET_TO_LIST s))
 Proof
 Induction.recInduct SET_TO_LIST_IND
@@ -2001,7 +2001,7 @@ Induction.recInduct SET_TO_LIST_IND
 QED
 (*------------------INCLUSION_EXCLUSION_RESTRICTED--------------------------------*)
 
-Theorem REAL_SUM_IMAGE_IMAGE1 :
+Theorem REAL_SUM_IMAGE_IMAGE1:
    !P f' f. FINITE P /\
           INJ f' P (IMAGE f' P) ==>
                (REAL_SUM_IMAGE f (IMAGE f' P) = REAL_SUM_IMAGE (f o f') P)
@@ -2026,7 +2026,7 @@ QED
 
 
 (*-----------------------INCLUSION_EXCLUSION_RESTRICTED---------------------------*)
-Theorem INCLUSION_EXCLUSION_RESTRICTED :
+Theorem INCLUSION_EXCLUSION_RESTRICTED:
 !P (f:('a->bool) -> real) (A:'b->bool) (x:'b->('a->bool)).
       (!s t. P s /\ P t /\ DISJOINT s t
                ==> (f(s UNION t) = f(s) + f(t))) /\
@@ -2262,7 +2262,7 @@ DISJOINT_DEF,NOT_IN_EMPTY,EXTENSION,IN_INSERT,IN_INTER,IN_DIFF,IN_UNIV])
 >> RW_TAC real_ss[IMAGE_INSERT,pow]
 QED
 (*------------------INCLUSION_EXCLUSION_RESTRICTED_REAL--------------------------------------*)
-Theorem INCLUSION_EXCLUSION_RESTRICTED_REAL :
+Theorem INCLUSION_EXCLUSION_RESTRICTED_REAL:
 !P (f:('a->bool)->real) (A:('a->bool)->bool).
         (!s t. P s /\ P t /\ DISJOINT s t
                ==> (f(s UNION t) = f(s) + f(t))) /\
@@ -2281,7 +2281,7 @@ REPEAT STRIP_TAC
 >> METIS_TAC[IMAGE_ID]
 QED
 (*----------------------PROB_INCLUSION_EXCLUSION----------------------------------*)
-Theorem PROB_INCLUSION_EXCLUSION :
+Theorem PROB_INCLUSION_EXCLUSION:
 !p (s:('a->bool)->bool). prob_space p /\ (!a. a IN s ==> a IN events p) /\
         FINITE s /\ (!k. k IN s ==> FINITE k)
         ==> ((prob p(BIGUNION s)) =
@@ -2295,7 +2295,7 @@ REPEAT STRIP_TAC
 >> FULL_SIMP_TAC real_ss[PROB_ADDITIVE,EVENTS_EMPTY,EVENTS_INTER,EVENTS_UNION,EVENTS_DIFF]
 QED
 (*------------------PROB_INCLUSION_EXCLUSION_list--------------------------------------*)
-Theorem PROB_INCLUSION_EXCLUSION_list :
+Theorem PROB_INCLUSION_EXCLUSION_list:
 ! p L. prob_space p  /\ (!x. MEM x (L) ==> x IN events p)
 ==> ((prob p(BIGUNION (set L))) =
                 sum_set {t | t SUBSET (set L) /\ ~(t = {})}
@@ -2309,7 +2309,7 @@ REPEAT STRIP_TAC
 >> RW_TAC list_ss[]
 QED
 (*---------------BIGUNION_EQ_UNION_LIST-----------------------------------------*)
-Theorem BIGUNION_EQ_UNION_LIST :
+Theorem BIGUNION_EQ_UNION_LIST:
 !L. BIGUNION (set L) =  union_list L
 Proof
 Induct
@@ -2319,7 +2319,7 @@ Induct
 >> RW_TAC std_ss[BIGUNION_INSERT]
 QED
 (*--------------------PROB_INCLUSION_EXCLUSION_PRINCIPLE---------------------------------------------------*)
-Theorem PROB_INCLUSION_EXCLUSION_PRINCIPLE :
+Theorem PROB_INCLUSION_EXCLUSION_PRINCIPLE:
 ! p L. prob_space p  /\ (!x. MEM x (L) ==> x IN events p )
 ==> ((prob p(union_list L)) =
                 sum_set {t | t SUBSET (set L) /\ ~(t = {})}

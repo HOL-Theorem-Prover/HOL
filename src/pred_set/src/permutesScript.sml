@@ -91,7 +91,7 @@ val permutes = new_definition ("permutes",
    “p permutes s <=> (!x. ~(x IN s) ==> (p(x) = x)) /\ (!y. ?!x. p x = y)”);
 
 (* connection to ‘pred_set$PERMUTES’, added by Chun Tian *)
-Theorem permutes_alt :
+Theorem permutes_alt:
     !f s. f permutes s <=> f PERMUTES s /\ !x. x NOTIN s ==> f(x) = x
 Proof
     RW_TAC std_ss [permutes, BIJ_ALT, IN_FUNSET]
@@ -127,13 +127,13 @@ Proof
       PROVE_TAC [] ]
 QED
 
-Theorem permutes_alt_univ :
+Theorem permutes_alt_univ:
     !f. f permutes UNIV <=> f PERMUTES UNIV
 Proof
     rw [permutes_alt]
 QED
 
-Theorem permutes_imp :
+Theorem permutes_imp:
     !f s. f permutes s ==> f PERMUTES s
 Proof
     RW_TAC bool_ss [permutes_alt]
@@ -147,7 +147,7 @@ val inverse = new_definition ("inverse",
    “inverse (f :'a->'b) = \y. @x. f x = y”);
 
 (* This connection was suggested by Jeremy Dawson *)
-Theorem inverse_alt_LINV :
+Theorem inverse_alt_LINV:
     !f. (!y. ?x. f x = y) /\ (!x y. (f x = f y) ==> (x = y)) ==>
         inverse f = LINV f UNIV
 Proof
@@ -160,7 +160,7 @@ Proof
  >> Q.EXISTS_TAC ‘UNIV’ >> rw []
 QED
 
-Theorem SURJECTIVE_INVERSE :
+Theorem SURJECTIVE_INVERSE:
    !f. (!y. ?x. f x = y) <=> !y. f (inverse f y) = y
 Proof
   GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL[
@@ -169,7 +169,7 @@ CONV_TAC (ONCE_DEPTH_CONV Thm.BETA_CONV) THEN CONV_TAC SELECT_CONV,
 Q.EXISTS_TAC(`inverse f y`)] THEN PROVE_TAC[]
 QED
 
-Theorem SURJECTIVE_INVERSE_o :
+Theorem SURJECTIVE_INVERSE_o:
    !f. (!y. ?x. f x = y) <=> (f o inverse f = I)
 Proof
     Q.X_GEN_TAC ‘f’
@@ -178,7 +178,7 @@ Proof
 QED
 
 (* cf. cardinalTheory.INJECTIVE_LEFT_INVERSE *)
-Theorem INJECTIVE_INVERSE :
+Theorem INJECTIVE_INVERSE:
    !f. (!x y. (f x = f y) ==> (x = y)) <=> (!x. inverse f (f x) = x)
 Proof
   GEN_TAC THEN EQ_TAC THENL[
@@ -189,7 +189,7 @@ CONV_TAC SELECT_CONV THEN Q.EXISTS_TAC(`x`) THEN REFL_TAC,
 PROVE_TAC[]]
 QED
 
-Theorem INJECTIVE_INVERSE_o :
+Theorem INJECTIVE_INVERSE_o:
    !f. (!x y. (f x = f y) ==> (x = y)) = (inverse f o f = I)
 Proof
     Q.X_GEN_TAC ‘f’
@@ -197,7 +197,7 @@ Proof
  >> PROVE_TAC[INJECTIVE_INVERSE]
 QED
 
-Theorem INVERSE_UNIQUE_o :
+Theorem INVERSE_UNIQUE_o:
    !f g. (f o g = I) /\ (g o f = I) ==> (inverse f = g)
 Proof
     rpt GEN_TAC
@@ -207,7 +207,7 @@ QED
 
 (* NOTE: Previously this proof used combinTheory.I_o_ID, which has issues when
          exporting permutes.ot.art. *)
-Theorem INVERSE_I :
+Theorem INVERSE_I:
    inverse I = (I :'a -> 'a)
 Proof
     MATCH_MP_TAC INVERSE_UNIQUE_o
@@ -222,19 +222,19 @@ QED
 val swap_def = new_definition ("swap_def",
    “swap (i,j) k = if k = i then j else if k = j then i else k”);
 
-Theorem SWAP_REFL :
+Theorem SWAP_REFL:
    !a. swap (a,a) = I
 Proof
   REWRITE_TAC[FUN_EQ_THM, swap_def, I_THM] THEN PROVE_TAC[]
 QED
 
-Theorem SWAP_SYM :
+Theorem SWAP_SYM:
    !a b. swap(a,b) = swap(b,a)
 Proof
   REWRITE_TAC[FUN_EQ_THM, swap_def, I_THM] THEN PROVE_TAC[]
 QED
 
-Theorem SWAP_IDEMPOTENT :
+Theorem SWAP_IDEMPOTENT:
    !a b. swap(a,b) o swap(a,b) = I
 Proof
     rpt GEN_TAC
@@ -242,14 +242,14 @@ Proof
  >> PROVE_TAC[]
 QED
 
-Theorem INVERSE_SWAP :
+Theorem INVERSE_SWAP:
    !a b. inverse(swap(a,b)) = swap(a,b)
 Proof
   REPEAT GEN_TAC THEN MATCH_MP_TAC INVERSE_UNIQUE_o THEN
   REWRITE_TAC[SWAP_IDEMPOTENT]
 QED
 
-Theorem SWAP_GALOIS :
+Theorem SWAP_GALOIS:
    !a b x y. (x = swap(a,b) y) = (y = swap(a,b) x)
 Proof
   REWRITE_TAC[swap_def] THEN PROVE_TAC[]
@@ -259,38 +259,38 @@ QED
 (* Basic consequences of the definition.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem PERMUTES_IN_IMAGE :
+Theorem PERMUTES_IN_IMAGE:
    !p s x. p permutes s ==> (p(x) IN s <=> x IN s)
 Proof
   REWRITE_TAC[permutes] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_IMAGE :
+Theorem PERMUTES_IMAGE:
    !p s. p permutes s ==> (IMAGE p s = s)
 Proof
   REWRITE_TAC[permutes, EXTENSION, IN_IMAGE] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_INJECTIVE :
+Theorem PERMUTES_INJECTIVE:
    !p s. p permutes s ==> !x y. (p(x) = p(y)) = (x = y)
 Proof
   REWRITE_TAC[permutes] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_SURJECTIVE :
+Theorem PERMUTES_SURJECTIVE:
    !p s. p permutes s ==> !y. ?x. p(x) = y
 Proof
   REWRITE_TAC[permutes] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_INVERSES_o :
+Theorem PERMUTES_INVERSES_o:
    !p s. p permutes s ==> (p o inverse(p) = I) /\ (inverse(p) o p = I)
 Proof
   REWRITE_TAC[GSYM INJECTIVE_INVERSE_o, GSYM SURJECTIVE_INVERSE_o] THEN
   REWRITE_TAC[permutes] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_INVERSES :
+Theorem PERMUTES_INVERSES:
    !p s. p permutes s
          ==> (!x. p(inverse(p) x) = x) /\ (!x. inverse(p) (p x) = x)
 Proof
@@ -298,43 +298,43 @@ Proof
   SIMP_TAC bool_ss [FUN_EQ_THM, o_ALPHA, I_THM]
 QED
 
-Theorem PERMUTES_SUBSET :
+Theorem PERMUTES_SUBSET:
    !p s t. p permutes s /\ s SUBSET t ==> p permutes t
 Proof
   REWRITE_TAC[permutes, SUBSET_DEF] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_EMPTY :
+Theorem PERMUTES_EMPTY:
    !p. p permutes {} <=> (p = I)
 Proof
   REWRITE_TAC[FUN_EQ_THM, I_THM, permutes, NOT_IN_EMPTY] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_SING :
+Theorem PERMUTES_SING:
    !p a. p permutes {a} <=> (p = I)
 Proof
   REWRITE_TAC[FUN_EQ_THM, I_THM, permutes, IN_SING] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_UNIV :
+Theorem PERMUTES_UNIV:
    !p. p permutes UNIV <=> !y. ?!x. p x = y
 Proof
   REWRITE_TAC[permutes, IN_UNIV]
 QED
 
-Theorem PERMUTES_INVERSE_EQ :
+Theorem PERMUTES_INVERSE_EQ:
    !p s. p permutes s ==> !x y. (inverse(p) y = x) <=> (p x = y)
 Proof
   REWRITE_TAC[permutes, inverse] THEN METIS_TAC[]
 QED
 
-Theorem PERMUTES_SWAP :
+Theorem PERMUTES_SWAP:
    !a b s. a IN s /\ b IN s ==> swap(a,b) permutes s
 Proof
   REWRITE_TAC[permutes, swap_def] THEN METIS_TAC[]
 QED
 
-Theorem PERMUTES_SUPERSET :
+Theorem PERMUTES_SUPERSET:
    !p s t. p permutes s /\ (!x. x IN (s DIFF t) ==> (p(x) = x))
            ==> p permutes t
 Proof
@@ -345,20 +345,20 @@ QED
 (* Group properties.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem PERMUTES_I :
+Theorem PERMUTES_I:
    !s. I permutes s
 Proof
   REWRITE_TAC[permutes, I_THM] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_COMPOSE :
+Theorem PERMUTES_COMPOSE:
    !p q s x. p permutes s /\ q permutes s ==> (q o p) permutes s
 Proof
     rpt GEN_TAC
  >> SIMP_TAC bool_ss [permutes, o_ALPHA] >> PROVE_TAC[]
 QED
 
-Theorem PERMUTES_INVERSE :
+Theorem PERMUTES_INVERSE:
    !p s. p permutes s ==> inverse(p) permutes s
 Proof
   REPEAT STRIP_TAC THEN
@@ -366,7 +366,7 @@ Proof
   POP_ASSUM MP_TAC THEN REWRITE_TAC[permutes] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTES_INVERSE_INVERSE :
+Theorem PERMUTES_INVERSE_INVERSE:
    !p s. p permutes s ==> (inverse(inverse(p)) = p)
 Proof
   REWRITE_TAC [FUN_EQ_THM] THEN
@@ -377,7 +377,7 @@ QED
 (* The number of permutations on a finite set.                               *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem PERMUTES_INSERT_LEMMA :
+Theorem PERMUTES_INSERT_LEMMA:
    !p a s. p permutes (a INSERT s) ==> (swap(a,p(a)) o p) permutes s
 Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC PERMUTES_SUPERSET THEN
@@ -386,7 +386,7 @@ Proof
             o_ALPHA, swap_def, IN_DIFF]
 QED
 
-Theorem PERMUTES_INSERT :
+Theorem PERMUTES_INSERT:
    {p | p permutes (a INSERT s)} =
         IMAGE (\(b,p). swap(a,b) o p)
               {(b,p) | b IN a INSERT s /\ p IN {p | p permutes s}}
@@ -405,7 +405,7 @@ Proof
     PROVE_TAC[PERMUTES_SUBSET, SUBSET_DEF, IN_INSERT, PERMUTES_SWAP]]
 QED
 
-Theorem HAS_SIZE_PERMUTATIONS :
+Theorem HAS_SIZE_PERMUTATIONS:
   !s:'a ->bool n: num.
     (s HAS_SIZE n) ==> ({p | p permutes s} HAS_SIZE (FACT n))
 Proof
@@ -448,13 +448,13 @@ Proof
                            CARD_CROSS,FACT] ]
 QED
 
-Theorem FINITE_PERMUTATIONS :
+Theorem FINITE_PERMUTATIONS:
    !s. FINITE s ==> FINITE {p | p permutes s}
 Proof
   METIS_TAC[HAS_SIZE_PERMUTATIONS, HAS_SIZE]
 QED
 
-Theorem CARD_PERMUTATIONS :
+Theorem CARD_PERMUTATIONS:
    !s. FINITE s ==> (CARD {p | p permutes s} = FACT(CARD s))
 Proof
   METIS_TAC[HAS_SIZE, HAS_SIZE_PERMUTATIONS]
@@ -465,7 +465,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* TODO: the following 2 theorem need long proof search of METIC_TAC *)
-Theorem PERMUTES_FINITE_INJECTIVE :
+Theorem PERMUTES_FINITE_INJECTIVE:
    !s: 'a->bool p.
         FINITE s
         ==> (p permutes s <=>
@@ -483,7 +483,7 @@ Proof
   Q.ASM_CASES_TAC `(y: 'a) IN s` THEN METIS_TAC[]
 QED
 
-Theorem PERMUTES_FINITE_SURJECTIVE :
+Theorem PERMUTES_FINITE_SURJECTIVE:
    !s: 'a ->bool p.
         FINITE s
         ==> (p permutes s <=>
@@ -504,7 +504,7 @@ QED
 (* Various combinations of transpositions with 2, 1 and 0 common elements.   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SWAP_COMMON :
+Theorem SWAP_COMMON:
   !a b c: 'a. ~(a = c) /\ ~(b = c) ==>
               (swap(a,b) o swap(a,c) = swap(b,c) o swap(a,b))
 Proof
@@ -527,7 +527,7 @@ Proof
   REFL_TAC
 QED
 
-Theorem SWAP_INDEPENDENT :
+Theorem SWAP_INDEPENDENT:
    !a b c d:'a. ~(a = c) /\ ~(a = d) /\ ~(b = c) /\ ~(b = d)
                ==> (swap(a,b) o swap(c,d) = swap(c,d) o swap(a,b))
 Proof
@@ -557,26 +557,26 @@ val permutation = new_definition ("permutation",
 
 Theorem SWAPSEQ_I = CONJUNCT1 swapseq_rules
 
-Theorem PERMUTATION_I :
+Theorem PERMUTATION_I:
    permutation I
 Proof
   REWRITE_TAC[permutation] THEN PROVE_TAC[SWAPSEQ_I]
 QED
 
-Theorem SWAPSEQ_SWAP :
+Theorem SWAPSEQ_SWAP:
    !a b. swapseq (if a = b then 0 else 1) (swap(a,b))
 Proof
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[ONE] THEN
   PROVE_TAC[swapseq_rules, I_o_ID, SWAPSEQ_I, SWAP_REFL]
 QED
 
-Theorem PERMUTATION_SWAP :
+Theorem PERMUTATION_SWAP:
    !a b. permutation (swap(a,b))
 Proof
   REWRITE_TAC[permutation] THEN PROVE_TAC[SWAPSEQ_SWAP]
 QED
 
-Theorem SWAPSEQ_COMPOSE :
+Theorem SWAPSEQ_COMPOSE:
    !n p m q. swapseq n p /\ swapseq m q ==> swapseq (n + m) (p o q)
 Proof
   SIMP_TAC std_ss[RIGHT_FORALL_IMP_THM, GSYM AND_IMP_INTRO] THEN
@@ -585,13 +585,13 @@ Proof
   PROVE_TAC[swapseq_rules]
 QED
 
-Theorem PERMUTATION_COMPOSE :
+Theorem PERMUTATION_COMPOSE:
    !p q. permutation p /\ permutation q ==> permutation (p o q)
 Proof
   REWRITE_TAC[permutation] THEN PROVE_TAC[SWAPSEQ_COMPOSE]
 QED
 
-Theorem SWAPSEQ_ENDSWAP :
+Theorem SWAPSEQ_ENDSWAP:
    !n p a b:'a. swapseq n p /\ ~(a = b) ==> swapseq (SUC n) (p o swap(a,b))
 Proof
   SIMP_TAC std_ss[RIGHT_FORALL_IMP_THM, GSYM AND_IMP_INTRO] THEN
@@ -599,7 +599,7 @@ Proof
   PROVE_TAC[o_ASSOC, swapseq_rules, I_o_ID]
 QED
 
-Theorem SWAPSEQ_INVERSE_EXISTS :
+Theorem SWAPSEQ_INVERSE_EXISTS:
    !n p:'a->'a. swapseq n p ==> ?q. swapseq n q /\ (p o q = I) /\ (q o p = I)
 Proof
   HO_MATCH_MP_TAC swapseq_ind THEN CONJ_TAC THENL
@@ -614,13 +614,13 @@ Proof
   ASM_REWRITE_TAC[SWAP_IDEMPOTENT, I_o_ID]
 QED
 
-Theorem SWAPSEQ_INVERSE :
+Theorem SWAPSEQ_INVERSE:
    !n p. swapseq n p ==> swapseq n (inverse p)
 Proof
   PROVE_TAC[SWAPSEQ_INVERSE_EXISTS, INVERSE_UNIQUE_o]
 QED
 
-Theorem PERMUTATION_INVERSE :
+Theorem PERMUTATION_INVERSE:
    !p. permutation p ==> permutation (inverse p)
 Proof
   REWRITE_TAC[permutation] THEN PROVE_TAC[SWAPSEQ_INVERSE]
@@ -644,7 +644,7 @@ Proof
   PROVE_TAC[]
 QED
 
-Theorem SWAP_GENERAL :
+Theorem SWAP_GENERAL:
    !a b c d:'a.
         ~(a = b) /\ ~(c = d)
         ==> (swap(a,b) o swap(c,d) = I) \/
@@ -663,7 +663,7 @@ Proof
   PROVE_TAC[SWAP_INDEPENDENT]]
 QED
 
-Theorem FIXING_SWAPSEQ_DECREASE :
+Theorem FIXING_SWAPSEQ_DECREASE:
    !n p a b:'a.
       swapseq n p /\ ~(a = b) /\ ((swap(a,b) o p) a = a)
       ==> ~(n = 0) /\ swapseq (n - 1) (swap(a,b) o p)
@@ -705,7 +705,7 @@ Proof
     PROVE_TAC[swapseq_rules] ]
 QED
 
-Theorem SWAPSEQ_IDENTITY_EVEN :
+Theorem SWAPSEQ_IDENTITY_EVEN:
    !n. swapseq n (I:'a->'a) ==> EVEN n
 Proof
   HO_MATCH_MP_TAC COMPLETE_INDUCTION THEN Q.X_GEN_TAC `n:num` THEN
@@ -734,7 +734,7 @@ QED
 val evenperm = new_definition ("evenperm",
    “evenperm p = EVEN(@n. swapseq n p)”);
 
-Theorem SWAPSEQ_EVEN_EVEN :
+Theorem SWAPSEQ_EVEN_EVEN:
    !m n p:'a->'a. swapseq m p /\ swapseq n p ==> (EVEN m <=> EVEN n)
 Proof
   REPEAT STRIP_TAC THEN
@@ -746,7 +746,7 @@ Proof
   SIMP_TAC bool_ss[EVEN_ADD]
 QED
 
-Theorem EVENPERM_UNIQUE :
+Theorem EVENPERM_UNIQUE:
    !n p b. swapseq n p /\ (EVEN n = b) ==> (evenperm p = b)
 Proof
   REWRITE_TAC[evenperm] THEN METIS_TAC[SWAPSEQ_EVEN_EVEN]
@@ -756,20 +756,20 @@ QED
 (* And it has the expected composition properties.                           *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem EVENPERM_I :
+Theorem EVENPERM_I:
    evenperm I = T
 Proof
   MATCH_MP_TAC EVENPERM_UNIQUE THEN PROVE_TAC[swapseq_rules, EVEN]
 QED
 
-Theorem EVENPERM_SWAP :
+Theorem EVENPERM_SWAP:
    !a b:'a. evenperm (swap(a,b)) <=> (a = b)
 Proof
   REPEAT GEN_TAC THEN MATCH_MP_TAC EVENPERM_UNIQUE THEN
   METIS_TAC[SWAPSEQ_SWAP, EVEN, num_CONV ``1:num``]
 QED
 
-Theorem EVENPERM_COMPOSE :
+Theorem EVENPERM_COMPOSE:
    !p q. permutation p /\ permutation q
          ==> (evenperm (p o q) = (evenperm p = evenperm q))
 Proof
@@ -781,7 +781,7 @@ Proof
   METIS_TAC[EVENPERM_UNIQUE, SWAPSEQ_COMPOSE, EVEN_ADD]
 QED
 
-Theorem EVENPERM_INVERSE :
+Theorem EVENPERM_INVERSE:
    !p. permutation p ==> (evenperm (inverse p) = evenperm p)
 Proof
   REWRITE_TAC[permutation] THEN REPEAT STRIP_TAC THEN
@@ -794,7 +794,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* cf. pred_setTheory.BIJ_ALT *)
-Theorem PERMUTATION_BIJECTIVE :
+Theorem PERMUTATION_BIJECTIVE:
    !p. permutation p ==> !y. ?!x. p(x) = y
 Proof
   REWRITE_TAC[permutation] THEN REPEAT STRIP_TAC THEN
@@ -803,7 +803,7 @@ Proof
   METIS_TAC[]
 QED
 
-Theorem PERMUTATION_FINITE_SUPPORT :
+Theorem PERMUTATION_FINITE_SUPPORT:
    !p. permutation p ==> FINITE {x:'a| ~(p x = x)}
 Proof
   SIMP_TAC bool_ss[permutation, GSYM LEFT_FORALL_IMP_THM] THEN
@@ -820,7 +820,7 @@ Proof
   SIMP_TAC bool_ss[o_ALPHA, swap_def] THEN PROVE_TAC[]
 QED
 
-Theorem PERMUTATION_LEMMA :
+Theorem PERMUTATION_LEMMA:
    !s p:'a->'a.
        FINITE s /\
        (!y. ?!x. p(x) = y) /\ (!x. ~(x IN s) ==> (p x = x))
@@ -854,7 +854,7 @@ Proof
     PROVE_TAC[]]
 QED
 
-Theorem PERMUTATION :
+Theorem PERMUTATION:
    !p. permutation p <=> (!y. ?!x. p(x) = y) /\ FINITE {x:'a| ~(p(x) = x)}
 Proof
   GEN_TAC THEN EQ_TAC THEN
@@ -865,14 +865,14 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
-Theorem PERMUTATION_INVERSE_WORKS :
+Theorem PERMUTATION_INVERSE_WORKS:
    !p. permutation p ==> (inverse p o p = I) /\ (p o inverse p = I)
 Proof
   PROVE_TAC[PERMUTATION_BIJECTIVE, SURJECTIVE_INVERSE_o,
             INJECTIVE_INVERSE_o]
 QED
 
-Theorem PERMUTATION_INVERSE_COMPOSE :
+Theorem PERMUTATION_INVERSE_COMPOSE:
    !p q. permutation p /\ permutation q
          ==> (inverse (p o q) = inverse q o inverse p)
 Proof
@@ -885,7 +885,7 @@ QED
 
 val IMP_CONJ = CONJ_EQ_IMP;
 
-Theorem PERMUTATION_COMPOSE_EQ :
+Theorem PERMUTATION_COMPOSE_EQ:
    (!p q:'a->'a. permutation(p) ==> (permutation(p o q) <=> permutation q)) /\
    (!p q:'a->'a. permutation(q) ==> (permutation(p o q) <=> permutation p))
 Proof
@@ -901,7 +901,7 @@ Proof
   REWRITE_TAC[I_o_ID]
 QED
 
-Theorem PERMUTATION_COMPOSE_SWAP :
+Theorem PERMUTATION_COMPOSE_SWAP:
    (!p a b:'a. permutation(swap(a,b) o p) <=> permutation p) /\
    (!p a b:'a. permutation(p o swap(a,b)) <=> permutation p)
 Proof
@@ -912,7 +912,7 @@ QED
 (* Relation to "permutes".                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem PERMUTATION_PERMUTES :
+Theorem PERMUTATION_PERMUTES:
    !p:'a->'a. permutation p <=> ?s. FINITE s /\ p permutes s
 Proof
   GEN_TAC THEN REWRITE_TAC[PERMUTATION, permutes] THEN
@@ -929,7 +929,7 @@ QED
 (* Hence a sort of induction principle composing by swaps.                   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem PERMUTES_INDUCT :
+Theorem PERMUTES_INDUCT:
    !P s. FINITE s /\
          P I /\
          (!a b:'a p. a IN s /\ b IN s /\ P p /\ permutation p
@@ -956,7 +956,7 @@ QED
 (* More lemmas about permutations.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem PERMUTES_NUMSET_LE :
+Theorem PERMUTES_NUMSET_LE:
    !p s:num->bool. p permutes s /\ (!i. i IN s ==> p(i) <= i) ==> (p = I)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM, I_THM] THEN STRIP_TAC THEN
@@ -967,7 +967,7 @@ Proof
   PROVE_TAC[PERMUTES_INJECTIVE, LESS_EQ_REFL,NOT_LESS]
 QED
 
-Theorem PERMUTES_NUMSET_GE :
+Theorem PERMUTES_NUMSET_GE:
    !p s:num->bool. p permutes s /\ (!i. i IN s ==> i <= p(i)) ==> (p = I)
 Proof
   REPEAT STRIP_TAC THEN
@@ -978,14 +978,14 @@ Proof
     PROVE_TAC[PERMUTES_INVERSE_INVERSE, INVERSE_I]]
 QED
 
-Theorem IMAGE_INVERSE_PERMUTATIONS :
+Theorem IMAGE_INVERSE_PERMUTATIONS:
    !s:'a->bool. {inverse p | p permutes s} = {p | p permutes s}
 Proof
   REWRITE_TAC[EXTENSION] THEN CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
   PROVE_TAC[PERMUTES_INVERSE_INVERSE, PERMUTES_INVERSE]
 QED
 
-Theorem IMAGE_COMPOSE_PERMUTATIONS_L :
+Theorem IMAGE_COMPOSE_PERMUTATIONS_L:
    !s q:'a->'a. q permutes s ==> ({q o p | p permutes s} = {p | p permutes s})
 Proof
   REWRITE_TAC[EXTENSION] THEN CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
@@ -997,7 +997,7 @@ Proof
     PROVE_TAC [PERMUTES_INVERSES_o, I_o_ID]]
 QED
 
-Theorem IMAGE_COMPOSE_PERMUTATIONS_R :
+Theorem IMAGE_COMPOSE_PERMUTATIONS_R:
    !s q:'a->'a. q permutes s ==> ({p o q | p permutes s} = {p | p permutes s})
 Proof
   REWRITE_TAC[EXTENSION] THEN CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
@@ -1009,7 +1009,7 @@ Proof
     PROVE_TAC [PERMUTES_INVERSES_o, I_o_ID]]
 QED
 
-Theorem PERMUTES_IN_COUNT :
+Theorem PERMUTES_IN_COUNT:
    !p n i. p permutes count n /\ i IN count n ==> p(i) < n
 Proof
   REWRITE_TAC[permutes, IN_COUNT] THEN PROVE_TAC[]

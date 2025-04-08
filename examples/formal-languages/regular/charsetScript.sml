@@ -13,15 +13,15 @@ val _ = new_theory "charset";
 (* Regexp_Type.sml.                                                          *)
 (*---------------------------------------------------------------------------*)
 
-Definition alphabet_size_def :
+Definition alphabet_size_def:
   alphabet_size = ^(numSyntax.term_of_int Regexp_Type.alphabet_size)
 End
 
-Definition ALPHABET_def :
+Definition ALPHABET_def:
   ALPHABET = ^(rhs (concl (EVAL ``GENLIST I alphabet_size``)))
 End
 
-Theorem mem_alphabet :
+Theorem mem_alphabet:
  !c. MEM c ALPHABET ==> c < alphabet_size
 Proof
  rw_tac std_ss [ALPHABET_def,alphabet_size_def,MEM] >> EVAL_TAC
@@ -35,13 +35,13 @@ Proof
   >> rw []
 QED
 
-Theorem mem_alphabet_iff :
+Theorem mem_alphabet_iff:
  !c. MEM c ALPHABET <=> c < alphabet_size
 Proof
  metis_tac [mem_alphabet,alphabet_mem]
 QED
 
-Theorem ORD_CHR_lem :
+Theorem ORD_CHR_lem:
  !c. c < alphabet_size ==> (ORD(CHR c) = c)
 Proof
  rw[alphabet_size_def,GSYM ORD_CHR] >> decide_tac
@@ -55,11 +55,11 @@ QED
 val _ = Hol_datatype
          `charset = Charset of word64 => word64 => word64 => word64`;
 
-Definition charset_empty_def :
+Definition charset_empty_def:
   charset_empty = Charset 0w 0w 0w 0w
 End
 
-Definition charset_full_def :
+Definition charset_full_def:
    charset_full = Charset (~0w) (~0w) (~0w) (~0w)
 End
 
@@ -73,7 +73,7 @@ End
 
 Theorem charset_full_thm = CONV_RULE (RHS_CONV EVAL) charset_full_def;
 
-Definition words4_bit_def :
+Definition words4_bit_def:
   words4_bit c (Charset w1 w2 w3 w4) =
      if c < 128 then
        (if c < 64 then word_bit c w1 else word_bit (c-64) w2)
@@ -81,12 +81,12 @@ Definition words4_bit_def :
        (if c < 192 then word_bit (c-128) w3 else word_bit (c-192) w4)
 End
 
-Definition charset_mem_def :
+Definition charset_mem_def:
    charset_mem c (cs:charset) <=> c < alphabet_size /\ words4_bit c cs
 End
 
 
-Definition charset_union_def :
+Definition charset_union_def:
    charset_union (cs1:charset) (cs2:charset) =
     if cs1 = cs2 then cs1 else
     if cs1 = charset_empty then cs2 else
@@ -100,7 +100,7 @@ Definition charset_union_def :
                    (word_or u4 v4)
 End
 
-Definition charset_sing_def :
+Definition charset_sing_def:
    charset_sing c =
      let n = ORD c
      in if n < 64  then Charset (1w << n) 0w 0w 0w else
@@ -110,7 +110,7 @@ Definition charset_sing_def :
 End
 
 
-Definition charset_insert_def :
+Definition charset_insert_def:
     charset_insert c cset = charset_union (charset_sing c) cset
 End
 
@@ -133,7 +133,7 @@ QED
 *)
 
 
-Definition charset_cmp_def :
+Definition charset_cmp_def:
    charset_cmp (Charset u1 u2 u3 u4) (Charset v1 v2 v3 v4) =
     case num_cmp (w2n u1) (w2n v1)
       of Less => Less
@@ -155,7 +155,7 @@ End
 (* Charset theorems                                                          *)
 (*---------------------------------------------------------------------------*)
 
-Theorem charset_mem_empty :
+Theorem charset_mem_empty:
  !c.
    ~charset_mem c charset_empty
 Proof
@@ -163,7 +163,7 @@ Proof
                alphabet_size_def,GSYM IMP_DISJ_THM,wordsTheory.word_bit_0]
 QED
 
-Theorem charset_mem_union :
+Theorem charset_mem_union:
  !c cs1 cs2.
     charset_mem c (charset_union cs1 cs2) <=> charset_mem c cs1 \/ charset_mem c cs2
 Proof
@@ -177,14 +177,14 @@ Proof
   >> srw_tac [WORD_ss, WORD_EXTRACT_ss, WORD_BIT_EQ_ss] []
 QED
 
-Theorem num_cmp_eq :
+Theorem num_cmp_eq:
  !k1 k2.
    (num_cmp k1 k2 = Equal) <=> (k1 = k2)
 Proof
  rw_tac std_ss [comparisonTheory.num_cmp_def]
 QED
 
-Theorem charset_cmp_eq :
+Theorem charset_cmp_eq:
  !cs1 cs2.
    (charset_cmp cs1 cs2 = Equal) <=> (cs1 = cs2)
 Proof
@@ -215,7 +215,7 @@ Proof
   >> rw_tac arith_ss [num_cmp_def,wordsTheory.w2n_11]
 QED
 
-Theorem charset_cmp_strict :
+Theorem charset_cmp_strict:
  !cs1 cs2.
    (charset_cmp cs1 cs2 = Less) <=> (charset_cmp cs2 cs1 = Greater)
 Proof
@@ -225,7 +225,7 @@ Proof
  >> metis_tac [num_cmp_good,good_cmp_thm,comparison_distinct]
 QED
 
-Theorem charset_cmp_trans :
+Theorem charset_cmp_trans:
  !cs1 cs2 cs3.
       (charset_cmp cs1 cs2 = Less) /\
       (charset_cmp cs2 cs3 = Less)
@@ -236,7 +236,7 @@ Proof
   >> rw_tac arith_ss [charset_cmp_less]
 QED
 
-Definition charset_string_def :
+Definition charset_string_def:
    charset_string s =
       FOLDL (\a c. charset_union a (charset_sing c))
             charset_empty

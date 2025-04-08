@@ -1417,11 +1417,11 @@ val ordDIVMOD = new_specification(
    "ordDIVMOD", ["ordDIVMOD"],
     SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ordDIVISION1);
 
-Definition ordDIV :
+Definition ordDIV:
     ordDIV a b = FST (ordDIVMOD a b)
 End
 
-Definition ordMOD :
+Definition ordMOD:
     ordMOD a b = SND (ordDIVMOD a b)
 End
 

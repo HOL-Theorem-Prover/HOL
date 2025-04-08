@@ -680,7 +680,7 @@ QED
    unfolding is finite with smaller "measure", then there must be only finite
    steps of the unfolding process and the resulting ltree is finite.
  *)
-Theorem ltree_finite_by_unfolding :
+Theorem ltree_finite_by_unfolding:
     !P f. (?(m :'a -> num).
            !seed. P seed ==>
                   let (a,seeds) = f seed in
@@ -723,11 +723,11 @@ Proof
  >> EQ_TAC >> rw []
 QED
 
-Definition finite_branching_def :
+Definition finite_branching_def:
     finite_branching = ltree_every (\a ts. LFINITE ts)
 End
 
-Theorem finite_branching_rules :
+Theorem finite_branching_rules:
     !a ts. EVERY finite_branching ts ==>
            finite_branching (Branch a (fromList ts))
 Proof
@@ -745,7 +745,7 @@ Proof
     rw [finite_branching_def]
 QED
 
-Theorem ltree_finite_imp_finite_branching :
+Theorem ltree_finite_imp_finite_branching:
     !t. ltree_finite t ==> finite_branching t
 Proof
     HO_MATCH_MP_TAC ltree_finite_ind
@@ -753,7 +753,7 @@ Proof
 QED
 
 (* cf. ltree_cases *)
-Theorem finite_branching_cases :
+Theorem finite_branching_cases:
     !t. finite_branching t <=>
         ?a ts. t = Branch a (fromList ts) /\ EVERY finite_branching ts
 Proof
@@ -778,7 +778,7 @@ val lemma = ltree_every_coind
          |> (Q.SPEC ‘P’) |> BETA_RULE
          |> REWRITE_RULE [GSYM finite_branching_def];
 
-Theorem finite_branching_coind :
+Theorem finite_branching_coind:
     !P. (!t. P t ==> ?a ts. t = Branch a (fromList ts) /\ EVERY P ts) ==>
          !t. P t ==> finite_branching t
 Proof
@@ -829,11 +829,11 @@ Proof
  >> rw []
 QED
 
-Definition ltree_paths_def :
+Definition ltree_paths_def:
     ltree_paths t = {p | ltree_lookup t p <> NONE}
 End
 
-Theorem IN_ltree_paths :
+Theorem IN_ltree_paths:
     !p t. p IN ltree_paths t <=> ltree_lookup t p <> NONE
 Proof
     rw [ltree_paths_def]
@@ -845,7 +845,7 @@ Proof
     rw [ltree_paths_def, ltree_lookup_def]
 QED
 
-Theorem ltree_paths_inclusive :
+Theorem ltree_paths_inclusive:
     !l1 l2 t. l1 <<= l2 /\ l2 IN ltree_paths t ==> l1 IN ltree_paths t
 Proof
     Induct_on ‘l1’
@@ -864,7 +864,7 @@ Proof
  >> Q.EXISTS_TAC ‘l2’ >> rw []
 QED
 
-Theorem ltree_el :
+Theorem ltree_el:
     ltree_el t [] = SOME (ltree_node t,LLENGTH (ltree_children t)) /\
     ltree_el t (n::ns) =
       case LNTH n (ltree_children t) of
@@ -875,7 +875,7 @@ Proof
  >> simp [ltree_el_def]
 QED
 
-Theorem ltree_lookup :
+Theorem ltree_lookup:
     ltree_lookup t [] = SOME t /\
     ltree_lookup t (n::ns) =
       case LNTH n (ltree_children t) of
@@ -895,19 +895,19 @@ Proof
  >> Cases_on ‘LNTH h (ltree_children t)’ >> fs []
 QED
 
-Theorem ltree_paths_alt_ltree_el :
+Theorem ltree_paths_alt_ltree_el:
     !t. ltree_paths t = {p | ltree_el t p <> NONE}
 Proof
     rw [ltree_paths_def, Once EXTENSION, ltree_lookup_iff_ltree_el]
 QED
 
-Theorem ltree_el_valid :
+Theorem ltree_el_valid:
     !p t. p IN ltree_paths t <=> ltree_el t p <> NONE
 Proof
     rw [ltree_paths_alt_ltree_el]
 QED
 
-Theorem ltree_el_valid_inclusive :
+Theorem ltree_el_valid_inclusive:
     !p t. p IN ltree_paths t <=> !p'. p' <<= p ==> ltree_el t p' <> NONE
 Proof
     rpt GEN_TAC
@@ -919,13 +919,13 @@ Proof
  >> Q.EXISTS_TAC ‘p’ >> art []
 QED
 
-Theorem ltree_lookup_valid :
+Theorem ltree_lookup_valid:
     !p t. p IN ltree_paths t <=> ltree_lookup t p <> NONE
 Proof
     rw [ltree_lookup_iff_ltree_el, ltree_el_valid]
 QED
 
-Theorem ltree_lookup_valid_inclusive :
+Theorem ltree_lookup_valid_inclusive:
     !p t. p IN ltree_paths t <=> !p'. p' <<= p ==> ltree_lookup t p' <> NONE
 Proof
     rw [ltree_lookup_iff_ltree_el, ltree_el_valid_inclusive]
@@ -934,7 +934,7 @@ QED
 (* ltree_lookup returns more information (the entire subtree), thus can be
    used to construct the return value of ltree_el.
  *)
-Theorem ltree_el_alt_ltree_lookup :
+Theorem ltree_el_alt_ltree_lookup:
     !p t. p IN ltree_paths t ==>
           ltree_el t p =
             do
@@ -969,7 +969,7 @@ Proof
  >> Cases_on ‘LNTH h ts’ >> rw []
 QED
 
-Theorem ltree_lookup_append :
+Theorem ltree_lookup_append:
     !l1 l2 t. ltree_lookup t l1 <> NONE ==>
               ltree_lookup t (l1 ++ l2) =
               ltree_lookup (THE (ltree_lookup t l1)) l2
@@ -982,7 +982,7 @@ Proof
  >> Cases_on ‘LNTH h ts’ >> simp []
 QED
 
-Theorem ltree_lookup_SNOC :
+Theorem ltree_lookup_SNOC:
     !t x xs. ltree_lookup t xs <> NONE ==>
              ltree_lookup t (SNOC x xs) =
              ltree_lookup (THE (ltree_lookup t xs)) [x]
@@ -992,7 +992,7 @@ Proof
  >> MATCH_MP_TAC ltree_lookup_append >> art []
 QED
 
-Theorem gen_ltree_unchanged :
+Theorem gen_ltree_unchanged:
     !t. gen_ltree (\p. THE (ltree_el t p)) = t
 Proof
     Q.X_GEN_TAC ‘t’
@@ -1014,7 +1014,7 @@ Proof
  >> simp [Once gen_ltree, ltree_el_def]
 QED
 
-Theorem gen_ltree_unchanged_extra :
+Theorem gen_ltree_unchanged_extra:
     !t f. gen_ltree (\p. if ltree_el t p <> NONE then THE (ltree_el t p)
                          else f p) = t
 Proof
@@ -1052,11 +1052,11 @@ QED
 (* This is the number of children at certain ltree node (NONE means infinite).
    NOTE: It makes the statements of the [ltree_insert_delete], slightly nicer.
  *)
-Definition ltree_branching_def :
+Definition ltree_branching_def:
     ltree_branching t p = SND (THE (ltree_el t p))
 End
 
-Theorem ltree_branching_alt_ltree_lookup :
+Theorem ltree_branching_alt_ltree_lookup:
     !p t. p IN ltree_paths t ==>
           ltree_branching t p = LLENGTH (ltree_children (THE (ltree_lookup t p)))
 Proof
@@ -1073,13 +1073,13 @@ Proof
  >> rw [ltree_paths_def]
 QED
 
-Theorem ltree_branching_NIL :
+Theorem ltree_branching_NIL:
     !a ts. ltree_branching (Branch a ts) [] = LLENGTH ts
 Proof
     rw [ltree_branching_def, ltree_el_def]
 QED
 
-Theorem ltree_branching_CONS :
+Theorem ltree_branching_CONS:
     !h p a ts. h::p IN ltree_paths (Branch a ts) ==>
                ltree_branching (Branch a ts) (h::p) =
                ltree_branching (THE (LNTH h ts)) p
@@ -1089,7 +1089,7 @@ Proof
  >> Cases_on ‘LNTH h ts’ >> fs []
 QED
 
-Theorem ltree_branching_ltree_paths :
+Theorem ltree_branching_ltree_paths:
     !p t m. p IN ltree_paths t /\ ltree_branching t p = SOME m ==>
             !h. h < m <=> SNOC h p IN ltree_paths t
 Proof
@@ -1127,7 +1127,7 @@ QED
    is going to be deleted. f can be used to update the parent node for the
    removal of rightmost child (subtree), otherwise use I.
  *)
-Definition ltree_delete_def :
+Definition ltree_delete_def:
     ltree_delete f t p =
     gen_ltree (\ns. let (d,len) = THE (ltree_el t ns); m = THE len in
                     if ns = p /\ len <> NONE /\ 0 < m then
@@ -1137,7 +1137,7 @@ Definition ltree_delete_def :
 End
 Overload ltree_delete' = “ltree_delete I”
 
-Theorem ltree_delete_NIL :
+Theorem ltree_delete_NIL:
     !f a ts.
          ltree_delete f (Branch a ts) [] =
          if LFINITE ts /\ 0 < THE (LLENGTH ts) then
@@ -1193,7 +1193,7 @@ Proof
       rfs [] ]
 QED
 
-Theorem ltree_delete_CONS :
+Theorem ltree_delete_CONS:
     !f a ts h p t.
          LNTH h ts = SOME t /\ ltree_el t p <> NONE ==>
          ltree_delete f (Branch a ts) (h::p) =
@@ -1236,7 +1236,7 @@ Proof
 QED
 
 (* NOTE: “ltree_delete” does not remove the parent branch no matter what *)
-Theorem ltree_delete_path_stable :
+Theorem ltree_delete_path_stable:
     !f p t. p IN ltree_paths t ==> p IN ltree_paths (ltree_delete f t p)
 Proof
     Q.X_GEN_TAC ‘f’
@@ -1258,7 +1258,7 @@ Proof
  >> rw [LNTH_IS_SOME, LFINITE_LLENGTH]
 QED
 
-Theorem ltree_el_ltree_delete :
+Theorem ltree_el_ltree_delete:
     !f p t. ltree_el t p = SOME (a,SOME (SUC n)) ==>
             ltree_el (ltree_delete f t p) p = SOME (f a,SOME n)
 Proof
@@ -1445,7 +1445,7 @@ Proof
       simp [LFINITE_LNTH_IS_SOME] ]
 QED
 
-Theorem ltree_delete_paths :
+Theorem ltree_delete_paths:
     !f p t n.
        p IN ltree_paths t /\ ltree_branching t p = SOME (SUC n) ==>
        ltree_paths (ltree_delete f t p) =
@@ -1466,7 +1466,7 @@ QED
 (* NOTE: “ltree_insert f t p t0” inserts t0 as the right-most children of the
    ltree node “ltree_lookup t p”.
  *)
-Definition ltree_insert_def :
+Definition ltree_insert_def:
     ltree_insert f t p t0 =
     gen_ltree (\ns. if ltree_el t ns <> NONE then
                        let (d,len) = THE (ltree_el t ns); m = THE len in
@@ -1479,7 +1479,7 @@ Definition ltree_insert_def :
 End
 Overload ltree_insert' = “ltree_insert I”
 
-Theorem ltree_insert_NIL :
+Theorem ltree_insert_NIL:
     !f a ts t0.
          ltree_insert f (Branch a ts) [] t0 =
          if LFINITE ts then
@@ -1523,7 +1523,7 @@ Proof
  >> rw [gen_ltree_unchanged_extra]
 QED
 
-Theorem ltree_insert_CONS :
+Theorem ltree_insert_CONS:
     !f a ts h p t t0.
          LNTH h ts = SOME t /\ ltree_el t p <> NONE ==>
          ltree_insert f (Branch a ts) (h::p) t0 =
@@ -1616,7 +1616,7 @@ Proof
  >> simp []
 QED
 
-Theorem ltree_finite_ltree_insert :
+Theorem ltree_finite_ltree_insert:
     !f p t t0.
        ltree_finite t /\ p IN ltree_paths t /\ ltree_finite t0 ==>
        ltree_finite (ltree_insert f t p t0)
@@ -1628,7 +1628,7 @@ Proof
  >> qexistsl_tac [‘q’, ‘r’] >> art []
 QED
 
-Theorem ltree_insert_path_stable :
+Theorem ltree_insert_path_stable:
     !f p t t0. p IN ltree_paths t ==> p IN ltree_paths (ltree_insert f t p t0)
 Proof
     Q.X_GEN_TAC ‘f’
@@ -1650,7 +1650,7 @@ Proof
  >> rw [LNTH_IS_SOME, LFINITE_LLENGTH]
 QED
 
-Theorem ltree_el_ltree_insert :
+Theorem ltree_el_ltree_insert:
     !f p t t0. ltree_el t p = SOME (a,SOME n) ==>
                ltree_el (ltree_insert f t p t0) p = SOME (f a,SOME (SUC n))
 Proof
@@ -1825,7 +1825,7 @@ Proof
       simp [] ]
 QED
 
-Theorem ltree_insert_paths :
+Theorem ltree_insert_paths:
     !f p t n t0.
        p IN ltree_paths t /\ ltree_branching t p = SOME n ==>
        ltree_paths (ltree_insert f t p t0) =
@@ -1842,7 +1842,7 @@ Proof
  >> Cases_on ‘y’ >> fs []
 QED
 
-Theorem ltree_insert_delete :
+Theorem ltree_insert_delete:
     !n p t t0 f g d len.
        ltree_branching t p = SOME (SUC n) /\
        ltree_lookup t (SNOC n p) = SOME t0 /\
@@ -1994,7 +1994,7 @@ QED
  *  ltree_finite and (finite) ltree_paths
  *---------------------------------------------------------------------------*)
 
-Theorem ltree_finite_imp_finite_ltree_paths :
+Theorem ltree_finite_imp_finite_ltree_paths:
     !t. ltree_finite t ==> FINITE (ltree_paths t)
 Proof
     HO_MATCH_MP_TAC ltree_finite_ind
@@ -2180,7 +2180,7 @@ Proof
  >> rw [HAS_SIZE]
 QED
 
-Theorem ltree_finite_alt_ltree_paths :
+Theorem ltree_finite_alt_ltree_paths:
     !t. ltree_finite t <=> FINITE (ltree_paths t)
 Proof
     METIS_TAC [ltree_finite_imp_finite_ltree_paths,
@@ -2215,7 +2215,7 @@ Proof
     rw [from_rose_def, LIST_EQ_REWRITE, EL_MAP]
 QED
 
-Theorem from_rose :
+Theorem from_rose:
     !t. from_rose t =
         Branch (rose_node t) (fromList (MAP from_rose (rose_children t)))
 Proof
@@ -2226,7 +2226,7 @@ QED
 
 Theorem rose_tree_induction[allow_rebind] = from_rose_ind;
 
-Theorem from_rose_11 :
+Theorem from_rose_11:
     !r1 r2. from_rose r1 = from_rose r2 <=> r1 = r2
 Proof
     rpt GEN_TAC
@@ -2274,7 +2274,7 @@ in
       SIMP_RULE bool_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] thm);
 end;
 
-Theorem to_rose_thm :
+Theorem to_rose_thm:
     !r. to_rose (from_rose r) = r
 Proof
     Q.X_GEN_TAC ‘r’
@@ -2283,7 +2283,7 @@ Proof
  >> rw [GSYM from_rose_11, to_rose_def]
 QED
 
-Theorem rose_node_to_rose :
+Theorem rose_node_to_rose:
     !t. ltree_finite t ==> rose_node (to_rose t) = ltree_node t
 Proof
     rw [ltree_finite_from_rose]
@@ -2292,7 +2292,7 @@ Proof
  >> rw [rose_node_def, from_rose_def, ltree_node_def]
 QED
 
-Theorem rose_children_to_rose :
+Theorem rose_children_to_rose:
     !t. ltree_finite t ==>
         rose_children (to_rose t) = MAP to_rose (THE (toList (ltree_children t)))
 Proof
@@ -2323,7 +2323,7 @@ QED
    See examples/lambda/barendregt/lameta_complateTheory.rose_to_term_def for
    an application.
  *)
-Definition rose_reduce_def :
+Definition rose_reduce_def:
     rose_reduce f ((Rose a ts) :'a rose_tree) = f a (MAP (rose_reduce f) ts)
 Termination
     WF_REL_TAC ‘measure (rose_tree_size (K 0) o SND)’
@@ -2337,7 +2337,7 @@ Proof
  >> rw [LIST_EQ_REWRITE, EL_MAP]
 QED
 
-Theorem rose_reduce :
+Theorem rose_reduce:
     !f t. rose_reduce f t = f (rose_node t) (MAP (rose_reduce f) (rose_children t))
 Proof
     rpt GEN_TAC
@@ -2355,13 +2355,13 @@ Theorem ltree_path_lt =
         SHORTLEX_THM |> Q.GEN ‘R’ |> ISPEC “($< :num -> num -> bool)”
 
 (* The first two properties are required by TOPOLOGICAL_SORT' *)
-Theorem ltree_path_lt_transitive :
+Theorem ltree_path_lt_transitive:
     transitive ltree_path_lt
 Proof
     rw [SHORTLEX_transitive]
 QED
 
-Theorem ltree_path_lt_antisymmetric :
+Theorem ltree_path_lt_antisymmetric:
     antisymmetric ltree_path_lt
 Proof
     MATCH_MP_TAC SHORTLEX_antisymmetric
@@ -2369,7 +2369,7 @@ Proof
         relationTheory.antisymmetric_def]
 QED
 
-Theorem ltree_path_lt_irreflexive :
+Theorem ltree_path_lt_irreflexive:
     irreflexive ltree_path_lt
 Proof
     MATCH_MP_TAC SHORTLEX_irreflexive
@@ -2397,7 +2397,7 @@ val path_index_def = new_specification
   ("path_index_def", ["path_index"],
     SIMP_RULE std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] path_index_exists);
 
-Theorem path_index_in_paths :
+Theorem path_index_in_paths:
     !s i. FINITE s /\ i < CARD s ==> path_index s i IN s
 Proof
     rpt STRIP_TAC
@@ -2410,7 +2410,7 @@ QED
 
 Overload ltree_path_le = “RC ltree_path_lt”
 
-Theorem ltree_path_le_total :
+Theorem ltree_path_le_total:
     total ltree_path_le
 Proof
     MATCH_MP_TAC SHORTLEX_total
@@ -2420,7 +2420,7 @@ QED
 (* NOTE: A more complete picture of ‘path_index’. Now SHORTLEX_total is involved
    in addition to transitive and antisymmetric.
  *)
-Theorem path_index_thm :
+Theorem path_index_thm:
     !s n. s HAS_SIZE n ==>
           BIJ (path_index s) (count n) s /\
          !j k. j < n /\ k < n ==>
@@ -2484,18 +2484,18 @@ Proof
  >> rw []
 QED
 
-Definition parent_inclusive_def :
+Definition parent_inclusive_def:
     parent_inclusive (s :num list set) <=>
     !p q. p IN s /\ q <<= p ==> q IN s
 End
 
-Definition sibling_inclusive_def :
+Definition sibling_inclusive_def:
     sibling_inclusive (s :num list set) <=>
     !p q. p IN s /\ p <> [] /\ q <> [] /\
           FRONT q = FRONT p /\ LAST q < LAST p ==> q IN s
 End
 
-Theorem parent_inclusive_ltree_paths :
+Theorem parent_inclusive_ltree_paths:
     !t. parent_inclusive (ltree_paths t)
 Proof
     rw [parent_inclusive_def]
@@ -2503,7 +2503,7 @@ Proof
  >> Q.EXISTS_TAC ‘p’ >> art []
 QED
 
-Theorem parent_inclusive_union :
+Theorem parent_inclusive_union:
     !s1 s2. parent_inclusive s1 /\ parent_inclusive s2 ==>
             parent_inclusive (s1 UNION s2)
 Proof
@@ -2554,7 +2554,7 @@ Proof
  >> simp []
 QED
 
-Theorem sibling_inclusive_ltree_paths :
+Theorem sibling_inclusive_ltree_paths:
     !t. sibling_inclusive (ltree_paths t)
 Proof
     rw [sibling_inclusive_def]
@@ -2562,7 +2562,7 @@ Proof
  >> Q.EXISTS_TAC ‘p’ >> art []
 QED
 
-Theorem sibling_inclusive_union :
+Theorem sibling_inclusive_union:
     !s1 s2. sibling_inclusive s1 /\ sibling_inclusive s2 ==>
             sibling_inclusive (s1 UNION s2)
 Proof
@@ -2577,7 +2577,7 @@ Proof
       Q.EXISTS_TAC ‘p’ >> art [] ]
 QED
 
-Theorem ltree_path_lt_sibling :
+Theorem ltree_path_lt_sibling:
     !p q. p <> [] /\ q <> [] /\ FRONT p = FRONT q /\ LAST p < LAST q ==>
           ltree_path_lt p q
 Proof
@@ -2610,7 +2610,7 @@ Proof
  >> simp []
 QED
 
-Theorem finite_branching_ltree_el_cases :
+Theorem finite_branching_ltree_el_cases:
     !p t. finite_branching t /\ p IN ltree_paths t ==>
           ?d m. ltree_el t p = SOME (d,SOME m)
 Proof

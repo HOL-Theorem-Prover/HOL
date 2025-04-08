@@ -29,7 +29,7 @@ val Strip = S_TAC;
 
 val geq = Term `$>= : num->num->bool`;
 
-Definition tends_num_real :
+Definition tends_num_real:
     tends_num_real x x0 = (x tends x0)(mtop(mr1), ^geq)
 End
 Overload "-->" = “tends_num_real”
@@ -44,7 +44,7 @@ val SEQ = store_thm("SEQ",
   THEN REFL_TAC);
 
 (* connection to real_topologyTheory *)
-Theorem LIM_SEQUENTIALLY_SEQ :
+Theorem LIM_SEQUENTIALLY_SEQ:
     !s l. (s --> l) sequentially <=> (s --> l)
 Proof
     REWRITE_TAC [LIM_SEQUENTIALLY, SEQ, GREATER_EQ, dist]
@@ -100,14 +100,14 @@ val convergent = new_definition("convergent",
   “convergent f = ?l. f --> l”);
 
 (* already defined in real_topologyTheory *)
-Theorem cauchy :
+Theorem cauchy:
   !f. cauchy f <=>
       !e. &0 < e ==> ?N:num. !m n. m >= N /\ n >= N ==> abs(f(m) - f(n)) < e
 Proof
     rw [cauchy_def, dist]
 QED
 
-Definition lim :
+Definition lim:
     limseq f = @l. f --> l
 End
 Overload lim = “limseq”
@@ -119,7 +119,7 @@ Proof
     REWRITE_TAC [LIM_SEQUENTIALLY_SEQ, reallim, lim]
 QED
 
-Theorem SEQ_LIM :
+Theorem SEQ_LIM:
     !f. convergent f <=> f --> lim f
 Proof
   GEN_TAC THEN REWRITE_TAC[convergent] THEN EQ_TAC THENL
@@ -156,7 +156,7 @@ val mono = new_definition("mono",
                \/
                (!m n. m <= n ==> f(m) >= f(n))”);
 
-Theorem MONO_SUC :
+Theorem MONO_SUC:
   !f:num->real. mono f <=> (!n. f(SUC n) >= f n) \/ (!n. f(SUC n) <= f(n))
 Proof
  GEN_TAC THEN REWRITE_TAC[mono, real_ge] THEN
@@ -894,7 +894,7 @@ val BOLZANO_LEMMA = store_thm("BOLZANO_LEMMA",
       ONCE_REWRITE_TAC[ADD_SYM] THEN REWRITE_TAC[LESS_EQ_ADD]]]);
 
 (* moved here from integralTheory *)
-Theorem BOLZANO_LEMMA_ALT :
+Theorem BOLZANO_LEMMA_ALT:
    !P. (!a b c. a <= b /\ b <= c /\ P a b /\ P b c ==> P a c) /\
        (!x. ?d. &0 < d /\ (!a b. a <= x /\ x <= b /\ b - a < d ==> P a b))
        ==> !a b. a <= b ==> P a b
@@ -920,7 +920,7 @@ val suminf = new_definition("suminf",
   “suminf f = @s. f sums s”);
 
 (* connection to real_topologyTheory *)
-Theorem sums_univ :
+Theorem sums_univ:
     !(f :num -> real) (l :real). real_topology$sums f l univ(:num) <=> f sums l
 Proof
     RW_TAC std_ss [sums, sums_def, dist, INTER_UNIV,
@@ -942,14 +942,14 @@ Proof
 QED
 
 (* NOTE: this indicates that ‘suminf = infsum univ(:num)’ *)
-Theorem suminf_univ :
+Theorem suminf_univ:
     !(f :num -> real). infsum univ(:num) f = seq$suminf f
 Proof
     RW_TAC std_ss [suminf_def, suminf, sums_univ]
 QED
 
 (* NOTE: this indicates that ‘summable = real_topology$summable univ(:num)’ *)
-Theorem summable_univ :
+Theorem summable_univ:
     !(f :num -> real). real_topology$summable univ(:num) f <=> summable f
 Proof
     RW_TAC std_ss [summable_def, summable, sums_univ]
@@ -2043,7 +2043,7 @@ val SER_POS_COMPARE = store_thm
    >> RW_TAC arith_ss [abs]);
 
 (* moved here from real_sigmaTheory *)
-Theorem SEQ_REAL_SUM_IMAGE :
+Theorem SEQ_REAL_SUM_IMAGE:
     !s. FINITE s ==>
         !f f'. (!x. x IN s ==> (\n. f n x) --> f' x) ==>
                 (\n. REAL_SUM_IMAGE (f n) s) --> REAL_SUM_IMAGE f' s
@@ -2062,7 +2062,7 @@ Proof
    >> METIS_TAC []
 QED
 
-Theorem POW_HALF_SMALL :
+Theorem POW_HALF_SMALL:
     !e:real. 0 < e ==> ?n. (1 / 2) pow n < e
 Proof
     RW_TAC std_ss []
@@ -2074,7 +2074,7 @@ Proof
  >> PROVE_TAC [LESS_EQ_REFL]
 QED
 
-Theorem POW_HALF_MONO :
+Theorem POW_HALF_MONO:
     !m n. m <= n ==> ((1:real)/2) pow n <= (1/2) pow m
 Proof
     REPEAT STRIP_TAC
@@ -2096,7 +2096,7 @@ Proof
                POW_HALF_POS]
 QED
 
-Theorem HARMONIC_SERIES_POW_2 : (* was in util_probTheory *)
+Theorem HARMONIC_SERIES_POW_2: (* was in util_probTheory *)
     summable (\n. inv (&(SUC n) pow 2))
 Proof
     MATCH_MP_TAC POS_SUMMABLE

@@ -259,7 +259,7 @@ val SUBST_IS_SAME = store_thm
 (* for many choices of x', u'.                                          *)
 (* -------------------------------------------------------------------- *)
 
-Theorem ETA_R_equals :
+Theorem ETA_R_equals:
    (!x t:^term. ETA_R (Var x) t = F) /\
    (!t u t':^term. ETA_R (App t u) t' = F) /\
    (!x u t:^term. ETA_R (Lam x u) t <=> ~(x IN FV t) /\ (u = App t (Var x)))

@@ -368,7 +368,7 @@ Proof
   rw [fsgsize_def, CARD_DELETE]
 QED
 
-Theorem fsgedges_members :
+Theorem fsgedges_members:
   !g x y. {x;y} IN fsgedges g ==> x <> y /\ x IN nodes g /\ y IN nodes g
 Proof
   rpt GEN_TAC >> STRIP_TAC >> dxrule alledges_valid >>
@@ -387,7 +387,7 @@ Proof
  >> rw [valid_edges_def]
 QED
 
-Definition fsgAddNodes_def :
+Definition fsgAddNodes_def:
   fsgAddNodes N g = ITSET fsgAddNode N g
 End
 
@@ -439,7 +439,7 @@ Proof
  >> qspec_then ‘g’ strip_assume_tac alledges_valid >> gs []
 QED
 
-Theorem fsg_edge_induction :
+Theorem fsg_edge_induction:
   ∀g P.
     P (fsgAddNodes (nodes g) emptyG) /\
     (!e g0. nodes g0 = nodes g /\
@@ -728,7 +728,7 @@ QED
 Overload V[local] = “nodes (g :fsgraph)”
 Overload E[local] = “fsgedges (g :fsgraph)”
 
-Theorem fsgraph_valid :
+Theorem fsgraph_valid:
     !(g :fsgraph) n1 n2. {n1;n2} IN E ==> n1 IN V /\ n2 IN V /\ n1 <> n2
 Proof
     rpt GEN_TAC
@@ -741,13 +741,13 @@ QED
    NOTE: ‘partitions’ requires that each partiton must be non-empty. This is not
    explicitly mentioned in the textbook but seems reasonable.
  *)
-Definition gen_partite_def :
+Definition gen_partite_def:
     gen_partite r (g :fsgraph) v <=>
       v partitions (nodes g) /\ CARD v = r /\
       !n1 n2. {n1;n2} IN fsgedges g ==> part v n1 <> part v n2
 End
 
-Definition partite :
+Definition partite:
     partite r (g :fsgraph) <=> ?v. gen_partite r g v
 End
 
@@ -761,7 +761,7 @@ Theorem partite_def = REWRITE_RULE [gen_partite_def] partite
 (* "Instead of '2-partite' one usually says bipartite." *)
 Overload bipartite = “partite 2”
 
-Definition gen_bipartite :
+Definition gen_bipartite:
     gen_bipartite (g :fsgraph) A B = gen_partite 2 g {A; B}
 End
 
@@ -776,7 +776,7 @@ Proof
  >> rw [gen_bipartite, gen_partite_def]
 QED
 
-Theorem gen_bipartite_def :
+Theorem gen_bipartite_def:
     !g A B. gen_bipartite (g :fsgraph) A B <=>
             DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
             !n1 n2. {n1;n2} IN fsgedges g ==>
@@ -853,7 +853,7 @@ Proof
       DISCH_THEN (fs o wrap o SYM) ]
 QED
 
-Theorem gen_bipartite_alt :
+Theorem gen_bipartite_alt:
     !g A B. gen_bipartite (g :fsgraph) A B <=>
             DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
             !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B
@@ -871,7 +871,7 @@ Proof
       gvs [INSERT2_lemma] ]
 QED
 
-Theorem bipartite_def :
+Theorem bipartite_def:
     !g. bipartite (g :fsgraph) <=>
         ?A B. DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
               !n1 n2. {n1;n2} IN fsgedges g ==>
@@ -889,7 +889,7 @@ Proof
  >> rw [gen_bipartite_def]
 QED
 
-Theorem bipartite_alt :
+Theorem bipartite_alt:
     !g. bipartite (g :fsgraph) <=>
         ?A B. DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
               !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B

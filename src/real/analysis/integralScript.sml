@@ -86,7 +86,7 @@ QED
 (* ------------------------------------------------------------------------ *)
 
 (* D represents a finite order set of points as a partition of I = [a,b] *)
-Definition division :
+Definition division:
    division(a,b) D <=>
      (D 0 = a) /\
      (?N. (!n. n < N ==> D(n) < D(SUC n)) /\
@@ -94,14 +94,14 @@ Definition division :
 End
 
 (* The "infinite tail" of D remains the value of the last point D(N) *)
-Definition dsize :
+Definition dsize:
    dsize D =
       @N. (!n. n < N ==> D(n) < D(SUC n)) /\
           (!n. n >= N ==> (D(n) = D(N)))
 End
 
 (* tagged division, p(n) is the tag of each intervals of the division D *)
-Definition tdiv :
+Definition tdiv:
    tdiv(a,b) (D,p) <=>
      division(a,b) D /\
      (!n. D(n) <= p(n) /\ p(n) <= D(SUC n))
@@ -115,13 +115,13 @@ End
 
    cf. integrationTheory.gauge_def (Gauge)
  *)
-Definition gauge :
+Definition gauge:
    gauge(E) (g:real->real) = !x. E x ==> &0 < g(x)
 End
 
 (* connection to integrationTheory, thus the function g (as the gauge) will be
    used as the radius of each division as open intervals. *)
-Theorem gauge_alt :
+Theorem gauge_alt:
     !c E g. 0 < c ==> (gauge E g <=> Gauge (\x. ball(x, if E x then c * g(x) else 1)))
 Proof
     rw [gauge, gauge_def, CENTRE_IN_BALL, OPEN_BALL]
@@ -133,7 +133,7 @@ Proof
  >> rw [REAL_LT_LMUL_0]
 QED
 
-Theorem gauge_alt_univ :
+Theorem gauge_alt_univ:
     !c g. 0 < c ==> (gauge univ(:real) g <=> Gauge (\x. ball(x,c * g(x))))
 Proof
     rpt STRIP_TAC
@@ -143,7 +143,7 @@ QED
 (* g is the gauge function (the range E is ignored), D is a division, p is the
    tag of each intervals in the division
  *)
-Definition fine :
+Definition fine:
    fine(g:real->real) (D,p) =
      !n. n < dsize D ==> D(SUC n) - D(n) < g(p(n))
 End
@@ -152,7 +152,7 @@ End
 (* Riemann sum                                                              *)
 (* ------------------------------------------------------------------------ *)
 
-Definition rsum :
+Definition rsum:
    rsum (D,(p:num->real)) f =
         sum(0,dsize(D))(\n. f(p n) * (D(SUC n) - D(n)))
 End
@@ -165,7 +165,7 @@ End
 
    NOTE: only integration on (closed) intervals are supported in integralTheory.
  *)
-Definition Dint :
+Definition Dint:
    Dint(a,b) f k <=>
        !e. &0 < e ==>
            ?g. gauge(\x. a <= x /\ x <= b) g /\
@@ -177,7 +177,7 @@ End
 (* Useful lemmas about the size of `trivial` divisions etc.                 *)
 (* ------------------------------------------------------------------------ *)
 
-Theorem DIVISION_0 :
+Theorem DIVISION_0:
     !a b. (a = b) ==> dsize(\n:num. if (n = 0) then a else b) = 0
 Proof
   REPEAT GEN_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC[COND_ID] THEN
@@ -189,7 +189,7 @@ Proof
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[ZERO_LESS_EQ]]
 QED
 
-Theorem DIVISION_1 :
+Theorem DIVISION_1:
     !a b. a < b ==> dsize(\n. if (n = 0) then a else b) = 1
 Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[dsize] THEN
@@ -214,7 +214,7 @@ Proof
       ASM_REWRITE_TAC[CONJUNCT1 LE, GSYM NOT_SUC, NOT_SUC]]]
 QED
 
-Theorem DIVISION_SINGLE :
+Theorem DIVISION_SINGLE:
     !a b. a <= b ==> division(a,b)(\n. if (n = 0) then a else b)
 Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[division] THEN
@@ -230,14 +230,14 @@ Proof
     ASM_REWRITE_TAC[COND_ID]]
 QED
 
-Theorem DIVISION_LHS :
+Theorem DIVISION_LHS:
     !D a b. division(a,b) D ==> (D(0) = a)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[division] THEN
   DISCH_THEN(fn th => REWRITE_TAC[th])
 QED
 
-Theorem DIVISION_THM :
+Theorem DIVISION_THM:
   !D a b. division(a,b) D <=>
          (D(0) = a) /\
          (!n. n < dsize D ==> D(n) < D(SUC n)) /\
@@ -270,7 +270,7 @@ Proof
     REWRITE_TAC[REAL_LT_REFL]]
 QED
 
-Theorem DIVISION_RHS :
+Theorem DIVISION_RHS:
     !D a b. division(a,b) D ==> (D(dsize D) = b)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[DIVISION_THM] THEN
@@ -278,7 +278,7 @@ Proof
   REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL]
 QED
 
-Theorem DIVISION_LT_GEN :
+Theorem DIVISION_LT_GEN:
    !D a b m n. division(a,b) D /\ m < n /\ n <= (dsize D) ==> D(m) < D(n)
 Proof
   REPEAT STRIP_TAC THEN UNDISCH_TAC (Term`m:num < n`) THEN
@@ -301,7 +301,7 @@ Proof
       ASM_REWRITE_TAC[]]]
 QED
 
-Theorem DIVISION_LT :
+Theorem DIVISION_LT:
    !D a b. division(a,b) D ==> !n. n < (dsize D) ==> D(0) < D(SUC n)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[DIVISION_THM] THEN STRIP_TAC THEN
@@ -315,7 +315,7 @@ Proof
   ASM_REWRITE_TAC[LESS_SUC_REFL]
 QED
 
-Theorem DIVISION_LE :
+Theorem DIVISION_LE:
    !D a b. division(a,b) D ==> a <= b
 Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
@@ -331,7 +331,7 @@ Proof
   ASM_REWRITE_TAC[PRE, REAL_LE_REFL, LESS_SUC_REFL, REAL_LT_IMP_LE]
 QED
 
-Theorem DIVISION_GT :
+Theorem DIVISION_GT:
    !D a b. division(a,b) D ==> !n. n < (dsize D) ==> D(n) < D(dsize D)
 Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC DIVISION_LT_GEN THEN
@@ -339,7 +339,7 @@ Proof
   ASM_REWRITE_TAC[LESS_EQ_REFL]
 QED
 
-Theorem DIVISION_EQ :
+Theorem DIVISION_EQ:
    !D a b. division(a,b) D ==> ((a = b) <=> (dsize D = 0))
 Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
@@ -355,7 +355,7 @@ Proof
   ASM_REWRITE_TAC[PRE, NOT_SUC, LESS_SUC_REFL, REAL_LT_IMP_NE]
 QED
 
-Theorem DIVISION_LBOUND :
+Theorem DIVISION_LBOUND:
    !D a b. division(a,b) D ==> !r. a <= D(r)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[DIVISION_THM] THEN STRIP_TAC THEN
@@ -374,7 +374,7 @@ Proof
       FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[GREATER_EQ]]]
 QED
 
-Theorem DIVISION_LBOUND_LT :
+Theorem DIVISION_LBOUND_LT:
    !D a b. division(a,b) D /\ ~(dsize D = 0) ==> !n. a < D(SUC n)
 Proof
   REPEAT STRIP_TAC THEN
@@ -391,7 +391,7 @@ Proof
     MATCH_MP_TAC OR_LESS THEN ASM_REWRITE_TAC[]]
 QED
 
-Theorem DIVISION_UBOUND :
+Theorem DIVISION_UBOUND:
    !D a b. division(a,b) D ==> !r. D(r) <= b
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[DIVISION_THM] THEN STRIP_TAC THEN
@@ -438,7 +438,7 @@ Proof
     DISCH_THEN (SUBST1_TAC o SYM) THEN REWRITE_TAC[SUB_MONO_EQ]]
 QED
 
-Theorem DIVISION_UBOUND_LT :
+Theorem DIVISION_UBOUND_LT:
    !D a b n. division(a,b) D /\ n < dsize D ==> D(n) < b
 Proof
   REPEAT STRIP_TAC THEN
@@ -742,7 +742,7 @@ Proof
          ASM_SIMP_TAC arith_ss[GSYM ADD]]]]
 QED
 
-Theorem DIVISION_APPEND_STRONG :
+Theorem DIVISION_APPEND_STRONG:
     !a b c D1 p1 D2 p2.
         tdiv(a,b) (D1,p1) /\ fine(g) (D1,p1) /\
         tdiv(b,c) (D2,p2) /\ fine(g) (D2,p2)
@@ -755,7 +755,7 @@ Proof
   MATCH_MP_TAC DIVISION_APPEND_EXPLICIT THEN ASM_MESON_TAC[]
 QED
 
-Theorem DIVISION_APPEND :
+Theorem DIVISION_APPEND:
     !a b c.
       (?D1 p1. tdiv(a,b) (D1,p1) /\ fine(g) (D1,p1)) /\
       (?D2 p2. tdiv(b,c) (D2,p2) /\ fine(g) (D2,p2)) ==>
@@ -771,7 +771,7 @@ QED
 (* This is also called Cousin's theorem [1, p.11].
    cf. integrationTheory.FINE_DIVISION_EXISTS
  *)
-Theorem DIVISION_EXISTS :
+Theorem DIVISION_EXISTS:
    !a b g. a <= b /\ gauge(\x. a <= x /\ x <= b) g
                 ==>
                 ?D p. tdiv(a,b) (D,p) /\ fine(g) (D,p)
@@ -836,12 +836,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 val _ = hide "integrable";
-Definition integrable :
+Definition integrable:
     integrable(a,b) f = ?i. Dint(a,b) f i
 End
 
 val _ = hide "integral";
-Definition integral :
+Definition integral:
     integral(a,b) f = @i. Dint(a,b) f i
 End
 
@@ -1055,7 +1055,7 @@ val DINT_LINEAR = store_thm("DINT_LINEAR",
 (* Ordering properties of integral.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem INTEGRAL_LE :
+Theorem INTEGRAL_LE:
     !f g a b i j.
         a <= b /\ integrable(a,b) f /\ integrable(a,b) g /\
         (!x. a <= x /\ x <= b ==> f(x) <= g(x))
@@ -1163,7 +1163,7 @@ val INTEGRAL_EQ = store_thm("INTEGRAL_EQ",
 (* Integral over a null interval is 0                                       *)
 (* ------------------------------------------------------------------------ *)
 
-Theorem INTEGRAL_NULL :
+Theorem INTEGRAL_NULL:
    !f a. Dint(a,a) f (&0)
 Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN GEN_TAC THEN
@@ -1179,7 +1179,7 @@ QED
 (* Fundamental theorem of calculus (Part I)                                 *)
 (* ------------------------------------------------------------------------ *)
 
-Theorem STRADDLE_LEMMA :
+Theorem STRADDLE_LEMMA:
    !f f' a b e. (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\ &0 < e
     ==> ?g. gauge(\x. a <= x /\ x <= b) g /\
             !x u v. a <= u /\ u <= x /\
@@ -3751,7 +3751,7 @@ Proof
  >> qexistsl_tac [‘a’, ‘b’] >> fs [tdiv]
 QED
 
-Theorem Dint_has_integral :
+Theorem Dint_has_integral:
     !f a b k. a <= b ==> (Dint(a,b) f k <=> (f has_integral k) (interval[a,b]))
 Proof
     rpt STRIP_TAC
@@ -3772,13 +3772,13 @@ Proof
 QED
 
 (* Below are easy corollaries of Dint_has_integral *)
-Theorem integrable_eq_integrable_on :
+Theorem integrable_eq_integrable_on:
     !f a b. a <= b ==> (integrable(a,b) f <=> f integrable_on (interval[a,b]))
 Proof
     rw [integrable, integrable_on, Dint_has_integral]
 QED
 
-Theorem integral_old_to_new :
+Theorem integral_old_to_new:
     !f a b. a <= b /\ integrable(a,b) f ==>
             integral(a,b) f = integration$integral (interval[a,b]) f
 Proof
@@ -3801,7 +3801,7 @@ Proof
  >> rw [GSYM Dint_has_integral]
 QED
 
-Theorem integral_new_to_old :
+Theorem integral_new_to_old:
     !f a b. a <= b /\ f integrable_on (interval[a,b]) ==>
             integration$integral (interval[a,b]) f = integral(a,b) f
 Proof

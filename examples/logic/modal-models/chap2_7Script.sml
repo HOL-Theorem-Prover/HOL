@@ -66,7 +66,7 @@ val thm_2_78_half1 = store_thm(
   fs[preserved_under_sim_def] >> rw[] >> fs[equiv0_def] >> `satis M w phi0` by metis_tac[] >> metis_tac[]);
 
 
-Theorem FINITE_SUBSET_IMAGE_lemma :
+Theorem FINITE_SUBSET_IMAGE_lemma:
 !s f ss. FINITE ss /\ ss ⊆ IMAGE f s ==>
          ?s0. FINITE s0 /\ s0 ⊆ s /\ ss = IMAGE f s0
 Proof

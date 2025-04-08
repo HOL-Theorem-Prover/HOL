@@ -531,7 +531,7 @@ QED
 (b) Showthatthereareultrafiltersover􏰟 thatdonotcontainanyfinitese
 *)
 
-Theorem exercise_2_5_4_a :
+Theorem exercise_2_5_4_a:
   FIP ({(univ(:num)) DIFF X | FINITE X}) (univ (:num))
 Proof
    rw[FIP_def]
@@ -554,7 +554,7 @@ Proof
 QED
 
 
-Theorem exercise_2_5_4_b :
+Theorem exercise_2_5_4_b:
   ?U. ultrafilter U (univ(:num)) /\ !s. FINITE s ==> s NOTIN U
 Proof
   `FIP ({(univ(:num)) DIFF X | FINITE X}) (univ (:num))` by metis_tac[exercise_2_5_4_a] >>

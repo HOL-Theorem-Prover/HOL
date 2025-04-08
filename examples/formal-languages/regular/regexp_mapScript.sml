@@ -59,11 +59,11 @@ val set_ss = list_ss ++ pred_setLib.PRED_SET_ss ++ rewrites [SET_EQ_THM,IN_DEF]
 
 val _ = new_theory "regexp_map";
 
-Definition eq_cmp_def :
+Definition eq_cmp_def:
    eq_cmp cmp <=> good_cmp cmp /\ !x y. (cmp x y = Equal) <=> (x=y)
 End
 
-Theorem eq_cmp_regexp_compare :
+Theorem eq_cmp_regexp_compare:
   eq_cmp regexp_compare
 Proof
   metis_tac [eq_cmp_def, regexp_compare_good,regexp_compare_eq]
@@ -74,13 +74,13 @@ val [frange_def,fdom_def] =
    `(fdom cmp bmap   = {a | ?x. lookup cmp a bmap = SOME x}) /\
     (frange cmp bmap = {x | ?a. lookup cmp a bmap = SOME x})`;
 
-Definition bmap_of_list_def :
+Definition bmap_of_list_def:
      bmap_of_list cmp (fmap:'a|->'b) list =
         FOLDR (\k bmap. balanced_map$insert cmp k (fmap ' k) bmap)
               Tip list
 End
 
-Definition fdom_bmap_def :
+Definition fdom_bmap_def:
     bmap_of cmp fmap = bmap_of_list cmp fmap (SET_TO_LIST (FDOM fmap))
 End
 ;
@@ -102,26 +102,26 @@ Proof
  Induct >> rw [invariant_def] >> metis_tac [insert_thm]
 QED
 
-Theorem invariant_bmap_of :
+Theorem invariant_bmap_of:
  !fmap cmp. good_cmp cmp ==> invariant cmp (bmap_of cmp fmap)
 Proof
  rw [bmap_of_def,invariant_insert_list]
 QED
 
-Theorem eq_cmp_singleton_keyset :
+Theorem eq_cmp_singleton_keyset:
   !cmp k.
      eq_cmp cmp ==> (key_set cmp k = {k})
 Proof
  rw_tac set_ss [eq_cmp_def,key_set_def]
 QED
 
-Theorem eq_cmp_keyset :
+Theorem eq_cmp_keyset:
  !cmp k j. eq_cmp cmp ==> (key_set cmp k j <=> (k=j))
 Proof
  rw_tac set_ss [eq_cmp_def,key_set_def] >> metis_tac[]
 QED
 
-Theorem eq_cmp_lookup_thm :
+Theorem eq_cmp_lookup_thm:
  !bmap cmp.
     invariant cmp bmap /\ eq_cmp cmp
    ==>
@@ -152,7 +152,7 @@ rw [insert_thm,lookup_thm,FLOOKUP_UPDATE]
  >> metis_tac [good_cmp_def,comparison_distinct]
 QED
 
-Theorem lookup_insert_thm :
+Theorem lookup_insert_thm:
  !bmap a b y.
      good_cmp cmp /\ invariant cmp bmap
     ==>
@@ -188,7 +188,7 @@ Induct >> rw [bmap_of_list_def] >> `good_cmp cmp` by metis_tac [eq_cmp_def]
      >> metis_tac [eq_cmp_def])
 QED
 
-Theorem lookup_bmap_of :
+Theorem lookup_bmap_of:
  !list fmap x.
    eq_cmp cmp
    ==>
@@ -201,7 +201,7 @@ Proof
             lookup_bmap_of_list_notin, MEM_SET_TO_LIST,FDOM_FINITE]
 QED
 
-Theorem FLOOKUP_lookup :
+Theorem FLOOKUP_lookup:
  !fmap.
     eq_cmp cmp ==> !x. FLOOKUP fmap x = lookup cmp x (bmap_of cmp fmap)
 Proof
@@ -269,7 +269,7 @@ Induct
   >> metis_tac [IN_SING]
 QED
 
-Theorem fdom_insert :
+Theorem fdom_insert:
   !bmap cmp k v.
       eq_cmp cmp /\
       invariant cmp bmap
@@ -282,14 +282,14 @@ Proof
   >> metis_tac [eq_cmp_def]
 QED
 
-Theorem FDOM_fdom :
+Theorem FDOM_fdom:
  !fmap.
      eq_cmp cmp ==> (FDOM fmap = fdom cmp (bmap_of cmp fmap))
 Proof
   rw [fdom_def,lookup_bmap_of]
 QED
 
-Theorem FRANGE_frange :
+Theorem FRANGE_frange:
   !fmap cmp.
       eq_cmp cmp ==> (FRANGE fmap = frange cmp (bmap_of cmp fmap))
 Proof
@@ -301,7 +301,7 @@ QED
 (* Definitions and lemmas about balanced_map things                          *)
 (*---------------------------------------------------------------------------*)
 
-Definition fmap_inj_def :
+Definition fmap_inj_def:
   fmap_inj cmp bmap =
      !x y. x IN fdom cmp bmap /\
            (lookup cmp x bmap = lookup cmp y bmap)
@@ -309,18 +309,18 @@ Definition fmap_inj_def :
 End
 
 
-Definition fapply_def :
+Definition fapply_def:
   fapply cmp bmap x = THE (lookup cmp x bmap)
 End
 
-Definition submap_def :
+Definition submap_def:
   submap cmp t1 t2 =
      !x. x IN fdom cmp t1
           ==> x IN fdom cmp t2 /\
              (lookup cmp x t1 = lookup cmp x t2)
 End
 
-Theorem member_iff_lookup :
+Theorem member_iff_lookup:
  !fmap cmp x.
      member cmp x fmap <=> ?y. lookup cmp x fmap = SOME y
 Proof
@@ -329,7 +329,7 @@ Proof
    >> BasicProvers.EVERY_CASE_TAC
 QED
 
-Theorem lookup_bin :
+Theorem lookup_bin:
   !fmap fmap' n k v x.
       (lookup cmp r (Bin n k v fmap fmap') = SOME x)
       <=>
@@ -340,7 +340,7 @@ Proof
  RW_TAC list_ss [lookup_def] THEN BasicProvers.CASE_TAC
 QED
 
-Theorem key_less_lookup :
+Theorem key_less_lookup:
  !fmap cmp k1 k2 x.
      invariant cmp fmap /\ good_cmp cmp /\
      key_ordered cmp k1 fmap Less /\
@@ -356,7 +356,7 @@ Proof
   >- metis_tac []
 QED
 
-Theorem key_greater_lookup :
+Theorem key_greater_lookup:
  !fmap cmp k1 k2 x.
      invariant cmp fmap /\ good_cmp cmp /\
      key_ordered cmp k1 fmap Greater /\
@@ -376,20 +376,20 @@ QED
 (* submap lemmas                                                             *)
 (*---------------------------------------------------------------------------*)
 
-Theorem submap_id :
+Theorem submap_id:
   !t cmp. submap cmp t t
 Proof
    rw [submap_def]
 QED
 
-Theorem submap_trans :
+Theorem submap_trans:
  !t1 t2 t3 cmp.
      submap cmp t1 t2 /\ submap cmp t2 t3 ==> submap cmp t1 t3
 Proof
   rw [submap_def]
 QED
 
-Theorem submap_mono :
+Theorem submap_mono:
  !t1 t2 k v cmp.
     eq_cmp cmp /\ invariant cmp t2 /\ submap cmp t1 t2
     /\ k NOTIN fdom cmp t1
@@ -405,7 +405,7 @@ Proof
   >> metis_tac[]
 QED
 
-Theorem submap_insert :
+Theorem submap_insert:
  !bmap t cmp x v.
     eq_cmp cmp /\ invariant cmp bmap /\
     x NOTIN fdom cmp bmap /\
@@ -425,7 +425,7 @@ Proof
        >> metis_tac [eq_cmp_def])
 QED
 
-Theorem fdom_ounion :
+Theorem fdom_ounion:
  !a b.
    good_cmp cmp /\ invariant cmp a /\ invariant cmp b
    ==>
@@ -437,7 +437,7 @@ Proof
                          member_iff_lookup,oneTheory.one] oin_ounion]
 QED
 
-Theorem SING_IN_FDOM :
+Theorem SING_IN_FDOM:
  !x bstmap cmp.
    eq_cmp cmp /\ invariant cmp bstmap
     ==>
@@ -455,7 +455,7 @@ Proof
                      ternaryComparisonsTheory.ordering_distinct])
 QED
 
-Theorem deleteFindMin_thm :
+Theorem deleteFindMin_thm:
  !t t' k v.
    invariant regexp_compare t /\ ~null t /\
    deleteFindMin t = ((k,v),t')
@@ -479,7 +479,7 @@ Proof
   >> metis_tac[SING_IN_FDOM]
 QED
 
-Theorem invariant_oset :
+Theorem invariant_oset:
  !l. good_cmp cmp ==> invariant cmp (oset cmp l)
 Proof
  simp_tac std_ss [oset_def]
@@ -489,7 +489,7 @@ Proof
    >- metis_tac [insert_thm]
 QED
 
-Theorem in_dom_oset :
+Theorem in_dom_oset:
  !l x.
    eq_cmp cmp ==> (x IN fdom cmp (oset cmp l) <=> MEM x l)
 Proof
@@ -503,14 +503,14 @@ Proof
        >> rw_tac set_ss [fdom_insert])
 QED
 
-Theorem dom_oset_lem :
+Theorem dom_oset_lem:
  !l.
     eq_cmp cmp ==> (fdom cmp (oset cmp l) = LIST_TO_SET l)
 Proof
  rw [EXTENSION,in_dom_oset,eq_cmp_regexp_compare]
 QED
 
-Theorem member_insert :
+Theorem member_insert:
  !bmap x y v.
     eq_cmp cmp /\ invariant cmp bmap ==>
     (member cmp x (insert cmp y v bmap) <=> (x=y) \/ member cmp x bmap)
@@ -519,7 +519,7 @@ Proof
  rw [fdom_insert] >> metis_tac [IN_DEF]
 QED
 
-Theorem mem_foldrWithKey :
+Theorem mem_foldrWithKey:
  !(bset:'a oset) acc a. eq_cmp cmp /\ invariant cmp bset ==>
      (MEM (a,()) (foldrWithKey (\k x xs. (k,())::xs) acc bset)
             <=>
@@ -539,7 +539,7 @@ Theorem mem_foldrWithKey_lem =
       |> Q.SPEC `[]`
       |> SIMP_RULE list_ss [];
 
-Theorem invariant_ffoldr :
+Theorem invariant_ffoldr:
  !list aset f.
     good_cmp cmp /\ invariant cmp aset
     ==>
@@ -549,7 +549,7 @@ Proof
          >> Cases_on `h` >> rw [] >> metis_tac [insert_thm]
 QED
 
-Theorem left_to_right_alt :
+Theorem left_to_right_alt:
  eq_cmp (cmp:'b->'b->ordering)
    ==>
    !(list :('a # unit) list) (bset :'b oset) x f.
@@ -585,14 +585,14 @@ Theorem left_to_right_lem =
       |> Q.SPEC `f`
       |> DISCH_ALL;
 
-Theorem oin_fdom :
+Theorem oin_fdom:
  !aset x.
    oin cmp x aset <=> x IN fdom cmp aset
 Proof
  rw [fdom_def, oin_def, member_iff_lookup]
 QED
 
-Theorem mem_oin :
+Theorem mem_oin:
  !list x aset.
      eq_cmp cmp /\ invariant cmp aset /\
      MEM (x,()) list
@@ -614,7 +614,7 @@ Theorem mem_oin_inst =
    |> Q.GEN `list`;
 
 
-Theorem fdom_oimage :
+Theorem fdom_oimage:
  !aset:'a oset.
      eq_cmp (cmp1:'a->'a->ordering) /\
      eq_cmp (cmp2:'b->'b->ordering) /\ invariant cmp1 aset
@@ -640,7 +640,7 @@ Proof
          >> fs [oin_def,member_iff_lookup,oneTheory.one])
 QED
 
-Theorem fdom_oimage_insert :
+Theorem fdom_oimage_insert:
  !bset a f cmp1 cmp2.
     eq_cmp (cmp1:'a->'a->ordering) /\
      eq_cmp (cmp2:'b->'b->ordering) /\ invariant cmp1 bset
@@ -667,7 +667,7 @@ Theorem fdom_oimage_inst =
    |> SIMP_RULE std_ss [eq_cmp_regexp_compare,num_cmp_good,num_cmp_antisym,eq_cmp_def];
 
 
-Theorem invariant_foldl :
+Theorem invariant_foldl:
   !list work f.
      invariant regexp_compare work
      ==>
@@ -681,7 +681,7 @@ Proof
   >> rw []
 QED
 
-Theorem oin_foldl_insert :
+Theorem oin_foldl_insert:
   !list bmap r f.
      invariant regexp_compare bmap
      ==>

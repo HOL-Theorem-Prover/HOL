@@ -732,7 +732,7 @@ Proof
 QED
 
 (* NOTE: This is INT_LT of HOL-Light *)
-Theorem INT_LT2 :
+Theorem INT_LT2:
     !x (y :int). x < y <=> ~(y <= x)
 Proof
     REWRITE_TAC [GSYM INT_NOT_LT]
@@ -1145,7 +1145,7 @@ val INT_LT_IMP_NE =
                   REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
                   REWRITE_TAC[INT_LT_REFL]);
 
-Theorem INT_NOT_EQ :
+Theorem INT_NOT_EQ:
     !x y. ~(x = y) <=> x < y \/ y < x
 Proof
     rpt GEN_TAC
@@ -1469,7 +1469,7 @@ val INT_SUB_RNEG =
               Term `!x y. x - ~y = x + y`,
               REPEAT GEN_TAC THEN REWRITE_TAC[int_sub, INT_NEGNEG]);
 
-Theorem INT_LE_LNEG :
+Theorem INT_LE_LNEG:
     !x y. -x <= y <=> &0 <= x + y
 Proof
     rpt STRIP_TAC
@@ -1477,7 +1477,7 @@ Proof
  >> REWRITE_TAC [INT_SUB_RNEG, Once INT_ADD_SYM]
 QED
 
-Theorem INT_LE_RNEG :
+Theorem INT_LE_RNEG:
     !x y. x <= -y <=> x + y <= &0
 Proof
     rpt STRIP_TAC
@@ -2886,7 +2886,7 @@ val INT_DIVIDES = new_definition (
 val _ = set_fixity "int_divides" (Infix(NONASSOC, 450))
 
 (* HOL-Light compatible definition of ‘int_divides’ (divides) *)
-Theorem int_divides :
+Theorem int_divides:
     !b a. a int_divides b <=> (?x. b = a * x)
 Proof
     RW_TAC std_ss [INT_DIVIDES, Once INT_MUL_SYM]
@@ -3009,7 +3009,7 @@ val _ = temp_set_fixity "divides" (Infixl 480);
 (* NOTE: This theorem is the definition of ‘divides’ of natural numbers in
    HOL-Light. This name is HOL-Light compatible.
  *)
-Theorem num_divides :
+Theorem num_divides:
     a divides b <=> &a int_divides &b
 Proof
     rw [INT_DIVIDES, divides_def]
@@ -3043,7 +3043,7 @@ val int_exp = Prim_rec.new_recursive_definition{
 val _ = set_fixity "int_exp"  (Infixr 700);
 val _ = overload_on ("**", Term`$int_exp`);
 
-Theorem INT_POW :
+Theorem INT_POW:
     (x :int) ** 0 = &1 /\ (!n. x ** SUC n = x * x ** n)
 Proof
     rw [int_exp]
@@ -3125,7 +3125,7 @@ val INT_EXP_NEG = store_thm(
                          INT_NEGNEG]
   ]);
 
-Theorem INT_POW_NEG :
+Theorem INT_POW_NEG:
     !(x :int) n. -x ** n = (if EVEN n then x ** n else -(x ** n))
 Proof
     qx_genl_tac [‘p’, ‘m’]
@@ -3625,7 +3625,7 @@ val LEAST_INT_DEF = new_definition ("LEAST_INT_DEF",
 val _ = set_fixity "LEAST_INT" Binder
 
 (* NOTE: Ported from HOL-Light *)
-Theorem FORALL_INT_CASES :
+Theorem FORALL_INT_CASES:
     !(P :int -> bool). (!x. P x) <=> (!n. P (&n)) /\ (!n. P (-&n))
 Proof
     rpt STRIP_TAC

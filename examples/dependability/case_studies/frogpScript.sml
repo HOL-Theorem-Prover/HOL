@@ -30,7 +30,7 @@ val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 (*-----Case Study: Oil and Gas Pipeline-------------*)
 (*--------------------------------------------------*)
 
-Definition pipeline_def :
+Definition pipeline_def:
 pipeline p L  = prob p (rbd_struct p (series (rbd_list L)))
 End
 
@@ -38,14 +38,14 @@ End
 (*-------------------------------------------------*)
 (*---------Operation State z1----------------------*)
 (*-------------------------------------------------*)
-Definition rel_pipeline_z1_def :
+Definition rel_pipeline_z1_def:
 (rel_pipeline_z1 p X (2:num) (3:num) = prob p
  (BIGUNION
     (IMAGE (\x. PREIMAGE X {Normal (&x)} INTER p_space p)
        ({x|(2:num) <= x /\ x < (SUC 3)}))))
 End
 (* ------------------------------------------------------------------------- *)
-Theorem series_exp_list_sum :
+Theorem series_exp_list_sum:
 !p t L C. (0 <=  t) /\  prob_space p /\
                 exp_dist_list p L C /\ (LENGTH C = LENGTH L ) /\
                 (!z. MEM z (rel_event_list p L t) ==> z IN events p) ==>
@@ -76,7 +76,7 @@ GEN_TAC >> GEN_TAC
 QED
 
 (*-----------------------------------------------*)
-Theorem rel_pipeline_series :
+Theorem rel_pipeline_series:
 !p L t C. 0 <= t /\ prob_space p /\ exp_dist_list p L C /\
      (LENGTH C = LENGTH L) /\
      ~NULL (rel_event_list p L t) /\
@@ -94,7 +94,7 @@ QED
 (*---------------------------------------------------*)
 (*---------------rel_pipeline_z1_THM------------------*)
 (*---------------------------------------------------*)
-Theorem rel_pipeline_z1_thm :
+Theorem rel_pipeline_z1_thm:
 !p p' X C L t.
    prob_space p  /\
    prob_space p'  /\
@@ -153,14 +153,14 @@ QED
 (*---------Operation State z2----------------------*)
 (*-------------------------------------------------*)
 
-Definition rel_pipeline_z2_def :
+Definition rel_pipeline_z2_def:
 (rel_pipeline_z2 p L t = prob p
         (rbd_struct p
            ((series of (\a. parallel (rbd_list (rel_event_list p a t))))
                           L)))
 End
 
-Definition len_mem_list_le_def :
+Definition len_mem_list_le_def:
 (len_mem_list_le (3:num) L = (!x. MEM x L ==> (LENGTH x <= 3)))
 End
 
@@ -168,7 +168,7 @@ End
 (*---------------------------------------------------*)
 (*---------------rel_pipeline_z2_THM------------------*)
 (*---------------------------------------------------*)
-Theorem rel_pipeline_z2_thm :
+Theorem rel_pipeline_z2_thm:
 !L (C:real list list)  p (t:real).
  (!z. MEM z L  ==>  ~NULL z)
    /\ (0 <=  (t:real)) /\ prob_space p /\
@@ -189,7 +189,7 @@ QED
 
 (*------------------------------------------------------*)
 (*------------------------------------------------------*)
-Theorem rel_pipeline_z3_lemma4 :
+Theorem rel_pipeline_z3_lemma4:
 !L1 L2 p.
      (!z. MEM z (L1++L2) ==> ~NULL z) /\ prob_space p /\
      (!x'. MEM x' (FLAT (L1++L2)) ==> x' IN events p) /\
@@ -217,7 +217,7 @@ QED
 (*---------------------------------------------------*)
 (*---------------rel_pipeline_z3_THM------------------*)
 (*---------------------------------------------------*)
-Theorem rel_pipeline_z3_THM :
+Theorem rel_pipeline_z3_THM:
 !L1 L2 (C1:real list list) C2  p (t:real).
  (!z. MEM z (L1++L2)  ==>  ~NULL z)
    /\ (0 <=  (t:real)) /\ prob_space p  /\
@@ -279,7 +279,7 @@ QED
  (*-------------------------------------------------*)
 (*---------Operation State z4----------------------*)
 (*-------------------------------------------------*)
-Definition rel_pipeline_z4_def :
+Definition rel_pipeline_z4_def:
 
     rel_pipeline_z4 p L1 L2 L3 t = (prob p
         (rbd_struct p ((series of (\a. parallel (rbd_list a))) L1) INTER
@@ -290,7 +290,7 @@ End
 (*-------------------------------------------------*)
 
 
-Theorem rel_pipeline_z4_lemma2 :
+Theorem rel_pipeline_z4_lemma2:
 !L1 L2 L3 p.
      (!z. MEM z (L1++L2++L3) ==> ~NULL z) /\ prob_space p /\
      (!x'. MEM x' (FLAT (L1++L2++L3)) ==> x' IN events p) /\ mutual_indep p (FLAT (L1++L2++L3)) ==>
@@ -322,7 +322,7 @@ QED
 (*---------------------------------------------------*)
 (*---------------rel_pipeline_z4_THM------------------*)
 (*---------------------------------------------------*)
-Theorem rel_pipeline_z4_THM :
+Theorem rel_pipeline_z4_THM:
 !L1 L2 L3 C1 C2 C3 p t.
      (!z. MEM z (L1 ++ L2 ++ L3) ==> ¬NULL z) /\ 0 <= t /\ prob_space p /\
      (!x'.

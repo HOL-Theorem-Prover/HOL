@@ -180,18 +180,18 @@ Overload SUB[local] = “\Ps Xs. CCS_SUBST (fromPairs Xs Ps)”
 (*  Section II: Multivariate CCS contexts                                     *)
 (* ========================================================================== *)
 
-Definition context_def :
+Definition context_def:
     context Xs E <=> !X. X IN Xs ==> CONTEXT (\t. CCS_Subst E t X)
 End
 
-Theorem context_nil :
+Theorem context_nil:
     !Xs. context Xs nil
 Proof
     RW_TAC std_ss [context_def, EVERY_MEM, CCS_Subst_def,
                    DISJOINT_EMPTY, CONTEXT2]
 QED
 
-Theorem context_prefix :
+Theorem context_prefix:
     !Xs u E. context Xs (prefix u E) ==> context Xs E
 Proof
     rw [context_def]
@@ -202,7 +202,7 @@ Proof
  >> DISCH_TAC >> IMP_RES_TAC CONTEXT3_backward
 QED
 
-Theorem context_prefix_rule :
+Theorem context_prefix_rule:
     !Xs u E. context Xs E ==> context Xs (prefix u E)
 Proof
     rw [context_def]
@@ -213,7 +213,7 @@ Proof
  >> Q.UNABBREV_TAC `e` >> SIMP_TAC std_ss []
 QED
 
-Theorem context_prefix_rewrite :
+Theorem context_prefix_rewrite:
     !Xs u E. context Xs (prefix u E) <=> context Xs E
 Proof
     rpt GEN_TAC
@@ -222,7 +222,7 @@ Proof
  >> MATCH_MP_TAC context_prefix_rule >> art []
 QED
 
-Theorem context_sum :
+Theorem context_sum:
     !Xs E1 E2. context Xs (sum E1 E2) ==> context Xs E1 /\ context Xs E2
 Proof
     rw [context_def] (* 2 subgoals, same tactics *)
@@ -235,7 +235,7 @@ Proof
       DISCH_TAC >> IMP_RES_TAC CONTEXT4_backward )
 QED
 
-Theorem context_sum_rule :
+Theorem context_sum_rule:
     !Xs E1 E2. context Xs E1 /\ context Xs E2 ==> context Xs (sum E1 E2)
 Proof
     rw [context_def, CCS_Subst_def]
@@ -252,7 +252,7 @@ Proof
  >> unset [`e1`, `e2`] >> SIMP_TAC std_ss []
 QED
 
-Theorem context_sum_rewrite :
+Theorem context_sum_rewrite:
     !Xs E1 E2. context Xs (sum E1 E2) <=>
                context Xs E1 /\ context Xs E2
 Proof
@@ -262,7 +262,7 @@ Proof
  >> MATCH_MP_TAC context_sum_rule >> art []
 QED
 
-Theorem context_par :
+Theorem context_par:
     !Xs E1 E2. context Xs (par E1 E2) ==> context Xs E1 /\ context Xs E2
 Proof
     rw [context_def]
@@ -275,7 +275,7 @@ Proof
       DISCH_TAC >> IMP_RES_TAC CONTEXT5_backward )
 QED
 
-Theorem context_par_rule :
+Theorem context_par_rule:
     !Xs E1 E2. context Xs E1 /\ context Xs E2 ==> context Xs (par E1 E2)
 Proof
     rw [context_def, CCS_Subst_def]
@@ -292,7 +292,7 @@ Proof
  >> unset [`e1`, `e2`] >> SIMP_TAC std_ss []
 QED
 
-Theorem context_par_rewrite :
+Theorem context_par_rewrite:
     !Xs E1 E2. context Xs (par E1 E2) <=>
                context Xs E1 /\ context Xs E2
 Proof
@@ -302,7 +302,7 @@ Proof
  >> MATCH_MP_TAC context_par_rule >> art []
 QED
 
-Theorem context_restr :
+Theorem context_restr:
     !Xs L E. context Xs (restr L E) ==> context Xs E
 Proof
     rw [context_def]
@@ -313,7 +313,7 @@ Proof
  >> DISCH_TAC >> IMP_RES_TAC CONTEXT6_backward
 QED
 
-Theorem context_restr_rule :
+Theorem context_restr_rule:
     !Xs L E. context Xs E ==> context Xs (restr L E)
 Proof
     rw [context_def, CCS_Subst_def]
@@ -327,7 +327,7 @@ Proof
  >> Q.UNABBREV_TAC `e` >> SIMP_TAC std_ss []
 QED
 
-Theorem context_restr_rewrite :
+Theorem context_restr_rewrite:
     !Xs L E. context Xs (restr L E) <=> context Xs E
 Proof
     rpt GEN_TAC
@@ -336,7 +336,7 @@ Proof
  >> MATCH_MP_TAC context_restr_rule >> art []
 QED
 
-Theorem context_relab :
+Theorem context_relab:
     !Xs E rf. context Xs (relab E rf) ==> context Xs E
 Proof
     RW_TAC std_ss [context_def, EVERY_MEM]
@@ -347,7 +347,7 @@ Proof
  >> DISCH_TAC >> IMP_RES_TAC CONTEXT7_backward
 QED
 
-Theorem context_relab_rule :
+Theorem context_relab_rule:
     !Xs E rf. context Xs E ==> context Xs (relab E rf)
 Proof
     RW_TAC std_ss [context_def, EVERY_MEM, CCS_Subst_def]
@@ -361,7 +361,7 @@ Proof
  >> Q.UNABBREV_TAC `e` >> SIMP_TAC std_ss []
 QED
 
-Theorem context_relab_rewrite :
+Theorem context_relab_rewrite:
     !Xs E rf. context Xs (relab E rf) <=> context Xs E
 Proof
     rpt GEN_TAC
@@ -370,14 +370,14 @@ Proof
  >> MATCH_MP_TAC context_relab_rule >> art []
 QED
 
-Theorem context_var :
+Theorem context_var:
     !Xs Y. context Xs (var Y)
 Proof
     RW_TAC lset_ss [context_def, EVERY_MEM, CCS_Subst_def]
  >> Cases_on `Y = X` >> fs [CONTEXT_rules]
 QED
 
-Theorem context_rec :
+Theorem context_rec:
     !Xs Y E. context Xs (rec Y E) ==> DISJOINT (FV E DELETE Y) Xs
 Proof
     rpt GEN_TAC >> DISCH_TAC
@@ -411,7 +411,7 @@ val context_backward_rules = save_thm
                context_restr, context_relab, context_rec]);
 
 (* c.f. STRONG_EQUIV_SUBST_CONTEXT *)
-Theorem STRONG_EQUIV_subst_context :
+Theorem STRONG_EQUIV_subst_context:
     !Xs Ps Qs. ALL_DISTINCT Xs /\ (LENGTH Ps = LENGTH Xs) /\
                LIST_REL STRONG_EQUIV Ps Qs ==>
         !E. context (set Xs) E ==>
@@ -482,7 +482,7 @@ Proof
 QED
 
 (* c.f. OBS_CONGR_SUBST_CONTEXT *)
-Theorem OBS_CONGR_subst_context :
+Theorem OBS_CONGR_subst_context:
     !Xs Ps Qs. ALL_DISTINCT Xs /\ (LENGTH Ps = LENGTH Xs) /\
                LIST_REL OBS_CONGR Ps Qs ==>
         !E. context (set Xs) E ==>
@@ -553,7 +553,7 @@ Proof
 QED
 
 (* c.f. OBS_contracts_SUBST_CONTEXT *)
-Theorem OBS_contracts_subst_context :
+Theorem OBS_contracts_subst_context:
     !Xs Ps Qs. ALL_DISTINCT Xs /\ (LENGTH Ps = LENGTH Xs) /\
                LIST_REL OBS_contracts Ps Qs ==>
         !E. context (set Xs) E ==>
@@ -624,7 +624,7 @@ Proof
 QED
 
 (* KEY result: multivariate version of CongruenceTheory.CONTEXT_combin *)
-Theorem context_combin :
+Theorem context_combin:
     !Xs Es C. ALL_DISTINCT Xs /\ context (set Xs) C /\
               EVERY (context (set Xs)) Es /\ (LENGTH Es = LENGTH Xs) ==>
               context (set Xs) (CCS_SUBST (fromPairs Xs Es) C)
@@ -698,13 +698,13 @@ QED
    2. For each X in Xs, if all subterms (var X) were replaced by holes,
       the resulting multi-hole context (\t. CCS_Subst E t X) is a WG.
  *)
-Definition weakly_guarded_def :
+Definition weakly_guarded_def:
     weakly_guarded Xs E <=> !X. X IN Xs ==> WG (\t. CCS_Subst E t X)
 End
 
 Overload weakly_guarded = “\Xs Es. EVERY (weakly_guarded Xs) Es”
 
-Theorem weakly_guarded_imp_context :
+Theorem weakly_guarded_imp_context:
     !Xs E. weakly_guarded Xs E ==> context Xs E
 Proof
     RW_TAC std_ss [weakly_guarded_def, context_def, EVERY_MEM]
@@ -712,20 +712,20 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-Theorem EVERY_weakly_guarded :
+Theorem EVERY_weakly_guarded:
     !Xs Es. EVERY (weakly_guarded (set Xs)) Es ==>
             !E X. MEM E Es /\ MEM X Xs ==> WG (\t. CCS_Subst E t X)
 Proof
     RW_TAC std_ss [weakly_guarded_def, EVERY_MEM]
 QED
 
-Theorem weakly_guarded_nil :
+Theorem weakly_guarded_nil:
     !Xs. weakly_guarded Xs nil
 Proof
     rw [weakly_guarded_def, CCS_Subst_def, DISJOINT_EMPTY, WG2]
 QED
 
-Theorem weakly_guarded_prefix :
+Theorem weakly_guarded_prefix:
     !Xs u E. weakly_guarded Xs (prefix u E) ==> context Xs E
 Proof
     rw [weakly_guarded_def, context_def]
@@ -736,7 +736,7 @@ Proof
  >> DISCH_TAC >> IMP_RES_TAC WG3_backward
 QED
 
-Theorem weakly_guarded_prefix_rule :
+Theorem weakly_guarded_prefix_rule:
     !Xs u E. context Xs E ==> weakly_guarded Xs (prefix u E)
 Proof
     rw [weakly_guarded_def, context_def]
@@ -747,7 +747,7 @@ Proof
  >> MATCH_MP_TAC WG3 >> art []
 QED
 
-Theorem weakly_guarded_sum :
+Theorem weakly_guarded_sum:
     !Xs E1 E2. weakly_guarded Xs (sum E1 E2) ==>
                weakly_guarded Xs E1 /\ weakly_guarded Xs E2
 Proof
@@ -761,7 +761,7 @@ Proof
       DISCH_TAC >> IMP_RES_TAC WG4_backward )
 QED
 
-Theorem weakly_guarded_sum_rule :
+Theorem weakly_guarded_sum_rule:
     !Xs E1 E2. weakly_guarded Xs E1 /\ weakly_guarded Xs E2 ==>
                weakly_guarded Xs (sum E1 E2)
 Proof
@@ -779,7 +779,7 @@ Proof
  >> unset [`e1`, `e2`] >> SIMP_TAC std_ss []
 QED
 
-Theorem weakly_guarded_sum_rewrite :
+Theorem weakly_guarded_sum_rewrite:
     !Xs E1 E2. weakly_guarded Xs (sum E1 E2) <=>
                weakly_guarded Xs E1 /\ weakly_guarded Xs E2
 Proof
@@ -789,7 +789,7 @@ Proof
  >> MATCH_MP_TAC weakly_guarded_sum_rule >> art []
 QED
 
-Theorem weakly_guarded_par :
+Theorem weakly_guarded_par:
     !Xs E1 E2. weakly_guarded Xs (par E1 E2) ==>
                weakly_guarded Xs E1 /\ weakly_guarded Xs E2
 Proof
@@ -803,7 +803,7 @@ Proof
       DISCH_TAC >> IMP_RES_TAC WG5_backward )
 QED
 
-Theorem weakly_guarded_par_rule :
+Theorem weakly_guarded_par_rule:
     !Xs E1 E2. weakly_guarded Xs E1 /\ weakly_guarded Xs E2 ==>
                weakly_guarded Xs (par E1 E2)
 Proof
@@ -821,7 +821,7 @@ Proof
  >> unset [`e1`, `e2`] >> SIMP_TAC std_ss []
 QED
 
-Theorem weakly_guarded_par_rewrite :
+Theorem weakly_guarded_par_rewrite:
     !Xs E1 E2. weakly_guarded Xs (par E1 E2) <=>
                weakly_guarded Xs E1 /\ weakly_guarded Xs E2
 Proof
@@ -831,7 +831,7 @@ Proof
  >> MATCH_MP_TAC weakly_guarded_par_rule >> art []
 QED
 
-Theorem weakly_guarded_restr :
+Theorem weakly_guarded_restr:
     !Xs L E. weakly_guarded Xs (restr L E) ==> weakly_guarded Xs E
 Proof
     rw [weakly_guarded_def]
@@ -842,7 +842,7 @@ Proof
  >> DISCH_TAC >> IMP_RES_TAC WG6_backward
 QED
 
-Theorem weakly_guarded_restr_rule :
+Theorem weakly_guarded_restr_rule:
     !Xs L E. weakly_guarded Xs E ==> weakly_guarded Xs (restr L E)
 Proof
     rw [weakly_guarded_def, CCS_Subst_def]
@@ -856,7 +856,7 @@ Proof
  >> Q.UNABBREV_TAC `e` >> SIMP_TAC std_ss []
 QED
 
-Theorem weakly_guarded_restr_rewrite :
+Theorem weakly_guarded_restr_rewrite:
     !Xs L E. weakly_guarded Xs (restr L E) <=> weakly_guarded Xs E
 Proof
     rpt GEN_TAC
@@ -865,7 +865,7 @@ Proof
  >> MATCH_MP_TAC weakly_guarded_restr_rule >> art []
 QED
 
-Theorem weakly_guarded_relab :
+Theorem weakly_guarded_relab:
     !Xs E rf. weakly_guarded Xs (relab E rf) ==> weakly_guarded Xs E
 Proof
     rw [weakly_guarded_def]
@@ -876,7 +876,7 @@ Proof
  >> DISCH_TAC >> IMP_RES_TAC WG7_backward
 QED
 
-Theorem weakly_guarded_relab_rule :
+Theorem weakly_guarded_relab_rule:
     !Xs E rf. weakly_guarded Xs E ==> weakly_guarded Xs (relab E rf)
 Proof
     rw [weakly_guarded_def, CCS_Subst_def]
@@ -890,7 +890,7 @@ Proof
  >> Q.UNABBREV_TAC `e` >> SIMP_TAC std_ss []
 QED
 
-Theorem weakly_guarded_relab_rewrite :
+Theorem weakly_guarded_relab_rewrite:
     !Xs E rf. weakly_guarded Xs (relab E rf) <=> weakly_guarded Xs E
 Proof
     rpt GEN_TAC
@@ -899,7 +899,7 @@ Proof
  >> MATCH_MP_TAC weakly_guarded_relab_rule >> art []
 QED
 
-Theorem weakly_guarded_var :
+Theorem weakly_guarded_var:
     !Xs Y. weakly_guarded Xs (var Y) ==> Y NOTIN Xs
 Proof
     rpt GEN_TAC
@@ -909,14 +909,14 @@ Proof
  >> RES_TAC >> fs [CCS_Subst_def, NO_WG0]
 QED
 
-Theorem weakly_guarded_var_rule :
+Theorem weakly_guarded_var_rule:
     !Xs Y. Y NOTIN Xs ==> weakly_guarded Xs (var Y)
 Proof
     rw [weakly_guarded_def, CCS_Subst_def]
  >> Cases_on `Y = X` >> fs [WG_rules]
 QED
 
-Theorem weakly_guarded_rec :
+Theorem weakly_guarded_rec:
     !Xs Y E. weakly_guarded Xs (rec Y E) ==> DISJOINT (FV E DELETE Y) Xs
 Proof
     rpt STRIP_TAC
@@ -946,7 +946,7 @@ val weakly_guarded_backward_rules = save_thm
                weakly_guarded_relab,
                weakly_guarded_rec]);
 
-Theorem disjoint_imp_weakly_guarded :
+Theorem disjoint_imp_weakly_guarded:
     !Xs E. DISJOINT (FV E) Xs ==> weakly_guarded Xs E
 Proof
     rw [weakly_guarded_def]
@@ -956,7 +956,7 @@ Proof
  >> fs [CCS_Subst_elim]
 QED
 
-Theorem disjoint_imp_context :
+Theorem disjoint_imp_context:
     !Xs E. DISJOINT (FV E) Xs ==> context Xs E
 Proof
     rpt STRIP_TAC
@@ -965,7 +965,7 @@ Proof
 QED
 
 (* c.f. CONTEXT_WG_combin *)
-Theorem weakly_guarded_combin :
+Theorem weakly_guarded_combin:
     !Xs Es C. ALL_DISTINCT Xs /\ context (set Xs) C /\
               EVERY (weakly_guarded (set Xs)) Es /\ (LENGTH Es = LENGTH Xs) ==>
               weakly_guarded (set Xs) (CCS_SUBST (fromPairs Xs Es) C)
@@ -1038,7 +1038,7 @@ QED
 (* ========================================================================== *)
 
 (* NOTE: each E in Es MUST contain free variables up to Xs *)
-Definition CCS_equation_def :
+Definition CCS_equation_def:
     CCS_equation (Xs :string list) (Es :'a CCS list) <=>
         ALL_DISTINCT Xs /\ LENGTH Es = LENGTH Xs /\
         EVERY (\e. (FV e) SUBSET (set Xs)) Es
@@ -1047,7 +1047,7 @@ End
 (* A solution Ps of the CCS equation (group) Es[Xs] up to R,
   `ALL_PROC Ps` is required in (all) unique-solution proofs.
  *)
-Definition CCS_solution_def :
+Definition CCS_solution_def:
     CCS_solution R Xs Es Ps <=>
         ALL_PROC Ps /\
         LIST_REL R Ps (MAP (CCS_SUBST (fromPairs Xs Ps)) Es)
@@ -1055,7 +1055,7 @@ End
 
 (* Each solution contains the same number of CCS processes as the
    variables - this is derived from LIST_REL's properties *)
-Theorem CCS_solution_length :
+Theorem CCS_solution_length:
     !Xs Es R Ps. CCS_equation Xs Es /\ CCS_solution R Xs Es Ps ==>
                  (LENGTH Ps = LENGTH Xs)
 Proof
@@ -1076,7 +1076,7 @@ QED
    NOTE1: `ALL_PROC Ps` is not required here.
    NOTE2: `FV E SUBSET (set Xs)` and `FV E' SUBSET (set Xs)` were added
  *)
-Theorem strong_unique_solution_lemma :
+Theorem strong_unique_solution_lemma:
     !Xs E. weakly_guarded (set Xs) E /\ FV E SUBSET (set Xs) ==>
            !Ps. (LENGTH Ps = LENGTH Xs) ==>
                 !u P'. TRANS (CCS_SUBST (fromPairs Xs Ps) E) u P' ==>
@@ -1228,7 +1228,7 @@ QED
    then:
         If Ps ~ E{Ps/Xs} and Qs ~ E{Qs/Xs} then Ps ~ Qs.
  *)
-Theorem strong_unique_solution_thm :
+Theorem strong_unique_solution_thm:
     !Xs Es Ps Qs.
         CCS_equation Xs Es /\ EVERY (weakly_guarded (set Xs)) Es /\
         Ps IN (CCS_solution STRONG_EQUIV Xs Es) /\
@@ -2008,7 +2008,7 @@ QED
 (* Transitivity is a property of equivalence but OBS_contracts is PreOrder,
    thus this lemma doesn't derive from LIST_REL_equivalence.
  *)
-Theorem OBS_contracts_transitive :
+Theorem OBS_contracts_transitive:
     !(Ps :'a CCS list) Qs Rs.
           LIST_REL OBS_contracts Ps Qs /\ LIST_REL OBS_contracts Qs Rs
       ==> LIST_REL OBS_contracts Ps Rs
@@ -2020,7 +2020,7 @@ Proof
  >> Q.EXISTS_TAC `EL n Qs` >> art []
 QED
 
-Theorem OBS_contracts_reflexive :
+Theorem OBS_contracts_reflexive:
     !(Ps :'a CCS list). LIST_REL OBS_contracts Ps Ps
 Proof
     RW_TAC list_ss [LIST_REL_EL_EQN, OBS_contracts_REFL]
@@ -2031,7 +2031,7 @@ QED
 
    Lemma 1,4 are directly used; Lemma 2,3 are further lemmas of Lemma 4.
 *)
-Theorem USC_unfolding_lemma1 :
+Theorem USC_unfolding_lemma1:
     !Xs Es E C0 Ps.
            CCS_equation Xs Es /\ EVERY (context (set Xs)) Es /\
            CCS_solution OBS_contracts Xs Es Ps /\
@@ -2067,7 +2067,7 @@ Proof
 QED
 
 (* `ALL_PROC Ps` is added to handle the last difficulity *)
-Theorem USC_unfolding_lemma2 :
+Theorem USC_unfolding_lemma2:
   !Xs. ALL_DISTINCT Xs ==>
        !E. weakly_guarded (set Xs) E ==>
            !Ps u P'. (LENGTH Ps = LENGTH Xs) /\ ALL_PROC Ps /\
@@ -2201,7 +2201,7 @@ QED
 (* It depends on lemma2 and repeated applications of
    the (celebrated) fromPairs_nested.
  *)
-Theorem USC_unfolding_lemma3 :
+Theorem USC_unfolding_lemma3:
     !Xs Es C E. ALL_DISTINCT Xs /\ context (set Xs) C /\
                (LENGTH Es = LENGTH Xs) /\
                 EVERY (weakly_guarded (set Xs)) Es /\
@@ -2244,7 +2244,7 @@ Proof
 QED
 
 (* (directly) used in unique_solution_of_rooted_contractions_lemma *)
-Theorem USC_unfolding_lemma4 :
+Theorem USC_unfolding_lemma4:
     !Xs Es C E C0.
            CCS_equation Xs Es /\ EVERY (weakly_guarded (set Xs)) Es /\
            context (set Xs) C /\
@@ -2352,7 +2352,7 @@ Proof
 QED
 
 (* Lemma 3.9 of [2], the full (multivariate) version *)
-Theorem unique_solution_of_rooted_contractions_lemma :
+Theorem unique_solution_of_rooted_contractions_lemma:
     !Xs Es Ps Qs. CCS_equation Xs Es /\ EVERY (weakly_guarded (set Xs)) Es /\
                   CCS_solution OBS_contracts Xs Es Ps /\
                   CCS_solution OBS_contracts Xs Es Qs ==>
@@ -2553,7 +2553,7 @@ Proof
 QED
 
 (* Theorem 3.10 of [2], full version *)
-Theorem unique_solution_of_obs_contractions :
+Theorem unique_solution_of_obs_contractions:
     !Xs Es Ps Qs.
         CCS_equation Xs Es /\ EVERY (weakly_guarded (set Xs)) Es /\
         Ps IN (CCS_solution OBS_contracts Xs Es) /\
@@ -2592,7 +2592,7 @@ Proof
 QED
 
 (* THE FINAL THEOREM (Theorem 3.16 of [3]) *)
-Theorem unique_solution_of_rooted_contractions :
+Theorem unique_solution_of_rooted_contractions:
     !Xs Es Ps Qs.
         CCS_equation Xs Es /\ EVERY (weakly_guarded (set Xs)) Es /\
         Ps IN (CCS_solution OBS_contracts Xs Es) /\

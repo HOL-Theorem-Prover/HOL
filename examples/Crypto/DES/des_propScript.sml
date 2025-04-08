@@ -156,7 +156,7 @@ Proof
   >> rw[MOD_LESS]
 QED
 
-Theorem compl_RK_R :
+Theorem compl_RK_R:
    !n (k:word64). 17 > n ==>(RK_R n ~k)= ~ (RK_R n k)
 Proof
      rw[]
@@ -452,7 +452,7 @@ Definition Wkey4_def:
 End
 
 (* Added by Chun Tian *)
-Definition Wtext_def :
+Definition Wtext_def:
   Wtext key = {x:word64| ?w. (Split (IP (desCore 8 (KS key 8) x))) = (w,w)}
 End
 
@@ -1002,7 +1002,7 @@ Proof
 QED
 
 (* Added by Chun Tian *)
-Theorem BIJ_for_weak_keys :
+Theorem BIJ_for_weak_keys:
     !x. MEM x Wtextlist ==> ?f. BIJ f x univ(:word32)
 Proof
     rw [Wtextlist_def]
@@ -1016,12 +1016,12 @@ Proof
       Q.EXISTS_TAC ‘w4trans1’ >> rw [BIJ_wtext4] ]
 QED
 
-Definition wtrans1_def :
+Definition wtrans1_def:
     wtrans1 = [w1trans1;w2trans1;w3trans1;w4trans1]
 End
 
 (* Added by Chun Tian *)
-Theorem BIJ_for_weak_keys_explicit :
+Theorem BIJ_for_weak_keys_explicit:
     !i. i < 4 ==> BIJ (EL i wtrans1) (EL i Wtextlist) univ(:word32)
 Proof
     NTAC 2 STRIP_TAC
@@ -1062,7 +1062,7 @@ Proof
 QED
 
 (* Added by Chun Tian *)
-Theorem DES_weak_fp_card :
+Theorem DES_weak_fp_card:
     !x. MEM x Wtextlist ==> CARD x = 2 ** 32
 Proof
     RW_TAC std_ss [GSYM card_word32, BIJ_for_weak_keys]
@@ -1075,7 +1075,7 @@ QED
 (* See N. Tihanyi, “Report on the First DES Fixed Points for Non-Weak Keys: Case-Study
    of Hacking an IoT Environment,” IEEE Access, vol. 10, pp. 77802–77809, Jan. 2022.
  *)
-Definition non_weak_keys_def :
+Definition non_weak_keys_def:
     non_weak_keys :(word64 # word64) list = [
       (* format: (non-weak key, plaintext) *)
       (0xB0B351C802C83DE0w,0x4739A2F04B7EAB28w);
@@ -1086,7 +1086,7 @@ Definition non_weak_keys_def :
 End
 
 (* Added by Chun Tian *)
-Theorem DES_fp_non_weak_keys :
+Theorem DES_fp_non_weak_keys:
     !i. i < LENGTH non_weak_keys ==>
         let (key,plaintext) = EL i non_weak_keys;
             (encrypt,decrypt) = FullDES key
@@ -1126,7 +1126,7 @@ Proof
   >> rw[AllpairXor_def,trans2_def,trans1_def]
 QED
 
-Theorem AllpairXor_card :
+Theorem AllpairXor_card:
     !X. CARD (AllpairXor X) = 2 ** 6
 Proof
     Suff ‘!X. 2 ** 6=CARD (AllpairXor X)’
@@ -1277,7 +1277,7 @@ Proof
   >> rw[word6_trans2_def,word6_trans1_def]
 QED
 
-Theorem pairXcY_card :
+Theorem pairXcY_card:
     ! X Y Sb. CARD (word6_set1 X Y Sb)
                 = CARD (word6_set2 X Y Sb)
 Proof
@@ -1289,7 +1289,7 @@ Proof
  >> rw[BIJ_pairXcY]
 QED
 
-Theorem prob_uniform_on_finite_set :
+Theorem prob_uniform_on_finite_set:
     !p. FINITE (p_space p) /\ p_space p <> {} /\ events p = POW (p_space
 p) /\
         (!s. s IN events p ==> prob p s = &CARD s / &CARD (p_space p)) ==>
@@ -1384,12 +1384,12 @@ Proof
   >> rw[card_word6]
 QED
 
-Definition XcauseYp_def :
+Definition XcauseYp_def:
    XcauseYp X Y Sb p <=>
    prob word6p {x| Sb(x) ?? Sb(x ?? X)= Y}=p
 End
 
-Definition XcauseY_def :
+Definition XcauseY_def:
    XcauseY X Y Sb =
    prob word6p {x| Sb(x) ?? Sb(x ?? X)= Y}
 End
@@ -1452,7 +1452,7 @@ Proof
   >> rw[word48Xor_def,trans48_2_def,trans48_1_def]
 QED
 
-Theorem word48Xor_card :
+Theorem word48Xor_card:
     !X. CARD (word48Xor X) = 2 ** 48
 Proof
     Suff ‘!X. 2 ** 48=CARD (word48Xor X)’
@@ -1512,7 +1512,7 @@ Proof
   >> rw[xor_trans]
 QED
 
-Theorem pairXcYF_card :
+Theorem pairXcYF_card:
     ! X Y. CARD (word48_set1 X Y)
                 = CARD (word48_set2 X Y)
 Proof

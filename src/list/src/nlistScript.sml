@@ -427,13 +427,13 @@ Proof
   simp[DROP_LENGTH_APPEND]
 QED
 
-Theorem ntl_LE :
+Theorem ntl_LE:
 !n. ntl n <= n
 Proof
 rw[ntl_def,ncons_def] >> `nsnd (n - 1) <= n - 1` by fs[nsnd_le] >> fs[]
 QED
 
-Theorem ntl_nonzero_LESS :
+Theorem ntl_nonzero_LESS:
 !n. n <> 0 ==> ntl n < n
 Proof
 rw[ntl_def,ncons_def] >> `nsnd (n - 1) <= n - 1` by fs[nsnd_le] >>
@@ -441,7 +441,7 @@ rw[ntl_def,ncons_def] >> `nsnd (n - 1) <= n - 1` by fs[nsnd_le] >>
 QED
 
 
-Theorem MEM_listOfN_LESS :
+Theorem MEM_listOfN_LESS:
   !l e. MEM e (listOfN l) ==> e < l
 Proof
   ho_match_mp_tac nlist_ind >> simp[DISJ_IMP_THM, FORALL_AND_THM] >> rw[] >>

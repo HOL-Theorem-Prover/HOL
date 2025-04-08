@@ -70,7 +70,7 @@ val IN_PREMEASURABLE = store_thm
 (* NOTE: added ‘sigma_algebra a /\ sigma_algebra b’ into antecedents,
          due to changes of ‘measurable’
  *)
-Theorem MEASURABLE_IMP_PREMEASURABLE :
+Theorem MEASURABLE_IMP_PREMEASURABLE:
     !f a b. sigma_algebra a /\ sigma_algebra b /\ f IN measurable a b ==>
             f IN premeasurable a b
 Proof
@@ -87,7 +87,7 @@ val MEASURABLE_IS_PREMEASURABLE = store_thm
    >> IMP_RES_TAC SIGMA_ALGEBRA_ALGEBRA
    >> METIS_TAC []);
 
-Theorem PREMEASURABLE_SIGMA :
+Theorem PREMEASURABLE_SIGMA:
     !f a b sp.
        sigma_algebra a /\ subset_class sp b /\ f IN (space a -> sp) /\
        (!s. s IN b ==> (PREIMAGE f s) INTER (space a) IN subsets a) ==>

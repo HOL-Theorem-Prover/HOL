@@ -56,7 +56,7 @@ val _ = set_trace "Goalstack.print_goal_at_top" 0;
    y = y'
    n - m = n' - m' (possibly negative) <=> n + m' = n' + m (non-negative)
  *)
-Definition equivalent_def :
+Definition equivalent_def:
     equivalent M N =
         if solvable M /\ solvable N then
            let M0 = principle_hnf M;
@@ -81,7 +81,7 @@ End
 (* A more general definition (but many existing hard proofs are still
    using the above “equivalent”).
  *)
-Definition equivalent2_def :
+Definition equivalent2_def:
     equivalent2 X M N r =
         if solvable M /\ solvable N then
            let M0 = principle_hnf M;
@@ -102,7 +102,7 @@ Definition equivalent2_def :
            ~solvable M /\ ~solvable N
 End
 
-Theorem equivalent_alt_equivalent2 :
+Theorem equivalent_alt_equivalent2:
     !M N. equivalent M N <=> equivalent2 (FV M UNION FV N) M N 0
 Proof
     RW_TAC std_ss [equivalent_def, equivalent2_def]
@@ -123,7 +123,7 @@ Proof
 QED
 
 (* NOTE: 0 < r is not necessary but makes the proof easier *)
-Theorem equivalent2_thm :
+Theorem equivalent2_thm:
     !X M N r. FINITE X /\ 0 < r /\
               FV M SUBSET X UNION RANK r /\
               FV N SUBSET X UNION RANK r ==>
@@ -378,7 +378,7 @@ Proof
       SET_TAC [] ]
 QED
 
-Theorem equivalent_reflexive :
+Theorem equivalent_reflexive:
     reflexive equivalent
 Proof
     rw [reflexive_def, equivalent_def]
@@ -388,7 +388,7 @@ QED
 Theorem equivalent_refl[simp] =
     SPEC_ALL (REWRITE_RULE [reflexive_def] equivalent_reflexive)
 
-Theorem equivalent_symmetric :
+Theorem equivalent_symmetric:
     symmetric equivalent
 Proof
     RW_TAC std_ss [symmetric_def, equivalent_def, Once MAX_COMM, Once UNION_COMM]
@@ -402,7 +402,7 @@ QED
 (* |- !x y. equivalent x y <=> equivalent y x *)
 Theorem equivalent_comm = REWRITE_RULE [symmetric_def] equivalent_symmetric
 
-Theorem equivalent_of_solvables :
+Theorem equivalent_of_solvables:
     !M N. solvable M /\ solvable N ==>
          (equivalent M N <=>
           let M0 = principle_hnf M;
@@ -424,7 +424,7 @@ Proof
     RW_TAC std_ss [equivalent_def]
 QED
 
-Theorem equivalent2_of_solvables :
+Theorem equivalent2_of_solvables:
     !X M N r. solvable M /\ solvable N ==>
           (equivalent2 X M N r =
            let M0 = principle_hnf M;
@@ -446,7 +446,7 @@ Proof
 QED
 
 (* beta-equivalent terms are also equivalent here *)
-Theorem lameq_imp_equivalent :
+Theorem lameq_imp_equivalent:
     !M N. M == N ==> equivalent M N
 Proof
     rpt STRIP_TAC
@@ -470,7 +470,7 @@ Proof
  >> simp [Abbr ‘X’, GSYM solvable_iff_has_hnf]
 QED
 
-Theorem lameq_imp_equivalent2 :
+Theorem lameq_imp_equivalent2:
     !X M N r. FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\
               M == N ==> equivalent2 X M N r
 Proof
@@ -494,7 +494,7 @@ QED
 (* NOTE: the initial calls of ‘principle_hnf’ get eliminated if the involved
          terms are already in head normal forms.
  *)
-Theorem equivalent_of_hnf :
+Theorem equivalent_of_hnf:
     !M N. hnf M /\ hnf N ==>
          (equivalent M N <=>
           let n  = LAMl_size M;
@@ -517,7 +517,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem equivalent2_of_hnf :
+Theorem equivalent2_of_hnf:
     !X M N r. hnf M /\ hnf N ==>
           (equivalent2 X M N r <=>
            let n1 = LAMl_size M;
@@ -544,7 +544,7 @@ QED
    defining this "concept": the literal encoding of inner head variables are not
    the same for equivalent terms.
  *)
-Theorem not_equivalent_example :
+Theorem not_equivalent_example:
     !x y. x <> y ==> ~equivalent (LAM x (VAR y @@ t)) (LAM y (VAR y @@ t))
 Proof
     qx_genl_tac [‘x’, ‘v’] >> DISCH_TAC
@@ -615,19 +615,19 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem equivalent_of_unsolvables :
+Theorem equivalent_of_unsolvables:
     !M N. unsolvable M /\ unsolvable N ==> equivalent M N
 Proof
     rw [equivalent_def]
 QED
 
-Theorem equivalent2_of_unsolvables :
+Theorem equivalent2_of_unsolvables:
     !X M N r. unsolvable M /\ unsolvable N ==> equivalent2 X M N r
 Proof
     rw [equivalent2_def]
 QED
 
-Theorem subtree_equiv_alt_equivalent2 :
+Theorem subtree_equiv_alt_equivalent2:
     !X M N r. FINITE X /\
               FV M SUBSET X UNION RANK r /\
               FV N SUBSET X UNION RANK r ==>
@@ -689,7 +689,7 @@ Proof
 QED
 
 (* NOTE: ‘0 < r’ is not necessary but makes this proof much easier. *)
-Theorem subtree_equiv_alt_equivalent :
+Theorem subtree_equiv_alt_equivalent:
     !X M N r. FINITE X /\ 0 < r /\
               FV M SUBSET X UNION RANK r /\
               FV N SUBSET X UNION RANK r ==>
@@ -704,7 +704,7 @@ QED
  *  BT_paths and BT_valid_paths
  *---------------------------------------------------------------------------*)
 
-Definition BT_paths_def :
+Definition BT_paths_def:
     BT_paths M = ltree_paths (BT' (FV M) M 0)
 End
 
@@ -714,7 +714,7 @@ Proof
     rw [BT_paths_def]
 QED
 
-Theorem BT_paths_thm :
+Theorem BT_paths_thm:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r ==>
             BT_paths M = ltree_paths (BT' X M r)
 Proof
@@ -722,7 +722,7 @@ Proof
  >> MATCH_MP_TAC BT_ltree_paths_cong >> simp []
 QED
 
-Theorem BT_paths_alt :
+Theorem BT_paths_alt:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r ==>
              (p IN BT_paths M <=> subterm X M p r <> NONE)
 Proof
@@ -730,7 +730,7 @@ Proof
 QED
 
 (* NOTE: "valid" paths are paths leading to non-bottom nodes. *)
-Definition BT_valid_paths_def :
+Definition BT_valid_paths_def:
     BT_valid_paths M =
       {p | p IN BT_paths M /\ ltree_el (BT' (FV M) M 0) p <> SOME bot}
 End
@@ -746,7 +746,7 @@ Proof
 QED
 
 (* By subterm_tpm_cong and BT_ltree_el_of_unsolvables, etc. *)
-Theorem BT_valid_paths_thm :
+Theorem BT_valid_paths_thm:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r ==>
             BT_valid_paths M =
            {p | p IN ltree_paths (BT' X M r) /\
@@ -802,7 +802,7 @@ Proof
  >> rw [GSYM BT_ltree_paths_thm]
 QED
 
-Theorem BT_ltree_el_cases :
+Theorem BT_ltree_el_cases:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
               p IN ltree_paths (BT' X M r) ==>
              ?vs y m. ltree_el (BT' X M r) p = SOME (SOME (vs,y),SOME m)
@@ -870,7 +870,7 @@ Proof
  >> simp []
 QED
 
-Theorem BT_ltree_el_neq_bot :
+Theorem BT_ltree_el_neq_bot:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
               p IN ltree_paths (BT' X M r) ==>
               ltree_el (BT' X M r) p <> SOME bot
@@ -882,7 +882,7 @@ Proof
  >> simp []
 QED
 
-Theorem BT_valid_paths_bnf :
+Theorem BT_valid_paths_bnf:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M ==>
             BT_valid_paths M = BT_paths M
 Proof
@@ -898,7 +898,7 @@ Proof
  >> MATCH_MP_TAC BT_ltree_el_neq_bot >> art []
 QED
 
-Theorem lameq_BT_paths_cong :
+Theorem lameq_BT_paths_cong:
     !X M N r. FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ M == N ==>
               BT_paths M = BT_paths N
 Proof
@@ -911,7 +911,7 @@ Proof
  >> MATCH_MP_TAC lameq_BT_cong >> art []
 QED
 
-Theorem lameq_BT_valid_paths_cong :
+Theorem lameq_BT_valid_paths_cong:
     !X M N r. FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ M == N ==>
               BT_valid_paths M = BT_valid_paths N
 Proof
@@ -924,7 +924,7 @@ Proof
  >> MATCH_MP_TAC lameq_BT_cong >> art []
 QED
 
-Theorem BT_valid_paths_has_bnf :
+Theorem BT_valid_paths_has_bnf:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ has_bnf M ==>
             BT_valid_paths M = BT_paths M
 Proof
@@ -948,7 +948,7 @@ QED
  *  subtree_equiv_lemma
  *---------------------------------------------------------------------------*)
 
-Theorem FV_apply_Boehm_construction :
+Theorem FV_apply_Boehm_construction:
     !X Ms p r.
        FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
        BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r ==>
@@ -1009,7 +1009,7 @@ QED
 Theorem subtree_equiv_lemma_explicit'[local] =
         subtree_equiv_lemma_explicit |> SIMP_RULE std_ss [LET_DEF]
 
-Theorem subtree_equiv_lemma :
+Theorem subtree_equiv_lemma:
     !X Ms p r.
        FINITE X /\ p <> [] /\ 0 < r /\ Ms <> [] /\
        BIGUNION (IMAGE FV (set Ms)) SUBSET X UNION RANK r /\
@@ -1051,12 +1051,12 @@ QED
    NOTE: The purpose of X is to make sure all terms in Ms share the same exclude
          set (and thus perhaps also the same initial binding list).
  *)
-Definition agree_upto_def :
+Definition agree_upto_def:
     agree_upto X Ms p r <=>
     !q M N. q <<= p /\ q <> p /\ MEM M Ms /\ MEM N Ms ==> subtree_equiv X M N q r
 End
 
-Theorem agree_upto_two :
+Theorem agree_upto_two:
     !X M N p r. agree_upto X [M; N] p r <=>
                !q. q <<= p /\ q <> p ==> subtree_equiv X M N q r
 Proof
@@ -1068,7 +1068,7 @@ QED
 (* NOTE: subtree_equiv_lemma and this theorem together implies the original
    agree_upto_lemma (see below).
  *)
-Theorem subtree_equiv_imp_agree_upto :
+Theorem subtree_equiv_imp_agree_upto:
     !X Ms p r pi.
       (!q M N. q <<= p /\ MEM M Ms /\ MEM N Ms /\
                subtree_equiv X M N q r ==>
@@ -1085,7 +1085,7 @@ QED
    NOTE: This theorem is weaker than subtree_equiv_lemma, but is tailored to
    prove [agree_upto_thm].
  *)
-Theorem agree_upto_lemma :
+Theorem agree_upto_lemma:
     !X Ms p r.
        FINITE X /\ Ms <> [] /\ p <> [] /\ 0 < r /\ agree_upto X Ms p r /\
       (!M. MEM M Ms ==> FV M SUBSET X UNION RANK r) /\
@@ -1124,7 +1124,7 @@ QED
 
    NOTE: This definition now assumes ’p IN ltree_paths (BT' X M r)’.
  *)
-Definition faithful_def :
+Definition faithful_def:
     faithful p X Ms pi r <=>
         (!M. MEM M Ms ==> (p IN BT_valid_paths M <=> solvable (apply pi M))) /\
          !M N. MEM M Ms /\ MEM N Ms ==>
@@ -1132,7 +1132,7 @@ Definition faithful_def :
                equivalent (apply pi M) (apply pi N))
 End
 
-Theorem faithful_two :
+Theorem faithful_two:
     !X M N p r pi.
        faithful p X [M; N] pi r <=>
          (p IN BT_valid_paths M <=> solvable (apply pi M)) /\
@@ -1186,7 +1186,7 @@ QED
    all unsolvable. In the induction case, however, p IN BT_paths M, p <> []
    implies M solvable.
  *)
-Theorem agree_upto_thm :
+Theorem agree_upto_thm:
     !X p Ms r. FINITE X /\ Ms <> [] /\ 0 < r /\
               (!M. MEM M Ms ==> FV M SUBSET X UNION RANK r) /\
               (!M. MEM M Ms ==> p IN ltree_paths (BT' X M r)) /\
@@ -1548,7 +1548,7 @@ QED
  * Distinct beta-eta-NFs are not everywhere (subtree) equivalent
  *---------------------------------------------------------------------------*)
 
-Theorem ltree_finite_BT_bnf :
+Theorem ltree_finite_BT_bnf:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M ==>
             ltree_finite (BT' X M r)
 Proof
@@ -1601,7 +1601,7 @@ Proof
  >> simp []
 QED
 
-Theorem ltree_finite_BT_has_bnf :
+Theorem ltree_finite_BT_has_bnf:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ has_bnf M ==>
             ltree_finite (BT' X M r)
 Proof
@@ -1618,7 +1618,7 @@ Proof
  >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M’ >> art []
 QED
 
-Theorem ltree_finite_BT_has_benf :
+Theorem ltree_finite_BT_has_benf:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ has_benf M ==>
             ltree_finite (BT' X M r)
 Proof
@@ -1626,7 +1626,7 @@ Proof
  >> MATCH_MP_TAC ltree_finite_BT_has_bnf >> art []
 QED
 
-Theorem ltree_finite_BT_benf :
+Theorem ltree_finite_BT_benf:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ benf M ==>
             ltree_finite (BT' X M r)
 Proof
@@ -1640,7 +1640,7 @@ QED
    is bnf (or has_bnf), then all terms are solvable, and there's no bottom in
    the resulting Boehm tree.
  *)
-Definition rose_to_term_def :
+Definition rose_to_term_def:
     rose_to_term =
     rose_reduce (\x args. case x of
                             SOME (vs,y) => LAMl vs (VAR y @* args)
@@ -1650,7 +1650,7 @@ End
 (* NOTE: This assumes that the input Boehm tree is finite (ltree_finite). *)
 Overload BT_to_term = “\t. rose_to_term (to_rose t)”
 
-Theorem BT_to_term_def :
+Theorem BT_to_term_def:
     !t. BT_to_term t =
           rose_reduce
             (\x args. case x of
@@ -1663,7 +1663,7 @@ QED
 (* Boehm trees of single variables are is involved as base cases of
    BT_expand lemmas.
  *)
-Definition BT_VAR_def :
+Definition BT_VAR_def:
     BT_VAR y :boehm_tree = Branch (SOME ([],y)) LNIL
 End
 
@@ -1702,7 +1702,7 @@ Proof
 QED
 
 (* This is the fundamental property of ‘to_term’ recovering the "original" term *)
-Theorem BT_to_term_bnf :
+Theorem BT_to_term_bnf:
     !X M r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M ==>
             BT_to_term (BT' X M r) = M
 Proof
@@ -1768,7 +1768,7 @@ Proof
  >> Q.EXISTS_TAC ‘EL i args’ >> rw [EL_MEM]
 QED
 
-Theorem BT_to_term_has_bnf :
+Theorem BT_to_term_has_bnf:
     !X M M0 r. FINITE X /\ FV M SUBSET X UNION RANK r /\ has_bnf M /\
                M0 = BT_to_term (BT' X M r) ==> M -b->* M0 /\ bnf M0
 Proof
@@ -1799,7 +1799,7 @@ Proof
  >> MATCH_MP_TAC betastar_lameq >> rw []
 QED
 
-Theorem lameq_BT_cong_has_bnf :
+Theorem lameq_BT_cong_has_bnf:
     !X M N r.
         FINITE X /\ FV M SUBSET X UNION RANK r /\
         FV N SUBSET X UNION RANK r /\ has_bnf M /\ has_bnf N ==>
@@ -1825,11 +1825,11 @@ Proof
  >> MATCH_MP_TAC lameq_SYM >> art []
 QED
 
-Definition subtree_equal_def :
+Definition subtree_equal_def:
     subtree_equal X M N p r <=> ltree_el (BT' X M r) p = ltree_el (BT' X N r) p
 End
 
-Theorem distinct_bnf_imp_not_subtree_equal :
+Theorem distinct_bnf_imp_not_subtree_equal:
     !X M N r. FINITE X /\
               FV M UNION FV N SUBSET X UNION RANK r /\
               has_bnf M /\ has_bnf N /\ ~(M == N) /\
@@ -1875,7 +1875,7 @@ Proof
 QED
 
 (* Key bridging theorem between the old and new worlds *)
-Theorem subtree_equal_alt_subtree_equiv :
+Theorem subtree_equal_alt_subtree_equiv:
     !X p M N r. FINITE X /\
                 FV M UNION FV N SUBSET X UNION RANK r /\
                 ltree_paths (BT' X M r) = ltree_paths (BT' X N r) ==>
@@ -1979,7 +1979,7 @@ Proof
       simp [head_equivalent_def, ltree_el_def, LMAP_fromList, LLENGTH_fromList] ]
 QED
 
-Theorem distinct_bnf_imp_not_subtree_equiv :
+Theorem distinct_bnf_imp_not_subtree_equiv:
     !X M N r. FINITE X /\
               FV M UNION FV N SUBSET X UNION RANK r /\
               has_bnf M /\ has_bnf N /\ ~(M == N) /\
@@ -1994,7 +1994,7 @@ Proof
  >> MATCH_MP_TAC distinct_bnf_imp_not_subtree_equal >> art []
 QED
 
-Theorem distinct_bnf_imp_agree_upto :
+Theorem distinct_bnf_imp_agree_upto:
     !X M N r. FINITE X /\
               FV M UNION FV N SUBSET X UNION RANK r /\
               has_bnf M /\ has_bnf N /\ ~(M == N) /\
@@ -2448,7 +2448,7 @@ Proof
 QED
 
 (* Lemma 10.4.1 (i) [1, p.254] *)
-Theorem separability_lemma1 :
+Theorem separability_lemma1:
     !M N. solvable (M :term) /\ solvable N /\ ~equivalent M N ==>
           !P Q. ?pi. Boehm_transform pi /\ apply pi M == P /\ apply pi N == Q
 Proof
@@ -2468,7 +2468,7 @@ Proof
 QED
 
 (* Lemma 10.4.1 (ii) [1, p.254] *)
-Theorem separability_lemma2 :
+Theorem separability_lemma2:
     !M N. solvable M /\ ~equivalent M N ==>
           !P. ?pi. Boehm_transform pi /\ apply pi M == P /\ ~solvable (apply pi N)
 Proof
@@ -2522,7 +2522,7 @@ QED
    NOTE: This theorem only depends on [separability_lemma1]. The present version
    is tailored for applying [distinct_bnf_imp_agree_uptp] and [agree_upto_thm].
  *)
-Theorem separability_thm :
+Theorem separability_thm:
     !X M N r.
        FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ 0 < r /\
        ltree_paths (BT' X M r) = ltree_paths (BT' X N r) /\
@@ -2563,7 +2563,7 @@ Proof
 QED
 
 (* A final form of [separability_thm], not used later in this theory *)
-Theorem separability_thm_final :
+Theorem separability_thm_final:
     !M N. has_bnf M /\ has_bnf N /\ ~(M == N) /\ BT_paths M = BT_paths N ==>
          !P Q. ?pi. Boehm_transform pi /\ apply pi M == P /\ apply pi N == Q
 Proof
@@ -2590,7 +2590,7 @@ QED
 
    NOTE: This theorem inherited all antecedents of [separability_thm].
  *)
-Theorem closed_separability_thm :
+Theorem closed_separability_thm:
     !X M N r.
        FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ 0 < r /\
        ltree_paths (BT' X M r) = ltree_paths (BT' X N r) /\
@@ -2615,7 +2615,7 @@ QED
 
    NOTE: This theorem inherited all antecedents of [separability_thm].
  *)
-Theorem distinct_bnf_imp_inconsistent :
+Theorem distinct_bnf_imp_inconsistent:
     !X M N r.
        FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ 0 < r /\
        ltree_paths (BT' X M r) = ltree_paths (BT' X N r) /\
@@ -2646,7 +2646,7 @@ Theorem distinct_bnf_imp_incompatible =
 (* The so called "completeness" of lambda is just another form of the above
    distinct_bnf_imp_inconsistent.
  *)
-Theorem lambda_complete :
+Theorem lambda_complete:
     !X M N r.
        FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\ 0 < r /\
        ltree_paths (BT' X M r) = ltree_paths (BT' X N r) /\
@@ -2657,7 +2657,7 @@ Proof
 QED
 
 (* A final form of the above theorem (completeness of lambda) *)
-Theorem lambda_complete_final :
+Theorem lambda_complete_final:
     !M N. has_bnf M /\ has_bnf N /\ BT_paths M = BT_paths N ==>
           M == N \/ inconsistent (asmlam {(M,N)})
 Proof
@@ -2690,7 +2690,7 @@ QED
    4. p IN ltree_paths (BT' X M r)
    5. THE (ltree_el (BT' X M r) p) <> bot (automatic by “bnf M”)
  *)
-Definition BT_expand_def :
+Definition BT_expand_def:
     BT_expand X t p r =
        let s = ltree_paths t;
           r' = LENGTH p + r;
@@ -2716,7 +2716,7 @@ Proof
  >> rw [ltree_paths_alt_ltree_el]
 QED
 
-Theorem ltree_finite_BT_expand :
+Theorem ltree_finite_BT_expand:
     !X M p r. FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
               p IN ltree_paths (BT' X M r) ==>
               ltree_finite (BT_expand X (BT' X M r) p r)
@@ -2740,7 +2740,7 @@ QED
    compat_closure eta N M' (FV N = FV M') /\
    M == M' (+ FV M' SUBSET FV M) ==> lameta M N (FV N SUBSET FV M)
  *)
-Theorem BT_expand_lemma1 :
+Theorem BT_expand_lemma1:
     !X M p r B N.
        FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
        p IN ltree_paths (BT' X M r) /\
@@ -3139,7 +3139,7 @@ QED
    Outputs: FINITE X /\ FV N (SUBSET FV M) SUBSET X UNION RANK r /\ has_bnf N
            lameta M N /\ BT_paths N = p INSERT BT_paths M
  *)
-Theorem BT_expand_lemma2 :
+Theorem BT_expand_lemma2:
     !X M p r B N.
        FINITE X /\ FV M SUBSET X UNION RANK r /\ has_bnf M /\
        p IN ltree_paths (BT' X M r) /\
@@ -3189,7 +3189,7 @@ QED
    is to make sure ‘ltree_el (BT' X M r) (FRONT p) = SOME (SOME (vs,y),SOME m)’
    and ‘LAST p = m’ always hold when adding the new path p.
  *)
-Theorem ltree_paths_BT_expand :
+Theorem ltree_paths_BT_expand:
     !X M p r m.
        FINITE X /\ FV M SUBSET X UNION RANK r /\ bnf M /\
        p IN ltree_paths (BT' X M r) /\
@@ -3242,7 +3242,7 @@ QED
 (* cf. takahashiS3Theory.eta_expand_def (for potential name conflicts only) *)
 Overload eta_expand1 = “\X M p r. BT_to_term (BT_expand X (BT' X M r) p r)”
 
-Definition eta_expand_upto_def :
+Definition eta_expand_upto_def:
     eta_expand_upto X M r paths =
     let s = paths DIFF ltree_paths (BT' X M r);
         n = CARD s;
@@ -3252,7 +3252,7 @@ Definition eta_expand_upto_def :
         FOLDL f M l
 End
 
-Theorem eta_expand_upto_thm :
+Theorem eta_expand_upto_thm:
     !X M M0 r paths.
        FINITE X /\ FV M SUBSET X UNION RANK r /\ has_bnf M /\
        ltree_paths (BT' X M r) SUBSET paths /\ FINITE paths /\
@@ -3482,7 +3482,7 @@ QED
 
    Also known as "Hilbert-Post completeness of lambda(beta)+eta".
  *)
-Theorem lameta_complete :
+Theorem lameta_complete:
     !X M N r. FINITE X /\ has_bnf M /\ has_bnf N /\ 0 < r /\
               FV M SUBSET X UNION RANK r /\
               FV N SUBSET X UNION RANK r ==>
@@ -3563,7 +3563,7 @@ Proof
 QED
 
 (* NOTE: “has_benf M /\ has_benf N” is used instead of “has_bnf M /\ has_bnf N” *)
-Theorem lameta_complete_final :
+Theorem lameta_complete_final:
     !M N. has_benf M /\ has_benf N ==>
           lameta M N \/ inconsistent (conversion (RINSERT (beta RUNION eta) M N))
 Proof
@@ -3574,7 +3574,7 @@ Proof
  >> SET_TAC []
 QED
 
-Theorem HP_complete_lameta :
+Theorem HP_complete_lameta:
     HP_complete (UNCURRY eta) has_benf
 Proof
     RW_TAC std_ss [HP_complete_def, GSYM eta_extend_alt_conversion,

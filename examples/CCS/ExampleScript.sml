@@ -114,7 +114,7 @@ in
 end;
 
 (* Examples used in Section 5 of I&C paper *)
-Theorem WG_example1 :
+Theorem WG_example1:
     WG (\t. prefix a t + prefix b t + prefix c (var Y))
 Proof
     HO_MATCH_MP_TAC WG4
@@ -123,7 +123,7 @@ Proof
  >> REWRITE_TAC [WG1]
 QED
 
-Theorem WG_example2 :
+Theorem WG_example2:
     WG (\t. prefix a (var X) + prefix b (var X) + prefix c t)
 Proof
     HO_MATCH_MP_TAC WG4

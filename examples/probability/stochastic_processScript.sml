@@ -42,7 +42,7 @@ Overload sum_list = “FOLDR $+ (0 :extreal)”
 (* ------------------------------------------------------------------------- *)
 
 (* Any non-empty set with (=) is a poset *)
-Theorem poset_trivial :
+Theorem poset_trivial:
     !(s :'a set). s <> {} ==> poset(s,$=)
 Proof
     RW_TAC std_ss [poset_def]
@@ -50,7 +50,7 @@ Proof
 QED
 
 (* Any non-empty set of numbers with (<=) is a poset *)
-Theorem poset_num_sets :
+Theorem poset_num_sets:
     !(N :num set). N <> {} ==> poset(N,$<=)
 Proof
     RW_TAC std_ss [poset_def]
@@ -81,14 +81,14 @@ Proof
  >> Q.EXISTS_TAC ‘y’ >> art []
 QED
 
-Definition gen_filtration_def :
+Definition gen_filtration_def:
     gen_filtration A a J <=>
       poset J /\ (!n. n IN (carrier J) ==> sub_sigma_algebra (a n) A) /\
       (!i j. i IN (carrier J) /\ j IN (carrier J) /\ (relation J) i j ==>
              subsets (a i) SUBSET subsets (a j))
 End
 
-Theorem gen_filtration_imp_sigma_algebra :
+Theorem gen_filtration_imp_sigma_algebra:
     !A a J. gen_filtration A a J ==> sigma_algebra A
 Proof
     rw [gen_filtration_def]
@@ -101,18 +101,18 @@ Proof
  >> rw [sub_sigma_algebra_def]
 QED
 
-Theorem filtration_alt_gen : (* was: filtration_alt *)
+Theorem filtration_alt_gen: (* was: filtration_alt *)
     !A a. filtration A a = gen_filtration A a (univ(:num),$<=)
 Proof
     rw [filtration_def, gen_filtration_def, poset_num]
 QED
 
-Definition gen_filtered_measure_space_def :
+Definition gen_filtered_measure_space_def:
     gen_filtered_measure_space m a J =
       (measure_space m /\ gen_filtration (m_space m,measurable_sets m) a J)
 End
 
-Theorem filtered_measure_space_alt_gen :
+Theorem filtered_measure_space_alt_gen:
     !m a. filtered_measure_space m a <=>
           gen_filtered_measure_space m a (univ(:num),$<=)
 Proof
@@ -120,13 +120,13 @@ Proof
         filtration_alt_gen, poset_num]
 QED
 
-Definition gen_sigma_finite_filtered_measure_space_def :
+Definition gen_sigma_finite_filtered_measure_space_def:
     gen_sigma_finite_filtered_measure_space m a J =
       (gen_filtered_measure_space m a J /\
        !n. n IN (carrier J) ==> sigma_finite (m_space m,subsets (a n),measure m))
 End
 
-Theorem sigma_finite_filtered_measure_space_alt_gen :
+Theorem sigma_finite_filtered_measure_space_alt_gen:
     !m a. sigma_finite_filtered_measure_space m a <=>
           gen_sigma_finite_filtered_measure_space m a (univ(:num),$<=)
 Proof
@@ -136,7 +136,7 @@ Proof
 QED
 
 (* ‘gen_martingale m a u (univ(:num),$<=) = martingale m a u’ [1, p.301] *)
-Definition gen_martingale_def :
+Definition gen_martingale_def:
    gen_martingale m a u J =
      (gen_sigma_finite_filtered_measure_space m a J /\
       (!n. n IN (carrier J) ==> integrable m (u n)) /\
@@ -147,7 +147,7 @@ Definition gen_martingale_def :
 End
 
 (* or "upwards directed", see [9, p.301] *)
-Definition upwards_filtering_def :
+Definition upwards_filtering_def:
     upwards_filtering (J :'index poset) =
       !i j. i IN (carrier J) /\ j IN (carrier J) ==>
             ?k. k IN (carrier J) /\ (relation J) i k /\ (relation J) j k
@@ -172,27 +172,27 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* ‘fcp_rectangle’ is a generalisation of ‘fcp_prod’ *)
-Definition fcp_rectangle_def :
+Definition fcp_rectangle_def:
     fcp_rectangle (h :num -> 'a set) (:'N) =
       {(v :'a['N]) | !i. i < dimindex(:'N) ==> v ' i IN h i}
 End
 
 Overload rectangle = “fcp_rectangle”
 
-Theorem RECTANGLE_UNIV :
+Theorem RECTANGLE_UNIV:
     rectangle (\n. univ(:'a)) (:'N) = univ(:'a['N])
 Proof
     rw [fcp_rectangle_def]
 QED
 
-Theorem IN_RECTANGLE :
+Theorem IN_RECTANGLE:
     !x (h :num -> 'a set). x IN rectangle h (:'N) <=>
        !i. i < dimindex(:'N) ==> x ' i IN h i
 Proof
     rw [fcp_rectangle_def, GSPECIFICATION]
 QED
 
-Theorem PREIMAGE_RECTANGLE :
+Theorem PREIMAGE_RECTANGLE:
     !(f :'a -> 'b['N]) (h :num -> 'b set).
         PREIMAGE f (rectangle h (:'N)) =
         BIGINTER (IMAGE (\n. PREIMAGE (\x. f x ' n) (h n)) (count (dimindex(:'N))))
@@ -218,7 +218,7 @@ val _ = set_fixity "of_dimension" (Infix(NONASSOC, 470));
    This gen definition can be used to convert any (1-dimensional) Borel
    sigma-algebra (e.g. ‘borel’ and ‘Borel’) into n-dimensional Borel spaces.
  *)
-Definition sigma_of_dimension_def :
+Definition sigma_of_dimension_def:
     sigma_of_dimension (B :'a algebra) (:'N) =
     sigma_functions (rectangle (\n. space B) (:'N)) (\n. B) (\n v. v ' n)
                     (count (dimindex(:'N)))
@@ -226,7 +226,7 @@ End
 Overload of_dimension = “sigma_of_dimension”
 
 (* ‘B of_dimension ['N]’ is indeed a sigma-algebra (for whatever B) *)
-Theorem sigma_algebra_of_dimension :
+Theorem sigma_algebra_of_dimension:
     !(B :'a algebra). sigma_algebra (B of_dimension (:'N))
 Proof
     rw [sigma_of_dimension_def, sigma_functions_def, fcp_rectangle_def]
@@ -237,7 +237,7 @@ Proof
  >> fs [IN_INTER, IN_PREIMAGE]
 QED
 
-Theorem space_sigma_of_dimension :
+Theorem space_sigma_of_dimension:
     !(B :'a algebra). space (B of_dimension (:'N)) = rectangle (\n. space B) (:'N)
 Proof
     rw [sigma_of_dimension_def, sigma_functions_def, SPACE_SIGMA]
@@ -253,7 +253,7 @@ QED
    NOTE: In theory, this theorem (and sigma_of_dimension_def) can be generalised
    to support differrent (space B) at each dimensions. So far this is not needed.
  *)
-Theorem sigma_of_dimension_alt :
+Theorem sigma_of_dimension_alt:
     !(B :'a algebra).
       subset_class (space B) (subsets B) /\ space B IN subsets B ==>
       B of_dimension (:'N) =
@@ -403,7 +403,7 @@ Proof
 QED
 
 (* for easier applications in the most common case (with sigma_algebras) *)
-Theorem sigma_of_dimension_alt_sigma_algebra :
+Theorem sigma_of_dimension_alt_sigma_algebra:
     !(B :'a algebra). sigma_algebra B ==>
       B of_dimension (:'N) =
       sigma (rectangle (\n. space B) (:'N))
@@ -416,7 +416,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def]
 QED
 
-Theorem rectangle_in_sigma_of_dimension :
+Theorem rectangle_in_sigma_of_dimension:
     !B h. sigma_algebra B /\ (!i. i < dimindex(:'N) ==> h i IN subsets B) ==>
           rectangle h (:'N) IN subsets (B of_dimension (:'N))
 Proof
@@ -425,7 +425,7 @@ Proof
  >> Q.EXISTS_TAC ‘h’ >> art []
 QED
 
-Theorem RECTANGLE_INTER_STABLE :
+Theorem RECTANGLE_INTER_STABLE:
   !(B :'a algebra) C.
      (C = {rectangle h (:'N) | !i. i < dimindex(:'N) ==> h i IN subsets B}) /\
      (!s t. s IN subsets B /\ t IN subsets B ==> s INTER t IN subsets B) ==>
@@ -439,12 +439,12 @@ Proof
 QED
 
 (* This is N-dimensional real-valued Borel space “:real['N] algebra” *)
-Definition borel_space_def :
+Definition borel_space_def:
     borel_space (:'N) = borel of_dimension (:'N)
 End
 
 (* This is N-dimensional extreal-valued Borel space “:extreal['N] algebra” *)
-Definition Borel_space_def :
+Definition Borel_space_def:
     Borel_space (:'N) = Borel of_dimension (:'N)
 End
 
@@ -459,7 +459,7 @@ Theorem SIGMA_ALGEBRA_BOREL_SPACE =
                  (ISPEC “Borel” sigma_algebra_of_dimension)
 
 (* alternative definition of ‘borel’ following "of_dimension_def" *)
-Theorem borel_space_alt_sigma_functions :
+Theorem borel_space_alt_sigma_functions:
     borel_space (:'N) =
     sigma_functions univ(:real['N]) (\n. borel) (\n v. v ' n)
                    (count (dimindex(:'N)))
@@ -467,7 +467,7 @@ Proof
     rw [space_borel, borel_space_def, sigma_of_dimension_def, RECTANGLE_UNIV]
 QED
 
-Theorem Borel_space_alt_sigma_functions :
+Theorem Borel_space_alt_sigma_functions:
     Borel_space (:'N) =
     sigma_functions univ(:extreal['N]) (\n. Borel) (\n v. v ' n)
                    (count (dimindex(:'N)))
@@ -476,7 +476,7 @@ Proof
 QED
 
 (* alternative definition of ‘borel’ following "of_dimension_alt" *)
-Theorem borel_space_alt_sigma :
+Theorem borel_space_alt_sigma:
     borel_space (:'N) =
     sigma univ(:real['N])
           {rectangle h (:'N) | !i. i < dimindex(:'N) ==> h i IN subsets borel}
@@ -485,7 +485,7 @@ Proof
         sigma_of_dimension_alt_sigma_algebra]
 QED
 
-Theorem Borel_space_alt_sigma :
+Theorem Borel_space_alt_sigma:
     Borel_space (:'N) =
     sigma univ(:extreal['N])
           {rectangle h (:'N) | !i. i < dimindex(:'N) ==> h i IN subsets Borel}
@@ -511,7 +511,7 @@ Theorem RECTANGLE_IN_BOREL_SPACE =
 (* (M + N)-dimensional prod space is the product sigma-algebra of M- and N-dimensional
     prod spaces. (The key of this proof is prod_sigma_of_generator.)
  *)
-Theorem sigma_of_dimension_decomposition :
+Theorem sigma_of_dimension_decomposition:
     !(B :'a algebra).
       subset_class (space B) (subsets B) /\ space B IN subsets B /\
       FINITE univ(:'M) /\ FINITE univ(:'N) ==>
@@ -632,7 +632,7 @@ Proof
 QED
 
 (* an application of ‘borel’ *)
-Theorem borel_space_decomposition :
+Theorem borel_space_decomposition:
     FINITE univ(:'M) /\ FINITE univ(:'N) ==>
     borel_space (:'M + 'N) = fcp_sigma (borel_space (:'M)) (borel_space (:'N))
 Proof
@@ -644,7 +644,7 @@ Proof
 QED
 
 (* an application of ‘Borel’ *)
-Theorem Borel_space_decomposition :
+Theorem Borel_space_decomposition:
     FINITE univ(:'M) /\ FINITE univ(:'N) ==>
     Borel_space (:'M + 'N) = fcp_sigma (Borel_space (:'M)) (Borel_space (:'N))
 Proof
@@ -666,7 +666,7 @@ val lemma =
                                     |> INST_TYPE [“:'index” |-> “:num”]
                                     |> INST_TYPE [“:'temp” |-> “:'a”];
 
-Theorem fcp_simultaneously_measurable :
+Theorem fcp_simultaneously_measurable:
     !B. sigma_algebra B /\
        (!i. (\v. v ' i) IN (rectangle (\n. space B) (:'N) -> space B)) ==>
         !i. i < dimindex(:'N) ==> (\v. v ' i) IN measurable (B of_dimension(:'N)) B
@@ -697,7 +697,7 @@ Theorem IN_MEASURABLE_BOREL_FCP =
 (* ------------------------------------------------------------------------- *)
 
 (* list (cons) version of ‘CROSS’ *)
-Definition cons_cross_def :
+Definition cons_cross_def:
     cons_cross A B = {CONS a b | a IN A /\ b IN B}
 End
 
@@ -707,36 +707,36 @@ Proof
     rw [cons_cross_def]
 QED
 
-Theorem cons_cross_alt_gen :
+Theorem cons_cross_alt_gen:
     !A B. cons_cross A B = general_cross CONS A B
 Proof
     rw [cons_cross_def, general_cross_def]
 QED
 
 (* list (cons) version of ‘prod_sets’ *)
-Definition cons_prod_def :
+Definition cons_prod_def:
     cons_prod a b = {cons_cross s t | s IN a /\ t IN b}
 End
 
-Theorem cons_prod_alt_gen :
+Theorem cons_prod_alt_gen:
     !a b. cons_prod a b = general_prod CONS a b
 Proof
     rw [cons_prod_def, general_prod_def, cons_cross_alt_gen]
 QED
 
 (* list (cons) version of ‘prod_sigma’ *)
-Definition cons_sigma_def :
+Definition cons_sigma_def:
     cons_sigma (a :'a algebra) (b :'a list algebra) =
       sigma (cons_cross (space a) (space b)) (cons_prod (subsets a) (subsets b))
 End
 
-Theorem space_cons_sigma :
+Theorem space_cons_sigma:
     !a b. space (cons_sigma a b) = cons_cross (space a) (space b)
 Proof
     rw [cons_sigma_def, SPACE_SIGMA]
 QED
 
-Theorem cons_sigma_alt_gen :
+Theorem cons_sigma_alt_gen:
     !a b. cons_sigma a b = general_sigma CONS a b
 Proof
     rw [cons_sigma_def, cons_cross_alt_gen, cons_prod_alt_gen, general_sigma_def]
@@ -765,14 +765,14 @@ Theorem cons_sigma_of_generator = general_sigma_of_generator
      |> Q.GENL [‘X’, ‘E’, ‘Y’, ‘G’]
 
 (* NOTE: ‘0 < N’ is a reasonable assumption sometimes *)
-Definition list_rectangle_def :
+Definition list_rectangle_def:
     list_rectangle (h :num -> 'a set) N =
       {v | LENGTH v = N /\ !i. i < N ==> EL i v IN h i}
 End
 Overload rectangle = “list_rectangle”
 
 (* NOTE: (\e. [e]) is a bijection *)
-Theorem list_rectangle_1 :
+Theorem list_rectangle_1:
     !h. rectangle h 1 = IMAGE (\e. [e]) (h 0)
 Proof
     rw [Once EXTENSION, list_rectangle_def]
@@ -781,20 +781,20 @@ Proof
  >> rw []
 QED
 
-Theorem list_rectangle_UNIV :
+Theorem list_rectangle_UNIV:
     list_rectangle (\n. UNIV) N = {v | LENGTH v = N}
 Proof
     rw [list_rectangle_def, Once EXTENSION]
 QED
 
-Theorem IN_list_rectangle :
+Theorem IN_list_rectangle:
     !v h N. v IN list_rectangle h N <=>
             LENGTH v = N /\ !i. i < N ==> EL i v IN h i
 Proof
     rw [list_rectangle_def, Once EXTENSION]
 QED
 
-Theorem list_rectangle_SUC :
+Theorem list_rectangle_SUC:
     !h n. rectangle h (SUC n) = cons_cross (h 0) (rectangle (h o SUC) n)
 Proof
     rw [cons_cross_def, Once EXTENSION, IN_list_rectangle, o_DEF]
@@ -807,7 +807,7 @@ Proof
  >> Cases_on ‘i’ >> fs []
 QED
 
-Theorem PREIMAGE_list_rectangle :
+Theorem PREIMAGE_list_rectangle:
     !(f :'a -> 'b list) (h :num -> 'b set) N.
         (!x. LENGTH (f x) = N) ==>
         PREIMAGE f (list_rectangle h N) =
@@ -822,12 +822,12 @@ Proof
  >> Q.EXISTS_TAC ‘i’ >> art []
 QED
 
-Definition sigma_lists_def :
+Definition sigma_lists_def:
     sigma_lists B N =
       sigma_functions (rectangle (\n. space B) N) (\n. B) EL (count N)
 End
 
-Theorem sigma_algebra_sigma_lists :
+Theorem sigma_algebra_sigma_lists:
     !(B :'a algebra) N. sigma_algebra (sigma_lists B N)
 Proof
     rw [sigma_lists_def, sigma_functions_def, list_rectangle_def]
@@ -836,14 +836,14 @@ Proof
  >> fs [IN_INTER, IN_PREIMAGE]
 QED
 
-Theorem space_sigma_lists :
+Theorem space_sigma_lists:
     !(B :'a algebra) N. space (sigma_lists B N) = rectangle (\n. space B) N
 Proof
     rw [sigma_lists_def, sigma_functions_def, SPACE_SIGMA]
 QED
 
 (* cf. sigma_of_dimension_alt *)
-Theorem sigma_lists_alt :
+Theorem sigma_lists_alt:
     !(B :'a algebra) N.
       subset_class (space B) (subsets B) /\ space B IN subsets B /\ 0 < N ==>
       sigma_lists B N =
@@ -986,7 +986,7 @@ Proof
 QED
 
 (* cf. sigma_of_dimension_alt_sigma_algebra *)
-Theorem sigma_lists_alt_sigma_algebra :
+Theorem sigma_lists_alt_sigma_algebra:
     !(B :'a algebra) N. sigma_algebra B /\ 0 < N ==>
       sigma_lists B N =
       sigma (rectangle (\n. space B) N)
@@ -999,11 +999,11 @@ Proof
  >> fs [sigma_algebra_def, algebra_def]
 QED
 
-Definition wrap_def :
+Definition wrap_def:
     wrap e = [e]
 End
 
-Theorem IMAGE_wrap_univ :
+Theorem IMAGE_wrap_univ:
     IMAGE wrap univ(:'a) = {v | LENGTH v = 1}
 Proof
     rw [Once EXTENSION, wrap_def]
@@ -1018,7 +1018,7 @@ Proof
     rw [wrap_def]
 QED
 
-Definition unwrap_def :
+Definition unwrap_def:
     unwrap = EL 0
 End
 
@@ -1028,7 +1028,7 @@ Proof
     rw [wrap_def, unwrap_def]
 QED
 
-Theorem wrap_unwrap :
+Theorem wrap_unwrap:
     !x. LENGTH x = 1 ==> wrap (unwrap x) = x
 Proof
     rw [wrap_def, unwrap_def]
@@ -1043,7 +1043,7 @@ Proof
  >> Q.EXISTS_TAC ‘x’ >> art []
 QED
 
-Theorem IMAGE_wrap_unwrap :
+Theorem IMAGE_wrap_unwrap:
     !s. (!e. e IN s ==> LENGTH e = 1) ==> IMAGE wrap (IMAGE unwrap s) = s
 Proof
     rpt STRIP_TAC
@@ -1057,7 +1057,7 @@ Proof
  >> Q.EXISTS_TAC ‘x’ >> art []
 QED
 
-Theorem BIJ_wrap :
+Theorem BIJ_wrap:
     !sp. BIJ wrap sp (IMAGE wrap sp)
 Proof
     rw [BIJ_THM, EXISTS_UNIQUE_ALT]
@@ -1067,7 +1067,7 @@ Proof
  >> fs [wrap_def]
 QED
 
-Theorem sigma_lists_1 :
+Theorem sigma_lists_1:
     !b. sigma_algebra b ==>
         sigma_lists b 1 = (IMAGE wrap (space b), IMAGE (IMAGE wrap) (subsets b))
 Proof
@@ -1141,7 +1141,7 @@ QED
 (* NOTE: This is a difficult result. It gives another alternative definition of
    sigma_lists using the very 1-dimensional generator. --Chun Tian, 25 ago 2024
  *)
-Theorem sigma_lists_alt_generator :
+Theorem sigma_lists_alt_generator:
     !sp sts N.
       subset_class sp sts /\ has_exhausting_sequence (sp,sts) /\ 0 < N ==>
       sigma_lists (sigma sp sts) N =
@@ -1578,7 +1578,7 @@ Proof
 QED
 
 (* cf. rectangle_in_sigma_of_dimension *)
-Theorem list_rectangle_in_sigma_lists :
+Theorem list_rectangle_in_sigma_lists:
     !B h N. sigma_algebra B /\ (!i. i < N ==> h i IN subsets B) /\ 0 < N ==>
             rectangle h N IN subsets (sigma_lists B N)
 Proof
@@ -1588,7 +1588,7 @@ Proof
 QED
 
 (* cf. RECTANGLE_INTER_STABLE *)
-Theorem list_rectangle_INTER_STABLE :
+Theorem list_rectangle_INTER_STABLE:
   !(B :'a algebra) N C.
      C = {rectangle h N | h | !i. i < N ==> h i IN subsets B} /\
      (!s t. s IN subsets B /\ t IN subsets B ==> s INTER t IN subsets B) ==>
@@ -1602,7 +1602,7 @@ Proof
 QED
 
 (* cf. Borel_space (:'N) in stochastic_processTheory. This is the list version. *)
-Definition Borel_lists_def :
+Definition Borel_lists_def:
    Borel_lists N = sigma_lists Borel N
 End
 
@@ -1616,14 +1616,14 @@ Theorem Borel_lists_alt_sigma_functions =
         Borel_lists_def
      |> REWRITE_RULE [sigma_lists_def, SPACE_BOREL, list_rectangle_UNIV]
 
-Theorem space_Borel_lists :
+Theorem space_Borel_lists:
     !N. space (Borel_lists N) = {v | LENGTH v = N}
 Proof
     rw [SPACE_SIGMA, Borel_lists_alt_sigma_functions, sigma_functions_def]
 QED
 
 (* cf. Borel_space_alt_sigma *)
-Theorem Borel_lists_alt_sigma :
+Theorem Borel_lists_alt_sigma:
     !N. 0 < N ==>
         Borel_lists N =
         sigma {v | LENGTH v = N}
@@ -1634,7 +1634,7 @@ Proof
 QED
 
 (* The shape of generator is aligned with Borel_eq_le_ext and Borel_inf_def (below) *)
-Theorem Borel_lists_alt_sigma_generator :
+Theorem Borel_lists_alt_sigma_generator:
     !N. 0 < N ==>
         Borel_lists N =
         sigma {v | LENGTH v = N}
@@ -1671,7 +1671,7 @@ Theorem list_rectangle_IN_Borel_lists =
 (* ‘SUC N’-dimensional prod space is the product sigma-algebra of 1- and N-dimensional
     prod sigmas. (The key of this proof is cons_sigma_of_generator.)
  *)
-Theorem sigma_lists_decomposition :
+Theorem sigma_lists_decomposition:
     !(B :'a algebra) N. sigma_algebra B /\ 0 < N ==>
         sigma_lists B (SUC N) = cons_sigma B (sigma_lists B N)
 Proof
@@ -1767,7 +1767,7 @@ Proof
         Q.EXISTS_TAC ‘\n. h (SUC n)’ >> rw [] ] ]
 QED
 
-Theorem Borel_lists_decomposition :
+Theorem Borel_lists_decomposition:
     !N. 0 < N ==> Borel_lists (SUC N) = cons_sigma Borel (Borel_lists N)
 Proof
     RW_TAC std_ss [Borel_lists_def]
@@ -1775,7 +1775,7 @@ Proof
  >> rw [SIGMA_ALGEBRA_BOREL]
 QED
 
-Theorem Borel_lists_1 :
+Theorem Borel_lists_1:
     Borel_lists 1 = (IMAGE wrap univ(:extreal),
                      IMAGE (IMAGE wrap) (subsets Borel))
 Proof
@@ -1810,7 +1810,7 @@ Theorem IN_MEASURABLE_BOREL_EL =
               (ISPEC “Borel” sigma_lists_simultaneously_measurable)
 
 (* cf. sigma_algebraTheory.MEASURABLE_FST and MEASURABLE_SND *)
-Theorem MEASURABLE_EL :
+Theorem MEASURABLE_EL:
     !B N. sigma_algebra B ==>
           !i. i < N ==> (EL i) IN measurable (sigma_lists B N) B
 Proof
@@ -1820,7 +1820,7 @@ Proof
 QED
 
 (* cf. sigma_algebraTheory.MEASURABLE_FST *)
-Theorem IN_MEASURABLE_BOREL_HD :
+Theorem IN_MEASURABLE_BOREL_HD:
     !N. 0 < N ==> HD IN Borel_measurable (Borel_lists N)
 Proof
     rpt STRIP_TAC
@@ -1832,7 +1832,7 @@ QED
 
    cf. IN_MEASURABLE_BOREL_2D_VECTOR
  *)
-Theorem IN_MEASURABLE_BOREL_LISTS :
+Theorem IN_MEASURABLE_BOREL_LISTS:
     !a f l n. sigma_algebra a /\ LENGTH (l :'index list) = n /\ 0 < n /\
              (!i. MEM i l ==> f i IN measurable a Borel) ==>
              (\x. MAP (\i. f i x) l) IN measurable a (Borel_lists n)
@@ -1910,7 +1910,7 @@ Proof
       impl_tac >- (Q.EXISTS_TAC ‘i’ >> art []) >> rw [] ]
 QED
 
-Theorem IN_MEASURABLE_BOREL_TL :
+Theorem IN_MEASURABLE_BOREL_TL:
     !N. 0 < N ==> TL IN measurable (Borel_lists (SUC N)) (Borel_lists N)
 Proof
     rw [IN_MEASURABLE, IN_FUNSET, space_Borel_lists]
@@ -2004,7 +2004,7 @@ QED
 (* cf. IN_MEASURABLE_BOREL_ADD' and IN_MEASURABLE_BOREL_2D_VECTOR, and
        IN_MEASURABLE_BOREL_LISTS.
  *)
-Theorem IN_MEASURABLE_BOREL_SUM_LIST :
+Theorem IN_MEASURABLE_BOREL_SUM_LIST:
     !N. 0 < N ==> FOLDR $+ 0 IN measurable (Borel_lists N) Borel
 Proof
     Induct_on ‘N’ >- rw []
@@ -2038,7 +2038,7 @@ Proof
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_TL >> art []
 QED
 
-Theorem IN_MEASURABLE_BOREL_SUM_LIST_LIST :
+Theorem IN_MEASURABLE_BOREL_SUM_LIST_LIST:
     !a f l. sigma_algebra a /\ 0 < LENGTH l /\
            (!i. MEM i l ==> f i IN measurable a Borel) ==>
            (\x. FOLDR $+ 0 (MAP (\i. f i x) l)) IN measurable a Borel
@@ -2058,7 +2058,7 @@ QED
 (*  Probability space constructed by sigma_lists of (the same) prob space    *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem existence_of_multidimensional_prob_space :
+Theorem existence_of_multidimensional_prob_space:
     !p N. prob_space p /\ 0 < N ==>
          ?pp. prob_space pp /\
              !E. (?h. E = rectangle h N /\ !i. i < N ==> h i IN events p) ==>
@@ -2735,7 +2735,7 @@ Proof
  >> Rewr
 QED
 
-Theorem indep_functions_of_vars :
+Theorem indep_functions_of_vars:
     !p X (l1 :'index list) l2 n1 n2 f g.
         prob_space p /\ ALL_DISTINCT (l1 ++ l2) /\
        (!n. MEM n (l1 ++ l2) ==> random_variable (X n) p Borel) /\
@@ -2780,7 +2780,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-Theorem indep_sum_list_of_vars :
+Theorem indep_sum_list_of_vars:
     !p X (l1 :'index list) l2 n1 n2 f g.
         prob_space p /\ ALL_DISTINCT (l1 ++ l2) /\
        (!n. MEM n (l1 ++ l2) ==> random_variable (X n) p Borel) /\
@@ -2805,7 +2805,7 @@ QED
    NOTE: The "bottom" of this cylinder is always a rectangle, thus is not the
    general cylinder sets.
  *)
-Definition cylinder_def :
+Definition cylinder_def:
     cylinder (h :num -> 'a set) N =
        {f :num -> 'a | !n. n < N ==> f n IN h n}
 End
@@ -2813,7 +2813,7 @@ End
 (* Converting cylinders back to rectangles by converting infinite sequences to
    finite lists (i.e., cutting off the tails).
  *)
-Definition cylinder2rect_def :
+Definition cylinder2rect_def:
     cylinder2rect (c :(num -> 'a) set) N = IMAGE (\f. GENLIST f N) c
 End
 
@@ -2857,7 +2857,7 @@ QED
    cylinder c (N = 1) of "true, ...", after cutting off the initial "true", must
    ranger over all possible infinite Boolean sequences.
  *)
-Definition is_cylinder_def :
+Definition is_cylinder_def:
     is_cylinder (c :(num -> 'a) set) N <=>
     c = {} \/ !f. GENLIST f N IN cylinder2rect c N ==> f IN c
 End
@@ -2881,7 +2881,7 @@ Proof
  >> fs [IN_list_rectangle]
 QED
 
-Theorem cylinder2rect_11 :
+Theorem cylinder2rect_11:
     !s t N. is_cylinder s N /\ is_cylinder t N ==>
            (cylinder2rect s N = cylinder2rect t N <=> s = t)
 Proof
@@ -2915,30 +2915,30 @@ QED
 (* NOTE: The choice of this particular generator {x | x <= c} is necessary, as
    it has an exhausting sequence in univ(:extreal set).
  *)
-Definition Borel_inf_def :
+Definition Borel_inf_def:
     Borel_inf =
       sigma UNIV {cylinder h N | 0 < N /\ !i. i < N ==> ?c. h i = {x | x <= c}}
 End
 
-Definition Borel_inf1_def :
+Definition Borel_inf1_def:
     Borel_inf1 =
       sigma UNIV {cylinder h N | 0 < N /\ !i. i < N ==> h i IN subsets Borel}
 End
 
 (* NOTE: The extra condition ‘is_cylinder c N’ is beyond textbook [4, p.178] *)
-Definition Borel_inf2_def :
+Definition Borel_inf2_def:
     Borel_inf2 =
       sigma UNIV {c | ?N. 0 < N /\ is_cylinder c N /\
                           cylinder2rect c N IN subsets (Borel_lists N)}
 End
 
-Theorem space_Borel_inf :
+Theorem space_Borel_inf:
     space Borel_inf = UNIV
 Proof
     rw [Borel_inf_def, SPACE_SIGMA]
 QED
 
-Theorem sigma_algebra_Borel_inf :
+Theorem sigma_algebra_Borel_inf:
     sigma_algebra Borel_inf
 Proof
     rw [Borel_inf_def, SIGMA_ALGEBRA_SIGMA_UNIV]
@@ -3127,7 +3127,7 @@ Proof
  >> DISCH_THEN (fs o wrap)
 QED
 
-Theorem Borel_inf_eq_Borel_inf2 :
+Theorem Borel_inf_eq_Borel_inf2:
     Borel_inf = Borel_inf2
 Proof
     ‘space Borel_inf  = UNIV’ by rw [SPACE_SIGMA, Borel_inf_def]
@@ -3138,7 +3138,7 @@ Proof
  >> REWRITE_TAC [Borel_inf2_SUBSET_inf, Borel_inf_SUBSET_inf2]
 QED
 
-Theorem Borel_inf_eq_Borel_inf1 :
+Theorem Borel_inf_eq_Borel_inf1:
     Borel_inf = Borel_inf1
 Proof
     ‘space Borel_inf  = UNIV’ by rw [SPACE_SIGMA, Borel_inf_def]

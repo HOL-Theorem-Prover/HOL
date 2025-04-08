@@ -302,7 +302,7 @@ val unif_prog_space_highlowrandom_distribution = store_thm
    >> POP_ORW
    >> RW_TAC std_ss [CARD_CROSS, CARD_SING]);
 
-Theorem unif_prog_space_leakage_reduce :
+Theorem unif_prog_space_leakage_reduce:
     !high low random f. FINITE high /\ FINITE low /\ FINITE random /\
            ~((high CROSS low) CROSS random={}) ==>
            (leakage (unif_prog_space high low random) f =
@@ -570,7 +570,7 @@ Proof
    >> Q.UNABBREV_TAC `foo` >> RW_TAC std_ss []
 QED
 
-Theorem unif_prog_space_visible_leakage_reduce :
+Theorem unif_prog_space_visible_leakage_reduce:
     !high low random f. FINITE high /\ FINITE low /\ FINITE random /\
            ~((high CROSS low) CROSS random={}) ==>
            (visible_leakage (unif_prog_space high low random) f =

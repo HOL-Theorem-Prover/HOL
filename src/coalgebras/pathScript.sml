@@ -339,7 +339,7 @@ val finite_length = store_thm(
   PROVE_TAC [finite_length_lemma, optionTheory.option_CASES,
              optionTheory.NOT_NONE_SOME]);
 
-Theorem length_cases :
+Theorem length_cases:
     !p. (finite p <=> (?n. length p = SOME (SUC n))) /\
         (~finite p <=> (length p = NONE))
 Proof
@@ -771,7 +771,7 @@ val tail_drop = store_thm(
 val _ = export_rewrites ["tail_drop"]
 
 (* from examples/lambda/barengregt/head_reductionScript.sml *)
-Theorem drop_tail_commute :
+Theorem drop_tail_commute:
     !i p. SUC i IN PL p ==> (drop i (tail p) = tail (drop i p))
 Proof
   Induct THEN SIMP_TAC (srw_ss()) [Once FORALL_path] THEN
@@ -779,7 +779,7 @@ Proof
 QED
 
 (* from examples/lambda/barengregt/head_reductionScript.sml *)
-Theorem drop_not_stopped :
+Theorem drop_not_stopped:
     !i p. SUC i IN PL p ==> ?v r q. drop i p = pcons v r q
 Proof
   Induct THEN GEN_TAC THEN
@@ -1839,7 +1839,7 @@ SRW_TAC [] [] THENL
      SRW_TAC [] [],
  SRW_TAC [] [Once unfold_def, first_def, path_rep_bijections_thm]]);
 
-Theorem infinite_path_cases :
+Theorem infinite_path_cases:
     !p. infinite p ==> ?x r q. (p = pcons x r q) /\ infinite q
 Proof
     rpt STRIP_TAC
@@ -1852,7 +1852,7 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem finite_take_all :
+Theorem finite_take_all:
     !p. finite p ==> (take (PRE (THE (length p))) p = p)
 Proof
     HO_MATCH_MP_TAC finite_path_ind
@@ -1862,7 +1862,7 @@ Proof
  >> rw [arithmeticTheory.PRE_SUB1, take_def]
 QED
 
-Theorem finite_last_el :
+Theorem finite_last_el:
     !p. finite p ==> (last p = el (PRE (THE (length p))) p)
 Proof
     rpt STRIP_TAC

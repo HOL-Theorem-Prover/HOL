@@ -176,7 +176,7 @@ Theorem nc_INDUCTION[local] = mkX_ind term_ind
 
 (* exactly mimic historical bound variable names etc for backwards
    compatibility *)
-Theorem nc_INDUCTION2 :
+Theorem nc_INDUCTION2:
     ∀P X.
       (∀s. P (VAR s)) ∧
       (∀t u. P t ∧ P u ==> P (APP t u)) ∧
@@ -307,7 +307,7 @@ val FV_EMPTY = store_thm(
 
    NOTE: the set of all closed terms forms $\Lambda_0$ found in textbooks.
  *)
-Definition closed_def :
+Definition closed_def:
     closed (M :term) <=> FV M = {}
 End
 
@@ -333,13 +333,13 @@ Proof
 QED
 
 (* NOTE: always use Once with it, to prevent infinite rewriting loops *)
-Theorem tpm_CONS :
+Theorem tpm_CONS:
   tpm ((x,y)::pi) t = tpm [(x,y)] (tpm pi t)
 Proof
   SRW_TAC [][GSYM pmact_decompose]
 QED
 
-Theorem tpm_SNOC :
+Theorem tpm_SNOC:
     tpm (SNOC (x,y) pi) t = tpm pi (tpm [(x,y)] t)
 Proof
     SIMP_TAC std_ss [SNOC_APPEND, GSYM pmact_decompose]
@@ -511,7 +511,7 @@ Proof
 QED
 
 (* Note: this is the opposite direction of lemma14b *)
-Theorem SUB_FIX_IMP_NOTIN_FV :
+Theorem SUB_FIX_IMP_NOTIN_FV:
     !x t. (!u. [u/x] t = t) ==> x NOTIN FV t
 Proof
     rpt GEN_TAC
@@ -528,7 +528,7 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem lemma14b_ext1 :
+Theorem lemma14b_ext1:
     !v M. v # M <=> !N. ([N/v] M = M)
 Proof
     rpt GEN_TAC
@@ -537,7 +537,7 @@ Proof
  >> rw [SUB_FIX_IMP_NOTIN_FV]
 QED
 
-Theorem SUB_EQ_IMP_NOTIN_FV :
+Theorem SUB_EQ_IMP_NOTIN_FV:
     !x t. (!t1 t2. [t1/x] t = [t2/x] t) ==> x NOTIN FV t
 Proof
     rpt GEN_TAC
@@ -557,7 +557,7 @@ Proof
  >> CCONTR_TAC >> fs []
 QED
 
-Theorem lemma14b_ext2 :
+Theorem lemma14b_ext2:
     !v M. v # M <=> !N1 N2. [N1/v] M = [N2/v] M
 Proof
     rpt GEN_TAC
@@ -566,7 +566,7 @@ Proof
 QED
 
 (* ‘tpm pi M’ doesn't change M if all its variables are irrelevant *)
-Theorem tpm_unchanged :
+Theorem tpm_unchanged:
     !pi M. DISJOINT (set (MAP FST pi)) (FV M) /\
            DISJOINT (set (MAP SND pi)) (FV M) ==> tpm pi M = M
 Proof
@@ -594,13 +594,13 @@ Theorem FV_SUB:
 Proof PROVE_TAC [lemma14b, lemma14c]
 QED
 
-Theorem FV_SUB_SUBSET :
+Theorem FV_SUB_SUBSET:
   !t u v. closed t ==> FV ([t/v] u) SUBSET FV u
 Proof
     rw [FV_SUB, closed_def]
 QED
 
-Theorem FV_SUB_upperbound :
+Theorem FV_SUB_upperbound:
   !t u v. FV ([t/v] u) SUBSET FV u UNION FV t
 Proof
     rw [FV_SUB]
@@ -621,7 +621,7 @@ Theorem lemma15b:
 Proof SRW_TAC [][lemma15a]
 QED
 
-Theorem SUB_TWICE_ONE_VAR :
+Theorem SUB_TWICE_ONE_VAR:
     !body. [x/v] ([y/v] body) = [[x/v]y / v] body
 Proof
   HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [][SUB_THM, SUB_VAR] THEN
@@ -655,7 +655,7 @@ Proof
 QED
 
 (* cf. appFOLDLTheory.LAMl_ALPHA_tpm *)
-Theorem SIMPLE_ALPHA_tpm :
+Theorem SIMPLE_ALPHA_tpm:
     !x y u. y # u ==> LAM x u = LAM y (tpm [(y,x)] u)
 Proof
     rpt STRIP_TAC
@@ -681,7 +681,7 @@ Theorem size_thm[simp] = CONJUNCT1 size_def
 
 Theorem size_tpm[simp] = GSYM (CONJUNCT2 size_def)
 
-Theorem size_nonzero :
+Theorem size_nonzero:
     !t:term. 0 < size t
 Proof
     HO_MATCH_MP_TAC simple_induction
@@ -692,7 +692,7 @@ QED
 Theorem size_nz =
     REWRITE_RULE [GSYM arithmeticTheory.NOT_ZERO_LT_ZERO] size_nonzero
 
-Theorem size_1_cases :
+Theorem size_1_cases:
     (size M = 1) <=> ?y. (M = VAR y)
 Proof
     Q.SPEC_THEN `M` STRUCT_CASES_TAC term_CASES
@@ -707,14 +707,14 @@ Proof
   SRW_TAC [][SUB_VAR, SUB_THM]
 QED
 
-Theorem size_foldl_app :
+Theorem size_foldl_app:
     !args t : term.
        size (FOLDL APP t args) = FOLDL (\n t. n + size t + 1) (size t) args
 Proof
   Induct THEN SRW_TAC [][size_thm]
 QED
 
-Theorem size_foldl_app_lt :
+Theorem size_foldl_app_lt:
     !(args : term list) x. x <= FOLDL (\n t. n + size t + 1) x args
 Proof
   Induct THEN SRW_TAC [][] THEN
@@ -723,7 +723,7 @@ Proof
   DECIDE_TAC
 QED
 
-Theorem size_args_foldl_app :
+Theorem size_args_foldl_app:
     !args n (t : term) x. n < LENGTH args ==>
                 size (EL n args) < x + size (FOLDL APP t args)
 Proof
@@ -750,12 +750,12 @@ val _ = export_rewrites ["ISUB_def"];
 
 val _ = set_fixity "ISUB" (Infixr 501);
 
-Definition DOM_DEF :
+Definition DOM_DEF:
    (DOM [] = {}) /\
    (DOM ((x,y)::rst) = {y} UNION DOM rst)
 End
 
-Theorem DOM_SNOC :
+Theorem DOM_SNOC:
     !x y rst. DOM (SNOC (x,y) rst) = {y} UNION DOM rst
 Proof
     NTAC 2 GEN_TAC
@@ -765,7 +765,7 @@ Proof
  >> SET_TAC []
 QED
 
-Theorem DOM_ALT_MAP_SND :
+Theorem DOM_ALT_MAP_SND:
     !phi. DOM phi = set (MAP SND phi)
 Proof
     Induct_on ‘phi’ >- rw [DOM_DEF]
@@ -774,12 +774,12 @@ Proof
  >> rw [DOM_DEF] >> SET_TAC []
 QED
 
-Definition FVS_DEF :
+Definition FVS_DEF:
    (FVS [] = {}) /\
    (FVS ((t,x)::rst) = FV t UNION FVS rst)
 End
 
-Theorem FVS_SNOC :
+Theorem FVS_SNOC:
     !t x rst. FVS (SNOC (t,x) rst) = FV t UNION FVS rst
 Proof
     NTAC 2 GEN_TAC
@@ -789,7 +789,7 @@ Proof
  >> SET_TAC []
 QED
 
-Theorem FVS_ALT :
+Theorem FVS_ALT:
     !ss. FVS ss = BIGUNION (set (MAP (FV o FST) ss))
 Proof
     Induct_on ‘ss’
@@ -819,13 +819,13 @@ Proof
                              DOM_DEF, FVS_DEF, SUB_THM]
 QED
 
-Theorem SUB_ISUB_SINGLETON :
+Theorem SUB_ISUB_SINGLETON:
     !t x u. [t/x]u:term = u ISUB [(t,x)]
 Proof
     SRW_TAC [][ISUB_def]
 QED
 
-Theorem ISUB_APPEND :
+Theorem ISUB_APPEND:
     !R1 R2 t:term. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)
 Proof
     Induct
@@ -833,7 +833,7 @@ Proof
 QED
 
 (* moved here from standardisationScript.sml *)
-Theorem ISUB_APP :
+Theorem ISUB_APP:
     !sub M N. (M @@ N) ISUB sub = (M ISUB sub) @@ (N ISUB sub)
 Proof
     Induct
@@ -841,7 +841,7 @@ Proof
 QED
 
 (* NOTE: This is actually appFOLDLTheory.appstar_ISUB *)
-Theorem FOLDL_APP_ISUB :
+Theorem FOLDL_APP_ISUB:
     !args (t:term) sub.
          FOLDL APP t args ISUB sub =
          FOLDL APP (t ISUB sub) (MAP (\t. t ISUB sub) args)
@@ -850,7 +850,7 @@ Proof
 QED
 
 (* NOTE: This is the basis of a "lemma14b" for ISUB, cf. ssub_14b *)
-Theorem ISUB_VAR_FRESH :
+Theorem ISUB_VAR_FRESH:
     !y sub. ~MEM y (MAP SND sub) ==> (VAR y ISUB sub = VAR y)
 Proof
     Q.X_GEN_TAC ‘x’
@@ -862,7 +862,7 @@ QED
 (* |- !y sub. y NOTIN DOM sub ==> VAR y ISUB sub = VAR y *)
 Theorem ISUB_VAR_FRESH' = REWRITE_RULE [GSYM DOM_ALT_MAP_SND] ISUB_VAR_FRESH
 
-Theorem ISUB_unchanged :
+Theorem ISUB_unchanged:
     !ss t. DISJOINT (FV t) (DOM ss) ==> t ISUB ss = t
 Proof
     Induct_on ‘ss’
@@ -892,7 +892,7 @@ Proof
  >> rw [swap_eq_3substs]
 QED
 
-Theorem tpm_ISUB_exists :
+Theorem tpm_ISUB_exists:
     !pi M. ?ss. tpm pi M = M ISUB ss
 Proof
     Induct_on ‘pi’
@@ -908,7 +908,7 @@ Proof
  >> Q.EXISTS_TAC ‘ss' ++ ss’ >> rw []
 QED
 
-Theorem FV_ISUB_SUBSET :
+Theorem FV_ISUB_SUBSET:
     !sub u. FVS sub = {} ==> FV (u ISUB sub) SUBSET FV u
 Proof
     Induct_on ‘sub’ >- rw []
@@ -921,7 +921,7 @@ Proof
  >> rw [closed_def]
 QED
 
-Theorem FV_ISUB_upperbound :
+Theorem FV_ISUB_upperbound:
     !sub u. FV (u ISUB sub) SUBSET FV u UNION FVS sub
 Proof
     Induct_on ‘sub’ >- rw []
@@ -940,7 +940,7 @@ QED
 
    NOTE: cf. fresh_tpm_isub' for another version without REVERSE.
  *)
-Theorem fresh_tpm_isub :
+Theorem fresh_tpm_isub:
     !xs ys t. LENGTH xs = LENGTH ys /\ ALL_DISTINCT ys /\
               DISJOINT (set ys) (FV t)
           ==> tpm (ZIP (xs,ys)) t =
@@ -979,7 +979,7 @@ Proof
  >> CCONTR_TAC >> gs []
 QED
 
-Theorem ISUB_SNOC :
+Theorem ISUB_SNOC:
     !s x rst t. t ISUB SNOC (s,x) rst = [s/x] (t ISUB rst)
 Proof
     NTAC 2 GEN_TAC
@@ -992,14 +992,14 @@ QED
    ---------------------------------------------------------------------- *)
 
 (* moved here from standardisationScript.sml *)
-Definition RENAMING_def :
+Definition RENAMING_def:
   (RENAMING []     <=> T) /\
   (RENAMING (h::t) <=> (?y x:string. (h = (VAR y:term,x))) /\ RENAMING t)
 End
 
 val _ = export_rewrites ["RENAMING_def"]
 
-Theorem RENAMING_APPEND :
+Theorem RENAMING_APPEND:
     !l1 l2. RENAMING (APPEND l1 l2) <=> RENAMING l1 /\ RENAMING l2
 Proof
     Induct >> SRW_TAC [][] >> METIS_TAC []
@@ -1017,7 +1017,7 @@ Proof
     Induct >> SRW_TAC [][RENAMING_APPEND, RENAMING_THM] >> METIS_TAC []
 QED
 
-Theorem RENAMING_ZIP :
+Theorem RENAMING_ZIP:
     !l1 l2. (LENGTH l1 = LENGTH l2) ==>
             (RENAMING (ZIP (l1, l2)) = !e. MEM e l1 ==> ?s. e = VAR s)
 Proof
@@ -1033,7 +1033,7 @@ Proof
  >> SRW_TAC [][]
 QED
 
-Theorem size_ISUB :
+Theorem size_ISUB:
     !R N:term. RENAMING R ==> (size (N ISUB R) = size N)
 Proof
   Induct THEN
@@ -1158,7 +1158,7 @@ Proof
   METIS_TAC [in_fmap_supp]
 QED
 
-Theorem ssub_14a :
+Theorem ssub_14a:
     !t. (!x. x IN FDOM fm ==> fm ' x = VAR x) ==>
         (fm : string |-> term) ' t = t
 Proof
@@ -1189,7 +1189,7 @@ Proof
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
 QED
 
-Theorem FV_ssub :
+Theorem FV_ssub:
     !fm N. (!y. y IN FDOM fm ==> FV (fm ' y) = {}) ==>
            FV (fm ' N) = FV N DIFF FDOM fm
 Proof
@@ -1229,7 +1229,7 @@ QED
  *)
 Theorem ssub_LAM = List.nth(CONJUNCTS ssub_thm, 2)
 
-Theorem ssub_update_apply :
+Theorem ssub_update_apply:
     !fm v N M. v NOTIN FDOM fm /\ (!k. k IN FDOM fm ==> closed (fm ' k)) ==>
               (fm |+ (v,N)) ' M = [N/v] (fm ' (M :term))
 Proof
@@ -1251,7 +1251,7 @@ QED
 
    ‘DISJOINT (FV N) (FDOM fm)’, which seems necessary.
  *)
-Theorem ssub_update_apply_SUBST :
+Theorem ssub_update_apply_SUBST:
     !M. (!k. k IN FDOM fm ==> v # fm ' k) /\ v NOTIN FDOM fm /\
         DISJOINT (FDOM fm) (FV N) ==>
         (fm |+ (v,N)) ' M = fm ' ([N/v] M)
@@ -1285,7 +1285,7 @@ Proof
  >> MATCH_MP_TAC ssub_update_apply_SUBST >> art []
 QED
 
-Theorem FEMPTY_update_apply :
+Theorem FEMPTY_update_apply:
     !M. (FEMPTY |+ (v,N)) ' M = [N/v] M
 Proof
     Q.X_GEN_TAC ‘M’
@@ -1295,7 +1295,7 @@ Proof
  >> rw []
 QED
 
-Theorem ssub_update_apply_subst :
+Theorem ssub_update_apply_subst:
     !fm v N M. v NOTIN FDOM fm /\
               (!k. k IN FDOM fm ==> closed (fm ' k)) /\ closed N ==>
               (fm |+ (v,N)) ' M = fm ' ([N/v] M)
@@ -1305,7 +1305,7 @@ Proof
  >> fs [closed_def, DISJOINT_DEF]
 QED
 
-Theorem ssub_reduce_thm :
+Theorem ssub_reduce_thm:
     !t. FV t INTER FDOM fm = {s} ==> fm ' t = [fm ' s/s] t
 Proof
     HO_MATCH_MP_TAC nc_INDUCTION2
@@ -1333,7 +1333,7 @@ Proof
  >> ASM_SET_TAC []
 QED
 
-Theorem ssub_reduce :
+Theorem ssub_reduce:
     !t. FV t = {s} /\ s IN FDOM fm ==> fm ' t = [fm ' s/s] t
 Proof
     rpt STRIP_TAC
@@ -1346,24 +1346,24 @@ QED
    ---------------------------------------------------------------------- *)
 
 (* from a key list and a value list (of same length) to an alist *)
-Definition fromPairs_def :
+Definition fromPairs_def:
     fromPairs (Xs :string list) (Ps :term list) = FEMPTY |++ ZIP (Xs,Ps)
 End
 
-Theorem fromPairs_single :
+Theorem fromPairs_single:
     !X E E'. ssub (fromPairs [X] [E']) E = [E'/X] E
 Proof
     RW_TAC list_ss [fromPairs_def, ZIP, FUPDATE_LIST_THM]
  >> rw [FEMPTY_update_apply]
 QED
 
-Theorem fromPairs_EMPTY :
+Theorem fromPairs_EMPTY:
     fromPairs [] [] = FEMPTY
 Proof
     SRW_TAC [] [fromPairs_def, FUPDATE_LIST_THM]
 QED
 
-Theorem fromPairs_HD :
+Theorem fromPairs_HD:
     !X Xs P Ps. ~MEM X Xs /\ LENGTH Ps = LENGTH Xs ==>
                 fromPairs (X::Xs) (P::Ps) = fromPairs Xs Ps |+ (X,P)
 Proof
@@ -1372,13 +1372,13 @@ Proof
  >> METIS_TAC [MAP_ZIP]
 QED
 
-Theorem FDOM_fromPairs :
+Theorem FDOM_fromPairs:
     !Xs Ps. LENGTH Ps = LENGTH Xs ==> FDOM (fromPairs Xs Ps) = set Xs
 Proof
     SRW_TAC [] [fromPairs_def, FDOM_FUPDATE_LIST, MAP_ZIP]
 QED
 
-Theorem fromPairs_DOMSUB_NOT_IN_DOM :
+Theorem fromPairs_DOMSUB_NOT_IN_DOM:
     !X Xs Ps. ~MEM X Xs /\ LENGTH Ps = LENGTH Xs ==>
               fromPairs Xs Ps \\ X = fromPairs Xs Ps
 Proof
@@ -1387,14 +1387,14 @@ Proof
  >> fs [FDOM_fromPairs]
 QED
 
-Theorem fromPairs_FAPPLY_HD :
+Theorem fromPairs_FAPPLY_HD:
     !X Xs P Ps n. ~MEM X Xs /\ ALL_DISTINCT Xs /\ (LENGTH Ps = LENGTH Xs) ==>
                   fromPairs (X::Xs) (P::Ps) ' X = P
 Proof
     RW_TAC std_ss [fromPairs_HD, FAPPLY_FUPDATE]
 QED
 
-Theorem fromPairs_FAPPLY_EL :
+Theorem fromPairs_FAPPLY_EL:
     !Xs Ps n. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\ n < LENGTH Xs ==>
               fromPairs Xs Ps ' (EL n Xs) = EL n Ps
 Proof
@@ -1428,7 +1428,7 @@ Proof
  >> METIS_TAC [ALL_DISTINCT_EL_IMP]
 QED
 
-Theorem fromPairs_elim :
+Theorem fromPairs_elim:
     !Xs Ps E. DISJOINT (FV E) (set Xs) /\ LENGTH Ps = LENGTH Xs ==>
               fromPairs Xs Ps ' E = E
 Proof
@@ -1456,7 +1456,7 @@ QED
 
    NOTE: added ‘DISJOINT (set Xs) (FV P)’ when switching to ‘ssub’
  *)
-Theorem fromPairs_reduce :
+Theorem fromPairs_reduce:
     !X Xs P Ps. ~MEM X Xs /\ ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
                 EVERY (\e. X NOTIN (FV e)) Ps /\
                 DISJOINT (set Xs) (FV P) ==>
@@ -1544,7 +1544,7 @@ Proof
 QED
 
 (* lemma2 in another form; this is less general than fromPairs_reduce *)
-Theorem fromPairs_FOLDR :
+Theorem fromPairs_FOLDR:
     !Xs Ps E. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
               EVERY (\p. DISJOINT (set Xs) (FV p)) Ps ==>
               (fromPairs Xs Ps) ' E =
@@ -1564,7 +1564,7 @@ Proof
  >> Q.EXISTS_TAC ‘n’ >> art []
 QED
 
-Theorem fromPairs_ISUB :
+Theorem fromPairs_ISUB:
     !Xs Ps E. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
               EVERY (\p. DISJOINT (set Xs) (FV p)) Ps ==>
               (fromPairs Xs Ps) ' E = E ISUB REVERSE (ZIP (Ps,Xs))
@@ -1608,7 +1608,7 @@ Proof
  >> fs [EVERY_CONJ]
 QED
 
-Theorem fromPairs_self :
+Theorem fromPairs_self:
     !E Xs. ALL_DISTINCT Xs ==> fromPairs Xs (MAP VAR Xs) ' E = E
 Proof
     Q.X_GEN_TAC ‘E’
@@ -1624,7 +1624,7 @@ Proof
  >> rw [EVERY_MAP, EVERY_MEM, FV_thm]
 QED
 
-Theorem fromPairs_nested :
+Theorem fromPairs_nested:
     !Xs Ps Es E.
         ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\ LENGTH Es = LENGTH Xs ==>
         fromPairs Xs Ps ' (fromPairs Xs Es ' E) =
@@ -1681,7 +1681,7 @@ Proof
 QED
 
 (* A (non-trivial) generalization of FV_SUBSET *)
-Theorem FV_fromPairs :
+Theorem FV_fromPairs:
     !Xs Ps E. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs ==>
               FV (fromPairs Xs Ps ' E) SUBSET
                  (FV E) UNION BIGUNION (IMAGE FV (set Ps))
@@ -1804,7 +1804,7 @@ QED
 (*  NOTE: This definition is not used (it doesn't have finite "support").    *)
 (*****************************************************************************)
 
-Definition fssub_def :
+Definition fssub_def:
     fssub f t = FUN_FMAP f (FV t) ' t
 End
 
@@ -1812,11 +1812,11 @@ End
  *  ‘tpm’ as an equivalence relation between terms
  *---------------------------------------------------------------------------*)
 
-Definition tpm_rel_def :
+Definition tpm_rel_def:
     tpm_rel M N = ?pi. tpm pi M = N
 End
 
-Theorem tpm_rel_alt :
+Theorem tpm_rel_alt:
     !M N. tpm_rel M N <=> ?pi. M = tpm pi N
 Proof
     rw [tpm_rel_def]
@@ -1827,7 +1827,7 @@ Proof
       fs [tpm_eqr] >> Q.EXISTS_TAC ‘REVERSE pi’ >> rw [] ]
 QED
 
-Theorem equivalence_tpm_rel :
+Theorem equivalence_tpm_rel:
     equivalence tpm_rel
 Proof
     rw [equivalence_def, reflexive_def, symmetric_def, transitive_def]
@@ -1859,19 +1859,19 @@ Proof
     rw [tpm_rel_thm]
 QED
 
-Theorem tpm_rel_SYM :
+Theorem tpm_rel_SYM:
     !M N. tpm_rel M N ==> tpm_rel N M
 Proof
     rw [tpm_rel_thm]
 QED
 
-Theorem tpm_rel_SYM_EQ :
+Theorem tpm_rel_SYM_EQ:
     !M N. tpm_rel M N <=> tpm_rel N M
 Proof
     rw [tpm_rel_thm]
 QED
 
-Theorem tpm_rel_TRANS :
+Theorem tpm_rel_TRANS:
     !M1 M2 M3. tpm_rel M1 M2 /\ tpm_rel M2 M3 ==> tpm_rel M1 M3
 Proof
     rpt STRIP_TAC
@@ -1888,7 +1888,7 @@ Proof
  >> MATCH_MP_TAC tpm_rel_SYM >> art []
 QED
 
-Theorem tpm_rel_cong :
+Theorem tpm_rel_cong:
     !M M' N N'. tpm_rel M M' /\ tpm_rel N N' ==> (tpm_rel M N <=> tpm_rel M' N')
 Proof
     rpt STRIP_TAC

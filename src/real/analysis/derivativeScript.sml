@@ -46,7 +46,7 @@ val LIM                = LIM_DEF;            (* real_topologyTheory *)
 
 val exp_ser = “\n. inv(&(FACT n))”;
 
-Definition exp_def :
+Definition exp_def:
     exp(x) = infsum UNIV (\n. (^exp_ser) n * (x pow n))
 End
 
@@ -59,7 +59,7 @@ val convex = new_definition ("convex",
         !x y u v. x IN s /\ y IN s /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
                   ==> ((u * x) + (v * y)) IN s``);
 
-Theorem CONVEX_ALT :
+Theorem CONVEX_ALT:
     !s. convex s <=> !x y u. x IN s /\ y IN s /\ &0 <= u /\ u <= &1
                          ==> ((&1 - u) * x + u * y) IN s
 Proof
@@ -81,7 +81,7 @@ val LIMPT_APPROACHABLE = store_thm ("LIMPT_APPROACHABLE",
   REPEAT GEN_TAC THEN REWRITE_TAC[limit_point_of] THEN
   MESON_TAC[open_def, DIST_SYM, OPEN_BALL, CENTRE_IN_BALL, IN_BALL]);
 
-Theorem LIMPT_OF_CONVEX :
+Theorem LIMPT_OF_CONVEX:
     !s x:real. convex s /\ x IN s ==> (x limit_point_of s <=> ~(s = {x}))
 Proof
     rpt STRIP_TAC
@@ -147,7 +147,7 @@ val CONVEX_CONNECTED = store_thm ("CONVEX_CONNECTED",
 (* Explicit expressions for convexity in terms of arbitrary sums.            *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem CONVEX_SUM :
+Theorem CONVEX_SUM:
     !s k u x:'a->real.
         FINITE k /\ convex s /\ (sum k u = &1) /\
         (!i. i IN k ==> &0 <= u i /\ x i IN s)
@@ -300,7 +300,7 @@ val convex_on = new_definition ("convex_on",
         !x y u v:real. x IN s /\ y IN s /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
                   ==> f(u * x + v * y) <= u * f(x) + v * f(y)``);
 
-Theorem REAL_CONVEX_BOUND2_LT :
+Theorem REAL_CONVEX_BOUND2_LT:
     !x y a b u v:real. x < a /\ y < b /\ &0 <= u /\ &0 <= v /\ (u + v = &1)
                ==> u * x + v * y < u * a + v * b
 Proof
@@ -381,7 +381,7 @@ val has_derivative_at = store_thm ("has_derivative_at",
 (* More explicit epsilon-delta forms.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem HAS_DERIVATIVE_WITHIN :
+Theorem HAS_DERIVATIVE_WITHIN:
    !f f' x s. (f has_derivative f')(at x within s) <=>
         linear f' /\
         !e. &0 < e
@@ -398,7 +398,7 @@ Proof
  >> SIMP_TAC std_ss [REAL_MUL_ASSOC, REAL_MUL_SYM, ABS_INV, ABS_ABS, REAL_LT_IMP_NE]
 QED
 
-Theorem HAS_DERIVATIVE_AT :
+Theorem HAS_DERIVATIVE_AT:
     !f f' x. (f has_derivative f')(at x) <=>
         linear f' /\
         !e. &0 < e
@@ -411,7 +411,7 @@ Proof
  >> REWRITE_TAC [HAS_DERIVATIVE_WITHIN, IN_UNIV]
 QED
 
-Theorem HAS_DERIVATIVE_AT_WITHIN :
+Theorem HAS_DERIVATIVE_AT_WITHIN:
     !f f' x s. (f has_derivative f') (at x)
            ==> (f has_derivative f') (at x within s)
 Proof
@@ -478,7 +478,7 @@ val HAS_DERIVATIVE_SUB = store_thm ("HAS_DERIVATIVE_SUB",
         ==> ((\x. f(x) - g(x)) has_derivative (\h. f'(h) - g'(h))) net``,
   SIMP_TAC real_ss [real_sub, HAS_DERIVATIVE_ADD, HAS_DERIVATIVE_NEG]);
 
-Theorem HAS_DERIVATIVE_SUM :
+Theorem HAS_DERIVATIVE_SUM:
     !f f' net s. FINITE s /\ (!a. a IN s ==> ((f a) has_derivative (f' a)) net)
      ==> ((\x. sum s (\a. f a x)) has_derivative (\h. sum s (\a. f' a h))) net
 Proof
@@ -563,7 +563,7 @@ val LIM_MUL_ABS_WITHIN = store_thm ("LIM_MUL_ABS_WITHIN",
   GEN_REWR_TAC RAND_CONV [GSYM REAL_MUL_LID] THEN
   ASM_SIMP_TAC std_ss [REAL_LT_MUL2, ABS_POS]);
 
-Theorem DIFFERENTIABLE_IMP_CONTINUOUS_WITHIN :
+Theorem DIFFERENTIABLE_IMP_CONTINUOUS_WITHIN:
     !f:real->real x s.
         f differentiable (at x within s) ==> f continuous (at x within s)
 Proof
@@ -599,14 +599,14 @@ val DIFFERENTIABLE_IMP_CONTINUOUS_ON = store_thm ("DIFFERENTIABLE_IMP_CONTINUOUS
   SIMP_TAC std_ss [differentiable_on, CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN,
            DIFFERENTIABLE_IMP_CONTINUOUS_WITHIN]);
 
-Theorem HAS_DERIVATIVE_WITHIN_SUBSET :
+Theorem HAS_DERIVATIVE_WITHIN_SUBSET:
     !f f' s t x. (f has_derivative f') (at x within s) /\ t SUBSET s
              ==> (f has_derivative f') (at x within t)
 Proof
     REWRITE_TAC[has_derivative_within] THEN MESON_TAC[LIM_WITHIN_SUBSET]
 QED
 
-Theorem DIFFERENTIABLE_WITHIN_SUBSET :
+Theorem DIFFERENTIABLE_WITHIN_SUBSET:
     !f:real->real s t x.
       f differentiable (at x within t) /\ s SUBSET t
       ==> f differentiable (at x within s)
@@ -787,7 +787,7 @@ val DIFF_CHAIN_WITHIN = store_thm ("DIFF_CHAIN_WITHIN",
 (* sharper forms that fix the sign of the derivative on the boundary.        *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem DIFFERENTIAL_COMPONENT_POS_AT_MINIMUM :
+Theorem DIFFERENTIAL_COMPONENT_POS_AT_MINIMUM:
     !f:real->real f' x s e.
         x IN s /\ convex s /\ (f has_derivative f') (at x within s) /\
         &0 < e /\ (!w. w IN s INTER ball(x,e) ==> (f x) <= (f w))
@@ -948,7 +948,7 @@ val CONVEX_CBALL = store_thm ("CONVEX_CBALL",
   ASM_SIMP_TAC real_ss [REAL_ARITH
    ``&0 <= u /\ &0 <= v /\ (u + v = &1) ==> (abs(u) + abs(v) = &1:real)``]);
 
-Theorem DIFFERENTIAL_COMPONENT_ZERO_AT_MAXMIN :
+Theorem DIFFERENTIAL_COMPONENT_ZERO_AT_MAXMIN:
     !f:real->real f' x s.
         x IN s /\ open s /\ (f has_derivative f') (at x) /\
         ((!w. w IN s ==> (f w) <= (f x)) \/
@@ -1005,7 +1005,7 @@ Proof
      ASM_SIMP_TAC std_ss [GSYM ABS_NZ])
 QED
 
-Theorem DIFFERENTIAL_ZERO_MAXMIN :
+Theorem DIFFERENTIAL_ZERO_MAXMIN:
     !f:real->real f' x s.
         x IN s /\ open s /\ (f has_derivative f') (at x) /\
         ((!y. y IN s ==> (f y) <= (f x)) \/
@@ -1659,7 +1659,7 @@ val vector_derivative = new_definition ("vector_derivative",
  ``vector_derivative (f:real->real) net =
         @f'. (f has_vector_derivative f') net``);
 
-Theorem HAS_VECTOR_DERIVATIVE_WITHIN_SUBSET :
+Theorem HAS_VECTOR_DERIVATIVE_WITHIN_SUBSET:
     !f f' s t x. (f has_vector_derivative f') (at x within s) /\ t SUBSET s
              ==> (f has_vector_derivative f') (at x within t)
 Proof
@@ -1692,7 +1692,7 @@ val HAS_VECTOR_DERIVATIVE_BILINEAR_AT = store_thm ("HAS_VECTOR_DERIVATIVE_BILINE
   RULE_ASSUM_TAC(REWRITE_RULE[bilinear, linear]) THEN
   FULL_SIMP_TAC real_ss [REAL_ADD_LDISTRIB]);
 
-Theorem HAS_VECTOR_DERIVATIVE_AT_WITHIN :
+Theorem HAS_VECTOR_DERIVATIVE_AT_WITHIN:
     !f f' x s. (f has_vector_derivative f') (at x)
            ==> (f has_vector_derivative f') (at x within s)
 Proof
@@ -1895,7 +1895,7 @@ Proof
 QED
 
 (* cf. transcTheory.EXP_CONVERGES *)
-Theorem EXP_CONVERGES :
+Theorem EXP_CONVERGES:
     !z. ((\n. z pow n / (&(FACT n))) sums exp(z)) (from 0)
 Proof
     RW_TAC std_ss [exp_def, FROM_0]

@@ -500,7 +500,7 @@ Theorem lemma15b:
 Proof SRW_TAC [][lemma15a]
 QED
 
-Theorem SUB_TWICE_ONE_VAR :
+Theorem SUB_TWICE_ONE_VAR:
     !body. [x/v] ([y/v] body) = [[x/v]y / v] body
 Proof
   HO_MATCH_MP_TAC cterm_induction THEN SRW_TAC [][cSUB_THM, SUB_VAR] THEN
@@ -553,7 +553,7 @@ Theorem size_thm[simp] = CONJUNCT1 size_def
 
 Theorem size_ctpm[simp] = GSYM (CONJUNCT2 size_def)
 
-Theorem size_nonzero :
+Theorem size_nonzero:
     !t:'a cterm. 0 < size t
 Proof
     HO_MATCH_MP_TAC simple_induction
@@ -564,7 +564,7 @@ QED
 Theorem size_nz =
     REWRITE_RULE [GSYM arithmeticTheory.NOT_ZERO_LT_ZERO] size_nonzero
 
-Theorem size_1_cases :
+Theorem size_1_cases:
     (size M = 1) <=> (?y. M = VAR y) ∨ (∃c. M = CONST c)
 Proof
     Q.SPEC_THEN `M` STRUCT_CASES_TAC cterm_CASES
@@ -579,14 +579,14 @@ Proof
   SRW_TAC [][SUB_VAR, cSUB_THM]
 QED
 
-Theorem size_foldl_app :
+Theorem size_foldl_app:
     !args t : 'a cterm.
        size (FOLDL APP t args) = FOLDL (\n t. n + size t + 1) (size t) args
 Proof
   Induct THEN SRW_TAC [][size_thm]
 QED
 
-Theorem size_foldl_app_lt :
+Theorem size_foldl_app_lt:
     !(args : 'a cterm list) x. x <= FOLDL (\n t. n + size t + 1) x args
 Proof
   Induct THEN SRW_TAC [][] THEN
@@ -595,7 +595,7 @@ Proof
   DECIDE_TAC
 QED
 
-Theorem size_args_foldl_app :
+Theorem size_args_foldl_app:
     !args n (t : 'a cterm) x. n < LENGTH args ==>
                 size (EL n args) < x + size (FOLDL APP t args)
 Proof
@@ -622,12 +622,12 @@ End
 
 val _ = set_fixity "ISUB" (Infixr 501);
 
-Definition DOM_DEF :
+Definition DOM_DEF:
    (DOM [] = {}) /\
    (DOM ((x,y)::rst) = {y} UNION DOM rst)
 End
 
-Theorem DOM_ALT_MAP_SND :
+Theorem DOM_ALT_MAP_SND:
     !phi. DOM phi = set (MAP SND phi)
 Proof
     Induct_on ‘phi’ >- rw [DOM_DEF]
@@ -636,7 +636,7 @@ Proof
  >> rw [DOM_DEF] >> SET_TAC []
 QED
 
-Definition cFVS_DEF :
+Definition cFVS_DEF:
    (cFVS [] = {}) /\
    (cFVS ((t,x)::rst) = cFV t UNION cFVS rst)
 End
@@ -664,13 +664,13 @@ Proof
                              DOM_DEF, cFVS_DEF, cSUB_THM]
 QED
 
-Theorem SUB_ISUB_SINGLETON :
+Theorem SUB_ISUB_SINGLETON:
     !t x u. [t/x]u:term = u ISUB [(t,x)]
 Proof
     SRW_TAC [][ISUB_def]
 QED
 
-Theorem ISUB_APPEND :
+Theorem ISUB_APPEND:
     !R1 R2 t:term. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)
 Proof
     Induct
@@ -678,14 +678,14 @@ Proof
 QED
 
 (* moved here from standardisationScript.sml *)
-Theorem ISUB_APP :
+Theorem ISUB_APP:
     !sub M N. (M @@ N) ISUB sub = (M ISUB sub) @@ (N ISUB sub)
 Proof
     Induct
  >> ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def, cSUB_THM]
 QED
 
-Theorem FOLDL_APP_ISUB :
+Theorem FOLDL_APP_ISUB:
     !args (t:term) sub.
          FOLDL APP t args ISUB sub =
          FOLDL APP (t ISUB sub) (MAP (\t. t ISUB sub) args)
@@ -693,7 +693,7 @@ Proof
     Induct >> SRW_TAC [][ISUB_APP]
 QED
 
-Theorem ISUB_VAR_FRESH :
+Theorem ISUB_VAR_FRESH:
     !y sub. ~MEM y (MAP SND sub) ==> (VAR y ISUB sub = VAR y)
 Proof
     Q.X_GEN_TAC ‘x’
@@ -707,14 +707,14 @@ QED
    ---------------------------------------------------------------------- *)
 
 (* moved here from standardisationScript.sml *)
-Definition RENAMING_def :
+Definition RENAMING_def:
   (RENAMING []     <=> T) /\
   (RENAMING (h::t) <=> (?y x:string. (h = (VAR y:term,x))) /\ RENAMING t)
 End
 
 val _ = export_rewrites ["RENAMING_def"]
 
-Theorem RENAMING_APPEND :
+Theorem RENAMING_APPEND:
     !l1 l2. RENAMING (APPEND l1 l2) <=> RENAMING l1 /\ RENAMING l2
 Proof
     Induct >> SRW_TAC [][] >> METIS_TAC []
@@ -732,7 +732,7 @@ Proof
     Induct >> SRW_TAC [][RENAMING_APPEND, RENAMING_THM] >> METIS_TAC []
 QED
 
-Theorem RENAMING_ZIP :
+Theorem RENAMING_ZIP:
     !l1 l2. (LENGTH l1 = LENGTH l2) ==>
             (RENAMING (ZIP (l1, l2)) = !e. MEM e l1 ==> ?s. e = VAR s)
 Proof
@@ -748,7 +748,7 @@ Proof
  >> SRW_TAC [][]
 QED
 
-Theorem size_ISUB :
+Theorem size_ISUB:
     !R N:term. RENAMING R ==> (size (N ISUB R) = size N)
 Proof
   Induct THEN
@@ -893,7 +893,7 @@ Proof
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
 QED
 
-Theorem cFV_ssub :
+Theorem cFV_ssub:
     !fm N. (!y. y IN FDOM fm ==> cFV (fm ' y) = {}) ==>
            cFV (fm ' N) = cFV N DIFF FDOM fm
 Proof
@@ -934,7 +934,7 @@ QED
 Theorem ssub_LAM = List.nth(CONJUNCTS ssub_thm, 2)
 
 (*
-Theorem ssub_update_apply :
+Theorem ssub_update_apply:
     !fm v N M. v NOTIN FDOM fm /\ (!k. k IN FDOM fm ==> closed (fm ' k)) ==>
               (fm |+ (v,N)) ' M = [N/v] (fm ' (M :term))
 Proof
@@ -955,7 +955,7 @@ QED
 
    ‘DISJOINT (cFV N) (FDOM fm)’, which seems necessary.
  *)
-Theorem ssub_update_apply_SUBST :
+Theorem ssub_update_apply_SUBST:
     !M. (!k. k IN FDOM fm ==> v # fm ' k) /\ v NOTIN FDOM fm /\
         DISJOINT (FDOM fm) (cFV N) ==>
         (fm |+ (v,N)) ' M = fm ' ([N/v] M)
@@ -973,7 +973,7 @@ Proof
  >> rw []
 QED
 
-Theorem ssub_update_apply_subst :
+Theorem ssub_update_apply_subst:
     !fm v N M. v NOTIN FDOM fm /\
               (!k. k IN FDOM fm ==> closed (fm ' k)) /\ closed N ==>
               (fm |+ (v,N)) ' M = fm ' ([N/v] M)

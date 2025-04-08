@@ -168,7 +168,7 @@ Proof
   simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG']
 QED
 
-Theorem holds_formsubst :
+Theorem holds_formsubst:
   ∀v i. holds M v (formsubst i p) ⇔ holds M (termval M v o i) p
 Proof
   Induct_on ‘p’ >> simp[MAP_MAP_o, termval_termsubst, Cong MAP_CONG'] >>

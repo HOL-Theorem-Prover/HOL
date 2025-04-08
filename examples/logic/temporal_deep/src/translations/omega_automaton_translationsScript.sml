@@ -30,7 +30,7 @@ val DETERMINISED_SEMI_AUTOMATON_def = Define
                      (\(s1, i, s2, i'). s1 SUBSET A.S /\ i SUBSET A.I /\
                         !x. x IN s2 = ?s1'. s1' IN s1 /\ (s1', i, x, i') IN A.R))`;
 
-Theorem DETERMINISED_SEMI_AUTOMATON___IS_DET_TOTAL :
+Theorem DETERMINISED_SEMI_AUTOMATON___IS_DET_TOTAL:
     !A. IS_DET_TOTAL_SEMI_AUTOMATON (DETERMINISED_SEMI_AUTOMATON A)
 Proof
     SIMP_TAC std_ss [IS_DET_TOTAL_SEMI_AUTOMATON_def,
@@ -277,7 +277,7 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_def = Define
                         (XP_AND(A.R, XP_CURRENT (VAR_RENAMING_HASHTABLE A.S f))))))`;
 
 (* Rabin-Scott subset construction: main theorem, by Sven Lamberti *)
-Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_THM :
+Theorem RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_THM:
     !A A' IV f g.
       (FINITE A.S /\ (A' = RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON A f) /\
        (INJ f (POW A.S) UNIV /\ DISJOINT (IMAGE f (POW A.S)) IV /\
@@ -950,7 +950,7 @@ val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def = Define
            !x. x IN s22 <=> x IN S /\ x IN A.S /\
                             ?s1'. s1' IN s12 /\ (s1', i, x, i') IN A.R)))`;
 
-Theorem BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_DET_TOTAL :
+Theorem BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_DET_TOTAL:
     !A S. IS_DET_TOTAL_SEMI_AUTOMATON (BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S)
 Proof
     SIMP_TAC std_ss [IS_DET_TOTAL_SEMI_AUTOMATON_def,
@@ -1562,7 +1562,7 @@ val ACCEPT_COND_TO_LTL_def = Define
       (LTL_AND (ACCEPT_COND_TO_LTL f1, ACCEPT_COND_TO_LTL f2))) /\
    (ACCEPT_COND_TO_LTL (ACCEPT_G f) = (LTL_ALWAYS (ACCEPT_COND_TO_LTL f)))`;
 
-Theorem ACCEPT_COND_TO_LTL_THM :
+Theorem ACCEPT_COND_TO_LTL_THM:
     (!ac:'a acceptance_condition v t.
        ACCEPT_COND_SEM_TIME t v ac = LTL_SEM_TIME t v (ACCEPT_COND_TO_LTL ac)) /\
     (!ac:'a acceptance_condition v.
@@ -1822,7 +1822,7 @@ val IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def = Define
                                 (s1 IN (IMAGE f (POW A.S))) (s1 IN (IMAGE f' (POW A.S)))) /\
                            IS_TRANSITION A (g s1) i1 (g s2) i2 /\ (g s2) IN S}))))`;
 
-Theorem SYMBOLIC___NDET_FG___TO___DET_FG___THM :
+Theorem SYMBOLIC___NDET_FG___TO___DET_FG___THM:
     !A A' IV f f' g S p p'.
        FINITE A.S /\
        (P_USED_VARS p) SUBSET A.S /\

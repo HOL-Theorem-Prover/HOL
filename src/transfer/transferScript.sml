@@ -229,7 +229,7 @@ QED
     exists
    ---------------------------------------------------------------------- *)
 
-Theorem EXISTS_bitotal :
+Theorem EXISTS_bitotal:
   bitotal AB ==> ((AB |==> (=)) |==> (=)) (?) (?)
 Proof
   simp[FUN_REL_def, bitotal_def, total_def, surj_def] >> strip_tac >>
@@ -324,7 +324,7 @@ Proof
   simp[FUN_REL_def]
 QED
 
-Theorem imp_conj :
+Theorem imp_conj:
   ((==>) |==> (==>) |==> (==>)) (/\) (/\)
 Proof
   simp[FUN_REL_def]

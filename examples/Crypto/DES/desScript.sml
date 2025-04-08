@@ -113,7 +113,7 @@ Type     sbox[pp] = “:word6 -> word4”
    NOTE: all "raw" index data below assume 1-indexing bits and the first bit is
          the most significant bit !!!
  *)
-Definition IP_data : (* 64 elements *)
+Definition IP_data: (* 64 elements *)
     IP_data = [58; 50; 42; 34; 26; 18; 10; 2;
                60; 52; 44; 36; 28; 20; 12; 4;
                62; 54; 46; 38; 30; 22; 14; 6;
@@ -125,7 +125,7 @@ Definition IP_data : (* 64 elements *)
 End
 
 (* The final permutation Inverse IP, see IP_Inverse for its relation with IP *)
-Definition IIP_data : (* 64 elements *)
+Definition IIP_data: (* 64 elements *)
     IIP_data = [40; 8; 48; 16; 56; 24; 64; 32;
                 39; 7; 47; 15; 55; 23; 63; 31;
                 38; 6; 46; 14; 54; 22; 62; 30;
@@ -141,7 +141,7 @@ End
    The tables should be interpreted (as those for IP and IP^−1) in that the
    first bit of the output of E is taken from the 32nd bit of the input.
  *)
-Definition E_data : (* 48 elements *)
+Definition E_data: (* 48 elements *)
     E_data = [32;  1;  2;  3;  4;  5;
                4;  5;  6;  7;  8;  9;
                8;  9; 10; 11; 12; 13;
@@ -157,7 +157,7 @@ End
    The tables should be interpreted in that the first bit of the output of P
    is taken from the 16th bit of the input.
  *)
-Definition P_data : (* 32 elements *)
+Definition P_data: (* 32 elements *)
     P_data = [16;  7; 20; 21; 29; 12; 28; 17;
                1; 15; 23; 26;  5; 18; 31; 10;
                2;  8; 24; 14; 32; 27;  3;  9;
@@ -168,7 +168,7 @@ End
 
    NOTE: PC1 is a permutation of all non-parity bit indexes.
  *)
-Definition PC1_data : (* 2 * 28 = 56 elements *)
+Definition PC1_data: (* 2 * 28 = 56 elements *)
     PC1_data = [57; 49; 41; 33; 25; 17;  9;
                  1; 58; 50; 42; 34; 26; 18;
                 10;  2; 59; 51; 43; 35; 27;
@@ -181,7 +181,7 @@ Definition PC1_data : (* 2 * 28 = 56 elements *)
 End
 
 (* Permuted Choice 2 (PC2) *)
-Definition PC2_data : (* 48 elements *)
+Definition PC2_data: (* 48 elements *)
     PC2_data = [14; 17; 11; 24;  1;  5;
                  3; 28; 15;  6; 21; 10;
                 23; 19; 12;  4; 26;  8;
@@ -193,7 +193,7 @@ Definition PC2_data : (* 48 elements *)
 End
 
 (* The round-dependent rotation values *)
-Definition R_data : (* 16 elements *)
+Definition R_data: (* 16 elements *)
     R_data = [1; 1; 2; 2; 2; 2; 2; 2; 1; 2; 2; 2; 2; 2; 2; 1]
 End
 
@@ -209,7 +209,7 @@ End
    of the S-box. The entry identified in this way gives the four bits of output
    from the S-box. see also SBox_def.
  *)
-Definition S1_data :
+Definition S1_data:
     S1_data =
          [[0xe;0x4;0xd;0x1;0x2;0xf;0xb;0x8;0x3;0xa;0x6;0xc;0x5;0x9;0x0;0x7];
           [0x0;0xf;0x7;0x4;0xe;0x2;0xd;0x1;0xa;0x6;0xc;0xb;0x9;0x5;0x3;0x8];
@@ -217,7 +217,7 @@ Definition S1_data :
           [0xf;0xc;0x8;0x2;0x4;0x9;0x1;0x7;0x5;0xb;0x3;0xe;0xa;0x0;0x6;0xd]]
 End
 
-Definition S2_data :
+Definition S2_data:
     S2_data =
          [[0xf;0x1;0x8;0xe;0x6;0xb;0x3;0x4;0x9;0x7;0x2;0xd;0xc;0x0;0x5;0xa];
           [0x3;0xd;0x4;0x7;0xf;0x2;0x8;0xe;0xc;0x0;0x1;0xa;0x6;0x9;0xb;0x5];
@@ -225,7 +225,7 @@ Definition S2_data :
           [0xd;0x8;0xa;0x1;0x3;0xf;0x4;0x2;0xb;0x6;0x7;0xc;0x0;0x5;0xe;0x9]]
 End
 
-Definition S3_data :
+Definition S3_data:
     S3_data =
          [[0xa;0x0;0x9;0xe;0x6;0x3;0xf;0x5;0x1;0xd;0xc;0x7;0xb;0x4;0x2;0x8];
           [0xd;0x7;0x0;0x9;0x3;0x4;0x6;0xa;0x2;0x8;0x5;0xe;0xc;0xb;0xf;0x1];
@@ -233,7 +233,7 @@ Definition S3_data :
           [0x1;0xa;0xd;0x0;0x6;0x9;0x8;0x7;0x4;0xf;0xe;0x3;0xb;0x5;0x2;0xc]]
 End
 
-Definition S4_data :
+Definition S4_data:
     S4_data =
          [[0x7;0xd;0xe;0x3;0x0;0x6;0x9;0xa;0x1;0x2;0x8;0x5;0xb;0xc;0x4;0xf];
           [0xd;0x8;0xb;0x5;0x6;0xf;0x0;0x3;0x4;0x7;0x2;0xc;0x1;0xa;0xe;0x9];
@@ -241,7 +241,7 @@ Definition S4_data :
           [0x3;0xf;0x0;0x6;0xa;0x1;0xd;0x8;0x9;0x4;0x5;0xb;0xc;0x7;0x2;0xe]]
 End
 
-Definition S5_data :
+Definition S5_data:
     S5_data =
          [[0x2;0xc;0x4;0x1;0x7;0xa;0xb;0x6;0x8;0x5;0x3;0xf;0xd;0x0;0xe;0x9];
           [0xe;0xb;0x2;0xc;0x4;0x7;0xd;0x1;0x5;0x0;0xf;0xa;0x3;0x9;0x8;0x6];
@@ -249,7 +249,7 @@ Definition S5_data :
           [0xb;0x8;0xc;0x7;0x1;0xe;0x2;0xd;0x6;0xf;0x0;0x9;0xa;0x4;0x5;0x3]]
 End
 
-Definition S6_data :
+Definition S6_data:
     S6_data =
          [[0xc;0x1;0xa;0xf;0x9;0x2;0x6;0x8;0x0;0xd;0x3;0x4;0xe;0x7;0x5;0xb];
           [0xa;0xf;0x4;0x2;0x7;0xc;0x9;0x5;0x6;0x1;0xd;0xe;0x0;0xb;0x3;0x8];
@@ -257,7 +257,7 @@ Definition S6_data :
           [0x4;0x3;0x2;0xc;0x9;0x5;0xf;0xa;0xb;0xe;0x1;0x7;0x6;0x0;0x8;0xd]]
 End
 
-Definition S7_data :
+Definition S7_data:
     S7_data =
          [[0x4;0xb;0x2;0xe;0xf;0x0;0x8;0xd;0x3;0xc;0x9;0x7;0x5;0xa;0x6;0x1];
           [0xd;0x0;0xb;0x7;0x4;0x9;0x1;0xa;0xe;0x3;0x5;0xc;0x2;0xf;0x8;0x6];
@@ -265,7 +265,7 @@ Definition S7_data :
           [0x6;0xb;0xd;0x8;0x1;0x4;0xa;0x7;0x9;0x5;0x0;0xf;0xe;0x2;0x3;0xc]]
 End
 
-Definition S8_data :
+Definition S8_data:
     S8_data =
          [[0xd;0x2;0x8;0x4;0x6;0xf;0xb;0x1;0xa;0x9;0x3;0xe;0x5;0x0;0xc;0x7];
           [0x1;0xf;0xd;0x8;0xa;0x3;0x7;0x4;0xc;0x5;0x6;0xb;0x0;0xe;0x9;0x2];
@@ -282,7 +282,7 @@ End
 
    NOTE: This definition is the only one where ‘FCP i.’ is explicitly used.
  *)
-Definition bitwise_perm_def :
+Definition bitwise_perm_def:
     bitwise_perm (w :bool['a]) table :bool['b] =
        FCP i. w ' (dimindex(:'a) - EL (dimindex(:'b) - 1 - i) table)
 End
@@ -291,24 +291,24 @@ End
 
    NOTE: the purpose of ‘-1’ is to convert 1-indexed E values to 0-indexed.
  *)
-Definition E_def :
+Definition E_def:
     E (w :word32) :word48 = bitwise_perm w E_data
 End
 
 (* The purpose of ‘-1’ is to convert 1-indexed P values to 0-indexed. *)
-Definition P_def :
+Definition P_def:
     P (w :word32) :word32 = bitwise_perm w P_data
 End
 
-Definition IP_def :
+Definition IP_def:
     IP (w :word64) :word64 = bitwise_perm w IP_data
 End
 
-Definition IIP_def :
+Definition IIP_def:
     IIP (w :word64) :word64 = bitwise_perm w IIP_data
 End
 
-Theorem IIP_IP_Inverse :
+Theorem IIP_IP_Inverse:
     !w. IIP (IP w) = w
 Proof
     RW_TAC fcp_ss [IIP_def, IP_def, bitwise_perm_def, dimindex_64]
@@ -332,7 +332,7 @@ Proof
  >> REWRITE_TAC []
 QED
 
-Theorem IP_IIP_Inverse :
+Theorem IP_IIP_Inverse:
     !w. IP (IIP w) = w
 Proof
     RW_TAC fcp_ss [IIP_def, IP_def, bitwise_perm_def, dimindex_64]
@@ -359,7 +359,7 @@ QED
 (*  S-Box Functions                                                          *)
 (*---------------------------------------------------------------------------*)
 
-Definition SBox_def :
+Definition SBox_def:
     SBox box (w :word6) :word4 =
       let row = w2n ((((5 >< 5)w :word1) @@ ((0 >< 0)w :word1)) :word2);
           col = w2n ((4 >< 1)w :word4)
@@ -377,7 +377,7 @@ Overload S7 = “SBox S7_data”
 Overload S8 = “SBox S8_data”
 
 (* Basic S-Box criteria (not used so far) *)
-Definition IS_SBox_def :
+Definition IS_SBox_def:
     IS_SBox (box :num list list) =
       (LENGTH box = 4 /\ EVERY (\l. PERM l (GENLIST I 16)) box)
 End
@@ -397,7 +397,7 @@ QED
          the order of bits S1(B1)S2(B2)S3(B3)S4(B4)S5(B5)S6(B6)S7(B7)S8(B8) has
          the natural bit order (from high to low). Thus S1 takes 47 >< 42, etc.
  *)
-Definition S_def :
+Definition S_def:
     S (w :word48) :word32 =
       concat_word_list [S8 ((5  ><  0) w);
                         S7 ((11 ><  6) w);
@@ -413,13 +413,13 @@ End
 (*  Key Scheduling                                                           *)
 (*---------------------------------------------------------------------------*)
 
-Definition PC1_def :
+Definition PC1_def:
     PC1 (k :word64) :roundkey =
       let (k' :word56) = bitwise_perm k PC1_data
       in ((55 >< 28) k', (27 >< 0) k')
 End
 
-Definition PC2_def :
+Definition PC2_def:
     PC2 (w :roundkey) :word48 =
       bitwise_perm ((FST w @@ SND w) :word56) PC2_data
 End
@@ -429,7 +429,7 @@ End
    are back at their initial state. The registers are ready for the next
    encryption. [1, p.26]
  *)
-Theorem SUM_R_data : (* not needed anywhere *)
+Theorem SUM_R_data: (* not needed anywhere *)
     SUM R_data = 28
 Proof
     EVAL_TAC
@@ -441,7 +441,7 @@ QED
          the first and last roundkey are the same (see SUM_R_data), which is
          the base roundkey returned by ‘PC1 key’.
  *)
-Definition RoundKey_def :
+Definition RoundKey_def:
     RoundKey      0  (k :word64) :roundkey list = [PC1 k] /\
     RoundKey (SUC n) (k :word64) =
       let ks = RoundKey n k; (c,d) = HD ks; r = EL n R_data
@@ -462,11 +462,11 @@ Proof
 QED
 
 (* This is the final roundkeys with correct number and order *)
-Definition KS_def :
+Definition KS_def:
     KS k n = MAP PC2 (TL (REVERSE (RoundKey n k)))
 End
 
-Theorem LENGTH_KS :
+Theorem LENGTH_KS:
     !k n. LENGTH (KS k n) = n
 Proof
     rw [KS_def, RoundKey_def]
@@ -482,22 +482,22 @@ QED
 (*---------------------------------------------------------------------------*)
 
 (* This is the initial split right after IP. cf. Join_def *)
-Definition Split_def :
+Definition Split_def:
     Split (w :word64) :block = ((63 >< 32)w, (31 >< 0)w)
 End
 
-Definition Join_def :
+Definition Join_def:
    Join ((u,v):block) :word64 = u @@ v
 End
 
-Theorem Join_Split_Inverse :
+Theorem Join_Split_Inverse:
     !w. Join (Split w) = w
 Proof
     rw [Join_def, Split_def]
  >> WORD_DECIDE_TAC
 QED
 
-Theorem Split_Join_Inverse :
+Theorem Split_Join_Inverse:
     !w. Split (Join w) = w
 Proof
     Cases_on ‘w’
@@ -507,11 +507,11 @@ QED
 
 (* This extra step is needed for DES_alt in which Round (instead of Feistel)
    is used. *)
-Definition Swap_def :
+Definition Swap_def:
    Swap ((v,u):block) :block = (u,v)
 End
 
-Theorem Swap_Inverse :
+Theorem Swap_Inverse:
     !w. Swap (Swap w) = w
 Proof
     Cases_on ‘w’ >> rw [Swap_def]
@@ -522,7 +522,7 @@ QED
 (*---------------------------------------------------------------------------*)
 
 (* This is DES Round Operation (Function) combining P, S and E *)
-Definition RoundOp_def :
+Definition RoundOp_def:
     RoundOp (w :word32) (k :word48) = P (S (E w ?? k))
 End
 
@@ -535,7 +535,7 @@ End
    NOTE: This version is general and is necessary for DES_0 (zero rounds give
          the cleartext).
  *)
-Definition Feistel_def :
+Definition Feistel_def:
     Feistel f      0  r ks w = w /\
     Feistel f (SUC n) r ks w =
       let (u,v) = Feistel f n r ks w; k = EL n ks in
@@ -548,7 +548,7 @@ End
    NOTE: This version is specific to DES and is simpler when proving DES
          properties but requires an extra Swap before Join.
  *)
-Definition Round_def :
+Definition Round_def:
     Round      0  ks w = (w :block) /\
     Round (SUC n) ks w =
       let (u,v) = Round n ks w; k = EL n ks in (v, u ?? RoundOp v k)
@@ -556,7 +556,7 @@ End
 
 Overload desRound = “Feistel RoundOp”;
 
-Theorem desRound_alt_Round :
+Theorem desRound_alt_Round:
     !ks w r n. n < r ==> desRound n r ks w = Round n ks w
 Proof
     NTAC 3 GEN_TAC
@@ -576,19 +576,19 @@ Proof
 QED
 
 (* This is the core of DES (no key scheduling) possibly reduced to r rounds *)
-Definition desCore_def :
+Definition desCore_def:
     desCore r ks = IIP o Join o (desRound r r ks) o Split o IP
 End
 
 (* Zero-round DES doesn't change the message at all *)
-Theorem desCore_0 :
+Theorem desCore_0:
     !ks w. desCore 0 ks w = w
 Proof
     rw [o_DEF, desCore_def, Feistel_def, IIP_IP_Inverse,
         Join_Split_Inverse]
 QED
 
-Theorem desCore_alt :
+Theorem desCore_alt:
     !ks r. 0 < r ==>
            desCore r ks = IIP o Join o Swap o (Round r ks) o Split o IP
 Proof
@@ -598,7 +598,7 @@ QED
 (* The decryption process is identical to encryption provided the round keys
    are taken in reverse order. [1, p.16]
  *)
-Definition DES_def :
+Definition DES_def:
    DES r key = let keys = KS key r in (desCore r keys, desCore r (REVERSE keys))
 End
 
@@ -610,7 +610,7 @@ Overload FullDES = “DES 16”
 (*---------------------------------------------------------------------------*)
 
 (* The plaintext message halves and intermediate message halves m0 ~ m16 [3] *)
-Definition half_message_def :
+Definition half_message_def:
     half_message f (u,v) ks n =
       if n = 0 then u
       else if n = 1 then v
@@ -618,7 +618,7 @@ Definition half_message_def :
            (f (half_message f (u,v) ks (n - 1)) (EL (n - 2) ks))
 End
 
-Theorem half_message :
+Theorem half_message:
     !f u v ks. half_message f (u,v) ks 0 = u /\
                half_message f (u,v) ks 1 = v /\
               (!n. 2 <= n ==>
@@ -648,7 +648,7 @@ QED
 (* This is half_message specialized for DES *)
 Overload M[local] = “half_message RoundOp”
 
-Theorem Round_alt_half_message :
+Theorem Round_alt_half_message:
     !u v ks n. Round n ks (u,v) = (M (u,v) ks n, M (u,v) ks (SUC n))
 Proof
     NTAC 3 GEN_TAC
@@ -667,7 +667,7 @@ Proof
 QED
 
 (* FullDES can be expressed by just M16 and M17 *)
-Theorem desCore_alt_half_message :
+Theorem desCore_alt_half_message:
     !r ks plaintext. 0 < r ==>
          desCore r ks plaintext =
            let uv = Split (IP plaintext) in
@@ -677,7 +677,7 @@ Proof
 QED
 
 (* The key idea of this proof is from [3] based on half_message_def *)
-Theorem desCore_CORRECT :
+Theorem desCore_CORRECT:
     !keys r plaintext. LENGTH keys = r ==>
        desCore r (REVERSE keys) (desCore r keys plaintext) = plaintext
 Proof
@@ -721,7 +721,7 @@ Proof
  >> ARITH_TAC
 QED
 
-Theorem FullDES_CORRECT :
+Theorem FullDES_CORRECT:
     !key plaintext. ((encrypt,decrypt) = FullDES key) ==>
                     (decrypt (encrypt plaintext) = plaintext)
 Proof

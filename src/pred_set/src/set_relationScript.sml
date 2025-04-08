@@ -1091,7 +1091,7 @@ Proof
   THEN PROVE_TAC [FINITE_WF_noloops]
 QED
 
-Theorem WF_acyclic :
+Theorem WF_acyclic:
     !r. WF (reln_to_rel r) ==> acyclic r
 Proof
     rpt STRIP_TAC

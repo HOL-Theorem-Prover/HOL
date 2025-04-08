@@ -828,7 +828,7 @@ QED
               = (q * a ** k) * a   by arithmetic
    Thus a divides b                by divides_def
 *)
-Theorem EXP_divides : (* was: EXP_DIVIDES *)
+Theorem EXP_divides: (* was: EXP_DIVIDES *)
     !a b n. 0 < n /\ a ** n divides b ==> a divides b
 Proof
   rpt strip_tac >>

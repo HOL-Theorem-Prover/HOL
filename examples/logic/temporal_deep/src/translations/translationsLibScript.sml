@@ -29,7 +29,7 @@ val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 (* Helper theorems for the rewrite translation of LTL to gen. Buechi *)
-Theorem LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX :
+Theorem LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX:
     !x l DS pf sv.
       ((pf = FST(LTL_TO_GEN_BUECHI l T x)) /\
        (DS = SND(LTL_TO_GEN_BUECHI l T x)) /\
@@ -39,7 +39,7 @@ Proof
     METIS_TAC [LTL_TO_GEN_BUECHI_THM, LTL_TO_GEN_BUECHI_DS___SEM___MAX]
 QED
 
-Theorem LTL_TO_GEN_BUECHI___TRANSLATION_THM___MIN :
+Theorem LTL_TO_GEN_BUECHI___TRANSLATION_THM___MIN:
     !x l DS pf sv.
       ((pf = FST(LTL_TO_GEN_BUECHI l x T)) /\
        (DS = SND(LTL_TO_GEN_BUECHI l x T)) /\
@@ -317,7 +317,7 @@ Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV___forget_eval =
                       ltl_to_gen_buechi_ds_REWRITES, LTL_TO_GEN_BUECHI_DS___PRODUCT_def]
               CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV___forget_eval;
 
-Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NEXT___forget_eval :
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NEXT___forget_eval:
     !b1 b2 DS l pf.
             LTL_TO_GEN_BUECHI_DS___SEM DS ==>
             (DS.B = {(l,b1,b2,pf)}) ==>
@@ -335,7 +335,7 @@ Proof
     SIMP_TAC std_ss [ltl_to_gen_buechi_ds_REWRITES, SUBSET_DEF, IN_SING, IN_INSERT]
 QED
 
-Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSNEXT___forget_eval :
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSNEXT___forget_eval:
     !b1 b2 DS l pf.
             LTL_TO_GEN_BUECHI_DS___SEM DS ==>
             (DS.B = {(l,b1,b2,pf)}) ==>
@@ -353,7 +353,7 @@ Proof
     SIMP_TAC std_ss [ltl_to_gen_buechi_ds_REWRITES, SUBSET_DEF, IN_SING, IN_INSERT]
 QED
 
-Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT___forget_eval :
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT___forget_eval:
     !b1 b2 DS l pf.
             LTL_TO_GEN_BUECHI_DS___SEM DS ==>
             (DS.B = {(l,b1,b2,pf)}) ==>
@@ -550,7 +550,7 @@ Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE___forget_eval =
     SIMP_RULE std_ss [ltl_to_gen_buechi_ds_REWRITES, LTL_TO_GEN_BUECHI_DS___PRODUCT_def]
               CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE___forget_eval;
 
-Theorem LTL_TO_GEN_BUECHI_DS___SEM___MAX___eval :
+Theorem LTL_TO_GEN_BUECHI_DS___SEM___MAX___eval:
      !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
          (LTL_EQUIVALENT l l') ==>
@@ -562,7 +562,7 @@ Proof
     METIS_TAC[LTL_TO_GEN_BUECHI_DS___SEM___MAX, LTL_SEM_def, LTL_EQUIVALENT_def]
 QED
 
-Theorem LTL_TO_GEN_BUECHI_DS___SEM___MIN___eval :
+Theorem LTL_TO_GEN_BUECHI_DS___SEM___MIN___eval:
     !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
          (LTL_EQUIVALENT l l') ==>
@@ -574,7 +574,7 @@ Proof
     METIS_TAC [LTL_TO_GEN_BUECHI_DS___SEM___MIN, LTL_SEM_def, LTL_EQUIVALENT_def]
 QED
 
-Theorem LTL_TO_GEN_BUECHI_DS___KS_SEM___MAX___eval :
+Theorem LTL_TO_GEN_BUECHI_DS___KS_SEM___MAX___eval:
     !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
          (LTL_EQUIVALENT l l') ==>
@@ -587,7 +587,7 @@ Proof
                LTL_EQUIVALENT_def, LTL_SEM_def]
 QED
 
-Theorem LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN___eval :
+Theorem LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN___eval:
     !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
          (LTL_EQUIVALENT l l') ==>
@@ -600,7 +600,7 @@ Proof
                LTL_SEM_def, LTL_EQUIVALENT_def]
 QED
 
-Theorem LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE___eval :
+Theorem LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE___eval:
     !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
          (LTL_EQUIVALENT l l') ==>
@@ -622,7 +622,7 @@ Proof
       FULL_SIMP_TAC std_ss [LTL_KS_SEM_def, LTL_SEM_def, LTL_EQUIVALENT_def]
 QED
 
-Theorem LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE___eval :
+Theorem LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE___eval:
     !DS l l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
          (LTL_EQUIVALENT l l') ==>
@@ -641,7 +641,7 @@ Proof
       FULL_SIMP_TAC std_ss [LTL_IS_CONTRADICTION_def, LTL_SEM_def, LTL_EQUIVALENT_def]
 QED
 
-Theorem LTL_TO_GEN_BUECHI_DS___SEM___EQUIVALENT___KRIPKE_STRUCTURE___eval :
+Theorem LTL_TO_GEN_BUECHI_DS___SEM___EQUIVALENT___KRIPKE_STRUCTURE___eval:
     !DS l1 l2 l' pf a.
          LTL_TO_GEN_BUECHI_DS___SEM DS ==>
          (LTL_EQUIVALENT (LTL_EVENTUAL (LTL_NOT (LTL_EQUIV(l1, l2)))) l') ==>
@@ -663,7 +663,7 @@ Proof
       PROVE_TAC[]
 QED
 
-Theorem IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong :
+Theorem IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong:
     !S0 R fc S0' R' fc'.
     (PROP_LOGIC_EQUIVALENT S0 S0') ==>
     (XPROP_LOGIC_EQUIVALENT R R') ==>
@@ -683,7 +683,7 @@ Proof
     METIS_TAC[]
 QED
 
-Theorem IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval :
+Theorem IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval:
     !f k fc. COND_IMP_EQ (INJ f (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS k UNION
                                  LIST_BIGUNION (MAP P_USED_VARS fc)) UNIV)
             (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE k fc)
@@ -695,7 +695,7 @@ Proof
                      IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING]
 QED
 
-Theorem IS_ELEMENT_ITERATOR___ID :
+Theorem IS_ELEMENT_ITERATOR___ID:
     !S n0. IS_ELEMENT_ITERATOR (\n:num. n) n0 S =
            RES_FORALL S (\n. n >= n0)
 Proof
@@ -704,7 +704,7 @@ Proof
     PROVE_TAC[]
 QED
 
-Theorem INJ___ADD_FUNC :
+Theorem INJ___ADD_FUNC:
     !S f n:num. INJ (\x. f x + n) S UNIV = INJ f S UNIV
 Proof
     SIMP_TAC std_ss [INJ_DEF, IN_UNIV]
@@ -714,7 +714,7 @@ val POS_START_def = Define `
    (POS_START n [] h = 0) /\
    (POS_START n (h'::l) h = (if (h = h') then (SUC n) else (POS_START (SUC n) l h)))`;
 
-Theorem POS_START_NOT_FOUND :
+Theorem POS_START_NOT_FOUND:
     !n l h. ((POS_START n l h = 0) = ~(MEM h l))
 Proof
     Induct_on `l` THENL
@@ -726,7 +726,7 @@ Proof
     ASM_REWRITE_TAC[] ] ]
 QED
 
-Theorem POS_START_FOUND :
+Theorem POS_START_FOUND:
     !n l h. MEM h l ==> (POS_START n l h > n) /\ (EL ((PRE (POS_START n l h)) - n) l = h)
 Proof
     Induct_on `l` THENL [
@@ -750,13 +750,13 @@ Proof
           ASM_SIMP_TAC list_ss [] ] ] ]
 QED
 
-Theorem POS_START_RANGE :
+Theorem POS_START_RANGE:
     !n l h. (POS_START n l h > n) \/ (POS_START n l h = 0)
 Proof
     PROVE_TAC[POS_START_FOUND, POS_START_NOT_FOUND]
 QED
 
-Theorem INJ_POS_START___MP_HELPER :
+Theorem INJ_POS_START___MP_HELPER:
     !l S n. (!s. s IN S ==> MEM s l) ==>
             (ALL_DISTINCT l ==> INJ (\x. PRE (POS_START n l x)) S UNIV)
 Proof
@@ -783,7 +783,7 @@ Induct_on `l` THENL [
     FULL_SIMP_TAC std_ss [] ] ]
 QED
 
-Theorem PRE_POS_START___REWRITES :
+Theorem PRE_POS_START___REWRITES:
     !n h. (PRE (POS_START n [] h) = 0) /\
           (!n h h' l. (PRE (POS_START n (h'::l) h)) =
                       (if (h' = h) then n else PRE (POS_START (SUC n) l h)))
@@ -791,7 +791,7 @@ Proof
     SIMP_TAC std_ss [POS_START_def, COND_RAND]
 QED
 
-Theorem NUM_FINITE_INJ_EXISTS :
+Theorem NUM_FINITE_INJ_EXISTS:
     !S. FINITE S ==> ?f:'a -> num. INJ f S UNIV
 Proof
   REPEAT STRIP_TAC THEN
@@ -807,7 +807,7 @@ Proof
   ASM_SIMP_TAC std_ss [FINITE_EMPTY, DISJOINT_EMPTY]
 QED
 
-Theorem RES_FORALL_INSERT :
+Theorem RES_FORALL_INSERT:
     !x xs P. RES_FORALL (x INSERT xs) P <=> P x /\ RES_FORALL xs P
 Proof
     SIMP_TAC std_ss [res_quanTheory.RES_FORALL, IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM] THEN

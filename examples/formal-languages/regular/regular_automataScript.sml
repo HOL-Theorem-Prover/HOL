@@ -355,7 +355,7 @@ End
 
 
 (* Theorem 1.25 *)
-Theorem wfFA_machine_union :
+Theorem wfFA_machine_union:
   ∀M1 M2. wfFA M1 ∧ wfFA M2 ⇒ wfFA (machine_union M1 M2)
 Proof
   rw[wfFA_def,machine_union_def] (* 11 *) >> simp[]

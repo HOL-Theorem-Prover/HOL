@@ -49,7 +49,7 @@ End
 
 val relO = new_axiom ("relO", “relF R O relF S RSUBSET relF (R O S)”)
 
-Theorem relO_EQ :
+Theorem relO_EQ:
   relF R O relF S = relF (R O S)
 Proof
   irule RSUBSET_ANTISYM >> simp[relO] >>

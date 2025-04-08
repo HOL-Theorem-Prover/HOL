@@ -396,19 +396,19 @@ val {tpm_thm = npm_thm,
                         newty = newty0,
                         genind_term_REP = genind_term_REP0};
 
-Theorem npm_eqr :
+Theorem npm_eqr:
     t = npm pi u <=> npm (REVERSE pi) t = (u :name)
 Proof
     METIS_TAC [pmact_inverse]
 QED
 
-Theorem npm_eql :
+Theorem npm_eql:
     npm pi t = u <=> t = npm (REVERSE pi) (u :name)
 Proof
     simp[npm_eqr]
 QED
 
-Theorem npm_CONS :
+Theorem npm_CONS:
     npm ((x,y)::pi) (t :name) = npm [(x,y)] (npm pi t)
 Proof
   SRW_TAC [][GSYM pmact_decompose]
@@ -444,19 +444,19 @@ Theorem tpm_thm[allow_rebind] =
         tpm_thm |> REWRITE_RULE [GSYM term_REP_npm, GSYM Input_def, Output_def',
                                  Match_def', Mismatch_def'];
 
-Theorem tpm_eqr :
+Theorem tpm_eqr:
     t = tpm pi u <=> tpm (REVERSE pi) t = (u :pi)
 Proof
     METIS_TAC [pmact_inverse]
 QED
 
-Theorem tpm_eql :
+Theorem tpm_eql:
     tpm pi t = u <=> t = tpm (REVERSE pi) (u :pi)
 Proof
     simp[tpm_eqr]
 QED
 
-Theorem tpm_CONS :
+Theorem tpm_CONS:
     tpm ((x,y)::pi) (t :pi) = tpm [(x,y)] (tpm pi t)
 Proof
   SRW_TAC [][GSYM pmact_decompose]
@@ -491,19 +491,19 @@ Theorem rpm_thm[allow_rebind] =
         rpm_thm |> REWRITE_RULE [GSYM term_REP_npm, GSYM term_REP_tpm, TauR_def',
                                  GSYM BoundOutput_def, GSYM InputR_def, FreeOutput_def']
 
-Theorem rpm_eqr :
+Theorem rpm_eqr:
     t = rpm pi u <=> rpm (REVERSE pi) t = (u :residual)
 Proof
     METIS_TAC [pmact_inverse]
 QED
 
-Theorem rpm_eql :
+Theorem rpm_eql:
     rpm pi t = u <=> t = rpm (REVERSE pi) (u :residual)
 Proof
     simp[rpm_eqr]
 QED
 
-Theorem rpm_CONS :
+Theorem rpm_CONS:
     rpm ((x,y)::pi) (t :residual) = rpm [(x,y)] (rpm pi t)
 Proof
   SRW_TAC [][GSYM pmact_decompose]
@@ -553,7 +553,7 @@ Proof
     srw_tac [][supp_npm, FINITE_GFV]
 QED
 
-Theorem FV_EMPTY_name :
+Theorem FV_EMPTY_name:
     FV n = {} <=> !v. v NOTIN FV (n :name)
 Proof
     SIMP_TAC (srw_ss()) [EXTENSION]
@@ -621,7 +621,7 @@ Proof
     srw_tac [][supp_tpm, FINITE_GFV]
 QED
 
-Theorem FV_EMPTY :
+Theorem FV_EMPTY:
     FV t = {} <=> !v. v NOTIN FV (t :pi)
 Proof
     SIMP_TAC (srw_ss()) [EXTENSION]
@@ -687,7 +687,7 @@ Proof
     srw_tac [][supp_rpm, FINITE_GFV]
 QED
 
-Theorem FV_EMPTY_residual :
+Theorem FV_EMPTY_residual:
     FV t = {} <=> !v. v NOTIN FV (t :residual)
 Proof
     SIMP_TAC (srw_ss()) [EXTENSION]
@@ -760,7 +760,7 @@ fun mkX_ind th = th |> Q.SPECL [‘\t x. Q t’, ‘\x. X’]
 Theorem nc_INDUCTION[local] = mkX_ind term_ind
 
 (* The recommended induction theorem containing correctly namedbinding variables. *)
-Theorem nc_INDUCTION2 :
+Theorem nc_INDUCTION2:
     !P X.
         P Nil /\ (!E. P E ==> P (Tau E)) /\
         (!a x E. P E /\ x NOTIN X /\ x # a ==> P (Input a x E)) /\
@@ -802,7 +802,7 @@ Theorem Res_eq_thm =
                               GSYM supp_tpm]
      |> Q.GENL [‘u’, ‘v’, ‘t1’, ‘t2’]
 
-Theorem Res_tpm_ALPHA :
+Theorem Res_tpm_ALPHA:
     v # (u :pi) ==> Res x u = Res v (tpm [(v,x)] u)
 Proof
     SRW_TAC [boolSimps.CONJ_ss][Res_eq_thm, pmact_flip_args]
@@ -820,7 +820,7 @@ Theorem Input_eq_thm =
                               GSYM term_REP_tpm, GSYM supp_tpm]
      |> Q.GENL [‘a’, ‘b’, ‘x’, ‘y’, ‘t1’, ‘t2’]
 
-Theorem Input_tpm_ALPHA :
+Theorem Input_tpm_ALPHA:
     v # (u :pi) ==> Input a x u = Input a v (tpm [(v,x)] u)
 Proof
     SRW_TAC [boolSimps.CONJ_ss][Input_eq_thm, pmact_flip_args]

@@ -129,7 +129,7 @@ Proof
     THEN REFL_TAC
 QED
 
-Theorem K_PARTIAL : (* from seqTheory *)
+Theorem K_PARTIAL: (* from seqTheory *)
     !x. K x = \z. x
 Proof
     GEN_TAC >> PURE_REWRITE_TAC [K_DEF]
@@ -485,7 +485,7 @@ val EXTENSIONAL_def = new_definition
   ("EXTENSIONAL_def",
    “EXTENSIONAL s (f :'a->'b) <=> !x. ~(x IN s) ==> f x = ARB”);
 
-Theorem IN_EXTENSIONAL :
+Theorem IN_EXTENSIONAL:
     !s (f :'a->'b). f IN EXTENSIONAL s <=> (!x. ~(x IN s) ==> f x = ARB)
 Proof
     REWRITE_TAC [IN_DEF]
@@ -496,7 +496,7 @@ Proof
  >> REWRITE_TAC []
 QED
 
-Theorem IN_EXTENSIONAL_UNDEFINED :
+Theorem IN_EXTENSIONAL_UNDEFINED:
     !s (f :'a->'b) x. f IN EXTENSIONAL s /\ ~(x IN s) ==> f x = ARB
 Proof
     REWRITE_TAC [IN_EXTENSIONAL]
@@ -517,7 +517,7 @@ val RESTRICTION = new_definition
   ("RESTRICTION",
    “RESTRICTION s (f :'a->'b) x = if x IN s then f x else ARB”);
 
-Theorem RESTRICTION_THM :
+Theorem RESTRICTION_THM:
     !s (f :'a->'b). RESTRICTION s f = \x. if x IN s then f x else ARB
 Proof
     rpt GEN_TAC
@@ -526,7 +526,7 @@ Proof
  >> REWRITE_TAC []
 QED
 
-Theorem RESTRICTION_DEFINED :
+Theorem RESTRICTION_DEFINED:
     !s (f :'a->'b) x. x IN s ==> RESTRICTION s f x = f x
 Proof
     rpt GEN_TAC
@@ -534,7 +534,7 @@ Proof
  >> COND_CASES_TAC >> REWRITE_TAC []
 QED
 
-Theorem RESTRICTION_UNDEFINED :
+Theorem RESTRICTION_UNDEFINED:
     !s (f :'a->'b) x. ~(x IN s) ==> RESTRICTION s f x = ARB
 Proof
     rpt GEN_TAC
@@ -542,7 +542,7 @@ Proof
  >> COND_CASES_TAC >> REWRITE_TAC []
 QED
 
-Theorem RESTRICTION_EQ :
+Theorem RESTRICTION_EQ:
     !s (f :'a->'b) x y. x IN s /\ f x = y ==> RESTRICTION s f x = y
 Proof
     rpt STRIP_TAC
@@ -552,7 +552,7 @@ Proof
 QED
 
 (* NOTE: HOL-Light doesn't have this theorem. *)
-Theorem EXTENSIONAL_RESTRICTION :
+Theorem EXTENSIONAL_RESTRICTION:
     !s (f :'a->'b). EXTENSIONAL s (RESTRICTION s (f :'a -> 'b))
 Proof
     REWRITE_TAC [EXTENSIONAL_def, RESTRICTION, IN_DEF]

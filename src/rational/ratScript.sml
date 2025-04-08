@@ -3129,7 +3129,7 @@ Proof
 QED
 
 (* This is another form of RATND_suff_eq using only natural numbers *)
-Theorem RATND_of_coprimes :
+Theorem RATND_of_coprimes:
     !p q. gcd p q = 1 /\ q <> 0 ==> RATN (&p / &q) = &p /\ RATD (&p / &q) = q
 Proof
     rpt GEN_TAC >> STRIP_TAC

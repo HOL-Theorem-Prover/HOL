@@ -28,12 +28,12 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"];
 Type simulation = “:'a CCS -> 'a CCS -> bool”
 
 (* new definition based on relationTheory.BISIM *)
-Definition STRONG_BISIM_def :
+Definition STRONG_BISIM_def:
     STRONG_BISIM = BISIM TRANS
 End
 
 (* original definition of STRONG_BISIM, now becomes a theorem *)
-Theorem STRONG_BISIM :
+Theorem STRONG_BISIM:
     STRONG_BISIM (Bsm :'a simulation) =
     !E E'. Bsm E E' ==>
         !u.
@@ -47,21 +47,21 @@ Proof
 QED
 
 (* The identity relation is a strong bisimulation. *)
-Theorem IDENTITY_STRONG_BISIM :
+Theorem IDENTITY_STRONG_BISIM:
     STRONG_BISIM Id
 Proof
     REWRITE_TAC [STRONG_BISIM_def, BISIM_ID]
 QED
 
 (* The converse of a strong bisimulation is a strong bisimulation. *)
-Theorem CONVERSE_STRONG_BISIM :
+Theorem CONVERSE_STRONG_BISIM:
     !Bsm. STRONG_BISIM Bsm ==> STRONG_BISIM (inv Bsm)
 Proof
     REWRITE_TAC [STRONG_BISIM_def, BISIM_INV]
 QED
 
 (* The composition of two strong bisimulations is a strong bisimulation. *)
-Theorem COMP_STRONG_BISIM :
+Theorem COMP_STRONG_BISIM:
     !Bsm1 Bsm2. STRONG_BISIM Bsm1 /\ STRONG_BISIM Bsm2 ==>
                 STRONG_BISIM (Bsm2 O Bsm1)
 Proof
@@ -69,7 +69,7 @@ Proof
 QED
 
 (* The union of two strong bisimulations is a strong bisimulation. *)
-Theorem UNION_STRONG_BISIM :
+Theorem UNION_STRONG_BISIM:
     !Bsm1 Bsm2. STRONG_BISIM Bsm1 /\ STRONG_BISIM Bsm2 ==>
                 STRONG_BISIM (Bsm1 RUNION Bsm2)
 Proof
@@ -82,7 +82,7 @@ QED
    arbitrary CCS terms in which open ‘var s’ has the same transition
    behavior with ‘nil’ (cf. NIL_NO_TRANS and VAR_NO_TRANS.)
  *)
-Definition STRONG_EQUIV_def :
+Definition STRONG_EQUIV_def:
     STRONG_EQUIV = BISIM_REL TRANS
 End
 
@@ -127,20 +127,20 @@ val STRONG_EQUIV_cases = save_thm
   ("STRONG_EQUIV_cases",
     REWRITE_RULE [SYM STRONG_EQUIV_def] (Q.ISPEC `TRANS` BISIM_REL_cases));
 
-Theorem STRONG_EQUIV_IS_STRONG_BISIM :
+Theorem STRONG_EQUIV_IS_STRONG_BISIM:
     STRONG_BISIM STRONG_EQUIV
 Proof
     REWRITE_TAC [STRONG_BISIM_def, STRONG_EQUIV_def, BISIM_REL_IS_BISIM]
 QED
 
 (* Alternative definition of STRONG_EQUIV *)
-Theorem STRONG_EQUIV :
+Theorem STRONG_EQUIV:
     !E E'. STRONG_EQUIV E E' = ?Bsm. Bsm E E' /\ STRONG_BISIM Bsm
 Proof
     METIS_TAC [STRONG_EQUIV_def, STRONG_BISIM_def, BISIM_REL_def]
 QED
 
-Theorem STRONG_EQUIV_equivalence :
+Theorem STRONG_EQUIV_equivalence:
     equivalence STRONG_EQUIV
 Proof
     REWRITE_TAC [STRONG_EQUIV_def, BISIM_REL_IS_EQUIV_REL]
@@ -153,20 +153,20 @@ Proof
                             STRONG_EQUIV_equivalence]
 QED
 
-Theorem STRONG_EQUIV_SYM :
+Theorem STRONG_EQUIV_SYM:
     !E E'. STRONG_EQUIV E E' ==> STRONG_EQUIV E' E
 Proof
     PROVE_TAC [REWRITE_RULE [equivalence_def, symmetric_def]
                             STRONG_EQUIV_equivalence]
 QED
 
-Theorem STRONG_EQUIV_SYM_EQ :
+Theorem STRONG_EQUIV_SYM_EQ:
     !E E'. STRONG_EQUIV E E' <=> STRONG_EQUIV E' E
 Proof
     rpt GEN_TAC >> EQ_TAC >> rw [STRONG_EQUIV_SYM]
 QED
 
-Theorem STRONG_EQUIV_TRANS :
+Theorem STRONG_EQUIV_TRANS:
     !E E' E''. STRONG_EQUIV E E' /\ STRONG_EQUIV E' E'' ==> STRONG_EQUIV E E''
 Proof
     PROVE_TAC [REWRITE_RULE [equivalence_def, transitive_def]
@@ -185,7 +185,7 @@ val EQUAL_IMP_STRONG_EQUIV = store_thm (
  >> PURE_ASM_REWRITE_TAC [STRONG_EQUIV_REFL]);
 
 (* Prop. 4, page 91: strong equivalence satisfies property [*] *)
-Theorem PROPERTY_STAR :
+Theorem PROPERTY_STAR:
     !E E'. STRONG_EQUIV E E' <=>
            !u. (!E1. TRANS E  u E1 ==> ?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2) /\
                (!E2. TRANS E' u E2 ==> ?E1. TRANS E  u E1 /\ STRONG_EQUIV E1 E2)
@@ -571,7 +571,7 @@ val PROPERTY_STAR = save_thm ((* NEW *)
 
  However, if we started with the original definition of STRONG_EQUIV:
 
-Definition STRONG_EQUIV :
+Definition STRONG_EQUIV:
     STRONG_EQUIV E E' = ?Bsm. Bsm E E' /\ STRONG_BISIM Bsm
 End
 

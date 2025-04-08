@@ -78,7 +78,7 @@ val lemC = Q.prove
 (* The main theorem                                                          *)
 (*---------------------------------------------------------------------------*)
 
-Theorem EVEN_REGEXP_THM :
+Theorem EVEN_REGEXP_THM:
  !n. EVEN(n) <=> MAP CHR (n2l 256 n) IN regexp_lang ^even_regexp_term
 Proof
  rw_tac (list_ss ++ pred_setLib.PRED_SET_ss)

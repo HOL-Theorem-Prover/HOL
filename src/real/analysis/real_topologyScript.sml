@@ -134,7 +134,7 @@ Proof
   \\ metis_tac [linear, REAL_MUL_RID]
 QED
 
-Theorem linear_repr :
+Theorem linear_repr:
     !f. linear f <=> ?l. f = \x. l * x
 Proof
     Q.X_GEN_TAC ‘f’
@@ -148,7 +148,7 @@ QED
    This theorem may simplify some theorems below, but it only holds for
    one-dimensional linear functions (I believe). --Chun Tian, 11 nov 2022.
  *)
-Theorem linear_alt_cmul :
+Theorem linear_alt_cmul:
     !f. linear f <=> !c x. f(c * x) = c * f(x)
 Proof
     Q.X_GEN_TAC ‘f’
@@ -1717,7 +1717,7 @@ val DEPENDENT_EXPLICIT = store_thm ("DEPENDENT_EXPLICIT",
      ASM_SIMP_TAC real_ss [REAL_MUL_RINV], DISCH_TAC THEN ASM_REWRITE_TAC []] THEN
     ASM_SET_TAC []]);
 
-Theorem INDEPENDENT_INJECTIVE_IMAGE_GEN :
+Theorem INDEPENDENT_INJECTIVE_IMAGE_GEN:
    !(f:real->real) s. independent s /\ linear f /\
      (!x y. x IN span s /\ y IN span s /\ (f(x) = f(y)) ==> (x = y))
     ==> independent (IMAGE f s)
@@ -1756,7 +1756,7 @@ val INDEPENDENT_INJECTIVE_IMAGE = store_thm ("INDEPENDENT_INJECTIVE_IMAGE",
   REPEAT STRIP_TAC THEN MATCH_MP_TAC INDEPENDENT_INJECTIVE_IMAGE_GEN THEN
   ASM_MESON_TAC[]);
 
-Theorem SPAN_LINEAR_IMAGE :
+Theorem SPAN_LINEAR_IMAGE:
     !f:real->real s. linear f ==> (span(IMAGE f s) = IMAGE f (span s))
 Proof
   REPEAT STRIP_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
@@ -1896,18 +1896,18 @@ val DIM_SUBSET_UNIV = store_thm ("DIM_SUBSET_UNIV",
 (* ------------------------------------------------------------------------- *)
 
 (* new definition *)
-Definition euclidean_def :
+Definition euclidean_def:
     euclidean = mtop mr1
 End
 
 (* new definition *)
-Definition euclidean_open_def :
+Definition euclidean_open_def:
     Open = open_in euclidean
 End
 Overload "open" = “Open”
 
 (* old definition as an equivalent theorem *)
-Theorem open_def :
+Theorem open_def:
     !s. Open s <=> !x. x IN s ==> ?e. &0 < e /\ !x'. dist(x',x) < e ==> x' IN s
 Proof
     rw [euclidean_def, MTOP_OPEN, euclidean_open_def, dist_def, IN_APP,
@@ -1915,7 +1915,7 @@ Proof
 QED
 
 (* old definition as an equivalent theorem *)
-Theorem euclidean :
+Theorem euclidean:
     euclidean = topology open
 Proof
     rw [euclidean_def, mtop]
@@ -1937,7 +1937,7 @@ val OPEN_UNIV = store_thm ("OPEN_UNIV",
 Theorem OPEN_INTER = convert OPEN_IN_INTER
 
 (* NOTE: added top quantifier for ‘f’ *)
-Theorem OPEN_BIGUNION :
+Theorem OPEN_BIGUNION:
     !f. (!s. s IN f ==> open s) ==> open (BIGUNION f)
 Proof
     REWRITE_TAC [open_def, IN_BIGUNION] >> MESON_TAC []
@@ -1957,7 +1957,7 @@ val OPEN_EXISTS = store_thm ("OPEN_EXISTS",
  ``!Q:'a->real->bool. (!a. open {x | Q a x}) ==> open {x | ?a. Q a x}``,
   MP_TAC(ISPEC ``\x:'a. T`` OPEN_EXISTS_IN) THEN REWRITE_TAC[]);
 
-Theorem OPEN_IN :
+Theorem OPEN_IN:
     !s. open s <=> open_in euclidean s
 Proof
     rw [euclidean_open_def]
@@ -1977,13 +1977,13 @@ val OPEN_IN_REFL = store_thm ("OPEN_IN_REFL",
   REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_REFL, TOPSPACE_EUCLIDEAN, SUBSET_UNIV]);
 
 (* new definition *)
-Definition euclidean_closed_def :
+Definition euclidean_closed_def:
     Closed = closed_in euclidean
 End
 Overload closed = “Closed”
 
 (* old definition as an equivalent theorem *)
-Theorem closed_def :
+Theorem closed_def:
     !s. Closed s <=> open (UNIV DIFF s)
 Proof
     rw [euclidean_closed_def, closed_in, euclidean_open_def, TOPSPACE_EUCLIDEAN]
@@ -1993,7 +1993,7 @@ val CLOSED_IN_REFL = store_thm ("CLOSED_IN_REFL",
  ``!s:real->bool. closed_in (subtopology euclidean s) s``,
   REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY_REFL, TOPSPACE_EUCLIDEAN, SUBSET_UNIV]);
 
-Theorem CLOSED_IN :
+Theorem CLOSED_IN:
     !s. closed s <=> closed_in euclidean s
 Proof
     rw [euclidean_closed_def]
@@ -2002,7 +2002,7 @@ QED
 (* |- !s t. open s /\ open t ==> open (s UNION t) *)
 Theorem OPEN_UNION = convert OPEN_IN_UNION
 
-Theorem OPEN_SUB_OPEN :
+Theorem OPEN_SUB_OPEN:
     !s. open s <=> !x. x IN s ==> ?t. open t /\ x IN t /\ t SUBSET s
 Proof
     rw [euclidean_open_def, Once OPEN_SUBOPEN, IN_APP]
@@ -2084,12 +2084,12 @@ val CLOSED_BIGUNION = store_thm ("CLOSED_BIGUNION",
 (* ------------------------------------------------------------------------- *)
 
 (* new definition based on metricTheory *)
-Definition ball_def :
+Definition ball_def:
     ball = metric$B(mr1)
 End
 
 (* old definition now becomes a theorem *)
-Theorem ball :
+Theorem ball:
     !x e. ball(x,e) = { y | dist(x,y) < e}
 Proof
     RW_TAC std_ss [ball_def, dist_def, metricTheory.ball,
@@ -3029,7 +3029,7 @@ val CONNECTED_OPEN_SET = store_thm ("CONNECTED_OPEN_SET",
      [``s INTER u:real->bool``, ``s INTER v:real->bool``] THEN
     ASM_SIMP_TAC std_ss [OPEN_INTER] THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]);
 
-Theorem CONNECTED_IFF_CONNECTABLE_POINTS :
+Theorem CONNECTED_IFF_CONNECTABLE_POINTS:
    !(s:real->bool).
         connected s <=>
         !a b. a IN s /\ b IN s
@@ -3104,7 +3104,7 @@ val CONNECTED_REAL_LEMMA = store_thm ("CONNECTED_REAL_LEMMA",
                   REAL_ARITH ``&0 < e /\ x <= b ==> x - e <= b:real``,
       REAL_ARITH ``&0 < e /\ e < d ==> x - e < x /\ abs((x - e) - x) < d:real``]]);
 
-Theorem CONNECTED_SEGMENT :
+Theorem CONNECTED_SEGMENT:
    (!a b:real. connected(segment[a,b])) /\
    (!a b:real. connected(segment(a,b)))
 Proof
@@ -3592,11 +3592,11 @@ val CONNECTED_EQUIVALENCE_RELATION = store_thm ("CONNECTED_EQUIVALENCE_RELATION"
 val _ = set_fixity "limit_point_of" (Infix(NONASSOC, 450));
 
 (* ‘limpt’ is defined in topologyTheory *)
-Definition limit_point_of_def :
+Definition limit_point_of_def:
     x limit_point_of s <=> limpt(euclidean) x s
 End
 
-Theorem limit_point_of :
+Theorem limit_point_of:
     !x s. x limit_point_of s <=>
           !t. x IN t /\ Open t ==> ?y. ~(y = x) /\ y IN s /\ y IN t
 Proof
@@ -4950,7 +4950,7 @@ val FORALL_EVENTUALLY = store_thm ("FORALL_EVENTUALLY",
 (* NOTE: This is for (f :'a -> real) (l :real) (net :'a net).
          Now the name "tendsto_real" follows HOL-Light's "realanalysis.ml".
  *)
-Definition tendsto_real :
+Definition tendsto_real:
     tendsto_real f l net <=> !e. &0 < e ==> eventually (\x. dist(f(x),l) < e) net
 End
 
@@ -4965,13 +4965,13 @@ val _ = TeX_notation {hol = UTF8.chr 0x27F6, TeX = ("\\HOLTokenLongmap{}", 1)};
 val _ = TeX_notation {hol = "-->",           TeX = ("\\HOLTokenLongmap{}", 1)};
 
 (* Now the name "reallim" follows HOL-Light's "realanalysis.ml" *)
-Definition reallim :
+Definition reallim:
     reallim net f = @l. (f --> l) net
 End
 Overload lim = “reallim”
 
 (* cf. limTheory.LIM *)
-Theorem LIM_DEF : (* was: LIM *)
+Theorem LIM_DEF: (* was: LIM *)
    !f l net. (f --> l) net <=>
         trivial_limit net \/
         !e. &0 < e ==> ?y. (?x. netord(net) x y) /\
@@ -5984,7 +5984,7 @@ Proof
 QED
 
 (* NOTE: removed the unused quantifier ‘b’ *)
-Theorem LIM_TRANSFORM_AWAY_WITHIN :
+Theorem LIM_TRANSFORM_AWAY_WITHIN:
    !f:real->real g a s l.
       (!x. x IN s /\ ~(x = a) ==> (f(x) = g(x))) /\
       (f --> l) (at a within s) ==> (g --> l) (at a within s)
@@ -5996,7 +5996,7 @@ Proof
 QED
 
 (* NOTE: removed the unused quantifier ‘b’ *)
-Theorem LIM_TRANSFORM_AWAY_AT :
+Theorem LIM_TRANSFORM_AWAY_AT:
    !f:real->real g a l.
       (!x. ~(x = a) ==> (f(x) = g(x))) /\
       (f --> l) (at a) ==> (g --> l) (at a)
@@ -6020,7 +6020,7 @@ val LIM_TRANSFORM_WITHIN_OPEN = store_thm ("LIM_TRANSFORM_WITHIN_OPEN",
   STRIP_TAC THEN EXISTS_TAC ``e:real`` THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC[SUBSET_DEF, IN_BALL] THEN ASM_MESON_TAC[DIST_NZ, DIST_SYM]);
 
-Theorem LIM_TRANSFORM_WITHIN_OPEN_EQ :
+Theorem LIM_TRANSFORM_WITHIN_OPEN_EQ:
     !f g:real->real s a l.
        open s /\ a IN s /\ (!x. x IN s /\ ~(x = a) ==> (f x = g x)) ==>
       ((f --> l) (at a) <=> (g --> l) (at a))
@@ -6444,7 +6444,7 @@ val CONNECTED_IMP_PERFECT_CLOSED = store_thm ("CONNECTED_IMP_PERFECT_CLOSED",
 (* Boundedness.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-Definition bounded_def :
+Definition bounded_def:
     Bounded s <=> ?a. !x:real. x IN s ==> abs(x) <= a
 End
 Overload bounded = “Bounded”
@@ -6922,7 +6922,7 @@ val SUBSET_BALLS = store_thm ("SUBSET_BALLS",
    [tac, tac, ALL_TAC, ALL_TAC] THEN REWRITE_TAC[lemma] THEN
   REPEAT(POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC);
 
-Theorem INTER_BALLS_EQ_EMPTY :
+Theorem INTER_BALLS_EQ_EMPTY:
    (!a b:real r s. (ball(a,r) INTER ball(b,s) = {}) <=>
                      r <= &0 \/ s <= &0 \/ r + s <= dist(a,b)) /\
    (!a b:real r s. (ball(a,r) INTER cball(b,s) = {}) <=>
@@ -7059,7 +7059,7 @@ val LIM_SUBSEQUENCE = store_thm ("LIM_SUBSEQUENCE",
 
    This lemma is useful when ‘r = \n. flr (a pow n)’, where ‘1 < a’ (but close to 1)
  *)
-Theorem LIM_SUBSEQUENCE_WEAK :
+Theorem LIM_SUBSEQUENCE_WEAK:
     !s r l. (!m n. m <= n ==> r(m) <= r(n)) /\ (!n. ?m. n <= r(m)) /\
             (s --> l) sequentially ==> (s o r --> l) sequentially
 Proof
@@ -7186,7 +7186,7 @@ val BOUNDED_CLOSED_IMP_COMPACT = store_thm ("BOUNDED_CLOSED_IMP_COMPACT",
 (* Completeness.                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-Definition cauchy_def :
+Definition cauchy_def:
     cauchy (s:num->real) <=>
      !e. &0 < e ==> ?N. !m n. m >= N /\ n >= N ==> dist(s m,s n) < e
 End
@@ -8306,12 +8306,12 @@ val CONTINUOUS_WITHIN_COMPARISON = store_thm ("CONTINUOUS_WITHIN_COMPARISON",
 val _ = set_fixity "continuous_on" (Infix(NONASSOC, 450));
 val _ = set_fixity "uniformly_continuous_on" (Infix(NONASSOC, 450));
 
-Definition continuous_on_def :
+Definition continuous_on_def:
     f continuous_on s <=> !x. x IN s ==> f continuous (at x within s)
 End
 Theorem CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN = continuous_on_def
 
-Theorem continuous_on :
+Theorem continuous_on:
     !f s. f continuous_on s <=>
           !x. x IN s ==> !e. &0 < e
                      ==> ?d. &0 < d /\ !x'. x' IN s /\ dist(x',x) < d
@@ -9583,7 +9583,7 @@ val QUOTIENT_MAP_RESTRICT = store_thm ("QUOTIENT_MAP_RESTRICT",
    MATCH_MP_TAC CONTINUOUS_CLOSED_IN_PREIMAGE_GEN ORELSE ASM_SIMP_TAC std_ss []) THEN
   ASM_SET_TAC[]);
 
-Theorem CONNECTED_MONOTONE_QUOTIENT_PREIMAGE :
+Theorem CONNECTED_MONOTONE_QUOTIENT_PREIMAGE:
    !f:real->real s t.
     f continuous_on s /\ (IMAGE f s = t) /\
    (!u. u SUBSET t
@@ -12814,7 +12814,7 @@ val COMPACT_AFFINITY = store_thm ("COMPACT_AFFINITY",
 (* ------------------------------------------------------------------------- *)
 
 (* This is a generalized ‘diameter’ with a metric parameter d *)
-Definition set_diameter_def :
+Definition set_diameter_def:
     set_diameter (d :'a metric) (s :'a set) =
       if s = {} then (0 :real)
       else sup {dist d (x,y) | x IN s /\ y IN s}
@@ -12824,7 +12824,7 @@ End
 Overload diameter = “set_diameter mr1”
 
 (* Old definition of ‘diameter’ (now becomes a theorem) *)
-Theorem diameter :
+Theorem diameter:
     !s. diameter s =
         if s = {} then (&0:real)
         else sup {abs(x - y) | x IN s /\ y IN s}
@@ -13282,7 +13282,7 @@ val SEPARATE_POINT_CLOSED = store_thm ("SEPARATE_POINT_CLOSED",
   STRIP_TAC THEN EXISTS_TAC ``dist(a:real,b)`` THEN
   METIS_TAC[DIST_POS_LT]);
 
-Theorem SEPARATE_COMPACT_CLOSED :
+Theorem SEPARATE_COMPACT_CLOSED:
    !s t:real->bool.
         compact s /\ closed t /\ (s INTER t = {})
         ==> ?d. &0 < d /\ !x y. x IN s /\ y IN t ==> d <= dist(x,y)
@@ -13495,11 +13495,11 @@ val OPEN_UNION_COMPACT_SUBSETS = store_thm ("OPEN_UNION_COMPACT_SUBSETS",
 (* A cute way of denoting open and closed intervals using overloading.       *)
 (* ------------------------------------------------------------------------- *)
 
-Definition OPEN_interval :
+Definition OPEN_interval:
     OPEN_interval ((a:real),(b:real)) = {x:real | a < x /\ x < b}
 End
 
-Definition CLOSED_interval :
+Definition CLOSED_interval:
     CLOSED_interval (l :(real # real) list) =
       {x:real | FST (HD l) <= x /\ x <= SND (HD l)}
 End
@@ -14395,7 +14395,7 @@ val IS_INTERVAL_POINTWISE = store_thm ("IS_INTERVAL_POINTWISE",
         ==> x IN s``,
   METIS_TAC [is_interval]);
 
-Theorem IS_INTERVAL_COMPACT :
+Theorem IS_INTERVAL_COMPACT:
     !s:real->bool. is_interval s /\ compact s <=> ?a b. s = interval[a,b]
 Proof
   GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN
@@ -14592,7 +14592,7 @@ val INTERVAL_CONTAINS_COMPACT_NEIGHBOURHOOD = store_thm
          FULL_SIMP_TAC std_ss [REAL_NEG_SUB,
           REAL_ARITH ``y - x < b - x <=> y < b:real``, REAL_LE_LT]]);
 
-Theorem IS_INTERVAL_SUMS :
+Theorem IS_INTERVAL_SUMS:
     !s t:real->bool.
         is_interval s /\ is_interval t
         ==> is_interval {x + y | x IN s /\ y IN t}
@@ -15088,7 +15088,7 @@ val CONNECTED_IVT_COMPONENT = store_thm ("CONNECTED_IVT_COMPONENT",
   ASM_SIMP_TAC std_ss [REAL_MUL_LID]);
 
 (* This theorem is inspired by limTheory.IVT *)
-Theorem CONTINUOUS_ON_IVT :
+Theorem CONTINUOUS_ON_IVT:
     !f a b y. a <= b /\ f(a) <= y /\ y <= f(b) /\
               f continuous_on (interval [a,b])
           ==> ?x. x IN interval [a,b] /\ (f(x) = y)
@@ -16293,7 +16293,7 @@ val UNCOUNTABLE_REAL = store_thm ("UNCOUNTABLE_REAL",
   REWRITE_TAC[CANTOR_THM_UNIV] THEN MATCH_MP_TAC CARD_EQ_IMP_LE THEN
   ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN REWRITE_TAC[CARD_EQ_REAL]);
 
-Theorem CARD_EQ_REAL_IMP_UNCOUNTABLE :
+Theorem CARD_EQ_REAL_IMP_UNCOUNTABLE:
     !s:real->bool. s =_c univ(:real) ==> ~COUNTABLE s
 Proof
   GEN_TAC THEN STRIP_TAC THEN
@@ -17079,7 +17079,7 @@ val CLOSED_SUBSTANDARD = store_thm ("CLOSED_SUBSTANDARD",
  ``closed {x:real | x = &0}``,
   REWRITE_TAC [GSPEC_EQ, CLOSED_SING]);
 
-Theorem DIM_SUBSTANDARD :
+Theorem DIM_SUBSTANDARD:
     dim {x:real | x = &0} = 0
 Proof
   REWRITE_TAC [dim, GSPEC_EQ] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
@@ -17187,18 +17187,18 @@ val _ = hide "summable";
 
 val _ = set_fixity "sums" (Infix(NONASSOC, 450));
 
-Definition sums_def : (* cf. seqTheory.sums *)
+Definition sums_def: (* cf. seqTheory.sums *)
    (f sums l) s = ((\n. sum (s INTER { 0n..n}) f) --> l) sequentially
 End
 val sums = sums_def;
 
-Definition suminf_def : (* cf. seqTheory.suminf *)
+Definition suminf_def: (* cf. seqTheory.suminf *)
     infsum s f = @l. (f sums l) s
 End
 val _ = overload_on ("suminf", ``infsum``);
 val infsum = suminf_def;
 
-Definition summable_def : (* cf. seqTheory.summable *)
+Definition summable_def: (* cf. seqTheory.summable *)
     summable s f = ?l. (f sums l) s
 End
 val summable = summable_def;
@@ -18735,7 +18735,7 @@ val CLOSEST_POINT_IN_FRONTIER = store_thm ("CLOSEST_POINT_IN_FRONTIER",
 (* ------------------------------------------------------------------------- *)
 
 (* This is a generalized ‘setdist’ with a metric parameter d *)
-Definition set_dist_def :
+Definition set_dist_def:
     set_dist (d :'a metric) ((s,t) :'a set # 'a set) =
       if (s = {}) \/ (t = {}) then (0 :real)
       else inf {dist d (x,y) | x IN s /\ y IN t}
@@ -18745,7 +18745,7 @@ End
 Overload setdist = “set_dist mr1”
 
 (* Old definition of ‘diameter’ (now becomes a theorem) *)
-Theorem setdist :
+Theorem setdist:
     !s t. setdist(s,t) =
           if (s = {}) \/ (t = {}) then (&0 :real)
           else inf {dist(x,y) | x IN s /\ y IN t}
@@ -19689,7 +19689,7 @@ val HAUSDIST_SINGS = store_thm ("HAUSDIST_SINGS",
   SIMP_TAC std_ss [IN_SING, UNWIND_FORALL_THM2] THEN
   METIS_TAC[REAL_LE_REFL]);
 
-Theorem HAUSDIST_EQ :
+Theorem HAUSDIST_EQ:
    !s t:real->bool s' t':real->bool.
         (!b. (!x. x IN s ==> setdist({x},t) <= b) /\
              (!y. y IN t ==> setdist({y},s) <= b) <=>
@@ -20162,7 +20162,7 @@ val HAUSDIST_COMPACT_NONTRIVIAL = store_thm ("HAUSDIST_COMPACT_NONTRIVIAL",
     METIS_TAC[DIST_SYM, HAUSDIST_SYM,
                   HAUSDIST_COMPACT_EXISTS, COMPACT_IMP_BOUNDED]]);
 
-Theorem HAUSDIST_BALLS :
+Theorem HAUSDIST_BALLS:
    (!a b:real r s.
         hausdist(ball(a,r),ball(b,s)) =
         if r <= &0 \/ s <= &0 then &0 else dist(a,b) + abs(r - s)) /\
@@ -20816,7 +20816,7 @@ val LOCALLY_OPEN_MAP_IMAGE = store_thm ("LOCALLY_OPEN_MAP_IMAGE",
 Overload gdelta = “gdelta_in euclidean”
 Overload fsigma = “fsigma_in euclidean”
 
-Theorem gdelta :
+Theorem gdelta:
     !s. gdelta (s:real->bool) <=>
         ?g. COUNTABLE g /\ (!u. u IN g ==> open u) /\ (BIGINTER g = s)
 Proof
@@ -20824,26 +20824,26 @@ Proof
         TOPSPACE_EUCLIDEAN, RELATIVE_TO_UNIV]
 QED
 
-Theorem fsigma :
+Theorem fsigma:
     !s. fsigma (s:real->bool) <=>
         ?g. COUNTABLE g /\ (!c. c IN g ==> closed c) /\ (BIGUNION g = s)
 Proof
     rw [fsigma_in, UNION_OF, euclidean_closed_def, SUBSET_DEF, IN_APP]
 QED
 
-Theorem GDELTA_COMPLEMENT :
+Theorem GDELTA_COMPLEMENT:
    !s. gdelta(univ(:real) DIFF s) <=> fsigma s
 Proof
    rw [GDELTA_IN_FSIGMA_IN, TOPSPACE_EUCLIDEAN, COMPL_COMPL_applied]
 QED
 
-Theorem METRIZABLE_SPACE_EUCLIDEAN :
+Theorem METRIZABLE_SPACE_EUCLIDEAN:
    metrizable_space euclidean
 Proof
    REWRITE_TAC[euclidean_def, METRIZABLE_SPACE_MTOPOLOGY]
 QED
 
-Theorem CLOSED_AS_GDELTA :
+Theorem CLOSED_AS_GDELTA:
    !s:real->bool. closed s ==> gdelta s
 Proof
     RW_TAC std_ss [euclidean_closed_def]
@@ -21799,17 +21799,17 @@ val SUBORDINATE_PARTITION_OF_UNITY = store_thm ("SUBORDINATE_PARTITION_OF_UNITY"
    Now we explicitly define that the upper and lower bounds of {} are both 0.
    This change shouldn't cause anything wrong. -- Chun Tian, Oct 24, 2019.
  *)
-Definition interval_upperbound :
+Definition interval_upperbound:
     (interval_upperbound:(real->bool)->real) s =
        if s = {} then 0:real else sup s
 End
 
-Definition interval_lowerbound :
+Definition interval_lowerbound:
     (interval_lowerbound:(real->bool)->real) s =
        if s = {} then 0:real else inf s
 End
 
-Theorem INTERVAL_UPPERBOUND :
+Theorem INTERVAL_UPPERBOUND:
     !a b:real. a <= b ==> (interval_upperbound(interval[a,b]) = b)
 Proof
     RW_TAC std_ss [interval_upperbound]
@@ -21820,7 +21820,7 @@ Proof
  >> ASM_MESON_TAC[REAL_LE_REFL]
 QED
 
-Theorem OPEN_INTERVAL_UPPERBOUND :
+Theorem OPEN_INTERVAL_UPPERBOUND:
     !a b:real. a < b ==> interval_upperbound(interval(a,b)) = b
 Proof
     RW_TAC std_ss [interval_upperbound]
@@ -21833,7 +21833,7 @@ Proof
  >> Q.EXISTS_TAC ‘z’ >> art []
 QED
 
-Theorem INTERVAL_LOWERBOUND :
+Theorem INTERVAL_LOWERBOUND:
     !a b:real. a <= b ==> (interval_lowerbound(interval[a,b]) = a)
 Proof
     RW_TAC std_ss [interval_lowerbound]
@@ -21844,7 +21844,7 @@ Proof
  >> ASM_MESON_TAC [REAL_LE_REFL]
 QED
 
-Theorem OPEN_INTERVAL_LOWERBOUND :
+Theorem OPEN_INTERVAL_LOWERBOUND:
     !a b:real. a < b ==> interval_lowerbound(interval(a,b)) = a
 Proof
     RW_TAC std_ss [interval_lowerbound]
@@ -21857,14 +21857,14 @@ Proof
  >> Q.EXISTS_TAC ‘z’ >> art []
 QED
 
-Theorem INTERVAL_LOWERBOUND_NONEMPTY :
+Theorem INTERVAL_LOWERBOUND_NONEMPTY:
     !a b:real. ~(interval[a,b] = {}) ==>
                (interval_lowerbound(interval[a,b]) = a)
 Proof
     SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_NE_EMPTY]
 QED
 
-Theorem INTERVAL_UPPERBOUND_NONEMPTY :
+Theorem INTERVAL_UPPERBOUND_NONEMPTY:
     !a b:real. ~(interval[a,b] = {}) ==>
                (interval_upperbound(interval[a,b]) = b)
 Proof
@@ -22003,7 +22003,7 @@ val CONTENT_LT_NZ = store_thm ("CONTENT_LT_NZ",
  ``!a b. &0 < content(interval[a,b]) <=> ~(content(interval[a,b]) = &0)``,
   REWRITE_TAC[CONTENT_POS_LT_EQ, CONTENT_EQ_0] THEN MESON_TAC[REAL_NOT_LE]);
 
-Theorem INTERVAL_BOUNDS_NULL :
+Theorem INTERVAL_BOUNDS_NULL:
     !a b:real. (content(interval[a,b]) = &0)
         ==> (interval_upperbound(interval[a,b]) =
              interval_lowerbound(interval[a,b]))

@@ -27,15 +27,15 @@ val bool_ss' = bool_ss -* ["lift_disj_eq", "lift_imp_disj"];
 (* Basic componentwise operations on vectors.                                *)
 (* ------------------------------------------------------------------------- *)
 
-Definition vector_add_def :
+Definition vector_add_def:
    (vector_add :real['N]->real['N]->real['N]) x y = FCP i. x ' i + y ' i
 End
 
-Definition vector_sub_def :
+Definition vector_sub_def:
    (vector_sub :real['N]->real['N]->real['N]) x y = FCP i. x ' i - y ' i
 End
 
-Definition vector_neg_def :
+Definition vector_neg_def:
    (vector_neg :real['N]->real['N]) x = FCP i. ~(x ' i)
 End
 
@@ -45,29 +45,29 @@ Overload "~"              = “vector_neg :real['N] -> real['N]”
 Overload "numeric_negate" = “vector_neg :real['N] -> real['N]”
 
 (* Below are equivalent definitions using advanced concepts in fcpTheory *)
-Definition FCP_MAP2 :
+Definition FCP_MAP2:
    FCP_MAP2 f (x :'a['N]) (y :'b['N]) = FCP_MAP (UNCURRY f) (FCP_ZIP x y)
 End
 
-Theorem FCP_MAP2_def : (* was: vector_map2_def *)
+Theorem FCP_MAP2_def: (* was: vector_map2_def *)
    !f x y. FCP_MAP2 f (x :'a['N]) (y :'b['N]) = (FCP i. f (x ' i) (y ' i))
 Proof
    SRW_TAC [FCP_ss] [FCP_MAP2, FCP_MAP_def, FCP_ZIP_def, UNCURRY_DEF]
 QED
 
-Theorem vector_add_alt :
+Theorem vector_add_alt:
    !x y. (vector_add :real['N]->real['N]->real['N]) x y = FCP_MAP2 (+) x y
 Proof
    rw [FCP_MAP2_def, vector_add_def]
 QED
 
-Theorem vector_sub_alt :
+Theorem vector_sub_alt:
    !x y. (vector_sub :real['N]->real['N]->real['N]) x y = FCP_MAP2 (-) x y
 Proof
    rw [FCP_MAP2_def, vector_sub_def]
 QED
 
-Theorem vector_neg_alt :
+Theorem vector_neg_alt:
    !x. (vector_neg :real['N]->real['N]) x = FCP_MAP (~) x
 Proof
    rw [FCP_MAP_def, vector_neg_def]
@@ -77,13 +77,13 @@ QED
 (* Also the scalar-vector multiplication.                                    *)
 (* ------------------------------------------------------------------------- *)
 
-Definition vector_mul_def :
+Definition vector_mul_def:
    (vector_mul :real -> real['N] -> real['N]) c x = FCP i. c * x ' i
 End
 
 Overload "*" = “vector_mul :real -> real['N] -> real['N]”
 
-Theorem vector_mul_alt :
+Theorem vector_mul_alt:
     !c x. (vector_mul :real -> real['N] -> real['N]) c x = FCP_MAP ($* c) x
 Proof
     rw [FCP_MAP_def, vector_mul_def]
@@ -93,7 +93,7 @@ QED
 (* Vectors corresponding to small naturals. Perhaps should overload "&"?     *)
 (* ------------------------------------------------------------------------- *)
 
-Definition vec_def :
+Definition vec_def:
    (vec :num -> real['N]) n = FCP i. &n
 End
 
@@ -123,13 +123,13 @@ Overload SUM[local] = “real_sigma$Sum”; (* see iterateTheory.sum_def *)
    and whenever the original proofs use DIMINDEX_GE_1, in the ported proofs we
    should use DIMINDEX_GT_0 instead. (See, e.g., the proof of VEC_EQ below.)
  *)
-Definition dot_def :
+Definition dot_def:
    ((x:real['N]) dot (y:real['N])) =
      SUM (count(dimindex(:'N))) (\i. (x ' i) * (y ' i))
 End
 
 (* alternative definition using ‘real_sigma$SIGMA’ (REAL_SUM_IMAGE_DEF) *)
-Theorem dot_alt :
+Theorem dot_alt:
     !x y. ((x:real['N]) dot (y:real['N])) =
           SIGMA (\i. (x ' i) * (y ' i)) (count (dimindex(:'N)))
 Proof
@@ -164,7 +164,7 @@ fun VECTOR_ARITH tm = prove(tm,VECTOR_ARITH_TAC);
 (* Obvious "component-pushing".                                              *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem VEC_COMPONENT :
+Theorem VEC_COMPONENT:
    !k i. i < dimindex(:'N) ==> (((vec k):real['N]) ' i = &k)
 Proof
    SRW_TAC [FCP_ss][vec_def]
@@ -172,25 +172,25 @@ QED
 
 Theorem VEC_0_COMPONENT = Q.SPEC ‘0’ VEC_COMPONENT
 
-Theorem VECTOR_ADD_COMPONENT :
+Theorem VECTOR_ADD_COMPONENT:
    !x:real['N] y i. i < dimindex (:'N) ==> ((x + y) ' i = (x ' i) + (y ' i))
 Proof
    SRW_TAC [FCP_ss][vector_add_def]
 QED
 
-Theorem VECTOR_NEG_COMPONENT :
+Theorem VECTOR_NEG_COMPONENT:
    !x:real['N] i. i < dimindex (:'N) ==> ((~x) ' i = -(x ' i))
 Proof
    SRW_TAC [FCP_ss][vector_neg_def]
 QED
 
-Theorem VECTOR_SUB_COMPONENT :
+Theorem VECTOR_SUB_COMPONENT:
    !x:real['N] y i. i < dimindex (:'N) ==> ((x - y) ' i = (x ' i) - (y ' i))
 Proof
    SRW_TAC [FCP_ss][vector_sub_def]
 QED
 
-Theorem VECTOR_MUL_COMPONENT :
+Theorem VECTOR_MUL_COMPONENT:
    !x:real['N] c i. i < dimindex (:'N) ==> ((c * x) ' i = c * (x ' i))
 Proof
    SRW_TAC [FCP_ss][vector_mul_def]
@@ -282,7 +282,7 @@ Theorem VECTOR_ADD_AC = VECTOR_ARITH
 val LE_REFL = LESS_EQ_REFL;
 
 (* new *)
-Theorem VEC_EQ :
+Theorem VEC_EQ:
     !m n. (vec m = (vec n):real['N]) <=> (m = n)
 Proof
     RW_TAC real_ss [CART_EQ, VEC_COMPONENT]
@@ -319,14 +319,14 @@ Theorem DOT_RZERO = VECTOR_ARITH ``!x:real['N]. (x dot (vec 0)) = &0``
 (* Sums of vectors (per-index summation).                                    *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem NEUTRAL_VECTOR_ADD :
+Theorem NEUTRAL_VECTOR_ADD:
     neutral(+) = (vec 0):real['N]
 Proof
   REWRITE_TAC[neutral] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
   BETA_TAC THEN REWRITE_TAC[VECTOR_EQ_ADDR,VECTOR_EQ_ADDL]
 QED
 
-Theorem MONOIDAL_VECTOR_ADD :
+Theorem MONOIDAL_VECTOR_ADD:
     monoidal ((+):real['N]->real['N]->real['N])
 Proof
   REWRITE_TAC[monoidal, NEUTRAL_VECTOR_ADD] THEN
@@ -337,11 +337,11 @@ QED
 
    Here ‘s’ is an index set ('a), ‘f’ is a set of real['N] vectors indexed by ‘s’.
  *)
-Definition vsum_def :
+Definition vsum_def:
    (vsum:('a->bool)->('a->real['N])->real['N]) s f = FCP i. sum s (\x. f(x) ' i)
 End
 
-Theorem vsum_alt :
+Theorem vsum_alt:
     !s f. FINITE s ==>
          (vsum:('a->bool)->('a->real['N])->real['N]) s f =
           FCP i. SIGMA (\x. f(x) ' i) s
@@ -349,7 +349,7 @@ Proof
     rw [vsum_def, GSYM REAL_SUM_IMAGE_sum]
 QED
 
-Theorem VSUM_CLAUSES :
+Theorem VSUM_CLAUSES:
    (!(f:'a->real['N]). vsum {} f = (vec 0)) /\
    (!x (f:'a->real['N]) s. FINITE s
             ==> vsum (x INSERT s) f =
@@ -358,7 +358,7 @@ Proof
   SRW_TAC[FCP_ss][vsum_def, VECTOR_ADD_COMPONENT, SUM_CLAUSES, VEC_COMPONENT]
 QED
 
-Theorem VSUM :
+Theorem VSUM:
    !(f:'a->real['N]) s. FINITE s ==> vsum s f = iterate (+) s f
 Proof
   GEN_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
@@ -366,50 +366,50 @@ Proof
   REWRITE_TAC[NEUTRAL_VECTOR_ADD]
 QED
 
-Theorem VSUM_EQ_0 :
+Theorem VSUM_EQ_0:
    !(f:'a->real['N]) s. (!x:'a. x IN s ==> (f(x) = (vec 0))) ==> (vsum s f = (vec 0))
 Proof
   SRW_TAC[FCP_ss][vsum_def, vec_def, SUM_EQ_0']
 QED
 
-Theorem VSUM_0 :
+Theorem VSUM_0:
    (vsum:('a->bool)->('a->real['N])->real['N]) s (\x. (vec 0)) = (vec 0)
 Proof
   SIMP_TAC bool_ss[VSUM_EQ_0]
 QED
 
-Theorem VSUM_LMUL :
+Theorem VSUM_LMUL:
    !(f:'a->real['N]) c s.  vsum s (\x. c * f(x)) = c * vsum s f
 Proof
   SRW_TAC[FCP_ss][vsum_def, VECTOR_MUL_COMPONENT, SUM_LMUL]
 QED
 
-Theorem VSUM_RMUL :
+Theorem VSUM_RMUL:
    !(c :'a->real) s (v :real['N]). vsum s (\x. c x * v) = (sum s c) * v
 Proof
   SRW_TAC[FCP_ss][vsum_def, VECTOR_MUL_COMPONENT, SUM_RMUL]
 QED
 
-Theorem VSUM_ADD :
+Theorem VSUM_ADD:
    !(f:'a->real['N]) g s. FINITE s ==> (vsum s (\x. f x + g x) = vsum s f + vsum s g)
 Proof
   SRW_TAC[FCP_ss][vsum_def, VECTOR_ADD_COMPONENT, SUM_ADD']
 QED
 
-Theorem VSUM_SUB :
+Theorem VSUM_SUB:
    !(f:'a->real['N]) g s. FINITE s ==> (vsum s (\x. f x - g x) = vsum s f - vsum s g)
 Proof
   SRW_TAC[FCP_ss][vsum_def, VECTOR_SUB_COMPONENT, SUM_SUB']
 QED
 
 (* NOTE: there's no ‘i < dimindex(:'N)’ part in HOL-Light *)
-Theorem VSUM_COMPONENT :
+Theorem VSUM_COMPONENT:
    !s f i. i < dimindex(:'N) ==> (vsum s (f:'a->real['N])) ' i = sum s (\x. f(x) ' i)
 Proof
   SRW_TAC[FCP_ss][vsum_def]
 QED
 
-Theorem VSUM_IMAGE :
+Theorem VSUM_IMAGE:
    !(f :'a->'b) (g :'b->real['N]) s.
         FINITE s /\ (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y))
            ==> (vsum (IMAGE f s) g = vsum s (g o f))
@@ -419,27 +419,27 @@ Proof
   ASM_SIMP_TAC bool_ss[o_DEF]
 QED
 
-Theorem VSUM_DELETE :
+Theorem VSUM_DELETE:
    !(f:'a->real['N]) s a. FINITE s /\ a IN s
            ==> (vsum (s DELETE a) f = vsum s f - f a)
 Proof
   SRW_TAC[FCP_ss][vsum_def, SUM_DELETE, VECTOR_SUB_COMPONENT]
 QED
 
-Theorem VSUM_NEG :
+Theorem VSUM_NEG:
    !(f:'a->real['N]) s. vsum s (\x. ~f x) = ~vsum s f
 Proof
   SRW_TAC[FCP_ss][vsum_def, SUM_NEG', VECTOR_NEG_COMPONENT]
 QED
 
-Theorem VSUM_EQ :
+Theorem VSUM_EQ:
    !(f:'a->real['N]) g s. (!x. x IN s ==> (f x = g x)) ==> (vsum s f = vsum s g)
 Proof
   SRW_TAC[FCP_ss][vsum_def] THEN
   MATCH_MP_TAC SUM_EQ THEN ASM_SIMP_TAC bool_ss[]
 QED
 
-Theorem VSUM_DELETE_CASES :
+Theorem VSUM_DELETE_CASES:
    !x (f:'a->real['N]) s.
         FINITE(s:'a->bool)
         ==> (vsum (s DELETE x) f = if x IN s then vsum s f - f x else vsum s f)
@@ -453,7 +453,7 @@ Proof
   ASM_SIMP_TAC bool_ss[VSUM_CLAUSES, FINITE_DELETE, IN_DELETE] THEN VECTOR_ARITH_TAC
 QED
 
-Theorem VSUM_RESTRICT_SET :
+Theorem VSUM_RESTRICT_SET:
    !P s (f:'a->real['N]).
            vsum {x | x IN s /\ P x} f =
            vsum s (\x. if P x then f x else (vec 0))
@@ -465,11 +465,11 @@ QED
 (* Basis vectors in coordinate directions.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-Definition basis_def :
+Definition basis_def:
    basis k = ((FCP i. if i = k then &1 else &0):real['N])
 End
 
-Theorem BASIS_INJ :
+Theorem BASIS_INJ:
    !i j. i < dimindex(:'N) /\ j < dimindex(:'N) /\ (basis i :real['N] = basis j)
      ==> i = j
 Proof
@@ -478,21 +478,21 @@ Proof
   CONV_TAC CONTRAPOS_CONV THEN ASM_SIMP_TAC bool_ss[REAL_10]
 QED
 
-Theorem BASIS_NE :
+Theorem BASIS_NE:
    !i j. i < dimindex(:'N) /\ j < dimindex(:'N) /\ ~(i = j)
      ==> ~(basis i :real['N] = basis j)
 Proof
   PROVE_TAC[BASIS_INJ]
 QED
 
-Theorem BASIS_COMPONENT :
+Theorem BASIS_COMPONENT:
    !k i. i < dimindex(:'N)
          ==> ((basis k :real['N]) ' i = if i = k then &1 else &0)
 Proof
   SRW_TAC[FCP_ss][basis_def]
 QED
 
-Theorem BASIS_EXPANSION :
+Theorem BASIS_EXPANSION:
    !(x:real['N]). vsum (count(dimindex(:'N))) (\i. x ' i * basis i) = x
 Proof
   SRW_TAC[FCP_ss][VSUM_COMPONENT, VECTOR_MUL_COMPONENT, BASIS_COMPONENT] THEN
@@ -501,7 +501,7 @@ Proof
   ASM_SIMP_TAC bool_ss[SUM_DELTA, IN_COUNT, REAL_MUL_RID]
 QED
 
-Theorem BASIS_EXPANSION_UNIQUE :
+Theorem BASIS_EXPANSION_UNIQUE:
    !u (x:real['N]).
         (vsum (count(dimindex(:'N))) (\i. f(i) * basis i) = x) <=>
         (!i. i < dimindex(:'N) ==> (f(i) = x ' i))
@@ -513,7 +513,7 @@ Proof
   SIMP_TAC bool_ss[SUM_DELTA, IN_COUNT]
 QED
 
-Theorem DOT_BASIS :
+Theorem DOT_BASIS:
    !x:real['N] i. i < dimindex(:'N) ==> (((basis i) dot x) = x ' i) /\
                                         ((x dot (basis i)) = x ' i)
 Proof
@@ -527,14 +527,14 @@ Proof
   ASM_SIMP_TAC bool_ss[SUM_DELTA, IN_COUNT, REAL_MUL_LID]
 QED
 
-Theorem VECTOR_EQ_LDOT :
+Theorem VECTOR_EQ_LDOT:
    !y z:real['N]. (!x. (x dot y) = (x dot z)) <=> (y = z)
 Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC bool_ss[] THEN
   REWRITE_TAC[CART_EQ] THEN PROVE_TAC[DOT_BASIS]
 QED
 
-Theorem VECTOR_EQ_RDOT :
+Theorem VECTOR_EQ_RDOT:
    !x y:real['N]. (!z. (x dot z) = (y dot z)) <=> (x = y)
 Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC bool_ss[] THEN
@@ -546,7 +546,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* cf. ‘real_topology$linear’ (real_topologyTheory.linear) *)
-Definition linear_def :
+Definition linear_def:
    vec_linear (f:real['M]->real['N]) =
        ((!x y. f(x + y) = f(x) + f(y)) /\
         (!c x. f(c * x) = c * f(x)))
@@ -554,62 +554,62 @@ End
 
 Overload linear = “vec_linear :(real['M]->real['N])->bool”
 
-Theorem LINEAR_COMPOSE_CMUL :
+Theorem LINEAR_COMPOSE_CMUL:
    !(f:real['M]->real['N]) c. linear f ==> linear (\x. c * f(x))
 Proof
   SIMP_TAC bool_ss[linear_def] THEN REPEAT STRIP_TAC THEN VECTOR_ARITH_TAC
 QED
 
-Theorem LINEAR_COMPOSE_NEG :
+Theorem LINEAR_COMPOSE_NEG:
    !(f:real['M]->real['N]). linear f ==> linear (\x. ~(f(x)))
 Proof
   SIMP_TAC bool_ss[linear_def] THEN REPEAT STRIP_TAC THEN VECTOR_ARITH_TAC
 QED
 
-Theorem LINEAR_COMPOSE_ADD :
+Theorem LINEAR_COMPOSE_ADD:
    !(f:real['M]->real['N]) g. linear f /\ linear g ==> linear (\x. f(x) + g(x))
 Proof
   SIMP_TAC bool_ss[linear_def] THEN REPEAT STRIP_TAC THEN VECTOR_ARITH_TAC
 QED
 
-Theorem LINEAR_COMPOSE_SUB :
+Theorem LINEAR_COMPOSE_SUB:
    !(f:real['M]->real['N]) g. linear f /\ linear g ==> linear (\x. f(x) - g(x))
 Proof
   SIMP_TAC bool_ss[linear_def] THEN REPEAT STRIP_TAC THEN VECTOR_ARITH_TAC
 QED
 
-Theorem LINEAR_COMPOSE :
+Theorem LINEAR_COMPOSE:
    !(f:real['M]->real['N]) g. linear f /\ linear g ==> linear (g o f)
 Proof
   SIMP_TAC bool_ss[linear_def, o_THM]
 QED
 
-Theorem LINEAR_ID :
+Theorem LINEAR_ID:
    linear (\x. x:real['N])
 Proof
   REWRITE_TAC[linear_def] THEN BETA_TAC THEN REWRITE_TAC[]
 QED
 
-Theorem LINEAR_I :
+Theorem LINEAR_I:
    linear (I :real['N]->real['N])
 Proof
   REWRITE_TAC[I_DEF, K_DEF, S_DEF] THEN BETA_TAC THEN BETA_TAC THEN
   REWRITE_TAC[LINEAR_ID]
 QED
 
-Theorem LINEAR_ZERO :
+Theorem LINEAR_ZERO:
    linear ((\x. (vec 0)):real['M]->real['N])
 Proof
   REWRITE_TAC[linear_def] THEN CONJ_TAC THEN VECTOR_ARITH_TAC
 QED
 
-Theorem LINEAR_NEGATION :
+Theorem LINEAR_NEGATION:
    linear ((~) :real['N]->real['N])
 Proof
   REWRITE_TAC[linear_def] THEN VECTOR_ARITH_TAC
 QED
 
-Theorem LINEAR_COMPOSE_VSUM :
+Theorem LINEAR_COMPOSE_VSUM:
    !(f :'a->real['M]->real['N]) s.
          FINITE s /\ (!a. a IN s ==> linear(f a))
          ==> linear(\x. vsum s (\a. f a x))
@@ -622,7 +622,7 @@ Proof
   REWRITE_TAC [ETA_AX] THEN PROVE_TAC[]
 QED
 
-Theorem LINEAR_VMUL_COMPONENT :
+Theorem LINEAR_VMUL_COMPONENT:
    !(f:real['M]->real['N]) v k.
      linear f /\ k < dimindex(:'N)
      ==> linear (\x. f(x) ' k * v)
@@ -631,37 +631,37 @@ Proof
   REPEAT STRIP_TAC THEN VECTOR_ARITH_TAC
 QED
 
-Theorem LINEAR_0 :
+Theorem LINEAR_0:
    !(f:real['M]->real['N]). linear f ==> (f((vec 0)) = (vec 0))
 Proof
   PROVE_TAC[VECTOR_MUL_LZERO, linear_def]
 QED
 
-Theorem LINEAR_CMUL :
+Theorem LINEAR_CMUL:
    !(f:real['M]->real['N]) c x. linear f ==> (f(c * x) = c * f(x))
 Proof
   SIMP_TAC bool_ss[linear_def]
 QED
 
-Theorem LINEAR_NEG :
+Theorem LINEAR_NEG:
    !(f:real['M]->real['N]) x. linear f ==> (f(~x) = ~(f x))
 Proof
   ONCE_REWRITE_TAC[VECTOR_NEG_MINUS1] THEN SIMP_TAC bool_ss[LINEAR_CMUL]
 QED
 
-Theorem LINEAR_ADD :
+Theorem LINEAR_ADD:
    !(f:real['M]->real['N]) x y. linear f ==> (f(x + y) = f(x) + f(y))
 Proof
   SIMP_TAC bool_ss[linear_def]
 QED
 
-Theorem LINEAR_SUB :
+Theorem LINEAR_SUB:
    !(f:real['M]->real['N]) x y. linear f ==> (f(x - y) = f(x) - f(y))
 Proof
   SIMP_TAC bool_ss[VECTOR_SUB, LINEAR_ADD, LINEAR_NEG]
 QED
 
-Theorem LINEAR_VSUM :
+Theorem LINEAR_VSUM:
    !(f:real['M]->real['N]) g s. linear f /\ FINITE s ==> (f(vsum s g) = vsum s (f o g))
 Proof
   GEN_TAC THEN GEN_TAC THEN
@@ -672,7 +672,7 @@ Proof
     SIMP_TAC bool_ss[MATCH_MP LINEAR_0 th, MATCH_MP LINEAR_ADD th, o_THM])
 QED
 
-Theorem LINEAR_VSUM_MUL :
+Theorem LINEAR_VSUM_MUL:
    !(f:real['M]->real['N]) s c v.
         linear f /\ FINITE s
         ==> (f(vsum s (\i. c i * v i)) = vsum s (\i. c(i) * f(v i)))
@@ -680,7 +680,7 @@ Proof
   SIMP_TAC bool_ss[LINEAR_VSUM, o_DEF, LINEAR_CMUL]
 QED
 
-Theorem LINEAR_INJECTIVE_0 :
+Theorem LINEAR_INJECTIVE_0:
    !(f:real['M]->real['N]). linear f
        ==> ((!x y. (f(x) = f(y)) ==> (x = y)) <=>
             (!x. (f(x) = (vec 0)) ==> (x = (vec 0))))
@@ -690,7 +690,7 @@ Proof
   ASM_SIMP_TAC bool_ss[GSYM LINEAR_SUB] THEN PROVE_TAC[VECTOR_SUB_RZERO]
 QED
 
-Theorem SYMMETRIC_LINEAR_IMAGE :
+Theorem SYMMETRIC_LINEAR_IMAGE:
    !(f:real['M]->real['N]) s. (!x. x IN s ==> ~x IN s) /\ linear f
           ==> !x. x IN (IMAGE f s) ==> ~x IN (IMAGE f s)
 Proof
@@ -703,7 +703,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* cf. real_topologyTheory.bilinear *)
-Definition bilinear_def :
+Definition bilinear_def:
    vec_bilinear (h:real['M]->real['N]->real['P]) =
      ((!x. linear(\y. h x y)) /\ (!y. linear (\x. h x y)))
 End
@@ -711,75 +711,75 @@ End
 Overload "bilinear" = “vec_bilinear :(real['M]->real['N]->real['P])->bool”
 
 (* Below are simple bilinear properties directly ported from HOL-Light *)
-Theorem BILINEAR_SWAP :
+Theorem BILINEAR_SWAP:
    !(h:real['M]->real['N]->real['P]).
         bilinear(\x y. h y x) <=> bilinear h
 Proof
   SIMP_TAC bool_ss[bilinear_def, ETA_AX] THEN METIS_TAC []
 QED
 
-Theorem BILINEAR_LADD :
+Theorem BILINEAR_LADD:
    !(h:real['M]->real['N]->real['P]) x y z.
       bilinear h ==> h (x + y) z = (h x z) + (h y z)
 Proof
   SIMP_TAC bool_ss[bilinear_def, linear_def]
 QED
 
-Theorem BILINEAR_RADD :
+Theorem BILINEAR_RADD:
    !(h:real['M]->real['N]->real['P]) x y z.
       bilinear h ==> h x (y + z) = (h x y) + (h x z)
 Proof
   SIMP_TAC bool_ss[bilinear_def, linear_def]
 QED
 
-Theorem BILINEAR_LMUL :
+Theorem BILINEAR_LMUL:
    !(h:real['M]->real['N]->real['P]) c x y.
       bilinear h ==> h (c * x) y = c * (h x y)
 Proof
   SIMP_TAC bool_ss[bilinear_def, linear_def]
 QED
 
-Theorem BILINEAR_RMUL :
+Theorem BILINEAR_RMUL:
    !(h:real['M]->real['N]->real['P]) c x y.
       bilinear h ==> h x (c * y) = c * (h x y)
 Proof
   SIMP_TAC bool_ss[bilinear_def, linear_def]
 QED
 
-Theorem BILINEAR_LNEG :
+Theorem BILINEAR_LNEG:
    !(h:real['M]->real['N]->real['P]) x y. bilinear h ==> h (~x) y = ~(h x y)
 Proof
   ONCE_REWRITE_TAC[VECTOR_NEG_MINUS1] THEN SIMP_TAC bool_ss[BILINEAR_LMUL]
 QED
 
-Theorem BILINEAR_RNEG :
+Theorem BILINEAR_RNEG:
    !(h:real['M]->real['N]->real['P]) x y. bilinear h ==> h x (~y) = ~(h x y)
 Proof
   ONCE_REWRITE_TAC[VECTOR_NEG_MINUS1] THEN SIMP_TAC bool_ss[BILINEAR_RMUL]
 QED
 
-Theorem BILINEAR_LZERO :
+Theorem BILINEAR_LZERO:
    !(h:real['M]->real['N]->real['P]) x. bilinear h ==> h (vec 0) x = vec 0
 Proof
   ONCE_REWRITE_TAC[VECTOR_ARITH ``(x:real['M]) = vec 0 <=> x + x = x``] THEN
   SIMP_TAC bool_ss[GSYM BILINEAR_LADD, VECTOR_ADD_LID]
 QED
 
-Theorem BILINEAR_RZERO :
+Theorem BILINEAR_RZERO:
    !(h:real['M]->real['N]->real['P]) x. bilinear h ==> h x (vec 0) = vec 0
 Proof
   ONCE_REWRITE_TAC[VECTOR_ARITH ``(x:real['M]) = vec 0 <=> x + x = x``] THEN
   SIMP_TAC bool_ss[GSYM BILINEAR_RADD, VECTOR_ADD_LID]
 QED
 
-Theorem BILINEAR_LSUB :
+Theorem BILINEAR_LSUB:
    !(h:real['M]->real['N]->real['P]) x y z.
       bilinear h ==> h (x - y) z = (h x z) - (h y z)
 Proof
   SIMP_TAC bool_ss[VECTOR_SUB, BILINEAR_LNEG, BILINEAR_LADD]
 QED
 
-Theorem BILINEAR_RSUB :
+Theorem BILINEAR_RSUB:
    !(h:real['M]->real['N]->real['P]) x y z.
       bilinear h ==> h x (y - z) = (h x y) - (h x z)
 Proof
@@ -790,13 +790,13 @@ QED
 (* Adjoints.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-Definition adjoint_def :
+Definition adjoint_def:
    adjoint(f:real['M]->real['N]) = @f'. !x y. (f(x) dot y) = (x dot f'(y))
 End
 
 Overload ADJOINT[local] = “adjoint”
 
-Theorem ADJOINT_WORKS :
+Theorem ADJOINT_WORKS:
    !f:real['M]->real['N]. linear f ==> !x y. (f(x) dot y) = (x dot (adjoint f)(y))
 Proof
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[adjoint_def] THEN CONV_TAC SELECT_CONV THEN
@@ -824,14 +824,14 @@ Proof
   MATCH_MP_TAC SUM_EQ THEN SRW_TAC[FCP_ss][]
 QED
 
-Theorem ADJOINT_LINEAR :
+Theorem ADJOINT_LINEAR:
    !f:real['M]->real['N]. linear f ==> linear(adjoint f)
 Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[linear_def, GSYM VECTOR_EQ_LDOT] THEN
   ASM_SIMP_TAC bool_ss[DOT_RMUL, DOT_RADD, GSYM ADJOINT_WORKS]
 QED
 
-Theorem ADJOINT_CLAUSES :
+Theorem ADJOINT_CLAUSES:
    !f:real['M]->real['N].
      linear f ==> (!x y. (x dot (adjoint f)(y)) = (f(x) dot y)) /\
                   (!x y. ((adjoint f)(y) dot x) = (y dot f(x)))
@@ -839,13 +839,13 @@ Proof
   PROVE_TAC[ADJOINT_WORKS, DOT_SYM]
 QED
 
-Theorem ADJOINT_ADJOINT :
+Theorem ADJOINT_ADJOINT:
    !f:real['M]->real['N]. linear f ==> (adjoint(adjoint f) = f)
 Proof
   SIMP_TAC bool_ss[FUN_EQ_THM, GSYM VECTOR_EQ_LDOT, ADJOINT_CLAUSES, ADJOINT_LINEAR]
 QED
 
-Theorem ADJOINT_UNIQUE :
+Theorem ADJOINT_UNIQUE:
    !(f:real['M]->real['N]) f'. linear f /\ (!x y. (f'(x) dot y) = (x dot f(y)))
           ==> (f' = adjoint f)
 Proof
@@ -857,7 +857,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* cf. real_topologyTheory.subspace *)
-Definition subspace_def :
+Definition subspace_def:
    vector_subspace s =
        ((vec 0) IN s /\
         (!x y. x IN s /\ y IN s ==> (x + y) IN s) /\
@@ -867,17 +867,17 @@ End
 Theorem hull_def = topologyTheory.hull;
 
 (* cf. real_topologyTheory.span *)
-Definition span_def :
+Definition span_def:
    vector_span s = (vector_subspace hull s)
 End
 
 (* cf. real_topologyTheory.dependent *)
-Definition dependent_def :
+Definition dependent_def:
    vector_dependent s = (?a. a IN s /\ a IN vector_span(s DELETE a))
 End
 
 (* cf. real_topologyTheory.independent *)
-Definition independent_def :
+Definition independent_def:
    vector_independent s = ~(vector_dependent s)
 End
 
@@ -890,49 +890,49 @@ Overload independent = “vector_independent”
 (* Closure properties of subspaces.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SUBSPACE_UNIV :
+Theorem SUBSPACE_UNIV:
    subspace(UNIV:real['N]->bool)
 Proof
   REWRITE_TAC[subspace_def, IN_UNIV]
 QED
 
-Theorem SUBSPACE_IMP_NONEMPTY :
+Theorem SUBSPACE_IMP_NONEMPTY:
    !(s :real['N]->bool). subspace s ==> ~(s = {})
 Proof
   REWRITE_TAC[subspace_def] THEN PROVE_TAC[NOT_IN_EMPTY]
 QED
 
-Theorem SUBSPACE_0 :
+Theorem SUBSPACE_0:
    !(s :real['N]->bool). subspace s ==> (vec 0) IN s
 Proof
   SIMP_TAC bool_ss[subspace_def]
 QED
 
-Theorem SUBSPACE_ADD :
+Theorem SUBSPACE_ADD:
    !x y (s :real['N]->bool). subspace s /\ x IN s /\ y IN s ==> (x + y) IN s
 Proof
   SIMP_TAC bool_ss[subspace_def]
 QED
 
-Theorem SUBSPACE_MUL :
+Theorem SUBSPACE_MUL:
    !x c (s :real['N]->bool). subspace s /\ x IN s ==> (c * x) IN s
 Proof
   SIMP_TAC bool_ss[subspace_def]
 QED
 
-Theorem SUBSPACE_NEG :
+Theorem SUBSPACE_NEG:
    !x (s :real['N]->bool). subspace s /\ x IN s ==> (~x) IN s
 Proof
   SIMP_TAC bool_ss[VECTOR_ARITH ``~x:real['N] = -(&1) * x``, SUBSPACE_MUL]
 QED
 
-Theorem SUBSPACE_SUB :
+Theorem SUBSPACE_SUB:
    !x y (s :real['N]->bool). subspace s /\ x IN s /\ y IN s ==> (x - y) IN s
 Proof
   SIMP_TAC bool_ss[VECTOR_SUB, SUBSPACE_ADD, SUBSPACE_NEG]
 QED
 
-Theorem SUBSPACE_VSUM :
+Theorem SUBSPACE_VSUM:
    !(s :real['N]->bool) f t. subspace s /\ FINITE t /\ (!x. x IN t ==> f(x) IN s)
            ==> (vsum t f) IN s
 Proof
@@ -942,7 +942,7 @@ Proof
   ASM_SIMP_TAC bool_ss[VSUM_CLAUSES, SUBSPACE_0, IN_INSERT, SUBSPACE_ADD]
 QED
 
-Theorem SUBSPACE_LINEAR_IMAGE :
+Theorem SUBSPACE_LINEAR_IMAGE:
    !f (s :real['N]->bool). linear f /\ subspace s ==> subspace(IMAGE f s)
 Proof
   SIMP_TAC bool_ss[subspace_def, GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
@@ -950,7 +950,7 @@ Proof
   PROVE_TAC[linear_def, LINEAR_0]
 QED
 
-Theorem SUBSPACE_LINEAR_PREIMAGE :
+Theorem SUBSPACE_LINEAR_PREIMAGE:
    !f (s :real['N]->bool). linear f /\ subspace s ==> subspace {x | f(x) IN s}
 Proof
   SIMP_TAC bool_ss[subspace_def, GSPEC_ETA, IN_ABS] THEN
@@ -961,26 +961,26 @@ QED
 (* Lemmas.                                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPAN_SPAN :
+Theorem SPAN_SPAN:
    !(s :real['N]->bool). span(span s) = span s
 Proof
   REWRITE_TAC[span_def, HULL_HULL]
 QED
 
-Theorem SPAN_MONO :
+Theorem SPAN_MONO:
    !(s :real['N]->bool) t. s SUBSET t ==> span s SUBSET span t
 Proof
   REWRITE_TAC[span_def, HULL_MONO]
 QED
 
-Theorem SUBSPACE_SPAN :
+Theorem SUBSPACE_SPAN:
    !(s :real['N]->bool). subspace(span s)
 Proof
   GEN_TAC THEN REWRITE_TAC[span_def] THEN MATCH_MP_TAC P_HULL THEN
   SIMP_TAC bool_ss[subspace_def, IN_BIGINTER]
 QED
 
-Theorem SPAN_CLAUSES :
+Theorem SPAN_CLAUSES:
    (!a s. a IN (s :real['N]->bool) ==> a IN span s) /\
    ((vec 0) IN span (s :real['N]->bool)) /\
    (!x y s. x IN span (s :real['N]->bool) /\ y IN span s ==> (x + y) IN span s) /\
@@ -989,14 +989,14 @@ Proof
   PROVE_TAC[span_def, HULL_SUBSET, SUBSET_DEF, SUBSPACE_SPAN, subspace_def]
 QED
 
-Theorem SPAN_INDUCT :
+Theorem SPAN_INDUCT:
    !(s :real['N]->bool) h.
        (!x. x IN s ==> x IN h) /\ subspace h ==> !x. x IN span(s) ==> h(x)
 Proof
   REWRITE_TAC[span_def] THEN PROVE_TAC[SUBSET_DEF, HULL_MINIMAL, IN_DEF]
 QED
 
-Theorem SPAN_EMPTY :
+Theorem SPAN_EMPTY:
    span ({} :real['N]->bool) = {(vec 0)}
 Proof
   REWRITE_TAC[span_def] THEN MATCH_MP_TAC HULL_UNIQUE THEN
@@ -1004,40 +1004,40 @@ Proof
   REPEAT STRIP_TAC THEN VECTOR_ARITH_TAC
 QED
 
-Theorem INDEPENDENT_EMPTY :
+Theorem INDEPENDENT_EMPTY:
    independent ({} :real['N]->bool)
 Proof
   REWRITE_TAC[independent_def, dependent_def, NOT_IN_EMPTY]
 QED
 
-Theorem INDEPENDENT_NONZERO :
+Theorem INDEPENDENT_NONZERO:
    !s. independent (s :real['N]->bool) ==> ~((vec 0) IN s)
 Proof
   REWRITE_TAC[independent_def, dependent_def] THEN PROVE_TAC[SPAN_CLAUSES]
 QED
 
 (* NOTE: this proof is a bit slow *)
-Theorem INDEPENDENT_MONO :
+Theorem INDEPENDENT_MONO:
    !s t:real['N]->bool. independent t /\ s SUBSET t ==> independent s
 Proof
   REWRITE_TAC[independent_def, dependent_def] THEN
   PROVE_TAC[SPAN_MONO, SUBSET_DEF, IN_DELETE]
 QED
 
-Theorem DEPENDENT_MONO :
+Theorem DEPENDENT_MONO:
    !s t:real['N]->bool. dependent s /\ s SUBSET t ==> dependent t
 Proof
   ONCE_REWRITE_TAC[TAUT `p /\ q ==> r <=> ~r /\ q ==> ~p`] THEN
   REWRITE_TAC[GSYM independent_def, INDEPENDENT_MONO]
 QED
 
-Theorem SPAN_SUBSPACE :
+Theorem SPAN_SUBSPACE:
    !b s:real['N]->bool. b SUBSET s /\ s SUBSET (span b) /\ subspace s ==> (span b = s)
 Proof
   PROVE_TAC[SUBSET_ANTISYM, span_def, HULL_MINIMAL]
 QED
 
-Theorem SPAN_INDUCT_ALT :
+Theorem SPAN_INDUCT_ALT:
    !(s :real['N]->bool) h. h((vec 0)) /\
          (!c x y. x IN s /\ h(y) ==> h(c * x + y))
           ==> !x:real['N]. x IN span(s) ==> h(x)
@@ -1060,49 +1060,49 @@ QED
 (* Individual closure properties.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPAN_SUPERSET :
+Theorem SPAN_SUPERSET:
    !x. x IN (s :real['N]->bool) ==> x IN span s
 Proof
   PROVE_TAC[SPAN_CLAUSES]
 QED
 
-Theorem SPAN_INC :
+Theorem SPAN_INC:
    !s. s SUBSET span (s :real['N]->bool)
 Proof
   REWRITE_TAC[SUBSET_DEF, SPAN_SUPERSET]
 QED
 
-Theorem SPAN_UNION_SUBSET :
+Theorem SPAN_UNION_SUBSET:
    !(s :real['N]->bool) t. span s UNION span t SUBSET span(s UNION t)
 Proof
   REWRITE_TAC[span_def, HULL_UNION_SUBSET]
 QED
 
-Theorem SPAN_UNIV :
+Theorem SPAN_UNIV:
    span(UNIV:real['N]->bool) = (UNIV:real['N]->bool)
 Proof
   SIMP_TAC bool_ss[SPAN_INC, (prove(“UNIV SUBSET s ==> (s = UNIV)”, PROVE_TAC[UNIV_SUBSET]))]
 QED
 
-Theorem SPAN_0 :
+Theorem SPAN_0:
    (vec 0) IN span (s :real['N]->bool)
 Proof
   PROVE_TAC[SUBSPACE_SPAN, SUBSPACE_0]
 QED
 
-Theorem SPAN_ADD :
+Theorem SPAN_ADD:
    !x y (s :real['N]->bool). x IN span s /\ y IN span s ==> (x + y) IN span s
 Proof
   PROVE_TAC[SUBSPACE_SPAN, SUBSPACE_ADD]
 QED
 
-Theorem SPAN_MUL :
+Theorem SPAN_MUL:
    !x c s. x IN span s ==> (c * x) IN span (s :real['N]->bool)
 Proof
   PROVE_TAC[SUBSPACE_SPAN, SUBSPACE_MUL]
 QED
 
-Theorem SPAN_MUL_EQ :
+Theorem SPAN_MUL_EQ:
    !x:real['N] c s. ~(c = &0) ==> ((c * x) IN span s <=> x IN span s)
 Proof
   REPEAT(STRIP_TAC ORELSE EQ_TAC) THEN ASM_SIMP_TAC bool_ss[SPAN_MUL] THEN
@@ -1111,38 +1111,38 @@ Proof
     ASM_SIMP_TAC bool_ss[REAL_MUL_LINV, VECTOR_MUL_LID]]
 QED
 
-Theorem SPAN_NEG :
+Theorem SPAN_NEG:
    !x s. x IN span s ==> (~x) IN span (s :real['N]->bool)
 Proof
   PROVE_TAC[SUBSPACE_SPAN, SUBSPACE_NEG]
 QED
 
-Theorem SPAN_NEG_EQ :
+Theorem SPAN_NEG_EQ:
    !x s. ~x IN span s <=> x IN span (s :real['N]->bool)
 Proof
   PROVE_TAC[SPAN_NEG, VECTOR_NEG_NEG]
 QED
 
-Theorem SPAN_SUB :
+Theorem SPAN_SUB:
    !x y s. x IN span s /\ y IN span s ==> (x - y) IN span (s :real['N]->bool)
 Proof
   PROVE_TAC[SUBSPACE_SPAN, SUBSPACE_SUB]
 QED
 
-Theorem SPAN_VSUM :
+Theorem SPAN_VSUM:
    !s f t. FINITE t /\ (!x. x IN t ==> f(x) IN span(s))
            ==> (vsum t f) IN span (s :real['N]->bool)
 Proof
   PROVE_TAC[SUBSPACE_SPAN, SUBSPACE_VSUM]
 QED
 
-Theorem SPAN_ADD_EQ :
+Theorem SPAN_ADD_EQ:
    !(s :real['N]->bool) x y. x IN span s ==> ((x + y) IN span s <=> y IN span s)
 Proof
   PROVE_TAC[SPAN_ADD, SPAN_SUB, VECTOR_ARITH ``(x + y) - x:real['N] = y``]
 QED
 
-Theorem SPAN_EQ_SELF :
+Theorem SPAN_EQ_SELF:
    !s. (span s = s) <=> subspace (s :real['N]->bool)
 Proof
   GEN_TAC THEN EQ_TAC THENL [PROVE_TAC[SUBSPACE_SPAN], ALL_TAC] THEN
@@ -1150,13 +1150,13 @@ Proof
   ASM_REWRITE_TAC[SUBSET_REFL, SPAN_INC]
 QED
 
-Theorem SPAN_SUBSET_SUBSPACE :
+Theorem SPAN_SUBSET_SUBSPACE:
    !s t:real['N]->bool. s SUBSET t /\ subspace t ==> span s SUBSET t
 Proof
   PROVE_TAC[SPAN_MONO, SPAN_EQ_SELF]
 QED
 
-Theorem SUBSPACE_TRANSLATION_SELF :
+Theorem SUBSPACE_TRANSLATION_SELF:
    !(s :real['N]->bool) a. subspace s /\ a IN s ==> (IMAGE (\x. a + x) s = s)
 Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM IMAGE_SURJ, SURJ_DEF] THEN
@@ -1166,7 +1166,7 @@ Proof
             SPAN_SUPERSET,SPAN_SUB, EXISTS_REFL]
 QED
 
-Theorem SUBSPACE_TRANSLATION_SELF_EQ :
+Theorem SUBSPACE_TRANSLATION_SELF_EQ:
    !s a:real['N]. subspace s ==> ((IMAGE (\x. a + x) s = s) <=> a IN s)
 Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN
@@ -1177,7 +1177,7 @@ Proof
   PROVE_TAC[subspace_def, VECTOR_ADD_RID]
 QED
 
-Theorem SUBSPACE_SUMS :
+Theorem SUBSPACE_SUMS:
    !s t. subspace s /\ subspace t
          ==> subspace {x + y | x IN s /\ y IN t}
 Proof
@@ -1192,7 +1192,7 @@ Proof
         REWRITE_TAC[VECTOR_ADD_LDISTRIB] THEN PROVE_TAC[]]
 QED
 
-Theorem SPAN_UNION :
+Theorem SPAN_UNION:
    !s t. span(s UNION t) = {x + y:real['N] | x IN span s /\ y IN span t}
 Proof
   REPEAT GEN_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
@@ -1216,7 +1216,7 @@ QED
 (* Mapping under linear image.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPAN_LINEAR_IMAGE :
+Theorem SPAN_LINEAR_IMAGE:
    !f:real['M]->real['N] s. linear f ==> (span(IMAGE f s) = IMAGE f (span s))
 Proof
   REPEAT STRIP_TAC THEN GEN_REWRITE_TAC I empty_rewrites[EXTENSION] THEN
@@ -1236,7 +1236,7 @@ QED
 (* The key breakdown property.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPAN_BREAKDOWN :
+Theorem SPAN_BREAKDOWN:
    !b s a:real['N].
       b IN s /\ a IN span s ==> ?k. (a - k * b) IN span(s DELETE b)
 Proof
@@ -1250,7 +1250,7 @@ Proof
     (c * x - (c * k) * y = c * (x - k * y))``]
 QED
 
-Theorem SPAN_BREAKDOWN_EQ :
+Theorem SPAN_BREAKDOWN_EQ:
    !a:real['N] s. (x IN span(a INSERT s) <=> (?k. (x - k * a) IN span s))
 Proof
   REPEAT STRIP_TAC THEN EQ_TAC THENL
@@ -1266,13 +1266,13 @@ Proof
     PROVE_TAC[SPAN_MONO, SUBSET_DEF, IN_INSERT, SPAN_CLAUSES]]
 QED
 
-Theorem SPAN_INSERT_0 :
+Theorem SPAN_INSERT_0:
    !s. span((vec 0) INSERT s) = span (s :real['N]->bool)
 Proof
   SIMP_TAC bool_ss[EXTENSION, SPAN_BREAKDOWN_EQ, VECTOR_MUL_RZERO, VECTOR_SUB_RZERO]
 QED
 
-Theorem SPAN_SING :
+Theorem SPAN_SING:
    !(a :real['N]). span {a} = {u * a | u IN (UNIV:real set)}
 Proof
   REWRITE_TAC[EXTENSION, SPAN_BREAKDOWN_EQ, SPAN_EMPTY] THEN
@@ -1284,7 +1284,7 @@ QED
 (* Hence some "reversal" results.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem IN_SPAN_INSERT :
+Theorem IN_SPAN_INSERT:
    !a b:real['N] s.
         a IN span(b INSERT s) /\ ~(a IN span s) ==> b IN span(a INSERT s)
 Proof
@@ -1302,7 +1302,7 @@ Proof
   PROVE_TAC[SPAN_CLAUSES, IN_INSERT, SUBSET_DEF, IN_DELETE, SPAN_MONO]
 QED
 
-Theorem IN_SPAN_DELETE :
+Theorem IN_SPAN_DELETE:
    !a b (s :real['N]->bool).
          a IN span s /\ ~(a IN span (s DELETE b))
          ==> b IN span (a INSERT (s DELETE b))
@@ -1310,7 +1310,7 @@ Proof
   PROVE_TAC[IN_SPAN_INSERT, SPAN_MONO, SUBSET_DEF, IN_INSERT, IN_DELETE]
 QED
 
-Theorem EQ_SPAN_INSERT_EQ :
+Theorem EQ_SPAN_INSERT_EQ:
    !s x y:real['N]. (x - y) IN span s ==> (span(x INSERT s) = span(y INSERT s))
 Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[SPAN_BREAKDOWN_EQ, EXTENSION] THEN
@@ -1323,7 +1323,7 @@ QED
 (* Transitivity property.                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPAN_TRANS :
+Theorem SPAN_TRANS:
    !x y:real['N] s. x IN span(s) /\ y IN span(x INSERT s) ==> y IN span(s)
 Proof
   REPEAT STRIP_TAC THEN
@@ -1340,7 +1340,7 @@ QED
 (* An explicit expansion is sometimes needed.                                *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPAN_EXPLICIT :
+Theorem SPAN_EXPLICIT:
    !(p:real['N] -> bool).
         span p =
          {y | ?s u. FINITE s /\ s SUBSET p /\
@@ -1376,7 +1376,7 @@ Proof
   MATCH_MP_TAC VSUM_EQ THEN BETA_TAC THEN PROVE_TAC[IN_DELETE]
 QED
 
-Theorem DEPENDENT_EXPLICIT :
+Theorem DEPENDENT_EXPLICIT:
    !p. dependent (p:real['N]-> bool) <=>
                 ?s u. FINITE s /\ s SUBSET p /\
                       (?v. v IN s /\ ~(u v = &0)) /\
@@ -1409,7 +1409,7 @@ Proof
           PROVE_TAC[SUBSET_DEF, SUBSET_DELETE_BOTH]]]
 QED
 
-Theorem DEPENDENT_FINITE :
+Theorem DEPENDENT_FINITE:
    !s:real['N]->bool.
         FINITE s
         ==> (dependent s <=> ?u. (?v. v IN s /\ ~(u v = &0)) /\
@@ -1431,7 +1431,7 @@ Proof
     ASM_REWRITE_TAC[SUBSET_REFL]]
 QED
 
-Theorem SPAN_FINITE :
+Theorem SPAN_FINITE:
    !s:real['N]->bool.
         FINITE s ==> (span s = {y | ?u. vsum s (\v. u v * v) = y})
 Proof
@@ -1455,7 +1455,7 @@ QED
 (* Standard bases are a spanning set, and obviously finite.                  *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPAN_STDBASIS :
+Theorem SPAN_STDBASIS:
    span {basis i :real['N] | i < dimindex(:'N)} = UNIV
 Proof
   REWRITE_TAC[EXTENSION, IN_UNIV] THEN Q.X_GEN_TAC `x:real['N]` THEN
@@ -1468,7 +1468,7 @@ QED
 
 Theorem HAS_SIZE_def[local] = HAS_SIZE
 
-Theorem HAS_SIZE_STDBASIS :
+Theorem HAS_SIZE_STDBASIS:
    {basis i :real['N] | i < dimindex(:'N)} HAS_SIZE dimindex(:'N)
 Proof
   SIMP_TAC bool_ss[Once (Q.prove(`{f x | P x} = IMAGE f {x | P x}`,
@@ -1480,19 +1480,19 @@ Proof
   PROVE_TAC[BASIS_INJ]
 QED
 
-Theorem FINITE_STDBASIS :
+Theorem FINITE_STDBASIS:
    FINITE {basis i :real['N] |i < dimindex(:'N)}
 Proof
   PROVE_TAC[HAS_SIZE_STDBASIS, HAS_SIZE_def]
 QED
 
-Theorem CARD_STDBASIS :
+Theorem CARD_STDBASIS:
    CARD {basis i :real['N] |i < dimindex(:'N)} = dimindex(:'N)
 Proof
    PROVE_TAC[HAS_SIZE_STDBASIS, HAS_SIZE_def]
 QED
 
-Theorem IN_SPAN_IMAGE_BASIS :
+Theorem IN_SPAN_IMAGE_BASIS:
    !x:real['N] s.
         x IN span(IMAGE basis s) <=>
           !i. i < dimindex(:'N) /\ ~(i IN s) ==>(x ' i = &0)
@@ -1528,7 +1528,7 @@ QED
 (* This is useful for building a basis step-by-step.                         *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem INDEPENDENT_STDBASIS :
+Theorem INDEPENDENT_STDBASIS:
    independent {basis i :real['N] | i < dimindex(:'N)}
 Proof
   SIMP_TAC std_ss[
@@ -1550,7 +1550,7 @@ Proof
   ASM_SIMP_TAC bool_ss[IN_DELETE, BASIS_COMPONENT, REAL_OF_NUM_EQ] THEN ARITH_TAC
 QED
 
-Theorem INDEPENDENT_INSERT :
+Theorem INDEPENDENT_INSERT:
    !a:real['N] s. independent(a INSERT s) <=>
                   if a IN s then independent s
                   else independent s /\ ~(a IN span s)
@@ -1576,7 +1576,7 @@ QED
 (* The degenerate case of the Exchange Lemma.                                *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPANNING_SUBSET_INDEPENDENT :
+Theorem SPANNING_SUBSET_INDEPENDENT:
    !s t:real['N]->bool.
         t SUBSET s /\ independent s /\ s SUBSET span(t) ==> (s = t)
 Proof
@@ -1593,7 +1593,7 @@ QED
 (* The general case of the Exchange Lemma, the key to what follows.          *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem EXCHANGE_LEMMA :
+Theorem EXCHANGE_LEMMA:
    !s t:real['N]->bool.
         FINITE t /\ independent s /\ s SUBSET span t
         ==> ?t'. (t' HAS_SIZE (CARD t)) /\
@@ -1673,7 +1673,7 @@ QED
 (* This implies corresponding size bounds.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem INDEPENDENT_SPAN_BOUND :
+Theorem INDEPENDENT_SPAN_BOUND:
    !(s :real['N]->bool) t. FINITE t /\ independent s /\ s SUBSET span(t)
          ==> FINITE s /\ CARD(s) <= CARD(t)
 Proof
@@ -1682,7 +1682,7 @@ Proof
   PROVE_TAC[HAS_SIZE_def, CARD_SUBSET, SUBSET_FINITE]
 QED
 
-Theorem INDEPENDENT_BOUND :
+Theorem INDEPENDENT_BOUND:
    !s:real['N]->bool.
         independent s ==> FINITE s /\ CARD(s) <= dimindex(:'N)
 Proof
@@ -1692,14 +1692,14 @@ Proof
   ASM_REWRITE_TAC[FINITE_STDBASIS, SPAN_STDBASIS, SUBSET_UNIV]
 QED
 
-Theorem DEPENDENT_BIGGERSET :
+Theorem DEPENDENT_BIGGERSET:
    !s:real['N]->bool. (FINITE s ==> CARD(s) > dimindex(:'N)) ==> dependent s
 Proof
   MP_TAC INDEPENDENT_BOUND THEN HO_MATCH_MP_TAC MONO_ALL THEN
   PROVE_TAC[GREATER_DEF, NOT_LESS, independent_def]
 QED
 
-Theorem INDEPENDENT_IMP_FINITE :
+Theorem INDEPENDENT_IMP_FINITE:
    !s:real['N]->bool. independent s ==> FINITE s
 Proof
   SIMP_TAC bool_ss[INDEPENDENT_BOUND]
@@ -1709,7 +1709,7 @@ QED
 (* Explicit formulation of independence.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem INDEPENDENT_EXPLICIT :
+Theorem INDEPENDENT_EXPLICIT:
    !b:real['N]->bool.
         independent b <=>
             FINITE b /\
@@ -1727,7 +1727,7 @@ QED
 (* Hence we can create a maximal independent subset.                         *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem MAXIMAL_INDEPENDENT_SUBSET_EXTEND :
+Theorem MAXIMAL_INDEPENDENT_SUBSET_EXTEND:
    !s v:real['N]->bool.
         s SUBSET v /\ independent s
         ==> ?b. s SUBSET b /\ b SUBSET v /\ independent b /\
@@ -1758,7 +1758,7 @@ Proof
   PROVE_TAC[SPAN_SUPERSET, ADD1, SUB_PLUS]
 QED
 
-Theorem MAXIMAL_INDEPENDENT_SUBSET :
+Theorem MAXIMAL_INDEPENDENT_SUBSET:
    !v:real['N]->bool. ?b. b SUBSET v /\ independent b /\ v SUBSET (span b)
 Proof
   MP_TAC(SPEC ``EMPTY:real['N]->bool`` MAXIMAL_INDEPENDENT_SUBSET_EXTEND) THEN
@@ -1769,7 +1769,7 @@ QED
 (* Notion of dimension.                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-Definition dim_def :
+Definition dim_def:
    vector_dim (v :real['N] -> bool) =
             @n. ?b. b SUBSET v /\ independent b /\ v SUBSET (span b) /\
                    (b HAS_SIZE n)
@@ -1778,7 +1778,7 @@ End
 (* cf. real_topologyTheory.dim *)
 Overload dim = “vector_dim”
 
-Theorem BASIS_EXISTS :
+Theorem BASIS_EXISTS:
    !v. ?b. b SUBSET v /\ independent b /\ v SUBSET (span b) /\
            (b HAS_SIZE (dim v))
 Proof
@@ -1786,7 +1786,7 @@ Proof
   PROVE_TAC[MAXIMAL_INDEPENDENT_SUBSET, HAS_SIZE_def, INDEPENDENT_BOUND]
 QED
 
-Theorem BASIS_EXISTS_FINITE :
+Theorem BASIS_EXISTS_FINITE:
    !v. ?b. FINITE b /\
            b SUBSET v /\
            independent b /\
@@ -1796,7 +1796,7 @@ Proof
   PROVE_TAC[BASIS_EXISTS, INDEPENDENT_IMP_FINITE]
 QED
 
-Theorem BASIS_SUBSPACE_EXISTS :
+Theorem BASIS_SUBSPACE_EXISTS:
    !s:real['N]->bool.
         subspace s
         ==> ?b. FINITE b /\
@@ -1816,14 +1816,14 @@ QED
 (* Consequences of independence or spanning for cardinality.                 *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem INDEPENDENT_CARD_LE_DIM :
+Theorem INDEPENDENT_CARD_LE_DIM:
    !v b:real['N]->bool.
         b SUBSET v /\ independent b ==> FINITE b /\ CARD(b) <= dim v
 Proof
   PROVE_TAC[BASIS_EXISTS, INDEPENDENT_SPAN_BOUND, HAS_SIZE_def, SUBSET_TRANS]
 QED
 
-Theorem SPAN_CARD_GE_DIM :
+Theorem SPAN_CARD_GE_DIM:
    !v b:real['N]->bool.
         v SUBSET (span b) /\ FINITE b ==> dim(v) <= CARD(b)
 Proof
@@ -1834,7 +1834,7 @@ QED
 (* Converses to those.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem CARD_GE_DIM_INDEPENDENT :
+Theorem CARD_GE_DIM_INDEPENDENT:
    !v b:real['N]->bool.
         b SUBSET v /\ independent b /\ dim v <= CARD(b)
         ==> v SUBSET (span b)
@@ -1852,7 +1852,7 @@ Proof
     `x <= y ==> ~(SUC y <= x)`, ARITH_TAC)]
 QED
 
-Theorem CARD_LE_DIM_SPANNING :
+Theorem CARD_LE_DIM_SPANNING:
    !v b:real['N]->bool.
         v SUBSET (span b) /\ FINITE b /\ CARD(b) <= dim v
         ==> independent b
@@ -1875,7 +1875,7 @@ QED
 (* More general size bound lemmas.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPANS_IMAGE :
+Theorem SPANS_IMAGE:
    !f b v. linear f /\ v SUBSET (span b)
            ==> (IMAGE f v) SUBSET span(IMAGE f b)
 Proof
@@ -1886,7 +1886,7 @@ QED
 (* Relation between bases and injectivity/surjectivity of map.               *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPANNING_SURJECTIVE_IMAGE :
+Theorem SPANNING_SURJECTIVE_IMAGE:
    !f:real['M]->real['N] s.
         UNIV SUBSET (span s) /\ linear f /\ (!y. ?x. f(x) = y)
         ==> UNIV SUBSET span(IMAGE f s)
@@ -1897,7 +1897,7 @@ Proof
   REWRITE_TAC[SUBSET_DEF, IN_UNIV, IN_IMAGE] THEN PROVE_TAC[]
 QED
 
-Theorem INDEPENDENT_INJECTIVE_IMAGE_GEN :
+Theorem INDEPENDENT_INJECTIVE_IMAGE_GEN:
    !f:real['M]->real['N] s.
         independent s /\ linear f /\
         (!x y. x IN span s /\ y IN span s /\ (f(x) = f(y)) ==> (x = y))
@@ -1930,7 +1930,7 @@ Proof
     PROVE_TAC[SPAN_SUPERSET, SUBSET_DEF]]
 QED
 
-Theorem INDEPENDENT_INJECTIVE_IMAGE :
+Theorem INDEPENDENT_INJECTIVE_IMAGE:
    !f:real['M]->real['N] s.
         independent s /\ linear f /\ (!x y. (f(x) = f(y)) ==> (x = y))
         ==> independent (IMAGE f s)
@@ -1943,7 +1943,7 @@ QED
 (* We can extend a linear basis-basis injection to the whole set.            *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem LINEAR_INDEP_IMAGE_LEMMA :
+Theorem LINEAR_INDEP_IMAGE_LEMMA:
    !f b. linear(f:real['M]->real['N]) /\
          FINITE b /\
          independent (IMAGE f b) /\
@@ -2001,7 +2001,7 @@ QED
 (* We can extend a linear mapping from basis.                                *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem LINEAR_INDEPENDENT_EXTEND_LEMMA :
+Theorem LINEAR_INDEPENDENT_EXTEND_LEMMA:
    !f b. FINITE b
          ==> independent b
              ==> ?g:real['M]->real['N].
@@ -2084,7 +2084,7 @@ Proof
   PROVE_TAC[SUBSET_DEF, IN_INSERT, SPAN_SUPERSET]
 QED
 
-Theorem LINEAR_INDEPENDENT_EXTEND :
+Theorem LINEAR_INDEPENDENT_EXTEND:
    !f b. independent b
          ==> ?g:real['M]->real['N]. linear g /\ (!x. x IN b ==> (g x = f x))
 Proof
@@ -2104,7 +2104,7 @@ QED
 (* Linear functions are equal on a subspace if they are on a spanning set.   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SUBSPACE_KERNEL :
+Theorem SUBSPACE_KERNEL:
    !f. linear f ==> subspace {x | f(x) = (vec 0)}
 Proof
   SIMP_TAC bool_ss[subspace_def, GSPEC_ETA, IN_ABS] THEN
@@ -2115,7 +2115,7 @@ QED
 (* |- (a <=> b) ==> a ==> b *)
 Theorem EQ_IMP[local] = Q.SPECL [‘a’, ‘b’] EQ_IMPLIES
 
-Theorem LINEAR_EQ_0_SPAN :
+Theorem LINEAR_EQ_0_SPAN:
    !f:real['M]->real['N] b.
         linear f /\ (!x. x IN b ==> (f(x) = (vec 0)))
         ==> !x. x IN span(b) ==> (f(x) = (vec 0))
@@ -2127,7 +2127,7 @@ Proof
   AP_TERM_TAC THEN ASM_SIMP_TAC bool_ss[EXTENSION, GSPEC_ETA, IN_ABS]
 QED
 
-Theorem LINEAR_EQ_0 :
+Theorem LINEAR_EQ_0:
    !f b (s :real['N]->bool).
            linear f /\ s SUBSET (span b) /\ (!x. x IN b ==> (f(x) = (vec 0)))
            ==> !x. x IN s ==> (f(x) = (vec 0))
@@ -2135,7 +2135,7 @@ Proof
   PROVE_TAC[LINEAR_EQ_0_SPAN, SUBSET_DEF]
 QED
 
-Theorem LINEAR_EQ :
+Theorem LINEAR_EQ:
    !f g b (s :real['N]->bool). linear f /\ linear g /\ s SUBSET (span b) /\
              (!x. x IN b ==> (f(x) = g(x)))
               ==> !x. x IN s ==> (f(x) = g(x))
@@ -2145,7 +2145,7 @@ Proof
   METIS_TAC[LINEAR_COMPOSE_SUB]
 QED
 
-Theorem LINEAR_EQ_STDBASIS :
+Theorem LINEAR_EQ_STDBASIS:
    !f:real['M]->real['N] g.
         linear f /\ linear g /\
         (!i. i < dimindex(:'M)
@@ -2165,7 +2165,7 @@ QED
 (* An injective map real^N->real^N is also surjective.                       *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem LINEAR_INJECTIVE_IMP_SURJECTIVE :
+Theorem LINEAR_INJECTIVE_IMP_SURJECTIVE:
    !f:real['N]->real['N].
         linear f /\ (!x y. (f(x) = f(y)) ==> (x = y))
         ==> !y. ?x. f(x) = y
@@ -2186,7 +2186,7 @@ QED
 (* And vice versa.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem LINEAR_SURJECTIVE_IMP_INJECTIVE :
+Theorem LINEAR_SURJECTIVE_IMP_INJECTIVE:
    !f:real['N]->real['N].
         linear f /\ (!y. ?x. f(x) = y)
         ==> !x y. (f(x) = f(y)) ==> (x = y)
@@ -2225,7 +2225,7 @@ Proof
   SIMP_TAC bool_ss[FORALL_IN_IMAGE] THEN PROVE_TAC[]
 QED
 
-Theorem LINEAR_SURJECTIVE_IFF_INJECTIVE :
+Theorem LINEAR_SURJECTIVE_IFF_INJECTIVE:
    !f:real['N]->real['N].
       linear f ==> ((!y. ?x. f x = y) <=> (!x y. (f x = f y) ==> (x = y)))
 Proof
@@ -2238,19 +2238,19 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* cf. permutationTheory.INVERSE_UNIQUE_o *)
-Theorem LEFT_RIGHT_INVERSE_EQ :
+Theorem LEFT_RIGHT_INVERSE_EQ:
    !f:'a->'a g h. (f o g = I) /\ (g o h = I) ==> (f = h)
 Proof
   PROVE_TAC[o_ASSOC, I_o_ID]
 QED
 
-Theorem ISOMORPHISM_EXPAND :
+Theorem ISOMORPHISM_EXPAND:
    !f g. (f o g = I) /\ (g o f = I) <=> (!x. f(g x) = x) /\ (!x. g(f x) = x)
 Proof
   REWRITE_TAC[FUN_EQ_THM, o_THM, I_THM]
 QED
 
-Theorem LINEAR_INJECTIVE_LEFT_INVERSE :
+Theorem LINEAR_INJECTIVE_LEFT_INVERSE:
    !f:real['M]->real['N].
         linear f /\ (!x y. (f x = f y) ==> (x = y))
         ==> ?g. linear g /\ (g o f = I)
@@ -2273,7 +2273,7 @@ Proof
         PROVE_TAC[]]
 QED
 
-Theorem LINEAR_SURJECTIVE_RIGHT_INVERSE :
+Theorem LINEAR_SURJECTIVE_RIGHT_INVERSE:
    !f:real['M]->real['N].
         linear f /\ (!y. ?x. f x = y) ==> ?g. linear g /\ (f o g = I)
 Proof
@@ -2293,7 +2293,7 @@ Proof
         PROVE_TAC[]]
 QED
 
-Theorem LINEAR_INJECTIVE_ISOMORPHISM :
+Theorem LINEAR_INJECTIVE_ISOMORPHISM:
    !f:real['N]->real['N].
         linear f /\ (!x y. (f x = f y) ==> (x = y))
         ==> ?f'. linear f' /\ (!x. f'(f x) = x) /\ (!x. f(f' x) = x)
@@ -2306,7 +2306,7 @@ Proof
   ASM_SIMP_TAC bool_ss[] THEN PROVE_TAC[LEFT_RIGHT_INVERSE_EQ]
 QED
 
-Theorem LINEAR_SURJECTIVE_ISOMORPHISM :
+Theorem LINEAR_SURJECTIVE_ISOMORPHISM:
    !f:real['N]->real['N].
         linear f /\ (!y. ?x. f x = y)
         ==> ?f'. linear f' /\ (!x. f'(f x) = x) /\ (!x. f(f' x) = x)
@@ -2323,7 +2323,7 @@ QED
 (* Left and right inverses are the same for R^N->R^N.                        *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem LINEAR_INVERSE_LEFT :
+Theorem LINEAR_INVERSE_LEFT:
    !f:real['N]->real['N] f'.
         linear f /\ linear f' ==> ((f o f' = I) <=> (f' o f = I))
 Proof

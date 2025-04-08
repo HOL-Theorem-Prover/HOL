@@ -5,20 +5,20 @@ open pairTheory arithmeticTheory listTheory rich_listTheory pred_setTheory
 
 val _ = new_theory "contig_support";
 
-Theorem SKOLEM_SUBSET :
+Theorem SKOLEM_SUBSET:
   !P Q.
     (!x. P x ==> ?y. Q x y) <=> ?f. !x. P x ==> Q x (f x)
 Proof
  metis_tac[]
 QED
 
-Theorem IS_SOME_NEG :
+Theorem IS_SOME_NEG:
  IS_SOME = \x. ~(x=NONE)
 Proof
   rw [FUN_EQ_THM] >> metis_tac [NOT_IS_SOME_EQ_NONE]
 QED
 
-Theorem strlen_eq :
+Theorem strlen_eq:
  !(s:string) m. (STRLEN L = m)
        <=>
        (m = 0 /\ L = []) \/
@@ -31,7 +31,7 @@ Proof
 
 QED
 
-Theorem strlen_eq_1 :
+Theorem strlen_eq_1:
  !L. (STRLEN L = 1) <=> ?n. n < 256 /\ L = [CHR n]
 Proof
  rw [Once strlen_eq] \\ metis_tac[]
@@ -47,7 +47,7 @@ Definition tdrop_def:
   tdrop (SUC n) (h::t) acc = tdrop n t (h::acc)
 End
 
-Theorem tdrop_thm :
+Theorem tdrop_thm:
  !n list acc acc'.
      tdrop n list acc = SOME (acc',suf)
      <=>
@@ -62,11 +62,11 @@ Proof
  >- (‘LENGTH (acc' ++ suf) = LENGTH acc’ by metis_tac[LENGTH_REVERSE] >>  fs[])
 QED
 
-Definition take_drop_def :
+Definition take_drop_def:
   take_drop n list = tdrop n list []
 End
 
-Theorem take_drop_thm :
+Theorem take_drop_thm:
   !n list.
       take_drop n list = SOME (pref,suf) <=> pref ++ suf = list /\ (n = LENGTH pref)
 Proof
@@ -79,7 +79,7 @@ Termination
   WF_REL_TAC ‘measure (\(a,b). b+1n - a)’
 End
 
-Theorem upto_interval_thm :
+Theorem upto_interval_thm:
   !lo hi. set(upto lo hi) = {n | lo <= n /\ n <= hi}
 Proof
  recInduct upto_ind
@@ -89,7 +89,7 @@ Proof
   >> rw [pred_setTheory.EXTENSION]
 QED
 
-Theorem length_upto :
+Theorem length_upto:
   !lo hi. lo <= hi ==> LENGTH(upto lo hi) = (hi-lo) + 1
 Proof
  recInduct upto_ind
@@ -110,20 +110,20 @@ QED
 (* iterative version that is more computationally efficient.                 *)
 (*---------------------------------------------------------------------------*)
 
-Definition concatPartial_acc_def :
+Definition concatPartial_acc_def:
   concatPartial_acc [] acc = SOME acc /\
   concatPartial_acc (NONE::t) acc = NONE /\
   concatPartial_acc (SOME x::t) acc = concatPartial_acc t (x::acc)
 End
 
-Definition concatPartial_def :
+Definition concatPartial_def:
   concatPartial optlist =
     case concatPartial_acc optlist []
      of NONE => NONE
       | SOME list => SOME (FLAT (REVERSE list))
 End
 
-Theorem concatPartial_acc_NONE :
+Theorem concatPartial_acc_NONE:
  !optlist acc list.
   (concatPartial_acc optlist acc = NONE)
    <=>
@@ -134,7 +134,7 @@ recInduct concatPartial_acc_ind
  >> full_simp_tac list_ss [concatPartial_acc_def]
 QED
 
-Theorem concatPartial_acc_SOME :
+Theorem concatPartial_acc_SOME:
  !optlist acc list.
   (concatPartial_acc optlist acc = SOME list)
    <=>
@@ -147,7 +147,7 @@ recInduct concatPartial_acc_ind
  >> metis_tac []
 QED
 
-Theorem concatPartial_NONE :
+Theorem concatPartial_NONE:
  !optlist.
   (concatPartial optlist = NONE)
    =
@@ -157,7 +157,7 @@ Proof
    >> metis_tac[concatPartial_acc_NONE]
 QED
 
-Theorem concatPartial_SOME :
+Theorem concatPartial_SOME:
  !optlist list.
   (concatPartial optlist = SOME list)
   <=>
@@ -168,7 +168,7 @@ Proof
   >> metis_tac[]
 QED
 
-Theorem concatPartial_thm :
+Theorem concatPartial_thm:
  concatPartial optlist =
     if EXISTS (\x. x=NONE) optlist
        then NONE
@@ -178,7 +178,7 @@ Proof
  >> fs [NOT_EXISTS,combinTheory.o_DEF,IS_SOME_NEG]
 QED
 
-Theorem concatPartial_nil :
+Theorem concatPartial_nil:
  concatPartial [] = SOME []
 Proof
  EVAL_TAC

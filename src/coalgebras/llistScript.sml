@@ -2164,7 +2164,7 @@ val toList_LAPPEND_APPEND = Q.store_thm("toList_LAPPEND_APPEND",
   fs[LTAKE_LAPPEND2,Abbr`n`] >>
   simp[toList]);
 
-Theorem LNTH_LLENGTH_NONE :
+Theorem LNTH_LLENGTH_NONE:
     !x n l. (LLENGTH l = SOME x) /\ x <= n ==> (LNTH n l = NONE)
 Proof
   rw[LESS_OR_EQ] >- (
@@ -2193,7 +2193,7 @@ val LNTH_NONE_MONO = Q.store_thm ("LNTH_NONE_MONO",
   rw[] >> decide_tac);
 
 (* NOTE: this is just another version of lnth_some_down_closed *)
-Theorem LNTH_IS_SOME_MONO :
+Theorem LNTH_IS_SOME_MONO:
    !m n l.
      IS_SOME (LNTH n l) /\ m <= n
    ==>
@@ -2214,7 +2214,7 @@ Proof
  >> Cases_on ‘n’ >> rw [LNTH_THM]
 QED
 
-Theorem LNTH_IS_SOME :
+Theorem LNTH_IS_SOME:
     !n ll. IS_SOME (LNTH n ll) <=> (LFINITE ll ==> n < THE (LLENGTH ll))
 Proof
     rpt GEN_TAC
@@ -2234,7 +2234,7 @@ Proof
  >> fs []
 QED
 
-Theorem LFINITE_LNTH_IS_SOME :
+Theorem LFINITE_LNTH_IS_SOME:
     !n ll. LFINITE ll ==> (IS_SOME (LNTH n ll) <=> n < THE (LLENGTH ll))
 Proof
     rw [LNTH_IS_SOME]
@@ -3003,7 +3003,7 @@ Definition LSET_def:
   LSET l x = ?n. LNTH n l = SOME x
 End
 
-Theorem IN_LSET :
+Theorem IN_LSET:
     !x l. x IN LSET l <=> ?n. LNTH n l = SOME x
 Proof
     rw [IN_APP, LSET_def]
@@ -3276,7 +3276,7 @@ Proof
   Induct_on `l` >> fs[]
 QED
 
-Theorem MAP_toList :
+Theorem MAP_toList:
     !ll f. LFINITE ll ==> MAP f (THE (toList ll)) = THE (toList (LMAP f ll))
 Proof
     rpt STRIP_TAC

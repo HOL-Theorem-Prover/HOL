@@ -628,7 +628,7 @@ Proof
   \\ simp[char_lt_def]
 QED
 
-Theorem INFINITE_STR_UNIV :
+Theorem INFINITE_STR_UNIV:
     INFINITE univ(:string)
 Proof
   SRW_TAC [][INFINITE_UNIV] THEN

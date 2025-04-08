@@ -1728,11 +1728,11 @@ val OBS_contracts_IMP_C_contracts = store_thm (
         by PROVE_TAC [OBS_contracts_IMP_contracts, GSYM RSUBSET]
  >> MATCH_MP_TAC PCC_is_coarsest >> art []);
 
-Definition SUM_contracts :
+Definition SUM_contracts:
     SUM_contracts = (\p q. !r. closed r ==> (sum p r) contracts (sum q r))
 End
 
-Theorem C_contracts_IMP_SUM_contracts :
+Theorem C_contracts_IMP_SUM_contracts:
     !p q. C_contracts p q ==> SUM_contracts p q
 Proof
     rw [C_contracts, SUM_contracts, CC_def]
@@ -1757,7 +1757,7 @@ val OBS_contracts_IMP_SUM_contracts = store_thm (
         ||                                          ||
         ++===================<<<====================++
  *)
-Theorem SUM_contracts_IMP_OBS_contracts :
+Theorem SUM_contracts_IMP_OBS_contracts:
     !p q. free_action p /\ free_action q ==>
           (SUM_contracts p q ==> OBS_contracts p q)
 Proof
@@ -1904,7 +1904,7 @@ val COARSEST_PRECONGR_LR = save_thm ((* NEW *)
  >> RW_TAC std_ss [OBS_contracts_SUBST_SUM_R] *)
 
 (* This is the OBS_contracts version of PROP3_COMMON *)
-Theorem COARSEST_PRECONGR_LEMMA :
+Theorem COARSEST_PRECONGR_LEMMA:
     !p q. (?k. STABLE k /\ closed k /\
                (!p' u. WEAK_TRANS p u p' ==> ~(WEAK_EQUIV p' k)) /\
                (!q' u. WEAK_TRANS q u q' ==> ~(WEAK_EQUIV q' k))) ==>

@@ -91,7 +91,7 @@ Proof
   rw [EXTENSION,EQ_IMP_THM]
 QED
 
-Theorem SUBSET_SKOLEM_THM :
+Theorem SUBSET_SKOLEM_THM:
   (!x. P x ==> ?y. Q x y) <=> ?f. !x. P x ==> Q x (f x)
 Proof
  metis_tac[]
@@ -561,7 +561,7 @@ QED
 (* execution* used to characterize NFA languages.                            *)
 (*---------------------------------------------------------------------------*)
 
-Definition is_exec_def :
+Definition is_exec_def:
  is_exec N qs w ⇔
    EVERY (λa. a ∈ N.Sigma) w ∧
    LENGTH qs = LENGTH w + 1 ∧
@@ -569,7 +569,7 @@ Definition is_exec_def :
    (∀n. n < LENGTH w ⇒ EL (n+1) qs ∈ N.delta (EL n qs) (EL n w))
 End
 
-Definition is_accepting_exec_def :
+Definition is_accepting_exec_def:
  is_accepting_exec N qs w
   ⇔
  is_exec N qs w ∧ HD qs ∈ N.initial ∧ LAST qs ∈ N.final
@@ -1351,7 +1351,7 @@ QED
 (* Correctness of constructions                                              *)
 (*---------------------------------------------------------------------------*)
 
-Theorem dfa_compl_correct :
+Theorem dfa_compl_correct:
   is_dfa N ⇒
   ∀w. w ∈ nfa_lang (nfa_compl N) <=>
       w ∈ (KSTAR {[a] | a ∈ N.Sigma} DIFF (nfa_lang N))
@@ -1375,7 +1375,7 @@ Proof
           metis_tac [IN_INSERT]))
 QED
 
-Theorem dfa_inter_correct :
+Theorem dfa_inter_correct:
   is_dfa N1 ∧ is_dfa N2 ∧ N1.Sigma = N2.Sigma
   ⇒
   ∀w. w ∈ nfa_lang (nfa_inter N1 N2) <=>
@@ -1398,7 +1398,7 @@ Proof
           qexists_tac ‘EL (n+1) qs’ >> qexists_tac ‘EL (n+1) qs'’ >> rw[EL_MAP2]))
 QED
 
-Theorem dfa_union_correct :
+Theorem dfa_union_correct:
   is_dfa N1 ∧ is_dfa N2 ∧ N1.Sigma = N2.Sigma
   ⇒
   ∀w. w ∈ nfa_lang (nfa_union N1 N2) <=>

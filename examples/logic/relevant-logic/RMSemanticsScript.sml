@@ -361,7 +361,7 @@ Proof
      )
 QED
 
-Theorem FILTER_AND_FILTERED_IMP_CONJl :
+Theorem FILTER_AND_FILTERED_IMP_CONJl:
   ∀A γ.γ ≠ [] ∧ MEM A γ ∧ FILTER (λx. x ≠ A) γ ≠ [] ⇒
           |- ((CONJl (FILTER (λx. x ≠ A) γ) & A) --> CONJl γ)
 Proof

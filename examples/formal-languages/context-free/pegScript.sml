@@ -50,7 +50,7 @@ Definition resultmap_def[simp]:
   resultmap f (Success a c eo) = Success a (f c) eo ∧
   resultmap f (Failure fl fe) = Failure fl fe
 End
-Theorem resultmap_EQ_Success :
+Theorem resultmap_EQ_Success:
   resultmap f r = Success a x eo ⇔ ∃x0. r = Success a x0 eo ∧ x = f x0
 Proof
   Cases_on ‘r’ >> simp[] >> metis_tac[]

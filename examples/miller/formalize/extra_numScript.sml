@@ -468,7 +468,7 @@ val LT_LE_1_MULT = store_thm
    >> Suff `~(m * n = 0) /\ ~(m * n = 1)` >- DECIDE_TAC
    >> RW_TAC arith_ss []);
 
-Theorem EXP_MONO :
+Theorem EXP_MONO:
     !p a b. 1 < p ==> (p EXP a < p EXP b <=> a < b)
 Proof
     Induct_on `b` >- RW_TAC arith_ss [EXP]
@@ -557,7 +557,7 @@ val MINUS_1_MULT_MOD = store_thm
    >> RW_TAC std_ss [MOD_EQ_0]
    >> RW_TAC arith_ss [MOD_EQ_X]);
 
-Theorem EXP2_MONO_LE :
+Theorem EXP2_MONO_LE:
     !a b n. 0 < n /\ a <= b ==> a EXP n <= b EXP n
 Proof
     Strip

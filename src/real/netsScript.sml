@@ -32,7 +32,7 @@ val bounded = new_definition("bounded",
       ?k x N. g N N /\ (!n. g n N ==> (dist m)(f(n),x) < k)”);
 
 (* in the view of real_topologyTheory, this is a general ‘at’ (net) *)
-Definition tendsto :
+Definition tendsto:
    tendsto(m:('a)metric,x) y z =
       (&0 < (dist m)(x,y) /\ (dist m)(x,y) <= (dist m)(x,z))
 End
@@ -106,7 +106,7 @@ val DORDER_TENDSTO = store_thm("DORDER_TENDSTO",
 (* Simpler characterization of limit in a metric topology                    *)
 (*---------------------------------------------------------------------------*)
 
-Theorem MTOP_TENDS :
+Theorem MTOP_TENDS:
   !d g. !x:'b->'a. !x0. (x tends x0)(mtop(d),g) <=>
      !e. &0 < e ==> ?n. g n n /\ !m. g m n ==> dist(d)(x(m),x0) < e
 Proof
@@ -609,7 +609,7 @@ val NET_LE = store_thm("NET_LE",
 (* A variant of nets (slightly non-standard but good for our purposes).      *)
 (* ------------------------------------------------------------------------- *)
 
-Definition isnet :
+Definition isnet:
    isnet g <=> !x y. (!z. g z x ==> g z y) \/ (!z. g z y ==> g z x)
 End
 
@@ -630,14 +630,14 @@ Proof
   SIMP_TAC std_ss [net_ty_bij, GSYM isnet]
 QED
 
-Theorem NET :
+Theorem NET:
    !n x y. (!z. netord n z x ==> netord n z y) \/
            (!z. netord n z y ==> netord n z x)
 Proof
    REWRITE_TAC[net_tybij, ETA_AX]
 QED
 
-Theorem OLDNET :
+Theorem OLDNET:
     !n x y. netord n x x /\ netord n y y
            ==> ?z. netord n z z /\
                    !w. netord n w z ==> netord n w x /\ netord n w y
@@ -645,7 +645,7 @@ Proof
   MESON_TAC[NET]
 QED
 
-Theorem NET_DILEMMA :
+Theorem NET_DILEMMA:
    !net. (?a. (?x. netord net x a) /\ (!x. netord net x a ==> P x)) /\
          (?b. (?x. netord net x b) /\ (!x. netord net x b ==> Q x))
      ==> ?c. (?x. netord net x c) /\ (!x. netord net x c ==> P x /\ Q x)
@@ -653,7 +653,7 @@ Proof
   MESON_TAC[NET]
 QED
 
-Theorem DORDER_NET :
+Theorem DORDER_NET:
     !n. dorder (netord n)
 Proof
     RW_TAC std_ss [dorder, OLDNET]
@@ -667,12 +667,12 @@ val _ = set_fixity "within" (Infix(NONASSOC, 450));
 val _ = set_fixity "in_direction" (Infix(NONASSOC, 450));
 
 (* new definition, making connection to netsTheory *)
-Definition at_def :
+Definition at_def:
     at z = mk_net (tendsto (mr1,z))
 End
 
 (* old definition, now becomes an equivalent theorem *)
-Theorem at :
+Theorem at:
     !a. at a = mk_net(\x y. &0 < dist(x,a) /\ dist(x,a) <= dist(y,a))
 Proof
     RW_TAC std_ss [at_def]

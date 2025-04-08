@@ -25,19 +25,19 @@ CoInductive BISIM_REL :
       ==> (BISIM_REL ts) p q
 End
 
-Theorem BISIM_ID :
+Theorem BISIM_ID:
     !ts. BISIM ts Id
 Proof
     SRW_TAC[][BISIM_def]
 QED
 
-Theorem BISIM_INV :
+Theorem BISIM_INV:
     !ts R. BISIM ts R ==> BISIM ts (inv R)
 Proof
     SRW_TAC[][BISIM_def, inv_DEF] >> METIS_TAC []
 QED
 
-Theorem BISIM_O :
+Theorem BISIM_O:
     !ts R R'. BISIM ts R /\ BISIM ts R' ==> BISIM ts (R' O R)
 Proof
     rpt STRIP_TAC
@@ -46,7 +46,7 @@ Proof
  >> METIS_TAC[BISIM_def]
 QED
 
-Theorem BISIM_RUNION :
+Theorem BISIM_RUNION:
     !ts R R'. BISIM ts R /\ BISIM ts R' ==> BISIM ts (R RUNION R')
 Proof
     rpt GEN_TAC
@@ -55,7 +55,7 @@ Proof
  >> METIS_TAC[]
 QED
 
-Theorem BISIM_REL_IS_BISIM :
+Theorem BISIM_REL_IS_BISIM:
     !ts. BISIM ts (BISIM_REL ts)
 Proof
     PURE_ONCE_REWRITE_TAC [BISIM_def]
@@ -66,7 +66,7 @@ Proof
 QED
 
 (* (Strong) bisimilarity, the original definition *)
-Theorem BISIM_REL_def :
+Theorem BISIM_REL_def:
     !ts. BISIM_REL ts = \p q. ?R. BISIM ts R /\ R p q
 Proof
     SRW_TAC[][FUN_EQ_THM]
@@ -81,7 +81,7 @@ Proof
       PROVE_TAC [BISIM_def] ]
 QED
 
-Theorem BISIM_REL_IS_EQUIV_REL :
+Theorem BISIM_REL_IS_EQUIV_REL:
     !ts. equivalence (BISIM_REL ts)
 Proof
     SRW_TAC[][equivalence_def]
@@ -134,7 +134,7 @@ CoInductive WBISIM_REL :
     WBISIM_REL ts tau p q
 End
 
-Theorem TS_IMP_ETS :
+Theorem TS_IMP_ETS:
     !ts tau p q. ts p tau q ==> (ETS ts tau) p q
 Proof
     SRW_TAC[][ETS_def]
@@ -142,13 +142,13 @@ Proof
  >> BETA_TAC >> ASM_REWRITE_TAC []
 QED
 
-Theorem ETS_REFL :
+Theorem ETS_REFL:
     !ts tau p. (ETS ts tau) p p
 Proof
     SRW_TAC[][ETS_def, RTC_REFL]
 QED
 
-Theorem TS_IMP_WTS :
+Theorem TS_IMP_WTS:
     !ts tau p l q. ts p l q ==> WTS ts tau p l q
 Proof
     SRW_TAC[][WTS_def]
@@ -157,7 +157,7 @@ Proof
  >> ASM_REWRITE_TAC [ETS_REFL]
 QED
 
-Theorem ETS_TRANS :
+Theorem ETS_TRANS:
     !ts tau x y z. (ETS ts tau) x y /\ (ETS ts tau) y z
                ==> (ETS ts tau) x z
 Proof
@@ -177,7 +177,7 @@ val lemma1 = prove (
  >> HO_MATCH_MP_TAC RTC_INDUCT
  >> METIS_TAC []);
 
-Theorem ETS_WTS_ETS :
+Theorem ETS_WTS_ETS:
     !ts tau p p1 l p2 p'.
         (ETS ts tau) p p1 /\ (WTS ts tau) p1 l p2 /\ (ETS ts tau) p2 p'
     ==> (WTS ts tau) p l p'
@@ -189,7 +189,7 @@ Proof
  >> METIS_TAC [ETS_TRANS]
 QED
 
-Theorem WBISIM_INV :
+Theorem WBISIM_INV:
     !ts tau R. WBISIM ts tau R ==> WBISIM ts tau (inv R)
 Proof
     SRW_TAC[][WBISIM_def, inv_DEF] >> METIS_TAC []
@@ -257,7 +257,7 @@ val lemma3' = prove (
  >> IMP_RES_TAC WBISIM_INV
  >> SRW_TAC[][]);
 
-Theorem WBISIM_ID :
+Theorem WBISIM_ID:
     !ts tau. WBISIM ts tau Id
 Proof
     SRW_TAC[][WBISIM_def]
@@ -265,7 +265,7 @@ Proof
  >> MATCH_MP_TAC TS_IMP_ETS >> ASM_REWRITE_TAC []
 QED
 
-Theorem WBISIM_O :
+Theorem WBISIM_O:
     !ts tau R R'. WBISIM ts tau R /\ WBISIM ts tau R' ==>
                   WBISIM ts tau (R' O R)
 Proof
@@ -278,7 +278,7 @@ Proof
       METIS_TAC [WBISIM_def, lemma2'] ]
 QED
 
-Theorem WBISIM_RUNION :
+Theorem WBISIM_RUNION:
     !ts tau R R'. WBISIM ts tau R /\ WBISIM ts tau R' ==>
                   WBISIM ts tau (R RUNION R')
 Proof
@@ -294,7 +294,7 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem WBISIM_REL_IS_WBISIM :
+Theorem WBISIM_REL_IS_WBISIM:
     !ts tau. WBISIM ts tau (WBISIM_REL ts tau)
 Proof
     PURE_ONCE_REWRITE_TAC [WBISIM_def]
@@ -304,7 +304,7 @@ Proof
 QED
 
 (* Weak bisimilarity, the original definition *)
-Theorem WBISIM_REL_def :
+Theorem WBISIM_REL_def:
     !ts tau. WBISIM_REL ts tau = \p q. ?R. WBISIM ts tau R /\ R p q
 Proof
     SRW_TAC[][FUN_EQ_THM]
@@ -319,7 +319,7 @@ Proof
       PROVE_TAC [WBISIM_def] ]
 QED
 
-Theorem WBISIM_REL_IS_EQUIV_REL :
+Theorem WBISIM_REL_IS_EQUIV_REL:
     !ts tau. equivalence (WBISIM_REL ts tau)
 Proof
   SRW_TAC[][equivalence_def]
@@ -341,7 +341,7 @@ QED
 (*  Relations between strong and weak bisimulations                          *)
 (*---------------------------------------------------------------------------*)
 
-Theorem BISIM_IMP_WBISIM :
+Theorem BISIM_IMP_WBISIM:
     !ts tau R. BISIM ts R ==> WBISIM ts tau R
 Proof
     SRW_TAC[][WBISIM_def] (* 4 goals *)
@@ -361,7 +361,7 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem BISIM_REL_RSUBSET_WBISIM_REL :
+Theorem BISIM_REL_RSUBSET_WBISIM_REL:
     !ts tau. (BISIM_REL ts) RSUBSET (WBISIM_REL ts tau)
 Proof
     SRW_TAC[][RSUBSET, BISIM_REL_def, WBISIM_REL_def]
@@ -370,7 +370,7 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem BISIM_REL_IMP_WBISIM_REL :
+Theorem BISIM_REL_IMP_WBISIM_REL:
     !ts tau p q. (BISIM_REL ts) p q ==> (WBISIM_REL ts tau) p q
 Proof
     REWRITE_TAC [GSYM RSUBSET, BISIM_REL_RSUBSET_WBISIM_REL]

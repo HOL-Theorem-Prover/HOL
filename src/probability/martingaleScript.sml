@@ -47,31 +47,31 @@ val _ = ratLib.deprecate_rat ();
 (*  Martingale definitions ([1, Chapter 23])                                 *)
 (* ------------------------------------------------------------------------- *)
 
-Definition sub_sigma_algebra_def :
+Definition sub_sigma_algebra_def:
    sub_sigma_algebra a b =
       (sigma_algebra a /\ sigma_algebra b /\ (space a = space b) /\
        (subsets a) SUBSET (subsets b))
 End
 
 (* the set of all filtrations of A *)
-Definition filtration_def :
+Definition filtration_def:
    filtration A (a :num -> 'a algebra) <=>
       (!n. sub_sigma_algebra (a n) A) /\
       (!i j. i <= j ==> subsets (a i) SUBSET subsets (a j))
 End
 
 (* NOTE: This is usually denoted by (sp,sts,a,m) in textbooks *)
-Definition filtered_measure_space_def :
+Definition filtered_measure_space_def:
    filtered_measure_space m a =
       (measure_space m /\ filtration (m_space m,measurable_sets m) a)
 End
 
-Definition sigma_finite_filtered_measure_space_def :
+Definition sigma_finite_filtered_measure_space_def:
    sigma_finite_filtered_measure_space m a =
       (filtered_measure_space m a /\ sigma_finite (m_space m,subsets (a 0),measure m))
 End
 
-Definition martingale_def :
+Definition martingale_def:
    martingale m a u =
      (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
       !n s. s IN (subsets (a n)) ==>
@@ -79,7 +79,7 @@ Definition martingale_def :
             integral m (\x. u n x * indicator_fn s x)))
 End
 
-Definition super_martingale_def :
+Definition super_martingale_def:
    super_martingale m a u =
      (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
       !n s. s IN (subsets (a n)) ==>
@@ -87,7 +87,7 @@ Definition super_martingale_def :
             integral m (\x. u n x * indicator_fn s x)))
 End
 
-Definition sub_martingale_def :
+Definition sub_martingale_def:
    sub_martingale m a u =
      (sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
       !n s. s IN (subsets (a n)) ==>
@@ -109,7 +109,7 @@ End
 
    cf. integrationTheory.FATOU for the version of Henstock-Kurzweil integrals.
  *)
-Theorem fatou_lemma :
+Theorem fatou_lemma:
     !m f. measure_space m /\ (!x n. x IN m_space m ==> 0 <= f n x) /\
          (!n. f n IN measurable (m_space m,measurable_sets m) Borel) ==>
           pos_fn_integral m (\x. liminf (\n. f n x)) <=
@@ -203,7 +203,7 @@ Proof
  >> Q.EXISTS_TAC ‘n'’ >> rw []
 QED
 
-Theorem LIM_SEQUENTIALLY_real_normal :
+Theorem LIM_SEQUENTIALLY_real_normal:
     !a l. (!n. a n <> PosInf /\ a n <> NegInf) ==>
           ((real o a --> l) sequentially <=>
            !e. 0 < e ==> ?N. !n. N <= n ==> abs (a n - Normal l) < Normal e)
@@ -258,7 +258,7 @@ QED
 
    This proof uses iterateTheory (numseg), added for WLLN_IID and SLLN_IID.
  *)
-Theorem LIM_SEQUENTIALLY_CESARO :
+Theorem LIM_SEQUENTIALLY_CESARO:
     !(f :num->real) l. ((\n. f n) --> l) sequentially ==>
           ((\n. SIGMA f (count (SUC n)) / &SUC n) --> l) sequentially
 Proof
@@ -363,7 +363,7 @@ Proof
 QED
 
 (* Properties A.1 (iv) [1, p.409] *)
-Theorem ext_liminf_le_subseq :
+Theorem ext_liminf_le_subseq:
     !a f l. (!n. a n <> PosInf /\ a n <> NegInf) /\
             (!m n. m < n ==> f m < f n) /\
             ((real o a o f) --> l) sequentially ==> liminf a <= Normal l
@@ -412,7 +412,7 @@ Proof
 QED
 
 (* Properties A.1 (iv) [1, p.409] (dual of previous lemma) *)
-Theorem ext_limsup_le_subseq :
+Theorem ext_limsup_le_subseq:
     !a f l. (!n. a n <> PosInf /\ a n <> NegInf) /\
             (!m n. m < n ==> f m < f n) /\
             ((real o a o f) --> l) sequentially ==> Normal l <= limsup a
@@ -441,7 +441,7 @@ Proof
 QED
 
 (* Properties A.1 (iv) [1, p.409] (construction of subsequence with liminf as the limit) *)
-Theorem ext_liminf_imp_subseq :
+Theorem ext_liminf_imp_subseq:
     !a. (!n. a n <> PosInf /\ a n <> NegInf) /\
         liminf a <> PosInf /\ liminf a <> NegInf ==>
         ?f. (!m n. m < n ==> f m < f n) /\
@@ -606,7 +606,7 @@ Proof
 QED
 
 (* Properties A.1 (iv) [1, p.409] *)
-Theorem ext_limsup_imp_subseq :
+Theorem ext_limsup_imp_subseq:
     !a. (!n. a n <> PosInf /\ a n <> NegInf) /\
         limsup a <> PosInf /\ limsup a <> NegInf ==>
         ?f. (!m n. m < n ==> f m < f n) /\
@@ -643,7 +643,7 @@ Proof
 QED
 
 (* Properties A.1 (v) [1, p.409] (full version) *)
-Theorem ext_limsup_thm :
+Theorem ext_limsup_thm:
     !a l. (!n. a n <> PosInf /\ a n <> NegInf) ==>
           ((real o a --> l) sequentially <=>
            limsup a = Normal l /\ liminf a = Normal l)
@@ -1003,7 +1003,7 @@ QED
    NOTE: ‘integrable m f’ can be moved to conclusions, but the current form is
           enough for WLLN_IID (directly used by truncated_vars_expectation).
  *)
-Theorem lebesgue_dominated_convergence :
+Theorem lebesgue_dominated_convergence:
     !m f fi. measure_space m /\ (!i. integrable m (fi i)) /\ integrable m f /\
             (!i x. x IN m_space m ==> fi i x <> PosInf /\ fi i x <> NegInf) /\
             (!x. x IN m_space m ==> f x <> PosInf /\ f x <> NegInf) /\
@@ -1251,7 +1251,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Theorem 15.1, Part I (transformation theorem, positive functions only) *)
-Theorem pos_fn_integral_distr :
+Theorem pos_fn_integral_distr:
     !M B f u. measure_space M /\ sigma_algebra B /\
               f IN measurable (m_space M, measurable_sets M) B /\
               u IN measurable B Borel /\
@@ -1609,7 +1609,7 @@ Proof
 QED
 
 (* Theorem 15.1, Part II (transformation theorem, general form) [1, p.154] *)
-Theorem integral_distr :
+Theorem integral_distr:
     !M B f u. measure_space M /\ sigma_algebra B /\
               f IN measurable (m_space M, measurable_sets M) B /\
               u IN measurable B Borel ==>
@@ -1637,7 +1637,7 @@ Proof
       MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS >> art [] ]
 QED
 
-Theorem pos_fn_integral_cong_measure :
+Theorem pos_fn_integral_cong_measure:
     !sp sts u v f.
         measure_space (sp,sts,u) /\ measure_space (sp,sts,v) /\
         (!s. s IN sts ==> (u s = v s)) /\ (!x. x IN sp ==> 0 <= f x) ==>
@@ -1691,7 +1691,7 @@ Proof
  >> rw [FN_PLUS_POS, FN_MINUS_POS]
 QED
 
-Theorem integral_cong_measure :
+Theorem integral_cong_measure:
     !sp sts u v f.
         measure_space (sp,sts,u) /\ measure_space (sp,sts,v) /\
        (!s. s IN sts ==> (u s = v s)) ==>
@@ -1710,7 +1710,7 @@ Proof
  >> rw []
 QED
 
-Theorem integrable_cong_measure :
+Theorem integrable_cong_measure:
     !sp sts u v f.
         measure_space (sp,sts,u) /\ measure_space (sp,sts,v) /\
        (!s. s IN sts ==> (u s = v s)) ==>
@@ -1738,7 +1738,7 @@ QED
 val fcp_cross_def = Define (* cf. CROSS_DEF *)
    ‘fcp_cross A B = {FCP_CONCAT a b | a IN A /\ b IN B}’;
 
-Theorem IN_FCP_CROSS : (* cf. IN_CROSS *)
+Theorem IN_FCP_CROSS: (* cf. IN_CROSS *)
     !s a b. s IN fcp_cross a b <=> ?t u. (s = FCP_CONCAT t u) /\ t IN a /\ u IN b
 Proof
     RW_TAC std_ss [fcp_cross_def, GSPECIFICATION, UNCURRY]
@@ -1749,7 +1749,7 @@ Proof
 QED
 
 (* high dimensional space are made by lower dimensional spaces *)
-Theorem fcp_cross_UNIV :
+Theorem fcp_cross_UNIV:
     FINITE univ(:'b) /\ FINITE univ(:'c) ==>
     fcp_cross univ(:'a['b]) univ(:'a['c]) = univ(:'a['b + 'c])
 Proof
@@ -1762,7 +1762,7 @@ QED
 val fcp_prod_def = Define (* cf. prod_sets_def *)
    ‘fcp_prod a b = {fcp_cross s t | s IN a /\ t IN b}’;
 
-Theorem IN_FCP_PROD :
+Theorem IN_FCP_PROD:
     !s A B. s IN fcp_prod A B <=> ?a b. (s = fcp_cross a b) /\ a IN A /\ b IN B
 Proof
     RW_TAC std_ss [fcp_prod_def, GSPECIFICATION, UNCURRY]
@@ -1772,7 +1772,7 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-Theorem FCP_BIGUNION_CROSS :
+Theorem FCP_BIGUNION_CROSS:
     !f s t. fcp_cross (BIGUNION (IMAGE f s)) t = BIGUNION (IMAGE (\n. fcp_cross (f n) t) s)
 Proof
     rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_FCP_CROSS]
@@ -1785,7 +1785,7 @@ Proof
  >> Q.EXISTS_TAC ‘n’ >> art []
 QED
 
-Theorem FCP_CROSS_BIGUNION :
+Theorem FCP_CROSS_BIGUNION:
     !f s t. fcp_cross t (BIGUNION (IMAGE f s)) = BIGUNION (IMAGE (\n. fcp_cross t (f n)) s)
 Proof
     rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_FCP_CROSS]
@@ -1798,7 +1798,7 @@ Proof
  >> Q.EXISTS_TAC ‘n’ >> art []
 QED
 
-Theorem FCP_CROSS_DIFF :
+Theorem FCP_CROSS_DIFF:
     !(X :'a['b] set) s (t :'a['c] set).
         FINITE univ(:'b) /\ FINITE univ(:'c) ==>
         fcp_cross (X DIFF s) t = (fcp_cross X t) DIFF (fcp_cross s t)
@@ -1842,7 +1842,7 @@ Proof
       qexistsl_tac [‘c’,‘u’] >> art [] >> PROVE_TAC [] ]
 QED
 
-Theorem FCP_SUBSET_CROSS :
+Theorem FCP_SUBSET_CROSS:
     !(a :'a['b] set) b (c :'a['c] set) d.
         a SUBSET b /\ c SUBSET d ==> (fcp_cross a c) SUBSET (fcp_cross b d)
 Proof
@@ -1852,7 +1852,7 @@ Proof
  >> PROVE_TAC [SUBSET_DEF]
 QED
 
-Theorem FCP_INTER_CROSS :
+Theorem FCP_INTER_CROSS:
     !(a :'a['b] set) (b :'a['c] set) c d.
         FINITE univ(:'b) /\ FINITE univ(:'c) ==>
        (fcp_cross a b) INTER (fcp_cross c d) = fcp_cross (a INTER c) (b INTER d)
@@ -1875,14 +1875,14 @@ val pair_operation_def = Define
        (!a b c d. (cons a b = cons c d) <=> (a = c) /\ (b = d)))’;
 
 (* two sample pair operations: comma (pairTheory) and FCP_CONCAT (fcpTheory) *)
-Theorem pair_operation_pair :
+Theorem pair_operation_pair:
     pair_operation (pair$, :'a -> 'b -> 'a # 'b)
                    (FST :'a # 'b -> 'a) (SND :'a # 'b -> 'b)
 Proof
     rw [pair_operation_def]
 QED
 
-Theorem pair_operation_FCP_CONCAT :
+Theorem pair_operation_FCP_CONCAT:
     FINITE univ(:'b) /\ FINITE univ(:'c) ==>
     pair_operation (FCP_CONCAT :'a['b] -> 'a['c] -> 'a['b + 'c])
                    (FCP_FST :'a['b + 'c] -> 'a['b])
@@ -1895,7 +1895,7 @@ Proof
  >> PROVE_TAC [FCP_CONCAT_THM]
 QED
 
-Theorem pair_operation_CONS :
+Theorem pair_operation_CONS:
     pair_operation CONS HD TL
 Proof
     rw [pair_operation_def]
@@ -1904,7 +1904,7 @@ QED
 val general_cross_def = Define
    ‘general_cross (cons :'a -> 'b -> 'c) A B = {cons a b | a IN A /\ b IN B}’;
 
-Theorem IN_general_cross :
+Theorem IN_general_cross:
     !cons s A B. s IN (general_cross cons A B) <=>
                  ?a b. s = cons a b /\ a IN A /\ b IN B
 Proof
@@ -1915,7 +1915,7 @@ Proof
 QED
 
 (* alternative definition of pred_set$CROSS *)
-Theorem CROSS_ALT :
+Theorem CROSS_ALT:
     !A B. A CROSS B = general_cross pair$, A B
 Proof
     RW_TAC std_ss [Once EXTENSION, IN_CROSS, IN_general_cross]
@@ -1924,7 +1924,7 @@ Proof
 QED
 
 (* alternative definition of fcp_cross *)
-Theorem fcp_cross_alt :
+Theorem fcp_cross_alt:
     !A B. fcp_cross A B = general_cross FCP_CONCAT A B
 Proof
     RW_TAC std_ss [Once EXTENSION, IN_FCP_CROSS, IN_general_cross]
@@ -1934,7 +1934,7 @@ val general_prod_def = Define
    ‘general_prod (cons :'a -> 'b -> 'c) A B =
       {general_cross cons a b | a IN A /\ b IN B}’;
 
-Theorem IN_general_prod :
+Theorem IN_general_prod:
     !(cons :'a -> 'b -> 'c) s A B.
         s IN general_prod cons A B <=> ?a b. (s = general_cross cons a b) /\ a IN A /\ b IN B
 Proof
@@ -1946,20 +1946,20 @@ Proof
 QED
 
 (* alternative definition of prod_sets *)
-Theorem prod_sets_alt :
+Theorem prod_sets_alt:
     !A B. prod_sets A B = general_prod pair$, A B
 Proof
     RW_TAC std_ss [Once EXTENSION, IN_PROD_SETS, IN_general_prod, GSYM CROSS_ALT]
 QED
 
 (* alternative definition of fcp_prod *)
-Theorem fcp_prod_alt :
+Theorem fcp_prod_alt:
     !A B. fcp_prod A B = general_prod FCP_CONCAT A B
 Proof
     RW_TAC std_ss [Once EXTENSION, IN_FCP_PROD, IN_general_prod, GSYM fcp_cross_alt]
 QED
 
-Theorem general_BIGUNION_CROSS :
+Theorem general_BIGUNION_CROSS:
     !(cons :'a -> 'b -> 'c) f (s :'index set) t.
        (general_cross cons (BIGUNION (IMAGE f s)) t =
         BIGUNION (IMAGE (\n. general_cross cons (f n) t) s))
@@ -1972,7 +1972,7 @@ Proof
  >> Q.EXISTS_TAC ‘n’ >> art []
 QED
 
-Theorem general_CROSS_BIGUNION :
+Theorem general_CROSS_BIGUNION:
     !(cons :'a -> 'b -> 'c) f (s :'index set) t.
        (general_cross cons t (BIGUNION (IMAGE f s)) =
         BIGUNION (IMAGE (\n. general_cross cons t (f n)) s))
@@ -1985,7 +1985,7 @@ Proof
  >> Q.EXISTS_TAC ‘n’ >> art []
 QED
 
-Theorem general_CROSS_DIFF :
+Theorem general_CROSS_DIFF:
     !(cons :'a -> 'b -> 'c) car cdr (X :'a set) s (t :'b set).
         pair_operation cons car cdr ==>
        (general_cross cons (X DIFF s) t =
@@ -2025,7 +2025,7 @@ Proof
       qexistsl_tac [‘a’,‘b’] >> art [] >> PROVE_TAC [] ]
 QED
 
-Theorem general_SUBSET_CROSS :
+Theorem general_SUBSET_CROSS:
     !(cons :'a -> 'b -> 'c) (a :'a set) b (c :'b set) d.
         a SUBSET b /\ c SUBSET d ==>
         (general_cross cons a c) SUBSET (general_cross cons b d)
@@ -2036,7 +2036,7 @@ Proof
  >> PROVE_TAC [SUBSET_DEF]
 QED
 
-Theorem general_INTER_CROSS :
+Theorem general_INTER_CROSS:
     !(cons :'a -> 'b -> 'c) car cdr (a :'a set) (b :'b set) c d.
         pair_operation cons car cdr ==>
        ((general_cross cons a b) INTER (general_cross cons c d) =
@@ -2054,7 +2054,7 @@ Proof
       qexistsl_tac [‘a'’, ‘b'’] >> art [] ]
 QED
 
-Theorem INDICATOR_FN_FCP_CROSS :
+Theorem INDICATOR_FN_FCP_CROSS:
     !(s :'a['b] set) (t :'a['c] set) x y.
         FINITE univ(:'b) /\ FINITE univ(:'c) ==>
        (indicator_fn (fcp_cross s t) (FCP_CONCAT x y) =
@@ -2065,7 +2065,7 @@ Proof
  >> METIS_TAC [FCP_CONCAT_11]
 QED
 
-Theorem indicator_fn_general_cross :
+Theorem indicator_fn_general_cross:
     !(cons :'a -> 'b -> 'c) car cdr (s :'a set) (t :'b set) x y.
         pair_operation cons car cdr ==>
        (indicator_fn (general_cross cons s t) (cons x y) =
@@ -2082,7 +2082,7 @@ val fcp_sigma_def = Define
       sigma (fcp_cross (space a) (space b)) (fcp_prod (subsets a) (subsets b))’;
 
 (* FCP version of SIGMA_ALGEBRA_PROD_SIGMA *)
-Theorem sigma_algebra_prod_sigma :
+Theorem sigma_algebra_prod_sigma:
     !a b. subset_class (space a) (subsets a) /\
           subset_class (space b) (subsets b) ==> sigma_algebra (fcp_sigma a b)
 Proof
@@ -2105,7 +2105,7 @@ val general_sigma_def = Define
             (general_prod cons (subsets A) (subsets B))’;
 
 (* alternative definition of ‘prod_sigma’ *)
-Theorem prod_sigma_alt :
+Theorem prod_sigma_alt:
     !A B. prod_sigma A B = general_sigma pair$, A B
 Proof
     RW_TAC std_ss [prod_sigma_def, general_sigma_def,
@@ -2113,14 +2113,14 @@ Proof
 QED
 
 (* alternative definition of ‘fcp_sigma’ *)
-Theorem fcp_sigma_alt :
+Theorem fcp_sigma_alt:
     !A B. fcp_sigma A B = general_sigma FCP_CONCAT A B
 Proof
     RW_TAC std_ss [fcp_sigma_def, general_sigma_def,
                    GSYM fcp_cross_alt, GSYM fcp_prod_alt]
 QED
 
-Theorem sigma_algebra_general_sigma :
+Theorem sigma_algebra_general_sigma:
     !(cons :'a -> 'b -> 'c) A B.
         subset_class (space A) (subsets A) /\
         subset_class (space B) (subsets B) ==> sigma_algebra (general_sigma cons A B)
@@ -2134,7 +2134,7 @@ Proof
  >> METIS_TAC [SUBSET_DEF]
 QED
 
-Theorem exhausting_sequence_general_cross :
+Theorem exhausting_sequence_general_cross:
     !(cons :'a -> 'b -> 'c) X Y A B f g.
        exhausting_sequence (X,A) f /\ exhausting_sequence (Y,B) g ==>
        exhausting_sequence (general_cross cons X Y,general_prod cons A B)
@@ -2166,7 +2166,7 @@ Proof
           FIRST_X_ASSUM MATCH_MP_TAC >> RW_TAC arith_ss [] ] ] ]
 QED
 
-Theorem exhausting_sequence_CROSS :
+Theorem exhausting_sequence_CROSS:
     !X Y A B f g.
        exhausting_sequence (X,A) f /\ exhausting_sequence (Y,B) g ==>
        exhausting_sequence (X CROSS Y,prod_sets A B) (\n. f n CROSS g n)
@@ -2178,7 +2178,7 @@ Proof
 QED
 
 (* FCP version of exhausting_sequence_CROSS *)
-Theorem exhausting_sequence_cross :
+Theorem exhausting_sequence_cross:
     !X Y A B f g.
        exhausting_sequence (X,A) f /\ exhausting_sequence (Y,B) g ==>
        exhausting_sequence (fcp_cross X Y,fcp_prod A B) (\n. fcp_cross (f n) (g n))
@@ -2194,7 +2194,7 @@ Proof
  >> RW_TAC std_ss [GSYM fcp_cross_alt, GSYM fcp_prod_alt]
 QED
 
-Theorem general_sigma_of_generator :
+Theorem general_sigma_of_generator:
     !(cons :'a -> 'b -> 'c) (car :'c -> 'a) (cdr :'c -> 'b) (X :'a set) (Y :'b set) E G.
         pair_operation cons car cdr /\
         subset_class X E /\ subset_class Y G /\
@@ -2425,7 +2425,7 @@ Proof
 QED
 
 (* Lemma 14.3 [1, p.138], reducing consideration of ‘prod_sigma’ to generators *)
-Theorem PROD_SIGMA_OF_GENERATOR :
+Theorem PROD_SIGMA_OF_GENERATOR:
     !X Y E G. subset_class X E /\ subset_class Y G /\
               has_exhausting_sequence (X,E) /\
               has_exhausting_sequence (Y,G) ==>
@@ -2439,7 +2439,7 @@ Proof
 QED
 
 (* FCP version of PROD_SIGMA_OF_GENERATOR *)
-Theorem prod_sigma_of_generator :
+Theorem prod_sigma_of_generator:
     !(X :'a['b] set) (Y :'a['c] set) E G.
         FINITE univ(:'b) /\ FINITE univ(:'c) /\
         subset_class X E /\ subset_class Y G /\
@@ -2458,7 +2458,7 @@ Proof
                    pair_operation_FCP_CONCAT]
 QED
 
-Theorem uniqueness_of_prod_measure_general :
+Theorem uniqueness_of_prod_measure_general:
     !(cons :'a -> 'b -> 'c) (car :'c -> 'a) (cdr :'c -> 'b)
      (X :'a set) (Y :'b set) E G A B u v m m'.
       pair_operation cons car cdr /\
@@ -2528,7 +2528,7 @@ Proof
 QED
 
 (* Theorem 14.4 [1, p.139], cf. UNIQUENESS_OF_MEASURE *)
-Theorem UNIQUENESS_OF_PROD_MEASURE :
+Theorem UNIQUENESS_OF_PROD_MEASURE:
     !(X :'a set) (Y :'b set) E G A B u v m m'.
       subset_class X E /\ subset_class Y G /\
       sigma_finite (X,E,u) /\ sigma_finite (Y,G,v) /\
@@ -2551,7 +2551,7 @@ Proof
 QED
 
 (* FCP version of UNIQUENESS_OF_PROD_MEASURE *)
-Theorem uniqueness_of_prod_measure :
+Theorem uniqueness_of_prod_measure:
     !(X :'a['b] set) (Y :'a['c] set) E G A B u v m m'.
       FINITE univ(:'b) /\ FINITE univ(:'c) /\
       subset_class X E /\ subset_class Y G /\
@@ -2654,7 +2654,7 @@ Proof
                    pair_operation_FCP_CONCAT]
 QED
 
-Theorem existence_of_prod_measure_general :
+Theorem existence_of_prod_measure_general:
    !(cons :'a -> 'b -> 'c) car cdr (X :'a set) (Y :'b set) A B u v m0.
        pair_operation cons car cdr /\
        sigma_finite_measure_space (X,A,u) /\
@@ -3805,7 +3805,7 @@ Proof
 QED
 
 (* Theorem 14.5 [1, p.139], cf. CARATHEODORY_SEMIRING *)
-Theorem EXISTENCE_OF_PROD_MEASURE :
+Theorem EXISTENCE_OF_PROD_MEASURE:
    !(X :'a set) (Y :'b set) A B u v m0.
        sigma_finite_measure_space (X,A,u) /\
        sigma_finite_measure_space (Y,B,v) /\
@@ -3892,7 +3892,7 @@ Proof
 QED
 
 (* FCP version of EXISTENCE_OF_PROD_MEASURE *)
-Theorem existence_of_prod_measure :
+Theorem existence_of_prod_measure:
    !(X :'a['b] set) (Y :'a['c] set) A B u v m0.
        FINITE univ(:'b) /\ FINITE univ(:'c) /\
        sigma_finite_measure_space (X,A,u) /\
@@ -3982,12 +3982,12 @@ in
 end;
 
 (* NOTE: symbols are now aligned with real_measureTheory *)
-Definition prod_measure_def :
+Definition prod_measure_def:
     prod_measure m1 m2 =
       \s. pos_fn_integral m2 (\y. pos_fn_integral m1 (\x. indicator_fn s (x,y)))
 End
 
-Definition prod_measure_space_def : (* was: prod_measure_def or pair_measure_def *)
+Definition prod_measure_space_def: (* was: prod_measure_def or pair_measure_def *)
     prod_measure_space m1 m2 =
       (m_space m1 CROSS m_space m2,
        subsets (prod_sigma (m_space m1,measurable_sets m1)
@@ -4010,7 +4010,7 @@ Overload CROSS = “prod_measure_space”
 Theorem prod_measure_space_alt =
     REWRITE_RULE [prod_measure_def] prod_measure_space_def
 
-Theorem measure_space_prod_measure : (* was: measure_space_pair_measure *)
+Theorem measure_space_prod_measure: (* was: measure_space_pair_measure *)
     !m1 m2. sigma_finite_measure_space m1 /\
             sigma_finite_measure_space m2 ==> measure_space (m1 CROSS m2)
 Proof
@@ -4052,7 +4052,7 @@ Proof
 QED
 
 (* ‘lborel_2d = lborel CROSS lborel’ doesn't hold *)
-Theorem lborel_2d_prod_measure :
+Theorem lborel_2d_prod_measure:
     !s. s IN measurable_sets lborel_2d ==>
         measure lborel_2d s = measure (lborel CROSS lborel) s
 Proof
@@ -4080,7 +4080,7 @@ QED
        (pos_fn_integral M1 (\x. pos_fn_integral M2 (\y. f (x,y))) =
         pos_fn_integral M2 (\y. pos_fn_integral M1 (\x. f (x,y)))): thm
  *)
-Theorem TONELLI : (* was: fubini (HVG concordia) *)
+Theorem TONELLI: (* was: fubini (HVG concordia) *)
     !(X :'a set) (Y :'b set) A B u v f.
         sigma_finite_measure_space (X,A,u) /\
         sigma_finite_measure_space (Y,B,v) /\
@@ -5479,7 +5479,7 @@ QED
 
    Named after Guido Fubini, an Italian mathematician [6].
  *)
-Theorem FUBINI :
+Theorem FUBINI:
     !(X :'a set) (Y :'b set) A B u v f.
         sigma_finite_measure_space (X,A,u) /\
         sigma_finite_measure_space (Y,B,v) /\
@@ -5974,7 +5974,7 @@ Theorem Fubini' = FUBINI'
  |> (Q.GENL [‘m1’, ‘m2’]);
 
 (* This theorem only needs TONELLI *)
-Theorem IN_MEASURABLE_BOREL_FROM_PROD_SIGMA :
+Theorem IN_MEASURABLE_BOREL_FROM_PROD_SIGMA:
     !X Y A B f. sigma_algebra (X,A) /\ sigma_algebra (Y,B) /\
                 f IN measurable ((X,A) CROSS (Y,B)) Borel ==>
                (!y. y IN Y ==> (\x. f (x,y)) IN measurable (X,A) Borel) /\
@@ -6085,7 +6085,7 @@ val FILTRATION = store_thm
  >> RW_TAC std_ss [filtration_def]);
 
 (* all sub measure spaces of a sigma-finite fms are also sigma-finite *)
-Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE :
+Theorem SIGMA_FINITE_FILTERED_MEASURE_SPACE:
     !m a. sigma_finite_filtered_measure_space m a ==>
           !n. sigma_finite (m_space m,subsets (a n),measure m)
 Proof
@@ -6108,7 +6108,7 @@ Theorem sigma_finite_filtered_measure_space_alt =
     REWRITE_RULE [filtered_measure_space_def]
                  sigma_finite_filtered_measure_space_def
 
-Theorem sigma_finite_filtered_measure_space_alt_all :
+Theorem sigma_finite_filtered_measure_space_alt_all:
     !m a. sigma_finite_filtered_measure_space m a <=>
           measure_space m /\ filtration (m_space m,measurable_sets m) a /\
           !n. sigma_finite (m_space m,subsets (a n),measure m)
@@ -6158,7 +6158,7 @@ val INFTY_SIGMA_ALGEBRA_MAXIMAL = store_thm
  >> REWRITE_TAC [SIGMA_SUBSET_SUBSETS]);
 
 (* A construction of sigma-filteration from only measurable functions *)
-Theorem filtration_from_measurable_functions :
+Theorem filtration_from_measurable_functions:
     !m X A. measure_space m /\
            (!n. X n IN Borel_measurable (measurable_space m)) /\
            (!n. A n = sigma (m_space m) (\n. Borel) X (count1 n)) ==>
@@ -6202,7 +6202,7 @@ QED
 
    This is Example 23.3 (i) [1, p.277]
  *)
-Theorem MARTINGALE_EQ_SUB_SUPER :
+Theorem MARTINGALE_EQ_SUB_SUPER:
     !m a u. martingale m a u <=> sub_martingale m a u /\ super_martingale m a u
 Proof
     RW_TAC std_ss [martingale_def, sub_martingale_def, super_martingale_def]
@@ -6234,7 +6234,7 @@ val martingale_shared_tactics_2 =
  >> FIRST_X_ASSUM irule
  >> RW_TAC arith_ss [];
 
-Theorem martingale_alt :
+Theorem martingale_alt:
    !m a u.
       martingale m a u <=>
       sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
@@ -6246,7 +6246,7 @@ Proof
  >> martingale_shared_tactics_1
 QED
 
-Theorem super_martingale_alt :
+Theorem super_martingale_alt:
    !m a u.
       super_martingale m a u <=>
       sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
@@ -6259,7 +6259,7 @@ Proof
  >> martingale_shared_tactics_2
 QED
 
-Theorem sub_martingale_alt :
+Theorem sub_martingale_alt:
    !m a u.
       sub_martingale m a u <=>
       sigma_finite_filtered_measure_space m a /\ (!n. integrable m (u n)) /\
@@ -6417,7 +6417,7 @@ val martingale_alt_generator_shared_tactics_4 =
  >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> art [];
  (* end of martingale_alt_generator_shared_tactics_4 *)
 
-Theorem martingale_alt_generator :
+Theorem martingale_alt_generator:
    !m a u g. (!n. a n = sigma (m_space m) (g n)) /\
              (!n. has_exhausting_sequence (m_space m,g n)) /\
              (!n s. s IN (g n) ==> measure m s < PosInf) /\
@@ -6502,7 +6502,7 @@ val martingale_alt_generator_shared_tactics_5 =
 
    This theorem (and the next one) relies on measureTheory.SEMIRING_SIGMA_MONOTONE
  *)
-Theorem sub_martingale_alt_generator :
+Theorem sub_martingale_alt_generator:
    !m a u g. (!n. a n = sigma (m_space m) (g n)) /\
              (!n. has_exhausting_sequence (m_space m,g n)) /\
              (!n s. s IN (g n) ==> measure m s < PosInf) /\
@@ -6545,7 +6545,7 @@ Proof
  >> rw [semiring_def]
 QED
 
-Theorem super_martingale_alt_generator :
+Theorem super_martingale_alt_generator:
    !m a u g. (!n. a n = sigma (m_space m) (g n)) /\
              (!n. has_exhausting_sequence (m_space m,g n)) /\
              (!n s. s IN (g n) ==> measure m s < PosInf) /\
@@ -6599,7 +6599,7 @@ QED
 
    NOTE: added `c <> PosInf` to the case `p = PosInf`.
  *)
-Definition lp_space_def :
+Definition lp_space_def:
     lp_space p m =
       {f | f IN measurable (m_space m,measurable_sets m) Borel /\
            if p = PosInf then
@@ -6615,7 +6615,7 @@ Overload L2_space = “lp_space 2”
 Overload L_PosInf = “lp_space PosInf”
 
 (* alternative definition of ‘lp_space’ when p is finite (was: 1 <= p) *)
-Theorem lp_space_alt_finite :
+Theorem lp_space_alt_finite:
     !p m f. 0 < p /\ p <> PosInf ==>
            (f IN lp_space p m <=>
             f IN measurable (m_space m,measurable_sets m) Borel /\
@@ -6638,7 +6638,7 @@ Proof
 QED
 
 (* alternative definition of ‘lp_space’ when p is infinite *)
-Theorem lp_space_alt_infinite :
+Theorem lp_space_alt_infinite:
     !m f. measure_space m ==>
          (f IN lp_space PosInf m <=>
           f IN measurable (m_space m,measurable_sets m) Borel /\
@@ -6662,7 +6662,7 @@ Proof
 QED
 
 (* special case when ‘p = 1’ *)
-Theorem L1_space_alt_integrable :
+Theorem L1_space_alt_integrable:
     !m f. measure_space m ==> (f IN L1_space m <=> integrable m f)
 Proof
     rw [lp_space_alt_finite]
@@ -6681,7 +6681,7 @@ Proof
 QED
 
 (* special case when ‘p = 2’ *)
-Theorem L2_space_alt_integrable_square :
+Theorem L2_space_alt_integrable_square:
     !m f. measure_space m ==>
          (f IN L2_space m <=>
           f IN Borel_measurable (m_space m,measurable_sets m) /\
@@ -6702,7 +6702,7 @@ Proof
 QED
 
 (* The "else" part should only be used when ‘1 <= p’ (and also ‘p <> PosInf’) *)
-Definition seminorm_def :
+Definition seminorm_def:
     seminorm p m f =
     if p = PosInf then
        inf {c | 0 < c /\ measure m {x | x IN m_space m /\ c <= abs (f x)} = 0}
@@ -6711,21 +6711,21 @@ Definition seminorm_def :
 End
 
 (* was: 1 <= p *)
-Theorem seminorm_normal :
+Theorem seminorm_normal:
     !p m f. 0 < p /\ p <> PosInf ==>
             seminorm p m f = (pos_fn_integral m (\x. (abs (f x)) powr p)) powr (inv p)
 Proof
     rw [seminorm_def]
 QED
 
-Theorem seminorm_infty :
+Theorem seminorm_infty:
     !m f. seminorm PosInf m f =
           inf {c | 0 < c /\ measure m {x | x IN m_space m /\ c <= abs (f x)} = 0}
 Proof
     rw [seminorm_def]
 QED
 
-Theorem seminorm_infty_alt :
+Theorem seminorm_infty_alt:
     !m f. measure_space m /\ f IN measurable (m_space m,measurable_sets m) Borel ==>
           seminorm PosInf m f = inf {c | 0 < c /\ AE x::m. abs (f x) < c}
 Proof
@@ -6739,7 +6739,7 @@ Proof
 QED
 
 (* was: 1 <= p *)
-Theorem seminorm_pos :
+Theorem seminorm_pos:
     !p m f. 0 < p ==> 0 <= seminorm p m f
 Proof
     rpt STRIP_TAC
@@ -6749,7 +6749,7 @@ Proof
  >> rw [seminorm_normal, powr_pos]
 QED
 
-Theorem seminorm_one :
+Theorem seminorm_one:
     !m f. measure_space m ==> seminorm 1 m f = pos_fn_integral m (abs o f)
 Proof
     rpt STRIP_TAC
@@ -6760,7 +6760,7 @@ Proof
  >> rw [abs_pos]
 QED
 
-Theorem seminorm_two :
+Theorem seminorm_two:
     !m f. measure_space m ==>
           seminorm 2 m f = sqrt (pos_fn_integral m (\x. (f x) pow 2))
 Proof
@@ -6777,7 +6777,7 @@ Proof
 QED
 
 (* was: 1 <= p; removed ‘p <> PosInf’ *)
-Theorem seminorm_not_infty :
+Theorem seminorm_not_infty:
     !p m f. measure_space m /\ 0 < p /\ f IN lp_space p m ==>
             seminorm p m f <> PosInf /\ seminorm p m f <> NegInf
 Proof
@@ -6824,7 +6824,7 @@ QED
    NOTE: The key in this proof is to construct the needed null set satisfying AE
          of the goal, and to eliminate the ‘inf’ behind ‘seminorm’.
  *)
-Theorem seminorm_infty_AE_bound :
+Theorem seminorm_infty_AE_bound:
     !m f. measure_space m /\ f IN Borel_measurable (m_space m,measurable_sets m)
       ==> (AE x::m. abs (f x) <= seminorm PosInf m f)
 Proof
@@ -6880,7 +6880,7 @@ Proof
 QED
 
 (* was: 1 <= p *)
-Theorem seminorm_powr :
+Theorem seminorm_powr:
     !p m f. measure_space m /\ 0 < p /\ p <> PosInf ==>
            (seminorm p m f) powr p = pos_fn_integral m (\x. (abs (f x)) powr p)
 Proof
@@ -6897,7 +6897,7 @@ Proof
 QED
 
 (* was: 1 <= p; removed ‘p <> PosInf’ *)
-Theorem seminorm_eq_0 :
+Theorem seminorm_eq_0:
     !p m f. measure_space m /\ 0 < p /\ f IN Borel_measurable (measurable_space m) ==>
            (seminorm p m f = 0 <=> AE x::m. f x = 0)
 Proof
@@ -7031,7 +7031,7 @@ Proof
 QED
 
 (* was: 1 <= p, removed ‘p <> PosInf’ *)
-Theorem lp_space_alt_seminorm :
+Theorem lp_space_alt_seminorm:
     !p m f. measure_space m /\ 0 < p ==>
            (f IN lp_space p m <=>
             f IN Borel_measurable (m_space m,measurable_sets m) /\
@@ -7121,7 +7121,7 @@ Proof
  >> rw [GSYM lt_infty, extreal_mul_def, extreal_not_infty]
 QED
 
-Theorem Hoelder_inequality :
+Theorem Hoelder_inequality:
     !m u v p q. measure_space m /\ 0 < p /\ 0 < q /\ inv(p) + inv(q) = 1 /\
                 u IN lp_space p m /\ v IN lp_space q m
             ==> integrable m (\x. u x * v x) /\
@@ -7541,7 +7541,7 @@ QED
 
    see, e.g., Corollary 13.3 (Cauchy-Schwarz inequality) [1, p.118]
  *)
-Theorem Cauchy_Schwarz_inequality :
+Theorem Cauchy_Schwarz_inequality:
     !m u v. measure_space m /\ u IN L2_space m /\ v IN L2_space m ==>
             integrable m (\x. u x * v x) /\
             integral m (\x. abs (u x * v x)) <= seminorm 2 m u * seminorm 2 m v
@@ -7581,7 +7581,7 @@ QED
 
    NOTE: ‘0 < p’ doesn't hold for Minkowski's inequality but hold for this lemma.
  *)
-Theorem lp_space_add :
+Theorem lp_space_add:
     !p m u v. measure_space m /\ 0 < p /\ u IN lp_space p m /\ v IN lp_space p m
           ==> (\x. u x + v x) IN lp_space p m
 Proof
@@ -7738,7 +7738,7 @@ QED
          namely "Reversed Minkowski's Inequality" (less useful), which can be proven
          from the present Minkowski_inequality by considering u and (\x. 1 / v x).
  *)
-Theorem Minkowski_inequality :
+Theorem Minkowski_inequality:
     !p m u v. measure_space m /\ 1 <= p /\ u IN lp_space p m /\ v IN lp_space p m
           ==> (\x. u x + v x) IN lp_space p m /\
               seminorm p m (\x. u x + v x) <= seminorm p m u + seminorm p m v
@@ -7996,7 +7996,7 @@ QED
   ‘AE x::m. u x = v x’ together do NOT implies ‘v IN measurable ...’ unless
    the measure space is complete, cf. IN_MEASURABLE_BOREL_AE_EQ.
  *)
-Theorem seminorm_cong_AE :
+Theorem seminorm_cong_AE:
     !m u v p. measure_space m /\ 0 < p /\
               u IN measurable (m_space m,measurable_sets m) Borel /\
               v IN measurable (m_space m,measurable_sets m) Borel /\
@@ -8023,7 +8023,7 @@ Proof
  >> Q.EXISTS_TAC ‘\x. u x = v x’ >> rw []
 QED
 
-Theorem seminorm_cong :
+Theorem seminorm_cong:
     !m u v p. measure_space m /\ 0 < p /\
              (u IN measurable (m_space m,measurable_sets m) Borel \/
               v IN measurable (m_space m,measurable_sets m) Borel) /\
@@ -8038,7 +8038,7 @@ Proof
  >> Q.EXISTS_TAC ‘{}’ >> rw [NULL_SET_EMPTY]
 QED
 
-Theorem lp_space_cong :
+Theorem lp_space_cong:
     !p m u v. measure_space m /\ 0 < p /\ (!x. x IN m_space m ==> u x = v x) ==>
              (u IN lp_space p m <=> v IN lp_space p m)
 Proof
@@ -8053,7 +8053,7 @@ Proof
      MATCH_MP_TAC seminorm_cong >> art [])
 QED
 
-Theorem lp_space_cong_AE :
+Theorem lp_space_cong_AE:
     !p m u v. measure_space m /\ 0 < p /\
               u IN Borel_measurable (measurable_space m) /\
               v IN Borel_measurable (measurable_space m) /\
@@ -8065,7 +8065,7 @@ Proof
  >> MATCH_MP_TAC seminorm_cong_AE >> art []
 QED
 
-Theorem seminorm_zero :
+Theorem seminorm_zero:
     !p m. measure_space m /\ 0 < p ==> seminorm p m (\x. 0) = 0
 Proof
     rpt STRIP_TAC
@@ -8084,7 +8084,7 @@ Proof
  >> rw [seminorm_normal, zero_rpow, pos_fn_integral_zero]
 QED
 
-Theorem seminorm_cmul :
+Theorem seminorm_cmul:
     !p m u r. measure_space m /\ 0 < p /\
               u IN measurable (measurable_space m) Borel ==>
               seminorm p m (\x. Normal r * u x) = Normal (abs r) * seminorm p m u
@@ -8167,7 +8167,7 @@ Proof
  >> MATCH_MP_TAC mul_linv_pos >> rw []
 QED
 
-Theorem lp_space_cmul :
+Theorem lp_space_cmul:
     !p m u r. measure_space m /\ 0 < p /\ u IN lp_space p m ==>
               (\x. Normal r * u x) IN lp_space p m
 Proof
@@ -8184,7 +8184,7 @@ Proof
  >> rw [extreal_mul_eq]
 QED
 
-Theorem lp_space_add_cmul :
+Theorem lp_space_add_cmul:
     !p m u v a b. measure_space m /\ 0 < p /\ u IN lp_space p m /\ v IN lp_space p m
               ==> (\x. Normal a * u x + Normal b * v x) IN lp_space p m
 Proof
@@ -8194,7 +8194,7 @@ Proof
 QED
 
 (* cf. lp_space_alt_finite, lp_space_alt_infinite *)
-Theorem lp_space_AE_normal :
+Theorem lp_space_AE_normal:
     !p m f. measure_space m /\ 0 < p /\ f IN lp_space p m ==>
             AE x::m. f x <> PosInf /\ f x <> NegInf
 Proof
@@ -8227,7 +8227,7 @@ Proof
  >> gs [extreal_abs_def, infty_powr]
 QED
 
-Theorem lp_space_sub :
+Theorem lp_space_sub:
     !p m u v. measure_space m /\ 0 < p /\ u IN lp_space p m /\ v IN lp_space p m
           ==> (\x. u x - v x) IN lp_space p m
 Proof

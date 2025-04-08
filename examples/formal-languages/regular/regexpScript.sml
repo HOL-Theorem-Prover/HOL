@@ -50,7 +50,7 @@ val list_ss = list_ss ++ rewrites
 
 val set_ss  = list_ss ++ pred_setLib.PRED_SET_ss ++ rewrites [SET_EQ_THM,IN_DEF]
 
-Definition LIST_UNION_def :
+Definition LIST_UNION_def:
   (LIST_UNION [] = {}) /\
   (LIST_UNION (h::t) = h UNION LIST_UNION t)
 End
@@ -62,7 +62,7 @@ Proof
  srw_tac [] [LIST_UNION_def,IN_DEF]
 QED
 
-Theorem ZIP_ind :
+Theorem ZIP_ind:
  !P.
     (!l. P ([],l)) /\ (!v2 v3. P (v2::v3,[])) /\
      (!x xs y ys. P (xs,ys) ==> P (x::xs,y::ys)) ==>
@@ -73,14 +73,14 @@ Proof
   \\ gen_tac \\ Cases \\ ASM_SIMP_TAC bool_ss []
 QED
 
-Theorem MEM_ZIP_IMP :
+Theorem MEM_ZIP_IMP:
  !l1 l2 a b.
      MEM (a,b) (ZIP (l1,l2)) ==> MEM a l1 /\ MEM b l2
 Proof
  recInduct ZIP_ind \\ RW_TAC list_ss [ZIP_def] \\ METIS_TAC []
 QED
 
-Theorem ZIP_eq_cons :
+Theorem ZIP_eq_cons:
  !l1 l2 a b t.
     (ZIP (l1,l2) = (a,b)::t) ==> ?t1 t2. (l1 = a::t1) /\ (l2 = b::t2)
 Proof
@@ -94,7 +94,7 @@ Proof
  METIS_TAC [ZIP_eq_cons]
 QED
 
-Theorem zip_append :
+Theorem zip_append:
  !l1 l2 l3 l4.
    (LENGTH l1 = LENGTH l2) /\
    (LENGTH l3 = LENGTH l4)
@@ -104,7 +104,7 @@ Proof
  recInduct ZIP_ind >> rw_tac list_ss [ZIP_def]
 QED
 
-Theorem ZIP_eq_nil :
+Theorem ZIP_eq_nil:
  !l1 l2. (ZIP (l1,l2) = []) <=> ((l1=[]) \/ (l2=[]))
 Proof
  recInduct ZIP_ind THEN RW_TAC list_ss [ZIP_def]
@@ -147,7 +147,7 @@ Triviality regexp_distinct = fetch "-" "regexp_distinct";
 (* "And" on regexps is derived syntax                                        *)
 (*---------------------------------------------------------------------------*)
 
-Definition And_def :
+Definition And_def:
   And r s = Neg(Or[Neg r; Neg s])
 End
 
@@ -161,7 +161,7 @@ End
 Definition DOT_def     : DOT = Chset charset_full
 End
 
-Definition Epsilon_def : Epsilon = Star (Chset charset_empty)
+Definition Epsilon_def: Epsilon = Star (Chset charset_empty)
 End
 
 
@@ -169,7 +169,7 @@ End
 (* Regexp of a string (currently unused).                                    *)
 (*---------------------------------------------------------------------------*)
 
-Definition catstring_def :
+Definition catstring_def:
     (catstring [] = Epsilon) /\
     (catstring (c::t) = Cat(Chset(charset_sing c)) (catstring t))
 End
@@ -181,7 +181,7 @@ End
 (* computation should stop at Chset, as is done in rsize_def.                *)
 (*---------------------------------------------------------------------------*)
 
-Definition rsize_def :
+Definition rsize_def:
     (rsize (Chset a) = 1n) /\
     (rsize (Cat r s) = 1 + (rsize r + rsize s)) /\
     (rsize (Star a)  = 1 + rsize a) /\
@@ -193,7 +193,7 @@ Definition rsize_def :
 End
 
 
-Theorem rsize_or_lem :
+Theorem rsize_or_lem:
  !l a. MEM a l ==> rsize a < rsize (Or l)
 Proof
  SIMP_TAC list_ss [rsize_def] THEN
@@ -201,7 +201,7 @@ Proof
  [DECIDE_TAC, RES_TAC THEN POP_ASSUM MP_TAC THEN DECIDE_TAC]
 QED
 
-Theorem rsizel_append :
+Theorem rsizel_append:
  !l1 l2. rsizel (l1 ++ l2) = rsizel (l1) + rsizel (l2)
 Proof
  Induct THEN RW_TAC list_ss [rsize_def]
@@ -213,7 +213,7 @@ QED
 (* show termination of other functions, so it need not be translated.        *)
 (*---------------------------------------------------------------------------*)
 
-Definition regexp_list_size_def :
+Definition regexp_list_size_def:
    (regexp_list_size [] (acc:num)     = acc) /\
     (regexp_list_size (Chset _::t) acc = regexp_list_size t (acc+1)) /\
     (regexp_list_size (Star r::t) acc  = regexp_list_size (r::t) (acc+1)) /\
@@ -234,7 +234,7 @@ End
 (* Language of a regexp                                                      *)
 (*---------------------------------------------------------------------------*)
 
-Definition regexp_lang_def :
+Definition regexp_lang_def:
   (regexp_lang (Chset ns) = {w:string | ?c. charset_mem c ns /\ (w = [CHR c])}) /\
   (regexp_lang (Cat r s)  = (regexp_lang r dot regexp_lang s)) /\
   (regexp_lang (Star r)   = KSTAR (regexp_lang r)) /\
@@ -247,7 +247,7 @@ Termination
   >> decide_tac
 End
 
-Theorem regexp_lang_thm :
+Theorem regexp_lang_thm:
    (regexp_lang (Chset ns) w = ?c. charset_mem c ns /\ (w = [CHR c])) /\
    (regexp_lang (Cat r s) w  = ?w1 w2. regexp_lang r w1 /\
                                        regexp_lang s w2 /\ (w = w1++w2)) /\
@@ -261,31 +261,31 @@ Proof
   Induct_on `rlist` THEN RW_TAC set_ss [LIST_UNION_THM]]
 QED
 
-Theorem regexp_lang_epsilon :
+Theorem regexp_lang_epsilon:
  regexp_lang Epsilon = {""}
 Proof
  rw [regexp_lang_def,Epsilon_def,charset_mem_empty,KSTAR_EMPTYSET,SET_EQ_THM]
 QED
 
-Theorem regexp_lang_empty :
+Theorem regexp_lang_empty:
  regexp_lang Empty = EMPTY
 Proof
  rw [regexp_lang_def,Empty_def,charset_mem_empty]
 QED
 
-Theorem regexp_lang_epsilon_thm :
+Theorem regexp_lang_epsilon_thm:
  !s. regexp_lang Epsilon s <=> (s = "")
 Proof
  rw [regexp_lang_epsilon,SET_EQ_THM]
 QED
 
-Theorem regexp_lang_empty_thm :
+Theorem regexp_lang_empty_thm:
  !s. regexp_lang Empty s <=> F
 Proof
  METIS_TAC [regexp_lang_empty,EMPTY_DEF]
 QED
 
-Theorem regexp_lang_dot :
+Theorem regexp_lang_dot:
  regexp_lang DOT = \w. ?c. w = [c]
 Proof
 rw_tac set_ss [DOT_def, regexp_lang_def, EXTENSION, EQ_IMP_THM]
@@ -297,7 +297,7 @@ rw_tac set_ss [DOT_def, regexp_lang_def, EXTENSION, EQ_IMP_THM]
  >> rw_tac bool_ss []
 QED
 
-Theorem regexp_lang_dot_star :
+Theorem regexp_lang_dot_star:
  regexp_lang (Star DOT) = \w. T
 Proof
 rw_tac set_ss [regexp_lang_def, regexp_lang_dot]
@@ -315,7 +315,7 @@ Proof
  rw_tac set_ss [EXTENSION]
 QED
 
-Theorem regexp_lang_invol :
+Theorem regexp_lang_invol:
  !r. regexp_lang (Or [r ; Neg r]) = \w. T
 Proof
 rw_tac set_ss [regexp_lang_def]
@@ -323,13 +323,13 @@ rw_tac set_ss [regexp_lang_def]
  >> rw_tac set_ss [union_compl]
 QED
 
-Theorem regexp_lang_invol_dot_star :
+Theorem regexp_lang_invol_dot_star:
  !r. regexp_lang (Or [r ; Neg r]) = regexp_lang (Star DOT)
 Proof
  rw_tac bool_ss [regexp_lang_invol, GSYM regexp_lang_dot_star]
 QED
 
-Theorem regexp_lang_dot_star_negempty :
+Theorem regexp_lang_dot_star_negempty:
  regexp_lang (Star DOT) = regexp_lang (Neg Empty)
 Proof
  rw_tac set_ss [regexp_lang_dot_star,Empty_def]
@@ -341,7 +341,7 @@ QED
 (* Compare lists by length. Used to speed up comparisons of Or regexps.      *)
 (*---------------------------------------------------------------------------*)
 
-Definition len_cmp_def :
+Definition len_cmp_def:
    (len_cmp [] [] = Equal) /\
    (len_cmp [] (_::_) = Less) /\
    (len_cmp (_::_) [] = Greater) /\
@@ -356,7 +356,7 @@ Proof
  recInduct len_cmp_ind >> rw[len_cmp_def]
 QED
 
-Theorem len_cmp_thm :
+Theorem len_cmp_thm:
  !l1 l2. len_cmp l1 l2 =
            if (LENGTH l1 = LENGTH l2) then Equal else
            if (LENGTH l1 < LENGTH l2) then Less else Greater
@@ -443,7 +443,7 @@ QED
 (* Regexp comparison, in worklist style, to accomodate CakeML.               *)
 (*---------------------------------------------------------------------------*)
 
-Definition regexp_compareW_def :
+Definition regexp_compareW_def:
   (regexp_compareW [] = Equal) /\
   (regexp_compareW (pair::t) =
      case pair of
@@ -477,12 +477,12 @@ Termination
   >- (Q.EXISTS_TAC `[(r1,r3) ; (r2,r4)]` \\ NTAC 2 (RW_TAC list_ss [rsize_def]))
 End
 
-Definition regexp_compare_def :
+Definition regexp_compare_def:
    regexp_compare r s = regexp_compareW [(r,s)]
 End
 
 
-Definition regexp_leq_def :
+Definition regexp_leq_def:
  regexp_leq r1 r2 <=>
    case regexp_compare r1 r2 of
     | Less => T
@@ -555,7 +555,7 @@ Proof
 QED
 
 
-Theorem regexp_compareW_compute :
+Theorem regexp_compareW_compute:
  !plist.
    regexp_compareW plist =
     case plist of
@@ -610,7 +610,7 @@ which expand to Or[r,rr,rrr, .... r^n] which, when compared to Or [r, ... r^(n-1
 cost n^2 work. Scott Owens suggested reversing the Or'd elements, which still gives an OK comparison
 function.
 
-Theorem regexp_compareW_compute_revised :
+Theorem regexp_compareW_compute_revised:
  !plist.
    regexp_compareW plist =
     case plist of
@@ -663,7 +663,7 @@ QED
 *)
 
 
-Theorem regexp_compareW_eq :
+Theorem regexp_compareW_eq:
  !plist l1 l2.
     (LENGTH l1 = LENGTH l2) /\ (ZIP (l1,l2) = plist)
     ==>
@@ -716,7 +716,7 @@ Proof
      >> rw[pairTheory.UNCURRY_VAR])
 QED
 
-Theorem regexp_compare_eq :
+Theorem regexp_compare_eq:
  !r s. (regexp_compare r s = Equal) <=> (r = s)
 Proof
  rw_tac list_ss [regexp_compare_def]
@@ -724,7 +724,7 @@ Proof
   >> rw_tac list_ss [ZIP_def]
 QED
 
-Theorem regexp_compareW_antisym :
+Theorem regexp_compareW_antisym:
  !plist l1 l2.
     (LENGTH l1 = LENGTH l2) /\ (ZIP (l1,l2) = plist)
      ==>
@@ -758,7 +758,7 @@ Proof
 
 QED
 
-Theorem regexp_compare_antisym :
+Theorem regexp_compare_antisym:
  !r s. (regexp_compare r s = Greater) <=> (regexp_compare s r = Less)
 Proof
  rw_tac list_ss [regexp_compare_def]
@@ -766,7 +766,7 @@ Proof
   >> rw_tac list_ss [ZIP_def]
 QED
 
-Theorem regexp_compareW_trans :
+Theorem regexp_compareW_trans:
  !plist l1 l2 l3.
    (LENGTH l1 = LENGTH l2) /\ (LENGTH l2 = LENGTH l3) /\
    (plist = ZIP (l1,l2)) /\
@@ -826,7 +826,7 @@ Proof
 
 QED
 
-Theorem regexp_compare_trans :
+Theorem regexp_compare_trans:
  !r s u. (regexp_compare r s = Less) /\ (regexp_compare s u = Less)
          ==>
          (regexp_compare r u = Less)
@@ -841,7 +841,7 @@ Proof
 QED
 
 
-Theorem regexp_compareW_trans_eq :
+Theorem regexp_compareW_trans_eq:
  !plist l1 l2 l3.
    (LENGTH l1 = LENGTH l2) /\ (LENGTH l2 = LENGTH l3) /\
    (plist = ZIP (l1,l2)) /\
@@ -887,7 +887,7 @@ Proof
 
 QED
 
-Theorem regexp_compare_trans_eq :
+Theorem regexp_compare_trans_eq:
  !r s u. (regexp_compare r s = Less) /\ (regexp_compare s u = Equal)
          ==>
          (regexp_compare r u = Less)
@@ -901,7 +901,7 @@ Proof
    >> rw[ZIP_def]
 QED
 
-Theorem regexp_compare_good :
+Theorem regexp_compare_good:
  good_cmp regexp_compare
 Proof
  rw_tac std_ss [good_cmp_thm,regexp_compare_eq]
@@ -909,14 +909,14 @@ Proof
                 regexp_compare_trans,regexp_compare_trans_eq]
 QED
 
-Theorem regexp_leq_total :
+Theorem regexp_leq_total:
  total regexp_leq
 Proof
  rw [total_def, regexp_leq_def] >> every_case_tac >> fs [] >>
  metis_tac [regexp_compare_antisym, cpn_distinct]
 QED
 
-Theorem regexp_leq_transitive :
+Theorem regexp_leq_transitive:
  transitive regexp_leq
 Proof
  rw [transitive_def, regexp_leq_def]
@@ -925,7 +925,7 @@ Proof
    >> metis_tac [regexp_compare_eq, regexp_compare_trans,cpn_distinct]
 QED
 
-Theorem regexp_leq_antisym :
+Theorem regexp_leq_antisym:
  antisymmetric regexp_leq
 Proof
   RW_TAC list_ss [antisymmetric_def, regexp_leq_def] >>
@@ -935,7 +935,7 @@ QED
 
 Theorem regexp_leq_antisym' = REWRITE_RULE [antisymmetric_def] regexp_leq_antisym
 
-Theorem regexp_compare_id :
+Theorem regexp_compare_id:
  !r. regexp_compare r r = Equal
 Proof
  metis_tac [regexp_compare_good, good_cmp_def]
@@ -949,7 +949,7 @@ QED
 (* Neg r might always match something.                                       *)
 (*---------------------------------------------------------------------------*)
 
-Definition is_regexp_empty_def :
+Definition is_regexp_empty_def:
   (is_regexp_empty (Chset cs) = (cs = charset_empty)) /\
    (is_regexp_empty (Cat r1 r2) = (is_regexp_empty r1 \/ is_regexp_empty r2)) /\
    (is_regexp_empty (Star _) = F) /\
@@ -976,7 +976,7 @@ QED
 (* worklist-style algorithm is relatively efficient and gets around a        *)
 (*---------------------------------------------------------------------------*)
 
-Definition nullableW_def :
+Definition nullableW_def:
   (nullableW [] = F) /\
   (nullableW (Chset _ :: t) = nullableW t) /\
   (nullableW (Cat r s :: t) = ((nullableW [r] /\ nullableW [s]) \/ nullableW t)) /\
@@ -987,12 +987,12 @@ Termination
  WF_REL_TAC `measure rsizel` >> RW_TAC list_ss [rsize_def,rsizel_append]
 End
 
-Definition nullable_def :
+Definition nullable_def:
    nullable r = nullableW [r]
 End
 
 
-Theorem nullableW_thm :
+Theorem nullableW_thm:
  !rlist. nullableW rlist <=> EXISTS (\r. regexp_lang r "") rlist
 Proof
   recInduct (fetch "-" "nullableW_ind")
@@ -1000,7 +1000,7 @@ Proof
     >> metis_tac [EVERY_DEF,FLAT]
 QED
 
-Theorem nullable_thm :
+Theorem nullable_thm:
  !r. nullable r <=> regexp_lang r ""
 Proof
  RW_TAC list_ss [nullable_def,nullableW_thm]
@@ -1010,7 +1010,7 @@ QED
 (* Brzozowski derivative                                                     *)
 (*---------------------------------------------------------------------------*)
 
-Definition deriv_def :
+Definition deriv_def:
   (deriv c (Chset cs) = if charset_mem c cs then Epsilon else Empty) /\
   (deriv c (Neg r)    = Neg (deriv c r)) /\
   (deriv c (Star r)   = Cat (deriv c r) (Star r)) /\
@@ -1035,7 +1035,7 @@ End
 (* basic matching algorithm.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-Definition deriv_matches_def :
+Definition deriv_matches_def:
    (deriv_matches r "" = nullable r) /\
    (deriv_matches r (c::s) = deriv_matches (deriv (ORD c) r) s)
 End
@@ -1064,7 +1064,7 @@ Proof
  Induct_on `ss1` >> rw []
 QED
 
-Theorem deriv_thm :
+Theorem deriv_thm:
  (!r c s. regexp_lang r (c::s) = regexp_lang (deriv (ORD c) r) s) /\
  (!rs c s. regexp_lang (Or rs) (c::s) = regexp_lang (deriv (ORD c) (Or rs)) s)
 Proof
@@ -1104,13 +1104,13 @@ QED
 (* Correctness of deriv                                                      *)
 (*---------------------------------------------------------------------------*)
 
-Theorem regexp_lang_deriv :
+Theorem regexp_lang_deriv:
  !r s. regexp_lang r s = deriv_matches r s
 Proof
  Induct_on `s` >> rw [deriv_matches_def, nullable_thm] >> metis_tac [deriv_thm]
 QED
 
-Theorem regexp_lang_eqns :
+Theorem regexp_lang_eqns:
  (!s. regexp_lang (Chset charset_empty) s = F) /\
  (!r1 r2 r3 s.
     regexp_lang (Cat (Cat r1 r2) r3) s = regexp_lang (Cat r1 (Cat r2 r3)) s) /\
@@ -1138,7 +1138,7 @@ QED
 Theorem deriv_matches_eqns =
     REWRITE_RULE [regexp_lang_deriv] regexp_lang_eqns;
 
-Theorem regexp_lang_ctxt_eqns :
+Theorem regexp_lang_ctxt_eqns:
  !r1 r2.
   (!s. regexp_lang r1 s = regexp_lang r2 s)
   ==>
@@ -1159,17 +1159,17 @@ Theorem deriv_matches_ctxt_eqns =
 (* Smart constructors for building normalized regexps                        *)
 (*---------------------------------------------------------------------------*)
 
-Definition is_charset_def :
+Definition is_charset_def:
    (is_charset (Chset cs) = T) /\
    (is_charset _ = F)
 End
 
-Definition build_char_set_def :
+Definition build_char_set_def:
     build_char_set cs = Chset cs
 End
 
 
-Definition merge_charsets_def : (* requires all charsets to be adjacent *)
+Definition merge_charsets_def: (* requires all charsets to be adjacent *)
   (merge_charsets (Chset cs1::Chset cs2::rs) =
        merge_charsets (Chset (charset_union cs1 cs2)::rs)) /\
    (merge_charsets rs = rs)
@@ -1179,7 +1179,7 @@ End;
 
 val merge_charsets_ind = fetch "-" "merge_charsets_ind";
 
-Definition assoc_cat_def :
+Definition assoc_cat_def:
    (assoc_cat (Cat r1 r2) r3 = Cat r1 (assoc_cat r2 r3)) /\
    (assoc_cat r1 r2 = Cat r1 r2)
 End
@@ -1187,7 +1187,7 @@ End
 
 val assoc_cat_ind = fetch "-" "assoc_cat_ind";
 
-Definition build_cat_def :
+Definition build_cat_def:
    build_cat r1 r2 =
      if (r1 = Empty) \/ (r2 = Empty) then Empty
      else if r1 = Epsilon then r2
@@ -1196,24 +1196,24 @@ Definition build_cat_def :
        assoc_cat r1 r2
 End
 
-Definition build_neg_def :
+Definition build_neg_def:
   (build_neg (Neg r) = r) /\
   (build_neg r = Neg r)
 End
 
-Definition build_star_def :
+Definition build_star_def:
   (build_star (Star r) = Star r) /\
   (build_star r = Star r)
 End
 
-Definition flatten_or_def :
+Definition flatten_or_def:
   (flatten_or [] = []) /\
   (flatten_or (Or rs::rs') = rs ++ flatten_or rs') /\
   (flatten_or (r::rs) = r :: flatten_or rs)
 End
 
 
-Definition remove_dups_def : (* requires sorted input *)
+Definition remove_dups_def: (* requires sorted input *)
   (remove_dups [] = []) /\
   (remove_dups [r] = [r]) /\
   (remove_dups (r1::r2::rs) =
@@ -1223,7 +1223,7 @@ Definition remove_dups_def : (* requires sorted input *)
       r1::remove_dups (r2::rs))
 End
 
-Definition build_or_def :
+Definition build_or_def:
    build_or rs =
     let rs = remove_dups (merge_charsets (mergesort regexp_leq (flatten_or rs)))
     in
@@ -1403,7 +1403,7 @@ QED
 (* Use smart constructors to normalize derivatives.                          *)
 (*---------------------------------------------------------------------------*)
 
-Definition smart_deriv_def :
+Definition smart_deriv_def:
    (smart_deriv c (Chset cs) = if charset_mem c cs then Epsilon else Empty) /\
    (smart_deriv c (Cat r1 r2) =
      let d1 = build_cat (smart_deriv c r1) r2
@@ -1422,7 +1422,7 @@ End
 val smart_deriv_ind = fetch "-" "smart_deriv_ind";
 
 
-Theorem smart_constructors_correct :
+Theorem smart_constructors_correct:
   (!r c s. regexp_lang (smart_deriv c r) s <=> regexp_lang (deriv c r) s) /\
   (!rs c s. EXISTS (\r. regexp_lang (smart_deriv c r) s) rs <=>
             EXISTS (\r. regexp_lang (deriv c r) s) rs)
@@ -1451,7 +1451,7 @@ Proof
 
 QED
 
-Theorem smart_deriv_thm :
+Theorem smart_deriv_thm:
   (smart_deriv c (Chset cs) = if charset_mem c cs then Epsilon else Empty) /\
   (smart_deriv c (Cat (Chset cs) r) = if charset_mem c cs then r else Empty) /\
   (smart_deriv c (Cat r1 r2) =
@@ -1470,7 +1470,7 @@ QED
 (* Matcher that uses smart constructor derivatives                           *)
 (*---------------------------------------------------------------------------*)
 
-Definition smart_deriv_matches_def :
+Definition smart_deriv_matches_def:
    (smart_deriv_matches r "" = nullable r) /\
    (smart_deriv_matches r (c::s) = smart_deriv_matches (smart_deriv (ORD c) r) s)
 End
@@ -1479,7 +1479,7 @@ End
 (* Correctness of matching with smart derivatives                            *)
 (*---------------------------------------------------------------------------*)
 
-Theorem regexp_lang_smart_deriv :
+Theorem regexp_lang_smart_deriv:
  !r s. smart_deriv_matches r s <=> regexp_lang r s
 Proof
   Induct_on `s` >>
@@ -1494,7 +1494,7 @@ QED
 (* Use smart constructors to normalize a regexp.                             *)
 (*---------------------------------------------------------------------------*)
 
-Definition normalize_def :
+Definition normalize_def:
   (normalize (Chset cs) = build_char_set cs) /\
    (normalize (Cat r1 r2) = build_cat (normalize r1) (normalize r2)) /\
    (normalize (Star r) = build_star (normalize r)) /\
@@ -1530,13 +1530,13 @@ Proof
  >- metis_tac [regexp_lang_ctxt_eqns]
 QED
 
-Theorem regexp_lang_normalize :
+Theorem regexp_lang_normalize:
  !r s. regexp_lang r s = regexp_lang (normalize r) s
 Proof
  metis_tac [regexp_lang_normalize_help]
 QED
 
-Theorem regexp_lang_normalize_eta :
+Theorem regexp_lang_normalize_eta:
  !r. regexp_lang r = regexp_lang (normalize r)
 Proof
  metis_tac [regexp_lang_normalize]
@@ -1546,11 +1546,11 @@ QED
 (* Is a regexp in normal form?                                               *)
 (*---------------------------------------------------------------------------*)
 
-Definition no_sub_or_def :
+Definition no_sub_or_def:
    no_sub_or rs = EVERY (\r. case r of | Or _ => F | _ => T) rs
 End
 
-Definition is_normalized_def :
+Definition is_normalized_def:
   (is_normalized (Chset cs) <=> T) /\
   (is_normalized (Cat r1 r2) <=>
      (r1 <> Chset charset_empty) /\
@@ -1587,7 +1587,7 @@ val is_normalized_ind = fetch "-" "is_normalized_ind";
 (* Slightly more compact version.                                            *)
 (*---------------------------------------------------------------------------*)
 
-Theorem is_normalized_eqns :
+Theorem is_normalized_eqns:
  (!cs. is_normalized (Chset cs) <=> T) /\
   (!r. is_normalized (Star r) <=> is_normalized r /\ (!s. r <> Star s)) /\
   (!r. is_normalized (Neg r) <=> is_normalized r /\ (!s. r <> Neg s)) /\
@@ -1623,7 +1623,7 @@ Proof
  rw [is_normalized_def, regexp_smart_constructors_def]
 QED
 
-Theorem norm_is_regexp_empty :
+Theorem norm_is_regexp_empty:
  !r. is_normalized r ==> (is_regexp_empty r = (r = Chset charset_empty))
 Proof
  recInduct (fetch "-" "is_normalized_ind") >>
@@ -1682,7 +1682,7 @@ Proof
  rw [is_normalized_def, regexp_smart_constructors_def]
 QED
 
-Theorem norm_neg :
+Theorem norm_neg:
  !r. is_normalized r ==> is_normalized (build_neg r)
 Proof
 Cases_on `r` >>
@@ -1693,7 +1693,7 @@ QED
 (* A normalised Or has only normalised subterms                              *)
 (*---------------------------------------------------------------------------*)
 
-Theorem flatten_or_norm_pres :
+Theorem flatten_or_norm_pres:
  !rs. EVERY is_normalized rs ==> EVERY is_normalized (flatten_or rs)
 Proof
 recInduct flatten_or_ind >>
@@ -1701,13 +1701,13 @@ rw [flatten_or_def] >>
 fs [is_normalized_def, EVERY_MEM]
 QED
 
-Theorem mergesort_norm_pres :
+Theorem mergesort_norm_pres:
  !rs. EVERY is_normalized rs ==> EVERY is_normalized (mergesort regexp_leq rs)
 Proof
  rw [EVERY_MEM, mergesort_mem]
 QED
 
-Theorem merge_charsets_norm_pres :
+Theorem merge_charsets_norm_pres:
  !rs. EVERY is_normalized rs ==> EVERY is_normalized (merge_charsets rs)
 Proof
  ho_match_mp_tac merge_charsets_ind >>
@@ -1716,7 +1716,7 @@ Proof
  fs [is_normalized_def]
 QED
 
-Theorem remove_dups_norm_pres :
+Theorem remove_dups_norm_pres:
  !rs. EVERY is_normalized rs ==> EVERY is_normalized (remove_dups rs)
 Proof
  ho_match_mp_tac remove_dups_ind >>
@@ -1728,7 +1728,7 @@ QED
 (* this.                                                                     *)
 (*---------------------------------------------------------------------------*)
 
-Theorem flatten_or_no_or :
+Theorem flatten_or_no_or:
  !rs. EVERY is_normalized rs ==> no_sub_or (flatten_or rs)
 Proof
  recInduct flatten_or_ind >>
@@ -1736,20 +1736,20 @@ Proof
  fs [is_normalized_def, EVERY_MEM, no_sub_or_def]
 QED
 
-Theorem mergesort_no_or_pres :
+Theorem mergesort_no_or_pres:
  !rs. no_sub_or rs ==> no_sub_or (mergesort regexp_leq rs)
 Proof
  rw [no_sub_or_def, EVERY_MEM, mergesort_mem]
 QED
 
-Theorem merge_charsets_no_or_pres :
+Theorem merge_charsets_no_or_pres:
  !rs. no_sub_or rs ==> no_sub_or (merge_charsets rs)
 Proof
  ho_match_mp_tac merge_charsets_ind >>
  rw [no_sub_or_def, merge_charsets_def]
 QED
 
-Theorem remove_dups_no_or_pres :
+Theorem remove_dups_no_or_pres:
  !rs. no_sub_or rs ==> no_sub_or (remove_dups rs)
 Proof
  ho_match_mp_tac remove_dups_ind >>
@@ -1768,7 +1768,7 @@ Proof
  >> EVAL_TAC
 QED
 
-Theorem SORTED_starts_charsets :
+Theorem SORTED_starts_charsets:
  !rs. SORTED regexp_leq rs ==>
   ?rs1 rs2. (rs = rs1 ++ rs2) /\ EVERY is_charset rs1 /\ ~EXISTS is_charset rs2
 Proof
@@ -1806,7 +1806,7 @@ Proof
 
 QED
 
-Theorem merge_charsets_no_charsets :
+Theorem merge_charsets_no_charsets:
  !rs. ~EXISTS is_charset rs ==> (merge_charsets rs = rs)
 Proof
  ho_match_mp_tac merge_charsets_ind >>
@@ -1814,7 +1814,7 @@ Proof
  fs [is_charset_def]
 QED
 
-Theorem merge_charsets_append :
+Theorem merge_charsets_append:
  !rs1 rs2.
   rs1 <> [] /\
   EVERY is_charset rs1 /\
@@ -1834,7 +1834,7 @@ Proof
 QED
 
 
-Theorem merge_charsets_sorted_pres :
+Theorem merge_charsets_sorted_pres:
  !rs. SORTED regexp_leq rs ==> SORTED regexp_leq (merge_charsets rs)
 Proof
  rw [] >>
@@ -1864,7 +1864,7 @@ Proof
  fs [is_charset_def, regexp_compare_def,regexp_compareW_def]
 QED
 
-Theorem remove_dups_mem :
+Theorem remove_dups_mem:
  !rs r. MEM r (remove_dups rs) = MEM r rs
 Proof
  ho_match_mp_tac remove_dups_ind >>
@@ -1872,7 +1872,7 @@ Proof
  metis_tac []
 QED
 
-Theorem remove_dups_sorted_pres :
+Theorem remove_dups_sorted_pres:
  !rs. SORTED regexp_leq rs ==> SORTED regexp_leq (remove_dups rs)
 Proof
  ho_match_mp_tac remove_dups_ind >>
@@ -1892,7 +1892,7 @@ QED
 (* this, but only on a sorted list of regexps.                               *)
 (*---------------------------------------------------------------------------*)
 
-Theorem merge_charsets_only1 :
+Theorem merge_charsets_only1:
  !rs. SORTED regexp_leq rs ==> LENGTH (FILTER is_charset (merge_charsets rs)) <= 1
 Proof
  rw [] >>
@@ -1905,7 +1905,7 @@ Proof
  fs [combinTheory.o_DEF, GSYM FILTER_EQ_NIL]
 QED
 
-Theorem remove_dups_charset_only1_pres :
+Theorem remove_dups_charset_only1_pres:
  !rs.
  LENGTH (FILTER is_charset rs) <= 1 ==>
  (LENGTH (FILTER is_charset (remove_dups rs)) = LENGTH (FILTER is_charset rs))
@@ -1922,7 +1922,7 @@ QED
 (* but only on a sorted list of regexps.                                     *)
 (*---------------------------------------------------------------------------*)
 
-Theorem remove_dups_no_dups :
+Theorem remove_dups_no_dups:
  !rs. SORTED regexp_leq rs ==> ALL_DISTINCT (remove_dups rs)
 Proof
  ho_match_mp_tac remove_dups_ind >>
@@ -1932,7 +1932,7 @@ Proof
  metis_tac[regexp_leq_antisym']
 QED
 
-Theorem norm_or :
+Theorem norm_or:
  !rs. EVERY is_normalized rs ==> is_normalized (build_or rs)
 Proof
  rw_tac list_ss [build_or_def, is_normalized_def,Empty_def]
@@ -1994,7 +1994,7 @@ QED
 (* Normalization delivers normal form                                        *)
 (*---------------------------------------------------------------------------*)
 
-Theorem normalize_thm :
+Theorem normalize_thm:
  !r. is_normalized (normalize r)
 Proof
  recInduct normalize_ind
@@ -2082,7 +2082,7 @@ QED
 
 val FULL_CASE_TAC = BasicProvers.FULL_CASE_TAC;
 
-Theorem normalize_id :
+Theorem normalize_id:
  !r. is_normalized r ==> (normalize r = r)
 Proof
 recInduct is_normalized_ind
@@ -2109,7 +2109,7 @@ QED
 (* Normalization is idempotent                                               *)
 (*---------------------------------------------------------------------------*)
 
-Theorem normalize_idempotent :
+Theorem normalize_idempotent:
  !r. normalize (normalize r) = normalize r
 Proof
  METIS_TAC [normalize_id,normalize_thm]
@@ -2120,7 +2120,7 @@ QED
 (* Smart derivative yields a regexp in normal form                           *)
 (*---------------------------------------------------------------------------*)
 
-Theorem smart_deriv_normalized :
+Theorem smart_deriv_normalized:
  !c r. is_normalized r ==> is_normalized (smart_deriv c r)
 Proof
  recInduct smart_deriv_ind
@@ -2137,7 +2137,7 @@ QED
 (* smart_deriv is ordinary deriv followed by normalization                   *)
 (*---------------------------------------------------------------------------*)
 
-Theorem smart_deriv_normalize_deriv :
+Theorem smart_deriv_normalize_deriv:
  !r c. is_normalized r ==> (smart_deriv c r = normalize (deriv c r))
 Proof
  recInduct normalize_ind THEN
@@ -2160,7 +2160,7 @@ QED
 (* (regexp_lang r "")                                                        *)
 (*---------------------------------------------------------------------------*)
 
-Theorem regexp_lang_algorithm :
+Theorem regexp_lang_algorithm:
  (!cs r. regexp_lang (Cat (Chset cs) r) [] = F) /\
   (!cs r c s.
    regexp_lang (Cat (Chset cs) r) (c::s) =

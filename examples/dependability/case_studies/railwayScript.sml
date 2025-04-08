@@ -26,19 +26,19 @@ val _ = new_theory "railway";
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
-Definition in_events_def :
+Definition in_events_def:
 in_events p L = (!z. MEM z L ==> z IN events p)
 End
 
-Definition two_dim_fail_event_list_def :
+Definition two_dim_fail_event_list_def:
 two_dim_fail_event_list p L t = MAP (\a. fail_event_list p a t) L
 End
 
-Definition three_dim_fail_event_list_def :
+Definition three_dim_fail_event_list_def:
 three_dim_fail_event_list p L t = MAP (\a. two_dim_fail_event_list p a t) L
 End
 
-Theorem railway_FT_equi_RBD :
+Theorem railway_FT_equi_RBD:
  prob_space p /\ in_events p (fail_event_list p [x1;x2;x3;x4;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15;x16] t) ==>
 ((FTree p (OR[OR(gate_list (fail_event_list p [x3;x4] t));
                     OR(gate_list (fail_event_list p [x5;x6] t));
@@ -70,13 +70,13 @@ QED
 
 (*--------------------------------------*)
 
-Definition one_minus_exp_func_list_def :
+Definition one_minus_exp_func_list_def:
 one_minus_exp_func_list C t = MAP (λa. 1 - exp (-(a * (t:real)))) C
 End
 
 
 (*--------------------------------------*)
-Theorem fail_prob_railway_FT :
+Theorem fail_prob_railway_FT:
 (0 <= t) /\ prob_space p /\
 mutual_indep p
   (FLAT

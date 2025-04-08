@@ -23,7 +23,7 @@ val EXACT_CONV = jrhUtils.EXACT_CONV; (* there's one also in hurdUtils *)
 (* Specialize nets theorems to the pointwise limit of real->real functions   *)
 (*---------------------------------------------------------------------------*)
 
-Definition tends_real_real :
+Definition tends_real_real:
     (tends_real_real f l)(x0) =
         (f tends l)(mtop(mr1),tendsto(mr1,x0))
 End
@@ -43,7 +43,7 @@ val LIM = store_thm("LIM",
   REFL_TAC);
 
 (* connection to real_topologyTheory *)
-Theorem LIM_AT_LIM :
+Theorem LIM_AT_LIM:
     !f l a. (f --> l) (at a) <=> (f -> l)(a)
 Proof
     REWRITE_TAC [LIM_AT, LIM, dist]
@@ -177,7 +177,7 @@ val diffl = new_infixr_definition("diffl",
   750);
 
 (* connection with derivativeTheory, added by Chun Tian *)
-Theorem diffl_has_vector_derivative :
+Theorem diffl_has_vector_derivative:
     !f l x. ($diffl f l)(x) <=> (f has_vector_derivative l) (at x)
 Proof
     rpt GEN_TAC
@@ -238,7 +238,7 @@ val contl = new_infixr_definition("contl",
   “$contl f x = ((\h. f(x + h)) -> f(x))(&0)”, 750);
 
 (* connection with real_topologyTheory *)
-Theorem contl_eq_continuous_at :
+Theorem contl_eq_continuous_at:
     !f x. f contl x <=> f continuous (at x)
 Proof
     RW_TAC real_ss [contl, CONTINUOUS_AT, LIM_AT_LIM, LIM]
@@ -264,14 +264,14 @@ val _ = hide "differentiable";
 val differentiable = new_infixr_definition("differentiable",
   “$differentiable f x = ?l. (f diffl l)(x)”, 750);
 
-Theorem differentiable_has_vector_derivative :
+Theorem differentiable_has_vector_derivative:
     !f x. f differentiable x <=> ?l. (f has_vector_derivative l) (at x)
 Proof
     rw [differentiable, diffl_has_vector_derivative]
 QED
 
 (* The equivalence between ‘differentiable’ and ‘derivative$differentiable’ *)
-Theorem differentiable_alt :
+Theorem differentiable_alt:
     !f x. f differentiable x <=> derivative$differentiable f (at x)
 Proof
     rw [differentiable, diffl_has_derivative, derivativeTheory.differentiable]
@@ -297,7 +297,7 @@ val DIFF_UNIQ = store_thm("DIFF_UNIQ",
 (* Differentiability implies continuity                                      *)
 (*---------------------------------------------------------------------------*)
 
-Theorem DIFF_CONT :
+Theorem DIFF_CONT:
     !f l x. ($diffl f l)(x) ==> $contl f x
 Proof
  (* new proof based on derivativeTheory *)
@@ -330,7 +330,7 @@ QED
 (* Alternative definition of continuity                                      *)
 (*---------------------------------------------------------------------------*)
 
-Theorem CONTL_LIM :
+Theorem CONTL_LIM:
     !f x. f contl x = (f -> f(x))(x)
 Proof
  (* new proof based on derivativeTheory *)
@@ -444,7 +444,7 @@ val CONT_COMPOSE = store_thm("CONT_COMPOSE",
 (* Intermediate Value Theorem (we prove contrapositive by bisection)         *)
 (*---------------------------------------------------------------------------*)
 
-Theorem IVT :
+Theorem IVT:
     !f a b y. a <= b /\ (f(a) <= y /\ y <= f(b)) /\
              (!x. a <= x /\ x <= b ==> f contl x)
         ==> (?x. a <= x /\ x <= b /\ (f(x) = y))
@@ -1195,7 +1195,7 @@ val DIFF_LCONST = store_thm("DIFF_LCONST",
 (* Lemma about introducing open ball in open interval                        *)
 (*---------------------------------------------------------------------------*)
 
-Theorem INTERVAL_LEMMA_LT :
+Theorem INTERVAL_LEMMA_LT:
    !a b x. a < x /\ x < b ==>
         ?d. &0 < d /\ !y. abs(x - y) < d ==> a < y /\ y < b
 Proof
@@ -1223,7 +1223,7 @@ Proof
   REAL_ARITH_TAC
 QED
 
-Theorem INTERVAL_LEMMA :
+Theorem INTERVAL_LEMMA:
    !a b x. a < x /\ x < b ==>
         ?d. &0 < d /\ !y. abs(x - y) < d ==> a <= y /\ y <= b
 Proof
@@ -1239,7 +1239,7 @@ QED
 (*---------------------------------------------------------------------------*)
 
 (* cf. derivativeTheory.ROLLE *)
-Theorem ROLLE :
+Theorem ROLLE:
    !f a b. a < b /\
            (f(a) = f(b)) /\
            (!x. a <= x /\ x <= b ==> f contl x) /\
@@ -1363,7 +1363,7 @@ val MVT_LEMMA = store_thm("MVT_LEMMA",
   REWRITE_TAC[REAL_ADD_RID]);
 
 (* cf. derivativeTheory.MVT (One-dimensional mean value theorem) *)
-Theorem MVT :
+Theorem MVT:
    !f a b. a < b /\
            (!x. a <= x /\ x <= b ==> f contl x) /\
            (!x. a < x /\ x < b ==> f differentiable x)
@@ -1865,7 +1865,7 @@ val DIFF_INVERSE_OPEN = store_thm("DIFF_INVERSE_OPEN",
 (* Every derivative is Darboux continuous.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem IVT_DERIVATIVE_0 :
+Theorem IVT_DERIVATIVE_0:
     !f f' a b.
         a <= b /\
         (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\
@@ -1927,7 +1927,7 @@ Proof
   REAL_ARITH_TAC
 QED
 
-Theorem IVT_DERIVATIVE_POS :
+Theorem IVT_DERIVATIVE_POS:
    !f f' a b y.
         a <= b /\
         (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\
@@ -1945,7 +1945,7 @@ Proof
   ASM_SIMP_TAC std_ss [DIFF_SUB, DIFF_X, DIFF_CMUL]
 QED
 
-Theorem IVT_DERIVATIVE_NEG :
+Theorem IVT_DERIVATIVE_NEG:
    !f f' a b y.
         a <= b /\
         (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x)) /\

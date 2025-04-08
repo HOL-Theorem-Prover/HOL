@@ -46,7 +46,7 @@ Proof
  >> REWRITE_TAC [lemma14a]
 QED
 
-Theorem hreduce_TRANS :
+Theorem hreduce_TRANS:
     !M0 M1 M2. M0 -h->* M1 /\ M1 -h->* M2 ==> M0 -h->* M2
 Proof
     rpt STRIP_TAC
@@ -68,14 +68,14 @@ val hreduce1_FV = store_thm(
 (* |- !M N. M -h-> N ==> FV N SUBSET FV M *)
 Theorem hreduce1_FV_SUBSET = hreduce1_FV |> REWRITE_RULE [GSYM SUBSET_DEF]
 
-Theorem hreduces_FV :
+Theorem hreduces_FV:
     ∀M N. M -h->* N ⇒ v ∈ FV N ⇒ v ∈ FV M
 Proof
     HO_MATCH_MP_TAC relationTheory.RTC_INDUCT
  >> METIS_TAC [relationTheory.RTC_RULES, hreduce1_FV]
 QED
 
-Theorem hreduce_FV_SUBSET :
+Theorem hreduce_FV_SUBSET:
     !M N. M -h->* N ==> FV N SUBSET FV M
 Proof
     rw [SUBSET_DEF]
@@ -155,7 +155,7 @@ val hreduce1_unique = store_thm(
   HO_MATCH_MP_TAC hreduce1_ind THEN
   SIMP_TAC (srw_ss() ++ DNF_ss) [hreduce1_rwts]);
 
-Theorem hreduce1_appstar :
+Theorem hreduce1_appstar:
     !Ns. M1 -h-> M2 /\ ~is_abs M1 ==> M1 @* Ns -h-> M2 @* Ns
 Proof
     Induct_on ‘Ns’ using SNOC_INDUCT
@@ -163,7 +163,7 @@ Proof
  >> fs [hreduce1_rules]
 QED
 
-Theorem hreduce_BETA_extended :
+Theorem hreduce_BETA_extended:
     !l vs t. LAMl vs t @* MAP VAR vs @* MAP VAR l -h->* t @* MAP VAR l
 Proof
     Q.X_GEN_TAC ‘l’
@@ -215,7 +215,7 @@ Proof
  >> Q.EXISTS_TAC ‘M0’ >> rw []
 QED
 
-Theorem hreduce_LAM :
+Theorem hreduce_LAM:
     !v M1 M2. LAM v M1 -h->* LAM v M2 <=> M1 -h->* M2
 Proof
     rpt STRIP_TAC
@@ -223,13 +223,13 @@ Proof
  >> REWRITE_TAC [LAMl_thm]
 QED
 
-Theorem hreduce1_abs :
+Theorem hreduce1_abs:
     !M N. M -h-> N ==> is_abs M ==> is_abs N
 Proof
     rw [Once hreduce1_cases] >> fs []
 QED
 
-Theorem hreduce_abs :
+Theorem hreduce_abs:
     !M N. M -h->* N ==> is_abs M ==> is_abs N
 Proof
     HO_MATCH_MP_TAC RTC_STRONG_INDUCT_RIGHT1
@@ -255,7 +255,7 @@ QED
 
    NOTE3: note that there's no requirements on ‘Ns’, which can be anything.
  *)
-Theorem hreduce_rules_appstar :
+Theorem hreduce_rules_appstar:
     !M1 M2 Ns. ~is_abs M1 /\ (!M. M1 -h->* M /\ M -h-> M2 ==> ~is_abs M) /\
                M1 -h->* M2 ==> M1 @* Ns -h->* M2 @* Ns
 Proof
@@ -288,7 +288,7 @@ Proof
  >> PROVE_TAC [hreduce1_abs]
 QED
 
-Theorem hreduce1_gen_bvc_ind :
+Theorem hreduce1_gen_bvc_ind:
   !P f. (!x. FINITE (f x)) /\
         (!v M N x. v NOTIN f x ==> P (LAM v M @@ N) ([N/v] M) x) /\
         (!v M1 M2 x. M1 -h-> M2 /\ v NOTIN f x /\ (!z. P M1 M2 z) ==>
@@ -332,7 +332,7 @@ Theorem hreduce1_bvcX_ind =
                        |> Q.GEN `X` |> Q.GEN `P`
 
 (* Lemma 8.3.12 [1, p.174] *)
-Theorem hreduce1_substitutive :
+Theorem hreduce1_substitutive:
     !M N. M -h-> N ==> [P/v] M -h-> [P/v] N
 Proof
     HO_MATCH_MP_TAC hreduce1_bvcX_ind
@@ -345,14 +345,14 @@ Proof
 QED
 
 (* This form is useful for ‘|- substitutive R ==> ...’ theorems (chap3Theory) *)
-Theorem substitutive_hreduce1 :
+Theorem substitutive_hreduce1:
     substitutive (-h->)
 Proof
     rw [substitutive_def, hreduce1_substitutive]
 QED
 
 (* hreduce1 and ISUB *)
-Theorem hreduce1_ISUB :
+Theorem hreduce1_ISUB:
     !sub M N. M -h-> N ==> M ISUB sub -h-> N ISUB sub
 Proof
     Induct_on ‘sub’ >- rw []
@@ -362,21 +362,21 @@ Proof
  >> MATCH_MP_TAC hreduce1_substitutive >> art []
 QED
 
-Theorem hreduce_substitutive :
+Theorem hreduce_substitutive:
     !M N. M -h->* N ==> [P/v] M -h->* [P/v] N
 Proof
     HO_MATCH_MP_TAC RTC_INDUCT >> rw []
  >> METIS_TAC [RTC_RULES, hreduce1_substitutive]
 QED
 
-Theorem substitutive_hreduce :
+Theorem substitutive_hreduce:
     substitutive (-h->*)
 Proof
     rw [substitutive_def, hreduce_substitutive]
 QED
 
 (* hreduce and ISUB *)
-Theorem hreduce_ISUB :
+Theorem hreduce_ISUB:
     !sub M N. M -h->* N ==> M ISUB sub -h->* N ISUB sub
 Proof
     Induct_on ‘sub’ >- rw []
@@ -392,7 +392,7 @@ QED
    NOTE: This proof is hard in the sense that some primitive theorems from
    nomsetTheory are used. And ‘~is_abs t’ is necessary for the case vs = [].
  *)
-Theorem hreduce1_LAMl_cases :
+Theorem hreduce1_LAMl_cases:
     !M vs t. ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M) /\
              M -h-> LAMl vs t /\ ~is_abs t ==>
         ?vs1 vs2 N. (vs = vs1 ++ vs2) /\ (M = LAMl vs1 N) /\ ~is_abs N /\
@@ -632,7 +632,7 @@ val hnf_ccbeta_preserved = store_thm(
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
 
-Theorem hnf_I :
+Theorem hnf_I:
     hnf I
 Proof
     RW_TAC std_ss [hnf_thm, I_def]
@@ -644,7 +644,7 @@ Proof
     Induct_on ‘vs’ >> rw []
 QED
 
-Theorem hnf_appstar :
+Theorem hnf_appstar:
     !M Ns. hnf (M @* Ns) <=> hnf M /\ (is_abs M ⇒ (Ns = []))
 Proof
   Induct_on ‘Ns’ using SNOC_INDUCT >> simp[appstar_SNOC] >>
@@ -658,7 +658,7 @@ Proof
 QED
 
 (* NOTE: ‘ALL_DISTINCT vs’ has been added to RHS. *)
-Theorem hnf_cases :
+Theorem hnf_cases:
     !M : term. hnf M <=> ?vs args y. ALL_DISTINCT vs /\ (M = LAMl vs (VAR y @* args))
 Proof
   simp[FORALL_AND_THM, EQ_IMP_THM] >> conj_tac
@@ -675,7 +675,7 @@ Proof
 QED
 
 (* A more general version of ‘hnf_cases’ directly based on term_laml_cases *)
-Theorem hnf_cases_genX :
+Theorem hnf_cases_genX:
     !X. FINITE X ==>
         !M. hnf M <=> ?vs args y. ALL_DISTINCT vs /\ (M = LAMl vs (VAR y @* args)) /\
                                   DISJOINT (set vs) X
@@ -1052,7 +1052,7 @@ val head_redex_preserved = store_thm(
   ]);
 
 (* moved here from standardisationScript.sml *)
-Definition is_head_reduction_def :
+Definition is_head_reduction_def:
   is_head_reduction s <=> okpath (labelled_redn beta) s /\
                         !i. i + 1 IN PL s ==>
                             nth_label i s is_head_redex el i s
@@ -1074,7 +1074,7 @@ Proof
 QED
 
 val _ = add_infix ("head_reduces", 760, NONASSOC)
-Definition head_reduces_def :
+Definition head_reduces_def:
   M head_reduces N = ?s. finite s /\ (first s = M) /\ (last s = N) /\
                          is_head_reduction s
 End
@@ -1133,7 +1133,7 @@ val head_reduces_reduction_beta = store_thm(
   MATCH_MP_TAC relationTheory.RTC_MONOTONE THEN
   METIS_TAC [head_reduce1_def, labelled_redn_cc]);
 
-Theorem hreduces_lameq :
+Theorem hreduces_lameq:
     M -h->* N ==> M == N
 Proof
     rw [SYM head_reduces_RTC_hreduce1]
@@ -1151,14 +1151,14 @@ val has_hnf_def = Define`
   has_hnf M = ?N. M == N /\ hnf N
 `;
 
-Theorem hnf_has_hnf :
+Theorem hnf_has_hnf:
     !M. hnf M ==> has_hnf M
 Proof
     rw [has_hnf_def]
  >> Q.EXISTS_TAC ‘M’ >> rw []
 QED
 
-Theorem lameq_has_hnf_cong :
+Theorem lameq_has_hnf_cong:
     !M N. M == N ==> (has_hnf M <=> has_hnf N)
 Proof
     rpt STRIP_TAC
@@ -1172,7 +1172,7 @@ Proof
       Q_TAC (TRANS_TAC lameq_TRANS) ‘N’ >> art [] ]
 QED
 
-Theorem hreduces_has_hnf_cong :
+Theorem hreduces_has_hnf_cong:
     !M N. M -h->* N ==> (has_hnf M <=> has_hnf N)
 Proof
     rpt STRIP_TAC
@@ -1180,7 +1180,7 @@ Proof
  >> MATCH_MP_TAC hreduces_lameq >> art []
 QED
 
-Theorem hreduce1_has_hnf_cong :
+Theorem hreduce1_has_hnf_cong:
     !M N. M -h-> N ==> (has_hnf M <=> has_hnf N)
 Proof
     rpt STRIP_TAC
@@ -1335,7 +1335,7 @@ val head_reduction_path_unique = store_thm(
               head_reduction_path_uexists THEN
   METIS_TAC [head_reduction_path_def]);
 
-Theorem infinite_is_head_reduction_drop :
+Theorem infinite_is_head_reduction_drop:
     !p. infinite p /\ is_head_reduction p ==> !n. is_head_reduction (drop n p)
 Proof
     NTAC 2 STRIP_TAC
@@ -1357,7 +1357,7 @@ Proof
  >> POP_ASSUM (fs o wrap)
 QED
 
-Theorem finite_is_head_reduction_drop :
+Theorem finite_is_head_reduction_drop:
     !p. finite p /\ is_head_reduction p ==>
         !n. n < THE (length p) ==> is_head_reduction (drop n p)
 Proof
@@ -1371,7 +1371,7 @@ Proof
  >> simp [is_head_reduction_def]
 QED
 
-Theorem infinite_head_reduction_path_to_llist :
+Theorem infinite_head_reduction_path_to_llist:
     !M. infinite (head_reduction_path M) <=>
         ?l. ~LFINITE l /\ (LNTH 0 l = SOME M) /\
             !i. THE (LNTH i l) -h-> THE (LNTH (SUC i) l)
@@ -1433,7 +1433,7 @@ Proof
 QED
 
 (* This theorem guarentees the one-one mapping between the list and the path *)
-Theorem finite_head_reduction_path_to_list_11 :
+Theorem finite_head_reduction_path_to_list_11:
     !M p. (p = head_reduction_path M) /\ finite p ==>
           ?l. l <> [] /\ (HD l = M) /\ hnf (LAST l) /\
              (LENGTH l = THE (length p)) /\
@@ -1480,7 +1480,7 @@ Proof
  >> Q.EXISTS_TAC ‘r’ >> art []
 QED
 
-Theorem finite_head_reduction_path_to_list :
+Theorem finite_head_reduction_path_to_list:
     !M. finite (head_reduction_path M) <=>
         ?l. l <> [] /\ (HD l = M) /\ hnf (LAST l) /\
             !i. SUC i < LENGTH l ==> EL i l -h-> EL (SUC i) l
@@ -1621,7 +1621,7 @@ Proof
 QED
 
 (* cf. Omega_starloops *)
-Theorem Omega_hreduce1_loops :
+Theorem Omega_hreduce1_loops:
     Omega -h-> N <=> (N = Omega)
 Proof
     rw [hreduce1_rwts, Omega_def]
@@ -1631,14 +1631,14 @@ QED
  *  Accessors of hnf components
  *---------------------------------------------------------------------------*)
 
-Definition hnf_head_def :
+Definition hnf_head_def:
     hnf_head t = if is_comb t then hnf_head (rator t) else t
 Termination
     WF_REL_TAC ‘measure size’
  >> rw [is_comb_APP_EXISTS] >> rw []
 End
 
-Theorem hnf_head_appstar :
+Theorem hnf_head_appstar:
     !t. ~is_comb t ==> (hnf_head (t @* args) = t)
 Proof
     Induct_on ‘args’ using SNOC_INDUCT
@@ -1659,7 +1659,7 @@ Theorem hnf_head_VAR[simp] =
     (cj 2 hnf_head_hnf) |> Q.GEN ‘args’ |> Q.SPEC ‘[]’
                         |> REWRITE_RULE [appstar_empty]
 
-Definition var_name_def :
+Definition var_name_def:
     var_name t = @s. VAR s = t
 End
 
@@ -1676,7 +1676,7 @@ QED
 Overload hnf_headvar = “\t. var_name (hnf_head t)”
 
 (* hnf_children retrives the ‘args’ part of absfree hnf *)
-Definition hnf_children_def :
+Definition hnf_children_def:
     hnf_children t = if is_comb t then
                         SNOC (rand t) (hnf_children (rator t))
                      else []
@@ -1684,7 +1684,7 @@ Termination
     WF_REL_TAC ‘measure size’ >> rw [is_comb_APP_EXISTS] >> rw []
 End
 
-Theorem hnf_children_thm :
+Theorem hnf_children_thm:
    (!y.     hnf_children ((VAR :string -> term) y) = []) /\
    (!v t.   hnf_children (LAM v t) = []) /\
    (!t1 t2. hnf_children (t1 @@ t2) = SNOC t2 (hnf_children t1))
@@ -1692,7 +1692,7 @@ Proof
    rpt (rw [Once hnf_children_def])
 QED
 
-Theorem hnf_children_appstar :
+Theorem hnf_children_appstar:
     !t. ~is_comb t ==> (hnf_children (t @* args) = args)
 Proof
     Induct_on ‘args’ using SNOC_INDUCT
@@ -1712,7 +1712,7 @@ QED
 Theorem hnf_children_VAR[simp] =
         hnf_children_hnf |> Q.SPECL [‘y’, ‘[]’] |> REWRITE_RULE [appstar_empty]
 
-Theorem absfree_hnf_cases :
+Theorem absfree_hnf_cases:
     !M. hnf M /\ ~is_abs M <=> ?y args. M = VAR y @* args
 Proof
     Q.X_GEN_TAC ‘M’
@@ -1727,14 +1727,14 @@ Proof
  >> rfs [is_abs_cases]
 QED
 
-Theorem absfree_hnf_thm :
+Theorem absfree_hnf_thm:
     !M. hnf M /\ ~is_abs M ==> (M = hnf_head M @* hnf_children M)
 Proof
     rw [absfree_hnf_cases]
  >> rw [hnf_children_appstar, hnf_head_appstar]
 QED
 
-Theorem hnf_children_FV_SUBSET :
+Theorem hnf_children_FV_SUBSET:
     !M Ms. hnf M /\ ~is_abs M /\ (Ms = hnf_children M) ==>
            !i. i < LENGTH Ms ==> FV (EL i Ms) SUBSET FV M
 Proof
@@ -1751,14 +1751,14 @@ Proof
  >> Q.EXISTS_TAC ‘EL i Ms’ >> rw [EL_MEM]
 QED
 
-Theorem absfree_hnf_head :
+Theorem absfree_hnf_head:
     !y args. hnf_head (VAR y @* args) = VAR y
 Proof
     rpt GEN_TAC
  >> MATCH_MP_TAC hnf_head_appstar >> rw []
 QED
 
-Theorem lameq_hnf_fresh_subst :
+Theorem lameq_hnf_fresh_subst:
     !as args P. (LENGTH args = LENGTH as) /\ DISJOINT (set as) (FV P) ==>
                 ([LAMl as P/y] (VAR y @* args) == P)
 Proof
@@ -1782,7 +1782,7 @@ Proof
  >> rw [DISJOINT_ALT]
 QED
 
-Theorem hnf_children_tpm :
+Theorem hnf_children_tpm:
     !pi M. hnf M ==> (hnf_children (tpm pi M) = MAP (tpm pi) (hnf_children M))
 Proof
     rpt STRIP_TAC
@@ -1816,14 +1816,14 @@ val (LAMl_size_thm, _) = define_recursive_term_function
 
 val _ = export_rewrites ["LAMl_size_thm"];
 
-Theorem LAMl_size_0_cases :
+Theorem LAMl_size_0_cases:
     !t. is_var t \/ is_comb t ==> (LAMl_size t = 0)
 Proof
     rw [is_var_cases, is_comb_APP_EXISTS]
  >> rw []
 QED
 
-Theorem LAMl_size_eq_0 :
+Theorem LAMl_size_eq_0:
     !t. ~is_abs t ==> (LAMl_size t = 0)
 Proof
     rpt STRIP_TAC
@@ -1831,7 +1831,7 @@ Proof
  >> METIS_TAC [term_cases]
 QED
 
-Theorem LAMl_size_LAMl :
+Theorem LAMl_size_LAMl:
     !vs t. ~is_abs t ==> (LAMl_size (LAMl vs t) = LENGTH vs)
 Proof
     rpt STRIP_TAC
@@ -1893,7 +1893,7 @@ Proof
     HO_MATCH_MP_TAC simple_induction >> rw []
 QED
 
-Theorem hnf_children_size_hnf :
+Theorem hnf_children_size_hnf:
     !M. hnf M /\ ~is_abs M ==> hnf_children_size M = LENGTH (hnf_children M)
 Proof
     rw [absfree_hnf_cases] >> rw []
@@ -1904,7 +1904,7 @@ QED
  *---------------------------------------------------------------------------*)
 
 (* NOTE: "irule (iffLR hnf_cases_shared)" is a useful tactic *)
-Theorem hnf_cases_shared :
+Theorem hnf_cases_shared:
     !vs M. ALL_DISTINCT vs /\ LAMl_size M <= LENGTH vs /\
            DISJOINT (set vs) (FV M) ==>
           (hnf M <=> ?y args. M = LAMl (TAKE (LAMl_size M) vs) (VAR y @* args))
@@ -1995,7 +1995,7 @@ Proof
  >> rw [EVERY_EL]
 QED
 
-Theorem hreduce_LAMl_appstar :
+Theorem hreduce_LAMl_appstar:
     !vs Ns t. ALL_DISTINCT vs /\ LENGTH vs = LENGTH Ns /\
               EVERY (\e. DISJOINT (FV e) (set vs)) Ns
           ==> LAMl vs t @* Ns -h->* fromPairs vs Ns ' t
@@ -2011,7 +2011,7 @@ Proof
 QED
 
 (* NOTE: there's no requirements on ‘args’, which can be empty *)
-Theorem hreduce_LAMl_appstar_ext :
+Theorem hreduce_LAMl_appstar_ext:
     !vs Ns t args.
              ALL_DISTINCT vs /\ LENGTH vs = LENGTH Ns /\
              EVERY (\e. DISJOINT (FV e) (set vs)) Ns
@@ -2050,7 +2050,7 @@ QED
    NOTE: Now the head variable y is always the LAST of L, while xs from
    different head reductions still share the same suffix.
  *)
-Theorem hreduce_permutator_shared :
+Theorem hreduce_permutator_shared:
     !Ns n ls. LENGTH Ns <= n /\ n < LENGTH ls /\ ALL_DISTINCT ls /\
              DISJOINT (set ls) (BIGUNION (IMAGE FV (set Ns)))
          ==> ?xs y. permutator n @* Ns -h->*
@@ -2319,7 +2319,7 @@ QED
    NOTE2: added one global excluded list X and more disjointness conclusions.
    NOTE3: added ‘LENGTH xs = n - LENGTH Ns’ for the potential needs.
  *)
-Theorem hreduce_permutator_thm :
+Theorem hreduce_permutator_thm:
     !X n Ns. FINITE X /\ LENGTH Ns <= n ==>
              ?xs y. permutator n @* Ns -h->*
                     LAMl xs (LAM y (VAR y @* Ns @* MAP VAR xs)) /\
@@ -2419,7 +2419,7 @@ Proof
 QED
 
 (* NOTE: More arguments remain the same after head reductions *)
-Theorem permutator_hreduce_more :
+Theorem permutator_hreduce_more:
     !n N Ns args. LENGTH Ns = n ==>
                   permutator n @* Ns @@ N @* args -h->* N @* Ns @* args
 Proof
@@ -2461,7 +2461,7 @@ Proof
  >> MATCH_MP_TAC (GSYM TAKE_DROP_SUC) >> art []
 QED
 
-Theorem permutator_hreduce_same_length :
+Theorem permutator_hreduce_same_length:
     !n N Ns. LENGTH Ns = n ==> permutator n @* Ns @@ N -h->* N @* Ns
 Proof
     rpt STRIP_TAC
@@ -2486,7 +2486,7 @@ QED
 
    An extra list of free variables ‘l’ may need to append after MAP VAR vs.
  *)
-Theorem hreduce_hnf_appstar_cong :
+Theorem hreduce_hnf_appstar_cong:
     !M vs y Ns args. ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M) /\
                      M -h->* LAMl vs (VAR y @* Ns) ==>
                      M @* MAP VAR vs @* args -h->* VAR y @* Ns @* args
@@ -2587,7 +2587,7 @@ Proof
 QED
 
 (* This theorem is more general than selector_thm *)
-Theorem hreduce_selector :
+Theorem hreduce_selector:
     !i n Ns. i < n /\ LENGTH Ns = n ==> selector i n @* Ns -h->* EL i Ns
 Proof
     rpt STRIP_TAC
@@ -2613,7 +2613,7 @@ Proof
  >> Q.EXISTS_TAC ‘e’ >> art []
 QED
 
-Theorem hnf_children_bnf :
+Theorem hnf_children_bnf:
     !vs y args i. ALL_DISTINCT vs /\ bnf (LAMl vs (VAR y @* args)) /\
                   i < LENGTH args ==> bnf (EL i args)
 Proof

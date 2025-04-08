@@ -54,7 +54,7 @@ val _ = ratLib.deprecate_rat ();
 
    Below is the new definition according to [1, p.61]:
  *)
-Definition Borel :
+Definition Borel:
     Borel = (univ(:extreal),
              {B' | ?B S. B' = (IMAGE Normal B) UNION S /\ B IN subsets borel /\
                          S IN {EMPTY; {NegInf}; {PosInf}; {NegInf; PosInf}}})
@@ -69,7 +69,7 @@ val _ = TeX_notation {hol = "Borel", TeX = ("\\ensuremath{{\\cal{B}}}", 1)};
 Overload Borel_measurable = “\a. measurable a Borel”;
 
 (* Lemma 8.2 [1, p.61], another equivalent definition of ‘borel’ *)
-Theorem borel_eq_real_set :
+Theorem borel_eq_real_set:
     borel = (univ(:real), IMAGE real_set (subsets Borel))
 Proof
     REWRITE_TAC [Once (SYM (Q.ISPEC ‘borel’ SPACE)), space_borel]
@@ -106,7 +106,7 @@ Proof
       qexistsl_tac [‘x’, ‘EMPTY’] >> rw [] ]
 QED
 
-Theorem SPACE_BOREL :
+Theorem SPACE_BOREL:
     space Borel = UNIV
 Proof
     rw [Borel]
@@ -129,7 +129,7 @@ local (* small tactics for the last 16 subgoals *)
       reverse CONJ_TAC >- (MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art []) \\
       rw [Once EXTENSION] >> METIS_TAC [];
 in
-Theorem SIGMA_ALGEBRA_BOREL :
+Theorem SIGMA_ALGEBRA_BOREL:
     sigma_algebra Borel
 Proof
     reverse (rw [Borel, SIGMA_ALGEBRA_ALT, IN_FUNSET, SUBSET_DEF])
@@ -435,7 +435,7 @@ val final_tactics = (* shared by all four Borel_eq theorems *)
       MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] ];
 
 (* The original definition of Borel now becomes a theorem *)
-Theorem Borel_def :
+Theorem Borel_def:
     Borel = sigma univ(:extreal) (IMAGE (\a. {x | x < Normal a}) univ(:real))
 Proof
     Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV)) = subsets Borel’
@@ -551,7 +551,7 @@ Proof
  >> final_tactics
 QED
 
-Theorem Borel_eq_ge :
+Theorem Borel_eq_ge:
     Borel = sigma univ(:extreal) (IMAGE (\a. {x | Normal a <= x}) univ(:real))
 Proof
     Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | Normal a <= x}) UNIV)) = subsets Borel’
@@ -659,7 +659,7 @@ Proof
  >> final_tactics
 QED
 
-Theorem Borel_eq_le : (* cf. borel_eq_le (borel_def) *)
+Theorem Borel_eq_le: (* cf. borel_eq_le (borel_def) *)
     Borel = sigma univ(:extreal) (IMAGE (\a. {x | x <= Normal a}) univ(:real))
 Proof
     Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV)) = subsets Borel’
@@ -768,7 +768,7 @@ Proof
  >> final_tactics
 QED
 
-Theorem Borel_eq_gr : (* cf. borel_eq_gr *)
+Theorem Borel_eq_gr: (* cf. borel_eq_gr *)
     Borel = sigma univ(:extreal) (IMAGE (\a. {x | Normal a < x}) univ(:real))
 Proof
     Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | Normal a < x}) UNIV)) = subsets Borel’
@@ -880,7 +880,7 @@ Proof
 QED
 
 (* NOTE: moved ‘sigma_algebra a’ to antecedents due to changes of ‘measurable’ *)
-Theorem MEASURABLE_BOREL :
+Theorem MEASURABLE_BOREL:
     !f a. sigma_algebra a ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -901,7 +901,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem IN_MEASURABLE_BOREL :
+Theorem IN_MEASURABLE_BOREL:
     !f a. sigma_algebra a ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -914,7 +914,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_NEGINF :
+Theorem IN_MEASURABLE_BOREL_NEGINF:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           ({x | f x = NegInf} INTER space a) IN subsets a
 Proof
@@ -936,7 +936,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_NOT_POSINF :
+Theorem IN_MEASURABLE_BOREL_NOT_POSINF:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           ({x | f x <> PosInf} INTER space a) IN subsets a
 Proof
@@ -962,7 +962,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_IMP :
+Theorem IN_MEASURABLE_BOREL_IMP:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c. ({x | f x < c} INTER space a) IN subsets a
 Proof
@@ -982,7 +982,7 @@ QED
 Theorem IN_MEASURABLE_BOREL_RO = IN_MEASURABLE_BOREL_IMP
 
 (* NOTE: moved ‘sigma_algebra a’ to antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT1 :
+Theorem IN_MEASURABLE_BOREL_ALT1:
     !f a. sigma_algebra a ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -1020,7 +1020,7 @@ Proof
 QED
 
 (* NOTE: moved ‘sigma_algebra a’ to antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT2 :
+Theorem IN_MEASURABLE_BOREL_ALT2:
     !f a. sigma_algebra a ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -1103,7 +1103,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT2_IMP :
+Theorem IN_MEASURABLE_BOREL_ALT2_IMP:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c. ({x | f x <= c} INTER space a) IN subsets a
 Proof
@@ -1125,7 +1125,7 @@ QED
 Theorem IN_MEASURABLE_BOREL_RC = IN_MEASURABLE_BOREL_ALT2_IMP
 
 (* NOTE: moved ‘sigma_algebra a’ to antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT3 :
+Theorem IN_MEASURABLE_BOREL_ALT3:
     !f a. sigma_algebra a ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -1152,7 +1152,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_POSINF :
+Theorem IN_MEASURABLE_BOREL_POSINF:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           ({x | f x = PosInf} INTER space a) IN subsets a
 Proof
@@ -1174,7 +1174,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_NOT_NEGINF :
+Theorem IN_MEASURABLE_BOREL_NOT_NEGINF:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           ({x | f x <> NegInf} INTER space a) IN subsets a
 Proof
@@ -1200,7 +1200,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT1_IMP :
+Theorem IN_MEASURABLE_BOREL_ALT1_IMP:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c. ({x | c <= f x} INTER space a) IN subsets a
 Proof
@@ -1222,7 +1222,7 @@ QED
 Theorem IN_MEASURABLE_BOREL_CR = IN_MEASURABLE_BOREL_ALT1_IMP
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT3_IMP :
+Theorem IN_MEASURABLE_BOREL_ALT3_IMP:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c. ({x | c < f x} INTER space a) IN subsets a
 Proof
@@ -1247,7 +1247,7 @@ Theorem IN_MEASURABLE_BOREL_OR = IN_MEASURABLE_BOREL_ALT3_IMP
 
    NOTE: moved ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’
  *)
-Theorem IN_MEASURABLE_BOREL_ALT4 :
+Theorem IN_MEASURABLE_BOREL_ALT4:
     !f a. sigma_algebra a /\ (!x. x IN space a ==> f x <> NegInf) ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -1298,7 +1298,7 @@ QED
 
    NOTE: moved ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’
  *)
-Theorem IN_MEASURABLE_BOREL_ALT5 :
+Theorem IN_MEASURABLE_BOREL_ALT5:
     !f a. sigma_algebra a /\ (!x. x IN space a ==> f x <> NegInf) ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -1348,7 +1348,7 @@ QED
 
    NOTE: ‘sigma_algebra a’ is moved to antecedents due to changes of ‘measurable’
  *)
-Theorem IN_MEASURABLE_BOREL_ALT6 :
+Theorem IN_MEASURABLE_BOREL_ALT6:
     !f a. sigma_algebra a /\ (!x. x IN space a ==> f x <> NegInf) ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -1423,7 +1423,7 @@ QED
 
    NOTE: ‘sigma_algebra a’ is moved to antecedents due to changes of ‘measurable’
  *)
-Theorem IN_MEASURABLE_BOREL_ALT7 :
+Theorem IN_MEASURABLE_BOREL_ALT7:
     !f a. sigma_algebra a /\ (!x. x IN space a ==> f x <> NegInf) ==>
          (f IN measurable a Borel <=>
           f IN (space a -> UNIV) /\
@@ -1505,7 +1505,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT4_IMP :
+Theorem IN_MEASURABLE_BOREL_ALT4_IMP:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c d. ({x | c <= f x /\ f x < d} INTER space a) IN subsets a
 Proof
@@ -1588,7 +1588,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT5_IMP :
+Theorem IN_MEASURABLE_BOREL_ALT5_IMP:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c d. ({x | c < f x /\ f x <= d} INTER space a) IN subsets a
 Proof
@@ -1652,7 +1652,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT6_IMP :
+Theorem IN_MEASURABLE_BOREL_ALT6_IMP:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c d. ({x| c <= f x /\ f x <= d} INTER space a) IN subsets a
 Proof
@@ -1811,7 +1811,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT7_IMP :
+Theorem IN_MEASURABLE_BOREL_ALT7_IMP:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c d. ({x | c < f x /\ f x < d} INTER space a) IN subsets a
 Proof
@@ -1892,7 +1892,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT8 :
+Theorem IN_MEASURABLE_BOREL_ALT8:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c. ({x | f x = c} INTER space a) IN subsets a
 Proof
@@ -1915,7 +1915,7 @@ QED
 Theorem IN_MEASURABLE_BOREL_SING = IN_MEASURABLE_BOREL_ALT8
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_ALT9 :
+Theorem IN_MEASURABLE_BOREL_ALT9:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
           !c. ({x | f x <> c} INTER space a) IN subsets a
 Proof
@@ -1940,7 +1940,7 @@ Theorem IN_MEASURABLE_BOREL_NOT_SING = IN_MEASURABLE_BOREL_ALT9
 
    NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’
  *)
-Theorem IN_MEASURABLE_BOREL_ALL :
+Theorem IN_MEASURABLE_BOREL_ALL:
     !f a.
         sigma_algebra a /\ f IN measurable a Borel ==>
         (!c. {x | f x < c} INTER space a IN subsets a) /\
@@ -1985,7 +1985,7 @@ Theorem IN_MEASURABLE_BOREL_ALL_MEASURE =
    (Q.SPECL [`f`, `(m_space m,measurable_sets m)`])) IN_MEASURABLE_BOREL_ALL
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_LT :
+Theorem IN_MEASURABLE_BOREL_LT:
     !f g a. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel ==>
             ({x | f x < g x} INTER space a) IN subsets a
 Proof
@@ -2011,7 +2011,7 @@ QED
 
    NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’
  *)
-Theorem IN_MEASURABLE_BOREL_LE :
+Theorem IN_MEASURABLE_BOREL_LE:
     !a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel ==>
             ({x | f x <= g x} INTER space a) IN subsets a
 Proof
@@ -2035,7 +2035,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-Theorem IN_MEASURABLE_BOREL_EQ_SYM :
+Theorem IN_MEASURABLE_BOREL_EQ_SYM:
     !a f g. (!x. x IN space a ==> (f x = g x)) ==>
             (f IN measurable a Borel <=> g IN measurable a Borel)
 Proof
@@ -2050,7 +2050,7 @@ Proof
 QED
 
 (* changed quantifier orders (was: f g m) for applications in martingaleTheory *)
-Theorem IN_MEASURABLE_BOREL_EQ :
+Theorem IN_MEASURABLE_BOREL_EQ:
     !m f g. (!x. x IN m_space m ==> (f x = g x)) /\
             g IN measurable (m_space m,measurable_sets m) Borel ==>
             f IN measurable (m_space m,measurable_sets m) Borel
@@ -2061,7 +2061,7 @@ Proof
 QED
 
 (* cf. IN_MEASURABLE_CONG (sigma_algebraTheory) for a more general version *)
-Theorem IN_MEASURABLE_BOREL_CONG :
+Theorem IN_MEASURABLE_BOREL_CONG:
     !m f g. (!x. x IN m_space m ==> (f x = g x)) ==>
             (f IN measurable (m_space m,measurable_sets m) Borel <=>
              g IN measurable (m_space m,measurable_sets m) Borel)
@@ -2245,7 +2245,7 @@ val BOREL_MEASURABLE_SETS_POSINF' = prove ((* new *)
  >> Rewr' >> REWRITE_TAC [BOREL_MEASURABLE_SETS_POSINF]);
 
 (* for compatibility with lebesgue_measure_hvgTheory *)
-Theorem BOREL_MEASURABLE_INFINITY :
+Theorem BOREL_MEASURABLE_INFINITY:
     {PosInf} IN subsets Borel /\ {NegInf} IN subsets Borel
 Proof
     REWRITE_TAC [BOREL_MEASURABLE_SETS_POSINF',
@@ -2589,7 +2589,7 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_SING_r]
 QED
 
-Theorem BOREL_MEASURABLE_SETS_FINITE :
+Theorem BOREL_MEASURABLE_SETS_FINITE:
     !s. FINITE s ==> s IN subsets Borel
 Proof
     HO_MATCH_MP_TAC FINITE_INDUCT
@@ -2611,7 +2611,7 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_SING]
 QED
 
-Theorem BOREL_MEASURABLE_SETS_NOT_SING :
+Theorem BOREL_MEASURABLE_SETS_NOT_SING:
     !c. {x | x <> c} IN subsets Borel
 Proof
     RW_TAC std_ss []
@@ -2673,7 +2673,7 @@ val BOREL_MEASURABLE_SETS = store_thm
 (* NOTE: This is similar with Borel_eq_le but this generator contains exhausting
    sequences, which is needed when generating product sigma-algebras.
  *)
-Theorem Borel_eq_le_ext :
+Theorem Borel_eq_le_ext:
     Borel = sigma univ(:extreal) (IMAGE (\c. {x | x <= c}) univ(:extreal))
 Proof
     Suff ‘subsets Borel =
@@ -2696,7 +2696,7 @@ QED
 (*        Borel measurable functions           *)
 (* ******************************************* *)
 
-Theorem IN_MEASURABLE_BOREL_CONST :
+Theorem IN_MEASURABLE_BOREL_CONST:
     !a k f. sigma_algebra a /\ (!x. x IN space a ==> (f x = k)) ==>
             f IN measurable a Borel
 Proof
@@ -2766,7 +2766,7 @@ val IN_MEASURABLE_BOREL_CMUL = store_thm
           METIS_TAC [lt_rdiv_neg, mul_comm])
  >> METIS_TAC [IN_MEASURABLE_BOREL_ALL, extreal_div_eq, REAL_LT_IMP_NE]);
 
-Theorem IN_MEASURABLE_BOREL_MINUS :
+Theorem IN_MEASURABLE_BOREL_MINUS:
     !a f g. sigma_algebra a /\ f IN measurable a Borel /\
            (!x. x IN space a ==> (g x = -f x)) ==> g IN measurable a Borel
 Proof
@@ -2777,7 +2777,7 @@ Proof
  >> REWRITE_TAC [extreal_of_num_def, extreal_ainv_def]
 QED
 
-Theorem IN_MEASURABLE_BOREL_AINV :
+Theorem IN_MEASURABLE_BOREL_AINV:
     !a f. sigma_algebra a /\ f IN measurable a Borel ==> (\x. -f x) IN measurable a Borel
 Proof
     rpt STRIP_TAC
@@ -2838,7 +2838,7 @@ QED
 
 (* A few theorems enhancing the existing IN_MEASURABLE_BOREL_ALL with ‘abs’ *)
 
-Theorem IN_MEASURABLE_BOREL_ALL_ABS :
+Theorem IN_MEASURABLE_BOREL_ALL_ABS:
     !f a. sigma_algebra a /\ f IN measurable a Borel ==>
         (!c. {x | f x < c} INTER space a IN subsets a) /\
         (!c. {x | c <= f x} INTER space a IN subsets a) /\
@@ -2866,7 +2866,7 @@ Proof
  >> rw [IN_MEASURABLE_BOREL_ALL]
 QED
 
-Theorem IN_MEASURABLE_BOREL_ALL_MEASURE_ABS :
+Theorem IN_MEASURABLE_BOREL_ALL_MEASURE_ABS:
    !m f. measure_space m /\ f IN Borel_measurable (measurable_space m) ==>
         (!c. {x | f x < c} INTER m_space m IN measurable_sets m) /\
         (!c. {x | c <= f x} INTER m_space m IN measurable_sets m) /\
@@ -2970,7 +2970,7 @@ val IN_MEASURABLE_BOREL_SQR = store_thm
       (!x. x IN space a ==> (f x <> NegInf /\ g x <> NegInf) \/
                             (f x <> PosInf /\ g x <> PosInf))
  *)
-Theorem IN_MEASURABLE_BOREL_ADD :
+Theorem IN_MEASURABLE_BOREL_ADD:
     !a f g h. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel /\
               (!x. x IN space a ==> (f x <> NegInf /\ g x <> NegInf) \/
                                     (f x <> PosInf /\ g x <> PosInf)) /\
@@ -3027,7 +3027,7 @@ QED
              (!x. x IN space a ==> (f x <> NegInf /\ g x <> PosInf) \/
                                    (f x <> PosInf /\ g x <> NegInf))
  *)
-Theorem IN_MEASURABLE_BOREL_SUB :
+Theorem IN_MEASURABLE_BOREL_SUB:
     !a f g h. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel /\
              (!x. x IN space a ==> (f x <> NegInf /\ g x <> PosInf) \/
                                    (f x <> PosInf /\ g x <> NegInf)) /\
@@ -3051,7 +3051,7 @@ Proof
 QED
 
 (* cf. IN_MEASURABLE_BOREL_TIMES for a more general version *)
-Theorem IN_MEASURABLE_BOREL_MUL :
+Theorem IN_MEASURABLE_BOREL_MUL:
     !a f g h. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel /\
              (!x. x IN space a ==> (h x = f x * g x)) /\
              (!x. x IN space a ==> f x <> NegInf /\ f x <> PosInf /\
@@ -3143,7 +3143,7 @@ val IN_MEASURABLE_BOREL_CMUL_INDICATOR = store_thm
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR
  >> METIS_TAC []);
 
-Theorem IN_MEASURABLE_BOREL_MUL_INDICATOR :
+Theorem IN_MEASURABLE_BOREL_MUL_INDICATOR:
     !a f s. sigma_algebra a /\ f IN measurable a Borel /\ s IN subsets a ==>
             (\x. f x * indicator_fn s x) IN measurable a Borel
 Proof
@@ -3192,7 +3192,7 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR_EQ = store_thm
            >> METIS_TAC [mul_rzero, mul_rone])
  >> POP_ORW >> art []);
 
-Theorem IN_MEASURABLE_BOREL_MAX :
+Theorem IN_MEASURABLE_BOREL_MAX:
     !a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel
         ==> (\x. max (f x) (g x)) IN measurable a Borel
 Proof
@@ -3210,7 +3210,7 @@ Proof
  >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]
 QED
 
-Theorem IN_MEASURABLE_BOREL_MIN :
+Theorem IN_MEASURABLE_BOREL_MIN:
     !a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel
         ==> (\x. min (f x) (g x)) IN measurable a Borel
 Proof
@@ -3229,7 +3229,7 @@ Proof
 QED
 
 (* see extrealTheory.max_fn_seq_def *)
-Theorem IN_MEASURABLE_BOREL_MAX_FN_SEQ :
+Theorem IN_MEASURABLE_BOREL_MAX_FN_SEQ:
     !a f. sigma_algebra a /\ (!i. f i IN measurable a Borel) ==>
           !n. max_fn_seq f n IN measurable a Borel
 Proof
@@ -3242,7 +3242,7 @@ Proof
 QED
 
 (* TODO: ‘!n x. x IN space a ==> fn n x <= fn (SUC n) x’ (MONO) is unnecessary *)
-Theorem IN_MEASURABLE_BOREL_MONO_SUP :
+Theorem IN_MEASURABLE_BOREL_MONO_SUP:
     !fi f a. sigma_algebra a /\ (!n:num. fi n IN measurable a Borel) /\
             (!n x. x IN space a ==> fi n x <= fi (SUC n) x) /\
             (!x. x IN space a ==> (f x = sup (IMAGE (\n. fi n x) UNIV)))
@@ -3275,7 +3275,7 @@ Proof
 QED
 
 (* Here univ(:num) is replaced by a subset X *)
-Theorem IN_MEASURABLE_BOREL_SUP :
+Theorem IN_MEASURABLE_BOREL_SUP:
     !a fi f X. sigma_algebra a /\ X <> {} /\
               (!n:num. n IN X ==> fi n IN measurable a Borel) /\
               (!x. x IN space a ==> (f x = sup (IMAGE (\n. fi n x) X)))
@@ -3312,7 +3312,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-Theorem IN_MEASURABLE_BOREL_MONO_INF :
+Theorem IN_MEASURABLE_BOREL_MONO_INF:
     !fi f a. sigma_algebra a /\ (!n:num. fi n IN measurable a Borel) /\
             (!x. x IN space a ==> (f x = inf (IMAGE (\n. fi n x) UNIV)))
          ==> f IN measurable a Borel
@@ -3343,7 +3343,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem IN_MEASURABLE_BOREL_INF :
+Theorem IN_MEASURABLE_BOREL_INF:
     !a fi f X. sigma_algebra a /\ X <> {} /\
               (!n:num. n IN X ==> fi n IN measurable a Borel) /\
               (!x. x IN space a ==> (f x = inf (IMAGE (\n. fi n x) X)))
@@ -3381,7 +3381,7 @@ Proof
 QED
 
 (* a generalized version of IN_MEASURABLE_BOREL_MAX, cf. sup_maximal *)
-Theorem IN_MEASURABLE_BOREL_MAXIMAL :
+Theorem IN_MEASURABLE_BOREL_MAXIMAL:
     !N. FINITE (N :'b set) ==>
         !g f a. sigma_algebra a /\ (!n. g n IN measurable a Borel) /\
                (!x. f x = sup (IMAGE (\n. g n x) N)) ==> f IN measurable a Borel
@@ -3419,7 +3419,7 @@ Proof
 QED
 
 (* a generalized version of IN_MEASURABLE_BOREL_MIN, cf. inf_minimal *)
-Theorem IN_MEASURABLE_BOREL_MINIMAL :
+Theorem IN_MEASURABLE_BOREL_MINIMAL:
     !N. FINITE (N :'b set) ==>
         !g f a. sigma_algebra a /\ (!n. g n IN measurable a Borel) /\
                (!x. f x = inf (IMAGE (\n. g n x) N)) ==> f IN measurable a Borel
@@ -3456,7 +3456,7 @@ Proof
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MIN >> art []
 QED
 
-Theorem IN_MEASURABLE_BOREL_SUMINF :
+Theorem IN_MEASURABLE_BOREL_SUMINF:
     !fn f a. sigma_algebra a /\ (!n:num. fn n IN measurable a Borel) /\
             (!i x. x IN space a ==> 0 <= fn i x) /\
             (!x. x IN space a ==> (f x = suminf (\n. fn n x))) ==> f IN measurable a Borel
@@ -3482,7 +3482,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_FN_PLUS :
+Theorem IN_MEASURABLE_BOREL_FN_PLUS:
     !a f. sigma_algebra a /\ f IN measurable a Borel ==> fn_plus f IN measurable a Borel
 Proof
     rpt STRIP_TAC
@@ -3504,7 +3504,7 @@ Proof
 QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
-Theorem IN_MEASURABLE_BOREL_FN_MINUS :
+Theorem IN_MEASURABLE_BOREL_FN_MINUS:
     !a f. sigma_algebra a /\ f IN measurable a Borel ==> fn_minus f IN measurable a Borel
 Proof
     RW_TAC std_ss [fn_minus_def]
@@ -3532,7 +3532,7 @@ QED
 
    This theorem is used in martingaleTheory.FUBINI.
  *)
-Theorem IN_MEASURABLE_BOREL_PLUS_MINUS :
+Theorem IN_MEASURABLE_BOREL_PLUS_MINUS:
     !a f. sigma_algebra a ==>
          (f IN measurable a Borel <=>
           fn_plus f IN measurable a Borel /\ fn_minus f IN measurable a Borel)
@@ -3569,7 +3569,7 @@ QED
 
    NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’
  *)
-Theorem in_borel_measurable_from_Borel :
+Theorem in_borel_measurable_from_Borel:
     !a f. sigma_algebra a /\ f IN measurable a Borel ==> (real o f) IN measurable a borel
 Proof
     rpt GEN_TAC >> STRIP_TAC
@@ -3613,7 +3613,7 @@ Proof
       qexistsl_tac [‘B’, ‘{}’] >> rw [] ]
 QED
 
-Theorem IN_MEASURABLE_BOREL_IMP_BOREL : (* was: borel_IMP_Borel *)
+Theorem IN_MEASURABLE_BOREL_IMP_BOREL: (* was: borel_IMP_Borel *)
     !f m. f IN measurable (m_space m,measurable_sets m) borel ==>
           (Normal o f) IN measurable (m_space m,measurable_sets m) Borel
 Proof
@@ -3704,7 +3704,7 @@ Proof
  >> rw [sigma_finite_measure_space_def]
 QED
 
-Theorem in_measurable_sigma_pow : (* was: measurable_measure_of *)
+Theorem in_measurable_sigma_pow: (* was: measurable_measure_of *)
     !m sp N f. measure_space m /\
                N SUBSET POW sp /\ f IN (m_space m -> sp) /\
               (!y. y IN N ==> (PREIMAGE f y) INTER m_space m IN measurable_sets m) ==>
@@ -3719,7 +3719,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [space_def, subsets_def]
 QED
 
-Theorem in_borel_measurable_imp : (* was: borel_measurableI *)
+Theorem in_borel_measurable_imp: (* was: borel_measurableI *)
     !m f. measure_space m /\
          (!s. open s ==> (PREIMAGE f s) INTER m_space m IN measurable_sets m) ==>
           f IN measurable (m_space m, measurable_sets m) borel
@@ -3752,7 +3752,7 @@ end;
 Overload lborel0 =
         “(space right_open_intervals,subsets right_open_intervals,lambda0)”
 
-Theorem lambda0_empty :
+Theorem lambda0_empty:
     lambda0 {} = 0
 Proof
     MP_TAC (REWRITE_RULE [le_refl] (Q.SPECL [`0`, `0`] lambda0_def))
@@ -3761,7 +3761,7 @@ Proof
  >> rw [extreal_of_num_def]
 QED
 
-Theorem lambda0_not_infty :
+Theorem lambda0_not_infty:
     !a b. lambda0 (right_open_interval a b) <> PosInf /\
           lambda0 (right_open_interval a b) <> NegInf
 Proof
@@ -3773,7 +3773,7 @@ Proof
         extreal_of_num_def, extreal_not_infty]
 QED
 
-Theorem lborel0_positive :
+Theorem lborel0_positive:
     positive lborel0
 Proof
     RW_TAC std_ss [positive_def, measure_def, measurable_sets_def, lambda0_empty]
@@ -3785,7 +3785,7 @@ Proof
  >> fs [GSYM right_open_interval_empty, lambda0_empty, le_refl]
 QED
 
-Theorem lborel0_subadditive :
+Theorem lborel0_subadditive:
     subadditive lborel0
 Proof
     RW_TAC std_ss [subadditive_def, measure_def, measurable_sets_def, subsets_def,
@@ -3824,7 +3824,7 @@ Proof
  >> REAL_ASM_ARITH_TAC
 QED
 
-Theorem lborel0_additive :
+Theorem lborel0_additive:
     additive lborel0
 Proof
     RW_TAC std_ss [additive_def, measure_def, measurable_sets_def, subsets_def,
@@ -3888,7 +3888,7 @@ QED
    all empty sets, then sort the rest of sets to guarantee that the first n
    sets still form a right-open interval.  -- Chun Tian, 26/1/2020
  *)
-Theorem lborel0_finite_additive :
+Theorem lborel0_finite_additive:
     finite_additive lborel0
 Proof
     RW_TAC std_ss [finite_additive_def, measure_def, measurable_sets_def]
@@ -4251,7 +4251,7 @@ Proof
 QED
 
 (* Proposition 6.3 [1, p.46], for constructing `lborel` by CARATHEODORY_SEMIRING *)
-Theorem lborel0_premeasure :
+Theorem lborel0_premeasure:
     premeasure lborel0
 Proof
     ASSUME_TAC lborel0_positive >> art [premeasure_def]
@@ -4884,19 +4884,19 @@ in
   val lborel_def = new_specification ("lborel_def", ["lborel"], thm);
 end;
 
-Theorem space_lborel :
+Theorem space_lborel:
     m_space lborel = univ(:real)
 Proof
     PROVE_TAC [lborel_def, GSYM SPACE, CLOSED_PAIR_EQ, space_borel]
 QED
 
-Theorem m_space_lborel :
+Theorem m_space_lborel:
     m_space lborel = space borel
 Proof
     PROVE_TAC [lborel_def, GSYM SPACE, CLOSED_PAIR_EQ]
 QED
 
-Theorem sets_lborel :
+Theorem sets_lborel:
     measurable_sets lborel = subsets borel
 Proof
     PROVE_TAC [lborel_def, GSYM SPACE, CLOSED_PAIR_EQ]
@@ -4905,7 +4905,7 @@ QED
 (* give `measure lebesgue` a special symbol (cf. `lambda0`) *)
 val _ = overload_on ("lambda", ``measure lborel``);
 
-Theorem lambda_empty :
+Theorem lambda_empty:
     lambda {} = 0
 Proof
     ASSUME_TAC right_open_intervals_semiring
@@ -4914,7 +4914,7 @@ Proof
  >> POP_ORW >> REWRITE_TAC [lambda0_empty]
 QED
 
-Theorem lambda_prop :
+Theorem lambda_prop:
     !a b. a <= b ==> (lambda (right_open_interval a b) = Normal (b - a))
 Proof
     rpt STRIP_TAC
@@ -4924,7 +4924,7 @@ Proof
  >> RW_TAC std_ss [lborel_def, lambda0_def, measure_def]
 QED
 
-Theorem lambda_not_infty :
+Theorem lambda_not_infty:
     !a b. lambda (right_open_interval a b) <> PosInf /\
           lambda (right_open_interval a b) <> NegInf
 Proof
@@ -4941,7 +4941,7 @@ val measure_space_lborel = save_thm
   ("measure_space_lborel", List.nth (CONJUNCTS lborel_def, 2));
 
 (* first step beyond right-open_intervals *)
-Theorem lambda_sing :
+Theorem lambda_sing:
     !c. lambda {c} = 0
 Proof
     GEN_TAC
@@ -5021,7 +5021,7 @@ Proof
         REAL_ASM_ARITH_TAC ] ]
 QED
 
-Theorem lambda_closed_interval :
+Theorem lambda_closed_interval:
     !a b. a <= b ==> (lambda (interval [a,b]) = Normal (b - a))
 Proof
     rpt STRIP_TAC
@@ -5054,7 +5054,7 @@ Proof
                    GSPECIFICATION, REAL_LT_REFL, real_lte]
 QED
 
-Theorem lambda_closed_interval_content :
+Theorem lambda_closed_interval_content:
     !a b. lambda (interval [a,b]) = Normal (content (interval [a,b]))
 Proof
     rpt STRIP_TAC
@@ -5066,7 +5066,7 @@ Proof
  >> REWRITE_TAC [lambda_empty]
 QED
 
-Theorem lambda_open_interval :
+Theorem lambda_open_interval:
     !a b. a <= b ==> (lambda (interval (a,b)) = Normal (b - a))
 Proof
     rpt STRIP_TAC
@@ -5100,7 +5100,7 @@ QED
  *)
 val sigma_finite_measure = MATCH_MP SIGMA_FINITE_ALT2 measure_space_lborel;
 
-Theorem sigma_finite_lborel :
+Theorem sigma_finite_lborel:
     sigma_finite lborel
 Proof
     RW_TAC std_ss [sigma_finite_measure]
@@ -5125,11 +5125,11 @@ QED
 (*  Extreal-based Borel measure space                                        *)
 (* ------------------------------------------------------------------------- *)
 
-Definition ext_lborel_def :
+Definition ext_lborel_def:
     ext_lborel = (space Borel, subsets Borel, lambda o real_set)
 End
 
-Theorem MEASURE_SPACE_LBOREL :
+Theorem MEASURE_SPACE_LBOREL:
     measure_space ext_lborel
 Proof
     simp [ext_lborel_def, measure_space_def, SIGMA_ALGEBRA_BOREL]
@@ -5191,7 +5191,7 @@ Proof
  >> rw [IN_FUNSET]
 QED
 
-Theorem SIGMA_FINITE_LBOREL :
+Theorem SIGMA_FINITE_LBOREL:
     sigma_finite ext_lborel
 Proof
     RW_TAC std_ss [MATCH_MP SIGMA_FINITE_ALT2 MEASURE_SPACE_LBOREL]
@@ -5259,7 +5259,7 @@ Proof
  >> REWRITE_TAC [extreal_not_infty]
 QED
 
-Theorem seq_le_imp_lim_le :
+Theorem seq_le_imp_lim_le:
     !x y (f :num->real). (!n. f n <= x) /\ (f --> y) sequentially ==> y <= x
 Proof
     RW_TAC bool_ss [LIM_SEQUENTIALLY]
@@ -5285,7 +5285,7 @@ Proof
 QED
 
 (* cf. seqTheory.SEQ_MONO_LE *)
-Theorem seq_mono_le :
+Theorem seq_mono_le:
     !(f :num->real) x n. (!n. f n <= f (n + 1)) /\ (f --> x) sequentially ==> f n <= x
 Proof
    RW_TAC bool_ss [LIM_SEQUENTIALLY] THEN MATCH_MP_TAC REAL_LE_EPSILON THEN
@@ -5320,7 +5320,7 @@ Proof
 QED
 
 (* from HVG but reworked using UNIQUENESS_OF_MEASURE --Chun *)
-Theorem lambda_eq : (* was: lborel_eqI *)
+Theorem lambda_eq: (* was: lborel_eqI *)
     !m. (!a b. measure m (interval [a,b]) =
          Normal (content (interval [a,b]))) /\ measure_space m /\
         (m_space m = space borel) /\ (measurable_sets m = subsets borel) ==>
@@ -5394,7 +5394,7 @@ val almost_everywhere_def = Define
 (* This binder syntax is learnt from Thomas Tuerk. ‘lborel’ is a required
    household measure space for `AE x. P x` without `::m`, but it's never used.
  *)
-Definition AE_def :
+Definition AE_def:
     $AE = \P. almost_everywhere lborel P
 End
 
@@ -5405,20 +5405,20 @@ val _ = associate_restriction ("AE", "almost_everywhere");
 val _ = Unicode.unicode_version {u = UTF8.chr 0x00C6, tmnm = "AE"};
  *)
 
-Theorem AE_THM :
+Theorem AE_THM:
     !m P. (AE x::m. P x) <=> almost_everywhere m P
 Proof
     SIMP_TAC std_ss [almost_everywhere_def]
 QED
 
-Theorem AE_DEF :
+Theorem AE_DEF:
     !m P. (AE x::m. P x) <=>
           ?N. null_set m N /\ !x. x IN (m_space m DIFF N) ==> P x
 Proof
     rw [AE_THM, almost_everywhere_def]
 QED
 
-Theorem AE_ALT :
+Theorem AE_ALT:
     !m P. (AE x::m. P x) <=>
           ?N. null_set m N /\ {x | x IN m_space m /\ ~P x} SUBSET N
 Proof
@@ -5426,7 +5426,7 @@ Proof
  >> METIS_TAC []
 QED
 
-Theorem AE_filter : (* was: AE + ae_filter *)
+Theorem AE_filter: (* was: AE + ae_filter *)
     !m P. (AE x::m. P x) <=>
           ?N. N IN null_set m /\ {x | x IN m_space m /\ x NOTIN P} SUBSET N
 Proof
@@ -5435,7 +5435,7 @@ Proof
  >> fs [IN_APP]
 QED
 
-Theorem FORALL_IMP_AE :
+Theorem FORALL_IMP_AE:
     !m P. measure_space m /\ (!x. x IN m_space m ==> P x) ==> AE x::m. P x
 Proof
     RW_TAC std_ss [AE_DEF]
@@ -5447,7 +5447,7 @@ QED
 (* Some Useful Theorems about Almost everywhere (ported by Waqar Ahmed)      *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem AE_I :
+Theorem AE_I:
     !N M P. null_set M N ==> {x | x IN m_space M /\ ~P x} SUBSET N ==>
             AE x::M. P x
 Proof
@@ -5456,7 +5456,7 @@ Proof
   FULL_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION] THEN METIS_TAC []
 QED
 
-Theorem AE_iff_null :
+Theorem AE_iff_null:
     !M P. measure_space M /\
           {x | x IN m_space M /\ ~P x} IN measurable_sets M ==>
           ((AE x::M. P x) <=> (null_set M {x | x IN m_space M /\ ~P x}))
@@ -5471,7 +5471,7 @@ Proof
 QED
 
 (* NOTE: changed ‘{x | ~N x} x’ to ‘~N x’ *)
-Theorem AE_iff_null_sets :
+Theorem AE_iff_null_sets:
     !N M. measure_space M /\ N IN measurable_sets M ==>
          (null_set M N <=> AE x::M. ~N x)
 Proof
@@ -5488,7 +5488,7 @@ Proof
  >> fs [SUBSET_DEF, IN_DEF]
 QED
 
-Theorem AE_NOT_IN :
+Theorem AE_NOT_IN:
     !N M. null_set M N ==> AE x::M. x NOTIN N
 Proof
     RW_TAC std_ss [AE_ALT]
@@ -5502,7 +5502,7 @@ QED
  *)
 Theorem AE_not_in = SIMP_RULE std_ss [IN_DEF] AE_NOT_IN
 
-Theorem AE_iff_measurable :
+Theorem AE_iff_measurable:
     !N M P. measure_space M /\ N IN measurable_sets M /\
             ({x | x IN m_space M /\ ~P x} = N) ==>
             ((AE x::M. P x) <=> (measure M N = 0))
@@ -5520,7 +5520,7 @@ Proof
 QED
 
 (* Quantifier movement conversions for AE *)
-Theorem RIGHT_IMP_AE_THM : (* was: AE_impl *)
+Theorem RIGHT_IMP_AE_THM: (* was: AE_impl *)
     !m P Q. measure_space m ==> ((P ==> AE x::m. Q x) <=> (AE x::m. P ==> Q x))
 Proof
     rpt STRIP_TAC
@@ -5547,7 +5547,7 @@ Proof
 QED
 
 (* Fixed statements by checking Isabelle's Measure_Space.thy *)
-Theorem AE_FORALL_SWAP_THM : (* was: AE_all_countable *)
+Theorem AE_FORALL_SWAP_THM: (* was: AE_all_countable *)
     !m P. measure_space m /\ countable univ(:'index) ==>
          ((AE x::m. !i. P i x) <=> !(i:'index). AE x::m. P i x)
 Proof
@@ -5576,7 +5576,7 @@ QED
 
    "If P is a generic property, as you say this set is not necessarily measurable."
  *)
-Theorem AE_IMP_MEASURABLE_SETS :
+Theorem AE_IMP_MEASURABLE_SETS:
     !m P. complete_measure_space m /\ (AE x::m. P x) ==>
           {x | x IN m_space m /\ P x} IN measurable_sets m
 Proof
@@ -5594,7 +5594,7 @@ QED
 
    "No, in general g is not measurable."
  *)
-Theorem IN_MEASURABLE_BOREL_AE_EQ :
+Theorem IN_MEASURABLE_BOREL_AE_EQ:
     !m f g. complete_measure_space m /\ (AE x::m. f x = g x) /\
             f IN measurable (m_space m,measurable_sets m) Borel ==>
             g IN measurable (m_space m,measurable_sets m) Borel
@@ -6614,13 +6614,13 @@ QED
 (*  Two-dimensional Borel sigma-algebra (extreal version), author: Chun Tian *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem SPACE_BOREL_2D :
+Theorem SPACE_BOREL_2D:
     space (Borel CROSS Borel) = UNIV
 Proof
     REWRITE_TAC [SPACE_PROD_SIGMA, SPACE_BOREL, CROSS_UNIV]
 QED
 
-Theorem SIGMA_ALGEBRA_BOREL_2D :
+Theorem SIGMA_ALGEBRA_BOREL_2D:
     sigma_algebra (Borel CROSS Borel)
 Proof
     MATCH_MP_TAC SIGMA_ALGEBRA_PROD_SIGMA
@@ -6685,7 +6685,7 @@ val borel_2d_sets_tm2 =
 val borel_2d_tm1 = “(univ(:extreal # extreal), ^borel_2d_sets_tm1)”;
 val borel_2d_tm2 = “(univ(:extreal # extreal), ^borel_2d_sets_tm2)”;
 
-Theorem BOREL_MEASURABLE_SETS_NORMAL :
+Theorem BOREL_MEASURABLE_SETS_NORMAL:
     !b. b IN subsets borel ==> IMAGE Normal b IN subsets Borel
 Proof
     rw [Borel]
@@ -7084,7 +7084,7 @@ Proof
 QED
 
 (* Main Theorem: alternative definition of ‘Borel CROSS Borel’  *)
-Theorem BOREL_2D :
+Theorem BOREL_2D:
     Borel CROSS Borel = ^borel_2d_tm2
 Proof
     Q.ABBREV_TAC ‘S = ^borel_2d_tm2’
@@ -7480,7 +7480,7 @@ Proof
         qexistsl_tac [‘B’, ‘{NegInf;PosInf}’] >> rw [] ] ]
 QED
 
-Theorem IN_MEASURABLE_BOREL_BOREL_I :
+Theorem IN_MEASURABLE_BOREL_BOREL_I:
     (\x. x) IN measurable Borel Borel
 Proof
     ‘(\x :extreal. x) = I’ by METIS_TAC [I_THM]
@@ -7489,7 +7489,7 @@ Proof
  >> REWRITE_TAC [SIGMA_ALGEBRA_BOREL]
 QED
 
-Theorem IN_MEASURABLE_BOREL_BOREL_ABS :
+Theorem IN_MEASURABLE_BOREL_BOREL_ABS:
     abs IN measurable Borel Borel
 Proof
     MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS
@@ -7502,7 +7502,7 @@ QED
    cf. stochastic_processTheory.random_variable_sigma_of_dimension for a
    generalization of this theorem to arbitrary finite dimensions.
  *)
-Theorem IN_MEASURABLE_BOREL_2D_VECTOR :
+Theorem IN_MEASURABLE_BOREL_2D_VECTOR:
     !a X Y. sigma_algebra a /\
             X IN measurable a Borel /\ Y IN measurable a Borel ==>
             (\x. (X x,Y x)) IN measurable a (Borel CROSS Borel)
@@ -7549,7 +7549,7 @@ Proof
  >> REWRITE_TAC [SUBSET_UNIV]
 QED
 
-Theorem IN_MEASURABLE_BOREL_2D_FUNCTION :
+Theorem IN_MEASURABLE_BOREL_2D_FUNCTION:
     !a X Y f. sigma_algebra a /\
               X IN measurable a Borel /\ Y IN measurable a Borel /\
               f IN measurable (Borel CROSS Borel) Borel ==>
@@ -7564,7 +7564,7 @@ Proof
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_2D_VECTOR >> art []
 QED
 
-Theorem IN_MEASURABLE_BOREL_2D_MUL :
+Theorem IN_MEASURABLE_BOREL_2D_MUL:
     (\(x,y). x * y) IN measurable (Borel CROSS Borel) Borel
 Proof
     simp [IN_MEASURABLE, SIGMA_ALGEBRA_BOREL_2D, SPACE_BOREL, IN_FUNSET,
@@ -7733,7 +7733,7 @@ Proof
  >> rw [Abbr ‘ff’, IN_MEASURABLE_BOREL_2D_MUL]
 QED
 
-Theorem IN_MEASURABLE_BOREL_TIMES :
+Theorem IN_MEASURABLE_BOREL_TIMES:
   !m f g h.
      measure_space m /\
      f IN measurable (m_space m, measurable_sets m) Borel /\
@@ -7747,7 +7747,7 @@ Proof
  >> fs [measure_space_def]
 QED
 
-Theorem IN_MEASURABLE_BOREL_BOREL_CONST :
+Theorem IN_MEASURABLE_BOREL_BOREL_CONST:
     !c. (\x. c) IN measurable Borel Borel
 Proof
     Q.X_GEN_TAC ‘c’
@@ -7756,7 +7756,7 @@ Proof
  >> rw [SIGMA_ALGEBRA_BOREL]
 QED
 
-Theorem IN_MEASURABLE_BOREL_BOREL_AINV :
+Theorem IN_MEASURABLE_BOREL_BOREL_AINV:
     extreal_ainv IN measurable Borel Borel
 Proof
     Know ‘$extreal_ainv = \x. -1 * x’
@@ -7768,7 +7768,7 @@ Proof
         extreal_of_num_def, extreal_ainv_def, extreal_mul_def]
 QED
 
-Theorem IN_MEASURABLE_BOREL_BOREL_MAX :
+Theorem IN_MEASURABLE_BOREL_BOREL_MAX:
     !c. (\x. max x c) IN measurable Borel Borel
 Proof
     Q.X_GEN_TAC ‘c’
@@ -7779,7 +7779,7 @@ Proof
         SIGMA_ALGEBRA_BOREL]
 QED
 
-Theorem IN_MEASURABLE_BOREL_BOREL_MIN :
+Theorem IN_MEASURABLE_BOREL_BOREL_MIN:
     !c. (\x. min x c) IN measurable Borel Borel
 Proof
     Q.X_GEN_TAC ‘c’
@@ -7790,7 +7790,7 @@ Proof
         SIGMA_ALGEBRA_BOREL]
 QED
 
-Theorem IN_MEASURABLE_BOREL_BOREL_POW :
+Theorem IN_MEASURABLE_BOREL_BOREL_POW:
     !n. (\x. x pow n) IN measurable Borel Borel
 Proof
     Induct_on ‘n’
@@ -7802,7 +7802,7 @@ Proof
 QED
 
 (* Improved without ‘f x <> NegInf /\ f x <> PosInf’ (and also ‘sigma_algebra a’) *)
-Theorem IN_MEASURABLE_BOREL_POW :
+Theorem IN_MEASURABLE_BOREL_POW:
     !n a f. f IN measurable a Borel ==> (\x. (f x) pow n) IN measurable a Borel
 Proof
     rpt STRIP_TAC
@@ -7816,7 +7816,7 @@ QED
 
    This is also Problem 8.21 of [1, p.70], the easy part!
  *)
-Theorem IN_MEASURABLE_BOREL_BOREL_MONO_INCREASING :
+Theorem IN_MEASURABLE_BOREL_BOREL_MONO_INCREASING:
     !f. (!x y. x <= y ==> f x <= f y) ==> f IN measurable Borel Borel
 Proof
     rpt STRIP_TAC
@@ -7919,7 +7919,7 @@ Proof
 QED
 
 (* An easy corollary of the previous theorem *)
-Theorem IN_MEASURABLE_BOREL_BOREL_MONO_DECREASING :
+Theorem IN_MEASURABLE_BOREL_BOREL_MONO_DECREASING:
     !f. (!x y. x <= y ==> f y <= f x) ==> f IN measurable Borel Borel
 Proof
     rpt STRIP_TAC
@@ -7933,7 +7933,7 @@ Proof
 QED
 
 (* NOTE: we put ‘abs’ together because ‘powr’ is only defined on [0, PosInf] *)
-Theorem IN_MEASURABLE_BOREL_BOREL_ABS_POWR :
+Theorem IN_MEASURABLE_BOREL_BOREL_ABS_POWR:
     !p. 0 <= p /\ p <> PosInf ==> (\x. (abs x) powr p) IN measurable Borel Borel
 Proof
     rpt STRIP_TAC
@@ -7959,7 +7959,7 @@ Proof
       rw [powr_pos] ]
 QED
 
-Theorem IN_MEASURABLE_BOREL_ABS_POWR :
+Theorem IN_MEASURABLE_BOREL_ABS_POWR:
     !a p f. f IN measurable a Borel /\ 0 <= p /\ p <> PosInf ==>
            (\x. (abs (f x)) powr p) IN measurable a Borel
 Proof

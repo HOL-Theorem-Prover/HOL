@@ -778,7 +778,7 @@ val LENGTH_NON_NIL = store_thm(
 val LENGTH_EQ_0 = save_thm("LENGTH_EQ_0", LENGTH_NIL);
 (* > val LENGTH_EQ_0 = |- !l. (LENGTH l = 0) <=> (l = []): thm *)
 
-Theorem LENGTH1 :
+Theorem LENGTH1:
     (1 = LENGTH l) <=> ?e. l = [e]
 Proof
     Cases_on `l` >> srw_tac [][LENGTH_NIL]
@@ -808,7 +808,7 @@ val LENGTH_EQ_1 = store_thm(
     rw[]
   ]*));
 
-Theorem LENGTH2 :
+Theorem LENGTH2:
     (2 = LENGTH l) <=> ?a b. l = [a;b]
 Proof
     Cases_on `l` >> srw_tac [][LENGTH1]
@@ -1401,7 +1401,7 @@ val (rules,ind,cases) = IndDefLib.Hol_reln`
 val strong = IndDefLib.derive_strong_induction (rules,ind)
 *)
 
-Theorem LIST_REL_equivalence :
+Theorem LIST_REL_equivalence:
     !R. equivalence R ==> equivalence (LIST_REL R)
 Proof
     SRW_TAC [] [equivalence_def, reflexive_def, symmetric_def,
@@ -1767,7 +1767,7 @@ val MEM_EL = store_thm(
     ASM_MESON_TAC []
   ]);
 
-Theorem EL_MEM :
+Theorem EL_MEM:
     !n l. n < LENGTH l ==> MEM (EL n l) l
 Proof
     RW_TAC std_ss [MEM_EL]
@@ -1792,7 +1792,7 @@ Proof
   Cases_on ‘l2’ THEN FULL_SIMP_TAC(srw_ss())[EVERY_DEF, ZIP]
 QED
 
-Theorem NOT_EVERY_EXISTS_FIRST :
+Theorem NOT_EVERY_EXISTS_FIRST:
     !P l. ~EVERY P l <=> ?i. i < LENGTH l /\ ~P (EL i l) /\ !j. j < i ==> P (EL j l)
 Proof
     rpt STRIP_TAC
@@ -1810,7 +1810,7 @@ Proof
  >> RW_TAC bool_ss []
 QED
 
-Theorem EXISTS_FIRST :
+Theorem EXISTS_FIRST:
     !P l. EXISTS P l <=> ?i. i < LENGTH l /\ P (EL i l) /\ !j. j < i ==> ~P (EL j l)
 Proof
     rw [EXISTS_NOT_EVERY]
@@ -2098,7 +2098,7 @@ Proof
   Cases THEN ASM_SIMP_TAC (srw_ss()) []
 QED
 
-Theorem TAKE_EQ_REWRITE :
+Theorem TAKE_EQ_REWRITE:
     !l m n. m <= LENGTH l /\ n <= LENGTH l ==> (TAKE m l = TAKE n l <=> m = n)
 Proof
     rpt STRIP_TAC
@@ -2115,7 +2115,7 @@ Proof
   FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
 QED
 
-Theorem FRONT_TAKE :
+Theorem FRONT_TAKE:
     !l n. 0 < n /\ n <= LENGTH l ==> (FRONT (TAKE n l) = TAKE (n - 1) l)
 Proof
   Induct THEN SRW_TAC [numSimps.ARITH_ss][TAKE_def, DROP_def] >>
@@ -2666,7 +2666,7 @@ val ITSET_eq_FOLDL_SET_TO_LIST = Q.store_thm(
 HO_MATCH_MP_TAC pred_setTheory.FINITE_COMPLETE_INDUCTION THEN
 SRW_TAC [] [pred_setTheory.ITSET_THM, SET_TO_LIST_THM, FOLDL]);
 
-Theorem LIST_TO_SET_SING :
+Theorem LIST_TO_SET_SING:
     !vs x. ALL_DISTINCT vs /\ set vs = {x} <=> vs = [x]
 Proof
     rpt GEN_TAC >> reverse EQ_TAC >- rw []
@@ -3243,7 +3243,7 @@ val GENLIST_CONSTANT = store_thm(
   rw_tac std_ss[] >>
   metis_tac[prim_recTheory.LESS_THM]);
 
-Theorem isPREFIX_NIL :
+Theorem isPREFIX_NIL:
     !x. [] <<= x /\ (x <<= [] <=> (x = []))
 Proof
     qx_gen_tac ‘x’
@@ -3251,13 +3251,13 @@ Proof
  >> rw [isPREFIX]
 QED
 
-Theorem isPREFIX_REFL :
+Theorem isPREFIX_REFL:
     !x. x <<= x
 Proof
     Induct_on ‘x’ >> rw [isPREFIX]
 QED
 
-Theorem isPREFIX_TRANS :
+Theorem isPREFIX_TRANS:
     !x y z. x <<= y /\ y <<= z ==> x <<= z
 Proof
     Induct_on ‘x’ >- rw []
@@ -3269,7 +3269,7 @@ Proof
  >> Q.EXISTS_TAC ‘l’ >> rw []
 QED
 
-Theorem isPREFIX_ANTISYM :
+Theorem isPREFIX_ANTISYM:
     !x y. x <<= y /\ y <<= x ==> x = y
 Proof
     Induct_on ‘x’ >- rw []
@@ -3280,7 +3280,7 @@ Proof
  >> fs []
 QED
 
-Theorem isPREFIX_SNOC_EQ :
+Theorem isPREFIX_SNOC_EQ:
    !x y z. z <<= SNOC x y <=> z <<= y \/ z = SNOC x y
 Proof
     NTAC 2 GEN_TAC
@@ -3311,7 +3311,7 @@ Proof
  >> rw [GENLIST, isPREFIX_SNOC]
 QED
 
-Theorem isPREFIX_GENLIST :
+Theorem isPREFIX_GENLIST:
     !(f :num -> 'a) m n. GENLIST f m <<= GENLIST f n <=> m <= n
 Proof
     rpt GEN_TAC
@@ -3329,7 +3329,7 @@ Proof
  >> fs [LIST_EQ_REWRITE]
 QED
 
-Theorem isPREFIX_MAP :
+Theorem isPREFIX_MAP:
     !f l1 l2. l1 <<= l2 ==> MAP f l1 <<= MAP f l2
 Proof
     qx_gen_tac ‘f’
@@ -3945,14 +3945,14 @@ val SHORTLEX_total = store_thm(
   MAP_EVERY Cases_on [‘LENGTH l1 < LENGTH l2’, ‘h1 = h2’, ‘l1 = l2’] >>
   simp[] >> metis_tac[arithmeticTheory.LESS_LESS_CASES]);
 
-Theorem SHORTLEX_irreflexive :
+Theorem SHORTLEX_irreflexive:
     !R. irreflexive R ==> irreflexive (SHORTLEX R)
 Proof
     rw [irreflexive_def]
  >> Induct_on ‘x’ >> rw [SHORTLEX_def]
 QED
 
-Theorem SHORTLEX_same_lengths :
+Theorem SHORTLEX_same_lengths:
     !R h1 h2 t1 t2. LENGTH t1 = LENGTH t2 ==>
                    (SHORTLEX R (h1::t1) (h2::t2) <=>
                     R h1 h2 \/ h1 = h2 /\ SHORTLEX R t1 t2)
@@ -3965,7 +3965,7 @@ QED
 
    The antecedent ‘irreflexive R’ is necessary.
  *)
-Theorem SHORTLEX_antisymmetric :
+Theorem SHORTLEX_antisymmetric:
     !R. irreflexive R /\ antisymmetric R ==> antisymmetric (SHORTLEX R)
 Proof
     rw [antisymmetric_def, irreflexive_def]
@@ -4061,7 +4061,7 @@ val WF_SHORTLEX = Q.store_thm(
   ‘LENGTH a0 = LENGTH a’ by metis_tac[] >>
   full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) []);
 
-Theorem SHORTLEX_SNOC :
+Theorem SHORTLEX_SNOC:
     !R l h1 h2. R h1 h2 ==> SHORTLEX R (SNOC h1 l) (SNOC h2 l)
 Proof
     Q.X_GEN_TAC ‘R’

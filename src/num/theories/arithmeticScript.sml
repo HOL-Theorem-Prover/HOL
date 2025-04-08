@@ -530,7 +530,7 @@ val LESS_EQ_ANTISYM = store_thm ("LESS_EQ_ANTISYM",
        ZERO_LESS_EQ, LESS_0, NOT_LESS_0, NOT_SUC_LESS_EQ_0]) ;
 
 Theorem LTE_ANTISYM = LESS_EQ_ANTISYM (* HOL-Light compatible name *)
-Theorem LET_ANTISYM :
+Theorem LET_ANTISYM:
     !m n. ~(m <= n /\ n < m)
 Proof
     rpt GEN_TAC
@@ -546,13 +546,13 @@ val LESS_EQ_0 = store_thm ("LESS_EQ_0",
  *  HOL Light (or HOL88) compatibility
  *---------------------------------------------------------------------------*)
 
-Theorem LT :
+Theorem LT:
     (!m:num. m < 0 <=> F) /\ (!m n. m < SUC n <=> (m = n) \/ m < n)
 Proof
     METIS_TAC [LESS_THM, NOT_LESS_0]
 QED
 
-Theorem LT_LE :
+Theorem LT_LE:
     !m n:num. m < n <=> m <= n /\ ~(m = n)
 Proof
     METIS_TAC [LESS_NOT_EQ, LESS_OR_EQ]
@@ -562,27 +562,27 @@ QED
 Theorem LE_LT = LESS_OR_EQ;
 
 (* moved here from cardinalTheory (proof is from old transc.ml *)
-Theorem LT_SUC_LE : (* was: LESS_SUC_EQ *)
+Theorem LT_SUC_LE: (* was: LESS_SUC_EQ *)
     !m n. m < SUC n <=> m <= n
 Proof
     rpt GEN_TAC >> REWRITE_TAC[CONJUNCT2 LT, LE_LT]
  >> EQ_TAC >> DISCH_THEN(DISJ_CASES_THEN(fn th => REWRITE_TAC[th]))
 QED
 
-Theorem LE_CASES :
+Theorem LE_CASES:
    !m n:num. m <= n \/ n <= m
 Proof
   rpt INDUCT_TAC >> ASM_REWRITE_TAC[ZERO_LESS_EQ, LESS_EQ_MONO]
 QED
 
-Theorem LT_CASES :
+Theorem LT_CASES:
    !m n:num. (m < n) \/ (n < m) \/ (m = n)
 Proof
   METIS_TAC [LESS_CASES, LESS_OR_EQ]
 QED
 
 (* moved here from real_topologyTheory *)
-Theorem WLOG_LT :
+Theorem WLOG_LT:
    (!m:num. P m m) /\ (!m n. P m n <=> P n m) /\ (!m n. m < n ==> P m n)
    ==> !m y. P m y
 Proof
@@ -590,7 +590,7 @@ Proof
 QED
 
 (* moved here from iterateTheory *)
-Theorem WLOG_LE :
+Theorem WLOG_LE:
    (!m n:num. P m n <=> P n m) /\ (!m n:num. m <= n ==> P m n) ==>
     !m n:num. P m n
 Proof
@@ -956,7 +956,7 @@ val LESS_EQUAL_ANTISYM = store_thm ("LESS_EQUAL_ANTISYM",
      [IMP_RES_TAC LESS_ANTISYM,
       ASM_REWRITE_TAC[]]);
 
-Theorem LE_ANTISYM :
+Theorem LE_ANTISYM:
     !m (n :num). m <= n /\ n <= m <=> m = n
 Proof
     rpt GEN_TAC
@@ -1136,7 +1136,7 @@ val SUB_LESS_OR = store_thm ("SUB_LESS_OR",
    REWRITE_TAC [SYM (SPEC_ALL PRE_SUB1)] THEN
    REWRITE_TAC [PRE,ONE,ADD_CLAUSES,LESS_EQ_ADD]);
 
-Theorem SUB_LESS_OR_EQ :
+Theorem SUB_LESS_OR_EQ:
     !m n. 0 < m ==> (n <= m - 1 <=> n < m)
 Proof
     rpt STRIP_TAC
@@ -1248,7 +1248,7 @@ val ADD_SUB = store_thm ("ADD_SUB",
    ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ]) ;
 
 (* ported from HOL-Light *)
-Theorem ADD_SUB2 :
+Theorem ADD_SUB2:
    !m n. (m + n) - m = n
 Proof
   ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_ACCEPT_TAC ADD_SUB
@@ -2168,7 +2168,7 @@ val MOD_UNIQUE = store_thm ("MOD_UNIQUE",
    end);
 
 (* A combined version of DIV_UNIQUE and MOD_UNIQUE from HOL-Light *)
-Theorem DIVMOD_UNIQ :
+Theorem DIVMOD_UNIQ:
    !m n q r. (m = q * n + r) /\ r < n ==> (m DIV n = q) /\ (m MOD n = r)
 Proof
     rpt STRIP_TAC
@@ -2959,7 +2959,7 @@ QED
   where ‘m DIV 0 = 0’ by definition. In HOL4, ‘m DIV 0’ is unspecified, thus
   only the following alternative statements is possible:
  *)
-Theorem DIVMOD_ELIM_THM :
+Theorem DIVMOD_ELIM_THM:
     !P m n. 0 < n ==>
            (P (m DIV n) (m MOD n) <=> !q r. m = q * n + r /\ r < n ==> P q r)
 Proof
@@ -2994,13 +2994,13 @@ QED
 (* Some miscellaneous lemmas (from transc.ml)                               *)
 (* ------------------------------------------------------------------------ *)
 
-Theorem MULT_DIV_2 :
+Theorem MULT_DIV_2:
     !n. (2 * n) DIV 2 = n
 Proof
   GEN_TAC THEN REWRITE_TAC[GSYM DIV2_def, DIV2_DOUBLE]
 QED
 
-Theorem EVEN_DIV_2 : (* was: EVEN_DIV2 *)
+Theorem EVEN_DIV_2: (* was: EVEN_DIV2 *)
     !n. ~(EVEN n) ==> ((SUC n) DIV 2 = SUC((n - 1) DIV 2))
 Proof
   GEN_TAC THEN REWRITE_TAC[GSYM ODD_EVEN, ODD_EXISTS] THEN
@@ -3124,7 +3124,7 @@ Proof
 QED
 
 (* HOL-Light compatible *)
-Theorem PRE_ELIM_THM_EXISTS :
+Theorem PRE_ELIM_THM_EXISTS:
    P (PRE n) <=> (?m. (n = SUC m \/ m = 0 /\ n = 0) /\ P m)
 Proof
     MP_TAC(INST [“P:num->bool” |-> “\x:num. ~P x”] PRE_ELIM_THM')
@@ -3521,13 +3521,13 @@ val MAX = MAX_DEF;
 val MIN = MIN_DEF;
 
 (* Alternative definitions of MAX and MIN using ‘<=’ instead of ‘<’ *)
-Theorem MIN_ALT :
+Theorem MIN_ALT:
     !m n. MIN m n = if m <= n then m else n
 Proof
     rw [LESS_OR_EQ, MIN_DEF] >> fs []
 QED
 
-Theorem MAX_ALT :
+Theorem MAX_ALT:
     !m n. MAX m n = if m <= n then n else m
 Proof
     rw [LESS_OR_EQ, MAX_DEF] >> fs []
@@ -4756,7 +4756,7 @@ Proof
 QED
 
 (* moved here from integralTheory *)
-Theorem num_MAX :
+Theorem num_MAX:
     !P. (?(x:num). P x) /\ (?(M:num). !x. P x ==> x <= M) <=>
         ?m. P m /\ (!x. P x ==> x <= m)
 Proof
@@ -4907,7 +4907,7 @@ val MOD_EQN = store_thm(
                = 0 MOD n                      by MULT_0 and MULT_COMM
                = 0                            by ZERO_MOD
 *)
-Theorem MOD_MULTIPLE_ZERO :
+Theorem MOD_MULTIPLE_ZERO:
     !n k. 0 < n /\ (k MOD n = 0) ==> !x. ((k*x) MOD n = 0)
 Proof
   metis_tac[MOD_TIMES2, MULT_0, MULT_COMM, ZERO_MOD]

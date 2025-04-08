@@ -23,7 +23,7 @@ Theorem solvable_alt_closed'[local] =
     REWRITE_RULE [closed_def] solvable_alt_closed
 
 (* 8.3.2 Examples of solvable terms [1, p.171] *)
-Theorem solvable_K :
+Theorem solvable_K:
     solvable K
 Proof
     rw [solvable_alt_closed']
@@ -31,7 +31,7 @@ Proof
  >> rw [lameq_K]
 QED
 
-Theorem solvable_xIO :
+Theorem solvable_xIO:
     solvable (VAR x @@ I @@ Omega)
 Proof
     Q.ABBREV_TAC ‘M = VAR x @@ I @@ Omega’
@@ -44,7 +44,7 @@ Proof
  >> rw [SUB_THM, lemma14b]
 QED
 
-Theorem solvable_Y :
+Theorem solvable_Y:
     solvable chap2$Y
 Proof
     rw [solvable_alt_closed']
@@ -61,7 +61,7 @@ Proof
  >> REWRITE_TAC [Q.SPEC ‘x’ I_thm]
 QED
 
-Theorem closures_imp_closed :
+Theorem closures_imp_closed:
     !M N. N IN closures M ==> closed N
 Proof
     rw [closures_def, closed_def]
@@ -80,7 +80,7 @@ Proof
 QED
 
 (* alternative definition of solvable terms involving all closed terms *)
-Theorem solvable_alt_closed_every :
+Theorem solvable_alt_closed_every:
     !M. closed M ==> (solvable M <=> ?Ns. M @* Ns == I /\ EVERY closed Ns)
 Proof
     rw [solvable_alt_closed, closed_def]
@@ -120,7 +120,7 @@ Proof
 QED
 
 (* cf. solvable_def, adding ‘EVERY closed Ns’ in RHS *)
-Theorem solvable_alt :
+Theorem solvable_alt:
     !M. solvable M <=> ?M' Ns. M' IN closures M /\ M' @* Ns == I /\ EVERY closed Ns
 Proof
     Q.X_GEN_TAC ‘M’
@@ -135,7 +135,7 @@ Proof
  >> Q.EXISTS_TAC ‘Ns’ >> art []
 QED
 
-Definition closed_substitution_instances_def :
+Definition closed_substitution_instances_def:
     closed_substitution_instances M =
        {fm ' M | fm | FDOM fm = FV M /\ !v. v IN FDOM fm ==> closed (fm ' v)}
 End
@@ -185,7 +185,7 @@ Proof
 QED
 
 (* Lemma 8.3.3 (i) *)
-Theorem solvable_alt_closed_substitution_instance :
+Theorem solvable_alt_closed_substitution_instance:
     !M. solvable M <=> ?M' Ns. M' IN closed_substitution_instances M /\
                                M' @* Ns == I /\ EVERY closed Ns
 Proof
@@ -370,7 +370,7 @@ QED
    NOTE: This is actually 8.3.5 [1, p.172] showing the definition of solvability of
          open terms is independent of the order of the variables in its closure.
  *)
-Theorem solvable_alt_universal :
+Theorem solvable_alt_universal:
     !M. solvable M <=> !M'. M' IN closures M ==> ?Ns. M' @* Ns == I /\ EVERY closed Ns
 Proof
     Q.X_GEN_TAC ‘M’
@@ -538,7 +538,7 @@ Proof
 QED
 
 (* Theorem 8.3.14 (Wadsworth) [1, p.175] *)
-Theorem solvable_iff_has_hnf :
+Theorem solvable_iff_has_hnf:
     !M. solvable M <=> has_hnf M
 Proof
     Q.X_GEN_TAC ‘M’
@@ -642,14 +642,14 @@ Proof
     METIS_TAC [pmact_inverse, solvable_tpm_I]
 QED
 
-Theorem unsolvable_subst :
+Theorem unsolvable_subst:
     !M v N. unsolvable M ==> unsolvable ([N/v] M)
 Proof
     rw [solvable_iff_has_hnf]
  >> PROVE_TAC [has_hnf_SUB_E]
 QED
 
-Theorem unsolvable_ISUB :
+Theorem unsolvable_ISUB:
     !ss M. unsolvable M ==> unsolvable (M ISUB ss)
 Proof
     Induct_on ‘ss’ >- rw []
@@ -660,14 +660,14 @@ Proof
  >> MATCH_MP_TAC unsolvable_subst >> art []
 QED
 
-Theorem hnf_solvable :
+Theorem hnf_solvable:
     !M. hnf M ==> solvable M
 Proof
     rw [solvable_iff_has_hnf]
  >> MATCH_MP_TAC hnf_has_hnf >> art []
 QED
 
-Theorem bnf_solvable :
+Theorem bnf_solvable:
     !M. bnf M ==> solvable M
 Proof
     rpt STRIP_TAC
@@ -675,7 +675,7 @@ Proof
  >> MATCH_MP_TAC bnf_hnf >> art []
 QED
 
-Theorem solvable_hnf :
+Theorem solvable_hnf:
     !vs y args. solvable (LAMl vs (VAR y @* args))
 Proof
     rpt GEN_TAC
@@ -703,12 +703,12 @@ Theorem solvable_VAR[simp] =
    For solvable terms, there is a unique terminating hnf as the last element of
    head reduction path, which is called "principle" hnf.
  *)
-Definition principle_hnf_def :
+Definition principle_hnf_def:
     principle_hnf = last o head_reduction_path
 End
 
 (* NOTE: This theorem fully captures the characteristics of principle hnf *)
-Theorem principle_hnf_thm :
+Theorem principle_hnf_thm:
     !M N. has_hnf M ==> (principle_hnf M = N <=> M -h->* N /\ hnf N)
 Proof
     rw [corollary11_4_8]
@@ -776,7 +776,7 @@ Theorem principle_hnf_thm' =
    NOTE: this theorem depends on finite_head_reduction_path_to_list_11 and
          hreduce1_FV.
  *)
-Theorem principle_hnf_FV_SUBSET :
+Theorem principle_hnf_FV_SUBSET:
     !M. has_hnf M ==> FV (principle_hnf M) SUBSET FV M
 Proof
     rpt STRIP_TAC
@@ -799,7 +799,7 @@ QED
 Theorem principle_hnf_FV_SUBSET' =
         principle_hnf_FV_SUBSET |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
-Theorem hnf_principle_hnf :
+Theorem hnf_principle_hnf:
     !M. has_hnf M ==> hnf (principle_hnf M)
 Proof
     rw [corollary11_4_8, principle_hnf_def]
@@ -811,7 +811,7 @@ QED
 Theorem hnf_principle_hnf' =
     REWRITE_RULE [GSYM solvable_iff_has_hnf] hnf_principle_hnf
 
-Theorem solvable_principle_hnf :
+Theorem solvable_principle_hnf:
     !M. solvable M ==> solvable (principle_hnf M)
 Proof
     rw [solvable_iff_has_hnf]
@@ -823,7 +823,7 @@ Theorem principle_hnf_has_hnf =
     REWRITE_RULE [solvable_iff_has_hnf] solvable_principle_hnf
 
 (* NOTE: This theorem cannot be put into [simp], too many missed hits *)
-Theorem principle_hnf_reduce :
+Theorem principle_hnf_reduce:
     !M. hnf M ==> principle_hnf M = M
 Proof
     rw [principle_hnf_def]
@@ -837,7 +837,7 @@ Proof
  >> gs [is_head_reduction_thm, hnf_no_head_redex]
 QED
 
-Theorem principle_hnf_bnf :
+Theorem principle_hnf_bnf:
     !M. bnf M ==> principle_hnf M = M
 Proof
     rpt STRIP_TAC
@@ -852,7 +852,7 @@ Proof
  >> rw [hnf_appstar]
 QED
 
-Theorem principle_hnf_stable :
+Theorem principle_hnf_stable:
     !M. has_hnf M ==> principle_hnf (principle_hnf M) = principle_hnf M
 Proof
     rpt STRIP_TAC
@@ -864,7 +864,7 @@ QED
 Theorem principle_hnf_stable' =
     REWRITE_RULE [GSYM solvable_iff_has_hnf] principle_hnf_stable
 
-Theorem principle_hnf_beta :
+Theorem principle_hnf_beta:
     !v t. hnf t /\ y # t ==> principle_hnf (LAM v t @@ VAR y) = [VAR y/v] t
 Proof
     rw [principle_hnf_def]
@@ -881,7 +881,7 @@ Proof
 QED
 
 (* NOTE: this shows that ‘principle_hnf’ is the normal_form of hreduce1 *)
-Theorem principle_hnf_hreduce1 :
+Theorem principle_hnf_hreduce1:
     !M N. M -h-> N ==> principle_hnf M = principle_hnf N
 Proof
     rw [principle_hnf_def]
@@ -897,7 +897,7 @@ QED
 
 (* NOTE: this useful theorem can be used to rewrite ‘principle_hnf M’ to
   ‘principle_hnf N’, if one can prove ‘M -h->* N’. *)
-Theorem principle_hnf_hreduce :
+Theorem principle_hnf_hreduce:
     !M N. M -h->* N ==> principle_hnf M = principle_hnf N
 Proof
     HO_MATCH_MP_TAC RTC_INDUCT >> rw []
@@ -906,7 +906,7 @@ Proof
 QED
 
 (* NOTE: This theorem doesn't need ‘solvable M’ in antecedents *)
-Theorem hreduces_hnf_imp_principle_hnf :
+Theorem hreduces_hnf_imp_principle_hnf:
     !M N. M -h->* N /\ hnf N ==> principle_hnf M = N
 Proof
     rpt STRIP_TAC
@@ -1014,7 +1014,7 @@ QED
         ‘NEWS’, and then call [hnf_cases_genX] using ‘ys’ as the new
          excluded list.
  *)
-Theorem principle_hnf_tpm_reduce :
+Theorem principle_hnf_tpm_reduce:
     !t xs ys. hnf t /\
               ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
               LENGTH xs = LENGTH ys /\
@@ -1039,7 +1039,7 @@ Proof
  >> MATCH_MP_TAC principle_hnf_tpm_reduce_lemma >> rw []
 QED
 
-Theorem hreduce_tpm_reduce :
+Theorem hreduce_tpm_reduce:
     !t xs ys. hnf t /\
               ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
               LENGTH xs = LENGTH ys /\
@@ -1063,7 +1063,7 @@ QED
  *)
 Theorem principle_hnf_tpm_reduce' = cj 2 principle_hnf_tpm_reduce
 
-Theorem principle_hnf_beta_reduce1 :
+Theorem principle_hnf_beta_reduce1:
     !v t. hnf t ==> principle_hnf (LAM v t @@ VAR v) = t
 Proof
     rpt STRIP_TAC
@@ -1075,7 +1075,7 @@ Proof
  >> rw [principle_hnf_reduce]
 QED
 
-Theorem principle_hnf_beta_reduce :
+Theorem principle_hnf_beta_reduce:
     !xs t. hnf t ==> principle_hnf (LAMl xs t @* MAP VAR xs) = t
 Proof
     Induct_on ‘xs’
@@ -1091,7 +1091,7 @@ Proof
 QED
 
 (* NOTE: ‘~is_abs t’ is required to preserve ‘l’ *)
-Theorem principle_hnf_beta_reduce_ext :
+Theorem principle_hnf_beta_reduce_ext:
     !l xs t. hnf t /\ ~is_abs t ==>
              principle_hnf (LAMl xs t @* MAP VAR xs @* l) = t @* l
 Proof
@@ -1113,7 +1113,7 @@ Proof
 QED
 
 (* Example 8.3.2 [1, p.171] *)
-Theorem unsolvable_Omega :
+Theorem unsolvable_Omega:
     unsolvable Omega
 Proof
    ‘closed Omega’ by rw [closed_def]
@@ -1169,7 +1169,7 @@ Proof
 QED
 
 (* NOTE: This important theorem has used first principles of solvable terms *)
-Theorem lameq_solvable_cong :
+Theorem lameq_solvable_cong:
     !M N. M == N ==> (solvable M <=> solvable N)
 Proof
     rpt STRIP_TAC
@@ -1188,7 +1188,7 @@ Proof
  >> MATCH_MP_TAC lameq_solvable_cong_lemma >> art []
 QED
 
-Theorem hreduce_solvable_cong :
+Theorem hreduce_solvable_cong:
     !M N. M -h->* N ==> (solvable M <=> solvable N)
 Proof
     rpt STRIP_TAC
@@ -1196,7 +1196,7 @@ Proof
  >> MATCH_MP_TAC hreduces_lameq >> art []
 QED
 
-Theorem lameq_principle_hnf :
+Theorem lameq_principle_hnf:
     !M. has_hnf M ==> principle_hnf M == M
 Proof
     rpt STRIP_TAC
@@ -1257,7 +1257,7 @@ Proof
 QED
 
 (* Lemma 8.3.16 [1, p.176] *)
-Theorem hnf_betastar_cases :
+Theorem hnf_betastar_cases:
     !vs y Ms N. LAMl vs (VAR y @* Ms) -b->* N ==>
                 ?Ns. N = LAMl vs (VAR y @* Ns) /\
                      LENGTH Ns = LENGTH Ms /\
@@ -1284,7 +1284,7 @@ Proof
  >> Q.EXISTS_TAC ‘EL i Ns’ >> rw []
 QED
 
-Theorem lameq_principle_hnf_lemma_general :
+Theorem lameq_principle_hnf_lemma_general:
     !r X M N. FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\
               hnf M /\ hnf N /\ M == N
           ==> LAMl_size M = LAMl_size N /\
@@ -1404,7 +1404,7 @@ Theorem lameq_principle_hnf_lemma =
         lameq_principle_hnf_lemma_general
      |> Q.SPEC ‘0’ |> SRULE [GSYM CONJ_ASSOC]
 
-Theorem lameq_principle_hnf_size_eq :
+Theorem lameq_principle_hnf_size_eq:
     !M N. has_hnf M /\ has_hnf N /\ M == N ==>
           LAMl_size (principle_hnf M) = LAMl_size (principle_hnf N)
 Proof
@@ -1433,7 +1433,7 @@ QED
 Theorem lameq_principle_hnf_size_eq' =
         lameq_principle_hnf_size_eq |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
-Theorem lameq_principle_hnf_head_eq :
+Theorem lameq_principle_hnf_head_eq:
     !r X M N M0 N0 n vs M1 N1.
          FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\
          has_hnf M /\ has_hnf N /\ M == N /\
@@ -1483,7 +1483,7 @@ Theorem lameq_principle_hnf_head_eq' =
         lameq_principle_hnf_head_eq |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
 (* Corollary 8.3.17 (ii) [1, p.176] (outer part) *)
-Theorem lameq_principle_hnf_thm :
+Theorem lameq_principle_hnf_thm:
     !r X M N M0 N0 n vs M1 N1.
          FINITE X /\ FV M UNION FV N SUBSET X UNION RANK r /\
          has_hnf M /\ has_hnf N /\ M == N /\
@@ -1540,7 +1540,7 @@ QED
 Theorem lameq_principle_hnf_thm' =
         lameq_principle_hnf_thm |> REWRITE_RULE [GSYM solvable_iff_has_hnf]
 
-Theorem lameq_principle_hnf_thm_simple :
+Theorem lameq_principle_hnf_thm_simple:
     !X M N M0 N0 n vs M1 N1.
          FINITE X /\ FV M UNION FV N SUBSET X /\
          has_hnf M /\ has_hnf N /\ M == N /\
@@ -1564,7 +1564,7 @@ Proof
 QED
 
 (* NOTE: The difficulty of applying this theorem is to prove the antecedents *)
-Theorem principle_hnf_SUB_cong :
+Theorem principle_hnf_SUB_cong:
     !M N v P. has_hnf M /\ has_hnf ([P/v] M) /\ has_hnf ([P/v] N) /\
               principle_hnf M = N ==>
               principle_hnf ([P/v] M) = principle_hnf ([P/v] N)
@@ -1584,7 +1584,7 @@ Proof
 QED
 
 (* NOTE: Again, the difficulty of applying this theorem is the antecedents *)
-Theorem principle_hnf_ISUB_cong :
+Theorem principle_hnf_ISUB_cong:
     !M N sub. has_hnf M /\ has_hnf (M ISUB sub) /\ has_hnf (N ISUB sub) /\
               principle_hnf M = N ==>
               principle_hnf (M ISUB sub) = principle_hnf (N ISUB sub)
@@ -1628,7 +1628,7 @@ Proof
  >> MATCH_MP_TAC hnf_has_hnf >> rw [hnf_appstar]
 QED
 
-Theorem principle_hnf_denude_thm :
+Theorem principle_hnf_denude_thm:
     !ls M vs y args. solvable M /\
        ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M) /\
        principle_hnf M = LAMl vs (VAR y @* args) ==>
@@ -1659,7 +1659,7 @@ QED
 Theorem principle_hnf_denude_thm' =
         principle_hnf_denude_thm |> Q.SPEC ‘[]’ |> SIMP_RULE (srw_ss()) []
 
-Theorem principle_hnf_permutator :
+Theorem principle_hnf_permutator:
     !n N Ns. hnf N /\ ~is_abs N /\ LENGTH Ns = n ==>
              principle_hnf (permutator n @* Ns @@ N) = N @* Ns
 Proof
@@ -1676,7 +1676,7 @@ Proof
  >> MATCH_MP_TAC permutator_hreduce_same_length >> art []
 QED
 
-Theorem principle_hnf_tpm :
+Theorem principle_hnf_tpm:
     !pi M. has_hnf M ==> principle_hnf (tpm pi M) = tpm pi (principle_hnf M)
 Proof
     rpt GEN_TAC >> DISCH_TAC

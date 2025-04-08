@@ -421,7 +421,7 @@ Proof
 
 val fpm_respects = faeq_perm |> SPEC_ALL |> EQ_IMP_RULE |> #2 |> GEN_ALL
 
-(* Theorem faeq_ALL :
+(* Theorem faeq_ALL:
   faeq (rawALL bv1 rf1) (rawALL bv2 rf2) ⇔
     (bv1 = bv2) ∧ faeq rf1 rf2 ∨
     bv1 ∉ rawfv rf2 ∧ faeq rf1 (rawfpm [(bv1,bv2)] rf2)

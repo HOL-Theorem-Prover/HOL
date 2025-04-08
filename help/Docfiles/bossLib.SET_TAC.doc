@@ -28,7 +28,7 @@ reduction, e.g., when there are other set-theoretic operators in the goal.
 \EXAMPLE
 A simple theorem about disjoint sets:
 {
-Theorem DISJOINT_RESTRICT_L :
+Theorem DISJOINT_RESTRICT_L:
   !s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c)
 Proof SET_TAC []
 QED

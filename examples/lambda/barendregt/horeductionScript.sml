@@ -237,7 +237,7 @@ val conversion_compatible = store_thm(
   HO_MATCH_MP_TAC equiv_closure_ind THEN SRW_TAC [][] THEN
   PROVE_TAC [compatible_def, equiv_closure_rules, compat_closure_compatible]);
 
-Theorem conversion_monotone :
+Theorem conversion_monotone:
     !r1 r2. r1 RSUBSET r2 ==> (conversion r1) RSUBSET (conversion r2)
 Proof
     rpt STRIP_TAC
@@ -293,7 +293,7 @@ val normal_form_def = Define`normal_form R t = ~can_reduce R t`;
  *  compat_closure and LAMl/appstar
  *---------------------------------------------------------------------------*)
 
-Theorem compat_closure_LAMl :
+Theorem compat_closure_LAMl:
     !vs. compat_closure R x y ==> compat_closure R (LAMl vs x) (LAMl vs y)
 Proof
     Induct_on ‘vs’ >> rw []
@@ -301,7 +301,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
 QED
 
-Theorem compat_closure_appstar :
+Theorem compat_closure_appstar:
     !args R M N. compat_closure R M N ==> compat_closure R (M @* args) (N @* args)
 Proof
     Induct_on ‘args’ using SNOC_INDUCT

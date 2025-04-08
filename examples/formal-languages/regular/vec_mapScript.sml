@@ -9,7 +9,7 @@ val _ = temp_tight_equality ();
 
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 
-Definition alist_to_vec_def :
+Definition alist_to_vec_def:
   (alist_to_vec l default 0 max = []) /\
   (alist_to_vec [] default (SUC n) max = default :: alist_to_vec [] default n max) /\
   (alist_to_vec ((x,y)::t) default (SUC n) max =
@@ -65,7 +65,7 @@ Proof
         >> metis_tac[])
 QED
 
-Theorem alist_to_vec_thm :
+Theorem alist_to_vec_thm:
  !l default max v.
   SORTED $<= (MAP FST l) /\
   alist_to_vec l default max max = v
@@ -101,7 +101,7 @@ Proof
  full_simp_tac bool_ss []
 QED
 
-Theorem dense_alist_to_vec_thm :
+Theorem dense_alist_to_vec_thm:
  !l n. MAP FST l = COUNT_LIST (LENGTH l) /\ n < LENGTH l
         ==>
        ALOOKUP l n = SOME (EL n (MAP SND l))

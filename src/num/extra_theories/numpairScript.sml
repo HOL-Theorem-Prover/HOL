@@ -283,7 +283,7 @@ Proof
 QED
 
 (* slightly more general than npair2_lt_I *)
-Theorem npairs_lt_I :
+Theorem npairs_lt_I:
   !a b c d. a <= b /\ c < d ==> npair a c < npair b d
 Proof
     rpt STRIP_TAC
