@@ -1,6 +1,7 @@
 structure OpenTheoryReader :> OpenTheoryReader = struct
 
 open boolSyntax HolKernel Parse OpenTheoryMap OpenTheoryCommon
+local open listTheory in end
 
 structure Parse =
 struct
