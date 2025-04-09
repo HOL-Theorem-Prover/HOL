@@ -18,7 +18,7 @@ type 'a quotation = 'a frag list
   in
     {New_Ty_Existence = New_Ty_Existence_Thm,
      New_Ty_Induct = New_Ty_Induct_Thm,
-     New_Ty_Uniqueness =  New_Ty_Uniqueness_Thm,
+     New_Ty_Uniqueness = New_Ty_Uniqueness_Thm,
      Constructors_Distinct = mutual_constructors_distinct,
      Constructors_One_One = mutual_constructors_one_one,
      Cases = mutual_cases,

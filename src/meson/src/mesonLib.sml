@@ -473,7 +473,7 @@ fun meson_single_expand infs rule ((g,ancestors),(insts,offset,size)) =
          let val h' = fol_inst_bump offset locin h
          in (h', checkan insts h' ancestors)
          end
-     val newhyps =  map mk_ihyp hyps
+     val newhyps = map mk_ihyp hyps
      open Uref
   in
     infs := !infs + 1;

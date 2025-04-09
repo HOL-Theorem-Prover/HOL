@@ -356,7 +356,7 @@ fun mk_fun_ty ty1 ty2 = mk_type {Tyop = "fun", Args = [ty1, ty2]}
 
 fun mk_ftn_var con suffix type_of_ftn =
     let val name = (#Name (dest_const con))^suffix
-    in {ftn_name = name, ftn_var =  mk_var {Name = name, Ty = type_of_ftn}}
+    in {ftn_name = name, ftn_var = mk_var {Name = name, Ty = type_of_ftn}}
     end
 
 fun mk_hilbert the_type =
@@ -650,7 +650,7 @@ val goal_thm =
     TAC_PROOF (([], goal),
                REPEAT STRIP_TAC THEN solve_goal_tac)
 
-val mutual_cases =  MP spec_induct goal_thm
+val mutual_cases = MP spec_induct goal_thm
 
 in
    {mutual_constructors_distinct = mutual_constructors_distinct,

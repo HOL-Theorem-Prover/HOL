@@ -312,7 +312,7 @@ val TINT_LT_REFL =
               THEN REWRITE_TAC[tint_lt]
               THEN ARITH_TAC)
 
-fun unfold_dec l =  REPEAT GEN_PAIR_TAC THEN REWRITE_TAC l THEN ARITH_TAC;
+fun unfold_dec l = REPEAT GEN_PAIR_TAC THEN REWRITE_TAC l THEN ARITH_TAC;
 
 val TINT_LT_TRANS =
     store_thm

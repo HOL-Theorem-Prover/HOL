@@ -110,7 +110,7 @@ fun ABBREV_TAC tm =
 (* EXT_CONV "!x. f x = g x" = |- (!x. f x = g x) = (f = g)       *)
 (*---------------------------------------------------------------*)
 
-val EXT_CONV =  SYM o uncurry X_FUN_EQ_CONV o
+val EXT_CONV = SYM o uncurry X_FUN_EQ_CONV o
       (I ## (mk_eq o (rator ## rator) o dest_eq)) o dest_forall;
 
 (*---------------------------------------------------------------------------*)

@@ -27,7 +27,7 @@ val Fib_def = function "Fib"
 val Ffib_def = function "Ffib" `(Ffib (SUC(SUC x)) = Ffib x + Fib (SUC x))`;
 
 val _ = nested_function
-   `(Ack (0,n) =  n+1) /\
+   `(Ack (0,n) = n+1) /\
     (Ack (SUC m,0) = Ack (m, 1)) /\
     (Ack (SUC m, SUC n) = Ack (m, Ack (SUC m, n)))`;
 

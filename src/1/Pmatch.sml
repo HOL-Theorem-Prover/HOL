@@ -800,7 +800,7 @@ fun mk_functional thy eqs =
                   err ("new clauses not allowed under current setting of "^
                        Lib.quote("Functional.allow_new_clauses")^" flag"))
              else ()
-     fun int_eq i1 (i2:int) =  (i1=i2)
+     fun int_eq i1 (i2:int) = (i1=i2)
      val inaccessibles = filter(fn x => not(op_mem int_eq x finals)) originals
      fun accessible p = not(op_mem int_eq (row_of_pat p) inaccessibles)
      val patts3 = (case inaccessibles of [] => patts2

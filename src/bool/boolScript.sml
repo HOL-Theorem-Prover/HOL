@@ -1901,7 +1901,7 @@ val LEFT_EXISTS_IMP_THM = thm (#(FILE), #(LINE))("LEFT_EXISTS_IMP_THM",
         val imp1 = DISCH tm (CHOOSE(x,ASSUME tm)(DISCH allp thm1))
         val otm = rand(concl imp1)
         val thm2 = EXISTS(tm,x)(DISCH P (UNDISCH(ASSUME otm)))
-        val nex =  mk_exists(x,mk_neg P)
+        val nex = mk_exists(x,mk_neg P)
         val asm1 = EXISTS (nex, x) (ASSUME (mk_neg P))
         val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
         val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN x th2))
@@ -1970,7 +1970,7 @@ let val t1 = “A:bool” and t2 = “B:bool”
     val thm3 = SUBST [t2 |-> EQT_INTRO (ASSUME t2)] (concl asm1) asm1
     val thm4 = NOT_INTRO(DISCH t2 (MP thm3 (DISCH t1 (ADD_ASSUM t1 TRUTH))))
     val imp1 = DISCH (concl asm1) (CONJ thm2 thm4)
-    val conj =  ASSUME “^t1 /\ ~^t2”
+    val conj = ASSUME “^t1 /\ ~^t2”
     val (asm2,asm3) = (CONJUNCT1 conj, CONJUNCT2 conj)
     val asm4 = ASSUME “^t1 ==> ^t2”
     val thm5 = MP (SUBST [t2 |-> EQF_INTRO asm3] (concl asm4) asm4) asm2
@@ -2608,14 +2608,14 @@ val ABS_REP_THM = thm (#(FILE), #(LINE))("ABS_REP_THM",
          in IMP_ANTISYM_RULE (SPECL [“a:'b”,“a':'b”] asm1) th1
          end
        val ABS = “\r:'a. @a:'b. r = rep a”
-       val absd =  RIGHT_BETA (AP_THM (REFL ABS) “rep (a:'b):'a”)
+       val absd = RIGHT_BETA (AP_THM (REFL ABS) “rep (a:'b):'a”)
        val lem = SYM(SELECT_RULE(EXISTS (“?a':'b.a=a'”,“a:'b”)
                                         (REFL “a:'b”)))
        val TH1 = GEN “a:'b”
                      (TRANS(TRANS absd (SELECT_EQ “a':'b” rep_eq)) lem)
        val t1 = SELECT_RULE(EQ_MP (SPEC “r:'a” asm2)
                                   (ASSUME “(P:'a->bool) r”))
-       val absd2 =  RIGHT_BETA (AP_THM (REFL ABS) “r:'a”)
+       val absd2 = RIGHT_BETA (AP_THM (REFL ABS) “r:'a”)
        val v = mk_var("v",type_of(rhs (concl absd2)))
        val (t1l,t1r) = dest_eq (concl t1)
        (* val rep = fst(strip_comb t1r) *)
@@ -3701,7 +3701,7 @@ in
     val lhs_thm = ASSUME lhs_t
     val lhs_eq = AP_THM EXISTS_UNIQUE_DEF subdisj_t
     val lhs_expanded = CONV_RULE BETA_CONV (EQ_MP lhs_eq lhs_thm)
-    val (expq0, univ) =  CONJ_PAIR lhs_expanded
+    val (expq0, univ) = CONJ_PAIR lhs_expanded
     val expq = EQ_MP (SPEC_ALL EXISTS_OR_THM) expq0
     val univ1 = SPEC_ALL univ
     val univ2 = CONV_RULE (LAND_CONV (LAND_CONV BETA_CONV)) univ1

@@ -109,7 +109,7 @@ fun dest_ident (IDENT (_,s)) = s
       (atom_name x
        handle HOL_ERR _ => raise ERR "dest_ident"
                                       "Expected a variable or constatnt")
-  | dest_ident t =  raise ERRloc "dest_ident" (locn_of_absyn t) "Expected an identifier";
+  | dest_ident t = raise ERRloc "dest_ident" (locn_of_absyn t) "Expected an identifier";
 
 fun dest_app (APP(_,M,N))  = (M,N)
   | dest_app (AQ (locn,x)) = binAQ dest_comb x locn (ERRloc "dest_app" locn "AQ")

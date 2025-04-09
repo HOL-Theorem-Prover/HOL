@@ -976,7 +976,7 @@ fun sketch_wrap thy file =
     val s1 = HolParser.inputFile {quietOpen = false} file
     val s2 = rm_spaces (rm_comment s1)
     val sl = partial_sml_lexer s2
-    val lexdir =  tactictoe_dir ^ "/log/lexer"
+    val lexdir = tactictoe_dir ^ "/log/lexer"
     val _ = app mkDir_err [OS.Path.dir lexdir, lexdir]
     val _ = write_sl (lexdir ^ "/" ^ thy) sl
   in

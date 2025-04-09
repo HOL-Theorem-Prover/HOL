@@ -394,7 +394,7 @@ in
   if length toks = 2 then hd (tl toks) else hd toks
 end
 
-fun structpart dnm =  hd (String.tokens (equal #".") dnm)
+fun structpart dnm = hd (String.tokens (equal #".") dnm)
 
 fun decode fname0 =
     let

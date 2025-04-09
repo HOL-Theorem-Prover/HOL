@@ -4,7 +4,7 @@ structure Systeml :> Systeml = struct
    very first thing compiled by the HOL build process so it absolutely
    can not depend on any other HOL source code. *)
 
-structure Path =  OS.Path
+structure Path = OS.Path
 structure Process = OS.Process
 structure FileSys = OS.FileSys
 

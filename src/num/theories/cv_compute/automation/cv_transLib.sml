@@ -81,7 +81,7 @@ fun is_not_recursive cv_def_tm = let
 fun is_tailrecursive cv_def_tm = let
   val fnames = strip_conj cv_def_tm |> map (fst o strip_comb o fst o dest_eq)
   val rhs_list = strip_conj cv_def_tm |> map (snd o dest_eq)
-  fun has_rec_call tm =  exists (fn fv => exists (aconv fv) fnames) (free_vars tm)
+  fun has_rec_call tm = exists (fn fv => exists (aconv fv) fnames) (free_vars tm)
   fun ok_rhs tm = let
     val (x,y,z) = cvSyntax.dest_cv_if tm
     in not (has_rec_call x) andalso ok_rhs y andalso ok_rhs z end

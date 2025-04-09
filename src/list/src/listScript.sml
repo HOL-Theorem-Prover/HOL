@@ -2895,7 +2895,7 @@ val SNOC_Axiom_old = prove(
           (fn1[] = e) /\
           (!x l. fn1(SNOC x l) = f(fn1 l)x l)”,
 
- let val  lemma =  CONV_RULE (EXISTS_UNIQUE_CONV)
+ let val lemma = CONV_RULE (EXISTS_UNIQUE_CONV)
        (REWRITE_RULE[REVERSE_REVERSE] (BETA_RULE (SPECL
          [“e:'b”,“(\ft x l. f ft x (REVERSE l)):'b -> ('a -> (('a)list -> 'b))”]
         (PURE_ONCE_REWRITE_RULE
@@ -2933,7 +2933,7 @@ val SNOC_Axiom = store_thm(
   Q.EXISTS_TAC ‘fn1’ THEN ASM_REWRITE_TAC []);
 
 val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
-val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
+val SNOC_CASES = save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
 
 (* cf. rich_listTheory.IS_PREFIX_SNOC *)
 Theorem isPREFIX_SNOC[simp] :

@@ -6483,7 +6483,7 @@ Hence x divides set_lcm (prime_powers_upto 10)
 *)
 val prime_powers_upto_lcm_divisor = store_thm(
   "prime_powers_upto_lcm_divisor",
-  ``!n x. 0 < x /\ x <=  n ==> x divides set_lcm (prime_powers_upto n)``,
+  ``!n x. 0 < x /\ x <= n ==> x divides set_lcm (prime_powers_upto n)``,
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   qabbrev_tac `m = set_lcm (prime_powers_upto n)` >>

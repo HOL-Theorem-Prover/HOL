@@ -738,7 +738,7 @@ in
 
                         val subst_list = map (fn x => fst(x) |-> snd(x)) (ListPair.zip (arg_vars,arg_thms));
                         (* subst_term: t1 = top_rator arg_vars[1] ... arg_vars[n] *)
-                        val subst_term =  mk_eq (t1 , list_mk_comb (top_rator,arg_vars))
+                        val subst_term = mk_eq (t1 , list_mk_comb (top_rator,arg_vars))
 
                         val thm1 = SUBST subst_list subst_term thm;
                         val (thm1_lhs, thm1_rhs) = dest_eq(concl thm1);
@@ -2436,7 +2436,7 @@ QED
 (*--------------------------------------------------------------------------
    RAT_ADD_MUL: thm
 
-   |- !n m. &n *  &m =  &(n*m)
+   |- !n m.  &n *  &m =  &(n*m)
    |- !n m. ~&n *  &m = ~&(n*m)
    |- !n m.  &n * ~&m = ~&(n*m)
    |- !n m. ~&n * ~&m =  &(n*m)

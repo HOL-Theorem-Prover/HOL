@@ -312,7 +312,7 @@ val LIFT_COND_ss = SSFRAG
              key = SOME([], Term`\x:'a. COND p (q x:'b) (r x)`),
              trace = 2}],
    dprocs = [], filter = NONE,
-   rewrs = [(SOME {Thy = "bool", Name =  "COND_RATOR"}, boolTheory.COND_RATOR),
+   rewrs = [(SOME {Thy = "bool", Name = "COND_RATOR"}, boolTheory.COND_RATOR),
             (SOME {Thy = "", Name = "NESTED_COND"}, NESTED_COND)]
   }
 

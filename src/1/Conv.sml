@@ -1215,7 +1215,7 @@ in
          val {Bvar, Body} = dest_forall tm handle HOL_ERR _ => raise FI_ERR
          val {ant, conseq} = dest_imp Body handle HOL_ERR _ => raise FI_ERR
          val fant = free_in Bvar ant
-         and fconseq =  free_in Bvar conseq
+         and fconseq = free_in Bvar conseq
          val ant_thm = ASSUME ant
          val tm_thm = ASSUME tm
       in
@@ -1329,7 +1329,7 @@ in
       val {Bvar, Body} = dest_exists tm handle HOL_ERR _ => raise EI_ERR
       val {ant = P, conseq = Q} = dest_imp Body handle HOL_ERR _ => raise EI_ERR
       val fP = free_in Bvar P
-      and fQ =  free_in Bvar Q
+      and fQ = free_in Bvar Q
    in
       if fP andalso fQ
          then raise ERR "EXISTS_IMP_CONV"
@@ -1346,7 +1346,7 @@ in
                  val thm2 = EXISTS (tm, Bvar) (DISCH P (UNDISCH (ASSUME otm)))
                  val notP = mk_neg P
                  val notP_thm = ASSUME notP
-                 val nex =  mk_exists {Bvar = Bvar, Body = notP}
+                 val nex = mk_exists {Bvar = Bvar, Body = notP}
                  val asm1 = EXISTS (nex, Bvar) notP_thm
                  val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
                  val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN Bvar th2))
@@ -1411,7 +1411,7 @@ fun LEFT_IMP_FORALL_CONV tm =
       val otm = mk_exists {Bvar = x', Body = new_imp}
       val imp1 = DISCH otm (CHOOSE (x', ASSUME otm) (DISCH ant thm1))
       val thm2 = EXISTS (otm, x') (DISCH t1' (UNDISCH (ASSUME tm)))
-      val nex =  mk_exists {Bvar = x', Body = mk_neg t1'}
+      val nex = mk_exists {Bvar = x', Body = mk_neg t1'}
       val asm1 = EXISTS (nex, x') not_t1'_thm
       val th2 = CCONTR t1' (MP (ASSUME (mk_neg nex)) asm1)
       val th3 = CCONTR nex (MP (ASSUME (mk_neg ant)) (GEN x' th2))
@@ -2311,7 +2311,7 @@ end
 
 local
    val vt = genvar alpha
-   and vf =  genvar alpha
+   and vf = genvar alpha
    val gen = GENL [vt, vf]
    val (CT, CF) = (gen ## gen) (CONJ_PAIR (SPECL [vt, vf] COND_CLAUSES))
 in
