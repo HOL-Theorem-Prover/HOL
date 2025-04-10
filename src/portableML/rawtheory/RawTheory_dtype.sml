@@ -8,6 +8,16 @@ fun class_toString Thm = "Thm"
 
 
 type raw_name = {thy : string, tstamp1 : Arbnum.num, tstamp2 : Arbnum.num}
+fun raw_name_compare (r1:raw_name, r2:raw_name) =
+    case String.compare(#thy r1, #thy r2) of
+        EQUAL => (case Arbnum.compare(#tstamp1 r1, #tstamp1 r2) of
+                      EQUAL => Arbnum.compare(#tstamp2 r1, #tstamp2 r2)
+                    | x => x)
+      | x => x
+fun raw_name_toString {thy,tstamp1,tstamp2} =
+    "{" ^ thy ^ "," ^ Arbnum.toString tstamp1 ^ "," ^
+    Arbnum.toString tstamp2 ^ "}"
+
 datatype raw_type = TYV of string
                   | TYOP of {opn : int (* ref to idtable *),
                              args : int list (* refs to earlier types *)}
