@@ -34,7 +34,20 @@ end
 
 structure TheoryGraph = Graph(RawTheorykey)
 
-type nodedata = {exports : string raw_exports, parents : raw_name list}
+type raw_nodedata = {
+  exports : string raw_exports,
+  parents : raw_name list
+}
+
+type derived_data = {
+  name : string,
+  parents : string list,
+  num_axms : int,
+  num_defs : int,
+  num_thms : int,
+  path : string
+}
+
 
 fun readThy p (g,links) =
     let
