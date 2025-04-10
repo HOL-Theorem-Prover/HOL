@@ -1,1 +1,10 @@
 CLINE_OPTIONS = --no_overlay
+
+all: $(DEFAULT_TARGETS)
+
+ifdef POLY
+all: theorytool
+
+theorytool: mktool.ML theorytool.ML theorystats.uo
+	polyc -o $@ $<
+endif

@@ -56,3 +56,4 @@ use  "RawTheory_dtype.sml";
 useB "RawTheoryReader";
 
 use "theorystats.sml";
+use "theorytool.ML";
