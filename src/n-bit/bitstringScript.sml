@@ -18,18 +18,21 @@ val _ = diminish_srw_ss ["NORMEQ"]
 
 Type bitstring = “:bool list”
 
-val extend_def = Define`
+Definition extend_def:
    (extend _ 0 l = l: bitstring) /\
-   (extend c (SUC n) l = extend c n (c::l))`
+   (extend c (SUC n) l = extend c n (c::l))
+End
 
-val boolify_def = Define`
+Definition boolify_def:
   (boolify a [] = a) /\
-  (boolify a (n :: l) = boolify ((n <> 0)::a) l)`
+  (boolify a (n :: l) = boolify ((n <> 0)::a) l)
+End
 
-val bitify_def = Define`
+Definition bitify_def:
   (bitify a [] = a) /\
   (bitify a (F :: l) = bitify (0::a) l) /\
-  (bitify a (T :: l) = bitify (1::a) l)`
+  (bitify a (T :: l) = bitify (1::a) l)
+End
 
 Definition n2v_def: n2v n = boolify [] (n2l 2 n)
 End
@@ -37,11 +40,13 @@ End
 Definition v2n_def: v2n l = l2n 2 (bitify [] l)
 End
 
-val s2v_def = Define`
-  s2v = MAP (\c. (c = #"1") \/ (c = #"T"))`
+Definition s2v_def:
+  s2v = MAP (\c. (c = #"1") \/ (c = #"T"))
+End
 
-val v2s_def = Define`
-  v2s = MAP (\b. if b then #"1" else #"0")`
+Definition v2s_def:
+  v2s = MAP (\b. if b then #"1" else #"0")
+End
 
 val zero_extend_def = zDefine`
   zero_extend n v = PAD_LEFT F n v`
@@ -76,12 +81,14 @@ val rotate_def = Define`
 val testbit_def = zDefine`
   testbit b v = (field b b v = [T])`
 
-val w2v_def = Define`
+Definition w2v_def:
   w2v (w : 'a word) =
-    GENLIST (\i. w ' (dimindex(:'a) - 1 - i)) (dimindex(:'a))`
+    GENLIST (\i. w ' (dimindex(:'a) - 1 - i)) (dimindex(:'a))
+End
 
-val v2w_def = zDefine`
-  v2w v : 'a word = FCP i. testbit i v`
+Definition v2w_def:
+  v2w v : 'a word = FCP i. testbit i v
+End
 
 val rev_count_list_def = Define`
   rev_count_list n = GENLIST (\i. n - 1 - i) n`
@@ -374,17 +381,57 @@ val word_bit_lem =
           DECIDE ``0 < n ==> (0 < i + n)``]
     |> GEN_ALL
 
-val w2v_v2w = Q.store_thm("w2v_v2w",
-  `!v. w2v (v2w v : 'a word) = fixwidth (dimindex(:'a)) v`,
+Theorem w2v_v2w:
+  !v. w2v (v2w v : 'a word) = fixwidth (dimindex(:'a)) v
+Proof
   lrw [w2v_def, bit_v2w, testbit, fixwidth_def, zero_extend_def,
        listTheory.PAD_LEFT, listTheory.LIST_EQ_REWRITE,
        rich_listTheory.EL_DROP, word_bit_lem]
   \\ Cases_on `x < dimindex(:'a) - LENGTH v`
-  \\ lrw [rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2])
+  \\ lrw [rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2]
+QED
 
-val v2w_w2v = Q.store_thm("v2w_w2v",
-  `!w. v2w (w2v w) = w`,
-  wrw [w2v_def, v2w_def, testbit])
+Theorem v2w_w2v:
+  !w. v2w (w2v w) = w
+Proof
+  wrw [w2v_def, v2w_def, testbit]
+QED
+
+Theorem v2w_append:
+  v2w (xs ++ ys) = (v2w xs) << (LENGTH ys) || v2w ys
+Proof
+  wrw[word_bit,bit_v2w,word_bit_or,word_bit_lsl]
+  \\ rw[testbit,rich_listTheory.EL_APPEND]
+  \\ fs[SF DNF_ss]
+QED
+
+Theorem v2w_NIL:
+  v2w [] = 0w
+Proof
+  wrw[v2w_def,testbit,word_0]
+QED
+
+Theorem v2w_T:
+  v2w [T] = 1w
+Proof
+  wrw[v2w_def,testbit,n2w_def]
+QED
+
+Theorem v2w_F:
+  v2w [F] = 0w
+Proof
+  wrw[v2w_def,testbit,n2w_def]
+QED
+
+Theorem v2w_thm:
+  (v2w [] = 0w) /\
+  (v2w (x :: xs) = (if x then ((1w << (LENGTH xs)) || v2w xs) else v2w xs))
+Proof
+  rw[]
+  >- rw[v2w_NIL]
+  >> simp_tac pure_ss [Once rich_listTheory.CONS_APPEND,v2w_append]
+  >> rw[v2w_T,v2w_F]
+QED
 
 val v2w_fixwidth = Q.store_thm("v2w_fixwidth",
   `!v. v2w (fixwidth (dimindex(:'a)) v) = v2w v : 'a word`,
