@@ -1439,16 +1439,16 @@ val dest_realintconst = dest_intconst
 val mk_realintconst   = mk_intconst
 
 (* Some test cases:
-   is_ratconst “&2 / &3” = true
-   is_ratconst “~&2 / &4” = false
-   is_ratconst “~&1 / &2” = true
-   is_ratconst “&2 / &4” = false
-   is_ratconst “&0 / &4” = false
-   is_ratconst “(&4 :real)” = true
-   is_ratconst “(&0 :real)” = true
-   is_ratconst “~&0 :real” = false
-   is_ratconst “~&3 :real” = true
-   is_ratconst “~&0 / &3” = false
+   is_ratconst “&2 / &3” = true;
+   is_ratconst “~&2 / &4” = false;
+   is_ratconst “~&1 / &2” = true;
+   is_ratconst “&2 / &4” = false;
+   is_ratconst “&0 / &4” = false;
+   is_ratconst “(&4 :real)” = true;
+   is_ratconst “(&0 :real)” = true;
+   is_ratconst “~&0 :real” = false;
+   is_ratconst “~&3 :real” = true;
+   is_ratconst “~&0 / &3” = false;
  *)
 fun is_ratconst tm =
     if is_div tm then
@@ -1541,20 +1541,20 @@ fun safe_delete (s :term set, i :term) =
 
 (* Test code for linear_add (after linear_of_term):
 
-   val m1 = linear_of_term “x + 1 / 2 * y”
-   listItems m1 [(“x”, 1i/1), (“y”, 1i/2)]
+   val m1 = linear_of_term “x + 1 / 2 * y”;
+   listItems m1; (* [(“x”, 1i/1), (“y”, 1i/2)] *)
 
-   val m2 = linear_of_term “2 * z + ~1 / 2 * y”
-   listItems m2 [(“y”, -1i/2), (“z”, 2i/1)]
+   val m2 = linear_of_term “2 * z + ~1 / 2 * y”;
+   listItems m2; (* [(“y”, -1i/2), (“z”, 2i/1)] *)
 
-   val m = linear_add m1 m2
-   listItems m [(“x”, 1i/1), (“z”, 2i/1)]
+   val m = linear_add m1 m2;
+   listItems m; (* [(“x”, 1i/1), (“z”, 2i/1)] *)
  *)
 fun linear_add (m1 :linear_type) (m2 :linear_type) :linear_type =
     mergeWithoutZero Arbrat.+ m1 m2
 
-(* val m' = linear_cmul (rat_of_term “&2”) m1
-   listItems m' [(“x”, 2i/1), (“y”, 1i/1)]
+(* val m' = linear_cmul (rat_of_term “&2”) m1;
+   listItems m'; (* [(“x”, 2i/1), (“y”, 1i/1)] *)
  *)
 fun linear_cmul c (m :linear_type) :linear_type =
     if c = Arbrat.zero then undefined
@@ -1563,8 +1563,8 @@ fun linear_cmul c (m :linear_type) :linear_type =
 
 (* Test code for linear_of_term (was called "lin_of_hol"):
 
-   val m = linear_of_term “&2 * x + &3 * y + &1 / &4”
-   listItems m [(“x”, 2i/1), (“y”, 3i/1), (“1”, 1i/4)]
+   val m = linear_of_term “&2 * x + &3 * y + &1 / &4”;
+   listItems m; (* [(“x”, 2i/1), (“y”, 3i/1), (“1”, 1i/4)] *)
  *)
 fun linear_of_term (tm :term) :linear_type =
     if tm ~~ zero_tm then undefined
@@ -1581,8 +1581,8 @@ fun linear_of_term (tm :term) :linear_type =
 
 (* This is for verbose printing only (also, the resulting term is simplified)
 
-   val e = linear_of_term “&0 + &1 * x + &2 * (y :real)”
-   term_of_linear e (* “x + 2 * y” *)
+   val e = linear_of_term “&0 + &1 * x + &2 * (y :real)”;
+   term_of_linear e; (* “x + 2 * y” *)
  *)
 fun term_of_linear (e :linear_type)  = let
     val vars = dom_set e
@@ -1804,12 +1804,12 @@ fun dest_suc_alien tm = numSyntax.dest_suc (dest_injected tm)
 
 (* Test code for REAL_LINEAR_PROVER
 
-   fun translator _ proof = proof
-   val lt0 = ASSUME (“~&1 + x + y + &1 / &2 * z > 0”)        (* Axiom_lt 0 *)
-   val le0 = ASSUME (“~&1 * x + ~&1 * y + &1 / &2 * z >= 0”) (* Axiom_le 0 *)
-   val eq0 = ASSUME (“~&1 + z = 0”)                          (* Axiom_eq 0 *)
+   fun translator _ proof = proof;
+   val lt0 = ASSUME (“~&1 + x + y + &1 / &2 * z > 0”);        (* Axiom_lt 0 *)
+   val le0 = ASSUME (“~&1 * x + ~&1 * y + &1 / &2 * z >= 0”); (* Axiom_le 0 *)
+   val eq0 = ASSUME (“~&1 + z = 0”);                          (* Axiom_eq 0 *)
 
-   REAL_LINEAR_PROVER translator ([eq0],[le0],[lt0])
+   REAL_LINEAR_PROVER translator ([eq0],[le0],[lt0]);
 
 val it =
    Sum
@@ -2291,7 +2291,7 @@ val (REAL_ARITH_TAC,REAL_ASM_ARITH_TAC) = mk_real_arith_tac REAL_ARITH
 (* finally, set verbose level to back to 1 (default) for user scripts *)
 val _ = verbose_level := 1
 
-end (* structure *)
+end; (* structure *)
 
 (* References:
 
