@@ -18,7 +18,7 @@ open HolKernel Parse basicHol90Lib;
 type thm = Thm.thm;
 
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname="bool"}
 
 fun decompose (tm, args_so_far) =
     if is_comb tm then
