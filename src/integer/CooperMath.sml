@@ -3,7 +3,7 @@ structure CooperMath :> CooperMath = struct
   local open gcdTheory in end
 
   open HolKernel boolLib intSyntax integerTheory
-       int_arithTheory intReduce CooperThms CooperSyntax
+       int_arithTheory intReduce cooperTheory CooperSyntax
 
   type num = Arbnum.num
 
@@ -26,51 +26,36 @@ open Parse
 (* Function to compute the Greatest Common Divisor of two integers.          *)
 (*---------------------------------------------------------------------------*)
 
-local open Arbint in
-fun gcd' i j = let
-    val r = i mod j
-in  if r = zero then j else gcd' j r
-end
-
-fun gcd (i,j) =
-    if i < zero orelse j < zero then raise ERR "gcd""negative arguments to gcd"
-    else if i = zero then j else if j = zero then i
-    else if i < j then gcd' j i else gcd' i j
-end (* local *)
-
 fun gcdl l =
   case l of
     [] => raise ERR "gcdl" "empty list"
-  | (h::t) => foldl gcd h t
+  | (h::t) => foldl Arbint.gcd h t
 
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Lowest Common Multiple of two integers.           *)
 (*---------------------------------------------------------------------------*)
 
-fun lcm (i,j) = let open Arbint in (i * j) div (gcd (i,j)) end
-handle _ => raise ERR "lcm" "negative arguments to lcm";
-
 fun lcml ints =
   case ints of
     [] => raise ERR "lcml" "empty list"
   | [x] => x
-  | (x::y::xs) => lcml (lcm (x, y)::xs)
+  | (x::y::xs) => lcml (Arbint.lcm (x, y)::xs)
 
 
-  fun extended_gcd(a, b) = let
-    open Arbnum
+fun extended_gcd(a, b) = let
+  open Arbnum
+in
+  if b = zero then (a,(Arbint.one,Arbint.zero))
+  else let
+    val (q,r) = divmod (a,b)
+    val (d,(x,y)) = extended_gcd(b,r)
+    open Arbint
   in
-    if b = zero then (a,(Arbint.one,Arbint.zero))
-    else let
-      val (q,r) = divmod (a,b)
-      val (d,(x,y)) = extended_gcd(b,r)
-      open Arbint
-    in
-      (d,(y,x - fromNat q * y))
-    end
+    (d,(y,x - fromNat q * y))
   end
+end
 
-  val gcd_t = prim_mk_const {Thy = "gcd", Name = "gcd"}
+val gcd_t = prim_mk_const {Thy = "gcd", Name = "gcd"}
 
 fun sum_var_coeffs var tm = let
   open Arbint
@@ -559,7 +544,7 @@ local
   val basic_rewrite_conv =
     REWRITE_CONV [boolTheory.NOT_IMP,
                   boolTheory.IMP_DISJ_THM, boolTheory.EQ_IMP_THM,
-                  elim_le, elim_ge, elim_gt,
+                  elim_le, int_ge, int_gt,
                   INT_SUB_CALCULATE, INT_RDISTRIB, INT_LDISTRIB,
                   INT_NEG_LMUL, INT_NEG_ADD, INT_NEGNEG, INT_NEG_0,
                   INT_MUL_RZERO, INT_MUL_LZERO]

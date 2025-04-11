@@ -4,7 +4,7 @@ structure CooperSyntax :> CooperSyntax = struct
    conversions, all intended for very specific use within the
    implementation of Cooper's algorithm *)
 
-open HolKernel boolLib intSyntax intReduce CooperThms
+open HolKernel boolLib intSyntax intReduce cooperTheory
 open int_arithTheory integerTheory
 
 

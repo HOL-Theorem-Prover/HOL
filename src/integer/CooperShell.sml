@@ -3,7 +3,7 @@ struct
 
 open HolKernel boolLib integerTheory
      arithmeticTheory intSyntax int_arithTheory intReduce
-     CooperSyntax CooperThms CooperMath;
+     CooperSyntax cooperTheory CooperMath;
 
 val ERR = mk_HOL_ERR "CooperShell";
 val lhand = rand o rator
