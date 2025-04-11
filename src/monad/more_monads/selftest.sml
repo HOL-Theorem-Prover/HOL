@@ -1,5 +1,6 @@
 open HolKernel Parse boolTheory boolLib testutils
 open monadsyntax parmonadsyntax state_transformerTheory errorStateMonadTheory
+open state_monadLib
 
 val _ = temp_remove_absyn_postprocessor "monadsyntax.transform_absyn"
 val _ = temp_remove_user_printer "monadsyntax.print_monads"
