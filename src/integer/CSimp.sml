@@ -1,7 +1,7 @@
 structure CSimp :> CSimp =
 struct
 
-open HolKernel boolLib CooperThms intSyntax integerTheory int_arithTheory
+open HolKernel boolLib cooperTheory intSyntax integerTheory int_arithTheory
 
 (* Fix the grammar used by this file *)
 structure Parse = struct

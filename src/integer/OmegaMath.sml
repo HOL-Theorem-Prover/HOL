@@ -81,7 +81,7 @@ in
       val newrhs_th = AP_TERM (rator tm) (INT_RING_CONV(mk_eq(r, varpart)))
     in
       K newrhs_th THENC REWR_CONV EQ_SYM_EQ THENC REWR_CONV INT_ENTIRE THENC
-      LAND_CONV REDUCE_CONV THENC REWR_CONV CooperThms.F_or_l THENC
+      LAND_CONV REDUCE_CONV THENC REWR_CONV cooperTheory.F_or_l THENC
       REWR_CONV EQ_SYM_EQ
     end
   else let
@@ -97,7 +97,7 @@ in
       REWR_CONV EQ_SYM_EQ THENC RAND_CONV (REWR_CONV INT_ADD_LID) THENC
       K (MP (SPECL [g_num_t, newvars_sum, newlhs] elim_eq_coeffs)
             g_num_nonzero) THENC
-      LAND_CONV REDUCE_CONV THENC REWR_CONV CooperThms.F_and_l
+      LAND_CONV REDUCE_CONV THENC REWR_CONV cooperTheory.F_and_l
     end
 end tm handle Foo => REDUCE_CONV tm
 
@@ -668,8 +668,8 @@ fun reveal_a_disj tm =
     if is_disj tm then ALL_CONV tm
     else
       (FIRST_CONV (map REWR_CONV [beq, not_beq, IMP_DISJ_THM,
-                                  CooperThms.NOT_AND]) ORELSEC
-       (REWR_CONV CooperThms.NOT_NOT_P THENC reveal_a_disj)) tm
+                                  cooperTheory.NOT_AND]) ORELSEC
+       (REWR_CONV cooperTheory.NOT_NOT_P THENC reveal_a_disj)) tm
 
 
 (* ----------------------------------------------------------------------
@@ -799,8 +799,8 @@ fun calculate_range_disjunct tm = let
       ((REWR_CONV refl_case THENC BETA_CONV) ORELSEC
        (REWR_CONV nonrefl_case THENC
         LAND_CONV CooperMath.REDUCE_CONV THENC
-        (REWR_CONV CooperThms.F_and_l ORELSEC
-         (REWR_CONV CooperThms.T_and_l THENC
+        (REWR_CONV cooperTheory.F_and_l ORELSEC
+         (REWR_CONV cooperTheory.T_and_l THENC
           FORK_CONV(BETA_CONV,
                     BINDER_CONV (LAND_CONV
                                    (LAND_CONV CooperMath.REDUCE_CONV)) THENC
