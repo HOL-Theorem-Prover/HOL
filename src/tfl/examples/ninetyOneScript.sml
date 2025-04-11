@@ -13,124 +13,70 @@ open Defn TotalDefn numLib prim_recTheory arithmeticTheory;
 
 val _ = new_theory "ninetyOne"
 
-val N_defn = Hol_defn "N" ‘N(x) = if x>100 then x-10 else N (N (x+11))’;
-
-val [Neqn] = Defn.eqns_of N_defn;
-val SOME Nind = Defn.ind_of N_defn;
-
-val SOME N_aux_defn = Defn.aux_defn N_defn;
-val SOME N_aux_ind = Defn.ind_of N_aux_defn;
-val [E] = map DISCH_ALL (Defn.eqns_of N_aux_defn);
+val N_defn =
+  Hol_defn "N"
+  ‘N(x) = if x>100 then x-10 else N (N (x+11))’;
 
 (*---------------------------------------------------------------------------
-      Prove partial correctness for N, to see how such a proof
-      works when the termination relation has not yet been supplied.
- ---------------------------------------------------------------------------*)
+   Boilerplate preparation for termination proof.
+  ---------------------------------------------------------------------------*)
 
-val Npartly_correct = Q.prove
-(‘WF R /\
-  (!x. ~(x > 100) ==> R (N_aux R (x + 11)) x) /\
-  (!x. ~(x > 100) ==> R (x + 11) x)
-    ==>
-  !n. N(n) = if n>100 then n-10 else 91’,
- STRIP_TAC THEN recInduct Nind
-   THEN RW_TAC arith_ss []
-   THEN ONCE_REWRITE_TAC [Neqn]
-   THEN RW_TAC arith_ss []);
+Theorem lemA[local] =
+  DECIDE “~(x > 100) ∧ 101 < y + (101-x) ∧ x < 101 <=> x<y ∧ x < 101”;
 
-val N_aux_partial_correctness = Q.prove
-(‘WF R /\
-  (!x. ~(x > 100) ==> R (N_aux R (x + 11)) x) /\
-  (!x. ~(x > 100) ==> R (x + 11) x)
-    ==>
-  !n. N_aux R n = if n>100 then n-10 else 91’,
- STRIP_TAC THEN recInduct N_aux_ind
-   THEN RW_TAC arith_ss []
-   THEN RW_TAC arith_ss [E]);
+val [aux_ind, aux_eqn] =
+  Defn.instantiate_aux N_defn
+        “measure λx. 101-x”
+        (SIMP_RULE arith_ss [lemA] o SRULE[]);
 
-(*---------------------------------------------------------------------------*)
-(* Termination of 91 is a bit tricky.                                        *)
-(*---------------------------------------------------------------------------*)
+Overload Fn[local] = “N_aux (measure (λx. 101 − x))”
 
-val lem = DECIDE “~(x > 100) ==> (101-y < 101-x <=> x<y)”;
+Theorem unexpand_measure:
+ (λx' x''. 101 < x' + (101 − x'') ∧ 0 < 101 − x'') = measure (λx. 101 − x)
+Proof
+  rw[FUN_EQ_THM,measure_def]
+QED
 
-val unexpand_measure = Q.prove
-(‘(\x' x''. 101 < x' + (101 - x'') /\ x'' < 101) = measure \x. 101-x’,
- RW_TAC arith_ss [FUN_EQ_THM, measure_thm]);
-
-(*---------------------------------------------------------------------------*)
-(* Get the auxiliary rec. eqns, instantiate with termination relation, and   *)
-(* do some simplifications.                                                  *)
-(*---------------------------------------------------------------------------*)
-
-val condE =
-  SIMP_RULE arith_ss [AND_IMP_INTRO,WF_measure,measure_thm,SUB_LEFT_LESS]
-        (Q.INST [‘R’ |-> ‘measure \x. 101-x’] E);
-
-val correctness' =
-  SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS]
-        (Q.INST [‘R’ |-> ‘measure \x. 101-x’] (N_aux_partial_correctness));
-
-val N_aux_ind' = (* takes ages, because of subtraction? *)
-  SIMP_RULE arith_ss [WF_measure,measure_thm,SUB_LEFT_LESS]
-        (Q.INST [‘R’ |-> ‘measure \x. 101-x’] (DISCH_ALL N_aux_ind));
-
-(*---------------------------------------------------------------------------*)
-(* Termination. This is done the hard way, to prop up an obscure point.      *)
-(* We'll use NA to abbreviate the instantiated auxiliary function: thus      *)
-(* NA = N_aux(measure($- 101)). The proof goes as follows:                   *)
-(*                                                                           *)
-(* Induct on the termination relation, then tidy up the goal, obtaining the  *)
-(* goal "x < NA (x+11)". We now want to unroll NA(x+11). This requires       *)
-(* manually instantiating the auxiliary fn with `x+11`, and proving its      *)
-(* constraints. One of these is                                              *)
-(*                                                                           *)
-(*   x+11 < NA (x+22)           (%%)                                         *)
-(*                                                                           *)
-(* We will prove this by using the IH, by means of first doing a case split  *)
-(* on "x+11 > 100". Having (%%) allows NA(x+11) to be unrolled, but we will  *)
-(* also keep (%%) around for later use. Now  conditional rewriting will      *)
-(* unroll "NA(x+11)" yielding the goal "x < NA(NA(x+22))". Now we want to    *)
-(* unroll NA one more time, at its argument NA(x+22). Again we do a case     *)
-(* split, this time on "NA (x+22) > 100". Consider the two branches coming   *)
-(* from the case split.                                                      *)
-(* Case: NA (x+22) > 100. The goal is easy to prove by arithmetic            *)
-(*       from the assumptions and unrolling NA into the base case.           *)
-(* Case: ~(NA (x+22) > 100). Here the IH may be used with a somewhat clever  *)
-(*       witness to deliver                                                  *)
-(*       NA(x+22) -11 < NA(NA(x+22) -11+11)                                  *)
-(*                    = NA(NA(x+22))                                         *)
-(*       After that, the proof of this branch is also easy.                  *)
-(*---------------------------------------------------------------------------*)
-
-val (N_def,N_ind) = Defn.tprove
+(*---------------------------------------------------------------------------
+    Induct with the aux induction theorem, then work to unroll the
+    aux_eqn at "x+11" and "Fn (x+22)". After that a slightly
+    tricky instantiation of the IH finishes things.
+  ---------------------------------------------------------------------------*)
+val (def,ind) = Defn.tprove
  (N_defn,
-  WF_REL_TAC ‘measure \x. 101 - x’
-    THEN RW_TAC arith_ss [SUB_LEFT_LESS,unexpand_measure]
-    THEN Q.ABBREV_TAC ‘NA = N_aux (measure (\x. 101 - x))’
-    THEN measureInduct_on ‘(\m. 101 - m) x’
-    THEN STRIP_TAC THEN FULL_SIMP_TAC arith_ss [lem]
-    THEN MP_TAC (Q.INST [‘x’ |-> ‘x+11’] condE)
-    THEN RW_TAC arith_ss []  (* implicit case split *)
-    THEN ‘x+11 < NA(x+22)’ by METIS_TAC[DECIDE“x<x+11”,DECIDE“x+11+11=x+22”]
-    THEN RW_TAC std_ss [] THEN WEAKEN_TAC is_imp
-    THEN MP_TAC (Q.INST [‘x’ |-> ‘NA(x+22)’] condE)
-    THEN RW_TAC arith_ss [] (* implicit case split *)
-    THEN ‘x < NA (x+22) - 11 /\ ~(NA (x + 22) - 11 > 100)’ by DECIDE_TAC
-    THEN ‘NA(x+22) - 11 < NA(NA(x+22) - 11 + 11)’ by METIS_TAC[]
-    THEN POP_ASSUM MP_TAC
-    THEN FULL_SIMP_TAC arith_ss [DECIDE “x+y < p ==> ((p-y)+y = p)”]);
+  WF_REL_TAC ‘measure λx. 101 - x’ >>
+  simp[SUB_LEFT_LESS,unexpand_measure] >>
+  ‘∀k x. ¬(x > 100) ∧ k = x + 11 ⇒ x < Fn k’
+     suffices_by metis_tac[] >>
+  recInduct aux_ind >> rw[] >>
+  rename1 ‘x < Fn(x + 11)’ >>
+  (* Manually unroll N at "x+11" and "Fn(x+22)" *)
+  mp_tac $ Q.INST [‘x’ |-> ‘x + 11’] aux_eqn >> gvs[] >> rw[] >> gvs[] >>
+  mp_tac $ Q.INST [‘x’ |-> ‘Fn(x+22)’] aux_eqn >> gvs [] >> rw[] >>
+  pop_assum kall_tac >>
+  irule LESS_TRANS >>
+  qexists_tac ‘Fn(x+22) - 11’ >>
+  conj_tac >- decide_tac >>
+  ‘¬(Fn(x+22) - 11 > 100)’ by decide_tac >>
+  first_x_assum drule >> simp[])
+
+Theorem N_def = def;
+Theorem N_ind = ind;
+
+Theorem correctness:
+  N n = if n <= 101 then 91 else n - 10
+Proof
+  qid_spec_tac ‘n’ >>
+  recInduct N_ind >> rw[] >>
+  once_rewrite_tac [N_def] >>
+  simp[]
+QED
 
 (*---------------------------------------------------------------------------
-      Note that the above development is slightly cranky, since
-      the partial correctness theorem has constraints remaining.
-      These were addressed by the termination proof, but the
-      constraints were proved and then thrown away.
-
       Now try some computations with N.
  ---------------------------------------------------------------------------*)
 
-val results = map EVAL [
+val results = map (Count.apply EVAL) [
   “N 0”, “N 10”, “N 11”, “N 12”, “N 40”, “N 89”, “N 90” ,
   “N 99”, “N 100”, “N 101”, “N 102”, “N 127”]
 
@@ -219,6 +165,5 @@ Theorem TrN_recursive_characterisation =
 
 (* |- TrN n = if n <= 101 then 91 else n - 10 *)
 Theorem TrN_thm = NT_THM |> Q.SPECL [‘1’, ‘n’] |> SRULE[]
-
 
 val _ = export_theory()

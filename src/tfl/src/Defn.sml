@@ -271,12 +271,29 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
               R=isubst theta R,
               SV=map (isubst theta) SV, stem=stem};
 
-
 fun set_reln def R =
    case reln_of def
     of NONE => def
      | SOME Rpat => inst_defn def (Term.match_term Rpat R)
                     handle e => (HOL_MESG"set_reln: unable"; raise e);
+
+fun instantiate_aux d reln rule =
+ let fun set_reln def R = (* Rvar has final type, so match against it *)
+      case reln_of def
+        of NONE => def
+         | SOME Rvar =>
+           let val tytheta = Type.match_type (type_of reln) (type_of Rvar)
+               val reln' = Term.inst tytheta reln
+           in inst_defn d (Term.match_term Rvar reln')
+           end
+     val dr = set_reln d reln
+     val defn = valOf $ aux_defn dr
+     val eqs = map DISCH_ALL $ eqns_of defn
+     val ind = DISCH_ALL $ valOf $ ind_of defn
+ in
+   map (rule o PURE_REWRITE_RULE [AND_IMP_INTRO]) (ind::eqs)
+ end
+ handle HOL_ERR _ => raise ERR "instantiate_aux" ""
 
 fun PROVE_HYPL thl th = itlist PROVE_HYP thl th
 
