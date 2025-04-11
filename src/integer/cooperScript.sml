@@ -61,4 +61,51 @@ Proof
   ASM_REWRITE_TAC []
 QED
 
+Theorem my_INT_MUL_LID:
+  (1 * (c * d) = c * d) /\
+  (~1 * (c * d) = ~c * d) /\
+  (1 * (c * d + x) = c * d + x) /\
+  (~1 * (c * d + x) = ~c * d + ~x) /\
+  (~~x = x)
+Proof
+  REWRITE_TAC [INT_MUL_LID, GSYM INT_NEG_MINUS1, INT_NEG_LMUL,
+               INT_NEG_ADD, INT_NEGNEG]
+QED
+
+Theorem INT_DIVIDES_NEG' =
+  CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG;
+
+Theorem INT_NEG_FLIP_LTL:
+  !x y. ~x < y <=> ~y < x
+Proof
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
+  REWRITE_TAC [INT_LT_NEG]
+QED
+
+Theorem INT_NEG_FLIP_LTR:
+  !x y. x < ~y <=> y < ~x
+Proof
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
+  REWRITE_TAC [INT_LT_NEG]
+QED
+
+Theorem negated_elim_lt_coeffs1 =
+  (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTR] o
+   REWRITE_RULE [GSYM INT_NEG_RMUL] o
+   Q.SPECL [`n`, `m`, `~x`])
+  elim_lt_coeffs1;
+
+Theorem negated_elim_lt_coeffs2 =
+  (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTL] o
+   REWRITE_RULE [GSYM INT_NEG_RMUL] o
+   Q.SPECL [`n`, `m`, `~x`])
+  elim_lt_coeffs2;
+
+Theorem elim_eq_coeffs' =
+  CONV_RULE (STRIP_QUANT_CONV (RAND_CONV
+                               (BINOP_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))))
+  elim_eq_coeffs;
+
 val _ = export_theory ();
