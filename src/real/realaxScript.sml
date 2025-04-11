@@ -854,9 +854,9 @@ Proof
  >> ARITH_TAC
 QED
 
-Theorem REAL_INT_LE_CONV_tth =
-  TAUT “(F /\ F = F) /\ (F /\ T = F) /\ (T /\ F = F) /\ (T /\ T = T)”;
-Theorem REAL_INT_LE_CONV_nth = TAUT “(~T = F) /\ (~F = T)”;
+Theorem REAL_INT_LE_CONV_tth = TAUT_PROVE
+  “(F /\ F = F) /\ (F /\ T = F) /\ (T /\ F = F) /\ (T /\ T = T)”;
+Theorem REAL_INT_LE_CONV_nth = TAUT_PROVE “(~T = F) /\ (~F = T)”;
 
 Theorem REAL_INT_LE_CONV_pth:
   (~(&m) <= &n = T) /\
