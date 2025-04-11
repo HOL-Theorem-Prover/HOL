@@ -1,19 +1,15 @@
 structure CooperMath :> CooperMath = struct
 
-  local open gcdTheory in end
+open HolKernel boolLib intSyntax integerTheory
+      int_arithTheory intReduce cooperTheory CooperSyntax
 
-  open HolKernel boolLib intSyntax integerTheory
-       int_arithTheory intReduce cooperTheory CooperSyntax
+type num = Arbnum.num
 
-  type num = Arbnum.num
-
-  val cooper_compset = int_compset()
-  val _ = computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY] cooper_compset
-  val REDUCE_CONV = computeLib.CBV_CONV cooper_compset
+val cooper_compset = int_compset()
+val _ = computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY] cooper_compset
+val REDUCE_CONV = computeLib.CBV_CONV cooper_compset
 
 val ERR = mk_HOL_ERR "CooperMath";
-
-fun lhand t = rand (rator t)
 
 (* Fix the grammar used by this file *)
 structure Parse = struct
@@ -147,142 +143,137 @@ in
     end
 end tm
 
-
-
-  fun elim_sdivides tm0 = let
-    (* term of form c | x + d *)
-    val (l,r) = dest_divides tm0
-    val normalise_plus_thm =
-      (if not (is_plus r) then RAND_CONV (REWR_CONV (GSYM INT_ADD_RID))
-       else REFL) tm0
-    val tm1 = rhs (concl normalise_plus_thm)
-    val normalised_thm = let
-      val (lp,_) = dest_plus (rand tm1)
-    in
-      if not (is_mult lp) then
-        TRANS normalise_plus_thm
-        (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_MUL_LID))) tm1)
-      else
-        normalise_plus_thm
-    end
-    val tm = rhs (concl normalised_thm)
-    val r = rand tm
-    val m = l
-    val m_nt = rand l
-    val (a,b) = let
-      val (lp,rp) = dest_plus r
-    in
-      (#1 (dest_mult lp), rp)
-    end
-    (* gcdthm2 of the form
-     m | ax + b  = d | b /\ ?t. ...
-     where d is the gcd of m and a *)
-    val a_nt = dest_injected a
-    val m_n = numSyntax.dest_numeral m_nt
-    val a_n = numSyntax.dest_numeral a_nt
-    val (d_n, (x_i, y_i)) = extended_gcd(m_n, a_n)
-    (* x_i * m_n + y_i * a_n = d_n *)
-    val m_nonz =
-      EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(m_nt,numSyntax.zero_tm))))
-    val a_nonz =
-      EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(a_nt,numSyntax.zero_tm))))
-    val pa_qm = mk_plus(mk_mult(term_of_int y_i, a),
-                        mk_mult(term_of_int x_i, m))
-    val pa_qm_eq_d = REDUCE_CONV pa_qm
-    val rwt =
-      if d_n = Arbnum.one then let
-        val hyp = LIST_CONJ [pa_qm_eq_d, m_nonz, a_nonz]
-      in
-        MATCH_MP gcd21_thm hyp
-      end
-      else let
-        val d_eq_pa_qm = SYM pa_qm_eq_d
-        val gcd_eq_d = REDUCE_CONV (list_mk_comb(gcd_t, [a_nt, m_nt]))
-        val d_eq_gcd = SYM gcd_eq_d
-        val d_nonz =
-          EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(rhs (concl gcd_eq_d),
-                                              numSyntax.zero_tm))))
-      in
-        MATCH_MP gcdthm2 (LIST_CONJ [d_eq_gcd, d_eq_pa_qm, d_nonz,
-                                     m_nonz, a_nonz])
-      end
-    val replaced = REWR_CONV rwt THENC REDUCE_CONV THENC
-      ONCE_REWRITE_CONV [INT_MUL_COMM] THENC
-      ONCE_REWRITE_CONV [INT_ADD_COMM]
+fun elim_sdivides tm0 = let
+  (* term of form c | x + d *)
+  val (l,r) = dest_divides tm0
+  val normalise_plus_thm =
+    (if not (is_plus r) then RAND_CONV (REWR_CONV (GSYM INT_ADD_RID))
+     else REFL) tm0
+  val tm1 = rhs (concl normalise_plus_thm)
+  val normalised_thm = let
+    val (lp,_) = dest_plus (rand tm1)
   in
-    TRANS normalised_thm (replaced tm)
+    if not (is_mult lp) then
+      TRANS normalise_plus_thm
+      (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_MUL_LID))) tm1)
+    else
+      normalise_plus_thm
   end
-
-
-  val simplify_constraints = let
-    (* applied to term of the form    lo < e /\ e <= hi
-     where e is generally of the form    c * x [+ b]
-     *)
-    fun elim_coeff tm = let
-      (* term of form    d < c * x,  d may be negative, c is +ve digit *)
-      val r = rand tm (* i.e., &c * x *)
-      val c = rand (rand (rator r))
-      val cnonz = EQF_ELIM (REDUCE_CONV (mk_eq(c,numSyntax.zero_tm)))
-    in
-      if is_negated (rand (rator tm)) then        (* ~d < c * x *)
-        REWR_CONV (GSYM INT_LT_NEG) THENC         (* ~(c * x) < ~~d *)
-        RAND_CONV (REWR_CONV INT_NEGNEG) THENC    (* ~(c * x) < d *)
-        LAND_CONV (REWR_CONV INT_NEG_MINUS1 THENC (* ~1 * (c * x) < d *)
-                   REWR_CONV INT_MUL_COMM THENC   (* (c * x) * ~1 < d *)
-                   REWR_CONV (GSYM INT_MUL_ASSOC)) THENC
-        (* c * (x * ~1) < d *)
-        REWR_CONV (MATCH_MP elim_lt_coeffs2 cnonz) THENC
-        (* x * ~1 < if ... *)
-        REWR_CONV (GSYM INT_LT_NEG) THENC         (* ~(if ..) < ~(x * ~1) *)
-        RAND_CONV (REWR_CONV INT_NEG_RMUL THENC   (* ... < x * ~~1 *)
-                   RAND_CONV (REWR_CONV INT_NEGNEG) THENC
-                   (* ... < x * 1 *)
-                   REWR_CONV INT_MUL_RID) THENC
-        REDUCE_CONV
-      else
-        REWR_CONV (MATCH_MP elim_lt_coeffs1 cnonz) THENC
-        REDUCE_CONV
-    end tm
-    val do_lt_case =
-      (* deal with tm of form   e < c * x [+ b] *)
-      move_terms_from LT Right (null o free_vars) THENC
-      REDUCE_CONV THENC elim_coeff
+  val tm = rhs (concl normalised_thm)
+  val r = rand tm
+  val m = l
+  val m_nt = rand l
+  val (a,b) = let
+    val (lp,rp) = dest_plus r
   in
+    (#1 (dest_mult lp), rp)
+  end
+  (* gcdthm2 of the form
+   m | ax + b  = d | b /\ ?t. ...
+   where d is the gcd of m and a *)
+  val a_nt = dest_injected a
+  val m_n = numSyntax.dest_numeral m_nt
+  val a_n = numSyntax.dest_numeral a_nt
+  val (d_n, (x_i, y_i)) = extended_gcd(m_n, a_n)
+  (* x_i * m_n + y_i * a_n = d_n *)
+  val m_nonz =
+    EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(m_nt,numSyntax.zero_tm))))
+  val a_nonz =
+    EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(a_nt,numSyntax.zero_tm))))
+  val pa_qm = mk_plus(mk_mult(term_of_int y_i, a),
+                      mk_mult(term_of_int x_i, m))
+  val pa_qm_eq_d = REDUCE_CONV pa_qm
+  val rwt =
+    if d_n = Arbnum.one then let
+      val hyp = LIST_CONJ [pa_qm_eq_d, m_nonz, a_nonz]
+    in
+      MATCH_MP gcd21_thm hyp
+    end
+    else let
+      val d_eq_pa_qm = SYM pa_qm_eq_d
+      val gcd_eq_d = REDUCE_CONV (list_mk_comb(gcd_t, [a_nt, m_nt]))
+      val d_eq_gcd = SYM gcd_eq_d
+      val d_nonz =
+        EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(rhs (concl gcd_eq_d),
+                                            numSyntax.zero_tm))))
+    in
+      MATCH_MP gcdthm2 (LIST_CONJ [d_eq_gcd, d_eq_pa_qm, d_nonz,
+                                   m_nonz, a_nonz])
+    end
+  val replaced = REWR_CONV rwt THENC REDUCE_CONV THENC
+    ONCE_REWRITE_CONV [INT_MUL_COMM] THENC
+    ONCE_REWRITE_CONV [INT_ADD_COMM]
+in
+  TRANS normalised_thm (replaced tm)
+end
+
+local
+  fun elim_coeff tm = let
+    (* term of form    d < c * x,  d may be negative, c is +ve digit *)
+    val r = rand tm (* i.e., &c * x *)
+    val c = rand (rand (rator r))
+    val cnonz = EQF_ELIM (REDUCE_CONV (mk_eq(c,numSyntax.zero_tm)))
+  in
+    if is_negated (rand (rator tm)) then        (* ~d < c * x *)
+      REWR_CONV (GSYM INT_LT_NEG) THENC         (* ~(c * x) < ~~d *)
+      RAND_CONV (REWR_CONV INT_NEGNEG) THENC    (* ~(c * x) < d *)
+      LAND_CONV (REWR_CONV INT_NEG_MINUS1 THENC (* ~1 * (c * x) < d *)
+                 REWR_CONV INT_MUL_COMM THENC   (* (c * x) * ~1 < d *)
+                 REWR_CONV (GSYM INT_MUL_ASSOC)) THENC
+      (* c * (x * ~1) < d *)
+      REWR_CONV (MATCH_MP elim_lt_coeffs2 cnonz) THENC
+      (* x * ~1 < if ... *)
+      REWR_CONV (GSYM INT_LT_NEG) THENC         (* ~(if ..) < ~(x * ~1) *)
+      RAND_CONV (REWR_CONV INT_NEG_RMUL THENC   (* ... < x * ~~1 *)
+                 RAND_CONV (REWR_CONV INT_NEGNEG) THENC
+                 (* ... < x * 1 *)
+                 REWR_CONV INT_MUL_RID) THENC
+      REDUCE_CONV
+    else
+      REWR_CONV (MATCH_MP elim_lt_coeffs1 cnonz) THENC
+      REDUCE_CONV
+  end tm
+  val do_lt_case =
+    (* deal with tm of form   e < c * x [+ b] *)
+    move_terms_from LT Right (null o free_vars) THENC
+    REDUCE_CONV THENC elim_coeff
+in
+  (* applied to term of the form    lo < e /\ e <= hi
+   where e is generally of the form    c * x [+ b]
+   *)
+  val simplify_constraints =
     LAND_CONV do_lt_case THENC
     RAND_CONV (REWR_CONV elim_le THENC
                RAND_CONV do_lt_case THENC
                REWR_CONV (GSYM elim_le))
-  end
+end
 
+fun factor_out g g_t tm =
+  if is_plus tm then BINOP_CONV (factor_out g g_t) tm
+  else let
+    open Arbint
+    val (c,v) = dest_mult tm
+    val c_n = int_of_term c
+    val new_c = c_n div g
+    val new_c_t = term_of_int new_c
+    val new_c_thm = SYM (REDUCE_CONV (mk_mult(g_t,new_c_t)))
+    val cx_eq_thm0 = LAND_CONV (K new_c_thm) tm
+    val reassociate = SYM (SPECL [v, new_c_t, g_t]
+                           integerTheory.INT_MUL_ASSOC)
+  in
+    TRANS cx_eq_thm0 reassociate
+  end handle HOL_ERR _ => REFL tm
 
-
-  fun factor_out g g_t tm =
-    if is_plus tm then BINOP_CONV (factor_out g g_t) tm
-    else let
-      open Arbint
-      val (c,v) = dest_mult tm
-      val c_n = int_of_term c
-      val new_c = c_n div g
-      val new_c_t = term_of_int new_c
-      val new_c_thm = SYM (REDUCE_CONV (mk_mult(g_t,new_c_t)))
-      val cx_eq_thm0 = LAND_CONV (K new_c_thm) tm
-      val reassociate = SYM (SPECL [v, new_c_t, g_t]
-                             integerTheory.INT_MUL_ASSOC)
-    in
-      TRANS cx_eq_thm0 reassociate
-    end handle HOL_ERR _ => REFL tm
-
-  fun factor_out_lits g g_t tm =
-      if is_plus tm then BINOP_CONV (factor_out_lits g g_t) tm
-      else if is_int_literal tm then let
-          val tm_i = int_of_term tm
-          val factor = Arbint.div(tm_i, g)
-          val factor_t = term_of_int factor
-        in
-          SYM (REDUCE_CONV (mk_mult(g_t, factor_t)))
-        end
-      else REFL tm
-
+fun factor_out_lits g g_t tm =
+    if is_plus tm then BINOP_CONV (factor_out_lits g g_t) tm
+    else if is_int_literal tm then let
+        val tm_i = int_of_term tm
+        val factor = Arbint.div(tm_i, g)
+        val factor_t = term_of_int factor
+      in
+        SYM (REDUCE_CONV (mk_mult(g_t, factor_t)))
+      end
+    else REFL tm
 
 fun check_divides tm = let
   val (l,r) = dest_divides tm
@@ -392,8 +383,8 @@ in
 end
 
 fun EVERY_SUMMAND_CONV c t =
-    if is_plus t then BINOP_CONV (EVERY_SUMMAND_CONV c) t
-    else c t
+  if is_plus t then BINOP_CONV (EVERY_SUMMAND_CONV c) t
+  else c t
 
 
 fun minimise_divides tm = let
@@ -489,42 +480,29 @@ in
 end
 
 
-val my_INT_MUL_LID = prove(
-  ``(1 * (c * d) = c * d) /\
-    (~1 * (c * d) = ~c * d) /\
-    (1 * (c * d + x) = c * d + x) /\
-    (~1 * (c * d + x) = ~c * d + ~x) /\
-    (~~x = x)``,
-  REWRITE_TAC [INT_MUL_LID, GSYM INT_NEG_MINUS1, INT_NEG_LMUL,
-               INT_NEG_ADD, INT_NEGNEG]);
-
-
 fun BLEAF_CONV connector c tm =
-    case bop_characterise tm of
-      NONE => c tm
-    | SOME NEGN => RAND_CONV (BLEAF_CONV connector c) tm
-    | SOME _ => connector(LAND_CONV (BLEAF_CONV connector c),
-                          RAND_CONV (BLEAF_CONV connector c))
-                         tm
-
-
+  (case bop_characterise tm of
+    NONE => c
+  | SOME NEGN => RAND_CONV (BLEAF_CONV connector c)
+  | SOME _ => connector(LAND_CONV (BLEAF_CONV connector c),
+                        RAND_CONV (BLEAF_CONV connector c)))
+  tm
 
 
 (* ----------------------------------------------------------------------
     Initial phases of the Cooper transformation
    ---------------------------------------------------------------------- *)
 
-
 (* Phase 1 *)
-val remove_bare_vars = let
+local
   fun Munge t = if is_var t then REWR_CONV (GSYM INT_MUL_LID) t
                 else if intSyntax.is_mult t then ALL_CONV t
                 else NO_CONV t
 in
-  ONCE_DEPTH_CONV Munge
+  val remove_bare_vars = ONCE_DEPTH_CONV Munge
 end
 
-val remove_negated_vars = let
+local
   fun remove_negated tm = let
     (* turn ~ var into ~1 * var *)
     val t0 = dest_negated tm (* exception raised when term not a negation
@@ -537,7 +515,7 @@ val remove_negated_vars = let
       NO_CONV tm
   end
 in
-  DEPTH_CONV remove_negated
+  val remove_negated_vars = DEPTH_CONV remove_negated
 end
 
 local
@@ -593,37 +571,6 @@ val phase1_CONV = Profile.profile "phase1" phase1_CONV
    have a gcd > 1, then we can divide through by that gcd.
 *)
 
-
-val INT_DIVIDES_NEG = CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG
-val INT_NEG_FLIP_LTL = prove(
-  ``!x y. ~x < y <=> ~y < x``,
-  REPEAT GEN_TAC THEN
-  CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
-  REWRITE_TAC [INT_LT_NEG]);
-val INT_NEG_FLIP_LTR = prove(
-  ``!x y. x < ~y <=> y < ~x``,
-  REPEAT GEN_TAC THEN
-  CONV_TAC (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
-  REWRITE_TAC [INT_LT_NEG]);
-
-val negated_elim_lt_coeffs1 =
-  (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTR] o
-   REWRITE_RULE [GSYM INT_NEG_RMUL] o
-   Q.SPECL [`n`, `m`, `~x`])
-  elim_lt_coeffs1;
-val negated_elim_lt_coeffs2 =
-  (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTL] o
-   REWRITE_RULE [GSYM INT_NEG_RMUL] o
-   Q.SPECL [`n`, `m`, `~x`])
-  elim_lt_coeffs2;
-
-
-
-val elim_eq_coeffs' =
-  CONV_RULE (STRIP_QUANT_CONV (RAND_CONV
-                               (BINOP_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))))
-  elim_eq_coeffs
-
 local
   val myrewrite_conv = REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
   fun normalise_eqs var tm =
@@ -639,7 +586,7 @@ in
                   else land (rand tm)
     in
       if is_negated coeff then
-        REWR_CONV (GSYM (CONJUNCT1 INT_DIVIDES_NEG)) THENC myrewrite_conv
+        REWR_CONV (GSYM (CONJUNCT1 INT_DIVIDES_NEG')) THENC myrewrite_conv
       else
         ALL_CONV
     end tm
@@ -736,7 +683,7 @@ in
        normalise_eqs var) tm
     end handle HOL_ERR _ =>
       if is_divides tm then
-        (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG)) THENC
+        (TRY_CONV (REWR_CONV (CONJUNCT2 INT_DIVIDES_NEG')) THENC
          RAND_CONV (collect_in_sum var) THENC
          dealwith_negative_divides THENC
          RAND_CONV (TRY_CONV (RAND_CONV collect_up_other_freevars)) THENC
@@ -830,8 +777,6 @@ fun find_coeff var term =  (* works over un-negated leaves *)
   else NONE
 
 
-
-
 (* Phase 3 multiplies up all coefficients of x in order to make them
    the lcm, and then eliminates this, by changing
      ?x. P (c * x)
@@ -858,7 +803,6 @@ fun LINEAR_MULT tm = let
 in
   recurse tm
 end
-
 
 
 (* Phase 3 multiplies up all coefficients of x in order to make them
@@ -1058,5 +1002,4 @@ in
   (*Profile.profile "simpcst.mainwork"*) mainwork
 end tm
 
-
-end (* struct *)
+end; (* struct *)
