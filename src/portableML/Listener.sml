@@ -13,7 +13,10 @@ fun add_listener (r:'a t) (sf as (s,f)) =
     in
       case List.find (fn (s', _) => s' = s) t of
         NONE => r := sf :: t
-      | SOME _ => raise DUP s
+      | SOME _ =>
+        if !Globals.interactive then
+          r := sf :: List.filter (fn (s', _) => s' <> s) t
+        else raise DUP s
     end
 
 fun remove_listener (r:'a t) s =
