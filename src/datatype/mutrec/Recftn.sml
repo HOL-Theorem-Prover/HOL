@@ -83,7 +83,7 @@ type thm = Thm.thm;
 
 
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname="bool"}
 
 
 (* define_mutual_functions takes the term def (one such as the one above)
