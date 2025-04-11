@@ -306,7 +306,7 @@ Definition mulpow2_def:
 End
 
 Theorem mulpow2_thm:
-  ! bs k. bleval (mulpow2 bs k) =  bleval bs * 2 ** k
+  ! bs k. bleval (mulpow2 bs k) = bleval bs * 2 ** k
 Proof
   ho_match_mp_tac mulpow2_ind >> gs[mulpow2_def, bleval_def, EXP]
 QED

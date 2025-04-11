@@ -1595,11 +1595,11 @@ Proof
   rpt strip_tac >>
   Cases_on `EVEN m` >| [
     `m = 2 * HALF m` by simp[EVEN_HALF] >>
-    `HALF (SUC m) =  HALF (2 * HALF m + 1)` by metis_tac[ADD1] >>
+    `HALF (SUC m) = HALF (2 * HALF m + 1)` by metis_tac[ADD1] >>
     `_ = HALF m` by simp[] >>
     simp[],
     `m = 2 * HALF m + 1` by simp[ODD_HALF, ODD_EVEN] >>
-    `HALF (SUC m) =  HALF (2 * HALF m + 1 + 1)` by metis_tac[ADD1] >>
+    `HALF (SUC m) = HALF (2 * HALF m + 1 + 1)` by metis_tac[ADD1] >>
     `_ = HALF m + 1` by simp[] >>
     simp[]
   ]

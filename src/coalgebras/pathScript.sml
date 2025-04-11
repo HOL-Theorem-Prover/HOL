@@ -1496,7 +1496,7 @@ Induct THEN
 SRW_TAC [] [LTAKE_CONS_EQ_SOME]);
 
 val lemma2 = Q.prove (
-`!l h t. LAPPEND (fromList l) (h:::t) =  LAPPEND (fromList (l++[h])) t`,
+`!l h t. LAPPEND (fromList l) (h:::t) = LAPPEND (fromList (l++[h])) t`,
 Induct THEN
 SRW_TAC [] []);
 

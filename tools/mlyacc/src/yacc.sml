@@ -716,7 +716,7 @@ precedences of the rule and the terminal are equal.
                 else precData sub i
            end
 
-        val elimAssoc =  fn i => (i - (i mod 3) + 1)
+        val elimAssoc = fn i => (i - (i mod 3) + 1)
         val rulePrec =
            let fun findRightTerm (nil,r) = r
                  | findRightTerm (TERM t :: tail,r) =

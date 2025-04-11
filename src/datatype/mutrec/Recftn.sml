@@ -722,7 +722,7 @@ open Rsyntax   (* use records *)
 
     (* Now we do our definition. *)
     val final = new_specification
-    {name =  specification_name,
+    {name = specification_name,
      consts = consts,
      sat_thm = sat_thm}
 

@@ -192,7 +192,7 @@ val infixes : infixities ref = ref
    {tok = " % ",   prec = 9,  left_assoc = true},    (* function application *)
    {tok = " -> ",  prec = 2,  left_assoc = false},   (* HOL ty prec = 50 *)
    {tok = " : ",   prec = 1,  left_assoc = false},   (* not in HOL grammars *)
-   {tok =  ", ",   prec = 0,  left_assoc = false},   (* HOL tm prec = 50 *)
+   {tok = ", ",    prec = 0,  left_assoc = false},   (* HOL tm prec = 50 *)
    (* Convenient alternative symbols *)
    {tok = " ** ",  prec = 7,  left_assoc = true},
    {tok = " ++ ",  prec = 6,  left_assoc = true},

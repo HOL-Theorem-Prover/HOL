@@ -155,7 +155,7 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
                 val th2 = ALPHA_CONV v (rand(concl th1))
             in TRANS th0 (AP_TERM eq (TRANS th1 th2))
             end
-        val eta =  CONV_RULE ((LAND_CONV o RAND_CONV o RAND_CONV) ETA_CONV)
+        val eta = CONV_RULE ((LAND_CONV o RAND_CONV o RAND_CONV) ETA_CONV)
         val LOCAL_NOT_FORALL_CONV =
             let val pth = eta (ISPEC P NOT_FORALL_THM)
             in LOCAL_QUANT_CONV pth
@@ -372,7 +372,7 @@ val PRENEX_CONV = let
 val PROP_CNF_CONV =
   let val th1 = TAUT`a \/ (b /\ c) <=> (a \/ b) /\ (a \/ c)`
       and th2 = TAUT`(a /\ b) \/ c <=> (a \/ c) /\ (b \/ c)`
-      val f =  DISTRIB_CONV(th1,th2) THENC
+      val f = DISTRIB_CONV(th1,th2) THENC
           DEPTH_BINOP_CONV conj_tm (ASSOC_CONV DISJ_ASSOC) THENC
           ASSOC_CONV CONJ_ASSOC
   in fn tm => f tm
@@ -387,7 +387,7 @@ val PROP_CNF_CONV =
 val PROP_DNF_CONV =
     let val th1 = TAUT`a /\ (b \/ c) <=> (a /\ b) \/ (a /\ c)`
         and th2 = TAUT`(a \/ b) /\ c <=> (a /\ c) \/ (b /\ c)`
-        val f =  DISTRIB_CONV(th1,th2) THENC
+        val f = DISTRIB_CONV(th1,th2) THENC
             DEPTH_BINOP_CONV disj_tm (ASSOC_CONV CONJ_ASSOC) THENC
             ASSOC_CONV DISJ_ASSOC
     in fn tm => f tm

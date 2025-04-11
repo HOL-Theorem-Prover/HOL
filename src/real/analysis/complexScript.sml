@@ -727,7 +727,7 @@ val COMPLEX_OF_REAL_SUB = store_thm("COMPLEX_OF_REAL_SUB",
 
 val COMPLEX_OF_REAL_DIV = store_thm("COMPLEX_OF_REAL_DIV",
   ``!x:real y:real.
-      complex_of_real x / complex_of_real y =  complex_of_real (x / y)``,
+      complex_of_real x / complex_of_real y = complex_of_real (x / y)``,
   REWRITE_TAC [real_div, COMPLEX_OF_REAL_MUL, COMPLEX_OF_REAL_INV,
                complex_div]);
 

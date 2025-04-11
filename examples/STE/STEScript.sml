@@ -634,10 +634,10 @@ val Proposition =
  *)
 
 
-val Proposition1 =  store_thm("Proposition1",
-                              ``!Y_ckt sigma. in_STE_lang sigma Y_ckt
-                              ==> !t. in_STE_lang (Suffix 1 sigma) Y_ckt``,
-                              PROVE_TAC [Proposition]);
+val Proposition1 = store_thm("Proposition1",
+                             ``!Y_ckt sigma. in_STE_lang sigma Y_ckt
+                             ==> !t. in_STE_lang (Suffix 1 sigma) Y_ckt``,
+                             PROVE_TAC [Proposition]);
 
 
 (* If a sequence sigma is less than or equal to another sequence sigma'

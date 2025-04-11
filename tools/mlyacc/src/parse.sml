@@ -37,8 +37,8 @@ functor ParseGenParserFun(structure Header : HEADER
               val source = Header.newSource(file,in_str,TextIO.stdOut)
               val error = fn (s : string,i:int,_) =>
                               Header.error source i s
-              val stream =  Parser.makeLexer (fn i => (TextIO.inputN(in_str,i)))
-                            source
+              val stream = Parser.makeLexer (fn i => (TextIO.inputN(in_str,i)))
+                           source
               val (result,_) = (Header.lineno := 1;
                                 Header.text := nil;
                                 Parser.parse(15,stream,error,source))

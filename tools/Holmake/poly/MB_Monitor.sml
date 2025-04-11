@@ -116,7 +116,7 @@ val polish = nstr_subhandler polish "polish"
 
 val cheat_string =      "Saved CHEAT _"
 val fastcheat_string =  "Saved FAST-CHEAT _"
-val oracle_string =     "Saved ORACLE thm _"
+val oracle_string =   "Saved ORACLE thm _"
 val used_cheat_string = "(used CHEAT)"
 
 fun delsml_sfx s =

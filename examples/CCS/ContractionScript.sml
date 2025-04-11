@@ -172,7 +172,7 @@ val contracts_is_CONTRACTION = store_thm (
  >> ASM_REWRITE_TAC []);
 
 (* the original definition now becomes a theorem *)
-val contracts_thm =  store_thm (
+val contracts_thm = store_thm (
    "contracts_thm",
   ``!P Q. P contracts Q = ?Con. Con P Q /\ CONTRACTION Con``,
     NTAC 2 GEN_TAC >> EQ_TAC (* 2 sub-goals here *)

@@ -52,9 +52,9 @@ struct
 
   fun - n m = if < n m then ZERO else LargeInt.-(n, m)
 
-  fun  *  n m = LargeInt.*(n, m)
+  fun * n m = LargeInt.*(n, m)
 
-  fun iSQR x =  *  x x
+  fun iSQR x = * x x
 
   fun pow (xn, yn) =
     if mod2 yn = ONE then
@@ -100,9 +100,9 @@ struct
 
   fun findq (a,(m,n)) =
         if n = ZERO then a
-          else let val d =  *  (BIT2 ZERO) n
+          else let val d = * (BIT2 ZERO) n
                in
-                  if < m d then a else findq ( *  (BIT2 ZERO) a,(m,d))
+                  if < m d then a else findq ( * (BIT2 ZERO) a,(m,d))
                end
 
   fun DIVMOD (a,(m,n)) =
@@ -110,7 +110,7 @@ struct
           else if < m n then (a,m)
                  else let val q = findq (BIT1 ZERO,(m,n))
                       in
-                         DIVMOD (+ a q,(- m ( *  n q),n))
+                         DIVMOD (+ a q,(- m ( * n q),n))
                       end
 
   fun DIV m n = LargeInt.quot(m, n)

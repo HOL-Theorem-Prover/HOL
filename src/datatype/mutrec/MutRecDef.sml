@@ -478,7 +478,7 @@ val ty_defs =
          val inhab_thm =
                EQ_MP (SYM (DEPTH_CONV BETA_CONV sel)) exists_thm
          val type_def = new_type_definition{inhab_thm = inhab_thm,
-                                            name  =  type_name,
+                                            name = type_name,
                                             pred = pred}
          val new_type =
              #Domain(dest_fun (type_of (#Bvar(dest_exists (concl type_def)))))
@@ -1117,7 +1117,7 @@ val mod_fns =
                of SOME entry => entry
                 | NONE => raise MUT_REC_ERR{function = "",
                                             message = "Impossible"}
-         val x =  mk_var {Name = "x", Ty = being_defined_type}
+         val x = mk_var {Name = "x", Ty = being_defined_type}
          val {Outs,...} =
              case find (fn entry => type_name = #type_name entry) Ins_Outs
                of SOME entry => entry
@@ -1351,7 +1351,7 @@ val not_rep_abs_thms =
 
 fun mk_case_prop type_name =
     let
-        val abs =  mk_comb{Rator = get_abs type_name, Rand = Joint_x}
+        val abs = mk_comb{Rator = get_abs type_name, Rand = Joint_x}
         val rep_abs = mk_comb{Rator = get_rep type_name, Rand = abs}
     in
         mk_imp {ant = mk_eq{lhs = rep_abs, rhs = Joint_x},
@@ -1359,7 +1359,7 @@ fun mk_case_prop type_name =
                                 Rand = abs}}
     end
 
-fun mk_rep_abs_cases_prop [] =  mk_const{Name= "T",Ty=bool}
+fun mk_rep_abs_cases_prop [] = mk_const{Name= "T",Ty=bool}
   | mk_rep_abs_cases_prop (type_name :: nil) =
     mk_case_prop type_name
   | mk_rep_abs_cases_prop (type_name :: type_names) =

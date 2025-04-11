@@ -131,7 +131,7 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   fun apply_deltas thyname ds =
       let
         fun appthis (ADD (s,th)) = add {thy = thyname, named_thm = (s, th)}
-          | appthis (REMOVE s) = remove {thy = thyname, remove =  s}
+          | appthis (REMOVE s) = remove {thy = thyname, remove = s}
       in
         List.app appthis ds
       end

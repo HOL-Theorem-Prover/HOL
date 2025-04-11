@@ -301,7 +301,7 @@ local
           case List.find (name_eq Name) ctxt of
             NONE => raise UNCHANGED
           | SOME ctxt_tm => Var{Locn = Locn, Name = Name,
-                                Ty =  Pretype.fromType (type_of ctxt_tm)}
+                                Ty = Pretype.fromType (type_of ctxt_tm)}
         else raise UNCHANGED
       end
     | Comb{Rator, Rand, Locn} => let
@@ -310,7 +310,7 @@ local
           val rator = gtf boundvars Rator
         in
           let
-            val rand =  gtf boundvars Rand
+            val rand = gtf boundvars Rand
           in
             Comb{Rator = rator, Rand = rand, Locn = Locn}
           end handle UNCHANGED => Comb{Rator = rator, Rand = Rand, Locn = Locn}

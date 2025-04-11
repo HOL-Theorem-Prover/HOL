@@ -68,7 +68,7 @@ struct
     val S43 = 0w15
     val S44 = 0w21
 
-    fun PADDING i =  W8V.tabulate (i,(fn 0 => 0wx80 | _ => 0wx0))
+    fun PADDING i = W8V.tabulate (i,(fn 0 => 0wx80 | _ => 0wx0))
 
     fun F (x,y,z) = W32.orb (W32.andb (x,y),
                            W32.andb (W32.notb x,z))
