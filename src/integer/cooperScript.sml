@@ -129,4 +129,13 @@ Proof
   ]
 QED
 
+Theorem NOT_EXISTS_THM' = GEN_ALL $ SYM $
+  PURE_REWRITE_RULE [NOT_CLAUSES] $ BETA_RULE $
+  SPEC ``\x:'a. ~ P x : bool`` boolTheory.NOT_EXISTS_THM;
+
+Theorem NOT_NOT = tautLib.TAUT_PROVE ``~~p:bool = p``;
+
+Theorem K_THM' =
+  INST_TYPE [(alpha |-> bool), (beta |-> ``:int``)] combinTheory.K_THM;
+
 val _ = export_theory ();
