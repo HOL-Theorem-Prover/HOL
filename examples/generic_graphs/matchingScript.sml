@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
-open fsgraphTheory pred_setTheory arithmeticTheory listTheory genericGraphTheory set_relationTheory;
-open rich_listTheory integerTheory combinTheory;
+open fsgraphTheory pred_setTheory pred_setLib arithmeticTheory listTheory genericGraphTheory set_relationTheory;
+open rich_listTheory integerTheory combinTheory topologyTheory whileTheory pairTheory;
 open hurdUtils;
 open tautLib;
 val _ = new_theory "matching";
@@ -8,17 +8,22 @@ val _ = new_theory "matching";
 open realTheory;
 open prim_recTheory;
 
+
+
+
 Overload V[local] = “nodes (G :fsgraph)”;
 Overload E[local] = “fsgedges (G :fsgraph)”;
 
-Type vertex = “:unit + num”;
+Type vertex[pp] = “:unit + num”;
 Type edge = “:vertex set”
 
 val ORW = ONCE_REWRITE_TAC;
 val POP_ORW' = pop_assum (fn t => ORW [GSYM t])
 val Keep_last_assum = (fn n => NTAC n (pop_assum mp_tac) >> KILL_TAC)
 val Keep_last_assum_disch = (fn n => Keep_last_assum n >> rpt disch_tac)
-
+val _ = clear_overloads_on "equiv_class";
+val set_ss = std_ss ++ PRED_SET_ss;
+val set_simp = ASM_SIMP_TAC set_ss;
 
 (* List lemmas *)
 
@@ -48,6 +53,26 @@ Proof
   SET_TAC []
 QED
 
+Theorem EXT_CHOICE_DEF:
+  ∀x s. s ≠ ∅ ⇒ (x = CHOICE s ⇒ x ∈ s)
+Proof
+  PROVE_TAC [CHOICE_DEF]
+QED
+
+(* Set relation lemmas *)
+
+Theorem finite_linear_order_has_local_maximal_lemma:
+  ∀s t r. FINITE s ∧ linear_order r s ∧ t ⊆ s ∧ t ≠ ∅ ⇒ ∃x. x ∈ maximal_elements t r
+Proof
+  rw [] >> Suff ‘∃x. x ∈ maximal_elements t (rrestrict r t)’
+  >- (simp [maximal_elements_def, rrestrict_def] >> PROVE_TAC []
+     )
+  >> irule finite_linear_order_has_maximal >> reverse $ rw []
+  >- (drule linear_order_restrict >> ‘t = s ∩ t’ by ASM_SET_TAC []
+      >> PROVE_TAC []
+     )
+  >> PROVE_TAC [SUBSET_FINITE]
+QED
 
 
 (* fsg lemma *)
@@ -70,6 +95,14 @@ Proof
   >> ‘{n1; n2} = {n2; n1}’ by SET_TAC []
   >> POP_ORW >> rw []
 QED
+
+Theorem fsg_FINITE_degree:
+  ∀(G: fsgraph) v. v ∈ V ⇒ FINITE {e | e ∈ E ∧ v ∈ e}
+Proof
+  rw [] >> irule SUBSET_FINITE_I >> qexists_tac ‘E’
+  >> simp [FINITE_fsgedges] >> ASM_SET_TAC []
+QED
+
 
 (* Bipartite graph identities *)
 Theorem gen_bipartite_sym:
@@ -98,7 +131,15 @@ Proof
   >> qexistsl_tac [‘ns ∩ A’, ‘ns ∩ B’] >> ASM_SET_TAC []
 QED
 
-(* Returns the neighbour of v ∈ e w.r.t. e ∈ E. *)
+Theorem gen_bipartite_FINITE:
+  ∀G A B. gen_bipartite G A B ⇒ FINITE A ∧ FINITE B
+Proof
+  NTAC 4 strip_tac >> gvs [gen_bipartite_def]
+  >> ‘FINITE V’ by simp [FINITE_nodes] >> ‘A ⊆ V ∧ B ⊆ V’ by ASM_SET_TAC []
+  >> PROVE_TAC [SUBSET_FINITE]
+QED
+
+(* paired_v: Helper that returns the neighbour of v ∈ e w.r.t. e ∈ E. *)
 Definition paired_v_def:
   paired_v (e :edge) (v :vertex) = CHOICE $ e DELETE v
 End
@@ -208,18 +249,23 @@ Proof
   rw [] >> qexists_tac ‘G’ >> rw [subgraph_id]
 QED
 
-(* k-regular, k-factor & set of preferences *)
-Definition regular_def:
-  regular k (G: fsgraph) ⇔ ∀v. v ∈ V ⇒ degree G v = k
-End
+Theorem edges_as_subgraph:
+  ∀(G: fsgraph) es. es ⊆ E ⇒ ∃G'. G' ⊆ G ∧ V' = V ∧ E' = es
+Proof
+  rw [subgraph_def]
+  >> ‘∃G'. nodes G' = V ∧ fsgedges G' = es’ suffices_by ASM_SET_TAC []
+  >> Q.EXISTS_TAC ‘fsgAddEdges es $ fsgAddNodes V emptyG’
+  >> rw [fsgedges_fsgAddEdges, EXTENSION] >> iff_tac
+  >- (rw []
+      >> ‘x = {m; n}’ by ASM_SET_TAC [] >> simp []
+     )
+  >> rw []
+  >> ‘x ∈ E’ by ASM_SET_TAC []
+  >> drule alledges_valid >> rpt strip_tac
+  >> qexistsl_tac [‘a’, ‘b’] >> simp []
+  >> gvs []
+QED
 
-Definition factor_def:
-  factor k (G': fsgraph) (G: fsgraph) ⇔ G' ⊆ G ∧ V' = V ∧ regular k G'
-End
-
-Definition preference:
-  preference (G: fsgraph) (R: vertex -> (edge # edge) -> bool) ⇔ ∀v. v ∈ V ⇒ linear_order (R v) E
-End
 
 (* Neighbour *)
 (* TODO: refactor ‘paired_v’ into ‘neighbour’ after replacing existing ‘neighbour’ with ‘neighbours’ *)
@@ -227,6 +273,7 @@ End
 Definition neighbour_def:
   neighbour (G: fsgraph) v = {v' | v' IN V /\ v' <> v /\ ?e. e IN E /\ v IN e /\ v' IN e}
 End
+
 
 Theorem neighbour_def_adj:
   ∀G v. neighbour G v = {v' | v' ∈ V ∧ adjacent (G: fsgraph) v v'}
@@ -242,32 +289,37 @@ Proof
   >> qexists_tac ‘{v; x}’ >> rw []
 QED
 
-Theorem neighbour_degree_eq:
-  ∀G v. CARD (neighbour G v) = degree G v
+Theorem neighbour_def_adj':
+  ∀G v. neighbour G v = {v' | adjacent (G: fsgraph) v v'}
+Proof
+  rw [neighbour_def_adj, adjacent_fsg, Once EXTENSION]
+  >> (iff_tac >> simp [])
+  >> PROVE_TAC [alledges_valid_alt]
+QED
+
+Theorem degree_neighbour_CARD_EQ:
+  ∀G v. degree G v = CARD (neighbour G v)
 Proof
   rw [neighbour_def_adj, degree_def]
   >> qabbrev_tac ‘f = \(n :vertex). {v; n}’
-  >> qabbrev_tac ‘P = equiv_class (adjacent G) V v’
-  >> qabbrev_tac ‘Q = equiv_class $IN E v’
-  >> irule FINITE_BIJ_CARD >> rw []
+  >> qabbrev_tac ‘P = {v' | v' ∈ V ∧ adjacent G v v'}’
+  >> qabbrev_tac ‘Q = {e | e ∈ E ∧ v ∈ e}’
+  >> ORW [EQ_SYM_EQ] >> irule FINITE_BIJ_CARD >> rw []
   >- rw [Abbr ‘P’, GSPEC_AND]
   >> qexists_tac ‘f’ >> rw [Abbr ‘f’, Abbr ‘P’, Abbr ‘Q’, BIJ_DEF]
   >- (rw [INJ_DEF]
-      >- (drule_then assume_tac $ iffLR adjacent_fsg
-          >> simp []
-         )
+      >- (gvs [adjacent_fsg] >> simp [PAIR_SYM_lemma])
       >> ASM_SET_TAC []
      )
   >> rw [SURJ_DEF]
-  >- (drule_then assume_tac $ iffLR adjacent_fsg
-      >> simp []
-     )
+  >- (gvs [adjacent_fsg] >> simp [PAIR_SYM_lemma])
   >> drule alledges_valid >> rw [] >> gvs []
   >- (qexists_tac ‘b’ >> rw [adjacent_fsg])
   >> qexists_tac ‘a’ >> ORW [adjacent_fsg_SYM] >> rw []
   >- rw [Once adjacent_fsg]
   >> SET_TAC []
 QED
+
 
 Theorem neighbour_bipartite:
   ∀G A B v. gen_bipartite G A B ∧ v ∈ V ∧ v ∈ A ⇒ neighbour G v ⊆ B
@@ -343,6 +395,7 @@ Proof
   >> METIS_TAC []
 QED
 
+
 Theorem neighbour_set_def_adj:
   ∀G U. U ⊆ V ⇒ N U = {v' | v' ∈ V ∧ ∃v. v ∈ U ∧ adjacent (G: fsgraph) v v'}
 Proof
@@ -396,6 +449,62 @@ Proof
   >> irule neighbour_subgraph_SUBSET >> ASM_SET_TAC []
 QED
 
+Theorem neighbour_set_neighbour_set:
+  ∀G U. U ⊆ V ∧ (∀n. n ∈ U ⇒ 0 < degree G n) ⇒ U ⊆ N (N U)
+Proof
+  rpt strip_tac >> rw [SUBSET_DEF, neighbour_set, PULL_EXISTS]
+  >> first_x_assum (drule_then strip_assume_tac)
+  >> sg ‘∃x'. adjacent G x x'’
+  >- (gvs [degree_def]
+      >> qabbrev_tac ‘es = {e | e ∈ E ∧ x ∈ e}’
+      >> sg ‘∃e. e ∈ es’
+      >- (ORW [MEMBER_NOT_EMPTY]
+          >> ‘0 ≠ CARD es’ by simp [] >> pop_assum mp_tac
+          >> ‘FINITE E’ by simp [FINITE_fsgedges]
+          >> ‘es ⊆ E’ by ASM_SET_TAC []
+          >> ‘FINITE es’ by PROVE_TAC [SUBSET_FINITE]
+          >> drule CARD_EQ_0 >> PROVE_TAC []
+         )
+      >> ‘e ∈ E’ by ASM_SET_TAC []
+      >> drule alledges_valid >> rw [Abbr ‘es’]
+      >> gvs []
+      >- (qexists_tac ‘b’ >> simp [adjacent_fsg]
+         )
+      >> qexists_tac ‘a’ >> simp [adjacent_fsg, Once PAIR_SYM_lemma]
+     )
+  >> qexistsl_tac [‘x'’, ‘x’] >> simp [neighbour_def_adj]
+  >> gvs [adjacent_fsg] >> drule alledges_valid_alt >> rw [Once PAIR_SYM_lemma]
+QED
+
+
+(* k-regular, k-factor & set of preferences *)
+Definition regular_def:
+  regular k (G: fsgraph) ⇔ ∀v. v ∈ V ⇒ degree G v = k
+End
+
+(* FIXME: move G' to front *)
+Definition factor_def:
+  factor k (G': fsgraph) (G: fsgraph) ⇔ G' ⊆ G ∧ V' = V ∧ regular k G'
+End
+
+(* Definition preference: *)
+(*   preference (G: fsgraph) (R: vertex -> (edge # edge) -> bool) ⇔ ∀v. v ∈ V ⇒ linear_order (R v) E *)
+(* End *)
+
+Definition preference_def:
+  preference (G: fsgraph) R ⇔ ∀v. v ∈ V ⇒ linear_order (R v) (neighbour G v)
+End
+
+(* Component *)
+Definition component_fsg_def:
+  component G (H :fsgraph) ⇔ H ⊆ G ∧ connected H ∧ ~(∃G'. H ⊆ G' ∧ G' ⊆ G ∧ fsgsize H < fsgsize G' ∧ connected G')
+End
+
+Definition odd_comp_count_def:
+  odd_comp_count G ⇔ {G' | component G G' ∧ ODD (CARD V')}
+End
+
+
 (* Matching *)
 
 Definition matching_def:
@@ -405,24 +514,19 @@ End
 Theorem matching_as_subgraph:
   ∀G M. matching G M ⇒ ∃G'. G' ⊆ G ∧ V' = V ∧ E' = M
 Proof
-  rw [matching_def, subgraph_def]
-  >> ‘∃G'. nodes G' = V ∧ fsgedges G' = M’ suffices_by ASM_SET_TAC []
-  >> Q.EXISTS_TAC ‘fsgAddEdges M $ fsgAddNodes V emptyG’
-  >> rw [fsgedges_fsgAddEdges]
-  >> rw [EXTENSION] >> reverse iff_tac
-  >- (rw []
-      >> ‘x ∈ E’ by ASM_SET_TAC []
-      >> drule alledges_valid >> rw []
-      >> qexistsl_tac [‘a’, ‘b’] >> ASM_SET_TAC []
-     )
-  >> rw []
-  >> ‘x = {m; n}’ by ASM_SET_TAC [] >> gvs []
+  rw [matching_def] >> PROVE_TAC [edges_as_subgraph]
 QED
 
 Theorem matching_SUBSET:
   ∀G M. matching G M ⇒ ∀M'. M' ⊆ M ⇒ matching G M'
 Proof
   ASM_SET_TAC [matching_def]
+QED
+
+Theorem matching_subgraph:
+  ∀G G' M. G' ⊆ G ∧ matching G' M ⇒ matching G M
+Proof
+  ASM_SET_TAC [matching_def, subgraph_def]
 QED
 
 Theorem matching_UNION:
@@ -441,6 +545,66 @@ Proof
   >> ASM_SET_TAC []
 QED
 
+Theorem gen_matching_exists:
+  !(G: fsgraph). ?x. matching G x
+Proof
+  GEN_TAC >> Q.EXISTS_TAC ‘ {} ’ >> simp [matching_def]
+QED
+
+Theorem matching_exists:
+  ?x. matching G x
+Proof
+  rw [gen_matching_exists]
+QED
+
+Theorem EMPTY_is_matching:
+  ∀G. matching G ∅
+Proof
+  ASM_SET_TAC [matching_def]
+QED
+
+
+Theorem matching_not_empty:
+  matching G <> {}
+Proof
+  ASSUME_TAC matching_exists >> ASM_SET_TAC [NOT_IN_EMPTY]
+QED
+
+
+Theorem finite_matching:
+  !G M. matching G M ==> FINITE M
+Proof
+  rw[matching_def] >> irule SUBSET_FINITE_I >> Q.EXISTS_TAC ‘fsgedges G’ >> rw[]
+QED
+
+
+Theorem finite_num_matching:
+  !(G: fsgraph). FINITE {M | matching G M}
+Proof
+  (* M SUBSET E ==> M IN P(E); [IN_POW (<--)]
+     !M. (matching G M ==> M SUBSET E) ==> {M | matching G M} SUBSET P(E) [new lemma?]
+     E is finite ==> P(E) is finite [FINITE_POW (<--)]
+     P(E) is finite /\ {M | matching G M} SUBSET P(E) ==> {M | matching G M} is finite [SUBSET_FINITE_I]
+   *)
+  (* pred_setTheory *)
+  rw []
+  >> irule SUBSET_FINITE_I
+  >> Q.EXISTS_TAC ‘POW (fsgedges G)’
+  >> rw [SUBSET_DEF, IN_POW]
+  >> gvs [matching_def, SUBSET_DEF]
+QED
+
+
+Theorem finite_num_matching':
+  !(G: fsgraph). FINITE (matching G)
+Proof
+  GEN_TAC \\
+  ‘matching G = {M | matching G M}’ by rw[EXTENSION, IN_APP]
+  >> pop_assum (fn t => rw [Once t])
+  >> rw [finite_num_matching]
+QED
+
+
 Definition matched:
   matched (G: fsgraph) M v ⇔ matching G M ⇒ v ∈ BIGUNION M
 End
@@ -449,6 +613,30 @@ Theorem matched_def:
   ∀G M v. matched G M v <=> matching G M ==> (?e. e IN M /\ v IN e)
 Proof
   rw [matched, BIGUNION] >> METIS_TAC []
+QED
+
+Theorem matched_def_alt:
+  ∀G M v. matched G M v <=> matching G M ==> (?v'. {v; v'} IN M)
+Proof
+  rw [matched] >> (reverse iff_tac >> rpt strip_tac)
+  >- (gvs [] >> qexists_tac ‘{v; v'}’ >> rw []
+     )
+  >> gvs [matching_def] >> ‘s ∈ E’ by ASM_SET_TAC []
+  >> drule_then strip_assume_tac alledges_valid >> gvs []
+  >- (qexists_tac ‘b’ >> art [])
+  >> qexists_tac ‘a’ >> art [Once PAIR_SYM_lemma]
+QED
+
+Theorem matched_impl:
+  ∀G M v. matching G M ∧ matched G M v ==> (?e. e IN M /\ v IN e)
+Proof
+  PROVE_TAC [matched_def]
+QED
+
+Theorem matched_impl_alt:
+  ∀G M v. matching G M ∧ matched G M v ==> (?v'. {v; v'} IN M)
+Proof
+  PROVE_TAC [matched_def_alt]
 QED
 
 Definition unmatched:
@@ -482,6 +670,29 @@ Proof
   ASM_SET_TAC [matched_set_def]
 QED
 
+Theorem matched_set_UNION:
+  ∀G M U W. matched_set G M U ∧ matched_set G M W ⇒ matched_set G M (U ∪ W)
+Proof
+  ASM_SET_TAC [matched_set_def]
+QED
+
+Theorem matched_set_CARD_LE_matching:
+  ∀G M U. matching G M ∧ matched_set G M U ∧ (∀v1 v2. v1 ∈ U ∧ v2 ∈ U ⇒ {v1; v2} ∉ E) ⇒ CARD U ≤ CARD M
+Proof
+  rw [matched_set_def, matched_def]
+  >> gvs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+  >> irule INJ_CARD >> CONJ_TAC
+  >- PROVE_TAC [finite_matching]
+  >> qexists_tac ‘f’ >> rw [INJ_DEF] >> gvs [matching_def]
+  >> ‘f x ∈ M ∧ f x ∈ E’ by ASM_SET_TAC [] >> drule alledges_valid >> rw [] >> gvs [] >> ASM_SET_TAC []
+QED
+
+Theorem matched_set_CARD_LE_matching_bipartite:
+  ∀G A B M U. gen_bipartite G A B ∧ matching G M ∧ matched_set G M U ∧ U ⊆ A ⇒ CARD U ≤ CARD M
+Proof
+  rw [] >> irule matched_set_CARD_LE_matching >> qexists_tac ‘G’ >> rw []
+  >> gvs [gen_bipartite_def] >> ASM_SET_TAC []
+QED
 
 Theorem matched_set_inj_f_neighbour:
   ∀G M U. matching G M ∧ U ⊆ V ∧ matched_set G M U ⇒ (∃f. INJ f U (N U))
@@ -534,58 +745,6 @@ Proof
   >> ASM_SET_TAC []
 QED
 
-Theorem gen_matching_exists:
-  !(G: fsgraph). ?x. matching G x
-Proof
-  GEN_TAC >> Q.EXISTS_TAC ‘ {} ’ >> simp [matching_def]
-QED
-
-Theorem matching_exists:
-  ?x. matching G x
-Proof
-  rw [gen_matching_exists]
-QED
-
-
-Theorem matching_not_empty:
-  matching G <> {}
-Proof
-  ASSUME_TAC matching_exists >> ASM_SET_TAC [NOT_IN_EMPTY]
-QED
-
-
-Theorem finite_matching:
-  !G M. matching G M ==> FINITE M
-Proof
-  rw[matching_def] >> irule SUBSET_FINITE_I >> Q.EXISTS_TAC ‘fsgedges G’ >> rw[]
-QED
-
-
-Theorem finite_num_matching:
-  !(G: fsgraph). FINITE {M | matching G M}
-Proof
-  (* M SUBSET E ==> M IN P(E); [IN_POW (<--)]
-     !M. (matching G M ==> M SUBSET E) ==> {M | matching G M} SUBSET P(E) [new lemma?]
-     E is finite ==> P(E) is finite [FINITE_POW (<--)]
-     P(E) is finite /\ {M | matching G M} SUBSET P(E) ==> {M | matching G M} is finite [SUBSET_FINITE_I]
-   *)
-  (* pred_setTheory *)
-  rw []
-  >> irule SUBSET_FINITE_I
-  >> Q.EXISTS_TAC ‘POW (fsgedges G)’
-  >> rw [SUBSET_DEF, IN_POW]
-  >> gvs [matching_def, SUBSET_DEF]
-QED
-
-
-Theorem finite_num_matching':
-  !(G: fsgraph). FINITE (matching G)
-Proof
-  GEN_TAC \\
-  ‘matching G = {M | matching G M}’ by rw[EXTENSION, IN_APP]
-  >> pop_assum (fn t => rw [Once t])
-  >> rw [finite_num_matching]
-QED
 
 
 Theorem matching_2times_vertex:
@@ -692,6 +851,51 @@ Proof
   >> POP_ORW >> rw [finite_num_vertex_cover]
 QED
 
+Theorem vertex_cover_bipartition:
+  ∀(G: fsgraph) A B. gen_bipartite G A B ⇒ vertex_cover G A
+Proof
+  rw [gen_bipartite_alt, vertex_cover_def]
+  >- ASM_SET_TAC []
+  >> gvs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+  >> qexists_tac ‘f e’ >> ASM_SET_TAC []
+QED
+
+(* Lemma: if U covers a matching M, then |M| <= |U|. *)
+Theorem vertex_cover_matching_card:
+  ∀(G: fsgraph) M U. gen_vertex_cover V M U /\ matching G M ==> CARD M <= CARD U
+Proof
+  rpt STRIP_TAC >> irule INJ_CARD >> CONJ_TAC
+  >- (irule SUBSET_FINITE >> Q.EXISTS_TAC ‘V’
+      >> gvs [gen_vertex_cover_def]
+     )
+  >> Q.EXISTS_TAC ‘\e. @x. x IN e /\ x IN U’
+  >> rw [INJ_DEF]
+  >- (SELECT_ELIM_TAC
+      >> simp []
+      >> gvs [gen_vertex_cover_def]
+      >> simp []
+      >> METIS_TAC []
+     )
+  >- (gvs [matching_def]
+      >> pop_assum MP_TAC >> rpt SELECT_ELIM_TAC >> rw []
+      >- METIS_TAC [gen_vertex_cover_def]
+      >- METIS_TAC [gen_vertex_cover_def]
+      >- (‘x IN e INTER e'’ by rw [INTER_DEF]
+          >> Cases_on ‘DISJOINT e e'’
+          >- METIS_TAC [NOT_IN_EMPTY, DISJOINT_DEF]
+          >- (gvs [DISJOINT_DEF, matching_def] >> METIS_TAC [matching_def])
+         )
+     )
+QED
+
+Theorem vertex_cover_gen_matching_card:
+  ∀G U. vertex_cover G U ⇒ ∀M. matching G M ⇒ CARD M ≤ CARD U
+Proof
+  rw [] >> irule vertex_cover_matching_card
+  >> qexists_tac ‘G’ >> rw []
+  >> irule gen_vertex_cover_subset
+  >> qexists_tac ‘E’ >> gvs [matching_def]
+QED
 
 (* Alternating & Augmenting Path *)
 Definition alternating_path:
@@ -1049,45 +1253,6 @@ Definition edges_in_path_def:
                                     path G p ∧ list$adjacent p v1 v2 ∧
                                     adjacent G v1 v2}
 End
-
-
-(* not so useful compatibility *)
-(* Theorem edges_in_path_eq_adjpairs: *)
-(*   ∀G p. path G p ⇒ edges_in_path G p = set $ adjpairs p *)
-(* Proof *)
-(*   rw [walk_def, path_def] *)
-(*   >> Induct_on ‘p’ using adjpairs_ind *)
-(*   >- rw [] *)
-(*   >- rw [edges_in_path_def] *)
-(*   >> rw [EXTENSION] >> eq_tac *)
-(*   >- (rw [edges_in_path_def] *)
-(*       >> gvs [IN_EDGE_lemma] *)
-(*       >> Cases_on ‘{v1; v2} = {x; y}’ *)
-(*       >- simp [] *)
-(*       >> rw [] *)
-(*       >> ‘∀v. v = y ∨ MEM v p ⇒ v ∈ V’ by METIS_TAC [] *)
-(*       >> qpat_x_assum ‘(∀v. v = y ∨ MEM v p ⇒ v ∈ V) ⇒ _’ (drule_then assume_tac) *)
-(*       >> pop_assum (irule o iffLR) >> STRONG_CONJ_TAC *)
-(*       >- (rw [] *)
-(*           >> sg ‘adjacent (x::y::p) v1' v2'’ *)
-(*           >- (drule (CONJUNCT2 adjacent_rules) >> rw [] *)
-(*              ) *)
-(*           >> gvs [path_def] *)
-(*          ) *)
-(*       >> rw [edges_in_path_def] *)
-(*       >> qexistsl_tac [‘v1’, ‘v2’] *)
-(*       >> rw [path_def, walk_def] *)
-(*       >- (ASM_SET_TAC []) *)
-(*       >- (ASM_SET_TAC []) *)
-(*       >> gvs [INSERT2_lemma] *)
-(*       >> cheat *)
-(*      ) *)
-(*   >> rw [IN_EDGE_lemma] *)
-(*   >- (POP_ORW >> rw [edges_in_path_def] *)
-(*       >> qexistsl_tac [‘x’,‘y’] >> (rw [path_def, walk_def] >> simp []) *)
-(*      ) *)
-(*   >> cheat *)
-(* QED *)
 
 
 Theorem edges_in_path_alt:
@@ -1568,39 +1733,133 @@ Proof
 QED
 
 (* Excercise 1 *)
-Theorem max_matching_no_aug_path:
+Theorem max_matching_iff_no_aug_path:
   !(G: fsgraph) M. bipartite G ⇒ (max_matching G M <=> !p. alternating_path G M p ⇒ ~augmenting_path G M p)
 Proof
   cheat
 QED
 
+Definition perfect_matching_def:
+  perfect_matching G M ⇔ matching G M ∧ V = BIGUNION M
+End
 
-(* Lemma: if U covers a matching M, then |M| <= |U|. *)
-Theorem vertex_cover_matching_card:
-  ∀(G: fsgraph) M U. gen_vertex_cover V M U /\ matching G M ==> CARD M <= CARD U
+Theorem perfect_matching_alt:
+  ∀G M. perfect_matching G M ⇔ matching G M ∧ (∀v. v ∈ V ⇒ ∃e. e ∈ M ∧ v ∈ e)
 Proof
-  rpt STRIP_TAC >> irule INJ_CARD >> CONJ_TAC
-  >- (irule SUBSET_FINITE >> Q.EXISTS_TAC ‘V’
-      >> gvs [gen_vertex_cover_def]
-     )
-  >> Q.EXISTS_TAC ‘\e. @x. x IN e /\ x IN U’
-  >> rw [INJ_DEF]
-  >- (SELECT_ELIM_TAC
-      >> simp []
-      >> gvs [gen_vertex_cover_def]
-      >> simp []
-      >> METIS_TAC []
-     )
-  >- (gvs [matching_def]
-      >> pop_assum MP_TAC >> rpt SELECT_ELIM_TAC >> rw []
-      >- METIS_TAC [gen_vertex_cover_def]
-      >- METIS_TAC [gen_vertex_cover_def]
-      >- (‘x IN e INTER e'’ by rw [INTER_DEF]
-          >> Cases_on ‘DISJOINT e e'’
-          >- METIS_TAC [NOT_IN_EMPTY, DISJOINT_DEF]
-          >- (gvs [DISJOINT_DEF, matching_def] >> METIS_TAC [matching_def])
+  rw [perfect_matching_def, BIGUNION] >> iff_tac
+  >- rw []
+  >> rw [Once EXTENSION] >> iff_tac
+  >- gvs []
+  >> rpt strip_tac >> gvs [matching_def]
+  >> ‘s ∈ E’ by ASM_SET_TAC [] >> drule alledges_valid >> ASM_SET_TAC []
+QED
+
+Theorem perfect_matching_def_matched_set:
+  ∀G M. perfect_matching G M ⇔ matching G M ∧ matched_set G M V
+Proof
+  rw [matched_set_def, matched_def, perfect_matching_alt] >> PROVE_TAC []
+QED
+
+Theorem perfect_matching_bipartite_BIJ:
+  ∀G A B M. gen_bipartite G A B ∧ perfect_matching G M ⇒ ∃f. BIJ f A B
+Proof
+  rw [perfect_matching_alt, matching_def]
+  >> gvs [gen_bipartite_alt]
+  >> ‘A ⊆ V’ by ASM_SET_TAC []
+  >> gvs [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] >> rename [‘Edge _ ∈ M’, ‘_ = {Aend _; Bend _;}’]
+  >> irule SCHROEDER_BERNSTEIN >> rw [INJ_DEF]
+  >- (qexists_tac ‘Bend o Edge’ >> rw []
+      >- (‘Edge x ∈ E’ by ASM_SET_TAC []
+          >> first_x_assum drule >> rw []
          )
+      >> ‘Edge x ∈ M ∧ Edge y ∈ M’ by ASM_SET_TAC []
+      >> ‘~DISJOINT (Edge x) (Edge y)’ by ASM_SET_TAC []
+      >> ‘Edge x = Edge y’ by METIS_TAC []
+      >> ASM_SET_TAC []
      )
+  >> qexists_tac ‘Aend o Edge’ >> rw []
+  >- (‘Edge x ∈ E’ by ASM_SET_TAC []
+      >> first_x_assum drule >> rw []
+     )
+  >> ‘Edge x ∈ M ∧ Edge y ∈ M’ by ASM_SET_TAC []
+  >> ‘~DISJOINT (Edge x) (Edge y)’ by ASM_SET_TAC []
+  >> ‘Edge x = Edge y’ by METIS_TAC []
+  >> ASM_SET_TAC []
+QED
+
+Theorem perfect_matching_bipartite_CARD:
+  ∀G A B M. gen_bipartite G A B ∧ perfect_matching G M ⇒ CARD A = CARD B
+Proof
+  rw [] >> drule_all_then strip_assume_tac perfect_matching_bipartite_BIJ
+  >> ‘FINITE A’ suffices_by (disch_tac >> drule_all FINITE_BIJ_CARD >> rw [])
+  >> PROVE_TAC [gen_bipartite_FINITE]
+QED
+
+
+Theorem perfect_matching_as_1factor:
+  ∀G A B M. gen_bipartite G A B ∧ perfect_matching G M ⇒ ∃G'. factor 1 G' G
+Proof
+  rw [perfect_matching_alt] >> drule_all_then strip_assume_tac matching_as_subgraph
+  >> qexists_tac ‘G'’ >> rw [factor_def, regular_def, degree_def]
+  >> first_x_assum $ drule_then strip_assume_tac >> gvs [matching_def]
+  >> irule SING_CARD_1 >> rw [SING_DEF] >> qexists_tac ‘e’
+  >> ASM_SET_TAC []
+QED
+
+Theorem perfect_matching_between_nodes:
+  ∀G A B M. gen_bipartite G A B ∧ perfect_matching G M ⇒ matched_set G M A ∧
+                                                         matched_set G M B ∧
+                                                         CARD A = CARD M ∧ CARD B = CARD M
+Proof
+  Suff ‘∀G A B M. gen_bipartite G A B ∧
+                  perfect_matching G M ⇒
+                  matched_set G M A ∧ CARD A = CARD M’
+  >- (rw []
+      >- (last_x_assum drule_all >> rw [])
+      >- (last_x_assum (mp_tac o Q.SPECL [‘G’, ‘B’, ‘A’, ‘M’]) >> rw [Once gen_bipartite_sym])
+      >- (last_x_assum drule_all >> rw [])
+      >> last_x_assum (mp_tac o Q.SPECL [‘G’, ‘B’, ‘A’, ‘M’]) >> rw [Once gen_bipartite_sym]
+     )
+  >> NTAC 5 strip_tac >> drule_all_then assume_tac perfect_matching_bipartite_CARD
+  >> gs [perfect_matching_def_matched_set]
+  >> ‘A ⊆ V’ by ASM_SET_TAC [gen_bipartite_def] >> drule matched_set_subset >> rw []
+  >> qpat_assum ‘_ = CARD B’ (ORW o wrap o SYM)
+  >> ‘matched_set G M A’ by PROVE_TAC [matched_set_subset]
+  >> ‘A ⊆ A’ by simp [SUBSET_DEF] >> drule_all_then assume_tac matched_set_CARD_LE_matching_bipartite
+  >> ‘CARD M ≤ CARD A’ suffices_by simp [] >> irule vertex_cover_gen_matching_card
+  >> qexists_tac ‘G’ >> drule vertex_cover_bipartition >> rw []
+QED
+
+
+Theorem perfect_matching_cond:
+  ∀G A B M. gen_bipartite G A B ∧ matching G M ∧ CARD A = CARD B ∧ CARD M = CARD A ⇒ perfect_matching G M
+Proof
+  rw [perfect_matching_def_matched_set]
+  >> drule_all_then strip_assume_tac matching_between_nodes
+  >> sg ‘Am = A ∧ Bm = B’
+  >- (CONJ_TAC >> irule SUBSET_EQ_CARD >> drule_all gen_bipartite_FINITE >> PROVE_TAC [SUBSET_FINITE])
+  >> gvs [] >> mp_tac $ Q.SPECL [‘G’, ‘M’, ‘A’, ‘B’] matched_set_UNION >> gvs [gen_bipartite_def]
+QED
+
+
+Theorem perfect_matching_iff:
+  ∀G A B M. gen_bipartite G A B ∧ matching G M ⇒ (perfect_matching G M ⇔ CARD A = CARD M ∧ CARD B = CARD M)
+Proof
+  PROVE_TAC [perfect_matching_cond, perfect_matching_between_nodes]
+QED
+
+Theorem perfect_matching_exists_iff:
+  ∀G A B M. gen_bipartite G A B ⇒ ((∃M. perfect_matching G M) ⇔ (∃M. matching G M ∧ CARD A = CARD M ∧ CARD B = CARD M))
+Proof
+  rw [] >> iff_tac
+  >> rw [] >> qexists_tac ‘M’ >> PROVE_TAC [perfect_matching_alt, perfect_matching_iff]
+QED
+
+
+Theorem perfect_matching_exists:
+  ∀G A B. gen_bipartite G A B ∧ CARD A = CARD B ∧ (∀v. v ∈ V ⇒ degree G v ≠ 0) ⇒ ∃M. perfect_matching G M
+Proof
+  rw [perfect_matching_def_matched_set] >> cheat
 QED
 
 
@@ -2165,11 +2424,8 @@ Proof
       >> rw [SUBSET_DEF]
      )
   >> sg ‘vertex_cover G A’
-  >- (rw [gen_vertex_cover_def]
-      >- (ASM_SET_TAC []
-         )
-      >> ‘gen_bipartite G A B’ by rw [gen_bipartite_def]
-      >> qexists_tac ‘Aend e’ >> ASM_SET_TAC []
+  >- (‘gen_bipartite G A B’ by rw [gen_bipartite_def]
+      >> drule vertex_cover_bipartition >> rw []
      )
   >> qmatch_abbrev_tac ‘MIN_SET s = x’
   >> Know ‘MIN_SET s = x ⇔ ∀y. y ∈ s ⇒ x ≤ y’
@@ -2275,17 +2531,530 @@ Proof
   >> gvs []
 QED
 
-Theorem bipartite_k_regular_1_factor:
-  ∀G k. bipartite G ∧ regular k G ⇒ ∃G'. factor 1 G' G
+Theorem regular_bipartition_CARD_EQ:
+  ∀G A B k. gen_bipartite G A B ∧ 1 ≤ k ∧ regular k G ⇒ CARD A = CARD B
 Proof
-  cheat
+  rw [gen_bipartite_alt, regular_def]
+  >> ASSUME_TAC $ Q.SPEC ‘G’ sumdegrees
+  >> qabbrev_tac ‘deg = (degree G)’
+  >> ‘(∀v. v ∈ A ⇒ deg v = k) ∧ (∀v. v ∈ B ⇒ deg v = k)’ by ASM_SET_TAC []
+  >> ‘FINITE V’ by simp [FINITE_nodes]
+  >> ‘FINITE E’ by simp [FINITE_fsgedges]
+  >> ‘A ⊆ V ∧ B ⊆ V’ by ASM_SET_TAC []
+  >> ‘FINITE A ∧ FINITE B’ by PROVE_TAC [SUBSET_FINITE]
+  >> qabbrev_tac ‘f =  λv. {e | e ∈ E ∧ v ∈ e}’
+  >> qabbrev_tac ‘E1 = BIGUNION (IMAGE f A)’
+  >> Suff ‘∑ deg A = fsgsize G’
+  >- (drule_all_then strip_assume_tac SUM_IMAGE_DISJOINT >> gvs []
+      >> disch_tac
+      >> ‘∑ deg B = fsgsize G’ by simp []
+      >> rev_drule_all SIGMA_CONSTANT
+      >> qpat_x_assum ‘∀v. v ∈ A ⇒ _’ K_TAC
+      >> rev_drule_all SIGMA_CONSTANT
+      >> simp []
+     )
+  >> sg ‘FINITE E1’
+  >- (rw [Abbr ‘E1’, BIGUNION, Abbr ‘f’]
+      >> irule SUBSET_FINITE_I >> qexists_tac ‘E’ >> simp [SUBSET_DEF]
+     )
+  >> qpat_x_assum ‘∀v. v ∈ B ⇒ _’ K_TAC >> drule_all SIGMA_CONSTANT >> Rewr'
+  >> sg ‘CARD E1 = k * CARD A’
+  >- (ORW [MULT_SYM]
+      >> sg ‘CARD (IMAGE f A) = CARD A’
+      >- (irule INJ_CARD_IMAGE >> simp []
+          >> qexists_tac ‘IMAGE f A’ >> rw [INJ_DEF, IN_IMAGE]
+          >- (qexists_tac ‘x’ >> rw []
+             )
+          >> gvs [Abbr ‘f’] >> pop_assum mp_tac >> rw [Once EXTENSION]
+          >> gvs [Abbr ‘deg’, degree_def]
+          >> ‘k ≠ 0’ by rw []
+          >> ‘FINITE E’ by simp [FINITE_fsgedges]
+          >> sg ‘∀v. FINITE {e | e ∈ E ∧ v ∈ e}’
+          >- (strip_tac >> irule SUBSET_FINITE_I
+              >> qexists_tac ‘E’ >> rw [SUBSET_DEF]
+             )
+          >> ‘∀v. v ∈ V ⇒ 0 < CARD {e | e ∈ E ∧ v ∈ e}’ by simp []
+          >> ‘∀v. v ∈ V ⇒ {e | e ∈ E ∧ v ∈ e} ≠ ∅’ by METIS_TAC [CARD_EQ_0]
+          >> fs [GSYM MEMBER_NOT_EMPTY]
+          >> pop_assum mp_tac
+          >> simp [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] >> rpt strip_tac
+          >> ‘x ∈ V’ by ASM_SET_TAC []
+          >> ‘f x ∈ E ∧ x ∈ f x’ by rw []
+          >> ‘y ∈ f x’ by PROVE_TAC []
+          >> ‘x ∈ A ∧ y ∈ A’ by ASM_SET_TAC []
+          >> qpat_x_assum ‘∀e. e ∈ E ⇒ _’ drule >> strip_tac >> gvs [] >> ASM_SET_TAC []
+         )
+      >> pop_assum (ORW o wrap o SYM) >> simp [Abbr ‘E1’] >> ORW [MULT_SYM]
+      >> irule CARD_BIGUNION_SAME_SIZED_SETS >> reverse CONJ_TAC
+      >- (reverse CONJ_TAC
+          >- (irule IMAGE_FINITE >> art []
+             )
+          >> simp [Abbr ‘f’] >> NTAC 2 strip_tac >> STRONG_CONJ_TAC
+          >- (‘e ⊆ E’ by ASM_SET_TAC [] >> PROVE_TAC [SUBSET_FINITE]
+             )
+          >> ‘v ∈ V’ by gvs [SUBSET_DEF] >> first_x_assum drule
+          >> gvs [Abbr ‘deg’, degree_def]
+         )
+      >> rw [Abbr ‘f’] >> rw [DISJOINT_ALT]
+      >> ASM_SET_TAC []
+     )
+  >> pop_assum (ORW o wrap o SYM) >> simp [fsgsize_def]
+  >> ‘E1 = E’ suffices_by simp []
+  >> simp [Abbr ‘E1’, Abbr ‘f’, PULL_EXISTS, Once EXTENSION] >> ASM_SET_TAC []
+QED
+
+
+Theorem bipartite_k_regular_1_factor:
+  ∀G k. bipartite G ∧ 1 ≤ k ∧ regular k G ⇒ ∃G'. factor 1 G' G
+Proof
+  rpt strip_tac >> gvs [bipartite_gen_bipartite]
+  >> drule_all_then assume_tac regular_bipartition_CARD_EQ
+  >> Suff ‘∃M. matching G M ∧ matched_set G M A’
+  >- (rpt strip_tac >> ‘vertex_cover G A’ by (drule vertex_cover_bipartition >> rw [])
+      >> ‘A ⊆ A’ by simp [SUBSET_DEF] >> drule_all matched_set_CARD_LE_matching_bipartite
+      >> drule_all vertex_cover_gen_matching_card >> rw [] >> drule_all $ iffRL EQ_LESS_EQ
+      >> NTAC 2 (pop_assum K_TAC) >> rw [] >> ‘CARD M = CARD A’ by gvs []
+      >> drule_all_then strip_assume_tac perfect_matching_cond
+      >> irule perfect_matching_as_1factor >> PROVE_TAC []
+     )
+  >> drule marriage_thm >> Rewr'
+  >> drule gen_bipartite_FINITE >> gvs [regular_def, gen_bipartite_alt] >> rpt strip_tac
+  >> ‘∀v. v ∈ S' ⇒ degree G v = k’ by ASM_SET_TAC []
+  >> ‘FINITE S'’ by PROVE_TAC [SUBSET_FINITE] >> drule_all_then assume_tac SIGMA_CONSTANT
+  >> sg ‘N S' ⊆ V’
+  >- (‘S' ⊆ V’ by ASM_SET_TAC [] >> rw [neighbour_set_def]
+      >> ASM_SET_TAC []
+     )
+  >> ‘FINITE V’ by simp [FINITE_nodes] >> ‘FINITE (N S')’ by PROVE_TAC [SUBSET_FINITE]
+  >> ‘FINITE E’ by simp [FINITE_fsgedges]
+  (* >> ‘ ∀v. v ∈ (N S') ⇒ degree G v = k’ by ASM_SET_TAC [] *)
+  (* >>  drule_all_then assume_tac SIGMA_CONSTANT *)
+  >> ‘k * CARD S' ≤ k * CARD (N S')’ suffices_by simp []
+  >> qabbrev_tac ‘f =  λv. {e | e ∈ E ∧ v ∈ e}’
+  >> qabbrev_tac ‘E1 = BIGUNION (IMAGE f S')’
+  >> qabbrev_tac  ‘E2 = BIGUNION (IMAGE f (N S'))’
+  >> sg ‘CARD E1 = k * CARD S'’
+  >- (rw [Abbr ‘E1’] >> ORW [MULT_SYM]
+      >> sg ‘CARD S' = CARD (IMAGE f S')’
+      >- (ORW [EQ_SYM_EQ] >> irule INJ_CARD_IMAGE >> simp []
+          >> qexists_tac ‘IMAGE f S'’ >> rw [INJ_DEF, IN_IMAGE]
+          >- (qexists_tac ‘x’ >> rw []
+             )
+          >> gvs [Abbr ‘f’] >> pop_assum mp_tac >> rw [Once EXTENSION]
+          >> gvs [degree_def]
+          >> ‘k ≠ 0’ by rw []
+          >> ‘FINITE E’ by simp [FINITE_fsgedges]
+          >> sg ‘∀v. FINITE {e | e ∈ E ∧ v ∈ e}’
+          >- (strip_tac
+              >> ‘{e | e ∈ E ∧ v ∈ e} ⊆ E’ by SET_TAC []
+              >> PROVE_TAC [SUBSET_FINITE]
+             )
+          >> ‘∀v. v ∈ V ⇒ 0 < CARD {e | e ∈ E ∧ v ∈ e}’ by simp []
+          >> ‘∀v. v ∈ V ⇒ {e | e ∈ E ∧ v ∈ e} ≠ ∅’ by METIS_TAC [CARD_EQ_0]
+          >> fs [GSYM MEMBER_NOT_EMPTY]
+          >> pop_assum mp_tac >> simp [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] >> rpt strip_tac
+          >> ‘x ∈ V’ by ASM_SET_TAC []
+          >> ‘f x ∈ E ∧ x ∈ f x’ by rw []
+          >> ‘y ∈ f x’ by PROVE_TAC []
+          >> ‘x ∈ A ∧ y ∈ A’ by ASM_SET_TAC []
+          >> qpat_x_assum ‘∀e. e ∈ E ⇒ _’ drule >> strip_tac >> gvs [] >> ASM_SET_TAC []
+         )
+      >> POP_ORW
+      >> irule CARD_BIGUNION_SAME_SIZED_SETS >> reverse CONJ_TAC
+      >- (reverse CONJ_TAC
+          >- (irule IMAGE_FINITE >> art []
+             )
+          >> simp [Abbr ‘f’] >> NTAC 2 strip_tac >> STRONG_CONJ_TAC
+          >- (‘e ⊆ E’ by ASM_SET_TAC [] >> PROVE_TAC [SUBSET_FINITE]
+             )
+          >> first_x_assum drule >> simp [degree_def]
+         )
+      >> rw [Abbr ‘f’] >> rw [DISJOINT_ALT]
+      >> ASM_SET_TAC []
+     )
+  >> pop_assum (ORW o wrap o SYM)
+  >> sg ‘N S' ⊆ B’
+  >- (simp [neighbour_set, SUBSET_DEF] >> rpt strip_tac
+      >> ‘x' ∈ V ∧ x' ∈ A’ by ASM_SET_TAC [] \\
+      ‘gen_bipartite G A B’ by rw [gen_bipartite_alt]
+      >> drule_all neighbour_bipartite >> ASM_SET_TAC []
+     )
+  >> sg ‘CARD E2 = k * CARD (N S')’
+  >- (rw [Abbr ‘E2’] >> ORW [MULT_SYM]
+      >> sg ‘CARD (N S') = CARD (IMAGE f (N S'))’
+      >- (ORW [EQ_SYM_EQ] >> irule INJ_CARD_IMAGE >> simp []
+          >> qexists_tac ‘IMAGE f (N S')’ >> rw [INJ_DEF, IN_IMAGE]
+          >- (qexists_tac ‘x’ >> rw []
+             )
+          >> gs [Abbr ‘f’, degree_def] >> pop_assum mp_tac >> rw [Once EXTENSION]
+          >> ‘FINITE E’ by simp [FINITE_fsgedges]
+          >> sg ‘∀v. v ∈ V ⇒ ∃e. e ∈ E ∧ v ∈ e’
+          >- (‘∀v. v ∈ V ⇒ {e | e ∈ E ∧ v ∈ e} ≠ ∅’
+                suffices_by (disch_tac >> fs [GSYM MEMBER_NOT_EMPTY])
+              >> ‘∀v. v ∈ V ⇒ CARD {e | e ∈ E ∧ v ∈ e} ≠ 0’ by simp []
+              >> sg ‘∀v. FINITE {e | e ∈ E ∧ v ∈ e}’
+              >- (strip_tac
+                  >> ‘{e | e ∈ E ∧ v ∈ e} ⊆ E’ by SET_TAC [] >> PROVE_TAC [SUBSET_FINITE]
+                 )
+              >> METIS_TAC [CARD_EQ_0]
+             )
+          >> pop_assum mp_tac >> simp [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] >> rpt strip_tac
+          >> ‘x ∈ V’ by ASM_SET_TAC []
+          >> ‘f x ∈ E ∧ x ∈ f x’ by rw []
+          >> ‘y ∈ f x’ by PROVE_TAC []
+          >> ‘x ∈ B ∧ y ∈ B’ by ASM_SET_TAC []
+          >> qpat_x_assum ‘∀e. e ∈ E ⇒ _’ drule >> strip_tac >> gvs [] >> ASM_SET_TAC []
+         )
+      >> POP_ORW >> irule CARD_BIGUNION_SAME_SIZED_SETS >> reverse CONJ_TAC
+      >- (reverse CONJ_TAC
+          >- (irule IMAGE_FINITE >> art []
+             )
+          >> simp [Abbr ‘f’] >> NTAC 2 strip_tac >> STRONG_CONJ_TAC
+          >- (‘e ⊆ E’ by ASM_SET_TAC [] >> PROVE_TAC [SUBSET_FINITE]
+             )
+          >> ‘v ∈ V’ by gvs [SUBSET_DEF] >> first_x_assum drule >> simp [degree_def]
+         )
+      >> rw [Abbr ‘f’] >> rw [DISJOINT_ALT]
+      >> ASM_SET_TAC []
+      >> last_x_assum drule >> gvs []
+     )
+  >> pop_assum (ORW o wrap o SYM)
+  >> Suff ‘E1 ⊆ E2’
+  >- (disch_tac >> irule CARD_SUBSET >> rw [Abbr ‘E2’, Abbr ‘f’]
+      >> ‘FINITE E’ by simp [FINITE_fsgedges] >> irule SUBSET_FINITE
+      >> qexists_tac ‘E’ >> ASM_SET_TAC []
+     )
+  >> rw [Abbr ‘E1’, Abbr ‘E2’, Abbr ‘f’, BIGUNION_IMAGE] >> rw [SUBSET_DEF]
+  >> ‘S' ⊆ V’ by ASM_SET_TAC []
+  >> qexists_tac ‘paired_v x v’
+  >> simp [paired_v_IN, neighbour_set, BIGUNION_IMAGE]
+  >> ORW [CONJ_SYM] >> STRONG_CONJ_TAC
+  >- (irule paired_v_IN >> qexists_tac ‘G’ >> art [])
+  >> strip_tac >> qexists_tac ‘v’ >> art []
+  >> irule paired_v_in_neighbour >> qexists_tac ‘x’ >> art []
+QED
+
+Definition stable_matching_def:
+  stable_matching G R M ⇔ matching G M ∧ preference G R ∧
+                          ∀v1 v2 v3. {v1; v2} ∈ E DIFF M ∧ {v1; v3} ∈ M ⇒
+                          (v2, v3) ∈ (R v1)
+End
+
+(* M better than M'; {v1; v2} ∈ M ∧ {v1; v3} ∈ M' implies v2 >= v3 *)
+Definition better_matching_def:
+  better_matching G A B R M' M ⇔ gen_bipartite G A B ∧ matching G M ∧ matching G M' ∧ M ≠ M' ∧
+                                 ∀v1 v2 v3. {v1; v2} ∈ M ∧ {v1; v3} ∈ M' ⇒ (v3, v2) ∈ (R v1)
+End
+
+
+Theorem fsg_ind = fsg_edge_induction |> CONV_RULE SWAP_FORALL_CONV;
+
+
+monadsyntax.enable_monadsyntax();
+List.app monadsyntax.enable_monad ["list", "option", ];
+Definition mapM_def:
+  mapM f [] = return [] ∧
+  mapM f (x::xs) = do
+    e <- f x;
+    es <- mapM f xs;
+    return (e::es);
+  od
+End
+
+Definition gale_shapley_def:
+  gale_shapley G A B R =
+  let acc = λm a b. a ∈ A ∧ b ∈ B ∧
+                    {a; b} ∈ (fsgedges G) DIFF m ∧
+                        ∀a'. a' ∈ A ∧ {a'; b} ∈ m ⇒ (a', a) ∈ (R b);
+      P = λes m.
+            {a | a ∈ A ∧ a ∉ BIGUNION m ∧ ∃b. (acc m a b ∧ {a; b} ∈ es)};
+      Amax = λes m a.
+               CHOICE (maximal_elements ({b | acc m a b ∧ {a; b} ∈ es}) (R a));
+      Q = λ(es :edge set, m).
+            es ⊆ E DIFF m ∧ P es m ≠ ∅;
+      h = λ(es :edge set, m :edge set).
+            let a = CHOICE (P es m);
+                b = Amax es m a
+            in
+              (es DELETE {a; b},
+               ({a; b} INSERT m) DIFF {e | e ∈ m ∧ b ∈ e}
+              );
+  in
+      WHILE Q h (E, ∅)
+End
+
+(* WIP *)
+Theorem gale_shapley_thm:
+  ∀G R. bipartite G ∧ preference G R ⇒ ∃M. stable_matching G R M
+Proof
+  rw [] >> Cases_on ‘E = ∅’
+  >- rw [stable_matching_def, matching_exists]
+  >> gvs [bipartite_alt, EXT_SKOLEM_THM] >> rename [‘_ = {Aend _; Bend _}’]
+  >> qabbrev_tac ‘acc = λm a b. a ∈ A ∧ b ∈ B ∧
+                                {a; b} ∈ (fsgedges G) DIFF m ∧
+                                    ∀a'. a' ∈ A ∧ {a'; b} ∈ m ⇒ (a', a) ∈ (R b)’
+  >> qabbrev_tac ‘P = λes m.
+                        {a | a ∈ A ∧ a ∉ BIGUNION m ∧ ∃b. (acc m a b ∧ {a; b} ∈ es)}’
+  >> qabbrev_tac ‘Amax = λes m a.
+                           CHOICE (maximal_elements ({b | acc m a b ∧ {a; b} ∈ es}) (R a))’
+  >> qabbrev_tac ‘Q = λ(es :edge set, m).
+                        es ⊆ E DIFF m ∧ P es m ≠ ∅’
+  >> qabbrev_tac ‘h = λ(es :edge set, m :edge set).
+                        let a = CHOICE (P es m);
+                            b = Amax es m a
+                        in
+                          (es DELETE {a; b},
+                           ({a; b} INSERT m) DIFF {e | e ∈ m ∧ b ∈ e}
+                          )
+                 ’
+  >> qabbrev_tac ‘Inv = λ(es :edge set, m :edge set).
+                          matching G m ∧
+                          ∀e. e ∈ m ⇒ Bend e ∈ maximal_elements {b | acc M (Aend e) b ∧ {Aend e; b} ∈ E} (R $ Aend e)
+                          ’
+  >> qabbrev_tac ‘r = measure (λ(es :edge set, m :edge set). CARD es)’
+  >> ‘WF r’ by simp [Abbr ‘r’]
+  >> dxrule WHILE_RULE >> disch_then (qspecl_then [‘Inv’, ‘Q’, ‘h’] mp_tac)
+  >> impl_tac
+  >- (CONJ_TAC
+      >- (simp [Abbr ‘Q’, Abbr ‘r’, pairTheory.FORALL_PROD]
+          >> qx_genl_tac [‘es’, ‘m’]
+          >> qabbrev_tac ‘a = CHOICE (P es m)’ >> rw [Abbr ‘P’, Abbr ‘h’]
+          >> ‘FINITE E’ by simp [FINITE_fsgedges] >> ‘es ⊆ E’ by ASM_SET_TAC []
+          >> ‘FINITE es’ by PROVE_TAC [SUBSET_FINITE]
+          >> rw [CARD_DELETE]
+          >- (‘CARD es ≠ 0’ suffices_by intLib.ARITH_TAC
+              >> drule CARD_EQ_0 >> METIS_TAC [MEMBER_NOT_EMPTY]
+             )
+          >> pop_assum mp_tac >> simp []
+          >> qabbrev_tac ‘b = Amax es m a’ >> fs [Abbr ‘Amax’]
+          >> qabbrev_tac ‘bs = (maximal_elements {b | acc m a b ∧ {a; b} ∈ es} (R a))’
+          >> mp_tac (Q.SPEC ‘bs’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+          >> ‘bs ≠ ∅’ suffices_by ASM_SET_TAC [maximal_elements_def]
+          >> simp [GSYM MEMBER_NOT_EMPTY, Abbr ‘bs’]
+          >> irule finite_linear_order_has_local_maximal_lemma >> CONJ_TAC
+          >- (qabbrev_tac ‘as = {a' | a' ∈ A ∧ (∀s. a' ∉ s ∨ s ∉ m) ∧ ∃b. acc m a' b ∧ {a'; b} ∈ es}’
+              >> gvs []
+              >> mp_tac (Q.SPEC ‘as’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+              >> ASM_SET_TAC []
+             )
+          >> qexists_tac ‘neighbour G a’ >> gvs [preference_def]
+          >> sg ‘a ∈ V’
+          >- (qabbrev_tac ‘as = {a' | a' ∈ A ∧ (∀s. a' ∉ s ∨ s ∉ m) ∧ ∃b. acc m a' b ∧ {a'; b} ∈ es}’
+               >> gvs []
+               >> mp_tac (Q.SPEC ‘as’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+               >> ASM_SET_TAC []
+             )
+          >> rw [neighbour_FINITE] >> rw [SUBSET_DEF, neighbour_def_adj', adjacent_fsg]
+          >> PROVE_TAC [SUBSET_DEF]
+         )
+      >> simp [HOARE_SPEC_DEF, pairTheory.FORALL_PROD, Abbr ‘Inv’, Abbr ‘Q’, Abbr ‘h’]
+      >> qx_genl_tac [‘es’, ‘m’] >> rw []
+      >- (‘{CHOICE (P es m); Amax es m (CHOICE (P es m))} ∉ m’ suffices_by gvs []
+          >> qpat_x_assum ‘_ ∈ m’ K_TAC
+          >> Suff ‘CHOICE (P es m) ∉ BIGUNION m’
+          >- (simp [] >> disch_then (Q.SPEC_THEN ‘{CHOICE (P es m); Amax es m (CHOICE (P es m))}’
+                                      mp_tac) >> simp []
+             )
+          >> mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+          >> simp [Abbr ‘P’]
+         )
+      >> ORW [matching_insert] >> CONJ_TAC
+      >- (irule matching_SUBSET >> qexists_tac ‘m’ >> simp []
+         )
+      (* TODO: works up to this line *)
+      >> qabbrev_tac ‘a = CHOICE (P es m)’ >> reverse CONJ_TAC
+      >- (simp [Abbr ‘Amax’]
+          >> qabbrev_tac ‘bs = (maximal_elements {b | acc m a b ∧ {a; b} ∈ es} (R a))’
+          >> mp_tac (Q.SPEC ‘bs’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+          >> Suff ‘bs ≠ ∅’
+          >- (rw [] >> pop_assum mp_tac >> ASM_SET_TAC [maximal_elements_def]
+             )
+          >> simp [GSYM MEMBER_NOT_EMPTY, Abbr ‘bs’]
+          >> irule finite_linear_order_has_local_maximal_lemma >> reverse CONJ_TAC
+          >- (qexists_tac ‘neighbour G a’ >> gvs [preference_def]
+              >> sg ‘a ∈ V’
+              >- (mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+                  >> simp [Abbr ‘P’] >> ASM_SET_TAC []
+                 )
+              >> rw [neighbour_FINITE] >> rw [SUBSET_DEF, neighbour_def_adj', adjacent_fsg]
+              >> PROVE_TAC [SUBSET_DEF]
+             )
+          >> ORW [GSYM MEMBER_NOT_EMPTY] >> rw [IN_APP, GSPEC_ETA]
+          >> mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+          >> simp [Abbr ‘P’] >> ASM_SET_TAC []
+         )
+      >> DISJ1_TAC >> ORW [DISJOINT_ALT] >> NTAC 2 strip_tac
+      >> assume_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF) \\
+         qabbrev_tac ‘bs = (maximal_elements {b | acc m a b ∧ {a; b} ∈ es} (R a))’ \\
+         assume_tac (Q.SPEC ‘bs :vertex set’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+      >> gvs []
+      >- (qpat_x_assum ‘a ∈ _’ mp_tac >> simp [Abbr ‘P’] >> METIS_TAC []
+         )
+      >> simp [Abbr ‘Amax’]
+      >> pop_assum mp_tac >> reverse impl_tac
+      >- (simp [Abbr ‘bs’] >> ASM_SET_TAC []
+         )
+      >> simp [Abbr ‘bs’]
+      >> rw [GSYM MEMBER_NOT_EMPTY] >> irule finite_linear_order_has_local_maximal_lemma
+      >> reverse CONJ_TAC
+      >- (qexists_tac ‘neighbour G a’ >> gvs [preference_def]
+          >> sg ‘a ∈ V’
+          >- (mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+              >> simp [Abbr ‘P’] >> ASM_SET_TAC []
+             )
+          >> rw [neighbour_FINITE] >> rw [SUBSET_DEF, neighbour_def_adj', adjacent_fsg]
+          >> PROVE_TAC [SUBSET_DEF]
+         )
+      >> ORW [GSYM MEMBER_NOT_EMPTY] >> rw [IN_APP, GSPEC_ETA]
+      >> mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+      >> simp [Abbr ‘P’] >> ASM_SET_TAC []
+     )
+  >> rw [HOARE_SPEC_DEF]
+  >> qabbrev_tac ‘es = FST $ WHILE Q h (E, ∅)’
+  >> qabbrev_tac ‘M = SND $ WHILE Q h (E, ∅)’
+  >> ‘WHILE Q h (E, ∅ :edge set) = (es, M)’ by METIS_TAC [PAIR]
+  >> qexists_tac ‘M’ >> rw [stable_matching_def]
+  >- (‘Inv (E, ∅)’ by simp [Abbr ‘Inv’, EMPTY_is_matching]
+      >> first_x_assum drule
+      >> rw [Abbr ‘Inv’]
+     )
+  >> ‘Inv (E, ∅)’ by simp [Abbr ‘Inv’, EMPTY_is_matching] >> first_x_assum $ drule_then strip_assume_tac
+  >> gvs []
+  >> pop_assum mp_tac >> simp [Abbr ‘Q’] >> rw []
+  >- (cheat                     (* TODO: change Inv to include es ⊆ E \ m *)
+     )
+  >> qabbrev_tac ‘happy = λm a. a ∉ BIGUNION m ∨
+                                ∃b. b ∈ maximal_elements {b | acc M v1 b ∧ {v1; b} ∈ E} (R v1) ∧ {a; b} ∈ m’
+  >> sg ‘happy M v1’
+  >- (simp [Abbr ‘happy’, Abbr ‘Amax’] >> DISJ2_TAC >> qexists_tac ‘v3’ >> simp []
+      >> fs [Abbr ‘P’]
+     )
+QED
+
+
+
+Theorem gale_shapley_thm_obsolete:
+  ∀G R. bipartite G ∧ preference G R ⇒ ∃M. stable_matching G R M
+Proof
+  rw [bipartite_alt]
+  >> qabbrev_tac ‘acc = λM a b. a ∈ A ∧ b ∈ B ∧
+                                {a; b} ∈ (fsgedges G) DIFF M ∧
+                                    ∀a'. a' ∈ A ∧ {a'; b} ∈ M ⇒ (a', a) ∈ (R b)’
+  >> qabbrev_tac ‘P = \M. {a | a ∈ A ∧ a ∉ BIGUNION M ∧
+                               ∃b. acc M a b}’
+  >> qabbrev_tac ‘Amax = \a. CHOICE (maximal_elements (neighbour g1 a) (R a))’
+  >> qabbrev_tac ‘h = λ(G0, M0).
+                        let a = CHOICE (P M0);
+                            b = Amax a
+                        in
+                          (fsgAddEdges {{a; b}} G0,
+                           ({a; b} INSERT M) DIFF {{a'; b} | a' | {a'; b} ∈ M}
+                          )
+                 ’
+  >> qabbrev_tac ‘Inv = λ(g, m). g ⊆ G ∧ stable_matching g (λv. rrestrict (R v) (neighbour g v)) m’
+  >> qabbrev_tac ‘Gd = λ(g :fsgraph, m). matching g m ∧ g ⊆ G ∧ P m ≠ ∅’
+  >> qabbrev_tac ‘r = measure (λ(g, m :edge set). CARD E - CARD (fsgedges g))’
+  >> sg ‘WF r’
+  >- (simp [Abbr ‘r’])
+  >> dxrule WHILE_RULE >> disch_then (qspecl_then [‘Inv’, ‘Gd’, ‘h’] mp_tac) >> cheat
+QED
+
+(* Gale-Shapley Algorithm *)
+Theorem gale_shapley_thm_obsolete2:
+  ∀G R. bipartite G ∧ preference G R ⇒ ∃M. stable_matching G R M
+Proof
+  strip_tac
+  >> CONV_TAC (UNBETA_CONV “G: fsgraph”)
+  >> match_mp_tac fsg_ind >> rw []
+  >- (qexists_tac ‘EMPTY’ >> rw [stable_matching_def, matching_def, preference_def]
+     )
+  >> qabbrev_tac ‘g1 = fsgAddEdges {e} g0’
+  >> sg ‘nodes g1 = V’
+  >- (rw [Abbr ‘g1’, nodes_fsgAddEdges])
+  >> sg ‘fsgedges g0 ⊆ fsgedges g1’
+  >- (drule fsgedges_fsgAddEdges_thm >> rw [Abbr ‘g1’])
+  >> ‘g0 ⊆ g1’ by METIS_TAC [subgraph_def, SUBSET_DEF]
+  >> qabbrev_tac ‘R' = λv. rrestrict (R v) (neighbour g0 v)’
+  >> qpat_x_assum ‘bipartite _’ mp_tac >> simp [bipartite_alt] >> rpt strip_tac
+  >> sg ‘gen_bipartite g0 A B’
+  >- (qpat_x_assum ‘∀R. _ ⇒ ∃M. stable_matching _ _ _’ K_TAC
+      >> simp [gen_bipartite_alt] >> ASM_SET_TAC []
+     )
+  >> ‘bipartite g0’ by PROVE_TAC [bipartite_gen_bipartite]
+  (* >> gvs [gen_bipartite_alt] *)
+  >> sg ‘preference g0 R'’
+  >- (rw [preference_def] >> simp [Abbr ‘R'’]
+      >> fs [preference_def] >> first_x_assum (drule_then assume_tac)
+      >> Suff ‘neighbour g1 v ∩ neighbour g0 v = neighbour g0 v’
+      >- (disch_tac
+          >> ‘linear_order (rrestrict (R v) (neighbour g0 v)) (neighbour g1 v ∩ neighbour g0 v)’ suffices_by simp []
+          >> irule linear_order_restrict >> art []
+         )
+      >> rw [neighbour_def] >> ASM_SET_TAC []
+     )
+  >> first_x_assum (drule_all_then strip_assume_tac)
+  >> qabbrev_tac ‘M0 = {e' | e' ∈ M ∧ DISJOINT e' e}’
+  >> sg ‘stable_matching g0 R' M0’
+  >- (rw [stable_matching_def]
+      >- (‘M0 ⊆ M’ by ASM_SET_TAC [] >> gvs [stable_matching_def]
+          >> PROVE_TAC [matching_SUBSET]
+         )
+      >> fs [stable_matching_def] >> fs [Abbr ‘M0’]
+      >> first_x_assum irule >> art []
+      >> CCONTR_TAC >> fs [matching_def]
+      >> ‘{v1; v3} ≠ {v1; v2}’ by ASM_SET_TAC []
+      >> qpat_x_assum ‘∀e1 e2. _’ drule_all >> rw [DISJOINT_ALT]
+     )
+  >> qabbrev_tac ‘acc = λM a b. a ∈ A ∧ b ∈ B ∧
+                                {a; b} ∈ (fsgedges g1) DIFF M ∧
+                                    ∀a'. a' ∈ A ∧ {a'; b} ∈ M ⇒ (a', a) ∈ (R b)’
+  >> qabbrev_tac ‘P = \M. {a | a ∈ A ∧ a ∉ BIGUNION M ∧
+                               ∃b. acc M a b}’
+  >> gvs [EXT_SKOLEM_THM] >> rename [‘_ = {Aend _; Bend _}’]
+  >> sg ‘∀M a. a ∈ P M ⇒ ∃b. b ∈ maximal_elements (neighbour g1 a) (R a)’
+  >- (rpt strip_tac >> irule finite_linear_order_has_maximal >> rpt strip_tac
+      >- (irule neighbour_FINITE >> gvs [Abbr ‘P’] >> ASM_SET_TAC []
+         )
+      >- (gvs [Abbr ‘P’, Abbr ‘acc’, neighbour_def_adj']
+      >> Suff ‘adjacent g1 a b’
+      >- (ASM_SET_TAC [])
+          >> rw [adjacent_fsg]
+         )
+      >> qpat_x_assum ‘preference g1 _’ mp_tac >> simp [preference_def]
+      >> ‘a ∈ V’ suffices_by simp []
+      >> fs [Abbr ‘P’] >> ASM_SET_TAC []
+  )
+  >> qabbrev_tac ‘Amax = \a. CHOICE (maximal_elements (neighbour g1 a) (R a))’
+  >> qabbrev_tac ‘h = \M. ((λa. ({a; Amax a} INSERT M) DIFF {e' | e' ∈ M ∧ Amax a ∈ e'}) (CHOICE (P M)))’
+  >> qabbrev_tac ‘Q = \M. P M = ∅’
+  >> mp_tac (Q.SPECL [‘Q’, ‘h’] (INST_TYPE [alpha |-> “:edge set”] ITERATION)) >> strip_tac
+  >> qexists_tac ‘f M0’
+  >> Cases_on ‘Q M0’
+  >- (‘f M0 = M0’ by METIS_TAC [] >> POP_ORW
+      >> qpat_x_assum ‘stable_matching _ _ M0’ mp_tac >> simp [stable_matching_def]
+      >> rpt strip_tac
+      >- (gvs [matching_def] >> ASM_SET_TAC []
+         )
+      >> qpat_x_assum ‘∀v1 v2 v3. _’ (mp_tac o Q.SPECL [‘v1’, ‘v2’, ‘v3’]) >> art []
+      >> Cases_on ‘{v1; v2} ∈ fsgedges g0’
+      >- (simp [] >> ‘R' v1 ⊆ R v1’ by METIS_TAC [rrestrict_SUBSET]
+          >> METIS_TAC [SUBSET_DEF]
+         )
+      >> simp []
+      >> sg ‘fsgedges g1 = {e} ∪ fsgedges g0’
+      >- (simp [Abbr ‘g1’] >> irule fsgedges_fsgAddEdges_thm
+         )
+      >> gvs [Abbr ‘M0’]
+     )
+  >> ‘f M0 = f (h M0)’ by METIS_TAC [] >> POP_ORW
+  >> qpat_x_assum ‘∀x. f x = _’ (assume_tac o GSYM) >> gvs [] (* prevent auto rewrites *)
+  >> cheat
 QED
 
 
 
 
-
-
+h
 
 
 val _ = export_theory();
