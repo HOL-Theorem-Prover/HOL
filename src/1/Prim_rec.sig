@@ -55,6 +55,7 @@ sig
    val prove_case_eq_thm           : {case_def : thm, nchotomy : thm} -> thm
    val prove_case_ho_elim_thm      : {case_def : thm, nchotomy : thm} -> thm
    val prove_case_ho_imp_thm       : {case_def : thm, nchotomy : thm} -> thm
+   val prove_case_const_thm        : {case_def : thm, nchotomy : thm} -> thm
 
    (* A utility function *)
    val EXISTS_EQUATION             : term -> thm -> thm

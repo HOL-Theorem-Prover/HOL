@@ -2039,6 +2039,29 @@ fun prove_case_ho_imp_thm ty_def = let
       |> REWRITE_RULE [DISJ_EQ_IMP, NOT_CLAUSES]
       |> GEN f
   end
+(* prove case_const
+   (ty_CASE x (\a1 ... an. y) ... (\n1 ... nn. y) = y)
+*)
+fun prove_case_const_thm {nchotomy, case_def} = let
+  val case_eqs = strip_conj (concl case_def)
+  val (_,eqn1) = strip_forall (hd (case_eqs))
+  val (term,_,y_typ) = dest_eq_ty eqn1
+  val (case_const,_) = strip_comb term
+  val y = mk_var("y",y_typ)
+  val ([x],cases) = strip_forall (concl nchotomy)
+  val x = mk_var("x",type_of x)
+  val y' = mk_var("y'",y_typ)
+  (*subst y to ensure freshness*)
+  fun mk_abs_y xs = list_mk_abs((map (subst [y |-> y']) xs),y)
+  val abs_y = strip_disj cases
+              |> map (mk_abs_y o #1 o strip_exists)
+  val goal = mk_eq (list_mk_comb(mk_comb(case_const,x), abs_y), y)
+in
+  (TAC_PROOF(([],goal),
+  STRUCT_CASES_TAC (ISPEC x nchotomy) THEN
+  PURE_REWRITE_TAC [case_def] THEN BETA_TAC THEN
+  REFL_TAC))
+end
 
 (* ----------------------------------------------------------------------
     gen_indthm : given definition theorem that is output of
