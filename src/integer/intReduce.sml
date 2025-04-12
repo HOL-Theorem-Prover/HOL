@@ -1,19 +1,20 @@
 structure intReduce :> intReduce =
 struct
 
-open HolKernel boolLib bossLib;
+open HolKernel boolLib bossLib
 
-open integerTheory intSyntax simpLib Arithconv numeralTheory tautLib;
+open integerTheory intSyntax simpLib Arithconv numeralTheory tautLib
+     intReduceTheory
 
 structure Parse = struct
   open Parse arithmeticTheory
   val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="integer"}
 end
 
-open Parse;
+open Parse
 
-val ERR = mk_HOL_ERR "intReduce";
-fun failwith function = raise (ERR function "");
+val ERR = mk_HOL_ERR "intReduce"
+fun failwith function = raise (ERR function "")
 
 (*---------------------------------------------------------------------------*)
 (* Integer-specific compset                                                  *)
@@ -45,7 +46,7 @@ val REDUCE_CONV = computeLib.CBV_CONV (int_compset())
 (* Add integer reductions to the global compset                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ = let open computeLib in add_funs elim_thms end;
+val _ = computeLib.add_funs elim_thms
 
 (*---------------------------------------------------------------------------*)
 (* Ground reduction conversions for integers (suitable for inclusion in      *)
@@ -80,7 +81,7 @@ in
 val INT_REDUCE_ss = SSFRAG
   {name=SOME"INT_REDUCE",
    convs = map mk_conv (exp_pattern::(abs_patterns @ basic_op_patterns)),
-   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
+   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
 
 fun RED_CONV t =
  let val (f, args) = strip_comb t
@@ -91,13 +92,13 @@ fun RED_CONV t =
    REDUCE_CONV t
  end
 
-end (* local *) ;
+end (* local *)
 
 (*---------------------------------------------------------------------------*)
 (* Add reducer to srw_ss                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val _ = BasicProvers.logged_addfrags {thyname="integer"} [INT_REDUCE_ss];
+val _ = BasicProvers.logged_addfrags {thyname="integer"} [INT_REDUCE_ss]
 
 (* Accumulate literal additions in integer expressions
     (doesn't do coefficient gathering - just adds up literals, and
@@ -109,23 +110,20 @@ in
   case summands of
     [] => raise Fail "strip_plus returned [] in collect_additive_consts"
   | [_] => NO_CONV tm
-  | _ => let
-    in
-      case partition is_int_literal summands of
-        ([], _) => NO_CONV tm
-      | ([_], _) => NO_CONV tm
-      | (_, []) => REDUCE_CONV tm
-      | (numerals, non_numerals) => let
-          val reorder_t = mk_eq(tm,
-                           mk_plus(list_mk_plus non_numerals,
-                                   list_mk_plus numerals))
-          val reorder_thm =
-            EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
-        in
-          (K reorder_thm THENC REDUCE_CONV THENC
-           TRY_CONV (REWR_CONV INT_ADD_RID)) tm
-        end
-    end
+  | _ =>
+    case partition is_int_literal summands of
+      ([], _) => NO_CONV tm
+    | ([_], _) => NO_CONV tm
+    | (_, []) => REDUCE_CONV tm
+    | (numerals, non_numerals) => let
+        val reorder_t = mk_eq(tm,
+          mk_plus(list_mk_plus non_numerals, list_mk_plus numerals))
+        val reorder_thm =
+          EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
+      in
+        (K reorder_thm THENC REDUCE_CONV THENC
+          TRY_CONV (REWR_CONV INT_ADD_RID)) tm
+      end
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -135,92 +133,43 @@ end
 (* ------------------------------------------------------------------------- *)
 
 local
-  val tth =
-    TAUT `(F /\ F <=> F) /\ (F /\ T <=> F) /\
-          (T /\ F <=> F) /\ (T /\ T <=> T)`;
-  val nth = TAUT `(~T <=> F) /\ (~F <=> T)`;
-  val NUM_EQ_CONV = Arithconv.NEQ_CONV;
+  val NUM_EQ_CONV = Arithconv.NEQ_CONV
   val NUM2_EQ_CONV = BINOP_CONV NUM_EQ_CONV THENC
-                     GEN_REWRITE_CONV I empty_rewrites[tth];
+                     GEN_REWRITE_CONV I empty_rewrites[INT_LE_CONV_tth]
   val NUM2_NE_CONV = RAND_CONV NUM2_EQ_CONV THENC
-                     GEN_REWRITE_CONV I empty_rewrites[nth];
-  val NUM_LE_CONV = Arithconv.LE_CONV;
-  val INT_LE_NEG2 = INT_LE_NEG;
-  val [pth_le1, pth_le2a, pth_le2b, pth_le3] = (CONJUNCTS o prove)
-   (“(-(&m) <= (&n :int) <=> T) /\
-     (&m <= (&n :int) <=> m <= n) /\
-     (-(&m) <= -(&n):int <=> n <= m) /\
-     (&m <= -(&n):int <=> (m = 0) /\ (n = 0))”,
-    REWRITE_TAC[INT_LE_NEG2] THEN
-    REWRITE_TAC[INT_LE_LNEG, INT_LE_RNEG] THEN
-    REWRITE_TAC[INT_OF_NUM_ADD, INT_OF_NUM_LE, LE_0] THEN
-    REWRITE_TAC[LE, ADD_EQ_0]);
+                     GEN_REWRITE_CONV I empty_rewrites[INT_LE_CONV_nth]
+  val NUM_LE_CONV = Arithconv.LE_CONV
+  val [pth_le1, pth_le2a, pth_le2b, pth_le3] = CONJUNCTS INT_LE_CONV_pth
+  val [pth_lt1, pth_lt2a, pth_lt2b, pth_lt3] = CONJUNCTS INT_LT_CONV_pth
+  val NUM_LT_CONV = Arithconv.LT_CONV
+  val [pth_ge1, pth_ge2a, pth_ge2b, pth_ge3] = CONJUNCTS INT_GE_CONV_pth
+  val NUM_LE_CONV = Arithconv.LE_CONV
+  val [pth_gt1, pth_gt2a, pth_gt2b, pth_gt3] = CONJUNCTS INT_GT_CONV_pth
+  val NUM_LT_CONV = Arithconv.LT_CONV
+  val [pth_eq1a, pth_eq1b, pth_eq2a, pth_eq2b] = CONJUNCTS INT_EQ_CONV_pth
+in
   val INT_LE_CONV = FIRST_CONV
    [GEN_REWRITE_CONV I empty_rewrites[pth_le1],
     GEN_REWRITE_CONV I empty_rewrites[pth_le2a, pth_le2b] THENC NUM_LE_CONV,
-    GEN_REWRITE_CONV I empty_rewrites[pth_le3] THENC NUM2_EQ_CONV];
-  val [pth_lt1, pth_lt2a, pth_lt2b, pth_lt3] = (CONJUNCTS o prove)
-   (“(&m < -(&n):int <=> F) /\
-     (&m < (&n :int) <=> m < n) /\
-     (-(&m) < -(&n):int <=> n < m) /\
-     (-(&m) < (&n :int) <=> ~((m = 0) /\ (n = 0)))”,
-    REWRITE_TAC[pth_le1, pth_le2a, pth_le2b, pth_le3,
-                GSYM NOT_LE, INT_LT2] THEN
-    TAUT_TAC);
-  val NUM_LT_CONV = Arithconv.LT_CONV;
+    GEN_REWRITE_CONV I empty_rewrites[pth_le3] THENC NUM2_EQ_CONV]
   val INT_LT_CONV = FIRST_CONV
    [GEN_REWRITE_CONV I empty_rewrites[pth_lt1],
     GEN_REWRITE_CONV I empty_rewrites[pth_lt2a, pth_lt2b] THENC NUM_LT_CONV,
-    GEN_REWRITE_CONV I empty_rewrites[pth_lt3] THENC NUM2_NE_CONV];
-  val [pth_ge1, pth_ge2a, pth_ge2b, pth_ge3] = (CONJUNCTS o prove)
-   (“(&m >= -(&n):int <=> T) /\
-     (&m >= (&n :int) <=> n <= m) /\
-     (-(&m) >= -(&n):int <=> m <= n) /\
-     (-(&m) >= (&n :int) <=> (m = 0) /\ (n = 0))”,
-    REWRITE_TAC[pth_le1, pth_le2a, pth_le2b, pth_le3, INT_GE] THEN
-    TAUT_TAC);
-  val NUM_LE_CONV = Arithconv.LE_CONV;
+    GEN_REWRITE_CONV I empty_rewrites[pth_lt3] THENC NUM2_NE_CONV]
   val INT_GE_CONV = FIRST_CONV
    [GEN_REWRITE_CONV I empty_rewrites[pth_ge1],
     GEN_REWRITE_CONV I empty_rewrites[pth_ge2a, pth_ge2b] THENC NUM_LE_CONV,
-    GEN_REWRITE_CONV I empty_rewrites[pth_ge3] THENC NUM2_EQ_CONV];
-  val [pth_gt1, pth_gt2a, pth_gt2b, pth_gt3] = (CONJUNCTS o prove)
-   (“(-(&m) > (&n :int) <=> F) /\
-     (&m > (&n :int) <=> n < m) /\
-     (-(&m) > -(&n):int <=> m < n) /\
-     (&m > -(&n):int <=> ~((m = 0) /\ (n = 0)))”,
-    REWRITE_TAC[pth_lt1, pth_lt2a, pth_lt2b, pth_lt3, INT_GT] THEN
-    TAUT_TAC);
-  val NUM_LT_CONV = Arithconv.LT_CONV;
+    GEN_REWRITE_CONV I empty_rewrites[pth_ge3] THENC NUM2_EQ_CONV]
   val INT_GT_CONV = FIRST_CONV
    [GEN_REWRITE_CONV I empty_rewrites[pth_gt1],
     GEN_REWRITE_CONV I empty_rewrites[pth_gt2a, pth_gt2b] THENC NUM_LT_CONV,
-    GEN_REWRITE_CONV I empty_rewrites[pth_gt3] THENC NUM2_NE_CONV];
-  val [pth_eq1a, pth_eq1b, pth_eq2a, pth_eq2b] = (CONJUNCTS o prove)
-   (“((&m = &n :int) <=> (m = n)) /\
-     ((-(&m) = -(&n):int) <=> (m = n)) /\
-     ((-(&m) = &n :int) <=> (m = 0) /\ (n = 0)) /\
-     ((&m = -(&n):int) <=> (m = 0) /\ (n = 0))”,
-    REWRITE_TAC[GSYM INT_LE_ANTISYM, GSYM LE_ANTISYM] THEN
-    REWRITE_TAC[pth_le1, pth_le2a, pth_le2b, pth_le3, LE, LE_0] THEN
-    TAUT_TAC);
+    GEN_REWRITE_CONV I empty_rewrites[pth_gt3] THENC NUM2_NE_CONV]
   val INT_EQ_CONV = FIRST_CONV
    [GEN_REWRITE_CONV I empty_rewrites[pth_eq1a, pth_eq1b] THENC NUM_EQ_CONV,
     GEN_REWRITE_CONV I empty_rewrites[pth_eq2a, pth_eq2b] THENC NUM2_EQ_CONV]
-in
-val (INT_LE_CONV,INT_LT_CONV,INT_GE_CONV,INT_GT_CONV,INT_EQ_CONV) =
-    (INT_LE_CONV,INT_LT_CONV,
-     INT_GE_CONV,INT_GT_CONV,INT_EQ_CONV);
-end;
+end
 
-val INT_NEG_CONV =
-  let val pth = prove
-   (“(-(&0) = &0) /\
-     (-(-(&x)) = &x)”,
-    REWRITE_TAC[INT_NEG_NEG, INT_NEG_0])
-  in
-    GEN_REWRITE_CONV I empty_rewrites[pth]
-  end;
+val INT_NEG_CONV = GEN_REWRITE_CONV I empty_rewrites[INT_NEG_CONV_pth]
 
 (*-----------------------------------------------------------------------*)
 (* INT_ADD_CONV "[x] + [y]" = |- [x] + [y] = [x+y]                       *)
@@ -228,62 +177,46 @@ val INT_NEG_CONV =
 
 (* NOTE: The following conversions are ported from HOL-Light's "int.ml". *)
 local
-  open Arbnum;
-  val NUM_ADD_CONV = ADD_CONV;
+  open Arbnum
+  val NUM_ADD_CONV = ADD_CONV
   val neg_tm = negate_tm
   and amp_tm = int_injection
-  and add_tm = plus_tm;
-  val dest = dest_binop plus_tm (ERR "INT_ADD_CONV" "");
+  and add_tm = plus_tm
+  val dest = dest_binop plus_tm (ERR "INT_ADD_CONV" "")
   val dest_numeral = numSyntax.dest_numeral
-  and mk_numeral = numSyntax.mk_numeral;
+  and mk_numeral = numSyntax.mk_numeral
   val m_tm = mk_var("m",numSyntax.num)
-  and n_tm = mk_var("n",numSyntax.num);
-  val pth0 = prove
-   (“(-(&m) + &m = &0) /\
-     (&m + -(&m) = &0)”,
-    REWRITE_TAC[INT_ADD_LINV, INT_ADD_RINV]);
-  val [pth1, pth2, pth3, pth4, pth5, pth6] = (CONJUNCTS o prove)
-   (“(-(&m) + -(&n):int = -(&(m + n))) /\
-     (-(&m) + &(m + n):int = &n) /\
-     (-(&(m + n)) + (&m :int) = -(&n)) /\
-     (&(m + n) + -(&m):int = &n) /\
-     (&m + -(&(m + n)):int = -(&n)) /\
-     (&m + &n = &(m + n):int)”,
-    REWRITE_TAC[GSYM INT_OF_NUM_ADD, INT_NEG_ADD] THEN
-    REWRITE_TAC[INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_LID] THEN
-    REWRITE_TAC[INT_ADD_RINV, INT_ADD_LID] THEN
-    ONCE_REWRITE_TAC[INT_ADD_SYM] THEN
-    REWRITE_TAC[INT_ADD_ASSOC, INT_ADD_LINV, INT_ADD_LID] THEN
-    REWRITE_TAC[INT_ADD_RINV, INT_ADD_LID]);
+  and n_tm = mk_var("n",numSyntax.num)
+  val [pth1, pth2, pth3, pth4, pth5, pth6] = CONJUNCTS INT_ADD_CONV_pth1
 in
 val INT_ADD_CONV =
-  GEN_REWRITE_CONV I empty_rewrites[pth0] ORELSEC
+  GEN_REWRITE_CONV I empty_rewrites[INT_ADD_CONV_pth0] ORELSEC
   (fn tm =>
     let val (l,r) = dest tm in
         if rator l ~~ neg_tm then
           if rator r ~~ neg_tm then
-            let val th1 = INST [m_tm |-> rand(rand l), n_tm |-> rand(rand r)] pth1;
-                val tm1 = rand(rand(rand(concl th1)));
+            let val th1 = INST [m_tm |-> rand(rand l), n_tm |-> rand(rand r)] pth1
+                val tm1 = rand(rand(rand(concl th1)))
                 val th2 = AP_TERM neg_tm (AP_TERM amp_tm (NUM_ADD_CONV tm1))
             in
               TRANS th1 th2
             end
           else (* l: neg, r: pos *)
-            let val m = rand(rand l) and n = rand r;
+            let val m = rand(rand l) and n = rand r
                 val m' = dest_numeral m and n' = dest_numeral n in
             if m' <= n' then
-              let val p = mk_numeral (n' - m');
-                  val th1 = INST [m_tm |-> m, n_tm |-> p] pth2;
-                  val th2 = NUM_ADD_CONV (rand(rand(lhand(concl th1))));
+              let val p = mk_numeral (n' - m')
+                  val th1 = INST [m_tm |-> m, n_tm |-> p] pth2
+                  val th2 = NUM_ADD_CONV (rand(rand(lhand(concl th1))))
                   val th3 = AP_TERM (rator tm) (AP_TERM amp_tm (SYM th2))
               in
                 TRANS th3 th1
               end
             else
-              let val p = mk_numeral (m' - n');
-                  val th1 = INST [m_tm |-> n, n_tm |-> p] pth3;
-                  val th2 = NUM_ADD_CONV (rand(rand(lhand(lhand(concl th1)))));
-                  val th3 = AP_TERM neg_tm (AP_TERM amp_tm (SYM th2));
+              let val p = mk_numeral (m' - n')
+                  val th1 = INST [m_tm |-> n, n_tm |-> p] pth3
+                  val th2 = NUM_ADD_CONV (rand(rand(lhand(lhand(concl th1)))))
+                  val th3 = AP_TERM neg_tm (AP_TERM amp_tm (SYM th2))
                   val th4 = AP_THM (AP_TERM add_tm th3) (rand tm)
               in
                 TRANS th4 th1
@@ -291,30 +224,30 @@ val INT_ADD_CONV =
             end
         else (* l: pos *)
           if rator r ~~ neg_tm then
-            let val m = rand l and n = rand(rand r);
+            let val m = rand l and n = rand(rand r)
                 val m' = dest_numeral m and n' = dest_numeral n in
             if n' <= m' then
-              let val p = mk_numeral (m' - n');
-                  val th1 = INST [m_tm |-> n, n_tm |-> p] pth4;
-                  val th2 = NUM_ADD_CONV (rand(lhand(lhand(concl th1))));
-                  val th3 = AP_TERM add_tm (AP_TERM amp_tm (SYM th2));
+              let val p = mk_numeral (m' - n')
+                  val th1 = INST [m_tm |-> n, n_tm |-> p] pth4
+                  val th2 = NUM_ADD_CONV (rand(lhand(lhand(concl th1))))
+                  val th3 = AP_TERM add_tm (AP_TERM amp_tm (SYM th2))
                   val th4 = AP_THM th3 (rand tm)
               in
                 TRANS th4 th1
               end
             else
-              let val p = mk_numeral (n' - m');
-                  val th1 = INST [m_tm |-> m, n_tm |-> p] pth5;
-                  val th2 = NUM_ADD_CONV (rand(rand(rand(lhand(concl th1)))));
-                  val th3 = AP_TERM neg_tm (AP_TERM amp_tm (SYM th2));
+              let val p = mk_numeral (n' - m')
+                  val th1 = INST [m_tm |-> m, n_tm |-> p] pth5
+                  val th2 = NUM_ADD_CONV (rand(rand(rand(lhand(concl th1)))))
+                  val th3 = AP_TERM neg_tm (AP_TERM amp_tm (SYM th2))
                   val th4 = AP_TERM (rator tm) th3
               in
                 TRANS th4 th1
               end
             end
           else
-            let val th1 = INST [m_tm |-> rand l, n_tm |-> rand r] pth6;
-                val tm1 = rand(rand(concl th1));
+            let val th1 = INST [m_tm |-> rand l, n_tm |-> rand r] pth6
+                val tm1 = rand(rand(concl th1))
                 val th2 = AP_TERM amp_tm (NUM_ADD_CONV tm1)
             in
               TRANS th1 th2
@@ -326,49 +259,30 @@ end (* local *)
 val INT_SUB_CONV =
   GEN_REWRITE_CONV I empty_rewrites[int_sub] THENC
   TRY_CONV(RAND_CONV INT_NEG_CONV) THENC
-  INT_ADD_CONV;
+  INT_ADD_CONV
 
 (*-----------------------------------------------------------------------*)
 (* INT_MUL_CONV "[x] * [y]" = |- [x] * [y] = [x * y]                     *)
 (*-----------------------------------------------------------------------*)
 
 local
-  val pth0 = prove
-     (“(&0 * &x = &0 :int) /\
-       (&0 * -(&x) = &0 :int) /\
-       (&x * &0 = &0 :int) /\
-       (-(&x) * &0 = &0 :int)”,
-      REWRITE_TAC[INT_MUL_LZERO, INT_MUL_RZERO]);
-  val (pth1,pth2) = (CONJ_PAIR o prove)
-     (“((&m * &n = &(m * n) :int) /\
-        (-(&m) * -(&n) = &(m * n) :int)) /\
-       ((-(&m) * &n = -(&(m * n)) :int) /\
-        (&m * -(&n) = -(&(m * n)) :int))”,
-      REWRITE_TAC[INT_MUL_LNEG, INT_MUL_RNEG, INT_NEG_NEG] THEN
-      REWRITE_TAC[INT_OF_NUM_MUL]);
-  val NUM_MULT_CONV = MUL_CONV;
+  val (pth1,pth2) = CONJ_PAIR INT_MUL_CONV_pth1
+  val NUM_MULT_CONV = MUL_CONV
 in
-val INT_MUL_CONV =
-    FIRST_CONV
-     [GEN_REWRITE_CONV I empty_rewrites[pth0],
-      GEN_REWRITE_CONV I empty_rewrites[pth1] THENC RAND_CONV NUM_MULT_CONV,
-      GEN_REWRITE_CONV I empty_rewrites[pth2] THENC
-      RAND_CONV(RAND_CONV NUM_MULT_CONV)];
-end;
+  val INT_MUL_CONV = FIRST_CONV [
+    GEN_REWRITE_CONV I empty_rewrites[INT_MUL_CONV_pth0],
+    GEN_REWRITE_CONV I empty_rewrites[pth1] THENC RAND_CONV NUM_MULT_CONV,
+    GEN_REWRITE_CONV I empty_rewrites[pth2] THENC
+      RAND_CONV(RAND_CONV NUM_MULT_CONV)]
+end
 
 (*-----------------------------------------------------------------------*)
 (* INT_POW_CONV "[x] EXP [y]" = |- [x] EXP [y] = [x ** y]                *)
 (*-----------------------------------------------------------------------*)
 
 local
-  val (pth1,pth2) = (CONJ_PAIR o prove)
-     (“(&x ** n = &(x ** n) :int) /\
-       ((-(&x):int) ** n = if EVEN n then &(x ** n) else -(&(x ** n)))”,
-    REWRITE_TAC[INT_OF_NUM_POW, INT_POW_NEG]);
-  val tth = prove
-   (“((if T then (x:int) else y) = x) /\ ((if F then (x:int) else y) = y)”,
-    REWRITE_TAC[]);
-  val neg_tm = negate_tm;
+  val (pth1,pth2) = CONJ_PAIR INT_POW_CONV_pth
+  val neg_tm = negate_tm
   val NUM_EXP_CONV = EXP_CONV
   and NUM_EVEN_CONV = EVEN_CONV
 in
@@ -376,9 +290,9 @@ val INT_POW_CONV =
   (GEN_REWRITE_CONV I empty_rewrites[pth1] THENC RAND_CONV NUM_EXP_CONV) ORELSEC
   (GEN_REWRITE_CONV I empty_rewrites[pth2] THENC
    RATOR_CONV(RATOR_CONV(RAND_CONV NUM_EVEN_CONV)) THENC
-   GEN_REWRITE_CONV I empty_rewrites[tth] THENC
+   GEN_REWRITE_CONV I empty_rewrites[INT_POW_CONV_tth] THENC
    (fn tm => if rator tm ~~ neg_tm then RAND_CONV(RAND_CONV NUM_EXP_CONV) tm
               else RAND_CONV NUM_EXP_CONV tm))
-end;
+end
 
-end (* struct *)
+end; (* struct *)

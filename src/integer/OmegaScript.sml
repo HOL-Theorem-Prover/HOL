@@ -6,7 +6,7 @@
 open HolKernel boolLib integerTheory
 open simpLib boolSimps BasicProvers TotalDefn
 
-local open listTheory in end;
+local open listTheory int_arithTheory CooperMath in end;
 
 val _ = new_theory "Omega";
 val _ = ParseExtras.temp_loose_equality()
@@ -1077,5 +1077,156 @@ val calculational_nightmare = store_thm(
   Induct THEN SRW_TAC [][nightmare_def, calc_nightmare_def] THEN
   Cases_on `h` THEN SRW_TAC [][nightmare_def, calc_nightmare_def] THEN
   PROVE_TAC []);
+
+Theorem SYM_RDISTRIB = GSYM INT_RDISTRIB;
+Theorem SYM_ADD_ASSOC = GSYM INT_ADD_ASSOC;
+Theorem SYM_NEG_LMUL = GSYM INT_NEG_LMUL;
+Theorem SYM_NEG_RMUL = GSYM INT_NEG_RMUL;
+Theorem SYM_MULT_LEFT_1 = GSYM arithmeticTheory.MULT_LEFT_1;
+Theorem SYM_MUL_LID = GSYM INT_MUL_LID;
+Theorem SYM_EQ_NEG = GSYM INT_EQ_NEG;
+
+Theorem EX_REFL = EQT_INTRO (SPEC_ALL EXISTS_REFL);
+
+Theorem front_put_thm:
+  !x y. x = y + (x + ~y)
+Proof
+  REPEAT GEN_TAC THEN
+  CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM))) THEN
+  REWRITE_TAC [INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_LID]
+QED
+
+
+Theorem EVERY_SUMMAND_lt_elim = SPEC_ALL int_arithTheory.less_to_leq_samer;
+
+local
+val tac = REWRITE_TAC [GSYM int_le, INT_NOT_LE, EVERY_SUMMAND_lt_elim,
+  int_gt, INT_LE_RADD, int_ge, GSYM INT_LE_ANTISYM, DE_MORGAN_THM]
+in
+
+Theorem EVERY_SUMMAND_not_le:
+  ~(x <= y) = (y + 1i <= x)
+Proof
+  tac
+QED
+
+Theorem EVERY_SUMMAND_not_lt:
+  ~(x:int < y) <=> y <= x
+Proof
+  tac
+QED
+
+Theorem EVERY_SUMMAND_not_gt:
+  ~(x:int > y) <=> x <= y
+Proof
+  tac
+QED
+
+Theorem EVERY_SUMMAND_not_ge:
+  ~(x >= y) <=> x + 1i <= y
+Proof
+  tac
+QED
+
+Theorem EVERY_SUMMAND_not_eq:
+  ~(x = y:int) <=> y + 1 <= x \/ x + 1 <= y
+Proof
+  tac
+QED
+
+Theorem EVERY_SUMMAND_ge_elim:
+  x:int >= y <=> y <= x
+Proof
+  tac
+QED
+
+Theorem EVERY_SUMMAND_gt_elim:
+  x > y <=> y + 1i <= x
+Proof
+  tac
+QED
+
+Theorem EVERY_SUMMAND_eq_elim:
+  (x:int = y) <=> (x <= y /\ y <= x)
+Proof
+  tac
+QED
+
+end;
+
+Theorem COND_FA_THEN_THM:
+  (if p then !x:'a. P x else q) = !x. if p then P x else q
+Proof
+  COND_CASES_TAC THEN REWRITE_TAC []
+QED
+
+Theorem COND_FA_ELSE_THM:
+  (if p then q else !x:'a. P x) = !x. if p then q else P x
+Proof
+  COND_CASES_TAC THEN REWRITE_TAC []
+QED
+
+Theorem COND_EX_THEN_THM:
+  (if p then ?x:'a. P x else q) = ?x. if p then P x else q
+Proof
+  COND_CASES_TAC THEN REWRITE_TAC []
+QED
+
+Theorem COND_EX_ELSE_THM:
+  (if p then q else ?x:'a. P x) = ?x. if p then q else P x
+Proof
+  COND_CASES_TAC THEN REWRITE_TAC []
+QED
+
+Theorem not_beq:
+  ~(b1 = b2) <=> b1 /\ ~b2 \/ ~b1 /\ b2
+Proof
+  BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []
+QED
+
+Theorem beq:
+  (b1 = b2) <=> b1 /\ b2 \/ ~b1 /\ ~b2
+Proof
+  BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []
+QED
+
+Theorem FLIP_COND:
+  (if g then t:'a else e) = if ~g then e else t
+Proof
+  COND_CASES_TAC THEN REWRITE_TAC []
+QED
+
+Theorem refl_case:
+  !u P. (?i:int. (u <= i /\ i <= u) /\ P i) = P u
+Proof
+  REWRITE_TAC [INT_LE_ANTISYM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
+  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN Q.EXISTS_TAC `u` THEN
+  ASM_REWRITE_TAC []
+QED
+
+Theorem nonrefl_case:
+  !lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) <=>
+            lo <= hi /\ (P lo \/ ?i. (lo + 1 <= i /\ i <= hi) /\ P i)
+Proof
+  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
+    Q.ASM_CASES_TAC `i = lo` THENL [
+      POP_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC [],
+      REWRITE_TAC [LEFT_AND_OVER_OR] THEN
+      DISJ2_TAC THEN CONJ_TAC THENL [
+        IMP_RES_TAC INT_LE_TRANS,
+        ALL_TAC
+      ] THEN Q.EXISTS_TAC `i` THEN ASM_REWRITE_TAC [] THEN
+      REWRITE_TAC [GSYM int_arithTheory.less_to_leq_samer] THEN
+      RULE_ASSUM_TAC (REWRITE_RULE [INT_LE_LT]) THEN
+      POP_ASSUM_LIST (MAP_EVERY STRIP_ASSUME_TAC) THEN
+      POP_ASSUM SUBST_ALL_TAC THEN
+      FIRST_X_ASSUM (fn th => MP_TAC th THEN REWRITE_TAC [] THEN NO_TAC)
+    ],
+    Q.EXISTS_TAC `lo` THEN ASM_REWRITE_TAC [INT_LE_REFL],
+    Q.EXISTS_TAC `i` THEN ASM_REWRITE_TAC [] THEN
+    MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `lo + 1` THEN
+    ASM_REWRITE_TAC [INT_LE_ADDR] THEN CONV_TAC CooperMath.REDUCE_CONV
+  ]
+QED
 
 val _ = export_theory();

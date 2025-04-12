@@ -3,9 +3,9 @@ struct
 
 open HolKernel boolLib integerTheory
      arithmeticTheory intSyntax int_arithTheory intReduce
-     CooperSyntax CooperThms CooperMath;
+     CooperSyntax cooperTheory CooperMath
 
-val ERR = mk_HOL_ERR "CooperShell";
+val ERR = mk_HOL_ERR "CooperShell"
 val lhand = rand o rator
 
 (* Fix the grammar used by this file *)
@@ -14,13 +14,6 @@ structure Parse = struct
   val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="integer"}
 end
 open Parse
-
-val simple_disj_congruence =
-  tautLib.TAUT_PROVE (Term`!p q r. (~p ==> (q = r)) ==>
-                                   (p \/ q <=> p \/ r)`)
-val simple_conj_congruence =
-  tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
-                                   (p /\ q <=> p /\ r)`)
 
 fun congruential_simplification tm = let
   val (d1, d2) = dest_disj tm
@@ -81,25 +74,6 @@ end tm handle HOL_ERR _ =>
 
 val unwind_constraint = UNCONSTRAIN THENC resquan_remove
 
-val p6_step = prove(
-  ``(?x:int. K (lo < x /\ x <= hi) x /\ P x) <=>
-    lo < hi /\ (P hi \/ (?x:int. K (lo < x /\ x <= hi - 1) x /\ P x))``,
-  REWRITE_TAC [combinTheory.K_THM, LEFT_AND_OVER_OR] THEN
-  EQ_TAC THENL [
-    CONV_TAC
-      (LAND_CONV (ONCE_REWRITE_CONV [restricted_quantification_simp])) THEN
-    STRIP_TAC THENL [
-      FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC [],
-      ASM_REWRITE_TAC [] THEN DISJ2_TAC THEN
-      Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC []
-    ],
-    STRIP_TAC THENL [
-      Q.EXISTS_TAC `hi` THEN ASM_REWRITE_TAC [INT_LE_REFL],
-      ONCE_REWRITE_TAC [restricted_quantification_simp] THEN
-      Q.EXISTS_TAC `x` THEN  ASM_REWRITE_TAC []
-    ]
-  ]);
-
 fun p6_recurse tm = let
   (* tm of form ?x. K (lo < x /\ x <= hi) x /\ P x *)
 in
@@ -114,7 +88,6 @@ in
                  (RAND_CONV REDUCE_CONV))) THENC
                p6_recurse)))
 end tm
-
 
 
 fun phase6_CONV tm = let
@@ -141,7 +114,7 @@ fun vphase6_CONV tm = let
 in
   BINDER_CONV (move_conj_left (is_vconstraint v)) THENC
   phase6_CONV
-end tm;
+end tm
 
 fun elim_vars_round_r tm = let
   val (l,r) = dest_eq tm
@@ -269,7 +242,6 @@ fun reveal_a_disj tm =
   end
 
 
-
 open CooperCore
 local
   fun stop_if_exelim tm =
@@ -345,9 +317,6 @@ in
     NONE
 end
 
-fun myfind f [] = NONE
-  | myfind f (h::t) = case f h of NONE => myfind f t | x => x
-
 fun find_equality tm = let
   (* if there is an equality term as a conjunct underneath any number of
      disjuncts, then return one of the free variables of that equality *)
@@ -358,7 +327,7 @@ fun find_equality tm = let
       if not (null fvs) then SOME (hd fvs) else NONE
     end else NONE
 in
-  myfind check_conj (cpstrip_conj tm)
+  get_first check_conj (cpstrip_conj tm)
 end
 
 fun best_var vars tm = let
@@ -433,8 +402,6 @@ in
     end
 end
 
-
-
 fun pull_last_exists_to_top tm = let
   val (v, body) = dest_exists tm
 in
@@ -473,8 +440,8 @@ fun find_dup c l =
 val do_muls = ONCE_DEPTH_CONV LINEAR_MULT
 
 fun find_triangle_eliminable vset dcsts csts = let
-  (* pick an element of vset to minimise the blow-up after doing a
-     Cooper triangle elimination on the two dcsts The list csts is of
+  (* Pick an element of vset to minimise the blow-up after doing a
+     Cooper triangle elimination on the two dcsts. The list csts is of
      range constraints from the problem.
 
      Recall that
@@ -524,11 +491,6 @@ in
       if v1_score > v2_score then (v2,v1) else (v1,v2)
     end
 end
-
-
-
-
-
 
 fun finish_pure_goal1 tm = let
   (* tm is of the form
@@ -626,7 +588,6 @@ fun finish_pure_goal tm =
        EVERY_DISJ_CONV (obvious_improvements THENC finish_pure_goal)) tm
     else REDUCE_CONV tm
 
-
 (*
   val tm0 = ``?w. ((y = 2 * w) \/ (y = 2 * w + 1)) /\ x <= w /\ w < z``
   val tm = rhs (concl (phase1_CONV tm0))
@@ -660,8 +621,6 @@ val tm0 =
 
 val tm = rand (rhs (concl ((phase1_CONV THENC move_quants_up THENC
                             flip_foralls) tm0)))
-
-
 *)
 
 fun pure_goal0 tm = let
@@ -707,6 +666,7 @@ val finish_pure_goal = Profile.profile "finish_pure_goal" finish_pure_goal
 val pure_goal = pure_goal0 THENC EVERY_DISJ_CONV finish_pure_goal THENC
                 REDUCE_CONV
 
+(*
 val tm100 = term_of_int (Arbint.fromInt 100)
 fun counter_example tm = let
   open seqmonad
@@ -731,7 +691,7 @@ in
     NONE => NO_CONV tm
   | SOME ((th,()),_) => th
 end
-
+ *)
 
 fun decide_pure_presburger_term tm = let
   (* no free variables allowed *)
