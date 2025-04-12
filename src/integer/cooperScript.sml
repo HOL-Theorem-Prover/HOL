@@ -108,4 +108,25 @@ Theorem elim_eq_coeffs' =
                                (BINOP_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))))
   elim_eq_coeffs;
 
+Theorem p6_step:
+  (?x:int. K (lo < x /\ x <= hi) x /\ P x) <=>
+  lo < hi /\ (P hi \/ (?x:int. K (lo < x /\ x <= hi - 1) x /\ P x))
+Proof
+  REWRITE_TAC [combinTheory.K_THM, LEFT_AND_OVER_OR] THEN
+  EQ_TAC THENL [
+    CONV_TAC
+      (LAND_CONV (ONCE_REWRITE_CONV [restricted_quantification_simp])) THEN
+    STRIP_TAC THENL [
+      FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC [],
+      ASM_REWRITE_TAC [] THEN DISJ2_TAC THEN
+      Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC []
+    ],
+    STRIP_TAC THENL [
+      Q.EXISTS_TAC `hi` THEN ASM_REWRITE_TAC [INT_LE_REFL],
+      ONCE_REWRITE_TAC [restricted_quantification_simp] THEN
+      Q.EXISTS_TAC `x` THEN  ASM_REWRITE_TAC []
+    ]
+  ]
+QED
+
 val _ = export_theory ();
