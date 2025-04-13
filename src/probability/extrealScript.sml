@@ -7721,6 +7721,7 @@ Proof
         METIS_TAC [lt_antisym] ] ]
 QED
 
+(* NOTE: This is also Lemma 14.14 of [1. p.147] *)
 Theorem countable_jumping_point_of :
     !f. (!x y. x <= y ==> f x <= f y) ==> countable {x | x jumping_point_of f}
 Proof
@@ -8214,9 +8215,10 @@ val _ = export_theory();
 
 (* References:
 
-  [1] Schilling, R.L.: Measures, Integrals and Martingales. Cambridge University Press (2005).
-  [2] Fichtenholz, G.M.: Differential- und Integralrechnung (Differential and Integral
-      Calculus), Vol.2. (1967).
+  [1] Schilling, R.L.: Measures, Integrals and Martingales (2nd Edition).
+      Cambridge University Press (2017).
+  [2] Fichtenholz, G.M.: Differential- und Integralrechnung (Differential and
+      Integral Calculus), Vol.2. (1967).
   [3] Harrison, J.: Constructing the real numbers in HOL. TPHOLs. (1992).
   [4] Wikipedia: https://en.wikipedia.org/wiki/Limit_superior_and_limit_inferior
  *)
