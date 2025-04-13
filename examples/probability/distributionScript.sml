@@ -174,6 +174,9 @@ QED
 
    The corresponding probability space where X is constructed, is always the
    restricted ext_lborel, i.e. restrict_space ext_lborel [0,1].
+
+   This proof is based on idea from StackExchange [6] (answered by @Alexisz).
+   See also [7, p.61] for the only textbook mentioning a similar proof.
  *)
 Theorem existence_of_random_variable :
     !m p. prob_space (space Borel,subsets Borel,m) /\
@@ -1795,4 +1798,7 @@ val _ = html_theory "distribution";
   [4] Shiryaev, A.N.: Probability-1. Springer-Verlag New York (2016).
   [5] Schilling, R.L.: Measures, Integrals and Martingales (2nd Edition).
       Cambridge University Press (2017).
+  [6] math.stackexchange.com:
+      https://math.stackexchange.com/questions/1400327/existence-of-a-random-variable
+  [7] Resnick, S.: A Probability Path. Springer (2019).
  *)
