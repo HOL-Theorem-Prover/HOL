@@ -5,7 +5,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory
-     prim_recTheory jrhUtils hrealTheory mesonLib tautLib;
+     normalizerTheory prim_recTheory jrhUtils hrealTheory mesonLib tautLib;
 
 val _ = new_theory "realax";
 val _ = ParseExtras.temp_loose_equality()
@@ -788,7 +788,7 @@ val REAL_POW_2 = store_thm("REAL_POW_2",
   REWRITE_TAC[real_pow, REAL_MUL_RID]);
 
 (* This actually shows that real numbers and (+,*,0,1) form a semi-ring *)
-Theorem REAL_POLY_CLAUSES :
+Triviality REAL_POLY_CLAUSES :
    (!x y z. x + (y + z) = (x + y) + z) /\
    (!x y. x + y = y + x) /\
    (!x. 0r + x = x) /\
@@ -804,6 +804,7 @@ Proof
   REWRITE_TAC[REAL_MUL_ASSOC, REAL_ADD_ASSOC, REAL_ADD_LID, REAL_MUL_LID] THEN
   REWRITE_TAC[Once REAL_ADD_AC] THEN REWRITE_TAC[Once REAL_MUL_SYM]
 QED
+Theorem REAL_POLY_CLAUSES = MATCH_MP SEMIRING_PTHS REAL_POLY_CLAUSES;
 
 Theorem REAL_POLY_NEG_CLAUSES :
    (!x. ~x = ~(1r) * x) /\

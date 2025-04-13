@@ -12,7 +12,7 @@ open HolKernel boolLib bossLib Parse;
 
 open combinTheory pred_setTheory pred_setLib arithmeticTheory integerTheory
      numLib intLib mesonLib hurdUtils cardinalTheory oneTheory newtypeTools
-     tautLib metisLib liteLib Ho_Rewrite;
+     tautLib metisLib liteLib Ho_Rewrite normalizerTheory;
 
 open monoidTheory groupTheory ringTheory;
 
@@ -1856,7 +1856,7 @@ Proof
   SIMP_TAC std_ss[RING_ADD_AC, RING_MUL_AC, IN_UNIV]
 QED
 Theorem RING_POLY_UNIVERSAL_CONV_pth =
-  UNDISCH $ SPEC_ALL RING_POLY_UNIVERSAL_CONV_pth;
+  MATCH_MP SEMIRING_PTHS $ UNDISCH $ SPEC_ALL RING_POLY_UNIVERSAL_CONV_pth;
 
 Triviality RING_POLY_UNIVERSAL_CONV_sth:
   !r. ring_carrier r = univ(:'a) ==>
