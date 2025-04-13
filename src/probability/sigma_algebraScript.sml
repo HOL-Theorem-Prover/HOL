@@ -3972,6 +3972,15 @@ Proof
                                (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_INTER)) >> art []
 QED
 
+Theorem restrict_algebra_SUBSET :
+    !A sp. sigma_algebra A /\ sp IN subsets A ==>
+           subsets (restrict_algebra A sp) SUBSET subsets A
+Proof
+    rw [restrict_algebra_def]
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT_SUBSET
+ >> Q.EXISTS_TAC ‘space A’ >> rw [SPACE]
+QED
+
 Theorem sigma_algebra_alt_eq :
     !sp sts. sigma_algebra (sp,sts) <=>
              algebra (sp,sts) /\
