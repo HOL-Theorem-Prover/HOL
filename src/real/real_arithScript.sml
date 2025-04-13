@@ -14,20 +14,20 @@ val (REAL_POLY_NEG_CONV,REAL_POLY_ADD_CONV,REAL_POLY_SUB_CONV,
       REAL_POLY_MUL_CONV,REAL_POLY_POW_CONV,REAL_POLY_CONV) =
   SEMIRING_NORMALIZERS_CONV REAL_POLY_CLAUSES REAL_POLY_NEG_CLAUSES
     (is_realintconst,
-    REAL_INT_ADD_CONV,REAL_INT_MUL_CONV,REAL_INT_POW_CONV) term_lt
+     REAL_INT_ADD_CONV,REAL_INT_MUL_CONV,REAL_INT_POW_CONV) term_lt
 
 val rule = GEN_REAL_ARITH0
     (term_of_rat (* only real integers are involved here *),
-    REAL_INT_EQ_CONV,REAL_INT_GE_CONV,REAL_INT_GT_CONV,
-    REAL_POLY_CONV,REAL_POLY_NEG_CONV,REAL_POLY_ADD_CONV,REAL_POLY_MUL_CONV,
-    NO_CONV,NO_CONV,REAL_LINEAR_PROVER)
+     REAL_INT_EQ_CONV,REAL_INT_GE_CONV,REAL_INT_GT_CONV,
+     REAL_POLY_CONV,REAL_POLY_NEG_CONV,REAL_POLY_ADD_CONV,REAL_POLY_MUL_CONV,
+     NO_CONV,NO_CONV,REAL_LINEAR_PROVER)
 
 (* eliminates abs, max and min by definitions *)
-and deabs_conv = REWRITE_CONV[real_abs, real_max, real_min]
+and deabs_conv = REWRITE_CONV[real_abs, real_max, real_min];
 
 fun REAL_ARITH0 tm = let
   val th1 = QCONV deabs_conv tm
-  in EQ_MP (SYM th1) (rule(rand(concl th1))) end
+  in EQ_MP (SYM th1) (rule(rand(concl th1))) end;
 
 Theorem ABSMAXMIN_ELIM_CONV1_pth[unlisted] = REAL_ARITH0 “
   (~(&1) * abs(x) >= r <=> ~(&1) * x >= r /\ &1 * x >= r) /\
