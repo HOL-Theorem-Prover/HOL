@@ -5642,6 +5642,19 @@ Proof
     irule MEASURABLE_PROD_SIGMA' >> simp[o_DEF,ETA_AX]
 QED
 
+(* NOTE: This version is inspired by HVG's "measurable_Pair". *)
+Theorem MEASURABLE_PAIR :
+    !a b1 b2 X Y.
+       sigma_algebra a /\ sigma_algebra b1 /\ sigma_algebra b2 /\
+       X IN measurable a b1 /\ Y IN measurable a b2 ==>
+      (\x. (X x,Y x)) IN measurable a (b1 CROSS b2)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC IN_MEASURABLE_PROD_SIGMA
+ >> qexistsl_tac [‘X’, ‘Y’] >> simp []
+ >> fs [sigma_algebra_def, algebra_def]
+QED
+
 Theorem algebra_finite_subsets_imp_sigma_algebra :
     !a. algebra a /\ FINITE (subsets a) ==> sigma_algebra a
 Proof

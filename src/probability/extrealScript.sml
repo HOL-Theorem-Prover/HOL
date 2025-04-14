@@ -3355,7 +3355,8 @@ Proof
    FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] THEN
    ASM_CASES_TAC ``PosInf IN A`` THENL
    [Q.EXISTS_TAC `(\x. PosInf)` THEN CONJ_TAC THENL [ASM_SET_TAC [], ALL_TAC] THEN
-    SIMP_TAC std_ss [] THEN REWRITE_TAC [SET_RULE ``{PosInf | n IN univ(:num)} = {PosInf}``] THEN
+    SIMP_TAC std_ss [] THEN
+    REWRITE_TAC [SET_RULE ``{PosInf | n IN univ(:num)} = {PosInf}``] THEN
     SIMP_TAC std_ss [sup_sing], ALL_TAC] THEN
    Q_TAC SUFF_TAC `?x. x IN A /\ 0 <= x` THENL
    [STRIP_TAC,
@@ -3375,7 +3376,8 @@ Proof
      ASM_SIMP_TAC std_ss [extreal_add_def, lt_infty],
      ALL_TAC] THEN
     SIMP_TAC std_ss [sup_le] THEN FULL_SIMP_TAC std_ss [GSYM extreal_lt_def] THEN
-    Q.EXISTS_TAC `n` THEN GEN_TAC THEN GEN_REWR_TAC LAND_CONV [GSYM SPECIFICATION] THEN
+    Q.EXISTS_TAC `n` THEN
+    GEN_TAC THEN GEN_REWR_TAC LAND_CONV [GSYM SPECIFICATION] THEN
     DISCH_TAC THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `y`) THEN ASM_REWRITE_TAC [] THEN
     SIMP_TAC std_ss [le_lt]] THEN
    Q_TAC SUFF_TAC `?f. !z. f z IN A /\ x' + Normal (&z) <= f z` THENL
@@ -3395,7 +3397,8 @@ Proof
     ASM_SIMP_TAC std_ss [extreal_add_def, extreal_le_def] THEN
     MATCH_MP_TAC (REAL_ARITH ``0 <= b ==> a <= b + a:real``) THEN
     METIS_TAC [extreal_le_def, extreal_of_num_def]] THEN
-   SIMP_TAC std_ss [sup_eq] THEN CONJ_TAC THENL [SIMP_TAC std_ss [le_infty], ALL_TAC] THEN
+   SIMP_TAC std_ss [sup_eq] THEN
+   CONJ_TAC THENL [SIMP_TAC std_ss [le_infty], ALL_TAC] THEN
    RW_TAC std_ss [] THEN POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN
    RW_TAC std_ss [GSYM extreal_lt_def, GSYM lt_infty] THEN
    POP_ASSUM (MP_TAC o MATCH_MP SIMP_EXTREAL_ARCH) THEN STRIP_TAC THEN
@@ -3454,6 +3457,42 @@ Theorem sup_seq_countable_seq : (* was: SUPR_countable_SUPR *)
                     (sup {g n | n IN A} = sup {f n | n IN UNIV})
 Proof
   RW_TAC std_ss [] THEN ASSUME_TAC sup_countable_seq THEN
+  POP_ASSUM (MP_TAC o Q.SPEC `IMAGE g A`) THEN
+  SIMP_TAC std_ss [GSYM IMAGE_DEF] THEN DISCH_THEN (MATCH_MP_TAC) THEN
+  ASM_SET_TAC []
+QED
+
+Theorem inf_countable_seq :
+    !A. A <> {} ==>
+       ?f. IMAGE f univ(:num) SUBSET A /\
+           inf A = inf {f n | n IN univ(:num)}
+Proof
+    rw [extreal_inf_def]
+ >> qabbrev_tac ‘A' = IMAGE numeric_negate A’
+ >> MP_TAC (Q.SPEC ‘A'’ sup_countable_seq)
+ >> impl_tac >- rw [Once EXTENSION, Abbr ‘A'’]
+ >> STRIP_TAC
+ >> Q.EXISTS_TAC ‘\n. -f n’
+ >> CONJ_TAC
+ >- (Q.PAT_X_ASSUM ‘_ SUBSET A'’ MP_TAC \\
+     rw [SUBSET_DEF] \\
+     Know ‘f n IN A'’ >- (POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘n’ >> rw []) \\
+     rw [Abbr ‘A'’] >> fs [])
+ >> POP_ORW
+ >> AP_TERM_TAC
+ >> rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘-f n’ >> simp [] \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> Q.EXISTS_TAC ‘n’ >> simp []
+QED
+
+Theorem inf_seq_countable_inf :
+    !A g. A <> {} ==>
+          ?f:num->extreal. IMAGE f UNIV SUBSET IMAGE g A /\
+                    (inf {g n | n IN A} = inf {f n | n IN UNIV})
+Proof
+  RW_TAC std_ss [] THEN ASSUME_TAC inf_countable_seq THEN
   POP_ASSUM (MP_TAC o Q.SPEC `IMAGE g A`) THEN
   SIMP_TAC std_ss [GSYM IMAGE_DEF] THEN DISCH_THEN (MATCH_MP_TAC) THEN
   ASM_SET_TAC []
@@ -7134,7 +7173,8 @@ Proof
 QED
 
 Theorem EXTREAL_PROD_IMAGE_COUNT_SUC:
-    !f n. EXTREAL_PROD_IMAGE f (count (SUC n)) = EXTREAL_PROD_IMAGE f (count n) * f n: extreal
+    !f n. EXTREAL_PROD_IMAGE f (count (SUC n)) =
+          EXTREAL_PROD_IMAGE f (count n) * f n: extreal
 Proof
     rw[] >> qspecl_then [‘f’,‘n’,‘count n’] assume_tac EXTREAL_PROD_IMAGE_PROPERTY >>
     rfs[] >> simp[mul_comm] >> pop_assum $ SUBST1_TAC o SYM >>
@@ -7181,7 +7221,8 @@ QED
 Theorem pow_even_le:
     !n. EVEN n ==> !x. 0 <= x pow n
 Proof
-    rw[] >> Cases_on ‘0 <= x’ >- simp[pow_pos_le] >> fs[GSYM extreal_lt_def] >> simp[le_lt,pow_pos_even]
+    rw[] >> Cases_on ‘0 <= x’ >- simp[pow_pos_le]
+ >> fs[GSYM extreal_lt_def] >> simp[le_lt,pow_pos_even]
 QED
 
 Theorem pow_ainv_odd:
@@ -7189,7 +7230,8 @@ Theorem pow_ainv_odd:
 Proof
     rw[] >> qspecl_then [‘n’,‘-1’,‘x’] mp_tac pow_mul >> simp[GSYM neg_minus1] >>
     ‘-1 pow n = -1’ suffices_by simp[GSYM neg_minus1] >> completeInduct_on ‘n’ >>
-    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,ODD] >> rename [‘ODD n’]) >> simp[GSYM neg_minus1]
+    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,ODD] >> rename [‘ODD n’])
+ >> simp[GSYM neg_minus1]
 QED
 
 Theorem pow_ainv_even:
@@ -7197,7 +7239,8 @@ Theorem pow_ainv_even:
 Proof
     rw[] >> qspecl_then [‘n’,‘-1’,‘x’] mp_tac pow_mul >> simp[GSYM neg_minus1] >>
     ‘-1 pow n = 1’ suffices_by simp[] >> completeInduct_on ‘n’ >>
-    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,EVEN] >> rename [‘EVEN n’]) >> simp[GSYM neg_minus1]
+    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,EVEN] >> rename [‘EVEN n’])
+ >> simp[GSYM neg_minus1]
 QED
 
 Theorem sub_le_sub_imp:
