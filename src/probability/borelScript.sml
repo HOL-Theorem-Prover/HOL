@@ -7543,9 +7543,7 @@ Proof
  >> rw [SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_I, SPACE_BOREL]
 QED
 
-(* NOTE: ‘Borel’ here can be generalized to any sigma_algebra
-
-   cf. stochastic_processTheory.random_variable_sigma_of_dimension for a
+(* cf. stochastic_processTheory.random_variable_sigma_of_dimension for a
    generalization of this theorem to arbitrary finite dimensions.
  *)
 Theorem IN_MEASURABLE_BOREL_2D_VECTOR :
@@ -7554,45 +7552,8 @@ Theorem IN_MEASURABLE_BOREL_2D_VECTOR :
             (\x. (X x,Y x)) IN measurable a (Borel CROSS Borel)
 Proof
     rpt STRIP_TAC
- >> Q.ABBREV_TAC ‘g = \x. (X x,Y x)’
- >> simp [IN_MEASURABLE, IN_FUNSET, SPACE_PROD_SIGMA, SPACE_BOREL]
- >> ‘sigma_algebra (Borel CROSS Borel)’ by PROVE_TAC [SIGMA_ALGEBRA_BOREL_2D]
- (* stage work *)
- >> Suff ‘IMAGE (\s. PREIMAGE g s INTER space a)
-                (subsets (Borel CROSS Borel)) SUBSET subsets a’
- >- (rw [IN_IMAGE, SUBSET_DEF] \\
-     FIRST_X_ASSUM MATCH_MP_TAC \\
-     Q.EXISTS_TAC ‘s’ >> art [])
- >> Know ‘IMAGE (\s. PREIMAGE g s INTER space a)
-                (prod_sets (subsets Borel) (subsets Borel)) SUBSET subsets a’
- >- (Q.UNABBREV_TAC ‘g’ \\
-     rw [IN_IMAGE, SUBSET_DEF, IN_PROD_SETS] \\
-     simp [PREIMAGE_CROSS, o_DEF, ETA_AX] \\
-    ‘PREIMAGE X t INTER PREIMAGE Y u INTER space a =
-       (PREIMAGE X t INTER space a) INTER (PREIMAGE Y u INTER space a)’
-      by SET_TAC [] >> POP_ORW \\
-     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> fs [IN_MEASURABLE])
- >> DISCH_TAC
- (* applying SIGMA_SUBSET *)
- >> Know ‘subsets (sigma (space a)
-                         (IMAGE (\s. PREIMAGE g s INTER space a)
-                                (prod_sets (subsets Borel) (subsets Borel)))) SUBSET
-          subsets a’
- >- (MATCH_MP_TAC SIGMA_SUBSET >> rw [])
- >> POP_ASSUM K_TAC
- >> DISCH_TAC
- (* stage work *)
- >> Suff ‘IMAGE (\s. PREIMAGE g s INTER space a) (subsets (Borel CROSS Borel)) =
-          subsets (sigma (space a)
-                         (IMAGE (\s. PREIMAGE g s INTER space a)
-                                (prod_sets (subsets Borel) (subsets Borel))))’
- >- (Rewr' >> art [])
- >> REWRITE_TAC [prod_sigma_def]
- (* applying PREIMAGE_SIGMA *)
- >> MATCH_MP_TAC PREIMAGE_SIGMA
- >> rw [IN_FUNSET, IN_CROSS, SPACE_BOREL, subset_class_def]
- >> MATCH_MP_TAC SUBSET_CROSS
- >> REWRITE_TAC [SUBSET_UNIV]
+ >> MATCH_MP_TAC MEASURABLE_PAIR
+ >> rw [SIGMA_ALGEBRA_BOREL]
 QED
 
 Theorem IN_MEASURABLE_BOREL_2D_FUNCTION :
