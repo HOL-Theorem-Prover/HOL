@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib integerTheory
      arithmeticTheory intSyntax int_arithTheory intSimps;
 
-open CooperSyntax CooperThms CooperMath
+open CooperSyntax cooperTheory CooperMath
 open Profile
 open DeepSyntaxTheory;
 

@@ -637,10 +637,10 @@ type outstream     = TextIO.outstream
 val std_out        = TextIO.stdOut
 val stdin          = TextIO.stdIn
 fun open_in file   = HOLFileSys.openIn file
-                     handle IO.Io{cause=SysErr(s,_),...} => raise (Io s)
+                     handle IO.Io{cause=OS.SysErr(s,_),...} => raise (Io s)
                                    (* handle OS.SysErr (s,_) => raise Io s; *)
 fun open_out file  = HOLFileSys.openOut file
-                     handle IO.Io{cause=SysErr(s,_),...} => raise (Io s)
+                     handle IO.Io{cause=OS.SysErr(s,_),...} => raise (Io s)
                                    (* handle OS.SysErr (s,_) => raise Io s; *)
 val output         = TextIO.output
 fun outputc strm s = output(strm,s)

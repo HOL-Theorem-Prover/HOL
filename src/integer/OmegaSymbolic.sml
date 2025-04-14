@@ -270,7 +270,7 @@ in
   else let
       open CooperMath
       val d_i = int_of_term d
-      val lc = lcm(c_i, d_i)
+      val lc = Arbint.lcm(c_i, d_i)
       fun multiply_through tm =
           if lc <> d_i then let
               val f_i = Arbint.div(lc, d_i)
@@ -319,7 +319,7 @@ in
         val (c1, c2) = dest_conj tm
         val thm0 = DISCH_ALL (REWRITE_CONV [ASSUME c1] c2)
       in
-        MATCH_MP CooperThms.simple_conj_congruence thm0
+        MATCH_MP cooperTheory.simple_conj_congruence thm0
       end
     in
       BINDER_CONV (RAND_CONV (EVERY_CONJ_CONV (lcmify x c c_i)) THENC
@@ -455,7 +455,7 @@ fun apply_fmve ctype = let
       end
   end t
   fun elim_rT tm =
-      (if Teq (rand tm) then REWR_CONV CooperThms.T_and_r
+      (if Teq (rand tm) then REWR_CONV cooperTheory.T_and_r
        else PURE_REWRITE_CONV [RIGHT_AND_OVER_OR, OR_CLAUSES, AND_CLAUSES]) tm
 in
   initially THENC LAND_CONV finisher THENC elim_rT

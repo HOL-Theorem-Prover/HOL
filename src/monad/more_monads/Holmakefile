@@ -6,7 +6,7 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 all: $(TARGETS) selftest.exe
 .PHONY: all
 
-selftest.exe: selftest.uo $(dprot $(SIGOBJ)/term_pp.uo) state_transformerTheory.uo
+selftest.exe: selftest.uo $(dprot $(SIGOBJ)/term_pp.uo) state_transformerTheory.uo state_monadLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq($(KERNELID),otknl)

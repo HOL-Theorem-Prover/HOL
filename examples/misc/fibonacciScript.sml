@@ -92,6 +92,77 @@ Proof
   Q.PAT_X_ASSUM ‘2 <= m + 1’ MP_TAC THEN ARITH_TAC
 QED
 
+(* ----------------------------------------------------------------------
+    computing fibonacci numbers without taking an exponential amount of
+    time over it.
+
+    Proof translates to a WHILE-loop because I can't figure out the
+    corresponding induction hypothesis, even as the loop invariant is
+    quite obvious.  Counting down (rather than up) in the loop is slightly
+    awkward, and perhaps this would make the inductive hypothesis worse.
+    Throwing away components of the triple can't help either; the invariant
+    sees starting and finishing values for all three.
+   ---------------------------------------------------------------------- *)
+
+Definition fibA_def[simp]:
+  fibA 0 p t = t ∧
+  fibA (SUC n) p t = fibA n t (t + p)
+End
+
+Definition fastfib_def:
+  fastfib n = if n = 0 then 0 else fibA (n - 1) 0 1
+End
+
+Overload Gd[local] = “λ(i:num,p:num,t:num). 0 < i”
+Overload Body[local] = “(λ(i:num,p:num,t:num). i - 1, t, t + p)”
+Overload Inv[local] =
+  “λL (i:num,p:num,t:num). i ≤ L ∧ p = fib (L - i) ∧ t = fib (L - i + 1)”
+
+Theorem fibA_thm:
+  fibA i p t = SND (SND (WHILE Gd Body (i,p,t)))
+Proof
+  map_every qid_spec_tac [‘p’, ‘t’] >> Induct_on ‘i’ >> simp[] >>
+  simp [Once whileTheory.WHILE, SimpRHS]
+QED
+
+Theorem WHILE_correct:
+  HOARE_SPEC (Inv L) (WHILE Gd Body) (λs. Inv L s ∧ ¬Gd s)
+Proof
+  irule whileTheory.WHILE_RULE >> conj_tac
+  >- (qexists_tac ‘inv_image $< FST’ >>
+      simp[pairTheory.FORALL_PROD, relationTheory.WF_inv_image]) >>
+  simp[pairTheory.FORALL_PROD, whileTheory.HOARE_SPEC_DEF] >>
+  rpt strip_tac >> simp[Once fib_def, SimpRHS]
+QED
+
+Theorem fastfib_correct:
+  fastfib n = fib n
+Proof
+  rw[fastfib_def, fibA_thm]
+  >- simp[Once fib_def] >>
+  qmatch_abbrev_tac ‘SND (SND (prog _)) = _’>>
+  assume_tac (GEN_ALL $ SRULE[whileTheory.HOARE_SPEC_DEF] WHILE_correct) >>
+  gvs[] >>
+  ‘Inv (n - 1) (n - 1, 0, 1)’
+    by (simp[] >> conj_tac >> simp[Once fib_def]) >>
+  first_x_assum dxrule >>
+  ‘∃i' p' t'. prog (n - 1, 0, 1) = (i',p',t')’ by metis_tac[pairTheory.PAIR] >>
+  simp[]
+QED
+
+(*
+lo, exponential speedup
+
+ time EVAL “fastfib 10”
+ time EVAL “fib 10”  (* 0.006s *)
+
+ time EVAL “fib 20”      (* 0.55s *)
+ time EVAL “fastfib 20”  (* 0.0012s *)
+
+ time EVAL “fib 25”      (* 5.9s *)
+ time EVAL “fastfib 25”  (* 0.00204s *)
+*)
+
 val _ = export_theory ();
 
 (* References:

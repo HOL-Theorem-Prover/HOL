@@ -7,9 +7,7 @@ signature CooperMath = sig
   val REDUCE_CONV    : term -> thm
   val gcd_t          : term
 
-  val gcd            : Arbint.int * Arbint.int -> Arbint.int
   val gcdl           : Arbint.int list -> Arbint.int
-  val lcm            : Arbint.int * Arbint.int -> Arbint.int
   val lcml           : Arbint.int list -> Arbint.int
   val extended_gcd   : num * num -> num * (Arbint.int * Arbint.int)
   val sum_var_coeffs : term -> term -> Arbint.int

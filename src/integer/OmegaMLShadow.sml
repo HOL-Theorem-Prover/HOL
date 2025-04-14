@@ -199,7 +199,7 @@ fun factoid_gcd f =
     case f of
       ALT av => let
         open CooperMath Vector
-        val g = VS.foldli (fn (_, c, g0) => gcd (Arbint.abs c, g0))
+        val g = VS.foldli (fn (_, c, g0) => Arbint.gcd (Arbint.abs c, g0))
                           Arbint.zero
                           (VS.slice(av, 0, SOME (length av - 1)))
       in
