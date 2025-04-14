@@ -78,17 +78,18 @@ Proof
  >> EQ_TAC >> rw [] (* 5 subgoals *)
  >| [ (* goal 1 (of 5) *)
       REWRITE_TAC [UNION_EMPTY] \\
-      Suff ‘{real x | x <> PosInf /\ x <> NegInf /\ x IN IMAGE Normal B} = B’ >- rw [] \\
+      Suff ‘{real x | x <> PosInf /\ x <> NegInf /\ x IN IMAGE Normal B} = B’
+      >- rw [] \\
       rw [Once EXTENSION] >> EQ_TAC >> rw [] >- art [real_normal] \\
       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty, real_normal],
       (* goal 2 (of 5) *)
-      Suff ‘{real x | x <> PosInf /\ x <> NegInf /\ x IN IMAGE Normal B UNION {NegInf}} = B’
-      >- rw [] \\
+      Suff ‘{real x | x <> PosInf /\ x <> NegInf /\
+            x IN IMAGE Normal B UNION {NegInf}} = B’ >- rw [] \\
       rw [Once EXTENSION] >> EQ_TAC >> rw [] >- art [real_normal] \\
       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty, real_normal],
       (* goal 3 (of 5) *)
-      Suff ‘{real x | x <> PosInf /\ x <> NegInf /\ x IN IMAGE Normal B UNION {PosInf}} = B’
-      >- rw [] \\
+      Suff ‘{real x | x <> PosInf /\ x <> NegInf /\
+             x IN IMAGE Normal B UNION {PosInf}} = B’ >- rw [] \\
       rw [Once EXTENSION] >> EQ_TAC >> rw [] >- art [real_normal] \\
       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty, real_normal],
       (* goal 4 (of 5) *)
@@ -99,11 +100,18 @@ Proof
       (* goal 5 (of 5) *)
       Q.EXISTS_TAC ‘IMAGE Normal x’ \\
       CONJ_TAC
-      >- (Suff ‘{real y | y <> PosInf /\ y <> NegInf /\ y IN IMAGE Normal x} = x’ >- rw [] \\
+      >- (Suff ‘{real y | y <> PosInf /\ y <> NegInf /\ y IN IMAGE Normal x} = x’
+          >- rw [] \\
           rw [Once EXTENSION] >> EQ_TAC >> rw [] >- art [real_normal] \\
           rename1 ‘y IN A’ \\
           Q.EXISTS_TAC ‘Normal y’ >> rw [extreal_not_infty, real_normal]) \\
       qexistsl_tac [‘x’, ‘EMPTY’] >> rw [] ]
+QED
+
+Theorem borel_measurable_real_set :
+    !s. s IN subsets Borel ==> real_set s IN subsets borel
+Proof
+    rw [borel_eq_real_set]
 QED
 
 Theorem SPACE_BOREL :
@@ -5048,6 +5056,47 @@ Proof
         REAL_ASM_ARITH_TAC ] ]
 QED
 
+Theorem lambda_finite :
+    !c. FINITE c ==> lambda c = 0
+Proof
+    HO_MATCH_MP_TAC FINITE_INDUCT
+ >> ASSUME_TAC measure_space_lborel
+ >> rw [MEASURE_EMPTY]
+ >> ‘DISJOINT c {e} /\ e INSERT c = c UNION {e}’ by ASM_SET_TAC []
+ >> POP_ORW
+ >> ‘additive lborel’ by PROVE_TAC [MEASURE_SPACE_ADDITIVE]
+ >> fs [additive_def]
+ >> Suff ‘lambda (c UNION {e}) = lambda c + lambda {e}’
+ >- rw [lambda_sing]
+ >> POP_ASSUM MATCH_MP_TAC
+ >> rw [finite_imp_borel_measurable, sets_lborel, borel_measurable_sets_sing]
+QED
+
+(* This elegant result is based on MEASURE_COUNTABLY_ADDITIVE and lambda_sing *)
+Theorem lambda_countable :
+    !c. countable c ==> lambda c = 0
+Proof
+    ASSUME_TAC measure_space_lborel
+ >> rw [COUNTABLE_ALT_BIJ]
+ >- (MATCH_MP_TAC lambda_finite >> art [])
+ >> ‘c = IMAGE (enumerate c) UNIV’ by PROVE_TAC [BIJ_IMAGE]
+ >> POP_ORW
+ >> qmatch_abbrev_tac ‘lambda (IMAGE f UNIV) = 0’
+ >> qabbrev_tac ‘g = \x. {f x}’
+ >> Know ‘IMAGE f UNIV = BIGUNION (IMAGE g UNIV)’
+ >- rw [Once EXTENSION, IN_BIGUNION_IMAGE, Abbr ‘g’]
+ >> Rewr'
+ >> qmatch_abbrev_tac ‘lambda s = 0’
+ >> Know ‘lambda s = suminf (lambda o g)’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC MEASURE_COUNTABLY_ADDITIVE \\
+     simp [IN_FUNSET, Abbr ‘g’, sets_lborel, borel_measurable_sets_sing] \\
+     rpt STRIP_TAC \\
+     fs [BIJ_DEF, INJ_DEF] >> METIS_TAC [])
+ >> Rewr'
+ >> simp [o_DEF, lambda_sing, Abbr ‘g’, ext_suminf_0]
+QED
+
 Theorem lambda_closed_interval :
     !a b. a <= b ==> (lambda (interval [a,b]) = Normal (b - a))
 Proof
@@ -7494,9 +7543,7 @@ Proof
  >> rw [SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_I, SPACE_BOREL]
 QED
 
-(* NOTE: ‘Borel’ here can be generalized to any sigma_algebra
-
-   cf. stochastic_processTheory.random_variable_sigma_of_dimension for a
+(* cf. stochastic_processTheory.random_variable_sigma_of_dimension for a
    generalization of this theorem to arbitrary finite dimensions.
  *)
 Theorem IN_MEASURABLE_BOREL_2D_VECTOR :
@@ -7505,45 +7552,8 @@ Theorem IN_MEASURABLE_BOREL_2D_VECTOR :
             (\x. (X x,Y x)) IN measurable a (Borel CROSS Borel)
 Proof
     rpt STRIP_TAC
- >> Q.ABBREV_TAC ‘g = \x. (X x,Y x)’
- >> simp [IN_MEASURABLE, IN_FUNSET, SPACE_PROD_SIGMA, SPACE_BOREL]
- >> ‘sigma_algebra (Borel CROSS Borel)’ by PROVE_TAC [SIGMA_ALGEBRA_BOREL_2D]
- (* stage work *)
- >> Suff ‘IMAGE (\s. PREIMAGE g s INTER space a)
-                (subsets (Borel CROSS Borel)) SUBSET subsets a’
- >- (rw [IN_IMAGE, SUBSET_DEF] \\
-     FIRST_X_ASSUM MATCH_MP_TAC \\
-     Q.EXISTS_TAC ‘s’ >> art [])
- >> Know ‘IMAGE (\s. PREIMAGE g s INTER space a)
-                (prod_sets (subsets Borel) (subsets Borel)) SUBSET subsets a’
- >- (Q.UNABBREV_TAC ‘g’ \\
-     rw [IN_IMAGE, SUBSET_DEF, IN_PROD_SETS] \\
-     simp [PREIMAGE_CROSS, o_DEF, ETA_AX] \\
-    ‘PREIMAGE X t INTER PREIMAGE Y u INTER space a =
-       (PREIMAGE X t INTER space a) INTER (PREIMAGE Y u INTER space a)’
-      by SET_TAC [] >> POP_ORW \\
-     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> fs [IN_MEASURABLE])
- >> DISCH_TAC
- (* applying SIGMA_SUBSET *)
- >> Know ‘subsets (sigma (space a)
-                         (IMAGE (\s. PREIMAGE g s INTER space a)
-                                (prod_sets (subsets Borel) (subsets Borel)))) SUBSET
-          subsets a’
- >- (MATCH_MP_TAC SIGMA_SUBSET >> rw [])
- >> POP_ASSUM K_TAC
- >> DISCH_TAC
- (* stage work *)
- >> Suff ‘IMAGE (\s. PREIMAGE g s INTER space a) (subsets (Borel CROSS Borel)) =
-          subsets (sigma (space a)
-                         (IMAGE (\s. PREIMAGE g s INTER space a)
-                                (prod_sets (subsets Borel) (subsets Borel))))’
- >- (Rewr' >> art [])
- >> REWRITE_TAC [prod_sigma_def]
- (* applying PREIMAGE_SIGMA *)
- >> MATCH_MP_TAC PREIMAGE_SIGMA
- >> rw [IN_FUNSET, IN_CROSS, SPACE_BOREL, subset_class_def]
- >> MATCH_MP_TAC SUBSET_CROSS
- >> REWRITE_TAC [SUBSET_UNIV]
+ >> MATCH_MP_TAC MEASURABLE_PAIR
+ >> rw [SIGMA_ALGEBRA_BOREL]
 QED
 
 Theorem IN_MEASURABLE_BOREL_2D_FUNCTION :

@@ -20,6 +20,7 @@ val _ = new_theory "extreal";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 val set_ss = std_ss ++ PRED_SET_ss;
+val T_TAC = rpt (Q.PAT_X_ASSUM ‘T’ K_TAC);
 
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
@@ -810,8 +811,9 @@ Proof
  >> PROVE_TAC [LESS_EQ_REFL]
 QED
 
-val le_epsilon = store_thm
-  ("le_epsilon", ``!x y. (!e. 0 < e /\ e <> PosInf ==> x <= y + e) ==> x <= y``,
+Theorem le_epsilon :
+    !x y. (!e. 0 < e /\ e <> PosInf ==> x <= y + e) ==> x <= y
+Proof
     NTAC 2 Cases
  >> RW_TAC std_ss [le_infty]
  >| [ (* goal 1 *)
@@ -825,7 +827,7 @@ val le_epsilon = store_thm
       RW_TAC std_ss [lt_01, extreal_of_num_def, extreal_not_infty, extreal_add_def,
                      extreal_le_def],
       (* goal 4 *)
-     `!e. 0 < e  ==> Normal r <= Normal r' + Normal e`
+     `!e. 0 < e ==> Normal r <= Normal r' + Normal e`
          by (RW_TAC std_ss [] \\
              Q.PAT_X_ASSUM `!e. P e` MATCH_MP_TAC \\
              METIS_TAC [extreal_not_infty, extreal_of_num_def, extreal_lt_eq]) \\
@@ -836,10 +838,12 @@ val le_epsilon = store_thm
                   by METIS_TAC [extreal_add_def, REAL_LT_IMP_LE] \\
              FULL_SIMP_TAC std_ss [] \\
              METIS_TAC [REAL_LE_ADD, extreal_le_def, REAL_LT_IMP_LE]) \\
-     `!e. 0 < e ==>  r <= r' + e`
-       by METIS_TAC [extreal_le_def, REAL_LT_IMP_LE, REAL_LE_ADD, extreal_add_def, REAL_LE_ADD] \\
+     `!e. 0 < e ==> r <= r' + e`
+       by METIS_TAC [extreal_le_def, REAL_LT_IMP_LE, REAL_LE_ADD, extreal_add_def,
+                     REAL_LE_ADD] \\
      `!e. 0 < e ==>  r <= r' + e` by METIS_TAC [extreal_le_def] \\
-      METIS_TAC [REAL_LE_EPSILON, extreal_le_def] ]);
+      METIS_TAC [REAL_LE_EPSILON, extreal_le_def] ]
+QED
 
 val le_mul_epsilon = store_thm
   ("le_mul_epsilon",
@@ -2596,12 +2600,14 @@ Proof
       >> METIS_TAC [])
   >> `?x. x IN IMAGE f UNIV` by RW_TAC std_ss [IN_UNIV,IN_IMAGE]
   >> RW_TAC std_ss []
-  >> `?x. x IN IMAGE f univ(:num) /\ sup (IMAGE f univ(:num)) <= x + e / 2` by METIS_TAC []
+  >> `?x. x IN IMAGE f univ(:num) /\
+          sup (IMAGE f univ(:num)) <= x + e / 2` by METIS_TAC []
   >> RW_TAC std_ss [GSYM ABS_BETWEEN, GREATER_EQ]
   >> FULL_SIMP_TAC std_ss [IN_IMAGE,IN_UNIV]
-  >> Q.EXISTS_TAC `x''''''`
+  >> rename1 ‘x2 = f x6’
+  >> Q.EXISTS_TAC ‘x6’
   >> RW_TAC std_ss [REAL_LT_SUB_RADD]
-  >- (MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `f x'''''' + e / 2`
+  >- (MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC ‘f x6 + e / 2’
       >> RW_TAC std_ss [] >> MATCH_MP_TAC REAL_LET_TRANS
       >> Q.EXISTS_TAC `f n + e / 2`
       >> reverse CONJ_TAC >- METIS_TAC [REAL_LET_ADD2,REAL_LT_HALF2,REAL_LE_REFL]
@@ -2793,16 +2799,17 @@ val sup_le_mono = store_thm
        by METIS_TAC [IN_IMAGE,IN_UNIV,lt_imp_le]
   >> METIS_TAC [sup_le,SPECIFICATION,extreal_lt_def]);
 
-val sup_cmul = store_thm
-  ("sup_cmul",
-  ``!f c. 0 <= c ==> (sup (IMAGE (\n. (Normal c) * f n) UNIV) =
-                      (Normal c) * sup (IMAGE f UNIV))``,
-  RW_TAC std_ss []
-  >> Cases_on `c = 0` >- RW_TAC real_ss [mul_lzero, GSYM extreal_of_num_def, UNIV_NOT_EMPTY,
-                                         sup_const_over_set]
-  >> `0 < c` by METIS_TAC [REAL_LT_LE]
-  >> RW_TAC std_ss [sup_eq]
-  >- (POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
+Theorem sup_cmul :
+    !f c. 0 <= c ==> sup (IMAGE (\n. (Normal c) * f n) UNIV) =
+                     Normal c * sup (IMAGE f UNIV)
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `c = 0`
+ >- RW_TAC real_ss [mul_lzero, GSYM extreal_of_num_def, UNIV_NOT_EMPTY,
+                    sup_const_over_set]
+ >> `0 < c` by METIS_TAC [REAL_LT_LE]
+ >> RW_TAC std_ss [sup_eq]
+ >- (POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
       >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
       >> Cases_on `sup (IMAGE f UNIV) = PosInf`
       >- RW_TAC std_ss [extreal_mul_def,le_infty]
@@ -2830,7 +2837,8 @@ val sup_cmul = store_thm
   >> RW_TAC std_ss [le_rdiv,sup_le]
   >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
   >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
-  >> METIS_TAC []);
+  >> METIS_TAC []
+QED
 
 (* Another version of `sup_cmul`: f is positive, c can be PosInf *)
 Theorem sup_cmult :
@@ -3347,7 +3355,8 @@ Proof
    FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] THEN
    ASM_CASES_TAC ``PosInf IN A`` THENL
    [Q.EXISTS_TAC `(\x. PosInf)` THEN CONJ_TAC THENL [ASM_SET_TAC [], ALL_TAC] THEN
-    SIMP_TAC std_ss [] THEN REWRITE_TAC [SET_RULE ``{PosInf | n IN univ(:num)} = {PosInf}``] THEN
+    SIMP_TAC std_ss [] THEN
+    REWRITE_TAC [SET_RULE ``{PosInf | n IN univ(:num)} = {PosInf}``] THEN
     SIMP_TAC std_ss [sup_sing], ALL_TAC] THEN
    Q_TAC SUFF_TAC `?x. x IN A /\ 0 <= x` THENL
    [STRIP_TAC,
@@ -3367,7 +3376,8 @@ Proof
      ASM_SIMP_TAC std_ss [extreal_add_def, lt_infty],
      ALL_TAC] THEN
     SIMP_TAC std_ss [sup_le] THEN FULL_SIMP_TAC std_ss [GSYM extreal_lt_def] THEN
-    Q.EXISTS_TAC `n` THEN GEN_TAC THEN GEN_REWR_TAC LAND_CONV [GSYM SPECIFICATION] THEN
+    Q.EXISTS_TAC `n` THEN
+    GEN_TAC THEN GEN_REWR_TAC LAND_CONV [GSYM SPECIFICATION] THEN
     DISCH_TAC THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `y`) THEN ASM_REWRITE_TAC [] THEN
     SIMP_TAC std_ss [le_lt]] THEN
    Q_TAC SUFF_TAC `?f. !z. f z IN A /\ x' + Normal (&z) <= f z` THENL
@@ -3387,7 +3397,8 @@ Proof
     ASM_SIMP_TAC std_ss [extreal_add_def, extreal_le_def] THEN
     MATCH_MP_TAC (REAL_ARITH ``0 <= b ==> a <= b + a:real``) THEN
     METIS_TAC [extreal_le_def, extreal_of_num_def]] THEN
-   SIMP_TAC std_ss [sup_eq] THEN CONJ_TAC THENL [SIMP_TAC std_ss [le_infty], ALL_TAC] THEN
+   SIMP_TAC std_ss [sup_eq] THEN
+   CONJ_TAC THENL [SIMP_TAC std_ss [le_infty], ALL_TAC] THEN
    RW_TAC std_ss [] THEN POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN
    RW_TAC std_ss [GSYM extreal_lt_def, GSYM lt_infty] THEN
    POP_ASSUM (MP_TAC o MATCH_MP SIMP_EXTREAL_ARCH) THEN STRIP_TAC THEN
@@ -3446,6 +3457,42 @@ Theorem sup_seq_countable_seq : (* was: SUPR_countable_SUPR *)
                     (sup {g n | n IN A} = sup {f n | n IN UNIV})
 Proof
   RW_TAC std_ss [] THEN ASSUME_TAC sup_countable_seq THEN
+  POP_ASSUM (MP_TAC o Q.SPEC `IMAGE g A`) THEN
+  SIMP_TAC std_ss [GSYM IMAGE_DEF] THEN DISCH_THEN (MATCH_MP_TAC) THEN
+  ASM_SET_TAC []
+QED
+
+Theorem inf_countable_seq :
+    !A. A <> {} ==>
+       ?f. IMAGE f univ(:num) SUBSET A /\
+           inf A = inf {f n | n IN univ(:num)}
+Proof
+    rw [extreal_inf_def]
+ >> qabbrev_tac ‘A' = IMAGE numeric_negate A’
+ >> MP_TAC (Q.SPEC ‘A'’ sup_countable_seq)
+ >> impl_tac >- rw [Once EXTENSION, Abbr ‘A'’]
+ >> STRIP_TAC
+ >> Q.EXISTS_TAC ‘\n. -f n’
+ >> CONJ_TAC
+ >- (Q.PAT_X_ASSUM ‘_ SUBSET A'’ MP_TAC \\
+     rw [SUBSET_DEF] \\
+     Know ‘f n IN A'’ >- (POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘n’ >> rw []) \\
+     rw [Abbr ‘A'’] >> fs [])
+ >> POP_ORW
+ >> AP_TERM_TAC
+ >> rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘-f n’ >> simp [] \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> Q.EXISTS_TAC ‘n’ >> simp []
+QED
+
+Theorem inf_seq_countable_inf :
+    !A g. A <> {} ==>
+          ?f:num->extreal. IMAGE f UNIV SUBSET IMAGE g A /\
+                    (inf {g n | n IN A} = inf {f n | n IN UNIV})
+Proof
+  RW_TAC std_ss [] THEN ASSUME_TAC inf_countable_seq THEN
   POP_ASSUM (MP_TAC o Q.SPEC `IMAGE g A`) THEN
   SIMP_TAC std_ss [GSYM IMAGE_DEF] THEN DISCH_THEN (MATCH_MP_TAC) THEN
   ASM_SET_TAC []
@@ -4964,6 +5011,46 @@ Proof
  >> MATCH_MP_TAC normal_real >> art []
 QED
 
+Theorem real_set_UNION :
+    !s t. real_set (s UNION t) = real_set s UNION real_set t
+Proof
+    rw [Once EXTENSION, real_set_def]
+ >> EQ_TAC >> rw [] >> rename1 ‘y <> PosInf’ (* 4 subgoals *)
+ >| [ (* goal 1 (of 4) *)
+      DISJ1_TAC >> Q.EXISTS_TAC ‘y’ >> art [],
+      (* goal 2 (of 4) *)
+      DISJ2_TAC >> Q.EXISTS_TAC ‘y’ >> art [],
+      (* goal 3 (of 4) *)
+      Q.EXISTS_TAC ‘y’ >> simp [],
+      (* goal 4 (of 4) *)
+      Q.EXISTS_TAC ‘y’ >> simp [] ]
+QED
+
+Theorem real_11 :
+    !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
+         (real x = real y <=> x = y)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >- rw []
+ >> Cases_on ‘x’ >> fs [real_normal]
+ >> Cases_on ‘y’ >> fs [real_normal]
+QED
+
+Theorem real_set_INTER :
+    !s t. real_set (s INTER t) = real_set s INTER real_set t
+Proof
+    rw [Once EXTENSION, real_set_def]
+ >> EQ_TAC >> rw [] >> rename1 ‘y <> PosInf’ (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      Q.EXISTS_TAC ‘y’ >> art [],
+      (* goal 2 (of 3) *)
+      Q.EXISTS_TAC ‘y’ >> art [],
+      (* goal 3 (of 3) *)
+      rename1 ‘real y = real x’ \\
+     ‘y = x’ by METIS_TAC [real_11] \\
+      Q.EXISTS_TAC ‘y’ >> simp [] ]
+QED
+
 (* new definition based on real_rat_set (q_set), now in real_sigmaTheory *)
 Definition Q_set :
     Q_set = IMAGE Normal q_set
@@ -5152,17 +5239,20 @@ QED
 Theorem Q_DENSE_IN_R :
     !x y. (x < y) ==> ?r. (r IN Q_set) /\ (x < r) /\ (r < y)
 Proof
- RW_TAC std_ss []
+    RW_TAC std_ss []
  >> Cases_on `0<=x` >- RW_TAC std_ss [Q_DENSE_IN_R_LEMMA]
  >> FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
  >> `y <> NegInf` by METIS_TAC [lt_infty]
  >> (Cases_on `y` >> RW_TAC std_ss [])
- >- (Q.EXISTS_TAC `0` >> METIS_TAC [NUM_IN_Q,extreal_of_num_def,extreal_not_infty,lt_infty])
- >> `x <> PosInf` by METIS_TAC [lt_infty,lt_trans,extreal_not_infty,extreal_of_num_def]
+ >- (Q.EXISTS_TAC `0` \\
+      METIS_TAC [NUM_IN_Q,extreal_of_num_def,extreal_not_infty,lt_infty])
+ >> `x <> PosInf`
+      by METIS_TAC [lt_infty,lt_trans,extreal_not_infty,extreal_of_num_def]
  >> Cases_on `x = NegInf`
  >- (Cases_on `0<=r`
-     >- (Q.EXISTS_TAC `&ceiling (Normal r)- 1`
-         >> RW_TAC std_ss [extreal_of_num_def,extreal_sub_def,extreal_not_infty,lt_infty,extreal_lt_eq]
+     >- (Q.EXISTS_TAC ‘&ceiling (Normal r) - 1’ \\
+         RW_TAC std_ss [extreal_of_num_def, extreal_sub_def, extreal_not_infty,
+                        lt_infty, extreal_lt_eq]
          >- METIS_TAC [SUB_IN_Q,NUM_IN_Q,extreal_sub_def,extreal_of_num_def]
          >> METIS_TAC [CEILING_UBOUND,REAL_LT_SUB_RADD,extreal_of_num_def,extreal_lt_eq,extreal_add_def])
      >> Q.EXISTS_TAC `- &ceiling (Normal (-r)) - 1`
@@ -5190,6 +5280,16 @@ Proof
      >> FULL_SIMP_TAC std_ss [extreal_of_num_def,extreal_lt_eq,extreal_le_def,extreal_sub_def,extreal_add_def]
      >> RW_TAC std_ss [GSYM REAL_LT_ADD_SUB,REAL_LT_SUB_RADD])
  >> RW_TAC std_ss [Q_DENSE_IN_R_LEMMA]
+QED
+
+(* NOTE: This version asserts a real number instead of extreal number. *)
+Theorem Q_DENSE_IN_R' :
+    !x y. x < y ==> ?r. r IN q_set /\ x < Normal r /\ Normal r < y
+Proof
+    rpt STRIP_TAC
+ >> drule Q_DENSE_IN_R >> rw [Q_set]
+ >> rename1 ‘r IN q_set’
+ >> Q.EXISTS_TAC ‘r’ >> art []
 QED
 
 Theorem COUNTABLE_ENUM_Q :
@@ -6882,15 +6982,21 @@ Proof
 QED
 
 Theorem extreal_le_simps[simp]:
-    (!x y. Normal x <= Normal y <=> x <= y) /\ (!x. NegInf <= x <=> T) /\ (!x. x <= PosInf <=> T) /\
-    (!x. Normal x <= NegInf <=> F) /\ (!x. PosInf <= Normal x <=> F) /\ (PosInf <= NegInf <=> F)
+    (!x y. Normal x <= Normal y <=> x <= y) /\
+    (!x. NegInf <= x <=> T) /\ (!x. x <= PosInf <=> T) /\
+    (!x. Normal x <= NegInf <=> F) /\
+    (!x. PosInf <= Normal x <=> F) /\
+    (PosInf <= NegInf <=> F)
 Proof
     rw[extreal_le_def] >> Cases_on ‘x’ >> simp[extreal_le_def]
 QED
 
 Theorem extreal_lt_simps[simp]:
-    (!x y. Normal x < Normal y <=> x < y) /\ (!x. x < NegInf <=> F) /\ (!x. PosInf < x <=> F) /\
-    (!x. Normal x < PosInf <=> T) /\ (!x. NegInf < Normal x <=> T) /\ (NegInf < PosInf <=> T)
+    (!x y. Normal x < Normal y <=> x < y) /\
+    (!x. x < NegInf <=> F) /\ (!x. PosInf < x <=> F) /\
+    (!x. Normal x < PosInf <=> T) /\
+    (!x. NegInf < Normal x <=> T) /\
+    (NegInf < PosInf <=> T)
 Proof
     simp[extreal_lt_eq] >> rw[extreal_lt_def]
 QED
@@ -6902,8 +7008,10 @@ Theorem extreal_0_simps[simp]:
     (0 <= NegInf <=> F) /\ (0 < NegInf <=> F) /\
     (NegInf <= 0 <=> T) /\ (NegInf < 0 <=> T) /\
     (0 = NegInf <=> F) /\ (NegInf = 0 <=> F) /\
-    (!r. 0 <= Normal r <=> 0 <= r) /\ (!r. 0 < Normal r <=> 0 < r) /\ (!r. 0 = Normal r <=> r = 0) /\
-    (!r. Normal r <= 0 <=> r <= 0) /\ (!r. Normal r < 0 <=> r < 0) /\ (!r. Normal r = 0 <=> r = 0)
+    (!r. 0 <= Normal r <=> 0 <= r) /\
+    (!r. 0 < Normal r <=> 0 < r) /\ (!r. 0 = Normal r <=> r = 0) /\
+    (!r. Normal r <= 0 <=> r <= 0) /\
+    (!r. Normal r < 0 <=> r < 0) /\ (!r. Normal r = 0 <=> r = 0)
 Proof
     simp[GSYM normal_0]
 QED
@@ -6913,8 +7021,10 @@ Theorem extreal_1_simps[simp]:
     (PosInf < 1 <=> F) /\ (1 = PosInf <=> F) /\ (PosInf = 1 <=> F) /\
     (1 <= NegInf <=> F) /\ (1 < NegInf <=> F) /\ (NegInf <= 1 <=> T) /\
     (NegInf < 1 <=> T) /\ (1 = NegInf <=> F) /\ (NegInf = 1 <=> F) /\
-    (!r. 1 <= Normal r <=> 1 <= r) /\ (!r. 1 < Normal r <=> 1 < r) /\ (!r. 1 = Normal r <=> r = 1) /\
-    (!r. Normal r <= 1 <=> r <= 1) /\ (!r. Normal r < 1 <=> r < 1) /\ (!r. Normal r = 1 <=> r = 1)
+    (!r. 1 <= Normal r <=> 1 <= r) /\
+    (!r. 1 < Normal r <=> 1 < r) /\ (!r. 1 = Normal r <=> r = 1) /\
+    (!r. Normal r <= 1 <=> r <= 1) /\
+    (!r. Normal r < 1 <=> r < 1) /\ (!r. Normal r = 1 <=> r = 1)
 Proof
     simp[GSYM normal_1]
 QED
@@ -6946,19 +7056,22 @@ QED
 
 Theorem EXTREAL_SUM_IMAGE_ALT_FOLDR:
     !f s. FINITE s ==>
-          EXTREAL_SUM_IMAGE f s = FOLDR (λe acc. f e + acc) 0x (REVERSE (SET_TO_LIST s))
+          EXTREAL_SUM_IMAGE f s =
+          FOLDR (λe acc. f e + acc) 0x (REVERSE (SET_TO_LIST s))
 Proof
     simp[EXTREAL_SUM_IMAGE_DEF,ITSET_TO_FOLDR]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_EQ':
-    !f g s. FINITE s /\ (!x. x IN s ==> f x = g x) ==> EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE g s: extreal
+    !f g s. FINITE s /\ (!x. x IN s ==> f x = g x) ==>
+            EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE g s: extreal
 Proof
     rw[] >> simp[EXTREAL_SUM_IMAGE_ALT_FOLDR] >> irule FOLDR_CONG >> rw[]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_MONO':
-    !f g s. FINITE s /\ (!x. x IN s ==> f x <= g x) ==> EXTREAL_SUM_IMAGE f s <= EXTREAL_SUM_IMAGE g s: extreal
+    !f g s. FINITE s /\ (!x. x IN s ==> f x <= g x) ==>
+            EXTREAL_SUM_IMAGE f s <= EXTREAL_SUM_IMAGE g s: extreal
 Proof
     ‘!f g l. (!e. MEM e l ==> f e <= g e) ==>
       (FOLDR (λe acc. f e + acc) 0x l <= FOLDR (λe acc. g e + acc) 0x l)’
@@ -6980,12 +7093,15 @@ QED
 
 Theorem EXTREAL_SUM_IMAGE_COUNT_SUC:
     !f n. (!m. m <= n ==> f m <> NegInf) \/ (!m. m <= n ==> f m <> PosInf) ==>
-        EXTREAL_SUM_IMAGE f (count (SUC n)) = (EXTREAL_SUM_IMAGE f (count n)) + f n:extreal
+          EXTREAL_SUM_IMAGE f (count (SUC n)) =
+         (EXTREAL_SUM_IMAGE f (count n)) + f n:extreal
 Proof
-    rw[] >> ‘count (SUC n) = (count n) UNION {n}’ by fs[count_def,EXTENSION] >>
-    rw[] >> pop_assum kall_tac >>
-    ‘EXTREAL_SUM_IMAGE f (count n UNION {n}) = EXTREAL_SUM_IMAGE f (count n) + EXTREAL_SUM_IMAGE f {n}’ suffices_by fs[EXTREAL_SUM_IMAGE_SING] >>
-    irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> simp[]
+    rw[] >> ‘count (SUC n) = (count n) UNION {n}’ by fs[count_def,EXTENSION]
+ >> rw[] >> pop_assum kall_tac
+ >> ‘EXTREAL_SUM_IMAGE f (count n UNION {n}) =
+     EXTREAL_SUM_IMAGE f (count n) + EXTREAL_SUM_IMAGE f {n}’
+       suffices_by fs[EXTREAL_SUM_IMAGE_SING]
+ >> irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> simp[]
 QED
 
 (*** EXTREAL_PROD_IMAGE Theorems ***)
@@ -7057,7 +7173,8 @@ Proof
 QED
 
 Theorem EXTREAL_PROD_IMAGE_COUNT_SUC:
-    !f n. EXTREAL_PROD_IMAGE f (count (SUC n)) = EXTREAL_PROD_IMAGE f (count n) * f n: extreal
+    !f n. EXTREAL_PROD_IMAGE f (count (SUC n)) =
+          EXTREAL_PROD_IMAGE f (count n) * f n: extreal
 Proof
     rw[] >> qspecl_then [‘f’,‘n’,‘count n’] assume_tac EXTREAL_PROD_IMAGE_PROPERTY >>
     rfs[] >> simp[mul_comm] >> pop_assum $ SUBST1_TAC o SYM >>
@@ -7104,7 +7221,8 @@ QED
 Theorem pow_even_le:
     !n. EVEN n ==> !x. 0 <= x pow n
 Proof
-    rw[] >> Cases_on ‘0 <= x’ >- simp[pow_pos_le] >> fs[GSYM extreal_lt_def] >> simp[le_lt,pow_pos_even]
+    rw[] >> Cases_on ‘0 <= x’ >- simp[pow_pos_le]
+ >> fs[GSYM extreal_lt_def] >> simp[le_lt,pow_pos_even]
 QED
 
 Theorem pow_ainv_odd:
@@ -7112,7 +7230,8 @@ Theorem pow_ainv_odd:
 Proof
     rw[] >> qspecl_then [‘n’,‘-1’,‘x’] mp_tac pow_mul >> simp[GSYM neg_minus1] >>
     ‘-1 pow n = -1’ suffices_by simp[GSYM neg_minus1] >> completeInduct_on ‘n’ >>
-    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,ODD] >> rename [‘ODD n’]) >> simp[GSYM neg_minus1]
+    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,ODD] >> rename [‘ODD n’])
+ >> simp[GSYM neg_minus1]
 QED
 
 Theorem pow_ainv_even:
@@ -7120,7 +7239,8 @@ Theorem pow_ainv_even:
 Proof
     rw[] >> qspecl_then [‘n’,‘-1’,‘x’] mp_tac pow_mul >> simp[GSYM neg_minus1] >>
     ‘-1 pow n = 1’ suffices_by simp[] >> completeInduct_on ‘n’ >>
-    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,EVEN] >> rename [‘EVEN n’]) >> simp[GSYM neg_minus1]
+    NTAC 2 (Cases_on ‘n’ >> fs[extreal_pow_alt,EVEN] >> rename [‘EVEN n’])
+ >> simp[GSYM neg_minus1]
 QED
 
 Theorem sub_le_sub_imp:
@@ -7204,7 +7324,8 @@ Proof
 QED
 
 Theorem sup_seq' : (* was: sup_sequence *)
-    !f l. mono_increasing f ==> ((f --> l) sequentially =
+    !f l. mono_increasing f ==>
+         ((f --> l) sequentially <=>
           (sup (IMAGE (\n. Normal (f n)) UNIV) = Normal l))
 Proof
     rpt STRIP_TAC
@@ -7212,6 +7333,633 @@ Proof
  >- (Rewr' \\
      MATCH_MP_TAC sup_seq >> art [])
  >> REWRITE_TAC [LIM_SEQUENTIALLY_SEQ]
+QED
+
+Theorem inf_seq' :
+    !f l. mono_decreasing f ==>
+         ((f --> l) sequentially <=>
+          (inf (IMAGE (\n. Normal (f n)) UNIV) = Normal l))
+Proof
+    rpt STRIP_TAC
+ >> Suff ‘(f --> l) sequentially <=> (f --> l)’
+ >- (Rewr' \\
+     MATCH_MP_TAC inf_seq >> art [])
+ >> REWRITE_TAC [LIM_SEQUENTIALLY_SEQ]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*   Analytic properties of mono-increasing functions (:extreal -> extreal)  *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: “f right_continuous_at x0” (continuous from right) only holds for
+   certain mono-increasing functions such as distribution functions.
+
+   It seems meaningless to talk about continuous at infinities, thus the type
+   of x0 is :real instead of :extreal.
+ *)
+val _ = set_fixity "right_continuous_at" (Infix(NONASSOC, 450));
+
+Definition right_continuous_at :
+    (f :extreal -> extreal) right_continuous_at x0 <=>
+    inf {f x | Normal x0 < x} = f (Normal x0)
+End
+
+(* cf. continuous_at for the rationale of the conclusion part. The present proof
+   is based on inf_seq', which connects the sequential limit to inf IMAGE.
+ *)
+Theorem right_continuous_at_thm :
+    !f x0. (!x y. x <= y ==> f x <= f y) /\ f right_continuous_at x0 /\
+           (!x. f x <> PosInf /\ f x <> NegInf) ==>
+            !e. 0 < e /\ e <> PosInf ==>
+                ?d. 0 < d /\ !x. x - x0 < d ==> f (Normal x) - f (Normal x0) <= e
+Proof
+    rw [right_continuous_at]
+ >> qabbrev_tac ‘y = f (Normal x0)’
+ >> Q.PAT_X_ASSUM ‘inf _ = y’ MP_TAC
+ (* preparing for inf_seq' *)
+ >> qabbrev_tac ‘g = \n. real (f (Normal (x0 + inv &SUC n)))’
+ >> Know ‘mono_decreasing g’
+ >- (rw [mono_decreasing_def, Abbr ‘g’] \\
+     REWRITE_TAC [GSYM extreal_le_eq] \\
+     ASM_SIMP_TAC std_ss [normal_real] \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> rw [])
+ >> DISCH_TAC
+ >> Know ‘inf {f x | Normal x0 < x} = inf (IMAGE (\n. Normal (g n)) UNIV)’
+ >- (reverse (rw [inf_eq'])
+     >- (rw [le_inf', Abbr ‘g’, normal_real] \\
+         POP_ASSUM MATCH_MP_TAC \\
+         Q.EXISTS_TAC ‘Normal (x0 + inv (&SUC n))’ >> rw []) \\
+     rw [inf_le', Abbr ‘g’, normal_real] \\
+     Cases_on ‘x = PosInf’
+     >- (Q_TAC (TRANS_TAC le_trans) ‘f (Normal (x0 + inv (&SUC 0)))’ \\
+         CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+                      Q.EXISTS_TAC ‘0’ >> rw []) \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> rw []) \\
+     Cases_on ‘x = NegInf’ >> fs [] \\
+    ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] \\
+     POP_ASSUM (fs o wrap) >> T_TAC \\
+    ‘0 < r - x0’ by rw [REAL_SUB_LT] \\
+     drule REAL_ARCH_INV_SUC >> STRIP_TAC \\
+     POP_ASSUM (ASSUME_TAC o
+                REWRITE_RULE [REAL_LT_SUB_LADD, Once REAL_ADD_COMM]) \\
+     Q_TAC (TRANS_TAC le_trans) ‘f (Normal (x0 + inv (&SUC n)))’ \\
+     reverse CONJ_TAC
+     >- (FIRST_X_ASSUM MATCH_MP_TAC >> simp [] \\
+         MATCH_MP_TAC REAL_LT_IMP_LE >> art []) \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘n’ >> rw [])
+ >> Rewr'
+ >> ‘?l. y = Normal l’ by METIS_TAC [extreal_cases]
+ >> fs [Abbr ‘y’]
+ (* applying inf_seq' *)
+ >> Know ‘inf (IMAGE (\n. Normal (g n)) univ(:num)) = Normal l <=>
+          (g --> l) sequentially’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC inf_seq' >> art [])
+ >> Rewr'
+ >> rw [LIM_SEQUENTIALLY, dist, Abbr ‘g’]
+ >> ‘e <> NegInf’ by rw [pos_not_neginf, lt_imp_le]
+ >> ‘?r. 0 < r /\ e = Normal r’
+      by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
+ >> POP_ORW
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> _’ (MP_TAC o Q.SPEC ‘r’)
+ >> rw []
+ >> Q.EXISTS_TAC ‘inv &SUC N’
+ >> CONJ_TAC >- (MATCH_MP_TAC REAL_INV_POS >> rw [])
+ >> rpt STRIP_TAC
+ (* redefine g as the real version of f *)
+ >> qabbrev_tac ‘g = real o f’
+ >> Know ‘!x. f x = Normal (g x)’
+ >- (rw [Abbr ‘g’] \\
+     rw [normal_real])
+ >> DISCH_THEN (FULL_SIMP_TAC std_ss o wrap)
+ >> FULL_SIMP_TAC std_ss [real_normal, extreal_le_eq, extreal_sub_def, extreal_11]
+ >> Q.PAT_X_ASSUM ‘!n. N <= n ==> _’ (MP_TAC o Q.SPEC ‘N’)
+ >> simp []
+ >> Know ‘abs (g (Normal (x0 + realinv (&SUC N))) - l) =
+               g (Normal (x0 + realinv (&SUC N))) - l’
+ >- (simp [ABS_REFL, REAL_SUB_LE] \\
+     Q.PAT_X_ASSUM ‘_ = l’ (REWRITE_TAC o wrap o SYM) \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> simp [])
+ >> Rewr'
+ >> DISCH_TAC
+ >> Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘g (Normal (x0 + realinv (&SUC N))) - l’
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
+ >> REWRITE_TAC [REAL_LE_SUB_CANCEL2]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> simp []
+ >> REWRITE_TAC [Once REAL_ADD_COMM]
+ >> REWRITE_TAC [GSYM REAL_LE_SUB_RADD]
+ >> MATCH_MP_TAC REAL_LT_IMP_LE >> art []
+QED
+
+(* A function is "right-continuous" if it's right-continuous at all points
+
+   NOTE: the requirement of mono-increasing is included since this version of
+  "right-continuous" definition only works on mono-increasing functions.
+ *)
+Definition right_continuous :
+    right_continuous f <=>
+   (!x y. x <= y ==> f x <= f y) /\ !x. f right_continuous_at x
+End
+
+(* |- !f. right_continuous f <=>
+         (!x y. x <= y ==> f x <= f y) /\
+          !x. inf {f x' | Normal x < x'} = f (Normal x)
+ *)
+Theorem right_continuous_def =
+        right_continuous |> REWRITE_RULE [right_continuous_at]
+
+(* NOTE: This core lemma holds also for other shapes of intervals (not used) *)
+Theorem countable_disjoint_interval_lemma :
+    !s. s = {interval (c,d) | c < d} /\ disjoint s ==> countable s
+Proof
+    simp [disjoint_def, IN_INTERVAL] >> DISCH_TAC
+ >> qmatch_abbrev_tac ‘countable s’
+ >> MP_TAC Q_DENSE_IN_REAL
+ >> simp [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+ >> STRIP_TAC
+ (* t is the set of rationals one-one mapping to each open intervals *)
+ >> qabbrev_tac ‘g = \e. f (interval_lowerbound e) (interval_upperbound e)’
+ >> qabbrev_tac ‘t = IMAGE g s’
+ >> Suff ‘cardeq s t’
+ >- (DISCH_TAC \\
+     Know ‘countable s <=> countable t’
+     >- (MATCH_MP_TAC CARD_COUNTABLE_CONG >> art []) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘cardeq s t’ K_TAC \\
+     MATCH_MP_TAC COUNTABLE_SUBSET \\
+     Q.EXISTS_TAC ‘q_set’ \\
+     rw [QSET_COUNTABLE, SUBSET_DEF, Abbr ‘t’, Abbr ‘g’, Abbr ‘s’] \\
+     simp [OPEN_INTERVAL_LOWERBOUND, OPEN_INTERVAL_UPPERBOUND])
+ (* stage work *)
+ >> simp [GSYM CARD_LE_ANTISYM]
+ >> reverse CONJ_TAC >- rw [IMAGE_cardleq, Abbr ‘t’]
+ >> rw [cardleq_def, INJ_DEF]
+ >> Q.EXISTS_TAC ‘g’
+ >> CONJ_TAC
+ >- (rw [Abbr ‘g’, Abbr ‘t’] \\
+     Q.EXISTS_TAC ‘x’ >> art [])
+ (* NOTE: from now on the set ‘t’ is no more used *)
+ >> rw [Abbr ‘s’, Abbr ‘g’, Abbr ‘t’]
+ >> gs [OPEN_INTERVAL_LOWERBOUND, OPEN_INTERVAL_UPPERBOUND]
+ >> rename1 ‘f c d = f a b’
+ >> CCONTR_TAC
+ >> qabbrev_tac ‘y = f a b’
+ >> ‘c < y /\ y < d /\ a < y /\ y < b’ by METIS_TAC []
+ >> Know ‘DISJOINT (interval (c,d)) (interval (a,b))’ >- METIS_TAC []
+ >> NTAC 2 (Q.PAT_X_ASSUM ‘!a b. _’ K_TAC)
+ >> simp [DISJOINT_ALT, OPEN_interval]
+ >> Q.EXISTS_TAC ‘y’ >> art []
+QED
+
+Theorem IN_open_interval :
+    !a b x. x IN open_interval a b <=> a < x /\ x < b
+Proof
+    rw [open_interval_def]
+QED
+
+(* NOTE: It's surprising hard to prove such a simple and obvious statement *)
+Theorem sup_open_interval :
+    !a b. a < b ==> sup (open_interval a b) = b
+Proof
+    rw [open_interval_def]
+ >> simp [GSYM le_antisym]
+ >> CONJ_TAC
+ >- (rw [sup_le'] \\
+     MATCH_MP_TAC lt_imp_le >> art [])
+ >> MATCH_MP_TAC le_epsilon
+ >> rpt STRIP_TAC
+ >> qmatch_abbrev_tac ‘b <= c + e’
+ >> Know ‘e <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC lt_imp_le >> art [])
+ >> DISCH_TAC
+ >> Know ‘b <= c + e <=> b - e <= c’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC sub_le_eq >> art [])
+ >> Rewr'
+ >> rw [Abbr ‘c’, le_sup']
+ >> Cases_on ‘b = PosInf’
+ >- (‘?r. 0 < r /\ e = Normal r’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+     POP_ORW \\
+     rw [extreal_sub_def] \\
+     CCONTR_TAC >> fs [GSYM extreal_lt_def] \\
+     MP_TAC (Q.SPECL [‘max a y’, ‘PosInf’] extreal_mean) \\
+     ASM_REWRITE_TAC [max_lt] \\
+     CCONTR_TAC >> fs [] \\
+     METIS_TAC [let_antisym])
+ (* b cannot be NegInf because a < b *)
+ >> Cases_on ‘b = NegInf’ >- fs [lt_infty]
+ >> MP_TAC (Q.SPECL [‘max a (b - e)’, ‘b’] extreal_mean) >> simp [max_lt]
+ >> impl_tac >- rw [sub_lt_eq, lt_addr]
+ >> STRIP_TAC
+ >> ‘z <= y’ by rw []
+ >> Q_TAC (TRANS_TAC le_trans) ‘z’ >> art []
+ >> MATCH_MP_TAC lt_imp_le >> art []
+QED
+
+Theorem inf_open_interval :
+    !a b. a < b ==> inf (open_interval a b) = a
+Proof
+    rw [open_interval_def]
+ >> simp [GSYM le_antisym]
+ >> reverse CONJ_TAC
+ >- (rw [le_inf'] \\
+     MATCH_MP_TAC lt_imp_le >> art [])
+ >> MATCH_MP_TAC le_epsilon
+ >> rpt STRIP_TAC
+ >> qmatch_abbrev_tac ‘c <= a + e’
+ >> Know ‘e <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC lt_imp_le >> art [])
+ >> DISCH_TAC
+ >> rw [Abbr ‘c’, inf_le']
+ >> Cases_on ‘a = NegInf’
+ >- (‘?r. 0 < r /\ e = Normal r’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq] \\
+     POP_ORW \\
+     rw [extreal_add_def] \\
+     CCONTR_TAC >> fs [GSYM extreal_lt_def] \\
+     MP_TAC (Q.SPECL [‘NegInf’, ‘min b y’] extreal_mean) \\
+     ASM_REWRITE_TAC [lt_min] \\
+     CCONTR_TAC >> fs [] \\
+     METIS_TAC [let_antisym])
+ >> Cases_on ‘a = PosInf’ >- fs [lt_infty]
+ >> MP_TAC (Q.SPECL [‘a’, ‘min (a + e) b’] extreal_mean) >> simp [lt_min]
+ >> impl_tac >- rw [sub_lt_eq, lt_addr]
+ >> STRIP_TAC
+ >> ‘y <= z’ by rw []
+ >> Q_TAC (TRANS_TAC le_trans) ‘z’ >> art []
+ >> MATCH_MP_TAC lt_imp_le >> art []
+QED
+
+(* NOTE: This is the extreal version of the core lemma we actually used. *)
+Theorem countable_disjoint_open_interval_lemma :
+    !s. s SUBSET {open_interval c d | c < d} /\ disjoint s ==> countable s
+Proof
+    rw [SUBSET_DEF, disjoint_def, IN_open_interval]
+ >> MP_TAC Q_DENSE_IN_R' (* instead of Q_DENSE_IN_REAL *)
+ >> simp [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]
+ >> STRIP_TAC
+ (* t is the set of rationals one-one mapping to each open intervals *)
+ >> qabbrev_tac ‘g = \e. f (inf e) (sup e)’
+ >> qabbrev_tac ‘t = IMAGE g s’
+ >> Suff ‘cardeq s t’
+ >- (DISCH_TAC \\
+     Know ‘countable s <=> countable t’
+     >- (MATCH_MP_TAC CARD_COUNTABLE_CONG >> art []) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘cardeq s t’ K_TAC \\
+     MATCH_MP_TAC COUNTABLE_SUBSET \\
+     Q.EXISTS_TAC ‘q_set’ \\
+     rw [QSET_COUNTABLE, SUBSET_DEF, Abbr ‘t’, Abbr ‘g’] \\
+     Q.PAT_X_ASSUM ‘!x. x IN s ==> ?c d. _’ drule >> rw [] \\
+     simp [inf_open_interval, sup_open_interval])
+ (* stage work *)
+ >> simp [GSYM CARD_LE_ANTISYM]
+ >> reverse CONJ_TAC >- rw [IMAGE_cardleq, Abbr ‘t’]
+ >> rw [cardleq_def, INJ_DEF]
+ >> Q.EXISTS_TAC ‘g’
+ >> CONJ_TAC
+ >- (rw [Abbr ‘g’, Abbr ‘t’] \\
+     Q.EXISTS_TAC ‘x’ >> art [])
+ (* NOTE: from now on the set ‘t’ is no more used *)
+ >> rw [Abbr ‘g’, Abbr ‘t’]
+ >> ‘?a b. x = open_interval a b /\ a < b’ by METIS_TAC []
+ >> ‘?c d. y = open_interval c d /\ c < d’ by METIS_TAC []
+ >> gs [inf_open_interval, sup_open_interval]
+ >> CCONTR_TAC
+ >> qabbrev_tac ‘z = f c d’
+ >> ‘a < Normal z /\ Normal z < b /\ c < Normal z /\ Normal z < d’ by METIS_TAC []
+ >> Know ‘DISJOINT (open_interval a b) (open_interval c d)’ >- METIS_TAC []
+ >> Q.PAT_X_ASSUM ‘!a b. _ ==> DISJOINT a b’ K_TAC
+ >> simp [DISJOINT_ALT, IN_open_interval]
+ >> Q.EXISTS_TAC ‘Normal z’ >> art []
+QED
+
+
+(* NOTE: This definition does not assume f is left or right-continuous. *)
+val _ = set_fixity "jumping_point_of" (Infix(NONASSOC, 450));
+
+Definition jumping_point_of :
+    x0 jumping_point_of (f :extreal -> extreal) <=>
+    sup {f x | x < Normal x0} <> inf {f x | Normal x0 < x}
+End
+
+(* A jumping point is indeed "jumping".
+
+   NOTE: Although the jumping point is :real (i.e. meaningless at PosInf/NegInf),
+   the function values, however, may jump from NegInf to PosInf (of course, such
+   a big jumping can only happen once if exists.) For distribution functions
+   ranged from 0 to 1 this is impossible, but the present definition is general.
+ *)
+Theorem jumping_point_of_jumping :
+    !f x0. (!x y. x <= y ==> f x <= f y) /\ x0 jumping_point_of f ==>
+           sup {f x | x < Normal x0} < inf {f x | Normal x0 < x}
+Proof
+    rw [jumping_point_of, lt_le]
+ >> rw [sup_le']
+ >> rw [le_inf']
+ >> Q_TAC (TRANS_TAC le_trans) ‘f (Normal x0)’ >> rw []
+QED
+
+(* NOTE: The set of "jumping points" is simply {x | x jumping_point_of f}.
+   The next “jumping_area” is a set of all ranges of f where f is jumping, and
+   therefore “BIGUNION (jumping_area f)” is the actual range (as set of reals)
+   where f is jumping. f is continuous outside of this range.
+ *)
+val _ = set_fixity "flat_area_of" (Infix(NONASSOC, 450));
+
+Definition jumping_area_def :
+    jumping_area f = {open_interval a b | ?x0. x0 jumping_point_of f /\
+                                               a = sup {f x | x < Normal x0} /\
+                                               b = inf {f x | Normal x0 < x}}
+End
+
+(* NOTE: There may be jumping points between x0 and y0, but at this moment we
+   don't know if these jumping points are countable or not.
+ *)
+Theorem mono_increasing_lemma :
+    !f x0 y0. (!x y. x <= y ==> f x <= f y) /\ x0 < y0 ==>
+              inf {f x | Normal x0 < x} <= sup {f x | x < Normal y0}
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘x0’, ‘y0’] REAL_MEAN) >> rw []
+ >> Q_TAC (TRANS_TAC le_trans) ‘f (Normal z)’
+ >> CONJ_TAC
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC inf_le_imp' >> rw [] \\
+      Q.EXISTS_TAC ‘Normal z’ >> rw [extreal_lt_eq],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC le_sup_imp' >> rw [] \\
+      Q.EXISTS_TAC ‘Normal z’ >> rw [extreal_lt_eq] ]
+QED
+
+(* NOTE: This is saying the number of (disjoint) jumping areas is countable.
+   The entire big union of all jumping areas is still uncountable (if exists).
+ *)
+Theorem jumping_area_countable :
+    !f. (!x y. x <= y ==> f x <= f y) ==> countable (jumping_area f)
+Proof
+    rw [jumping_area_def]
+ >> MATCH_MP_TAC countable_disjoint_open_interval_lemma
+ >> CONJ_TAC
+ >- (rw [SUBSET_DEF] \\
+     qexistsl_tac [‘sup {f x | x < Normal x0}’,
+                   ‘inf {f x | Normal x0 < x}’] >> art [] \\
+     MATCH_MP_TAC jumping_point_of_jumping >> art [])
+ >> rw [disjoint_def]
+ >> rename1 ‘y0 jumping_point_of f’
+ >> rw [DISJOINT_ALT, IN_open_interval]
+ >> CCONTR_TAC
+ >> Q.PAT_X_ASSUM ‘open_interval _ _ <> open_interval _ _’ MP_TAC >> fs []
+ >> qmatch_abbrev_tac ‘open_interval a b = open_interval c d’
+ >> fs [jumping_point_of]
+ >> ‘a < b /\ c < d’ by METIS_TAC [lt_trans]
+ >> Cases_on ‘x0 = y0’ >> fs []
+ >> ‘x0 < y0 \/ y0 < x0’ by METIS_TAC [REAL_LT_TOTAL]
+ >| [ (* goal 1 (of 2) *)
+     ‘b <= c’ by METIS_TAC [mono_increasing_lemma] \\
+     ‘x < c’ by METIS_TAC [lte_trans] \\
+      METIS_TAC [lt_antisym],
+      (* goal 2 (of 2) *)
+     ‘d <= a’ by METIS_TAC [mono_increasing_lemma] \\
+     ‘x < a’ by METIS_TAC [lte_trans] \\
+      METIS_TAC [lt_antisym] ]
+QED
+
+Theorem open_interval_11 :
+    !a b c d. a < b /\ c < d ==>
+             (open_interval a b = open_interval c d <=> a = c /\ b = d)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >- rw []
+ >> rw [Once EXTENSION, IN_open_interval]
+ >| [ (* goal 1 (of 2) *)
+      CCONTR_TAC \\
+     ‘a < c \/ c < a’ by METIS_TAC [lt_total] >| (* 2 subgoals *)
+      [ (* goal 1.1 (of 2): c--------d
+                        a-z------b *)
+        MP_TAC (Q.SPECL [‘a’, ‘min b c’] extreal_mean) >> rw [lt_min] \\
+        CCONTR_TAC >> fs [] \\
+        METIS_TAC [lt_antisym],
+        (* goal 1.2 (of 2): a--------b
+                        c-z------d *)
+        MP_TAC (Q.SPECL [‘c’, ‘min a d’] extreal_mean) >> rw [lt_min] \\
+        CCONTR_TAC >> fs [] \\
+        METIS_TAC [lt_antisym] ],
+      (* goal 2 (of 2) *)
+      CCONTR_TAC \\
+     ‘b < d \/ d < b’ by METIS_TAC [lt_total] >| (* 2 subgoals *)
+      [ (* goal 1.1 (of 2): c------z-d
+                        a--------b *)
+        MP_TAC (Q.SPECL [‘max b c’, ‘d’] extreal_mean) >> rw [max_lt] \\
+        CCONTR_TAC >> fs [] \\
+        METIS_TAC [lt_antisym],
+        (* goal 1.2 (of 2): a------z-b
+                        c--------d *)
+        MP_TAC (Q.SPECL [‘max a d’, ‘b’] extreal_mean) >> rw [max_lt] \\
+        CCONTR_TAC >> fs [] \\
+        METIS_TAC [lt_antisym] ] ]
+QED
+
+(* NOTE: This is also Lemma 14.14 of [1. p.147] *)
+Theorem countable_jumping_point_of :
+    !f. (!x y. x <= y ==> f x <= f y) ==> countable {x | x jumping_point_of f}
+Proof
+    rpt STRIP_TAC
+ >> qmatch_abbrev_tac ‘countable s’
+ >> Suff ‘countable s <=> countable (jumping_area f)’
+ >- (Rewr' \\
+     MATCH_MP_TAC jumping_area_countable >> art [])
+ >> MATCH_MP_TAC CARD_COUNTABLE_CONG
+ >> rw [cardeq_def, Abbr ‘s’]
+ >> qabbrev_tac ‘g = \x0. let a = sup {f x | x < Normal x0};
+                              b = inf {f x | Normal x0 < x} in
+                            open_interval a b’
+ >> Q.EXISTS_TAC ‘g’
+ >> rw [BIJ_THM, Abbr ‘g’, jumping_area_def]
+ >- (qexistsl_tac [‘sup {f x | x < Normal x0}’,
+                   ‘inf {f x | Normal x0 < x}’] >> art [] \\
+     Q.EXISTS_TAC ‘x0’ >> art [])
+ >> rw [EXISTS_UNIQUE_ALT]
+ >> Q.EXISTS_TAC ‘x0’
+ >> Q.X_GEN_TAC ‘y0’
+ >> reverse EQ_TAC >- (rw [] >> rw [])
+ >> STRIP_TAC
+ >> POP_ASSUM MP_TAC
+ >> qmatch_abbrev_tac ‘open_interval c d = open_interval a b ==> _’
+ >> ‘a < b /\ c < d’ by METIS_TAC [jumping_point_of_jumping]
+ >> simp [open_interval_11]
+ >> STRIP_TAC
+ >> CCONTR_TAC
+ >> ‘x0 < y0 \/ y0 < x0’ by METIS_TAC [REAL_LT_TOTAL]
+ >| [ (* goal 1 (of 2) *)
+     ‘b <= c’ by METIS_TAC [mono_increasing_lemma] \\
+     ‘a < c’ by METIS_TAC [lte_trans] \\
+      METIS_TAC [lt_le],
+      (* goal 2 (of 2) *)
+     ‘d <= a’ by METIS_TAC [mono_increasing_lemma] \\
+     ‘d < b’ by METIS_TAC [let_trans] \\
+      METIS_TAC [lt_le] ]
+QED
+
+(* NOTE: This definition does not assume f is left or right-continuous.
+   For constant function (\x. c), “(NegInf,PosInf) flat_area_of f” should hold.
+ *)
+Definition flat_area_of :
+   (a,b) flat_area_of (f :extreal -> extreal) <=> a < b /\
+        ?c. (!x. a < x /\ x < b ==> f x = c) /\
+            (!x. x < a ==> f x < c) /\ (!x. b < x ==> c < f x)
+End
+
+Definition flat_areas_def :
+    flat_areas f = {open_interval a b | (a,b) flat_area_of f}
+End
+
+Theorem flat_areas_countable :
+    !f. (!x y. x <= y ==> f x <= f y) ==> countable (flat_areas f)
+Proof
+    rw [flat_areas_def]
+ >> MATCH_MP_TAC countable_disjoint_open_interval_lemma
+ >> CONJ_TAC
+ >- (rw [SUBSET_DEF, flat_area_of] \\
+     qexistsl_tac [‘a’, ‘b’] >> art [])
+ >> rw [disjoint_def]
+ >> rw [DISJOINT_ALT, IN_open_interval]
+ >> CCONTR_TAC >> fs []
+ >> Q.PAT_X_ASSUM ‘open_interval _ _ <> open_interval _ _’ MP_TAC >> fs []
+ >> qmatch_abbrev_tac ‘open_interval a b = open_interval c d’
+ >> fs [flat_area_of]
+ >> NTAC 4 (POP_ASSUM K_TAC)
+ >> simp [open_interval_11]
+ >> ‘c' = c''’ by METIS_TAC []
+ >> POP_ASSUM (fs o wrap o SYM)
+ >> CONJ_TAC (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      CCONTR_TAC \\
+     ‘a < c \/ c < a’ by METIS_TAC [lt_total] >| (* 2 subgoals *)
+      [ (* goal 1.1 (of 2): a_z_c___________/__/
+                           /   /           b  d *)
+        MP_TAC (Q.SPECL [‘a’, ‘min b c’] extreal_mean) >> rw [lt_min] \\
+        CCONTR_TAC >> fs [] \\
+       ‘f z = c' /\ f z < c'’ by METIS_TAC [] \\
+        METIS_TAC [lt_le],
+        (* goal 1.2 (of 2): c_z_a___________/__/
+                           /   /           d  b *)
+        MP_TAC (Q.SPECL [‘c’, ‘min a d’] extreal_mean) >> rw [lt_min] \\
+        CCONTR_TAC >> fs [] \\
+       ‘f z = c' /\ f z < c'’ by METIS_TAC [] \\
+        METIS_TAC [lt_le] ],
+      (* goal 2 (of 2) *)
+      CCONTR_TAC \\
+     ‘b < d \/ d < b’ by METIS_TAC [lt_total] >| (* 2 subgoals *)
+      [ (* goal 2.1 (of 2): a__c___________/___/
+                           /  /           b z d *)
+        MP_TAC (Q.SPECL [‘max b c’, ‘d’] extreal_mean) >> rw [max_lt] \\
+        CCONTR_TAC >> fs [] \\
+       ‘f z = c' /\ c' < f z’ by METIS_TAC [] \\
+        METIS_TAC [lt_le],
+        (* goal 2.2 (of 2): c__a___________/___/
+                           /  /           d z b *)
+        MP_TAC (Q.SPECL [‘max a d’, ‘b’] extreal_mean) >> rw [max_lt] \\
+        CCONTR_TAC >> fs [] \\
+       ‘f z = c' /\ c' < f z’ by METIS_TAC [] \\
+        METIS_TAC [lt_le] ] ]
+QED
+
+Theorem countable_flat_area_of :
+    !f. (!x y. x <= y ==> f x <= f y) ==> countable {(a,b) | (a,b) flat_area_of f}
+Proof
+    rpt STRIP_TAC
+ >> qmatch_abbrev_tac ‘countable s’
+ >> Suff ‘countable s <=> countable (flat_areas f)’
+ >- (Rewr' \\
+     MATCH_MP_TAC flat_areas_countable >> art [])
+ >> MATCH_MP_TAC CARD_COUNTABLE_CONG
+ >> rw [cardeq_def, Abbr ‘s’]
+ >> qabbrev_tac ‘g = \e. open_interval (FST e) (SND e)’
+ >> Q.EXISTS_TAC ‘g’
+ >> rw [BIJ_THM, Abbr ‘g’, flat_areas_def]
+ >- (qexistsl_tac [‘a’, ‘b’] >> simp [])
+ >> rw [EXISTS_UNIQUE_ALT]
+ >> Q.EXISTS_TAC ‘(a,b)’
+ >> simp [FORALL_PROD]
+ >> qx_genl_tac [‘c’, ‘d’]
+ >> reverse EQ_TAC >- NTAC 2 (rw [])
+ >> STRIP_TAC
+ >> fs [flat_area_of]
+ >> gs [open_interval_11]
+QED
+
+(* NOTE: Both ‘sup o IMAGE f’ and ‘inf o IMAGE f’ are equivalent here. See
+  [flat_values_alt] below. The present definition is easier for proving its
+   countable.
+ *)
+Definition flat_values_def :
+    flat_values f = IMAGE (sup o IMAGE f) (flat_areas f)
+End
+
+Theorem IN_flat_values_lemma[local] :
+    !a b. a < b /\ (!x. a < x /\ x < b ==> f x = c) ==>
+          IMAGE f (open_interval a b) = (\y. y = c)
+Proof
+    rpt STRIP_TAC
+ >> rw [Once EXTENSION, IN_open_interval]
+ >> EQ_TAC >> rw []
+ >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> MP_TAC (Q.SPECL [‘a’, ‘b’] extreal_mean) >> rw []
+ >> Q.EXISTS_TAC ‘z’ >> art []
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Theorem IN_flat_values :
+    !f z. z IN flat_values f <=>
+          ?a b. a < b /\ (!x. a < x /\ x < b ==> f x = z) /\
+               (!x. x < a ==> f x < z) /\ (!x. b < x ==> z < f x)
+Proof
+    rw [flat_values_def, flat_areas_def, flat_area_of]
+ >> EQ_TAC >> rw []
+ >- (qexistsl_tac [‘a’, ‘b’] \\
+     Suff ‘IMAGE f (open_interval a b) = (\y. y = c)’
+     >- (Rewr' >> simp [sup_const]) \\
+     MATCH_MP_TAC IN_flat_values_lemma >> art [])
+ >> Q.EXISTS_TAC ‘open_interval a b’
+ >> Suff ‘IMAGE f (open_interval a b) = (\y. y = z)’
+ >- (Rewr' >> simp [sup_const] \\
+     qexistsl_tac [‘a’, ‘b’] >> art [] \\
+     Q.EXISTS_TAC ‘z’ >> art [])
+ >> MATCH_MP_TAC IN_flat_values_lemma >> art []
+QED
+
+Theorem flat_values_alt :
+    !f. flat_values f = IMAGE (inf o IMAGE f) (flat_areas f)
+Proof
+    rw [Once EXTENSION, IN_flat_values]
+ >> EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘open_interval a b’ \\
+     Know ‘IMAGE f (open_interval a b) = (\y. y = x)’
+     >- (MATCH_MP_TAC IN_flat_values_lemma >> art []) >> Rewr' \\
+     simp [inf_const] \\
+     rw [flat_areas_def, flat_area_of] \\
+     qexistsl_tac [‘a’, ‘b’] >> art [] \\
+     Q.EXISTS_TAC ‘x’ >> art [])
+ >> fs [flat_areas_def, flat_area_of]
+ >> qexistsl_tac [‘a’, ‘b’] >> art []
+ >> Know ‘IMAGE f (open_interval a b) = (\y. y = c)’
+ >- (MATCH_MP_TAC IN_flat_values_lemma >> art [])
+ >> Rewr'
+ >> simp [inf_const]
+QED
+
+Theorem flat_values_countable :
+    !f. (!x y. x <= y ==> f x <= f y) ==> countable (flat_values f)
+Proof
+    rw [flat_values_def]
+ >> MATCH_MP_TAC COUNTABLE_IMAGE
+ >> MATCH_MP_TAC flat_areas_countable >> art []
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -7510,9 +8258,10 @@ val _ = export_theory();
 
 (* References:
 
-  [1] Schilling, R.L.: Measures, Integrals and Martingales. Cambridge University Press (2005).
-  [2] Fichtenholz, G.M.: Differential- und Integralrechnung (Differential and Integral
-      Calculus), Vol.2. (1967).
+  [1] Schilling, R.L.: Measures, Integrals and Martingales (2nd Edition).
+      Cambridge University Press (2017).
+  [2] Fichtenholz, G.M.: Differential- und Integralrechnung (Differential and
+      Integral Calculus), Vol.2. (1967).
   [3] Harrison, J.: Constructing the real numbers in HOL. TPHOLs. (1992).
   [4] Wikipedia: https://en.wikipedia.org/wiki/Limit_superior_and_limit_inferior
  *)

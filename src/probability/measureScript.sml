@@ -1591,6 +1591,18 @@ Proof
    rw [restrict_algebra_def, restrict_space]
 QED
 
+Theorem restrict_space_SUBSET :
+    !M sp. measure_space M /\ sp IN measurable_sets M ==>
+           measurable_sets (restrict_space M sp) SUBSET measurable_sets M
+Proof
+    rw [restrict_space_def]
+ >> ‘sigma_algebra (measurable_space M)’ by fs [measure_space_def]
+ >> qabbrev_tac ‘A = measurable_space M’
+ >> ‘measurable_sets M = subsets A’ by rw [subsets_def, Abbr ‘A’]
+ >> fs []
+ >> MATCH_MP_TAC restrict_algebra_SUBSET >> art []
+QED
+
 (* Another way to restrict a measure space *)
 Theorem MEASURE_SPACE_RESTRICTED_MEASURE :
     !m s. measure_space m /\ s IN measurable_sets m ==>

@@ -14,7 +14,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open combinTheory arithmeticTheory numLib logrootTheory hurdUtils pred_setLib
-     pred_setTheory topologyTheory pairTheory tautLib jrhUtils;
+     pred_setTheory topologyTheory pairTheory tautLib jrhUtils cardinalTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
      real_topologyTheory derivativeTheory;
@@ -29,6 +29,408 @@ val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 fun METIS ths tm = prove(tm,METIS_TAC ths);
+val T_TAC = rpt (Q.PAT_X_ASSUM ‘T’ K_TAC);
+
+(* ------------------------------------------------------------------------- *)
+(*  Properties of distribution_functions                                     *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: There's no supporting theorem for “distribution_function” in
+   probabilityTheory. The present lemma seems the first one.
+ *)
+Theorem distribution_function_monotone :
+    !p X f. prob_space p /\ random_variable X p Borel /\
+            f = distribution_function p X ==> (!x y. x <= y ==> f x <= f y)
+Proof
+    rw [distribution_function_def]
+ >> MATCH_MP_TAC PROB_INCREASING >> art []
+ >> Know ‘!z. {w | X w <= z} INTER p_space p IN events p’
+ >- (Q.X_GEN_TAC ‘z’ \\
+     fs [random_variable_def, IN_MEASURABLE, PREIMAGE_def] \\
+     Q.PAT_X_ASSUM ‘!s. s IN subsets Borel ==> _’ (MP_TAC o Q.SPEC ‘{x | x <= z}’) \\
+     rw [BOREL_MEASURABLE_SETS])
+ >> rw [SUBSET_DEF]
+ >> Q_TAC (TRANS_TAC le_trans) ‘x’ >> art []
+QED
+
+(* NOTE: This tactic is shared by existence_of_random_variable and the next
+   existence_of_random_variable.
+ *)
+val distribution_function_right_continuous_tac =
+    (simp [right_continuous_def] >> Q.X_GEN_TAC ‘x0’ \\
+  (* preparing for MONOTONE_CONVERGENCE_BIGINTER *)
+     qabbrev_tac ‘g = \n. {x | x <= Normal x0 + 1 / &SUC n}’ \\
+     qabbrev_tac ‘s = BIGINTER (IMAGE g UNIV)’ \\
+     Know ‘f (Normal x0) = measure M s’
+     >- (rw [Abbr ‘M’, Abbr ‘s’, Abbr ‘f’] \\
+         AP_TERM_TAC \\
+         rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
+         EQ_TAC >> rw [Abbr ‘g’]
+         >- (Q_TAC (TRANS_TAC le_trans) ‘Normal x0’ >> art [] \\
+             simp [le_addr] \\
+            ‘&SUC y <> 0 :extreal’ by rw [extreal_of_num_def] \\
+            ‘1 / &SUC y = inv (&SUC y)’ by rw [inv_1over] >> POP_ORW \\
+             MATCH_MP_TAC le_inv >> rw [extreal_of_num_def]) \\
+         MATCH_MP_TAC le_epsilon >> rpt STRIP_TAC \\
+         drule EXTREAL_ARCH_INV' >> STRIP_TAC \\
+         Q_TAC (TRANS_TAC le_trans) ‘Normal x0 + inv (&SUC n)’ \\
+        ‘&SUC n <> 0 :extreal’ by rw [extreal_of_num_def] \\
+         reverse CONJ_TAC >- simp [le_ladd] \\
+         simp [inv_1over]) >> Rewr' \\
+     Know ‘inf {f x' | Normal x0 < x'} = inf (IMAGE (measure M o g) UNIV)’
+     >- (simp [GSYM le_antisym] \\
+         CONJ_TAC
+         >- (rw [le_inf', inf_le'] \\
+             rw [Abbr ‘M’, Abbr ‘g’] \\
+             POP_ASSUM MATCH_MP_TAC \\
+             Q.EXISTS_TAC ‘Normal x0 + 1 / &SUC x’ >> rw [lt_addr] \\
+            ‘&SUC x <> 0 :extreal’ by rw [extreal_of_num_def] \\
+            ‘1 / &SUC x = inv (&SUC x)’ by rw [inv_1over] >> POP_ORW \\
+             simp [inv_pos_eq, extreal_of_num_def]) \\
+         rw [le_inf'] >> rename1 ‘Normal x0 < z’ \\
+         rw [inf_le', Abbr ‘g’, o_DEF] \\
+         Cases_on ‘z = PosInf’
+         >- (POP_ORW \\
+            ‘f PosInf = measure M (m_space M)’
+               by rw [Abbr ‘f’, Abbr ‘M’, SPACE_BOREL] >> POP_ORW \\
+            ‘measure M (m_space M) = 1’ by fs [prob_space_def] >> POP_ORW \\
+             POP_ASSUM (MP_TAC o
+                        Q.SPEC ‘measure M {x' | x' <= Normal x0 + 1 / &SUC 0}’) \\
+             impl_tac >- (Q.EXISTS_TAC ‘0’ >> rw []) \\
+             simp [Abbr ‘M’] >> STRIP_TAC \\
+             Q_TAC (TRANS_TAC le_trans) ‘f (Normal x0 + 1)’ >> art []) \\
+         Know ‘z <> NegInf’
+         >- (simp [lt_infty] \\
+             Q_TAC (TRANS_TAC lt_trans) ‘Normal x0’ >> rw []) >> DISCH_TAC \\
+        ‘?r. z = Normal r’ by METIS_TAC [extreal_cases] \\
+         POP_ASSUM (fs o wrap) >> T_TAC \\
+        ‘0 < r - x0’ by rw [REAL_SUB_LT] \\
+         drule REAL_ARCH_INV_SUC >> STRIP_TAC \\
+        ‘x0 + inv (&SUC n) < r’ by REAL_ASM_ARITH_TAC \\
+         Q_TAC (TRANS_TAC le_trans) ‘f (Normal x0 + 1 / &SUC n)’ \\
+         CONJ_TAC
+         >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+             Q.EXISTS_TAC ‘n’ >> simp [Abbr ‘M’]) \\
+         FIRST_X_ASSUM MATCH_MP_TAC \\
+        ‘&SUC n <> 0 :extreal’ by rw [extreal_of_num_def] \\
+        ‘1 / &SUC n = inv (&SUC n)’ by rw [inv_1over] >> POP_ORW \\
+         simp [extreal_inv_eq, extreal_of_num_def, extreal_add_def] \\
+         MATCH_MP_TAC REAL_LT_IMP_LE >> art []) >> Rewr' \\
+  (* applying MONOTONE_CONVERGENCE_BIGINTER *)
+     MATCH_MP_TAC MONOTONE_CONVERGENCE_BIGINTER >> simp [IN_FUNSET] \\
+     fs [prob_space_def, Abbr ‘M’] \\
+     CONJ_ASM1_TAC >- rw [Abbr ‘g’, BOREL_MEASURABLE_SETS] \\
+     CONJ_TAC >- (rw [lt_infty] \\
+                  Q_TAC (TRANS_TAC let_trans) ‘1’ >> simp []) \\
+     rw [SUBSET_DEF, Abbr ‘g’] \\
+     Q_TAC (TRANS_TAC le_trans) ‘Normal x0 + 1 / &SUC (SUC n)’ >> art [] \\
+     simp [le_ladd] \\
+    ‘!n. &SUC n <> 0 :extreal’ by rw [extreal_of_num_def] \\
+     simp [GSYM inv_1over] \\
+    ‘!n. (0 :extreal) < &SUC n’ by rw [extreal_of_num_def] \\
+     simp [inv_le_antimono] \\
+     simp [extreal_of_num_def, extreal_le_eq]);
+
+(* NOTE: This proof is similar with the ‘right_continuous f’ subgoal in the proof of
+   existence_of_random_variable but it's hard to extract a common lemma for them.
+ *)
+Theorem distribution_function_right_continuous :
+    !p X f. prob_space p /\ random_variable X p Borel /\
+            f = distribution_function p X ==> right_continuous f
+Proof
+    RW_TAC std_ss []
+ >> qabbrev_tac ‘m = distribution p X’
+ >> qabbrev_tac ‘M = (space Borel,subsets Borel,m)’
+ >> Know ‘prob_space M’
+ >- (qunabbrevl_tac [‘M’, ‘m’] \\
+     MATCH_MP_TAC distribution_prob_space >> rw [SIGMA_ALGEBRA_BOREL])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘f = \w. m {x | x <= w}’
+ >> ‘distribution_function p X = f’
+       by rw [FUN_EQ_THM, distribution_function, Abbr ‘m’]
+ >> ‘!x y. x <= y ==> f x <= f y’ by PROVE_TAC [distribution_function_monotone]
+ >> Know ‘!s. s IN subsets Borel ==>
+              0 <= m s /\ m s <= 1 /\ m s <> NegInf /\ m s <> PosInf’
+ >- (Q.X_GEN_TAC ‘s’ >> DISCH_TAC \\
+    ‘m s = prob M s’ by rw [Abbr ‘M’, PROB] >> POP_ORW \\
+    ‘s IN events M’ by rw [Abbr ‘M’, events_def] \\
+     METIS_TAC [PROB_LE_1, PROB_POSITIVE, PROB_FINITE])
+ >> DISCH_TAC
+ >> Know ‘!x. 0 <= f x /\ f x <= 1 /\ f x <> NegInf /\ f x <> PosInf’
+ >- (Q.X_GEN_TAC ‘x’ >> simp [Abbr ‘f’] \\
+     METIS_TAC [BOREL_MEASURABLE_SETS])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘_ = f’ (REWRITE_TAC o wrap)
+ >> distribution_function_right_continuous_tac
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  Existence of random variables having the given distribution              *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: ‘m’ is the distribution to be equal to ”distribution p X“. By theorem
+  [distribution_prob_space], any valid distribution must form a probability
+   space, i.e. prob_space (space Borel,subsets Borel,m).
+
+   The corresponding probability space where X is constructed, is always the
+   restricted ext_lborel, i.e. restrict_space ext_lborel [0,1].
+
+   This proof is based on idea from StackExchange [6] (answered by @Alexisz).
+   See also [7, p.61] for the only textbook mentioning a similar proof.
+ *)
+Theorem existence_of_random_variable :
+    !m p. prob_space (space Borel,subsets Borel,m) /\
+          p = restrict_space ext_lborel {x | 0 <= x /\ x <= 1} ==>
+          ?X. random_variable X p Borel /\
+              !s. s IN subsets Borel ==> distribution p X s = m s
+Proof
+    RW_TAC std_ss []
+ >> qabbrev_tac ‘M = (space Borel,subsets Borel,m)’
+ >> Know ‘!s. s IN subsets Borel ==>
+              0 <= m s /\ m s <= 1 /\ m s <> NegInf /\ m s <> PosInf’
+ >- (Q.X_GEN_TAC ‘s’ >> DISCH_TAC \\
+    ‘m s = prob M s’ by rw [Abbr ‘M’, PROB] >> POP_ORW \\
+    ‘s IN events M’ by rw [Abbr ‘M’, events_def] \\
+     METIS_TAC [PROB_LE_1, PROB_POSITIVE, PROB_FINITE])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘sp = {(x :extreal) | 0 <= x /\ x <= 1}’
+ >> ‘sp IN subsets Borel’ by rw [BOREL_MEASURABLE_SETS, Abbr ‘sp’]
+ >> qabbrev_tac ‘p = restrict_space ext_lborel sp’
+ >> ‘prob_space p’ by PROVE_TAC [prob_space_ext_lborel_01]
+ >> qabbrev_tac ‘f = \w. m {x | x <= w}’
+ >> Know ‘!x. 0 <= f x /\ f x <= 1 /\ f x <> NegInf /\ f x <> PosInf’
+ >- (Q.X_GEN_TAC ‘x’ >> simp [Abbr ‘f’] \\
+     METIS_TAC [BOREL_MEASURABLE_SETS])
+ >> DISCH_TAC
+ >> Know ‘!x y. x <= y ==> f x <= f y’
+ >- (rw [Abbr ‘f’] \\
+     Know ‘increasing M’ >- PROVE_TAC [MEASURE_SPACE_INCREASING, prob_space_def] \\
+     rw [increasing_def, Abbr ‘M’] \\
+     POP_ASSUM MATCH_MP_TAC \\
+     simp [ext_lborel_def, BOREL_MEASURABLE_SETS] \\
+     rw [SUBSET_DEF] >> Q_TAC (TRANS_TAC le_trans) ‘x’ >> art [])
+ >> DISCH_TAC
+ (* applying shared tactics *)
+ >> ‘right_continuous f’ by distribution_function_right_continuous_tac
+ (* now define the canonical random variable *)
+ >> qabbrev_tac ‘X = \w. sup {x | f x <= w}’
+ >> Know ‘!x y. x <= y ==> X x <= X y’
+ >- (rw [Abbr ‘X’] \\
+     MATCH_MP_TAC sup_mono_subset >> rw [SUBSET_DEF] \\
+     Q_TAC (TRANS_TAC le_trans) ‘x’ >> art [])
+ >> DISCH_TAC
+ >> Q.EXISTS_TAC ‘X’
+ >> STRONG_CONJ_TAC
+ >- (rw [random_variable_def, p_space_def, events_def] \\
+     simp [Abbr ‘p’, space_restrict_space, sets_restrict_space] \\
+     simp [ext_lborel_def] \\
+     simp [GSYM restrict_algebra_def] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_MONO_INCREASING >> rw [])
+ >> DISCH_TAC
+ >> ASSUME_TAC SIGMA_ALGEBRA_BOREL
+ (* applying UNIQUENESS_OF_MEASURE_FINITE
+
+    NOTE: The choice of [Borel_eq_le] here is to make the RHS easier, in form of
+   “m {x | x <= Normal a}” which is “f (Normal a)”. The LHS is tricky no matter
+    which version of ‘Borel’ alternative definition were chosen.
+  *)
+ >> simp [Borel_eq_le]
+ >> HO_MATCH_MP_TAC UNIQUENESS_OF_MEASURE_FINITE >> simp []
+ >> CONJ_TAC >- rw [subset_class_def] (* subset_class *)
+ >> CONJ_TAC (* INTER-stable *)
+ >- (RW_TAC std_ss [] \\
+     Q.EXISTS_TAC ‘min a a'’ \\
+     rw [Once EXTENSION] >> EQ_TAC >> rw [] >| (* 3 subgoals *)
+     [ rw [GSYM extreal_min_eq, le_min],
+       fs [GSYM extreal_min_eq, le_min],
+       fs [GSYM extreal_min_eq, le_min] ])
+ >> simp [GSYM Borel_eq_le, GSYM SPACE_BOREL]
+ >> fs [prob_space_def, random_variable_def, p_space_def, events_def,
+        distribution_distr]
+ >> CONJ_TAC (* measure_space_distr *)
+ >- (‘(\s. distr p X s) = distr p X’ by rw [FUN_EQ_THM] >> POP_ORW \\
+     MATCH_MP_TAC measure_space_distr >> art [])
+ >> simp [distr_def, SPACE_BOREL]
+ >> CONJ_TAC >- fs [Abbr ‘M’, SPACE_BOREL] (* m UNIV = 1 *)
+ >> RW_TAC std_ss []
+ >> simp []
+ (* NOTE: RHS is now ‘f (Normal a)’, which is good (Kai Phan's idea) *)
+ >> ‘m_space p = sp /\ measure p = lambda o real_set’
+      by rw [Abbr ‘p’, space_restrict_space, measure_restrict_space,
+             ext_lborel_def, SPACE_BOREL]
+ >> qabbrev_tac ‘l = \s. lambda (real_set s)’
+ >> simp []
+ >> qmatch_abbrev_tac ‘l (s INTER sp) = _’
+ >> qabbrev_tac ‘s' = s INTER sp’
+ (* This is needed at the end of this proof *)
+ >> Know ‘s' IN subsets Borel’
+ >- (Q.PAT_X_ASSUM ‘X IN Borel_measurable (measurable_space p)’ MP_TAC \\
+     simp [Abbr ‘s'’, Abbr ‘s’, IN_MEASURABLE, IN_FUNSET, SPACE_BOREL] \\
+     DISCH_TAC \\
+     MP_TAC (Q.SPECL [‘ext_lborel’, ‘sp’]
+                     (INST_TYPE [alpha |-> “:extreal”] restrict_space_SUBSET)) \\
+     simp [measure_space_ext_lborel, ext_lborel_def] \\
+     Suff ‘PREIMAGE X {x | x <= Normal a} INTER sp IN  measurable_sets p’
+     >- rw [SUBSET_DEF] \\
+     POP_ASSUM MATCH_MP_TAC \\
+     rw [BOREL_MEASURABLE_SETS])
+ (* unfolding X, eliminating sup and PREIMAGE *)
+ >> Q.PAT_X_ASSUM ‘!x y. x <= y ==> X x <= X y’ K_TAC
+ >> Q.PAT_X_ASSUM ‘X IN Borel_measurable (measurable_space p)’ K_TAC
+ >> simp [o_DEF, Abbr ‘X’, PREIMAGE_def, sup_le', Abbr ‘s'’, Abbr ‘s’]
+ >> DISCH_TAC
+ (* NOTE: “s INTER sp = s, i.e. s SUBSET sp” cannot be proved *)
+ >> qmatch_abbrev_tac ‘l (s INTER sp) = _’
+ >> qabbrev_tac ‘s' = s INTER sp’
+ (* NOTE: we hope that s' is equal or (at least closer) to the following t *)
+ >> qabbrev_tac ‘t = {x | 0 <= x /\ x <= f (Normal a)}’
+ >> Know ‘l t = f (Normal a)’
+ >- (rw [Abbr ‘l’, Abbr ‘t’, Once EXTENSION, o_DEF] \\
+    ‘?r. 0 <= r /\ f (Normal a) = Normal r’
+       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq] \\
+     POP_ORW \\
+     Suff ‘real_set {x | 0 <= x /\ x <= Normal r} = interval [0,r]’
+     >- rw [lambda_closed_interval] \\
+     rw [Once EXTENSION, real_set_def, CLOSED_interval] \\
+     EQ_TAC >> rw [] (* 3 subgoals *)
+     >| [ (* goal 1 (of 3) *)
+         ‘?z. 0 <= z /\ x' = Normal z’
+            by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq] \\
+          simp [real_normal],
+          (* goal 2 (of 3) *)
+         ‘?z. z <= r /\ x' = Normal z’
+            by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq] \\
+          simp [real_normal],
+          (* goal 3 (of 3) *)
+          Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_of_num_def, extreal_le_eq] ])
+ >> DISCH_THEN (REWRITE_TAC o wrap o SYM)
+ >> Know ‘s' SUBSET t’
+ >- (Q.PAT_X_ASSUM ‘s' IN subsets Borel’ K_TAC \\
+     rw [SUBSET_DEF, Abbr ‘s'’, Abbr ‘s’, Abbr ‘sp’, Abbr ‘t’] \\
+     rename1 ‘y <= f (Normal a)’ \\
+     CCONTR_TAC >> fs [GSYM extreal_lt_def] \\
+     qabbrev_tac ‘x = @x. Normal a < x /\ f x <= y’ \\
+     Suff ‘Normal a < x /\ f x <= y’
+     >- (STRIP_TAC \\
+        ‘x <= Normal a’ by rw [] \\
+         METIS_TAC [let_antisym]) \\
+  (* applying SELECT_ELIM_TAC, all @s must be moved to the goal *)
+     qunabbrev_tac ‘x’ \\
+     SELECT_ELIM_TAC >> simp [] \\
+  (* applying right_continuous_at_thm *)
+     MP_TAC (Q.SPECL [‘f’, ‘a’] right_continuous_at_thm) \\
+     fs [right_continuous] \\
+     qabbrev_tac ‘e = y - f (Normal a)’ \\
+     DISCH_THEN (MP_TAC o Q.SPEC ‘e’) \\
+     impl_tac (* 0 < e /\ e <> PosInf *)
+     >- (‘y <> NegInf’ by rw [pos_not_neginf] \\
+         Know ‘y <> PosInf’
+         >- (simp [lt_infty] \\
+             Q_TAC (TRANS_TAC let_trans) ‘1’ >> rw []) >> DISCH_TAC \\
+         Q.PAT_X_ASSUM ‘f (Normal a) < y’ MP_TAC \\
+        ‘?r. 0 <= r /\ r <= 1 /\ y = Normal r’
+           by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq] \\
+        ‘?z. f (Normal a) = Normal z’ by METIS_TAC [extreal_cases] \\
+         simp [Abbr ‘e’, extreal_sub_def, extreal_of_num_def] \\
+         rw [REAL_SUB_LT]) >> STRIP_TAC \\
+     MP_TAC (Q.SPECL [‘a’, ‘a + d’] REAL_MEAN) >> rw [] \\
+    ‘z - a < d’ by PROVE_TAC [REAL_LT_SUB_RADD, REAL_ADD_COMM] \\
+     Q.EXISTS_TAC ‘Normal z’ >> simp [] \\
+     Q.PAT_X_ASSUM ‘!x. x - a < d ==> _’ (MP_TAC o Q.SPEC ‘z’) \\
+     simp [Abbr ‘e’] \\
+     simp [le_rsub])
+ >> DISCH_TAC
+ (* Now analyzing those "extra points" in “t” but not in “s'” *)
+ >> qabbrev_tac ‘N = t DIFF s'’
+ >> Know ‘countable N’
+ >- (Q.PAT_X_ASSUM ‘s' SUBSET t’ K_TAC \\
+     Q.PAT_X_ASSUM ‘s' IN subsets Borel’ K_TAC \\
+     simp [Abbr ‘N’, Abbr ‘t’, Abbr ‘s'’, Abbr ‘s’, DIFF_DEF] \\
+     Q.PAT_X_ASSUM ‘m_space p = sp’ K_TAC \\
+     simp [GSYM CONJ_ASSOC, GSYM extreal_lt_def, Abbr ‘sp’] \\
+     simp [LEFT_AND_OVER_OR] \\
+     Know ‘!x. 0 <= x /\ x <= f (Normal a) /\ 1 < x <=> F’
+     >- (rw [] \\
+         STRONG_DISJ_TAC >> simp [extreal_lt_def] \\
+         STRONG_DISJ_TAC \\
+         Q_TAC (TRANS_TAC le_trans) ‘f (Normal a)’ >> rw []) >> Rewr \\
+     Know ‘!x. 0 <= x /\ x <= f (Normal a) /\ x < 0 <=> F’
+     >- (rw [extreal_lt_def] >> METIS_TAC []) >> Rewr \\
+     qmatch_abbrev_tac ‘countable N’ \\
+     Know ‘N = {y | 0 <= y /\ y <= f (Normal a) /\ ?x. Normal a < x /\ f x = y}’
+     >- (rw [Abbr ‘N’, Once EXTENSION] >> EQ_TAC >> rw [] >| (* 2 subgoals *)
+         [ (* goal 1 (of 2) *)
+           Q.EXISTS_TAC ‘y’ >> art [] \\
+           rw [GSYM le_antisym] \\
+           Q_TAC (TRANS_TAC le_trans) ‘f (Normal a)’ >> art [] \\
+           FIRST_X_ASSUM MATCH_MP_TAC \\
+           MATCH_MP_TAC lt_imp_le >> art [],
+           (* goal 2 (of 2) *)
+           rename1 ‘Normal a < x’ \\
+           Q.EXISTS_TAC ‘x’ >> rw [] ]) >> Rewr' \\
+     qunabbrev_tac ‘N’ \\
+     qmatch_abbrev_tac ‘countable N’ \\
+     Know ‘N = {y | y = f (Normal a) /\ ?x. Normal a < x /\ f x = y}’
+     >- (rw [Abbr ‘N’, Once EXTENSION] >> EQ_TAC >> rw [] \\
+         rename1 ‘Normal a < x’ \\
+         simp [GSYM le_antisym] \\
+         FIRST_X_ASSUM MATCH_MP_TAC \\
+         MATCH_MP_TAC lt_imp_le >> art []) >> Rewr' \\
+     qunabbrev_tac ‘N’ \\
+     qmatch_abbrev_tac ‘countable N’ \\
+     qabbrev_tac ‘z = f (Normal a)’ \\
+     Cases_on ‘?x. Normal a < x /\ f x = z’
+     >- (Know ‘N = {z}’
+         >- (rw [Abbr ‘N’, Once EXTENSION, Abbr ‘z’] >> METIS_TAC []) >> Rewr' \\
+         rw [COUNTABLE_SING]) \\
+     Know ‘N = {}’ >- (rw [Abbr ‘N’, Once EXTENSION] >> fs []) >> Rewr' \\
+     REWRITE_TAC [countable_EMPTY])
+ >> DISCH_TAC
+ >> ‘DISJOINT s' N /\ t = s' UNION N’ by ASM_SET_TAC [] >> POP_ORW
+ >> Know ‘real_set N = IMAGE real N’
+ >- (rw [Once EXTENSION, real_set_def] \\
+     EQ_TAC >> rw [] >> rename1 ‘y IN N’
+     >- (Q.EXISTS_TAC ‘y’ >> art []) \\
+     Q.EXISTS_TAC ‘y’ >> art [] \\
+     POP_ASSUM MP_TAC \\
+     Suff ‘!x. x IN t ==> x <> PosInf /\ x <> NegInf’ >- simp [Abbr ‘N’] \\
+     Q.X_GEN_TAC ‘x’ >> simp [Abbr ‘t’] \\
+     STRIP_TAC \\
+     reverse CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> art []) \\
+     simp [lt_infty] \\
+     Q_TAC (TRANS_TAC let_trans) ‘f (Normal a)’ >> art [] \\
+     simp [GSYM lt_infty])
+ >> DISCH_THEN (ASSUME_TAC o SYM)
+ >> ‘countable (real_set N)’ by PROVE_TAC [COUNTABLE_IMAGE]
+ >> Know ‘l N = 0’
+ >- (simp [Abbr ‘l’, o_DEF] \\
+     MATCH_MP_TAC lambda_countable >> art [])
+ >> DISCH_TAC
+ >> Suff ‘l (s' UNION N) = l s' + l N’ >- rw []
+ >> fs [Abbr ‘l’, o_DEF, real_set_UNION]
+ >> Know ‘DISJOINT (real_set s') (real_set N)’
+ >- (rw [DISJOINT_ALT, real_set_def] \\
+     rename1 ‘real x = real y’ \\
+     Cases_on ‘x = PosInf’ >> simp [] \\
+     Cases_on ‘x = NegInf’ >> simp [] \\
+    ‘x = y’ by METIS_TAC [real_11] >> POP_ORW \\
+     Q.PAT_X_ASSUM ‘DISJOINT s' N’ MP_TAC \\
+     rw [DISJOINT_ALT])
+ >> DISCH_TAC
+ >> qmatch_abbrev_tac ‘lambda (A UNION B) = _’
+ >> Suff ‘lambda (A UNION B) = lambda A + lambda B’ >- rw []
+ >> MATCH_MP_TAC ADDITIVE >> simp []
+ >> ASSUME_TAC measure_space_lborel
+ >> CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_ADDITIVE >> art [])
+ >> ASSUME_TAC sigma_algebra_borel
+ >> simp [sets_lborel]
+ >> Suff ‘A IN subsets borel’
+ >- (simp [] >> DISCH_TAC \\
+     STRONG_CONJ_TAC >- (MATCH_MP_TAC countable_imp_borel_measurable >> art []) \\
+     DISCH_TAC \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [])
+ >> rw [Abbr ‘A’, borel_measurable_real_set]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Various alternative definitions of distributions                         *)
@@ -164,8 +566,7 @@ Proof
      fs [] \\
     ‘s' = {}’ by rw [Abbr ‘s'’, GSYM INTERVAL_EQ_EMPTY, real_lt] \\
      simp [lambda_empty])
- >> Know ‘c < 0’
- >- (simp [REAL_LT_LE] >> fs [real_lt])
+ >> Know ‘c < 0’ >- (simp [REAL_LT_LE] >> fs [real_lt])
  >> POP_ASSUM K_TAC
  >> DISCH_TAC
  >> qabbrev_tac ‘s' = interval [(b - t) / c, (a - t) / c]’
@@ -1397,4 +1798,7 @@ val _ = html_theory "distribution";
   [4] Shiryaev, A.N.: Probability-1. Springer-Verlag New York (2016).
   [5] Schilling, R.L.: Measures, Integrals and Martingales (2nd Edition).
       Cambridge University Press (2017).
+  [6] math.stackexchange.com:
+      https://math.stackexchange.com/questions/1400327/existence-of-a-random-variable
+  [7] Resnick, S.: A Probability Path. Springer (2019).
  *)

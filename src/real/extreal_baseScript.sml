@@ -1239,12 +1239,29 @@ Proof
  >> RealArith.REAL_ASM_ARITH_TAC
 QED
 
+Theorem lt_lsub :
+    !x y z. x <> PosInf /\ x <> NegInf ==> (x - z < x - y <=> y < z)
+Proof
+    rw [extreal_sub]
+ >> ‘y < z <=> -z < -y’ by rw [lt_neg] >> POP_ORW
+ >> MATCH_MP_TAC lt_ladd >> art []
+QED
+
 Theorem le_rsub_imp :
     !x y z. x <= y ==> x - z <= y - z
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_le_def, extreal_sub_def, le_infty, le_refl]
  >> METIS_TAC [real_sub, REAL_LE_ADD2, REAL_LE_NEG, REAL_LE_REFL]
+QED
+
+Theorem le_rsub :
+    !x y z. z <> PosInf /\ z <> NegInf ==> (x - z <= y - z <=> x <= y)
+Proof
+    rw [extreal_sub]
+ >> MATCH_MP_TAC le_radd
+ >> ‘?r. z = Normal r’ by METIS_TAC [extreal_cases]
+ >> rw [extreal_ainv_def, extreal_not_infty]
 QED
 
 Theorem lt_rsub_imp :
@@ -1257,6 +1274,15 @@ Proof
  >> rw [extreal_sub_def, lt_infty]
  >> fs [lt_infty, lt_refl, extreal_lt_eq]
  >> RealArith.REAL_ASM_ARITH_TAC
+QED
+
+Theorem lt_rsub :
+    !x y z. z <> PosInf /\ z <> NegInf ==> (x - z < y - z <=> x < y)
+Proof
+    rw [extreal_sub]
+ >> MATCH_MP_TAC lt_radd
+ >> ‘?r. z = Normal r’ by METIS_TAC [extreal_cases]
+ >> rw [extreal_ainv_def, extreal_not_infty]
 QED
 
 Theorem eq_sub_ladd_normal :
@@ -3204,6 +3230,18 @@ QED
 (*   Minimum and maximum                                                     *)
 (* ------------------------------------------------------------------------- *)
 
+Theorem extreal_min_eq :
+    !a b. min (Normal a) (Normal b) = Normal (min a b)
+Proof
+    rw [min_def, extreal_min_def, extreal_le_eq]
+QED
+
+Theorem extreal_max_eq :
+    !a b. max (Normal a) (Normal b) = Normal (max a b)
+Proof
+    rw [max_def, extreal_max_def, extreal_le_eq]
+QED
+
 Theorem min_le :
     !z x y. min x y <= z <=> x <= z \/ y <= z
 Proof
@@ -3298,6 +3336,21 @@ Proof
  >> METIS_TAC [max_le]
 QED
 
+Theorem lt_min :
+    !x y z :extreal. z < min x y <=> z < x /\ z < y
+Proof
+    rw [extreal_lt_def]
+ >> METIS_TAC [min_le]
+QED
+
+(* cf. REAL_MAX_LT *)
+Theorem max_lt :
+    !x y z :extreal. max x y < z <=> x < z /\ y < z
+Proof
+    rw [extreal_lt_def]
+ >> METIS_TAC [le_max]
+QED
+
 Theorem max_refl[simp] :
     !x. max x x = x
 Proof
@@ -3382,14 +3435,16 @@ Proof
      >- (Q.EXISTS_TAC `Normal 0` >> REWRITE_TAC [lt_infty])
      >- fs [lt_infty] \\
      STRIP_ASSUME_TAC (Q.SPEC `r` SIMP_REAL_ARCH) \\
-     Q.EXISTS_TAC `&SUC n` >> REWRITE_TAC [lt_infty, extreal_of_num_def, extreal_lt_eq] \\
+     Q.EXISTS_TAC `&SUC n` \\
+     REWRITE_TAC [lt_infty, extreal_of_num_def, extreal_lt_eq] \\
      MATCH_MP_TAC REAL_LET_TRANS \\
      Q.EXISTS_TAC `&n` >> art [] \\
      SIMP_TAC real_ss [])
  >> Cases_on `x`
  >- (STRIP_ASSUME_TAC (Q.SPEC `r` SIMP_REAL_ARCH_NEG) \\
      Q.EXISTS_TAC `-&SUC n` \\
-    `-&SUC n = Normal (-&(SUC n))` by PROVE_TAC [extreal_ainv_def, extreal_of_num_def] \\
+    `-&SUC n = Normal (-&(SUC n))`
+       by PROVE_TAC [extreal_ainv_def, extreal_of_num_def] \\
      POP_ORW >> REWRITE_TAC [lt_infty, extreal_lt_eq] \\
      MATCH_MP_TAC REAL_LTE_TRANS \\
      Q.EXISTS_TAC `-&n` >> art [] \\
@@ -3418,7 +3473,8 @@ Proof
      `0 < r` by METIS_TAC [extreal_lt_eq, extreal_of_num_def] \\
      `?n. z < &n * r` by METIS_TAC [REAL_ARCH] \\
       Q.EXISTS_TAC `n` \\
-      RW_TAC real_ss [extreal_lt_eq, REAL_LE_MUL, extreal_of_num_def, extreal_mul_def] ]
+      RW_TAC real_ss [extreal_lt_eq, REAL_LE_MUL, extreal_of_num_def,
+                      extreal_mul_def] ]
 QED
 
 Theorem SIMP_EXTREAL_ARCH :
@@ -3432,7 +3488,7 @@ Proof
 QED
 
 Theorem SIMP_EXTREAL_ARCH_NEG :
-    !x. x <> NegInf ==> ?n. - &n <= x
+    !x. x <> NegInf ==> ?n. -&n <= x
 Proof
     Cases
  >> RW_TAC std_ss [le_infty]
