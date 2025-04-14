@@ -1078,17 +1078,17 @@ val calculational_nightmare = store_thm(
   Cases_on `h` THEN SRW_TAC [][nightmare_def, calc_nightmare_def] THEN
   PROVE_TAC []);
 
-Theorem SYM_RDISTRIB = GSYM INT_RDISTRIB;
-Theorem SYM_ADD_ASSOC = GSYM INT_ADD_ASSOC;
-Theorem SYM_NEG_LMUL = GSYM INT_NEG_LMUL;
-Theorem SYM_NEG_RMUL = GSYM INT_NEG_RMUL;
-Theorem SYM_MULT_LEFT_1 = GSYM arithmeticTheory.MULT_LEFT_1;
-Theorem SYM_MUL_LID = GSYM INT_MUL_LID;
-Theorem SYM_EQ_NEG = GSYM INT_EQ_NEG;
+Theorem SYM_RDISTRIB[unlisted] = GSYM INT_RDISTRIB;
+Theorem SYM_ADD_ASSOC[unlisted] = GSYM INT_ADD_ASSOC;
+Theorem SYM_NEG_LMUL[unlisted] = GSYM INT_NEG_LMUL;
+Theorem SYM_NEG_RMUL[unlisted] = GSYM INT_NEG_RMUL;
+Theorem SYM_MULT_LEFT_1[unlisted] = GSYM arithmeticTheory.MULT_LEFT_1;
+Theorem SYM_MUL_LID[unlisted] = GSYM INT_MUL_LID;
+Theorem SYM_EQ_NEG[unlisted] = GSYM INT_EQ_NEG;
 
-Theorem EX_REFL = EQT_INTRO (SPEC_ALL EXISTS_REFL);
+Theorem EX_REFL[unlisted] = EQT_INTRO (SPEC_ALL EXISTS_REFL);
 
-Theorem front_put_thm:
+Theorem front_put_thm[unlisted]:
   !x y. x = y + (x + ~y)
 Proof
   REPEAT GEN_TAC THEN
@@ -1097,56 +1097,57 @@ Proof
 QED
 
 
-Theorem EVERY_SUMMAND_lt_elim = SPEC_ALL int_arithTheory.less_to_leq_samer;
+Theorem EVERY_SUMMAND_lt_elim[unlisted] =
+  SPEC_ALL int_arithTheory.less_to_leq_samer;
 
 local
 val tac = REWRITE_TAC [GSYM int_le, INT_NOT_LE, EVERY_SUMMAND_lt_elim,
   int_gt, INT_LE_RADD, int_ge, GSYM INT_LE_ANTISYM, DE_MORGAN_THM]
 in
 
-Theorem EVERY_SUMMAND_not_le:
+Theorem EVERY_SUMMAND_not_le[unlisted]:
   ~(x <= y) = (y + 1i <= x)
 Proof
   tac
 QED
 
-Theorem EVERY_SUMMAND_not_lt:
+Theorem EVERY_SUMMAND_not_lt[unlisted]:
   ~(x:int < y) <=> y <= x
 Proof
   tac
 QED
 
-Theorem EVERY_SUMMAND_not_gt:
+Theorem EVERY_SUMMAND_not_gt[unlisted]:
   ~(x:int > y) <=> x <= y
 Proof
   tac
 QED
 
-Theorem EVERY_SUMMAND_not_ge:
+Theorem EVERY_SUMMAND_not_ge[unlisted]:
   ~(x >= y) <=> x + 1i <= y
 Proof
   tac
 QED
 
-Theorem EVERY_SUMMAND_not_eq:
+Theorem EVERY_SUMMAND_not_eq[unlisted]:
   ~(x = y:int) <=> y + 1 <= x \/ x + 1 <= y
 Proof
   tac
 QED
 
-Theorem EVERY_SUMMAND_ge_elim:
+Theorem EVERY_SUMMAND_ge_elim[unlisted]:
   x:int >= y <=> y <= x
 Proof
   tac
 QED
 
-Theorem EVERY_SUMMAND_gt_elim:
+Theorem EVERY_SUMMAND_gt_elim[unlisted]:
   x > y <=> y + 1i <= x
 Proof
   tac
 QED
 
-Theorem EVERY_SUMMAND_eq_elim:
+Theorem EVERY_SUMMAND_eq_elim[unlisted]:
   (x:int = y) <=> (x <= y /\ y <= x)
 Proof
   tac
@@ -1154,49 +1155,49 @@ QED
 
 end;
 
-Theorem COND_FA_THEN_THM:
+Theorem COND_FA_THEN_THM[unlisted]:
   (if p then !x:'a. P x else q) = !x. if p then P x else q
 Proof
   COND_CASES_TAC THEN REWRITE_TAC []
 QED
 
-Theorem COND_FA_ELSE_THM:
+Theorem COND_FA_ELSE_THM[unlisted]:
   (if p then q else !x:'a. P x) = !x. if p then q else P x
 Proof
   COND_CASES_TAC THEN REWRITE_TAC []
 QED
 
-Theorem COND_EX_THEN_THM:
+Theorem COND_EX_THEN_THM[unlisted]:
   (if p then ?x:'a. P x else q) = ?x. if p then P x else q
 Proof
   COND_CASES_TAC THEN REWRITE_TAC []
 QED
 
-Theorem COND_EX_ELSE_THM:
+Theorem COND_EX_ELSE_THM[unlisted]:
   (if p then q else ?x:'a. P x) = ?x. if p then q else P x
 Proof
   COND_CASES_TAC THEN REWRITE_TAC []
 QED
 
-Theorem not_beq:
+Theorem not_beq[unlisted]:
   ~(b1 = b2) <=> b1 /\ ~b2 \/ ~b1 /\ b2
 Proof
   BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []
 QED
 
-Theorem beq:
+Theorem beq[unlisted]:
   (b1 = b2) <=> b1 /\ b2 \/ ~b1 /\ ~b2
 Proof
   BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []
 QED
 
-Theorem FLIP_COND:
+Theorem FLIP_COND[unlisted]:
   (if g then t:'a else e) = if ~g then e else t
 Proof
   COND_CASES_TAC THEN REWRITE_TAC []
 QED
 
-Theorem refl_case:
+Theorem refl_case[unlisted]:
   !u P. (?i:int. (u <= i /\ i <= u) /\ P i) = P u
 Proof
   REWRITE_TAC [INT_LE_ANTISYM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
@@ -1204,7 +1205,7 @@ Proof
   ASM_REWRITE_TAC []
 QED
 
-Theorem nonrefl_case:
+Theorem nonrefl_case[unlisted]:
   !lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) <=>
             lo <= hi /\ (P lo \/ ?i. (lo + 1 <= i /\ i <= hi) /\ P i)
 Proof
