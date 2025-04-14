@@ -207,6 +207,7 @@ in
   TRANS normalised_thm (replaced tm)
 end
 
+val elim_le = fetch "cooper" "elim_le"
 local
   fun elim_coeff tm = let
     (* term of form    d < c * x,  d may be negative, c is +ve digit *)
@@ -572,6 +573,10 @@ val phase1_CONV = Profile.profile "phase1" phase1_CONV
 *)
 
 local
+  val INT_DIVIDES_NEG' = fetch "cooper" "INT_DIVIDES_NEG'"
+  val negated_elim_lt_coeffs1 = fetch "cooper" "negated_elim_lt_coeffs1"
+  val negated_elim_lt_coeffs2 = fetch "cooper" "negated_elim_lt_coeffs2"
+  val elim_eq_coeffs' = fetch "cooper" "elim_eq_coeffs'"
   val myrewrite_conv = REWRITE_CONV [INT_NEG_ADD, INT_NEG_LMUL, INT_NEGNEG]
   fun normalise_eqs var tm =
     if is_eq tm andalso free_in var (rhs tm) then
@@ -877,6 +882,7 @@ val phase3_CONV = Profile.profile "phase3" phase3_CONV
 *)
 
 (* "sophisticated" simplification routines *)
+val my_INT_MUL_LID = fetch "cooper" "my_INT_MUL_LID"
 fun simplify_constrained_disjunct tm = let
   (* takes a term of the form
        ?j.   ... /\ K (d1 < j /\ j <= d2) j /\ ...

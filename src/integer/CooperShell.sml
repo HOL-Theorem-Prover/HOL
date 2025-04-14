@@ -74,6 +74,7 @@ end tm handle HOL_ERR _ =>
 
 val unwind_constraint = UNCONSTRAIN THENC resquan_remove
 
+val p6_step = fetch "cooper" "p6_step"
 fun p6_recurse tm = let
   (* tm of form ?x. K (lo < x /\ x <= hi) x /\ P x *)
 in
@@ -135,6 +136,7 @@ val obvious_improvements =
                              TRY_CONV check_divides) THENC
      REDUCE_CONV)
 
+val DISJ_NEQ_ELIM = fetch "cooper" "DISJ_NEQ_ELIM"
 fun do_equality_simplifications tm = let
   (* term is existentially quantified.  May contain leaf terms of the form
      v = e, where v is the variable quantified.  If there is such a term at
@@ -282,6 +284,7 @@ val eliminate_existential_entirely =
         REDUCE_CONV THENC obvious_improvements)
 
 
+val cpEU_THM = fetch "cooper" "cpEU_THM"
 fun eliminate_quantifier tm = let
 (* assume that there are no quantifiers below the one we're eliminating *)
 in

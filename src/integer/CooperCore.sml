@@ -65,6 +65,8 @@ in
   recurse [] NONE tmlist
 end
 
+val move_add = fetch "cooper" "move_add"
+val NOT_AND_IMP = fetch "cooper" "NOT_AND_IMP"
 fun phase4_CONV tm = let
   (* have a formula of the form
        ?x. form

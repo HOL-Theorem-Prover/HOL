@@ -3,15 +3,13 @@ open integerTheory int_arithTheory
 
 val _ = new_theory "cooper";
 
-Theorem elim_le = GSYM INT_NOT_LT;
+Theorem elim_le[unlisted] = GSYM INT_NOT_LT;
 
-Theorem move_add:
+Theorem move_add[unlisted]:
   !x y z:int. (x + y) + z = (x + z) + y
 Proof
   REPEAT GEN_TAC THEN CONV_TAC (AC_CONV (INT_ADD_ASSOC, INT_ADD_COMM))
 QED
-
-Theorem F_not = List.nth(CONJUNCTS NOT_CLAUSES,2);
 
 val AND_CLAUSES0 = CONJUNCTS (Q.ID_SPEC AND_CLAUSES);
 val OR_CLAUSES0 = CONJUNCTS (Q.ID_SPEC OR_CLAUSES);
@@ -28,10 +26,10 @@ Theorem NOT_NOT_P = List.nth(CONJUNCTS NOT_CLAUSES, 0);
 Theorem NOT_OR = GEN_ALL (#2 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)));
 Theorem NOT_AND = GEN_ALL (#1 (CONJ_PAIR (SPEC_ALL DE_MORGAN_THM)));
 
-Theorem NOT_AND_IMP =
+Theorem NOT_AND_IMP[unlisted] =
   tautLib.TAUT_PROVE ``!p q. ~(p /\ q) = (p ==> ~q)``;
 
-Theorem DISJ_NEQ_ELIM:
+Theorem DISJ_NEQ_ELIM[unlisted]:
   !P x v:'a. ~(x = v) \/ P x <=> ~(x = v) \/ P v
 Proof
   REWRITE_TAC [GSYM IMP_DISJ_THM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
@@ -39,7 +37,7 @@ Proof
   POP_ASSUM MP_TAC THEN REWRITE_TAC []
 QED
 
-Theorem cpEU_THM:
+Theorem cpEU_THM[unlisted]:
   !P. (?!x:int. P x) <=>
       (?x. P x) /\ (!y y'. (~P y \/ ~P y') \/ (1*y = 1*y'))
 Proof
@@ -61,7 +59,7 @@ Proof
   ASM_REWRITE_TAC []
 QED
 
-Theorem my_INT_MUL_LID:
+Theorem my_INT_MUL_LID[unlisted]:
   (1 * (c * d) = c * d) /\
   (~1 * (c * d) = ~c * d) /\
   (1 * (c * d + x) = c * d + x) /\
@@ -72,10 +70,10 @@ Proof
                INT_NEG_ADD, INT_NEGNEG]
 QED
 
-Theorem INT_DIVIDES_NEG' =
+Theorem INT_DIVIDES_NEG'[unlisted] =
   CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG;
 
-Theorem INT_NEG_FLIP_LTL:
+Triviality INT_NEG_FLIP_LTL:
   !x y. ~x < y <=> ~y < x
 Proof
   REPEAT GEN_TAC THEN
@@ -83,7 +81,7 @@ Proof
   REWRITE_TAC [INT_LT_NEG]
 QED
 
-Theorem INT_NEG_FLIP_LTR:
+Triviality INT_NEG_FLIP_LTR:
   !x y. x < ~y <=> y < ~x
 Proof
   REPEAT GEN_TAC THEN
@@ -91,24 +89,24 @@ Proof
   REWRITE_TAC [INT_LT_NEG]
 QED
 
-Theorem negated_elim_lt_coeffs1 =
+Theorem negated_elim_lt_coeffs1[unlisted] =
   (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTR] o
    REWRITE_RULE [GSYM INT_NEG_RMUL] o
    Q.SPECL [`n`, `m`, `~x`])
   elim_lt_coeffs1;
 
-Theorem negated_elim_lt_coeffs2 =
+Theorem negated_elim_lt_coeffs2[unlisted] =
   (ONCE_REWRITE_RULE [INT_NEG_FLIP_LTL] o
    REWRITE_RULE [GSYM INT_NEG_RMUL] o
    Q.SPECL [`n`, `m`, `~x`])
   elim_lt_coeffs2;
 
-Theorem elim_eq_coeffs' =
+Theorem elim_eq_coeffs'[unlisted] =
   CONV_RULE (STRIP_QUANT_CONV (RAND_CONV
                                (BINOP_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))))
   elim_eq_coeffs;
 
-Theorem p6_step:
+Theorem p6_step[unlisted]:
   (?x:int. K (lo < x /\ x <= hi) x /\ P x) <=>
   lo < hi /\ (P hi \/ (?x:int. K (lo < x /\ x <= hi - 1) x /\ P x))
 Proof
@@ -129,13 +127,13 @@ Proof
   ]
 QED
 
-Theorem NOT_EXISTS_THM' = GEN_ALL $ SYM $
+Theorem NOT_EXISTS_THM'[unlisted] = GEN_ALL $ SYM $
   PURE_REWRITE_RULE [NOT_CLAUSES] $ BETA_RULE $
   SPEC ``\x:'a. ~ P x : bool`` boolTheory.NOT_EXISTS_THM;
 
-Theorem NOT_NOT = tautLib.TAUT_PROVE ``~~p:bool = p``;
+Theorem NOT_NOT[unlisted] = tautLib.TAUT_PROVE ``~~p:bool = p``;
 
-Theorem K_THM' =
+Theorem K_THM'[unlisted] =
   INST_TYPE [(alpha |-> bool), (beta |-> ``:int``)] combinTheory.K_THM;
 
 val _ = export_theory ();
