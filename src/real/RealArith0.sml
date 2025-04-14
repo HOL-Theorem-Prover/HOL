@@ -108,15 +108,20 @@ val dest_intconst = realSyntax.int_of_term
 (* ------------------------------------------------------------------------- *)
 
 local
-  val NUM2_EQ_CONV =
-    BINOP_CONV NUM_EQ_CONV THENC GEN_REWRITE_CONV I [REAL_INT_LE_CONV_tth]
-  val NUM2_NE_CONV =
-    RAND_CONV NUM2_EQ_CONV THENC GEN_REWRITE_CONV I [REAL_INT_LE_CONV_nth]
-  val [pth_le1, pth_le2a, pth_le2b, pth_le3] = CONJUNCTS REAL_INT_LE_CONV_pth
-  val [pth_lt1, pth_lt2a, pth_lt2b, pth_lt3] = CONJUNCTS REAL_INT_LT_CONV_pth
-  val [pth_ge1, pth_ge2a, pth_ge2b, pth_ge3] = CONJUNCTS REAL_INT_GE_CONV_pth
-  val [pth_gt1, pth_gt2a, pth_gt2b, pth_gt3] = CONJUNCTS REAL_INT_GT_CONV_pth
-  val [pth_eq1a, pth_eq1b, pth_eq2a, pth_eq2b] = CONJUNCTS REAL_INT_EQ_CONV_pth
+  val tth = fetch "realax" "REAL_INT_LE_CONV_tth"
+  val nth = fetch "realax" "REAL_INT_LE_CONV_nth"
+  val NUM2_EQ_CONV = BINOP_CONV NUM_EQ_CONV THENC GEN_REWRITE_CONV I [tth]
+  val NUM2_NE_CONV = RAND_CONV NUM2_EQ_CONV THENC GEN_REWRITE_CONV I [nth]
+  val [pth_le1, pth_le2a, pth_le2b, pth_le3] =
+    CONJUNCTS $ fetch "realax" "REAL_INT_LE_CONV_pth"
+  val [pth_lt1, pth_lt2a, pth_lt2b, pth_lt3] =
+    CONJUNCTS $ fetch "realax" "REAL_INT_LT_CONV_pth"
+  val [pth_ge1, pth_ge2a, pth_ge2b, pth_ge3] =
+    CONJUNCTS $ fetch "realax" "REAL_INT_GE_CONV_pth"
+  val [pth_gt1, pth_gt2a, pth_gt2b, pth_gt3] =
+    CONJUNCTS $ fetch "realax" "REAL_INT_GT_CONV_pth"
+  val [pth_eq1a, pth_eq1b, pth_eq2a, pth_eq2b] =
+    CONJUNCTS $ fetch "realax" "REAL_INT_EQ_CONV_pth"
 in
   val REAL_INT_LE_CONV = FIRST_CONV [
     GEN_REWRITE_CONV I [pth_le1],
@@ -143,13 +148,18 @@ end
 (* Negation & multiplication.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val REAL_INT_NEG_CONV = GEN_REWRITE_CONV I [REAL_INT_NEG_CONV_pth]
+local
+  val pth = fetch "realax" "REAL_INT_NEG_CONV_pth"
+in
+  val REAL_INT_NEG_CONV = GEN_REWRITE_CONV I [pth]
+end
 
 local
-  val (pth1,pth2) = CONJ_PAIR REAL_INT_MUL_CONV_pth1
+  val pth0 = fetch "realax" "REAL_INT_MUL_CONV_pth0"
+  val (pth1,pth2) = CONJ_PAIR $ fetch "realax" "REAL_INT_MUL_CONV_pth1"
 in
   val REAL_INT_MUL_CONV = FIRST_CONV [
-    GEN_REWRITE_CONV I [REAL_INT_MUL_CONV_pth0],
+    GEN_REWRITE_CONV I [pth0],
     GEN_REWRITE_CONV I [pth1] THENC RAND_CONV MUL_CONV,
     GEN_REWRITE_CONV I [pth2] THENC RAND_CONV(RAND_CONV MUL_CONV)]
 end
@@ -164,10 +174,12 @@ local
   val add_tm = realSyntax.plus_tm
   val dest = liteLib.dest_binop add_tm
   val m_tm = ``m:num`` and n_tm = ``n:num``
-  val [pth1, pth2, pth3, pth4, pth5, pth6] = CONJUNCTS REAL_INT_ADD_CONV_pth1
+  val pth0 = fetch "realax" "REAL_INT_ADD_CONV_pth0"
+  val [pth1, pth2, pth3, pth4, pth5, pth6] =
+    CONJUNCTS $ fetch "realax" "REAL_INT_ADD_CONV_pth1"
 in
   val REAL_INT_ADD_CONV =
-    GEN_REWRITE_CONV I [REAL_INT_ADD_CONV_pth0] ORELSEC
+    GEN_REWRITE_CONV I [pth0] ORELSEC
     (fn tm =>
       let
         val (l,r) = dest tm
@@ -263,13 +275,14 @@ val NUM_EVEN_CONV = EVEN_CONV
 
 local
   val neg_tm = realSyntax.negate_tm
-  val (pth1,pth2) = CONJ_PAIR REAL_INT_POW_CONV_pth1
+  val tth = fetch "realax" "REAL_INT_POW_CONV_tth"
+  val (pth1,pth2) = CONJ_PAIR $ fetch "realax" "REAL_INT_POW_CONV_pth1"
 in
   val REAL_INT_POW_CONV =
     (GEN_REWRITE_CONV I [pth1] THENC RAND_CONV NUM_EXP_CONV) ORELSEC
     (TRY_CONV(GEN_REWRITE_CONV I [pth2]) THENC
     RATOR_CONV(RATOR_CONV(RAND_CONV NUM_EVEN_CONV)) THENC
-    TRY_CONV(GEN_REWRITE_CONV I [REAL_INT_POW_CONV_tth]) THENC
+    TRY_CONV(GEN_REWRITE_CONV I [tth]) THENC
     (fn tm => if rator tm ~~ neg_tm then RAND_CONV(RAND_CONV NUM_EXP_CONV) tm
               else RAND_CONV NUM_EXP_CONV tm))
 end
@@ -736,6 +749,8 @@ val it =
  *)
 local
   val n_tm = “n:num”
+  val pth = fetch "realax" "REAL_LINEAR_PROVER_pth"
+  val pth' = fetch "realax" "REAL_LINEAR_PROVER_pth'"
 in
   fun REAL_LINEAR_PROVER translator (eq,le,lt) = let
     val eq_pols = map (linear_of_term o lhand o concl) eq
@@ -761,11 +776,11 @@ in
 
     (* adding “&n >= 0” theorems for alien terms before translating proof *)
     val le' = le @ map
-      (fn a => INST [n_tm |-> rand a] REAL_LINEAR_PROVER_pth) aliens
+      (fn a => INST [n_tm |-> rand a] pth) aliens
 
     (* adding “&SUC n > 0” theorems for alien terms before translating proof *)
     val lt' = lt @ map
-      (fn a => INST [n_tm |-> dest_suc_alien a] REAL_LINEAR_PROVER_pth') suc_aliens
+      (fn a => INST [n_tm |-> dest_suc_alien a] pth') suc_aliens
   in
     translator (eq,le',lt') proof
   end
@@ -816,7 +831,7 @@ val (mk_numeric,
  *)
 
 local
-  val pths_init = CONJUNCTS GEN_REAL_ARITH0_pth_init
+  val pths_init = CONJUNCTS $ fetch "realax" "GEN_REAL_ARITH0_pth_init"
   val pth10 = last pths_init
   val x_tm = “x:real” and y_tm = “y:real”
   and neg_tm = realSyntax.negate_tm
@@ -840,6 +855,11 @@ local
   val is_ge = realSyntax.is_geq
   and is_gt = realSyntax.is_greater
   and is_req = is_binop eq_tm
+  val pth_final = fetch "realax" "GEN_REAL_ARITH0_pth_final"
+  val pth_add = fetch "realax" "GEN_REAL_ARITH0_pth_add"
+  val pth_mul = fetch "realax" "GEN_REAL_ARITH0_pth_mul"
+  val pth_emul = fetch "realax" "GEN_REAL_ARITH0_pth_emul"
+  val pth_square = fetch "realax" "GEN_REAL_ARITH0_pth_square"
 in
 fun GEN_REAL_ARITH0 (mk_numeric,
                      NUMERIC_EQ_CONV,NUMERIC_GE_CONV,NUMERIC_GT_CONV,
@@ -928,23 +948,22 @@ let
       GEN_NNF_CONV false (REAL_INEQ_NORM_CONV,REAL_INEQ_NORM_DCONV)
 
   fun MUL_RULE th =
-      let val rules = MATCH_MP_RULE GEN_REAL_ARITH0_pth_mul in
+      let val rules = MATCH_MP_RULE pth_mul in
           CONV_RULE(LAND_CONV POLY_MUL_CONV) (rules th)
       end
 
   fun ADD_RULE th =
-      let val rules = MATCH_MP_RULE GEN_REAL_ARITH0_pth_add in
+      let val rules = MATCH_MP_RULE pth_add in
           CONV_RULE(LAND_CONV POLY_ADD_CONV) (rules th)
       end
 
   fun EMUL_RULE tm th =
-      let val rule = MATCH_MP GEN_REAL_ARITH0_pth_emul in
+      let val rule = MATCH_MP pth_emul in
           CONV_RULE(LAND_CONV POLY_MUL_CONV) (SPEC tm (rule th))
       end
 
   fun SQUARE_RULE t =
-    CONV_RULE (LAND_CONV POLY_MUL_CONV)
-      (SPEC t GEN_REAL_ARITH0_pth_square)
+    CONV_RULE (LAND_CONV POLY_MUL_CONV) (SPEC t pth_square)
 
   (* val (eqs,les,lts) = (eq,le',lt')
      NOTE: for debugging purposes, one may use dest_positivstellensatz()
@@ -1033,7 +1052,7 @@ in
           DISCH_ALL(PROVE_HYP (EQ_MP th0 (ASSUME (mk_neg tm))) th3)
       end
   in
-    MP (INST [p_tm |-> tm] GEN_REAL_ARITH0_pth_final) th
+    MP (INST [p_tm |-> tm] pth_final) th
   end
 end
 end (* local *)

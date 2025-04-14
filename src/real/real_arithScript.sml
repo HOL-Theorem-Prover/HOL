@@ -29,7 +29,7 @@ fun REAL_ARITH0 tm = let
   val th1 = QCONV deabs_conv tm
   in EQ_MP (SYM th1) (rule(rand(concl th1))) end
 
-Theorem ABSMAXMIN_ELIM_CONV1_pth = REAL_ARITH0 “
+Theorem ABSMAXMIN_ELIM_CONV1_pth[unlisted] = REAL_ARITH0 “
   (~(&1) * abs(x) >= r <=> ~(&1) * x >= r /\ &1 * x >= r) /\
   (~(&1) * abs(x) + a >= r <=> a + ~(&1) * x >= r /\ a + &1 * x >= r) /\
   (a + ~(&1) * abs(x) >= r <=> a + ~(&1) * x >= r /\ a + &1 * x >= r) /\

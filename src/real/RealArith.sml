@@ -149,6 +149,8 @@ local
   val binops_mul = liteLib.binops mul_tm
   val list_mk_binop_mul = list_mk_binop mul_tm
   val mk_binop_mul = mk_binop mul_tm
+  val pth1 = fetch "realax" "REAL_PROD_NORM_CONV_pth1"
+  val pth2 = fetch "realax" "REAL_PROD_NORM_CONV_pth2"
 in
   fun REAL_PROD_NORM_CONV tm =
     let
@@ -161,7 +163,7 @@ in
         let
           val th1 = QCONV (DEPTH_CONV REAL_INT_MUL_CONV) tm
         in
-          TRANS th1 (INST [x_tm |-> rand(concl th1)] REAL_PROD_NORM_CONV_pth1)
+          TRANS th1 (INST [x_tm |-> rand(concl th1)] pth1)
         end
       else
         let
@@ -172,7 +174,7 @@ in
               val t = mk_eq (tm, list_mk_binop_mul sothers)
               val th1 = REAL_MUL_AC t
             in
-              TRANS th1 (INST [x_tm |-> rand(concl th1)] REAL_PROD_NORM_CONV_pth2)
+              TRANS th1 (INST [x_tm |-> rand(concl th1)] pth2)
             end
           else
             let
@@ -198,8 +200,11 @@ end
 (* ------------------------------------------------------------------------- *)
 
 local
+  val pth0a = fetch "realax" "LINEAR_ADD_pth0a"
+  val pth0b = fetch "realax" "LINEAR_ADD_pth0b"
+  val [pth1, pth2, pth3, pth4, pth5, pth6] =
+    CONJUNCTS $ fetch "realax" "LINEAR_ADD_pth1"
   val x_tm = ``x:real``
-  val [pth1, pth2, pth3, pth4, pth5, pth6] = CONJUNCTS LINEAR_ADD_pth1
   val tm1_tm = ``tm1:real``
   val l1_tm = ``l1:real``
   val r1_tm = ``r1:real``
@@ -221,8 +226,8 @@ local
       let
         val ltm = mk tm1 tm2
       in
-        if tm1 ~~ zero_tm then INST [x_tm |-> tm2] LINEAR_ADD_pth0a
-        else if tm2 ~~ zero_tm then INST [x_tm |-> tm1] LINEAR_ADD_pth0b else
+        if tm1 ~~ zero_tm then INST [x_tm |-> tm2] pth0a
+        else if tm2 ~~ zero_tm then INST [x_tm |-> tm1] pth0b else
           let
             val (l1,r1) = dest tm1
             val v1 = rand l1
@@ -373,6 +378,8 @@ end
 (* ------------------------------------------------------------------------- *)
 
 local
+  val pth1 = fetch "realax" "REAL_SUM_NORM_CONV_pth1"
+  val pth2 = fetch "realax" "REAL_SUM_NORM_CONV_pth2"
   val ptm = ``$~ :real->real``
   val stm = ``$+ :real->real->real``
   val one_tm = ``&1 :real``
@@ -383,10 +390,10 @@ local
       val _ = trace "prelim_conv"
       fun c1 t = (trace "gen_rewrite 1";
                   trace_term t;
-                  GEN_REWRITE_CONV I [REAL_SUM_NORM_CONV_pth1] t)
+                  GEN_REWRITE_CONV I [pth1] t)
       fun c2 t = (trace "gen_rewrite 2";
                   trace_term t;
-                  GEN_REWRITE_CONV I [REAL_SUM_NORM_CONV_pth2] t)
+                  GEN_REWRITE_CONV I [pth2] t)
       fun c3 t = (trace "gen_rewrite 3"; trace_term t;
                   GEN_REWRITE_CONV TOP_DEPTH_CONV
                   [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB] t)
@@ -428,10 +435,13 @@ end
 (* ------------------------------------------------------------------------- *)
 
 local
-  val rewr1_CONV = FIRST_CONV
-    (map REWR_CONV [REAL_NEGATE_CANON_pth2, REAL_NEGATE_CANON_pth3])
-  val rewr2_CONV = FIRST_CONV
-    (map REWR_CONV [REAL_NEGATE_CANON_pth4, REAL_NEGATE_CANON_pth5])
+  val pth1 = fetch "realax" "REAL_NEGATE_CANON_pth1"
+  val pth2 = fetch "realax" "REAL_NEGATE_CANON_pth2"
+  val pth3 = fetch "realax" "REAL_NEGATE_CANON_pth3"
+  val pth4 = fetch "realax" "REAL_NEGATE_CANON_pth4"
+  val pth5 = fetch "realax" "REAL_NEGATE_CANON_pth5"
+  val rewr1_CONV = FIRST_CONV (map REWR_CONV [pth2, pth3])
+  val rewr2_CONV = FIRST_CONV (map REWR_CONV [pth4, pth5])
   fun distrib_neg_conv tm =
     let
       val _ = trace "distrib_neg_conv"
@@ -455,7 +465,7 @@ in
     let
       val _ = trace "REAL_NEGATE_CANON"
       val _ = trace_thm th
-      val th1 = GEN_REWRITE_RULE I [REAL_NEGATE_CANON_pth1] th
+      val th1 = GEN_REWRITE_RULE I [pth1] th
       val _ = trace_thm th1
       val t = rand (concl th1)
       val _ = trace_term t
@@ -471,12 +481,13 @@ end
 (* ------------------------------------------------------------------------- *)
 
 local
+  val pth2 = fetch "realax" "REAL_ATOM_NORM_CONV_pth2"
+  val pth3 = fetch "realax" "REAL_ATOM_NORM_CONV_pth3"
   val right_CONV = RAND_CONV REAL_SUM_NORM_CONV
   val atomcache = ref []
   fun lookup_cache tm =
     first (fn th => liteLib.lhand(concl th) ~~ tm) (!atomcache)
-  val negate_CONV = GEN_REWRITE_CONV I
-    [REAL_ATOM_NORM_CONV_pth2, REAL_ATOM_NORM_CONV_pth3]
+  val negate_CONV = GEN_REWRITE_CONV I [pth2, pth3]
   val le_tm = ``$<= :real->real->bool``
   val lt_tm = ``$< :real->real->bool``
 in
@@ -501,8 +512,11 @@ end
 (* abs                                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val REAL_INT_ABS_CONV =
-  TRY_CONV(GEN_REWRITE_CONV I [REAL_INT_ABS_CONV_pth])
+local
+  val pth = fetch "realax" "REAL_INT_ABS_CONV_pth"
+in
+  val REAL_INT_ABS_CONV = TRY_CONV (GEN_REWRITE_CONV I [pth])
+end
 
 fun real_int_compset () = let
   open computeLib
@@ -742,6 +756,7 @@ fun elim ineqs =
 (* ------------------------------------------------------------------------- *)
 
 local
+  val pth = fetch "realax" "LINEAR_MULT_pth"
   val mult_tm = realSyntax.mult_tm
   val zero_tm = realSyntax.zero_tm
   val x_tm = ``x:real``
@@ -751,7 +766,7 @@ local
                 (REWR_CONV REAL_MUL_ASSOC THENC LAND_CONV REAL_INT_MUL_CONV)
 in
   fun LINEAR_MULT n tm =
-    if tm ~~ zero_tm then INST [x_tm |-> n] LINEAR_MULT_pth else
+    if tm ~~ zero_tm then INST [x_tm |-> n] pth else
       let
         val ltm = mk_comb(mk_comb(mult_tm,n),tm)
       in
@@ -776,7 +791,7 @@ local
   local
     val a_tm = ``a:real``
     val b_tm = ``b:real``
-    val pths = CONJUNCTS ADD_INEQS_pth
+    val pths = CONJUNCTS $ fetch "realax" "ADD_INEQS_pth"
   in
     fun ADD_INEQS th1 th2 =
       let
@@ -791,7 +806,7 @@ local
   end
 
   local
-    val pths = CONJUNCTS MULTIPLY_INEQS_pth
+    val pths = CONJUNCTS $ fetch "realax" "MULTIPLY_INEQS_pth"
     val x_tm = ``x:real``
     val y_tm = ``y:real``
   in
@@ -855,6 +870,7 @@ local
   val eq_tm = realSyntax.real_eq_tm
   val le_tm = realSyntax.leq_tm
   val lt_tm = realSyntax.less_tm
+  val trivthm = fetch "realax" "REAL_SIMPLE_ARITH_REFUTER_trivthm"
   fun fixup_atom th =
     let
       val _ = trace "fixup_atom"
@@ -865,7 +881,7 @@ local
     in
       if rand tm0 ~~ zero_tm then
         if rator(rator tm0) ~~ lt_tm then
-          EQ_MP REAL_SIMPLE_ARITH_REFUTER_trivthm th0
+          EQ_MP trivthm th0
         else failwith "trivially true, so useless in refutation"
       else th0
     end
@@ -929,7 +945,8 @@ end
 local
   local
     val zero_tm = ``&0 :real``
-    val raw_CONV = GEN_REWRITE_CONV I [ZERO_LEFT_CONV_pth] THENC
+    val pth = fetch "realax" "ZERO_LEFT_CONV_pth"
+    val raw_CONV = GEN_REWRITE_CONV I [pth] THENC
       GEN_REWRITE_CONV TOP_SWEEP_CONV
       [REAL_ADD_LID', REAL_NEG_ADD, REAL_NEG_NEG]
   in
@@ -958,6 +975,9 @@ local
     fun is_abstm tm = is_comb tm andalso rator tm ~~ abs_tm
     fun is_negtm tm = is_comb tm andalso rator tm ~~ neg_tm
     fun is_negabstm tm = is_negtm tm andalso is_abstm(rand tm)
+    val ABS_CASES_THM = fetch "realax" "ABS_CASES_THM"
+    val ABS_STRONG_CASES_THM = fetch "realax" "ABS_STRONG_CASES_THM"
+    val ABS_ELIM_THM = fetch "realax" "ABS_ELIM_THM"
     val ABS_ELIM_RULE = GEN_REWRITE_RULE I [ABS_ELIM_THM]
     val NEG_DISTRIB_RULE =
                   GEN_REWRITE_RULE (RAND_CONV o TOP_SWEEP_CONV)
@@ -1017,7 +1037,13 @@ local
         (INST [x_tm |-> rand tm] ABS_STRONG_CASES_THM))
       end
   end
-  val atom_CONV = GEN_REWRITE_CONV I [atom_CONV_pth]
+
+  local
+    val pth = fetch "realax" "atom_CONV_pth"
+  in
+    val atom_CONV = GEN_REWRITE_CONV I [pth]
+  end
+
   fun DISCARD_UNREAL_TAC th =
     let
       val tm = concl th
@@ -1108,8 +1134,11 @@ fun OLD_REAL_ARITH tm =
 (* In the code below we fallback to the default Int (instead of Arbint) lib. *)
 open Int realSyntax Rewrite
 
-val ABSMAXMIN_ELIM_CONV1 =
-  GEN_REWRITE_CONV I empty_rewrites [ABSMAXMIN_ELIM_CONV1_pth]
+local
+  val pth = fetch "real_arith" "ABSMAXMIN_ELIM_CONV1_pth"
+in
+  val ABSMAXMIN_ELIM_CONV1 = GEN_REWRITE_CONV I empty_rewrites [pth]
+end
 
 local
   val abs_tm = absval_tm
@@ -1117,6 +1146,9 @@ local
   and x_tm = “x:real”
   and y_tm = “y:real”
   and is_abs = is_absval
+  val pth_abs = fetch "realax" "ABSMAXMIN_ELIM_CONV2_pth_abs"
+  val pth_max = fetch "realax" "ABSMAXMIN_ELIM_CONV2_pth_max"
+  val pth_min = fetch "realax" "ABSMAXMIN_ELIM_CONV2_pth_min"
   fun eliminate_construct (p :term -> bool) (c :term -> term -> thm) tm = let
     val t = find_term (fn t => p t andalso free_in t tm) tm
     val v = genvar(type_of t)
@@ -1128,21 +1160,15 @@ local
   end
   val elim_abs =
     eliminate_construct is_abs (fn p => fn ax =>
-      INST [p_tm |-> p, x_tm |-> rand ax] ABSMAXMIN_ELIM_CONV2_pth_abs)
+      INST [p_tm |-> p, x_tm |-> rand ax] pth_abs)
   and elim_max =
     eliminate_construct is_max (fn p => fn ax => let
       val (ax,y) = dest_comb ax
-      in
-        INST [p_tm |-> p, x_tm |-> rand ax, y_tm |-> y]
-          ABSMAXMIN_ELIM_CONV2_pth_max
-      end)
+      in INST [p_tm |-> p, x_tm |-> rand ax, y_tm |-> y] pth_max end)
   and elim_min =
     eliminate_construct is_min (fn p => fn ax => let
       val (ax,y) = dest_comb ax
-      in
-        INST [p_tm |-> p, x_tm |-> rand ax, y_tm |-> y]
-          ABSMAXMIN_ELIM_CONV2_pth_min
-      end)
+      in INST [p_tm |-> p, x_tm |-> rand ax, y_tm |-> y] pth_min end)
 in
   val ABSMAXMIN_ELIM_CONV2 = FIRST_CONV [elim_abs, elim_max, elim_min]
 end
