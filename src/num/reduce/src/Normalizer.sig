@@ -13,7 +13,8 @@ sig
                SEMIRING_ADD_CONV,SEMIRING_MUL_CONV,SEMIRING_POW_CONV)
               variable_order
 
-    - "sth" is a theorem as axioms of a semiring system of the following form:
+    - "sth" is the result of applying SEMIRING_PTHS to a theorem
+      as axioms of a semiring system of the following form:
 
   |- (!x:'a y z. add x (add y z) = add (add x y) z) /\
      (!x y. add x y = add y x) /\

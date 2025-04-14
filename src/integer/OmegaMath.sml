@@ -1,8 +1,7 @@
 structure OmegaMath :> OmegaMath = struct
 
 open HolKernel boolLib intSyntax integerTheory int_arithTheory
-open CooperMath
-local open OmegaTheory in end
+open CooperMath OmegaTheory
 
 (* Fix the grammar used by this file *)
 val ctxt_grammars = (Parse.type_grammar(), Parse.term_grammar())
@@ -10,9 +9,7 @@ val _ = Parse.temp_set_grammars $ valOf $ Parse.grammarDB {thyname="int_arith"}
 
 val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV bool_rewrites
 
-
 val ERR = mk_HOL_ERR "OmegaMath"
-val lhand = rand o rator
 
 (* ----------------------------------------------------------------------
     find_summand v tm
@@ -81,7 +78,7 @@ in
       val newrhs_th = AP_TERM (rator tm) (INT_RING_CONV(mk_eq(r, varpart)))
     in
       K newrhs_th THENC REWR_CONV EQ_SYM_EQ THENC REWR_CONV INT_ENTIRE THENC
-      LAND_CONV REDUCE_CONV THENC REWR_CONV CooperThms.F_or_l THENC
+      LAND_CONV REDUCE_CONV THENC REWR_CONV cooperTheory.F_or_l THENC
       REWR_CONV EQ_SYM_EQ
     end
   else let
@@ -97,7 +94,7 @@ in
       REWR_CONV EQ_SYM_EQ THENC RAND_CONV (REWR_CONV INT_ADD_LID) THENC
       K (MP (SPECL [g_num_t, newvars_sum, newlhs] elim_eq_coeffs)
             g_num_nonzero) THENC
-      LAND_CONV REDUCE_CONV THENC REWR_CONV CooperThms.F_and_l
+      LAND_CONV REDUCE_CONV THENC REWR_CONV cooperTheory.F_and_l
     end
 end tm handle Foo => REDUCE_CONV tm
 
@@ -144,10 +141,10 @@ end tm handle Foo => REDUCE_CONV tm
    ---------------------------------------------------------------------- *)
 
 fun gcd_check tm =
-    case #Name (dest_thy_const (#1 (strip_comb tm))) of
-      "int_le" => gcd_le_check tm
-    | "=" => gcd_eq_check tm
-    | _ => raise ERR "gcd_check" "Term not an = or <="
+  case #Name (dest_thy_const (#1 (strip_comb tm))) of
+    "int_le" => gcd_le_check tm
+  | "=" => gcd_eq_check tm
+  | _ => raise ERR "gcd_check" "Term not an = or <="
 
 (* ----------------------------------------------------------------------
     addzero t
@@ -158,8 +155,8 @@ fun gcd_check tm =
    ---------------------------------------------------------------------- *)
 
 fun addzero t =
-    if is_int_literal t orelse  is_int_literal (rand t) then ALL_CONV t
-    else SYM (SPEC t INT_ADD_RID)
+  if is_int_literal t orelse  is_int_literal (rand t) then ALL_CONV t
+  else SYM (SPEC t INT_ADD_RID)
 
 (* ----------------------------------------------------------------------
     LASSOC_ADD_CONV tm
@@ -177,11 +174,7 @@ val LASSOC_ADD_CONV = REWR_CONV INT_ADD_ASSOC
     a + (b + c)
    ---------------------------------------------------------------------- *)
 
-val RASSOC_ADD_CONV = let
-  val th = GSYM INT_ADD_ASSOC
-in
-  REWR_CONV th
-end
+val RASSOC_ADD_CONV = REWR_CONV SYM_ADD_ASSOC
 
 (* ----------------------------------------------------------------------
     RTOP_TWO_CONV c tm
@@ -212,7 +205,6 @@ end tm
     SORT_AND_GATHER1_CONV below
    ---------------------------------------------------------------------- *)
 
-val SYM_RDISTRIB = GSYM INT_RDISTRIB
 fun PAIRWISE_GATHER_CONV tm = let
   val (tm1,tm2) = dest_plus tm
 in
@@ -241,7 +233,7 @@ end tm
     a numeral as its rightmost summand.
    ---------------------------------------------------------------------- *)
 
-val CHECK_RZERO_CONV = let
+local
   fun recurse tm = let
     val (l,r) = dest_plus tm
   in
@@ -263,7 +255,7 @@ val CHECK_RZERO_CONV = let
       end
   end tm
 in
-  TRY_CONV recurse
+  val CHECK_RZERO_CONV = TRY_CONV recurse
 end
 
 (* ----------------------------------------------------------------------
@@ -292,9 +284,9 @@ end
    ---------------------------------------------------------------------- *)
 
 fun SORT_AND_GATHER1_CONV tm =
-    (RTOP_TWO_CONV PAIRWISE_GATHER_CONV THENC
-     TRY_CONV (LAND_CONV SORT_AND_GATHER1_CONV) THENC
-     CHECK_RZERO_CONV) tm
+  (RTOP_TWO_CONV PAIRWISE_GATHER_CONV THENC
+   TRY_CONV (LAND_CONV SORT_AND_GATHER1_CONV) THENC
+   CHECK_RZERO_CONV) tm
 
 (* ----------------------------------------------------------------------
     INTERNAL_SG1_CONV tm
@@ -305,8 +297,8 @@ fun SORT_AND_GATHER1_CONV tm =
    ---------------------------------------------------------------------- *)
 
 fun INTERNAL_SG1_CONV tm =
-    (RTOP_TWO_CONV PAIRWISE_GATHER_CONV THENC
-     TRY_CONV (LAND_CONV INTERNAL_SG1_CONV)) tm
+  (RTOP_TWO_CONV PAIRWISE_GATHER_CONV THENC
+   TRY_CONV (LAND_CONV INTERNAL_SG1_CONV)) tm
 
 (* ----------------------------------------------------------------------
     SORT_AND_GATHER_CONV tm
@@ -316,13 +308,13 @@ fun INTERNAL_SG1_CONV tm =
 
 fun SORT_AND_GATHER_CONV tm = let
   fun prepare_insertion tm =
-      (* term is a sum, if right argument is singleton, insert it using
-         SORT_AND_GATHER1_CONV, otherwise, reassociate and recurse *)
-      if is_plus (rand tm) then
-        (LASSOC_ADD_CONV THENC LAND_CONV SORT_AND_GATHER_CONV THENC
-         SORT_AND_GATHER_CONV) tm
-      else
-        INTERNAL_SG1_CONV tm
+    (* term is a sum, if right argument is singleton, insert it using
+       SORT_AND_GATHER1_CONV, otherwise, reassociate and recurse *)
+    if is_plus (rand tm) then
+      (LASSOC_ADD_CONV THENC LAND_CONV SORT_AND_GATHER_CONV THENC
+       SORT_AND_GATHER_CONV) tm
+    else
+      INTERNAL_SG1_CONV tm
 in
   if is_plus tm then
     LAND_CONV SORT_AND_GATHER_CONV THENC prepare_insertion THENC
@@ -340,14 +332,14 @@ end tm
 
 fun S_AND_G_MULT tm = let
   fun prepare_insertion tm =
-      (* term is a sum, if right argument is singleton, insert it using
-         SORT_AND_GATHER1_CONV, otherwise, reassociate and recurse *)
-      if is_plus (rand tm) then
-        (LASSOC_ADD_CONV THENC LAND_CONV S_AND_G_MULT THENC S_AND_G_MULT) tm
-      else if is_mult (rand tm) andalso not (is_var (rand (rand tm))) then
-        (RAND_CONV LINEAR_MULT THENC prepare_insertion) tm
-      else
-        SORT_AND_GATHER1_CONV tm
+    (* term is a sum, if right argument is singleton, insert it using
+       SORT_AND_GATHER1_CONV, otherwise, reassociate and recurse *)
+    if is_plus (rand tm) then
+      (LASSOC_ADD_CONV THENC LAND_CONV S_AND_G_MULT THENC S_AND_G_MULT) tm
+    else if is_mult (rand tm) andalso not (is_var (rand (rand tm))) then
+      (RAND_CONV LINEAR_MULT THENC prepare_insertion) tm
+    else
+      SORT_AND_GATHER1_CONV tm
 in
   if is_plus tm then
     LAND_CONV S_AND_G_MULT THENC prepare_insertion
@@ -367,10 +359,10 @@ end tm
    ---------------------------------------------------------------------- *)
 
 fun NEG_SUM_CONV tm =
-    ((REWR_CONV INT_NEG_ADD THENC BINOP_CONV NEG_SUM_CONV) ORELSEC
-     (REWR_CONV INT_NEG_LMUL THENC
-      TRY_CONV (LAND_CONV (REWR_CONV INT_NEGNEG))) ORELSEC
-     TRY_CONV (REWR_CONV INT_NEGNEG)) tm
+  ((REWR_CONV INT_NEG_ADD THENC BINOP_CONV NEG_SUM_CONV) ORELSEC
+   (REWR_CONV INT_NEG_LMUL THENC
+    TRY_CONV (LAND_CONV (REWR_CONV INT_NEGNEG))) ORELSEC
+   TRY_CONV (REWR_CONV INT_NEGNEG)) tm
 
 
 (* ----------------------------------------------------------------------
@@ -380,12 +372,6 @@ fun NEG_SUM_CONV tm =
     tm.  Of course, this doesn't preserve the order in the sum.
    ---------------------------------------------------------------------- *)
 
-(* ``!x y. x = y + (x + ~y)`` *)
-val front_put_thm = prove(
-  ``!x y. x = y + (x + ~y)``,
-  REPEAT GEN_TAC THEN
-  CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV INT_ADD_COMM))) THEN
-  REWRITE_TAC [INT_ADD_ASSOC, INT_ADD_RINV, INT_ADD_LID]);
 fun MOVE_VCOEFF_TO_FRONT v tm = let
   val cv = find_summand v tm
   val th = SPECL [tm,cv] front_put_thm
@@ -422,7 +408,7 @@ fun NORMALISE_MULT0 t = let
          numSyntax.list_mk_mult,
          EQT_ELIM o AC_CONV (MULT_ASSOC, MULT_COMM),
          numSyntax.is_numeral,
-         GSYM arithmeticTheory.MULT_LEFT_1,
+         SYM_MULT_LEFT_1,
          numSyntax.term_of_int 1)
       else if intSyntax.is_mult t then
         (intSyntax.dest_mult,
@@ -431,7 +417,7 @@ fun NORMALISE_MULT0 t = let
          intSyntax.list_mk_mult,
          EQT_ELIM o AC_CONV (INT_MUL_ASSOC, INT_MUL_COMM),
          intSyntax.is_int_literal,
-         GSYM INT_MUL_LID,
+         SYM_MUL_LID,
          intSyntax.one_tm)
       else raise ERR "NORMALISE_MULT" "Term not a multiplication"
   val ms = strip t
@@ -449,8 +435,8 @@ in
     sort nums others
 end t
 
-val NORMALISE_MULT  =
-    NORMALISE_MULT0 THENC REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
+val NORMALISE_MULT =
+    NORMALISE_MULT0 THENC REWRITE_CONV [SYM_NEG_RMUL, SYM_NEG_LMUL,
                                         INT_NEGNEG] THENC
     REWRITE_CONV [INT_NEG_LMUL] THENC
     TRY_CONV (FIRST_CONV (map REWR_CONV [arithmeticTheory.MULT_LEFT_1,
@@ -470,35 +456,18 @@ fun EVERY_SUMMAND c tm =
   if is_plus tm then BINOP_CONV (EVERY_SUMMAND c) tm
   else c tm
 
-local
-  val lt_elim = SPEC_ALL int_arithTheory.less_to_leq_samer
-  val tac = REWRITE_TAC [GSYM int_le, INT_NOT_LE, lt_elim, int_gt,
-                         INT_LE_RADD, int_ge, GSYM INT_LE_ANTISYM,
-                         DE_MORGAN_THM]
-  val not_le = prove(``~(x <= y) = (y + 1i <= x)``, tac)
-  val not_lt = prove(``~(x:int < y) <=> y <= x``, tac)
-  val not_gt = prove(``~(x:int > y) <=> x <= y``, tac)
-  val not_ge = prove(``~(x >= y) <=> x + 1i <= y``, tac)
-  val not_eq = prove(``~(x = y:int) <=> y + 1 <= x \/ x + 1 <= y``, tac)
-  val ge_elim = prove(``x:int >= y <=> y <= x``, tac)
-  val gt_elim = prove(``x > y <=> y + 1i <= x``, tac)
-  val eq_elim = prove(``(x:int = y) <=> (x <= y /\ y <= x)``, tac)
-  val mult1 = GSYM INT_MUL_LID
-in
-
-fun MULT1_CONV tm = if not (is_mult tm) andalso not (is_int_literal tm) then
-                      REWR_CONV mult1 tm
-                    else ALL_CONV tm
+fun MULT1_CONV tm =
+  if not (is_mult tm) andalso not (is_int_literal tm) then
+    REWR_CONV SYM_MUL_LID tm
+  else ALL_CONV tm
 
 val sum_normalise =
-    REWRITE_CONV [INT_NEG_ADD, INT_LDISTRIB, INT_RDISTRIB,
-                  INT_NEG_LMUL, INT_NEGNEG, INT_NEG_0,
-                  int_sub] THENC
-    EVERY_SUMMAND (TRY_CONV NORMALISE_MULT THENC MULT1_CONV) THENC
-    REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
-                  INT_NEGNEG] THENC
-    REWRITE_CONV [INT_NEG_LMUL] THENC
-    SORT_AND_GATHER_CONV
+  REWRITE_CONV [INT_NEG_ADD, INT_LDISTRIB, INT_RDISTRIB,
+                INT_NEG_LMUL, INT_NEGNEG, INT_NEG_0, int_sub] THENC
+  EVERY_SUMMAND (TRY_CONV NORMALISE_MULT THENC MULT1_CONV) THENC
+  REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL, INT_NEGNEG] THENC
+  REWRITE_CONV [INT_NEG_LMUL] THENC
+  SORT_AND_GATHER_CONV
 
 val norm_divides =
     LAND_CONV CooperMath.REDUCE_CONV THENC
@@ -507,51 +476,54 @@ val norm_divides =
     CooperMath.minimise_divides THENC
     CooperMath.check_divides
 
-fun normalise_numbers tm = let
+local
   val MK_LEQ =
-    TRY_CONV (FIRST_CONV (map REWR_CONV [lt_elim, not_le, not_lt, not_gt,
-                                         not_ge, ge_elim, gt_elim])) THENC
+    TRY_CONV (FIRST_CONV (map REWR_CONV [
+      EVERY_SUMMAND_lt_elim, EVERY_SUMMAND_not_le, EVERY_SUMMAND_not_lt,
+      EVERY_SUMMAND_not_gt, EVERY_SUMMAND_not_ge, EVERY_SUMMAND_ge_elim,
+      EVERY_SUMMAND_gt_elim])) THENC
     (REWR_CONV int_arithTheory.le_move_all_right ORELSEC
      REWR_CONV int_arithTheory.eq_move_all_right)
   val base_normaliser = RAND_CONV sum_normalise THENC gcd_check
 in
-  if (is_leq tm orelse is_eq tm) andalso lhand tm ~~ zero_tm then
-    if is_plus (rand tm) then let
-      val (rl, rr) = dest_plus (rand tm)
-      fun mult_ok acc tm = let
-        val (c,v) = dest_mult tm
+  fun normalise_numbers tm = (
+    if (is_leq tm orelse is_eq tm) andalso lhand tm ~~ zero_tm then
+      if is_plus (rand tm) then let
+        val (rl, rr) = dest_plus (rand tm)
+        fun mult_ok acc tm = let
+          val (c,v) = dest_mult tm
+        in
+          is_int_literal c andalso is_var v andalso
+          (case acc of
+            NONE => true
+          | SOME v0 => Term.compare(v0, v) = GREATER)
+        end handle HOL_ERR _ => false
+        fun rhs_ok acc tm = let
+          val (l,r) = dest_plus tm
+        in
+          mult_ok acc r andalso rhs_ok (SOME (rand r)) l
+        end handle HOL_ERR _ => mult_ok acc tm
       in
-        is_int_literal c andalso is_var v andalso
-        (case acc of
-           NONE => true
-         | SOME v0 => Term.compare(v0, v) = GREATER)
-      end handle HOL_ERR _ => false
-      fun rhs_ok acc tm = let
-        val (l,r) = dest_plus tm
-      in
-        mult_ok acc r andalso rhs_ok (SOME (rand r)) l
-      end handle HOL_ERR _ => mult_ok acc tm
-    in
-      if is_int_literal rr andalso rhs_ok NONE rl then
-        if is_eq tm andalso is_negated (lhand (hd (strip_plus rl))) then
-          REWR_CONV (GSYM INT_EQ_NEG) THENC
-          LAND_CONV (REWR_CONV INT_NEG_0) THENC base_normaliser
-        else NO_CONV
-      else base_normaliser
-    end
-    else if is_int_literal (rand tm) then CooperMath.REDUCE_CONV
-         else base_normaliser
-  else if is_divides tm then
-    CHANGED_CONV norm_divides
-  else if is_neg tm andalso is_divides (rand tm) then
-    CHANGED_CONV (RAND_CONV norm_divides)
-  else MK_LEQ THENC base_normaliser
-end tm
+        if is_int_literal rr andalso rhs_ok NONE rl then
+          if is_eq tm andalso is_negated (lhand (hd (strip_plus rl))) then
+            REWR_CONV (GSYM INT_EQ_NEG) THENC
+            LAND_CONV (REWR_CONV INT_NEG_0) THENC base_normaliser
+          else NO_CONV
+        else base_normaliser
+      end
+      else if is_int_literal (rand tm) then CooperMath.REDUCE_CONV
+          else base_normaliser
+    else if is_divides tm then
+      CHANGED_CONV norm_divides
+    else if is_neg tm andalso is_divides (rand tm) then
+      CHANGED_CONV (RAND_CONV norm_divides)
+    else MK_LEQ THENC base_normaliser
+  ) tm
+end (* local *)
 
 val leaf_normalise =
-    (REWR_CONV not_eq THENC BINOP_CONV normalise_numbers) ORELSEC
-    normalise_numbers
-end (* local *)
+  (REWR_CONV EVERY_SUMMAND_not_eq THENC BINOP_CONV normalise_numbers) ORELSEC
+  normalise_numbers
 
 
 (* ----------------------------------------------------------------------
@@ -562,34 +534,27 @@ end (* local *)
     expressions.
    ---------------------------------------------------------------------- *)
 
-val tac = COND_CASES_TAC THEN REWRITE_TAC []
-val COND_FA_THEN_THM =
-    prove(``(if p then !x:'a. P x else q) = !x. if p then P x else q``, tac)
-val COND_FA_ELSE_THM =
-    prove(``(if p then q else !x:'a. P x) = !x. if p then q else P x``, tac)
-val COND_EX_THEN_THM =
-    prove(``(if p then ?x:'a. P x else q) = ?x. if p then P x else q``, tac)
-val COND_EX_ELSE_THM =
-    prove(``(if p then q else ?x:'a. P x) = ?x. if p then q else P x``, tac)
-
 fun COND_FA_THEN tm = let
   val (g, t, e) = dest_cond tm
   val (v, _) = dest_forall t
 in
   HO_REWR_CONV COND_FA_THEN_THM THENC RAND_CONV (ALPHA_CONV v)
 end tm
+
 fun COND_FA_ELSE tm = let
   val (g, t, e) = dest_cond tm
   val (v, _) = dest_forall e
 in
   HO_REWR_CONV COND_FA_ELSE_THM THENC RAND_CONV (ALPHA_CONV v)
 end tm
+
 fun COND_EX_THEN tm = let
   val (g, t, e) = dest_cond tm
   val (v, _) = dest_exists t
 in
   HO_REWR_CONV COND_EX_THEN_THM THENC RAND_CONV (ALPHA_CONV v)
 end tm
+
 fun COND_EX_ELSE tm = let
   val (g, t, e) = dest_cond tm
   val (v, _) = dest_exists e
@@ -623,31 +588,30 @@ fun generate_nway_casesplit n = let
   val P_ty = genty n
   val P_t = mk_var("P", P_ty)
   fun gen_cases (m, vs, t) =
-      if m < n then let
-          val v = mk_var("v"^Int.toString m, bool)
-          val vT = (m + 1, v::vs, mk_comb(t, T))
-          val vF = (m + 1, (mk_neg v)::vs, mk_comb(t, F))
-        in
-          mk_disj(gen_cases vT, gen_cases vF)
-        end
-      else
-        mk_conj(t, list_mk_conj vs)
+    if m < n then let
+        val v = mk_var("v"^Int.toString m, bool)
+        val vT = (m + 1, v::vs, mk_comb(t, T))
+        val vF = (m + 1, (mk_neg v)::vs, mk_comb(t, F))
+      in
+        mk_disj(gen_cases vT, gen_cases vF)
+      end
+    else
+      mk_conj(t, list_mk_conj vs)
   val RHS = gen_cases (0, [], P_t)
   fun gen_vars n acc =
-      if n < 0 then acc
-      else gen_vars (n - 1) (mk_var("v"^Int.toString n, bool)::acc)
+    if n < 0 then acc
+    else gen_vars (n - 1) (mk_var("v"^Int.toString n, bool)::acc)
   val vars = gen_vars (n - 1) []
+  val th = prove(mk_eq(list_mk_comb(P_t, vars), RHS),
+    MAP_EVERY BOOL_CASES_TAC vars THEN REWRITE_TAC [])
 in
-  GEN P_t (GENL vars
-                (prove(mk_eq(list_mk_comb(P_t, vars), RHS),
-                       MAP_EVERY BOOL_CASES_TAC vars THEN REWRITE_TAC [])))
+  GEN P_t (GENL vars th)
 end
 
 fun UNBETA_LIST tlist =
     case tlist of
       [] => ALL_CONV
     | (t::ts) => UNBETA_CONV t THENC RATOR_CONV (UNBETA_LIST ts)
-
 
 
 (* ----------------------------------------------------------------------
@@ -657,19 +621,12 @@ fun UNBETA_LIST tlist =
     by rewriting appropriately.
    ---------------------------------------------------------------------- *)
 
-val not_beq = prove(
-  ``~(b1 = b2) <=> b1 /\ ~b2 \/ ~b1 /\ b2``,
-  BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []);
-val beq = prove(
-  ``(b1 = b2) <=> b1 /\ b2 \/ ~b1 /\ ~b2``,
-  BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []);
-
 fun reveal_a_disj tm =
     if is_disj tm then ALL_CONV tm
     else
       (FIRST_CONV (map REWR_CONV [beq, not_beq, IMP_DISJ_THM,
-                                  CooperThms.NOT_AND]) ORELSEC
-       (REWR_CONV CooperThms.NOT_NOT_P THENC reveal_a_disj)) tm
+                                  cooperTheory.NOT_AND]) ORELSEC
+       (REWR_CONV cooperTheory.NOT_NOT_P THENC reveal_a_disj)) tm
 
 
 (* ----------------------------------------------------------------------
@@ -680,10 +637,6 @@ fun reveal_a_disj tm =
     else branches) so that the coefficient of the first variable is
     positive
    ---------------------------------------------------------------------- *)
-
-val FLIP_COND = prove(
-  ``(if g then t:'a else e) = if ~g then e else t``,
-  COND_CASES_TAC THEN REWRITE_TAC []);
 
 fun normalise_guard t = let
   val _ = dest_cond t
@@ -707,7 +660,7 @@ in
 end t
 
 fun TOP_SWEEP_ONCE_CONV c t =
-    (TRY_CONV c THENC SUB_CONV (TOP_SWEEP_ONCE_CONV c)) t
+  (TRY_CONV c THENC SUB_CONV (TOP_SWEEP_ONCE_CONV c)) t
 
 val normalise_guards = TOP_SWEEP_ONCE_CONV normalise_guard
 
@@ -751,8 +704,8 @@ end t
    ---------------------------------------------------------------------- *)
 
 fun cond_removal t =
-    ((reveal_a_disj THENC BINOP_CONV cond_removal) ORELSEC
-     (normalise_guards THENC cond_removal0)) t
+  ((reveal_a_disj THENC BINOP_CONV cond_removal) ORELSEC
+   (normalise_guards THENC cond_removal0)) t
 
 
 (* ----------------------------------------------------------------------
@@ -764,43 +717,14 @@ fun cond_removal t =
        P(0) \/ P(1) \/ ... \/ P(u)
    ---------------------------------------------------------------------- *)
 
-val refl_case = prove(
-  ``!u P. (?i:int. (u <= i /\ i <= u) /\ P i) = P u``,
-  REWRITE_TAC [INT_LE_ANTISYM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN Q.EXISTS_TAC `u` THEN
-  ASM_REWRITE_TAC []);
-val nonrefl_case = prove(
-  ``!lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) <=>
-              lo <= hi /\ (P lo \/ ?i. (lo + 1 <= i /\ i <= hi) /\ P i)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    Q.ASM_CASES_TAC `i = lo` THENL [
-      POP_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC [],
-      REWRITE_TAC [LEFT_AND_OVER_OR] THEN
-      DISJ2_TAC THEN CONJ_TAC THENL [
-        IMP_RES_TAC INT_LE_TRANS,
-        ALL_TAC
-      ] THEN Q.EXISTS_TAC `i` THEN ASM_REWRITE_TAC [] THEN
-      REWRITE_TAC [GSYM int_arithTheory.less_to_leq_samer] THEN
-      RULE_ASSUM_TAC (REWRITE_RULE [INT_LE_LT]) THEN
-      POP_ASSUM_LIST (MAP_EVERY STRIP_ASSUME_TAC) THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      FIRST_X_ASSUM (fn th => MP_TAC th THEN REWRITE_TAC [] THEN NO_TAC)
-    ],
-    Q.EXISTS_TAC `lo` THEN ASM_REWRITE_TAC [INT_LE_REFL],
-    Q.EXISTS_TAC `i` THEN ASM_REWRITE_TAC [] THEN
-    MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `lo + 1` THEN
-    ASM_REWRITE_TAC [INT_LE_ADDR] THEN CONV_TAC CooperMath.REDUCE_CONV
-  ]);
-
-
 fun calculate_range_disjunct tm = let
   val (i, body) = dest_exists tm
   fun recurse tm =
       ((REWR_CONV refl_case THENC BETA_CONV) ORELSEC
        (REWR_CONV nonrefl_case THENC
         LAND_CONV CooperMath.REDUCE_CONV THENC
-        (REWR_CONV CooperThms.F_and_l ORELSEC
-         (REWR_CONV CooperThms.T_and_l THENC
+        (REWR_CONV cooperTheory.F_and_l ORELSEC
+         (REWR_CONV cooperTheory.T_and_l THENC
           FORK_CONV(BETA_CONV,
                     BINDER_CONV (LAND_CONV
                                    (LAND_CONV CooperMath.REDUCE_CONV)) THENC
@@ -917,7 +841,7 @@ fun sum_to_sumc tm = let
   val (cs_t, vs_t) = (mk_list ## mk_list) (cs, vs)
   val sumc_t = list_mk_comb(sumc_t, [cs_t, vs_t])
 in
-  SYM ((REWRITE_CONV [INT_ADD_ASSOC, OmegaTheory.sumc_def, INT_MUL_RID] THENC
+  SYM ((REWRITE_CONV [INT_ADD_ASSOC, sumc_def, INT_MUL_RID] THENC
         REWR_CONV INT_ADD_RID) sumc_t)
 end
 
@@ -932,16 +856,15 @@ end
    ---------------------------------------------------------------------- *)
 
 fun sumc_eliminate reducer tm = let
-  open OmegaTheory
   fun recurse tm =
-      if listSyntax.is_nil (rand (rand tm)) then
-        (REWR_CONV sumc_singleton THENC reducer) tm
-      else
-        (REWR_CONV sumc_nonsingle THENC LAND_CONV (LAND_CONV reducer) THENC
-         RAND_CONV recurse) tm
+    if listSyntax.is_nil (rand (rand tm)) then
+      (REWR_CONV sumc_singleton THENC reducer) tm
+    else
+      (REWR_CONV sumc_nonsingle THENC LAND_CONV (LAND_CONV reducer) THENC
+        RAND_CONV recurse) tm
 in
   if listSyntax.is_nil (rand tm) then
-    REWRITE_CONV [listTheory.MAP, OmegaTheory.sumc_def]
+    REWRITE_CONV [listTheory.MAP, sumc_def]
   else
     recurse
 end tm
@@ -958,19 +881,17 @@ end tm
 
    ---------------------------------------------------------------------- *)
 
-val SYM_EQ_NEG = GSYM INT_EQ_NEG
 fun eliminate_equality v tm = let
-  open OmegaTheory
   val instantiate_eqremoval =
       C MP TRUTH o CONV_RULE (LAND_CONV REDUCE_CONV) o
       PART_MATCH (lhand o rand) equality_removal
   val rhs_th = MOVE_VCOEFF_TO_FRONT v (rand tm)
   val cv_t = lhand (rand (concl rhs_th))
   val dealwith_negative_coefficient =
-      if is_negated (lhand cv_t) then
-        REWR_CONV SYM_EQ_NEG THENC
-        FORK_CONV (REWR_CONV INT_NEG_0, NEG_SUM_CONV)
-      else ALL_CONV
+    if is_negated (lhand cv_t) then
+      REWR_CONV SYM_EQ_NEG THENC
+      FORK_CONV (REWR_CONV INT_NEG_0, NEG_SUM_CONV)
+    else ALL_CONV
 in
   RAND_CONV (K rhs_th) THENC dealwith_negative_coefficient THENC
   RAND_CONV (RAND_CONV sum_to_sumc) THENC instantiate_eqremoval THENC
@@ -1013,7 +934,6 @@ in
   else (BINDER_CONV (push_exvar_to_bot v))
 end tm
 
-val EX_REFL = EQT_INTRO (SPEC_ALL EXISTS_REFL)
 fun OmegaEq t = let
   val (exvars, body) = strip_exists t
   val exv_set = HOLset.addList(empty_tmset, exvars)
@@ -1029,17 +949,16 @@ fun OmegaEq t = let
   val newrhs = if null rest then c else mk_conj(c, list_mk_conj rest)
   val reordered_thm =
       EQT_ELIM (AC_CONV(CONJ_ASSOC, CONJ_COMM) (mk_eq(body, newrhs)))
-  val bring_veq_to_top = let
-    val (rCONV, finisher) = if null rest then (I, ALL_CONV)
-                            else (LAND_CONV,
-                                  LEFT_AND_EXISTS_CONV THENC
-                                  BINDER_CONV (REWR_CONV (GSYM CONJ_ASSOC)))
-  in
-      if elimc = Arbint.one then
-        rCONV (phase2_CONV to_elim THENC LAND_CONV (REWR_CONV INT_MUL_LID))
-      else
-        rCONV (eliminate_equality to_elim) THENC finisher
-  end
+  val (rCONV, finisher) =
+    if null rest then (I, ALL_CONV)
+    else (LAND_CONV,
+          LEFT_AND_EXISTS_CONV THENC
+          BINDER_CONV (REWR_CONV (GSYM CONJ_ASSOC)))
+  val bring_veq_to_top =
+    if elimc = Arbint.one then
+      rCONV (phase2_CONV to_elim THENC LAND_CONV (REWR_CONV INT_MUL_LID))
+    else
+      rCONV (eliminate_equality to_elim) THENC finisher
   fun ifVarsRemain c t = if is_exists t then c t else ALL_CONV t
   val (absify, unwinder) =
       if null rest andalso elimc = Arbint.one then
@@ -1121,15 +1040,15 @@ fun eliminate_negative_divides t = let
   val (vs, _) = strip_exists t
   fun elim_ndivides tm = let
     val (c, d) = dest_divides (rand tm)
-    val c_neq_0 = EQT_ELIM (CooperMath.REDUCE_CONV
-                              (mk_neg(mk_eq(rand c, numSyntax.zero_tm))))
+    val c_neq_0 = EQT_ELIM $ CooperMath.REDUCE_CONV $
+      mk_neg(mk_eq(rand c, numSyntax.zero_tm))
   in
     MP (SPECL [rand c, d] int_arithTheory.NOT_INT_DIVIDES_POS) c_neq_0
   end
   fun rdistrib tm =
-      TRY_CONV (REWR_CONV RIGHT_AND_OVER_OR THENC RAND_CONV rdistrib) tm
+    TRY_CONV (REWR_CONV RIGHT_AND_OVER_OR THENC RAND_CONV rdistrib) tm
   fun ldistrib tm =
-      TRY_CONV (REWR_CONV LEFT_AND_OVER_OR THENC RAND_CONV ldistrib) tm
+    TRY_CONV (REWR_CONV LEFT_AND_OVER_OR THENC RAND_CONV ldistrib) tm
   fun find_divides tm = let
   in
     if is_conj tm then

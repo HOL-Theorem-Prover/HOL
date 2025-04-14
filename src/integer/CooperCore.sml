@@ -2,7 +2,7 @@ structure CooperCore :> CooperCore =
 struct
 open HolKernel Parse boolLib
      integerTheory int_arithTheory intReduce
-     intSyntax CooperSyntax CooperMath CooperThms
+     intSyntax CooperSyntax CooperMath cooperTheory
 
 val ERR = mk_HOL_ERR "CooperCore";
 

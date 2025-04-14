@@ -27,6 +27,9 @@ fun plus2 x = x + 2
 fun less1 x = if x = 0 then raise Fail "Can't take one off zero" else x - 1
 fun less2 x = if x < 2 then raise Fail "Can't take one off zero" else x - 2
 
+fun max (x, y) = if x < y then y else x
+fun min (x, y) = if x < y then x else y
+
 fun toBinString x = fmt StringCvt.BIN x
 fun toOctString x = fmt StringCvt.OCT x
 fun toHexString x = fmt StringCvt.HEX x
@@ -94,6 +97,8 @@ in
          then gcd' j i
       else gcd' i j
 end
+
+fun lcm (x, y) = (x * y) div (gcd (x, y))
 
 (* Basic Integer square root *)
 
