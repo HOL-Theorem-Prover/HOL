@@ -2310,7 +2310,7 @@ val power_predecessor_eqn = store_thm(
   `_ = (t ** n - 1) + (t - 1) * t ** n` by rw[] >>
   `_ = (t ** n - 1) + (t * t ** n - t ** n)` by rw[LEFT_SUB_DISTRIB] >>
   `_ = t * t ** n - 1` by rw[] >>
-  `_ =  t ** SUC n - 1 ` by rw[GSYM EXP] >>
+  `_ = t ** SUC n - 1 ` by rw[GSYM EXP] >>
   rw[]);
 
 (* Above is the formal proof of the following observation for any base:

@@ -434,7 +434,7 @@ val FOLDR_CONV  =
   fn conv => fn tm =>
     let val (f,e,l) = listSyntax.dest_foldr tm
         val ithm' = ISPECL[f,e] ithm
-        val (els,lty) =  (dest_list l)
+        val (els,lty) = (dest_list l)
         fun itfn a th =
           let val l' = case snd(strip_comb(lhs(concl th)))
                        of [f',e',l'] => l'
@@ -741,7 +741,7 @@ val ELL_CONV =
     (let val (N,lst) = rich_listSyntax.dest_ell tm
          val ty = type_of lst
          val (lst',ety) = (dest_list lst)
-         val n =  int_of_term N
+         val n = int_of_term N
      in
          if not(n < (length lst'))
              then raise ERR "ELL_CONV" ("index too large: "^(int_to_string n))

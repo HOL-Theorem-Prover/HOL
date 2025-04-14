@@ -1461,7 +1461,7 @@ val ALGEBRA_ALT_INTER = store_thm
    RW_TAC std_ss [algebra_def, subset_class_def]
    >> EQ_TAC >|
    [RW_TAC std_ss []
-    >> Know `s INTER t =  space a DIFF ((space a DIFF s) UNION (space a DIFF t))`
+    >> Know `s INTER t = space a DIFF ((space a DIFF s) UNION (space a DIFF t))`
     >- (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION]
         >> EQ_TAC
         >- (RW_TAC std_ss [] >> FULL_SIMP_TAC std_ss [SUBSET_DEF] >> PROVE_TAC [])

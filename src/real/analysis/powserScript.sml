@@ -556,7 +556,7 @@ val TERMDIFF = store_thm("TERMDIFF",
     REWRITE_TAC[real_div, GSYM REAL_MUL_ASSOC] THEN
     GEN_REWR_TAC RAND_CONV
      [AC(REAL_MUL_ASSOC,REAL_MUL_SYM)
-      “a * (b * (c * d)) =  b * (c * (a * d))”] THEN
+      “a * (b * (c * d)) = b * (c * (a * d))”] THEN
     DISJ_CASES_THEN2 SUBST1_TAC (X_CHOOSE_THEN “m:num” SUBST1_TAC)
      (SPEC “n:num” num_CASES) THEN REWRITE_TAC[REAL_MUL_LZERO] THEN
     REWRITE_TAC[TWO, SUC_SUB1, SUB_MONO_EQ] THEN

@@ -295,7 +295,7 @@ val expands_is_EXPANSION = store_thm (
  >> ASM_REWRITE_TAC []);
 
 (* the original definition now becomes a theorem *)
-val expands_thm =  store_thm (
+val expands_thm = store_thm (
    "expands_thm",
   ``!P Q. P expands Q = ?Exp. Exp P Q /\ EXPANSION Exp``,
     NTAC 2 GEN_TAC >> EQ_TAC (* 2 sub-goals here *)

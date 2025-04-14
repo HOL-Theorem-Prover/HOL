@@ -28,7 +28,7 @@ val op+++ = op++
 
 fun (m1 >-> m2) = m1 >- (fn x => m2 >> return x)
 fun optional p = (p >- return o SOME) ++ (return NONE)
-fun mmap f [] =  return []
+fun mmap f [] = return []
   | mmap f (x::xs) = let
     in
       f x >-            (fn x' =>

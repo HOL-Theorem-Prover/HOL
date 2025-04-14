@@ -300,7 +300,7 @@ fun checkparse () = let
   val tm = Lib.with_flag (Globals.notify_on_tyvar_guess, false)
                          Parse.Term
                          `!x. P x`
-  val randty =  type_of (rand tm)
+  val randty = type_of (rand tm)
 in
   if Type.compare(randty, alpha --> bool) <> EQUAL then die ""
   else OK()

@@ -638,7 +638,7 @@ fun ((g1:grammar) Gmerge (g2:(int option * grammar_rule) list)) = let
   val g0_rules =
     Listsort.sort (fn (e1,e2) => aug_compare(#1 e1, #1 e2))
     (rules g1 @ g2)
-  val g_rules =  resolve_same_precs g0_rules
+  val g_rules = resolve_same_precs g0_rules
 in
   fupdate_rules (fn _ => g_rules) g1
 end
@@ -815,7 +815,7 @@ end
 
 fun add_rule {term_name = s : string, fixity = f, pp_elements,
               paren_style, block_style} G0 = let
-  val _ =  pp_elements_ok pp_elements orelse
+  val _ = pp_elements_ok pp_elements orelse
                  raise GrammarError "token list no good"
   val new_tstamp = gnext_timestamp G0
   val rr = {term_name = s, elements = pp_elements, timestamp = new_tstamp,

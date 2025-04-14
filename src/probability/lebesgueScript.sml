@@ -2846,7 +2846,7 @@ Proof
                        >> `{x' | x' IN m_space m /\ Normal (&x / 2 pow n) <= f x' /\ f x' < (&x + 1) / 2 pow n} =
                            {x' | Normal (&x / 2 pow n) <= f x' /\ f x' < (&x + 1) / 2 pow n} INTER m_space m`
                              by (RW_TAC std_ss [EXTENSION,GSPECIFICATION,IN_INTER] >> METIS_TAC [])
-                       >> `!x. &x + 1 =  &(x + 1)` by METIS_TAC [extreal_of_num_def,extreal_add_def,REAL_ADD]
+                       >> `!x. &x + 1 = &(x + 1)` by METIS_TAC [extreal_of_num_def,extreal_add_def,REAL_ADD]
                        >> METIS_TAC [IN_MEASURABLE_BOREL_ALL, measurable_sets_def,subsets_def,space_def,m_space_def])
                    >> RW_TAC std_ss [extreal_of_num_def,extreal_pow_def]
                    >> `0:real <= 2 pow n` by FULL_SIMP_TAC std_ss [REAL_LT_IMP_LE]
@@ -2869,7 +2869,7 @@ Proof
             >> `{x | x IN m_space m /\ Normal (&i / 2 pow n) <= f x /\ f x < (&i + 1) / 2 pow n} =
                 {x | Normal (&i / 2 pow n) <= f x /\ f x < (&i + 1) / 2 pow n} INTER m_space m`
                     by (RW_TAC std_ss [EXTENSION,GSPECIFICATION,IN_INTER] >> METIS_TAC [])
-            >> `!x. &x + 1 =  &(x + 1)` by METIS_TAC [extreal_of_num_def,extreal_add_def,REAL_ADD]
+            >> `!x. &x + 1 = &(x + 1)` by METIS_TAC [extreal_of_num_def,extreal_add_def,REAL_ADD]
             >> METIS_TAC [IN_MEASURABLE_BOREL_ALL, measurable_sets_def,subsets_def,space_def,m_space_def])
   >> (MP_TAC o Q.SPECL [`count (4 ** n)`,`(\k. &k / 2 pow n * measure m {x | x IN m_space m /\ &k / 2 pow n <= f x /\ f x < (&k + 1) / 2 pow n})`,` 2 pow n * measure m {x | x IN m_space m /\ 2 pow n <= f x}`] o INST_TYPE [alpha |-> ``:num``] o GSYM) EXTREAL_SUM_IMAGE_IN_IF_ALT
   >> RW_TAC std_ss []

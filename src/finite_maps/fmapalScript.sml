@@ -1212,7 +1212,7 @@ GEN_TAC THEN Induct THENL
                      fmap_APPEND, fmap_UNIT]
 ]);
 
-val orl_fmap_lb =  maybe_thm ("orl_fmap_lb",``!cmp t:('a#'b)bt lb.
+val orl_fmap_lb = maybe_thm ("orl_fmap_lb",``!cmp t:('a#'b)bt lb.
    bt_to_fmap_lb cmp lb t = fmap (bt_to_orl_lb cmp lb t)``,
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_to_orl_lb, fmap_NIL, bt_to_fmap_lb,
@@ -1222,7 +1222,7 @@ GEN_TAC THEN Induct THENL
                      fmap_APPEND, fmap_UNIT, orl_fmap_lb_ub]
 ]);
 
-val orl_fmap_ub =  maybe_thm ("orl_fmap_ub",``!cmp t:('a#'b)bt ub.
+val orl_fmap_ub = maybe_thm ("orl_fmap_ub",``!cmp t:('a#'b)bt ub.
    bt_to_fmap_ub cmp t ub = fmap (bt_to_orl_ub cmp t ub)``,
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_to_orl_ub, fmap_NIL, bt_to_fmap_ub,

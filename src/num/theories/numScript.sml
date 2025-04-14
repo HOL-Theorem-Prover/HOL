@@ -59,7 +59,7 @@ val num_ISO_DEF = define_new_type_bijections
                    {name = "num_ISO_DEF",
                     ABS = "ABS_num",
                     REP = "REP_num",
-                    tyax =  num_TY_DEF};
+                    tyax = num_TY_DEF};
 
 val R_11   = prove_rep_fn_one_one num_ISO_DEF
 and R_ONTO = prove_rep_fn_onto    num_ISO_DEF

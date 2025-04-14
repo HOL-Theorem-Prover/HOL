@@ -304,8 +304,8 @@ val thm1 = prove (``X ==> T``, REWRITE_TAC[]);
 val thm2 = prove (``T ==> T``, REWRITE_TAC[]);
 val t1 = ``X:bool``
 
-val thm1 =  prove (``(?r:'b. P (z:'a)) <=> P z``, PROVE_TAC[]);
-val thm2 =  prove (``P (z:'a) ==> P z``, PROVE_TAC[]);
+val thm1 = prove (``(?r:'b. P (z:'a)) <=> P z``, PROVE_TAC[]);
+val thm2 = prove (``P (z:'a) ==> P z``, PROVE_TAC[]);
 val t = ``(?r:'b. P (z:'a))``
 
 THEN_CONSEQ_CONV___combine thm1 thm2 t
@@ -493,7 +493,7 @@ val is_neg_asm_marker = can dest_neg_asm_marker
 
 fun asm_marker_ELIM_CONV tt =
    let
-      val (l, tt) =  (dest_asm_marker tt)
+      val (l, tt) = (dest_asm_marker tt)
    in
       SPECL [l,tt]  ASM_MARKER_THM
    end;

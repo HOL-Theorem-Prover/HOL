@@ -731,7 +731,7 @@ Proof
 QED
 
 Theorem cv_rep_dimindex[cv_rep]:
-  Num (dimindex (:'a)) =  Num (dimindex (:'a))
+  Num (dimindex (:'a)) = Num (dimindex (:'a))
 Proof
   simp[]
 QED

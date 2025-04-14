@@ -35,9 +35,9 @@ functor mkCore(structure IntGrammar : INTGRAMMAR) : CORE =
                                  ITEM{rule=RULE{num=m,...},dot=e,...}) =>
                                         n=m andalso d=e
 
-                val gtItem =  fn (ITEM{rule=RULE{num=n,...},dot=d,...},
-                                  ITEM{rule=RULE{num=m,...},dot=e,...}) =>
-                                        n>m orelse (n=m andalso d>e)
+                val gtItem = fn (ITEM{rule=RULE{num=n,...},dot=d,...},
+                                 ITEM{rule=RULE{num=m,...},dot=e,...}) =>
+                                       n>m orelse (n=m andalso d>e)
 
                 structure ItemList = ListOrdSet
                         (struct

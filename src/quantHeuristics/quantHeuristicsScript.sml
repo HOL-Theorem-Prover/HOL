@@ -415,7 +415,7 @@ in
         filter (fn x => not (same_const ((fst o dest_imp o concl) x) F))
           (apply_rules ruleL [] cL);
 
-      val thmL1 =  doit currentL1;
+      val thmL1 = doit currentL1;
       val thmL2 = doit currentL2;
 
       val thm1' = SIMP_RULE (std_ss++boolSimps.CONJ_ss) [] (LIST_CONJ thmL1)

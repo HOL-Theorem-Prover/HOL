@@ -151,7 +151,7 @@ val poly_diff = new_definition ("poly_diff_def",
 val POLY_ADD_CLAUSES = store_thm("POLY_ADD_CLAUSES",
  Term`([] + p2 = p2) /\
       (p1 + [] = p1) /\
-   ((h1::t1) + (h2::t2) =  (h1 + h2) :: (t1 + t2))`,
+   ((h1::t1) + (h2::t2) = (h1 + h2) :: (t1 + t2))`,
   REWRITE_TAC[poly_add, NOT_CONS_NIL, HD, TL] THEN
   SPEC_TAC(Term`p1:real list`,Term`p1:real list`) THEN
   LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[poly_add]);

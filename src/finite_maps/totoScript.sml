@@ -488,7 +488,7 @@ val toto_unequal_imp = store_thm ("toto_unequal_imp", Term
                    !x y. ((x = y) = F) ==>
                          (if phi x y
                           then apto cmp x y = LESS
-                          else apto cmp x y =  GREATER)`,
+                          else apto cmp x y = GREATER)`,
 REPEAT GEN_TAC THEN REWRITE_TAC [toto_of_LinearOrder] THEN
 STRIP_TAC THEN AR THEN
 IMP_RES_TAC TotOrd_TO_of_LO THEN
@@ -525,7 +525,7 @@ CONV_TAC (ONCE_DEPTH_CONV (PALPHA_CONV (Term`x:'a#'b`)) THENC
           LAND_CONV BETA_CONV)
 THEN REFL_TAC);
 
-val SLO_LEX =  maybe_thm ("SLO_LEX", Term`!R:'a reln V:'b->'b->bool.
+val SLO_LEX = maybe_thm ("SLO_LEX", Term`!R:'a reln V:'b->'b->bool.
 StrongLinearOrder R /\ StrongLinearOrder V ==> StrongLinearOrder (R LEX V)`,
 REWRITE_TAC [StrongLinearOrder] THEN REPEAT STRIP_TAC THEN
 IMP_RES_TAC StrongOrder_ALT THENL

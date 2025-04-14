@@ -1029,7 +1029,7 @@ fun maketable (fins:(int * (int list)) list,
 	   	  end
 
             val _ = say "val s = [\n"
-            val res =  makeEntry(trans,nil,empty)
+            val res = makeEntry(trans,nil,empty)
             val _ =
               case !CharFormat
                of true => (say "(0, \"\")]\n"; say "fun f x = x\n")

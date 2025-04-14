@@ -149,7 +149,7 @@ fun AND_IMPS_CONV tm =
       val th2 = GENL avs (DISCH tm1 (UNDISCH th1))
       val tm2 = concl th2
       val th3 = DISCH tm2 (UNDISCH (SPEC_ALL (ASSUME tm2)))
-      val (thts,tht) =  nsplit SIMPLE_DISJ_PAIR (tl ths) th3
+      val (thts,tht) = nsplit SIMPLE_DISJ_PAIR (tl ths) th3
       fun proc_fn th =
           let val t = hd(hyp th) in GENL avs (DISCH t (UNDISCH th))
           end
