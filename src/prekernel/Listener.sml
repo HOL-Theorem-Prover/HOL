@@ -1,9 +1,9 @@
 structure Listener :> Listener =
 struct
 
-open Unsynchronized
+open Unsynchronized Feedback
+
 type 'a t = (string * ('a -> unit)) list ref
-exception DUP of string
 
 fun new_listener () : 'a t = ref []
 
@@ -16,7 +16,9 @@ fun add_listener (r:'a t) (sf as (s,f)) =
       | SOME _ =>
         if !Globals.interactive then
           r := sf :: List.filter (fn (s', _) => s' <> s) t
-        else raise DUP s
+        else
+          raise mk_HOL_ERR "Listener" "add_listener"
+            ("duplicate listener registration: "^s)
     end
 
 fun remove_listener (r:'a t) s =

@@ -1,7 +1,6 @@
 signature Listener = sig
 
   type 'a t
-  exception DUP of string
   val add_listener : 'a t -> (string * ('a -> unit)) -> unit
   val remove_listener : 'a t -> string -> ('a -> unit) option
   val listeners : 'a t -> (string * ('a -> unit)) list
