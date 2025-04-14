@@ -711,7 +711,7 @@ val DECODE_ARM_THM = store_thm("DECODE_ARM_THM",
                else
                  if b 4 then data_proc else data_proc`,
   SRW_TAC [boolSimps.LET_ss] [DECODE_ARM_def]
-    \\ FULL_SIMP_TAC (srw_ss()) [bool_case_ID]);
+    \\ FULL_SIMP_TAC (srw_ss()) []);
 
 (* -------------------------------------------------------------------------- *)
 

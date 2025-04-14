@@ -3593,10 +3593,26 @@ let val x    = “x:bool”
  end);
 
 (* ------------------------------------------------------------------------- *)
-(*    bool_case_ID = |- !x b. bool_case x x b = x                            *)
+(*    bool_case_ID = |- !x. (x => T | F) = x                                 *)
+(* ------------------------------------------------------------------------- *)
+val bool_case_ID = thm (#(FILE), #(LINE))("bool_case_ID",
+let val x = “x:bool”
+    val (CONDT,CONDF) = INST_TYPE [alpha |-> bool] COND_CLAUSES
+                      |> SPECL [T,F]
+                      |> CONJ_PAIR
+    val tm = “(if x then T else F) = x”
+    val thT1 = SUBST_CONV [x |-> ASSUME “x = T”] tm tm
+    val thF1 = SUBST_CONV [x |-> ASSUME “x = F”] tm tm
+    val thmT = EQ_MP (SYM thT1) CONDT
+    val thmF = EQ_MP (SYM thF1) CONDF
+in
+   GEN x (DISJ_CASES (SPEC x BOOL_CASES_AX) thmT thmF)
+end);
+(* ------------------------------------------------------------------------- *)
+(*    bool_case_CONST = |- !x b. bool_case x x b = x                            *)
 (* ------------------------------------------------------------------------- *)
 
-val bool_case_ID = thm (#(FILE), #(LINE))("bool_case_ID", COND_ID)
+val bool_case_CONST = thm (#(FILE), #(LINE))("bool_case_CONST", COND_ID)
 
 
 (* ------------------------------------------------------------------------- *)
