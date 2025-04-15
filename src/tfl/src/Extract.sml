@@ -226,8 +226,7 @@ fun variant_tuple away tuple =
        val (p2',away2) = variant_tuple away1 p2
    in (mk_pair(p1',p2'), away2)
    end
-
-else
+ else
   (tuple,away)
 
 fun vstruct_variants away vstructs =
