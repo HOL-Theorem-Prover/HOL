@@ -203,6 +203,7 @@ datatype 'a tac_expr
   | LTacsToLT of 'a tac_expr
   | LNullOk of 'a tac_expr
   | LFirst of 'a tac_expr list
+  | LFirstLT of 'a tac_expr
   | LSelectGoal of 'a
   | LSelectGoals of 'a
   | LAllGoals of 'a tac_expr
@@ -379,10 +380,9 @@ val parseTacticBlock: string -> (int * int) tac_expr = let
     group true (tr e) (LSplit (tr n, grouped true simplifyLT lhs, grouped true simplifyLT rhs)) :: acc
   | AppE [(_, _, IdentE "TRY_LT"), rhs] => group true (tr e) (LTry (simplifyLT rhs)) :: acc
   | AppE [(_, _, IdentE "REPEAT_LT"), rhs] => group true (tr e) (LRepeat (simplifyLT rhs)) :: acc
+  | AppE [(_, _, IdentE "FIRST_LT"), rhs] => group true (tr e) (LFirstLT (simplify rhs)) :: acc
   | AppE [(_, _, IdentE "EVERY_LT"), (_, _, ListE (args, _))] =>
     foldr (uncurry simplifysLT) acc args
-  | AppE [(_, _, IdentE "FIRST_LT"), (_, _, ListE (args, _))] =>
-    group true (tr e) (LFirst (foldr (uncurry simplifyLFirst) [] args)) :: acc
   | AppE [(_, _, IdentE "SELECT_LT_THEN"), lhs, rhs] =>
     group true (tr e) (LSelectThen (grouped true simplify lhs, grouped true simplify rhs)) :: acc
   | AppE [(_, _, IdentE "SELECT_LT"), lhs] =>
@@ -430,6 +430,7 @@ fun mapTacExpr {start, stop, repair} = let
     | go LReverse = LReverse
     | go (LTry e) = LTry (go e)
     | go (LRepeat e) = LRepeat (go e)
+    | go (LFirstLT e) = LFirstLT (go e)
     | go (LSelectThen (e1, e2)) = LSelectThen (go e1, go e2)
     | go (List (p, ls)) = List (trF false p (fn () => map go ls))
     | go (LOpaque (prec, p)) = LOpaque (prec, tr true p)
@@ -488,6 +489,7 @@ fun printTacsAsE s [] = ""
       | go LReverse = TAtom "REVERSE_LT"
       | go (LTry e) = TApp ("TRY_LT", [go e])
       | go (LRepeat e) = TApp ("REPEAT_LT", [go e])
+      | go (LFirstLT e) = TApp ("FIRST_LT", [go e])
       | go (LSelectThen (e1, e2)) = TApp ("SELECT_LT_THEN", [go e1, go e2])
       | go (List (p, ls)) = TList (map go ls)
       | go (Group (_, _, e)) = go e
@@ -581,6 +583,7 @@ datatype tac_frag_open
   | FOpenHeadGoal
   | FOpenSplit of int * int
   | FOpenSelect
+  | FOpenFirstLT
 
 datatype tac_frag_mid
   = FNextFirst
@@ -592,6 +595,7 @@ datatype tac_frag_close
   = FClose
   | FCloseFirst
   | FCloseRepeat
+  | FCloseFirstLT
 
 datatype tac_frag
   = FFOpen of tac_frag_open
@@ -647,6 +651,7 @@ fun linearize isAtom e = let
     | LReverse => (one, FAtom LReverse :: acc')
     | LTry e => bracket (fn one => go e (one, [])) FOpenFirst acc
     | LRepeat e => bracket (fn one => go e (one, [])) FOpenRepeat acc
+    | LFirstLT e => bracket2 FCloseFirstLT (fn one => go e (one, [])) FOpenFirstLT acc
     | LSelectThen (e1, e2) =>
       mbracket FClose FNextSelect FOpenSelect (fn _ =>
         map (fn f => snd (f (false, []))) [
@@ -700,6 +705,7 @@ val unlinearize = let
     | mkOpen FOpenHeadGoal acc = LHeadGoal (mkThen acc [])
     | mkOpen (FOpenSplit n) acc = LSplit (n, mkLThenL acc [], LThenLT [])
     | mkOpen FOpenSelect acc = LAllGoals $ Try (mkThen acc [])
+    | mkOpen FOpenFirstLT acc = LAllGoals $ Try (mkThen acc [])
   fun finish ([], acc) = mkThen (rev acc) []
     | finish ((e, acc') :: stk, acc) =
       finish (stk, mkOpen e (rev acc) :: acc')

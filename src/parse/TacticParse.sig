@@ -34,6 +34,7 @@ datatype 'a tac_expr
   | LTacsToLT of 'a tac_expr
   | LNullOk of 'a tac_expr
   | LFirst of 'a tac_expr list
+  | LFirstLT of 'a tac_expr
   | LSelectGoal of 'a
   | LSelectGoals of 'a
   | LAllGoals of 'a tac_expr
@@ -77,6 +78,7 @@ datatype tac_frag_open
   | FOpenHeadGoal
   | FOpenSplit of int * int
   | FOpenSelect
+  | FOpenFirstLT
 
 datatype tac_frag_mid
   = FNextFirst
@@ -88,6 +90,7 @@ datatype tac_frag_close
   = FClose
   | FCloseFirst
   | FCloseRepeat
+  | FCloseFirstLT
 
 datatype tac_frag
   = FFOpen of tac_frag_open
