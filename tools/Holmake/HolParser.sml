@@ -214,7 +214,6 @@ structure ToSML = struct
   fun mkDoubleReader read pos: double_reader = let
     val inbox = ref (pos, [])
     val outbox = ref (pos, [])
-    val pos = ref pos
     fun read' n = let
       val buf = read n
       val _ = if buf = "" then () else let
@@ -223,7 +222,7 @@ structure ToSML = struct
       in buf end
     fun readAt from to push = let
       fun checkInbox from = if from = to then () else let
-        fun moveToOutbox [] mid acc = raise Fail "unreachable"
+        fun moveToOutbox [] _ _ = raise Fail "unreachable"
           | moveToOutbox (chunk :: rest) mid acc = let
             val mid' = mid - size chunk
             in
@@ -307,8 +306,186 @@ structure ToSML = struct
       String.concat [
         "(DB_dtype.mkloc (", mlquote fname, ", ", Int.toString (i + 1), ", true))"
       ]
-  fun mkPushTranslatorCore ({read, filename, parseError, quietOpen}:args)
-      ({regular, aux, strstr, strcode = strcode0}:strcode) = let
+
+  type doDecl_args = {
+    aux: string -> unit,
+    cat: substring list -> string,
+    countlines: int * substring -> unit,
+    doDecls: int -> Simple.decl list -> int -> unit,
+    doQuote: Simple.qbody -> unit,
+    doQuoteConj: Simple.qbody -> (bool -> int * string -> unit) -> unit,
+    doThmAttrs: bool -> substring -> substring -> unit,
+    filename: string ref,
+    full: string -> substring,
+    line: (int * int) ref,
+    magicBind: string -> unit,
+    parseError: int * int -> string -> unit,
+    quietOpen: bool,
+    readAt: int -> int -> (int * substring -> unit) -> unit,
+    regular: int * int -> unit,
+    regular': int * substring -> unit,
+    ss: substring -> string,
+    strstr: int * int -> unit,
+    strstr': int * substring -> unit }
+
+  fun mkDoDecl
+      ({regular, aux, strstr, parseError, quietOpen,
+       full, ss, cat, regular', strstr', filename, line,
+       doQuote, doDecls, magicBind, doQuoteConj,
+       doThmAttrs, readAt, countlines}: doDecl_args) = let
+    open Simple
+    fun doDecl d = case d of
+        OpenDecl {head = p, toks = _, stop} => (
+          (* two bools  :  interactively  "quiet"   "noisy-open"     verdict
+                                             T          _               T
+                                             F          T               F
+                                             F          F               T *)
+          if quietOpen then
+            aux "val _ = HOL_Interactive.start_open();"
+            (* semicolon is needed to make sure this is evaluated before the
+               open-s hit *)
+          else ();
+          regular (p, stop);
+          if quietOpen then
+            (* implicitly: opened structures can't define HOL_Interactive
+               structures of their own; or call HOL_Interactive.end_open! *)
+            aux " val _ = HOL_Interactive.end_open();"
+          else ())
+      | DefinitionDecl {head = (p, head), quote, termination, ...} => let
+        val {name, attrs, name_attrs, ...} = parseDefinitionPfx head
+        val attrs = destAttrs attrs
+        val indThm =
+          case List.find (fn (k,_) => Substring.compare (k, full "induction") = EQUAL) attrs of
+            SOME (_, s::_) => ss s
+          | _ =>
+            if Substring.isSuffix "_def" name then
+              cat [Substring.slice (name, 0, SOME (Substring.size name - 4)), full "_ind"]
+            else if Substring.isSuffix "_DEF" name then
+              cat [Substring.slice (name, 0, SOME (Substring.size name - 4)), full "_IND"]
+            else cat [name, full "_ind"]
+        in
+          aux "val "; regular' (p, name); aux " = ";
+          if !filename = "" then aux "TotalDefn.qDefine"
+          else app aux [
+                 "TotalDefn.located_qDefine ",
+                 mk_mkloc_string (!filename,#1 (!line))
+               ];
+          app aux [" \"", ss name_attrs, "\" "]; doQuote quote;
+          case termination of
+            NONE => aux " NONE;"
+          | SOME {decls = Decls {start = dstart, decls = decls, stop = dstop}, ...} =>
+            (aux " (SOME ("; doDecls dstart decls dstop; aux "));");
+          magicBind indThm
+        end
+      | DatatypeDecl {head = (_, _), quote, ...} => (
+          aux "val _ = bossLib.Datatype "; doQuote quote; aux ";")
+      | QuoteDecl {head = (p, head), quote, ...} => let
+        val {name, ...} = parseQuotePfx head
+        in aux "val _ = "; regular' (p, name); aux " "; doQuote quote; aux ";" end
+      | QuoteEqnDecl {head = (p, head), quote, ...} => let
+        val {name, bind, ...} = parseQuoteEqnPfx head
+        in
+          aux "val "; regular' (p, bind); aux " = ";
+          regular' (p, name); aux " "; doQuote quote; aux ";"
+        end
+      | InductiveDecl {head = (_, head), quote, ...} => let
+        val {isCo, thmname = stem, ...} = parseInductivePfx head
+        val (entryPoint, indSuffix) =
+          if isCo then ("CoIndDefLib.xHol_coreln", "_coind") else ("IndDefLib.xHol_reln", "_ind")
+        val conjIdx = ref 1
+        val conjs = ref []
+        fun collect first (_, lab) = (
+          if first then () else (aux ") /\\\\ ("; conjIdx := !conjIdx + 1);
+          case parseDefnLabel lab of
+            {tilde, name = SOME name, name_attrs, ...} =>
+            conjs := (!conjIdx, tilde, name, name_attrs) :: !conjs
+          | _ => ()
+        )
+        in
+          app aux ["val (", ss stem, "_rules,", ss stem, indSuffix, ",",
+            ss stem, "_cases) = ", entryPoint, " \"", ss stem, "\" "];
+          doQuoteConj quote collect; aux ";";
+          magicBind (cat [stem, full "_strongind"]);
+          app (fn (i, tilde, name, name_attrs) => let
+            val f = if tilde then fn s => app aux [ss stem, "_", s] else aux
+            in
+              aux " val "; f (ss name); aux " = boolLib.save_thm(\""; f (ss name_attrs);
+              app aux ["\", Drule.cj ", Int.toString i, " ",
+                ss stem, "_rules handle HOL_ERR _ => boolTheory.TRUTH);"]
+            end) (rev (!conjs))
+        end
+      | BeginType (p, head) => let
+        val {local_, kind, tyname, ...} = parseBeginType (p, head) parseError
+        val fnm = kindToName local_ kind
+        in app aux ["val _ = Parse.", fnm, "(\""]; strstr' (p, tyname); aux "\"," end
+      | BeginSimpleThm (p, head) => let
+        val {isTriv, thmname, attrs, name_attrs, ...} = parseTheoremPfx head
+        in
+          aux "val "; regular' (p, thmname); aux " = boolLib.save_thm(\"";
+          doThmAttrs isTriv attrs name_attrs; aux "\","
+        end
+      | TheoremDecl {head = (p, head), quote, proof_tok, body, ...} => let
+        val {isTriv, thmname, attrs, name_attrs, ...} = parseTheoremPfx head
+        val goalabs = "(fn HOL__GOAL__foo => (";
+        val Decls {start = dstart, decls, stop = dstop} = body
+        in
+          aux "val "; regular' (p, thmname);
+          if !filename = "" then aux " = Q.store_thm(\""
+          else app aux [" = Q.store_thm_at ",
+                        mk_mkloc_string (!filename, #1 (!line)),
+                        " (\""];
+          doThmAttrs isTriv attrs name_attrs; aux "\", ";
+          doQuote quote; aux ", ";
+          case proof_tok of
+            SOME (p, tok) => let
+            fun ofKey "exclude_simps" = "simpLib.remove_simps"
+              | ofKey "exclude_frags" = "simpLib.remove_ssfrags"
+              | ofKey k = k
+            fun mktm1 (k,vals) = ofKey (ss k) ^ " [" ^
+              String.concatWith "," (map (mlquote o ss) vals) ^ "]"
+            fun mktm kv [] = mktm1 kv
+              | mktm kv (kv2::xs) = mktm1 kv ^ " o " ^ mktm kv2 xs
+            val () = case destAttrs (#2 (destNameAttrs (full tok))) of
+              [] => ()
+            | kv::attrs => aux ("BasicProvers.with_simpset_updates (" ^ mktm kv attrs ^ ") ")
+            val n = #1 (!line)
+            val _ = readAt p (p + size tok) countlines
+            in aux goalabs; aux (CharVector.tabulate (#1 (!line) - n, (fn _ => #"\n"))) end
+          | _ => aux goalabs;
+          doDecls dstart decls dstop; aux ") HOL__GOAL__foo));"
+        end
+      | Chunk _ => ()
+      | Semi _ => ()
+      | FullQuote {type_q, quote, ...} => (
+        aux (case type_q of NONE => "(Parse.Term " | SOME _ => "(Parse.Type ");
+        doQuote quote; aux ")")
+      | Quote {quote, ...} => doQuote quote
+      | String (start, stop) => strstr (start, stop)
+      | LinePragma _ => aux (Int.toString (#1 (!line) + 1))
+      | LinePragmaWith (p, text) => let
+        val num = Substring.substring(text, 7, size text - 8)
+        in
+          case Int.fromString (Substring.string num) of
+            NONE => parseError (fromSS (p, num)) "expected an integer"
+          | SOME num => line := (fn (_, pos) => (num - 1, pos)) (!line);
+          aux " "
+        end
+      | FilePragma _ => aux (mlquote (!filename))
+      | FilePragmaWith (_, text) => (
+          filename := String.substring(text, 7, size text - 8);
+          aux " ")
+    in doDecl end
+
+  type ret = {
+    doDecl: bool -> int -> Simple.decl -> int,
+    feed: unit -> Simple.topdecl,
+    finishThmVal: unit -> unit,
+    regular: int * int -> unit
+  }
+
+  fun mkPushTranslatorCore' mkDoDecl
+      ({read, filename, parseError, quietOpen}:args)
+      ({regular, aux, strstr, strcode = strcode0}:strcode): ret = let
     open Simple
     val ss = Substring.string
     val full = Substring.full
@@ -333,7 +510,6 @@ structure ToSML = struct
     val strcode = wrap strcode0
     val strstr = wrap strstr
     val regular' = regular o fromSS
-    val strcode' = strcode o fromSS
     val strstr' = strstr o fromSS
     fun locpragma pos = let
       val (line, start) = !line
@@ -348,8 +524,8 @@ structure ToSML = struct
     fun magicBind name =
       aux (" " ^ Systeml.bindstr (concat ["val ", name, " = DB.fetch \"-\" \"", name,
         "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"]) ^ ";")
-    fun doThmAttrs false p attrs name_attrs = aux (ss name_attrs)
-      | doThmAttrs true p attrs name_attrs =
+    fun doThmAttrs false _ name_attrs = aux (ss name_attrs)
+      | doThmAttrs true attrs name_attrs =
         if Substring.isEmpty attrs then
           (aux (ss name_attrs); aux "[local]")
         else (
@@ -364,7 +540,7 @@ structure ToSML = struct
         aux "\", ANTIQUOTE "; regular (idstart, idstart + size id); aux ", QUOTE \"";
         doQuoteCore (idstart + size id) rest stop f)
       | QuoteAntiq (p, Paren {start_tok, decls, end_tok, stop = pstop}) :: rest => let
-        val Decls {start = dstart, decls, stop = dstop} = decls
+        val Decls {start = _, decls, stop = dstop} = decls
         in
           quote (start, p); aux "\", ANTIQUOTE ";
           case end_tok of
@@ -393,148 +569,24 @@ structure ToSML = struct
           (strcode1 (start, p); strcode (p, stop); doQuote0 stop rest)
         | _ => doQuoteCore start toks stop (SOME (f false))
       in aux "[QUOTE \"("; locpragma start; doQuote0 start toks; aux ")\"]" end
+    and doDecls start [] stop = regular (start, stop)
+      | doDecls start (d :: ds) stop = doDecls (doDecl false start d) ds stop
+    and doDeclCore d: unit = mkDoDecl
+      { regular = regular, aux = aux, strstr = strstr, parseError = parseError,
+        quietOpen = quietOpen,full = full, ss = ss, cat = cat, regular' = regular',
+        strstr' = strstr', filename = filename, line = line, doQuote = doQuote,
+        doDecls = doDecls, magicBind = magicBind, doQuoteConj = doQuoteConj,
+        doThmAttrs = doThmAttrs, readAt = readAt, countlines = countlines } d
     and doDecl eager pos d = case d of
-        OpenDecl {head = p, toks, stop} => (
-          regular (pos, p); finishThmVal ();
-          (* two bools  :  interactively  "quiet"   "noisy-open"     verdict
-                                             T          _               T
-                                             F          T               F
-                                             F          F               T *)
-          if quietOpen then
-            aux "val _ = HOL_Interactive.start_open();"
-            (* semicolon is needed to make sure this is evaluated before the
-               open-s hit *)
-          else ();
-          regular (p, stop);
-          if quietOpen then
-            (* implicitly: opened structures can't define HOL_Interactive
-               structures of their own; or call HOL_Interactive.end_open! *)
-            aux " val _ = HOL_Interactive.end_open();"
-          else ();
-          stop)
-      | DefinitionDecl {head = (p, head), quote, termination, stop, ...} => let
-        val {keyword, name, attrs, name_attrs} = parseDefinitionPfx head
-        val attrs = destAttrs attrs
-        val indThm =
-          case List.find (fn (k,v) => Substring.compare (k, full "induction") = EQUAL) attrs of
-            SOME (_, s::_) => ss s
-          | _ =>
-            if Substring.isSuffix "_def" name then
-              cat [Substring.slice (name, 0, SOME (Substring.size name - 4)), full "_ind"]
-            else if Substring.isSuffix "_DEF" name then
-              cat [Substring.slice (name, 0, SOME (Substring.size name - 4)), full "_IND"]
-            else cat [name, full "_ind"]
-        in
-          regular (pos, p); finishThmVal ();
-          aux "val "; regular' (p, name); aux " = ";
-          if !filename = "" then aux "TotalDefn.qDefine"
-          else app aux [
-                 "TotalDefn.located_qDefine ",
-                 mk_mkloc_string (!filename,#1 (!line))
-               ];
-          app aux [" \"", ss name_attrs, "\" "]; doQuote quote;
-          case termination of
-            NONE => aux " NONE;"
-          | SOME {decls = Decls {start = dstart, decls = decls, stop = dstop}, ...} =>
-            (aux " (SOME ("; doDecls dstart decls dstop; aux "));");
-          magicBind indThm;
-          stop
-        end
-      | DatatypeDecl {head = (p, head), quote, stop, ...} => (
-          regular (pos, p); finishThmVal ();
-          aux "val _ = bossLib.Datatype "; doQuote quote; aux ";";
-          stop)
-      | QuoteDecl {head = (p, head), quote, stop, ...} => let
-        val {keyword, name} = parseQuotePfx head
-        in
-          regular (pos, p); finishThmVal ();
-          aux "val _ = "; regular' (p, name); aux " "; doQuote quote; aux ";";
-          stop
-        end
-      | QuoteEqnDecl {head = (p, head), quote, stop, ...} => let
-        val {keyword, name, bind} = parseQuoteEqnPfx head
-        in
-          regular (pos, p); finishThmVal ();
-          aux "val "; regular' (p, bind); aux " = ";
-          regular' (p, name); aux " "; doQuote quote; aux ";";
-          stop
-        end
-      | InductiveDecl {head = (p, head), quote, stop, ...} => let
-        val {isCo, keyword, thmname = stem} = parseInductivePfx head
-        val (entryPoint, indSuffix) =
-          if isCo then ("CoIndDefLib.xHol_coreln", "_coind") else ("IndDefLib.xHol_reln", "_ind")
-        val conjIdx = ref 1
-        val conjs = ref []
-        fun collect first (p, lab) = (
-          if first then () else (aux ") /\\\\ ("; conjIdx := !conjIdx + 1);
-          case parseDefnLabel lab of
-            {tilde, name = SOME name, name_attrs, ...} =>
-            conjs := (!conjIdx, tilde, name, name_attrs) :: !conjs
-          | _ => ()
-        )
-        in
-          regular (pos, p); finishThmVal ();
-          app aux ["val (", ss stem, "_rules,", ss stem, indSuffix, ",",
-            ss stem, "_cases) = ", entryPoint, " \"", ss stem, "\" "];
-          doQuoteConj quote collect; aux ";";
-          magicBind (cat [stem, full "_strongind"]);
-          app (fn (i, tilde, name, name_attrs) => let
-            val f = if tilde then fn s => app aux [ss stem, "_", s] else aux
-            in
-              aux " val "; f (ss name); aux " = boolLib.save_thm(\""; f (ss name_attrs);
-              app aux ["\", Drule.cj ", Int.toString i, " ",
-                ss stem, "_rules handle HOL_ERR _ => boolTheory.TRUTH);"]
-            end) (rev (!conjs));
-          stop
-        end
-      | BeginType (p, head) => let
-        val {local_, kind, keyword, tyname} = parseBeginType (p, head) parseError
-        val fnm = kindToName local_ kind
-        in
-          regular (pos, p); finishThmVal ();
-          app aux ["val _ = Parse.", fnm, "(\""]; strstr' (p, tyname); aux "\",";
-          inThmVal := true; p + size head
-        end
-      | BeginSimpleThm (p, head) => let
-        val {isTriv, keyword, thmname, attrs, name_attrs} = parseTheoremPfx head
-        in
-          regular (pos, p); finishThmVal ();
-          aux "val "; regular' (p, thmname); aux " = boolLib.save_thm(\"";
-          doThmAttrs isTriv p attrs name_attrs; aux "\","; inThmVal := true;
-          p + size head
-        end
-      | TheoremDecl {head = (p, head), quote, proof_tok, body, stop, ...} => let
-        val {isTriv, keyword, thmname, attrs, name_attrs} = parseTheoremPfx head
-        val goalabs = "(fn HOL__GOAL__foo => (";
-        val Decls {start = dstart, decls, stop = dstop} = body
-        in
-          regular (pos, p); finishThmVal ();
-          aux "val "; regular' (p, thmname);
-          if !filename = "" then aux " = Q.store_thm(\""
-          else app aux [" = Q.store_thm_at ",
-                        mk_mkloc_string (!filename, #1 (!line)),
-                        " (\""];
-          doThmAttrs isTriv p attrs name_attrs; aux "\", ";
-          doQuote quote; aux ", ";
-          case proof_tok of
-            SOME (p, tok) => let
-            fun ofKey "exclude_simps" = "simpLib.remove_simps"
-              | ofKey "exclude_frags" = "simpLib.remove_ssfrags"
-              | ofKey k = k
-            fun mktm1 (k,vals) = ofKey (ss k) ^ " [" ^
-              String.concatWith "," (map (mlquote o ss) vals) ^ "]"
-            fun mktm kv [] = mktm1 kv
-              | mktm kv (kv2::xs) = mktm1 kv ^ " o " ^ mktm kv2 xs
-            val () = case destAttrs (#2 (destNameAttrs (full tok))) of
-              [] => ()
-            | kv::attrs => aux ("BasicProvers.with_simpset_updates (" ^ mktm kv attrs ^ ") ")
-            val n = #1 (!line)
-            val _ = readAt p (p + size tok) countlines
-            in aux goalabs; aux (CharVector.tabulate (#1 (!line) - n, (fn _ => #"\n"))) end
-          | _ => aux goalabs;
-          doDecls dstart decls dstop; aux ") HOL__GOAL__foo));";
-          stop
-        end
+        OpenDecl       {head = p,      stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | DefinitionDecl {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | DatatypeDecl   {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | QuoteDecl      {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | QuoteEqnDecl   {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | InductiveDecl  {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | TheoremDecl    {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | BeginType      (p, head) => (regular (pos, p); finishThmVal (); doDeclCore d; inThmVal := true; p + size head)
+      | BeginSimpleThm (p, head) => (regular (pos, p); finishThmVal (); doDeclCore d; inThmVal := true; p + size head)
       | Chunk p =>
         if !inThmVal then
           (regular (pos, p); aux ");"; inThmVal := false; p)
@@ -549,36 +601,21 @@ structure ToSML = struct
           (regular (pos, p+1); p+1)
         else
           pos
-      | FullQuote {head = (p, head), type_q, quote, stop, ...} => (
-        regular (pos, p);
-        aux (case type_q of NONE => "(Parse.Term " | SOME _ => "(Parse.Type ");
-        doQuote quote; aux ")";
-        stop)
-      | Quote {head = (p, _), quote, stop, ...} => (regular (pos, p); doQuote quote; stop)
-      | String (start, stop) => (regular (pos, start); strstr (start, stop); stop)
-      | LinePragma p => (regular (pos, p); aux (Int.toString (#1 (!line) + 1)); p + 7)
-      | LinePragmaWith (p, text) => let
-        val num = Substring.substring(text, 7, size text - 8)
-        in
-          regular (pos, p);
-          case Int.fromString (Substring.string num) of
-            NONE => parseError (fromSS (p, num)) "expected an integer"
-          | SOME num => line := (fn (_, pos) => (num - 1, pos)) (!line);
-          aux " "; p + size text
-        end
-      | FilePragma p => (regular (pos, p); aux (mlquote (!filename)); p + 7)
-      | FilePragmaWith (p, text) => (
-          regular (pos, p);
-          filename := String.substring(text, 7, size text - 8);
-          aux " "; p + size text)
-    and doDecls start [] stop = regular (start, stop)
-      | doDecls start (d :: ds) stop = doDecls (doDecl false start d) ds stop
+      | FullQuote {head = (p, _), stop, ...} => (regular (pos, p); doDeclCore d; stop)
+      | Quote     {head = (p, _), stop, ...} => (regular (pos, p); doDeclCore d; stop)
+      | String (start, stop) => (regular (pos, start); doDeclCore d; stop)
+      | LinePragma      p        => (regular (pos, p); doDeclCore d; p + 7)
+      | FilePragma      p        => (regular (pos, p); doDeclCore d; p + 7)
+      | LinePragmaWith (p, text) => (regular (pos, p); doDeclCore d; p + size text)
+      | FilePragmaWith (p, text) => (regular (pos, p); doDeclCore d; p + size text)
     in {
       feed = feed,
       regular = regular,
       finishThmVal = finishThmVal,
       doDecl = doDecl
     } end
+
+  val mkPushTranslatorCore = mkPushTranslatorCore' mkDoDecl
 
   fun mkPushTranslator args strcode = let
     open Simple
@@ -624,7 +661,7 @@ fun file_to_parser ({quietOpen}:args) fname = let
   val instrm = openIn fname
   (* val isscript = String.isSuffix "Script.sml" fname *)
   val read = ToSML.mkPullTranslator
-    {read = fn n => input instrm, filename = fname, parseError = K (K ()), quietOpen = quietOpen}
+    {read = fn _ => input instrm, filename = fname, parseError = K (K ()), quietOpen = quietOpen}
   in (read, fn () => closeIn instrm) end
 
 fun string_to_parser ({quietOpen}:args) s = let
@@ -640,7 +677,7 @@ fun input_to_parser ({quietOpen}:args) fname inp = let
   in (read, I) end
 
 fun stream_to_parser args fname strm =
-  input_to_parser args fname (fn n => input strm)
+  input_to_parser args fname (fn _ => input strm)
 
 fun inputFile args fname = exhaust_parser (file_to_parser args fname)
 fun fromString args s = exhaust_parser (string_to_parser args s)

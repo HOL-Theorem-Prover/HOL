@@ -67,13 +67,39 @@ structure ToSML: sig
   val strcode: (string -> unit) -> int * substring -> unit
   val mkStrcode: (string -> unit) -> strcode
 
-  val mkPushTranslatorCore:
-    args -> strcode -> {
-      doDecl: bool -> int -> Simple.decl -> int,
-      feed: unit -> Simple.topdecl,
-      finishThmVal: unit -> unit,
-      regular: int * int -> unit
-    }
+  type doDecl_args = {
+    aux: string -> unit,
+    cat: substring list -> string,
+    countlines: int * substring -> unit,
+    doDecls: int -> Simple.decl list -> int -> unit,
+    doQuote: Simple.qbody -> unit,
+    doQuoteConj: Simple.qbody -> (bool -> int * string -> unit) -> unit,
+    doThmAttrs: bool -> substring -> substring -> unit,
+    filename: string ref,
+    full: string -> substring,
+    line: (int * int) ref,
+    magicBind: string -> unit,
+    parseError: int * int -> string -> unit,
+    quietOpen: bool,
+    readAt: int -> int -> (int * substring -> unit) -> unit,
+    regular: int * int -> unit,
+    regular': int * substring -> unit,
+    ss: substring -> string,
+    strstr: int * int -> unit,
+    strstr': int * substring -> unit
+  }
+  val mkDoDecl: doDecl_args -> Simple.decl -> unit
+
+  type ret = {
+    doDecl: bool -> int -> Simple.decl -> int,
+    feed: unit -> Simple.topdecl,
+    finishThmVal: unit -> unit,
+    regular: int * int -> unit
+  }
+
+  val mkPushTranslatorCore': (doDecl_args -> Simple.decl -> unit) ->
+    args -> strcode -> ret
+  val mkPushTranslatorCore: args -> strcode -> ret
 
   val mkPushTranslator: args -> strcode -> unit -> bool
 
