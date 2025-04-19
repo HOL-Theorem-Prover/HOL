@@ -665,7 +665,7 @@ fun remove_ssfrags names (ss as SS{history,limit,...}) =
       fun filterthis (hi as ADDFRAG f) = not(member f)
         | filterthis hi = true
       val history' = List.filter filterthis history
-      val _ = length history' < length history orelse
+      val _ = length history' < length history orelse !Globals.interactive orelse
               raise Conv.UNCHANGED
     in
       build_from_history history' |> fupdlimit (fn _ => limit)
