@@ -11,7 +11,7 @@ sig
   val ty: tokens -> (int, Ast.Ty.ty) parser
 end =
 struct
-
+  local open ParserCombinators ParserSimple in end
   structure PC = ParserCombinators
   structure PS = ParseSimple
 

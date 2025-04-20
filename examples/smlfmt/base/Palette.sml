@@ -6,6 +6,7 @@
 structure Palette =
 struct
 
+  local open TerminalColors in end
   structure TC = TerminalColors
 
   val green = TC.hsv {h = 120.0, s = 1.0, v = 0.75}

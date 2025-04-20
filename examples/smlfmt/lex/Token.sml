@@ -173,6 +173,7 @@ sig
 
 end =
 struct
+  local open Source in end
 
   datatype reserved =
   (** ============ core ============ *)

@@ -31,7 +31,7 @@ end =
 struct
 
   structure TCS = TerminalColorString
-  (* structure TC = TerminalColors *)
+  local open TerminalColors in end
   open Palette
 
   datatype element =

@@ -32,14 +32,38 @@ sig
 
 end =
 struct
-  structure D =
-    Dict
-      (struct type t = string val compare: t * t -> order = String.compare end)
-
-  open D
 
   datatype assoc = AssocLeft | AssocRight
   datatype fixity = Nonfix | Infix of (int * assoc)
+
+  structure D = struct
+    exception NotFound = Redblackmap.NotFound
+
+    type 'a t = (string, 'a) Redblackmap.dict
+    type 'a dict = 'a t
+
+    val empty = Redblackmap.mkDict String.compare
+    val isEmpty = Redblackmap.isEmpty
+    val size = Redblackmap.numItems
+    fun singleton x = Redblackmap.singleton String.compare x
+    val unionWith = Redblackmap.unionWith
+    val intersectWith = Redblackmap.intersectWith
+
+    fun insert d (k, v) = Redblackmap.insert (d, k, v)
+    fun lookup d k = Redblackmap.find (d, k)
+    fun find d k = Redblackmap.peek (d, k)
+    fun contains d k = Redblackmap.inDomain (d, k)
+
+    fun remove d k =
+      #1 (Redblackmap.remove (d, k))
+      handle NotFound => d
+
+    fun fromList kvs =
+      List.foldl (fn ((k, v), d) => insert d (k, v)) empty kvs
+
+    val listKeys = Redblackmap.listKeys
+  end
+  open D
 
   type t = fixity D.t list
 
