@@ -25,7 +25,7 @@ sig
   val toString: ('a -> string) -> 'a seq -> string
   val equal: ('a * 'a -> bool) -> 'a seq * 'a seq -> bool
 
-  val $ : 'a -> 'a seq
+  val S : 'a -> 'a seq
   val % : 'a list -> 'a seq
 
   val append: 'a seq * 'a seq -> 'a seq
@@ -59,11 +59,9 @@ struct
     AS.full (A.fromList [])
   fun singleton x =
     AS.full (A.array (1, x))
-  val $ = singleton
+  val S = singleton
   fun toString f s =
     "<" ^ String.concatWith "," (List.tabulate (length s, f o nth s)) ^ ">"
-
-  fun fromArray a = AS.full a
 
   fun fromList l =
     AS.full (A.fromList l)

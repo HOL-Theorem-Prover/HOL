@@ -10,16 +10,12 @@ sig
 end =
 struct
 
-  structure TCS = TerminalColorString
-  structure TC = TerminalColors
-  fun boldc c x =
-    TCS.bold (TCS.foreground c (TCS.fromString x))
-
+  local open Error in end
   fun warnWithMessage msg =
-    TCS.printErr (boldc Palette.yellow (msg ^ "\n"))
+    print (msg ^ "\n")
 
   fun failWithMessage msg =
-    TCS.printErr (boldc Palette.red (msg ^ "\n"))
+    print (msg ^ "\n")
 
   fun handleLexOrParseError exn =
     let
