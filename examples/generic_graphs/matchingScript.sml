@@ -2736,9 +2736,30 @@ QED
 
 Definition stable_matching_def:
   stable_matching G R M ⇔ matching G M ∧ preference G R ∧
-                          ∀v1 v2 v3. {v1; v2} ∈ E DIFF M ∧ {v1; v3} ∈ M ⇒
-                          (v2, v3) ∈ (R v1)
+                          ∀v1 v2. {v1; v2} ∈ E DIFF M ==>
+                                       ∃v3. {v1; v3} ∈ M ∧ (v3, v2) ∉ (R v1)
 End
+
+(* Given a stable matching, no edges in E have both ends unmatched *)
+Theorem stable_matching_edges_ends_matched:
+  ∀G R M. stable_matching G R M ⇒ ∀v1 v2. {v1; v2} ∈ E ⇒ matched G M v1
+Proof
+  rw [stable_matching_def, matched_def]
+  >> Cases_on ‘{v1; v2} ∈ M’
+  >- (qexists_tac ‘{v1; v2}’ >> simp []
+     )
+  >> first_x_assum dxrule >> rw []
+  >> qexists_tac ‘{v1; v3}’ >> simp []
+QED
+
+Theorem stable_matching_edges_ends_matched_alt:
+  ∀G R M e. stable_matching G R M ∧ e ∈ E ⇒ ∃v. v ∈ e ∧ matched G M v
+Proof
+  rw [] >> drule_then strip_assume_tac alledges_valid >> gvs []
+  >> drule_all stable_matching_edges_ends_matched
+  >> disch_tac >> qexists_tac ‘a’ >> simp []
+QED
+
 
 (* M better than M'; {v1; v2} ∈ M ∧ {v1; v3} ∈ M' implies v2 >= v3 *)
 Definition better_matching_def:
@@ -2749,17 +2770,6 @@ End
 
 Theorem fsg_ind = fsg_edge_induction |> CONV_RULE SWAP_FORALL_CONV;
 
-
-monadsyntax.enable_monadsyntax();
-List.app monadsyntax.enable_monad ["list", "option", ];
-Definition mapM_def:
-  mapM f [] = return [] ∧
-  mapM f (x::xs) = do
-    e <- f x;
-    es <- mapM f xs;
-    return (e::es);
-  od
-End
 
 Definition gale_shapley_def:
   gale_shapley G A B R =
@@ -2789,10 +2799,13 @@ Theorem gale_shapley_thm:
 Proof
   rw [] >> Cases_on ‘E = ∅’
   >- rw [stable_matching_def, matching_exists]
-  >> gvs [bipartite_alt, EXT_SKOLEM_THM] >> rename [‘_ = {Aend _; Bend _}’]
+  >> gvs [bipartite_alt, EXT_SKOLEM_THM] >> rename [‘_ = {Aend _; Bend _}’] >> gvs []
+  >> ‘∀e. e ∈ E ⇒ ∃n1 n2. e = {n1; n2} ∧ n1 ∈ A ∧ n2 ∈ B’ by METIS_TAC []
   >> qabbrev_tac ‘acc = λm a b. a ∈ A ∧ b ∈ B ∧
                                 {a; b} ∈ (fsgedges G) DIFF m ∧
                                     ∀a'. a' ∈ A ∧ {a'; b} ∈ m ⇒ (a', a) ∈ (R b)’
+  (* >> qabbrev_tac ‘happy = λm a. a ∉ BIGUNION m ∨ *)
+  (*                               ∃b. {a; b} ∈ m ∧ b ∈ maximal_elements {b | acc m a b ∧ {a; b} ∈ E} (R a)’ *)
   >> qabbrev_tac ‘P = λes m.
                         {a | a ∈ A ∧ a ∉ BIGUNION m ∧ ∃b. (acc m a b ∧ {a; b} ∈ es)}’
   >> qabbrev_tac ‘Amax = λes m a.
@@ -2809,7 +2822,8 @@ Proof
                  ’
   >> qabbrev_tac ‘Inv = λ(es :edge set, m :edge set).
                           matching G m ∧
-                          ∀e. e ∈ m ⇒ Bend e ∈ maximal_elements {b | acc M (Aend e) b ∧ {Aend e; b} ∈ E} (R $ Aend e)
+                          es ⊆ E DIFF m ∧
+                          ∀a b. a ∈ A ∧ {a; b} ∈ m ⇒ b ∈ maximal_elements {b' | acc m a b' ∧ {a; b'} ∈ E} (R a)
                           ’
   >> qabbrev_tac ‘r = measure (λ(es :edge set, m :edge set). CARD es)’
   >> ‘WF r’ by simp [Abbr ‘r’]
@@ -2848,7 +2862,7 @@ Proof
           >> PROVE_TAC [SUBSET_DEF]
          )
       >> simp [HOARE_SPEC_DEF, pairTheory.FORALL_PROD, Abbr ‘Inv’, Abbr ‘Q’, Abbr ‘h’]
-      >> qx_genl_tac [‘es’, ‘m’] >> rw []
+      >> qx_genl_tac [‘es’, ‘m’] >> rw [] (* 7 *)
       >- (‘{CHOICE (P es m); Amax es m (CHOICE (P es m))} ∉ m’ suffices_by gvs []
           >> qpat_x_assum ‘_ ∈ m’ K_TAC
           >> Suff ‘CHOICE (P es m) ∉ BIGUNION m’
@@ -2858,19 +2872,46 @@ Proof
           >> mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
           >> simp [Abbr ‘P’]
          )
-      >> ORW [matching_insert] >> CONJ_TAC
-      >- (irule matching_SUBSET >> qexists_tac ‘m’ >> simp []
-         )
-      (* TODO: works up to this line *)
-      >> qabbrev_tac ‘a = CHOICE (P es m)’ >> reverse CONJ_TAC
-      >- (simp [Abbr ‘Amax’]
-          >> qabbrev_tac ‘bs = (maximal_elements {b | acc m a b ∧ {a; b} ∈ es} (R a))’
-          >> mp_tac (Q.SPEC ‘bs’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
-          >> Suff ‘bs ≠ ∅’
-          >- (rw [] >> pop_assum mp_tac >> ASM_SET_TAC [maximal_elements_def]
+      >- cheat
+      >- (cheat)
+      >- (ORW [matching_insert] >> CONJ_TAC
+          >- (irule matching_SUBSET >> qexists_tac ‘m’ >> simp []
              )
-          >> simp [GSYM MEMBER_NOT_EMPTY, Abbr ‘bs’]
-          >> irule finite_linear_order_has_local_maximal_lemma >> reverse CONJ_TAC
+          >> qabbrev_tac ‘a = CHOICE (P es m)’ >> reverse CONJ_TAC
+          >- (simp [Abbr ‘Amax’]
+              >> qabbrev_tac ‘bs = (maximal_elements {b | acc m a b ∧ {a; b} ∈ es} (R a))’
+              >> mp_tac (Q.SPEC ‘bs’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+              >> Suff ‘bs ≠ ∅’
+              >- (rw [] >> pop_assum mp_tac >> ASM_SET_TAC [maximal_elements_def]
+                 )
+              >> simp [GSYM MEMBER_NOT_EMPTY, Abbr ‘bs’]
+              >> irule finite_linear_order_has_local_maximal_lemma >> reverse CONJ_TAC
+              >- (qexists_tac ‘neighbour G a’ >> gvs [preference_def]
+                  >> sg ‘a ∈ V’
+                  >- (mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+                      >> simp [Abbr ‘P’] >> ASM_SET_TAC []
+                     )
+                  >> rw [neighbour_FINITE] >> rw [SUBSET_DEF, neighbour_def_adj', adjacent_fsg]
+                  >> PROVE_TAC [SUBSET_DEF]
+                 )
+              >> ORW [GSYM MEMBER_NOT_EMPTY] >> rw [IN_APP, GSPEC_ETA]
+              >> mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+              >> simp [Abbr ‘P’] >> ASM_SET_TAC []
+             )
+          >> DISJ1_TAC >> ORW [DISJOINT_ALT] >> NTAC 2 strip_tac
+          >> assume_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF) \\
+          qabbrev_tac ‘bs = (maximal_elements {b | acc m a b ∧ {a; b} ∈ es} (R a))’ \\
+          assume_tac (Q.SPEC ‘bs :vertex set’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
+          >> gvs []
+          >- (qpat_x_assum ‘a ∈ _’ mp_tac >> simp [Abbr ‘P’] >> METIS_TAC []
+             )
+          >> simp [Abbr ‘Amax’]
+          >> pop_assum mp_tac >> reverse impl_tac
+          >- (simp [Abbr ‘bs’] >> ASM_SET_TAC []
+             )
+          >> simp [Abbr ‘bs’]
+          >> rw [GSYM MEMBER_NOT_EMPTY] >> irule finite_linear_order_has_local_maximal_lemma
+          >> reverse CONJ_TAC
           >- (qexists_tac ‘neighbour G a’ >> gvs [preference_def]
               >> sg ‘a ∈ V’
               >- (mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
@@ -2883,53 +2924,101 @@ Proof
           >> mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
           >> simp [Abbr ‘P’] >> ASM_SET_TAC []
          )
-      >> DISJ1_TAC >> ORW [DISJOINT_ALT] >> NTAC 2 strip_tac
-      >> assume_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF) \\
-         qabbrev_tac ‘bs = (maximal_elements {b | acc m a b ∧ {a; b} ∈ es} (R a))’ \\
-         assume_tac (Q.SPEC ‘bs :vertex set’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
-      >> gvs []
-      >- (qpat_x_assum ‘a ∈ _’ mp_tac >> simp [Abbr ‘P’] >> METIS_TAC []
-         )
-      >> simp [Abbr ‘Amax’]
-      >> pop_assum mp_tac >> reverse impl_tac
-      >- (simp [Abbr ‘bs’] >> ASM_SET_TAC []
-         )
-      >> simp [Abbr ‘bs’]
-      >> rw [GSYM MEMBER_NOT_EMPTY] >> irule finite_linear_order_has_local_maximal_lemma
-      >> reverse CONJ_TAC
-      >- (qexists_tac ‘neighbour G a’ >> gvs [preference_def]
-          >> sg ‘a ∈ V’
-          >- (mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
-              >> simp [Abbr ‘P’] >> ASM_SET_TAC []
-             )
-          >> rw [neighbour_FINITE] >> rw [SUBSET_DEF, neighbour_def_adj', adjacent_fsg]
-          >> PROVE_TAC [SUBSET_DEF]
-         )
-      >> ORW [GSYM MEMBER_NOT_EMPTY] >> rw [IN_APP, GSPEC_ETA]
-      >> mp_tac (Q.SPEC ‘P (es :edge set) (m :edge set)’ $ INST_TYPE [alpha |-> “:vertex”] CHOICE_DEF)
-      >> simp [Abbr ‘P’] >> ASM_SET_TAC []
+      >- cheat
+      >- cheat
+      >> cheat
      )
   >> rw [HOARE_SPEC_DEF]
   >> qabbrev_tac ‘es = FST $ WHILE Q h (E, ∅)’
   >> qabbrev_tac ‘M = SND $ WHILE Q h (E, ∅)’
-  >> ‘WHILE Q h (E, ∅ :edge set) = (es, M)’ by METIS_TAC [PAIR]
-  >> qexists_tac ‘M’ >> rw [stable_matching_def]
-  >- (‘Inv (E, ∅)’ by simp [Abbr ‘Inv’, EMPTY_is_matching]
-      >> first_x_assum drule
-      >> rw [Abbr ‘Inv’]
+  >> ‘WHILE Q h (E, ∅) = (es, M)’ by METIS_TAC [PAIR]
+  >> qexists_tac ‘M’
+  >> ‘Inv (E, ∅)’ by simp [Abbr ‘Inv’, EMPTY_is_matching] >> first_x_assum drule
+  >> gvs [] >> rw []
+  >> simp [stable_matching_def] >> STRONG_CONJ_TAC
+  >- gvs [Abbr ‘Inv’]
+  >> rw [] >> gvs [Abbr ‘Inv’]
+
+
+  >> sg ‘∀a b. a ∈ A ∧ b ∈ B ∧ {a; b} ∈ E DIFF M ⇒ ~acc M a b’
+  >- (qpat_x_assum ‘~Q _’ mp_tac >> rw [Abbr ‘Q’, Once EXTENSION]
+      >- (gvs [Abbr ‘Inv’])
+      >> qpat_x_assum ‘∀x. x ∉ _’ (assume_tac o Q.SPEC ‘a’)
+      >> pop_assum mp_tac >> qunabbrev_tac ‘P’ >> rw []
+      >- (rw [Abbr ‘acc’]
+          >> Suff ‘∃e. e ∈ M ∧ b ∈ e’
+          >- (rw [] >> qexists_tac ‘Aend e’
+              >> ‘e ∈ E’ by PROVE_TAC [matching_def, SUBSET_DEF]
+              >> ‘b = Bend e’ by (last_x_assum drule >> ASM_SET_TAC [])
+              >> STRONG_CONJ_TAC
+              >- (POP_ORW >> last_x_assum dxrule >> PROVE_TAC []
+                 )
+              >> disch_tac >> gvs [Abbr ‘Inv’]
+              >>
+              >> last_assum (drule_then strip_assume_tac) >> first_x_assum dxrule_all
+              >> rw [maximal_elements_def]
+             )
+         )
      )
-  >> ‘Inv (E, ∅)’ by simp [Abbr ‘Inv’, EMPTY_is_matching] >> first_x_assum $ drule_then strip_assume_tac
-  >> gvs []
-  >> pop_assum mp_tac >> simp [Abbr ‘Q’] >> rw []
-  >- (cheat                     (* TODO: change Inv to include es ⊆ E \ m *)
+
+  >> qpat_x_assum ‘~Q _’ mp_tac >> simp [Abbr ‘Q’, Abbr ‘P’, Once EXTENSION]
+
+  >> Suff ‘∃v3. {v1; v3} ∈ M’
+  >- (rw [] >> qexists_tac ‘v3’ >> art []
+      >> Cases_on ‘v1 ∈ A’
+      >- (first_x_assum drule_all >> rw [maximal_elements_def]
+          >> Cases_on ‘acc M v1 v3’
+          >- METIS_TAC []
+          >> gvs []
+         )
+      >> sg ‘v1 ∈ B’
+      >- (dxrule alledges_valid >> ASM_SET_TAC []
+         )
+      >> qpat_x_assum ‘v1 ∉ _’ K_TAC
+      >> ‘{v1; v3} ∈ E’ by PROVE_TAC [SUBSET_DEF, matching_def]
+      >> sg ‘v3 ∈ A’
+      >- (last_x_assum drule >> ASM_SET_TAC []
+         )
+      >> ‘{v3; v1} ∈ M’ by rw [Once PAIR_SYM_lemma] >> first_x_assum dxrule_all
+      >> strip_tac >> ‘acc M v3 v1’ by ASM_SET_TAC [maximal_elements_def]
+      >> pop_assum mp_tac >> simp [Abbr ‘acc’] >> rw []
+      >> CCONTR_TAC >> qpat_x_assum ‘_ ∈ M’ mp_tac >> simp [Once PAIR_SYM_lemma]
      )
-  >> qabbrev_tac ‘happy = λm a. a ∉ BIGUNION m ∨
-                                ∃b. b ∈ maximal_elements {b | acc M v1 b ∧ {v1; b} ∈ E} (R v1) ∧ {a; b} ∈ m’
-  >> sg ‘happy M v1’
-  >- (simp [Abbr ‘happy’, Abbr ‘Amax’] >> DISJ2_TAC >> qexists_tac ‘v3’ >> simp []
-      >> fs [Abbr ‘P’]
+
+
+
+  >> qpat_x_assum ‘~Q _’ mp_tac >> set_simp [Abbr ‘Q’, Abbr ‘P’, Once EXTENSION]
+  >> ORW [DECIDE “a ∨ b ∨ c ⇔ ~a ⇒ (~c ⇒ b)”] >> rw []
+  >> Cases_on ‘v1 ∈ A’
+  >- (sg ‘v2 ∈ B’
+      >- (qpat_x_assum ‘∀e. e ∈ E ⇒ ∃n1 n2. _’ drule >> ASM_SET_TAC []
+         )
+      >> first_x_assum drule >> rw []
+      >> Suff ‘∃s. v1 ∈ s ∧ s ∈ M’
+      >- (rpt strip_tac
+          >> ‘s ∈ E’ by PROVE_TAC [matching_def, SUBSET_DEF]
+          >> drule alledges_valid >> rw [] >> gvs []
+          >- (qexists_tac ‘b’ >> art [])
+          >> qexists_tac ‘a’ >> art [Once PAIR_SYM_lemma]
+         )
+      >> pop_assum mp_tac >> ‘(∃b. acc M v1 b ∧ {v1; b} ∈ es)’ suffices_by simp []
+      >> Cases_on ‘{v1; v2} ∈ es’
+      >- (qexists_tac ‘v2’ >> rw [Abbr ‘acc’]
+          >> first_x_assum drule_all >> rw [maximal_elements_def]
+         )
+      >>
+
+
+
+
+
+      >> ORW [DECIDE “a ∨ (b ∨ c) ∨ d ⇔ (~a ∧ ~b ⇒ c) ∨ d”] >> rw []
+      >> pop_assum drule_all >> rw []
      )
 QED
+
+
+
 
 
 
@@ -2940,8 +3029,14 @@ Proof
   >> qabbrev_tac ‘acc = λM a b. a ∈ A ∧ b ∈ B ∧
                                 {a; b} ∈ (fsgedges G) DIFF M ∧
                                     ∀a'. a' ∈ A ∧ {a'; b} ∈ M ⇒ (a', a) ∈ (R b)’
+  >> qabbrev_tac ‘Blk = \m. {{a; b} | {a; b} ∈ E ∧ a ∉ BIGUNION m ∧
+                                           acc m a b}’
+  >> qabbrev_tac ‘P' = \m. {a | a ∈ A ∧ ∃b. Blk m {a; b} }’
   >> qabbrev_tac ‘P = \M. {a | a ∈ A ∧ a ∉ BIGUNION M ∧
                                ∃b. acc M a b}’
+  >> sg ‘∀m. P' m = P m’
+  >- (simp [Abbr ‘P'’, Abbr ‘P’, Abbr ‘Blk’, PAIR]
+     )
   >> qabbrev_tac ‘Amax = \a. CHOICE (maximal_elements (neighbour g1 a) (R a))’
   >> qabbrev_tac ‘h = λ(G0, M0).
                         let a = CHOICE (P M0);
