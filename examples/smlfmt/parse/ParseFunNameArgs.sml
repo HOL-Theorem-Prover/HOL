@@ -14,6 +14,7 @@ sig
                   -> (int, Ast.Exp.fname_args) parser
 end =
 struct
+  local open ParseSimple ParseTy ParsePat ExpPatRestriction in end
 
   structure PC = ParserCombinators
   structure PS = ParseSimple

@@ -15,7 +15,8 @@ sig
               -> (int, Ast.Sig.sigexp) parser
 end =
 struct
-
+  local open ParseSimple ParseTy ParsePat ExpPatRestriction in end
+  
   structure PC = ParserCombinators
   structure PS = ParseSimple
   structure PT = ParseTy

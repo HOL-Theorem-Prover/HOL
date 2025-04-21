@@ -15,6 +15,7 @@ sig
            -> (int, Ast.Pat.pat) parser
 end =
 struct
+  local open ParseSimple ParseTy in end
 
   structure PC = ParserCombinators
   structure PS = ParseSimple
