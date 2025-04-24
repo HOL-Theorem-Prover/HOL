@@ -1975,35 +1975,37 @@ End
 
 Theorem TAKE_nil[simp] = cj 1 TAKE_def
 
-val TAKE_cons = store_thm(
-  "TAKE_cons", “0 < n ==> (TAKE n (x::xs) = x::(TAKE (n-1) xs))”,
-  SRW_TAC[][TAKE_def]);
-val _ = export_rewrites ["TAKE_cons"];
+Theorem TAKE_cons[simp]:
+  0 < n ==> (TAKE n (x::xs) = x::(TAKE (n-1) xs))
+Proof
+  SRW_TAC[][TAKE_def]
+QED
 
 Theorem DROP_nil[simp] = CONJUNCT1 DROP_def
 
-val DROP_cons = store_thm(
-  "DROP_cons",“0 < n ==> (DROP n (x::xs) = DROP (n-1) xs)”,
-  SRW_TAC[][DROP_def]);
-val _ = export_rewrites ["DROP_cons"];
+Theorem DROP_cons[simp]:
+  0 < n ==> (DROP n (x::xs) = DROP (n-1) xs)
+Proof
+  SRW_TAC[][DROP_def]
+QED
 
-val TAKE_0 = store_thm(
-  "TAKE_0",
-  “TAKE 0 l = []”,
-  Cases_on ‘l’ THEN SRW_TAC [] [TAKE_def]);
-val _  = export_rewrites ["TAKE_0"]
+Theorem TAKE_0[simp]:
+  TAKE 0 l = []
+Proof
+  Cases_on ‘l’ THEN SRW_TAC[][TAKE_def]
+QED
 
-val TAKE_LENGTH_ID = store_thm(
-  "TAKE_LENGTH_ID",
-  “!l. TAKE (LENGTH l) l = l”,
-  Induct_on ‘l’ THEN SRW_TAC [] []);
-val _ = export_rewrites ["TAKE_LENGTH_ID"]
+Theorem TAKE_LENGTH_ID[simp]:
+  !l. TAKE (LENGTH l) l = l
+Proof
+  Induct_on ‘l’ THEN SRW_TAC [] []
+QED
 
-val LENGTH_TAKE = store_thm(
-  "LENGTH_TAKE",
-  “!n l. n <= LENGTH l ==> (LENGTH (TAKE n l) = n)”,
-  Induct_on ‘l’ THEN SRW_TAC [numSimps.ARITH_ss] [TAKE_def]);
-val _ = export_rewrites ["LENGTH_TAKE"]
+Theorem LENGTH_TAKE[simp]:
+  !n l. n <= LENGTH l ==> (LENGTH (TAKE n l) = n)
+Proof
+  Induct_on ‘l’ THEN SRW_TAC [numSimps.ARITH_ss] [TAKE_def]
+QED
 
 Theorem TAKE_LENGTH_TOO_LONG:
   !l n. LENGTH l <= n ==> (TAKE n l = l)
