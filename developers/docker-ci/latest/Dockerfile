@@ -113,6 +113,4 @@ RUN apt-get install -qy pandoc latexmk texlive-latex-extra
 RUN apt-get install -qy texlive-fonts-extra texlive-science
 RUN apt-get clean
 
-# z3 and cvc5 as system packages
-RUN apt-get install -qy z3 cvc5
 RUN apt-get clean
