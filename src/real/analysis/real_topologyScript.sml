@@ -1963,10 +1963,11 @@ Proof
     rw [euclidean_open_def]
 QED
 
-val TOPSPACE_EUCLIDEAN = store_thm ("TOPSPACE_EUCLIDEAN",
- ``topspace euclidean = univ(:real)``,
-  SIMP_TAC std_ss [topspace, EXTENSION, IN_UNIV, IN_BIGUNION, GSPECIFICATION] THEN
-  MESON_TAC[OPEN_UNIV, IN_UNIV, OPEN_IN]);
+Theorem TOPSPACE_EUCLIDEAN :
+    topspace euclidean = univ(:real)
+Proof
+    rw [TOPSPACE_MTOP, euclidean_def]
+QED
 
 val TOPSPACE_EUCLIDEAN_SUBTOPOLOGY = store_thm ("TOPSPACE_EUCLIDEAN_SUBTOPOLOGY",
  ``!s. topspace (subtopology euclidean s) = s``,
@@ -3651,10 +3652,6 @@ val LIMPT_APPROACHABLE_LE = store_thm ("LIMPT_APPROACHABLE_LE",
   REWRITE_TAC [NOT_EXISTS_THM] THEN BETA_TAC THEN
   SIMP_TAC std_ss [TAUT `~(a /\ b /\ c) <=> c ==> ~(a /\ b)`, APPROACHABLE_LT_LE]);
 
-val REAL_CHOOSE_SIZE = store_thm ("REAL_CHOOSE_SIZE",
- ``!c. &0 <= c ==> (?x. abs x = c:real)``,
-  METIS_TAC [ABS_REFL]);
-
 val LIMPT_UNIV = store_thm ("LIMPT_UNIV",
  ``!x:real. x limit_point_of UNIV``,
   GEN_TAC THEN REWRITE_TAC[LIMPT_APPROACHABLE, IN_UNIV] THEN
@@ -4734,13 +4731,9 @@ val FRONTIER_INTER_SUBSET_INTER = store_thm ("FRONTIER_INTER_SUBSET_INTER",
 (* Identify trivial limits, where we can't approach arbitrarily closely.     *)
 (* ------------------------------------------------------------------------- *)
 
-val trivial_limit = new_definition ("trivial_limit",
-  ``trivial_limit net <=>
-     (!a:'a b. a = b) \/
-     ?a:'a b. ~(a = b) /\ !x. ~(netord(net) x a) /\ ~(netord(net) x b)``);
-
-val TRIVIAL_LIMIT_WITHIN = store_thm ("TRIVIAL_LIMIT_WITHIN",
- ``!a:real. trivial_limit (at a within s) <=> ~(a limit_point_of s)``,
+Theorem TRIVIAL_LIMIT_WITHIN :
+    !a:real. trivial_limit (at a within s) <=> ~(a limit_point_of s)
+Proof
   REWRITE_TAC[trivial_limit, LIMPT_APPROACHABLE_LE, WITHIN, AT, DIST_NZ] THEN
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_THEN(DISJ_CASES_THEN MP_TAC) THENL
@@ -4751,9 +4744,10 @@ val TRIVIAL_LIMIT_WITHIN = store_thm ("TRIVIAL_LIMIT_WITHIN",
       SUBGOAL_THEN ``&0 < dist(a,b:real) \/ &0 < dist(a,c:real)`` MP_TAC THEN
       ASM_MESON_TAC[DIST_TRIANGLE, DIST_SYM, GSYM DIST_NZ, GSYM DIST_EQ_0,
                     REAL_ARITH ``x:real <= &0 + &0 ==> ~(&0 < x)``]],
-    KNOW_TAC ``!e. (0 < e ==> ?x'. x' IN s /\ 0 < dist (x',a) /\ dist (x',a) <= e) =
-           (\e. 0 < e ==> ?x'. x' IN s /\ 0 < dist (x',a) /\ dist (x',a) <= e) e`` THENL
-    [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
+    Know ‘!e. (0 < e ==> ?x'. x' IN s /\ 0 < dist (x',a) /\ dist (x',a) <= e) =
+           (\e. 0 < e ==> ?x'. x' IN s /\ 0 < dist (x',a) /\ dist (x',a) <= e) e’
+    >- FULL_SIMP_TAC std_ss [] \\
+    DISC_RW_KILL THEN
     REWRITE_TAC[NOT_FORALL_THM] THEN BETA_TAC THEN REWRITE_TAC [NOT_IMP] THEN
     SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
     STRIP_TAC THEN DISJ2_TAC THEN
@@ -4762,59 +4756,21 @@ val TRIVIAL_LIMIT_WITHIN = store_thm ("TRIVIAL_LIMIT_WITHIN",
      [ASM_SIMP_TAC std_ss [REAL_CHOOSE_DIST, REAL_LT_IMP_LE], ALL_TAC] THEN
     STRIP_TAC THEN EXISTS_TAC ``b:real`` THEN POP_ASSUM MP_TAC THEN
     DISCH_THEN(SUBST_ALL_TAC o SYM) THEN
-    ASM_MESON_TAC[REAL_NOT_LE, DIST_REFL, DIST_NZ, DIST_SYM]]);
+    ASM_MESON_TAC[REAL_NOT_LE, DIST_REFL, DIST_NZ, DIST_SYM]]
+QED
 
 val TRIVIAL_LIMIT_AT = store_thm ("TRIVIAL_LIMIT_AT",
  ``!a. ~(trivial_limit (at a))``,
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
   REWRITE_TAC[TRIVIAL_LIMIT_WITHIN, LIMPT_UNIV]);
 
-val TRIVIAL_LIMIT_AT_INFINITY = store_thm ("TRIVIAL_LIMIT_AT_INFINITY",
- ``~(trivial_limit at_infinity)``,
-  REWRITE_TAC[trivial_limit, AT_INFINITY, real_ge] THEN
-  MESON_TAC[REAL_LE_REFL, REAL_CHOOSE_SIZE, REAL_LT_01, REAL_LT_LE]);
-
-val TRIVIAL_LIMIT_AT_POSINFINITY = store_thm ("TRIVIAL_LIMIT_AT_POSINFINITY",
- ``~(trivial_limit at_posinfinity)``,
-  REWRITE_TAC[trivial_limit, AT_POSINFINITY, DE_MORGAN_THM] THEN
-  CONJ_TAC THENL
-   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC, ALL_TAC] THEN
-  REWRITE_TAC[DE_MORGAN_THM, NOT_EXISTS_THM, real_ge, REAL_NOT_LE] THEN
-  MESON_TAC[REAL_LT_TOTAL, REAL_LT_ANTISYM]);
-
-val TRIVIAL_LIMIT_AT_NEGINFINITY = store_thm ("TRIVIAL_LIMIT_AT_NEGINFINITY",
- ``~(trivial_limit at_neginfinity)``,
-  REWRITE_TAC[trivial_limit, AT_NEGINFINITY, DE_MORGAN_THM] THEN
-  CONJ_TAC THENL
-   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC, ALL_TAC] THEN
-  REWRITE_TAC[DE_MORGAN_THM, NOT_EXISTS_THM, real_ge, REAL_NOT_LE] THEN
-  MESON_TAC[REAL_LT_TOTAL, REAL_LT_ANTISYM]);
-
-val TRIVIAL_LIMIT_SEQUENTIALLY = store_thm ("TRIVIAL_LIMIT_SEQUENTIALLY",
- ``~(trivial_limit sequentially)``,
-  REWRITE_TAC[trivial_limit, SEQUENTIALLY] THEN
-  MESON_TAC[GREATER_EQ, LESS_EQ_REFL, SUC_NOT]);
-
 val LIM_WITHIN_CLOSED_TRIVIAL = store_thm ("LIM_WITHIN_CLOSED_TRIVIAL",
  ``!a s. closed s /\ ~(a IN s) ==> trivial_limit (at a within s)``,
   REWRITE_TAC[TRIVIAL_LIMIT_WITHIN] THEN MESON_TAC[CLOSED_LIMPT]);
 
-val NONTRIVIAL_LIMIT_WITHIN = store_thm ("NONTRIVIAL_LIMIT_WITHIN",
- ``!net s. trivial_limit net ==> trivial_limit(net within s)``,
-  REWRITE_TAC[trivial_limit, WITHIN] THEN MESON_TAC[]);
-
 (* ------------------------------------------------------------------------- *)
 (* Some property holds "sufficiently close" to the limit point.              *)
 (* ------------------------------------------------------------------------- *)
-
-val eventually = new_definition ("eventually",
- ``eventually p net <=>
-        trivial_limit net \/
-        ?y. (?x. netord net x y) /\ (!x. netord net x y ==> p x)``);
-
-val EVENTUALLY_HAPPENS = store_thm ("EVENTUALLY_HAPPENS",
- ``!net p. eventually p net ==> trivial_limit net \/ ?x. p x``,
-  REWRITE_TAC[eventually] THEN MESON_TAC[]);
 
 val EVENTUALLY_WITHIN_LE = store_thm ("EVENTUALLY_WITHIN_LE",
  ``!s a:real p.
@@ -4845,124 +4801,68 @@ val EVENTUALLY_AT = store_thm ("EVENTUALLY_AT",
   ONCE_REWRITE_TAC[GSYM WITHIN_UNIV] THEN
   REWRITE_TAC[EVENTUALLY_WITHIN, IN_UNIV]);
 
-val EVENTUALLY_SEQUENTIALLY = store_thm ("EVENTUALLY_SEQUENTIALLY",
- ``!p. eventually p sequentially <=> ?N. !n. N <= n ==> p n``,
-  REWRITE_TAC[eventually, SEQUENTIALLY, GREATER_EQ, LESS_EQ_REFL,
-    TRIVIAL_LIMIT_SEQUENTIALLY] THEN  MESON_TAC[LESS_EQ_REFL]);
-
-val EVENTUALLY_AT_INFINITY = store_thm ("EVENTUALLY_AT_INFINITY",
- ``!p. eventually p at_infinity <=> ?b. !x. abs(x) >= b ==> p x``,
-  SIMP_TAC std_ss [eventually, AT_INFINITY, TRIVIAL_LIMIT_AT_INFINITY] THEN
-  REPEAT GEN_TAC THEN EQ_TAC THENL [MESON_TAC[REAL_LE_REFL], ALL_TAC] THEN
-  MESON_TAC[real_ge, REAL_LE_REFL, REAL_CHOOSE_SIZE,
-    REAL_ARITH ``&0 <= b:real \/ (!x. x >= &0 ==> x >= b)``]);
-
-val EVENTUALLY_AT_POSINFINITY = store_thm ("EVENTUALLY_AT_POSINFINITY",
- ``!p. eventually p at_posinfinity <=> ?b. !x. x >= b ==> p x``,
-  REWRITE_TAC[eventually, TRIVIAL_LIMIT_AT_POSINFINITY, AT_POSINFINITY] THEN
-  MESON_TAC[REAL_ARITH ``x >= x``]);
-
-val EVENTUALLY_AT_NEGINFINITY = store_thm ("EVENTUALLY_AT_NEGINFINITY",
- ``!p. eventually p at_neginfinity <=> ?b. !x. x <= b ==> p x``,
-  REWRITE_TAC[eventually, TRIVIAL_LIMIT_AT_NEGINFINITY, AT_NEGINFINITY] THEN
-  MESON_TAC[REAL_LE_REFL]);
-
-val EVENTUALLY_AT_INFINITY_POS = store_thm ("EVENTUALLY_AT_INFINITY_POS",
- ``!p:real->bool.
-        eventually p at_infinity <=> ?b. &0 < b /\ !x. abs x >= b ==> p x``,
-  GEN_TAC THEN REWRITE_TAC[EVENTUALLY_AT_INFINITY, real_ge] THEN
-  MESON_TAC[REAL_ARITH ``&0 < abs b + &1 /\ (abs b + &1 <= x ==> b <= x:real)``]);
-
-val ALWAYS_EVENTUALLY = store_thm ("ALWAYS_EVENTUALLY",
- ``(!x. p x) ==> eventually p net``,
-  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[eventually, trivial_limit] THEN
-  MESON_TAC[]);
-
-(* ------------------------------------------------------------------------- *)
-(* Combining theorems for "eventually". *)
-(* ------------------------------------------------------------------------- *)
-
-val EVENTUALLY_AND = store_thm ("EVENTUALLY_AND",
- ``!net:('a net) p q.
-   eventually (\x. p x /\ q x) net <=>
-   eventually p net /\ eventually q net``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[eventually] THEN
-  ASM_CASES_TAC ``trivial_limit(net:('a net))`` THEN ASM_REWRITE_TAC[] THEN
-  EQ_TAC THEN SIMP_TAC std_ss [NET_DILEMMA] THENL [MESON_TAC [], ALL_TAC] THEN
-  DISCH_TAC THEN MATCH_MP_TAC NET_DILEMMA THEN METIS_TAC []);
-
-val EVENTUALLY_MONO = store_thm ("EVENTUALLY_MONO",
- ``!net:('a net) p q.
-  (!x. p x ==> q x) /\ eventually p net
-    ==> eventually q net``,
-  REWRITE_TAC[eventually] THEN MESON_TAC[]);
-
-val EVENTUALLY_MP = store_thm ("EVENTUALLY_MP",
- ``!net:('a net) p q.
-  eventually (\x. p x ==> q x) net /\ eventually p net
-  ==> eventually q net``,
-  REWRITE_TAC[GSYM EVENTUALLY_AND] THEN
-  REWRITE_TAC[eventually] THEN MESON_TAC[]);
-
-val EVENTUALLY_FALSE = store_thm ("EVENTUALLY_FALSE",
- ``!net. eventually (\x. F) net <=> trivial_limit net``,
-  REWRITE_TAC[eventually] THEN MESON_TAC[]);
-
-val EVENTUALLY_TRUE = store_thm ("EVENTUALLY_TRUE",
- ``!net. eventually (\x. T) net <=> T``,
-  REWRITE_TAC[eventually, trivial_limit] THEN MESON_TAC[]);
-
-val NOT_EVENTUALLY = store_thm ("NOT_EVENTUALLY",
- ``!net p. (!x. ~(p x)) /\ ~(trivial_limit net) ==> ~(eventually p net)``,
-  REWRITE_TAC[eventually] THEN MESON_TAC[]);
-
-val EVENTUALLY_FORALL = store_thm ("EVENTUALLY_FORALL",
- ``!net:('a net) p s:'b->bool.
-  FINITE s /\ ~(s = {})
-  ==> (eventually (\x. !a. a IN s ==> p a x) net <=>
-   !a. a IN s ==> eventually (p a) net)``,
-  GEN_TAC THEN GEN_TAC THEN REWRITE_TAC[GSYM AND_IMP_INTRO] THEN
-  KNOW_TAC ``!s:'b->bool. (s <> ({} :'b -> bool) ==>
-   (eventually (\(x :'a). !(a :'b). a IN s ==> (p :'b -> 'a -> bool) a x)
-   (net :'a net) <=> !(a :'b). a IN s ==> eventually (p a) net)) =
-             (\s. s <> ({} :'b -> bool) ==>
-   (eventually (\(x :'a). !(a :'b). a IN s ==> (p :'b -> 'a -> bool) a x)
-   (net :'a net) <=> !(a :'b). a IN s ==> eventually (p a) net)) s`` THENL
-  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [FORALL_IN_INSERT, EVENTUALLY_AND, ETA_AX] THEN
-  SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN
-  MAP_EVERY X_GEN_TAC [``t:'b->bool``, ``b:'b``] THEN
-  ASM_CASES_TAC ``t:'b->bool = {}`` THEN
-  ASM_SIMP_TAC std_ss [NOT_IN_EMPTY, EVENTUALLY_TRUE] THEN METIS_TAC []);
-
-val FORALL_EVENTUALLY = store_thm ("FORALL_EVENTUALLY",
- ``!net:('a net) p s:'b->bool.
-   FINITE s /\ ~(s = {})
-   ==> ((!a. a IN s ==> eventually (p a) net) <=>
-   eventually (\x. !a. a IN s ==> p a x) net)``,
-  SIMP_TAC std_ss [EVENTUALLY_FORALL]);
-
 (* ------------------------------------------------------------------------- *)
 (* Limits, defined as vacuously true when the limit is trivial.              *)
 (* ------------------------------------------------------------------------- *)
 
-(* NOTE: This is for (f :'a -> real) (l :real) (net :'a net).
-         Now the name "tendsto_real" follows HOL-Light's "realanalysis.ml".
- *)
-Definition tendsto_real :
-    tendsto_real f l net <=> !e. &0 < e ==> eventually (\x. dist(f(x),l) < e) net
-End
-
-Overload "-->" = “tendsto_real”
 val _ = set_fixity "-->" (Infixr 750);
-
-val tendsto = tendsto_real;
 
 (* LONG RIGHTWARDS ARROW *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x27F6, tmnm = "-->"};
 val _ = TeX_notation {hol = UTF8.chr 0x27F6, TeX = ("\\HOLTokenLongmap{}", 1)};
 val _ = TeX_notation {hol = "-->",           TeX = ("\\HOLTokenLongmap{}", 1)};
+
+(* NOTE: This is for (f :'a -> real) (l :real) (net :'a net).
+         Now the name "tendsto_real" follows HOL-Light's "realanalysis.ml".
+ *)
+Overload "-->" = “limit euclidean”
+
+(* NOTE: This is the original definition of “tendsto_real” *)
+Theorem tendsto_real_def :
+    !f l net. (f --> l) net <=> !e. &0 < e ==> eventually (\x. dist(f(x),l) < e) net
+Proof
+    rw [limit, TOPSPACE_EUCLIDEAN, GSYM OPEN_IN]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q.PAT_X_ASSUM ‘!u. open u /\ l IN u ==> P’ (MP_TAC o Q.SPEC ‘ball (l,e)’) \\
+      simp [OPEN_BALL, IN_BALL, Once DIST_SYM, DIST_REFL],
+      (* goal 2 (of 2) *)
+      fs [open_def] \\
+      Q.PAT_X_ASSUM ‘!x. x IN u ==> P’ (MP_TAC o Q.SPEC ‘l’) >> rw [] \\
+      Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’  (MP_TAC o Q.SPEC ‘e’) >> rw [] \\
+      MATCH_MP_TAC EVENTUALLY_MONO \\
+      Q.EXISTS_TAC ‘\x. dist (f x,l) < e’ >> rw [] ]
+QED
+
+(* |- !f l net.
+        (f --> l) net <=>
+        !e. 0 < e ==> eventually (\x. abs (f x - l) < e) net
+
+   NOTE: This theorem is compatible with HOL-Light (Multivariate/realanalysis.ml)
+ *)
+Theorem tendsto_real = REWRITE_RULE [dist] tendsto_real_def
+
+(* This theorem is only used locally for compatibility purposes *)
+Theorem tendsto[local] = tendsto_real_def
+
+Theorem limit_at_alt_tends :
+    !top f l a. l IN topspace top ==>
+               (limit top f l (at a) <=> (f tends l) (top,tendsto (mr1,a)))
+Proof
+    rw [tendsto_mr1]
+ >> MATCH_MP_TAC limit_alt_tends
+ >> rw [TRIVIAL_LIMIT_AT, AT]
+ >> MATCH_MP_TAC REAL_LTE_TRANS
+ >> Q.EXISTS_TAC ‘dist (x,a)’ >> art []
+QED
+
+Theorem tendsto_real_alt_tends :
+    !f l a. (f --> l) (at a) <=> (f tends l) (mtop mr1,tendsto (mr1,a))
+Proof
+    rw [GSYM euclidean_def]
+ >> MP_TAC (ISPEC “euclidean” limit_at_alt_tends)
+ >> simp [TOPSPACE_EUCLIDEAN]
+QED
 
 (* Now the name "reallim" follows HOL-Light's "realanalysis.ml" *)
 Definition reallim :
@@ -5873,23 +5773,6 @@ val LIM_AT_ZERO = store_thm ("LIM_AT_ZERO",
    SIMP_TAC std_ss [dist, REAL_ADD_SUB, REAL_SUB_RZERO],
   FIRST_X_ASSUM(MP_TAC o SPEC ``x - a:real``) THEN
   SIMP_TAC std_ss [dist, REAL_SUB_RZERO, REAL_SUB_ADD2]]);
-
-(* ------------------------------------------------------------------------- *)
-(* It's also sometimes useful to extract the limit point from the net. *)
-(* ------------------------------------------------------------------------- *)
-
-val netlimit = new_definition ("netlimit",
- ``netlimit net = @a. !x. ~(netord net x a)``);
-
-val NETLIMIT_WITHIN = store_thm ("NETLIMIT_WITHIN",
- ``!a:real s. ~(trivial_limit (at a within s))
-    ==> (netlimit (at a within s) = a)``,
-  REWRITE_TAC[trivial_limit, netlimit, AT, WITHIN, DE_MORGAN_THM] THEN
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC SELECT_UNIQUE THEN REWRITE_TAC[] THEN
-  SUBGOAL_THEN
-   ``!x:real. ~(&0 < dist(x,a) /\ dist(x,a) <= dist(a,a) /\ x IN s)``
-    ASSUME_TAC THENL
-    [ASM_MESON_TAC[DIST_REFL, REAL_NOT_LT], ASM_MESON_TAC[]]);
 
 val NETLIMIT_AT = store_thm ("NETLIMIT_AT",
  ``!a. netlimit(at a) = a``,
@@ -8320,11 +8203,12 @@ Proof
     rw [continuous_on_def, continuous_within]
 QED
 
-val uniformly_continuous_on = new_definition ("uniformly_continuous_on",
- ``f uniformly_continuous_on s <=>
+Definition uniformly_continuous_on :
+   f uniformly_continuous_on s <=>
    !e. &0 < e
    ==> ?d. &0 < d /\ !x x'. x IN s /\ x' IN s /\ dist(x',x) < d
-     ==> dist(f(x'),f(x)) < e``);
+     ==> dist(f(x'),f(x)) < e
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Some simple consequential lemmas.                                         *)
