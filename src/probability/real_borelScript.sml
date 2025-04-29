@@ -1264,6 +1264,18 @@ Proof
  >> RW_TAC std_ss []
 QED
 
+Theorem borel_2d_measurable_add :
+    (\(x,y). x + y) IN borel_measurable (borel CROSS borel)
+Proof
+    rpt STRIP_TAC
+ >> ASSUME_TAC sigma_algebra_borel
+ >> ‘sigma_algebra (borel CROSS borel)’ by PROVE_TAC [SIGMA_ALGEBRA_PROD_SIGMA_WEAK]
+ >> MATCH_MP_TAC in_borel_measurable_add
+ >> qexistsl_tac [‘FST’, ‘SND’]
+ >> simp [MEASURABLE_FST, MEASURABLE_SND]
+ >> simp [FORALL_PROD]
+QED
+
 Theorem in_borel_measurable_const :
     !a k f. sigma_algebra a /\ (!x. x IN space a ==> (f x = k)) ==>
             f IN measurable a borel
@@ -1318,6 +1330,18 @@ Proof
       RW_TAC real_ss [],
       (* goal 2 (of 2) *)
       REWRITE_TAC [real_sub] ]
+QED
+
+Theorem borel_2d_measurable_sub :
+    (\(x,y). x - y) IN borel_measurable (borel CROSS borel)
+Proof
+    rpt STRIP_TAC
+ >> ASSUME_TAC sigma_algebra_borel
+ >> ‘sigma_algebra (borel CROSS borel)’ by PROVE_TAC [SIGMA_ALGEBRA_PROD_SIGMA_WEAK]
+ >> MATCH_MP_TAC in_borel_measurable_sub
+ >> qexistsl_tac [‘FST’, ‘SND’]
+ >> simp [MEASURABLE_FST, MEASURABLE_SND]
+ >> simp [FORALL_PROD]
 QED
 
 Theorem in_borel_measurable_pow2 : (* was: in_borel_measurable_sqr *)

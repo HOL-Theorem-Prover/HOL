@@ -4,13 +4,14 @@
 (* Original Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar (2013, 2015)   *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
-(* Updated and further enriched by Chun Tian (2018 - 2023)                   *)
+(* Updated and further enriched by Chun Tian (2018 - 2025)                   *)
 (* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
 
 open metisLib combinTheory pred_setTheory res_quanTools pairTheory jrhUtils
-     prim_recTheory arithmeticTheory numLib tautLib pred_setLib hurdUtils;
+     prim_recTheory arithmeticTheory numLib tautLib pred_setLib hurdUtils
+     topologyTheory;
 
 open realTheory realLib real_sigmaTheory iterateTheory real_topologyTheory
      seqTheory limTheory transcTheory metricTheory listTheory rich_listTheory
@@ -6571,15 +6572,51 @@ Proof
  >> rw [bounded_metric_lt_1]
 QED
 
+(* cf. real_topologyTheory.euclidean_def *)
+Definition ext_euclidean_def :
+    ext_euclidean = mtop extreal_mr1
+End
+
+Theorem topspace_ext_euclidean[simp] :
+    topspace ext_euclidean = UNIV
+Proof
+    rw [TOPSPACE_MTOP, ext_euclidean_def]
+QED
+
+Theorem mspace_extreal_mr1[simp] :
+    mspace extreal_mr1 = UNIV
+Proof
+    rw [mspace, GSYM ext_euclidean_def, topspace_ext_euclidean]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Limits of extreal functions ('a -> extreal) and continuous functions      *)
 (* ------------------------------------------------------------------------- *)
 
-Definition ext_tendsto_def :
-    ext_tendsto f l net =
-      !e. &0 < e ==> eventually (\x. dist extreal_mr1 (f(x),l) < e) net
+Definition ext_tendsto :
+    ext_tendsto = limit ext_euclidean
 End
 Overload "-->" = “ext_tendsto”
+
+Theorem ext_tendsto_def :
+    !f l net. ext_tendsto f l net <=>
+             !e. &0 < e ==> eventually (\x. dist extreal_mr1 (f(x),l) < e) net
+Proof
+    rw [ext_tendsto, ext_euclidean_def, limit]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (Q.PAT_X_ASSUM ‘!u. open_in (mtop extreal_mr1) u /\ l IN u ==> P’
+       (MP_TAC o Q.SPEC ‘mball extreal_mr1 (l,e)’) \\
+     simp [OPEN_IN_MBALL, IN_MBALL] \\
+     rw [MDIST_REFL, Once METRIC_SYM])
+ >> fs [OPEN_IN_MTOPOLOGY]
+ >> Q.PAT_X_ASSUM ‘!x. x IN u ==> P’ (MP_TAC o Q.SPEC ‘l’) >> rw []
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’  (MP_TAC o Q.SPEC ‘r’) >> rw []
+ >> MATCH_MP_TAC EVENTUALLY_MONO
+ >> Q.EXISTS_TAC ‘\x. dist extreal_mr1 (f x,l) < r’ >> rw []
+ >> fs [SUBSET_DEF, IN_MBALL]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [Once METRIC_SYM]
+QED
 
 Definition extreal_lim_def :
     extreal_lim net f = @l. ext_tendsto f l net
@@ -6605,13 +6642,17 @@ Overload continuous = “ext_continuous”
 Definition ext_continuous_on_def :
     ext_continuous_on f s <=> !x. x IN s ==> ext_continuous f (at x within s)
 End
+
+(* ‘continuous_on’ is defined in real_topologyTheory *)
 Overload continuous_on = “ext_continuous_on”
 
-val _ = set_fixity "bounded_on" (Infix(NONASSOC, 450));
-Definition bounded_on_def :
-    ext_bounded_on f s <=> ?c. !x. x IN s ==> abs x <= Normal c
+(* Use ‘ext_bounded (IMAGE f UNIV)’ to say a function f is bounded (on UNIV) *)
+Definition ext_bounded_def :
+    ext_bounded s <=> ?a. a <> PosInf /\ !x. x IN s ==> abs x <= a
 End
-Overload bounded_on = “ext_bounded_on”
+
+(* ‘bounded’ is defined in real_topologyTheory *)
+Overload bounded = “ext_bounded”
 
 Theorem EXTREAL_LIM :
     !(f :'a -> extreal) l net.
@@ -7141,7 +7182,8 @@ QED
 Theorem EXTREAL_PROD_IMAGE_ONE:
     !s. FINITE s ==> EXTREAL_PROD_IMAGE (λx. 1) s = 1x
 Proof
-    Induct_on ‘s’ >> simp[EXTREAL_PROD_IMAGE_EMPTY,EXTREAL_PROD_IMAGE_PROPERTY,DELETE_NON_ELEMENT_RWT]
+    Induct_on ‘s’
+ >> simp[EXTREAL_PROD_IMAGE_EMPTY,EXTREAL_PROD_IMAGE_PROPERTY,DELETE_NON_ELEMENT_RWT]
 QED
 
 Theorem EXTREAL_PROD_IMAGE_POS:
@@ -7360,15 +7402,14 @@ QED
 val _ = set_fixity "right_continuous_at" (Infix(NONASSOC, 450));
 
 Definition right_continuous_at :
-    (f :extreal -> extreal) right_continuous_at x0 <=>
-    inf {f x | Normal x0 < x} = f (Normal x0)
+    (f :extreal -> extreal) right_continuous_at x0 <=> inf {f x | x0 < x} = f x0
 End
 
 (* cf. continuous_at for the rationale of the conclusion part. The present proof
    is based on inf_seq', which connects the sequential limit to inf IMAGE.
  *)
 Theorem right_continuous_at_thm :
-    !f x0. (!x y. x <= y ==> f x <= f y) /\ f right_continuous_at x0 /\
+    !f x0. (!x y. x <= y ==> f x <= f y) /\ f right_continuous_at (Normal x0) /\
            (!x. f x <> PosInf /\ f x <> NegInf) ==>
             !e. 0 < e /\ e <> PosInf ==>
                 ?d. 0 < d /\ !x. x - x0 < d ==> f (Normal x) - f (Normal x0) <= e
@@ -7417,13 +7458,12 @@ Proof
  >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
      MATCH_MP_TAC inf_seq' >> art [])
  >> Rewr'
- >> rw [LIM_SEQUENTIALLY, dist, Abbr ‘g’]
+ >> rw [LIM_SEQUENTIALLY, metricTheory.dist, Abbr ‘g’]
  >> ‘e <> NegInf’ by rw [pos_not_neginf, lt_imp_le]
  >> ‘?r. 0 < r /\ e = Normal r’
       by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_lt_eq]
  >> POP_ORW
- >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> _’ (MP_TAC o Q.SPEC ‘r’)
- >> rw []
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> _’ (MP_TAC o Q.SPEC ‘r’) >> rw []
  >> Q.EXISTS_TAC ‘inv &SUC N’
  >> CONJ_TAC >- (MATCH_MP_TAC REAL_INV_POS >> rw [])
  >> rpt STRIP_TAC
@@ -7436,14 +7476,14 @@ Proof
  >> FULL_SIMP_TAC std_ss [real_normal, extreal_le_eq, extreal_sub_def, extreal_11]
  >> Q.PAT_X_ASSUM ‘!n. N <= n ==> _’ (MP_TAC o Q.SPEC ‘N’)
  >> simp []
- >> Know ‘abs (g (Normal (x0 + realinv (&SUC N))) - l) =
-               g (Normal (x0 + realinv (&SUC N))) - l’
+ >> Know ‘abs (g (Normal (x0 + inv (&SUC N))) - l) =
+               g (Normal (x0 + inv (&SUC N))) - l’
  >- (simp [ABS_REFL, REAL_SUB_LE] \\
      Q.PAT_X_ASSUM ‘_ = l’ (REWRITE_TAC o wrap o SYM) \\
      FIRST_X_ASSUM MATCH_MP_TAC >> simp [])
  >> Rewr'
  >> DISCH_TAC
- >> Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘g (Normal (x0 + realinv (&SUC N))) - l’
+ >> Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘g (Normal (x0 + inv (&SUC N))) - l’
  >> reverse CONJ_TAC
  >- (MATCH_MP_TAC REAL_LT_IMP_LE >> art [])
  >> REWRITE_TAC [REAL_LE_SUB_CANCEL2]
@@ -7453,23 +7493,6 @@ Proof
  >> REWRITE_TAC [GSYM REAL_LE_SUB_RADD]
  >> MATCH_MP_TAC REAL_LT_IMP_LE >> art []
 QED
-
-(* A function is "right-continuous" if it's right-continuous at all points
-
-   NOTE: the requirement of mono-increasing is included since this version of
-  "right-continuous" definition only works on mono-increasing functions.
- *)
-Definition right_continuous :
-    right_continuous f <=>
-   (!x y. x <= y ==> f x <= f y) /\ !x. f right_continuous_at x
-End
-
-(* |- !f. right_continuous f <=>
-         (!x y. x <= y ==> f x <= f y) /\
-          !x. inf {f x' | Normal x < x'} = f (Normal x)
- *)
-Theorem right_continuous_def =
-        right_continuous |> REWRITE_RULE [right_continuous_at]
 
 (* NOTE: This core lemma holds also for other shapes of intervals (not used) *)
 Theorem countable_disjoint_interval_lemma :
@@ -7637,7 +7660,6 @@ Proof
  >> simp [DISJOINT_ALT, IN_open_interval]
  >> Q.EXISTS_TAC ‘Normal z’ >> art []
 QED
-
 
 (* NOTE: This definition does not assume f is left or right-continuous. *)
 val _ = set_fixity "jumping_point_of" (Infix(NONASSOC, 450));
