@@ -146,8 +146,6 @@ struct
       fun f at i = f i
       fun check f i =
         i < numToks andalso f (tok i)
-      fun is c =
-        check (fn t => c = Token.getClass t)
       fun isReserved rc =
         check (fn t => Token.Reserved rc = Token.getClass t)
 
@@ -159,15 +157,12 @@ struct
         PS.maybeReserved toks rc i
       fun parse_vid i = PS.vid toks i
       fun parse_longvid i = PS.longvid toks i
-      fun parse_recordLabel i = PS.recordLabel toks i
       fun parse_tycon i = PS.tycon toks i
       fun parse_ty i = PT.ty toks i
       fun parse_pat infdict restriction i =
         PP.pat allows toks infdict restriction i
 
 
-      fun parse_zeroOrMoreDelimitedByReserved x i =
-        PC.zeroOrMoreDelimitedByReserved toks x i
       fun parse_oneOrMoreDelimitedByReserved x i =
         PC.oneOrMoreDelimitedByReserved toks x i
       fun parse_two (p1, p2) state =
@@ -177,15 +172,6 @@ struct
 
       fun consume_exp infdict restriction i =
         exp allows toks infdict restriction i
-
-      fun consume_opvid infdict i =
-        let
-          val (i, opp) = parse_maybeReserved Token.Op i
-          val (i, vid) = parse_vid i
-          val _ = ParserUtils.errorIfInfixNotOpped infdict opp vid
-        in
-          (i, {opp = opp, vid = vid})
-        end
 
 
       (* This function is duplicated in ParseSigExpAndSpec. *)
@@ -381,7 +367,7 @@ struct
         let
           val (i, {elems, delims}) =
             parse_oneOrMoreDelimitedByReserved
-              {parseElem = consume_decExbind infdict, delim = Token.And} i
+              {parseElem = consume_decExbind, delim = Token.And} i
         in
           ( (i, infdict)
           , Ast.Exp.DecException
@@ -398,7 +384,7 @@ struct
         *  [op] vid = [op] longvid
         * ^
         *)
-      and consume_decExbind infdict i =
+      and consume_decExbind i =
         let
           val (i, opp) = parse_maybeReserved Token.Op i
           val (i, vid) = parse_vid i
@@ -703,8 +689,6 @@ struct
       fun f at i = f i
       fun check f i =
         i < numToks andalso f (tok i)
-      fun is c =
-        check (fn t => c = Token.getClass t)
       fun isReserved rc =
         check (fn t => Token.Reserved rc = Token.getClass t)
 
@@ -713,7 +697,6 @@ struct
         PS.reserved toks rc i
       fun parse_maybeReserved rc i =
         PS.maybeReserved toks rc i
-      fun parse_vid i = PS.vid toks i
       fun parse_longvid i = PS.longvid toks i
       fun parse_recordLabel i = PS.recordLabel toks i
       fun parse_ty i = PT.ty toks i
@@ -725,8 +708,6 @@ struct
         PC.zeroOrMoreDelimitedByReserved toks x i
       fun parse_oneOrMoreDelimitedByReserved x i =
         PC.oneOrMoreDelimitedByReserved toks x i
-      fun parse_two (p1, p2) state =
-        PC.two (p1, p2) state
       fun parse_zeroOrMoreWhile c p s =
         PC.zeroOrMoreWhile c p s
 
@@ -798,7 +779,7 @@ struct
                   }
 
             else if isReserved Token.Underscore i then
-              consume_expAfterUnderscore infdict restriction (tok i) (i + 1)
+              consume_expAfterUnderscore (tok i) (i + 1)
 
             else
               ParserUtils.tokError toks
@@ -873,7 +854,7 @@ struct
         * This is a bit awkward, but we're trying to handle MLton-specific
         * code here, e.g. _prim and _import.
         *)
-      and consume_expAfterUnderscore infdict restriction underscore i =
+      and consume_expAfterUnderscore underscore i =
         let
           fun err () =
             ParserUtils.error

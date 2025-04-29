@@ -160,7 +160,7 @@ struct
             else if
               isReserved Token.Colon i andalso Restriction.anyOkay restriction
             then
-              (true, consume_patTyped infdict pat (tok i) (i + 1))
+              (true, consume_patTyped pat (tok i) (i + 1))
 
             else if
               isReserved Token.As i andalso Restriction.anyOkay restriction
@@ -307,7 +307,7 @@ struct
       (** pat : ty
         *      ^
         *)
-      and consume_patTyped infdict pat colon i =
+      and consume_patTyped pat colon i =
         let val (i, ty) = parse_ty i
         in (i, Ast.Pat.Typed {pat = pat, colon = colon, ty = ty})
         end

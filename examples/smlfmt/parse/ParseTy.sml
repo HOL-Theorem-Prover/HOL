@@ -12,7 +12,7 @@ sig
 end =
 struct
   local open ParserCombinators ParseSimple in end
-  
+
   structure PC = ParserCombinators
   structure PS = ParseSimple
 

@@ -16,7 +16,7 @@ sig
 end =
 struct
   local open ParseSimple ParseTy ParsePat ExpPatRestriction in end
-  
+
   structure PC = ParserCombinators
   structure PS = ParseSimple
   structure PT = ParseTy
@@ -47,22 +47,10 @@ struct
         PS.reserved toks rc i
       fun parse_tyvars i = PS.tyvars toks i
       fun parse_sigid i = PS.sigid toks i
-      fun parse_strid i = PS.strid toks i
-      fun parse_funid i = PS.funid toks i
-      fun parse_vid i = PS.vid toks i
-      fun parse_longvid i = PS.longvid toks i
-      fun parse_tycon i = PS.tycon toks i
       fun parse_maybeLongTycon i = PS.maybeLongTycon toks i
-      fun parse_maybeLongStrid i = PS.maybeLongStrid toks i
       fun parse_ty i = PT.ty toks i
 
 
-      fun parse_oneOrMoreDelimitedByReserved x i =
-        PC.oneOrMoreDelimitedByReserved toks x i
-      fun parse_two (p1, p2) state =
-        PC.two (p1, p2) state
-      fun parse_zeroOrMoreWhile c p s =
-        PC.zeroOrMoreWhile c p s
       fun parse_oneOrMoreWhile c p s =
         PC.oneOrMoreWhile c p s
 
@@ -170,8 +158,6 @@ struct
         PC.two (p1, p2) state
       fun parse_zeroOrMoreWhile c p s =
         PC.zeroOrMoreWhile c p s
-      fun parse_oneOrMoreWhile c p s =
-        PC.oneOrMoreWhile c p s
 
 
       (* This function is duplicated in ParseExpAndDec. *)

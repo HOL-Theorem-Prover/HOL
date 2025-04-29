@@ -39,11 +39,6 @@ struct
       fun tok i = Seq.nth toks i
 
 
-      (** not yet implemented *)
-      fun nyi fname i =
-        ParserUtils.nyi toks fname i
-
-
       (** This silliness lets you write almost-English like this:
         *   if is Token.Identifier at i           then ...
         *   if isReserved Token.Val at i          then ...
@@ -53,23 +48,17 @@ struct
       fun f at i = f i
       fun check f i =
         i < numToks andalso f (tok i)
-      fun is c =
-        check (fn t => c = Token.getClass t)
       fun isReserved rc =
         check (fn t => Token.Reserved rc = Token.getClass t)
 
 
       fun parse_reserved rc i =
         PS.reserved toks rc i
-      fun parse_tyvars i = PS.tyvars toks i
       fun parse_sigid i = PS.sigid toks i
       fun parse_strid i = PS.strid toks i
       fun parse_funid i = PS.funid toks i
       fun parse_vid i = PS.vid toks i
       fun parse_longvid i = PS.longvid toks i
-      fun parse_tycon i = PS.tycon toks i
-      fun parse_maybeLongTycon i = PS.maybeLongTycon toks i
-      fun parse_maybeLongStrid i = PS.maybeLongStrid toks i
       fun parse_ty i = PT.ty toks i
 
 
@@ -79,8 +68,6 @@ struct
         PC.two (p1, p2) state
       fun parse_zeroOrMoreWhile c p s =
         PC.zeroOrMoreWhile c p s
-      fun parse_oneOrMoreWhile c p s =
-        PC.oneOrMoreWhile c p s
 
       fun consume_sigExp infdict i =
         ParseSigExpAndSpec.sigexp allows toks infdict i

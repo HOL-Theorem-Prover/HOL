@@ -70,7 +70,6 @@ sig
 
   datatype class =
     Comment
-  | MLtonReserved
   | Reserved of reserved
   | IntegerConstant
   | WordConstant
@@ -162,7 +161,6 @@ sig
 
     val make: Source.t -> class -> pretoken
     val reserved: Source.t -> reserved -> pretoken
-    val mltonReserved: Source.t -> pretoken
     val longIdentifier: Source.t -> pretoken
     val identifier: Source.t -> pretoken
     val reservedOrIdentifier: Source.t -> pretoken
@@ -239,7 +237,6 @@ struct
 
   datatype class =
     Comment
-  | MLtonReserved
   | Reserved of reserved
   | IntegerConstant
   | WordConstant
@@ -259,8 +256,6 @@ struct
 
   fun reserved src rclass =
     WithSource.make {value = Reserved rclass, source = src}
-
-  fun mltonReserved src = WithSource.make {value = MLtonReserved, source = src}
 
   fun longIdentifier src =
     WithSource.make {value = LongIdentifier, source = src}
@@ -508,7 +503,6 @@ struct
       Identifier => true
     | LongIdentifier => true
     | Reserved Equal => true (** annoying edge case *)
-    | MLtonReserved => true (** another special case... *)
     | _ => false
 
   fun isSymbolicIdentifier tok =
@@ -657,7 +651,6 @@ struct
     | CharConstant => "char"
     | Identifier => "identifier"
     | LongIdentifier => "long identifier"
-    | MLtonReserved => "MLton reserved"
     | Whitespace => "whitespace"
 
 
@@ -879,7 +872,6 @@ struct
 
     val make = make
     val reserved = reserved
-    val mltonReserved = mltonReserved
     val longIdentifier = longIdentifier
     val identifier = identifier
     val reservedOrIdentifier = reservedOrIdentifier
