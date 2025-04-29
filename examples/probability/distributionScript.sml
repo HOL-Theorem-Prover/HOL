@@ -17,15 +17,12 @@ open combinTheory arithmeticTheory numLib logrootTheory hurdUtils pred_setLib
      pred_setTheory topologyTheory pairTheory tautLib jrhUtils cardinalTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
-     real_topologyTheory derivativeTheory;
+     real_topologyTheory derivativeTheory metricTheory netsTheory;
 
 open sigma_algebraTheory extreal_baseTheory extrealTheory real_borelTheory
      measureTheory borelTheory lebesgueTheory martingaleTheory probabilityTheory;
 
 val _ = new_theory "distribution"; (* was: "normal_rv" *)
-
-val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
-                   POP_ASSUM K_TAC;
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 fun METIS ths tm = prove(tm,METIS_TAC ths);
@@ -35,12 +32,31 @@ val T_TAC = rpt (Q.PAT_X_ASSUM ‘T’ K_TAC);
 (*  Properties of distribution_functions                                     *)
 (* ------------------------------------------------------------------------- *)
 
+(* A function is "right-continuous" if it's right-continuous at all points
+
+   NOTE: the requirement of mono-increasing is included since this version of
+  "right-continuous" definition only works on mono-increasing functions.
+
+   NOTE: The concept of "right-continuous" at points PosInf/NegInf is tricky,
+   and (may) not be true for all distribution functions, thus is excluded.
+ *)
+Definition right_continuous :
+    right_continuous (f :extreal -> extreal) <=>
+      (!x y. x <= y ==> f x <= f y) /\ !x. f right_continuous_at (Normal x)
+End
+
+(* |- !f. right_continuous f <=>
+         (!x y. x <= y ==> f x <= f y) /\ !x. inf {f x' | x < x'} = f (Normal x)
+ *)
+Theorem right_continuous_def =
+        right_continuous |> REWRITE_RULE [right_continuous_at]
+
 (* NOTE: There's no supporting theorem for “distribution_function” in
    probabilityTheory. The present lemma seems the first one.
  *)
 Theorem distribution_function_monotone :
     !p X f. prob_space p /\ random_variable X p Borel /\
-            f = distribution_function p X ==> (!x y. x <= y ==> f x <= f y)
+            f = distribution_function p X ==> !x y. x <= y ==> f x <= f y
 Proof
     rw [distribution_function_def]
  >> MATCH_MP_TAC PROB_INCREASING >> art []
@@ -53,11 +69,24 @@ Proof
  >> Q_TAC (TRANS_TAC le_trans) ‘x’ >> art []
 QED
 
-(* NOTE: This tactic is shared by existence_of_random_variable and the next
+Theorem distribution_function_monotone' :
+    !p X f. prob_space p /\ random_variable X p borel /\
+            f = distribution_function p (Normal o X) ==> !x y. x <= y ==> f x <= f y
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> MATCH_MP_TAC distribution_function_monotone
+ >> qexistsl_tac [‘p’, ‘Normal o X’] >> art []
+ >> fs [random_variable_def]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art []
+ >> MATCH_MP_TAC EVENTS_SIGMA_ALGEBRA >> art []
+QED
+
+(* NOTE: This tactic is shared by distribution_function_right_continuous and
    existence_of_random_variable.
  *)
 val distribution_function_right_continuous_tac =
-    (simp [right_continuous_def] >> Q.X_GEN_TAC ‘x0’ \\
+    (simp [right_continuous_def] \\
+     Q.X_GEN_TAC ‘x0’ \\
   (* preparing for MONOTONE_CONVERGENCE_BIGINTER *)
      qabbrev_tac ‘g = \n. {x | x <= Normal x0 + 1 / &SUC n}’ \\
      qabbrev_tac ‘s = BIGINTER (IMAGE g UNIV)’ \\
@@ -270,7 +299,7 @@ Proof
      MP_TAC (Q.SPECL [‘ext_lborel’, ‘sp’]
                      (INST_TYPE [alpha |-> “:extreal”] restrict_space_SUBSET)) \\
      simp [measure_space_ext_lborel, ext_lborel_def] \\
-     Suff ‘PREIMAGE X {x | x <= Normal a} INTER sp IN  measurable_sets p’
+     Suff ‘PREIMAGE X {x | x <= Normal a} INTER sp IN measurable_sets p’
      >- rw [SUBSET_DEF] \\
      POP_ASSUM MATCH_MP_TAC \\
      rw [BOREL_MEASURABLE_SETS])
@@ -1115,7 +1144,7 @@ Proof
  >> Suff `measure_space lborel /\ (!x. x IN m_space lborel ==> 0 <= f x) /\
           f IN measurable (m_space lborel,measurable_sets lborel) Borel`
  >- (DISCH_THEN (MP_TAC o MATCH_MP null_sets_density_iff) \\
-     DISCH_THEN (MP_TAC o Q.SPEC `A`) >> DISC_RW_KILL \\
+     DISCH_THEN (MP_TAC o Q.SPEC `A`) >> Rewr' \\
      fs [sets_lborel] \\
      rw [AE_ALT, null_set_def, GSYM extreal_lt_def, space_lborel, sets_lborel] \\
      Q.EXISTS_TAC ‘A’ >> art [] \\
@@ -1316,7 +1345,7 @@ Proof
  >> Q_TAC SUFF_TAC
        `pos_fn_integral lborel (\x. f x * Normal (normal_density mu sig x)) =
         pos_fn_integral N f`
- >- (DISC_RW_KILL THEN
+ >- (Rewr' THEN
      simp [Abbr ‘g’] \\
      MP_TAC (Q.SPECL [‘lborel’, ‘N’, ‘f’]
                (INST_TYPE [alpha |-> “:real”] RN_deriv_positive_integral)) \\
@@ -1624,7 +1653,7 @@ Proof
  >> Suff ‘pos_fn_integral lborel
            (\x. (\x. Normal (normal_density (mu + b) sig x) * indicator_fn A x) x) =
           Normal (abs 1) * pos_fn_integral lborel (\x. f (-b + 1 * x))’
- >- (SIMP_TAC std_ss [] >> DISC_RW_KILL \\
+ >- (SIMP_TAC std_ss [] >> Rewr' \\
      Suff `pos_fn_integral lborel f =
            Normal (abs 1) * pos_fn_integral lborel (\x. f (-b + 1 * x))`
      >- (DISCH_THEN (simp o wrap o SYM) \\
@@ -1782,6 +1811,1293 @@ Proof
  >> Suff ‘normal_rv Y p (b + a * mu) (abs a * sig)’ >- rw [normal_rv_def]
  >> MATCH_MP_TAC normal_rv_affine'
  >> Q.EXISTS_TAC ‘X’ >> rw []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  Convolutions (see also [4, p.291] or [5, p.157])                         *)
+(* ------------------------------------------------------------------------- *)
+
+Definition convolution :
+    convolution (M :real m_space) (N :real m_space) =
+    distr_of (prod_measure_space M N)
+             (space borel, subsets borel, (\x. 0)) (\(x,y). x + y)
+End
+
+(* |- !M N.
+        convolution M N =
+        (space borel,subsets borel,
+         (\s.
+              if s IN subsets borel then distr (M CROSS N) (\(x,y). x + y) s
+              else 0))
+ *)
+Theorem convolution_def = convolution
+     |> REWRITE_RULE [distr_of_alt_distr, m_space_def, measurable_sets_def]
+
+(* Easy corollary of distribution_prob_space *)
+Theorem prob_space_distr_of :
+    !p M X. prob_space p /\ measure_space M /\
+            random_variable X p (measurable_space M) ==> prob_space (distr_of p M X)
+Proof
+    rw [distr_of_alt_distr, GSYM distribution_distr]
+ >> qmatch_abbrev_tac ‘prob_space (m_space M,measurable_sets M,m)’
+ >> MATCH_MP_TAC prob_space_eq
+ >> Q.EXISTS_TAC ‘(m_space M,measurable_sets M,distribution p X)’
+ >> simp [p_space_def, events_def, prob_def, Abbr ‘m’]
+ >> qabbrev_tac ‘A = measurable_space M’
+ >> ‘m_space M = space A /\ measurable_sets M = subsets A’ by rw [Abbr ‘A’]
+ >> NTAC 2 POP_ORW
+ >> MATCH_MP_TAC distribution_prob_space >> art []
+ >> fs [measure_space_def]
+QED
+
+Theorem prob_sigma_finite_measure_space :
+    !p. prob_space p ==> sigma_finite_measure_space p
+Proof
+    rw [sigma_finite_measure_space_def, PROB_SPACE_SIGMA_FINITE]
+ >> fs [prob_space_def]
+QED
+
+(* NOTE: This theorem gives an alternative definition of “prod_measure” targeting
+   at product sets (the generator case). This proof was part of pair_measure_eqI.
+ *)
+(* NOTE: New proof by UNIQUENESS_OF_MEASURE *)
+Theorem measure_of_prod_measure_space : (* was: pair_measure_eqI *)
+    !M M1 M2. measure_space M /\
+              sigma_finite_measure_space M1 /\
+              sigma_finite_measure_space M2 /\
+             (measurable_sets (M1 CROSS M2) = measurable_sets M) /\
+             (!A B. A IN measurable_sets M1 /\ B IN measurable_sets M2 ==>
+                    measure M1 A * measure M2 B = measure M (A CROSS B)) ==>
+              measure_of (M1 CROSS M2) = measure_of M
+Proof
+    rpt STRIP_TAC
+ >> ‘measure_space (M1 CROSS M2)’ by PROVE_TAC [measure_space_prod_measure]
+ >> ‘m_space (M1 CROSS M2) = m_space M’ by METIS_TAC [sets_eq_imp_space_eq]
+ >> rw [measure_of_def, FUN_EQ_THM]
+ >> ‘sigma_sets (m_space M) (measurable_sets M) = measurable_sets M’
+      by METIS_TAC [sigma_sets_eq, measure_space_def]
+ >> POP_ORW
+ >> Suff ‘!s. s IN measurable_sets M ==> measure (M1 CROSS M2) s = measure M s’
+ >- (DISCH_TAC \\
+     Cases_on ‘a IN measurable_sets M’ >> rw [] \\
+     POP_ASSUM MP_TAC \\
+     Suff ‘measure_space (m_space M,measurable_sets M,measure (M1 CROSS M2))’
+     >- rw [] \\
+     MATCH_MP_TAC measure_space_eq \\
+     Q.EXISTS_TAC ‘M’ >> rw [m_space_def, measurable_sets_def, measure_def])
+ (* applying UNIQUENESS_OF_MEASURE *)
+ >> qabbrev_tac ‘u = measure (M1 CROSS M2)’
+ >> qabbrev_tac ‘v = measure M’
+ >> qabbrev_tac ‘sp = m_space M’
+ >> qabbrev_tac ‘a = measurable_space M1’
+ >> qabbrev_tac ‘b = measurable_space M2’
+ >> fs [sigma_finite_measure_space_def]
+ >> ‘sigma_algebra a /\ sigma_algebra b’ by PROVE_TAC [MEASURE_SPACE_SIGMA_ALGEBRA]
+ >> qabbrev_tac ‘sts = prod_sets (subsets a) (subsets b)’
+ >> Know ‘measurable_sets M = subsets (sigma sp sts)’
+ >- (Q.PAT_X_ASSUM ‘_ = measurable_sets M’ (REWRITE_TAC o wrap o SYM) \\
+     simp [prod_measure_space_def] \\
+     simp [prod_sigma_def] \\
+     Suff ‘space a CROSS space b = sp’ >- rw [] \\
+     simp [Abbr ‘sp’] \\
+     Q.PAT_X_ASSUM ‘_ = m_space M’ (REWRITE_TAC o wrap o SYM) \\
+     simp [prod_measure_space_def, Abbr ‘a’, Abbr ‘b’])
+ >> Rewr'
+ (* applying UNIQUENESS_OF_MEASURE *)
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC UNIQUENESS_OF_MEASURE
+ >> CONJ_TAC (* subset_class sp sts *)
+ >- (rw [Abbr ‘sp’, Abbr ‘sts’, subset_class_def, IN_PROD_SETS] \\
+     Q.PAT_X_ASSUM ‘_ = m_space M’ (REWRITE_TAC o wrap o SYM) \\
+     simp [SPACE_PROD] \\
+     MATCH_MP_TAC SUBSET_CROSS \\
+    ‘m_space M1 = space a /\ m_space M2 = space b’ by rw [Abbr ‘a’, Abbr ‘b’] \\
+     NTAC 2 POP_ORW \\
+     fs [sigma_algebra_def, algebra_def, subset_class_def])
+ >> CONJ_TAC (* !s t. s IN sts /\ t IN sts ==> s INTER t IN sts *)
+ >- (rw [Abbr ‘sts’, IN_PROD_SETS] \\
+     simp [INTER_CROSS] \\
+     qexistsl_tac [‘t' INTER t''’, ‘u' INTER u''’] >> art [] \\
+     CONJ_TAC \\ (* 2 subgoals, same tactics *)
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [])
+ >> STRONG_CONJ_TAC (* sigma_finite (sp,sts,u) *)
+ >- (NTAC 2 (Q.PAT_X_ASSUM ‘sigma_finite _’ MP_TAC) \\
+     rw [sigma_finite, Abbr ‘sts’, IN_PROD_SETS, GSYM lt_infty] \\
+     simp [SPACE_PROD] \\
+     Q.EXISTS_TAC ‘\n. f n CROSS f' n’ \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC exhausting_sequence_CROSS \\
+        ‘m_space M1 = space a /\ m_space M2 = space b’ by rw [Abbr ‘a’, Abbr ‘b’] \\
+         NTAC 2 POP_ORW \\
+         simp [SPACE]) \\
+     rw [] \\
+     fs [exhausting_sequence_def, IN_FUNSET, Abbr ‘a’, Abbr ‘b’] \\
+     Know ‘v (f n CROSS f' n) = measure M1 (f n) * measure M2 (f' n)’
+     >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> art []) >> Rewr' \\
+    ‘0 <= measure M1 (f n) /\ 0 <= measure M2 (f' n)’
+       by PROVE_TAC [MEASURE_POSITIVE] \\
+    ‘measure M1 (f n) <> NegInf /\ measure M2 (f' n) <> NegInf’
+       by rw [pos_not_neginf] \\
+    ‘?r1. measure M1 (f n) = Normal r1’ by METIS_TAC [extreal_cases] \\
+    ‘?r2. measure M2 (f' n) = Normal r2’ by METIS_TAC [extreal_cases] \\
+     NTAC 2 POP_ORW \\
+     simp [extreal_mul_eq])
+ >> DISCH_TAC
+ >> CONJ_TAC (* measure_space (sp,subsets (sigma sp sts),v) *)
+ >- (MATCH_MP_TAC measure_space_eq \\
+     Q.EXISTS_TAC ‘M’ \\
+     simp [m_space_def, measurable_sets_def, measure_def] \\
+     Q.PAT_X_ASSUM ‘_ = measurable_sets M’ (REWRITE_TAC o wrap o SYM) \\
+     simp [prod_measure_space_def, prod_sigma_def, Abbr ‘sp’] \\
+     Q.PAT_X_ASSUM ‘_ = m_space M’ (REWRITE_TAC o wrap o SYM) \\
+     simp [prod_measure_space_def, prod_sigma_def, m_space_def] \\
+     NTAC 2 AP_TERM_TAC \\
+     simp [Abbr ‘a’, Abbr ‘b’, Abbr ‘sts’])
+ >> CONJ_TAC (* measure_space (sp,subsets (sigma sp sts),u) *)
+ >- (MATCH_MP_TAC measure_space_eq \\
+     Q.EXISTS_TAC ‘M1 CROSS M2’ \\
+     simp [m_space_def, measurable_sets_def, measure_def] \\
+     Q.PAT_X_ASSUM ‘_ = measurable_sets M’ (REWRITE_TAC o wrap o SYM) \\
+     simp [prod_measure_space_def, prod_sigma_def, Abbr ‘sp’] \\
+     Q.PAT_X_ASSUM ‘_ = m_space M’ (REWRITE_TAC o wrap o SYM) \\
+     simp [prod_measure_space_def, prod_sigma_def, m_space_def] \\
+     NTAC 2 AP_TERM_TAC \\
+     simp [Abbr ‘a’, Abbr ‘b’, Abbr ‘sts’])
+ (* stage work *)
+ >> rw [Abbr ‘sts’, IN_PROD_SETS]
+ >> rename1 ‘v (A CROSS B) = u (A CROSS B)’
+ >> Know ‘v (A CROSS B) = measure M1 A * measure M2 B’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     fs [Abbr ‘a’, Abbr ‘b’])
+ >> Rewr'
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> simp [Abbr ‘u’, prod_measure_space_def]
+ >> MATCH_MP_TAC PROD_MEASURE_CROSS
+ >> fs [Abbr ‘a’, Abbr ‘b’]
+QED
+
+(* NOTE: M1/M2 is usually (space Borel,subsets Borel,\x. 0) or the borel variants,
+   i.e. the measure functions in M1/M2 are never used, only the measurable spaces
+   (sigma_algebras) matter.
+ *)
+Theorem indep_var_distribution_imp :
+    !p M1 X M2 Y. prob_space p /\
+       sigma_finite_measure_space M1 /\
+       sigma_finite_measure_space M2 /\
+       random_variable X p (measurable_space M1) /\
+       random_variable Y p (measurable_space M2) /\
+       indep_rv p X Y (measurable_space M1) (measurable_space M2) ==>
+       measure_of (distr_of p M1 X CROSS distr_of p M2 Y) =
+       measure_of (distr_of p (M1 CROSS M2) (\x. (X x,Y x)))
+Proof
+    rpt STRIP_TAC
+ >> ‘measure_space (M1 CROSS M2)’ by PROVE_TAC [measure_space_prod_measure]
+ >> fs [sigma_finite_measure_space_def]
+ >> Know ‘random_variable (\x. (X x, Y x)) p
+           (m_space (M1 CROSS M2),measurable_sets (M1 CROSS M2))’
+ >- (ASM_SIMP_TAC std_ss [random_variable_def, MEASURABLE_SPACE_PROD] \\
+     SIMP_TAC std_ss [p_space_def, events_def] \\
+     MATCH_MP_TAC MEASURABLE_PAIR \\
+     FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, events_def,
+                           random_variable_def, measure_space_def])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘Z = \x. (X x,Y x)’
+ >> qabbrev_tac ‘A1 = measurable_space M1’
+ >> qabbrev_tac ‘A2 = measurable_space M2’
+ >> ‘prob_space (distr_of p M1 X) /\
+     prob_space (distr_of p M2 Y)’ by PROVE_TAC [prob_space_distr_of]
+ (* eliminating measure_of *)
+ >> MATCH_MP_TAC measure_of_prod_measure_space
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC measure_space_distr_of \\
+     fs [prob_space_def, random_variable_def, p_space_def, events_def])
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >- (fs [prob_space_def, sigma_finite_measure_space_def] \\
+     MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE >> rw [lt_infty])
+ >> CONJ_TAC
+ >- (fs [prob_space_def, sigma_finite_measure_space_def] \\
+     MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE >> rw [lt_infty])
+ >> simp [distr_of, prod_measure_space_def]
+ >> reverse (rw [PREIMAGE_CROSS])
+ >- (Q.PAT_X_ASSUM ‘A CROSS B NOTIN subsets (A1 CROSS A2)’ MP_TAC \\
+     Suff ‘A CROSS B IN subsets (A1 CROSS A2)’ >- rw [] \\
+     simp [prod_sigma_def] \\
+     MATCH_MP_TAC IN_SIGMA >> rw [IN_PROD_SETS] \\
+     qexistsl_tac [‘A’, ‘B’] >> fs [Abbr ‘A1’, Abbr ‘A2’])
+ >> simp [Abbr ‘Z’, o_DEF, ETA_AX]
+ (* finally, we need “indep_vars” (indep_rv) *)
+ >> simp [GSYM prob_def, GSYM p_space_def]
+ >> Q.PAT_X_ASSUM ‘indep_vars p X Y A1 A2’ MP_TAC
+ >> simp [indep_rv_def, Abbr ‘A1’, Abbr ‘A2’, indep_def]
+ >> DISCH_THEN (MP_TAC o Q.SPECL [‘A’, ‘B’])
+ >> fs [random_variable_def]
+ >> STRIP_TAC
+ >> POP_ASSUM (REWRITE_TAC o wrap o SYM)
+ >> AP_TERM_TAC >> SET_TAC []
+QED
+
+Theorem MEASURE_SPACE_SUBSET_POW :
+    !N. measure_space N ==> measurable_sets N SUBSET POW (m_space N)
+Proof
+    NTAC 2 STRIP_TAC
+ >> simp [Once SUBSET_DEF, IN_POW]
+ >> qabbrev_tac ‘a = measurable_space N’
+ >> ‘sigma_algebra a’ by rw [Abbr ‘a’, MEASURE_SPACE_SIGMA_ALGEBRA]
+ >> ‘m_space N = space a /\ measurable_sets N = subsets a’ by rw [Abbr ‘a’]
+ >> NTAC 2 POP_ORW
+ >> simp [GSYM subset_class_def]
+ >> POP_ASSUM MP_TAC
+ >> simp [sigma_algebra_def, algebra_def]
+QED
+
+Theorem MEASURE_SPACE_SIGMA_SETS_REDUCE :
+    !M. measure_space M ==>
+        sigma_sets (m_space M) (measurable_sets M) = measurable_sets M
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC sigma_sets_eq
+ >> MATCH_MP_TAC MEASURE_SPACE_SIGMA_ALGEBRA >> art []
+QED
+
+(* NOTE: The theorem statements (and the proof) are cleaned *)
+Theorem sum_indep_random_variable :
+    !p X Y. prob_space p /\
+            random_variable X p borel /\
+            random_variable Y p borel /\
+            indep_rv p X Y borel borel ==>
+        !s. s IN subsets borel ==>
+            distribution p (\x. X x + Y x) s =
+            measure (convolution
+                      (distr_of p (space borel, subsets borel, (\x. 0)) X)
+                      (distr_of p (space borel, subsets borel, (\x. 0)) Y)) s
+Proof
+    RW_TAC std_ss [convolution]
+ >> qabbrev_tac ‘M = (space borel,subsets borel,(\x :real set. (0 :extreal)))’
+ >> ‘measure_space M’
+      by rw [Abbr ‘M’, measure_space_trivial', sigma_algebra_borel]
+ >> Know ‘sigma_finite M’
+ >- (qunabbrev_tac ‘M’ \\
+     MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE >> rw [])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘N1 = distr_of p M X’
+ >> qabbrev_tac ‘N2 = distr_of p M Y’
+ >> ASSUME_TAC measure_space_lborel
+ >> ‘random_variable X p (m_space M,measurable_sets M) /\
+     random_variable Y p (m_space M,measurable_sets M) /\
+     indep_vars p X Y (measurable_space M) (measurable_space M)’ by rw [Abbr ‘M’]
+ >> Know ‘prob_space N1 /\ prob_space N2’
+ >- (rw [Abbr ‘N1’, Abbr ‘N2’] \\
+     MATCH_MP_TAC prob_space_distr_of >> art [])
+ >> STRIP_TAC
+ >> ‘m_space M = space borel’ by rw [Abbr ‘M’]
+ >> ‘measurable_sets M = subsets borel’ by rw [Abbr ‘M’]
+ >> simp [distr_of]
+ (* applying indep_var_distribution_imp *)
+ >> Know ‘measure_of (distr_of p M X CROSS distr_of p M Y) =
+          measure_of (distr_of p (M CROSS M) (\x. (X x,Y x)))’
+ >- (MATCH_MP_TAC indep_var_distribution_imp \\
+     rw [sigma_finite_measure_space_def])
+ >> simp [] (* rewrite “distr_of p M X”, etc. by abbreviations *)
+ >> DISCH_TAC
+ (* stage work *)
+ >> qmatch_abbrev_tac (* this defines f *)
+       ‘distribution p (\x. X x + Y x) s =
+        measure (N1 CROSS N2) (PREIMAGE f s INTER m_space (N1 CROSS N2))’
+ >> Know ‘measure_space (N1 CROSS N2)’
+ >- (MATCH_MP_TAC measure_space_prod_measure \\
+     simp [sigma_finite_measure_space_def] \\
+     METIS_TAC [prob_space_def, PROB_SPACE_SIGMA_FINITE])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘N = N1 CROSS N2’
+ >> Suff ‘distribution p (\x. X x + Y x) s = measure (distr_of N M f) s’
+ >- (Rewr' \\
+     simp [Abbr ‘N’, prod_measure_space_def, distr_of])
+ (* stage work *)
+ >> Know ‘measure_space (M CROSS M)’
+ >- (MATCH_MP_TAC measure_space_prod_measure \\
+     simp [sigma_finite_measure_space_def])
+ >> DISCH_TAC
+ >> Know ‘sigma_algebra (measurable_space p)’
+ >- (MATCH_MP_TAC MEASURE_SPACE_SIGMA_ALGEBRA \\
+     FULL_SIMP_TAC std_ss [prob_space_def])
+ >> DISCH_TAC
+ >> Know ‘measure_space (distr_of p M (\x. X x + Y x))’
+ >- (MATCH_MP_TAC measure_space_distr_of >> simp [SPACE] \\
+     FULL_SIMP_TAC std_ss [prob_space_def] \\
+     MATCH_MP_TAC in_borel_measurable_add \\
+     qexistsl_tac [‘X’, ‘Y’] >> simp [] \\
+     fs [random_variable_def, p_space_def, events_def])
+ >> DISCH_TAC
+ >> Know ‘measure_space (distr_of p (M CROSS M) (\x. (X x,Y x)))’
+ >- (MATCH_MP_TAC measure_space_distr_of \\
+     FULL_SIMP_TAC std_ss [prob_space_def] \\
+     simp [prod_measure_space_def, GSYM SPACE_PROD_SIGMA, SPACE] \\
+     MATCH_MP_TAC MEASURABLE_PAIR \\
+     simp [sigma_algebra_borel] \\
+     fs [random_variable_def, p_space_def, events_def])
+ >> DISCH_TAC
+ >> simp [distr_of, distribution_def, prob_def, p_space_def]
+ >> ‘(\x. X x + Y x) = f o (\x. (X x,Y x))’ by rw [FUN_EQ_THM, o_DEF, Abbr ‘f’]
+ >> POP_ORW
+ >> qmatch_abbrev_tac ‘measure p (PREIMAGE (f o g) s INTER m_space p) = _’
+ >> Q.PAT_X_ASSUM ‘measure_of N = _’ MP_TAC
+ >> simp [measure_of_def, distr_of]
+ >> simp [MEASURE_SPACE_SUBSET_POW, MEASURE_SPACE_SIGMA_SETS_REDUCE]
+ >> Q.PAT_X_ASSUM ‘measure_space (distr_of p (M CROSS M) g)’ MP_TAC
+ >> simp [distr_of]
+ >> DISCH_THEN K_TAC
+ >> STRIP_TAC
+ >> POP_ASSUM (MP_TAC o (SIMP_RULE std_ss [FUN_EQ_THM]))
+ >> DISCH_TAC
+ >> ‘m_space (M CROSS M) = UNIV’
+      by rw [Abbr ‘M’, prod_measure_space_def, space_borel, CROSS_UNIV]
+ >> POP_ASSUM (fs o wrap) >> T_TAC
+ >> Know ‘f IN measurable (measurable_space N) borel’
+ >- (rw [IN_MEASURABLE, Abbr ‘N’, prod_measure_space_def]
+     >- rw [IN_FUNSET, space_borel] \\
+     Know ‘f IN borel_measurable (borel CROSS borel)’
+     >- rw [Abbr ‘f’, borel_2d_measurable_add] \\
+     rw [IN_MEASURABLE, IN_FUNSET, space_borel_2d])
+ >> DISCH_TAC
+ >> Know ‘PREIMAGE f s IN measurable_sets N’
+ >- (POP_ASSUM (MP_TAC o REWRITE_RULE [IN_MEASURABLE]) \\
+     simp [IN_FUNSET, Abbr ‘N’, prod_measure_space_def])
+ >> DISCH_TAC
+ >> simp [PREIMAGE_o]
+ >> qabbrev_tac ‘h = s o f’
+ >> Know ‘PREIMAGE f s = h’
+ >- (rw [Abbr ‘h’, PREIMAGE_def, o_DEF] \\
+     rw [IN_APP, FUN_EQ_THM])
+ >> DISCH_THEN (fs o wrap)
+ >> Q.PAT_X_ASSUM ‘_ = measurable_sets (M CROSS M)’ (fs o wrap o SYM)
+ >> Q.PAT_X_ASSUM ‘!a. P’ (MP_TAC o Q.SPEC ‘h’)
+ >> simp []
+QED
+
+(* NOTE: This proof was extracted from the proof of convolution_density *)
+Theorem measure_space_convolution :
+    !M N. sigma_finite_measure_space M /\ sigma_finite_measure_space N /\
+          measurable_space M = borel /\ measurable_space N = borel ==>
+          measure_space (convolution M N)
+Proof
+    rw [convolution]
+ >> MATCH_MP_TAC measure_space_distr_of
+ >> rw [measure_space_prod_measure, measure_space_trivial', sigma_algebra_borel]
+ >> simp [prod_measure_space_def]
+ >> Know ‘m_space M = space borel’
+ >- (Q.PAT_X_ASSUM ‘measurable_space M = borel’
+       (REWRITE_TAC o wrap o SYM) >> rw [])
+ >> Rewr'
+ >> Know ‘m_space N = space borel’
+ >- (Q.PAT_X_ASSUM ‘measurable_space N = borel’
+       (REWRITE_TAC o wrap o SYM) >> rw [])
+ >> Rewr'
+ >> simp [GSYM SPACE_PROD_SIGMA, SPACE, borel_2d_measurable_add]
+QED
+
+(* NOTE: The original proof of this theorem (by HVG people) has ~1K lines. The
+   present proof is a reworked version of the original proof (same idea), by
+   repeatedly applying TONELLI.
+ *)
+Theorem convolution_density :
+    !f g. f IN measurable (m_space lborel, measurable_sets lborel) Borel /\
+          g IN measurable (m_space lborel, measurable_sets lborel) Borel /\
+          finite_measure_space (density_of lborel f) /\
+          finite_measure_space (density_of lborel g) /\
+         (!x. x IN m_space lborel ==> 0 <= f x) /\
+         (!x. x IN m_space lborel ==> 0 <= g x) ==>
+          measure_of
+            (convolution (density_of lborel f) (density_of lborel g)) =
+          measure_of
+            (density_of lborel (\x. pos_fn_integral lborel (\y. f (x - y) * g y)))
+Proof
+    rpt STRIP_TAC
+ >> qmatch_abbrev_tac ‘measure_of (convolution M1 M2) = _’
+ >> ASSUME_TAC measure_space_lborel
+ >> Know ‘m_space M1 = UNIV /\ m_space M2 = UNIV /\
+          measurable_space M1 = borel /\
+          measurable_space M2 = borel’
+ >- (simp [Abbr ‘M1’, Abbr ‘M2’, density_of_pos_fn, lborel_def] \\
+     simp [space_lborel])
+ >> STRIP_TAC
+ >> MATCH_MP_TAC measure_of_eq'
+ >> ‘measure_space M1 /\ measure_space M2’ by METIS_TAC [measure_space_density_of]
+ >> ‘sigma_finite_measure_space M1 /\
+     sigma_finite_measure_space M2’
+       by fs [finite_measure_space, sigma_finite_measure_space_def]
+ (* Part 1: measure_space (convolution M1 M2) *)
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC measure_space_convolution >> art [] \\
+     simp [Abbr ‘M1’, Abbr ‘M2’, density_of, lborel_def])
+ >> DISCH_TAC
+ >> ‘!x y. f (x - y) * g y = (\(x,y). (f (x - y) * g y)) (x,y)’ by rw []
+ >> POP_ORW
+ >> qabbrev_tac ‘h = \(x,y). f (x - y) * g y’
+ >> Know ‘h IN Borel_measurable (borel CROSS borel)’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES' \\
+     rw [Abbr ‘h’, sigma_algebra_borel_2d, space_borel_2d, FORALL_PROD] \\
+     qexistsl_tac [‘\z. f (FST z - SND z)’, ‘g o SND’] \\
+     reverse CONJ_TAC
+     >- (reverse CONJ_TAC >- rw [] \\
+         MATCH_MP_TAC MEASURABLE_COMP \\
+         Q.EXISTS_TAC ‘measurable_space lborel’ >> art [] \\
+         simp [lborel_def, MEASURABLE_SND, sigma_algebra_borel]) \\
+     Know ‘(\z. f (FST z - SND z)) = f o (\(x,y). x - y)’
+     >- (simp [o_DEF, FUN_EQ_THM, FORALL_PROD]) >> Rewr' \\
+     MATCH_MP_TAC MEASURABLE_COMP \\
+     Q.EXISTS_TAC ‘measurable_space lborel’ >> art [] \\
+     simp [lborel_def, borel_2d_measurable_sub])
+ >> DISCH_TAC
+ >> ‘!z. 0 <= h z’ by (fs [space_lborel] >> simp [FORALL_PROD, Abbr ‘h’, le_mul])
+ (* Part 2: measure_space (density_of lborel ...) *)
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC measure_space_density_of >> art [] \\
+  (* applying TONELLI *)
+     MP_TAC (Q.SPECL [‘m_space lborel’, ‘m_space lborel’,
+                      ‘measurable_sets lborel’, ‘measurable_sets lborel’,
+                      ‘lambda’, ‘lambda’, ‘h’]
+                     (INST_TYPE [alpha |-> “:real”, beta |-> “:real”] TONELLI)) \\
+     simp [MEASURE_SPACE_REDUCE] \\
+     simp [sigma_finite_measure_space_def, sigma_finite_lborel, lborel_def])
+ (* Part 3: measurable_sets (convolution M1 M2) = _ *)
+ >> STRONG_CONJ_TAC
+ >- (SIMP_TAC std_ss [convolution, distr_of, density_of, measurable_sets_def] \\
+     SIMP_TAC std_ss [sets_lborel])
+ >> Rewr'
+ (* stage work *)
+ >> RW_TAC std_ss []
+ >> qmatch_abbrev_tac ‘measure (convolution M1 M2) A =
+                       measure (density_of lborel h2) A’
+ >> Know ‘!x. x IN m_space lborel ==> 0 <= h2 x’
+ >- (rw [Abbr ‘h2’] >> MATCH_MP_TAC pos_fn_integral_pos >> rw [])
+ >> DISCH_TAC
+ >> simp [convolution, density_of_pos_fn, distr_of]
+ >> ‘A IN measurable_sets lborel’ by METIS_TAC [density_of, measurable_sets_def]
+ >> ‘A IN subsets borel’ by METIS_TAC [sets_lborel]
+ >> simp [prod_measure_space_def, GSYM CROSS_UNIV]
+ >> ‘measure_space (M1 CROSS M2)’ by simp [measure_space_prod_measure]
+ >> qmatch_abbrev_tac ‘prod_measure M1 M2 (PREIMAGE h3 A) = _’
+ >> Know ‘PREIMAGE h3 A IN measurable_sets (M1 CROSS M2)’
+ >- (simp [prod_measure_space_def,
+           Abbr ‘M1’, Abbr ‘M2’, density_of, lborel_def, Abbr ‘h3’] \\
+     MP_TAC borel_2d_measurable_add \\
+     rw [IN_MEASURABLE, SPACE_PROD_SIGMA, space_borel, GSYM CROSS_UNIV])
+ >> DISCH_TAC
+ (* stage work *)
+ >> ‘!x y. indicator_fn (PREIMAGE h3 A) (x,y) = indicator_fn A (x + y)’
+       by SIMP_TAC std_ss [indicator_fn_def, IN_PREIMAGE, Abbr ‘h3’]
+ >> simp [prod_measure_def]
+ >> qmatch_abbrev_tac ‘pos_fn_integral M2 f0 = _’
+ >> Know ‘!x. 0 <= f0 x’
+ >- (rw [Abbr ‘f0’] \\
+     MATCH_MP_TAC pos_fn_integral_pos >> simp [INDICATOR_FN_POS])
+ >> DISCH_TAC
+ (* applying pos_fn_integral_density_reduce *)
+ >> qunabbrev_tac ‘M2’
+ >> Know ‘pos_fn_integral (density_of lborel g) f0 =
+          pos_fn_integral lborel (\x. g x * f0 x)’
+ >- (MATCH_MP_TAC pos_fn_integral_density_of_reduce \\
+     simp [Abbr ‘f0’] \\
+  (* preparing for TONELLI *)
+    ‘!x y. indicator_fn A (x + y) = (\(x,y). indicator_fn A (x + y)) (x,y)’
+       by rw [] >> POP_ORW \\
+     qmatch_abbrev_tac ‘(\y. pos_fn_integral M1 (\x. h4 (x,y))) IN _’ \\
+    ‘h4 = indicator_fn A o h3’
+       by simp [Abbr ‘h4’, Abbr ‘h3’, o_DEF, FUN_EQ_THM, FORALL_PROD] >> POP_ORW \\
+     qunabbrev_tac ‘h4’ \\
+     qabbrev_tac ‘h4 = indicator_fn A o h3’ \\
+     Know ‘h4 IN Borel_measurable (borel CROSS borel)’
+     >- (qunabbrev_tac ‘h4’ \\
+         MATCH_MP_TAC MEASURABLE_COMP \\
+         Q.EXISTS_TAC ‘borel’ >> rw [Abbr ‘h3’, borel_2d_measurable_add] \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR \\
+         Q.EXISTS_TAC ‘A’ >> rw [sigma_algebra_borel]) >> DISCH_TAC \\
+    ‘!z. 0 <= h4 z’ by rw [Abbr ‘h4’, INDICATOR_FN_POS] \\
+     qabbrev_tac ‘M2 = density_of lborel g’ \\
+  (* applying TONELLI *)
+     MP_TAC (Q.SPECL [‘m_space M1’, ‘m_space M2’,
+                      ‘measurable_sets M1’, ‘measurable_sets M2’,
+                      ‘measure M1’, ‘measure M2’, ‘h4’]
+                     (INST_TYPE [alpha |-> “:real”, beta |-> “:real”] TONELLI)) \\
+     simp [MEASURE_SPACE_REDUCE, lborel_def])
+ >> Rewr'
+ >> Q.PAT_X_ASSUM ‘!x. 0 <= f0 x’ K_TAC
+ >> rw [Abbr ‘f0’, Abbr ‘M1’]
+ >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [REAL_ADD_COMM]
+ >> qabbrev_tac ‘f1 = \(x,y :real). indicator_fn A (x + y)’
+ >> ‘!x y. indicator_fn A (x + y) = f1 (x,y)’ by rw [Abbr ‘f1’] >> POP_ORW
+ >> ‘!z. 0 <= f1 z’ by simp [Abbr ‘f1’, INDICATOR_FN_POS, FORALL_PROD]
+ >> Know ‘f1 IN Borel_measurable (borel CROSS borel)’
+ >- (‘f1 = indicator_fn A o h3’
+        by simp [Abbr ‘f1’, Abbr ‘h3’, FORALL_PROD, FUN_EQ_THM] >> POP_ORW \\
+     MATCH_MP_TAC MEASURABLE_COMP \\
+     Q.EXISTS_TAC ‘borel’ >> rw [Abbr ‘h3’, borel_2d_measurable_add] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR \\
+     Q.EXISTS_TAC ‘A’ >> rw [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘PREIMAGE h3 A IN _’               K_TAC
+ >> Q.PAT_X_ASSUM ‘!x y. _ = indicator_fn A (x + y)’ K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space (_ CROSS _)’        K_TAC
+ >> qabbrev_tac ‘M1 = density_of lborel f’
+ (* applying pos_fn_integral_cmul_general *)
+ >> Know ‘pos_fn_integral lborel (\x. g x * pos_fn_integral M1 (\y. f1 (x,y))) =
+          pos_fn_integral lborel (\x. pos_fn_integral M1 (\y. g x * f1 (x,y)))’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     simp [measure_space_lborel, space_lborel] \\
+     CONJ_TAC
+     >- (rpt STRIP_TAC \\
+         MATCH_MP_TAC le_mul >> fs [space_lborel] \\
+         MATCH_MP_TAC pos_fn_integral_pos >> simp []) \\
+     CONJ_TAC
+     >- (Q.X_GEN_TAC ‘x’ \\
+         MATCH_MP_TAC pos_fn_integral_pos >> simp [] \\
+         Q.X_GEN_TAC ‘y’ \\
+         MATCH_MP_TAC le_mul >> fs [space_lborel]) \\
+     Q.X_GEN_TAC ‘x’ \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+    ‘0 <= g x’ by fs [space_lborel] \\
+     HO_MATCH_MP_TAC pos_fn_integral_cmul_general \\
+     rw [Abbr ‘f1’, INDICATOR_FN_POS] \\
+    ‘(\y. indicator_fn A (x + y)) = indicator_fn A o (\y. x + y)’ by rw [o_DEF] \\
+     POP_ORW \\
+     ASSUME_TAC sigma_algebra_borel \\
+     MATCH_MP_TAC MEASURABLE_COMP \\
+     Q.EXISTS_TAC ‘borel’ \\
+     reverse CONJ_TAC
+     >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR \\
+         Q.EXISTS_TAC ‘A’ >> rw []) \\
+     HO_MATCH_MP_TAC in_borel_measurable_add \\
+     qexistsl_tac [‘\y. x’, ‘I’] \\
+     rw [MEASURABLE_I, sigma_algebra_borel] \\
+     MATCH_MP_TAC in_borel_measurable_const \\
+     Q.EXISTS_TAC ‘x’ >> rw [])
+ >> Rewr'
+ >> qabbrev_tac ‘f2 = \(x,y). g x * f1 (x,y)’
+ >> ‘!x y. g x * f1 (x,y) = f2 (x,y)’ by rw [Abbr ‘f2’] >> POP_ORW
+ >> ‘!z. 0 <= f2 z’ by (fs [space_lborel] >> simp [Abbr ‘f2’, FORALL_PROD, le_mul])
+ >> Know ‘f2 IN Borel_measurable (borel CROSS borel)’
+ >- (qunabbrev_tac ‘f2’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES' \\
+     qexistsl_tac [‘g o FST’, ‘f1’] \\
+     simp [sigma_algebra_borel_2d, FORALL_PROD] \\
+     MATCH_MP_TAC MEASURABLE_COMP \\
+     Q.EXISTS_TAC ‘borel’ \\
+     simp [sigma_algebra_borel, MEASURABLE_FST] \\
+     fs [lborel_def])
+ >> DISCH_TAC
+ >> qunabbrev_tac ‘M1’
+ >> Know ‘pos_fn_integral lborel
+            (\x. pos_fn_integral (density_of lborel f) (\y. f2 (x,y))) =
+          pos_fn_integral lborel
+            (\x. pos_fn_integral lborel (\y. f y * f2 (x,y)))’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     simp [measure_space_lborel, space_lborel] \\
+     CONJ_TAC
+     >- (Q.X_GEN_TAC ‘x’ \\
+         MATCH_MP_TAC pos_fn_integral_pos >> rw []) \\
+     CONJ_TAC
+     >- (Q.X_GEN_TAC ‘x’ \\
+         MATCH_MP_TAC pos_fn_integral_pos >> fs [space_lborel, le_mul]) \\
+     Q.X_GEN_TAC ‘x’ \\
+     HO_MATCH_MP_TAC pos_fn_integral_density_of_reduce >> simp [] \\
+  (* applying TONELLI *)
+     MP_TAC (Q.SPECL [‘m_space lborel’, ‘m_space lborel’,
+                      ‘measurable_sets lborel’, ‘measurable_sets lborel’,
+                      ‘lambda’, ‘lambda’, ‘f2’]
+                     (INST_TYPE [alpha |-> “:real”, beta |-> “:real”] TONELLI)) \\
+     simp [MEASURE_SPACE_REDUCE] \\
+     simp [sigma_finite_measure_space_def, sigma_finite_lborel, lborel_def,
+           space_lborel])
+ >> Rewr'
+ >> qabbrev_tac ‘f3 = \(x,y). f y * f2 (x,y)’
+ >> ‘!x y. f y * f2 (x,y) = f3 (x,y)’ by rw [Abbr ‘f3’] >> POP_ORW
+ >> ‘!z. 0 <= f3 z’ by (fs [space_lborel] >> simp [Abbr ‘f3’, le_mul, FORALL_PROD])
+ >> Know ‘f3 IN Borel_measurable (borel CROSS borel)’
+ >- (qunabbrev_tac ‘f3’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES' \\
+     qexistsl_tac [‘f o SND’, ‘f2’] \\
+     simp [sigma_algebra_borel_2d, FORALL_PROD] \\
+     MATCH_MP_TAC MEASURABLE_COMP \\
+     Q.EXISTS_TAC ‘borel’ \\
+     simp [sigma_algebra_borel, MEASURABLE_SND] \\
+     fs [lborel_def])
+ >> DISCH_TAC
+ (* applying lebesgue_pos_integral_real_affine' *)
+ >> Know ‘pos_fn_integral lborel (\x. pos_fn_integral lborel (\y. f3 (x,y))) =
+          pos_fn_integral lborel
+            (\x. Normal (abs 1) *
+                 pos_fn_integral lborel (\y. f3 (x,-x + 1 * y)))’
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     SIMP_TAC std_ss [lborel_def, space_lborel, IN_UNIV] \\
+     CONJ_TAC
+     >- (Q.X_GEN_TAC ‘x’ \\
+         MATCH_MP_TAC pos_fn_integral_pos >> rw []) \\
+     CONJ_TAC
+     >- (Q.X_GEN_TAC ‘x’ \\
+         MATCH_MP_TAC le_mul >> simp [] \\
+         MATCH_MP_TAC pos_fn_integral_pos >> rw []) \\
+     Q.X_GEN_TAC ‘x’ \\
+     qmatch_abbrev_tac ‘pos_fn_integral lborel f4 = _’ \\
+    ‘(\y. f3 (x,-x + 1 * y)) = (\y. f4 (-x + 1 * y))’
+       by rw [Abbr ‘f4’, FUN_EQ_THM] >> POP_ORW \\
+     MATCH_MP_TAC lebesgue_pos_integral_real_affine' \\
+     simp [Abbr ‘f4’] \\
+  (* applying TONELLI *)
+     MP_TAC (Q.SPECL [‘m_space lborel’, ‘m_space lborel’,
+                      ‘measurable_sets lborel’, ‘measurable_sets lborel’,
+                      ‘lambda’, ‘lambda’, ‘f3’]
+                     (INST_TYPE [alpha |-> “:real”, beta |-> “:real”] TONELLI)) \\
+     simp [MEASURE_SPACE_REDUCE] \\
+     simp [sigma_finite_measure_space_def, sigma_finite_lborel, lborel_def] \\
+     simp [space_lborel])
+ >> Rewr'
+ (* stage work *)
+ >> Q.PAT_X_ASSUM ‘!z. 0 <= f3 z’ K_TAC
+ >> Q.PAT_X_ASSUM ‘!z. 0 <= f2 z’ K_TAC
+ >> Q.PAT_X_ASSUM ‘!z. 0 <= f1 z’ K_TAC
+ >> rpt (Q.PAT_X_ASSUM ‘_ IN Borel_measurable (borel CROSS borel)’ K_TAC)
+ >> rw [Abbr ‘f3’, Abbr ‘f2’, Abbr ‘f1’, mul_assoc]
+ >> ‘!x y:real. x + (-x + y) = y’ by REAL_ARITH_TAC >> POP_ORW
+ >> simp [normal_1]
+ >> ‘!x y:real. -x + y = y - x’ by REAL_ARITH_TAC >> POP_ORW
+ >> qabbrev_tac ‘f4 = \(x,y). f (y - x) * g x * indicator_fn A y’
+ >> ‘!x y. f (y - x) * g x * indicator_fn A y = f4 (x,y)’ by rw [Abbr ‘f4’]
+ >> POP_ORW
+ >> Know ‘!z. 0 <= f4 z’
+ >- (simp [Abbr ‘f4’, FORALL_PROD] \\
+     qx_genl_tac [‘x’, ‘y’] \\
+     fs [space_lborel] \\
+     MATCH_MP_TAC le_mul >> rw [le_mul, INDICATOR_FN_POS])
+ >> DISCH_TAC
+ >> Know ‘f4 IN Borel_measurable (borel CROSS borel)’
+ >- (qunabbrev_tac ‘f4’ \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES' \\
+     qexistsl_tac [‘\z. f (SND z - FST z) * g (FST z)’, ‘indicator_fn A o SND’] \\
+     simp [sigma_algebra_borel_2d, FORALL_PROD] \\
+     ASSUME_TAC sigma_algebra_borel \\
+     reverse CONJ_TAC
+     >- (MATCH_MP_TAC MEASURABLE_COMP \\
+         Q.EXISTS_TAC ‘borel’ >> simp [MEASURABLE_SND] \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR \\
+         Q.EXISTS_TAC ‘A’ >> simp []) \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES' \\
+     qexistsl_tac [‘f o (\z. SND z - FST z)’, ‘g o FST’] \\
+     ASM_SIMP_TAC std_ss [sigma_algebra_borel_2d, SPACE_PROD_SIGMA] \\
+     reverse CONJ_TAC
+     >- (MATCH_MP_TAC MEASURABLE_COMP \\
+         Q.EXISTS_TAC ‘measurable_space lborel’ >> art [] \\
+         simp [MEASURABLE_FST, lborel_def]) \\
+     MATCH_MP_TAC MEASURABLE_COMP \\
+     Q.EXISTS_TAC ‘measurable_space lborel’ >> art [] \\
+     simp [lborel_def] \\
+     MATCH_MP_TAC in_borel_measurable_sub \\
+     qexistsl_tac [‘SND’, ‘FST’] \\
+     simp [sigma_algebra_borel_2d, MEASURABLE_FST, MEASURABLE_SND, FORALL_PROD])
+ >> DISCH_TAC
+ >> Know ‘pos_fn_integral lborel (\x. pos_fn_integral lborel (\y. f4 (x,y))) =
+          pos_fn_integral lborel (\y. pos_fn_integral lborel (\x. f4 (x,y)))’
+ >- (MATCH_MP_TAC pos_fn_integral_exchange \\
+     simp [sigma_finite_measure_space_def, sigma_finite_lborel, lborel_def])
+ >> Rewr'
+ >> NTAC 2 (POP_ASSUM K_TAC) (* f4-related *)
+ >> simp [Abbr ‘f4’, Abbr ‘h3’]
+ >> MATCH_MP_TAC pos_fn_integral_cong
+ >> simp [lborel_def, space_lborel]
+ >> CONJ_TAC
+ >- (Q.X_GEN_TAC ‘x’ \\
+     MATCH_MP_TAC pos_fn_integral_pos >> fs [lborel_def, space_lborel] \\
+     Q.X_GEN_TAC ‘y’ \\
+     MATCH_MP_TAC le_mul >> rw [le_mul, INDICATOR_FN_POS])
+ >> CONJ_TAC
+ >- (Q.X_GEN_TAC ‘x’ \\
+     fs [space_lborel] \\
+     MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS])
+ >> Q.PAT_X_ASSUM ‘!x. x IN m_space lborel ==> 0 <= h2 x’ K_TAC
+ >> Q.PAT_X_ASSUM ‘!z. 0 <= h z’ K_TAC
+ >> simp [Abbr ‘h2’, Abbr ‘h’]
+ >> Q.X_GEN_TAC ‘x’
+ >> qabbrev_tac ‘c = indicator_fn A x’
+ >> ‘0 <= c’ by rw [Abbr ‘c’, INDICATOR_FN_POS]
+ >> qmatch_abbrev_tac ‘_ = pos_fn_integral lborel f5 * c’
+ >> ‘(\y. f (x - y) * g y * c) = (\y. f5 y * c)’ by rw [Abbr ‘f5’, FUN_EQ_THM]
+ >> POP_ORW
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> MATCH_MP_TAC pos_fn_integral_cmul_general
+ >> fs [lborel_def, space_lborel]
+ >> reverse CONJ_TAC >- (Q.X_GEN_TAC ‘y’ >> rw [Abbr ‘f5’, le_mul])
+ >> qunabbrev_tac ‘f5’
+ >> HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES'
+ >> ASSUME_TAC sigma_algebra_borel
+ >> qexistsl_tac [‘f o (\y. x - y)’, ‘g’]
+ >> ASM_SIMP_TAC std_ss [space_borel, IN_UNIV]
+ >> MATCH_MP_TAC MEASURABLE_COMP
+ >> Q.EXISTS_TAC ‘borel’ >> art []
+ >> MATCH_MP_TAC in_borel_measurable_sub
+ >> qexistsl_tac [‘\y. x’, ‘I’]
+ >> simp [space_borel, MEASURABLE_I]
+ >> MATCH_MP_TAC in_borel_measurable_const
+ >> Q.EXISTS_TAC ‘x’ >> rw []
+QED
+
+(* |- !f g.
+        f IN Borel_measurable borel /\ g IN Borel_measurable borel /\
+        finite_measure_space (density_of lborel f) /\
+        finite_measure_space (density_of lborel g) /\ (!x. 0 <= f x) /\
+        (!x. 0 <= g x) ==>
+        measure_of (convolution (density_of lborel f) (density_of lborel g)) =
+        measure_of
+          (density_of lborel
+             (\x. pos_fn_integral lborel (\y. f (x - y) * g y)))
+ *)
+Theorem convolution_density' =
+        convolution_density |> SRULE [lborel_def, space_lborel]
+
+Theorem measure_convolution_density :
+    !f g A. f IN Borel_measurable (measurable_space lborel) /\
+            g IN Borel_measurable (measurable_space lborel) /\
+            finite_measure_space (density_of lborel f) /\
+            finite_measure_space (density_of lborel g) /\
+           (!x. x IN m_space lborel ==> 0 <= f x) /\
+           (!x. x IN m_space lborel ==> 0 <= g x) /\
+            A IN measurable_sets lborel ==>
+            measure (convolution (density_of lborel f) (density_of lborel g)) A =
+            measure (density_of lborel
+                      (\x. pos_fn_integral lborel (\y. f (x - y) * g y))) A
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘f’, ‘g’] convolution_density)
+ >> simp [measure_of_def]
+ >> qabbrev_tac ‘h = \(x,y). f (x - y) * g y’
+ >> ‘!x y. f (x - y) * g y = h (x,y)’ by rw [Abbr ‘h’, FUN_EQ_THM]
+ >> POP_ORW
+ >> ASSUME_TAC measure_space_lborel
+ >> qabbrev_tac ‘M1 = density_of lborel f’
+ >> qabbrev_tac ‘M2 = density_of lborel g’
+ >> ‘measure_space M1 /\ measure_space M2’ by METIS_TAC [measure_space_density_of]
+ >> ‘sigma_finite_measure_space M1 /\
+     sigma_finite_measure_space M2’
+       by fs [finite_measure_space, sigma_finite_measure_space_def]
+ >> Know ‘measure_space (convolution M1 M2)’
+ >- (MATCH_MP_TAC measure_space_convolution >> art [] \\
+     simp [Abbr ‘M1’, Abbr ‘M2’, density_of_pos_fn, lborel_def])
+ >> DISCH_TAC
+ >> ‘!z. 0 <= h z’ by (fs [space_lborel] >> simp [Abbr ‘h’, le_mul, FORALL_PROD])
+ >> Know ‘h IN Borel_measurable (borel CROSS borel)’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES' \\
+     rw [Abbr ‘h’, sigma_algebra_borel_2d, space_borel_2d, FORALL_PROD] \\
+     qexistsl_tac [‘\z. f (FST z - SND z)’, ‘g o SND’] \\
+     reverse CONJ_TAC
+     >- (reverse CONJ_TAC >- rw [] \\
+         MATCH_MP_TAC MEASURABLE_COMP \\
+         Q.EXISTS_TAC ‘measurable_space lborel’ >> art [] \\
+         simp [lborel_def, MEASURABLE_SND, sigma_algebra_borel]) \\
+     Know ‘(\z. f (FST z - SND z)) = f o (\(x,y). x - y)’
+     >- (simp [o_DEF, FUN_EQ_THM, FORALL_PROD]) >> Rewr' \\
+     MATCH_MP_TAC MEASURABLE_COMP \\
+     Q.EXISTS_TAC ‘measurable_space lborel’ >> art [] \\
+     simp [lborel_def, borel_2d_measurable_sub])
+ >> DISCH_TAC
+ >> Know ‘measure_space (density_of lborel
+                          (\x. pos_fn_integral lborel (\y. h (x,y))))’
+ >- (MATCH_MP_TAC measure_space_density_of >> simp [lborel_def] \\
+     MP_TAC (Q.SPECL [‘m_space lborel’, ‘m_space lborel’,
+                      ‘measurable_sets lborel’, ‘measurable_sets lborel’,
+                      ‘lambda’, ‘lambda’, ‘h’]
+                     (INST_TYPE [alpha |-> “:real”, beta |-> “:real”] TONELLI)) \\
+     simp [MEASURE_SPACE_REDUCE] \\
+     simp [sigma_finite_measure_space_def, sigma_finite_lborel, lborel_def])
+ >> DISCH_TAC
+ >> qabbrev_tac ‘M = convolution M1 M2’
+ >> qabbrev_tac ‘N = density_of lborel (\x. pos_fn_integral lborel (\y. h (x,y)))’
+ >> qabbrev_tac ‘h2 = \x. pos_fn_integral lborel (\y. h (x,y))’
+ >> Know ‘!x. x IN m_space lborel ==> 0 <= h2 x’
+ >- (rw [space_lborel, Abbr ‘h2’] \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw [space_lborel])
+ >> DISCH_TAC
+ >> Know ‘measurable_sets M = measurable_sets N’
+ >- (simp [Abbr ‘M’, Abbr ‘N’, convolution, distr_of, density_of_pos_fn] \\
+     SIMP_TAC std_ss [sets_lborel])
+ >> DISCH_TAC
+ >> STRIP_TAC >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> ‘measurable_sets M SUBSET POW (m_space M) /\
+     measurable_sets N SUBSET POW (m_space N)’ by simp [MEASURE_SPACE_SUBSET_POW]
+ >> NTAC 2 (POP_ASSUM (REWRITE_TAC o wrap))
+ >> ‘sigma_sets (m_space M) (measurable_sets M) = measurable_sets M /\
+     sigma_sets (m_space N) (measurable_sets N) = measurable_sets N’
+       by METIS_TAC [sigma_sets_eq, MEASURE_SPACE_SIGMA_ALGEBRA]
+ >> NTAC 2 (POP_ASSUM (REWRITE_TAC o wrap))
+ >> STRIP_TAC
+ >> REWRITE_TAC [MEASURE_SPACE_REDUCE]
+ >> simp [FUN_EQ_THM]
+ >> DISCH_THEN (MP_TAC o Q.SPEC ‘A’)
+ >> Suff ‘measurable_sets N = measurable_sets lborel’ >- rw []
+ >> simp [Abbr ‘N’, density_of_pos_fn]
+QED
+
+(* |- !f g A.
+        f IN Borel_measurable borel /\ g IN Borel_measurable borel /\
+        finite_measure_space (density_of lborel f) /\
+        finite_measure_space (density_of lborel g) /\ (!x. 0 <= f x) /\
+        (!x. 0 <= g x) /\ A IN subsets borel ==>
+        measure (convolution (density_of lborel f) (density_of lborel g)) A =
+        measure
+          (density_of lborel
+             (\x. pos_fn_integral lborel (\y. f (x - y) * g y))) A
+ *)
+Theorem measure_convolution_density' =
+        measure_convolution_density |> SRULE [lborel_def, space_lborel, sets_lborel]
+
+(* NOTE: The conclusion of this theorem doesn't need the random variable X,
+   but to use normal_pdf_pos_fn_integral_eq_1, ‘normal_rv X p 0 sig1’ is
+   necessary.
+ *)
+Theorem conv_normal_density_zero_mean[local] :
+    !sig1 sig2 p X x. 0 < sig1 /\ 0 < sig2 /\
+       prob_space p /\ normal_rv X p 0 sig1 ==>
+       pos_fn_integral lborel
+         (\y. Normal_density 0 sig1 (x - y) * Normal_density 0 sig2 y) =
+       Normal_density 0 (sqrt (sig1 pow 2 + sig2 pow 2)) x
+Proof
+    RW_TAC std_ss []
+ >> `0 < sig1 pow 2 /\ 0 < sig2 pow 2` by METIS_TAC [REAL_POW_LT]
+ >> Know ‘pos_fn_integral lborel
+            (\y. Normal_density 0 sig1 (x - y) *
+                 Normal_density 0 sig2 y) =
+          pos_fn_integral lborel
+            (\y. Normal_density 0 (sqrt (sig1 pow 2 + sig2 pow 2)) x *
+                 Normal_density
+                    (sig2 pow 2 * x / (sig1 pow 2 + sig2 pow 2))
+                    (sqrt (sig1 pow 2 * sig2 pow 2 / (sig1 pow 2 + sig2 pow 2))) y)’
+ >- (Q.ABBREV_TAC `sig1' = sig1 pow 2` \\
+     Q.ABBREV_TAC `sig2' = sig2 pow 2` \\
+     Q.ABBREV_TAC `sig = sig1' * sig2' / (sig1' + sig2')` \\
+    `!mu sig x. 0 <= Normal_density mu sig x` by
+        METIS_TAC [extreal_of_num_def, extreal_le_def, normal_density_nonneg] \\
+     MATCH_MP_TAC pos_fn_integral_cong \\
+     simp [measure_space_lborel, space_lborel, le_mul] \\
+     Q.X_GEN_TAC `y` \\
+     RW_TAC real_ss [extreal_mul_def, extreal_11, normal_density] \\
+    `0 <= sig1' + sig2'` by ASM_SIMP_TAC real_ss [REAL_LE_ADD, REAL_LT_IMP_LE] \\
+     POP_ASSUM (ASSUME_TAC o MATCH_MP SQRT_POW_2) \\
+     ASM_SIMP_TAC std_ss [] \\
+    `0 < sig1' * sig2' / (sig1' + sig2')` by
+       ASM_SIMP_TAC std_ss [REAL_LT_MUL, REAL_LT_DIV, REAL_LT_ADD] \\
+    `0 <= sig` by METIS_TAC [REAL_LT_IMP_LE] \\
+     POP_ASSUM (ASSUME_TAC o MATCH_MP SQRT_POW_2) \\
+     ASM_SIMP_TAC std_ss [] \\
+     ONCE_REWRITE_TAC [REAL_ARITH ``a * exp b * (c * exp d) =
+                                   (a * c) * (exp b * exp d:real)``] \\
+     MATCH_MP_TAC
+       (METIS [] ``(a1 = a2) /\ (b1 = b2) ==> (a1 * b1:real = a2 * b2:real)``) \\
+     CONJ_TAC (* equations about sqrt and pi *)
+     >- (SIMP_TAC real_ss [real_div] \\
+         ASSUME_TAC PI_POS \\
+        `0 < 2 * pi * sig1'` by ASM_SIMP_TAC real_ss [REAL_LT_MUL] \\
+        `0 < 2 * pi * sig2'` by ASM_SIMP_TAC real_ss [REAL_LT_MUL] \\
+        `0 < 2 * pi * (sig1' + sig2')`
+           by ASM_SIMP_TAC real_ss [REAL_LT_MUL, REAL_LT_ADD] \\
+        `0 < sig` by METIS_TAC [] \\
+        `0 < 2 * pi * sig` by ASM_SIMP_TAC real_ss [REAL_LT_MUL] \\
+        `0 <> sqrt (2 * pi * sig1')`
+           by (MATCH_MP_TAC REAL_LT_IMP_NE >> ASM_SIMP_TAC std_ss [SQRT_POS_LT]) \\
+        `0 <> sqrt (2 * pi * sig2')`
+           by (MATCH_MP_TAC REAL_LT_IMP_NE >> ASM_SIMP_TAC std_ss [SQRT_POS_LT]) \\
+        `0 <> sqrt (2 * pi * (sig1' + sig2'))`
+           by (MATCH_MP_TAC REAL_LT_IMP_NE >> ASM_SIMP_TAC std_ss [SQRT_POS_LT]) \\
+        `0 <> sqrt (2 * pi * sig)`
+           by (MATCH_MP_TAC REAL_LT_IMP_NE >> ASM_SIMP_TAC std_ss [SQRT_POS_LT]) \\
+         ASM_SIMP_TAC std_ss [GSYM REAL_INV_MUL, REAL_INV_INJ] \\
+         ASM_SIMP_TAC real_ss [GSYM SQRT_MUL, REAL_LT_IMP_LE] \\
+         AP_TERM_TAC \\
+         ONCE_REWRITE_TAC [REAL_ARITH
+           ``a * b * c * (a * b * d) = (a * b * a * b) * (c * d:real)``] \\
+         AP_TERM_TAC \\
+         Q.UNABBREV_TAC `sig` >> ONCE_REWRITE_TAC [REAL_MUL_COMM] \\
+        `sig1' + sig2' <> 0`
+           by ASM_SIMP_TAC real_ss [REAL_LT_ADD, REAL_LT_IMP_NE] \\
+         ASM_SIMP_TAC real_ss [REAL_DIV_RMUL] \\
+         METIS_TAC [REAL_MUL_COMM]) \\
+  (* equations about exp *)
+     ASM_SIMP_TAC std_ss [GSYM EXP_ADD] >> AP_TERM_TAC \\
+  (* exp is eliminated.. *)
+     SIMP_TAC real_ss [real_div] \\
+     REWRITE_TAC [REAL_ARITH ``(-a + -b = -c + -d) <=> (a + b = c + d:real)``] \\
+     Q.UNABBREV_TAC `sig` \\
+     SIMP_TAC std_ss [real_div, POW_2] \\
+     ONCE_REWRITE_TAC [REAL_ARITH
+       ``!a b. (a - b) * (a - b) = (a * a) - (2 * a * b:real) + (b * b)``] \\
+     SIMP_TAC std_ss [REAL_MUL_ASSOC] \\
+     Q.ABBREV_TAC `sig = sig1' + sig2'` \\
+     REWRITE_TAC [REAL_ARITH ``!a b. (a + b) * c = a * c + b * c:real``] \\
+     REWRITE_TAC [REAL_ARITH ``!a b. (a - b) * c = a * c - b * c:real``] \\
+     Know ‘2 * y * sig2' * x * inv sig * inv (2 * sig1' * sig2' * inv sig) =
+           2 * x * y * inv (2 * sig1')’
+     >- (`2 <> 0:real` by REAL_ARITH_TAC \\
+         `sig1' <> 0 /\ sig2' <> 0` by METIS_TAC [REAL_LT_IMP_NE, EQ_SYM_EQ] \\
+         `0 < sig1' + sig2'` by ASM_SIMP_TAC std_ss [REAL_LT_ADD] \\
+         `0 < inv sig` by METIS_TAC [REAL_INV_POS] \\
+         `inv sig <> 0` by METIS_TAC [REAL_LT_IMP_NE, EQ_SYM_EQ] \\
+         ASM_SIMP_TAC std_ss [REAL_MUL_NZ, REAL_INV_MUL, REAL_INV_INV] \\
+         SIMP_TAC std_ss [REAL_MUL_ASSOC] \\
+         `sig <> 0` by METIS_TAC [REAL_LT_IMP_NE] \\
+         ONCE_REWRITE_TAC [REAL_ARITH
+          ``2 * y * sig2' * x * inv sig * inv 2 * inv sig1' * inv sig2' * sig:real =
+            2 * x * y * inv 2 * inv sig1' *
+            (inv sig2' * sig2') * (inv sig * sig)``] \\
+         ASM_SIMP_TAC real_ss [REAL_MUL_LINV]) >> Rewr' \\
+     Q.ABBREV_TAC `DONE1 = 2 * x * y * inv (2 * sig1')` \\
+    `2 <> 0:real` by REAL_ARITH_TAC \\
+    `sig1' <> 0 /\ sig2' <> 0` by METIS_TAC [REAL_LT_IMP_NE, EQ_SYM_EQ] \\
+    `0 < sig1' + sig2'` by ASM_SIMP_TAC std_ss [REAL_LT_ADD] \\
+    `0 < inv sig` by METIS_TAC [REAL_INV_POS] \\
+    `inv sig <> 0` by METIS_TAC [REAL_LT_IMP_NE, EQ_SYM_EQ] \\
+     ASM_SIMP_TAC std_ss [REAL_MUL_NZ, REAL_INV_MUL, REAL_INV_INV, REAL_MUL_ASSOC] \\
+     Know ‘y * y * inv 2 * inv sig1' * inv sig2' * sig =
+           y * y * inv 2 * inv sig1' + y * y * inv 2 * inv sig2'’
+     >- (Q.UNABBREV_TAC `sig` \\
+         ONCE_REWRITE_TAC [REAL_ARITH ``!a b c. a * (b + c) = a * b + a * c:real``] \\
+         REWRITE_TAC [REAL_ARITH
+           ``y * y * inv 2 * inv sig1' * inv sig2' * sig1':real =
+             y * y * inv 2 * inv sig2' * (sig1' * inv sig1')``] \\
+         REWRITE_TAC [REAL_ARITH
+           ``y * y * inv 2 * inv sig1' * inv sig2' * sig2':real =
+             y * y * inv 2 * inv sig1' * (sig2' * inv sig2')``] \\
+         ASM_SIMP_TAC real_ss [REAL_MUL_RINV] \\
+         METIS_TAC [REAL_ADD_COMM]) >> Rewr' \\
+     Q.ABBREV_TAC `DONE2 = y * y * inv 2 * inv sig1'` \\
+     Q.ABBREV_TAC `DONE3 = y * y * inv 2 * inv sig2'` \\
+     SIMP_TAC std_ss [REAL_ADD_ASSOC] \\
+     ONCE_REWRITE_TAC [REAL_ARITH ``!a b c. a + (b) + c = a + c + b:real``] \\
+     ONCE_REWRITE_TAC [REAL_ARITH ``a + b - c = -c + b + a:real``] \\
+     SIMP_TAC std_ss [REAL_ADD_ASSOC, real_sub] \\
+     AP_THM_TAC >> AP_TERM_TAC \\
+     AP_THM_TAC >> AP_TERM_TAC >> AP_THM_TAC >> AP_TERM_TAC \\
+    `sig <> 0` by METIS_TAC [REAL_LT_IMP_NE] \\
+     ASM_SIMP_TAC std_ss [REAL_INV_MUL, REAL_MUL_ASSOC] \\
+     ONCE_REWRITE_TAC [REAL_ARITH
+       ``sig2' * x * inv sig * sig2' * x * inv sig * inv 2 * inv sig1' *
+         inv sig2' * sig:real =
+         x * x * inv 2 * (inv sig1' * (sig * inv sig) * (sig2' * inv sig2') *
+         (sig2' * inv sig))``] \\
+     ASM_SIMP_TAC real_ss [REAL_MUL_RINV] \\
+     ONCE_REWRITE_TAC [REAL_ARITH ``x * x * inv 2 * a + x * x * inv 2 * b:real =
+                                    x * x * inv 2 * (a + b:real)``] \\
+     AP_TERM_TAC >> SIMP_TAC std_ss [REAL_MUL_ASSOC] \\
+     ONCE_REWRITE_TAC [REAL_ARITH ``inv sig + inv sig1' * sig2' * inv sig:real =
+                                    inv sig * (1 + (sig2' * inv sig1'))``] \\
+     Know ‘(1 + sig2' * inv sig1') = (sig * inv sig1')’
+     >- (ASM_SIMP_TAC real_ss [GSYM real_div, REAL_EQ_RDIV_EQ] \\
+         ONCE_REWRITE_TAC [REAL_ARITH
+           ``!a b c. (a + b) * c = a * c + b * c:real``] \\
+         ASM_SIMP_TAC real_ss [real_div, GSYM REAL_MUL_ASSOC, REAL_MUL_LINV]) \\
+     Rewr' \\
+     ASM_SIMP_TAC real_ss [REAL_MUL_ASSOC, REAL_MUL_LINV])
+ >> Rewr'
+ >> Q.ABBREV_TAC `c = Normal_density 0 (sqrt (sig1 pow 2 + sig2 pow 2)) x`
+ >> `!mu sig x. 0 <= Normal_density mu sig x`
+       by METIS_TAC [extreal_of_num_def, extreal_le_def, normal_density_nonneg]
+ >> `0 <= c` by METIS_TAC []
+ >> qabbrev_tac
+     ‘f = Normal_density (sig2 pow 2 * x / (sig1 pow 2 + sig2 pow 2))
+                         (sqrt (sig1 pow 2 * sig2 pow 2 / (sig1 pow 2 + sig2 pow 2)))’
+ >> simp []
+ >> Know ‘pos_fn_integral lborel (\y. c * f y) =
+          c * pos_fn_integral lborel f’
+ >- (MATCH_MP_TAC pos_fn_integral_cmul_general \\
+     simp [lborel_def, Abbr ‘c’, Abbr ‘f’, IN_MEASURABLE_BOREL_normal_density'])
+ >> Rewr'
+ >> qunabbrev_tac ‘f’
+ >> `0 <= sig1 pow 2` by ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE]
+ >> `0 < (sig1 pow 2 + sig2 pow 2)` by ASM_SIMP_TAC real_ss [REAL_LT_ADD]
+ >> SIMP_TAC std_ss [real_div]
+ >> ONCE_REWRITE_TAC [REAL_ARITH
+      ``sig2 pow 2 * x * inv (sig1 pow 2 + sig2 pow 2):real =
+        x * sig2 pow 2 * inv (sig1 pow 2 + sig2 pow 2)``]
+ >> ONCE_REWRITE_TAC [GSYM REAL_MUL_ASSOC]
+ >> SIMP_TAC std_ss [GSYM real_div]
+ >> Q.ABBREV_TAC `b = sig2 pow 2 / (sig1 pow 2 + sig2 pow 2)`
+ >> `0 < b` by METIS_TAC [REAL_LT_DIV]
+ >> `0 <= b` by ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE]
+ >> `0 <= sig1` by ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE]
+ >> ASM_SIMP_TAC std_ss [SQRT_MUL, POW_2_SQRT]
+ >> ONCE_REWRITE_TAC [REAL_MUL_COMM]
+ >> GEN_REWR_TAC RAND_CONV [GSYM mul_rone] >> AP_TERM_TAC
+ >> `0 < sqrt b` by METIS_TAC [SQRT_POS_LT]
+ >> `sqrt b <> 0` by METIS_TAC [REAL_LT_IMP_NE]
+ >> Q.ABBREV_TAC `a = sqrt b`
+ >> Q.ABBREV_TAC `Y = (\z. (b * x) + a * X z)`
+ >> `!z. Y z = (b * x) + a * X z` by METIS_TAC []
+ >> `normal_rv Y p ((b * x) + a * 0) (abs a * sig1)` by METIS_TAC [normal_rv_affine']
+ >> POP_ASSUM MP_TAC
+ >> `abs a = a` by METIS_TAC [ABS_REFL, REAL_LT_IMP_LE]
+ >> ASM_SIMP_TAC real_ss []
+ >> DISCH_TAC
+ >> `(\x. PDF p Y x) = PDF p Y` by METIS_TAC [ETA_AX]
+ >> `integral lborel (PDF p Y) = 1` by METIS_TAC [normal_pdf_integral_eq_1]
+ >> `!x. 0 <= PDF p Y x` by METIS_TAC [normal_pdf_nonneg]
+ >> ASSUME_TAC measure_space_lborel
+ >> `pos_fn_integral lborel (\x. PDF p Y x) = 1` by METIS_TAC [integral_pos_fn]
+ >> `UNIV IN measurable_sets lborel`
+      by METIS_TAC [m_space_lborel, space_borel, MEASURE_SPACE_MSPACE_MEASURABLE]
+ >> `pos_fn_integral lborel (\z. PDF p Y z * indicator_fn UNIV z) =
+     pos_fn_integral lborel
+       (\z. Normal_density (b * x) (a * sig1) z * indicator_fn UNIV z)`
+      by METIS_TAC [integral_normal_pdf_eq_density]
+ >> POP_ASSUM MP_TAC
+ >> SIMP_TAC std_ss [indicator_fn_def, IN_UNIV, mul_rone]
+ >> METIS_TAC []
+QED
+
+Theorem sum_indep_normal :
+    !p X Y mu1 mu2 sig1 sig2.
+       prob_space p /\ 0 < sig1 /\ 0 < sig2 /\
+       indep_rv p X Y borel borel /\
+       normal_rv X p mu1 sig1 /\ normal_rv Y p mu2 sig2 ==>
+       normal_rv (\x. X x + Y x) p (mu1 + mu2) (sqrt (sig1 pow 2 + sig2 pow 2))
+Proof
+    rpt STRIP_TAC
+ (* applying indep_rv_cong *)
+ >> Know ‘indep_rv p ((\x. -mu1 + x) o X) ((\x. -mu2 + x) o Y) borel borel’
+ >- (MATCH_MP_TAC indep_rv_cong >> art [] \\
+     fs [normal_rv] \\
+     Suff ‘!c. (\x. c + x) IN borel_measurable borel’ >- rw [] \\
+     Q.X_GEN_TAC ‘c’ \\
+     HO_MATCH_MP_TAC in_borel_measurable_add \\
+     qexistsl_tac [‘\x. c’, ‘I’] \\
+     simp [sigma_algebra_borel, MEASURABLE_I] \\
+     MATCH_MP_TAC in_borel_measurable_const \\
+     Q.EXISTS_TAC ‘c’ >> rw [sigma_algebra_borel])
+ >> simp [o_DEF]
+ >> qmatch_abbrev_tac ‘indep_rv p X' Y' borel borel ==> _’
+ >> DISCH_TAC
+ >> Know ‘normal_rv (\x. -mu1 + 1 * X x) p (-mu1 + 1 * mu1) (abs 1 * sig1)’
+ >- (MATCH_MP_TAC normal_rv_affine' \\
+     Q.EXISTS_TAC ‘X’ >> ASM_SIMP_TAC real_ss [])
+ >> simp [ETA_AX] >> DISCH_TAC
+ >> Know ‘normal_rv (\x. -mu2 + 1 * Y x) p (-mu2 + 1 * mu2) (abs 1 * sig2)’
+ >- (MATCH_MP_TAC normal_rv_affine' \\
+     Q.EXISTS_TAC ‘Y’ >> ASM_SIMP_TAC real_ss [])
+ >> simp [ETA_AX] >> DISCH_TAC
+ >> Suff ‘normal_rv (\x. -mu1 + X x + (-mu2 + Y x)) p
+                    0 (sqrt (sig1 pow 2 + sig2 pow 2))’
+ >- (DISCH_TAC \\
+     Know ‘normal_rv (\x. X x + Y x) p ((mu1 + mu2) + 1 * 0)
+                     (abs 1 * (sqrt (sig1 pow 2 + sig2 pow 2)))’
+     >- (MATCH_MP_TAC normal_rv_affine' \\
+         Q.EXISTS_TAC `(\x. -mu1 + X x + (-mu2 + Y x))` \\
+        `0 < sig1 pow 2 /\ 0 < sig2 pow 2` by METIS_TAC [REAL_POW_LT] \\
+        `0 < (sig1 pow 2 + sig2 pow 2)` by ASM_SIMP_TAC real_ss [REAL_LT_ADD] \\
+         ASM_SIMP_TAC real_ss [SQRT_POS_LT] \\
+         rw [Abbr ‘X'’, Abbr ‘Y'’] \\
+         REAL_ARITH_TAC) \\
+     RW_TAC real_ss [])
+ (* stage work *)
+ >> SIMP_TAC std_ss [normal_rv]
+ >> CONJ_TAC
+ >- (fs [normal_rv, random_variable_def] \\
+     MATCH_MP_TAC in_borel_measurable_add \\
+     qexistsl_tac [‘X'’, ‘Y'’] >> rw [EVENTS_SIGMA_ALGEBRA])
+ >> SIMP_TAC std_ss [normal_pmeasure, measurable_distr, FUN_EQ_THM]
+ >> Q.X_GEN_TAC ‘s’
+ >> `s IN subsets borel <=> s IN measurable_sets lborel`
+       by METIS_TAC [sets_lborel]
+ >> POP_ASSUM (REWRITE_TAC o wrap o SYM)
+ >> Cases_on ‘s IN subsets borel’ >> rw []
+ >> MP_TAC (Q.SPECL [‘p’, ‘X'’, ‘Y'’] sum_indep_random_variable) >> simp []
+ >> impl_tac >- fs [normal_rv]
+ >> DISCH_THEN (MP_TAC o Q.SPEC ‘s’) >> simp []
+ >> DISCH_THEN K_TAC
+ >> Know ‘distr_of p (space borel,subsets borel,(\x. 0)) X' =
+          distr_of p lborel X'’
+ >- (simp [distr_of, m_space_lborel, sets_lborel])
+ >> Rewr'
+ >> Know ‘distr_of p (space borel,subsets borel,(\x. 0)) Y' =
+          distr_of p lborel Y'’
+ >- (simp [distr_of, m_space_lborel, sets_lborel])
+ >> Rewr'
+ >> ASSUME_TAC measure_space_lborel
+ >> Know ‘distr_of p lborel X' = density_of lborel (\x. Normal_density 0 sig1 x)’
+ >- (qmatch_abbrev_tac ‘_ = density_of lborel f’ \\
+     Know ‘!x. x IN m_space lborel ==> 0 <= f x’
+     >- (rw [space_lborel, Abbr ‘f’] \\
+         rw [extreal_of_num_def, extreal_le_eq, normal_density_nonneg]) \\
+     DISCH_TAC \\
+     simp [distr_of, density_of_pos_fn, GSYM prob_def, FUN_EQ_THM] \\
+     Q.X_GEN_TAC ‘t’ \\
+     simp [sets_lborel] \\
+     Cases_on ‘t IN subsets borel’ >> rw [] \\
+     Q.PAT_X_ASSUM ‘normal_rv X' p 0 sig1’ MP_TAC \\
+     simp [normal_rv, measurable_distr, distribution_def, FUN_EQ_THM,
+           normal_pmeasure, p_space_def, sets_lborel] \\
+     STRIP_TAC \\
+     POP_ASSUM (MP_TAC o Q.SPEC ‘t’) >> rw [])
+ >> Rewr'
+ >> Know ‘distr_of p lborel Y' = density_of lborel (\x. Normal_density 0 sig2 x)’
+ >- (qmatch_abbrev_tac ‘_ = density_of lborel f’ \\
+     Know ‘!x. x IN m_space lborel ==> 0 <= f x’
+     >- (rw [space_lborel, Abbr ‘f’] \\
+         rw [extreal_of_num_def, extreal_le_eq, normal_density_nonneg]) \\
+     DISCH_TAC \\
+     ASSUME_TAC measure_space_lborel \\
+     simp [distr_of, density_of_pos_fn, GSYM prob_def, FUN_EQ_THM] \\
+     Q.X_GEN_TAC ‘t’ \\
+     simp [sets_lborel] \\
+     Cases_on ‘t IN subsets borel’ >> rw [] \\
+     Q.PAT_X_ASSUM ‘normal_rv Y' p 0 sig2’ MP_TAC \\
+     simp [normal_rv, measurable_distr, distribution_def, FUN_EQ_THM,
+           normal_pmeasure, p_space_def, sets_lborel] \\
+     STRIP_TAC \\
+     POP_ASSUM (MP_TAC o Q.SPEC ‘t’) >> rw [])
+ >> Rewr'
+ >> qmatch_abbrev_tac ‘measure (convolution (density_of lborel f)
+                                            (density_of lborel g)) s = _’
+ (* applying measure_convolution_density' *)
+ >> Know ‘measure (convolution (density_of lborel f) (density_of lborel g)) s =
+          measure (density_of lborel
+                    (\x. pos_fn_integral lborel (\y. f (x - y) * g y))) s’
+ >- (MATCH_MP_TAC measure_convolution_density' \\
+     simp [Abbr ‘f’, Abbr ‘g’, IN_MEASURABLE_BOREL_normal_density',
+           normal_density_nonneg] \\
+     CONJ_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       simp [finite_measure_space_def] \\
+       CONJ_TAC
+       >- (MATCH_MP_TAC measure_space_density_of \\
+           rw [lborel_def, IN_MEASURABLE_BOREL_normal_density']) \\
+       qabbrev_tac ‘f = \x. Normal_density 0 sig1 x’ \\
+      ‘!x. x IN m_space lborel ==> 0 <= f x’
+         by rw [Abbr ‘f’, space_lborel, extreal_of_num_def, extreal_le_eq,
+                normal_density_nonneg] \\
+       simp [density_of_pos_fn, MEASURE_SPACE_SPACE] \\
+       qabbrev_tac ‘A = m_space lborel’ \\
+      ‘A IN measurable_sets lborel’ by METIS_TAC [MEASURE_SPACE_SPACE] \\
+       simp [Abbr ‘f’] \\
+       Know ‘pos_fn_integral lborel (\x. Normal_density 0 sig1 x * indicator_fn A x) =
+             pos_fn_integral lborel (\x. PDF p X' x * indicator_fn A x)’
+       >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+           MATCH_MP_TAC integral_normal_pdf_eq_density >> art []) >> Rewr' \\
+       POP_ASSUM K_TAC \\
+      ‘!x. 0 <= PDF p X' x’ by PROVE_TAC [normal_pdf_nonneg] \\
+       Know ‘pos_fn_integral lborel (\x. PDF p X' x * indicator_fn A x) =
+             pos_fn_integral lborel (PDF p X')’
+       >- (MATCH_MP_TAC pos_fn_integral_cong \\
+           simp [Abbr ‘A’, space_lborel] \\
+           CONJ_TAC >- rw [le_mul, INDICATOR_FN_POS] \\
+           rw [indicator_fn_def]) >> Rewr' \\
+       Suff ‘pos_fn_integral lborel (PDF p X') = 1’ >- rw [] \\
+       MATCH_MP_TAC normal_pdf_pos_fn_integral_eq_1 \\
+       qexistsl_tac [‘0’, ‘sig1’] >> art [],
+       (* goal 2 (of 2) *)
+       simp [finite_measure_space_def] \\
+       CONJ_TAC
+       >- (MATCH_MP_TAC measure_space_density_of \\
+           rw [lborel_def, IN_MEASURABLE_BOREL_normal_density']) \\
+       qabbrev_tac ‘f = \x. Normal_density 0 sig2 x’ \\
+      ‘!x. x IN m_space lborel ==> 0 <= f x’
+         by rw [Abbr ‘f’, space_lborel, extreal_of_num_def, extreal_le_eq,
+                normal_density_nonneg] \\
+       simp [density_of_pos_fn, MEASURE_SPACE_SPACE] \\
+       qabbrev_tac ‘A = m_space lborel’ \\
+      ‘A IN measurable_sets lborel’ by METIS_TAC [MEASURE_SPACE_SPACE] \\
+       simp [Abbr ‘f’] \\
+       Know ‘pos_fn_integral lborel (\x. Normal_density 0 sig2 x * indicator_fn A x) =
+             pos_fn_integral lborel (\x. PDF p Y' x * indicator_fn A x)’
+       >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+           MATCH_MP_TAC integral_normal_pdf_eq_density >> art []) >> Rewr' \\
+       POP_ASSUM K_TAC \\
+      ‘!x. 0 <= PDF p Y' x’ by PROVE_TAC [normal_pdf_nonneg] \\
+       Know ‘pos_fn_integral lborel (\x. PDF p Y' x * indicator_fn A x) =
+             pos_fn_integral lborel (PDF p Y')’
+       >- (MATCH_MP_TAC pos_fn_integral_cong \\
+           simp [Abbr ‘A’, space_lborel] \\
+           CONJ_TAC >- rw [le_mul, INDICATOR_FN_POS] \\
+           rw [indicator_fn_def]) >> Rewr' \\
+       Suff ‘pos_fn_integral lborel (PDF p Y') = 1’ >- rw [] \\
+       MATCH_MP_TAC normal_pdf_pos_fn_integral_eq_1 \\
+       qexistsl_tac [‘0’, ‘sig2’] >> art [] ])
+ >> Rewr'
+ >> qmatch_abbrev_tac ‘measure (density_of lborel h) s = _’
+ >> Know ‘!x. x IN m_space lborel ==> 0 <= h x’
+ >- (rw [space_lborel, Abbr ‘h’] \\
+     MATCH_MP_TAC pos_fn_integral_pos >> simp [space_lborel] \\
+     Q.X_GEN_TAC ‘y’ >> MATCH_MP_TAC le_mul \\
+     simp [Abbr ‘f’, Abbr ‘g’, extreal_of_num_def, extreal_le_eq] \\
+     rw [normal_density_nonneg])
+ >> DISCH_TAC
+ >> simp [density_of_pos_fn, sets_lborel]
+ >> MATCH_MP_TAC pos_fn_integral_cong >> simp []
+ >> CONJ_TAC >- rw [le_mul, INDICATOR_FN_POS]
+ >> CONJ_TAC
+ >- (rw [space_lborel] \\
+     MATCH_MP_TAC le_mul \\
+     rw [INDICATOR_FN_POS, extreal_of_num_def, extreal_le_eq] \\
+     rw [normal_density_nonneg])
+ >> POP_ASSUM K_TAC (* 0 <= h x *)
+ >> rw [Abbr ‘f’, Abbr ‘g’, Abbr ‘h’, space_lborel]
+ >> Suff ‘pos_fn_integral lborel
+            (\y. Normal_density 0 sig1 (x - y) * Normal_density 0 sig2 y) =
+          Normal_density 0 (sqrt (sig1 pow 2 + sig2 pow 2)) x’ >- rw []
+ >> MATCH_MP_TAC conv_normal_density_zero_mean
+ >> qexistsl_tac [‘p’, ‘X'’] >> art []
+QED
+
+(* Modern version of ‘convolution’ (measure function part only) *)
+Definition convolution_measure_def :
+    convolution_measure M N = distr (M CROSS N) (\(x,y). x + y :real)
+End
+
+Theorem m_space_convolution :
+    !M N. m_space (convolution M N) = space borel
+Proof
+    rw [convolution_def]
+QED
+
+Theorem measurable_sets_convolution :
+    !M N. measurable_sets (convolution M N) = subsets borel
+Proof
+    rw [convolution_def]
+QED
+
+Theorem measure_convolution :
+    !M N s. s IN subsets borel ==>
+            measure (convolution M N) s = convolution_measure M N s
+Proof
+    rw [convolution_def, convolution_measure_def]
+QED
+
+Theorem sum_indep_random_variable' :
+    !(p :'a m_space) X Y.
+        prob_space p /\ random_variable X p borel /\
+        random_variable Y p borel /\ indep_vars p X Y borel borel ==>
+        !s. s IN subsets borel ==>
+            distribution p (\x. X x + Y x) s =
+            convolution_measure
+              (distr_of p (space borel,subsets borel,(\x. 0)) X)
+              (distr_of p (space borel,subsets borel,(\x. 0)) Y) s
+Proof
+    rpt STRIP_TAC
+ >> qmatch_abbrev_tac ‘_ = convolution_measure M N s’
+ >> Suff ‘convolution_measure M N s = measure (convolution M N) s’
+ >- (Rewr' \\
+     qunabbrevl_tac [‘M’, ‘N’] \\
+     irule sum_indep_random_variable >> art [])
+ >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
+ >> MATCH_MP_TAC measure_convolution >> art []
+QED
+
+Definition ext_normal_rv_def :
+    ext_normal_rv X p mu sig <=>
+      (!x. x IN p_space p ==> X x <> PosInf /\ X x <> NegInf) /\
+      normal_rv (real o X) p mu sig
+End
+
+Theorem normal_rv_and_ext_normal_rv :
+    !p X mu sig. normal_rv X p mu sig <=> ext_normal_rv (Normal o X) p mu sig
+Proof
+    rw [ext_normal_rv_def, o_DEF, real_normal, ETA_AX]
 QED
 
 val _ = export_theory ();
