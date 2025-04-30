@@ -1190,21 +1190,41 @@ Proof
       METIS_TAC [PROB_POSITIVE, INTER_SUBSET, IN_POW, le_antisym] ]
 QED
 
-val distribution_pos = store_thm
-  ("distribution_pos",
-  ``!p X a. prob_space p /\ (events p = POW (p_space p)) ==>
-            0 <= distribution p X a``,
+Theorem distribution_pos :
+    !p X a. prob_space p /\ (events p = POW (p_space p)) ==>
+            0 <= distribution p X a
+Proof
     RW_TAC std_ss [distribution_def]
  >> MATCH_MP_TAC PROB_POSITIVE
- >> RW_TAC std_ss [IN_POW, INTER_SUBSET]);
+ >> RW_TAC std_ss [IN_POW, INTER_SUBSET]
+QED
 
-val distribution_le_1 = store_thm
-  ("distribution_le_1",
-  ``!p X a. prob_space p /\ (events p = POW (p_space p)) ==>
-            distribution p X a <= 1``,
+(* NOTE: for general prob_space *)
+Theorem distribution_positive :
+    !p X B s. prob_space p /\ random_variable X p B /\ sigma_algebra B /\
+              s IN subsets B ==> 0 <= distribution p X s
+Proof
+    rw [distribution_def, random_variable_def, IN_MEASURABLE]
+ >> MATCH_MP_TAC PROB_POSITIVE >> rw []
+QED
+
+Theorem distribution_le_1 :
+    !p X a. prob_space p /\ (events p = POW (p_space p)) ==>
+            distribution p X a <= 1
+Proof
     RW_TAC std_ss [distribution_def]
  >> MATCH_MP_TAC PROB_LE_1
- >> RW_TAC std_ss [IN_POW, INTER_SUBSET]);
+ >> RW_TAC std_ss [IN_POW, INTER_SUBSET]
+QED
+
+(* NOTE: for general prob_space *)
+Theorem distribution_le_one :
+    !p X B s. prob_space p /\ random_variable X p B /\ sigma_algebra B /\
+              s IN subsets B ==> distribution p X s <= 1
+Proof
+    rw [distribution_def, random_variable_def, IN_MEASURABLE]
+ >> MATCH_MP_TAC PROB_LE_1 >> rw []
+QED
 
 (* Theorem 3.1.3 [2, p.36], cf. measure_space_distr
 
@@ -1824,6 +1844,21 @@ Proof
  >> REWRITE_TAC [lt_infty]
  >> MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `1` >> art []
  >> REWRITE_TAC [extreal_of_num_def, lt_infty]
+QED
+
+(* NOTE: more general version of the above theorem *)
+Theorem distribution_finite :
+    !p X B s. prob_space p /\ random_variable X p B /\
+              sigma_algebra B /\ s IN subsets B ==>
+              distribution p X s <> NegInf /\
+              distribution p X s <> PosInf
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> ‘0 <= distribution p X s /\ distribution p X s <= 1’
+      by PROVE_TAC [distribution_positive, distribution_le_one]
+ >> CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> art [])
+ >> REWRITE_TAC [lt_infty]
+ >> Q_TAC (TRANS_TAC let_trans) ‘1’ >> rw []
 QED
 
 Theorem joint_conditional :

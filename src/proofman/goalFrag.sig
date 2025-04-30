@@ -27,6 +27,7 @@ val open_select_lt  : frag_tactic
 val open_split_lt   : int -> frag_tactic
 val open_tacs_to_lt : frag_tactic
 val open_then1      : frag_tactic
+val open_first_lt   : frag_tactic
 val next_select_lt  : frag_tactic
 val next_first      : frag_tactic
 val next_split_lt   : frag_tactic
@@ -34,6 +35,7 @@ val next_tacs_to_lt : frag_tactic
 val close_first     : frag_tactic
 val close_paren     : frag_tactic
 val close_repeat    : frag_tactic
+val close_first_lt  : frag_tactic
 
 val pp_goalstate    : goalstate Parse.pprinter
 

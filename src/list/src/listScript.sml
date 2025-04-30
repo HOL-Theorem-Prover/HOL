@@ -19,8 +19,8 @@
 open HolKernel Parse boolLib BasicProvers;
 
 open Num_conv mesonLib arithmeticTheory
-     simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
-     relationTheory combinTheory quotientLib
+     simpLib boolSimps pairTheory pred_setTheory pred_setLib
+     TotalDefn metisLib relationTheory combinTheory quotientLib
 
 local open pairTheory pred_setTheory Datatype OpenTheoryMap
 in end;
