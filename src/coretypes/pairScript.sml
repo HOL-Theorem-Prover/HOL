@@ -167,6 +167,36 @@ Proof
     simp[SWAP_def]
 QED
 
+Theorem SWAP_o_SWAP[simp]:
+    SWAP o SWAP = I
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem FST_SWAP[simp]:
+  !x. (FST (SWAP x)) = SND x
+Proof
+  simp[SWAP_def]
+QED
+
+Theorem SND_SWAP[simp]:
+  !x. (SND (SWAP x)) = FST x
+Proof
+  simp[SWAP_def]
+QED
+
+Theorem FST_o_SWAP[simp]:
+   FST o SWAP = SND
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem SND_o_SWAP[simp]:
+   SND o SWAP = FST
+Proof
+  simp[FUN_EQ_THM]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
@@ -198,6 +228,12 @@ Theorem UNCURRY_CONST[simp]:
     (UNCURRY (\x1 x2. y) x) = y
 Proof
   REWRITE_TAC[UNCURRY]
+QED
+
+Theorem UNCURRY_SWAP[simp]:
+  UNCURRY f (SWAP x) = UNCURRY (flip f) x
+Proof
+  simp[UNCURRY]
 QED
 
 Theorem IN_UNCURRY_R[simp]:
@@ -460,6 +496,13 @@ Theorem PAIR_MAP_THM[simp,compute]:
 Proof REWRITE_TAC [PAIR_MAP,FST,SND]
 QED
 
+Theorem pair_map_eq[simp]:
+  (f ## g) p = (w,v) <=> (?x y. (p = (x,y)) /\ (w = f x) /\ (v = g y))
+Proof
+  Q.SPEC_THEN ‘p’ STRIP_ASSUME_TAC pair_CASES >>
+  simp [] >> EQ_TAC >> simp[]
+QED
+
 Theorem FST_PAIR_MAP[simp]:
   !p f g. FST ((f ## g) p) = f (FST p)
 Proof REWRITE_TAC [PAIR_MAP, FST]
@@ -506,6 +549,21 @@ val LET2_RATOR = Q.store_thm("LET2_RATOR",
 REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
   THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
   THEN REWRITE_TAC[]);
+
+Theorem UNCURRY_RAND:
+  !f'. f' (UNCURRY f x) = UNCURRY ((o) f' o f) x
+Proof
+ REWRITE_TAC [UNCURRY_VAR,combinTheory.o_DEF] THEN BETA_TAC
+ THEN REWRITE_TAC[]
+QED
+
+Theorem UNCURRY_RATOR:
+  !M . UNCURRY M f0 x = UNCURRY (flip (flip o M) x) f0
+Proof
+ REWRITE_TAC [UNCURRY_VAR,combinTheory.C_DEF,combinTheory.o_DEF]
+ THEN BETA_TAC THEN BETA_TAC
+ THEN REWRITE_TAC[]
+QED
 
 val o_UNCURRY_R = store_thm(
   "o_UNCURRY_R",
@@ -595,6 +653,13 @@ Proof
   SIMP_TAC bool_ss [FUN_EQ_THM, pair_CASE_def, combinTheory.C_DEF, UNCURRY]
 QED
 
+Theorem UNCURRY_pair_CASE:
+  UNCURRY = flip pair_CASE
+Proof
+  SIMP_TAC bool_ss [FUN_EQ_THM, pair_CASE_def, combinTheory.C_DEF, UNCURRY]
+QED
+
+
 val pair_case_cong = save_thm("pair_case_cong",
   Prim_rec.case_cong_thm pair_CASES pair_case_thm);
 val pair_rws = [PAIR, FST, SND];
@@ -603,6 +668,12 @@ Theorem pair_case_eq:
   (pair_CASE p f = v) <=> ?x y. (p = (x,y)) /\ (f x y = v)
 Proof
   SIMP_TAC bool_ss [pair_CASE_UNCURRY, UNCURRY_EQ, combinTheory.C_DEF]
+QED
+
+Theorem pair_CASE_SWAP[simp]:
+  pair_CASE (SWAP v) f = pair_CASE v (flip f)
+Proof
+  simp[pair_CASE_UNCURRY]
 QED
 
 val pair_case_ho_elim = Q.store_thm(
