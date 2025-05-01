@@ -16,7 +16,8 @@ val ERR = mk_HOL_ERR "Cooper";
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars DeepSyntaxTheory.DeepSyntax_grammars
+  val (Type,Term) =
+      parse_from_grammars $ valOf $ grammarDB{thyname="DeepSyntax"}
 end
 open Parse
 
