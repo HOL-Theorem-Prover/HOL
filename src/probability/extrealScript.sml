@@ -6627,7 +6627,6 @@ Overload lim = “extreal_lim”
 Definition ext_continuous_def :
     ext_continuous f net <=> ext_tendsto f (f (netlimit net)) net
 End
-Overload continuous = “ext_continuous”
 
 (* NOTE: because of the type of ‘at x within s’, here the type of ‘f’ is
   “:real -> extreal”. For a function ‘g :extreal -> extreal’, to say it's
@@ -6643,16 +6642,10 @@ Definition ext_continuous_on_def :
     ext_continuous_on f s <=> !x. x IN s ==> ext_continuous f (at x within s)
 End
 
-(* ‘continuous_on’ is defined in real_topologyTheory *)
-Overload continuous_on = “ext_continuous_on”
-
 (* Use ‘ext_bounded (IMAGE f UNIV)’ to say a function f is bounded (on UNIV) *)
 Definition ext_bounded_def :
     ext_bounded s <=> ?a. a <> PosInf /\ !x. x IN s ==> abs x <= a
 End
-
-(* ‘bounded’ is defined in real_topologyTheory *)
-Overload bounded = “ext_bounded”
 
 Theorem EXTREAL_LIM :
     !(f :'a -> extreal) l net.
