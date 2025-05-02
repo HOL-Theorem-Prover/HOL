@@ -614,8 +614,7 @@ Theorem MEM_disjsplit1:
      MEM f1 Γ ∨ (∃f2. MEM f2 Γ2 ∧ MEM (Disj f1 f2) Γ)
 Proof
   ho_match_mp_tac disjsplit_s4_ind >> rw[]
-  >- (fs[] >> rw[] >> metis_tac[])
-  >> Cases_on `z` >> fs[] >> Cases_on `r` >> fs[] >> metis_tac[]
+  >> fs[] >> METIS_TAC[]
 QED
 
 Theorem MEM_disjsplit2:
@@ -624,8 +623,7 @@ Theorem MEM_disjsplit2:
      MEM f2 Γ ∨ (∃f1. MEM f1 Γ1 ∧ MEM (Disj f1 f2) Γ)
 Proof
   ho_match_mp_tac disjsplit_s4_ind >> rw[]
-  >- (fs[] >> rw[] >> metis_tac[])
-  >> Cases_on `z` >> fs[] >> Cases_on `r` >> fs[] >> metis_tac[]
+  >> fs[] >> METIS_TAC[]
 QED
 
 Theorem wfm_S4_Disj:
@@ -654,7 +652,7 @@ Proof
   [‘Conj f1 f2’]
   >- (rpt strip_tac >> rw[] >> fs[conjsplit_s4_def] >>
       Cases_on `MEM ϕ Γ₀` >> gvs[] >> simp[EXISTS_OR_THM]) >>
-  rw[] >> Cases_on `z` >> gvs[] >> metis_tac[]
+  rw[] >> gvs[] >> metis_tac[]
 QED
 
 Theorem wfm_S4_Conj:
@@ -921,27 +919,25 @@ Proof
 QED
 
 Theorem disj_s4_g2_in_g0:
-  ∀s pf s1 s2. disjsplit_s4 s = SOME (pf, s1, s2) ⇒
-               set s2 ⊆ set (closure_list_conc s)
+  ∀s pf s1 s2.
+  disjsplit_s4 s = SOME (pf, s1, s2) ⇒
+  set s2 ⊆ set (closure_list_conc s)
 Proof
-  ho_match_mp_tac disjsplit_s4_ind >> rw[SUBSET_DEF]
-  >-(Cases_on `x = f2` >> fs[] >> rw[]
-     >- metis_tac[mem_closure_self]
-     >> metis_tac[mem_lst_closure])
-  >-(PairCases_on `z` >> fs[] >> rw[] >> Cases_on `x = Var v2` >> fs[])
-  >> PairCases_on `z` >> fs[] >> rw[] >> Cases_on `x = NVar v2` >> fs[]
+  ho_match_mp_tac disjsplit_s4_ind >>
+  rw[SUBSET_DEF] >> gvs[MEM]
+  >- simp[mem_closure_self]
+  >- simp[mem_lst_closure]
 QED
 
 Theorem disj_s4_g1_in_g0:
   ∀s pf s1 s2.
-    disjsplit_s4 s = SOME (pf, s1, s2) ⇒ set s1 ⊆ set (closure_list_conc s)
+  disjsplit_s4 s = SOME (pf, s1, s2) ⇒
+  set s1 ⊆ set (closure_list_conc s)
 Proof
-  ho_match_mp_tac disjsplit_s4_ind >> rw[SUBSET_DEF]
-  >-(Cases_on `x = f1` >> fs[] >> rw[]
-     >- metis_tac[mem_closure_self]
-     >> metis_tac[mem_lst_closure])
-  >-(PairCases_on `z` >> fs[] >> rw[] >> Cases_on `x = Var v2` >> fs[])
-  >> PairCases_on `z` >> fs[] >> rw[] >> Cases_on `x = NVar v2` >> fs[]
+  ho_match_mp_tac disjsplit_s4_ind >>
+  rw[SUBSET_DEF] >> gvs[MEM]
+  >- simp[mem_closure_self]
+  >- simp[mem_lst_closure]
 QED
 
 Theorem pre_hintikka_disj_right_cons:
