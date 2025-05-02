@@ -1,4 +1,4 @@
-INCLUDES = ../ring/src ../integer ../res_quan/src ../sort
+INCLUDES = ../integer ../res_quan/src ../sort
 
 all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all

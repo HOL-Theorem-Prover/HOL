@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib bossLib liteLib;
 
 open integerTheory intSimps Omega Cooper intSyntax intReduce Canon hurdUtils
-     tautLib integerRingLib;
+     tautLib Normalizer Grobner hurdUtils mesonLib;
 
 structure Parse = struct
   open Parse
@@ -63,6 +63,83 @@ end
 val ARITH_CONV = Omega.OMEGA_CONV
 val ARITH_TAC = Omega.OMEGA_TAC
 val ARITH_PROVE = Omega.OMEGA_PROVE
+
+(* ------------------------------------------------------------------------- *)
+(* Instantiate the normalizer (code below are ported from HOL-Light)         *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  val sth = prove
+   (“(!x y z. x + (y + z) = (x + y) + z :int) /\
+     (!x y. x + y = y + x :int) /\
+     (!x. &0 + x = x :int) /\
+     (!x y z. x * (y * z) = (x * y) * z :int) /\
+     (!x y. x * y = y * x :int) /\
+     (!x. &1 * x = x :int) /\
+     (!(x :int). &0 * x = &0) /\
+     (!x y z. x * (y + z) = x * y + x * z :int) /\
+     (!(x :int). x ** 0 = &1) /\
+     (!(x :int) n. x ** (SUC n) = x * (x ** n))”,
+    REWRITE_TAC [INT_POW, INT_ADD_ASSOC, INT_MUL_ASSOC, INT_ADD_LID,
+                 INT_MUL_LZERO, INT_MUL_LID, INT_LDISTRIB] THEN
+    REWRITE_TAC [Once INT_ADD_SYM, Once INT_MUL_SYM]);
+  val rth = prove
+   (“(!x. -x = -(&1) * x :int) /\
+     (!x y. x - y = x + -(&1) * y :int)”,
+    REWRITE_TAC [INT_MUL_LNEG, INT_MUL_LID, int_sub]);
+  val is_semiring_constant = is_int_literal
+  and SEMIRING_ADD_CONV = INT_ADD_CONV
+  and SEMIRING_MUL_CONV = INT_MUL_CONV
+  and SEMIRING_POW_CONV = INT_POW_CONV;
+  fun term_lt u t = (Term.compare(u,t) = LESS);
+  val (_,_,_,_,_,POLY_CONV) =
+    SEMIRING_NORMALIZERS_CONV sth rth
+     (is_semiring_constant,
+      SEMIRING_ADD_CONV,SEMIRING_MUL_CONV,SEMIRING_POW_CONV)
+     term_lt
+in
+  val INT_POLY_CONV = POLY_CONV;
+end;
+
+(* ------------------------------------------------------------------------- *)
+(* Instantiate the ring and ideal procedures.                                *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  val INT_INTEGRAL = prove
+   (“(!(x :int). &0 * x = &0) /\
+     (!x y (z :int). (x + y = x + z) <=> (y = z)) /\
+     (!w x y (z :int). (w * y + x * z = w * z + x * y) <=> (w = x) \/ (y = z))”,
+    REWRITE_TAC[INT_MUL_LZERO, INT_EQ_LADD] THEN
+    ONCE_REWRITE_TAC[GSYM INT_SUB_0] THEN
+    REWRITE_TAC[GSYM INT_ENTIRE] THEN
+    rpt GEN_TAC \\
+    Suff ‘w * y + x * z - (w * z + x * y) = (w - x) * (y - z :int)’
+    >- (Rewr' >> REWRITE_TAC []) \\
+    REWRITE_TAC [INT_ADD2_SUB2] \\
+    REWRITE_TAC [GSYM INT_SUB_LDISTRIB] \\
+   ‘x * (z - y) = -x * (y - z :int)’
+      by (REWRITE_TAC [INT_MUL_LNEG, INT_SUB_LDISTRIB, INT_NEG_SUB]) \\
+    POP_ORW \\
+    REWRITE_TAC [GSYM INT_RDISTRIB, GSYM int_sub]);
+  val dest_intconst = Arbrat.fromAInt o int_of_term;
+  val mk_intconst = term_of_int o Arbrat.toAInt;
+  val (pure,ideal) =
+    RING_AND_IDEAL_CONV
+      (dest_intconst,mk_intconst,INT_EQ_CONV,
+       negate_tm, plus_tm, minus_tm,
+       genvar bool, mult_tm, genvar bool, exp_tm,
+       INT_INTEGRAL,TRUTH,INT_POLY_CONV)
+in
+  val INT_RING = pure;
+  fun int_ideal_cofactors tms tm =
+      if forall (fn t => type_of t = int_ty) (tm::tms)
+      then ideal tms tm
+      else
+        failwith "int_ideal_cofactors: not all terms have type :int"
+end;
+
+val INT_RING_TAC = CONV_TAC (EQT_INTRO o INT_RING);
 
 (* ------------------------------------------------------------------------- *)
 (* A tactic for simple divisibility/congruence/coprimality goals.            *)
