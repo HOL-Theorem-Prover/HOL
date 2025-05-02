@@ -15,6 +15,7 @@ main {
   import: pair
   import: prim-rec
   import: arithmetic
+  import: reduce
   import: sum
   import: poset
   import: numeral
@@ -118,6 +119,11 @@ arithmetic {
   import: relation
   article: "../num/theories/arithmetic.ot.art"
 }
+reduce {
+  import: bool
+  import: arithmetic
+  article: "../num/reduce/src/reduce.ot.art"
+}
 numeral {
   import: bool
   import: arithmetic
@@ -153,6 +159,7 @@ divides {
   import: bool
   import: num
   import: arithmetic
+  import: reduce
   import: numeral
   import: while
   article: "../num/extra_theories/divides.ot.art"
@@ -162,6 +169,7 @@ logroot {
   import: combin
   import: num
   import: arithmetic
+  import: reduce
   import: numeral
   import: while
   import: pair
@@ -185,6 +193,7 @@ bit {
   import: num
   import: combin
   import: arithmetic
+  import: reduce
   import: numeral
   import: while
   import: logroot
@@ -195,6 +204,7 @@ numeral-bit {
   import: num
   import: combin
   import: arithmetic
+  import: reduce
   import: numeral
   import: while
   import: pair
