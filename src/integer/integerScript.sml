@@ -3615,6 +3615,33 @@ val INT_DIVIDES_REDUCE = store_thm(
   SIMP_TAC bool_ss [NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, SUC_NOT] THEN
   PROVE_TAC [INT_MOD0]);
 
+(* equations to put any expression build on + * ~ & int_0 int_1
+   under the (unique) following forms:  &n  or ~&n
+
+   NOTE: was in integerRingScript.sml
+ *)
+Theorem int_calculate :
+            ( &n +  &m = &(n+m))
+         /\ (~&n +  &m = if n<=m then &(m-n) else ~&(n-m))
+         /\ ( &n + ~&m = if m<=n then &(n-m) else ~&(m-n))
+         /\ (~&n + ~&m = ~&(n+m))
+
+         /\ ( &n *  &m =  &(n*m))
+         /\ (~&n *  &m = ~&(n*m))
+         /\ ( &n * ~&m = ~&(n*m))
+         /\ (~&n * ~&m =  &(n*m))
+
+         /\ (( &n =  &m) <=> (n=m))
+         /\ (( &n = ~&m) <=> (n=0)/\(m=0))
+         /\ ((~&n =  &m) <=> (n=0)/\(m=0))
+         /\ ((~&n = ~&m) <=> (n=m))
+
+         /\ (~~x = x : int)
+         /\ (~0 = 0 : int)
+Proof
+    REWRITE_TAC [INT_ADD_CALCULATE,INT_MUL_CALCULATE,INT_EQ_CALCULATE]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* LEAST integer satisfying a predicate (may be undefined).                  *)
 (*---------------------------------------------------------------------------*)

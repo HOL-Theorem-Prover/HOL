@@ -1,4 +1,4 @@
-INCLUDES = $(HOLDIR)/src/integer $(HOLDIR)/src/sort
+INCLUDES = $(HOLDIR)/src/integer $(HOLDIR)/src/rational $(HOLDIR)/src/sort
 
 all: $(DEFAULT_TARGETS) selftest.exe
 
