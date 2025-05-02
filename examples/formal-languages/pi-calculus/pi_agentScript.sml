@@ -940,28 +940,41 @@ val fn0_def_t = “fn0 = λn. ^FN (name_REP n)”
 val fn1_def_t = “fn1 = λp. ^FN (pi_REP p)”
 val fn2_def_t = “fn2 = λr. ^FN (residual_REP r)”
 
-val fn0_Name_clause = TAC_PROOF(
-  ([fn0_def_t], “fn0 (Name n) = ^FN (GVAR n ())”),
-  ASM_REWRITE_TAC[Name_def] >> BETA_TAC >> AP_TERM_TAC >>
-  irule repabs_pseudo_id0 >> REWRITE_TAC[genind_GVAR] >>
-  BETA_TAC >> REFL_TAC)
+val testcase = [(fn0_def_t, repabs_pseudo_id0, [Name_def]),
+                (fn1_def_t, repabs_pseudo_id1,
+                 [SYM Nil_def', Input_def, SYM Output_def', SYM Tau_def',
+                  SYM Match_def', SYM Mismatch_def', SYM Sum_def', SYM Par_def',
+                  Res_def]),
+                (fn2_def_t, repabs_pseudo_id2,
+                 [InputS_def, SYM FreeOutput_def', BoundOutput_def,
+                  SYM TauR_def'])]
 
-val fn1_Nil_clause = TAC_PROOF(
-  ([fn1_def_t], “fn1 Nil = ^FN (GLAM v rNil [][])”),
-  simp[Nil_def, GLAM_NIL_ELIM] >> AP_TERM_TAC >>
-  irule repabs_pseudo_id1 >> REWRITE_TAC[genind_GLAM_eqn] >>
-  simp[])
+fun case1 (tm_def, repabs, defs) =
+  let
+    val c = lhs tm_def
 
-val fn1_Tau_clause = TAC_PROOF(
-  ([fn1_def_t], “fn1 (Tau p) = ^FN (GLAM v rTau [] [pi_REP p])”),
-  simp[Tau_def, GLAM_NIL_ELIM] >> AP_TERM_TAC >> irule repabs_pseudo_id1 >>
-  simp[genind_GLAM_eqn, genind_term_REP1])
+    fun def1 d =
+        let
+          val (_, eq) = strip_forall (concl d)
+          val tactic =
+            ASSUME_TAC d >>
+            asm_simp_tac bool_ss [GLAM_NIL_ELIM] >> AP_TERM_TAC >>
+            SYM_TAC >> MATCH_MP_TAC repabs >>
+            simp_tac bool_ss [genind_GLAM_eqn, genind_GVAR,
+                              TypeBase.distinct_of “:repcode”,
+                              LIST_REL_NIL, LIST_REL_CONS1, PULL_EXISTS,
+                              CONS_11, genind_term_REP1, genind_term_REP0,
+                              genind_term_REP2]
+          val goal =
+                mk_eq (mk_comb(FN, rand (rhs eq)), mk_comb (c, lhs eq))
+        in
+          TAC_PROOF(([tm_def], goal), tactic)
+        end
+  in
+    map def1 defs
+  end
 
-val fn1_Input_clause = TAC_PROOF(
-  ([fn1_def_t],
-   “fn1 (Input a x p) = ^FN (GLAM x rInput [pi_REP p] [name_REP a])”),
-  simp[Input_def] >> AP_TERM_TAC >> irule repabs_pseudo_id1 >>
-  simp[genind_GLAM_eqn, genind_term_REP1, genind_term_REP0])
+val fn_rewrites = map case1 testcase
 
 Theorem parameter_tm_recursion0 =
   parameter_gtm_recursion
@@ -997,10 +1010,34 @@ val rwt2 =
 
 val (exv, body) = dest_exists (concl parameter_tm_recursion0)
 val cs = CONJUNCTS (ASSUME (body |> subst[exv |-> FN]))
-val cs' = map (SIMP_RULE bool_ss [rwt0, rwt1, rwt2, GLAM_NIL_ELIM,
-                            GSYM fn1_Nil_clause, GSYM fn1_Tau_clause,
-                            GSYM fn1_Input_clause,
-                            GSYM fn0_Name_clause] ) cs
+
+
+val cs' = map (SIMP_RULE bool_ss (rwt0:: rwt1:: rwt2:: GLAM_NIL_ELIM ::
+                                  List.concat fn_rewrites)) cs
+
+val th0 = LIST_CONJ cs'
+val eqns = List.filter is_eq (hyp th0)
+val th1 = itlist Prim_rec.EXISTS_EQUATION eqns th0
+val th = CHOOSE (FN, parameter_tm_recursion0) th1
+
+th |> DISCH_ALL |> elim_unnecessary_atoms {finite_fv = FINITE_FV}
+                                          [ASSUME “FINITE (A:string set)”,
+                                            ASSUME “∀p:'q. FINITE (supp ppm p)”]
+   |> UNDISCH_ALL |> DISCH_ALL
+      |> REWRITE_RULE [AND_IMP_INTRO]
+      |> CONV_RULE (LAND_CONV (REWRITE_CONV [GSYM CONJ_ASSOC]))
+      |> Q.INST [‘tvf’ |-> ‘vr’, (* Name? *)
+                 ‘tnf’ |-> ‘f0’, (* Nil *)
+                 ‘ttf’ |-> ‘f1’, (* Tau *)
+                 ‘tif’ |-> ‘f2’, (* Input *)
+                 ‘tof’ |-> ‘f3’, (* Output *)
+                 ‘tmf’ |-> ‘f4’, (* Match *)
+                 ‘tuf’ |-> ‘f5’, (* Mismatch *)
+                 ‘tsf’ |-> ‘f6’, (* Sum *)
+                 ‘tpf’ |-> ‘f7’, (* Par *)
+                 ‘trf’ |-> ‘f8’, (* Res *)
+                 ‘dpm’ |-> ‘apm’]
+      |> CONV_RULE (REDEPTH_CONV sort_uvars)
 
 (* use Prim_rec.EXISTS_EQUATION to eliminate "definitions" of fn0, fn1, fn2 *)
 
