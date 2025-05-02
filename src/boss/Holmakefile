@@ -77,7 +77,7 @@ hol4-base.art: hol4-base.thy hol4-base-unint.art ../opentheory/hol4.int \
                bool_defs.ot.art prove_base_assums.ot.art
 	opentheory info --article -o $@ $<
 
-install: hol4-base.thy hol4-base.art 
+install: hol4-base.thy hol4-base.art
 	opentheory install --reinstall $<
 
 all: hol4-base.art
