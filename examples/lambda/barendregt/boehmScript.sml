@@ -1058,7 +1058,7 @@ Proof
  >> reverse (Cases_on ‘solvable M’)
  >- rw [subterm_def, BT_of_unsolvables, ltree_el_def]
  (* stage work *)
- >> rw [subterm_def, BT_def, BT_generator_def, Once ltree_unfold, ltree_el_def]
+ >> simp[subterm_def, BT_def, BT_generator_def, Once ltree_unfold, ltree_el_def]
  >> qabbrev_tac ‘M0 = principle_hnf M’
  >> qabbrev_tac ‘n  = LAMl_size M0’
  >> Q_TAC (RNEWS_TAC (“vs :string list”, “r :num”, “n :num”)) ‘X’
@@ -4829,7 +4829,7 @@ Proof
  >> DISCH_TAC
  >> Q.PAT_X_ASSUM ‘subterm X M (h::p) r <> NONE’ MP_TAC
  >> Q_TAC (UNBETA_TAC [subterm_alt]) ‘subterm X M (h::p) r’
- >> STRIP_TAC
+ >> STRIP_TAC >> fs[]
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
  >> CONJ_TAC
  >- (MATCH_MP_TAC subterm_induction_lemma' \\
