@@ -16,23 +16,24 @@ sig
    datatype shared_thm = ORIG of thm
                        | COPY of (string * string) * thm
    type mk_datatype_record =
-        {ax        : shared_thm,
-         induction : shared_thm,
-         case_def  : thm,
-         case_cong : thm,
-         case_eq   : thm,
-         case_elim : thm,
-         nchotomy  : thm,
-         size      : (term * shared_thm) option,
-         encode    : (term * shared_thm) option,
-         lift      : term option,
-         one_one   : thm option,
-         distinct  : thm option,
-         fields    : (string * rcd_fieldinfo) list,
-         accessors : thm list,
-         updates   : thm list,
-         destructors : thm list,
-         recognizers : thm list}
+       {ax            : shared_thm,
+        induction     : shared_thm,
+        case_def      : thm,
+        case_cong     : thm,
+        case_eq       : thm,
+        case_elim     : thm,
+        constant_case : thm,
+        nchotomy      : thm,
+        size          : (term * shared_thm) option,
+        encode        : (term * shared_thm) option,
+        lift          : term option,
+        one_one       : thm option,
+        distinct      : thm option,
+        fields        : (string * rcd_fieldinfo) list,
+        accessors     : thm list,
+        updates       : thm list,
+        destructors   : thm list,
+        recognizers   : thm list}
 
    val mk_datatype_info_no_simpls : mk_datatype_record -> tyinfo
    val gen_std_rewrs    : tyinfo -> thm list
@@ -63,6 +64,7 @@ sig
    val case_def_of     : tyinfo -> thm
    val case_eq_of      : tyinfo -> thm
    val case_elim_of    : tyinfo -> thm
+   val constant_case_of : tyinfo -> thm
    val nchotomy_of     : tyinfo -> thm
    val distinct_of     : tyinfo -> thm option
    val one_one_of      : tyinfo -> thm option
