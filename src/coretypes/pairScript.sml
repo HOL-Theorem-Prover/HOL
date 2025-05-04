@@ -168,7 +168,8 @@ Proof
 QED
 
 Theorem SWAP_o_SWAP[simp]:
-    SWAP o SWAP = I
+    SWAP o SWAP = I /\
+    SWAP o SWAP o f = f
 Proof
   simp[FUN_EQ_THM]
 QED
@@ -186,13 +187,15 @@ Proof
 QED
 
 Theorem FST_o_SWAP[simp]:
-   FST o SWAP = SND
+   FST o SWAP = SND /\
+   FST o SWAP o f = SND o f
 Proof
   simp[FUN_EQ_THM]
 QED
 
 Theorem SND_o_SWAP[simp]:
-   SND o SWAP = FST
+   SND o SWAP = FST /\
+   SND o SWAP o f = FST o f
 Proof
   simp[FUN_EQ_THM]
 QED
@@ -514,12 +517,14 @@ Proof REWRITE_TAC [PAIR_MAP, SND]
 QED
 
 Theorem FST_o_PAIR_MAP[simp]:
-  FST o (g ## f) = (g o FST)
+  FST o (g ## f) = g o FST /\
+  FST o (g ## f) o f' = g o FST o f'
 Proof simp [FUN_EQ_THM]
 QED
 
 Theorem SND_o_PAIR_MAP[simp]:
-  SND o (g ## f) = (f o SND)
+  SND o (g ## f) = (f o SND) /\
+  SND o (g ## f) o f' = f o SND o f'
 Proof simp [FUN_EQ_THM]
 QED
 
