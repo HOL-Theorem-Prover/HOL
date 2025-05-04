@@ -329,6 +329,22 @@ val IF_EQUALS_OPTION = store_thm(
   SRW_TAC [][]);
 val _ = export_rewrites ["IF_EQUALS_OPTION"]
 
+Theorem if_option_eq[simp]:
+    (((if P then X else SOME x) = NONE) <=> P /\ (X = NONE)) /\
+    (((if P then SOME x else X) = NONE) <=> ~P /\ (X = NONE)) /\
+    (((if P then X else NONE) = SOME x) <=> P /\ (X = SOME x)) /\
+    (((if P then NONE else X) = SOME x) <=> ~P /\ (X = SOME x))
+Proof
+  OPTION_CASES_TAC“X:'a option” THEN SRW_TAC [](option_rws)
+QED
+
+Theorem if_option_neq[simp]:
+    (((if P then X else NONE) ≠ NONE) <=> P /\ (X ≠ NONE)) /\
+    (((if P then NONE else X) ≠ NONE) <=> ~P /\ (X ≠ NONE))
+Proof
+  OPTION_CASES_TAC“X:'a option” THEN SRW_TAC [](option_rws)
+QED
+
 val IF_NONE_EQUALS_OPTION = store_thm(
   "IF_NONE_EQUALS_OPTION",
   ``(((if P then X else NONE) = NONE) <=> (P ==> IS_NONE X)) /\
@@ -336,7 +352,6 @@ val IF_NONE_EQUALS_OPTION = store_thm(
     (((if P then X else NONE) = SOME x) <=> P /\ (X = SOME x)) /\
     (((if P then NONE else X) = SOME x) <=> ~P /\ (X = SOME x))``,
   OPTION_CASES_TAC“X:'a option” THEN SRW_TAC [](option_rws));
-val _ = export_rewrites ["IF_NONE_EQUALS_OPTION"]
 
 (* ----------------------------------------------------------------------
     OPTION_MAP theorems
