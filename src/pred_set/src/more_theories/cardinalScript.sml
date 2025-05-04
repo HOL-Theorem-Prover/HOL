@@ -3178,13 +3178,13 @@ Proof
                  else if (!x. x IN s ==> ISR x) /\ IMAGE OUTR s IN As then
                    SOME (INR (THE (SND p (IMAGE OUTR s))))
                  else NONE’ >>
-  rw[] >> simp[AllCaseEqs(), PULL_EXISTS]
+  rw[] >> simp[PULL_EXISTS]
   >- (metis_tac[THE_DEF, MEMBER_NOT_EMPTY])
   >- (rename [‘s = {}’, ‘s <> IMAGE INL A’] >>
-      pop_assum mp_tac >> rw[]
+      rpt (IF_CASES_TAC >> fs[])
       >- (qpat_x_assum ‘s <> IMAGE INL _’ mp_tac >>
-          csimp[EXTENSION, PULL_EXISTS, sumTheory.INL]) >>
-      first_x_assum $ qspec_then ‘IMAGE OUTR s’ mp_tac >> simp[]) >>
+          rw[CONTRAPOS_THM] >> gvs[]) >>
+      fs[DISJ_EQ_IMP]) >>
   qexists_tac ‘λtup. (OUTL (THE (tup (IMAGE INL A))),
                       (λB. if B IN As then
                              SOME (OUTR (THE (tup (IMAGE INR B))))
