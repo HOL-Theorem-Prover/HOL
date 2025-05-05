@@ -18,7 +18,8 @@
 open HolKernel Parse boolLib bossLib;
 
 open jrhUtils quotient liteLib pred_setTheory arithmeticTheory prim_recTheory
-     numTheory simpLib numLib liteLib metisLib BasicProvers dividesTheory;
+     numTheory simpLib numLib liteLib metisLib BasicProvers dividesTheory
+     hurdUtils normalizerTheory;
 
 val _ = set_grammar_ancestry ["arithmetic", "pred_set"];
 
@@ -3640,6 +3641,55 @@ Theorem int_calculate :
          /\ (~0 = 0 : int)
 Proof
     REWRITE_TAC [INT_ADD_CALCULATE,INT_MUL_CALCULATE,INT_EQ_CALCULATE]
+QED
+
+(*---------------------------------------------------------------------------*)
+(* Lemmas for intLib.                                                        *)
+(*---------------------------------------------------------------------------*)
+
+Triviality INT_POLY_CONV_sth:
+  (!x y z. x + (y + z) = (x + y) + z :int) /\
+  (!x y. x + y = y + x :int) /\
+  (!x. &0 + x = x :int) /\
+  (!x y z. x * (y * z) = (x * y) * z :int) /\
+  (!x y. x * y = y * x :int) /\
+  (!x. &1 * x = x :int) /\
+  (!(x :int). &0 * x = &0) /\
+  (!x y z. x * (y + z) = x * y + x * z :int) /\
+  (!(x :int). x ** 0 = &1) /\
+  (!(x :int) n. x ** (SUC n) = x * (x ** n))
+Proof
+  REWRITE_TAC [INT_POW, INT_ADD_ASSOC, INT_MUL_ASSOC, INT_ADD_LID,
+    INT_MUL_LZERO, INT_MUL_LID, INT_LDISTRIB] THEN
+  REWRITE_TAC [Once INT_ADD_SYM, Once INT_MUL_SYM]
+QED
+
+Theorem INT_POLY_CONV_sth = MATCH_MP SEMIRING_PTHS INT_POLY_CONV_sth;
+
+Theorem INT_POLY_CONV_rth:
+  (!x. -x = -(&1) * x :int) /\
+  (!x y. x - y = x + -(&1) * y :int)
+Proof
+  REWRITE_TAC [INT_MUL_LNEG, INT_MUL_LID, int_sub]
+QED
+
+Theorem INT_INTEGRAL:
+  (!(x :int). &0 * x = &0) /\
+  (!x y (z :int). (x + y = x + z) <=> (y = z)) /\
+  (!w x y (z :int). (w * y + x * z = w * z + x * y) <=> (w = x) \/ (y = z))
+Proof
+  REWRITE_TAC[INT_MUL_LZERO, INT_EQ_LADD] THEN
+  ONCE_REWRITE_TAC[GSYM INT_SUB_0] THEN
+  REWRITE_TAC[GSYM INT_ENTIRE] THEN
+  rpt GEN_TAC \\
+  Suff ‘w * y + x * z - (w * z + x * y) = (w - x) * (y - z :int)’
+  >- (Rewr' >> REWRITE_TAC []) \\
+  REWRITE_TAC [INT_ADD2_SUB2] \\
+  REWRITE_TAC [GSYM INT_SUB_LDISTRIB] \\
+  ‘x * (z - y) = -x * (y - z :int)’
+    by (REWRITE_TAC [INT_MUL_LNEG, INT_SUB_LDISTRIB, INT_NEG_SUB]) \\
+  POP_ORW \\
+  REWRITE_TAC [GSYM INT_RDISTRIB, GSYM int_sub]
 QED
 
 (*---------------------------------------------------------------------------*)

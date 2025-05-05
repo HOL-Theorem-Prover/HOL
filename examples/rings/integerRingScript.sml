@@ -14,7 +14,7 @@ ARW_TAC [ is_ring_def, ring_accessors, INT_0, INT_1,
 MAP_FIRST MATCH_ACCEPT_TAC [ INT_ADD_SYM, INT_MUL_SYM ]);
 
 val int_ring_thms =
-  EVAL_ringLib.store_ring { Name = "int", Theory = int_is_ring }
+  EVAL_ringLib.store_ring { Name = "int", Theory = int_is_ring };
 
 (* Note: AND_CLAUSES is not lazy *)
 local open numeralTheory
