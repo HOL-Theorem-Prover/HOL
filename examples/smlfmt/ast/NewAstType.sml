@@ -772,4 +772,4 @@ struct
 
   type t = ast
 
-end
+end;

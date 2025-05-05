@@ -8,12 +8,12 @@ sig
   (** Get the next token in the given source. If there isn't one, returns NONE.
     * raises Error if there's a problem.
     *)
-  val next: AstAllows.t -> Source.t -> Token.Pretoken.t option
+  val next: ParserContext.t -> Source.t -> Token.Pretoken.t option
 
   (** Get all the tokens in the given source.
     * raises Error if there's a problem.
     *)
-  val tokens: AstAllows.t -> Source.t -> Token.t Seq.t
+  val tokens: ParserContext.t -> Source.t -> Token.t Seq.t
 end =
 struct
 
@@ -28,7 +28,7 @@ struct
          {header = "SYNTAX ERROR", pos = pos, what = what, explain = explain})
 
 
-  fun next allows (src: Source.t) : Token.Pretoken.t option =
+  fun next ctx (src: Source.t) : Token.Pretoken.t option =
     let
       val startOffset = Source.absoluteStartOffset src
       val src = Source.wholeFile src
@@ -111,7 +111,7 @@ struct
             }
 
         else if
-          check isMaybeUnicode at s andalso not (AstAllows.extendedText allows)
+          check isMaybeUnicode at s andalso not (ParserContext.extendedText ctx)
         then
           error
             { pos = slice (s, s + 1)
@@ -126,7 +126,7 @@ struct
 
         else if
           not (check isPrint at s) andalso not (check isMaybeUnicode at s)
-          andalso AstAllows.extendedText allows
+          andalso ParserContext.extendedText ctx
         then
           error
             { pos = slice (s, s + 1)
@@ -143,7 +143,7 @@ struct
             }
 
         else if
-          not (AstAllows.extendedText allows) andalso not (check isPrint at s)
+          not (ParserContext.extendedText ctx) andalso not (check isPrint at s)
         then
           error
             { pos = slice (s, s + 1)
@@ -653,7 +653,7 @@ struct
     end
 
 
-  fun tokens allows src =
+  fun tokens ctx src =
     let
       val startOffset = Source.absoluteStartOffset src
       val endOffset = Source.absoluteEndOffset src
@@ -669,7 +669,7 @@ struct
         if offset >= endOffset then
           finish acc
         else
-          case next allows (Source.drop src offset) of
+          case next ctx (Source.drop src offset) of
             NONE => finish acc
           | SOME tok => loop (tok :: acc) (tokEndOffset tok)
     in

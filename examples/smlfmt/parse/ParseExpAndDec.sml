@@ -8,11 +8,11 @@ sig
   type ('a, 'b) parser = ('a, 'b) ParserCombinators.parser
   type tokens = Token.t Seq.t
 
-  val dec: {forceExactlyOne: bool, allows: AstAllows.t}
+  val dec: {forceExactlyOne: bool, ctx: ParserContext.t}
            -> tokens
            -> (int * InfixDict.t, Ast.Exp.dec) parser
 
-  val exp: AstAllows.t
+  val exp: ParserContext.t
            -> tokens
            -> InfixDict.t
            -> ExpPatRestriction.t
@@ -132,7 +132,7 @@ struct
     *)
 
 
-  fun dec {forceExactlyOne, allows} toks (start, infdict) =
+  fun dec {forceExactlyOne, ctx} toks (start, infdict) =
     let
       val numToks = Seq.length toks
       fun tok i = Seq.nth toks i
@@ -160,7 +160,7 @@ struct
       fun parse_tycon i = PS.tycon toks i
       fun parse_ty i = PT.ty toks i
       fun parse_pat infdict restriction i =
-        PP.pat allows toks infdict restriction i
+        PP.pat ctx toks infdict restriction i
 
 
       fun parse_oneOrMoreDelimitedByReserved x i =
@@ -171,7 +171,7 @@ struct
         PC.zeroOrMoreWhile c p s
 
       fun consume_exp infdict restriction i =
-        exp allows toks infdict restriction i
+        exp ctx toks infdict restriction i
 
 
       (* This function is duplicated in ParseSigExpAndSpec. *)
@@ -221,7 +221,7 @@ struct
               val (i, tycon) = parse_vid i
               val (i, eq) = parse_reserved Token.Equal i
               val (i, optbar) = parse_maybeReserved Token.Bar i
-              val _ = ParserUtils.checkOptBar allows optbar
+              val _ = ParserUtils.checkOptBar ctx optbar
                 "Unexpected bar on first branch of datatype declaration."
 
               val (i, {elems, delims}) =
@@ -429,7 +429,7 @@ struct
               fun parseBranch (*vid*) i =
                 let
                   val (i, fname_args) =
-                    ParseFunNameArgs.fname_args allows toks infdict i
+                    ParseFunNameArgs.fname_args ctx toks infdict i
 
                   val (i, ty) =
                     if not (isReserved Token.Colon at i) then
@@ -448,7 +448,7 @@ struct
                 end
 
               val (i, optbar) = parse_maybeReserved Token.Bar i
-              val _ = ParserUtils.checkOptBar allows optbar
+              val _ = ParserUtils.checkOptBar ctx optbar
                 "Unexpected bar on first branch of 'fun'."
               val (i, {elems, delims}) =
                 parse_oneOrMoreDelimitedByReserved
@@ -675,7 +675,7 @@ struct
   (* ======================================================================= *)
 
 
-  and exp allows toks infdict restriction start =
+  and exp ctx toks infdict restriction start =
     let
       val numToks = Seq.length toks
       fun tok i = Seq.nth toks i
@@ -701,7 +701,7 @@ struct
       fun parse_recordLabel i = PS.recordLabel toks i
       fun parse_ty i = PT.ty toks i
       fun parse_pat infdict restriction i =
-        PP.pat allows toks infdict restriction i
+        PP.pat ctx toks infdict restriction i
 
 
       fun parse_zeroOrMoreDelimitedByReserved x i =
@@ -713,7 +713,7 @@ struct
 
 
       fun consume_dec xx =
-        dec {forceExactlyOne = false, allows = allows} toks xx
+        dec {forceExactlyOne = false, ctx = ctx} toks xx
 
 
       fun consume_exp infdict restriction i =
@@ -917,7 +917,7 @@ struct
                 isReserved Token.Comma at i
                 orelse isReserved Token.CloseCurlyBracket at i
               then
-                if AstAllows.recordPun allows then
+                if ParserContext.recordPun ctx then
                   (i, Ast.Exp.RecordPun {id = lab})
                 else
                   ParserUtils.error
@@ -1031,7 +1031,7 @@ struct
           val (i, exp) = consume_exp infdict Restriction.None i
           val (i, off) = parse_reserved Token.Of i
           val (i, optbar) = parse_maybeReserved Token.Bar i
-          val _ = ParserUtils.checkOptBar allows optbar
+          val _ = ParserUtils.checkOptBar ctx optbar
             "Unexpected bar on first branch of 'case'."
 
           val (i, {elems, delims}) =
@@ -1071,7 +1071,7 @@ struct
         let
           val fnn = tok (i - 1)
           val (i, optbar) = parse_maybeReserved Token.Bar i
-          val _ = ParserUtils.checkOptBar allows optbar
+          val _ = ParserUtils.checkOptBar ctx optbar
             "Unexpected bar on first branch of anonymous function."
 
           val (i, {elems, delims}) =
@@ -1153,7 +1153,7 @@ struct
         let
           val handlee = tok (i - 1)
           val (i, optbar) = parse_maybeReserved Token.Bar i
-          val _ = ParserUtils.checkOptBar allows optbar
+          val _ = ParserUtils.checkOptBar ctx optbar
             "Unexpected bar on first branch of 'handle'."
           val (i, {elems, delims}) =
             parse_oneOrMoreDelimitedByReserved

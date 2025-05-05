@@ -3,7 +3,7 @@
   * See the file LICENSE for details.
   *)
 
-structure AstAllows:
+structure ParserContext:
 sig
   type t
 

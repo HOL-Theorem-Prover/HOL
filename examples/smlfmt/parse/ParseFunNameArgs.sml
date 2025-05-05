@@ -8,7 +8,7 @@ sig
   type ('a, 'b) parser = ('a, 'b) ParserCombinators.parser
   type tokens = Token.t Seq.t
 
-  val fname_args: AstAllows.t
+  val fname_args: ParserContext.t
                   -> tokens
                   -> InfixDict.t
                   -> (int, Ast.Exp.fname_args) parser
@@ -27,7 +27,7 @@ struct
   type tokens = Token.t Seq.t
 
 
-  fun fname_args allows toks infdict i =
+  fun fname_args ctx toks infdict i =
     let
       val numToks = Seq.length toks
       fun tok i = Seq.nth toks i
@@ -46,7 +46,7 @@ struct
             not (isReserved Token.Colon i orelse isReserved Token.Equal i)
         in
           PC.zeroOrMoreWhile continue
-            (PP.pat allows toks infdict Restriction.At) i
+            (PP.pat ctx toks infdict Restriction.At) i
         end
 
 
@@ -80,13 +80,13 @@ struct
       fun infixedFun larg id i =
         let
           (* val _ = print ("infixedFun\n") *)
-          val (i, rarg) = PP.pat allows toks infdict Restriction.At i
+          val (i, rarg) = PP.pat ctx toks infdict Restriction.At i
         in
           (i, Ast.Exp.InfixedFun {larg = larg, id = id, rarg = rarg})
         end
 
 
-      val (i, firstPat) = PP.pat allows toks infdict Restriction.At i
+      val (i, firstPat) = PP.pat ctx toks infdict Restriction.At i
 
       fun err () =
         ParserUtils.error

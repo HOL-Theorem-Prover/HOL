@@ -8,7 +8,7 @@ sig
   type ('a, 'b) parser = ('a, 'b) ParserCombinators.parser
   type tokens = Token.t Seq.t
 
-  val pat: AstAllows.t
+  val pat: ParserContext.t
            -> tokens
            -> InfixDict.t
            -> ExpPatRestriction.t
@@ -61,7 +61,7 @@ struct
     end
 
 
-  fun pat allows toks infdict restriction start =
+  fun pat ctx toks infdict restriction start =
     let
       val numToks = Seq.length toks
       fun tok i = Seq.nth toks i
@@ -80,7 +80,7 @@ struct
       fun parse_ty i = PT.ty toks i
 
       fun consume_pat infdict restriction i =
-        if not (Restriction.anyOkay restriction andalso AstAllows.orPat allows) then
+        if not (Restriction.anyOkay restriction andalso ParserContext.orPat ctx) then
           consume_onePat infdict restriction i
         else
           let
@@ -173,7 +173,7 @@ struct
 
             else if
               isReserved Token.Bar i andalso Restriction.anyOkay restriction
-              andalso not (AstAllows.orPat allows)
+              andalso not (ParserContext.orPat ctx)
             then
               ParserUtils.tokError toks
                 { pos = i

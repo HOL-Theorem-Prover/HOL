@@ -3,7 +3,7 @@ fun doSML filepath =
     val fp = FilePath.fromUnixPath filepath
 
     (* Setting features for the lexer and parser *)
-    val allows = AstAllows.make
+    val ctx = ParserContext.make
       { topExp = true
       , optBar = false
       , recordPun = false
@@ -26,12 +26,12 @@ fun doSML filepath =
     val _ = print ("load source: " ^ Time.fmt 3 tm ^ "s\n")
 
     val (allTokens, tm) = Util.getTime (fn _ =>
-      Lexer.tokens allows source
+      Lexer.tokens ctx source
       handle exn => handleError exn)
     val _ = print ("lex: " ^ Time.fmt 3 tm ^ "s\n")
 
     val (result, tm) = Util.getTime (fn _ =>
-      Parser.parse allows allTokens
+      Parser.parse ctx allTokens
       handle exn => handleError exn)
     val _ = print ("parse: " ^ Time.fmt 3 tm ^ "s\n")
   in () end
