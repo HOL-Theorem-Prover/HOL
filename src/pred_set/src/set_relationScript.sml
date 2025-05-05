@@ -1,6 +1,7 @@
-open HolKernel boolLib BasicProvers simpLib numLib metisLib markerLib
-open pred_setTheory pred_setSimps pairTheory arithmeticTheory
-open optionTheory relationTheory;
+open HolKernel boolLib BasicProvers;
+
+open simpLib numLib metisLib markerLib pred_setTheory pred_setSimps pairTheory
+     arithmeticTheory optionTheory relationTheory hurdUtils TotalDefn;
 
 val _ = new_theory "set_relation";
 
@@ -12,6 +13,8 @@ in
     OpenTheory_const_name{const={Thy="set_relation",Name=x},name=(ns,y)}
   fun ot x = ot0 x x
 end
+
+fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
 
 (* ------------------------------------------------------------------------ *)
 (*  Basic concepts                                                          *)
@@ -787,6 +790,123 @@ Theorem linear_order_dom_rng:
 Proof
   SRW_TAC [] [linear_order_def, domain_def, range_def, SUBSET_DEF]
   THEN METIS_TAC []
+QED
+
+(* ------------------------------------------------------------------------ *)
+(* Symmetric closure (sc)                                                   *)
+(* ------------------------------------------------------------------------ *)
+
+Definition symmetric_def :
+    symmetric r s <=> !x y. x IN s /\ y IN s ==> ((x,y) IN r <=> (y,x) IN r)
+End
+
+Theorem symmetric_union :
+    !r1 r2 s. symmetric r1 s /\ symmetric r2 s ==> symmetric (r1 UNION r2) s
+Proof
+    SRW_TAC [][symmetric_def]
+QED
+
+Theorem irreflexive_union :
+    !r1 r2 s. irreflexive r1 s /\ irreflexive r2 s ==> irreflexive (r1 UNION r2) s
+Proof
+    SRW_TAC [][irreflexive_def]
+QED
+
+Inductive sc :
+    (!x y. r (x,y) ==> sc r (x,y)) /\
+    (!x y. sc r (x,y) ==> sc r (y,x))
+End
+
+Theorem sc_rules[allow_rebind] :
+    !r. (!x y. (x,y) IN r ==> (x,y) IN sc r) /\
+         !x y. (x,y) IN sc r ==> (y,x) IN sc r
+Proof
+    simp [IN_APP]
+ >> METIS_TAC [sc_rules]
+QED
+
+Theorem sc_cases[allow_rebind] :
+    !r a0. a0 IN sc r <=> (?x y. a0 = (x,y) /\ (x,y) IN r) \/
+                        ?x y. a0 = (y,x) /\ (x,y) IN sc r
+Proof
+    simp [IN_APP]
+ >> METIS_TAC [sc_cases]
+QED
+
+Theorem sc_ind[allow_rebind] :
+    !P r.
+        (!x y. (x,y) IN r ==> P (x,y)) /\ (!x y. P (x,y) ==> P (y,x)) ==>
+        !x. x IN sc r ==> P x
+Proof
+    simp [IN_APP]
+ >> METIS_TAC [sc_ind]
+QED
+
+Theorem sc_swap :
+    !x y r. (x,y) IN sc r <=> (y,x) IN sc r
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC >> STRIP_TAC
+ >> MATCH_MP_TAC (cj 2 sc_rules) >> art []
+QED
+
+Theorem sc_symmetric[simp] :
+    symmetric (sc r) s
+Proof
+    SRW_TAC [][symmetric_def, Once sc_swap]
+QED
+
+Theorem sc_irreflexive_lemma[local] :
+    !x r. (x,x) NOTIN r ==> (x,x) NOTIN sc r
+Proof
+    rpt GEN_TAC
+ >> simp [Once MONO_NOT_EQ]
+ >> Suff ‘!z. z IN sc r ==> FST z = SND z ==> z IN r’ >- SRW_TAC [][]
+ >> HO_MATCH_MP_TAC sc_ind >> SRW_TAC [][]
+QED
+
+Theorem sc_irreflexive :
+    !r s. irreflexive r s ==> irreflexive (sc r) s
+Proof
+    SRW_TAC [][irreflexive_def]
+ >> MATCH_MP_TAC sc_irreflexive_lemma
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Theorem sc_empty[simp] :
+    sc {} = {}
+Proof
+    SRW_TAC [][Once EXTENSION]
+ >> Suff ‘!x. x IN sc {} ==> F’ >- SRW_TAC [][]
+ >> HO_MATCH_MP_TAC sc_ind
+ >> SRW_TAC [][]
+QED
+
+Theorem sc_def :
+    !r. sc r = {(x,y) | (x,y) IN r \/ (y,x) IN r}
+Proof
+    SRW_TAC [][Once EXTENSION]
+ >> reverse EQ_TAC
+ >- (SRW_TAC [][] >- (MATCH_MP_TAC (cj 1 sc_rules) >> art []) \\
+     SRW_TAC [][Once sc_swap] \\
+     MATCH_MP_TAC (cj 1 sc_rules) >> art [])
+ >> Q.ID_SPEC_TAC ‘x’
+ >> HO_MATCH_MP_TAC sc_ind >> NTAC 2 (SRW_TAC [][])
+QED
+
+Theorem finite_sc :
+    !r. FINITE r ==> FINITE (sc r)
+Proof
+    SRW_TAC [][sc_def]
+ >> Q.MATCH_ABBREV_TAC ‘FINITE s’
+ >> Know ‘s = r UNION (IMAGE (\z. (SND z,FST z)) r)’
+ >- (SRW_TAC [][Once EXTENSION, Abbr ‘s’] \\
+     Cases_on ‘x’ >> EQ_TAC >> NTAC 2 (SRW_TAC [][]) \\
+     DISJ2_TAC \\
+     Q.RENAME_TAC [‘(x,y) IN r’] \\
+     Q.EXISTS_TAC ‘(x,y)’ >> SRW_TAC [][])
+ >> Rewr'
+ >> SRW_TAC [][FINITE_UNION]
 QED
 
 (* ------------------------------------------------------------------------ *)
@@ -1980,8 +2100,6 @@ Proof
   FULL_SIMP_TAC (srw_ss()) [tc_rules] >> rpt var_eq_tac>>
   METIS_TAC[transitive_def]
 QED
-
-fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
 
 Theorem StrongOrder_extends_to_StrongLinearOrder:
   !R1: 'a -> 'a -> bool.

@@ -5,7 +5,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory
-     prim_recTheory jrhUtils hrealTheory mesonLib tautLib;
+     normalizerTheory prim_recTheory jrhUtils hrealTheory mesonLib tautLib;
 
 val _ = new_theory "realax";
 val _ = ParseExtras.temp_loose_equality()
@@ -788,7 +788,7 @@ val REAL_POW_2 = store_thm("REAL_POW_2",
   REWRITE_TAC[real_pow, REAL_MUL_RID]);
 
 (* This actually shows that real numbers and (+,*,0,1) form a semi-ring *)
-Theorem REAL_POLY_CLAUSES :
+Triviality REAL_POLY_CLAUSES :
    (!x y z. x + (y + z) = (x + y) + z) /\
    (!x y. x + y = y + x) /\
    (!x. 0r + x = x) /\
@@ -804,6 +804,7 @@ Proof
   REWRITE_TAC[REAL_MUL_ASSOC, REAL_ADD_ASSOC, REAL_ADD_LID, REAL_MUL_LID] THEN
   REWRITE_TAC[Once REAL_ADD_AC] THEN REWRITE_TAC[Once REAL_MUL_SYM]
 QED
+Theorem REAL_POLY_CLAUSES = MATCH_MP SEMIRING_PTHS REAL_POLY_CLAUSES;
 
 Theorem REAL_POLY_NEG_CLAUSES :
    (!x. ~x = ~(1r) * x) /\
@@ -854,11 +855,11 @@ Proof
  >> ARITH_TAC
 QED
 
-Theorem REAL_INT_LE_CONV_tth = TAUT_PROVE
+Theorem REAL_INT_LE_CONV_tth[unlisted] = TAUT_PROVE
   “(F /\ F = F) /\ (F /\ T = F) /\ (T /\ F = F) /\ (T /\ T = T)”;
-Theorem REAL_INT_LE_CONV_nth = TAUT_PROVE “(~T = F) /\ (~F = T)”;
+Theorem REAL_INT_LE_CONV_nth[unlisted] = TAUT_PROVE “(~T = F) /\ (~F = T)”;
 
-Theorem REAL_INT_LE_CONV_pth:
+Theorem REAL_INT_LE_CONV_pth[unlisted]:
   (~(&m) <= &n = T) /\
   (&m <= (&n : real) = m <= n) /\
   (~(&m) <= ~(&n) = n <= m) /\
@@ -870,7 +871,7 @@ Proof
   >> REWRITE_TAC[LE, ADD_EQ_0]
 QED
 
-Theorem REAL_INT_LT_CONV_pth:
+Theorem REAL_INT_LT_CONV_pth[unlisted]:
   (&m < ~(&n) = F) /\
   (&m < (&n :real) = m < n) /\
   (~(&m) < ~(&n) = n < m) /\
@@ -880,7 +881,7 @@ Proof
   >> CONV_TAC tautLib.TAUT_CONV
 QED
 
-Theorem REAL_INT_GE_CONV_pth:
+Theorem REAL_INT_GE_CONV_pth[unlisted]:
   (&m >= ~(&n) = T) /\
   (&m >= (&n :real) = n <= m) /\
   (~(&m) >= ~(&n) = m <= n) /\
@@ -890,7 +891,7 @@ Proof
   >> CONV_TAC tautLib.TAUT_CONV
 QED
 
-Theorem REAL_INT_GT_CONV_pth:
+Theorem REAL_INT_GT_CONV_pth[unlisted]:
   (~(&m) > &n = F) /\
   (&m > (&n :real) = n < m) /\
   (~(&m) > ~(&n) = m < n) /\
@@ -900,7 +901,7 @@ Proof
   >> CONV_TAC tautLib.TAUT_CONV
 QED
 
-Theorem REAL_INT_EQ_CONV_pth:
+Theorem REAL_INT_EQ_CONV_pth[unlisted]:
   ((&m = (&n :real)) = (m = n)) /\
   ((~(&m) = ~(&n)) = (m = n)) /\
   ((~(&m) = &n) = (m = 0) /\ (n = 0)) /\
@@ -911,13 +912,13 @@ Proof
   \\ CONV_TAC tautLib.TAUT_CONV
 QED
 
-Theorem REAL_INT_NEG_CONV_pth:
+Theorem REAL_INT_NEG_CONV_pth[unlisted]:
   (~(&0) = &0) /\ (~(~(&x)) = &x)
 Proof
   REWRITE_TAC[REAL_NEG_NEG, REAL_NEG_0]
 QED
 
-Theorem REAL_INT_MUL_CONV_pth0:
+Theorem REAL_INT_MUL_CONV_pth0[unlisted]:
   (&0 * (&x :real) = &0) /\
   (&0 * ~(&x) = &0) /\
   ((&x :real) * &0 = &0) /\
@@ -926,7 +927,7 @@ Proof
   REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO]
 QED
 
-Theorem REAL_INT_MUL_CONV_pth1:
+Theorem REAL_INT_MUL_CONV_pth1[unlisted]:
   ((&m * &n = &(m * n) :real) /\ (~(&m) * ~(&n) = &(m * n) :real)) /\
   ((~(&m) * &n = ~(&(m * n) :real)) /\ (&m * ~(&n) = ~(&(m * n) :real)))
 Proof
@@ -934,16 +935,16 @@ Proof
   >> REWRITE_TAC[REAL_OF_NUM_MUL]
 QED
 
-Theorem REAL_PROD_NORM_CONV_pth1 = SYM(SPEC ``x:real`` REAL_MUL_RID)
-Theorem REAL_PROD_NORM_CONV_pth2 = SYM(SPEC ``x:real`` REAL_MUL_LID)
+Theorem REAL_PROD_NORM_CONV_pth1[unlisted] = SYM(SPEC ``x:real`` REAL_MUL_RID)
+Theorem REAL_PROD_NORM_CONV_pth2[unlisted] = SYM(SPEC ``x:real`` REAL_MUL_LID)
 
-Theorem REAL_INT_ADD_CONV_pth0:
+Theorem REAL_INT_ADD_CONV_pth0[unlisted]:
   (~(&m) + &m = &0) /\ (&m + ~(&m) = &0)
 Proof
   REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_RINV]
 QED
 
-Theorem REAL_INT_ADD_CONV_pth1:
+Theorem REAL_INT_ADD_CONV_pth1[unlisted]:
   (~(&m) + ~(&n :real) = ~(&(m + n))) /\
   (~(&m) + &(m + n) = &n) /\
   (~(&(m + n)) + &m = ~(&n)) /\
@@ -959,19 +960,19 @@ Proof
   REWRITE_TAC[REAL_ADD_RINV, REAL_ADD_LID]
 QED
 
-Theorem LINEAR_ADD_pth0a:
+Theorem LINEAR_ADD_pth0a[unlisted]:
   &0 + x = x :real
 Proof
   REWRITE_TAC[REAL_ADD_LID]
 QED
 
-Theorem LINEAR_ADD_pth0b:
+Theorem LINEAR_ADD_pth0b[unlisted]:
   x + &0 = x :real
 Proof
   REWRITE_TAC[REAL_ADD_RID]
 QED
 
-Theorem LINEAR_ADD_pth1:
+Theorem LINEAR_ADD_pth1[unlisted]:
   ((l1 + r1) + (l2 + r2) = (l1 + l2) + (r1 + r2):real) /\
   ((l1 + r1) + tm2 = l1 + (r1 + tm2):real) /\
   (tm1 + (l2 + r2) = l2 + (tm1 + r2)) /\
@@ -993,19 +994,19 @@ Proof
     THEN MATCH_ACCEPT_TAC REAL_ADD_SYM]
 QED
 
-Theorem REAL_SUM_NORM_CONV_pth1:
+Theorem REAL_SUM_NORM_CONV_pth1[unlisted]:
   ~x = ~(&1) * x
 Proof
   REWRITE_TAC[REAL_MUL_LNEG, REAL_MUL_LID]
 QED
 
-Theorem REAL_SUM_NORM_CONV_pth2:
+Theorem REAL_SUM_NORM_CONV_pth2[unlisted]:
   x - y:real = x + ~(&1) * y
 Proof
   REWRITE_TAC[real_sub, GSYM REAL_SUM_NORM_CONV_pth1]
 QED
 
-Theorem REAL_NEGATE_CANON_pth1:
+Theorem REAL_NEGATE_CANON_pth1[unlisted]:
   ((a:real <= b = &0 <= X) = (b < a = &0 < ~X)) /\
   ((a:real < b = &0 < X) = (b <= a = &0 <= ~X))
 Proof
@@ -1014,69 +1015,69 @@ Proof
   CONV_TAC tautLib.TAUT_CONV
 QED
 
-Theorem REAL_NEGATE_CANON_pth2:
+Theorem REAL_NEGATE_CANON_pth2[unlisted]:
   ~((~a) * x + z :real) = a * x + ~z
 Proof
   REWRITE_TAC[GSYM REAL_MUL_LNEG, REAL_NEG_ADD, REAL_NEG_NEG]
 QED
 
-Theorem REAL_NEGATE_CANON_pth3:
+Theorem REAL_NEGATE_CANON_pth3[unlisted]:
   ~(a * x + z :real) = ~a * x + ~z
 Proof
   REWRITE_TAC[REAL_NEG_ADD, GSYM REAL_MUL_LNEG]
 QED
 
-Theorem REAL_NEGATE_CANON_pth4:
+Theorem REAL_NEGATE_CANON_pth4[unlisted]:
   ~(~a * x :real) = a * x
 Proof
   REWRITE_TAC[REAL_MUL_LNEG, REAL_NEG_NEG]
 QED
 
-Theorem REAL_NEGATE_CANON_pth5:
+Theorem REAL_NEGATE_CANON_pth5[unlisted]:
   ~(a * x :real) = ~a * x
 Proof
   REWRITE_TAC[REAL_MUL_LNEG]
 QED
 
-Theorem REAL_ATOM_NORM_CONV_pth2:
+Theorem REAL_ATOM_NORM_CONV_pth2[unlisted]:
   (a:real < b = c < d:real) = (b <= a = d <= c)
 Proof
   REWRITE_TAC[real_lt] THEN CONV_TAC tautLib.TAUT_CONV
 QED
 
-Theorem REAL_ATOM_NORM_CONV_pth3:
+Theorem REAL_ATOM_NORM_CONV_pth3[unlisted]:
   (a:real <= b = c <= d:real) = (b < a = d < c)
 Proof
   REWRITE_TAC[real_lt] THEN CONV_TAC tautLib.TAUT_CONV
 QED
 
-Theorem REAL_INT_POW_CONV_pth1:
+Theorem REAL_INT_POW_CONV_pth1[unlisted]:
   (&x pow n = &(x EXP n)) /\
      ((~(&x)) pow n = if EVEN n then &(x EXP n) else ~(&(x EXP n)))
 Proof
   REWRITE_TAC[REAL_OF_NUM_POW, REAL_POW_NEG]
 QED
 
-Theorem REAL_INT_POW_CONV_tth:
+Theorem REAL_INT_POW_CONV_tth[unlisted]:
   ((if T then x:real else y) = x) /\ ((if F then x:real else y) = y)
 Proof
   REWRITE_TAC[]
 QED
 
-Theorem REAL_INT_ABS_CONV_pth:
+Theorem REAL_INT_ABS_CONV_pth[unlisted]:
   (abs(~(&x)) = &x) /\
   (abs(&x) = &x)
 Proof
   REWRITE_TAC[REAL_ABS_NEG, REAL_ABS_NUM]
 QED
 
-Theorem LINEAR_MULT_pth:
+Theorem LINEAR_MULT_pth[unlisted]:
   x * &0 = &0 :real
 Proof
   REWRITE_TAC[REAL_MUL_RZERO]
 QED
 
-Theorem ADD_INEQS_pth:
+Theorem ADD_INEQS_pth[unlisted]:
   ((&0 = a) /\ (&0 = b) ==> (&0 = a + b :real)) /\
   ((&0 = a) /\ (&0 <= b) ==> (&0 <= a + b :real)) /\
   ((&0 = a) /\ (&0 < b) ==> (&0 < a + b :real)) /\
@@ -1100,7 +1101,7 @@ Proof
   THEN ASM_REWRITE_TAC[]
 QED
 
-Theorem MULTIPLY_INEQS_pth:
+Theorem MULTIPLY_INEQS_pth[unlisted]:
   ((&0 = y) ==> (&0 = x * y :real)) /\
   (&0 <= y ==> &0 <= x ==> &0 <= x * y :real) /\
   (&0 < y ==> &0 < x ==> &0 < x * y :real)
@@ -1112,13 +1113,13 @@ Proof
   ASM_REWRITE_TAC[]
 QED
 
-Theorem REAL_SIMPLE_ARITH_REFUTER_trivthm:
+Theorem REAL_SIMPLE_ARITH_REFUTER_trivthm[unlisted]:
   &0 < &0 :real = F
 Proof
   REWRITE_TAC[REAL_LE_REFL, real_lt]
 QED
 
-Theorem ZERO_LEFT_CONV_pth:
+Theorem ZERO_LEFT_CONV_pth[unlisted]:
   ((x = y) = (&0 = y + ~x)) /\
   (x <= y = &0 <= y + ~x) /\
   (x < y = &0 < y + ~x)
@@ -1129,7 +1130,7 @@ Proof
               GSYM REAL_LE_RNEG, REAL_LE_NEG2, REAL_NEG_NEG]
 QED
 
-Theorem ABS_ELIM_THM:
+Theorem ABS_ELIM_THM[unlisted]:
   (&0 <= ~(abs(x)) + y = &0 <= x + y /\ &0 <= ~x + y) /\
   (&0 < ~(abs(x)) + y = &0 < x + y /\ &0 < ~x + y)
 Proof
@@ -1154,14 +1155,14 @@ Proof
   THEN ASM_REWRITE_TAC[]
 QED
 
-Theorem ABS_CASES_THM:
+Theorem ABS_CASES_THM[unlisted]:
   (abs(x) = x) \/ (abs(x) = ~x)
 Proof
   REWRITE_TAC[real_abs] THEN COND_CASES_TAC
   THEN REWRITE_TAC[]
 QED
 
-Theorem ABS_STRONG_CASES_THM:
+Theorem ABS_STRONG_CASES_THM[unlisted]:
   &0 <= x /\ (abs(x) = x) \/ (&0 <= ~x) /\ (abs(x) = ~x)
 Proof
   REWRITE_TAC[real_abs] THEN COND_CASES_TAC
@@ -1171,7 +1172,7 @@ Proof
   THEN ASM_REWRITE_TAC[]
 QED
 
-Theorem atom_CONV_pth:
+Theorem atom_CONV_pth[unlisted]:
   (~(x:real <= y) = y < x) /\
   (~(x:real < y) = y <= x) /\
   (~(x = y) = (x:real) < y \/ y < x)
@@ -1181,12 +1182,12 @@ Proof
   MATCH_ACCEPT_TAC EQ_SYM_EQ
 QED
 
-Theorem REAL_LINEAR_PROVER_pth = (* |- &n >= 0 *)
+Theorem REAL_LINEAR_PROVER_pth[unlisted] = (* |- &n >= 0 *)
   REWRITE_RULE [GSYM real_ge] (SPEC “n:num” REAL_POS);
-Theorem REAL_LINEAR_PROVER_pth' = (* |- &SUC n > 0 *)
+Theorem REAL_LINEAR_PROVER_pth'[unlisted] = (* |- &SUC n > 0 *)
   REWRITE_RULE [GSYM real_gt] (SPEC “n:num” REAL_POS_LT);
 
-Theorem GEN_REAL_ARITH0_pth_init:
+Theorem GEN_REAL_ARITH0_pth_init[unlisted]:
   (x < y <=> y - x > &0) /\
   (x <= y <=> y - x >= &0) /\
   (x > y <=> x - y > &0) /\
@@ -1205,8 +1206,8 @@ Proof
   drule_all $ iffLR REAL_LE_ANTISYM >> ASM_SIMP_TAC bool_ss []
 QED
 
-Theorem GEN_REAL_ARITH0_pth_final = tautLib.TAUT `(~p ==> F) ==> p`;
-Theorem GEN_REAL_ARITH0_pth_add:
+Theorem GEN_REAL_ARITH0_pth_final[unlisted] = tautLib.TAUT `(~p ==> F) ==> p`;
+Theorem GEN_REAL_ARITH0_pth_add[unlisted]:
   ((x = &0) /\ (y = &0) ==> (x + y = &0 :real)) /\
   ((x = &0) /\ y >= &0 ==> x + y >= &0) /\
   ((x = &0) /\ y > &0 ==> x + y > &0) /\
@@ -1223,7 +1224,7 @@ Proof
   RW_TAC bool_ss [REAL_LT_ADD, REAL_ADD_RID, REAL_ADD_LID]
 QED
 
-Theorem GEN_REAL_ARITH0_pth_mul:
+Theorem GEN_REAL_ARITH0_pth_mul[unlisted]:
   ((x = &0) /\ (y = &0) ==> (x * y = &0 :real)) /\
   ((x = &0) /\ y >= &0 ==> (x * y = &0)) /\
   ((x = &0) /\ y > &0 ==> (x * y = &0)) /\
@@ -1238,33 +1239,33 @@ Proof
   SIMP_TAC arith_ss [REAL_LT_LE, REAL_LE_MUL, REAL_ENTIRE]
 QED
 
-Theorem GEN_REAL_ARITH0_pth_emul:
+Theorem GEN_REAL_ARITH0_pth_emul[unlisted]:
   (y = &0) ==> !x. x * y = &0 :real
 Proof
   SIMP_TAC arith_ss [REAL_MUL_RZERO]
 QED
 
-Theorem GEN_REAL_ARITH0_pth_square:
+Theorem GEN_REAL_ARITH0_pth_square[unlisted]:
   !x. x * x >= &0 :real
 Proof
   REWRITE_TAC[real_ge, REAL_POW_2, REAL_LE_SQUARE]
 QED
 
-Theorem ABSMAXMIN_ELIM_CONV2_pth_abs:
+Theorem ABSMAXMIN_ELIM_CONV2_pth_abs[unlisted]:
   P(abs x) <=> (x >= &0 /\ P x) \/ (&0 > x /\ P (~x))
 Proof
   REWRITE_TAC[real_abs, real_gt, real_ge] THEN COND_CASES_TAC THEN
   ASM_REWRITE_TAC[real_lt]
 QED
 
-Theorem ABSMAXMIN_ELIM_CONV2_pth_max:
+Theorem ABSMAXMIN_ELIM_CONV2_pth_max[unlisted]:
   P(max x y) <=> (y >= x /\ P y) \/ (x > y /\ P x)
 Proof
   REWRITE_TAC[real_max, real_gt, real_ge] THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[real_lt]
 QED
 
-Theorem ABSMAXMIN_ELIM_CONV2_pth_min:
+Theorem ABSMAXMIN_ELIM_CONV2_pth_min[unlisted]:
   P(min x y) <=> (y >= x /\ P x) \/ (x > y /\ P y)
 Proof
   REWRITE_TAC[real_min, real_gt, real_ge] THEN

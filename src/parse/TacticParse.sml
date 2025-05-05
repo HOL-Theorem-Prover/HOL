@@ -173,7 +173,7 @@ fun parseSMLSimple body = let
     | _ => lhs
   and tail2 prec rhs =
     case peekInfix () of
-      (start, SOME (_, prec', rassoc)) =>
+      (_, SOME (_, prec', rassoc)) =>
       if prec' + (if rassoc then 1 else 0) > prec then
         tail2 prec (tail (prec + (if prec' > prec then 1 else 0)) rhs)
       else rhs
@@ -203,6 +203,7 @@ datatype 'a tac_expr
   | LTacsToLT of 'a tac_expr
   | LNullOk of 'a tac_expr
   | LFirst of 'a tac_expr list
+  | LFirstLT of 'a tac_expr
   | LSelectGoal of 'a
   | LSelectGoals of 'a
   | LAllGoals of 'a tac_expr
@@ -379,10 +380,9 @@ val parseTacticBlock: string -> (int * int) tac_expr = let
     group true (tr e) (LSplit (tr n, grouped true simplifyLT lhs, grouped true simplifyLT rhs)) :: acc
   | AppE [(_, _, IdentE "TRY_LT"), rhs] => group true (tr e) (LTry (simplifyLT rhs)) :: acc
   | AppE [(_, _, IdentE "REPEAT_LT"), rhs] => group true (tr e) (LRepeat (simplifyLT rhs)) :: acc
+  | AppE [(_, _, IdentE "FIRST_LT"), rhs] => group true (tr e) (LFirstLT (simplify rhs)) :: acc
   | AppE [(_, _, IdentE "EVERY_LT"), (_, _, ListE (args, _))] =>
     foldr (uncurry simplifysLT) acc args
-  | AppE [(_, _, IdentE "FIRST_LT"), (_, _, ListE (args, _))] =>
-    group true (tr e) (LFirst (foldr (uncurry simplifyLFirst) [] args)) :: acc
   | AppE [(_, _, IdentE "SELECT_LT_THEN"), lhs, rhs] =>
     group true (tr e) (LSelectThen (grouped true simplify lhs, grouped true simplify rhs)) :: acc
   | AppE [(_, _, IdentE "SELECT_LT"), lhs] =>
@@ -430,6 +430,7 @@ fun mapTacExpr {start, stop, repair} = let
     | go LReverse = LReverse
     | go (LTry e) = LTry (go e)
     | go (LRepeat e) = LRepeat (go e)
+    | go (LFirstLT e) = LFirstLT (go e)
     | go (LSelectThen (e1, e2)) = LSelectThen (go e1, go e2)
     | go (List (p, ls)) = List (trF false p (fn () => map go ls))
     | go (LOpaque (prec, p)) = LOpaque (prec, tr true p)
@@ -442,8 +443,7 @@ fun mapTacExpr {start, stop, repair} = let
     | go (OOpaque (prec, p)) = OOpaque (prec, tr false p)
   in go end
 
-fun printTacsAsE s [] = ""
-  | printTacsAsE s (l::ls) = let
+fun printTacsAsE s ls = let
   datatype tree
     = TAtom of string
     | TOpaque of int * string
@@ -454,7 +454,7 @@ fun printTacsAsE s [] = ""
   val mkTree = let
     fun sub (start, stop) = String.concat [
       String.substring (s, start, stop-start)]
-    fun mkInfixl s acc [] = Option.valOf acc
+    fun mkInfixl _ acc [] = Option.valOf acc
       | mkInfixl s NONE (a::l) = mkInfixl s (SOME a) l
       | mkInfixl s (SOME t) (a::l) = mkInfixl s (SOME (TInfix (t, s, a))) l
     val mkInfixl = fn s => mkInfixl s NONE
@@ -488,8 +488,9 @@ fun printTacsAsE s [] = ""
       | go LReverse = TAtom "REVERSE_LT"
       | go (LTry e) = TApp ("TRY_LT", [go e])
       | go (LRepeat e) = TApp ("REPEAT_LT", [go e])
+      | go (LFirstLT e) = TApp ("FIRST_LT", [go e])
       | go (LSelectThen (e1, e2)) = TApp ("SELECT_LT_THEN", [go e1, go e2])
-      | go (List (p, ls)) = TList (map go ls)
+      | go (List (_, ls)) = TList (map go ls)
       | go (Group (_, _, e)) = go e
       | go (RepairGroup (_, _, e, _)) = go e
       | go (Opaque (prec, p)) = TOpaque (prec, sub p)
@@ -537,7 +538,7 @@ fun printTacsAsE s [] = ""
     (print "("; indent := !indent + 1; f (); indent := !indent - 1; print ")")
   else f ()
   val getPrec = fn "by" => 8 | "suffices_by" => 8 | _ => 0
-  fun printTree prec (TAtom s) = print s
+  fun printTree _ (TAtom s) = print s
     | printTree prec (TOpaque (p, s)) = parenIf (p < prec) (fn () => print s)
     | printTree prec (TInfix (e1, s, e2)) = let
       val p = getPrec s
@@ -547,27 +548,21 @@ fun printTacsAsE s [] = ""
     | printTree prec (TApp (s, args)) =
       parenIf (9 < prec) (fn () => (
         print s; app (fn e => (print " "; printTree 10 e)) args))
-    | printTree prec (TList []) = print "[]"
-    | printTree prec (TList (a::l)) = (
+    | printTree _ (TList []) = print "[]"
+    | printTree _ (TList (a::l)) = (
       print "["; printTree 0 a;
       app (fn e => (print ", "; printTree 0 e)) l; print "]")
-    | printTree prec (TTuple []) = print "()"
-    | printTree prec (TTuple (a::l)) = (
+    | printTree _ (TTuple []) = print "()"
+    | printTree _ (TTuple (a::l)) = (
       print "("; printTree 0 a;
       app (fn e => (print ", "; printTree 0 e)) l; print ")")
   fun goL l = case optTree $ mkTree l of
       TAtom "ALL_TAC" => NONE
     | t => SOME t
-  fun goLL l [] = (
-      case goL l of
-        SOME t => (print "e("; printTree 0 t; print ");\n")
-      | NONE => ())
-    | goLL l (l'::ls) = (
-      case goL l of
-        SOME t => (print "val _ = e("; printTree 0 t; print ");\n")
-      | NONE => ();
-      goLL l' ls)
-  in goLL l ls; concat $ rev (!r) end
+  fun goT [] = ()
+    | goT [t] = (print "e("; printTree 0 t; print ");\n")
+    | goT (t::ts) = (print "val _ = e("; printTree 0 t; print ");\n"; goT ts)
+  in goT (List.mapPartial goL ls); concat $ rev (!r) end
 
 datatype tac_frag_open
   = FOpen
@@ -581,6 +576,7 @@ datatype tac_frag_open
   | FOpenHeadGoal
   | FOpenSplit of int * int
   | FOpenSelect
+  | FOpenFirstLT
 
 datatype tac_frag_mid
   = FNextFirst
@@ -592,6 +588,7 @@ datatype tac_frag_close
   = FClose
   | FCloseFirst
   | FCloseRepeat
+  | FCloseFirstLT
 
 datatype tac_frag
   = FFOpen of tac_frag_open
@@ -630,7 +627,7 @@ fun linearize isAtom e = let
     | LThen (e, ls) => goList ls $ go e acc
     | LThen1 e => span e (bracket (fn _ => go e (true, [])) FOpenThen1) acc
     | LTacsToLT (List (p, e::ls)) =>
-      group p (mbracket FClose FNextTacsToLT FOpenTacsToLT (fn one =>
+      group p (mbracket FClose FNextTacsToLT FOpenTacsToLT (fn _ =>
         map (fn e => snd (go e (true, []))) (e::ls))) acc
     | LNullOk e => bracket (fn one => go e (one, [])) FOpenNullOk acc
     | LFirst [] => (true, FAtom (LFirst []) :: acc')
@@ -647,6 +644,7 @@ fun linearize isAtom e = let
     | LReverse => (one, FAtom LReverse :: acc')
     | LTry e => bracket (fn one => go e (one, [])) FOpenFirst acc
     | LRepeat e => bracket (fn one => go e (one, [])) FOpenRepeat acc
+    | LFirstLT e => bracket2 FCloseFirstLT (fn one => go e (one, [])) FOpenFirstLT acc
     | LSelectThen (e1, e2) =>
       mbracket FClose FNextSelect FOpenSelect (fn _ =>
         map (fn f => snd (f (false, []))) [
@@ -671,8 +669,8 @@ fun linearize isAtom e = let
 val unlinearize = let
   fun go [] acc = acc
     | go (FFOpen e :: l) (stk, acc) = go l ((e, acc) :: stk, [])
-    | go (FFMid e :: l) acc = raise Bind
-    | go (FFClose e :: l) acc = raise Bind
+    | go (FFMid _ :: _) _ = raise Bind
+    | go (FFClose _ :: _) _ = raise Bind
     | go (FAtom a :: l) (s, acc) = go l (s, a :: acc)
     | go (FGroup (_, e) :: l) acc = go l (go e acc)
     | go (FBracket (_, _, _, a) :: l) (stk, acc) = go l (stk, a :: acc)
@@ -700,6 +698,7 @@ val unlinearize = let
     | mkOpen FOpenHeadGoal acc = LHeadGoal (mkThen acc [])
     | mkOpen (FOpenSplit n) acc = LSplit (n, mkLThenL acc [], LThenLT [])
     | mkOpen FOpenSelect acc = LAllGoals $ Try (mkThen acc [])
+    | mkOpen FOpenFirstLT acc = LAllGoals $ Try (mkThen acc [])
   fun finish ([], acc) = mkThen (rev acc) []
     | finish ((e, acc') :: stk, acc) =
       finish (stk, mkOpen e (rev acc) :: acc')
@@ -727,13 +726,13 @@ fun sliceTacticBlock start stop sliceClose sp e = let
       end
   and separateE sp ls f = (fn (ll, l) => (rev l::ll, [])) o f o slice sp ls
   and join sp ls f = f o slice sp ls
-  and slice1 sp (true, true) a acc = cons a acc
+  and slice1 _ (true, true) a acc = cons a acc
     | slice1 _ _ (FGroup (sp as (l, r), ls)) acc =
       if stop <= l orelse r <= start then acc else slice sp ls acc
     | slice1 sp (true, false) (FBracket (start, ls, _, _)) acc =
       slice sp ls $ cons (FFOpen start) acc
     | slice1 sp (false, false) (FBracket (_, ls, _, _)) acc = slice sp ls acc
-    | slice1 sp (false, true) (FBracket (e as (start, ls, stop, a))) acc =
+    | slice1 sp (false, true) (FBracket (start, ls, stop, a)) acc =
       if sliceClose then cons (FFClose stop) $ slice sp ls acc else
         (case start of
           FOpen => separateE sp ls I acc
@@ -743,7 +742,7 @@ fun sliceTacticBlock start stop sliceClose sp e = let
         | FOpenLastGoal => join sp ls I acc
         | FOpenHeadGoal => join sp ls I acc
         | _ => cons (FAtom a) acc)
-    | slice1 sp (inclStart, inclStop) (e as FMBracket (opn, mid, cls, ls, a)) acc =
+    | slice1 sp (inclStart, inclStop) (e as FMBracket (opn, mid, cls, ls, _)) acc =
       if sliceClose then let
         fun go [] acc = if inclStop then cons (FFClose cls) acc else acc
           | go (a::ls) acc = let
@@ -768,7 +767,7 @@ fun sliceTacticBlock start stop sliceClose sp e = let
         NONE => cons e acc
         | SOME (sp, a) => slice sp a acc
         in acc end
-    | slice1 sp _ a acc = cons a acc
+    | slice1 _ _ a acc = cons a acc
   val (ll, l) = slice sp (linearize isAtom e) ([], [])
   in rev (rev l :: ll) end
 

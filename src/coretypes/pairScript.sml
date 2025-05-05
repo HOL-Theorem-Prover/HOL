@@ -194,6 +194,12 @@ Proof
   REWRITE_TAC [UNCURRY,FST,SND]
 QED
 
+Theorem UNCURRY_CONST[simp]:
+    (UNCURRY (\x1 x2. y) x) = y
+Proof
+  REWRITE_TAC[UNCURRY]
+QED
+
 Theorem IN_UNCURRY_R[simp]:
   (x,y) IN UNCURRY R <=> R x y
 Proof

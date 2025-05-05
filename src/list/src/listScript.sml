@@ -19,8 +19,8 @@
 open HolKernel Parse boolLib BasicProvers;
 
 open Num_conv mesonLib arithmeticTheory
-     simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
-     relationTheory combinTheory quotientLib
+     simpLib boolSimps pairTheory pred_setTheory pred_setLib
+     TotalDefn metisLib relationTheory combinTheory quotientLib
 
 local open pairTheory pred_setTheory Datatype OpenTheoryMap
 in end;
@@ -180,7 +180,7 @@ Definition MAP[simp]:
   MAP f (h::t) = f h::MAP f t
 End
 
-Definition LIST_TO_SET_DEF[simp]:
+Definition LIST_TO_SET_DEF:
   (LIST_TO_SET [] x <=> F) /\
   (LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
 End
@@ -199,7 +199,7 @@ Theorem LIST_TO_SET[simp]:
   LIST_TO_SET [] = {} /\
   LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t
 Proof
-  SRW_TAC [] [FUN_EQ_THM, IN_DEF]
+  SRW_TAC [] [FUN_EQ_THM, IN_DEF, LIST_TO_SET_DEF]
 QED
 
 Definition FILTER[simp]:

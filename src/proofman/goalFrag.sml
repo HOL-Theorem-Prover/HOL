@@ -13,7 +13,7 @@ datatype stash_kind
 datatype 'a handled = Running of 'a | Failed of exn
 
 fun mapHandled f (Running a) = (Running (f a) handle e as HOL_ERR _ => Failed e)
-  | mapHandled f (Failed e) = Failed e
+  | mapHandled _ (Failed e) = Failed e
 
 datatype goaltree
   = Base of goal list * list_validation
@@ -28,12 +28,12 @@ datatype goaltree
 type goalstate = int * goaltree
 type frag_tactic = goalstate -> goalstate
 
-fun apply1 f g (Base gs) = g gs
-  | apply1 f g (Parallel (gs, v)) = Parallel (map f gs, v)
-  | apply1 f g (Stashed (gs, k)) = Stashed (f gs, k)
-  | apply1 f g (Try (gs, k)) = Try (mapHandled f gs, k)
-  | apply1 f g (Repeat (gs, log, k)) = Repeat (mapHandled f gs, mapHandled f o log, k)
-  | apply1 f g (t as Done _) = t
+fun apply1 _ g (Base gs) = g gs
+  | apply1 f _ (Parallel (gs, v)) = Parallel (map f gs, v)
+  | apply1 f _ (Stashed (gs, k)) = Stashed (f gs, k)
+  | apply1 f _ (Try (gs, k)) = Try (mapHandled f gs, k)
+  | apply1 f _ (Repeat (gs, log, k)) = Repeat (mapHandled f gs, mapHandled f o log, k)
+  | apply1 _ _ (t as Done _) = t
 
 fun asBase (Base gs) = gs
   | asBase _ = raise Bind
@@ -64,8 +64,8 @@ fun expand_listf (ltac:list_tactic) (n, g) =
   (n, apply (fn (gs, v) => (fn (gs', v') => Base (gs', v o v')) (ltac gs)) g)
 val expand_list = expand_listf o Tactical.VALID_LT
 
-fun top_goals (n, Base (gs, _)) = gs
-  | top_goals (n, g) = let
+fun top_goals (_, Base (gs, _)) = gs
+  | top_goals (_, g) = let
     fun go (Base (gs, _)) acc = List.revAppend (gs, acc)
       | go (Parallel (gs, _)) acc = goList gs acc
       | go (Stashed (gs, _)) acc = go gs acc
@@ -93,7 +93,7 @@ fun close_paren (n, g) = let
           ([], v) => Base (ss, fn ths => v' (v [] @ ths))
         | _ => raise ERR "THEN1" "first subgoal not solved by second tactic")
       | TacsToLT (acc, [], v) => Base (concatMapV I (rev acc, v))
-      | TacsToLT (acc, _, _) => raise ERR "TACS_TO_LT" "length mismatch"
+      | TacsToLT _ => raise ERR "TACS_TO_LT" "length mismatch"
       | NthGoal (lo, hi, v) => let
         val (gs', v') = asBase gs
         val n1 = length lo; val n2 = length gs'
@@ -164,14 +164,14 @@ fun open_tacs_to_lt (n, g) = (n+1, apply (fn
   | (g::gs, v) => Stashed (Base ([g], I), TacsToLT ([], gs, v))) g)
 
 fun next_tacs_to_lt (n, g) = let
-  fun go (Stashed (_, TacsToLT (acc, [], _))) = raise ERR "TACS_TO_LT" "length mismatch"
+  fun go (Stashed (_, TacsToLT (_, [], _))) = raise ERR "TACS_TO_LT" "length mismatch"
     | go (Stashed (gs, TacsToLT (acc, g::gs', v))) =
       Stashed (Base ([g], I), TacsToLT (asBase gs :: acc, gs', v))
     | go _ = raise Bind
   in (n, applyN go (n-1) g) end
 
 fun open_null_ok (n, g) = (n+1, apply (fn
-    gs as ([], v) => Done gs
+    gs as ([], _) => Done gs
   | gs => Parallel ([Base gs], I)) g)
 fun open_nth_goal i (n, g) = (n+1, apply (fn (gs, v) => let
   val (lo, (g, hi)) = apsnd (valOf o List.getItem) $ Lib.split_after (i-1) gs
@@ -211,6 +211,19 @@ fun next_select_lt (n, g) = let
   fun f (Parallel (gs, v)) = go gs [] [] (v o #1)
     | f _ = raise Bind
   in (n-1, applyN f (n-2) g) end
+
+val open_first_lt = open_first o open_paren
+fun close_first_lt (n, g) = let
+  fun go [] _ = raise ERR "FIRST_LT" "No goal on which tactic succeeds"
+    | go (Try (Running (Base (gs, v)), _) :: rest) acc = let
+      val rest = map (fn Try (_, ([g], _)) => g | _ => raise Bind) rest
+      val v = splitAtV (length acc) I $ splitAtV (length gs) v I
+      in Base (List.revAppend (acc, gs @ rest), v) end
+    | go (Try (Failed _, ([g], _)) :: rest) acc = go rest (g :: acc)
+    | go _ _ = raise Bind
+  fun f (Parallel (gs, _)) = go gs []
+    | f _ = raise Bind
+  in (n-2, applyN f (n-2) g) end
 
 fun pp_goalstate gs = let
   open smpp
