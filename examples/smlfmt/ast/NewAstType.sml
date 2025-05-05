@@ -90,7 +90,7 @@ struct
     | Unit of {left: NewToken.t, right: NewToken.t}
 
     (** [op] longvid *)
-    | Ident of {opp: NewToken.t option, id: NewToken.t}
+    | Ident of {op_: NewToken.t option, id: NewToken.t}
 
     (** [ pat, ..., pat ] *)
     | List of
@@ -116,7 +116,7 @@ struct
     | Parens of {left: NewToken.t, pat: pat, right: NewToken.t}
 
     (** [op] longvid atpat *)
-    | Con of {opp: NewToken.t option, id: NewToken.t, atpat: pat}
+    | Con of {op_: NewToken.t option, id: NewToken.t, atpat: pat}
 
     (** pat vid pat *)
     | Infix of {left: pat, id: NewToken.t, right: pat}
@@ -126,10 +126,10 @@ struct
 
     (** [op] vid [:ty] as pat *)
     | Layered of
-        { opp: NewToken.t option
+        { op_: NewToken.t option
         , id: NewToken.t
         , ty: {colon: NewToken.t, ty: Ty.t} option
-        , ass: NewToken.t (** the `as` of course *)
+        , as_: NewToken.t (** the `as` of course *)
         , pat: pat
         }
 
@@ -165,7 +165,7 @@ struct
           , tycon: NewToken.t
           , eq: NewToken.t
           , elems:
-              { opp: NewToken.t option
+              { op_: NewToken.t option
               , id: NewToken.t
               , arg: {off: NewToken.t, ty: Ty.t} option
               } Seq.t
@@ -197,7 +197,7 @@ struct
       * Note that the arguments always must be atomic patterns
       *)
     datatype fname_args =
-      PrefixedFun of {opp: NewToken.t option, id: NewToken.t, args: Pat.t Seq.t}
+      PrefixedFun of {op_: NewToken.t option, id: NewToken.t, args: Pat.t Seq.t}
 
     | InfixedFun of {larg: Pat.t, id: NewToken.t, rarg: Pat.t}
 
@@ -241,7 +241,7 @@ struct
       Const of NewToken.t
 
     (** [op] longvid *)
-    | Ident of {opp: NewToken.t option, id: NewToken.t}
+    | Ident of {op_: NewToken.t option, id: NewToken.t}
 
     (** { lab = pat, ..., lab = pat } *)
     | Record of
@@ -275,12 +275,12 @@ struct
 
     (** let dec in exp [; exp ...] end *)
     | LetInEnd of
-        { lett: NewToken.t
+        { let_: NewToken.t
         , dec: dec
-        , inn: NewToken.t
+        , in_: NewToken.t
         , exps: exp Seq.t
         , delims: NewToken.t Seq.t
-        , endd: NewToken.t
+        , end_: NewToken.t
         }
 
     (** ( exp ) *)
@@ -303,15 +303,15 @@ struct
     | Typed of {exp: exp, colon: NewToken.t, ty: Ty.t}
 
     (** exp andalso exp *)
-    | Andalso of {left: exp, andalsoo: NewToken.t, right: exp}
+    | Andalso of {left: exp, andalso_: NewToken.t, right: exp}
 
     (** exp orelse exp *)
-    | Orelse of {left: exp, orelsee: NewToken.t, right: exp}
+    | Orelse of {left: exp, orelse_: NewToken.t, right: exp}
 
     (** exp handle pat => exp [| pat => exp ...] *)
     | Handle of
         { exp: exp
-        , handlee: NewToken.t
+        , handle_: NewToken.t
         , elems: {pat: Pat.t, arrow: NewToken.t, exp: exp} Seq.t
         , delims: NewToken.t Seq.t (** the bars between match rules *)
 
@@ -320,26 +320,26 @@ struct
         }
 
     (** raise exp *)
-    | Raise of {raisee: NewToken.t, exp: exp}
+    | Raise of {raise_: NewToken.t, exp: exp}
 
     (** if exp then exp else exp *)
     | IfThenElse of
-        { iff: NewToken.t
+        { if_: NewToken.t
         , exp1: exp
-        , thenn: NewToken.t
+        , then_: NewToken.t
         , exp2: exp
-        , elsee: NewToken.t
+        , else_: NewToken.t
         , exp3: exp
         }
 
     (** while exp do exp *)
-    | While of {whilee: NewToken.t, exp1: exp, doo: NewToken.t, exp2: exp}
+    | While of {while_: NewToken.t, exp1: exp, do_: NewToken.t, exp2: exp}
 
     (** case exp of pat => exp [| pat => exp ...] *)
     | Case of
-        { casee: NewToken.t
+        { case_: NewToken.t
         , exp: exp
-        , off: NewToken.t
+        , of_: NewToken.t
         , elems: {pat: Pat.t, arrow: NewToken.t, exp: exp} Seq.t
         , delims: NewToken.t Seq.t (** the bars between match rules *)
 
@@ -349,7 +349,7 @@ struct
 
     (** fn pat => exp [| pat => exp ...] *)
     | Fn of
-        { fnn: NewToken.t
+        { fn_: NewToken.t
         , elems: {pat: Pat.t, arrow: NewToken.t, exp: exp} Seq.t
         , delims: NewToken.t Seq.t (** the bars between match rules *)
 
@@ -373,25 +373,25 @@ struct
 
     (** val tyvarseq [rec] pat = exp [and [rec] pat = exp ...] *)
     | DecVal of
-        { vall: NewToken.t
+        { val_: NewToken.t
         , tyvars: NewToken.t SyntaxSeq.t
-        , elems: {recc: NewToken.t option, pat: Pat.t, eq: NewToken.t, exp: exp} Seq.t
+        , elems: {rec_: NewToken.t option, pat: Pat.t, eq: NewToken.t, exp: exp} Seq.t
         (** the `and` delimiters between bindings *)
         , delims: NewToken.t Seq.t
         }
 
     (** fun tyvarseq [op]vid atpat ... atpat [: ty] = exp [| ...] *)
     | DecFun of
-        {funn: NewToken.t, tyvars: NewToken.t SyntaxSeq.t, fvalbind: exp fvalbind}
+        {fun_: NewToken.t, tyvars: NewToken.t SyntaxSeq.t, fvalbind: exp fvalbind}
 
     (** type tyvarseq tycon = ty [and tyvarseq tycon = ty ...] *)
-    | DecType of {typee: NewToken.t, typbind: typbind}
+    | DecType of {type_: NewToken.t, typbind: typbind}
 
     (** datatype datbind [withtype typbind] *)
     | DecDatatype of
-        { datatypee: NewToken.t
+        { datatype_: NewToken.t
         , datbind: datbind
-        , withtypee: {withtypee: NewToken.t, typbind: typbind} option
+        , withtype_: {withtype_: NewToken.t, typbind: typbind} option
         }
 
     (** datatype tycon = datatype longtycon *)
@@ -405,17 +405,17 @@ struct
 
     (** abstype datbind [withtype typbind] with dec end *)
     | DecAbstype of
-        { abstypee: NewToken.t
+        { abstype_: NewToken.t
         , datbind: datbind
-        , withtypee: {withtypee: NewToken.t, typbind: typbind} option
+        , withtype_: {withtype_: NewToken.t, typbind: typbind} option
         , withh: NewToken.t
         , dec: dec
-        , endd: NewToken.t
+        , end_: NewToken.t
         }
 
     (** exception exbind *)
     | DecException of
-        { exceptionn: NewToken.t
+        { exception_: NewToken.t
         , elems: exbind Seq.t
         (** the `and` delimiters between bindings *)
         , delims: NewToken.t Seq.t
@@ -423,15 +423,15 @@ struct
 
     (** local dec in dec end *)
     | DecLocal of
-        { locall: NewToken.t
+        { local_: NewToken.t
         , left_dec: dec
-        , inn: NewToken.t
+        , in_: NewToken.t
         , right_dec: dec
-        , endd: NewToken.t
+        , end_: NewToken.t
         }
 
     (** open longstrid [longstrid ...] *)
-    | DecOpen of {openn: NewToken.t, elems: NewToken.t Seq.t}
+    | DecOpen of {open_: NewToken.t, elems: NewToken.t Seq.t}
 
     (** dec [[;] dec ...]
       *
@@ -441,25 +441,25 @@ struct
 
     (** infix [d] vid [vid ...] *)
     | DecInfix of
-        {infixx: NewToken.t, precedence: NewToken.t option, elems: NewToken.t Seq.t}
+        {infix_: NewToken.t, precedence: NewToken.t option, elems: NewToken.t Seq.t}
 
     (** infixr [d] vid [vid ...] *)
     | DecInfixr of
-        {infixrr: NewToken.t, precedence: NewToken.t option, elems: NewToken.t Seq.t}
+        {infixr_: NewToken.t, precedence: NewToken.t option, elems: NewToken.t Seq.t}
 
     (** nonfix vid [vid ...] *)
-    | DecNonfix of {nonfixx: NewToken.t, elems: NewToken.t Seq.t}
+    | DecNonfix of {nonfix_: NewToken.t, elems: NewToken.t Seq.t}
 
     (** HOLScript *)
-    | DecHOLCoInductive of {head: NewToken.t, body: NewToken.t list, endd: NewToken.t}
-    | DecHOLInductive of {head: NewToken.t, body: NewToken.t list, endd: NewToken.t}
-    | DecHOLDatatype of {head: NewToken.t, body: NewToken.t list, endd: NewToken.t}
+    | DecHOLCoInductive of {head: NewToken.t, body: NewToken.t list, end_: NewToken.t}
+    | DecHOLInductive of {head: NewToken.t, body: NewToken.t list, end_: NewToken.t}
+    | DecHOLDatatype of {head: NewToken.t, body: NewToken.t list, end_: NewToken.t}
     | DecHOLOverload of {head: NewToken.t, term: exp}
     | DecHOLDefinition of
         { head: NewToken.t
         , body: NewToken.t list
         , termination: {tok: NewToken.t, proof: exp} option
-        , endd: NewToken.t}
+        , end_: NewToken.t}
     | DecHOLSimpleTheorem of {head: NewToken.t, thm: exp}
     | DecHOLSimpleTriviality of {head: NewToken.t, thm: exp}
     | DecHOLTheorem of
@@ -476,10 +476,10 @@ struct
 
     and exbind =
       ExnNew of
-        {opp: NewToken.t option, id: NewToken.t, arg: {off: NewToken.t, ty: Ty.t} option}
+        {op_: NewToken.t option, id: NewToken.t, arg: {of_: NewToken.t, ty: Ty.t} option}
 
     | ExnReplicate of
-        { opp: NewToken.t option
+        { op_: NewToken.t option
         , left_id: NewToken.t
         , eq: NewToken.t
         , right_id: NewToken.t
@@ -509,7 +509,7 @@ struct
 
     (** val vid : ty [and vid : ty and ...] *)
     | Val of
-        { vall: NewToken.t
+        { val_: NewToken.t
         , elems: {vid: NewToken.t, colon: NewToken.t, ty: Ty.t} Seq.t
         (** 'and' delimiters between mutually recursive values *)
         , delims: NewToken.t Seq.t
@@ -517,17 +517,17 @@ struct
 
     (** type tyvarseq tycon [and tyvarseq tycon ...] *)
     | Type of
-        { typee: NewToken.t
+        { type_: NewToken.t
         , elems: {tyvars: NewToken.t SyntaxSeq.t, tycon: NewToken.t} Seq.t
         (** 'and' delimiters between mutually recursive types *)
         , delims: NewToken.t Seq.t
         }
 
-    | TypeAbbreviation of {typee: NewToken.t, typbind: typbind}
+    | TypeAbbreviation of {type_: NewToken.t, typbind: typbind}
 
     (** eqtype tyvarseq tycon [and tyvarseq tycon ...] *)
     | Eqtype of
-        { eqtypee: NewToken.t
+        { eqtype_: NewToken.t
         , elems: {tyvars: NewToken.t SyntaxSeq.t, tycon: NewToken.t} Seq.t
         (** 'and' delimiters between mutually recursive types *)
         , delims: NewToken.t Seq.t
@@ -535,12 +535,12 @@ struct
 
     (** datatype tyvarseq tycon = condesc [and tyvarseq tycon ...] *)
     | Datatype of
-        { datatypee: NewToken.t
+        { datatype_: NewToken.t
         , elems:
             { tyvars: NewToken.t SyntaxSeq.t
             , tycon: NewToken.t
             , eq: NewToken.t
-            , elems: {vid: NewToken.t, arg: {off: NewToken.t, ty: Ty.t} option} Seq.t
+            , elems: {vid: NewToken.t, arg: {of_: NewToken.t, ty: Ty.t} option} Seq.t
             (** '|' delimiters between clauses *)
             , delims: NewToken.t Seq.t
             (** SuccessorML: optional leading bar (not permitted in Standard ML). *)
@@ -549,7 +549,7 @@ struct
         (** 'and' delimiters between mutually recursive datatypes *)
         , delims: NewToken.t Seq.t
         (** SuccessorML: withtype in signatures *)
-        , withtypee: {withtypee: NewToken.t, typbind: typbind} option
+        , withtype_: {withtype_: NewToken.t, typbind: typbind} option
         }
 
     (** datatype tycon = datatype longtycon *)
@@ -563,8 +563,8 @@ struct
 
     (** exception vid [of ty] [and vid [of ty] ...] *)
     | Exception of
-        { exceptionn: NewToken.t
-        , elems: {vid: NewToken.t, arg: {off: NewToken.t, ty: Ty.t} option} Seq.t
+        { exception_: NewToken.t
+        , elems: {vid: NewToken.t, arg: {of_: NewToken.t, ty: Ty.t} option} Seq.t
         (** 'and' delimiters between exceptions *)
         , delims: NewToken.t Seq.t
         }
@@ -577,16 +577,16 @@ struct
         }
 
     (** include sigexp *)
-    | Include of {includee: NewToken.t, sigexp: sigexp}
+    | Include of {include_: NewToken.t, sigexp: sigexp}
 
     (** include sigid ... sigid *)
-    | IncludeIds of {includee: NewToken.t, sigids: NewToken.t Seq.t}
+    | IncludeIds of {include_: NewToken.t, sigids: NewToken.t Seq.t}
 
     (** spec sharing type longtycon1 = ... = longtyconn *)
     | SharingType of
         { spec: spec
-        , sharingg: NewToken.t
-        , typee: NewToken.t
+        , sharing_: NewToken.t
+        , type_: NewToken.t
         , elems: NewToken.t Seq.t
         (** the '=' delimiters between longtycons *)
         , delims: NewToken.t Seq.t
@@ -595,7 +595,7 @@ struct
     (** spec sharing longstrid = ... = longstrid *)
     | Sharing of
         { spec: spec
-        , sharingg: NewToken.t
+        , sharing_: NewToken.t
         , elems: NewToken.t Seq.t
         (** the '=' delimiters between longstrids *)
         , delims: NewToken.t Seq.t
@@ -609,7 +609,7 @@ struct
       Ident of NewToken.t
 
     (** sig spec end *)
-    | Spec of {sigg: NewToken.t, spec: spec, endd: NewToken.t}
+    | Spec of {sig_: NewToken.t, spec: spec, end_: NewToken.t}
 
     (** sigexp where type tyvarseq tycon = ty [where type ...]
       *
@@ -620,8 +620,8 @@ struct
     | WhereType of
         { sigexp: sigexp
         , elems:
-            { wheree: NewToken.t
-            , typee: NewToken.t
+            { where_: NewToken.t
+            , type_: NewToken.t
             , tyvars: NewToken.t SyntaxSeq.t
             , tycon: NewToken.t
             , eq: NewToken.t
@@ -634,7 +634,7 @@ struct
 
     (** signature sigid = sigexp [and ...] *)
       Signature of
-        { signaturee: NewToken.t
+        { signature_: NewToken.t
         , elems: {ident: NewToken.t, eq: NewToken.t, sigexp: sigexp} Seq.t
 
         (** 'and' between elems *)
@@ -653,7 +653,7 @@ struct
     datatype strexp =
       Ident of NewToken.t
 
-    | Struct of {structt: NewToken.t, strdec: strdec, endd: NewToken.t}
+    | Struct of {struct_: NewToken.t, strdec: strdec, end_: NewToken.t}
 
     | Constraint of
         { strexp: strexp
@@ -668,11 +668,11 @@ struct
         {funid: NewToken.t, lparen: NewToken.t, strdec: strdec, rparen: NewToken.t}
 
     | LetInEnd of
-        { lett: NewToken.t
+        { let_: NewToken.t
         , strdec: strdec
-        , inn: NewToken.t
+        , in_: NewToken.t
         , strexp: strexp
-        , endd: NewToken.t
+        , end_: NewToken.t
         }
 
 
@@ -698,11 +698,11 @@ struct
     | DecMultiple of {elems: strdec Seq.t, delims: NewToken.t option Seq.t}
 
     | DecLocalInEnd of
-        { locall: NewToken.t
+        { local_: NewToken.t
         , strdec1: strdec
-        , inn: NewToken.t
+        , in_: NewToken.t
         , strdec2: strdec
-        , endd: NewToken.t
+        , end_: NewToken.t
         }
 
     (** _overload prec name : ty as longvid [and longvid ...] *)
@@ -735,7 +735,7 @@ struct
 
     datatype fundec =
       DecFunctor of
-        { functorr: NewToken.t
+        { functor_: NewToken.t
         , elems:
             { funid: NewToken.t
             , lparen: NewToken.t
