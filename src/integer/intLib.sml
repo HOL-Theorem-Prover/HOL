@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib bossLib liteLib;
 
 open integerTheory intSimps Omega Cooper intSyntax intReduce Canon hurdUtils
-     tautLib Normalizer Grobner hurdUtils mesonLib;
+     tautLib Normalizer Grobner hurdUtils mesonLib normalizerTheory;
 
 structure Parse = struct
   open Parse
@@ -93,7 +93,8 @@ local
   and SEMIRING_POW_CONV = INT_POW_CONV;
   fun term_lt u t = (Term.compare(u,t) = LESS);
   val (_,_,_,_,_,POLY_CONV) =
-    SEMIRING_NORMALIZERS_CONV sth rth
+    (* The new sth is the result of applying SEMIRING_PTHS to the original sth *)
+    SEMIRING_NORMALIZERS_CONV (MATCH_MP SEMIRING_PTHS sth) rth
      (is_semiring_constant,
       SEMIRING_ADD_CONV,SEMIRING_MUL_CONV,SEMIRING_POW_CONV)
      term_lt
