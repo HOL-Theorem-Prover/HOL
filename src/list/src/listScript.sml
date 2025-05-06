@@ -180,7 +180,7 @@ Definition MAP[simp]:
   MAP f (h::t) = f h::MAP f t
 End
 
-Definition LIST_TO_SET_DEF:
+Definition LIST_TO_SET_DEF[simp]:
   (LIST_TO_SET [] x <=> F) /\
   (LIST_TO_SET (h::t) x <=> (x = h) \/ LIST_TO_SET t x)
 End
@@ -199,7 +199,7 @@ Theorem LIST_TO_SET[simp]:
   LIST_TO_SET [] = {} /\
   LIST_TO_SET (h::t) = h INSERT LIST_TO_SET t
 Proof
-  SRW_TAC [] [FUN_EQ_THM, IN_DEF, LIST_TO_SET_DEF]
+  SRW_TAC [] [FUN_EQ_THM, IN_DEF]
 QED
 
 Definition FILTER[simp]:
