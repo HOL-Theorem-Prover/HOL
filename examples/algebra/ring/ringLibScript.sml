@@ -12,7 +12,7 @@ open HolKernel boolLib bossLib Parse;
 
 open combinTheory pred_setTheory pred_setLib arithmeticTheory integerTheory
      numLib intLib mesonLib hurdUtils cardinalTheory oneTheory newtypeTools
-     tautLib metisLib liteLib Ho_Rewrite;
+     tautLib metisLib liteLib Ho_Rewrite normalizerTheory;
 
 open monoidTheory groupTheory ringTheory;
 
@@ -1820,6 +1820,142 @@ Proof
                         RING_NEG_NEG, RING_NEG_ADD, RING_MUL_LNEG, RING_MUL_RNEG] THEN
     ASM_SIMP_TAC std_ss[RING_ADD_AC, IN_UNIV]
 QED
+
+(* ------------------------------------------------------------------------- *)
+(* Technical lemmas used in ringLib                                          *)
+(* ------------------------------------------------------------------------- *)
+
+(* |- !P Q. P /\ (?x. Q x) <=> ?x. P /\ Q x *)
+Theorem RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
+
+(* |- !P Q. (?x. P x) /\ Q <=> ?x. P x /\ Q *)
+Theorem LEFT_AND_EXISTS_THM = GSYM LEFT_EXISTS_AND_THM;
+
+(* |- p ==> q ==> r <=> p /\ q ==> r *)
+Theorem IMP_IMP = Q.SPECL [‘p’, ‘q’, ‘r’] AND_IMP_INTRO;
+
+Triviality RING_POLY_UNIVERSAL_CONV_pth:
+  !r. ring_carrier r = univ(:'a) ==>
+    (!x y z. ring_add r x (ring_add r y z) =
+             ring_add r (ring_add r x y) z) /\
+    (!x y. ring_add r x y = ring_add r y x) /\
+    (!x. ring_add r (ring_of_int r (&0)) x = x) /\
+    (!x y z. ring_mul r x (ring_mul r y z) =
+             ring_mul r (ring_mul r x y) z) /\
+    (!x y. ring_mul r x y = ring_mul r y x) /\
+    (!x. ring_mul r (ring_of_int r (&1)) x = x) /\
+    (!x. ring_mul r (ring_of_int r (&0)) x = ring_of_int r (&0)) /\
+    (!x y z. ring_mul r x (ring_add r y z) =
+             ring_add r (ring_mul r x y) (ring_mul r x z)) /\
+    (!x. ring_pow r x 0 = ring_of_int r (&1)) /\
+    (!x n. ring_pow r x (SUC n) = ring_mul r x (ring_pow r x n))
+Proof
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_1, CONJUNCT1 ring_of_num] THEN
+  SIMP_TAC std_ss[RING_ADD_LZERO, RING_MUL_LID, RING_MUL_LZERO, IN_UNIV] THEN
+  SIMP_TAC std_ss[ring_pow, RING_ADD_LDISTRIB, IN_UNIV] THEN
+  SIMP_TAC std_ss[RING_ADD_AC, RING_MUL_AC, IN_UNIV]
+QED
+Theorem RING_POLY_UNIVERSAL_CONV_pth =
+  MATCH_MP SEMIRING_PTHS $ UNDISCH $ SPEC_ALL RING_POLY_UNIVERSAL_CONV_pth;
+
+Triviality RING_POLY_UNIVERSAL_CONV_sth:
+  !r. ring_carrier r = univ(:'a) ==>
+    (!x. ring_neg r x = ring_mul r (ring_of_int r (- &1)) x) /\
+    (!x y. ring_sub r x y =
+           ring_add r x (ring_mul r (ring_of_int r (- &1)) y))
+Proof
+  SIMP_TAC std_ss[RING_OF_INT_NEG, RING_MUL_LNEG, IN_UNIV, ring_sub] THEN
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_1, CONJUNCT1 ring_of_num] THEN
+  SIMP_TAC std_ss[ring_sub, RING_MUL_LNEG, RING_MUL_LID, IN_UNIV]
+QED
+Theorem RING_POLY_UNIVERSAL_CONV_sth =
+  UNDISCH $ SPEC_ALL RING_POLY_UNIVERSAL_CONV_sth;
+
+Theorem RING_POLY_UNIVERSAL_CONV_ith:
+  ring_0 r = ring_of_int r (&0) /\
+  ring_1 r = ring_of_int r (&1)
+Proof
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_1, CONJUNCT1 ring_of_num]
+QED
+
+Theorem RING_INTEGRAL = repeat UNDISCH RING_INTEGRAL_LEMMA;
+
+Theorem RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_b:
+  ring_of_int r n :'a = ring_of_int r n <=> T
+Proof
+  REWRITE_TAC[]
+QED
+
+Triviality RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_l:
+  integral_domain (r :'a Ring)
+  ==> ((ring_of_int r (&1) = ring_of_int r (&0)) <=> F)
+Proof
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0, RING_OF_NUM_1] THEN
+  SIMP_TAC std_ss[integral_domain]
+QED
+Theorem RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_l =
+  UNDISCH RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_l;
+
+Triviality RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_r:
+  integral_domain (r :'a Ring)
+  ==> (ring_of_int r (&0) = ring_of_int r (&1) <=> F)
+Proof
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0, RING_OF_NUM_1] THEN
+  SIMP_TAC std_ss[integral_domain]
+QED
+Theorem RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_r =
+  UNDISCH RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_r;
+
+Theorem RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_g:
+  (ring_of_int r m :'a = ring_of_int r n <=> F) <=>
+  ~(&(ring_char r) int_divides (m - n))
+Proof
+  REWRITE_TAC[RING_OF_INT_EQ]
+QED
+
+Theorem RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_h:
+  (&(ring_char(r :'a Ring)) int_divides -(&n) <=> ring_char r divides n) /\
+  (&(ring_char(r :'a Ring)) int_divides &n <=> ring_char r divides n)
+Proof
+  REWRITE_TAC[num_divides, INT_DIVIDES_NEG]
+QED
+
+Theorem RING_WORD_UNIVERSAL_cth:
+  ring_0 r = ring_of_int (r :'a Ring) (&0) /\
+  ring_1 r = ring_of_int (r :'a Ring) (&1)
+Proof
+  REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0, RING_OF_NUM_1]
+QED
+
+Triviality RING_WORD_UNIVERSAL_pth:
+  ring_carrier r = univ(:'a) ==>
+  (x = y <=> ring_sub r x y = ring_of_int r (&0))
+Proof
+  SIMP_TAC bool_ss[RING_SUB_EQ_0, IN_UNIV, RING_OF_INT_OF_NUM, RING_OF_NUM_0]
+QED
+Theorem RING_WORD_UNIVERSAL_pth = UNDISCH RING_WORD_UNIVERSAL_pth;
+
+Triviality RING_WORD_UNIVERSAL_mth:
+  ring_carrier r = univ(:'a) ==>
+  p = ring_of_int r (&0) ==> !c. ring_mul r c p = ring_of_int r (&0)
+Proof
+  SIMP_TAC bool_ss[RING_MUL_RZERO, RING_OF_INT_OF_NUM, RING_OF_NUM_0, IN_UNIV]
+QED
+Theorem RING_WORD_UNIVERSAL_mth = UNDISCH RING_WORD_UNIVERSAL_mth;
+
+Triviality RING_WORD_UNIVERSAL_dth:
+  ring_carrier r = univ(:'a) ==>
+  p = ring_of_int r (&0) /\ q = ring_of_int r (&0) ==>
+  ring_add r p q = ring_of_int r (&0)
+Proof
+  SIMP_TAC bool_ss[RING_ADD_RZERO, RING_OF_INT_OF_NUM, RING_OF_NUM_0, IN_UNIV]
+QED
+Theorem RING_WORD_UNIVERSAL_dth = UNDISCH RING_WORD_UNIVERSAL_dth;
+
+Theorem RING_RING_WORD_pth = TAUT `(p ==> q) /\ (p' ==> q) <=> p \/ p' ==> q`;
+Theorem RING_RING_HORN_pth1 = TAUT ‘~p \/ ~q <=> ~(p /\ q)’;
+Theorem RING_RING_HORN_pth2 = TAUT ‘p \/ ~q <=> q ==> p’;
+Theorem RING_RING_CORE_pth = TAUT ‘p ==> q <=> (p \/ q <=> q)’
 
 val _ = export_theory();
 val _ = html_theory "ringLib";

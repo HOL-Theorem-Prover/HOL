@@ -3,6 +3,8 @@ struct
 
 open HolKernel boolLib bossLib;
 
+local open fracTheory in end
+
 structure Parse =
 struct
   open Parse

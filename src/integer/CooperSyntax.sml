@@ -250,6 +250,8 @@ val move_quants_up =
 (* Takes !x. P x                                                          *)
 (*  and produces ~(?x. ~P x)                                              *)
 (* ---------------------------------------------------------------------- *)
+
+val NOT_EXISTS_THM' = fetch "cooper" "NOT_EXISTS_THM'"
 fun flip_forall tm = let
   val (bvar, _) = dest_forall tm
 in
@@ -317,6 +319,7 @@ val bmarker_tm = prim_mk_const { Name = "bmarker", Thy = "int_arith"};
 val mk_bmark_thm = GSYM int_arithTheory.bmarker_def
 fun mk_bmark tm = SPEC tm mk_bmark_thm
 
+val NOT_NOT = fetch "cooper" "NOT_NOT"
 fun mark_conjunct P tm = let
 in
   if is_conj tm then
@@ -378,6 +381,7 @@ fun dest_constraint tm =
     raise ERR "dest_constraint" "Term not a constraint"
 
 
+val K_THM' = fetch "cooper" "K_THM'"
 fun MK_CONSTRAINT tm =
   case free_vars tm of
     [] => ALL_CONV tm

@@ -5,7 +5,7 @@
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Aaron Coble [7] (2010), Cambridge University         *)
 (* ------------------------------------------------------------------------- *)
-(* Updated by Chun Tian (2019-2020) using some materials from:               *)
+(* Updated by Chun Tian (2019 - 2025) using some materials from:             *)
 (*                                                                           *)
 (*        Lebesgue Measure Theory (lebesgue_measure_hvgScript.sml)           *)
 (*                                                                           *)
@@ -17,7 +17,7 @@
 (*                                                                           *)
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
-(* Note: This theory is inspired by Isabelle/HOL                             *)
+(* Note: The original work was inspired by Isabelle/HOL                      *)
 (* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
@@ -26,7 +26,7 @@ open arithmeticTheory prim_recTheory optionTheory pairTheory combinTheory
      pred_setTheory pred_setLib numLib res_quanTheory res_quanTools listTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
-     jrhUtils cardinalTheory iterateTheory;
+     jrhUtils cardinalTheory iterateTheory extreal_baseTheory;
 
 open hurdUtils extrealTheory sigma_algebraTheory measureTheory borelTheory
      real_topologyTheory;
@@ -34,7 +34,6 @@ open hurdUtils extrealTheory sigma_algebraTheory measureTheory borelTheory
 val _ = new_theory "lebesgue";
 
 val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove (tm, METIS_TAC ths);
 
@@ -7872,15 +7871,44 @@ Proof
  >> ASM_SIMP_TAC std_ss [normal_real]
 QED
 
+Theorem pos_fn_integral_max_0 :
+    !m f. measure_space m /\
+         (!x. x IN m_space m ==> 0 <= f x) ==>
+          pos_fn_integral m (\x. max 0 (f x)) = pos_fn_integral m f
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC pos_fn_integral_cong >> rw [le_max]
+ >> MATCH_MP_TAC max_0_reduce >> rw []
+QED
+
 Theorem pos_fn_integral_cmult :
     !f c m. measure_space m /\ 0 <= c /\
             f IN measurable (m_space m, measurable_sets m) Borel ==>
-           (pos_fn_integral m (\x. c * fn_plus f x) = c * pos_fn_integral m (fn_plus f))
+            pos_fn_integral m (\x. c * fn_plus f x) =
+            c * pos_fn_integral m (fn_plus f)
 Proof
     rpt STRIP_TAC
  >> `(\x. c * fn_plus f x) = fn_plus (\x. c * f x)` by METIS_TAC [FN_PLUS_CMUL_full]
  >> POP_ORW >> SIMP_TAC std_ss [o_DEF, FN_PLUS_ALT']
  >> MATCH_MP_TAC pos_fn_integral_cmult' >> art []
+QED
+
+Theorem pos_fn_integral_cmul_general :
+    !m f c. measure_space m /\ 0 <= c /\
+            f IN Borel_measurable (measurable_space m) /\
+          (!x. x IN m_space m ==> 0 <= f x) ==>
+            pos_fn_integral m (\x. c * f x) = c * pos_fn_integral m f
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘f’, ‘c’, ‘m’] pos_fn_integral_cmult)
+ >> simp []
+ >> Know ‘pos_fn_integral m f^+ = pos_fn_integral m f’
+ >- (MATCH_MP_TAC pos_fn_integral_cong >> rw [FN_PLUS_REDUCE])
+ >> Rewr'
+ >> DISCH_THEN (REWRITE_TAC o wrap o SYM)
+ >> MATCH_MP_TAC pos_fn_integral_cong >> simp []
+ >> rpt STRIP_TAC
+ >> MATCH_MP_TAC le_mul >> rw []
 QED
 
 Theorem density_fn_plus :

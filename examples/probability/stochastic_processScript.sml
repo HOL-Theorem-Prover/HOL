@@ -2061,6 +2061,7 @@ QED
 Theorem existence_of_multidimensional_prob_space :
     !p N. prob_space p /\ 0 < N ==>
          ?pp. prob_space pp /\
+              measurable_space pp = sigma_lists (measurable_space p) N /\
              !E. (?h. E = rectangle h N /\ !i. i < N ==> h i IN events p) ==>
                  E IN events pp /\
                  prob pp E = PI (\i. prob p (IMAGE (EL i) E)) (count N)
@@ -2108,7 +2109,8 @@ Proof
             ‘x NOTIN f n’ by METIS_TAC [DISJOINT_ALT] \\
              gvs []) >> Rewr' \\
          AP_TERM_TAC >> simp [o_DEF, Abbr ‘g’]) \\
-     rw [count_def, prob_def, Abbr ‘f’, unwrap_def, events_def] \\
+     rw [count_def, prob_def, Abbr ‘f’, unwrap_def, events_def]
+     >- (rw [Abbr ‘a'’, Abbr ‘a’, p_space_def, events_def]) \\
      simp [Abbr ‘a'’, sigma_lists_1, Abbr ‘a’, subsets_def] \\
      fs [GSYM events_def] \\
      Q.EXISTS_TAC ‘h 0’ >> art [] \\
@@ -2161,7 +2163,7 @@ Proof
       ‘a = general_sigma CONS (p_space p,events p) (p_space p1,events p1)’
  >> qabbrev_tac ‘p2 = (Z,subsets a,m)’
  >> Q.EXISTS_TAC ‘p2’
- >> CONJ_TAC
+ >> CONJ_TAC (* prob_space p2 *)
  >- (simp [prob_space_def] \\
      fs [sigma_finite_measure_space_def] \\
      simp [GSYM prob_def, GSYM p_space_def] \\
@@ -2177,6 +2179,19 @@ Proof
      >- (FIRST_X_ASSUM MATCH_MP_TAC \\
          simp [EVENTS_SPACE]) >> Rewr' \\
      simp [PROB_UNIV])
+ >> CONJ_TAC
+ >- (simp [Abbr ‘p2’, Abbr ‘Z’] \\
+    ‘0 < N’ by rw [Abbr ‘N’] \\
+     Know ‘sigma_algebra (measurable_space p)’
+     >- (MATCH_MP_TAC MEASURE_SPACE_SIGMA_ALGEBRA \\
+         fs [prob_space_def]) >> DISCH_TAC \\
+     simp [sigma_lists_decomposition] \\
+     Q.PAT_X_ASSUM ‘_ = sigma_lists (measurable_space p) N’
+       (REWRITE_TAC o wrap o SYM) \\
+     Know ‘general_cross CONS (p_space p) (p_space p1) = space a’
+     >- (simp [Abbr ‘a’, general_sigma_def, SPACE_SIGMA]) >> Rewr' \\
+     simp [SPACE, cons_sigma_alt_gen] \\
+     simp [Abbr ‘a’, p_space_def, events_def])
  (* stage work *)
  >> Q.X_GEN_TAC ‘E’ >> simp [list_rectangle_SUC]
  >> STRIP_TAC
@@ -2252,6 +2267,7 @@ QED
 Theorem existence_of_multidimensional_prob_space' :
     !p N. prob_space p /\ 0 < N ==>
          ?pp. prob_space pp /\
+              measurable_space pp = sigma_lists (measurable_space p) N /\
              !E h. E = rectangle h N /\ (!i. i < N ==> h i IN events p) ==>
                    E IN events pp /\ prob pp E = PI (prob p o h) (count N)
 Proof

@@ -174,6 +174,7 @@ val LASSOC_ADD_CONV = REWR_CONV INT_ADD_ASSOC
     a + (b + c)
    ---------------------------------------------------------------------- *)
 
+val SYM_ADD_ASSOC = fetch "Omega" "SYM_ADD_ASSOC"
 val RASSOC_ADD_CONV = REWR_CONV SYM_ADD_ASSOC
 
 (* ----------------------------------------------------------------------
@@ -205,6 +206,7 @@ end tm
     SORT_AND_GATHER1_CONV below
    ---------------------------------------------------------------------- *)
 
+val SYM_RDISTRIB = fetch "Omega" "SYM_RDISTRIB"
 fun PAIRWISE_GATHER_CONV tm = let
   val (tm1,tm2) = dest_plus tm
 in
@@ -372,6 +374,7 @@ fun NEG_SUM_CONV tm =
     tm.  Of course, this doesn't preserve the order in the sum.
    ---------------------------------------------------------------------- *)
 
+val front_put_thm = fetch "Omega" "front_put_thm"
 fun MOVE_VCOEFF_TO_FRONT v tm = let
   val cv = find_summand v tm
   val th = SPECL [tm,cv] front_put_thm
@@ -397,6 +400,8 @@ end tm
 
    ---------------------------------------------------------------------- *)
 
+val SYM_MULT_LEFT_1 = fetch "Omega" "SYM_MULT_LEFT_1"
+val SYM_MUL_LID = fetch "Omega" "SYM_MUL_LID"
 fun NORMALISE_MULT0 t = let
   open arithmeticTheory
   (* t is a multiplication term, over either :num or :int *)
@@ -435,6 +440,8 @@ in
     sort nums others
 end t
 
+val SYM_NEG_LMUL = fetch "Omega" "SYM_NEG_LMUL"
+val SYM_NEG_RMUL = fetch "Omega" "SYM_NEG_RMUL"
 val NORMALISE_MULT =
     NORMALISE_MULT0 THENC REWRITE_CONV [SYM_NEG_RMUL, SYM_NEG_LMUL,
                                         INT_NEGNEG] THENC
@@ -477,11 +484,18 @@ val norm_divides =
     CooperMath.check_divides
 
 local
+  val lt_elim = fetch "Omega" "EVERY_SUMMAND_lt_elim"
+  val not_le = fetch "Omega" "EVERY_SUMMAND_not_le"
+  val not_lt = fetch "Omega" "EVERY_SUMMAND_not_lt"
+  val not_gt = fetch "Omega" "EVERY_SUMMAND_not_gt"
+  val not_ge = fetch "Omega" "EVERY_SUMMAND_not_ge"
+  val not_eq = fetch "Omega" "EVERY_SUMMAND_not_eq"
+  val ge_elim = fetch "Omega" "EVERY_SUMMAND_ge_elim"
+  val gt_elim = fetch "Omega" "EVERY_SUMMAND_gt_elim"
+  val eq_elim = fetch "Omega" "EVERY_SUMMAND_eq_elim"
   val MK_LEQ =
     TRY_CONV (FIRST_CONV (map REWR_CONV [
-      EVERY_SUMMAND_lt_elim, EVERY_SUMMAND_not_le, EVERY_SUMMAND_not_lt,
-      EVERY_SUMMAND_not_gt, EVERY_SUMMAND_not_ge, EVERY_SUMMAND_ge_elim,
-      EVERY_SUMMAND_gt_elim])) THENC
+      lt_elim, not_le, not_lt, not_gt, not_ge, ge_elim, gt_elim])) THENC
     (REWR_CONV int_arithTheory.le_move_all_right ORELSEC
      REWR_CONV int_arithTheory.eq_move_all_right)
   val base_normaliser = RAND_CONV sum_normalise THENC gcd_check
@@ -519,11 +533,11 @@ in
       CHANGED_CONV (RAND_CONV norm_divides)
     else MK_LEQ THENC base_normaliser
   ) tm
-end (* local *)
 
-val leaf_normalise =
-  (REWR_CONV EVERY_SUMMAND_not_eq THENC BINOP_CONV normalise_numbers) ORELSEC
-  normalise_numbers
+  val leaf_normalise =
+    (REWR_CONV not_eq THENC BINOP_CONV normalise_numbers) ORELSEC
+    normalise_numbers
+end (* local *)
 
 
 (* ----------------------------------------------------------------------
@@ -534,6 +548,7 @@ val leaf_normalise =
     expressions.
    ---------------------------------------------------------------------- *)
 
+val COND_FA_THEN_THM = fetch "Omega" "COND_FA_THEN_THM"
 fun COND_FA_THEN tm = let
   val (g, t, e) = dest_cond tm
   val (v, _) = dest_forall t
@@ -541,6 +556,7 @@ in
   HO_REWR_CONV COND_FA_THEN_THM THENC RAND_CONV (ALPHA_CONV v)
 end tm
 
+val COND_FA_ELSE_THM = fetch "Omega" "COND_FA_ELSE_THM"
 fun COND_FA_ELSE tm = let
   val (g, t, e) = dest_cond tm
   val (v, _) = dest_forall e
@@ -548,6 +564,7 @@ in
   HO_REWR_CONV COND_FA_ELSE_THM THENC RAND_CONV (ALPHA_CONV v)
 end tm
 
+val COND_EX_THEN_THM = fetch "Omega" "COND_EX_THEN_THM"
 fun COND_EX_THEN tm = let
   val (g, t, e) = dest_cond tm
   val (v, _) = dest_exists t
@@ -555,6 +572,7 @@ in
   HO_REWR_CONV COND_EX_THEN_THM THENC RAND_CONV (ALPHA_CONV v)
 end tm
 
+val COND_EX_ELSE_THM = fetch "Omega" "COND_EX_ELSE_THM"
 fun COND_EX_ELSE tm = let
   val (g, t, e) = dest_cond tm
   val (v, _) = dest_exists e
@@ -621,11 +639,13 @@ fun UNBETA_LIST tlist =
     by rewriting appropriately.
    ---------------------------------------------------------------------- *)
 
+val not_beq = fetch "Omega" "not_beq"
+val beq = fetch "Omega" "beq"
 fun reveal_a_disj tm =
     if is_disj tm then ALL_CONV tm
     else
       (FIRST_CONV (map REWR_CONV [beq, not_beq, IMP_DISJ_THM,
-                                  cooperTheory.NOT_AND]) ORELSEC
+                                  NOT_AND]) ORELSEC
        (REWR_CONV cooperTheory.NOT_NOT_P THENC reveal_a_disj)) tm
 
 
@@ -638,6 +658,7 @@ fun reveal_a_disj tm =
     positive
    ---------------------------------------------------------------------- *)
 
+val FLIP_COND = fetch "Omega" "FLIP_COND"
 fun normalise_guard t = let
   val _ = dest_cond t
   fun make_guard_positive t = let
@@ -717,6 +738,8 @@ fun cond_removal t =
        P(0) \/ P(1) \/ ... \/ P(u)
    ---------------------------------------------------------------------- *)
 
+val refl_case = fetch "Omega" "refl_case"
+val nonrefl_case = fetch "Omega" "nonrefl_case"
 fun calculate_range_disjunct tm = let
   val (i, body) = dest_exists tm
   fun recurse tm =
@@ -881,6 +904,7 @@ end tm
 
    ---------------------------------------------------------------------- *)
 
+val SYM_EQ_NEG = fetch "Omega" "SYM_EQ_NEG"
 fun eliminate_equality v tm = let
   val instantiate_eqremoval =
       C MP TRUTH o CONV_RULE (LAND_CONV REDUCE_CONV) o
@@ -934,6 +958,7 @@ in
   else (BINDER_CONV (push_exvar_to_bot v))
 end tm
 
+val EX_REFL = fetch "Omega" "EX_REFL"
 fun OmegaEq t = let
   val (exvars, body) = strip_exists t
   val exv_set = HOLset.addList(empty_tmset, exvars)

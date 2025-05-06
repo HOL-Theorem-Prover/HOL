@@ -5,6 +5,8 @@ open HolKernel boolLib Parse bossLib;
 
 open pairTheory pairLib integerTheory intLib
 
+local open fracTheory in end
+
 structure Parse =
 struct
   open Parse

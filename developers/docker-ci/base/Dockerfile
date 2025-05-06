@@ -5,7 +5,7 @@
 # e.g. docker buildx build --platform linux/amd64,linux/arm64v8 .
 
 # GitHub Actions recommends Debian-based systems as base images
-FROM debian:trixie
+FROM debian:bookworm
 
 LABEL org.opencontainers.image.authors="Chun Tian (binghe) <binghe.lisp@gmail.com>"
 
@@ -27,7 +27,7 @@ ENV PATH=/ML/HOL/bin:$PATH
 # Some necessary Debian packages
 # NOTE: GCC 13 is necessary for building Moscow ML (default compiler is now GCC 14).
 RUN apt-get update -qy
-RUN apt-get install -qy build-essential git libgmp-dev wget curl procps file unzip vim gcc-13
+RUN apt-get install -qy build-essential git libgmp-dev wget curl procps file unzip vim
 RUN apt-get clean
 
 # for Unicode display, learnt from Magnus Myreen
@@ -40,9 +40,9 @@ RUN apt-get install -qy graphviz emacs-nox
 RUN apt-get clean
 
 # 1. install Moscow ML (https://github.com/kfl/mosml.git) with GCC 13
-COPY mosml-gcc-13.patch /ML
+# COPY mosml-gcc-13.patch /ML
 RUN wget -q -O - https://github.com/kfl/mosml/archive/refs/tags/ver-2.10.1.tar.gz | tar xzf -
-RUN cd mosml-ver-2.10.1/src; patch -p0 < /ML/mosml-gcc-13.patch;
+# RUN cd mosml-ver-2.10.1/src; patch -p0 < /ML/mosml-gcc-13.patch;
 RUN cd mosml-ver-2.10.1; make -C src world install
 RUN rm -rf mosml-ver-2.10.1 *.patch
 

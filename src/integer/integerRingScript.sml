@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib;
-open integerTheory EVAL_ringTheory hurdUtils;
+open integerTheory EVAL_ringTheory hurdUtils normalizerTheory;
 
 val _ = new_theory "integerRing";
 val _ = ParseExtras.temp_loose_equality()
@@ -49,7 +49,7 @@ val int_rewrites = save_thm("int_rewrites", LIST_CONJ
     numeral_lt, numeral_lte, numeral_sub, iSUB_THM, AND_CLAUSES ]);
 end;
 
-Theorem INT_POLY_CONV_sth:
+Triviality INT_POLY_CONV_sth:
   (!x y z. x + (y + z) = (x + y) + z :int) /\
   (!x y. x + y = y + x :int) /\
   (!x. &0 + x = x :int) /\
@@ -65,6 +65,8 @@ Proof
     INT_MUL_LZERO, INT_MUL_LID, INT_LDISTRIB] THEN
   REWRITE_TAC [Once INT_ADD_SYM, Once INT_MUL_SYM]
 QED
+
+Theorem INT_POLY_CONV_sth = MATCH_MP SEMIRING_PTHS INT_POLY_CONV_sth;
 
 Theorem INT_POLY_CONV_rth:
   (!x. -x = -(&1) * x :int) /\
