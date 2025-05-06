@@ -13,8 +13,6 @@ open logrootTheory;
 
 val _ = new_theory "turing_machine_primeq";
 
-val _ = hide "sc"
-
 Triviality DISJ_IMP_EQ[simp]:
   ((x = y) ∨ P ⇔ (x ≠ y ⇒ P)) ∧
   (P ∨ (x = y) ⇔ (x ≠ y ⇒ P)) ∧
