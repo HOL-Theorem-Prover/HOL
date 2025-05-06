@@ -16,6 +16,8 @@ val _ = new_theory "open_bisimulation";
 (* some proofs here are large with too many assumptions *)
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
 
+Overload sc = “symmetric_closure”
+
 (* ----------------------------------------------------------------------
    Pi-calculus as a nominal datatype in HOL4
 

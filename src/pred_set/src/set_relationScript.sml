@@ -251,36 +251,38 @@ QED
 (* Transitive closure                                                       *)
 (* ------------------------------------------------------------------------ *)
 
-Inductive tc:
-  (!x y. r (x, y) ==> tc r (x, y)) /\
-  (!x y. (?z. tc r (x, z) /\ tc r (z, y)) ==> tc r (x, y))
+Inductive transitive_closure :
+  (!x y. r (x,y) ==> transitive_closure r (x,y)) /\
+  (!x y. (?z. transitive_closure r (x,z) /\ transitive_closure r (z,y)) ==>
+         transitive_closure r (x,y))
 End
+Overload tc[local] = “transitive_closure”
 
-Theorem tc_rules[allow_rebind]:
+Theorem tc_rules:
   !r.
-    (!x y. (x ,y) IN r ==> (x, y) IN tc r) /\
-    (!x y. (?z. (x, z) IN tc r /\ (z, y) IN tc r) ==> (x, y) IN tc r)
+    (!x y. (x,y) IN r ==> (x,y) IN tc r) /\
+    (!x y. (?z. (x,z) IN tc r /\ (z,y) IN tc r) ==> (x,y) IN tc r)
 Proof
-  SRW_TAC [] [SPECIFICATION, tc_rules]
+  SRW_TAC [] [SPECIFICATION, transitive_closure_rules]
 QED
 
-Theorem tc_cases[allow_rebind]:
-  !r x y. (x, y) IN tc r <=> (x, y) IN r \/ ?z. (x, z) IN tc r /\ (z, y) IN tc r
+Theorem tc_cases:
+  !r x y. (x,y) IN tc r <=> (x,y) IN r \/ ?z. (x,z) IN tc r /\ (z,y) IN tc r
 Proof
   SRW_TAC [] [SPECIFICATION]
-  THEN SRW_TAC [] [Once (Q.SPECL [`r`, `(x, y)`] tc_cases)]
+  THEN SRW_TAC [] [Once (Q.SPECL [`r`, `(x, y)`] transitive_closure_cases)]
 QED
 
-Theorem tc_ind[allow_rebind]:
+Theorem tc_ind:
   !r tc'.
-    (!x y. (x, y) IN r ==> tc' x y) /\
+    (!x y. (x,y) IN r ==> tc' x y) /\
     (!x y. (?z. tc' x z /\ tc' z y) ==> tc' x y) ==>
-    !x y. (x, y) IN tc r ==> tc' x y
+    !x y. (x,y) IN tc r ==> tc' x y
 Proof
   SRW_TAC [] [SPECIFICATION]
   THEN IMP_RES_TAC
          (SIMP_RULE (srw_ss()) [LAMBDA_PROD, GSYM PFORALL_THM]
-            (Q.SPECL [`r`, `\(x, y). tc' x y`] tc_ind))
+            (Q.SPECL [`r`, `\(x, y). tc' x y`] transitive_closure_ind))
 QED
 
 val [tc_rule1', tc_rule2] = CONJUNCTS (SPEC_ALL tc_rules)
@@ -322,7 +324,7 @@ Proof
   THEN ASM_REWRITE_TAC [subset_tc]
 QED
 
-Theorem tc_strongind[allow_rebind]:
+Theorem tc_strongind:
   !r tc'.
     (!x y. (x, y) IN r ==> tc' x y) /\
     (!x y. (?z. (x, z) IN tc r /\ tc' x z /\ (z, y) IN tc r /\ tc' z y) ==>
@@ -332,7 +334,7 @@ Proof
   SRW_TAC [] [SPECIFICATION]
   THEN IMP_RES_TAC
          (SIMP_RULE (srw_ss()) [LAMBDA_PROD, GSYM PFORALL_THM]
-            (Q.SPECL [`r`, `\(x, y). tc' x y`] tc_strongind))
+            (Q.SPECL [`r`, `\(x, y). tc' x y`] transitive_closure_strongind))
 QED
 
 Triviality tc_cases_lem:
@@ -796,53 +798,67 @@ QED
 (* Symmetric closure (sc)                                                   *)
 (* ------------------------------------------------------------------------ *)
 
-Definition symmetric_def :
+Definition symmetric_def:
     symmetric r s <=> !x y. x IN s /\ y IN s ==> ((x,y) IN r <=> (y,x) IN r)
 End
 
-Theorem symmetric_union :
+Theorem symmetric_union:
     !r1 r2 s. symmetric r1 s /\ symmetric r2 s ==> symmetric (r1 UNION r2) s
 Proof
     SRW_TAC [][symmetric_def]
 QED
 
-Theorem irreflexive_union :
+Theorem irreflexive_union:
     !r1 r2 s. irreflexive r1 s /\ irreflexive r2 s ==> irreflexive (r1 UNION r2) s
 Proof
     SRW_TAC [][irreflexive_def]
 QED
 
-Inductive sc :
-    (!x y. r (x,y) ==> sc r (x,y)) /\
-    (!x y. sc r (x,y) ==> sc r (y,x))
+Inductive symmetric_closure:
+    (!x y. r (x,y) ==> symmetric_closure r (x,y)) /\
+    (!x y. symmetric_closure r (x,y) ==> symmetric_closure r (y,x))
 End
+Overload sc[local] = “symmetric_closure”
 
-Theorem sc_rules[allow_rebind] :
+Theorem sc_rules:
     !r. (!x y. (x,y) IN r ==> (x,y) IN sc r) /\
          !x y. (x,y) IN sc r ==> (y,x) IN sc r
 Proof
     simp [IN_APP]
- >> METIS_TAC [sc_rules]
+ >> METIS_TAC [symmetric_closure_rules]
 QED
 
-Theorem sc_cases[allow_rebind] :
-    !r a0. a0 IN sc r <=> (?x y. a0 = (x,y) /\ (x,y) IN r) \/
-                        ?x y. a0 = (y,x) /\ (x,y) IN sc r
+Theorem sc_cases:
+    !r x y. (x,y) IN sc r <=> (x,y) IN r \/ (y,x) IN sc r
 Proof
-    simp [IN_APP]
- >> METIS_TAC [sc_cases]
+  SRW_TAC [] [SPECIFICATION]
+  THEN SRW_TAC [] [Once (Q.SPECL [`r`, `(x, y)`] symmetric_closure_cases)]
 QED
 
-Theorem sc_ind[allow_rebind] :
-    !P r.
-        (!x y. (x,y) IN r ==> P (x,y)) /\ (!x y. P (x,y) ==> P (y,x)) ==>
-        !x. x IN sc r ==> P x
+Theorem sc_ind:
+    !r sc'.
+        (!x y. (x,y) IN r ==> sc' x y) /\ (!x y. sc' x y ==> sc' y x) ==>
+        !x y. (x,y) IN sc r ==> sc' x y
 Proof
-    simp [IN_APP]
- >> METIS_TAC [sc_ind]
+  SRW_TAC [] [SPECIFICATION]
+  THEN IMP_RES_TAC
+         (SIMP_RULE (srw_ss()) [LAMBDA_PROD, GSYM PFORALL_THM]
+            (Q.SPECL [`r`, `\(x, y). sc' x y`] symmetric_closure_ind))
 QED
 
-Theorem sc_swap :
+Theorem sc_strongind:
+  !r sc'.
+        (!x y. (x,y) IN r ==> sc' x y) /\
+        (!x y. (x,y) IN sc r /\ sc' x y ==> sc' y x) ==>
+        !x y. (x,y) IN sc r ==> sc' x y
+Proof
+  SRW_TAC [] [SPECIFICATION]
+  THEN IMP_RES_TAC
+         (SIMP_RULE (srw_ss()) [LAMBDA_PROD, GSYM PFORALL_THM]
+            (Q.SPECL [`r`, `\(x, y). sc' x y`] symmetric_closure_strongind))
+QED
+
+Theorem sc_swap:
     !x y r. (x,y) IN sc r <=> (y,x) IN sc r
 Proof
     rpt GEN_TAC
@@ -850,22 +866,24 @@ Proof
  >> MATCH_MP_TAC (cj 2 sc_rules) >> art []
 QED
 
-Theorem sc_symmetric[simp] :
+Theorem sc_symmetric[simp]:
     symmetric (sc r) s
 Proof
     SRW_TAC [][symmetric_def, Once sc_swap]
 QED
 
-Theorem sc_irreflexive_lemma[local] :
+Theorem sc_irreflexive_lemma[local]:
     !x r. (x,x) NOTIN r ==> (x,x) NOTIN sc r
 Proof
     rpt GEN_TAC
  >> simp [Once MONO_NOT_EQ]
  >> Suff ‘!z. z IN sc r ==> FST z = SND z ==> z IN r’ >- SRW_TAC [][]
- >> HO_MATCH_MP_TAC sc_ind >> SRW_TAC [][]
+ >> SIMP_TAC bool_ss [FORALL_PROD]
+ >> HO_MATCH_MP_TAC sc_ind
+ >> SRW_TAC [][]
 QED
 
-Theorem sc_irreflexive :
+Theorem sc_irreflexive:
     !r s. irreflexive r s ==> irreflexive (sc r) s
 Proof
     SRW_TAC [][irreflexive_def]
@@ -873,16 +891,18 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-Theorem sc_empty[simp] :
+Theorem sc_empty[simp]:
     sc {} = {}
 Proof
     SRW_TAC [][Once EXTENSION]
  >> Suff ‘!x. x IN sc {} ==> F’ >- SRW_TAC [][]
+ >> SIMP_TAC bool_ss [FORALL_PROD]
+ >> Suff ‘!x y. (x,y) IN sc {} ==> F’ >- SRW_TAC [][]
  >> HO_MATCH_MP_TAC sc_ind
  >> SRW_TAC [][]
 QED
 
-Theorem sc_def :
+Theorem sc_def:
     !r. sc r = {(x,y) | (x,y) IN r \/ (y,x) IN r}
 Proof
     SRW_TAC [][Once EXTENSION]
@@ -891,10 +911,11 @@ Proof
      SRW_TAC [][Once sc_swap] \\
      MATCH_MP_TAC (cj 1 sc_rules) >> art [])
  >> Q.ID_SPEC_TAC ‘x’
+ >> simp [FORALL_PROD]
  >> HO_MATCH_MP_TAC sc_ind >> NTAC 2 (SRW_TAC [][])
 QED
 
-Theorem finite_sc :
+Theorem finite_sc:
     !r. FINITE r ==> FINITE (sc r)
 Proof
     SRW_TAC [][sc_def]
@@ -2630,5 +2651,15 @@ Proof
   THEN SRW_TAC [] []
   THEN METIS_TAC [partial_order_def, nth_min_subset_lem2]
 QED
+
+val _ = List.app Theory.delete_binding
+  ["symmetric_closure_rules",
+   "symmetric_closure_ind",
+   "symmetric_closure_strongind",
+   "symmetric_closure_cases",
+   "transitive_closure_rules",
+   "transitive_closure_ind",
+   "transitive_closure_strongind",
+   "transitive_closure_cases"];
 
 val _ = export_theory ();
