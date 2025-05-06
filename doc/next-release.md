@@ -86,6 +86,8 @@ Incompatibilities:
 
 -   `util_probTheory` has been merged into `sigma_algebraTheory`.
 
+-   In `set_relationTheory`, the constant `tc` has been renamed to `transitive_closure`.
+
 * * * * *
 
 <div class="footer">
