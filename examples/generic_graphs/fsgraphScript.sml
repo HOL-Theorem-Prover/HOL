@@ -738,9 +738,11 @@ QED
 
 (* r-partite graphs [2, p.17]
 
-   NOTE: ‘partitions’ requires that each partiton must be non-empty. This is not
-   explicitly mentioned in the textbook but seems reasonable.
- *)
+   Expressed in terms of colourings from nodes into :num. This gives the
+   consequences one would expect, while explicitly allowing for a partition
+   "set" to be empty.
+
+*)
 Definition gen_partite_def :
     gen_partite r (g :fsgraph) v <=>
       (∀n. n ∈ nodes g ⇒ v n < r) ∧
