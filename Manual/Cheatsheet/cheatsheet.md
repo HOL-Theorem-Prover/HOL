@@ -390,7 +390,7 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 <code>qrefinel [&grave;<i>term</i>&grave;s]</code>
 : Like `qrefine`, but accepts a list of terms to instantiate multiple `∃` quantifiers.
   Also can be passed underscores, to avoid refining selected `∃` quantifiers.
-  For example, for a goal `n = 2 /\ c = 5 ==> ∃ a b c d. a + b = c + d`, the tactic <code>strip_tac >> qrefinel [&grave;_&grave;,&grave;SUC c&grave;,&grave;_&grave;,&grave;n + m&grave;]</code> produces the new goal `∃ a c' m. a + SUC c = c' + (n + m)` .
+  For example, for a goal `n = 2 /\ c = 5 ==> ∃ a b c d. a + b = c + d`, the tactic <code>strip_tac >> qrefinel [&grave;&#95;&grave;,&grave;SUC c&grave;,&grave;&#95;&grave;,&grave;n + m&grave;]</code> produces the new goal `∃ a c' m. a + SUC c = c' + (n + m)` .
 
 <code>goal_assum $ drule_at Any</code>
 : For a goal of the form `∃ vars . P1 /\ ... /\ Pn` (where the `vars` may be free in the `Pi`), attempts to match the `Pi` against the assumptions.
