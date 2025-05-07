@@ -3852,7 +3852,7 @@ val RSUM_COMPONENT_LE = store_thm ("RSUM_COMPONENT_LE",
   POP_ASSUM MP_TAC THEN
   POP_ASSUM (MP_TAC o Q.SPECL [`p_1:real`,`p_2:real->bool`]) THEN
   ASM_REWRITE_TAC [SUBSET_DEF] THEN REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC [] THEN Cases_on `content (interval [(a',b')]) =  0` THENL
+  ASM_REWRITE_TAC [] THEN Cases_on `content (interval [(a',b')]) = 0` THENL
   [ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC, ALL_TAC] THEN
   MP_TAC(SPECL [``a':real``, ``b':real``] CONTENT_POS_LE) THEN
   GEN_REWR_TAC LAND_CONV [REAL_LE_LT] THEN
@@ -6696,7 +6696,7 @@ val lemma1 = prove (
       REWRITE_TAC[IN_INSERT, IN_NUMSEG] THEN ARITH_TAC,
       DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
       DISCH_THEN SUBST1_TAC THEN AP_TERM_TAC THEN
-      REWRITE_TAC [METIS [o_DEF] `` (\s. f (SUC n INSERT s)) =  f o (\s. SUC n INSERT s)``]
+      REWRITE_TAC [METIS [o_DEF] `` (\s. f (SUC n INSERT s)) = f o (\s. SUC n INSERT s)``]
       THEN MATCH_MP_TAC (SUM_IMAGE) THEN
       SIMP_TAC std_ss [FINITE_POWERSET, FINITE_NUMSEG] THEN
       MAP_EVERY X_GEN_TAC [``s:num->bool``, ``t:num->bool``] THEN
@@ -6708,7 +6708,7 @@ val lemma1 = prove (
 
 val lemma2 = prove (
    ``!f:real->real m a:real c:real d:real.
-          f integrable_on univ(:real) /\ m <=  1n /\
+          f integrable_on univ(:real) /\ m <= 1n /\
           ((a = c) \/ (d = c)) /\
           ((a = c) ==> (a = d)) /\ ((a <= c) /\ (a <= d))
           ==> (integral(interval[a,d]) f =
@@ -8746,7 +8746,7 @@ val lemma = prove (
     METIS_TAC[integrable_on, HAS_INTEGRAL_DIFF, NEGLIGIBLE_EMPTY,
                  SET_RULE ``s SUBSET t ==> (s DIFF t = {})``]);
 
-val INTEGRABLE_ON_ALL_INTERVALS_INTEGRABLE_BOUND =  store_thm ("INTEGRABLE_ON_ALL_INTERVALS_INTEGRABLE_BOUND",
+val INTEGRABLE_ON_ALL_INTERVALS_INTEGRABLE_BOUND = store_thm ("INTEGRABLE_ON_ALL_INTERVALS_INTEGRABLE_BOUND",
  ``!f:real->real g s.
         (!a b. (\x. if x IN s then f x else 0)
                integrable_on interval[a,b]) /\
@@ -16303,7 +16303,7 @@ val EQUIINTEGRABLE_OPEN_INTERVAL_RESTRICTIONS = store_thm ("EQUIINTEGRABLE_OPEN_
             equiintegrable_on interval[a,b]``,
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
-   ``!n. (\n. n <=  1n
+   ``!n. (\n. n <= 1n
         ==> f INSERT
             { (\x. if !i. 1 <= i /\ i <= n ==> c < x /\ x < d
                    then (f:real->real) x else 0) |
@@ -16314,7 +16314,7 @@ val EQUIINTEGRABLE_OPEN_INTERVAL_RESTRICTIONS = store_thm ("EQUIINTEGRABLE_OPEN_
     SIMP_TAC std_ss [ARITH_PROVE ``~(1 <= i /\ i <= 0:num)``] THEN
     ASM_SIMP_TAC std_ss [ETA_AX, EQUIINTEGRABLE_ON_SING, SET_RULE
      ``f INSERT {f |(c,d)| c IN UNIV /\ d IN UNIV} = {f}``] THEN
-    X_GEN_TAC ``n:num`` THEN ASM_CASES_TAC ``SUC n <=  1n`` THEN
+    X_GEN_TAC ``n:num`` THEN ASM_CASES_TAC ``SUC n <= 1n`` THEN
     ASM_REWRITE_TAC[] THEN KNOW_TAC ``n <= 1:num`` THENL
     [ASM_ARITH_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC] THEN
      DISCH_THEN(MP_TAC o SPEC ``f:real->real`` o
@@ -16434,7 +16434,7 @@ val EQUIINTEGRABLE_CLOSED_INTERVAL_RESTRICTIONS = store_thm ("EQUIINTEGRABLE_CLO
             equiintegrable_on interval[a,b]``,
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
-   ``!n. (\n. n <=  1n
+   ``!n. (\n. n <= 1n
         ==> f INSERT
             { (\x. if !i. 1 <= i /\ i <= n ==> c <= x /\ x <= d
                    then (f:real->real) x else 0) |
@@ -16445,7 +16445,7 @@ val EQUIINTEGRABLE_CLOSED_INTERVAL_RESTRICTIONS = store_thm ("EQUIINTEGRABLE_CLO
     REWRITE_TAC[ARITH_PROVE ``~(1 <= i /\ i <= 0:num)``] THEN
     ASM_SIMP_TAC std_ss [ETA_AX, EQUIINTEGRABLE_ON_SING, SET_RULE
      ``f INSERT {f |(c,d)| c IN UNIV /\ d IN UNIV} = {f}``] THEN
-    X_GEN_TAC ``n:num`` THEN ASM_CASES_TAC ``SUC n <=  1n`` THEN
+    X_GEN_TAC ``n:num`` THEN ASM_CASES_TAC ``SUC n <= 1n`` THEN
     ASM_SIMP_TAC std_ss [] THEN KNOW_TAC ``n <= 1:num`` THENL
     [ASM_SIMP_TAC arith_ss [], DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC] THEN
     DISCH_THEN(MP_TAC o SPEC ``f:real->real`` o

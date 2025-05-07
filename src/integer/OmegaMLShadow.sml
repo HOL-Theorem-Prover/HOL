@@ -175,7 +175,7 @@ fun combine_dark_factoids i low up =
         val b = ~(sub(U, i))
         val maxdex = Int.-(length L, 1)
         fun gen j = let
-          val base =  a * sub(U, j) + b * sub(L, j)
+          val base = a * sub(U, j) + b * sub(L, j)
         in
           if j = maxdex then base - ((a - one) * (b - one))
           else base

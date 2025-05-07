@@ -718,20 +718,20 @@ bt_to_list_CONV ``bt_to_list_ac
 val cmp = ``numto``;
 val tbt = rand (rand (concl (DISPLAY_TO_ENUMERAL_CONV
                              numto_CONV ``numto`` ``{1;2;3;4;5}``)));
-val bolt =  ``bt_to_ol_lb_ub_ac ^cmp 0 ^tbt 4 []``;
-val bolt' =  ``bt_to_ol_lb_ub_ac ^cmp 0 ^tbt 8 []``;
-val bolt'' =  ``bt_to_ol_lb_ub_ac ^cmp 2 ^tbt 5 []``;
+val bolt = ``bt_to_ol_lb_ub_ac ^cmp 0 ^tbt 4 []``;
+val bolt' = ``bt_to_ol_lb_ub_ac ^cmp 0 ^tbt 8 []``;
+val bolt'' = ``bt_to_ol_lb_ub_ac ^cmp 2 ^tbt 5 []``;
 bt_to_ol_lb_ub_CONV numto_CONV bolt;
 
-val bult =  ``bt_to_ol_ub_ac ^cmp ^tbt 4 []``;
-val bult' =  ``bt_to_ol_ub_ac ^cmp ^tbt 8 []``;
+val bult = ``bt_to_ol_ub_ac ^cmp ^tbt 4 []``;
+val bult' = ``bt_to_ol_ub_ac ^cmp ^tbt 8 []``;
 bt_to_ol_ub_CONV numto_CONV bult;
 
-val bllt =  ``bt_to_ol_lb_ac ^cmp 2 ^tbt []``;
-val bllt' =  ``bt_to_ol_lb_ac ^cmp 0 ^tbt []``;
+val bllt = ``bt_to_ol_lb_ac ^cmp 2 ^tbt []``;
+val bllt' = ``bt_to_ol_lb_ac ^cmp 0 ^tbt []``;
 bt_to_ol_lb_CONV numto_CONV bllt;
 
-val blt =  ``bt_to_ol numto ^tbt``;
+val blt = ``bt_to_ol numto ^tbt``;
 bt_to_ol_CONV numto_CONV blt;
 val badbt = ``node (node nt 1 nt) 3 (node (node nt 3 nt) 4 (node nt 1 nt))``;
 val badblt = ``bt_to_ol numto ^badbt``;

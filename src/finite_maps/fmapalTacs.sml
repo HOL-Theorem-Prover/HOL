@@ -130,7 +130,7 @@ fun FUN_FMAPAL_CONV keyconv cmp elemconv =
 (* ******************************************************************* *)
 
 (* FAPPLY_node = |- !cmp x l a b r.
-     FMAPAL cmp (node l (a,b) r) ' x =  case apto cmp x a of
+     FMAPAL cmp (node l (a,b) r) ' x = case apto cmp x a of
      LESS => FMAPAL cmp l ' x | EQUAL => b | GREATER => FMAPAL cmp r ' x
 
    FAPPLY_nt = |- !cmp x. FMAPAL cmp nt ' x = FEMPTY ' x *)
@@ -709,20 +709,20 @@ ORWL_TO_FMAPAL fake;
 val cmp = ``numto``;
 val tbt = rand (rand (concl (fmap_TO_FMAPAL_CONV numto_CONV ``numto``
                              ``fmap [1,T;2,F;3,T;4,F;5,T]``)));
-val bolt =  ``bt_to_orl_lb_ub_ac ^cmp 0 ^tbt 4 []``;
-val bolt' =  ``bt_to_orl_lb_ub_ac ^cmp 0 ^tbt 8 []``;
-val bolt'' =  ``bt_to_orl_lb_ub_ac ^cmp 2 ^tbt 5 []``;
+val bolt = ``bt_to_orl_lb_ub_ac ^cmp 0 ^tbt 4 []``;
+val bolt' = ``bt_to_orl_lb_ub_ac ^cmp 0 ^tbt 8 []``;
+val bolt'' = ``bt_to_orl_lb_ub_ac ^cmp 2 ^tbt 5 []``;
 bt_to_orl_lb_ub_CONV numto_CONV bolt;
 
-val bult =  ``bt_to_orl_ub_ac ^cmp ^tbt 4 []``;
-val bult' =  ``bt_to_orl_ub_ac ^cmp ^tbt 8 []``;
+val bult = ``bt_to_orl_ub_ac ^cmp ^tbt 4 []``;
+val bult' = ``bt_to_orl_ub_ac ^cmp ^tbt 8 []``;
 bt_to_orl_ub_CONV numto_CONV bult;
 
-val bllt =  ``bt_to_orl_lb_ac ^cmp 2 ^tbt []``;
-val bllt' =  ``bt_to_orl_lb_ac ^cmp 0 ^tbt []``;
+val bllt = ``bt_to_orl_lb_ac ^cmp 2 ^tbt []``;
+val bllt' = ``bt_to_orl_lb_ac ^cmp 0 ^tbt []``;
 bt_to_orl_lb_CONV numto_CONV bllt;
 
-val blt =  ``bt_to_orl numto ^tbt``;
+val blt = ``bt_to_orl numto ^tbt``;
 bt_to_orl_CONV numto_CONV blt;
 val badbt = ``node (node nt (1,T) nt) (3,T) (node (node nt (3,F) nt)
               (4,F) (node nt (1,F) nt))``;

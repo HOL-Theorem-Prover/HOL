@@ -588,7 +588,7 @@ val _ = ConstMapML.insert(Term.prim_mk_const{Name="NIL",Thy="list"});
 val num_CASES = arithmeticTheory.num_CASES;
 
 val NOT_SUC = numTheory.NOT_SUC;
-val PRE =  prim_recTheory.PRE;
+val PRE = prim_recTheory.PRE;
 
 val BUTFIRSTN_compute = Q.prove(
   `!n l. BUTFIRSTN n l =

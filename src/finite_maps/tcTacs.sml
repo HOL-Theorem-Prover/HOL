@@ -209,7 +209,7 @@ rand (concl
                                                   (node nt 98 nt))))))))
                              nt)))))))) *)
 
-val beer_tc_fmap =  rand (rand (concl (Count.apply (TC_CONV REDUCE_CONV)
+val beer_tc_fmap = rand (rand (concl (Count.apply (TC_CONV REDUCE_CONV)
                                 ``(FMAP_TO_RELN ^beer_bottles)^+``)));
                                           (*runtime: 42.143s,Prims:23897363*)
 

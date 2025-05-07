@@ -597,14 +597,14 @@ in
                      sat_thm = def_thm}
 end;
 
-val new_resq_definition =  new_gen_resq_definition NONE;
+val new_resq_definition = new_gen_resq_definition NONE;
 
 fun new_infixl_resq_definition (name,tm,fix) =
     new_gen_resq_definition (SOME (Infixl fix)) (name,tm);
 fun new_infixr_resq_definition (name,tm,fix) =
     new_gen_resq_definition (SOME (Infixr fix)) (name,tm);
 
-val new_binder_resq_definition =  new_gen_resq_definition (SOME Binder);
+val new_binder_resq_definition = new_gen_resq_definition (SOME Binder);
 
 (* --------------------------------------------------------------------- *)
 (* Some restricted quantifier functions using term quotations            *)

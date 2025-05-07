@@ -30,7 +30,7 @@ fun (m1 ++? fm2) env =
       Error e => fm2 e env
     | Some x => Some x
 
-fun mmap f [] =  return []
+fun mmap f [] = return []
   | mmap (f:'a -> ('s,'b,'error) t) ((x:'a)::xs) = let
     in
       f x >-            (fn (x':'b) =>

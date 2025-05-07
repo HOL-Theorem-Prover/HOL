@@ -985,7 +985,7 @@ fun prove_induction_thm th =
                   in GENL vs (SPECL [mk_abs(v,T), P] thm)
                   end
       val spec = SPECL (map (mk_fn P ty) cases) uniq
-      val simp =  CONV_RULE (LCONV(conv1 THENC conv2)) spec
+      val simp = CONV_RULE (LCONV(conv1 THENC conv2)) spec
    in
      GEN P (CONV_RULE (RAND_CONV CONCL_SIMP) simp)
    end

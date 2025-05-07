@@ -538,7 +538,7 @@ val SUBSET_K = store_thm (* from util_prob *)
 (* Proper subset.                                                        *)
 (* ===================================================================== *)
 
-val PSUBSET_DEF =  new_definition(
+val PSUBSET_DEF = new_definition(
   "PSUBSET_DEF",
   ``PSUBSET (s:'a set) t <=> s SUBSET t /\ ~(s = t)``);
 val _ = set_fixity "PSUBSET" (Infix(NONASSOC, 450))
@@ -3166,7 +3166,7 @@ val card_rel_def =
 (* Prove that such a relation exists.                                   *)
 (* ---------------------------------------------------------------------*)
 
-val CARD_REL_EXISTS =  prove_rec_fn_exists num_Axiom card_rel_def;
+val CARD_REL_EXISTS = prove_rec_fn_exists num_Axiom card_rel_def;
 
 (* ---------------------------------------------------------------------*)
 (* Now, prove that it doesn't matter which element we delete            *)

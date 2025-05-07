@@ -324,7 +324,7 @@ val COUNTABLY_ADDITIVE = store_thm
        countably_additive m /\ f IN (UNIV -> measurable_sets m)
        /\ (!i j. i <> j ==> DISJOINT (f i) (f j)) /\
        (s = BIGUNION (IMAGE f UNIV)) /\ s IN measurable_sets m ==>
-       (suminf (measure m o f) =  measure m s)``,
+       (suminf (measure m o f) = measure m s)``,
    RW_TAC std_ss []
    >> PROVE_TAC [countably_additive_def]);
 
@@ -6563,7 +6563,7 @@ Proof
  >> (MP_TAC o Q.SPECL [`m`,`f`,`n`,`x`]) lemma_fn_3
  >> RW_TAC real_ss []
  >- METIS_TAC [lemma_fn_2,le_refl]
- >> `fn_seq m f n x =  &k / 2 pow n` by RW_TAC real_ss [lemma_fn_1]
+ >> `fn_seq m f n x = &k / 2 pow n` by RW_TAC real_ss [lemma_fn_1]
  >> RW_TAC std_ss []
 QED
 

@@ -45,7 +45,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val interactive_flag = #interactive (#core optv)
   val no_overlay = #no_overlay (#core optv)
   val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
-  val MOSMLDIR =  case #mosmldir optv of NONE => MOSMLDIR0 | SOME s => s
+  val MOSMLDIR = case #mosmldir optv of NONE => MOSMLDIR0 | SOME s => s
   val MOSMLCOMP = fullPath [MOSMLDIR, "mosmlc"]
   fun compile debug args = let
     val _ = if isSome debug then

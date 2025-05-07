@@ -1320,7 +1320,7 @@ Proof
      >> rfs [IN_MEASURABLE_BOREL]
      >> `({x | Normal c < f x} INTER space a) INTER ({x | f x <= Normal d} INTER space a) IN subsets a`
           by METIS_TAC [sigma_algebra_def,ALGEBRA_INTER]
-     >> `({x | Normal c < f x} INTER space a) INTER ({x | f x <=  Normal d} INTER space a) =
+     >> `({x | Normal c < f x} INTER space a) INTER ({x | f x <= Normal d} INTER space a) =
           {x | Normal c < f x} INTER {x | f x <= Normal d} INTER space a`
           by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] >> METIS_TAC [])
      >> `{x | Normal c < f x} INTER {x | f x <= Normal d} = {x | Normal c < f x /\ f x <= Normal d}`

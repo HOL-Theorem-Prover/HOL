@@ -391,7 +391,7 @@ val BOOL_EQ_IMP_convdata = {name = "BOOL_EQ_IMP_CONV",
             key = SOME ([],``(a:bool) = (b:bool)``),
             conv = K (K BOOL_EQ_IMP_CONV)}:simpfrag.convdata;
 
-val BOOL_EXTRACT_SHARED_convdata =  {name = "BOOL_EXTRACT_SHARED_CONV",
+val BOOL_EXTRACT_SHARED_convdata = {name = "BOOL_EXTRACT_SHARED_CONV",
             trace = 2,
             key = SOME ([],``a:bool``),
             conv = K (K BOOL_EXTRACT_SHARED_CONV)}:simpfrag.convdata;

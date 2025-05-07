@@ -1058,7 +1058,7 @@ fun mutrec thy bindstem eqns =
       val mut_ind2 = GENL Plist (DISCH ant (LIST_CONJ tmpl))
   in
     { rules = mut_rules2,
-      ind =  mut_ind2,
+      ind = mut_ind2,
       SV = #SV wfrec_res,
       R = rand (#WFR wfrec_res),
       union = defn,
@@ -1396,11 +1396,11 @@ val ex1 =
   ("f","g"), ("g","g"), ("g","i"), ("g","h"),
   ("i","h"), ("i","k"), ("h","j")];
 
-val ex2 =  ("a","z")::ex1;
-val ex3 =  ("z","a")::ex1;
-val ex4 =  ("z","c")::ex3;
-val ex5 =  ("c","z")::ex3;
-val ex6 =  ("c","i")::ex3;
+val ex2 = ("a","z")::ex1;
+val ex3 = ("z","a")::ex1;
+val ex4 = ("z","c")::ex3;
+val ex5 = ("c","z")::ex3;
+val ex6 = ("c","i")::ex3;
 
 cliques_of (trancl ex1);
 cliques_of (trancl ex2);

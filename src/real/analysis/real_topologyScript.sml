@@ -1404,8 +1404,8 @@ val MAXIMAL_INDEPENDENT_SUBSET_EXTEND = store_thm ("MAXIMAL_INDEPENDENT_SUBSET_E
   FIRST_X_ASSUM(MP_TAC o REWRITE_RULE [SUBSET_DEF]) THEN
   SIMP_TAC std_ss [NOT_FORALL_THM, NOT_IMP] THEN
   DISCH_THEN(X_CHOOSE_THEN ``a:real`` STRIP_ASSUME_TAC) THEN
-  KNOW_TAC ``(!(m :num). m <  1n - CARD (s :real -> bool) ==>
-        !(s :real -> bool). (m =  1n - CARD s) ==>
+  KNOW_TAC ``(!(m :num). m < 1n - CARD (s :real -> bool) ==>
+        !(s :real -> bool). (m = 1n - CARD s) ==>
           s SUBSET (v :real -> bool) /\ independent s ==>
           ?(b :real -> bool).
             s SUBSET b /\ b SUBSET v /\ independent b /\ v SUBSET span b) ==>
@@ -1887,7 +1887,7 @@ val DIM_SUBSET = store_thm ("DIM_SUBSET",
   MESON_TAC[BASIS_EXISTS, INDEPENDENT_SPAN_BOUND, SUBSET_DEF, HAS_SIZE]);
 
 val DIM_SUBSET_UNIV = store_thm ("DIM_SUBSET_UNIV",
- ``!s:real->bool. dim(s) <=  1n``,
+ ``!s:real->bool. dim(s) <= 1n``,
   GEN_TAC THEN REWRITE_TAC[GSYM DIM_UNIV] THEN
   MATCH_MP_TAC DIM_SUBSET THEN REWRITE_TAC[SUBSET_UNIV]);
 
@@ -2674,7 +2674,7 @@ val ENDS_IN_SEGMENT = store_thm ("ENDS_IN_SEGMENT",
    [EXISTS_TAC ``&0:real``, EXISTS_TAC ``&1:real``] THEN
   (CONJ_TAC THENL [REAL_ARITH_TAC, REAL_ARITH_TAC]));
 
-val ENDS_NOT_IN_SEGMENT =  store_thm ("ENDS_NOT_IN_SEGMENT",
+val ENDS_NOT_IN_SEGMENT = store_thm ("ENDS_NOT_IN_SEGMENT",
  ``!a b. ~(a IN segment(a,b)) /\ ~(b IN segment(a,b))``,
   REWRITE_TAC[open_segment] THEN SET_TAC[]);
 
@@ -7837,7 +7837,7 @@ val CLOSED_IMP_FIP = store_thm ("CLOSED_IMP_FIP",
   MATCH_MP_TAC COMPACT_IMP_FIP THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
    [ASM_MESON_TAC[CLOSED_INTER_COMPACT, COMPACT_EQ_BOUNDED_CLOSED],
     REWRITE_TAC [METIS [INTER_ASSOC, GSYM BIGINTER_INSERT]
-          ``!f.  s INTER t INTER BIGINTER f =  s INTER BIGINTER (t INSERT f)``] THEN
+          ``!f.  s INTER t INTER BIGINTER f = s INTER BIGINTER (t INSERT f)``] THEN
   GEN_TAC THEN STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
   ASM_SIMP_TAC std_ss [FINITE_INSERT, INSERT_SUBSET]]);
 
@@ -10675,7 +10675,7 @@ val CONTINUOUS_AGREE_ON_CLOSURE = store_thm ("CONTINUOUS_AGREE_ON_CLOSURE",
         (!x. x IN s ==> (g x = h x))
         ==> !x. x IN closure s ==> (g x = h x)``,
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_SUB_0] THEN STRIP_TAC THEN
-  ONCE_REWRITE_TAC [METIS [] ``(g x - h x = 0) =  ((\x. g x - h x) x = 0:real)``] THEN
+  ONCE_REWRITE_TAC [METIS [] ``(g x - h x = 0) = ((\x. g x - h x) x = 0:real)``] THEN
   MATCH_MP_TAC CONTINUOUS_CONSTANT_ON_CLOSURE THEN
   ASM_SIMP_TAC std_ss [CONTINUOUS_ON_SUB]);
 
@@ -13636,7 +13636,7 @@ val INTERIOR_CLOSED_INTERVAL = store_thm ("INTERIOR_CLOSED_INTERVAL",
   [DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x - (e / 2:real)`),
    DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `x + (e / 2:real)`)] THEN
    ASM_SIMP_TAC std_ss [dist, REAL_ADD_SUB, REAL_ARITH ``x - y - x = -y:real``,
-                                   REAL_ARITH ``x + y - x =  y:real``] THEN
+                                   REAL_ARITH ``x + y - x = y:real``] THEN
    ASM_SIMP_TAC std_ss [ABS_MUL, ABS_NEG, REAL_MUL_RID] THENL [CONJ_TAC THENL
    [METIS_TAC [ABS_REFL, REAL_LT_HALF1, REAL_LT_HALF2, REAL_LE_LT], ALL_TAC],
     CONJ_TAC THENL [METIS_TAC [ABS_REFL, REAL_LT_HALF1, REAL_LT_HALF2, REAL_LE_LT],
@@ -15871,11 +15871,11 @@ val HOMEOMORPHIC_OPEN_INTERVAL_UNIV = store_thm ("HOMEOMORPHIC_OPEN_INTERVAL_UNI
       FULL_SIMP_TAC real_ss [REAL_LT_IMP_LE] THEN
       RULE_ASSUM_TAC (ONCE_REWRITE_RULE [REAL_MUL_SYM]) THEN
       FULL_SIMP_TAC real_ss [GSYM real_div, REAL_LE_RDIV_EQ,
-       REAL_ARITH ``(-1 < x) =  (0 < 1 + x:real)``],
+       REAL_ARITH ``(-1 < x) = (0 < 1 + x:real)``],
       FULL_SIMP_TAC real_ss [REAL_LT_IMP_LE, REAL_NOT_LE] THEN
       RULE_ASSUM_TAC (ONCE_REWRITE_RULE [REAL_MUL_SYM]) THEN
       FULL_SIMP_TAC real_ss [GSYM real_div, REAL_LT_LDIV_EQ,
-       REAL_ARITH ``(x < 1) =  (0 < 1 - x:real)``] THEN
+       REAL_ARITH ``(x < 1) = (0 < 1 - x:real)``] THEN
       METIS_TAC [REAL_ARITH ``~(x < 0 /\ 0 <= x:real)``],
       FULL_SIMP_TAC real_ss [] THEN
       METIS_TAC [REAL_INV_1OVER, REAL_MUL_RINV, REAL_INV_INV]],
