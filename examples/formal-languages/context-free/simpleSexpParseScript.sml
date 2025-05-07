@@ -1026,7 +1026,8 @@ Proof
     gvs[stoppers_def,IN_DEF]
     \\ pairarg_tac \\ fs[destSXNUM_def]
     \\ fs[UNCURRY,destSXCONS_def,destSXNUM_def,rich_listTheory.FOLDL_MAP]
-    \\ qmatch_assum_abbrev_tac`FOLDL f a t = _`
+    \\ gvs[destSXNUM_def]
+    \\ qmatch_goalsub_abbrev_tac`FOLDL f a t`
     \\ ‘∀ls a . FST (FOLDL f a ls) = FST a * 10 ** (LENGTH ls)’
           by (Induct \\ simp[Abbr`f`,arithmeticTheory.EXP]) >>
     ‘∀ls a. EVERY isDigit (MAP FST ls) ⇒
@@ -1044,6 +1045,7 @@ Proof
     \\ fs[s2n_UNHEX_alt]
     \\ imp_res_tac num_to_dec_string_eq_cons
     \\ simp[GSYM num_from_dec_string_def]
+    \\ fs[]
     \\ imp_res_tac isDigit_UNHEX_alt \\ fs[]) >~
   [‘print_nt sxnt_sexp’, ‘print_nt sxnt_sexp0’]
   >- (qx_gen_tac ‘sexp’ >> strip_tac >> simp[Once print_nt_def] >> gvs[] >>
