@@ -743,8 +743,8 @@ QED
  *)
 Definition gen_partite_def :
     gen_partite r (g :fsgraph) v <=>
-      v partitions (nodes g) /\ CARD v = r /\
-      !n1 n2. {n1;n2} IN fsgedges g ==> part v n1 <> part v n2
+      (∀n. n ∈ nodes g ⇒ v n < r) ∧
+      (∀e. e ∈ fsgedges g ⇒ CARD (IMAGE v e) = 2)
 End
 
 Definition partite :
@@ -753,8 +753,7 @@ End
 
 (* |- !r g.
         partite r g <=>
-        ?v. v partitions V /\ CARD v = r /\
-            !n1 n2. {n1; n2} IN E ==> part v n1 <> part v n2
+        ?v. (∀n. n IN V ⇒ v n < r) ∧ (∀e. e IN E ⇒ CARD (IMAGE v e) = 2)
  *)
 Theorem partite_def = REWRITE_RULE [gen_partite_def] partite
 
@@ -762,151 +761,84 @@ Theorem partite_def = REWRITE_RULE [gen_partite_def] partite
 Overload bipartite = “partite 2”
 
 Definition gen_bipartite :
-    gen_bipartite (g :fsgraph) A B = gen_partite 2 g {A; B}
+  gen_bipartite (g :fsgraph) A B ⇔
+    ∃cf. gen_partite 2 g cf ∧ A = PREIMAGE cf {0} ∩ V ∧
+         B = PREIMAGE cf {1} ∩ V
 End
 
 Theorem gen_bipartite_partitions[local] :
-    !g :fsgraph v. gen_partite 2 g v ==> ?A B. gen_bipartite g A B
+  !g :fsgraph v. gen_partite 2 g v ==> ?A B. gen_bipartite g A B
 Proof
-    rw [gen_partite_def]
- >> ‘FINITE V’ by rw []
- >> ‘FINITE v’ by PROVE_TAC [partitions_FINITE]
- >> gs [CARDEQ2]
- >> qexistsl_tac [‘a’, ‘b’]
- >> rw [gen_bipartite, gen_partite_def]
+  rw [gen_partite_def, gen_bipartite] >> metis_tac[]
 QED
 
 Theorem gen_bipartite_def :
-    !g A B. gen_bipartite (g :fsgraph) A B <=>
-            DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
-            !n1 n2. {n1;n2} IN fsgedges g ==>
-                    (n1 IN A /\ n2 IN B) \/ (n1 IN B /\ n2 IN A)
+  !g A B. gen_bipartite (g :fsgraph) A B <=>
+          DISJOINT A B /\ A UNION B = nodes g /\
+          !n1 n2. {n1;n2} IN fsgedges g ==>
+                      (n1 IN A /\ n2 IN B) \/ (n1 IN B /\ n2 IN A)
 Proof
-    rw [gen_bipartite, gen_partite_def]
- >> EQ_TAC >> simp []
- >- (STRIP_TAC \\
-    ‘FINITE V’ by rw [] \\
-     qabbrev_tac ‘v = {A; B}’ \\
-    ‘FINITE v’ by PROVE_TAC [partitions_FINITE] \\
-     fs [CARDEQ2] >> gvs [Abbr ‘v’] \\
-     CONJ_ASM1_TAC (* DISJOINT A B *)
-     >- (MATCH_MP_TAC partitions_DISJOINT \\
-         qexistsl_tac [‘{A; B}’, ‘V’] >> rw []) \\
-     CONJ_TAC (* A <> {} *) >- fs [partitions_PAIR_DISJOINT] \\
-     CONJ_TAC (* B <> {} *) >- fs [partitions_PAIR_DISJOINT] \\
-     CONJ_ASM1_TAC (* A UNION B = V *)
-     >- (Q.PAT_X_ASSUM ‘{A;B} partitions V’ (MP_TAC o MATCH_MP partitions_covers) \\
-         SET_TAC []) \\
-     rpt STRIP_TAC \\
-    ‘n1 IN V /\ n2 IN V /\ n1 <> n2’ by PROVE_TAC [fsgraph_valid] \\
-     Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘n1’, ‘n2’]) >> rw [] \\
-     Cases_on ‘n1 IN A’
-     >- (DISJ1_TAC >> rw [] (* goal: n2 IN B *) \\
-         Know ‘A = part {A; B} n1’
-         >- (MATCH_MP_TAC part_unique \\
-             Q.EXISTS_TAC ‘V’ >> rw []) \\
-         DISCH_THEN (fs o wrap o SYM) \\
-         Cases_on ‘n2 IN A’
-         >- (Know ‘A = part {A; B} n2’
-             >- (MATCH_MP_TAC part_unique \\
-                 Q.EXISTS_TAC ‘V’ >> rw []) \\
-             DISCH_THEN (fs o wrap o SYM)) \\
-         ASM_SET_TAC []) \\
-     simp [] \\
-     CONJ_ASM1_TAC >- ASM_SET_TAC [] \\
-     Know ‘B = part {A; B} n1’
-     >- (MATCH_MP_TAC part_unique \\
-         Q.EXISTS_TAC ‘V’ >> rw []) \\
-     DISCH_THEN (fs o wrap o SYM) \\
-     Cases_on ‘n2 IN B’
-     >- (Know ‘B = part {A; B} n2’
-         >- (MATCH_MP_TAC part_unique \\
-             Q.EXISTS_TAC ‘V’ >> rw []) \\
-         DISCH_THEN (fs o wrap o SYM)) \\
-     ASM_SET_TAC [])
- >> STRIP_TAC
- >> CONJ_ASM1_TAC (* {A; B} partitions V *)
- >- (rw [partitions_PAIR_DISJOINT] >- art [] \\
-     rw [Once DISJOINT_SYM])
- >> rpt STRIP_TAC
- >> ‘n1 IN V /\ n2 IN V /\ n1 <> n2’ by PROVE_TAC [fsgraph_valid]
- >> Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘n1’, ‘n2’]) >> rw []
- >| [ (* goal 1 (of 2) *)
-      CCONTR_TAC >> fs [] \\
-      Know ‘A = part {A; B} n1’
-      >- (MATCH_MP_TAC part_unique \\
-          Q.EXISTS_TAC ‘V’ >> rw []) \\
-      DISCH_THEN (fs o wrap o SYM) \\
-      Know ‘B = part {A; B} n2’
-      >- (MATCH_MP_TAC part_unique \\
-          Q.EXISTS_TAC ‘V’ >> rw []) \\
-      DISCH_THEN (fs o wrap o SYM),
-      (* goal 2 (of 2) *)
-      CCONTR_TAC >> fs [] \\
-      Know ‘B = part {A; B} n1’
-      >- (MATCH_MP_TAC part_unique \\
-          Q.EXISTS_TAC ‘V’ >> rw []) \\
-      DISCH_THEN (fs o wrap o SYM) \\
-      Know ‘A = part {A; B} n2’
-      >- (MATCH_MP_TAC part_unique \\
-          Q.EXISTS_TAC ‘V’ >> rw []) \\
-      DISCH_THEN (fs o wrap o SYM) ]
+  rw [gen_bipartite, gen_partite_def, EQ_IMP_THM] >~
+  [‘DISJOINT (PREIMAGE cf {0} ∩ V) (PREIMAGE cf {1} ∩ V)’]
+  >- rw[DISJOINT_DEF, EXTENSION] >~
+  [‘PREIMAGE cf {0} ∩ V ∪ PREIMAGE cf {1} ∩ V = V’]
+  >- (rw[EXTENSION] >> metis_tac[DECIDE “x < 2 ⇔ x = 0 ∨ x = 1”]) >~
+  [‘{n1;n2} ∈ E’]
+  >- (first_x_assum drule >> simp[CARDEQ2, PULL_EXISTS] >>
+      ‘n1 ∈ V ∧ n2 ∈ V ∧ n1 ≠ n2’ by metis_tac[fsgedges_members] >>
+      rw[INSERT2_lemma] >> metis_tac[DECIDE “x < 2 ⇔ x = 0 ∨ x = 1”]) >~
+  [‘DISJOINT A B’, ‘A ∪ B = V’, ‘A = PREIMAGE _ {0} ∩ V(* sg *)’]
+  >- (qexists ‘λn. if n ∈ A then 0 else 1’ >> rw[] >~
+      [‘CARD (IMAGE _ e) = 2 (* g *)’]
+      >- (drule alledges_valid >> simp[PULL_EXISTS, AllCaseEqs()] >>
+          metis_tac[IN_DISJOINT]) >~
+      [‘A ∪ B = V’, ‘A = PREIMAGE _ {0} ∩ V’]
+      >- (simp[EXTENSION, AllCaseEqs()] >> metis_tac[IN_UNION]) >~
+      [‘A ∪ B = V’, ‘B = PREIMAGE _ {1} ∩ V’]
+      >- (simp[EXTENSION, AllCaseEqs()] >> metis_tac[IN_UNION, IN_DISJOINT]))
 QED
 
 Theorem gen_bipartite_alt :
     !g A B. gen_bipartite (g :fsgraph) A B <=>
-            DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
+            DISJOINT A B /\ A UNION B = nodes g /\
             !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B
 Proof
-    rw [gen_bipartite_def]
- >> EQ_TAC >> rw []
- >| [ (* goal 1 (of 2) *)
-      MP_TAC (Q.SPEC ‘g’ alledges_valid) >> rw [] \\
-      Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘a’, ‘b’]) >> rw []
-      >- (qexistsl_tac [‘a’, ‘b’] >> art []) \\
-      qexistsl_tac [‘b’, ‘a’] >> art [] \\
-      rw [INSERT2_lemma],
-      (* goal 2 (of 2) *)
-      Q.PAT_X_ASSUM ‘!e. P’ (MP_TAC o Q.SPEC ‘{n1; n2}’) >> rw [] \\
-      gvs [INSERT2_lemma] ]
+    rw [gen_bipartite_def, EQ_IMP_THM] >~
+    [‘{a;b} ∈ E’]
+    >- (first_x_assum drule >> dsimp[PULL_EXISTS, INSERT2_lemma] >>
+        metis_tac[]) >~
+    [‘e ∈ E’, ‘e = {_; _}’]
+    >- (drule alledges_valid >> simp[PULL_EXISTS, INSERT2_lemma] >>
+        metis_tac[])
 QED
 
 Theorem bipartite_def :
     !g. bipartite (g :fsgraph) <=>
-        ?A B. DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
+        ?A B. DISJOINT A B /\ A UNION B = nodes g /\
               !n1 n2. {n1;n2} IN fsgedges g ==>
                       (n1 IN A /\ n2 IN B) \/ (n1 IN B /\ n2 IN A)
 Proof
-    Q.X_GEN_TAC ‘g’
- >> EQ_TAC
- >- (rw [partite] \\
-    ‘?A B. gen_bipartite g A B’ by METIS_TAC [gen_bipartite_partitions] \\
-     fs [gen_bipartite_def] \\
-     qexistsl_tac [‘A’, ‘B’] >> rw [])
- >> rw [partite]
- >> Q.EXISTS_TAC ‘{A; B}’
- >> REWRITE_TAC [GSYM gen_bipartite]
- >> rw [gen_bipartite_def]
+  rw[partite, EQ_IMP_THM] >~
+  [‘gen_partite 2 g cf’]
+  >- (drule gen_bipartite_partitions >> simp[gen_bipartite_def]) >~
+  [‘∃v. gen_partite 2 g v’, ‘A ∪ B = V’]
+  >- (‘gen_bipartite g A B’ by simp[gen_bipartite_def] >>
+      metis_tac[gen_bipartite])
 QED
 
 Theorem bipartite_alt :
-    !g. bipartite (g :fsgraph) <=>
-        ?A B. DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
-              !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B
+  !g. bipartite (g :fsgraph) <=>
+      ?A B. DISJOINT A B /\ A UNION B = nodes g /\
+            !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B
 Proof
-    rw [bipartite_def]
- >> EQ_TAC >> STRIP_TAC
- >| [ (* goal 1 (of 2) *)
-      qexistsl_tac [‘A’, ‘B’] >> rw [] \\
-      MP_TAC (Q.SPEC ‘g’ alledges_valid) >> rw [] \\
-      Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘a’, ‘b’]) >> rw []
-      >- (qexistsl_tac [‘a’, ‘b’] >> art []) \\
-      qexistsl_tac [‘b’, ‘a’] >> art [] \\
-      rw [INSERT2_lemma],
-      (* goal 2 (of 2) *)
-      qexistsl_tac [‘A’, ‘B’] >> rw [] \\
-      Q.PAT_X_ASSUM ‘!e. P’ (MP_TAC o Q.SPEC ‘{n1; n2}’) >> rw [] \\
-      gvs [INSERT2_lemma] ]
+  rw [bipartite_def, EQ_IMP_THM] >>
+  first_assum $ irule_at (Pat ‘DISJOINT _ _’) >> rw[] >~
+  [‘{a;b} ∈ E’]
+  >- (first_x_assum drule >> dsimp[PULL_EXISTS, INSERT2_lemma] >>
+      metis_tac[]) >~
+  [‘e ∈ E’, ‘e = {_; _}’]
+  >- (drule alledges_valid >> simp[PULL_EXISTS, INSERT2_lemma] >>
+      metis_tac[])
 QED
 
 val _ = export_theory();
