@@ -3,19 +3,8 @@ struct
 
 open HolKernel boolLib Parse bossLib;
 
-(* interactive mode
-app load ["pairTheory", "pairLib", "integerTheory","intLib","intSyntax",
-        "ringLib", "integerRingTheory","integerRingLib",
-        "intExtensionTheory", "intExtensionLib", "jbUtils",
-        "fracTheory","fracUtils", "fracSyntax"];
-*)
-
-open
-        arithmeticTheory
-        pairTheory pairLib integerTheory intLib intSyntax
-        EVAL_ringLib integerRingTheory integerRingLib
-        intExtensionTheory intExtensionLib
-        fracTheory fracUtils fracSyntax;
+open arithmeticTheory pairTheory pairLib integerTheory intLib intSyntax
+     intExtensionTheory intExtensionLib fracTheory fracUtils fracSyntax;
 
 val ERR = mk_HOL_ERR "fracLib"
 
@@ -437,8 +426,10 @@ fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
        calculation theorems *)
     val hyps_sgs = map (fn x => (asm_list,x)) asms_hyp;
 
-    (* TODO: statt oben hier noch ein paar Theoreme ergänzen, die dann mit
-       thms konkateniert werden *)
+    (* TODO: statt oben hier noch ein paar Theoreme ergänzen (UOK), die dann mit
+       thms konkateniert werden (Instead of adding a few theorems above, we can
+       add them here, which will then be concatenated with theorems.)
+     *)
 
     (*val thms = map mk_thm ([subs_sg] @ hyps_sgs);*)
 
@@ -451,9 +442,8 @@ fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
           (* all other theorems: hyptothesis subgoals *)
           val asm_thms = tl thms
 
-          (* erster Schritt: baue Voraussetzungen für die calc_thms
-             zusammen *)
-
+          (* erster Schritt: baue Voraussetzungen für (UOK) die calc_thms zusammen
+            (first step: build the requirements for the calc_thms) *)
 
           (* extract proof from asm_thms list (TODO: other list) *)
           fun proof_from_asm_thms (t1:term) =

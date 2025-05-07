@@ -1,8 +1,26 @@
-(*---------------------------------------------------------------------------
-      Normalizers and equality provers for rings.
- ---------------------------------------------------------------------------*)
+open HolKernel Parse boolLib bossLib
 
-load "numRingLib"; open numRingLib;         (* Test on natural numbers *)
+open testutils
+
+open arithmeticTheory EVAL_ringLib EVAL_numRingLib integerRingLib ratRingLib;
+
+val _ = ratLib.deprecate_rat();
+
+fun ntest (i,out) =
+  convtest ("NUM_NORM_CONV " ^ Parse.term_to_string i, NUM_NORM_CONV, i, out)
+
+val _ = List.app ntest [
+      (``2n * x + y + x``, ``3n * x + y``),
+      (``10 + 3n * (x + 2 * y) + z``, ``10 + (3n * x + (6 * y + z))``)
+    ]
+
+fun rtest (i,b) =
+  convtest ("NUM_RING_CONV " ^ Parse.term_to_string i, NUM_RING_CONV, i,
+            if b then boolSyntax.T else boolSyntax.F)
+
+val _ = List.app rtest [
+      (``x + y + x = y + 2n * x``, true)
+    ]
 
 val ring_conv = NUM_RING_CONV o Parse.Term
 val norm_conv = NUM_NORM_CONV o Parse.Term;
@@ -15,8 +33,6 @@ norm_conv `(a+b)*(a+b)*(a+b) : num`;
 ring_conv `(a+b)*(a+b) = (b+a)*(b+a) : num`;
 
 
-load "integerRingLib"; open integerRingLib; (* Test on integers *)
-
 val ring_conv = INT_RING_CONV o Parse.Term;
 val norm_conv = INT_NORM_CONV o Parse.Term;
 
@@ -27,12 +43,14 @@ norm_conv `(b+a)*(b+a) : int`;
 norm_conv `(a+b)*(a+b)*(a+b) : int`;
 ring_conv `(a+b)*(a+b) = (b+a)*(b+a) :int`;
 
-ringLib.RING_NORM_CONV(--` (a-b)*(a+b) : int `--);
-INT_NORM_CONV(--` (a-b)*(a+b) : int `--);
+val _ = RING_NORM_CONV(“(a-b)*(a+b) : int”);
+val _ = INT_NORM_CONV(“(a-b)*(a+b) : int”);
 
 (*---------------------------------------------------------------------------
        bigger test: 8 squares
  ---------------------------------------------------------------------------*)
+
+val _ = intLib.prefer_int ();
 
 Count.apply ring_conv
    `(p1*p1+q1*q1+r1*r1+s1*s1+t1*t1+u1*u1+v1*v1+w1*w1)
@@ -80,7 +98,7 @@ Count.apply ring_conv
     ((((p1*r2-q1*s2)+r1*p2+s1*q2+t1*v2+u1*w2)-v1*t2)-w1*u2)*
     ((((p1*r2-q1*s2)+r1*p2+s1*q2+t1*v2+u1*w2)-v1*t2)-w1*u2)
     +
-    ((p1*s2+q1*r2-r1*q2+s1*p2+t1*w2-u1*v2+v1*u2-w1*t2)*
+    (p1*s2+q1*r2-r1*q2+s1*p2+t1*w2-u1*v2+v1*u2-w1*t2)*
     (p1*s2+q1*r2-r1*q2+s1*p2+t1*w2-u1*v2+v1*u2-w1*t2)
     +
     (p1*t2-q1*u2-r1*v2-s1*w2+t1*p2+u1*q2+v1*r2+w1*s2)*
@@ -110,22 +128,20 @@ Count.apply ring_conv
     runtime: 2710.160s,    gctime: 330.350s,     systime: 52.590s.
  ---------------------------------------------------------------------------*)
 
+val _ = ratLib.prefer_rat();
 
+(* check ring norm code *)
+val _ = convtest ("RAT_RING_NORM_CONV (01)",
+                  RAT_RING_NORM_CONV,
+                  “2q * q + 3 * r - 6 * q”, “-4q * q + 3 * r”);
+val _ = convtest ("RAT_RING_NORM_CONV (02)",
+                  RAT_RING_NORM_CONV,
+                  “2q * q + 3 * r - 2 * q”, “3 * r”);
+val _ = convtest ("RAT_RING_NORM_CONV (03)",
+                  RAT_RING_NORM_CONV,
+                  “-2 * r + 2q * q + 3 * r - 2 * q - r ”, “0q”);
+val _ = convtest ("RAT_RING_NORM_CONV (04)",
+                  RAT_RING_NORM_CONV,
+                  “(r:rat) * 1 + 3 * r”, “4q * r”);
 
-(*---------------------------------------------------------------------------
-      Another example: sum of squares
- ---------------------------------------------------------------------------*)
-
-open arithmeticTheory;
-
-val sum_def =
- Define `(sum f 0 = 0n) /\ (sum f (SUC n) = sum f n + f (SUC n))`;
-
-val lemma = Q.prove
-(`!n:num. sum (\m. m * m) n * 6 = n * (n+1) * (2 * n + 1)`,
- Induct THEN RW_TAC arith_ss [sum_def,RIGHT_ADD_DISTRIB] THEN NUM_RING_TAC);
-
-val sum_squares = Q.prove
-(`!n:num. sum (\m. m * m) n  = (n*(n+1) * (2*n + 1)) DIV 6`,
- GEN_TAC THEN MATCH_MP_TAC (GSYM DIV_UNIQUE) THEN Q.EXISTS_TAC `0`
- THEN RW_TAC arith_ss [lemma]);
+val _ = Process.exit Process.success

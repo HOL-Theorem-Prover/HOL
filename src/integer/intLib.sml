@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib bossLib liteLib;
 
 open integerTheory intSimps Omega Cooper intSyntax intReduce Canon hurdUtils
-     tautLib integerRingLib;
+     tautLib Normalizer Grobner hurdUtils mesonLib normalizerTheory;
 
 structure Parse = struct
   open Parse
@@ -63,6 +63,39 @@ end
 val ARITH_CONV = Omega.OMEGA_CONV
 val ARITH_TAC = Omega.OMEGA_TAC
 val ARITH_PROVE = Omega.OMEGA_PROVE
+
+(* ------------------------------------------------------------------------- *)
+(* Instantiate the normalizer (code below are ported from HOL-Light)         *)
+(* ------------------------------------------------------------------------- *)
+
+val (_,_,_,_,_,INT_POLY_CONV) =
+  SEMIRING_NORMALIZERS_CONV INT_POLY_CONV_sth INT_POLY_CONV_rth
+    (is_int_literal,INT_ADD_CONV,INT_MUL_CONV,INT_POW_CONV)
+    (fn u => fn t => Term.compare(u,t) = LESS)
+
+(* ------------------------------------------------------------------------- *)
+(* Instantiate the ring and ideal procedures.                                *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  val dest_intconst = Arbrat.fromAInt o int_of_term
+  val mk_intconst = term_of_int o Arbrat.toAInt
+  val (pure,ideal) =
+    RING_AND_IDEAL_CONV
+      (dest_intconst,mk_intconst,INT_EQ_CONV,
+       negate_tm, plus_tm, minus_tm,
+       genvar bool, mult_tm, genvar bool, exp_tm,
+       INT_INTEGRAL,TRUTH,INT_POLY_CONV)
+in
+  val INT_RING = pure
+  fun int_ideal_cofactors tms tm =
+    if forall (fn t => type_of t = int_ty) (tm::tms)
+    then ideal tms tm
+    else
+      failwith "int_ideal_cofactors: not all terms have type :int"
+end
+
+val INT_RING_TAC = CONV_TAC (EQT_INTRO o INT_RING)
 
 (* ------------------------------------------------------------------------- *)
 (* A tactic for simple divisibility/congruence/coprimality goals.            *)

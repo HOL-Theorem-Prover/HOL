@@ -12,7 +12,7 @@ SRCRELNAMES = \
   monad/more_monads \
   n-bit \
   pred_set/src/more_theories probability \
-  rational real real/analysis res_quan/src ring/src \
+  rational real real/analysis res_quan/src \
   search sort string \
   TeX transfer \
   update
