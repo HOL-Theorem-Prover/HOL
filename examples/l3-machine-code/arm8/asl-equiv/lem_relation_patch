@@ -1,0 +1,27 @@
+--- armv8.6-asl-snapshot/A64_ISA_v86A/lib/lem/lem_relationScript.sml	2025-05-07 22:17:55.522283790 +0200
++++ armv8.6-asl-snapshot/A64_ISA_v86A/lib/lem/lem_relation_newScript.sml	2025-05-07 22:26:39.696443565 +0200
+@@ -416,13 +416,13 @@
+ 
+ (*val reflexiveTransitiveClosureOn : forall 'a. SetType 'a, Eq 'a => rel 'a 'a -> set 'a -> rel 'a 'a*)
+ val _ = Define `
+- ((reflexive_transitive_closure_on:('a#'a)set -> 'a set ->('a#'a)set) r s=  (tc (((r) UNION ((relIdOn s))))))`;
++ ((reflexive_transitive_closure_on:('a#'a)set -> 'a set ->('a#'a)set) r s=  (transitive_closure (((r) UNION ((relIdOn s))))))`;
+ 
+ 
+ 
+ (*val reflexiveTransitiveClosure : forall 'a. SetType 'a, Eq 'a => rel 'a 'a -> rel 'a 'a*)
+ val _ = Define `
+- ((reflexiveTransitiveClosure:('a#'a)set ->('a#'a)set) r=  (tc (((r) UNION (relId)))))`;
++ ((reflexiveTransitiveClosure:('a#'a)set ->('a#'a)set) r=  (transitive_closure (((r) UNION (relId)))))`;
+ 
+ 
+ 
+@@ -438,7 +438,7 @@
+ (*val withoutTransitiveEdges: forall 'a. SetType 'a, Eq 'a => rel 'a 'a -> rel 'a 'a*)
+ val _ = Define `
+  ((withoutTransitiveEdges:('a#'a)set ->('a#'a)set) r=
+-   (let tc1 = (tc r) in
++   (let tc1 = (transitive_closure r) in
+   {(a, c) | a, c 
+   | ((a, c) IN r) /\
+    (! (b :: range r).
