@@ -57,6 +57,11 @@ struct
 
   type t = source
 
+  type range = {
+    start: int,
+    stop: int  (** exclusive *)
+  }
+
   fun loadFromCharSeq path contents =
     let
       val n = Seq.length contents

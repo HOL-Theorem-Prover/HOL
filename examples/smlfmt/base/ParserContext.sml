@@ -8,12 +8,8 @@ sig
   type t
 
   val make:
-    { topExp: bool
-    , optBar: bool
-    , recordPun: bool
-    , orPat: bool
-    , extendedText: bool
-    , sigWithtype: bool
+    { parseError: Source.range -> string -> unit
+    , successorML: bool
     }
     -> t
 
@@ -27,19 +23,15 @@ end =
 struct
   datatype t =
     T of
-      { topExp: bool
-      , optBar: bool
-      , recordPun: bool
-      , orPat: bool
-      , extendedText: bool
-      , sigWithtype: bool
+      { parseError: Source.range -> string -> unit
+      , successorML: bool
       }
 
   fun make x = T x
-  fun topExp (T x) = #topExp x
-  fun optBar (T x) = #optBar x
-  fun recordPun (T x) = #recordPun x
-  fun orPat (T x) = #orPat x
-  fun extendedText (T x) = #extendedText x
-  fun sigWithtype (T x) = #sigWithtype x
+  fun topExp _ = true
+  fun optBar (T x) = #successorML x
+  fun recordPun (T x) = #successorML x
+  fun orPat (T x) = #successorML x
+  fun extendedText _ = true
+  fun sigWithtype _ = true
 end

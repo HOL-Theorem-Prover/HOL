@@ -451,9 +451,9 @@ struct
     | DecNonfix of {nonfix_: NewToken.t, elems: NewToken.t Seq.t}
 
     (** HOLScript *)
-    | DecHOLCoInductive of {head: NewToken.t, body: NewToken.t list, end_: NewToken.t}
-    | DecHOLInductive of {head: NewToken.t, body: NewToken.t list, end_: NewToken.t}
-    | DecHOLDatatype of {head: NewToken.t, body: NewToken.t list, end_: NewToken.t}
+    | DecHOLCoInductive of {head: NewToken.t, body: qbody, end_: NewToken.t}
+    | DecHOLInductive of {head: NewToken.t, body: qbody, end_: NewToken.t}
+    | DecHOLDatatype of {head: NewToken.t, body: qbody, end_: NewToken.t}
     | DecHOLOverload of {head: NewToken.t, term: exp}
     | DecHOLDefinition of
         { head: NewToken.t
@@ -484,6 +484,15 @@ struct
         , eq: NewToken.t
         , right_id: NewToken.t
         }
+
+    and qbody = QuoteBody of {start: int, decls: qdecl list, stop: int}
+
+    and qdecl =
+      QuoteAntiq of {caret_: NewToken.t, arg: exp, stop: int}
+
+    | QuoteDefinitionLabel of NewToken.t
+
+    | QuoteComment of Source.range
 
   end
 

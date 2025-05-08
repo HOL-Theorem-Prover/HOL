@@ -4,12 +4,10 @@ fun doSML filepath =
 
     (* Setting features for the lexer and parser *)
     val ctx = ParserContext.make
-      { topExp = true
-      , optBar = false
-      , recordPun = false
-      , orPat = false
-      , extendedText = false
-      , sigWithtype = false }
+      { parseError = fn {start, stop} => fn msg =>
+        TextIO.output (TextIO.stdErr, concat [
+          Int.toString start, "-", Int.toString stop, ": ", msg])
+      , successorML = true }
 
     (* Some basic error handling *)
     fun handleError exn =

@@ -78,9 +78,6 @@ struct
     | Identifier
     | LongIdentifier
     (** ============ trivia ============ *)
-    (* Anything that is not part of a token is whitespace - no need to track it
-     * explicitly. *)
-    | Comment
     | EOF
     (** ============ HOLScript ============ *)
     (** ============ quotes ============ *)
@@ -89,8 +86,8 @@ struct
     | HOLOpenFullQuote  (* `` *) (* “ *)
     | HOLCloseFullQuote (* `` *) (* ” *)
     | HOLAntiquote  (* ^ within quotations *)
-    | HOLComment  (* Comments within quotations *)
     | HOLQuoteContent  (* Anything else within quotations *)
+    | HOLDefinitionLabel  (* [~foo] within quotations *)
     (** ============ general syntax ============ *)
     (* These tokens must be at the beginning of a line *)
     | HOLCoInductive  (* CoInductive stem: *)
@@ -107,20 +104,9 @@ struct
     | HOLQED  (* QED *)
     | HOLTriviality  (* Triviality name[attrs]: *)
 
-  (** position and range type are based on LSP *)
-  type position = {
-    line: int,  (** zero-based *)
-    character: int  (** zero-based, byte offset in a line  *)
-  }
-
-  type range = {
-    start: position,
-    endd: position  (** exclusive *)
-  }
-    
   type token = {
     token: Token,
-    range: range
+    range: Source.range
   }
 
   type t = token
