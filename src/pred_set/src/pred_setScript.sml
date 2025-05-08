@@ -17,6 +17,8 @@ open Prim_rec pairLib numLib numpairTheory hurdUtils tautLib pureSimps
      metisLib mesonLib simpLib boolSimps dividesTheory
      combinTheory relationTheory optionTheory TotalDefn;
 
+local open pred_setpp in end
+
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
@@ -175,6 +177,7 @@ val GSPEC_DEF_LEMMA = prove(
 
 val GSPECIFICATION = new_specification
   ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
+
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 val _ = ot0 "GSPEC" "specification"
 
@@ -385,7 +388,7 @@ val _ = set_fixity UnicodeChars.universal_set (Prefix 2200)
    abstraction produces ARB terms.)  To turn printing off, we overload the
    same pattern to "" *)
 val _ = overload_on ("", “\x:'a itself. UNIV : 'a set”)
-local open pred_setpp in end
+
 val _ = add_ML_dependency "pred_setpp"
 val _ = add_user_printer ("pred_set.UNIV", ``UNIV:'a set``)
 
