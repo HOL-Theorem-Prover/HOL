@@ -1703,6 +1703,14 @@ val sorted_perm_count_list = Q.store_thm ("sorted_perm_count_list",
           by srw_tac [ARITH_ss] [transitive_def,antisymmetric_def] >>
  metis_tac [sorted_map, SORTED_PERM_EQ, sorted_count_list]);
 
+Theorem greater_sorted_eq:
+  SORTED $> (x::L) ⇔ SORTED $> L ∧ ∀y. MEM y L ⇒ y < x
+Proof
+  qsuff_tac ‘(∀y. MEM y L ⇒ y < x) = (∀y. MEM y L ⇒ x > y)’
+  >- (strip_tac \\ gvs [] \\ irule SORTED_EQ \\ rw [transitive_def])
+  \\ eq_tac \\ rpt strip_tac \\ res_tac \\ decide_tac
+QED
+
 val less_sorted_eq = MATCH_MP SORTED_EQ arithmeticTheory.transitive_LESS
   |> curry save_thm"less_sorted_eq";
 
