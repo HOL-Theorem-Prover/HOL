@@ -766,7 +766,7 @@ val OUTL = sumTheory.OUTL;
 val OUTR = sumTheory.OUTR;
 
 (* ------------------------------------------------------------------------- *)
-(* Generalize the recursion theorem to multiple domain types.                *)
+(* Generalize the recursion theorem to multiple range types.                 *)
 (* (We needed to use a single type to justify it via a proforma theorem.)    *)
 (*                                                                           *)
 (* NB! Before this is called nontrivially (i.e. more than one new type)      *)
