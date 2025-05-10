@@ -307,11 +307,10 @@ Theorem is_lookup_far_left:
   !R k k' v. R k k' ==> is_lookup F T R [(k', v)] k NONE
 Proof
   fs [is_lookup_def, sortingTheory.SORTED_EQ, listTheory.MEM_MAP,
-      pairTheory.EXISTS_PROD]
+      pairTheory.EXISTS_PROD,alistTheory.ALOOKUP_NONE,PULL_EXISTS]
   \\ rpt strip_tac
-  \\ Cases_on `ALOOKUP ys k` \\ CASE_TAC \\ fs []
-  \\ metis_tac [alistTheory.ALOOKUP_MEM, relationTheory.irreflexive_def,
-    relationTheory.transitive_def]
+  \\ metis_tac [ relationTheory.irreflexive_def,
+     relationTheory.transitive_def]
 QED
 
 Theorem is_lookup_far_right:

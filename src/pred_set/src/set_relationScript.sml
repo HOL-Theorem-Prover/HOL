@@ -2539,18 +2539,18 @@ Triviality nth_min_lem2:
     nth_min r' (s, r) m <> NONE ==>
     nth_min r' (s, r) m <> nth_min r' (s, r) (SUC (m + n))
 Proof
-  Induct_on `m`
+  FULL_SIMP_TAC(srw_ss()) [GSYM MONO_NOT_EQ]
+  THEN Induct_on `m`
   THEN SRW_TAC [] [nth_min_def, LET_THM]
   THEN Cases_on `get_min r' (s, r)`
-  THEN FULL_SIMP_TAC (srw_ss()) []
-  THENL [
-    CCONTR_TAC
-    THEN FULL_SIMP_TAC (srw_ss()) []
-    THEN `x IN s DELETE x` by METIS_TAC [nth_min_lem1]
-    THEN FULL_SIMP_TAC (srw_ss()) [],
+  THEN FULL_SIMP_TAC(srw_ss())[]
+  THEN1 (
+        `x IN s DELETE x` by METIS_TAC [nth_min_lem1]
+        THEN FULL_SIMP_TAC(srw_ss())[])
+  THEN1 (
     `SUC m + n = SUC (m + n)` by DECIDE_TAC
-    THEN METIS_TAC [NOT_IS_SOME_EQ_NONE]
-  ]
+    THEN FULL_SIMP_TAC(srw_ss())[]
+    THEN METIS_TAC[])
 QED
 
 Triviality nth_min_inj_lem:
