@@ -4893,10 +4893,11 @@ val DROP_HEAD_ELEMENT = store_thm(
       Then LENGTH (TAKE n ls) = LENGTH ls   by LENGTH_TAKE_EQ
       Thus DROP n (TAKE n ls) = []          by DROP_LENGTH_TOO_LONG
 *)
-val DROP_TAKE_EQ_NIL = store_thm(
-  "DROP_TAKE_EQ_NIL",
-  ``!ls n. DROP n (TAKE n ls) = []``,
-  rw[LENGTH_TAKE_EQ, DROP_LENGTH_TOO_LONG]);
+Theorem DROP_TAKE_EQ_NIL[simp]:
+  !ls n. DROP n (TAKE n ls) = []
+Proof
+  rw[]
+QED
 
 (* Theorem: TAKE m (DROP n ls) = DROP n (TAKE (n + m) ls) *)
 (* Proof:
