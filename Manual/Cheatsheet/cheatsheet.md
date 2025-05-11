@@ -11,7 +11,7 @@ header-includes:
 
 ## Preliminaries
 
-  - Join the `#hol` channel on the [CakeML Discord](https://discord.gg/a8UUs6Ce6m).
+  - Join the [HOL Zulip](https://hol.zulipchat.com/).
 
   - Learn how to interact with HOL4 using the [documentation](https://hol-theorem-prover.org/#doc).
     - For Emacs, the [short guide](https://hol-theorem-prover.org/HOL-interaction.pdf) or [complete documentation](https://hol-theorem-prover.org/hol-mode.html).
@@ -153,7 +153,7 @@ Also commonly used when rewriting are:
 
 <code>cj <i>n</i> <i>theorem</i></code>
 : Returns the <code><i>n</i></code>th conjunct of the theorem, handling universal quantifiers and implications.
-  For example, for `thm = ⊢ ∀ P Q R . P ==> Q /\ R`, `cj 2 thm` gives `⊢ ∀ P R . P ==> R)`.
+  For example, for `thm = ⊢ ∀ P Q R . P ==> Q /\ R`, `cj 2 thm` gives `⊢ ∀ P R . P ==> R`.
   **NB** indexing begins at `1`.
 
 <code>SRULE [<i>rewrites</i>] <i>theorem</i></code>
@@ -358,17 +358,23 @@ In many cases, we may want to state exactly how the goal should be taken apart (
 `disj{1,2}_tac`
 : Reduces a goal of the form `p \/ q` into `p` or `q` respectively.
 
+`sym_tac`
+: Converts a goal of the form `x = y` to `y = x`.
+
 `gen_tac`
 : Removes a top-level `∀`-quantified variable.
 
-`AP_TERM_TAC`
-: Reduces a goal of the form `f x = f y` to `x = y`.
-
-`AP_THM_TAC`
-: Reduces a goal of the form `f x = g x` to `f = g`.
-
-`MK_COMB_TAC`
-: Reduces a goal of the form `f x = g y` to two subgoals, `f = g` and `x = y`.
+<code>cong_tac <i>int_opt</i></code>
+: Attacks equalities. For example, reduces
+  `f x = f y` to `x = y`,
+  `f x = g x` to `f = g`, and
+  `(λa. f a + 1) = g` to `f x + 1 = g x`.
+  Can also handle universal quantifiers and set comprehensions, and *congruence theorems* for particular constants.
+  For example,
+  `MAP f l = MAP g l`
+  is reduced to
+  `MEM x l ⊢ f x = g x`.
+  The <code><i>int_opt</i></code> is an optional limit on the number of repeated applications of `cong_tac`.
 
 `iff_tac`<br>`eq_tac`
 : Reduces a goal of the form `P <=> Q` to two subgoals, `P ==> Q` and `Q ==> P`.
@@ -627,7 +633,7 @@ Some patterns arise very often in proofs.
   - **Rewrites which don't seem to do anything.**
     Sometimes it may seem that you have an assumption which should trigger simplification in the goal on rewriting - however, it doesn't seem to be doing anything.
     Often this is due to a type mismatch - i.e. your assumption involves more general types than your goal.
-    To diagnose it you can turn types annotations on using for instance `show_types:= true`.
-    If this is the case, you cannot instantiate type variables once introduced into your goal-state for soundness reasons, so you must instead type-instantiate the assumption when it is introduced.
+    To check if this is the case, print your goal with type information by setting `show_types := true` in your REPL and search for a discrepancy.
+    You cannot instantiate type variables once introduced into your goal-state for soundness reasons, so you must instead type-instantiate the assumption when it is introduced.
     You can use `INST_TYPE` for this, for example:<br>
     <code>assume_tac $ INST_TYPE [&grave;&grave;:'a&grave;&grave; |-> &grave;&grave;:num&grave;&grave;] listTheory.MAP</code>
