@@ -71,6 +71,7 @@ val bool_info =
            case_def = boolTheory.bool_case_thm,
            nchotomy = boolTheory.BOOL_CASES_AX
          },
+       constant_case = boolTheory.bool_case_CONST,
        case_cong = boolTheory.COND_CONG,
        distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
        nchotomy = boolTheory.BOOL_CASES_AX,
@@ -146,32 +147,33 @@ fun pfetch s ty =
               ("unable to find "^
                Lib.quote (print_sp_type ty)^" in the TypeBase");
 
-fun axiom_of ty        = TypeBasePure.axiom_of (pfetch "axiom_of" ty)
-fun induction_of ty    = TypeBasePure.induction_of (pfetch "induction_of" ty)
-fun constructors_of ty = TypeBasePure.constructors_of (pfetch "constructors_of" ty)
-fun destructors_of ty  = TypeBasePure.destructors_of (pfetch "destructors_of" ty)
-fun recognizers_of ty  = TypeBasePure.recognizers_of (pfetch "recognizers_of" ty)
-fun case_const_of ty   = TypeBasePure.case_const_of (pfetch "case_const_of" ty)
-fun case_cong_of ty    = TypeBasePure.case_cong_of (pfetch "case_cong_of" ty)
-fun case_def_of ty     = TypeBasePure.case_def_of (pfetch "case_def_of" ty)
-fun case_eq_of ty      = TypeBasePure.case_eq_of (pfetch "case_eq_of" ty)
-fun nchotomy_of ty     = TypeBasePure.nchotomy_of (pfetch "nchotomy_of" ty)
-fun fields_of ty       = TypeBasePure.fields_of (pfetch "fields_of" ty)
-fun accessors_of ty    = TypeBasePure.accessors_of (pfetch "accessors_of" ty)
-fun updates_of ty      = TypeBasePure.updates_of (pfetch "updates_of" ty)
-fun simpls_of ty       = TypeBasePure.simpls_of (pfetch "simpls_of" ty)
-fun axiom_of0 ty       = TypeBasePure.axiom_of0 (pfetch "axiom_of" ty)
-fun induction_of0 ty   = TypeBasePure.induction_of0 (pfetch "induction_of0" ty)
+fun axiom_of ty         = TypeBasePure.axiom_of (pfetch "axiom_of" ty)
+fun induction_of ty     = TypeBasePure.induction_of (pfetch "induction_of" ty)
+fun constructors_of ty  = TypeBasePure.constructors_of (pfetch "constructors_of" ty)
+fun destructors_of ty   = TypeBasePure.destructors_of (pfetch "destructors_of" ty)
+fun recognizers_of ty   = TypeBasePure.recognizers_of (pfetch "recognizers_of" ty)
+fun case_const_of ty    = TypeBasePure.case_const_of (pfetch "case_const_of" ty)
+fun case_cong_of ty     = TypeBasePure.case_cong_of (pfetch "case_cong_of" ty)
+fun case_def_of ty      = TypeBasePure.case_def_of (pfetch "case_def_of" ty)
+fun case_eq_of ty       = TypeBasePure.case_eq_of (pfetch "case_eq_of" ty)
+fun constant_case_of ty = TypeBasePure.constant_case_of (pfetch "case_eq_of" ty)
+fun nchotomy_of ty      = TypeBasePure.nchotomy_of (pfetch "nchotomy_of" ty)
+fun fields_of ty        = TypeBasePure.fields_of (pfetch "fields_of" ty)
+fun accessors_of ty     = TypeBasePure.accessors_of (pfetch "accessors_of" ty)
+fun updates_of ty       = TypeBasePure.updates_of (pfetch "updates_of" ty)
+fun simpls_of ty        = TypeBasePure.simpls_of (pfetch "simpls_of" ty)
+fun axiom_of0 ty        = TypeBasePure.axiom_of0 (pfetch "axiom_of" ty)
+fun induction_of0 ty    = TypeBasePure.induction_of0 (pfetch "induction_of0" ty)
 
-fun distinct_of ty     = valOf2 ty "distinct_of"
+fun distinct_of ty      = valOf2 ty "distinct_of"
                            (TypeBasePure.distinct_of (pfetch "distinct_of" ty))
-fun one_one_of ty      = valOf2 ty "one_one_of"
+fun one_one_of ty       = valOf2 ty "one_one_of"
                             (TypeBasePure.one_one_of (pfetch "one_one_of" ty))
-fun size_of0 ty        = TypeBasePure.size_of0 (pfetch "size_of0" ty)
-fun encode_of0 ty      = TypeBasePure.encode_of0 (pfetch "encode_of0" ty)
-fun size_of ty         = valOf2 ty "size_of"
+fun size_of0 ty         = TypeBasePure.size_of0 (pfetch "size_of0" ty)
+fun encode_of0 ty       = TypeBasePure.encode_of0 (pfetch "encode_of0" ty)
+fun size_of ty          = valOf2 ty "size_of"
                            (TypeBasePure.size_of (pfetch "size_of" ty))
-fun encode_of ty       = valOf2 ty "encode_of"
+fun encode_of ty        = valOf2 ty "encode_of"
                             (TypeBasePure.encode_of (pfetch "encode_of" ty))
 
 

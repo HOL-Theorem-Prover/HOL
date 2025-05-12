@@ -708,6 +708,7 @@ fun persistent_tyinfo tyinfos =
           save_thm(name "_induction", induction_of tyi);
           save_thm(name "_case_cong", case_cong_of tyi);
           save_thm(name "_case_eq", case_eq_of tyi);
+          save_thm(name "_case_CONST", constant_case_of tyi);
           ()
         end
   in

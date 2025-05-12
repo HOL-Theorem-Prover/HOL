@@ -688,6 +688,10 @@ val pair_case_ho_elim = Q.store_thm(
   Q.ISPEC_THEN ‘p’ STRUCT_CASES_TAC pair_CASES THEN
   SRW_TAC[][pair_CASE_def, FST, SND, PAIR_EQ]);
 
+Theorem pair_case_CONST = Prim_rec.prove_case_const_thm
+                                 { case_def = pair_case_thm,
+                                   nchotomy=ABS_PAIR_THM};
+
 val _ = TypeBase.export [
       TypeBasePure.mk_datatype_info_no_simpls {
         ax=TypeBasePure.ORIG pair_Axiom,
@@ -695,6 +699,7 @@ val _ = TypeBase.export [
         case_cong=pair_case_cong,
         case_eq = pair_case_eq,
         case_elim = pair_case_ho_elim,
+        constant_case = pair_case_CONST,
         induction=TypeBasePure.ORIG pair_induction,
         nchotomy=ABS_PAIR_THM,
         size=NONE,

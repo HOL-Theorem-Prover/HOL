@@ -27,23 +27,24 @@ datatype shared_thm
     | COPY of (string * string) * thm;
 
    type mk_datatype_record =
-        {ax        : shared_thm,
-         induction : shared_thm,
-         case_def  : thm,
-         case_cong : thm,
-         case_eq   : thm,
-         case_elim : thm,
-         nchotomy  : thm,
-         size      : (term * shared_thm) option,
-         encode    : (term * shared_thm) option,
-         lift      : term option,
-         one_one   : thm option,
-         distinct  : thm option,
-         fields    : (string * rcd_fieldinfo) list,
-         accessors : thm list,
-         updates   : thm list,
-         destructors : thm list,
-         recognizers : thm list}
+       {ax            : shared_thm,
+        induction     : shared_thm,
+        case_def      : thm,
+        case_cong     : thm,
+        case_eq       : thm,
+        case_elim     : thm,
+        constant_case : thm,
+        nchotomy      : thm,
+        size          : (term * shared_thm) option,
+        encode        : (term * shared_thm) option,
+        lift          : term option,
+        one_one       : thm option,
+        distinct      : thm option,
+        fields        : (string * rcd_fieldinfo) list,
+        accessors     : thm list,
+        updates       : thm list,
+        destructors   : thm list,
+        recognizers   : thm list}
 
 fun thm_of (ORIG x)     = x
   | thm_of (COPY (s,x)) = x;
@@ -53,59 +54,61 @@ fun thm_of (ORIG x)     = x
 (*---------------------------------------------------------------------------*)
 
 type dtyinfo =
-           {ty           : hol_type,
-            axiom        : shared_thm,
-            induction    : shared_thm,
-            case_def     : thm,
-            case_eq      : thm,
-            case_elim    : thm,
-            case_cong    : thm,
-            nchotomy     : thm,
-            case_const   : term,
-            constructors : term list,
-            destructors  : thm list,
-            recognizers  : thm list,
-            size         : (term * shared_thm) option,
-            encode       : (term * shared_thm) option,
-            lift         : term option,
-            distinct     : thm option,
-            one_one      : thm option,
-            fields       : (string * rcd_fieldinfo) list,
-            accessors    : thm list,
-            updates      : thm list,
-            simpls       : simpfrag,
-            extra        : ThyDataSexp.t list} ;
+          {ty            : hol_type,
+           axiom         : shared_thm,
+           induction     : shared_thm,
+           case_def      : thm,
+           case_eq       : thm,
+           case_elim     : thm,
+           constant_case : thm,
+           case_cong     : thm,
+           nchotomy      : thm,
+           case_const    : term,
+           constructors  : term list,
+           destructors   : thm list,
+           recognizers   : thm list,
+           size          : (term * shared_thm) option,
+           encode        : (term * shared_thm) option,
+           lift          : term option,
+           distinct      : thm option,
+           one_one       : thm option,
+           fields        : (string * rcd_fieldinfo) list,
+           accessors     : thm list,
+           updates       : thm list,
+           simpls        : simpfrag,
+           extra         : ThyDataSexp.t list} ;
 
 open FunctionalRecordUpdate
-fun gcons_mkUp z = makeUpdate22 z
+fun gcons_mkUp z = makeUpdate23 z
 fun update_DTY z = let
   fun from accessors axiom case_cong case_const case_def case_eq case_elim
-           constructors destructors distinct encode extra fields induction lift
-           nchotomy one_one recognizers simpls size ty updates =
+           constant_case constructors destructors distinct encode extra fields
+           induction lift nchotomy one_one recognizers simpls size ty updates =
     {accessors = accessors, axiom = axiom, case_cong = case_cong,
      case_const = case_const, case_def = case_def, case_eq = case_eq,
-     case_elim = case_elim, constructors = constructors,
+     case_elim = case_elim, constant_case = constant_case, constructors = constructors,
      destructors = destructors, distinct = distinct, encode = encode,
      extra = extra, fields = fields, induction = induction, lift = lift,
      nchotomy = nchotomy, one_one = one_one, recognizers = recognizers,
      simpls = simpls, size = size, ty = ty, updates = updates}
   (* fields in reverse order to above *)
   fun from' updates ty size simpls recognizers one_one nchotomy lift induction
-            fields extra encode distinct destructors constructors case_elim
-            case_eq case_def case_const case_cong axiom accessors =
+            fields extra encode distinct destructors constructors constant_case
+            case_elim case_eq case_def case_const case_cong axiom accessors =
     {accessors = accessors, axiom = axiom, case_cong = case_cong,
      case_const = case_const, case_def = case_def, case_eq = case_eq,
-     case_elim = case_elim, constructors = constructors, destructors = destructors,
+     case_elim = case_elim, constant_case = constant_case,
+     constructors = constructors, destructors = destructors,
      distinct = distinct, encode = encode, extra = extra, fields = fields,
      induction = induction, lift = lift, nchotomy = nchotomy,
      one_one = one_one, recognizers = recognizers, simpls = simpls,
      size = size, ty = ty, updates = updates}
   (* first order *)
   fun to f {accessors, axiom, case_cong, case_const, case_def, case_eq,
-            case_elim, constructors, destructors, distinct, encode, extra, fields,
-            induction, lift, nchotomy, one_one, recognizers, simpls, size, ty,
-            updates} =
-    f accessors axiom case_cong case_const case_def case_eq case_elim
+            case_elim, constant_case, constructors, destructors, distinct,
+            encode, extra, fields, induction, lift, nchotomy, one_one,
+            recognizers, simpls, size, ty, updates} =
+    f accessors axiom case_cong case_const case_def case_eq case_elim constant_case
       constructors destructors distinct encode extra fields induction lift
       nchotomy one_one recognizers simpls size ty updates
 in
@@ -185,6 +188,10 @@ fun case_eq_of (DFACTS {case_eq, ...}) = case_eq
 fun case_elim_of (DFACTS {case_elim, ...}) = case_elim
   | case_elim_of (NFACTS (ty,_)) =
        raise ERR "case_elim_of" (dollarty ty^" is not a datatype");
+
+fun constant_case_of (DFACTS {constant_case, ...}) = constant_case
+  | constant_case_of (NFACTS (ty,_)) =
+       raise ERR "constant_case_of" (dollarty ty^" is not a datatype");
 
 fun extra_of (DFACTS{extra,...}) = extra
   | extra_of (NFACTS(_, {extra,...})) = extra
@@ -363,42 +370,44 @@ val defn_const =
 
 fun mk_datatype_info_no_simpls rcd =
   let
-    val {ax,case_def,case_eq,case_elim,case_cong,induction,
-         nchotomy,size,encode,lift,one_one,
-         fields, accessors, updates, distinct,
+    val {ax,case_def,case_eq,case_elim,constant_case,
+         case_cong,induction,nchotomy,size,encode,lift,
+         one_one, fields, accessors, updates, distinct,
          destructors,recognizers} = rcd
     val (ty,ty_names,constructors) = basic_info case_def
   in
     DFACTS
-      {ty           = ty,
-       constructors = constructors,
-       destructors  = destructors,
-       recognizers  = recognizers,
-       case_const   = defn_const case_def,
-       case_def     = case_def,
-       case_eq      = case_eq,
-       case_elim    = case_elim,
-       case_cong    = case_cong,
-       induction    = induction,
-       nchotomy     = nchotomy,
-       one_one      = one_one,
-       distinct     = distinct,
-       fields       = fields,
-       accessors    = accessors,
-       updates      = updates,
-       simpls       = {rewrs = [], convs = []},
-       size         = size,
-       encode       = encode,
-       lift         = lift,
-       axiom        = ax,
-       extra        = []}
+      {ty            = ty,
+       constructors  = constructors,
+       destructors   = destructors,
+       recognizers   = recognizers,
+       case_const    = defn_const case_def,
+       case_def      = case_def,
+       case_eq       = case_eq,
+       case_elim     = case_elim,
+       constant_case = constant_case,
+       case_cong     = case_cong,
+       induction     = induction,
+       nchotomy      = nchotomy,
+       one_one       = one_one,
+       distinct      = distinct,
+       fields        = fields,
+       accessors     = accessors,
+       updates       = updates,
+       simpls        = {rewrs = [], convs = []},
+       size          = size,
+       encode        = encode,
+       lift          = lift,
+       axiom         = ax,
+       extra         = []}
   end
 
 fun gen_std_rewrs tyi =
   let
     val D  = case distinct_of tyi of NONE => [] | SOME x => CONJUNCTS x
     val inj = case one_one_of tyi of NONE => [] | SOME th => [th]
-    val c = D @ map GSYM D @ inj
+    val const_case = [constant_case_of tyi] handle HOL_ERR _ => []
+    val c = D @ map GSYM D @ inj @ const_case
   in
     case_def_of tyi :: c handle HOL_ERR _ => c
   end
@@ -415,6 +424,8 @@ local fun mk_ti (n,ax,ind)
                         prove_case_eq_thm {case_def = cdef, nchotomy = nch},
                       case_elim =
                         prove_case_ho_elim_thm {case_def = cdef, nchotomy = nch},
+                      constant_case =
+                        prove_case_const_thm {case_def = cdef, nchotomy = nch},
                       one_one=oo, distinct=d,size=NONE, encode=NONE,
                       lift=NONE, fields=[], accessors=[],updates=[],
                       recognizers=[],destructors=[]}
@@ -443,6 +454,8 @@ fun gen_datatype_info {ax, ind, case_defs} =
               prove_case_eq_thm {case_def = cased1, nchotomy = nch1},
             case_elim =
               prove_case_ho_elim_thm {case_def = cased1, nchotomy = nch1},
+            constant_case =
+              prove_case_const_thm {case_def = cased1, nchotomy = nch1},
             size=NONE, encode=NONE, lift=NONE,
             fields=[], accessors=[],updates=[],
             one_one=hd one_ones, distinct=hd distincts,
@@ -477,7 +490,8 @@ fun pp_tyinfo tyi =
         let
           val {ty,constructors, case_const, case_def, case_cong, induction,
                nchotomy,one_one,distinct,simpls,size,encode,lift,axiom, case_eq,
-               case_elim, fields, accessors, updates,recognizers,destructors,extra}
+               case_elim,constant_case,fields, accessors, updates,recognizers,
+               destructors,extra}
               = recd
           val ty_namestring = name_pair (ty_name_of d)
         in
@@ -544,6 +558,11 @@ fun pp_tyinfo tyi =
             block CONSISTENT 1 (
               add_string "Case-const higher-order split:" >> add_break (1,0) >>
               pp_thm case_elim
+            ) >> add_break(1,0) >>
+
+            block CONSISTENT 1 (
+              add_string "Case-const constant case:" >> add_break (1,0) >>
+              pp_thm constant_case
             ) >> add_break(1,0) >>
 
             block CONSISTENT 1 (
@@ -1089,6 +1108,7 @@ fun dtyiToSEXPs (dtyi : dtyinfo) =
     field "case_def" (Thm (#case_def dtyi)) @
     field "case_eq" (Thm (#case_eq dtyi)) @
     field "case_elim" (Thm (#case_elim dtyi)) @
+    field "constant_case" (Thm (#constant_case dtyi)) @
     field "case_cong" (Thm (#case_cong dtyi)) @
     field "case_const" (Term (#case_const dtyi)) @
     field "constructors" (List (map Term (#constructors dtyi))) @
@@ -1155,6 +1175,7 @@ fun fromSEXP0 s =
               Sym "case_def", Thm case_def,
               Sym "case_eq", Thm case_eq,
               Sym "case_elim", Thm case_elim,
+              Sym "constant_case", Thm constant_case,
               Sym "case_cong", Thm case_cong,
               Sym "case_const", Term case_const,
               Sym "constructors", List clist,
@@ -1174,8 +1195,8 @@ fun fromSEXP0 s =
         (SOME (
             DFACTS {ty = typ, axiom = ORIG axiom, induction = ORIG induction,
                     case_def = case_def, case_eq = case_eq,
-                    case_elim = case_elim, case_cong = case_cong,
-                    case_const = case_const,
+                    case_elim = case_elim, constant_case = constant_case,
+                    case_cong = case_cong, case_const = case_const,
                     constructors = H "constructors" (map tm) clist,
                     destructors = H "destructors" (map thm) dlist,
                     recognizers = H "recognizers" (map thm) rlist,
