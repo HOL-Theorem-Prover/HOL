@@ -4,7 +4,6 @@ open boolSimps mesonLib numLib InductiveDefinition tautLib
 open relationTheory set_relationTheory pred_setTheory pairTheory
      arithmeticTheory optionTheory;
 
-
 val _ = new_theory "wellorder"
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
