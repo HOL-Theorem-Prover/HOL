@@ -387,6 +387,8 @@ fun enum_type_to_tyinfo (ty, clist) = let
           Prim_rec.prove_case_eq_thm{case_def = case_def, nchotomy = nchotomy},
         case_elim =
           Prim_rec.prove_case_ho_elim_thm{case_def = case_def, nchotomy = nchotomy},
+        constant_case =
+          Prim_rec.prove_case_const_thm{case_def = case_def, nchotomy = nchotomy},
         nchotomy = nchotomy,
         size = size,
         encode = NONE,
