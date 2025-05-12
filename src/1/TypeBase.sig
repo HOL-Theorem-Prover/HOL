@@ -31,6 +31,7 @@ sig
    val case_cong_of       : hol_type -> thm
    val case_def_of        : hol_type -> thm
    val case_eq_of         : hol_type -> thm
+   val constant_case_of   : hol_type -> thm
    val nchotomy_of        : hol_type -> thm
    val distinct_of        : hol_type -> thm
    val fields_of          : hol_type -> (string * rcd_fieldinfo) list
