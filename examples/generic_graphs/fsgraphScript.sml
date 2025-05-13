@@ -5,6 +5,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory pairTheory listTheory pred_setTheory sortingTheory
+     relationTheory
      hurdUtils
 
 open genericGraphTheory;
@@ -284,9 +285,9 @@ Theorem fsg_induction1:
 Proof
   gen_tac >> strip_tac >>
   ‘WF (inv_image ($< LEX $<) (λg:fsgraph. (gsize g, fsgsize g)))’
-    by (irule relationTheory.WF_inv_image >>
+    by (irule WF_inv_image >>
         irule pairTheory.WF_LEX >> simp[]) >>
-  drule_then irule relationTheory.WF_INDUCTION_THM >>
+  drule_then irule WF_INDUCTION_THM >>
   qx_gen_tac ‘G’ >> simp[LEX_DEF] >> strip_tac >>
   qspec_then ‘G’ strip_assume_tac fsg_decomposition1 >> gvs[] >>
   last_x_assum irule >> simp[] >> first_x_assum irule >>
@@ -836,8 +837,8 @@ Theorem TC_adjacent_fsgAddEdges:
 Proof
   Induct_on ‘TC’ >> rw[] >~
   [‘adjacent g m n (* a *)’]
-  >- (irule relationTheory.TC_SUBSET >> simp[]) >>
-  metis_tac[relationTheory.TC_RULES]
+  >- (irule TC_SUBSET >> simp[]) >>
+  metis_tac[TC_RULES]
 QED
 
 Overload reachable = “λg:fsgraph. (adjacent g)꙳”
@@ -852,7 +853,7 @@ Theorem reachable_SYM:
   reachable g m n ⇒ reachable g n m
 Proof
   Induct_on ‘RTC’ >> simp[] >>
-  metis_tac[relationTheory.RTC_RULES_RIGHT1, adjacent_SYM]
+  metis_tac[RTC_RULES_RIGHT1, adjacent_SYM]
 QED
 
 Theorem reachable_finite[simp]:
@@ -885,7 +886,7 @@ Theorem component_of_EQ_EMPTY[simp]:
 Proof
   simp[component_of_def, AllCaseEqs(), EQ_IMP_THM, DISJ_IMP_THM] >>
   disch_then (mp_tac o Q.AP_TERM ‘nodes’) >> simp[] >>
-  simp[EXTENSION] >> metis_tac[relationTheory.RTC_RULES]
+  simp[EXTENSION] >> metis_tac[RTC_RULES]
 QED
 
 Theorem fsgedges_component_of:
@@ -907,11 +908,11 @@ Proof
   simp[component_of_def, fsgraph_component_equality] >> rw[] >>
   drule_then strip_assume_tac reachable_members >> gvs[] >~
   [‘GSPEC _ = GSPEC _’]
-  >- (simp[EXTENSION] >> metis_tac[reachable_SYM, relationTheory.RTC_TRANS]) >>
+  >- (simp[EXTENSION] >> metis_tac[reachable_SYM, RTC_TRANS]) >>
   dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >> rpt strip_tac >~
   [‘_ = _  (* g *)’]
   >- (simp[Once EXTENSION] >>
-      metis_tac[reachable_SYM, relationTheory.RTC_TRANS]) >>
+      metis_tac[reachable_SYM, RTC_TRANS]) >>
   simp[valid_edges_def, PULL_EXISTS, AllCaseEqs()]
 QED
 
@@ -967,8 +968,8 @@ Proof
   drule_then strip_assume_tac alledges_valid >>
   gvs[fsgedges_component_of] >>
   first_x_assum (resolve_then Any strip_assume_tac EQ_REFL) >>
-  metis_tac[reachable_SYM, INSERT_COMM, relationTheory.RTC_RULES,
-            relationTheory.RTC_RULES_RIGHT1, adjacent_fsg]
+  metis_tac[reachable_SYM, INSERT_COMM, RTC_RULES,
+            RTC_RULES_RIGHT1, adjacent_fsg]
 QED
 
 Theorem component_UNION_complement:
@@ -986,7 +987,7 @@ Proof
   ([‘e ∈ fsgedges g’],
    drule_then strip_assume_tac alledges_valid >> first_x_assum drule >>
    gvs[] >> simp[DISJ_IMP_THM] >>
-   metis_tac[adjacent_fsg, INSERT_COMM, relationTheory.RTC_RULES_RIGHT1,
+   metis_tac[adjacent_fsg, INSERT_COMM, RTC_RULES_RIGHT1,
              reachable_SYM]) >>
   simp[fsgedges_component_of] >> simp[Once EXTENSION] >> metis_tac[]
 QED
@@ -1010,7 +1011,7 @@ Theorem TC_adjacent_SYM:
   TC (adjacent (g:fsgraph)) m n ⇒ TC (adjacent g) n m
 Proof
   Induct_on ‘TC’ >> rw[] >>
-  metis_tac[relationTheory.TC_RULES, adjacent_SYM]
+  metis_tac[TC_RULES, adjacent_SYM]
 QED
 
 Theorem connected_indivisible:
@@ -1038,7 +1039,7 @@ Proof
   disch_then (mp_tac o Q.AP_TERM ‘nodes’) >>
   simp[Excl "nodes_EQ_EMPTY", GSYM MEMBER_NOT_EMPTY] >>
   qexists ‘n2’ >> irule complement_contains_unreachables >> simp[] >>
-  simp[relationTheory.RTC_CASES_TC] >> metis_tac[TC_adjacent_SYM]
+  simp[RTC_CASES_TC] >> metis_tac[TC_adjacent_SYM]
 QED
 
 Theorem reachable_within_components:
@@ -1046,46 +1047,128 @@ Theorem reachable_within_components:
 Proof
   reverse $ Cases_on ‘n1 ∈ nodes g’
   >- (simp[component_of_def] >>
-      simp[SimpL “$==>”, Once relationTheory.RTC_CASES1] >>
+      simp[SimpL “$==>”, Once RTC_CASES1] >>
       simp[DISJ_IMP_THM] >> metis_tac[adjacent_members]) >>
   pop_assum mp_tac >> Induct_on ‘RTC’ >> simp[] >> rw[] >>
   rename[‘adjacent g m n’, ‘reachable g n p’] >>
   ‘n ∈ nodes g’ by metis_tac[adjacent_members] >> gvs[] >>
-  ‘reachable g m n’ by metis_tac[relationTheory.RTC_SUBSET] >>
+  ‘reachable g m n’ by metis_tac[RTC_SUBSET] >>
   ‘component_of g n = component_of g m’
     by metis_tac[reachable_equal_components] >> gvs[] >>
-  irule $ cj 2 $ relationTheory.RTC_RULES >> first_assum $ irule_at Any >>
+  irule $ cj 2 $ RTC_RULES >> first_assum $ irule_at Any >>
   gvs[adjacent_fsg, fsgedges_component_of] >>
-  metis_tac[relationTheory.RTC_RULES, adjacent_fsg]
+  metis_tac[RTC_RULES, adjacent_fsg]
 QED
 
 Theorem reachable_component_SUBSET:
   reachable (component_of g m) a b ⇒ reachable g a b
 Proof
-  Induct_on ‘RTC’ >> rw[] >> irule $ cj 2 $ relationTheory.RTC_RULES >>
+  Induct_on ‘RTC’ >> rw[] >> irule $ cj 2 $ RTC_RULES >>
   gvs[adjacent_fsg, IN_edges_component_of, INSERT2_lemma] >>
   metis_tac[INSERT_COMM]
 QED
 
-        (*
 Theorem connected_component_of[simp]:
   connected (component_of g n)
 Proof
-  rw[connected_def] >> gvs[relationTheory.RTC_CASES_TC]
-
-
-Theorem connected_components_exist:
-  ∀g. ∃cs. FINITE cs ∧ ITSET gUNION cs emptyG = g ∧
-           ∀g0. g0 ∈ cs ⇒ connected g0
-Proof
-  gen_tac >> completeInduct_on ‘gsize g’ >> gvs[PULL_FORALL] >> rw[] >>
-  Cases_on ‘g = emptyG’
-  >- (qexists ‘{}’ >> simp[]) >>
-  ????
+  rw[connected_def] >>
+  rename [‘n1 ≠ n2’, ‘reachable g n1 n’] >>
+  ‘component_of g n = component_of g n1’
+    by simp[reachable_equal_components] >>
+  ‘reachable (component_of g n) n1 n2’
+    by metis_tac[reachable_within_components, reachable_SYM,
+                 RTC_TRANS] >>
+  gvs[RTC_CASES_TC]
 QED
 
-*)
+Theorem edges_stay_within_components:
+  {a;b} ∈ fsgedges g ⇒
+  ∀n. a ∈ nodes (component_of g n) ⇒ b ∈ nodes (component_of g n)
+Proof
+  CCONTR_TAC >> gvs[] >~
+  [‘reachable g a n’, ‘¬reachable g b n’]
+  >- metis_tac[RTC_RULES, reachable_SYM, adjacent_fsg, INSERT_COMM] >>
+  drule alledges_valid >> simp[INSERT2_lemma] >> metis_tac[]
+QED
 
+Theorem gUNION_LCOMM:
+  ∀x y z. gUNION x (gUNION y z) = gUNION y (gUNION x z)
+Proof
+  metis_tac[gUNION_ASSOC, gUNION_COMM]
+QED
+
+Theorem order_component_complement[simp]:
+  order (component_complement g n) = order g - order (component_of g n)
+Proof
+  simp[gsize_def, nodes_component_complement] >>
+  ‘nodes (component_of g n) ⊆ nodes g’ by simp[SUBSET_DEF] >>
+  ‘nodes g ∩ nodes (component_of g n) = nodes (component_of g n)’
+    by ASM_SET_TAC[] >>
+  simp[]
+QED
+
+Theorem ZERO_LT_ORDER_COMPONENT[simp]:
+  0 < order (component_of g n) ⇔ n ∈ nodes g
+Proof
+  simp[gsize_def, EQ_IMP_THM] >> conj_tac >> CCONTR_TAC >~
+  [‘n ∈ nodes g ⇒ _’]
+  >- gvs[] >>
+  gvs[component_of_def]
+QED
+
+Theorem nodes_ITSET_gUNION:
+  ∀A g0.
+    FINITE A ⇒
+    nodes (ITSET gUNION A g0) = nodes g0 ∪ BIGUNION (IMAGE nodes A)
+Proof
+  Induct_on ‘FINITE’ >>
+  simp[COMMUTING_ITSET_RECURSES, gUNION_LCOMM, DELETE_NON_ELEMENT_RWT,
+       AC UNION_COMM UNION_ASSOC]
+QED
+
+Theorem fsgedges_ITSET_gUNION:
+  ∀A g0.
+    FINITE A ⇒
+    fsgedges (ITSET gUNION A g0) = fsgedges g0 ∪ BIGUNION (IMAGE fsgedges A)
+Proof
+  Induct_on ‘FINITE’ >>
+  simp[COMMUTING_ITSET_RECURSES, gUNION_LCOMM, DELETE_NON_ELEMENT_RWT,
+       AC UNION_COMM UNION_ASSOC]
+QED
+
+Definition connected_components_def:
+  connected_components g = IMAGE (component_of g) (nodes g)
+End
+
+Theorem FINITE_connected_components[simp]:
+  FINITE (connected_components g)
+Proof
+  simp[connected_components_def]
+QED
+
+Theorem gUNION_connected_components:
+  ITSET gUNION (connected_components g) emptyG = g
+Proof
+  simp[fsgraph_component_equality, nodes_ITSET_gUNION, fsgedges_ITSET_gUNION]>>
+  conj_tac >> simp[Once EXTENSION, PULL_EXISTS]
+  >- (qx_gen_tac ‘n’ >>
+      simp[connected_components_def, PULL_EXISTS, SF CONJ_ss] >>
+      iff_tac >> simp[PULL_EXISTS] >> metis_tac[RTC_RULES]) >>
+  qx_gen_tac ‘e’ >>
+  simp[connected_components_def, PULL_EXISTS, SF CONJ_ss,
+       fsgedges_component_of] >> iff_tac >> rw[] >> simp[] >>
+  drule_then strip_assume_tac alledges_valid >> gvs[] >>
+  irule_at Any EQ_REFL >> simp[] >>
+  metis_tac [RTC_RULES, adjacent_fsg]
+QED
+
+Theorem connected_components_are_connected:
+  cc ∈ connected_components g ⇒ connected cc
+Proof
+  simp[connected_components_def, PULL_EXISTS]
+QED
+
+(* might still show that this is the only such decomposition *)
 
 (* ----------------------------------------------------------------------
     r-partite graphs and (in particular) bipartite graphs [2, p.17]
