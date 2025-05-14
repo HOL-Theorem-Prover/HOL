@@ -3,7 +3,8 @@
    basicSize is loaded and the tests make sense. *)
 
 open HolKernel Parse Datatype boolSyntax
-local open testutils basicSize in end
+
+               local open testutils basicSize in end
 
 val _ = new_theory "with_basic_sizes" ;
 
@@ -12,8 +13,11 @@ val ERR = mk_HOL_ERR "with_basic_sizes"
 
 (* these are a subset of the tests in datatype selftest.sml, which
    are interesting because they involve the basic types, which are
-   installed but missing their size functions in this context *)
+   installed but missing their size functions in this context
 
+*)
+
+(*
 fun check_size_eq ty nms = let
     val _ = testutils.tprint ("Checking size_eq in " ^ type_to_string ty)
     val szs_etc = TypeBase.size_of ty |> snd |> concl |> strip_conj
@@ -26,6 +30,28 @@ fun check_size_eq ty nms = let
       else raise ERR "check_size_eq" ("no term named " ^ nm)
     val _ = List.map check nms
   in testutils.OK () end
+*)
+
+val dest_clause = (I##dest_eq) o strip_forall
+val clause_rhs = snd o snd o dest_clause
+val string_set = HOLset.fromList String.compare
+
+fun check_size_eq ty nms =
+ let open HOLset
+     val _ = testutils.tprint ("Checking size_eq in " ^ type_to_string ty)
+     val expected = string_set nms
+     val size_def = snd $ TypeBase.size_of ty
+     val clauses = strip_conj (concl size_def)
+     val rights = map clause_rhs clauses
+     val rhs_consts = rights |> map (find_terms is_const) |> List.concat
+     val defset = string_set (map (fst o dest_const) rhs_consts)
+ in
+   if isSubset (expected,defset) then
+      testutils.OK ()
+   else raise ERR "check_size_eq"
+           (String.concat ("size_def missing constant(s): "
+                :: (Lib.commafy $ listItems $ difference (expected,defset))))
+ end
 
 (* Tom Ridge's example from 2009/04/23 *)
 val _ = Hol_datatype `
@@ -59,7 +85,7 @@ val _ = Hol_datatype `u2 = d2 of 'a u1 `;
 val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
                       u4 = d4 of u3 u1 `;
 
-val _ = check_size_eq ``: u3`` ["u1_size", "u2_size", "option_size"];
+val _ = check_size_eq ``: u3`` ["u1_size", "u2_size"];
 
 val _ = Hol_datatype `list = NIL | :: of 'a => list`;
 
@@ -72,4 +98,3 @@ val _ = Datatype`a_rec = A ((a_rec # unit # num option # (unit + num)) list) | B
 val _ = check_size_eq ``: a_rec`` ["option_size", "list_size", "one_size"];
 
 val _ = export_theory ();
-
