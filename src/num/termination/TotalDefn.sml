@@ -479,7 +479,7 @@ fun WF_TAC g = PRIM_WF_TAC (WF_thms()) g;
 (* currently stored in the TypeBase but rather in the theories where the     *)
 (* datatypes were defined.                                                   *)
 (*---------------------------------------------------------------------------*)
-
+(*
 fun size_eq_conv tm = let
     val tys = tm |> find_terms is_const |> map type_of
       |> map (fst o strip_fun) |> List.concat
@@ -494,6 +494,7 @@ fun size_eq_conv tm = let
       |> map fst |> mapfilter dest_thy_const
       |> mapfilter (fn xs => fetch (#Thy xs) (#Name xs ^ "_eq"))
   in simpLib.SIMP_CONV boolSimps.bool_ss size_eqs tm end
+*)
 
 (*--------------------------------------------------------------------------*)
 (* Basic simplification and proof for remaining termination conditions.     *)
@@ -502,7 +503,7 @@ fun size_eq_conv tm = let
 fun get_orig (TypeBasePure.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
-fun PRIM_TC_SIMP_CONV simps =
+fun TC_SIMP_CONV simps =
  let val els = TypeBasePure.listItems (TypeBase.theTypeBase())
      val size_defs =
          mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els
@@ -519,12 +520,10 @@ val ASM_ARITH_TAC =
     THEN CONV_TAC Arith.ARITH_CONV;
 
 fun EX_ARITH_TAC exthl =
- CHANGED_TAC (CONV_TAC size_eq_conv THEN simpLib.SIMP_TAC term_ss exthl)
-    THEN REPEAT STRIP_TAC THEN simpLib.ASM_SIMP_TAC term_ss []
-    THEN CONV_TAC (PRIM_TC_SIMP_CONV exthl)
+    simpLib.SIMP_TAC term_ss exthl THEN
+    REPEAT STRIP_TAC THEN simpLib.ASM_SIMP_TAC term_ss []
+    THEN CONV_TAC (TC_SIMP_CONV exthl)
     THEN ASM_ARITH_TAC
-
-(* fun solve_conjs tac = EVERY_CONJ_CONV (TRY_CONV (solve_conv tac)) *)
 
 val solve_conjs =
     let fun solve_conv tac tm =
@@ -533,8 +532,8 @@ val solve_conjs =
       EVERY_CONJ_CONV o TRY_CONV o solve_conv
     end
 
-fun PRIM_TC_SIMP_TAC thl exthl =
-  CONV_TAC (PRIM_TC_SIMP_CONV thl) THEN
+fun TC_SIMP_TAC thl exthl =
+  CONV_TAC (TC_SIMP_CONV thl) THEN
   CONV_TAC (solve_conjs
               (TRY ASM_ARITH_TAC THEN TRY (EX_ARITH_TAC (exthl @ thl))))
   THEN REWRITE_TAC []
@@ -545,13 +544,13 @@ fun PRIM_TC_SIMP_TAC thl exthl =
 (* and hopefully legible goal if not all TCs are dispatched.                 *)
 (*---------------------------------------------------------------------------*)
 
-fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
+fun TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
 
 fun WF_REL_TAC q =
   Q.EXISTS_TAC q THEN
-  PRIM_TERM_TAC
+  TERM_TAC
     WF_TAC
-    (PRIM_TC_SIMP_TAC
+    (TC_SIMP_TAC
        (termination_simps())
        (!termination_solve_simps))
 
@@ -572,12 +571,12 @@ in
 fun PROVE_TERM_TAC g =
  let val term_simps = termination_simps()
      val simps = map (PURE_REWRITE_RULE [combinTheory.I_THM]) term_simps
-     val reduce_tac = CONV_TAC (PRIM_TC_SIMP_CONV term_simps)
+     val reduce_tac = CONV_TAC (TC_SIMP_CONV term_simps)
      val cleanup_tac = BasicProvers.PRIM_STP_TAC (term_dp_ss ++ rewrites simps) NO_TAC
      val tac1 = reduce_tac THEN cleanup_tac
-     val tac2 = PRIM_TC_SIMP_TAC term_simps (!termination_solve_simps)
+     val tac2 = TC_SIMP_TAC term_simps (!termination_solve_simps)
  in
-     PRIM_TERM_TAC WF_TAC (SOLVES tac1 ORELSE tac2)
+     TERM_TAC WF_TAC (SOLVES tac1 ORELSE tac2)
  end g
 end;
 
