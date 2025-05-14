@@ -539,13 +539,13 @@ fun PRIM_TC_SIMP_TAC thl exthl =
               (TRY ASM_ARITH_TAC THEN TRY (EX_ARITH_TAC (exthl @ thl))))
   THEN REWRITE_TAC []
 
-fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
-
 (*---------------------------------------------------------------------------*)
 (* Instantiate the termination relation with q and then try to prove         *)
 (* wellfoundedness and remaining termination conditions. Return a reduced    *)
 (* and hopefully legible goal if not all TCs are dispatched.                 *)
 (*---------------------------------------------------------------------------*)
+
+fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
 
 fun WF_REL_TAC q =
   Q.EXISTS_TAC q THEN
@@ -572,9 +572,8 @@ in
 fun PROVE_TERM_TAC g =
  let val term_simps = termination_simps()
      val simps = map (PURE_REWRITE_RULE [combinTheory.I_THM]) term_simps
-     val ss = term_dp_ss ++ rewrites simps
      val reduce_tac = CONV_TAC (PRIM_TC_SIMP_CONV term_simps)
-     val cleanup_tac = BasicProvers.PRIM_STP_TAC ss NO_TAC
+     val cleanup_tac = BasicProvers.PRIM_STP_TAC (term_dp_ss ++ rewrites simps) NO_TAC
      val tac1 = reduce_tac THEN cleanup_tac
      val tac2 = PRIM_TC_SIMP_TAC term_simps (!termination_solve_simps)
  in
