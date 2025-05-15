@@ -188,7 +188,8 @@ val bnf_noposn = store_thm(
   "bnf_noposn",
   ``∀M. bnf M ⇔ (noposn M = NONE)``,
   HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][] THEN Cases_on `noposn M` THEN SRW_TAC [][])
+  SRW_TAC [][] THEN Cases_on `noposn M` THEN
+  SRW_TAC [][EQ_IMP_THM])
 
 val normorder_noposn = store_thm(
   "normorder_noposn",

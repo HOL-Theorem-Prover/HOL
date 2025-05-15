@@ -595,15 +595,15 @@ val wo2wo_EQ_NONE = store_thm(
   ``!x. (wo2wo w1 w2 x = NONE) ==>
         !y. (x,y) WIN w1 ==> (wo2wo w1 w2 y = NONE)``,
   ONCE_REWRITE_TAC [wo2wo_thm] >> rw[LET_THM] >>
-  match_mp_tac SUBSET_ANTISYM >> rw[IMAGE_wo2wo_SUBSET] >>
-  match_mp_tac SUBSET_TRANS >>
-  qexists_tac `IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)` >>
-  conj_tac >- (
-    Cases_on`wleast w2 (IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE))` >>
-    imp_res_tac wleast_EQ_NONE >> fs[] ) >>
-  simp_tac (srw_ss() ++ DNF_ss) [SUBSET_DEF] >>
-  qsuff_tac `!a. a IN iseg w1 x ==> a IN iseg w1 y` >- metis_tac[] >>
-  rw[iseg_def] >> metis_tac [WIN_TRANS]);
+  fs[IMAGE_wo2wo_SUBSET,SET_EQ_SUBSET]
+  >- (
+    qsuff_tac `elsOf w2 ⊆ IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 y) DELETE NONE)` >- fs[] >>
+    MATCH_MP_TAC SUBSET_TRANS >>
+    first_x_assum (irule_at (Pos hd)) >>
+    simp_tac (srw_ss() ++ DNF_ss) [SUBSET_DEF] >>
+    qsuff_tac `!a. a IN iseg w1 x ==> a IN iseg w1 y` >- metis_tac[] >>
+    rw[iseg_def] >> METIS_TAC[WIN_TRANS])
+  >- imp_res_tac wleast_EQ_NONE);
 
 val wo2wo_EQ_SOME_downwards = store_thm(
   "wo2wo_EQ_SOME_downwards",
