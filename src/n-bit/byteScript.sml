@@ -79,12 +79,67 @@ Proof
   \\ ‘w2n a MOD 8 < 8’ by fs [MOD_LESS] \\ rw []
 QED
 
+Theorem set_byte_bit_field_insert:
+  set_byte a b w be = bit_field_insert (byte_index a be + 7) (byte_index a be) b w
+Proof
+  asm_simp_tac (boss_ss () ++ fcpLib.FCP_ss) [set_byte_def, bit_field_insert_def, word_modify_def, w2w, word_lsl_def, word_slice_alt_def, word_or_def]
+  >> rpt strip_tac
+  >> IF_CASES_TAC
+  >> fs []
+QED
+
 Theorem set_byte_change_a:
   w2n (a:'a word) MOD (dimindex(:'a) DIV 8) = w2n a' MOD (dimindex(:'a) DIV 8)
   ==>
     set_byte a b w be = set_byte a' b w be
 Proof
   rw[set_byte_def,byte_index_def]
+QED
+
+Triviality lt_or_gt:
+  (a: num) <> b ==> a < b \/ b < a
+Proof
+  simp []
+QED
+
+Triviality num_bytes_nonzero:
+  8 <= dimindex (:'a) <=> 0 < dimindex (:'a) DIV 8
+Proof
+  iff_tac
+  >- (rpt strip_tac
+      >> `8 DIV 8 <= dimindex (:'a) DIV 8` by simp [DIV_LE_MONOTONE]
+      >> fs [])
+  >- (rpt strip_tac
+      >> irule LE_TRANS
+      >> qexists `dimindex (:'a) DIV 8 * 8`
+      >> simp [dividesTheory.DIV_MULT_LE])
+QED
+
+Theorem byte_index_lt_or_gt:
+  w2n (n: 'a word) MOD (dimindex (:'a) DIV 8) <> w2n (m: 'a word) MOD (dimindex (:'a) DIV 8)
+  /\ 8 <= dimindex (:'a)
+  ==> byte_index n be + 8 <= byte_index m be \/ byte_index m be + 8 <= byte_index n be
+Proof
+  rpt strip_tac
+  >> drule_then strip_assume_tac lt_or_gt
+  >> Cases_on `be`
+  >> fs [byte_index_def, num_bytes_nonzero]
+  >> qabbrev_tac `bytes = dimindex (:'a) DIV 8`
+  >> `w2n m MOD bytes < bytes` by simp []
+  >> `w2n n MOD bytes < bytes` by simp []
+  >> simp []
+QED
+
+Theorem set_byte_transpose:
+  w2n n MOD (dimindex (:'a) DIV 8) <> w2n m MOD (dimindex (:'a) DIV 8)
+  /\ 8 <= dimindex (:'a)
+  ==> set_byte n x (set_byte m y (w: 'a word) be) be = set_byte m y (set_byte n x w be) be
+Proof
+  rpt strip_tac
+  >> simp [set_byte_bit_field_insert]
+  >> irule bit_field_insert_transpose
+  >> drule_all_then (qspec_then `be` assume_tac) byte_index_lt_or_gt
+  >> simp []
 QED
 
 Theorem get_byte_set_byte:
@@ -131,6 +186,21 @@ Definition word_of_bytes_def:
   (word_of_bytes be a (b::bs) =
      set_byte a b (word_of_bytes be (a+1w) bs) be)
 End
+
+Theorem word_of_bytes_SNOC:
+  LENGTH bs < dimindex (:'a) DIV 8 /\ w2n (n: 'a word) + LENGTH bs < dimword (:'a) ==>
+  word_of_bytes be n (SNOC b bs) = set_byte (n + n2w (LENGTH bs)) b (word_of_bytes be n bs) be
+Proof
+  qid_spec_tac `n`
+  >> Induct_on `bs`
+  >- simp [word_of_bytes_def]
+  >- (rpt strip_tac
+      >> last_x_assum (qspec_then `n + 1w` assume_tac)
+      >> rfs [w2n_add_2, word_of_bytes_def, ADD1, GSYM word_add_n2w]
+      >> irule set_byte_transpose
+      >> qspecl_then [`dimindex (:'a) DIV 8`, `LENGTH bs + 1`, `0`, `w2n n`] assume_tac ADD_MOD
+      >> rfs [w2n_add_2, num_bytes_nonzero])
+QED
 
 Definition words_of_bytes_def:
   (words_of_bytes be [] = ([]:'a word list)) /\
@@ -692,45 +762,6 @@ Proof
          simp[MULT_DIV])>>simp[]
 QED
 
-(*
-Theorem word_to_bytes_word_of_bytes_32:
-  LENGTH bs = dimindex (:32) DIV 8 ==>
-  word_to_bytes (word_of_bytes be (0w:word32) bs) be = bs
-Proof
-  simp[word_to_bytes_def]>>
-  rewrite_tac[numLib.num_CONV “4”,numLib.num_CONV “3”,TWO,ONE,
-              word_to_bytes_aux_def]>>
-  simp[]>>
-  Cases_on ‘bs’>>simp[]>>
-  rename1 ‘_ ==> _ /\ _ = bs’>>Cases_on ‘bs’>>simp[]>>
-  ntac 2 (SIMP_TAC std_ss [Once CONJ_ASSOC]>>
-       rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[])>>
-  rewrite_tac[numLib.num_CONV “4”,numLib.num_CONV “3”,TWO,ONE]>>
-  fs[]>>strip_tac>>
-  simp[word_of_bytes_def,get_byte_set_byte_irrelevant,get_byte_set_byte]
-QED
-
-Theorem word_to_bytes_word_of_bytes_64:
-  LENGTH bs = dimindex (:64) DIV 8 ==>
-  word_to_bytes (word_of_bytes be (0w:word64) bs) be = bs
-Proof
-  simp[word_to_bytes_def]>>
-  rewrite_tac[numLib.num_CONV “8”,numLib.num_CONV “7”,numLib.num_CONV “6”,
-              numLib.num_CONV “5”,numLib.num_CONV “4”,numLib.num_CONV “3”,
-              TWO,ONE,word_to_bytes_aux_def]>>
-  simp[]>>
-  Cases_on ‘bs’>>simp[]>>
-  rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[]>>
-  ntac 6 (SIMP_TAC std_ss [Once CONJ_ASSOC]>>
-       rename1 ‘_ /\ _ = bs’>>Cases_on ‘bs’>>simp[])>>
-  rewrite_tac[numLib.num_CONV “8”,numLib.num_CONV “7”,numLib.num_CONV “6”,
-              numLib.num_CONV “5”,numLib.num_CONV “4”,numLib.num_CONV “3”,
-              TWO,ONE]>>
-  fs[]>>strip_tac>>
-  simp[word_of_bytes_def,get_byte_set_byte_irrelevant,get_byte_set_byte]
-QED
-*)
-
 Theorem set_byte_get_byte:
   8 <= dimindex (:'a) ==>
   set_byte a (get_byte (a:'a word) (w:'a word) be) w be = w
@@ -817,34 +848,67 @@ Proof
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_slice_alt_def]
 QED
 
-Theorem word_to_bytes_word_of_bytes_32:
-  word_of_bytes be (0w:word32) (word_to_bytes (w:word32) be) = w
+Theorem word_slice_alt_empty:
+  h <= l ==> word_slice_alt h l w = 0w
 Proof
-  ‘8 <= dimindex (:32)’ by simp[]>>
-  simp[word_to_bytes_def]>>
-  rewrite_tac[numLib.num_CONV “4”,numLib.num_CONV “3”,TWO,ONE,
-              word_to_bytes_aux_def]>>
-  simp[]>>
-  simp[word_of_bytes_def]>>
-  simp[set_byte_get_byte_copy]>>
-  rpt (CASE_TAC>>fs[byte_index_def])>>
-  srw_tac[wordsLib.WORD_BIT_EQ_ss][word_slice_alt_def]
+  asm_simp_tac (boss_ss () ++ fcpLib.FCP_ss) [word_slice_alt_def, word_0]
+  >> rpt strip_tac
+  >> spose_not_then assume_tac
+  >> simp []
 QED
 
-Theorem word_to_bytes_word_of_bytes_64:
-  word_of_bytes be (0w:word64) (word_to_bytes (w:word64) be) = w
+Theorem word_slice_alt_full:
+  dimindex (:'a) <= h ==> word_slice_alt h 0 (w: 'a word) = w
 Proof
-  ‘8 <= dimindex (:64)’ by simp[]>>
-  simp[word_to_bytes_def]>>
-  rewrite_tac[numLib.num_CONV “8”,numLib.num_CONV “7”,
-              numLib.num_CONV “6”,numLib.num_CONV “5”,
-              numLib.num_CONV “4”,numLib.num_CONV “3”,
-              TWO,ONE,word_to_bytes_aux_def]>>
-  simp[]>>
-  simp[word_of_bytes_def]>>
-  simp[set_byte_get_byte_copy]>>
-  rpt (CASE_TAC>>fs[byte_index_def])>>
-  srw_tac[wordsLib.WORD_BIT_EQ_ss][word_slice_alt_def]
+  asm_simp_tac (boss_ss () ++ fcpLib.FCP_ss) [word_slice_alt_def]
 QED
+
+Theorem bit_field_insert_self_word_slice_alt:
+  l1 <= h2 /\ l2 <= SUC h1 ==>
+  bit_field_insert h1 l1 (w >>> l1) (word_slice_alt h2 l2 w) = word_slice_alt (MAX (SUC h1) h2) (MIN l1 l2) w
+Proof
+  asm_simp_tac (boss_ss () ++ fcpLib.FCP_ss) [bit_field_insert_def, word_slice_alt_def, word_modify_def, word_lsr_def, LT_SUC_LE]
+  >> rpt strip_tac
+  >> IF_CASES_TAC
+  >- simp []
+  >- fs [NOT_LE]
+QED
+
+Theorem word_of_bytes_word_to_bytes_aux_le:
+  n <= dimindex (:'a) DIV 8 /\ 8 <= dimindex (:'a)
+  ==> word_of_bytes F 0w (word_to_bytes_aux n (w: 'a word) F) = word_slice_alt (8 * n) 0 w
+Proof
+  Induct_on `n`
+  >- simp [word_to_bytes_aux_def, word_of_bytes_def, word_slice_alt_empty]
+  >- (strip_tac
+      >> `dimindex (:'a) DIV 8 <= dimindex (:'a)` by simp [DIV_LESS_EQ]
+      >> `n < dimword (:'a)` by simp [dimindex_lt_dimword, LESS_TRANS, LESS_LESS_EQ_TRANS]
+      >> simp [word_to_bytes_aux_def, GSYM SNOC_APPEND, word_of_bytes_SNOC, set_byte_bit_field_insert, get_byte_def, bit_field_insert_w2w, byte_index_def, bit_field_insert_self_word_slice_alt, MAX_DEF, ADD1, LEFT_ADD_DISTRIB])
+QED
+
+Theorem word_of_bytes_word_to_bytes_aux_be:
+  n <= dimindex (:'a) DIV 8 /\ 8 <= dimindex (:'a)
+  ==> word_of_bytes T 0w (word_to_bytes_aux n (w: 'a word) T) = word_slice_alt (8 * (dimindex (:'a) DIV 8)) (8 * (dimindex (:'a) DIV 8 - n)) w
+Proof
+  Induct_on `n`
+  >- simp [word_to_bytes_aux_def, word_of_bytes_def, word_slice_alt_empty]
+  >- (rpt strip_tac
+      >> `dimindex (:'a) DIV 8 <= dimindex (:'a)` by simp [DIV_LESS_EQ]
+      >> `n < dimword (:'a)` by simp [dimindex_lt_dimword, LESS_TRANS, LESS_LESS_EQ_TRANS]
+      >> simp [word_to_bytes_aux_def, GSYM SNOC_APPEND, word_of_bytes_SNOC, set_byte_bit_field_insert, get_byte_def, bit_field_insert_w2w, byte_index_def, bit_field_insert_self_word_slice_alt, MAX_EQ_GE, MIN_EQ_LE, ADD1])
+QED
+
+Theorem word_of_bytes_word_to_bytes:
+  8 <= dimindex (:'a) /\ divides 8 (dimindex (:'a))
+  ==> word_of_bytes be 0w (word_to_bytes (w: 'a word) be) = w
+Proof
+  simp [word_to_bytes_def]
+  >> Cases_on `be`
+  >- simp [word_of_bytes_word_to_bytes_aux_be, dividesTheory.DIVIDES_DIV, word_slice_alt_full]
+  >- simp [word_of_bytes_word_to_bytes_aux_le, dividesTheory.DIVIDES_DIV, word_slice_alt_full]
+QED
+
+Theorem word_to_bytes_word_of_bytes_32 = word_of_bytes_word_to_bytes |> INST_TYPE [``:'a`` |-> ``:32``] |> SRULE [dividesTheory.compute_divides]
+Theorem word_to_bytes_word_of_bytes_64 = word_of_bytes_word_to_bytes |> INST_TYPE [``:'a`` |-> ``:64``] |> SRULE [dividesTheory.compute_divides]
 
 val _ = export_theory();

@@ -3604,6 +3604,26 @@ Proof
   PROVE_TAC [LESS_OR_EQ, NOT_LESS, LESS_TRANS]
 QED
 
+Theorem MIN_EQ_LE:
+  (a <= b ==> MIN a b = a) /\
+  (b <= a ==> MIN a b = b)
+Proof
+  simp [MIN_DEF]
+  >> rpt strip_tac
+  >- fs [LESS_OR_EQ]
+  >- (`~(a < b)` by simp [NOT_LT] >> simp [])
+QED
+
+Theorem MAX_EQ_GE:
+  (b <= a ==> MAX a b = a) /\
+  (a <= b ==> MAX a b = b)
+Proof
+  simp [MAX_DEF]
+  >> rpt strip_tac
+  >- (`~(a < b)` by simp [NOT_LT, LT_IMP_LE] >> simp [])
+  >- fs [LESS_OR_EQ]
+QED
+
 val MIN_0 = store_thm ("MIN_0",
   “!n. (MIN n 0 = 0) /\ (MIN 0 n = 0)”,
   REWRITE_TAC [MIN] THEN
