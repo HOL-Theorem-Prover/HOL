@@ -251,7 +251,7 @@ Definition c_exp_def:
 Termination
   WF_REL_TAC ‘inv_image (measure I LEX measure I)
     (λx. case x of INL (t,l,vs,fs,x) => (exp_size x,if t then 1 else 0)
-                 | INR (l,vs,fs,xs) => (exp1_size xs,0))’
+                 | INR (l,vs,fs,xs) => (list_size exp_size xs,0))’
 End
 
 Definition c_exp'_def: (* rephrasing that is better for proofs *)
@@ -284,7 +284,7 @@ Definition c_exp'_def: (* rephrasing that is better for proofs *)
 Termination
   WF_REL_TAC ‘inv_image (measure I LEX measure I)
     (λx. case x of INL (t,l,vs,fs,x) => (exp_size x,if t then 1 else 0)
-                 | INR (l,vs,fs,xs) => (exp1_size xs,0))’
+                 | INR (l,vs,fs,xs) => (list_size exp_size xs,0))’
 End
 
 Theorem c_exp'[simp]:

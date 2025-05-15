@@ -227,9 +227,12 @@ Definition eval_def:
        | (Err v, s2) => (Err v, s2)
        | (Res vs, s2) => (Res (v::vs), s2))
 Termination
-  WF_REL_TAC ‘inv_image (measure I LEX measure I)
-                (λx. case x of INL (env,x,s) => (s.clock,exp_size x)
-                             | INR (env,xs,s) => (s.clock,exp1_size xs))’
+  WF_REL_TAC
+    ‘inv_image
+       (measure I LEX measure I)
+       (λx. case x of
+              INL (env,x,s) => (s.clock,exp_size x)
+            | INR (env,xs,s) => (s.clock,list_size exp_size xs))’
   \\ rw [] \\ fs [fix_def,CaseEq"bool"] \\ rw [] \\ fs []
   \\ fs [take_branch_def,AllCaseEqs(),return_def,fail_def,get_env_and_body_def]
   \\ rw [] \\ fs []
