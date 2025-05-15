@@ -202,8 +202,10 @@ Definition dest_cons_chain_def:
   dest_cons_chain _ = NONE
 End
 
+val exp_size_def = snd $ TypeBase.size_of “:exp”;
+
 Theorem dest_cons_chain_size:
-  ∀x vs. dest_cons_chain x = SOME vs ⇒ exp1_size vs + op_size Cons + 1 ≤ exp_size x
+  ∀x vs. dest_cons_chain x = SOME vs ⇒ list_size exp_size vs + op_size Cons + 1 ≤ exp_size x
 Proof
   completeInduct_on ‘exp_size x’ \\ rw [] \\ fs [PULL_FORALL]
   \\ qpat_x_assum ‘dest_cons_chain _ = SOME _’ mp_tac
@@ -211,7 +213,7 @@ Proof
   \\ fs [AllCaseEqs()] \\ rw []
   THEN1 (rw [] \\ fs [] \\ fs [exp_size_def])
   \\ first_assum (first_assum o mp_then Any mp_tac)
-  \\ strip_tac \\ fs [exp_size_def]
+  \\ strip_tac \\ fs [exp_size_def,list_size_def]
 QED
 
 Definition up_const_def:
@@ -228,16 +230,6 @@ Theorem exp_size_non_zero:
   exp_size y ≠ 0
 Proof
   Cases_on ‘y’ \\ fs [exp_size_def]
-QED
-
-Triviality FRONT_exp1_size:
-  ¬NULL v ⇒ exp1_size (FRONT v) ≤ exp1_size v
-Proof
-  Cases_on ‘v = []’ \\ fs []
-  \\ qspec_then ‘v’ mp_tac SNOC_CASES \\ asm_rewrite_tac []
-  \\ strip_tac \\ full_simp_tac std_ss [FRONT_SNOC]
-  \\ rw [] \\ fs [SNOC_APPEND]
-  \\ Induct_on ‘l’ \\ fs [exp_size_def]
 QED
 
 Definition dest_case_lets_def:
@@ -304,7 +296,7 @@ Proof
   \\ gvs [list_size_def,exp_size_def]
   \\ qpat_x_assum ‘_ = SOME _’ mp_tac
   \\ simp [Once (oneline dest_case_enum_def), AllCaseEqs()]
-  \\ strip_tac \\ gvs [list_size_def,exp_size_def,exp_size_eq]
+  \\ strip_tac \\ gvs [list_size_def,exp_size_def]
 QED
 
 Theorem dest_case_lets_exp_size:
@@ -320,7 +312,7 @@ Theorem dest_case_tree_exp_size:
   ∀z a t xs y rows.
     dest_case_tree a (If t xs y z) = SOME rows ⇒
     list_size exp_size (MAP SND (MAP SND rows)) ≤ exp_size y + exp_size z ∧
-    exp_size a < exp1_size xs
+    exp_size a < list_size exp_size xs
 Proof
   gen_tac \\ completeInduct_on ‘exp_size z’
   \\ gen_tac \\ strip_tac \\ fs [PULL_FORALL]
@@ -396,12 +388,13 @@ Termination
   WF_REL_TAC ‘measure (λx. case x of INL v => exp_size v + 1
                                    | INR (INL v) => list_size exp_size v + 1
                                    | INR (INR v) => exp_size v)’ \\ rw []
-  \\ gvs [LENGTH_EQ_NUM_compute,list_size_def,exp_size_def,exp_size_eq]
+  \\ gvs [LENGTH_EQ_NUM_compute,list_size_def,exp_size_def]
   \\ ‘exp_size x ≠ 0 ∧ exp_size y ≠ 0’ by fs [exp_size_non_zero] \\ fs []
   \\ imp_res_tac dest_case_enum_exp_size \\ fs [exp_size_def]
   \\ imp_res_tac dest_case_tree_exp_size \\ fs [exp_size_def]
-  \\ imp_res_tac dest_cons_chain_size \\ gvs [exp_size_eq,exp_size_def]
-  \\ TRY (Cases_on ‘op’) \\ fs [dest_cons_chain_def]
+  \\ imp_res_tac dest_cons_chain_size \\ gvs [exp_size_def,list_size_def]
+  \\ fs [dest_cons_chain_def,exp_size_def]
+  \\ TRY (Cases_on ‘op’) \\ fs [dest_cons_chain_def,exp_size_def]
   \\ Cases_on ‘v’ \\ gvs [list_size_def]
 End
 
