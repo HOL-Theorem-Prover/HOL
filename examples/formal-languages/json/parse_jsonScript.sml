@@ -225,15 +225,8 @@ Definition json_to_string_list_def:
   (mem_to_string_list n_obj =
    let (n, obj) = n_obj in
    [CONCAT ["\""; n; "\""]] ++ [":"] ++ json_to_string_list obj)
-Termination
-   WF_REL_TAC `measure (\x. case x of
-       | INL obj => json_size obj
-       | INR p => json2_size p)`
-  >> rw[]
-  >> imp_res_tac json_size_MEM1
-  >> imp_res_tac json_size_MEM2
-  >> fs[]
 End
+
 Definition json_to_string_def:
   json_to_string obj = CONCAT $ json_to_string_list obj
 End
@@ -748,14 +741,6 @@ Definition json_to_tok_def:
   /\
   (mem_to_tok n_obj = let (n, obj) = n_obj in
    json_to_tok obj ++ [COLON; Str n])
-Termination
-   WF_REL_TAC `measure (\x. case x of
-       | INL obj => json_size obj
-       | INR p => json2_size p)`
-  >> rw[]
-  >> imp_res_tac json_size_MEM1
-  >> imp_res_tac json_size_MEM2
-  >> fs[]
 End
 
 (*
