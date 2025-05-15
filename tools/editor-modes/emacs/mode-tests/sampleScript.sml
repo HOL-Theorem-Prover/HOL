@@ -140,8 +140,8 @@ Proof
 QED
 
 (* escaped_alpha_qfier *)
-val t = “P $some ∧ x < y ∧
-         Q”;
+val t =  “P $some ∧ x < y ∧
+          Q”;
 
 (* escaped symbol qfier *)
 val t = “P $@ ∧
