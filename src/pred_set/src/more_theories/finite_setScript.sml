@@ -869,6 +869,12 @@ Proof
   Induct_on`s` \\ gs[toSet_fINSERT, fIN_IN]
 QED
 
+Theorem IN_toSet_fINSERT:
+  x ∈ toSet (fINSERT a s) ⇔ x = a ∨ x ∈ toSet s
+Proof
+  rw[GSYM fIN_IN]
+QED
+
 Theorem fITSETr_total:
   !s f a0. ?a. fITSETr f s a0 a
 Proof
