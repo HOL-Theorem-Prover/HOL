@@ -2561,6 +2561,17 @@ Proof
   simp[MEM_MAP,pairTheory.EXISTS_PROD,MEM_toSortedAList,domain_lookup]
 QED
 
+Theorem PERM_toAList_toSortedAList:
+  PERM (toAList t) (toSortedAList t)
+Proof
+  irule PERM_ALL_DISTINCT
+  \\ conj_tac
+  >- ( Cases \\ simp[MEM_toAList, MEM_toSortedAList] )
+  \\ conj_tac
+  >- metis_tac[ALL_DISTINCT_MAP, ALL_DISTINCT_MAP_FST_toAList]
+  >- metis_tac[ALL_DISTINCT_MAP, ALL_DISTINCT_MAP_FST_toSortedAList]
+QED
+
 Theorem set_MAP_FST_toAList_domain:
   set (MAP FST (toAList t)) = domain t
 Proof
