@@ -2564,7 +2564,7 @@ QED
 Theorem PERM_toAList_toSortedAList:
   PERM (toAList t) (toSortedAList t)
 Proof
-  irule PERM_ALL_DISTINCT
+  irule sortingTheory.PERM_ALL_DISTINCT
   \\ conj_tac
   >- ( Cases \\ simp[MEM_toAList, MEM_toSortedAList] )
   \\ conj_tac
