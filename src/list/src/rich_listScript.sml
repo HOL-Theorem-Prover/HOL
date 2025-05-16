@@ -3630,6 +3630,12 @@ Theorem REPLICATE_NIL[simp]:  REPLICATE x y = [] <=> x = 0
 Proof Cases_on`x` >> rw[]
 QED
 
+Theorem REPLICATE_EQ_CONS:
+  REPLICATE n x = y :: r <=> y = x /\ ?m. n = SUC m /\ r = REPLICATE m x
+Proof
+  Cases_on`n` \\ rw[REPLICATE, EQ_IMP_THM]
+QED
+
 val REPLICATE_APPEND = Q.store_thm("REPLICATE_APPEND",
   `REPLICATE n a ++ REPLICATE m a = REPLICATE (n+m) a`,
   simp[LIST_EQ_REWRITE,LENGTH_REPLICATE] >> rw[] >>
