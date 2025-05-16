@@ -1250,15 +1250,40 @@ Proof
   metis_tac[]
 QED
 
-(*
+Theorem connected_components_disconnected:
+  cc1 ∈ connected_components g ∧ cc2 ∈ connected_components g ∧ cc1 ≠ cc2 ∧
+  m ∈ nodes cc1 ∧ n ∈ nodes cc2 ⇒
+  ¬reachable g m n
+Proof
+  rpt strip_tac >>
+  ‘m ∈ nodes g ∧ n ∈ nodes g’ by metis_tac[connected_component_nodes_SUBSET] >>
+  ‘m ∈ nodes (component_of g m) ∧ n ∈ nodes (component_of g n)’
+    by simp[] >>
+  ‘cc1 = component_of g m ∧ cc2 = component_of g n’
+    by metis_tac[every_node_has_unique_connected_component,
+                 component_of_IN_connected_components] >> gvs[] >>
+  metis_tac[reachable_equal_components]
+QED
+
+Theorem connected_components_EQ_EMPTY[simp]:
+  connected_components g = ∅ ⇔ g = emptyG
+Proof
+  simp[connected_components_def]
+QED
+
+Theorem connected_components_EMPTY[simp]:
+  connected_components emptyG = ∅
+Proof
+  simp[connected_components_def]
+QED
+
 Theorem connected_components_unique:
   FINITE A ∧ pairwise (λg1 g2. g1 ≠ g2 ⇒ DISJOINT(nodes g1) (nodes g2)) A ∧
   (∀cc. cc ∈ A ⇒ connected cc ∧ cc ≠ emptyG) ∧ ITSET gUNION A emptyG = g ⇒
   connected_components g = A
 Proof
-  CCONTR_TAC >> gvs[] >> qabbrev_tac ‘g = ITSET gUNION A emptyG’ >>
-  ‘∃cc. cc ∈ A ∧ cc ∉ connected_components g ∨
-        cc ∉ A ∧ cc ∈ connected_components g’ by metis_tac[EXTENSION]
+  rw[] >> qabbrev_tac ‘g = ITSET gUNION A emptyG’ >>
+  simp[EXTENSION, EQ_IMP_THM] >> qx_gen_tac ‘cc’ >> reverse $ rpt strip_tac
   >- (‘∃n. n ∈ nodes cc’
         by (CCONTR_TAC >> gvs[] >>
             ‘nodes cc = {}’ by simp[EXTENSION, Excl "nodes_EQ_EMPTY"] >>
@@ -1268,15 +1293,10 @@ Proof
       ‘∀e. e ∈ fsgedges cc ⇒ e ∈ fsgedges g’
         by (simp[Abbr‘g’, fsgedges_ITSET_gUNION, PULL_EXISTS] >> metis_tac[]) >>
       ‘n ∈ nodes g’ by simp[] >>
-      ‘∃cc1. cc1 ∈ connected_components g ∧ n ∈ nodes cc1’
-        by metis_tac[every_node_has_a_connected_component] >>
-      ‘cc1 = component_of g n’
-        by (qpat_x_assum ‘cc1 ∈ connected_components g’ mp_tac >>
-            simp[connected_components_def, PULL_EXISTS,
-                 component_of_EQUAL] >> rw[] >> gvs[] >>
-            metis_tac[reachable_SYM]) >>
-      ‘cc1 ≠ cc’ by (strip_tac >> gvs[]) >>
-      gvs[] >> qpat_x_assum ‘component_of g n ≠ cc’ mp_tac >>
+      ‘component_of g n ∈ connected_components g ∧ n ∈ nodes (component_of g n)’
+        by simp[connected_components_def, PULL_EXISTS,
+                component_of_EQUAL] >>
+      ‘component_of g n = cc’ suffices_by metis_tac[] >>
       simp[fsgraph_component_equality, EXTENSION] >> conj_asm1_tac >> rw[] >~
       [‘reachable g m n ∧ m ∈ nodes g ⇔ m ∈ nodes cc’]
       >- (reverse $ iff_tac
@@ -1323,25 +1343,95 @@ Proof
         simp[Abbr‘g’, nodes_ITSET_gUNION, PULL_EXISTS] >> rpt strip_tac >>
         first_assum $ irule_at (Pat ‘_ ∈ A’) >> rw[] >>
         dxrule_all (iffLR pairwise_def) >> simp[] >> metis_tac[IN_DISJOINT]) >>
-  qpat_x_assum ‘cc ∉ A’ mp_tac >>
   ‘cc = cc1’ suffices_by simp[] >>
   simp[fsgraph_component_equality] >>
-  ‘nodes cc = nodes cc1’
-    by (irule SUBSET_ANTISYM >>
-        ‘nodes cc1 ⊆ nodes cc’
-          by (simp[SUBSET_DEF] >> qx_gen_tac ‘m’ >> strip_tac >>
-              ‘connected cc1’ by simp[] >>
-              pop_assum mp_tac >> simp[connected_def, NoAsms] >>
-              Cases_on ‘m = n ’ >> simp[] >> strip_tac >>
-              ‘reachable cc1 m n’ by metis_tac[RTC_CASES_TC] >>
-              ‘cc = component_of g n’
+  ‘n ∈ nodes (component_of g n)’ by simp[] >>
+  ‘cc = component_of g n’
+    by metis_tac[every_node_has_unique_connected_component,
+                 component_of_IN_connected_components] >>
+  gvs[nodes_component_of, fsgedges_component_of] >> conj_asm1_tac >~
+  [‘_ = nodes cc1’]
+  >- (simp[EXTENSION, EQ_IMP_THM] >> qx_gen_tac ‘m’ >> rpt strip_tac >~
+      [‘m ∈ nodes cc1 (* a *)’, ‘reachable g n m (* g *)’]
+      >- (‘connected cc1’ by simp[] >>
+          pop_assum mp_tac >> simp[connected_def, NoAsms] >>
+          Cases_on ‘m = n ’ >> simp[] >> strip_tac >>
+          ‘reachable cc1 m n’ by metis_tac[RTC_CASES_TC] >>
+          simp[Abbr‘g’, nodes_ITSET_gUNION, PULL_EXISTS] >>
+          ‘∀m n. adjacent cc1 m n ⇒ adjacent (ITSET gUNION A emptyG) m n’
+            suffices_by metis_tac[RTC_MONOTONE, reachable_SYM] >>
+          simp[PULL_EXISTS, adjacent_fsg, fsgedges_ITSET_gUNION] >>
+          metis_tac[]) >>
+      CCONTR_TAC >>
+      ‘reachable g m n’ by simp[reachable_SYM] >>
+      drule_all_then strip_assume_tac reachable_passing_over_boundary >>
+      qpat_x_assum ‘_ ∈ fsgedges g’ mp_tac >>
+      simp[Abbr‘g’, fsgedges_ITSET_gUNION, PULL_FORALL] >>
+      qx_gen_tac ‘eset’ >> rename [‘{m0;n0} ∈ _’] >>
+      Cases_on ‘{m0;n0} ∈ eset’ >> simp[] >>
+      rpt strip_tac >> gvs[] >> rename [‘{m0;n0} ∈ fsgedges cc2’] >>
+      ‘m0 ∈ nodes cc2 ∧ n0 ∈ nodes cc2’
+        by metis_tac[alledges_valid, INSERT2_lemma] >>
+      ‘cc1 ≠ cc2’ by metis_tac[] >>
+      dxrule_all (iffLR pairwise_def) >> simp[] >>
+      metis_tac[IN_DISJOINT]) >>
+  pop_assum mp_tac >> ONCE_REWRITE_TAC [EXTENSION] >> simp[] >>
+  strip_tac >> qx_gen_tac ‘e’ >> iff_tac >> strip_tac >> gvs[] >~
+  [‘{a;b} ∈ fsgedges g’, ‘Abbrev(g = _)’]
+  >- (CCONTR_TAC >> qpat_x_assum ‘{a;b} ∈ fsgedges _’ mp_tac >>
+      simp[Abbr‘g’, fsgedges_ITSET_gUNION] >>
+      qx_gen_tac ‘B’ >> Cases_on ‘{a;b} ∈ B’ >> simp[] >>
+      rpt strip_tac >> gvs[] >> rename [‘{a;b} ∈ fsgedges cc2 (* a *)’] >>
+      ‘a ∈ nodes cc2 ∧ b ∈ nodes cc2’
+        by metis_tac[alledges_valid, INSERT2_lemma] >>
+      dxrule_all (iffLR pairwise_def) >> simp[] >>
+      metis_tac[IN_DISJOINT]) >>
+  drule_then strip_assume_tac alledges_valid>> simp[] >>
+  irule_at Any EQ_REFL >> gvs[] >>
+  simp [Abbr‘g’, fsgedges_ITSET_gUNION] >> metis_tac[]
+QED
 
-*)
+Theorem connected_components_EQ_SING[simp]:
+  connected_components g1 = {g2} ⇔ g1 = g2 ∧ connected g2 ∧ g2 ≠ emptyG
+Proof
+  iff_tac >> strip_tac >~
+  [‘connected_components g1 = {g2} (* a *)’]
+  >- (assume_tac (gUNION_connected_components |> Q.INST[‘g’ |-> ‘g1’]) >>
+      gvs[gUNION_LCOMM, COMMUTING_ITSET_RECURSES] >>
+      rpt strip_tac >~
+      [‘connected _’]
+      >- metis_tac[connected_components_are_connected, IN_INSERT] >>
+      gvs[]) >>
+  irule connected_components_unique >> gvs[pairwise_def]
+QED
 
-
-
-
-
+Theorem connected_components_addNode:
+  n ∉ nodes g ⇒
+  connected_components (fsgAddNode n g) =
+  fsgAddNode n emptyG INSERT connected_components g
+Proof
+  strip_tac >> irule connected_components_unique >>
+  simp[DISJ_IMP_THM, FORALL_AND_THM, COMMUTING_ITSET_RECURSES, gUNION_LCOMM,
+       pairwise_def] >> rw[] >> simp[] >~
+  [‘connected cc’, ‘cc ∈ connected_components g’]
+  >- metis_tac[connected_components_are_connected] >~
+  [‘connected (fsgAddNode n emptyG)’]
+  >- simp[connected_def] >~
+  [‘cc ∈ connected_components g’, ‘cc ≠ emptyG’]
+  >- metis_tac[connected_components_nonempty] >~
+  [‘gUNION (fsgAddNode n emptyG) _ = _ ’]
+  >- (dep_rewrite.DEP_REWRITE_TAC[DELETE_NON_ELEMENT_RWT] >>
+      simp[gUNION_connected_components] >> strip_tac >~
+      [‘fsgAddNode n emptyG ∉ connected_components g’]
+      >- (strip_tac >> drule connected_component_nodes_SUBSET >>
+          simp[]) >>
+      simp[gUNION_def, fsgraph_component_equality] >>
+      SET_TAC[]) >>~-
+  ([‘g1 ∈ connected_components g’, ‘n ∉ nodes g1’],
+   metis_tac[connected_component_nodes_SUBSET]) >>
+  simp[IN_DISJOINT] >> CCONTR_TAC >> gvs[] >>
+  drule_all connected_components_disconnected >> simp[]
+QED
 
 (* ----------------------------------------------------------------------
     r-partite graphs and (in particular) bipartite graphs [2, p.17]
