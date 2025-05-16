@@ -618,6 +618,25 @@ Definition toSet_def:
   toSet fs = { x | fIN x fs }
 End
 
+Theorem toSet_fEMPTY[simp]:
+  toSet fEMPTY = {}
+Proof
+  rw[toSet_def]
+QED
+
+Theorem toSet_fINSERT:
+  toSet (fINSERT x s) = x INSERT (toSet s)
+Proof
+  rw[toSet_def, pred_setTheory.EXTENSION]
+QED
+
+Theorem toSet_fIMAGE:
+  toSet (fIMAGE f s) = IMAGE f (toSet s)
+Proof
+  rw[toSet_def, pred_setTheory.EXTENSION, EQ_IMP_THM]
+  \\ metis_tac[]
+QED
+
 Definition rel_set_def:
   rel_set AB A B <=>
     (!a. a IN A ==> ?b. b IN B /\ AB a b) /\
@@ -843,6 +862,18 @@ val _ = TypeBase.export [
           size = NONE,
           encode=NONE})
     ]
+
+Theorem CARD_toSet:
+  CARD (toSet s) = fCARD s
+Proof
+  Induct_on`s` \\ gs[toSet_fINSERT, fIN_IN]
+QED
+
+Theorem IN_toSet_fINSERT:
+  x ∈ toSet (fINSERT a s) ⇔ x = a ∨ x ∈ toSet s
+Proof
+  rw[GSYM fIN_IN]
+QED
 
 Theorem fITSETr_total:
   !s f a0. ?a. fITSETr f s a0 a

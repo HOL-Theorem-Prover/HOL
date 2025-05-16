@@ -2,6 +2,8 @@ open HolKernel Parse boolLib IndDefLib DefnBase
 
 open arithmeticTheory BasicProvers simpLib
 
+local open newtypeTools metisLib numeralTheory in end
+
 fun simp ths = ASM_SIMP_TAC (srw_ss()) ths
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 
@@ -578,6 +580,27 @@ Theorem exp_to_cv:
   m ** n = c2n (cv_exp (Num m) (Num n))
 Proof
   rewrite_tac [c2n_def,cv_exp_def]
+QED
+
+(* Properties that can help with manual termination proofs *)
+
+Theorem c2n_cv_add[simp]:
+  c2n (cv_add v1 v2) = c2n v1 + c2n v2
+Proof
+  Cases_on`v1` \\ Cases_on`v2` \\ simp[ADD_CLAUSES]
+QED
+
+Theorem c2n_cv_mul[simp]:
+  c2n (cv_mul v1 v2) = c2n v1 * c2n v2
+Proof
+  Cases_on`v1` \\ Cases_on`v2` \\ simp[]
+QED
+
+Theorem cv_lt_Num_0:
+  (c2b $ cv_lt (Num 0) x) = ∃n. x = Num (SUC n)
+Proof
+  Cases_on`x` \\ simp[cv_lt_def]
+  \\ Cases_on`m` \\ simp[LT, LESS_0_CASES]
 QED
 
 val _ = app Parse.permahide [“c2n”,“c2b”,“Num”,“Pair”];

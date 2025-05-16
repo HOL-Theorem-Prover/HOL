@@ -362,6 +362,13 @@ val PERM_LENGTH = Q.store_thm(
   ‘!l1 l2. PERM l1 l2 ==> (LENGTH l1 = LENGTH l2)’,
   HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][]);
 
+Theorem PERM_NULL_EQ:
+  !l1 l2. PERM l1 l2 ==> NULL l1 = NULL l2
+Proof
+  ho_match_mp_tac PERM_IND
+  \\ rw[NULL_EQ]
+QED
+
 val PERM_MEM_EQ = Q.store_thm(
   "PERM_MEM_EQ",
   ‘!l1 l2. PERM l1 l2 ==> !x. MEM x l1 = MEM x l2’,

@@ -511,6 +511,14 @@ Proof
   GEN_TAC >> OPTION_CASES_TAC “opt: 'a option” >> REWRITE_TAC[OPTION_BIND_def]
 QED
 
+Theorem OPTION_BIND_eq_case:
+  OPTION_BIND (x: 'a option) f =
+  case x of NONE => NONE | SOME a => f a
+Proof
+  OPTION_CASES_TAC “x:'a option”
+  \\ SRW_TAC[][]
+QED
+
 val OPTION_IGNORE_BIND_def = new_definition(
   "OPTION_IGNORE_BIND_def",
   ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);

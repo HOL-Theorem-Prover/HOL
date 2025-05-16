@@ -834,6 +834,12 @@ val NULL_LENGTH = Q.store_thm("NULL_LENGTH",
   ‘!l. NULL l = (LENGTH l = 0)’,
   REWRITE_TAC[NULL_EQ, LENGTH_NIL]);
 
+Theorem NULL_MAP[simp]:
+  NULL (MAP f ls) = NULL ls
+Proof
+  rw[NULL_EQ]
+QED
+
 val LENGTH_CONS = store_thm("LENGTH_CONS",
  “!l n. (LENGTH l = SUC n) =
           ?h:'a. ?l'. (LENGTH l' = n) /\ (l = CONS h l')”,
@@ -1075,6 +1081,12 @@ val LENGTH_TL = Q.store_thm
 ("LENGTH_TL",
   ‘!l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)’,
   Cases_on ‘l’ THEN SIMP_TAC arith_ss [LENGTH, TL]);
+
+Theorem LENGTH_TL_LESS_EQ:
+  !ls. LENGTH (TL ls) <= LENGTH ls
+Proof
+  Cases \\ rw[]
+QED
 
 val FILTER_EQ_NIL = Q.store_thm
 ("FILTER_EQ_NIL",
@@ -2375,6 +2387,18 @@ Proof
   \\ first_x_assum drule
   \\ rw[]
   \\ rw[UNCURRY, arithmeticTheory.ADD1]
+QED
+
+Theorem ALL_DISTINCT_MAP_DROP_LESS:
+  !ls.
+    n <= m /\
+    ALL_DISTINCT (MAP (DROP m) ls) ==>
+    ALL_DISTINCT (MAP (DROP n) ls)
+Proof
+  Induct \\ rw[] \\ fs[MEM_MAP, PULL_EXISTS]
+  \\ rw[] \\ first_x_assum irule
+  \\ full_simp_tac(srw_ss() ++ numSimps.ARITH_ss)
+     [LIST_EQ_REWRITE, EL_DROP, LENGTH_DROP, LESS_EQ_EXISTS]
 QED
 
 (* ----------------------------------------------------------------------
@@ -4914,6 +4938,15 @@ Theorem OPT_MMAP_cong[defncong]:
 Proof
   ntac 2 gen_tac \\ Induct \\ rw[] \\ computeLib.EVAL_TAC
   \\ FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) []
+QED
+
+Theorem IS_SOME_OPT_MMAP:
+  IS_SOME (OPT_MMAP f ls) <=> EVERY IS_SOME (MAP f ls)
+Proof
+  Induct_on`ls` \\ rw[]
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`IS_SOME (f x)`
+  \\ Cases_on`f x` \\ rw[]
+  \\ Cases_on`OPT_MMAP f ls` \\ fs[]
 QED
 
 val LAST_compute = Q.store_thm("LAST_compute",
