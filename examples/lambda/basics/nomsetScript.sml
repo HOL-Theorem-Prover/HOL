@@ -755,6 +755,12 @@ val MEM_listpm_EXISTS = store_thm(
   ``MEM x (listpm pm pi l) ⇔ ∃y. MEM y l ∧ (x = pmact pm pi y)``,
   Induct_on `l` >> fsrw_tac [][] >> metis_tac []);
 
+Theorem listpm_permeq:
+  pi1 == pi2 ⇒ listpm p pi1 = listpm p pi2
+Proof
+  strip_tac >> simp[FUN_EQ_THM] >> Induct
+QED
+
 (* lists of pairs of strings, (concrete rep for permutations) *)
 val _ = overload_on("cpm_pmact", ``list_pmact (pair_pmact string_pmact string_pmact)``);
 val _ = overload_on ("cpmpm", ``pmact cpm_pmact``);
@@ -765,6 +771,14 @@ Theorem ALL_DISTINCT_listpm[simp]:
 Proof
   Induct_on ‘xs’ >> simp[MEM_listpm]
 QED
+
+Theorem set_listpm:
+  set (listpm pm pi l) = setpm pm pi (set l)
+Proof
+  Induct_on ‘l’ >> simp[pmact_INSERT]
+QED
+
+
 
 (* ----------------------------------------------------------------------
     Notion of support, and calculating the smallest set of support

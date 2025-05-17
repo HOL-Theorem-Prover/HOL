@@ -109,7 +109,7 @@ in
 val genind_t =
   mk_thy_const {Thy = "generic_terms", Name = "genind",
                 Ty = (num_ty --> alpha --> bool) -->
-                     (num_ty --> beta --> numlist_ty --> numlist_ty --> bool) -->
+                     (num_ty --> num_ty --> beta --> numlist_ty --> numlist_ty --> bool) -->
                      num_ty --> gterm_ty --> bool}
 val GVAR_t = mk_thy_const {Thy = "generic_terms", Name = "GVAR",
                            Ty = string_ty --> alpha --> gterm_ty}

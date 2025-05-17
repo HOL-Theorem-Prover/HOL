@@ -20,9 +20,9 @@ val _ = set_fixity "=" (Infix(NONASSOC, 450))
 val tyname = "term"
 
 val vp = “(λn u:unit. n = 0)”
-val lp = “(λn (d:unit + unit) tns uns.
-               (n = 0) ∧ ISL d ∧ (tns = []) ∧ (uns = [0;0]) ∨
-               (n = 0) ∧ ISR d ∧ (tns = [0]) ∧ (uns = []))”
+val lp = “(λn lfvs (d:unit + unit) tns uns.
+             lfvs = 0 ∧ n = 0 ∧ ISL d ∧ tns = [] ∧ uns = [0;0] ∨
+             lfvs = 0 ∧ n = 0 ∧ ISR d ∧ tns = [0] ∧ uns = [])”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
@@ -33,7 +33,7 @@ val [gvar,glam] = genind_rules |> SPEC_ALL |> CONJUNCTS
 val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
 val LAM_def = new_definition(
   "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v (INR ()) [^term_REP_t t] [])``);
+  ``^LAM_t v t = ^term_ABS_t (GLAM v [] (INR ()) [^term_REP_t t] [])``);
 
 val LAM_termP = prove(
   mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
@@ -44,15 +44,17 @@ val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
 val APP_def = new_definition(
   "APP_def",
   ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
+       ^term_ABS_t (GLAM ARB [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
 val APP_termP = prove(
-  ``^termP (GLAM x (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
+  ``^termP (GLAM x [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
   match_mp_tac glam >> srw_tac [][genind_term_REP])
 val APP_t = defined_const APP_def
 
-val APP_def' = prove(
-  ``^term_ABS_t (GLAM v (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) = ^APP_t t1 t2``,
-  srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
+Theorem APP_def':
+  ^term_ABS_t (GLAM v [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) =
+  ^APP_t t1 t2
+Proof srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]
+QED
 
 val VAR_t = mk_var("VAR", ``:string -> ^newty``)
 val VAR_def = new_definition(
@@ -161,7 +163,8 @@ val term_ind =
                       IN_UNION, NOT_IN_EMPTY, oneTheory.FORALL_ONE,
                       genind_exists, LIST_REL_CONS1, LIST_REL_NIL]
         |> Q.INST [`Q` |-> `λt. P (term_ABS t)`]
-        |> SIMP_RULE std_ss [GSYM LAM_def, APP_def', GSYM VAR_def, absrep_id]
+        |> SIMP_RULE std_ss [GSYM LAM_def, APP_def', GSYM VAR_def, absrep_id,
+                             LENGTH_NIL]
         |> SIMP_RULE (srw_ss()) [GSYM supp_tpm]
         |> elim_unnecessary_atoms {finite_fv = FINITE_FV}
                                   [ASSUME ``!x:'c. FINITE (fv x:string set)``]
@@ -198,8 +201,9 @@ val (_, repty) = dom_rng (type_of term_REP_t)
 val repty' = ty_antiq repty
 
 val tlf =
-   “λ(v:string) (u:unit + unit) (ds1:(ρ -> α) list) (ds2:(ρ -> α) list)
-                                (ts1:^repty' list) (ts2:^repty' list) (p :ρ).
+   “λ(v:string) (fvs : string list) (u:unit + unit)
+     (ds1:(ρ -> α) list) (ds2:(ρ -> α) list)
+     (ts1:^repty' list) (ts2:^repty' list) (p :ρ).
        if ISR u then tlf (HD ds1) v (^term_ABS_t (HD ts1)) p :α
        else taf (HD ds2) (HD (TL ds2)) (^term_ABS_t (HD ts2))
                 (^term_ABS_t (HD (TL ts2))) p :α”

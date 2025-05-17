@@ -16,48 +16,56 @@ val _ = new_theory "generic_terms";
 
 val _ = computeLib.auto_import_definitions := false;
 
-val _ = Datatype `
+Datatype:
   pregterm = var string 'v
-           | lam string 'b (pregterm list) (pregterm list)
-`;
+           | lam string (string list) 'b (pregterm list) (pregterm list)
+End
 
-val fv_def = Define `
-  (fv (var s vv) = {s}) ∧
-  (fv (lam v bv bndts unbndts) = (fvl bndts DELETE v) ∪ fvl unbndts) ∧
-  (fvl [] = ∅) ∧
-  (fvl (h::ts) = fv h ∪ fvl ts)`
+Definition fv_def:
+  fv (var s vv) = {s} ∧
+  fv (lam v fvs bv bndts unbndts) =
+   (fvl bndts DELETE v) ∪ fvl unbndts ∪ set fvs ∧
+  fvl [] = ∅ ∧
+  fvl (h::ts) = fv h ∪ fvl ts
+End
 val _ = augment_srw_ss [rewrites [fv_def]]
 
 val oldind = TypeBase.induction_of ``:(α,β)pregterm``
 
-val pind = prove(
-  ``∀P.
+Theorem pind[local]:
+  ∀P.
       (∀s vv. P (var s vv)) ∧
-      (∀v bv bndts unbndts.
-         EVERY P bndts ∧ EVERY P unbndts ⇒ P (lam v bv bndts unbndts))
+      (∀v bv fvs bndts unbndts.
+         EVERY P bndts ∧ EVERY P unbndts ⇒ P (lam v fvs bv bndts unbndts))
     ⇒
-      ∀t. P t``,
+      ∀t. P t
+Proof
   gen_tac >> strip_tac >>
   Q_TAC suff_tac `(∀t. P t) ∧ (∀ts. EVERY P ts)` >- metis_tac [] >>
-  ho_match_mp_tac oldind >> srw_tac [][]);
+  ho_match_mp_tac oldind >> srw_tac [][]
+QED
 
-val finite_fv = store_thm(
-  "finite_fv",
-  ``∀t. FINITE (fv t)``,
-  Q_TAC suff_tac `(∀t:(α,β)pregterm. FINITE (fv t)) ∧
-                  (∀l:(α,β)pregterm list. FINITE (fvl l))` >- srw_tac [][] >>
-  ho_match_mp_tac oldind >> srw_tac [][]);
+Theorem fvl_thm:
+  fvl ts = BIGUNION (IMAGE fv (set ts))
+Proof
+  Induct_on ‘ts’ >> simp[]
+QED
+
+Theorem finite_fv:
+  ∀t. FINITE (fv t)
+Proof
+  Induct_on ‘t’ using pind >> gvs[fvl_thm, PULL_EXISTS, EVERY_MEM]
+QED
 val _ = augment_srw_ss [rewrites [finite_fv]]
 
-val raw_ptpm_def = Define`
-  (raw_ptpm p (var s vv) = var (lswapstr p s) vv) ∧
-  (raw_ptpm p (lam v bv bndts unbndts) = lam (lswapstr p v)
-                                         bv
-                                         (raw_ptpml p bndts)
-                                         (raw_ptpml p unbndts)) ∧
+Definition raw_ptpm_def:
+  raw_ptpm p (var s vv) = var (lswapstr p s) vv ∧
+  raw_ptpm p (lam v fvs bv bndts unbndts) =
+   lam (lswapstr p v) (listpm string_pmact p fvs) bv
+       (raw_ptpml p bndts) (raw_ptpml p unbndts) ∧
   (raw_ptpml p [] = []) ∧
   (raw_ptpml p (h::t) = raw_ptpm p h :: raw_ptpml p t)
-`;
+End
 
 val _ = overload_on("pt_pmact",``mk_pmact raw_ptpm``);
 val _ = overload_on("ptpm",``pmact pt_pmact``);
@@ -75,11 +83,15 @@ val raw_ptpm_compose = prove(
         raw_ptpml p1 (raw_ptpml p2 l) = raw_ptpml (p1 ++ p2) l)``,
   ho_match_mp_tac oldind >> srw_tac [][raw_ptpm_def, pmact_decompose]);
 
-val raw_ptpm_permeq = prove(
-  ``(∀x. lswapstr p1 x = lswapstr p2 x) ⇒
-    (∀t:(α,β)pregterm. raw_ptpm p1 t = raw_ptpm p2 t) ∧
-    (∀l:(α,β)pregterm list. raw_ptpml p1 l = raw_ptpml p2 l)``,
-  strip_tac >> ho_match_mp_tac oldind >> srw_tac [][raw_ptpm_def]);
+Theorem raw_ptpm_permeq[local]:
+  (∀x. lswapstr p1 x = lswapstr p2 x) ⇒
+  (∀t:(α,β)pregterm. raw_ptpm p1 t = raw_ptpm p2 t) ∧
+  (∀l:(α,β)pregterm list. raw_ptpml p1 l = raw_ptpml p2 l)
+Proof
+  strip_tac >> ho_match_mp_tac oldind >> srw_tac [][raw_ptpm_def] >>
+  AP_THM_TAC >> irule listpm_permeq >>
+  gvs[permeq_def, stringpm_raw, FUN_EQ_THM]
+QED
 
 val ptpm_raw = prove(
   ``(ptpm = raw_ptpm) ∧ (ptpml = raw_ptpml)``,
@@ -109,20 +121,23 @@ Theorem ptpm_thm[simp] =
                |> map (SUBS (map GSYM (CONJUNCTS ptpm_raw))) |> LIST_CONJ
                |> REWRITE_RULE [ptpml_listpm]
 
-val ptpm_fv = store_thm(
-  "ptpm_fv",
-  ``(∀t:(α,β)pregterm. fv (ptpm p t) = ssetpm p (fv t)) ∧
-    (∀l:(α,β)pregterm list. fvl (ptpml p l) = ssetpm p (fvl l))``,
-  ho_match_mp_tac oldind >> srw_tac[][stringpm_raw, ptpml_listpm, pmact_INSERT, pmact_DELETE, pmact_UNION]);
+Theorem ptpm_fv:
+  (∀t:(α,β)pregterm. fv (ptpm p t) = ssetpm p (fv t)) ∧
+  (∀l:(α,β)pregterm list. fvl (ptpml p l) = ssetpm p (fvl l))
+Proof
+  ho_match_mp_tac oldind >>
+  srw_tac[][stringpm_raw, ptpml_listpm, pmact_INSERT, pmact_DELETE, pmact_UNION,
+            set_listpm]
+QED
 val _ = augment_srw_ss [rewrites [ptpm_fv]]
 
-val allatoms_def = Define`
+Definition allatoms_def:
   (allatoms (var s vv) = {s}) ∧
-  (allatoms (lam v bv bndts unbndts) =
-     v INSERT allatomsl bndts ∪ allatomsl unbndts) ∧
+  (allatoms (lam v fvs bv bndts unbndts) =
+     v INSERT allatomsl bndts ∪ allatomsl unbndts ∪ set fvs) ∧
   (allatomsl [] = ∅) ∧
   (allatomsl (t::ts) = allatoms t ∪ allatomsl ts)
-`;
+End
 
 Theorem allatoms_finite[simp] :
     (∀t:(α,β)pregterm. FINITE (allatoms t)) ∧
@@ -131,17 +146,33 @@ Proof
   ho_match_mp_tac oldind >> srw_tac [][allatoms_def]
 QED
 
-val allatoms_supports = store_thm(
-  "allatoms_supports",
-  ``(∀t:(α,β)pregterm. support pt_pmact t (allatoms t)) ∧
-    (∀l:(α,β)pregterm list. support (list_pmact pt_pmact) l (allatomsl l))``,
+Theorem allatoms_supports:
+  (∀t:(α,β)pregterm. support pt_pmact t (allatoms t)) ∧
+  (∀l:(α,β)pregterm list. support (list_pmact pt_pmact) l (allatomsl l))
+Proof
   simp_tac (srw_ss())[support_def] >>
-  ho_match_mp_tac oldind >> srw_tac [][allatoms_def]);
+  ho_match_mp_tac oldind >> srw_tac [][allatoms_def] >>
+  rename [‘listpm string_pmact [(x,y)] l = l’] >>
+  map_every (C qpat_x_assum mp_tac) [‘¬MEM x l’, ‘¬MEM y l’] >>
+  Induct_on ‘l’ >> simp[]
+QED
 
 val allatoms_fresh = store_thm(
   "allatoms_fresh",
   ``x ∉ allatoms t ∧ y ∉ allatoms t ==> (ptpm [(x,y)] t = t)``,
   METIS_TAC [allatoms_supports, support_def]);
+
+Theorem lswapstrl_apart:
+  ¬MEM a l ∧ MEM b l ⇒ listpm string_pmact [(a,b)] l ≠ l
+Proof
+  Induct_on ‘l’ >> dsimp[]
+QED
+
+Theorem lswapstrl_fresh:
+  ¬MEM a l ∧ ¬MEM b l ⇒ listpm string_pmact [(a,b)] l = l
+Proof
+  Induct_on ‘l’ >> simp[]
+QED
 
 val allatoms_apart = store_thm(
   "allatoms_apart",
@@ -150,19 +181,21 @@ val allatoms_apart = store_thm(
     (∀l:(α,β)pregterm list a b.
        a ∉ allatomsl l ∧ b ∈ allatomsl l ⇒ listpm pt_pmact [(a,b)] l ≠ l)``,
   ho_match_mp_tac oldind >> srw_tac [][allatoms_def] >>
-  metis_tac[swapstr_def]);
+  metis_tac[swapstr_def, lswapstrl_apart]);
 
-val allatoms_supp = store_thm(
-  "allatoms_supp",
-  ``supp pt_pmact t = allatoms t``,
-  MATCH_MP_TAC supp_unique THEN
-  SRW_TAC [][allatoms_supports, SUBSET_DEF] THEN
-  FULL_SIMP_TAC (srw_ss()) [support_def] THEN
-  SPOSE_NOT_THEN ASSUME_TAC THEN
-  `?y. ~(y IN allatoms t) /\ ~(y IN s')`
-     by (Q.SPEC_THEN `allatoms t UNION s'` MP_TAC NEW_def THEN
+Theorem allatoms_supp:
+  supp pt_pmact t = allatoms t
+Proof
+  MATCH_MP_TAC supp_unique >>
+  SRW_TAC [][allatoms_supports, SUBSET_DEF] >>
+  fs[support_def] >>
+  SPOSE_NOT_THEN ASSUME_TAC >>
+  rename [‘x ∈ allatoms t’, ‘x ∉ A’] >>
+  ‘?y. y NOTIN allatoms t ∧ y NOTIN A’
+     by (Q.SPEC_THEN ‘allatoms t UNION A’ MP_TAC NEW_def THEN
          SRW_TAC [][] THEN METIS_TAC []) THEN
-  METIS_TAC [allatoms_apart]);
+  METIS_TAC [allatoms_apart]
+QED
 
 val allatoms_perm = store_thm(
   "allatoms_perm",
@@ -170,36 +203,38 @@ val allatoms_perm = store_thm(
     (∀l:(α,β)pregterm list.
       allatomsl (listpm pt_pmact p l) = ssetpm p (allatomsl l))``,
   ho_match_mp_tac oldind >>
-  srw_tac [][allatoms_def, pmact_INSERT, pmact_UNION]);
+  srw_tac [][allatoms_def, pmact_INSERT, pmact_UNION, set_listpm]);
 
-val (aeq_rules, aeq_ind, aeq_cases) = Hol_reln`
-  (!s vv. aeq (var s vv) (var s vv)) /\
-  (!u v bv z bndts1 bndts2 us1 us2.
+Inductive aeq:
+[~var:]
+  (!s vv. aeq (var s vv) (var s vv))
+[~lam:]
+  (!u v fvs bv z bndts1 bndts2 us1 us2.
       aeql us1 us2 ∧
       aeql (ptpml [(u,z)] bndts1) (ptpml [(v,z)] bndts2) ∧
       z ∉ allatomsl bndts1 ∧ z ∉ allatomsl bndts2 ∧ z ≠ u ∧ z ≠ v ⇒
-      aeq (lam u bv bndts1 us1) (lam v bv bndts2 us2)) ∧
-  aeql [] [] ∧
+      aeq (lam u fvs bv bndts1 us1) (lam v fvs bv bndts2 us2))
+[~nil:]
+  aeql [] []
+[~cons:]
   (∀h1 h2 t1 t2. aeq h1 h2 ∧ aeql t1 t2 ⇒ aeql (h1::t1) (h2::t2))
-`;
+End
 
-val aeq_lam = List.nth(CONJUNCTS aeq_rules, 1)
+Theorem aeq_distinct: ~aeq (var s vv) (lam v fvs bv ts us)
+Proof ONCE_REWRITE_TAC [aeq_cases] THEN SRW_TAC [][]
+QED
 
-val aeq_distinct = store_thm(
-  "aeq_distinct",
-  ``~aeq (var s vv) (lam v bv ts us)``,
-  ONCE_REWRITE_TAC [aeq_cases] THEN SRW_TAC [][]);
-
-val aeq_ptpm_lemma = store_thm(
-  "aeq_ptpm_lemma",
-  ``(!t:(α,β)pregterm u. aeq t u ==> !p. aeq (ptpm p t) (ptpm p u)) ∧
-    (∀ts:(α,β)pregterm list us.
-      aeql ts us ⇒ ∀π. aeql (listpm pt_pmact π ts) (listpm pt_pmact π us)) ``,
+Theorem aeq_ptpm_lemma:
+  (!t:(α,β)pregterm u. aeq t u ==> !p. aeq (ptpm p t) (ptpm p u)) ∧
+  (∀ts:(α,β)pregterm list us.
+      aeql ts us ⇒ ∀π. aeql (listpm pt_pmact π ts) (listpm pt_pmact π us))
+Proof
   ho_match_mp_tac aeq_ind >> srw_tac [][aeq_rules, ptpml_listpm] >>
   match_mp_tac aeq_lam >>
   Q.EXISTS_TAC `lswapstr p z` THEN
   srw_tac [][allatoms_perm, pmact_IN] >>
-  srw_tac [][ptpml_listpm, pmact_sing_to_back]);
+  srw_tac [][ptpml_listpm, pmact_sing_to_back]
+QED
 
 val aeq_ptpm_eqn = store_thm(
   "aeq_ptpm_eqn",
@@ -226,10 +261,10 @@ val fv_SUBSET_allatoms = store_thm(
   SIMP_TAC (srw_ss()) [SUBSET_DEF] >> ho_match_mp_tac oldind>>
   srw_tac [][allatoms_def] >> metis_tac []);
 
-val aeq_fv = store_thm(
-  "aeq_fv",
-  ``(!t:(α,β)pregterm u. aeq t u ==> (fv t = fv u)) ∧
-    (∀ts:(α,β)pregterm list us. aeql ts us ⇒ (fvl ts = fvl us))``,
+Theorem aeq_fv:
+  (!t:(α,β)pregterm u. aeq t u ==> (fv t = fv u)) ∧
+  (∀ts:(α,β)pregterm list us. aeql ts us ⇒ (fvl ts = fvl us))
+Proof
   ho_match_mp_tac aeq_ind >>
   srw_tac [][EXTENSION, ptpm_fv, pmact_IN, ptpml_listpm] THEN
   Cases_on `x ∈ fvl us` >> srw_tac [][] >>
@@ -248,18 +283,19 @@ val aeq_fv = store_thm(
         SRW_TAC [][swapstr_def]
       ]
     ]
-  ]);
+  ]
+QED
 
 Theorem aeq_refl[simp] :
-    (∀t:(α,β)pregterm. aeq t t) ∧ (∀l:(α,β)pregterm list. aeql l l)
+  (∀t:(α,β)pregterm. aeq t t) ∧ (∀l:(α,β)pregterm list. aeql l l)
 Proof
   ho_match_mp_tac oldind >> asm_simp_tac (srw_ss())[aeq_rules] >>
   REPEAT gen_tac >> strip_tac >>
-  MAP_EVERY Q.X_GEN_TAC [`b`, `s`] >>
+  qx_genl_tac [‘b’, ‘bvs’, ‘v’] >>
   MATCH_MP_TAC aeq_lam >>
   SRW_TAC [][aeql_ptpm_eqn, ptpml_listpm] THEN
-  Q.SPEC_THEN `s INSERT allatomsl l` MP_TAC NEW_def THEN SRW_TAC [][] THEN
-  METIS_TAC [pmact_sing_inv]
+  Q.SPEC_THEN `v INSERT allatomsl l` MP_TAC NEW_def THEN SRW_TAC [][] THEN
+  METIS_TAC []
 QED
 
 val aeq_sym = store_thm(
@@ -276,9 +312,9 @@ val aeq_var_inversion = store_thm(
 
 val aeq_lam_inversion = store_thm(
   "aeq_lam_inversion",
-  ``aeq (lam v bv bndts unbndts) N =
+  ``aeq (lam v fvs bv bndts unbndts) N =
       ∃z v' bndts' unbndts'.
-        (N = lam v' bv bndts' unbndts') ∧ z ≠ v' ∧ z ≠ v ∧
+        (N = lam v' fvs bv bndts' unbndts') ∧ z ≠ v' ∧ z ≠ v ∧
         z ∉ allatomsl bndts ∧ z ∉ allatomsl bndts' ∧
         aeql (ptpml [(v,z)] bndts) (ptpml [(v',z)] bndts') ∧
         aeql unbndts unbndts'``,
@@ -286,8 +322,8 @@ val aeq_lam_inversion = store_thm(
 
 Theorem aeq_ptm_11:
     (aeq (var s1 vv1) (var s2 vv2) ⇔ (s1 = s2) ∧ (vv1 = vv2)) /\
-    (aeq (lam v bv1 bndts1 unbndts1) (lam v bv2 bndts2 unbndts2) ⇔
-      (bv1 = bv2) ∧ aeql bndts1 bndts2 ∧ aeql unbndts1 unbndts2)
+    (aeq (lam v fvs1 bv1 bndts1 unbndts1) (lam v fvs2 bv2 bndts2 unbndts2) ⇔
+      bv1 = bv2 ∧ fvs1 = fvs2 ∧ aeql bndts1 bndts2 ∧ aeql unbndts1 unbndts2)
 Proof
   SRW_TAC [][aeq_lam_inversion, aeq_ptpm_eqn, aeq_var_inversion, EQ_IMP_THM]
   THENL [
@@ -318,11 +354,11 @@ val aeq_trans = store_thm(
   ho_match_mp_tac aeq_ind >> REPEAT conj_tac >|[
     srw_tac [][],
     Q_TAC SUFF_TAC
-      `∀u v bv z bt1 bt2 ut1 (ut2:(α,β)pregterm list).
+      ‘∀u v fvs bv z bt1 bt2 ut1 (ut2:(α,β)pregterm list).
          (∀l3. aeql (ptpml [(v,z)] bt2) l3 ⇒ aeql (ptpml [(u,z)] bt1) l3) ∧
          (∀ut3. aeql ut2 ut3 ⇒ aeql ut1 ut3) ∧
          z ∉ allatomsl bt1 ∧ z ∉ allatomsl bt2 ∧ z ≠ u ∧ z ≠ v ⇒
-         ∀t3. aeq (lam v bv bt2 ut2) t3 ⇒ aeq (lam u bv bt1 ut1) t3`
+         ∀t3. aeq (lam v fvs bv bt2 ut2) t3 ⇒ aeq (lam u fvs bv bt1 ut1) t3’
           >- metis_tac [] >>
     rpt gen_tac >> strip_tac >> gen_tac >>
     simp_tac (srw_ss()) [SimpL ``$==>``, aeq_lam_inversion] >>
@@ -369,22 +405,22 @@ val alt_aeq_lam = store_thm(
   ``(∀z. z ∉ allatomsl t1 ∧ z ∉ allatomsl t2 ∧ z ≠ u ∧ z ≠ v ⇒
          aeql (ptpml [(u,z)] t1) (ptpml [(v,z)] t2)) ∧
     aeql u1 u2 ⇒
-    aeq (lam u bv t1 u1) (lam v bv t2 u2)``,
+    aeq (lam u fvs bv t1 u1) (lam v fvs bv t2 u2)``,
   strip_tac >> MATCH_MP_TAC aeq_lam >>
   Q_TAC (NEW_TAC "z")
      `allatomsl t1 ∪ allatomsl t2 ∪ {u;v}` >>
   METIS_TAC []);
 
-val fresh_swap = store_thm(
-  "fresh_swap",
-  ``(∀t:(α,β)pregterm x y. x ∉ fv t ∧ y ∉ fv t ⇒ aeq t (ptpm [(x, y)] t)) ∧
-    (∀l:(α,β)pregterm list x y.
-       x ∉ fvl l ∧ y ∉ fvl l ⇒ aeql l (ptpml [(x,y)] l))``,
+Theorem fresh_swap:
+  (∀t:(α,β)pregterm x y. x ∉ fv t ∧ y ∉ fv t ⇒ aeq t (ptpm [(x, y)] t)) ∧
+  (∀l:(α,β)pregterm list x y.
+     x ∉ fvl l ∧ y ∉ fvl l ⇒ aeql l (ptpml [(x,y)] l))
+Proof
   ho_match_mp_tac oldind >>
   asm_simp_tac (srw_ss()) [aeq_rules,ptpml_listpm] >>
   map_every qx_gen_tac [`bt`, `ut`] >> strip_tac >>
-  map_every qx_gen_tac [`b`, `s`,`x`,`y`] >>
-  strip_tac >> srw_tac [][] >>
+  qx_genl_tac [`b`, ‘fvs’, `s`,`x`,`y`] >>
+  strip_tac >> srw_tac [][lswapstrl_fresh] >>
   match_mp_tac alt_aeq_lam >> rpt strip_tac >>
   fsrw_tac [][pmact_id, pmact_nil, GSYM ptpml_listpm] >>
   `z ∉ fvl bt` by METIS_TAC [SUBSET_DEF, fv_SUBSET_allatoms] >| [
@@ -406,13 +442,14 @@ val fresh_swap = store_thm(
     Cases_on `s = y` THEN1 SRW_TAC [][pmact_id, pmact_nil] THEN
     ONCE_REWRITE_TAC [GSYM pmact_sing_to_back] THEN
     SRW_TAC [][swapstr_def, aeql_ptpm_eqn, pmact_sing_inv]
-  ]);
+  ]
+QED
 
 Theorem lam_aeq_thm:
-    aeq (lam v1 bv1 t1 u1) (lam v2 bv2 t2 u2) ⇔
-       (v1 = v2) ∧ (bv1 = bv2) ∧ aeql t1 t2 ∧ aeql u1 u2 ∨
-       v1 ≠ v2 ∧ (bv1 = bv2) ∧ v1 ∉ fvl t2 ∧ aeql t1 (ptpml [(v1,v2)] t2) ∧
-       aeql u1 u2
+    aeq (lam v1 fvs1 bv1 t1 u1) (lam v2 fvs2 bv2 t2 u2) ⇔
+       (v1 = v2) ∧ (bv1 = bv2) ∧ fvs1 = fvs2 ∧ aeql t1 t2 ∧ aeql u1 u2 ∨
+       v1 ≠ v2 ∧ (bv1 = bv2) ∧ fvs1 = fvs2 ∧ v1 ∉ fvl t2 ∧
+       aeql t1 (ptpml [(v1,v2)] t2) ∧ aeql u1 u2
 Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, DISJ_IMP_THM] THEN REPEAT CONJ_TAC THENL [
     srw_tac [][aeq_lam_inversion] >>
@@ -454,8 +491,8 @@ val aeql_LIST_REL = prove(
 
 val lam_respects_aeq = store_thm(
   "lam_respects_aeq",
-  ``!v bv t1 t2 u1 u2.
-      aeql t1 t2 ∧ aeql u1 u2 ==> aeq (lam v bv t1 u1) (lam v bv t2 u2)``,
+  ``!v fvs bv t1 t2 u1 u2.
+      aeql t1 t2 ∧ aeql u1 u2 ==> aeq (lam v fvs bv t1 u1) (lam v fvs bv t2 u2)``,
   srw_tac [][] >> match_mp_tac aeq_lam >>
   srw_tac [][aeql_ptpm_eqn, pmact_sing_inv] >>
   Q_TAC (NEW_TAC "z") `v INSERT allatomsl t1 ∪ allatomsl t2` >> metis_tac []);
@@ -501,7 +538,8 @@ val pregterm_size_def = definition "pregterm_size_def";
 
 Definition psize_def:
   (psize (var s vv) = 1) ∧
-  (psize (lam s bv ts us) = SUM (MAP psize ts) + SUM (MAP psize us) + 1)
+  (psize (lam s fvs bv ts us) =
+   SUM (MAP psize ts) + SUM (MAP psize us) + LENGTH fvs + 1)
 Termination
  WF_REL_TAC `measure (pregterm_size (K 0) (K 0))` >>
  conj_tac >> (ntac 3 gen_tac) >> Induct >>
@@ -537,7 +575,7 @@ val [GFV_thm0, gfvl_thm, GFV_raw_gtpm, simple_induction0,
     {
      types = [{name = "gterm", equiv = aeq_equiv}],
      defs = map mk_def
-       [("GLAM", ``lam:string -> α -> (α,β)pregterm list ->
+       [("GLAM", ``lam:string -> string list -> α -> (α,β)pregterm list ->
                        (α,β)pregterm list -> (α,β)pregterm``),
         ("GVAR", ``var:string -> β -> (α,β)pregterm``),
         ("GFV", ``fv : (α,β)pregterm -> string set``),
@@ -603,7 +641,7 @@ val GFV_apart = prove(
   ho_match_mp_tac simple_induction >>
   srw_tac [][GFV_thm0, gtpm_thm, gterm_11, MEM_MAP,
              MAP_EQ1, GLAM_eq_thm0, IN_gfvl] >>
-  srw_tac [][] >> metis_tac[swapstr_def]);
+  srw_tac [][] >> metis_tac[swapstr_def, lswapstrl_apart, pmact_flip_args]);
 
 (* tempting to delete GFV and just use supp gtpm.... *)
 val GFV_supp = prove(
@@ -628,7 +666,8 @@ val gtmsize_gtpml = prove(
   ``MAP gtmsize (listpm gt_pmact pi pl) = MAP gtmsize pl``,
   Induct_on `pl` >> fsrw_tac [][gtmsize_raw_gtpm, gtpm_raw]);
 
-val gtmsize_gtpm = CONJ (SUBS [GSYM gtpm_raw] gtmsize_raw_gtpm) (GEN_ALL gtmsize_gtpml)
+val gtmsize_gtpm =
+  CONJ (SUBS [GSYM gtpm_raw] gtmsize_raw_gtpm) (GEN_ALL gtmsize_gtpml)
 
 (* don't export any of these, because the intention is not to have users
    working with this type *)
@@ -638,7 +677,7 @@ Theorem gtpm_thm[allow_rebind] = REWRITE_RULE [MAP_gtpm] gtpm_thm
 val gterm_distinct = save_thm("gterm_distinct", gterm_distinct)
 val gterm_11 = save_thm("gterm_11", gterm_11)
 val GLAM_eq_thm = save_thm("GLAM_eq_thm", rmGFV GLAM_eq_thm1)
-val gtpm_fresh = save_thm("gtpm_fresh", rmGFV (SUBS [GSYM gtpm_raw] (GSYM FRESH_swap0)))
+Theorem gtpm_fresh = rmGFV (SUBS [GSYM gtpm_raw] (GSYM FRESH_swap0))
 val FINITE_GFV = save_thm("FINITE_GFV", rmGFV FINITE_GFV)
 val IN_GFVl = save_thm("IN_GFVl", rmGFV IN_gfvl)
 
@@ -653,18 +692,22 @@ val _ = augment_srw_ss [rewrites [gterm_distinct]]
 
 
 (* default rewriting of negations makes a mess of these. *)
-val NOT_IN_GFV = store_thm(
-  "NOT_IN_GFV",
-  ``(x ∉ GFV (GVAR s vv) ⇔ x ≠ s) ∧
-    (x ∉ GFV (GLAM v bv ts us) ⇔
-       (∀u. MEM u us ⇒ x ∉ GFV u) ∧
-       (∀t. x ≠ v ∧ MEM t ts ⇒ x ∉ GFV t))``,
-  srw_tac [][GFV_thm, IN_GFVl] >> metis_tac []);
+Theorem  NOT_IN_GFV :
+  (x ∉ GFV (GVAR s vv) ⇔ x ≠ s) ∧
+  (x ∉ GFV (GLAM v fvs bv ts us) ⇔
+     ¬MEM x fvs ∧
+     (∀u. MEM u us ⇒ x ∉ GFV u) ∧
+     (∀t. x ≠ v ∧ MEM t ts ⇒ x ∉ GFV t))
+Proof
+  srw_tac [][GFV_thm, IN_GFVl] >> metis_tac []
+QED
 
-val GLAM_NIL_EQ = store_thm(
-  "GLAM_NIL_EQ",
-  ``(GLAM u bv1 [] ts = GLAM v bv2 [] ts') ⇔ (bv1 = bv2) ∧ (ts = ts')``,
-  srw_tac [][GLAM_eq_thm] >> metis_tac []);
+Theorem GLAM_NIL_EQ:
+  GLAM u fvs1 bv1 [] ts = GLAM v fvs2 bv2 [] ts' ⇔
+    fvs1 = fvs2 ∧ bv1 = bv2 ∧ ts = ts'
+Proof
+  srw_tac [][GLAM_eq_thm] >> metis_tac []
+QED
 
 val list_rel_split = prove(
   ``LIST_REL (λx y. P x y ∧ Q x y) l1 l2 ⇔
@@ -673,31 +716,34 @@ val list_rel_split = prove(
   metis_tac []);
 
 (* generic sub-type of a generic term, where one is only allowed to look
-   at the data attached to the GLAM and the number of arguments in the lists *)
-val (genind_rules, genind_ind, genind_cases) = Hol_reln`
-  (∀n:num s vv. vp n vv ==> genind vp lp n (GVAR s vv)) ∧
-  (∀n v bv ts us tns uns.
+   at the beta-value data attached to the GLAM, the number of fvs, and the
+   number of arguments in the lists *)
+Inductive genind:
+[~var:]
+  ∀n:num s vv. vp n vv ==> genind vp lp n (GVAR s vv)
+[~lam:]
+  ∀n v bv ts us tns uns.
      LIST_REL (genind vp lp) tns ts ∧
      LIST_REL (genind vp lp) uns us ∧
-     lp n bv tns uns  ⇒
-     genind vp lp n (GLAM v bv ts us))
-`;
+     lp n (LENGTH fvs) bv tns uns  ⇒
+     genind vp lp n (GLAM v fvs bv ts us)
+End
 
-val grules' = genind_rules |> SPEC_ALL |> CONJUNCTS
-
-val genind_gtpm = store_thm(
-  "genind_gtpm",
-  ``∀n t. genind vp lp n t ⇒ ∀pi. genind vp lp n (gtpm pi t)``,
+Theorem genind_gtpm:
+  ∀n t. genind vp lp n t ⇒ ∀pi. genind vp lp n (gtpm pi t)
+Proof
   Induct_on `genind` >>
   srw_tac [DNF_ss][gtpm_thm, genind_rules, list_rel_split] >>
-  match_mp_tac (List.nth(grules', 1)) >>
+  match_mp_tac genind_lam >>
   fsrw_tac [CONJ_ss][LIST_REL_EL_EQN,EL_MAP] >>
-  srw_tac [][] >> metis_tac [])
+  srw_tac [][] >> metis_tac []
+QED
 
-val genind_gtpm_eqn = store_thm(
-  "genind_gtpm_eqn",
-  ``genind vp lp n (gtpm pi t) = genind vp lp n t``,
-  metis_tac [pmact_inverse, genind_gtpm]);
+Theorem genind_gtpm_eqn:
+  genind vp lp n (gtpm pi t) = genind vp lp n t
+Proof
+  metis_tac [pmact_inverse, genind_gtpm]
+QED
 val _ = augment_srw_ss [rewrites [genind_gtpm_eqn]]
 
 val LIST_REL_genind_gtpm_eqn = store_thm(
@@ -711,47 +757,50 @@ val _ = augment_srw_ss [rewrites [FINITE_GFV, LIST_REL_genind_gtpm_eqn]]
 
 val _ = overload_on ("gtpml", ``listpm gt_pmact``)
 
-val gtpml_eqr = store_thm(
-"gtpml_eqr",
-``!t u. (t = gtpml pi u) = (gtpml (REVERSE pi) t = u)``,
-srw_tac [][pmact_eql]);
+Theorem gtpml_eqr:
+  !t u. (t = gtpml pi u) = (gtpml (REVERSE pi) t = u)
+Proof srw_tac [][pmact_eql]
+QED
 
-val genind_GLAM_eqn = store_thm(
-  "genind_GLAM_eqn",
-  ``genind vp lp n (GLAM v bv ts us) =
+Theorem genind_GLAM_eqn:
+  genind vp lp n (GLAM v fvs bv ts us) ⇔
       ∃tns uns. LIST_REL (genind vp lp) tns ts ∧
                 LIST_REL (genind vp lp) uns us ∧
-                lp n bv tns uns``,
+                lp n (LENGTH fvs) bv tns uns
+Proof
   srw_tac [DNF_ss][genind_cases, gterm_distinct, GLAM_eq_thm] >>
-  srw_tac [][gtpml_eqr, perm_supp] >> metis_tac []);
+  srw_tac [][gtpml_eqr, perm_supp] >> metis_tac []
+QED
 
-val finite_gfvl = prove(
-  ``FINITE (GFVl ts)``,
-  Induct_on `ts` >> srw_tac [][MEM_MAP] >> srw_tac [][]);
+Theorem finite_gfvl[local,simp]: FINITE (GFVl ts)
+Proof Induct_on `ts` >> srw_tac [][MEM_MAP] >> srw_tac [][]
+QED
 
-val _ = augment_srw_ss [rewrites [finite_gfvl]]
-
-val bvc_genind = store_thm(
-  "bvc_genind",
-  ``∀P fv.
+Theorem bvc_genind:
+  ∀P fv.
       (∀x. FINITE (fv x)) ∧
       (∀n s vv x. vp n vv ⇒ P n (GVAR s vv) x) ∧
-      (∀n v bv tns uns ts us x.
+      (∀n v fvs bv tns uns ts us x.
          LIST_REL (λn t. genind vp lp n t ∧ ∀x. P n t x) tns ts ∧
          LIST_REL (λn t. genind vp lp n t ∧ ∀x. P n t x) uns us ∧
-         lp n bv tns uns ∧ v ∉ fv x ∧ v ∉ supp (list_pmact gt_pmact) us
+         lp n (LENGTH fvs) bv tns uns ∧ v ∉ fv x ∧
+         v ∉ supp (list_pmact gt_pmact) us
         ⇒
-         P n (GLAM v bv ts us) x)
+         P n (GLAM v fvs bv ts us) x)
    ⇒
-      ∀n t. genind vp lp n t ⇒ ∀x. P n t x``,
+      ∀n t. genind vp lp n t ⇒ ∀x. P n t x
+Proof
   rpt GEN_TAC >> strip_tac >>
-  qsuff_tac `∀n t. genind vp lp n t ⇒ ∀pi x. P n (gtpm pi t) x`
+  qsuff_tac ‘∀n t. genind vp lp n t ⇒ ∀pi x. P n (gtpm pi t) x’
   >- metis_tac [pmact_nil] >>
   Induct_on `genind` >> srw_tac [DNF_ss][gtpm_thm, list_rel_split] >>
   Q_TAC (NEW_TAC "z")
-    `fv x ∪ {lswapstr pi v; v} ∪ GFVl (gtpml pi us) ∪ GFVl (gtpml pi ts)` >>
-  `GLAM (lswapstr pi v) bv (gtpml pi ts) (gtpml pi us) =
-   GLAM z bv (gtpml [(z,lswapstr pi v)] (gtpml pi ts)) (gtpml pi us)`
+    ‘fv x ∪ {lswapstr pi v; v} ∪ GFVl (gtpml pi us) ∪ GFVl (gtpml pi ts) ∪
+     set (listpm string_pmact pi fvs)’ >>
+  ‘GLAM (lswapstr pi v) (listpm string_pmact pi fvs) bv
+        (gtpml pi ts) (gtpml pi us) =
+   GLAM z (listpm string_pmact pi fvs) bv
+          (gtpml [(z,lswapstr pi v)] (gtpml pi ts)) (gtpml pi us)’
      by (srw_tac [][GLAM_eq_thm, NOT_IN_supp_listpm]
          >- fsrw_tac [DNF_ss][MEM_listpm_EXISTS, NOT_IN_supp_listpm,
                               GFV_gtpm] >>
@@ -761,7 +810,8 @@ val bvc_genind = store_thm(
   map_every qexists_tac [`tns`, `uns`] >>
   asm_simp_tac (srw_ss() ++ DNF_ss) [] >>
   fsrw_tac [CONJ_ss][LIST_REL_EL_EQN, EL_listpm] >>
-  srw_tac [][GSYM pmact_decompose])
+  srw_tac [][GSYM pmact_decompose]
+QED
 
 val genindX =
     bvc_genind |> Q.SPEC `λn t x. Q n t`
@@ -770,11 +820,11 @@ val genindX =
                |> Q.INST [`Q` |-> `P`] |> GEN_ALL
 
 val genind_KT = prove(
-  ``∀n t. genind (λn vv. T) (λn bv tns uns. T) n t``,
+  ``∀n t. genind (λn vv. T) (λn lfvs bv tns uns. T) n t``,
   CONV_TAC SWAP_FORALL_CONV >> ho_match_mp_tac simple_induction >>
   srw_tac [][]
-  >- (match_mp_tac (hd grules') >> srw_tac [][]) >>
-  match_mp_tac (hd (tl grules')) >>
+  >- (match_mp_tac genind_var >> srw_tac [][]) >>
+  match_mp_tac genind_lam >>
   map_every qexists_tac [`GENLIST (K 0) (LENGTH bndts)`,
                          `GENLIST (K 0) (LENGTH unbndts)`] >>
   fsrw_tac[DNF_ss] [LIST_REL_EL_EQN, MEM_EL]);
@@ -786,23 +836,23 @@ val vacuous_list_rel = prove(
   metis_tac []);
 
 val silly = prove(
-  ``(∀v bv tns uns ts us x.
+  ``(∀v fvs bv tns uns ts us x.
        LIST_REL (λn:num t. ∀x. Q t x) tns ts ∧
        LIST_REL (λn:num t. ∀x. Q t x) uns us ∧ v ∉ fv x ∧
        v ∉ supp (list_pmact gt_pmact) us ⇒
-       Q (GLAM v bv ts us) x) ⇔
-   (∀v bv ts us x.
+       Q (GLAM v fvs bv ts us) x) ⇔
+   (∀v fvs bv ts us x.
       (∀t x. MEM t ts ⇒ Q t x) ∧ (∀u x. MEM u us ⇒ Q u x) ∧
       v ∉ fv x ∧ v ∉ supp (list_pmact gt_pmact) us ⇒
-      Q (GLAM v bv ts us) x)``,
+      Q (GLAM v fvs bv ts us) x)``,
   srw_tac [][EQ_IMP_THM, vacuous_list_rel] >>
-  first_x_assum (Q.SPECL_THEN [`v`,`bv`,`GENLIST (K 0) (LENGTH ts)`,
+  first_x_assum (Q.SPECL_THEN [`v`,‘fvs’, `bv`,`GENLIST (K 0) (LENGTH ts)`,
                                `GENLIST (K 0) (LENGTH us)`] MP_TAC) >>
   srw_tac [][]);
 
 val gen_bvc_induction =
     bvc_genind |> SPEC_ALL
-               |> Q.INST [`lp` |-> `(λn bv tns uns. T)`,
+               |> Q.INST [`lp` |-> `(λn lfvs bv tns uns. T)`,
                           `vp` |-> `(λn vv. T)`,
                           `P` |-> `λn t x. Q t x`]
                |> SIMP_RULE (srw_ss()) [genind_KT, silly]
@@ -816,21 +866,23 @@ val bvc_ind =
                       |> Q.INST [`Q` |-> `P`]
                       |> Q.GEN `X` |> Q.GEN `P`
 
-val gterm_cases = store_thm(
-"gterm_cases",
-``∀t. (∃s vv. t = GVAR s vv) ∨ (∃s bv ts us. t = GLAM s bv ts us)``,
-ho_match_mp_tac simple_induction >>
-srw_tac [][] >> metis_tac []);
+Theorem gterm_cases:
+  ∀t. (∃s vv. t = GVAR s vv) ∨ (∃s fvs bv ts us. t = GLAM s fvs bv ts us)
+Proof
+  ho_match_mp_tac simple_induction >>
+  srw_tac [][] >> metis_tac []
+QED
 
 Theorem FORALL_gterm:
-  (∀t. P t) ⇔ (∀s v. P (GVAR s v)) ∧ (∀s bv ts us. P (GLAM s bv ts us))
+  (∀t. P t) ⇔ (∀s v. P (GVAR s v)) ∧
+              (∀s fvs bv ts us. P (GLAM s fvs bv ts us))
 Proof
   EQ_TAC >> srw_tac [][] >>
   qspec_then `t` STRUCT_CASES_TAC gterm_cases >> srw_tac [][]
 QED
 
-val some_4_F = prove(
-  ``(some (w,x,y,z). F) = NONE``,
+val some_5_F = prove(
+  ``(some (v,w,x,y,z). F) = NONE``,
   DEEP_INTRO_TAC optionTheory.some_intro THEN
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD]);
 
@@ -841,26 +893,29 @@ ntac 2 gen_tac >> Induct >> srw_tac [][] >>
 fsrw_tac [ARITH_ss][]);
 
 val vf = mk_var ("vf", ``: string -> β -> ρ -> γ``)
-val lf = mk_var ("lf", ``: string -> α -> (ρ -> γ) list -> (ρ -> γ) list
-                           -> (α,β)gterm list -> (α,β)gterm list -> ρ -> γ``)
+val lf = mk_var ("lf", “: string -> string list -> α ->
+                           (ρ -> γ) list -> (ρ -> γ) list
+                           -> (α,β)gterm list -> (α,β)gterm list -> ρ -> γ”)
 
-val trec = ``tmrec (A: string set) (ppm: ρ pmact) ^vf ^lf : (α,β)gterm -> ρ -> γ``
+val trec = “tmrec (A: string set) (ppm: ρ pmact) ^vf ^lf : (α,β)gterm -> ρ -> γ”
 
-val tmrec_defn = Hol_defn "tmrec" `
+Definition tmrec_def:
   ^trec t = λp.
     case some(s,vv).(t = GVAR s vv) of
       SOME (s,vv) => vf s vv p
     | NONE => (
-    case some(v,bv,ts,us).(t = GLAM v bv ts us) ∧ v ∉ supp ppm p ∧ v ∉ GFVl us ∧ v ∉ A of
-      SOME (v,bv,ts,us) => lf v bv (MAP (^trec) ts) (MAP (^trec) us) ts us p
-    | NONE => ARB)`
-
-val (tmrec_def, tmrec_ind) = Defn.tprove(
-  tmrec_defn,
+    case some(v,fvs,bv,ts,us).
+           t = GLAM v fvs bv ts us ∧ v ∉ supp ppm p ∧ v ∉ GFVl us ∧ v ∉ A ∧
+           ¬MEM v fvs
+    of
+      SOME (v,fvs,bv,ts,us) =>
+        lf v fvs bv (MAP (^trec) ts) (MAP (^trec) us) ts us p
+    | NONE => ARB)
+Termination
   WF_REL_TAC `measure (gtmsize o SND o SND o SND o SND)` >>
   srw_tac [][] >>
   qspec_then `t` FULL_STRUCT_CASES_TAC gterm_cases >>
-  fsrw_tac [][some_4_F,gterm_distinct] >>
+  fsrw_tac [][some_5_F,gterm_distinct] >>
   fsrw_tac [][GLAM_eq_thm] >>
   qpat_x_assum `X = SOME Y` mp_tac >>
   DEEP_INTRO_TAC optionTheory.some_intro >>
@@ -868,10 +923,11 @@ val (tmrec_def, tmrec_ind) = Defn.tprove(
   srw_tac [][gtmsize_thm] >>
   Q.ISPEC_THEN `gtmsize` imp_res_tac SUM_MAP_MEM >>
   srw_tac [][gtmsize_gtpm] >>
-  DECIDE_TAC)
+  DECIDE_TAC
+End
 
 val vp = ``vp: num -> β -> bool``
-val lp = ``lp: num -> α -> num list -> num list -> bool``
+val lp = ``lp: num -> num -> α -> num list -> num list -> bool``
 
 val _ = temp_overload_on ("→", ``fnpm``)
 val _ = temp_set_fixity "→" (Infixr 700)
@@ -881,35 +937,39 @@ val relsupp_def = Define`
     ∀x. x ∉ A ∧ x ∉ GFV t ==> x ∉ supp (fn_pmact ppm dpm) r
 `;
 
-val sidecond_def = Define`
+Definition sidecond_def:
   sidecond dpm ppm A ^vp ^lp ^vf ^lf ⇔
   FINITE A ∧ (∀p. FINITE (supp ppm p)) ∧
     (∀x y s vv n p.
        x ∉ A ∧ y ∉ A ∧ genind vp lp n (GVAR s vv) ⇒
        (pmact dpm [(x,y)] (^vf s vv p) =
         ^vf (lswapstr [(x,y)] s) vv (pmact ppm [(x,y)] p))) ∧
-    (∀x y n v bv r1 r2 ts us p.
+    (∀x y n v fvs bv r1 r2 ts us p.
        x ∉ A ∧ y ∉ A ∧ v ∉ A ∧
-       genind vp lp n (GLAM v bv ts us) ∧
+       genind vp lp n (GLAM v fvs bv ts us) ∧
        LIST_REL (relsupp A dpm ppm) ts r1 ∧
        LIST_REL (relsupp A dpm ppm) us r2 ∧
        v ∉ supp ppm p ⇒
-       (pmact dpm [(x,y)] (^lf v bv r1 r2 ts us p) =
-        ^lf (lswapstr [(x,y)] v) bv
+       (pmact dpm [(x,y)] (^lf v fvs bv r1 r2 ts us p) =
+        ^lf (lswapstr [(x,y)] v)
+            (listpm string_pmact [(x,y)] fvs)
+            bv
             (listpm (fn_pmact ppm dpm) [(x,y)] r1)
             (listpm (fn_pmact ppm dpm) [(x,y)] r2)
             (listpm gt_pmact [(x,y)] ts)
             (listpm gt_pmact [(x,y)] us)
-            (pmact ppm [(x,y)] p)))`
+            (pmact ppm [(x,y)] p)))
+End
 
 val FCB_def = Define`
   FCB dpm ppm A ^vp ^lp ^lf ⇔
-  ∀a n v bv r1 r2 ts us p.
-             a ∉ A ∧ a ∉ GFVl us ∧ a ∉ supp ppm p ∧
-             LIST_REL (relsupp A dpm ppm) ts r1 ∧
-             LIST_REL (relsupp A dpm ppm) us r2 ∧
-             genind vp lp n (GLAM v bv ts us) ⇒
-             a ∉ supp dpm (^lf a bv r1 r2 ts us p)`
+  ∀a n v fvs bv r1 r2 ts us p.
+     a ∉ A ∧ a ∉ GFVl us ∧ a ∉ supp ppm p ∧
+     ¬MEM a fvs ∧
+     LIST_REL (relsupp A dpm ppm) ts r1 ∧
+     LIST_REL (relsupp A dpm ppm) us r2 ∧
+     genind vp lp n (GLAM v fvs bv ts us) ⇒
+     a ∉ supp dpm (^lf a fvs bv r1 r2 ts us p)`
 
 val some_2_EQ = prove(
   ``(some (x,y). (x' = x) /\ (y' = y)) = SOME(x',y')``,
@@ -921,11 +981,11 @@ val some_2_F = prove(
   DEEP_INTRO_TAC optionTheory.some_intro THEN
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD]);
 
-val tmrec_GVAR = tmrec_def |> Q.INST [`t` |-> `GVAR s vv`]
+val tmrec_GVAR = tmrec_def |> SPEC_ALL |> Q.INST [`t` |-> `GVAR s vv`]
   |> SIMP_RULE (srw_ss()++ETA_ss) [gterm_11,some_2_EQ]
-val tmrec_GLAM = tmrec_def |> Q.INST [`t` |-> `GLAM v bv ts us`]
+val tmrec_GLAM = tmrec_def |> SPEC_ALL |> Q.INST [`t` |-> `GLAM v fvs bv ts us`]
   |> SIMP_RULE (srw_ss()) [gterm_distinct,some_2_F,NOT_IN_supp_listpm]
-  |> C (foldr (uncurry Q.GEN)) [`v`,`bv`,`ts`,`us`]
+  |> C (foldr (uncurry Q.GEN)) [`v`,‘fvs’, `bv`,`ts`,`us`]
 
 val gtpm_GVAR = gtpm_thm |> CONJUNCT1
 val genind_GVAR = store_thm(
@@ -934,10 +994,10 @@ val genind_GVAR = store_thm(
   srw_tac [][genind_cases,gterm_distinct,gterm_11]);
 val GFV_GVAR = GFV_thm |> CONJUNCT1
 
-val gtpm_eqr = store_thm(
-"gtpm_eqr",
-``(t = gtpm pi u) = (gtpm (REVERSE pi) t = u)``,
-METIS_TAC [pmact_inverse]);
+Theorem gtpm_eqr:
+  (t = gtpm pi u) = (gtpm (REVERSE pi) t = u)
+Proof METIS_TAC [pmact_inverse]
+QED
 
 val lswapstr_sing = Q.prove(`lswapstr [(x,y)] z = swapstr x y z`, srw_tac [][]);
 
@@ -954,7 +1014,7 @@ Induct >> srw_tac [][trec_fnpm]);
 
 val genind_GLAM_subterm = store_thm(
 "genind_GLAM_subterm",
-``genind vp lp n (GLAM v bv ts us) ∧ (MEM u ts ∨ MEM u us) ⇒
+``genind vp lp n (GLAM v fvs bv ts us) ∧ (MEM u ts ∨ MEM u us) ⇒
     ∃n. genind vp lp n u``,
 srw_tac [][Once genind_cases,gterm_distinct] >>
 fsrw_tac [][GLAM_eq_thm] >>
@@ -965,7 +1025,7 @@ metis_tac []);
 
 val gtmsize_GLAM_subterm = store_thm(
 "gtmsize_GLAM_subterm",
-``(MEM t ts ∨ MEM t us) ⇒ gtmsize t < gtmsize (GLAM s bv ts us)``,
+``(MEM t ts ∨ MEM t us) ⇒ gtmsize t < gtmsize (GLAM s fvs bv ts us)``,
 srw_tac [][gtmsize_thm] >>
 imp_res_tac SUM_MAP_MEM >>
 pop_assum (qspec_then `gtmsize` mp_tac) >>
@@ -998,8 +1058,6 @@ fun sidecond_tac dir =
                                             rwt
                                             (dir w))) (asl,w))
 
-val _ = set_trace "Goalstack.print_goal_at_top" 0
-
 val listpm_tMAP = prove(
   ``(listpm apm pi (MAP f l) =
      MAP ((gt_pmact → apm) pi f) (gtpml pi l))``,
@@ -1007,16 +1065,23 @@ val listpm_tMAP = prove(
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-val tmrec_equivariant = store_thm( (* correct name? *)
-"tmrec_equivariant",
-``sidecond dpm ppm A ^vp ^lp ^vf ^lf ∧ FCB dpm ppm A ^vp ^lp ^lf ⇒
+Theorem genind_ignores_fvspm:
+  genind vp lp n (GLAM v (listpm string_pmact pi fvs) bv ts us) ⇔
+  genind vp lp n (GLAM v fvs bv ts us)
+Proof
+  simp[genind_GLAM_eqn]
+QED
+
+Theorem tmrec_equivariant:
+  sidecond dpm ppm A ^vp ^lp ^vf ^lf ∧ FCB dpm ppm A ^vp ^lp ^lf ⇒
   ∀n. genind vp lp n t ⇒
       ∀p x y. x ∉ A ∧ y ∉ A ⇒
         (pmact dpm [(x,y)] (tmrec A ppm vf lf t p) =
-         tmrec A ppm vf lf (gtpm [(x,y)] t) (pmact ppm [(x,y)] p))``,
+         tmrec A ppm vf lf (gtpm [(x,y)] t) (pmact ppm [(x,y)] p))
+Proof
 strip_tac >>
-completeInduct_on `gtmsize t` >>
-qabbrev_tac `m = v` >> markerLib.RM_ALL_ABBREVS_TAC >>
+completeInduct_on ‘gtmsize t’ >>
+qabbrev_tac ‘m = v’ >> markerLib.RM_ALL_ABBREVS_TAC >>
 pop_assum (strip_assume_tac o SIMP_RULE (srw_ss() ++ DNF_ss) []) >>
 simp_tac (srw_ss()) [Once FORALL_gterm] >>
 conj_tac >- (
@@ -1027,130 +1092,142 @@ conj_tac >- (
 rpt gen_tac >>
 disch_then SUBST_ALL_TAC >>
 gen_tac >> strip_tac >>
-qx_gen_tac `p` >>
-Q.SPECL_THEN [`s`,`bv`,`ts`,`us`,`p`] MP_TAC
+qx_gen_tac ‘p’ >>
+Q.SPECL_THEN [‘s’,‘fvs’, ‘bv’,‘ts’,‘us’,‘p’] MP_TAC
   (tmrec_GLAM |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]) >>
 DEEP_INTRO_TAC optionTheory.some_intro >>
 asm_simp_tac (srw_ss()) [pairTheory.FORALL_PROD] >>
-`FINITE A ∧ (∀p. FINITE (supp ppm p))`
+‘FINITE A ∧ (∀p. FINITE (supp ppm p))’
    by fsrw_tac [][sidecond_def] >>
 reverse conj_tac >- (
   (* bogus some(...) = ARB case *)
-  Q_TAC (NEW_TAC "z") `supp ppm p ∪ A ∪ GFVl us ∪ GFVl ts ∪ {s}` >>
-  disch_then (qspec_then `z` mp_tac) >>
-  asm_simp_tac (srw_ss()++DNF_ss) [GLAM_eq_thm,IN_GFVl,gtpml_eqr,listpm_MAP,MEM_MAP,GFV_gtpm] >>
+  Q_TAC (NEW_TAC "z") ‘supp ppm p ∪ A ∪ GFVl us ∪ GFVl ts ∪ {s} ∪ set fvs’ >>
+  disch_then (qspec_then ‘z’ mp_tac) >>
+  asm_simp_tac (srw_ss()++DNF_ss)
+               [GLAM_eq_thm,IN_GFVl,gtpml_eqr,listpm_MAP,MEM_MAP,GFV_gtpm] >>
   fsrw_tac [][IN_GFVl] >>
   metis_tac []) >>
-map_every qx_gen_tac [`s'`,`bv'`,`ts'`,`us'`] >>
+map_every qx_gen_tac [‘s'’,‘fvs'’, ‘bv'’,‘ts'’,‘us'’] >>
 strip_tac >>
 strip_tac >>
-`(us' = us) ∧ (bv' = bv)` by fsrw_tac [][GLAM_eq_thm] >> rpt VAR_EQ_TAC >>
+‘fvs' = fvs ∧ us' = us ∧ bv' = bv’
+  by fsrw_tac [][GLAM_eq_thm] >> rpt VAR_EQ_TAC >>
 asm_simp_tac (srw_ss()++DNF_ss) [gtpm_thm,IN_GFVl,GFV_thm] >>
-map_every qx_gen_tac [`x`, `y`] >>
+map_every qx_gen_tac [‘x’, ‘y’] >>
 strip_tac >>
-qpat_x_assum `tmrec A ppm vf lf (GLAM X Y Z WW) p = XX` (K ALL_TAC) >>
+qpat_x_assum ‘tmrec A ppm vf lf (GLAM X _ Y Z WW) p = XX’ (K ALL_TAC) >>
 srw_tac [][tmrec_GLAM] >>
 DEEP_INTRO_TAC optionTheory.some_intro >>
 asm_simp_tac (srw_ss()++ETA_ss) [pairTheory.FORALL_PROD] >>
 reverse conj_tac >- (
   (* bogus ARB case *)
   asm_simp_tac (srw_ss()) [GLAM_eq_thm] >>
-  Q_TAC (NEW_TAC "z") `{swapstr x y s'} ∪ A ∪ supp ppm (pmact ppm [(x,y)] p) ∪ GFVl (gtpml [(x,y)] us) ∪ GFVl (gtpml [(x,y)] ts')` >>
-  disch_then (qspec_then `z` mp_tac) >>
+  Q_TAC (NEW_TAC "z")
+        ‘{swapstr x y s'} ∪ A ∪ supp ppm (pmact ppm [(x,y)] p) ∪
+         GFVl (gtpml [(x,y)] us) ∪ GFVl (gtpml [(x,y)] ts') ∪
+         set (listpm string_pmact [(x,y)] fvs)’ >>
+  disch_then (qspec_then ‘z’ mp_tac) >>
   fsrw_tac [DNF_ss][IN_GFVl,gtpml_eqr,listpm_MAP,MEM_MAP,GFV_gtpm] >>
   reverse conj_tac >- metis_tac [] >>
   conj_tac >- metis_tac [] >>
   srw_tac [][] >> metis_tac []) >>
-qabbrev_tac `r1 = MAP (tmrec A ppm vf lf) ts'` >>
-qabbrev_tac `r2 = MAP (tmrec A ppm vf lf) us` >>
+qabbrev_tac ‘r1 = MAP (tmrec A ppm vf lf) ts'’ >>
+qabbrev_tac ‘r2 = MAP (tmrec A ppm vf lf) us’ >>
 fsrw_tac [][AND_IMP_INTRO] >>
-`∃tns uns. LIST_REL (genind vp lp) tns ts ∧ LIST_REL (genind vp lp) uns us`
+‘∃tns uns. LIST_REL (genind vp lp) tns ts ∧ LIST_REL (genind vp lp) uns us’
   by (fsrw_tac [][genind_cases, GLAM_eq_thm] >> srw_tac [][] >>
       metis_tac []) >>
-`LIST_REL (genind vp lp) tns ts'`
+‘LIST_REL (genind vp lp) tns ts'’
    by (fsrw_tac [][GLAM_eq_thm] >> srw_tac [][] >> fsrw_tac [][]) >>
-qabbrev_tac `GGSIZE = gtmsize (GLAM s' bv ts' us)` >>
-`∀t n' a. gtmsize t < GGSIZE ∧ genind vp lp n' t ∧ a ∉ A ∧ a ∉ GFV t ==>
-          a ∉ supp (fn_pmact ppm dpm) (tmrec A ppm vf lf t)`
+qabbrev_tac ‘GGSIZE = gtmsize (GLAM s' fvs bv ts' us)’ >>
+‘∀t n' a. gtmsize t < GGSIZE ∧ genind vp lp n' t ∧ a ∉ A ∧ a ∉ GFV t ==>
+          a ∉ supp (fn_pmact ppm dpm) (tmrec A ppm vf lf t)’
    by (srw_tac [][] >> match_mp_tac notinsupp_I >>
-       qexists_tac `A ∪ GFV t` >>
+       qexists_tac ‘A ∪ GFV t’ >>
        srw_tac [][support_def, fnpm_def, FUN_EQ_THM] >>
        metis_tac [supp_fresh, pmact_sing_inv]) >>
-`LIST_REL (relsupp A dpm ppm) ts' r1 ∧ LIST_REL (relsupp A dpm ppm) us r2`
-  by (srw_tac [][LIST_REL_EL_EQN, relsupp_def, Abbr`r1`, Abbr`r2`] >>
+‘LIST_REL (relsupp A dpm ppm) ts' r1 ∧ LIST_REL (relsupp A dpm ppm) us r2’
+  by (srw_tac [][LIST_REL_EL_EQN, relsupp_def, Abbr‘r1’, Abbr‘r2’] >>
       srw_tac [][EL_MAP] >> first_x_assum match_mp_tac >|
-      [qexists_tac `EL n' tns`, qexists_tac `EL n' uns`] >>
+      [qexists_tac ‘EL n' tns’, qexists_tac ‘EL n' uns’] >>
       metis_tac [LIST_REL_EL_EQN, MEM_EL, gtmsize_GLAM_subterm]) >>
 (* COMPLETE THIS... *)
-`∀t p x y.
+‘∀t p x y.
    (MEM t ts' ∨ MEM t us ∨ MEM t ts) ∧ x ∉ A ∧ y ∉ A ==>
    (pmact dpm [(x,y)] (tmrec A ppm vf lf t p) =
-      tmrec A ppm vf lf (gtpm [(x,y)] t) (pmact ppm [(x,y)] p))`
+      tmrec A ppm vf lf (gtpm [(x,y)] t) (pmact ppm [(x,y)] p))’
    by (srw_tac [][] >> first_x_assum match_mp_tac >>
        fsrw_tac [][GLAM_eq_thm] >> srw_tac [][] >>
        fsrw_tac [][MEM_listpm_EXISTS, gtmsize_gtpm] >>
        metis_tac [genind_GLAM_subterm, gtmsize_GLAM_subterm]) >>
 (* THEN COMPLETE THIS ... *)
-`(∀a b. a ∉ A ∧ b ∉ A ==>
+‘(∀a b. a ∉ A ∧ b ∉ A ==>
         (listpm (fn_pmact ppm dpm) [(a,b)] r1 =
          MAP (tmrec A ppm vf lf) (gtpml [(a,b)] ts'))) ∧
  (∀a b. a ∉ A ∧ b ∉ A ==>
         (listpm (fn_pmact ppm dpm) [(a,b)] r2 =
-         MAP (tmrec A ppm vf lf) (gtpml [(a,b)] us)))`
+         MAP (tmrec A ppm vf lf) (gtpml [(a,b)] us)))’
   by (asm_simp_tac (srw_ss() ++ DNF_ss)
                    [listpm_tMAP, MAP_EQ_f, MEM_listpm_EXISTS,
-                    Abbr`r1`, Abbr`r2`, fnpm_def, FUN_EQ_THM,
+                    Abbr‘r1’, Abbr‘r2’, fnpm_def, FUN_EQ_THM,
                     pmact_sing_inv]) >>
-map_every qx_gen_tac [`s''`, `bv'`, `ts''`, `us'`] >>
+map_every qx_gen_tac [‘s''’, ‘fvs'’, ‘bv'’, ‘ts''’, ‘us'’] >>
 srw_tac [][] >>
-`(bv' = bv) ∧ (us' = gtpml [(x,y)] us)` by fsrw_tac [][GLAM_eq_thm] >>
+‘fvs' = listpm string_pmact [(x,y)] fvs ∧ bv' = bv ∧ us' = gtpml [(x,y)] us’
+  by fsrw_tac [][GLAM_eq_thm] >>
 rpt VAR_EQ_TAC >>
 sidecond_tac lhs >>
 disch_then (fn th => asm_simp_tac (srw_ss()) [th]) >>
-qpat_x_assum `GLAM (swapstr x y s') bv Z1 Z2 = Z3` mp_tac >>
+qpat_x_assum ‘GLAM (swapstr x y s') _ bv Z1 Z2 = Z3’ mp_tac >>
 srw_tac [][GLAM_eq_thm] >>
-qabbrev_tac `u = swapstr x y s'` >>
+qabbrev_tac ‘u = swapstr x y s'’ >>
 fsrw_tac [][gtpml_eqr] >>
-qpat_x_assum `XX = ts''` (SUBST_ALL_TAC o SYM) >>
-`u ∉ A` by srw_tac [][Abbr`u`,swapstr_def] >>
-`u ∉ supp ppm (pmact ppm [(x,y)] p)` by srw_tac [][Abbr`u`,perm_supp] >>
-`s'' ∉ supp (list_pmact gt_pmact) (gtpml [(x,y)] us) ∧
- s'' ∉ supp (list_pmact gt_pmact) (gtpml [(x,y)] ts')` by (
+qpat_x_assum ‘XX = ts''’ (SUBST_ALL_TAC o SYM) >>
+‘u ∉ A’ by srw_tac [][Abbr‘u’,swapstr_def] >>
+‘u ∉ supp ppm (pmact ppm [(x,y)] p)’ by srw_tac [][Abbr‘u’,perm_supp] >>
+‘s'' ∉ supp (list_pmact gt_pmact) (gtpml [(x,y)] us) ∧
+ s'' ∉ supp (list_pmact gt_pmact) (gtpml [(x,y)] ts')’ by (
   fsrw_tac [DNF_ss][IN_GFVl,listpm_MAP,MEM_MAP,GFV_gtpm] >>
   metis_tac [] ) >>
-`u ∉ supp (list_pmact gt_pmact) (gtpml [(x,y)] us)` by (
-  fsrw_tac [DNF_ss][IN_GFVl,listpm_MAP,MEM_MAP,GFV_gtpm,Abbr`u`] >>
+‘u ∉ supp (list_pmact gt_pmact) (gtpml [(x,y)] us)’ by (
+  fsrw_tac [DNF_ss][IN_GFVl,listpm_MAP,MEM_MAP,GFV_gtpm,Abbr‘u’] >>
   metis_tac [] ) >>
-`genind vp lp n (GLAM u bv (gtpml [(x,y)] ts') (gtpml [(x,y)] us))` by (
-  qmatch_abbrev_tac `genind vp lp n t` >>
-  qsuff_tac `t = gtpm [(x,y)] (GLAM s' bv ts' us)` >- srw_tac [][] >>
-  srw_tac [][Abbr`t`,gtpm_thm] ) >>
-qmatch_abbrev_tac `LHS = RHS` >>
+‘genind vp lp n
+   (GLAM u (listpm string_pmact[(x,y)] fvs) bv
+         (gtpml [(x,y)] ts') (gtpml [(x,y)] us))’ by (
+  qmatch_abbrev_tac ‘genind vp lp n t’ >>
+  qsuff_tac ‘t = gtpm [(x,y)] (GLAM s' fvs bv ts' us)’ >- srw_tac [][] >>
+  srw_tac [][Abbr‘t’,gtpm_thm] ) >>
+qmatch_abbrev_tac ‘LHS = RHS’ >>
 match_mp_tac EQ_TRANS >>
-qexists_tac `pmact dpm [(u,s'')] RHS` >>
-qabbrev_tac `usxyts = gtpml [(u,s'')] (gtpml [(x,y)] ts')` >>
-qabbrev_tac `xyus = gtpml [(x,y)] us` >>
-`genind vp lp n (GLAM s'' bv usxyts xyus)`
+qexists_tac ‘pmact dpm [(u,s'')] RHS’ >>
+qabbrev_tac ‘usxyts = gtpml [(u,s'')] (gtpml [(x,y)] ts')’ >>
+qabbrev_tac ‘xyus = gtpml [(x,y)] us’ >>
+qabbrev_tac ‘usxyfvs = listpm string_pmact [(u,s'')] $
+                       listpm string_pmact [(x,y)] fvs’ >>
+‘genind vp lp n (GLAM s'' usxyfvs bv usxyts xyus)’
   by(first_x_assum (mp_tac o MATCH_MP genind_gtpm) >>
-     disch_then (qspec_then `[(u,s'')]` mp_tac) >>
+     disch_then (qspec_then ‘[(u,s'')]’ mp_tac) >>
      CONV_TAC (LAND_CONV (RAND_CONV (REWRITE_CONV [gtpm_thm]))) >>
      asm_simp_tac (srw_ss()) [supp_fresh]) >>
-`LIST_REL (relsupp A dpm ppm) usxyts (MAP (tmrec A ppm vf lf) usxyts) ∧
- LIST_REL (relsupp A dpm ppm) xyus (MAP (tmrec A ppm vf lf) xyus)`
-   by (map_every qunabbrev_tac [`r1`, `r2`, `usxyts`, `xyus`] >>
+‘genind vp lp n (GLAM s'' fvs bv usxyts xyus)’
+  by gvs[Abbr‘usxyfvs’, genind_ignores_fvspm] >>
+‘LIST_REL (relsupp A dpm ppm) usxyts (MAP (tmrec A ppm vf lf) usxyts) ∧
+ LIST_REL (relsupp A dpm ppm) xyus (MAP (tmrec A ppm vf lf) xyus)’
+   by (map_every qunabbrev_tac [‘r1’, ‘r2’, ‘usxyts’, ‘xyus’] >>
        rpt (first_x_assum (mp_tac o MATCH_MP LIST_REL_relsupp_gtpml)) >>
-       rpt (disch_then (qspecl_then [`x`,`y`] assume_tac)) >>
+       rpt (disch_then (qspecl_then [‘x’,‘y’] assume_tac)) >>
        ntac 2 (pop_assum mp_tac) >> asm_simp_tac (srw_ss()) [] >>
        rpt (disch_then (assume_tac o MATCH_MP LIST_REL_relsupp_gtpml)) >>
-       ntac 2 (pop_assum (qspecl_then [`u`, `s''`] mp_tac)) >>
+       ntac 2 (pop_assum (qspecl_then [‘u’, ‘s''’] mp_tac)) >>
        asm_simp_tac (srw_ss()) [listpm_tMAP] >>
        rpt (disch_then assume_tac) >>
-       qpat_x_assum `LIST_REL _ (_ (_ ts')) (MAP _ _)` mp_tac >>
+       qpat_x_assum ‘LIST_REL _ (_ (_ ts')) (MAP _ _)’ mp_tac >>
        qmatch_abbrev_tac
-        `LIST_REL RR TS (MAP f1 TS) ==> LIST_REL RR TS (MAP f2 TS)` >>
-       qsuff_tac `MAP f1 TS = MAP f2 TS` >- srw_tac [][] >>
+        ‘LIST_REL RR TS (MAP f1 TS) ==> LIST_REL RR TS (MAP f2 TS)’ >>
+       qsuff_tac ‘MAP f1 TS = MAP f2 TS’ >- srw_tac [][] >>
        srw_tac [][MAP_EQ_f] >>
-       map_every qunabbrev_tac [`f1`, `f2`, `TS`] >>
+       map_every qunabbrev_tac [‘f1’, ‘f2’, ‘TS’] >>
        asm_simp_tac (srw_ss()) [FUN_EQ_THM, fnpm_def] >> gen_tac >>
        ih_commute_tac lhs >> asm_simp_tac (srw_ss()) [pmact_sing_inv] >>
        disch_then match_mp_tac >>
@@ -1159,55 +1236,64 @@ qabbrev_tac `xyus = gtpml [(x,y)] us` >>
 reverse conj_tac >- (
   match_mp_tac supp_fresh >>
   reverse conj_tac >- (
-    fsrw_tac [][FCB_def,Abbr`RHS`] >>
+    fsrw_tac [][FCB_def,Abbr‘RHS’] >>
     first_x_assum match_mp_tac >>
     asm_simp_tac (srw_ss()) [] >>
-    map_every qexists_tac [`n`,`s''`] >>
-    srw_tac [][]) >>
+    map_every qexists_tac [‘n’,‘s''’] >>
+    srw_tac [][genind_ignores_fvspm]) >>
   match_mp_tac notinsupp_I >>
-  qunabbrev_tac `RHS` >>
+  qunabbrev_tac ‘RHS’ >>
   qexists_tac
-     `A ∪ {s''} ∪ supp ppm (pmact ppm [(x,y)] p) ∪ GFVl xyus ∪ GFVl usxyts` >>
-  `FINITE A ∧ (∀p. FINITE (supp ppm p))` by fsrw_tac [][sidecond_def] >>
-  asm_simp_tac (srw_ss()) [support_def] >>
-  map_every qx_gen_tac [`w`,`z`] >>
+     ‘A ∪ {s''} ∪ supp ppm (pmact ppm [(x,y)] p) ∪
+      set (listpm string_pmact [(x,y)] fvs) ∪ GFVl xyus ∪ GFVl usxyts’ >>
+  ‘FINITE A ∧ (∀p. FINITE (supp ppm p))’ by fsrw_tac [][sidecond_def] >>
+  asm_simp_tac (srw_ss()) [support_def] >> reverse conj_tac
+  >- simp[MEM_listpm, Abbr‘u’] >>
+  map_every qx_gen_tac [‘w’,‘z’] >>
   strip_tac >>
-  sidecond_tac lhs >>
+  sidecond_tac lhs >> impl_tac
+  >- simp[genind_ignores_fvspm] >>
   asm_simp_tac (srw_ss()) [] >>
   disch_then (K ALL_TAC) >>
   asm_simp_tac (srw_ss()) [listpm_tMAP, supp_fresh] >>
   rpt AP_THM_TAC >>
-  qmatch_abbrev_tac `lf s'' bv X1 Y1 = lf s'' bv X2 Y2` >>
-  qsuff_tac `(X1 = X2) ∧ (Y1 = Y2)` >- srw_tac [][] >>
-  map_every qunabbrev_tac [`X1`, `X2`, `Y1`, `Y2`] >>
+  qmatch_abbrev_tac ‘lf s'' FVS1 bv X1 Y1 = lf s'' FVS2 bv X2 Y2’ >>
+  qsuff_tac ‘FVS1 = FVS2 ∧ X1 = X2 ∧ Y1 = Y2’ >- srw_tac [][] >>
+  map_every qunabbrev_tac [‘X1’, ‘X2’, ‘Y1’, ‘Y2’, ‘FVS1’, ‘FVS2’] >>
   asm_simp_tac (srw_ss() ++ DNF_ss)
                [MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM, fnpm_def] >>
+  conj_tac
+  >- (irule supp_fresh >> simp[IN_supp_listpm]) >>
   srw_tac [][] >> (* two similar goals here-on *)
   ih_commute_tac lhs >>
   asm_simp_tac (srw_ss()) [gtmsize_gtpm, pmact_sing_inv] >>
   disch_then match_mp_tac >>
-  map_every qunabbrev_tac [`usxyts`, `xyus`] >>
+  map_every qunabbrev_tac [‘usxyts’, ‘xyus’] >>
   fsrw_tac [][MEM_listpm_EXISTS, gtmsize_gtpm] >>
   metis_tac [gtmsize_GLAM_subterm, genind_GLAM_subterm]) >>
-srw_tac [][Abbr`RHS`] >>
-sidecond_tac rhs >>
+srw_tac [][Abbr‘RHS’] >>
+sidecond_tac rhs >> impl_tac >- simp[genind_ignores_fvspm] >>
 asm_simp_tac (srw_ss()) [listpm_tMAP, supp_fresh] >>
 disch_then (K ALL_TAC) >>
-qunabbrev_tac `LHS` >> rpt AP_THM_TAC >>
-qunabbrev_tac `usxyts` >>
+qunabbrev_tac ‘LHS’ >> rpt AP_THM_TAC >>
+qunabbrev_tac ‘usxyts’ >>
 asm_simp_tac (srw_ss() ++ ETA_ss) [pmact_sing_inv, pmact_nil] >>
 AP_THM_TAC >>
-qmatch_abbrev_tac `lf u bv X1 Y1 = lf u bv X2 Y2` >>
-qsuff_tac `(X1 = X2) ∧ (Y1 = Y2)` >- srw_tac [][] >>
-map_every qunabbrev_tac [`X1`,`X2`,`Y1`, `Y2`] >>
+qmatch_abbrev_tac ‘lf u FVS1 bv X1 Y1 = lf u FVS2 bv X2 Y2’ >>
+qsuff_tac ‘FVS1 = FVS2 ∧ X1 = X2 ∧ Y1 = Y2’ >- srw_tac [][] >>
+map_every qunabbrev_tac [‘X1’,‘X2’,‘Y1’, ‘Y2’, ‘FVS1’, ‘FVS2’] >>
+conj_tac
+>- (simp[Abbr‘usxyfvs’] >> sym_tac >> irule supp_fresh >>
+    simp[IN_supp_listpm] >> simp[MEM_listpm, Abbr‘u’]) >>
 conj_tac >> (* splits in two *)
 srw_tac [][MAP_EQ_f, FUN_EQ_THM, fnpm_def] >>
 ih_commute_tac rhs >>
 asm_simp_tac (srw_ss()) [pmact_sing_inv, gtmsize_gtpm] >>
 disch_then (match_mp_tac o GSYM) >>
-qunabbrev_tac `xyus` >>
+qunabbrev_tac ‘xyus’ >>
 fsrw_tac [][MEM_listpm_EXISTS, gtmsize_gtpm] >>
-metis_tac [genind_GLAM_subterm, gtmsize_GLAM_subterm]);
+metis_tac [genind_GLAM_subterm, gtmsize_GLAM_subterm]
+QED
 
 fun udplus th =
     th |> REWRITE_RULE [GSYM CONJ_ASSOC]
@@ -1227,53 +1313,64 @@ val tmrec_fresh = store_thm(
   srw_tac [][support_def, FUN_EQ_THM, fnpm_def] >>
   metis_tac [tmrec_equivariant, supp_fresh, pmact_sing_inv]);
 
-val NEWFCB_def = Define`
+Definition NEWFCB_def:
   NEWFCB dpm ppm A vp lp lf ⇔
-  ∀a1 a2 n bv r1 r2 ts us p.
+  ∀a1 a2 n fvs bv r1 r2 ts us p.
      a1 ∉ A ∧ a1 ∉ supp ppm p ∧ a2 ∉ A ∧ a2 ∉ GFVl ts ∧ a2 ∉ supp ppm p ∧
      LIST_REL (relsupp A dpm ppm) ts r1 ∧
      LIST_REL (relsupp A dpm ppm) us r2 ∧
-     genind vp lp n (GLAM a1 bv ts us) ==>
-     (lf a2 bv (listpm (fn_pmact ppm dpm) [(a2,a1)] r1) r2
+     genind vp lp n (GLAM a1 fvs bv ts us) ==>
+     (lf a2 fvs bv (listpm (fn_pmact ppm dpm) [(a2,a1)] r1) r2
                (gtpml [(a2,a1)] ts) us p =
-      lf a1 bv r1 r2 ts us p)
-`
+      lf a1 fvs bv r1 r2 ts us p)
+End
 
-val LIST_REL_combined_supps = prove(
-  ``LIST_REL (relsupp A dpm ppm) ts rs ∧ x ∉ A ∧ x ∉ GFVl ts ==>
-    x ∉ supp (list_pmact (fn_pmact ppm dpm)) rs``,
+Theorem LIST_REL_combined_supps[local]:
+  LIST_REL (relsupp A dpm ppm) ts rs ∧ x ∉ A ∧ x ∉ GFVl ts ==>
+  x ∉ supp (list_pmact (fn_pmact ppm dpm)) rs
+Proof
   qsuff_tac
     `∀ts rs. LIST_REL (relsupp A dpm ppm) ts rs ==>
              ∀x. x ∉ GFVl ts ∧ x ∉ A ==> x ∉ supp (list_pmact (fn_pmact ppm dpm)) rs`
     >- metis_tac [] >>
-  Induct_on `LIST_REL` >> srw_tac [][relsupp_def]);
+  Induct_on `LIST_REL` >> srw_tac [][relsupp_def]
+QED
 
-val NEWFCB_OLD = prove(
-  ``NEWFCB dpm ppm A vp lp ^lf ∧ sidecond dpm ppm A vp lp vf lf ==>
-    FCB dpm ppm A vp lp lf``,
+Theorem NEWFCB_OLD:
+  NEWFCB dpm ppm A vp lp ^lf ∧ sidecond dpm ppm A vp lp vf lf ==>
+  FCB dpm ppm A vp lp lf
+Proof
   srw_tac [][FCB_def, NEWFCB_def] >>
-  `FINITE A ∧ (∀p. FINITE (supp ppm p))`
+  ‘FINITE A ∧ (∀p. FINITE (supp ppm p))’
      by fsrw_tac [][sidecond_def] >>
-  Q_TAC (NEW_TAC "z") `A ∪ GFVl ts ∪ GFVl us ∪ supp ppm p ∪ {a}` >>
-  `lf a bv r1 r2 ts us p = lf z bv (listpm (fn_pmact ppm dpm) [(z,a)] r1) r2
-                              (gtpml [(z,a)] ts) us p`
+  Q_TAC (NEW_TAC "z") ‘A ∪ GFVl ts ∪ GFVl us ∪ supp ppm p ∪ {a} ∪ set fvs’ >>
+  ‘lf a fvs bv r1 r2 ts us p =
+   lf z fvs bv (listpm (fn_pmact ppm dpm) [(z,a)] r1) r2
+      (gtpml [(z,a)] ts) us p’
      by (fsrw_tac [][NEWFCB_def] >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
          first_x_assum match_mp_tac >>
          fsrw_tac [][genind_GLAM_eqn] >> metis_tac []) >>
   pop_assum SUBST1_TAC >>
   match_mp_tac notinsupp_I >>
-  qexists_tac `{z} ∪ A ∪ GFVl (gtpml [(z,a)] ts) ∪ GFVl us ∪ supp ppm p` >>
+  qexists_tac ‘{z} ∪ A ∪ GFVl (gtpml [(z,a)] ts) ∪ GFVl us ∪ supp ppm p ∪
+              set fvs’ >>
   srw_tac [][perm_supp]>>
   srw_tac [][support_def] >>
   sidecond_tac lhs >>
-  `x ∉ supp (list_pmact (fn_pmact ppm dpm)) r2 ∧ y ∉ supp (list_pmact (fn_pmact ppm dpm)) r2 ∧
-   x ∉ supp (list_pmact (fn_pmact ppm dpm)) (listpm (fn_pmact ppm dpm) [(z,a)] r1) ∧
-   y ∉ supp (list_pmact (fn_pmact ppm dpm)) (listpm (fn_pmact ppm dpm) [(z,a)] r1)`
-      by (srw_tac [][perm_supp] >>
-          metis_tac [LIST_REL_combined_supps, swapstr_def]) >>
+  ‘x ∉ supp (list_pmact (fn_pmact ppm dpm)) r2 ∧
+   y ∉ supp (list_pmact (fn_pmact ppm dpm)) r2 ∧
+   x ∉ supp (list_pmact (fn_pmact ppm dpm))
+            (listpm (fn_pmact ppm dpm) [(z,a)] r1) ∧
+   y ∉ supp (list_pmact (fn_pmact ppm dpm))
+            (listpm (fn_pmact ppm dpm) [(z,a)] r1)’
+    by (srw_tac [][perm_supp] >>
+        metis_tac [LIST_REL_combined_supps, swapstr_def]) >>
   asm_simp_tac (srw_ss()) [LIST_REL_relsupp_gtpml, genind_GLAM_eqn, supp_fresh,
                            perm_supp] >>
-  disch_then match_mp_tac >> fsrw_tac [][genind_GLAM_eqn] >> metis_tac []);
+  ‘listpm string_pmact [(x,y)] fvs = fvs’
+    by (irule supp_fresh >> simp[IN_supp_listpm]) >> simp[] >>
+  disch_then match_mp_tac >> fsrw_tac [][genind_GLAM_eqn] >> metis_tac []
+QED
 
 val fresh_I = PROVE_HYP (udplus NEWFCB_OLD) (udplus tmrec_fresh)
 val eqv_I = PROVE_HYP (udplus NEWFCB_OLD) (udplus tmrec_equivariant)
@@ -1286,63 +1383,64 @@ fun xmatch_cond_assum dir (asl,w) =
                           (dir w))) (asl,w)
 
 
-val parameter_gtm_recursion = store_thm(
-"parameter_gtm_recursion",
-``sidecond dpm ppm A ^vp ^lp ^vf ^lf ∧ NEWFCB dpm ppm A ^vp ^lp ^lf ⇒
+Theorem parameter_gtm_recursion:
+  sidecond dpm ppm A ^vp ^lp ^vf ^lf ∧ NEWFCB dpm ppm A ^vp ^lp ^lf ⇒
   ∃f.
-   ((∀n s vv p. genind vp lp n (GVAR s vv) ⇒ (f (GVAR s vv) p = vf s vv p)) ∧
-    ∀n v bv ns ms ts us p.
-       v ∉ A ∧ v ∉ supp ppm p ∧ genind vp lp n (GLAM v bv ts us) ⇒
-       (f (GLAM v bv ts us) p = lf v bv (MAP f ts) (MAP f us) ts us p)) ∧
-   ∀n t p.
-     genind vp lp n t ==>
-     ∀x y. x ∉ A ∧ y ∉ A ==>
-           (pmact dpm [(x,y)] (f t p) = f (gtpm [(x,y)] t) (pmact ppm [(x,y)] p))``,
-strip_tac >>
-`FINITE A ∧ ∀p. FINITE (supp ppm p)` by fsrw_tac [][sidecond_def] >>
-qexists_tac `tmrec A ppm vf lf` >>
-reverse conj_tac >-
-   (rpt strip_tac >> imp_res_tac eqv_I >> srw_tac [][]) >>
-conj_tac >- srw_tac [][tmrec_GVAR] >>
-srw_tac [][tmrec_GLAM] >>
-DEEP_INTRO_TAC optionTheory.some_intro >>
-asm_simp_tac (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD] >>
-reverse conj_tac >- (
-  (* bogus ARB case *)
-  asm_simp_tac (srw_ss()) [GLAM_eq_thm] >>
-  Q_TAC (NEW_TAC "z") `A ∪ supp ppm p ∪ GFVl ts ∪ GFVl us ∪ {v}` >>
-  disch_then (qspec_then `z` mp_tac) >>
-  fsrw_tac [][gtpml_eqr] >>
-  fsrw_tac [DNF_ss][IN_supp_listpm, MEM_listpm_EXISTS, perm_supp] >>
-  metis_tac []) >>
-asm_simp_tac (srw_ss()++DNF_ss++ETA_ss) [GLAM_eq_thm,gtpml_eqr,gtpm_eqr] >>
-qx_gen_tac `u` >> strip_tac >>
-`LIST_REL (relsupp A dpm ppm) ts (MAP (tmrec A ppm vf lf) ts) ∧
- LIST_REL (relsupp A dpm ppm) us (MAP (tmrec A ppm vf lf) us)` by (
-  assume_tac fresh_I >>
-  fsrw_tac [DNF_ss][MEM_EL] >>
-  srw_tac [][LIST_REL_EL_EQN, EL_MAP, relsupp_def] >>
-  fsrw_tac [][AND_IMP_INTRO] >>
-  first_x_assum match_mp_tac >>
-  fsrw_tac [][] >>
-  match_mp_tac genind_GLAM_subterm >>
-  srw_tac [][MEM_EL] >>
-  metis_tac []) >>
-asm_simp_tac (srw_ss()) [pmact_flip_args] >>
-qsuff_tac `MAP (tmrec A ppm vf lf) (gtpml [(u,v)] ts) =
-           listpm (fn_pmact ppm dpm) [(u,v)] (MAP (tmrec A ppm vf lf) ts)`
+    ((∀n s vv p. genind vp lp n (GVAR s vv) ⇒ (f (GVAR s vv) p = vf s vv p)) ∧
+     ∀n v fvs bv ns ms ts us p.
+       v ∉ A ∧ v ∉ supp ppm p ∧ genind vp lp n (GLAM v fvs bv ts us) ⇒
+       (f (GLAM v fvs bv ts us) p = lf v fvs bv (MAP f ts) (MAP f us) ts us p)) ∧
+    ∀n t p.
+      genind vp lp n t ==>
+      ∀x y. x ∉ A ∧ y ∉ A ==>
+            pmact dpm [(x,y)] (f t p) =
+            f (gtpm [(x,y)] t) (pmact ppm [(x,y)] p)
+Proof
+  strip_tac >>
+  ‘FINITE A ∧ ∀p. FINITE (supp ppm p)’ by fsrw_tac [][sidecond_def] >>
+  qexists_tac ‘tmrec A ppm vf lf’ >>
+  reverse conj_tac
+  >- (rpt strip_tac >> imp_res_tac eqv_I >> srw_tac [][]) >>
+  conj_tac >- srw_tac [][tmrec_GVAR] >>
+  srw_tac [][tmrec_GLAM] >>
+  DEEP_INTRO_TAC optionTheory.some_intro >>
+  asm_simp_tac (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD] >>
+  reverse conj_tac
+  >- ((* bogus ARB case *)
+      asm_simp_tac (srw_ss()) [GLAM_eq_thm] >>
+      Q_TAC (NEW_TAC "z") ‘A ∪ supp ppm p ∪ GFVl ts ∪ GFVl us ∪ {v} ∪ set fvs’ >>
+      disch_then (qspec_then ‘z’ mp_tac) >>
+      fsrw_tac [][gtpml_eqr] >>
+      fsrw_tac [DNF_ss][IN_supp_listpm, MEM_listpm_EXISTS, perm_supp] >>
+      metis_tac []) >>
+  asm_simp_tac (srw_ss()++DNF_ss++ETA_ss) [GLAM_eq_thm,gtpml_eqr,gtpm_eqr] >>
+  qx_gen_tac ‘u’ >> strip_tac >>
+  ‘LIST_REL (relsupp A dpm ppm) ts (MAP (tmrec A ppm vf lf) ts) ∧
+   LIST_REL (relsupp A dpm ppm) us (MAP (tmrec A ppm vf lf) us)’
+    by (assume_tac fresh_I >>
+        fsrw_tac [DNF_ss][MEM_EL] >>
+        srw_tac [][LIST_REL_EL_EQN, EL_MAP, relsupp_def] >>
+        fsrw_tac [][AND_IMP_INTRO] >>
+        first_x_assum match_mp_tac >>
+        fsrw_tac [][] >>
+        match_mp_tac genind_GLAM_subterm >>
+        srw_tac [][MEM_EL] >>
+        metis_tac []) >>
+  asm_simp_tac (srw_ss()) [pmact_flip_args] >>
+  qsuff_tac ‘MAP (tmrec A ppm vf lf) (gtpml [(u,v)] ts) =
+             listpm (fn_pmact ppm dpm) [(u,v)] (MAP (tmrec A ppm vf lf) ts)’
   >- (disch_then SUBST1_TAC >> fsrw_tac [][NEWFCB_def] >>
       first_x_assum match_mp_tac >> fsrw_tac [][perm_supp] >> metis_tac []) >>
-srw_tac [][listpm_tMAP, MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM,
-           fnpm_def] >>
-srw_tac [][pmact_sing_inv] >>
-assume_tac (eqv_I |> Q.GEN `t`
-                  |> SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO]) >>
-(fn (asl,w) => pop_assum
-                   (fn rwt =>
-                       mp_tac (PART_MATCH (lhs o #2 o dest_imp) rwt
-                                          (rhs w) |> Q.GEN `n`)) (asl,w)) >>
-asm_simp_tac (srw_ss()) [pmact_sing_inv] >>
-metis_tac [genind_GLAM_subterm]);
+  srw_tac [][listpm_tMAP, MAP_EQ_f, MEM_listpm_EXISTS, FUN_EQ_THM, fnpm_def] >>
+  srw_tac [][pmact_sing_inv] >>
+  assume_tac (eqv_I |> Q.GEN ‘t’
+                    |> SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO]) >>
+  (fn (asl,w) => pop_assum
+                 (fn rwt =>
+                    mp_tac (PART_MATCH (lhs o #2 o dest_imp) rwt
+                                       (rhs w) |> Q.GEN ‘n’)) (asl,w)) >>
+  asm_simp_tac (srw_ss()) [pmact_sing_inv] >>
+  metis_tac [genind_GLAM_subterm]
+QED
 
 val _ = export_theory()
