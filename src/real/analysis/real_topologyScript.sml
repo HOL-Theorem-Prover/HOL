@@ -13,7 +13,6 @@
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
 (*    Note: This theory was ported from HOL Light                            *)
-(*                                                                           *)
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
@@ -1899,6 +1898,10 @@ val DIM_SUBSET_UNIV = store_thm ("DIM_SUBSET_UNIV",
 Definition euclidean_def :
     euclidean = mtop mr1
 End
+Overload euclideanreal[inferior] = “euclidean” (* HOL-Light compatible *)
+
+(* |- mtop mr1 = euclidean *)
+Theorem MTOPOLOGY_REAL_EUCLIDEAN_METRIC = SYM euclidean_def
 
 (* new definition *)
 Definition euclidean_open_def :
@@ -2091,15 +2094,22 @@ End
 
 (* old definition now becomes a theorem *)
 Theorem ball :
-    !x e. ball(x,e) = { y | dist(x,y) < e}
+    !x e. ball(x,e) = {y | dist(x,y) < e}
 Proof
     RW_TAC std_ss [ball_def, dist_def, metricTheory.ball,
                    Once EXTENSION, GSPECIFICATION]
  >> rw [IN_APP]
 QED
 
-val cball = new_definition ("cball",
-  ``cball(x,e) = { y | dist(x,y) <= e}``);
+Definition cball_def :
+    cball = mcball mr1
+End
+
+Theorem cball :
+    !x e. cball(x,e) = {y | dist(x,y) <= e}
+Proof
+    rw [cball_def, dist_def, mcball, mspace]
+QED
 
 val sphere = new_definition ("sphere",
   ``sphere(x,e) = { y | dist(x,y) = e}``);
@@ -3836,8 +3846,15 @@ val OPEN_IN_SING = store_thm ("OPEN_IN_SING",
 (* Interior of a set.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val interior = new_definition ("interior",
-  ``interior s = {x | ?t. open t /\ x IN t /\ t SUBSET s}``);
+Definition interior_def :
+    interior s = euclidean interior_of s
+End
+
+Theorem interior :
+    !s. interior s = {x | ?t. open t /\ x IN t /\ t SUBSET s}
+Proof
+    rw [interior_def, interior_of, euclidean_open_def]
+QED
 
 val INTERIOR_EQ = store_thm ("INTERIOR_EQ",
  ``!s. (interior s = s) <=> open s``,
@@ -4085,8 +4102,16 @@ val REAL_ARCH_RDIV_EQ_0 = store_thm ("REAL_ARCH_RDIV_EQ_0",
 (* Closure of a set.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val closure = new_definition ("closure",
-  ``closure s = s UNION {x | x limit_point_of s}``);
+Definition closure_def :
+    closure s = euclidean closure_of s
+End
+
+Theorem closure :
+    !s. closure s = s UNION {x | x limit_point_of s}
+Proof
+    rw [closure_def, CLOSURE_OF, TOPSPACE_EUCLIDEAN, limit_point_of_def,
+        derived_set_of_alt_limpt]
+QED
 
 val CLOSURE_APPROACHABLE = store_thm ("CLOSURE_APPROACHABLE",
  ``!x s. x IN closure(s) <=> !e. &0 < e ==> ?y. y IN s /\ dist(y,x) < e``,
@@ -4498,8 +4523,15 @@ val DENSE_OPEN_INTER = store_thm ("DENSE_OPEN_INTER",
 (* Frontier (aka boundary).                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val frontier = new_definition ("frontier",
-  ``frontier s = (closure s) DIFF (interior s)``);
+Definition frontier_def :
+    frontier s = euclidean frontier_of s
+End
+
+Theorem frontier :
+    !s. frontier s = (closure s) DIFF (interior s)
+Proof
+    rw [frontier_def, frontier_of, closure_def, interior_def]
+QED
 
 val FRONTIER_CLOSED = store_thm ("FRONTIER_CLOSED",
  ``!s. closed(frontier s)``,
@@ -6102,15 +6134,11 @@ val SEQ_HARMONIC = store_thm ("SEQ_HARMONIC",
 (* More properties of closed balls.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val CLOSED_CBALL = store_thm ("CLOSED_CBALL",
- ``!x:real e. closed(cball(x,e))``,
-  REWRITE_TAC[CLOSED_SEQUENTIAL_LIMITS, IN_CBALL, dist] THEN
-  GEN_TAC THEN GEN_TAC THEN X_GEN_TAC ``s:num->real`` THEN
-  X_GEN_TAC ``y:real`` THEN STRIP_TAC THEN
-  MATCH_MP_TAC(ISPEC ``sequentially`` LIM_ABS_UBOUND) THEN
-  EXISTS_TAC ``\n. x - (s:num->real) n`` THEN
-  REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY, EVENTUALLY_SEQUENTIALLY] THEN
-  ASM_SIMP_TAC std_ss [LIM_SUB, LIM_CONST, SEQUENTIALLY]);
+Theorem CLOSED_CBALL :
+   !x:real e. closed(cball(x,e))
+Proof
+    rw [CLOSED_IN, cball_def, euclidean_def, CLOSED_IN_MCBALL]
+QED
 
 val IN_INTERIOR_CBALL = store_thm ("IN_INTERIOR_CBALL",
  ``!x s. x IN interior s <=> ?e. &0 < e /\ cball(x,e) SUBSET s``,
@@ -8858,6 +8886,26 @@ val CONTINUOUS_ON_IMP_OPEN_IN = store_thm ("CONTINUOUS_ON_IMP_OPEN_IN",
    open_in (subtopology euclidean (IMAGE f s)) t
    ==> open_in (subtopology euclidean s) {x | x IN s /\ f x IN t}``,
  METIS_TAC[CONTINUOUS_ON_OPEN]);
+
+(* NOTE: It's a bit strange that “open_in euclidean (IMAGE f s)” is required,
+   by [OPEN_IN_SUBTOPOLOGY]. cf. HOL-Light's CONTINUOUS_MAP_EUCLIDEAN.
+ *)
+Theorem continuous_on_alt_continuous_map :
+   !(f :real -> real) s. open_in euclidean (IMAGE f s) ==>
+     (f continuous_on s <=>
+      continuous_map (subtopology euclidean s,euclidean) f)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC
+ >- (rw [CONTINUOUS_MAP, CONTINUOUS_ON_OPEN, TOPSPACE_EUCLIDEAN] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     fs [OPEN_IN_SUBTOPOLOGY] \\
+     MATCH_MP_TAC OPEN_IN_INTER >> art [])
+ (* stage work *)
+ >> rw [CONTINUOUS_MAP, TOPSPACE_EUCLIDEAN]
+ >> MATCH_MP_TAC CONTINUOUS_OPEN_IN_PREIMAGE_GEN
+ >> Q.EXISTS_TAC ‘UNIV’ >> rw []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Similarly in terms of closed sets. *)
