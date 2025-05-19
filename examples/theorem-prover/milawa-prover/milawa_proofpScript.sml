@@ -278,7 +278,7 @@ val term_syntax_ok_def = tDefine "term_syntax_ok" `
      (LIST_TO_SET (free_vars y) SUBSET LIST_TO_SET xs) /\ ALL_DISTINCT xs /\
      EVERY var_ok xs /\
      EVERY (term_syntax_ok) zs /\ term_syntax_ok y /\ (LENGTH xs = LENGTH zs))`
- (WF_REL_TAC `measure (logic_term_size)`);
+ (WF_REL_TAC `measure logic_term_size`);
 
 val formula_syntax_ok_def = Define `
   (formula_syntax_ok (Not x) = formula_syntax_ok x) /\
@@ -319,6 +319,9 @@ val logic_flag_term_vars_TERM = prove(
 val logic_func2sexp_NOT_EQAL_NIL = add_prove(
   ``LISP_EQUAL (logic_func2sexp l0) (Sym "QUOTE") = Sym "NIL"``,
   FS [LISP_EQUAL_def]);
+
+(* Temporary reversion to old-style size definitions *)
+val _ = computeLib.add_funs [logic_term_size_def];
 
 val logic_flag_term_vars_thm = prove(
   ``!l acc.
@@ -655,41 +658,51 @@ val _ = Hol_datatype `
 
 val logic_appeal_size_def = fetch "-" "logic_appeal_size_def"
 
+val _ = computeLib.add_funs [logic_appeal_size_def];
+
 val CONCL_def = Define `CONCL (Appeal name concl x) = concl`;
+
 val HYPS_def = Define `
   (HYPS (Appeal name concl NONE) = []) /\
   (HYPS (Appeal name concl (SOME(x,y))) = x)`;
 
-val logic_appeal_size_def = fetch "-" "logic_appeal_size_def"
+Triviality logic_appeal3_size_lemma:
+  !q a. MEM a q ==> logic_appeal_size a < list_size logic_appeal_size q
+Proof
+  Induct \\ bossLib.rw[list_size_def]
+  >- decide_tac
+  >- (res_tac >> decide_tac)
+QED
 
-val logic_appeal3_size_lemma = prove(
-  ``!q a. MEM a q ==> logic_appeal_size a < logic_appeal3_size q``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) [logic_appeal_size_def]
-  \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ FULL_SIMP_TAC (srw_ss()) [logic_appeal_size_def] \\ DECIDE_TAC);
+val option_size_def = snd $ TypeBase.size_of “:'a option”;
+val pair_size_def = snd $ TypeBase.size_of “:'a#'b”;
 
-val a2sexp_def = tDefine "a2sexp" `
+Definition a2sexp_def:
   a2sexp (Appeal name concl subproofs_extras) =
     let xs =
        (if subproofs_extras = NONE then [] else
          [list2sexp (MAP a2sexp (FST (THE subproofs_extras)))] ++
            if SND (THE subproofs_extras) = NONE then [] else
              [THE (SND (THE subproofs_extras))]) in
-       list2sexp ([Sym name; f2sexp concl] ++ xs)`
- (WF_REL_TAC `measure (logic_appeal_size)` \\ REPEAT STRIP_TAC
-  \\ Cases_on `subproofs_extras` \\ FULL_SIMP_TAC (srw_ss()) [logic_appeal_size_def]
-  \\ Cases_on `x` \\ FULL_SIMP_TAC (srw_ss()) [logic_appeal_size_def]
-  \\ IMP_RES_TAC logic_appeal3_size_lemma \\ DECIDE_TAC)
+       list2sexp ([Sym name; f2sexp concl] ++ xs)
+Termination
+ WF_REL_TAC `measure logic_appeal_size` \\ bossLib.rw[]
+ \\ Cases_on `subproofs_extras` \\ gvs[]
+ \\ Cases_on `x` \\ gvs[option_size_def, pair_size_def]
+ \\ IMP_RES_TAC logic_appeal3_size_lemma \\ DECIDE_TAC
+End
 
-val appeal_syntax_ok_def = tDefine "appeal_syntax_ok" `
+Definition appeal_syntax_ok_def:
   appeal_syntax_ok (Appeal name concl subproofs_extras) =
     formula_syntax_ok concl /\
     (~(subproofs_extras = NONE) ==>
-       EVERY appeal_syntax_ok (FST (THE subproofs_extras)))`
- (WF_REL_TAC `measure (logic_appeal_size)` \\ REPEAT STRIP_TAC
-  \\ Cases_on `subproofs_extras` \\ FULL_SIMP_TAC (srw_ss()) [logic_appeal_size_def]
-  \\ Cases_on `x` \\ FULL_SIMP_TAC (srw_ss()) [logic_appeal_size_def]
-  \\ IMP_RES_TAC logic_appeal3_size_lemma \\ DECIDE_TAC);
+       EVERY appeal_syntax_ok (FST (THE subproofs_extras)))
+Termination
+ WF_REL_TAC `measure logic_appeal_size` \\ bossLib.rw[]
+ \\ Cases_on `subproofs_extras` \\ gvs[]
+ \\ Cases_on `x` \\ gvs[option_size_def, pair_size_def]
+ \\ IMP_RES_TAC logic_appeal3_size_lemma \\ DECIDE_TAC
+End
 
 val appeal_syntax_ok_thm = prove(
   ``appeal_syntax_ok a =
@@ -1535,8 +1548,6 @@ val logic_proofp_thm = prove(
   \\ FS [MAP,logic_proofp_def] \\ FULL_SIMP_TAC (srw_ss()) []
   \\ ONCE_REWRITE_TAC [logic_flag_proofp_def] \\ FS []
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ FS []);
-
-
 
 
 val callmap2sexp_def = Define `
