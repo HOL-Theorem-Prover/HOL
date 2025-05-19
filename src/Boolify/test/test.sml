@@ -50,20 +50,24 @@ val Hol_datatype =
   end;
 *)
 
+(*
 val Hol_datatype =
   fn q =>
   let
     val tybase = TypeBase.theTypeBase()
     val asts = ParseDatatype.parse (Parse.type_grammar()) q
     val (tybase', tyinfol) = Datatype.primHol_datatype tybase asts
-    val
-    val {def,const_tyopl} = Encode.define_encode tyax
+    val ty = TypeBasePure.ty_of (hd tyinfol)
+    val ax = TypeBasePure.axiom_of (hd tyinfol)
+    val {def,const_tyopl} = Encode.define_encode ax tybase
+
     val () = Lib.try (Count.apply Datatype.Hol_datatype) q
     val tyname = first_token q
 
   in
     (tyname, size_of tyname, encode_of tyname)
   end;
+*)
 
 (* ------------------------------------------------------------------------- *)
 (* Example datatypes to test boolification.                                  *)

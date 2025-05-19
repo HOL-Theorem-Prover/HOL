@@ -251,6 +251,6 @@ fun define_and_add_encode tyinfo =
                   ; tyinfo)
     end;
 
-val () = TypeBase.register_update_fn add_encode;
+val () = TypeBase.register_update_fn define_and_add_encode;
 
 end
