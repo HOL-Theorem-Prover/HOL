@@ -202,7 +202,7 @@ fun define_encode ax db =
      val pre_defn0 = list_mk_conj (map clause annot_conjs)
      val nil_rws =
        [CONJUNCT1 (DB.fetch "list" "APPEND"), DB.fetch "list" "APPEND_NIL"]
-     val pre_defn1 = rhs(concl   (* remove zero additions *)
+     val pre_defn1 = rhs(concl   (* remove appends with NIL *)
                       ((DEPTH_CONV BETA_CONV THENC
                         Rewrite.PURE_REWRITE_CONV nil_rws) pre_defn0))
                      handle UNCHANGED => pre_defn0
@@ -223,25 +223,17 @@ fun define_encode ax db =
  ---------------------------------------------------------------------------*)
 
 fun insert_encode {def, const_tyopl} tyinfo =
-    let
-      val first_tyname = TypeBasePure.ty_name_of tyinfo
-      fun ins_encode info encode_eqs =
-          let val tyname = TypeBasePure.ty_name_of info
-          in case assoc2 tyname const_tyopl
-              of SOME(c,tyop) => TypeBasePure.put_encode(c,encode_eqs) info
-               | NONE => (HOL_MESG ("Can't find encode constant for"
-                                 ^Lib.quote(pair_string tyname));
-                         raise ERR "build_tyinfos" "")
-          end
-     in
-       ins_encode tyinfo (TypeBasePure.ORIG def)
-    end
-    handle HOL_ERR _ => tyinfo;
+  let val tyname = TypeBasePure.ty_name_of tyinfo
+  in case assoc2 tyname const_tyopl
+      of SOME(c,tyop) => TypeBasePure.put_encode(c,TypeBasePure.ORIG def) tyinfo
+       | NONE => raise ERR "insert_encode"
+          ("Can't find encode constant for"^Lib.quote(pair_string tyname))
+  end
 
 fun is_copy (TypeBasePure.COPY _) = true
   | is_copy _ = false
 
-fun add_encode tyinfo =
+fun define_and_add_encode tyinfo =
   if Option.isSome (TypeBasePure.encode_of0 tyinfo) orelse
      is_copy (TypeBasePure.axiom_of0 tyinfo)
   then
@@ -253,7 +245,7 @@ fun add_encode tyinfo =
       val tyname = TypeBasePure.ty_name_of tyinfo
     in
       case define_encode recursion db of
-          SOME s => insert_encode s tyinfo
+          SOME r => insert_encode r tyinfo
         | NONE => (HOL_MESG("Couldn't define encode function for type "
                             ^Lib.quote (pair_string tyname))
                   ; tyinfo)

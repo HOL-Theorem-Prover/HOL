@@ -8,9 +8,11 @@ val () =
   loadPath :=
   ["../../datatype/", "../../list/src", "../../tfl/src", "../src"] @
   !loadPath;
-*)
 
 val () = app load ["Encode", "EncodeTheory", "DecodeTheory", "CoderTheory"];
+*)
+
+local open Encode in end;
 
 open EncodeTheory DecodeTheory CoderTheory;
 
@@ -18,39 +20,49 @@ open EncodeTheory DecodeTheory CoderTheory;
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun first_token (QUOTE s :: _) = hd (String.tokens Char.isSpace
-                                            (Lib.deinitcomment s))
+fun first_token (QUOTE s :: _) =
+      hd $ String.tokens Char.isSpace $ Lib.deinitcomment s
   | first_token _ = "if_you_can_read_this_then_first_token_probably_failed";
+
 fun mkTy nm =
-    let val kid = {Thy = current_theory(), Tyop = nm}
-        val a = valOf (Type.op_arity kid)
+  let val thy = current_theory()
+      val kid = {Thy = thy, Tyop = nm}
+      val n = valOf (Type.op_arity kid)
     in
       mk_thy_type {
-        Args = List.tabulate(a,
-                             fn i => mk_vartype ("'a" ^ Int.toString i)),
-        Thy = current_theory(),
-        Tyop = nm
+        Thy = thy, Tyop = nm,
+         Args = List.tabulate(n, fn i => mk_vartype ("'a" ^ Int.toString i))
       }
     end
+
 val size_of = Lib.total (TypeBase.size_of o mkTy)
 val encode_of = Lib.total (TypeBase.encode_of o mkTy)
 
+(*
 val Hol_datatype =
   fn q =>
   let
     val () = Lib.try (Count.apply Datatype.Hol_datatype) q
     val tyname = first_token q
+
   in
     (tyname, size_of tyname, encode_of tyname)
   end;
+*)
 
-fun encode tm =
+val Hol_datatype =
+  fn q =>
   let
-    val db = TypeBase.theTypeBase()
-    val f = TypeBasePure.type_encode db (type_of tm)
+    val tybase = TypeBase.theTypeBase()
+    val asts = ParseDatatype.parse (Parse.type_grammar()) q
+    val (tybase', tyinfol) = Datatype.primHol_datatype tybase asts
+    val
+    val {def,const_tyopl} = Encode.define_encode tyax
+    val () = Lib.try (Count.apply Datatype.Hol_datatype) q
+    val tyname = first_token q
+
   in
-    (*CONV_RULE (REDEPTH_CONV pairLib.PAIRED_BETA_CONV)*)
-    (bossLib.EVAL (mk_comb (f, tm)))
+    (tyname, size_of tyname, encode_of tyname)
   end;
 
 (* ------------------------------------------------------------------------- *)
@@ -91,6 +103,14 @@ try Hol_datatype
 (* ------------------------------------------------------------------------- *)
 (* Encoding of terms.                                                        *)
 (* ------------------------------------------------------------------------- *)
+
+fun encode tm =
+  let
+    val db = TypeBase.theTypeBase()
+    val f = TypeBasePure.type_encode db (type_of tm)
+  in
+    bossLib.EVAL (mk_comb (f, tm))
+  end;
 
 val encode = encode o Term;
 
