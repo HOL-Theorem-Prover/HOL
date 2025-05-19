@@ -12,9 +12,9 @@ val vp = “(\n ^u_tm. n = 0)”;
 val glam_rep_t = “:unit + unit”;
 val d_tm = mk_var("d", glam_rep_t);
 val lp =
-  “(\n ^d_tm tns uns.
-     n = 1 /\ ISL d /\ tns = [] ∧ uns = [] \/
-     n = 1 /\ ISR d /\ tns = [1] ∧ uns = [0]
+  “(\n lfvs ^d_tm tns uns.
+     n = 1 /\ lfvs = 0 /\ ISL d /\ tns = [] ∧ uns = [] \/
+     n = 1 /\ lfvs = 0 /\ ISR d /\ tns = [1] ∧ uns = [0]
     )”;
 
 val _ = tprint "Deriving type 0"
