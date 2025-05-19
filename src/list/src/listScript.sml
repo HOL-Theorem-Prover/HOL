@@ -2389,18 +2389,6 @@ Proof
   \\ rw[UNCURRY, arithmeticTheory.ADD1]
 QED
 
-Theorem ALL_DISTINCT_MAP_DROP_LESS:
-  !ls.
-    n <= m /\
-    ALL_DISTINCT (MAP (DROP m) ls) ==>
-    ALL_DISTINCT (MAP (DROP n) ls)
-Proof
-  Induct \\ rw[] \\ fs[MEM_MAP, PULL_EXISTS]
-  \\ rw[] \\ first_x_assum irule
-  \\ full_simp_tac(srw_ss() ++ numSimps.ARITH_ss)
-     [LIST_EQ_REWRITE, EL_DROP, LENGTH_DROP, LESS_EQ_EXISTS]
-QED
-
 (* ----------------------------------------------------------------------
     LRC
       Where NRC has the number of steps in a transitive path,
