@@ -983,6 +983,115 @@ Proof
   SIMP_TAC std_ss [INTERS_GSPEC] THEN SET_TAC[]
 QED
 
+Theorem EXISTS_SUBSET_IMAGE :
+   !P (f :'a->'b) s.
+      (?t. t SUBSET IMAGE f s /\ P t) <=> (?t. t SUBSET s /\ P (IMAGE f t))
+Proof
+  REWRITE_TAC[SUBSET_IMAGE] THEN MESON_TAC[]
+QED
+
+Theorem FORALL_SUBSET_IMAGE :
+   !P (f :'a->'b) s.
+        (!t. t SUBSET IMAGE f s ==> P t) <=>
+        (!t. t SUBSET s ==> P(IMAGE f t))
+Proof
+  REWRITE_TAC[SUBSET_IMAGE] THEN MESON_TAC[]
+QED
+
+Theorem SUBSET_IMAGE_INJ :
+   !(f :'a->'b) s t.
+        s SUBSET (IMAGE f t) <=>
+        ?u. u SUBSET t /\
+            (!x y. x IN u /\ y IN u ==> (f x = f y <=> x = y)) /\
+            s = IMAGE f u
+Proof
+  REPEAT GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[IMAGE_SUBSET]] THEN
+  DISCH_TAC THEN FIRST_ASSUM(MP_TAC o MATCH_MP (SET_RULE
+   “s SUBSET IMAGE f t ==> !x. x IN s ==> ?y. y IN t /\ f y = x”)) THEN
+  REWRITE_TAC[SURJECTIVE_ON_RIGHT_INVERSE] THEN
+  DISCH_THEN(X_CHOOSE_TAC “g:'b->'a”) THEN
+  EXISTS_TAC “IMAGE (g :'b->'a) s” THEN ASM_SET_TAC[]
+QED
+
+Theorem EXISTS_SUBSET_IMAGE_INJ :
+   !P (f :'a->'b) s.
+    (?t. t SUBSET IMAGE f s /\ P t) <=>
+    (?t. t SUBSET s /\
+         (!x y. x IN t /\ y IN t ==> (f x = f y <=> x = y)) /\
+         P (IMAGE f t))
+Proof
+  REWRITE_TAC[SUBSET_IMAGE_INJ] THEN METIS_TAC []
+QED
+
+Theorem FORALL_SUBSET_IMAGE_INJ :
+   !P (f :'a->'b) s.
+        (!t. t SUBSET IMAGE f s ==> P t) <=>
+        (!t. t SUBSET s /\
+             (!x y. x IN t /\ y IN t ==> (f x = f y <=> x = y))
+             ==> P(IMAGE f t))
+Proof
+  REPEAT GEN_TAC THEN
+  qabbrev_tac ‘Q = \t. t SUBSET IMAGE f s ==> P t’ \\
+  qabbrev_tac ‘R = \t. t SUBSET s /\
+                      (!x y. x IN t /\ y IN t ==> (f x = f y <=> x = y)) ==>
+                       P (IMAGE f t)’ \\
+  ‘$! Q <=> ~(?t. ~Q t)’ by rw [Abbr ‘Q’] >> POP_ORW \\
+  ‘$! R <=> ~(?t. ~R t)’ by rw [Abbr ‘R’] >> POP_ORW \\
+  simp[Abbr ‘Q’, Abbr ‘R’, NOT_IMP, EXISTS_SUBSET_IMAGE_INJ, GSYM CONJ_ASSOC]
+QED
+
+Theorem EXISTS_FINITE_SUBSET_IMAGE_INJ :
+   !P (f :'a->'b) s.
+    (?t. FINITE t /\ t SUBSET IMAGE f s /\ P t) <=>
+    (?t. FINITE t /\ t SUBSET s /\
+         (!x y. x IN t /\ y IN t ==> (f x = f y <=> x = y)) /\
+         P (IMAGE f t))
+Proof
+  ONCE_REWRITE_TAC[TAUT `p /\ q /\ r <=> q /\ p /\ r`] THEN
+  REPEAT GEN_TAC THEN SIMP_TAC std_ss[EXISTS_SUBSET_IMAGE_INJ] THEN
+  AP_TERM_TAC THEN ABS_TAC THEN MESON_TAC[FINITE_IMAGE_INJ_EQ]
+QED
+
+Theorem FORALL_FINITE_SUBSET_IMAGE_INJ :
+   !P (f :'a->'b) s.
+        (!t. FINITE t /\ t SUBSET IMAGE f s ==> P t) <=>
+        (!t. FINITE t /\ t SUBSET s /\
+             (!x y. x IN t /\ y IN t ==> (f x = f y <=> x = y))
+             ==> P(IMAGE f t))
+Proof
+  REPEAT GEN_TAC THEN
+  qabbrev_tac ‘Q = \t. FINITE t /\ t SUBSET IMAGE f s ==> P t’ \\
+  qabbrev_tac ‘R = \t. FINITE t /\ t SUBSET s /\
+                      (!x y. x IN t /\ y IN t ==> (f x = f y <=> x = y)) ==>
+                       P (IMAGE f t)’ \\
+  ‘$! Q <=> ~(?t. ~Q t)’ by rw [Abbr ‘Q’] >> POP_ORW \\
+  ‘$! R <=> ~(?t. ~R t)’ by rw [Abbr ‘R’] >> POP_ORW \\
+  simp[Abbr ‘Q’, Abbr ‘R’, NOT_IMP, EXISTS_FINITE_SUBSET_IMAGE_INJ, GSYM CONJ_ASSOC]
+QED
+
+Theorem EXISTS_FINITE_SUBSET_IMAGE :
+   !P (f :'a->'b) s.
+      (?t. FINITE t /\ t SUBSET IMAGE f s /\ P t) <=>
+      (?t. FINITE t /\ t SUBSET s /\ P (IMAGE f t))
+Proof
+  REPEAT GEN_TAC THEN EQ_TAC THENL
+   [REWRITE_TAC[EXISTS_FINITE_SUBSET_IMAGE_INJ] THEN MESON_TAC[],
+    MESON_TAC[FINITE_IMAGE, IMAGE_SUBSET]]
+QED
+
+Theorem FORALL_FINITE_SUBSET_IMAGE :
+   !P (f :'a->'b) s.
+      (!t. FINITE t /\ t SUBSET IMAGE f s ==> P t) <=>
+      (!t. FINITE t /\ t SUBSET s ==> P(IMAGE f t))
+Proof
+  REPEAT GEN_TAC THEN
+  qabbrev_tac ‘Q = \t. FINITE t /\ t SUBSET IMAGE f s ==> P t’ \\
+  qabbrev_tac ‘R = \t. FINITE t /\ t SUBSET s ==> P (IMAGE f t)’ \\
+  ‘$! Q <=> ~(?t. ~Q t)’ by rw [Abbr ‘Q’] >> POP_ORW \\
+  ‘$! R <=> ~(?t. ~R t)’ by rw [Abbr ‘R’] >> POP_ORW \\
+  simp[Abbr ‘Q’, Abbr ‘R’, NOT_IMP, GSYM CONJ_ASSOC, EXISTS_FINITE_SUBSET_IMAGE]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Pairwise property over sets and lists (from real_topologyTheory)          *)
 (* ------------------------------------------------------------------------- *)
@@ -3675,6 +3784,195 @@ Proof
  >> rw []
  >> ‘y IN N’ by METIS_TAC [SUBSET_DEF]
  >> Q.EXISTS_TAC ‘y’ >> fs [IN_APP]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Compact sets and compact topological spaces (from HOL-Light's metric.ml)  *)
+(* ------------------------------------------------------------------------- *)
+
+Definition compact_in :
+   compact_in top s <=>
+     s SUBSET topspace top /\
+     (!U. (!u. u IN U ==> open_in top u) /\ s SUBSET UNIONS U
+          ==> (?V. FINITE V /\ V SUBSET U /\ s SUBSET UNIONS V))
+End
+
+Definition compact_space :
+   compact_space (top :'a topology) <=> compact_in top (topspace top)
+End
+
+Theorem COMPACT_SPACE_ALT :
+   !(top :'a topology).
+        compact_space top <=>
+        !U. (!u. u IN U ==> open_in top u) /\
+            topspace top SUBSET UNIONS U
+            ==> ?V. FINITE V /\ V SUBSET U /\ topspace top SUBSET UNIONS V
+Proof
+  REWRITE_TAC[compact_space, compact_in, SUBSET_REFL]
+QED
+
+Theorem COMPACT_SPACE :
+   !(top :'a topology).
+        compact_space top <=>
+        !U. (!u. u IN U ==> open_in top u) /\
+            UNIONS U = topspace top
+            ==> ?V. FINITE V /\ V SUBSET U /\ UNIONS V = topspace top
+Proof
+  GEN_TAC THEN REWRITE_TAC[COMPACT_SPACE_ALT] THEN
+  SIMP_TAC std_ss[GSYM SUBSET_ANTISYM_EQ, UNIONS_SUBSET] THEN
+  AP_TERM_TAC THEN ABS_TAC THEN
+  MESON_TAC[SUBSET_DEF, OPEN_IN_SUBSET]
+QED
+
+Theorem COMPACT_IN_ABSOLUTE :
+   !top (s :'a set).
+        compact_in (subtopology top s) s <=> compact_in top s
+Proof
+  rw[compact_in] THEN
+  simp[TOPSPACE_SUBTOPOLOGY, SUBSET_INTER, SUBSET_REFL] THEN
+  simp[OPEN_IN_SUBTOPOLOGY, SET_RULE
+   “(!x. x IN s ==> ?y. P y /\ x = f y) <=> s SUBSET IMAGE f {y | P y}”] THEN
+  simp[IMP_CONJ, FORALL_SUBSET_IMAGE] THEN
+  simp[EXISTS_FINITE_SUBSET_IMAGE] THEN
+  simp[GSYM SIMPLE_IMAGE, GSYM INTER_UNIONS] THEN
+  simp[SUBSET_INTER, SUBSET_REFL] THEN SET_TAC[]
+QED
+
+Theorem COMPACT_IN_SUBSPACE :
+   !top (s :'a set).
+        compact_in top s <=>
+        s SUBSET topspace top /\ compact_space (subtopology top s)
+Proof
+  rw[compact_space, COMPACT_IN_ABSOLUTE, TOPSPACE_SUBTOPOLOGY] THEN
+  ONCE_REWRITE_TAC[TAUT `p /\ q <=> ~(p ==> ~q)`] THEN
+  qabbrev_tac ‘t = topspace top’ \\
+  Know ‘(s SUBSET t ==> ~compact_in (subtopology top s) (t INTER s)) <=>
+        (s SUBSET t ==> ~compact_in (subtopology top s) s)’
+  >- METIS_TAC [SET_RULE “s SUBSET t ==> t INTER s = s”] >> Rewr' \\
+  REWRITE_TAC[COMPACT_IN_ABSOLUTE] THEN
+  REWRITE_TAC[TAUT `(p <=> ~(q ==> ~p)) <=> (p ==> q)`] THEN
+  SIMP_TAC std_ss[Abbr ‘t’, compact_in]
+QED
+
+Theorem COMPACT_SPACE_SUBTOPOLOGY :
+   !top (s :'a set). compact_in top s ==> compact_space (subtopology top s)
+Proof
+  SIMP_TAC std_ss[COMPACT_IN_SUBSPACE]
+QED
+
+Theorem COMPACT_IN_SUBTOPOLOGY :
+   !top s (t :'a set).
+        compact_in (subtopology top s) t <=> compact_in top t /\ t SUBSET s
+Proof
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[COMPACT_IN_SUBSPACE, SUBTOPOLOGY_SUBTOPOLOGY] THEN
+  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY, SUBSET_INTER] THEN
+  ASM_CASES_TAC “(t :'a set) SUBSET s” THEN ASM_REWRITE_TAC[] THEN
+  METIS_TAC [SET_RULE “t SUBSET s ==> s INTER t = t”]
+QED
+
+Theorem COMPACT_IN_SUBSET_TOPSPACE :
+   !top (s :'a set). compact_in top s ==> s SUBSET topspace top
+Proof
+  SIMP_TAC std_ss[compact_in]
+QED
+
+Theorem COMPACT_IN_CONTRACTIVE :
+   !top (top' :'a topology).
+        topspace top' = topspace top /\
+        (!u. open_in top u ==> open_in top' u)
+        ==> !s. compact_in top' s ==> compact_in top s
+Proof
+  REPEAT GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN
+  REWRITE_TAC[compact_in] THEN MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+   [ASM_SET_TAC[], HO_MATCH_MP_TAC MONO_FORALL THEN ASM_SET_TAC[]]
+QED
+
+Theorem COMPACT_SPACE_CONTRACTIVE :
+   !top (top' :'a topology).
+        topspace top' = topspace top /\
+        (!u. open_in top u ==> open_in top' u)
+        ==> compact_space top' ==> compact_space top
+Proof
+  SIMP_TAC std_ss[compact_space] THEN MESON_TAC[COMPACT_IN_CONTRACTIVE]
+QED
+
+Theorem FINITE_IMP_COMPACT_IN :
+   !top (s :'a set). s SUBSET topspace top /\ FINITE s ==> compact_in top s
+Proof
+  SIMP_TAC std_ss[compact_in] \\
+  rpt STRIP_TAC \\
+  EXISTS_TAC “IMAGE (\(x :'a). @u. u IN U /\ x IN u) s” THEN
+  CONJ_TAC >- (MATCH_MP_TAC FINITE_IMAGE >> art []) \\
+  ASM_SET_TAC []
+QED
+
+Theorem COMPACT_IN_EMPTY :
+   !(top :'a topology). compact_in top {}
+Proof
+  GEN_TAC THEN MATCH_MP_TAC FINITE_IMP_COMPACT_IN THEN
+  REWRITE_TAC[FINITE_EMPTY, EMPTY_SUBSET]
+QED
+
+Theorem COMPACT_SPACE_TOPSPACE_EMPTY :
+   !(top :'a topology). topspace top = {} ==> compact_space top
+Proof
+  MESON_TAC[SUBTOPOLOGY_TOPSPACE, COMPACT_IN_EMPTY, compact_space]
+QED
+
+Theorem FINITE_IMP_COMPACT_IN_EQ :
+   !top (s :'a set).
+        FINITE s ==> (compact_in top s <=> s SUBSET topspace top)
+Proof
+  MESON_TAC[COMPACT_IN_SUBSET_TOPSPACE, FINITE_IMP_COMPACT_IN]
+QED
+
+Theorem COMPACT_IN_SING :
+   !top (a :'a). compact_in top {a} <=> a IN topspace top
+Proof
+  SIMP_TAC std_ss[FINITE_IMP_COMPACT_IN_EQ, FINITE_SING, SING_SUBSET]
+QED
+
+Theorem CLOSED_COMPACT_IN :
+   !top k (c :'a set). compact_in top k /\ c SUBSET k /\ closed_in top c
+                   ==> compact_in top c
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [compact_in] >> STRIP_TAC
+ >> CONJ_TAC >- ASM_SET_TAC []
+ >> rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!U. _ ==> ?V. FINITE V /\ _’
+      (MP_TAC o Q.SPEC ‘(topspace top DIFF c) INSERT U’)
+ >> ANTS_TAC
+ >- (qabbrev_tac ‘t = topspace top’ \\
+    ‘open_in top t’ by rw [OPEN_IN_TOPSPACE, Abbr ‘t’] \\
+     reverse CONJ_TAC
+     >- (rw [SUBSET_DEF] \\
+         Cases_on ‘x IN c’
+         >- (Q.PAT_X_ASSUM ‘c SUBSET BIGUNION U’ MP_TAC \\
+             rw [SUBSET_DEF] \\
+             POP_ASSUM (MP_TAC o Q.SPEC ‘x’) >> rw [] \\
+             Q.EXISTS_TAC ‘s’ >> rw []) \\
+         Q.EXISTS_TAC ‘t DIFF c’ >> simp [] \\
+         ASM_SET_TAC []) \\
+     rw [] >- (MATCH_MP_TAC OPEN_IN_DIFF >> art []) \\
+     Q.PAT_X_ASSUM ‘c SUBSET BIGUNION U’ MP_TAC \\
+     rw [SUBSET_DEF])
+ >> STRIP_TAC
+ >> Q.EXISTS_TAC ‘V DELETE (topspace top DIFF c)’
+ >> ASM_REWRITE_TAC[FINITE_DELETE]
+ >> CONJ_TAC >- ASM_SET_TAC []
+ >> REWRITE_TAC[SUBSET_DEF, IN_UNIONS, IN_DELETE]
+ >> ASM_SET_TAC []
+QED
+
+Theorem CLOSED_IN_COMPACT_SPACE :
+   !top (s :'a set).
+        compact_space top /\ closed_in top s ==> compact_in top s
+Proof
+  REWRITE_TAC[compact_space] THEN REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC CLOSED_COMPACT_IN THEN EXISTS_TAC “topspace (top :'a topology)” THEN
+  ASM_MESON_TAC[CLOSED_IN_SUBSET]
 QED
 
 val _ = export_theory();
