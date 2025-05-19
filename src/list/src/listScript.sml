@@ -1082,7 +1082,7 @@ val LENGTH_TL = Q.store_thm
   ‘!l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)’,
   Cases_on ‘l’ THEN SIMP_TAC arith_ss [LENGTH, TL]);
 
-Theorem LENGTH_TL_LESS_EQ:
+Theorem LENGTH_TL_LE:
   !ls. LENGTH (TL ls) <= LENGTH ls
 Proof
   Cases \\ rw[]
