@@ -11,8 +11,7 @@ open HolKernel boolLib Parse pairSyntax numSyntax listSyntax
   combinSyntax arithmeticTheory boolSimps
   optionTheory listSyntax EncodeTheory PreListEncode;
 
-infix 0 THEN |->;
-infixr 1 -->;
+type tyinfo = TypeBasePure.tyinfo;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -206,7 +205,7 @@ fun define_encode ax db =
                       ((DEPTH_CONV BETA_CONV THENC
                         Rewrite.PURE_REWRITE_CONV nil_rws) pre_defn0))
                      handle UNCHANGED => pre_defn0
-     val defn = new_recursive_definition
+     val defn = Prim_rec.new_recursive_definition
                  {name="encode_"^def_name^"_def",
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
@@ -245,7 +244,9 @@ fun define_and_add_encode tyinfo =
       val tyname = TypeBasePure.ty_name_of tyinfo
     in
       case define_encode recursion db of
-          SOME r => insert_encode r tyinfo
+          SOME (r as {def,...}) =>
+               (computeLib.add_funs [def];
+                insert_encode r tyinfo)
         | NONE => (HOL_MESG("Couldn't define encode function for type "
                             ^Lib.quote (pair_string tyname))
                   ; tyinfo)

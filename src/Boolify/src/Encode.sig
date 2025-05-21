@@ -4,4 +4,17 @@
 (* Basically the same as Konrad Slind's code to generate size functions      *)
 (* ========================================================================= *)
 
-signature Encode = sig end
+signature Encode =
+sig
+
+  include Abbrev
+  type tyinfo = TypeBasePure.tyinfo
+
+  val define_encode :
+    thm ->
+      TypeBasePure.typeBase ->
+        {const_tyopl: (term * (string * string)) list, def: thm} option
+
+  val define_and_add_encode : tyinfo -> tyinfo
+
+end
