@@ -26,7 +26,7 @@ End
 
 Definition try_def[simp]:
   try (return v) f = return v ∧
-  try (error e) = f e
+  try (error e) f = f e
 End
 
 Definition choice_def:
