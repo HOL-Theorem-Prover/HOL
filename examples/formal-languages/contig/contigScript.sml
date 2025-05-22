@@ -191,8 +191,6 @@ Definition csize_def :
   (csize (Array c dim) = 1 + csize c) /\
   (csize (List c)      = 1 + csize c) /\
   (csize (Alt b c1 c2) = 1 + csize c1 + csize c2)
-Termination
-  WF_REL_TAC `measure contig_size`
 End
 
 Theorem csize_lem:
@@ -970,7 +968,6 @@ Proof
      >- (‘evalBexp theta' b = SOME F’ by metis_tac [evalBexp_submap]
          >> rw [Alt_flatB]))
 QED
-
 
 Theorem matchFn_sound :
  !contig s theta lval.
