@@ -2205,8 +2205,6 @@ End
 
 Definition from_rose_def:
   from_rose (Rose a ts) = Branch a (fromList (MAP from_rose ts))
-Termination
-  WF_REL_TAC `measure (rose_tree_size (K 0))` \\ rw []
 End
 
 Theorem from_rose_def[allow_rebind] :
@@ -2325,8 +2323,6 @@ QED
  *)
 Definition rose_reduce_def :
     rose_reduce f ((Rose a ts) :'a rose_tree) = f a (MAP (rose_reduce f) ts)
-Termination
-    WF_REL_TAC ‘measure (rose_tree_size (K 0) o SND)’
 End
 
 Theorem rose_reduce_def[allow_rebind] :

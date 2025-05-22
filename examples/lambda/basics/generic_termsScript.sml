@@ -540,11 +540,6 @@ Definition psize_def:
   (psize (var s vv) = 1) ∧
   (psize (lam s fvs bv ts us) =
    SUM (MAP psize ts) + SUM (MAP psize us) + LENGTH fvs + 1)
-Termination
- WF_REL_TAC `measure (pregterm_size (K 0) (K 0))` >>
- conj_tac >> (ntac 3 gen_tac) >> Induct >>
- srw_tac [ARITH_ss][pregterm_size_def] >>
- fsrw_tac [][] >> res_tac >> DECIDE_TAC
 End
 
 val psize_thm = SIMP_RULE (srw_ss()++ETA_ss) [] psize_def
@@ -1381,7 +1376,6 @@ fun xmatch_cond_assum dir (asl,w) =
        mp_tac (PART_MATCH (lhs o #2 o strip_imp)
                           rwt
                           (dir w))) (asl,w)
-
 
 Theorem parameter_gtm_recursion:
   sidecond dpm ppm A ^vp ^lp ^vf ^lf ∧ NEWFCB dpm ppm A ^vp ^lp ^lf ⇒

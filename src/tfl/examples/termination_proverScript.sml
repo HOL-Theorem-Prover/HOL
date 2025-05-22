@@ -21,6 +21,21 @@ Termination
   WF_REL_TAC ‘$<’ >> simp[arithmeticTheory.DIV_LT_X]
 End
 
+Definition n2l_def:
+  n2l b n = if n < b \/ b < 2 then [n MOD b] else n MOD b :: n2l b (n DIV b)
+End
+
+local open numpairTheory nlistTheory in end
+
+Definition nlistrec_def:
+  nlistrec n f l = if l = 0 then n
+                   else f (nfst (l - 1)) (nsnd (l - 1))
+                          (nlistrec n f (nsnd (l - 1)))
+Termination
+  WF_REL_TAC `measure (SND o SND)` THEN
+  STRIP_TAC THEN ASSUME_TAC (Q.INST [`n` |-> `l - 1`] numpairTheory.nsnd_le) THEN
+  simp[]
+End
 
 (*---------------------------------------------------------------------------*)
 (* Functions over datatypes with nesting under type operators                *)
@@ -141,8 +156,8 @@ Definition int_bits_bound_def:
   int_bits_bound i n ⇔ i < 2 ** PRE n
 End
 
-(* NB: the invocation of LIST_REL needs eta-expanded has_type,
-   otherwise ugly failure *)
+(* NB: the invocation of LIST_REL needs an eta-expanded has_type,
+   otherwise ugly failure. *)
 
 Definition has_type_def:
   has_type (Uint n)     (NumV v)    = (v < 2 ** n ∧ valid_int_bound n) ∧
