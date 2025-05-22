@@ -33,8 +33,6 @@ QED
 Definition raw_tpm_def:
   (raw_tpm π (V s) = V (lswapstr π s)) ∧
   (raw_tpm π (TFn f ts) = TFn f (MAP (raw_tpm π) ts))
-Termination
-  WF_REL_TAC ‘measure (foterm_size o SND)’ >> simp[]
 End
 
 Theorem raw_tpm_def[allow_rebind] =
@@ -83,8 +81,6 @@ QED
 Definition tfv_def[simp]:
   (tfv (V s) = {s}) ∧
   (tfv (TFn f ts) = LIST_UNION (MAP tfv ts))
-Termination
-  WF_REL_TAC ‘measure foterm_size’ >> simp[]
 End
 
 Theorem FINITE_tfv[simp]:
@@ -201,7 +197,6 @@ Proof
 QED
 
 val _ = augment_srw_ss [rewrites [FINITE_raw_atoms]]
-
 
 Theorem raw_atoms_apart:
   ∀rf x y. x ∈ raw_atoms rf ∧ y ∉ raw_atoms rf ⇒ rawfpm [(x,y)] rf ≠ rf
@@ -383,6 +378,7 @@ Theorem rawfpm_xx_id[simp]:
 Proof
   Induct_on ‘f’ >> simp[]
 QED
+
 (*
 Theorem raw_fresh:
   ∀x y. x ∉ rawfv rf ∧ y ∉ rawfv rf ⇒ faeq (rawfpm [(x,y)] rf) rf
@@ -453,10 +449,5 @@ val lifted_results = define_equivalence_type
                fpm_respects,
                faeq_ALL_respects, faeq_rawfv]
   };
-
-
-
-
-
 
 val _ = export_theory();

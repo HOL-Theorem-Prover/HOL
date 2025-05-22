@@ -688,6 +688,9 @@ QED
 val _ = temp_overload_on ("fm2D", ``folmodels2Doms``);
 val _ = temp_overload_on ("upfm", ``ultraproduct_folmodel``);
 *)
+
+val term_size_def = snd $ TypeBase.size_of “:term”;
+
 Theorem thm_A_19_i:
   !t U I.
     ultrafilter U I ==>
@@ -786,7 +789,7 @@ completeInduct_on `term_size t` >> rw[] >> Cases_on `t` (* 2 *)
                  {f | Uequiv U I' (folmodels2Doms FMS) f
                      (λi. termval (FMS i) (λn. CHOICE (σ n) i) m)}`
                   suffices_by metis_tac[] >>
-                rw[] >> first_x_assum irule >> rw[] >> drule term_size_lemma >>
+                rw[] >> first_x_assum irule >> rw[term_size_def] >> drule term_size_lemma >>
                 strip_tac >>
                 first_x_assum (qspec_then `n` assume_tac) >> fs[] >>
                 metis_tac[]) >> rw[] >>

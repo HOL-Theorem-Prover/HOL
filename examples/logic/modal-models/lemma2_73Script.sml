@@ -33,12 +33,9 @@ irule subset_countable >>
 qexists_tac `univ (:folLang$form)` >> rw[SUBSET_DEF]
 QED
 
-
 Definition FCT_def[simp]:
   (FCT (V v) = {}) /\
   (FCT (Fn s ts) = if ts = [] then {s} else (LIST_UNION (MAP FCT ts)))
-Termination
-  WF_REL_TAC `(measure (term_size))` >> rw[term_size_lemma]
 End
 
 Definition FC_def[simp]:
@@ -89,10 +86,6 @@ Theorem IMAGE_UPDATE:
 Proof
   rw[IMAGE_DEF,SUBSET_DEF] >> Cases_on `x' = a` >> rw[APPLY_UPDATE_THM] >> metis_tac[]
 QED
-
-
-
-
 
 Theorem ultraproduct_comm_termval:
   !t U I MS. ultrafilter U I ==> term_functions t = {} ==>
@@ -342,8 +335,6 @@ QED
 Definition shift_term_def:
   shift_term n (V m) = V (m+n) /\
   shift_term n (Fn m l) = if l = [] then (V m) else (Fn m (MAP (shift_term n) l))
-Termination
-WF_REL_TAC `measure (term_size o SND)` >> rw[term_size_lemma]
 End
 
 Definition shift_form_def:
@@ -448,7 +439,12 @@ Proof
   >- rw[form_functions_def,shift_form_def]
 QED
 
-
+val _ =
+  let val size_defs =
+        TypeBase.elts() |> map TypeBasePure.size_of |> mapfilter (snd o valOf)
+  in
+   bossLib.augment_srw_ss [rewrites size_defs]
+  end
 
 Theorem shift_FVT:
 !t x. (FVT t ⊆ s /\
@@ -937,14 +933,13 @@ rw[FUN_EQ_THM,models2worlds_def,folmodels2Doms_def,mm2folm_def]
 QED
 
 
-
 Theorem FCT_term_functions:
 !t. FCT t ⊆ {FST c | c IN (term_functions t)}
 Proof
 completeInduct_on `term_size t` >> Cases_on `t` >> rw[FCT_def,term_functions_def]>>
 rw[SUBSET_DEF] >> fs[MEM_MAP,PULL_FORALL] >>
 first_x_assum (qspec_then `a` assume_tac) >> drule term_size_lemma >>
-strip_tac >> `term_size a < n + (term1_size l + 1)` by fs[ADD_CLAUSES] >> fs[] >>
+strip_tac >> `term_size a < n + (list_size term_size l + 1)` by fs[ADD_CLAUSES] >> fs[] >>
 rw[] >> fs[SUBSET_DEF] >> first_x_assum drule >> rw[PULL_EXISTS] >>
 qexists_tac `c` >> rw[] >> metis_tac[]
 QED

@@ -75,8 +75,6 @@ Definition closure_list_conc_def[simp]:
   closure_list_conc (Dia f::rest) =
     Dia f :: closure_list_conc [f] ++ (closure_list_conc rest) ∧
   closure_list_conc (f::rest) = f :: (closure_list_conc rest)
-Termination
-  WF_REL_TAC `measure gsize` >> rw[]
 End
 
 Theorem mem_lst_closure:
@@ -967,15 +965,7 @@ Definition thm_3_17_prop:
   thm_3_17_prop (Nd (id, h, r) cs) ⇔ pre_hintikka h ∧
                                      set id.Gm ⊆ set h ∧
                                      ∀s. MEM s cs ⇒ thm_3_17_prop s
-Termination
-  WF_REL_TAC `measure (premodel_size (K 1))`
 End
- (* >> Induct_on `cs` >> fs[] >> rw[]
-  >- rw[] >> first_x_assum (drule_then strip_assume_tac) >> simp[]
-End *)
-(* TODO: Not sure why this part of the termination proof
-         is no longer needed *)
-
 
 Theorem thm_3_17_prop_RTC:
   ∀m w. thm_3_17_prop m ⇒ RTC pt_rel m w ⇒ thm_3_17_prop w
@@ -1084,8 +1074,6 @@ Definition thm_3_19_prop[simp]:
             (∀g d p. MEM (g,d) r ∧ MEM (Box p) (h ⧺ id.Sg) ⇒ MEM (Box p) d) ∧
             set r ⊆ set id.As ∧
             (∀s. MEM s l ⇒ thm_3_19_prop s)
-Termination
-  WF_REL_TAC `measure (premodel_size (K 1))`
 End
 
 Definition thm_3_19_prop':

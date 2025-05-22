@@ -11,11 +11,19 @@ Datatype:
   term = Var string | Fn string (term list)
 End
 
-val term_size_def = DB.fetch "-" "term_size_def"
+val term_size_def = TypeBase.size_of “:term” |> snd;
+
 val _ = export_rewrites ["term_size_def"]
 
+val _ =
+  let val size_defs =
+        TypeBase.elts() |> map TypeBasePure.size_of |> mapfilter (snd o valOf)
+  in
+   bossLib.augment_srw_ss [rewrites size_defs]
+  end
+
 Theorem term_size_lemma[simp]:
-  ∀x l a. MEM a l ⇒ term_size a < 1 + (x + term1_size l)
+  ∀x l a. MEM a l ⇒ term_size a < 1 + (x + list_size term_size l)
 Proof
   rpt gen_tac >> Induct_on ‘l’ >> simp[] >> rpt strip_tac >> simp[] >>
   res_tac >> simp[]
