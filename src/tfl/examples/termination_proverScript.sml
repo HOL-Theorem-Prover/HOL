@@ -38,6 +38,16 @@ Termination
 End
 
 (*---------------------------------------------------------------------------*)
+(* Should be automatic                                                       *)
+(*---------------------------------------------------------------------------*)
+
+Definition test_def:
+  test (l,n) s = if n = 0 then l else test (s::l,n - 1) s
+Termination
+  WF_REL_TAC ‘measure (SND o FST)’
+End
+
+(*---------------------------------------------------------------------------*)
 (* Functions over datatypes with nesting under type operators                *)
 (*---------------------------------------------------------------------------*)
 
