@@ -24,6 +24,11 @@ Definition bind_def[simp]:
   bind (error e) f = error e
 End
 
+Definition try_def[simp]:
+  try (return v) f = return v ∧
+  try (error e) = f e
+End
+
 Definition choice_def:
   choice (return v) m = return v /\
   choice (error e) m = m
