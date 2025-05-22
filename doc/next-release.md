@@ -88,6 +88,14 @@ Incompatibilities:
 
 -   In `set_relationTheory`, the constant `tc` has been renamed to `transitive_closure`.
 
+-   Various `adjoin_to…` entry-points in `Theory` have been removed.
+    The biggest incompatibility this causes is the removal of the `<thy>_grammars` binding from all `<thy>Theory` structures.
+    To access the grammars specific to a particular theory (`foo`, say), one must now write
+
+           valOf $ Parse.grammarDB {thyname="foo"}
+
+    where the call may fail if the theory is not present in the hierarchy.
+
 * * * * *
 
 <div class="footer">
