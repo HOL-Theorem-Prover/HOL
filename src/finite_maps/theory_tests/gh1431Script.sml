@@ -74,8 +74,6 @@ QED
 Definition datcount_def[simp]:
   datcount (Dats ds) = 2 + SUM (MAP datcount ds)  ∧
   datcount _ = 1
-Termination
-  WF_REL_TAC ‘measure dat_size’
 End
 
 Overload dcalist = “λas. LENGTH as + SUM (MAP (datcount o SND) as)”
