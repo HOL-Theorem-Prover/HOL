@@ -204,6 +204,7 @@ process in it."
       (concat (hol-locpragma-of-position pos) s)
       s))
 
+; for the moment we have no way of passing on the column information
 (defun hol-locpragma-of-position (pos)
   "Convert Elisp position into HOL location pragma.  Not for interactive use."
   (let ((initial-point (point)))
@@ -213,7 +214,7 @@ process in it."
                       (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
       (goto-char initial-point)
-      (format " (*#loc %d %d *)\n" (- row 1) col))))
+      (format "#(LINE=%d,%d)" row col))))
 
 (defun send-raw-string-to-hol (string echoit)
   "Sends a string in the raw to HOL.  Not for interactive use."

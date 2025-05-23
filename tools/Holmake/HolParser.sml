@@ -463,11 +463,13 @@ structure ToSML = struct
       | String (start, stop) => strstr (start, stop)
       | LinePragma _ => aux (Int.toString (#1 (!line) + 1))
       | LinePragmaWith (p, text) => let
-        val num = Substring.substring(text, 7, size text - 8)
+        val arg = Substring.substring(text, 7, size text - 8)
+        val nums = map (Int.fromString o Substring.string) (Substring.fields (fn c => c = #",") arg)
         in
-          case Int.fromString (Substring.string num) of
-            NONE => parseError (fromSS (p, num)) "expected an integer"
-          | SOME num => line := (fn (_, pos) => (num - 1, pos)) (!line);
+          case nums of
+              [SOME i] => line := (fn (_, pos) => (i - 1, pos)) (!line)
+            | [SOME i,SOME j] => line := (i - 1, p - j)
+            | _ => parseError (fromSS (p, arg)) "expected integer or integer,integer";
           aux " "
         end
       | FilePragma _ => aux (mlquote (!filename))
