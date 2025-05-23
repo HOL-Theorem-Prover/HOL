@@ -1430,7 +1430,7 @@ QED
      recursive definitions by so-called higher-order recursion.
  ---------------------------------------------------------------------------*)
 
-val list_size_def =
+Theorem list_size_thm[simp] =
   REWRITE_RULE [arithmeticTheory.ADD_ASSOC]
                (#2 (TypeBase.size_of “:'a list”));
 
@@ -1443,10 +1443,10 @@ Theorem list_size_cong[defncong]:
     list_size f M = list_size f' N
 Proof
 Induct
-  THEN REWRITE_TAC [list_size_def, MEM]
+  THEN REWRITE_TAC [list_size_thm, MEM]
   THEN REPEAT STRIP_TAC
   THEN PAT_X_ASSUM (Term‘x = y’) (SUBST_ALL_TAC o SYM)
-  THEN REWRITE_TAC [list_size_def]
+  THEN REWRITE_TAC [list_size_thm]
   THEN MK_COMB_TAC THENL
   [NTAC 2 (MK_COMB_TAC THEN TRY REFL_TAC)
      THEN FIRST_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [MEM],
@@ -1460,7 +1460,7 @@ QED
 Theorem list_size_append:
   !f xs ys. list_size f (xs ++ ys) = list_size f xs + list_size f ys
 Proof
-  GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_def]
+  GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_thm]
 QED
 
 Theorem FOLDR_CONG[defncong]:
