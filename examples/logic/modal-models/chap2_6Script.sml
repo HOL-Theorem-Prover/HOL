@@ -27,13 +27,6 @@ open pairTheory;
 val _ = new_theory "chap2_6";
 val _ = temp_delsimps ["satis_def"]
 
-val _ =
-  let val size_defs =
-        TypeBase.elts() |> map TypeBasePure.size_of |> mapfilter (snd o valOf)
-  in
-   bossLib.augment_srw_ss [rewrites size_defs]
-  end
-
 Definition L1tau_def:
   L1tau phi <=> form_functions phi = {} /\
                 form_predicates phi ⊆ (0,2) INSERT {(p,1)| p IN (univ (:num))}

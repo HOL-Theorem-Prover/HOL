@@ -11,13 +11,6 @@ Datatype:
   term = Var string | Fn string (term list)
 End
 
-val _ =
-  let val size_defs =
-        TypeBase.elts() |> map TypeBasePure.size_of |> mapfilter (snd o valOf)
-  in
-   bossLib.augment_srw_ss [rewrites size_defs]
-  end
-
 Theorem term_size_lemma[simp]:
   ∀x l a. MEM a l ⇒ term_size a < 1 + (x + list_size term_size l)
 Proof

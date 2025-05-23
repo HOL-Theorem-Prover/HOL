@@ -24,9 +24,6 @@ QED
 Datatype: term = V num | Fn num (term list)
 End
 
-val term_size_def = DB.fetch "-" "term_size_def"
-val _ = export_rewrites ["term_size_def"]
-
 Theorem term_size_lemma[simp]:
   ∀x l a. MEM a l ⇒ term_size a < 1 + (x + list_size term_size l)
 Proof

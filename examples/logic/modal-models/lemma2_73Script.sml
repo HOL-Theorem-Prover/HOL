@@ -439,13 +439,6 @@ Proof
   >- rw[form_functions_def,shift_form_def]
 QED
 
-val _ =
-  let val size_defs =
-        TypeBase.elts() |> map TypeBasePure.size_of |> mapfilter (snd o valOf)
-  in
-   bossLib.augment_srw_ss [rewrites size_defs]
-  end
-
 Theorem shift_FVT:
 !t x. (FVT t ⊆ s /\
        (∀c. c ∈ term_functions t ⇒ FST c ∈ count (CARD A) ∧ SND c = 0)
