@@ -11,10 +11,6 @@ Datatype:
   term = Var string | Fn string (term list)
 End
 
-val term_size_def = TypeBase.size_of “:term” |> snd;
-
-val _ = export_rewrites ["term_size_def"]
-
 val _ =
   let val size_defs =
         TypeBase.elts() |> map TypeBasePure.size_of |> mapfilter (snd o valOf)
