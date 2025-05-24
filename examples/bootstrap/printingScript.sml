@@ -84,7 +84,7 @@ Definition v2pretty_def:
                (Append (Str " . ") T (v2pretty e)))
 Termination
   WF_REL_TAC ‘measure v_size’ \\ rw []
-  \\ imp_res_tac dest_list_size \\ fs [v_size_def,isNum_def]
+  \\ imp_res_tac dest_list_size \\ fs [isNum_def]
 End
 
 Definition get_size_def:
@@ -202,18 +202,15 @@ Definition dest_cons_chain_def:
   dest_cons_chain _ = NONE
 End
 
-val exp_size_def = snd $ TypeBase.size_of “:exp”;
-
 Theorem dest_cons_chain_size:
   ∀x vs. dest_cons_chain x = SOME vs ⇒ list_size exp_size vs + op_size Cons + 1 ≤ exp_size x
 Proof
   completeInduct_on ‘exp_size x’ \\ rw [] \\ fs [PULL_FORALL]
   \\ qpat_x_assum ‘dest_cons_chain _ = SOME _’ mp_tac
   \\ once_rewrite_tac [DefnBase.one_line_ify NONE dest_cons_chain_def]
-  \\ fs [AllCaseEqs()] \\ rw []
-  THEN1 (rw [] \\ fs [] \\ fs [exp_size_def])
+  \\ fs [AllCaseEqs()] \\ rw [] >> rw[]
   \\ first_assum (first_assum o mp_then Any mp_tac)
-  \\ strip_tac \\ fs [exp_size_def,list_size_def]
+  \\ strip_tac \\ fs []
 QED
 
 Definition up_const_def:
@@ -293,10 +290,10 @@ Theorem dest_case_enum_exp_size:
 Proof
   ho_match_mp_tac dest_case_enum_ind
   \\ simp [dest_case_enum_def,AllCaseEqs()] \\ rw []
-  \\ gvs [list_size_def,exp_size_def]
+  \\ gvs []
   \\ qpat_x_assum ‘_ = SOME _’ mp_tac
   \\ simp [Once (oneline dest_case_enum_def), AllCaseEqs()]
-  \\ strip_tac \\ gvs [list_size_def,exp_size_def]
+  \\ strip_tac \\ gvs []
 QED
 
 Theorem dest_case_lets_exp_size:
@@ -304,8 +301,7 @@ Theorem dest_case_lets_exp_size:
 Proof
   ho_match_mp_tac dest_case_lets_ind
   \\ fs [dest_case_lets_def]
-  \\ rw [] \\ pairarg_tac \\ fs [] \\ rw []
-  \\ fs [exp_size_def]
+  \\ rw [] \\ pairarg_tac \\ gvs[]
 QED
 
 Theorem dest_case_tree_exp_size:
@@ -321,14 +317,14 @@ Proof
   \\ rpt gen_tac \\ strip_tac
   \\ pairarg_tac \\ fs []
   \\ rpt BasicProvers.var_eq_tac
-  \\ rw [] \\ fs [exp_size_def,list_size_def]
-  \\ ‘exp_size z ≠ 0’ by (Cases_on ‘z’ \\ fs [exp_size_def])
+  \\ rw [] \\ fs []
+  \\ ‘exp_size z ≠ 0’ by (Cases_on ‘z’ \\ fs [])
   \\ imp_res_tac dest_case_lets_exp_size \\ fs []
   \\ Cases_on ‘z’ \\ fs [dest_case_tree_def]
-  \\ rw [] \\ fs [list_size_def,exp_size_def]
+  \\ rw [] \\ fs []
   \\ rename [‘If _ _ _ e4’]
   \\ first_x_assum (qspec_then ‘e4’ mp_tac)
-  \\ fs [exp_size_def]
+  \\ fs []
   \\ disch_then drule \\ fs []
 QED
 
@@ -388,14 +384,14 @@ Termination
   WF_REL_TAC ‘measure (λx. case x of INL v => exp_size v + 1
                                    | INR (INL v) => list_size exp_size v + 1
                                    | INR (INR v) => exp_size v)’ \\ rw []
-  \\ gvs [LENGTH_EQ_NUM_compute,list_size_def,exp_size_def]
+  \\ gvs [LENGTH_EQ_NUM_compute]
   \\ ‘exp_size x ≠ 0 ∧ exp_size y ≠ 0’ by fs [exp_size_non_zero] \\ fs []
-  \\ imp_res_tac dest_case_enum_exp_size \\ fs [exp_size_def]
-  \\ imp_res_tac dest_case_tree_exp_size \\ fs [exp_size_def]
-  \\ imp_res_tac dest_cons_chain_size \\ gvs [exp_size_def,list_size_def]
-  \\ fs [dest_cons_chain_def,exp_size_def]
-  \\ TRY (Cases_on ‘op’) \\ fs [dest_cons_chain_def,exp_size_def]
-  \\ Cases_on ‘v’ \\ gvs [list_size_def]
+  \\ imp_res_tac dest_case_enum_exp_size \\ fs []
+  \\ imp_res_tac dest_case_tree_exp_size \\ fs []
+  \\ imp_res_tac dest_cons_chain_size \\ gvs []
+  \\ fs [dest_cons_chain_def]
+  \\ TRY (Cases_on ‘op’) \\ fs [dest_cons_chain_def]
+  \\ Cases_on ‘v’ \\ gvs []
 End
 
 Definition dec2v_def:

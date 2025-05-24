@@ -5,7 +5,10 @@ open binderLib nomdatatype nomsetTheory boolSimps
 
 val _ = new_theory "foltypes"
 
-val _ = Datatype‘foterm = V string | TFn string (foterm list)’;
+Datatype:
+  foterm = V string
+         | TFn string (foterm list)
+End
 
 Theorem foterm_induct:
   ∀P. (∀s. P (V s)) ∧ (∀f ts. (∀t. MEM t ts ⇒ P t) ⇒ P(TFn f ts)) ⇒
@@ -19,12 +22,8 @@ QED
 
 val _ = TypeBase.update_induction foterm_induct
 
-val foterm_size_def = DB.fetch "-" "foterm_size_def"
-val _ = export_rewrites ["foterm_size_def"]
-
-
 Theorem foterm_size_lemma[simp]:
-  ∀x l a. MEM a l ⇒ foterm_size a < foterm1_size l + (x + 1)
+  ∀x l a. MEM a l ⇒ foterm_size a < list_size foterm_size l + (x + 1)
 Proof
   rpt gen_tac >> Induct_on ‘l’ >> simp[] >> rw[] >> simp[] >>
   res_tac >> simp[]
