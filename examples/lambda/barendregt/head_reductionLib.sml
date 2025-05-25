@@ -20,7 +20,7 @@ open Parse;
 (* Given a hnf ‘M0’ and a shared (by multiple terms) binding variable list ‘vs’,
    HNF_TAC adds the following abbreviation and new assumptions:
 
-   Abbrev (M1 = principle_hnf (M0 @* MAP VAR (TAKE (LAMl_size M0) vs)))
+   Abbrev (M1 = principal_hnf (M0 @* MAP VAR (TAKE (LAMl_size M0) vs)))
    M0 = LAMl (TAKE (LAMl_size M0) vs) (VAR y @* args)
    M1 = VAR y @* args
 
@@ -44,16 +44,16 @@ open Parse;
 fun HNF_TAC (M0, vs, y, args) M1 = let
     val n = “LAMl_size ^M0” in
     qunabbrev_tac ‘^M1’
- >> qabbrev_tac ‘^M1 = principle_hnf (^M0 @* MAP VAR (TAKE ^n ^vs))’
+ >> qabbrev_tac ‘^M1 = principal_hnf (^M0 @* MAP VAR (TAKE ^n ^vs))’
  >> Know ‘?^y ^args. ^M0 = LAMl (TAKE ^n ^vs) (VAR ^y @* ^args)’
- >- (‘hnf ^M0’ by PROVE_TAC [hnf_principle_hnf, hnf_principle_hnf'] \\
+ >- (‘hnf ^M0’ by PROVE_TAC [hnf_principal_hnf, hnf_principal_hnf'] \\
      irule (iffLR hnf_cases_shared) >> rw [])
  >> STRIP_TAC
  >> Know ‘^M1 = VAR ^y @* ^args’
  >- (qunabbrev_tac ‘^M1’ \\
      Q.PAT_ASSUM ‘^M0 = LAMl (TAKE ^n ^vs) (VAR ^y @* ^args)’
         (fn th => REWRITE_TAC [Once th]) \\
-     MATCH_MP_TAC principle_hnf_beta_reduce >> rw [hnf_appstar])
+     MATCH_MP_TAC principal_hnf_beta_reduce >> rw [hnf_appstar])
  >> DISCH_TAC
 end;
 

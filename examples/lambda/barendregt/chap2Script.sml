@@ -270,6 +270,18 @@ Inductive lameta : (* p. 21 *)
   !M x. ~(x IN FV M) ==> lameta (LAM x (M @@ VAR x)) M
 End
 
+Theorem lameta_subst :
+    !M N P x. lameta M N ==> lameta ([P/x] M) ([P/x] N)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC lameta_TRANS
+ >> Q.EXISTS_TAC ‘LAM x N @@ P’
+ >> simp [lameta_rules]
+ >> MATCH_MP_TAC lameta_TRANS
+ >> Q.EXISTS_TAC ‘LAM x M @@ P’
+ >> simp [lameta_rules]
+QED
+
 val lemma2_14 = store_thm(
   "lemma2_14",
   ``!M N. lameta M N = lamext M N``,

@@ -2471,18 +2471,18 @@ QED
 
 (* This is an important theroem, hard to prove.
 
-   To use this theorem, first one defines ‘M0 = principle_hnf M’ as abbreviation,
+   To use this theorem, first one defines ‘M0 = principal_hnf M’ as abbreviation,
    then define ‘n = LAMl_size M0’ and ‘vs = NEWS n (FV M)’ (or ‘FV M0’, or
   ‘X UNION FV M0’, ‘X UNION FV M’), and this give us the needed antecedents:
 
        ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M) /\ LENGTH vs = n
 
    Then use hnf_cases_shared to derive ‘M0 = LAMl vs (VAR y @* args)’ and then
-  ‘M1 = principle_hnf (M0 @* MAP VAR vs) = VAR y @* args’.
+  ‘M1 = principal_hnf (M0 @* MAP VAR vs) = VAR y @* args’.
 
-   The conclusion is that ‘principle_hnf (M @* MAP VAR vs) = M1’.
+   The conclusion is that ‘principal_hnf (M @* MAP VAR vs) = M1’.
 
-   Now ‘principle_hnf’ can be used to "denude" the outer LAMl of a solvable term.
+   Now ‘principal_hnf’ can be used to "denude" the outer LAMl of a solvable term.
 
    An extra list of free variables ‘l’ may need to append after MAP VAR vs.
  *)
