@@ -75,7 +75,8 @@ Proof
   >- (simp[optionTheory.option_case_eq, pairTheory.pair_case_eq, PULL_EXISTS] >>
       rw[EQ_IMP_THM]
       >- (rw[] >>
-          fs[ident_def, optionTheory.option_case_eq, pairTheory.pair_case_eq])>>
+          fs[ident_def, boolTheory.bool_case_eq,
+          optionTheory.option_case_eq, pairTheory.pair_case_eq])>>
       Cases_on ‘px’ >> fs[] >> rw[] >>
       Cases_on ‘sx’ >> fs[ident_def]) >>
   simp[] >> rw[] >> fs[] >> Cases_on ‘px’ >> fs[]
