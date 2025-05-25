@@ -3058,8 +3058,7 @@ val sexp2sexp_thm = store_thm("sexp2sexp_thm",
     \\ EVAL_TAC \\ DECIDE_TAC)
   \\ REVERSE (Cases_on `sym2prim (getSym a) = NONE`)
   \\ ASM_SIMP_TAC std_ss [] THEN1
-   (CCONTR_TAC \\ Q.PAT_X_ASSUM `sym2prim (getSym a) <> NONE` MP_TAC
-    \\ FULL_SIMP_TAC std_ss [sym2prim_def] \\ SRW_TAC [] [] \\ Cases_on `a`
+   (FULL_SIMP_TAC std_ss [sym2prim_def] \\ Cases_on `a`
     \\ FULL_SIMP_TAC (srw_ss()) [getSym_def,CAR_def,term2sexp_def,func2sexp_def,
          list2sexp_def,prim2sym_def,sfix_def])
   \\ Cases_on `MEM a [Sym "FIRST";Sym "SECOND";Sym "THIRD";Sym "FOURTH";Sym "FIFTH"]`
