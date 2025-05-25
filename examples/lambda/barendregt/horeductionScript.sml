@@ -182,6 +182,12 @@ QED
 (* |- !R x y z. conversion R x y /\ conversion R y z ==> conversion R x z *)
 Theorem conversion_TRANS = cj 3 conversion_rules
 
+(* |- !R x y. R x y ==> conversion R x y *)
+Theorem conversion_R = cj 4 conversion_rules
+
+(* |- !R x y. conversion R x y ==> conversion R y x *)
+Theorem conversion_SYM = cj 2 conversion_rules
+
 Theorem compat_closure_compatible:
   !R. compatible (compat_closure R)
 Proof

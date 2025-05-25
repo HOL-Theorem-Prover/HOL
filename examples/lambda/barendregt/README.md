@@ -49,9 +49,16 @@ and
   In "Higher Order and Symbolic Computation", 19:169-195, 2006.
 
 solvableScript.sml :
+      solvability of lambda-terms; Wadsworth's theorem (solvable iff has_hnf)
+    
 boehmScript.sml :
+      Effective Boehm trees
+
 lameta_completeScript.sml :
+      Hilbert-Post Completeness of Lambda-Eta-Calculus
+
 takahashiS3Script.sml :
+      Section 3 of Takahashi's paper (has_benf iff has_bnf)
 
 These files are new work.
 

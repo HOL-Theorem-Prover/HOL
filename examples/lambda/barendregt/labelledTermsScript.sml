@@ -239,7 +239,7 @@ val parameter_tm_recursion = save_thm(
         |> INST_TYPE [alpha |-> “:unit + unit + num”, beta |-> “:unit”,
                       gamma |-> alpha]
         |> Q.INST [‘lf’ |-> ‘^tlf’, ‘vf’ |-> ‘^tvf’, ‘vp’ |-> ‘^vp’,
-                   ‘lp’ |-> ‘^lp’, ‘n’ |-> ‘0’]
+                   ‘lp’ |-> ‘^lp’]
         |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
                                  GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
                                  GSYM RIGHT_EXISTS_AND_THM,

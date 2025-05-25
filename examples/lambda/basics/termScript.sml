@@ -197,6 +197,10 @@ val LAM_eq_thm = save_thm(
                               GSYM supp_tpm]
      |> GENL [``u:string``, ``v:string``, ``t1:term``, ``t2:term``]);
 
+(* ----------------------------------------------------------------------
+    term recursion
+   ---------------------------------------------------------------------- *)
+
 val (_, repty) = dom_rng (type_of term_REP_t)
 val repty' = ty_antiq repty
 
@@ -235,7 +239,7 @@ val parameter_tm_recursion = save_thm(
       |> INST_TYPE [alpha |-> ``:unit + unit``, beta |-> ``:unit``,
                     gamma |-> alpha]
       |> Q.INST [`lf` |-> `^tlf`, `vf` |-> `^tvf`, `vp` |-> `^vp`,
-                 `lp` |-> `^lp`, `n` |-> `0`]
+                 `lp` |-> `^lp`]
       |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
                                GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
                                GSYM RIGHT_EXISTS_AND_THM,
