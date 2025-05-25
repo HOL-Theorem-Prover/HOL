@@ -100,25 +100,6 @@ Datatype:
    | Null
 End
 
-val json_size_def = fetch "-" "json_size_def";
-
-Theorem json_size_MEM1:
-  !l a. MEM a l ==> json_size a < json3_size l
-Proof
-  Induct >> rw[json_size_def]
-  >> res_tac
-  >> fs[]
-QED
-
-Theorem json_size_MEM2:
-  !l a. MEM a l ==> json_size (SND a) + list_size char_size (FST a) < json1_size l
-Proof
-  Induct >> fs[json_size_def]
-  >> gen_tac >> PairCases
-  >> rw[]
-  >> res_tac >> fs[json_size_def]
-QED
-
 Definition concat_with_def:
   (concat_with [] c = []) /\
   (concat_with [s] c = s) /\
@@ -399,6 +380,7 @@ Definition lex_leading_zeroes_def:
     else
       (( \ (a, b). if a = 0 then (if acc > 0 then (SOME (acc-1, a), b) else (NONE, b)) else (SOME (acc, a), b)) (lex_num (c::cs) 0)))
 End
+
 Definition lex_frac_def:
   lex_frac [] = (NONE, []) /\
   (lex_frac (c::cs) =
