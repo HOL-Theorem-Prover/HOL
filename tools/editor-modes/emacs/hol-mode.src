@@ -169,7 +169,7 @@ evaluations.")
 
 (defun hol-term-at-point ()
   (let ((s (thing-at-point 'hol-term t)))
-    (with-hol-locpragma hol-beg-pos s)))
+    (with-hol-interm-locpragma hol-beg-pos s)))
 
 (defun hol-buffer-ok (string)
   "Checks a string to see if it is the name of a good HOL buffer.
@@ -204,17 +204,30 @@ process in it."
       (concat (hol-locpragma-of-position pos) s)
       s))
 
-; for the moment we have no way of passing on the column information
+(defun with-hol-interm-locpragma (pos s)
+  (if hol-generate-locpragma-p
+      (concat (hol-interm-locpragma-of-position pos) s)
+    s))
+
 (defun hol-locpragma-of-position (pos)
   "Convert Elisp position into HOL location pragma.  Not for interactive use."
-  (let ((initial-point (point)))
+  (let ((rcposn (hol-get-rowcol-posn pos)))
+    ;; send position of the line before and a newline so that text that
+    ;; needs to be in column 0 is still in column 0
+    (format "#(LINE=%d,%d)\n" (- (car rcposn) 1) (cdr rcposn))))
+
+(defun hol-interm-locpragma-of-position (pos)
+  (let ((rcposn (hol-get-rowcol-posn pos)))
+    (format "(*#loc %d %d*)" (car rcposn) (cdr rcposn))))
+
+(defun hol-get-rowcol-posn (pos)
+  (save-excursion
     (goto-char pos)
     (let* ((rowstart (point-at-bol))  ;; (line-beginning-position)
            (row      (+ (count-lines 1 pos)
-                      (if (= rowstart pos) 1 0)))
+                        (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
-      (goto-char initial-point)
-      (format "#(LINE=%d,%d)" row col))))
+      (cons row col))))
 
 (defun send-raw-string-to-hol (string echoit)
   "Sends a string in the raw to HOL.  Not for interactive use."
@@ -468,7 +481,7 @@ If prefix ARG is true, or if in transient mark mode, region is active and
 the region contains no term delimiters, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
-                 (with-hol-locpragma (region-beginning)
+                 (with-hol-interm-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
     (if (or (and (is-region-active)
@@ -481,7 +494,7 @@ the region contains no term delimiters, then send region instead."
   (send-raw-string-to-hol
    (concat "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `"
            str "`) handle e => Raise e")
-   nil))
+   t))
 
 (defun remove-sml-comments (end)
   (let (done (start (point)))
