@@ -349,29 +349,12 @@ in
 end;
 
 
-
 val SUM_def = Define `
   (SUM [] = 0) /\
   (SUM (x::xs) = x + SUM xs)`;
 
-val MEM_term_size5 = prove(
-  ``!ts a. MEM a ts ==> term_size a < term5_size ts``,
-  Induct \\ SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
-
-val MEM_term_size3 = prove(
-  ``!ts a b. MEM (a,b) ts ==> term_size a < term3_size ts /\
-                              term_size b < term3_size ts``,
-  Induct \\ SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ Cases_on `h` \\ FULL_SIMP_TAC std_ss [term_size_def] \\ DECIDE_TAC);
-
-val MEM_term_size1 = prove(
-  ``!ts a b. MEM (a,b) ts ==> term_size b < term1_size ts``,
-  Induct \\ SIMP_TAC std_ss [MEM,term_size_def] \\ REPEAT STRIP_TAC \\ RES_TAC
-  \\ Cases_on `h` \\ FULL_SIMP_TAC std_ss [term_size_def] \\ DECIDE_TAC);
-
-val term_depth_def = tDefine "term_depth" `
-  (term_depth (Const _) = 1) /\
+Definition term_depth_def:
+(term_depth (Const _) = 1) /\
   (term_depth (Var _) = 1) /\
   (term_depth (App _ xs) = 1 + SUM (MAP term_depth xs)) /\
   (term_depth (If x y z) = 1 + term_depth x + term_depth y + term_depth z) /\
@@ -387,10 +370,8 @@ val term_depth_def = tDefine "term_depth" `
   (term_depth (Third x) = 30 + term_depth x) /\
   (term_depth (Fourth x) = 40 + term_depth x) /\
   (term_depth (Fifth x) = 50 + term_depth x) /\
-  (term_depth (Defun _ _ _) = 10)`
- (WF_REL_TAC `measure (term_size)` \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC MEM_term_size5 \\ IMP_RES_TAC MEM_term_size1
-  \\ IMP_RES_TAC MEM_term_size3 \\ REPEAT DECIDE_TAC);
+  (term_depth (Defun _ _ _) = 10)
+End
 
 val ZERO_LT_term_depth = prove(
   ``!x. 0 < term_depth x``,
@@ -2848,7 +2829,7 @@ val func2sexp_def = Define `
   (func2sexp (Fun f) =
      if MEM f reserved_names then [Val 0; Sym f] else [Sym f])`;
 
-val term2sexp_def = tDefine "term2sexp" `
+Definition term2sexp_def:
   (term2sexp (Const s) = list2sexp [Sym "QUOTE"; s]) /\
   (term2sexp (Var v) = Sym v) /\
   (term2sexp (App fc vs) = list2sexp (func2sexp fc ++ MAP term2sexp vs)) /\
@@ -2865,14 +2846,14 @@ val term2sexp_def = tDefine "term2sexp" `
   (term2sexp (Third x) = list2sexp [Sym "THIRD"; term2sexp x]) /\
   (term2sexp (Fourth x) = list2sexp [Sym "FOURTH"; term2sexp x]) /\
   (term2sexp (Fifth x) = list2sexp [Sym "FIFTH"; term2sexp x]) /\
-  (term2sexp (Defun fname ps s) = list2sexp [Sym "DEFUN"; Sym fname; list2sexp (MAP Sym ps); s])`
- (WF_REL_TAC `measure (term_size)`);
+  (term2sexp (Defun fname ps s) = list2sexp [Sym "DEFUN"; Sym fname; list2sexp (MAP Sym ps); s])
+End
 
 val fun_name_ok_def = Define `
   (fun_name_ok (Fun f) = ~MEM f reserved_names) /\
   (fun_name_ok _ = T)`;
 
-val no_bad_names_def = tDefine "no_bad_names" `
+Definition no_bad_names_def:
   (no_bad_names (Const s) = T) /\
   (no_bad_names (Var v) = ~(v = "T") /\ ~(v = "NIL")) /\
   (no_bad_names (App fc vs) = fun_name_ok fc /\ EVERY no_bad_names vs) /\
@@ -2889,8 +2870,8 @@ val no_bad_names_def = tDefine "no_bad_names" `
   (no_bad_names (Third x) = no_bad_names x) /\
   (no_bad_names (Fourth x) = no_bad_names x) /\
   (no_bad_names (Fifth x) = no_bad_names x) /\
-  (no_bad_names (Defun fname ps s) = T)`
- (WF_REL_TAC `measure (term_size)`);
+  (no_bad_names (Defun fname ps s) = T)
+End
 
 val sexp2list_list2sexp = prove(
   ``!x. sexp2list (list2sexp x) = x``,

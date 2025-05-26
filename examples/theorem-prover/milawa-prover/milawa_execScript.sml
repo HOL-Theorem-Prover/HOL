@@ -581,16 +581,20 @@ Proof
   \\ DECIDE_TAC
 QED
 
+Theorem MEM_term3_size[local]:
+  !xs a. MEM a xs ==>
+         term_size (FST a) < list_size (pair_size term_size term_size) xs /\
+         term_size (SND a) < list_size (pair_size term_size term_size) xs
+Proof
+  simp[pairTheory.FORALL_PROD] >> rw [MEM_SPLIT] >> rw [list_size_append]
+QED
+
 Theorem MEM_term1_size[local]:
   !xs a. MEM a xs ==>
          term_size (SND a) <=
          list_size (pair_size (list_size char_size) term_size) xs
 Proof
-  Induct \\ FULL_SIMP_TAC std_ss [MEM,term_size_def,list_size_def]
-  \\ REPEAT STRIP_TAC
-  \\ Cases_on `h` \\ RES_TAC
-  \\ FULL_SIMP_TAC std_ss [term_size_def, pair_size_def]
-  \\ DECIDE_TAC
+  simp[pairTheory.FORALL_PROD] >> rw [MEM_SPLIT] >> rw [list_size_append]
 QED
 
 Definition term_cost_def:
@@ -615,7 +619,8 @@ Definition term_cost_def:
   (term_cost (LetStar zs x) = 5 * SUM (MAP term_cost (MAP SND zs)) +
                               10 * LENGTH zs + term_cost x + 5)
 Termination
-  WF_REL_TAC `measure term_size` \\ REPEAT STRIP_TAC
+  WF_REL_TAC `measure term_size`
+  \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [PULL_IMP,MEM_MAP]
   \\ IMP_RES_TAC MEM_term1_size
   \\ IMP_RES_TAC MEM_term3_size
@@ -750,12 +755,12 @@ val logic_func2sexp_def = Define `
   (logic_func2sexp (mFun f) =
      if MEM f ^bad_names_tm then Val (THE (INDEX_OF 0 f ^bad_names_tm)) else Sym f)`
 
-val t2sexp_def = tDefine "t2sexp" `
+Definition t2sexp_def:
   (t2sexp (mConst s) = list2sexp [Sym "QUOTE"; s]) /\
   (t2sexp (mVar v) = Sym v) /\
   (t2sexp (mApp fc vs) = list2sexp (logic_func2sexp fc :: MAP t2sexp vs)) /\
-  (t2sexp (mLamApp xs z ys) = list2sexp (list2sexp [Sym "LAMBDA"; list2sexp (MAP Sym xs); t2sexp z]::MAP t2sexp ys))`
- (WF_REL_TAC `measure (logic_term_size)`);
+  (t2sexp (mLamApp xs z ys) = list2sexp (list2sexp [Sym "LAMBDA"; list2sexp (MAP Sym xs); t2sexp z]::MAP t2sexp ys))
+End
 
 val f2sexp_def = Define `
   (f2sexp (Or x y) = list2sexp [Sym "POR*"; f2sexp x; f2sexp y]) /\
@@ -850,12 +855,9 @@ val f2func_def = Define `
                           Fun name)`
 
 Theorem MEM_logic_term_size[local]:
-  !xs x. MEM x xs ==> logic_term_size x < logic_term1_size xs
+  !xs x. MEM x xs ==> logic_term_size x < list_size logic_term_size xs
 Proof
-  Induct \\ SIMP_TAC std_ss [MEM] \\ NTAC 2 STRIP_TAC
-  \\ Cases_on `x = h`
-  \\ FULL_SIMP_TAC std_ss [EVERY_DEF,logic_term_size_def]
-  \\ REPEAT STRIP_TAC \\ RES_TAC \\ DECIDE_TAC
+  rw [MEM_SPLIT] >> rw [list_size_append]
 QED
 
 Definition t2term_def:
@@ -2005,7 +2007,7 @@ Proof
     \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
     \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ IMP_RES_TAC MEM_logic_term_size
-    \\ STRIP_TAC THEN1 (simp[logic_term_size_def] \\ DECIDE_TAC)
+    \\ STRIP_TAC THEN1 (simp[] \\ DECIDE_TAC)
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,MEM_FLAT,PULL_IMP,MEM_MAP]
     \\ METIS_TAC [])
 QED
@@ -2044,7 +2046,7 @@ Proof
       \\ IMP_RES_TAC MEM_ZIP_ID \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
       \\ Q.PAT_X_ASSUM ‘!x1 x2 x3. bbb’ MATCH_MP_TAC \\ IMP_RES_TAC MEM_ZIP_IMP
       \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_MEM]
-      \\ IMP_RES_TAC MEM_logic_term_size \\ simp[logic_term_size_def])
+      \\ IMP_RES_TAC MEM_logic_term_size \\ simp[])
     \\ MATCH_MP_TAC (MilawaTrue_rules |> CONJUNCTS |> el 6)
     \\ Q.LIST_EXISTS_TAC [‘l0’,‘ZIP (MAP (\a. term_sub (ZIP (vs,xs)) a) l,
                                      MAP (\a. term_sub (ZIP (vs,ys)) a) l)’]
