@@ -1,3 +1,15 @@
+(*
+  A functional big-step semantics for an extension of the listImp language
+  that describes a constrained coroutine mechanism. In particular the coroutines
+  are:
+    - stackful
+    - one-shot
+    - asymmetric.
+
+  In addition, the coroutines are NOT first-class in that they can't be moved
+  around the program like other values, nor can multiple identifiers be bound to
+  the same instance of a coroutine, let alone obtain a copy.
+*)
 
 open HolKernel Parse boolLib bossLib;
 open stringLib integerTheory finite_mapTheory
