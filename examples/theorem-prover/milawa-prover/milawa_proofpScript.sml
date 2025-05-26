@@ -270,15 +270,15 @@ val func_syntax_ok_def = Define `
 val var_ok_def = Define `
   var_ok x = ~(x = "NIL") /\ ~(x = "T")`;
 
-val term_syntax_ok_def = tDefine "term_syntax_ok" `
+Definition term_syntax_ok_def:
   (term_syntax_ok (mConst s) = T) /\
   (term_syntax_ok (mVar v) = ~(MEM v ["NIL";"T"])) /\
   (term_syntax_ok (mApp fc vs) = func_syntax_ok fc /\ EVERY (term_syntax_ok) vs) /\
   (term_syntax_ok (mLamApp xs y zs) =
      (LIST_TO_SET (free_vars y) SUBSET LIST_TO_SET xs) /\ ALL_DISTINCT xs /\
      EVERY var_ok xs /\
-     EVERY (term_syntax_ok) zs /\ term_syntax_ok y /\ (LENGTH xs = LENGTH zs))`
- (WF_REL_TAC `measure logic_term_size`);
+     EVERY (term_syntax_ok) zs /\ term_syntax_ok y /\ (LENGTH xs = LENGTH zs))
+End
 
 val formula_syntax_ok_def = Define `
   (formula_syntax_ok (Not x) = formula_syntax_ok x) /\
@@ -302,13 +302,13 @@ val _ = add_rw (EVAL ``"TERM" = "LIST"``);
 val _ = add_rw (EVAL ``isTrue (Sym "NIL")``);
 val _ = add_rw (ETA_THM);
 
-val term_vars_ok_def = tDefine "term_vars_ok" `
+Definition term_vars_ok_def:
   (term_vars_ok (mConst s) = T) /\
   (term_vars_ok (mVar v) = ~(MEM v ["NIL";"T"])) /\
   (term_vars_ok (mApp fc vs) = ~(fc = mFun "QUOTE") /\ EVERY (term_vars_ok) vs) /\
   (term_vars_ok (mLamApp xs y zs) =
-     EVERY (term_vars_ok) zs /\ term_vars_ok y)`
- (WF_REL_TAC `measure (logic_term_size)`);
+     EVERY (term_vars_ok) zs /\ term_vars_ok y)
+End
 
 val logic_flag_term_vars_TERM = prove(
   ``logic_flag_term_vars (Sym "LIST") (Dot (t2sexp l) (Sym "NIL")) acc =
@@ -321,8 +321,11 @@ val logic_func2sexp_NOT_EQAL_NIL = add_prove(
   FS [LISP_EQUAL_def]);
 
 (* Temporary reversion to old-style size definitions *)
+(*
 val _ = computeLib.add_funs [logic_term_size_def];
+*)
 
+(*
 val logic_flag_term_vars_thm = prove(
   ``!l acc.
       EVERY term_vars_ok l ==>
@@ -365,14 +368,58 @@ val logic_flag_term_vars_thm = prove(
     \\ `logic_term1_size l0 < logic_term1_size (mLamApp l1 l l0::t)` by
           (FS [logic_term_size_def] \\ DECIDE_TAC)
     \\ FS [APPEND_ASSOC]));
+*)
+Theorem logic_flag_term_vars_thm:
+  !l acc.
+      EVERY term_vars_ok l ==>
+      (logic_flag_term_vars (Sym "LIST") (list2sexp (MAP t2sexp l)) (list2sexp (MAP Sym acc)) =
+       list2sexp (MAP Sym ((FLAT (MAP (\a. free_vars a) l)) ++ acc)))
+Proof
+  STRIP_TAC \\ completeInduct_on `list_size logic_term_size l` \\ REPEAT STRIP_TAC
+  \\ FS [PULL_FORALL_IMP] \\ Cases_on `l`
+  \\ ONCE_REWRITE_TAC [logic_flag_term_vars_def]
+  \\ FS [t2sexp_def,list2sexp_def,logic_constantp_def,free_vars_def,
+         REVERSE_DEF,APPEND,MAP,FLAT,REVERSE_DEF,EVERY_DEF]
+  \\ `list_size logic_term_size t < list_size logic_term_size (h::t)` by bossLib.rw[]
+  \\ ASM_SIMP_TAC std_ss []
+  \\ Cases_on `h` THEN1
+   (ONCE_REWRITE_TAC [logic_flag_term_vars_def]
+    \\ FS [t2sexp_def,list2sexp_def,logic_constantp_def,free_vars_def,
+           APPEND])
+  THEN1
+   (ONCE_REWRITE_TAC [logic_flag_term_vars_def]
+    \\ FS [t2sexp_def,list2sexp_def,logic_constantp_def,free_vars_def,
+           logic_variablep_def,APPEND,term_vars_ok_def,MAP,MAP_APPEND])
+  THEN1
+   (ONCE_REWRITE_TAC [logic_flag_term_vars_def]
+    \\ FS [t2sexp_def,list2sexp_def,logic_constantp_def,free_vars_def,
+           logic_variablep_def,APPEND,term_vars_ok_def,MAP,MAP_APPEND]
+    \\ pop_assum kall_tac
+    \\ ‘list_size logic_term_size l < list_size logic_term_size (mApp l0 l::t)’ by bossLib.rw[]
+    \\ ‘EVERY term_vars_ok l’ by full_simp_tac (srw_ss() ++ ETA_ss)[term_vars_ok_def]
+    \\ first_x_assum drule_all
+    \\ rw_tac std_ss [GSYM MAP_APPEND]
+    \\ metis_tac[APPEND_ASSOC])
+  THEN1
+   (ONCE_REWRITE_TAC [logic_flag_term_vars_def]
+    \\ FS [t2sexp_def,list2sexp_def,logic_constantp_def,free_vars_def,
+         REVERSE_DEF,logic_variablep_def,APPEND,term_vars_ok_def,MAP,
+         logic_flag_term_vars_Dot,logic_flag_term_vars_Sym,REVERSE_APPEND,
+         APPEND_ASSOC] \\ FS [LISP_EQUAL_def]
+    \\ pop_assum kall_tac
+    \\ ‘list_size logic_term_size l0 < list_size logic_term_size (mLamApp l1 l l0::t)’ by bossLib.rw[]
+    \\ first_x_assum drule_all
+    \\ rw_tac std_ss [GSYM MAP_APPEND]
+    \\ metis_tac[APPEND_ASSOC])
+QED
 
 val IMP_IMP = METIS_PROVE [] ``b1 /\ (b2 ==> b3) ==> ((b1 ==> b2) ==> b3)``;
 
-val MEM_logic_term_size = prove(
-  ``!xs x. MEM x xs ==> logic_term_size x < logic_term1_size xs``,
-  Induct \\ SIMP_TAC std_ss [MEM] \\ NTAC 2 STRIP_TAC
-  \\ Cases_on `x = h` \\ FULL_SIMP_TAC std_ss [EVERY_DEF,logic_term_size_def]
-  \\ REPEAT STRIP_TAC \\ RES_TAC \\ DECIDE_TAC);
+Theorem MEM_logic_term_size:
+  !xs x. MEM x xs ==> logic_term_size x < list_size logic_term_size xs
+Proof
+  bossLib.rw[MEM_SPLIT] >> bossLib.rw [list_size_append]
+QED
 
 val syntax_ok_IMP_vars_ok = add_prove(
   ``!t. term_syntax_ok t ==> term_vars_ok t``,
@@ -574,11 +621,11 @@ val logic_flag_term_atblp_thm = prove(
       EVERY term_syntax_ok ts /\ atbl_ok ctxt atbl ==>
       isTrue (logic_flag_term_atblp (Sym "LIST") (list2sexp (MAP t2sexp ts)) atbl) ==>
       EVERY (term_ok ctxt) ts``,
-  STRIP_TAC \\ completeInduct_on `logic_term1_size ts` \\ STRIP_TAC \\ STRIP_TAC
+  STRIP_TAC \\ completeInduct_on `list_size logic_term_size ts` \\ STRIP_TAC \\ STRIP_TAC
   \\ FS [PULL_FORALL_IMP] \\ Cases_on `ts` \\ FS [EVERY_DEF] \\ STRIP_TAC
   \\ ONCE_REWRITE_TAC [logic_flag_term_atblp_def] \\ FS [MAP]
   \\ Cases_on `isTrue (logic_flag_term_atblp (Sym "TERM") (t2sexp h) atbl)` \\ FS []
-  \\ `logic_term1_size t < logic_term1_size (h::t)` by (EVAL_TAC \\ DECIDE_TAC)
+  \\ `list_size logic_term_size t < list_size logic_term_size (h::t)` by (EVAL_TAC \\ DECIDE_TAC)
   \\ FS [] \\ REPEAT STRIP_TAC
   \\ Q.PAT_X_ASSUM `isTrue (logic_flag_term_atblp (Sym "TERM") (t2sexp h) atbl)` MP_TAC
   \\ ONCE_REWRITE_TAC [logic_flag_term_atblp_def] \\ FS [MAP]
@@ -669,9 +716,7 @@ val HYPS_def = Define `
 Triviality logic_appeal3_size_lemma:
   !q a. MEM a q ==> logic_appeal_size a < list_size logic_appeal_size q
 Proof
-  Induct \\ bossLib.rw[list_size_def]
-  >- decide_tac
-  >- (res_tac >> decide_tac)
+  bossLib.rw[MEM_SPLIT] >> bossLib.rw [list_size_append]
 QED
 
 val option_size_def = snd $ TypeBase.size_of “:'a option”;
@@ -688,7 +733,7 @@ Definition a2sexp_def:
 Termination
  WF_REL_TAC `measure logic_appeal_size` \\ bossLib.rw[]
  \\ Cases_on `subproofs_extras` \\ gvs[]
- \\ Cases_on `x` \\ gvs[option_size_def, pair_size_def]
+ \\ Cases_on `x` \\ gvs[]
  \\ IMP_RES_TAC logic_appeal3_size_lemma \\ DECIDE_TAC
 End
 
@@ -835,8 +880,8 @@ val MAP_EQ_MAP = prove(
   \\ Cases_on `h = h'` \\ METIS_TAC []);
 
 val MEM_logic_term_size = prove(
-  ``!l x. MEM x l ==> logic_term_size x <= logic_term1_size l``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) [logic_term_size_def] \\ REPEAT STRIP_TAC
+  ``!l x. MEM x l ==> logic_term_size x <= list_size logic_term_size l``,
+  Induct \\ FULL_SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
 
 val t2sexp_11 = add_prove(
@@ -844,26 +889,20 @@ val t2sexp_11 = add_prove(
   STRIP_TAC \\ completeInduct_on `logic_term_size x`
   \\ REPEAT STRIP_TAC \\ FS [PULL_FORALL_IMP]
   \\ Cases_on `x` \\ Cases_on `y` \\ FS [t2sexp_def]
-  \\ FULL_SIMP_TAC (srw_ss()) [term_syntax_ok_def] \\ FS [logic_func2sexp_11] THEN1
+  \\ FULL_SIMP_TAC (srw_ss()) [term_syntax_ok_def]
+  \\ FS [logic_func2sexp_11]
+  THEN1
    (sg `(MAP t2sexp l = MAP t2sexp l') = (l = l')` \\ FS []
     \\ MATCH_MP_TAC MAP_EQ_MAP \\ REPEAT STRIP_TAC
     \\ FS [EVERY_MEM] \\ RES_TAC
-    \\ `logic_term_size x < logic_term_size (mApp l0 l)` by
-        (EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size \\ DECIDE_TAC)
-    \\ METIS_TAC [])
-  \\ `(MAP Sym l1 = MAP Sym l1') = (l1 = l1')` by
-        (MATCH_MP_TAC MAP_EQ_MAP \\ REPEAT STRIP_TAC \\ FS [])
-  \\ `(t2sexp l = t2sexp l') = (l = l')` by
-       (Q.PAT_X_ASSUM `!xx.bbb` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
-        \\ FS [] \\ EVAL_TAC \\ DECIDE_TAC)
-  \\ ASM_SIMP_TAC std_ss []
-  \\ sg `(MAP t2sexp l0 = MAP t2sexp l0') = (l0 = l0')`
-  \\ FS [CONJ_ASSOC]
-  \\ MATCH_MP_TAC MAP_EQ_MAP \\ REPEAT STRIP_TAC
-  \\ FS [EVERY_MEM] \\ RES_TAC
-  \\ `logic_term_size x < logic_term_size (mLamApp l1 l l0)` by
-       (EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size \\ DECIDE_TAC)
-  \\ METIS_TAC []);
+    \\ first_x_assum (irule o iffLR)
+    \\ simp[] \\ gvs[MEM_SPLIT] >> bossLib.rw[list_size_append])
+  \\ bossLib.rw[MAP_EQ_MAP,EQ_IMP_THM]
+  \\ pop_assum mp_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[MAP_EQ_MAP]
+  \\ rpt strip_tac
+  \\ first_x_assum (irule o iffLR)
+  \\ gvs[MEM_SPLIT] >> bossLib.rw[list_size_append]);
 
 val f2sexp_11 = add_prove(
   ``!x y. ((f2sexp x = f2sexp y) = (x = y))``,
@@ -1056,7 +1095,8 @@ val logic_check_functional_axiom_thm = prove(
   \\ FS [PULL_FORALL_IMP]
   \\ ONCE_REWRITE_TAC [logic_check_functional_axiom_def] \\ FS []
   \\ Cases_on `f` \\ FS [f2sexp_def] \\ FULL_SIMP_TAC (srw_ss()) [] \\ FS []
-  \\ SRW_TAC [] [] \\ FS [] THEN1
+  \\ SRW_TAC [] [] \\ FS []
+  THEN1
    (Cases_on `f'` \\ FS [f2sexp_def] \\ SRW_TAC [] [] \\ FS []
     \\ Cases_on `f` \\ FS [f2sexp_def] \\ SRW_TAC [] [] \\ FS []
     \\ `formula_size f0 < formula_size (Or (Not (Equal l l0)) f0)` by
@@ -1064,6 +1104,7 @@ val logic_check_functional_axiom_thm = prove(
     \\ FULL_SIMP_TAC std_ss [GSYM list2sexp_def,GSYM MAP,formula_syntax_ok_def]
     \\ Q.PAT_X_ASSUM `!ff xx. bb` (MP_TAC o Q.SPECL [`f0`,`l::xs`,`l0::ys`])
     \\ FS [LENGTH,REVERSE_DEF,EVERY_APPEND,EVERY_DEF] \\ REPEAT STRIP_TAC
+    \\ gvs[]
     \\ FS [GSYM or_not_equal_list_def]
     \\ Q.LIST_EXISTS_TAC [`(l,l0)::ts`,`g`]
     \\ FS [MAP,REVERSE_DEF] \\ FS [GSYM APPEND_ASSOC,APPEND])
@@ -1188,27 +1229,32 @@ val logic_sigmap_thm = prove(
   \\ Q.LIST_EXISTS_TAC [`(a,t)::xs`,`z`]
   \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss []);
 
-val logic_flag_substitute_thm = prove(
-  ``!ts.
+Theorem logic_flag_substitute_thm:
+  !ts.
       EVERY term_syntax_ok ts /\ ~isDot z ==>
       (logic_flag_substitute (Sym "LIST") (list2sexp (MAP t2sexp ts)) (sigmap2sexp xs z) =
-       list2sexp (MAP (t2sexp o term_sub xs) ts))``,
-  STRIP_TAC \\ completeInduct_on `logic_term1_size ts` \\ NTAC 3 STRIP_TAC
+       list2sexp (MAP (t2sexp o term_sub xs) ts))
+Proof
+  STRIP_TAC \\ completeInduct_on `list_size logic_term_size ts` \\ NTAC 3 STRIP_TAC
   \\ FS [PULL_FORALL_IMP] \\ ONCE_REWRITE_TAC [logic_flag_substitute_def]
   \\ Cases_on `ts` \\ FS [] \\ FULL_SIMP_TAC (srw_ss()) [] \\ FS []
-  \\ `logic_term1_size t < logic_term1_size (h::t)` by (EVAL_TAC \\ DECIDE_TAC)
-  \\ FS [] \\ Cases_on `h` \\ ONCE_REWRITE_TAC [logic_flag_substitute_def]
+  \\ `list_size logic_term_size t < list_size logic_term_size (h::t)` by bossLib.rw[]
+  \\ pop_assum (assume_tac o SRULE[]) \\ gvs[]
+  \\ Cases_on `h` \\ ONCE_REWRITE_TAC [logic_flag_substitute_def]
   \\ FS [t2sexp_def,term_sub_def,logic_variablep_def,LET_DEF,term_syntax_ok_def]
   THEN1
    (REPEAT (POP_ASSUM (K ALL_TAC)) \\ Induct_on `xs`
     \\ FS [MAP,LOOKUP_def,t2sexp_def,FORALL_PROD]
     \\ SRW_TAC [] [] \\ FS [] \\ FS [isTrue_def])
   THEN1
-   (`logic_term1_size l < logic_term1_size (mApp l0 l::t)` by (EVAL_TAC \\ DECIDE_TAC)
-    \\ FS [] \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ Induct_on `l` \\ FS [MAP])
+   (`list_size logic_term_size l < list_size logic_term_size (mApp l0 l::t)` by bossLib.rw[]
+    \\ pop_assum (assume_tac o SRULE[])
+    \\ gvs[MAP_o] >> metis_tac[])
   THEN1
-   (`logic_term1_size l0 < logic_term1_size (mLamApp l1 l l0::t)` by (EVAL_TAC \\ DECIDE_TAC)
-    \\ FS [] \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ Induct_on `l0` \\ FS [MAP]));
+   (`list_size logic_term_size l0 < list_size logic_term_size (mLamApp l1 l l0::t)` by bossLib.rw[]
+    \\ pop_assum (assume_tac o SRULE[])
+    \\ gvs[MAP_o] >> metis_tac[])
+QED
 
 val logic_substitute_thm = add_prove(
   ``term_syntax_ok t /\ ~isDot z ==>
@@ -1549,7 +1595,6 @@ val logic_proofp_thm = prove(
   \\ ONCE_REWRITE_TAC [logic_flag_proofp_def] \\ FS []
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ FS []);
 
-
 val callmap2sexp_def = Define `
   callmap2sexp ts =
     list2sexp (MAP (\(xs,ys). Dot (list2sexp (MAP t2sexp xs))
@@ -1665,8 +1710,8 @@ val term_syntax_ok_term_sub = prove(
   \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!t. b1 /\ b2 ==> b3` MATCH_MP_TAC \\ FS []
   \\ EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size \\ DECIDE_TAC);
 
-val logic_flag_callmap_thm = prove(
-  ``!ts.
+Theorem logic_flag_callmap_thm:
+  !ts.
       EVERY term_syntax_ok ts /\ EVERY (term_ok ctxt) ts /\
       (logic_func2sexp (mFun name) = Sym name) ==>
       (logic_flag_callmap (Sym "LIST") (Sym name) (list2sexp (MAP t2sexp ts)) =
@@ -1674,12 +1719,13 @@ val logic_flag_callmap_thm = prove(
       EVERY (EVERY term_syntax_ok o FST) (FLAT (MAP (callmap name) ts)) /\
       EVERY (EVERY term_syntax_ok o SND) (FLAT (MAP (callmap name) ts)) /\
       EVERY (\x. LENGTH (FST x) = LENGTH (FST (ctxt ' name)))
-            (FLAT (MAP (callmap name) ts))``,
-  STRIP_TAC \\ completeInduct_on `logic_term1_size ts` \\ NTAC 3 STRIP_TAC
+            (FLAT (MAP (callmap name) ts))
+Proof
+  STRIP_TAC \\ completeInduct_on `list_size logic_term_size ts` \\ NTAC 3 STRIP_TAC
   \\ FS [PULL_FORALL_IMP] \\ Cases_on `ts`
   \\ ONCE_REWRITE_TAC [logic_flag_callmap_def]
   \\ FS [MAP,FLAT,callmap2sexp_def,MAP_APPEND,EVERY_DEF,EVERY_APPEND]
-  \\ `logic_term1_size t < logic_term1_size (h::t)` by (EVAL_TAC \\ DECIDE_TAC)
+  \\ `list_size logic_term_size t < list_size logic_term_size (h::t)` by bossLib.rw[]
   \\ sg `(logic_flag_callmap (Sym "TERM") (Sym name) (t2sexp h) =
        callmap2sexp (callmap name h)) /\
       EVERY (EVERY term_syntax_ok o FST) (callmap name h) /\
@@ -1722,7 +1768,7 @@ val logic_flag_callmap_thm = prove(
      (`(\a. callmap name a) = callmap name` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
       \\ FS [EVERY_DEF,MAP,term_ok_def,func_arity_def]
       \\ FS [MAP,AND_IMP_INTRO] \\ Q.PAT_X_ASSUM `!ts.bbb` MATCH_MP_TAC
-      \\ FS [term_ok_def,EVERY_MEM,logic_term_size_def] \\ DECIDE_TAC)
+      \\ gvs [term_ok_def,EVERY_MEM])
     \\ `~(logic_func2sexp l0 = Sym name)` by
      (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ Cases_on `l0`
       \\ SIMP_TAC (srw_ss()) [logic_func2sexp_def]
@@ -1734,7 +1780,7 @@ val logic_flag_callmap_thm = prove(
     \\ FS [] THEN1
      (`(\a. callmap name a) = callmap name` by FULL_SIMP_TAC std_ss [FUN_EQ_THM]
       \\ FS [MAP,AND_IMP_INTRO] \\ Q.PAT_X_ASSUM `!ts.bbb` MATCH_MP_TAC
-      \\ FS [term_ok_def,EVERY_MEM,logic_term_size_def] \\ DECIDE_TAC))
+      \\ gvs [term_ok_def,EVERY_MEM]))
   \\ Q.PAT_X_ASSUM `!ts.bbb` (fn th =>
            (MP_TAC o Q.SPEC `l0`) th THEN (MP_TAC o Q.SPEC `[l]`) th)
   \\ FULL_SIMP_TAC std_ss [EVERY_DEF,term_ok_def]
@@ -1760,7 +1806,8 @@ val logic_flag_callmap_thm = prove(
   \\ FS [LENGTH_MAP,MEM_FLAT,MEM_MAP,PULL_EXISTS_IMP,PULL_CONJ]
   \\ MATCH_MP_TAC term_syntax_ok_term_sub \\ ASM_SIMP_TAC std_ss []
   \\ FS [EVERY_MEM,MEM_ZIP] \\ Cases \\ FS [] \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC rich_listTheory.EL_IS_EL \\ RES_TAC \\ FS []);
+  \\ IMP_RES_TAC rich_listTheory.EL_IS_EL \\ RES_TAC \\ FS []
+QED
 
 val logic_callmap_thm = prove(
   ``term_syntax_ok t /\ term_ok ctxt t /\
