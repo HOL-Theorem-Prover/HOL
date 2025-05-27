@@ -92,27 +92,21 @@ val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
 local
   open Arbnum
 in
-abstype thyid = UID of {name:string, sec: num, usec : num}
+abstype thyid = UID of {name:string, hash:vec}
 with
   fun thyid_eq x (y:thyid) = (x=y);
-  fun new_thyid s =
-      let val {sec,usec} = Portable.dest_time (Portable.timestamp())
-      in
-        UID{name=s, sec = sec, usec = usec}
-      end
 
-  fun dest_thyid (UID{name, sec, usec}) = (name,sec,usec)
+  fun dest_thyid (UID{name, hash}) = (name,hash)
 
   val thyid_name = #1 o dest_thyid;
 
-  fun make_thyid(s,i1,i2) = UID{name=s, sec=i1,usec=i2}
+  fun make_thyid(s,h) = UID{name=s, hash=h}
 
-  fun thyid_to_string (UID{name,sec,usec}) =
-     String.concat["(",Lib.quote name,",",toString sec, ",",
-                   toString usec, ")"]
+  fun thyid_to_string (UID{name,hash}) =
+     String.concat["(",Lib.quote name,",",hashToString hash, ")"]
 
   val min_thyid =
-      UID{name="min", sec = fromInt 0, usec = fromInt 0}  (* Ur-theory *)
+      UID{name="min", hash = minHash}  (* Ur-theory *)
 
 end;
 end (* local *)
@@ -188,7 +182,7 @@ fun fact_thm (s, (th, _)) = th
 
 type thminfo = DB_dtype.thminfo
 type segment =
-     {thid    : thyid,                                         (* unique id  *)
+     {name    : string,
       facts   : (thm * thminfo) Symtab.table,                 (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
       mldeps  : string HOLset.set}
@@ -197,15 +191,15 @@ local
   fun seg_mkUp z = makeUpdate4 z
 in
   fun update_seg z = let
-    fun from facts mldeps thid thydata =
+    fun from facts mldeps name thydata =
       {facts=facts, mldeps=mldeps,
-       thid=thid, thydata=thydata}
+       name=name, thydata=thydata}
     (* fields in reverse order to above *)
-    fun from' thydata thid mldeps facts =
+    fun from' thydata name mldeps facts =
       {facts=facts, mldeps=mldeps,
-       thid=thid, thydata=thydata}
-    fun to f {facts, mldeps, thid, thydata} =
-      f facts mldeps thid thydata
+       name=name, thydata=thydata}
+    fun to f {facts, mldeps, name, thydata} =
+      f facts mldeps name thydata
   in
     seg_mkUp (from, from', to)
   end z
@@ -223,11 +217,11 @@ end (* local *)
  * gets created (the file is only created on export).                        *
  *---------------------------------------------------------------------------*)
 
-fun empty_segment_value thid =
-    {facts=Symtab.empty, thid=thid, thydata = empty_datamap,
+fun empty_segment_value name =
+    {facts=Symtab.empty, name=name, thydata = empty_datamap,
      mldeps = HOLset.empty String.compare}
 
-fun fresh_segment s :segment = empty_segment_value (new_thyid s)
+fun fresh_segment s :segment = empty_segment_value s
 
 local val CT = ref (fresh_segment "scratch")
 in
@@ -235,7 +229,7 @@ in
   fun makeCT seg = CT := seg
 end;
 
-val CTname = thyid_name o #thid o theCT;
+val CTname = #name o theCT;
 val current_theory = CTname;
 
 
@@ -257,13 +251,6 @@ fun thy_axioms (th:segment)   = filter is_axiom   (#facts th)
 fun thy_theorems (th:segment) = filter is_theorem (#facts th)
 fun thy_defns (th:segment)    = filter is_defn    (#facts th)
 end
-
-fun stamp thyname =
-  let val (_,sec,usec) = dest_thyid (fst (Graph.first
-                          (equal thyname o thyid_name o fst)))
-  in
-    Portable.mk_time {sec = sec, usec = usec}
-  end;
 
 local fun norm_name "-" = CTname()
         | norm_name s = s
@@ -290,12 +277,10 @@ end;
  * Is a segment empty?                                                       *
  *---------------------------------------------------------------------------*)
 
-fun empty_segment ({thid,facts, ...}:segment) =
-  let val thyname = thyid_name thid
-  in null (thy_types thyname) andalso
-     null (thy_constants thyname) andalso
-     Symtab.is_empty facts
-  end;
+fun empty_segment ({name=thyname,facts, ...}:segment) =
+  null (thy_types thyname) andalso
+  null (thy_constants thyname) andalso
+  Symtab.is_empty facts;
 
 (*---------------------------------------------------------------------------*
  *              ADDING TO THE SEGMENT                                        *
@@ -374,7 +359,7 @@ fun del_binding name (s as {facts,...} : segment) =
 
 fun zap_segment s (thy : segment) =
     (Type.del_segment s; Term.del_segment s;
-     empty_segment_value (#thid thy)
+     empty_segment_value (#name thy)
      )
 
 (*---------------------------------------------------------------------------
@@ -674,7 +659,7 @@ struct
                      (string, DataOps) Binarymap.dict)
 
   fun segment_data {thy,thydataty} = let
-    val {thydata,thid,...} = theCT()
+    val {thydata,name,...} = theCT()
     fun check_map m =
         case Binarymap.peek(m, thydataty) of
           NONE => NONE
@@ -682,7 +667,7 @@ struct
         | SOME (Pending _) => raise ERR "segment_data"
                                         "Can't interpret pending loads"
   in
-    if thyid_name thid = thy then
+    if name = thy then
       (DPRINT
          (fn _ => "segment_data for " ^ thydataty ^
                   " coming from current_theory\n");
@@ -753,7 +738,7 @@ struct
 
   fun temp_encoded_update (r as {thy,thydataty,data,shared_readmaps}) =
       let
-        val (s as {thydata, thid, ...}) = theCT()
+        val (s as {thydata, name, ...}) = theCT()
         open Binarymap
         fun updatemap inmap = let
           val baddecode = ERR "temp_encoded_update"
@@ -778,7 +763,7 @@ struct
           insert(inmap, thydataty, newdata)
         end
   in
-    if thy = thyid_name thid then
+    if thy = name then
       makeCT (update_seg s (U #thydata (updatemap thydata)) $$)
     else let
       val newsubmap =
@@ -889,10 +874,9 @@ local
 in
 fun export_theory () = if !Globals.interactive then () else let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
-  val {thid,facts,thydata,mldeps,...} = scrubCT()
+  val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
   val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
   val concat = String.concat
-  val thyname = thyid_name thid
   val name = thyname^"Theory"
   val sigthry = {name = thyname,
                  parents = map thyid_name (Graph.fringe()),
@@ -917,7 +901,7 @@ fun export_theory () = if !Globals.interactive then () else let
     Binarymap.foldl foldthis ([], [], Binarymap.mkDict String.compare) dmap
   end
   val structthry =
-      {theory = dest_thyid thid,
+      {theory = thyname,
        parents = map dest_thyid (Graph.fringe()),
        types = thy_types thyname,
        constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
@@ -979,8 +963,7 @@ fun new_theory str =
       raise ERR "new_theory"
                 ("proposed theory name "^Lib.quote str^" is not an identifier")
     else let
-        val thy as {thid, ...} = theCT()
-        val thyname = thyid_name thid
+        val thy as {name=thyname, ...} = theCT()
         val tdelta = TheoryDelta.NewTheory{oldseg=thyname,newseg=str}
         fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                          makeCT(fresh_segment str);
@@ -996,9 +979,14 @@ fun new_theory str =
           raise ERR"new_theory" ("theory: "^Lib.quote str^" already exists.")
         else if thyname="scratch" andalso empty_segment thy then
           mk_thy()
-        else
-          (export_theory ();
-           Graph.add (thid, Graph.fringe()); mk_thy ())
+        else let
+          val () = export_theory ();
+          val hash = (* TODO calculate from exported dat *) minHash;
+          val thid = make_thyid(thyname, hash);
+          val () = Graph.add (thid, Graph.fringe())
+        in
+           mk_thy ()
+        end
       end
 
 

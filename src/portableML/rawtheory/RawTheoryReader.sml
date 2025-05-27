@@ -45,12 +45,20 @@ fun string_to_class "A" = SOME Axm
   | string_to_class "D" = SOME Def
   | string_to_class _ = NONE
 
+val hashLength = 32
+fun hashFromString s =
+  if String.size s <> 2 * hashLength then NONE
+  else SOME (
+    Word8Vector.tabulate(hashLength, fn i =>
+      Option.valOf (Word8.fromString (
+        String.substring(s, 2 * i, 2)))))
+  handle Option => NONE
+
 val dec_thyname : raw_name decoder =
     map_decode
-        (fn (s,n1,n2) => {thy = s, tstamp1 = n1, tstamp2 = n2}) $
-        pair3_decode (string_decode,
-                      Option.map Arbnum.fromString o string_decode,
-                      Option.map Arbnum.fromString o string_decode)
+        (fn (s,h) => {thy = s, hash = h}) $
+        pair_decode (string_decode,
+                     Option.mapPartial hashFromString o string_decode)
 
 (* ----------------------------------------------------------------------
     raw types and terms
@@ -225,7 +233,7 @@ fun decode s =
           case thyparentage of
               Cons p => p
             | _ => raise TheoryReader "thyparentage not a pair"
-      val fullthy as {thy,...} = force "thyname" dec_thyname thy_data
+      val fullthy = force "thyname" string_decode thy_data
       val parents = force "parents" (list_decode dec_thyname) parents_data
       val ({tables,exports}, incorporate_data, thydata_data) =
           force "toplevel_decode" (
