@@ -1,0 +1,4 @@
+gh1353.log: doit.sh testd/bugScript.sml
+	$(tee ./doit.sh $(protect $(HOLDIR)/bin/hol.state0) $(protect $(HOLDIR)/bin/Holmake), $@)
+
+EXTRA_CLEANS = gh1353.log

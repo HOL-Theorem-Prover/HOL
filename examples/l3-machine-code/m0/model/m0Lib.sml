@@ -8,6 +8,6 @@ open utilsLib m0Theory
 val () = (numLib.temp_prefer_num (); wordsLib.prefer_word ())
 
 fun m0_compset thms =
-   utilsLib.theory_compset (thms, m0Theory.inventory)
+   utilsLib.theory_compset (thms, Import.gen_inventory{thyname="m0"})
 
 end

@@ -50,22 +50,16 @@ Definition ptree_head_def[simp]:
   (ptree_head (Nd (nt,l) children) = NT nt)
 End
 
-Overload ptree_size[local] = ``parsetree_size (K 0) (K 0) (K 0)``;
-
 Definition valid_ptree_def[simp,nocompute]:
   (valid_ptree G (Lf _) ⇔ T) ∧
   (valid_ptree G (Nd (nt,l) children) ⇔
     nt ∈ FDOM G.rules ∧ MAP ptree_head children ∈ G.rules ' nt ∧
     ∀pt. pt ∈ set children ⇒ valid_ptree G pt)
-Termination
-   WF_REL_TAC `measure (ptree_size o SND)`
 End
 
 Definition ptree_fringe_def:
   (ptree_fringe (Lf (t,_)) = [t]) ∧
   (ptree_fringe (Nd _ children) = FLAT (MAP ptree_fringe children))
-Termination
-   WF_REL_TAC `measure ptree_size`
 End
 
 Theorem ptree_fringe_def[simp,compute,allow_rebind] =
@@ -83,8 +77,6 @@ Type lfptree = “:(α,β,one) parsetree”
 Definition real_fringe_def[simp]:
   (real_fringe (Lf t) = [t]) ∧
   (real_fringe (Nd n ptl) = FLAT (MAP real_fringe ptl))
-Termination
-  WF_REL_TAC `measure ptree_size`
 End
 
 Theorem MAP_TKI_11[simp]:
@@ -118,8 +110,6 @@ Definition valid_locs_def[simp]:
   (valid_locs (Nd (_, l) children) ⇔
      l = merge_list_locs (MAP ptree_loc children) ∧
      ∀pt. MEM pt children ⇒ valid_locs pt)
-Termination
-  WF_REL_TAC ‘measure ptree_size’
 End
 
 Definition valid_lptree_def:
@@ -147,8 +137,7 @@ Definition derive_def:
                   sym ∈ FDOM G.rules ∧ rhs ∈ G.rules ' sym
 End
 
-val RTC1 = RTC_RULES |> Q.SPEC `R` |> CONJUNCT2
-                                    |> Q.GEN `R`
+val RTC1 = RTC_RULES |> Q.SPEC `R` |> CONJUNCT2 |> Q.GEN `R`
 val qxch = Q.X_CHOOSE_THEN
 fun qxchl [] ttac = ttac
   | qxchl (q::qs) ttac = qxch q (qxchl qs ttac)

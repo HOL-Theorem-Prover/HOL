@@ -9,7 +9,7 @@ open nomsetTheory
 open NEWLib
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars nomsetTheory.nomset_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="nomset"}
 end
 open Parse
 
@@ -19,9 +19,7 @@ val tmToString =
         |> trace ("Unicode", 0)
 
 
-fun ERR f msg = raise (HOL_ERR {origin_function = f,
-                                origin_structure = "binderLib",
-                                message = msg})
+val ERR = mk_HOL_ERR "binderLib"
 
 datatype nominaltype_info =
          NTI of { recursion_thm : thm option,
@@ -33,6 +31,93 @@ datatype nominaltype_info =
                   pm_rewrites : thm list,
                   fv_rewrites : thm list,
                   binders : (term * int * thm) list }
+
+local
+  open ThyDataSexp
+in
+fun enc_nti (NTI r) =
+    let
+      val {recursion_thm,nullfv,binders,...} = r
+      val {pm_constant, pm_rewrites, fv_rewrites,...} = r
+      val null_pmc_pmrs_fvrs =
+          pair4_encode (Term,Term,mk_list Thm,mk_list Thm)
+      val recthm_binders =
+          pair_encode (option_encode Thm, mk_list (pair3_encode(Term,Int,Thm)))
+    in
+      pair_encode(null_pmc_pmrs_fvrs, recthm_binders)
+                 ((nullfv,pm_constant,pm_rewrites,fv_rewrites),
+                  (recursion_thm,binders))
+    end
+
+val dec_nti =
+    let
+      val thml = list_decode thm_decode
+      val nppf_dec = pair4_decode
+                       (term_decode, term_decode, thml, thml)
+      val rbs = pair_decode (
+            option_decode thm_decode,
+            list_decode (pair3_decode (term_decode,int_decode,thm_decode))
+          )
+      fun mapthis ((nc,pc,pths,fvths), (rthm,binders)) =
+          NTI {recursion_thm = rthm,
+               nullfv = nc, pm_constant = pc,
+               pm_rewrites = pths,
+               fv_rewrites = fvths,
+               binders = binders}
+    in
+      pair_decode(nppf_dec, rbs) >> mapthis
+    end
+fun nti_uptodate (NTI r) =
+    let
+      val {recursion_thm = rthm, nullfv, binders, ...} = r
+      val {pm_constant, pm_rewrites, fv_rewrites,...} = r
+    in
+      (not (isSome rthm) orelse uptodate_thm (valOf rthm)) andalso
+      List.all (fn (t,_,th) => uptodate_thm th andalso uptodate_term t)
+               binders andalso
+      List.all uptodate_thm fv_rewrites andalso
+      List.all uptodate_thm pm_rewrites andalso
+      List.all uptodate_term [pm_constant,nullfv]
+    end
+type dbdelta = KernelSig.kernelname * nominaltype_info
+type db = nominaltype_info KNametab.table
+val enc_delta = pair_encode (KName, enc_nti)
+val dec_delta = pair_decode (kname_decode, dec_nti)
+end
+
+val adata = {apply_delta = KNametab.update,
+             initial_values = [("min", KNametab.empty)],
+             tag = "binderLib"}
+
+val adr as {
+  get_global_value = getTypeDB,
+  record_delta = export_nomtype0,
+  update_global_value, ...
+} =
+    AncestryData.fullmake {
+      adinfo = adata,
+      globinfo = {
+        apply_to_global = KNametab.update,
+        initial_value = KNametab.empty,
+        thy_finaliser = NONE
+      },
+      sexps = {dec = dec_delta, enc = enc_delta},
+      uptodate_delta = (fn (knm,nti) =>
+                           nti_uptodate nti andalso
+                           Type.uptodate_kname knm)
+    }
+
+fun export_nomtype (ty,nti) =
+    let val {Thy,Tyop,Args} = dest_thy_type ty
+    in
+      export_nomtype0 ({Thy=Thy,Name=Tyop}, nti)
+    end
+
+fun local_update (ty, nti) =
+    let val {Thy,Tyop,Args} = dest_thy_type ty
+    in
+      update_global_value (KNametab.update ({Thy=Thy,Name=Tyop}, nti))
+    end
 
 fun nti_null_fv (NTI{nullfv, ...}) = nullfv
 fun nti_perm_t (NTI{pm_constant,...}) = pm_constant
@@ -63,9 +148,6 @@ fun nti_recursion (NTI{recursion_thm,...}) = recursion_thm
 
    ---------------------------------------------------------------------- *)
 
-val type_db =
-    ref (Binarymap.mkDict KernelSig.name_compare :
-         (KernelSig.kernelname,nominaltype_info) Binarymap.dict)
 
 val string_ty = stringSyntax.string_ty
 val stringset_ty = pred_setSyntax.mk_set_type string_ty
@@ -98,13 +180,13 @@ end
 fun isdbty ty = let
   val {Thy,Tyop,...} = dest_thy_type ty
 in
-  isSome (Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}))
+  KNametab.defined (getTypeDB()) {Thy=Thy,Name=Tyop}
 end handle HOL_ERR _ => false
 
 fun tylookup ty = let
   val {Thy,Tyop,...} = dest_thy_type ty
 in
-  Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop})
+  KNametab.lookup(getTypeDB()) {Thy=Thy,Name=Tyop}
 end handle HOL_ERR _ => NONE
 
 fun get_pm_rewrites ty =
@@ -157,7 +239,7 @@ fun find_avoids (t, (strs, sets)) = let
     val {Thy,Tyop,...} = dest_thy_type ty
   in
     if is_var t then
-      case Binarymap.peek(!type_db, {Thy=Thy,Name=Tyop}) of
+      case KNametab.lookup(getTypeDB()) {Thy=Thy,Name=Tyop} of
         NONE => NONE
       | SOME (NTI data) => SOME (mk_icomb(mk_icomb(supp_t, #pm_constant data),
                                           t))
@@ -255,11 +337,11 @@ end
 
 fun recthm_for_type ty = let
   val {Tyop,Thy,...} = dest_thy_type ty
-  val NTI {recursion_thm,...} = Binarymap.find(!type_db, {Name=Tyop,Thy=Thy})
 in
-  recursion_thm
-end handle HOL_ERR _ => NONE
-         | Binarymap.NotFound => NONE
+  case KNametab.lookup(getTypeDB()) {Name=Tyop,Thy=Thy} of
+      NONE => NONE
+    | SOME (NTI {recursion_thm,...}) => recursion_thm
+end
 
 fun find_constructors recthm = let
   val (_, c) = dest_imp (concl recthm)
@@ -281,20 +363,20 @@ end
 fun check_for_errors tm = let
   val conjs = map (#2 o strip_forall) (strip_conj tm)
   val _ = List.all is_eq conjs orelse
-          ERR "prove_recursive_term_function_exists"
+          raise ERR "prove_recursive_term_function_exists"
               "All conjuncts must be equations"
   val f = rator (lhs (hd conjs))
   val _ = List.all (fn t => rator (lhs t) ~~ f) conjs orelse
-          ERR "prove_recursive_term_function_exists"
+          raise ERR "prove_recursive_term_function_exists"
               "Must define same constant in all equations"
   val _ = List.all (fn t => length (#2 (strip_comb (lhs t))) = 1) conjs orelse
-          ERR "prove_recursive_term_function_exists"
+          raise ERR "prove_recursive_term_function_exists"
               "Function being defined must be applied to one argument"
   val dom_ty = #1 (dom_rng (type_of f))
   val recthm = valOf (recthm_for_type dom_ty)
-               handle Option => ERR "prove_recursive_term_function_exists"
-                                    ("No recursion theorem for type "^
-                                     type_to_string dom_ty)
+               handle Option =>
+               raise ERR "prove_recursive_term_function_exists"
+                 ("No recursion theorem for type " ^ type_to_string dom_ty)
   val constructors = map #1 (find_constructors recthm)
   val () =
       case List.find
@@ -304,7 +386,7 @@ fun check_for_errors tm = let
                                              (#1 (strip_comb (rand (lhs t))))))
                       constructors) conjs of
         NONE => ()
-      | SOME t => ERR "prove_recursive_term_function_exists"
+      | SOME t => raise ERR "prove_recursive_term_function_exists"
                       ("Unknown constructor "^
                        tmToString (#1 (strip_comb (rand (lhs t)))))
   val () =
@@ -317,7 +399,7 @@ fun check_for_errors tm = let
                     end) conjs of
         NONE => ()
       | SOME (v, c) =>
-        ERR "prove_recursive_term_function_exists"
+        raise ERR "prove_recursive_term_function_exists"
             (#1 (dest_const c)^"^'s argument "^tmToString v^
              " is not a variable")
 in
@@ -427,7 +509,7 @@ fun prove_recursive_term_function_exists0 fin tm = let
       case alist of
         [] => [(c,rhs)]
       | (h as (c',rhs')) :: t => if same_const c c' then
-                                   ERR "prove_recursive_term_function_exists"
+                                   raise ERR "prove_recursive_term_function_exists"
                                        ("Two equations for constructor " ^
                                         #1 (dest_const c))
                                  else h :: insert x t
@@ -448,7 +530,7 @@ in
   case Lib.total dest_thy_type rng_ty of
     SOME {Tyop, Thy, ...} => let
     in
-      case Binarymap.peek(!type_db, {Name=Tyop,Thy=Thy}) of
+      case KNametab.lookup(getTypeDB()) {Name=Tyop,Thy=Thy} of
         NONE => callthis nameless_nti |> REWRITE_RULE [discretepm_thm]
       | SOME i => callthis i
         handle InfoProofFailed tm =>
@@ -509,8 +591,8 @@ fun define_wrapper worker q = let
   val a = Absyn q
   val f = head_sym a
   val fstr = case f of
-               Absyn.IDENT(_, s) => s
-             | x => ERR "define_recursive_term_function" "invalid head symbol"
+      Absyn.IDENT(_, s) => s
+    | x => raise ERR "define_recursive_term_function" "invalid head symbol"
   val restore_this = hide fstr
   fun restore() = Parse.update_overload_maps fstr restore_this
   val tm = Parse.absyn_to_term (Parse.term_grammar()) a

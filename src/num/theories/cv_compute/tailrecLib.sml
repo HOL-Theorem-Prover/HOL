@@ -3,8 +3,7 @@ struct
 
 open HolKernel Parse boolLib simpLib boolSimps
 
-fun mk_HOL_ERR f msg = HOL_ERR {origin_structure = "tailrecLib",
-                                origin_function = f, message = msg}
+val ERR = mk_HOL_ERR "tailrecLib"
 
 type thmloc = DB_dtype.thm_src_location
 
@@ -59,7 +58,7 @@ fun mk_sum_term fn_t inty tm =
           else
             case strip_to_dest fn_t [] t of
                 SOME xs => if null xs then
-                             raise mk_HOL_ERR "mk_sum_term" "malformed term"
+                             raise ERR "mk_sum_term" "malformed term"
                            else
                              sumSyntax.mk_inl
                                (pairSyntax.list_mk_pair xs, type_of t)

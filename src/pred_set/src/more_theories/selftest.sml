@@ -2,9 +2,10 @@ open HolKernel Parse boolLib bossLib testutils countable_typesLib;
 
 val Datatype = quietly Datatype
 val mk_countable = quietly mk_countable
-val _ = Datatype `rose_tricky = RT_Empty | RT_List (num list) ((rose_tricky) list)`
 
-val _ = tprint "Testing mk_countable on rose-type datatype rose_tricky."
+val _ = Datatype `rose_tricky = RT_Empty | RT_List (num list) ((rose_tricky) list)`;
+
+val _ = tprint "Testing mk_countable on rose-type datatype rose_tricky.";
 val _ = require (check_result (fn thm => not (is_imp (concl thm))))
     mk_countable ``: rose_tricky``;
 

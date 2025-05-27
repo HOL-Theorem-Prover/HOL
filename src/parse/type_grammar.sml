@@ -97,9 +97,8 @@ fun initialise_typrinter f =
     if not (!initialised_printer) then
       (type_printer := f; initialised_printer := true)
     else
-      raise Feedback.HOL_ERR {origin_structure = "type_grammar",
-                              origin_function = "initialised_printer",
-                              message = "Printer function already initialised"}
+      raise Feedback.mk_HOL_ERR "type_grammar" "initialised_printer"
+        "Printer function already initialised"
 
 fun pp_type g ty = (!type_printer) g ty
 

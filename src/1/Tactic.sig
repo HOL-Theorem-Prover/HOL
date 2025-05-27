@@ -22,6 +22,7 @@ sig
   val disj2_tac             : tactic
   val MP_TAC                : thm_tactic
   val mp_tac                : thm_tactic
+  val EQ_MP_TAC             : thm_tactic
   val EQ_TAC                : tactic
   val eq_tac                : tactic (* alias for EQ_TAC *)
   val iff_tac               : tactic (* alias for EQ_TAC *)
@@ -66,6 +67,8 @@ sig
   val FILTER_STRIP_TAC      : term -> tactic
   val ASM_CASES_TAC         : term -> tactic
   val REFL_TAC              : tactic
+  val SYM_TAC               : tactic
+  val sym_tac               : tactic
   val UNDISCH_TAC           : term -> tactic
   val AP_TERM_TAC           : tactic
   val AP_THM_TAC            : tactic

@@ -24,6 +24,7 @@ sig
    val goal_size    : goal -> int
    val gstk_size    : gstk -> int
 
+   val pr_goal      : goal -> unit term_pp_types.printer
    val std_pp_goal  : goal Parse.pprinter
    val pp_goal      : goal Parse.pprinter
    val pp_gstk      : gstk Parse.pprinter

@@ -23,6 +23,7 @@ DIRNAMES = \
   empty_script \
   deps_of_depthys \
   gh604 \
+  gh1353 \
   ignore_errors/j1 \
   qfreadTheoremsyntax \
   use-fnf

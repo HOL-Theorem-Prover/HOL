@@ -25,6 +25,8 @@ end
 
 val Define = bossLib.zDefine
 
+Overload tc[local] = “transitive_closure”
+
 (* ------------------------------------------------------------------------
    Binary floating point representation
    ------------------------------------------------------------------------ *)

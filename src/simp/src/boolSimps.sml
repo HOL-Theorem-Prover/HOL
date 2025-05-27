@@ -8,7 +8,8 @@ infix THENQC
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars combinTheory.combin_grammars
+val SOME combin_grammars = grammarDB {thyname="combin"}
+val _ = Parse.temp_set_grammars combin_grammars
 
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
 
@@ -311,7 +312,7 @@ val LIFT_COND_ss = SSFRAG
              key = SOME([], Term`\x:'a. COND p (q x:'b) (r x)`),
              trace = 2}],
    dprocs = [], filter = NONE,
-   rewrs = [(SOME {Thy = "bool", Name =  "COND_RATOR"}, boolTheory.COND_RATOR),
+   rewrs = [(SOME {Thy = "bool", Name = "COND_RATOR"}, boolTheory.COND_RATOR),
             (SOME {Thy = "", Name = "NESTED_COND"}, NESTED_COND)]
   }
 

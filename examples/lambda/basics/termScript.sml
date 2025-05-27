@@ -9,7 +9,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory
-     relationTheory pairTheory hurdUtils;
+     relationTheory pairTheory hurdUtils rich_listTheory;
 
 open generic_termsTheory binderLib nomsetTheory nomdatatype;
 
@@ -20,20 +20,20 @@ val _ = set_fixity "=" (Infix(NONASSOC, 450))
 val tyname = "term"
 
 val vp = “(λn u:unit. n = 0)”
-val lp = “(λn (d:unit + unit) tns uns.
-               (n = 0) ∧ ISL d ∧ (tns = []) ∧ (uns = [0;0]) ∨
-               (n = 0) ∧ ISR d ∧ (tns = [0]) ∧ (uns = []))”
+val lp = “(λn lfvs (d:unit + unit) tns uns.
+             lfvs = 0 ∧ n = 0 ∧ ISL d ∧ tns = [] ∧ uns = [0;0] ∨
+             lfvs = 0 ∧ n = 0 ∧ ISR d ∧ tns = [0] ∧ uns = [])”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 {vp = vp, lp = lp};
+    new_type_step1 tyname 0 [] {vp = vp, lp = lp};
 
 val [gvar,glam] = genind_rules |> SPEC_ALL |> CONJUNCTS
 
 val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
 val LAM_def = new_definition(
   "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v (INR ()) [^term_REP_t t] [])``);
+  ``^LAM_t v t = ^term_ABS_t (GLAM v [] (INR ()) [^term_REP_t t] [])``);
 
 val LAM_termP = prove(
   mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
@@ -44,15 +44,17 @@ val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
 val APP_def = new_definition(
   "APP_def",
   ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
+       ^term_ABS_t (GLAM ARB [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
 val APP_termP = prove(
-  ``^termP (GLAM x (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
+  ``^termP (GLAM x [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
   match_mp_tac glam >> srw_tac [][genind_term_REP])
 val APP_t = defined_const APP_def
 
-val APP_def' = prove(
-  ``^term_ABS_t (GLAM v (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) = ^APP_t t1 t2``,
-  srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
+Theorem APP_def':
+  ^term_ABS_t (GLAM v [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) =
+  ^APP_t t1 t2
+Proof srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]
+QED
 
 val VAR_t = mk_var("VAR", ``:string -> ^newty``)
 val VAR_def = new_definition(
@@ -114,6 +116,12 @@ Theorem FINITE_FV[simp]: FINITE (FV t)
 Proof srw_tac [][supp_tpm, FINITE_GFV]
 QED
 
+Theorem FINITE_BIGUNION_IMAGE_FV[simp] :
+    FINITE (BIGUNION (IMAGE FV (set Ns)))
+Proof
+    rw [] >> rw [FINITE_FV]
+QED
+
 fun supp_clause {con_termP, con_def} = let
   val t = mk_comb(``supp ^t_pmact_t``, lhand (concl (SPEC_ALL con_def)))
 in
@@ -155,7 +163,8 @@ val term_ind =
                       IN_UNION, NOT_IN_EMPTY, oneTheory.FORALL_ONE,
                       genind_exists, LIST_REL_CONS1, LIST_REL_NIL]
         |> Q.INST [`Q` |-> `λt. P (term_ABS t)`]
-        |> SIMP_RULE std_ss [GSYM LAM_def, APP_def', GSYM VAR_def, absrep_id]
+        |> SIMP_RULE std_ss [GSYM LAM_def, APP_def', GSYM VAR_def, absrep_id,
+                             LENGTH_NIL]
         |> SIMP_RULE (srw_ss()) [GSYM supp_tpm]
         |> elim_unnecessary_atoms {finite_fv = FINITE_FV}
                                   [ASSUME ``!x:'c. FINITE (fv x:string set)``]
@@ -188,12 +197,17 @@ val LAM_eq_thm = save_thm(
                               GSYM supp_tpm]
      |> GENL [``u:string``, ``v:string``, ``t1:term``, ``t2:term``]);
 
+(* ----------------------------------------------------------------------
+    term recursion
+   ---------------------------------------------------------------------- *)
+
 val (_, repty) = dom_rng (type_of term_REP_t)
 val repty' = ty_antiq repty
 
 val tlf =
-   “λ(v:string) (u:unit + unit) (ds1:(ρ -> α) list) (ds2:(ρ -> α) list)
-                                (ts1:^repty' list) (ts2:^repty' list) (p :ρ).
+   “λ(v:string) (fvs : string list) (u:unit + unit)
+     (ds1:(ρ -> α) list) (ds2:(ρ -> α) list)
+     (ts1:^repty' list) (ts2:^repty' list) (p :ρ).
        if ISR u then tlf (HD ds1) v (^term_ABS_t (HD ts1)) p :α
        else taf (HD ds2) (HD (TL ds2)) (^term_ABS_t (HD ts2))
                 (^term_ABS_t (HD (TL ts2))) p :α”
@@ -225,7 +239,7 @@ val parameter_tm_recursion = save_thm(
       |> INST_TYPE [alpha |-> ``:unit + unit``, beta |-> ``:unit``,
                     gamma |-> alpha]
       |> Q.INST [`lf` |-> `^tlf`, `vf` |-> `^tvf`, `vp` |-> `^vp`,
-                 `lp` |-> `^lp`, `n` |-> `0`]
+                 `lp` |-> `^lp`]
       |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
                                GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
                                GSYM RIGHT_EXISTS_AND_THM,
@@ -326,10 +340,12 @@ Proof
   simp[tpm_eqr]
 QED
 
-val tpm_CONS = store_thm(
-  "tpm_CONS",
-  ``tpm ((x,y)::pi) t = tpm [(x,y)] (tpm pi t)``,
-  SRW_TAC [][GSYM pmact_decompose]);
+(* NOTE: always use Once with it, to prevent infinite rewriting loops *)
+Theorem tpm_CONS :
+  tpm ((x,y)::pi) t = tpm [(x,y)] (tpm pi t)
+Proof
+  SRW_TAC [][GSYM pmact_decompose]
+QED
 
 Theorem tpm_SNOC :
     tpm (SNOC (x,y) pi) t = tpm pi (tpm [(x,y)] t)
@@ -469,6 +485,10 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* |- !t. u # t ==> tpm [(v,u)] t = [VAR u/v] t *)
+Theorem fresh_tpm_subst' =
+    ONCE_REWRITE_RULE [pmact_flip_args] fresh_tpm_subst
+
 Theorem tpm_subst:
   !N. tpm pi ([M/v] N) = [tpm pi M/lswapstr pi v] (tpm pi N)
 Proof
@@ -482,6 +502,7 @@ Theorem tpm_subst_out:
 Proof SRW_TAC [][tpm_subst]
 QED
 
+(* Lemma 1.15 (a) [2, p.8] (NOTE: It was Lemma 1.14 (a) of 1st edition of [2]) *)
 Theorem lemma14a[simp]:
   !t. [VAR v/v] t = t
 Proof
@@ -489,6 +510,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* Lemma 1.15 (b) [2, p.8] *)
 Theorem lemma14b:
   !M. ~(v IN FV M) ==> ([N/v] M = M)
 Proof
@@ -552,7 +574,7 @@ Proof
 QED
 
 (* ‘tpm pi M’ doesn't change M if all its variables are irrelevant *)
-Theorem lemma14b_tpm :
+Theorem tpm_unchanged :
     !pi M. DISJOINT (set (MAP FST pi)) (FV M) /\
            DISJOINT (set (MAP SND pi)) (FV M) ==> tpm pi M = M
 Proof
@@ -586,6 +608,14 @@ Proof
     rw [FV_SUB, closed_def]
 QED
 
+Theorem FV_SUB_upperbound :
+  !t u v. FV ([t/v] u) SUBSET FV u UNION FV t
+Proof
+    rw [FV_SUB]
+ >> ASM_SET_TAC []
+QED
+
+(* Lemma 1.16 (a) [2, p.9] *)
 Theorem lemma15a:
   !M. v ∉ FV M ==> [N/v]([VAR v/x]M) = [N/x]M
 Proof
@@ -593,6 +623,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* Lemma 1.16 (b) [2, p.9] *)
 Theorem lemma15b:
   v ∉ FV M ==> [VAR u/v]([VAR v/u] M) = M
 Proof SRW_TAC [][lemma15a]
@@ -629,6 +660,15 @@ Theorem SIMPLE_ALPHA:
 Proof
   SRW_TAC [][GSYM fresh_tpm_subst] THEN
   SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]
+QED
+
+(* cf. appFOLDLTheory.LAMl_ALPHA_tpm *)
+Theorem SIMPLE_ALPHA_tpm :
+    !x y u. y # u ==> LAM x u = LAM y (tpm [(y,x)] u)
+Proof
+    rpt STRIP_TAC
+ >> simp [fresh_tpm_subst]
+ >> MATCH_MP_TAC SIMPLE_ALPHA >> art []
 QED
 
 (* ----------------------------------------------------------------------
@@ -723,6 +763,16 @@ Definition DOM_DEF :
    (DOM ((x,y)::rst) = {y} UNION DOM rst)
 End
 
+Theorem DOM_SNOC :
+    !x y rst. DOM (SNOC (x,y) rst) = {y} UNION DOM rst
+Proof
+    NTAC 2 GEN_TAC
+ >> Induct_on ‘rst’ >- rw [DOM_DEF]
+ >> simp [FORALL_PROD]
+ >> rw [DOM_DEF]
+ >> SET_TAC []
+QED
+
 Theorem DOM_ALT_MAP_SND :
     !phi. DOM phi = set (MAP SND phi)
 Proof
@@ -736,6 +786,23 @@ Definition FVS_DEF :
    (FVS [] = {}) /\
    (FVS ((t,x)::rst) = FV t UNION FVS rst)
 End
+
+Theorem FVS_SNOC :
+    !t x rst. FVS (SNOC (t,x) rst) = FV t UNION FVS rst
+Proof
+    NTAC 2 GEN_TAC
+ >> Induct_on ‘rst’ >- rw [FVS_DEF]
+ >> simp [FORALL_PROD]
+ >> rw [FVS_DEF]
+ >> SET_TAC []
+QED
+
+Theorem FVS_ALT :
+    !ss. FVS ss = BIGUNION (set (MAP (FV o FST) ss))
+Proof
+    Induct_on ‘ss’
+ >> simp [FORALL_PROD, FVS_DEF]
+QED
 
 Theorem FINITE_DOM[simp] :
     !ss. FINITE (DOM ss)
@@ -800,6 +867,21 @@ Proof
  >> rw [ISUB_def, SUB_VAR]
 QED
 
+(* |- !y sub. y NOTIN DOM sub ==> VAR y ISUB sub = VAR y *)
+Theorem ISUB_VAR_FRESH' = REWRITE_RULE [GSYM DOM_ALT_MAP_SND] ISUB_VAR_FRESH
+
+Theorem ISUB_unchanged :
+    !ss t. DISJOINT (FV t) (DOM ss) ==> t ISUB ss = t
+Proof
+    Induct_on ‘ss’
+ >- rw [DOM_DEF]
+ >> simp [FORALL_PROD] >> qx_genl_tac [‘N’, ‘v’]
+ >> rw [DOM_DEF]
+ >> simp [lemma14b]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [Once DISJOINT_SYM]
+QED
+
 Theorem tpm1_ISUB_exists[local] :
     !M x y. ?ss. tpm [(x,y)] M = M ISUB ss
 Proof
@@ -834,7 +916,6 @@ Proof
  >> Q.EXISTS_TAC ‘ss' ++ ss’ >> rw []
 QED
 
-
 Theorem FV_ISUB_SUBSET :
     !sub u. FVS sub = {} ==> FV (u ISUB sub) SUBSET FV u
 Proof
@@ -846,6 +927,72 @@ Proof
  >> CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [])
  >> MATCH_MP_TAC FV_SUB_SUBSET
  >> rw [closed_def]
+QED
+
+Theorem FV_ISUB_upperbound :
+    !sub u. FV (u ISUB sub) SUBSET FV u UNION FVS sub
+Proof
+    Induct_on ‘sub’ >- rw []
+ >> SIMP_TAC std_ss [FORALL_PROD]
+ >> rw [FVS_DEF, ISUB_def]
+ >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV ([p_1/p_2] u) UNION FVS sub’
+ >> simp []
+ >> reverse CONJ_TAC >- SET_TAC []
+ (* applying FV_SUB_upperbound *)
+ >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV u UNION FV p_1’
+ >> simp [FV_SUB_upperbound]
+ >> SET_TAC []
+QED
+
+(* This is a direct generalization of fresh_tpm_subst
+
+   NOTE: cf. fresh_tpm_isub' for another version without REVERSE.
+ *)
+Theorem fresh_tpm_isub :
+    !xs ys t. LENGTH xs = LENGTH ys /\ ALL_DISTINCT ys /\
+              DISJOINT (set ys) (FV t)
+          ==> tpm (ZIP (xs,ys)) t =
+              t ISUB (ZIP (MAP VAR (REVERSE ys), REVERSE xs))
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘pi = ZIP (xs,ys)’
+ >> ‘xs = MAP FST pi /\ ys = MAP SND pi’ by simp [Abbr ‘pi’, MAP_ZIP]
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set ys) (FV t)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘ALL_DISTINCT ys’ MP_TAC
+ >> NTAC 2 POP_ORW
+ >> KILL_TAC
+ >> Q.ID_SPEC_TAC ‘t’
+ >> Induct_on ‘pi’ >- simp []
+ >> simp [FORALL_PROD]
+ >> qx_gen_tac ‘u’
+ >> qx_gen_tac ‘v’
+ >> rw [Once tpm_CONS]
+ >> qabbrev_tac ‘xs = MAP FST pi’
+ >> qabbrev_tac ‘ys = MAP SND pi’
+ >> ‘LENGTH xs = LENGTH ys’ by rw [Abbr ‘xs’, Abbr ‘ys’]
+ >> qabbrev_tac ‘ss = ZIP (MAP VAR (REVERSE ys),REVERSE xs)’
+ >> Know ‘ZIP (MAP VAR (REVERSE ys) ++ [VAR v],REVERSE xs ++ [u]) =
+          ss ++ [(VAR v,u)]’
+ >- simp [GSYM ZIP_APPEND]
+ >> Rewr'
+ >> simp [GSYM ISUB_APPEND]
+ >> MATCH_MP_TAC fresh_tpm_subst'
+ >> Suff ‘v NOTIN (FV t UNION FVS ss)’
+ >- METIS_TAC [FV_ISUB_upperbound, SUBSET_DEF]
+ >> Know ‘FVS ss = set ys’
+ >- (simp [FVS_ALT, Abbr ‘ss’, MAP_ZIP, MAP_MAP_o] \\
+     rw [Once EXTENSION] >> EQ_TAC >> rw [MEM_MAP] >- fs [] \\
+     Q.EXISTS_TAC ‘{x}’ >> simp [])
+ >> Rewr'
+ >> CCONTR_TAC >> gs []
+QED
+
+Theorem ISUB_SNOC :
+    !s x rst t. t ISUB SNOC (s,x) rst = [s/x] (t ISUB rst)
+Proof
+    NTAC 2 GEN_TAC
+ >> Induct_on ‘rst’ >- rw []
+ >> simp [FORALL_PROD]
 QED
 
 (* ----------------------------------------------------------------------
@@ -1240,7 +1387,7 @@ Proof
 QED
 
 Theorem fromPairs_DOMSUB_NOT_IN_DOM :
-    !X Xs Ps. ~MEM X Xs /\ (LENGTH Ps = LENGTH Xs) ==>
+    !X Xs Ps. ~MEM X Xs /\ LENGTH Ps = LENGTH Xs ==>
               fromPairs Xs Ps \\ X = fromPairs Xs Ps
 Proof
     rpt STRIP_TAC
@@ -1321,7 +1468,7 @@ Theorem fromPairs_reduce :
     !X Xs P Ps. ~MEM X Xs /\ ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
                 EVERY (\e. X NOTIN (FV e)) Ps /\
                 DISJOINT (set Xs) (FV P) ==>
-         !E. fromPairs (X::Xs) (P::Ps) ' E = [P/X] (fromPairs Xs Ps ' E)
+               !E. fromPairs (X::Xs) (P::Ps) ' E = [P/X] (fromPairs Xs Ps ' E)
 Proof
     rpt STRIP_TAC
  >> Know `fromPairs (X::Xs) (P::Ps) = (fromPairs Xs Ps) |+ (X,P)`
@@ -1425,16 +1572,48 @@ Proof
  >> Q.EXISTS_TAC ‘n’ >> art []
 QED
 
-Theorem fromPairs_FOLDR' :
+Theorem fromPairs_ISUB :
     !Xs Ps E. ALL_DISTINCT Xs /\ LENGTH Ps = LENGTH Xs /\
               EVERY (\p. DISJOINT (set Xs) (FV p)) Ps ==>
-              (fromPairs Xs Ps) ' E =
-              FOLDR (\(x,y) e. [y/x] e) E (ZIP (Xs,Ps))
+              (fromPairs Xs Ps) ' E = E ISUB REVERSE (ZIP (Ps,Xs))
 Proof
-    rpt STRIP_TAC
- >> MATCH_MP_TAC fromPairs_FOLDR >> art []
- >> fs [FEVERY_DEF, EVERY_MEM]
- >> RW_TAC std_ss [MEM_ZIP]
+    Induct_on ‘Xs’
+ >- rw [fromPairs_def, FUPDATE_LIST_THM]
+ >> rw []
+ >> Cases_on ‘Ps’ >- fs []
+ >> fs [fromPairs_def] >> rename1 ‘v # P’
+ (* RHS rewriting *)
+ >> REWRITE_TAC [GSYM ISUB_APPEND, GSYM SUB_ISUB_SINGLETON]
+ (* LHS rewriting *)
+ >> rw [fromPairs_def, FUPDATE_LIST_THM]
+ >> Know ‘(FEMPTY :string |-> term) |+ (v,P) |++ ZIP (Xs,t) =
+          (FEMPTY |++ ZIP (Xs,t)) |+ (v,P)’
+ >- (MATCH_MP_TAC FUPDATE_FUPDATE_LIST_COMMUTES \\
+     rw [MAP_ZIP])
+ >> Rewr'
+ >> qabbrev_tac ‘fm = (FEMPTY :string |-> term) |++ ZIP (Xs,t)’
+ >> ‘FDOM fm = set Xs’ by rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, MAP_ZIP]
+ (* applying ssub_update_apply_SUBST' *)
+ >> Know ‘(fm |+ (v,P)) ' E = [fm ' P/v] (fm ' E)’
+ >- (MATCH_MP_TAC ssub_update_apply_SUBST' >> rw [] \\
+    ‘fm = fromPairs Xs t’ by rw [Abbr ‘fm’, fromPairs_def] \\
+     POP_ORW \\
+     Q.PAT_X_ASSUM ‘MEM k Xs’ MP_TAC >> rw [MEM_EL] \\
+     Know ‘fromPairs Xs t ' (EL n Xs) = EL n t’
+     >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘EVERY _ t’ MP_TAC >> rw [EVERY_MEM, MEM_EL] \\
+     POP_ASSUM (MP_TAC o (Q.SPEC ‘EL n t’)) \\
+     impl_tac >- (Q.EXISTS_TAC ‘n’ >> art []) \\
+     rw [DISJOINT_ALT'])
+ >> Rewr'
+ >> Know ‘fm ' P = P’
+ >- (MATCH_MP_TAC ssub_14b \\
+     rw [GSYM DISJOINT_DEF, Once DISJOINT_SYM])
+ >> Rewr'
+ >> Suff ‘fm ' E = E ISUB REVERSE (ZIP (t,Xs))’ >- rw []
+ >> qunabbrev_tac ‘fm’
+ >> FIRST_X_ASSUM irule >> rw []
+ >> fs [EVERY_CONJ]
 QED
 
 Theorem fromPairs_self :
@@ -1562,8 +1741,75 @@ Proof
  >> SET_TAC []
 QED
 
+(* If, additionally, ‘ALL_DISTINCT xs /\ DISJOINT (set xs) (set ys)’ holds,
+   the REVERSE in conclusion can be eliminated.
+ *)
+Theorem fresh_tpm_isub' :
+    !xs ys t. LENGTH xs = LENGTH ys /\
+              ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+              DISJOINT (set xs) (set ys) /\
+              DISJOINT (set ys) (FV t)
+          ==> tpm (ZIP (xs,ys)) t = t ISUB (ZIP (MAP VAR ys, xs))
+Proof
+    rw [fresh_tpm_isub]
+ >> qabbrev_tac ‘Ps = MAP VAR ys’
+ >> ‘LENGTH Ps = LENGTH ys’ by rw [Abbr ‘Ps’]
+ >> simp [MAP_REVERSE, GSYM REVERSE_ZIP]
+ (* applying fromPairs_ISUB *)
+ >> Know ‘t ISUB REVERSE (ZIP (Ps,xs)) = fromPairs xs Ps ' t’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC fromPairs_ISUB >> art [] \\
+     rw [EVERY_MEM, MEM_EL, Abbr ‘Ps’] \\
+     simp [EL_MAP] \\
+     Q.PAT_X_ASSUM ‘DISJOINT (set xs) (set ys)’ MP_TAC \\
+     rw [DISJOINT_ALT'] \\
+     POP_ASSUM MATCH_MP_TAC >> simp [EL_MEM])
+ >> Rewr'
+ >> qabbrev_tac ‘xs' = REVERSE xs’
+ >> qabbrev_tac ‘Ps' = REVERSE Ps’
+ >> ‘xs = REVERSE xs' /\ Ps = REVERSE Ps'’ by rw [Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> NTAC 2 POP_ORW
+ >> ‘LENGTH xs' = LENGTH xs /\ LENGTH Ps' = LENGTH Ps’
+      by rw [Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> simp [GSYM REVERSE_ZIP]
+ >> Know ‘t ISUB REVERSE (ZIP (Ps',xs')) = fromPairs xs' Ps' ' t’
+ >- (ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     MATCH_MP_TAC fromPairs_ISUB >> art [] \\
+     CONJ_TAC >- rw [Abbr ‘xs'’, ALL_DISTINCT_REVERSE] \\
+     rw [EVERY_MEM, MEM_EL, Abbr ‘Ps'’, Abbr ‘Ps’, Abbr ‘xs'’] \\
+     simp [EL_MAP] \\
+     Q.PAT_X_ASSUM ‘DISJOINT (set xs) (set ys)’ MP_TAC \\
+     rw [DISJOINT_ALT'] \\
+     POP_ASSUM MATCH_MP_TAC >> simp [EL_MEM])
+ >> Rewr'
+ >> simp [fromPairs_def, Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> qabbrev_tac ‘fm = FEMPTY |++ ZIP (xs,Ps)’
+ >> qabbrev_tac ‘fm' = FEMPTY |++ ZIP (REVERSE xs,REVERSE Ps)’
+ >> Suff ‘fm = fm'’ >- rw []
+ >> ‘FDOM fm = set xs /\ FDOM fm' = set xs’
+       by rw [Abbr ‘fm’, Abbr ‘fm'’, GSYM fromPairs_def, FDOM_fromPairs,
+              LIST_TO_SET_REVERSE]
+ >> rw [fmap_EXT, MEM_EL]
+ (* applying fromPairs_FAPPLY_EL *)
+ >> simp [Abbr ‘fm’, Abbr ‘fm'’, GSYM fromPairs_def]
+ >> Know ‘fromPairs xs Ps ' (EL n xs) = EL n Ps’
+ >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> art [])
+ >> Rewr'
+ >> qabbrev_tac ‘xs' = REVERSE xs’
+ >> qabbrev_tac ‘Ps' = REVERSE Ps’
+ >> ‘xs = REVERSE xs' /\ Ps = REVERSE Ps'’ by rw [Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> NTAC 2 POP_ORW
+ >> ‘LENGTH xs' = LENGTH xs /\ LENGTH Ps' = LENGTH Ps’
+      by rw [Abbr ‘xs'’, Abbr ‘Ps'’]
+ >> simp [EL_REVERSE, Once EQ_SYM_EQ]
+ >> MATCH_MP_TAC fromPairs_FAPPLY_EL
+ >> simp [Abbr ‘xs'’, Abbr ‘Ps'’, ALL_DISTINCT_REVERSE]
+QED
+
 (*****************************************************************************)
 (*  Simultaneous substitution given by a function containing infinite keys   *)
+(*                                                                           *)
+(*  NOTE: This definition is not used (it doesn't have finite "support").    *)
 (*****************************************************************************)
 
 Definition fssub_def :
@@ -1681,25 +1927,22 @@ val tm_recursion_nosideset = save_thm(
   "tm_recursion_nosideset",
   tm_recursion |> Q.INST [`A` |-> `{}`] |> SIMP_RULE (srw_ss()) [lemma])
 
-val term_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \open binderLib\n\
-    \val term_info = \n\
-    \   NTI {nullfv = ``LAM \"\" (VAR \"\")``,\n\
-    \        pm_rewrites = [],\n\
-    \        pm_constant = ``nomset$mk_pmact term$raw_tpm``,\n\
-    \        fv_rewrites = [],\n\
-    \        recursion_thm = SOME tm_recursion_nosideset,\n\
-    \        binders = [(``term$LAM``, 0, tpm_ALPHA)]}\n\
-    \val _ = type_db :=\n\
-    \          Binarymap.insert(!type_db,\n\
-    \                           {Name = \"term\",Thy=\"term\"},\n\
-    \                           term_info)\n\
-    \in end;\n"
-
-val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
-
+val nti =
+  NTI {nullfv = “LAM "" (VAR "")”,
+       pm_rewrites = [],
+       pm_constant = “nomset$mk_pmact term$raw_tpm”,
+       fv_rewrites = [],
+       recursion_thm = SOME tm_recursion_nosideset,
+       binders = [(``term$LAM``, 0, tpm_ALPHA)]}
+val _ = binderLib.export_nomtype(“:term”, nti)
 
 val _ = export_theory()
 val _ = html_theory "term";
+
+(* References:
+
+ [1] Barendregt, H.P.: The lambda calculus, its syntax and semantics.
+     College Publications, London (1984).
+ [2] Hindley, J.R., Seldin, J.P.: Lambda-calculus and combinators, an introduction.
+     Second Edition. Cambridge University Press, Cambridge (2008).
+ *)

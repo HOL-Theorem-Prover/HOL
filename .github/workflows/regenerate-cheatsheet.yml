@@ -1,0 +1,65 @@
+name: Regenerate tactic cheatsheet
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'Manual/Cheatsheet/**'
+  workflow_dispatch:
+
+jobs:
+
+  regenerate:
+    runs-on: ubuntu-latest
+    env:
+      COMMIT_MSG: ${{ github.workspace }}/commit_msg.txt
+
+    steps:
+    - name: Install prerequisites
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential pandoc curl
+
+    - name: Checkout HOL
+      uses: actions/checkout@v4
+      with:
+        path: hol
+
+    - name: Checkout HOL webpages
+      uses: actions/checkout@v4
+      with:
+        repository: hol-theorem-prover/hol-webpages
+        path: hol-webpages
+        token: ${{ secrets.CHEATSHEET_REGEN }}
+
+    - name: Regenerate cheatsheet
+      run: |
+        cd hol/Manual/Cheatsheet
+        make -f Holmakefile
+
+    - name: Copy cheatsheet into HOL webpages
+      run: |
+        cp hol/Manual/Cheatsheet/cheatsheet.html hol-webpages/new-look/cheatsheet.html
+        cp hol/Manual/Cheatsheet/cheatsheet.css  hol-webpages/new-look/cheatsheet.css
+
+    - name: Compose commit message
+      env:
+        HEAD_COMMIT: ${{github.event.head_commit.id}}
+        AUTHOR: ${{github.event.pusher.username || github.event.pusher.name}}
+      run: |
+        echo "[cheatsheet] Regenerate cheatsheet" > $COMMIT_MSG
+        echo "" >> $COMMIT_MSG
+        echo "Trigger: head commit HOL-Theorem-Prover/HOL@$HEAD_COMMIT, by $AUTHOR" >> $COMMIT_MSG
+
+    - name: Commit changes to HOL webpages
+      run: |
+        cd hol-webpages
+        git config user.name "GitHub Actions"
+        git config user.email "<>"
+        git add new-look/cheatsheet.html new-look/cheatsheet.css
+        git commit --allow-empty --file $COMMIT_MSG
+        git push
+
+    - name: Update HOL webpages
+      run: |
+        curl --silent https://hol-theorem-prover.org/update.cgi

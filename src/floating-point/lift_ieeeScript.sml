@@ -11,7 +11,7 @@ val _ = new_theory "lift_ieee";
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM"]
 
-val () =  Parse.temp_overload_on ("bias", ``words$INT_MAX``)
+val () = Parse.temp_overload_on ("bias", ``words$INT_MAX``)
 
 (* ------------------------------------------------------------------------ *)
 
@@ -164,14 +164,7 @@ val REAL_POW_LE_1 = Q.prove(
   \\ simp []
   );
 
-val REAL_POW_MONO = Q.prove(
-  `!m n x. 1r <= x /\ m <= n ==> x pow m <= x pow n`,
-  rw [arithmeticTheory.LESS_EQ_EXISTS]
-  \\ simp [REAL_POW_ADD]
-  \\ Ho_Rewrite.GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID]
-  \\ metis_tac [REAL_LE_LMUL_IMP, REAL_POW_LE_1, POW_POS, REAL_LE_TRANS,
-                REAL_LE_01]
-  );
+val REAL_POW_MONO = realTheory.REAL_POW_MONO
 
 val exponent_le = Q.prove(
   `!e : 'a word. e <> -1w ==> (w2n e <= UINT_MAX (:'a) - 1)`,
@@ -1736,7 +1729,7 @@ val float_to_real_real_to_float_zero_id = Q.store_thm (
 val non_representable_float_is_zero = store_thm (
   "non_representable_float_is_zero",
   ``!ff P.
-      2 * abs ff <=  ulp ((:'a#'b) :('a#'b) itself) ==>
+      2 * abs ff <= ulp ((:'a#'b) :('a#'b) itself) ==>
       (float_to_real ((float_round roundTiesToEven P ff):('a, 'b) float) = 0)``,
   rpt strip_tac \\ Cases_on `P`
   \\ fs [round_roundTiesToEven_is_plus_zero,

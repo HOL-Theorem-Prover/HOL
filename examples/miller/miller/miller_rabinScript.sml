@@ -11,7 +11,7 @@ open listTheory subtypeTools
      extra_realTheory realTheory realLib seqTheory
      state_transformerTheory combinTheory;
 
-open util_probTheory real_probabilityTheory probTheory prob_uniformTheory;
+open real_probabilityTheory probTheory prob_uniformTheory;
 
 val _ = new_theory "miller_rabin";
 val _ = ParseExtras.temp_loose_equality()

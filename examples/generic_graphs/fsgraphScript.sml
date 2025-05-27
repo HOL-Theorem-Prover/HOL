@@ -5,6 +5,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory pairTheory listTheory pred_setTheory sortingTheory
+     relationTheory
      hurdUtils
 
 open genericGraphTheory;
@@ -43,10 +44,28 @@ Definition valid_edges_def:
   valid_edges es s ⇔ ∀e. e ∈ es ⇒ e ⊆ s ∧ FINITE e ∧ CARD e = 2
 End
 
+Theorem valid_edges_EMPTY[simp]:
+  valid_edges {} g
+Proof
+  simp[valid_edges_def]
+QED
+
 Theorem fsgedges_emptyG[simp]:
   fsgedges emptyG = ∅
 Proof
   simp[fsgedges_def]
+QED
+
+Theorem fsgedges_singleton[simp]:
+  {n} ∉ fsgedges g
+Proof
+  simp[fsgedges_def]
+QED
+
+Theorem fsgAddEdges_EMPTY[simp]:
+  fsgAddEdges {} g = g
+Proof
+  simp[fsgAddEdges_def]
 QED
 
 Theorem fsgedges_addNode[simp]:
@@ -266,9 +285,9 @@ Theorem fsg_induction1:
 Proof
   gen_tac >> strip_tac >>
   ‘WF (inv_image ($< LEX $<) (λg:fsgraph. (gsize g, fsgsize g)))’
-    by (irule relationTheory.WF_inv_image >>
+    by (irule WF_inv_image >>
         irule pairTheory.WF_LEX >> simp[]) >>
-  drule_then irule relationTheory.WF_INDUCTION_THM >>
+  drule_then irule WF_INDUCTION_THM >>
   qx_gen_tac ‘G’ >> simp[LEX_DEF] >> strip_tac >>
   qspec_then ‘G’ strip_assume_tac fsg_decomposition1 >> gvs[] >>
   last_x_assum irule >> simp[] >> first_x_assum irule >>
@@ -683,6 +702,7 @@ Proof
   gs[adjacent_iff, adjacent_rules]
 QED
 
+(* [1], Thm 1.2 *)
 Theorem walks_contain_paths:
   ∀g vs. walk g vs ⇒
          ∃vs'. path g vs' ∧ HD vs' = HD vs ∧ LAST vs' = LAST vs ∧
@@ -721,6 +741,698 @@ Proof
   irule adjacent_append2 >> simp[]
 QED
 
+Definition gUNION_def:
+  gUNION g1 g2 = fsgAddEdges (fsgedges g2) (fsgAddNodes (nodes g2) g1)
+End
+
+Theorem valid_edges_SUBSET:
+  nodes g ⊆ A ⇒ valid_edges (fsgedges g) A
+Proof
+  rw[valid_edges_def] >> drule_then strip_assume_tac alledges_valid >>
+  gvs[SUBSET_DEF]
+QED
+
+Theorem valid_edges_UNION[simp]:
+  valid_edges (A ∪ B) ns ⇔ valid_edges A ns ∧ valid_edges B ns
+Proof
+  simp[valid_edges_def] >> metis_tac[]
+QED
+
+Theorem gUNION_emptyG[simp]:
+  gUNION emptyG g = g ∧ gUNION g emptyG = g
+Proof
+  rw[gUNION_def, fsgraph_component_equality, fsgedges_fsgAddEdges_thm,
+     valid_edges_SUBSET]
+QED
+
+Theorem gUNION_COMM:
+  gUNION g1 g2 = gUNION g2 g1
+Proof
+  simp[gUNION_def, fsgraph_component_equality, AC UNION_COMM UNION_ASSOC] >>
+  dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >>
+  simp[fsgedges_fsgAddNodes, AC UNION_ASSOC UNION_COMM, valid_edges_SUBSET]
+QED
+
+Theorem gUNION_ASSOC:
+  gUNION g1 (gUNION g2 g3) = gUNION (gUNION g1 g2) g3
+Proof
+  rw[gUNION_def, fsgraph_component_equality, AC UNION_COMM UNION_ASSOC] >>
+  dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >>
+  simp[fsgedges_fsgAddNodes, AC UNION_ASSOC UNION_COMM] >>
+  dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >>
+  simp[fsgedges_fsgAddNodes, AC UNION_ASSOC UNION_COMM] >>
+  rw[] >> irule valid_edges_SUBSET >> SET_TAC[]
+QED
+
+val _ = set_mapped_fixity {
+  fixity = Infixl 500, term_name = "gUNION", tok = "∪ᵍ"
+  }
+
+Theorem nodes_gUNION[simp]:
+  nodes (gUNION g1 g2) = nodes g1 ∪ nodes g2
+Proof
+  simp[gUNION_def, UNION_COMM]
+QED
+
+Theorem fsgedges_gUNION[simp]:
+  fsgedges (gUNION g1 g2) = fsgedges g1 ∪ fsgedges g2
+Proof
+  simp[gUNION_def] >>
+  dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >>
+  simp[fsgedges_fsgAddNodes, UNION_COMM, valid_edges_SUBSET]
+QED
+
+Theorem adjacent_gUNION[simp]:
+  DISJOINT (nodes g1) (nodes g2) ∧
+  adjacent (gUNION g1 g2) n1 n2 ⇒
+  n1 ∈ nodes g1 ∧ n2 ∈ nodes g1 ∨ n1 ∈ nodes g2 ∧ n2 ∈ nodes g2
+Proof
+  simp[adjacent_fsg] >> rw[] >>
+  drule alledges_valid >> simp[INSERT2_lemma] >>
+  metis_tac[IN_DISJOINT]
+QED
+
+Theorem fsgAddNode_gUNION:
+  n ∉ nodes g1 ∧ n ∉ nodes g2 ⇒
+  gUNION (fsgAddNode n g1) g2 = fsgAddNode n (gUNION g1 g2) ∧
+  gUNION g1 (fsgAddNode n g2) = fsgAddNode n (gUNION g1 g2)
+Proof
+  simp[gUNION_def, fsgraph_component_equality] >> rw[] >>~-
+  ([‘_ ∪ _ (* sg *)’], SET_TAC[]) >>
+  dep_rewrite.DEP_REWRITE_TAC [fsgedges_fsgAddEdges_thm] >>
+  simp[valid_edges_SUBSET, fsgedges_fsgAddNodes, SUBSET_DEF]
+QED
+
+Theorem valid_edges_with_member:
+  valid_edges es A ∧ n ∈ e ∧ e ∈ es ⇒
+  ∃m. e = {m;n} ∧ m ≠ n ∧ m ∈ A ∧ n ∈ A
+Proof
+  simp[valid_edges_def, CARDEQ2, SF CONJ_ss, INSERT2_lemma] >> rw[] >>
+  first_x_assum $ drule_then strip_assume_tac >>
+  gvs[INSERT2_lemma]
+QED
+
+Theorem TC_adjacent_fsgAddEdges:
+  ∀m n. TC (adjacent g) m n ⇒ ∀es. TC (adjacent (fsgAddEdges es g)) m n
+Proof
+  Induct_on ‘TC’ >> rw[] >~
+  [‘adjacent g m n (* a *)’]
+  >- (irule TC_SUBSET >> simp[]) >>
+  metis_tac[TC_RULES]
+QED
+
+Overload reachable = “λg:fsgraph. (adjacent g)꙳”
+
+Theorem reachable_members:
+  reachable g m n ⇒ m ∈ nodes g ∧ n ∈ nodes g ∨ m = n
+Proof
+  Induct_on ‘RTC’ >> simp[] >> metis_tac[adjacent_members]
+QED
+
+Theorem reachable_SYM:
+  reachable g m n ⇒ reachable g n m
+Proof
+  Induct_on ‘RTC’ >> simp[] >>
+  metis_tac[RTC_RULES_RIGHT1, adjacent_SYM]
+QED
+
+Theorem reachable_finite[simp]:
+  FINITE { n | reachable g m n}
+Proof
+  Cases_on ‘m ∈ nodes g’
+  >- (irule SUBSET_FINITE >> qexists ‘nodes g’ >> simp[SUBSET_DEF] >>
+      metis_tac[reachable_members]) >>
+  ‘∀n. reachable g m n ⇔ n = m’ suffices_by simp[] >>
+  simp[EQ_IMP_THM] >> metis_tac[reachable_members]
+QED
+
+Definition component_of_def:
+  component_of g n =
+  if n ∈ nodes g then
+    fsgAddEdges
+      (fsgedges g ∩ {{a;b} | (adjacent g)꙳ n a ∧ (adjacent g)꙳ n b})
+      (fsgAddNodes { m | (adjacent g)꙳ n m } emptyG)
+  else emptyG
+End
+
+Theorem nodes_component_of:
+  n ∈ nodes g ⇒ nodes (component_of g n) = { m | reachable g n m }
+Proof
+  simp[component_of_def, nodes_fsgAddNodes]
+QED
+
+Theorem component_of_EQ_EMPTY[simp]:
+  component_of g n = emptyG ⇔ n ∉ nodes g
+Proof
+  simp[component_of_def, AllCaseEqs(), EQ_IMP_THM, DISJ_IMP_THM] >>
+  disch_then (mp_tac o Q.AP_TERM ‘nodes’) >> simp[] >>
+  simp[EXTENSION] >> metis_tac[RTC_RULES]
+QED
+
+Theorem fsgedges_component_of:
+  n ∈ nodes g ⇒
+  fsgedges (component_of g n) =
+  { {a;b} | {a;b} ∈ fsgedges g ∧ (adjacent g)꙳ n a ∧
+            (adjacent g)꙳ n b }
+Proof
+  simp[component_of_def] >> strip_tac >>
+  dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >>
+  simp[fsgedges_fsgAddNodes] >> conj_tac >~
+  [‘_ ∩ _ = _’] >- SET_TAC[] >>
+  simp[valid_edges_def, PULL_EXISTS, AllCaseEqs()]
+QED
+
+Theorem reachable_equal_components:
+  reachable g m n ⇒ component_of g m = component_of g n
+Proof
+  simp[component_of_def, fsgraph_component_equality] >> rw[] >>
+  drule_then strip_assume_tac reachable_members >> gvs[] >~
+  [‘GSPEC _ = GSPEC _’]
+  >- (simp[EXTENSION] >> metis_tac[reachable_SYM, RTC_TRANS]) >>
+  dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >> rpt strip_tac >~
+  [‘_ = _  (* g *)’]
+  >- (simp[Once EXTENSION] >>
+      metis_tac[reachable_SYM, RTC_TRANS]) >>
+  simp[valid_edges_def, PULL_EXISTS, AllCaseEqs()]
+QED
+
+Theorem IN_nodes_component_of[simp]:
+  m ∈ nodes (component_of g n) ⇔ reachable g m n ∧ m ∈ nodes g ∧ n ∈ nodes g
+Proof
+  rw[component_of_def] >> metis_tac[reachable_SYM, reachable_members]
+QED
+
+Theorem component_of_EQUAL:
+  component_of g m = component_of g n ⇔
+    m ∉ nodes g ∧ n ∉ nodes g ∨ reachable g m n
+Proof
+  simp[EQ_IMP_THM, DISJ_IMP_THM, reachable_equal_components] >> rw[] >~
+  [‘_ ∨ _’]
+  >- (pop_assum (mp_tac o Q.AP_TERM ‘nodes’) >>
+      simp[EXTENSION] >> map_every Cases_on [‘m ∈ nodes g’, ‘n ∈ nodes g’] >>
+      simp[] >> metis_tac[RTC_RULES]) >>
+  simp[component_of_def]
+QED
+
+Theorem IN_edges_component_of:
+  e ∈ fsgedges (component_of g n) ⇔
+  ∃a b. e = {a;b} ∧ e ∈ fsgedges g ∧ n ∈ nodes g ∧
+        reachable g n a ∧ reachable g n b
+Proof
+  reverse $ Cases_on ‘n ∈ nodes g’ >- simp[component_of_def] >>
+  simp[fsgedges_component_of] >> metis_tac[]
+QED
+
+Theorem IN_nodes_component_SYM:
+  m ∈ nodes (component_of g n) ⇔ n ∈ nodes (component_of g m)
+Proof
+  simp[] >> metis_tac[reachable_SYM]
+QED
+
+Definition component_complement_def:
+  component_complement g n =
+    fsgAddEdges (fsgedges g DIFF fsgedges (component_of g n)) $
+    fsgAddNodes (nodes g DIFF nodes (component_of g n)) $ emptyG
+End
+
+Theorem nodes_component_complement:
+  nodes (component_complement g n) = nodes g DIFF nodes (component_of g n)
+Proof
+  simp[component_complement_def]
+QED
+
+Theorem component_complement_EQ_all:
+  n ∉ nodes g ⇒ component_complement g n = g
+Proof
+  simp[component_complement_def, component_of_def, fsgraph_component_equality,
+       fsgedges_fsgAddEdges_thm, valid_edges_SUBSET]
+QED
+
+Theorem fsgedges_component_complement:
+  fsgedges (component_complement g n) =
+  fsgedges g DIFF fsgedges (component_of g n)
+Proof
+  reverse $ Cases_on ‘n ∈ nodes g’
+  >- simp[component_complement_EQ_all, component_of_def] >>
+  simp[component_complement_def] >>
+  dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >>
+  simp[valid_edges_def, CARDEQ2, SF CONJ_ss] >> rpt strip_tac >>
+  drule_then strip_assume_tac alledges_valid >>
+  gvs[fsgedges_component_of] >>
+  first_x_assum (resolve_then Any strip_assume_tac EQ_REFL) >>
+  metis_tac[reachable_SYM, INSERT_COMM, RTC_RULES,
+            RTC_RULES_RIGHT1, adjacent_fsg]
+QED
+
+Theorem component_UNION_complement:
+  gUNION (component_of g n) (component_complement g n) = g
+Proof
+  reverse $ Cases_on ‘n ∈ nodes g’
+  >- (simp[component_complement_EQ_all, component_of_def]) >>
+  simp[gUNION_def, component_complement_def, nodes_component_of,
+       fsgedges_component_of] >>
+  simp[fsgraph_component_equality, nodes_component_of] >> conj_tac >~
+  [‘_ = nodes g’]
+  >- (simp[EXTENSION] >> metis_tac[reachable_members]) >>
+  dep_rewrite.DEP_REWRITE_TAC[fsgedges_fsgAddEdges_thm] >>
+  simp[valid_edges_def, CARDEQ2, SF CONJ_ss] >> rpt strip_tac >>~-
+  ([‘e ∈ fsgedges g’],
+   drule_then strip_assume_tac alledges_valid >> first_x_assum drule >>
+   gvs[] >> simp[DISJ_IMP_THM] >>
+   metis_tac[adjacent_fsg, INSERT_COMM, RTC_RULES_RIGHT1,
+             reachable_SYM]) >>
+  simp[fsgedges_component_of] >> simp[Once EXTENSION] >> metis_tac[]
+QED
+
+Theorem complement_contains_unreachables:
+  m ∈ nodes g ∧ n ∈ nodes g ∧ ¬reachable g m n ⇒
+  m ∈ nodes (component_complement g n)
+Proof
+  simp[nodes_component_complement]
+QED
+
+Theorem DISJOINT_component_complement:
+  DISJOINT (nodes $ component_of g n) (nodes $ component_complement g n) ∧
+  DISJOINT (fsgedges $ component_of g n) (fsgedges $ component_complement g n)
+Proof
+  simp[nodes_component_complement, fsgedges_component_complement] >>
+  simp[IN_DISJOINT] >> metis_tac[]
+QED
+
+Theorem TC_adjacent_SYM:
+  TC (adjacent (g:fsgraph)) m n ⇒ TC (adjacent g) n m
+Proof
+  Induct_on ‘TC’ >> rw[] >>
+  metis_tac[TC_RULES, adjacent_SYM]
+QED
+
+Theorem connected_indivisible:
+  connected g ⇔
+    ∀g1 g2. g1 ∪ᵍ g2 = g ∧ DISJOINT (nodes g1) (nodes g2) ⇒
+            g1 = emptyG ∨ g2 = emptyG
+Proof
+  rw[EQ_IMP_THM] >~
+  [‘connected (gUNION g1 g2)’]
+  >- (gvs[connected_def] >> CCONTR_TAC >> gvs[] >>
+      ‘nodes g1 ≠ {} ∧ nodes g2 ≠ {}’ by simp[nodes_EQ_EMPTY] >>
+      ‘∃n1 n2. n1 ∈ nodes g1 ∧ n2 ∈ nodes g2’ by metis_tac[MEMBER_NOT_EMPTY] >>
+      ‘n1 ≠ n2’ by metis_tac[IN_DISJOINT] >>
+      ‘∀n1 n2. TC (adjacent (gUNION g1 g2)) n1 n2 ⇒
+               n1 ∈ nodes g1 ∧ n2 ∈ nodes g1 ∨
+               n1 ∈ nodes g2 ∧ n2 ∈ nodes g2’
+        suffices_by
+        (rw[] >> first_x_assum $ drule_at Any >> simp[] >>
+         metis_tac[IN_DISJOINT]) >>
+      Induct_on ‘TC’ >> rw[] >> metis_tac[IN_DISJOINT]) >>
+  CCONTR_TAC >> gvs[connected_def] >>
+  qpat_x_assum ‘∀g1 g2. _’ mp_tac >> simp[] >>
+  qexistsl [‘component_of g n1’, ‘component_complement g n1’] >>
+  simp[component_UNION_complement, DISJOINT_component_complement] >>
+  disch_then (mp_tac o Q.AP_TERM ‘nodes’) >>
+  simp[Excl "nodes_EQ_EMPTY", GSYM MEMBER_NOT_EMPTY] >>
+  qexists ‘n2’ >> irule complement_contains_unreachables >> simp[] >>
+  simp[RTC_CASES_TC] >> metis_tac[TC_adjacent_SYM]
+QED
+
+Theorem reachable_within_components:
+  reachable g n1 n2 ⇒ reachable (component_of g n1) n1 n2
+Proof
+  reverse $ Cases_on ‘n1 ∈ nodes g’
+  >- (simp[component_of_def] >>
+      simp[SimpL “$==>”, Once RTC_CASES1] >>
+      simp[DISJ_IMP_THM] >> metis_tac[adjacent_members]) >>
+  pop_assum mp_tac >> Induct_on ‘RTC’ >> simp[] >> rw[] >>
+  rename[‘adjacent g m n’, ‘reachable g n p’] >>
+  ‘n ∈ nodes g’ by metis_tac[adjacent_members] >> gvs[] >>
+  ‘reachable g m n’ by metis_tac[RTC_SUBSET] >>
+  ‘component_of g n = component_of g m’
+    by metis_tac[reachable_equal_components] >> gvs[] >>
+  irule $ cj 2 $ RTC_RULES >> first_assum $ irule_at Any >>
+  gvs[adjacent_fsg, fsgedges_component_of] >>
+  metis_tac[RTC_RULES, adjacent_fsg]
+QED
+
+Theorem reachable_component_SUBSET:
+  reachable (component_of g m) a b ⇒ reachable g a b
+Proof
+  Induct_on ‘RTC’ >> rw[] >> irule $ cj 2 $ RTC_RULES >>
+  gvs[adjacent_fsg, IN_edges_component_of, INSERT2_lemma] >>
+  metis_tac[INSERT_COMM]
+QED
+
+Theorem connected_component_of[simp]:
+  connected (component_of g n)
+Proof
+  rw[connected_def] >>
+  rename [‘n1 ≠ n2’, ‘reachable g n1 n’] >>
+  ‘component_of g n = component_of g n1’
+    by simp[reachable_equal_components] >>
+  ‘reachable (component_of g n) n1 n2’
+    by metis_tac[reachable_within_components, reachable_SYM,
+                 RTC_TRANS] >>
+  gvs[RTC_CASES_TC]
+QED
+
+Theorem edges_stay_within_components:
+  {a;b} ∈ fsgedges g ⇒
+  ∀n. a ∈ nodes (component_of g n) ⇒ b ∈ nodes (component_of g n)
+Proof
+  CCONTR_TAC >> gvs[] >~
+  [‘reachable g a n’, ‘¬reachable g b n’]
+  >- metis_tac[RTC_RULES, reachable_SYM, adjacent_fsg, INSERT_COMM] >>
+  drule alledges_valid >> simp[INSERT2_lemma] >> metis_tac[]
+QED
+
+Theorem gUNION_LCOMM:
+  ∀x y z. gUNION x (gUNION y z) = gUNION y (gUNION x z)
+Proof
+  metis_tac[gUNION_ASSOC, gUNION_COMM]
+QED
+
+Theorem order_component_complement[simp]:
+  order (component_complement g n) = order g - order (component_of g n)
+Proof
+  simp[gsize_def, nodes_component_complement] >>
+  ‘nodes (component_of g n) ⊆ nodes g’ by simp[SUBSET_DEF] >>
+  ‘nodes g ∩ nodes (component_of g n) = nodes (component_of g n)’
+    by ASM_SET_TAC[] >>
+  simp[]
+QED
+
+Theorem ZERO_LT_ORDER_COMPONENT[simp]:
+  0 < order (component_of g n) ⇔ n ∈ nodes g
+Proof
+  simp[gsize_def, EQ_IMP_THM] >> conj_tac >> CCONTR_TAC >~
+  [‘n ∈ nodes g ⇒ _’]
+  >- gvs[] >>
+  gvs[component_of_def]
+QED
+
+Theorem nodes_ITSET_gUNION:
+  ∀A g0.
+    FINITE A ⇒
+    nodes (ITSET gUNION A g0) = nodes g0 ∪ BIGUNION (IMAGE nodes A)
+Proof
+  Induct_on ‘FINITE’ >>
+  simp[COMMUTING_ITSET_RECURSES, gUNION_LCOMM, DELETE_NON_ELEMENT_RWT,
+       AC UNION_COMM UNION_ASSOC]
+QED
+
+Theorem fsgedges_ITSET_gUNION:
+  ∀A g0.
+    FINITE A ⇒
+    fsgedges (ITSET gUNION A g0) = fsgedges g0 ∪ BIGUNION (IMAGE fsgedges A)
+Proof
+  Induct_on ‘FINITE’ >>
+  simp[COMMUTING_ITSET_RECURSES, gUNION_LCOMM, DELETE_NON_ELEMENT_RWT,
+       AC UNION_COMM UNION_ASSOC]
+QED
+
+Definition connected_components_def:
+  connected_components g = IMAGE (component_of g) (nodes g)
+End
+
+Theorem FINITE_connected_components[simp]:
+  FINITE (connected_components g)
+Proof
+  simp[connected_components_def]
+QED
+
+Theorem gUNION_connected_components:
+  ITSET gUNION (connected_components g) emptyG = g
+Proof
+  simp[fsgraph_component_equality, nodes_ITSET_gUNION, fsgedges_ITSET_gUNION]>>
+  conj_tac >> simp[Once EXTENSION, PULL_EXISTS]
+  >- (qx_gen_tac ‘n’ >>
+      simp[connected_components_def, PULL_EXISTS, SF CONJ_ss] >>
+      iff_tac >> simp[PULL_EXISTS] >> metis_tac[RTC_RULES]) >>
+  qx_gen_tac ‘e’ >>
+  simp[connected_components_def, PULL_EXISTS, SF CONJ_ss,
+       fsgedges_component_of] >> iff_tac >> rw[] >> simp[] >>
+  drule_then strip_assume_tac alledges_valid >> gvs[] >>
+  irule_at Any EQ_REFL >> simp[] >>
+  metis_tac [RTC_RULES, adjacent_fsg]
+QED
+
+Theorem connected_components_are_connected:
+  cc ∈ connected_components g ⇒ connected cc
+Proof
+  simp[connected_components_def, PULL_EXISTS]
+QED
+
+Theorem connected_components_nonempty:
+  cc ∈ connected_components g ⇒ cc ≠ emptyG
+Proof
+  simp[connected_components_def, PULL_EXISTS]
+QED
+
+Theorem connected_component_nodes_SUBSET:
+  cc ∈ connected_components g ∧ n ∈ nodes cc ⇒ n ∈ nodes g
+Proof
+  simp[connected_components_def, PULL_EXISTS, SF CONJ_ss]
+QED
+
+Theorem connected_component_edges_SUBSET:
+  cc ∈ connected_components g ∧ e ∈ fsgedges cc ⇒ e ∈ fsgedges g
+Proof
+  simp[connected_components_def, PULL_EXISTS, SF CONJ_ss, fsgedges_component_of]
+QED
+
+Theorem component_of_IN_connected_components[simp]:
+  component_of g n ∈ connected_components g ⇔ n ∈ nodes g
+Proof
+  simp[connected_components_def, EQ_IMP_THM, PULL_EXISTS] >>
+  simp[component_of_EQUAL, SF CONJ_ss] >>
+  metis_tac[reachable_members]
+QED
+
+Theorem every_node_has_a_connected_component:
+  ∀n. n ∈ nodes g ⇒ ∃cc. cc ∈ connected_components g ∧ n ∈ nodes cc
+Proof
+  simp[connected_components_def, PULL_EXISTS] >> metis_tac[RTC_RULES]
+QED
+
+Theorem every_node_has_unique_connected_component:
+  ∀n. n ∈ nodes g ⇒ ∃!cc. cc ∈ connected_components g ∧ n ∈ nodes cc
+Proof
+  simp[EXISTS_UNIQUE_THM] >> rw[] >~
+  [‘_ ∈ connected_components g ∧ n ∈ nodes _’]
+  >- metis_tac[every_node_has_a_connected_component] >>
+  simp[fsgraph_component_equality] >> conj_tac >~
+  [‘nodes cc1 = nodes cc2’]
+  >- (gvs[connected_components_def, EXTENSION] >>
+      metis_tac[reachable_SYM, RTC_TRANS]) >~
+  [‘fsgedges cc1 = fsgedges cc2’]
+  >- (gvs[connected_components_def, Once EXTENSION, fsgedges_component_of]>>
+      qx_gen_tac ‘e’ >> iff_tac >> rw[] >>
+      metis_tac[RTC_TRANS, reachable_SYM])
+QED
+
+Theorem connected_components_partition_nodes:
+  IMAGE nodes (connected_components g) partitions nodes g
+Proof
+  rw[partitions_thm] >> simp[SF SFY_ss, connected_components_nonempty] >~
+  [‘nodes cc ⊆ nodes g’]
+  >- simp[SUBSET_DEF, SF SFY_ss, connected_component_nodes_SUBSET] >>
+  simp[PULL_EXISTS, EXISTS_UNIQUE_THM] >>
+  rename [‘_ ∈ connected_components g ∧ n ∈ nodes _’, ‘n ∈ nodes g’] >>
+  qexists ‘component_of g n’ >> rw[] >>
+  rename [‘nodes cc1 = nodes cc2’, ‘n ∈ nodes cc1’] >>
+  gvs[connected_components_def] >>
+  simp[EXTENSION] >> metis_tac[reachable_SYM, RTC_TRANS]
+QED
+
+Theorem reachable_passing_over_boundary:
+  reachable g m n ∧ m ∉ A ∧ n ∈ A ⇒
+  ∃a b. {a;b} ∈ fsgedges g ∧ a ∉ A ∧ b ∈ A
+Proof
+  Induct_on ‘RTC’ >> simp[SF CONJ_ss, adjacent_fsg] >> rw[] >>
+  metis_tac[]
+QED
+
+Theorem connected_components_disconnected:
+  cc1 ∈ connected_components g ∧ cc2 ∈ connected_components g ∧ cc1 ≠ cc2 ∧
+  m ∈ nodes cc1 ∧ n ∈ nodes cc2 ⇒
+  ¬reachable g m n
+Proof
+  rpt strip_tac >>
+  ‘m ∈ nodes g ∧ n ∈ nodes g’ by metis_tac[connected_component_nodes_SUBSET] >>
+  ‘m ∈ nodes (component_of g m) ∧ n ∈ nodes (component_of g n)’
+    by simp[] >>
+  ‘cc1 = component_of g m ∧ cc2 = component_of g n’
+    by metis_tac[every_node_has_unique_connected_component,
+                 component_of_IN_connected_components] >> gvs[] >>
+  metis_tac[reachable_equal_components]
+QED
+
+Theorem connected_components_EQ_EMPTY[simp]:
+  connected_components g = ∅ ⇔ g = emptyG
+Proof
+  simp[connected_components_def]
+QED
+
+Theorem connected_components_EMPTY[simp]:
+  connected_components emptyG = ∅
+Proof
+  simp[connected_components_def]
+QED
+
+Theorem connected_components_unique:
+  FINITE A ∧ pairwise (λg1 g2. g1 ≠ g2 ⇒ DISJOINT(nodes g1) (nodes g2)) A ∧
+  (∀cc. cc ∈ A ⇒ connected cc ∧ cc ≠ emptyG) ∧ ITSET gUNION A emptyG = g ⇒
+  connected_components g = A
+Proof
+  rw[] >> qabbrev_tac ‘g = ITSET gUNION A emptyG’ >>
+  simp[EXTENSION, EQ_IMP_THM] >> qx_gen_tac ‘cc’ >> reverse $ rpt strip_tac
+  >- (‘∃n. n ∈ nodes cc’
+        by (CCONTR_TAC >> gvs[] >>
+            ‘nodes cc = {}’ by simp[EXTENSION, Excl "nodes_EQ_EMPTY"] >>
+            gvs[]) >>
+      ‘∀n. n ∈ nodes cc ⇒ n ∈ nodes g’
+        by (simp[Abbr‘g’, nodes_ITSET_gUNION, PULL_EXISTS] >> metis_tac[]) >>
+      ‘∀e. e ∈ fsgedges cc ⇒ e ∈ fsgedges g’
+        by (simp[Abbr‘g’, fsgedges_ITSET_gUNION, PULL_EXISTS] >> metis_tac[]) >>
+      ‘n ∈ nodes g’ by simp[] >>
+      ‘component_of g n ∈ connected_components g ∧ n ∈ nodes (component_of g n)’
+        by simp[connected_components_def, PULL_EXISTS,
+                component_of_EQUAL] >>
+      ‘component_of g n = cc’ suffices_by metis_tac[] >>
+      simp[fsgraph_component_equality, EXTENSION] >> conj_asm1_tac >> rw[] >~
+      [‘reachable g m n ∧ m ∈ nodes g ⇔ m ∈ nodes cc’]
+      >- (reverse $ iff_tac
+          >- (strip_tac >> Cases_on ‘m = n’ >> simp[] >>
+              gvs[RTC_CASES_TC] >>
+              ‘(adjacent cc)⁺ m n’ by gvs[connected_def] >>
+              pop_assum mp_tac >> MATCH_MP_TAC TC_MONOTONE >>
+              simp[adjacent_fsg, Abbr‘g’, fsgedges_ITSET_gUNION, PULL_EXISTS] >>
+              metis_tac[]) >>
+          CCONTR_TAC >> gvs[] >>
+          ‘∃ m0 n0. {m0; n0} ∈ fsgedges g ∧ m0 ∉ nodes cc ∧ n0 ∈ nodes cc’
+            by metis_tac[reachable_passing_over_boundary] >>
+          qpat_x_assum ‘_ ∈ fsgedges g’ mp_tac >>
+          simp[Abbr‘g’, fsgedges_ITSET_gUNION, PULL_FORALL] >>
+          qx_gen_tac ‘eset’ >> Cases_on ‘{m0;n0} ∈ eset’ >> simp[] >>
+          rpt strip_tac >> gvs[] >> rename [‘{m0;n0} ∈ fsgedges cc1’] >>
+          ‘m0 ∈ nodes cc1 ∧ n0 ∈ nodes cc1’
+            by metis_tac[alledges_valid, INSERT2_lemma] >>
+          ‘cc1 ≠ cc’ by metis_tac[] >>
+          dxrule_all (iffLR pairwise_def) >> simp[] >>
+          metis_tac[IN_DISJOINT]) >>
+      simp[fsgedges_component_of] >> rw[EQ_IMP_THM] >~
+      [‘{a;b} ∈ fsgedges g (* a *)’, ‘reachable g n a’, ‘reachable g n b’]
+      >- (‘a ∈ nodes g ∧ b ∈ nodes g’
+            by metis_tac[alledges_valid, INSERT2_lemma] >>
+          ‘a ∈ nodes cc ∧ b ∈ nodes cc’ by metis_tac[reachable_SYM] >>
+          CCONTR_TAC >> qpat_x_assum ‘{a;b} ∈ fsgedges g’ mp_tac >>
+          simp[Abbr‘g’, fsgedges_ITSET_gUNION, PULL_FORALL] >>
+          qx_gen_tac ‘B’ >> Cases_on ‘{a;b} ∈ B’ >> simp[] >>
+          rpt strip_tac >> gvs[] >> rename [‘{a;b} ∈ fsgedges cc1 (* a *)’] >>
+          ‘a ∈ nodes cc1 ∧ b ∈ nodes cc1’
+            by metis_tac[alledges_valid, INSERT2_lemma] >>
+          dxrule_all (iffLR pairwise_def) >> simp[] >>
+          metis_tac[IN_DISJOINT]) >>
+      drule_then strip_assume_tac alledges_valid>> simp[] >>
+      irule_at Any EQ_REFL >> gvs[] >> metis_tac [reachable_SYM]) >>
+  ‘nodes cc ≠ {}’ by simp[connected_components_nonempty, SF SFY_ss] >>
+  pop_assum (strip_assume_tac o REWRITE_RULE[GSYM MEMBER_NOT_EMPTY]) >>
+  rename [‘n ∈ nodes cc’] >>
+  ‘n ∈ nodes g’ by metis_tac[connected_component_nodes_SUBSET] >>
+  ‘∃cc1. cc1 ∈ A ∧ n ∈ nodes cc1 ∧
+         ∀cc2. cc2 ∈ A ∧ n ∈ nodes cc2 ⇒ cc2 = cc1’
+    by (pop_assum mp_tac >>
+        simp[Abbr‘g’, nodes_ITSET_gUNION, PULL_EXISTS] >> rpt strip_tac >>
+        first_assum $ irule_at (Pat ‘_ ∈ A’) >> rw[] >>
+        dxrule_all (iffLR pairwise_def) >> simp[] >> metis_tac[IN_DISJOINT]) >>
+  ‘cc = cc1’ suffices_by simp[] >>
+  simp[fsgraph_component_equality] >>
+  ‘n ∈ nodes (component_of g n)’ by simp[] >>
+  ‘cc = component_of g n’
+    by metis_tac[every_node_has_unique_connected_component,
+                 component_of_IN_connected_components] >>
+  gvs[nodes_component_of, fsgedges_component_of] >> conj_asm1_tac >~
+  [‘_ = nodes cc1’]
+  >- (simp[EXTENSION, EQ_IMP_THM] >> qx_gen_tac ‘m’ >> rpt strip_tac >~
+      [‘m ∈ nodes cc1 (* a *)’, ‘reachable g n m (* g *)’]
+      >- (‘connected cc1’ by simp[] >>
+          pop_assum mp_tac >> simp[connected_def, NoAsms] >>
+          Cases_on ‘m = n ’ >> simp[] >> strip_tac >>
+          ‘reachable cc1 m n’ by metis_tac[RTC_CASES_TC] >>
+          simp[Abbr‘g’, nodes_ITSET_gUNION, PULL_EXISTS] >>
+          ‘∀m n. adjacent cc1 m n ⇒ adjacent (ITSET gUNION A emptyG) m n’
+            suffices_by metis_tac[RTC_MONOTONE, reachable_SYM] >>
+          simp[PULL_EXISTS, adjacent_fsg, fsgedges_ITSET_gUNION] >>
+          metis_tac[]) >>
+      CCONTR_TAC >>
+      ‘reachable g m n’ by simp[reachable_SYM] >>
+      drule_all_then strip_assume_tac reachable_passing_over_boundary >>
+      qpat_x_assum ‘_ ∈ fsgedges g’ mp_tac >>
+      simp[Abbr‘g’, fsgedges_ITSET_gUNION, PULL_FORALL] >>
+      qx_gen_tac ‘eset’ >> rename [‘{m0;n0} ∈ _’] >>
+      Cases_on ‘{m0;n0} ∈ eset’ >> simp[] >>
+      rpt strip_tac >> gvs[] >> rename [‘{m0;n0} ∈ fsgedges cc2’] >>
+      ‘m0 ∈ nodes cc2 ∧ n0 ∈ nodes cc2’
+        by metis_tac[alledges_valid, INSERT2_lemma] >>
+      ‘cc1 ≠ cc2’ by metis_tac[] >>
+      dxrule_all (iffLR pairwise_def) >> simp[] >>
+      metis_tac[IN_DISJOINT]) >>
+  pop_assum mp_tac >> ONCE_REWRITE_TAC [EXTENSION] >> simp[] >>
+  strip_tac >> qx_gen_tac ‘e’ >> iff_tac >> strip_tac >> gvs[] >~
+  [‘{a;b} ∈ fsgedges g’, ‘Abbrev(g = _)’]
+  >- (CCONTR_TAC >> qpat_x_assum ‘{a;b} ∈ fsgedges _’ mp_tac >>
+      simp[Abbr‘g’, fsgedges_ITSET_gUNION] >>
+      qx_gen_tac ‘B’ >> Cases_on ‘{a;b} ∈ B’ >> simp[] >>
+      rpt strip_tac >> gvs[] >> rename [‘{a;b} ∈ fsgedges cc2 (* a *)’] >>
+      ‘a ∈ nodes cc2 ∧ b ∈ nodes cc2’
+        by metis_tac[alledges_valid, INSERT2_lemma] >>
+      dxrule_all (iffLR pairwise_def) >> simp[] >>
+      metis_tac[IN_DISJOINT]) >>
+  drule_then strip_assume_tac alledges_valid>> simp[] >>
+  irule_at Any EQ_REFL >> gvs[] >>
+  simp [Abbr‘g’, fsgedges_ITSET_gUNION] >> metis_tac[]
+QED
+
+Theorem connected_components_EQ_SING[simp]:
+  connected_components g1 = {g2} ⇔ g1 = g2 ∧ connected g2 ∧ g2 ≠ emptyG
+Proof
+  iff_tac >> strip_tac >~
+  [‘connected_components g1 = {g2} (* a *)’]
+  >- (assume_tac (gUNION_connected_components |> Q.INST[‘g’ |-> ‘g1’]) >>
+      gvs[gUNION_LCOMM, COMMUTING_ITSET_RECURSES] >>
+      rpt strip_tac >~
+      [‘connected _’]
+      >- metis_tac[connected_components_are_connected, IN_INSERT] >>
+      gvs[]) >>
+  irule connected_components_unique >> gvs[pairwise_def]
+QED
+
+Theorem connected_components_addNode:
+  n ∉ nodes g ⇒
+  connected_components (fsgAddNode n g) =
+  fsgAddNode n emptyG INSERT connected_components g
+Proof
+  strip_tac >> irule connected_components_unique >>
+  simp[DISJ_IMP_THM, FORALL_AND_THM, COMMUTING_ITSET_RECURSES, gUNION_LCOMM,
+       pairwise_def] >> rw[] >> simp[] >~
+  [‘connected cc’, ‘cc ∈ connected_components g’]
+  >- metis_tac[connected_components_are_connected] >~
+  [‘connected (fsgAddNode n emptyG)’]
+  >- simp[connected_def] >~
+  [‘cc ∈ connected_components g’, ‘cc ≠ emptyG’]
+  >- metis_tac[connected_components_nonempty] >~
+  [‘gUNION (fsgAddNode n emptyG) _ = _ ’]
+  >- (dep_rewrite.DEP_REWRITE_TAC[DELETE_NON_ELEMENT_RWT] >>
+      simp[gUNION_connected_components] >> strip_tac >~
+      [‘fsgAddNode n emptyG ∉ connected_components g’]
+      >- (strip_tac >> drule connected_component_nodes_SUBSET >>
+          simp[]) >>
+      simp[gUNION_def, fsgraph_component_equality] >>
+      SET_TAC[]) >>~-
+  ([‘g1 ∈ connected_components g’, ‘n ∉ nodes g1’],
+   metis_tac[connected_component_nodes_SUBSET]) >>
+  simp[IN_DISJOINT] >> CCONTR_TAC >> gvs[] >>
+  drule_all connected_components_disconnected >> simp[]
+QED
+
 (* ----------------------------------------------------------------------
     r-partite graphs and (in particular) bipartite graphs [2, p.17]
    ---------------------------------------------------------------------- *)
@@ -738,13 +1450,15 @@ QED
 
 (* r-partite graphs [2, p.17]
 
-   NOTE: ‘partitions’ requires that each partiton must be non-empty. This is not
-   explicitly mentioned in the textbook but seems reasonable.
- *)
+   Expressed in terms of colourings from nodes into :num. This gives the
+   consequences one would expect, while explicitly allowing for a partition
+   "set" to be empty.
+
+*)
 Definition gen_partite_def :
     gen_partite r (g :fsgraph) v <=>
-      v partitions (nodes g) /\ CARD v = r /\
-      !n1 n2. {n1;n2} IN fsgedges g ==> part v n1 <> part v n2
+      (∀n. n ∈ nodes g ⇒ v n < r) ∧
+      (∀e. e ∈ fsgedges g ⇒ CARD (IMAGE v e) = 2)
 End
 
 Definition partite :
@@ -753,8 +1467,7 @@ End
 
 (* |- !r g.
         partite r g <=>
-        ?v. v partitions V /\ CARD v = r /\
-            !n1 n2. {n1; n2} IN E ==> part v n1 <> part v n2
+        ?v. (∀n. n IN V ⇒ v n < r) ∧ (∀e. e IN E ⇒ CARD (IMAGE v e) = 2)
  *)
 Theorem partite_def = REWRITE_RULE [gen_partite_def] partite
 
@@ -762,151 +1475,84 @@ Theorem partite_def = REWRITE_RULE [gen_partite_def] partite
 Overload bipartite = “partite 2”
 
 Definition gen_bipartite :
-    gen_bipartite (g :fsgraph) A B = gen_partite 2 g {A; B}
+  gen_bipartite (g :fsgraph) A B ⇔
+    ∃cf. gen_partite 2 g cf ∧ A = PREIMAGE cf {0} ∩ V ∧
+         B = PREIMAGE cf {1} ∩ V
 End
 
 Theorem gen_bipartite_partitions[local] :
-    !g :fsgraph v. gen_partite 2 g v ==> ?A B. gen_bipartite g A B
+  !g :fsgraph v. gen_partite 2 g v ==> ?A B. gen_bipartite g A B
 Proof
-    rw [gen_partite_def]
- >> ‘FINITE V’ by rw []
- >> ‘FINITE v’ by PROVE_TAC [partitions_FINITE]
- >> gs [CARDEQ2]
- >> qexistsl_tac [‘a’, ‘b’]
- >> rw [gen_bipartite, gen_partite_def]
+  rw [gen_partite_def, gen_bipartite] >> metis_tac[]
 QED
 
 Theorem gen_bipartite_def :
-    !g A B. gen_bipartite (g :fsgraph) A B <=>
-            DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
-            !n1 n2. {n1;n2} IN fsgedges g ==>
-                    (n1 IN A /\ n2 IN B) \/ (n1 IN B /\ n2 IN A)
+  !g A B. gen_bipartite (g :fsgraph) A B <=>
+          DISJOINT A B /\ A UNION B = nodes g /\
+          !n1 n2. {n1;n2} IN fsgedges g ==>
+                      (n1 IN A /\ n2 IN B) \/ (n1 IN B /\ n2 IN A)
 Proof
-    rw [gen_bipartite, gen_partite_def]
- >> EQ_TAC >> simp []
- >- (STRIP_TAC \\
-    ‘FINITE V’ by rw [] \\
-     qabbrev_tac ‘v = {A; B}’ \\
-    ‘FINITE v’ by PROVE_TAC [partitions_FINITE] \\
-     fs [CARDEQ2] >> gvs [Abbr ‘v’] \\
-     CONJ_ASM1_TAC (* DISJOINT A B *)
-     >- (MATCH_MP_TAC partitions_DISJOINT \\
-         qexistsl_tac [‘{A; B}’, ‘V’] >> rw []) \\
-     CONJ_TAC (* A <> {} *) >- fs [partitions_PAIR_DISJOINT] \\
-     CONJ_TAC (* B <> {} *) >- fs [partitions_PAIR_DISJOINT] \\
-     CONJ_ASM1_TAC (* A UNION B = V *)
-     >- (Q.PAT_X_ASSUM ‘{A;B} partitions V’ (MP_TAC o MATCH_MP partitions_covers) \\
-         SET_TAC []) \\
-     rpt STRIP_TAC \\
-    ‘n1 IN V /\ n2 IN V /\ n1 <> n2’ by PROVE_TAC [fsgraph_valid] \\
-     Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘n1’, ‘n2’]) >> rw [] \\
-     Cases_on ‘n1 IN A’
-     >- (DISJ1_TAC >> rw [] (* goal: n2 IN B *) \\
-         Know ‘A = part {A; B} n1’
-         >- (MATCH_MP_TAC part_unique \\
-             Q.EXISTS_TAC ‘V’ >> rw []) \\
-         DISCH_THEN (fs o wrap o SYM) \\
-         Cases_on ‘n2 IN A’
-         >- (Know ‘A = part {A; B} n2’
-             >- (MATCH_MP_TAC part_unique \\
-                 Q.EXISTS_TAC ‘V’ >> rw []) \\
-             DISCH_THEN (fs o wrap o SYM)) \\
-         ASM_SET_TAC []) \\
-     simp [] \\
-     CONJ_ASM1_TAC >- ASM_SET_TAC [] \\
-     Know ‘B = part {A; B} n1’
-     >- (MATCH_MP_TAC part_unique \\
-         Q.EXISTS_TAC ‘V’ >> rw []) \\
-     DISCH_THEN (fs o wrap o SYM) \\
-     Cases_on ‘n2 IN B’
-     >- (Know ‘B = part {A; B} n2’
-         >- (MATCH_MP_TAC part_unique \\
-             Q.EXISTS_TAC ‘V’ >> rw []) \\
-         DISCH_THEN (fs o wrap o SYM)) \\
-     ASM_SET_TAC [])
- >> STRIP_TAC
- >> CONJ_ASM1_TAC (* {A; B} partitions V *)
- >- (rw [partitions_PAIR_DISJOINT] >- art [] \\
-     rw [Once DISJOINT_SYM])
- >> rpt STRIP_TAC
- >> ‘n1 IN V /\ n2 IN V /\ n1 <> n2’ by PROVE_TAC [fsgraph_valid]
- >> Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘n1’, ‘n2’]) >> rw []
- >| [ (* goal 1 (of 2) *)
-      CCONTR_TAC >> fs [] \\
-      Know ‘A = part {A; B} n1’
-      >- (MATCH_MP_TAC part_unique \\
-          Q.EXISTS_TAC ‘V’ >> rw []) \\
-      DISCH_THEN (fs o wrap o SYM) \\
-      Know ‘B = part {A; B} n2’
-      >- (MATCH_MP_TAC part_unique \\
-          Q.EXISTS_TAC ‘V’ >> rw []) \\
-      DISCH_THEN (fs o wrap o SYM),
-      (* goal 2 (of 2) *)
-      CCONTR_TAC >> fs [] \\
-      Know ‘B = part {A; B} n1’
-      >- (MATCH_MP_TAC part_unique \\
-          Q.EXISTS_TAC ‘V’ >> rw []) \\
-      DISCH_THEN (fs o wrap o SYM) \\
-      Know ‘A = part {A; B} n2’
-      >- (MATCH_MP_TAC part_unique \\
-          Q.EXISTS_TAC ‘V’ >> rw []) \\
-      DISCH_THEN (fs o wrap o SYM) ]
+  rw [gen_bipartite, gen_partite_def, EQ_IMP_THM] >~
+  [‘DISJOINT (PREIMAGE cf {0} ∩ V) (PREIMAGE cf {1} ∩ V)’]
+  >- rw[DISJOINT_DEF, EXTENSION] >~
+  [‘PREIMAGE cf {0} ∩ V ∪ PREIMAGE cf {1} ∩ V = V’]
+  >- (rw[EXTENSION] >> metis_tac[DECIDE “x < 2 ⇔ x = 0 ∨ x = 1”]) >~
+  [‘{n1;n2} ∈ E’]
+  >- (first_x_assum drule >> simp[CARDEQ2, PULL_EXISTS] >>
+      ‘n1 ∈ V ∧ n2 ∈ V ∧ n1 ≠ n2’ by metis_tac[fsgedges_members] >>
+      rw[INSERT2_lemma] >> metis_tac[DECIDE “x < 2 ⇔ x = 0 ∨ x = 1”]) >~
+  [‘DISJOINT A B’, ‘A ∪ B = V’, ‘A = PREIMAGE _ {0} ∩ V(* sg *)’]
+  >- (qexists ‘λn. if n ∈ A then 0 else 1’ >> rw[] >~
+      [‘CARD (IMAGE _ e) = 2 (* g *)’]
+      >- (drule alledges_valid >> simp[PULL_EXISTS, AllCaseEqs()] >>
+          metis_tac[IN_DISJOINT]) >~
+      [‘A ∪ B = V’, ‘A = PREIMAGE _ {0} ∩ V’]
+      >- (simp[EXTENSION, AllCaseEqs()] >> metis_tac[IN_UNION]) >~
+      [‘A ∪ B = V’, ‘B = PREIMAGE _ {1} ∩ V’]
+      >- (simp[EXTENSION, AllCaseEqs()] >> metis_tac[IN_UNION, IN_DISJOINT]))
 QED
 
 Theorem gen_bipartite_alt :
     !g A B. gen_bipartite (g :fsgraph) A B <=>
-            DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
+            DISJOINT A B /\ A UNION B = nodes g /\
             !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B
 Proof
-    rw [gen_bipartite_def]
- >> EQ_TAC >> rw []
- >| [ (* goal 1 (of 2) *)
-      MP_TAC (Q.SPEC ‘g’ alledges_valid) >> rw [] \\
-      Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘a’, ‘b’]) >> rw []
-      >- (qexistsl_tac [‘a’, ‘b’] >> art []) \\
-      qexistsl_tac [‘b’, ‘a’] >> art [] \\
-      rw [INSERT2_lemma],
-      (* goal 2 (of 2) *)
-      Q.PAT_X_ASSUM ‘!e. P’ (MP_TAC o Q.SPEC ‘{n1; n2}’) >> rw [] \\
-      gvs [INSERT2_lemma] ]
+    rw [gen_bipartite_def, EQ_IMP_THM] >~
+    [‘{a;b} ∈ E’]
+    >- (first_x_assum drule >> dsimp[PULL_EXISTS, INSERT2_lemma] >>
+        metis_tac[]) >~
+    [‘e ∈ E’, ‘e = {_; _}’]
+    >- (drule alledges_valid >> simp[PULL_EXISTS, INSERT2_lemma] >>
+        metis_tac[])
 QED
 
 Theorem bipartite_def :
     !g. bipartite (g :fsgraph) <=>
-        ?A B. DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
+        ?A B. DISJOINT A B /\ A UNION B = nodes g /\
               !n1 n2. {n1;n2} IN fsgedges g ==>
                       (n1 IN A /\ n2 IN B) \/ (n1 IN B /\ n2 IN A)
 Proof
-    Q.X_GEN_TAC ‘g’
- >> EQ_TAC
- >- (rw [partite] \\
-    ‘?A B. gen_bipartite g A B’ by METIS_TAC [gen_bipartite_partitions] \\
-     fs [gen_bipartite_def] \\
-     qexistsl_tac [‘A’, ‘B’] >> rw [])
- >> rw [partite]
- >> Q.EXISTS_TAC ‘{A; B}’
- >> REWRITE_TAC [GSYM gen_bipartite]
- >> rw [gen_bipartite_def]
+  rw[partite, EQ_IMP_THM] >~
+  [‘gen_partite 2 g cf’]
+  >- (drule gen_bipartite_partitions >> simp[gen_bipartite_def]) >~
+  [‘∃v. gen_partite 2 g v’, ‘A ∪ B = V’]
+  >- (‘gen_bipartite g A B’ by simp[gen_bipartite_def] >>
+      metis_tac[gen_bipartite])
 QED
 
 Theorem bipartite_alt :
-    !g. bipartite (g :fsgraph) <=>
-        ?A B. DISJOINT A B /\ A <> {} /\ B <> {} /\ A UNION B = nodes g /\
-              !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B
+  !g. bipartite (g :fsgraph) <=>
+      ?A B. DISJOINT A B /\ A UNION B = nodes g /\
+            !e. e IN fsgedges g ==> ?n1 n2. e = {n1; n2} /\ n1 IN A /\ n2 IN B
 Proof
-    rw [bipartite_def]
- >> EQ_TAC >> STRIP_TAC
- >| [ (* goal 1 (of 2) *)
-      qexistsl_tac [‘A’, ‘B’] >> rw [] \\
-      MP_TAC (Q.SPEC ‘g’ alledges_valid) >> rw [] \\
-      Q.PAT_X_ASSUM ‘!n1 n2. P’ (MP_TAC o Q.SPECL [‘a’, ‘b’]) >> rw []
-      >- (qexistsl_tac [‘a’, ‘b’] >> art []) \\
-      qexistsl_tac [‘b’, ‘a’] >> art [] \\
-      rw [INSERT2_lemma],
-      (* goal 2 (of 2) *)
-      qexistsl_tac [‘A’, ‘B’] >> rw [] \\
-      Q.PAT_X_ASSUM ‘!e. P’ (MP_TAC o Q.SPEC ‘{n1; n2}’) >> rw [] \\
-      gvs [INSERT2_lemma] ]
+  rw [bipartite_def, EQ_IMP_THM] >>
+  first_assum $ irule_at (Pat ‘DISJOINT _ _’) >> rw[] >~
+  [‘{a;b} ∈ E’]
+  >- (first_x_assum drule >> dsimp[PULL_EXISTS, INSERT2_lemma] >>
+      metis_tac[]) >~
+  [‘e ∈ E’, ‘e = {_; _}’]
+  >- (drule alledges_valid >> simp[PULL_EXISTS, INSERT2_lemma] >>
+      metis_tac[])
 QED
 
 val _ = export_theory();

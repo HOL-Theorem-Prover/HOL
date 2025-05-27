@@ -12,8 +12,6 @@ val decompile_arm = decompile prog_armLib.arm_tools;
 val decompile_ppc = decompile prog_ppcLib.ppc_tools;
 val decompile_x86 = decompile prog_x86Lib.x86_tools;
 
-infix \\
-val op \\ = op THEN;
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;

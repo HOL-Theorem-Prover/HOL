@@ -13,9 +13,7 @@ open HolKernel boolLib Rsyntax;
 infix ## THEN THENL ORELSEC;
 
 fun COND_REWR_ERR {function,message} =
-          HOL_ERR{origin_structure = "Cond_rewrite",
-                  origin_function = function,
-                  message = message};
+  mk_HOL_ERR "Cond_rewrite" function message
 
 val frees = rev o Term.free_vars;
 
@@ -99,7 +97,7 @@ fun var_cap th fv sv newvs =
      in
      if tmem v fv then
       if tmem v sv then
-       (let val v' =  (variant (fv @ sv) v)
+       (let val v' = (variant (fv @ sv) v)
             in
              ((v':: nv), (CONV_RULE (GEN_ALPHA_CONV v') th'))
             end)
@@ -130,7 +128,7 @@ fun MATCH_SUBS1 th fvs asm (m1:((term,term)subst * (hol_type,hol_type)subst)) =
         val thm2a = INST (fst rlist) thm2
         val (new_antes, _) = strip_imp (concl thm2a)
         val thm3 = UNDISCH_ALL thm2a
-        val sgl =  subtract new_antes (intersect new_antes asm)
+        val sgl = subtract new_antes (intersect new_antes asm)
       in
         (sgl,thm3)
       end

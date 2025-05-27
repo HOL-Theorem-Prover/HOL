@@ -285,4 +285,36 @@ CoInductive reln:
 [rule2:] ∀y. reln (y 3)
 End
 
+Theorem every_node_has_unique_connected_component:
+  ∀n. n ∈ nodes g ⇒ ∃!cc. cc ∈ connected_components g ∧ n ∈ nodes cc
+Proof
+  simp[EXISTS_UNIQUE_THM] >> rw[] >~
+  [‘_ ∈ connected_components g ∧ n ∈ nodes _’]
+  >- metis_tac[every_node_has_a_connected_component] >>
+  simp[fsgraph_component_equality] >> conj_tac >~
+  [‘nodes cc1 = nodes cc2’]
+  >- (gvs[connected_components_def, EXTENSION] >>
+      metis_tac[reachable_SYM, RTC_TRANS]) >~
+  [‘fsgedges cc1 = fsgedges cc2’]
+  >- (gvs[connected_components_def, Once EXTENSION, fsgedges_component_of]>>
+      qx_gen_tac ‘e’ >> iff_tac >> rw[] >>
+      metis_tac[RTC_TRANS, reachable_SYM])
+QED
+
+Theorem every_node_has_unique_connected_component:
+  ∀n. n ∈ nodes g ⇒ ?!cc. cc ∈ connected_components g ∧ n ∈ nodes cc
+Proof
+  simp[EXISTS_UNIQUE_THM] >> rw[] >~
+  [‘_ ∈ connected_components g ∧ n ∈ nodes _’]
+  >- metis_tac[every_node_has_a_connected_component] >>
+  simp[fsgraph_component_equality] >> conj_tac >~
+  [‘nodes cc1 = nodes cc2’]
+  >- (gvs[connected_components_def, EXTENSION] >>
+      metis_tac[reachable_SYM, RTC_TRANS]) >~
+  [‘fsgedges cc1 = fsgedges cc2’]
+  >- (gvs[connected_components_def, Once EXTENSION, fsgedges_component_of]>>
+      qx_gen_tac ‘e’ >> iff_tac >> rw[] >>
+      metis_tac[RTC_TRANS, reachable_SYM])
+QED
+
 val _ = export_theory()

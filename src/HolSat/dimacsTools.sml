@@ -60,7 +60,7 @@ fun lookup_sat_var svm sva s =
        SOME(_,n) => (n,svm)
      | NONE      =>
        let val svm2 = SVM.insert(svm1,s,(s,c))
-           val svm'    =  (c+1,svm2)
+           val svm' = (c+1,svm2)
            val _    = Array.update(sva,c,s)
                       handle Subscript =>
                         (failwith ("lookup_sat_varError: " ^ term_to_string s ^
@@ -334,7 +334,7 @@ fun update_maps svm sva s i =
     then let val (c,svm1) = svm
              val svm2 = SVM.insert(svm1,s,(s,i))
              val c' = if i>c then i else c
-             val svm'    =  (c'+1,svm2)
+             val svm' = (c'+1,svm2)
              val _    = Array.update(sva,i,s)
                  handle Subscript =>
                         (failwith ("update_mapsError: "^(term_to_string s)^"::"
@@ -363,7 +363,7 @@ fun getIntClause sva svm get src =
 
 fun getTerms sva svm get src =
     let fun loop src (acc,svm,sva) =
-            let val res =  getIntClause sva svm get src
+            let val res = getIntClause sva svm get src
             in case res of
                 SOME((ns,svm'), src) => loop src (buildClause ns::acc,svm',sva)
               | NONE          => SOME((acc,svm,sva), src)

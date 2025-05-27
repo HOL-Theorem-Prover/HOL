@@ -2,7 +2,7 @@ structure CooperCore :> CooperCore =
 struct
 open HolKernel Parse boolLib
      integerTheory int_arithTheory intReduce
-     intSyntax CooperSyntax CooperMath CooperThms
+     intSyntax CooperSyntax CooperMath cooperTheory
 
 val ERR = mk_HOL_ERR "CooperCore";
 
@@ -13,7 +13,7 @@ val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 (* Fix the grammar used by this file *)
 structure Parse :> Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars listTheory.list_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="list"}
 end
 open Parse
 
@@ -65,6 +65,8 @@ in
   recurse [] NONE tmlist
 end
 
+val move_add = fetch "cooper" "move_add"
+val NOT_AND_IMP = fetch "cooper" "NOT_AND_IMP"
 fun phase4_CONV tm = let
   (* have a formula of the form
        ?x. form

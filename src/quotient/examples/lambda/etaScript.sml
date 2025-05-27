@@ -1,8 +1,4 @@
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
-
-
 
 val _ = new_theory "eta";
 
@@ -77,9 +73,8 @@ val RC_INDUCT_TAC =
           val rc_thm' = BETA_RULE(ISPEC P (ISPEC R rc_thm))
       in MATCH_MP_TAC rc_thm' (asl,w)
       end
-      handle _ => raise HOL_ERR{origin_structure = "<top-level>",
-                     origin_function = "RC_INDUCT_TAC",
-                     message = "Unanticipated term structure"}
+      handle _ => raise mk_HOL_ERR "<top-level>" "RC_INDUCT_TAC"
+        "Unanticipated term structure"
  in tac
  end;
 
@@ -116,9 +111,8 @@ val TC_INDUCT_TAC =
           val tc_thm' = BETA_RULE(ISPEC P (ISPEC R tc_thm))
       in MATCH_MP_TAC tc_thm' (asl,w)
       end
-      handle _ => raise HOL_ERR{origin_structure = "<top-level>",
-                     origin_function = "TC_INDUCT_TAC",
-                     message = "Unanticipated term structure"}
+      handle _ => raise mk_HOL_ERR "<top-level>" "TC_INDUCT_TAC"
+                     "Unanticipated term structure"
  in tac
  end;
 

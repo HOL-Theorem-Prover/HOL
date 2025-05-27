@@ -26,6 +26,7 @@ exception UNCHANGED
 fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 val ERR = mk_HOL_ERR "Conv"
+val ERRloc = mk_HOL_ERRloc "Conv"
 fun w nm c t = c t handle UNCHANGED => raise UNCHANGED
                    | e as HOL_ERR _ => Portable.reraise e
                    | Fail s => raise Fail (s ^ " --> " ^ nm)
@@ -80,17 +81,20 @@ val REWR_CONV_A  = REWR_CONV0 (PART_MATCH_A,    "REWR_CONV_A")
  *    now passes on information about nested failure                    *
  *----------------------------------------------------------------------*)
 
+fun set_origin fnm
+    {origin_function, origin_structure, source_location, message} =
+  if Lib.mem origin_function ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+      andalso origin_structure = "Conv"
+      then ERRloc fnm source_location message
+  else ERRloc fnm source_location (origin_function ^ ": " ^ message)
+
 fun RAND_CONV conv tm =
    let
       val {Rator, Rand} =
          dest_comb tm handle HOL_ERR _ => raise ERR "RAND_CONV" "not a comb"
       val newrand =
          conv Rand
-         handle HOL_ERR {origin_function, message, origin_structure} =>
-            if Lib.mem origin_function ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-               andalso origin_structure = "Conv"
-               then raise ERR "RAND_CONV" message
-            else raise ERR "RAND_CONV" (origin_function ^ ": " ^ message)
+         handle HOL_ERR e => raise set_origin "RAND_CONV" e
    in
       AP_TERM Rator newrand
       handle HOL_ERR {message, ...} =>
@@ -113,11 +117,7 @@ fun RATOR_CONV conv tm =
          dest_comb tm handle HOL_ERR _ => raise ERR "RATOR_CONV" "not a comb"
       val newrator =
          conv Rator
-         handle HOL_ERR {origin_function, origin_structure, message} =>
-            if Lib.mem origin_function  ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-               andalso origin_structure = "Conv"
-               then raise ERR "RATOR_CONV" message
-            else raise ERR "RATOR_CONV" (origin_function ^ ": " ^ message)
+         handle HOL_ERR e => raise set_origin "RATOR_CONV" e
    in
       AP_THM newrator Rand
       handle HOL_ERR {message, ...} =>
@@ -158,13 +158,7 @@ fun ABS_CONV conv tm =
                  in
                     TRANS (TRANS th1 eq_thm') th2
                  end
-                 handle HOL_ERR {origin_function, origin_structure, message} =>
-                          if Lib.mem origin_function
-                                     ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-                             andalso origin_structure = "Conv"
-                             then raise ERR "ABS_CONV" message
-                          else raise ERR "ABS_CONV"
-                                         (origin_function ^ ": " ^ message)
+                 handle HOL_ERR e => raise set_origin "ABS_CONV" e
         end
     | _ => raise ERR "ABS_CONV" "Term not an abstraction"
 
@@ -1221,7 +1215,7 @@ in
          val {Bvar, Body} = dest_forall tm handle HOL_ERR _ => raise FI_ERR
          val {ant, conseq} = dest_imp Body handle HOL_ERR _ => raise FI_ERR
          val fant = free_in Bvar ant
-         and fconseq =  free_in Bvar conseq
+         and fconseq = free_in Bvar conseq
          val ant_thm = ASSUME ant
          val tm_thm = ASSUME tm
       in
@@ -1335,7 +1329,7 @@ in
       val {Bvar, Body} = dest_exists tm handle HOL_ERR _ => raise EI_ERR
       val {ant = P, conseq = Q} = dest_imp Body handle HOL_ERR _ => raise EI_ERR
       val fP = free_in Bvar P
-      and fQ =  free_in Bvar Q
+      and fQ = free_in Bvar Q
    in
       if fP andalso fQ
          then raise ERR "EXISTS_IMP_CONV"
@@ -1352,7 +1346,7 @@ in
                  val thm2 = EXISTS (tm, Bvar) (DISCH P (UNDISCH (ASSUME otm)))
                  val notP = mk_neg P
                  val notP_thm = ASSUME notP
-                 val nex =  mk_exists {Bvar = Bvar, Body = notP}
+                 val nex = mk_exists {Bvar = Bvar, Body = notP}
                  val asm1 = EXISTS (nex, Bvar) notP_thm
                  val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
                  val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN Bvar th2))
@@ -1417,7 +1411,7 @@ fun LEFT_IMP_FORALL_CONV tm =
       val otm = mk_exists {Bvar = x', Body = new_imp}
       val imp1 = DISCH otm (CHOOSE (x', ASSUME otm) (DISCH ant thm1))
       val thm2 = EXISTS (otm, x') (DISCH t1' (UNDISCH (ASSUME tm)))
-      val nex =  mk_exists {Bvar = x', Body = mk_neg t1'}
+      val nex = mk_exists {Bvar = x', Body = mk_neg t1'}
       val asm1 = EXISTS (nex, x') not_t1'_thm
       val th2 = CCONTR t1' (MP (ASSUME (mk_neg nex)) asm1)
       val th3 = CCONTR nex (MP (ASSUME (mk_neg ant)) (GEN x' th2))
@@ -2317,7 +2311,7 @@ end
 
 local
    val vt = genvar alpha
-   and vf =  genvar alpha
+   and vf = genvar alpha
    val gen = GENL [vt, vf]
    val (CT, CF) = (gen ## gen) (CONJ_PAIR (SPECL [vt, vf] COND_CLAUSES))
 in

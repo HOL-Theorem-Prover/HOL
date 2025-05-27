@@ -1,5 +1,6 @@
-open HolKernel Parse boolLib;
-open bossLib pred_setTheory listTheory rich_listTheory pairTheory realLib
+open HolKernel Parse boolLib bossLib;
+
+open pred_setTheory listTheory rich_listTheory pairTheory realLib
      hurdUtils extra_listTheory;
 
 val _ = new_theory "prob_canon";

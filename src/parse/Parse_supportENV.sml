@@ -28,4 +28,8 @@ struct
   fun fupd_free f ({scope,free,uscore_cnt,ptyE}:env) : env =
     {scope=scope, free=f free, uscore_cnt=uscore_cnt, ptyE = ptyE}
 
+  fun fupd_uscore_cnt f ({scope,free,uscore_cnt,ptyE}:env) : env =
+    {scope=scope, free=free, uscore_cnt=f uscore_cnt, ptyE = ptyE}
+
+
 end

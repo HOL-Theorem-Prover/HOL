@@ -238,7 +238,7 @@ The usual kinds of combining theorems are proved. For example, the derivative
 of a sum of two functions is the sum of their derivatives:
 \begin{hol}
 \begin{alltt}
-##thm limTheory.DIFF_ADD   
+##thm limTheory.DIFF_ADD
 
 ##thm derivativeTheory.HAS_DERIVATIVE_ADD
 
@@ -761,9 +761,9 @@ filtering out $\pm\infty$.
 It can be proven that \holtxt{ext_lborel} is indeed a $\sigma$-finite measure space:
 \begin{hol}
 \begin{alltt}
-##thm MEASURE_SPACE_LBOREL
+##thm measure_space_ext_lborel
 
-##thm SIGMA_FINITE_LBOREL
+##thm sigma_finite_ext_lborel
 \end{alltt}
 \end{hol}
 
@@ -1004,10 +1004,10 @@ Let $(X,\mathcal{A},\mu)$ and $(Y,\mathcal{B},\nu)$ be two $\sigma$-finite measu
 sometimes we want to define a measure $\rho$ on rectangles of the form $A\times B$
 such that $\rho(A\times B) = \mu(A)\nu(B)$ for $A\in\mathcal{A}$ and $B\in\mathcal{B}$.
 The first problem which we encounter is that the family $\mathcal{A}\times\mathcal{B}$,
-denoted by \holtxt{prod_sets A B} (in \theoryimp{util_prob} theory):
+denoted by \holtxt{prod_sets A B} (in \theoryimp{sigma_algebra} theory):
 \begin{hol}
 \begin{alltt}
->>__ open util_probTheory;
+>>__ open sigma_algebraTheory;
 ##thm prod_sets_def
 \end{alltt}
 \end{hol}

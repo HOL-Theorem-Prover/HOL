@@ -45,7 +45,7 @@ jobs:
             Z3_VERSION=4.13.0
             CVC_VERSION=5
             # NOTE: the arg value cannot be quoted here:
-            BUILDOPTS=--stdknl -j2 -t
+            BUILDOPTS=--stdknl -j4 -t
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -83,7 +83,7 @@ jobs:
             Z3_VERSION=4.13.0
             CVC_VERSION=5
             # NOTE: the arg value cannot be quoted here:
-            BUILDOPTS=--expk -j2 -t
+            BUILDOPTS=--expk -j4 -t
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 

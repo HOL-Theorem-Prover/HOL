@@ -19,11 +19,7 @@ val _ = ParseExtras.temp_loose_equality();
 
 (* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *)
 
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
+val op >- = op THEN1;
 
 val bool_ss = bool_ss ++ boolSimps.LET_ss;
 
@@ -115,7 +111,7 @@ val LEAST_THM = store_thm("LEAST_THM",
   `!n. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC whileTheory.FULL_LEAST_INTRO
-    \\ Cases_on `$LEAST P = n` >> ASM_REWRITE_TAC []
+    \\ Cases_on `$LEAST P = n` >- ASM_REWRITE_TAC []
     \\ `$LEAST P < n` by DECIDE_TAC
     \\ PROVE_TAC []);
 
@@ -123,7 +119,7 @@ val lem = prove(
   `(!t1 t2. t1 < t2 ==> imm t1 < imm t2) ==>
    (!m. m < x ==> imm (m + 1) <= imm x)`,
   RW_TAC arith_ss []
-    \\ Cases_on `m + 1 = x` >> ASM_SIMP_TAC arith_ss []
+    \\ Cases_on `m + 1 = x` >- ASM_SIMP_TAC arith_ss []
     \\ `m + 1 < x` by DECIDE_TAC
     \\ RES_TAC \\ DECIDE_TAC);
 
@@ -163,13 +159,13 @@ val LIST_EQ = prove(
 
 val EL_GENLIST = prove(
   `!f n x. x < n ==> (EL x (GENLIST f n) = f x)`,
-  Induct_on `n` >> SIMP_TAC arith_ss []
+  Induct_on `n` >- SIMP_TAC arith_ss []
     \\ REPEAT STRIP_TAC \\ REWRITE_TAC [GENLIST]
     \\ Cases_on `x < n`
     \\ POP_ASSUM (fn th =>
           ASSUME_TAC (SUBS [(GSYM o SPECL [`f`,`n`]) LENGTH_GENLIST] th) \\
           ASSUME_TAC th)
-    >> ASM_SIMP_TAC bool_ss [EL_SNOC]
+    >- ASM_SIMP_TAC bool_ss [EL_SNOC]
     \\ `x = LENGTH (GENLIST f n)` by FULL_SIMP_TAC arith_ss [LENGTH_GENLIST]
     \\ ASM_SIMP_TAC bool_ss [EL_LENGTH_SNOC]
     \\ REWRITE_TAC [LENGTH_GENLIST]);
@@ -216,7 +212,7 @@ val lem4 = prove(
     \\ IMP_RES_TAC ((SIMP_RULE std_ss [] o
          INST [`P` |-> `\t. x < imm (t + 1)`] o SPEC `t`) LEAST_THM)
     \\ FULL_SIMP_TAC std_ss [FREE_IMMERSION_def]
-    \\ Cases_on `t` >> ASM_SIMP_TAC arith_ss []
+    \\ Cases_on `t` >- ASM_SIMP_TAC arith_ss []
     \\ PAT_X_ASSUM `!t. t < SUC n ==> p`
          (SPEC_THEN `n` (ASSUME_TAC o SIMP_RULE arith_ss [NOT_LESS]))
     \\ ASM_REWRITE_TAC [ADD1]);
@@ -228,11 +224,11 @@ val PACK_SERIALIZE = store_thm("PACK_SERIALIZE",
       (!strm. SERIALIZE imm (PACK imm strm) = strm)`,
   RW_TAC bool_ss [PACKED_STRM_def]
     \\ REWRITE_TAC [FUN_EQ_THM,LIST_EQ]
-    << [
+    THENL [
       RW_TAC bool_ss [PACK_def,LENGTH_GENLIST,EL_GENLIST]
         \\ SIMP_TAC arith_ss [SERIALIZE_def,IMM_START_def,IMM_RET_def]
         \\ Cases_on `x`
-        << [
+        THENL [
           FULL_SIMP_TAC arith_ss [FREE_IMMERSION_def,IMM_LEN_def,
             (SIMP_RULE arith_ss [NOT_LESS] o
              INST [`P` |-> `\t. n < imm (t + 1)`] o SPEC `0`) LEAST_THM],
@@ -376,7 +372,7 @@ val PUIMMERSION_MONO_LEMMA2 = prove(
   REPEAT STRIP_TAC
    \\ IMP_RES_TAC PUIMMERSION_MONO_LEMMA
    \\ Induct_on `p`
-   >> ASM_REWRITE_TAC [SYM ONE,GSYM ADD1,PUIMMERSION_MONO_LEMMA]
+   >- ASM_REWRITE_TAC [SYM ONE,GSYM ADD1,PUIMMERSION_MONO_LEMMA]
    \\ FULL_SIMP_TAC bool_ss
         [SUC_COMM_LEMMA,LESS_IMP_LESS_ADD,ADD_COMM,PUIMMERSION_def]);
 
@@ -459,7 +455,7 @@ val PTCON_THM = prove(
          Pstate_out_state (f t x))) ==>
      PTCON f strm`,
   RW_TAC bool_ss [PTCON_def,IS_PMAP_INIT_def]
-    << [
+    THENL [
       `IS_PMAP f` by PROVE_TAC [IS_PMAP_def]
         \\ IMP_RES_TAC PMAP2 \\ ASM_SIMP_TAC bool_ss [],
       FULL_SIMP_TAC bool_ss [PMAP_def]
@@ -496,7 +492,7 @@ val PTCON_IMMERSION_LEMMA = prove(
          Pstate_out_state (f (imm x t) x)))`,
   RW_TAC bool_ss [IS_PMAP_INIT_def,IMMERSION,PTCON_IMMERSION]
    \\ EQ_TAC \\ REPEAT STRIP_TAC
-   << [
+   THENL [
      `IS_PMAP f` by PROVE_TAC [IS_PMAP_def]
        \\ PAT_X_ASSUM `!t1:num t2 x. P`
             (fn th => ASSUME_TAC (GSYM (SPECL [`0`,`t`] th)))
@@ -553,7 +549,7 @@ val TC_STRM_ONE_STEP_THM = prove(
   `!strm. (!t i. i IN strm ==> (ADVANCE t i)) IN strm =
             (!i. i IN strm ==> (ADVANCE 1 i) IN strm)`,
   STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-    >> ASM_SIMP_TAC bool_ss []
+    >- ASM_SIMP_TAC bool_ss []
     \\ Induct_on `t`
     \\ ASM_SIMP_TAC bool_ss [ADVANCE_ZERO,ADVANCE_ONE]
 );
@@ -604,13 +600,13 @@ val PTCON_IMMERSION_ONE_STEP_THM = prove(
     \\ EQ_TAC \\ STRIP_TAC
     \\ ASM_SIMP_TAC bool_ss [PTCON_IMMERSION_LEMMA2]
     \\ IMP_RES_TAC PTCON_IMMERSION_LEMMA
-    >> RW_TAC bool_ss []
+    >- RW_TAC bool_ss []
     \\ NTAC 3 (POP_ASSUM (K ALL_TAC))
     \\ POP_ASSUM (fn th => REWRITE_TAC [th])
     \\ Induct
-    >> FULL_SIMP_TAC bool_ss [PUNIFORM_def,PUIMMERSION_def,ADVANCE_ZERO]
+    >- FULL_SIMP_TAC bool_ss [PUNIFORM_def,PUIMMERSION_def,ADVANCE_ZERO]
     \\ REPEAT STRIP_TAC
-    << [
+    THENL [
       `imm x (SUC t) = imm (Pstate_out_state (f (imm x t) x)) 1 + imm x t`
         by PROVE_TAC [SPLIT_ITER_LEMMA2]
         \\ `IS_PMAP f` by PROVE_TAC [IS_PMAP_THM]
@@ -700,7 +696,7 @@ val lem = prove(
      IS_PMAP f /\ PUNIFORM imm f /\ PTCON_IMMERSION f imm strm ==>
      !t x. x.inp IN strm ==> (imm (Pstate_out_state (f 0 x)) t = imm x t)`,
   RW_TAC bool_ss [PUNIFORM_def,PUIMMERSION_def]
-   \\ Induct_on `t` >> ASM_REWRITE_TAC []
+   \\ Induct_on `t` >- ASM_REWRITE_TAC []
    \\ FULL_SIMP_TAC bool_ss [PTCON_IMMERSION]
    \\ PAT_X_ASSUM `!t1 t2 x. P` (SPECL_THEN [`t`,`0`,`x`] IMP_RES_TAC)
    \\ PAT_X_ASSUM `!x. imm x 0 = 0`
@@ -829,7 +825,7 @@ val PONE_STEP_THM = prove(
     \\ IMP_RES_TAC ONE_STEP_LEMMA
     \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
     \\ RW_TAC bool_ss [PCORRECT_def]
-    << [
+    THENL [
        IMP_RES_TAC PUNIFORM_IMP_IMMERSION,
        PAT_X_ASSUM `IS_PMAP impl` (K ALL_TAC),
        SPECL_THEN [`sstrm`,`istrm`,`spec`,`impl`,`imm`,`abs`,`ismpl`,`f`]
@@ -854,7 +850,7 @@ val PONE_STEP_THM = prove(
          \\ PAT_X_ASSUM `a ==> b` MATCH_MP_TAC
          \\ REPEAT STRIP_TAC
     ]
-    \\ Induct_on `t` >> ASM_SIMP_TAC bool_ss []
+    \\ Induct_on `t` >- ASM_SIMP_TAC bool_ss []
     \\ PAT_X_ASSUM `!x. x.inp IN istrm ==> !t. P` IMP_RES_TAC
     \\ POP_ASSUM (fn th => REWRITE_TAC [th])
     \\ PAT_X_ASSUM `PTCON_IMMERSION impl imm istrm`
@@ -1267,7 +1263,7 @@ val DATA_ABSTRACTION_I = store_thm("DATA_ABSTRACTION_I",
         (!a. ?b. abs (h b) = a))`,
   RW_TAC (srw_ss()++boolSimps.LET_ss) [IS_IMAP_INIT_def,IMAP_def,
     DATA_ABSTRACTION_def,RANGE_def,IMAGE_DEF,SURJ_DEF,IN_UNIV,GSPECIFICATION]
-    \\ Tactical.REVERSE EQ_TAC >> METIS_TAC [lem,lem2]
+    \\ Tactical.REVERSE EQ_TAC >- METIS_TAC [lem,lem2]
     \\ REPEAT STRIP_TAC
     \\ PAT_X_ASSUM `!x. (f 0 x).state = y` (SPEC_THEN `<|state := a; inp := i|>`
          (ASSUME_TAC o SIMP_RULE (srw_ss()) [] o SYM))
@@ -1300,7 +1296,7 @@ val CORRECT = prove(
   RW_TAC (srw_ss()++boolSimps.LET_ss) [CORRECT_def]
     \\ EQ_TAC \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC (srw_ss()) []
-    << [
+    THENL [
       PAT_X_ASSUM `!x. P` (SPEC_THEN `<| state := a; inp := i |>`
         (IMP_RES_TAC o SIMP_RULE (srw_ss()) [])),
       PAT_X_ASSUM `!x. P` (SPEC_THEN `<| state := a; inp := i |>`
@@ -1353,7 +1349,7 @@ val STATE_FUNPOW_INIT4 = store_thm("STATE_FUNPOW_INIT4",
     \\ IMP_RES_TAC STATE_FUNPOW_INIT
     \\ SPEC_TAC (`t`,`t`)
     \\ Induct
-    >> ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss) [FUNPOW,PINIT_def,SINIT_def]
+    >- ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss) [FUNPOW,PINIT_def,SINIT_def]
     \\ FULL_SIMP_TAC (srw_ss() ++ boolSimps.LET_ss)
          [FUNPOW_SUC, PNEXT_def, SNEXT_def,
           SIMP_RULE (srw_ss()) [PNEXT_def] STATE_FUNPOW_INIT2,

@@ -175,7 +175,7 @@ fun combine_dark_factoids i low up =
         val b = ~(sub(U, i))
         val maxdex = Int.-(length L, 1)
         fun gen j = let
-          val base =  a * sub(U, j) + b * sub(L, j)
+          val base = a * sub(U, j) + b * sub(L, j)
         in
           if j = maxdex then base - ((a - one) * (b - one))
           else base
@@ -199,7 +199,7 @@ fun factoid_gcd f =
     case f of
       ALT av => let
         open CooperMath Vector
-        val g = VS.foldli (fn (_, c, g0) => gcd (Arbint.abs c, g0))
+        val g = VS.foldli (fn (_, c, g0) => Arbint.gcd (Arbint.abs c, g0))
                           Arbint.zero
                           (VS.slice(av, 0, SOME (length av - 1)))
       in
@@ -223,9 +223,8 @@ fun term_to_factoid vars tm = let
     case (vlist,slist) of
       ([],[]) => [Arbint.zero]
     | ([],[s]) => [int_of_term s]
-    | ([], _) => raise HOL_ERR { origin_function = "term_to_factoid",
-                                origin_structure = "OmegaMLShadow",
-                                message = "Too many summands in term"}
+    | ([], _) =>
+      raise mk_HOL_ERR "OmegaMLShadow" "term_to_factoid" "Too many summands in term"
     | (v::vs, []) => Arbint.zero :: mk_coeffs vs []
     | (v::vs, s::ss) =>
         if is_mult s then let

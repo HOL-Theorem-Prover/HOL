@@ -21,9 +21,6 @@
 (* Boilerplate.                                                          *)
 (* --------------------------------------------------------------------- *)
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
-
 
 (* --------------------------------------------------------------------- *)
 (* Create the theory.                                                    *)

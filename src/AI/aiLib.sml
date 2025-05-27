@@ -821,10 +821,18 @@ fun export_goal file (goal as (asl,w)) =
 fun import_terml file =
   let
     val t = HOLsexp.fromFile file
-    val sdo = valOf (dec_sdata {with_strings = fn _ => (),
-                                with_stridty = fn _ => ()} t)
   in
-    #unnamed_terms (export_from_sharing_data sdo)
+    case TheoryReader.core_decode t of
+        NONE => raise Option
+      | SOME {exports,tables} =>
+        let
+          val sdo = dec_sdata {before_types = fn _ => (),
+                               before_terms = fn _ => (),
+                               tables = tables,
+                               exports = exports}
+        in
+          #unnamed_terms (export_from_sharing_data sdo)
+        end
   end
 
 fun import_goal file = let val l = import_terml file in (tl l, hd l) end
@@ -859,9 +867,9 @@ fun enc_tmdata (encf,tmlf) tmdata =
 
 fun dec_tmdata decf t =
   let
-    val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
-    val (sdo, tmdata) =
-      valOf (pair_decode (dec_sdata a, SOME) t)
+    val ({exports,tables}, tmdata) = valOf (pair_decode (TheoryReader.core_decode, SOME) t)
+    val sdo = dec_sdata {exports = exports, tables = tables,
+                         before_types = fn _ => (), before_terms = fn _ => ()}
     val dec_tm = Option.map (read_term sdo) o string_decode
   in
     decf dec_tm tmdata

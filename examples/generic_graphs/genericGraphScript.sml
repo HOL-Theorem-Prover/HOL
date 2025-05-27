@@ -1003,6 +1003,12 @@ Proof
   xfer_back_tac [] >> simp[addNode0_def]
 QED
 
+Theorem addNode_EQ_emptyG[simp]:
+  addNode n l G ≠ emptyG
+Proof
+  disch_then (mp_tac o Q.AP_TERM ‘nodes’) >> simp[]
+QED
+
 Theorem edgebag_addNode[simp]:
   ∀n l G. edgebag (addNode n l G) = edgebag G
 Proof

@@ -216,6 +216,19 @@ type output_functions = {warn : string -> unit,
                          chatty : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> (unit -> string) -> unit}
+type 'a ofn_update = ('a -> 'a) -> output_functions -> output_functions
+fun fupd_info_inline f {warn,info,info_inline,info_inline_end,chatty,tgtfatal,diag} =
+    {warn = warn,info = info, info_inline_end = info_inline_end, info_inline = f info_inline,
+     chatty = chatty, tgtfatal = tgtfatal, diag = diag}
+fun fupd_info_inline_end f {warn,info,info_inline,info_inline_end,chatty,tgtfatal,diag} =
+    {warn = warn,info = info, info_inline_end = f info_inline_end, info_inline = info_inline,
+     chatty = chatty, tgtfatal = tgtfatal, diag = diag}
+fun fupd_info f {warn,info,info_inline,info_inline_end,chatty,tgtfatal,diag} =
+    {warn = warn,info = f info, info_inline_end = info_inline_end, info_inline = info_inline,
+     chatty = chatty, tgtfatal = tgtfatal, diag = diag}
+fun quieten_info ofns = ofns |> fupd_info_inline_end (K (K ()))
+                             |> fupd_info_inline (K (K ()))
+                             |> fupd_info (K (K ()))
 
 fun die_with message = let
 in

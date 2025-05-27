@@ -8,8 +8,6 @@ open compilerLib;
 open lisp_gcTheory lisp_typeTheory lisp_invTheory;
 
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]

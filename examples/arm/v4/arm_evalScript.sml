@@ -20,11 +20,6 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 
-infix << >>
-
-val op << = op THENL;
-val op >> = op THEN1;
-
 val std_ss = std_ss ++ boolSimps.LET_ss;
 val arith_ss = arith_ss ++ boolSimps.LET_ss;
 
@@ -395,7 +390,7 @@ val PSR_CONS = store_thm("PSR_CONS",
              (SET_IFMODE (w ' 7) (w ' 6) m (0xFFFFF20w && w))`,
   RW_TAC word_ss [SET_IFMODE_def,SET_NZCV_def,word_modify_def,n2w_def]
     \\ RW_TAC word_ss [word_bits_def]
-    << [
+    THENL [
       `(i = 31) \/ (i = 30) \/ (i = 29) \/ (i = 28) \/ (i < 28)`
         by DECIDE_TAC
         \\ ASM_SIMP_TAC arith_ss [],
@@ -403,7 +398,7 @@ val PSR_CONS = store_thm("PSR_CONS",
        (7 < i /\ i < 28) \/ (i = 7) \/ (i = 6) \/ (i = 5) \/ (i < 5)`
         by DECIDE_TAC
         \\ ASM_SIMP_TAC (word_ss++ARITH_ss) [word_and_def]
-        << [
+        THENL [
           FULL_SIMP_TAC std_ss [LESS_THM]
             \\ FULL_SIMP_TAC arith_ss [] \\ EVAL_TAC,
           EVAL_TAC,
@@ -783,10 +778,10 @@ val immediate_enc = store_thm("immediate_enc",
          [IMMEDIATE_def,addr_mode1_encode_def,msr_mode_encode_def]
     \\ (MATCH_MP_TAC (METIS_PROVE [] ``!a b c d x. (a = b) /\ (c = d) ==>
          (ROR a c x = ROR b d x)``)
-    \\ STRIP_TAC << [ALL_TAC,
+    \\ STRIP_TAC THENL [ALL_TAC,
          MATCH_MP_TAC (PROVE [] ``!a b. (a = b) ==> (2w:word8 * a = 2w * b)``)]
     \\ SRW_TAC word_frags [WORD_EQ]
-    << [Cases_on `i' < 12` \\ SRW_TAC word_frags []
+    THENL [Cases_on `i' < 12` \\ SRW_TAC word_frags []
         \\ Cases_on `i' < 8` \\ SRW_TAC word_frags [],
       Cases_on `i' < 4` \\ SRW_TAC word_frags []]
     \\ POP_ASSUM_LIST (ASSUME_TAC o hd)

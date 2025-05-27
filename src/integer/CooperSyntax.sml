@@ -4,14 +4,13 @@ structure CooperSyntax :> CooperSyntax = struct
    conversions, all intended for very specific use within the
    implementation of Cooper's algorithm *)
 
-open HolKernel boolLib intSyntax intReduce CooperThms
+open HolKernel boolLib intSyntax intReduce cooperTheory
 open int_arithTheory integerTheory
-
 
 (* Fix the grammar used by this file *)
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars integer_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="integer"}
 end
 open Parse
 
@@ -37,7 +36,7 @@ end
 (* operators that might have their meaning concealed under negations      *)
 (* ---------------------------------------------------------------------- *)
 
-val cpstrip_conj  = let
+local
   (* treats negations over disjunctions as conjunctions *)
   fun doit posp acc tm = let
     val (l,r) = (if posp then dest_conj else dest_disj) tm
@@ -49,10 +48,10 @@ val cpstrip_conj  = let
     doit (not posp) acc t0
   end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
 in
-  doit true []
+  val cpstrip_conj = doit true []
 end
 
-val cpstrip_disj = let
+local
   (* treats negations over conjunctions as disjunctions *)
   fun doit posp acc tm = let
     val (l,r) = (if posp then dest_disj else dest_conj) tm
@@ -64,17 +63,16 @@ val cpstrip_disj = let
     doit (not posp) acc t0
   end handle HOL_ERR _ => if posp then tm::acc else mk_neg tm :: acc
 in
-  doit true []
+  val cpstrip_disj = doit true []
 end
 
 datatype term_op = CONJN | DISJN | NEGN
-fun characterise t =
+fun bop_characterise t =
   (case #1 (dest_const (#1 (strip_comb t))) of
      "/\\" => SOME CONJN
    | "\\/" => SOME DISJN
    | "~" => SOME NEGN
    | _ => NONE) handle HOL_ERR _ => NONE
-val bop_characterise = characterise
 
 
 datatype reltype = rEQ | rDIV | rLT
@@ -91,7 +89,7 @@ end
 
 fun cpEVERY_CONJ_CONV c tm = let
   fun findconjunct posp tm =
-    case (characterise tm, posp) of
+    case (bop_characterise tm, posp) of
       (SOME CONJN, true) => BINOP_CONV (findconjunct posp) tm
     | (SOME DISJN, false) => BINOP_CONV (findconjunct posp) tm
     | (SOME NEGN, _) => RAND_CONV (findconjunct (not posp)) tm
@@ -102,7 +100,7 @@ end
 
 fun cpEVERY_DISJ_CONV c tm = let
   fun finddisj posp tm =
-    case (characterise tm, posp) of
+    case (bop_characterise tm, posp) of
       (SOME DISJN, true) => BINOP_CONV (finddisj posp) tm
     | (SOME CONJN, false) => BINOP_CONV (finddisj posp) tm
     | (SOME NEGN, _) => RAND_CONV (finddisj (not posp)) tm
@@ -165,19 +163,19 @@ fun negstatus s = case s of qsUNIV => qsEXISTS | qsEXISTS => qsUNIV | x => x
 fun goal_qtype tm = let
   fun recurse acc tm = let
     val (l, r) = dest_conj tm
-        handle HOL_ERR _ => dest_disj tm
-        handle HOL_ERR _ => let
-                 val (g, t, e) = dest_cond tm
-               in
-                 if recurse EITHER g <> EITHER then raise return_NEITHER
-                 else (t,e)
-               end
-        handle HOL_ERR _ => let
-                 val _ = assert (not o is_neg) tm
-                 val (l, r) = dest_imp tm
-               in
-                 (mk_neg l, r)
-               end
+      handle HOL_ERR _ => dest_disj tm
+      handle HOL_ERR _ => let
+          val (g, t, e) = dest_cond tm
+        in
+          if recurse EITHER g <> EITHER then raise return_NEITHER
+          else (t,e)
+        end
+      handle HOL_ERR _ => let
+          val _ = assert (not o is_neg) tm
+          val (l, r) = dest_imp tm
+        in
+          (mk_neg l, r)
+        end
   in
     case (acc, recurse acc l) of
       (_, EITHER) => recurse acc r
@@ -215,14 +213,14 @@ end
 fun find_free_terms P t = let
   fun recurse binders acc tm = let
     val newset =
-        if P tm then let
-            val tm_frees = FVL [tm] empty_tmset
-          in
-            if HOLset.isEmpty (HOLset.intersection(tm_frees, binders)) then
-              HOLset.add(acc, tm)
-            else acc
-          end
-        else acc
+      if P tm then let
+          val tm_frees = FVL [tm] empty_tmset
+        in
+          if HOLset.isEmpty (HOLset.intersection(tm_frees, binders)) then
+            HOLset.add(acc, tm)
+          else acc
+        end
+      else acc
   in
     case dest_term tm of
       LAMB(v, body) => recurse (HOLset.add(binders, v)) newset body
@@ -252,24 +250,16 @@ val move_quants_up =
 (* Takes !x. P x                                                          *)
 (*  and produces ~(?x. ~P x)                                              *)
 (* ---------------------------------------------------------------------- *)
-local
-  val NOT_EXISTS_THM =
-    GEN_ALL (SYM
-             (PURE_REWRITE_RULE [NOT_CLAUSES]
-              (BETA_RULE (SPEC (Term`\x:'a. ~ P x : bool`)
-                               boolTheory.NOT_EXISTS_THM))))
+
+val NOT_EXISTS_THM' = fetch "cooper" "NOT_EXISTS_THM'"
+fun flip_forall tm = let
+  val (bvar, _) = dest_forall tm
 in
-
-  fun flip_forall tm = let
-    val (bvar, _) = dest_forall tm
-  in
-    BINDER_CONV (UNBETA_CONV bvar) THENC
-    REWR_CONV NOT_EXISTS_THM THENC
-    RAND_CONV (BINDER_CONV (RAND_CONV BETA_CONV)) THENC
-    RAND_CONV (RENAME_VARS_CONV [#1 (dest_var bvar)])
-  end tm
-end
-
+  BINDER_CONV (UNBETA_CONV bvar) THENC
+  REWR_CONV NOT_EXISTS_THM' THENC
+  RAND_CONV (BINDER_CONV (RAND_CONV BETA_CONV)) THENC
+  RAND_CONV (RENAME_VARS_CONV [#1 (dest_var bvar)])
+end tm
 
 
 (* ---------------------------------------------------------------------- *)
@@ -324,18 +314,12 @@ fun resquan_remove tm =
   (resquan_onestep THENC TRY_CONV (RAND_CONV resquan_remove) THENC
    REWRITE_CONV []) tm
 
-
-
-
-
-
 val bmarker_tm = prim_mk_const { Name = "bmarker", Thy = "int_arith"};
 
 val mk_bmark_thm = GSYM int_arithTheory.bmarker_def
 fun mk_bmark tm = SPEC tm mk_bmark_thm
 
-val NOT_NOT = tautLib.TAUT_PROVE ``~~p:bool = p``
-
+val NOT_NOT = fetch "cooper" "NOT_NOT"
 fun mark_conjunct P tm = let
 in
   if is_conj tm then
@@ -379,7 +363,6 @@ in
   tml_eq (free_vars (hd (tl args))) [v]
 end
 fun constraint_var tm = rand tm
-val lhand = rand o rator
 fun constraint_size tm = let
   val (_, args) = strip_comb tm
   val range_tm = hd args
@@ -388,28 +371,29 @@ in
   Arbint.-(int_of_term (rand hi), int_of_term (lhand lo))
 end
 fun dest_constraint tm =
-    if is_constraint tm then let
-        val (_, args) = strip_comb tm
-        val (lo,hi) = dest_conj (hd args)
-      in
-        (rand tm, (lhand lo, rand hi))
-      end
-    else
-      raise ERR "dest_constraint" "Term not a constraint"
+  if is_constraint tm then let
+      val (_, args) = strip_comb tm
+      val (lo,hi) = dest_conj (hd args)
+    in
+      (rand tm, (lhand lo, rand hi))
+    end
+  else
+    raise ERR "dest_constraint" "Term not a constraint"
 
 
-
-val K_THM = INST_TYPE [(alpha |-> bool), (beta |-> int_ty)] combinTheory.K_THM
+val K_THM' = fetch "cooper" "K_THM'"
 fun MK_CONSTRAINT tm =
   case free_vars tm of
     [] => ALL_CONV tm
-  | [v] => SYM (SPECL [tm,v] K_THM)
+  | [v] => SYM (SPECL [tm,v] K_THM')
   | _ => raise Fail "MK_CONSTRAINT: Term has too many free variables"
+
 fun UNCONSTRAIN tm = let
   val (f, args) = strip_comb tm
 in
-  SPECL args K_THM
+  SPECL args K_THM'
 end
+
 fun IN_CONSTRAINT c = UNCONSTRAIN THENC c THENC MK_CONSTRAINT
 
 fun quick_cst_elim tm = let
@@ -439,7 +423,6 @@ fun reduce_if_ground tm =
   if is_exists tm orelse not (HOLset.isEmpty (FVL [tm] empty_tmset))
      then ALL_CONV tm
      else REDUCE_CONV tm
-
 
 fun fixup_newvar tm = let
   (* takes an existential term and replaces all occurrences of the bound
@@ -477,7 +460,6 @@ in
 end tm
 
 
-
 (* with ?x. p \/ q \/ r...
    expand to (?x. p) \/ (?x.q) \/ (?x.r) ...
 *)
@@ -486,13 +468,13 @@ fun push_one_exists_over_many_disjs tm =
    ALL_CONV) tm
 
 fun push_in_exists tm =
-    (* takes all existentials that are over disjuncts, and pushes them *)
-    (* over the disjuncts, preserving the order *)
-    if is_exists tm then
-      (BINDER_CONV push_in_exists THENC
-                   push_one_exists_over_many_disjs) tm
-    else
-      ALL_CONV tm
+  (* takes all existentials that are over disjuncts, and pushes them *)
+  (* over the disjuncts, preserving the order *)
+  if is_exists tm then
+    (BINDER_CONV push_in_exists THENC
+                 push_one_exists_over_many_disjs) tm
+  else
+    ALL_CONV tm
 
 (*val push_in_exists = Profile.profile "push_in" push_in_exists*)
 
@@ -514,24 +496,24 @@ in
 end handle HOL_ERR _ => false
 
 
-local exception foo
+local
+  exception foo
 in
-fun push_in_exists_and_follow c tm = let
-  (* looking at
-       ?x. ... /\ P x /\ ...
-     where the ... don't contain any instances of x
-     Push the existential in over the conjuncts and finish by applying c
-     to ?x. P x
-  *)
-  val th0 = EXISTS_AND_CONV tm handle HOL_ERR _ => raise foo
-  val tm1 = rhs (concl th0)
-  val goleft = is_exists (#1 (dest_conj tm1))
-  val cconval = if goleft then LAND_CONV else RAND_CONV
-in
-  (K th0 THENC cconval (push_in_exists_and_follow c)) tm
-end handle foo => c tm
+  fun push_in_exists_and_follow c tm = let
+    (* looking at
+        ?x. ... /\ P x /\ ...
+      where the ... don't contain any instances of x
+      Push the existential in over the conjuncts and finish by applying c
+      to ?x. P x
+    *)
+    val th0 = EXISTS_AND_CONV tm handle HOL_ERR _ => raise foo
+    val tm1 = rhs (concl th0)
+    val goleft = is_exists (#1 (dest_conj tm1))
+    val cconval = if goleft then LAND_CONV else RAND_CONV
+  in
+    (K th0 THENC cconval (push_in_exists_and_follow c)) tm
+  end handle foo => c tm
 end
-
 
 (* given (p \/ q \/ r..) /\ s   (with the or's right associated)
    expand to (p /\ s) \/ (q /\ s) \/ (r /\ s) \/ ...
@@ -548,5 +530,4 @@ fun ADDITIVE_TERMS_CONV c tm =
     BINOP_CONV c tm
   else ALL_CONV tm
 
-
-end
+end;

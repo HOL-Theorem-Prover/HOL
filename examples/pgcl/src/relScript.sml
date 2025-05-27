@@ -34,13 +34,6 @@ val _ = new_theory "rel";
 (* Helpful proof tools                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-infixr 0 ++ << || THENC ORELSEC ORELSER ##;
-infix 1 >>;
-
-val op ++ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-val op || = op ORELSE;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;

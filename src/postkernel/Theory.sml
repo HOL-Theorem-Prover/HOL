@@ -64,95 +64,25 @@ type num = Arbnum.num
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
 
-type thy_addon = {sig_ps    : (unit -> PP.pretty) option,
-                  struct_ps : (unit -> PP.pretty) option}
 open DB_dtype
 
-local
-  val hooks =
-    (* hooks are stored in the order they are registered, with later
-       hooks earlier in the list.
-       The set component is the list of the disabled hooks.
-     *)
-      ref (HOLset.empty String.compare,
-           [] : (string * (TheoryDelta.t -> unit)) list)
-in
-fun call_hooks td = let
-  val (disabled, hooks) = !hooks
-  val hooks_rev = List.rev hooks
-  fun protect nm (f:TheoryDelta.t -> unit) td = let
-    fun error_pfx() =
-        "Hook "^nm^" failed on event " ^ TheoryDelta.toString td
-  in
-    f td
-    handle e as HOL_ERR {origin_function,origin_structure,message} =>
-           Feedback.HOL_WARNING
-               "Theory"
-               "callhooks"
-               (error_pfx() ^ " with problem " ^
-                Feedback.exn_to_string e)
-         | Match =>
-           Feedback.HOL_WARNING
-               "Theory"
-               "callhooks"
-               (error_pfx() ^ " with a Match exception")
-  end
-  fun recurse l =
-      case l of
-        [] => ()
-      | (nm, f) :: rest => let
-        in
-          if HOLset.member(disabled,nm) then ()
-          else protect nm f td;
-          recurse rest
-        end
-in
-  recurse hooks_rev
-end
+val delta_hook : TheoryDelta.t Listener.t = Listener.new_listener()
 
-fun register_hook (nm, f) = let
-  val (disabled, hooks0) = !hooks
-  val hooks0 = List.filter (fn (nm',f) => nm' <> nm) hooks0
-in
-  hooks := (disabled, (nm,f) :: hooks0)
-end
+fun register_hook sf = Listener.add_listener delta_hook sf
 
-fun delete_hook nm = let
-  val (disabled, hookfns) = !hooks
-  val (deleting, remaining) = Lib.partition (fn (nm', _) => nm' = nm) hookfns
-in
-  case deleting of
-    [] => HOL_WARNING "Theory" "delete_hook" ("No hook with name: "^nm)
-  | _ => ();
-  hooks := (HOLset.delete(disabled,nm), remaining)
-end
-
-fun get_hooks () = #2 (!hooks)
-
-fun hook_modify act f x =
-  let
-    val (disabled0, fns) = !hooks
-    fun finish() = hooks := (disabled0, fns)
-    val _ = hooks := (act disabled0, fns)
-    val result = f x handle e => (finish(); raise e)
-  in
-    finish();
-    result
-  end
-
-fun disable_hook nm f x =
-  hook_modify (fn s => HOLset.add(s,nm)) f x
-
-fun safedel_fromset nm s =
-  HOLset.delete(s, nm) handle HOLset.NotFound => s
-fun enable_hook nm f x =
-  hook_modify (safedel_fromset nm) f x
-
-
-end (* local block enclosing declaration of hooks variable *)
+fun call_hooks td =
+    let
+      fun error_report (s,_,e) =
+          Feedback.HOL_WARNING
+            "Theory"
+            "callhooks"
+            ("Hook " ^ s ^ " failed on event " ^ TheoryDelta.toString td ^
+             " with problem " ^ Feedback.exn_to_string e)
+    in
+      List.app error_report (Listener.call_listener delta_hook td)
+    end
 
 (* This reference is set in course of loading the parsing library *)
-
 val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
 
 (*---------------------------------------------------------------------------*
@@ -261,23 +191,21 @@ type segment =
      {thid    : thyid,                                         (* unique id  *)
       facts   : (thm * thminfo) Symtab.table,                 (* stored thms *)
       thydata : ThyDataMap,                             (* extra theory data *)
-      adjoin  : thy_addon list,                        (*  extras for export *)
-      adjoinpc: (unit -> PP.pretty) list,
       mldeps  : string HOLset.set}
 local
   open FunctionalRecordUpdate
-  fun seg_mkUp z = makeUpdate6 z
+  fun seg_mkUp z = makeUpdate4 z
 in
   fun update_seg z = let
-    fun from adjoin adjoinpc facts mldeps thid thydata =
-      {adjoin=adjoin, adjoinpc = adjoinpc, facts=facts, mldeps=mldeps,
+    fun from facts mldeps thid thydata =
+      {facts=facts, mldeps=mldeps,
        thid=thid, thydata=thydata}
     (* fields in reverse order to above *)
-    fun from' thydata thid mldeps facts adjoinpc adjoin =
-      {adjoin=adjoin, adjoinpc = adjoinpc, facts=facts, mldeps=mldeps,
+    fun from' thydata thid mldeps facts =
+      {facts=facts, mldeps=mldeps,
        thid=thid, thydata=thydata}
-    fun to f {adjoin, adjoinpc, facts, mldeps, thid, thydata} =
-      f adjoin adjoinpc facts mldeps thid thydata
+    fun to f {facts, mldeps, thid, thydata} =
+      f facts mldeps thid thydata
   in
     seg_mkUp (from, from', to)
   end z
@@ -296,7 +224,7 @@ end (* local *)
  *---------------------------------------------------------------------------*)
 
 fun empty_segment_value thid =
-    {adjoin=[], adjoinpc = [], facts=Symtab.empty, thid=thid, thydata = empty_datamap,
+    {facts=Symtab.empty, thid=thid, thydata = empty_datamap,
      mldeps = HOLset.empty String.compare}
 
 fun fresh_segment s :segment = empty_segment_value (new_thyid s)
@@ -328,7 +256,6 @@ fun thy_parents thyname             = snd (Graph.first
 fun thy_axioms (th:segment)   = filter is_axiom   (#facts th)
 fun thy_theorems (th:segment) = filter is_theorem (#facts th)
 fun thy_defns (th:segment)    = filter is_defn    (#facts th)
-fun thy_addons (th:segment)   = #adjoin th
 end
 
 fun stamp thyname =
@@ -394,20 +321,19 @@ fun add_fact th (seg : segment) =
       update_seg seg (U #facts (updator th (#facts seg))) $$
     end
 
-fun new_addon a (s as {adjoin, ...} : segment) =
-  update_seg s (U #adjoin (a::adjoin)) $$
-
-fun new_addonpc a (s as {adjoinpc, ...} : segment) =
-    update_seg s (U #adjoinpc (a::adjoinpc)) $$
-
 fun add_ML_dep s (seg as {mldeps, ...} : segment) =
   update_seg seg (U #mldeps (HOLset.add(mldeps, s))) $$
 
-fun upd_binding_p s f (seg as {facts,...} : segment) : segment option =
+type upddeltaty = {old:thminfo,new:thminfo,thm:thm}
+fun upd_binding_p s f (seg as {facts,...}:segment) : (segment*upddeltaty) option=
     case Symtab.lookup facts s of
         NONE => NONE
       | SOME (th, i) =>
-        SOME (update_seg seg (U #facts (Symtab.update(s,(th, f i)) facts)) $$)
+        let val new = f i
+        in
+          SOME (update_seg seg (U #facts (Symtab.update(s,(th, new)) facts)) $$,
+                {old=i,new=new,thm=th})
+        end
 
 local fun plucky k tab =
           case Symtab.lookup tab k of
@@ -457,6 +383,11 @@ fun zap_segment s (thy : segment) =
 
 local
   fun inCT f arg = makeCT(f arg (theCT()))
+  fun inCT' f arg = let val (seg',v) = f arg (theCT())
+                    in
+                      makeCT seg';
+                      v
+                    end
   open TheoryDelta
   fun add_factCT p = (inCT add_fact p;
                       call_hooks (TheoryDelta.NewBinding p))
@@ -480,36 +411,22 @@ in
   fun delete_binding s  = (inCT del_binding s; call_hooks (DelBinding s))
 
   fun set_MLname s1 s2  = inCT set_MLbind (s1,s2)
-  fun upd_binding s f   = inCT (fn f => fn seg =>
+  fun upd_binding s f   =
+      let val deltadata = inCT' (fn f => fn seg =>
                                    case upd_binding_p s f seg of
                                        NONE => raise ERR
                                                      "upd_binding"
                                                      ("No such binding: "^s)
-                                     | SOME seg' => seg')
-                               f
+                                     | SOME v => v)
+                                f
+      in
+        call_hooks(UpdBinding(s,deltadata))
+      end
 
 
-  val adjoin_to_theory  = inCT new_addon
-  val adjoin_after_completion = inCT new_addonpc
   val zapCT             = inCT zap_segment
 
 end;
-
-local
-  structure PP = HOLPP
-  fun pp_lines l =
-    PP.block PP.CONSISTENT 0
-       (List.concat (map (fn s => [PP.add_string s, PP.NL]) l))
-  val is_empty =
-    fn [] => true
-     | [s] => s = "none" orelse List.all Char.isSpace (String.explode s)
-     | _ => false
-  fun pp l = if is_empty l then NONE else SOME (fn _ => pp_lines l)
-  val qpp = pp o Portable.quote_to_string_list
-in
-  fun quote_adjoin_to_theory q1 q2 =
-    adjoin_to_theory {sig_ps = qpp q1, struct_ps = qpp q2}
-end
 
 (*---------------------------------------------------------------------------*
  *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *
@@ -730,10 +647,8 @@ fun incorporate_types thy tys =
   in List.app itype tys
   end;
 
-fun incorporate_consts thy tyvector consts =
-  let fun iconst(s,i) = (install_const(s,Vector.sub(tyvector,i),thy);())
-  in List.app iconst consts
-  end;
+fun incorporate_consts thy consts =
+    List.app (fn (s,ty) => ignore (install_const(s,ty,thy))) consts
 
 (* ----------------------------------------------------------------------
     Theory data functions
@@ -936,13 +851,6 @@ fun theory_out p ostrm =
    TextIO.closeOut ostrm
  end;
 
-(* automatically reverses the list, which is what is needed. *)
-
-fun unadjzip [] A = A
-  | unadjzip ({sig_ps,struct_ps}::t) (l1,l2) =
-       unadjzip t (sig_ps::l1, struct_ps::l2)
-
-
 (*---------------------------------------------------------------------------
     We always export the theory, except if it is the initial theory (named
     "scratch") and the initial theory is empty. If the initial theory is
@@ -979,18 +887,16 @@ local
     | NONE => ()
   end
 in
-fun export_theory () = let
+fun export_theory () = if !Globals.interactive then () else let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
-  val {thid,facts,adjoin,adjoinpc,thydata,mldeps,...} = scrubCT()
+  val {thid,facts,thydata,mldeps,...} = scrubCT()
   val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
   val concat = String.concat
   val thyname = thyid_name thid
   val name = thyname^"Theory"
-  val (sig_ps, struct_ps) = unadjzip adjoin ([],[])
   val sigthry = {name = thyname,
                  parents = map thyid_name (Graph.fringe()),
-                 all_thms = all_thms,
-                 sig_ps = sig_ps}
+                 all_thms = all_thms}
   fun mungethydata dmap = let
     fun foldthis (k,v,acc as (strlist,tmlist,dict)) =
         case v of
@@ -1016,8 +922,6 @@ fun export_theory () = let
        types = thy_types thyname,
        constants = Lib.mapfilter Term.dest_const (thy_constants thyname),
        all_thms = all_thms,
-       struct_ps = struct_ps,
-       struct_pcps = adjoinpc,
        thydata = mungethydata thydata,
        mldeps = HOLset.listItems mldeps}
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
@@ -1102,9 +1006,9 @@ fun new_theory str =
     Function f tries to extend current theory. If that fails then
     revert to previous state.
 
-    We do not (yet) track changes to the state used by adjoin_to_theory or
-    any hooks, though the hooks should see the changes adding and
-    removing things from the "signature".
+    We do not (yet) track changes to the state used by any hooks, though the
+    hooks should see the changes adding and removing things from the
+    "signature".
    ---------------------------------------------------------------------- *)
 
 fun try_theory_extension f x =

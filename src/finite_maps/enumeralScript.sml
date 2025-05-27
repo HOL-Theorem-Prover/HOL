@@ -461,7 +461,7 @@ SRW_TAC [] [bt_to_set_lb_ub_mut_rec, bt_to_ol_lb_ub,
                     LIST_TO_SET_APPEND, EXTENSION] THEN
 SRW_TAC [] [NOT_IN_nt, bt_to_set_lb_ub]);
 
-val ol_set_lb =  maybe_thm ("ol_set_lb",``!cmp:'a toto t lb.
+val ol_set_lb = maybe_thm ("ol_set_lb",``!cmp:'a toto t lb.
    bt_to_set_lb cmp lb t = set (bt_to_ol_lb cmp lb t)``,
 GEN_TAC THEN Induct THEN
 SRW_TAC [] [bt_to_set_lb_mut_rec, bt_to_ol_lb,

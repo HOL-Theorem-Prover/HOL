@@ -20,6 +20,8 @@
 open HolKernel Parse boolLib relationTheory mesonLib metisLib
 open quotientLib simpLib boolSimps BasicProvers
 
+local open computeLib in end
+
 val _ = new_theory "pair";
 
 fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta-reduce *)
@@ -101,7 +103,7 @@ val PAIR_EQ = Q.store_thm
    THEN REWRITE_TAC[],
   STRIP_TAC THEN ASM_REWRITE_TAC[]]);
 
-Theorem CLOSED_PAIR_EQ[simp] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
+Theorem CLOSED_PAIR_EQ[simp,compute] = itlist Q.GEN [`x`, `y`, `a`, `b`] PAIR_EQ;
 
 
 (*---------------------------------------------------------------------------
@@ -140,8 +142,8 @@ val PAIR =
 local val th1 = REWRITE_RULE [PAIR_EQ] (SPEC (Term`(x,y):'a#'b`) PAIR)
       val (th2,th3) = (CONJUNCT1 th1, CONJUNCT2 th1)
 in
-Theorem FST[simp] = itlist Q.GEN [`x`,`y`] th2;
-Theorem SND[simp] = itlist Q.GEN [`x`,`y`] th3;
+Theorem FST[simp,compute] = itlist Q.GEN [`x`,`y`] th2;
+Theorem SND[simp,compute] = itlist Q.GEN [`x`,`y`] th3;
 end;
 val _ = ot0 "FST" "fst"
 val _ = ot0 "SND" "snd"
@@ -165,6 +167,39 @@ Proof
     simp[SWAP_def]
 QED
 
+Theorem SWAP_o_SWAP[simp]:
+    SWAP o SWAP = I /\
+    SWAP o SWAP o f = f
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem FST_SWAP[simp]:
+  !x. (FST (SWAP x)) = SND x
+Proof
+  simp[SWAP_def]
+QED
+
+Theorem SND_SWAP[simp]:
+  !x. (SND (SWAP x)) = FST x
+Proof
+  simp[SWAP_def]
+QED
+
+Theorem FST_o_SWAP[simp]:
+   FST o SWAP = SND /\
+   FST o SWAP o f = SND o f
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem SND_o_SWAP[simp]:
+   SND o SWAP = FST /\
+   SND o SWAP o f = FST o f
+Proof
+  simp[FUN_EQ_THM]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
@@ -186,10 +221,22 @@ val ELIM_UNCURRY = Q.store_thm(
   REWRITE_TAC [UNCURRY] THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
   REFL_TAC);
 
-Theorem UNCURRY_DEF[simp]:
+Theorem UNCURRY_DEF[simp,compute]:
     !f x y. UNCURRY f (x,y) :'c = f x y
 Proof
   REWRITE_TAC [UNCURRY,FST,SND]
+QED
+
+Theorem UNCURRY_CONST[simp]:
+    (UNCURRY (\x1 x2. y) x) = y
+Proof
+  REWRITE_TAC[UNCURRY]
+QED
+
+Theorem UNCURRY_SWAP[simp]:
+  UNCURRY f (SWAP x) = UNCURRY (flip f) x
+Proof
+  simp[UNCURRY]
 QED
 
 Theorem IN_UNCURRY_R[simp]:
@@ -359,12 +406,10 @@ val PROD_ALL_def = new_definition(
   "PROD_ALL_def",
   ``PROD_ALL (P:'a -> bool) (Q : 'b -> bool) p <=> P (FST p) /\ Q (SND p)``);
 
-val PROD_ALL_THM = store_thm(
-  "PROD_ALL_THM",
-  ``PROD_ALL P Q (x:'a,y:'b) <=> P x /\ Q y``,
-  REWRITE_TAC [PROD_ALL_def, FST, SND]);
-val _ = BasicProvers.export_rewrites ["PROD_ALL_THM"]
-val _ = computeLib.add_persistent_funs ["PROD_ALL_THM"]
+Theorem PROD_ALL_THM[simp,compute]:
+  PROD_ALL P Q (x:'a,y:'b) <=> P x /\ Q y
+Proof REWRITE_TAC [PROD_ALL_def, FST, SND]
+QED
 
 val PROD_ALL_MONO = store_thm(
   "PROD_ALL_MONO",
@@ -449,9 +494,16 @@ val PAIR_MAP = Q.new_infixr_definition
  ("PAIR_MAP",
   `$## (f:'a->'c) (g:'b->'d) p = (f (FST p), g (SND p))`, 490);
 
-Theorem PAIR_MAP_THM[simp]:
+Theorem PAIR_MAP_THM[simp,compute]:
   !f g x y. (f##g) (x,y) = (f x, g y)
 Proof REWRITE_TAC [PAIR_MAP,FST,SND]
+QED
+
+Theorem pair_map_eq[simp]:
+  (f ## g) p = (w,v) <=> (?x y. (p = (x,y)) /\ (w = f x) /\ (v = g y))
+Proof
+  Q.SPEC_THEN ‘p’ STRIP_ASSUME_TAC pair_CASES >>
+  simp [] >> EQ_TAC >> simp[]
 QED
 
 Theorem FST_PAIR_MAP[simp]:
@@ -462,6 +514,18 @@ QED
 Theorem SND_PAIR_MAP[simp]:
   !p f g. SND ((f ## g) p) = g (SND p)
 Proof REWRITE_TAC [PAIR_MAP, SND]
+QED
+
+Theorem FST_o_PAIR_MAP[simp]:
+  FST o (g ## f) = g o FST /\
+  FST o (g ## f) o f' = g o FST o f'
+Proof simp [FUN_EQ_THM]
+QED
+
+Theorem SND_o_PAIR_MAP[simp]:
+  SND o (g ## f) = (f o SND) /\
+  SND o (g ## f) o f' = f o SND o f'
+Proof simp [FUN_EQ_THM]
 QED
 
 Theorem PAIR_MAP_I[simp,quotient_simp]:
@@ -490,6 +554,21 @@ val LET2_RATOR = Q.store_thm("LET2_RATOR",
 REWRITE_TAC [boolTheory.LET_DEF] THEN BETA_TAC
   THEN REWRITE_TAC [UNCURRY_VAR] THEN BETA_TAC
   THEN REWRITE_TAC[]);
+
+Theorem UNCURRY_RAND:
+  !f'. f' (UNCURRY f x) = UNCURRY ((o) f' o f) x
+Proof
+ REWRITE_TAC [UNCURRY_VAR,combinTheory.o_DEF] THEN BETA_TAC
+ THEN REWRITE_TAC[]
+QED
+
+Theorem UNCURRY_RATOR:
+  !M . UNCURRY M f0 x = UNCURRY (flip (flip o M) x) f0
+Proof
+ REWRITE_TAC [UNCURRY_VAR,combinTheory.C_DEF,combinTheory.o_DEF]
+ THEN BETA_TAC THEN BETA_TAC
+ THEN REWRITE_TAC[]
+QED
 
 val o_UNCURRY_R = store_thm(
   "o_UNCURRY_R",
@@ -564,13 +643,13 @@ val pair_CASE_def =
                  “pair_CASE (p:('a#'b)) f = f (FST p) (SND p)”)
 val _ = ot0 "pair_case" "case"
 
-val pair_case_thm = save_thm("pair_case_thm",
-  pair_CASE_def |> Q.SPEC `(x,y)` |> REWRITE_RULE [FST, SND] |> SPEC_ALL)
+Theorem pair_case_thm =
+  pair_CASE_def |> Q.SPEC ‘(x,y)’ |> REWRITE_RULE [FST, SND] |> SPEC_ALL
 
 (* and, to be consistent with what would be generated if we could use
    Hol_datatype to generate the pair type: *)
-val pair_case_def = save_thm("pair_case_def", pair_case_thm)
-val _ = overload_on("case", ``pair_CASE``)
+Theorem pair_case_def = pair_case_thm
+Overload case = “pair_CASE”
 
 
 Theorem pair_CASE_UNCURRY:
@@ -578,6 +657,13 @@ Theorem pair_CASE_UNCURRY:
 Proof
   SIMP_TAC bool_ss [FUN_EQ_THM, pair_CASE_def, combinTheory.C_DEF, UNCURRY]
 QED
+
+Theorem UNCURRY_pair_CASE:
+  UNCURRY = flip pair_CASE
+Proof
+  SIMP_TAC bool_ss [FUN_EQ_THM, pair_CASE_def, combinTheory.C_DEF, UNCURRY]
+QED
+
 
 val pair_case_cong = save_thm("pair_case_cong",
   Prim_rec.case_cong_thm pair_CASES pair_case_thm);
@@ -587,6 +673,12 @@ Theorem pair_case_eq:
   (pair_CASE p f = v) <=> ?x y. (p = (x,y)) /\ (f x y = v)
 Proof
   SIMP_TAC bool_ss [pair_CASE_UNCURRY, UNCURRY_EQ, combinTheory.C_DEF]
+QED
+
+Theorem pair_CASE_SWAP[simp]:
+  pair_CASE (SWAP v) f = pair_CASE v (flip f)
+Proof
+  simp[pair_CASE_UNCURRY]
 QED
 
 val pair_case_ho_elim = Q.store_thm(
@@ -629,14 +721,6 @@ val _ = TypeBase.export [
     beta-reduction.
 
  ---------------------------------------------------------------------------*)
-
-
-
-val S = PP.add_string and NL = PP.NL and B = PP.block PP.CONSISTENT 0
-
-val _ = adjoin_to_theory
-{sig_ps = SOME(fn _ => S "val pair_rws : thm list"),
- struct_ps = SOME(fn _ => S "val pair_rws = [PAIR, FST, SND];")};
 
 val datatype_pair = store_thm(
   "datatype_pair",
@@ -1058,165 +1142,28 @@ QED
     It adds relevant rewrites into the global compset.
  ---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn _ => B[
-      S "val _ = let open computeLib",                                   NL,
-      S "        in add_funs (map lazyfy_thm",                           NL,
-      S "              [CLOSED_PAIR_EQ,FST,SND,pair_case_thm,SWAP_def,", NL,
-      S "               CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM])",           NL,
-      S "        end;",                                                  NL])}
+fun stA s =
+  let
+    val nm = s ^ "_lazyfied"
+    val th = save_thm(nm, computeLib.lazyfy_thm $ DB.fetch "-" s)
+  in
+    ThmAttribute.store_at_attribute {
+      name = nm, attrname = "compute", args = [], thm = th
+    }
+  end
 
-(*---------------------------------------------------------------------------
-    Some messiness in order to teach the definition principle about
-    varstructs.
- ---------------------------------------------------------------------------*)
-
-val _ = adjoin_to_theory
-{sig_ps = SOME(fn _ => B[
-      S "type hol_type = Abbrev.hol_type", NL,
-      S "type term     = Abbrev.term", NL,
-      S "type conv     = Abbrev.conv", NL,NL,
-      S "val uncurry_tm       : term", NL,
-      S "val comma_tm         : term", NL,
-      S "val dest_pair        : term -> term * term", NL,
-      S "val strip_pair       : term -> term list", NL,
-      S "val spine_pair       : term -> term list", NL,
-      S "val is_vstruct       : term -> bool", NL,
-      S "val mk_pabs          : term * term -> term", NL,
-      S "val PAIRED_BETA_CONV : conv", NL]),
- struct_ps = SOME(fn _ => B[
-S"(*---------------------------------------------------------------", NL,
-S"       Support for definitions using varstructs", NL,
-S"----------------------------------------------------------------*)", NL,
-NL,
-S "open HolKernel boolLib;", NL,
-S "infix |-> ORELSEC THENC;", NL,
-NL,
-S "val ERR1 = mk_HOL_ERR \"pairSyntax\"", NL,
-S "val ERR2 = mk_HOL_ERR \"PairedLambda\"", NL,
-S "val ERR3 = mk_HOL_ERR \"pairTheory.dest\"", NL,
-NL,
-S "val comma_tm = prim_mk_const {Name=\",\", Thy=\"pair\"};", NL,
-S "val uncurry_tm = prim_mk_const {Name=\"UNCURRY\", Thy=\"pair\"};", NL,
-NL,
-S "val dest_pair = dest_binop comma_tm (ERR1 \"dest_pair\" \"not a pair\")", NL,
-S "val strip_pair = strip_binop dest_pair;", NL,
-S "val spine_pair = spine_binop (total dest_pair);", NL,
-NL,
-S "local fun check [] = true", NL,
-S "        | check (h::t) = is_var h andalso not(tmem h t) andalso check t", NL,
-S "in", NL,
-S "fun is_vstruct M = check (strip_pair M)",
-S "end;", NL,
-NL,
-S "fun mk_uncurry_tm(xt,yt,zt) = ", NL,
-S "  inst [alpha |-> xt, beta |-> yt, gamma |-> zt] uncurry_tm;", NL,
-NL,
-NL,
-S "fun mk_pabs(vstruct,body) =", NL,
-S "  if is_var vstruct then Term.mk_abs(vstruct, body)", NL,
-S "  else let val (fst,snd) = dest_pair vstruct", NL,
-S "       in mk_comb(mk_uncurry_tm(type_of fst, type_of snd, type_of body),", NL,
-S "                  mk_pabs(fst,mk_pabs(snd,body)))", NL,
-S "       end handle HOL_ERR _ => raise ERR1 \"mk_pabs\" \"\";", NL,
-NL,
-NL,
-S "local val vs = map genvar [alpha --> beta --> gamma, alpha, beta]", NL,
-S "      val DEF = SPECL vs UNCURRY_DEF", NL,
-S "      val RBCONV = RATOR_CONV BETA_CONV THENC BETA_CONV", NL,
-S "      fun conv tm = ", NL,
-S "       let val (Rator,Rand) = dest_comb tm", NL,
-S "           val (fst,snd) = dest_pair Rand", NL,
-S "           val (Rator,f) = dest_comb Rator", NL,
-S "           val _ = assert (same_const uncurry_tm) Rator", NL,
-S "           val (t1,ty') = dom_rng (type_of f)", NL,
-S "           val (t2,t3) = dom_rng ty'", NL,
-S "           val iDEF = INST_TYPE [alpha |-> t1, beta |-> t2, gamma |-> t3] DEF", NL,
-S "           val (fv,xyv) = strip_comb(rand(concl iDEF))", NL,
-S "           val xv = hd xyv and yv = hd (tl xyv)", NL,
-S "           val def = INST [yv |-> snd, xv |-> fst, fv |-> f] iDEF", NL,
-S "       in", NL,
-S "         TRANS def ", NL,
-S "          (if Term.is_abs f ", NL,
-S "           then if Term.is_abs (body f) ", NL,
-S "                then RBCONV (rhs(concl def))", NL,
-S "                else CONV_RULE (RAND_CONV conv)", NL,
-S "                      (AP_THM(BETA_CONV(mk_comb(f, fst))) snd)", NL,
-S "           else let val recc = conv (rator(rand(concl def)))", NL,
-S "                in if Term.is_abs (rhs(concl recc))", NL,
-S "                   then RIGHT_BETA (AP_THM recc snd)", NL,
-S "                   else TRANS (AP_THM recc snd) ", NL,
-S "                           (conv(mk_comb(rhs(concl recc), snd)))", NL,
-S "                end)", NL,
-S "       end", NL,
-S "in", NL,
-S "fun PAIRED_BETA_CONV tm ", NL,
-S "    = conv tm handle HOL_ERR _ => raise ERR2 \"PAIRED_BETA_CONV\" \"\"", NL,
-S "end;", NL,
-NL,
-NL,
-S "(*---------------------------------------------------------------------------", NL,
-S "     Lifting primitive definition principle to understand varstruct", NL,
-S "     arguments in definitions.", NL,
-S " ---------------------------------------------------------------------------*)", NL,
-NL,
-S "fun inter s1 [] = []", NL,
-S "  | inter s1 (h::t) = case op_intersect aconv s1 h of [] => inter s1 t | X => X", NL,
-NL,
-S "fun joint_vars []  = []", NL,
-S "  | joint_vars [_] = []", NL,
-S "  | joint_vars (h::t) = case inter h t of [] => joint_vars t | X => X;", NL,
-NL,
-S "fun dest t = ", NL,
-S "  let val (lhs,rhs) = dest_eq (snd(strip_forall t))", NL,
-S "      val (f,args) = strip_comb lhs", NL,
-S "      val f = mk_var(dest_const f) handle HOL_ERR _ => f", NL,
-S "  in ", NL,
-S "  case filter (not o is_vstruct) args ", NL,
-S "   of [] => (case joint_vars (map free_vars args)", NL,
-S "              of [] => (args, mk_eq(f,itlist (curry mk_pabs) args rhs))", NL,
-S "               | V  => raise ERR3 \"new_definition\" (String.concat", NL,
-S "                       (\"shared variables between arguments: \" ::", NL,
-S "                        commafy (map Parse.term_to_string V))))", NL,
-S "    | tml => raise ERR3 \"new_definition\" (String.concat", NL,
-S "             (\"The following arguments are not varstructs: \"::", NL,
-S "              commafy (map Parse.term_to_string tml)))", NL,
-S "  end;", NL,
-NL,
-S "fun RHS_CONV conv th = TRANS th (conv(rhs(concl th)));", NL,
-NL,
-S "fun add_varstruct v th = ", NL,
-S "  RHS_CONV(BETA_CONV ORELSEC PAIRED_BETA_CONV) (AP_THM th v)", NL,
-NL,
-S "fun post (V,th) =", NL,
-S "  let val vars = List.concat (map free_vars_lr V)", NL,
-S "  in", NL,
-S "    itlist GEN vars (rev_itlist add_varstruct V th)", NL,
-S "  end;", NL,
-S "  ", NL,
-S "val _ = Definition.new_definition_hook := (dest, post)", NL])};
+(* not super apparent to me why these need to be lazyfied, with possible
+   exception of pair_case_thm, which gives us some evaluation order control
+*)
+val _ = app stA ["pair_case_thm", "SWAP_def", "CURRY_DEF"]
 
 val FST_EQ_EQUIV = Q.store_thm("FST_EQ_EQUIV",
   `(FST p = x) <=> ?y. p = (x,y)`,
   Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
+
 val SND_EQ_EQUIV = Q.store_thm("SND_EQ_EQUIV",
   ‘(SND p = y) <=> ?x. p = (x,y)’,
   Q.ISPEC_THEN `p` STRUCT_CASES_TAC pair_CASES >> simp_tac(srw_ss())[]);
-
-
-
-val comma_tm = Term.prim_mk_const{Name=",", Thy="pair"};
-fun is_pair tm = Term.same_const comma_tm (fst(strip_comb tm));
-fun dest_pair tm =
-  case snd (strip_comb tm) of [a,b] => (a,b) | _ => raise Match;
-
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn _ =>
-                    S "val _ = BasicProvers.new_let_thms\
-                          \[o_UNCURRY_R, C_UNCURRY_L, S_UNCURRY_R, \
-                          \FORALL_UNCURRY]")}
 
 val _ = export_theory();
 

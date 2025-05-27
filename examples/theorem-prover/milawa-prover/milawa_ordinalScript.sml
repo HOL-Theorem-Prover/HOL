@@ -3,8 +3,6 @@ open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_ordinal";
 
 open lisp_sexpTheory arithmeticTheory pred_setTheory ordinalNotationTheory;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE
 
 

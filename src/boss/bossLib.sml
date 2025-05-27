@@ -185,6 +185,124 @@ val op >>~-           = Q.>>~-
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 
+fun variantl avoids t =
+    (* t a (possibly tupled) var *)
+    if is_var t then (variant avoids t, t::avoids)
+    else
+      let val (l,r) = pairSyntax.dest_pair t
+          val (l',avoids) = variantl avoids l
+          val (r',avoids) = variantl avoids r
+      in
+        (pairSyntax.mk_pair(l',r'), avoids)
+      end
+
+local
+  open FunctionalRecordUpdate
+  fun mkUpdateT z = makeUpdate4 z
+in
+fun updateT z = let
+  fun from flip fn_ext setcomp usercongs =
+      {flip = flip, fn_ext = fn_ext, setcomp = setcomp,
+       usercongs = usercongs}
+  fun from' usercongs setcomp fn_ext flip =
+      {flip = flip, fn_ext = fn_ext, setcomp = setcomp,
+       usercongs = usercongs}
+  fun to f {flip,fn_ext,setcomp,usercongs} =
+      f flip fn_ext setcomp usercongs
+in
+  mkUpdateT (from,from',to)
+end z
+end
+
+local
+fun final flip = if flip then SYM_TAC else ALL_TAC
+fun ole NONE n = false
+  | ole (SOME m) n = m <= n
+fun odec NONE = NONE
+  | odec (SOME m) = SOME (m - 1)
+in
+
+fun GEN_CONG_TAC first (cfg as {fn_ext,flip,usercongs,setcomp:bool}) depth
+                 (g as (asl,w)) =
+    if ole depth 0 then final flip g
+    else if not (is_eq w) then
+      if first then raise ERR "CONG_TAC" "Goal not an equality"
+      else final flip g
+    else
+      let
+        open pairSyntax
+        val depth' = odec depth
+        val (l,r) = dest_eq w
+        val (f1,args) = strip_comb l and (f2, _) = strip_comb r
+        val post = TRY (FIRST [REFL_TAC, FIRST_ASSUM MATCH_ACCEPT_TAC,
+                               SYM_TAC THEN FIRST_ASSUM MATCH_ACCEPT_TAC])
+        fun FAIL g = raise ERR "CONG_TAC" "Goal not an eliminable equality"
+        val stdfinisher =
+            if aconv f1 f2 then
+              let fun strip n = if n <= 0 then ALL_TAC
+                                else MK_COMB_TAC THENL [strip (n - 1), ALL_TAC]
+              in
+                strip (length args) THEN post THEN GEN_CONG_TAC false cfg depth'
+              end
+            else IF (MK_COMB_TAC THEN post) (GEN_CONG_TAC false cfg depth')
+                    (if first then FAIL else final flip)
+      in
+        if f1 ~~ numSyntax.numeral_tm orelse f2 ~~ numSyntax.numeral_tm then
+          if first then raise ERR "CONG_TAC" "Equality on at least one numeral"
+          else final flip
+        else if fn_ext andalso (is_pabs l orelse is_pabs r) then
+          let
+            (* complicated because of possibility of paired abstractions *)
+            open HOLset
+            val b_tms = ([#1 (dest_pabs l)] handle HOL_ERR _ => [])@
+                        ([#1 (dest_pabs r)] handle HOL_ERR _ => [])
+            val frees = FVL (w::asl) empty_tmset
+            fun genv [] = #1 (variantl (listItems frees) (hd b_tms))
+              | genv (v::vs) =
+                if isEmpty (intersection(frees, FVL [v] empty_tmset)) then v
+                else genv vs
+            val usethis = genv b_tms
+          in
+            CONV_TAC (REWR_CONV FUN_EQ_THM) THEN pairLib.PGEN_TAC usethis THEN
+            CONV_TAC (BINOP_CONV (TRY_CONV pairLib.GEN_BETA_CONV)) THEN
+            GEN_CONG_TAC false cfg depth'
+          end
+        else if pred_setSyntax.is_set_spec l orelse
+                pred_setSyntax.is_set_spec r
+        then
+          CONV_TAC (REWR_CONV pred_setTheory.EXTENSION) THEN GEN_TAC THEN
+          CONV_TAC (BINOP_CONV (TRY_CONV pred_setLib.SET_SPEC_CONV)) THEN
+          GEN_CONG_TAC false cfg depth'
+        else if usercongs then
+          let val candidates = DefnBase.read_congs()
+              fun user_tac cth = irule cth THEN REPEAT STRIP_TAC THEN
+                                 pairLib.GEN_BETA_TAC THEN post
+          in
+            IF (FIRST (map user_tac candidates))
+               (GEN_CONG_TAC false cfg depth')
+               stdfinisher
+          end
+        else stdfinisher
+      end g
+end (* local *)
+
+val default = {fn_ext=true,usercongs=true,setcomp=true,flip=false}
+val cfg_cong =
+  fn z => FunctionalRecordUpdate.Fold.post (updateT default, GEN_CONG_TAC true) z
+
+fun CONG_TAC d = GEN_CONG_TAC true default d
+val cong_tac = CONG_TAC
+
+val eqmp_th = let
+  (* |- !p q. p ==> (p <=> q) ==> q *)
+  val p = mk_var("p", bool) and q = mk_var("q", bool)
+  val eq = mk_eq(p,q)
+  val th0 = EQ_MP (ASSUME eq) (ASSUME p)
+in
+  th0 |> DISCH eq |> DISCH p |> GEN q |> GEN p
+end
+fun EQ_MP_CONG_TAC d th = MATCH_MP_TAC (MATCH_MP eqmp_th th) THEN cong_tac d
+
 (* ----------------------------------------------------------------------
     Working with abbreviations, and other gadgets from markerLib
    ---------------------------------------------------------------------- *)
@@ -237,11 +355,13 @@ end
     useful for proving termination in fold and rose-tree settings
    ---------------------------------------------------------------------- *)
 
+(*
 val size_comb_tac =
   full_simp_tac boolSimps.bool_ss [listTheory.MEM_SPLIT]
   THEN CONV_TAC TotalDefn.size_eq_conv
   THEN simp_tac boolSimps.bool_ss
     [listTheory.list_size_append, listTheory.list_size_def]
+*)
 
 val _ = let
   val sref = TotalDefn.termination_solve_simps

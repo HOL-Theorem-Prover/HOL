@@ -224,13 +224,11 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
 val op >- = op THEN1
 fun op>>-(tac1, n) tac2 g =
   op>- (tac1, tac2) g
-  handle e as HOL_ERR {message,origin_structure,origin_function} =>
+  handle e as HOL_ERR (er as {message,...}) =>
          if is_substring "THEN1" message then raise e
          else
-           raise HOL_ERR {message = message ^
-                                    " (THEN1 on line "^Int.toString n^")",
-                          origin_function = origin_function,
-                          origin_structure = origin_structure}
+           raise HOL_ERR (set_message
+             (message ^ " (THEN1 on line "^Int.toString n^")") er)
 fun (f ?? x) = f x
 
 
@@ -627,6 +625,27 @@ fun FIRST [] g = NO_TAC g
 fun MAP_EVERY tacf lst = EVERY (map tacf lst)
 val map_every = MAP_EVERY
 fun MAP_FIRST tacf lst = FIRST (map tacf lst)
+
+(* ----------------------------------------------------------------------
+    IF : tactic -> tactic -> tactic -> tactic
+
+    IF g t e runs g on the goal; if it succeeds it continues with t,
+    if it fails it continues with e. This is not the same as
+
+      (g THEN t) ORELSE e
+
+    which catches errors in t as well as g.
+   ---------------------------------------------------------------------- *)
+
+fun IF gt tt et goal =
+      case Lib.total gt goal of
+          NONE => et goal
+        | SOME (sgs, vf) =>
+          let
+            val (gll,vfl) = unzip (map tt sgs)
+          in
+            (List.concat gll, vf o mapshape (map length gll) vfl)
+          end
 
 (* ----------------------------------------------------------------------
     FIRST_LT : tactic -> list_tactic

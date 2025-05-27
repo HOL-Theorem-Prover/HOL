@@ -1289,9 +1289,11 @@ The abbreviation \ml{e} may also be used to expand a tactic.
 \begin{hol}
 \begin{verbatim}
    b          : unit -> goalstack
+   rd         : unit -> goalstack
    drop       : unit -> proofs
    dropn      : int  -> proofs
    backup     : unit -> goalstack
+   redo       : unit -> goalstack
    restart    : unit -> goalstack
    set_backup : int  -> unit
 \end{verbatim}
@@ -1301,7 +1303,8 @@ Often (we are tempted to say {\it usually}!) one takes a wrong path
 in doing a proof, or makes a mistake when setting a goal. To undo a step
 in the goalstack, the function \ml{backup} and its abbreviation
 \ml{b} are used. This will restore the goalstack to its previous
-state.
+state. To redo a step in the goalstack, the \ml{redo} function,
+abbreviated as \ml{rd}, may be used.
 
 
 To directly back up all the way to the original goal, the function

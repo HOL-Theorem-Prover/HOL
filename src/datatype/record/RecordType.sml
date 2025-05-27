@@ -17,7 +17,8 @@ open HolKernel Parse boolLib
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+  val SOME bool_grammars = grammarDB {thyname="bool"}
+  val (Type,Term) = parse_from_grammars bool_grammars
 end
 open Parse
 
@@ -209,10 +210,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val size = length fields
 
   val _ = length types = length fields orelse
-    raise HOL_ERR {origin_function = "prove_recordtype_thms",
-                   origin_structure = "RecordType",
-                   message =
-                   "Number of fields doesn't match number of types"}
+    raise mk_HOL_ERR "RecordType" "prove_recordtype_thms"
+      "Number of fields doesn't match number of types"
 
   (* we now have the type actually defined in typthm *)
   fun letgen x y = x @ [variant x (mk_var (app_letter y,y))]
@@ -574,9 +573,9 @@ fun prove_recordtype_thms (tyinfo, fields) = let
 
   (* add to the TypeBase's simpls entry for the record type *)
   val new_simpls = let
-    val new_simpls0 =  [accessor_thm, accfupd_thm,
-                        literal_equality, literal_11, fupdfupd_thm,
-                        fupdfupds_comp_thm]
+    val new_simpls0 = [accessor_thm, accfupd_thm,
+                       literal_equality, literal_11, fupdfupd_thm,
+                       fupdfupds_comp_thm]
   in
     if not (null fupdcanon_thms) then
       fupdcanon_thm :: fupdcanon_comp_thm :: new_simpls0

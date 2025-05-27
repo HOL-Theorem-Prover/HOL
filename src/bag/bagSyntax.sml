@@ -39,7 +39,7 @@ fun mk_union (tm1, tm2) = let
 in
   list_mk_comb(bu_tm, [tm1, tm2])
 end
-fun mk_diff(tm1, tm2) =  let
+fun mk_diff(tm1, tm2) = let
   val bt = base_type tm1
   val bd_tm = Term.inst [alpha |-> bt] BAG_DIFF_tm
 in

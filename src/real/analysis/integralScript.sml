@@ -1396,14 +1396,17 @@ val DIVISION_LE_SUC = store_thm("DIVISION_LE_SUC",
   REWRITE_TAC[DIVISION_THM, GREATER_EQ] THEN
   MESON_TAC[LESS_CASES, LE, REAL_LE_REFL, REAL_LT_IMP_LE]);
 
-val DIVISION_MONO_LE = store_thm("DIVISION_MONO_LE",
-  ``!d a b. division(a,b) d ==> !m n. m <= n ==> d(m) <= d(n)``,
+Theorem DIVISION_MONO_LE:
+  !d a b. division(a,b) d ==> !m n. m <= n ==> d(m) <= d(n)
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN(ASSUME_TAC o MATCH_MP DIVISION_LE_SUC) THEN
   SIMP_TAC arith_ss[LESS_EQ_EXISTS] THEN GEN_TAC THEN
   SIMP_TAC arith_ss[GSYM LEFT_FORALL_IMP_THM] THEN INDUCT_TAC THEN
-  REWRITE_TAC[ADD_CLAUSES, REAL_LE_REFL] THEN REWRITE_TAC[GSYM ADD_SUC] THEN
+  REWRITE_TAC[ADD_CLAUSES, REAL_LE_REFL] THEN
   MATCH_MP_TAC REAL_LE_TRANS THEN
-  EXISTS_TAC(Term`(d:num ->real)(m + p)`) THEN ASM_REWRITE_TAC[]);
+  first_assum $ irule_at (Pat ‘_ <= d (SUC _)’) >>
+  ASM_REWRITE_TAC[]
+QED
 
 val DIVISION_MONO_LE_SUC = store_thm("DIVISION_MONO_LE_SUC",
   ``!d a b. division(a,b) d ==> !n. d(n) <= d(SUC n)``,
@@ -1678,7 +1681,7 @@ val DINT_COMBINE = store_thm("DINT_COMBINE",
                          [DISCH_TAC THEN
                           SUBGOAL_THEN``dsize
                                 (\(i :num). if i <= (m :num) then (d :num -> real) i
-                                        else (b :real)) <=  SUC (m:num)``MP_TAC THENL
+                                        else (b :real)) <= SUC (m:num)``MP_TAC THENL
                            [MATCH_MP_TAC DIVISION_DSIZE_LE THEN
                             MAP_EVERY EXISTS_TAC [``a:real``, ``b:real``] THEN
                             ASM_REWRITE_TAC[] THEN SIMP_TAC arith_ss[],

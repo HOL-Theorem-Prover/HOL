@@ -2,8 +2,6 @@ open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_bytecode";
 
 open stringTheory arithmeticTheory lisp_sexpTheory;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

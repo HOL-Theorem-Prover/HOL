@@ -13,7 +13,8 @@
 
 open HolKernel boolLib Parse BasicProvers;
 
-open simpLib boolSimps mesonLib metisLib numTheory prim_recTheory;
+open simpLib boolSimps mesonLib metisLib numTheory prim_recTheory
+     combinTheory relationTheory;
 
 local open SatisfySimps DefnBase in end
 
@@ -224,6 +225,11 @@ val NRC = new_recursive_definition {
   def = “(NRC R 0 x y = (x = y)) /\
           (NRC R (SUC n) x y = ?z. R x z /\ NRC R n z y)”};
 
+val bool_to_bit_def = new_definition(
+  "bool_to_bit_def",
+  “bool_to_bit b = if b then 1 else 0”
+);
+
 val _ = overload_on ("RELPOW", “NRC”)
 val _ = overload_on ("NRC", “NRC”)
 
@@ -351,6 +357,15 @@ val LESS_ADD = store_thm ("LESS_ADD",
    [EXISTS_TAC (“SUC 0”) THEN ASM_REWRITE_TAC[ADD],
     RES_THEN (STRIP_THM_THEN (SUBST1_TAC o SYM)) THEN
     EXISTS_TAC (“SUC p”) THEN REWRITE_TAC [ADD]]);
+
+Theorem LT_EXISTS:
+  !m n. m < n <=> ?d. n = m + SUC d
+Proof
+  CONV_TAC (SWAP_FORALL_CONV) >>
+  INDUCT_TAC >> simp [LT_SUC, NOT_LESS_0, ADD_CLAUSES, NOT_SUC] >>
+  GEN_TAC >> Q.SPEC_THEN ‘m’ strip_assume_tac num_CASES >>
+  simp[ADD_CLAUSES, LESS_0]
+QED
 
 val transitive_LESS = store_thm(
   "transitive_LESS[simp]",
@@ -2962,6 +2977,19 @@ Proof
  >> PROVE_TAC []
 QED
 
+Theorem MOD_DIV_SAME[simp]:
+  0 < y ==> x MOD y DIV y = 0
+Proof
+  strip_tac
+  \\ Cases_on`y=1` \\ fs[DIV_1, MOD_1]
+  \\ `1 < y` by (
+    simp[ONE, SUC_LT]
+    \\ Cases_on`y` \\ fs[NOT_LESS_0, ONE]
+    \\ drule (NOT_LT_ZERO_EQ_ZERO |> GSYM |> SPEC_ALL |> iffRL |> CONTRAPOS)
+    \\ rw[] )
+  \\ rw[DIV_EQ_0, MOD_LESS]
+QED
+
 (* ------------------------------------------------------------------------ *)
 (* Some miscellaneous lemmas (from transc.ml)                               *)
 (* ------------------------------------------------------------------------ *)
@@ -4996,5 +5024,35 @@ val MOD_EXP = store_thm(
   `_ = ((a MOD n) * (a ** m MOD n)) MOD n` by rw[] >>
   `_ = (a * a ** m) MOD n` by rw[MOD_TIMES2] >>
   rw[EXP]);
+
+Theorem ODD_bool_to_bit[simp]:
+  ODD (bool_to_bit b) = b /\
+  ODD (1 - bool_to_bit b) = ~b
+Proof
+  rw[bool_to_bit_def, ODD, ONE, SUB_MONO_EQ, SUB_0]
+QED
+
+Theorem bool_to_bit_neq_add:
+  bool_to_bit (x <> y) =
+  (bool_to_bit x + bool_to_bit y) MOD 2
+Proof
+  reverse(rw[bool_to_bit_def, ADD_0, ADD])
+  >- (
+    rw[ONE, ADD] \\ rw[GSYM TWO, GSYM ONE]
+    \\ irule EQ_SYM
+    \\ irule (DIVMOD_ID |> SPEC_ALL |> UNDISCH |> cj 2 |> DISCH_ALL)
+    \\ rw[TWO, LESS_0] )
+  \\ irule EQ_SYM
+  \\ irule ONE_MOD
+  \\ rw[ONE, TWO, LESS_MONO, LESS_0]
+QED
+
+Theorem bool_to_bit_MOD_2[simp]:
+  bool_to_bit x MOD 2 = bool_to_bit x
+Proof
+  rw[bool_to_bit_def]
+  \\ irule ONE_MOD
+  \\ rw[ONE, TWO, LESS_MONO, LESS_0]
+QED
 
 val _ = export_theory()

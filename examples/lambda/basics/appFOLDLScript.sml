@@ -9,9 +9,9 @@
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory listTheory rich_listTheory pred_setTheory finite_mapTheory
-     hurdUtils listLib;
+     hurdUtils listLib pairTheory;
 
-open termTheory binderLib;
+open termTheory binderLib basic_swapTheory NEWLib;
 
 val _ = new_theory "appFOLDL"
 
@@ -202,17 +202,28 @@ Proof
  >> simp [LIST_TO_SET_SNOC] >> SET_TAC []
 QED
 
+Theorem BIGUNION_IMAGE_FV_MAP_VAR[simp] :
+    BIGUNION (IMAGE FV (set (MAP VAR vs))) = set vs
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE]
+ >> reverse EQ_TAC >> rpt STRIP_TAC
+ >- (Q.EXISTS_TAC ‘VAR x’ >> rw [MEM_MAP])
+ >> rename1 ‘x IN FV t’
+ >> gs [MEM_MAP]
+QED
+
 (* A special case of FV_appstar *)
 Theorem FV_appstar_MAP_VAR[simp] :
     FV (M @* MAP VAR vs) = FV M UNION set vs
 Proof
     rw [FV_appstar]
- >> Suff ‘BIGUNION (IMAGE FV (set (MAP VAR vs))) = set vs’ >- rw []
- >> rw [Once EXTENSION, IN_BIGUNION_IMAGE]
- >> reverse EQ_TAC >> rpt STRIP_TAC
- >- (Q.EXISTS_TAC ‘VAR x’ >> rw [MEM_MAP])
- >> rename1 ‘x IN FV t’
- >> gs [MEM_MAP]
+QED
+
+Theorem size_appstar :
+    !args. size (t @* args) = size t + SUM (MAP size args) + LENGTH args
+Proof
+    SNOC_INDUCT_TAC
+ >> rw [size_thm, MAP_SNOC, SUM_SNOC]
 QED
 
 (*---------------------------------------------------------------------------*
@@ -277,6 +288,23 @@ Proof
  >> Induct_on ‘vs’ >> rw []
 QED
 
+Theorem LAMl_ISUB :
+    !ss vs M. DISJOINT (set vs) (FVS ss) /\
+              DISJOINT (set vs) (DOM ss) ==>
+             ((LAMl vs M) ISUB ss = LAMl vs (M ISUB ss))
+Proof
+    Induct_on ‘ss’ >- rw [DOM_DEF, FVS_DEF]
+ >> simp [FORALL_PROD, DOM_ALT_MAP_SND]
+ >> qx_genl_tac [‘P’, ‘v’]
+ >> rw [FVS_DEF, DISJOINT_UNION]
+ >> Know ‘[P/v] (LAMl vs M) = LAMl vs ([P/v] M)’
+ >- (MATCH_MP_TAC LAMl_SUB \\
+     simp [Once DISJOINT_SYM])
+ >> Rewr'
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> simp [Once DISJOINT_SYM, DOM_ALT_MAP_SND]
+QED
+
 (* LAMl_ssub = ssub_LAM + LAMl_SUB *)
 Theorem LAMl_ssub :
     !vs fm t. DISJOINT (FDOM fm) (set vs) /\
@@ -287,10 +315,18 @@ Proof
 QED
 
 Theorem tpm_LAMl:
-  tpm π (LAMl vs M) = LAMl (listpm string_pmact π vs) (tpm π M)
+    !vs pi M. tpm pi (LAMl vs M) = LAMl (listpm string_pmact pi vs) (tpm pi M)
 Proof
-  Induct_on ‘vs’ >> simp[]
+    Induct_on ‘vs’ >> simp[]
 QED
+
+(* |- !vs pi M.
+        LAMl vs (tpm pi M) =
+        tpm pi (LAMl (listpm string_pmact (REVERSE pi) vs) M)
+ *)
+Theorem LAMl_tpm = tpm_LAMl |> Q.SPECL [‘vs’, ‘REVERSE pi’, ‘tpm pi M’]
+                            |> SRULE [tpm_eql]
+                            |> Q.GENL [‘vs’, ‘pi’, ‘M’]
 
 Theorem tpm_appstar:
   tpm π (M ·· Ms) = tpm π M ·· listpm term_pmact π Ms
@@ -354,52 +390,37 @@ Proof
   ]
 QED
 
+Theorem LAMl_ALPHA_tpm :
+    !xs ys M. LENGTH xs = LENGTH ys /\ ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+              DISJOINT (set ys) (set xs UNION FV M) ==>
+              LAMl xs M = LAMl ys (tpm (ZIP (xs,ys)) M)
+Proof
+    rpt STRIP_TAC
+ >> Know ‘LAMl xs M = LAMl ys (M ISUB REVERSE (ZIP (MAP VAR ys, xs)))’
+ >- (MATCH_MP_TAC LAMl_ALPHA >> art [])
+ >> Rewr'
+ >> fs [DISJOINT_UNION']
+ >> simp [fresh_tpm_isub, REVERSE_ZIP, MAP_REVERSE]
+QED
+
 Theorem LAMl_ALPHA_ssub :
     !vs vs' M.
        LENGTH vs = LENGTH vs' /\ ALL_DISTINCT vs /\ ALL_DISTINCT vs' /\
-       DISJOINT (LIST_TO_SET vs') (LIST_TO_SET vs UNION FV M) ==>
+       DISJOINT (set vs') (set vs UNION FV M) ==>
        LAMl vs M = LAMl vs' ((FEMPTY |++ ZIP (vs, MAP VAR vs')) ' M)
 Proof
     rpt STRIP_TAC
  >> Suff ‘(FEMPTY |++ ZIP (vs, MAP VAR vs')) ' M =
           M ISUB REVERSE (ZIP (MAP VAR vs', vs))’
  >- (Rewr' >> MATCH_MP_TAC LAMl_ALPHA >> art [])
- >> rpt (POP_ASSUM MP_TAC)
- >> Q.ID_SPEC_TAC ‘vs'’
- >> Q.ID_SPEC_TAC ‘vs’
- >> Induct_on ‘vs’ >- rw [FUPDATE_LIST_THM, ISUB_def]
- >> rw []
- >> Cases_on ‘vs'’ >- fs []
- >> fs [] >> rename1 ‘v # M’
- (* RHS rewriting *)
- >> REWRITE_TAC [GSYM ISUB_APPEND, GSYM SUB_ISUB_SINGLETON]
- (* LHS rewriting *)
- >> rw [FUPDATE_LIST_THM]
- >> Know ‘(FEMPTY :string |-> term) |+ (h,VAR v) |++ ZIP (vs,MAP VAR t) =
-          (FEMPTY |++ ZIP (vs,MAP VAR t)) |+ (h,VAR v)’
- >- (MATCH_MP_TAC FUPDATE_FUPDATE_LIST_COMMUTES \\
-     rw [MAP_ZIP])
- >> Rewr'
- >> qabbrev_tac ‘fm = (FEMPTY :string |-> term) |++ ZIP (vs,MAP VAR t)’
- >> ‘FDOM fm = set vs’ by (rw [Abbr ‘fm’, FDOM_FUPDATE_LIST, MAP_ZIP])
- (* applying ssub_update_apply_SUBST' *)
- >> Know ‘(fm |+ (h,VAR v)) ' M = [fm ' (VAR v)/h] (fm ' M)’
- >- (MATCH_MP_TAC ssub_update_apply_SUBST' >> rw [] \\
-    ‘fm = fromPairs vs (MAP VAR t)’ by rw [Abbr ‘fm’, fromPairs_def] \\
-     POP_ORW \\
-     Q.PAT_X_ASSUM ‘MEM k vs’ MP_TAC >> rw [MEM_EL] \\
-     Know ‘fromPairs vs (MAP VAR t) ' (EL n vs) = EL n (MAP VAR t)’
-     >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
-     rw [EL_MAP] \\
-     Q.PAT_X_ASSUM ‘~MEM h t’ MP_TAC >> rw [MEM_EL] \\
-     POP_ASSUM (MP_TAC o (Q.SPEC ‘n’)) >> rw [])
- >> Rewr'
- >> Know ‘fm ' (VAR v) = VAR v’
- >- (MATCH_MP_TAC ssub_14b >> rw [GSYM DISJOINT_DEF])
- >> Rewr'
- >> Suff ‘fm ' M = M ISUB REVERSE (ZIP (MAP VAR t,vs))’ >- rw []
- >> qunabbrev_tac ‘fm’
- >> FIRST_X_ASSUM irule >> rw []
+ (* applying fromPairs_ISUB *)
+ >> REWRITE_TAC [GSYM fromPairs_def]
+ >> MATCH_MP_TAC fromPairs_ISUB
+ >> fs [DISJOINT_UNION']
+ >> rw [EVERY_MEM, MEM_MAP]
+ >> simp []
+ >> Q.PAT_X_ASSUM ‘DISJIOINT (set vs') (set vs)’ MP_TAC
+ >> rw [DISJOINT_ALT]
 QED
 
 Theorem LAMl_SNOC[simp] :
@@ -414,6 +435,24 @@ Proof
     Induct_on ‘vs’ >> rw [LAM_eq_thm]
 QED
 
+Theorem LAMl_RNEWS_11 :
+    !X r n1 n2 y1 y2. FINITE X ==>
+       (LAMl (RNEWS r n1 X) (VAR y1) =
+        LAMl (RNEWS r n2 X) (VAR y2) <=> n1 = n2 /\ y1 = y2)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC >- (STRIP_TAC >> fs [])
+ >> Q_TAC (RNEWS_TAC (“vs1 :string list”, “r :num”, “n1 :num”)) ‘X’
+ >> Q_TAC (RNEWS_TAC (“vs2 :string list”, “r :num”, “n2 :num”)) ‘X’
+ >> DISCH_TAC
+ >> Know ‘size (LAMl vs1 (VAR y1)) = size (LAMl vs2 (VAR y2))’
+ >- (POP_ORW >> rw [])
+ >> simp [] (* n1 = n2 *)
+ >> DISCH_TAC
+ >> ‘vs1 = vs2’ by simp [Abbr ‘vs1’, Abbr ‘vs2’]
+ >> fs []
+QED
+
 (*---------------------------------------------------------------------------*
  *  funpow for lambda terms (using arithmeticTheory.FUNPOW)
  *---------------------------------------------------------------------------*)
@@ -421,7 +460,8 @@ QED
 Overload funpow = “\f. FUNPOW (APP (f :term))”
 
 Theorem FV_FUNPOW :
-    !(f :term) x n. FV (FUNPOW (APP f) n x) = if n = 0 then FV x else FV f UNION FV x
+    !(f :term) x n. FV (FUNPOW (APP f) n x) =
+                    if n = 0 then FV x else FV f UNION FV x
 Proof
     rpt STRIP_TAC
  >> Q.SPEC_TAC (‘n’, ‘i’)

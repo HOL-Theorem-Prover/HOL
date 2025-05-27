@@ -8,17 +8,8 @@
 
 open HolKernel boolLib Parse bossLib;
 
-(* interactive mode
-app load [
-        "pairTheory", "jbUtils", "schneiderUtils",
-        "arithmeticTheory", "integerTheory", "intLib", "integerRingLib", "intSyntax",
-        "intExtensionTheory", "intExtensionLib", "fracUtils"];
-*)
-
-open
-        pairTheory schneiderUtils
-        arithmeticTheory integerTheory intLib integerRingLib intSyntax
-        intExtensionTheory intExtensionLib
+open pairTheory pairSyntax schneiderUtils arithmeticTheory integerTheory
+     intLib intSyntax intExtensionTheory intExtensionLib;
 
 val _ = new_theory "frac";
 val _ = ParseExtras.temp_loose_equality()
@@ -634,11 +625,7 @@ val FRAC_AINV_RMUL = store_thm("FRAC_AINV_RMUL", ``!f1 f2. frac_ainv (frac_mul f
         FRAC_POS_TAC ``frac_dnm f1 * frac_dnm f2`` THEN
         RW_TAC int_ss [NMR,DNM] THEN
         FRAC_EQ_TAC THENL
-        [
-                integerRingLib.INT_RING_TAC
-        ,
-                PROVE_TAC[]
-        ] );
+        [ INT_RING_TAC, PROVE_TAC[] ]);
 
 val FRAC_AINV_LMUL = store_thm("FRAC_AINV_LMUL", ``!f1 f2. frac_ainv (frac_mul f1 f2) = frac_mul (frac_ainv f1) f2``,
         PROVE_TAC[FRAC_MUL_COMM, FRAC_AINV_RMUL] );

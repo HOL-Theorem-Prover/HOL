@@ -3,9 +3,6 @@ open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_synthesis_demo";
 
 open arithmeticTheory listTheory pairTheory lisp_sexpTheory lisp_synthesisLib;
 
-infix \\ val op \\ = op THEN;
-
-
 (* we start by proving a lemma which helps with termination proofs *)
 
 val term_lemma = prove(

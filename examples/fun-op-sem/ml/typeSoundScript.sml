@@ -580,10 +580,6 @@ Definition tysubst_def0[induction=tysubst_ind]:
       | NONE => Tvar x)) ∧
   tysubst s (Tapp ts tc) =
     Tapp (MAP (tysubst s) ts) tc
-Termination
- WF_REL_TAC`measure (t_size o SND)` >>
- rpt gen_tac >> Induct_on`ts` >>
- rw[t_size_def] >> res_tac >>simp[]
 End
 Theorem tysubst_def[simp] =
   tysubst_def0
@@ -594,10 +590,6 @@ Theorem tysubst_def[simp] =
 Definition tyvars_def0:
   (tyvars (Tvar x) = {x}) ∧
   (tyvars (Tapp ts _) = BIGUNION (IMAGE tyvars (set ts)))
-Termination
- WF_REL_TAC`measure (t_size)` >>
- rpt gen_tac >> Induct_on`ts` >>
- rw[t_size_def] >> res_tac >>simp[]
 End
 Theorem tyvars_def[simp] =
   tyvars_def0
@@ -795,10 +787,6 @@ Definition raconv_def0[induction=raconv_ind]:
   (raconv f tvs1 tvs2 (Tapp ts1 tc1) (Tapp ts2 tc2) ⇔
      tc2 = tc1 ∧ LIST_REL (raconv f tvs1 tvs2) ts1 ts2) ∧
   (raconv _ _ _ _ _ = F)
-Termination
-(WF_REL_TAC`measure (t_size o SND o SND o SND o SND)` >>
- rpt gen_tac >> Induct_on`ts2` >> simp[t_size_def] >>
- rw[] >> res_tac >> simp[])
 End
 Theorem raconv_def[simp] =
   raconv_def0

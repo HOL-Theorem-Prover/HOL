@@ -1,4 +1,6 @@
-open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
+open HolKernel Parse boolLib bossLib;
+
+open arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
      hurdUtils extra_numTheory combinTheory
      pairTheory realTheory realLib extra_boolTheory
@@ -140,6 +142,3 @@ val PROB_BERN_BINOMIAL = store_thm
    ++ PROVE_TAC [REAL_MUL_ASSOC, REAL_MUL_SYM]);
 
 val _ = export_theory ();
-
-
-

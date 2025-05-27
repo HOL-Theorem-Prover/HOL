@@ -1,0 +1,53 @@
+====
+Num
+====
+
+val _ = “:num”
+
+---
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_type
+        (hol_atomic_type)))))
+
+
+==========
+List Type
+==========
+
+val _ = “:'a list”
+
+---
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_type
+        (hol_list_ty
+          (hol_atomic_type))))))
+
+
+==============
+Function Type
+==============
+
+val _ = “:'a -> ('a -> 'b) -> 'b”
+
+---
+
+(source_file
+  (val_dec
+    (valbind
+      (wildcard_pat)
+      (quoted_type
+        (hol_fun_ty
+          (hol_atomic_type)
+          (hol_fun_ty
+            (hol_fun_ty
+              (hol_atomic_type)
+              (hol_atomic_type))
+            (hol_atomic_type)))))))

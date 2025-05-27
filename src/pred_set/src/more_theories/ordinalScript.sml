@@ -785,7 +785,7 @@ val allNats_dwardclosedetc = prove(
 val omega_def = Define`
   omega = sup { fromNat i | T }
 `;
-val _ = overload_on ("ω", ``omega``)   (* UOK *)
+val _ = overload_on ("ω", ``omega``)
 
 val lt_omega0 =
   MATCH_MP preds_sup_thm allNats_dwardclosedetc
@@ -1761,7 +1761,7 @@ val epsilon0_def = Define`
   epsilon0 = oleast x. omega ** x = x
 `
 
-val _ = overload_on("ε₀", ``epsilon0``)  (* UOK *)
+val _ = overload_on("ε₀", ``epsilon0``)
 
 val epsilon0_fixpoint = store_thm(
   "epsilon0_fixpoint",
@@ -1891,12 +1891,16 @@ val expbound_add = store_thm(
   `y < omega ** b` by metis_tac [ordlte_TRANS] >>
   metis_tac[])
 
-val downduct = prove(
-  ``(!n. n <= m /\ P (SUC n) ==> P n) /\ P m ==>
-    (!n. n <= m ==> P n)``,
-  strip_tac >> fs[arithmeticTheory.LESS_EQ_EXISTS] >>
-  full_simp_tac (srw_ss() ++ DNF_ss) [] >> CONV_TAC SWAP_FORALL_CONV >>
-  Induct >> rw[] >> simp[]);
+Theorem downduct[local]:
+  (!n. n <= m /\ P (SUC n) ==> P n) /\ P m ==>
+  (!n. n <= m ==> P n)
+Proof
+  strip_tac >> fs[arithmeticTheory.LESS_EQ_EXISTS, PULL_EXISTS] >>
+  CONV_TAC SWAP_FORALL_CONV >>
+  Induct >> rw[] >> simp[] >>
+  gvs[DECIDE “n + SUC d = d + m <=> m = SUC n”] >>
+  metis_tac[arithmeticTheory.ADD_COMM]
+QED
 
 val addL_fixpoint_iff = store_thm(
   "addL_fixpoint_iff",
@@ -2777,7 +2781,7 @@ QED
 Definition omega1_def:
   omega1 : 'a ucord = sup { a | countableOrd a }
 End
-Overload "ω₁" = “omega1”  (* UOK *)
+Overload "ω₁" = “omega1”
 
 Theorem x_lt_omega1_countable: x < omega1 <=> countableOrd x
 Proof

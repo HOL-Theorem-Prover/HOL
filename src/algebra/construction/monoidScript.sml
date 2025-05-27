@@ -2933,7 +2933,7 @@ val submonoid_order_eqn = store_thm(
 
 (* Define an operation on images *)
 val image_op_def = Define`
-   image_op (g:'a monoid) (f:'a -> 'b) x y =  f (CHOICE (preimage f G x) * CHOICE (preimage f G y))
+   image_op (g:'a monoid) (f:'a -> 'b) x y = f (CHOICE (preimage f G x) * CHOICE (preimage f G y))
 `;
 
 (* Theorem: INJ f G univ(:'b) ==> !x y. x IN G /\ y IN G ==> (image_op g f (f x) (f y) = f (x * y)) *)

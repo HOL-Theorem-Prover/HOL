@@ -5,7 +5,7 @@
 open HolKernel Parse boolLib bossLib BasicProvers;
 
 open pred_setTheory pred_setLib listTheory rich_listTheory finite_mapTheory
-     arithmeticTheory string_numTheory hurdUtils;
+     arithmeticTheory string_numTheory hurdUtils pairTheory;
 
 open basic_swapTheory termTheory nomsetTheory binderLib appFOLDLTheory;
 
@@ -213,6 +213,18 @@ val lameq_sub_cong = save_thm(
   "lameq_sub_cong",
   REWRITE_RULE [GSYM AND_IMP_INTRO] (last (CONJUNCTS lemma2_12)));
 
+Theorem lameq_isub_cong :
+    !ss M N. M == N ==> M ISUB ss == N ISUB ss
+Proof
+    Induct_on ‘ss’
+ >- rw []
+ >> simp [FORALL_PROD]
+ >> qx_genl_tac [‘P’, ‘v’]
+ >> rpt STRIP_TAC
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC (cj 1 lemma2_12) >> art []
+QED
+
 val lemma2_13 = store_thm( (* p.20 *)
   "lemma2_13",
   ``!c n n'. ctxt c ==> (n == n') ==> (c n == c n')``,
@@ -257,6 +269,18 @@ Inductive lameta : (* p. 21 *)
 [~ETA:]
   !M x. ~(x IN FV M) ==> lameta (LAM x (M @@ VAR x)) M
 End
+
+Theorem lameta_subst :
+    !M N P x. lameta M N ==> lameta ([P/x] M) ([P/x] N)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC lameta_TRANS
+ >> Q.EXISTS_TAC ‘LAM x N @@ P’
+ >> simp [lameta_rules]
+ >> MATCH_MP_TAC lameta_TRANS
+ >> Q.EXISTS_TAC ‘LAM x M @@ P’
+ >> simp [lameta_rules]
+QED
 
 val lemma2_14 = store_thm(
   "lemma2_14",
@@ -710,6 +734,7 @@ Proof
   SRW_TAC [][SUB_THM, SUB_VAR]
 QED
 
+(* cf. LAMl_ALPHA_tpm *)
 Theorem EQ_LAML_bodies_permute:
   ∀us vs M N. (LAMl us M = LAMl vs N) ∧ ¬is_abs M ∧ ¬is_abs N ⇒
               ∃pi. N = tpm pi M
@@ -745,25 +770,6 @@ Proof
     Q.X_GEN_TAC ‘t’
  >> Q.SPEC_THEN ‘t’ STRUCT_CASES_TAC term_CASES
  >> SRW_TAC [][]
-QED
-
-(* accessor for retrieving ‘y’ from ‘VAR y’ *)
-local
-    val th1 = prove (“!t. is_var t ==> ?y. t = VAR y”, rw [is_var_cases]);
-    val th2 = SIMP_RULE std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] th1;
-in
-   (* |- !t. is_var t ==> t = VAR (THE_VAR t) *)
-    val THE_VAR_def = new_specification ("THE_VAR_def", ["THE_VAR"], th2);
-end;
-
-Theorem THE_VAR_thm[simp] :
-    !y. THE_VAR (VAR y) = y
-Proof
-    rpt STRIP_TAC
- >> qabbrev_tac ‘t = (VAR y :term)’ >> simp []
- >> ‘is_var t’ by rw [Abbr ‘t’]
- >> Suff ‘VAR (THE_VAR t) = (VAR y :term)’ >- rw []
- >> ASM_SIMP_TAC std_ss [GSYM THE_VAR_def]
 QED
 
 Theorem term_cases :
@@ -1173,7 +1179,7 @@ val _ = remove_ovl_mapping "Y" {Thy = "chap2", Name = "Y"}
 
 (* permutator [1, p.247] *)
 Definition permutator_def :
-    permutator n = let Z = GENLIST n2s (n + 1);
+    permutator n = let Z = GENLIST n2s (SUC n);
                        z = LAST Z;
                    in
                        LAMl Z (VAR z @* MAP VAR (FRONT Z))
@@ -1183,9 +1189,8 @@ Theorem closed_permutator :
     !n. closed (permutator n)
 Proof
     rw [closed_def, permutator_def, FV_LAMl]
- >> qabbrev_tac ‘Z = GENLIST n2s (n + 1)’
- >> ‘ALL_DISTINCT Z /\ LENGTH Z = n + 1’
-       by (rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST])
+ >> qabbrev_tac ‘Z = GENLIST n2s (SUC n)’
+ >> ‘ALL_DISTINCT Z /\ LENGTH Z = SUC n’ by rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST]
  >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
  >> qabbrev_tac ‘z = LAST Z’
  >> ‘MEM z Z’ by rw [Abbr ‘z’, MEM_LAST_NOT_NIL]
@@ -1194,31 +1199,31 @@ Proof
  >> rfs [MEM_FRONT_NOT_NIL]
 QED
 
-(* |- !n. FV (permutator n) = {} *)
-Theorem FV_permutator[simp] = REWRITE_RULE [closed_def] closed_permutator
+(* |- FV (permutator n) = {} *)
+Theorem FV_permutator[simp] =
+        REWRITE_RULE [closed_def] closed_permutator |> SPEC_ALL
 
-(* NOTE: the default permutator binding variables can be exchanged to another
+(* NOTE: The default permutator binding variables can be exchanged to another
    fresh list excluding any given set X.
  *)
-Theorem permutator_cases :
+Theorem permutator_alt :
     !X n. FINITE X ==>
           ?vs v. LENGTH vs = n /\ ALL_DISTINCT (SNOC v vs) /\
                  DISJOINT X (set (SNOC v vs)) /\
                  permutator n = LAMl vs (LAM v (VAR v @* MAP VAR vs))
 Proof
     RW_TAC std_ss [permutator_def]
- >> qabbrev_tac ‘Z = GENLIST n2s (n + 1)’
- >> ‘ALL_DISTINCT Z /\ LENGTH Z = n + 1’
-       by (rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST])
+ >> qabbrev_tac ‘Z = GENLIST n2s (SUC n)’
+ >> ‘ALL_DISTINCT Z /\ LENGTH Z = SUC n’ by rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST]
  >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
  >> qabbrev_tac ‘z = LAST Z’
  >> ‘MEM z Z’ by rw [Abbr ‘z’, MEM_LAST_NOT_NIL]
  >> qabbrev_tac ‘M = VAR z @* MAP VAR (FRONT Z)’
  (* preparing for LAMl_ALPHA_ssub *)
- >> qabbrev_tac ‘Y = NEWS (n + 1) (set Z UNION X)’
+ >> qabbrev_tac ‘Y = NEWS (SUC n) (set Z UNION X)’
  >> ‘FINITE (set Z UNION X)’ by rw []
- >> ‘ALL_DISTINCT Y /\ DISJOINT (set Y) (set Z UNION X) /\
-     LENGTH Y = n + 1’ by rw [NEWS_def, Abbr ‘Y’]
+ >> ‘ALL_DISTINCT Y /\ DISJOINT (set Y) (set Z UNION X) /\ LENGTH Y = SUC n’
+       by rw [NEWS_def, Abbr ‘Y’]
  >> fs []
  >> Know ‘LAMl Z M = LAMl Y ((FEMPTY |++ ZIP (Z,MAP VAR Y)) ' M)’
  >- (MATCH_MP_TAC LAMl_ALPHA_ssub >> rw [DISJOINT_SYM] \\
@@ -1242,13 +1247,11 @@ Proof
  >- (simp [Abbr ‘M’, ssub_appstar] \\
      Know ‘fm ' z = VAR y’
      >- (rw [Abbr ‘fm’, Abbr ‘z’, LAST_EL] \\
-         Know ‘fromPairs Z (MAP VAR Y) ' (EL (PRE (n + 1)) Z) =
-               EL (PRE (n + 1)) (MAP VAR Y)’
+         Know ‘fromPairs Z (MAP VAR Y) ' (EL n Z) = EL n (MAP VAR Y)’
          >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
          rw [EL_MAP, Abbr ‘y’, LAST_EL]) >> Rewr' \\
      Suff ‘MAP ($' fm) (MAP VAR (FRONT Z)) = MAP VAR (FRONT Y)’ >- rw [] \\
      rw [LIST_EQ_REWRITE, LENGTH_FRONT] \\
-    ‘PRE (n + 1) = n’ by rw [] >> POP_ASSUM (fs o wrap) \\
      rename1 ‘i < n’ \\
      simp [EL_MAP, LENGTH_FRONT] \\
      Know ‘MEM (EL i (FRONT Z)) Z’
@@ -1265,33 +1268,33 @@ Proof
      rw [EL_MAP])
  >> Rewr'
  >> qexistsl_tac [‘FRONT Y’, ‘y’]
- >> rw [LENGTH_FRONT, ALL_DISTINCT_SNOC, SNOC_LAST_FRONT, Abbr ‘y’, ALL_DISTINCT_FRONT]
+ >> rw [LENGTH_FRONT, ALL_DISTINCT_SNOC, SNOC_LAST_FRONT, Abbr ‘y’,
+        ALL_DISTINCT_FRONT]
  >> Know ‘ALL_DISTINCT (SNOC (LAST Y) (FRONT Y))’
- >- (rw [SNOC_LAST_FRONT])
+ >- rw [SNOC_LAST_FRONT]
  >> rw [ALL_DISTINCT_SNOC]
 QED
 
+(* TODO: The proof can be simplified using the previous permutator_alt *)
 Theorem permutator_thm :
     !n N Ns. LENGTH Ns = n ==> permutator n @* Ns @@ N == N @* Ns
 Proof
     RW_TAC std_ss [permutator_def]
  >> qabbrev_tac ‘n = LENGTH Ns’
- >> qabbrev_tac ‘Z = GENLIST n2s (n + 1)’
- >> ‘ALL_DISTINCT Z /\ LENGTH Z = n + 1’
-       by (rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST])
- >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> qabbrev_tac ‘Z = GENLIST n2s (SUC n)’
  >> qabbrev_tac ‘z = LAST Z’
+ >> ‘ALL_DISTINCT Z /\ LENGTH Z = SUC n’ by rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST]
+ >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
  >> ‘MEM z Z’ by rw [Abbr ‘z’, MEM_LAST_NOT_NIL]
  >> qabbrev_tac ‘M = VAR z @* MAP VAR (FRONT Z)’
  (* preparing for LAMl_ALPHA_ssub *)
- >> qabbrev_tac
-     ‘Y = NEWS (n + 1) (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
+ >> qabbrev_tac ‘Y = NEWS (SUC n) (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
  >> Know ‘FINITE (set Z UNION (BIGUNION (IMAGE FV (set Ns))))’
  >- (rw [] >> rw [FINITE_FV])
  >> DISCH_TAC
  >> Know ‘ALL_DISTINCT Y /\
           DISJOINT (set Y) (set Z UNION (BIGUNION (IMAGE FV (set Ns)))) /\
-          LENGTH Y = n + 1’
+          LENGTH Y = SUC n’
  >- (ASM_SIMP_TAC std_ss [NEWS_def, Abbr ‘Y’])
  >> rw []
  (* applying LAMl_ALPHA_ssub *)
@@ -1321,13 +1324,11 @@ Proof
  >- (simp [Abbr ‘M’, ssub_appstar] \\
      Know ‘fm ' z = VAR y’
      >- (rw [Abbr ‘fm’, Abbr ‘z’, LAST_EL] \\
-         Know ‘fromPairs Z (MAP VAR Y) ' (EL (PRE (n + 1)) Z) =
-               EL (PRE (n + 1)) (MAP VAR Y)’
+         Know ‘fromPairs Z (MAP VAR Y) ' (EL n Z) = EL n (MAP VAR Y)’
          >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
          rw [EL_MAP, Abbr ‘y’, LAST_EL]) >> Rewr' \\
      Suff ‘MAP ($' fm) (MAP VAR (FRONT Z)) = MAP VAR (FRONT Y)’ >- rw [] \\
      rw [LIST_EQ_REWRITE, LENGTH_FRONT] \\
-    ‘PRE (n + 1) = n’ by rw [] >> POP_ASSUM (fs o wrap) \\
      rename1 ‘i < n’ \\
      simp [EL_MAP, LENGTH_FRONT] \\
      Know ‘MEM (EL i (FRONT Z)) Z’
@@ -1375,7 +1376,8 @@ Proof
          ONCE_REWRITE_TAC [DECIDE “P ==> ~Q <=> Q ==> ~P”] \\
          DISCH_TAC \\
          Know ‘EL i (FRONT Y) = EL i Y’
-         >- (MATCH_MP_TAC EL_FRONT >> rw [LENGTH_FRONT, NULL_EQ, GSYM ADD1]) >> Rewr' \\
+         >- (MATCH_MP_TAC EL_FRONT >> rw [LENGTH_FRONT, NULL_EQ, GSYM ADD1]) \\
+         Rewr' \\
          rw [ALL_DISTINCT_EL_IMP]) \\
      Q.X_GEN_TAC ‘y’ \\
      rw [MEM_EL, GSYM ADD1] >> rename1 ‘i < LENGTH (FRONT Y)’ \\
@@ -1446,6 +1448,48 @@ QED
 (* |- !i n. i < n ==> FV (selector i n) = {} *)
 Theorem FV_selector[simp] = REWRITE_RULE [closed_def] closed_selector
 
+Theorem selector_alt :
+    !X i n. FINITE X /\ i < n ==>
+            ?vs v. LENGTH vs = n /\ ALL_DISTINCT vs /\ DISJOINT X (set vs) /\
+                   v = EL i vs /\ selector i n = LAMl vs (VAR v)
+Proof
+    RW_TAC std_ss [selector_def]
+ >> qabbrev_tac ‘Z = GENLIST n2s n’
+ >> ‘ALL_DISTINCT Z /\ LENGTH Z = n’ by rw [Abbr ‘Z’, ALL_DISTINCT_GENLIST]
+ >> ‘Z <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> qabbrev_tac ‘z = EL i Z’
+ >> ‘MEM z Z’ by rw [Abbr ‘z’, EL_MEM]
+ >> ‘n2s i = z’ by rw [Abbr ‘z’, Abbr ‘Z’, EL_GENLIST]
+ >> POP_ORW
+ (* preparing for LAMl_ALPHA_ssub *)
+ >> qabbrev_tac ‘Y = NEWS n (set Z UNION X)’
+ >> ‘FINITE (set Z UNION X)’ by rw []
+ >> ‘ALL_DISTINCT Y /\ DISJOINT (set Y) (set Z UNION X) /\ LENGTH Y = n’
+       by rw [NEWS_def, Abbr ‘Y’]
+ >> fs []
+ >> qabbrev_tac ‘M = VAR z’
+ >> Know ‘LAMl Z M = LAMl Y ((FEMPTY |++ ZIP (Z,MAP VAR Y)) ' M)’
+ >- (MATCH_MP_TAC LAMl_ALPHA_ssub >> rw [Abbr ‘M’] \\
+     Q.PAT_X_ASSUM ‘DISJOINT (set Z) (set Y)’ MP_TAC \\
+     rw [DISJOINT_ALT])
+ >> Rewr'
+ >> ‘Y <> []’ by rw [NOT_NIL_EQ_LENGTH_NOT_0]
+ >> REWRITE_TAC [GSYM fromPairs_def]
+ >> qabbrev_tac ‘fm = fromPairs Z (MAP VAR Y)’
+ >> ‘FDOM fm = set Z’ by rw [FDOM_fromPairs, Abbr ‘fm’]
+ >> qabbrev_tac ‘y = EL i Y’
+ >> Know ‘fm ' M = VAR y’
+ >- (simp [Abbr ‘M’, ssub_appstar] \\
+     rw [Abbr ‘fm’, Abbr ‘z’] \\
+     Know ‘fromPairs Z (MAP VAR Y) ' (EL i Z) = EL i (MAP VAR Y)’
+     >- (MATCH_MP_TAC fromPairs_FAPPLY_EL >> rw []) >> Rewr' \\
+     rw [EL_MAP, Abbr ‘y’])
+ >> Rewr'
+ >> Q.EXISTS_TAC ‘Y’
+ >> rw [Abbr ‘y’]
+QED
+
+(* TODO: rework this proof by (the new) selector_alt *)
 Theorem selector_thm :
     !i n Ns. i < n /\ LENGTH Ns = n ==> selector i n @* Ns == EL i Ns
 Proof
@@ -1592,11 +1636,18 @@ Definition solvable_def :
     solvable (M :term) = ?M' Ns. M' IN closures M /\ M' @* Ns == I
 End
 
+Theorem closures_alt_closed :
+    !M. closed M ==> closures M = {M}
+Proof
+    rw [closures_def, closed_def]
+ >> rw [Once EXTENSION]
+QED
+
 (* 8.3.1 (i) [1, p.171] *)
 Theorem solvable_alt_closed :
     !M. closed M ==> (solvable M <=> ?Ns. M @* Ns == I)
 Proof
-    rw [solvable_def, closed_def]
+    rw [solvable_def, closures_alt_closed]
 QED
 
 (* 8.3.1 (iii) [1, p.171] *)

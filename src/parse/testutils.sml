@@ -231,7 +231,7 @@ fun convtest (nm,conv,tm,expected) =
 
 fun check_HOL_ERRexn P e =
     case e of
-        HOL_ERR{origin_structure,origin_function,message} =>
+        HOL_ERR{origin_structure,origin_function,message,...} =>
           P (origin_structure, origin_function, message)
       | _ => false
 

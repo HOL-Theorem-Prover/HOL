@@ -12,8 +12,6 @@ open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
 open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
 open stop_and_copyTheory lisp_consTheory;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

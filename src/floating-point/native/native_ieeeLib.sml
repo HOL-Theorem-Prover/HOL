@@ -34,7 +34,7 @@ val ERR = Feedback.mk_HOL_ERR "native_ieeeLib"
 val n256 = Arbnum.fromInt 256
 
 local
-   val byte =  Word8.fromInt o Arbnum.toInt
+   val byte = Word8.fromInt o Arbnum.toInt
    fun loop a i x =
       if i <= 0
          then byte (Arbnum.mod (x, n256)) :: a

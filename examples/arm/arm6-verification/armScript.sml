@@ -845,9 +845,6 @@ val ARM_SPEC_STATE = save_thm("ARM_SPEC_STATE",
 
 (* ......................................................................... *)
 
-infix \\
-val op \\ = op THEN;
-
 val UPDATE_LT_COMMUTES = store_thm("UPDATE_LT_COMMUTES",
   `!m a b c d. a <+ b ==>
      ((b =+ d) ((a =+ c) m) = (a =+ c) ((b =+ d) m))`,

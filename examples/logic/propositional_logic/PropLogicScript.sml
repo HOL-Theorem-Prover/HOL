@@ -642,7 +642,8 @@ Theorem limitbuild_mono:
   ∀m n. m ≤ n ⇒ limitbuild A m ⊆ limitbuild A n
 Proof
   simp[PULL_EXISTS, arithmeticTheory.LESS_EQ_EXISTS] >>
-  Induct_on ‘p’ >> simp[arithmeticTheory.ADD_CLAUSES] >>
+  CONV_TAC SWAP_FORALL_CONV >> Induct >>
+  simp[arithmeticTheory.ADD_CLAUSES] >>
   rw[] >> gs[SUBSET_DEF]
 QED
 

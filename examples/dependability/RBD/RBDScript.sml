@@ -1,6 +1,4 @@
 (* ========================================================================= *)
-(* File Name: RBDScript.sml                                                  *)
-(*---------------------------------------------------------------------------*)
 (* Description: Formalization of Reliability Block Diagrams in               *)
 (*                   Higher-order Logic                                      *)
 (*                                                                           *)
@@ -10,31 +8,31 @@
 (*                                                                           *)
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
-(*                                                                           *)
-(*                                                                           *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib limTheory arithmeticTheory realTheory prim_recTheory
-     real_probabilityTheory seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools
-     listTheory transcTheory rich_listTheory pairTheory combinTheory realLib  optionTheory
-     dep_rewrite util_probTheory extrealTheory real_measureTheory real_sigmaTheory
-     indexedListsTheory listLib satTheory numTheory bossLib metisLib realLib numLib
-     combinTheory arithmeticTheory boolTheory listSyntax real_lebesgueTheory real_sigmaTheory
-     cardinalTheory extra_pred_setTools;
-open HolKernel boolLib bossLib Parse;
+open HolKernel Parse boolLib bossLib;
+
+open limTheory arithmeticTheory realTheory prim_recTheory
+     real_probabilityTheory seqTheory pred_setTheory res_quanTheory
+     sortingTheory res_quanTools listTheory transcTheory rich_listTheory
+     pairTheory combinTheory realLib optionTheory numLib combinTheory
+     dep_rewrite extrealTheory real_measureTheory real_sigmaTheory
+     indexedListsTheory listLib satTheory numTheory bossLib metisLib realLib
+     arithmeticTheory listSyntax real_lebesgueTheory
+     real_sigmaTheory cardinalTheory extra_pred_setTools;
+
 val _ = new_theory "RBD";
-(*--------------------*)
+
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
-(*--------------------*)
 (*------------------------------*)
 (*      RBD datatypes           *)
 (*------------------------------*)
 val _ = type_abbrev( "event" , ``:'a ->bool``);
 
-val _ = Hol_datatype` rbd = series of rbd list| parallel of rbd list | atomic of 'a  event `;
+val _ = Hol_datatype
+       `rbd = series of rbd list| parallel of rbd list | atomic of 'a  event`;
 
 (*----------------------------------------------*)
 (*      RBD Structures Semantic Function        *)

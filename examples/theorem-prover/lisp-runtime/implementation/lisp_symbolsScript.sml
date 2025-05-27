@@ -14,8 +14,6 @@ open stop_and_copyTheory;
 open codegenLib decompilerLib prog_x64Lib prog_x64Theory progTheory;
 open lisp_parseTheory;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 fun SUBGOAL q = REVERSE (sg q)
@@ -365,7 +363,7 @@ fun make_code_set code = let
     ``(p + (n2w n):word64,xs:word8 list)``
   fun foos n [] = pred_setSyntax.mk_empty(type_of (foo 0 (listw (hd ns))))
     | foos n (w::ws) = pred_setSyntax.mk_insert(foo n (listw w),foos (n+length w) ws)
-  fun post_pc n [] = (fst (dest_pair (foo n (listw (hd ns)))),n)
+  fun post_pc n [] = (fst (pairSyntax.dest_pair (foo n (listw (hd ns)))),n)
     | post_pc n (w::ws) = post_pc (n+length w) ws
   in (foos 0 ns, post_pc 0 ns) end;
 

@@ -10,15 +10,11 @@ open armLib;
 structure Parse = struct
   open Parse
   val (Type,Term) =
-      prog_armTheory.prog_arm_grammars
+      valOf (grammarDB {thyname="prog_arm"})
         |> apsnd ParseExtras.grammar_loose_equality
         |> parse_from_grammars
 end
 open Parse
-
-
-infix \\
-val op \\ = op THEN;
 
 val use_stack = ref false;
 fun arm_use_stack b = (use_stack := b);

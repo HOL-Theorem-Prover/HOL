@@ -5,6 +5,7 @@ sig
   datatype proof0
        = GOALSTACK of goalStack.gstk History.history
        | GOALTREE of goalTree.gtree History.history
+       | GOALFRAG of goalFrag.goalstate History.history
   type tacmodifier = {tacm: tactic -> tactic,
                       ltacm : list_tactic -> list_tactic}
 
@@ -17,12 +18,14 @@ sig
   (* Starting a proof *)
   val new_goalstack  : goal -> tacmodifier -> (thm->thm) -> proof
   val new_goaltree   : goal -> tacmodifier -> proof
+  val new_goalfrag   : goal -> tacmodifier -> proof
   val set_goal       : goal -> tacmodifier -> proof
   val add            : proof -> proofs -> proofs
 
   (* Undo *)
   val backup         : proof -> proof
   val set_backup     : int -> proof -> proof
+  val redo           : proof -> proof
   val restore        : proof -> proof
   val save           : proof -> proof
   val forget_history : proof -> proof
@@ -34,6 +37,7 @@ sig
   val expandf        : tactic -> proof -> proof
   val expand_list    : list_tactic -> proof -> proof
   val expand_listf   : list_tactic -> proof -> proof
+  val expand_frag    : goalFrag.frag_tactic -> proof -> proof
   val expandv        : string * tactic -> proof -> proof
 
   (* Seeing what the state of the proof manager is *)

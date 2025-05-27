@@ -13,7 +13,7 @@ open realTheory realLib realSimps transcTheory limTheory seqTheory real_sigmaThe
 open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory
      extra_listTheory extra_stringTheory extra_stringLib;
 
-open util_probTheory sigma_algebraTheory real_measureTheory real_lebesgueTheory
+open sigma_algebraTheory real_measureTheory real_lebesgueTheory
      real_probabilityTheory;
 
 open informationTheory;

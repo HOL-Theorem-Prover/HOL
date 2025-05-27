@@ -1212,7 +1212,7 @@ GEN_TAC THEN Induct THENL
                      fmap_APPEND, fmap_UNIT]
 ]);
 
-val orl_fmap_lb =  maybe_thm ("orl_fmap_lb",``!cmp t:('a#'b)bt lb.
+val orl_fmap_lb = maybe_thm ("orl_fmap_lb",``!cmp t:('a#'b)bt lb.
    bt_to_fmap_lb cmp lb t = fmap (bt_to_orl_lb cmp lb t)``,
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_to_orl_lb, fmap_NIL, bt_to_fmap_lb,
@@ -1222,7 +1222,7 @@ GEN_TAC THEN Induct THENL
                      fmap_APPEND, fmap_UNIT, orl_fmap_lb_ub]
 ]);
 
-val orl_fmap_ub =  maybe_thm ("orl_fmap_ub",``!cmp t:('a#'b)bt ub.
+val orl_fmap_ub = maybe_thm ("orl_fmap_ub",``!cmp t:('a#'b)bt ub.
    bt_to_fmap_ub cmp t ub = fmap (bt_to_orl_ub cmp t ub)``,
 GEN_TAC THEN Induct THENL
 [SRW_TAC [] [bt_to_orl_ub, fmap_NIL, bt_to_fmap_ub,
@@ -2521,5 +2521,29 @@ GEN_TAC THEN Induct THENL
 val fmap_ORWL_thm = store_thm ("fmap_ORWL_thm",
 ``!cmp l:('a#'b)list. ORWL cmp (fmap l) (incr_sort cmp l)``,
 REWRITE_TAC [ORWL, incr_sort_fmap, incr_sort_ORL]);
+
+Theorem T_OR[unlisted]:
+  !p. T \/ p = T
+Proof
+  REWRITE_TAC [OR_CLAUSES]
+QED
+
+Theorem F_OR[unlisted]:
+  !p. F \/ p = p
+Proof
+  REWRITE_TAC [OR_CLAUSES]
+QED
+
+Theorem NOT_CONS_NIL_EQN[unlisted]:
+  !ab:'a#'b l. ((ab::l) = []) = F
+Proof
+  REWRITE_TAC [NOT_CONS_NIL]
+QED
+
+Theorem NOT_node_nt_EQN[unlisted]:
+  !ab:'a#'b l r. ((node l ab r) = nt) = F
+Proof
+  REWRITE_TAC [GSYM bt_distinct]
+QED
 
 val _ = export_theory ();

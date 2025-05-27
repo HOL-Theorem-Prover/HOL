@@ -27,7 +27,13 @@ fun mk_countable_lemma ty = let
     val ind = TypeBase.induction_of ty
     val conses = find_terms (fn t => is_comb t andalso is_var (rator t)) (concl ind)
       |> map rand |> filter (not o is_var)
-    val size_thm = snd (TypeBase.size_of ty)
+(*    val size_thm = snd (TypeBase.size_of ty)
+   -- the auto-defined size definition is (A) stored in the theory segment, but
+      (B) may be revised by size_eq theorems before being tucked into the
+      TypeBase. Using such revised size definitions makes mk_countable_lemma fail,
+      so we grab (A) out of the theory rather than (B) out of the TypeBase. *)
+    val {Tyop,Thy,Args} = dest_thy_type ty
+    val size_thm = DB.fetch Thy (Tyop^"_size_def")
     val sizes = strip_conj (concl size_thm) |> map (lhs o snd o strip_forall)
       |> map rator |> HOLset.fromList Term.compare |> HOLset.listItems
     val lemma_tys = map (fst o dom_rng o type_of) sizes
@@ -91,4 +97,3 @@ fun mk_countable ty = let
   in loop (thm, lemmas) |> REWRITE_RULE [] end
 
 end
-

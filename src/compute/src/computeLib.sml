@@ -392,38 +392,53 @@ val {export,...} =
     }
 val add_persistent_funs = app export
 
-(*---------------------------------------------------------------------------*)
-(* Once we delete a constant from a compset, we will probably want to make   *)
-(* sure that the constant doesn't get re-added when the theory is exported   *)
-(*---------------------------------------------------------------------------*)
 
-fun pr_list_to_ppstream pps f b1 b2 [] = ()
-  | pr_list_to_ppstream pps f b1 b2 [e] = f pps e
-  | pr_list_to_ppstream pps f b1 b2 (e::es) =
-      (f pps e; b1 pps; b2 pps; pr_list_to_ppstream pps f b1 b2 es)
+(* ----------------------------------------------------------------------
+    Other exported changes: set_skip and del_consts
+   ---------------------------------------------------------------------- *)
 
-fun del_persistent_consts [] = ()
-  | del_persistent_consts clist =
-     let open Portable
-         val plist = map (fn c => let val {Name,Thy,Ty} = dest_thy_const c
-                                  in (Name,Thy) end) clist
-         val plist' = map (Lib.mlquote##Lib.mlquote) plist
-         fun prec (s1,s2) = "Term.prim_mk_const{Name = "^s1^", Thy = "^s2^"}"
-         val plist'' = map prec plist'
-     in
-       del_consts clist
-       ; Theory.adjoin_to_theory
-          {sig_ps = NONE,
-           struct_ps = SOME(fn _ =>
-             PP.block CONSISTENT 0 [
-               PP.add_string "val _ = computeLib.del_consts [",
-               PP.block INCONSISTENT 0 (
-                 PP.pr_list PP.add_string
-                            [PP.add_string ",", PP.add_break (0,0)] plist''
-               ),
-               PP.add_string "];"
-             ])}
-     end
+datatype clib_delta = CLD_set_skip of term * int option
+                    | CLD_delconst of term
+fun uptodate_delta (CLD_set_skip(t,_)) = uptodate_term t
+  | uptodate_delta (CLD_delconst t) = uptodate_term t
+
+fun encdelta cld =
+    let open ThyDataSexp
+    in
+      case cld of
+          CLD_set_skip d => pair_encode (Term, option_encode Int) d
+        | CLD_delconst t => Term t
+    end
+
+fun decdelta d =
+    let open ThyDataSexp
+    in
+      case d of
+          Term t => SOME (CLD_delconst t)
+        | _ => (pair_decode(term_decode, option_decode int_decode) >>
+                CLD_set_skip) d
+    end
+
+fun apply_delta cld () =
+    case cld of
+        CLD_set_skip (t, iopt) => set_skip the_compset t iopt
+      | CLD_delconst t => del_consts [t]
+
+val {record_delta,get_deltas=thy_updates,...} =
+    AncestryData.fullmake {
+      adinfo = {tag = "computeLib.delta",
+                initial_values = [("min", ())],
+                apply_delta = apply_delta},
+      uptodate_delta = uptodate_delta,
+      sexps = {dec = decdelta, enc = encdelta},
+      globinfo = {apply_to_global = apply_delta,
+                  thy_finaliser = NONE,
+                  initial_value = ()}
+    }
+
+fun set_EVAL_skip t i = record_delta (CLD_set_skip(t,i))
+fun temp_set_EVAL_skip t i = set_skip the_compset t i
+fun del_persistent_consts cs = app (fn c => record_delta(CLD_delconst c)) cs
 
 (* ----------------------------------------------------------------------
     compset pretty-printer

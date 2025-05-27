@@ -204,6 +204,7 @@ process in it."
       (concat (hol-locpragma-of-position pos) s)
       s))
 
+; for the moment we have no way of passing on the column information
 (defun hol-locpragma-of-position (pos)
   "Convert Elisp position into HOL location pragma.  Not for interactive use."
   (let ((initial-point (point)))
@@ -213,7 +214,7 @@ process in it."
                       (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
       (goto-char initial-point)
-      (format " (*#loc %d %d *)\n" (- row 1) col))))
+      (format "#(LINE=%d,%d)" row col))))
 
 (defun send-raw-string-to-hol (string echoit)
   "Sends a string in the raw to HOL.  Not for interactive use."
@@ -534,7 +535,7 @@ starts >%s%s<"
         (old-mark-active (is-region-active)))
     (unwind-protect
         (with-temp-buffer
-          (holscript-mode)
+          (let ((holscript-mode-hook nil)) (holscript-mode))
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
           (insert string)
@@ -617,17 +618,7 @@ starts >%s%s<"
                             (endm (make-marker)))
                         ; (message "Handling an open")
                         (if hol-auto-load-p
-                            (hol-load-modules-in-region start end))
-                        (if leave-loud-opens nil
-                            ;; now bracket the open decl with quietdec toggles
-                          (set-marker endm end)
-                          (goto-char end)
-                          (insert
-                           ";val _ = HOL_Interactive.toggle_quietdec();\n")
-                          (goto-char open-start)
-                          (insert
-                           "val _ = HOL_Interactive.toggle_quietdec();\n")
-                          (goto-char endm) (set-marker endm nil))))
+                            (hol-load-modules-in-region start end))))
                      (t
                       ; (message "Saw \"%s\"; position = %d; loading: %s"
                       ;           ms (point) (match-string 6))
@@ -717,7 +708,8 @@ file to \"use\" first."
                        (setq hol-mode-to-delete nil)))
             ; below, use visit parameter = 1 to stop message in mini-buffer
             (write-region (point-min) (point-max) fname nil 1)
-            (send-raw-string-to-hol (format "use \"%s\"" fname) nil)
+            (send-raw-string-to-hol
+             (format "QUse.prim_use {quietOpen = true} \"%s\"" fname) nil)
             (setq hol-mode-to-delete fname))
     (send-raw-string-to-hol (buffer-string) echoit)))
 
@@ -726,6 +718,11 @@ file to \"use\" first."
   "Perform a HOL backup."
   (interactive)
   (send-raw-string-to-hol "proofManagerLib.b()" hol-echo-commands-p))
+
+(defun hol-redo ()
+  "Perform a HOL redo."
+  (interactive)
+  (send-raw-string-to-hol "proofManagerLib.rd()" hol-echo-commands-p))
 
 (defun hol-user-backup ()
   "Perform a HOL backup to a user-defined save-point."
@@ -966,7 +963,7 @@ region instead. With prefix ARG prompt for a file-name to load."
         (setq hol-buffer-name (buffer-name buf))
         (set-buffer hol-buffer-name)))
 
-    (setq comint-prompt-regexp "^- ")
+    (setq comint-prompt-regexp "^> ")
     ;; must go to ridiculous lengths to ensure that font-lock-mode is
     ;; turned off and stays off
     (font-lock-mode 0)
@@ -977,6 +974,7 @@ region instead. With prefix ARG prompt for a file-name to load."
     (setq comint-preoutput-filter-functions '(holpp-output-filter))
     (setq comint-scroll-show-maximum-output t)
     (setq comint-scroll-to-bottom-on-output t)
+    (setq comint-output-filter-functions '(comint-postoutput-scroll-to-bottom))
     (hol-mode-init-sml)
     (send-raw-string-to-hol
      "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil)
@@ -1264,24 +1262,28 @@ argument N, sets the trace to that value in particular."
 
 (defun hol-open-string (prefixp)
   "Opens HOL modules, prompting for the name of the module to load.
-With prefix ARG, toggles quietdec variable before and after opening,
-potentially saving a great deal of time as tediously large modules are
-printed out.  (That's assuming that quietdec is false to start with.)"
+With prefix ARG, makes output loud, letting the module contents
+appear as printed declarations in the REPL. The noisy-open flag is then
+(re)set to false.  Noisiness is overridden if HOL's quietdec flag is true."
   (interactive "P")
   (let* ((prompt0 "Name of module to (load and) open")
-         (prompt (concat prompt0 (if prefixp " (toggling quietness)") ": "))
+         (prompt (concat prompt0 (if prefixp " (printing decls)") ": "))
          (module-name (read-string prompt)))
     (hol-load-string module-name)
-    (if prefixp (hol-toggle-quietdec))
+    (if prefixp
+        (send-raw-string-to-hol "HOL_Interactive.noisy_open := true;"
+                                hol-echo-commands-p))
     (send-raw-string-to-hol (concat "open " module-name) hol-echo-commands-p)
-    (if prefixp (hol-toggle-quietdec))))
+    (if prefixp
+        (send-raw-string-to-hol "HOL_Interactive.noisy_open := false;"
+                                hol-echo-commands-p))))
 
 (defun hol-db-match (tm)
   "Does a DB.match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
   (interactive "sTerm to match on: ")
   (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p))
-                          
+
 (defun hol-db-polarity-match (p tm)
   "Does a DB.polarity_match [] on the given TERM (given as a string, without quotes) and formats the result nicely."
   (interactive "P\nsTerm to polarity match on: ")

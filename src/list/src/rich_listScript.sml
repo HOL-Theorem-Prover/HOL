@@ -8,7 +8,7 @@ open HolKernel Parse boolLib BasicProvers;
 open numLib metisLib simpLib combinTheory arithmeticTheory prim_recTheory
      pred_setTheory listTheory pairTheory markerLib TotalDefn;
 
-local open listSimps pred_setSimps in end;
+local open listSimps pred_setSimps dep_rewrite in end;
 
 val FILTER_APPEND = FILTER_APPEND_DISTRIB
 val REVERSE = REVERSE_SNOC_DEF
@@ -1212,7 +1212,7 @@ val BUTLASTN_LENGTH_NIL = Q.store_thm ("BUTLASTN_LENGTH_NIL",
    SNOC_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH, LENGTH_SNOC, BUTLASTN]);
 
 val BUTLASTN_SUC_FRONT = Q.store_thm ("BUTLASTN_SUC_FRONT",
-   `!n l. n < LENGTH l ==> (BUTLASTN (SUC n) l =  BUTLASTN n (FRONT l))`,
+   `!n l. n < LENGTH l ==> (BUTLASTN (SUC n) l = BUTLASTN n (FRONT l))`,
    INDUCT_TAC
    THEN SNOC_INDUCT_TAC
    THEN REWRITE_TAC [LENGTH, NOT_LESS_0, BUTLASTN, FRONT_SNOC]);
@@ -2302,14 +2302,7 @@ val TAKE_SEG_DROP = Q.store_thm("TAKE_SEG_DROP",
   first_x_assum (Q.SPECL_THEN [‘SUC n’, ‘m’] mp_tac) >>
   SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [ADD1]);
 
-val EL_MEM = Q.store_thm ("EL_MEM",
-   `!n l. n < LENGTH l ==> (MEM (EL n l) l)`,
-   INDUCT_TAC
-   THEN LIST_INDUCT_TAC
-   THEN ASM_REWRITE_TAC [LENGTH, EL, HD, TL, NOT_LESS_0, LESS_MONO_EQ, MEM]
-   THEN REPEAT STRIP_TAC
-   THEN DISJ2_TAC
-   THEN RES_TAC);
+Theorem EL_MEM = listTheory.EL_MEM
 
 val TL_SNOC = Q.store_thm ("TL_SNOC",
    `!x l. TL (SNOC x l) = if NULL l then [] else SNOC x (TL l)`,
@@ -2711,6 +2704,30 @@ Proof
      Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC [])
  >> ‘LENGTH l <= n’ by rw []
  >> rw [TAKE_LENGTH_TOO_LONG]
+QED
+
+Theorem IS_PREFIX_IMP_TAKE :
+    !l l1. l1 <<= l ==> l1 = TAKE (LENGTH l1) l
+Proof
+    rw [IS_PREFIX_EQ_TAKE]
+ >> rw [LENGTH_TAKE]
+QED
+
+(* NOTE: This theorem can also be proved by IS_PREFIX_LENGTH_ANTI and
+   prefixes_is_prefix_total, but IS_PREFIX_EQ_TAKE is more natural.
+ *)
+Theorem IS_PREFIX_EQ_REWRITE :
+    !l1 l2 l. l1 <<= l /\ l2 <<= l ==> (l1 = l2 <=> LENGTH l1 = LENGTH l2)
+Proof
+    rw [IS_PREFIX_EQ_TAKE]
+ >> rw [LENGTH_TAKE, TAKE_EQ_REWRITE]
+QED
+
+Theorem IS_PREFIX_ALL_DISTINCT :
+    !l l1. l1 <<= l /\ ALL_DISTINCT l ==> ALL_DISTINCT l1
+Proof
+    rw [IS_PREFIX_EQ_TAKE']
+ >> MATCH_MP_TAC ALL_DISTINCT_TAKE >> rw []
 QED
 
 Theorem IS_PREFIX_FRONT_MONO :
@@ -3165,6 +3182,201 @@ Proof
   \\ Cases_on`q` \\ fs[ADD1]
 QED
 
+Theorem chunks_append_divides:
+  !n l1 l2.
+    0 < n /\ divides n (LENGTH l1) /\ ~NULL l1 /\ ~NULL l2 ==>
+    chunks n (l1 ++ l2) = chunks n l1 ++ chunks n l2
+Proof
+  HO_MATCH_MP_TAC chunks_ind
+  \\ rw[dividesTheory.divides_def, PULL_EXISTS]
+  \\ simp[Once chunks_def]
+  \\ Cases_on`q=0` \\ fs[] \\ rfs[]
+  \\ IF_CASES_TAC
+  >- ( Cases_on`q` \\ fs[ADD1, LEFT_ADD_DISTRIB] \\ fs[LESS_OR_EQ] )
+  \\ simp[DROP_APPEND, TAKE_APPEND]
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`lhs = _`
+  \\ simp[Once chunks_def]
+  \\ Cases_on`q = 1` \\ fs[]
+  >- (
+    simp[Abbr`lhs`]
+    \\ fs[NOT_LESS_EQUAL]
+    \\ simp[DROP_LENGTH_TOO_LONG])
+  \\ simp[Abbr`lhs`]
+  \\ `n - n * q = 0` by simp[]
+  \\ simp[]
+  \\ first_x_assum irule
+  \\ simp[NULL_EQ]
+  \\ qexists_tac`q - 1`
+  \\ simp[]
+QED
+
+Theorem chunks_length[simp]:
+  chunks (LENGTH ls) ls = [ls]
+Proof
+  rw[Once chunks_def]
+QED
+
+Theorem chunks_not_nil[simp]:
+  !n ls. chunks n ls <> []
+Proof
+  HO_MATCH_MP_TAC chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def]
+QED
+
+Theorem LENGTH_chunks:
+  !n ls. 0 < n /\ ~NULL ls ==>
+    LENGTH (chunks n ls) =
+    LENGTH ls DIV n + (bool_to_bit $ ~divides n (LENGTH ls))
+Proof
+  HO_MATCH_MP_TAC chunks_ind
+  \\ rw[]
+  \\ rw[Once chunks_def, dividesTheory.DIV_EQUAL_0, bool_to_bit_def,
+        dividesTheory.divides_def]
+  \\ fs[LESS_OR_EQ, ADD1, NULL_EQ, bool_to_bit_def] \\ rfs[]
+  \\ rw[]
+  \\ fs[dividesTheory.divides_def, dividesTheory.SUB_DIV]
+  \\ rfs[]
+  >- (
+    Cases_on`LENGTH ls DIV n = 0` >- rfs[dividesTheory.DIV_EQUAL_0]
+    \\ simp[] )
+  >- (
+    Cases_on`q` \\ fs[MULT_SUC]
+    \\ Q.MATCH_ASMSUB_RENAME_TAC`n + n * p`
+    \\ first_x_assum(Q.SPEC_THEN`2 + p`mp_tac)
+    \\ simp[LEFT_ADD_DISTRIB] )
+  >- (
+    first_x_assum(Q.SPEC_THEN`PRE q`mp_tac)
+    \\ Cases_on`q` \\ fs[MULT_SUC] )
+  \\ Cases_on`q` \\ fs[MULT_SUC]
+  \\ simp[ADD_DIV_RWT]
+QED
+
+Theorem EL_chunks:
+  !k ls n.
+  n < LENGTH (chunks k ls) /\ 0 < k /\ ~NULL ls ==>
+  EL n (chunks k ls) = TAKE k (DROP (n * k) ls)
+Proof
+  HO_MATCH_MP_TAC chunks_ind \\ rw[NULL_EQ]
+  \\ Q.PAT_X_ASSUM`_ < LENGTH _ `mp_tac
+  \\ rw[Once chunks_def] \\ fs[]
+  \\ rw[Once chunks_def]
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`EL m _`
+  \\ Cases_on`m` \\ fs[]
+  \\ pop_assum mp_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[LENGTH_chunks]
+  \\ simp[NULL_EQ]
+  \\ strip_tac
+  \\ dep_rewrite.DEP_REWRITE_TAC[DROP_DROP]
+  \\ simp[MULT_SUC]
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`k + k * m <= _`
+  \\ `k * m <= LENGTH ls - k` suffices_by simp[]
+  \\ `m <= (LENGTH ls - k) DIV k` suffices_by simp[X_LE_DIV]
+  \\ fs[bool_to_bit_def]
+  \\ pop_assum mp_tac \\ rw[]
+QED
+
+Theorem chunks_MAP:
+  !n ls. chunks n (MAP f ls) = MAP (MAP f) (chunks n ls)
+Proof
+  HO_MATCH_MP_TAC chunks_ind \\ rw[]
+  \\ rw[Once chunks_def]
+  >- rw[Once chunks_def]
+  >- rw[Once chunks_def]
+  \\ fs[]
+  \\ simp[GSYM MAP_DROP]
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ simp[MAP_TAKE]
+QED
+
+Theorem chunks_ZIP:
+  !n ls l2. LENGTH ls = LENGTH l2 ==>
+  chunks n (ZIP (ls, l2)) = MAP ZIP (ZIP (chunks n ls, chunks n l2))
+Proof
+  HO_MATCH_MP_TAC chunks_ind \\ rw[]
+  \\ rw[Once chunks_def]
+  >- ( rw[Once chunks_def] \\ rw[Once chunks_def] )
+  >- rw[Once chunks_def]
+  \\ fs[]
+  \\ simp[GSYM ZIP_DROP]
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ CONV_TAC(PATH_CONV"rrrr"(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ simp[ZIP_TAKE]
+QED
+
+Theorem chunks_TAKE:
+  !n ls m. divides n m /\ 0 < m ==>
+    chunks n (TAKE m ls) = TAKE (m DIV n) (chunks n ls)
+Proof
+  HO_MATCH_MP_TAC chunks_ind \\ rw[]
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ rw[]
+  >- (
+    rw[Once chunks_def] \\ fs[LENGTH_TAKE_EQ]
+    \\ fs[dividesTheory.divides_def]
+    \\ BasicProvers.VAR_EQ_TAC
+    \\ Q.MATCH_GOALSUB_RENAME_TAC`n * m`
+    \\ fs[ZERO_LESS_MULT]
+    \\ `n <= n * m` by simp[LE_MULT_CANCEL_LBARE]
+    \\ dep_rewrite.DEP_REWRITE_TAC[TAKE_LENGTH_TOO_LONG]
+    \\ simp[MULT_DIV] )
+  >- fs[dividesTheory.divides_def]
+  \\ fs[]
+  \\ simp[Once chunks_def, LENGTH_TAKE_EQ]
+  \\ `n <= m` by (
+    rfs[dividesTheory.divides_def] \\ rw[]
+    \\ fs[ZERO_LESS_MULT] )
+  \\ IF_CASES_TAC
+  >- (
+    pop_assum mp_tac \\ rw[]
+    \\ `m = n` by fs[] \\ rw[] )
+  \\ fs[TAKE_TAKE, DROP_TAKE]
+  \\ first_x_assum(Q.SPEC_THEN`m - n`mp_tac)
+  \\ simp[]
+  \\ impl_keep_tac >- (
+    fs[dividesTheory.divides_def]
+    \\ qexists_tac`q - 1`
+    \\ simp[LEFT_SUB_DISTRIB] )
+  \\ rw[]
+  \\ `m DIV n <> 0` by fs[dividesTheory.DIV_EQUAL_0]
+  \\ Cases_on`m DIV n` \\ fs[TAKE_TAKE_MIN]
+  \\ `MIN n m = n` by fs[MIN_DEF] \\ rw[]
+  \\ simp[dividesTheory.SUB_DIV]
+QED
+
+Definition chunks_tr_aux_def:
+  chunks_tr_aux n ls acc =
+    if LENGTH ls <= SUC n then REVERSE $ ls :: acc
+    else chunks_tr_aux n (DROP (SUC n) ls) (TAKE (SUC n) ls :: acc)
+Termination
+  WF_REL_TAC`measure $ LENGTH o FST o SND`
+  \\ rw[LENGTH_DROP]
+End
+
+Definition chunks_tr_def:
+  chunks_tr n ls = if n = 0 then [ls] else chunks_tr_aux (n - 1) ls []
+End
+
+Theorem chunks_tr_aux_thm:
+  !n ls acc.
+    chunks_tr_aux n ls acc =
+    REVERSE acc ++ chunks (SUC n) ls
+Proof
+  HO_MATCH_MP_TAC chunks_tr_aux_ind
+  \\ rw[]
+  \\ rw[Once chunks_tr_aux_def]
+  >- rw[Once chunks_def]
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV(srw_ss())[Once chunks_def]))
+  \\ rw[]
+QED
+
+Theorem chunks_tr_thm:
+  chunks_tr = chunks
+Proof
+  simp[FUN_EQ_THM, chunks_tr_def]
+  \\ Cases \\ rw[chunks_tr_aux_thm]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
@@ -3418,6 +3630,12 @@ Theorem REPLICATE_NIL[simp]:  REPLICATE x y = [] <=> x = 0
 Proof Cases_on`x` >> rw[]
 QED
 
+Theorem REPLICATE_EQ_CONS:
+  REPLICATE n x = y :: r <=> y = x /\ ?m. n = SUC m /\ r = REPLICATE m x
+Proof
+  Cases_on`n` \\ rw[REPLICATE, EQ_IMP_THM]
+QED
+
 val REPLICATE_APPEND = Q.store_thm("REPLICATE_APPEND",
   `REPLICATE n a ++ REPLICATE m a = REPLICATE (n+m) a`,
   simp[LIST_EQ_REWRITE,LENGTH_REPLICATE] >> rw[] >>
@@ -3495,6 +3713,94 @@ QED
 
 end
 (* end CakeML lemmas *)
+
+(* BEGIN more lemmas of IS_SUFFIX *)
+Theorem IS_SUFFIX_EQ_DROP :
+    !l l1. IS_SUFFIX l l1 <=> ?n. n <= LENGTH l /\ l1 = DROP n l
+Proof
+    rw [GSYM IS_PREFIX_REVERSE, IS_PREFIX_EQ_TAKE]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q.EXISTS_TAC ‘LENGTH l - n’ >> simp [] \\
+      ONCE_REWRITE_TAC [GSYM REVERSE_11] \\
+      POP_ASSUM (fn th => REWRITE_TAC [th]) \\
+      simp [TAKE_REVERSE, REVERSE_DROP],
+      (* goal 2 (of 2) *)
+      Q.EXISTS_TAC ‘LENGTH l - n’ >> simp [] \\
+      simp [TAKE_REVERSE, REVERSE_DROP] ]
+QED
+
+Theorem IS_SUFFIX_EQ_DROP' :
+    !l l1. IS_SUFFIX l l1 <=> ?n. l1 = DROP n l
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC
+ >- (rw [IS_SUFFIX_EQ_DROP] \\
+     Q.EXISTS_TAC ‘n’ >> REWRITE_TAC [])
+ >> STRIP_TAC
+ >> Cases_on ‘n <= LENGTH l’
+ >- (rw [IS_SUFFIX_EQ_DROP] \\
+     Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC [])
+ >> ‘LENGTH l <= n’ by rw []
+ >> ‘l1 = []’ by rw [DROP_EQ_NIL]
+ >> simp [IS_SUFFIX]
+QED
+
+Theorem IS_SUFFIX_IMP_DROP :
+    !l l1. IS_SUFFIX l l1 ==> l1 = DROP (LENGTH l - LENGTH l1) l
+Proof
+    rw [IS_SUFFIX_EQ_DROP]
+ >> rw [LENGTH_DROP]
+QED
+
+Theorem IS_SUFFIX_IMP_LASTN :
+    !l l1. IS_SUFFIX l l1 ==> l1 = LASTN (LENGTH l1) l
+Proof
+    rw [IS_SUFFIX_EQ_DROP]
+ >> rw [DROP_LASTN]
+QED
+
+Theorem LIST_TO_SET_PREFIX :
+    !l l1. l1 <<= l ==> set l1 SUBSET set l
+Proof
+    rw [IS_PREFIX_EQ_TAKE']
+ >> rw [LIST_TO_SET_TAKE]
+QED
+
+Theorem LIST_TO_SET_SUFFIX :
+    !l l1. IS_SUFFIX l l1 ==> set l1 SUBSET set l
+Proof
+    rw [IS_SUFFIX_EQ_DROP']
+ >> rw [LIST_TO_SET_DROP]
+QED
+
+Theorem IS_SUFFIX_ALL_DISTINCT :
+    !l l1. IS_SUFFIX l l1 /\ ALL_DISTINCT l ==> ALL_DISTINCT l1
+Proof
+    rw [IS_SUFFIX_EQ_DROP']
+ >> MATCH_MP_TAC ALL_DISTINCT_DROP >> rw []
+QED
+(* END more lemmas of IS_SUFFIX *)
+
+Theorem IS_SUFFIX_dropWhile:
+  IS_SUFFIX ls (dropWhile P ls)
+Proof
+  Induct_on`ls`
+  \\ rw[IS_SUFFIX_CONS]
+QED
+
+Theorem LENGTH_dropWhile_id:
+  (LENGTH (dropWhile P ls) = LENGTH ls) <=> (dropWhile P ls = ls)
+Proof
+  rw[EQ_IMP_THM]
+  \\ rw[dropWhile_id]
+  \\ Cases_on`ls` \\ fs[]
+  \\ strip_tac \\ fs[]
+  \\ `IS_SUFFIX t (dropWhile P t)` by simp[IS_SUFFIX_dropWhile]
+  \\ fs[IS_SUFFIX_APPEND]
+  \\ `LENGTH t = LENGTH l + LENGTH (dropWhile P t)` by metis_tac[LENGTH_APPEND]
+  \\ fs[]
+QED
 
 Theorem nub_GENLIST:
   nub (GENLIST f n) =
@@ -4116,6 +4422,13 @@ Theorem HD_APPEND:
   !h t ls. HD (h::t ++ ls) = h
 Proof
   simp[]
+QED
+
+Theorem HD_APPEND_NOT_NIL :
+  !l1 l2. l1 <> [] ==> HD (l1 ++ l2) = HD l1
+Proof
+    rpt GEN_TAC
+ >> Cases_on ‘l1’ >> rw [HD_APPEND]
 QED
 
 (* Theorem: 0 <> n ==> (EL (n-1) t = EL n (h::t)) *)
@@ -7315,213 +7628,197 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
-local
-   val alias =
-      [
-       ("ALL_EL_BUTFIRSTN", "EVERY_DROP"),
-       ("ALL_EL_BUTLASTN", "EVERY_BUTLASTN"),
-       ("ALL_EL_FIRSTN", "EVERY_TAKE"),
-       ("ALL_EL_FOLDL", "EVERY_FOLDL"),
-       ("ALL_EL_FOLDL_MAP", "EVERY_FOLDL_MAP"),
-       ("ALL_EL_FOLDR", "EVERY_FOLDR"),
-       ("ALL_EL_FOLDR_MAP", "EVERY_FOLDR_MAP"),
-       ("ALL_EL_LASTN", "EVERY_LASTN"),
-       ("ALL_EL_REPLICATE", "EVERY_REPLICATE"),
-       ("ALL_EL_REVERSE", "EVERY_REVERSE"),
-       ("ALL_EL_SEG", "EVERY_SEG"),
-       ("APPEND_BUTLASTN_BUTFIRSTN", "APPEND_BUTLASTN_DROP"),
-       ("APPEND_FIRSTN_LASTN", "APPEND_TAKE_LASTN"),
-       ("BUTFIRSTN", "DROP"),
-       ("BUTFIRSTN_APPEND1", "DROP_APPEND1"),
-       ("BUTFIRSTN_APPEND2", "DROP_APPEND2"),
-       ("BUTFIRSTN_BUTFIRSTN", "DROP_DROP"),
-       ("BUTFIRSTN_CONS_EL", "DROP_CONS_EL"),
-       ("BUTFIRSTN_LASTN", "DROP_LASTN"),
-       ("BUTFIRSTN_LENGTH_APPEND", "DROP_LENGTH_APPEND"),
-       ("BUTFIRSTN_LENGTH_NIL", "DROP_LENGTH_NIL"),
-       ("BUTFIRSTN_REVERSE", "DROP_REVERSE"),
-       ("BUTFIRSTN_SEG", "DROP_SEG"),
-       ("BUTFIRSTN_SNOC", "DROP_SNOC"),
-       ("BUTLASTN_BUTLAST", "BUTLASTN_FRONT"),
-       ("BUTLASTN_FIRSTN", "BUTLASTN_TAKE"),
-       ("BUTLASTN_SUC_BUTLAST", "BUTLASTN_SUC_FRONT"),
-       ("ELL_IS_EL", "ELL_MEM"),
-       ("EL_BUTFIRSTN", "EL_DROP"),
-       ("EL_FIRSTN", "EL_TAKE"),
-       ("EL_IS_EL", "EL_MEM"),
-       ("FIRSTN", "TAKE"),
-       ("FIRSTN_APPEND1", "TAKE_APPEND1"),
-       ("FIRSTN_APPEND2", "TAKE_APPEND2"),
-       ("FIRSTN_BUTLASTN", "TAKE_BUTLASTN"),
-       ("FIRSTN_FIRSTN", "TAKE_TAKE"),
-       ("FIRSTN_LENGTH_APPEND", "TAKE_LENGTH_APPEND"),
-       ("FIRSTN_REVERSE", "TAKE_REVERSE"),
-       ("FIRSTN_SEG", "TAKE_SEG"),
-       ("FIRSTN_SNOC", "TAKE_SNOC"),
-       ("IS_EL_BUTFIRSTN", "MEM_DROP_IMP"),
-       ("IS_EL_BUTLASTN", "MEM_BUTLASTN"),
-       ("IS_EL_DEF", "MEM_EXISTS"),
-       ("IS_EL_FIRSTN", "MEM_TAKE"),
-       ("IS_EL_FOLDL", "MEM_FOLDL"),
-       ("IS_EL_FOLDL_MAP", "MEM_FOLDL_MAP"),
-       ("IS_EL_FOLDR", "MEM_FOLDR"),
-       ("IS_EL_FOLDR_MAP", "MEM_FOLDR_MAP"),
-       ("IS_EL_LASTN", "MEM_LASTN"),
-       ("IS_EL_REPLICATE", "MEM_REPLICATE"),
-       ("IS_EL_SEG", "MEM_SEG"),
-       ("IS_EL_SOME_EL", "MEM_EXISTS"),
-       ("LASTN_BUTFIRSTN", "LASTN_DROP"),
-       ("LENGTH_BUTLAST", "LENGTH_FRONT"),
-       ("SNOC_EL_FIRSTN", "SNOC_EL_TAKE"),
-       ("SOME_EL_BUTFIRSTN", "EXISTS_DROP"),
-       ("SOME_EL_BUTLASTN", "EXISTS_BUTLASTN"),
-       ("SOME_EL_DISJ", "EXISTS_DISJ"),
-       ("SOME_EL_FIRSTN", "EXISTS_TAKE"),
-       ("SOME_EL_FOLDL", "EXISTS_FOLDL"),
-       ("SOME_EL_FOLDL_MAP", "EXISTS_FOLDL_MAP"),
-       ("SOME_EL_FOLDR", "EXISTS_FOLDR"),
-       ("SOME_EL_FOLDR_MAP", "EXISTS_FOLDR_MAP"),
-       ("SOME_EL_LASTN", "EXISTS_LASTN"),
-       ("SOME_EL_REVERSE", "EXISTS_REVERSE"),
-       ("SOME_EL_SEG", "EXISTS_SEG"),
-       ("ZIP_FIRSTN", "ZIP_TAKE"),
-       ("ZIP_FIRSTN_LEQ", "ZIP_TAKE_LEQ")
-      ]
-   val moved =
-      [
-       ("ALL_DISTINCT_SNOC", "ALL_DISTINCT_SNOC"),
-       ("ALL_EL", "EVERY_DEF"),
-       ("ALL_EL_APPEND", "EVERY_APPEND"),
-       ("ALL_EL_CONJ", "EVERY_CONJ"),
-       ("ALL_EL_SNOC", "EVERY_SNOC"),
-       ("APPEND", "APPEND"),
-       ("APPEND_11_LENGTH", "APPEND_11_LENGTH"),
-       ("APPEND_ASSOC", "APPEND_ASSOC"),
-       ("APPEND_BUTLAST_LAST", "APPEND_FRONT_LAST"),
-       ("APPEND_FIRSTN_BUTFIRSTN", "TAKE_DROP"),
-       ("APPEND_LENGTH_EQ", "APPEND_LENGTH_EQ"),
-       ("APPEND_SNOC", "APPEND_SNOC"),
-       ("BUTLAST", "FRONT_SNOC"),
-       ("BUTLAST_CONS", "FRONT_CONS"),
-       ("CONS", "CONS"),
-       ("CONS_11", "CONS_11"),
-       ("EL", "EL"),
-       ("EL_DROP", "EL_DROP"),
-       ("EL_GENLIST", "EL_GENLIST"),
-       ("EL_LENGTH_SNOC", "EL_LENGTH_SNOC"),
-       ("EL_MAP", "EL_MAP"),
-       ("EL_REVERSE", "EL_REVERSE"),
-       ("EL_SNOC", "EL_SNOC"),
-       ("EL_TAKE", "EL_TAKE"),
-       ("EQ_LIST", "EQ_LIST"),
-       ("EVERY_GENLIST", "EVERY_GENLIST"),
-       ("EXISTS_GENLIST", "EXISTS_GENLIST"),
-       ("FILTER", "FILTER"),
-       ("FILTER_APPEND", "FILTER_APPEND_DISTRIB"),
-       ("FILTER_REVERSE", "FILTER_REVERSE"),
-       ("FIRSTN_LENGTH_ID", "TAKE_LENGTH_ID"),
-       ("FLAT", "FLAT"),
-       ("FLAT_APPEND", "FLAT_APPEND"),
-       ("FOLDL", "FOLDL"),
-       ("FOLDL_SNOC", "FOLDL_SNOC"),
-       ("FOLDR", "FOLDR"),
-       ("GENLIST", "GENLIST"),
-       ("GENLIST_APPEND", "GENLIST_APPEND"),
-       ("GENLIST_CONS", "GENLIST_CONS"),
-       ("GENLIST_FUN_EQ", "GENLIST_FUN_EQ"),
-       ("HD", "HD"),
-       ("HD_GENLIST", "HD_GENLIST"),
-       ("IS_EL", "MEM"),
-       ("IS_EL_APPEND", "MEM_APPEND"),
-       ("IS_EL_FILTER", "MEM_FILTER"),
-       ("IS_EL_REVERSE", "MEM_REVERSE"),
-       ("IS_EL_SNOC", "MEM_SNOC"),
-       ("LAST", "LAST_SNOC"),
-       ("LAST_APPEND", "LAST_APPEND_CONS"),
-       ("LAST_CONS", "LAST_CONS"),
-       ("LENGTH", "LENGTH"),
-       ("LENGTH_APPEND", "LENGTH_APPEND"),
-       ("LENGTH_BUTFIRSTN", "LENGTH_DROP"),
-       ("LENGTH_CONS", "LENGTH_CONS"),
-       ("LENGTH_EQ_NIL", "LENGTH_EQ_NIL"),
-       ("LENGTH_FIRSTN", "LENGTH_TAKE"),
-       ("LENGTH_GENLIST", "LENGTH_GENLIST"),
-       ("LENGTH_MAP", "LENGTH_MAP"),
-       ("LENGTH_NIL", "LENGTH_NIL"),
-       ("LENGTH_REVERSE", "LENGTH_REVERSE"),
-       ("LENGTH_SNOC", "LENGTH_SNOC"),
-       ("LENGTH_ZIP", "LENGTH_ZIP"),
-       ("LIST_NOT_EQ", "LIST_NOT_EQ"),
-       ("MAP", "MAP"),
-       ("MAP2", "MAP2"),
-       ("MAP2_ZIP", "MAP2_ZIP"),
-       ("MAP_APPEND", "MAP_APPEND"),
-       ("MAP_EQ_f", "MAP_EQ_f"),
-       ("MAP_GENLIST", "MAP_GENLIST"),
-       ("MAP_MAP_o", "MAP_MAP_o"),
-       ("MAP_SNOC", "MAP_SNOC"),
-       ("MAP_o", "MAP_o"),
-       ("NOT_ALL_EL_SOME_EL", "NOT_EVERY"),
-       ("NOT_CONS_NIL", "NOT_CONS_NIL"),
-       ("NOT_EQ_LIST", "NOT_EQ_LIST"),
-       ("NOT_NIL_CONS", "NOT_NIL_CONS"),
-       ("NOT_SOME_EL_ALL_EL", "NOT_EXISTS"),
-       ("NULL", "NULL"),
-       ("NULL_DEF", "NULL_DEF"),
-       ("NULL_EQ_NIL", "NULL_EQ"),
-    (* removed due to conflicts with Tactical.REVERSE:
-       ("REVERSE", "REVERSE_SNOC_DEF"),
-     *)
-       ("REVERSE_APPEND", "REVERSE_APPEND"),
-       ("REVERSE_EQ_NIL", "REVERSE_EQ_NIL"),
-       ("REVERSE_REVERSE", "REVERSE_REVERSE"),
-       ("REVERSE_SNOC", "REVERSE_SNOC"),
-       ("SNOC", "SNOC"),
-       ("SNOC_11", "SNOC_11"),
-       ("SNOC_APPEND", "SNOC_APPEND"),
-       ("SNOC_Axiom", "SNOC_Axiom"),
-       ("SNOC_CASES", "SNOC_CASES"),
-       ("SNOC_INDUCT", "SNOC_INDUCT"),
-       ("SOME_EL", "EXISTS_DEF"),
-       ("SOME_EL_APPEND", "EXISTS_APPEND"),
-       ("SOME_EL_MAP", "EXISTS_MAP"),
-       ("SOME_EL_SNOC", "EXISTS_SNOC"),
-       ("SUM", "SUM"),
-       ("SUM_APPEND", "SUM_APPEND"),
-       ("SUM_SNOC", "SUM_SNOC"),
-       ("TL", "TL"),
-       ("TL_GENLIST", "TL_GENLIST"),
-       ("UNZIP", "UNZIP"),
-       ("UNZIP_ZIP", "UNZIP_ZIP"),
-       ("ZIP", "ZIP"),
-       ("ZIP_GENLIST", "ZIP_GENLIST"),
-       ("ZIP_UNZIP", "ZIP_UNZIP")
-      ]
-   val B = PP.block PP.CONSISTENT 0
-in
-   val () = Theory.adjoin_to_theory {
-      sig_ps = SOME
-        (fn _ =>
-           let
-              fun S s = PP.add_string ("val " ^ s ^ " : thm")
-           in
-             B (
-               [PP.add_string "(* Aliases for legacy theorem names *)", PP.NL] @
-               PP.pr_list S [PP.add_break(1,0)]
-                          (Lib.sort (Lib.curry String.<)
-                                    (List.map fst (alias @ moved)))
-             )
-           end),
-      struct_ps = SOME
-        (fn _ =>
-           let
-              fun S p (s1, s2) =
-                PP.add_string ("val " ^ s1 ^ " = " ^ p ^ s2)
-              fun L p l = B (PP.pr_list (S p) [PP.NL] l)
-           in
-              B [L "listTheory." moved, PP.add_break(1,0), L "" alias]
-           end)}
-end
+(* Aliases for legacy theorem names *)
+ val alias =
+    [
+     ("ALL_EL_BUTFIRSTN", "EVERY_DROP"),
+     ("ALL_EL_BUTLASTN", "EVERY_BUTLASTN"),
+     ("ALL_EL_FIRSTN", "EVERY_TAKE"),
+     ("ALL_EL_FOLDL", "EVERY_FOLDL"),
+     ("ALL_EL_FOLDL_MAP", "EVERY_FOLDL_MAP"),
+     ("ALL_EL_FOLDR", "EVERY_FOLDR"),
+     ("ALL_EL_FOLDR_MAP", "EVERY_FOLDR_MAP"),
+     ("ALL_EL_LASTN", "EVERY_LASTN"),
+     ("ALL_EL_REPLICATE", "EVERY_REPLICATE"),
+     ("ALL_EL_REVERSE", "EVERY_REVERSE"),
+     ("ALL_EL_SEG", "EVERY_SEG"),
+     ("APPEND_BUTLASTN_BUTFIRSTN", "APPEND_BUTLASTN_DROP"),
+     ("APPEND_FIRSTN_LASTN", "APPEND_TAKE_LASTN"),
+     ("BUTFIRSTN", "DROP"),
+     ("BUTFIRSTN_APPEND1", "DROP_APPEND1"),
+     ("BUTFIRSTN_APPEND2", "DROP_APPEND2"),
+     ("BUTFIRSTN_BUTFIRSTN", "DROP_DROP"),
+     ("BUTFIRSTN_CONS_EL", "DROP_CONS_EL"),
+     ("BUTFIRSTN_LASTN", "DROP_LASTN"),
+     ("BUTFIRSTN_LENGTH_APPEND", "DROP_LENGTH_APPEND"),
+     ("BUTFIRSTN_LENGTH_NIL", "DROP_LENGTH_NIL"),
+     ("BUTFIRSTN_REVERSE", "DROP_REVERSE"),
+     ("BUTFIRSTN_SEG", "DROP_SEG"),
+     ("BUTFIRSTN_SNOC", "DROP_SNOC"),
+     ("BUTLASTN_BUTLAST", "BUTLASTN_FRONT"),
+     ("BUTLASTN_FIRSTN", "BUTLASTN_TAKE"),
+     ("BUTLASTN_SUC_BUTLAST", "BUTLASTN_SUC_FRONT"),
+     ("ELL_IS_EL", "ELL_MEM"),
+     ("EL_BUTFIRSTN", "EL_DROP"),
+     ("EL_FIRSTN", "EL_TAKE"),
+     ("EL_IS_EL", "EL_MEM"),
+     ("FIRSTN", "TAKE"),
+     ("FIRSTN_APPEND1", "TAKE_APPEND1"),
+     ("FIRSTN_APPEND2", "TAKE_APPEND2"),
+     ("FIRSTN_BUTLASTN", "TAKE_BUTLASTN"),
+     ("FIRSTN_FIRSTN", "TAKE_TAKE"),
+     ("FIRSTN_LENGTH_APPEND", "TAKE_LENGTH_APPEND"),
+     ("FIRSTN_REVERSE", "TAKE_REVERSE"),
+     ("FIRSTN_SEG", "TAKE_SEG"),
+     ("FIRSTN_SNOC", "TAKE_SNOC"),
+     ("IS_EL_BUTFIRSTN", "MEM_DROP_IMP"),
+     ("IS_EL_BUTLASTN", "MEM_BUTLASTN"),
+     ("IS_EL_DEF", "MEM_EXISTS"),
+     ("IS_EL_FIRSTN", "MEM_TAKE"),
+     ("IS_EL_FOLDL", "MEM_FOLDL"),
+     ("IS_EL_FOLDL_MAP", "MEM_FOLDL_MAP"),
+     ("IS_EL_FOLDR", "MEM_FOLDR"),
+     ("IS_EL_FOLDR_MAP", "MEM_FOLDR_MAP"),
+     ("IS_EL_LASTN", "MEM_LASTN"),
+     ("IS_EL_REPLICATE", "MEM_REPLICATE"),
+     ("IS_EL_SEG", "MEM_SEG"),
+     ("IS_EL_SOME_EL", "MEM_EXISTS"),
+     ("LASTN_BUTFIRSTN", "LASTN_DROP"),
+     ("LENGTH_BUTLAST", "LENGTH_FRONT"),
+     ("SNOC_EL_FIRSTN", "SNOC_EL_TAKE"),
+     ("SOME_EL_BUTFIRSTN", "EXISTS_DROP"),
+     ("SOME_EL_BUTLASTN", "EXISTS_BUTLASTN"),
+     ("SOME_EL_DISJ", "EXISTS_DISJ"),
+     ("SOME_EL_FIRSTN", "EXISTS_TAKE"),
+     ("SOME_EL_FOLDL", "EXISTS_FOLDL"),
+     ("SOME_EL_FOLDL_MAP", "EXISTS_FOLDL_MAP"),
+     ("SOME_EL_FOLDR", "EXISTS_FOLDR"),
+     ("SOME_EL_FOLDR_MAP", "EXISTS_FOLDR_MAP"),
+     ("SOME_EL_LASTN", "EXISTS_LASTN"),
+     ("SOME_EL_REVERSE", "EXISTS_REVERSE"),
+     ("SOME_EL_SEG", "EXISTS_SEG"),
+     ("ZIP_FIRSTN", "ZIP_TAKE"),
+     ("ZIP_FIRSTN_LEQ", "ZIP_TAKE_LEQ")
+    ]
+
+ val moved =
+    [
+     ("ALL_DISTINCT_SNOC", "ALL_DISTINCT_SNOC"),
+     ("ALL_EL", "EVERY_DEF"),
+     ("ALL_EL_APPEND", "EVERY_APPEND"),
+     ("ALL_EL_CONJ", "EVERY_CONJ"),
+     ("ALL_EL_SNOC", "EVERY_SNOC"),
+     ("APPEND", "APPEND"),
+     ("APPEND_11_LENGTH", "APPEND_11_LENGTH"),
+     ("APPEND_ASSOC", "APPEND_ASSOC"),
+     ("APPEND_BUTLAST_LAST", "APPEND_FRONT_LAST"),
+     ("APPEND_FIRSTN_BUTFIRSTN", "TAKE_DROP"),
+     ("APPEND_LENGTH_EQ", "APPEND_LENGTH_EQ"),
+     ("APPEND_SNOC", "APPEND_SNOC"),
+     ("BUTLAST", "FRONT_SNOC"),
+     ("BUTLAST_CONS", "FRONT_CONS"),
+     ("CONS", "CONS"),
+     ("CONS_11", "CONS_11"),
+     ("EL", "EL"),
+     ("EL_DROP", "EL_DROP"),
+     ("EL_GENLIST", "EL_GENLIST"),
+     ("EL_LENGTH_SNOC", "EL_LENGTH_SNOC"),
+     ("EL_MAP", "EL_MAP"),
+     ("EL_REVERSE", "EL_REVERSE"),
+     ("EL_SNOC", "EL_SNOC"),
+     ("EL_TAKE", "EL_TAKE"),
+     ("EQ_LIST", "EQ_LIST"),
+     ("EVERY_GENLIST", "EVERY_GENLIST"),
+     ("EXISTS_GENLIST", "EXISTS_GENLIST"),
+     ("FILTER", "FILTER"),
+     ("FILTER_APPEND", "FILTER_APPEND_DISTRIB"),
+     ("FILTER_REVERSE", "FILTER_REVERSE"),
+     ("FIRSTN_LENGTH_ID", "TAKE_LENGTH_ID"),
+     ("FLAT", "FLAT"),
+     ("FLAT_APPEND", "FLAT_APPEND"),
+     ("FOLDL", "FOLDL"),
+     ("FOLDL_SNOC", "FOLDL_SNOC"),
+     ("FOLDR", "FOLDR"),
+     ("GENLIST", "GENLIST"),
+     ("GENLIST_APPEND", "GENLIST_APPEND"),
+     ("GENLIST_CONS", "GENLIST_CONS"),
+     ("GENLIST_FUN_EQ", "GENLIST_FUN_EQ"),
+     ("HD", "HD"),
+     ("HD_GENLIST", "HD_GENLIST"),
+     ("IS_EL", "MEM"),
+     ("IS_EL_APPEND", "MEM_APPEND"),
+     ("IS_EL_FILTER", "MEM_FILTER"),
+     ("IS_EL_REVERSE", "MEM_REVERSE"),
+     ("IS_EL_SNOC", "MEM_SNOC"),
+     ("LAST", "LAST_SNOC"),
+     ("LAST_APPEND", "LAST_APPEND_CONS"),
+     ("LAST_CONS", "LAST_CONS"),
+     ("LENGTH", "LENGTH"),
+     ("LENGTH_APPEND", "LENGTH_APPEND"),
+     ("LENGTH_BUTFIRSTN", "LENGTH_DROP"),
+     ("LENGTH_CONS", "LENGTH_CONS"),
+     ("LENGTH_EQ_NIL", "LENGTH_EQ_NIL"),
+     ("LENGTH_FIRSTN", "LENGTH_TAKE"),
+     ("LENGTH_GENLIST", "LENGTH_GENLIST"),
+     ("LENGTH_MAP", "LENGTH_MAP"),
+     ("LENGTH_NIL", "LENGTH_NIL"),
+     ("LENGTH_REVERSE", "LENGTH_REVERSE"),
+     ("LENGTH_SNOC", "LENGTH_SNOC"),
+     ("LENGTH_ZIP", "LENGTH_ZIP"),
+     ("LIST_NOT_EQ", "LIST_NOT_EQ"),
+     ("MAP", "MAP"),
+     ("MAP2", "MAP2"),
+     ("MAP2_ZIP", "MAP2_ZIP"),
+     ("MAP_APPEND", "MAP_APPEND"),
+     ("MAP_EQ_f", "MAP_EQ_f"),
+     ("MAP_GENLIST", "MAP_GENLIST"),
+     ("MAP_MAP_o", "MAP_MAP_o"),
+     ("MAP_SNOC", "MAP_SNOC"),
+     ("MAP_o", "MAP_o"),
+     ("NOT_ALL_EL_SOME_EL", "NOT_EVERY"),
+     ("NOT_CONS_NIL", "NOT_CONS_NIL"),
+     ("NOT_EQ_LIST", "NOT_EQ_LIST"),
+     ("NOT_NIL_CONS", "NOT_NIL_CONS"),
+     ("NOT_SOME_EL_ALL_EL", "NOT_EXISTS"),
+     ("NULL", "NULL"),
+     ("NULL_DEF", "NULL_DEF"),
+     ("NULL_EQ_NIL", "NULL_EQ"),
+  (* removed due to conflicts with Tactical.REVERSE:
+     ("REVERSE", "REVERSE_SNOC_DEF"),
+   *)
+     ("REVERSE_APPEND", "REVERSE_APPEND"),
+     ("REVERSE_EQ_NIL", "REVERSE_EQ_NIL"),
+     ("REVERSE_REVERSE", "REVERSE_REVERSE"),
+     ("REVERSE_SNOC", "REVERSE_SNOC"),
+     ("SNOC", "SNOC"),
+     ("SNOC_11", "SNOC_11"),
+     ("SNOC_APPEND", "SNOC_APPEND"),
+     ("SNOC_Axiom", "SNOC_Axiom"),
+     ("SNOC_CASES", "SNOC_CASES"),
+     ("SNOC_INDUCT", "SNOC_INDUCT"),
+     ("SOME_EL", "EXISTS_DEF"),
+     ("SOME_EL_APPEND", "EXISTS_APPEND"),
+     ("SOME_EL_MAP", "EXISTS_MAP"),
+     ("SOME_EL_SNOC", "EXISTS_SNOC"),
+     ("SUM", "SUM"),
+     ("SUM_APPEND", "SUM_APPEND"),
+     ("SUM_SNOC", "SUM_SNOC"),
+     ("TL", "TL"),
+     ("TL_GENLIST", "TL_GENLIST"),
+     ("UNZIP", "UNZIP"),
+     ("UNZIP_ZIP", "UNZIP_ZIP"),
+     ("ZIP", "ZIP"),
+     ("ZIP_GENLIST", "ZIP_GENLIST"),
+     ("ZIP_UNZIP", "ZIP_UNZIP")
+    ]
+
+val () = List.app
+  (fn (s1, s2) => ignore (save_thm(s1, fetch "list" s2)))
+  moved;
+
+val () = List.app
+  (fn (s1, s2) => ignore (save_thm(s1, theorem s2)))
+  alias;
 
 (* ------------------------------------------------------------------------ *)
 

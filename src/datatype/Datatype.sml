@@ -67,7 +67,8 @@ type tyspec = hol_type * constructor list
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars;
+val SOME arithmetic_grammars = Parse.grammarDB {thyname="arithmetic"};
+val _ = Parse.temp_set_grammars arithmetic_grammars;
 
 val ERR = mk_HOL_ERR "Datatype";
 
@@ -179,6 +180,9 @@ fun ast_tyvar_strings (dAQ ty) = map dest_vartype $ type_vars ty
   | ast_tyvar_strings (dTyop {Args, ...}) =
       List.concat (map ast_tyvar_strings Args)
 
+val typecheck_listener : (string Symtab.table * pretype * hol_type) Listener.t =
+    Listener.new_listener()
+
 local
   fun strvariant avoids s = if mem s avoids then strvariant avoids (s ^ "a")
                             else s
@@ -221,6 +225,7 @@ fun to_tyspecs ASTs =
                                        Args = map (mk_hol_ty d) Args}
      fun mk_hol_type d pty = let
        val ty = mk_hol_ty d pty
+       val _ = Listener.call_listener typecheck_listener (d, pty, ty)
      in
        if Theory.uptodate_type ty then ty
        else let val tyname = #1 (dest_type ty)

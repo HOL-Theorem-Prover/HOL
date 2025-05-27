@@ -65,11 +65,7 @@ val bool_info =
       {ax=ORIG boolTheory.boolAxiom,
        induction = ORIG boolTheory.bool_INDUCT,
        case_def = boolTheory.bool_case_thm,
-       case_eq =
-         Prim_rec.prove_case_eq_thm{
-           case_def = boolTheory.bool_case_thm,
-           nchotomy = boolTheory.BOOL_CASES_AX
-         },
+       case_eq = boolTheory.bool_case_eq,
        case_elim =
          Prim_rec.prove_case_ho_elim_thm{
            case_def = boolTheory.bool_case_thm,

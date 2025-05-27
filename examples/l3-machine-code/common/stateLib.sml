@@ -9,7 +9,7 @@ open helperLib progSyntax temporalSyntax temporal_stateSyntax
 structure Parse = struct
   open Parse
   val (Type, Term) =
-      temporal_stateTheory.temporal_state_grammars
+      valOf (grammarDB {thyname="temporal_state"})
         |> apsnd ParseExtras.grammar_loose_equality
         |> parse_from_grammars
 end
@@ -267,6 +267,13 @@ end
    ------------------------------------------------------------------------ *)
 
 local
+  (* store component theorems as ThmSetData *)
+
+  val {DB, export, ...} = ThmSetData.export_list{
+        settype = "l3stateLib_components",
+        initial = []
+      }
+
    fun def_suffix s = s ^ "_def"
 
    val comp_names =
@@ -429,31 +436,12 @@ in
          val proj_def =
             Definition.new_definition
                (sthy ^ "_proj_def", boolSyntax.mk_eq (proj_l, proj_r))
-         val () =
-            Theory.adjoin_to_theory
-               {sig_ps =
-                  SOME (fn _ =>
-                           PP.add_string "val component_defs: thm list"),
-                struct_ps =
-                  SOME (fn _ =>
-                           PP.block PP.CONSISTENT 2 [
-                             PP.add_string "val component_defs =",
-                             PP.add_break(1,0),
-                             PP.block PP.INCONSISTENT 1 (
-                               PP.add_string "[" ::
-                               PP.pr_list
-                                 PP.add_string
-                                 [PP.add_string ",", PP.add_break (1, 0)]
-                                 (comp_names defs) @
-                               [PP.add_string "]"]
-                             ),
-                             PP.add_newline
-                           ]
-                       )
-               }
+         val () = List.app export (comp_names defs)
       in
          proj_def :: defs
       end
+
+   fun sep_components r = case DB r of NONE => [] | SOME ths => ths
 end
 
 (*

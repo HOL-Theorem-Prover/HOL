@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
-open binderLib
-open relationTheory nomsetTheory termTheory chap2Theory
+open arithmeticTheory relationTheory listTheory rich_listTheory hurdUtils;
+open binderLib nomsetTheory termTheory chap2Theory appFOLDLTheory;
 
 val _ = new_theory "horeduction";
 
@@ -182,6 +182,12 @@ QED
 (* |- !R x y z. conversion R x y /\ conversion R y z ==> conversion R x z *)
 Theorem conversion_TRANS = cj 3 conversion_rules
 
+(* |- !R x y. R x y ==> conversion R x y *)
+Theorem conversion_R = cj 4 conversion_rules
+
+(* |- !R x y. conversion R x y ==> conversion R y x *)
+Theorem conversion_SYM = cj 2 conversion_rules
+
 Theorem compat_closure_compatible:
   !R. compatible (compat_closure R)
 Proof
@@ -289,4 +295,57 @@ val can_reduce_reduces = store_thm(
 
 val normal_form_def = Define`normal_form R t = ~can_reduce R t`;
 
+(*---------------------------------------------------------------------------*
+ *  compat_closure and LAMl/appstar
+ *---------------------------------------------------------------------------*)
+
+Theorem compat_closure_LAMl :
+    !vs. compat_closure R x y ==> compat_closure R (LAMl vs x) (LAMl vs y)
+Proof
+    Induct_on ‘vs’ >> rw []
+ >> MATCH_MP_TAC compat_closure_LAM
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> rw []
+QED
+
+Theorem compat_closure_appstar :
+    !args R M N. compat_closure R M N ==> compat_closure R (M @* args) (N @* args)
+Proof
+    Induct_on ‘args’ using SNOC_INDUCT
+ >- rw []
+ >> rw [appstar_SNOC]
+ >> MATCH_MP_TAC compat_closure_APPL
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Theorem compat_closure_appstar' :
+    !R args t h m.
+       LENGTH args = m /\ h < m /\ compat_closure R N (EL h args) ==>
+       compat_closure R (t @* GENLIST (\i. if i = h then N else EL i args) m)
+                        (t @* args)
+Proof
+    Q.X_GEN_TAC ‘R’
+ >> Induct_on ‘args’ >- (rw [] >> fs [])
+ >> rw []
+ >> qabbrev_tac ‘t' = t @@ h’
+ >> Cases_on ‘h' = 0’
+ >- (fs [] \\
+     Know ‘GENLIST (\i. if i = 0 then N else EL i (h::args)) (SUC (LENGTH args)) =
+           N::args’
+     >- (rw [LIST_EQ_REWRITE] \\
+        ‘x = 0 \/ 0 < x’ by rw [] >> simp [EL_CONS]) >> Rewr' \\
+     simp [GSYM appstar_CONS, Abbr ‘t'’] \\
+     MATCH_MP_TAC compat_closure_appstar \\
+     MATCH_MP_TAC compat_closure_APPR >> art [])
+ >> Know ‘GENLIST (\i. if i = h' then N else EL i (h::args)) (SUC (LENGTH args)) =
+          h::GENLIST (\i. if i = h' - 1 then N else EL i args) (LENGTH args)’
+ >- (rw [LIST_EQ_REWRITE] \\
+     Cases_on ‘x = h'’ >> simp [EL_CONS] \\
+    ‘x = 0 \/ 0 < x’ by rw [] >> simp [EL_CONS])
+ >> Rewr'
+ >> simp [GSYM appstar_CONS, Abbr ‘t'’]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> simp []
+ >> fs [EL_CONS, PRE_SUB1]
+QED
+
 val _ = export_theory();
+val _ = html_theory "horeduction";

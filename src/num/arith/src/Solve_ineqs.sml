@@ -27,9 +27,7 @@ infix << THENC ##;
 val num_CONV = Num_conv.num_CONV;
 val MATCH_MP = Drule.MATCH_MP;
 
-fun failwith function = raise HOL_ERR{origin_structure = "Solve_ineqs",
-                                      origin_function = function,
-                                      message = ""};
+fun failwith function = raise mk_HOL_ERR "Solve_ineqs" function ""
 
 
 (*===========================================================================*)

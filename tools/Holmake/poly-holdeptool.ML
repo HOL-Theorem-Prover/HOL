@@ -16,9 +16,9 @@ use "Systeml.sig";
 use "../../tools-poly/Holmake/Systeml.sml";
 use "AttributeSyntax.sig";
 use "AttributeSyntax.sml";
-use "QuoteFilter.sml";
-use "QFRead.sig";
-use "QFRead.sml";
+use "HolLex.sml";
+use "HolParser.sig";
+use "HolParser.sml";
 use "holdeptool.sml";
 
 val main = holdeptool.main

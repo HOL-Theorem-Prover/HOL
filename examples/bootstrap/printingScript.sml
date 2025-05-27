@@ -84,7 +84,7 @@ Definition v2pretty_def:
                (Append (Str " . ") T (v2pretty e)))
 Termination
   WF_REL_TAC ‘measure v_size’ \\ rw []
-  \\ imp_res_tac dest_list_size \\ fs [v_size_def,isNum_def]
+  \\ imp_res_tac dest_list_size \\ fs [isNum_def]
 End
 
 Definition get_size_def:
@@ -203,15 +203,14 @@ Definition dest_cons_chain_def:
 End
 
 Theorem dest_cons_chain_size:
-  ∀x vs. dest_cons_chain x = SOME vs ⇒ exp1_size vs + op_size Cons + 1 ≤ exp_size x
+  ∀x vs. dest_cons_chain x = SOME vs ⇒ list_size exp_size vs + op_size Cons + 1 ≤ exp_size x
 Proof
   completeInduct_on ‘exp_size x’ \\ rw [] \\ fs [PULL_FORALL]
   \\ qpat_x_assum ‘dest_cons_chain _ = SOME _’ mp_tac
   \\ once_rewrite_tac [DefnBase.one_line_ify NONE dest_cons_chain_def]
-  \\ fs [AllCaseEqs()] \\ rw []
-  THEN1 (rw [] \\ fs [] \\ fs [exp_size_def])
+  \\ fs [AllCaseEqs()] \\ rw [] >> rw[]
   \\ first_assum (first_assum o mp_then Any mp_tac)
-  \\ strip_tac \\ fs [exp_size_def]
+  \\ strip_tac \\ fs []
 QED
 
 Definition up_const_def:
@@ -228,16 +227,6 @@ Theorem exp_size_non_zero:
   exp_size y ≠ 0
 Proof
   Cases_on ‘y’ \\ fs [exp_size_def]
-QED
-
-Triviality FRONT_exp1_size:
-  ¬NULL v ⇒ exp1_size (FRONT v) ≤ exp1_size v
-Proof
-  Cases_on ‘v = []’ \\ fs []
-  \\ qspec_then ‘v’ mp_tac SNOC_CASES \\ asm_rewrite_tac []
-  \\ strip_tac \\ full_simp_tac std_ss [FRONT_SNOC]
-  \\ rw [] \\ fs [SNOC_APPEND]
-  \\ Induct_on ‘l’ \\ fs [exp_size_def]
 QED
 
 Definition dest_case_lets_def:
@@ -301,10 +290,10 @@ Theorem dest_case_enum_exp_size:
 Proof
   ho_match_mp_tac dest_case_enum_ind
   \\ simp [dest_case_enum_def,AllCaseEqs()] \\ rw []
-  \\ gvs [list_size_def,exp_size_def]
+  \\ gvs []
   \\ qpat_x_assum ‘_ = SOME _’ mp_tac
   \\ simp [Once (oneline dest_case_enum_def), AllCaseEqs()]
-  \\ strip_tac \\ gvs [list_size_def,exp_size_def,exp_size_eq]
+  \\ strip_tac \\ gvs []
 QED
 
 Theorem dest_case_lets_exp_size:
@@ -312,15 +301,14 @@ Theorem dest_case_lets_exp_size:
 Proof
   ho_match_mp_tac dest_case_lets_ind
   \\ fs [dest_case_lets_def]
-  \\ rw [] \\ pairarg_tac \\ fs [] \\ rw []
-  \\ fs [exp_size_def]
+  \\ rw [] \\ pairarg_tac \\ gvs[]
 QED
 
 Theorem dest_case_tree_exp_size:
   ∀z a t xs y rows.
     dest_case_tree a (If t xs y z) = SOME rows ⇒
     list_size exp_size (MAP SND (MAP SND rows)) ≤ exp_size y + exp_size z ∧
-    exp_size a < exp1_size xs
+    exp_size a < list_size exp_size xs
 Proof
   gen_tac \\ completeInduct_on ‘exp_size z’
   \\ gen_tac \\ strip_tac \\ fs [PULL_FORALL]
@@ -329,14 +317,14 @@ Proof
   \\ rpt gen_tac \\ strip_tac
   \\ pairarg_tac \\ fs []
   \\ rpt BasicProvers.var_eq_tac
-  \\ rw [] \\ fs [exp_size_def,list_size_def]
-  \\ ‘exp_size z ≠ 0’ by (Cases_on ‘z’ \\ fs [exp_size_def])
+  \\ rw [] \\ fs []
+  \\ ‘exp_size z ≠ 0’ by (Cases_on ‘z’ \\ fs [])
   \\ imp_res_tac dest_case_lets_exp_size \\ fs []
   \\ Cases_on ‘z’ \\ fs [dest_case_tree_def]
-  \\ rw [] \\ fs [list_size_def,exp_size_def]
+  \\ rw [] \\ fs []
   \\ rename [‘If _ _ _ e4’]
   \\ first_x_assum (qspec_then ‘e4’ mp_tac)
-  \\ fs [exp_size_def]
+  \\ fs []
   \\ disch_then drule \\ fs []
 QED
 
@@ -396,13 +384,14 @@ Termination
   WF_REL_TAC ‘measure (λx. case x of INL v => exp_size v + 1
                                    | INR (INL v) => list_size exp_size v + 1
                                    | INR (INR v) => exp_size v)’ \\ rw []
-  \\ gvs [LENGTH_EQ_NUM_compute,list_size_def,exp_size_def,exp_size_eq]
+  \\ gvs [LENGTH_EQ_NUM_compute]
   \\ ‘exp_size x ≠ 0 ∧ exp_size y ≠ 0’ by fs [exp_size_non_zero] \\ fs []
-  \\ imp_res_tac dest_case_enum_exp_size \\ fs [exp_size_def]
-  \\ imp_res_tac dest_case_tree_exp_size \\ fs [exp_size_def]
-  \\ imp_res_tac dest_cons_chain_size \\ gvs [exp_size_eq,exp_size_def]
+  \\ imp_res_tac dest_case_enum_exp_size \\ fs []
+  \\ imp_res_tac dest_case_tree_exp_size \\ fs []
+  \\ imp_res_tac dest_cons_chain_size \\ gvs []
+  \\ fs [dest_cons_chain_def]
   \\ TRY (Cases_on ‘op’) \\ fs [dest_cons_chain_def]
-  \\ Cases_on ‘v’ \\ gvs [list_size_def]
+  \\ Cases_on ‘v’ \\ gvs []
 End
 
 Definition dec2v_def:

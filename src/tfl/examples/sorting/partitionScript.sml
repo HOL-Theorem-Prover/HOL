@@ -7,10 +7,6 @@ app load ["bossLib", "numLib"];
 
 open HolKernel Parse boolLib numLib bossLib listTheory;
 
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-infixr 3 -->;
-infix 8 by;
-
 val _ = new_theory "partition";
 
 (*---------------------------------------------------------------------------

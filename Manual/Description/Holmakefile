@@ -26,7 +26,8 @@ tactics.tex: tactics.stex $(PS_STUFF)
 
 theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 	$(dprot $(HOLDIR)/src/integer/integerTheory.uo) \
-	$(dprot $(SIGOBJ)/real_sigmaTheory.uo) \
+	$(dprot $(HOLDIR)/src/real/real_sigmaTheory.uo) \
+	$(dprot $(HOLDIR)/src/real/analysis/real_topologyTheory.uo) \
 	$(dprot $(SIGOBJ)/iterateTheory.uo)
 	$(PS_COMMAND)
 

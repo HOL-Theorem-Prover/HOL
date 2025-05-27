@@ -336,17 +336,14 @@ fun ppgoal (g as (asl,w)) =
 
    val goal_printer = ref (Parse.mlower o ppgoal)
 in
- val mppgoal = ppgoal
+ val pr_goal = ppgoal
  val std_pp_goal = Parse.mlower o ppgoal
  val pp_goal = !goal_printer
  fun set_goal_pp pp = !goal_printer before (goal_printer := pp)
 end;
 
-(* not clear that this function is used; certainly, default interactive system
-   uses Manager.sml's printer instead. *)
 fun pp_gstk gstk =
  let open smpp
-     val pr_goal = mppgoal
      fun pr (GSTK{prop = POSED g, stack = [], ...}) =
              block Portable.CONSISTENT 0 (
                add_string"Initial goal:" >> add_newline >> add_newline >>

@@ -54,6 +54,10 @@ list as they resolve against the theorem. The variant {drule_all_then}
 allows a continuation other than {MP_TAC} to be used. The variant
 {dxrule_all_then} combines both.
 
+A negated conclusion ({~Q}) is not treated as an implication ({Q ==> F})
+so the tactic will not attempt to find an instantiation of {Q} among the
+assumptions.
+
 \SEEALSO
 Tactic.drule, Tactic.IMP_RES_TAC.
 

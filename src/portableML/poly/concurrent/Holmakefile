@@ -1,1 +1,19 @@
 CLINE_OPTIONS = --no_overlay
+
+PORT_DEPS = $(dprot $(SIGOBJ)/Table.ui) $(dprot $(SIGOBJ)/Portable.ui)
+CD_DEPS = Future.ui
+ETDD_DEPS0 = Counter Exn Single_Assignment Standard_Thread Synchronized \
+           Thread_Attributes
+ETDD_DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%.ui),$(DD_DEPS0))
+
+TQDD_DEPS0 = Counter Par_Exn
+TQDD_DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%.ui),$(TQDD_DEPS0))
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+Event_Timer.uo: Event_Timer.sml Event_Timer.ui $(PORT_DEPS) $(CD_DEPS) $(ETDD_DEPS)
+	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/Table.ui) $<
+
+Task_Queue.uo: Task_Queue.sml Task_Queue.ui $(PORT_DEPS) $(TQDD_DEPS)
+	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/Table.ui) $<

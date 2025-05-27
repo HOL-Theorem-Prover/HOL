@@ -27,9 +27,7 @@ open Rationals;
 open Lib; infix ##;
 open Feedback;
 
-fun failwith function = raise HOL_ERR{origin_structure = "Sup_Inf",
-                                      origin_function = function,
-                                      message = ""};
+fun failwith function = raise mk_HOL_ERR "Sup_Inf" function ""
 
 
 (*===========================================================================*)

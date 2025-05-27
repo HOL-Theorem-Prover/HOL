@@ -9,8 +9,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open boolSimps arithmeticTheory stringTheory pred_setTheory numLib hurdUtils
-     listTheory rich_listTheory pairTheory numpairTheory
-     string_numTheory listRangeTheory;
+     listTheory rich_listTheory pairTheory numpairTheory string_numTheory;
 
 val _ = new_theory "basic_swap";
 
@@ -164,28 +163,25 @@ QED
 
 (* The primitive ‘alloc’ allocates a ranged list of variables in the row *)
 Definition alloc_def :
-    alloc r m n = MAP (n2s o npair r) [m ..< n]
+    alloc r z n = GENLIST (\i. n2s (npair r (z + i))) n
 End
 
-Theorem alloc_NIL[simp] :
-    alloc r n n = []
+Theorem alloc_0[simp] :
+    alloc r z 0 = []
 Proof
     rw [alloc_def]
 QED
 
 Theorem alloc_thm :
-    !r m n. ALL_DISTINCT (alloc r m n) /\ LENGTH (alloc r m n) = n - m
+    !r z n. ALL_DISTINCT (alloc r z n) /\ LENGTH (alloc r z n) = n
 Proof
-    rw [alloc_def]
- >> MATCH_MP_TAC ALL_DISTINCT_MAP_INJ >> rw []
+    rw [alloc_def, ALL_DISTINCT_GENLIST]
 QED
 
 Theorem alloc_prefix :
     !r m n n'. n <= n' ==> alloc r m n <<= alloc r m n'
 Proof
-    rw [alloc_def]
- >> MATCH_MP_TAC isPREFIX_MAP
- >> MATCH_MP_TAC isPREFIX_listRangeLHI >> art []
+    rw [alloc_def, isPREFIX_GENLIST]
 QED
 
 (* ----------------------------------------------------------------------
@@ -193,7 +189,7 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition RNEWS :
-    RNEWS r n s = let d = SUC (string_width s) in alloc r d (d + n)
+    RNEWS r n s = let z = SUC (string_width s) in alloc r z n
 End
 
 Theorem RNEWS_0[simp] :
@@ -204,16 +200,15 @@ QED
 
 Theorem RNEWS_def :
     !r n s.
-        FINITE s ==>
-        ALL_DISTINCT (RNEWS r n s) /\ DISJOINT (set (RNEWS r n s)) s /\
-        LENGTH (RNEWS r n s) = n
+       FINITE s ==>
+       ALL_DISTINCT (RNEWS r n s) /\ DISJOINT (set (RNEWS r n s)) s /\
+       LENGTH (RNEWS r n s) = n
 Proof
     rw [RNEWS, alloc_thm]
- >> rw [DISJOINT_ALT', alloc_def, MEM_MAP]
- >> rw [Once DISJ_COMM]
- >> STRONG_DISJ_TAC
- >> MP_TAC (Q.SPECL [‘n2s (r *, y)’, ‘s’] string_width_thm)
- >> rw []
+ >> rw [DISJOINT_ALT', alloc_def, MEM_MAP, MEM_GENLIST]
+ >> qabbrev_tac ‘x = n2s (r *, (i + SUC (string_width s)))’
+ >> MP_TAC (Q.SPECL [‘x’, ‘s’] string_width_thm)
+ >> simp [Abbr ‘x’]
 QED
 
 Theorem RNEWS_prefix :
@@ -222,15 +217,26 @@ Proof
     rw [RNEWS, alloc_prefix]
 QED
 
+Theorem TAKE_RNEWS :
+    !r m n s. FINITE s /\ m <= n ==> TAKE m (RNEWS r n s) = RNEWS r m s
+Proof
+    rw [RNEWS, alloc_def]
+ >> qabbrev_tac ‘z = string_width s’
+ >> simp [Once LIST_EQ_REWRITE]
+ >> Q.X_GEN_TAC ‘i’ >> DISCH_TAC
+ >> simp [EL_TAKE, EL_MAP]
+QED
+
 Theorem RNEWS_set :
     !r n s. set (RNEWS r n s) =
             {v | ?j. v = n2s (r *, j) /\
                      string_width s < j /\ j <= string_width s + n}
 Proof
     rw [RNEWS, alloc_def, Once EXTENSION, MEM_GENLIST, MEM_MAP]
+ >> qabbrev_tac ‘z = string_width s’
  >> EQ_TAC >> rw []
- >- (Q.EXISTS_TAC ‘y’ >> rw [])
- >> Q.EXISTS_TAC ‘j’ >> rw []
+ >- (Q.EXISTS_TAC ‘i + SUC z’ >> rw [])
+ >> Q.EXISTS_TAC ‘j - SUC z’ >> rw []
 QED
 
 Theorem RNEWS_11 :
@@ -288,8 +294,15 @@ QED
 Theorem alloc_SUBSET_ROW :
     !r m n. set (alloc r m n) SUBSET ROW r
 Proof
-    rw [alloc_def, ROW, SUBSET_DEF, MEM_MAP]
- >> Q.EXISTS_TAC ‘y’ >> rw []
+    rw [alloc_def, ROW, SUBSET_DEF, MEM_GENLIST]
+ >> Q.EXISTS_TAC ‘i + m’ >> art []
+QED
+
+Theorem ROW_DISJOINT :
+    !r1 r2. r1 <> r2 ==> DISJOINT (ROW r1) (ROW r2)
+Proof
+    rw [DISJOINT_ALT, ROW]
+ >> rw [n2s_11]
 QED
 
 Definition RANK_DEF :
@@ -363,6 +376,18 @@ Proof
  >> Q.EXISTS_TAC ‘j’ >> rw []
 QED
 
+Theorem DISJOINT_RNEWS :
+    !r1 r2 n1 n2 s1 s2. FINITE s1 /\ FINITE s2 /\ r1 <> r2 ==>
+        DISJOINT (set (RNEWS r1 n1 s1)) (set (RNEWS r2 n2 s2))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC DISJOINT_SUBSET
+ >> Q.EXISTS_TAC ‘ROW r2’ >> rw [RNEWS_SUBSET_ROW]
+ >> MATCH_MP_TAC DISJOINT_SUBSET'
+ >> Q.EXISTS_TAC ‘ROW r1’ >> rw [RNEWS_SUBSET_ROW]
+ >> MATCH_MP_TAC ROW_DISJOINT >> art []
+QED
+
 Theorem DISJOINT_RANK_RNEWS :
     !r1 r2 n s.
         FINITE s /\ r1 <= r2 ==> DISJOINT (RANK r1) (set (RNEWS r2 n s))
@@ -373,12 +398,22 @@ Proof
  >> rw [RANK_ROW_DISJOINT, RNEWS_SUBSET_ROW]
 QED
 
+(* |- !r1 r2 n s.
+        FINITE s /\ r1 <= r2 ==> DISJOINT (set (RNEWS r2 n s)) (RANK r1)
+ *)
+Theorem DISJOINT_RNEWS_RANK =
+    ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_RANK_RNEWS
+
 Theorem DISJOINT_RANK_RNEWS' :
     !r n s. FINITE s ==> DISJOINT (RANK r) (set (RNEWS r n s))
 Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC DISJOINT_RANK_RNEWS >> rw []
 QED
+
+(* |- !r n s. FINITE s ==> DISJOINT (set (RNEWS r n s)) (RANK r) *)
+Theorem DISJOINT_RNEWS_RANK' =
+    ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_RANK_RNEWS'
 
 Theorem RNEWS_SUBSET_RANK :
     !r1 r2 n s. FINITE s /\ r1 < r2 ==>

@@ -6,12 +6,19 @@ structure TotalDefn :> TotalDefn =
 struct
 
 open HolKernel Parse boolLib pairLib basicSize DefnBase numSyntax
-     arithmeticTheory;
+     relationTheory combinTheory prim_recTheory arithmeticTheory
+     basicSizeTheory pairTheory
+
+local open numSimps in end
+
+open simpLib infix ++;
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+  val SOME arithmetic_grammars = grammarDB {thyname="arithmetic"}
+  val (Type,Term) = parse_from_grammars arithmetic_grammars
 end
+
 open Parse
 
 val allow_schema_definition = ref false
@@ -142,7 +149,8 @@ fun proper_subterm tm1 tm2 =
 
 
 (*---------------------------------------------------------------------------*)
-(* Adjustable set of rewrites for doing termination proof.                   *)
+(* termination_simps is an adjustable set of rewrites for doing termination  *)
+(* proofs. It is created by the call to "create_simple_dictionary            *)
 (*---------------------------------------------------------------------------*)
 
 val DIV_LESS_I = prove
@@ -157,8 +165,6 @@ val SUB_LESS_I = prove
 (``!m n. 0n < n /\ n <= m ==> I(m - n) < I(m)``,
  REWRITE_TAC[SUB_LESS,combinTheory.I_THM]);
 
-local open combinTheory prim_recTheory relationTheory basicSizeTheory pairTheory
-in end
 val initial_termination_simps = [("SUB_LESS_I", SUB_LESS_I),
                                  ("DIV_LESS_I", DIV_LESS_I),
                                  ("MOD_LESS_I", MOD_LESS_I)]
@@ -206,28 +212,24 @@ val {getDB = WF_thms, export = export_WF_thm, ...} =
 
 
 (*---------------------------------------------------------------------------*)
-(* Same as pairSimps.PAIR_ss, except more eager to force paired              *)
-(* beta-reductions. For example, should reduce "(\(x,y). M x y) N" to        *)
-(* "M (FST N) (SND N)"                                                       *)
+(* Once higher level definitions are expanded, there remains an essentially  *)
+(* arithmetic formula and term_dp_ss is invoked. We perform any (paired)     *)
+(* beta-reductions, eg. expand "(\(x,y). M x y) N" to "M (FST N) (SND N)",   *)
+(* and do arithmetic simplification before invoking an arithmetic decision   *)
+(* procedure.                                                                *)
 (*---------------------------------------------------------------------------*)
 
 val term_ss =
- let open simpLib infix ++
- in boolSimps.bool_ss
+ boolSimps.bool_ss
     ++ pairSimps.PAIR_ss
     ++ pairSimps.paired_forall_ss
     ++ pairSimps.paired_exists_ss
     ++ pairSimps.gen_beta_ss
     ++ rewrites [pairTheory.FORALL_PROD]
     ++ numSimps.REDUCE_ss
-    ++ numSimps.ARITH_RWTS_ss
- end;
+    ++ numSimps.ARITH_RWTS_ss;
 
-val term_dp_ss =
- let open simpLib infix ++
- in term_ss ++ numSimps.ARITH_DP_ss
- end;
-
+val term_dp_ss = term_ss ++ numSimps.ARITH_DP_ss
 
 (*---------------------------------------------------------------------------*)
 (* Destruct R (x1,...,xn) (y1,...ym) into [(x1,y1), ... , (xn,yn)],          *)
@@ -376,6 +378,7 @@ val simplifyR =
 (* Build a type size, not counting outer sum or pair constructors,           *)
 (* which are likely to be created by mutual recursion.                       *)
 (*---------------------------------------------------------------------------*)
+
 fun flat_type_size ty = case
         (total sumSyntax.dest_sum ty, total pairSyntax.dest_prod ty) of
     (SOME (lty, rty), _) => list_mk_icomb (basicSizeSyntax.sum_size_tm,
@@ -475,25 +478,6 @@ fun BC_TAC th =
 fun PRIM_WF_TAC thl = REPEAT (MAP_FIRST BC_TAC thl ORELSE CONJ_TAC);
 fun WF_TAC g = PRIM_WF_TAC (WF_thms()) g;
 
-(*---------------------------------------------------------------------------*)
-(* Apply _size_eq theorems.                                                  *)
-(*---------------------------------------------------------------------------*)
-
-fun size_eq_conv tm = let
-    val tys = tm |> find_terms is_const |> map type_of
-      |> map (fst o strip_fun) |> List.concat
-    fun ty_rec ty_s [] = HOLset.listItems ty_s
-      | ty_rec ty_s (ty :: tys) = if is_type ty
-          then ty_rec (HOLset.add (ty_s, ty)) (snd (dest_type ty) @ tys)
-          else ty_rec ty_s tys
-    val all_tys = ty_rec (HOLset.empty Type.compare) tys
-    val size_eqs = mapfilter TypeBase.axiom_of all_tys
-      |> map Prim_rec.doms_of_tyaxiom |> List.concat
-      |> mapfilter TypeBase.size_of
-      |> map fst |> mapfilter dest_thy_const
-      |> mapfilter (fn xs => fetch (#Thy xs) (#Name xs ^ "_eq"))
-  in simpLib.SIMP_CONV boolSimps.bool_ss size_eqs tm end
-
 (*--------------------------------------------------------------------------*)
 (* Basic simplification and proof for remaining termination conditions.     *)
 (*--------------------------------------------------------------------------*)
@@ -501,7 +485,26 @@ fun size_eq_conv tm = let
 fun get_orig (TypeBasePure.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
-fun PRIM_TC_SIMP_CONV simps =
+(*---------------------------------------------------------------------------*)
+(* Convert a tactic to a conv                                                *)
+(*---------------------------------------------------------------------------*)
+
+fun TAC_CONV tac tm =
+    TAC_PROOF (([], tm), REWRITE_TAC [] THEN tac) |> EQT_INTRO;
+
+fun SOLVES tac g =
+  let val result as (subgoals, vfn) = tac g
+  in if null subgoals then result else NO_TAC g
+  end
+
+val solve_conjs = EVERY_CONJ_CONV o TRY_CONV o TAC_CONV
+
+(*---------------------------------------------------------------------------*)
+(* Simplify with context definitions for size and case constructs, plus      *)
+(* underlying rewrites for pairs and numbers.                                *)
+(*---------------------------------------------------------------------------*)
+
+fun TC_SIMP_CONV simps =
  let val els = TypeBasePure.listItems (TypeBase.theTypeBase())
      val size_defs =
          mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els
@@ -510,66 +513,78 @@ fun PRIM_TC_SIMP_CONV simps =
   simpLib.SIMP_CONV term_ss (simps@size_defs@case_defs)
  end;
 
-fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (termination_simps()) tm;
-
 val ASM_ARITH_TAC =
- REPEAT STRIP_TAC
-    THEN REPEAT (POP_ASSUM
-         (fn th => if numSimps.is_arith (concl th)
-                   then MP_TAC th else ALL_TAC))
-    THEN CONV_TAC Arith.ARITH_CONV;
+  let fun keep_arith th =
+       if numSimps.is_arith (concl th) then MP_TAC th else ALL_TAC
+  in
+    REPEAT STRIP_TAC THEN
+    REPEAT (POP_ASSUM keep_arith) THEN
+    CONV_TAC Arith.ARITH_CONV
+  end
 
 fun EX_ARITH_TAC exthl =
- CHANGED_TAC (CONV_TAC size_eq_conv THEN simpLib.SIMP_TAC term_ss exthl)
-    THEN REPEAT STRIP_TAC THEN simpLib.ASM_SIMP_TAC term_ss []
-    THEN CONV_TAC (PRIM_TC_SIMP_CONV exthl)
+    simpLib.SIMP_TAC term_ss exthl THEN
+    REPEAT STRIP_TAC THEN simpLib.ASM_SIMP_TAC term_ss []
+    THEN CONV_TAC (TC_SIMP_CONV exthl)
     THEN ASM_ARITH_TAC
 
-fun solve_conv tac tm =
-    TAC_PROOF (([], tm), REWRITE_TAC [] THEN tac) |> EQT_INTRO
 
-fun solve_conjs tac = EVERY_CONJ_CONV (TRY_CONV (solve_conv tac))
+fun TC_SIMP_TAC thl exthl =
+  CONV_TAC (TC_SIMP_CONV thl) THEN
+  CONV_TAC (solve_conjs
+              (TRY ASM_ARITH_TAC THEN TRY (EX_ARITH_TAC (exthl @ thl))))
+  THEN REWRITE_TAC []
 
-fun PRIM_TC_SIMP_TAC thl exthl =
-  CONV_TAC (PRIM_TC_SIMP_CONV thl)
-    THEN CONV_TAC (solve_conjs (TRY ASM_ARITH_TAC THEN TRY (EX_ARITH_TAC (exthl @ thl))))
-    THEN REWRITE_TAC []
+(*---------------------------------------------------------------------------*)
+(* Apply both WF solver and TC solver to goal already instantiated with      *)
+(* termination relation.                                                     *)
+(*---------------------------------------------------------------------------*)
 
-fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC
-    (termination_simps()) (!termination_solve_simps) g;
-
-fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
-
-val STD_TERM_TAC = PRIM_TERM_TAC WF_TAC TC_SIMP_TAC;
-
-local
-  fun mesg tac (g as (_,tm)) =
-    (if !Defn.monitoring then
-      print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
-      else () ;
-     tac g)
-in
-fun PROVE_TERM_TAC g =
- let open combinTheory simpLib
-     val simps = map (PURE_REWRITE_RULE [I_THM]) (termination_simps())
-     val ss = term_dp_ss ++ rewrites simps
- in
-   PRIM_TERM_TAC WF_TAC
-      (CONV_TAC TC_SIMP_CONV THEN BasicProvers.PRIM_STP_TAC ss NO_TAC)
- end g
-end;
-
+fun TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
 
 (*---------------------------------------------------------------------------*)
 (* Instantiate the termination relation with q and then try to prove         *)
-(* wellfoundedness and remaining termination conditions.                     *)
+(* wellfoundedness and remaining termination conditions. Return a reduced    *)
+(* and hopefully legible goal if not all TCs are dispatched.                 *)
 (*---------------------------------------------------------------------------*)
 
-fun PRIM_WF_REL_TAC q WFthms simps exsimps g =
-  (Q.EXISTS_TAC q THEN CONJ_TAC THENL
-   [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps exsimps]) g;
+(*
+fun WF_REL_TAC q =
+  Q.EXISTS_TAC q THEN
+  TERM_TAC
+    WF_TAC
+    (TC_SIMP_TAC
+       (termination_simps())
+       (!termination_solve_simps))
+*)
 
-fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
+fun WF_REL_TAC q =
+  let val term_simps = termination_simps()
+      val simps = map (PURE_REWRITE_RULE [combinTheory.I_THM]) term_simps
+      val reduce_tac = CONV_TAC (TC_SIMP_CONV term_simps)
+      val cleanup_tac = BasicProvers.PRIM_STP_TAC (term_dp_ss ++ rewrites simps) NO_TAC
+      val nice_cleanup_tac = CONV_TAC (solve_conjs cleanup_tac)
+  in
+    Q.EXISTS_TAC q THEN
+    TERM_TAC WF_TAC (reduce_tac THEN nice_cleanup_tac)
+  end
+
+(*---------------------------------------------------------------------------*)
+(* Attempt to prove goal of form WF R /\ P R, where R has already been set   *)
+(* to a concrete relation. tac1 ORELSE tac2 is a kludge added because tac2   *)
+(* can get some TCs that tac1 can't.                                         *)
+(*---------------------------------------------------------------------------*)
+
+fun PROVE_TERM_TAC g =
+ let val term_simps = termination_simps()
+     val simps = map (PURE_REWRITE_RULE [combinTheory.I_THM]) term_simps
+     val reduce_tac = CONV_TAC (TC_SIMP_CONV term_simps)
+     val cleanup_tac = BasicProvers.PRIM_STP_TAC (term_dp_ss ++ rewrites simps) NO_TAC
+     val tac1 = reduce_tac THEN cleanup_tac
+     val tac2 = TC_SIMP_TAC term_simps (!termination_solve_simps)
+ in
+   TERM_TAC WF_TAC (SOLVES tac1 ORELSE tac2)
+ end g
 
 
 (*---------------------------------------------------------------------------
@@ -583,8 +598,7 @@ fun reln_is_not_set defn =
   of NONE => false
    | SOME R => is_var R;
 
-fun proveTotal tac defn =
-  let val (WFR,rest) = get_WF (Defn.tcs_of defn)
+fun proveTotal tac defn =  let val (WFR,rest) = get_WF (Defn.tcs_of defn)
       val form = list_mk_conj(WFR::rest)
       val thm = Tactical.default_prover(form,tac)
   in
@@ -738,16 +752,17 @@ val tDefine = located_tDefine DB.Unknown
     version of Define that allows control of options with "attributes"
     attached to the name, and provides an optional termination tactic
    ---------------------------------------------------------------------- *)
-fun test_remove n sl =
-    if mem n sl then (true, set_diff sl [n]) else (false, sl)
+fun test_remove n kvl =
+    let val (ns, rest) = Lib.partition (fn (k,_) => k = n) kvl
+    in
+      (not (null ns), rest)
+    end
 
-fun find_indoption sl =
-    case List.find (String.isPrefix "induction=") sl of
-        NONE => (NONE, sl)
-      | SOME s => (
-          SOME (String.extract(s,size "induction=",NONE)),
-          set_diff sl [s]
-      )
+fun find_indoption kvl =
+    case Lib.partition (fn (k,_) => k = "induction") kvl of
+        ([], _) => (NONE, kvl)
+      | ([(k,[v])], rest) => (SOME v, rest)
+      | _ => raise ERR "Definition" "multiple induction attribute-values"
 
 fun tailrecDefine loc nm q =
     let
@@ -758,15 +773,23 @@ fun tailrecDefine loc nm q =
       th
     end
 
+val _ = List.app ThmAttribute.reserve_word
+                 ["nocompute", "schematic", "tailrecursive"]
+
 fun located_qDefine loc stem q tacopt =
     let
-      val (corename, attrs) = ThmAttribute.extract_attributes stem
-      val (nocomp, attrs) = test_remove "nocompute" attrs
-      val (svarsok, attrs) = test_remove "schematic" attrs
-      val (notuserdef, attrs) = test_remove "notuserdef" attrs
-      val (rebindok, attrs) = test_remove "allow_rebind" attrs
-      val (tailrecp, attrs) = test_remove "tailrecursive" attrs
-      val (indopt,attrs) = find_indoption attrs
+      val {thmname=corename, attrs=attrs,reserved=R,unknown} =
+          ThmAttribute.extract_attributes stem
+      val (nocomp, R) = test_remove "nocompute" R
+      val (svarsok, R) = test_remove "schematic" R
+      val (notuserdef, R) = test_remove "notuserdef" R
+      val (rebindok, R) = test_remove "allow_rebind" R
+      val (tailrecp, R) = test_remove "tailrecursive" R
+      val (indopt, R) = find_indoption R
+      val _ = null unknown orelse
+              raise ERR "Definition"
+                    ("Unknown attributes: " ^
+                     String.concatWith ", " (map #1 unknown))
       fun fmod f =
           f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
                 else (fn f => f))
@@ -786,10 +809,10 @@ fun located_qDefine loc stem q tacopt =
                     \no sense"
             | (false, NONE) => fmod (located_xDefine loc corename) q
             | (false, SOME tac) => fmod (located_tDefine loc corename q) tac
-      fun proc_attr a =
-          ThmAttribute.store_at_attribute{name = corename, attrname = a,
-                                          thm = thm}
-      val attrs = if notuserdef then attrs else "userdef" :: attrs
+      fun proc_attr (k,vs) =
+          ThmAttribute.store_at_attribute{name = corename, attrname = k,
+                                          args = vs, thm = thm}
+      val attrs = if notuserdef then attrs else ("userdef",[]) :: attrs
       val gen_ind =
           if tailrecp then (fn th => raise ERR "Unseen" "")
           else Prim_rec.gen_indthm {lookup_ind = TypeBase.induction_of}

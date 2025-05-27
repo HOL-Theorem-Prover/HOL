@@ -867,7 +867,10 @@ class characters.")
                 (sb (holscript-syntax-convert (syntax-after (1- (point))))))
             (if (or (nth 3 pp1) (nth 4 pp1))
                 (goto-char (nth 8 pp1))
-              (if (and sb (equal sa sb)) (forward-char -1)
+              (if (and sb (equal sa sb))
+                  (progn (forward-char -1)
+                         (if (or (looking-at "∃!") (looking-at "?!"))
+                             (throw 'found-one (point))))
                 (if (equal (car (last (nth 9 pp1))) limit)
                     (if (or (looking-at holscript-quantifier-regexp)
                             (looking-at holscript-lambda-regexp)
@@ -1395,7 +1398,7 @@ class characters.")
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
                             auto-mode-alist))
 
-(if (fboundp 'yas-minor-mode)
+(if (boundp 'yas-snippet-dirs)
     (progn
       (setq yas-snippet-dirs
             (append

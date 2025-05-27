@@ -1,6 +1,4 @@
 (* ========================================================================= *)
-(* File Name: WSNScript.sml                                                  *)
-(*---------------------------------------------------------------------------*)
 (* Description: Formal Reliability Analysis of Data Transport Protocol       *)
 (*                 using Theorem Proving                                     *)
 (*                                                                           *)
@@ -10,16 +8,15 @@
 (*                                                                           *)
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
-(*                                                                           *)
-(*                                                                           *)
 (* ========================================================================= *)
 
 open HolKernel boolLib bossLib Parse;
 
 open limTheory arithmeticTheory realTheory prim_recTheory real_probabilityTheory
-     seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools listTheory transcTheory
-     rich_listTheory pairTheory combinTheory realLib  optionTheory util_probTheory extrealTheory real_measureTheory
-     real_lebesgueTheory real_sigmaTheory satTheory numTheory dep_rewrite extra_pred_setTools;
+     seqTheory pred_setTheory res_quanTheory sortingTheory res_quanTools
+     listTheory transcTheory rich_listTheory pairTheory combinTheory realLib
+     optionTheory extrealTheory real_measureTheory real_lebesgueTheory
+     real_sigmaTheory satTheory numTheory dep_rewrite extra_pred_setTools;
 
 open RBDTheory FT_deepTheory VDCTheory smart_gridTheory ASN_gatewayTheory;
 
@@ -27,10 +24,8 @@ fun K_TAC _ = ALL_TAC;
 
 val _ = new_theory "WSN";
 
-(*--------------------*)
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
 (*--------------------------------------*)
 Theorem E2W_WSN :

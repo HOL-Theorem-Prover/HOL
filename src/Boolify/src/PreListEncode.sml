@@ -77,7 +77,7 @@ val list_info' = TypeBasePure.put_encode list_boolify_info list_info;
 
 val num_info = Option.valOf (TypeBase.read {Thy = "num", Tyop = "num"});
 val num_boolify_info =
-  (Term`encode_num`, TypeBasePure.ORIG encode_num_primitive_def);
+  (Term`encode_num`, TypeBasePure.ORIG encode_num_def);
 val num_info' = TypeBasePure.put_encode num_boolify_info num_info;
 
 (*---------------------------------------------------------------------------

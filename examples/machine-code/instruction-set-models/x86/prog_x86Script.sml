@@ -8,10 +8,6 @@ open set_sepTheory progTheory x86_Theory x86_seq_monadTheory x86_icacheTheory;
 val _ = new_theory "prog_x86";
 val _ = ParseExtras.temp_loose_equality()
 
-
-infix \\
-val op \\ = op THEN;
-
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 

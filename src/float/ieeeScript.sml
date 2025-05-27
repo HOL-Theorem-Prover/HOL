@@ -7,8 +7,6 @@
  * First, make standard environment available.                               *
  *---------------------------------------------------------------------------*)
 open HolKernel Parse boolLib;
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
 (*---------------------------------------------------------------------------*
  * Next, bring in extra tools used.                                          *
@@ -41,7 +39,7 @@ val wordlength = new_definition (
 
 val emax  = new_definition (
   "emax",
-  “emax(X: (num#num)) =  (((2:num) EXP (expwidth (X))) - (1:num))”);
+  “emax(X: (num#num)) = (((2:num) EXP (expwidth (X))) - (1:num))”);
 
 val bias = new_definition (
   "bias",
@@ -331,7 +329,7 @@ val fsub = new_definition (
    else if is_infinity(X) b then minus(X) b
    else zerosign(X) (if is_zero(X) a /\ is_zero(X) b /\ ~(sign(a) = sign(b)) then sign(a) else if m = To_ninfinity then 1 else 0) (round(X) m (valof(X) a - valof(X) b)))”);
 
-val fmul =  new_definition (
+val fmul = new_definition (
   "fmul",
   “fmul(X:num#num) (m:roundmode) (a:num#num#num) (b:num#num#num) =
   (if is_nan(X) a \/ is_nan(X) b \/ is_zero(X) a /\ is_infinity(X) b \/ is_infinity(X) a /\ is_zero(X) b then some_nan(X)
@@ -372,11 +370,9 @@ val fneg = new_definition (
 (* Comparison codes.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val ccode =  Hol_datatype `
-  ccode = Gt
-    | Lt
-      | Eq
-        | Un`;
+Datatype:
+  ccode = Gt | Lt | Eq | Un
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Comparison operations.                                                    *)

@@ -100,11 +100,10 @@ local open Parse_support Absyn
 in
   fun absyn_to_preterm_in_env TmG t = let
     val oinfo = term_grammar.overload_info TmG
-    fun binder(VIDENT (l,s))    = make_binding_occ l s
-      | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2]
-                                               NONE
-      | binder(VAQ (l,x))       = make_aq_binding_occ l x
-      | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME pty)
+    fun binder l' (VIDENT (l,s))    = make_binding_occ l' l s
+      | binder l' (VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder l' v1, binder l' v2] NONE
+      | binder l' (VAQ (l,x))       = make_aq_binding_occ l' l x
+      | binder l' (VTYPED(l,v,pty)) = make_vstruct oinfo l [binder l' v] (SOME pty)
     open parse_term Absyn Parse_support
     val to_ptmInEnv = absyn_to_preterm_in_env TmG
     val (f, args) = Absyn.strip_app t
@@ -202,15 +201,34 @@ in
             | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
             | IDENT (l, s)       => make_atom oinfo l s
             | QIDENT (l, s1, s2) => make_qconst l (s1,s2)
-            | LAM(l, vs, t)      => bind_term l [binder vs] (to_ptmInEnv t)
+            | LAM(l, vs, t)      => bind_term l [binder l vs] (to_ptmInEnv t)
             | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
             | AQ (l, t)          => make_aq l t
         end
   end
 end;
 
-fun absyn_to_preterm g a =
-  a |> absyn_to_preterm_in_env g |> Parse_support.make_preterm
+fun dest_uname s =
+    if size s >= 2 andalso String.sub(s,0) = #"_" then
+      let val stl = String.extract(s,1,NONE)
+      in
+        if CharVector.all Char.isDigit stl then Int.fromString stl
+        else NONE
+      end
+    else NONE
+fun getfreshuscore vnames =
+    case List.mapPartial dest_uname vnames of
+        [] => 0
+      | i::is => List.foldl Int.max i is + 1
+
+fun ctxt_absyn_to_preterm g fvs a =
+    let val maxuscore = getfreshuscore (map (#1 o dest_var) fvs)
+    in
+      a |> absyn_to_preterm_in_env g
+        |> Parse_support.make_preterm{next_uscore=maxuscore}
+    end
+
+fun absyn_to_preterm g = ctxt_absyn_to_preterm g []
 
 fun preterm g tyg q : preterm Pretype.in_env =
   q |> absyn g tyg |> absyn_to_preterm g
@@ -283,7 +301,7 @@ local
           case List.find (name_eq Name) ctxt of
             NONE => raise UNCHANGED
           | SOME ctxt_tm => Var{Locn = Locn, Name = Name,
-                                Ty =  Pretype.fromType (type_of ctxt_tm)}
+                                Ty = Pretype.fromType (type_of ctxt_tm)}
         else raise UNCHANGED
       end
     | Comb{Rator, Rand, Locn} => let
@@ -292,7 +310,7 @@ local
           val rator = gtf boundvars Rator
         in
           let
-            val rand =  gtf boundvars Rand
+            val rand = gtf boundvars Rand
           in
             Comb{Rator = rator, Rand = rand, Locn = Locn}
           end handle UNCHANGED => Comb{Rator = rator, Rand = Rand, Locn = Locn}
@@ -344,7 +362,7 @@ in
       open seqmonad
       fun givetypes pt = give_types_to_fvs fvs [] pt handle UNCHANGED => pt
       val pt_S = q |> mk_absyn
-                   |> absyn_to_preterm g
+                   |> ctxt_absyn_to_preterm g fvs
                    |> fromErr
                    |> lift givetypes
     in

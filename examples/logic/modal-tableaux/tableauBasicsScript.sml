@@ -183,10 +183,8 @@ QED
 Datatype: tmodel = Nd (num list) (tmodel list)
 End
 
-Theorem tmodel_size_def[simp,allow_rebind] = definition "tmodel_size_def"
-
 Theorem MEM_tmodel_size:
-  MEM t ts ⇒ tmodel_size t < tmodel1_size ts
+  MEM t ts ⇒ tmodel_size t < list_size tmodel_size ts
 Proof
   Induct_on ‘ts’ >> rw[] >> res_tac >> simp[]
 QED

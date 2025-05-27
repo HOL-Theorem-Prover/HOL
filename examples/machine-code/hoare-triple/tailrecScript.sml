@@ -4,10 +4,6 @@ open pred_setTheory arithmeticTheory whileTheory sumTheory;
 
 val _ = new_theory "tailrec";
 
-infix \\
-val op \\ = op THEN;
-
-
 (* ---- definitions ----- *)
 
 val TAILREC_PRE_def = Define `

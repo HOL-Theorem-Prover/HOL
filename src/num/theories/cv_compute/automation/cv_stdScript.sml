@@ -103,7 +103,7 @@ val res = cv_trans TAKE_def;
 
 val res = cv_trans DROP_def;
 
-val res = cv_trans_pre EL;
+val res = cv_trans_pre EL_def;
 
 Theorem EL_pre[cv_pre]:
   !n xs. EL_pre n xs <=> n < LENGTH xs

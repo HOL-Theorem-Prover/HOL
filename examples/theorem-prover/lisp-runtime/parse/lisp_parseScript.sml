@@ -15,8 +15,6 @@ val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
@@ -530,7 +528,7 @@ fun FORCE_PBETA_CONV tm = let
   val vs = fst (pairSyntax.dest_pabs tm1)
   fun expand_pair_conv tm = ISPEC tm (GSYM pairTheory.PAIR)
   fun get_conv vs = let
-    val (x,y) = dest_pair vs
+    val (x,y) = pairSyntax.dest_pair vs
     in expand_pair_conv THENC (RAND_CONV (get_conv y)) end
     handle e => ALL_CONV
   in (RAND_CONV (get_conv vs) THENC PairRules.PBETA_CONV) tm end;

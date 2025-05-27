@@ -42,6 +42,7 @@ sig
 
   val inst_defn  : defn -> (term,term)subst * (hol_type,hol_type)subst -> defn
   val set_reln   : defn -> term -> defn
+  val instantiate_aux : defn -> term -> (thm -> thm) -> thm list
 
   val elim_tcs   : defn -> thm list -> defn
   val simp_tcs   : defn -> conv -> defn
@@ -49,6 +50,7 @@ sig
 
   val triv_defn  : defn -> bool
   val fetch_eqns : defn -> thm
+
 
   val been_stored: string * thm -> unit
   val store      : string * thm * thm -> unit
@@ -71,5 +73,13 @@ sig
   val tprove_no_defn : (thm * thm) * tactic -> thm * thm
 
   val SUC_TO_NUMERAL_DEFN_CONV_hook : (term -> thm) ref
+
+  val build_eqns
+     : term quotation -> term list * Extract.simpls * (term * term) * (term * thm) list
+  val build_eqns_from_term
+     : term -> term list * Extract.simpls * (term * term) * (term * thm) list
+
+  val extract_tcs : term quotation -> (thm * term list * bool) list
+  val extract_tcs_from_term : term -> (thm * term list * bool) list
 
 end

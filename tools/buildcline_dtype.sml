@@ -10,12 +10,14 @@ type t = {kernelspec : string option,
           multithread : int option,
           build_theory_graph : bool option,
           selftest : int option,
-          relocbuild : bool}
+          relocbuild : bool,
+          timelimit : int option}
 
 val initial : t =
     { kernelspec = NONE, jobcount = NONE, seqname = NONE, help = false,
       build_theory_graph = NONE, selftest = NONE, debug = false,
-      relocbuild = false, multithread = NONE, keepgoing = false
+      relocbuild = false, multithread = NONE, keepgoing = false,
+      timelimit = NONE
     }
 
 type 'a final_options =
@@ -27,7 +29,8 @@ type 'a final_options =
       jobcount : int option,
       multithread : int option,
       keepgoing : bool,
-      relocbuild : bool}
+      relocbuild : bool,
+      timelimit : int option}
 
 
 

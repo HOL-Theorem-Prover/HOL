@@ -5,11 +5,7 @@ val _ = new_theory "my_list";
 
 (* ------------------------------------------------------------------------- *)
 
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
+val op >- = op THEN1;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -17,9 +13,9 @@ val LIST_EQ = store_thm("LIST_EQ",
   `!a b. (LENGTH a = LENGTH b) /\
          (!x. x < LENGTH a ==> (EL x a = EL x b)) ==>
          (a = b)`,
-  Induct_on `b` >> SIMP_TAC list_ss [LENGTH_NIL]
+  Induct_on `b` >- SIMP_TAC list_ss [LENGTH_NIL]
     \\ Induct_on `a` \\ RW_TAC list_ss []
-    >> POP_ASSUM (fn th => PROVE_TAC [(SIMP_RULE list_ss [] o SPEC `0`) th])
+    >- POP_ASSUM (fn th => PROVE_TAC [(SIMP_RULE list_ss [] o SPEC `0`) th])
     \\ POP_ASSUM (fn th => PROVE_TAC
          [(GEN_ALL o SIMP_RULE list_ss [] o SPEC `SUC x`) th]));
 
@@ -30,14 +26,14 @@ val NULL_SNOC = store_thm("NULL_SNOC",
 val FILTER_ALL = store_thm("FILTER_ALL",
   `!l. (!n. n < LENGTH l ==> ~P (EL n l)) ==> (FILTER P l = [])`,
   Induct \\ RW_TAC list_ss []
-    >> (EXISTS_TAC `0` \\ ASM_SIMP_TAC list_ss [])
+    >- (EXISTS_TAC `0` \\ ASM_SIMP_TAC list_ss [])
     \\ POP_ASSUM (fn th => PROVE_TAC
          [(GEN_ALL o SIMP_RULE list_ss [] o SPEC `SUC n`) th]));
 
 val FILTER_NONE = store_thm("FILTER_NONE",
   `!l. (!n. n < LENGTH l ==> P (EL n l)) ==> (FILTER P l = l)`,
   Induct \\ RW_TAC list_ss []
-    >> POP_ASSUM (fn th => ASM_SIMP_TAC std_ss
+    >- POP_ASSUM (fn th => ASM_SIMP_TAC std_ss
          [(GEN_ALL o SIMP_RULE list_ss [] o SPEC `SUC n`) th])
     \\ POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE list_ss [] o SPEC `0`));
 
@@ -47,13 +43,13 @@ val MAP_GENLIST = store_thm("MAP_GENLIST",
 
 val EL_GENLIST = store_thm("EL_GENLIST",
   `!f n x. x < n ==> (EL x (GENLIST f n) = f x)`,
-  Induct_on `n` >> SIMP_TAC arith_ss []
+  Induct_on `n` >- SIMP_TAC arith_ss []
     \\ REPEAT STRIP_TAC \\ REWRITE_TAC [GENLIST]
     \\ Cases_on `x < n`
     \\ POP_ASSUM (fn th => ASSUME_TAC
            (SUBS [(GSYM o SPECL [`f`,`n`]) LENGTH_GENLIST] th)
               \\ ASSUME_TAC th)
-    >> ASM_SIMP_TAC bool_ss [EL_SNOC]
+    >- ASM_SIMP_TAC bool_ss [EL_SNOC]
     \\ `x = LENGTH (GENLIST f n)` by FULL_SIMP_TAC arith_ss [LENGTH_GENLIST]
     \\ ASM_SIMP_TAC bool_ss [EL_LENGTH_SNOC]
     \\ REWRITE_TAC [LENGTH_GENLIST]);
@@ -99,10 +95,10 @@ val ZIP_APPEND = store_thm("ZIP_APPEND",
   `!a b c d. (LENGTH a = LENGTH b) /\
              (LENGTH c = LENGTH d) ==>
              (ZIP (a,b) ++ ZIP (c,d) = ZIP (a ++ c,b ++ d))`,
-  Induct_on `b` >> SIMP_TAC list_ss [LENGTH_NIL]
-    \\ Induct_on `d` >> SIMP_TAC list_ss [LENGTH_NIL]
-    \\ Induct_on `a` >> SIMP_TAC list_ss [LENGTH_NIL]
-    \\ Induct_on `c` >> SIMP_TAC list_ss [LENGTH_NIL]
+  Induct_on `b` >- SIMP_TAC list_ss [LENGTH_NIL]
+    \\ Induct_on `d` >- SIMP_TAC list_ss [LENGTH_NIL]
+    \\ Induct_on `a` >- SIMP_TAC list_ss [LENGTH_NIL]
+    \\ Induct_on `c` >- SIMP_TAC list_ss [LENGTH_NIL]
     \\ MAP_EVERY X_GEN_TAC [`h1`,`h2`,`h3`,`h4`]
     \\ RW_TAC list_ss []
     \\ `LENGTH (h1::c) = LENGTH (h3::d)`

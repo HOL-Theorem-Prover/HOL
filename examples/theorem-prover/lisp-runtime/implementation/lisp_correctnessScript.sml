@@ -11,14 +11,13 @@ open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory helperLib sumTheory;
 open set_sepTheory bitTheory fcpTheory stringTheory optionTheory relationTheory;
 
-infix \\
-val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
 val _ = let
   val thms = DB.match [] ``SPEC X64_MODEL``
-  val thms = filter (can (find_term (can (match_term ``zLISP``))) o car o concl) (map (fst o snd) thms)
+  val thms = filter (can (find_term (can (match_term ``zLISP``))) o car o concl)
+                    (map (#1 o #2) thms)
   val thms = map (INST [``ddd:bool option``|->``SOME T``]) thms
   val _ = map (fn th => add_compiled [th] handle e => ()) thms
   in () end;

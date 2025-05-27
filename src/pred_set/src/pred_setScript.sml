@@ -17,6 +17,8 @@ open Prim_rec pairLib numLib numpairTheory hurdUtils tautLib pureSimps
      metisLib mesonLib simpLib boolSimps dividesTheory
      combinTheory relationTheory optionTheory TotalDefn;
 
+local open pred_setpp in end
+
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
@@ -38,8 +40,8 @@ fun rw thl = SRW_TAC[ARITH_ss]thl
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] \\
                    POP_ASSUM K_TAC;
 
-fun store_thm(r as(n,t,tac)) = let
-  val th = boolLib.store_thm r
+fun store_thm_at loc (r as(n,t,tac)) = let
+  val th = boolLib.store_thm_at loc r
 in
   if String.isPrefix "IN_" n then let
       val stem0 = String.extract(n,3,NONE)
@@ -55,8 +57,9 @@ in
             if same_const t IN_tm then let
                 val applied_thm = SIMP_RULE bool_ss [SimpLHS, IN_DEF] th
                 val applied_name = stem ^ "_applied"
+                val loc' = DB_dtype.inexactify_locn loc
               in
-                save_thm(applied_name, applied_thm)
+                boolLib.save_thm_at loc' (applied_name, applied_thm)
               ; export_rewrites [applied_name]
               ; th
               end
@@ -65,12 +68,12 @@ in
   else th
 end
 structure Q = struct
-  val foo = store_thm
+  val foo = store_thm_at
   open Q
-  fun store_thm(n,q,tac) =
+  fun store_thm_at loc (n,q,tac) =
     let val t = Parse.typed_parse_in_context Type.bool [] q
     in
-      foo(n,t,tac)
+      foo loc (n,t,tac)
     end
 end
 
@@ -141,10 +144,9 @@ QED
 (* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
 (* --------------------------------------------------------------------- *)
 
-val NUM_SET_WOP =
-    store_thm
-    ("NUM_SET_WOP",
-     (“!s. (?n. n IN s) = ?n. n IN s /\ (!m. m IN s ==> n <= m)”),
+Theorem NUM_SET_WOP:
+  !s. (?n. n IN s) = ?n. n IN s /\ (!m. m IN s ==> n <= m)
+Proof
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
      [let val th = BETA_RULE (ISPEC (“\n:num. n IN s”) WOP)
       in IMP_RES_THEN (X_CHOOSE_THEN (“N:num”) STRIP_ASSUME_TAC) th
@@ -152,7 +154,8 @@ val NUM_SET_WOP =
       [FIRST_ASSUM ACCEPT_TAC,
        GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN
        ASM_REWRITE_TAC [GSYM NOT_LESS]],
-      EXISTS_TAC (“n:num”) THEN FIRST_ASSUM ACCEPT_TAC]);
+      EXISTS_TAC (“n:num”) THEN FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (* ===================================================================== *)
 (* Generalized set specification.                                        *)
@@ -174,6 +177,7 @@ val GSPEC_DEF_LEMMA = prove(
 
 val GSPECIFICATION = new_specification
   ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
+
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 val _ = ot0 "GSPEC" "specification"
 
@@ -244,23 +248,29 @@ val IN_GSPEC = store_thm ("IN_GSPEC",
   REWRITE_TAC [GSPECIFICATION] THEN REPEAT STRIP_TAC THEN
   Q.EXISTS_TAC `y` THEN ASM_SIMP_TAC std_ss []) ;
 
-val PAIR_IN_GSPEC_1 = Q.store_thm ("PAIR_IN_GSPEC_1",
-  `(a,b) IN {(y,x) | y | P y} <=> P a /\ (b = x)`,
+Theorem PAIR_IN_GSPEC_1:
+  (a,b) IN {(y,x) | y | P y} <=> P a /\ (b = x)
+Proof
   SIMP_TAC bool_ss [GSPECIFICATION,
     o_THM, FST, SND, PAIR_EQ] THEN
-    MATCH_ACCEPT_TAC CONJ_COMM) ;
+    MATCH_ACCEPT_TAC CONJ_COMM
+QED
 
-val PAIR_IN_GSPEC_2 = Q.store_thm ("PAIR_IN_GSPEC_2",
-  `(a,b) IN {(x,y) | y | P y} <=> P b /\ (a = x)`,
+Theorem PAIR_IN_GSPEC_2:
+  (a,b) IN {(x,y) | y | P y} <=> P b /\ (a = x)
+Proof
   SIMP_TAC bool_ss [GSPECIFICATION,
     o_THM, FST, SND, PAIR_EQ] THEN
-    MATCH_ACCEPT_TAC CONJ_COMM) ;
+    MATCH_ACCEPT_TAC CONJ_COMM
+QED
 
-val PAIR_IN_GSPEC_same = Q.store_thm ("PAIR_IN_GSPEC_same",
-  `(a,b) IN {(x,x) | P x} <=> P a /\ (a = b)`,
+Theorem PAIR_IN_GSPEC_same:
+  (a,b) IN {(x,x) | P x} <=> P a /\ (a = b)
+Proof
   SIMP_TAC bool_ss [GSPECIFICATION,
     o_THM, FST, SND, PAIR_EQ] THEN
-    EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []) ;
+    EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []
+QED
 
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
@@ -304,29 +314,27 @@ val _ = overload_on (UChar.emptyset, ``pred_set$EMPTY``)
 val _ = TeX_notation {hol = UChar.emptyset, TeX = ("\\HOLTokenEmpty{}", 1)}
 val _ = ot0 "EMPTY" "{}"
 
-val NOT_IN_EMPTY =
-    store_thm
-    ("NOT_IN_EMPTY",
-     (“!x:'a.~(x IN EMPTY)”),
+Theorem NOT_IN_EMPTY[simp]:
+  !x:'a. ~(x IN EMPTY)
+Proof
      PURE_REWRITE_TAC [EMPTY_DEF,SPECIFICATION] THEN
      CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
-     REPEAT STRIP_TAC);
+     REPEAT STRIP_TAC
+QED
 
-val _ = export_rewrites ["NOT_IN_EMPTY"]
-
-val MEMBER_NOT_EMPTY =
-    store_thm
-    ("MEMBER_NOT_EMPTY",
-     (“!s:'a set. (?x. x IN s) = ~(s = EMPTY)”),
+Theorem MEMBER_NOT_EMPTY:
+  !s:'a set. (?x. x IN s) = ~(s = EMPTY)
+Proof
      REWRITE_TAC [EXTENSION,NOT_IN_EMPTY] THEN
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
-     REWRITE_TAC [NOT_CLAUSES]);
+     REWRITE_TAC [NOT_CLAUSES]
+QED
 
-val EMPTY_applied = store_thm(
-  "EMPTY_applied",
-  ``EMPTY x <=> F``,
-  REWRITE_TAC [EMPTY_DEF])
-val _ = export_rewrites ["EMPTY_applied"]
+Theorem EMPTY_applied[simp]:
+  EMPTY x <=> F
+Proof
+  REWRITE_TAC [EMPTY_DEF]
+QED
 
 (* ===================================================================== *)
 (* The set of everything                                                 *)
@@ -337,23 +345,21 @@ val UNIV_DEF = new_definition
 
 val _ = ot0 "UNIV" "universe"
 
-val IN_UNIV =
-    store_thm
-    ("IN_UNIV",
-     (“!x:'a. x IN UNIV”),
-     GEN_TAC THEN PURE_REWRITE_TAC [UNIV_DEF,SPECIFICATION] THEN
-     CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
-val _ = export_rewrites ["IN_UNIV"]
-val UNIV_applied = save_thm(
-  "UNIV_applied[simp]",
-  REWRITE_RULE[SPECIFICATION] IN_UNIV);
+Theorem IN_UNIV[simp]:
+  !x:'a. x IN UNIV
+Proof
+  GEN_TAC THEN PURE_REWRITE_TAC [UNIV_DEF,SPECIFICATION] THEN
+  CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH
+QED
+(* as the above is not an equation, the "magic" at head of file doesn't
+   fire, and we have to manually add: *)
+Theorem UNIV_applied[simp] =
+  REWRITE_RULE[SPECIFICATION] IN_UNIV
 
-val UNIV_NOT_EMPTY =
-    store_thm
-    ("UNIV_NOT_EMPTY",
-     (“~(UNIV:'a set = EMPTY)”),
-     REWRITE_TAC [EXTENSION,IN_UNIV,NOT_IN_EMPTY]);
-val _ = export_rewrites ["UNIV_NOT_EMPTY"]
+Theorem UNIV_NOT_EMPTY[simp]:
+  ~(UNIV:'a set = EMPTY)
+Proof REWRITE_TAC [EXTENSION,IN_UNIV,NOT_IN_EMPTY]
+QED
 
 val EMPTY_NOT_UNIV =
     store_thm
@@ -382,7 +388,7 @@ val _ = set_fixity UnicodeChars.universal_set (Prefix 2200)
    abstraction produces ARB terms.)  To turn printing off, we overload the
    same pattern to "" *)
 val _ = overload_on ("", “\x:'a itself. UNIV : 'a set”)
-local open pred_setpp in end
+
 val _ = add_ML_dependency "pred_setpp"
 val _ = add_user_printer ("pred_set.UNIV", ``UNIV:'a set``)
 
@@ -535,7 +541,7 @@ val SUBSET_K = store_thm (* from util_prob *)
 (* Proper subset.                                                        *)
 (* ===================================================================== *)
 
-val PSUBSET_DEF =  new_definition(
+val PSUBSET_DEF = new_definition(
   "PSUBSET_DEF",
   ``PSUBSET (s:'a set) t <=> s SUBSET t /\ ~(s = t)``);
 val _ = set_fixity "PSUBSET" (Infix(NONASSOC, 450))
@@ -1510,10 +1516,10 @@ val REST_DEF =
     new_definition
     ("REST_DEF", (“REST (s:'a set) = s DELETE (CHOICE s)”));
 
-val IN_REST = store_thm
-  ("IN_REST",
-  ``!x:'a. !s. x IN (REST s) <=> x IN s /\ ~(x = CHOICE s)``,
-    REWRITE_TAC [REST_DEF, IN_DELETE]);
+Theorem IN_REST:
+  !x:'a. !s. x IN (REST s) <=> x IN s /\ ~(x = CHOICE s)
+Proof REWRITE_TAC [REST_DEF, IN_DELETE]
+QED
 
 val CHOICE_NOT_IN_REST =
     store_thm
@@ -3163,7 +3169,7 @@ val card_rel_def =
 (* Prove that such a relation exists.                                   *)
 (* ---------------------------------------------------------------------*)
 
-val CARD_REL_EXISTS =  prove_rec_fn_exists num_Axiom card_rel_def;
+val CARD_REL_EXISTS = prove_rec_fn_exists num_Axiom card_rel_def;
 
 (* ---------------------------------------------------------------------*)
 (* Now, prove that it doesn't matter which element we delete            *)
@@ -4594,11 +4600,12 @@ val BIGUNION_GSPEC = store_thm ("BIGUNION_GSPEC",
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [EXTENSION] THEN
   SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
 
-val IN_BIGUNION_IMAGE = store_thm (* from util_prob *)
-  ("IN_BIGUNION_IMAGE",
-   ``!f s y. (y IN BIGUNION (IMAGE f s)) = (?x. x IN s /\ y IN f x)``,
-   RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE]
-   >> PROVE_TAC []);
+(* from util_prob *)
+Theorem IN_BIGUNION_IMAGE:
+  !f s y. (y IN BIGUNION (IMAGE f s)) = (?x. x IN s /\ y IN f x)
+Proof
+   RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE] >> PROVE_TAC []
+QED
 
 Theorem BIGUNION_IMAGE:
   !f s. BIGUNION (IMAGE f s) = {y | ?x. x IN s /\ y IN f x}
@@ -4663,6 +4670,16 @@ Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   FULL_SIMP_TAC bool_ss [IN_BIGUNION, SUBSET_DEF] THEN
   PROVE_TAC []
+QED
+
+Theorem BIGUNION_IMAGE_SUBSET :
+    !f s t. BIGUNION (IMAGE f s) SUBSET t <=> !x. x IN s ==> f x SUBSET t
+Proof
+    RW_TAC std_ss [BIGUNION_SUBSET, IN_IMAGE]
+ >> reverse EQ_TAC >> rw []
+ >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> Q.EXISTS_TAC ‘x’ >> art []
 QED
 
 val BIGUNION_IMAGE_UNIV = store_thm (* from util_prob *)
@@ -5127,6 +5144,24 @@ Theorem SUBSET_CROSS :
     !a b c d. a SUBSET b /\ c SUBSET d ==> (a CROSS c) SUBSET (b CROSS d)
 Proof
     RW_TAC std_ss [SUBSET_DEF, IN_CROSS]
+QED
+
+Theorem IMAGE_FST_CROSS :
+    !s t. t <> {} ==> IMAGE FST (s CROSS t) = s
+Proof
+    rw [EXTENSION]
+ >> EQ_TAC >> rw [] >> rw []
+ >> Q.RENAME_TAC [‘y IN s’]
+ >> Q.EXISTS_TAC ‘(y,x)’ >> rw []
+QED
+
+Theorem IMAGE_SND_CROSS :
+    !s t. s <> {} ==> IMAGE SND (s CROSS t) = t
+Proof
+    rw [EXTENSION]
+ >> EQ_TAC >> rw [] >> rw []
+ >> Q.RENAME_TAC [‘y IN t’]
+ >> Q.EXISTS_TAC ‘(x,y)’ >> rw []
 QED
 
 (* sums *)
@@ -7750,7 +7785,7 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
-    A proof of Kőnig's Lemma                                                UOK
+    A proof of Kőnig's Lemma
    ---------------------------------------------------------------------- *)
 
 (* a counting exercise for R-trees.  If x0 has finitely many successors, and
@@ -9052,27 +9087,6 @@ QED
 
 (*---------------------------------------------------------------------------*)
 
-val _ = Theory.quote_adjoin_to_theory
-  `val SET_SPEC_ss : simpLib.ssfrag`
-`local
-  val GSPEC_t = prim_mk_const {Name = "GSPEC", Thy = "pred_set"}
-  val IN_t = mk_thy_const {Name = "IN", Thy = "bool",
-                           Ty = alpha --> (alpha --> bool) --> bool}
-  val f_t = mk_var ("f", beta --> pairSyntax.mk_prod (alpha, bool))
-  val x_t = mk_var ("x", alpha)
-  val SET_SPEC_CONV =
-    {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),
-     key = SOME ([], list_mk_comb (IN_t, [x_t, mk_comb (GSPEC_t, f_t)])),
-     name = "SET_SPEC_CONV",
-     trace = 2}
-in
-  val SET_SPEC_ss =
-    simpLib.SSFRAG
-      {name = SOME "SET_SPEC", ac = [], congs = [], convs = [SET_SPEC_CONV],
-       dprocs = [], filter = NONE, rewrs = []}
-  val _ = BasicProvers.logged_addfrags {thyname = "pred_set"} [SET_SPEC_ss]
-end
-`
 Theorem FUNPOW_INJ:
   INJ f UNIV UNIV ==> INJ (FUNPOW f n) UNIV UNIV
 Proof

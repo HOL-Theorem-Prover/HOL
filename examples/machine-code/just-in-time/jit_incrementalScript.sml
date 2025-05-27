@@ -12,10 +12,6 @@ open jit_codegenTheory;
 open compilerLib;
 open export_codeLib;
 
-infix \\
-val op \\ = op THEN;
-
-
 val _ = new_theory "jit_incremental";
 val _ = ParseExtras.temp_loose_equality()
 val bool_ss = bool_ss -* ["lift_disj_eq", "list_imp_disj"]
@@ -2278,9 +2274,9 @@ val PRE_LEMMA = prove(
 
 val code_generator_length = let
   val tms = list_dest pred_setSyntax.dest_insert ((cdr o concl o SPEC_ALL) codege_code_def)
-  val (x,y) = (dest_pair o last o butlast) tms
+  val (x,y) = (pairSyntax.dest_pair o last o butlast) tms
   val x = Arbnum.toInt (numSyntax.dest_numeral (cdr (cdr x)))
-  val i = (length o fst o listSyntax.dest_list o fst o dest_pair) y
+  val i = (length o fst o listSyntax.dest_list o fst o pairSyntax.dest_pair) y
   in x + i end
 
 val assign_eip_to_ebx = let

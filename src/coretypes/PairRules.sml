@@ -69,7 +69,7 @@ fun PSUB_CONV conv tm =
 
 val UNCURRY_DEF = pairTheory.UNCURRY_DEF;
 val CURRY_DEF = pairTheory.CURRY_DEF;
-val PAIR =  pairTheory.PAIR;
+val PAIR = pairTheory.PAIR;
 
 val CURRY_CONV =
     let val gfty = alpha --> beta --> gamma
@@ -372,7 +372,7 @@ fun PALPHA_CONV np tm =
     then if is_var opr then ALPHA_CONV np tm
          else (* is_pair opr *)
          let val np' = genvar (type_of np)
-             val t1 =  PBETA_CONV (mk_comb(tm, np'))
+             val t1 = PBETA_CONV (mk_comb(tm, np'))
              val t2 = ABS np' t1
              val t3 = CONV_RULE (RATOR_CONV (RAND_CONV ETA_CONV)) t2
          in
@@ -776,7 +776,7 @@ fun PEXISTS_AND_CONV tm =
         handle HOL_ERR _ => failwith "expecting `?x. P /\\ Q`"
         val (P,Q) = dest_conj Body
             handle HOL_ERR _ => failwith "expecting `?x. P /\\ Q`"
-        val oP = occs_in x P and oQ =  occs_in x Q
+        val oP = occs_in x P and oQ = occs_in x Q
     in
         if (oP andalso oQ) then
             failwith "bound pair occurs in both conjuncts"
@@ -925,7 +925,7 @@ fun PFORALL_OR_CONV tm =
             handle HOL_ERR _ => failwith "expecting `!x. P \\/ Q`"
         val (P,Q) = dest_disj Body
             handle HOL_ERR _ => failwith "expecting `!x. P \\/ Q`"
-        val oP = occs_in x P and oQ =  occs_in x Q
+        val oP = occs_in x P and oQ = occs_in x Q
     in
         if (oP andalso oQ) then
                 failwith "bound pair occurs in both conjuncts"
@@ -1092,7 +1092,7 @@ fun PFORALL_IMP_CONV tm =
             (Bvar,(ant,conseq))
         end
     handle HOL_ERR _ => failwith "expecting `!x. P ==> Q`"
-        val oP = occs_in x P and oQ =  occs_in x Q
+        val oP = occs_in x P and oQ = occs_in x Q
     in
         if (oP andalso oQ) then
             failwith "bound pair occurs in both sides of `==>`"
@@ -1231,7 +1231,7 @@ fun  PEXISTS_IMP_CONV tm =
             (Bvar,(ant,conseq))
         end
     handle HOL_ERR _ => failwith "expecting `?x. P ==> Q`"
-        val oP = occs_in x P and oQ =  occs_in x Q
+        val oP = occs_in x P and oQ = occs_in x Q
     in
         if (oP andalso oQ) then
                 failwith "bound pair occurs in both sides of `==>`"

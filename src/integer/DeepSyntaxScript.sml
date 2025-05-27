@@ -1,8 +1,5 @@
 open HolKernel Parse boolLib
 
-infix THEN THENL |->
-infix 8 by
-
 open Datatype integerTheory bossLib int_arithTheory simpLib pred_setTheory
 
 val _ = new_theory "DeepSyntax";

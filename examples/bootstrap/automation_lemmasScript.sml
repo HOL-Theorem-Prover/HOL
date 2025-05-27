@@ -641,12 +641,6 @@ Definition exp_def:
   exp (If t xs e1 e2) = list [Name "If"; test t; list (MAP exp xs); exp e1; exp e2] ∧
   exp (Let n e1 e2) = list [Name "Let"; Num n; exp e1; exp e2] ∧
   exp (Call n xs) = list [Name "Call"; Num n; list (MAP exp xs)]
-Termination
-  WF_REL_TAC ‘measure exp_size’ \\ rw []
-  \\ qsuff_tac ‘∀xs a. MEM a xs ⇒ exp_size a < exp1_size xs’
-  \\ TRY (rw []  \\ res_tac \\ fs [] \\ NO_TAC)
-  \\ Induct \\ fs [exp_size_def]
-  \\ rw [] \\ fs [] \\ res_tac \\ fs []
 End
 
 Theorem exp_def[simp,allow_rebind] =

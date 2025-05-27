@@ -72,7 +72,7 @@ The most frequently used options to build are those to do with “selftest” le
 The build program’s `--selftest` option can be given as is (in which case the selftest level is 1), or followed by a positive number, which gives the selftest level explicitly.
 The higher the number, the more regression tests are executed.
 Developers are expected to categorise their tests so that those at level 1 will complete quickly, those at level 2 will execute in moderate time, and those at level 3 can take as long as is necessary.[^selftestnote]
-As of 2022, there are no regression tests that require a level greater than 3,and we will likely keep things this way.
+As of 2022, there are no regression tests that require a level greater than 3, and we will likely keep things this way.
 
 [^selftestnote]: As of 2022, our automatic testing infrastructure runs one selftest at level 3 each day, and one at level 2, with the latter testing the experimental kernel. Yes, this means that things only in level 3 are not getting tested for the experimental kernel.
 
@@ -151,7 +151,7 @@ Under both Moscow&nbsp;ML and Poly/ML the following are created:
 : This tool creates LaTeX mungers, as described in the *DESCRIPTION* manual.
 
 `unquote`
-: This is the quotation filter embodied as a Unix filter, with a variety of options to specify behaviour. Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `QFRead` module) is doing when it messes with user input.
+: This is the quotation filter embodied as a Unix filter, with a variety of options to specify behaviour. Note that this is not used by Poly/ML HOL, but can be useful there to see what the filter (as embodied by the `HolParser` module) is doing when it messes with user input.
 
 Under Poly/ML, the following additional files will appear:
 
@@ -188,31 +188,39 @@ Unless otherwise noted, they are built by the configuration process.
 :   Described [above](#build).
     The top-level driver code is in files called `build.sml` in `tools` and `tools-poly`.
     Shared code is in `tools/buildutils.sml`.
+    The executable is in `bin/`.
 
 `cmp`
 :   A simple-minded tool for comparing two files, returning (*via* exit code) 0 (success) if the two command-line arguments are byte-for-byte identical.
     Useful in regression testing of other tools.
     Built on demand *via* a Holmakefile.
+    The executable is in `tools/cmp`.
 
 `Holmake`
 :   The user-facing tool for building HOL developments.
     Use of this tool is described in the Description manual.
     The `tools/Holmake` directory contains almost all of the sources, but the Poly/ML-specific implementation of the `Systeml` module (on top of which everything else in the system is built) is in `tools-poly/Holmake`.
     The Poly/ML specific code implementing concurrent `Holmake` is in `tools/Holmake/poly`.
+    The executable is in `bin/`.
 
-`mllex`
+`mllex.exe`
 :   The tool from SML/NJ.
+    The executable is in `tools/mllex`.
 
-`mlyacc`
+`mlyacc.exe`
 :   The tool from SML/NJ.
+    The executable is in `tools/mlyacc/src/`.
 
-`quote-filter`
+`unquote`
 :   The quotation filter that runs over sources before they are seen by SML implementations.
     This is used interactively (*via* a Unix filter that preprocesses all user-input under Moscow ML, or built into the Poly/ML REPL), and non-interactively (by being applied to source files).
+    The core sources are in `tools/Holmake`, but the standalone executable is built in `tools/quote-filter` and it is moved to `bin/` as part of configuration.
 
 `unicode-grep`
 :   Our tool for enforcing code style ([as documented below](#coding-standardsrequirements)).
     The command-line specifies the directories to scan, and options dictate which requirements are enforced/checked for.
+    The enforcing of style is done by the `Holmakefile` in `src/portableML/testsrc`.
+    The executable is in `tools/unicode-grep`.
 
 ## Other Tools Directories
 
@@ -239,20 +247,14 @@ Unless otherwise noted, they are built by the configuration process.
 :   Build sequence files.
     These are “modularised” so that, in principle, custom build sequences can be constructed more easily.
 
-`tools/vim`
-:   Implementation of the vim editor mode.
+`tools/editor-modes`
+:   Implementation of the editor modes.
 
 ## Coding Standards/Requirements
 
 We are fairly liberal in the style of code we accept, which is almost required given the long history of our sources (see `arithmeticScript.sml` for lots of old comments).
 However, the regression machinery does enforce some coding requirements, and these requirements may tighten over time.
-As of September 2024, the requirements are:
-
--   No use of Unicode characters under `src/` except for Greek lambda (`U+03BB`), and four quotation marks (“ ” ‘ ’—`U+2018`, `U+2019`, `U+201C` and `U+201D`).
-    Use of all five exceptions is _encouraged_.
-    In some situations, _e.g._, in a comment, it is extremely useful to be able to use Unicode characters.
-    If this is required, the line on which this occurs can be exempted by having that line include the substring `UOK` (typically inside an SML comment).
-    All Unicode is accepted under `examples`.
+As of March 2025, the requirements are:
 
 -   No use of TABs anywhere.
 
@@ -263,10 +265,10 @@ We encourage developers to keep their lines under 80 columns in width.
 
 <!-- # Appropriate Idioms  -->
 
-# Glossary of common abbreviations in the source code
+# Glossary of Common Abbreviations in the Source Code
 
 These appear with either capitalisation.
-There is a slight tendency to having all upper-case SML identifiers refer to theorems, or functions that returns theorems.
+There is a slight tendency to having all upper-case SML identifiers refer to theorems, or functions that return theorems.
 
 `abs`
 :   Abstraction.
@@ -274,8 +276,8 @@ There is a slight tendency to having all upper-case SML identifiers refer to the
 `ant`
 :   Antecedent of an implication.
 
-`asm`
-:   Assumptions of a theorem or goal.
+`asl`, `asm`
+:   Assumptions of a theorem or goal.  The `asl` name is particularly commonly used to name a goal’s assumptions (used, *e.g.,* when writing tactics).
 
 `conseq`
 :   Consequent of an implication.

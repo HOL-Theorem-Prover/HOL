@@ -19,8 +19,8 @@
 open HolKernel Parse boolLib BasicProvers;
 
 open Num_conv mesonLib arithmeticTheory
-     simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
-     relationTheory combinTheory quotientLib
+     simpLib boolSimps pairTheory pred_setTheory pred_setLib
+     TotalDefn metisLib relationTheory combinTheory quotientLib
 
 local open pairTheory pred_setTheory Datatype OpenTheoryMap
 in end;
@@ -49,7 +49,7 @@ fun qxchl [] ttac = ttac
 
 val _ = new_theory "list";
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
 val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define
 val bDefine = Lib.with_flag (Defn.def_suffix, "") Define
@@ -146,7 +146,7 @@ Definition SUM:
   SUM (h::t) = h + SUM t
 End
 
-Definition APPEND[simp]:
+Definition APPEND_def:
   APPEND [] l = l /\
   APPEND (h::l1) l2 = h::APPEND l1 l2
 End
@@ -156,6 +156,14 @@ val _ = overload_on ("++", Term‘APPEND’);
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
                        TeX = ("\\HOLTokenDoublePlus", 1) }
+
+(* preserving old choice of quantification order *)
+Theorem APPEND[simp]:
+  (!l:'a list.  APPEND [] l = l) /\
+  (!l1 l2 h:'a. APPEND (h::l1) l2 = h::(APPEND l1 l2))
+Proof
+  REWRITE_TAC[APPEND_def]
+QED
 
 Definition FLAT[simp]:
   FLAT []     = [] /\
@@ -168,7 +176,7 @@ Definition LENGTH[simp]:
 End
 
 Definition MAP[simp]:
-  MAP f [] = [] /\
+  MAP (f:'a -> 'b) [] = [] /\
   MAP f (h::t) = f h::MAP f t
 End
 
@@ -219,10 +227,18 @@ Definition EXISTS_DEF[simp]:
   (EXISTS P (h::t) <=> P h \/ EXISTS P t)
 End
 
-Definition EL:
+Definition EL_def:
   EL 0 l = (HD l:'a) /\
   EL (SUC n) l = EL n (TL l)
 End
+
+(* preserving particular variable quantification order *)
+Theorem EL:
+  (!(l:'a list).    EL 0 l = HD l:'a) /\
+  (!(l:'a list) n.  EL (SUC n) l = EL n (TL l))
+Proof
+  REWRITE_TAC[EL_def]
+QED
 
 (* ---------------------------------------------------------------------*)
 (* Definition of a function                                             *)
@@ -818,6 +834,12 @@ val NULL_LENGTH = Q.store_thm("NULL_LENGTH",
   ‘!l. NULL l = (LENGTH l = 0)’,
   REWRITE_TAC[NULL_EQ, LENGTH_NIL]);
 
+Theorem NULL_MAP[simp]:
+  NULL (MAP f ls) = NULL ls
+Proof
+  rw[NULL_EQ]
+QED
+
 val LENGTH_CONS = store_thm("LENGTH_CONS",
  “!l n. (LENGTH l = SUC n) =
           ?h:'a. ?l'. (LENGTH l' = n) /\ (l = CONS h l')”,
@@ -1059,6 +1081,12 @@ val LENGTH_TL = Q.store_thm
 ("LENGTH_TL",
   ‘!l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)’,
   Cases_on ‘l’ THEN SIMP_TAC arith_ss [LENGTH, TL]);
+
+Theorem LENGTH_TL_LE:
+  !ls. LENGTH (TL ls) <= LENGTH ls
+Proof
+  Cases \\ rw[]
+QED
 
 val FILTER_EQ_NIL = Q.store_thm
 ("FILTER_EQ_NIL",
@@ -1402,7 +1430,7 @@ QED
      recursive definitions by so-called higher-order recursion.
  ---------------------------------------------------------------------------*)
 
-val list_size_def =
+Theorem list_size_thm[simp] =
   REWRITE_RULE [arithmeticTheory.ADD_ASSOC]
                (#2 (TypeBase.size_of “:'a list”));
 
@@ -1415,10 +1443,10 @@ Theorem list_size_cong[defncong]:
     list_size f M = list_size f' N
 Proof
 Induct
-  THEN REWRITE_TAC [list_size_def, MEM]
+  THEN REWRITE_TAC [list_size_thm, MEM]
   THEN REPEAT STRIP_TAC
   THEN PAT_X_ASSUM (Term‘x = y’) (SUBST_ALL_TAC o SYM)
-  THEN REWRITE_TAC [list_size_def]
+  THEN REWRITE_TAC [list_size_thm]
   THEN MK_COMB_TAC THENL
   [NTAC 2 (MK_COMB_TAC THEN TRY REFL_TAC)
      THEN FIRST_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [MEM],
@@ -1432,7 +1460,7 @@ QED
 Theorem list_size_append:
   !f xs ys. list_size f (xs ++ ys) = list_size f xs + list_size f ys
 Proof
-  GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_def]
+  GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_thm]
 QED
 
 Theorem FOLDR_CONG[defncong]:
@@ -1750,6 +1778,13 @@ val MEM_EL = store_thm(
     Cases_on ‘n’ THEN FULL_SIMP_TAC arith_ss [EL, HD, TL] THEN
     ASM_MESON_TAC []
   ]);
+
+Theorem EL_MEM :
+    !n l. n < LENGTH l ==> MEM (EL n l) l
+Proof
+    RW_TAC std_ss [MEM_EL]
+ >> Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC []
+QED
 
 val SUM_MAP_PLUS_ZIP = store_thm(
   "SUM_MAP_PLUS_ZIP",
@@ -2289,6 +2324,13 @@ val ALL_DISTINCT_APPEND = store_thm (
              (ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\
              (!e. MEM e l1 ==> ~(MEM e l2)))”,
   Induct THEN SRW_TAC [] [] THEN PROVE_TAC []);
+
+Theorem ALL_DISTINCT_APPEND' :
+    !l1 l2. ALL_DISTINCT (l1 ++ l2) <=>
+            ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\ DISJOINT (set l1) (set l2)
+Proof
+    RW_TAC std_ss [ALL_DISTINCT_APPEND, DISJOINT_ALT]
+QED
 
 val ALL_DISTINCT_SING = store_thm(
    "ALL_DISTINCT_SING",
@@ -2865,7 +2907,7 @@ val SNOC_Axiom_old = prove(
           (fn1[] = e) /\
           (!x l. fn1(SNOC x l) = f(fn1 l)x l)”,
 
- let val  lemma =  CONV_RULE (EXISTS_UNIQUE_CONV)
+ let val lemma = CONV_RULE (EXISTS_UNIQUE_CONV)
        (REWRITE_RULE[REVERSE_REVERSE] (BETA_RULE (SPECL
          [“e:'b”,“(\ft x l. f ft x (REVERSE l)):'b -> ('a -> (('a)list -> 'b))”]
         (PURE_ONCE_REWRITE_RULE
@@ -2903,7 +2945,7 @@ val SNOC_Axiom = store_thm(
   Q.EXISTS_TAC ‘fn1’ THEN ASM_REWRITE_TAC []);
 
 val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
-val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
+val SNOC_CASES = save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
 
 (* cf. rich_listTheory.IS_PREFIX_SNOC *)
 Theorem isPREFIX_SNOC[simp] :
@@ -3915,6 +3957,48 @@ val SHORTLEX_total = store_thm(
   MAP_EVERY Cases_on [‘LENGTH l1 < LENGTH l2’, ‘h1 = h2’, ‘l1 = l2’] >>
   simp[] >> metis_tac[arithmeticTheory.LESS_LESS_CASES]);
 
+Theorem SHORTLEX_irreflexive :
+    !R. irreflexive R ==> irreflexive (SHORTLEX R)
+Proof
+    rw [irreflexive_def]
+ >> Induct_on ‘x’ >> rw [SHORTLEX_def]
+QED
+
+Theorem SHORTLEX_same_lengths :
+    !R h1 h2 t1 t2. LENGTH t1 = LENGTH t2 ==>
+                   (SHORTLEX R (h1::t1) (h2::t2) <=>
+                    R h1 h2 \/ h1 = h2 /\ SHORTLEX R t1 t2)
+Proof
+    rw [SHORTLEX_THM]
+QED
+
+(* NOTE: ‘antisymmetric’ (together with ‘transitive’) is sufficient for using
+   iterateTheory.TOPOLOGICAL_SORT' to sort a list of lists w.r.t. ‘SHORTLEX R’.
+
+   The antecedent ‘irreflexive R’ is necessary.
+ *)
+Theorem SHORTLEX_antisymmetric :
+    !R. irreflexive R /\ antisymmetric R ==> antisymmetric (SHORTLEX R)
+Proof
+    rw [antisymmetric_def, irreflexive_def]
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> qid_spec_tac ‘y’
+ >> qid_spec_tac ‘x’
+ >> Induct_on ‘x’
+ >- rw [SHORTLEX_THM]
+ >> rpt STRIP_TAC
+ >> Cases_on ‘y’ >- fs [SHORTLEX_THM]
+ >> Q.RENAME_TAC [‘h1::t1 = h2::t2’]
+ >> ‘LENGTH (h1::t1) <= LENGTH (h2::t2)’ by PROVE_TAC [SHORTLEX_LENGTH_LE]
+ >> ‘LENGTH (h2::t2) <= LENGTH (h1::t1)’ by PROVE_TAC [SHORTLEX_LENGTH_LE]
+ >> ‘LENGTH (h1::t1) = LENGTH (h2::t2)’ by PROVE_TAC [LESS_EQUAL_ANTISYM]
+ >> FULL_SIMP_TAC arith_ss [LENGTH]
+ >> Q.PAT_X_ASSUM ‘SHORTLEX R (h1::t1) (h2::t2)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘SHORTLEX R (h2::t2) (h1::t1)’ MP_TAC
+ >> rw [SHORTLEX_same_lengths] (* 5 subgoals *)
+ >> PROVE_TAC []
+QED
+
 val WF_SHORTLEX_same_lengths = Q.store_thm(
   "WF_SHORTLEX_same_lengths",
   ‘WF R ==>
@@ -3988,6 +4072,14 @@ val WF_SHORTLEX = Q.store_thm(
   ‘LENGTH bb <= LENGTH a0’ by metis_tac[SHORTLEX_LENGTH_LE] >>
   ‘LENGTH a0 = LENGTH a’ by metis_tac[] >>
   full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) []);
+
+Theorem SHORTLEX_SNOC :
+    !R l h1 h2. R h1 h2 ==> SHORTLEX R (SNOC h1 l) (SNOC h2 l)
+Proof
+    Q.X_GEN_TAC ‘R’
+ >> HO_MATCH_MP_TAC list_induction
+ >> rw []
+QED
 
 val LLEX_def = Define‘
   (LLEX R [] l2 <=> l2 <> []) /\
@@ -4711,6 +4803,16 @@ val EL_LENGTH_dropWhile_REVERSE = Q.store_thm("EL_LENGTH_dropWhile_REVERSE",
    >> fs [NOT_EVERY, dropWhile_APPEND_EXISTS, arithmeticTheory.ADD1])
 end
 
+Theorem dropWhile_id:
+ (dropWhile P ls = ls) <=> NULL ls \/ ~P(HD ls)
+Proof
+  Cases_on`ls` \\ rw[dropWhile_def, NULL]
+  \\ disch_then(mp_tac o Q.AP_TERM`LENGTH`)
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`dropWhile P l`
+  \\ Q.SPECL_THEN[`P`,`l`]mp_tac LENGTH_dropWhile_LESS_EQ
+  \\ simp[]
+QED
+
 val IMP_EVERY_LUPDATE = store_thm("IMP_EVERY_LUPDATE",
   “!xs h i. P h /\ EVERY P xs ==> EVERY P (LUPDATE h i xs)”,
   Induct THEN fs [LUPDATE_def] THEN REPEAT STRIP_TAC
@@ -4824,6 +4926,15 @@ Theorem OPT_MMAP_cong[defncong]:
 Proof
   ntac 2 gen_tac \\ Induct \\ rw[] \\ computeLib.EVAL_TAC
   \\ FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) []
+QED
+
+Theorem IS_SOME_OPT_MMAP:
+  IS_SOME (OPT_MMAP f ls) <=> EVERY IS_SOME (MAP f ls)
+Proof
+  Induct_on`ls` \\ rw[]
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`IS_SOME (f x)`
+  \\ Cases_on`f x` \\ rw[]
+  \\ Cases_on`OPT_MMAP f ls` \\ fs[]
 QED
 
 val LAST_compute = Q.store_thm("LAST_compute",

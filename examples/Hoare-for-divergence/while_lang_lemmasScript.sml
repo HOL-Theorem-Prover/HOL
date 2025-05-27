@@ -46,7 +46,7 @@ Proof
   \\ fs [LESS_EQ_EXISTS] \\ rw []
   \\ imp_res_tac NRC_ADD_E
   \\ imp_res_tac NRC_step_deterministic
-  \\ res_tac \\ rveq \\ fs []
+  \\ rveq
   \\ ‘∀n t1 t2. NRC step n (Skip,t1) (Skip,t2) ⇒ t1 = t2’ by
      (Induct \\ fs [NRC] \\ rw [] \\ fs [Once step_cases] \\ rveq \\ fs [])
   \\ res_tac \\ rveq \\ fs []
@@ -360,9 +360,11 @@ Theorem lprefix_chain_RTC_step:
   lprefix_chain {fromList out | (∃q t. RTC step x (q,t,out))}
 Proof
   fs [lprefix_lubTheory.lprefix_chain_def] \\ rw []
-  \\ fs [lprefix_lubTheory.lprefix_rel_def,PULL_EXISTS,LPREFIX_fromList,from_toList]
+  \\ fs [lprefix_lubTheory.lprefix_rel_def,PULL_EXISTS,LPREFIX_fromList,
+         from_toList]
   \\ fs [RTC_eq_NRC]
-  \\ ‘n ≤ n' ∨ n' ≤ n’ by fs []
+  \\ rename [‘s1 ≼ s2 ∨ s2 ≼ s1’, ‘NRC _ a _ (_,_,s1)’, ‘NRC _ b _ (_, _, s2)’]
+  \\ ‘a ≤ b ∨ b ≤ a’ by fs []
   \\ fs [LESS_EQ_EXISTS] \\ rw []
   \\ drule NRC_ADD_E \\ strip_tac
   \\ imp_res_tac NRC_step_deterministic
@@ -390,7 +392,9 @@ Proof
       \\ drule RTC_Seq
       \\ disch_then (qspec_then ‘c'’ mp_tac)
       \\ simp [RTC_eq_NRC] \\ rw []
-      \\ Cases_on ‘n ≤ n'’ \\ fs []
+      \\ rename [‘NRC step b _ (Seq Skip _, _)’, ‘out ≼ _’,
+                 ‘NRC step a _ (_, _, out)’]
+      \\ Cases_on ‘a ≤ b’ \\ fs []
       THEN1
        (fs [LESS_EQ_EXISTS] \\ rw []
         \\ drule NRC_ADD_E \\ strip_tac
@@ -400,14 +404,14 @@ Proof
         \\ Cases_on ‘t’ \\ fs [output_of_def]
         \\ ‘NRC step 0 (c',q',r) (c',q',r)’ by fs []
         \\ goal_assum (first_assum o mp_then (Pos hd) mp_tac) \\ fs [])
-      \\ qpat_x_assum ‘NRC step n _ _’ assume_tac
+      \\ qpat_x_assum ‘NRC step a _ _’ assume_tac
       \\ rename [‘_ _ _ (x1,x2,x3)’]
       \\ qexists_tac ‘x3’
       \\ qexists_tac ‘x1’
       \\ qexists_tac ‘x2’ \\ fs []
-      \\ qexists_tac ‘n - n' - 1’
-      \\ ‘n = n' + SUC (n − n' - 1)’ by decide_tac
-      \\ ‘NRC step (n' + SUC (n − n' − 1)) (Seq c c',s) (x1,x2,x3)’ by metis_tac []
+      \\ qexists_tac ‘a - b - 1’
+      \\ ‘a = b + SUC (a − b - 1)’ by decide_tac
+      \\ ‘NRC step (b + SUC (a − b − 1)) (Seq c c',s) (x1,x2,x3)’ by metis_tac []
       \\ drule NRC_ADD_E \\ strip_tac
       \\ imp_res_tac NRC_step_deterministic \\ rw []
       \\ pop_assum mp_tac \\ fs [NRC]

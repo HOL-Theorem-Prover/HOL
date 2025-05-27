@@ -32,12 +32,21 @@ struct
                 handle Interrupt => raise Interrupt
                      | _ => raise Fail "Couldn't parse sexp from file"
       in
-        case dec_sdata {with_strings = fn _ => (), with_stridty = fn _ => ()} t
-         of
+        case TheoryReader.core_decode t of
             NONE => raise Fail "Couldn't decode sexp"
-          | SOME sdi =>
-            map (fn (n,th,i) => (n,th))
-                (#theorems (export_from_sharing_data sdi))
+          | SOME {tables,exports} =>
+            let
+              val sdo = SharingTables.dec_sdata {
+                    tables = tables,
+                    exports = exports,
+                    before_types = fn () => (),
+                    before_terms = fn _ => ()
+                  }
+            in
+              map
+                (fn (n,th,i) => (n,th))
+                (#theorems (export_from_sharing_data sdo))
+            end
       end
 
   fun read_file fname =

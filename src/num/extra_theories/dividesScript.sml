@@ -150,13 +150,15 @@ val DIVIDES_FACT = store_thm
  ``!b. 0<b ==> divides b (FACT b)``,
  Cases_on `b` THEN ARW[FACT, divides_def] THEN METIS_TAC [MULT_COMM]);
 
-val LEQ_DIVIDES_FACT = store_thm
- ("LEQ_DIVIDES_FACT",
-  ``!m n. 0 < m /\ m <= n ==> divides m (FACT n)``,
-  RW_TAC arith_ss  [LESS_EQ_EXISTS]
-   THEN Induct_on `p`
-   THEN METIS_TAC [FACT, LESS_REFL, num_CASES, DIVIDES_MULT,
-                   MULT_COMM, DIVIDES_REFL, ADD_CLAUSES]);
+Theorem LEQ_DIVIDES_FACT:
+  !m n. 0 < m /\ m <= n ==> divides m (FACT n)
+Proof
+  RW_TAC arith_ss  [LESS_EQ_EXISTS] >>
+  Q.RENAME_TAC [‘divides m (FACT (m + d))’] >>
+  Induct_on ‘d’ >>
+  METIS_TAC [FACT, LESS_REFL, num_CASES, DIVIDES_MULT,
+             MULT_COMM, DIVIDES_REFL, ADD_CLAUSES]
+QED
 
 (* Idea: a convenient form of divides_def. *)
 

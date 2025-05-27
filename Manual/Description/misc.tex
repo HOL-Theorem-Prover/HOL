@@ -101,17 +101,10 @@ Finally, the \ml{trace} function allows for a trace to be temporarily set while 
 \label{Holmake}
 \index{Holmake@\holmake|(}
 
-The purpose of \holmake{} is to maintain dependencies in a \HOL{}
-source directory. A single invocation of \holmake{} will compute
-dependencies between files, (re)compile plain ML code, (re)compile and
-execute theory scripts, and (re)compile the resulting theory modules.
-\holmake{} does not require the user to provide any explicit
-dependency information themselves. \holmake{} can be very convenient
-to use, but there are some conventions and restrictions on it that
-must be followed, described below.
-
-
-
+The purpose of \holmake{} is to maintain dependencies in a \HOL{} project (a collection of \HOL{} files, possibly distributed over multiple directories).
+A single invocation of \holmake{} will compute dependencies between files, (re)compile plain ML code, (re)compile and execute theory scripts, and (re)compile the resulting theory modules.
+\holmake{} does not require the user to provide any explicit dependency information themselves.
+\holmake{} can be very convenient to use, but there are some conventions and restrictions on it that must be followed, described below.
 
 \holmake{} can be accessed through
 \begin{verbatim}
@@ -139,20 +132,16 @@ and re-compiling and re-executing them.
 
 \subsection{Theory construction}
 
-To start a theory construction, some context (semantic, and also proof
-support) is established, typically by loading parent theories and
-useful libraries. In the course of building the theory, the user keeps
-track of the ML---which, for example, establishes context, makes
-definitions, builds and invokes tactics, and saves theorems---in a
-text file. This file is used to achieve inter-session persistence of
-the theory being constructed.  For example, the text file resulting
-from session $n$ is ``\verb+use+''-d to start session $n+1$; after
-that, theory construction resumes.
+A theory \emph{my}\texttt{Theory} is constructed by writing the file \emph{my}\texttt{Script.sml}.
+In this file, the context (semantic, and also proof support) is established, by specifying parent theories and useful libraries.
+In the course of building the theory, the user is writing what one might call the ``\HOL{} script language'': this is a mixture of \ML{} (used mostly to write tactics) and \HOL{} material (inside definitions and theorem statements).
+This script file is used to achieve inter-session persistence of
+the theory being constructed.
 
 Once the user finishes the perhaps long and arduous task of constructing
 a theory, the user should
 \begin{enumerate}
-\item make the script separately compilable;
+\item check the script is separately compilable;
 \item invoke \holmake{}. This will (a) compile and execute the
   script file; and (b) compile the resulting theory file. After this,
   the theory file is available for use.
@@ -177,7 +166,7 @@ The file \texttt{myScript.sml} should begin with the standard boilerplate:
 
     val _ = new_theory "my"
 \end{alltt}
-This ``boilerplate'' ensures that the standard tactics and SML commands will be in the namespace when the script file is compiled.
+This ``boilerplate'' ensures that the standard tactics and \ML{} commands will be in the namespace when the script file is compiled.
 Interactively, these modules have already been loaded and \texttt{open}-ed, so what can be typed directly at \texttt{hol} cannot necessarily be included as-is in a script file.
 In addition, if \texttt{myTheory} depends on other \HOL{} theories, this ancestry should also be recorded in the script file.
 The easiest way to achieve this is simply to \texttt{open} the relevant theories.
@@ -200,13 +189,18 @@ Contrarily, the batch compiler will reject files having occurrences of \ml{load}
 In addition, simply referring to a theory's theorems using the `dot-notation' will make that theory an ancestor.
 For example,
 \begin{alltt}
-   Theorem mytheorem:
-     ...
-   Proof
-     simp[ThirdAncestorTheory.important_lemma] ...
-   QED
+    Theorem mytheorem:
+      ...
+    Proof
+      simp[ThirdAncestorTheory.important_lemma] ...
+    QED
 \end{alltt}
 will record a dependency on \texttt{ThirdAncestoryTheory}, making it just as much an ancestor as the theories that have been explicitly \texttt{open}-ed elsewhere.
+This ``trick'' is not good practice however, and can lead to strange behaviours when working interactively.
+If it feels important to keep the top-level \ML{} namespace uncontaminated, the right idiom for the top of the script file is
+\begin{alltt}
+    local open ThirdAncestorTheory in end
+\end{alltt}
 
 Finally, all script files should also end with the invocation:
 \begin{verbatim}
@@ -214,20 +208,22 @@ Finally, all script files should also end with the invocation:
 \end{verbatim}
 When the script is finally executed, this call writes the theory to disk.
 
-The calls to \texttt{new_theory} and \texttt{export_theory} must bracket a sequence of SML declarations.
-A declaration will typically be a \texttt{val}-binding, but might also be a function definition (\emph{via} \texttt{fun}), an \texttt{open}, or even a \texttt{structure} declaration.
+\index{special syntactic forms for scripts}
+The calls to \texttt{new_theory} and \texttt{export_theory} must bracket a sequence of \ML{} declarations and/or uses of special syntactic forms for scripts (the so-called ``modern syntax'').
+The special syntactic forms all map to \ML{} declarations, and include uses of keywords like \ml{Theorem}, \ml{Type}, and \ml{Overload}.
+An \ML{} declaration will typically be a \texttt{val}-binding, but might also be a function definition (\emph{via} \texttt{fun}), an \texttt{open}, or even a \texttt{structure} declaration.
 Declarations are \emph{not} expressions.
-This means that script files should \emph{not} include bare calls to \HOL{} functions like \texttt{Datatype}.
+This means that script files should \emph{not} include bare calls to \HOL{} functions like \texttt{set_fixity}.
 Instead, declarations such as the following need to be used:
 \begin{alltt}
-    val _ = Datatype`tree = Lf | Nd num tree tree`
+    val _ = set_fixity "symbol" (Infixl 500);
 \end{alltt}
 This is because (due to restrictions imposed by Moscow~ML\index{Moscow ML}) the script file is required to be an ML structure, and the contents of a structure must be \emph{declarations}, not expressions.
 Indeed, one is allowed to (and generally should) omit the bracketing
 \begin{alltt}
-  structure myScript = struct
-  ...
-  end
+    structure myScript = struct
+    ...
+    end
 \end{alltt}
 lines, but the contents of the file are still interpreted as if belonging to a structure.
 
@@ -272,26 +268,29 @@ A complete theory construction might be performed by the following steps:
 After that, the theory is usable as an ML module.
 This flow is demonstrated in the Euclid example of \TUTORIAL.
 
-Alternatively, and probably with the help of one of the editor modes,\footnote{There are editor modes for \texttt{emacs} and \texttt{vim}.} one can develop a theory with a script file that is always separately compilable.
+Alternatively, and probably with the help of one of the editor modes,\footnote{There are editor modes for \texttt{emacs}, \texttt{vim}, and others.} one can develop a theory with a script file that is always separately compilable.
 
 \subsection{\holmake{} Limitations}
 
 Without information to the contrary, \holmake{} assumes that all files of interest are in the current directory or in \HOL{}'s master \texttt{sigobj} directory.
-Using a \texttt{Holmakefile} (see Section~\ref{sec:using-Holmakefiles}), it is possible to mention files in other directories, both as dependencies and as explicit targets with rules on how those targets should be built.
-However, it is probably impossible (or at least, painfully difficult) to describe how theories are built from script files using the \texttt{Holmakefile} language.
-Nor will \holmake{} perform its automatic dependency analysis on such ``remote'' files.
+Using a \texttt{Holmakefile} (see Section~\ref{sec:using-Holmakefiles}), it is possible to mention files in other directories (which can contain their own \texttt{Holmakefile}s), both as dependencies and as explicit targets with rules on how those targets should be built.
 
 \index{Holmake@\holmake!recursive invocation}%
 \index{Holmake@\holmake!INCLUDES variable@\texttt{INCLUDES} variable}%
-The right approach when a development spans multiple directories is to indicate that there is a dependency on other directories by using the \texttt{-I} flag, or (better) the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
+The right approach when a development spans multiple directories is to indicate that there is a dependency on other directories by using the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.\footnote{In one-off situations, it is also possible to use the \texttt{-I} flag on \holmake{}'s command-line.}
 \holmake{} requires that, just as files must have an acyclic dependency graph, the directories containing those files must have a compatible, and acyclic, \texttt{INCLUDES} graph.
 With \texttt{INCLUDES} information to hand, \holmake{} will process the entire \texttt{INCLUDES} graph, looking throughout the graph for theory files that the current directory may depend on, and rebuilding those remote targets as necessary.
+
+Finally, it is borderline impossible (or at least, extremely difficult) to describe how theories are built from script files using, \eg, the Unix command-line.
+This means that it is hard to independently control/script the processing of $x$\texttt{Script.sml} files; one must instead rely on the logic built into \holmake{} to do this.
+
 
 \subsection{\holmake{}'s command-line arguments}
 \index{Holmake@\holmake!command-line arguments}
 Like {\tt make}, \holmake{} takes command-line arguments corresponding to the targets that the user desires to build.
-As a special case of this, targets ending with the suffix \ml{Theory} are treated as an instruction to build the theory files that lie behind a \HOL{} theory.
-(If successful such a build will enable other script-files to refer to that theory, and for interactive sessions to issue \ml{load~"xTheory";} commands.)
+As a special case of this, theories and \ML{} object files can be specified on the command-line by just giving the same string as would be passed to the \ml{open} declaration form.\footnote{Strictly, the files generated on disk for these cases have a \texttt{.uo} suffix; this feature allows that suffix to be omitted.}
+Command-line targets do not have to provide paths to directories where those targets are ``housed'' if there is only target of the given name in the combination of all \texttt{INCLUDE}-d directories.
+
 If there are no command-line targets, then \holmake{} will look for a \texttt{Holmakefile} in the current directory.
 If there is none, or if that file specifies no targets, then \holmake{} will attempt to build all \ML{} modules and \HOL{} theories it can detect in the current directory.
 If there is a target in the \texttt{Holmakefile}, then \holmake{} will try to build the first such target (only).
@@ -310,15 +309,14 @@ In addition, there are three special targets that can be used:
 \end{description}
 
 \noindent Finally, users can directly affect the workings of \holmake{}
-with the following command-line options:
+with the following command-line options/flags:
 \begin{description}
 \item[\texttt{-f <theory>}] Toggles whether or not a theory should be
-  built in ``fast'' mode.  Fast building causes tactic proofs
-  (invocations of \texttt{prove} and \texttt{store\_thm}) to
-  automatically succeed.  This lack of soundness is marked by the
-  \texttt{fast\_proof} oracle tag.  This tag will appear on all
-  theorems proved in this way and all subsequent theorems that depend
-  on such theorems.  \holmake's default is not to build in fast mode.
+  built in ``fast'' mode.
+  Fast building causes tactic proofs (invocations of \texttt{prove}, \texttt{store\_thm}, and the \texttt{Theorem}-\texttt{Proof}-\texttt{QED} form) to automatically succeed.
+  This lack of soundness is marked by the \texttt{fast\_proof} oracle tag.
+  This tag will appear on all theorems proved in this way and all subsequent theorems that depend on such theorems.
+  \holmake's default is not to build in fast mode.
 \item[\texttt{--fast}] Makes \holmake's default be to build in fast
   mode (see above).
 \item[{\tt --help} or {\tt -h}] Prints out a useful option summary and
@@ -331,7 +329,7 @@ with the following command-line options:
 \item[\tt -I <directory>]
   Look in specified directory for additional object files, including other HOL theories.
   This option can be repeated, with multiple {\tt -I}'s to allow for multiple directories to be referenced.
-  As above, directories specified in this way will also be rebuilt before the current targets are built.
+  Files in directories specified in this way will be rebuilt if they are needed for the specified list of targets.
 \item[\texttt{--interactive} or \texttt{-i}] Causes the HOL code that
   runs when a theory building file is executed to have the flag
   \texttt{Globals.interactive} set to true.  This will alter the diagnostic

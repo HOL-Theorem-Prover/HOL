@@ -72,9 +72,7 @@ val (asl,gl) = top_goal();
 
 
 fun TACTIC_ERR{function,message} =
-    Feedback.HOL_ERR{origin_structure = "Tactic",
-                     origin_function = function,
-                     message = message};
+    Feedback.mk_HOL_ERR "Tactic" function message
 
 fun failwith function =
    ( (* if debug_fail then

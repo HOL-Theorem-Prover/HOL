@@ -50,6 +50,8 @@ All of these commands are executed by first typing the HOL prefix
 \item [n ``hol-name-top-theorem''] Prompts for a name to give to the
   ``top theorem'' (i.e., the theorem just proved in the goalstack).
   With a \emph{prefix argument} also drops the goal.
+\item [o ``hol-open-string''] Prompts for the name of a ``module'' to (load, if necessary, and) open into the top-level name-space.
+  With a \emph{prefix argument} prints the declarations from the \texttt{open}-ed structures.  Without the prefix, there will be minimal output.
 \item [p ``hol-print''] Prints the top goal in the goalstack.
 \item [r ``hol-rotate''] Rotates goals in the goalstack.  With a
   numeric \emph{prefix argument} rotates that many out of the way,

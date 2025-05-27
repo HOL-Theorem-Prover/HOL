@@ -701,6 +701,10 @@ val hwDefineLib = ref([] : (thm * thm * thm)list);
 
 fun hwDefine defq =
  let val absyn0 = Parse.Absyn defq
+     val TC_SIMP_TAC =
+          TotalDefn.TC_SIMP_TAC
+                (TotalDefn.termination_simps())
+                (!TotalDefn.termination_solve_simps)
  in
   case absyn0
   of Absyn.APP(_,Absyn.APP(_,Absyn.IDENT(loc,"measuring"),def),f) =>
@@ -717,13 +721,13 @@ fun hwDefine defq =
            val tac = EXISTS_TAC (numSyntax.mk_cmeasure typedf)
                       THEN CONJ_TAC
                       THENL [TotalDefn.WF_TAC,
-                             TotalDefn.TC_SIMP_TAC
-                             THEN (PROVE_TAC[wordsTheory.WORD_PRED_THM])]
+                             TC_SIMP_TAC THEN PROVE_TAC[wordsTheory.WORD_PRED_THM]]
            val (defth,ind) = Defn.tprove(defn, tac)
            val totalth = prove
                  (getTotal defth,
                   RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
-                  THEN EXISTS_TAC typedf THEN TotalDefn.TC_SIMP_TAC
+                  THEN EXISTS_TAC typedf THEN
+                  TC_SIMP_TAC
                   THEN PROVE_TAC [wordsTheory.WORD_PRED_THM])
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                           (RecCompileConvert defth totalth)
@@ -748,7 +752,8 @@ fun hwDefine defq =
           let val reln = rand(concl(CONJUNCT1 terminates))
               val totalth = prove (getTotal defth,
                       RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
-                      THEN EXISTS_TAC (rand reln) THEN TotalDefn.TC_SIMP_TAC)
+                      THEN EXISTS_TAC (rand reln)
+                      THEN TC_SIMP_TAC)
               val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                                 (RecCompileConvert defth totalth)
           in

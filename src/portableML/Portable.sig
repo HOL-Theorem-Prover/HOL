@@ -78,6 +78,7 @@ sig
   val split : ('a * 'b) list -> 'a list * 'b list
   val mapfilter : ('a -> 'b) -> 'a list -> 'b list
   val flatten : 'a list list -> 'a list
+  val get_first : ('a -> 'b option) -> 'a list -> 'b option
   val trypluck': ('a -> 'b option) -> 'a list -> ('b option * 'a list)
   val plucki : ('a -> bool) -> 'a list -> ('a * int * 'a list) option
   val funpow : int -> ('a -> 'a) -> 'a -> 'a
@@ -204,6 +205,7 @@ sig
   val ordof: string * int -> int
   val replace_string : {from:string,to:string} -> string -> string
   val remove_wspace : string -> string
+  val remove_external_wspace : string -> string
 
   val time_eq: time -> time -> bool
   val timestamp: unit -> time

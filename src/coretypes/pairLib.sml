@@ -11,13 +11,17 @@ open HolKernel boolLib pairSyntax PairedLambda pairTools simpLib;
 
 fun pairLib_ERR src msg = mk_HOL_ERR "pairLib" src msg
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+local open pairTheory in
+val pair_rws = [PAIR, FST, SND];
+end
+
+val _ = Rewrite.add_implicit_rewrites pair_rws;
 
 (* Implementation of new_specification as a rule derived from
    gen_new_specification. This occurs here because the derivation
    depends on pairs. *)
 
-(* given (λ(x,y,...) ...) arg                            (UOK)
+(* given (λ(x,y,...) ...) arg
   produces an assumption:
   arg = (x,y,...)
   where the variables may be primed if necessary *)
@@ -187,6 +191,56 @@ local
         (n, (cs,th))
 
 
+end
+
+(*---------------------------------------------------------------
+      Support for definitions using varstructs
+---------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------
+     Lifting primitive definition principle to understand varstruct
+     arguments in definitions.
+ ---------------------------------------------------------------------------*)
+
+fun inter s1 [] = []
+  | inter s1 (h::t) = case op_intersect aconv s1 h of [] => inter s1 t | X => X
+
+fun joint_vars []  = []
+  | joint_vars [_] = []
+  | joint_vars (h::t) = case inter h t of [] => joint_vars t | X => X;
+
+fun dest t =
+  let val (lhs,rhs) = dest_eq (snd(strip_forall t))
+      val (f,args) = strip_comb lhs
+      val f = mk_var(dest_const f) handle HOL_ERR _ => f
+  in
+  case filter (not o is_vstruct) args
+   of [] => (case joint_vars (map free_vars args)
+              of [] => (args, mk_eq(f,itlist (curry mk_pabs) args rhs))
+               | V  => raise pairLib_ERR "new_definition" (String.concat
+                       ("shared variables between arguments: " ::
+                        commafy (map Parse.term_to_string V))))
+    | tml => raise pairLib_ERR "new_definition" (String.concat
+             ("The following arguments are not varstructs: "::
+              commafy (map Parse.term_to_string tml)))
+  end;
+
+fun RHS_CONV conv th = TRANS th (conv(rhs(concl th)));
+
+fun add_varstruct v th =
+  RHS_CONV(BETA_CONV ORELSEC PAIRED_BETA_CONV) (AP_THM th v)
+
+fun post (V,th) =
+  let val vars = List.concat (map free_vars_lr V)
+  in
+    itlist GEN vars (rev_itlist add_varstruct V th)
+  end;
+
+val _ = Definition.new_definition_hook := (dest, post)
+
+local open pairTheory in
+val _ = BasicProvers.new_let_thms
+  [o_UNCURRY_R, C_UNCURRY_L, S_UNCURRY_R, FORALL_UNCURRY];
 end
 
 val add_pair_compset = computeLib.add_thms

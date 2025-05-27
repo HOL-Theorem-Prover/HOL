@@ -1139,9 +1139,6 @@ val okpath_monotone = store_thm(
 
 val okpath_def = Define`okpath R = gfp (okpath_f R)`;
 
-infix |>
-fun x |> f = f x
-
 val okpath_co_ind = save_thm(
   "okpath_co_ind",
   okpath_monotone |> SPEC_ALL
@@ -1499,7 +1496,7 @@ Induct THEN
 SRW_TAC [] [LTAKE_CONS_EQ_SOME]);
 
 val lemma2 = Q.prove (
-`!l h t. LAPPEND (fromList l) (h:::t) =  LAPPEND (fromList (l++[h])) t`,
+`!l h t. LAPPEND (fromList l) (h:::t) = LAPPEND (fromList (l++[h])) t`,
 Induct THEN
 SRW_TAC [] []);
 

@@ -11,20 +11,21 @@ val tyname = "cterm"
 val vp = “(λn u:unit. n = 0)”;
 
 (* GLAM corresponds to APP, LAM and CONST *)
-val lp = “(λn (d:unit + unit + 'a) tns uns.
-             n = 0 ∧ ISL d ∧ tns = [] ∧ uns = [0;0] ∨
-             n = 0 ∧ ISR d ∧ ISL (OUTR d) ∧ tns = [0] ∧ uns = [] ∨
-             n = 0 ∧ ISR d ∧ ISR (OUTR d) ∧ tns = [] ∧ uns = [])”
+val lp = “(λn lfvs (d:unit + unit + 'a) tns uns.
+             n = 0 ∧ lfvs = 0 ∧ ISL d ∧ tns = [] ∧ uns = [0;0] ∨
+             n = 0 ∧ lfvs = 0 ∧ ISR d ∧ ISL (OUTR d) ∧ tns = [0] ∧ uns = [] ∨
+             n = 0 ∧ lfvs = 0 ∧ ISR d ∧ ISR (OUTR d) ∧ tns = [] ∧ uns = [])”
 
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
-    new_type_step1 tyname 0 {vp=vp, lp = lp}
+    new_type_step1 tyname 0 [] {vp = vp, lp = lp};
+
 val [gvar,glam] = genind_rules |> SPEC_ALL |> CONJUNCTS
 
 val LAM_t = mk_var("LAM", ``:string -> ^newty -> ^newty``)
 val LAM_def = new_definition(
   "LAM_def",
-  ``^LAM_t v t = ^term_ABS_t (GLAM v (INR (INL ())) [^term_REP_t t] [])``)
+  ``^LAM_t v t = ^term_ABS_t (GLAM v [] (INR (INL ())) [^term_REP_t t] [])``)
 val LAM_termP = prove(
   mk_comb(termP, LAM_def |> SPEC_ALL |> concl |> rhs |> rand),
   match_mp_tac glam >> srw_tac [][genind_term_REP]);
@@ -34,14 +35,15 @@ val APP_t = mk_var("APP", ``:^newty -> ^newty -> ^newty``)
 val APP_def = new_definition(
   "APP_def",
   ``^APP_t t1 t2 =
-       ^term_ABS_t (GLAM ARB (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
+       ^term_ABS_t (GLAM ARB [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``);
 val APP_termP = prove(
-  ``^termP (GLAM x (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
+  ``^termP (GLAM x [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2])``,
   match_mp_tac glam >> srw_tac [][genind_term_REP])
 val APP_t = defined_const APP_def
 
 val APP_def' = prove(
-  ``^term_ABS_t (GLAM v (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) = ^APP_t t1 t2``,
+  ``^term_ABS_t (GLAM v [] (INL ()) [] [^term_REP_t t1; ^term_REP_t t2]) =
+    ^APP_t t1 t2``,
   srw_tac [][APP_def, GLAM_NIL_EQ, term_ABS_pseudo11, APP_termP]);
 
 val VAR_t = mk_var("VAR", ``:string -> ^newty``)
@@ -56,14 +58,14 @@ val VAR_t = defined_const VAR_def
 val CONST_t = mk_var("CONST", “:'a -> ^newty”)
 val CONST_def = new_definition(
   "CONST_def",
-  “^CONST_t a = ^term_ABS_t (GLAM ARB (INR (INR a)) [][])”);
+  “^CONST_t a = ^term_ABS_t (GLAM ARB [] (INR (INR a)) [][])”);
 val CONST_termP = prove(
-  “^termP (GLAM v (INR (INR a)) [][])”,
+  “^termP (GLAM v [] (INR (INR a)) [][])”,
   srw_tac[][genind_rules]);
 val CONST_t = defined_const CONST_def
 
 val CONST_def' = prove(
-  “^term_ABS_t (GLAM v (INR (INR a)) [] []) = ^CONST_t a”,
+  “^term_ABS_t (GLAM v [] (INR (INR a)) [] []) = ^CONST_t a”,
   srw_tac[][CONST_def, GLAM_NIL_EQ, term_ABS_pseudo11, CONST_termP]);
 
 val cons_info =
@@ -154,7 +156,7 @@ val term_ind =
         |> Q.SPEC `fv`
         |> UNDISCH |> Q.SPEC `0` |> DISCH_ALL
         |> SIMP_RULE (std_ss ++ DNF_ss)
-                     [sumTheory.FORALL_SUM, supp_listpm,
+                     [sumTheory.FORALL_SUM, supp_listpm, LENGTH_NIL,
                       IN_UNION, NOT_IN_EMPTY, oneTheory.FORALL_ONE,
                       genind_exists, LIST_REL_CONS1, LIST_REL_NIL]
         |> Q.INST [`Q` |-> `λt. P (^term_ABS_t t)`]
@@ -183,8 +185,9 @@ val (_, repty) = dom_rng (type_of term_REP_t)
 val repty' = ty_antiq repty
 
 val tlf =
-  ``λ(v:string) (u:unit + unit + 'a) (ds1:(ρ -> 'r) list) (ds2:(ρ -> 'r)  list)
-                                (ts1:^repty' list) (ts2:^repty' list) (p:ρ).
+  ``λ(v:string) (fvs:string list) (u:unit + unit + 'a)
+     (ds1:(ρ -> 'r) list) (ds2:(ρ -> 'r)  list)
+     (ts1:^repty' list) (ts2:^repty' list) (p:ρ).
        if ISR u then
          if ISL (OUTR u) then tlf (HD ds1) v (cterm_ABS (HD ts1)) p: 'r
          else tcf (OUTR (OUTR u))
@@ -998,24 +1001,14 @@ val lemma = prove(
 Theorem ctm_recursion_nosideset =
   ctm_recursion |> Q.INST [`A` |-> `{}`] |> SIMP_RULE (srw_ss()) [lemma]
 
-val term_info_string =
-    "local\n\
-    \fun k |-> v = {redex = k, residue = v}\n\
-    \open binderLib\n\
-    \val term_info = \n\
-    \   NTI {nullfv = ``LAM \"\" (VAR \"\")``,\n\
-    \        pm_rewrites = [],\n\
-    \        pm_constant = ``nomset$mk_pmact cterm$raw_ctpm``,\n\
-    \        fv_rewrites = [],\n\
-    \        recursion_thm = SOME ctm_recursion_nosideset,\n\
-    \        binders = [(``cterm$LAM``, 0, ctpm_ALPHA)]}\n\
-    \val _ = type_db :=\n\
-    \          Binarymap.insert(!type_db,\n\
-    \                           {Name = \"cterm\",Thy=\"cterm\"},\n\
-    \                           term_info)\n\
-    \in end;\n"
+val term_info =
+  NTI {nullfv = “LAM "" (VAR "")”,
+       pm_rewrites = [],
+       pm_constant = “nomset$mk_pmact cterm$raw_ctpm”,
+       fv_rewrites = [],
+       recursion_thm = SOME ctm_recursion_nosideset,
+       binders = [(``cterm$LAM``, 0, ctpm_ALPHA)]}
 
-val _ = adjoin_after_completion (fn _ => PP.add_string term_info_string)
-
+val _ = binderLib.export_nomtype (“:α cterm”, term_info)
 
 val _ = export_theory()

@@ -1943,6 +1943,14 @@ Proof
   Induct \\ rw[list_to_num_set_def, wf_insert]
 QED
 
+Theorem size_list_to_num_set:
+  size (list_to_num_set ls) = LENGTH (nub ls)
+Proof
+  Induct_on`ls`
+  \\ gs[list_to_num_set_def, nub_def, size_insert, domain_list_to_num_set]
+  \\ rw[]
+QED
+
 Theorem mapi_fromList:
   mapi f (fromList ls) = fromList (MAPi f ls)
 Proof
@@ -2559,6 +2567,17 @@ Proof
   AP_TERM_TAC>>
   rw[pred_setTheory.EXTENSION]>>
   simp[MEM_MAP,pairTheory.EXISTS_PROD,MEM_toSortedAList,domain_lookup]
+QED
+
+Theorem PERM_toAList_toSortedAList:
+  PERM (toAList t) (toSortedAList t)
+Proof
+  irule sortingTheory.PERM_ALL_DISTINCT
+  \\ conj_tac
+  >- ( Cases \\ simp[MEM_toAList, MEM_toSortedAList] )
+  \\ conj_tac
+  >- metis_tac[ALL_DISTINCT_MAP, ALL_DISTINCT_MAP_FST_toAList]
+  >- metis_tac[ALL_DISTINCT_MAP, ALL_DISTINCT_MAP_FST_toSortedAList]
 QED
 
 Theorem set_MAP_FST_toAList_domain:

@@ -161,9 +161,7 @@ val AND2IMP = REWRITE_RULE[(SYM o SPEC_ALL)AND_IMP_INTRO];
 val IMP2AND = REWRITE_RULE[AND_IMP_INTRO];
 
 fun TACTIC_ERR{function,message} =
-    Feedback.HOL_ERR{origin_structure = "Tactic",
-                      origin_function = function,
-                      message = message};
+    Feedback.mk_HOL_ERR "Tactic" function message
 
 fun failwith function =
     raise TACTIC_ERR{function = function,message = ""};

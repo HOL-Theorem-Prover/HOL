@@ -2,4 +2,17 @@ SRCDIRS = string finite_maps pred_set/src/more_theories
 
 INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/src/%),$(SRCDIRS))
 
-EXTRA_CLEANS = $(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
+EXTRA_CLEANS = $(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS)) selftest.exe
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: binder-basics-selftest.log
+
+binder-basics-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

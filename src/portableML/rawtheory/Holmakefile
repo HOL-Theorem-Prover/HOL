@@ -1,0 +1,13 @@
+CLINE_OPTIONS = --no_overlay
+
+all: $(DEFAULT_TARGETS)
+
+theorystats.uo: theorystats.sml $(dprot $(SIGOBJ)/Graph.ui)
+	$(HOLMOSMLC) -c Graph.ui $<
+
+ifdef POLY
+all: theorytool
+
+theorytool: mktool.ML theorytool.ML theorystats.uo
+	polyc -o $@ $<
+endif

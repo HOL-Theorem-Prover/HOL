@@ -105,7 +105,7 @@ val tsar_tc = ``(FMAP_TO_RELN ^(rand (concl RomH)))^+``;
 val tsar_anc_thm = Count.apply (TC_CONV tsarto_CONV) tsar_tc;
 (* 21401 primitive inferences *)
 
-val tsar_enum_fmap =  Count.apply (FMAPAL_TO_fmap_CONV tsarto_CONV)
+val tsar_enum_fmap = Count.apply (FMAPAL_TO_fmap_CONV tsarto_CONV)
               (rand (rand (concl tsar_anc_thm)));
 (* 912 primitive inferences *)
 

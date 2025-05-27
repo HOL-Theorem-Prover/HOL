@@ -23,10 +23,7 @@ struct
 val COND_ABS       = boolTheory.COND_ABS;
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;
 
-fun failwith function =
-   raise HOL_ERR{origin_structure = "Sub_and_cond",
-                 origin_function = function,
-                 message = ""};
+fun failwith function = raise mk_HOL_ERR "Sub_and_cond" function ""
 
 
 (*---------------------------------------------------------------------------*)

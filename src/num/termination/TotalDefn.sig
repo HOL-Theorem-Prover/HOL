@@ -11,30 +11,26 @@ sig
 
 
    (* Support for interactive termination proofs *)
-   val WF_thms : unit -> thm list
+   val WF_thms       : unit -> thm list
    val export_WF_thm : string -> unit
+   val PRIM_WF_TAC   : thm list -> tactic
+   val WF_TAC        : tactic
 
    val termination_simps : unit -> thm list
    val termination_simpdb : unit -> (string,thm) Binarymap.dict
    val temp_exclude_termsimp  : string -> unit
    val exclude_termsimp  : string -> unit
-   val temp_export_termsimp : string -> unit
-   val export_termsimp : string -> unit
    val with_termsimps : thm list -> ('a -> 'b) -> ('a -> 'b)
    val termination_solve_simps : thm list ref
 
+   val export_termsimp : string -> unit
+   val temp_export_termsimp : string -> unit
 
-   val PRIM_WF_TAC        : thm list -> tactic
-   val PRIM_TC_SIMP_CONV  : thm list -> conv
-   val PRIM_TC_SIMP_TAC   : thm list -> thm list -> tactic
-   val PRIM_WF_REL_TAC    : term quotation -> thm list -> thm list -> thm list -> tactic
+   val TC_SIMP_CONV : thm list -> conv
+   val TC_SIMP_TAC  : thm list -> thm list -> tactic
 
-   val size_eq_conv : conv
-   val WF_TAC       : tactic
-   val TC_SIMP_CONV : conv
-   val TC_SIMP_TAC  : tactic
-   val STD_TERM_TAC : tactic
    val WF_REL_TAC   : term quotation -> tactic
+   val PROVE_TERM_TAC : tactic
 
    (* Definitions with automated termination proof support *)
 
