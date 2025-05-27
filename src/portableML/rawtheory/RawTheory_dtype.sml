@@ -7,7 +7,24 @@ fun class_toString Thm = "Thm"
   | class_toString Def = "Def"
 
 
-fun hash_compare _ = EQUAL (* TODO *)
+type vec = Word8Vector.vector
+val hashLength = 20
+val minHash = Word8Vector.tabulate(hashLength, fn _ => 0wx0)
+fun hashToString h = String.concat(List.tabulate(hashLength,
+  fn i => StringCvt.padLeft #"0" 2 (
+            Word8.toString (Word8Vector.sub(h, i)))))
+fun hashFromString s =
+  if String.size s <> 2 * hashLength then NONE
+  else SOME (
+    Word8Vector.tabulate(hashLength, fn i =>
+      Option.valOf (Word8.fromString (
+        String.substring(s, 2 * i, 2)))))
+  handle Option => NONE
+fun hash_to_list h = List.tabulate(
+  Word8Vector.length h, Portable.curry Word8Vector.sub h)
+val hash_compare =
+  Portable.inv_img_cmp hash_to_list
+    (Portable.list_compare Word8.compare)
 
 type raw_name = {thy : string, hash : Word8Vector.vector}
 fun raw_name_compare (r1:raw_name, r2:raw_name) =
@@ -15,7 +32,7 @@ fun raw_name_compare (r1:raw_name, r2:raw_name) =
         EQUAL => hash_compare(#hash r1, #hash r2)
       | x => x
 fun raw_name_toString {thy,hash} =
-    "{" ^ thy ^ "," ^ "...hash..." ^ "}" (* TODO *)
+    "{" ^ thy ^ "," ^ hashToString hash ^ "}"
 
 datatype raw_type = TYV of string
                   | TYOP of {opn : int (* ref to idtable *),

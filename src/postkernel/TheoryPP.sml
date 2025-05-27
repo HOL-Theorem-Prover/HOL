@@ -24,13 +24,6 @@ type struct_info_record = {
                  (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
  }
 
-type vec = Word8Vector.vector
-val hashLength = 32
-val minHash = Word8Vector.tabulate(hashLength, fn _ => 0wx0)
-fun hashToString h = String.concat(List.tabulate(hashLength,
-  fn i => StringCvt.padLeft #"0" 2 (
-            Word8.toString (Word8Vector.sub(h, i)))))
-
 open Feedback Lib Portable Dep;
 
 val ERR = mk_HOL_ERR "TheoryPP";
@@ -359,7 +352,7 @@ fun pp_thydata (info_record : struct_info_record) = let
   val share_data = add_terms thydata_tms share_data
 
   local open HOLsexp in
-  val enc_thid = pair_encode (String, String o hashToString)
+  val enc_thid = pair_encode (String, String o RawTheory_dtype.hashToString)
   val enc_thid_and_parents =
       curry (pair_encode(String, list_encode enc_thid))
   end (* local *)
