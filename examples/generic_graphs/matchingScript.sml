@@ -1878,11 +1878,12 @@ Proof
 QED
 
 (* Excercise 1 *)
-Theorem max_matching_iff_no_aug_path:
-  !(G: fsgraph) M. bipartite G ⇒ (max_matching G M <=> !p. alternating_path G M p ⇒ ~augmenting_path G M p)
-Proof
-  cheat
-QED
+
+(* Theorem max_matching_iff_no_aug_path: *)
+(*   !(G: fsgraph) M. bipartite G ⇒ (max_matching G M <=> !p. alternating_path G M p ⇒ ~augmenting_path G M p) *)
+(* Proof *)
+(*   cheat *)
+(* QED *)
 
 Definition perfect_matching_def:
   perfect_matching G M ⇔ matching G M ∧ V = BIGUNION M
@@ -2001,11 +2002,11 @@ Proof
 QED
 
 
-Theorem perfect_matching_exists:
-  ∀G A B. gen_bipartite G A B ∧ CARD A = CARD B ∧ (∀v. v ∈ V ⇒ degree G v ≠ 0) ⇒ ∃M. perfect_matching G M
-Proof
-  rw [perfect_matching_def_matched_set] >> cheat
-QED
+(* Theorem perfect_matching_exists: *)
+(*   ∀G A B. gen_bipartite G A B ∧ CARD A = CARD B ∧ (∀v. v ∈ V ⇒ degree G v ≠ 0) ⇒ ∃M. perfect_matching G M *)
+(* Proof *)
+(*   rw [perfect_matching_def_matched_set] >> cheat *)
+(* QED *)
 
 
 Theorem matching_insert:
@@ -2134,7 +2135,7 @@ Proof
   >> rename [‘_ = {Aend _; Bend _}’] (* This is to easily define f as well as find two ends in a bipartition. *)
   >> qabbrev_tac ‘f = \e. if ?p. alternating_path G M p /\ HD p IN A /\ LAST p = Bend e then Bend e else Aend e’
   >> qabbrev_tac ‘U = IMAGE f M’
-  >> sg ‘CARD M = CARD U’       (* I probably need this outside the subgoal *)
+  >> sg ‘CARD M = CARD U’
   >- (Q.SPECL_THEN [‘f’,‘M’] MP_TAC CARD_IMAGE_INJ
       >> Q.SPECL_THEN [‘G’,‘M’] MP_TAC finite_matching
       >> rw []
@@ -2482,14 +2483,14 @@ QED
 
 
 
-Theorem minimal_vertex_cover_exists:
-  !(G: fsgraph). bipartite G ⇒ ?U. vertex_cover G U /\ CARD U = MIN_SET (IMAGE CARD (vertex_cover G))
-Proof                           (* TODO *)
-  (* By Above *)
-  rw [] >> drule konig_matching_thm >> rw []
-  >> MP_TAC $ Q.SPEC ‘G’ max_matching_exists >> rw [max_matching_def]
-  >> cheat
-QED
+(* Theorem minimal_vertex_cover_exists: *)
+(*   !(G: fsgraph). bipartite G ⇒ ?U. vertex_cover G U /\ CARD U = MIN_SET (IMAGE CARD (vertex_cover G)) *)
+(* Proof *)
+(*   (* By Above *) *)
+(*   rw [] >> drule konig_matching_thm >> rw [] *)
+(*   >> MP_TAC $ Q.SPEC ‘G’ max_matching_exists >> rw [max_matching_def] *)
+(*   >> cheat *)
+(* QED *)
 
 
 Theorem marriage_thm:
