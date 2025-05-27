@@ -14,8 +14,8 @@ type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
 type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 type thminfo = DB_dtype.thminfo
 type struct_info_record = {
-   theory      : string*Arbnum.num*Arbnum.num,
-   parents     : (string*Arbnum.num*Arbnum.num) list,
+   theory      : string,
+   parents     : (string*Word8Vector.vector) list,
    types       : (string*int) list,
    constants   : (string*hol_type) list,
    all_thms    : (string * thm * thminfo) list,
@@ -23,6 +23,13 @@ type struct_info_record = {
    thydata     : string list * Term.term list *
                  (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
  }
+
+type vec = Word8Vector.vector
+val hashLength = 32
+val minHash = Word8Vector.tabulate(hashLength, fn _ => 0wx0)
+fun hashToString h = String.concat(List.tabulate(hashLength,
+  fn i => StringCvt.padLeft #"0" 2 (
+            Word8.toString (Word8Vector.sub(h, i)))))
 
 open Feedback Lib Portable Dep;
 
@@ -219,10 +226,10 @@ fun mlower s m =
 
 fun pp_struct (info_record : struct_info_record) = let
   open Term Thm
-  val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, all_thms,
+  val {theory=name, parents=parents0, thydata, mldeps, all_thms,
        types,constants} = info_record
   val parents1 =
-    List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
+    List.mapPartial (fn (s,_) => if "min"=s then NONE else SOME (Thry s))
                     parents0
   val jump = add_newline >> add_newline
   fun pblock(ob_pr, obs) =
@@ -237,7 +244,7 @@ fun pp_struct (info_record : struct_info_record) = let
            add_string "in end;"
            )
 
-  fun pparent (s,i,j) = Thry s
+  fun pparent (s,_) = Thry s
 
   fun pr_bind(s, th, {private,...}:thminfo) = let
     val addsbl = pr_list add_string (add_break(1,2))
@@ -335,11 +342,11 @@ end
 
 fun pp_thydata (info_record : struct_info_record) = let
   open Term Thm
-  val {theory as (name,i1,i2), parents=parents0,
+  val {theory = name, parents=parents0,
        thydata = (thydata_strings,thydata_tms, thydata), mldeps,
        all_thms,types,constants,...} = info_record
   val parents1 =
-      List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
+      List.mapPartial (fn (s,_) => if "min"=s then NONE else SOME (Thry s))
                       parents0
   open SharingTables
 
@@ -352,10 +359,9 @@ fun pp_thydata (info_record : struct_info_record) = let
   val share_data = add_terms thydata_tms share_data
 
   local open HOLsexp in
-  fun enc_thid(s,i,j) =
-    List[String s, String (Arbnum.toString i), String (Arbnum.toString j)]
+  val enc_thid = pair_encode (String, String o hashToString)
   val enc_thid_and_parents =
-      curry (pair_encode(enc_thid, list_encode enc_thid))
+      curry (pair_encode(String, list_encode enc_thid))
   end (* local *)
 
   fun enc_incorporate_types types =
@@ -395,7 +401,7 @@ fun pp_thydata (info_record : struct_info_record) = let
       in
         List [
           Symbol "theory",
-          enc_thid_and_parents theory parents0,
+          enc_thid_and_parents name parents0,
           enc_sdata share_data,
           tagged_encode "incorporate" (
             pair_encode(enc_incorporate_types, enc_incorporate_constants)
