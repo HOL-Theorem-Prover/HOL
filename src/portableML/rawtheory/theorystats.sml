@@ -24,7 +24,7 @@ fun println s = print (s ^ "\n")
 
 structure RawTheorykey =
 struct
-  type key = raw_name * string (* time-stamped name + path *)
+  type key = raw_name * string (* name with hash + path *)
   val ord = pair_compare (raw_name_compare, String.compare)
   fun pp (rn, p) =
       HOLPP.add_string(
@@ -57,9 +57,10 @@ fun readThy p (g,links) =
           handle TheoryReader s => raise Fail ("Bad decode for " ^ p)
       val {dir, file} = OS.Path.splitDirFile p
       val {base, ext} = OS.Path.splitBaseExt file
-      val _ = ext = SOME "dat" andalso base = #thy name ^ "Theory" orelse
-              (warn ("Theory.dat at " ^ p ^ " has name " ^ #thy name); true)
-      val key = (name,dir)
+      val _ = ext = SOME "dat" andalso base = name ^ "Theory" orelse
+              (warn ("Theory.dat at " ^ p ^ " has name " ^ name); true)
+      val hash = Word8Vector.tabulate(32, fn _ => 0wx0) (* TODO compute or read actual hash *)
+      val key = ({thy=name, hash=hash},dir)
     in
       SOME (g |> TheoryGraph.new_node(key, {exports = exports, parents = parents}),
             (key, parents)::links)
