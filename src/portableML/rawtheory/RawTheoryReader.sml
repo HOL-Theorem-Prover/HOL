@@ -45,15 +45,6 @@ fun string_to_class "A" = SOME Axm
   | string_to_class "D" = SOME Def
   | string_to_class _ = NONE
 
-val hashLength = 32
-fun hashFromString s =
-  if String.size s <> 2 * hashLength then NONE
-  else SOME (
-    Word8Vector.tabulate(hashLength, fn i =>
-      Option.valOf (Word8.fromString (
-        String.substring(s, 2 * i, 2)))))
-  handle Option => NONE
-
 val dec_thyname : raw_name decoder =
     map_decode
         (fn (s,h) => {thy = s, hash = h}) $

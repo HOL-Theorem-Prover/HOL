@@ -139,7 +139,7 @@ sig
 
  *)
 
-  val link_parents           : string*TheoryPP.vec -> (string*TheoryPP.vec) list -> unit
+  val link_parents           : string*vec -> (string*vec) list -> unit
   val incorporate_types      : string -> (string*int) list -> unit
   val incorporate_consts     : string -> (string*hol_type) list -> unit
   val pp_thm                 : (thm -> HOLPP.pretty) ref

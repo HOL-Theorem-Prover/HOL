@@ -34,7 +34,7 @@ fun load_thydata (r as {thyname,path}) =
                     ("reading at " ^ path ^ " for theory " ^ thyname ^
                      " and got theory called " ^ stored_name ^ " instead")
 
-      val hash = TheoryPP.minHash (* TODO: compute the actual hash *)
+      val hash = minHash (* TODO: compute the actual hash *)
       val _ = Theory.link_parents (thyname, hash) (map mungename parents)
       val {types=new_types,consts=new_consts} = #newsig rawthy
       fun before_types () = Theory.incorporate_types thyname new_types

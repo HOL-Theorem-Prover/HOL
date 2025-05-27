@@ -22,10 +22,6 @@ sig
    thydata     : string list * Term.term list *
                  (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
  }
- type vec = Word8Vector.vector
- val hashToString : vec -> string
- val minHash : vec
- val hashLength : int
 
  val pp_type : string -> string -> hol_type -> PP.pretty
 
