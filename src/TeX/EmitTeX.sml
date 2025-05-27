@@ -679,7 +679,7 @@ fun pp_theory_as_tex name =
       (set_trace "Unicode" u; raise Fail (name ^ "Theory is empty.\n"))
     else
       B [
-        pp_newcommand (hash_prefix()), hash, S "}", NL,
+        pp_newcommand (hash_prefix()), S hash, S "}", NL,
         pp_datatypes_as_tex typs,
         pp_defnitions_as_tex defns,
         pp_theorems_as_tex thms
