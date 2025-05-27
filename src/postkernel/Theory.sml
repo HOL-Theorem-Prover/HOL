@@ -99,6 +99,7 @@ with
   fun dest_thyid (UID{name, hash}) = (name,hash)
 
   val thyid_name = #1 o dest_thyid;
+  val thyid_hash = #2 o dest_thyid;
 
   fun make_thyid(s,h) = UID{name=s, hash=h}
 
@@ -245,6 +246,9 @@ local
 in
 fun thy_types thyname               = Type.thy_types thyname
 fun thy_constants thyname           = Term.thy_consts thyname
+fun thy_hash thyname                = thyid_hash (
+                                      fst (Graph.first
+                                           (equal thyname o thyid_name o fst)))
 fun thy_parents thyname             = snd (Graph.first
                                            (equal thyname o thyid_name o fst))
 fun thy_axioms (th:segment)   = filter is_axiom   (#facts th)
@@ -261,6 +265,7 @@ local fun norm_name "-" = CTname()
                       ("couldn't find "^style^" named "^Lib.quote name)
       val cleaned = List.mapPartial drop_pthmkind
 in
+ val hash             = thy_hash o norm_name
  val types            = thy_types o norm_name
  val constants        = thy_constants o norm_name
  fun get_parents s    = if norm_name s = CTname()
