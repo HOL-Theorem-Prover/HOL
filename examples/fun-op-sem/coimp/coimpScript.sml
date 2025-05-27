@@ -103,8 +103,6 @@ Definition break_ok_def:
   (break_ok (Break:stmt) = F) /\
   (break_ok (If b l1 l2) = ((EVERY break_ok l1) /\ (EVERY break_ok l2))) /\
   (break_ok _ = T)
-Termination
-  WF_REL_TAC `measure stmt_size`
 End
 
 Definition continue_ok_def:
@@ -112,8 +110,6 @@ Definition continue_ok_def:
   (continue_ok (If b l1 l2) =
     ((EVERY continue_ok l1) /\ (EVERY continue_ok l2))) /\
   (continue_ok _ = T)
-Termination
-  WF_REL_TAC `measure stmt_size`
 End
 
 (* needs to be folded over a program *)
@@ -595,23 +591,29 @@ Proof
 QED
 
 Theorem safe_co_preserves_frame_ok:
-  !l co cos. EVERY (EVERY syntax_ok ∘ FST) l ==>
-  (!k. EVERY (frame_ok k ∘ SND) l) ==>
-  ALL_DISTINCT (MAP FST cos) ==>
-  (!c. c ∈ alist_range cos ==>
-    (EVERY (EVERY syntax_ok ∘ FST) c) /\ (!k. EVERY ((frame_ok k) ∘ SND) c)) ==>
-  ALL_DISTINCT (MAP FST (AFUPDKEY co (λ_. l) cos)) /\
-  (!c. c ∈ alist_range (AFUPDKEY co (λ_. l) cos) ==>
-    (EVERY (EVERY syntax_ok ∘ FST) c) /\ (!k. EVERY ((frame_ok k) ∘ SND) c))
+  !l co cos.
+    EVERY (EVERY syntax_ok ∘ FST) l ==>
+    (!k. EVERY (frame_ok k ∘ SND) l) ==>
+    ALL_DISTINCT (MAP FST cos) ==>
+    (!c. c ∈ alist_range cos ==>
+         EVERY (EVERY syntax_ok ∘ FST) c ∧ (!k. EVERY ((frame_ok k) ∘ SND) c)) ==>
+    ALL_DISTINCT (MAP FST (AFUPDKEY co (λ_. l) cos)) /\
+    (!c. c ∈ alist_range (AFUPDKEY co (λ_. l) cos) ==>
+         (EVERY (EVERY syntax_ok ∘ FST) c) /\ (!k. EVERY ((frame_ok k) ∘ SND) c))
 Proof
-  rpt gen_tac >> Induct_on `cos` >> simp[AFUPDKEY_def] >> gen_tac >>
-  rpt $ disch_then assume_tac >> gen_tac >> gvs[] >> Cases_on `h` >>
-  pop_assum $ qspec_then `c` mp_tac >> simp[alist_range_def, AFUPDKEY_def] >>
-  CASE_TAC >> rpt $ disch_then assume_tac >> gvs[] >> pop_assum mp_tac >>
-  CASE_TAC >> disch_then assume_tac >> gvs[PULL_EXISTS] >>
-  first_x_assum $ qspec_then `k` assume_tac >> gvs[] >>
-  qpat_x_assum `ALOOKUP (AFUPDKEY _ _ _) _ = _` mp_tac >>
-  simp[AFUPDKEY_ALOOKUP] >> rpt CASE_TAC >> rw[] >> simp[]
+  rpt gen_tac >> Induct_on `cos`
+  >- simp[AFUPDKEY_def] >>
+  qx_gen_tac ‘h’ >> Cases_on ‘h’ >>
+  rpt (disch_then strip_assume_tac) >>
+  qpat_x_assum ‘_ ⇒ _’
+               (fn th =>
+                  gvs[MEM_MAP, AFUPDKEY_def, alist_range_def, PULL_EXISTS, AllCaseEqs(),
+                      DISJ_IMP_THM, FORALL_AND_THM] >> rw[] >>
+                  gvs[AllCaseEqs()] >>
+                  assume_tac th) >>
+  pop_assum mp_tac >>
+  gvs[alist_range_def, PULL_EXISTS, AFUPDKEY_ALOOKUP, AllCaseEqs()] >>
+  metis_tac[]
 QED
 
 Theorem frame_ok_preserved:
@@ -633,22 +635,22 @@ Theorem frame_ok_preserved:
       (syntax_ok c ==> (EVERY ((EVERY syntax_ok) ∘ FST) frs))))
 Proof
   ho_match_mp_tac evaluate_ind >> gvs[evaluate_def] >> rpt CONJ_TAC >>
-  rpt gen_tac >> rpt $ disch_then assume_tac >>
-  rpt gen_tac >> rpt $ disch_then assume_tac >> pop_assum mp_tac
+  rpt gen_tac >> rpt $ disch_then strip_assume_tac >>
+  rpt gen_tac >> rpt $ disch_then strip_assume_tac >> pop_assum mp_tac
     >- (rpt CASE_TAC >> rw[] >>
-        qspecl_then [`SUC v14`, `c`, `s`]
+        rename [‘cval (SUC n) c s = SOME (_,r)’] >>
+        qspecl_then [`SUC n`, `c`, `s`]
           assume_tac (cj 3 functions_invariant) >>
         gvs[fun_ok_def] >>
-        first_x_assum $ qspecl_then [`m'`, `l`] assume_tac >> gvs[]
-          >- (drule smart_coseq_preserves_frame_ok >> metis_tac[])
-          >- (drule smart_coseq_preserves_from_new_syntax_ok >> metis_tac[])
-          >- (drule smart_coseq_preserves_ok >> metis_tac[])
-    )
+        gvs[FORALL_AND_THM]
+        >- (drule smart_coseq_preserves_frame_ok >> metis_tac[])
+        >- (drule smart_coseq_preserves_from_new_syntax_ok >> metis_tac[])
+        >- (drule smart_coseq_preserves_ok >> metis_tac[]))
     >- (rpt CASE_TAC >> rw[] >> gvs[] >>
-        qspecl_then [`SUC v27`, `co`, `s`]
+        rename [‘runco (SUC n) co s = SOME (_, r)’] >>
+        qspecl_then [`SUC n`, `co`, `s`]
           assume_tac (cj 2 functions_invariant) >>
-        gvs[fun_ok_def, GSYM update_covar_preserves_frame_ok, FORALL_AND_THM]
-    )
+        gvs[fun_ok_def, GSYM update_covar_preserves_frame_ok, FORALL_AND_THM])
     >- (CASE_TAC >> rw[from_new_syntax_ok_def])
     >- (simp[GSYM update_var_preserves_frame_ok])
     >- (pop_assum mp_tac >> CASE_TAC >>
@@ -658,13 +660,11 @@ Proof
         simp[GSYM syntax_ok_def, ETA_THM] >>
         qspecl_then [`break_ok`, `continue_ok`, `c2`]
           mp_tac (iffRL EVERY_CONJ) >>
-        simp[GSYM syntax_ok_def, ETA_THM] >> rw[]
-    )
-    >- (CASE_TAC >> rw[] >> gvs[] >>
-        last_x_assum $ qspecl_then [`m`, `frs`] assume_tac >>
-        gvs[syntax_ok_def, break_ok_def, continue_ok_def]
-    )
-    >- (qspecl_then [`SUC v46`, `cs`, `s`]
+        simp[GSYM syntax_ok_def, ETA_THM] >> rw[])
+    >- (CASE_TAC >> rw[] >> gvs[FORALL_AND_THM] >>
+        gvs[syntax_ok_def, break_ok_def, continue_ok_def])
+    >- (rename [‘option_CASE (pval (SUC n) cs s)’] >>
+        qspecl_then [`SUC n`, `cs`, `s`]
           assume_tac (cj 1 functions_invariant) >>
         CASE_TAC >> CASE_TAC >> Cases_on `q` >> rw[] >> gvs[fun_ok_def]
           >>~- ([`cval _ _ _ = _`],
@@ -1138,8 +1138,10 @@ Theorem set_globals_invariant:
     !x. ((s.globals x) <> NONE) = ((z.globals x) <> NONE))
 Proof
   ho_match_mp_tac evaluate_ind >> rw[] >> pop_assum mp_tac >>
-  gvs[evaluate_def] >> rpt CASE_TAC >> rw[] >> gvs[update_var_def] >>
-  rpt CASE_TAC >> simp[APPLY_UPDATE_THM] >> CASE_TAC >> simp[]
+  gvs[evaluate_def, AllCaseEqs(), PULL_EXISTS] >> dsimp[] >>
+  rpt strip_tac >> gvs[] >> simp[update_var_def] >>
+  rpt CASE_TAC >> rw[] >> simp[APPLY_UPDATE_THM] >>
+  iff_tac >> rw[] >> strip_tac >> gvs[]
 QED
 
 Theorem assigncall_frame_indifferent:

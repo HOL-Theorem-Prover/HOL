@@ -29,10 +29,9 @@ Definition pval_def:
     | NONE => NONE
     | SOME s' => pval t cs s')
 Termination
-  WF_REL_TAC `inv_image (measure I LEX measure I) (\r. case r of
-    | INR (t, cs, _) => (t, com1_size cs)
-    | INL (t, c, _) => (t, com_size c))` >>
-  rw[]
+  WF_REL_TAC ‘inv_image (measure I LEX measure I) (\r. case r of
+    | INR (t, cs, _) => (t, list_size com_size cs)
+    | INL (t, c, _) => (t, com_size c))’
 End
 
 Definition imp_to_listImp_def[simp]:
@@ -50,10 +49,6 @@ Definition listImp_to_imp_def[simp]:
   (com_to_imp ((Assign v a):com) = (Assign v a):imp$com) /\
   (com_to_imp (If b c1s c2s) = If b (prog_to_imp c1s) (prog_to_imp c2s)) /\
   (com_to_imp (While b cs) = While b (prog_to_imp cs))
-Termination
-  WF_REL_TAC `inv_image (measure I) (\r. case r of
-    | INR c => com_size c
-    | INL cs => com1_size cs)`
 End
 
 Theorem pval_none[simp]:
