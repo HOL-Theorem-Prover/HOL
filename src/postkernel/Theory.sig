@@ -40,6 +40,7 @@ sig
 (* Information on the current theory segment *)
 
   val current_theory     : unit -> string
+  val hash               : string -> vec
   val parents            : string -> string list
   val ancestry           : string -> string list
   val types              : string -> (string * int) list
