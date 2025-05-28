@@ -11,8 +11,8 @@ type vec = Word8Vector.vector
 val hashLength = 20
 val minHash = Word8Vector.tabulate(hashLength, fn _ => 0wx0)
 fun hashToString h = String.concat(List.tabulate(hashLength,
-  fn i => StringCvt.padLeft #"0" 2 (
-            Word8.toString (Word8Vector.sub(h, i)))))
+  fn i => StringCvt.padLeft #"0" 2 (String.map Char.toLower (
+            Word8.toString (Word8Vector.sub(h, i))))))
 fun hashFromString s =
   if String.size s <> 2 * hashLength then NONE
   else SOME (
