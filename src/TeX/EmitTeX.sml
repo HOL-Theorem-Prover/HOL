@@ -671,7 +671,7 @@ fun pp_theory_as_tex name =
       val typs = datatype_theorems name
       val defns = non_type_definitions name
       val thms = non_type_theorems name
-      val hash = RawTheory_dtype.hashToString (Theory.hash name)
+      val hash = Theory.hash name
       val u = current_trace "Unicode"
       val _ = set_trace "Unicode" 0
   in
