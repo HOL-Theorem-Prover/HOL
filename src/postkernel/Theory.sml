@@ -876,11 +876,14 @@ local
       end
     | NONE => ()
   end
+  fun fromHOLFS x = case HFS_NameMunge.HOLtoFS x
+                      of NONE => x
+                       | SOME {fullfile,...} => fullfile
 in
 fun export_theory_return_hash () =
   if !Globals.interactive then let
     val holdatfile = String.concat["./",current_theory(),".dat"]
-    val SOME {fullfile=datfile, ...} = HFS_NameMunge.HOLtoFS holdatfile
+    val datfile = fromHOLFS holdatfile
   in
     SHA1.sha1_file {filename=datfile}
   end else let
@@ -933,7 +936,7 @@ fun export_theory_return_hash () =
           val tstr = Lib.time_to_string time_since
           val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
           val () = theory_out (TheoryPP.pp_thydata structthry) ostrm3;
-          val SOME {fullfile=datfile, ...} = HFS_NameMunge.HOLtoFS holdatfile
+          val datfile = fromHOLFS holdatfile
           val hash = SHA1.sha1_file {filename=datfile}
       in
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
