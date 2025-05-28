@@ -53,7 +53,7 @@ fun readThy p (g,links) =
     let
       open RawTheoryReader
       val dat as {parents, name, exports, ...} =
-          RawTheoryReader.load_raw_thydata{thyname="", path = p}
+          RawTheoryReader.load_raw_thydata{path = p}
           handle TheoryReader s => raise Fail ("Bad decode for " ^ p)
       val {dir, file} = OS.Path.splitDirFile p
       val {base, ext} = OS.Path.splitBaseExt file
