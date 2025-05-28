@@ -15,7 +15,7 @@ type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 type thminfo = DB_dtype.thminfo
 type struct_info_record = {
    theory      : string,
-   parents     : (string*Word8Vector.vector) list,
+   parents     : (string*string) list,
    types       : (string*int) list,
    constants   : (string*hol_type) list,
    all_thms    : (string * thm * thminfo) list,
@@ -217,7 +217,7 @@ fun mlower s m =
     | SOME(_, (_, ps)) => PP.block PP.CONSISTENT 0 ps
 
 
-fun pp_struct (info_record : struct_info_record) = let
+fun pp_struct hash (info_record : struct_info_record) = let
   open Term Thm
   val {theory=name, parents=parents0, thydata, mldeps, all_thms,
        types,constants} = info_record
@@ -308,6 +308,10 @@ fun pp_struct (info_record : struct_info_record) = let
                     add_string (mlquote name ^ ",")
                   ) >> add_break (1,0) >>
                   block INCONSISTENT 2 (
+                    add_string "hash =" >> add_break(1,2) >>
+                    add_string (mlquote hash ^ ",")
+                  ) >> add_break (1,0) >>
+                  block INCONSISTENT 2 (
                     add_string "path =" >> add_break(1,2) >>
                     add_string ("holpathdb.subst_pathvars "^datfile)
                   ) >>
@@ -352,7 +356,7 @@ fun pp_thydata (info_record : struct_info_record) = let
   val share_data = add_terms thydata_tms share_data
 
   local open HOLsexp in
-  val enc_thid = pair_encode (String, String o RawTheory_dtype.hashToString)
+  val enc_thid = pair_encode (String, String)
   val enc_thid_and_parents =
       curry (pair_encode(String, list_encode enc_thid))
   end (* local *)

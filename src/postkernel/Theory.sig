@@ -5,7 +5,6 @@ sig
   type term      = Term.term
   type thm       = Thm.thm
   type num = Arbnum.num
-  type vec = Word8Vector.vector
   datatype thm_src_location = datatype DB_dtype.thm_src_location
   type thminfo = DB_dtype.thminfo
 
@@ -40,7 +39,7 @@ sig
 (* Information on the current theory segment *)
 
   val current_theory     : unit -> string
-  val hash               : string -> vec
+  val hash               : string -> string
   val parents            : string -> string list
   val ancestry           : string -> string list
   val types              : string -> (string * int) list
@@ -139,7 +138,7 @@ sig
 
  *)
 
-  val link_parents           : string*vec -> (string*vec) list -> unit
+  val link_parents           : string*string -> (string*string) list -> unit
   val incorporate_types      : string -> (string*int) list -> unit
   val incorporate_consts     : string -> (string*hol_type) list -> unit
   val pp_thm                 : (thm -> HOLPP.pretty) ref

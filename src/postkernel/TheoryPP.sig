@@ -14,7 +14,7 @@ sig
  type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
  type struct_info_record = {
    theory      : string,
-   parents     : (string*Word8Vector.vector) list,
+   parents     : (string*string) list,
    types       : (string*int) list,
    constants   : (string*hol_type) list,
    all_thms    : (string * thm * thminfo) list,
@@ -32,7 +32,7 @@ sig
                parents     : string list,
                all_thms    : (string * thm * thminfo) list} PP.pprinter
 
- val pp_struct : struct_info_record PP.pprinter
+ val pp_struct : string -> struct_info_record PP.pprinter
 
  val pp_thydata : struct_info_record PP.pprinter
 
