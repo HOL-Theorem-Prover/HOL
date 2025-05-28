@@ -48,8 +48,7 @@ fun string_to_class "A" = SOME Axm
 val dec_thyname : raw_name decoder =
     map_decode
         (fn (s,h) => {thy = s, hash = h}) $
-        pair_decode (string_decode,
-                     Option.mapPartial hashFromString o string_decode)
+        pair_decode (string_decode, string_decode)
 
 (* ----------------------------------------------------------------------
     raw types and terms
@@ -255,7 +254,7 @@ fun decode s =
       }
     end
 
-fun load_raw_thydata {thyname, path} : raw_theory =
+fun load_raw_thydata {path} : raw_theory =
     case decode (fromFile path) of
         NONE => raise TheoryReader ("Invalid file at "^path)
       | SOME v => v

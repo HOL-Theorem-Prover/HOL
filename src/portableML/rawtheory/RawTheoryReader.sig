@@ -28,6 +28,6 @@ sig
 
   val thm_decode : int raw_thm decoder
   val core_decode : string raw_core decoder
-  val load_raw_thydata : {thyname:string,path:string} -> raw_theory
+  val load_raw_thydata : {path:string} -> raw_theory
 
 end

@@ -24,17 +24,16 @@ fun temp_encoded_update sdata thyname {data,ty} =
     }
 
 
-fun load_thydata (r as {thyname,path}) =
+fun load_thydata (r as {thyname,path,hash}) =
     let
       open HOLsexp
-      val rawthy as {parents,tables,exports,name=stored_name,...} = load_raw_thydata r
+      val rawthy as {parents,tables,exports,name=stored_name,...} =
+            load_raw_thydata {path=path}
       fun mungename {thy,hash} = (thy,hash)
       val _ = thyname = stored_name orelse
               raise TheoryReader
                     ("reading at " ^ path ^ " for theory " ^ thyname ^
                      " and got theory called " ^ stored_name ^ " instead")
-
-      val hash = minHash (* TODO: compute the actual hash *)
       val _ = Theory.link_parents (thyname, hash) (map mungename parents)
       val {types=new_types,consts=new_consts} = #newsig rawthy
       fun before_types () = Theory.incorporate_types thyname new_types

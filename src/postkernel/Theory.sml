@@ -92,7 +92,7 @@ val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
 local
   open Arbnum
 in
-abstype thyid = UID of {name:string, hash:vec}
+abstype thyid = UID of {name:string, hash:string}
 with
   fun thyid_eq x (y:thyid) = (x=y);
 
@@ -104,10 +104,10 @@ with
   fun make_thyid(s,h) = UID{name=s, hash=h}
 
   fun thyid_to_string (UID{name,hash}) =
-     String.concat["(",Lib.quote name,",",hashToString hash, ")"]
+     String.concat["(",Lib.quote name,",",hash,")"]
 
   val min_thyid =
-      UID{name="min", hash = minHash}  (* Ur-theory *)
+      UID{name="min", hash=""}  (* Ur-theory *)
 
 end;
 end (* local *)
@@ -877,7 +877,13 @@ local
     | NONE => ()
   end
 in
-fun export_theory () = if !Globals.interactive then () else let
+fun export_theory_return_hash () =
+  if !Globals.interactive then let
+    val holdatfile = String.concat["./",current_theory(),".dat"]
+    val SOME {fullfile=datfile, ...} = HFS_NameMunge.HOLtoFS holdatfile
+  in
+    SHA1.sha1_file {filename=datfile}
+  end else let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
   val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
   val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
@@ -918,22 +924,26 @@ fun export_theory () = if !Globals.interactive then () else let
  in
    case filter filtP (map #1 all_thms) of
      [] =>
-     (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
+     (let val holdatfile = concat["./",name,".dat"]
+          val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
-          val ostrm3 = Portable.open_out(concat["./",name,".dat"])
+          val ostrm3 = Portable.open_out(holdatfile)
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, !new_theory_time)
           val tstr = Lib.time_to_string time_since
+          val () = mesg ("Exporting theory "^Lib.quote thyname^" ... ");
+          val () = theory_out (TheoryPP.pp_thydata structthry) ostrm3;
+          val SOME {fullfile=datfile, ...} = HFS_NameMunge.HOLtoFS holdatfile
+          val hash = SHA1.sha1_file {filename=datfile}
       in
-        mesg ("Exporting theory "^Lib.quote thyname^" ... ");
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
-        theory_out (TheoryPP.pp_struct structthry) ostrm2;
-        theory_out (TheoryPP.pp_thydata structthry) ostrm3;
+        theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
         mesg "done.\n";
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
            maybe_log_time_to_disk thyname (Time.toString time_since))
-        else ()
+        else ();
+        hash
       end
         handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
 
@@ -946,6 +956,7 @@ fun export_theory () = if !Globals.interactive then () else let
             "   Use `set_MLname <bad> <good>' to change each name."]);
         raise ERR "export_theory" "bad binding names")
 end
+val export_theory = ignore o export_theory_return_hash
 end;
 
 
@@ -985,8 +996,7 @@ fun new_theory str =
         else if thyname="scratch" andalso empty_segment thy then
           mk_thy()
         else let
-          val () = export_theory ();
-          val hash = (* TODO calculate from exported dat *) minHash;
+          val hash = export_theory_return_hash ();
           val thid = make_thyid(thyname, hash);
           val () = Graph.add (thid, Graph.fringe())
         in
