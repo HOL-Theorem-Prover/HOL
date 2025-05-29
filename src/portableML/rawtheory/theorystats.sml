@@ -59,7 +59,7 @@ fun readThy p (g,links) =
       val {base, ext} = OS.Path.splitBaseExt file
       val _ = ext = SOME "dat" andalso base = name ^ "Theory" orelse
               (warn ("Theory.dat at " ^ p ^ " has name " ^ name); true)
-      val hash = "" (* TODO compute or read actual hash: val hash = SHA1.sha1_file {filename=p} *)
+      val hash = SHA1.sha1_file {filename=p}
       val key = ({thy=name, hash=hash},dir)
     in
       SOME (g |> TheoryGraph.new_node(key, {exports = exports, parents = parents}),

@@ -2,7 +2,7 @@ CLINE_OPTIONS = --no_overlay
 
 all: $(DEFAULT_TARGETS)
 
-theorystats.uo: theorystats.sml $(dprot $(SIGOBJ)/Graph.ui)
+theorystats.uo: theorystats.sml $(dprot $(SIGOBJ)/Graph.ui) $(dprot $(SIGOBJ)/SHA1.uo)
 	$(HOLMOSMLC) -c Graph.ui $<
 
 ifdef POLY
