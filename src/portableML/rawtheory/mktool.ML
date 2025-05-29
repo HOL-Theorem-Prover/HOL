@@ -55,5 +55,8 @@ useB "../HOLsexp";
 use  "RawTheory_dtype.sml";
 useB "RawTheoryReader";
 
+useB "../poly/SHA1_ML";
+useB "../SHA1";
+
 use "theorystats.sml";
 use "theorytool.ML";
