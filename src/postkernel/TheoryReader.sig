@@ -6,11 +6,11 @@ sig
   type sharing_tables = RawTheory_dtype.sharing_tables
   type 'a raw_exports = 'a RawTheory_dtype.raw_exports
   type 'a raw_core = {tables : sharing_tables, exports : 'a raw_exports}
-  val load_thydata : {thyname:string,path:string} ->
+  val load_thydata : {thyname:string,path:string,hash:string} ->
                      (Thm.thm * DB_dtype.thminfo) Symtab.table
   val core_decode : string raw_core HOLsexp.decoder
 
-  val load_raw_thydata : {thyname:string,path:string} -> raw_theory
+  val load_raw_thydata : {path:string} -> raw_theory
 
 
 end
