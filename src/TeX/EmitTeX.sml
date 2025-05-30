@@ -51,6 +51,8 @@ fun prefix_string()     = prefix_escape (!current_theory_name);
 fun datatype_prefix()   = prefix_string() ^ "Datatypes";
 fun definition_prefix() = prefix_string() ^ "Definitions";
 fun theorem_prefix()    = prefix_string() ^ "Theorems";
+fun date_prefix()       = prefix_string() ^ "Date";
+fun time_prefix()       = prefix_string() ^ "Time";
 fun hash_prefix()       = prefix_string() ^ "Hash";
 
 (* ------------------------------------------------------------------------- *)
@@ -672,6 +674,9 @@ fun pp_theory_as_tex name =
       val defns = non_type_definitions name
       val thms = non_type_theorems name
       val hash = Theory.hash name
+      val time = Date.fromTimeLocal $ Time.now()
+        (* TODO: Use OS.FileSys.modTime somehow to get:
+         *       `Theory.modTime name` here instead *)
       val u = current_trace "Unicode"
       val _ = set_trace "Unicode" 0
   in
@@ -679,6 +684,10 @@ fun pp_theory_as_tex name =
       (set_trace "Unicode" u; raise Fail (name ^ "Theory is empty.\n"))
     else
       B [
+        pp_newcommand (date_prefix()),
+        S (Date.fmt "%d %B %Y" time), S "}", NL,
+        pp_newcommand (time_prefix()),
+        S (Date.fmt "%H:%M" time), S "}", NL,
         pp_newcommand (hash_prefix()), S hash, S "}", NL,
         pp_datatypes_as_tex typs,
         pp_defnitions_as_tex defns,
@@ -716,6 +725,7 @@ fun pp_parents_as_tex_doc names =
       if null names then [S "% No parents", NL]
       else [
         S "\\begin{flushleft}", NL,
+        S ("\\textbf{Built:} " ^ "\\" ^ date_prefix() ^ " \\\\[2pt]"), NL,
         S ("\\textbf{Hash:} " ^ "\\" ^ hash_prefix() ^ " \\\\[2pt]"), NL,
         S "\\textbf{Parent Theories:} ",
         B (PP.pr_list S [S ",", PP.add_break(1,0)] names), NL,
