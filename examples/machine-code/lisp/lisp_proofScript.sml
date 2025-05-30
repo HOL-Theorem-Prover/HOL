@@ -20,7 +20,7 @@ val list2sexp_def = Define `
   (list2sexp [] = Sym "nil") /\
   (list2sexp (x::xs) = Dot x (list2sexp xs))`;
 
-val x2sexp_def = tDefine "x2sexp" `
+Definition x2sexp_def:
   (x2sexp (F,xx,FunCon s) = Sym s) /\
   (x2sexp (F,xx,FunVar s) = Sym s) /\
   (x2sexp (F,xx,Lambda vs x) =
@@ -30,8 +30,11 @@ val x2sexp_def = tDefine "x2sexp" `
   (x2sexp (T,Var v,yy) = Sym v) /\
   (x2sexp (T,App f xs,yy) = list2sexp (x2sexp (F,Var "nil",f) :: MAP (\x. x2sexp (T,x,FunVar "nil")) xs)) /\
   (x2sexp (T,Ite cs,yy) = list2sexp (Sym "cond" :: MAP (\ (t1,t2).
-       list2sexp [x2sexp (T,t1,FunVar "nil"); x2sexp (T,t2,FunVar "nil")]) cs))`
- (WF_REL_TAC `measure (\(x,y,z). if x then term_size y else func_size z)`);
+       list2sexp [x2sexp (T,t1,FunVar "nil"); x2sexp (T,t2,FunVar "nil")]) cs))
+Termination
+  WF_REL_TAC `measure (\(x,y,z). if x then term_size y else func_size z)` THEN
+  simp[MEM_SPLIT, PULL_EXISTS, list_size_append]
+End
 
 val x2sexp = x2sexp_def |> CONJUNCTS |> map SPEC_ALL |> LIST_CONJ
 
