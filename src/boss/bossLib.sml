@@ -355,17 +355,9 @@ end
     useful for proving termination in fold and rose-tree settings
    ---------------------------------------------------------------------- *)
 
-(*
-val size_comb_tac =
-  full_simp_tac boolSimps.bool_ss [listTheory.MEM_SPLIT]
-  THEN CONV_TAC TotalDefn.size_eq_conv
-  THEN simp_tac boolSimps.bool_ss
-    [listTheory.list_size_append, listTheory.list_size_def]
-*)
-
 val _ = let
   val sref = TotalDefn.termination_solve_simps
-in sref := ([listTheory.MEM_SPLIT, listTheory.list_size_append] @ ! sref) end
+in sref := ([listTheory.MEM_SPLIT] @ ! sref) end
 
 (* ----------------------------------------------------------------------
     convenient simplification aliases

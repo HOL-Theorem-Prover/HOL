@@ -5362,4 +5362,52 @@ Proof
   simp[MAP_MAP_o, FUN_MAP, combinTheory.o_DEF, SF ETA_ss]
 QED
 
+(*---------------------------------------------------------------------------*)
+(* relation of list_size to other list operations.                           *)
+(*---------------------------------------------------------------------------*)
+
+val ADD_AC = AC ADD_ASSOC ADD_SYM;
+
+Theorem list_size_reverse[simp]:
+  list_size f (REVERSE l) = list_size f l
+Proof
+  Induct_on ‘l’ >> rw [list_size_append,ADD_AC]
+QED
+
+Theorem list_size_map[simp]:
+  list_size f (MAP g l) = list_size (λx. f (g x)) l
+Proof
+  Induct_on ‘l’ >> rw []
+QED
+
+Theorem list_size_snoc[simp]:
+  list_size f (SNOC x l) = list_size f (x::l)
+Proof
+  Induct_on ‘l’ >> rw [ADD_AC]
+QED
+
+Theorem list_size_filter[simp]:
+  list_size f (FILTER P l) <= list_size f l
+Proof
+  Induct_on ‘l’ >> rw [] >> numLib.DECIDE_TAC
+QED
+
+Theorem list_size_take[simp]:
+  ∀l n. list_size f (TAKE n l) <= list_size f l
+Proof
+  Induct >> rw [] >> Cases_on ‘n’ >> rw[]
+QED
+
+Theorem list_size_drop[simp]:
+  ∀l n. list_size f (DROP n l) <= list_size f l
+Proof
+  Induct >> rw [] >> Cases_on ‘n’ >> rw[] >>
+  pop_assum (mp_tac o Q.SPEC ‘n'’) >> numLib.DECIDE_TAC
+QED
+
+val _ =
+ List.app TotalDefn.export_termsimp
+   ["list.list_size_append", "list.list_size_reverse",
+    "list.list_size_map", "list.list_size_snoc"];
+
 val _ = export_theory();
