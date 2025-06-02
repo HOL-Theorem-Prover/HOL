@@ -4,21 +4,17 @@
 
 open HolKernel boolLib bossLib listTheory Defn TotalDefn;
 
+open arithmeticTheory;
+
 local open stringLib in end
 
 val _ = new_theory "termination_prover";
-
-(*---------------------------------------------------------------------------*)
-(*  Add DIV_LT_X to termination simps?                                       *)
-(*---------------------------------------------------------------------------*)
 
 Definition encode_num_def:
   encode_num (n:num) =
     if n = 0 then [T; T]
     else if EVEN n then F :: encode_num ((n - 2) DIV 2)
     else T :: F :: encode_num ((n - 1) DIV 2)
-Termination
-  WF_REL_TAC ‘$<’ >> simp[arithmeticTheory.DIV_LT_X]
 End
 
 Definition n2l_def:
@@ -32,9 +28,8 @@ Definition nlistrec_def:
                    else f (nfst (l - 1)) (nsnd (l - 1))
                           (nlistrec n f (nsnd (l - 1)))
 Termination
-  WF_REL_TAC `measure (SND o SND)` THEN
-  STRIP_TAC THEN ASSUME_TAC (Q.INST [`n` |-> `l - 1`] numpairTheory.nsnd_le) THEN
-  simp[]
+  WF_REL_TAC `measure (SND o SND)` >> strip_tac >>
+  ASSUME_TAC (Q.INST [`n` |-> `l - 1`] numpairTheory.nsnd_le) >> simp[]
 End
 
 (*---------------------------------------------------------------------------*)
@@ -45,6 +40,90 @@ Definition test_def:
   test (l,n) s = if n = 0 then l else test (s::l,n - 1) s
 Termination
   WF_REL_TAC ‘measure (SND o FST)’
+End
+
+(*---------------------------------------------------------------------------*)
+(* From src/finite_maps/patriciaScript.sml                                   *)
+(*---------------------------------------------------------------------------*)
+
+Datatype:
+ ptree = Empty | Leaf num 'a | Branch num num ptree ptree
+End
+
+Definition BRANCHING_BIT_def:
+  BRANCHING_BIT p0 p1 =
+    if (ODD p0 = EVEN p1) \/ (p0 = p1) then 0
+    else SUC (BRANCHING_BIT (DIV2 p0) (DIV2 p1))
+Termination
+ WF_REL_TAC `measure (\(x,y). x + y)` \\ rw[]
+   \\ Cases_on `ODD p0` \\ FULL_SIMP_TAC bool_ss []
+   \\ FULL_SIMP_TAC bool_ss [GSYM ODD_EVEN, GSYM EVEN_ODD]
+   \\ IMP_RES_TAC EVEN_ODD_EXISTS
+   \\ SRW_TAC [ARITH_ss] [ADD1,
+         ONCE_REWRITE_RULE [MULT_COMM] (CONJ ADD_DIV_ADD_DIV MULT_DIV)]
+End
+
+(*---------------------------------------------------------------------------*)
+(* Illustrates need for case splitting on if-then-else in termination prover *)
+(*---------------------------------------------------------------------------*)
+
+local open bitTheory in end
+
+Definition PEEK_def:
+  PEEK Empty k = NONE /\
+  PEEK (Leaf j d) k = (if k = j then SOME d else NONE) /\
+  PEEK (Branch p m l r) k = PEEK (if BIT m k then l else r) k
+End
+
+Definition JOIN_def:
+  JOIN (p0,t0,p1,t1) =
+    let m = BRANCHING_BIT p0 p1 in
+      if BIT m p0 then
+        Branch (MOD_2EXP m p0) m t0 t1
+      else
+        Branch (MOD_2EXP m p0) m t1 t0
+End
+
+Definition ADD_def:
+  (ADD Empty (k,e) = Leaf k e) /\
+  (ADD (Leaf j d) (k,e) = (if j = k then Leaf k e
+                          else JOIN (k, Leaf k e, j, Leaf j d))) ∧
+  (ADD (Branch p m l r) (k,e) =
+         if MOD_2EXP_EQ m k p then
+           if BIT m k then
+                Branch p m (ADD l (k,e)) r
+              else
+                Branch p m l (ADD r (k,e))
+         else
+           JOIN (k, Leaf k e, p, Branch p m l r))
+End
+
+(*---------------------------------------------------------------------------*)
+(* Recursion in monads. From src/monad/more_monads/errorStateMonadScript.sml *)
+(*---------------------------------------------------------------------------*)
+
+Type M[local] = “:'state -> ('a # 'state) option”
+
+Definition UNIT_DEF:
+  UNIT (x:'b) : ('b,'a) M = \(s:'a). SOME (x, s)
+End
+
+Definition BIND_DEF:
+  BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) (s0:'a) =
+    case g s0 of
+      NONE => NONE
+    | SOME (b,s) => f b s
+End
+
+Definition FOR_def:
+ (FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M)
+      (i, j, a) =
+    if i = j then
+        a i
+     else
+        BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))
+Termination
+  WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`
 End
 
 (*---------------------------------------------------------------------------*)

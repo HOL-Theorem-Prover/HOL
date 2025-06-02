@@ -32,8 +32,7 @@ Definition x2sexp_def:
   (x2sexp (T,Ite cs,yy) = list2sexp (Sym "cond" :: MAP (\ (t1,t2).
        list2sexp [x2sexp (T,t1,FunVar "nil"); x2sexp (T,t2,FunVar "nil")]) cs))
 Termination
-  WF_REL_TAC `measure (\(x,y,z). if x then term_size y else func_size z)` THEN
-  simp[MEM_SPLIT, PULL_EXISTS, list_size_append]
+  WF_REL_TAC `measure (\(x,y,z). if x then term_size y else func_size z)`
 End
 
 val x2sexp = x2sexp_def |> CONJUNCTS |> map SPEC_ALL |> LIST_CONJ
