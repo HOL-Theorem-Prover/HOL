@@ -3,6 +3,7 @@ sig
 
   include Abbrev
   type defn = DefnBase.defn
+  type simpset = simpLib.simpset
 
    (* Support for automated termination proofs *)
 
@@ -21,20 +22,21 @@ sig
    val temp_exclude_termsimp  : string -> unit
    val exclude_termsimp  : string -> unit
    val with_termsimps : thm list -> ('a -> 'b) -> ('a -> 'b)
-   val termination_solve_simps : thm list ref
-
    val export_termsimp : string -> unit
    val temp_export_termsimp : string -> unit
 
-   val TC_SIMP_CONV : thm list -> conv
-   val TC_SIMP_TAC  : thm list -> thm list -> tactic
+   val termination_solve_simps : thm list ref
 
-   val WF_REL_TAC   : term quotation -> tactic
-   val PROVE_TERM_TAC : tactic
+   val termination_ss  : unit -> simpset
+   val TC_SIMPLIFIER   : simpset -> tactic
+   val TC_PROVER       : simpset -> thm list -> tactic
+   val TC_SIMP_TAC     : unit -> tactic
+   val TC_PROVE_TAC    : unit -> tactic
+   val WF_REL_TAC      : term quotation -> tactic
 
    (* Definitions with automated termination proof support *)
 
-   val defnDefine  : tactic -> defn -> thm * thm option * thm option
+   val defnDefine  : defn -> thm * thm option * thm option
    val primDefine  : defn -> thm * thm option * thm option
    val tailrecDefine: DB.thm_src_location -> string -> term quotation -> thm
    val located_tDefine : DB.thm_src_location -> string -> term quotation ->
@@ -53,8 +55,8 @@ sig
 
    type apidefn = (defn * thm option, phase * exn) Lib.verdict
 
-   val apiDefine      : (defn->term list) -> tactic -> string * term -> apidefn
-   val apiDefineq     : (defn->term list) -> tactic -> term quotation -> apidefn
+   val apiDefine      : (defn->term list) -> (unit -> tactic) -> string * term -> apidefn
+   val apiDefineq     : (defn->term list) -> (unit -> tactic) -> term quotation -> apidefn
    val std_apiDefine  : string * term -> apidefn
    val std_apiDefineq : term quotation -> apidefn
 
