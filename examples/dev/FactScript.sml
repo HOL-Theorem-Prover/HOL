@@ -95,7 +95,6 @@ val (MultIter,MultIter_ind,MultIter_dev) =
   `MultIter (m,n:num,acc:num) =
       if m = 0n then (0,n,acc) else MultIter(m-1,n,n + acc)`;
 
-
 (*****************************************************************************)
 (* Two argument multiplication, defined in terms of MultIter                 *)
 (*****************************************************************************)
