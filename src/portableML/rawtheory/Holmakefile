@@ -9,5 +9,5 @@ ifdef POLY
 all: theorytool
 
 theorytool: mktool.ML theorytool.ML theorystats.uo
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 endif
