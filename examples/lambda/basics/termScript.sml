@@ -11,7 +11,7 @@ open HolKernel Parse boolLib bossLib;
 open boolSimps arithmeticTheory pred_setTheory listTheory finite_mapTheory
      relationTheory pairTheory hurdUtils rich_listTheory;
 
-open generic_termsTheory binderLib nomsetTheory nomdatatype;
+open basic_swapTheory generic_termsTheory binderLib nomsetTheory nomdatatype;
 
 val _ = new_theory "term";
 
@@ -120,6 +120,9 @@ val supp_tpm = prove(
   srw_tac [][supptpm_support, supptpm_apart, FINITE_GFV])
 
 Overload FV = “supp ^t_pmact_t”
+
+val _ = TeX_notation { hol = "FV",
+        TeX = ("\\ensuremath{\\mathrm{FV}\\!}", 1) };
 
 Theorem FINITE_FV[simp]: FINITE (FV t)
 Proof srw_tac [][supp_tpm, FINITE_GFV]
@@ -1817,15 +1820,115 @@ Proof
  >> simp [Abbr ‘xs'’, Abbr ‘Ps'’, ALL_DISTINCT_REVERSE]
 QED
 
-(*****************************************************************************)
-(*  Simultaneous substitution given by a function containing infinite keys   *)
-(*                                                                           *)
-(*  NOTE: This definition is not used (it doesn't have finite "support").    *)
-(*****************************************************************************)
+(* NOTE: M may contain free variables from xs, but after the fresh tpm
+   there's no more xs variables, thus is disjoint with xs.
+ *)
+Theorem FV_renaming_disjoint :
+    !xs ys M. ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+              LENGTH xs = LENGTH ys /\
+              DISJOINT (set xs) (set ys) /\
+              DISJOINT (set ys) (FV M)
+          ==> DISJOINT (FV (M ISUB ZIP (MAP VAR ys,xs))) (set xs)
+Proof
+    rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘ALL_DISTINCT xs’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘ALL_DISTINCT ys’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set xs) (set ys)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set ys) (FV M)’ MP_TAC
+ >> qabbrev_tac ‘pi = ZIP (xs,ys)’
+ >> ‘xs = MAP FST pi /\ ys = MAP SND pi’ by rw [Abbr ‘pi’, MAP_ZIP]
+ >> NTAC 2 POP_ORW
+ >> KILL_TAC
+ >> Q.ID_SPEC_TAC ‘M’
+ >> Induct_on ‘pi’ >- rw []
+ >> simp [FORALL_PROD]
+ >> qx_genl_tac [‘x’, ‘y’, ‘M’]
+ >> qabbrev_tac ‘xs = MAP FST pi’
+ >> qabbrev_tac ‘ys = MAP SND pi’
+ >> NTAC 4 STRIP_TAC
+ >> CONJ_TAC
+ >- (FIRST_X_ASSUM irule >> art [] \\
+     simp [FV_SUB] \\
+     Cases_on ‘x IN FV M’ >> simp [] \\
+     MATCH_MP_TAC DISJOINT_SUBSET' \\
+     Q.EXISTS_TAC ‘FV M’ >> simp [Once DISJOINT_SYM])
+ (* stage work *)
+ >> qabbrev_tac ‘sub = ZIP (MAP VAR ys,xs)’
+ >> fs []
+ >> qabbrev_tac ‘t = [VAR y/x] M’
+ >> Know ‘FV (t ISUB sub) SUBSET FV t UNION FVS sub’
+ >- rw [FV_ISUB_upperbound]
+ >> ‘LENGTH ys = LENGTH xs’ by rw [Abbr ‘xs’, Abbr ‘ys’]
+ >> Know ‘FVS sub = set ys’
+ >- (rw [Abbr ‘sub’, FVS_ALT, Once EXTENSION] \\
+     EQ_TAC >> rw []
+     >- (rename1 ‘MEM z ys’ \\
+         gvs [MEM_MAP] \\
+         POP_ASSUM MP_TAC \\
+         rw [MEM_ZIP, LENGTH_MAP] \\
+         gvs [EL_MAP] \\
+         simp [EL_MEM]) \\
+     simp [MEM_MAP] \\
+     rename1 ‘MEM z ys’ \\
+     Q.EXISTS_TAC ‘FV (VAR z)’ >> simp [] \\
+     fs [MEM_EL] \\
+     Q.EXISTS_TAC ‘(VAR (EL n ys),EL n xs)’ >> simp [] \\
+     Q.EXISTS_TAC ‘n’ >> simp [EL_ZIP, EL_MAP])
+ >> Rewr'
+ >> simp [Abbr ‘t’, FV_SUB]
+ >> Cases_on ‘x IN FV M’ >> simp []
+ >- (DISCH_TAC \\
+     CCONTR_TAC >> fs [] \\
+     Know ‘x IN {y} UNION (FV M DELETE x) UNION set ys’
+     >- METIS_TAC [SUBSET_DEF] \\
+     simp [IN_UNION])
+ >> qabbrev_tac ‘t = [VAR y/x] M’
+ >> DISCH_TAC
+ >> CCONTR_TAC >> fs []
+ >> Know ‘x IN FV M UNION set ys’ >- METIS_TAC [SUBSET_DEF]
+ >> simp [IN_UNION]
+QED
 
-Definition fssub_def :
-    fssub f t = FUN_FMAP f (FV t) ' t
-End
+(* NOTE: M is disjoint with zs, and the tpm (not a fresh tpm) is irrelevant
+   with zs, thus after the tpm the resulting term is still disjoint with zs.
+ *)
+Theorem FV_tpm_disjoint :
+    !zs xs ys M. ALL_DISTINCT xs /\ ALL_DISTINCT ys /\
+                 LENGTH xs = LENGTH ys /\
+                 DISJOINT (set xs) (set ys) /\
+                 DISJOINT (set xs) (set zs) /\
+                 DISJOINT (set ys) (set zs) /\
+                 DISJOINT (set zs) (FV M)
+             ==> DISJOINT (set zs) (FV (tpm (ZIP (xs,ys)) M))
+Proof
+    rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘ALL_DISTINCT xs’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘ALL_DISTINCT ys’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set xs) (set ys)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set ys) (set zs)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set xs) (set zs)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set zs) (FV M)’   MP_TAC
+ >> qabbrev_tac ‘pi = ZIP (xs,ys)’
+ >> ‘xs = MAP FST pi /\ ys = MAP SND pi’ by rw [Abbr ‘pi’, MAP_ZIP]
+ >> NTAC 2 POP_ORW
+ >> KILL_TAC
+ >> Q.ID_SPEC_TAC ‘M’
+ >> Induct_on ‘pi’ >- rw []
+ >> simp [FORALL_PROD]
+ >> qx_genl_tac [‘x’, ‘y’, ‘M’]
+ >> qabbrev_tac ‘xs = MAP FST pi’
+ >> qabbrev_tac ‘ys = MAP SND pi’
+ >> rpt STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!M. P’ (MP_TAC o Q.SPEC ‘M’) >> rw []
+ >> simp [Once tpm_CONS]
+ >> qabbrev_tac ‘t = tpm pi M’
+ >> rw [DISJOINT_ALT', FV_tpm]
+ >> rename1 ‘swapstr x y z IN FV t’
+ >> Cases_on ‘x = z’ >> fs [swapstr_def]
+ >> Cases_on ‘y = z’ >> fs []
+ >> Q.PAT_X_ASSUM ‘DISJOINT (set zs) (FV t)’ MP_TAC
+ >> rw [DISJOINT_ALT']
+QED
 
 (*---------------------------------------------------------------------------*
  *  ‘tpm’ as an equivalence relation between terms
@@ -1921,6 +2024,16 @@ Proof
       MATCH_MP_TAC tpm_rel_TRANS >> Q.EXISTS_TAC ‘N'’ >> art [] \\
       MATCH_MP_TAC tpm_rel_SYM >> art [] ]
 QED
+
+(*****************************************************************************)
+(*  Simultaneous substitution given by a function containing infinite keys   *)
+(*                                                                           *)
+(*  NOTE: This definition is hard to use (it doesn't have finite "support"). *)
+(*****************************************************************************)
+
+Definition fssub_def :
+    fssub f t = FUN_FMAP f (FV t) ' t
+End
 
 (* ----------------------------------------------------------------------
     Set up the recursion functionality in binderLib

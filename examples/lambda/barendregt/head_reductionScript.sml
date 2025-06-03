@@ -39,6 +39,12 @@ val _ = overload_on ("-h->", ``hreduce1``)
 val _ = set_fixity "-h->*" (Infix(NONASSOC, 450))
 val _ = overload_on ("-h->*", ``hreduce1^*``)
 
+val _ = TeX_notation { hol = "-h->",
+        TeX = ("\\ensuremath{\\rightarrow_h}", 1) };
+
+val _ = TeX_notation { hol = "-h->*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow_{h}}", 1) };
+
 Theorem hreduce1_beta_reduce[simp] :
      LAM h M @@ VAR h -h-> M
 Proof
