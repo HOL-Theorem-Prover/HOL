@@ -1,11 +1,11 @@
 (*---------------------------------------------------------------------------*
- * Beta-equivalence and combinators (Chapter 2 of Hankin [2])
+ * Beta-equivalence and combinators (Chapter 2 of Barendregt [1] & Hankin [2])
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib bossLib BasicProvers;
 
 open pred_setTheory pred_setLib listTheory rich_listTheory finite_mapTheory
-     arithmeticTheory string_numTheory hurdUtils pairTheory;
+     arithmeticTheory string_numTheory hurdUtils pairTheory listLib;
 
 open basic_swapTheory termTheory nomsetTheory binderLib appFOLDLTheory;
 
@@ -17,18 +17,45 @@ structure Q = struct open Q open OldAbbrevTactics end;
 
 val _ = new_theory "chap2";
 
-val (ctxt_rules, ctxt_indn, ctxt_cases) =  (* p. 10 *)
-  Hol_reln`(!s. ctxt (\x. VAR s))                       /\
-           ctxt (\x. x)                                 /\
-           (!c1 c2. ctxt c1 /\ ctxt c2 ==>
-                    ctxt (\x. c1 x @@ c2 x))            /\
-           (!v c.   ctxt c ==> ctxt (\x. LAM v (c x)))`;
+(* Definition 2.1.18 [1, p.29] *)
+Inductive ctxt :
+[~VAR:]
+    !s. ctxt (\x. VAR s)
+[~I:]
+    ctxt (\x. x)
+[~APP:]
+    !c1 c2. ctxt c1 /\ ctxt c2 ==> ctxt (\x. c1 x @@ c2 x)
+[~LAM:]
+    !v c. ctxt c ==> ctxt (\x. LAM v (c x))
+End
 
 val constant_contexts_exist = store_thm(
   "constant_contexts_exist",
   ``!t. ctxt (\x. t)``,
   HO_MATCH_MP_TAC simple_induction THEN REPEAT STRIP_TAC THEN
   SRW_TAC [][ctxt_rules]);
+
+Theorem ctxt_LAMl :
+    !vs c. ctxt c ==> ctxt (\x. LAMl vs (c x))
+Proof
+    Induct_on ‘vs’ >> rw [ETA_AX]
+ >> HO_MATCH_MP_TAC ctxt_LAM
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
+
+Theorem ctxt_APPL :
+    !c t. ctxt c ==> ctxt (\x. c x @@ t)
+Proof
+    rpt STRIP_TAC
+ >> HO_MATCH_MP_TAC ctxt_APP >> rw [constant_contexts_exist]
+QED
+
+Theorem ctxt_APPR :
+    !c t. ctxt c ==> ctxt (\x. t @@ c x)
+Proof
+    rpt STRIP_TAC
+ >> HO_MATCH_MP_TAC ctxt_APP >> rw [constant_contexts_exist]
+QED
 
 val (one_hole_context_rules, one_hole_context_ind, one_hole_context_cases) =
   Hol_reln`one_hole_context (\x.x) /\
@@ -95,6 +122,12 @@ Inductive lameq :
   !M N x. M == N ==> LAM x M == LAM x N
 End
 
+(* lameq *)
+val _ = TeX_notation { hol = "==", TeX = ("\\HOLTokenLameq", 1) };
+
+Overload "=/=" = “λ(M:term) N. ¬(M == N)”
+val _ = set_fixity "=/=" (Infix(NONASSOC, 450))
+
 Theorem lameq_refl[simp] = lameq_REFL
 
 Theorem lameq_tpm:
@@ -144,10 +177,15 @@ Theorem lameq_ind_X =
                        |> Q.INST[‘Q’ |-> ‘P’]
                        |> Q.GENL [‘P’, ‘X’]
 
-val lameq_app_cong = store_thm(
-  "lameq_app_cong",
-  ``M1 == M2 ==> N1 == N2 ==> M1 @@ N1 == M2 @@ N2``,
-  METIS_TAC [lameq_rules]);
+(* NOTE: The previous proof (by METIS_TAC [lameq_rules]) is a bit slow *)
+Theorem lameq_app_cong :
+    M1 == M2 ==> N1 == N2 ==> M1 @@ N1 == M2 @@ N2
+Proof
+    rpt STRIP_TAC
+ >> Q_TAC (TRANS_TAC lameq_TRANS) ‘M2 @@ N1’
+ >> CONJ_TAC >- (MATCH_MP_TAC lameq_APPL >> art [])
+ >> MATCH_MP_TAC lameq_APPR >> art []
+QED
 
 val lameq_weaken_cong = store_thm(
   "lameq_weaken_cong",
@@ -225,13 +263,14 @@ Proof
  >> MATCH_MP_TAC (cj 1 lemma2_12) >> art []
 QED
 
-val lemma2_13 = store_thm( (* p.20 *)
+(* This is also Proposition 2.1.19 [1, p.29] *)
+val lemma2_13 = store_thm( (* [2, p.20] *)
   "lemma2_13",
   ``!c n n'. ctxt c ==> (n == n') ==> (c n == c n')``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MAP_EVERY Q.ID_SPEC_TAC [`n`, `n'`] THEN
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `c` THEN
-  HO_MATCH_MP_TAC ctxt_indn THEN PROVE_TAC [lameq_rules]);
+  HO_MATCH_MP_TAC ctxt_ind THEN PROVE_TAC [lameq_rules]);
 
 Theorem lameq_LAMl_cong :
     !vs M N. M == N ==> LAMl vs M == LAMl vs N
@@ -269,6 +308,11 @@ Inductive lameta : (* p. 21 *)
 [~ETA:]
   !M x. ~(x IN FV M) ==> lameta (LAM x (M @@ VAR x)) M
 End
+
+(* lameta *)
+val _ = set_fixity "===" (Infix(NONASSOC, 450))
+val _ = overload_on("===", “lameta”);
+val _ = TeX_notation { hol = "===", TeX = ("\\HOLTokenLameta", 1) };
 
 Theorem lameta_subst :
     !M N P x. lameta M N ==> lameta ([P/x] M) ([P/x] N)
@@ -362,6 +406,36 @@ Proof
  >> MATCH_MP_TAC asmlam_trans
  >> Q.EXISTS_TAC ‘LAM x M @@ P’
  >> simp [asmlam_rules]
+QED
+
+Theorem asmlam_app_cong :
+    !M1 M2 N1 N2. asmlam eqns M1 M2 /\ asmlam eqns N1 N2 ==>
+                  asmlam eqns (M1 @@ N1) (M2 @@ N2)
+Proof
+    rpt STRIP_TAC
+ >> Q_TAC (TRANS_TAC asmlam_trans) ‘M2 @@ N1’
+ >> CONJ_TAC >- (MATCH_MP_TAC asmlam_lcong >> art [])
+ >> MATCH_MP_TAC asmlam_rcong >> art []
+QED
+
+Theorem asmlam_ctxt_cong :
+    !c. ctxt c ==> !M N. asmlam eqns M N ==> asmlam eqns (c M) (c N)
+Proof
+    HO_MATCH_MP_TAC ctxt_ind >> rw [asmlam_refl] (* 2 subgoals *)
+ >- (MATCH_MP_TAC asmlam_app_cong >> rw [])
+ >> MATCH_MP_TAC asmlam_abscong >> rw []
+QED
+
+Theorem asmlam_absorb :
+    !M N. M == N ==> asmlam {(M,N)} = (==)
+Proof
+    rpt STRIP_TAC
+ >> simp [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM]
+ >> CONJ_TAC
+ >- (HO_MATCH_MP_TAC asmlam_ind >> simp [] \\
+     METIS_TAC [lameq_rules])
+ >> HO_MATCH_MP_TAC lameq_ind
+ >> METIS_TAC [asmlam_rules]
 QED
 
 (* Definition 2.1.32 [1, p.33]
@@ -1026,6 +1100,7 @@ Proof
   Induct_on ‘Ns’ using SNOC_INDUCT >> rw [appstar_SNOC, lameq_APPL]
 QED
 
+(* Lemma 2.1.23 [1, p.30] *)
 Theorem lameq_LAMl_appstar_VAR[simp] :
     !xs. LAMl xs t @* (MAP VAR xs) == t
 Proof
@@ -1037,6 +1112,96 @@ Proof
  >> MATCH_MP_TAC lameq_appstar_cong
  >> rw [Once lameq_cases]
  >> DISJ1_TAC >> qexistsl_tac [‘h’, ‘M’] >> rw []
+QED
+
+(* Lemma 2.1.20 (i) [1, p.29] *)
+Theorem lameq_ctxt_app_lemma :
+    !vs c. ctxt c ==> ?f. !M. FV M SUBSET set vs ==> c M == f @@ (LAMl vs M)
+Proof
+    Q.X_GEN_TAC ‘vs’
+ >> HO_MATCH_MP_TAC ctxt_ind >> rw [] (* 4 subgoals *)
+ (* ?f. !M. FV M SUBSET set vs ==> VAR s == f @@ LAMl vs M *)
+ >- (Q_TAC (NEW_TAC "x") ‘{s}’ \\
+     Q.EXISTS_TAC ‘LAM x (VAR s)’ >> rw [] \\
+     MATCH_MP_TAC lameq_SYM \\
+     qabbrev_tac ‘N = LAMl vs M’ \\
+     Q_TAC (TRANS_TAC lameq_TRANS) ‘[N/x] (VAR s)’ >> rw [lameq_BETA])
+ (* ?f. !M. FV M SUBSET set vs ==> M == f @@ LAMl vs M *)
+ >- (Q_TAC (NEW_TAC "x") ‘set vs’ \\
+     Q.EXISTS_TAC ‘LAM x (VAR x @* MAP VAR vs)’ >> rw [] \\
+     MATCH_MP_TAC lameq_SYM \\
+     qmatch_abbrev_tac ‘LAM x N @@ P == M’ \\
+     Q_TAC (TRANS_TAC lameq_TRANS) ‘[P/x] N’ >> rw [lameq_BETA] \\
+     simp [Abbr ‘N’, appstar_SUB] \\
+     Know ‘MAP [P/x] (MAP VAR vs) = MAP VAR vs’
+     >- (REWRITE_TAC [MAP_MAP_o] \\
+         simp [LIST_EQ_REWRITE, EL_MAP] \\
+         Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+         MATCH_MP_TAC lemma14b \\
+         Q.PAT_X_ASSUM ‘~MEM x vs’ MP_TAC \\
+         rw [MEM_EL] >> METIS_TAC []) >> Rewr' \\
+     simp [Abbr ‘P’])
+ (* ?f. !M. FV M SUBSET set vs ==> c M @@ c' M == f @@ LAMl vs M *)
+ >- (Q_TAC (NEW_TAC "x") ‘set vs UNION FV f UNION FV f'’ \\
+     Q.EXISTS_TAC ‘LAM x ((f @@ VAR x) @@ (f' @@ VAR x))’ >> rw [] \\
+     NTAC 2 (Q.PAT_X_ASSUM ‘!M. FV M SUBSET set vs ==> _’
+               (MP_TAC o Q.SPEC ‘M’)) >> rw [] \\
+     Q_TAC (TRANS_TAC lameq_TRANS) ‘(f @@ LAMl vs M) @@ (f' @@ LAMl vs M)’ \\
+     CONJ_TAC >- (irule lameq_app_cong >> art []) \\
+     qmatch_abbrev_tac ‘_ == LAM x N @@ P’ \\
+     MATCH_MP_TAC lameq_SYM \\
+     Suff ‘f @@ P @@ (f' @@ P) = [P/x] N’
+     >- (Rewr' >> rw [lameq_BETA]) \\
+     simp [Abbr ‘N’, SUB_THM] \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+     CONJ_TAC >> MATCH_MP_TAC lemma14b >> rw [])
+ (* ?f. !M. FV M SUBSET set vs ==> LAM v (c M) == f @@ LAMl vs M
+
+    LAM v (c M)
+ == LAM v (f @@ LAMl vs M)
+ == g @@ LAMl vs M ==> g = LAM x (LAM v (f @@ VAR x))
+  *)
+ >> Q_TAC (NEW_TAC "x") ‘{v} UNION (set vs) UNION FV f’
+ >> Q.EXISTS_TAC ‘LAM x (LAM v (f @@ VAR x))’ >> rw []
+ >> Q.PAT_X_ASSUM ‘!M. FV M SUBSET set vs ==> _’ (MP_TAC o Q.SPEC ‘M’) >> rw []
+ >> Q_TAC (TRANS_TAC lameq_TRANS) ‘LAM v (f @@ LAMl vs M)’
+ >> CONJ_TAC >- (MATCH_MP_TAC lameq_ABS >> art [])
+ >> POP_ASSUM K_TAC (* c M == ... *)
+ >> qmatch_abbrev_tac ‘_ == LAM x N @@ P’
+ >> MATCH_MP_TAC lameq_SYM
+ >> Suff ‘LAM v (f @@ P) = [P/x] N’ >- rw [lameq_BETA]
+ >> simp [Abbr ‘N’]
+ >> qabbrev_tac ‘t = f @@ VAR x’
+ >> Know ‘[P/x] (LAM v t) = LAM v ([P/x] t)’
+ >- (MATCH_MP_TAC SUB_LAM >> rw [Abbr ‘P’] \\
+     simp [FV_LAMl] \\
+     STRONG_DISJ_TAC >> fs [SUBSET_DEF])
+ >> Rewr'
+ >> simp [Abbr ‘t’, SUB_THM, Once EQ_SYM_EQ]
+ >> MATCH_MP_TAC lemma14b >> art []
+QED
+
+Theorem lameq_ctxt_app_closed :
+    !c. ctxt c ==> ?f. !M. closed M ==> c M == f @@ M
+Proof
+    rw [closed_def]
+ >> MP_TAC (Q.SPECL [‘[]’, ‘c’] lameq_ctxt_app_lemma) >> rw []
+QED
+
+(* Lemma 2.1.20 (ii) [1, p.29] *)
+Theorem lameq_ctxt_app :
+    !c M. ctxt c ==> ?vs f. c M == f @@ (LAMl vs M)
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘X = FV M’
+ >> qabbrev_tac ‘vs = SET_TO_LIST X’
+ >> Know ‘FV M = set vs’
+ >- (simp [Abbr ‘vs’, Once EQ_SYM_EQ] \\
+     MATCH_MP_TAC SET_TO_LIST_INV >> rw [Abbr ‘X’])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘vs’, ‘c’] lameq_ctxt_app_lemma) >> rw []
+ >> qexistsl_tac [‘vs’, ‘f’]
+ >> POP_ASSUM MATCH_MP_TAC >> rw []
 QED
 
 Theorem lameq_LAMl_appstar_reduce :
@@ -1567,9 +1732,13 @@ QED
 
 (* By prefixing a list of abstractions of FVs, any term can be "closed". The
    set ‘closures M’ represent such closures with different order of FVs.
+
+   NOTE: The condition “set vs = FV M” was replaced with “FV M SUBSET set vs”,
+   which allows more flexible binding variable lists. This is useful for
+   constructing a share binding variable list closing a finite list of terms.
  *)
 Definition closures_def :
-    closures M = {LAMl vs M | vs | ALL_DISTINCT vs /\ set vs = FV M}
+    closures M = {LAMl vs M | vs | ALL_DISTINCT vs /\ FV M SUBSET set vs}
 End
 
 Theorem closures_not_empty :
@@ -1583,48 +1752,51 @@ Proof
  >> rw [SET_TO_LIST_INV]
 QED
 
-Theorem closures_of_closed[simp] :
-    !M. closed M ==> closures M = {M}
+Theorem closures_of_closed :
+    !M. closed M ==> M IN closures M
 Proof
     rw [closures_def, closed_def]
- >> rw [Once EXTENSION]
+ >> Q.EXISTS_TAC ‘[]’ >> rw []
 QED
 
 Theorem closures_of_open_sing :
-    !M v. FV M = {v} ==> closures M = {LAM v M}
+    !M v. FV M = {v} ==> LAM v M IN closures M
 Proof
     rw [closures_def, LIST_TO_SET_SING]
- >> rw [Once EXTENSION]
+ >> Q.EXISTS_TAC ‘[v]’ >> rw []
 QED
 
-(* ‘closure M’ is just one arbitrary element in ‘closures M’. *)
-Overload closure = “\M. CHOICE (closures M)”
+(* ‘closure M’ is the canonical element in ‘closures M’. *)
+Definition closure_def :
+    closure M = LAMl (SET_TO_LIST (FV M)) M
+End
 
 Theorem closure_in_closures :
     !M. closure M IN closures M
 Proof
-    rw [CHOICE_DEF, closures_not_empty]
+    rw [closure_def, closures_def]
+ >> Q.EXISTS_TAC ‘SET_TO_LIST (FV M)’
+ >> rw [ALL_DISTINCT_SET_TO_LIST]
+ >> rw [SUBSET_DEF]
 QED
 
 Theorem closure_idem[simp] :
-    !M. closed M ==> closure M = M
+    closed M ==> closure M = M
 Proof
-    rw [closures_of_closed]
+    rw [closure_def, closed_def]
 QED
 
 Theorem closure_open_sing :
     !M v. FV M = {v} ==> closure M = LAM v M
 Proof
-    rpt STRIP_TAC
- >> ‘closures M = {LAM v M}’ by PROVE_TAC [closures_of_open_sing]
- >> rw []
+    rw [closure_def]
 QED
 
 Theorem closed_closure[simp]:
   closed (closure M)
 Proof
   qspec_then ‘M’ assume_tac closure_in_closures >> gvs[closures_def] >>
-  simp[closed_def, appFOLDLTheory.FV_LAMl]
+  simp[closed_def, appFOLDLTheory.FV_LAMl] >> ASM_SET_TAC []
 QED
 
 (*---------------------------------------------------------------------------*
@@ -1636,18 +1808,47 @@ Definition solvable_def :
     solvable (M :term) = ?M' Ns. M' IN closures M /\ M' @* Ns == I
 End
 
-Theorem closures_alt_closed :
-    !M. closed M ==> closures M = {M}
-Proof
-    rw [closures_def, closed_def]
- >> rw [Once EXTENSION]
-QED
-
 (* 8.3.1 (i) [1, p.171] *)
 Theorem solvable_alt_closed :
     !M. closed M ==> (solvable M <=> ?Ns. M @* Ns == I)
 Proof
-    rw [solvable_def, closures_alt_closed]
+    rw [solvable_def, closures_def, closed_def]
+ >> reverse EQ_TAC
+ >- (STRIP_TAC \\
+     qexistsl_tac [‘M’, ‘Ns’] >> art [] \\
+     Q.EXISTS_TAC ‘[]’ >> rw [])
+ >> rw []
+ (* stage work *)
+ >> rpt (POP_ASSUM MP_TAC)
+ >> qid_spec_tac ‘M’
+ >> qid_spec_tac ‘vs’
+ >> SNOC_INDUCT_TAC
+ >- (rw [] \\
+     Q.EXISTS_TAC ‘Ns’ >> art [])
+ >> rw [LAMl_SNOC, ALL_DISTINCT_SNOC]
+ >> qabbrev_tac ‘N = LAM x M’
+ >> ‘FV N = {}’ by rw [Abbr ‘N’]
+ >> Know ‘?Ps. N @* Ps == I’
+ >- (FIRST_X_ASSUM irule >> art [])
+ >> STRIP_TAC
+ >> Cases_on ‘Ps’ >> fs [Abbr ‘N’]
+ >- (‘LAM x M @@ I == I @@ I’ by rw [lameq_APPL] \\
+     ‘I @@ I == I’ by rw [lameq_I] \\
+     ‘LAM x M @@ I == I’ by PROVE_TAC [lameq_TRANS] \\
+     ‘LAM x M @@ I == [I/x] M’ by rw [lameq_BETA] \\
+     ‘[I/x] M = M’ by rw [lemma14b] \\
+     POP_ASSUM (fs o wrap) \\
+    ‘M == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM] \\
+     Q.EXISTS_TAC ‘[]’ >> rw [])
+ >> ‘LAM x M @@ h == [h/x] M’ by rw [lameq_BETA]
+ >> ‘[h/x] M = M’ by rw [lemma14b]
+ >> POP_ASSUM (fs o wrap)
+ >> qabbrev_tac ‘N = LAM x M’
+ >> Know ‘N @@ h @* t == M @* t’
+ >- (MATCH_MP_TAC lameq_appstar_cong >> art [])
+ >> DISCH_TAC
+ >> ‘M @* t == I’ by PROVE_TAC [lameq_TRANS, lameq_SYM]
+ >> Q.EXISTS_TAC ‘t’ >> art []
 QED
 
 (* 8.3.1 (iii) [1, p.171] *)

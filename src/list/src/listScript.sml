@@ -156,6 +156,7 @@ val _ = overload_on ("++", Term‘APPEND’);
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
                        TeX = ("\\HOLTokenDoublePlus", 1) }
+val _ = TeX_notation { hol = "++", TeX = ("\\HOLTokenDoublePlus", 1) };
 
 (* preserving old choice of quantification order *)
 Theorem APPEND[simp]:

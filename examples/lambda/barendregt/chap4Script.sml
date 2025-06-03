@@ -13,11 +13,72 @@ val _ = new_theory "chap4";
 
 val _ = hide "B"
 
-(* definition 4.1.1(i) is already in chap2, given name asmlam *)
+(* definition 4.1.1(i) is already in chap2, given name asmlam
 
+   NOTE: “lambdathy {}” is false, use “lambdathy (UNCURRY (==)” for the base theory.
+ *)
 Definition lambdathy_def:
   lambdathy A ⇔ consistent (asmlam A) ∧ UNCURRY (asmlam A) = A
 End
+
+Theorem asmlam_lameq_absorb :
+    asmlam (UNCURRY (==)) = (==)
+Proof
+    simp [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM]
+ >> CONJ_TAC
+ >- (HO_MATCH_MP_TAC asmlam_ind >> simp [] \\
+     METIS_TAC [lameq_rules])
+ >> HO_MATCH_MP_TAC lameq_ind
+ >> METIS_TAC [asmlam_rules]
+QED
+
+Theorem asmlam_lameta_absorb :
+    asmlam (UNCURRY lameta) = lameta
+Proof
+    simp [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM]
+ >> CONJ_TAC
+ >- (HO_MATCH_MP_TAC asmlam_ind >> simp [] \\
+     METIS_TAC [lameta_rules])
+ >> HO_MATCH_MP_TAC lameta_ind
+ >> REWRITE_TAC [CONJ_ASSOC]
+ >> CONJ_TAC >- METIS_TAC [asmlam_rules]
+ >> qx_genl_tac [‘t’, ‘y’] >> STRIP_TAC
+ >> MATCH_MP_TAC asmlam_eqn >> simp []
+ >> MATCH_MP_TAC lameta_ETA >> art []
+QED
+
+(* not used *)
+Theorem asmlam_conversion_absorb :
+    asmlam (UNCURRY (conversion R)) = asmlam (UNCURRY R)
+Proof
+    simp [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM]
+ >> reverse CONJ_TAC
+ >- (HO_MATCH_MP_TAC asmlam_ind >> simp [] \\
+     reverse CONJ_TAC >- METIS_TAC [asmlam_rules] \\
+     rpt STRIP_TAC \\
+     MATCH_MP_TAC asmlam_eqn >> rw [] \\
+     rw [conversion_rules])
+ >> HO_MATCH_MP_TAC asmlam_ind >> simp []
+ >> reverse CONJ_TAC >- METIS_TAC [asmlam_rules]
+ >> HO_MATCH_MP_TAC EQC_INDUCTION
+ >> reverse CONJ_TAC >- METIS_TAC [asmlam_rules]
+ >> HO_MATCH_MP_TAC compat_closure_ind
+ >> reverse CONJ_TAC >- METIS_TAC [asmlam_rules]
+ >> rpt STRIP_TAC
+ >> MATCH_MP_TAC asmlam_eqn >> rw []
+QED
+
+Theorem lambdathy_lameq :
+    lambdathy (UNCURRY (==))
+Proof
+    rw [lambdathy_def, asmlam_lameq_absorb, lameq_consistent]
+QED
+
+Theorem lambdathy_lameta :
+    lambdathy (UNCURRY lameta)
+Proof
+    rw [lambdathy_def, asmlam_lameta_absorb, lameta_consistent]
+QED
 
 Definition church1_def:
   church1 = LAM "x" (LAM "y" (VAR "x" @@ VAR "y"))
@@ -265,7 +326,7 @@ Proof
       METIS_TAC [conversion_rules],
       (* goal 6 (of 8) *)
       PROVE_TAC [conversion_compatible, compatible_def, rightctxt, rightctxt_thm],
-      (* goal 8 (of 8) *)
+      (* goal 7 (of 8) *)
       PROVE_TAC [conversion_compatible, compatible_def, leftctxt],
       (* goal 8 (of 8) *)
       PROVE_TAC [conversion_compatible, compatible_def, absctxt] ]
