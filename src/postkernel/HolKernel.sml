@@ -229,7 +229,7 @@ in
          val ERR = Feedback.mk_HOL_ERR (thy ^ "Syntax")
          val tm = Term.prim_mk_const {Name = name, Thy = thy}
          val () =
-            ignore (List.length (args tm) = n
+            ignore (List.length (args tm) >= n
                     orelse raise ERR "syntax_fns" "bad number of arguments")
          val d = dest tm (ERR ("dest_" ^ name) "")
       in
