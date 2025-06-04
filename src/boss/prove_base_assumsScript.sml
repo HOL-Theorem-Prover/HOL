@@ -631,13 +631,23 @@ val th20 = store_thm
   \\ PURE_REWRITE_TAC[T_iff,or_T,F_iff,or_F,imp_T,imp_F]
   \\ REFL_TAC);
 
+val not_T = hd(amatch``~T``);
+
+(* |- !A B. A ==> B <=> ~A \/ B *)
+val imp_disj_thm = store_thm
+  ("imp_disj_thm", concl boolTheory.IMP_DISJ_THM,
+    rpt gen_tac
+ >> qspec_then ‘A’ FULL_STRUCT_CASES_TAC bool_cases
+ >> PURE_REWRITE_TAC[T_imp,not_T,F_imp,not_F,F_or,T_or]
+ >> REFL_TAC);
+
 (* |- !A B. A \/ B <=> ~A ==> B (DISJ_EQ_IMP) *)
 val th21 = save_thm
   ("th21", (* this forward proof comes from boolScript.sml *)
   let
     val lemma = not_not |> SPEC ``A:bool``
   in
-    IMP_DISJ_THM
+    imp_disj_thm
     |> SPECL [``~A:bool``,``B:bool``]
     |> SYM
     |> CONV_RULE
@@ -1580,16 +1590,6 @@ val th98 = store_thm
   \\ TRY (disj1_tac >> first_assum ACCEPT_TAC)
   \\ TRY (disj2_tac >> first_assum ACCEPT_TAC));
 
-val not_T = hd(amatch``~T``);
-
-(* |- !A B. A ==> B <=> ~A \/ B *)
-val IMP_DISJ_THM = store_thm
-  ("IMP_DISJ_THM", concl boolTheory.IMP_DISJ_THM,
-  rpt gen_tac
-  \\ qspec_then`A`FULL_STRUCT_CASES_TAC bool_cases
-  \\ PURE_REWRITE_TAC[T_imp,not_T,F_imp,not_F,F_or,T_or]
-  \\ REFL_TAC);
-
 (* This is no more needed
 val some_neq_none = hd(amatch``_ <> Data_Option_none``);
  *)
@@ -1665,8 +1665,8 @@ val COND_EXPAND_IMP = save_thm
      val t2   = “t2:bool”
      val nb   = mk_neg b;
      val nnb  = mk_neg nb;
-     val imp_th1  = SPECL [b, t1] IMP_DISJ_THM;
-     val imp_th2a = SPECL [nb, t2] IMP_DISJ_THM
+     val imp_th1  = SPECL [b, t1] imp_disj_thm;
+     val imp_th2a = SPECL [nb, t2] imp_disj_thm
      val imp_th2b = SUBST_CONV [nnb |-> (SPEC b (CONJUNCT1 NOT_CLAUSES))]
                      (mk_disj (nnb, t2)) (mk_disj (nnb, t2))
      val imp_th2  = TRANS imp_th2a imp_th2b
@@ -1707,9 +1707,9 @@ val OR_CONG = save_thm
      val th4 = ASSUME ctm1
      val th5 = ASSUME ctm2
      val th6 = SUBS [SPEC Q (CONJUNCT1 NOT_CLAUSES)]
-                    (SUBS [SPECL[notQ, PeqP'] IMP_DISJ_THM] th4)
+                    (SUBS [SPECL[notQ, PeqP'] imp_disj_thm] th4)
      val th7 = SUBS [SPEC P' (CONJUNCT1 NOT_CLAUSES)]
-                    (SUBS [SPECL[notP', QeqQ'] IMP_DISJ_THM] th5)
+                    (SUBS [SPECL[notP', QeqQ'] imp_disj_thm] th5)
      val th8 = ASSUME P'
      val th9 = DISJ1 th8 Q'
      val th10 = ASSUME QeqQ'
