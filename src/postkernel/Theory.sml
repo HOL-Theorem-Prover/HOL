@@ -209,7 +209,8 @@ in
 end (* local *)
 
 type metadata = {path: string, timestamp: Time.time}
-val metadata = ref (Binarymap.mkDict String.compare)
+val metadata = ref ((Binarymap.mkDict String.compare):
+                    (string,metadata)Binarymap.dict)
 fun record_metadata thy md =
   metadata := Binarymap.insert(!metadata, thy, md)
 fun thy_timestamp thy = #timestamp (Binarymap.find(!metadata, thy))
