@@ -278,9 +278,7 @@ Proof
                       IN_BIGUNION_IMAGE, GSPECIFICATION, IN_o, o_THM,
                       PROB_WHILE_CUT_REV, BIND_DEF, UNIT_DEF, UNCURRY]
     >> FULL_SIMP_TAC arith_ss [SPECIFICATION, ADD1, RANDOM_LURCHES_TRANSLATION,
-                               BIND_DEF, UNCURRY, UNIT_DEF, o_THM]
-    >> Suff `!x. (a = a + x) = (x = 0)` >- RW_TAC std_ss []
-    >> DECIDE_TAC,
+                               BIND_DEF, UNCURRY, UNIT_DEF, o_THM],
     MATCH_MP_TAC PROB_INCREASING_UNION
     >> SET_EQ_TAC
     >> RW_TAC std_ss [PROB_SPACE_BERN, IN_FUNSET, IN_UNIV, INDEP_FN_FST_EVENTS,
