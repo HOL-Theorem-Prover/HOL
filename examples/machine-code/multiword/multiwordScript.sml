@@ -1791,7 +1791,6 @@ val mw_div_by_single_thm_bis = store_thm ("mw_div_by_single_thm_bis",
          FULL_SIMP_TAC std_ss [mw_mul_by_single_lemma] >>
          ONCE_REWRITE_TAC[MULT_COMM] >>
          srw_tac[][MOD_TIMES,ADD_DIV_ADD_DIV] >>
-         MATCH_MP_TAC ((fn (x,y) => y) (EQ_IMP_RULE (SPEC_ALL EQ_ADDL))) >>
          MATCH_MP_TAC LESS_DIV_EQ_ZERO >> METIS_TAC[]) >>
 
   HO_MATCH_MP_TAC mw_div_by_single_ind >>
@@ -2501,7 +2500,6 @@ THEN1(REPEAT strip_tac >>
          `0 < dimword(:'a) DIV 2` by METIS_TAC[TWO,DIV_GT0,DECIDE``0<2``,TWO,LESS_EQ,ONE_LT_dimword] >>
          METIS_TAC[LESS_LESS_EQ_TRANS,ZERO_LT_EXP,ZERO_LT_dimword,LESS_EQ_ADD,ZERO_LESS_MULT,ADD_COMM]) >>
       srw_tac[][MOD_TIMES,ADD_DIV_ADD_DIV,Abbr`rslt`] >>
-      MATCH_MP_TAC ((fn (x,y) => y) (EQ_IMP_RULE (SPEC_ALL EQ_ADDL))) >>
       MATCH_MP_TAC LESS_DIV_EQ_ZERO >> METIS_TAC[]) >>
 
 HO_MATCH_MP_TAC mw_div_loop_ind >>
