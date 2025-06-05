@@ -208,6 +208,11 @@ in
   val $$ = $$
 end (* local *)
 
+type metadata = {path: string, timestamp: Time.time}
+val metadata = ref (Binarymap.mkDict String.compare)
+fun record_metadata thy md =
+  metadata := Binarymap.insert(!metadata, thy, md)
+fun thy_timestamp thy = #timestamp (Binarymap.find(!metadata, thy))
 
 
 (*---------------------------------------------------------------------------*
@@ -266,6 +271,7 @@ local fun norm_name "-" = CTname()
       val cleaned = List.mapPartial drop_pthmkind
 in
  val hash             = thy_hash o norm_name
+ val mod_time         = thy_timestamp o norm_name
  val types            = thy_types o norm_name
  val constants        = thy_constants o norm_name
  fun get_parents s    = if norm_name s = CTname()

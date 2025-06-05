@@ -674,9 +674,7 @@ fun pp_theory_as_tex name =
       val defns = non_type_definitions name
       val thms = non_type_theorems name
       val hash = Theory.hash name
-      val time = Date.fromTimeLocal $ Time.now()
-        (* TODO: Use OS.FileSys.modTime somehow to get:
-         *       `Theory.modTime name` here instead *)
+      val time = Date.fromTimeLocal $ Theory.mod_time name
       val u = current_trace "Unicode"
       val _ = set_trace "Unicode" 0
   in
