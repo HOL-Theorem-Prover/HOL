@@ -47,10 +47,8 @@ fun string_to_class "A" = SOME Axm
 
 val dec_thyname : raw_name decoder =
     map_decode
-        (fn (s,n1,n2) => {thy = s, tstamp1 = n1, tstamp2 = n2}) $
-        pair3_decode (string_decode,
-                      Option.map Arbnum.fromString o string_decode,
-                      Option.map Arbnum.fromString o string_decode)
+        (fn (s,h) => {thy = s, hash = h}) $
+        pair_decode (string_decode, string_decode)
 
 (* ----------------------------------------------------------------------
     raw types and terms
@@ -225,7 +223,7 @@ fun decode s =
           case thyparentage of
               Cons p => p
             | _ => raise TheoryReader "thyparentage not a pair"
-      val fullthy as {thy,...} = force "thyname" dec_thyname thy_data
+      val fullthy = force "thyname" string_decode thy_data
       val parents = force "parents" (list_decode dec_thyname) parents_data
       val ({tables,exports}, incorporate_data, thydata_data) =
           force "toplevel_decode" (
@@ -256,7 +254,7 @@ fun decode s =
       }
     end
 
-fun load_raw_thydata {thyname, path} : raw_theory =
+fun load_raw_thydata {path} : raw_theory =
     case decode (fromFile path) of
         NONE => raise TheoryReader ("Invalid file at "^path)
       | SOME v => v
