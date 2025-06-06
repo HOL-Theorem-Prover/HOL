@@ -8,6 +8,8 @@
 *.uo
 *.ui
 *.o
+*.tr
+*.tr.gz
 .hollogs
 .holobjs
 .HOLMK
