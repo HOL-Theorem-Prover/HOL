@@ -554,7 +554,33 @@ fun WF_REL_TAC q =
     TERM_TAC WF_TAC (CONV_TAC (EVERY_CONJ_CONV conjunct_conv))
   end
 
+val TC_SIMPLIFIER = fn ss =>
+     let val tac = TC_SIMPLIFIER ss
+     in fn g => (numSimps.clear_arith_caches(); tac g)
+     end
+
+val TC_PROVER = fn ss => fn ths =>
+     let val tac = TC_PROVER ss ths
+     in fn g => (numSimps.clear_arith_caches(); tac g)
+     end
+
+val TC_SIMP_TAC = fn () =>
+    let val tac = TC_SIMP_TAC ()
+    in fn g => (numSimps.clear_arith_caches(); tac g)
+    end
+
+val TC_PROVE_TAC = fn () =>
+    let val tac = TC_PROVE_TAC ()
+    in fn g => (numSimps.clear_arith_caches(); tac g)
+    end
+
+val WF_REL_TAC = fn q =>
+    let val tac = WF_REL_TAC q
+    in fn g => (numSimps.clear_arith_caches(); tac g)
+    end
+
 fun mk_term_tac() = TERM_TAC WF_TAC (TC_PROVE_TAC ())
+
 
 (*---------------------------------------------------------------------------
        Definition principles that automatically attempt
