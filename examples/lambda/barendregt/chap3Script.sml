@@ -65,6 +65,11 @@ val ubeta_arrow = "-" ^ UnicodeChars.beta ^ "->"
 val _ = Unicode.unicode_version {u = ubeta_arrow, tmnm = "-b->"}
 val _ = Unicode.unicode_version {u = ubeta_arrow^"*", tmnm = "-b->*"}
 
+val _ = TeX_notation { hol = "-b->",
+        TeX = ("\\ensuremath{\\rightarrow}", 1) };
+
+val _ = TeX_notation { hol = "-b->*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow}", 1) };
 
 Theorem permutative_beta[simp]:
   permutative beta
@@ -789,6 +794,16 @@ val lameq_consistent = store_thm(
   `S = K` by PROVE_TAC [corollary3_2_1] THEN
   FULL_SIMP_TAC (srw_ss()) [S_def, K_def]);
 
+Theorem incompatible_not_lameq :
+    !M N. incompatible M N ==> ~(M == N)
+Proof
+    rw [incompatible_def, inconsistent_def]
+ >> CCONTR_TAC >> fs []
+ >> ‘!P Q. P == Q’ by METIS_TAC [asmlam_absorb]
+ >> MP_TAC lameq_consistent
+ >> rw [consistent_def]
+QED
+
 val has_bnf_thm = store_thm(
   "has_bnf_thm",
   ``has_bnf M <=> ?N. M -b->* N /\ bnf N``,
@@ -1277,6 +1292,12 @@ val _ = set_fixity "-βη->" (Infix(NONASSOC, 450))
 val _ = set_fixity "-βη->*" (Infix(NONASSOC, 450))
 val _ = set_fixity "-η->" (Infix(NONASSOC, 450))
 val _ = set_fixity "-η->*" (Infix(NONASSOC, 450))
+
+val _ = TeX_notation { hol = "-η->",
+        TeX = ("\\ensuremath{\\rightarrow_{\\eta}}", 1) };
+
+val _ = TeX_notation { hol = "-η->*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow_{\\eta}}", 1) };
 
 Theorem eta_FV_EQN:
   eta M N ⇒ FV N = FV M

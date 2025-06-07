@@ -2198,6 +2198,12 @@ Proof
   rename [‘g.edges e = 1’] >> Cases_on ‘g.edges e = 0’ >> simp[]
 QED
 
+Theorem BAG_OF_SET_EQ_EMPTY_BAG[simp]:
+  BAG_OF_SET s = {||} ⇔ s = ∅
+Proof
+  simp[EXTENSION] >> simp[FUN_EQ_THM, EMPTY_BAG, BAG_OF_SET, AllCaseEqs()]
+QED
+
 Theorem addEdges_SING[simp]:
   addEdges {directed {m} {n} l} g =
   addEdge m n l (g: (α,directedG,'ec,'el,'h,ν,'nl,σ) graph)
@@ -2250,7 +2256,8 @@ Proof
       simp[]) >>~-
   ([‘BAG_UNION _ _ = _ ’],
    csimp[edge0_def, Once FUN_EQ_THM, BAG_UNION, BAG_INSERT, BAG_OF_SET] >>
-   rw[])
+   rw[]) >>
+  simp[SF CONJ_ss]
 QED
 
 Theorem edges_addEdges_allokdirgraph:

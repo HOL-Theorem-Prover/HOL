@@ -32,6 +32,9 @@ End
 val _ = set_mapped_fixity {term_name = "peta", tok = "=η=>",
                            fixity = Infix(NONASSOC, 450)}
 
+val _ = TeX_notation { hol = "=η=>",
+        TeX = ("\\ensuremath{\\Rightarrow_{\\eta}}", 1) };
+
 Theorem peta_VAR[simp]:
   peta (VAR s) M ⇔ M = VAR s
 Proof

@@ -554,6 +554,13 @@ fun WF_REL_TAC q =
     TERM_TAC WF_TAC (CONV_TAC (EVERY_CONJ_CONV conjunct_conv))
   end
 
+(*---------------------------------------------------------------------------*)
+(* A big cache in the ARITH dp can really slow the termination provers down. *)
+(* So always clear it. This is a blunt instrument. Better solutions: limit   *)
+(* cache size, or preserve ARITH dp cache, but make termination_ss           *)
+(* independent of it, or find and fix the slowdown in the cache impl.        *)
+(*---------------------------------------------------------------------------*)
+
 val TC_SIMPLIFIER = fn ss =>
      let val tac = TC_SIMPLIFIER ss
      in fn g => (numSimps.clear_arith_caches(); tac g)
