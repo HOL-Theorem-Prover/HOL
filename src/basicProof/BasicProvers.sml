@@ -734,8 +734,27 @@ fun TRIV_LET_CONV tm =
     else NO_CONV tm
  end;
 
+(*---------------------------------------------------------------------------*)
+(* Use a hammer to squash a nut. We want to identify "new" assumptions in    *)
+(* asl2, i.e., those in asl2 but not asl1. This calculation has to use       *)
+(* multisets and not just sets.                                              *)
+(*---------------------------------------------------------------------------*)
+
+val empty_mset = HOLdict.mkDict Term.compare : (term,int) HOLdict.dict
+fun mset_insert t mset = HOLdict.insertWith (op+) (mset,t,1)
+fun mset_of list = itlist mset_insert list empty_mset
+fun mset_diff l2 l1 =
+  let val mset1 = mset_of l1
+      val mset2 = mset_of l2
+      fun add (t,i) acc =
+          let val j = HOLdict.find(mset1,t)
+          in if j < i then t::acc else acc
+          end handle _ => acc
+  in itlist add (HOLdict.listItems mset2) []
+  end;
+
 fun SIMP_OLD_ASSUMS (orig as (asl1,_)) (gl as (asl2,_)) =
- let val new = op_set_diff aconv asl2 asl1
+ let val new = mset_diff asl2 asl1
  in if null new then ALL_TAC
     else let val thms = map ASSUME new
           in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN
