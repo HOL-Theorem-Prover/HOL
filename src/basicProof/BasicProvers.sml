@@ -735,8 +735,8 @@ fun TRIV_LET_CONV tm =
  end;
 
 (*---------------------------------------------------------------------------*)
-(* Use a hammer to squash a nut. We want to identify "new" assumptions in    *)
-(* asl2, i.e., those in asl2 but not asl1. This calculation has to use       *)
+(* Use a hammer to squash an ant. We want to identify "new" assumptions in   *)
+(* asl2, i.e., those in asl2 and not asl1. This calculation has to use       *)
 (* multisets and not just sets.                                              *)
 (*---------------------------------------------------------------------------*)
 
@@ -744,17 +744,22 @@ val empty_mset = HOLdict.mkDict Term.compare : (term,int) HOLdict.dict
 fun mset_insert t mset = HOLdict.insertWith (op+) (mset,t,1)
 fun mset_of list = itlist mset_insert list empty_mset
 fun mset_diff l2 l1 =
-  let val mset1 = mset_of l1
+  let open HOLdict
+      val mset1 = mset_of l1
       val mset2 = mset_of l2
       fun add (t,i) acc =
-          let val j = HOLdict.find(mset1,t)
-          in if j < i then t::acc else acc
-          end handle _ => acc
-  in itlist add (HOLdict.listItems mset2) []
+          case peek(mset1,t)
+           of NONE => (t,i)::acc
+            | SOME j => if j < i then (t,i-j)::acc else acc
+  in
+     itlist add (HOLdict.listItems mset2) []
   end;
 
-fun SIMP_OLD_ASSUMS (orig as (asl1,_)) (gl as (asl2,_)) =
- let val new = mset_diff asl2 asl1
+fun asl_diff asl2 asl1 = map fst (mset_diff asl2 asl1)
+fun legacy_asl_diff asl2 asl1 = op_set_diff aconv asl2 asl1
+
+fun simp_old_assumsFn diffFn (orig as (asl1,_)) (gl as (asl2,_)) =
+ let val new = diffFn asl2 asl1
  in if null new then ALL_TAC
     else let val thms = map ASSUME new
           in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN
@@ -763,36 +768,49 @@ fun SIMP_OLD_ASSUMS (orig as (asl1,_)) (gl as (asl2,_)) =
           end
  end gl;
 
-fun USE_NEW_ASSUM orig_goal cgoal =
+fun use_new_assumFn simp_oldFn orig_goal cgoal =
  (TRY (WEAKEN_TAC is_refl) THEN
   ASM_REWRITE_TAC[] THEN
-  SIMP_OLD_ASSUMS orig_goal THEN
+  simp_oldFn orig_goal THEN
   CONV_TAC (DEPTH_CONV TRIV_LET_CONV)) cgoal;
+
+val USE_NEW_ASSUM      = use_new_assumFn (simp_old_assumsFn asl_diff)
+val LEGACY_USE_NEW_ASSUM = use_new_assumFn (simp_old_assumsFn legacy_asl_diff)
 
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis in the conclusion of the goal, then simplify a bit.    *)
 (*---------------------------------------------------------------------------*)
 
-fun CASE_TAC gl =
- (PURE_CASE_TAC THEN USE_NEW_ASSUM gl THEN CONV_TAC CASE_SIMP_CONV) gl;
+fun case_tac use_newFn gl =
+ (PURE_CASE_TAC THEN use_newFn gl THEN CONV_TAC CASE_SIMP_CONV) gl;
 
-fun TOP_CASE_TAC gl =
- (PURE_TOP_CASE_TAC THEN USE_NEW_ASSUM gl THEN CONV_TAC CASE_SIMP_CONV) gl;
+fun top_case_tac use_newFn gl =
+ (PURE_TOP_CASE_TAC THEN use_newFn gl THEN CONV_TAC CASE_SIMP_CONV) gl;
 
+val CASE_TAC = case_tac USE_NEW_ASSUM
+val TOP_CASE_TAC = top_case_tac USE_NEW_ASSUM
+
+val LEGACY_CASE_TAC = case_tac LEGACY_USE_NEW_ASSUM
+val LEGACY_TOP_CASE_TAC = top_case_tac LEGACY_USE_NEW_ASSUM
 
 (*---------------------------------------------------------------------------*)
 (* Do a case analysis anywhere in the goal, then simplify a bit.             *)
 (*---------------------------------------------------------------------------*)
 
-fun FULL_CASE_TAC goal =
+fun full_case_tac use_newFn goal =
  let val rws = case_rwlist()
      val case_conv = PURE_CASE_SIMP_CONV rws
      val asm_rule = Rewrite.REWRITE_RULE rws
- in PURE_FULL_CASE_TAC THEN USE_NEW_ASSUM goal
+ in PURE_FULL_CASE_TAC THEN use_newFn goal
     THEN RULE_ASSUM_TAC asm_rule
     THEN CONV_TAC case_conv
- end goal;
-val full_case_tac = FULL_CASE_TAC
+ end goal
+
+val FULL_CASE_TAC      = full_case_tac USE_NEW_ASSUM
+val LEGACY_FULL_CASE_TAC = full_case_tac LEGACY_USE_NEW_ASSUM
+
+val full_case_tac      = FULL_CASE_TAC
+val legacy_full_case_tac = LEGACY_FULL_CASE_TAC
 
 (*---------------------------------------------------------------------------*)
 (* Repeatedly do a case analysis anywhere in the goal. Avoids re-computing   *)
@@ -800,16 +818,22 @@ val full_case_tac = FULL_CASE_TAC
 (* than REPEAT FULL_CASE_TAC.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun EVERY_CASE_TAC goal =
+fun every_case_tac use_newFn goal =
  let val rws = case_rwlist()
      val case_conv = PURE_CASE_SIMP_CONV rws
      val asm_rule = BETA_RULE o Rewrite.REWRITE_RULE rws
-     fun tac a = (PURE_FULL_CASE_TAC THEN USE_NEW_ASSUM a THEN
+     fun tac a = (PURE_FULL_CASE_TAC THEN use_newFn a THEN
                   RULE_ASSUM_TAC asm_rule THEN
                   CONV_TAC case_conv) a
  in REPEAT tac
  end goal;
+
+val EVERY_CASE_TAC      = every_case_tac USE_NEW_ASSUM;
+val LEGACY_EVERY_CASE_TAC = every_case_tac LEGACY_USE_NEW_ASSUM
+
 val every_case_tac = EVERY_CASE_TAC
+val legacy_every_case_tac = LEGACY_EVERY_CASE_TAC
+
 
 (*===========================================================================*)
 (* Rewriters                                                                 *)
