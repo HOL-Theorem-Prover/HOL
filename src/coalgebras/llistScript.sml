@@ -2564,15 +2564,17 @@ Proof
   metis_tac[to_fromList,THE_DEF,toList,NOT_SOME_NONE]
 QED
 
-val LPREFIX_TRANS = Q.store_thm("LPREFIX_TRANS",
-  `LPREFIX l1 l2 /\ LPREFIX l2 l3 ==> LPREFIX l1 l3`,
+Theorem LPREFIX_TRANS:
+  LPREFIX l1 l2 /\ LPREFIX l2 l3 ==> LPREFIX l1 l3
+Proof
   rw[LPREFIX_def] >>
-  every_case_tac >> fs[] >>
+  every_case_tac >> gvs[] >>
   TRY(imp_res_tac IS_PREFIX_TRANS >> NO_TAC) >>
   imp_res_tac IS_PREFIX_LENGTH >>
   imp_res_tac LTAKE_TAKE_LESS >> simp[] >>
   fs[IS_PREFIX_APPEND] >>
-  simp[TAKE_APPEND1]);
+  simp[TAKE_APPEND1]
+QED
 
 val LPREFIX_fromList = Q.store_thm ("LPREFIX_fromList",
   `!l ll.
