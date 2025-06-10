@@ -897,7 +897,7 @@ Theorem norm_varhead0[local]:
 Proof
   HO_MATCH_MP_TAC normorder_strong_ind >>
   rw[lam_eq_appstar, app_eq_appstar_SNOC] >>
-  gvs[]
+  gvs[listTheory.SNOC_APPEND]
   >- (REWRITE_TAC [GSYM listTheory.APPEND_ASSOC] >>
       rpt $ irule_at Any EQ_REFL >> simp[]) >>
   first_assum $ irule_at (Pat ‘_ -n-> _’) >>

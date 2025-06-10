@@ -3393,11 +3393,10 @@ Proof
   \\ ho_match_mp_tac SNOC_INDUCT \\ rw []
   THEN1
    (qspec_then ‘ys’ mp_tac SNOC_CASES \\ rpt strip_tac
-    \\ asm_rewrite_tac [IS_SUFFIX] \\ fs [])
-  \\ rewrite_tac [GSYM SNOC_APPEND]
+    \\ asm_rewrite_tac [IS_SUFFIX] \\ fs [SNOC_APPEND])
   \\ qspec_then ‘ys’ mp_tac SNOC_CASES \\ rpt strip_tac
   \\ asm_rewrite_tac [IS_SUFFIX]
-  \\ fs [GSYM PULL_EXISTS]
+  \\ fs [GSYM PULL_EXISTS, SNOC_APPEND]
   \\ Cases_on ‘l = []’ \\ fs []
   \\ asm_rewrite_tac [IS_SUFFIX]
   \\ first_x_assum (qspec_then ‘l’ mp_tac)

@@ -194,6 +194,13 @@ val NOT_NULL_SNOC = Q.store_thm("NOT_NULL_SNOC",
    BasicProvers.Induct_on `l`
    THEN REWRITE_TAC[SNOC, NULL_DEF]);
 
+(* cf. CONS_ACYCLIC *)
+Theorem SNOC_ACYCLIC[simp] :
+    l <> SNOC x l /\ SNOC x l <> l
+Proof
+    SRW_TAC [] [SNOC_APPEND]
+QED
+
 (* ------------------------------------------------------------------------ *)
 
 val LASTN_def = zDefine `
@@ -205,6 +212,12 @@ val LASTN = store_thm("LASTN",
   FULL_SIMP_TAC std_ss [LASTN_def,REVERSE_SNOC,
     TAKE,REVERSE_DEF]
   THEN FULL_SIMP_TAC std_ss [SNOC_APPEND]);
+
+Theorem SNOC_LASTN :
+    !l x n. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
+Proof
+    SNOC_INDUCT_TAC >> rw [LASTN]
+QED
 
 val BUTLASTN_def = zDefine `
   BUTLASTN n xs = REVERSE (DROP n (REVERSE xs))`;
@@ -284,10 +297,10 @@ Proof
 QED
 
 (* |- !(x:'a) l. ~([] = SNOC x l) *)
-val NOT_NIL_SNOC = Theory.save_thm ("NOT_NIL_SNOC",
-   valOf (hd (Prim_rec.prove_constructors_distinct SNOC_Axiom)));
+Theorem NOT_NIL_SNOC[simp] =
+   valOf (hd (Prim_rec.prove_constructors_distinct SNOC_Axiom))
 
-val NOT_SNOC_NIL = Theory.save_thm ("NOT_SNOC_NIL", GSYM NOT_NIL_SNOC);
+Theorem NOT_SNOC_NIL[simp] = GSYM NOT_NIL_SNOC
 
 val SNOC_EQ_LENGTH_EQ = Q.store_thm ("SNOC_EQ_LENGTH_EQ",
    `!x1 l1 x2 l2. (SNOC x1 l1 = SNOC x2 l2) ==> (LENGTH l1 = LENGTH l2)`,
@@ -2359,12 +2372,11 @@ val LESS_EQ_SPLIT = numLib.DECIDE ``!p n m. m + n <= p ==> n <= p /\ m <= p``
 val SUB_LESS_EQ_ADD =
    numLib.DECIDE ``!p n m. n <= p ==> (m <= p - n <=> m + n <= p)``
 
-
 Theorem BUTLASTN_TAKE_UNCOND:
   !n l. BUTLASTN n l = TAKE (LENGTH l - n) l
 Proof
   simp[BUTLASTN_def] >> Induct >> simp[] >>
-  Cases using SNOC_CASES >> simp[TAKE_APPEND] >>
+  Cases using SNOC_CASES >> simp[TAKE_APPEND, SNOC_APPEND] >>
   simp[ARITH_PROVE “1 - SUC x = 0”, ARITH_PROVE “x + 1 - SUC y = x - y”]
 QED
 
@@ -2384,8 +2396,8 @@ Theorem LASTN_DROP_UNCOND:
   !n l. LASTN n l = DROP (LENGTH l - n) l
 Proof
   simp[LASTN_def] >> Induct >> simp[] >>
-  Cases using SNOC_CASES >> simp[DROP_APPEND] >>
-  simp[ARITH_PROVE “1 - SUC n = 0”, ARITH_PROVE “x + 1 - SUC y = x - y”]
+  Cases using SNOC_CASES >> simp[DROP_APPEND, SNOC_APPEND] >>
+  simp[ARITH_PROVE “a - (b :num) - a = 0”]
 QED
 
 Theorem LASTN_DROP:
@@ -3492,7 +3504,7 @@ val TAKE_EL_SNOC = Q.store_thm("TAKE_EL_SNOC",
              TAKE_APPEND2]
           THEN FULL_SIMP_TAC arith_ss [])
    THEN `n < LENGTH ls` by FULL_SIMP_TAC arith_ss [ADD1, LENGTH_SNOC]
-   THEN rw[TAKE_SNOC,TAKE_APPEND1,EL_APPEND1]
+   THEN rw[TAKE_SNOC,TAKE_APPEND1,EL_APPEND1,SNOC_APPEND]
    THEN FULL_SIMP_TAC arith_ss [ADD1, LENGTH_SNOC, TAKE_APPEND1, SNOC_APPEND])
 
 val REVERSE_DROP = Q.store_thm("REVERSE_DROP",
@@ -3503,7 +3515,7 @@ val REVERSE_DROP = Q.store_thm("REVERSE_DROP",
    THEN Cases_on`n = SUC (LENGTH ls)`
    THEN1 (rw[DROP_LENGTH_NIL_rwt,ADD1,LASTN])
    THEN `n <= LENGTH ls` by RW_TAC arith_ss []
-   THEN rw[DROP_APPEND1,LASTN_APPEND1]
+   THEN rw[DROP_APPEND1,LASTN_APPEND1,SNOC_APPEND,ADD1]
    THEN `LENGTH [x] <= LENGTH ls + 1 - n` by RW_TAC arith_ss [LENGTH]
    THEN RW_TAC arith_ss [LASTN_APPEND1, LENGTH]);
 
@@ -3660,7 +3672,8 @@ QED
 Theorem REVERSE_REPLICATE[simp]:
   !n x. REVERSE (REPLICATE n x) = REPLICATE n x
 Proof
-  Induct \\ fs [REPLICATE] \\ fs [GSYM REPLICATE,GSYM SNOC_REPLICATE]
+  Induct \\ fs [REPLICATE] \\
+  fs [GSYM REPLICATE, GSYM SNOC_REPLICATE, SNOC_APPEND]
 QED
 
 Theorem SUM_REPLICATE[simp]:
@@ -3885,7 +3898,7 @@ val COUNT_LIST_AUX = Q.prove(
 val COUNT_LIST_compute = Q.store_thm ("COUNT_LIST_compute",
    `!n. COUNT_LIST n = COUNT_LIST_AUX n []`,
    Induct
-   THEN SRW_TAC [] [COUNT_LIST_GENLIST, GENLIST, COUNT_LIST_AUX_def]
+   THEN SRW_TAC [] [COUNT_LIST_GENLIST, GENLIST, COUNT_LIST_AUX_def, SNOC_APPEND]
    THEN FULL_SIMP_TAC (srw_ss()) [COUNT_LIST_GENLIST, COUNT_LIST_AUX]);
 
 val SPLITP_AUX_lem1 = Q.prove(
@@ -4025,7 +4038,7 @@ QED
 val SNOC_LAST_FRONT' = store_thm(
    "SNOC_LAST_FRONT'",
   ``!l. l <> [] ==> (l = SNOC (LAST l) (FRONT l))``,
-  rw[APPEND_FRONT_LAST]);
+  rw[APPEND_FRONT_LAST, SNOC_APPEND]);
 
 (* Theorem: REVERSE [x] = [x] *)
 (* Proof:

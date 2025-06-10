@@ -365,7 +365,7 @@ Proof
   \\ `?y ys. x::xs = SNOC y ys` by metis_tac[SNOC_CASES,list_distinct]
   \\ full_simp_tac std_ss [FRONT_SNOC,LAST_SNOC] \\ rpt BasicProvers.VAR_EQ_TAC
   \\ qmatch_goalsub_rename_tac`SPLITP P (SNOC y (w ++ z))`
-  \\ Cases_on`NULL z` \\ fs[NULL_EQ]
+  \\ Cases_on`NULL z` \\ fs[NULL_EQ, SNOC_APPEND]
   >- (
     simp[SPLITP_APPEND]
     \\ full_simp_tac std_ss [GSYM NOT_EXISTS]

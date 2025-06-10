@@ -987,8 +987,7 @@ Theorem ltree_lookup_SNOC :
              ltree_lookup t (SNOC x xs) =
              ltree_lookup (THE (ltree_lookup t xs)) [x]
 Proof
-    rpt STRIP_TAC
- >> ‘SNOC x xs = xs ++ [x]’ by rw [] >> POP_ORW
+    rw [SNOC_APPEND]
  >> MATCH_MP_TAC ltree_lookup_append >> art []
 QED
 
@@ -1335,11 +1334,7 @@ Proof
        POP_ASSUM (fs o wrap) \\
        Cases_on ‘LNTH n ts’ >> fs [] ])
  (* stage work *)
- >> rpt STRIP_TAC
- >> ‘!q. SNOC n (h::p) ++ q = h::(SNOC n p ++ q)’ by rw []
- >> POP_ORW
- >> ‘SNOC n (h::p) = h::SNOC n p’ by rw []
- >> POP_ORW
+ >> rw []
  >> Cases_on ‘t’
  >> POP_ASSUM MP_TAC
  >> simp [ltree_el_def, ltree_lookup_def]
@@ -1392,14 +1387,14 @@ Proof
       simp [ltree_el_def, LNTH_LGENLIST] \\
       Cases_on ‘LLENGTH ts’ >> simp []
       >- (DISCH_TAC \\
-          Know ‘p ++ [n] ++ q IN ltree_paths (ltree_delete f x p)’
+          Know ‘SNOC n p ++ q IN ltree_paths (ltree_delete f x p)’
           >- rw [ltree_paths_alt_ltree_el] \\
           Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
           simp []) \\
       rename1 ‘LLENGTH ts = SOME N’ \\
       Cases_on ‘h < N’ >> simp [] \\
       DISCH_TAC \\
-      Know ‘p ++ [n] ++ q IN ltree_paths (ltree_delete f x p)’
+      Know ‘SNOC n p ++ q IN ltree_paths (ltree_delete f x p)’
       >- rw [ltree_paths_alt_ltree_el] \\
       Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
       simp [],
@@ -1712,11 +1707,7 @@ Proof
        rw [LFINITE_LNTH_IS_SOME] \\
        CCONTR_TAC >> fs [] ])
  (* stage work *)
- >> rpt STRIP_TAC
- >> ‘!q. SNOC n (h::p) ++ q = h::(SNOC n p ++ q)’ by rw []
- >> POP_ORW
- >> ‘SNOC n (h::p) = h::SNOC n p’ by rw []
- >> POP_ORW
+ >> rw []
  >> Cases_on ‘t’
  >> POP_ASSUM MP_TAC
  >> simp [ltree_el_def, ltree_lookup_def]
@@ -1807,15 +1798,15 @@ Proof
       (* goal 3 (of 3) *)
       simp [ltree_el_def, LNTH_LGENLIST] \\
       Cases_on ‘LLENGTH ts’ >> simp []
-      >- (Know ‘ltree_el (ltree_insert f x p t0) (p ++ [n] ++ q) <> NONE <=>
-                p ++ [n] ++ q IN ltree_paths (ltree_insert f x p t0)’
+      >- (Know ‘ltree_el (ltree_insert f x p t0) (SNOC n p ++ q) <> NONE <=>
+                SNOC n p ++ q IN ltree_paths (ltree_insert f x p t0)’
           >- rw [ltree_paths_alt_ltree_el] >> Rewr' \\
           Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
           simp []) \\
       rename1 ‘LLENGTH ts = SOME N’ \\
       Cases_on ‘h < N’ >> simp []
-      >- (Know ‘ltree_el (ltree_insert f x p t0) (p ++ [n] ++ q) <> NONE <=>
-                p ++ [n] ++ q IN ltree_paths (ltree_insert f x p t0)’
+      >- (Know ‘ltree_el (ltree_insert f x p t0) (SNOC n p ++ q) <> NONE <=>
+                SNOC n p ++ q IN ltree_paths (ltree_insert f x p t0)’
           >- rw [ltree_paths_alt_ltree_el] >> Rewr' \\
           Q.PAT_X_ASSUM ‘!t a n. P’ (MP_TAC o Q.SPECL [‘x’, ‘a’, ‘n’]) \\
           simp []) \\
@@ -2602,8 +2593,7 @@ Theorem ltree_path_lt_sibling' :
 Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC ltree_path_lt_sibling
- >> REWRITE_TAC [FRONT_SNOC, LAST_SNOC]
- >> simp []
+ >> rw [FRONT_SNOC, LAST_SNOC]
 QED
 
 Theorem finite_branching_ltree_el_cases :

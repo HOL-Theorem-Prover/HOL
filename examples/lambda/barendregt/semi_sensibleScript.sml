@@ -17,8 +17,7 @@ open termTheory chap2Theory chap3Theory chap4Theory horeductionTheory
 val _ = temp_delsimps [
    "lift_disj_eq", "lift_imp_disj",
    "IN_UNION",     (* |- !s t x. x IN s UNION t <=> x IN s \/ x IN t *)
-   "APPEND_ASSOC", (* |- !l1 l2 l3. l1 ++ (l2 ++ l3) = l1 ++ l2 ++ l3 *)
-   "SNOC_APPEND"   (* |- !x l. SNOC x l = l ++ [x] *)
+   "APPEND_ASSOC"  (* |- !l1 l2 l3. l1 ++ (l2 ++ l3) = l1 ++ l2 ++ l3 *)
 ];
 
 val _ = hide "B";

@@ -1,5 +1,5 @@
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_bigops";
-val _ = ParseExtras.temp_loose_equality()
+open HolKernel Parse boolLib bossLib;
+
 open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory lisp_sexpTheory
 open lisp_invTheory lisp_parseTheory lisp_opsTheory;
 
@@ -20,6 +20,10 @@ val _ = let
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
+
+val _ = new_theory "lisp_bigops";
+val _ = ParseExtras.temp_loose_equality()
+val _ = augment_srw_ss [rewrites [SNOC_APPEND]];
 
 (*
 val _ = set_echo 3;

@@ -97,9 +97,9 @@ val num_to_dec_string_eq_cons = Q.store_thm("num_to_dec_string_eq_cons",
   \\ rw[]
   \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.l2n_n2l \\ rw[]
   \\ Q.ISPEC_THEN`n2l 10 n`FULL_STRUCT_CASES_TAC SNOC_CASES
-  \\ fs[EVERY_SNOC] \\ rpt var_eq_tac
+  \\ fs[EVERY_SNOC, SNOC_APPEND] \\ rpt var_eq_tac
   \\ simp[UNHEX_HEX]
-  \\ simp[SNOC_APPEND,l2n_APPEND,numposrepTheory.l2n_def]
+  \\ simp[l2n_APPEND,numposrepTheory.l2n_def]
   \\ simp[s2n_def,MAP_MAP_o]
   \\ AP_TERM_TAC
   \\ fs[LIST_EQ_REWRITE,EL_MAP,EVERY_MEM,MEM_EL,PULL_EXISTS]

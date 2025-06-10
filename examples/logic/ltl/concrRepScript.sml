@@ -1947,6 +1947,8 @@ val ADDEDGE_FINAL_LEMM = store_thm
 
 val _ = set_trace "BasicProvers.var_eq_old" 1
 val _ = diminish_srw_ss ["ABBREV"]
+val _ = augment_srw_ss [rewrites [SNOC_APPEND]]
+
 Theorem ADDEDGE_LEMM:
    !g f e aP. wfg g ∧ MEM f (graphStates g)
             ∧ unique_node_formula g
