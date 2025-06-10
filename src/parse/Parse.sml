@@ -1056,7 +1056,7 @@ fun gparents {thyname} =
       [] => parents thyname
     | thys => thys
 
-val {merge = merge_grammars0, set_parents = set_grammar_ancestry0,
+val {merge = merge_grammars0, from_parents = set_grammar_ancestry0,
      DB = grammarDB0, parents = gparents} =
     let
       open GrammarDeltas

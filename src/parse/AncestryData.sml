@@ -162,7 +162,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
                   apply_delta = apply_delta,
                   parents = parents}
       val _ = apply_delta_hook := merge info
-      fun set_ancestry sl =
+      fun from_ancestry sl =
           let
             val _ = parent_export (List $ map String sl)
             val vopt = merge info sl
@@ -180,7 +180,7 @@ fun make {info : ('delta,'value)adata_info, get_deltas, delta_side_effects} =
     in
       List.app onload (tts_ancestry "-");
       {merge = merge info, DB = valueDB,
-       parents = parents, set_parents = set_ancestry}
+       parents = parents, from_parents = from_ancestry}
     end
 
 fun gen_other_tds {tag,dec,enc,P} (t, thyevent) =
@@ -208,7 +208,7 @@ type ('delta,'value) fullresult =
        get_deltas : {thyname : string} -> 'delta list,
        record_delta : 'delta -> unit,
        parents : {thyname : string} -> string list,
-       set_parents : string list -> 'value option,
+       from_parents : string list -> 'value option,
        get_global_value : unit -> 'value,
        update_global_value : ('value -> 'value) -> unit }
 
@@ -276,7 +276,7 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
           {get_deltas = get_deltas, dblookup = valueDB,
            apply_delta = apply_delta, tag = tag, parents = get_parents}
       val _ = apply_delta_hook := merge info
-      fun set_ancestry sl =
+      fun from_ancestry sl =
           let
             val _ = set_raw_deltas (List [])
             val _ = export_raw_parents (List $ map String sl)
@@ -299,7 +299,7 @@ fun fullmake (arg as {adinfo:('delta,'value)adata_info,...}) =
        get_deltas = get_deltas,
        record_delta = record_delta,
        parents = get_parents,
-       set_parents = set_ancestry,
+       from_parents = from_ancestry,
        get_global_value = get_global_value,
        update_global_value = update_global_value}
     end

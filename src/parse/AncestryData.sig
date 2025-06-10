@@ -11,7 +11,7 @@ sig
          get_deltas : {thyname : string} -> 'delta list,
          record_delta : 'delta -> unit,
          parents : {thyname : string} -> string list,
-         set_parents : string list -> 'value option,
+         from_parents : string list -> 'value option,
          get_global_value : unit -> 'value,
          update_global_value : ('value -> 'value) -> unit }
 
@@ -27,7 +27,7 @@ sig
              { merge : string list -> 'value option,
                DB : {thyname : string} -> 'value option,
                parents : {thyname : string} -> string list,
-               set_parents : string list -> 'value option
+               from_parents : string list -> 'value option
              }
 
   val fullmake : { adinfo : ('delta, 'value) adata_info,

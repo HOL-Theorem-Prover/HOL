@@ -1345,7 +1345,7 @@ fun temp_set_simpset_ancestry sl =
       | SOME v => updnote_global_value (K v)
 
 fun set_simpset_ancestry sl =
-    case #set_parents adresult sl of
+    case #from_parents adresult sl of
         NONE => HOL_WARNING "BasicProvers" "set_simpset_ancestry"
                             "Merge of parental values produces no value; \
                             \nothing done"

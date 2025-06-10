@@ -289,7 +289,7 @@ fun export_with_ancestry
       {merge = #merge fullresult, DB = #DB fullresult,
        get_deltas = get_fulldeltas,
        record_delta = #record_delta fullresult o mk_raw,
-       parents = #parents fullresult, set_parents = #set_parents fullresult,
+       parents = #parents fullresult, from_parents = #from_parents fullresult,
        get_global_value = #get_global_value fullresult,
        update_global_value = #update_global_value fullresult
       }
