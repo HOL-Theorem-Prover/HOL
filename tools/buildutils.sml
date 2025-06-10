@@ -788,6 +788,7 @@ in
   system_ps (POLYC ^ " poly-Doc2Html.ML -o Doc2Html.exe");
   system_ps (POLYC ^ " poly-Doc2Txt.ML -o Doc2Txt.exe");
   system_ps (POLYC ^ " poly-Doc2Tex.ML -o Doc2Tex.exe")
+  system_ps (POLYC ^ " poly-Doc2Md.ML -o Doc2markdown.exe")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
