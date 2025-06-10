@@ -130,7 +130,8 @@ Proof
        \\ drule terminates_history \\ fs []
        \\ disch_then (qspec_then ‘SND t’ assume_tac) \\ fs []
        \\ goal_assum (first_assum o mp_then (Pos hd) mp_tac) \\ fs []
-       \\ Cases_on ‘s'’ \\ Cases_on ‘t’ \\ fs [guard_def,output_of_def,ADD1]
+       \\ Cases_on ‘s'’ \\ Cases_on ‘t’
+       \\ fs [guard_def,output_of_def,ADD1,SNOC_APPEND]
        \\ fs [ignores_output_def] \\ metis_tac [])
     \\ last_x_assum (qspec_then ‘i’ kall_tac)
     \\ conj_tac

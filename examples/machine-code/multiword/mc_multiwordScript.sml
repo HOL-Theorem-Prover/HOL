@@ -6,7 +6,7 @@ local open mc_tailrecLib blastLib intLib in end
 
 val _ = new_theory "mc_multiword";
 val _ = ParseExtras.temp_loose_equality()
-val _ = temp_delsimps ["NORMEQ_CONV"]
+val _ = temp_delsimps ["NORMEQ_CONV", "TAKE1_DROP"];
 
 val REV = Tactical.REVERSE;
 
@@ -460,7 +460,7 @@ val mc_add_loop1_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_add_def,
        LET_DEF,single_add_def,b2n_thm]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def] \\ DECIDE_TAC);
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND] \\ DECIDE_TAC);
 
 val mc_add_loop2_thm = prove(
   ``!(xs:'a word list) zs xs1 zs1 xs2 zs2 r8 c l.
@@ -507,7 +507,7 @@ val mc_add_loop2_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_add_def,
        LET_DEF,single_add_def,b2n_thm]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND]
   \\ DECIDE_TAC)
 
 val mc_add_thm = prove(
@@ -781,7 +781,7 @@ val mc_sub_loop1_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
        LET_DEF,single_sub_def,b2n_thm,single_add_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND]
   \\ DECIDE_TAC);
 
 val mc_sub_loop2_thm = prove(
@@ -827,7 +827,7 @@ val mc_sub_loop2_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
        LET_DEF,single_add_def,b2n_thm,single_sub_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def] \\ DECIDE_TAC);
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND] \\ DECIDE_TAC);
 
 val mc_sub_thm = prove(
   ``!(xs:'a word list) ys zs zs2 l.
@@ -2488,7 +2488,7 @@ val mc_div_loop_thm = prove(
     \\ FULL_SIMP_TAC std_ss [rich_listTheory.EL_APPEND2,DECIDE ``n <= n + m:num``,
          GSYM APPEND_ASSOC,rich_listTheory.EL_APPEND1]
     \\ `(x::zs = []) \/ ?t1 t2. x::zs = SNOC t1 t2` by METIS_TAC [SNOC_CASES]
-    \\ FULL_SIMP_TAC (srw_ss()) [ADD1]
+    \\ FULL_SIMP_TAC (srw_ss()) [ADD1, SNOC_APPEND]
     \\ `LENGTH ys = LENGTH t2` by
      (`LENGTH (x::zs) = LENGTH (t2 ++ [t1])` by METIS_TAC []
       \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,ADD1])
@@ -3502,7 +3502,7 @@ val mc_div_sub_aux_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_SNOC,ADD1,AC ADD_COMM ADD_ASSOC,mw_sub_def,
        LET_DEF,single_sub_def,b2n_thm,single_add_def]
   \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
-  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def]
+  \\ FULL_SIMP_TAC (srw_ss()) [b2w_def, SNOC_APPEND]
   \\ `(dimword(:'a) <= b2n ~c + (w2n h' + w2n (~h))) =
       ~(w2n h' < b2n c + w2n h)` by METIS_TAC [sub_borrow_lemma]
   \\ fs [])

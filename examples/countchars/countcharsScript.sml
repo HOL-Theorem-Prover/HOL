@@ -46,7 +46,7 @@ Proof
   ‘LHS = countchars fm (EL i s :: TAKE i s)’ by simp[Abbr‘LHS’] >>
   pop_assum SUBST1_TAC >> irule countchars_PERM >>
   simp[PERM_CONS_EQ_APPEND] >> map_every qexists_tac [‘TAKE i s’, ‘[]’] >>
-  simp[GSYM rich_listTheory.SNOC_EL_TAKE]
+  simp[rich_listTheory.TAKE_SUC] (* TAKE1_DROP is implicitly used *)
 QED
 
 Theorem countchars_EQN: countchars fm s = countchars_aux fm s (LENGTH s)

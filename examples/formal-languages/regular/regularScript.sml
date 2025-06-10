@@ -897,6 +897,7 @@ Proof
       ‘LENGTH Q1 = LENGTH w + 2 ∧ LENGTH Q2 = LENGTH w + 2’ by decide_tac >>
       ‘∃qs1 q1. Q1 = SNOC q1 qs1 ∧ qs1 ≠ []’ by metis_tac[snoc2] >>
       ‘∃qs2 q2. Q2 = SNOC q2 qs2 ∧ qs2 ≠ []’ by metis_tac[snoc2] >> fs[] >>
+      ONCE_REWRITE_TAC [CONJ_SYM] \\
       irule (METIS_PROVE [] “(b' ⇒ a=a') ∧ (a' ⇒ b=b') ∧ a' ∧ b' ⇒ a ∧ b”) >>
       qexists_tac ‘qs1 = qs2’ >> qexists_tac ‘T’ >> simp[] >> conj_tac
       >- (first_x_assum irule >> rw[LENGTH_FRONT] >> fs[GSYM SNOC_APPEND]
@@ -906,7 +907,8 @@ Proof
           >- (‘EL (n+1) (SNOC q2 qs2) ∈
                N.delta (EL n (SNOC q2 qs2)) (EL n (SNOC a w))’ by rw[] >>
                rpt(forget_tac is_forall) >> pop_assum mp_tac >> simp[EL_SNOC]))
-      >- (rw[] >> forget_tac is_neg >> forget_tac is_eq >>
+      >- (fs [SNOC_APPEND] \\
+          rw[] >> forget_tac is_neg >> forget_tac is_eq >>
           fs [GSYM SNOC_APPEND] >> ‘LENGTH w < SUC (LENGTH w)’ by decide_tac >>
           first_x_assum drule >> fs [Once BOUNDED_FORALL_THM] >>
           ‘LENGTH w + 1 = LENGTH qs1’ by decide_tac >>
@@ -914,7 +916,8 @@ Proof
           ‘EL (LENGTH w) qs1 ∈ N.Q’ by
             (irule nfa_execution_last_state >> rw[] >> fs [is_dfa_def]) >>
           fs [is_dfa_def] >>
-          ‘∃qf. N.delta (EL (LENGTH w) qs1) a = {qf}’ by metis_tac[] >> gvs[])
+          ‘∃qf. N.delta (EL (LENGTH w) qs1) a = {qf}’ by metis_tac[] >>
+          gvs[])
      )
 QED
 

@@ -29,9 +29,8 @@ val gba_trans_concr_def = Define`
   gba_trans_concr ts_lists =
                 FOLDR d_conj_concr [(concrEdge [] [] [])] ts_lists `;
 
-val GBA_TRANS_LEMM1 = store_thm
-  ("GBA_TRANS_LEMM1",
-   ``!x s. MEM x (gba_trans_concr s)
+Theorem GBA_TRANS_LEMM1 :
+    !x s. MEM x (gba_trans_concr s)
         ==> ((!l. MEM l s
                  ==> (?cE. MEM cE l
                    ∧ (MEM_SUBSET cE.pos x.pos)
@@ -50,135 +49,118 @@ val GBA_TRANS_LEMM1 = store_thm
                 ∧ (!q i. MEM (q,i) s_with_ind
                        ==> MEM (f (q,i)) q))
         ∧ (ALL_DISTINCT x.pos ∧ ALL_DISTINCT x.neg
-           ∧ ALL_DISTINCT x.sucs))``,
+           ∧ ALL_DISTINCT x.sucs))
+Proof
    Q.HO_MATCH_ABBREV_TAC
     `!x s. MEM x (gba_trans_concr s) ==> A x s ∧ B x s`
-   >> `!x s. MEM x (gba_trans_concr s) ==> A x s ∧ (A x s ==> B x s)`
+ >> `!x s. MEM x (gba_trans_concr s) ==> A x s ∧ (A x s ==> B x s)`
       suffices_by fs[]
-   >> qunabbrev_tac `A` >> qunabbrev_tac `B`
-   >> Induct_on `s` >> fs[gba_trans_concr_def] >> rpt strip_tac
-   >- (fs[cE_equiv_def,MEM_EQUAL_def,MEM_SUBSET_def])
-   >- (fs[cE_equiv_def,MEM_EQUAL_def,MEM_SUBSET_def]
-       >> fs[d_conj_concr_def,FOLDR_LEMM4] >> qexists_tac `e1` >> simp[]
-       >> metis_tac[MEM_SUBSET_APPEND,nub_set,MEM_SUBSET_SET_TO_LIST]
-      )
-   >- (fs[cE_equiv_def,MEM_EQUAL_def,MEM_SUBSET_def]
-       >> fs[d_conj_concr_def,FOLDR_LEMM4]
-       >> `∃cE.
-            MEM cE l ∧ MEM_SUBSET cE.pos e2.pos ∧
-            MEM_SUBSET cE.neg e2.neg ∧ MEM_SUBSET cE.sucs e2.sucs`
-          by metis_tac[]
-       >> qexists_tac `cE`
-       >> metis_tac[MEM_SUBSET_APPEND,MEM_SUBSET_TRANS,nub_set,
-                    MEM_SUBSET_SET_TO_LIST]
-      )
-   >- (Cases_on `s= []` >> fs[]
-    >- (fs[d_conj_concr_def,FOLDR_CONS,MEM_MAP]
-        >> qexists_tac `
-             λ(q,i).
-               if (q,i) = (h,0) then e1 else ARB`
-        >> simp[] >> fs[d_conj_concr_def,FOLDR_CONS,MEM_MAP]
-        >> simp[cE_equiv_def,nub_set,MEM_EQUAL_SET]
-       )
-    >- (fs[d_conj_concr_def,FOLDR_LEMM4]
-       >> first_x_assum (qspec_then `e2` mp_tac) >> simp[] >> strip_tac
-       >> qabbrev_tac `s_ind = (GENLIST (λn. (EL n s,n)) (LENGTH s))`
-       >> `∃f.
-           cE_equiv e2
-               (FOLDR
+ >> qunabbrev_tac `A` >> qunabbrev_tac `B`
+ >> Induct_on `s` >> fs[gba_trans_concr_def]
+ >> rpt strip_tac (* 7 subgoals *)
+ >| [ (* goal 1 (of 7) *)
+      fs[cE_equiv_def,MEM_EQUAL_def,MEM_SUBSET_def],
+      (* goal 2 (of 7) *)
+      fs[cE_equiv_def,MEM_EQUAL_def,MEM_SUBSET_def] \\
+      fs[d_conj_concr_def,FOLDR_LEMM4] >> qexists_tac `e1` >> simp[] \\
+      metis_tac[MEM_SUBSET_APPEND,nub_set,MEM_SUBSET_SET_TO_LIST],
+      (* goal 3 (of 7) *)
+      fs[cE_equiv_def,MEM_EQUAL_def,MEM_SUBSET_def] \\
+      fs[d_conj_concr_def,FOLDR_LEMM4] \\
+     `∃cE. MEM cE l ∧ MEM_SUBSET cE.pos e2.pos ∧
+           MEM_SUBSET cE.neg e2.neg ∧ MEM_SUBSET cE.sucs e2.sucs`
+          by metis_tac[] \\
+      qexists_tac `cE` \\
+      metis_tac[MEM_SUBSET_APPEND,MEM_SUBSET_TRANS,nub_set,MEM_SUBSET_SET_TO_LIST],
+      (* goal 4 (of 7) *)
+      Cases_on `s = []` >> fs[]
+      >- (fs[d_conj_concr_def,FOLDR_CONS,MEM_MAP] \\
+          qexists_tac `λ(q,i). if (q,i) = (h,0) then e1 else ARB` \\
+          simp[] >> fs[d_conj_concr_def,FOLDR_CONS,MEM_MAP] \\
+          simp[cE_equiv_def,nub_set,MEM_EQUAL_SET]) \\
+   (* s <> [] *)
+      fs[d_conj_concr_def,FOLDR_LEMM4] \\
+      first_x_assum (qspec_then `e2` mp_tac) >> simp[] >> strip_tac \\
+      qabbrev_tac `s_ind = (GENLIST (λn. (EL n s,n)) (LENGTH s))` \\
+     `∃f. cE_equiv e2
+            (FOLDR
               (λsF e.
                  <|pos := sF.pos ⧺ e.pos; neg := sF.neg ⧺ e.neg;
                   sucs := sF.sucs ⧺ e.sucs|>) (concrEdge [] [] [])
               (MAP f s_ind))
           ∧ (!q i. MEM (q,i) s_ind ==> MEM (f (q,i)) q)
           ∧ ALL_DISTINCT e2.pos ∧ ALL_DISTINCT e2.neg
-          ∧ ALL_DISTINCT e2.sucs` by metis_tac[]
-       >> qexists_tac `
-             λ(q,i).
-              if i = 0
-              then e1
-              else f (q,i-1)` >> simp[]
-       >> fs[FOLDR_CONCR_EDGE] >> fs[nub_append] >> rpt strip_tac
-       >> fs[concrEdge_component_equality]
-       >- (qunabbrev_tac `s_ind` >> fs[]
-            >> fs[cE_equiv_def] >> rw[MEM_EQUAL_SET,LIST_TO_SET_FILTER]
-            >> (simp[SET_EQ_SUBSET,SUBSET_DEF]
-                 >> strip_tac >> fs[GENLIST]
-                 >- (rpt strip_tac
-                     >> Q.HO_MATCH_ABBREV_TAC
-                         `MEM k (FOLDR (λe pr. (g e) ⧺ pr) [] L)`
-                     >- (`MEM e1 L`
+          ∧ ALL_DISTINCT e2.sucs` by metis_tac[] \\
+      qexists_tac `λ(q,i). if i = 0 then e1 else f (q,i-1)` >> simp[] \\
+      fs[FOLDR_CONCR_EDGE] >> fs[nub_append] >> rpt strip_tac \\
+      fs[concrEdge_component_equality] (* 2 subgoals *)
+      >- (fs[Abbr ‘s_ind’, cE_equiv_def] \\
+          rw[MEM_EQUAL_SET,LIST_TO_SET_FILTER] (* 3 subgoals, same tactics *)
+          >> (simp[SET_EQ_SUBSET,SUBSET_DEF] \\
+              strip_tac >> fs[GENLIST] (* 2 subgoals *)
+              >- (rpt strip_tac \\
+                  Q.HO_MATCH_ABBREV_TAC
+                    `MEM k (FOLDR (λe pr. (g e) ⧺ pr) [] L)` (* 2 subgoals *)
+                  >- (`MEM e1 L`
                            suffices_by metis_tac[MEM_SUBSET_SET_TO_LIST,
-                                                 FOLDR_APPEND_LEMM,SUBSET_DEF]
-                         >> qunabbrev_tac `L` >> simp[MEM_MAP]
-                         >> qexists_tac `(h,0)` >> fs[EL,MEM_GENLIST]
-                         >> simp[LENGTH_NOT_NULL,NULL_EQ]
-                        )
-                     >- (`?e. MEM e L ∧ (MEM k (g e))`
-                           suffices_by metis_tac[FOLDR_LEMM6]
-                         >> qunabbrev_tac `L` >> simp[MEM_MAP] >> fs[]
-                         >> `MEM k
-                              (FOLDR (λe pr. g e ⧺ pr) []
+                                                 FOLDR_APPEND_LEMM,SUBSET_DEF] \\
+                      simp[Abbr ‘L’, MEM_MAP] \\
+                      qexists_tac `(h,0)` >> fs[EL,MEM_GENLIST] \\
+                      simp[LENGTH_NOT_NULL,NULL_EQ]) \\
+                  `?e. MEM e L ∧ (MEM k (g e))`
+                           suffices_by metis_tac[FOLDR_LEMM6] \\
+                   qunabbrev_tac `L` >> simp[MEM_MAP] >> fs[] \\
+                  `MEM k (FOLDR (λe pr. g e ⧺ pr) []
                                (MAP f (GENLIST (λn. (EL n s,n)) (LENGTH s))))`
-                             by metis_tac[MEM_EQUAL_SET]
-                          >> fs[FOLDR_LEMM6] >> qexists_tac `a` >> strip_tac
-                          >- (fs[MEM_MAP] >> qexists_tac `(FST y,SND y+1)`
-                              >> simp[] >> fs[MEM_GENLIST]
-                              >> rename [‘n + 1 = LENGTH s’,
-                                         ‘EL (LENGTH s) (h::s)’]
-                              >> Cases_on `SUC n=LENGTH s` >> fs[]
-                              >> metis_tac[EL,TL,DECIDE ``n+1 = SUC n``]
-                             )
-                          >- fs[]
-                        )
-                    )
-                 >- (rpt strip_tac >> fs[FOLDR_LEMM6,MEM_MAP]
-                  >- (rw[] >> fs[] >> Cases_on `s = []` >> fs[]
-                      >> disj2_tac >> Q.HO_MATCH_ABBREV_TAC `MEM k (g e2)`
-                      >> `MEM k
-                           (FOLDR (λe pr. g e ⧺ pr) []
+                             by metis_tac[MEM_EQUAL_SET] \\
+                   fs[FOLDR_LEMM6] >> qexists_tac `a` >> strip_tac (* 2 subgoals *)
+                   >- (fs[MEM_MAP] >> qexists_tac `(FST y,SND y+1)` \\
+                       simp[] >> fs[MEM_GENLIST] \\
+                       rename [‘n + 1 = LENGTH s’, ‘EL (LENGTH s) (h::s)’] \\
+                       Cases_on `SUC n=LENGTH s` >> fs[] \\
+                       metis_tac[EL,TL,DECIDE ``n+1 = SUC n``]) \\
+                   fs[]) \\
+           (* stage work *)
+              rpt strip_tac >> fs[FOLDR_LEMM6,MEM_MAP] (* 2 subgoals *)
+              >- (rw[] >> fs[] >> Cases_on `s = []` >> fs[] \\
+                  disj2_tac >> Q.HO_MATCH_ABBREV_TAC `MEM k (g e2)` \\
+                 `MEM k (FOLDR (λe pr. g e ⧺ pr) []
                             (MAP f (GENLIST (λn. (EL n s,n)) (LENGTH s))))`
-                         suffices_by metis_tac[MEM_EQUAL_SET]
-                      >> simp[FOLDR_LEMM6,MEM_GENLIST,MEM_MAP]
-                      >> qexists_tac `f (EL (LENGTH s) (h::s),LENGTH s − 1)`
-                      >> simp[]
-                      >> qexists_tac `(EL (LENGTH s) (h::s),LENGTH s − 1)`
-                      >> fs[] >> `0 < LENGTH s` by (Cases_on `s` >> fs[])
-                      >> rw[]
-                      >> `?n. SUC n = LENGTH s`
-                         by (Cases_on `LENGTH s` >> simp[])
-                      >> `n = LENGTH s -1` by simp[] >> metis_tac[EL,TL]
-                     )
-                  >- (fs[MEM_GENLIST] >> rw[] >> fs[]
-                      >> rename [‘MEM x (_ (if n = 0 then _ else _))’]
-                      >> Cases_on `n = 0` >> fs[] >> disj2_tac
-                      >> Q.HO_MATCH_ABBREV_TAC `MEM k (g e2)`
-                      >> `MEM k
-                           (FOLDR (λe pr. g e ⧺ pr) []
+                         suffices_by metis_tac[MEM_EQUAL_SET] \\
+                  simp[FOLDR_LEMM6,MEM_GENLIST,MEM_MAP] \\
+                  qexists_tac `f (EL (LENGTH s) (h::s),LENGTH s − 1)` >> simp[] \\
+                  qexists_tac `(EL (LENGTH s) (h::s),LENGTH s − 1)` \\
+                  fs[] >> `0 < LENGTH s` by (Cases_on `s` >> fs[]) \\
+                  rw[] \\
+                 `?n. SUC n = LENGTH s` by (Cases_on `LENGTH s` >> simp[]) \\
+                 `n = LENGTH s -1` by simp[] >> metis_tac[EL,TL]) \\
+           (* stage work *)
+              fs[MEM_GENLIST] >> rw[] >> fs[] \\
+              rename [‘MEM x (_ (if n = 0 then _ else _))’] \\
+              Cases_on `n = 0` >> fs[] >> disj2_tac \\
+              Q.HO_MATCH_ABBREV_TAC `MEM k (g e2)` \\
+             `MEM k (FOLDR (λe pr. g e ⧺ pr) []
                               (MAP f (GENLIST (λn. (EL n s,n)) (LENGTH s))))`
-                          suffices_by metis_tac[MEM_EQUAL_SET]
-                      >> simp[FOLDR_LEMM6,MEM_GENLIST,MEM_MAP]
-                      >> qexists_tac `f (EL n (h::s),n-1)`
-                      >> simp[]
-                      >> qexists_tac `(EL n (h::s),n − 1)`
-                      >> fs[] >> `0 < n` by fs[]
-                      >> `?p. SUC p = n`
-                            by (Cases_on `n` >> simp[])
-                      >> `p = n -1` by simp[] >> metis_tac[EL,TL]
-                     )
-                  )
-                  )
-              )
-       >> qunabbrev_tac `s_ind` >> fs[]
-       >> Cases_on `i=0` >> fs[MEM_GENLIST]
-       >> `?p. SUC p = i` by (Cases_on `i` >> simp[])
-       >> rw[]
-       )
-       )
-   >- (fs[d_conj_concr_def] >> fs[FOLDR_LEMM4] >> fs[all_distinct_nub])
-   >- (fs[d_conj_concr_def] >> fs[FOLDR_LEMM4] >> fs[all_distinct_nub])
-   >- (fs[d_conj_concr_def] >> fs[FOLDR_LEMM4] >> fs[all_distinct_nub])
-  );
+                          suffices_by metis_tac[MEM_EQUAL_SET] \\
+              simp[FOLDR_LEMM6,MEM_GENLIST,MEM_MAP] \\
+              qexists_tac `f (EL n (h::s),n-1)` >> simp[] \\
+              qexists_tac `(EL n (h::s),n − 1)` >> fs [] \\
+             `0 < n` by fs[] \\
+             `?p. SUC p = n` by (Cases_on `n` >> simp[]) \\
+             `p = n - 1` by simp[] >> metis_tac[EL,TL]
+             ) (* end of shared tactics (for 3 subgoals) *)
+         ) (* end of subgoal *) \\
+      fs[Abbr ‘s_ind’] \\
+      Cases_on `i=0` >> fs[MEM_GENLIST] \\
+     `?p. SUC p = i` by (Cases_on `i` >> simp[]) \\
+      rw[],
+      (* goal 5 (of 7) *)
+      fs[d_conj_concr_def] >> fs[FOLDR_LEMM4] >> fs[all_distinct_nub],
+      (* goal 6 (of 7) *)
+      fs[d_conj_concr_def] >> fs[FOLDR_LEMM4] >> fs[all_distinct_nub],
+      (* goal 7 (of 7) *)
+      fs[d_conj_concr_def] >> fs[FOLDR_LEMM4] >> fs[all_distinct_nub] ]
+QED
 
 val GBA_TRANS_LEMM2 = store_thm
   ("GBA_TRANS_LEMM2",

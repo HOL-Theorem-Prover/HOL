@@ -742,7 +742,7 @@ val stack_ok_EL = store_thm("stack_ok_EL",
 val LENGTH_LESS_REV = prove(
   ``!xs m. m < LENGTH xs ==> ?ys z zs. (xs = ys ++ z::zs) /\ (LENGTH zs = m)``,
   recInduct SNOC_INDUCT \\ SIMP_TAC std_ss [LENGTH,LENGTH_SNOC]
-  \\ SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC (srw_ss()) [SNOC_APPEND] \\ REPEAT STRIP_TAC
   \\ Cases_on `m` \\ FULL_SIMP_TAC std_ss [LENGTH_NIL,APPEND,CONS_11,APPEND_NIL]
   THEN1 (METIS_TAC []) \\ RES_TAC \\ Q.LIST_EXISTS_TAC [`ys`,`z`,`zs ++ [x]`]
   \\ FULL_SIMP_TAC std_ss [APPEND,LENGTH,GSYM APPEND_ASSOC,LENGTH_APPEND,ADD1]);

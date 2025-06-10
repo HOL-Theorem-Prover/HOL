@@ -2098,7 +2098,7 @@ Theorem TAKE1:
 Proof Induct_on ‘l’ >> srw_tac[][]
 QED
 
-Theorem TAKE1_DROP:
+Theorem TAKE1_DROP[simp]:
   !n l. n < LENGTH l ==> (TAKE 1 (DROP n l) = [EL n l])
 Proof
   Induct_on ‘l’ >> rw[] >> Cases_on ‘n’ >> fs[EL_restricted]
@@ -2808,6 +2808,7 @@ val FRONT_SNOC = store_thm(
   RW_TAC bool_ss [SNOC]);
 val _ = export_rewrites ["FRONT_SNOC"]
 
+(* NOTE: Do NOT put [simp] here! *)
 val SNOC_APPEND = store_thm("SNOC_APPEND",
    “!x (l:('a) list). SNOC x l = APPEND l [x]”,
    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC, APPEND]);
@@ -2836,11 +2837,13 @@ val EL_LENGTH_SNOC = store_thm("EL_LENGTH_SNOC",
     (“!l:'a list. !x. EL (LENGTH l) (SNOC x l) = x”),
     LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[EL, SNOC, HD, TL, LENGTH]);
 
-val APPEND_SNOC = store_thm("APPEND_SNOC",
-    (“!l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)”),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND, SNOC]);
+Theorem APPEND_SNOC[simp] :
+    !l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)
+Proof
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND, SNOC]
+QED
 
-Theorem EVERY_SNOC:
+Theorem EVERY_SNOC[simp] :
   !P (x:'a) l. EVERY P (SNOC x l) <=> EVERY P l /\ P x
 Proof
     GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
