@@ -64,7 +64,10 @@ fun make_measures alts = let
 fun termination_tactic alts = let
   val ms = make_measures alts
   fun one_tac tm =
-    WF_REL_TAC [ANTIQUOTE tm] \\ cv_termination_tac \\ NO_TAC
+    EXISTS_TAC tm
+    \\ conj_tac >- TotalDefn.WF_TAC
+    \\ rpt strip_tac
+    \\ cv_termination_tac \\ NO_TAC
   fun try_each [] t = NO_TAC t
     | try_each (x::xs) t = (one_tac x ORELSE try_each xs) t
   in try_each ms end
@@ -380,7 +383,7 @@ fun get_measures eqs = let
   val def = Define `mymap f g l1 l2 = (MAP f l1, MAP g l2)`
 *)
 fun preprocess_def def = let
-  val eqs = def |> CONJUNCTS
+  val eqs = def |> SPEC_ALL |> CONJUNCTS
   val mes = get_measures eqs
   val def = eqs |> map (CONV_RULE (RATOR_CONV (REWRITE_CONV [combinTheory.I_THM])))
                 |> LIST_CONJ
