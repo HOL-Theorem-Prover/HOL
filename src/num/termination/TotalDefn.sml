@@ -463,9 +463,6 @@ fun WF_TAC g = PRIM_WF_TAC (WF_thms()) g;
 (* Basic simplification and proof for remaining termination conditions.     *)
 (*--------------------------------------------------------------------------*)
 
-fun get_orig (TypeBasePure.ORIG th) = th
-  | get_orig _ = raise ERR "get_orig" "not the original"
-
 (*---------------------------------------------------------------------------*)
 (* Convert a tactic to a conv                                                *)
 (*---------------------------------------------------------------------------*)
@@ -487,7 +484,7 @@ fun SOLVES tac g =
   end
 
 (*---------------------------------------------------------------------------*)
-(* There are two entrypoints to termination proofs. One---TC_PROVER---is     *)
+(* There are two entrypoints to termination proofs. One---TC_PROVE_TAC---is  *)
 (* intended to be an automatic prover acting as a backend to prove one of a  *)
 (* set of generated guesses. Thus it needs to be reasonably fast and yet     *)
 (* still go "as deep as possible" in order to prove a guess if it is true.   *)
@@ -501,13 +498,6 @@ fun SOLVES tac g =
 (*---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*)
-(* Apply both WF solver and TC solver to goal already instantiated with      *)
-(* termination relation.                                                     *)
-(*---------------------------------------------------------------------------*)
-
-fun TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
-
-(*---------------------------------------------------------------------------*)
 (* Extra rewrites, used only if they would solve a termination conjunct.     *)
 (*---------------------------------------------------------------------------*)
 
@@ -519,24 +509,25 @@ val termination_solve_simps = ref ([] : thm list);
 
 fun termination_ss() =
   let open boolTheory
+      fun get_orig (TypeBasePure.ORIG th) = th
+        | get_orig _ = raise ERR "get_orig" "not the original"
       val term_simps = [PULL_EXISTS] @ termination_simps()
       val elts = TypeBase.elts()
       val size_defs =
          mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) elts
       val case_defs = mapfilter TypeBasePure.case_def_of elts
   in
-   base_dp_ss ++ rewrites term_simps ++ rewrites size_defs ++ rewrites case_defs
+   base_ss ++ rewrites term_simps ++ rewrites size_defs ++ rewrites case_defs
+           ++ numSimps.ARITH_DP_ss  (* important that this is last! *)
   end
 
-fun TC_SIMPLIFIER ss =
-   CONV_TAC (simpLib.SIMP_CONV ss []) THEN
-   BasicProvers.PRIM_STP_TAC ss NO_TAC
-
-fun TC_PROVER ss thl = SOLVES (TC_SIMPLIFIER (ss ++ rewrites thl))
-
-fun TC_PROVE_TAC() = TC_PROVER (termination_ss()) (!termination_solve_simps)
-fun TC_SIMP_TAC() =
-    TC_SIMPLIFIER (termination_ss() ++ rewrites (!termination_solve_simps))
+(* simplify then case split and simplify from asms *)
+fun TC_SIMP_TAC ss thl =
+    let val ss' = ss ++ rewrites (!termination_solve_simps @ thl)
+    in
+      CONV_TAC (simpLib.SIMP_CONV ss' []) THEN
+      BasicProvers.PRIM_STP_TAC ss' NO_TAC
+    end
 
 (*---------------------------------------------------------------------------*)
 (* Instantiate the termination relation with q, then try to prove            *)
@@ -544,49 +535,20 @@ fun TC_SIMP_TAC() =
 (* unproved TCs should be in reduced form.                                   *)
 (*---------------------------------------------------------------------------*)
 
+fun TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
+
 fun WF_REL_TAC q =
   let val ss = termination_ss()
       val simplifier = simpLib.SIMP_CONV ss []
-      val prover = TC_PROVER ss (!termination_solve_simps)
+      val prover = SOLVES (TC_SIMP_TAC ss [])
       val conjunct_conv = TAC_CONV(prover) ORELSEC simplifier
   in
     Q.EXISTS_TAC q THEN
     TERM_TAC WF_TAC (CONV_TAC (EVERY_CONJ_CONV conjunct_conv))
   end
 
-(*---------------------------------------------------------------------------*)
-(* A big cache in the ARITH dp can really slow the termination provers down. *)
-(* So always clear it. This is a blunt instrument. Better solutions: limit   *)
-(* cache size, or preserve ARITH dp cache, but make termination_ss           *)
-(* independent of it, or find and fix the slowdown in the cache impl.        *)
-(*---------------------------------------------------------------------------*)
-
-val TC_SIMPLIFIER = fn ss =>
-     let val tac = TC_SIMPLIFIER ss
-     in fn g => (numSimps.clear_arith_caches(); tac g)
-     end
-
-val TC_PROVER = fn ss => fn ths =>
-     let val tac = TC_PROVER ss ths
-     in fn g => (numSimps.clear_arith_caches(); tac g)
-     end
-
-val TC_SIMP_TAC = fn () =>
-    let val tac = TC_SIMP_TAC ()
-    in fn g => (numSimps.clear_arith_caches(); tac g)
-    end
-
-val TC_PROVE_TAC = fn () =>
-    let val tac = TC_PROVE_TAC ()
-    in fn g => (numSimps.clear_arith_caches(); tac g)
-    end
-
-val WF_REL_TAC = fn q =>
-    let val tac = WF_REL_TAC q
-    in fn g => (numSimps.clear_arith_caches(); tac g)
-    end
-
-fun mk_term_tac() = TERM_TAC WF_TAC (TC_PROVE_TAC ())
+fun mk_term_tac() =
+    TERM_TAC WF_TAC (SOLVES (TC_SIMP_TAC (termination_ss()) []))
 
 (*---------------------------------------------------------------------------
        Definition principles that automatically attempt

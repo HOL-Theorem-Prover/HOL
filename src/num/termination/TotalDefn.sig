@@ -28,10 +28,7 @@ sig
    val termination_solve_simps : thm list ref
 
    val termination_ss  : unit -> simpset
-   val TC_SIMPLIFIER   : simpset -> tactic
-   val TC_PROVER       : simpset -> thm list -> tactic
-   val TC_SIMP_TAC     : unit -> tactic
-   val TC_PROVE_TAC    : unit -> tactic
+   val TC_SIMP_TAC     : simpset -> thm list -> tactic
    val WF_REL_TAC      : term quotation -> tactic
 
    (* Definitions with automated termination proof support *)
