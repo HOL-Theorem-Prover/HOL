@@ -6,8 +6,15 @@ TEX_CORES = description title preface system conv drules tactics \
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
 
-PS_STUFF = ../Tools/polyscripter ../Tools/umap
+PS_ROOT = ../Tools/polyscripter
+PS_STUFF =  $(PS_ROOT) ../Tools/umap
 PS_COMMAND = $(PS_STUFF) < $< > $@
+PS_NOUMAP = $(PS_ROOT) < $< > $@
+
+.PHONY: all
+
+all: system.pdf system.html description.pdf
+
 
 description.pdf: $(TEX_SOURCES)
 	latexmk -pdf description
@@ -47,6 +54,16 @@ libraries.tex: libraries.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
 
 system.tex: system.stex $(PS_STUFF)
 	$(PS_COMMAND)
+
+
+system.md: system.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+system.pdf: system.md
+	pandoc -o $@ $<
+
+system.html: system.md
+	pandoc -s -o $@ $<
 
 HolSat.tex: HolSat.stex $(PS_STUFF) zchaff.cnf
 	$(PS_COMMAND)

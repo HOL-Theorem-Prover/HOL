@@ -1,0 +1,244 @@
+---
+header-includes: |
+  \DeclareUnicodeCharacter{3B1}{$\alpha$}
+  \DeclareUnicodeCharacter{3BB}{$\lambda$}
+  \DeclareUnicodeCharacter{201C}{\mbox{\textrm{\textquotedblleft}}}
+  \DeclareUnicodeCharacter{201D}{\mbox{\textrm{\textquotedblright}}}
+  \DeclareUnicodeCharacter{2286}{$\subseteq$}
+---
+
+
+# The HOL Logic in ML
+
+In this chapter, the concrete representation of the HOL logic is described.
+This involves describing the ML functions that comprise the interface to the logic (up to and including [§Theorems](#theorems);
+the quotation, parsing, and printing of logical types and terms [§Quotations](#quotations-parsing-and-printing);
+the representation of theorems ([§Theorems](#theorems));
+the representation of theories ([§Theories](#theories));
+the fundamental HOL theory \texttt{bool} ([§bool](#the-theory-bool));
+the primitive rules of inference
+([§Rules](#primitive-rules-of-inference-of-the-hol-logic));
+and the methods for extending theories (throughout [§Theories](#theories) and also later in [§bossLib](#high-level-proof-bosslib)).
+It is assumed that the reader is familiar with ML.
+If not, the introduction to ML in *Getting Started with HOL* in the TUTORIAL Part should be read first.
+
+The HOL system provides the ML types `hol_type` and `term` which implement the types and terms of the HOL logic, as defined in §LOGIC.
+It also provides primitive ML functions for creating and manipulating values of these types.
+Upon this basis the HOL logic is implemented.
+The key idea of the HOL system, due to Robin Milner, and discussed in this chapter, is that theorems are represented as an abstract ML type whose only pre-defined values are axioms, and whose only operations are rules of inference.
+This means that the only way to construct theorems in HOL is to apply rules of inference to axioms or existing theorems; hence the consistency of the logic is preserved.
+
+The purpose of the meta-language ML is to provide a programming
+environment in which to build theorem proving tools to assist in the
+construction of proofs.
+When the HOL system is built, a range of
+useful theorems is pre-proved and a set of tools pre-defined.
+The basic
+system thus offers a rich initial environment; users can further enrich
+it by implementing their own application specific tools and building
+their own application specific theories.
+
+
+## Types
+
+The allowed types depend on which type constants
+have been declared in the current theory.
+See [§Theories](#theories)
+for details of how such declarations are made. There are two primitive
+constructor
+functions for values of type `hol_type`
+```
+   mk_vartype : string -> hol_type
+   mk_thy_type : {Tyop:string, Thy:string, Args:hol_type list} ->
+                 hol_type
+```
+
+The function `mk_vartype` constructs a type variable
+with a given name; it gives a warning if the name is not an allowable
+type variable name (*i.e.*, not an apostrophe (`'`) followed by an alphanumeric).
+The function `mk_thy_type` constructs a compound type
+from a record `{Tyop,Thy,Args}` where `Tyop` is a string
+representing the name of the type operator, `Thy` is a string
+representing the theory that `Tyop` was declared in, and `Args`
+is a list of types representing the arguments to the operator.
+Function types $\sigma_1\to\sigma_2$ of the logic are represented in
+ML as though they were compound types $(\sigma_1,\sigma_2)$`fun`
+(in §LOGIC, however, function types were not regarded as compound
+types).
+
+The evaluation of
+$$
+\mathtt{mk\_thy\_type}\{\mathtt{Tyop} = \mathit{name},\,
+\mathtt{Thy} = \mathit{thyname},\,
+\mathtt{Args} = [\sigma_1, \cdots ,\sigma_n]\}
+$$
+fails if
+
+1.  $\mathit{name}$ is not a type operator of theory $\mathit{thyname}$;
+2.  $\mathit{name}$ is a type operator of theory $\mathit{thyname}$,
+but its arity is not $n$.
+
+For example, `mk_thy_type{Tyop="bool", Thy="min", Args=[]}`
+evaluates to an ML value of type `hol_type` representing the type
+`bool`.
+
+Type constants may be bound to ML values and need not be repeatedly constructed: *e.g.*, the type built by `mk_thy_type{Tyop="bool", Thy="min", Args=[]}` is abbreviated by the ML value `bool`.
+Similarly, function types may be constructed with the infix ML function `-->`.
+A few common type variables
+have been constructed and bound to ML identifers, *e.g.*, `alpha` is the type variable `'a` and `beta` is the type variable `'b`.
+Thus the ML code `alpha --> bool` is equal to, but much more concise than
+
+```
+>> mk_thy_type{Tyop="fun", Thy="min",
+               Args=[mk_vartype "'a",
+                     mk_thy_type{Tyop="bool", Thy="min", Args=[]}]}
+```
+There are two primitive destructor
+functions for values of type `hol_type`:
+```
+  dest_vartype : hol_type -> string
+  dest_thy_type : hol_type -> {Tyop:string, Thy:string, Args:hol_type list}
+```
+The function `dest_vartype` extracts the name of a type variable.
+A compound type is destructed by the function `dest_thy_type` into the name of the type
+operator, the name of the theory it was declared in, and a list of the
+argument types; `dest_vartype` and `dest_thy_type` are thus
+the inverses of `mk_vartype` and `mk_thy_type`, respectively.
+The destructors fail on arguments of the wrong form.
+
+## Terms
+
+The four primitive kinds of terms of the logic are described in
+§LOGIC.  The ML functions for manipulating these are described in
+this section. There are also *derived* terms that are described
+in [§Derived Syntactic Forms](#derived-syntactic-forms).
+
+At any time, the terms that may be constructed depends on which
+constants have been declared in the current theory. See
+[§Theories](#theories) for details of how such declarations are made.
+
+There are four primitive constructor
+functions for values of type `term`:
+
+```
+   mk_var : (string * hol_type) -> term
+```
+`mk_var(`$x$`,`$\sigma$`)` evaluates to a variable
+with name $x$ and type $\sigma$; it always succeeds.
+
+```
+   mk_thy_const : {Name:string, Thy:string, Ty:hol_type} -> term
+```
+`mk_thy_const{Name =`$\;\mathit{c}$`,Thy =`$\;\mathit{thyname}$`,Ty =`$\;\sigma$`}` evaluates to a term representing the constant
+with name $c$ and type $\sigma$; it fails if:
+
+1. $c$ is not the name of a constant in the theory $\mathit{thyname}$;
+2. $\sigma$ is not an instance of the generic type of $c$
+(the generic type of a constant is established when the constant is defined;
+see [§Theories](#theories)).
+
+```
+   mk_comb : (term * term) -> term
+
+```
+
+`mk_comb(`$t_1$`,`$t_2$`)` evaluates to a term representing the combination $t_1\ t_2$.
+It fails if:
+
+1. the type of $t_1$ does not have the form $\sigma'\to\sigma$;
+2. the type of $t_1$ has the form $\sigma'\to\sigma$, but the
+type of $t_2$ is not equal to $\sigma'$.
+
+```
+   mk_abs : (term * term) -> term
+```
+
+`mk_abs(`$x$`,`$t$`)` evaluates to a term representing
+the abstraction $\lambda x.\;t$; it fails if $x$ is not a variable.
+
+There are four primitive destructor functions on terms:
+
+```
+   dest_var       : term -> (string * hol_type)
+   dest_thy_const : term -> {Name:string, Thy:string, Ty:hol_type}
+   dest_comb      : term -> (term * term)
+   dest_abs       : term -> (term * term)
+```
+
+These are the inverses of `mk_var`, `mk_thy_const`,
+`mk_comb` and `mk_abs`, respectively.
+They fail when applied to terms of the wrong form.
+Other useful destructor functions are
+`rator`,
+`rand`,
+`bvar`,
+`body`,
+`lhs` and
+`rhs`.
+See §REFERENCE for details.
+
+The function
+```
+   type_of : term -> hol_type
+```
+returns the type of a term.
+
+The function
+```
+   aconv : term -> term -> bool
+```
+implements the $\alpha$-convertibility test for
+$\lambda$-calculus terms.
+From the point of view of the HOL logic, $\alpha$-convertible terms
+are identical.
+A variety of other functions are available for performing $\beta$-reduction (`beta_conv`), $\eta$-reduction
+(`eta_conv`), substitution (`subst`), type instantiation (`inst`), computation of free variables (`free_vars`) and
+other common term operations.  See §REFERENCE for more details.
+
+
+## Quotations, Parsing and Printing
+
+It would be tedious to always have to input types and terms using the constructor functions.
+The HOL system, adapting the approach taken in LCF, has special quotation
+parsers for HOL types and terms which enable types and terms
+to be input using a fairly standard syntax.
+For example, the ML
+expression `“:bool -> bool”` denotes exactly the same
+value (of ML type `hol_type`) as
+
+```
+>> mk_thy_type{
+    Tyop = "fun",Thy = "min",
+    Args = [
+      mk_thy_type{Tyop = "bool", Thy = "min", Args = []},
+      mk_thy_type{Tyop = "bool", Thy = "min", Args = []}
+    ]}
+```
+and the expression `“\x. x + 1”`‘
+can be used instead of
+
+```
+>> val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+>> val tedious = mk_abs
+    (mk_var("x",numty),
+     mk_comb(mk_comb (
+       mk_thy_const {
+         Name="+",Thy="arithmetic",Ty=numty --> numty --> numty
+       },
+       mk_var("x", numty)
+       ),
+       mk_comb(
+         mk_thy_const{
+           Name="NUMERAL", Thy="arithmetic", Ty=numty-->numty
+         },
+         mk_comb(
+           mk_thy_const{
+             Name="BIT1", Thy="arithmetic", Ty=numty-->numty
+           },
+           mk_thy_const{
+             Name="ZERO", Thy="arithmetic", Ty=numty
+           }))));
+>> val parsed = ``\x. x + 1``;
+>> aconv tedious parsed;
+```
+
