@@ -96,9 +96,9 @@ fun is_tailrecursive cv_def_tm = let
     else true;
   in all ok_rhs rhs_list end
 
-fun define_cv_function name (def:thm) cv_def_tm (SOME t) =
+fun define_cv_function name (def:thm) cv_def_tm (SOME t) measure_opt =
        tDefine name [ANTIQUOTE cv_def_tm] t
-  | define_cv_function name def cv_def_tm NONE =
+  | define_cv_function name def cv_def_tm NONE measure_opt =
        if is_no_arg_fun cv_def_tm then let
          val v_str = cv_def_tm |> dest_eq |> fst |> dest_var |> fst
          val new_v_tm = mk_var(v_str, cvSyntax.cv --> cvSyntax.cv)
@@ -111,9 +111,11 @@ fun define_cv_function name (def:thm) cv_def_tm (SOME t) =
        else if is_tailrecursive cv_def_tm then
          tailrecLib.tailrec_define (name ^ "_def") cv_def_tm
        else (let
-         val alts = strip_conj cv_def_tm
-                      |> map (length o snd o strip_comb o fst o dest_eq)
-                      |> map (fn n => (List.tabulate(n,fn i => [i]),n))
+         val alts = (case measure_opt of
+                       SOME m => map (fn (x,y) => ([[x]],y)) m
+                     | NONE => strip_conj cv_def_tm
+                        |> map (length o snd o strip_comb o fst o dest_eq)
+                        |> map (fn n => (List.tabulate(n,fn i => [i]),n)))
          val t = termination_tactic alts
          in tDefine name [ANTIQUOTE cv_def_tm] t end
        handle HOL_ERR _ => let
@@ -338,12 +340,50 @@ val clean_name = let
                     c = #"_" orelse c = #"'"
   in String.translate (fn c => if okay_char c then implode [c] else "_") end;
 
+fun measure_args args def = let
+  val all_eqs = CONJUNCTS def |> map SPEC_ALL
+  val lhs = all_eqs |> map (repeat rator o fst o dest_eq o concl)
+  fun nub [] = []
+    | nub (c::cs) = c :: nub (filter (not o aconv c) cs)
+  val uconsts = nub lhs
+  val ts = zip uconsts (map (fn n => n + 1) args)
+  val TO_I = GSYM combinTheory.I_THM |> SPEC_ALL
+  fun annotate_eq eq = let
+    val l = eq |> concl |> dest_eq |> fst
+    val (c,xs) = strip_comb l
+    val i = snd (first (fn (x,y) => aconv c x) ts)
+    val j = length xs
+    fun RATOR_N_CONV 0 c = c
+      | RATOR_N_CONV n c = RATOR_CONV (RATOR_N_CONV (n-1) c)
+    in CONV_RULE (PATH_CONV "lr"
+         (RATOR_N_CONV (j-i) (RAND_CONV (REWR_CONV TO_I)))) eq end
+  in LIST_CONJ (map annotate_eq all_eqs) end;
+
+fun get_measures eqs = let
+  val eqs = map (UNDISCH_ALL o SPEC_ALL o UNDISCH_ALL) eqs
+  fun nub [] = []
+    | nub (c::cs) = c :: nub (filter (not o aconv c) cs)
+  val lhs1 = eqs |> map (repeat rator o fst o dest_eq o concl) |> nub
+  fun find_index acc [] = ~1
+    | find_index acc (true::xs) = acc + 1
+    | find_index acc (false::xs) = find_index (acc + 1) xs
+  fun find_I l = let
+    val eq = first (fn eq => aconv l (repeat rator (fst (dest_eq (concl eq))))) eqs
+    val (_,args) = strip_comb (fst (dest_eq (concl eq)))
+    in (find_index ~1 (map combinSyntax.is_I args), length args) end
+  val locs = map find_I lhs1
+  in if List.all (fn (n,_) => 0 <= n) locs then SOME locs else NONE end;
+
 (*
   val _ = Define `bar x = x + 5n`
   val def = Define `foo = bar`
   val def = Define `mymap f g l1 l2 = (MAP f l1, MAP g l2)`
 *)
 fun preprocess_def def = let
+  val eqs = def |> CONJUNCTS
+  val mes = get_measures eqs
+  val def = eqs |> map (CONV_RULE (RATOR_CONV (REWRITE_CONV [combinTheory.I_THM])))
+                |> LIST_CONJ
   val defs = def |> oneline_ify_all |> map (SPEC_ALL o UNDISCH_ALL o SPEC_ALL)
   (* val th = hd defs *)
   fun adjust_def th =
@@ -399,7 +439,7 @@ fun preprocess_def def = let
     val renamed = CONV_RULE (sweep_conv rename_conv) th
     in SPEC_ALL renamed end;
   val defs = map remove_primes defs
-  in defs end
+  in (defs, mes) end
 
 fun store_cv_result name orig_names result =
   let val _ = cv_print Verbose "Storing result:\n"
@@ -463,7 +503,7 @@ fun print_pre_goal name pre_def orig_names_list thy_name =
 *)
 
 fun cv_trans_any allow_pre term_opt def = let
-  val defs = preprocess_def def
+  val (defs,measure_opt) = preprocess_def def
   (* make hyps *)
   val assums = defs |> map mk_assum_for
   val hyps = map snd assums
@@ -497,7 +537,7 @@ fun cv_trans_any allow_pre term_opt def = let
   val cv_def_tm = list_mk_conj cv_eqs
   val name = cv_eqs |> hd |> dest_eq |> fst |> strip_comb
                     |> fst |> dest_var |> fst |> clean_name
-  val cv_def = define_cv_function name def cv_def_tm term_opt
+  val cv_def = define_cv_function name def cv_def_tm term_opt measure_opt
   val cv_defs = cv_def |> CONJUNCTS |> map SPEC_ALL
   val _ = cv_print Verbose "Defined cv functions:\n"
   val _ = (cv_print Verbose "\n"; List.app (indent_print_thm Verbose "" "\n\n") cv_defs)
@@ -601,7 +641,7 @@ fun cv_trans_pre_rec def tac =
  *--------------------------------------------------------------------------*)
 
 fun cv_trans_simple_constant def = let
-  val defs = preprocess_def def
+  val (defs,_) = preprocess_def def
   val def = hd defs
   val (l,r) = def |> concl |> dest_eq
   in if length defs > 1 orelse not (is_const l) then NONE
