@@ -28,4 +28,6 @@ sig
 
   val cv_termination_tac  : tactic
 
+  val measure_args : int list -> thm -> thm
+
 end
