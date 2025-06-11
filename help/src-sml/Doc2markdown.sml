@@ -15,7 +15,10 @@ fun capitalise s = CharVector.tabulate (
 fun trans_secnm "DESCRIBE" = "Description"
   | trans_secnm s = capitalise s
 
+(* almost certainly wrong *)
 fun brkt_text s = s
+
+fun html_linkify s = "[" ^ s ^ "](" ^ s ^ ".html)"
 
 fun markdown (name,sectionl) ostrm =
     let fun out s = TextIO.output(ostrm, s)
@@ -31,13 +34,16 @@ fun markdown (name,sectionl) ostrm =
         fun mdsection sec =
             case sec of
                 SEEALSO sslist =>
-                (out "## See Also\n\n";
-                 out (String.concatWith ", " (map Substring.string sslist));
+                (out "\n## See Also\n\n";
+                 out (String.concatWith
+                        ", "
+                        (map (html_linkify o Substring.string) sslist));
                  out "\n\n")
               | TYPE ss =>
-                (out ("## Type\n\n```\n" ^ Substring.string ss ^ "\n```\n\n"))
+                (out ("\n## Type\n\n```\n" ^ Substring.string ss ^ "\n```\n\n"))
+              | FIELD ("DOC", [TEXT ss]) => out ("# " ^ Substring.string ss ^ "\n\n")
               | FIELD (secnm, textelems) =>
-                (out ("## " ^ trans_secnm secnm ^ "\n\n");
+                (out ("\n## " ^ trans_secnm secnm ^ "\n\n");
                  List.app mdtext textelems;
                  out "\n")
 
