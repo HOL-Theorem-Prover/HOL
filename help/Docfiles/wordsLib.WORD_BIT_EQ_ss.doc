@@ -20,17 +20,17 @@ combination with decision procedures to test for the bitwise equality of words.
 \EXAMPLE
 
 {
-- SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] ``a = b : 'a word``
+- SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] “a = b : 'a word”
 > val it = |- (a = b) = !i. i < dimindex (:'a) ==> (a ' i = b ' i) : thm
 }
 Further simplification occurs when the word length is known.
 {
-- SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] ``a = b : word2``
+- SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] “a = b : word2”
 > val it = |- (a = b) = (a ' 1 = b ' 1) /\ (a ' 0 = b ' 0) : thm
 }
 Best used in combination with decision procedures.
 {
-- (SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] THENC tautLib.TAUT_CONV) ``a && b && a = a && b``
+- (SIMP_CONV (std_ss++WORD_BIT_EQ_ss) [] THENC tautLib.TAUT_CONV) “a && b && a = a && b”
 <<HOL message: inventing new type variable names: 'a>>
 > val it = |- (a && b && a = a && b) = T : thm
 

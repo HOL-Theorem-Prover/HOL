@@ -12,7 +12,7 @@ The conversion {WORD_CONV} applies the simpset fragment {WORD_ss}.
 
 \EXAMPLE
 {
-- WORD_CONV ``c * (a + b) !! (b + a) * c``
+- WORD_CONV “c * (a + b) !! (b + a) * c”
 <<HOL message: inventing new type variable names: 'a>>
 > val it = |- c * (a + b) !! (b + a) * c = a * c + b * c : thm
 }

@@ -18,17 +18,17 @@ The fragment {WORD_ss} contains {BIT_ss}, {SIZES_ss}, {WORD_LOGIC_ss},
 \EXAMPLE
 
 {
-- SIMP_CONV (pure_ss++WORD_ss) [] ``BIT i 42``
+- SIMP_CONV (pure_ss++WORD_ss) [] “BIT i 42”
 > val it = |- BIT i 42 = i IN {1; 3; 5} : thm
 
-- SIMP_CONV (pure_ss++WORD_ss) [] ``dimword(:42)``
+- SIMP_CONV (pure_ss++WORD_ss) [] “dimword(:42)”
 > val it = |- dimword (:42) = 4398046511104 : thm
 
-- SIMP_CONV (pure_ss++WORD_ss) [] ``((a #<< 2 #>> 2 + a) && $- 1w) - a``
+- SIMP_CONV (pure_ss++WORD_ss) [] “((a #<< 2 #>> 2 + a) && $- 1w) - a”
 <<HOL message: inventing new type variable names: 'a>>
 > val it = |- (a #<< 2 #>> 2 + a && $- 1w) - a = a : thm
 
-- SIMP_CONV (pure_ss++WORD_ss) [] ``(4 -- 2) ($- 1w : word8)``
+- SIMP_CONV (pure_ss++WORD_ss) [] “(4 -- 2) ($- 1w : word8)”
 > val it = |- (4 -- 2) ($- 1w) = 7w : thm
 }
 

@@ -22,13 +22,13 @@ extract).
 \EXAMPLE
 
 {
-- SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss) [] ``(((7 >< 5) (a:word8)):3 word @@ ((4 >< 0) a):5 word) : word8``
+- SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss) [] “(((7 >< 5) (a:word8)):3 word @@ ((4 >< 0) a):5 word) : word8”
 > val it = |- (7 >< 5) a @@ (4 >< 0) a = a : thm
 
-- SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss) [] ``(4 -- 2) ((a:word8) #>> 4)``
+- SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss) [] “(4 -- 2) ((a:word8) #>> 4)”
 > val it = |- (4 -- 2) (a #>> 4) = (7 >< 6) a !! (0 >< 0) a << 2 : thm
 
-- SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss) [] ``w2w (sw2sw (a:word4):word8):word4``
+- SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss) [] “w2w (sw2sw (a:word4):word8):word4”
 > val it = |- w2w (sw2sw a) = a : thm
 }
 

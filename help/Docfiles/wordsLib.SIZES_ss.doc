@@ -12,12 +12,12 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {SIZES_ss} evaluates terms {``dimindex(:'a)``}, {``dimword(:'a)``},
-{``INT_MIN(:'a)``}, and {``FINITE (UNIV : 'a set)``} for numeric types.
+The fragment {SIZES_ss} evaluates terms {“dimindex(:'a)”}, {“dimword(:'a)”},
+{“INT_MIN(:'a)”}, and {“FINITE (UNIV : 'a set)”} for numeric types.
 
 \EXAMPLE
 {
-- SIMP_CONV (pure_ss++SIZES_ss) [] ``dimindex(:32) + INT_MIN(:32) + dimword(:32)``
+- SIMP_CONV (pure_ss++SIZES_ss) [] “dimindex(:32) + INT_MIN(:32) + dimword(:32)”
 > val it =
     |- dimindex (:32) + INT_MIN (:32) + dimword (:32) =
        32 + 2147483648 + 4294967296 : thm

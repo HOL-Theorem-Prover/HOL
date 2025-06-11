@@ -13,7 +13,7 @@ canonical form.
 
 \EXAMPLE
 {
-- WORD_LOGIC_CONV ``a && (b !! ~a !! c)``
+- WORD_LOGIC_CONV “a && (b !! ~a !! c)”
 <<HOL message: inventing new type variable names: 'a>>
 > val it = |- a && (b !! ~a !! c) = a && b !! a && c : thm
 }

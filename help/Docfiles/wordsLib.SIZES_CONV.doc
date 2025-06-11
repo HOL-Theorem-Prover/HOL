@@ -8,7 +8,7 @@ Evaluates {dimindex}, {dimword} and {INT_MIN}.
 
 \EXAMPLE
 {
-- SIZES_CONV ``dimword(:32)``
+- SIZES_CONV “dimword(:32)”
 > val it = |- dimword (:32) = 4294967296 : thm
 }
 
