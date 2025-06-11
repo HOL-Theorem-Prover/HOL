@@ -701,8 +701,8 @@ val hwDefineLib = ref([] : (thm * thm * thm)list);
 
 fun hwDefine defq =
  let open TotalDefn
-     val TC_SIMP = TC_SIMP_TAC()
-     val TC_PROVE = TC_PROVE_TAC()
+     val TC_SIMP = TC_SIMP_TAC (termination_ss()) []
+     val TC_PROVE = TC_SIMP >> NO_TAC
      val absyn0 = Parse.Absyn defq
  in
   case absyn0
