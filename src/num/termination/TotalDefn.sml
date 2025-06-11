@@ -210,8 +210,6 @@ val base_ss =
     ++ numSimps.REDUCE_ss
     ++ numSimps.ARITH_RWTS_ss;
 
-val base_dp_ss = base_ss ++ numSimps.ARITH_DP_ss
-
 (*---------------------------------------------------------------------------*)
 (* Destruct R (x1,...,xn) (y1,...ym) into [(x1,y1), ... , (xn,yn)],          *)
 (* where n and m need not be equal.                                          *)
