@@ -495,7 +495,7 @@ fun getlimit (SS ss) = #limit ss
  fun po_rel (Travrules.PREORDER(r,_,_)) = r
 
  fun mk_reducer rel_t subsets initial_rewrites = let
-   exception redExn of (control * thm) Net.net
+   val redExn : ((control * thm) Net.net) Universal.tag = Universal.tag()
    fun munge_subset_th th = let
      val (_, impn) = strip_forall (concl th)
      val (a, _) = dest_imp impn
@@ -505,14 +505,12 @@ fun getlimit (SS ss) = #limit ss
    end
    val subsets = map munge_subset_th subsets
    fun addcontext (ctxt, thms) = let
-     val n = case ctxt of redExn n => n
-                        | _ => raise ERR ("mk_reducer.addcontext",
-                                          "Wrong sort of ctxt")
+     val n = Universal.tagProject redExn ctxt
      val n' = munge rel_t subsets [] ([map TH thms], n)
    in
-     redExn n'
+     Universal.tagInject redExn n'
    end
-   val initial_ctxt = addcontext (redExn Net.empty, initial_rewrites)
+   val initial_ctxt = addcontext (Universal.tagInject redExn Net.empty, initial_rewrites)
    fun applythm solver t (bound, th) = let
      val _ =
          trace(7, LZ_TEXT (fn () => "Attempting rewrite: "^thm_to_string th))
@@ -551,8 +549,7 @@ fun getlimit (SS ss) = #limit ss
    fun apply {solver,conv,context,stack,relation = (relation,_)} t = let
      val _ = can (match_term rel_t) relation orelse
              raise ERR ("mk_reducer.apply", "Wrong relation")
-     val n = case context of redExn n => n
-                           | _ => raise ERR ("apply", "Wrong sort of ctxt")
+     val n = Universal.tagProject redExn context
      val lookup_t = mk_icomb(relation,t)
      val _ = trace(7, LZ_TEXT(fn () => "Looking up "^term_to_string lookup_t))
      val matches = Net.match lookup_t n
@@ -675,29 +672,30 @@ fun remove_ssfrags names (ss as SS{history,limit,...}) =
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)
 (*---------------------------------------------------------------------------*)
 
- exception CONVNET of net;
+ val CONVNET : net Universal.tag = Universal.tag();
 
  fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) = let
    fun addcontext (context,thms) = let
-     val net = (raise context) handle CONVNET net => net
+     val net = Universal.tagProject CONVNET context
      val cthms = map dest_tagged_rewrite thms
      val new_rwts0 = flatten (map mk_rewrs cthms)
      val new_rwts =
          map (fn th => (SOME {Thy = "", Name = "rewrite: from context"}, th))
              new_rwts0
    in
-     CONVNET
+     Universal.tagInject CONVNET
        (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
    end
    fun apply {solver,conv,context,stack,relation} tm = let
-     val net = (raise context) handle CONVNET net => net
+     val net = Universal.tagProject CONVNET context
    in
      tryfind (fn {ci = {conval,...},...} => conval solver stack tm)
              (lookup tm net)
    end
+   val initial = Universal.tagInject CONVNET initial_net
    in REDUCER {name=SOME"rewriter_for_ss",
                addcontext=addcontext, apply=apply,
-               initial=CONVNET initial_net}
+               initial=initial}
    end;
 
  fun traversedata_for_ss (ss as (SS ssdata)) =

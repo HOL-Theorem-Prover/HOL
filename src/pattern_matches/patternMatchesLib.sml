@@ -34,14 +34,14 @@ val list_ss  =
 (***********************************************)
 
 fun make_gen_conv_ss c name ssl = let
-   exception genconv_reducer_exn
+   val genconv_reducer_exn : unit Universal.tag = Universal.tag()
    fun addcontext (context,thms) = context
    fun apply {solver,conv,context,stack,relation} tm = (
      QCHANGED_CONV (c (ssl, SOME (conv stack))) tm
    )
    in simpLib.dproc_ss (REDUCER {name=SOME name,
                addcontext=addcontext, apply=apply,
-               initial=genconv_reducer_exn})
+               initial=Universal.tagInject genconv_reducer_exn ()})
    end;
 
 (* Often in the following, a single row needs extracting.

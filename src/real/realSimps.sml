@@ -603,18 +603,18 @@ in
 end;
 
 val ARITH_REDUCER = let
-  exception CTXT of thm list;
-  fun get_ctxt e = (raise e) handle CTXT c => c
+  val CTXT : (thm list) Universal.tag = Universal.tag()
+  fun get_ctxt e = Universal.tagProject CTXT e
   fun add_ctxt(ctxt, newthms) = let
     val addthese = filter is_arith_thm (flatten (map CONJUNCTS newthms))
   in
-    CTXT (addthese @ get_ctxt ctxt)
+    Universal.tagInject CTXT (addthese @ get_ctxt ctxt)
   end
 in
   REDUCER {name = SOME"REAL_ARITH_DP",
            addcontext = add_ctxt,
            apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
-           initial = CTXT []}
+           initial = Universal.tagInject CTXT []}
 end;
 
 val REAL_ARITH_ss =

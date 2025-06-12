@@ -3020,11 +3020,11 @@ val FAST_EXPAND_QUANT_INSTANTIATE_CONV =
 
 
 fun QUANT_INSTANTIATE_REDUCER cache_ref_opt re min_occs expand_eq bqp qpL =
-  let exception FACTDB of thm list;
-      fun get_db e = (raise e) handle FACTDB thms => thms
+  let val FACTDB : (thm list) Universal.tag = Universal.tag()
+      fun get_db e = Universal.tagProject FACTDB e
   in Traverse.REDUCER
     {name=SOME"QUANT_INSTANTIATE",
-     initial = FACTDB [],
+     initial = Universal.tagInject FACTDB [],
      apply=(fn r => fn t =>
        let
          val thms = get_db (#context r);
@@ -3032,7 +3032,7 @@ fun QUANT_INSTANTIATE_REDUCER cache_ref_opt re min_occs expand_eq bqp qpL =
        in
          res
        end handle UNCHANGED => fail()),
-     addcontext=(fn (ctxt,thms) => (FACTDB (thms @ (get_db ctxt))))}
+     addcontext=(fn (ctxt,thms) => (Universal.tagInject FACTDB (thms @ (get_db ctxt))))}
   end;
 
 fun EXTENSIBLE_QUANT_INST_ss cache_ref_opt re min_occs expand_eq bqp qpL =

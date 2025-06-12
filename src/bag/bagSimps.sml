@@ -121,19 +121,19 @@ val (CACHED_SBAG_SOLVE, sbag_cache) =
 
 
 val SBAG_SOLVER = let
-  exception CTXT of thm list;
-  fun get_ctxt e = (raise e) handle CTXT c => c
+  val CTXT : (thm list) Universal.tag = Universal.tag()
+  fun get_ctxt e = Universal.tagProject CTXT e
   fun add_ctxt(ctxt, newthms) = let
     val addthese = filter (is_ok o concl) (flatten (map CONJUNCTS newthms))
   in
-    CTXT (addthese @ get_ctxt ctxt)
+    Universal.tagInject CTXT (addthese @ get_ctxt ctxt)
   end
 in
   Traverse.REDUCER
   {name=SOME"SBAG_SOLVER",
    addcontext = add_ctxt,
    apply = fn args => CACHED_SBAG_SOLVE (get_ctxt (#context args)),
-   initial = CTXT []}
+   initial = Universal.tagInject CTXT []}
 end;
 
 val SBAG_SOLVE_ss = SSFRAG

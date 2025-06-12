@@ -254,20 +254,20 @@ fun mkSS DPname DP = let
      that we have accumulated a contradictory context. *)
   end
   val ARITH_REDUCER = let
-    exception CTXT of thm list
-    fun get_ctxt e = (raise e) handle CTXT c => c
+    val CTXT : (thm list) Universal.tag = Universal.tag()
+    fun get_ctxt e = Universal.tagProject CTXT e
     fun add_ctxt(ctxt, newthms) = let
       val addthese = filter (fn th => is_arith_thm th andalso
                                       not (Feq (concl th)))
                             (flatten (map CONJUNCTS newthms))
     in
-      CTXT (addthese @ get_ctxt ctxt)
+      Universal.tagInject CTXT (addthese @ get_ctxt ctxt)
     end
   in
     REDUCER {name = SOME DPname,
              addcontext = add_ctxt,
              apply = fn args => CDP (get_ctxt (#context args)),
-             initial = CTXT []}
+             initial = Universal.tagInject CTXT []}
   end
 in
   (SSFRAG {name=SOME DPname,

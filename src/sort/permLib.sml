@@ -612,11 +612,9 @@ fun PERM_SIMP_CONV thmL t =
 
 local
 
-exception perm_reducer_context of thm list
+val perm_reducer_context : (thm list) Universal.tag = Universal.tag()
 
-fun perm_reducer_get_context e =
-    (raise e)
-    handle perm_reducer_context thmL => thmL;
+fun perm_reducer_get_context e = Universal.tagProject perm_reducer_context e
 
 
 fun clean_perm_thm thm = filter (is_PERM o concl) (BODY_CONJUNCTS thm);
@@ -646,17 +644,17 @@ fun perm_reducer_add_context old_thmL [] = old_thmL
 val perm_simplify_thmL = perm_reducer_add_context [];
 
 fun perm_reducer_add_context2 (ctx, thmL) =
-   perm_reducer_context (perm_reducer_add_context
+   Universal.tagInject perm_reducer_context (perm_reducer_add_context
                         (perm_reducer_get_context ctx) thmL);
 
 fun perm_reducer_add_context_simple (ctx, thmL) =
-   perm_reducer_context (append (clean_perm_thmL thmL)
+   Universal.tagInject perm_reducer_context (append (clean_perm_thmL thmL)
                                 (perm_reducer_get_context ctx));
 
 val PERM_REDUCER =
   Traverse.REDUCER {
     name = SOME "PERM_REDUCER",
-    initial = perm_reducer_context [],
+    initial = Universal.tagInject perm_reducer_context [],
     addcontext = perm_reducer_add_context2,
     apply = fn args =>
                QCHANGED_CONV
@@ -666,7 +664,7 @@ val PERM_REDUCER =
 val PERM_REDUCER_SIMPLE =
   Traverse.REDUCER {
     name = SOME "PERM_REDUCER_SIMPLE",
-    initial = perm_reducer_context [],
+    initial = Universal.tagInject perm_reducer_context [],
     addcontext = perm_reducer_add_context_simple,
     apply = fn args =>
                QCHANGED_CONV
