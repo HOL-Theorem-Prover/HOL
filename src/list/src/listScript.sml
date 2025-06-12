@@ -32,6 +32,10 @@ fun simp l = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss) l
 val rw = SRW_TAC []
 val metis_tac = METIS_TAC
 fun fs l = FULL_SIMP_TAC (srw_ss()) l
+fun gvs l =
+  global_simp_tac {
+    strip = true, elimvars = true, droptrues = true, oldestfirst = true
+  } (srw_ss()) l
 val std_ss = arith_ss ++ boolSimps.LET_ss;
 
 fun DECIDE_TAC (g as (asl,_)) =
@@ -492,6 +496,8 @@ Theorem APPEND_ASSOC:
    APPEND l1 (APPEND l2 l3) = APPEND (APPEND l1 l2) l3
 Proof LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [APPEND]
 QED
+
+Theorem APPEND_ASSOC'[simp] = GSYM APPEND_ASSOC
 
 Theorem LENGTH_APPEND[simp]:
   !(l1:'a list) (l2:'a list).
@@ -1014,11 +1020,11 @@ Proof
   >- (rw[EQ_IMP_THM]
       >- (REWRITE_TAC [GSYM $ cj 2 APPEND] >>
           rpt $ irule_at Any EQ_REFL >> simp[DISJ_IMP_THM]) >>
-      Q.RENAME_TAC [‘x::xs = p ++ [e] ++ s’] >> Cases_on ‘p’ >> fs[] >>
+      Q.RENAME_TAC [‘x::xs = p ++ e::s’] >> Cases_on ‘p’ >> fs[] >>
       rw[] >> metis_tac[]) >>
   iff_tac
   >- (rw[] >> Q.EXISTS_TAC ‘[]’ >> simp[])
-  >- (strip_tac >> Q.RENAME_TAC [‘x::xs = p ++ [e] ++ s’] >>
+  >- (strip_tac >> Q.RENAME_TAC [‘x::xs = p ++ e::s’] >>
       Cases_on ‘p’ >> fs[])
 QED
 
@@ -3530,22 +3536,20 @@ val MEM_SPLIT_APPEND_first = store_thm(
     SRW_TAC [] [SimpRHS, Once EXISTS_LIST]
   ]);
 
-val MEM_SPLIT_APPEND_last = store_thm(
-  "MEM_SPLIT_APPEND_last",
-  “MEM e l <=> ?pfx sfx. (l = pfx ++ [e] ++ sfx) /\ ~MEM e sfx”,
-  Q.ID_SPEC_TAC ‘l’ THEN SNOC_INDUCT_TAC THEN SRW_TAC [] [] THEN
-  Cases_on ‘e = x’ THEN SRW_TAC [] [] THENL [
-    MAP_EVERY Q.EXISTS_TAC [‘l’, ‘[]’] THEN SRW_TAC [] [SNOC_APPEND],
-    SRW_TAC [] [EQ_IMP_THM] THENL [
-      MAP_EVERY Q.EXISTS_TAC [‘pfx’, ‘SNOC x sfx’] THEN
-      SRW_TAC [] [APPEND_ASSOC, APPEND_SNOC],
-      Q.SPEC_THEN ‘sfx’ STRIP_ASSUME_TAC SNOC_CASES THEN
-      SRW_TAC [] [] THEN FULL_SIMP_TAC (srw_ss()) [] THEN1
-        FULL_SIMP_TAC (srw_ss()) [GSYM SNOC_APPEND] THEN
-      FULL_SIMP_TAC (srw_ss()) [APPEND_SNOC] THEN SRW_TAC [] [] THEN
-      METIS_TAC []
-    ]
-  ]);
+Theorem REVERSEL_EQ_REVERSER:
+  REVERSE l = m <=> l = REVERSE m
+Proof
+  metis_tac[REVERSE_REVERSE]
+QED
+
+Theorem MEM_SPLIT_APPEND_last:
+  MEM e l <=> ?pfx sfx. (l = pfx ++ [e] ++ sfx) /\ ~MEM e sfx
+Proof
+  ONCE_REWRITE_TAC [GSYM MEM_REVERSE] >>
+  simp[Once MEM_SPLIT_APPEND_first, SimpLHS, Excl "MEM_REVERSE"] >>
+  REWRITE_TAC[REVERSEL_EQ_REVERSER] >> simp[REVERSE_APPEND] >>
+  metis_tac[MEM_REVERSE, REVERSE_REVERSE]
+QED
 
 val APPEND_EQ_APPEND = store_thm(
   "APPEND_EQ_APPEND",
@@ -3556,31 +3560,18 @@ val APPEND_EQ_APPEND = store_thm(
   SRW_TAC [] [] THEN
   Cases_on ‘m1’ THEN SRW_TAC [] [] THEN METIS_TAC []);
 
-val APPEND_EQ_CONS = store_thm(
-  "APPEND_EQ_CONS",
-  “(l1 ++ l2 = h::t) <=>
+Theorem APPEND_EQ_CONS:
+  (l1 ++ l2 = h::t) <=>
        ((l1 = []) /\ (l2 = h::t)) \/
-       ?lt. (l1 = h::lt) /\ (t = lt ++ l2)”,
+       ?lt. (l1 = h::lt) /\ (t = lt ++ l2)
+Proof
   MAP_EVERY Q.ID_SPEC_TAC [‘t’, ‘h’, ‘l2’, ‘l1’] THEN Induct_on ‘l1’ THEN
-  SRW_TAC [] [] THEN METIS_TAC []);
+  SRW_TAC [] [] THEN METIS_TAC []
+QED
 
-(* could just use APPEND_EQ_APPEND and APPEND_EQ_SING, but this gives you
-   four possibilities
-      |- (x ++ [e] ++ y = a ++ b) <=>
-           (?l'. (x = a ++ l') /\ (b = l' ++ [e] ++ y)) \/
-           (a = x ++ [e]) /\ (b = y) \/
-           (a = x) /\ (b = e::y) \/
-           ?l. (a = x ++ [e] ++ l) /\ (y = l ++ b)
-   Note that the middle two are instances of the outer two with the
-   existentially quantified l set to []
-*)
-val APPEND_EQ_APPEND_MID = store_thm(
-  "APPEND_EQ_APPEND_MID",
-  “(l1 ++ [e] ++ l2 = m1 ++ m2) <=>
-       (?l. (m1 = l1 ++ [e] ++ l) /\ (l2 = l ++ m2)) \/
-       (?l. (l1 = m1 ++ l) /\ (m2 = l ++ [e] ++ l2))”,
-  MAP_EVERY Q.ID_SPEC_TAC [‘m2’, ‘m1’, ‘l2’, ‘e’, ‘l1’] THEN Induct THEN
-  Cases_on ‘m1’ THEN SRW_TAC [] [] THEN METIS_TAC []);
+Theorem APPEND_EQ_APPEND_MID =
+  SIMP_CONV (srw_ss() ++ DNF_ss) [APPEND_EQ_CONS, APPEND_EQ_APPEND]
+            “l1 ++ e::l2 = m1 ++ m2”
 
 (* --------------------------------------------------------------------- *)
 
@@ -3789,10 +3780,11 @@ val LIST_BIND_ID = store_thm(
     (LIST_BIND l I = FLAT l)”,
   SIMP_TAC (srw_ss()) [LIST_BIND_def]);
 
-val LIST_BIND_APPEND = store_thm(
-  "LIST_BIND_APPEND",
-  “LIST_BIND (l1 ++ l2) f = LIST_BIND l1 f ++ LIST_BIND l2 f”,
-  Induct_on ‘l1’ THEN ASM_SIMP_TAC (srw_ss()) [APPEND_ASSOC]);
+Theorem LIST_BIND_APPEND:
+  LIST_BIND (l1 ++ l2) f = LIST_BIND l1 f ++ LIST_BIND l2 f
+Proof
+  Induct_on ‘l1’ THEN simp[]
+QED
 
 val LIST_BIND_MAP = store_thm(
   "LIST_BIND_MAP",
@@ -4283,10 +4275,6 @@ Proof
   metis_tac[SUBSET_DEF, LIST_TO_SET_TAKE]
 QED
 
-fun gvs ths =
-  global_simp_tac{elimvars = true, droptrues = true, strip = true,
-                  oldestfirst = false} (srw_ss()) ths
-
 Theorem FINITE_BOUNDED_LISTS:
   !s n. FINITE s ==> FINITE { l | set l SUBSET s /\ LENGTH l <= n}
 Proof
@@ -4328,13 +4316,14 @@ val LIST_TO_SET_FLAT = Q.store_thm("LIST_TO_SET_FLAT",
    ‘!ls. set (FLAT ls) = BIGUNION (set (MAP set ls))’,
    Induct >> ASM_SIMP_TAC (srw_ss()) [])
 
-val MEM_APPEND_lemma = Q.store_thm("MEM_APPEND_lemma",
-   ‘!a b c d x.
-      (a ++ [x] ++ b = c ++ [x] ++ d) /\ x NOTIN set b /\ x NOTIN set a ==>
-      (a = c) /\ (b = d)’,
-   rw [APPEND_EQ_APPEND_MID]
-   >> fs []
-   >> fs [APPEND_EQ_SING])
+Theorem MEM_APPEND_lemma:
+  !a b c d x.
+    a ++ x::b = c ++ x::d /\ x NOTIN set b /\ x NOTIN set a ==>
+    a = c /\ b = d
+Proof
+   rw [APPEND_EQ_APPEND_MID] >>
+   gvs[APPEND_EQ_APPEND, APPEND_EQ_CONS]
+QED
 
 val EVERY2_REVERSE = Q.store_thm("EVERY2_REVERSE",
    ‘!R l1 l2. EVERY2 R l1 l2 ==> EVERY2 R (REVERSE l1) (REVERSE l2)’,
@@ -4582,11 +4571,11 @@ Theorem FLAT_EQ_APPEND:
   FLAT l = x ++ y <=>
     (?p s. l = p ++ s /\ x = FLAT p /\ y = FLAT s) \/
     (?p s ip is.
-       l = p ++ [ip ++ is] ++ s /\ ip <> [] /\ is <> [] /\
+       l = p ++ (ip ++ is) :: s /\ ip <> [] /\ is <> [] /\
        x = FLAT p ++ ip /\
        y = is ++ FLAT s)
 Proof
-  reverse eq_tac >- (rw[] >> rw[APPEND_ASSOC, FLAT_APPEND]) >>
+  reverse eq_tac >- (rw[] >> rw[FLAT_APPEND]) >>
   map_every qid_spec_tac [`y`,`x`,`l`] >> Induct_on `l` >- simp[] >>
   simp[] >> map_every qx_gen_tac [`h`, `x`, `y`] >>
   simp[APPEND_EQ_APPEND] >>
@@ -4598,13 +4587,11 @@ Proof
           simp[]) >>
       disj2_tac >>
       map_every qexists_tac [`[]`, `l`, `x`, `m`] >> simp[]) >>
-  `(?p s. l = p ++ s /\ FLAT p = m /\ FLAT s = y) \/
-   (?p s ip is.
-       l = p ++ [ip ++ is] ++ s /\ m = FLAT p ++ ip /\ ip <> [] /\ is <> [] /\
-       y = is ++ FLAT s)` by metis_tac[]
-  >- (disj1_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[]) >>
-  disj2_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[APPEND_ASSOC] >>
-  map_every qexists_tac [`ip`, `is`] >> rw []
+  first_x_assum $ drule_then strip_assume_tac >> gvs[]
+  >- (disj1_tac >> ONCE_REWRITE_TAC [cj 2 $ GSYM APPEND] >>
+      rpt $ irule_at Any EQ_REFL >> simp[]) >>
+  disj2_tac >> ONCE_REWRITE_TAC [cj 2 $ GSYM APPEND] >>
+  rpt $ irule_at Any EQ_REFL >> simp[]
 QED
 
 val ALL_DISTINCT_MAP_INJ = Q.store_thm("ALL_DISTINCT_MAP_INJ",
@@ -4698,24 +4685,22 @@ val every_zip_fst = Q.store_thm ("every_zip_fst",
    >> TRY(Cases_on ‘l2’)
    >> fs [ZIP]);
 
-val el_append3 = Q.store_thm ("el_append3",
-   ‘!l1 x l2. EL (LENGTH l1) (l1++ [x] ++ l2) = x’,
-   Induct_on ‘l1’
-   >> rw []
-   >> rw []);
+Theorem el_append3[simp]:
+   !l1 x l2. EL (LENGTH l1) (l1 ++ x::l2) = x
+Proof
+  simp[EL_APPEND_EQN]
+QED
 
-val lupdate_append = Q.store_thm ("lupdate_append",
-   ‘!x n l1 l2.
-       n < LENGTH l1 ==> (LUPDATE x n (l1++l2) = LUPDATE x n l1 ++ l2)’,
+Theorem lupdate_append:
+   !x n l1 l2.
+     n < LENGTH l1 ==> (LUPDATE x n (l1++l2) = LUPDATE x n l1 ++ l2)
+Proof
    Induct_on ‘l1’
    >> rw []
    >> Cases_on ‘n’
    >> rw [LUPDATE_def]
-   >> fs []);
-
-val lupdate_append2 = Q.store_thm ("lupdate_append2",
-   ‘!v l1 x l2 l3. LUPDATE v (LENGTH l1) (l1++[x]++l2) = l1++[v]++l2’,
-   Induct_on ‘l1’ >> rw [LUPDATE_def])
+   >> fs []
+QED
 
 val HD_REVERSE = store_thm ("HD_REVERSE",
   “!x. x <> [] ==> (HD (REVERSE x) = LAST x)”,
@@ -5091,14 +5076,18 @@ Proof
 QED
 
 Theorem adjacent_ps_append:
-  !xs a b. adjacent xs a b <=> ?p s. xs = p ++ [a;b] ++ s
+  !xs a b. adjacent xs a b <=> ?p s. xs = p ++ a::b::s
 Proof
   simp[adjacent_EL, PULL_EXISTS, EQ_IMP_THM] >> rw[]
   >- (Q.RENAME_TAC [‘i + 1 < LENGTH xs’] >>
       MAP_EVERY Q.EXISTS_TAC [‘TAKE i xs’, ‘DROP (i + 2) xs’] >>
       simp[LIST_EQ_REWRITE, EL_APPEND_EQN, EL_TAKE, EL_DROP] >> rw[] >>
-      Q.RENAME_TAC [‘~(j < i)’, ‘j < i + 2’] >>
-      ‘j = i \/ j = i + 1’ by simp[] >> simp[]) >>
+      simp[Once EL_compute, SimpRHS] >>
+      Q.RENAME_TAC [‘~(j < i)’, ‘j < LENGTH xs’, ‘i + 1 < LENGTH xs’] >>
+      Cases_on ‘i = j’ >> simp[] >>
+      simp[Once EL_compute, SimpRHS] >>
+      Cases_on ‘j = i + 1’ >> simp[] >>
+      simp[EL_DROP, PRE_SUB1]) >>
   Q.EXISTS_TAC ‘LENGTH p’ >> simp[EL_APPEND_EQN]
 QED
 
@@ -5111,7 +5100,8 @@ QED
 Theorem adjacent_append2:
   !xs ys a b. adjacent ys a b ==> adjacent (xs ++ ys) a b
 Proof
-  simp[adjacent_ps_append, PULL_EXISTS, APPEND_ASSOC] >> rpt strip_tac >>
+  simp[adjacent_ps_append, PULL_EXISTS] >>
+  REWRITE_TAC[APPEND_ASSOC] >> rpt strip_tac >>
   irule_at Any EQ_REFL
 QED
 
@@ -5121,10 +5111,8 @@ Proof
   simp[adjacent_ps_append, EQ_IMP_THM, PULL_EXISTS] >> rw[]
   >- (pop_assum (mp_tac o Q.AP_TERM ‘REVERSE’) >>
       REWRITE_TAC[REVERSE_REVERSE] >> simp[REVERSE_APPEND] >>
-      strip_tac >> Q.EXISTS_TAC ‘REVERSE s’ >>
-      simp[GSYM APPEND_ASSOC, APPEND_11]) >>
-  simp[REVERSE_APPEND, APPEND_ASSOC] >>
-  Q.EXISTS_TAC ‘REVERSE s’ >> simp[GSYM APPEND_ASSOC, APPEND_11]
+      strip_tac >> irule_at Any EQ_REFL) >>
+  simp[REVERSE_APPEND] >> irule_at Any EQ_REFL
 QED
 
 (* ---------------------------------------------------------------------- *)
@@ -5164,7 +5152,7 @@ val _ =
 val _ = export_rewrites
           ["APPEND_11",
            "MAP2", "NULL_DEF",
-           "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
+           "SUM", "CONS", "CONS_11",
            "LENGTH_MAP",
            "NOT_CONS_NIL", "NOT_NIL_CONS",
            "CONS_ACYCLIC", "list_case_def",

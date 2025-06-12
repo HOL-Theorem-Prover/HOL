@@ -196,9 +196,9 @@ local
   val appl_t = list_mk_append (map mkl ["x", "y", "z"])
   val appr_t = mk_append(mkl "x", mk_append(mkl "y", mkl"z"))
 in
-val _ = tprint "Std simp left-normalises list"
-val _ = require_msg (check_result (aconv appl_t o rhs o concl)) thm_to_string
-                    (QCONV (SIMP_CONV (srw_ss()) [])) appr_t
+val _ = tprint "Std simp right-normalises list"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss()) [])) appl_t
 val _ = tprint "Simp -* APPEND_ASSOC leaves list unchanged"
 val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
                     (QCONV (SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [])) appr_t

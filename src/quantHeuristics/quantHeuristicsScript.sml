@@ -943,11 +943,14 @@ val INR_NEQ_ELIM = store_thm ("INR_NEQ_ELIM",
     ((!r. INR r <> x) <=> (ISL x))``,
 Cases_on `x` THEN SIMP_TAC std_ss []);
 
-val LENGTH_LE_PLUS = store_thm ("LENGTH_LE_PLUS",
-  ``(n + m) <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ m <= LENGTH l2 /\ (l = l1 ++ l2))``,
-SIMP_TAC list_ss [arithmeticTheory.LESS_EQ_EXISTS, LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM,
-  GSYM RIGHT_EXISTS_AND_THM] THEN
-METIS_TAC[]);
+Theorem LENGTH_LE_PLUS:
+  (n + m) <= LENGTH l <=>
+  (?l1 l2. (LENGTH l1 = n) /\ m <= LENGTH l2 /\ (l = l1 ++ l2))
+Proof
+  SIMP_TAC list_ss [arithmeticTheory.LESS_EQ_EXISTS, LENGTH_EQ_NUM,
+                    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
+  METIS_TAC[APPEND_ASSOC]
+QED
 
 val LENGTH_LE_NUM = store_thm ("LENGTH_LE_NUM",
   ``n <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ (l = l1 ++ l2))``,
