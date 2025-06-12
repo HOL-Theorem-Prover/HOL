@@ -20,6 +20,11 @@ src/portableML/rawtheory
 src/prekernel
 **KERNEL**
 src/thm
+(stdknl)src/tracing/no
+(expk)src/tracing/no
+[poly](trknl)src/tracing/yes
+[mosml](trknl)src/tracing/no
+(otknl)src/tracing/no
 src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
