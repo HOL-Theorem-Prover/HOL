@@ -16,7 +16,7 @@ sig
     * A context object is the current state of a single reducer.
     * ---------------------------------------------------------------------*)
 
-  type context = exn (* well known SML hack to allow any kind of data *)
+  type context = Universal.universal
 
    (* ---------------------------------------------------------------------
     * Reducers

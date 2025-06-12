@@ -31,7 +31,7 @@ val equality = boolSyntax.equality;
  * reducers and contexts
  * ---------------------------------------------------------------------*)
 
-type context = exn   (* well known SML hack to allow any kind of data *)
+type context = Universal.universal
 
 datatype reducer =
   REDUCER of {name : string option,
