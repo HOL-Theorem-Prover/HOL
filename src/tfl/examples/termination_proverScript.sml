@@ -42,6 +42,17 @@ Termination
   WF_REL_TAC ‘measure (SND o FST)’
 End
 
+Definition ramana_bug_def:
+  bug a b x y u v =
+  if a = 0 then x else let
+    q = b DIV a;
+    r = b MOD a;
+    m = x - (u * q);
+    n = y - (v * q);
+    b = a; a = r; x = u; y = v; u = m; v = n in
+      bug a b x y u v
+End
+
 (*---------------------------------------------------------------------------*)
 (* From src/finite_maps/patriciaScript.sml                                   *)
 (*---------------------------------------------------------------------------*)
