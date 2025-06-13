@@ -150,17 +150,13 @@ fun BAG_IMAGE_CONV___FINITE t =
 val BAG_IMAGE_CONV = snd o BAG_IMAGE_CONV___FINITE;
 
 
-(******************************************************************************)
-(* BAG_CARD_CONV                                                              *)
-(*                                                                            *)
-(* Moves BAG_IMAGE over very simple bags that consists of repeatedly          *)
-(* inserting elements into the empty bag. For these bags, it's very easy to   *)
-(* show that they are finite.                                                 *)
-(*                                                                            *)
-(* For example:                                                               *)
-(* BAG_IMAGE_CONV ``BAG_IMAGE f {|x0; x1; x2; x3; x4|}`` results in           *)
-(*                              {|f x0; f x1; f x2; f x3; f x4|}              *)
-(******************************************************************************)
+(* ----------------------------------------------------------------------
+    BAG_CARD_CONV
+
+    Moves BAG_CARD over very simple bags that consist of repeated
+    BAG_INSERTs into the empty bag, and BAG_UNIONs.
+    For these bags, it's very easy to show that they are finite.
+   ---------------------------------------------------------------------- *)
 
 local
    val card_empty_thm = CONJUNCT1 bagTheory.BAG_CARD_THM
