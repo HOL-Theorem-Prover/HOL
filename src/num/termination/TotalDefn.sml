@@ -154,9 +154,10 @@ fun proper_subterm tm1 tm2 =
 (*---------------------------------------------------------------------------*)
 
 val initial_termination_simps =
-  [("SUB_LESS_I", SUB_LESS),
-   ("DIV_LT_X", DIV_LT_X),
+  [("DIV_LT_X", DIV_LT_X),
    ("X_LT_DIV", X_LT_DIV),
+   ("SUB_LESS", SUB_LESS),
+   ("DIV_LESS", DIV_LESS),
    ("MOD_LESS", MOD_LESS)]
 
 val {exclude = exclude_termsimp, temp_exclude = temp_exclude_termsimp,
@@ -367,6 +368,42 @@ fun flat_type_size ty = case
   | _ => TypeBasePure.type_size (TypeBase.theTypeBase()) ty
 
 (*---------------------------------------------------------------------------*)
+(* Among the termination_simps() are theorems of the form                    *)
+(*                                                                           *)
+(*   constraints ==> f t1 < f t2                                             *)
+(*                                                                           *)
+(* which are used to finalize termination proofs. These are also used to     *)
+(* determine if an argument position should be included in the synthesized   *)
+(* termination relation. An example is                                       *)
+(*                                                                           *)
+(*  ⊢ ∀m. m ≠ 0w ⇒ w2n (m − 1w) < w2n m                                      *)
+(*                                                                           *)
+(* When the type of t1 and t2 are :num, there need be no "measure function"  *)
+(* f present. The following theorem is an example.                           *)
+(*                                                                           *)
+(*  ⊢ ∀m n. 0 < n ⇒ m MOD n < n                                              *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun is_relevant tsimps = let
+  fun rec_call_pat th = let
+      fun dest_order x = dest_less x handle HOL_ERR _ => dest_leq x
+      fun is_measureFn_app (l,r) =
+          aconv (rator l) (rator r) handle HOL_ERR _ => false
+      val (l,r) = concl th |> strip_forall |> snd |>
+                  strip_imp |> snd |> dest_order
+  in if is_measureFn_app (l,r) then
+        rand l else
+     if is_var r then
+        l
+     else raise ERR "is_relevant" ""
+  end
+  val pats = mapfilter rec_call_pat tsimps
+ in
+   fn (tm,_:term) => 0 < length (mapfilter (C match_term tm) pats)
+ end;
+
+(*---------------------------------------------------------------------------*)
 (* "guessR" guesses a list of termination measures. Quite ad hoc.            *)
 (* First guess covers recursions on proper subterms, e.g. prim. recs. Next   *)
 (* guess measure sum of sizes of all arguments. Next guess generates         *)
@@ -378,22 +415,11 @@ fun flat_type_size ty = case
 (* duplicates are weeded out.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun known_fun tm =
- let fun dest_order x = dest_less x handle HOL_ERR _ => dest_leq x
-     fun get_lhs th =
-            rand (fst(dest_order(snd(strip_imp
-                  (snd(strip_forall(concl th)))))))
-     val pats = mapfilter get_lhs (termination_simps())
- in
-    0 < length (mapfilter (C match_term tm) pats)
- end;
-
-fun relevant (tm,_) = known_fun tm;
-
 fun guessR defn =
  let open Defn numSyntax simpLib boolSimps
    fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
    fun size_app v = mk_comb(tysize (type_of v),v)
+   val relevant = is_relevant (termination_simps())
  in
  if null (tcs_of defn) then []
   else
