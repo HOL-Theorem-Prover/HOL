@@ -24,6 +24,11 @@ val rw = SRW_TAC[numSimps.ARITH_ss]
 fun simp thl = ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
 fun fs thl = FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
 fun rfs thl = REV_FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl;
+fun gvs l =
+  global_simp_tac {
+    strip = true, elimvars = true, droptrues = true, oldestfirst = true
+  } (srw_ss() ++ numSimps.ARITH_ss) l
+fun dsimp thl = simp(thl @ [SF boolSimps.DNF_ss])
 val qabbrev_tac = Q.ABBREV_TAC;
 val qexists_tac = Q.EXISTS_TAC;
 val qspecl_then = Q.SPECL_THEN;
@@ -2220,12 +2225,6 @@ val EL_APPEND2 = Q.store_thm ("EL_APPEND2",
       LENGTH l1 <= n ==> !l2. EL n (APPEND l1 l2) = EL (n - (LENGTH l1)) l2`,
    simp_tac (srw_ss() ++ numSimps.ARITH_ss) [EL_APPEND_EQN]);
 
-local
-  val op >> = op THEN
-  val rw = SRW_TAC[]
-  val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
-  val fs = FULL_SIMP_TAC(srw_ss())
-in
 Theorem LUPDATE_APPEND2:
    !l1 l2 n x.
       LENGTH l1 <= n ==>
@@ -2263,8 +2262,6 @@ val is_prefix_el = Q.store_thm ("is_prefix_el",
   Cases_on `l1` >>
   Cases_on `l2` >>
   rw [] >> fs []);
-
-end
 
 val EL_CONS = Q.store_thm ("EL_CONS",
    `!n. 0 < n ==> !x l. EL n (CONS x l) = EL (PRE n) l`,
@@ -3385,26 +3382,15 @@ Proof
   \\ Cases \\ rw[chunks_tr_aux_thm]
 QED
 
-(*---------------------------------------------------------------------------*)
-(* Various lemmas from the CakeML project https://cakeml.org                 *)
-(*---------------------------------------------------------------------------*)
-
-val rw = SRW_TAC []
-val metis_tac = METIS_TAC
-val fs = FULL_SIMP_TAC (srw_ss())
-val rfs = REV_FULL_SIMP_TAC (srw_ss())
-fun simpss() = srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss
-fun simp ths = asm_simp_tac (simpss()) ths
-fun dsimp ths = asm_simp_tac (simpss() ++ boolSimps.DNF_ss) ths
-val decide_tac = numLib.DECIDE_TAC
-
-val LIST_TO_SET_EQ_SING = Q.store_thm("LIST_TO_SET_EQ_SING",
-   `!x ls. (set ls = {x}) <=> ls <> [] /\ EVERY ($= x) ls`,
+Theorem LIST_TO_SET_EQ_SING:
+  !x ls. (set ls = {x}) <=> ls <> [] /\ EVERY ($= x) ls
+Proof
    GEN_TAC
    >> Induct
    >> simp[]
    >> simp[Once EXTENSION,EVERY_MEM]
-   >> metis_tac[])
+   >> metis_tac[]
+QED
 
 val REPLICATE_GENLIST = Q.store_thm("REPLICATE_GENLIST",
    `!n x. REPLICATE n x = GENLIST (K x) n`,
@@ -3670,16 +3656,17 @@ Theorem LENGTH_FLAT_REPLICATE[simp]:
 Proof  Induct >> simp[REPLICATE,MULT]
 QED
 
-val take_drop_partition = Q.store_thm ("take_drop_partition",
-   `!n m l. m <= n ==> (TAKE m l ++ TAKE (n - m) (DROP m l) = TAKE n l)`,
-   Induct_on `m`
-   >> rw []
-   >> Cases_on `l`
-   >> rw [TAKE_def]
-   THEN1 RW_TAC arith_ss []
-   >> FIRST_X_ASSUM (MP_TAC o Q.SPECL [`n - 1`, `t`])
-   >> rw []
-   >> FULL_SIMP_TAC arith_ss [ADD1]);
+Theorem take_drop_partition:
+  !n m l. m <= n ==> (TAKE m l ++ TAKE (n - m) (DROP m l) = TAKE n l)
+Proof
+  Induct_on `m`
+  >> rw []
+  >> Cases_on `l`
+  >> rw [TAKE_def]
+  >> FIRST_X_ASSUM (MP_TAC o Q.SPECL [`n - 1`, `t`])
+  >> rw []
+  >> FULL_SIMP_TAC arith_ss [ADD1]
+QED
 
 val all_distinct_count_list = Q.store_thm ("all_distinct_count_list",
    `!n. ALL_DISTINCT (COUNT_LIST n)`,
@@ -4685,11 +4672,14 @@ QED
      so j = LENGTH l1                          by ALL_DISTINCT_EL_IMP
 *)
 Theorem ALL_DISTINCT_EL_APPEND:
-  !ls l1 l2 j. ALL_DISTINCT ls /\ j < LENGTH ls /\ ls = l1 ++ [EL j ls] ++ l2 ==> j = LENGTH l1
+  !ls l1 l2 j.
+    ALL_DISTINCT ls /\ j < LENGTH ls /\ ls = l1 ++ (EL j ls::l2) ==>
+    j = LENGTH l1
 Proof
   rpt strip_tac >>
   `EL j ls = EL (LENGTH l1) ls` by metis_tac[el_append3] >>
-  `LENGTH ls = LENGTH l1 + 1 + LENGTH l2` by metis_tac[LENGTH_APPEND, LENGTH_SING] >>
+  `LENGTH ls = LENGTH l1 + 1 + LENGTH l2`
+    by metis_tac[LENGTH_APPEND, LENGTH, ADD1, ADD_ASSOC, ADD_COMM] >>
   `LENGTH l1 < LENGTH ls` by decide_tac >>
   metis_tac[ALL_DISTINCT_EL_IMP]
 QED
@@ -4717,37 +4707,18 @@ QED
          <=> ALL_DISTINCT (x::(h::l1 ++ l2))       by APPEND
 *)
 Theorem ALL_DISTINCT_APPEND_3:
-  !l1 x l2. ALL_DISTINCT (l1 ++ [x] ++ l2) <=> ALL_DISTINCT (x::(l1 ++ l2))
+  !l1 x l2. ALL_DISTINCT (l1 ++ x::l2) <=> ALL_DISTINCT (x::(l1 ++ l2))
 Proof
-  rpt strip_tac >>
-  Induct_on `l1` >-
-  simp[] >>
-  rpt strip_tac >>
-  `ALL_DISTINCT (h::l1 ++ [x] ++ l2) <=> ALL_DISTINCT (h::(l1 ++ [x] ++ l2))` by rw[] >>
-  `_ = (~MEM h (l1 ++ [x] ++ l2) /\ ALL_DISTINCT (l1 ++ [x] ++ l2))` by rw[] >>
-  `_ = (~MEM h (l1 ++ [x] ++ l2) /\ ALL_DISTINCT (x::(l1 ++ l2)))` by rw[] >>
-  `_ = (~MEM h (x::(l1 ++ l2)) /\ ALL_DISTINCT (x::(l1 ++ l2)))` by rw[MEM_APPEND_3] >>
-  `_ = ALL_DISTINCT (h::x::(l1 ++ l2))` by rw[] >>
-  `_ = ALL_DISTINCT (x::h::(l1 ++ l2))` by rw[ALL_DISTINCT_SWAP] >>
-  `_ = ALL_DISTINCT (x::(h::l1 ++ l2))` by metis_tac[APPEND] >>
-  simp[]
+  simp[ALL_DISTINCT_APPEND] >> metis_tac[]
 QED
 
-(* Theorem: ALL_DISTINCT l ==> !x. MEM x l <=> ?p1 p2. (l = p1 ++ [x] ++ p2) /\ ~MEM x p1 /\ ~MEM x p2 *)
-(* Proof:
-   If part: MEM x l ==> ?p1 p2. (l = p1 ++ [x] ++ p2) /\ ~MEM x p1 /\ ~MEM x p2
-      Note ?p1 p2. (l = p1 ++ [x] ++ p2) /\ ~MEM x p2    by MEM_SPLIT_APPEND_last
-       Now ALL_DISTINCT (p1 ++ [x])              by ALL_DISTINCT_APPEND, ALL_DISTINCT l
-       But MEM x [x]                             by MEM
-        so ~MEM x p1                             by ALL_DISTINCT_APPEND
-
-   Only-if part: MEM x (p1 ++ [x] ++ p2), true   by MEM_APPEND
-*)
 Theorem MEM_SPLIT_APPEND_distinct:
-  !l. ALL_DISTINCT l ==> !x. MEM x l <=> ?p1 p2. (l = p1 ++ [x] ++ p2) /\ ~MEM x p1 /\ ~MEM x p2
+  !l. ALL_DISTINCT l ==>
+      !x. MEM x l <=> ?p1 p2. l = p1 ++ (x::p2) /\ ~MEM x p1 /\ ~MEM x p2
 Proof
-  rw[EQ_IMP_THM] >-
-  metis_tac[MEM_SPLIT_APPEND_last, ALL_DISTINCT_APPEND, MEM] >>
+  rw[EQ_IMP_THM]
+  >- (RULE_ASSUM_TAC (SIMP_RULE(srw_ss())[MEM_SPLIT]) >>
+      gvs[ALL_DISTINCT_APPEND] >> metis_tac[]) >>
   rw[]
 QED
 
@@ -4786,13 +4757,14 @@ Proof
   rw[EQ_IMP_THM] >| [
     imp_res_tac MEM_SPLIT_APPEND_first >>
     qexists_tac `LENGTH pfx` >>
-    rpt strip_tac >-
-    fs[] >-
-    fs[el_append3] >-
-    fs[TAKE_APPEND1, DROP_APPEND1] >>
-    `TAKE (LENGTH pfx) ls = pfx` by rw[TAKE_APPEND1] >>
-    fs[],
-    fs[EL_MEM]
+    rpt strip_tac
+    >- fs[]
+    >- fs[el_append3]
+    >- (fs[TAKE_APPEND1, DROP_APPEND1] >>
+        `TAKE (LENGTH pfx) ls = pfx` by rw[TAKE_APPEND1] >>
+        fs[] >> simp[DROP_APPEND2]) >>
+    gvs[TAKE_APPEND2],
+    gvs[EL_MEM]
   ]
 QED
 
@@ -4834,8 +4806,9 @@ Proof
     rpt strip_tac >-
     fs[] >-
     fs[el_append3] >-
-    fs[TAKE_APPEND1, DROP_APPEND1] >>
-    `DROP (LENGTH pfx + 1) ls = sfx` by rw[DROP_APPEND1] >>
+    fs[TAKE_APPEND1, DROP_APPEND1, DROP_APPEND2] >>
+    `DROP (LENGTH pfx + 1) ls = sfx`
+      by rw[DROP_APPEND1, DROP_APPEND2] >>
     fs[],
     fs[EL_MEM]
   ]
@@ -4873,22 +4846,23 @@ QED
        This is true                by EL_MEM, just need k < LENGTH ls
 *)
 Theorem MEM_SPLIT_TAKE_DROP_distinct:
-  !ls. ALL_DISTINCT ls ==>
+  !ls.
+    ALL_DISTINCT ls ==>
     !x. MEM x ls <=>
-    ?k. k < LENGTH ls /\ x = EL k ls /\
-        ls = TAKE k ls ++ x::DROP (k+1) ls /\
-         ~MEM x (TAKE k ls) /\ ~MEM x (DROP (k+1) ls)
+        ?k. k < LENGTH ls /\ x = EL k ls /\
+            ls = TAKE k ls ++ x::DROP (k+1) ls /\
+            ~MEM x (TAKE k ls) /\ ~MEM x (DROP (k+1) ls)
 Proof
   rw[EQ_IMP_THM] >| [
-    `?p1 p2. ls = p1 ++ [x] ++ p2 /\ ~MEM x p1 /\ ~MEM x p2` by rw[GSYM MEM_SPLIT_APPEND_distinct] >>
+    drule_all_then strip_assume_tac (iffLR MEM_SPLIT_APPEND_distinct) >>
+    Q.RENAME_TAC [‘ls = p1 ++ x::p2’] >>
     qexists_tac `LENGTH p1` >>
-    rpt strip_tac >-
-    fs[] >-
-    fs[el_append3] >-
-    fs[TAKE_APPEND1, DROP_APPEND1] >-
-    rfs[TAKE_APPEND1] >>
-    `DROP (LENGTH p1 + 1) ls = p2` by rw[DROP_APPEND1] >>
-    fs[],
+    rpt strip_tac
+    >- simp[]
+    >- simp[el_append3]
+    >- simp[TAKE_APPEND1, DROP_APPEND1, DROP_APPEND2]
+    >- gvs[TAKE_APPEND1] >>
+    gvs[DROP_APPEND, DROP_LENGTH_TOO_LONG],
     fs[EL_MEM]
   ]
 QED
@@ -4913,15 +4887,13 @@ QED
    = x                                         by HD
 *)
 Theorem FILTER_EL_IMP:
-  !P ls l1 l2 x. let fs = FILTER P ls in ls = l1 ++ x::l2 /\ P x ==>
-                 x = EL (LENGTH (FILTER P l1)) fs
+  !P ls l1 l2 x.
+    let fs = FILTER P ls in
+      ls = l1 ++ x::l2 /\ P x ==>
+      x = EL (LENGTH (FILTER P l1)) fs
 Proof
   rw_tac std_ss[] >>
-  qabbrev_tac `l3 = x::l2` >>
-  qabbrev_tac `j = LENGTH (FILTER P l1)` >>
-  `EL j fs = EL j (FILTER P l1 ++ FILTER P l3)` by simp[FILTER_APPEND_DISTRIB, Abbr`fs`] >>
-  `_ = EL 0 (FILTER P (x::l2))` by simp[EL_APPEND, Abbr`j`, Abbr`l3`] >>
-  fs[]
+  simp[FILTER_APPEND_DISTRIB, Abbr‘fs’, EL_APPEND2]
 QED
 
 (* Theorem: let fs = FILTER P ls in ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ j < LENGTH fs ==>
@@ -4954,8 +4926,10 @@ QED
       This is true                             by FILTER_EL_IMP
 *)
 Theorem FILTER_EL_IFF:
-  !P ls l1 l2 x j. let fs = FILTER P ls in ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ j < LENGTH fs ==>
-                   (x = EL j fs <=> P x /\ j = LENGTH (FILTER P l1))
+  !P ls l1 l2 x j.
+    let fs = FILTER P ls in
+      ALL_DISTINCT ls /\ ls = l1 ++ x::l2 /\ j < LENGTH fs ==>
+      (x = EL j fs <=> P x /\ j = LENGTH (FILTER P l1))
 Proof
   rw_tac std_ss[] >>
   qabbrev_tac `k = LENGTH (FILTER P l1)` >>
