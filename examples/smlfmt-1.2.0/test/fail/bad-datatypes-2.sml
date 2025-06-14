@@ -1,1 +1,0 @@
-datatype 'a 'b = A

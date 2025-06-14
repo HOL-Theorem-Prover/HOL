@@ -1,5 +1,0 @@
-val str =
-  "hello \
-  \world \
-
-

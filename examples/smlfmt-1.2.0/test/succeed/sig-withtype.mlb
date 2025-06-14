@@ -1,4 +1,0 @@
-$(SML_LIB)/basis/basis.mlb
-ann "allowSigWithtype true" in
-  successor-ml/sig-withtype.sml
-end

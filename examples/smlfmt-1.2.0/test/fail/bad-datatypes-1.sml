@@ -1,3 +1,0 @@
-datatype foo =
-  | French
-  | Noun
