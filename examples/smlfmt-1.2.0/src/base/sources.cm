@@ -1,0 +1,75 @@
+Library
+  structure Util
+  structure SeqBasis
+  structure ReadFile
+  structure BinarySearch
+  structure CommandLineArgs
+  structure Seq
+  structure ExnHistory
+  structure SimplePromise
+  structure MemoizedPromise
+  structure TerminalColors
+  structure TextFormat
+  structure FilePath
+  structure FindInPath
+  structure RunProcess
+  structure MLtonPathMap
+  structure Terminal
+  structure Source
+  structure WithSource
+  structure StripEffectiveWhitespace
+  structure Palette
+  structure TerminalColorString
+  structure Error
+  functor Dict
+  functor Set
+  structure DocVar
+  structure Tab
+  functor PrettySimpleDoc
+  functor PrettyTabbedDoc
+  structure AstAllows
+is
+  $/basis.cm
+  $/smlnj-lib.cm
+
+  Util.sml
+  SeqBasis.sml
+  ReadFile.sml
+  BinarySearch.sml
+  CommandLineArgs.sml
+  Seq.sml
+
+  ExnHistory.smlnj.sml
+
+  SimplePromise.sml
+  MemoizedPromise.sml
+
+  TerminalColors.sml
+
+  TextFormat.sml
+  FilePath.sml
+
+  FindInPath.sml
+  RunProcess.smlnj.sml
+  MLtonPathMap.sml
+  Terminal.sml
+
+  Source.sml
+  WithSource.sml
+
+  StripEffectiveWhitespace.sml
+  Palette.sml
+  TerminalColorString.sml
+  Error.sml
+
+  Dict.sml
+
+  Set.sml
+
+  DocVar.sml
+  Tab.sml
+
+  PrettySimpleDoc.sml
+  PrettyTabbedDoc.sml
+
+  AstAllows.sml

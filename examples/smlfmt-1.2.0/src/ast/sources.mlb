@@ -1,0 +1,14 @@
+local
+  $(SML_LIB)/basis/basis.mlb
+  ../base/sources.mlb
+  ../lex/sources.mlb
+  MaybeLongToken.sml
+  AstType.sml
+  Ast.sml
+  CompareAst.sml
+in
+  structure Token
+  structure MaybeLongToken
+  structure Ast
+  structure CompareAst
+end

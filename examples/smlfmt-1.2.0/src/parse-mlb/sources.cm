@@ -1,0 +1,17 @@
+Library
+  structure MLBAst
+  structure MLBParser
+  structure ParseAllSMLFromMLB
+is
+  $/basis.cm
+  ../base/sources.cm
+  ../lex/sources.cm
+  ../ast/sources.cm
+  ../parse/sources.cm
+  ../lex-mlb/sources.cm
+
+  MLBAstType.sml
+  MLBAst.sml
+  MLBParser.sml
+  ParseAnnotations.sml
+  ParseAllSMLFromMLB.sml

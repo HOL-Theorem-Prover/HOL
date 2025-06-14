@@ -1,0 +1,9 @@
+Library
+  structure MLBToken
+  structure MLBLexer
+is
+  $/basis.cm
+  ../base/sources.cm
+  ../lex/sources.cm
+  MLBToken.sml
+  MLBLexer.sml

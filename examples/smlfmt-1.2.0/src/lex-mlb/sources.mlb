@@ -1,0 +1,10 @@
+local
+  $(SML_LIB)/basis/basis.mlb
+  ../base/sources.mlb
+  ../lex/sources.mlb
+  MLBToken.sml
+  MLBLexer.sml
+in
+  structure MLBToken
+  structure MLBLexer
+end

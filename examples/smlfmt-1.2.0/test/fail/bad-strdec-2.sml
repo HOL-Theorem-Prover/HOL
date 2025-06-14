@@ -1,0 +1,1 @@
+structure X = Y.'Foo

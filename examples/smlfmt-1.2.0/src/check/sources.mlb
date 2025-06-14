@@ -1,0 +1,10 @@
+local
+  $(SML_LIB)/basis/basis.mlb
+  ../base/sources.mlb
+  ../lex/sources.mlb
+  ../ast/sources.mlb
+  ../parse/sources.mlb
+  CheckOutput.sml
+in
+  structure CheckOutput
+end

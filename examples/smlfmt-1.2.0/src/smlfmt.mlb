@@ -1,0 +1,12 @@
+$(SML_LIB)/basis/basis.mlb
+$(SML_LIB)/basis/mlton.mlb
+base/sources.mlb
+ast/sources.mlb
+lex/sources.mlb
+parse/sources.mlb
+parse-mlb/sources.mlb
+pretty-print/sources.mlb
+prettier-print/sources.mlb
+syntax-highlighting/sources.mlb
+check/sources.mlb
+smlfmt.sml

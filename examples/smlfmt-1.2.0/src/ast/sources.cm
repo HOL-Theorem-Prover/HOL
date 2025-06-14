@@ -1,0 +1,13 @@
+Library
+  structure Token
+  structure MaybeLongToken
+  structure Ast
+  structure CompareAst
+is
+  $/basis.cm
+  ../base/sources.cm
+  ../lex/sources.cm
+  MaybeLongToken.sml
+  AstType.sml
+  Ast.sml
+  CompareAst.sml

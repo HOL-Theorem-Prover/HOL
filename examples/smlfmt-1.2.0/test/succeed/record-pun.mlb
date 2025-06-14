@@ -1,0 +1,4 @@
+$(SML_LIB)/basis/basis.mlb
+ann "allowRecordPunExps true" in
+  successor-ml/record-pun.sml
+end

@@ -1,0 +1,4 @@
+$(SML_LIB)/basis/basis.mlb
+ann "allowOptBar true" in
+  successor-ml/opt-bar.sml
+end

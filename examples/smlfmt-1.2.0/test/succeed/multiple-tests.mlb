@@ -1,0 +1,9 @@
+local
+  basic-fun-dec.sml
+  char-escapes.sml
+  datatypes.sml
+  decs.sml
+  functors.sml
+in
+  structure F = Whatever
+end

@@ -1,0 +1,7 @@
+Library
+  structure SyntaxHighlighter
+is
+  $/basis.cm
+  ../base/sources.cm
+  ../lex/sources.cm
+  SyntaxHighlighter.sml

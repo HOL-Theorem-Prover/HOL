@@ -1,0 +1,3 @@
+datatype foo =
+  | French
+  | Noun

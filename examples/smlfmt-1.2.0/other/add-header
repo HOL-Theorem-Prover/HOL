@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cat license-header $1 > /tmp/foo
+mv /tmp/foo $1

@@ -1,0 +1,21 @@
+Library
+  structure PrettierPrintAst
+  structure TabbedTokenDoc
+is
+  $/basis.cm
+  ../base/sources.cm
+  ../ast/sources.cm
+  ../syntax-highlighting/sources.cm
+
+  TabbedTokenDoc.sml
+
+  PrettierUtil.sml
+  PrettierTy.sml
+  PrettierPat.sml
+  PrettierExpAndDec.sml
+  PrettierSigUtil.sml
+  PrettierSig.sml
+  PrettierStrUtil.sml
+  PrettierStr.sml
+  PrettierFun.sml
+  PrettierPrintAst.sml

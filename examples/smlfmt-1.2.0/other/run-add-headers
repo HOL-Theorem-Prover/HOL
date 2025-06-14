@@ -1,0 +1,1 @@
+gfind . -type f -name "*.sml" -exec ./add-header {} \;

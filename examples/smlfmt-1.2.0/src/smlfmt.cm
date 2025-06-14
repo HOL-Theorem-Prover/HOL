@@ -1,0 +1,12 @@
+Group is
+  $/basis.cm
+  base/sources.cm
+  ast/sources.cm
+  lex/sources.cm
+  parse/sources.cm
+  parse-mlb/sources.cm
+  pretty-print/sources.cm
+  prettier-print/sources.cm
+  syntax-highlighting/sources.cm
+  check/sources.cm
+  Main.smlnj.sml

@@ -1,0 +1,10 @@
+Library
+  structure LexUtils
+  structure Token
+  structure Lexer
+is
+  $/basis.cm
+  ../base/sources.cm
+  LexUtils.sml
+  Token.sml
+  Lexer.sml

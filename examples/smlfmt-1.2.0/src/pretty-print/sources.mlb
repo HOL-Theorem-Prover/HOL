@@ -1,0 +1,18 @@
+local
+  $(SML_LIB)/basis/basis.mlb
+  ../base/sources.mlb
+  ../ast/sources.mlb
+  ../syntax-highlighting/sources.mlb
+  StringDoc.sml
+  TokenDoc.sml
+  PrettyUtil.sml
+  PrettyTy.sml
+  PrettyPat.sml
+  PrettyExpAndDec.sml
+  PrettySig.sml
+  PrettyStr.sml
+  PrettyFun.sml
+  PrettyPrintAst.sml
+in
+  structure PrettyPrintAst
+end

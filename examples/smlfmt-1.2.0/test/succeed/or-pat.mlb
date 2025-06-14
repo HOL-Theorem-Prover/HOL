@@ -1,0 +1,4 @@
+$(SML_LIB)/basis/basis.mlb
+ann "allowOrPats true" in
+  successor-ml/or-pats.sml
+end

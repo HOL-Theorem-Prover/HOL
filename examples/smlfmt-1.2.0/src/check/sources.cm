@@ -1,0 +1,9 @@
+Library
+  structure CheckOutput
+is
+  $/basis.cm
+  ../base/sources.cm
+  ../ast/sources.cm
+  ../lex/sources.cm
+  ../parse/sources.cm
+  CheckOutput.sml

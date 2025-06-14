@@ -1,0 +1,94 @@
+#!/usr/bin/python3
+
+import argparse, sys, os, json, subprocess, errno
+
+def get_git_root():
+  return subprocess.Popen(['git', 'rev-parse', '--show-toplevel'],
+    stdout=subprocess.PIPE).communicate()[0].rstrip().decode()
+
+ROOT = get_git_root()
+FAIL_TEST_DIR = os.path.join(ROOT, 'test', 'fail')
+SUCCEED_TEST_DIR = os.path.join(ROOT, 'test', 'succeed')
+
+def error_and_exit(msg):
+  sys.stderr.write('[ERROR] ' + msg)
+  sys.exit(1)
+
+def run_must_succeed(cmd):
+  process = \
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  out, err = process.communicate()
+  if process.returncode != 0:
+    sys.stderr.write(out.decode() + "\n" + err.decode() + "\n")
+    error_and_exit("command failed:\n  {}\n".format(" ".join(cmd)))
+
+def info(msg):
+  print('[INFO] ' + msg)
+
+info('building parser...')
+MAKE_CMD = ['make', '-C', ROOT, 'smlfmt']
+run_must_succeed(MAKE_CMD)
+info('built parser successfully')
+
+MAIN = os.path.join(ROOT, 'smlfmt')
+
+def run_test(path, expect_success=True):
+  cmd = [MAIN, '--preview-only', '--safety-check', path]
+  process = \
+    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  out, err = process.communicate()
+  succeeded = (process.returncode == 0)
+  okay = (expect_success == succeeded)
+  return okay
+
+def run_test_expect_success(path):
+  return run_test(path, expect_success=True)
+def run_test_expect_fail(path):
+  return run_test(path, expect_success=False)
+
+fail_problems = []
+
+def ext(path):
+  return os.path.splitext(path)[1]
+
+valid_exts = [".mlb",".sml",".sig",".fun",".cm",".ml",".ML"]
+
+for name in os.listdir(FAIL_TEST_DIR):
+  path = os.path.join(FAIL_TEST_DIR, name)
+  if (not os.path.isfile(path)) or (ext(path) not in valid_exts):
+    continue
+  shortpath = os.path.join('test', 'fail', name)
+  info('running {}'.format(shortpath))
+  okay = run_test_expect_fail(path)
+  if not okay:
+    fail_problems.append(shortpath)
+
+succeed_problems = []
+
+for name in os.listdir(SUCCEED_TEST_DIR):
+  path = os.path.join(SUCCEED_TEST_DIR, name)
+  if (not os.path.isfile(path)) or (ext(path) not in valid_exts):
+    continue
+  shortpath = os.path.join('test', 'succeed', name)
+  info('running {}'.format(shortpath))
+  okay = run_test_expect_success(path)
+  if not okay:
+    succeed_problems.append(shortpath)
+
+error_msg = ""
+
+if len(fail_problems) > 0:
+  stuff = '\n  '.join(fail_problems)
+  error_msg += \
+    "These should have failed, but did not:\n  {}\n".format(stuff)
+
+if len(succeed_problems) > 0:
+  stuff = '\n  '.join(succeed_problems)
+  error_msg += \
+    "These should have succeeded, but did not:\n  {}\n".format(stuff)
+
+print('')
+if error_msg != "":
+  error_and_exit("NOT ALL TESTS WENT AS EXPECTED!\n\n" + error_msg)
+else:
+  info('SUCCESS! Everything is good.')

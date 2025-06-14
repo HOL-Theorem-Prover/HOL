@@ -1,0 +1,7 @@
+mixfix-2/infix.sml
+local
+  mixfix-2/nonfix.sml
+in
+mixfix-2/use-nonfix.sml
+end
+mixfix-2/use-nonfix.sml

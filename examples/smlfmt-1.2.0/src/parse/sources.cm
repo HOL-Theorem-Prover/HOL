@@ -1,0 +1,22 @@
+Library
+  structure ParserUtils
+  structure ParserCombinators
+  structure InfixDict
+  structure Parser
+is
+  $/basis.cm
+  ../base/sources.cm
+  ../lex/sources.cm
+  ../ast/sources.cm
+  InfixDict.sml
+  ParserCombinators.sml
+  ParserUtils.sml
+  ExpPatRestriction.sml
+  FixExpPrecedence.sml
+  ParseSimple.sml
+  ParseTy.sml
+  ParsePat.sml
+  ParseFunNameArgs.sml
+  ParseExpAndDec.sml
+  ParseSigExpAndSpec.sml
+  Parser.sml

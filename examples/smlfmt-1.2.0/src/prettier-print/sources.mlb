@@ -1,0 +1,22 @@
+local
+  $(SML_LIB)/basis/basis.mlb
+  ../base/sources.mlb
+  ../ast/sources.mlb
+  ../syntax-highlighting/sources.mlb
+
+  TabbedTokenDoc.sml
+
+  PrettierUtil.sml
+  PrettierTy.sml
+  PrettierPat.sml
+  PrettierExpAndDec.sml
+  PrettierSigUtil.sml
+  PrettierSig.sml
+  PrettierStrUtil.sml
+  PrettierStr.sml
+  PrettierFun.sml
+  PrettierPrintAst.sml
+in
+  structure PrettierPrintAst
+  structure TabbedTokenDoc
+end

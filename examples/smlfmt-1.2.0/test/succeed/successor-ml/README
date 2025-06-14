@@ -1,0 +1,14 @@
+The testing harness (../../runall) doesn't run these files directly, but
+instead through .mlb files in the parent directory. This is because the test
+command is simply `smlfmt --preview-only`, which will fail on SuccessorML
+features. But we can use a .mlb file to enable select features.
+
+For example see the file ../or-pat.mlb:
+
+  $(SML_LIB)/basis/basis.mlb
+  ann "allowOrPats true" in
+    successor-ml/or-pats.sml
+  end
+
+This allows us to test these features while using the same test command for
+all test files.

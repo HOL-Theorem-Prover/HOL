@@ -1,0 +1,17 @@
+Library
+  structure PrettyPrintAst
+is
+  $/basis.cm
+  ../base/sources.cm
+  ../ast/sources.cm
+  ../syntax-highlighting/sources.cm
+  StringDoc.sml
+  TokenDoc.sml
+  PrettyUtil.sml
+  PrettyTy.sml
+  PrettyPat.sml
+  PrettyExpAndDec.sml
+  PrettySig.sml
+  PrettyStr.sml
+  PrettyFun.sml
+  PrettyPrintAst.sml

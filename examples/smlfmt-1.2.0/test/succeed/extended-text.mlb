@@ -1,0 +1,4 @@
+$(SML_LIB)/basis/basis.mlb
+ann "allowExtendedTextConsts true" in
+  successor-ml/extended-text.sml
+end
