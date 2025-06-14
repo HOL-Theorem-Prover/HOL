@@ -17,6 +17,15 @@ sig
 end =
 struct
 
+  (** Allows us to behave differently when, for example, lexing a quotation.
+      An alternative to keeping this state around would be to have the parser
+      and lexer be coroutines. *)
+  datatype State = SML | QUOTE
+  
+  val currentState = ref SML
+  fun getState () = !currentState
+  fun setState newState = currentState := newState
+
   (** This is just to get around annoying bad syntax highlighting for SML... *)
   val backslash = #"\\" (* " *)
 
@@ -67,6 +76,30 @@ struct
         in (128 <= i andalso i <= 253) (* ?? *)
         end
 
+      fun isSequenceAt xs i =
+        let
+          fun loop [] _ = true
+            | loop (x::xs) pos = 
+              (is x at pos) andalso loop xs (pos + 1)
+        in loop xs i end
+
+      fun isOpenQuote i =
+        isSequenceAt [#"\226", #"\128", #"\152"] i
+
+      fun isCloseQuote i =
+        isSequenceAt [#"\226", #"\128", #"\153"] i
+
+      fun isOpenFullQuote i =
+        isSequenceAt [#"\226", #"\128", #"\156"] i
+
+      fun isCloseFullQuote i =
+        isSequenceAt [#"\226", #"\128", #"\157"] i
+
+      fun closesQuote i =
+        is #"`" at i orelse
+        isSequenceAt [#"`", #"`"] i orelse
+        isCloseQuote i orelse
+        isCloseFullQuote i
 
       (** ====================================================================
         * STRING HANDLING
@@ -312,7 +345,38 @@ struct
       fun loop_topLevel s =
         if isEndOfFileAt s then
           NONE
-        else
+        else if getState () = QUOTE then
+          (* Check whether we have a closing quote. We will leave it to the parser
+             to determine whether proper versions were used. *)
+          if is #"`" at s then
+            (setState SML; success (mkr Token.Quote (s, s + 1)))
+          else if isSequenceAt [#"`", #"`"] s then
+            (setState SML; success (mkr Token.FullQuote (s, s + 2)))
+          else if isCloseQuote s then
+            (setState SML; success (mkr Token.CloseQuote (s, s + 3)))
+          else if isCloseFullQuote s then
+            (setState SML; success (mkr Token.CloseFullQuote (s, s + 3)))
+          else if is #"^" at s then
+            error
+              { pos = slice (s, s + 1)
+              , what = "Unimplemented: Antiquote"
+              , explain = SOME "Maybe a false positive (e.g., ^ followed by whitespace)"
+              }
+          else if isSequenceAt [#"\n", #"["] s then
+            error
+              { pos = slice (s, s + 2)
+              , what = "Unimplemented: DefinitionLabel"
+              , explain = SOME "Maybe a false positive (e.g., list starting on newline)"
+              }
+          else if isSequenceAt [#"(", #"*"] s then
+            error
+              { pos = slice (s, s + 2)
+              , what = "Unimplemented: QuoteComment"
+              , explain = NONE
+              }
+          else
+            loop_quoteContent {start = s} s
+        else if getState () = SML then
           case get s of
             #"(" => loop_afterOpenParen (s + 1)
           | #")" => success (mkr Token.CloseParen (s, s + 1))
@@ -338,7 +402,16 @@ struct
               if is #"\"" at s + 1 then loop_charConstant (s + 2)
               else loop_symbolicId (s + 1) {idStart = s, longStart = NONE}
           | c =>
-              if LexUtils.isDecDigit c then
+              if is #"`" at s then
+                (setState QUOTE; success (mkr Token.Quote (s, s + 1)))
+              else if isOpenQuote s then
+                (* Unicode quotes consist of 3 bytes *)
+                (setState QUOTE; success (mkr Token.OpenQuote (s, s + 3)))
+              else if isSequenceAt [#"`", #"`"] s then
+                (setState QUOTE; success (mkr Token.FullQuote (s, s + 2)))
+              else if isOpenFullQuote s then
+                (setState QUOTE; success (mkr Token.OpenFullQuote (s, s + 3)))
+              else if LexUtils.isDecDigit c then
                 loop_decIntegerConstant (s + 1) {constStart = s}
               else if LexUtils.isSymbolic c then
                 loop_symbolicId (s + 1) {idStart = s, longStart = NONE}
@@ -353,12 +426,40 @@ struct
                   , what = "Unexpected character."
                   , explain = SOME "Perhaps from unsupported character-set?"
                   }
+          else
+            error
+              { pos = slice (s, s + 1)
+              , what = "Unexpected character."
+              , explain = SOME "Perhaps in a bad state?"
+              }
 
+      and loop_quoteContent {start} i =
+        if is #"^" at (i + 1) then
+          error
+              { pos = slice (i + 1, i + 2)
+              , what = "Unimplemented: Antiquote"
+              , explain = SOME "Maybe a false positive (e.g., ^ followed by whitespace)"
+              }
+        else if isSequenceAt [#"\n", #"["] (i + 1) then
+          error
+            { pos = slice (i + 1, i + 3)
+            , what = "Unimplemented: DefinitionLabel"
+            , explain = SOME "Maybe a false positive (e.g., list starting on newline)"
+            }
+        else if isSequenceAt [#"(", #"*"] (i + 1) then
+          error
+            { pos = slice (i + 1, i + 3)
+            , what = "Unimplemented: QuoteComment"
+            , explain = NONE
+            }
+        else if closesQuote (i + 1) then
+          success (mkr Token.QuoteContent (start, i + 1))
+        else
+          loop_quoteContent {start = start} (i + 1)
 
       and loop_whitespace {start} i =
         if check Char.isSpace i then loop_whitespace {start = start} (i + 1)
         else success (mk Token.Whitespace (start, i))
-
 
       (** #"...
         *   ^

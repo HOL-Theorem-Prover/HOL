@@ -67,6 +67,17 @@ sig
   | Structure
   | Where
   | ColonArrow
+  (** ============ HOL =============== *)
+  | Quote
+  | FullQuote
+  | OpenQuote
+  | CloseQuote
+  | OpenFullQuote
+  | CloseFullQuote
+  | QuoteContent
+  | Antiquote
+  | DefinitionLabel
+  | QuoteComment
 
   datatype class =
     Comment
@@ -235,6 +246,24 @@ struct
   | Structure
   | Where
   | ColonArrow
+  (** ============ HOL =============== *)
+  | Quote  (* ` *)
+  | FullQuote  (* `` *)
+  | OpenQuote  (* ‘ *)
+  | CloseQuote (* ’ *)
+  | OpenFullQuote (* “ *)
+  | CloseFullQuote (* ” *)
+  (* "Normal" content between quotes, i.e., not antiquotes, labels or comments *)
+  | QuoteContent
+  (* ^ within quotes, unless followed by a symbol, whitespace or more ^ *)
+  | Antiquote
+  (* For example, a [foo] label in the middle of inductive definitions *)
+  | DefinitionLabel
+  (* Comments within quotes. We need to track them as they can interact with
+     antiquotations.
+     For example, (* ^(bar) *) within a quote should not be interpreted as an
+     antiquotation. *)
+  | QuoteComment
 
   datatype class =
     Comment
