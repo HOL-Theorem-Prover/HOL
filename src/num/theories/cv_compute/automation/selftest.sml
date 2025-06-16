@@ -303,6 +303,10 @@ val _ = Datatype `
         | Op num clos_op (c_exp list)
 `
 
+(*---------------------------------------------------------------------------*)
+(* Prim rec, so no termination proof needed ... what is going on here?       *)
+(*---------------------------------------------------------------------------*)
+
 val exp_size_alt_def = tDefine "exp_size_alt" `
   exp_size_alt ((Var x y) : c_exp) = 1:num /\
   exp_size_alt (If a b c d) = 1 + exp_size_alt b + exp_size_alt c + exp_size_alt d /\
@@ -316,7 +320,7 @@ val exp_size_alt_def = tDefine "exp_size_alt" `
   exp_size_alt (Op a0 a1 a2) = 1 + exp_sizes_alt a2 /\
   exp_sizes_alt [] = 0 /\
   exp_sizes_alt (x::xs) = exp_size_alt x + exp_sizes_alt xs`
-  cheat;
+ cheat
 
 val pre = cv_auto_trans_pre_rec exp_size_alt_def cheat;
 
@@ -336,7 +340,9 @@ val dest_handle_If_def = Define `
   dest_handle_If _ = NONE `
 
 val _ = cv_trans can_raise_def;
+(*
 val _ = cv_trans dest_handle_If_def;
+*)
 
 (*
 val mem_test_def = Define `mem_test n = MEM n ["test1"; "test2"]`
