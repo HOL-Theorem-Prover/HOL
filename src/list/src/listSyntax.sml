@@ -248,6 +248,21 @@ val strip_cons =
   end;
 
 (*---------------------------------------------------------------------------*)
+(* Strips leading occurences of SNOC                                         *)
+(*                                                                           *)
+(*  strip_snoc “SNOC x l”          = (``l``, [``x``])                        *)
+(*  strip_snoc “SNOC y (SNOC x l)” = (``l``, [``x``, ``y``])                 *)
+(*  strip_snoc “l :'a list”        = (``l``, [])                             *)
+(*---------------------------------------------------------------------------*)
+val strip_snoc =
+  let fun strip A M =
+        case total dest_snoc M
+         of NONE => (M, A)
+          | SOME(t,hl) => strip (t::A) hl
+  in strip []
+  end;
+
+(*---------------------------------------------------------------------------*)
 (* Strips occurences of append                                               *)
 (* Added 03 December 2009 by Thomas Tuerk                                    *)
 (*---------------------------------------------------------------------------*)
@@ -256,6 +271,22 @@ val strip_append =
         case total dest_append M
          of NONE => (M::A)
           | SOME(l1,l2) => strip (l2::A) l1
+  in strip []
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Strips leading occurences of SNOC, outputs compatible with strip_append   *)
+(* NOTE: The name "strip_snoc_to_lists" is suggested by Konrad Slind.        *)
+(*                                                                           *)
+(*  strip_snoc_to_lists “SNOC x l”          = [``l``, ``[x]``]               *)
+(*  strip_snoc_to_lists “SNOC y (SNOC x l)” = [``l``, ``[x]``, ``[y]``]      *)
+(*  strip_snoc_to_lists “l :'a list”        = [``l``]                        *)
+(*---------------------------------------------------------------------------*)
+val strip_snoc_to_lists =
+  let fun strip A M =
+        case total dest_snoc M
+         of NONE => (M::A)
+          | SOME(t,hl) => strip (mk_list([t],type_of t)::A) hl
   in strip []
   end;
 

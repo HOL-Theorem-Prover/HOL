@@ -61,9 +61,31 @@ val _ = app(test "LASTN_CONV" Term.compare term_to_string LASTN_CONV)
             (``LASTN 0 [1;2]``, ``[]: num list``),
             (``LASTN 3 [1;2;3]``, ``[1;2;3]``),
             (``LASTN 0 [] : num list``, ``[] : num list``)]
+
 val _ = app(test "LIST_EQ_SIMP_CONV" Term.compare term_to_string
                  listSimps.LIST_EQ_SIMP_CONV)
-           [(``(l1:'a list ++ [])::t = p ++ q``, ``(l1:'a list)::t = p ++ q``)]
+           [(“(l1:'a list ++ [])::t = p ++ q”, “(l1:'a list)::t = p ++ q”),
+            (“[a; b] = [a; b]”, “T”),
+            (* old examples from listSimps.sml *)
+            (“[x1;x2] ++ l1 ++ l2 ++ [x3] ++ l3 = x1::x2'::l1' ++ l3 :'a list”,
+             “(x2 = x2' :'a) /\ (l1 ++ l2 ++ [x3] = l1' :'a list)”),
+            (“[x1;x2] ++ l1 ++ l2 ++ [x3] ++ [x4;x5;x6] = x1'::l1' ++ [x5;x6]:'a list”,
+             “(x1 = x1' :'a) /\ (x2::(l1 ++ l2 ++ [x3; x4]) = l1' :'a list)”),
+            (“l1 ++ l2 ++ [x3] ++ l3 = l1 ++ l2' ++ x3'::l3”,
+             “(l2 = l2' :'a list) /\ (x3 = x3' :'a)”),
+            (“[x1;x2;x3] ++ l2 ++ [x3] ++ l3 = [x1;x2] ++ l1 ++ l2' ++ l3 :'a list”,
+             “(x3::(l2 ++ [x3]) = l1 ++ l2' :'a list)”),
+            (“(x::l) = (l ++ l :'a list)”, “[x] = l :'a list”),
+            (* new test cases for the SNOC support *)
+            (“[a;b;c;d] = SNOC d l”, “[a; b; c] = l”),
+            (“[a;b;c;d] = SNOC d (SNOC c l)”, “[a; b] = l”),
+            (“SNOC x l = l' ++ [y]”, “l = (l' :'a list) /\ x = (y :'a)”),
+            (“SNOC x l = l ++ [c]”, “x = c :'a”),
+            (“SNOC x l = l ++ [x]”, “T”),
+            (“SNOC a b = SNOC c d”, “b = (d :'a list) /\ a = (c :'a)”),
+            (“l ++ [x] = SNOC y l'”, “l = (l' :'a list) /\ x = (y :'a)”)
+            ]
+
 val _ = app(test "APPEND_CONV" Term.compare term_to_string
                  ListConv1.APPEND_CONV)
            [(“[1;2;3] ++ [4;5;6]”, “[1;2;3;4;5;6]”),
