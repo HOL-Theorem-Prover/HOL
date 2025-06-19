@@ -10,7 +10,9 @@ val _ = new_theory"ripemd160";
 
 (* auxiliary function used in chg_end_def *)
 Definition chg_end_acc_def:
-  (chg_end_acc acc [] = acc) ∧ (chg_end_acc acc (b::bits) = chg_end_acc (TAKE 8 (b::bits) ++ acc) (DROP 8 (b::bits)))
+  chg_end_acc acc [] = acc ∧
+  chg_end_acc acc (b::bits) =
+    chg_end_acc (TAKE 8 (b::bits) ++ acc) (DROP 8 (b::bits))
 Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
 End
@@ -18,14 +20,14 @@ End
 Theorem chg_end_acc_sum_leng:
   ∀acc bits. LENGTH $ chg_end_acc acc bits = LENGTH acc + LENGTH bits
 Proof
-  ho_match_mp_tac chg_end_acc_ind >>
+  ho_match_mp_tac chg_end_acc_ind>>
   rw[chg_end_acc_def, listTheory.LENGTH_TAKE_EQ]
 QED
 
 (* change bits in little-endian to that in big-endian or vice versa, padding 0s to the left of bits when
    necessary to make the length of bits a multiple of 8 *)
 Definition chg_end_def:
-  chg_end bits =
+  chg_end (bits: num list) =
   let
     l = LENGTH bits;
     n = l MOD 8;
@@ -37,14 +39,13 @@ End
 Theorem chg_end_length_multiple:
   divides 8 $ LENGTH (chg_end bits)
 Proof
-  simp[chg_end_def, chg_end_acc_sum_leng, dividesTheory.DIVIDES_MOD_0] >>
-  Cases_on ‘LENGTH bits MOD 8’ >-
-   simp[Once $ GSYM MOD_PLUS] >>
-  simp[Once $ GSYM MOD_PLUS] >>
+  simp[chg_end_def, chg_end_acc_sum_leng, dividesTheory.DIVIDES_MOD_0]>>
+  Cases_on ‘LENGTH bits MOD 8’
+  >-simp[Once $ GSYM MOD_PLUS]>>
+  simp[Once $ GSYM MOD_PLUS]>>
   ‘SUC n < 8’ by (
-    pop_assum (SUBST1_TAC o GSYM) >>
-    simp[MOD_LESS]
-  ) >>
+    pop_assum (SUBST1_TAC o GSYM)>>
+    simp[MOD_LESS])>>
   simp[]
 QED
 
@@ -77,19 +78,12 @@ Proof
     drule_then assume_tac logrootTheory.LOG2_LE_MONO>>
     pop_assum $ drule_then assume_tac>>
     gvs[])>>
-  rw[pad_message_def]>>gvs[]
-  >-simp[chg_end_length,bitstringTheory.length_pad_left]
-  >-(
-    simp[chg_end_length,bitstringTheory.length_pad_left,ADD1]>>
-    cheat
-    (*replace cheat by what follows: Cases_on ‘LENGTH (n2l 2 (LENGTH bits)) = 64’
-    >-(
-      simp[dividesTheory.DIVIDES_MOD_0]
-    )
-    >-(cheat)*))
-  >-(
-    simp[chg_end_length,bitstringTheory.length_pad_left,ADD1]>>
-    cheat)
+  rw[pad_message_def]>>
+  gvs[]>>
+  simp[chg_end_length,bitstringTheory.length_pad_left,ADD1]>>
+  Cases_on ‘LENGTH (n2l 2 (LENGTH bits)) = 64’>>
+  simp[dividesTheory.DIVIDES_MOD_0]>>
+  intLib.ARITH_TAC
 QED
 
 Definition parse_block_def:
