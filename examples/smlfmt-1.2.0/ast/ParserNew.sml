@@ -9,22 +9,19 @@ structure AstNew = struct
   datatype 'a seq =
     Empty
   | One of 'a
-  | Many of
-      { left: int (** open paren *)
-      , elems: 'a delimited (** elements *)
-      , right: int (** close paren *)
-      }
+  | Many of {left: int, elems: 'a delimited, right: int option, stop: int}
 
   datatype ty =
-    Var of ident
-  | Record of (** { lab : ty, ..., lab : ty } *)
+    TyVar of ident
+  | TyRecord of (** { lab : ty, ..., lab : ty } *)
       { left: int,
-        elems: {lab: ident, colon: int, ty: ty} delimited,
-        right: int }
-  | Tuple of ty delimited (** ty * ... * ty *)
-  | Con of {args: ty seq, id: ident} (** tyseq longtycon *)
-  | Arrow of {from: ty, arrow: int, to: ty} (** ty -> ty *)
-  | Parens of {left: int, ty: ty, right: int} (** ( ty ) *)
+        elems: {lab: ident option, colon: int option, ty: ty} delimited,
+        right: int option, stop: int }
+  | TyTuple of ty delimited (** ty * ... * ty *)
+  | TyCon of {args: ty seq, id: ident} (** tyseq longtycon *)
+  | TyArrow of {from: ty, arrow: int, to: ty} (** ty -> ty *)
+  | TyParens of {left: int, ty: ty, right: int option, stop: int} (** ( ty ) *)
+  | TyError of {start: int, stop: int} (** ( ty ) *)
 
   (** tyvarseq tycon = ty [and tyvarseq tycon = ty ...] *)
   type tybind = {tyvars: ident seq, tycon: ident, bind: {eq: int, ty: ty} option}
@@ -167,7 +164,7 @@ structure AstNew = struct
 
   and valbind =
     ValBind of {rec_: int option, pat: exp, eq: int, exp: exp}
-  | ValSpec of {vid: ident, colon: int, ty: ty}
+  | ValSpec of {vid: ident, colon: int option, ty: ty}
 
   and funarg =
     ArgIdent of {strid: ident, colon: int, sigexp: sigexp}
@@ -229,6 +226,7 @@ fun parseSML body parseError = let
   fun ws () = takeWhile Char.isSpace
   fun isIdRest c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
   val isIdSym = Char.contains "'_!%&$#+-/:<=>?@\\~`^|*"
+  fun colZero start = start = 0 orelse String.sub (body, start) = #"\n"
   val _ = ws ()
 
   fun finishString () = case cur () of
@@ -330,17 +328,125 @@ fun parseSML body parseError = let
 
   fun ident start = String.substring (body, start, !pos - start)
 
-  fun parseSymbol s =
-    case token () of
-      (start, Symbol c) => if c = s then SOME start else (pos := start; NONE)
-    | (start, _) => (pos := start; NONE)
+  datatype ident_kind = Regular | Keyword | HolKeyword
+  fun identKind start = let
+    val s = ident start
+    fun holKw () = if colZero start then HolKeyword else Regular
+    in (s, case s of
+        ":" => Keyword | ":>" => Keyword | "|" => Keyword | "=" => Keyword | "=>" => Keyword
+      | "->" => Keyword | "#" => Keyword | "abstype" => Keyword | "and" => Keyword
+      | "andalso" => Keyword | "as" => Keyword | "case" => Keyword | "datatype" => Keyword
+      | "do" => Keyword | "else" => Keyword | "end" => Keyword | "exception" => Keyword
+      | "fn" => Keyword | "fun" => Keyword | "handle" => Keyword | "if" => Keyword
+      | "in" => Keyword | "infix" => Keyword | "infixr" => Keyword | "let" => Keyword
+      | "local" => Keyword | "nonfix" => Keyword | "of" => Keyword | "op" => Keyword
+      | "open" => Keyword | "orelse" => Keyword | "raise" => Keyword | "rec" => Keyword
+      | "then" => Keyword | "type" => Keyword | "val" => Keyword | "with" => Keyword
+      | "withtype" => Keyword | "while" => Keyword | "eqtype" => Keyword | "functor" => Keyword
+      | "include" => Keyword | "sharing" => Keyword | "sig" => Keyword | "signature" => Keyword
+      | "struct" => Keyword | "structure" => Keyword | "where" => Keyword
 
-  fun parseKeyword s =
-    case token () of
-      (start, IdentTk) => if ident start = s then SOME start else (pos := start; NONE)
-    | (start, _) => (pos := start; NONE)
+      | "Datatype" => holKw () | "Type" => holKw () | "Overload" => holKw ()
+      | "Definition" => holKw () | "Theorem" => holKw () | "Triviality" => holKw ()
+      | "Quote" => holKw () | "Inductive" => holKw () | "CoInductive" => holKw ()
+      | "Proof" => holKw () | "QED" => holKw () | "Termination" => holKw () | "End" => holKw ()
 
-  fun parseTy (prec: bool): ty = raise Todo
+      | _ => Regular)
+    end
+
+  val lookahead = ref NONE
+  val token = fn () => case !lookahead of
+    NONE => token ()
+  | SOME tk => (lookahead := NONE; tk)
+  fun unread tk = lookahead := SOME tk
+
+  fun parseSymbol s err = let
+    val tk = token ()
+    val r = case tk of (start, Symbol c) => if c = s then SOME start else NONE | _ => NONE
+    val _ = case r of SOME _ => () | NONE => (
+      case err of NONE => () | SOME e => parseError (#1 tk, !pos) e;
+      unread tk)
+    in r end
+
+  fun parseKeyword s err = let
+    val tk = token ()
+    val r = case tk of (start, IdentTk) => if ident start = s then SOME start else NONE | _ => NONE
+    val _ = case r of SOME _ => () | NONE => (
+      case err of NONE => () | SOME e => parseError (#1 tk, !pos) e;
+      unread tk)
+    in r end
+
+  fun parseDelimitedClose {elem, delim, close} = let
+    fun go args delims = case token () of tk =>
+      if close tk then ({args = rev args, delims = rev delims}, SOME (#1 tk), !pos)
+      else case ((unread tk; elem ()), token ()) of (e, tk) =>
+        if close tk then ({args = rev (e :: args), delims = rev delims}, SOME (#1 tk), !pos)
+        else if delim tk then go (e :: args) (#1 tk :: delims)
+        else (
+          parseError (#1 tk, !pos) "expected close delimiter";
+          unread tk; ({args = rev (e :: args), delims = rev delims}, NONE, #1 tk))
+    in go [] [] end
+
+  fun parseDelimited (f as {elem, delim}) args delims =
+    case (elem (), token ()) of (e, tk) =>
+      if delim tk then parseDelimited f (e :: args) (#1 tk :: delims)
+      else (unread tk; {args = rev (e :: args), delims = rev delims})
+
+  fun parseTy (prec: bool): ty = let
+    val lhs = case token () of
+      (start, TyVarTk) => TyVar (start, ident start)
+    | (start, Symbol #"(") => let
+      val (elems, right, stop) = parseDelimitedClose {
+        elem = fn () => parseTy false,
+        delim = fn (_, Symbol #",") => true | _ => false,
+        close = fn (_, Symbol #")") => true | _ => false }
+      in
+        case elems of
+          {args = [ty], delims = []} =>
+          TyParens {left = start, ty = ty, right = right, stop = stop}
+        | _ => case token () of tk =>
+          case case tk of (start, IdentTk) => SOME (identKind start) | _ => NONE of
+            SOME (id, Regular) => let
+            val args = Many {left = start, elems = elems, right = right, stop = stop}
+            in TyCon {args = args, id = (#1 tk, id)} end
+          | _ => (
+            parseError (#1 tk, !pos) "expected a type constructor";
+            unread tk; TyError {start = start, stop = stop})
+      end
+    | (start, Symbol #"{") => let
+      val (elems, right, stop) = parseDelimitedClose {
+        elem = fn () => let
+          val tk = token ()
+          val lab = case tk of
+            (start, IdentTk) =>
+            (case identKind start of (id, Regular) => SOME (start, id) | _ => NONE)
+          | (start, IntTk) => SOME (start, ident start)
+          | _ => NONE
+          val _ = case lab of SOME _ => () | NONE =>
+            (parseError (#1 tk, !pos) "expected an identifier"; unread tk)
+          val colon = parseKeyword ":" (SOME "expected a colon")
+          in {lab = lab, colon = colon, ty = parseTy false} end,
+        delim = fn (_, Symbol #",") => true | _ => false,
+        close = fn (_, Symbol #"}") => true | _ => false }
+      in TyRecord {left = start, elems = elems, right = right, stop = stop} end
+    | tk =>
+      case case tk of (start, IdentTk) => SOME (identKind start) | _ => NONE of
+        SOME (id, Regular) => TyCon {args = Empty, id = (#1 tk, id)}
+      | _ => (
+        parseError (#1 tk, !pos) "expected a type";
+        unread tk; TyError {start = #1 tk, stop = #1 tk})
+    fun rhs lhs = case token () of
+      tk as (start, IdentTk) => (case identKind start of
+        ("*", _) => if prec then (unread tk; lhs) else
+          rhs (TyTuple (parseDelimited {
+            elem = fn () => parseTy true,
+            delim = fn (s, IdentTk) => ident s = "*" | _ => false } [lhs] [start]))
+      | ("->", _) => if prec then (unread tk; lhs) else
+          rhs (TyArrow {from = lhs, arrow = start, to = parseTy false})
+      | (id, Regular) => rhs (TyCon {args = One lhs, id = (#1 tk, id)})
+      | _ => (unread tk; lhs))
+    | tk => (unread tk; lhs)
+    in rhs lhs end
   val parseTy = fn () => parseTy false
 
   fun parseExp (pat: bool): exp = raise Todo
@@ -351,14 +457,14 @@ fun parseSML body parseError = let
         val pat = parseExp true
         val tyvars = Empty
         in
-          case parseKeyword "=" of
+          case parseKeyword "=" NONE of
             SOME eq => let
             val exp = parseExp false
             val elem = ValBind {rec_ = NONE, pat = pat, eq = eq, exp = exp}
             val elems = {args = [elem], delims = []}
             in parseDec inSig (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
           | NONE => let
-            val SOME colon = parseKeyword ":"
+            val colon = parseKeyword ":" (SOME "expected a colon")
             val Ident {op_ = NONE, id} = pat
             val ty = parseTy ()
             val elem = ValSpec {vid = id, colon = colon, ty = ty}
