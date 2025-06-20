@@ -237,13 +237,25 @@ Definition key_set_cmp2_def:
     ∀k1 k2. k1 ∈ ks1 ∧ k2 ∈ ks2 ⇒ cmp k1 k2 = res
 End
 
+Theorem good_cmp_same[local]:
+  good_cmp cmp ⇒ cmp x x = Equal
+Proof
+  gvs [good_cmp_def]
+QED
+
 Theorem key_set_cmp2_thm:
   !cmp k k' res.
     good_cmp cmp
   ⇒
     (key_set_cmp2 cmp (key_set cmp k) (key_set cmp k') res ⇔ cmp k k' = res)
 Proof
- rw [key_set_cmp2_def, key_set_def] >> metis_tac [cmp_thms]
+  rw [key_set_cmp2_def, key_set_def]
+  \\ eq_tac \\ rpt strip_tac
+  >-
+   (pop_assum $ qspecl_then [‘k’,‘k'’] mp_tac
+    \\ simp [good_cmp_same])
+  \\ Cases_on ‘res’ \\ gvs []
+  \\ metis_tac [cmp_thms]
 QED
 
 (* Maps based on balanced binary trees. Copied from ghc-7.8.3
@@ -374,7 +386,7 @@ balanceL' k x l r =
                 else Bin (1+ls+rs) k x l r
 End
 
-val balanceR'_def = Define `
+Definition balanceR'_def:
 balanceR' k x l r =
   case l of
     | Tip =>
@@ -396,9 +408,10 @@ balanceR' k x l r =
                      if  rls < ratio*rrs then Bin (1+ls+rs) rk rx (Bin (1+ls+rls) k x l rl) rr
                      else Bin (1+ls+rs) rlk rlx (Bin (1+ls+size rll) k x l rll) (Bin (1+rrs+size rlr) rk rx rlr rr)
                    | (_, _) => Tip (* error "Failure in Data.Map.balanceR" *)
-              else Bin (1+ls+rs) k x l r`;
+              else Bin (1+ls+rs) k x l r
+End
 
-val balanceL_def = Define `
+Definition balanceL_def:
 (balanceL k x Tip Tip =
   Bin 1 k x Tip Tip) ∧
 (balanceL k x (Bin s' k' v' Tip Tip) Tip =
@@ -427,9 +440,10 @@ val balanceL_def = Define `
                                    (Bin (1+rs+size lrr) k x lrr (Bin rs k' v' l' r'))
        | (_, _) => Tip (* error "Failure in Data.Map.balanceL" *)
   else
-    Bin (1+ls+rs) k x (Bin ls lk lx ll lr) (Bin rs k' v' l' r'))`;
+    Bin (1+ls+rs) k x (Bin ls lk lx ll lr) (Bin rs k' v' l' r'))
+End
 
-val balanceR_def = Define `
+Definition balanceR_def:
 (balanceR k x Tip Tip =
   Bin 1 k x Tip Tip) ∧
 (balanceR k x Tip (Bin s' k' v' Tip Tip) =
@@ -457,49 +471,56 @@ val balanceR_def = Define `
                                    (Bin (1+rrs+size rlr) rk rx rlr rr)
        | (_, _) => Tip (* error "Failure in Data.Map.balanceR" *)
   else
-    Bin (1+ls+rs) k x (Bin ls k' v' l' r') (Bin rs rk rx rl rr))`;
+    Bin (1+ls+rs) k x (Bin ls k' v' l' r') (Bin rs rk rx rl rr))
+End
 
-val insert_def = Define `
+Definition insert_def:
 (insert cmp k v Tip = singleton k v) ∧
 (insert cmp k v (Bin s k' v' l r) =
   case cmp k k' of
      | Less => balanceL k' v' (insert cmp k v l) r
      | Greater => balanceR k' v' l (insert cmp k v r)
-     | Equal => Bin s k v l r)`;
+     | Equal => Bin s k v l r)
+End
 
-val insertR_def = Define `
+Definition insertR_def:
 (insertR cmp k v Tip = singleton k v) ∧
 (insertR cmp k v (Bin s k' v' l r) =
   case cmp k k' of
      | Less => balanceL k' v' (insertR cmp k v l) r
      | Greater => balanceR k' v' l (insertR cmp k v r)
-     | Equal => Bin s k' v' l r)`;
+     | Equal => Bin s k' v' l r)
+End
 
-val insertMax_def = Define `
+Definition insertMax_def:
 (insertMax k v Tip = singleton k v) ∧
-(insertMax k v (Bin s k' v' l r) = balanceR k' v' l (insertMax k v r))`;
+(insertMax k v (Bin s k' v' l r) = balanceR k' v' l (insertMax k v r))
+End
 
-val insertMin_def = Define `
+Definition insertMin_def:
 (insertMin k v Tip = singleton k v) ∧
-(insertMin k v (Bin s k' v' l r) = balanceL k' v' (insertMin k v l) r)`;
+(insertMin k v (Bin s k' v' l r) = balanceL k' v' (insertMin k v l) r)
+End
 
-val deleteFindMax_def = Define `
+Definition deleteFindMax_def:
 (deleteFindMax (Bin s k x l Tip) = ((k,x),l)) ∧
 (deleteFindMax (Bin s k x l r) =
   let (km,r') = deleteFindMax r in
     (km,balanceL k x l r')) ∧
 (deleteFindMax Tip =
-  (ARB,Tip))`; (*(error "Map.deleteFindMax: can not return the maximal element of an empty map", Tip)*)
+  (ARB,Tip))
+End
 
-val deleteFindMin_def = Define `
+Definition deleteFindMin_def:
 (deleteFindMin (Bin s k x Tip r) = ((k,x),r)) ∧
 (deleteFindMin (Bin s k x l r) =
   let (km,l') = deleteFindMin l in
     (km,balanceR k x l' r)) ∧
 (deleteFindMin Tip =
-  (ARB,Tip))`; (*(error "Map.deleteFindMin: can not return the maximal element of an empty map", Tip)*)
+  (ARB,Tip))
+End
 
-val glue_def = Define `
+Definition glue_def:
 (glue Tip r = r) ∧
 (glue l Tip = l) ∧
 (glue l r =
@@ -508,33 +529,37 @@ val glue_def = Define `
       balanceR km m l' r
   else
     let ((km,m),r') = deleteFindMin r in
-      balanceL km m l r')`;
+      balanceL km m l r')
+End
 
-val delete_def = Define `
+Definition delete_def:
 (delete cmp k Tip = Tip) ∧
 (delete cmp k (Bin s k' v l r) =
   case cmp k k' of
      | Less => balanceR k' v (delete cmp k l) r
      | Greater => balanceL k' v l (delete cmp k r)
-     | Eq => glue l r)`;
+     | Eq => glue l r)
+End
 
-val trim_help_greater_def = Define `
+Definition trim_help_greater_def:
 (trim_help_greater cmp lo (Bin s' k v' l' r) =
   if cmp k lo = Less ∨ cmp k lo = Equal then
     trim_help_greater cmp lo r
   else
     Bin s' k v' l' r) ∧
-(trim_help_greater cmp lo Tip = Tip)`;
+(trim_help_greater cmp lo Tip = Tip)
+End
 
-val trim_help_lesser_def = Define `
+Definition trim_help_lesser_def:
 (trim_help_lesser cmp hi (Bin s' k v' l r') =
   if cmp k hi = Greater ∨ cmp k hi = Equal then
     trim_help_lesser cmp hi l
   else
     Bin s' k v' l r') ∧
-(trim_help_lesser cmp lo Tip = Tip)`;
+(trim_help_lesser cmp lo Tip = Tip)
+End
 
-val trim_help_middle_def = Define `
+Definition trim_help_middle_def:
 (trim_help_middle cmp lo hi (Bin s' k v' l r) =
   if cmp k lo = Less ∨ cmp k lo = Equal then
     trim_help_middle cmp lo hi r
@@ -542,15 +567,17 @@ val trim_help_middle_def = Define `
     trim_help_middle cmp lo hi l
   else
     Bin s' k v' l r) ∧
-(trim_help_middle lo cmp hi Tip = Tip)`;
+(trim_help_middle lo cmp hi Tip = Tip)
+End
 
-val trim_def = Define `
+Definition trim_def:
 (trim cmp NONE NONE t = t) ∧
 (trim cmp (SOME lk) NONE t = trim_help_greater cmp lk t) ∧
 (trim cmp NONE (SOME hk) t = trim_help_lesser cmp hk t) ∧
-(trim cmp (SOME lk) (SOME hk) t = trim_help_middle cmp lk hk t)`;
+(trim cmp (SOME lk) (SOME hk) t = trim_help_middle cmp lk hk t)
+End
 
-val link_def = Define `
+Definition link_def:
 (link k v Tip r = insertMin k v r) ∧
 (link k v l Tip = insertMax k v l) ∧
 (link k v (Bin sizeL ky y ly ry) (Bin sizeR kz z lz rz) =
@@ -559,7 +586,8 @@ val link_def = Define `
   else if delta*sizeR < sizeL then
     balanceR ky y ly (link k v ry (Bin sizeR kz z lz rz))
   else
-    bin k v (Bin sizeL ky y ly ry) (Bin sizeR kz z lz rz))`;
+    bin k v (Bin sizeL ky y ly ry) (Bin sizeR kz z lz rz))
+End
 
 (* From the Haskell implementation:
  * [link2 l r] merges two trees.
@@ -577,43 +605,49 @@ Definition link2_def:
        glue (Bin sizeL kx x lx rx) (Bin sizeR ky y ly ry))
 End
 
-val filterLt_help_def = Define `
+Definition filterLt_help_def:
 (filterLt_help cmp b Tip = Tip) ∧
 (filterLt_help cmp b' (Bin s kx x l r) =
   case cmp kx b' of
      | Less => link kx x l (filterLt_help cmp b' r)
      | Equal => l
-     | Greater => filterLt_help cmp b' l)`;
+     | Greater => filterLt_help cmp b' l)
+End
 
-val filterLt_def = Define `
+Definition filterLt_def:
 (filterLt cmp NONE t = t) ∧
-(filterLt cmp (SOME b) t = filterLt_help cmp b t)`;
+(filterLt cmp (SOME b) t = filterLt_help cmp b t)
+End
 
-val filterGt_help_def = Define `
+Definition filterGt_help_def:
 (filterGt_help cmp b Tip = Tip) ∧
 (filterGt_help cmp b' (Bin s kx x l r) =
   case cmp b' kx of
      | Less => link kx x (filterGt_help cmp b' l) r
      | Equal => r
-     | Greater => filterGt_help cmp b' r)`;
+     | Greater => filterGt_help cmp b' r)
+End
 
-val filterGt_def = Define `
+Definition filterGt_def:
 (filterGt cmp NONE t = t) ∧
-(filterGt cmp (SOME b) t = filterGt_help cmp b t)`;
+(filterGt cmp (SOME b) t = filterGt_help cmp b t)
+End
 
-val hedgeUnion_def = Define `
+Definition hedgeUnion_def:
 (hedgeUnion cmp blo bhi t1 Tip = t1) ∧
 (hedgeUnion cmp blo bhi Tip (Bin _ kx x l r) =
   link kx x (filterGt cmp blo l) (filterLt cmp bhi r)) ∧
 (hedgeUnion cmp blo bhi t1 (Bin _ kx x Tip Tip) = insertR cmp kx x t1) ∧
 (hedgeUnion cmp blo bhi (Bin s kx x l r) t2 =
   link kx x (hedgeUnion cmp blo (SOME kx) l (trim cmp blo (SOME kx) t2))
-            (hedgeUnion cmp (SOME kx) bhi r (trim cmp (SOME kx) bhi t2)))`;
+            (hedgeUnion cmp (SOME kx) bhi r (trim cmp (SOME kx) bhi t2)))
+End
 
-val union_def = Define `
+Definition union_def:
 (union cmp Tip t2 = t2) ∧
 (union cmp t1 Tip = t1) ∧
-(union cmp t1 t2 = hedgeUnion cmp NONE NONE t1 t2)`;
+(union cmp t1 t2 = hedgeUnion cmp NONE NONE t1 t2)
+End
 
 Definition hedgeUnionWithKey_def:
   (hedgeUnionWithKey _ _ _ _ t1 Tip = t1) ∧
@@ -649,16 +683,19 @@ Definition filter_def:
   filter f t = filterWithKey (λk x. f x) t
 End
 
-val foldrWithKey_def = Define `
+Definition foldrWithKey_def:
 (foldrWithKey f z' Tip = z') ∧
 (foldrWithKey f z' (Bin _ kx x l r) =
-  foldrWithKey f (f kx x (foldrWithKey f z' r)) l)`;
+  foldrWithKey f (f kx x (foldrWithKey f z' r)) l)
+End
 
-val toAscList_def = Define `
-toAscList t = foldrWithKey (\k x xs. (k,x)::xs) [] t`;
+Definition toAscList_def:
+toAscList t = foldrWithKey (\k x xs. (k,x)::xs) [] t
+End
 
-val compare_def = Define `
-compare cmp1 cmp2 t1 t2 = list_cmp (pair_cmp cmp1 cmp2) (toAscList t1) (toAscList t2)`;
+Definition compare_def:
+compare cmp1 cmp2 t1 t2 = list_cmp (pair_cmp cmp1 cmp2) (toAscList t1) (toAscList t2)
+End
 
 Definition mapWithKey_def:
   (mapWithKey f Tip = Tip) ∧
@@ -670,7 +707,7 @@ Definition map_def:
   map f t = mapWithKey (λk x. f x) t
 End
 
-val splitLookup_def = Define `
+Definition splitLookup_def:
 (splitLookup cmp k Tip = (Tip,NONE,Tip)) ∧
 (splitLookup cmp k (Bin _ kx x l r) =
   case cmp k kx of
@@ -683,30 +720,32 @@ val splitLookup_def = Define `
          let lt' = link kx x l lt in
            (lt',z,gt)
      | Equal =>
-         (l,SOME x,r))`;
+         (l,SOME x,r))
+End
 
-val submap'_def = Define `
+Definition submap'_def:
 (submap' cmp _ Tip _ = T) ∧
 (submap' cmp _ _ Tip = F) ∧
 (submap' cmp f (Bin _ kx x l r) t =
   case splitLookup cmp kx t of
      | (lt,NONE,gt) => F
-     | (lt,SOME y,gt) => f x y ∧ submap' cmp f l lt ∧ submap' cmp f r gt)`;
+     | (lt,SOME y,gt) => f x y ∧ submap' cmp f l lt ∧ submap' cmp f r gt)
+End
 
-val isSubmapOfBy_def = Define `
-isSubmapOfBy cmp f t1 t2 ⇔ size t1 ≤ size t2 ∧ submap' cmp f t1 t2`;
+Definition isSubmapOfBy_def:
+isSubmapOfBy cmp f t1 t2 ⇔ size t1 ≤ size t2 ∧ submap' cmp f t1 t2
+End
 
-val isSubmapOf_def = Define `
-isSubmapOf cmp t1 t2 ⇔ isSubmapOfBy cmp (=) t1 t2`;
+Definition isSubmapOf_def:
+isSubmapOf cmp t1 t2 ⇔ isSubmapOfBy cmp (=) t1 t2
+End
 
 (* TODO: The ghc implementation is more complex and efficient *)
-val fromList_def = Define `
-fromList cmp l = FOLDR (λ(k,v) t. insert cmp k v t) empty l`;
+Definition fromList_def:
+fromList cmp l = FOLDR (λ(k,v) t. insert cmp k v t) empty l
+End
 
 (* ----------------------- proofs ------------------------ *)
-
-val balanceL_ind = fetch "-" "balanceL_ind";
-val balanceR_ind = fetch "-" "balanceR_ind";
 
 Triviality balanceL'_thm: !k v l r. balanceL k v l r = balanceL' k v l r
 Proof
@@ -735,16 +774,18 @@ Definition balanced_def:
   balanced l r ⇔ l + r ≤ 1 ∨ MAX l r ≤ delta * MIN l r
 End
 
-val structure_size_def = Define `
+Definition structure_size_def:
 (structure_size Tip = 0) ∧
-(structure_size (Bin n k v l r) = 1 + structure_size l + structure_size r)`;
+(structure_size (Bin n k v l r) = 1 + structure_size l + structure_size r)
+End
 
-val key_ordered_def = Define `
+Definition key_ordered_def:
 (key_ordered cmp k Tip res ⇔ T) ∧
 (key_ordered cmp k (Bin n k' v l r) res ⇔
   cmp k k' = res ∧
   key_ordered cmp k l res ∧
-  key_ordered cmp k r res)`;
+  key_ordered cmp k r res)
+End
 
 Triviality key_ordered_to_fmap:
 !cmp k t res.
@@ -760,7 +801,7 @@ Proof
  metis_tac [key_set_cmp_thm]
 QED
 
-val invariant_def = Define `
+Definition invariant_def:
 (invariant cmp Tip ⇔ T) ∧
 (invariant cmp (Bin s k v l r) ⇔
   s = 1 + structure_size l + structure_size r ∧
@@ -768,10 +809,11 @@ val invariant_def = Define `
   key_ordered cmp k r Less ∧
   balanced (size l) (size r) ∧
   invariant cmp l ∧
-  invariant cmp r)`;
+  invariant cmp r)
+End
 
-val invariant_eq = Q.store_thm ("invariant_eq",
-`(invariant cmp Tip ⇔ T) ∧
+Theorem invariant_eq:
+ (invariant cmp Tip ⇔ T) ∧
  (invariant cmp (Bin s k v l r) ⇔
   (good_cmp cmp ⇒ DISJOINT (FDOM (to_fmap cmp l)) (FDOM (to_fmap cmp r))) ∧
   (good_cmp cmp ⇒ key_set cmp k ∉ FDOM (to_fmap cmp l)) ∧
@@ -781,7 +823,8 @@ val invariant_eq = Q.store_thm ("invariant_eq",
   key_ordered cmp k r Less ∧
   balanced (size l) (size r) ∧
   invariant cmp l ∧
-  invariant cmp r)`,
+  invariant cmp r)
+Proof
  rw [invariant_def] >>
  eq_tac >>
  rw [DISJOINT_DEF, EXTENSION] >>
@@ -792,7 +835,8 @@ val invariant_eq = Q.store_thm ("invariant_eq",
  imp_res_tac to_fmap_key_set >>
  rw [] >>
  rfs [key_set_cmp_thm] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
 Triviality inv_props:
 !cmp s k v l r.
@@ -824,95 +868,115 @@ Proof
  rw [FCARD_FUPDATE, FCARD_DISJOINT_UNION]
 QED
 
-val size_thm = Q.store_thm ("size_thm",
-`!cmp t. good_cmp cmp ∧ invariant cmp t ⇒ size t = FCARD (to_fmap cmp t)`,
- metis_tac [structure_size_thm, structure_size_to_fmap]);
+Theorem size_thm:
+ !cmp t. good_cmp cmp ∧ invariant cmp t ⇒ size t = FCARD (to_fmap cmp t)
+Proof
+ metis_tac [structure_size_thm, structure_size_to_fmap]
+QED
 
-val null_thm = Q.store_thm ("null_thm",
-`!cmp t. null t ⇔ (to_fmap cmp t = FEMPTY)`,
+Theorem null_thm:
+  !cmp t. null t ⇔ (to_fmap cmp t = FEMPTY)
+Proof
  Cases_on `t` >>
- rw [null_def, to_fmap_def]);
+ rw [null_def, to_fmap_def]
+QED
 
-val lookup_thm = Q.store_thm ("lookup_thm",
-`!cmp k t.
+Theorem lookup_thm:
+ !cmp k t.
   good_cmp cmp ∧
   invariant cmp t
   ⇒
-  lookup cmp k t = FLOOKUP (to_fmap cmp t) (key_set cmp k)`,
+  lookup cmp k t = FLOOKUP (to_fmap cmp t) (key_set cmp k)
+Proof
  Induct_on `t` >>
  rw [lookup_def, to_fmap_def] >>
  imp_res_tac inv_props >>
- every_case_tac >>
- fs [invariant_eq, FLOOKUP_UPDATE, FLOOKUP_FUNION] >>
+ TOP_CASE_TAC >>
+ gvs [invariant_eq, FLOOKUP_UPDATE, FLOOKUP_FUNION] >>
  every_case_tac >>
  fs [] >>
  rw [] >>
  rfs [key_set_eq] >>
  fs [FLOOKUP_DEF] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
-val member_thm = Q.store_thm ("member_thm",
-`!cmp k t.
+Theorem member_thm:
+ !cmp k t.
   good_cmp cmp ∧
   invariant cmp t
   ⇒
-  (member cmp k t ⇔ key_set cmp k ∈ FDOM (to_fmap cmp t))`,
+  (member cmp k t ⇔ key_set cmp k ∈ FDOM (to_fmap cmp t))
+Proof
  Induct_on `t` >>
  rw [member_def, to_fmap_def] >>
  imp_res_tac inv_props >>
- every_case_tac >>
+ TOP_CASE_TAC >>
  fs [invariant_def, FLOOKUP_UPDATE, FLOOKUP_FUNION] >>
  every_case_tac >>
  fs [] >>
  rw [] >>
  rfs [key_set_eq] >>
  fs [FLOOKUP_DEF] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
-val empty_thm = Q.store_thm ("empty_thm",
-`!cmp. invariant cmp empty ∧ to_fmap cmp empty = FEMPTY`,
- rw [invariant_def, empty_def, to_fmap_def, FCARD_DEF]);
+Theorem empty_thm:
+  !cmp. invariant cmp empty ∧ to_fmap cmp empty = FEMPTY
+Proof
+ rw [invariant_def, empty_def, to_fmap_def, FCARD_DEF]
+QED
 
-val singleton_thm = Q.store_thm ("singleton_thm",
-`!cmp k v. invariant cmp (singleton k v) ∧ to_fmap cmp (singleton k v) = FEMPTY |+ (key_set cmp k,v)`,
+Theorem singleton_thm:
+  !cmp k v.
+    invariant cmp (singleton k v) ∧
+    to_fmap cmp (singleton k v) = FEMPTY |+ (key_set cmp k,v)
+Proof
  rw [balanced_def, invariant_def, singleton_def, to_fmap_def, size_def, structure_size_def,
-     key_ordered_def]);
+     key_ordered_def]
+QED
 
 (* The balance routine from the comments in the Haskell file *)
 
-val singleL_def = Define `
-singleL k1 x1 t1 (Bin _ k2 x2 t2 t3)  = bin k2 x2 (bin k1 x1 t1 t2) t3`;
+Definition singleL_def:
+singleL k1 x1 t1 (Bin _ k2 x2 t2 t3)  = bin k2 x2 (bin k1 x1 t1 t2) t3
+End
 
-val singleR_def = Define `
-singleR k1 x1 (Bin _ k2 x2 t1 t2) t3  = bin k2 x2 t1 (bin k1 x1 t2 t3)`;
+Definition singleR_def:
+singleR k1 x1 (Bin _ k2 x2 t1 t2) t3  = bin k2 x2 t1 (bin k1 x1 t2 t3)
+End
 
-val doubleL_def = Define `
+Definition doubleL_def:
 doubleL k1 x1 t1 (Bin _ k2 x2 (Bin _ k3 x3 t2 t3) t4) =
-  bin k3 x3 (bin k1 x1 t1 t2) (bin k2 x2 t3 t4)`;
+  bin k3 x3 (bin k1 x1 t1 t2) (bin k2 x2 t3 t4)
+End
 
-val doubleR_def = Define `
+Definition doubleR_def:
 doubleR k1 x1 (Bin _ k2 x2 t1 (Bin _ k3 x3 t2 t3)) t4 =
-  bin k3 x3 (bin k2 x2 t1 t2) (bin k1 x1 t3 t4)`;
+  bin k3 x3 (bin k2 x2 t1 t2) (bin k1 x1 t3 t4)
+End
 
-val rotateL_def = Define `
+Definition rotateL_def:
 (rotateL k x l (Bin s' k' x' ly ry) =
   if size ly < ratio * size ry then
     singleL k x l (Bin s' k' x' ly ry)
   else
     doubleL k x l (Bin s' k' x' ly ry)) ∧
 (rotateL k x l Tip =
-  doubleL k x l Tip)`;
+  doubleL k x l Tip)
+End
 
-val rotateR_def = Define `
+Definition rotateR_def:
 (rotateR k x (Bin s' k' x' ly ry) r =
   if size ry < ratio * size ly then
     singleR k x (Bin s' k' x' ly ry) r
   else
     doubleR k x (Bin s' k' x' ly ry) r) ∧
 (rotateR k x Tip r =
-  doubleR k x Tip r)`;
+  doubleR k x Tip r)
+End
 
-val bal_def = Define `
+Definition bal_def:
 bal k x l r =
   if size l + size r ≤ 1 then
     Bin (size l + size r + 1) k x l r
@@ -921,31 +985,34 @@ bal k x l r =
   else if size l > delta * size r then
     rotateR k x l r
   else
-    Bin (size l + size r + 1) k x l r`;
+    Bin (size l + size r + 1) k x l r
+End
 
-val balL_def = Define `
+Definition balL_def:
 balL k x l r =
   if size l + size r ≤ 1 then
     Bin (size l + size r + 1) k x l r
   else if size l > delta * size r then
     rotateR k x l r
   else
-    Bin (size l + size r + 1) k x l r`;
+    Bin (size l + size r + 1) k x l r
+End
 
-val balR_def = Define `
+Definition balR_def:
 balR k x l r =
   if size l + size r ≤ 1 then
     Bin (size l + size r + 1) k x l r
   else if size r > delta * size l then
     rotateL k x l r
   else
-    Bin (size l + size r + 1) k x l r`;
+    Bin (size l + size r + 1) k x l r
+End
 
 (* We want a formula that states how unbalanced two trees can be
  * and still be re-balanced by the balancer. It also has to allow the
  * trees to be as unbalanced as the link, insert and delete functions need. The
  * formula below is the result of guesswork. *)
-val almost_balancedL_def = Define `
+Definition almost_balancedL_def:
 almost_balancedL l r =
   if l + r ≤ 1 ∨ l ≤ delta * r then
     balanced l r
@@ -954,9 +1021,10 @@ almost_balancedL l r =
   else if r = 1 then
     l < 8
   else
-    2 * l < (2 * delta + 3) * r + 2`;
+    2 * l < (2 * delta + 3) * r + 2
+End
 
-val almost_balancedR_def = Define `
+Definition almost_balancedR_def:
 almost_balancedR l r =
   if l + r ≤ 1 ∨ r ≤ delta * l then
     balanced l r
@@ -965,7 +1033,8 @@ almost_balancedR l r =
   else if l = 1 then
     r < 8
   else
-    2 * r < (2 * delta + 3) * l + 2`;
+    2 * r < (2 * delta + 3) * l + 2
+End
 
 Triviality balanced_lem1: !l r. l + r ≤ 1 ⇒ balanced l r
 Proof rw [balanced_def]
@@ -1448,23 +1517,26 @@ Proof
      metis_tac [FUPDATE_COMMUTES, cmp_thms, to_fmap_key_set, key_set_cmp_thm])
 QED
 
-val lookup_insert = Q.store_thm("lookup_insert",
-  `good_cmp cmp ∧ invariant cmp t ⇒
+Theorem lookup_insert:
+   good_cmp cmp ∧ invariant cmp t ⇒
    lookup cmp k (insert cmp k' v t) =
-   if cmp k k' = Equal then SOME v else lookup cmp k t`,
+   if cmp k k' = Equal then SOME v else lookup cmp k t
+Proof
   rw[] \\ rw[lookup_thm,insert_thm,FLOOKUP_UPDATE] \\
-  metis_tac[key_set_eq,comparisonTheory.cmp_thms]);
+  metis_tac[key_set_eq,comparisonTheory.cmp_thms]
+QED
 
 val comparison_distinct = TypeBase.distinct_of ``:ordering``
 
-val insertR_thm = Q.store_thm ("insertR_thm",
-`∀t.
+Theorem insertR_thm:
+ ∀t.
   good_cmp cmp ∧
   invariant cmp t
   ⇒
   invariant cmp (insertR cmp k v t) ∧
   to_fmap cmp (insertR cmp k v t) =
-    if key_set cmp k ∈ FDOM (to_fmap cmp t) then to_fmap cmp t else to_fmap cmp t |+ (key_set cmp k,v)`,
+    if key_set cmp k ∈ FDOM (to_fmap cmp t) then to_fmap cmp t else to_fmap cmp t |+ (key_set cmp k,v)
+Proof
  Induct_on `t`
  >- fs [insertR_def, singleton_def, to_fmap_def, invariant_def,
         structure_size_def, balanced_def, size_def, key_ordered_def] >>
@@ -1507,16 +1579,18 @@ val insertR_thm = Q.store_thm ("insertR_thm",
      imp_res_tac balanceR_thm >>
      rw [FUNION_FUPDATE_2] >>
      rfs [key_ordered_to_fmap] >>
-     metis_tac [FUPDATE_COMMUTES, good_cmp_def, comparison_distinct]));
+     metis_tac [FUPDATE_COMMUTES, good_cmp_def, comparison_distinct])
+QED
 
-val insertMax_thm = Q.store_thm ("insertMax_thm",
-`∀t.
+Theorem insertMax_thm:
+ ∀t.
   good_cmp cmp ∧
   invariant cmp t ∧
   (!k1. k1 ∈ FDOM (to_fmap cmp t) ⇒ key_set_cmp cmp k k1 Greater)
   ⇒
   invariant cmp (insertMax k v t) ∧
-  to_fmap cmp (insertMax k v t) = to_fmap cmp t |+ (key_set cmp k,v)`,
+  to_fmap cmp (insertMax k v t) = to_fmap cmp t |+ (key_set cmp k,v)
+Proof
  Induct_on `t`
  >- fs [insertMax_def, singleton_def, to_fmap_def, invariant_def,
         structure_size_def, balanced_def, size_def, key_ordered_def] >>
@@ -1533,16 +1607,18 @@ val insertMax_thm = Q.store_thm ("insertMax_thm",
      metis_tac [almost_balancedR_thm, good_cmp_def, key_set_cmp_thm]) >>
  rw [FUNION_FUPDATE_2] >>
  rfs [key_ordered_to_fmap] >>
- metis_tac [FUPDATE_COMMUTES, cmp_thms, key_set_cmp_thm]);
+ metis_tac [FUPDATE_COMMUTES, cmp_thms, key_set_cmp_thm]
+QED
 
-val insertMin_thm = Q.store_thm ("insertMin_thm",
-`∀t.
+Theorem insertMin_thm:
+ ∀t.
   good_cmp cmp ∧
   invariant cmp t ∧
   (!k1. k1 ∈ FDOM (to_fmap cmp t) ⇒ key_set_cmp cmp k k1 Less)
   ⇒
   invariant cmp (insertMin k v t) ∧
-  to_fmap cmp (insertMin k v t) = to_fmap cmp t |+ (key_set cmp k,v)`,
+  to_fmap cmp (insertMin k v t) = to_fmap cmp t |+ (key_set cmp k,v)
+Proof
  Induct_on `t`
  >- fs [insertMin_def, singleton_def, to_fmap_def, invariant_def,
         structure_size_def, balanced_def, size_def, key_ordered_def] >>
@@ -1564,10 +1640,11 @@ val insertMin_thm = Q.store_thm ("insertMin_thm",
  rw [balanceL_thm] >>
  imp_res_tac balanceL_thm >>
  rw [FUNION_FUPDATE_1] >>
- metis_tac [FUPDATE_COMMUTES, cmp_thms, key_set_cmp_thm]);
+ metis_tac [FUPDATE_COMMUTES, cmp_thms, key_set_cmp_thm]
+QED
 
-val deleteFindMin = Q.store_thm ("deleteFindMin",
-`∀t t' k v.
+Theorem deleteFindMin:
+ ∀t t' k v.
   good_cmp cmp ∧
   invariant cmp t ∧
   ~null t ∧
@@ -1577,7 +1654,8 @@ val deleteFindMin = Q.store_thm ("deleteFindMin",
   key_ordered cmp k t' Less ∧
   FLOOKUP (to_fmap cmp t) (key_set cmp k) = SOME v ∧
   to_fmap cmp t' =
-    DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)`,
+    DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)
+Proof
  ho_match_mp_tac (fetch "-" "deleteFindMin_ind") >>
  rpt conj_tac >>
  rpt gen_tac >>
@@ -1693,10 +1771,11 @@ val deleteFindMin = Q.store_thm ("deleteFindMin",
      fs [flookup_thm,key_ordered_to_fmap] >>
      rfs [key_ordered_to_fmap] >>
      rw [] >>
-     metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm]));
+     metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm])
+QED
 
-val deleteFindMax = Q.store_thm ("deleteFindMax",
-`∀t t' k v.
+Theorem deleteFindMax:
+ ∀t t' k v.
   good_cmp cmp ∧
   invariant cmp t ∧
   ~null t ∧
@@ -1706,7 +1785,8 @@ val deleteFindMax = Q.store_thm ("deleteFindMax",
   key_ordered cmp k t' Greater ∧
   FLOOKUP (to_fmap cmp t) (key_set cmp k) = SOME v ∧
   to_fmap cmp t' =
-    DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)`,
+    DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)
+Proof
  ho_match_mp_tac (fetch "-" "deleteFindMax_ind") >>
  rpt conj_tac >>
  rpt gen_tac >>
@@ -1821,12 +1901,13 @@ val deleteFindMax = Q.store_thm ("deleteFindMax",
      fs [flookup_thm,key_ordered_to_fmap] >>
      rfs [key_ordered_to_fmap] >>
      rw [] >>
-     metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm]));
+     metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm])
+QED
 
+Triviality FLOOKUP_EXT' = FLOOKUP_EXT |> SIMP_RULE (srw_ss()) [FUN_EQ_THM];
 
-val FLOOKUP_EXT' = FLOOKUP_EXT |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]
-val glue_thm = Q.store_thm ("glue_thm",
-`!l r.
+Theorem glue_thm:
+ !l r.
   good_cmp cmp ∧
   invariant cmp l ∧
   invariant cmp r ∧
@@ -1834,7 +1915,8 @@ val glue_thm = Q.store_thm ("glue_thm",
   balanced (size l) (size r)
   ⇒
   invariant cmp (glue l r) ∧
-  to_fmap cmp (glue l r) = FUNION (to_fmap cmp l) (to_fmap cmp r)`,
+  to_fmap cmp (glue l r) = FUNION (to_fmap cmp l) (to_fmap cmp r)
+Proof
  Cases_on `l` >>
  Cases_on `r` >>
  simp [size_def, glue_def] >>
@@ -1916,7 +1998,8 @@ val glue_thm = Q.store_thm ("glue_thm",
          imp_res_tac almost_balancedL_thm >>
          fs [size_def] >>
          rw [] >>
-         FULL_SIMP_TAC (srw_ss()++ARITH_ss) [])));
+         FULL_SIMP_TAC (srw_ss()++ARITH_ss) []))
+QED
 
 val to_fmap_tac =
   rw [to_fmap_def] >>
@@ -1928,14 +2011,15 @@ val to_fmap_tac =
   rfs [key_ordered_to_fmap] >>
   metis_tac [cmp_thms, to_fmap_key_set, key_set_eq, key_set_cmp_thm];
 
-val delete_thm = Q.store_thm ("delete_thm",
-`!t.
+Theorem delete_thm:
+ !t.
   good_cmp cmp ∧
   invariant cmp t
   ⇒
   invariant cmp (delete cmp k t) ∧
   to_fmap cmp (delete cmp k t) =
-    DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)`,
+    DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)
+Proof
  Induct_on `t`
  >- rw [delete_def, to_fmap_def] >>
  rpt gen_tac >>
@@ -1972,7 +2056,8 @@ val delete_thm = Q.store_thm ("delete_thm",
          rw [FCARD_DRESTRICT, DELETE_INTER2] >>
          imp_res_tac almost_balancedL_thm >>
          metis_tac [FCARD_DEF])
-     >- to_fmap_tac));
+     >- to_fmap_tac)
+QED
 
 Theorem lookup_delete:
  good_cmp cmp /\ invariant cmp t ==>
@@ -1982,14 +2067,16 @@ Proof
  rw[lookup_thm,delete_thm,FLOOKUP_DRESTRICT] \\ metis_tac[key_set_eq,FLOOKUP_DEF]
 QED
 
-val restrict_set_def = Define `
+Definition restrict_set_def:
 restrict_set cmp lo hi =
 { k | option_cmp cmp lo (SOME k) = Less ∧
-      option_cmp2 cmp (SOME k) hi = Less }`;
+      option_cmp2 cmp (SOME k) hi = Less }
+End
 
-val restrict_domain_def = Define `
+Definition restrict_domain_def:
   restrict_domain cmp lo hi m =
-    DRESTRICT m (IMAGE (key_set cmp) (restrict_set cmp lo hi))`;
+    DRESTRICT m (IMAGE (key_set cmp) (restrict_set cmp lo hi))
+End
 
 Triviality restrict_domain_union:
   restrict_domain cmp lo hi (FUNION m1 m2) =
@@ -2031,7 +2118,7 @@ Definition bounded_root_def:
     !s k v l r. t = Bin s k v l r ⇒ k ∈ restrict_set cmp lk hk
 End
 
-Triviality trim_thm:
+Triviality trim_thm: (* slow *)
 !t lk hk cmp.
   good_cmp cmp ∧
   invariant cmp t
@@ -2696,14 +2783,15 @@ Proof
  rw [bounded_all_def, restrict_set_def, option_cmp_def, option_cmp2_def]
 QED
 
-val union_thm = Q.store_thm ("union_thm",
-`!cmp blo bhi t1 t2.
+Theorem union_thm:
+ !cmp blo bhi t1 t2.
   good_cmp cmp ∧
   invariant cmp t1 ∧
   invariant cmp t2
   ⇒
   invariant cmp (union cmp t1 t2) ∧
-  to_fmap cmp (union cmp t1 t2) = (to_fmap cmp t1 ⊌ to_fmap cmp t2)`,
+  to_fmap cmp (union cmp t1 t2) = (to_fmap cmp t1 ⊌ to_fmap cmp t2)
+Proof
  Cases_on `t1` >>
  Cases_on `t2` >>
  simp [union_def, to_fmap_def] >>
@@ -2717,14 +2805,17 @@ val union_thm = Q.store_thm ("union_thm",
  every_case_tac >>
  fs [FLOOKUP_DEF, invariant_eq] >>
  rfs [key_ordered_to_fmap] >>
- metis_tac [cmp_thms, to_fmap_key_set]);
+ metis_tac [cmp_thms, to_fmap_key_set]
+QED
 
-val lookup_union = Q.store_thm("lookup_union",
-  `good_cmp cmp ∧ invariant cmp t1 ∧ invariant cmp t2 ⇒
+Theorem lookup_union:
+   good_cmp cmp ∧ invariant cmp t1 ∧ invariant cmp t2 ⇒
    lookup cmp k (union cmp t1 t2) = case lookup cmp k t1 of
                                       NONE => lookup cmp k t2
-                                    | SOME v => SOME v`,
-  rw[lookup_thm,union_thm,FLOOKUP_FUNION]);
+                                    | SOME v => SOME v
+Proof
+  rw[lookup_thm,union_thm,FLOOKUP_FUNION]
+QED
 
 Triviality hedgeUnionWithKey_thm:
   ∀cmp f blo bhi t1 t2.
@@ -2921,16 +3012,19 @@ Proof
   strip_tac \\ simp [unionWith_def, lookup_unionWithKey]
 QED
 
-val EXT2 = Q.prove (
-`!s1 s2. s1 = s2 ⇔ (!k v. (k,v) ∈ s1 ⇔ (k,v) ∈ s2)`,
+Triviality EXT2:
+ !s1 s2. s1 = s2 ⇔ (!k v. (k,v) ∈ s1 ⇔ (k,v) ∈ s2)
+Proof
  rw [EXTENSION] >>
  EQ_TAC >>
  rw [] >>
  PairCases_on `x` >>
- rw []);
+ rw []
+QED
 
-val lift_key_def = Define `
-lift_key cmp kvs = IMAGE (\(k,v). (key_set cmp k, v)) kvs`;
+Definition lift_key_def:
+lift_key cmp kvs = IMAGE (\(k,v). (key_set cmp k, v)) kvs
+End
 
 Triviality toAscList_helper:
 ∀cmp l t.
@@ -3020,24 +3114,27 @@ Proof
  metis_tac []
 QED
 
-val toAscList_thm = Q.store_thm ("toAscList_thm",
-`!cmp t.
+Theorem toAscList_thm:
+ !cmp t.
   good_cmp cmp ∧
   invariant cmp t
   ⇒
   SORTED (\(x,y) (x',y'). cmp x x' = Less) (toAscList t) ∧
-  lift_key cmp (set (toAscList t)) = set (fmap_to_alist (to_fmap cmp t))`,
+  lift_key cmp (set (toAscList t)) = set (fmap_to_alist (to_fmap cmp t))
+Proof
  rpt gen_tac >>
  strip_tac >>
  qspecl_then [`cmp`, `[]`, `t`] mp_tac toAscList_helper >>
- simp [toAscList_def, lift_key_def]);
+ simp [toAscList_def, lift_key_def]
+QED
 
 (* some useful specialisations of the above theorem *)
 
-val MAP_FST_toAscList = Q.store_thm("MAP_FST_toAscList",
-  `good_cmp cmp ∧ invariant cmp t ⇒
+Theorem MAP_FST_toAscList:
+   good_cmp cmp ∧ invariant cmp t ⇒
    SORTED (λx y. cmp x y = Less) (MAP FST (toAscList t)) ∧
-   FDOM (to_fmap cmp t) = IMAGE (key_set cmp) (set (MAP FST (toAscList t)))`,
+   FDOM (to_fmap cmp t) = IMAGE (key_set cmp) (set (MAP FST (toAscList t)))
+Proof
   rw[] \\ imp_res_tac toAscList_thm
   >- (
     qmatch_goalsub_abbrev_tac`SORTED R` \\
@@ -3048,16 +3145,19 @@ val MAP_FST_toAscList = Q.store_thm("MAP_FST_toAscList",
     rw[sorted_map] \\
     rw[Abbr`R`,relationTheory.inv_image_def,LAMBDA_PROD] ) \\
   fs[Once EXTENSION,lift_key_def,MEM_MAP,EXISTS_PROD,FORALL_PROD,FLOOKUP_DEF] \\
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val MEM_toAscList = Q.store_thm("MEM_toAscList",
-  `good_cmp cmp ∧ invariant cmp t ∧ MEM (k,v) (toAscList t) ⇒
-   FLOOKUP (to_fmap cmp t) (key_set cmp k) = SOME v`,
+Theorem MEM_toAscList:
+   good_cmp cmp ∧ invariant cmp t ∧ MEM (k,v) (toAscList t) ⇒
+   FLOOKUP (to_fmap cmp t) (key_set cmp k) = SOME v
+Proof
   rw[] \\
   imp_res_tac toAscList_thm \\
   `(key_set cmp k,v) ∈ lift_key cmp (set (toAscList t))`
   by (simp_tac std_ss [lift_key_def] \\ simp[EXISTS_PROD] \\ metis_tac[])
-  \\ rfs[]);
+  \\ rfs[]
+QED
 
 Theorem ALOOKUP_toAscList:
   good_cmp cmp /\ invariant cmp t /\ (!x y. cmp x y = Equal <=> x = y) ==>
@@ -3082,24 +3182,27 @@ Proof
   )
 QED
 
-val compare_good_cmp = Q.store_thm ("compare_good_cmp",
-`!cmp1 cmp2. good_cmp cmp1 ∧ good_cmp cmp2 ⇒ good_cmp (compare cmp1 cmp2)`,
+Theorem compare_good_cmp:
+ !cmp1 cmp2. good_cmp cmp1 ∧ good_cmp cmp2 ⇒ good_cmp (compare cmp1 cmp2)
+Proof
  rw [] >>
  imp_res_tac pair_cmp_good >>
  imp_res_tac list_cmp_good >>
  rpt (pop_assum mp_tac) >>
  REWRITE_TAC [good_cmp_def, compare_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val compare_thm1 = Q.prove (
-`!cmp1 cmp2 t1 t2.
+Triviality compare_thm1:
+ !cmp1 cmp2 t1 t2.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
   invariant cmp1 t1 ∧
   invariant cmp1 t2 ∧
   compare cmp1 cmp2 t1 t2 = Equal
   ⇒
-  fmap_rel (\x y. cmp2 x y = Equal) (to_fmap cmp1 t1) (to_fmap cmp1 t2)`,
+  fmap_rel (\x y. cmp2 x y = Equal) (to_fmap cmp1 t1) (to_fmap cmp1 t2)
+Proof
  rw [compare_def, fmap_rel_OPTREL_FLOOKUP, OPTREL_def] >>
  imp_res_tac toAscList_thm >>
  fs [lift_key_def, list_cmp_equal_list_rel, pair_cmp_def] >>
@@ -3143,29 +3246,33 @@ val compare_thm1 = Q.prove (
      >- metis_tac [] >>
      qexists_tac `q'` >>
      rw [] >>
-     metis_tac [cmp_thms]));
-val _ = print "Proved compare_thm1";
+     metis_tac [cmp_thms])
+QED
 
-
-val NONE_lem = Q.prove (
-`x = NONE ⇔ ¬?y. x = SOME y`,
+Triviality NONE_lem:
+ x = NONE ⇔ ¬?y. x = SOME y
+Proof
  Cases_on `x` >>
- rw []);
+ rw []
+QED
 
-val pair_cmp_lem = Q.prove (
-`!cmp1 cmp2. pair_cmp cmp1 cmp2 (x1,x2) (y1,y2) = Equal ⇔ cmp1 x1 y1 = Equal ∧ cmp2 x2 y2 = Equal`,
+Triviality pair_cmp_lem:
+ !cmp1 cmp2. pair_cmp cmp1 cmp2 (x1,x2) (y1,y2) = Equal ⇔ cmp1 x1 y1 = Equal ∧ cmp2 x2 y2 = Equal
+Proof
  rw [pair_cmp_def] >>
- every_case_tac);
+ every_case_tac
+QED
 
-val strict_sorted_unique = Q.prove (
-`!cmp l x1 y1 x2 y2.
+Triviality strict_sorted_unique:
+ !cmp l x1 y1 x2 y2.
   good_cmp cmp ∧
   SORTED (λ(x,y) (x',y'). cmp x x' = Less) l ∧
   MEM (x1,y1) l ∧
   MEM (x2,y2) l ∧
   cmp x1 x2 = Equal
   ⇒
-  x1 = x2 ∧ y1 = y2`,
+  x1 = x2 ∧ y1 = y2
+Proof
  Induct_on `l` >>
  rw [] >>
  `transitive (λ(x,y) (x',y'). cmp x x' = Less)` by metis_tac [good_cmp_trans] >>
@@ -3176,18 +3283,19 @@ val strict_sorted_unique = Q.prove (
  >- metis_tac [cmp_thms] >>
  Cases_on `h` >>
  fs [] >>
- res_tac);
-val _ = print "Proved strict_sorted_unique\n"
+ res_tac
+QED
 
-val strict_sorted_eq_el = Q.prove (
-`!cmp l m n.
+Triviality strict_sorted_eq_el:
+ !cmp l m n.
   good_cmp cmp ∧
   SORTED (λ(x,y) (x',y'). cmp x x' = Less) l ∧
   cmp (FST (EL m l)) (FST (EL n l)) = Equal ∧
   m < LENGTH l ∧
   n < LENGTH l
   ⇒
-  m = n`,
+  m = n
+Proof
  Induct_on `l` >>
  rw [] >>
  `transitive (λ(x,y) (x',y'). cmp x x' = Less)` by metis_tac [good_cmp_trans] >>
@@ -3210,11 +3318,11 @@ val strict_sorted_eq_el = Q.prove (
      `MEM (EL (PRE m) l) l` by metis_tac [MEM_EL] >>
      Cases_on `EL (PRE m) l` >>
      fs [] >>
-     metis_tac [cmp_thms]));
-val _ = print "Proved strict_sorted_eq_el\n";
+     metis_tac [cmp_thms])
+QED
 
-val compare_lem2 = Q.prove (
-`!cmp1 cmp2 n l1 l2.
+Triviality compare_lem2:
+ !cmp1 cmp2 n l1 l2.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
   (∀k.
@@ -3234,7 +3342,8 @@ val compare_lem2 = Q.prove (
   ⇒
   n ≠ LENGTH l2 ∧
   (λ(p1,p2) (p1',p2'). pair_cmp cmp1 cmp2 (p1,p2) (p1',p2') = Equal)
-    (EL n l1) (EL n l2)`,
+    (EL n l1) (EL n l2)
+Proof
  rpt GEN_TAC >>
  rpt DISCH_TAC >>
  fs [] >>
@@ -3331,18 +3440,19 @@ val compare_lem2 = Q.prove (
                       Cases_on `EL n'' l2` >>
                       fs [] >>
                       metis_tac [cmp_thms]) >>
-         metis_tac [cmp_thms])));
-val _ = print "Proved compare_lem2\n";
+         metis_tac [cmp_thms]))
+QED
 
-val compare_thm2 = Q.prove (
-`!cmp1 cmp2 t1 t2.
+Triviality compare_thm2:
+ !cmp1 cmp2 t1 t2.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
   invariant cmp1 t1 ∧
   invariant cmp1 t2 ∧
   fmap_rel (\x y. cmp2 x y = Equal) (to_fmap cmp1 t1) (to_fmap cmp1 t2)
   ⇒
-  compare cmp1 cmp2 t1 t2 = Equal`,
+  compare cmp1 cmp2 t1 t2 = Equal
+Proof
  rw [compare_def, fmap_rel_OPTREL_FLOOKUP, OPTREL_def, list_cmp_equal_list_rel] >>
  imp_res_tac toAscList_thm >>
  fs [EXTENSION] >>
@@ -3385,11 +3495,11 @@ val compare_thm2 = Q.prove (
      Cases_on `EL n l1` >>
      Cases_on `EL n l2` >>
      fs [] >>
-     metis_tac [good_cmp_def, pair_cmp_good]));
-val _ = print "Proved compare_thm2\n";
+     metis_tac [good_cmp_def, pair_cmp_good])
+QED
 
-val compare_thm = Q.store_thm ("compare_thm",
-`!cmp1 cmp2 t1 t2.
+Theorem compare_thm:
+ !cmp1 cmp2 t1 t2.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
   invariant cmp1 t1 ∧
@@ -3397,8 +3507,10 @@ val compare_thm = Q.store_thm ("compare_thm",
   ⇒
   (compare cmp1 cmp2 t1 t2 = Equal
    ⇔
-   fmap_rel (\x y. cmp2 x y = Equal) (to_fmap cmp1 t1) (to_fmap cmp1 t2))`,
- metis_tac [compare_thm1, compare_thm2]);
+   fmap_rel (\x y. cmp2 x y = Equal) (to_fmap cmp1 t1) (to_fmap cmp1 t2))
+Proof
+ metis_tac [compare_thm1, compare_thm2]
+QED
 
 Theorem mapWithKey_thm:
   ∀t.
@@ -3452,8 +3564,8 @@ Proof
       FLOOKUP_FUN_FMAP, FLOOKUP_o_f, CaseEq "option", flookup_thm]
 QED
 
-val splitLookup_thm = Q.store_thm ("splitLookup_thm",
-`!t lt v gt.
+Theorem splitLookup_thm:
+ !t lt v gt.
   good_cmp cmp ∧
   invariant cmp t ∧
   (lt,v,gt) = splitLookup cmp k t
@@ -3466,7 +3578,8 @@ val splitLookup_thm = Q.store_thm ("splitLookup_thm",
   to_fmap cmp t =
     case v of
        | NONE => FUNION (to_fmap cmp lt) (to_fmap cmp gt)
-       | SOME v => (FUNION (to_fmap cmp lt) (to_fmap cmp gt)) |+ (key_set cmp k, v)`,
+       | SOME v => (FUNION (to_fmap cmp lt) (to_fmap cmp gt)) |+ (key_set cmp k, v)
+Proof
  Induct_on `t` >>
  simp [splitLookup_def, to_fmap_def, key_ordered_to_fmap] >>
  rpt gen_tac >>
@@ -3533,15 +3646,17 @@ val splitLookup_thm = Q.store_thm ("splitLookup_thm",
      rfs [key_ordered_to_fmap, flookup_thm] >>
      fs [key_ordered_to_fmap, flookup_thm] >>
      res_tac >>
-     metis_tac [cmp_thms, key_set_cmp_def, key_set_cmp_thm]));
+     metis_tac [cmp_thms, key_set_cmp_def, key_set_cmp_thm])
+QED
 
-val submap'_thm = Q.prove (
-`!cmp f t1 t2.
+Triviality submap'_thm:
+ !cmp f t1 t2.
   good_cmp cmp ∧
   invariant cmp t1 ∧
   invariant cmp t2
   ⇒
-  (submap' cmp f t1 t2 ⇔ !k v. lookup cmp k t1 = SOME v ⇒ ?v'. lookup cmp k t2 = SOME v' ∧ f v v')`,
+  (submap' cmp f t1 t2 ⇔ !k v. lookup cmp k t1 = SOME v ⇒ ?v'. lookup cmp k t2 = SOME v' ∧ f v v')
+Proof
  ho_match_mp_tac (fetch "-" "submap'_ind") >>
  rpt conj_tac
  >- rw [lookup_def, submap'_def]
@@ -3673,15 +3788,17 @@ val submap'_thm = Q.prove (
              rfs [key_ordered_to_fmap] >>
              res_tac >>
              fs [key_set_cmp_def, key_set_def] >>
-             metis_tac [cmp_thms]))));
+             metis_tac [cmp_thms])))
+QED
 
-val isSubmapOfBy_thm = Q.store_thm ("isSubmapOfBy_thm",
-`!cmp f t1 t2.
+Theorem isSubmapOfBy_thm:
+ !cmp f t1 t2.
   good_cmp cmp ∧
   invariant cmp t1 ∧
   invariant cmp t2
   ⇒
-  (isSubmapOfBy cmp f t1 t2 ⇔ !k v. lookup cmp k t1 = SOME v ⇒ ?v'. lookup cmp k t2 = SOME v' ∧ f v v')`,
+  (isSubmapOfBy cmp f t1 t2 ⇔ !k v. lookup cmp k t1 = SOME v ⇒ ?v'. lookup cmp k t2 = SOME v' ∧ f v v')
+Proof
  rw [isSubmapOfBy_def] >>
  Cases_on `size t1 ≤ size t2` >>
  rw [submap'_thm] >>
@@ -3699,23 +3816,27 @@ val isSubmapOfBy_thm = Q.store_thm ("isSubmapOfBy_thm",
  imp_res_tac to_fmap_key_set >>
  rw [] >>
  qexists_tac `k` >>
- rw []);
+ rw []
+QED
 
-val isSubmapOf_thm = Q.store_thm ("isSubmapOf_thm",
-`!cmp t1 t2.
+Theorem isSubmapOf_thm:
+ !cmp t1 t2.
   good_cmp cmp ∧
   invariant cmp t1 ∧
   invariant cmp t2
   ⇒
-  (isSubmapOf cmp t1 t2 ⇔ !k v. lookup cmp k t1 = SOME v ⇒ lookup cmp k t2 = SOME v)`,
- rw [isSubmapOf_def, isSubmapOfBy_thm]);
+  (isSubmapOf cmp t1 t2 ⇔ !k v. lookup cmp k t1 = SOME v ⇒ lookup cmp k t2 = SOME v)
+Proof
+ rw [isSubmapOf_def, isSubmapOfBy_thm]
+QED
 
-val fromList_thm = Q.store_thm ("fromList_thm",
-`!cmp l.
+Theorem fromList_thm:
+ !cmp l.
   good_cmp cmp
   ⇒
   invariant cmp (fromList cmp l) ∧
-  to_fmap cmp (fromList cmp l) = alist_to_fmap (MAP (\(k,v). (key_set cmp k, v)) l)`,
+  to_fmap cmp (fromList cmp l) = alist_to_fmap (MAP (\(k,v). (key_set cmp k, v)) l)
+Proof
  Induct_on `l` >>
  simp [fromList_def, empty_thm] >>
  rpt gen_tac >>
@@ -3725,20 +3846,23 @@ val fromList_thm = Q.store_thm ("fromList_thm",
  inv_mp_tac insert_thm >>
  strip_tac >>
  simp [] >>
- fs [fromList_def]);
+ fs [fromList_def]
+QED
 
 (* ------------------------ Extra stuff, not from ghc ----------------- *)
 
-val map_keys_def = Define `
-map_keys cmp f t = fromList cmp (MAP (\(k,v). (f k, v)) (toAscList t))`;
+Definition map_keys_def:
+map_keys cmp f t = fromList cmp (MAP (\(k,v). (f k, v)) (toAscList t))
+End
 
-val in_lift_key = Q.prove (
-`!cmp k v l.
+Triviality in_lift_key:
+ !cmp k v l.
   good_cmp cmp ∧
   SORTED (λ(x,y:'a) (x',y':'a). cmp x x' = Less) l ∧
   transitive (λ(x,y:'a) (x',y':'a). cmp x x' = Less)
   ⇒
-  ((k,v) ∈ lift_key cmp (set l) ⇔ ALOOKUP (MAP (λ(x,y). (key_set cmp x, y)) l) k = SOME v)`,
+  ((k,v) ∈ lift_key cmp (set l) ⇔ ALOOKUP (MAP (λ(x,y). (key_set cmp x, y)) l) k = SOME v)
+Proof
  Induct_on `l` >>
  fs [lift_key_def, key_set_def, LAMBDA_PROD, EXISTS_PROD, EXTENSION, FORALL_PROD] >>
  rw [] >>
@@ -3748,88 +3872,18 @@ val in_lift_key = Q.prove (
  fs [SORTED_EQ] >>
  res_tac >>
  fs [] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
- (*
-val alookup_unit_lem = Q.prove (
-`!cmp1 cmp2 f k l x.
-  good_cmp cmp1 ∧
-  good_cmp cmp2 ∧
-  resp_equiv2 cmp1 cmp2 f
-  ⇒
-  (ALOOKUP (MAP (\(k,v). (key_set cmp1 k, ())) l) (key_set cmp1 x') =
-   ALOOKUP (MAP (\(k,v). (key_set cmp2 (f k), ())) l) (key_set cmp2 (f x')))`,
-
- Induct_on `l` >>
- rw [] >>
- PairCases_on `h` >>
- rw [] >>
- rfs [key_set_eq, resp_equiv2_def] >>
- >- (rfs [] >>
-     fs [EXTENSION, key_set_def] >>
-     match_mp_tac (METIS_PROVE [] ``F⇒x``) >>
-     rw [] >>
-     pop_assum mp_tac >>
-     simp [] >>
-     eq_tac >>
-     rw [] >>
-     fs [resp_equiv2_def]
-     >- (qexists_tac `key_set cmp2 (f h0)` >>
-         rw [key_set_def] >>
-         metis_tac [cmp_thms])
-     >- metis_tac [cmp_thms])
- >- (rfs [] >>
-     rw [] >>
-     fs [EXTENSION, key_set_def] >>
-     Cases_on `x ∈ k` >>
-     fs [resp_equiv2_def] >>
-     first_x_assum (qspecl_then [`f x`] assume_tac) >>
-     fs [] >>
-     Cases_on `cmp2 (f h0) (f x) = Equal` >>
-     fs []
-metis_tac [cmp_thms]
-
-
- rfs [key_set_eq] >>
-     `IMAGE f (key_set cmp1 h0) ⊆ key_set cmp2 (f h0)` by metis_tac [key_set_map] >>
-     fs [SUBSET_DEF, EXTENSION] >>
-     `x ∈ key_set cmp2 (f h0) ∧ ¬?x'.  x = f x' ∧ x' ∈ key_set cmp1 h0` by metis_tac []
-     fs []
-
-     fs [key_set_def, resp_equiv2_def, EXTENSION] >>
-     rw [] >>
-     rfs [] >>
-     Cases_on `h1 = v` >>
-     rw [] >>
-
-     pop_assum mp_tac >>
-     match_mp_tac (METIS_PROVE [] ``x ⇒ (~x ⇒ y)``) >>
-     eq_tac >>
-     rw []
-
-     metis_tac [cmp_thms]
- >- (`IMAGE f k ≠ {}` by cheat >>
-     imp_res_tac CHOICE_DEF >>
-     fs [] >>
-     fs [] >>
-
-     rfs [key_set_eq] >>
-     fs [key_set_def, resp_equiv2_def] >>
-     metis_tac [cmp_thms])
-
- fs [resp_equiv2_def, key_set_def, EXTENSION] >>
- rfs []
- metis_tac []
- *)
-
-val bigunion_key_sets = Q.prove (
-`!cmp1.
+Triviality bigunion_key_sets:
+ !cmp1.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
   resp_equiv2 cmp1 cmp2 f
   ⇒
   BIGUNION (IMAGE (\x. key_set cmp2 (f x)) (key_set cmp1 x)) =
-  key_set cmp2 (CHOICE (IMAGE f (key_set cmp1 x)))`,
+  key_set cmp2 (CHOICE (IMAGE f (key_set cmp1 x)))
+Proof
  rw [EXTENSION] >>
  `IMAGE f (key_set cmp1 x) ≠ {}` by (rw [EXTENSION, key_set_def] >> metis_tac [cmp_thms]) >>
  imp_res_tac CHOICE_DEF >>
@@ -3840,182 +3894,37 @@ val bigunion_key_sets = Q.prove (
  >- metis_tac [cmp_thms] >>
  qexists_tac `key_set cmp2 (f x)` >>
  rw [key_set_def] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
-val image_lem = Q.prove (
-`good_cmp cmp1
+Triviality image_lem:
+ good_cmp cmp1
  ⇒
  IMAGE (λx. key_set cmp2 (f x)) (key_set cmp1 k'') =
- { key_set cmp2 (f x) | x | cmp1 x k'' = Equal }`,
+ { key_set cmp2 (f x) | x | cmp1 x k'' = Equal }
+Proof
  rw [EXTENSION,key_set_def] >>
- metis_tac [cmp_thms]);
+ metis_tac [cmp_thms]
+QED
 
- (*
-val map_keys_thm = Q.store_thm ("map_keys_thm",
-`!cmp1 cmp2 f t.
-  good_cmp cmp1 ∧
-  good_cmp cmp2 ∧
-  invariant cmp1 t ∧
-  resp_equiv2 cmp1 cmp2 f ∧
-  equiv_inj cmp1 cmp2 f
-  ⇒
-  invariant cmp2 (map_keys cmp2 f t) ∧
-  to_fmap cmp2 (map_keys cmp2 f t) = MAP_KEYS (BIGUNION o IMAGE (key_set cmp2 o f)) (to_fmap cmp1 t)`,
-
- simp [map_keys_def] >>
- rpt gen_tac >>
- DISCH_TAC >>
- inv_mp_tac fromList_thm >>
- rw [MAP_MAP_o, combinTheory.o_DEF] >>
- rw [FLOOKUP_EXT'] >>
- `SORTED (λ(x,y) (x',y'). cmp1 x x' = Less) (toAscList t) ∧
-  lift_key cmp1 (set (toAscList t)) = set (fmap_to_alist (to_fmap cmp1 t))`
-            by metis_tac [toAscList_thm] >>
- pop_assum mp_tac >>
- simp [EXTENSION, MEM_MAP, LAMBDA_PROD, EXISTS_PROD, FORALL_PROD] >>
- `transitive (λ(x,y:'c) (x',y':'c). cmp1 x x' = Less)` by metis_tac [good_cmp_trans] >>
- rw [in_lift_key] >>
- fs [] >>
- rw [FLOOKUP_DEF] >>
- `INJ (λx. BIGUNION (IMAGE (λx. key_set cmp2 (f x)) x)) (FDOM (to_fmap cmp1 t)) UNIV`
-          by rw [INJ_DEF] >>
-          imp_res_tac to_fmap_key_set
-          rw [] >>
-          CCONTR_TAC >>
-          fs [equiv_inj_def] >>
-          rfs [key_set_eq] >>
-          `cmp2 (f k'') (f k') ≠ Equal` by metis_tac []
-          rfs [image_lem]
-
-          fs [EXTENSION]
-          fs [PULL_EXISTS, PULL_FORALL]
-
-
-          rfs [bigunion_key_sets]
-
-              fs [resp_equiv2_def, equiv_inj_def]
-
-              rw [key_set_def]
-              fs [key_set_def]
-              CCONTR_TAC
-              Cases_on `cmp1 k' k'' = Equal` >>
-              fs []
-              `cmp2 (f k') (f k'') ≠ Equal` by metis_tac [cmp_thms]
-metis_tac [cmp_thms]
-
- Cases_on `ALOOKUP (MAP (λ(p1,p2). (key_set cmp2 (f p1),())) (toAscList t)) k = NONE` >>
- fs []
-
- Cases_on `?x. k = key_set cmp2 x` >>
- fs []
- >- (Cases_on `?x'. x = f x'` >>
-     fs []
-     >- (first_x_assum (qspecl_then [`key_set cmp1 x'`] mp_tac) >>
-         rw []
-
- rw [] >>
-
-
- fs [lift_key_def]
-
- Cases_on `FLOOKUP (MAP_KEYS (IMAGE f) (to_fmap cmp1 t)) k`
- >- (fs [ALOOKUP_NONE, MEM_MAP, LAMBDA_PROD, EXISTS_PROD] >>
-     CCONTR_TAC >>
-     fs [] >>
-     rw [] >>
-     fs [lift_key_def, resp_equiv2_def, EXTENSION, LAMBDA_PROD,EXISTS_PROD, FORALL_PROD,
-         PULL_FORALL, PULL_EXISTS]>>
-
-     fs [PULL_EXISTS, PULL_FORALL, key_set_def, EXTENSION]
-
-     first_x_assum (qspecl_then [`key_set cmp1 p_1'`, `p_2`] assume_tac) >>
-     fs [FLOOKUP_DEF, MAP_KEYS_def] >>
-     fs [EXTENSION, key_set_def] >>
-     metis_tac [cmp_thms]
-
-val key_set_map = Q.prove (
-`!cmp1 cmp2 f k.
-  resp_equiv2 cmp1 cmp2 f ⇒
-  IMAGE f (key_set cmp1 k) SUBSET key_set cmp2 (f k)`,
- rw [key_set_def, SUBSET_DEF, resp_equiv2_def] >>
- metis_tac []);
-
-`good_cmp cmp1 ∧ good_cmp cmp2 ∧ (!x y. cmp1 x y = Equal ⇒ x = y) /\ (!x y. cmp2 x y = Equal ⇒ x = y) ∧ (!x y. f x = f y ⇒ x = y) ⇒ resp_equiv2 cmp1 cmp2 f`
-          rw [resp_equiv2_def] >>
-          metis_tac [cmp_thms]
-
-
-val flookup_lem = Q.prove (
-`!cmp1 cmp2 m k v f.
-  (FLOOKUP m k =
-   FLOOKUP (MAP_KEYS (BIGUNION o IMAGE (λx. key_set cmp2 (f x))) m) (BIGUNION o IMAGE (λx. key_set cmp2 (f k))))`,
-
- rw [FLOOKUP_DEF, MAP_KEYS_def] >>
- eq_tac >>
- rw []
-
-
-val map_keys_thm = Q.store_thm ("map_keys_thm",
-`!cmp1 cmp2 f t.
-  good_cmp cmp1 ∧
-  good_cmp cmp2 ∧
-  invariant cmp1 t ∧
-  resp_equiv2 cmp1 cmp2 f
-  ⇒
-  invariant cmp2 (map_keys cmp2 f t) ∧
-  to_fmap cmp2 (map_keys cmp2 f t) = MAP_KEYS (IMAGE f) (to_fmap cmp1 t)`,
-
- simp [map_keys_def] >>
- rpt gen_tac >>
- DISCH_TAC >>
- inv_mp_tac fromList_thm >>
- rw [MAP_MAP_o, combinTheory.o_DEF] >>
- rw [LAMBDA_PROD] >>
- rw [FLOOKUP_EXT'] >>
- `SORTED (λ(x,y) (x',y'). cmp1 x x' = Less) (toAscList t) ∧
-  lift_key cmp1 (set (toAscList t)) = set (fmap_to_alist (to_fmap cmp1 t))`
-            by metis_tac [toAscList_thm] >>
- pop_assum mp_tac >>
- simp [EXTENSION, MEM_MAP, LAMBDA_PROD, EXISTS_PROD, FORALL_PROD] >>
- `transitive (λ(x,y:'c) (x',y':'c). cmp1 x x' = Less)` by metis_tac [good_cmp_trans] >>
- rw [in_lift_key] >>
- fs []
-
-
- fs [lift_key_def]
-
- Cases_on `FLOOKUP (MAP_KEYS (IMAGE f) (to_fmap cmp1 t)) k`
- >- (rw [ALOOKUP_NONE, MEM_MAP, LAMBDA_PROD, EXISTS_PROD] >>
-     CCONTR_TAC >>
-     fs [] >>
-     rw [] >>
-     fs [lift_key_def, resp_equiv2_def, EXTENSION, LAMBDA_PROD,EXISTS_PROD, FORALL_PROD,
-         PULL_FORALL, PULL_EXISTS]>>
-
-     fs [PULL_EXISTS, PULL_FORALL, key_set_def, EXTENSION]
-
-     first_x_assum (qspecl_then [`key_set cmp1 p_1'`, `p_2`] assume_tac) >>
-     fs [FLOOKUP_DEF, MAP_KEYS_def] >>
-     fs [EXTENSION, key_set_def] >>
-     metis_tac [cmp_thms]
-     *)
-
-val every_def = Define `
+Definition every_def:
 (every f Tip = T) ∧
 (every f (Bin _ kx x l r) =
   if f kx x then
     if every f l then
       if every f r then T else F
     else F
-  else F)`;
+  else F)
+End
 
-val every_thm = Q.store_thm ("every_thm",
-`!f t cmp.
+Theorem every_thm:
+ !f t cmp.
   good_cmp cmp ∧
   invariant cmp t ∧
   resp_equiv cmp f
   ⇒
-  (every f t ⇔ (!k v. lookup cmp k t = SOME v ⇒ f k v))`,
+  (every f t ⇔ (!k v. lookup cmp k t = SOME v ⇒ f k v))
+Proof
  Induct_on `t` >>
  rw [every_def, lookup_def] >>
  fs [invariant_eq, resp_equiv_def] >>
@@ -4047,9 +3956,10 @@ val every_thm = Q.store_thm ("every_thm",
      rfs [key_ordered_to_fmap] >>
      res_tac >>
      imp_res_tac key_set_cmp_thm >>
-     metis_tac [cmp_thms]));
+     metis_tac [cmp_thms])
+QED
 
-val exists_def = Define `
+Definition exists_def:
 (exists f Tip = F) ∧
 (exists f (Bin _ kx x l r) =
   if f kx x then
@@ -4059,15 +3969,17 @@ val exists_def = Define `
   else if exists f r then
     T
   else
-    F)`;
+    F)
+End
 
-val exists_thm = Q.store_thm ("exists_thm",
-`!f t cmp.
+Theorem exists_thm:
+ !f t cmp.
   good_cmp cmp ∧
   invariant cmp t ∧
   resp_equiv cmp f
   ⇒
-  (exists f t ⇔ (?k v. lookup cmp k t = SOME v ∧ f k v))`,
+  (exists f t ⇔ (?k v. lookup cmp k t = SOME v ∧ f k v))
+Proof
  Induct_on `t` >>
  rw [exists_def, lookup_def] >>
  fs [invariant_eq, resp_equiv_def] >>
@@ -4097,7 +4009,8 @@ val exists_thm = Q.store_thm ("exists_thm",
      metis_tac [cmp_thms])
  >- (EVERY_CASE_TAC >>
      fs [] >>
-     metis_tac []));
+     metis_tac [])
+QED
 
 Theorem filterWithKey_thm:
   ∀f t cmp.
