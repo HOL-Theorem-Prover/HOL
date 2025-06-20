@@ -2163,13 +2163,8 @@ Triviality link_balanced_lem1:
   ⇒
   almost_balancedL (l + (r + 2)) rz
 Proof
- fs [almost_balancedL_def, balanced_def, TIMES_MIN, LESS_OR_EQ, delta_def, LEFT_ADD_DISTRIB] >>
- CCONTR_TAC >>
- fs [NOT_LESS, LESS_OR_EQ] >>
- fs [MIN_DEF] >>
- rw [] >>
- every_case_tac >>
- fs [NOT_LESS, LESS_OR_EQ]
+ simp_tac std_ss [almost_balancedL_def, balanced_def,delta_def] >>
+ simp [MIN_DEF] >> decide_tac
 QED
 
 Triviality link_balanced_lem2:
@@ -2180,13 +2175,8 @@ Triviality link_balanced_lem2:
   ⇒
   almost_balancedR ly (SUC (l + r) + 1)
 Proof
- fs [ADD1, almost_balancedR_def, balanced_def, TIMES_MIN, LESS_OR_EQ, delta_def, LEFT_ADD_DISTRIB] >>
- CCONTR_TAC >>
- fs [NOT_LESS, LESS_OR_EQ] >>
- fs [MIN_DEF] >>
- rw [] >>
- every_case_tac >>
- fs [NOT_LESS, LESS_OR_EQ]
+ simp_tac std_ss [almost_balancedR_def, balanced_def, delta_def] >>
+ simp [MIN_DEF] >> decide_tac
 QED
 
 Triviality link_balanced_lem3:
@@ -2196,9 +2186,8 @@ Triviality link_balanced_lem3:
   ⇒
   balanced (l + 1) (r + 1)
 Proof
- fs [ADD1, balanced_def, TIMES_MIN, LESS_OR_EQ, delta_def, LEFT_ADD_DISTRIB] >>
- CCONTR_TAC >>
- fs [NOT_LESS, LESS_OR_EQ, MIN_DEF]
+ simp_tac std_ss [balanced_def, delta_def] >>
+ simp [MIN_DEF] >> decide_tac
 QED
 
 Triviality link2_balanced_lem:
@@ -2207,11 +2196,8 @@ Triviality link2_balanced_lem:
   delta * (l + lx + 1) < r + ry + 1 ⇒
     almost_balancedL (l + lx + r + 1) ry
 Proof
-  simp [almost_balancedL_def, balanced_def, TIMES_MIN, LESS_OR_EQ, delta_def,
-        LEFT_ADD_DISTRIB]
-  \\ CCONTR_TAC
-  \\ fs [NOT_LESS, LESS_OR_EQ] \\ fs [MIN_DEF]
-  \\ rw [] \\ every_case_tac \\ gs [NOT_LESS, LESS_OR_EQ]
+  simp_tac std_ss [almost_balancedL_def, balanced_def, delta_def] >>
+  simp [MIN_DEF] >> decide_tac
 QED
 
 Triviality link2_balanced_lem2:
@@ -2221,11 +2207,8 @@ Triviality link2_balanced_lem2:
   delta * (r + ry + 1) < l + lx + 1 ⇒
     almost_balancedR lx (l + r + ry + 1)
 Proof
-  simp [almost_balancedR_def, balanced_def, TIMES_MIN, LESS_OR_EQ, delta_def,
-        LEFT_ADD_DISTRIB]
-  \\ CCONTR_TAC
-  \\ fs [NOT_LESS, LESS_OR_EQ] \\ fs [MIN_DEF]
-  \\ rw [] \\ every_case_tac \\ gs [NOT_LESS, LESS_OR_EQ]
+  rewrite_tac [almost_balancedR_def, balanced_def, delta_def] >>
+  simp [MIN_DEF] >> decide_tac
 QED
 
 Triviality link_thm:
@@ -2505,7 +2488,7 @@ Proof
  rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def]
 QED
 
-Triviality restrict_domain_partition:
+Triviality restrict_domain_partition: (* slow *)
 !cmp x l h t1 t2.
   good_cmp cmp ∧
   x ∈ restrict_set cmp l h ∧
@@ -2519,8 +2502,6 @@ Triviality restrict_domain_partition:
            (restrict_domain cmp (SOME x) h t2)
 Proof
  rw [restrict_domain_def, FLOOKUP_EXT'] >>
- every_case_tac >>
- rw [] >>
  fs [restrict_set_def] >>
  `h = NONE ∨ ?h'. h = SOME h'` by (Cases_on `h` >> simp[]) >>
  `l = NONE ∨ ?l'. l = SOME l'` by (Cases_on `l` >> simp[]) >>
@@ -3188,10 +3169,14 @@ Theorem compare_good_cmp:
  !cmp1 cmp2. good_cmp cmp1 ∧ good_cmp cmp2 ⇒ good_cmp (compare cmp1 cmp2)
 Proof
  rw [] >>
- imp_res_tac pair_cmp_good >>
- imp_res_tac list_cmp_good >>
+ ‘good_cmp (list_cmp (pair_cmp cmp1 cmp2))’ by
+    (irule list_cmp_good \\ irule pair_cmp_good \\ simp []) >>
+ last_x_assum kall_tac >>
+ last_x_assum kall_tac >>
  rpt (pop_assum mp_tac) >>
- REWRITE_TAC [good_cmp_def, compare_def] >>
+ rewrite_tac [good_cmp_def, compare_def] >>
+ rpt strip_tac >>
+ rpt (last_x_assum irule >> rewrite_tac [] >> NO_TAC) >>
  metis_tac []
 QED
 
@@ -3877,7 +3862,7 @@ Proof
  metis_tac [cmp_thms]
 QED
 
-Triviality bigunion_key_sets:
+Triviality bigunion_key_sets: (* slow *)
  !cmp1.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
@@ -4096,8 +4081,12 @@ Proof
   \\ drule_all_then strip_assume_tac every_thm \\ rw []
   \\ drule_all_then assume_tac lookup_thm
   \\ gs [FLOOKUP_FDIFF, IN_DEF, LAMBDA_PROD, EXISTS_PROD, resp_equiv_def]
-  \\ ‘key_set cmp k ≠ {}’
-    by gs [EXTENSION, key_set_def, good_cmp_thm, SF SFY_ss]
+  \\ ‘key_set cmp k ≠ {}’ by
+    (gvs [key_set_def,EXTENSION]
+     \\ last_x_assum mp_tac
+     \\ rpt $ pop_assum kall_tac
+     \\ rewrite_tac [good_cmp_thm]
+     \\ metis_tac [])
   \\ drule_then assume_tac CHOICE_DEF
   \\ ‘f k v = f (CHOICE (key_set cmp k)) v’
     suffices_by rw []
