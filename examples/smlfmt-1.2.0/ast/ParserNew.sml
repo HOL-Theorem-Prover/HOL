@@ -219,10 +219,12 @@ end
 structure ParserNew = struct
 open AstNew
 
-fun parseSMLSimple body = let
+fun parseSML body parseError = let
   val pos = ref 0
   fun cur () = String.sub (body, !pos) handle Subscript => #"\000"
+  fun ahead i = String.sub (body, !pos + i) handle Subscript => #"\000"
   fun next () = pos := !pos + 1
+  fun nextn i = pos := !pos + i
   fun takeWhile f = if f (cur ()) then (next (); takeWhile f) else ()
   fun ws () = takeWhile Char.isSpace
   fun isIdRest c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
@@ -243,29 +245,89 @@ fun parseSMLSimple body = let
   | #"(" => (next (); if cur () = #"*" then (next (); finishComment ()) else (); finishComment ())
   | _ => (next (); finishComment ())
 
-  fun finishId () = if cur () <> #"." then () else let
-    val c = (next (); cur ())
-    in
-      if isIdSym c then (takeWhile isIdSym; finishId ()) else
-      if Char.isAlpha c then (takeWhile isIdRest; finishId ()) else
-      pos := !pos - 1
-    end
+  fun finishId () = if cur () <> #"." then () else case ahead 1 of c =>
+    if isIdSym c then (next (); takeWhile isIdSym; finishId ()) else
+    if Char.isAlpha c then (next (); takeWhile isIdRest; finishId ()) else ()
+
+  fun finishRealAfterExp () = (
+    if cur () = #"~" then next () else ();
+    takeWhile Char.isDigit)
+  fun finishReal () = (
+    takeWhile Char.isDigit;
+    case cur () of
+      #"e" => (next (); finishRealAfterExp ())
+    | #"E" => (next (); finishRealAfterExp ())
+    | _ => ())
+  fun finishRealAfterDot () = (
+    if Char.isDigit (cur ()) then next () else parseError (!pos, !pos) "Expected digit";
+    finishReal ())
 
   exception Todo
-  datatype token = EOF | StringTk | IdentTk | Symbol of char
+  datatype token =
+    EOF
+  | StringTk
+  | CharTk
+  | TyVarTk
+  | IdentTk
+  | IntTk
+  | WordTk
+  | RealTk
+  | QuoteTk
+  | Symbol of char
+  | ErrorTk
+
+  fun finishInt () = (
+    takeWhile Char.isDigit;
+    case cur () of
+      #"." => (next (); finishRealAfterDot (); RealTk)
+    | #"e" => (next (); finishRealAfterExp (); RealTk)
+    | #"E" => (next (); finishRealAfterExp (); RealTk)
+    | _ => IntTk)
+
+  fun finishIntAfterZero () = case cur () of
+    #"x" => if Char.isHexDigit (ahead 1) then (nextn 2; takeWhile Char.isHexDigit; IntTk) else IntTk
+  | #"w" => (case ahead 1 of
+      #"x" => if Char.isHexDigit (ahead 2) then (nextn 3; takeWhile Char.isHexDigit; WordTk) else IntTk
+    | c => if Char.isDigit c then (nextn 2; takeWhile Char.isDigit; WordTk) else IntTk)
+  | #"." => (next (); finishRealAfterDot (); RealTk)
+  | #"E" => (next (); finishRealAfterExp (); RealTk)
+  | #"e" => (next (); finishRealAfterExp (); RealTk)
+  | c => if Char.isDigit c then (next (); finishInt ()) else IntTk
 
   fun token () = (ws (); case cur () of
     #"\000" => (!pos, EOF)
   | #"\"" => (!pos, (next (); finishString (); StringTk))
+  | #"~" => (!pos, (next (); case cur () of
+      #"0" => (next (); finishIntAfterZero ())
+    | c =>
+      if Char.isDigit c then (next (); finishInt ()) else
+      (takeWhile isIdSym; finishId (); IdentTk)))
+  | #"0" => (!pos, (next (); finishIntAfterZero ()))
+  | #"'" => (!pos, (next (); takeWhile isIdRest; TyVarTk))
+  | #"." => (!pos, (next (); takeWhile (fn c => c = #"."); IdentTk))
+  | #"#" => (!pos, (next (); case cur () of
+      #"\"" => (next (); finishString (); CharTk)
+    | _ => (takeWhile isIdSym; finishId (); IdentTk)))
   | #"(" => let
     val start = !pos
     val _ = next ()
     in if cur () = #"*" then (next (); finishComment (); token ()) else (start, Symbol #"(") end
+  | #"`" => (!pos, (next (); case cur () of
+      #"`" => (next (); QuoteTk)
+    | _ => QuoteTk))
+  | #"\226" => (!pos, (case (ahead 1, ahead 2) of
+      (#"\128", #"\152") => (nextn 3; QuoteTk)
+    | (#"\128", #"\153") => (nextn 3; QuoteTk)
+    | (#"\128", #"\156") => (nextn 3; QuoteTk)
+    | (#"\128", #"\157") => (nextn 3; QuoteTk)
+    | _ => (next (); ErrorTk)))
   | c => (!pos, (next ();
-    if Char.contains ")[]{},;" c then Symbol c else
+    if Char.contains ")[]{},;_" c then Symbol c else
     if isIdSym c then (takeWhile isIdSym; finishId (); IdentTk) else
+    if Char.isDigit c then (next (); finishInt ()) else
     if Char.isAlpha c then (takeWhile isIdRest; finishId (); IdentTk) else
-    raise Todo)))
+    (next (); ErrorTk))))
+
   fun ident start = String.substring (body, start, !pos - start)
 
   fun parseSymbol s =
@@ -278,7 +340,9 @@ fun parseSMLSimple body = let
       (start, IdentTk) => if ident start = s then SOME start else (pos := start; NONE)
     | (start, _) => (pos := start; NONE)
 
-  fun parseTy (): ty = raise Todo
+  fun parseTy (prec: bool): ty = raise Todo
+  val parseTy = fn () => parseTy false
+
   fun parseExp (pat: bool): exp = raise Todo
   fun parseDec (inSig: bool) (acc: dec list): dec list =
     case token () of
