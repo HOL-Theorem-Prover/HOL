@@ -2118,7 +2118,7 @@ Definition bounded_root_def:
     !s k v l r. t = Bin s k v l r ⇒ k ∈ restrict_set cmp lk hk
 End
 
-Triviality trim_thm: (* slow *)
+Triviality trim_thm:
 !t lk hk cmp.
   good_cmp cmp ∧
   invariant cmp t
@@ -2139,8 +2139,10 @@ Proof
  fs [invariant_eq] >>
  rpt gen_tac >>
  strip_tac >>
+ rpt $ qpat_x_assum ‘∀x._’ $ drule_then strip_assume_tac >>
+ gs [] >>
+ IF_CASES_TAC >> fs [] >>
  every_case_tac >>
- fs [] >>
  simp [to_fmap_def] >>
  fs [SUBMAP_DEF, restrict_domain_def, DRESTRICTED_FUNION, DRESTRICT_FUPDATE] >>
  rw [invariant_def] >>
