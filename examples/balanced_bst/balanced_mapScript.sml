@@ -189,15 +189,6 @@ Definition key_set_def:
   key_set cmp k = { k' | cmp k k' = Equal }
 End
 
-Triviality key_set_nonempty:
-  good_cmp cmp ⇒ key_set cmp k ≠ {}
-Proof
-  simp_tac std_ss [EXTENSION, key_set_def,GSPECIFICATION,NOT_IN_EMPTY]
-  \\ rewrite_tac [good_cmp_thm]
-  \\ strip_tac
-  \\ last_x_assum $ irule_at Any
-QED
-
 Theorem key_set_equiv:
  !cmp.
   good_cmp cmp
@@ -206,6 +197,13 @@ Theorem key_set_equiv:
   (!k1 k2. k1 ∈ key_set cmp k2 ⇒ k2 ∈ key_set cmp k1) ∧
   (!k1 k2 k3. k1 ∈ key_set cmp k2 ∧ k2 ∈ key_set cmp k3 ⇒ k1 ∈ key_set cmp k3)
 Proof rw [key_set_def] >> metis_tac [good_cmp_def]
+QED
+
+Triviality key_set_nonempty:
+  good_cmp cmp ⇒ key_set cmp k ≠ {}
+Proof
+  rw [EXTENSION]
+  \\ metis_tac [key_set_equiv]
 QED
 
 Theorem key_set_partition:
@@ -224,8 +222,8 @@ Theorem key_set_eq:
   ⇒
     (key_set cmp k1 = key_set cmp k2 ⇔ cmp k1 k2 = Equal)
 Proof
- rw [key_set_def, EXTENSION] >>
- metis_tac [cmp_thms, key_set_equiv]
+  rw [key_set_def, EXTENSION] >>
+  metis_tac [cmp_thms |> CONJUNCTS |> last]
 QED
 
 Definition key_set_cmp_def:
@@ -238,7 +236,9 @@ Theorem key_set_cmp_thm:
   ⇒
     (key_set_cmp cmp k (key_set cmp k') res ⇔ cmp k k' = res)
 Proof
- rw [key_set_cmp_def, key_set_def] >> metis_tac [cmp_thms]
+  rw [key_set_cmp_def, key_set_def]
+  \\ Cases_on ‘res’
+  \\ metis_tac [cmp_thms |> CONJUNCTS |> last]
 QED
 
 Definition key_set_cmp2_def:
@@ -256,6 +256,17 @@ Theorem good_cmp_eq_sym[local]:
   good_cmp cmp ∧
   cmp x y = Equal ⇒
   cmp y x = Equal
+Proof
+ rewrite_tac [cmp_thms |> CONJUNCTS |> last]
+ \\ strip_tac
+ \\ res_tac
+QED
+
+Triviality good_cmp_eq_trans:
+  good_cmp cmp ∧
+  cmp x y = Equal ∧
+  cmp y z = Equal ⇒
+  cmp x z = Equal
 Proof
  rewrite_tac [cmp_thms |> CONJUNCTS |> last]
  \\ strip_tac
@@ -853,10 +864,8 @@ Proof
  CCONTR_TAC >>
  fs [] >>
  imp_res_tac key_ordered_to_fmap >>
- fs [] >>
  imp_res_tac to_fmap_key_set >>
- rw [] >>
- rfs [key_set_cmp_thm] >>
+ gvs [key_set_cmp_thm] >>
  metis_tac [cmp_thms]
 QED
 
@@ -923,6 +932,13 @@ Proof
  metis_tac [cmp_thms]
 QED
 
+Triviality member_eq_lookup:
+  ∀cmp k t. member cmp k t = IS_SOME (lookup cmp k t)
+Proof
+  Induct_on ‘t’ \\ gvs [member_def,lookup_def]
+  \\ rpt gen_tac \\ CASE_TAC \\ gvs []
+QED
+
 Theorem member_thm:
  !cmp k t.
   good_cmp cmp ∧
@@ -930,17 +946,10 @@ Theorem member_thm:
   ⇒
   (member cmp k t ⇔ key_set cmp k ∈ FDOM (to_fmap cmp t))
 Proof
- Induct_on `t` >>
- rw [member_def, to_fmap_def] >>
- imp_res_tac inv_props >>
- TOP_CASE_TAC >>
- fs [invariant_def, FLOOKUP_UPDATE, FLOOKUP_FUNION] >>
- every_case_tac >>
- fs [] >>
- rw [] >>
- rfs [key_set_eq] >>
- fs [FLOOKUP_DEF] >>
- metis_tac [cmp_thms]
+  rewrite_tac [member_eq_lookup]
+  \\ rpt strip_tac
+  \\ simp [lookup_thm,TO_FLOOKUP]
+  \\ Cases_on ‘FLOOKUP (to_fmap cmp t) (key_set cmp k)’ \\ simp []
 QED
 
 Theorem empty_thm:
@@ -1083,8 +1092,7 @@ Triviality balanced_lem3:
      balanced b (b0 + r + 1) ∧
      balanced b0 r
 Proof
- rw [almost_balancedL_def, balanced_def, TIMES_MIN, delta_def, ratio_def] >>
- fs [MIN_DEF]
+  rw [almost_balancedL_def, balanced_def, TIMES_MIN, delta_def, ratio_def]
 QED
 
 Triviality balanced_lem4:
@@ -1099,8 +1107,7 @@ Triviality balanced_lem4:
   balanced b b' ∧
   balanced b0' r
 Proof
- rw [almost_balancedL_def, balanced_def, TIMES_MIN, delta_def, ratio_def] >>
- fs [MIN_DEF]
+ rw [almost_balancedL_def, balanced_def, TIMES_MIN, delta_def, ratio_def]
 QED
 
 Triviality balanced_lem5:
@@ -1121,8 +1128,7 @@ Triviality balanced_lem6:
    ⇒
     balanced (b + l + 1) b0 ∧ balanced l b
 Proof
- rw [almost_balancedR_def, balanced_def, TIMES_MIN, delta_def, ratio_def] >>
- fs [MIN_DEF]
+  rw [almost_balancedR_def, balanced_def, TIMES_MIN, delta_def, ratio_def]
 QED
 
 Triviality balanced_lem7:
@@ -1137,8 +1143,7 @@ Triviality balanced_lem7:
     balanced l b' ∧
     balanced b0' b0
 Proof
- rw [almost_balancedR_def, balanced_def, TIMES_MIN, delta_def, ratio_def] >>
- fs [MIN_DEF]
+ rw [almost_balancedR_def, balanced_def, TIMES_MIN, delta_def, ratio_def]
 QED
 
 Triviality singleR_thm:
@@ -1173,7 +1178,7 @@ Proof
                 FUNION_ASSOC])
 QED
 
-Triviality doubleR_thm:
+Triviality doubleR_thm: (* slow *)
 !k v r cmp n k' v' b b0.
   good_cmp cmp ∧
   key_ordered cmp k (Bin n k' v' b b0) Greater ∧
@@ -1245,7 +1250,7 @@ Proof
   metis_tac [singleR_thm, doubleR_thm, ADD_COMM, NOT_ZERO_LT_ZERO, GREATER_DEF]
 QED
 
-Triviality balanceL_balL:
+Triviality balanceL_balL: (* slow *)
 !k v l r cmp.
   good_cmp cmp ∧
   invariant cmp l ∧
@@ -1293,7 +1298,7 @@ Proof
  metis_tac [rotateR_thm]
 QED
 
-Triviality singleL_thm:
+Triviality singleL_thm: (* slowish *)
 !k v l cmp n k' v' b b0.
   good_cmp cmp ∧
   key_ordered cmp k (Bin n k' v' b b0) Less ∧
@@ -1325,7 +1330,7 @@ Proof
                 FUNION_ASSOC])
 QED
 
-Triviality doubleL_thm:
+Triviality doubleL_thm: (* slow *)
 !k v l cmp n k' v' b b0.
   good_cmp cmp ∧
   key_ordered cmp k (Bin n k' v' b b0) Less ∧
@@ -1402,7 +1407,7 @@ Proof
  metis_tac [singleL_thm, doubleL_thm, ADD_COMM, NOT_ZERO_LT_ZERO, GREATER_DEF]
 QED
 
-Triviality balanceR_balR:
+Triviality balanceR_balR: (* slow *)
 !k v l r cmp.
   good_cmp cmp ∧
   invariant cmp l ∧
@@ -1457,13 +1462,8 @@ Triviality almost_balancedL_thm:
     almost_balancedL l r ∧ almost_balancedL (l + 1) r ∧
     almost_balancedL l (r - 1)
 Proof
- rw [almost_balancedL_def] >>
- fs [balanced_def, NOT_LESS_EQUAL, TIMES_MIN] >>
- rw [] >>
- CCONTR_TAC >>
- fs [] >>
- fs [NOT_LESS_EQUAL] >>
- fs [delta_def, MIN_DEF]
+ rw [almost_balancedL_def, balanced_def, TIMES_MIN, delta_def] >>
+ rw [MIN_DEF]
 QED
 
 Triviality almost_balancedR_thm:
@@ -1473,16 +1473,8 @@ Triviality almost_balancedR_thm:
     almost_balancedR l r ∧ almost_balancedR l (r + 1) ∧
     almost_balancedR (l - 1) r
 Proof
- rw [almost_balancedR_def] >>
- fs [balanced_def, NOT_LESS_EQUAL, TIMES_MIN] >>
- rw [] >>
- CCONTR_TAC >>
- fs [] >>
- fs [NOT_LESS_EQUAL] >>
- fs [delta_def, MIN_DEF] >>
- fs [NOT_LESS, LESS_OR_EQ] >>
- rw [] >>
- decide_tac
+ rw [almost_balancedR_def, balanced_def, TIMES_MIN, delta_def] >>
+ rw [MIN_DEF]
 QED
 
 Theorem insert_thm:
@@ -1544,13 +1536,13 @@ Theorem lookup_insert:
    lookup cmp k (insert cmp k' v t) =
    if cmp k k' = Equal then SOME v else lookup cmp k t
 Proof
-  rw[] \\ rw[lookup_thm,insert_thm,FLOOKUP_UPDATE] \\
-  metis_tac[key_set_eq,comparisonTheory.cmp_thms]
+  rw[] \\ rw[lookup_thm,insert_thm,FLOOKUP_UPDATE,key_set_eq]
+  \\ drule_all good_cmp_eq_sym \\ asm_rewrite_tac []
 QED
 
 val comparison_distinct = TypeBase.distinct_of ``:ordering``
 
-Theorem insertR_thm:
+Theorem insertR_thm: (* slow *)
  ∀t.
   good_cmp cmp ∧
   invariant cmp t
@@ -1665,7 +1657,7 @@ Proof
  metis_tac [FUPDATE_COMMUTES, cmp_thms, key_set_cmp_thm]
 QED
 
-Theorem deleteFindMin:
+Theorem deleteFindMin: (* slow *)
  ∀t t' k v.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -1796,7 +1788,7 @@ Proof
      metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm])
 QED
 
-Theorem deleteFindMax:
+Theorem deleteFindMax: (* slow *)
  ∀t t' k v.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -2123,7 +2115,7 @@ Proof
  Cases_on `hi` >>
  Cases_on `lo` >>
  fs [option_cmp_def, option_cmp2_def] >>
- metis_tac [cmp_thms]
+ metis_tac [cmp_thms |> CONJUNCTS |> last]
 QED
 
 Triviality restrict_domain_FMERGE_WITH_KEY:
@@ -2140,7 +2132,7 @@ Definition bounded_root_def:
     !s k v l r. t = Bin s k v l r ⇒ k ∈ restrict_set cmp lk hk
 End
 
-Triviality trim_thm:
+Triviality trim_thm: (* slow *)
 !t lk hk cmp.
   good_cmp cmp ∧
   invariant cmp t
@@ -2233,7 +2225,7 @@ Proof
   simp [MIN_DEF] >> decide_tac
 QED
 
-Triviality link_thm:
+Triviality link_thm: (* slow *)
 !k v l r.
   good_cmp cmp ∧
   invariant cmp l ∧
@@ -2334,7 +2326,7 @@ Proof
      to_fmap_tac)
 QED
 
-Triviality link2_thm:
+Triviality link2_thm: (* very slow *)
   ∀l r.
     good_cmp cmp ∧
     invariant cmp l ∧
@@ -2403,7 +2395,7 @@ Proof
   \\ metis_tac [key_set_cmp2_thm, to_fmap_key_set, key_set_cmp_thm, cmp_thms]
 QED
 
-Triviality filter_lt_help_thm:
+Triviality filter_lt_help_thm: (* slowish *)
 !cmp bound t.
   good_cmp cmp ∧
   invariant cmp t
@@ -2510,7 +2502,7 @@ Proof
  rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def]
 QED
 
-Triviality restrict_domain_partition: (* slow *)
+Triviality restrict_domain_partition: (* very slow *)
 !cmp x l h t1 t2.
   good_cmp cmp ∧
   x ∈ restrict_set cmp l h ∧
@@ -2662,7 +2654,7 @@ Proof
  metis_tac [good_cmp_def, comparison_distinct, key_set_eq]
 QED
 
-Triviality hedgeUnion_thm:
+Triviality hedgeUnion_thm: (* slow *)
 !cmp blo bhi t1 t2.
   good_cmp cmp ∧
   invariant cmp t1 ∧
@@ -2810,7 +2802,7 @@ Proof
  every_case_tac >>
  fs [FLOOKUP_DEF, invariant_eq] >>
  rfs [key_ordered_to_fmap] >>
- metis_tac [cmp_thms, to_fmap_key_set]
+ metis_tac [to_fmap_key_set]
 QED
 
 Theorem lookup_union:
@@ -2822,7 +2814,7 @@ Proof
   rw[lookup_thm,union_thm,FLOOKUP_FUNION]
 QED
 
-Triviality hedgeUnionWithKey_thm:
+Triviality hedgeUnionWithKey_thm: (* slowish *)
   ∀cmp f blo bhi t1 t2.
     good_cmp cmp ∧
     invariant cmp t1 ∧
@@ -3030,7 +3022,7 @@ Definition lift_key_def:
 lift_key cmp kvs = IMAGE (\(k,v). (key_set cmp k, v)) kvs
 End
 
-Triviality toAscList_helper:
+Triviality toAscList_helper: (* slowish *)
 ∀cmp l t.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -3201,7 +3193,7 @@ Proof
  metis_tac []
 QED
 
-Triviality compare_thm1:
+Triviality compare_thm1: (* slowish *)
  !cmp1 cmp2 t1 t2.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
@@ -3284,14 +3276,9 @@ Proof
  Induct_on `l` >>
  rw [] >>
  `transitive (λ(x,y) (x',y'). cmp x x' = Less)` by metis_tac [good_cmp_trans] >>
- fs [SORTED_EQ, LAMBDA_PROD, FORALL_PROD]
- >- metis_tac [cmp_thms]
- >- metis_tac [cmp_thms]
- >- metis_tac [cmp_thms]
- >- metis_tac [cmp_thms] >>
- Cases_on `h` >>
- fs [] >>
- res_tac
+ fs [SORTED_EQ, LAMBDA_PROD, FORALL_PROD] >>
+ rpt (Cases_on `h` >> fs [] >> res_tac >> NO_TAC) >>
+ metis_tac [cmp_thms]
 QED
 
 Triviality strict_sorted_eq_el:
@@ -3900,10 +3887,23 @@ Proof
  eq_tac >>
  rw [] >>
  rfs [resp_equiv2_def]
- >- metis_tac [cmp_thms] >>
+ >-
+  (irule good_cmp_eq_trans \\ asm_rewrite_tac []
+   \\ qpat_x_assum ‘∀x._’ imp_res_tac
+   \\ pop_assum $ irule_at $ Pos last
+   \\ last_x_assum $ irule
+   \\ irule good_cmp_eq_trans \\ asm_rewrite_tac []
+   \\ pop_assum $ irule_at $ Pos last
+   \\ irule good_cmp_eq_sym \\ asm_rewrite_tac []) >>
  qexists_tac `key_set cmp2 (f x)` >>
- rw [key_set_def] >>
- metis_tac [cmp_thms]
+ rw [key_set_def]
+ >-
+  (irule good_cmp_eq_trans \\ asm_rewrite_tac []
+   \\ pop_assum $ irule_at $ Pos last
+   \\ res_tac \\ asm_rewrite_tac [])
+ \\ first_x_assum drule \\ strip_tac
+ \\ first_x_assum $ irule_at $ Pos last
+ \\ metis_tac [good_cmp_eq_trans,good_cmp_eq_sym]
 QED
 
 Triviality image_lem:
