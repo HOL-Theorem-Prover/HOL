@@ -189,6 +189,15 @@ Definition key_set_def:
   key_set cmp k = { k' | cmp k k' = Equal }
 End
 
+Triviality key_set_nonempty:
+  good_cmp cmp ⇒ key_set cmp k ≠ {}
+Proof
+  simp_tac std_ss [EXTENSION, key_set_def,GSPECIFICATION,NOT_IN_EMPTY]
+  \\ rewrite_tac [good_cmp_thm]
+  \\ strip_tac
+  \\ last_x_assum $ irule_at Any
+QED
+
 Theorem key_set_equiv:
  !cmp.
   good_cmp cmp
@@ -243,6 +252,16 @@ Proof
   gvs [good_cmp_def]
 QED
 
+Theorem good_cmp_eq_sym[local]:
+  good_cmp cmp ∧
+  cmp x y = Equal ⇒
+  cmp y x = Equal
+Proof
+ rewrite_tac [cmp_thms |> CONJUNCTS |> last]
+ \\ strip_tac
+ \\ res_tac
+QED
+
 Theorem key_set_cmp2_thm:
   !cmp k k' res.
     good_cmp cmp
@@ -250,12 +269,15 @@ Theorem key_set_cmp2_thm:
     (key_set_cmp2 cmp (key_set cmp k) (key_set cmp k') res ⇔ cmp k k' = res)
 Proof
   rw [key_set_cmp2_def, key_set_def]
+  \\ rename [‘cmp k0 _ = Equal ∧ cmp k3 _ = Equal’]
   \\ eq_tac \\ rpt strip_tac
   >-
-   (pop_assum $ qspecl_then [‘k’,‘k'’] mp_tac
-    \\ simp [good_cmp_same])
+   (pop_assum irule
+    \\ imp_res_tac good_cmp_same \\ asm_rewrite_tac [])
   \\ Cases_on ‘res’ \\ gvs []
-  \\ metis_tac [cmp_thms]
+  \\ last_x_assum mp_tac
+  \\ once_rewrite_tac [cmp_thms |> CONJUNCTS |> last]
+  \\ metis_tac []
 QED
 
 (* Maps based on balanced binary trees. Copied from ghc-7.8.3
@@ -2976,8 +2998,7 @@ Proof
   rw[lookup_thm, unionWithKey_thm, FLOOKUP_FMERGE_WITH_KEY]
   \\ CASE_TAC \\ gs []
   \\ CASE_TAC \\ gs []
-  \\ ‘key_set cmp k ≠ {}’
-    by gs [EXTENSION, key_set_def, good_cmp_thm, SF SFY_ss]
+  \\ ‘key_set cmp k ≠ {}’ by (irule key_set_nonempty \\ asm_rewrite_tac [])
   \\ drule_then assume_tac CHOICE_DEF
   \\ fs [key_set_def]
 QED
@@ -3462,6 +3483,8 @@ Proof
  rw [] >>
  ONCE_REWRITE_TAC [list_rel_thm] >>
  gen_tac >>
+ ‘good_cmp (pair_cmp cmp1 cmp2)’ by
+   (irule pair_cmp_good \\ asm_rewrite_tac []) >>
  DISCH_TAC >>
  fs []
  >- (match_mp_tac compare_lem2 >>
@@ -3478,11 +3501,11 @@ Proof
                     PairCases_on `y'` >>
                     PairCases_on `x'` >>
                     fs [] >>
-                    metis_tac [good_cmp_def, pair_cmp_good])) >>
+                    drule_all good_cmp_eq_sym \\ rewrite_tac [])) >>
      Cases_on `EL n l1` >>
      Cases_on `EL n l2` >>
      fs [] >>
-     metis_tac [good_cmp_def, pair_cmp_good])
+     drule_all good_cmp_eq_sym \\ rewrite_tac [])
 QED
 
 Theorem compare_thm:
@@ -3531,10 +3554,7 @@ Proof
   fmrw [FLOOKUP_EXT'] >>
   fmrw [FLOOKUP_FMAP_MAP2, DOMSUB_FLOOKUP_THM] >>
   every_case_tac >> fs [] >>
-  ‘key_set cmp k ≠ {}’
-    by (gs [EXTENSION, key_set_def]
-        \\ fs [good_cmp_thm]
-        \\ first_assum (irule_at Any)) >>
+  ‘key_set cmp k ≠ {}’ by (irule key_set_nonempty \\ asm_rewrite_tac []) >>
   drule_then assume_tac CHOICE_DEF >>
   fs [key_set_def])
 QED
@@ -3551,7 +3571,7 @@ Proof
       FLOOKUP_FUN_FMAP, FLOOKUP_o_f, CaseEq "option", flookup_thm]
 QED
 
-Theorem splitLookup_thm:
+Theorem splitLookup_thm: (* slow *)
  !t lt v gt.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -3636,7 +3656,7 @@ Proof
      metis_tac [cmp_thms, key_set_cmp_def, key_set_cmp_thm])
 QED
 
-Triviality submap'_thm:
+Triviality submap'_thm: (* slowish *)
  !cmp f t1 t2.
   good_cmp cmp ∧
   invariant cmp t1 ∧
@@ -3852,13 +3872,15 @@ Triviality in_lift_key:
 Proof
  Induct_on `l` >>
  fs [lift_key_def, key_set_def, LAMBDA_PROD, EXISTS_PROD, EXTENSION, FORALL_PROD] >>
- rw [] >>
- fs [] >>
- eq_tac >>
- rw [] >>
- fs [SORTED_EQ] >>
- res_tac >>
- fs [] >>
+ rpt gen_tac >> strip_tac >>
+ fs [SORTED_EQ,FORALL_PROD] >>
+ last_x_assum drule_all >>
+ disch_then $ qspecl_then [‘k’,‘v’] mp_tac >>
+ strip_tac >>
+ pop_assum $ assume_tac o GSYM >>
+ simp [CaseEq"bool"] >>
+ eq_tac >> rw [] >> fs [] >>
+ rpt disj2_tac >>
  metis_tac [cmp_thms]
 QED
 
@@ -3890,8 +3912,12 @@ Triviality image_lem:
  IMAGE (λx. key_set cmp2 (f x)) (key_set cmp1 k'') =
  { key_set cmp2 (f x) | x | cmp1 x k'' = Equal }
 Proof
- rw [EXTENSION,key_set_def] >>
- metis_tac [cmp_thms]
+ rw [EXTENSION,key_set_def]
+ \\ eq_tac \\ gvs []
+ \\ rpt strip_tac
+ \\ qexists_tac ‘x'’
+ \\ asm_rewrite_tac []
+ \\ drule_all good_cmp_eq_sym \\ rewrite_tac []
 QED
 
 Definition every_def:
@@ -3920,26 +3946,18 @@ Proof
  rfs [] >>
  eq_tac >>
  rw []
- >- (EVERY_CASE_TAC >>
-     fs [] >>
-     metis_tac [])
+ >- (gvs [AllCaseEqs()] >> res_tac)
  >- (first_x_assum (qspecl_then [`k`] assume_tac) >>
-     rfs [] >>
-     EVERY_CASE_TAC >>
-     fs [] >>
+     rfs [AllCaseEqs(),SF DNF_ss] >>
      metis_tac [cmp_thms])
  >- (first_x_assum (qspecl_then [`k'`] assume_tac) >>
-     EVERY_CASE_TAC >>
-     fs [] >>
-     rfs [lookup_thm, flookup_thm] >>
+     rfs [AllCaseEqs(),SF DNF_ss, lookup_thm, flookup_thm] >>
      rfs [key_ordered_to_fmap] >>
      res_tac >>
      imp_res_tac key_set_cmp_thm >>
      metis_tac [cmp_thms])
  >- (first_x_assum (qspecl_then [`k'`] assume_tac) >>
-     EVERY_CASE_TAC >>
-     fs [] >>
-     rfs [lookup_thm, flookup_thm] >>
+     rfs [AllCaseEqs(),SF DNF_ss, lookup_thm, flookup_thm] >>
      rfs [key_ordered_to_fmap] >>
      res_tac >>
      imp_res_tac key_set_cmp_thm >>
@@ -3999,7 +4017,7 @@ Proof
      metis_tac [])
 QED
 
-Theorem filterWithKey_thm:
+Theorem filterWithKey_thm: (* slow *)
   ∀f t cmp.
     good_cmp cmp ∧
     invariant cmp t ∧
@@ -4028,8 +4046,7 @@ Proof
     >- (
       qpat_x_assum ‘key_set _ _ = _’ (assume_tac o SYM) \\ gvs []
       \\ rw [IN_DEF, FORALL_PROD]
-      \\ ‘key_set cmp k ≠ {}’
-        by gs [EXTENSION, key_set_def, good_cmp_thm, SF SFY_ss]
+      \\ ‘key_set cmp k ≠ {}’ by (irule key_set_nonempty \\ asm_rewrite_tac [])
       \\ drule_then assume_tac CHOICE_DEF
       \\ ‘f k v = f (CHOICE (key_set cmp k)) v’
         suffices_by rw []
@@ -4062,11 +4079,10 @@ Proof
   \\ gs [flookup_thm, DISJOINT_ALT]
   \\ gs [CaseEqs ["option", "bool"], flookup_thm]
   \\ CCONTR_TAC \\ gs []
-  \\ ‘key_set cmp k ≠ {}’
-    by gs [EXTENSION, key_set_def, good_cmp_thm, SF SFY_ss]
+  \\ ‘key_set cmp k ≠ {}’ by (irule key_set_nonempty \\ asm_rewrite_tac [])
   \\ drule_then assume_tac CHOICE_DEF
-  \\ fs [good_cmp_def, key_set_def]
-  \\ metis_tac []
+  \\ fs [key_set_def]
+  \\ res_tac
 QED
 
 Theorem every_filter:
@@ -4081,12 +4097,7 @@ Proof
   \\ drule_all_then strip_assume_tac every_thm \\ rw []
   \\ drule_all_then assume_tac lookup_thm
   \\ gs [FLOOKUP_FDIFF, IN_DEF, LAMBDA_PROD, EXISTS_PROD, resp_equiv_def]
-  \\ ‘key_set cmp k ≠ {}’ by
-    (gvs [key_set_def,EXTENSION]
-     \\ last_x_assum mp_tac
-     \\ rpt $ pop_assum kall_tac
-     \\ rewrite_tac [good_cmp_thm]
-     \\ metis_tac [])
+  \\ ‘key_set cmp k ≠ {}’ by (irule key_set_nonempty \\ asm_rewrite_tac [])
   \\ drule_then assume_tac CHOICE_DEF
   \\ ‘f k v = f (CHOICE (key_set cmp k)) v’
     suffices_by rw []
