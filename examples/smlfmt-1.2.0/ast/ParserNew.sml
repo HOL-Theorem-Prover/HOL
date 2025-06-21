@@ -327,6 +327,7 @@ fun parseSML body parseError = let
     if Char.isAlpha c then (takeWhile isIdRest; finishId (); IdentTk) else
     (next (); ErrorTk))))
 
+  (* TODO Rename to something more generic *)
   fun ident start = String.substring (body, start, !pos - start)
 
   datatype ident_kind = Regular | Keyword | HolKeyword
@@ -452,7 +453,16 @@ fun parseSML body parseError = let
 
   fun parseExp (pat: bool): exp =
     case token () of
-      (start, Symbol #"[") => let
+      (start, Symbol #"_") => Wild start
+    | (start, IntTk) => IntegerConstant (start, ident start)
+    | (start, WordTk) => WordConstant (start, ident start)
+    | (start, StringTk) => StringConstant (start, ident start)
+    | (start, CharTk) => CharConstant (start, ident start)
+    | (start, RealTk) => RealConstant (start, ident start)
+    | (start, Symbol #"(") => (case token () of
+        (startClose, Symbol #")") => Unit {left = start, right = startClose}
+      | _ => raise Todo)
+    | (start, Symbol #"[") => let
       val (elems, right, stop) = parseDelimitedClose {
         elem = fn () => parseExp pat,
         delim = fn (_, Symbol #",") => true | _ => false,
