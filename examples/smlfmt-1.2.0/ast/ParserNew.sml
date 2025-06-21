@@ -47,7 +47,8 @@ structure AstNew = struct
   | RealConstant of int * string (* 1.5 *)
   | Unit of {left: int, right: int} (** () *)
   | Ident of {op_: int option, id: ident}  (** [op] longvid *)
-  | List of {left: int, elems: exp delimited, right: int} (** [ exp, ..., exp ] *)
+  | List of {left: int, elems: exp delimited, right: int option, stop: int}
+    (** [ exp, ..., exp ] *)
   | Tuple of {left: int, elems: exp delimited, right: int} (** ( exp, ..., exp ) *)
   | Record of {left: int, elems: row delimited, right: int}
     (** { lab = exp, ..., lab = exp } *)
@@ -449,7 +450,17 @@ fun parseSML body parseError = let
     in rhs lhs end
   val parseTy = fn () => parseTy false
 
-  fun parseExp (pat: bool): exp = raise Todo
+  fun parseExp (pat: bool): exp =
+    case token () of
+      (start, Symbol #"[") => let
+      val (elems, right, stop) = parseDelimitedClose {
+        elem = fn () => parseExp pat,
+        delim = fn (_, Symbol #",") => true | _ => false,
+        close = fn (_, Symbol #"]") => true | _ => false
+      }
+      in List {left = start, elems = elems, right = right, stop = stop} end
+    | _ => raise Todo
+
   fun parseDec (inSig: bool) (acc: dec list): dec list =
     case token () of
       (start, IdentTk) => (case ident start of
