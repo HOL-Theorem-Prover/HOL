@@ -9,9 +9,9 @@ open HolKernel Parse boolLib pairLib basicSize DefnBase numSyntax
      relationTheory combinTheory prim_recTheory arithmeticTheory
      basicSizeTheory pairTheory
 
-local open numSimps in end
-
 open simpLib infix ++;
+
+local open numSimps in end
 
 structure Parse = struct
   open Parse
@@ -21,9 +21,9 @@ end
 
 open Parse
 
-val allow_schema_definition = ref false
-val _ = Feedback.register_btrace ("Define.allow_schema_definition",
-                                  allow_schema_definition)
+(*---------------------------------------------------------------------------*)
+(* Set up standard errors, warnings, etc                                     *)
+(*---------------------------------------------------------------------------*)
 
 val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
@@ -35,6 +35,25 @@ fun render_exn srcfn e =
        raise ERR srcfn "Exception raised")
     else
       raise e
+
+(*---------------------------------------------------------------------------*)
+(* Set up trace stuff                                                        *)
+(*---------------------------------------------------------------------------*)
+
+val monitoring = ref 0;
+fun lztrace(i,title,msgf) =
+  if i <= !monitoring then
+     Lib.say (String.concat ["\n", title, msgf()])
+  else ()
+
+val max_trace_val = 5;
+val no_trace = max_trace_val + 1;
+val _ = register_trace
+          ("Definition.termination", monitoring, max_trace_val);
+
+val allow_schema_definition = ref false
+val _ = Feedback.register_btrace
+         ("Define.allow_schema_definition", allow_schema_definition)
 
 (*---------------------------------------------------------------------------*)
 (* Misc. stuff that should be in Lib probably                                *)
@@ -52,6 +71,15 @@ fun copies x =
         | repl n = x::repl (n-1)
   in repl
   end;
+
+fun trylist f [] = raise ERR "trylist" "all attempts failed"
+  | trylist f (h::t) = (h, f h) handle HOL_ERR _ => trylist f t
+
+fun index_of P =
+ let fun index i [] = raise ERR "index_of" "not found"
+       | index i (h::t) = if P(h) then i else index (i+1) t
+ in index 0
+ end
 
 (*---------------------------------------------------------------------------*)
 (* perms delivers all permutations of a list. By Peter Sestoft.              *)
@@ -194,11 +222,9 @@ val {getDB = WF_thms, export = export_WF_thm, ...} =
     }
 
 (*---------------------------------------------------------------------------*)
-(* WHen proving termination goals, once higher level definitions are         *)
-(* expanded, there remains an essentially arithmetic formula and term_dp_ss  *)
-(* is invoked. We perform any (paired) beta-reductions, eg. expand           *)
-(* "(\(x,y). M x y) N" to "M (FST N) (SND N)",  and do arithmetic            *)
-(* simplification before invoking an arithmetic decision procedure.          *)
+(* Basic simplification set. We perform any (paired) beta-reductions, eg.    *)
+(* expand "(\(x,y). M x y) N" to "M (FST N) (SND N)", and apply common       *)
+(* arithmetic simplification.                                                *)
 (*---------------------------------------------------------------------------*)
 
 val base_ss =
@@ -415,6 +441,13 @@ fun is_relevant tsimps = let
 (* duplicates are weeded out.                                                *)
 (*---------------------------------------------------------------------------*)
 
+fun report_num_tcs n =
+    lztrace(1,"Termination conditions: ",
+            fn () => Int.toString n)
+fun report_num_guesses n =
+    lztrace(1,"Candidate termination relations generated: ",
+            fn () => Int.toString n)
+
 fun guessR defn =
  let open Defn numSyntax simpLib boolSimps
    fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
@@ -430,6 +463,7 @@ fun guessR defn =
            val (_,tcs0) = Lib.pluck isWFR (tcs_of defn)
            val tcs = map (rhs o concl o QCONV (SIMP_CONV bool_ss [])) tcs0
            val tcs = filter (not o aconv T) tcs
+           val () = report_num_tcs (length tcs)
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
            val chf1    = projects check1
@@ -459,6 +493,7 @@ fun guessR defn =
                           mk_cmeasure (flat_type_size domty)]
                          @ it_prim_rec @ lex_combs
            val allrels' = mk_term_set (map simplifyR allrels)
+           val () = report_num_guesses(length allrels')
        in
          allrels'
        end
@@ -508,7 +543,7 @@ fun SOLVES tac g =
   end
 
 (*---------------------------------------------------------------------------*)
-(* There are two entrypoints to termination proofs. One---TC_PROVE_TAC---is  *)
+(* There are two entrypoints to termination proofs. One---TC_SIMP_TAC---is  *)
 (* intended to be an automatic prover acting as a backend to prove one of a  *)
 (* set of generated guesses. Thus it needs to be reasonably fast and yet     *)
 (* still go "as deep as possible" in order to prove a guess if it is true.   *)
@@ -538,10 +573,12 @@ fun termination_ss() =
       val term_simps = [PULL_EXISTS] @ termination_simps()
       val elts = TypeBase.elts()
       val size_defs =
-         mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) elts
+          mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) elts
       val case_defs = mapfilter TypeBasePure.case_def_of elts
   in
-   base_ss ++ rewrites term_simps ++ rewrites size_defs ++ rewrites case_defs
+   base_ss ++ rewrites term_simps
+           ++ rewrites size_defs
+           ++ rewrites case_defs
            ++ numSimps.ARITH_DP_ss  (* important that this is last! *)
   end
 
@@ -559,7 +596,7 @@ fun TC_SIMP_TAC ss thl =
 (* unproved TCs should be in reduced form.                                   *)
 (*---------------------------------------------------------------------------*)
 
-fun TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
+fun TERM_TAC tctac = CONJ_TAC THENL [WF_TAC,tctac]
 
 fun WF_REL_TAC q =
   let val ss = termination_ss()
@@ -568,11 +605,18 @@ fun WF_REL_TAC q =
       val conjunct_conv = TAC_CONV(prover) ORELSEC simplifier
   in
     Q.EXISTS_TAC q THEN
-    TERM_TAC WF_TAC (CONV_TAC (EVERY_CONJ_CONV conjunct_conv))
+    TERM_TAC (CONV_TAC (EVERY_CONJ_CONV conjunct_conv))
   end
 
 fun mk_term_tac() =
-    TERM_TAC WF_TAC (SOLVES (TC_SIMP_TAC (termination_ss()) []))
+    let val ss = termination_ss() ++ boolSimps.ETA_ss
+    in TERM_TAC (SOLVES (TC_SIMP_TAC ss [])) end
+
+(*
+fun mk_term_tac() =
+    let val ss = termination_ss() ++ boolSimps.ETA_ss
+    in TERM_TAC (SOLVES (TC_SIMP_TAC ss [])) end
+*)
 
 (*---------------------------------------------------------------------------
        Definition principles that automatically attempt
@@ -633,7 +677,16 @@ local open Defn
      in
         raise ERR "defnDefine" (msg1 ^ s)
      end
-in
+  fun report_successful_candidate tm candidates =
+      let val i = index_of (aconv tm) candidates
+          val mesg = String.concat
+              ["Termination proof successful with candidate ", Int.toString i, ":\n  "]
+      in
+         lztrace(1, mesg, fn () => term_to_string tm ^ "\n\n")
+      end
+  fun report_failure_of_candidates() =
+      lztrace(1, "All candidates failed.\n", fn () => "\n")
+ in
   fun located_defnDefine loc defn =
     let
        val V = params_of defn
@@ -642,11 +695,19 @@ in
        fun try_proof defn Rcand = tprover (set_reln defn Rcand)
        val (defn',opt) =
           if should_try_to_prove_termination defn V
-            then ((if reln_is_not_set defn
-                      then Lib.tryfind (try_proof defn) (guessR defn)
-                   else tprover defn)
-                  handle HOL_ERR _ => termination_proof_failed defn)
-            else (defn,NONE)
+           then
+            ((if reln_is_not_set defn then  (* look for suitable term. reln *)
+                 let val candidates = guessR defn
+                     val (cand,result) = trylist (try_proof defn) candidates
+                     val () = report_successful_candidate cand candidates
+                 in result end
+              else (* one is already installed, try to prove TCs *)
+                 tprover defn
+             ) handle HOL_ERR _ =>
+                 (report_failure_of_candidates();
+                  termination_proof_failed defn))
+          else
+            (defn,NONE)
     in
        save_defn_at loc defn'
        ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)

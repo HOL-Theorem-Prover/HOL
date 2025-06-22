@@ -1629,6 +1629,17 @@ QED
 
 val _ = DefnBase.register_indn(ZIP_ind, [{Thy = "list", Name = "ZIP"}])
 
+Theorem ZIP_ind_alt :
+ !P.
+    (!l. P ([],l)) /\ (!h t. P (h::t,[])) /\
+     (!x xs y ys. P (xs,ys) ==> P (x::xs,y::ys)) ==>
+     !v v1. P (v,v1)
+Proof
+  ntac 2 strip_tac
+  \\ Induct \\ ASM_REWRITE_TAC[]
+  \\ gen_tac \\ Cases \\ ASM_SIMP_TAC bool_ss []
+QED
+
 val ZIP = store_thm("ZIP",
   “(ZIP ([],[]) = []) /\
     (!(x1:'a) l1 (x2:'b) l2.
@@ -5390,10 +5401,25 @@ Proof
   Induct_on ‘l’ >> rw [ADD_AC]
 QED
 
+Theorem list_size_zip:
+  ∀l1 l2.
+    LENGTH l1 = LENGTH l2 ⇒
+    list_size (pair_size f1 f2) (ZIP (l1,l2)) =
+    list_size f1 l1 + list_size f2 l2
+Proof
+  Induction.recInduct ZIP_ind_alt >> rw[ADD_AC]
+QED
+
 Theorem list_size_filter[simp]:
   list_size f (FILTER P l) <= list_size f l
 Proof
   Induct_on ‘l’ >> rw [] >> numLib.DECIDE_TAC
+QED
+
+Theorem filter_size_less[simp]:
+  ∀h t. list_size f (FILTER P t) < list_size f (h::t)
+Proof
+ gen_tac >> Induct >> fs[] >> rw[] >> numLib.DECIDE_TAC
 QED
 
 Theorem list_size_take[simp]:
@@ -5412,6 +5438,6 @@ QED
 val _ =
  List.app TotalDefn.export_termsimp
    ["list.list_size_append", "list.list_size_reverse",
-    "list.list_size_map", "list.list_size_snoc"];
+    "list.list_size_map", "list.list_size_snoc", "list.list_size_zip"];
 
 val _ = export_theory();

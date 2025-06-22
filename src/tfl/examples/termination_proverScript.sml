@@ -10,6 +10,8 @@ local open stringLib in end
 
 val _ = new_theory "termination_prover";
 
+val _ = set_trace "Definition.termination" 2;
+
 Definition encode_num_def:
   encode_num (n:num) =
     if n = 0 then [T; T]
@@ -143,13 +145,54 @@ End
 
 Datatype:
   term = Var num
-       | Fnapp num (term list)
+       | App num (term list)
 End
 
 Definition vars_of_def:
   vars_of (Var n) = [n] ∧
-  vars_of (Fnapp c ts) = FLAT (MAP vars_of ts)
+  vars_of (App c ts) = FLAT (MAP vars_of ts)
 End
+
+Definition match_def:
+  match [] [] theta = SOME theta ∧
+  match [] __ _____ = NONE ∧
+  match __ [] _____ = NONE ∧
+  match (Var n::pats) (tm::obs) theta =
+        (let bindings = {t | (n,t) ∈ theta}
+         in if bindings = {} then
+               match pats obs ((n,tm) INSERT theta)
+            else
+            if bindings = {tm} then
+               match pats obs theta
+            else NONE) ∧
+  match (App _ _ :: ___) (Var _ :: ___) theta = NONE ∧
+  match (App c1 T1::pats) (App c2 T2::obs) theta =
+        if c1 ≠ c2 then
+           NONE
+        else
+           match (T1 ++ pats) (T2 ++ obs) theta
+End
+
+Definition subst_def:
+  subst theta (App c tms) = App c (MAP (subst theta) tms) ∧
+  subst theta (Var n) =
+        (let bindings = {t | (n,t) ∈ theta}
+         in if bindings = {} then
+               Var n
+            else
+               @t. t ∈ bindings)
+End
+
+local open comparisonTheory in end
+
+Definition term_cmp_def:
+  term_cmp (Var x1) (Var x2) = num_cmp x1 x2 ∧
+  term_cmp (Var _) (App _ _) = Less ∧
+  term_cmp (App _ _) (Var _) = Greater ∧
+  term_cmp (App x1 ts1) (App x2 ts2) =
+     pair_cmp num_cmp (list_cmp term_cmp) (x1,ts1) (x2,ts2)
+End
+
 
 Datatype:
   exp = VarExp string
