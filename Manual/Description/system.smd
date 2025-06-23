@@ -23,14 +23,19 @@ header-includes: |
   \DeclareUnicodeCharacter{3B1}{$\alpha$}
   \DeclareUnicodeCharacter{3B2}{$\beta$}
   \DeclareUnicodeCharacter{3BB}{$\lambda$}
+  \DeclareUnicodeCharacter{3C4}{\ensuremath{\tau}}
   \DeclareUnicodeCharacter{201C}{\mbox{\textrm{\textquotedblleft}}}
   \DeclareUnicodeCharacter{201D}{\mbox{\textrm{\textquotedblright}}}
+  \DeclareUnicodeCharacter{2081}{\ensuremath{{}\sb{1}}}
+  \DeclareUnicodeCharacter{2082}{\ensuremath{{}\sb{2}}}
+  \DeclareUnicodeCharacter{2099}{\ensuremath{{}\sb{n}}}
   \DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
   \DeclareUnicodeCharacter{21D4}{$\Leftrightarrow$}
   \DeclareUnicodeCharacter{2200}{$\forall$}
   \DeclareUnicodeCharacter{2203}{$\exists$}
   \DeclareUnicodeCharacter{2227}{$\land$}
   \DeclareUnicodeCharacter{2228}{$\lor$}
+  \DeclareUnicodeCharacter{222A}{\ensuremath{\cup}}
   \DeclareUnicodeCharacter{2286}{$\subseteq$}
   \DeclareUnicodeCharacter{22A2}{$\vdash$}
   \DeclareUnicodeCharacter{2983}{$\llbrace$}
@@ -43,19 +48,21 @@ header-includes: |
 <!-- PolyML code for extracting stuff from structures and printing types etc -->
 >>__ structure PNV = PolyML.NameSpace.Values
 >>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
->>__ fun printNameAndType indent str nm =
+>>__ fun printNameAndType0 qp indent str nm =
        let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
                        handle Option => raise Fail ("Structure " ^ str ^ " not found")
            val snames = PolyML.NameSpace.Structures.contents sinfo
            val sval = valOf (#lookupVal snames nm)
                        handle Option => raise Fail ("Name " ^ nm ^ " not found in structure " ^ str)
-           val typ_p = PNV.printType(PNV.typeof sval, 100, SOME snames)
+           val ctxt = if qp then NONE else SOME snames
+           val typ_p = PNV.printType(PNV.typeof sval, 100, ctxt)
            val spaces = CharVector.tabulate(indent, fn _ => #" ")
            open PolyML
        in
            PP.prettyPrint(TextIO.print, 70-indent)
             (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
        end
+>>__ val printNameAndType = printNameAndType0 false
 
 # The HOL Logic in ML
 
@@ -750,165 +757,117 @@ These points are illustrated with a theorem inferred, for example purposes, from
 
 >> th;
 ```
-##skip
 
 ## Primitive Rules of Inference of the HOL Logic
-\label{rules}
 
-\index{inference rules, of HOL logic@inference rules, of HOL logic!primitive|(}
-%
-The primitive rules of inference of the logic were described
-abstractly in \LOGIC. The descriptions relied on meta-variables $t$,
-$t_1$, $t_2$, and so on.  In the HOL logic, infinite families of
-primitive inferences are grouped together and thought of as single
-primitive inference schemes. %
-%
-\index{families of inferences, in HOL logic@families of inferences, in HOL logic}
-%
-Each family contains all the concrete instances of one particular
-inference `pattern'. These can be produced, in abstract form, by
-instantiating the meta-variables in \LOGIC{}'s rules to concrete
-terms.
+The primitive rules of inference of the logic were described abstractly in §LOGIC.
+The descriptions relied on meta-variables $t$, $t_1$, $t_2$, and so on.
+In the HOL logic, infinite families of primitive inferences are grouped together and thought of as single primitive inference schemes.
+Each family contains all the concrete instances of one particular inference ‘pattern’.
+These can be produced, in abstract form, by instantiating the meta-variables in LOGIC’s rules to concrete terms.
 
-In \HOL, primitive inference schemes are represented by ML functions
-that return theorems as values.  That is, for particular HOL terms,
-the ML functions return the instance of the theorem at those terms.
-The ML functions are part of the ML abstract type
-`thm`:
-%
-\index{thm (ML type)@`thm` (ML type)}
-%
-although `thm` has no primitive constructors, it has (eight)
-operations which return theorems as values: `ASSUME`, `REFL`,
-`BETA_CONV`, `SUBST`, `ABS`, `INST_TYPE`, `DISCH` and
+In HOL, primitive inference schemes are represented by ML functions that return theorems as values.
+That is, for particular HOL terms, the ML functions return the instance of the theorem at those terms.
+The ML functions are part of the ML abstract type `thm`: although `thm` has no primitive constructors, it has (eight) operations which return theorems as values: `ASSUME`,
+`REFL`,
+`BETA_CONV`,
+`SUBST`,
+`ABS`,
+`INST_TYPE`,
+`DISCH` and
 `MP`.
-%
-\index{inference schemes, in HOL logic@inference schemes, in HOL logic}
 
 The ML functions that implement the primitive inference schemes in the
-HOL system are described below.  The same notation
-%
-\index{inferences, in HOL logic@inferences, in HOL logic!notation for}
-%
-is used here as in \LOGIC: hypotheses above a horizontal line and
-conclusion
-%
-\index{conclusions!of inference rules} beneath. The machine-readable
-{\small ASCII} notation is used for the logical constants.
+HOL system are described below.
+The same notation is used here as in §LOGIC: hypotheses above a horizontal line and conclusion beneath.
+The machine-readable ASCII notation is used for the logical constants.
 
-### Assumption introduction}
-%
-\index{assumption introduction, in HOL logic@assumption introduction, in HOL logic!ML function for@ML function for}
 
-\begin{holboxed}
-\index{ASSUME@`ASSUME`|pin}
-\begin{verbatim}
-   ASSUME : term -> thm
-\end{verbatim}\end{holboxed}
 
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-$t${\small\verb+ |- +}$t$ \\
-\end{tabular}
-\end{center}
+### Assumption Introduction
 
-\noindent
-{\small\verb+ASSUME +}$t$ evaluates to $t${\small\verb+ |- +}$t$.
+```
+>>__ printNameAndType 4 "Thm" "ASSUME";
+```
+
+```
+    ------------
+       t |- t
+```
+
+
+`ASSUME` `“`$t$`”` evaluates to $t$ `|-` $t$.
 Failure occurs if $t$ is not of type `bool`.
 
-\bigskip
 
-### Reflexivity}\index{reflexivity, in HOL logic@reflexivity, in HOL logic!ML function for@ML function for}
+### Reflexivity
 
-\begin{holboxed}\index{REFL@`REFL`|pin}
-\begin{verbatim}
-   REFL : term -> thm
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Thm" "REFL";
+```
 
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-{\small\verb+ |- +}$t${\small\verb+ = +}$t$ \\
-\end{tabular}
-\end{center}
+```
+    --------------
+       |- t = t
+```
 
-\noindent {\small\verb+REFL +}$t${\small\verb++} evaluates to
-{\small\verb+|- +}$t${\small\verb+ = +}$t$. A call to `REFL` never fails.
+`REFL` `“`$t$`”` evaluates to `|-` $t = t$. A call to `REFL` never fails.
 
-\bigskip
+### Beta-Conversion
 
-### Beta-conversion}
-\index{beta-conversion, in HOL logic@beta-conversion, in HOL logic!ML function for@ML function for}
+```
+>>__ printNameAndType 4 "Thm" "BETA_CONV";
+```
 
-\begin{holboxed}\index{BETA_CONV@`BETA_CONV`|pin}
-\begin{verbatim}
-   BETA_CONV : term -> thm
-\end{verbatim}
-\end{holboxed}
+```
+    ----------------------------------
+       |- (λx. t₁)t₂ = t₁[t₂/x]
+```
 
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-\holtxt{ |- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}
-\end{tabular}
-\end{center}
+-  where $t_1$`[`$t_2$`/`$x$`]` denotes the result of substituting $t_2$ for $x$
+   in $t_1$, with suitable renaming of variables to prevent free variables
+   in $t_2$ becoming bound after substitution. 
+   The substitution $t_1[t_2/x]$ is always defined.
 
-\begin{itemize}
-\item where $t_1[t_2/x]$ denotes the result of substituting $t_2$ for $x$
-in $t_1$, with suitable renaming of variables to prevent free variables
-in $t_2$ becoming bound after substitution. The substitution
- $t_1[t_2/x]$ is always defined.
-\end{itemize}
 
-%'' below makes latex font-locking cope with the "unbalanced" double
-%back-tick quotations.
-\noindent \ml{BETA_CONV ``(\bs$x$.$t_1$)$t_2$``} %''
-evaluates to the theorem \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
+`BETA_CONV` `“`$(\lambda x.\;t_1)t_2$`”`
+evaluates to the theorem `|-` $(\lambda x.\;t_1)t_2 = t_1[t_2/x]$.
 Failure occurs if the argument to `BETA_CONV` is not a $\beta$-redex
-(\ie, is not of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
+(*i.e.*, is not of the form $(\lambda x.\;t_1)t_2$).
 
-\bigskip
 
-### Substitution}\index{substitution rule, in HOL logic@substitution rule, in HOL logic!ML function for@ML function for|(}\index{SUBST@`SUBST`|(}
+### Substitution
 
-\begin{holboxed}
-\begin{verbatim}
-   SUBST : (thm * term) list -> term -> thm -> thm
-\end{verbatim}
-\end{holboxed}
+<!-- if you attempt to use printNameAndType, polyml reports the first type below as Thm.Lib.subst -->
+```
+    SUBST : (term,thm)Lib.subst -> term -> thm -> thm
+```
 
-\begin{center}
-\begin{tabular}{c}
-$\Gamma_1${\small\verb+ |- +} $t_1${\small\verb+=+}$t'_1$ {\small\verb+  +} $\cdots$ {\small\verb+  +}
-$\Gamma_n${\small\verb+ |- +} $t_n${\small\verb+=+}$t'_n$ {\small\verb+  +}
-$\Gamma${\small\verb+ |- +} $t[t_1,\ldots,t_n]$ \\ \hline
-$\Gamma_1 \cup \cdots
-\cup \Gamma_n \cup \Gamma${\small\verb+ |- +} $t[t'_1,\ldots,t'_n]$ \\
-\end{tabular}
-\end{center}
+```
+       Γ₁ |- t1 = t1'   ...  Γₙ |- tn = tn'   Γ |- t[t1,...,tn]
+    --------------------------------------------------------------
+                Γ₁ ∪ ... ∪ Γₙ ∪ Γ |- t[t1',...tn']
+```
 
-\bigskip
+-  where $t[t_1,\ldots,t_n]$ denotes a term $t$ with some free
+   occurrences of the terms $t_1$, $\dots$, $t_n$ singled out and
+   $t[t'_1,\ldots,t'_n]$ denotes the result of simultaneously replacing each
+   such occurrences of $t_i$ by $t'_i$ (for $1{\leq}i {\leq} n$),
+   with suitable renaming of variables to prevent free variables
+   in $t_i'$ becoming bound after substitution.
 
-\begin{itemize}
-\item where $t[t_1,\ldots,t_n]$ denotes a term $t$ with some free
-occurrences of the terms $t_1$, $\dots$, $t_n$ singled out and
-$t[t'_1,\ldots,t'_n]$ denotes the result of simultaneously replacing each
-such occurrences of $t_i$ by $t'_i$ (for $1{\leq}i {\leq} n$),
-with suitable renaming of variables to prevent free variables
-in $t_i'$ becoming bound after substitution.
-\end{itemize}
-
-\noindent
-The first argument to {\small\verb+SUBST+} is a list
-{\small\verb+[(|-+}$t_1${\small\verb+=+}$t'_1${\small\verb+, +}$x_1${\small\verb+);+}$\:\ldots\:${\small\verb+;(|-+}$t_n${\small\verb+=+}
-$t'_n${\small\verb+, +}$x_n${\small\verb+)]+}.  The second argument is a
-template term $t[x_1,\ldots,x_n]$ in which occurrences of the variable
-$x_i$ (where $1 \leq i\leq n$) are used to mark the places where
-substitutions with {\small\verb+|- +}$t_i${\small\verb+=+}$t'_i$ are to be
+The first argument to `SUBST` is a list of what are effectively pairs in the widely used `(τ₁,τ₂)Lib.subst` ML type. 
+Each element in these lists is a record of type `{redex:τ₁,residue:τ₂}` with the intention that the `redex` value is to be replaced by the `residue` value. 
+Such values can be constructed with the infix arrow `|->`, so that, for example:
+```
+>> 3 |-> "foo";
+```
+In `SUBST`, the `redex` values are variables $x_i$ and the theorems are $\Gamma_i\vdash t_i = t'_i$.
+The second argument is a template term $t[x_1,\ldots,x_n]$ in which occurrences of the variable $x_i$ (where $1 \leq i\leq n$) are used to mark the places where
+substitutions with $\Gamma_i \vdash t_i = t'_i$ are to be
 done. Thus
 
+##skip
 \bigskip
 
 {\small\verb+SUBST [(|-+}$t_1${\small\verb+=+}$t'_1${\small\verb+, +}$x_1${\small\verb+);+}$\ldots${\small\verb+;(|-+}$t_n${\small\verb+=+}
@@ -924,6 +883,8 @@ Failure occurs if:
 \item the type of $x_i$ is not equal to the type of $t_i$ for some
 $1\leq i\leq n$.
 \end{myenumerate}\index{SUBST@`SUBST`|)}\index{substitution rule, in HOL logic@substitution rule, in HOL logic!ML function for@ML function for|)}
+
+##skip
 
 ### Abstraction}\index{abstraction rule, in HOL logic@abstraction rule, in HOL logic!ML function for@ML function for}
 \index{function abstraction, in HOL logic@function abstraction, in HOL logic!inference rules for}
