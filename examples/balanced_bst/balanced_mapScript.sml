@@ -273,7 +273,7 @@ Proof
  \\ res_tac
 QED
 
-Theorem good_cmp_greater_antisym:
+Theorem good_cmp_greater_antisym[local]:
   good_cmp cmp ∧
   cmp x y = Greater ∧
   cmp y x = Greater ⇒
@@ -289,7 +289,7 @@ Proof
   \\ simp_tac (srw_ss()) []
 QED
 
-Theorem good_cmp_less_antisym:
+Theorem good_cmp_less_antisym[local]:
   good_cmp cmp ∧
   cmp x y = Less ∧
   cmp y x = Less ⇒
