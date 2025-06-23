@@ -63,6 +63,7 @@ header-includes: |
             (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
        end
 >>__ val printNameAndType = printNameAndType0 false
+>>__ linewidth := 65
 
 # The HOL Logic in ML
 
