@@ -18,6 +18,8 @@ header-includes: |
       \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
     \EndAccSupp{}%
   }
+  \DeclareUnicodeCharacter{393}{\ensuremath{\Gamma}}
+  \DeclareUnicodeCharacter{394}{\ensuremath{\Delta}}
   \DeclareUnicodeCharacter{3B1}{$\alpha$}
   \DeclareUnicodeCharacter{3B2}{$\beta$}
   \DeclareUnicodeCharacter{3BB}{$\lambda$}
@@ -28,13 +30,32 @@ header-includes: |
   \DeclareUnicodeCharacter{2200}{$\forall$}
   \DeclareUnicodeCharacter{2203}{$\exists$}
   \DeclareUnicodeCharacter{2227}{$\land$}
+  \DeclareUnicodeCharacter{2228}{$\lor$}
   \DeclareUnicodeCharacter{2286}{$\subseteq$}
   \DeclareUnicodeCharacter{22A2}{$\vdash$}
   \DeclareUnicodeCharacter{2983}{$\llbrace$}
   \DeclareUnicodeCharacter{2984}{$\rrbrace$}
+  \DeclareUnicodeCharacter{1D49F}{\ensuremath{{\cal D}}}
 
 ---
 
+
+<!-- PolyML code for extracting stuff from structures and printing types etc -->
+>>__ structure PNV = PolyML.NameSpace.Values
+>>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
+>>__ fun printNameAndType indent str nm =
+       let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
+                       handle Option => raise Fail ("Structure " ^ str ^ " not found")
+           val snames = PolyML.NameSpace.Structures.contents sinfo
+           val sval = valOf (#lookupVal snames nm)
+                       handle Option => raise Fail ("Name " ^ nm ^ " not found in structure " ^ str)
+           val typ_p = PNV.printType(PNV.typeof sval, 100, SOME snames)
+           val spaces = CharVector.tabulate(indent, fn _ => #" ")
+           open PolyML
+       in
+           PP.prettyPrint(TextIO.print, 70-indent)
+            (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
+       end
 
 # The HOL Logic in ML
 
@@ -76,9 +97,8 @@ for details of how such declarations are made. There are two primitive
 constructor
 functions for values of type `hol_type`
 ```
-   mk_vartype : string -> hol_type
-   mk_thy_type : {Tyop:string, Thy:string, Args:hol_type list} ->
-                 hol_type
+>>__ printNameAndType 4 "Type" "mk_vartype"
+>>__ printNameAndType 4 "Type" "mk_thy_type"
 ```
 
 The function `mk_vartype` constructs a type variable
@@ -124,9 +144,8 @@ Thus the ML code `alpha --> bool` is equal to, but much more concise than
 There are two primitive destructor
 functions for values of type `hol_type`:
 ```
-  dest_vartype : hol_type -> string
-  dest_thy_type : hol_type ->
-                  {Tyop:string, Thy:string, Args:hol_type list}
+>>__ printNameAndType 4 "Type" "dest_vartype";
+>>__ printNameAndType 4 "Type" "dest_thy_type";
 ```
 The function `dest_vartype` extracts the name of a type variable.
 A compound type is destructed by the function `dest_thy_type` into the name of the type
@@ -150,13 +169,13 @@ There are four primitive constructor
 functions for values of type `term`:
 
 ```
-   mk_var : (string * hol_type) -> term
+>>__ printNameAndType 4 "Term" "mk_var"
 ```
 `mk_var(`$x$`,`$\sigma$`)` evaluates to a variable
 with name $x$ and type $\sigma$; it always succeeds.
 
 ```
-   mk_thy_const : {Name:string, Thy:string, Ty:hol_type} -> term
+>>__ printNameAndType 4 "Term" "mk_thy_const"
 ```
 `mk_thy_const{Name =`$\;\mathit{c}$`,Thy =`$\;\mathit{thyname}$`,Ty =`$\;\sigma$`}` evaluates to a term representing the constant
 with name $c$ and type $\sigma$; it fails if:
@@ -167,8 +186,7 @@ with name $c$ and type $\sigma$; it fails if:
 see [§Theories](#theories)).
 
 ```
-   mk_comb : (term * term) -> term
-
+>>__ printNameAndType 4 "Term" "mk_comb"
 ```
 
 `mk_comb(`$t_1$`,`$t_2$`)` evaluates to a term representing the combination $t_1\ t_2$.
@@ -179,7 +197,7 @@ It fails if:
 type of $t_2$ is not equal to $\sigma'$.
 
 ```
-   mk_abs : (term * term) -> term
+>>__ printNameAndType 4 "Term" "mk_abs"
 ```
 
 `mk_abs(`$x$`,`$t$`)` evaluates to a term representing
@@ -188,10 +206,10 @@ the abstraction $\lambda x.\;t$; it fails if $x$ is not a variable.
 There are four primitive destructor functions on terms:
 
 ```
-   dest_var       : term -> (string * hol_type)
-   dest_thy_const : term -> {Name:string, Thy:string, Ty:hol_type}
-   dest_comb      : term -> (term * term)
-   dest_abs       : term -> (term * term)
+>>__ printNameAndType 4 "Term" "dest_var";
+>>__ printNameAndType 4 "Term" "dest_thy_const";
+>>__ printNameAndType 4 "Term" "dest_comb";
+>>__ printNameAndType 4 "Term" "dest_abs";
 ```
 
 These are the inverses of `mk_var`, `mk_thy_const`,
@@ -208,13 +226,13 @@ See §REFERENCE for details.
 
 The function
 ```
-   type_of : term -> hol_type
+>>__ printNameAndType 4 "Term" "type_of"
 ```
 returns the type of a term.
 
 The function
 ```
-   aconv : term -> term -> bool
+>>__ printNameAndType 4 "Term" "aconv"
 ```
 implements the $\alpha$-convertibility test for
 $\lambda$-calculus terms.
@@ -430,7 +448,7 @@ the capabilities of the term and type parsing and printing facilities
 in the system.  The remainder of this section provides a brief
 overview of what is possible.
 
-### Type inference
+### Type Inference
 
 Notice that there is no explicit type information in `\x.x+1`.
 The HOL type checker knows that `1` has type `:num` and `+` has type `:num->(num->num)`.
@@ -490,7 +508,7 @@ In this way, one has an option that can result in needing to write fewer parenth
 ```
 Note that, as above, the pretty-printer will always print terms with the “invisible” function application symbol and parentheses as necessary, even if they were input with dollar-signs.
 
-### Viewing the grammar
+### Viewing the Grammar
 
 The behaviour of the HOL quotation parser and printer is determined
 by the current grammar. Thus, a familiarity with the basic vocabulary
@@ -510,13 +528,9 @@ For example, in the following session, we see that the type grammar used in the 
 Also, `fun`, `sum`, and `prod` have infix notation (`->`), (`+`), and (`#`), respectively, with different binding strengths: `#` (with 70) binds stronger than `+` (60), which  binds stronger than `->` (50).
 All postfix type operators bind more strongly than the infixes.
 
-The next session shows the (abbreviated) output from invoking the
-`term_grammar` function in the startup HOL environment. The deleted
-output includes a listing of all constants known to the system,
-including prefix operators, along with all overloadings currrently in
-force. The portrayed grammar ranges from binding operators at very low
-(0) binding strength, through to function application (2000) and
-record selection (2500), which bind very tightly.
+The next session shows the (abbreviated) output from invoking the `term_grammar` function in the startup HOL environment.
+The deleted output includes a listing of all constants known to the system, including prefix operators, along with all overloadings currrently in force.
+The portrayed grammar ranges from binding operators at very low (0) binding strength, through to function application (2000) and record selection (2500), which bind very tightly.
 
 ```
 > term_grammar();
@@ -566,367 +580,179 @@ val it =
   : grammar
 ```
 
-##skip
 
-### Namespace control}
+### Namespace control
 
-\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in HOL logic parser)!generating qualified identifiers}
 In order to provide convenience, the parser deals with overloading and ambiguity.
-Overloading of numeric literals is discussed in Section~\ref{arith-overloading}, although any symbol may be overloaded, not just numerals.
+Overloading of numeric literals is discussed in [§Overloading of Arithmetic Operators](#overloading-of-arithmetic-operators), although any symbol may be overloaded, not just numerals.
 At times such flexibility is quite useful; however, it can happen that one wishes to explicitly designate a particular constant.
-In that case, the notation $\mathit{thy}\holtxt{\$}\mathit{const}$ may be used in the parser to designate the constant $\mathit{const}$ declared in theory $\mathit{thy}$.
+In that case, the notation $\mathit{thy}$`$`$\mathit{const}$ may be used in the parser to designate the constant $\mathit{const}$ declared in theory $\mathit{thy}$.
 In the following example, the less-than operator is explicitly specified.
 
-\setcounter{sessioncount}{0}
-\begin{session}
-\begin{alltt}
->> ``prim_rec$< x y``
-\end{alltt}
-\end{session}
-Note how the \holtxt{<} symbol is not treated as an infix by the
-parser when given in ``fully-qualified'' form.  Syntactically, such
-tokens are never given special treatment by the parser of \HOL's
+```
+>> “prim_rec$< x y”
+```
+Note how the `<` symbol is not treated as an infix by the
+parser when given in “fully-qualified” form.  Syntactically, such
+tokens are never given special treatment by the parser of HOL's
 concrete syntax.
-%
-\index{constants, in HOL logic@constants, in HOL logic!fully-qualified names of}
 
-\section{Ways to Construct Types and Terms}
+## Ways to Construct Types and Terms
 
-\index{type variables, in HOL logic@type variables, in HOL logic!constructor for}
-\index{type constructors!in HOL logic@in HOL logic}
-\index{term constructors, in HOL logic@term constructors, in HOL logic|(}
-\index{terms, in HOL logic@terms, in HOL logic!constructors for|(}
 The table below shows ML expressions for various kinds of type
 quotations\index{quotation, in HOL logic@quotation, in HOL logic!of types}.
 The expressions in the same row are equivalent.
 
-\bigskip
+<!--
+ !-- \begin{tabular}{|l|l|l|} \hline
+ !-- \multicolumn{3}{|c|}{ } \\
+ !-- \multicolumn{3}{|c|}{\bf Types} \\
+ !-- \multicolumn{3}{|c|}{ } \\
+  -->
 
-\begin{center}
-\index{compound types, in HOL logic@compound types, in HOL logic!constructors for}
-\index{ type variables, in HOL logic@\ml{'a,\,'b,\,}$\ldots$ (type variables, in HOL logic)}
-\index{types, in HOL logic@types, in HOL logic!constructors for}
-\index{ function type operator, in HOL logic@\ml{->} (function type operator, in HOL logic)}
-\index{mk_vartype@`mk_vartype`}
-\index{mk_type@`mk_type`}
-\index{ type quotes, in ML@\ml{\uholquote{:$\cdots$}} (type quotes, in \ML)}
-\begin{tabular}{|l|l|l|} \hline
-\multicolumn{3}{|c|}{ } \\
-\multicolumn{3}{|c|}{\bf Types} \\
-\multicolumn{3}{|c|}{ } \\
-{\it Kind of type} & {\it ML quotation} & {\it Constructor expression}  \\ \hline
- & & \\
-Type variable &
-{\small\verb+:'+}$\mathit{alphanum}$ & {\small\holtxt{mk_vartype("'}}$\mathit{alphanum}${\small\holtxt{")}}   \\ \hline
-Type constant & {\small\verb+:+}$\mathit{op}$ & {\small\verb+mk_type("+}$\mathit{op}${\small\verb+",[])+}   \\ \hline
- & {\small\verb+:+}$\mathit{thy}${\small\verb+$+}$\mathit{op}$
-  & \parbox{7cm}
-   {{\small\holtxt{mk_thy_type\lb{}Thy="}}$\mathit{thy}${\small\holtxt{",}} \newline
-    {\small\holtxt{\quad Tyop="}}$\mathit{op}${\small\holtxt{",Args=[]\rb{}}}}   \\ \hline
-Function type & {\small\verb+:+}$\sigma_1${\small\verb+->+}$\sigma_2$ &
-$\sigma_1${\small\verb+-->+}$\sigma_2$ \\
-\hline
-Compound type &
-{\small\verb+:(+}$\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\verb+)+}$\mathit{op}$ &
-{\small\holtxt{mk_type("}}$\mathit{op}${\small\holtxt{",[}}%
- $\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\holtxt{])}}
-\\
-\hline
-& {\small\verb+:(+}$\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\verb+)+}$\mathit{thy}${\small\verb+$+}$\mathit{op}$
-& \parbox{7cm}
-   {{\small\holtxt{mk_thy_type\lb{}Thy="}}$\mathit{thy}${\small\holtxt{",}} \newline
-    {\small\holtxt{\quad Tyop="}}$\mathit{op}${\small\holtxt{",Args=[}}%
- $\sigma_1{\small\holtxt{,\ldots,}}\sigma_n${\small\holtxt{]\rb{}}}} \\ \hline
-\end{tabular}
-\end{center}
+ *Kind of type*    *Quotation*                                                       *ML expression*
+ ---------------   ---------------                                                   -------------------------
+ Type variable      `:'`$\mathit{alphanum}$                                          `mk_vartype("'`$\mathit{alphanum}$`")`
+ Type constant      `:`$\mathit{op}$                                                 `mk_type("`$\mathit{op}$`",[])`
+                    `:`$\mathit{thy}$`$`$\mathit{op}$                                `mk_thy_type{`
+                                                                                      $\;\;$`Thy="`$\mathit{thy}$`",Tyop="`$\mathit{op}$`", Args=[]}`
+ Function type      `:`$\sigma_1$`->`$\sigma_2$                                      $\sigma_1$ `-->` $\sigma_2$
+ Compound type      `:(`$\sigma_1,\dots,\sigma_n$`)`$\mathit{op}$                    `mk_type("`$\mathit{op}$`",[`$\sigma_1,\dots,\sigma_n$`])`
+                    `:(`$\sigma_1\dots,\sigma_n$`)`$\mathit{thy}$`$`$\mathit{op}$    `mk_thy_type{`
+                                                                                      $\;\;$`Thy="`$\mathit{thy}$`",Tyop="`$\mathit{op}$`",`
+                                                                                      $\;\;$`Args=[`$\sigma_1,\dots,\sigma_n$`]}`
+
+ Table: Building Types *via* Quotations or ML
 
 
 Equivalent ways of inputting the four primitive kinds of term are shown in
 the next table.
 
-\bigskip
+ *Kind of term*    *Quotation*                       *ML expression*
+ ---------------   ------------                      -----------------
+ Variable          $v$`:`$\sigma$                    `mk_var("`$v$`",`$\sigma$`)`
+ Constant          $c$`:`$\sigma$                    `mk_const"`$c$`",`$\sigma$`)`
+                   $\mathit{thy}$`$`$c$`:`$\sigma$   `mk_thy_const{Thy="`$\mathit{thy}$`",Name="`$c$`",Ty=`$\sigma$`}`
+ Combination       $t_1$ $t_2$                       `mk_comb(`$t_1$`, `$t_2$`)`
+ Abstraction       `\`$x$`. `$t$                    `mk_abs(`$x$`, `$t$`)`
 
-\begin{center}
-\index{combinations, in HOL logic@combinations, in HOL logic!quotation of}
-\index{terms, in HOL logic@terms, in HOL logic!primitive}
-\index{terms, in HOL logic@terms, in HOL logic!constructors for}
-\index{quotation, in HOL logic@quotation, in HOL logic!of primitive terms}
-\index{function abstraction, in HOL logic@function abstraction, in HOL logic!symbol for}
-\index{function application, in HOL logic@function application, in HOL logic!constructor for}
-\index{function application, in HOL logic@function application, in HOL logic!syntax of}
-\index{variables, in HOL logic@variables, in HOL logic!constructor for}
-\index{variables, in HOL logic@variables, in HOL logic!syntax of}
-\index{mk_var@`mk_var`}
-\index{mk_const@`mk_const`}
-\index{mk_comb@`mk_comb`}
-\index{mk_abs@`mk_abs`}
-\begin{tabular}{|l|l|l|} \hline
-\multicolumn{3}{|c|}{ } \\
-\multicolumn{3}{|c|}{\bf Primitive terms} \\
-\multicolumn{3}{|c|}{ } \\
-{\it Kind of term} & {\it ML quotation} &
-{\it Constructor expression}  \\ \hline
- & & \\
-Variable & $\mathit{var}${\small\verb+:+}$\sigma$ &
-{\small\verb+mk_var("+}$\mathit{var}${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
-%
-Constant & $\mathit{const}${\small\verb+:+}$\sigma$ &
-{\small\verb+mk_const("+}$\mathit{const}${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
-%
-Constant & $\mathit{thy}${\small\verb+$+}$\mathit{const}${\small\verb+:+}$\sigma$ &
-{\small\verb+mk_thy_const{Name="+}$\mathit{const}${\small\verb+",Thy="+}$\mathit{thy}${\small\verb+",Ty=+}$\sigma${\small\verb+}+} \\ \hline
-%
-Combination & $t_1\ t_2$ &
-{\small\verb+mk_comb(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
-%
-Abstraction & {\small\holtxt{\bs}}$x${\small\holtxt{.}}$t$ &
-{\small\verb+mk_abs(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
-\end{tabular}
-\end{center}
-%
-\index{type checking, in HOL logic@type checking, in HOL logic!of quotation syntax|)}
+ Table: Building Primitive Terms
+
+
+The following shows a few of these in action:
+```
+>> val c = mk_const("CONS",
+                    mk_vartype("'a") -->
+                    mk_type("list", [mk_vartype("'a")]) -->
+                    “:'a list”)
+
+>> dest_thy_const c;
+```
 
 In addition to the kinds of terms in the tables above, the parser also
 supports the following syntactic abbreviations.
 
+ *Abbreviated term*             *Meaning*                                            *ML expression*
+ ------------------             ----------                                           ----------------
+ $t\;t_1 \cdots t_n$            `(`$\cdots$`((`$t$ $t_1$`)` $t_2$`)`$\cdots t_n$`)`  `list_mk_comb(`$t$`,[`$t_1,\dots,t_n$`])`
+ `\`$x_1\cdots x_n$`.` $t$      `\`$x_1$`.`$\cdots$`\`$x_n$`.` $t$                   `list_mk_abs([`$x_1,\dots,x_n$`],`$t$`)`
 
-\begin{center}
+ Table: Syntactic abbreviations
 
-\index{variables, in HOL logic@variables, in HOL logic!multiple bound}
-\index{list_mk_comb@`list_mk_comb`|pin}
-\index{list_mk_abs@`list_mk_abs`|pin}
-\index{list_mk_forall@`list_mk_forall`|pin}
-\index{list_mk_exists@`list_mk_exists`|pin}
-\index{combinations, in HOL logic@combinations, in HOL logic!abbreviation for multiple}
-\index{existential quantifier, in HOL logic@existential quantifier, in HOL logic!abbreviation for multiple}
-\index{universal quantifier, in HOL logic@universal quantifier, in HOL logic!abbreviation for multiple}
-\begin{tabular}{|l|l|l|} \hline
-\multicolumn{3}{|c|}{ } \\
-\multicolumn{3}{|c|}{\bf Syntactic abbreviations} \\
-\multicolumn{3}{|c|}{ } \\
-{\it Abbreviated term} & {\it Meaning} &
-{\it Constructor expression} \\ \hline
- & &  \\
-$t\ t_1 \cdots t_n$ &
-{\small\verb+(+}$\cdots${\small\verb+(+}$t\ t_1${\small\verb+)+}$\cdots t_n${\small\verb+)+} &
-{\small\verb+list_mk_comb(+}$t${\small\verb+,[+}$t_1${\small\holtxt{,\ldots,}}$t_n${\small\verb+])+} \\ \hline
-{\small\verb+\+}$x_1\cdots x_n${\small\verb+.+}$t$ &
-{\small\holtxt{\bs}}$x_1${\small\verb+.+}$\cdots${\small\holtxt{\bs}}$x_n${\small\verb+.+}$t$ &
-{\small\verb+list_mk_abs([+}$x_1${\small\holtxt{,\ldots,}}$x_n${\small\verb+],+}$t${\small\verb+)+}
-\\ \hline
-\end{tabular}
-\end{center}
-\index{term constructors, in HOL logic@term constructors, in HOL logic|)}
-\index{terms, in HOL logic@terms, in HOL logic!constructors for|)}
+## Theorems
 
-\section{Theorems}
-\label{sec:theorems-in-ml}
-
-In \LOGIC, the notion of deduction was introduced in terms of
-\textit{sequents},
-%
-\index{sequents!in natural deduction}
-%
-where a sequent is a pair whose second component is a formula being
-asserted (a conclusion),
-%
-\index{conclusions!of sequents}
-%
-and whose first component is a set of formulas
-(hypotheses).
-%
-\index{hypotheses!of sequents}
-%
-Based on this was the notion of a \textit{deductive
-  system}:
-\index{natural deduction}%
-\index{deductive systems}%
-%
+In §LOGIC, the notion of deduction was introduced in terms of *sequents*, where a sequent is a pair whose second component is a formula being asserted (a conclusion), and whose first component is a set of formulas (hypotheses).
+Based on this was the notion of a *deductive system*:
 a set of pairs, whose second component is a sequent, and whose first
-component is a set of sequents.\footnote{Note that these sequents form
-  a list, not a set; that is, are ordered.}  The concept of a sequent
-\textit{following from}
-%
-\index{follows from, in natural deduction}
-%
-a set of sequents via a deductive system was then defined: a sequent
-follows from a set of sequents if the sequent is the last element of
-some chain of sequents, each of whose elements is either in the set,
-or itself follows from the set along with earlier elements of the
-chain, via the deductive system.
+component is a list of sequents.
+The concept of a sequent *following from* a list of sequents *via* a deductive system was then defined:
+a sequent follows from a list of sequents if the sequent is the last element of
+some chain of sequents, each of whose elements is either in the list,
+or itself follows from the list along with earlier elements of the
+chain, *via* the deductive system.
 
-\index{turnstile notation|(} A notation for `follows from' was then
-introduced.  That a sequent $(\{t_1,\ldots,t_n\},\ t)$ follows from a
-set of sequents $\Delta$, via a deductive system ${\cal D}$, is
-denoted by: $t_1,\ldots,t_n\vdash_{{\cal D},\Delta} t$.  (It was noted
-that where either ${\cal D}$ or $\Delta$ were clear by context, their
+A notation for `follows from' was then introduced.
+That a sequent $(\{t_1,\dots,t_n\},\ t)$ follows from a
+set of sequents $\Delta$, via a deductive system 𝒟, is
+denoted by: $t_1,\dots,t_n\vdash_{𝒟,\Delta} t$.
+(It was noted that where either 𝒟 or Δ were clear by context, their
 mention could be omitted; and where the set of hypotheses was empty,
 its mention could be omitted.)
 
-A sequent that follows from the empty set of sequents via a deductive
-system is called a \textit{theorem} of that deductive system.  That
-is, a theorem
-%
-\index{theorems, in natural deduction}
-%
-is the last element of a \textit{proof}
-%
-\index{proof!in natural deduction}
-%
-(in the sense of \LOGIC) from the empty set of sequents. When a pair
-$(L,(\Gamma,t))$ belongs to a deductive system, and the list $L$ is
-empty, then the sequent $(\Gamma,t)$ is called an
-\textit{axiom}\index{axioms!in natural deduction}.  Any pair
-$(L,(\Gamma,t))$ belonging to a deductive system is called a
-\textit{primitive inference}\index{inference, in natural
-  deduction}\index{primitive inference, in natural deduction} of the
-system, with hypotheses\footnote{Note that `hypotheses' and
-  `conclusion' are also used for the components of sequents.} $L$ and
-conclusion $(\Gamma,t)$.
+A sequent that follows from the empty set of sequents via a deductive system is called a \textit{theorem} of that deductive system.
+That is, a theorem is the last element of a *proof* (in the sense of §LOGIC) from the empty set of sequents.
+When a pair $(L,(Γ,t))$ belongs to a deductive system, and the list $L$ is empty, then the sequent $(\Gamma,t)$ is called an *axiom*.
+Any pair $(L,(Γ,t))$ belonging to a deductive system is called a *primitive inference* of the system, with hypotheses[^prim-inf-hypotheses] $L$ and conclusion $(Γ,t)$.
 
-A formula
-%
-\index{formulas as terms, in HOL logic@formulas as terms, in HOL logic}
-%
-in the abstract is represented concretely in HOL by a term whose
-HOL type is \holtxt{:bool}.  Therefore, a term
-%
-\index{terms, in HOL logic@terms, in HOL logic!as logical formulas}
-%
-of type \holtxt{:bool} is used to represent a member of the set of
-hypotheses of a sequent; and likewise to represent the conclusion of a
-sequent.  Sets in this context are represented by an implementation of
-the ML signature `HOLset` supporting operations such as
-`member` and `union`.
-%
-\index{sequents!representation of, in HOL logic@representation of, in HOL logic}
+A formula in the abstract is represented concretely in HOL by a term whose HOL type is `:bool`.
+Therefore, a term of type `:bool` is used to represent a member of the set of hypotheses of a sequent; and likewise to represent the conclusion of a sequent.
+Sets in this context are represented by an implementation of the ML signature `HOLset` supporting operations such as `member` and `union`.
 
-A theorem in the abstract is represented concretely in the HOL
-system by a value with the ML abstract type `thm`.
-%
-\index{thm (ML type)@`thm` (ML type)}
-%
+A theorem in the abstract is represented concretely in the HOL system by a value with the ML abstract type `thm`.
 The type `thm` has a destructor function
+```
+>>__ printNameAndType 4 "Thm" "dest_thm"
+```
+which returns a pair consisting of a list of the hypotheses and the conclusion, respectively, of a theorem.
+The order of assumptions in the list should not be relied on.
+Using `dest_thm`, two further destructor functions are derived:
 
-\begin{holboxed}
-\index{dest_thm@`dest_thm`|pin}
-\begin{verbatim}
-   dest_thm : thm -> (term list * term)
-\end{verbatim}
-\end{holboxed}
-
-\noindent which returns a pair consisting of a list of the
-hypotheses
-\index{hypotheses!of theorems}
-and the conclusion,
-\index{conclusions!of theorems}
-%
-respectively, of a theorem.  The order of assumptions in the list
-should not be relied on.  A theorem's hypotheses are also available in
-the set form with the function
-
-\begin{holboxed}
-\index{hyp_set@`hyp_set`}
-\begin{verbatim}
-   hyp_set : thm -> term HOLset.set
-\end{verbatim}
-\end{holboxed}
-
-Using `dest_thm`, two further destructor
-\index{theorems, in HOL logic@theorems, in HOL logic!destructors for}
-functions are derived
-
-\begin{holboxed}
-\index{hyp@`hyp`|pin}
-\index{concl@`concl`|pin}
-\begin{verbatim}
-   hyp   : thm -> term list
-   concl : thm -> term
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Thm" "hyp"
+>>__ printNameAndType 4 "Thm" "concl"
+```
 
 \noindent for extracting the hypothesis list and the conclusion, respectively,
-of a theorem. The ML type `thm` does not have
-a primitive constructor function.  In this way, the ML type system protects
-the HOL logic
-from the arbitrary and unrecorded construction
-of theorems, which would compromise
-the consistency
-\index{consistency, of HOL logic@consistency, of HOL logic} of the logic.
-(Functions which return theorems as values, \eg, functions representing primitive inferences,
-are discussed in Section~\ref{rules}.)
-%% derived-rules reference is dead for the moment (until we
-%% resuscitate drules.tex)
-%, and further in Chapter\ref{derived-rules}.)
+of a theorem.
+A theorem's hypotheses are also available in the set form with the function
+```
+>>__ printNameAndType 4 "Thm" "hypset";
+```
 
-It was mentioned in \LOGIC{} that the deductive system of HOL
-includes four axioms.\footnote{This is a simplification: in fact the
-  various axioms are an extension of the basic logic.}  In that
-manual, the axioms were presented in abstract form.  Concretely,
-axioms are just theorem values that are introduced through the use of
-the ML function `new_axiom` (see Section~\ref{theoryprims}
-below).  For example, the axiom `BOOL_CASES_AX` mentioned in
-\LOGIC{} is printed in HOL as follows (where `T` and
-`F` are the HOL logic's constants representing truth and
-falsity, respectively):
 
-\begin{session}
-\index{F (falsity), the HOL constant@`F` (falsity), the HOL constant!axiom for}
-\begin{alltt}
+The ML type `thm` does not have a primitive constructor function.
+In this way, the ML type system protects the HOL logic from the arbitrary and unrecorded construction of theorems, which would compromise the consistency of the logic.
+(Functions which return theorems as values, *e.g.*, functions representing primitive inferences,
+are discussed in [§Primitive Rules](#primitive-rules-of-inference-of-the-hol-logic).)
+<!-- derived-rules reference is dead for the moment (until we
+     resuscitate drules.tex)
+, and further in Chapter\ref{derived-rules}.) -->
+
+It was mentioned in §LOGIC that the deductive system of HOL includes four axioms.[^four-axioms-simplification]
+In that manual, the axioms were presented in abstract form.
+Concretely, axioms are just theorem values that are introduced through the use of the ML function `new_axiom` (see [§Theory Operations](#ml-functions-for-theory-operations) below).
+For example, the axiom `BOOL_CASES_AX` mentioned in §LOGIC is printed in HOL as follows (where `T` and `F` are the HOL logic's constants representing truth and falsity, respectively):
+
+```
 >> BOOL_CASES_AX;
-\end{alltt}
-\end{session}
+```
+Note the special print format, with the $\vdash$ notation used to indicate ML type `thm` status; as well as the absence of HOL quotation marks in the ML context.
 
-\noindent
-Note the special print format,
-\index{printing, in HOL logic@printing, in HOL logic!of theorems}
-%
-with the $\vdash$ notation
-%
-\index{theorem notation, in HOL logic@theorem notation, in HOL logic|(}
-%
-used to indicate ML type `thm` status; as well as the
-absence of HOL quotation marks
-%
-\index{ theorem marker, in HOL logic@\ml{$\vdash$} (theorem marker, in HOL logic)}
-%
-in the ML context.
 
 The session below illustrates the use of the destructor functions:
-
-\setcounter{sessioncount}{0}
-\begin{session}
-\begin{alltt}
+```
 >> hyp BOOL_CASES_AX;
 
 >> concl BOOL_CASES_AX;
 
 >> type_of it;
-\end{alltt}
-\end{session}
-\index{turnstile notation|)}
-
-\noindent In addition to the print conventions mentioned above, the
+```
+In addition to the print conventions mentioned above, the
 printing of theorems prints hypotheses
-\index{printing, in HOL logic@printing, in HOL logic!of hypotheses of theorems}
-as periods (\ie, full stops or dots).  The flag `show_assums`
-\index{show_assums@`show_assums`} allows theorems
-to be printed with hypotheses shown in full. These points are illustrated with a
-theorem inferred, for example purposes, from another axiom mentioned
-in \LOGIC, `SELECT_AX`.
+as periods (*i.e.*, full stops or dots).
+The flag `show_assums` allows theorems to be printed with hypotheses shown in full.
+These points are illustrated with a theorem inferred, for example purposes, from another axiom mentioned in §LOGIC, `SELECT_AX`.
 
-\begin{session}
-\begin{alltt}
+```
 >> val th = UNDISCH (SPEC_ALL SELECT_AX);
 
 >> show_assums := true;
 
 >> th;
-\end{alltt}
-\end{session}
-\index{theorem notation, in HOL logic@theorem notation, in HOL logic|)}
+```
+##skip
 
-\section{\texorpdfstring{Primitive Rules of Inference of the HOL Logic}{Primitive Rules of Inference of the HOL Logic}}
+## Primitive Rules of Inference of the HOL Logic
 \label{rules}
 
 \index{inference rules, of HOL logic@inference rules, of HOL logic!primitive|(}
@@ -1359,7 +1185,7 @@ of the segment.
 
 \index{theories, in HOL logic@theories, in HOL logic!representation of|)}
 
-### ML functions for theory operations}
+### ML functions for theory operations
 \label{theoryprims}
 
 A typical\index{HOL system@HOL system!typical work in} piece of work
@@ -2136,6 +1962,10 @@ None of these functions saves anything in the current theory.
 \index{type definitions, in HOL logic@type definitions, in HOL logic!properties of bijections for|)}
 ##endskip
 
+[^prim-inf-hypotheses]: Note that ‘hypotheses’ and ‘conclusion’ are also used for the components of sequents.
+[^four-axioms-simplification]: This is a simplification: in fact the various axioms are an extension of the basic logic.
+
 <!-- Local variables: -->
 <!-- mode: markdown -->
 <!-- End: -->
+
