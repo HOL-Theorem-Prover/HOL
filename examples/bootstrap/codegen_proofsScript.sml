@@ -9,6 +9,7 @@ open source_valuesTheory source_syntaxTheory x64asm_syntaxTheory mp_then
 
 val _ = new_theory "codegen_proofs";
 
+val _ = augment_srw_ss [rewrites [SNOC_APPEND]];
 
 (* definitions of invariants and relations *)
 

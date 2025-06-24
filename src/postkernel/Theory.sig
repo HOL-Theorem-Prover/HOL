@@ -39,7 +39,8 @@ sig
 (* Information on the current theory segment *)
 
   val current_theory     : unit -> string
-  val stamp              : string -> Time.time
+  val hash               : string -> string
+  val mod_time           : string -> Time.time
   val parents            : string -> string list
   val ancestry           : string -> string list
   val types              : string -> (string * int) list
@@ -138,11 +139,13 @@ sig
 
  *)
 
-  val link_parents           : string*num*num -> (string*num*num) list -> unit
+  val link_parents           : string*string -> (string*string) list -> unit
   val incorporate_types      : string -> (string*int) list -> unit
   val incorporate_consts     : string -> (string*hol_type) list -> unit
   val pp_thm                 : (thm -> HOLPP.pretty) ref
 
+  type metadata = {path: string, timestamp: Time.time}
+  val record_metadata        : string -> metadata -> unit
 
   (* Theory files (which are just SML source code) call this function as
      the last thing done when they load.  This will in turn cause a

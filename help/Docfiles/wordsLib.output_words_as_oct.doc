@@ -12,14 +12,14 @@ A call to {output_words_as_oct} will make word literals output in octal format.
 
 \EXAMPLE
 {
-- ``032w:word5``;
-> val it = ``32w`` : term
+- “032w:word5”;
+> val it = “32w” : term
 - wordsLib.output_words_as_oct();
-- ``032w:word5``;
-> val it = ``032w`` : term
+- “032w:word5”;
+> val it = “032w” : term
 - wordsLib.output_words_as_dec();
-- ``032w:word5``;
-> val it = ``26w`` : term
+- “032w:word5”;
+> val it = “26w” : term
 }
 
 \COMMENTS

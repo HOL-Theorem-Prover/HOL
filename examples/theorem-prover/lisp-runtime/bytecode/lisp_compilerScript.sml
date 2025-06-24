@@ -1245,7 +1245,7 @@ val n_times_iCONST = prove(
 val MAP_EQ_GENLIST = prove(
   ``!xs. MAP (\x.b) xs = GENLIST (\x.b) (LENGTH xs)``,
   HO_MATCH_MP_TAC rich_listTheory.SNOC_INDUCT
-  \\ SRW_TAC [] [] \\ ASM_SIMP_TAC std_ss []
+  \\ SRW_TAC [] [SNOC_APPEND] \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [GENLIST,GSYM ADD1,SNOC_APPEND]);
 
 val MAP_CONST_REVERSE = prove(

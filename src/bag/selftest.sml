@@ -8,7 +8,15 @@ val _ = List.app convtest [
   ("bagSimps.CANCEL_CONV(2)", bagSimps.CANCEL_CONV,
    “b5 + (b1: 'a bag) + b2 + b4 = b2 + b6 + b1”, “(b4:'a bag) + b5 = b6”),
   ("bagSimps.CANCEL_CONV(3)", bagSimps.CANCEL_CONV,
-   “SUB_BAG b2 (b5 + (b1: 'a bag) + b2 + b4)”, “{||} <= b1 + b4 + b5”)
+   “SUB_BAG b2 (b5 + (b1: 'a bag) + b2 + b4)”, “{||} <= b1 + b4 + b5”),
+  ("bagSimpleLib.BAG_CARD_CONV(1)", bagSimpleLib.BAG_CARD_CONV,
+   “BAG_CARD {| 1; 1; 2 |}”, “3n”),
+  ("bagSimpleLib.BAG_CARD_CONV(2)", bagSimpleLib.BAG_CARD_CONV,
+   “BAG_CARD {| |}”, “0n”),
+  ("bagSimpleLib.BAG_CARD_CONV(3)", bagSimpleLib.BAG_CARD_CONV,
+   “BAG_CARD {| 1;2;3;4;5;6 |}”, “6n”),
+  ("bagSimpleLib.BAG_CARD_CONV(3)", bagSimpleLib.BAG_CARD_CONV,
+   “BAG_CARD (BAG_UNION {| 1;1 |} {| 1;2;3;4;5;6 |})”, “8n”)
 ];
 
 val _ = tprint "mk_card {| 2; 3 |}"
@@ -42,3 +50,5 @@ val _ = require_msg (check_result (aconv “{||}:bool bag”))
                     term_to_string
                     bagSyntax.dest_card
                     “BAG_CARD ({||}:bool bag)”
+
+

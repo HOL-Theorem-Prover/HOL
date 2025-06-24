@@ -453,6 +453,7 @@ val listRangeINC_EXISTS_EVERY = store_thm(
    = [m .. n] ++ [n + 1]                                        by arithmetic
    = SNOC (n + 1) [m .. n]                                      by SNOC_APPEND
 *)
+
 Theorem listRangeINC_SNOC:
   !m n. m <= n + 1 ==> ([m .. (n + 1)] = SNOC (n + 1) [m .. n])
 Proof
@@ -460,6 +461,7 @@ Proof
   `(n + 2 - m = 1 + (n + 1 - m)) /\ (n + 1 - m + m = n + 1)` by decide_tac >>
   rw_tac std_ss[GENLIST_APPEND, GENLIST_1, SNOC_APPEND]
 QED
+
 
 (* Theorem: m <= n + 1 ==> (FRONT [m .. (n + 1)] = [m .. n]) *)
 (* Proof:

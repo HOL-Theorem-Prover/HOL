@@ -14,7 +14,7 @@ format.
 \EXAMPLE
 {
 - wordsLib.output_words_as_hex();
-- EVAL ``44w : word32 << 3``
+- EVAL “44w : word32 << 3”
 > val it = |- 0x2Cw << 3 = 0x160w : thm
 }
 

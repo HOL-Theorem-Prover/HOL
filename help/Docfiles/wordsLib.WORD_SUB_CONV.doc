@@ -10,15 +10,15 @@ complement) and subtraction wherever possible.
 
 \EXAMPLE
 {
-> wordsLib.WORD_SUB_CONV ``a + -3w * b + -1w * c = -1w * d + e: 'a word``;
+> wordsLib.WORD_SUB_CONV “a + -3w * b + -1w * c = -1w * d + e: 'a word”;
 val it =
    |- (a + -3w * b + -1w * c = -1w * d + e) <=> (a - 3w * b - c = e - d):
    thm
 
-> wordsLib.WORD_SUB_CONV ``-1w * a: 'a word``;
+> wordsLib.WORD_SUB_CONV “-1w * a: 'a word”;
 val it = |- -1w * a = -a: thm
 
-wordsLib.WORD_SUB_CONV ``-1w * a + -2w * b: 'a word``;
+wordsLib.WORD_SUB_CONV “-1w * a + -2w * b: 'a word”;
 val it =
    |- -1w * a + -2w * b = -(2w * b + a):
    thm

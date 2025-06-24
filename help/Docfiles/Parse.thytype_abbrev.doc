@@ -14,7 +14,7 @@ A call to {thytype_abbrev({Name=n,Thy=t}, ty, prp)} establishes the
 with {type_abbrev}. The boolean flag {prp} indicates whether or not
 this abbreviation will also be used when the printer comes to print
 the given type. In other words, after the call it becomes possible to
-write {``:args t$n``} to stand for type {ty}. If there are type
+write {“:args t$n”} to stand for type {ty}. If there are type
 variables in {ty} they become the parameters to the new abbreviated
 type operator. These parameters need to be filled in in the {args}
 position above. If there are no type variables in {ty} then

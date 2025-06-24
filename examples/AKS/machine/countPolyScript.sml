@@ -730,7 +730,8 @@ val poly_extendM_value = store_thm(
     `k = 1` by decide_tac >>
     rw[PAD_RIGHT],
     `SUC (k - 1) = k` by decide_tac >>
-    `PAD_RIGHT 0 (k - 1) [0] ++ [0] = SNOC 0 (PAD_RIGHT 0 (k - 1) [0])` by rw[] >>
+    `PAD_RIGHT 0 (k - 1) [0] ++ [0] =
+     SNOC 0 (PAD_RIGHT 0 (k - 1) [0])` by rw[SNOC_APPEND] >>
     `_ = PAD_RIGHT 0 (SUC (k - 1)) [0]` by rw[PAD_RIGHT_SNOC] >>
     metis_tac[]
   ]);

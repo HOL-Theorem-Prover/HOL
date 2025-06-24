@@ -194,24 +194,26 @@ local
    val intOf = Option.valOf o Int.fromString
    val number = PolyML.Compiler.compilerVersionNumber
    val _ = number >= 570 orelse die "PolyML version must be at least 5.7.0"
+   val ldruntimepath = "-Wl,-rpath,"^polymllibdir
    val default =
-       ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
-        "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
+       ["-L" ^ polymllibdir,
+        "-lpolymain", "-lpolyml", "-lpthread",
+        "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc", ldruntimepath]
 in
    val machine_flags =
        if sysname = "Darwin" (* Mac OS X *) then
          let
-           val stdsuffix = ["-Wl,-rpath,"^polymllibdir, "-Wl,-no_pie"]
+           val stdsuffix = "-Wl,-no_pie"
          in
            (case pkgconfig_info of
-                  SOME list => list @ stdsuffix
+                  SOME list => list @ [ldruntimepath, stdsuffix]
                 | NONE => ["-L"^polymllibdir, "-lpolymain", "-lpolyml",
-                           "-lstdc++"] @ stdsuffix) @
+                           "-lstdc++"] @ [ldruntimepath, stdsuffix]) @
            (if PolyML.architecture() = "I386" then ["-arch", "i386"] else [])
          end
        else if sysname = "Linux" then
          case pkgconfig_info of
-             SOME list => list
+             SOME list => list @ [ldruntimepath]
            | _ => default
        else if String.isPrefix "CYGWIN_NT" sysname (* Cygwin! *) then
          default

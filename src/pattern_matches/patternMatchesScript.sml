@@ -635,21 +635,21 @@ val PMATCH_INTRO_CATCHALL = store_thm ("PMATCH_INTRO_CATCHALL",
 SIMP_TAC std_ss [PMATCH_REMOVE_ARB]);
 
 
-val PMATCH_REMOVE_ARB_NO_OVERLAP = store_thm ("PMATCH_REMOVE_ARB_NO_OVERLAP",
-``!v p g r rows1 rows2.
-  ((!x. (r x = ARB)) /\
-   (!x. ((v = p x) /\ (g x)) ==> EVERY (\row. (row (p x) = NONE)) rows2)) ==>
-  (PMATCH v (rows1 ++ ((PMATCH_ROW p g r) :: rows2)) =
-   PMATCH v (rows1 ++ rows2))``,
-
-REPEAT STRIP_TAC THEN
-ONCE_REWRITE_TAC [PMATCH_INTRO_CATCHALL] THEN
-SIMP_TAC list_ss [SNOC_APPEND,
-  rich_listTheory.APPEND_ASSOC_CONS] THEN
-MATCH_MP_TAC PMATCH_ROWS_DROP_SUBSUMED_PMATCH_ROWS THEN
-ASM_SIMP_TAC std_ss [])
-
-
+Theorem PMATCH_REMOVE_ARB_NO_OVERLAP:
+  !v p g r rows1 rows2.
+    ((!x. (r x = ARB)) /\
+     (!x. ((v = p x) /\ (g x)) ==> EVERY (\row. (row (p x) = NONE)) rows2)) ==>
+    (PMATCH v (rows1 ++ ((PMATCH_ROW p g r) :: rows2)) =
+     PMATCH v (rows1 ++ rows2))
+Proof
+  REPEAT STRIP_TAC THEN
+  ONCE_REWRITE_TAC [PMATCH_INTRO_CATCHALL] THEN
+  SIMP_TAC list_ss [SNOC_APPEND,
+                    rich_listTheory.APPEND_ASSOC_CONS] THEN
+  REWRITE_TAC [APPEND_ASSOC] THEN
+  MATCH_MP_TAC PMATCH_ROWS_DROP_SUBSUMED_PMATCH_ROWS THEN
+  ASM_SIMP_TAC std_ss []
+QED
 
 (***************************************************)
 (* Fancy redundancy check                          *)

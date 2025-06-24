@@ -3484,7 +3484,7 @@ Proof
   \\ qmatch_asmsub_abbrev_tac`FOLDL _ ws tl`
   \\ `ls = SNOC (EL i iota_w64_RCz) tl`
   by(
-    simp[Abbr`ls`, Abbr`tl`]
+    simp[Abbr`ls`, Abbr`tl`, SNOC_APPEND]
     \\ simp[LIST_EQ_REWRITE, EL_TAKE, EL_APPEND]
     \\ rw[]
     \\ `i = x` by gs[]

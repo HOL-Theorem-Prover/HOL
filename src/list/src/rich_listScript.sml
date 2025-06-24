@@ -199,10 +199,19 @@ val NOT_NULL_SNOC = Q.store_thm("NOT_NULL_SNOC",
    BasicProvers.Induct_on `l`
    THEN REWRITE_TAC[SNOC, NULL_DEF]);
 
+(* cf. CONS_ACYCLIC *)
+Theorem SNOC_ACYCLIC[simp] :
+    l <> SNOC x l /\ SNOC x l <> l
+Proof
+  SRW_TAC [] [SNOC_APPEND] >> disch_then (mp_tac o Q.AP_TERM ‘LENGTH’) >>
+  simp[]
+QED
+
 (* ------------------------------------------------------------------------ *)
 
-val LASTN_def = zDefine `
-  LASTN n xs = REVERSE (TAKE n (REVERSE xs))`;
+Definition LASTN_def[nocompute]:
+  LASTN n xs = REVERSE (TAKE n (REVERSE xs))
+End
 
 val LASTN = store_thm("LASTN",
   ``(!l. LASTN 0 l = []) /\
@@ -210,6 +219,12 @@ val LASTN = store_thm("LASTN",
   FULL_SIMP_TAC std_ss [LASTN_def,REVERSE_SNOC,
     TAKE,REVERSE_DEF]
   THEN FULL_SIMP_TAC std_ss [SNOC_APPEND]);
+
+Theorem SNOC_LASTN :
+    !l x n. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
+Proof
+    SNOC_INDUCT_TAC >> rw [LASTN]
+QED
 
 val BUTLASTN_def = zDefine `
   BUTLASTN n xs = REVERSE (DROP n (REVERSE xs))`;
@@ -289,10 +304,10 @@ Proof
 QED
 
 (* |- !(x:'a) l. ~([] = SNOC x l) *)
-val NOT_NIL_SNOC = Theory.save_thm ("NOT_NIL_SNOC",
-   valOf (hd (Prim_rec.prove_constructors_distinct SNOC_Axiom)));
+Theorem NOT_NIL_SNOC[simp] =
+   valOf (hd (Prim_rec.prove_constructors_distinct SNOC_Axiom))
 
-val NOT_SNOC_NIL = Theory.save_thm ("NOT_SNOC_NIL", GSYM NOT_NIL_SNOC);
+Theorem NOT_SNOC_NIL[simp] = GSYM NOT_NIL_SNOC
 
 val SNOC_EQ_LENGTH_EQ = Q.store_thm ("SNOC_EQ_LENGTH_EQ",
    `!x1 l1 x2 l2. (SNOC x1 l1 = SNOC x2 l2) ==> (LENGTH l1 = LENGTH l2)`,
@@ -2363,7 +2378,6 @@ Theorem LESS_EQ_SPLIT[local] =
 
 Theorem SUB_LESS_EQ_ADD[local] =
    numLib.DECIDE ``!p n m. n <= p ==> (m <= p - n <=> m + n <= p)``
-
 
 Theorem BUTLASTN_TAKE_UNCOND:
   !n l. BUTLASTN n l = TAKE (LENGTH l - n) l
@@ -5105,75 +5119,15 @@ Proof
   ]
 QED
 
-(* Theorem: let fs = FILTER P ls; j = LENGTH (FILTER P l1) in
-             ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
-             (x = EL j fs /\ y = EL (j + 1) fs <=> FILTER P l2 = []) *)
-(* Proof:
-   Note fs = FILTER P ls
-           = FILTER P (l1 ++ x::l2 ++ y::l3)   by given
-           = FILTER P l1 ++
-             x :: FILTER P l2 ++
-             y :: FILTER P l3                  by FILTER_APPEND_DISTRIB, FILTER
-   Thus LENGTH fs
-      = j + SUC (LENGTH (FILTER P l2))
-          + SUC (LENGTH (FILTER P l3))         by LENGTH_APPEND
-     or j + 2 <= LENGTH fs                     by arithmetic
-     or j < LENGTH fs, j + 1 < LENGTH fs       by inequality
-
-   Let l4 = y::l3, then
-       ls = l1 ++ x::l2 ++ l4
-          = l1 ++ x::(l2 ++ l4)                by APPEND_ASSOC_CONS
-   Thus x = EL j fs                            by FILTER_EL_IFF, j < LENGTH fs
-
-   Now let l5 = l1 ++ x::l2,
-           k = LENGTH (FILTER P l5).
-   Then ls = l5 ++ y::l3                       by APPEND_ASSOC
-    and fs = FILTER P l5 ++
-             y :: FILTER P l3                  by FILTER_APPEND_DISTRIB, FILTER
-     so LENGTH fs = k + SUC (LENGTH P l3)      by LENGTH_APPEND
-   Thus k < LENGTH fs
-    and y = EL k fs                            by FILTER_EL_IFF
-
-   Also FILTER P l5 = FILTER P l1 ++
-                      x :: FILTER P l2         by FILTER_APPEND_DISTRIB, FILTER
-     so k = j + SUC (LENGTH (FILTER P l2))     by LENGTH_APPEND
-   Thus k = j + 1
-    <=> LENGTH (FILTER P l2) = 0               by arithmetic
-
-   Note ALL_DISTINCT fs                        by FILTER_ALL_DISTINCT
-     so EL k fs = EL (j + 1) fs
-    <=> k = j + 1
-    <=> LENGTH (FILTER P l2) = 0               by above
-    <=> FILTER P l2 = []                       by LENGTH_EQ_0
-*)
 Theorem FILTER_EL_NEXT_IFF:
-  !P ls l1 l2 l3 x y. let fs = FILTER P ls; j = LENGTH (FILTER P l1) in
-                      ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
-                      (x = EL j fs /\ y = EL (j + 1) fs <=> FILTER P l2 = [])
+  !P ls l1 l2 l3 x y.
+    let fs = FILTER P ls; j = LENGTH (FILTER P l1) in
+      ALL_DISTINCT ls /\ ls = l1 ++ x::l2 ++ y::l3 /\ P x /\ P y ==>
+      (x = EL j fs /\ y = EL (j + 1) fs <=> FILTER P l2 = [])
 Proof
-  rw_tac std_ss[] >>
-  qabbrev_tac `ls = l1 ++ x::l2 ++ y::l3` >>
-  `j + 2 <= LENGTH fs` by
-  (`fs = FILTER P l1 ++ x::FILTER P l2 ++ y::FILTER P l3` by simp[FILTER_APPEND_DISTRIB, Abbr`fs`, Abbr`ls`] >>
-  `LENGTH fs = j + SUC (LENGTH (FILTER P l2)) + SUC (LENGTH (FILTER P l3))` by fs[Abbr`j`] >>
-  decide_tac) >>
-  `j < LENGTH fs` by decide_tac >>
-  qabbrev_tac `l4 = y::l3` >>
-  `ls = l1 ++ x::(l2 ++ l4)` by simp[Abbr`ls`] >>
-  `x = EL j fs` by metis_tac[FILTER_EL_IFF] >>
-  qabbrev_tac `l5 = l1 ++ x::l2` >>
-  qabbrev_tac `k = LENGTH (FILTER P l5)` >>
-  `ls = l5 ++ y::l3` by simp[Abbr`l5`, Abbr`ls`] >>
-  `k < LENGTH fs /\ (k = j + 1 <=> FILTER P l2 = [])` by
-    (`fs = FILTER P l5 ++ y::FILTER P l3` by rfs[FILTER_APPEND_DISTRIB, Abbr`fs`] >>
-  `LENGTH fs = k + SUC (LENGTH (FILTER P l3))` by fs[Abbr`k`] >>
-  `FILTER P l5 = FILTER P l1 ++ x :: FILTER P l2` by rfs[FILTER_APPEND_DISTRIB, Abbr`l5`] >>
-  `k = j + SUC (LENGTH (FILTER P l2))` by fs[Abbr`k`, Abbr`j`] >>
-  simp[]) >>
-  `y = EL k fs` by metis_tac[FILTER_EL_IFF] >>
-  `j + 1 < LENGTH fs` by decide_tac >>
-  `ALL_DISTINCT fs` by simp[FILTER_ALL_DISTINCT, Abbr`fs`] >>
-  metis_tac[ALL_DISTINCT_EL_IMP]
+  rw[] >> gvs[Abbr‘fs’, Abbr‘j’, FILTER_APPEND, EL_APPEND2, EL_APPEND1] >>
+  Cases_on ‘FILTER P l2’ >> simp[] >> strip_tac >> gvs[ALL_DISTINCT_APPEND] >>
+  metis_tac[MEM_FILTER, MEM]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -6877,25 +6831,25 @@ val sublist_append_pair = store_thm(
           = sublist (h::t) q              by inductive hypothesis (only-if)
         ==> sublist (h::t) (h'::q)        by SUBLIST, different head.
 *)
-val sublist_append_extend = store_thm(
-  "sublist_append_extend",
-  ``!h t q. h::t <= q  <=> ?x y. (q = x ++ (h::y)) /\ (t <= y)``,
+Theorem sublist_append_extend:
+  !h t q. h::t <= q  <=> ?x y. (q = x ++ (h::y)) /\ (t <= y)
+Proof
   ntac 2 strip_tac >>
   Induct >-
   rw[sublist_of_nil] >>
-  rpt strip_tac >>
-  (Cases_on `h = h'` >> rw[EQ_IMP_THM]) >| [
-    `h::q = [] ++ [h] ++ q` by rw[] >>
-    metis_tac[sublist_cons],
-    `h::t <= h::y` by rw[GSYM sublist_cons] >>
-    `x ++ [h] ++ y = x ++ (h::y)` by rw[] >>
+  rpt strip_tac >> Q.RENAME_TAC [‘h::t ≤ h'::q ⇔ _’] >>
+  Cases_on ‘h = h'’ >> rw[EQ_IMP_THM] >| [
+    map_every Q.EXISTS_TAC [‘[]’, ‘q’] >> gvs[sublist_def],
+    ‘h::t <= h::y’ by rw[GSYM sublist_cons] >>
+    ‘x ++ [h] ++ y = x ++ (h::y)’ by rw[] >>
     metis_tac[sublist_append_include],
-    `h::t <= q` by metis_tac[sublist_def] >>
+    ‘h::t <= q’ by metis_tac[sublist_def] >>
     metis_tac[APPEND, APPEND_ASSOC],
-    `h::t <= h::y` by rw[GSYM sublist_cons] >>
-    `x ++ [h] ++ y = x ++ (h::y)` by rw[] >>
+    ‘h::t <= h::y’ by rw[GSYM sublist_cons] >>
+    ‘x ++ [h] ++ y = x ++ (h::y)’ by rw[] >>
     metis_tac[sublist_append_include]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Applications of sublist.                                                  *)

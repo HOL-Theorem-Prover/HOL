@@ -2819,11 +2819,10 @@ val poly_snoc_eq_add_shift = store_thm(
   ``!r:'a ring. Ring r ==> !p c. poly p /\ c IN R /\ c <> #0 ==> (SNOC c p = p + [c] >> (LENGTH p))``,
   rpt strip_tac >>
   `poly [c]` by rw[poly_nonzero_element_poly] >>
-  Induct_on `p` >-
-  rw[] >>
+  Induct_on `p` >- rw[] >>
+  `SNOC c p <> |0|` by rw[NOT_SNOC_NIL] >>
   rpt strip_tac >>
   `h IN R /\ poly p` by metis_tac[poly_cons_poly] >>
-  `SNOC c p <> |0|` by rw[NOT_SNOC_NIL] >>
   Cases_on `h = #0` >| [
     `p <> |0|` by metis_tac[poly_cons_property, poly_zero] >>
     `SNOC c (#0::p) = #0::SNOC c p` by rw[] >>

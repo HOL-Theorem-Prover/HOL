@@ -398,14 +398,11 @@ val prop_2_15_subgoal_1 = store_thm(
               >- fs[LENGTH]
               >- fs[HD])
            >- (fs[RESTRICT_def] >> rw[] (* 3 *)
-              >- (`w ++ [v'] = SNOC v' w` by fs[] >>
-                 `EL m (w ++ [v']) = EL m w` by rw[EL_SNOC] >>
-                 fs[] >>
+              >- (`EL m (w ++ [v']) = EL m w` by rw[EL_APPEND1] >>
                  Cases_on `m < LENGTH w - 1` (* 2 *)
                  >- (`m + 1 < LENGTH w` by fs[] >>
-                    `w ++ [v'] = SNOC v' w` by fs[] >>
-                    `EL (m + 1) (w ++ [v']) = EL (m + 1) w` by rw[EL_SNOC] >>
-                    fs[])
+                     `EL (m + 1) (w ++ [v']) = EL (m + 1) w` by rw[EL_APPEND1] >>
+                     fs[])
                  >- (`m = LENGTH w - 1` by fs[] >>
                     `LENGTH w <> 0` by (SPOSE_NOT_THEN ASSUME_TAC >> fs[]) >>
                     `w <> []` by fs[] >>
@@ -422,10 +419,8 @@ val prop_2_15_subgoal_1 = store_thm(
                     `EL m w = LAST w` by fs[] >>
                     `EL (m + 1) (w ++ [v']) = v'` by fs[] >> fs[]))
               >- (Cases_on `m < LENGTH w - 1` (* 2 *)
-                 >- (`SNOC v' w = w ++ [v']` by fs[] >>
-                    `EL m (w ++ [v']) = EL m w` by metis_tac[EL_SNOC] >> fs[])
-                 >- (`SNOC v' w = w ++ [v']` by fs[] >>
-                    `EL m (w ++ [v']) = EL m w` by metis_tac[EL_SNOC] >> fs[] >>
+                 >- (`EL m (w ++ [v']) = EL m w` by rw [EL_APPEND1] >> fs[])
+                 >- (`EL m (w ++ [v']) = EL m w` by rw[EL_APPEND1] >> fs[] >>
                     Cases_on `LENGTH w = 1`
                     >- (`m = 0` by fs[] >>
                        `EL m w = HD w` by fs[] >>
@@ -437,13 +432,11 @@ val prop_2_15_subgoal_1 = store_thm(
                        `LENGTH w - 2 + 1 = LENGTH w - 1` by fs[] >> fs[])))
               >- (Cases_on `m < LENGTH w - 2` (* 2 *)
                  >- (`m + 1 < LENGTH (w ++ [v'])` by fs[] >>
-                    `w ++ [v'] = SNOC v' w` by fs[] >>
-                    `EL (m + 1) (w ++ [v']) = EL (m + 1) w` by rw[EL_SNOC] >>
+                    `EL (m + 1) (w ++ [v']) = EL (m + 1) w` by rw[EL_APPEND1] >>
                     `m < LENGTH w - 1` by fs[] >> fs[])
                  >- (Cases_on `m < LENGTH w - 1` (* 2 *)
                     >- (`m + 1 < LENGTH w` by fs[] >>
-                       `w ++ [v'] = SNOC v' w` by fs[] >>
-                       `EL (m + 1) (w ⧺ [v']) = EL (m + 1) w` by rw[EL_SNOC] >>
+                       `EL (m + 1) (w ⧺ [v']) = EL (m + 1) w` by rw[EL_APPEND1] >>
                        fs[])
                     >- (`m = LENGTH w - 1` by fs[] >>
                        `m + 1 = LENGTH w` by fs[] >>
@@ -467,7 +460,7 @@ val prop_2_15_subgoal_1 = store_thm(
                  `w <> []`
                      by (SPOSE_NOT_THEN ASSUME_TAC >> fs[LENGTH]) >>
                  rw[LAST_EL] >> metis_tac[]))
-            >- (`w ++ [v'] = SNOC v' w` by fs[] >> metis_tac[EL_SNOC]))));
+            >- (rw [EL_APPEND1]))));
 
 
 val LAST_in_world = store_thm(
@@ -517,14 +510,12 @@ val prop_2_15_subgoal_2 = store_thm(
                  RESTRICT M.frame.rel M.frame.world (EL m y)
                    (EL (m + 1) y)` by fs[bounded_preimage_rooted_def] >>
               Cases_on `m < LENGTH y - 1`
-              >- (`y ++ [a'] = SNOC a' y` by fs[] >>
-                 `EL m (y ++ [a']) = EL m y` by rw[EL_SNOC] >>
+              >- (`EL m (y ++ [a']) = EL m y` by rw[EL_APPEND1] >>
                  `m + 1 < LENGTH y` by fs[] >>
-                 `EL (m + 1) (y ++ [a']) = EL (m + 1) y` by rw[EL_SNOC] >>
+                 `EL (m + 1) (y ++ [a']) = EL (m + 1) y` by rw[EL_APPEND1] >>
                  metis_tac[])
               >- (`m = LENGTH y - 1` by fs[] >>
-                 `y ++ [a'] = SNOC a' y` by fs[] >>
-                 `EL m (y ++ [a']) = EL m y` by rw[EL_SNOC] >>
+                 `EL m (y ++ [a']) = EL m y` by rw[EL_APPEND1] >>
                  `y <> []` by (SPOSE_NOT_THEN ASSUME_TAC >> fs[bounded_preimage_rooted_def]) >>
                  `LAST y = EL (PRE (LENGTH y)) y` by rw[LAST_EL] >>
                  `PRE (LENGTH y) = m` by fs[] >>
@@ -595,17 +586,17 @@ val prop_2_15_subgoal_4 = store_thm(
            `LENGTH l - 1 < LENGTH l` by fs[] >>
            `EL (LENGTH l - 1) (SNOC x' l) = LAST l /\
            EL ((LENGTH l - 1) + 1) (SNOC x' l) = x'` suffices_by metis_tac[] >> rw[] (* 2 *)
-           >- (`SNOC x' l = l ++ [x']` by fs[] >>
+           >- (`SNOC x' l = l ++ [x']` by fs[SNOC_APPEND] >>
               `EL (LENGTH l − 1) (SNOC x' l) = EL (LENGTH l − 1) l` by rw[EL_APPEND1] >>
               `l <> []` by (SPOSE_NOT_THEN ASSUME_TAC >> fs[]) >>
               `PRE (LENGTH l) = LENGTH l - 1` by fs[] >>
               `EL (LENGTH l - 1) l = LAST l` by rw[LAST_EL] >> fs[])
-           >-  (`SNOC x' l = l ++ [x']` by fs[] >>
+           >-  (`SNOC x' l = l ++ [x']` by fs[SNOC_APPEND] >>
                `PRE (LENGTH (l ++ [x'])) = LENGTH l` by fs[] >>
                `l ++ [x'] <> []` by fs[] >>
                `EL (LENGTH l) (l ++ [x']) = LAST (l ++ [x'])` by metis_tac[LAST_EL] >>
                `LAST (l ++ [x']) = x'` by fs[] >> metis_tac[]))
-        >- (`SNOC x' l = l ++ [x']` by fs[] >> metis_tac[EL_APPEND1]))
+        >- (`SNOC x' l = l ++ [x']` by fs[SNOC_APPEND] >> metis_tac[EL_APPEND1]))
      >- (`LENGTH t > 0` by fs[bounded_preimage_rooted_def] >>
         `LENGTH t <= 1` by (SPOSE_NOT_THEN ASSUME_TAC >> fs[]) >>
         `LENGTH t <> 0` by fs[] >>
@@ -637,17 +628,17 @@ val FRONT_rel = store_thm(
      `LENGTH l - 1 < LENGTH l` by fs[] >>
      `EL (LENGTH l - 1) (SNOC x' l) = LAST l /\
      EL ((LENGTH l - 1) + 1) (SNOC x' l) = x'` suffices_by metis_tac[] >> rw[] (* 2 *)
-     >- (`SNOC x' l = l ++ [x']` by fs[] >>
+     >- (`SNOC x' l = l ++ [x']` by fs[SNOC_APPEND] >>
         `EL (LENGTH l − 1) (SNOC x' l) = EL (LENGTH l − 1) l` by rw[EL_APPEND1] >>
         `l <> []` by (SPOSE_NOT_THEN ASSUME_TAC >> fs[]) >>
         `PRE (LENGTH l) = LENGTH l - 1` by fs[] >>
         `EL (LENGTH l - 1) l = LAST l` by rw[LAST_EL] >> fs[])
-     >-  (`SNOC x' l = l ++ [x']` by fs[] >>
+     >-  (`SNOC x' l = l ++ [x']` by fs[SNOC_APPEND] >>
          `PRE (LENGTH (l ++ [x'])) = LENGTH l` by fs[] >>
          `l ++ [x'] <> []` by fs[] >>
          `EL (LENGTH l) (l ++ [x']) = LAST (l ++ [x'])` by metis_tac[LAST_EL] >>
          `LAST (l ++ [x']) = x'` by fs[] >> metis_tac[]))
-  >- (`SNOC x' l = l ++ [x']` by fs[] >> metis_tac[EL_APPEND1]));
+  >- (`SNOC x' l = l ++ [x']` by fs[SNOC_APPEND] >> metis_tac[EL_APPEND1]));
 
 
 
@@ -771,9 +762,6 @@ val point_GENSUBMODEL_satis = store_thm(
   `w IN (point_GENSUBMODEL M w).frame.world` by fs[point_GENSUBMODEL_def] >>
   metis_tac[prop_2_6]);
 
-
-
-
 val prop_2_15_corollary = store_thm(
   "prop_2_15_corollary",
   ``!M (w:'b) form. satis M w form ==>
@@ -786,10 +774,5 @@ val prop_2_15_corollary = store_thm(
   qexists_tac `MODEL` >> rw[] >> qexists_tac `s` >> rw[] >>
   fs[bounded_mor_image_def] >>
   `s IN MODEL.frame.world` by metis_tac[tree_def] >> metis_tac[prop_2_14]);
-
-
-
-
-
 
 val _ = export_theory();

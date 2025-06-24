@@ -154,9 +154,10 @@ fun proper_subterm tm1 tm2 =
 (*---------------------------------------------------------------------------*)
 
 val initial_termination_simps =
-  [("SUB_LESS_I", SUB_LESS),
-   ("DIV_LT_X", DIV_LT_X),
+  [("DIV_LT_X", DIV_LT_X),
    ("X_LT_DIV", X_LT_DIV),
+   ("SUB_LESS", SUB_LESS),
+   ("DIV_LESS", DIV_LESS),
    ("MOD_LESS", MOD_LESS)]
 
 val {exclude = exclude_termsimp, temp_exclude = temp_exclude_termsimp,
@@ -209,8 +210,6 @@ val base_ss =
     ++ rewrites [pairTheory.FORALL_PROD]
     ++ numSimps.REDUCE_ss
     ++ numSimps.ARITH_RWTS_ss;
-
-val base_dp_ss = base_ss ++ numSimps.ARITH_DP_ss
 
 (*---------------------------------------------------------------------------*)
 (* Destruct R (x1,...,xn) (y1,...ym) into [(x1,y1), ... , (xn,yn)],          *)
@@ -369,6 +368,42 @@ fun flat_type_size ty = case
   | _ => TypeBasePure.type_size (TypeBase.theTypeBase()) ty
 
 (*---------------------------------------------------------------------------*)
+(* Among the termination_simps() are theorems of the form                    *)
+(*                                                                           *)
+(*   constraints ==> f t1 < f t2                                             *)
+(*                                                                           *)
+(* which are used to finalize termination proofs. These are also used to     *)
+(* determine if an argument position should be included in the synthesized   *)
+(* termination relation. An example is                                       *)
+(*                                                                           *)
+(*  ⊢ ∀m. m ≠ 0w ⇒ w2n (m − 1w) < w2n m                                      *)
+(*                                                                           *)
+(* When the type of t1 and t2 are :num, there need be no "measure function"  *)
+(* f present. The following theorem is an example.                           *)
+(*                                                                           *)
+(*  ⊢ ∀m n. 0 < n ⇒ m MOD n < n                                              *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun is_relevant tsimps = let
+  fun rec_call_pat th = let
+      fun dest_order x = dest_less x handle HOL_ERR _ => dest_leq x
+      fun is_measureFn_app (l,r) =
+          aconv (rator l) (rator r) handle HOL_ERR _ => false
+      val (l,r) = concl th |> strip_forall |> snd |>
+                  strip_imp |> snd |> dest_order
+  in if is_measureFn_app (l,r) then
+        rand l else
+     if is_var r then
+        l
+     else raise ERR "is_relevant" ""
+  end
+  val pats = mapfilter rec_call_pat tsimps
+ in
+   fn (tm,_:term) => 0 < length (mapfilter (C match_term tm) pats)
+ end;
+
+(*---------------------------------------------------------------------------*)
 (* "guessR" guesses a list of termination measures. Quite ad hoc.            *)
 (* First guess covers recursions on proper subterms, e.g. prim. recs. Next   *)
 (* guess measure sum of sizes of all arguments. Next guess generates         *)
@@ -380,22 +415,11 @@ fun flat_type_size ty = case
 (* duplicates are weeded out.                                                *)
 (*---------------------------------------------------------------------------*)
 
-fun known_fun tm =
- let fun dest_order x = dest_less x handle HOL_ERR _ => dest_leq x
-     fun get_lhs th =
-            rand (fst(dest_order(snd(strip_imp
-                  (snd(strip_forall(concl th)))))))
-     val pats = mapfilter get_lhs (termination_simps())
- in
-    0 < length (mapfilter (C match_term tm) pats)
- end;
-
-fun relevant (tm,_) = known_fun tm;
-
 fun guessR defn =
  let open Defn numSyntax simpLib boolSimps
    fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
    fun size_app v = mk_comb(tysize (type_of v),v)
+   val relevant = is_relevant (termination_simps())
  in
  if null (tcs_of defn) then []
   else
@@ -463,9 +487,6 @@ fun WF_TAC g = PRIM_WF_TAC (WF_thms()) g;
 (* Basic simplification and proof for remaining termination conditions.     *)
 (*--------------------------------------------------------------------------*)
 
-fun get_orig (TypeBasePure.ORIG th) = th
-  | get_orig _ = raise ERR "get_orig" "not the original"
-
 (*---------------------------------------------------------------------------*)
 (* Convert a tactic to a conv                                                *)
 (*---------------------------------------------------------------------------*)
@@ -487,7 +508,7 @@ fun SOLVES tac g =
   end
 
 (*---------------------------------------------------------------------------*)
-(* There are two entrypoints to termination proofs. One---TC_PROVER---is     *)
+(* There are two entrypoints to termination proofs. One---TC_PROVE_TAC---is  *)
 (* intended to be an automatic prover acting as a backend to prove one of a  *)
 (* set of generated guesses. Thus it needs to be reasonably fast and yet     *)
 (* still go "as deep as possible" in order to prove a guess if it is true.   *)
@@ -501,13 +522,6 @@ fun SOLVES tac g =
 (*---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*)
-(* Apply both WF solver and TC solver to goal already instantiated with      *)
-(* termination relation.                                                     *)
-(*---------------------------------------------------------------------------*)
-
-fun TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
-
-(*---------------------------------------------------------------------------*)
 (* Extra rewrites, used only if they would solve a termination conjunct.     *)
 (*---------------------------------------------------------------------------*)
 
@@ -519,24 +533,25 @@ val termination_solve_simps = ref ([] : thm list);
 
 fun termination_ss() =
   let open boolTheory
+      fun get_orig (TypeBasePure.ORIG th) = th
+        | get_orig _ = raise ERR "get_orig" "not the original"
       val term_simps = [PULL_EXISTS] @ termination_simps()
       val elts = TypeBase.elts()
       val size_defs =
          mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) elts
       val case_defs = mapfilter TypeBasePure.case_def_of elts
   in
-   base_dp_ss ++ rewrites term_simps ++ rewrites size_defs ++ rewrites case_defs
+   base_ss ++ rewrites term_simps ++ rewrites size_defs ++ rewrites case_defs
+           ++ numSimps.ARITH_DP_ss  (* important that this is last! *)
   end
 
-fun TC_SIMPLIFIER ss =
-   CONV_TAC (simpLib.SIMP_CONV ss []) THEN
-   BasicProvers.PRIM_STP_TAC ss NO_TAC
-
-fun TC_PROVER ss thl = SOLVES (TC_SIMPLIFIER (ss ++ rewrites thl))
-
-fun TC_PROVE_TAC() = TC_PROVER (termination_ss()) (!termination_solve_simps)
-fun TC_SIMP_TAC() =
-    TC_SIMPLIFIER (termination_ss() ++ rewrites (!termination_solve_simps))
+(* simplify then case split and simplify from asms *)
+fun TC_SIMP_TAC ss thl =
+    let val ss' = ss ++ rewrites (!termination_solve_simps @ thl)
+    in
+      CONV_TAC (simpLib.SIMP_CONV ss' []) THEN
+      BasicProvers.PRIM_STP_TAC ss' NO_TAC
+    end
 
 (*---------------------------------------------------------------------------*)
 (* Instantiate the termination relation with q, then try to prove            *)
@@ -544,49 +559,20 @@ fun TC_SIMP_TAC() =
 (* unproved TCs should be in reduced form.                                   *)
 (*---------------------------------------------------------------------------*)
 
+fun TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
+
 fun WF_REL_TAC q =
   let val ss = termination_ss()
       val simplifier = simpLib.SIMP_CONV ss []
-      val prover = TC_PROVER ss (!termination_solve_simps)
+      val prover = SOLVES (TC_SIMP_TAC ss [])
       val conjunct_conv = TAC_CONV(prover) ORELSEC simplifier
   in
     Q.EXISTS_TAC q THEN
     TERM_TAC WF_TAC (CONV_TAC (EVERY_CONJ_CONV conjunct_conv))
   end
 
-(*---------------------------------------------------------------------------*)
-(* A big cache in the ARITH dp can really slow the termination provers down. *)
-(* So always clear it. This is a blunt instrument. Better solutions: limit   *)
-(* cache size, or preserve ARITH dp cache, but make termination_ss           *)
-(* independent of it, or find and fix the slowdown in the cache impl.        *)
-(*---------------------------------------------------------------------------*)
-
-val TC_SIMPLIFIER = fn ss =>
-     let val tac = TC_SIMPLIFIER ss
-     in fn g => (numSimps.clear_arith_caches(); tac g)
-     end
-
-val TC_PROVER = fn ss => fn ths =>
-     let val tac = TC_PROVER ss ths
-     in fn g => (numSimps.clear_arith_caches(); tac g)
-     end
-
-val TC_SIMP_TAC = fn () =>
-    let val tac = TC_SIMP_TAC ()
-    in fn g => (numSimps.clear_arith_caches(); tac g)
-    end
-
-val TC_PROVE_TAC = fn () =>
-    let val tac = TC_PROVE_TAC ()
-    in fn g => (numSimps.clear_arith_caches(); tac g)
-    end
-
-val WF_REL_TAC = fn q =>
-    let val tac = WF_REL_TAC q
-    in fn g => (numSimps.clear_arith_caches(); tac g)
-    end
-
-fun mk_term_tac() = TERM_TAC WF_TAC (TC_PROVE_TAC ())
+fun mk_term_tac() =
+    TERM_TAC WF_TAC (SOLVES (TC_SIMP_TAC (termination_ss()) []))
 
 (*---------------------------------------------------------------------------
        Definition principles that automatically attempt

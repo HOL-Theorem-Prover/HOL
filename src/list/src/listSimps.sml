@@ -82,13 +82,15 @@ fun APPEND_SIMPLE_LISTS_ASSOC_CONV t =
 (*       REVERSE (x5::x6::x7::(l3 ++ l4 ++ l5)) ++ [x8;x9]))) =          *)
 (*    [x1; x2] ++ l1 ++ [x4] ++ l2 ++ REVERSE l5 ++ REVERSE l4 ++        *)
 (*       REVERSE l3 ++ [x7; x6; x5; x8; x9; x3]                          *)
+(*                                                                       *)
+(* NOTE: SNOC is now considered as an alternative normal form of lists,  *)
+(* and therefore SNOC_APPEND has been eliminated from this conversion.   *)
 (* --------------------------------------------------------------------- *)
 
 val NORM_CONS_APPEND_NO_EVAL_CONV =
    (TOP_DEPTH_CONV NORM_CONS_CONV) THENC
    (PURE_REWRITE_CONV [listTheory.APPEND_NIL, listTheory.APPEND_ASSOC,
-                      listTheory.SNOC_APPEND, listTheory.REVERSE_APPEND,
-                      listTheory.REVERSE_DEF]) THENC
+                       listTheory.REVERSE_APPEND, listTheory.REVERSE_DEF]) THENC
    (DEPTH_CONV ((QCHANGED_CONV APPEND_SIMPLE_LISTS_ASSOC_CONV) ORELSEC
                 (QCHANGED_CONV APPEND_SIMPLE_LISTS_CONV)))
 
