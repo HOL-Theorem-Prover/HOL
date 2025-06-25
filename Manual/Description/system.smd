@@ -203,9 +203,9 @@ see [§Theories](#theories)).
 `mk_comb(`$t_1$`,`$t_2$`)` evaluates to a term representing the combination $t_1\ t_2$.
 It fails if:
 
-1. the type of $t_1$ does not have the form $\sigma'\to\sigma$;
-2. the type of $t_1$ has the form $\sigma'\to\sigma$, but the
-type of $t_2$ is not equal to $\sigma'$.
+1. the type of $t_1$ does not have the form $\sigma_1\to\sigma_2$;
+2. the type of $t_1$ has the form $\sigma_1\to\sigma_2$, but the
+type of $t_2$ is not equal to $\sigma_1$.
 
 ```
 >>__ printNameAndType 4 "Term" "mk_abs"
@@ -566,8 +566,8 @@ val it =
     (400)  TM  ::=  TM "/\" TM   (R-associative)
     (425)  TM  ::=  TM "IN" TM   (non-associative)
     (440)  TM  ::=  TM "++" TM   (L-associative)
-    (450)  TM  ::=  TM "::" TM  [CONS] | TM ">=;" TM | TM "<=" TM |
-                    TM ">" TM | TM "<;" TM | TM ">=" TM | TM "<=" TM |
+    (450)  TM  ::=  TM "::" TM  [CONS] | TM ">=" TM | TM "<=" TM |
+                    TM ">" TM | TM "<" TM | TM ">=" TM | TM "<=" TM |
                     TM ">" TM | TM "<" TM | TM "LEX" TM | TM "RSUBSET" TM |
                     TM ":=" TM  [record field update] |
                     TM "updated_by" TM  [functional record update] |
@@ -601,7 +601,7 @@ In that case, the notation $\mathit{thy}$`$`$\mathit{const}$ may be used in the 
 In the following example, the less-than operator is explicitly specified.
 
 ```
->> “prim_rec$< x y”
+>> “prim_rec$< x y”;
 ```
 Note how the `<` symbol is not treated as an infix by the
 parser when given in “fully-qualified” form.  Syntactically, such
