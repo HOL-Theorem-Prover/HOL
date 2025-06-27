@@ -231,7 +231,7 @@ Proof
   \\ goal_assum drule
 QED
 
-val _ = set_trace "TFL rewrite monitoring" 3;
+val _ = set_trace "Definition.TC extraction" 3;
 
 Definition evaluate_def:
   eval_stmt cx (AugAssign t e) = do

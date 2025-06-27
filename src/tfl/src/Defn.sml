@@ -453,7 +453,7 @@ val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 
 local
   val chatting = ref true
-  val _ = Feedback.register_btrace("Define.storage_message", chatting)
+  val _ = Feedback.register_btrace("Definition.storage_message", chatting)
 in
 fun been_stored (s,thm) =
   (add_defs_to_EVAL [(s,thm)];
@@ -463,7 +463,7 @@ fun been_stored (s,thm) =
            else
              Theory.format_name_message {pfx = "Saved definition", name = s})
    else ()
-   )
+  )
 
 
 (* can fiddle with indSuffix to get "neat" effects; if it is a string

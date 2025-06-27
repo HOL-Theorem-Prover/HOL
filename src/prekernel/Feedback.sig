@@ -44,9 +44,12 @@ sig
     val HOL_WARNING       : string -> string -> string -> unit
     val HOL_WARNINGloc    : string -> string -> locn.locn -> string -> unit
 
-    val traces            : unit -> {name:string, max : int,
-                                     aliases : string list,
-                                     trace_level:int, default:int} list
+    datatype trace_elt =
+       TraceElt of
+         {name : string, aliases : string list,
+          trace_level : int, default : int, max : int}
+
+    val traces            : unit -> trace_elt list
     val register_trace    : (string * int ref * int) -> unit
     val create_trace      : {name:string,initial:int,max:int} ->
                             {get : unit -> int, set : int -> unit}

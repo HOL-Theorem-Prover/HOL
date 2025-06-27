@@ -16,7 +16,7 @@ exception EXTRACTION_ERROR of term list * term
 val monitoring = ref 0;
 val max_trace_val = 5;
 val no_trace = max_trace_val + 1;
-val _ = register_trace ("TFL rewrite monitoring", monitoring, max_trace_val);
+val _ = register_trace ("Definition.TC extraction", monitoring, max_trace_val);
 
 fun lztrace(i,title,msgf) =
   if i <= !monitoring then

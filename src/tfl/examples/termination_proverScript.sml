@@ -10,7 +10,10 @@ local open stringLib in end
 
 val _ = new_theory "termination_prover";
 
-val _ = set_trace "Definition.termination" 2;
+(* get a view of what's happening
+val _ = set_trace "Definition.TC extraction" 3;
+val _ = set_trace "Definition.termination candidates" 2;
+*)
 
 Definition encode_num_def:
   encode_num (n:num) =
@@ -60,7 +63,7 @@ End
 (*---------------------------------------------------------------------------*)
 
 Datatype:
- ptree = Empty | Leaf num 'a | Branch num num ptree ptree
+  ptree = Empty | Leaf num 'a | Branch num num ptree ptree
 End
 
 Definition BRANCHING_BIT_def:
@@ -193,7 +196,6 @@ Definition term_cmp_def:
      pair_cmp num_cmp (list_cmp term_cmp) (x1,ts1) (x2,ts2)
 End
 
-
 Datatype:
   exp = VarExp string
       | ConstExp num
@@ -209,6 +211,10 @@ Definition exp_vars_def:
  exp_vars (BinopExp (e1,e2)) = exp_vars e1 UNION exp_vars e2 ∧
  exp_vars (FncallExp s elist) = FOLDR (λe s. exp_vars e UNION s) {} elist
 End
+
+(*---------------------------------------------------------------------------*)
+(* Mutual recursion                                                          *)
+(*---------------------------------------------------------------------------*)
 
 Datatype:
   expr = VarExpr string
@@ -248,6 +254,9 @@ End
 
   Modifications: IntV (int) --> IntV(num)
                : byte --> word8
+
+  Use of higher order constructs means that the definition no longer has to be
+  mutually recursive
 *)
 
 local open wordsLib in end

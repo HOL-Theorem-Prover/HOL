@@ -40,20 +40,23 @@ fun render_exn srcfn e =
 (* Set up trace stuff                                                        *)
 (*---------------------------------------------------------------------------*)
 
-val monitoring = ref 0;
+local
+  val monitoring = ref 0
+  val _ = register_trace
+             ("Definition.termination candidates", monitoring, 4)
+in
 fun lztrace(i,title,msgf) =
   if i <= !monitoring then
-     Lib.say (String.concat ["\n", title, msgf()])
+     Lib.say $ String.concat ["\n", title, msgf()]
   else ()
-
-val max_trace_val = 5;
-val no_trace = max_trace_val + 1;
-val _ = register_trace
-          ("Definition.termination", monitoring, max_trace_val);
+end
 
 val allow_schema_definition = ref false
 val _ = Feedback.register_btrace
-         ("Define.allow_schema_definition", allow_schema_definition)
+         ("Definition.allow_schema_definition", allow_schema_definition)
+
+val auto_tgoal = ref true
+val _ = Feedback.register_btrace("Definition.auto Defn.tgoal", auto_tgoal)
 
 (*---------------------------------------------------------------------------*)
 (* Misc. stuff that should be in Lib probably                                *)
@@ -612,12 +615,6 @@ fun mk_term_tac() =
     let val ss = termination_ss() ++ boolSimps.ETA_ss
     in TERM_TAC (SOLVES (TC_SIMP_TAC ss [])) end
 
-(*
-fun mk_term_tac() =
-    let val ss = termination_ss() ++ boolSimps.ETA_ss
-    in TERM_TAC (SOLVES (TC_SIMP_TAC ss [])) end
-*)
-
 (*---------------------------------------------------------------------------
        Definition principles that automatically attempt
        to prove termination. If the termination proof
@@ -647,9 +644,6 @@ fun complain_about_rhsfvs srcfn V =
     end
 
 local open Defn
-  val auto_tgoal = ref true
-  val () = Feedback.register_btrace("auto Defn.tgoal", auto_tgoal)
-
   fun should_try_to_prove_termination defn rhs_frees =
      let
         val tcs = tcs_of defn
@@ -680,7 +674,8 @@ local open Defn
   fun report_successful_candidate tm candidates =
       let val i = index_of (aconv tm) candidates
           val mesg = String.concat
-              ["Termination proof successful with candidate ", Int.toString i, ":\n  "]
+              ["Termination proof successful with candidate ",
+               Int.toString i, ":\n  "]
       in
          lztrace(1, mesg, fn () => term_to_string tm ^ "\n\n")
       end
@@ -842,7 +837,7 @@ fun located_qDefine loc stem q tacopt =
       fun fmod f =
           f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
                 else (fn f => f))
-            |> (if svarsok then trace ("Define.allow_schema_definition", 1)
+            |> (if svarsok then trace ("Definition.allow_schema_definition", 1)
                 else (fn f => f))
             |> with_flag(Defn.def_suffix, "")
             |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
