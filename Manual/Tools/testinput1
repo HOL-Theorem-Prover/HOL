@@ -84,3 +84,7 @@ or processed
       x < x + 1n
     Proof simp[]
     QED
+
+##linecount_limit 0 4
+>> term_grammar();
+##poplinecount_limit

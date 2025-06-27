@@ -25,23 +25,44 @@ header-includes: |
   \DeclareUnicodeCharacter{3BB}{$\lambda$}
   \DeclareUnicodeCharacter{3C3}{\ensuremath{\sigma}}
   \DeclareUnicodeCharacter{3C4}{\ensuremath{\tau}}
+  \DeclareUnicodeCharacter{1D40}{\ensuremath{{}\sp{\top}}}
   \DeclareUnicodeCharacter{1D62}{\ensuremath{{}\sb{i}}}
+  \DeclareUnicodeCharacter{1D63}{\ensuremath{{}\sb{r}}}
   \DeclareUnicodeCharacter{201C}{\mbox{\textrm{\textquotedblleft}}}
   \DeclareUnicodeCharacter{201D}{\mbox{\textrm{\textquotedblright}}}
+  \DeclareUnicodeCharacter{207A}{\ensuremath{{}\sp{+}}}
   \DeclareUnicodeCharacter{2081}{\ensuremath{{}\sb{1}}}
   \DeclareUnicodeCharacter{2082}{\ensuremath{{}\sb{2}}}
   \DeclareUnicodeCharacter{2099}{\ensuremath{{}\sb{n}}}
+  \DeclareUnicodeCharacter{21A6}{$\mapsto$}
+  \DeclareUnicodeCharacter{21CE}{\ensuremath{\not\Leftrightarrow}}
   \DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
   \DeclareUnicodeCharacter{21D4}{$\Leftrightarrow$}
   \DeclareUnicodeCharacter{2200}{$\forall$}
   \DeclareUnicodeCharacter{2203}{$\exists$}
+  \DeclareUnicodeCharacter{2208}{\ensuremath{\in}}
+  \DeclareUnicodeCharacter{2209}{\ensuremath{\not\in}}
+  \DeclareUnicodeCharacter{2212}{\ensuremath{{-}}}
+  \DeclareUnicodeCharacter{2218}{\ensuremath{\circ}}
   \DeclareUnicodeCharacter{2227}{$\land$}
   \DeclareUnicodeCharacter{2228}{$\lor$}
+  \DeclareUnicodeCharacter{2229}{\ensuremath{\cap}}
   \DeclareUnicodeCharacter{222A}{\ensuremath{\cup}}
+  \DeclareUnicodeCharacter{2260}{\ensuremath{\ne}}
+  \DeclareUnicodeCharacter{2264}{\ensuremath{\le}}
+  \DeclareUnicodeCharacter{2265}{\ensuremath{\ge}}
+  \DeclareUnicodeCharacter{227C}{\ensuremath{\preceq}}
+  \DeclareUnicodeCharacter{2282}{\ensuremath{\subset}}
   \DeclareUnicodeCharacter{2286}{$\subseteq$}
+  \DeclareUnicodeCharacter{2294}{\ensuremath{\sqcup}}
+  \DeclareUnicodeCharacter{2297}{\ensuremath{\otimes}}
   \DeclareUnicodeCharacter{22A2}{$\vdash$}
   \DeclareUnicodeCharacter{2983}{$\llbrace$}
   \DeclareUnicodeCharacter{2984}{$\rrbrace$}
+  \DeclareUnicodeCharacter{2987}{\ensuremath{\llparenthesis}}
+  \DeclareUnicodeCharacter{2988}{\ensuremath{\rrparenthesis}}
+  \DeclareUnicodeCharacter{29FA}{\ensuremath{{+}\!\!{+}}}
+  \DeclareUnicodeCharacter{A673}{\ensuremath{\sp{*}}}
   \DeclareUnicodeCharacter{1D49F}{\ensuremath{{\cal D}}}
 
 ---
@@ -65,7 +86,16 @@ header-includes: |
             (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
        end
 >>__ val printNameAndType = printNameAndType0 false
->>__ linewidth := 65
+>>__ val (pushLineWidth,popLineWidth) = let
+     val lwstk = ref [65]
+     val _ = linewidth := 65
+   in
+     ((fn i => (linewidth := i; lwstk := i :: !lwstk)),
+      (fn () => case !lwstk of [_] => () 
+                  | i::is => (linewidth := i; lwstk := is))
+     )
+   end
+
 
 # The HOL Logic in ML
 
@@ -380,8 +410,8 @@ a HOL identifier can be of two forms:
       $\lceil$        `U+2308`      $\rangle$         `U+27E9`
       $\rceil$        `U+2309`      ⦃                 `U+2983`
       $\lfloor$       `U+230A`      ⦄                 `U+2984`
-      $\rfloor$       `U+230B`      $\llparenthesis$  `U+2987`
-      $\llbracket$    `U+27E6`      $\rrparenthesis$  `U+2988`
+      $\rfloor$       `U+230B`      ⦇                 `U+2987`
+      $\llbracket$    `U+27E6`      ⦈                 `U+2988`
       $\rrbracket$    `U+27E7`
 
     Table: Non-aggregating Unicode characters
@@ -443,7 +473,7 @@ To repeat that definition:
 >> val parsed = ``\x. x + 1``;
 ```
 The backslash can be used instead of $\lambda$, and the ` `` ` symbol can be used instead of both the “ and ” symbols.
-Similarly, the logical connectives have both ASCII and Unicode forms, and either can be used (even within the same term), except that the begin- and end-delimiters must be of the same type.
+Similarly, the logical connectives have both ASCII and Unicode forms (see [§Grammar](#viewing-the-grammar) below), and either can be used (even within the same term), except that the begin- and end-delimiters must be of the same type.
 Usually the system prefers to print its output with the Unicode symbols.
 Thus:
 ```
@@ -473,9 +503,9 @@ variables in a term with the same name have the same type.
 This is illustrated in the following session.
 
 ```
-##linelen_limit 75
+##linelen_limit 65
 >>+ ``x = (x = 1)``;
-##nolinelen_limit
+##poplinelen_limit
 ```
 
 The desired value can be directly constructed by the primitive constructor
@@ -531,64 +561,26 @@ the parser with the functions `type_grammar` and
 For example, in the following session, we see that the type grammar used in the startup context of HOL has the type operators `fun`, `sum`, `prod`, `list`, `recspace`, `num`, `option`, `one`, `cv`, `ind`, and `bool`:
 
 ```
->>__ val stash = !linewidth; linewidth := 65;
+>>__ pushLineWidth 65;
 >> type_grammar();
->>__ linewidth := stash
+>>__ popLineWidth();
 ```
 
 Also, `fun`, `sum`, and `prod` have infix notation (`->`), (`+`), and (`#`), respectively, with different binding strengths: `#` (with 70) binds stronger than `+` (60), which  binds stronger than `->` (50).
 All postfix type operators bind more strongly than the infixes.
 
 The next session shows the (abbreviated) output from invoking the `term_grammar` function in the startup HOL environment.
-The deleted output includes a listing of all constants known to the system, including prefix operators, along with all overloadings currrently in force.
-The portrayed grammar ranges from binding operators at very low (0) binding strength, through to function application (2000) and record selection (2500), which bind very tightly.
+The deleted output includes more rules, a listing of all constants known to the system, including prefix operators, and a list of all overloadings currrently in force.
+The grammar rules shown include precedence levels, concrete syntax, and how various forms map to actual names (*e.g.*, `if`-`then`-`else` maps to the name `COND`, and `⇒` maps to actual name `==>`). 
 
 ```
-> term_grammar();
-val it =
-    (0)    TM  ::=  "LEAST" <..binders..>  "." TM |
-                    "?!" <..binders..>  "." TM | "?" <..binders..>  "." TM |
-                    "!" <..binders..>  "." TM | "@" <..binders..>  "." TM |
-                    "\" <..binders..>  "." TM
-    (2)    TM  ::=  "let" TM "in" TM  [let]
-    (4)    TM  ::=  TM "::" TM (restricted quantification operator)
-    (5)    TM  ::=  TM TM  (binder argument concatenation)
-    (7)    TM  ::=  "case" TM "of" TM  [case__magic]
-    (8)    TM  ::=  TM "|" TM  [case_split__magic]   (R-associative)
-    (9)    TM  ::=  TM "and" TM   (L-associative)
-    (10)   TM  ::=  TM "=>" TM  [case_arrow__magic]   (R-associative)
-    (50)   TM  ::=  TM "##" TM | TM "," TM   (R-associative)
-    (70)   TM  ::=  "if" TM "then" TM "else" TM  [COND]
-    (80)   TM  ::=  TM ":-" TM   (non-associative)
-    (100)  TM  ::=  TM "=" TM   (non-associative)
-    (200)  TM  ::=  TM "==>" TM   (R-associative)
-    (300)  TM  ::=  TM "\/" TM   (R-associative)
-    (400)  TM  ::=  TM "/\" TM   (R-associative)
-    (425)  TM  ::=  TM "IN" TM   (non-associative)
-    (440)  TM  ::=  TM "++" TM   (L-associative)
-    (450)  TM  ::=  TM "::" TM  [CONS] | TM ">=" TM | TM "<=" TM |
-                    TM ">" TM | TM "<" TM | TM ">=" TM | TM "<=" TM |
-                    TM ">" TM | TM "<" TM | TM "LEX" TM | TM "RSUBSET" TM |
-                    TM ":=" TM  [record field update] |
-                    TM "updated_by" TM  [functional record update] |
-                    TM "with" TM  [record update]
-                    (R-associative)
-    (500)  TM  ::=  TM "-" TM | TM "+" TM | TM "RUNION" TM   (L-associative)
-    (600)  TM  ::=  TM "DIV" TM | TM "*" TM | TM "RINTER" TM
-                    (L-associative)
-    (650)  TM  ::=  TM "MOD" TM   (L-associative)
-    (700)  TM  ::=  TM "**" TM | TM "EXP" TM   (R-associative)
-    (800)  TM  ::=  TM "O" TM | TM "o" TM   (R-associative)
-    (900)  TM  ::=  "~" TM
-    (1000) TM  ::=  TM ":" TY  (type annotation)
-    (2000) TM  ::=  TM TM  (function application) |    (L-associative)
-    (2500) TM  ::=  TM "." TM  [record field selection]   (L-associative)
-           TM  ::=  "[" ... "]"  (separator = ";") |
-                    "<|" ... "|>"  (separator = ";")
-           TM  ::=  "(" ")"  [one] |
-                    "(" TM ")"  [just parentheses, no term produced]
-    ... <further output omitted>
-  : grammar
+##linecount_limit 25 25
+##linelen_limit 70
+>>__ pushLineWidth 70;
+>> term_grammar();
+##poplinelen_limit
+##poplinecount_limit
+>>__ popLineWidth();
 ```
 
 
@@ -763,7 +755,7 @@ These points are illustrated with a theorem inferred, for example purposes, from
 >>__ show_assums := false;
 ```
 
-## Primitive Rules of Inference of the HOL Logic
+### Primitive Rules of Inference of the HOL Logic
 
 The primitive rules of inference of the logic were described abstractly in §LOGIC.
 The descriptions relied on meta-variables $t$, $t_1$, $t_2$, and so on.
@@ -789,7 +781,7 @@ The machine-readable ASCII notation is used for the logical constants.
 
 
 
-### Assumption Introduction
+#### Assumption Introduction
 
 ```
 >>__ printNameAndType 4 "Thm" "ASSUME";
@@ -805,7 +797,7 @@ The machine-readable ASCII notation is used for the logical constants.
 Failure occurs if $t$ is not of type `bool`.
 
 
-### Reflexivity
+#### Reflexivity
 
 ```
 >>__ printNameAndType 4 "Thm" "REFL";
@@ -818,7 +810,7 @@ Failure occurs if $t$ is not of type `bool`.
 
 `REFL` `“`$t$`”` evaluates to `|-` $t = t$. A call to `REFL` never fails.
 
-### Beta-Conversion
+#### Beta-Conversion
 
 ```
 >>__ printNameAndType 4 "Thm" "BETA_CONV";
@@ -841,7 +833,7 @@ Failure occurs if the argument to `BETA_CONV` is not a $\beta$-redex
 (*i.e.*, is not of the form $(\lambda x.\;t_1)t_2$).
 
 
-### Substitution
+#### Substitution
 
 <!-- if you attempt to use printNameAndType, polyml reports the first type below as Thm.Lib.subst -->
 ```
@@ -896,7 +888,7 @@ The following is a somewhat contrived example of using `SUBST`:
 >> val result = SUBST [“x:num” |-> th1, “y:num” |-> th2] template th
 ```
 
-### Abstraction
+#### Abstraction
 
 ```
 >>__ printNameAndType 4 "Thm" "ABS";
@@ -914,7 +906,7 @@ The following is a somewhat contrived example of using `SUBST`:
 Failure occurs if `x` is not a variable, or `x` occurs free in any assumption in `Γ`.
 
 
-### Type Instantiation
+#### Type Instantiation
 
 ```
     INST_TYPE : (hol_type, hol_type) Lib.subst -> thm -> thm
@@ -947,7 +939,7 @@ For example:
 ```
 
 
-### Discharging an Assumption
+#### Discharging an Assumption
 
 ```
 >>__ printNameAndType 4 "Thm" "DISCH";
@@ -968,7 +960,7 @@ type `:bool`.
 
 
 
-### Modus Ponens
+#### Modus Ponens
 
 
 ```

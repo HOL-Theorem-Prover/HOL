@@ -13,7 +13,7 @@ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun lnumdie linenum extra exn =
   die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
-       extra ^ exnMessage exn)
+       extra ^ "\n" ^ exnMessage exn)
 
 val outputPrompt = ref "> "
 
@@ -216,7 +216,16 @@ fun removeCruft s =
 
 fun addIndent ws = String.translate(fn #"\n" => "\n"^ws | c => str c)
 
-val linelen_limit = ref (NONE : int option)
+type 'a refstack = 'a list ref
+fun rsPushValue a (r as ref v) = r := a::v
+fun rsValue (ref v) = hd v
+fun rsPop (r as ref [_]) = ()
+  | rsPop (r as ref (x::xs)) = r := xs
+  | rsPop (ref []) = raise Fail "rsPop: can't happen"
+fun newRS v = ref [v]
+
+val linelen_limit = newRS (NONE : int option)
+val linecount_limit = newRS (0, NONE) : (int*int option) refstack
 
 fun trunc lim s =
     if UTF8.size s <= lim then s
@@ -224,13 +233,55 @@ fun trunc lim s =
     else UTF8.substring(s,0,lim)
 
 fun impose_linelen_limit s =
-    case !linelen_limit of
+    case rsValue linelen_limit of
         NONE => s
       | SOME lim =>
         let
           val lines = String.fields (fn c => c = #"\n") s
         in
           String.concatWith "\n" (map (trunc lim) lines)
+        end
+
+fun impose_linecount_limit s =
+    case rsValue linecount_limit of
+        (0,NONE) => s
+      | (dropc, NONE) =>
+        let
+          val lines = String.fields (fn c => c = #"\n") s
+          val c = length lines
+        in
+          if dropc >= c then "[...No output after prefix elided...]\n"
+          else
+            "[...Lines elided...]\n" ^
+            String.concatWith "\n" (List.drop (lines, dropc)) ^ "\n"
+        end
+      | (0, SOME lim) =>
+        let
+          val lines = String.fields (fn c => c = #"\n") s
+          val c = length lines
+          val (lines', closeWith) =
+              case Int.compare(lim,c) of
+                  LESS => (List.take(lines, lim), "\n[...Output elided...]\n")
+                | _ => (lines, "\n")
+        in
+          String.concatWith "\n" (List.take (lines', lim)) ^
+          closeWith
+        end
+      | (dropc, SOME takec) =>
+        let
+          val lines = String.fields (fn c => c = #"\n") s
+          val dr = List.drop and tk = List.take
+          val c = length lines
+        in
+          if c <= dropc then
+            "[...No output after prefix elided...]\n"
+          else if dropc + takec >= c then
+            "[...Lines elided...]\n" ^
+            String.concatWith "\n" (dr (lines, dropc)) ^ "\n"
+          else
+            "[...Lines elided...]\n" ^
+            String.concatWith "\n" (tk (dr (lines,dropc), takec)) ^
+            "\n[...Output elided...]\n"
         end
 
 fun transformOutput umap ws s =
@@ -240,6 +291,7 @@ fun transformOutput umap ws s =
     |> deleteTrailingWhiteSpace
     |> (fn s => ws ^ s)
     |> impose_linelen_limit
+    |> impose_linecount_limit
 
 fun spaceNotNL c = Char.isSpace c andalso c <> #"\n"
 
@@ -332,7 +384,16 @@ in
   if String.isPrefix ">>>" line then
     (advance lbuf; (ws ^ String.extract(line, 1, NONE), ""))
   else if String.isPrefix "###" line then
-    (advance lbuf; (ws ^ String.extract(line, 1, NONE), ""))
+    let val toks = String.tokens Char.isSpace line
+    in
+      advance lbuf;
+      case (ws, toks) of
+          ("", tok1 :: _) =>
+          if CharVector.all (fn c => c = #"#") tok1 then
+            (line, "")
+          else (ws ^ String.extract(line, 1, NONE), "")
+        | _ => (ws ^ String.extract(line, 1, NONE), "")
+    end
   else if String.isPrefix assertcmd line then
     let
       val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
@@ -430,13 +491,52 @@ in
         NONE => lnumdie (linenum lbuf) "Mal-formed ##linelen_limit directive"
                         (Fail "")
       | SOME i => if i >= 10 then
-                    (advance lbuf; linelen_limit := SOME i; ("", ""))
+                    (advance lbuf; rsPushValue (SOME i) linelen_limit; ("", ""))
                   else
                     lnumdie (linenum lbuf)
                             "Unreasonable (<10) ##linelen_limit directive"
                             (Fail "")
   else if String.isPrefix "##nolinelen_limit" line then
-    (advance lbuf; linelen_limit := NONE; ("", ""))
+    (advance lbuf; rsPushValue NONE linelen_limit; ("", ""))
+  else if String.isPrefix "##poplinelen_limit" line then
+    (advance lbuf; rsPop linelen_limit; ("", ""))
+  else if String.isPrefix "##linecount_limit " line then
+    case tl (String.tokens Char.isSpace line) of
+        [dr] => (case Int.fromString dr of
+                     NONE => lnumdie
+                               (linenum lbuf)
+                               ("Mal-formed ##linecount_limit directive: \""^
+                                dr ^ "\" not a valid integer")
+                               (Fail "")
+                   | SOME dri => (rsPushValue (dri,NONE) linecount_limit;
+                                  advance lbuf;
+                                  ("", "")))
+      | [dr,tk] =>
+        let
+          val dri =
+              case Int.fromString dr of
+                  NONE => lnumdie (linenum lbuf)
+                                  ("Mal-formed ##linecount_limit directive: \""^
+                                   dr ^ "\" not a valid integer")
+                                  (Fail "")
+                      | SOME i => i
+          val tkopt =
+              if tk = "_" then NONE
+              else
+                case Int.fromString tk of
+                    NONE => lnumdie
+                              (linenum lbuf)
+                              ("Mal-formed ##linecount_limit directive: \"" ^
+                               tk ^ "\" not a valid integer or \"_\"")
+                              (Fail "")
+                  | SOME i => SOME i
+        in
+          (advance lbuf; rsPushValue (dri,tkopt) linecount_limit; ("", ""))
+        end
+      | _ => lnumdie (linenum lbuf) "Mal-formed ##linecount_limit directive"
+                     (Fail "")
+  else if String.isPrefix "##poplinecount_limit" line then
+    (advance lbuf; rsPop linecount_limit; ("", ""))
   else if String.isPrefix ">>-" line then
     let
       val (firstline,d) = poss_space_extract 3 line
