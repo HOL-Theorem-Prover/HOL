@@ -16,6 +16,8 @@ val _ = wordsLib.guess_lengths();
 val _ = numLib.temp_prefer_num();
 val _ = intLib.deprecate_int()
 
+val _ = augment_srw_ss [rewrites [SNOC_APPEND]];
+
 val _ = Globals.show_assums := false;
 
 val _ = computeLib.add_convs [

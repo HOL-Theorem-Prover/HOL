@@ -1107,7 +1107,7 @@ QED
 
 
 Theorem extend_states_thm :
- !next_state state_map table states next_state' state_map' table'.
+ ∀next_state state_map table states next_state' state_map' table'.
     (extend_states next_state state_map table states
        = (next_state',state_map',table')) /\
     invariant regexp_compare state_map
@@ -1143,11 +1143,8 @@ Proof
       >> `good_cmp regexp_compare` by metis_tac [regexp_compare_good]
       >> rw [lookup_insert_thm,regexp_compare_eq]
       >> metis_tac [THE_DEF])
-  >- (rename1 ‘x = fapply regexp_compare state_map' r’ >>
-      gvs[submap_def,fapply_def] >>
-      first_x_assum $ mp_tac o Q.SPEC `r` >>
-      rw [fdom_def]
-      >> metis_tac [THE_DEF])
+  >- (gvs[submap_def,fapply_def,fdom_def,EXTENSION,PULL_EXISTS] >>
+      first_x_assum drule >> disch_then (SUBST_ALL_TAC o SYM) >> rw[])
 QED
 
 (*---------------------------------------------------------------------------*)

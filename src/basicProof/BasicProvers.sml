@@ -747,25 +747,27 @@ fun mset_diff l2 l1 =
   let open HOLdict
       val mset1 = mset_of l1
       val mset2 = mset_of l2
-      fun add (t,i) acc =
-          case peek(mset1,t)
-           of NONE => (t,i)::acc
-            | SOME j => if j < i then (t,i-j)::acc else acc
+      fun winnow [] acc = rev acc
+        | winnow (h::t) acc =
+          let val i = find (mset2,h)
+          in case peek(mset1,h)
+              of NONE => winnow t (h::acc)
+               | SOME j => winnow t (if j < i then h::acc else acc)
+          end
   in
-     itlist add (HOLdict.listItems mset2) []
-  end;
+    winnow l2 []
+  end
 
-fun asl_diff asl2 asl1 = map fst (mset_diff asl2 asl1)
+fun asl_diff asl2 asl1 = mset_diff asl2 asl1
 fun legacy_asl_diff asl2 asl1 = op_set_diff aconv asl2 asl1
 
 fun simp_old_assumsFn diffFn (orig as (asl1,_)) (gl as (asl2,_)) =
  let val new = diffFn asl2 asl1
  in if null new then ALL_TAC
     else let val thms = map ASSUME new
-          in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN
-              RULE_ASSUM_TAC (REWRITE_RULE thms) THEN
-              MAP_EVERY ASSUME_TAC thms
-          end
+         in MAP_EVERY (Lib.C UNDISCH_THEN (K ALL_TAC)) new THEN
+            RULE_ASSUM_TAC (REWRITE_RULE thms) THEN
+            MAP_EVERY ASSUME_TAC thms end
  end gl;
 
 fun use_new_assumFn simp_oldFn orig_goal cgoal =
