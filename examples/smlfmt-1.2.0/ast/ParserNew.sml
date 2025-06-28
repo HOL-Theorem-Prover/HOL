@@ -56,7 +56,7 @@ structure AstNew = struct
   | Con of {op_: int option, id: ident, atpat: exp} (** [op] longvid atpat *)
   | Infix of {left: exp, id: ident, right: exp} (** exp vid exp *)
   | Typed of {exp: exp, colon: int, ty: ty} (** exp : ty *)
-  | Layered of {op_: int option, id: ident, ty: {colon: int, ty: ty} option, as_: int, pat: exp}
+  | Layered of {op_: int option, id: ident, ty: {colon: int, ty: ty} option, as_: int option, pat: exp}
     (** [op] vid [:ty] as pat *)
   | Or of exp delimited (** SuccessorML "or patterns": pat | pat | ... | pat *)
   | Select of {hash: int, label: ident} (** # label *)
@@ -362,20 +362,23 @@ fun parseSML body parseError = let
   | SOME tk => (lookahead := NONE; tk)
   fun unread tk = lookahead := SOME tk
 
+  fun makeError tk r err = 
+    case r of
+      SOME _ => ()
+    | NONE => (case err of
+        NONE => ()
+      | SOME e => parseError (#1 tk, !pos) e; unread tk)
+
   fun parseSymbol s err = let
     val tk = token ()
     val r = case tk of (start, Symbol c) => if c = s then SOME start else NONE | _ => NONE
-    val _ = case r of SOME _ => () | NONE => (
-      case err of NONE => () | SOME e => parseError (#1 tk, !pos) e;
-      unread tk)
+    val _ = makeError tk r err
     in r end
 
   fun parseKeyword s err = let
     val tk = token ()
     val r = case tk of (start, IdentTk) => if ident start = s then SOME start else NONE | _ => NONE
-    val _ = case r of SOME _ => () | NONE => (
-      case err of NONE => () | SOME e => parseError (#1 tk, !pos) e;
-      unread tk)
+    val _ = makeError tk r err
     in r end
 
   fun parseDelimitedClose {elem, delim, close} = let
@@ -451,7 +454,18 @@ fun parseSML body parseError = let
     in rhs lhs end
   val parseTy = fn () => parseTy false
 
-  fun parseExp (pat: bool): exp =
+  fun parseExp (pat: bool): exp = let
+    fun parseIdentifer () = let
+      val tk = token ()
+      (* In case of failure, record an error and return the empty string *)
+      fun fail () = (parseError (#1 tk, !pos) "expected identifier"; unread tk; (#1 tk, ""))
+      in
+        case tk of
+          (start, IdentTk) =>
+            (case identKind start of (id, Regular) => (start, id) | _ => fail ())
+        | _ => fail ()
+      end
+    in
     case token () of
       (start, Symbol #"_") => Wild start
     | (start, IntTk) => IntegerConstant (start, ident start)
@@ -462,6 +476,25 @@ fun parseSML body parseError = let
     | (start, Symbol #"(") => (case token () of
         (startClose, Symbol #")") => Unit {left = start, right = startClose}
       | _ => raise Todo)
+    | (start, IdentTk) => let
+      val op_ = if ident start = "op" then SOME start else NONE
+      val id = parseIdentifer ()
+      in  (* Must be Ident, Con, or Layered *)
+        case parseKeyword ":" NONE of
+          SOME colon => let
+          val ty = parseTy ()
+          val as_ = parseKeyword "as" (SOME "expected keyword as")
+          val pat = parseExp true
+          in Layered {op_ = op_, id = id, ty = SOME {colon = colon, ty = ty}, as_ = as_, pat = pat} end
+        | NONE =>  (* Must be Ident, Con, or Layered without ty *)
+          case parseKeyword "as" NONE of
+            SOME as_ => let
+            val pat = parseExp true
+            in Layered {op_ = op_, id = id, ty = NONE, as_ = SOME as_, pat = pat} end
+          | NONE =>  (* Must be Ident or Con *)
+            case parseExp true of
+              BadExp _ => Ident {op_ = op_, id = id}
+            | atpat => Con {op_ = op_, id = id, atpat = atpat} end
     | (start, Symbol #"[") => let
       val (elems, right, stop) = parseDelimitedClose {
         elem = fn () => parseExp pat,
@@ -470,6 +503,7 @@ fun parseSML body parseError = let
       }
       in List {left = start, elems = elems, right = right, stop = stop} end
     | _ => raise Todo
+    end
 
   fun parseDec (inSig: bool) (acc: dec list): dec list =
     case token () of
