@@ -21,7 +21,7 @@ structure AstNew = struct
   | TyCon of {args: ty seq, id: ident} (** tyseq longtycon *)
   | TyArrow of {from: ty, arrow: int, to: ty} (** ty -> ty *)
   | TyParens of {left: int, ty: ty, right: int option, stop: int} (** ( ty ) *)
-  | TyError of {start: int, stop: int} (** ( ty ) *)
+  | BadTy of {start: int, stop: int} (** ( ty ) *)
 
   (** tyvarseq tycon = ty [and tyvarseq tycon = ty ...] *)
   type tybind = {tyvars: ident seq, tycon: ident, bind: {eq: int, ty: ty} option}
@@ -416,7 +416,7 @@ fun parseSML body parseError = let
             in TyCon {args = args, id = (#1 tk, id)} end
           | _ => (
             parseError (#1 tk, !pos) "expected a type constructor";
-            unread tk; TyError {start = start, stop = stop})
+            unread tk; BadTy {start = start, stop = stop})
       end
     | (start, Symbol #"{") => let
       val (elems, right, stop) = parseDelimitedClose {
@@ -439,7 +439,7 @@ fun parseSML body parseError = let
         SOME (id, Regular) => TyCon {args = Empty, id = (#1 tk, id)}
       | _ => (
         parseError (#1 tk, !pos) "expected a type";
-        unread tk; TyError {start = #1 tk, stop = #1 tk})
+        unread tk; BadTy {start = #1 tk, stop = #1 tk})
     fun rhs lhs = case token () of
       tk as (start, IdentTk) => (case identKind start of
         ("*", _) => if prec then (unread tk; lhs) else
