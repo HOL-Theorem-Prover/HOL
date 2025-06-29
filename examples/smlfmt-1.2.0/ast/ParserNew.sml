@@ -52,7 +52,7 @@ structure AstNew = struct
   | Tuple of {left: int, elems: exp delimited, right: int} (** ( exp, ..., exp ) *)
   | Record of {left: int, elems: row delimited, right: int}
     (** { lab = exp, ..., lab = exp } *)
-  | Parens of {left: int, exp: exp, right: int} (** ( exp ) *)
+  | Parens of {left: int, exp: exp, right: int option} (** ( exp ) *)
   | Con of {op_: int option, id: ident, atpat: exp} (** [op] longvid atpat *)
   | Infix of {left: exp, id: ident, right: exp} (** exp vid exp *)
   | Typed of {exp: exp, colon: int, ty: ty} (** exp : ty *)
@@ -473,9 +473,20 @@ fun parseSML body parseError = let
     | (start, StringTk) => StringConstant (start, ident start)
     | (start, CharTk) => CharConstant (start, ident start)
     | (start, RealTk) => RealConstant (start, ident start)
-    | (start, Symbol #"(") => (case token () of
-        (startClose, Symbol #")") => Unit {left = start, right = startClose}
-      | _ => raise Todo)
+    | (startOpen, Symbol #"(") => (case token () of
+        (startClose, Symbol #")") => Unit {left = startOpen, right = startClose}
+      | tk => let
+          val exp = (unread tk; parseExp pat)
+          in
+            case token () of
+              (startClose, Symbol #")") =>
+                Parens {left = startOpen, exp = exp, right = SOME startClose}
+            | (startComma, Symbol #",") => raise Todo
+            | (startSemi, Symbol #";") => raise Todo
+            | (startBad, _) => (
+                parseError (startOpen, startBad) "expected closing parenthesis";
+                Parens {left = startOpen, exp = exp, right = NONE})
+          end)
     | (start, IdentTk) => let
       val op_ = if ident start = "op" then SOME start else NONE
       val id = parseIdentifer ()
