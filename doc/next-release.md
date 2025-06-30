@@ -24,6 +24,9 @@ New features:
     See the DESCRIPTION and REFERENCE manuals for details.
     ([GitHub issue](https://github.com/HOL-Theorem-Prover/HOL/issues/1220))
 
+-   The automatic termination-finding technology behind `Definition` (and lower-level APIs) is now rather stronger.
+    This should reduce the number of times you need to introduce explicit `Termination`-argument blocks to accompany your definitions.
+
 
 Bugs fixed:
 -----------
