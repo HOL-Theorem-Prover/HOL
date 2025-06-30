@@ -1,7 +1,9 @@
 open HolKernel boolLib bossLib Parse
-     listTheory rich_listTheory arithmeticTheory logrootTheory
-     bitTheory wordsTheory numposrepTheory byteTheory wordsLib
-     (*intLib*)
+     listTheory rich_listTheory
+     arithmeticTheory logrootTheory
+     bitTheory wordsTheory
+     numposrepTheory byteTheory wordsLib
+     cv_stdTheory cv_transLib
 
 (* The RIPEMD-160 Specification: https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf *)
 (* See Appendix A for Pseudo-code for RIPEMD-160 *)
@@ -17,13 +19,6 @@ Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
 End
 
-Theorem chg_end_acc_sum_leng:
-  ∀acc bits. LENGTH $ chg_end_acc acc bits = LENGTH acc + LENGTH bits
-Proof
-  ho_match_mp_tac chg_end_acc_ind>>
-  rw[chg_end_acc_def, listTheory.LENGTH_TAKE_EQ]
-QED
-
 (* change bits in little-endian to that in big-endian or vice versa, padding 0s to the left of bits when
    necessary to make the length of bits a multiple of 8 *)
 Definition chg_end_def:
@@ -36,24 +31,7 @@ Definition chg_end_def:
     chg_end_acc [] $ (REPLICATE k 0 ++ bits)
 End
 
-Theorem chg_end_length_multiple:
-  divides 8 $ LENGTH (chg_end bits)
-Proof
-  simp[chg_end_def, chg_end_acc_sum_leng, dividesTheory.DIVIDES_MOD_0]>>
-  Cases_on ‘LENGTH bits MOD 8’
-  >-simp[Once $ GSYM MOD_PLUS]>>
-  simp[Once $ GSYM MOD_PLUS]>>
-  ‘SUC n < 8’ by (
-    pop_assum (SUBST1_TAC o GSYM)>>
-    simp[MOD_LESS])>>
-  simp[]
-QED
-
-Theorem chg_end_length:
-  LENGTH (chg_end bits) = LENGTH bits + (8 − LENGTH bits MOD 8) MOD 8
-Proof
-  rw[chg_end_def,chg_end_acc_sum_leng]
-QED
+val () = cv_auto_trans chg_end_def;
 
 Definition pad_message_def:
   pad_message bits =
@@ -65,26 +43,6 @@ Definition pad_message_def:
   in
     bits ++ (1 :: REPLICATE k 0) ++ lb
 End
-
-Theorem pad_message_length_multiple:
-  LENGTH bits < 2 ** 64 ⇒ divides 512 $ LENGTH (pad_message bits)
-Proof
-  strip_tac>>
-  ‘LENGTH (n2l 2 (LENGTH bits)) ≤ 64’ by (
-    ‘LENGTH bits ≤ 2 ** 64 - 1’ by decide_tac>>
-    Cases_on ‘LENGTH bits’>>
-    simp[numposrepTheory.LENGTH_n2l]>>
-    ‘0 < SUC n’ by simp[]>>
-    drule_then assume_tac logrootTheory.LOG2_LE_MONO>>
-    pop_assum $ drule_then assume_tac>>
-    gvs[])>>
-  rw[pad_message_def]>>
-  gvs[]>>
-  simp[chg_end_length,bitstringTheory.length_pad_left,ADD1]>>
-  Cases_on ‘LENGTH (n2l 2 (LENGTH bits)) = 64’>>
-  simp[dividesTheory.DIVIDES_MOD_0]>>
-  intLib.ARITH_TAC
-QED
 
 Definition parse_block_def:
   parse_block acc bits =
@@ -104,9 +62,11 @@ Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
 End
 
-(* TO DO: Change the last else-branch into an exception *)
+val () = cv_auto_trans parse_message_def;
+
+(* dummy else-branch added to make f a total function *)
 Definition f_def:
-  f j x y z: word32 =
+  f (j: num) x y z: word32 =
   if 0 ≤ j ∧ j ≤ 15 then x ?? y ?? z
   else if 16 ≤ j ∧ j ≤ 31 then (x && y) || (¬x && z)
   else if 32 ≤ j ∧ j ≤ 47 then (x || ¬y) ?? z
@@ -115,9 +75,11 @@ Definition f_def:
   else 0x0w
 End
 
-(* TO DO: Change the last else-branch into an exception *)
+val () = cv_auto_trans f_def;
+
+(* dummy else-branch added to make K a total function *)
 Definition K_def:
-  K j: word32 =
+  K (j: num): word32 =
   if 0 ≤ j ∧ j ≤ 15 then 0x00000000w
   else if 16 ≤ j ∧ j ≤ 31 then 0x5A827999w
   else if 32 ≤ j ∧ j ≤ 47 then 0x6ED9EBA1w
@@ -126,9 +88,11 @@ Definition K_def:
   else 0x0w
 End
 
-(* TO DO: Change the last else-branch into an exception *)
+val () = cv_auto_trans K_def;
+
+(* dummy else-branch added to make K' a total function *)
 Definition K'_def:
-  K' j: word32 =
+  K' (j: num): word32 =
   if 0 ≤ j ∧ j ≤ 15 then 0x50A28BE6w
   else if 16 ≤ j ∧ j ≤ 31 then 0x5C4DD124w
   else if 32 ≤ j ∧ j ≤ 47 then 0x6D703EF3w
@@ -137,34 +101,54 @@ Definition K'_def:
   else 0x0w
 End
 
+val () = cv_auto_trans K'_def;
+
+(* dummy case of NONE to make rho a total function *)
 Definition rho_def:
-  rho n = EL n [7;4;13;1;10;6;15;3;12;0;9;5;2;14;11;8]
+  rho n: num =
+  case oEL n [7;4;13;1;10;6;15;3;12;0;9;5;2;14;11;8] of
+    SOME k => k
+  | NONE   => 16
 End
+
+val () = cv_auto_trans rho_def;
 
 Definition pi_def:
   pi i = (9 * i + 5) MOD 16
 End
 
+val () = cv_trans pi_def;
+
+(* dummy else-branch added to make r a total function *)
 Definition r_def:
   r j =
+  if 0 ≤ j ∧ j ≤ 79 then
     let
       qt = j DIV 16;
       rm = j MOD 16
     in
       FUNPOW rho qt rm
+  else 16
 End
 
+val () = cv_auto_trans r_def;
+
+(* dummy else-branch added to make r' a total function *)
 Definition r'_def:
   r' j =
+  if 0 ≤ j ∧ j ≤ 79 then
     let
       qt = j DIV 16;
       rm = pi (j MOD 16)
     in
       FUNPOW rho qt rm
+  else 16
 End
 
+val () = cv_auto_trans r'_def;
+
 Definition shift_lookup_table_def:
-  shift_lookup_table =
+  shift_lookup_table: num list list =
   [[11;14;15;12;5;8;7;9;11;13;14;15;6;7;9;8];
    [12;13;11;15;6;9;9;7;12;15;11;13;7;8;7;7];
    [13;15;14;11;7;7;6;8;13;14;13;12;5;5;6;9];
@@ -172,27 +156,38 @@ Definition shift_lookup_table_def:
    [15;12;13;13;9;5;8;6;14;11;12;11;8;6;5;5]]
 End
 
+val () = cv_trans_deep_embedding EVAL shift_lookup_table_def;
+
+(* dummy else-branch added to make s a total function *)
 Definition s_def:
   s j =
+  if 0 ≤ j ∧ j ≤ 79 then
     let
       row = j DIV 16;
       col = r j
     in
       EL col (EL row shift_lookup_table)
+  else 16
 End
+
+(*val res = cv_trans_pre s_def;*)
 
 Definition s'_def:
   s' j =
+  if 0 ≤ j ∧ j ≤ 79 then
     let
       row = j DIV 16;
       col = r' j
     in
       EL col (EL row shift_lookup_table)
+  else 16
 End
 
 Definition initial_value_def:
   initial_value: word32 # word32 # word32 # word32 # word32 = (0x67452301w, 0xEFCDAB89w, 0x98BADCFEw, 0x10325476w, 0xC3D2E1F0w)
 End
+
+val () = cv_trans_deep_embedding EVAL initial_value_def;
 
 Definition rol_def:
   rol n (x: 'a word) = (x << n) || (x >>> (dimindex(:'a) - n))
@@ -241,5 +236,51 @@ Definition RIPEMD_160_def:
                                (word32_chg_end h1);
                                (word32_chg_end h0)]
 End
+
+Theorem chg_end_acc_sum_leng:
+  ∀acc bits. LENGTH $ chg_end_acc acc bits = LENGTH acc + LENGTH bits
+Proof
+  ho_match_mp_tac chg_end_acc_ind>>
+  rw[chg_end_acc_def, listTheory.LENGTH_TAKE_EQ]
+QED
+
+Theorem chg_end_length_multiple:
+  divides 8 $ LENGTH (chg_end bits)
+Proof
+  simp[chg_end_def, chg_end_acc_sum_leng, dividesTheory.DIVIDES_MOD_0]>>
+  Cases_on ‘LENGTH bits MOD 8’
+  >-simp[Once $ GSYM MOD_PLUS]>>
+  simp[Once $ GSYM MOD_PLUS]>>
+  ‘SUC n < 8’ by (
+    pop_assum (SUBST1_TAC o GSYM)>>
+    simp[MOD_LESS])>>
+  simp[]
+QED
+
+Theorem chg_end_length:
+  LENGTH (chg_end bits) = LENGTH bits + (8 − LENGTH bits MOD 8) MOD 8
+Proof
+  rw[chg_end_def,chg_end_acc_sum_leng]
+QED
+
+Theorem pad_message_length_multiple:
+  LENGTH bits < 2 ** 64 ⇒ divides 512 $ LENGTH (pad_message bits)
+Proof
+  strip_tac>>
+  ‘LENGTH (n2l 2 (LENGTH bits)) ≤ 64’ by (
+    ‘LENGTH bits ≤ 2 ** 64 - 1’ by decide_tac>>
+    Cases_on ‘LENGTH bits’>>
+    simp[numposrepTheory.LENGTH_n2l]>>
+    ‘0 < SUC n’ by simp[]>>
+    drule_then assume_tac logrootTheory.LOG2_LE_MONO>>
+    pop_assum $ drule_then assume_tac>>
+    gvs[])>>
+  rw[pad_message_def]>>
+  gvs[]>>
+  simp[chg_end_length,bitstringTheory.length_pad_left,ADD1]>>
+  Cases_on ‘LENGTH (n2l 2 (LENGTH bits)) = 64’>>
+  simp[dividesTheory.DIVIDES_MOD_0]>>
+  intLib.ARITH_TAC
+QED
 
 val _ = export_theory();
