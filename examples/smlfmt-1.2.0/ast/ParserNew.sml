@@ -52,16 +52,18 @@ structure AstNew = struct
   | Tuple of {left: int, elems: exp delimited, right: int} (** ( exp, ..., exp ) *)
   | Record of {left: int, elems: row delimited, right: int}
     (** { lab = exp, ..., lab = exp } *)
-  | Parens of {left: int, exp: exp, right: int option} (** ( exp ) *)
+  | Parens of {left: int, exp: exp, right: int option, stop: int} (** ( exp ) *)
   | Con of {op_: int option, id: ident, atpat: exp} (** [op] longvid atpat *)
   | Infix of {left: exp, id: ident, right: exp} (** exp vid exp *)
   | Typed of {exp: exp, colon: int, ty: ty} (** exp : ty *)
-  | Layered of {op_: int option, id: ident, ty: {colon: int, ty: ty} option, as_: int option, pat: exp}
+  | Layered of
+    {op_: int option, id: ident, ty: {colon: int, ty: ty} option, as_: int option, pat: exp}
     (** [op] vid [:ty] as pat *)
   | Or of exp delimited (** SuccessorML "or patterns": pat | pat | ... | pat *)
   | Select of {hash: int, label: ident} (** # label *)
   | Sequence of {left: int, elems: exp delimited, right: int} (** (exp; ...; exp) *) (* TODO: this is stupid *)
-  | LetInEnd of {let_: int, dec: dec list, in_: int option, exps: exp delimited, end_: int option, stop: int}
+  | LetInEnd of
+    {let_: int, dec: dec list, in_: int option, exps: exp delimited, end_: int option, stop: int}
     (** let dec in exp [; exp ...] end *)
   | App of exp * exp (** exp exp *)
   | Andalso of {left: exp, andalso_: int, right: exp} (** exp andalso exp *)
@@ -286,7 +288,8 @@ fun parseSML body parseError = let
   fun finishIntAfterZero () = case cur () of
     #"x" => if Char.isHexDigit (ahead 1) then (nextn 2; takeWhile Char.isHexDigit; IntTk) else IntTk
   | #"w" => (case ahead 1 of
-      #"x" => if Char.isHexDigit (ahead 2) then (nextn 3; takeWhile Char.isHexDigit; WordTk) else IntTk
+      #"x" =>
+      if Char.isHexDigit (ahead 2) then (nextn 3; takeWhile Char.isHexDigit; WordTk) else IntTk
     | c => if Char.isDigit c then (nextn 2; takeWhile Char.isDigit; WordTk) else IntTk)
   | #"." => (next (); finishRealAfterDot (); RealTk)
   | #"E" => (next (); finishRealAfterExp (); RealTk)
@@ -362,7 +365,7 @@ fun parseSML body parseError = let
   | SOME tk => (lookahead := NONE; tk)
   fun unread tk = lookahead := SOME tk
 
-  fun makeError tk r err = 
+  fun makeError tk r err =
     case r of
       SOME _ => ()
     | NONE => (case err of
@@ -381,27 +384,26 @@ fun parseSML body parseError = let
     val _ = makeError tk r err
     in r end
 
-  fun parseDelimitedClose {elem, delim, close} = let
-    fun go args delims = case token () of tk =>
+  fun parseDelimitedClose args delims (f as {elem, delim, close}) =
+    case token () of tk =>
       if close tk then ({args = rev args, delims = rev delims}, SOME (#1 tk), !pos)
       else case ((unread tk; elem ()), token ()) of (e, tk) =>
         if close tk then ({args = rev (e :: args), delims = rev delims}, SOME (#1 tk), !pos)
-        else if delim tk then go (e :: args) (#1 tk :: delims)
+        else if delim tk then parseDelimitedClose (e :: args) (#1 tk :: delims) f
         else (
           parseError (#1 tk, !pos) "expected close delimiter";
           unread tk; ({args = rev (e :: args), delims = rev delims}, NONE, #1 tk))
-    in go [] [] end
 
-  fun parseDelimited (f as {elem, delim}) args delims =
+  fun parseDelimited args delims (f as {elem, delim}) =
     case (elem (), token ()) of (e, tk) =>
-      if delim tk then parseDelimited f (e :: args) (#1 tk :: delims)
+      if delim tk then parseDelimited (e :: args) (#1 tk :: delims) f
       else (unread tk; {args = rev (e :: args), delims = rev delims})
 
   fun parseTy (prec: bool): ty = let
     val lhs = case token () of
       (start, TyVarTk) => TyVar (start, ident start)
     | (start, Symbol #"(") => let
-      val (elems, right, stop) = parseDelimitedClose {
+      val (elems, right, stop) = parseDelimitedClose [] [] {
         elem = fn () => parseTy false,
         delim = fn (_, Symbol #",") => true | _ => false,
         close = fn (_, Symbol #")") => true | _ => false }
@@ -419,7 +421,7 @@ fun parseSML body parseError = let
             unread tk; BadTy {start = start, stop = stop})
       end
     | (start, Symbol #"{") => let
-      val (elems, right, stop) = parseDelimitedClose {
+      val (elems, right, stop) = parseDelimitedClose [] [] {
         elem = fn () => let
           val tk = token ()
           val lab = case tk of
@@ -443,9 +445,9 @@ fun parseSML body parseError = let
     fun rhs lhs = case token () of
       tk as (start, IdentTk) => (case identKind start of
         ("*", _) => if prec then (unread tk; lhs) else
-          rhs (TyTuple (parseDelimited {
+          rhs (TyTuple (parseDelimited [lhs] [start] {
             elem = fn () => parseTy true,
-            delim = fn (s, IdentTk) => ident s = "*" | _ => false } [lhs] [start]))
+            delim = fn (s, IdentTk) => ident s = "*" | _ => false }))
       | ("->", _) => if prec then (unread tk; lhs) else
           rhs (TyArrow {from = lhs, arrow = start, to = parseTy false})
       | (id, Regular) => rhs (TyCon {args = One lhs, id = (#1 tk, id)})
@@ -455,7 +457,7 @@ fun parseSML body parseError = let
   val parseTy = fn () => parseTy false
 
   fun parseExp (pat: bool): exp = let
-    fun parseIdentifer () = let
+    fun parseIdentifier () = let
       val tk = token ()
       (* In case of failure, record an error and return the empty string *)
       fun fail () = (parseError (#1 tk, !pos) "expected identifier"; unread tk; (#1 tk, ""))
@@ -467,8 +469,7 @@ fun parseSML body parseError = let
       end
 
     fun parseArmList () = raise Todo
-    in
-    case token () of
+    val res = case token () of
       (start, Symbol #"_") => Wild start
     | (start, IntTk) => IntegerConstant (start, ident start)
     | (start, WordTk) => WordConstant (start, ident start)
@@ -478,81 +479,75 @@ fun parseSML body parseError = let
     | (startOpen, Symbol #"(") => (case token () of
         (startClose, Symbol #")") => Unit {left = startOpen, right = startClose}
       | tk => let
-          val exp = (unread tk; parseExp pat)
-          in
-            case token () of
-              (startClose, Symbol #")") =>
-                Parens {left = startOpen, exp = exp, right = SOME startClose}
-            | (startComma, Symbol #",") => raise Todo (* Tuple *)
-            | (startSemi, Symbol #";") => raise Todo (* Sequence *)
-            | (startBad, _) => (
-                parseError (startOpen, startBad) "expected closing parenthesis";
-                Parens {left = startOpen, exp = exp, right = NONE})
-          end)
-    | (start, IdentTk) =>
-      if ident start = "let" then let
+        val exp = (unread tk; parseExp pat)
+        in
+          case token () of
+            (startClose, Symbol #")") =>
+            Parens {left = startOpen, exp = exp, right = SOME startClose, stop = startClose+1}
+          | (startComma, Symbol #",") => raise Todo (* Tuple *)
+          | (startSemi, Symbol #";") => raise Todo (* Sequence *)
+          | (startBad, _) => (
+            parseError (startBad, startBad) "expected closing parenthesis";
+            Parens {left = startOpen, exp = exp, right = NONE, stop = startBad})
+        end)
+    | (start, IdentTk) => (case ident start of
+        "let" => let
         val let_ = start
         val dec = parseDec false []
         val in_ = parseKeyword "in" (SOME "expected keyword in")
-        val (exps, end_, stop) = parseDelimitedClose {
+        val (exps, end_, stop) = parseDelimitedClose [] [] {
           elem = fn () => parseExp pat,
           delim = fn (_, Symbol #";") => true | _ => false,
-          close = fn (start, IdentTk) => ident start = "end" | _ => false
-        }
+          close = fn (start, IdentTk) => ident start = "end" | _ => false }
         in LetInEnd {let_ = let_, dec = dec, in_ = in_, exps = exps, end_ = end_, stop = stop} end
-      else if ident start = "raise" then
-        Raise {raise_ = start, exp = parseExp pat}
-      else if ident start = "if" then let
-        val if_ = start
-        val exp1 = parseExp pat
-        val then_ = parseKeyword "then" (SOME "expected keyword then")
-        val exp2 = parseExp pat
-        val else_ = parseKeyword "else" (SOME "expected keyword else")
-        val exp3 = parseExp pat
-        in IfThenElse {if_ = if_, exp1 = exp1, then_ = then_, exp2 = exp2, else_ = else_, exp3 = exp3} end
-      else if ident start = "while" then let
-        val while_ = start
-        val exp1 = parseExp pat
-        val do_ = parseKeyword "do" (SOME "expected keyword do")
-        val exp2 = parseExp pat
-        in While {while_ = while_, exp1 = exp1, do_ = do_, exp2 = exp2} end
-      else if ident start = "case" then let
-        val case_ = start
-        val exp = parseExp pat
-        val of_ = parseKeyword "of" (SOME "expected keyword then")
-        val elems = parseArmList ()
-        in Case {case_ = case_, exp = exp, of_ = of_, elems = elems} end
-      else if ident start = "fn" then
-        Fn {fn_ = start, elems = parseArmList ()}
-      else let
-        val op_ = if ident start = "op" then SOME start else NONE
-        val id = parseIdentifer ()
+      | "raise" => Raise {raise_ = start, exp = parseExp pat}
+      | "if" => IfThenElse {
+        if_ = start,
+        exp1 = parseExp pat,
+        then_ = parseKeyword "then" (SOME "expected keyword then"),
+        exp2 = parseExp pat,
+        else_ = parseKeyword "else" (SOME "expected keyword else"),
+        exp3 = parseExp pat }
+      | "while" => While {
+        while_ = start,
+        exp1 = parseExp pat,
+        do_ = parseKeyword "do" (SOME "expected keyword do"),
+        exp2 = parseExp pat }
+      | "case" => Case {
+        case_ = start,
+        exp = parseExp pat,
+        of_ = parseKeyword "of" (SOME "expected keyword then"),
+        elems = parseArmList () }
+      | "fn" => Fn {fn_ = start, elems = parseArmList ()}
+      | id => let
+        val op_ = if id = "op" then SOME start else (unread (start, IdentTk); NONE)
+        val id = parseIdentifier ()
         in  (* Must be Ident, Con, or Layered *)
           case parseKeyword ":" NONE of
-            SOME colon => let
-            val ty = parseTy ()
-            val as_ = parseKeyword "as" (SOME "expected keyword as")
-            val pat = parseExp true
-            in Layered {op_ = op_, id = id, ty = SOME {colon = colon, ty = ty}, as_ = as_, pat = pat} end
+            SOME colon =>
+            Layered {
+              op_ = op_, id = id,
+              ty = SOME {colon = colon, ty = parseTy ()},
+              as_ = parseKeyword "as" (SOME "expected keyword as"),
+              pat = parseExp true }
           | NONE =>  (* Must be Ident, Con, or Layered without ty *)
             case parseKeyword "as" NONE of
-              SOME as_ => let
-              val pat = parseExp true
-              in Layered {op_ = op_, id = id, ty = NONE, as_ = SOME as_, pat = pat} end
+              SOME as_ =>
+              Layered {op_ = op_, id = id, ty = NONE, as_ = SOME as_, pat = parseExp true}
             | NONE =>  (* Must be Ident or Con *)
               case parseExp true of
                 BadExp _ => Ident {op_ = op_, id = id}
-              | atpat => Con {op_ = op_, id = id, atpat = atpat} end
+              | atpat => Con {op_ = op_, id = id, atpat = atpat}
+        end)
     | (start, Symbol #"[") => let
-      val (elems, right, stop) = parseDelimitedClose {
+      val (elems, right, stop) = parseDelimitedClose [] [] {
         elem = fn () => parseExp pat,
         delim = fn (_, Symbol #",") => true | _ => false,
-        close = fn (_, Symbol #"]") => true | _ => false
-      }
+        close = fn (_, Symbol #"]") => true | _ => false }
       in List {left = start, elems = elems, right = right, stop = stop} end
-    | (start, Symbol #"#") => Select {hash = start, label = parseIdentifer ()}
+    | (start, Symbol #"#") => Select {hash = start, label = parseIdentifier ()}
     | _ => raise Todo
-    end
+    in res end
 
   and parseDec (inSig: bool) (acc: dec list): dec list =
     case token () of
