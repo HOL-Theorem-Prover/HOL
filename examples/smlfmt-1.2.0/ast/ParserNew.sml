@@ -49,7 +49,8 @@ structure AstNew = struct
   | Ident of {op_: int option, id: ident}  (** [op] longvid *)
   | List of {left: int, elems: exp delimited, right: int option, stop: int}
     (** [ exp, ..., exp ] *)
-  | Tuple of {left: int, elems: exp delimited, right: int} (** ( exp, ..., exp ) *)
+  | Tuple of {left: int, elems: exp delimited, right: int option, stop: int}
+    (** ( exp, ..., exp ) *)
   | Record of {left: int, elems: row delimited, right: int}
     (** { lab = exp, ..., lab = exp } *)
   | Parens of {left: int, exp: exp, right: int option, stop: int} (** ( exp ) *)
@@ -61,7 +62,8 @@ structure AstNew = struct
     (** [op] vid [:ty] as pat *)
   | Or of exp delimited (** SuccessorML "or patterns": pat | pat | ... | pat *)
   | Select of {hash: int, label: ident} (** # label *)
-  | Sequence of {left: int, elems: exp delimited, right: int} (** (exp; ...; exp) *) (* TODO: this is stupid *)
+  | Sequence of {left: int, elems: exp delimited, right: int option, stop: int}
+    (** (exp; ...; exp) *) (* TODO: this is stupid *)
   | LetInEnd of
     {let_: int, dec: dec list, in_: int option, exps: exp delimited, end_: int option, stop: int}
     (** let dec in exp [; exp ...] end *)
@@ -469,7 +471,7 @@ fun parseSML body parseError = let
       end
 
     fun parseArmList () = raise Todo
-    val res = case token () of
+    val lhs = case token () of
       (start, Symbol #"_") => Wild start
     | (start, IntTk) => IntegerConstant (start, ident start)
     | (start, WordTk) => WordConstant (start, ident start)
@@ -484,8 +486,18 @@ fun parseSML body parseError = let
           case token () of
             (startClose, Symbol #")") =>
             Parens {left = startOpen, exp = exp, right = SOME startClose, stop = startClose+1}
-          | (startComma, Symbol #",") => raise Todo (* Tuple *)
-          | (startSemi, Symbol #";") => raise Todo (* Sequence *)
+          | (startComma, Symbol #",") => let
+            val (elems, right, stop) = parseDelimitedClose [exp] [startComma] {
+              elem = fn () => parseExp pat,
+              delim = fn (_, Symbol #",") => true | _ => false,
+              close = fn (_, Symbol #")") => true | _ => false }
+            in Tuple {left = startOpen, elems = elems, right = right, stop = stop} end
+          | (startSemi, Symbol #";") => let
+            val (elems, right, stop) = parseDelimitedClose [exp] [startSemi] {
+              elem = fn () => parseExp pat,
+              delim = fn (_, Symbol #";") => true | _ => false,
+              close = fn (_, Symbol #")") => true | _ => false }
+            in Sequence {left = startOpen, elems = elems, right = right, stop = stop} end
           | (startBad, _) => (
             parseError (startBad, startBad) "expected closing parenthesis";
             Parens {left = startOpen, exp = exp, right = NONE, stop = startBad})
@@ -547,7 +559,7 @@ fun parseSML body parseError = let
       in List {left = start, elems = elems, right = right, stop = stop} end
     | (start, Symbol #"#") => Select {hash = start, label = parseIdentifier ()}
     | _ => raise Todo
-    in res end
+    in lhs end
 
   and parseDec (inSig: bool) (acc: dec list): dec list =
     case token () of
