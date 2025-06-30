@@ -24,12 +24,22 @@ New features:
     See the DESCRIPTION and REFERENCE manuals for details.
     ([GitHub issue](https://github.com/HOL-Theorem-Prover/HOL/issues/1220))
 
--   The automatic termination-finding technology behind `Definition` (and lower-level APIs) is now rather stronger.
-    This should reduce the number of times you need to introduce explicit `Termination`-argument blocks to accompany your definitions.
+- The automatic termination-finding technology behind `Definition`
+    (and lower-level APIs) is now rather stronger, especially when
+    dealing with higher order recursions using list operators.  This
+    should reduce the number of times you need to introduce explicit
+    `Termination`-argument blocks to accompany your
+    definitions. Termination condition extraction and termination
+    relation guessing now have traces ("Definition.TC extraction" and
+    "Definition.termination candidates") that can be examined for illumination.
+    See `src/tfl/examples/termination_proverScript.sml` for examples.
 
 
 Bugs fixed:
 -----------
+
+- EVERY_CASE_TAC would loop if the "split-upon" subterm was already an assumption, but no longer.
+
 
 New theories:
 -------------
