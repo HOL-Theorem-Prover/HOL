@@ -22,7 +22,7 @@ open Num_conv mesonLib arithmeticTheory
      simpLib boolSimps pairTheory pred_setTheory pred_setLib
      TotalDefn metisLib relationTheory combinTheory quotientLib
 
-local open pairTheory pred_setTheory Datatype OpenTheoryMap
+local open pairTheory pred_setTheory Datatype OpenTheoryMap basicSizeTheory
 in end;
 
 val ERR = mk_HOL_ERR "listScript"
