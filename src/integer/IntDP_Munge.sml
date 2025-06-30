@@ -1,14 +1,15 @@
 structure IntDP_Munge :> IntDP_Munge =
 struct
 
-structure Parse = struct
-  open Parse
-  val (Type,Term) = parse_from_grammars int_arithTheory.int_arith_grammars
-end
-open Parse
 
 open HolKernel boolLib intSyntax boolSyntax CooperSyntax integerTheory
      int_arithTheory intReduce
+
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="int_arith"}
+end
+open Parse
 
 val ERR = mk_HOL_ERR "IntDP_Munge";
 

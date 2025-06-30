@@ -4,8 +4,6 @@ sig
   type hol_type  = Type.hol_type
   type term      = Term.term
   type thm       = Thm.thm
-  type thy_addon = {sig_ps    : (unit -> HOLPP.pretty) option,
-                    struct_ps : (unit -> HOLPP.pretty) option}
   type num = Arbnum.num
   datatype thm_src_location = datatype DB_dtype.thm_src_location
   type thminfo = DB_dtype.thminfo
@@ -41,7 +39,8 @@ sig
 (* Information on the current theory segment *)
 
   val current_theory     : unit -> string
-  val stamp              : string -> Time.time
+  val hash               : string -> string
+  val mod_time           : string -> Time.time
   val parents            : string -> string list
   val ancestry           : string -> string list
   val types              : string -> (string * int) list
@@ -53,9 +52,6 @@ sig
 
 (* Support for persistent theories *)
 
-  val adjoin_to_theory       : thy_addon -> unit
-  val adjoin_after_completion: (unit -> HOLPP.pretty) -> unit
-  val quote_adjoin_to_theory : string quotation -> string quotation -> unit
   val export_theory          : unit -> unit
 
 (* Make hooks available so that theory changes can be seen by
@@ -143,11 +139,13 @@ sig
 
  *)
 
-  val link_parents           : string*num*num -> (string*num*num) list -> unit
+  val link_parents           : string*string -> (string*string) list -> unit
   val incorporate_types      : string -> (string*int) list -> unit
   val incorporate_consts     : string -> (string*hol_type) list -> unit
   val pp_thm                 : (thm -> HOLPP.pretty) ref
 
+  type metadata = {path: string, timestamp: Time.time}
+  val record_metadata        : string -> metadata -> unit
 
   (* Theory files (which are just SML source code) call this function as
      the last thing done when they load.  This will in turn cause a

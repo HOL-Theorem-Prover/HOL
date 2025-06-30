@@ -144,20 +144,15 @@ Proof
   qpat_x_assum `SS ≠ ∅` mp_tac >> simp[EXTENSION] >> metis_tac[]
 QED
 
-
 Definition ptree_NTs_def:
   (ptree_NTs (Lf (l,_)) = case l of NT N => {N} | _ => ∅) ∧
   (ptree_NTs (Nd (n,_) subs) = n INSERT BIGUNION (IMAGE ptree_NTs (set subs)))
-Termination
-  WF_REL_TAC `measure (parsetree_size (K 0) (K 0) (K 0))`
 End
 
 Definition ptree_rptfree_def:
   ptree_rptfree (Lf _) = T ∧
   ptree_rptfree (Nd (N,_) subs) =
     ∀s. MEM s subs ⇒ ptree_rptfree s ∧ N ∉ ptree_NTs s
-Termination
-  WF_REL_TAC `measure (parsetree_size (K 0) (K 0) (K 0))`
 End
 
 Theorem nullableML_by_singletons:

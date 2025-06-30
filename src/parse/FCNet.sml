@@ -103,7 +103,7 @@ fun index x net = let
                 |  _  => let fun exec_defd [] (NODE _) = raise ERR "appl"
                                   "NODE: should be at a LEAF instead"
                                | exec_defd [] (LEAF L) = SOME L
-                               | exec_defd (h::rst) net =  appl rst h net
+                               | exec_defd (h::rst) net = appl rst h net
                          in
                            exec_defd defd net
                          end
@@ -180,7 +180,7 @@ let fun del [] = []
              |  _  => let fun exec_defd [] (NODE _) = raise ERR "remv"
                                 "NODE: should be at a LEAF instead"
                             | exec_defd [] (LEAF L) = LEAF(del L)
-                            | exec_defd (h::rst) net =  remv rst h net
+                            | exec_defd (h::rst) net = remv rst h net
                       in
                         exec_defd defd childnet
                       end

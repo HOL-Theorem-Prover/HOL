@@ -5,7 +5,10 @@ open binderLib nomdatatype nomsetTheory boolSimps
 
 val _ = new_theory "foltypes"
 
-val _ = Datatype‘foterm = V string | TFn string (foterm list)’;
+Datatype:
+  foterm = V string
+         | TFn string (foterm list)
+End
 
 Theorem foterm_induct:
   ∀P. (∀s. P (V s)) ∧ (∀f ts. (∀t. MEM t ts ⇒ P t) ⇒ P(TFn f ts)) ⇒
@@ -19,12 +22,8 @@ QED
 
 val _ = TypeBase.update_induction foterm_induct
 
-val foterm_size_def = DB.fetch "-" "foterm_size_def"
-val _ = export_rewrites ["foterm_size_def"]
-
-
 Theorem foterm_size_lemma[simp]:
-  ∀x l a. MEM a l ⇒ foterm_size a < foterm1_size l + (x + 1)
+  ∀x l a. MEM a l ⇒ foterm_size a < list_size foterm_size l + (x + 1)
 Proof
   rpt gen_tac >> Induct_on ‘l’ >> simp[] >> rw[] >> simp[] >>
   res_tac >> simp[]
@@ -33,8 +32,6 @@ QED
 Definition raw_tpm_def:
   (raw_tpm π (V s) = V (lswapstr π s)) ∧
   (raw_tpm π (TFn f ts) = TFn f (MAP (raw_tpm π) ts))
-Termination
-  WF_REL_TAC ‘measure (foterm_size o SND)’ >> simp[]
 End
 
 Theorem raw_tpm_def[allow_rebind] =
@@ -83,8 +80,6 @@ QED
 Definition tfv_def[simp]:
   (tfv (V s) = {s}) ∧
   (tfv (TFn f ts) = LIST_UNION (MAP tfv ts))
-Termination
-  WF_REL_TAC ‘measure foterm_size’ >> simp[]
 End
 
 Theorem FINITE_tfv[simp]:
@@ -201,7 +196,6 @@ Proof
 QED
 
 val _ = augment_srw_ss [rewrites [FINITE_raw_atoms]]
-
 
 Theorem raw_atoms_apart:
   ∀rf x y. x ∈ raw_atoms rf ∧ y ∉ raw_atoms rf ⇒ rawfpm [(x,y)] rf ≠ rf
@@ -383,6 +377,7 @@ Theorem rawfpm_xx_id[simp]:
 Proof
   Induct_on ‘f’ >> simp[]
 QED
+
 (*
 Theorem raw_fresh:
   ∀x y. x ∉ rawfv rf ∧ y ∉ rawfv rf ⇒ faeq (rawfpm [(x,y)] rf) rf
@@ -453,10 +448,5 @@ val lifted_results = define_equivalence_type
                fpm_respects,
                faeq_ALL_respects, faeq_rawfv]
   };
-
-
-
-
-
 
 val _ = export_theory();

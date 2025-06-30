@@ -1482,7 +1482,7 @@ Theorem path_alt:
   (!n. path n 0 = [(1,n DIV 4,1)]) /\
    !n k. path n (SUC k) = (path n k) ++ [(zagier o flip) (LAST (path n k))]
 Proof
-  simp[path_def]
+  simp[path_def, SNOC_APPEND]
 QED
 
 (* Theorem: path n 1 = [(1,n DIV 4,1); (1,1,n DIV 4)] *)

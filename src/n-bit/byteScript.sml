@@ -311,6 +311,18 @@ Definition word_to_bytes_def:
   word_to_bytes_aux (dimindex (:'a) DIV 8) w be
 End
 
+Theorem LENGTH_word_to_bytes_aux[simp]:
+  LENGTH (word_to_bytes_aux n w b) = n
+Proof
+  Induct_on`n` \\ rw[word_to_bytes_aux_def]
+QED
+
+Theorem LENGTH_word_to_bytes[simp]:
+  LENGTH (word_to_bytes (w:'a word) be) = dimindex(:'a) DIV 8
+Proof
+  rw[word_to_bytes_def]
+QED
+
 Theorem byte_index_cycle:
   8 <= dimindex (:'a) ==>
   byte_index (n2w ((w2n (a:'a word)) MOD (dimindex (:'a) DIV 8)):'a word) be = byte_index a be

@@ -101,3 +101,11 @@ Proof
 QED
 
 Theorem thm2[foo, simp , key = val1 val2] = exp
+
+Theorem th3[*,bar]:
+  stmt
+Proof
+tac
+QED
+
+Overload "" = term;

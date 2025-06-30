@@ -21,16 +21,14 @@ Proof
   Induct_on ‘sets’ >> simp[] >> metis_tac[]
 QED
 
-Datatype:   term = V num | Fn num (term list)
+Datatype: term = V num | Fn num (term list)
 End
 
-val term_size_def = DB.fetch "-" "term_size_def"
-val _ = export_rewrites ["term_size_def"]
-
 Theorem term_size_lemma[simp]:
-  ∀x l a. MEM a l ⇒ term_size a < 1 + (x + term1_size l)
+  ∀x l a. MEM a l ⇒ term_size a < 1 + (x + list_size term_size l)
 Proof
-  rpt gen_tac >> Induct_on ‘l’ >> simp[] >> rpt strip_tac >> simp[] >>
+  rpt gen_tac >> Induct_on ‘l’ >>
+  simp[list_size_def] >> rpt strip_tac >> simp[] >>
   res_tac >> simp[]
 QED
 
@@ -50,16 +48,13 @@ val _ = TypeBase.update_induction term_induct
 Definition tswap_def[simp]:
   (tswap x y (V v) = if v = x then V y else if v = y then V x else V v) ∧
   (tswap x y (Fn f ts) = Fn f (MAP (tswap x y) ts))
-Termination
-  WF_REL_TAC ‘measure (term_size o SND o SND)’ >> simp[]
 End
 
 Definition FVT_def:
   (FVT (V v) = {v}) ∧
   (FVT (Fn s ts) = LIST_UNION (MAP FVT ts))
-Termination
-  WF_REL_TAC ‘measure term_size’ >> simp[]
 End
+
 Theorem FVT_def[simp,allow_rebind] = SIMP_RULE bool_ss [SF ETA_ss] FVT_def
 
 Theorem FVT_FINITE[simp]:
@@ -91,8 +86,6 @@ QED
 Definition termsubst_def:
   (termsubst v (V x) = v x) ∧
   (termsubst v (Fn f l) = Fn f (MAP (termsubst v) l))
-Termination
-  WF_REL_TAC ‘measure (term_size o SND)’ >> simp[]
 End
 
 Theorem termsubst_def[simp,allow_rebind] =
@@ -170,8 +163,6 @@ Definition term_functions_def[simp]:
   (term_functions (V v) = ∅) ∧
   (term_functions (Fn f args) =
      (f, LENGTH args) INSERT LIST_UNION (MAP term_functions args))
-Termination
-  WF_REL_TAC ‘measure term_size’ >> simp[]
 End
 
 Definition form_functions_def[simp]:
@@ -427,9 +418,8 @@ QED
 Definition num_of_term_def:
   num_of_term (V x) = 0 ⊗ x ∧
   num_of_term (Fn f l) = 1 ⊗ (f ⊗ nlist_of (MAP num_of_term l))
-Termination
-  WF_REL_TAC ‘measure term_size’ >> simp[]
 End
+
 Theorem num_of_term_def[simp,allow_rebind] =
         SIMP_RULE bool_ss [SF ETA_ss] num_of_term_def
 
@@ -498,7 +488,5 @@ Theorem FORM_OF_NUM[simp]:
 Proof
   simp[form_of_num_def]
 QED
-
-
 
 val _ = export_theory();

@@ -2302,7 +2302,7 @@ val _ = export_rewrites ["RDOM_DELETE_DEF"]
 
 (* this syntax is compatible (easily confused) with that for finite maps *)
 val _ = set_fixity "\\\\" (Infixl 600)
-Overload "\\\\" =  “RDOM_DELETE”
+Overload "\\\\" = “RDOM_DELETE”
 
 val IN_RDOM_DELETE = store_thm(
   "IN_RDOM_DELETE",

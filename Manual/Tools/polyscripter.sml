@@ -17,11 +17,12 @@ fun lnumdie linenum extra exn =
 
 val outputPrompt = ref "> "
 
-val quote = HolParser.fromString
+val args = {quietOpen = true}
+val quote = HolParser.fromString args
 val default_linewidth = 77
 
 fun quoteFile lnum fname =
-  HolParser.inputFile fname handle e => lnumdie lnum "" e
+  HolParser.inputFile args fname handle e => lnumdie lnum "" e
 
 datatype lbuf =
          LB of {
@@ -276,6 +277,8 @@ fun dropWhile0 P a [] = (List.rev a,[])
                                  else (List.rev a, l)
 fun dropWhile P l = dropWhile0 P [] l
 
+datatype cstate = Consuming | Skipping
+
 fun process_line debugp umap obuf origline lbuf = let
   val {reset = obRST, ...} = obuf
   val (ws,line) = getIndent origline
@@ -319,7 +322,7 @@ fun process_line debugp umap obuf origline lbuf = let
     end
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
-  val stringCReader = #read o HolParser.stringToReader true
+  val stringCReader = #read o HolParser.stringToReader args
   fun compile exnhandle input =
       (if debugp then
          TextIO.output(TextIO.stdErr, input)
@@ -538,19 +541,31 @@ fun main () =
               ignore (TextIO.inputLine TextIO.stdIn)
             else ()
     val lb = mklbuf TextIO.stdIn
-    fun recurse lb : unit=
+    fun recurse cstate lb : unit=
       case current lb of
           NONE => ()
         | SOME line =>
-          let
-            val (i, output) = process_line debugp umap obuf line lb
-               handle e => die ("Untrapped exception: line "^
-                                Int.toString (linenum lb) ^ ": " ^
-                                exnMessage e)
-          in
-            print (i ^ output);
-            recurse lb
-          end
+          if String.isPrefix "##skip" line then
+            (advance lb; recurse (Skipping :: cstate) lb)
+          else if String.isPrefix "##endskip" line then
+            case cstate of
+                Skipping :: rest => (advance lb; recurse rest lb)
+              | _ => die ("Unbalanced ##endskip on line " ^
+                          Int.toString (linenum lb))
+          else
+            case cstate of
+                Skipping :: _ => (advance lb; recurse cstate lb)
+              | _ =>
+                let
+                  val (i, output) =
+                      process_line debugp umap obuf line lb
+                      handle e => die ("Untrapped exception: line "^
+                                       Int.toString (linenum lb) ^ ": " ^
+                                       exnMessage e)
+                in
+                  print (i ^ output);
+                  recurse cstate lb
+                end
   in
-    recurse lb
+    recurse [] lb
   end

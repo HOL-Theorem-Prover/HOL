@@ -1,5 +1,6 @@
 open HolKernel Portable Parse boolLib;
 
+open jrhCore
 open intLib testutils;
 
 fun noamb_parse s = trace ("guess overloads", 0) Parse.Term [QUOTE s]
@@ -33,7 +34,7 @@ val _ =
       noamb_parse
       "-p"
 
-val _ = tpp "¬p ∧ q"                                                   (* UOK *)
+val _ = tpp "¬p ∧ q"
 
 (* check that deprecation really deprecates *)
 val _ = intLib.deprecate_int()

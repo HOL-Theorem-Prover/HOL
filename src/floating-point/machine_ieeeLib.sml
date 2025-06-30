@@ -7,7 +7,8 @@ open realSyntax intrealSyntax wordsLib binary_ieeeSyntax
 structure Parse =
 struct
   open Parse
-  val (Type, Term) = parse_from_grammars binary_ieeeTheory.binary_ieee_grammars
+  val (Type,Term) =
+    parse_from_grammars $ valOf $ grammarDB {thyname="binary_ieee"}
 end
 open Parse
 

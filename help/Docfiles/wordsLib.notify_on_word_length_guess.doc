@@ -18,11 +18,11 @@ instantiates types in a term.
 ...
 - wordsLib.notify_on_word_length_guess := false;
 > val it = () : unit
-- wordsLib.inst_word_lengths ``(7 >< 5) a @@ (4 >< 0) a``;
+- wordsLib.inst_word_lengths “(7 >< 5) a @@ (4 >< 0) a”;
 <<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd>>
-> val it = ``(7 >< 5) a @@ (4 >< 0) a`` : term
+> val it = “(7 >< 5) a @@ (4 >< 0) a” : term
 - type_of it;
-> val it = ``:bool[8]`` : hol_type
+> val it = “:bool[8]” : hol_type
 }
 
 \COMMENTS

@@ -2793,7 +2793,7 @@ THEN1 (
     POP_ASSUM (Q.SPEC_THEN `a` MP_TAC) THEN
     FULL_SIMP_TAC (srw_ss()) [dis_set_def] THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    SRW_TAC [][nwalkstar_nwalk] ) THEN
+    SRW_TAC [][nwalkstar_nwalk] >> metis_tac[]) THEN
   Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie (lswapstr q1 a) (apply_pi q1 t)` THEN
   `lswapstr (REVERSE q2) (lswapstr q1 a) ∈ dis_set q1 q2` by (
     ASM_SIMP_TAC (srw_ss()) [dis_set_def] THEN

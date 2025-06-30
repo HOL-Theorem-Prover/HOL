@@ -399,9 +399,7 @@ end
 
 (* ------------------------------------------------------------------------ *)
 
-val () = ( utilsLib.reset_thms ()
-         ; utilsLib.setStepConv utilsLib.WGROUND_CONV
-         )
+val () = utilsLib.setStepConv utilsLib.WGROUND_CONV
 
 fun get_def n =
   let
@@ -719,4 +717,4 @@ val Fetch_default = Theory.save_thm("Fetch_default",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = (utilsLib.adjoin_thms (); export_theory ())
+val () = export_theory ()

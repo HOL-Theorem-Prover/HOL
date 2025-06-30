@@ -25,6 +25,17 @@ fun mkloc(s,i,b) =
 type thminfo = {private: bool, loc:thm_src_location,class:class}
 fun updsrcloc f {private,loc,class} =
     {private = private,loc = f loc,class = class}
+fun thmsrcloc_toString tsl =
+    case tsl of
+        Located {scriptpath,linenum,exact} =>
+        "Located{scriptpath=\"" ^ String.toString scriptpath ^
+                 "\",linenum=" ^ Int.toString linenum ^
+                 ",exact="^Bool.toString exact^"}"
+      | Unknown => "Unknown"
+fun thminfo_toString {private,loc,class} =
+    "{private=" ^ Bool.toString private ^
+    ",loc=" ^ thmsrcloc_toString loc ^
+    ",class=" ^ class_toString class ^ "}"
 
 datatype theory =
          THEORY of string *

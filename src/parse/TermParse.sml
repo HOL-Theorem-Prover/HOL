@@ -208,8 +208,27 @@ in
   end
 end;
 
-fun absyn_to_preterm g a =
-  a |> absyn_to_preterm_in_env g |> Parse_support.make_preterm
+fun dest_uname s =
+    if size s >= 2 andalso String.sub(s,0) = #"_" then
+      let val stl = String.extract(s,1,NONE)
+      in
+        if CharVector.all Char.isDigit stl then Int.fromString stl
+        else NONE
+      end
+    else NONE
+fun getfreshuscore vnames =
+    case List.mapPartial dest_uname vnames of
+        [] => 0
+      | i::is => List.foldl Int.max i is + 1
+
+fun ctxt_absyn_to_preterm g fvs a =
+    let val maxuscore = getfreshuscore (map (#1 o dest_var) fvs)
+    in
+      a |> absyn_to_preterm_in_env g
+        |> Parse_support.make_preterm{next_uscore=maxuscore}
+    end
+
+fun absyn_to_preterm g = ctxt_absyn_to_preterm g []
 
 fun preterm g tyg q : preterm Pretype.in_env =
   q |> absyn g tyg |> absyn_to_preterm g
@@ -282,7 +301,7 @@ local
           case List.find (name_eq Name) ctxt of
             NONE => raise UNCHANGED
           | SOME ctxt_tm => Var{Locn = Locn, Name = Name,
-                                Ty =  Pretype.fromType (type_of ctxt_tm)}
+                                Ty = Pretype.fromType (type_of ctxt_tm)}
         else raise UNCHANGED
       end
     | Comb{Rator, Rand, Locn} => let
@@ -291,7 +310,7 @@ local
           val rator = gtf boundvars Rator
         in
           let
-            val rand =  gtf boundvars Rand
+            val rand = gtf boundvars Rand
           in
             Comb{Rator = rator, Rand = rand, Locn = Locn}
           end handle UNCHANGED => Comb{Rator = rator, Rand = Rand, Locn = Locn}
@@ -343,7 +362,7 @@ in
       open seqmonad
       fun givetypes pt = give_types_to_fvs fvs [] pt handle UNCHANGED => pt
       val pt_S = q |> mk_absyn
-                   |> absyn_to_preterm g
+                   |> ctxt_absyn_to_preterm g fvs
                    |> fromErr
                    |> lift givetypes
     in

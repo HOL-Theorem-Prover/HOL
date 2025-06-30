@@ -265,70 +265,99 @@ fun ntys_equal {Ty = ty1,Name = n1, Thy = thy1}
   type_compare (ty1, ty2) = SOME EQUAL andalso n1 = n2 andalso thy1 = thy2
 
 
-(* put a new overloading resolution into the database.  If it's already
-   there for a given operator, don't mind.  In either case, make sure that
-   it's at the head of the list, meaning that it will be the first choice
-   in ambigous resolutions.
-   update: abstracted the inserter to allow adding at the
-           end of the list for inferior resolutions.  *)
-fun add_overloading_with_inserter inserter tstamp (opname, term) oinfo = let
+(* put a new overloading resolution into the database, not objecting if it's already
+   there for a given string.  If provided, use inserter function to place the mapping from
+   string to term into the parse list. When inserter_opt = NONE, don't put into parse list
+   at all (overload is for output only).  Inserter function expected to put something either
+   to front or back.
+
+   If tstamp_opt is SOME tf, then insert the reverse mapping into the printing map.
+   (For printing, precedence is handled by specificity and size of match and then the tstamp
+   last of all.)  With not tstamp function, don't change the print map
+*)
+fun add_overloading_with_inserter {inserter_opt, tstamp_opt} (opname, term) oinfo = let
   val _ = Theory.uptodate_term term orelse
           raise OVERLOAD_ERR ("Term is out-of-date; opname = "^opname)
+  val _ = isSome inserter_opt orelse isSome tstamp_opt orelse
+          raise OVERLOAD_ERR "Request to overload with parsing and printing both disabled"
   val (opc0, cop0) = oinfo
   val opc =
-      case info_for_name oinfo opname of
-        SOME {base_type, actual_ops = a0, tyavoids} => let
-          (* this name is already overloaded *)
-          val actual_ops = List.filter Theory.uptodate_term a0
-          val changed = length actual_ops <> length a0
-        in
-          case Lib.total (Lib.pluck (aconv term)) actual_ops of
-            SOME (_, rest) => let
-              (* this term was already in the map *)
-              (* must replace it *)
-              val (avoids, base_type) =
-                  if changed then
-                    (tmlist_tyvs (free_varsl actual_ops), au_tml actual_ops)
-                  else (tyavoids, base_type)
-            in
-              Binarymap.insert(opc0, opname,
-                               {actual_ops = inserter(term,rest),
-                                base_type = base_type,
-                                tyavoids = avoids})
-            end
-          | NONE => let
-              (* Wasn't in the map, so can just cons its record in *)
-              val (newbase, new_avoids) =
-                  if changed then
-                    (au_tml (term::actual_ops),
-                     tmlist_tyvs (free_varsl (term::actual_ops)))
-                  else
-                    (anti_unify base_type (type_of term),
-                     Lib.union (tmlist_tyvs (free_vars term)) tyavoids)
-            in
-              Binarymap.insert(opc0, opname,
-                               {actual_ops = inserter(term,actual_ops),
-                                base_type = newbase,
-                                tyavoids = new_avoids})
-            end
-        end
-      | NONE =>
-        (* this name not overloaded at all *)
-        Binarymap.insert(opc0, opname,
-                         {actual_ops = [term], base_type = type_of term,
-                          tyavoids = tmlist_tyvs (free_vars term)})
-  val cop = let
-    val fvs = free_vars term
-    val (_, pat) = strip_abs term
-  in
-    PrintMap.insert(cop0,(fvs,pat),(term,opname,tstamp()))
-  end
+      case (inserter_opt, info_for_name oinfo opname) of
+          (NONE, _) => opc0
+        | (SOME inserter, SOME {base_type, actual_ops = a0, tyavoids}) => let
+            (* this name is already overloaded *)
+            val actual_ops = List.filter Theory.uptodate_term a0
+            val changed = length actual_ops <> length a0
+          in
+            case Lib.total (Lib.pluck (aconv term)) actual_ops of
+              SOME (_, rest) => let
+                (* this term was already in the map *)
+                (* must replace it *)
+                val (avoids, base_type) =
+                    if changed then
+                      (tmlist_tyvs (free_varsl actual_ops), au_tml actual_ops)
+                    else (tyavoids, base_type)
+              in
+                Binarymap.insert(opc0, opname,
+                                 {actual_ops = inserter(term,rest),
+                                  base_type = base_type,
+                                  tyavoids = avoids})
+              end
+            | NONE => let
+                (* Wasn't in the map, so can just cons its record in *)
+                val (newbase, new_avoids) =
+                    if changed then
+                      (au_tml (term::actual_ops),
+                       tmlist_tyvs (free_varsl (term::actual_ops)))
+                    else
+                      (anti_unify base_type (type_of term),
+                       Lib.union (tmlist_tyvs (free_vars term)) tyavoids)
+              in
+                Binarymap.insert(opc0, opname,
+                                 {actual_ops = inserter(term,actual_ops),
+                                  base_type = newbase,
+                                  tyavoids = new_avoids})
+              end
+          end
+        | (SOME _, NONE) =>
+          (* this name not overloaded at all *)
+          Binarymap.insert(opc0, opname,
+                           {actual_ops = [term], base_type = type_of term,
+                            tyavoids = tmlist_tyvs (free_vars term)})
+  val cop =
+      case tstamp_opt of
+          NONE => cop0
+        | SOME tstamp =>
+          let
+            val fvs = free_vars term
+            val (_, pat) = strip_abs term
+          in
+            PrintMap.insert(cop0,(fvs,pat),(term,opname,tstamp()))
+          end
 in
   (opc, cop)
 end
 
-val add_overloading = add_overloading_with_inserter (op ::) (fn () => pos_tstamp true)
-val add_inferior_overloading = add_overloading_with_inserter (fn (a,l) => l @ [a]) (fn() => pos_tstamp false)
+val add_overloading = add_overloading_with_inserter {
+      inserter_opt = SOME (op ::),
+      tstamp_opt = SOME (fn () => pos_tstamp true)
+    }
+
+val add_inferior_overloading = add_overloading_with_inserter {
+      inserter_opt = SOME (fn (a,l) => l @ [a]),
+      tstamp_opt = SOME (fn() => pos_tstamp false)
+    }
+
+fun prim_add_overloading{print,parse,frontp} =
+    let val ts = if print then
+                   SOME (fn () => pos_tstamp frontp)
+                 else NONE
+        val is = if parse then if frontp then SOME (op ::)
+                               else SOME (fn (a,l) => l @ [a])
+                 else NONE
+    in
+      add_overloading_with_inserter {inserter_opt = is, tstamp_opt = ts}
+    end
 
 local
   fun foverloading f {opname, realname, realthy} oinfo = let

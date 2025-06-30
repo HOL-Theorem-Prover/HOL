@@ -47,7 +47,8 @@ val ERR = mk_HOL_ERR "List_conv";
 structure Parse =
 struct
  open Parse
- val (Type,Term) = parse_from_grammars rich_listTheory.rich_list_grammars
+ val SOME rich_list_grammars = grammarDB {thyname="rich_list"}
+ val (Type,Term) = parse_from_grammars rich_list_grammars
  fun == q x = Type q
 end
 open Parse
@@ -433,7 +434,7 @@ val FOLDR_CONV  =
   fn conv => fn tm =>
     let val (f,e,l) = listSyntax.dest_foldr tm
         val ithm' = ISPECL[f,e] ithm
-        val (els,lty) =  (dest_list l)
+        val (els,lty) = (dest_list l)
         fun itfn a th =
           let val l' = case snd(strip_comb(lhs(concl th)))
                        of [f',e',l'] => l'
@@ -740,7 +741,7 @@ val ELL_CONV =
     (let val (N,lst) = rich_listSyntax.dest_ell tm
          val ty = type_of lst
          val (lst',ety) = (dest_list lst)
-         val n =  int_of_term N
+         val n = int_of_term N
      in
          if not(n < (length lst'))
              then raise ERR "ELL_CONV" ("index too large: "^(int_to_string n))

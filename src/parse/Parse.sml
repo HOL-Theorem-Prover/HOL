@@ -460,11 +460,14 @@ fun smashErrm m =
     | errormonad.Some (_, result) => result
 val stdprinters = SOME(term_to_string,type_to_string)
 
+fun ctxt_absyn_to_preterm fvs a =
+  TermParse.ctxt_absyn_to_preterm (term_grammar()) fvs a
+
 fun parse_in_context FVs q =
   let
     open errormonad
     val m =
-        (q |> Absyn |> absyn_to_preterm) >-
+        (q |> Absyn |> ctxt_absyn_to_preterm FVs) >-
         TermParse.ctxt_preterm_to_term stdprinters NONE FVs
   in
     smashErrm m
@@ -1087,7 +1090,6 @@ fun merge_grammars sl =
 
 fun grammarDB thyname = grammarDB0 thyname
 
-
 fun set_grammar_ancestry slist =
     let
       val _ = GrammarDeltas.clear_deltas()
@@ -1100,33 +1102,6 @@ fun set_grammar_ancestry slist =
       term_grammar_changed := true
     end
 
-local fun sig_addn s = String.concat
-       ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
-      open Portable
-in
-fun setup_grammars (oldname, thyname) = let
-in
-  if not (null (!grm_updates)) andalso thyname <> oldname then
-    HOL_WARNING "Parse" "setup_grammars"
-                ("\"new_theory\" is throwing away grammar changes for "^
-                 "theory "^oldname^":\n"^
-                 String.concat (map (fn (s1, s2, _) => s1 ^ " - " ^ s2 ^ "\n")
-                                    (!grm_updates)))
-  else ();
-  grm_updates := [];
-  adjoin_to_theory {
-    sig_ps = SOME (fn _ => PP.add_string (sig_addn thyname)),
-    struct_ps = NONE
-  };
-  adjoin_after_completion (
-    fn () =>
-       PP.add_string ("val " ^ thyname ^
-                      "_grammars = valOf (Parse.grammarDB {thyname = " ^
-                      quote thyname ^ "})\n")
-  )
-end
-end (* local *)
-
 val _ = let
   val rawpp_thm =
       pp_thm
@@ -1135,13 +1110,6 @@ val _ = let
 in
   Theory.pp_thm := rawpp_thm
 end
-
-val _ = Theory.register_hook
-            ("Parse.setup_grammars",
-             (fn TheoryDelta.NewTheory{oldseg,newseg} =>
-                 setup_grammars(oldseg, newseg)
-               | _ => ()))
-
 
 fun export_theorems_as_docfiles dirname thms = let
   val {arcs,isAbs,vol} = Path.fromString dirname

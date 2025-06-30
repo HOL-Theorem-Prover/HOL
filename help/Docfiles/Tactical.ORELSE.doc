@@ -18,5 +18,5 @@ The resulting tactic fails if both {T1} and {T2} fail when applied to the
 relevant goal.
 
 \SEEALSO
-Tactical.EVERY, Tactical.FIRST, Tactical.THEN.
+Tactical.EVERY, Tactical.FIRST, Tactical.IF, Tactical.THEN.
 \ENDDOC

@@ -11,7 +11,8 @@ open listTheory listSyntax;
 structure Parse =
 struct
  open Parse
- val (Type,Term) = parse_from_grammars listTheory.list_grammars
+ val SOME list_grammars = grammarDB {thyname="list"}
+ val (Type,Term) = parse_from_grammars list_grammars
  fun == q x = Type q
 end
 open Parse
@@ -81,13 +82,15 @@ fun APPEND_SIMPLE_LISTS_ASSOC_CONV t =
 (*       REVERSE (x5::x6::x7::(l3 ++ l4 ++ l5)) ++ [x8;x9]))) =          *)
 (*    [x1; x2] ++ l1 ++ [x4] ++ l2 ++ REVERSE l5 ++ REVERSE l4 ++        *)
 (*       REVERSE l3 ++ [x7; x6; x5; x8; x9; x3]                          *)
+(*                                                                       *)
+(* NOTE: SNOC is now considered as an alternative normal form of lists,  *)
+(* and therefore SNOC_APPEND has been eliminated from this conversion.   *)
 (* --------------------------------------------------------------------- *)
 
 val NORM_CONS_APPEND_NO_EVAL_CONV =
    (TOP_DEPTH_CONV NORM_CONS_CONV) THENC
    (PURE_REWRITE_CONV [listTheory.APPEND_NIL, listTheory.APPEND_ASSOC,
-                      listTheory.SNOC_APPEND, listTheory.REVERSE_APPEND,
-                      listTheory.REVERSE_DEF]) THENC
+                       listTheory.REVERSE_APPEND, listTheory.REVERSE_DEF]) THENC
    (DEPTH_CONV ((QCHANGED_CONV APPEND_SIMPLE_LISTS_ASSOC_CONV) ORELSEC
                 (QCHANGED_CONV APPEND_SIMPLE_LISTS_CONV)))
 
@@ -120,42 +123,9 @@ val GSYM_CONS_APPEND_CONV =
 (* LIST_EQ_SIMP_CONV : conv                                              *)
 (* --------------------------------------------------------------------- *)
 
-(*examples
-val t = ``[x1;x2] ++ l1 ++ l2 ++ [x3] ++ l3 = x1::x2'::l1' ++ l3``
- |- ([x1; x2] ++ l1 ++ l2 ++ [x3] ++ l3 = x1::x2'::l1' ++ l3) <=>
-    (x2 = x2') /\ (l1 ++ l2 ++ [x3] = l1')
-
-val t = ``[x1;x2] ++ l1 ++ l2 ++ [x3] ++ [x4;x5;x6] = x1'::l1' ++ [x5;x6]``
-
- |- ([x1; x2] ++ l1 ++ l2 ++ [x3] ++ [x4; x5; x6] = x1'::l1' ++ [x5; x6]) <=>
-     (x1 = x1') /\ (x2::(l1 ++ l2 ++ [x3; x4]) = l1') : thm
-
-val t = ``l1 ++ l2 ++ [x3] ++ l3 = l1 ++ l2' ++ x3'::l3``
-
- |- (l1 ++ l2 ++ [x3] ++ l3 = l1 ++ l2' ++ x3'::l3) <=>
-    (l2 = l2') /\ (x3 = x3')
-
-val t = ``[x1;x2;x3] ++ l2 ++ [x3] ++ l3 = [x1;x2] ++ l1 ++ l2' ++ l3``
-
- |- ([x1; x2; x3] ++ l2 ++ [x3] ++ l3 = [x1; x2] ++ l1 ++ l2' ++ l3) <=>
-     (x3::(l2 ++ [x3]) = l1 ++ l2')
-
-val t = ``(x::l) = (l ++ l)``
-
-
-ListConv1.LIST_EQ_SIMP_CONV t
-
-*)
+(* NOTE: the old examples here are moved to selftest.sml *)
 
 local
-   fun strip_cons_append tt =
-   let
-      val (eL, b) = strip_cons tt
-      val lL = strip_append b
-   in
-      (eL, lL)
-   end
-
    fun EQ_CONV c = LHS_CONV c THENC RHS_CONV c
 
    fun is_non_empty_list t = is_list t andalso not (is_nil t)
@@ -284,7 +254,7 @@ local
            val thm2 = TRANS thm1 (MP thm2b TRUTH)
 
            val thm3 = if turn then
-              CONV_RULE ((RHS_CONV o RAND_CONV) SYM_CONV) thm2 else thm2
+               CONV_RULE ((RHS_CONV o ONCE_DEPTH_CONV) SYM_CONV) thm2 else thm2
 
            val thm4 = CONV_RULE ((RHS_CONV o RAND_CONV)
                          (LIST_EQ_SIMP_CONV___internal_left_elim conv)) thm3
@@ -320,7 +290,20 @@ in
             val (l1', _) = dest_eq t
             val _ = if is_list_type (type_of l1') then () else raise UNCHANGED
          in
-            conv t
+             let val th = PURE_REWRITE_CONV [SNOC_APPEND] t
+                 val (t1, t2) = dest_eq (concl th)
+             in
+                 (* If the list equation after eliminating SNOC actually cannot be
+                    simplified, the entire conversion should return UNCHANGED, by
+                    throwing HOL_ERR here, to be handled later.
+                  *)
+                 let val th' = CHANGED_CONV conv t2
+                 in
+                     TRANS th th'
+                 end
+             end
+             handle UNCHANGED => conv t
+                  | HOL_ERR _ => raise UNCHANGED
          end
    end
 

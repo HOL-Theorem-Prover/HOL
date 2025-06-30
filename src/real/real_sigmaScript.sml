@@ -2534,20 +2534,41 @@ val REAL_LT_RDIV_EQ_NEG = store_thm
   >> `-y * inv(-z) < x` by METIS_TAC [GSYM REAL_LT_LDIV_EQ, real_div]
   >> METIS_TAC [REAL_NEG_INV, REAL_NEG_MUL2, GSYM real_div]);
 
-val REAL_LE_RDIV_EQ_NEG = store_thm
-  ("REAL_LE_RDIV_EQ_NEG", ``!x y z. z < 0:real ==> (y / z <= x <=> x * z <= y)``,
-  RW_TAC real_ss []
-  >> `0 < -z` by RW_TAC real_ss [REAL_NEG_GT0]
-  >> `z <> 0` by (METIS_TAC [REAL_LT_IMP_NE])
-  >>EQ_TAC
-  >- (RW_TAC real_ss []
-      >> `y / z * (-z) <= x * (-z)` by METIS_TAC [GSYM REAL_LE_RMUL]
-      >> FULL_SIMP_TAC real_ss []
-      >> METIS_TAC [REAL_DIV_RMUL,REAL_LE_NEG])
-  >> RW_TAC real_ss []
-  >> `-y <= x * (-z)` by FULL_SIMP_TAC real_ss [REAL_LE_NEG]
-  >> `-y * inv (-z) <= x` by METIS_TAC [GSYM REAL_LE_LDIV_EQ, real_div]
-  >> METIS_TAC [REAL_NEG_INV, REAL_NEG_MUL2, GSYM real_div]);
+(* REAL_LE_RDIV_EQ: |- !x y z. 0 < z ==> (x <= y / z <=> x * z <= y) *)
+Theorem REAL_LE_RDIV_EQ_NEG :
+    !x y z. z < (0 :real) ==> (y / z <= x <=> x * z <= y)
+Proof
+    RW_TAC real_ss []
+ >> `0 < -z` by RW_TAC real_ss [REAL_NEG_GT0]
+ >> `z <> 0` by (METIS_TAC [REAL_LT_IMP_NE])
+ >> EQ_TAC
+ >- (RW_TAC real_ss [] \\
+    `y / z * (-z) <= x * (-z)` by METIS_TAC [GSYM REAL_LE_RMUL] \\
+     FULL_SIMP_TAC real_ss [] \\
+     METIS_TAC [REAL_DIV_RMUL, REAL_LE_NEG])
+ >> RW_TAC real_ss []
+ >> `-y <= x * (-z)` by FULL_SIMP_TAC real_ss [REAL_LE_NEG]
+ >> `-y * inv (-z) <= x` by METIS_TAC [GSYM REAL_LE_LDIV_EQ, real_div]
+ >> METIS_TAC [REAL_NEG_INV, REAL_NEG_MUL2, GSYM real_div]
+QED
+
+(* REAL_LE_LDIV_EQ: |- !x y z. 0 < z ==> (x / z <= y <=> x <= y * z) *)
+Theorem REAL_LE_LDIV_EQ_NEG :
+    !x y z. z < (0 :real) ==> (x <= y / z <=> y <= x * z)
+Proof
+    RW_TAC real_ss []
+ >> `0 < -z` by RW_TAC real_ss [REAL_NEG_GT0]
+ >> `z <> 0` by (METIS_TAC [REAL_LT_IMP_NE])
+ >> EQ_TAC
+ >- (RW_TAC real_ss [] \\
+    `x * (-z) <= y / z * (-z)` by METIS_TAC [GSYM REAL_LE_RMUL] \\
+     FULL_SIMP_TAC real_ss [] \\
+     METIS_TAC [REAL_DIV_RMUL, REAL_LE_NEG])
+ >> RW_TAC real_ss []
+ >> `x * (-z) <= -y` by FULL_SIMP_TAC real_ss [REAL_LE_NEG]
+ >> `x <= -y * inv (-z)` by METIS_TAC [GSYM REAL_LE_RDIV_EQ, real_div]
+ >> METIS_TAC [REAL_NEG_INV, REAL_NEG_MUL2, GSYM real_div]
+QED
 
 val POW_POS_EVEN = store_thm
   ("POW_POS_EVEN",``!x:real. x < 0 ==> ((0 < x pow n) <=> (EVEN n))``,

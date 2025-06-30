@@ -19,14 +19,14 @@ further simplification occurs, in particular for {~(n2w n)}.
 \EXAMPLE
 
 {
-- SIMP_CONV (pure_ss++WORD_LOGIC_ss) [] ``3w !! 12w && a !! ~4w !! a && 16w``
+- SIMP_CONV (pure_ss++WORD_LOGIC_ss) [] “3w !! 12w && a !! ~4w !! a && 16w”
 <<HOL message: inventing new type variable names: 'a>>
 > val it = |- 3w !! 12w && a !! ~4w !! a && 16w = 28w && a !! $- 5w : thm
 }
 
 More simplification occurs when the word length is known.
 {
-- SIMP_CONV (pure_ss++WORD_LOGIC_ss) [] ``~12w !! ~14w : word8``
+- SIMP_CONV (pure_ss++WORD_LOGIC_ss) [] “~12w !! ~14w : word8”
 > val it = |- ~12w !! ~14w = 243w : thm
 }
 

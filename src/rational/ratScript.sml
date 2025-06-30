@@ -8,12 +8,8 @@
 
 open HolKernel boolLib Parse BasicProvers bossLib;
 
-open arithmeticTheory pred_setTheory
-        integerTheory intLib
-        intExtensionTheory intExtensionLib
-        EVAL_ringLib integerRingLib
-        fracTheory fracLib ratUtils
-        quotient schneiderUtils;
+open arithmeticTheory pred_setTheory integerTheory intLib intExtensionTheory
+     intExtensionLib fracTheory fracLib ratUtils quotient schneiderUtils;
 
 open gcdTheory dividesTheory primeFactorTheory;
 
@@ -738,7 +734,7 @@ in
 
                         val subst_list = map (fn x => fst(x) |-> snd(x)) (ListPair.zip (arg_vars,arg_thms));
                         (* subst_term: t1 = top_rator arg_vars[1] ... arg_vars[n] *)
-                        val subst_term =  mk_eq (t1 , list_mk_comb (top_rator,arg_vars))
+                        val subst_term = mk_eq (t1 , list_mk_comb (top_rator,arg_vars))
 
                         val thm1 = SUBST subst_list subst_term thm;
                         val (thm1_lhs, thm1_rhs) = dest_eq(concl thm1);
@@ -2436,7 +2432,7 @@ QED
 (*--------------------------------------------------------------------------
    RAT_ADD_MUL: thm
 
-   |- !n m. &n *  &m =  &(n*m)
+   |- !n m.  &n *  &m =  &(n*m)
    |- !n m. ~&n *  &m = ~&(n*m)
    |- !n m.  &n * ~&m = ~&(n*m)
    |- !n m. ~&n * ~&m =  &(n*m)
@@ -2633,7 +2629,7 @@ val rat_of_int_MUL = Q.store_thm(
   fs[integerTheory.INT_NOT_LT, RAT_MUL_NUM_CALCULATE, RAT_EQ_NUM_CALCULATE] >>
   TRY (elim_tac assume_tac elim1 ORELSE elim_tac assume_tac elim2) >> rw[] >>
   asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
-    [GSYM integerTheory.INT_INJ, GSYM integerRingTheory.int_calculate,
+    [GSYM integerTheory.INT_INJ, GSYM integerTheory.int_calculate,
      num_rwt, integerTheory.INT_LE_MUL, integerTheory.INT_LE_LT,
      integerTheory.INT_MUL_SIGN_CASES, integerTheory.INT_NEG_GT0]);
 
@@ -2643,7 +2639,7 @@ val rat_of_int_ADD = Q.store_thm(
   simp[rat_of_int_def] >> rw[]
   >- (simp[GSYM RAT_AINV_ADD, RAT_ADD_NUM_CALCULATE] >>
       asm_simp_tac (bool_ss ++ intLib.INT_ARITH_ss)
-       [GSYM integerTheory.INT_INJ, GSYM integerRingTheory.int_calculate,
+       [GSYM integerTheory.INT_INJ, GSYM integerTheory.int_calculate,
         num_rwt, integerTheory.INT_LE_MUL, integerTheory.INT_LE_LT,
         integerTheory.INT_MUL_SIGN_CASES, integerTheory.INT_NEG_GT0])
   >- (full_simp_tac (bool_ss ++ intLib.INT_ARITH_ss) [])

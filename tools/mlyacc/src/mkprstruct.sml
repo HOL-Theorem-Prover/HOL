@@ -40,7 +40,7 @@ functor mkPrintStruct(structure LrTable : LR_TABLE
          characters for each escape sequence and 16 characters for each entry
       *)
 
-      val maxLength =  16
+      val maxLength = 16
 
       (* number of entries we can fit on a row *)
 

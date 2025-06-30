@@ -97,9 +97,9 @@ val num_to_dec_string_eq_cons = Q.store_thm("num_to_dec_string_eq_cons",
   \\ rw[]
   \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.l2n_n2l \\ rw[]
   \\ Q.ISPEC_THEN`n2l 10 n`FULL_STRUCT_CASES_TAC SNOC_CASES
-  \\ fs[EVERY_SNOC] \\ rpt var_eq_tac
+  \\ fs[EVERY_SNOC, SNOC_APPEND] \\ rpt var_eq_tac
   \\ simp[UNHEX_HEX]
-  \\ simp[SNOC_APPEND,l2n_APPEND,numposrepTheory.l2n_def]
+  \\ simp[l2n_APPEND,numposrepTheory.l2n_def]
   \\ simp[s2n_def,MAP_MAP_o]
   \\ AP_TERM_TAC
   \\ fs[LIST_EQ_REWRITE,EL_MAP,EVERY_MEM,MEM_EL,PULL_EXISTS]
@@ -1026,7 +1026,8 @@ Proof
     gvs[stoppers_def,IN_DEF]
     \\ pairarg_tac \\ fs[destSXNUM_def]
     \\ fs[UNCURRY,destSXCONS_def,destSXNUM_def,rich_listTheory.FOLDL_MAP]
-    \\ qmatch_assum_abbrev_tac`FOLDL f a t = _`
+    \\ gvs[destSXNUM_def]
+    \\ qmatch_goalsub_abbrev_tac`FOLDL f a t`
     \\ ‘∀ls a . FST (FOLDL f a ls) = FST a * 10 ** (LENGTH ls)’
           by (Induct \\ simp[Abbr`f`,arithmeticTheory.EXP]) >>
     ‘∀ls a. EVERY isDigit (MAP FST ls) ⇒
@@ -1044,6 +1045,7 @@ Proof
     \\ fs[s2n_UNHEX_alt]
     \\ imp_res_tac num_to_dec_string_eq_cons
     \\ simp[GSYM num_from_dec_string_def]
+    \\ fs[]
     \\ imp_res_tac isDigit_UNHEX_alt \\ fs[]) >~
   [‘print_nt sxnt_sexp’, ‘print_nt sxnt_sexp0’]
   >- (qx_gen_tac ‘sexp’ >> strip_tac >> simp[Once print_nt_def] >> gvs[] >>

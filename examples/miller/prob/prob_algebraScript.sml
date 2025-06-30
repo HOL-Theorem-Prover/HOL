@@ -5,7 +5,7 @@ open arithmeticTheory pred_setTheory listTheory rich_listTheory pairTheory
      extra_listTheory hurdUtils realTheory extra_realTheory realLib
      extra_numTheory seqTheory simpLib;
 
-open util_probTheory sigma_algebraTheory real_measureTheory real_probabilityTheory;
+open sigma_algebraTheory real_measureTheory real_probabilityTheory;
 open subtypeTheory extra_pred_setTheory;
 open sequenceTheory sequenceTools;
 open prob_canonTheory prob_canonTools;

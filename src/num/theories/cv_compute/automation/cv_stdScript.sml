@@ -211,6 +211,12 @@ QED
 
 val res = cv_trans_pre index_of;
 
+Theorem INDEX_OF_pre[cv_pre]:
+  ∀x y. INDEX_OF_pre x y
+Proof
+  Induct_on`y` \\ rw[Once res]
+QED
+
 Definition replicate_acc_def:
   replicate_acc n x acc =
     if n = 0:num then acc else replicate_acc (n-1) x (x::acc)

@@ -306,8 +306,6 @@ val _ =
   in
     print "Calling mllex on HolLex\n";
     systeml [mllex, "HolLex"];
-    print "Calling mllex on QuoteFilter\n";
-    systeml [mllex, "QuoteFilter"];
     compile [] "holpathdb.sig";
     compile [] "holpathdb.sml";
     compile [] "regexpMatch.sig";
@@ -326,7 +324,6 @@ val _ =
     compile [] "AttributeSyntax.sig";
     compile [] "AttributeSyntax.sml";
     compile [] "HolLex.sml";
-    compile [] "QuoteFilter.sml";
     compile [] "terminal_primitives.sig";
     compile [] "terminal_primitives.sml";
     compile [] "Holmake_tools_dtype.sml";
@@ -508,6 +505,8 @@ val _ = let
   val cwd = FileSys.getDir()
 in
   FileSys.chDir (fullPath [holdir, "tools/quote-filter"]);
+  compile [] "quotefix.sig";
+  compile ["-I", holmakedir] "quotefix.sml";
   compile [] "qfilter_util.sig";
   compile [] "qfilter_util.sml";
   compile ["-I", holmakedir] "quote-filter.sml";

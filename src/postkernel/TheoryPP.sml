@@ -14,13 +14,11 @@ type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
 type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 type thminfo = DB_dtype.thminfo
 type struct_info_record = {
-   theory      : string*Arbnum.num*Arbnum.num,
-   parents     : (string*Arbnum.num*Arbnum.num) list,
+   theory      : string,
+   parents     : (string*string) list,
    types       : (string*int) list,
    constants   : (string*hol_type) list,
    all_thms    : (string * thm * thminfo) list,
-   struct_ps   : (unit -> PP.pretty) option list,
-   struct_pcps : (unit -> PP.pretty) list,
    mldeps      : string list,
    thydata     : string list * Term.term list *
                  (string,shared_writemaps -> HOLsexp.t)Binarymap.dict
@@ -108,7 +106,7 @@ fun classify As Ds Ts [] = (As,Ds,Ts)
 
 fun pp_sig pp_thm info_record = let
   open PP
-  val {name,parents,all_thms,sig_ps} = info_record
+  val {name,parents,all_thms} = info_record
   val parents'     = sort parents
   val rm_temp      = List.filter (fn (s, _, _) => not (is_temp_binding s))
   val all_thms'    = rm_temp all_thms
@@ -148,13 +146,6 @@ fun pp_sig pp_thm info_record = let
   fun pr_thms _ [] = []
     | pr_thms heading plist =
        [block CONSISTENT 0 (pr_list (pr_thm heading) [NL,NL] plist), NL, NL]
-  fun pr_sig_ps NONE = []  (* won't be fired because of filtering below *)
-    | pr_sig_ps (SOME pp) = [pp()]
-  fun pr_sig_psl [] = []
-    | pr_sig_psl l =
-       [NL, NL,
-        block CONSISTENT 0
-              (pr_list (block CONSISTENT 0 o pr_sig_ps) [NL, NL] l)]
 
   val filter_visible =
       List.mapPartial (fn (s, th, {private=false,...}:thminfo) => SOME (s,th)
@@ -191,8 +182,7 @@ in
          (if null definitions' then []
           else [NL, NL, pthms("Definitions", definitions')]) @
          (if null theorems' then []
-          else [NL, NL, pthms ("Theorems", theorems')]) @
-         pr_sig_psl (filter (fn NONE => false | _ => true) sig_ps)
+          else [NL, NL, pthms ("Theorems", theorems')])
        )
      ], NL
     ] @
@@ -227,12 +217,12 @@ fun mlower s m =
     | SOME(_, (_, ps)) => PP.block PP.CONSISTENT 0 ps
 
 
-fun pp_struct (info_record : struct_info_record) = let
+fun pp_struct hash (info_record : struct_info_record) = let
   open Term Thm
-  val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, all_thms,
-       types,constants,struct_ps, struct_pcps} = info_record
+  val {theory=name, parents=parents0, thydata, mldeps, all_thms,
+       types,constants} = info_record
   val parents1 =
-    List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
+    List.mapPartial (fn (s,_) => if "min"=s then NONE else SOME (Thry s))
                     parents0
   val jump = add_newline >> add_newline
   fun pblock(ob_pr, obs) =
@@ -247,7 +237,7 @@ fun pp_struct (info_record : struct_info_record) = let
            add_string "in end;"
            )
 
-  fun pparent (s,i,j) = Thry s
+  fun pparent (s,_) = Thry s
 
   fun pr_bind(s, th, {private,...}:thminfo) = let
     val addsbl = pr_list add_string (add_break(1,2))
@@ -309,6 +299,10 @@ fun pp_struct (info_record : struct_info_record) = let
              add_newline >> add_newline >>
              block CONSISTENT 0 (
               add_string "structure TDB = struct" >> add_break(1,2) >>
+              add_string "val path =" >> add_break(1,4) >>
+                add_string ("holpathdb.subst_pathvars "^datfile) >>
+                add_break(1,2) >>
+              add_string "val timestamp = HOLFileSys.modTime path" >> add_break(1,2) >>
               add_string "val thydata = " >> add_break(1,4) >>
               block INCONSISTENT 0 (
                 add_string "TheoryReader.load_thydata {" >> add_break (1,2) >>
@@ -318,25 +312,30 @@ fun pp_struct (info_record : struct_info_record) = let
                     add_string (mlquote name ^ ",")
                   ) >> add_break (1,0) >>
                   block INCONSISTENT 2 (
-                    add_string "path =" >> add_break(1,2) >>
-                    add_string ("holpathdb.subst_pathvars "^datfile)
+                    add_string "hash =" >> add_break(1,2) >>
+                    add_string (mlquote hash ^ ",")
+                  ) >> add_break (1,0) >>
+                  block INCONSISTENT 2 (
+                    add_string "path = path"
                   ) >>
                   add_break(1,~2) >> add_string "}"
                 )
               ) >> add_break(1,2) >>
               add_string ("fun find s = #1 (valOf (Symtab.lookup thydata s))") >>
               add_break(1,0) >> add_string "end"
+            ) >> add_break(1,0) >>
+            add_string "val () = Theory.record_metadata" >> add_break(1,2) >>
+            block INCONSISTENT 2 (
+              add_string (mlquote name) >> add_break (1,0) >>
+              add_string "{timestamp=TDB.timestamp, path=TDB.path}"
             ) >> jump >>
-            bind_theorems >>
-            add_newline >>
-            pr_psl struct_ps
+            bind_theorems
           )
         ) >> add_break(0,0) >>
         add_string "val _ = if !Globals.print_thy_loads then TextIO.print \
                    \\"done\\n\" else ()" >> add_newline >>
         add_string ("val _ = Theory.load_complete "^ stringify name) >>
         jump >>
-        pr_pcl struct_pcps >>
         add_string "end" >> add_newline)
 in
   mlower ": struct" m
@@ -348,11 +347,11 @@ end
 
 fun pp_thydata (info_record : struct_info_record) = let
   open Term Thm
-  val {theory as (name,i1,i2), parents=parents0,
+  val {theory = name, parents=parents0,
        thydata = (thydata_strings,thydata_tms, thydata), mldeps,
        all_thms,types,constants,...} = info_record
   val parents1 =
-      List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
+      List.mapPartial (fn (s,_) => if "min"=s then NONE else SOME (Thry s))
                       parents0
   open SharingTables
 
@@ -365,10 +364,9 @@ fun pp_thydata (info_record : struct_info_record) = let
   val share_data = add_terms thydata_tms share_data
 
   local open HOLsexp in
-  fun enc_thid(s,i,j) =
-    List[String s, String (Arbnum.toString i), String (Arbnum.toString j)]
+  val enc_thid = pair_encode (String, String)
   val enc_thid_and_parents =
-      curry (pair_encode(enc_thid, list_encode enc_thid))
+      curry (pair_encode(String, list_encode enc_thid))
   end (* local *)
 
   fun enc_incorporate_types types =
@@ -408,7 +406,7 @@ fun pp_thydata (info_record : struct_info_record) = let
       in
         List [
           Symbol "theory",
-          enc_thid_and_parents theory parents0,
+          enc_thid_and_parents name parents0,
           enc_sdata share_data,
           tagged_encode "incorporate" (
             pair_encode(enc_incorporate_types, enc_incorporate_constants)

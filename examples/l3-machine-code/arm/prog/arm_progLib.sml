@@ -7,7 +7,8 @@ open stateLib spec_databaseLib arm_progTheory
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars arm_progTheory.arm_prog_grammars
+   val (Type, Term) =
+       parse_from_grammars $ valOf $ grammarDB {thyname="arm_prog"}
 end
 
 open Parse
@@ -17,7 +18,7 @@ val ERR = Feedback.mk_HOL_ERR "arm_progLib"
 (* ------------------------------------------------------------------------ *)
 
 val arm_proj_def = arm_progTheory.arm_proj_def
-val arm_comp_defs = arm_progTheory.component_defs
+val arm_comp_defs = stateLib.sep_components {thyname="arm_prog"}
 
 local
    val pc = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}

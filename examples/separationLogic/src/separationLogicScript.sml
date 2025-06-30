@@ -9053,7 +9053,7 @@ PROVE_TAC[]);
 
 
 
-val COND_PROP___STRONG_EQUIV_REWRITE =  store_thm(
+val COND_PROP___STRONG_EQUIV_REWRITE = store_thm(
 "COND_PROP___STRONG_EQUIV_REWRITE",
 ``!P1 P2. COND_PROP___STRONG_EQUIV P1 P2 =
      ((FST P1 = FST P2) /\ ((FST P1 /\ FST P2) ==> (SND P1 = SND P2)))``,
@@ -9375,7 +9375,7 @@ store_thm ("COND_PROP___ADD_COND___true",
 SIMP_TAC std_ss [COND_PROP___ADD_COND_def]);
 
 
-val COND_PROP___ADD_COND___false =  store_thm (
+val COND_PROP___ADD_COND___false = store_thm (
 "COND_PROP___ADD_COND___false",
 ``!p. COND_PROP___EQUIV (COND_PROP___ADD_COND F p)  cond_prop_false``,
 SIMP_TAC std_ss [COND_PROP___ADD_COND_def, cond_prop_false_def, COND_PROP___EQUIV_REWRITE]);

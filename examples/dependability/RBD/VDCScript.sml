@@ -1,8 +1,5 @@
 (* ========================================================================= *)
-(* File Name: VDCScript.sml                                                  *)
-(*---------------------------------------------------------------------------*)
 (* Description: Formal Reliability Analysis of Virtual Data Center in HOL    *)
-(*                                                                           *)
 (*                                                                           *)
 (*                HOL4-Kananaskis                                            *)
 (*                                                                           *)
@@ -10,26 +7,22 @@
 (*                                                                           *)
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
-(*                                                                           *)
-(*                                                                           *)
 (* ========================================================================= *)
-
 
 open HolKernel Parse boolLib bossLib;
 
 open limTheory arithmeticTheory realTheory iterateTheory
-    prim_recTheory real_probabilityTheory seqTheory pred_setTheory
-    res_quanTheory sortingTheory res_quanTools listTheory
-    transcTheory rich_listTheory pairTheory combinTheory realLib
-    optionTheory dep_rewrite util_probTheory extrealTheory real_measureTheory
-    real_lebesgueTheory real_sigmaTheory satTheory numTheory RBDTheory extra_pred_setTools;
+     prim_recTheory real_probabilityTheory seqTheory pred_setTheory
+     res_quanTheory sortingTheory res_quanTools listTheory
+     transcTheory rich_listTheory pairTheory combinTheory realLib
+     optionTheory dep_rewrite extrealTheory real_measureTheory
+     real_lebesgueTheory real_sigmaTheory satTheory numTheory RBDTheory
+     extra_pred_setTools;
 
 val _ = new_theory "VDC";
 
-(*--------------------*)
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-(*---------------------------*)
 
 (* -------------------------------------------------------------------------- *)
 (*     Reliability Events Modeling form Random Variable                       *)
@@ -65,8 +58,6 @@ Definition four_dim_rel_event_list_def :
 four_dim_rel_event_list p L t =
  MAP (\a. three_dim_rel_event_list p a t) L
 End
-
-
 
 (* -------------------------------------------------------------------------- *)
 (*  Formalization of Cloud Server Random variable and failure rate lists      *)
@@ -107,11 +98,8 @@ rel_virt_cloud_server p L t =
       ((series of (\a. parallel (rbd_list (rel_event_list p a t)))) L))
 End
 
-
 (* -------------------------------------------------------------------------- *)
 (*   Formalization of Exponential Function and Distribution                  *)
-(*                                                                            *)
-(*                                                                            *)
 (* -------------------------------------------------------------------------- *)
 
 Definition exp_func_list_def :
@@ -151,12 +139,8 @@ Definition gen_rv_list_def :
 gen_rv_list (X:'a->extreal) n = gen_list X n
 End
 
-
-
 (* ========================================================================== *)
 (*    Essential Lemmas for Virtual Data Center Formalization                  *)
-(*                                                                            *)
-(*                                                                            *)
 (* ========================================================================== *)
 
 Theorem not_null_map :
@@ -168,14 +152,13 @@ RW_TAC std_ss[]
 >> RW_TAC list_ss[]
 QED
 
-(*-----------------------------*)
 Theorem extreal_not_le :
 !x y. ~(x < y) = ~(~(y <=  x))
 Proof
 RW_TAC std_ss []
 >> PROVE_TAC[extreal_lt_def]
 QED
-(*---------------*)
+
 Theorem compl_rel_event_eq_fail_event :
 !p t s.
      prob_space p ==>
@@ -186,7 +169,6 @@ SRW_TAC[][PREIMAGE_def,DIFF_DEF,EXTENSION,GSPECIFICATION,REAL_NOT_LT]
 >> SET_TAC[extreal_not_le]
 QED
 
-(*---------------*)
 Theorem gen_list_suc :
 !L (n:num). (gen_list L (SUC n) = L::gen_list L n)
 Proof
@@ -197,7 +179,7 @@ GEN_TAC
 >> SRW_TAC [] [gen_list_def, SNOC]
 >> FULL_SIMP_TAC list_ss[gen_list_def, SNOC_APPEND]
 QED
-(*---------------*)
+
 Theorem compl_fail_event_eq_rel_event :
 !X t p. p_space p DIFF fail_event p X t = rel_event p X t
 Proof
@@ -206,7 +188,7 @@ Proof
   >> RW_TAC std_ss[GSYM extreal_lt_def]
   >> METIS_TAC[]
 QED
-(*---------------*)
+
 Theorem comp_rel_event_eq_fail_event :
 !X t p. p_space p DIFF rel_event p X t = fail_event p X t
 Proof
@@ -358,14 +340,12 @@ GEN_TAC
 >> FULL_SIMP_TAC list_ss[of_DEF,o_DEF,two_dim_rel_event_list_def,rbd_list_def,rbd_struct_def]
 QED
 
-
 (******************************************************************************)
 (*                                                                            *)
 (*       Reliability of Virtualization Configuration in a Cloud Server        *)
 (*                                                                            *)
 (******************************************************************************)
 
-(*----------------------------*)
 Theorem rel_virtual_cloud_server :
 !L_VM L_VMM L_HW C_VM C_VMM C_HW p t.  (~NULL (L_VM))/\
 (0 <=  t) /\ prob_space p /\
@@ -402,9 +382,9 @@ RW_TAC list_ss[]
 >> RW_TAC list_ss[two_dim_exp_dist_list_def]
 QED
 
-(*---------------------------*)
 Theorem seq_rel_prod_tend_0 :
-!(n:num) p X t . (0 <=  (t:real)) /\ possibly p ((rel_event p X t)) /\   prob_space p ==> ((\n.
+    !(n:num) p X t. (0 <= (t:real)) /\ possibly p ((rel_event p X t)) /\
+                    prob_space p ==> ((\n.
    list_prod
      (one_minus_list
         (list_prob p (rel_event_list p (gen_rv_list X n) t)))) --> 0)
@@ -442,7 +422,7 @@ RW_TAC std_ss[]
   >> DEP_REWRITE_TAC[ABS_1_MINUS_PROB]
   >> RW_TAC std_ss[]
 QED
-(*--------rel_prod_tend_0----*)
+
 Theorem rel_prod_tend_0 :
 !(n:num) p X t. (0 <=  (t:real)) /\
       possibly p ((rel_event p X t)) /\
@@ -464,7 +444,6 @@ RW_TAC std_ss[]
 >> RW_TAC std_ss[]
 QED
 
-(*------------------------*)
 Theorem bound_mult_ratr :
 ! (a:real) (b:real) c :real. (0 < c) ==> ((a * (b / c) = (a * b ) / c))
 Proof
@@ -473,7 +452,7 @@ RW_TAC std_ss[]
 >- (RW_TAC std_ss[])
 >> DEP_ASM_REWRITE_TAC[mult_ratr]
 QED
-(*-------------------------*)
+
 Theorem bound_log_inequal :
 ! (a:real) (b:real) (c:real) (e:real)  n.
     (0 <= e) /\ (e < 1) /\ (a < b) /\ (0 < n) /\  (0 <  b) /\
@@ -571,7 +550,7 @@ REPEAT GEN_TAC
 >> ONCE_REWRITE_TAC[GSYM REAL_NEG_0]
 >> RW_TAC real_ss[REAL_LT_NEG]
 QED
-(*-------------------------*)
+
 Theorem nlen_gen_list_eq_n1 :
  !L n . LENGTH (gen_list L n) = n
 Proof
@@ -581,7 +560,6 @@ RW_TAC std_ss[]
 >> RW_TAC list_ss[gen_list_def]
 QED
 
-(*-------------------------*)
 Theorem nlen_gen_list_eq_n :
 !L n t p . LENGTH (rel_event_list p (gen_rv_list L n) t) = n
 Proof
@@ -591,7 +569,6 @@ RW_TAC std_ss[]
 >> RW_TAC list_ss[gen_rv_list_def,rel_event_list_def,gen_list_def,nlen_gen_list_eq_n1]
 QED
 
-(*-------------------------*)
 Theorem compl_rel_pow_n :
 !X p t n.
       prob_space p /\
@@ -615,7 +592,6 @@ GEN_TAC
 >> RW_TAC std_ss[comp_rel_event_eq_fail_event]
 QED
 
-(*-------------------------*)
 Theorem virt_config_bounds :
 !X_VM X_VMM X_HW p n t.
       prob_space p /\
@@ -690,7 +666,6 @@ RW_TAC std_ss[]
 >> REAL_ARITH_TAC
 QED
 
-(*-------------------------*)
 Theorem mem_flat_map_not_null2 :
 !f L.
      (!y. ~NULL (f y)) /\ (!z. MEM z L ==> ~NULL z) ==>
@@ -702,7 +677,7 @@ GEN_TAC
 >> RW_TAC std_ss[]
 >> FULL_SIMP_TAC list_ss[]
 QED
-(*----------------------*)
+
 Theorem mem_flat_map_not_null3 :
 !p t L.  (!z. MEM z ((L)) ==> ~NULL z) ==> (!z. MEM z (((MAP (\a. rel_event_list p a t) L))) ==> ~NULL z)
 Proof
@@ -714,7 +689,7 @@ GEN_TAC
 >> FULL_SIMP_TAC list_ss[rel_event_list_def]
 >> RW_TAC std_ss[not_null_map]
 QED
-(*-----------------------*)
+
 Theorem mem_flat_map_not_null1 :
 !p t L.
      (!z. MEM z (FLAT L) ==> ~NULL z) ==>
@@ -735,7 +710,6 @@ GEN_TAC
 >> FULL_SIMP_TAC list_ss[]
 QED
 
-(*----------------------------*)
 Theorem mem_flat_map_not_null :
 !p t L.
       (!z. MEM z (FLAT (FLAT L)) ==> ~NULL z) ==>
@@ -755,7 +729,7 @@ GEN_TAC
 >> EXISTS_TAC(``h:('a->extreal) list list list``)
 >> FULL_SIMP_TAC list_ss[]
 QED
-(*-------------------------------*)
+
 Theorem parallel_series_parallel_rbd_alt_form :
 !p t L.
       prob_space p ==>
@@ -780,7 +754,6 @@ GEN_TAC
 >> RW_TAC std_ss[GSYM rel_event_list_def,GSYM two_dim_rel_event_list_def]
 QED
 
-(*-------------------------------*)
 Theorem nested_series_parallel_rbd_alt_form :
 !p t L.
      prob_space p ==>
@@ -807,7 +780,6 @@ GEN_TAC
 >> FULL_SIMP_TAC std_ss[of_DEF,o_DEF]
 QED
 
-(*-------------------------------*)
 Theorem mem_flat_fun_eq_mem_flat_null_list1 :
 !p t L. ~NULL L ==> ~NULL (rel_event_list p L t)
 Proof
@@ -817,7 +789,7 @@ GEN_TAC
 >- (RW_TAC list_ss[rel_event_list_def])
 >> RW_TAC list_ss[rel_event_list_def]
 QED
-(*-------------------------------*)
+
 Theorem mem_flat_fun_eq_mem_flat_null_list2 :
 !p t L. (!z. MEM z (FLAT (L)) ==> ~NULL z) ==>
   (!z. MEM z
@@ -841,7 +813,7 @@ GEN_TAC
    >> FULL_SIMP_TAC list_ss[])
 >> METIS_TAC[]
 QED
-(*-------------------------------*)
+
 Theorem mem_flat_fun_eq_mem_flat_null_list3 :
 !p t L.
        (!z. MEM z L ==> ~NULL z) ==>
@@ -857,7 +829,7 @@ GEN_TAC
    >> METIS_TAC[])
 >> FULL_SIMP_TAC list_ss[two_dim_rel_event_list_def,rel_event_list_def]
 QED
-(*-------------------------------*)
+
 Theorem mem_flat_fun_eq_mem_flat_null_list :
 !p t L.
      (!z. MEM z (FLAT (FLAT L)) ==> ~NULL z) ==>
@@ -876,7 +848,6 @@ GEN_TAC
 >> FULL_SIMP_TAC list_ss[four_dim_rel_event_list_def,three_dim_rel_event_list_def,two_dim_rel_event_list_def,rel_event_list_def]
 QED
 
-(*---------------------------*)
 Theorem parallel_series_parallel_prod_rel_exp_dist :
 !p t L C.
      (0 <= t) /\ prob_space p /\ (LENGTH C = LENGTH L) /\
@@ -992,7 +963,7 @@ GEN_TAC
 >> FULL_SIMP_TAC std_ss[GSYM three_dim_rel_event_list_def,GSYM of_DEF]
 >> RW_TAC list_ss[exp_func_list_def,of_DEF,o_DEF]
 QED
-(*---------------------------*)
+
 Theorem nested_series_parallel_exp_dist :
 !p t L C.
      (0 <= t) /\ prob_space p /\ (!z. MEM z (FLAT (FLAT L)) ==> ~NULL z) /\
@@ -1138,21 +1109,16 @@ GEN_TAC
 >> RW_TAC list_ss[of_DEF,o_DEF,exp_func_list_def]
 QED
 
-(*---------------------*)
 Theorem cloud_server_rv_list_not_null1 :
- !p t a b c  n m. ( !z.
+    !p t a b c  n m. ( !z.
         MEM z (FLAT (gen_list [c] m)) \/
         MEM z (FLAT (FLAT (cloud_server_rv_list [c] m n))) ==>
-        ~NULL z) ==> (!z.
-        MEM z (FLAT (three_dim_rel_event_list p (gen_list [a::b::c] m) t)) ==> ~NULL z)
+        ~NULL z) ==>
+       !z. MEM z (FLAT (three_dim_rel_event_list p (gen_list [a::b::c] m) t)) ==>
+           ~NULL z
 Proof
-
-GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> Induct
+    NTAC 5 GEN_TAC
+ >> Induct
 >- (RW_TAC list_ss[cloud_server_rv_list_def,gen_list_def]
    >> Induct_on `m`
    >- (RW_TAC list_ss[gen_list_def,three_dim_rel_event_list_def,two_dim_rel_event_list_def,rel_event_list_def])
@@ -1171,7 +1137,7 @@ GEN_TAC
 >> FULL_SIMP_TAC list_ss[three_dim_rel_event_list_def,two_dim_rel_event_list_def,rel_event_list_def]
 >> METIS_TAC[]
 QED
-(*---------------------*)
+
 Theorem cloud_server_rv_list_not_null2 :
 !a b c n m.
   (!z.
@@ -1201,7 +1167,7 @@ GEN_TAC
 >- (FULL_SIMP_TAC list_ss[cloud_server_rv_list_def,gen_list_suc])
 >> METIS_TAC[]
 QED
-(*----------------------*)
+
 Theorem cloud_server_rv_list_not_null3 :
 !a b c n m.
   (!z.
@@ -1226,7 +1192,7 @@ GEN_TAC
 >> FIRST_X_ASSUM (Q.SPECL_THEN [`m:num`] MP_TAC)
 >> RW_TAC list_ss[]
 QED
-(*---------------------*)
+
 Theorem cloud_server_rv_list_not_null :
 !p t a b c n m.
   (!z.
@@ -1258,7 +1224,6 @@ GEN_TAC
 >> RW_TAC list_ss[]
 QED
 
-(*---------------------*)
 Theorem in_events_cloud_server_rv_list1 :
 !p t a b c n m. rel_event p a t IN events p /\
                     rel_event p b t IN events p /\
@@ -1278,12 +1243,8 @@ Theorem in_events_cloud_server_rv_list1 :
               (FLAT (three_dim_rel_event_list p (gen_list [a::b::c] m) t))) ==>
            x' IN events p)
 Proof
-GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> Induct
+    NTAC 5 GEN_TAC
+ >> Induct
 >- (RW_TAC list_ss[cloud_server_rv_list_def,gen_list_def]
    >> Induct_on `m`
    >- (RW_TAC list_ss[gen_list_def,three_dim_rel_event_list_def,two_dim_rel_event_list_def,rel_event_list_def])
@@ -1314,7 +1275,6 @@ GEN_TAC
 >> METIS_TAC[]
 QED
 
-(*----------------------*)
 Theorem in_events_cloud_server_rv_list :
 !p t a b c n m. rel_event p a t IN events p /\ rel_event p b t IN events p /\
   (!x'.
@@ -1333,12 +1293,8 @@ Theorem in_events_cloud_server_rv_list :
                      (cloud_server_rv_list [a::b::c] m n)
                      t)))) ==> x' IN events p)
 Proof
-GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> Induct
+    NTAC 5 GEN_TAC
+ >> Induct
 >- (RW_TAC list_ss[cloud_server_rv_list_def,gen_list_def,four_dim_rel_event_list_def,three_dim_rel_event_list_def,two_dim_rel_event_list_def,rel_event_list_def])
 >> RW_TAC list_ss[cloud_server_rv_list_def,gen_list_suc,four_dim_rel_event_list_def,three_dim_rel_event_list_def,two_dim_rel_event_list_def,rel_event_list_def]
 >- (FULL_SIMP_TAC std_ss[GSYM cloud_server_rv_list_def]
@@ -1353,7 +1309,6 @@ GEN_TAC
 >> RW_TAC list_ss[]
 QED
 
-(*---------------------*)
 Theorem rel_prod_series_rbd_exp_dist :
 !p t L C.
       (0 <= t) /\ prob_space p /\ exp_dist_list p L C /\
@@ -1385,7 +1340,7 @@ GEN_TAC
 >> DEP_REWRITE_TAC[GSYM fail_event_def,compl_fail_event_eq_rel_event,rel_event_def]
 >> RW_TAC std_ss[exp_func_list_def]
 QED
-(*---------------------*)
+
 Theorem len_cloud_server_fail_rate_eq_rv_list :
 !a b c d e f n m.
      LENGTH (cloud_server_fail_rate_list [a::b::c] m n) =
@@ -1403,25 +1358,19 @@ GEN_TAC
 >> FIRST_X_ASSUM (Q.SPECL_THEN [`m:num`] MP_TAC)
 >> RW_TAC list_ss[cloud_server_rv_list_def,cloud_server_fail_rate_list_def,gen_list_def]
 QED
-(*---------------------*)
+
 Theorem len_cloud_server_fail_rate_eq_rv_list1 :
-!a b c d e f m.
+  !a b c d e f m.
      (LENGTH (([a::b::c])) = LENGTH (([d::e::f]))) ==>
      (LENGTH (gen_list ([a::b::c]) m) = LENGTH (gen_list ([d::e::f]) m))
 Proof
-GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> Induct
->- (RW_TAC list_ss[gen_list_def])
->> RW_TAC list_ss[gen_list_def]
+    NTAC 6 GEN_TAC
+ >> Induct >- (RW_TAC list_ss[gen_list_def])
+ >> RW_TAC list_ss[gen_list_def]
 QED
-(*---------------------*)
+
 Theorem len_cloud_server_fail_rate_eq_rv_list2 :
-!a b c d e f n m n'.
+  !a b c d e f n m n'.
      (LENGTH [a::b::c] = LENGTH [d::e::f]) /\
      (n' < LENGTH (cloud_server_rv_list ([a::b::c]) m n)) /\
      (n' < LENGTH(cloud_server_fail_rate_list ([d::e::f]) m n)) /\
@@ -1429,13 +1378,8 @@ Theorem len_cloud_server_fail_rate_eq_rv_list2 :
      (LENGTH (EL n' (cloud_server_rv_list ([a::b::c]) m n)) =
       LENGTH (EL n' (cloud_server_fail_rate_list ([d::e::f]) m n)))
 Proof
-GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> Induct
+    NTAC 6 GEN_TAC
+ >> Induct
 >- (RW_TAC list_ss[cloud_server_rv_list_def,cloud_server_fail_rate_list_def,gen_list_def])
 >> RW_TAC list_ss[cloud_server_rv_list_def,cloud_server_fail_rate_list_def,gen_list_suc]
 >> Induct_on `n'`
@@ -1451,10 +1395,8 @@ GEN_TAC
 >> FULL_SIMP_TAC std_ss[cloud_server_rv_list_def,cloud_server_fail_rate_list_def]
 QED
 
-
-(*---------------------*)
 Theorem len_cloud_server_fail_rate_eq_rv_list3 :
-!a b c d e f m n.
+  !a b c d e f m n.
       (LENGTH c = LENGTH f) /\
       ~NULL f /\ ~NULL c /\
       (n < LENGTH (gen_list [a::b::c] m)) /\
@@ -1462,22 +1404,17 @@ Theorem len_cloud_server_fail_rate_eq_rv_list3 :
       (LENGTH (EL n (gen_list [a::b::c] m)) =
        LENGTH (EL n (gen_list [d::e::f] m)))
 Proof
-GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> Induct
->- (RW_TAC list_ss[gen_list_def])
->> RW_TAC list_ss[gen_list_suc]
->> Induct_on `n`
->- (RW_TAC list_ss[])
->> RW_TAC list_ss[]
+    NTAC 6 GEN_TAC
+ >> Induct >- (RW_TAC list_ss[gen_list_def])
+ >> RW_TAC list_ss[gen_list_suc]
+ >> Induct_on `n`
+ >- (RW_TAC list_ss[])
+ >> RW_TAC list_ss[]
 QED
-(*---------------------*)
+
 Theorem len_cloud_server_fail_rate_eq_rv_list4 :
-!a b c d e f l m n n'.  (LENGTH c =  LENGTH f) /\ (n' < LENGTH (cloud_server_rv_list [a::b::c] m l))
+    !a b c d e f l m n n'.
+      (LENGTH c =  LENGTH f) /\ (n' < LENGTH (cloud_server_rv_list [a::b::c] m l))
        /\  (n' <
             LENGTH (cloud_server_fail_rate_list [d::e::f] m l))
        /\  (n <
@@ -1493,13 +1430,8 @@ Theorem len_cloud_server_fail_rate_eq_rv_list4 :
           (EL n' (cloud_server_fail_rate_list [d::e::f] m l)))
 )
 Proof
-GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> Induct
+    NTAC 6 GEN_TAC
+ >> Induct
 >- (RW_TAC list_ss[cloud_server_rv_list_def,cloud_server_fail_rate_list_def,gen_list_def])
 >> RW_TAC list_ss[cloud_server_rv_list_def,cloud_server_fail_rate_list_def,gen_list_suc]
 >> Induct_on `n'`
@@ -1514,7 +1446,7 @@ GEN_TAC
    >> FULL_SIMP_TAC list_ss[gen_list_def])
 >> RW_TAC list_ss[gen_list_suc]
 QED
-(*-------------------------*)
+
 Theorem len_cloud_server_fail_rate_eq_rv_list5 :
 !a b c d e f n.
      (LENGTH c = LENGTH f) /\
@@ -1522,18 +1454,11 @@ Theorem len_cloud_server_fail_rate_eq_rv_list5 :
      (n < LENGTH [a::b::c]) /\ (n < LENGTH [d::e::f]) ==>
      (LENGTH (EL n [a::b::c]) = LENGTH (EL n [d::e::f]))
 Proof
-GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> GEN_TAC
->> Induct
->- (RW_TAC list_ss[])
->> RW_TAC list_ss[LENGTH]
+    NTAC 6 GEN_TAC
+ >> Induct >- (RW_TAC list_ss[])
+ >> RW_TAC list_ss[LENGTH]
 QED
 
-(*-------------------------*)
 Theorem len_cloud_server_fail_rate_eq_rv_list6 :
 !a b c d e f m n n'.
      (LENGTH c = LENGTH f) /\
@@ -1781,6 +1706,5 @@ REPEAT GEN_TAC >> REPEAT STRIP_TAC
 >> MATCH_MP_TAC mem_flat_map_not_null3
 >> RW_TAC std_ss[]
 QED
-
 
 val _ = export_theory();

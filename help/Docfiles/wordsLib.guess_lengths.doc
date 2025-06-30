@@ -18,21 +18,21 @@ return type of {word_concat} and {word_extract}.
 ...
 - show_types := true;
 > val it = () : unit
-- ``(7 >< 5) a @@ (4 >< 0) a``;
+- “(7 >< 5) a @@ (4 >< 0) a”;
 <<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd>>
 > val it =
-    ``(((7 :num) >< (5 :num)) (a :bool['d]) :bool['a]) @@
-      (((4 :num) >< (0 :num)) a :bool['b])`` : term
+    “(((7 :num) >< (5 :num)) (a :bool['d]) :bool['a]) @@
+      (((4 :num) >< (0 :num)) a :bool['b])” : term
 - wordsLib.guess_lengths();
 > val it = () : unit
-- ``(7 >< 5) a @@ (4 >< 0) a``;
+- “(7 >< 5) a @@ (4 >< 0) a”;
 <<HOL message: inventing new type variable names: 'a, 'b, 'c, 'd>>
 <<HOL message: assigning word length(s): 'a <- 3, 'b <- 5 and 'c <- 8>>
 > val it =
-    ``(((7 :num) >< (5 :num)) (a :bool['d]) :bool[3]) @@
-      (((4 :num) >< (0 :num)) a :bool[5])`` : term
+    “(((7 :num) >< (5 :num)) (a :bool['d]) :bool[3]) @@
+      (((4 :num) >< (0 :num)) a :bool[5])” : term
 - type_of it;
-> val it = ``:bool[8]`` : hol_type
+> val it = “:bool[8]” : hol_type
 }
 
 \SEEALSO

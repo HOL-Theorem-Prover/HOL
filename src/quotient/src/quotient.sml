@@ -50,6 +50,7 @@ open simpLib boolSimps
 structure Parse =
 struct
   open Parse
+  val SOME quotient_grammars = grammarDB {thyname="quotient"}
   val (Type,Term) = parse_from_grammars(quotient_grammars)
   fun == q _ = Type q
 end
@@ -358,7 +359,7 @@ fun define_partial_quotient_type tyname abs rep equiv =
 (* Then we can define the new type obj using 'new_type_definition'. *)
 (* This actually creates the new quotient type.                     *)
 
-        val TY_DEF =  new_type_definition( tyname, ty_exists )
+        val TY_DEF = new_type_definition( tyname, ty_exists )
         val nty = (hd o #Args o dest_type o type_of o #Bvar o dest_exists
                       o concl) TY_DEF
 
@@ -807,7 +808,7 @@ fun define_quotient_type tyname abs rep equiv =
 *)
 
 (* Then we can define the new type obj using 'new_type_definition'. *)
-        val TY_DEF =  new_type_definition( tyname, ty_exists )
+        val TY_DEF = new_type_definition( tyname, ty_exists )
         val nty = (hd o #Args o dest_type o type_of o #Bvar o dest_exists
                       o concl) TY_DEF
 
@@ -2168,13 +2169,13 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
            end
 
         fun mk_R_tm tau = mk_var {Name="R" ^ base_vartype tau,
-                                  Ty=  tau --> tau --> bool}
+                                  Ty= tau --> tau --> bool}
 
         fun mk_abs_tm (tau,ksi) = mk_var {Name="abs" ^ base_vartype tau,
-                                          Ty=  tau --> ksi}
+                                          Ty= tau --> ksi}
 
         fun mk_rep_tm (tau,ksi) = mk_var {Name="rep" ^ base_vartype tau,
-                                          Ty=  ksi --> tau}
+                                          Ty= ksi --> tau}
 
         val quotient_tm = (fst o strip_comb o lhs o snd o strip_forall o concl) QUOTIENT_def
 

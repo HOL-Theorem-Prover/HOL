@@ -471,8 +471,6 @@ QED
 Definition bumpterm_def:
   bumpterm (V x) = V x ∧
   bumpterm (Fn k l) = Fn (0 ⊗ k) (MAP bumpterm l)
-Termination
-  WF_REL_TAC ‘measure term_size’ >> simp[]
 End
 
 Theorem bumpterm_def[simp,allow_rebind] =
@@ -542,8 +540,6 @@ QED
 Definition unbumpterm_def[simp]:
   unbumpterm (V x) = V x ∧
   unbumpterm (Fn k l) = Fn (nsnd k) (MAP unbumpterm l)
-Termination
-  WF_REL_TAC ‘measure term_size’ >> simp[]
 End
 
 Definition unbumpform_def[simp]:

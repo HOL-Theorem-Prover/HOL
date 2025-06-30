@@ -6,7 +6,7 @@ open HolKernel Parse boolLib;
 structure Parse =
 struct
   open Parse
-  val (Type,Term) = parse_from_grammars bool_grammars
+  val (Type,Term) = parse_from_grammars $ valOf $ grammarDB {thyname="bool"}
 end
 
 (* ************************************************************ *)

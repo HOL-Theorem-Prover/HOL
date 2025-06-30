@@ -6,7 +6,7 @@ open HolKernel Parse boolLib BasicProvers;
 structure Parse = struct
   open Parse
   val (Type,Term) =
-      pred_setTheory.pred_set_grammars
+      valOf (grammarDB {thyname = "pred_set"})
         |> apsnd ParseExtras.grammar_loose_equality
         |> parse_from_grammars
 end

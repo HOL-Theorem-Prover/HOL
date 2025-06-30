@@ -7,13 +7,15 @@
 open HolKernel Parse boolLib bossLib;
 
 open combinTheory arithmeticTheory pred_setTheory pred_setLib logrootTheory
-     numLib hurdUtils topologyTheory;
+     numLib hurdUtils topologyTheory listTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory iterateTheory
      real_topologyTheory metricTheory;
 
-open util_probTheory sigma_algebraTheory extrealTheory measureTheory
-     borelTheory lebesgueTheory martingaleTheory probabilityTheory;
+open sigma_algebraTheory extrealTheory measureTheory borelTheory lebesgueTheory
+     martingaleTheory probabilityTheory;
+
+open stochastic_processTheory;
 
 val _ = new_theory "large_number";
 
@@ -33,8 +35,13 @@ val _ = temp_clear_overloads_on "equiv_class";
   -- B.V. Gnedenko and A.N. Kolmogorov,
     "Limit distributions for sums of independent random variables." [13] *)
 
-val PRINT_TAC = goalStack.print_tac;
 val set_ss = std_ss ++ PRED_SET_ss;
+
+fun PRINT_TAC pfx g = let
+in
+  print (pfx ^ "\n");
+  Tactical.ALL_TAC g
+end
 
 val _ = hide "S";
 val _ = hide "W";

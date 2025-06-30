@@ -8,7 +8,7 @@ The conversion {WORD_DIV_LSR_CONV} replaces instances of unsigned division by a 
 
 \EXAMPLE
 {
-> wordsLib.WORD_DIV_LSR_CONV ``w // 8w : word8``;
+> wordsLib.WORD_DIV_LSR_CONV “w // 8w : word8”;
 val it = |- w // 8w = w >>> 3: thm
 }
 

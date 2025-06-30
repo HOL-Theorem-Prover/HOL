@@ -338,36 +338,38 @@ val goals =
  73 |- Data_Pair_comma x y = Data_Pair_comma a b <=> x = a /\ y = b,
  74 |- Data_Sum_left x = Data_Sum_left y <=> x = y,
  75 |- Data_Sum_right x = Data_Sum_right y <=> x = y,
- 76 |- Function_id = Function_Combinator_s Function_const Function_const,
- 77 |- Relation_empty = (\x y. F),
- 78 |- Relation_universe = (\x y. T),
- 79 |- Number_Natural_bit1 =
+ 76 |- y ==> x <=> ~x ==> ~y
+ 77 |- Function_id = Function_Combinator_s Function_const Function_const,
+ 78 |- Relation_empty = (\x y. F),
+ 79 |- Relation_universe = (\x y. T),
+ 80 |- Number_Natural_bit1 =
        (\n.
             Number_Natural_plus n
               (Number_Natural_plus n (Number_Natural_suc Number_Natural_zero))),
- 80 |- Number_Natural_max = (\m n. if Number_Natural_less m n then n else m),
- 81 |- Number_Natural_min = (\m n. if Number_Natural_less m n then m else n),
- 82 |- Number_Natural_greater = (\m n. Number_Natural_less n m),
- 83 |- Number_Natural_greatereq = (\m n. Number_Natural_greater m n \/ m = n),
- 84 |- Number_Natural_less =
+ 81 |- Number_Natural_max = (\m n. if Number_Natural_less m n then n else m),
+ 82 |- Number_Natural_min = (\m n. if Number_Natural_less m n then m else n),
+ 83 |- Number_Natural_greater = (\m n. Number_Natural_less n m),
+ 84 |- Number_Natural_greatereq = (\m n. Number_Natural_greater m n \/ m = n),
+ 85 |- Number_Natural_less =
        (\m n. ?P. (!n. P (Number_Natural_suc n) ==> P n) /\ P m /\ ~P n),
- 85 |- Number_Natural_lesseq = (\m n. Number_Natural_less m n \/ m = n),
- 86 |- Relation_irreflexive = (\R. !x. ~R x x),
- 87 |- Relation_reflexive = (\R. !x. R x x),
- 88 |- Relation_transitive = (\R. !x y z. R x y /\ R y z ==> R x z),
- 89 |- Relation_wellFounded =
+ 86 |- Number_Natural_lesseq = (\m n. Number_Natural_less m n \/ m = n),
+ 87 |- Relation_irreflexive = (\R. !x. ~R x x),
+ 88 |- Relation_reflexive = (\R. !x. R x x),
+ 89 |- Relation_transitive = (\R. !x y z. R x y /\ R y z ==> R x z),
+ 90 |- Relation_wellFounded =
        (\R. !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b),
- 90 |- Relation_transitiveClosure =
+ 91 |- Relation_transitiveClosure =
        (\R a b.
             !P. (!x y. R x y ==> P x y) /\ (!x y z. P x y /\ P y z ==> P x z) ==>
                 P a b),
- 91 |- Relation_subrelation = (\R1 R2. !x y. R1 x y ==> R2 x y),
- 92 |- Relation_intersect = (\R1 R2 x y. R1 x y /\ R2 x y),
- 93 |- Relation_union = (\R1 R2 x y. R1 x y \/ R2 x y),
- 94 |- Function_o = (\f g x. f (g x)),
- 95 |- (!x. P x ==> Q x) ==> (?x. P x) ==> ?x. Q x,
- 96 |- (x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w,
- 97 |- (x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w]: thm list
+ 92 |- Relation_subrelation = (\R1 R2. !x y. R1 x y ==> R2 x y),
+ 93 |- Relation_intersect = (\R1 R2 x y. R1 x y /\ R2 x y),
+ 94 |- Relation_union = (\R1 R2 x y. R1 x y \/ R2 x y),
+ 95 |- Function_o = (\f g x. f (g x)),
+ 96 |- (!x. P x ==> Q x) ==> (?x. P x) ==> ?x. Q x,
+ 97 |- (x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w,
+ 98 |- (x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w
+ ]: thm list
  *)
 
 val bool_cases = hd(amatch``(x = T) \/ _``);
@@ -629,13 +631,23 @@ val th20 = store_thm
   \\ PURE_REWRITE_TAC[T_iff,or_T,F_iff,or_F,imp_T,imp_F]
   \\ REFL_TAC);
 
+val not_T = hd(amatch``~T``);
+
+(* |- !A B. A ==> B <=> ~A \/ B *)
+val imp_disj_thm = store_thm
+  ("imp_disj_thm", concl boolTheory.IMP_DISJ_THM,
+    rpt gen_tac
+ >> qspec_then ‘A’ FULL_STRUCT_CASES_TAC bool_cases
+ >> PURE_REWRITE_TAC[T_imp,not_T,F_imp,not_F,F_or,T_or]
+ >> REFL_TAC);
+
 (* |- !A B. A \/ B <=> ~A ==> B (DISJ_EQ_IMP) *)
 val th21 = save_thm
   ("th21", (* this forward proof comes from boolScript.sml *)
   let
     val lemma = not_not |> SPEC ``A:bool``
   in
-    IMP_DISJ_THM
+    imp_disj_thm
     |> SPECL [``~A:bool``,``B:bool``]
     |> SYM
     |> CONV_RULE
@@ -1091,6 +1103,8 @@ val th61 = store_thm
   ("th61",  el 61 goals |> concl,
   PURE_REWRITE_TAC[iff_F,not_not,iff_T,not_F,and_T]);
 
+val BOOL_EQ_DISTINCT = th61;
+
 (* |- Data_List_concat Data_List_nil = Data_List_nil /\
       !h t.
           Data_List_concat (Data_List_cons h t) =
@@ -1236,18 +1250,29 @@ val th75 = store_thm
   ("th75", el 75 goals |> concl,
   MATCH_ACCEPT_TAC right_11);
 
+val mono_not_eq = hd (amatch “~t1 ==> ~t2 <=> t2 ==> t1”);
+val eq_sym_eq = hd (amatch “x = y <=> y = x”);
+
+(* |- y ==> x <=> ~x ==> ~y *)
+val th76 = store_thm
+  ("th76", el 76 goals |> concl,
+    PURE_ONCE_REWRITE_TAC [eq_sym_eq]
+ >> MATCH_ACCEPT_TAC mono_not_eq);
+
+val MONO_NOT_EQ = th76;
+
 val skk = hd(amatch``Function_Combinator_s _ _ = Function_id``);
 
 (* |- Function_id = Function_Combinator_s Function_const Function_const *)
-val th76 = store_thm
-  ("th76", el 76 goals |> concl,
+val th77 = store_thm
+  ("th77", el 77 goals |> concl,
   PURE_REWRITE_TAC[skk] \\ REFL_TAC);
 
 val empty_thm = hd(amatch``Relation_empty _ _``);
 
 (* |- Relation_empty = (\x y. F) *)
-val th77 = store_thm
-  ("th77", el 77 goals |> concl,
+val th78 = store_thm
+  ("th78", el 78 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,EQF_INTRO (SPEC_ALL empty_thm)]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
@@ -1255,8 +1280,8 @@ val th77 = store_thm
 val universe_thm = hd(amatch``Relation_universe _ _``);
 
 (* |- Relation_universe = (\x y. T) *)
-val th78 = store_thm
-  ("th78", el 78 goals |> concl,
+val th79 = store_thm
+  ("th79", el 79 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,EQT_INTRO(SPEC_ALL universe_thm)]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
@@ -1277,8 +1302,8 @@ val num_less_ind = hd(amatch``(!x. _ ==> _) ==> !n. P (n:Number_Natural_natural)
            Number_Natural_plus n
              (Number_Natural_plus n (Number_Natural_suc Number_Natural_zero)))
  *)
-val th79 = store_thm
-  ("th79", el 79 goals |> concl,
+val th80 = store_thm
+  ("th80", el 80 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,bit1_thm,plus_suc]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ gen_tac
@@ -1297,8 +1322,8 @@ val if_id   = hd(amatch``if _ then x else x``);
 val less_or_eq   = hd(amatch``Number_Natural_lesseq _ _ <=> (Number_Natural_less _ _) \/ _``);
 
 (* |- Number_Natural_max = (\m n. if Number_Natural_less m n then n else m) *)
-val th80 = store_thm
-  ("th80", el 80 goals |> concl,
+val th81 = store_thm
+  ("th81", el 81 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,max_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac
@@ -1313,8 +1338,8 @@ val th80 = store_thm
 val min_thm = hd(amatch``Number_Natural_min _ _ = COND _ _ _``);
 
 (* |- Number_Natural_min = (\m n. if Number_Natural_less m n then m else n) *)
-val th81 = store_thm
-  ("th81", el 81 goals |> concl,
+val th82 = store_thm
+  ("th82", el 82 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,min_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac
@@ -1329,8 +1354,8 @@ val th81 = store_thm
 val greater_thm   = hd(amatch``Number_Natural_greater _ _ = _``);
 
 (* |- Number_Natural_greater = (\m n. Number_Natural_less n m) *)
-val th82 = store_thm
-  ("th82", el 82 goals |> concl,
+val th83 = store_thm
+  ("th83", el 83 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,greater_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
@@ -1338,8 +1363,8 @@ val th82 = store_thm
 val greatereq_thm = hd(amatch``Number_Natural_greatereq _ _``);
 
 (* |- Number_Natural_greatereq = (\m n. Number_Natural_greater m n \/ m = n) *)
-val th83 = store_thm
-  ("th83", el 83 goals |> concl,
+val th84 = store_thm
+  ("th84", el 84 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,greatereq_thm,less_or_eq,greater_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac
@@ -1367,8 +1392,8 @@ val F_IMP2 = store_thm
 (* |- Number_Natural_less =
       (\m n. ?P. (!n. P (Number_Natural_suc n) ==> P n) /\ P m /\ ~P n)
  *)
-val th84 = store_thm
-  ("th84", el 84 goals |> concl,
+val th85 = store_thm
+  ("th85", el 85 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ qx_genl_tac[`a`,`b`]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1427,8 +1452,8 @@ val th84 = store_thm
   \\ PURE_REWRITE_TAC[F_imp]);
 
 (* |- Number_Natural_lesseq = (\m n. Number_Natural_less m n \/ m = n) *)
-val th85 = store_thm
-  ("th85", el 85 goals |> concl,
+val th86 = store_thm
+  ("th86", el 86 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,less_or_eq]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
@@ -1436,8 +1461,8 @@ val th85 = store_thm
 val irreflexive_thm = hd(amatch``Relation_irreflexive _ = _``);
 
 (* |- Relation_irreflexive = (\R. !x. ~R x x) *)
-val th86 = store_thm
-  ("th86", el 86 goals |> concl,
+val th87 = store_thm
+  ("th87", el 87 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm, irreflexive_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac
@@ -1446,8 +1471,8 @@ val th86 = store_thm
 val reflexive_thm = hd(amatch``Relation_reflexive _ = _``);
 
 (* |- Relation_reflexive = (\R. !x. R x x) *)
-val th87 = store_thm
-  ("th87", el 87 goals |> concl,
+val th88 = store_thm
+  ("th88", el 88 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm, reflexive_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
@@ -1455,8 +1480,8 @@ val th87 = store_thm
 val transitive_thm = hd(amatch``Relation_transitive s <=> _``);
 
 (* |- Relation_transitive = (\R. !x y z. R x y /\ R y z ==> R x z) *)
-val th88 = store_thm
-  ("th88", el 88 goals |> concl,
+val th89 = store_thm
+  ("th89", el 89 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,transitive_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ gen_tac \\ REFL_TAC);
@@ -1466,8 +1491,8 @@ val wellFounded_thm = hd(amatch``Relation_wellFounded r <=> !p. (?x. _) ==> _``)
 (* |- Relation_wellFounded =
       (\R. !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b)
  *)
-val th89 = store_thm
-  ("th89", el 89 goals |> concl,
+val th90 = store_thm
+  ("th90", el 90 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ PURE_REWRITE_TAC[wellFounded_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1483,8 +1508,8 @@ val subrelation_thm  = hd(amatch``Relation_subrelation x s <=> !x y. _``);
            !P. (!x y. R x y ==> P x y) /\ (!x y z. P x y /\ P y z ==> P x z) ==>
                P a b)
  *)
-val th90 = store_thm
-  ("th90", el 90 goals |> concl,
+val th91 = store_thm
+  ("th91", el 91 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ PURE_REWRITE_TAC[tc_def,bigIntersect_thm,mem_fromPred]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -1497,8 +1522,8 @@ val th90 = store_thm
   \\ REFL_TAC);
 
 (* |- Relation_subrelation = (\R1 R2. !x y. R1 x y ==> R2 x y) *)
-val th91 = store_thm
-  ("th91", el 91 goals |> concl,
+val th92 = store_thm
+  ("th92", el 92 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,subrelation_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
@@ -1511,15 +1536,15 @@ val mem_union = hd(amatch``Set_member _ (Set_union _ _) <=> _``);
 val mem_toSet = hd(amatch``Set_member _ (Relation_toSet _)``);
 
 (* |- Relation_intersect = (\R1 R2 x y. R1 x y /\ R2 x y) *)
-val th92 = store_thm
-  ("th92", el 92 goals |> concl,
+val th93 = store_thm
+  ("th93", el 93 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,intersect_thm,fromSet_thm,mem_inter,mem_toSet]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
 
 (* |- Relation_union = (\R1 R2 x y. R1 x y \/ R2 x y) *)
-val th93 = store_thm
-  ("th93", el 93 goals |> concl,
+val th94 = store_thm
+  ("th94", el 94 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,union_thm,fromSet_thm,mem_union,mem_toSet]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
@@ -1527,15 +1552,15 @@ val th93 = store_thm
 val o_thm = hd(amatch``(Function_o _ _) _ = _``);
 
 (* |- Function_o = (\f g x. f (g x)) *)
-val th94 = store_thm
-  ("th94", el 94 goals |> concl,
+val th95 = store_thm
+  ("th95", el 95 goals |> concl,
   PURE_REWRITE_TAC[GSYM fun_eq_thm,o_thm]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ rpt gen_tac \\ REFL_TAC);
 
 (* |- (!x. P x ==> Q x) ==> (?x. P x) ==> ?x'. Q x' *)
-val th95 = store_thm
-  ("th95", el 95 goals |> concl,
+val th96 = store_thm
+  ("th96", el 96 goals |> concl,
   rpt strip_tac
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
   \\ qexists_tac`x`
@@ -1550,30 +1575,20 @@ val th94' = store_thm
  *)
 
 (* |- (x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w *)
-val th96 = store_thm
-  ("th96", el 96 goals |> concl,
+val th97 = store_thm
+  ("th97", el 97 goals |> concl,
    rpt strip_tac
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
   \\ first_assum ACCEPT_TAC);
 
 (* |- (x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w *)
-val th97 = store_thm
-  ("th97", el 97 goals |> concl,
+val th98 = store_thm
+  ("th98", el 98 goals |> concl,
   rpt strip_tac
   \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
   \\ TRY (disj1_tac >> first_assum ACCEPT_TAC)
   \\ TRY (disj2_tac >> first_assum ACCEPT_TAC));
-
-val not_T = hd(amatch``~T``);
-
-(* |- !A B. A ==> B <=> ~A \/ B *)
-val IMP_DISJ_THM = store_thm
-  ("IMP_DISJ_THM", concl boolTheory.IMP_DISJ_THM,
-  rpt gen_tac
-  \\ qspec_then`A`FULL_STRUCT_CASES_TAC bool_cases
-  \\ PURE_REWRITE_TAC[T_imp,not_T,F_imp,not_F,F_or,T_or]
-  \\ REFL_TAC);
 
 (* This is no more needed
 val some_neq_none = hd(amatch``_ <> Data_Option_none``);
@@ -1595,8 +1610,8 @@ val th89 = store_thm
   MATCH_ACCEPT_TAC ex_unique_thm);
  *)
 
-(* Now raise an error if the above th96 is not the last one *)
-val _ = if List.length goals <> 97 then
+(* Now raise an error if the above th98 is not the last one *)
+val _ = if List.length goals <> 98 then
             (raise ERR "-" "assumptions changed")
         else ();
 
@@ -1619,23 +1634,11 @@ val MONO_NOT = store_thm
   ("MONO_NOT", concl boolTheory.MONO_NOT,
     MATCH_ACCEPT_TAC mono_not);
 
-val mono_not_eq = hd (amatch “~t1 ==> ~t2 <=> t2 ==> t1”);
-val eq_sym_eq = hd (amatch “x = y <=> y = x”);
-
-(* |- y ==> x <=> ~x ==> ~y *)
-val MONO_NOT_EQ = store_thm
-  ("MONO_NOT_EQ", concl boolTheory.MONO_NOT_EQ,
-    PURE_ONCE_REWRITE_TAC [eq_sym_eq]
- >> MATCH_ACCEPT_TAC mono_not_eq);
-
 (* |- P (let x = M in N x) <=> (let x = M in P (N x)) *)
 val LET_RAND = store_thm("LET_RAND", concl boolTheory.LET_RAND,
   PURE_REWRITE_TAC[LET_DEF]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ REFL_TAC)
-
-(* |- (T <=/=> F) /\ (F <=/=> T) *)
-val BOOL_EQ_DISTINCT = th61;
 
 (* |- (!t1 t2. (if T then t1 else t2) = t1) /\
       !t1 t2. (if F then t1 else t2) = t2
@@ -1662,8 +1665,8 @@ val COND_EXPAND_IMP = save_thm
      val t2   = “t2:bool”
      val nb   = mk_neg b;
      val nnb  = mk_neg nb;
-     val imp_th1  = SPECL [b, t1] IMP_DISJ_THM;
-     val imp_th2a = SPECL [nb, t2] IMP_DISJ_THM
+     val imp_th1  = SPECL [b, t1] imp_disj_thm;
+     val imp_th2a = SPECL [nb, t2] imp_disj_thm
      val imp_th2b = SUBST_CONV [nnb |-> (SPEC b (CONJUNCT1 NOT_CLAUSES))]
                      (mk_disj (nnb, t2)) (mk_disj (nnb, t2))
      val imp_th2  = TRANS imp_th2a imp_th2b
@@ -1704,9 +1707,9 @@ val OR_CONG = save_thm
      val th4 = ASSUME ctm1
      val th5 = ASSUME ctm2
      val th6 = SUBS [SPEC Q (CONJUNCT1 NOT_CLAUSES)]
-                    (SUBS [SPECL[notQ, PeqP'] IMP_DISJ_THM] th4)
+                    (SUBS [SPECL[notQ, PeqP'] imp_disj_thm] th4)
      val th7 = SUBS [SPEC P' (CONJUNCT1 NOT_CLAUSES)]
-                    (SUBS [SPECL[notP', QeqQ'] IMP_DISJ_THM] th5)
+                    (SUBS [SPECL[notP', QeqQ'] imp_disj_thm] th5)
      val th8 = ASSUME P'
      val th9 = DISJ1 th8 Q'
      val th10 = ASSUME QeqQ'

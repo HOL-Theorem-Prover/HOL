@@ -172,6 +172,11 @@ local val DBref = ref empty_dbmap
                                               [flat nb]
                 )
               | DelBinding s => delete_binding s
+              | UpdBinding(s,{old,new,thm}) =>
+                if Theory.is_temp_binding s then ()
+                else DBref := functional_bindl (!DBref)
+                                               (current_theory())
+                                               [(s,thm,new)]
               | _ => ()
           end
       val _ = Theory.register_hook("DB", hook)

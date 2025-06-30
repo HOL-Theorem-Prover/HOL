@@ -1,11 +1,12 @@
 structure OpenTheoryReader :> OpenTheoryReader = struct
 
 open boolSyntax HolKernel Parse OpenTheoryMap OpenTheoryCommon
+local open listTheory in end
 
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars listTheory.list_grammars
+   val (Type, Term) = parse_from_grammars $ valOf $ grammarDB {thyname="list"}
 end
 
 local open Thm Drule in

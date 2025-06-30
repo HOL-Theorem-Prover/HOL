@@ -28,7 +28,7 @@ open HolKernel boolTheory boolLib Parse Rsyntax
      Num_conv numSyntax arithmeticTheory numeralTheory;
 
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
+val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname="arithmetic"}
 
 val ERR = mk_HOL_ERR "Arithconv"
 fun failwith function = raise (ERR function "")

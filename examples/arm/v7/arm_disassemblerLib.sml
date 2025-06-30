@@ -651,7 +651,7 @@ in
         f (if is_PC a then "usad8" else "usada8")
           (ocommy (not (is_PC a)) [d,n,m] a)
    | ("Parallel_Add_Subtract", [u,opc,n,d,m]) =>
-        f (parallel_add_subtract (u,pairTheory.dest_pair opc)) (rcommy [d,n,m])
+        f (parallel_add_subtract (u,pairSyntax.dest_pair opc)) (rcommy [d,n,m])
    | ("Divide", [u,n,d,m]) =>
         f (if is_T u then "udiv" else "sdiv") (rcommy [d,n,m])
    | _ => raise ERR "disassemble_data_processing"

@@ -12,14 +12,14 @@ simplification, words.
 
 \DESCRIBE
 
-The fragment {BIT_ss} rewrites the term {``BIT i n``} for ground {n}.
+The fragment {BIT_ss} rewrites the term {“BIT i n”} for ground {n}.
 
 \EXAMPLE
 {
-- SIMP_CONV (std_ss++BIT_ss) [] ``BIT i 33``;
+- SIMP_CONV (std_ss++BIT_ss) [] “BIT i 33”;
 > val it = |- BIT i 33 = i IN {0; 5} : thm
 
-- SIMP_CONV (std_ss++BIT_ss) [] ``BIT 5 33``;
+- SIMP_CONV (std_ss++BIT_ss) [] “BIT 5 33”;
 > val it = |- BIT 5 33 = T : thm
 }
 

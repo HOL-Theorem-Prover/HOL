@@ -143,7 +143,7 @@ val _ = overload_on ("*",  Term`$complex_mul`);
 val _ = overload_on ("inv",  Term`$complex_inv`);
 val _ = overload_on ("numeric_negate", ``$~ : complex->complex``);
 Overload "~" = “$~ : bool -> bool”
-Overload "¬" = “$~ : bool -> bool”  (* UOK *)
+Overload "¬" = “$~ : bool -> bool”
 
 val complex_sub = new_definition
 ("complex_sub",
@@ -727,7 +727,7 @@ val COMPLEX_OF_REAL_SUB = store_thm("COMPLEX_OF_REAL_SUB",
 
 val COMPLEX_OF_REAL_DIV = store_thm("COMPLEX_OF_REAL_DIV",
   ``!x:real y:real.
-      complex_of_real x / complex_of_real y =  complex_of_real (x / y)``,
+      complex_of_real x / complex_of_real y = complex_of_real (x / y)``,
   REWRITE_TAC [real_div, COMPLEX_OF_REAL_MUL, COMPLEX_OF_REAL_INV,
                complex_div]);
 

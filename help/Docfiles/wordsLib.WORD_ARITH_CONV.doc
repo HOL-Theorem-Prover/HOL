@@ -14,10 +14,10 @@ canonical form.
 \EXAMPLE
 {WORD_ARITH_CONV} fixes the sign of equalities.
 {
-- SIMP_CONV (std_ss++WORD_ARITH_ss++WORD_ARITH_EQ_ss) [] ``$- a = b : 'a word``
+- SIMP_CONV (std_ss++WORD_ARITH_ss++WORD_ARITH_EQ_ss) [] “$- a = b : 'a word”
 > val it = |- ($- a = b) = ($- 1w * a + $- 1w * b = 0w) : thm
 
-- WORD_ARITH_CONV ``$- a = b : 'a word``
+- WORD_ARITH_CONV “$- a = b : 'a word”
 > val it = |- ($- a = b) = (a + b = 0w) : thm
 }
 

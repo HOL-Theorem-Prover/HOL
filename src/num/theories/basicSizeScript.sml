@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib Prim_rec
+open HolKernel Parse boolLib pairLib Prim_rec
      pairTheory sumTheory optionTheory numeralTheory;
 
 

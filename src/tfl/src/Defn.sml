@@ -271,12 +271,29 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
               R=isubst theta R,
               SV=map (isubst theta) SV, stem=stem};
 
-
 fun set_reln def R =
    case reln_of def
     of NONE => def
      | SOME Rpat => inst_defn def (Term.match_term Rpat R)
                     handle e => (HOL_MESG"set_reln: unable"; raise e);
+
+fun instantiate_aux d reln rule =
+ let fun set_reln def R = (* Rvar has final type, so match against it *)
+      case reln_of def
+        of NONE => def
+         | SOME Rvar =>
+           let val tytheta = Type.match_type (type_of reln) (type_of Rvar)
+               val reln' = Term.inst tytheta reln
+           in inst_defn d (Term.match_term Rvar reln')
+           end
+     val dr = set_reln d reln
+     val defn = valOf $ aux_defn dr
+     val eqs = map DISCH_ALL $ eqns_of defn
+     val ind = DISCH_ALL $ valOf $ ind_of defn
+ in
+   map (rule o PURE_REWRITE_RULE [AND_IMP_INTRO]) (ind::eqs)
+ end
+ handle HOL_ERR _ => raise ERR "instantiate_aux" ""
 
 fun PROVE_HYPL thl th = itlist PROVE_HYP thl th
 
@@ -528,54 +545,6 @@ fun extraction_thms constset thy =
  in (case_rewrites, case_congs@read_congs())
  end;
 
-(*---------------------------------------------------------------------------
-         Capturing termination conditions.
- ----------------------------------------------------------------------------*)
-
-
-local fun !!v M = mk_forall(v, M)
-      val mem = Lib.op_mem aconv
-      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
-in
-fun solver (restrf,f,G,nref) _ context tm =
-  let val globals = f::G  (* not to be generalized *)
-      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
-      val rcontext = rev context
-      val antl = case rcontext of [] => []
-                               | _   => [list_mk_conj(map concl rcontext)]
-      val TC = genl(list_mk_imp(antl, tm))
-      val (R,arg,pat) = wfrecUtils.dest_relation tm
-  in
-     if can(find_term (aconv restrf)) arg
-     then (nref := true; raise ERR "solver" "nested function")
-     else let val _ = if can(find_term (aconv f)) TC
-                      then nref := true else ()
-          in case rcontext
-              of [] => SPEC_ALL(ASSUME TC)
-               | _  => MATCH_MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
-          end
-  end
-end;
-
-fun extract FV congs f (proto_def,WFR) =
- let val R = rand WFR
-     val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
-     val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
-     fun mk_restr p = mk_comb(restr_fR, p)
- in fn (p,th) =>
-    let val nested_ref = ref false
-        val FV' = FV@free_vars(concl th)
-        val rwArgs = (RW.Pure [CUT_LEM],
-                      RW.Context ([],RW.DONT_ADD),
-                      RW.Congs congs,
-                      RW.Solver (solver (mk_restr p, f, FV', nested_ref)))
-        val th' = CONV_RULE (RW.Rewrite RW.Fully rwArgs) th
-    in
-      (th', Lib.op_set_diff aconv (hyp th') [proto_def,WFR], !nested_ref)
-    end
-end;
-
-
 (*---------------------------------------------------------------------------*
  * Perform TC extraction without making a definition.                        *
  *---------------------------------------------------------------------------*)
@@ -624,7 +593,7 @@ fun checkSV pats SV =
 (* but do not define the constant yet.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun wfrec_eqns facts tup_eqs =
+fun instantiate_wfrec_thm facts tup_eqs =
  let val {functional,pats} =
         mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
      val SV = free_vars functional    (* schematic variables *)
@@ -653,13 +622,23 @@ fun wfrec_eqns facts tup_eqs =
                     THENC REPEATC ((RWcnv THENC LIST_BETA_CONV) ORELSEC
                                    elim_triv_literal_CONV))
      val corollaries' = map rule corollaries
+ in
+   (proto_def,
+    Listsort.sort Term.compare SV,
+    WFR,
+    pats,
+    Extract.simpls_of_congs congs,
+    zip given_pats corollaries')
+ end
+
+fun wfrec_eqns facts tup_eqs =
+ let val (proto_def,SV,WFR,pats,congs,pcs) =
+          instantiate_wfrec_thm facts tup_eqs
+    val extractFn = Extract.extract [rand WFR] congs (proto_def,WFR)
   in
      {proto_def=proto_def,
-      SV=Listsort.sort Term.compare SV,
-      WFR=WFR,
-      pats=pats,
-      extracta = map (extract [R1] congs f (proto_def,WFR))
-                     (zip given_pats corollaries')}
+      SV=SV,WFR=WFR,pats=pats,
+      extracta = map extractFn pcs}
   end
 
 (*---------------------------------------------------------------------------
@@ -929,6 +908,8 @@ fun ndom_rng ty 0 = ([],ty)
       end;
 
 fun tmi_eq (tm1,i1:int) (tm2,i2) = i1 = i2 andalso aconv tm1 tm2
+fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
+
 fun mutrec thy bindstem eqns =
   let val dom_rng = Type.dom_rng
       val genvar = Term.genvar
@@ -938,7 +919,6 @@ fun mutrec thy bindstem eqns =
       val OUTR = sumTheory.OUTR
       val sum_case_def = sumTheory.sum_case_def
       val CONJ = Thm.CONJ
-      fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
       val eqnl = strip_conj eqns
       val lhs_info =
           op_mk_set tmi_eq (map ((I##length) o strip_comb o lhs) eqnl)
@@ -1078,7 +1058,7 @@ fun mutrec thy bindstem eqns =
       val mut_ind2 = GENL Plist (DISCH ant (LIST_CONJ tmpl))
   in
     { rules = mut_rules2,
-      ind =  mut_ind2,
+      ind = mut_ind2,
       SV = #SV wfrec_res,
       R = rand (#WFR wfrec_res),
       union = defn,
@@ -1265,7 +1245,8 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
  ---------------------------------------------------------------------------*)
 
 fun holexnMessage (HOL_ERR {origin_structure,origin_function,source_location,message}) =
-      origin_structure ^ "." ^ origin_function ^ ":" ^ locn.toShortString source_location ^ ": " ^ message
+      origin_structure ^ "." ^ origin_function ^
+      ":" ^ locn.toShortString source_location ^ ": " ^ message
   | holexnMessage e = General.exnMessage e
 
 fun is_simple_arg t =
@@ -1415,11 +1396,11 @@ val ex1 =
   ("f","g"), ("g","g"), ("g","i"), ("g","h"),
   ("i","h"), ("i","k"), ("h","j")];
 
-val ex2 =  ("a","z")::ex1;
-val ex3 =  ("z","a")::ex1;
-val ex4 =  ("z","c")::ex3;
-val ex5 =  ("c","z")::ex3;
-val ex6 =  ("c","i")::ex3;
+val ex2 = ("a","z")::ex1;
+val ex3 = ("z","a")::ex1;
+val ex4 = ("z","c")::ex3;
+val ex5 = ("c","z")::ex3;
+val ex6 = ("c","i")::ex3;
 
 cliques_of (trancl ex1);
 cliques_of (trancl ex2);
@@ -1958,5 +1939,124 @@ fun tstore_defn (d,t) =
   in store (name_of d,def,ind)
    ; (def,ind)
   end;
+
+(*---------------------------------------------------------------------------*)
+(* Support for debugging termination condition extraction. Following code    *)
+(* does some error checking, instantiates wfrec theorem to get a constrained *)
+(* version of the original recursion equations, and collects ancillary       *)
+(* information. Result is ready for tc extraction.                           *)
+(*---------------------------------------------------------------------------*)
+
+fun build_eqns_from_term eqns =
+ let fun err s = raise ERR "extract_tcs" s
+     val fns = all_fns eqns
+     val _ = assert (not o null) fns
+     val ((f, args), fnrhs) = dest_hd_eqn eqns
+     val stem = fst (dest_atom f)
+     val facts = TypeBase.theTypeBase ()
+     val thy = facts
+ in
+  if length fns = 1 then
+    (if null args then
+         (if free_in f fnrhs then
+            case move_arg eqns of
+              SOME eqns' => build_eqns_from_term eqns'
+            | NONE => err "Simple nullary definition recurses"
+          else
+           case free_vars fnrhs of
+            [] => err "Nullary definition failed - giving up"
+           | fvs => err ("Free variables (" ^
+                     String.concat (Lib.commafy (map (#1 o dest_var) fvs)) ^
+                     ") on RHS of nullary definition")
+          )
+     else
+      (if not (can dest_conj eqns) andalso
+          not (free_in f fnrhs)  andalso
+          List.all is_simple_arg args then
+            raise err "Not a recursive definition"
+       else
+          let val (tup_eqs, stem', untuple) = pairf (stem, eqns)
+                   handle HOL_ERR _ =>
+                   err "failure in internal translation to tupled format"
+              val (proto_def,SV,WFR,pats,congs,pcs) =
+                      instantiate_wfrec_thm facts tup_eqs
+          in
+             ([rand WFR], congs, (proto_def,WFR), pcs)
+          end)
+    )
+    else
+    (* mutual recursive *)
+    let val bindstem = stem
+      val dom_rng = Type.dom_rng
+      val genvar = Term.genvar
+      val DEPTH_CONV = Conv.DEPTH_CONV
+      val BETA_CONV = Thm.BETA_CONV
+      val OUTL = sumTheory.OUTL
+      val OUTR = sumTheory.OUTR
+      val sum_case_def = sumTheory.sum_case_def
+      val CONJ = Thm.CONJ
+      val eqnl = strip_conj eqns
+      val lhs_info =
+          op_mk_set tmi_eq (map ((I##length) o strip_comb o lhs) eqnl)
+      val div_tys = map (fn (tm,i) => ndom_rng (type_of tm) i) lhs_info
+      val lhs_info1 = zip (map fst lhs_info) div_tys
+      val dom_tyl = map (list_mk_prod_type o fst) div_tys
+      val rng_tyl = mk_set (map snd div_tys)
+      val mut_dom = end_itlist mk_sum_type dom_tyl
+      val mut_rng = end_itlist mk_sum_type rng_tyl
+      val mut_name = unionStem bindstem
+      val mut = mk_var(mut_name, mut_dom --> mut_rng)
+      fun inform (f,(doml,rng)) =
+        let val s = fst(dest_atom f)
+        in if 1<length doml
+            then (f, (mk_var(s^"_TUPLED",list_mk_prod_type doml --> rng),doml))
+            else (f, (f,doml))
+         end
+      val eqns' = tuple_args (map inform lhs_info1) eqns
+      val eqnl' = strip_conj eqns'
+      val (L,R) = unzip (map dest_eq eqnl')
+      val fnl' = op_mk_set aconv (map (fst o strip_comb o lhs) eqnl')
+      val fnvar_map = zip lhs_info1 fnl'
+      val gvl = map genvar dom_tyl
+      val gvr = map genvar rng_tyl
+      val injmap = zip fnl' (map2 (C (curry mk_abs)) (inject mut_dom gvl) gvl)
+      fun mk_lhs_mut_app (f,arg) =
+          mk_comb(mut,beta_conv (mk_comb(op_assoc aconv f injmap,arg)))
+      val L1 = map (mk_lhs_mut_app o dest_comb) L
+      val gv_mut_rng = genvar mut_rng
+      val outfns = map (curry mk_abs gv_mut_rng)
+                       (project rng_tyl mut_rng gv_mut_rng)
+      val ty_outs = zip rng_tyl outfns
+      (* now replace each f by \x. outbar(mut(inbar x)) *)
+      fun fout f = (f,assoc (#2(dom_rng(type_of f))) ty_outs)
+      val RNG_OUTS = map fout fnl'
+      fun mk_rhs_mut f v =
+          (f |-> mk_abs(v,beta_conv (mk_comb(op_assoc aconv f RNG_OUTS,
+                                             mk_lhs_mut_app (f,v)))))
+      val R1 = map (Term.subst (map2 mk_rhs_mut fnl' gvl)) R
+      val eqnl1 = zip L1 R1
+      val rng_injmap =
+            zip rng_tyl (map2 (C (curry mk_abs)) (inject mut_rng gvr) gvr)
+      fun f_rng_in f = (f,assoc (#2(dom_rng(type_of f))) rng_injmap)
+      val RNG_INS = map f_rng_in fnl'
+      val tmp = zip (map (#1 o dest_comb) L) R1
+      val R2 = map (fn (f,r) => beta_conv(mk_comb(op_assoc aconv f RNG_INS, r)))
+                   tmp
+      val R3 = map (rhs o concl o QCONV (DEPTH_CONV BETA_CONV)) R2
+      val mut_eqns = list_mk_conj(map mk_eq (zip L1 R3))
+      val (proto_def,SV,WFR,pats,congs,pcs) =
+               instantiate_wfrec_thm facts mut_eqns
+      in
+         ([rand WFR], congs, (proto_def,WFR), pcs)
+     end
+ end
+
+fun extract_tcs_from_term eqns =
+ let val (FV, congs, p, pcs) = build_eqns_from_term eqns
+ in map (Extract.extract FV congs p) pcs
+ end
+
+fun build_eqns q = build_eqns_from_term (hd (parse_quote q))
+fun extract_tcs q = extract_tcs_from_term (hd (parse_quote q))
 
 end (* Defn *)

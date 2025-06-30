@@ -496,4 +496,36 @@ val _ = quiet_warnings (fn () =>
            ) () handle _ => die "FAILED!"
 val _ = OK()
 
+val _ = tprint "Test for lambdas in supplied sizes (github issue #1400)";
+
+val _ = quiet_warnings (fn () => let in
+  Hol_datatype `list_syn = L of (('a # 'b) list)`;
+  Defn.Hol_defn "list_syn_size_v1_def"
+    `list_syn_size_v1 (f : ('a # 'b) -> num$num) = (\x : ('a, 'b) list_syn. 0)`;
+  ()
+  end) ()
+
+val size_v2_defn = Defn.Hol_defn "list_syn_size_v2_def"
+  `list_syn_size_v2 = (\x_sz y_sz. list_syn_size_v1 (\k. x_sz (FST k) + y_sz (SND k)))`;
+val size_v2_def = hd (Defn.eqns_of size_v2_defn);
+
+(* coerce a non-standard size term *)
+val _ = TypeBase.export [
+    TypeBasePure.mk_nondatatype_info (
+      ``: ('a, 'b) list_syn``,
+      {encode = NONE,
+       size = SOME (``\(xsize : 'a -> num$num) (ysize : 'b -> num$num).
+                list_syn_size_v2 (\x : 'a. 0) (\y. ysize y + 1)``,
+            size_v2_def),
+       induction = NONE,
+       nchotomy = NONE}
+      )
+  ]
+
+(* test the type with the non-standard size can be used in a size eq proof *)
+val _ = Hol_datatype `t1 = T1 of (((num, num) list_syn # t2) list)
+    ;  t2 = T2 of t1`;
+
+val _ = OK ()
+
 val _ = Process.exit Process.success;

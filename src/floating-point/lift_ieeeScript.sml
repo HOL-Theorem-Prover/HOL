@@ -11,7 +11,7 @@ val _ = new_theory "lift_ieee";
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM"]
 
-val () =  Parse.temp_overload_on ("bias", ``words$INT_MAX``)
+val () = Parse.temp_overload_on ("bias", ``words$INT_MAX``)
 
 (* ------------------------------------------------------------------------ *)
 
@@ -1729,7 +1729,7 @@ val float_to_real_real_to_float_zero_id = Q.store_thm (
 val non_representable_float_is_zero = store_thm (
   "non_representable_float_is_zero",
   ``!ff P.
-      2 * abs ff <=  ulp ((:'a#'b) :('a#'b) itself) ==>
+      2 * abs ff <= ulp ((:'a#'b) :('a#'b) itself) ==>
       (float_to_real ((float_round roundTiesToEven P ff):('a, 'b) float) = 0)``,
   rpt strip_tac \\ Cases_on `P`
   \\ fs [round_roundTiesToEven_is_plus_zero,

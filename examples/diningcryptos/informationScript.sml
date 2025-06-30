@@ -2,17 +2,18 @@
 (* Create "informationTheory" setting up the theory of information           *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
+open HolKernel Parse boolLib bossLib;
+
+open metisLib arithmeticTheory pred_setTheory
      listTheory state_transformerTheory combinTheory
      pairTheory realTheory realLib jrhUtils iterateTheory
-     realSimps numTheory simpLib seqTheory subtypeTheory
+     realSimps numTheory simpLib seqTheory subtypeTheory real_sigmaTheory
      transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps;
 
 open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory;
-open real_sigmaTheory;
 
-open hurdUtils util_probTheory sigma_algebraTheory real_measureTheory
-     real_borelTheory real_lebesgueTheory real_probabilityTheory;
+open hurdUtils sigma_algebraTheory real_measureTheory real_borelTheory
+     real_lebesgueTheory real_probabilityTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)

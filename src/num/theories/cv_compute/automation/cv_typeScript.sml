@@ -284,4 +284,58 @@ Proof
   Cases_on ‘v’ \\ fs [from_pair_def]
 QED
 
+Theorem from_pair_eq_IMP:
+  from_pair f1 f2 x = Pair y1 y2 ==>
+  f1 (FST x) = y1 /\ f2 (SND x) = y2
+Proof
+  Cases_on ‘x’ \\ rw [] \\ gvs [from_pair_def]
+QED
+
+Theorem IMP_from_pair_eq:
+  f1 (FST x) = y1 /\ f2 (SND x) = y2 ==>
+  from_pair f1 f2 x = Pair y1 y2
+Proof
+  Cases_on ‘x’ \\ rw [] \\ gvs [from_pair_def]
+QED
+
+Theorem from_option_eq_IMP:
+  from_option f1 x = Pair (Num 1) y1 ==>
+  f1 (THE x) = y1 /\ IS_SOME x
+Proof
+  Cases_on ‘x’ \\ rw [] \\ gvs [from_option_def]
+QED
+
+Theorem IMP_from_option_eq:
+  f1 (THE x) = y1 /\ IS_SOME x ==>
+  from_option f1 x = Pair (Num 1) y1
+Proof
+  Cases_on ‘x’ \\ rw [] \\ gvs [from_option_def]
+QED
+
+Theorem to_pair_IMP:
+  x = to_pair t1 t2 (Pair x1 x2) ==>
+  FST x = t1 x1 /\ SND x = t2 x2
+Proof
+  rw [to_pair_def]
+QED
+
+Theorem IMP_to_pair:
+  FST x = y1 /\ SND x = y2 ==> x = (y1,y2)
+Proof
+  Cases_on ‘x’ \\ gvs []
+QED
+
+Theorem to_option_IMP:
+  x = to_option t1 (Pair x1 x2) ==>
+  THE x = t1 x2 /\ IS_SOME x
+Proof
+  rw [to_option_def]
+QED
+
+Theorem IMP_to_option:
+  THE x = y1 /\ IS_SOME x ==> x = SOME y1
+Proof
+  Cases_on ‘x’ \\ gvs []
+QED
+
 val _ = export_theory();

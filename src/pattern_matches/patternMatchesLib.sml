@@ -16,8 +16,9 @@ open oneSyntax
 structure Parse =
 struct
   open Parse
+  val SOME patternMatches_grammars = grammarDB {thyname="patternMatches"}
   val (Type,Term) =
-      parse_from_grammars patternMatchesTheory.patternMatches_grammars
+      parse_from_grammars patternMatches_grammars
 end
 open Parse
 
@@ -1199,7 +1200,7 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
 
       val (var_basename, _) = dest_var (tt_col)
       val gen_fun = mk_var_gen (var_basename ^ "_") avoid;
-      val args =  map (fn t => gen_fun (type_of t)) args_vars
+      val args = map (fn t => gen_fun (type_of t)) args_vars
 
       val (vars, _) = replace_element tts col args
     in
@@ -1216,7 +1217,7 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
   val v' = ff_inv v
 
   val PMATCH_ROW_REMOVE_FUN' = let
-    val thm0 =  FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN
+    val thm0 = FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN
     val thm1 = ISPEC ff_tm  thm0
     val thm2 = ISPEC v'  thm1
     val thm3 = MATCH_MP thm2 ff_thm
@@ -1586,7 +1587,7 @@ fun PMATCH_EXPAND_COLS_CONV t = let
 
     val var_basename = fst (dest_var l) handle HOL_ERR _ => "v"
     val gen_fun = mk_var_gen (var_basename ^ "_") avoid;
-    val new_vars =  map gen_fun types
+    val new_vars = map gen_fun types
   in
     new_vars
   end
@@ -2396,7 +2397,7 @@ local
          in process_current_col (cs', kl') ps' end
 
     val ps = (snd current_col)
-    val (cs, kl) =  process_current_col (List.map (K []) evs, []) ps
+    val (cs, kl) = process_current_col (List.map (K []) evs, []) ps
     val cols1 = zip evs cs
 
     val cols2 = List.map (fn (v, rs) =>

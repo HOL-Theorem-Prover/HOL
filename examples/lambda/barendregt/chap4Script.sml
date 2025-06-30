@@ -1,17 +1,84 @@
-open HolKernel Parse boolLib bossLib;
-open binderLib
+(* ========================================================================== *)
+(* FILE    : chap4Script.sml                                                  *)
+(* TITLE   : Lambda Theories (general setup)                                  *)
+(* ========================================================================== *)
 
-open pred_setTheory
-open termTheory chap2Theory chap3Theory
+open HolKernel Parse boolLib bossLib;
+
+open pred_setTheory relationTheory hurdUtils;
+
+open binderLib termTheory horeductionTheory chap2Theory chap3Theory;
+
 val _ = new_theory "chap4";
 
 val _ = hide "B"
 
-(* definition 4.1.1(i) is already in chap2, given name asmlam *)
+(* definition 4.1.1(i) is already in chap2, given name asmlam
 
+   NOTE: “lambdathy {}” is false, use “lambdathy (UNCURRY (==)” for the base theory.
+ *)
 Definition lambdathy_def:
   lambdathy A ⇔ consistent (asmlam A) ∧ UNCURRY (asmlam A) = A
 End
+
+Theorem asmlam_lameq_absorb :
+    asmlam (UNCURRY (==)) = (==)
+Proof
+    simp [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM]
+ >> CONJ_TAC
+ >- (HO_MATCH_MP_TAC asmlam_ind >> simp [] \\
+     METIS_TAC [lameq_rules])
+ >> HO_MATCH_MP_TAC lameq_ind
+ >> METIS_TAC [asmlam_rules]
+QED
+
+Theorem asmlam_lameta_absorb :
+    asmlam (UNCURRY lameta) = lameta
+Proof
+    simp [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM]
+ >> CONJ_TAC
+ >- (HO_MATCH_MP_TAC asmlam_ind >> simp [] \\
+     METIS_TAC [lameta_rules])
+ >> HO_MATCH_MP_TAC lameta_ind
+ >> REWRITE_TAC [CONJ_ASSOC]
+ >> CONJ_TAC >- METIS_TAC [asmlam_rules]
+ >> qx_genl_tac [‘t’, ‘y’] >> STRIP_TAC
+ >> MATCH_MP_TAC asmlam_eqn >> simp []
+ >> MATCH_MP_TAC lameta_ETA >> art []
+QED
+
+(* not used *)
+Theorem asmlam_conversion_absorb :
+    asmlam (UNCURRY (conversion R)) = asmlam (UNCURRY R)
+Proof
+    simp [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM]
+ >> reverse CONJ_TAC
+ >- (HO_MATCH_MP_TAC asmlam_ind >> simp [] \\
+     reverse CONJ_TAC >- METIS_TAC [asmlam_rules] \\
+     rpt STRIP_TAC \\
+     MATCH_MP_TAC asmlam_eqn >> rw [] \\
+     rw [conversion_rules])
+ >> HO_MATCH_MP_TAC asmlam_ind >> simp []
+ >> reverse CONJ_TAC >- METIS_TAC [asmlam_rules]
+ >> HO_MATCH_MP_TAC EQC_INDUCTION
+ >> reverse CONJ_TAC >- METIS_TAC [asmlam_rules]
+ >> HO_MATCH_MP_TAC compat_closure_ind
+ >> reverse CONJ_TAC >- METIS_TAC [asmlam_rules]
+ >> rpt STRIP_TAC
+ >> MATCH_MP_TAC asmlam_eqn >> rw []
+QED
+
+Theorem lambdathy_lameq :
+    lambdathy (UNCURRY (==))
+Proof
+    rw [lambdathy_def, asmlam_lameq_absorb, lameq_consistent]
+QED
+
+Theorem lambdathy_lameta :
+    lambdathy (UNCURRY lameta)
+Proof
+    rw [lambdathy_def, asmlam_lameta_absorb, lameta_consistent]
+QED
 
 Definition church1_def:
   church1 = LAM "x" (LAM "y" (VAR "x" @@ VAR "y"))
@@ -19,13 +86,11 @@ End
 
 Overload "𝟙" = “church1”
 
-
 Overload "TC" = “asmlam”
 
 Overload "eta_extend" = “λA. asmlam (UNCURRY eta ∪ A)”
 val _ = set_mapped_fixity {tok = UTF8.chr 0x1D73C, fixity = Suffix 2100,
                            term_name = "eta_extend"}
-
 
 Theorem lameta_subset_eta_extend:
   ∀M N. lameta M N ⇒ 𝒯 𝜼 M N
@@ -199,6 +264,102 @@ Proof
 QED
 *)
 
+Theorem eta_extend_alt_conversion :
+    !M N. conversion (RINSERT (beta RUNION eta) M N) = eta_extend {(M,N)}
+Proof
+    rw [FUN_EQ_THM]
+ >> EQ_TAC >> STRIP_TAC
+ >- (rename1 ‘eta_extend {(M,N)} x y’ \\
+     POP_ASSUM MP_TAC \\
+     qid_spec_tac ‘y’ \\
+     qid_spec_tac ‘x’ \\
+     HO_MATCH_MP_TAC EQC_INDUCTION \\
+     simp [CONJ_ASSOC] >> reverse CONJ_TAC
+     >- (qx_genl_tac [‘x’, ‘y’, ‘z’] >> STRIP_TAC \\
+         MATCH_MP_TAC asmlam_trans \\
+         Q.EXISTS_TAC ‘y’ >> art []) \\
+     reverse CONJ_TAC
+     >- (rpt STRIP_TAC \\
+         MATCH_MP_TAC asmlam_sym >> art []) \\
+     simp [asmlam_refl] \\
+     MATCH_MP_TAC compat_closure_ind \\
+     simp [CONJ_ASSOC] >> reverse CONJ_TAC
+     >- (rpt STRIP_TAC \\
+         MATCH_MP_TAC asmlam_abscong >> art []) \\
+     reverse CONJ_TAC
+     >- (rpt STRIP_TAC \\
+         MATCH_MP_TAC asmlam_lcong >> art []) \\
+     reverse CONJ_TAC
+     >- (rpt STRIP_TAC \\
+         MATCH_MP_TAC asmlam_rcong >> art []) \\
+     rw [RINSERT, RUNION] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       MATCH_MP_TAC lameq_asmlam \\
+       MATCH_MP_TAC ccbeta_lameq \\
+       MATCH_MP_TAC compat_closure_R >> art [],
+       (* goal 2 (of 3) *)
+       MATCH_MP_TAC asmlam_eqn >> rw [],
+       (* goal 3 (of 3) *)
+       MATCH_MP_TAC asmlam_eqn >> rw [] ])
+ >> rename1 ‘eta_extend {(M,N)} x y’
+ >> POP_ASSUM MP_TAC
+ >> qid_spec_tac ‘y’
+ >> qid_spec_tac ‘x’
+ >> HO_MATCH_MP_TAC asmlam_ind >> rw [] (* 8 subgoals *)
+ >| [ (* goal 1 (of 8) *)
+      MATCH_MP_TAC EQC_R \\
+      MATCH_MP_TAC compat_closure_R \\
+      rw [RINSERT, RUNION],
+      (* goal 2 (of 8) *)
+      MATCH_MP_TAC EQC_R \\
+      MATCH_MP_TAC compat_closure_R \\
+      rw [RINSERT, RUNION],
+      (* goal 3 (of 8) *)
+      MATCH_MP_TAC EQC_R \\
+      MATCH_MP_TAC compat_closure_R \\
+      rw [RINSERT, RUNION, beta_def] \\
+      DISJ1_TAC >> DISJ1_TAC \\
+      qexistsl_tac [‘x’, ‘M'’] >> art [],
+      (* goal 4 (of 8) *)
+      rw [conversion_rules],
+      (* goal 5 (of 8) *)
+      METIS_TAC [conversion_rules],
+      (* goal 6 (of 8) *)
+      PROVE_TAC [conversion_compatible, compatible_def, rightctxt, rightctxt_thm],
+      (* goal 7 (of 8) *)
+      PROVE_TAC [conversion_compatible, compatible_def, leftctxt],
+      (* goal 8 (of 8) *)
+      PROVE_TAC [conversion_compatible, compatible_def, absctxt] ]
+QED
 
+(* Definition 4.1.22 [1, p.83] (Hilbert-Post-completeness)
 
-val _ = export_theory();
+   NOTE: An extra predicate ‘P’ is needed to support [lameta_complete_final],
+   which requires ‘has_benf M /\ has_benf N’.
+
+  "HP-complete theories correspond to maximally consistent theories in first order
+   model theory." (same page of [1])
+
+   NOTE: In particular, asmlam ((UNCURRY eta) UNION {(M,N)}) := eta_extend {(M,N)}
+ *)
+Definition HP_complete_def :
+    HP_complete thy P <=>
+      !M N. P M /\ P N ==>
+            asmlam thy M N \/ inconsistent (asmlam (thy UNION {(M,N)}))
+End
+
+(* NOTE: This is the unconditional version of HP-completeness.
+
+  "It will be proved in Chapter 16 that “Kthy” has a quite natural unique HP-complete
+   extension “Kthy_star” such that “|- HP_complete' Kthy_star” holds.
+ *)
+Overload HP_complete' = “\thy. HP_complete thy (K T)”
+
+val _ = export_theory ();
+val _ = html_theory "chap4";
+
+(* References:
+
+ [1] Barendregt, H.P.: The lambda calculus, its syntax and semantics.
+     College Publications, London (1984).
+ *)

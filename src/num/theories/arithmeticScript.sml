@@ -13,7 +13,8 @@
 
 open HolKernel boolLib Parse BasicProvers;
 
-open simpLib boolSimps mesonLib metisLib numTheory prim_recTheory;
+open simpLib boolSimps mesonLib metisLib numTheory prim_recTheory
+     combinTheory relationTheory;
 
 local open SatisfySimps DefnBase in end
 

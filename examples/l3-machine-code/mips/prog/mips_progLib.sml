@@ -7,7 +7,8 @@ open stateLib mips_progTheory
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars mips_progTheory.mips_prog_grammars
+   val (Type, Term) =
+       parse_from_grammars $ valOf $ grammarDB {thyname="mips_prog"}
 end
 
 open Parse
@@ -17,7 +18,7 @@ val ERR = Feedback.mk_HOL_ERR "mips_progLib"
 (* ------------------------------------------------------------------------ *)
 
 val mips_proj_def = mips_progTheory.mips_proj_def
-val mips_comp_defs = mips_progTheory.component_defs
+val mips_comp_defs = stateLib.sep_components{thyname="mips_prog"}
 
 fun syn n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "mips_prog"
 val mips_1 = syn 2 HolKernel.dest_monop HolKernel.mk_monop

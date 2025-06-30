@@ -1681,7 +1681,7 @@ val DINT_COMBINE = store_thm("DINT_COMBINE",
                          [DISCH_TAC THEN
                           SUBGOAL_THEN``dsize
                                 (\(i :num). if i <= (m :num) then (d :num -> real) i
-                                        else (b :real)) <=  SUC (m:num)``MP_TAC THENL
+                                        else (b :real)) <= SUC (m:num)``MP_TAC THENL
                            [MATCH_MP_TAC DIVISION_DSIZE_LE THEN
                             MAP_EVERY EXISTS_TAC [``a:real``, ``b:real``] THEN
                             ASM_REWRITE_TAC[] THEN SIMP_TAC arith_ss[],

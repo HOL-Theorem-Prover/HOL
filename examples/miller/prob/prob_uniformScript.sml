@@ -4,10 +4,9 @@ open arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
      hurdUtils extra_numTheory combinTheory
      pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
-     simpLib;
+     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory simpLib;
 
-open util_probTheory real_measureTheory real_probabilityTheory;
+open sigma_algebraTheory real_measureTheory real_probabilityTheory;
 open prob_algebraTheory probTheory;
 
 val _ = new_theory "prob_uniform";

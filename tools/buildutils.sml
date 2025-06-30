@@ -384,7 +384,8 @@ in
           jobcount = jcount,
           keepgoing = #keepgoing option_record,
           multithread = #multithread option_record,
-          relocbuild = #relocbuild option_record}
+          relocbuild = #relocbuild option_record,
+          timelimit = #timelimit option_record}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
 (* ----------------------------------------------------------------------
@@ -786,7 +787,8 @@ in
   system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
   system_ps (POLYC ^ " poly-Doc2Html.ML -o Doc2Html.exe");
   system_ps (POLYC ^ " poly-Doc2Txt.ML -o Doc2Txt.exe");
-  system_ps (POLYC ^ " poly-Doc2Tex.ML -o Doc2Tex.exe")
+  system_ps (POLYC ^ " poly-Doc2Tex.ML -o Doc2Tex.exe");
+  system_ps (POLYC ^ " poly-Doc2Md.ML -o Doc2markdown.exe")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -923,7 +925,7 @@ fun process_cline () =
       end
     | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
               build_theory_graph, jobcount, relocbuild, debug, keepgoing,
-              selftest_level} =>
+              selftest_level, timelimit} =>
       let
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
@@ -939,7 +941,8 @@ fun process_cline () =
            keepgoing = keepgoing,
            multithread = multithread,
            relocbuild = relocbuild,
-           selftest_level = selftest_level
+           selftest_level = selftest_level,
+           timelimit = timelimit
           }
       end
 

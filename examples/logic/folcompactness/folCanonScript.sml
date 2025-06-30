@@ -410,8 +410,6 @@ QED
 Definition tm_constify_def[simp]:
   (tm_constify kvs (V x) = if x ∈ kvs then V x else Fn (1 ⊗ x) []) ∧
   (tm_constify kvs (Fn f zs) = Fn (0 ⊗ f) (MAP (tm_constify kvs) zs))
-Termination
-  WF_REL_TAC ‘measure (term_size o SND)’ >> simp[]
 End
 
 Definition varify_map_def:
@@ -687,7 +685,6 @@ Theorem holds_FMC_ARB:
 Proof
   simp[holds_valuation]
 QED
-
 
 Theorem not_entails:
   ¬entails (:α) H ϕ ⇔ satisfiable (:α) { FMC p | p ∈ Not ϕ INSERT H }

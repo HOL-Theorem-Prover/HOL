@@ -47,6 +47,7 @@ val string_decode : string dec
 val int_decode    : int dec
 val type_decode   : Type.hol_type dec
 val term_decode   : Term.term dec
+val thm_decode    : Thm.thm dec
 val char_decode   : char dec
 val list_decode   : 'a dec -> 'a list dec
 val kname_decode  : KernelSig.kernelname dec
@@ -73,5 +74,25 @@ val tag_decode : string -> 'a dec -> 'a dec
 val || : 'a dec * 'a dec -> 'a dec
 val >> : 'a dec * ('a -> 'b) -> 'b dec
 val first : 'a dec list -> 'a dec
+
+(* encoder/decoder pairs *)
+type 'a ed = ('a enc * 'a dec)
+val string_ed : string ed
+val int_ed : int ed
+val type_ed : Type.hol_type ed
+val term_ed : Term.term ed
+val thm_ed : Thm.thm ed
+val char_ed : char ed
+val kname_ed : KernelSig.kernelname ed
+val bool_ed : bool ed
+
+val list_ed : 'a ed -> 'a list ed
+val option_ed : 'a ed -> 'a option ed
+val pair_ed : 'a ed * 'b ed -> ('a * 'b) ed
+val pair3_ed : 'a ed * 'b ed * 'c ed -> ('a * 'b * 'c) ed
+val pair4_ed : 'a ed * 'b ed * 'c ed * 'd ed -> ('a * 'b * 'c * 'd) ed
+
+val bij_ed : ('a -> 'b) * ('b -> 'a) -> 'b ed -> 'a ed
+val inj_ed : ('a -> 'b) * ('b -> 'a option) -> 'b ed -> 'a ed
 
 end

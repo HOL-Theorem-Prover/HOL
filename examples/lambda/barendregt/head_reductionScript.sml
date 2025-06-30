@@ -13,12 +13,16 @@ open boolSimps relationTheory pred_setTheory listTheory finite_mapTheory
      hurdUtils pairTheory;
 
 open termTheory appFOLDLTheory chap2Theory chap3Theory nomsetTheory binderLib
-     horeductionTheory term_posnsTheory finite_developmentsTheory
-     basic_swapTheory NEWLib;
+     horeductionTheory term_posnsTheory finite_developmentsTheory NEWLib
+     basic_swapTheory;
 
 val _ = new_theory "head_reduction"
 
 val _ = hide "Y";
+
+(* Disable some conflicting overloads from labelledTermsTheory *)
+Overload FV  = “supp term_pmact”
+Overload VAR = “term$VAR”
 
 Inductive hreduce1 :
 [~BETA:]
@@ -34,6 +38,12 @@ val _ = overload_on ("-h->", ``hreduce1``)
 
 val _ = set_fixity "-h->*" (Infix(NONASSOC, 450))
 val _ = overload_on ("-h->*", ``hreduce1^*``)
+
+val _ = TeX_notation { hol = "-h->",
+        TeX = ("\\ensuremath{\\rightarrow_h}", 1) };
+
+val _ = TeX_notation { hol = "-h->*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow_{h}}", 1) };
 
 Theorem hreduce1_beta_reduce[simp] :
      LAM h M @@ VAR h -h-> M
@@ -209,6 +219,14 @@ Proof
  >> rename1 ‘M1 -h-> M0’
  >> ONCE_REWRITE_TAC [RTC_CASES1] >> DISJ2_TAC
  >> Q.EXISTS_TAC ‘M0’ >> rw []
+QED
+
+Theorem hreduce_LAM :
+    !v M1 M2. LAM v M1 -h->* LAM v M2 <=> M1 -h->* M2
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘[v]’, ‘M1’, ‘M2’] hreduce_LAMl)
+ >> REWRITE_TAC [LAMl_thm]
 QED
 
 Theorem hreduce1_abs :
@@ -1639,11 +1657,29 @@ Theorem hnf_head_hnf[simp] :
 Proof
     CONJ_TAC
  >- NTAC 2 (rw [Once hnf_head_def])
- >> MATCH_MP_TAC hnf_head_appstar
+ >> MATCH_MP_TAC hnf_head_appstar >> rw []
+QED
+
+(* |- hnf_head (VAR y) = VAR y *)
+Theorem hnf_head_VAR[simp] =
+    (cj 2 hnf_head_hnf) |> Q.GEN ‘args’ |> Q.SPEC ‘[]’
+                        |> REWRITE_RULE [appstar_empty]
+
+Definition var_name_def :
+    var_name t = @s. VAR s = t
+End
+
+Theorem var_name_thm[simp] :
+    var_name (VAR s) = s
+Proof
+    REWRITE_TAC [var_name_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC ‘s’ >> art [])
  >> rw []
 QED
 
-Overload hnf_headvar = “\t. THE_VAR (hnf_head t)”
+Overload hnf_headvar = “\t. var_name (hnf_head t)”
 
 (* hnf_children retrives the ‘args’ part of absfree hnf *)
 Definition hnf_children_def :
@@ -1677,6 +1713,10 @@ Proof
     rpt GEN_TAC
  >> MATCH_MP_TAC hnf_children_appstar >> rw []
 QED
+
+(* |- hnf_children (VAR y) = [] *)
+Theorem hnf_children_VAR[simp] =
+        hnf_children_hnf |> Q.SPECL [‘y’, ‘[]’] |> REWRITE_RULE [appstar_empty]
 
 Theorem absfree_hnf_cases :
     !M. hnf M /\ ~is_abs M <=> ?y args. M = VAR y @* args
@@ -2144,7 +2184,7 @@ Proof
  >> Know ‘fm ' M = VAR y @* MAP VAR Y’
  >- (simp [Abbr ‘M’, ssub_appstar] \\
      Know ‘fm ' z = VAR y’
-     >- (‘z = EL n Z'’ by simp [Abbr ‘Z'’, EL_APPEND2] >> POP_ORW \\
+     >- (‘z = EL n Z'’ by simp [Abbr ‘Z'’, SNOC_APPEND, EL_APPEND2] >> POP_ORW \\
          simp [Abbr ‘fm’, LAST_EL] \\
          qabbrev_tac ‘Y' = SNOC y Y’ \\
          Know ‘fromPairs Z' (MAP VAR Y') ' (EL n Z') = EL n (MAP VAR Y')’
@@ -2160,7 +2200,7 @@ Proof
     ‘MEM (EL i Z) Z'’ by rw [EL_MEM, Abbr ‘Z'’] \\
      rw [Abbr ‘fm’] \\
      Know ‘EL i Z = EL i Z'’
-     >- (simp [Abbr ‘Z'’, EL_APPEND1]) >> Rewr' \\
+     >- (simp [Abbr ‘Z'’, SNOC_APPEND, EL_APPEND1]) >> Rewr' \\
      qabbrev_tac ‘Y' = SNOC y Y’ \\
      Know ‘EL i Y = EL i Y'’
      >- (SIMP_TAC std_ss [Once EQ_SYM_EQ, Abbr ‘Y'’] \\
@@ -2317,7 +2357,7 @@ Proof
  >> ‘DISJOINT (set L') X’ by rw [Abbr ‘L'’, LIST_TO_SET_REVERSE]
  >> ‘DISJOINT (set L') (BIGUNION (IMAGE FV (set Ns)))’
       by ASM_SIMP_TAC std_ss [Abbr ‘L'’, LIST_TO_SET_REVERSE]
- >> ‘SNOC y xs = REVERSE l’ by rw [Abbr ‘l’, REVERSE_SNOC] >> POP_ORW
+ >> ‘SNOC y xs = REVERSE l’ by rw [Abbr ‘l’, REVERSE_SNOC, SNOC_APPEND] >> POP_ORW
  >> simp []
  >> CONJ_TAC (* ALL_DISTINCT l *)
  >- (MATCH_MP_TAC IS_PREFIX_ALL_DISTINCT \\
@@ -2437,18 +2477,18 @@ QED
 
 (* This is an important theroem, hard to prove.
 
-   To use this theorem, first one defines ‘M0 = principle_hnf M’ as abbreviation,
+   To use this theorem, first one defines ‘M0 = principal_hnf M’ as abbreviation,
    then define ‘n = LAMl_size M0’ and ‘vs = NEWS n (FV M)’ (or ‘FV M0’, or
   ‘X UNION FV M0’, ‘X UNION FV M’), and this give us the needed antecedents:
 
        ALL_DISTINCT vs /\ DISJOINT (set vs) (FV M) /\ LENGTH vs = n
 
    Then use hnf_cases_shared to derive ‘M0 = LAMl vs (VAR y @* args)’ and then
-  ‘M1 = principle_hnf (M0 @* MAP VAR vs) = VAR y @* args’.
+  ‘M1 = principal_hnf (M0 @* MAP VAR vs) = VAR y @* args’.
 
-   The conclusion is that ‘principle_hnf (M @* MAP VAR vs) = M1’.
+   The conclusion is that ‘principal_hnf (M @* MAP VAR vs) = M1’.
 
-   Now ‘principle_hnf’ can be used to "denude" the outer LAMl of a solvable term.
+   Now ‘principal_hnf’ can be used to "denude" the outer LAMl of a solvable term.
 
    An extra list of free variables ‘l’ may need to append after MAP VAR vs.
  *)
@@ -2577,6 +2617,47 @@ Proof
  >> FIRST_X_ASSUM irule
  >> Q.EXISTS_TAC ‘FV e’ >> art []
  >> Q.EXISTS_TAC ‘e’ >> art []
+QED
+
+Theorem hnf_children_bnf :
+    !vs y args i. ALL_DISTINCT vs /\ bnf (LAMl vs (VAR y @* args)) /\
+                  i < LENGTH args ==> bnf (EL i args)
+Proof
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘M1 = VAR y @* args’
+ >> qabbrev_tac ‘N = LAMl vs M1’
+ >> qabbrev_tac ‘n = LENGTH vs’
+ >> qabbrev_tac ‘m = LENGTH args’
+ >> MP_TAC (Q.SPECL [‘N’, ‘FV M1 UNION set vs’] bnf_characterisation_X)
+ >> simp []
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘ys’
+                 (Q.X_CHOOSE_THEN ‘v’
+                   (Q.X_CHOOSE_THEN ‘args'’ STRIP_ASSUME_TAC)))
+ >> ‘LAMl_size N = n’ by simp [Abbr ‘N’, Abbr ‘M1’]
+ >> Know ‘LENGTH ys = n’
+ >- (POP_ASSUM (REWRITE_TAC o wrap o SYM) \\
+     Q.PAT_X_ASSUM ‘N = _’ (REWRITE_TAC o wrap) >> simp [])
+ >> DISCH_TAC
+ >> Know ‘hnf_children_size N = m’
+ >- (qunabbrevl_tac [‘N’, ‘M1’] >> simp [])
+ >> DISCH_TAC
+ >> Know ‘LENGTH args' = m’
+ >- (POP_ASSUM (REWRITE_TAC o wrap o SYM) \\
+     Q.PAT_X_ASSUM ‘N = _’ (REWRITE_TAC o wrap) \\
+     simp [])
+ >> DISCH_TAC
+ (* applying LAMl_ALPHA_tpm *)
+ >> Q.PAT_X_ASSUM ‘N = _’ MP_TAC
+ >> Know ‘N = LAMl ys (tpm (ZIP (vs,ys)) M1)’
+ >- (qunabbrev_tac ‘N’ \\
+     MATCH_MP_TAC LAMl_ALPHA_tpm >> simp [Once DISJOINT_SYM])
+ >> Rewr'
+ >> simp [Abbr ‘M1’]
+ >> qabbrev_tac ‘pi = ZIP (vs,ys)’
+ >> simp [Once tpm_eql]
+ >> qabbrev_tac ‘pi' = REVERSE pi’
+ >> rw [tpm_appstar]
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> simp [EL_MEM]
 QED
 
 val _ = export_theory()

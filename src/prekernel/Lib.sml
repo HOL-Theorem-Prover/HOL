@@ -156,11 +156,6 @@ fun end_itlist f =
       endit
    end
 
-fun get_first f l =
-   case l of
-      [] => NONE
-    | h :: t => (case f h of NONE => get_first f t | some => some)
-
 fun zip [] [] = []
   | zip (a :: b) (c :: d) = (a, c) :: zip b d
   | zip _ _ = raise ERR "zip" "different length lists"
@@ -200,7 +195,7 @@ fun apnth f 0 (y :: ys) = f y :: ys
   | apnth f n (y :: ys) = y :: apnth f (n-1) ys
   | apnth f n [] = raise ERR "apnth" "list too short (or -ve index)"
 
-fun mapshape [] _ _ =  []
+fun mapshape [] _ _ = []
   | mapshape (n :: nums) (f :: funcs) all_args =
      let
         val (fargs, rst) = split_after n all_args

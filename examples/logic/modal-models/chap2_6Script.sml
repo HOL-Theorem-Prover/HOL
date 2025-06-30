@@ -27,9 +27,10 @@ open pairTheory;
 val _ = new_theory "chap2_6";
 val _ = temp_delsimps ["satis_def"]
 
-val L1tau_def = Define`
-L1tau phi <=> form_functions phi = {} /\
-              form_predicates phi ⊆ (0,2) INSERT {(p,1)| p IN (univ (:num))}`
+Definition L1tau_def:
+  L1tau phi <=> form_functions phi = {} /\
+                form_predicates phi ⊆ (0,2) INSERT {(p,1)| p IN (univ (:num))}
+End
 
 Theorem ST_L1tau:
 !phi x. L1tau (ST x phi)
@@ -76,11 +77,11 @@ Proof
   Cases_on `t` >> fs[FCT_def,termval_def] >> Cases_on `l = []` >> fs[] >>
   `(MAP (termval M1 σ) l) = (MAP (termval M2 σ) l)` suffices_by metis_tac[] >>
   irule MAP_LIST_EQ >> rw[] >> Cases_on `m` >> rw[termval_def] >>
-  `term_size (Fn n' l') < 1 + (n + term1_size l)` by fs[term_size_lemma] >>
+  `term_size (Fn n' l') < 1 + (n + list_size term_size l)` by fs[term_size_lemma] >>
   first_x_assum (qspec_then `term_size (Fn n' l')` assume_tac) >>
-  `1 + (n + term1_size l) = n + (term1_size l + 1)` by fs[] >>
+  `1 + (n + list_size term_size l) = n + (list_size term_size l + 1)` by fs[] >>
   fs[] >> first_x_assum drule >> rw[] >>
-  first_x_assum (qspec_then `Fn n' l'` assume_tac) >> fs[term_size_def] >>
+  first_x_assum (qspec_then `Fn n' l'` assume_tac) >> fs[] >>
   Cases_on `l' = []`
   >- (fs[] >> `MEM (FCT (Fn n' [])) (MAP (λa. FCT a) l)` by (fs[MEM_MAP] >>
      qexists_tac `Fn n' []` >> fs[FCT_def]) >>
@@ -919,8 +920,6 @@ irule holds_valuation >> rw[] >>
   by rw[folmodels2Doms_def,models2worlds_def,folm2mm_def,FUN_EQ_THM] >>
 rw[EXTENSION,EQ_IMP_THM] >> metis_tac[Uequiv_SYM]
 QED
-
-
 
 Theorem mm2folm_folm2mm_Pred0:
 !M wl.

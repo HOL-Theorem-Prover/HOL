@@ -245,12 +245,6 @@ Definition free_vars_def[simp]:
   free_vars (If _ xs  y z) = FLAT (MAP free_vars xs) ++ free_vars y ++ free_vars z ∧
   free_vars (Let n x y) = free_vars x ++ FILTER (\k. k ≠ n) (free_vars y) ∧
   free_vars (Call _ xs) = FLAT (MAP free_vars xs)
-Termination
-  WF_REL_TAC ‘measure exp_size’ \\ rw []
-  \\ qsuff_tac ‘!xs a. MEM a xs ==> exp_size a <= exp1_size xs’
-  \\ TRY (rw [] \\ res_tac \\ fs [] \\ NO_TAC)
-  \\ Induct \\ fs [] \\ rw [] \\ fs [exp_size_def]
-  \\ res_tac \\ fs []
 End
 
 Theorem delete_env_update:

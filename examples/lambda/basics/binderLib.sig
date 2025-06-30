@@ -20,10 +20,14 @@ sig
                   pm_rewrites : thm list,
                   fv_rewrites : thm list,
                   binders : (term * int * thm) list }
+  val enc_nti : nominaltype_info ThyDataSexp.enc
+  val dec_nti : nominaltype_info ThyDataSexp.dec
   val nameless_nti : nominaltype_info
 
   (* stores information per type *)
-  val type_db : (KernelSig.kernelname,nominaltype_info) Binarymap.dict ref
+  val getTypeDB : unit -> nominaltype_info KNametab.table
+  val export_nomtype : hol_type * nominaltype_info -> unit
+  val local_update : hol_type * nominaltype_info -> unit
 
   val recursive_term_function_existence : term -> thm
   val prove_recursive_term_function_exists : term -> thm

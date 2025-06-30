@@ -15,6 +15,7 @@ main {
   import: pair
   import: prim-rec
   import: arithmetic
+  import: reduce
   import: sum
   import: poset
   import: numeral
@@ -118,11 +119,17 @@ arithmetic {
   import: relation
   article: "../num/theories/arithmetic.ot.art"
 }
+reduce {
+  import: bool
+  import: arithmetic
+  article: "../num/reduce/src/reduce.ot.art"
+}
 numeral {
   import: bool
   import: arithmetic
   import: marker
   import: relation
+  import: pair
   article: "../num/theories/numeral.ot.art"
 }
 basic-size {
@@ -153,6 +160,7 @@ divides {
   import: bool
   import: num
   import: arithmetic
+  import: reduce
   import: numeral
   import: while
   article: "../num/extra_theories/divides.ot.art"
@@ -162,6 +170,7 @@ logroot {
   import: combin
   import: num
   import: arithmetic
+  import: reduce
   import: numeral
   import: while
   import: pair
@@ -185,6 +194,7 @@ bit {
   import: num
   import: combin
   import: arithmetic
+  import: reduce
   import: numeral
   import: while
   import: logroot
@@ -195,6 +205,7 @@ numeral-bit {
   import: num
   import: combin
   import: arithmetic
+  import: reduce
   import: numeral
   import: while
   import: pair
@@ -252,6 +263,7 @@ rich-list {
   import: bool
   import: marker
   import: combin
+  import: pair
   import: list
   import: arithmetic
   import: pred-set
@@ -263,11 +275,13 @@ indexed-lists {
   import: bool
   import: list
   import: relation
+  import: pair
   import: pred-set
   article: "../list/src/indexedLists.ot.art"
 }
 numposrep {
   import: bool
+  import: pair
   import: num
   import: arithmetic
   import: list

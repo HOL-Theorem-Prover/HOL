@@ -11,7 +11,8 @@ infix THEN THENC ORELSE ORELSE_TCL;
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+val SOME bool_grammars = Parse.grammarDB {thyname="bool"};
+val _ = Parse.temp_set_grammars bool_grammars
 
 (*---------------------------------------------------------------------------*
  * Miscellaneous bits.                                                       *
@@ -472,7 +473,7 @@ fun meson_single_expand infs rule ((g,ancestors),(insts,offset,size)) =
          let val h' = fol_inst_bump offset locin h
          in (h', checkan insts h' ancestors)
          end
-     val newhyps =  map mk_ihyp hyps
+     val newhyps = map mk_ihyp hyps
      open Uref
   in
     infs := !infs + 1;

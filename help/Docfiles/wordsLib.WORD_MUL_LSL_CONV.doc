@@ -13,7 +13,7 @@ into a sum of left shifts.
 
 \EXAMPLE
 {
-- WORD_MUL_LSL_CONV ``49w * a``
+- WORD_MUL_LSL_CONV “49w * a”
 > val it = |- 49w * a = a << 5 + a << 4 + a : thm
 }
 

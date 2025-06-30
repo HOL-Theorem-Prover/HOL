@@ -435,6 +435,11 @@ val _ = require (check_result (fn _ => true))
                  REWRITE_TAC [])
                 ([], ``p /\ T = p``)
 
+val _ = tprint "PAT_ABBREV_TAC handles underscores"
+val _ = require (check_result (fn _ => true))
+                (Q.PAT_ABBREV_TAC `bar = foo _`)
+                ([], ``_ y = foo a``)
+
 val _ = new_definition ("gh425a_def", ``gh425a a = a``);
 val _ = new_definition ("gh425b_def", ``gh425b p = (p ==> T)``);
 val _ = overload_on ("gh425", ``gh425a``);

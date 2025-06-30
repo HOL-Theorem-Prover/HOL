@@ -29,9 +29,10 @@ current and previously obtained subgoals.
 
 \SEEALSO
 proofManagerLib.set_goal, proofManagerLib.restart,
-proofManagerLib.backup,proofManagerLib.restore, proofManagerLib.save,
-proofManagerLib.set_backup,proofManagerLib.expand, proofManagerLib.expandf,
-proofManagerLib.p,proofManagerLib.top_thm, proofManagerLib.top_goal.
+proofManagerLib.backup, proofManagerLib.redo, proofManagerLib.restore,
+proofManagerLib.save, proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
 
 \ENDDOC
 

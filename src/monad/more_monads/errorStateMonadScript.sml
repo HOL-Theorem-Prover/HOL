@@ -33,18 +33,21 @@ val EXT_DEF = DEF `EXT g m = BIND m g` ;
   can compose any monad with the state transformer monad in this way *)
 val MCOMP_DEF = DEF `MCOMP g f = CURRY (OPTION_MCOMP (UNCURRY g) (UNCURRY f))`;
 
-val FOR_def = TotalDefn.tDefine "FOR"
- `(FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
+Definition FOR_def:
+ (FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
      if i = j then
         a i
      else
-        BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))`
-  (TotalDefn.WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`)
+        BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))
+Termination
+  WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`
+End
 
-val FOREACH_def = TotalDefn.Define`
+Definition FOREACH_def:
    ((FOREACH : 'a list # ('a -> (unit, 'state) M) -> (unit, 'state) M) ([], a) =
        UNIT ()) /\
-   (FOREACH (h :: t, a) = BIND (a h) (\u. FOREACH (t, a)))`
+   (FOREACH (h :: t, a) = BIND (a h) (\u. FOREACH (t, a)))
+End
 
 val READ_def = TotalDefn.Define`
    (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. SOME (f s, s)`;

@@ -1,15 +1,20 @@
+(* ========================================================================== *)
+(* FILE    : chap3Script.sml                                                  *)
+(* TITLE   : Theory of reductions (Chapter 3 of Barendregt 1984 [1])          *)
+(*                                                                            *)
+(* AUTHORS : 2005-2011 Michael Norrish                                        *)
+(*         : 2023-2025 Michael Norrish and Chun Tian                          *)
+(* ========================================================================== *)
+
 open HolKernel Parse boolLib bossLib;
 
-open boolSimps metisLib basic_swapTheory relationTheory listTheory hurdUtils;
+open boolSimps metisLib basic_swapTheory relationTheory listTheory hurdUtils
+     pred_setTheory pred_setLib BasicProvers;
 
-local open pred_setLib in end;
-
-open binderLib BasicProvers nomsetTheory termTheory chap2Theory appFOLDLTheory;
-open horeductionTheory
+open binderLib nomsetTheory termTheory chap2Theory appFOLDLTheory
+     horeductionTheory;
 
 val _ = new_theory "chap3";
-
-val SUBSET_DEF = pred_setTheory.SUBSET_DEF
 
 (* definition from p30 *)
 val beta_def = Define`beta M N = ?x body arg. (M = LAM x body @@ arg) /\
@@ -60,6 +65,11 @@ val ubeta_arrow = "-" ^ UnicodeChars.beta ^ "->"
 val _ = Unicode.unicode_version {u = ubeta_arrow, tmnm = "-b->"}
 val _ = Unicode.unicode_version {u = ubeta_arrow^"*", tmnm = "-b->*"}
 
+val _ = TeX_notation { hol = "-b->",
+        TeX = ("\\ensuremath{\\rightarrow}", 1) };
+
+val _ = TeX_notation { hol = "-b->*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow}", 1) };
 
 Theorem permutative_beta[simp]:
   permutative beta
@@ -124,6 +134,14 @@ val cc_beta_FV_SUBSET = store_thm(
   ``!M N. M -b-> N ==> FV N SUBSET FV M``,
   HO_MATCH_MP_TAC ccbeta_ind THEN Q.EXISTS_TAC `{}` THEN
   SRW_TAC [][SUBSET_DEF, FV_SUB] THEN PROVE_TAC []);
+
+Theorem betastar_FV_SUBSET :
+    !M N. M -b->* N ==> FV N SUBSET FV M
+Proof
+    HO_MATCH_MP_TAC RTC_INDUCT >> rw []
+ >> Q_TAC (TRANS_TAC SUBSET_TRANS) ‘FV M'’ >> art []
+ >> MATCH_MP_TAC cc_beta_FV_SUBSET >> art []
+QED
 
 Theorem cc_beta_tpm:
   !M N. M -b-> N ==> !p. tpm p M -b-> tpm p N
@@ -590,10 +608,16 @@ Proof
   simp[GSYM TC_RC_EQNS, theorem3_17]
 QED
 
-val beta_CR = store_thm(
-  "beta_CR",
-  ``CR beta``,
-  PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]);
+(* Theorem 3.2.8 [1, p.62] (1st version)
+
+   NOTE: This is the short proof due to Tait and Martin-Löf.
+   cf. chap11_1Theory.beta_CR_2 and finite_developmentsTheory.corollary11_2_29.
+ *)
+Theorem beta_CR :
+    CR beta
+Proof
+  PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]
+QED
 
 val betaCR_square = store_thm(
   "betaCR_square",
@@ -769,6 +793,16 @@ val lameq_consistent = store_thm(
   `normal_form beta K` by PROVE_TAC [K_beta_normal, beta_normal_form_bnf] THEN
   `S = K` by PROVE_TAC [corollary3_2_1] THEN
   FULL_SIMP_TAC (srw_ss()) [S_def, K_def]);
+
+Theorem incompatible_not_lameq :
+    !M N. incompatible M N ==> ~(M == N)
+Proof
+    rw [incompatible_def, inconsistent_def]
+ >> CCONTR_TAC >> fs []
+ >> ‘!P Q. P == Q’ by METIS_TAC [asmlam_absorb]
+ >> MP_TAC lameq_consistent
+ >> rw [consistent_def]
+QED
 
 val has_bnf_thm = store_thm(
   "has_bnf_thm",
@@ -1259,6 +1293,12 @@ val _ = set_fixity "-βη->*" (Infix(NONASSOC, 450))
 val _ = set_fixity "-η->" (Infix(NONASSOC, 450))
 val _ = set_fixity "-η->*" (Infix(NONASSOC, 450))
 
+val _ = TeX_notation { hol = "-η->",
+        TeX = ("\\ensuremath{\\rightarrow_{\\eta}}", 1) };
+
+val _ = TeX_notation { hol = "-η->*",
+        TeX = ("\\ensuremath{\\twoheadrightarrow_{\\eta}}", 1) };
+
 Theorem eta_FV_EQN:
   eta M N ⇒ FV N = FV M
 Proof
@@ -1601,6 +1641,49 @@ val betastar_eq_cong = store_thm(
 Theorem betastar_TRANS =
         RTC_TRANSITIVE |> Q.ISPEC ‘compat_closure beta’
                        |> REWRITE_RULE [transitive_def]
+
+Theorem lameq_imp_lameta :
+    !M N. M == N ==> lameta M N
+Proof
+    rw [GSYM beta_eta_lameta]
+ >> Know ‘conversion beta RSUBSET conversion (beta RUNION eta)’
+ >- (MATCH_MP_TAC conversion_monotone \\
+     simp [RSUBSET, RUNION])
+ >> rw [RSUBSET]
+ >> POP_ASSUM MATCH_MP_TAC
+ >> rw [GSYM lameq_betaconversion]
+QED
+
+Theorem etaconversion_imp_lameta :
+    !M N. conversion eta M N ==> lameta M N
+Proof
+    rw [GSYM beta_eta_lameta]
+ >> Know ‘conversion eta RSUBSET conversion (beta RUNION eta)’
+ >- (MATCH_MP_TAC conversion_monotone \\
+     simp [RSUBSET, RUNION])
+ >> rw [RSUBSET]
+QED
+
+Theorem lameta_asmlam :
+    !M N. lameta M N <=> asmlam (UNCURRY eta) M N
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC
+ >> qid_spec_tac ‘N’
+ >> qid_spec_tac ‘M’
+ >- (HO_MATCH_MP_TAC lameta_ind >> rw [asmlam_rules] (* 2 goals left *)
+     >- (MATCH_MP_TAC asmlam_trans \\
+         Q.EXISTS_TAC ‘M'’ >> art []) \\
+     MATCH_MP_TAC asmlam_eqn \\
+     rw [eta_def] \\
+     Q.EXISTS_TAC ‘x’ >> art [])
+ >> HO_MATCH_MP_TAC asmlam_ind >> rw [lameta_rules] (* 2 goals left *)
+ >- (MATCH_MP_TAC etaconversion_imp_lameta \\
+     MATCH_MP_TAC EQC_R \\
+     MATCH_MP_TAC compat_closure_R >> art [])
+ >> MATCH_MP_TAC lameta_TRANS
+ >> Q.EXISTS_TAC ‘N’ >> art []
+QED
 
 val _ = export_theory();
 val _ = html_theory "chap3";

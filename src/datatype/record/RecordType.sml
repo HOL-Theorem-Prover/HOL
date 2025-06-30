@@ -17,7 +17,8 @@ open HolKernel Parse boolLib
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+  val SOME bool_grammars = grammarDB {thyname="bool"}
+  val (Type,Term) = parse_from_grammars bool_grammars
 end
 open Parse
 
@@ -572,9 +573,9 @@ fun prove_recordtype_thms (tyinfo, fields) = let
 
   (* add to the TypeBase's simpls entry for the record type *)
   val new_simpls = let
-    val new_simpls0 =  [accessor_thm, accfupd_thm,
-                        literal_equality, literal_11, fupdfupd_thm,
-                        fupdfupds_comp_thm]
+    val new_simpls0 = [accessor_thm, accfupd_thm,
+                       literal_equality, literal_11, fupdfupd_thm,
+                       fupdfupds_comp_thm]
   in
     if not (null fupdcanon_thms) then
       fupdcanon_thm :: fupdcanon_comp_thm :: new_simpls0

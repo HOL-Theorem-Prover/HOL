@@ -25,8 +25,6 @@ QED
 Definition termval_def:
   (termval M v (V x) = v x) ∧
   (termval M v (Fn f l) = M.Fun f (MAP (termval M v) l))
-Termination
-  WF_REL_TAC ‘measure (term_size o SND o SND)’ >> simp[]
 End
 
 Theorem termval_def[simp,allow_rebind] =
@@ -302,9 +300,5 @@ Proof
   simp[] >> fs[satisfies_def] >> rw[] >> first_x_assum irule >>
   fs[valuation_def] >> fs[Abbr‘Mt’] >> metis_tac[]
 QED
-
-
-
-
 
 val _ = export_theory();

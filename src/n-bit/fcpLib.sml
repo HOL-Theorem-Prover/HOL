@@ -89,4 +89,11 @@ in
           end
 end
 
+val _ = let
+  val tyi = TypeBasePure.gen_datatype_info
+    {ax = fcp_Axiom, ind = fcp_ind, case_defs = [fcp_case_def]}
+in
+  TypeBase.write tyi
+end
+
 end

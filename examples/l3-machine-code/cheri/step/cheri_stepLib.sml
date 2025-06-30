@@ -15,7 +15,8 @@ val () = show_assums := true
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars cheri_step_grammars
+   val (Type, Term) =
+       parse_from_grammars $ valOf $ grammarDB{thyname="cheri_step"}
 end
 open Parse
 
@@ -335,7 +336,8 @@ local
       in
          if utilsLib.vacuous thm then NONE else SOME thm
       end
-  val thms = List.map (DB.fetch "cheri_step") cheri_stepTheory.rwts
+  val thms = List.map (DB.fetch "cheri_step")
+                      (valOf $ utilsLib.get_rewrites {thyname="cheri_step"})
   val find_thm = utilsLib.find_rw (utilsLib.mk_rw_net utilsLib.lhsc thms)
 in
    fun eval tm =

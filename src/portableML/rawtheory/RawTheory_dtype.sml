@@ -2,9 +2,18 @@ structure RawTheory_dtype =
 struct
 
 datatype class = Thm | Axm | Def
+fun class_toString Thm = "Thm"
+  | class_toString Axm = "Axm"
+  | class_toString Def = "Def"
 
+type raw_name = {thy : string, hash : string}
+fun raw_name_compare (r1:raw_name, r2:raw_name) =
+    case String.compare(#thy r1, #thy r2) of
+        EQUAL => String.compare(#hash r1, #hash r2)
+      | x => x
+fun raw_name_toString {thy,hash} =
+    "{" ^ thy ^ "," ^ hash ^ "}"
 
-type raw_name = {thy : string, tstamp1 : Arbnum.num, tstamp2 : Arbnum.num}
 datatype raw_type = TYV of string
                   | TYOP of {opn : int (* ref to idtable *),
                              args : int list (* refs to earlier types *)}
@@ -52,7 +61,7 @@ type 'a raw_exports = {
 type 'a raw_core = {tables : sharing_tables, exports : 'a raw_exports}
 
 type raw_theory = {
-  name : raw_name,
+  name : string,
   parents : raw_name list,
   tables : sharing_tables,
   newsig : {

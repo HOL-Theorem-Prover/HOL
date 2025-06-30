@@ -167,6 +167,11 @@ val {export = export_cong,...} =
       }
     }
 
+val _ = ThmAttribute.define_abbreviation{
+      abbrev="cong",
+      expansion=[("defncong", [])]
+    }
+
 
 (* ----------------------------------------------------------------------
 

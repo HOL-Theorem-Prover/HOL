@@ -3,6 +3,25 @@ struct
 
   open HolKernel boolLib pred_setTheory
 
+  local
+    val GSPEC_t = prim_mk_const {Name = "GSPEC", Thy = "pred_set"}
+    val IN_t = mk_thy_const {Name = "IN", Thy = "bool",
+                             Ty = alpha --> (alpha --> bool) --> bool}
+    val f_t = mk_var ("f", beta --> pairSyntax.mk_prod (alpha, bool))
+    val x_t = mk_var ("x", alpha)
+    val SET_SPEC_CONV =
+      {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),
+       key = SOME ([], list_mk_comb (IN_t, [x_t, mk_comb (GSPEC_t, f_t)])),
+       name = "SET_SPEC_CONV",
+       trace = 2}
+  in
+    val SET_SPEC_ss =
+      simpLib.SSFRAG
+        {name = SOME "SET_SPEC", ac = [], congs = [], convs = [SET_SPEC_CONV],
+         dprocs = [], filter = NONE, rewrs = []}
+    val _ = BasicProvers.logged_addfrags {thyname = "pred_set"} [SET_SPEC_ss]
+  end
+
   val PRED_SET_ss = simpLib.merge_ss [BasicProvers.thy_ssfrag "pred_set",
                                       SET_SPEC_ss]
 

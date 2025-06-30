@@ -17,6 +17,7 @@ open HolKernel Parse boolLib bossLib;
  ******************************************************************************)
 open arithmeticTheory pairLib pairTheory PairRules combinTheory
      composeTheory compile vsynth;
+
 infixr 3 THENR;
 infixr 3 ORELSER;
 
@@ -93,7 +94,6 @@ val (MultIter,MultIter_ind,MultIter_dev) =
  hwDefine
   `MultIter (m,n:num,acc:num) =
       if m = 0n then (0,n,acc) else MultIter(m-1,n,n + acc)`;
-
 
 (*****************************************************************************)
 (* Two argument multiplication, defined in terms of MultIter                 *)

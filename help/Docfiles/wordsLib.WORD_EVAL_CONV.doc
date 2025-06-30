@@ -13,7 +13,7 @@ operations.  It uses {wordsLib.words_compset}.
 
 \EXAMPLE
 {
-- WORD_EVAL_CONV ``word_log2 (word_reverse (3w * (33w #<< 4))) : word32``
+- WORD_EVAL_CONV “word_log2 (word_reverse (3w * (33w #<< 4))) : word32”
 > val it = |- word_log2 (word_reverse (3w * 33w #<< 4)) = 27w : thm
 }
 

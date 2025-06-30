@@ -17,6 +17,8 @@ open Prim_rec pairLib numLib numpairTheory hurdUtils tautLib pureSimps
      metisLib mesonLib simpLib boolSimps dividesTheory
      combinTheory relationTheory optionTheory TotalDefn;
 
+local open pred_setpp in end
+
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
@@ -175,6 +177,7 @@ val GSPEC_DEF_LEMMA = prove(
 
 val GSPECIFICATION = new_specification
   ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
+
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 val _ = ot0 "GSPEC" "specification"
 
@@ -385,7 +388,7 @@ val _ = set_fixity UnicodeChars.universal_set (Prefix 2200)
    abstraction produces ARB terms.)  To turn printing off, we overload the
    same pattern to "" *)
 val _ = overload_on ("", “\x:'a itself. UNIV : 'a set”)
-local open pred_setpp in end
+
 val _ = add_ML_dependency "pred_setpp"
 val _ = add_user_printer ("pred_set.UNIV", ``UNIV:'a set``)
 
@@ -538,7 +541,7 @@ val SUBSET_K = store_thm (* from util_prob *)
 (* Proper subset.                                                        *)
 (* ===================================================================== *)
 
-val PSUBSET_DEF =  new_definition(
+val PSUBSET_DEF = new_definition(
   "PSUBSET_DEF",
   ``PSUBSET (s:'a set) t <=> s SUBSET t /\ ~(s = t)``);
 val _ = set_fixity "PSUBSET" (Infix(NONASSOC, 450))
@@ -3166,7 +3169,7 @@ val card_rel_def =
 (* Prove that such a relation exists.                                   *)
 (* ---------------------------------------------------------------------*)
 
-val CARD_REL_EXISTS =  prove_rec_fn_exists num_Axiom card_rel_def;
+val CARD_REL_EXISTS = prove_rec_fn_exists num_Axiom card_rel_def;
 
 (* ---------------------------------------------------------------------*)
 (* Now, prove that it doesn't matter which element we delete            *)
@@ -5141,6 +5144,24 @@ Theorem SUBSET_CROSS :
     !a b c d. a SUBSET b /\ c SUBSET d ==> (a CROSS c) SUBSET (b CROSS d)
 Proof
     RW_TAC std_ss [SUBSET_DEF, IN_CROSS]
+QED
+
+Theorem IMAGE_FST_CROSS :
+    !s t. t <> {} ==> IMAGE FST (s CROSS t) = s
+Proof
+    rw [EXTENSION]
+ >> EQ_TAC >> rw [] >> rw []
+ >> Q.RENAME_TAC [‘y IN s’]
+ >> Q.EXISTS_TAC ‘(y,x)’ >> rw []
+QED
+
+Theorem IMAGE_SND_CROSS :
+    !s t. s <> {} ==> IMAGE SND (s CROSS t) = t
+Proof
+    rw [EXTENSION]
+ >> EQ_TAC >> rw [] >> rw []
+ >> Q.RENAME_TAC [‘y IN t’]
+ >> Q.EXISTS_TAC ‘(x,y)’ >> rw []
 QED
 
 (* sums *)
@@ -7764,7 +7785,7 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
-    A proof of Kőnig's Lemma                                                UOK
+    A proof of Kőnig's Lemma
    ---------------------------------------------------------------------- *)
 
 (* a counting exercise for R-trees.  If x0 has finitely many successors, and
@@ -9066,27 +9087,6 @@ QED
 
 (*---------------------------------------------------------------------------*)
 
-val _ = Theory.quote_adjoin_to_theory
-  `val SET_SPEC_ss : simpLib.ssfrag`
-`local
-  val GSPEC_t = prim_mk_const {Name = "GSPEC", Thy = "pred_set"}
-  val IN_t = mk_thy_const {Name = "IN", Thy = "bool",
-                           Ty = alpha --> (alpha --> bool) --> bool}
-  val f_t = mk_var ("f", beta --> pairSyntax.mk_prod (alpha, bool))
-  val x_t = mk_var ("x", alpha)
-  val SET_SPEC_CONV =
-    {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),
-     key = SOME ([], list_mk_comb (IN_t, [x_t, mk_comb (GSPEC_t, f_t)])),
-     name = "SET_SPEC_CONV",
-     trace = 2}
-in
-  val SET_SPEC_ss =
-    simpLib.SSFRAG
-      {name = SOME "SET_SPEC", ac = [], congs = [], convs = [SET_SPEC_CONV],
-       dprocs = [], filter = NONE, rewrs = []}
-  val _ = BasicProvers.logged_addfrags {thyname = "pred_set"} [SET_SPEC_ss]
-end
-`
 Theorem FUNPOW_INJ:
   INJ f UNIV UNIV ==> INJ (FUNPOW f n) UNIV UNIV
 Proof

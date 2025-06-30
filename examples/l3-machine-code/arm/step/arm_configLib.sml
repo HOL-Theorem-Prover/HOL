@@ -12,7 +12,7 @@ open armTheory utilsLib
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars armTheory.arm_grammars
+   val (Type, Term) = parse_from_grammars $ valOf $ grammarDB {thyname="arm"}
 end
 
 open Parse

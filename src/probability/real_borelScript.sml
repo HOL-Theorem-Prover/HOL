@@ -26,7 +26,7 @@ open metisLib arithmeticTheory pred_setTheory pred_setLib numTheory numLib
 
 open cardinalTheory real_topologyTheory iterateTheory real_of_ratTheory;
 
-open hurdUtils util_probTheory sigma_algebraTheory;
+open hurdUtils sigma_algebraTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "borel" (renamed to "real_borel")               *)
@@ -43,6 +43,26 @@ val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = intLib.deprecate_int ();
 val _ = ratLib.deprecate_rat ();
+
+val PREIMAGE_REAL_COMPL1 = store_thm
+  ("PREIMAGE_REAL_COMPL1", ``!c:real. COMPL {x | c < x} = {x | x <= c}``,
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
+
+val PREIMAGE_REAL_COMPL2 = store_thm
+  ("PREIMAGE_REAL_COMPL2", ``!c:real. COMPL {x | c <= x} = {x | x < c}``,
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
+
+val PREIMAGE_REAL_COMPL3 = store_thm
+  ("PREIMAGE_REAL_COMPL3", ``!c:real. COMPL {x | x <= c} = {x | c < x}``,
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lt,SPECIFICATION]);
+
+val PREIMAGE_REAL_COMPL4 = store_thm
+  ("PREIMAGE_REAL_COMPL4", ``!c:real. COMPL {x | x < c} = {x | c <= x}``,
+  RW_TAC real_ss [COMPL_DEF,UNIV_DEF,DIFF_DEF,EXTENSION]
+  >> RW_TAC real_ss [GSPECIFICATION,GSYM real_lte,SPECIFICATION]);
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
@@ -732,6 +752,15 @@ val in_borel_measurable = store_thm
             >> RW_TAC std_ss [subset_class_def, SUBSET_DEF, IN_UNIV])
    >> ASM_REWRITE_TAC []);
 
+Theorem in_borel_measurable_I :
+    (\x. x) IN measurable borel borel
+Proof
+    ‘(\x :real. x) = I’ by METIS_TAC [I_THM]
+ >> POP_ORW
+ >> MATCH_MP_TAC MEASURABLE_I
+ >> REWRITE_TAC [sigma_algebra_borel]
+QED
+
 val borel_measurable_indicator = store_thm
   ("borel_measurable_indicator",
    ``!s a. sigma_algebra s /\ a IN subsets s ==>
@@ -1123,7 +1152,8 @@ Proof
  >> Q.PAT_X_ASSUM `!f. P f ==> Q f`
      (MP_TAC o
       Q.SPEC `(\n. {x | c - ((1/2) pow n) <= x /\ x < c + ((1/2) pow n)})`)
- >> `(\n. {x | c - ((1/2) pow n) <= x /\ x < c + ((1/2) pow n)}) IN (UNIV -> subsets borel)`
+ >> ‘(\n. {x | c - ((1/2) pow n) <= x /\ x < c + ((1/2) pow n)}) IN
+       (UNIV -> subsets borel)’
      by RW_TAC std_ss [IN_FUNSET, borel_measurable_sets_ge_less]
  >> METIS_TAC []
 QED
@@ -1164,6 +1194,33 @@ Proof
                   borel_measurable_sets_not_sing]
 QED
 
+Theorem finite_imp_borel_measurable :
+    !c. FINITE c ==> c IN subsets borel
+Proof
+    HO_MATCH_MP_TAC FINITE_INDUCT
+ >> ASSUME_TAC sigma_algebra_borel
+ >> rw [SIGMA_ALGEBRA_EMPTY]
+ >> ‘e INSERT c = c UNION {e}’ by ASM_SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_UNION
+ >> rw [borel_measurable_sets_sing]
+QED
+
+Theorem countable_imp_borel_measurable :
+    !c. countable c ==> c IN subsets borel
+Proof
+    ASSUME_TAC sigma_algebra_borel
+ >> rw [COUNTABLE_ENUM]
+ >- rw [SIGMA_ALGEBRA_EMPTY]
+ >> ASSUME_TAC sigma_algebra_borel
+ >> qabbrev_tac ‘g = \x. {f x}’
+ >> Know ‘IMAGE f UNIV = BIGUNION (IMAGE g UNIV)’
+ >- rw [Once EXTENSION, IN_BIGUNION_IMAGE, Abbr ‘g’]
+ >> Rewr'
+ >> fs [SIGMA_ALGEBRA_FN]
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [Abbr ‘g’, IN_FUNSET, borel_measurable_sets_sing]
+QED
+
 (* borel_measurable_plus_borel_measurable *)
 Theorem in_borel_measurable_add :
     !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
@@ -1171,9 +1228,11 @@ Theorem in_borel_measurable_add :
 Proof
     rpt STRIP_TAC
  >> RW_TAC std_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV]
- >> Know `!c. {w | w IN space a /\ h w < c} =
-              BIGUNION (IMAGE (\r. {x | x IN space a /\ f x < r /\ r < c - g x}) q_set)`
- >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_UNIV, IN_INTER] \\
+ >> Know ‘!c. {w | w IN space a /\ h w < c} =
+              BIGUNION
+               (IMAGE (\r. {x | x IN space a /\ f x < r /\ r < c - g x}) q_set)’
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_UNIV,
+                    IN_INTER] \\
      EQ_TAC >- (RW_TAC std_ss [] \\
                 MATCH_MP_TAC Q_DENSE_IN_REAL \\
                 METIS_TAC [REAL_LT_SUB_LADD]) \\
@@ -1198,15 +1257,28 @@ Proof
  >- (rpt STRIP_TAC \\
      METIS_TAC [REAL_LT_SUB_LADD, REAL_ADD_COMM])
  >> DISCH_TAC
- >> `{x | x IN space a /\ r < c - g x} = {x | x IN space a /\ g x < c - r}` by ASM_SET_TAC []
- >> POP_ORW
+ >> ‘{x | x IN space a /\ r < c - g x} =
+     {x | x IN space a /\ g x < c - r}’ by ASM_SET_TAC [] >> POP_ORW
  >> MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
                          (Q.SPECL [‘g’, ‘a’] in_borel_measurable_less))
  >> RW_TAC std_ss []
 QED
 
+Theorem borel_2d_measurable_add :
+    (\(x,y). x + y) IN borel_measurable (borel CROSS borel)
+Proof
+    rpt STRIP_TAC
+ >> ASSUME_TAC sigma_algebra_borel
+ >> ‘sigma_algebra (borel CROSS borel)’ by PROVE_TAC [SIGMA_ALGEBRA_PROD_SIGMA_WEAK]
+ >> MATCH_MP_TAC in_borel_measurable_add
+ >> qexistsl_tac [‘FST’, ‘SND’]
+ >> simp [MEASURABLE_FST, MEASURABLE_SND]
+ >> simp [FORALL_PROD]
+QED
+
 Theorem in_borel_measurable_const :
-    !a k f. sigma_algebra a /\ (!x. x IN space a ==> (f x = k)) ==> f IN measurable a borel
+    !a k f. sigma_algebra a /\ (!x. x IN space a ==> (f x = k)) ==>
+            f IN measurable a borel
 Proof
     RW_TAC std_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV]
  >> rename1 ‘{w | w IN space a /\ f w < c} IN subsets a’
@@ -1258,6 +1330,18 @@ Proof
       RW_TAC real_ss [],
       (* goal 2 (of 2) *)
       REWRITE_TAC [real_sub] ]
+QED
+
+Theorem borel_2d_measurable_sub :
+    (\(x,y). x - y) IN borel_measurable (borel CROSS borel)
+Proof
+    rpt STRIP_TAC
+ >> ASSUME_TAC sigma_algebra_borel
+ >> ‘sigma_algebra (borel CROSS borel)’ by PROVE_TAC [SIGMA_ALGEBRA_PROD_SIGMA_WEAK]
+ >> MATCH_MP_TAC in_borel_measurable_sub
+ >> qexistsl_tac [‘FST’, ‘SND’]
+ >> simp [MEASURABLE_FST, MEASURABLE_SND]
+ >> simp [FORALL_PROD]
 QED
 
 Theorem in_borel_measurable_pow2 : (* was: in_borel_measurable_sqr *)
@@ -3502,7 +3586,8 @@ Proof
           Q.X_GEN_TAC ‘y’ >> Cases_on ‘y’ >> DISCH_TAC \\
           rename1 ‘dist mr2 ((0,r),(x0,y0)) < e’ \\
           Q.EXISTS_TAC ‘(x0,y0)’ >> rw [] \\
-          Q.PAT_X_ASSUM ‘!y. dist mr2 ((0,-r),y) < e ==> P’ (MP_TAC o (Q.SPEC ‘(-x0,-y0)’)) \\
+          Q.PAT_X_ASSUM ‘!y. dist mr2 ((0,-r),y) < e ==> P’
+            (MP_TAC o (Q.SPEC ‘(-x0,-y0)’)) \\
          ‘0 = -0’ by PROVE_TAC [REAL_NEG_0] >> POP_ORW \\
           RW_TAC std_ss [MR2_MIRROR] \\
           Cases_on ‘x’ >> fs [] \\
@@ -3522,7 +3607,8 @@ Proof
           Q.X_GEN_TAC ‘y’ >> Cases_on ‘y’ >> DISCH_TAC \\
           rename1 ‘dist mr2 ((q,0),(x0,y0)) < e’ \\
           Q.EXISTS_TAC ‘(x0,y0)’ >> rw [] \\
-          Q.PAT_X_ASSUM ‘!y. dist mr2 ((-q,0),y) < e ==> P’ (MP_TAC o (Q.SPEC ‘(-x0,-y0)’)) \\
+          Q.PAT_X_ASSUM ‘!y. dist mr2 ((-q,0),y) < e ==> P’
+            (MP_TAC o (Q.SPEC ‘(-x0,-y0)’)) \\
          ‘0 = -0’ by PROVE_TAC [REAL_NEG_0] >> POP_ORW \\
           RW_TAC std_ss [MR2_MIRROR] \\
           Cases_on ‘x’ >> fs [] \\
@@ -3542,7 +3628,8 @@ Proof
           Q.X_GEN_TAC ‘y’ >> Cases_on ‘y’ >> DISCH_TAC \\
           rename1 ‘dist mr2 ((x0,y0),(x1,y1)) < e’ \\
           Q.EXISTS_TAC ‘(x1,y1)’ >> rw [] \\
-          Q.PAT_X_ASSUM ‘!y. dist mr2 ((-x0,-y0),y) < e ==> P’ (MP_TAC o (Q.SPEC ‘(-x1,-y1)’)) \\
+          Q.PAT_X_ASSUM ‘!y. dist mr2 ((-x0,-y0),y) < e ==> P’
+            (MP_TAC o (Q.SPEC ‘(-x1,-y1)’)) \\
           rw [MR2_MIRROR] \\
           Cases_on ‘x’ >> fs [] \\
           Q.PAT_X_ASSUM ‘-x1 = x2’ (fs o wrap o SYM) \\
@@ -3554,7 +3641,8 @@ Proof
           Q.X_GEN_TAC ‘y’ >> Cases_on ‘y’ >> DISCH_TAC \\
           rename1 ‘dist mr2 ((0,r),(x0,y0)) < e’ \\
           Q.EXISTS_TAC ‘(x0,y0)’ >> rw [] \\
-          Q.PAT_X_ASSUM ‘!y. dist mr2 ((0,-r),y) < e ==> P’ (MP_TAC o (Q.SPEC ‘(-x0,-y0)’)) \\
+          Q.PAT_X_ASSUM ‘!y. dist mr2 ((0,-r),y) < e ==> P’
+            (MP_TAC o (Q.SPEC ‘(-x0,-y0)’)) \\
          ‘0 = -0’ by PROVE_TAC [REAL_NEG_0] >> POP_ORW \\
           RW_TAC std_ss [MR2_MIRROR] \\
           Cases_on ‘x’ >> fs [] \\
@@ -3578,7 +3666,8 @@ Proof
           Q.X_GEN_TAC ‘y’ >> Cases_on ‘y’ >> DISCH_TAC \\
           rename1 ‘dist mr2 ((q,0),(x0,y0)) < e’ \\
           Q.EXISTS_TAC ‘(x0,y0)’ >> rw [] \\
-          Q.PAT_X_ASSUM ‘!y. dist mr2 ((-q,0),y) < e ==> P’ (MP_TAC o (Q.SPEC ‘(-x0,-y0)’)) \\
+          Q.PAT_X_ASSUM ‘!y. dist mr2 ((-q,0),y) < e ==> P’
+            (MP_TAC o (Q.SPEC ‘(-x0,-y0)’)) \\
          ‘0 = -0’ by PROVE_TAC [REAL_NEG_0] >> POP_ORW \\
           RW_TAC std_ss [MR2_MIRROR] \\
           Cases_on ‘x’ >> fs [] \\

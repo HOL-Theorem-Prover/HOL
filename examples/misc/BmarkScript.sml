@@ -5,7 +5,7 @@
 open HolKernel Parse boolLib
 open Prim_rec numLib unwindLib bossLib Rsyntax
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 
 
 (*---------------------------------------------------------------------------*

@@ -63,7 +63,9 @@ syn region HOLString start=/«/ end=/»/ contains=MLEscChar
 syn region HOLDefnStart
       \ matchgroup=MLKeyword start="^\<Definition\>"
       \ end=":"me=e-1
-      \ contains=MLIdent nextgroup=HOLDefnEnd
+      \ contains=MLIdent,HOLThmExtra
+      \ nextgroup=HOLDefnEnd
+
 syn match  HOLQED /^\<End\>/
 syn region HOLDefnEnd
       \ matchgroup=MLKeyword start=":"
@@ -105,7 +107,7 @@ syn region HOLThmProofFold
 syn region HOLTriviality
       \ matchgroup=MLKeyword start="^\<Triviality\>"
       \ end="[:=]"me=e-1
-      \ contains=MLIdent
+      \ contains=MLIdent,HOLThmExtra
       \ nextgroup=HOLThmProof
 
 " (Co)Inductive

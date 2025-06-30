@@ -39,5 +39,20 @@ fun toNat x =
 val divmod = divMod
 val quotrem = quotRem
 fun negate x = ~x
+fun sgn x = x >= 0
+
+(* NOTE: gcd is always positive *)
+fun gcd (a, b) = fromNat (Arbnumcore.gcd (toNat (abs a), toNat (abs b)))
+
+(* previous version which returns negative values if x or y is negative:
+local
+  fun gxd x y =
+    if y = zero then x else gxd y (x mod y)
+in
+  fun gcd (x, y) = if x < y then gxd y x else gxd x y
+end
+ *)
+
+fun lcm (x, y) = (x * y) div gcd (x, y)
 
 end

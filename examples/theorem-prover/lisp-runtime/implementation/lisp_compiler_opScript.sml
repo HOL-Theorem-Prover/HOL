@@ -4283,7 +4283,7 @@ val (_,mc_check_exists_def,mc_check_exists_pre_def) = compile "x64" ``
 val FUN_LOOKUP_EQ_NONE = prove(
   ``!xs. (FUN_LOOKUP xs y = NONE) = ~(MEM y (MAP FST xs))``,
   Induct \\ FULL_SIMP_TAC std_ss [FUN_LOOKUP_def,MAP,MEM,FORALL_PROD]
-  \\ SRW_TAC [] []);
+  \\ SRW_TAC [] [EQ_IMP_THM]);
 
 val mc_check_exists_thm = prove(
   ``!xs y fc ok.

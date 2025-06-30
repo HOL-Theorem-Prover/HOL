@@ -19,8 +19,8 @@
 open HolKernel Parse boolLib BasicProvers;
 
 open Num_conv mesonLib arithmeticTheory
-     simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
-     relationTheory combinTheory quotientLib
+     simpLib boolSimps pairTheory pred_setTheory pred_setLib
+     TotalDefn metisLib relationTheory combinTheory quotientLib
 
 local open pairTheory pred_setTheory Datatype OpenTheoryMap
 in end;
@@ -49,7 +49,7 @@ fun qxchl [] ttac = ttac
 
 val _ = new_theory "list";
 
-val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
+val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
 val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define
 val bDefine = Lib.with_flag (Defn.def_suffix, "") Define
@@ -156,6 +156,7 @@ val _ = overload_on ("++", Term‘APPEND’);
 val _ = Unicode.unicode_version {u = UnicodeChars.doubleplus, tmnm = "++"}
 val _ = TeX_notation { hol = UnicodeChars.doubleplus,
                        TeX = ("\\HOLTokenDoublePlus", 1) }
+val _ = TeX_notation { hol = "++", TeX = ("\\HOLTokenDoublePlus", 1) };
 
 (* preserving old choice of quantification order *)
 Theorem APPEND[simp]:
@@ -834,6 +835,12 @@ val NULL_LENGTH = Q.store_thm("NULL_LENGTH",
   ‘!l. NULL l = (LENGTH l = 0)’,
   REWRITE_TAC[NULL_EQ, LENGTH_NIL]);
 
+Theorem NULL_MAP[simp]:
+  NULL (MAP f ls) = NULL ls
+Proof
+  rw[NULL_EQ]
+QED
+
 val LENGTH_CONS = store_thm("LENGTH_CONS",
  “!l n. (LENGTH l = SUC n) =
           ?h:'a. ?l'. (LENGTH l' = n) /\ (l = CONS h l')”,
@@ -1075,6 +1082,12 @@ val LENGTH_TL = Q.store_thm
 ("LENGTH_TL",
   ‘!l. 0 < LENGTH l ==> (LENGTH (TL l) = LENGTH l - 1)’,
   Cases_on ‘l’ THEN SIMP_TAC arith_ss [LENGTH, TL]);
+
+Theorem LENGTH_TL_LE:
+  !ls. LENGTH (TL ls) <= LENGTH ls
+Proof
+  Cases \\ rw[]
+QED
 
 val FILTER_EQ_NIL = Q.store_thm
 ("FILTER_EQ_NIL",
@@ -1418,7 +1431,7 @@ QED
      recursive definitions by so-called higher-order recursion.
  ---------------------------------------------------------------------------*)
 
-val list_size_def =
+Theorem list_size_thm[simp] =
   REWRITE_RULE [arithmeticTheory.ADD_ASSOC]
                (#2 (TypeBase.size_of “:'a list”));
 
@@ -1431,10 +1444,10 @@ Theorem list_size_cong[defncong]:
     list_size f M = list_size f' N
 Proof
 Induct
-  THEN REWRITE_TAC [list_size_def, MEM]
+  THEN REWRITE_TAC [list_size_thm, MEM]
   THEN REPEAT STRIP_TAC
   THEN PAT_X_ASSUM (Term‘x = y’) (SUBST_ALL_TAC o SYM)
-  THEN REWRITE_TAC [list_size_def]
+  THEN REWRITE_TAC [list_size_thm]
   THEN MK_COMB_TAC THENL
   [NTAC 2 (MK_COMB_TAC THEN TRY REFL_TAC)
      THEN FIRST_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [MEM],
@@ -1448,7 +1461,7 @@ QED
 Theorem list_size_append:
   !f xs ys. list_size f (xs ++ ys) = list_size f xs + list_size f ys
 Proof
-  GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_def]
+  GEN_TAC \\ Induct \\ FULL_SIMP_TAC arith_ss [APPEND, list_size_thm]
 QED
 
 Theorem FOLDR_CONG[defncong]:
@@ -2085,7 +2098,7 @@ Theorem TAKE1:
 Proof Induct_on ‘l’ >> srw_tac[][]
 QED
 
-Theorem TAKE1_DROP:
+Theorem TAKE1_DROP[simp]:
   !n l. n < LENGTH l ==> (TAKE 1 (DROP n l) = [EL n l])
 Proof
   Induct_on ‘l’ >> rw[] >> Cases_on ‘n’ >> fs[EL_restricted]
@@ -2795,6 +2808,7 @@ val FRONT_SNOC = store_thm(
   RW_TAC bool_ss [SNOC]);
 val _ = export_rewrites ["FRONT_SNOC"]
 
+(* NOTE: Do NOT put [simp] here! *)
 val SNOC_APPEND = store_thm("SNOC_APPEND",
    “!x (l:('a) list). SNOC x l = APPEND l [x]”,
    GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [SNOC, APPEND]);
@@ -2823,11 +2837,13 @@ val EL_LENGTH_SNOC = store_thm("EL_LENGTH_SNOC",
     (“!l:'a list. !x. EL (LENGTH l) (SNOC x l) = x”),
     LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[EL, SNOC, HD, TL, LENGTH]);
 
-val APPEND_SNOC = store_thm("APPEND_SNOC",
-    (“!l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)”),
-    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND, SNOC]);
+Theorem APPEND_SNOC[simp] :
+    !l1 (x:'a) l2. APPEND l1 (SNOC x l2) = SNOC x (APPEND l1 l2)
+Proof
+    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND, SNOC]
+QED
 
-Theorem EVERY_SNOC:
+Theorem EVERY_SNOC[simp] :
   !P (x:'a) l. EVERY P (SNOC x l) <=> EVERY P l /\ P x
 Proof
     GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
@@ -2895,7 +2911,7 @@ val SNOC_Axiom_old = prove(
           (fn1[] = e) /\
           (!x l. fn1(SNOC x l) = f(fn1 l)x l)”,
 
- let val  lemma =  CONV_RULE (EXISTS_UNIQUE_CONV)
+ let val lemma = CONV_RULE (EXISTS_UNIQUE_CONV)
        (REWRITE_RULE[REVERSE_REVERSE] (BETA_RULE (SPECL
          [“e:'b”,“(\ft x l. f ft x (REVERSE l)):'b -> ('a -> (('a)list -> 'b))”]
         (PURE_ONCE_REWRITE_RULE
@@ -2933,7 +2949,7 @@ val SNOC_Axiom = store_thm(
   Q.EXISTS_TAC ‘fn1’ THEN ASM_REWRITE_TAC []);
 
 val SNOC_INDUCT = save_thm("SNOC_INDUCT", prove_induction_thm SNOC_Axiom_old);
-val SNOC_CASES =  save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
+val SNOC_CASES = save_thm("SNOC_CASES", hd (prove_cases_thm SNOC_INDUCT));
 
 (* cf. rich_listTheory.IS_PREFIX_SNOC *)
 Theorem isPREFIX_SNOC[simp] :
@@ -3945,6 +3961,48 @@ val SHORTLEX_total = store_thm(
   MAP_EVERY Cases_on [‘LENGTH l1 < LENGTH l2’, ‘h1 = h2’, ‘l1 = l2’] >>
   simp[] >> metis_tac[arithmeticTheory.LESS_LESS_CASES]);
 
+Theorem SHORTLEX_irreflexive :
+    !R. irreflexive R ==> irreflexive (SHORTLEX R)
+Proof
+    rw [irreflexive_def]
+ >> Induct_on ‘x’ >> rw [SHORTLEX_def]
+QED
+
+Theorem SHORTLEX_same_lengths :
+    !R h1 h2 t1 t2. LENGTH t1 = LENGTH t2 ==>
+                   (SHORTLEX R (h1::t1) (h2::t2) <=>
+                    R h1 h2 \/ h1 = h2 /\ SHORTLEX R t1 t2)
+Proof
+    rw [SHORTLEX_THM]
+QED
+
+(* NOTE: ‘antisymmetric’ (together with ‘transitive’) is sufficient for using
+   iterateTheory.TOPOLOGICAL_SORT' to sort a list of lists w.r.t. ‘SHORTLEX R’.
+
+   The antecedent ‘irreflexive R’ is necessary.
+ *)
+Theorem SHORTLEX_antisymmetric :
+    !R. irreflexive R /\ antisymmetric R ==> antisymmetric (SHORTLEX R)
+Proof
+    rw [antisymmetric_def, irreflexive_def]
+ >> NTAC 2 (POP_ASSUM MP_TAC)
+ >> qid_spec_tac ‘y’
+ >> qid_spec_tac ‘x’
+ >> Induct_on ‘x’
+ >- rw [SHORTLEX_THM]
+ >> rpt STRIP_TAC
+ >> Cases_on ‘y’ >- fs [SHORTLEX_THM]
+ >> Q.RENAME_TAC [‘h1::t1 = h2::t2’]
+ >> ‘LENGTH (h1::t1) <= LENGTH (h2::t2)’ by PROVE_TAC [SHORTLEX_LENGTH_LE]
+ >> ‘LENGTH (h2::t2) <= LENGTH (h1::t1)’ by PROVE_TAC [SHORTLEX_LENGTH_LE]
+ >> ‘LENGTH (h1::t1) = LENGTH (h2::t2)’ by PROVE_TAC [LESS_EQUAL_ANTISYM]
+ >> FULL_SIMP_TAC arith_ss [LENGTH]
+ >> Q.PAT_X_ASSUM ‘SHORTLEX R (h1::t1) (h2::t2)’ MP_TAC
+ >> Q.PAT_X_ASSUM ‘SHORTLEX R (h2::t2) (h1::t1)’ MP_TAC
+ >> rw [SHORTLEX_same_lengths] (* 5 subgoals *)
+ >> PROVE_TAC []
+QED
+
 val WF_SHORTLEX_same_lengths = Q.store_thm(
   "WF_SHORTLEX_same_lengths",
   ‘WF R ==>
@@ -4018,6 +4076,14 @@ val WF_SHORTLEX = Q.store_thm(
   ‘LENGTH bb <= LENGTH a0’ by metis_tac[SHORTLEX_LENGTH_LE] >>
   ‘LENGTH a0 = LENGTH a’ by metis_tac[] >>
   full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) []);
+
+Theorem SHORTLEX_SNOC :
+    !R l h1 h2. R h1 h2 ==> SHORTLEX R (SNOC h1 l) (SNOC h2 l)
+Proof
+    Q.X_GEN_TAC ‘R’
+ >> HO_MATCH_MP_TAC list_induction
+ >> rw []
+QED
 
 val LLEX_def = Define‘
   (LLEX R [] l2 <=> l2 <> []) /\
@@ -4866,6 +4932,15 @@ Proof
   \\ FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) []
 QED
 
+Theorem IS_SOME_OPT_MMAP:
+  IS_SOME (OPT_MMAP f ls) <=> EVERY IS_SOME (MAP f ls)
+Proof
+  Induct_on`ls` \\ rw[]
+  \\ Q.MATCH_GOALSUB_RENAME_TAC`IS_SOME (f x)`
+  \\ Cases_on`f x` \\ rw[]
+  \\ Cases_on`OPT_MMAP f ls` \\ fs[]
+QED
+
 val LAST_compute = Q.store_thm("LAST_compute",
    ‘(!x. LAST [x] = x) /\
     (!h1 h2 t. LAST (h1::h2::t) = LAST (h2::t))’,
@@ -5290,5 +5365,53 @@ Proof
   rpt strip_tac >> rpt (dxrule_then assume_tac QUOTIENT_ABS_REP) >>
   simp[MAP_MAP_o, FUN_MAP, combinTheory.o_DEF, SF ETA_ss]
 QED
+
+(*---------------------------------------------------------------------------*)
+(* relation of list_size to other list operations.                           *)
+(*---------------------------------------------------------------------------*)
+
+val ADD_AC = AC ADD_ASSOC ADD_SYM;
+
+Theorem list_size_reverse[simp]:
+  list_size f (REVERSE l) = list_size f l
+Proof
+  Induct_on ‘l’ >> rw [list_size_append,ADD_AC]
+QED
+
+Theorem list_size_map[simp]:
+  list_size f (MAP g l) = list_size (λx. f (g x)) l
+Proof
+  Induct_on ‘l’ >> rw []
+QED
+
+Theorem list_size_snoc[simp]:
+  list_size f (SNOC x l) = list_size f (x::l)
+Proof
+  Induct_on ‘l’ >> rw [ADD_AC]
+QED
+
+Theorem list_size_filter[simp]:
+  list_size f (FILTER P l) <= list_size f l
+Proof
+  Induct_on ‘l’ >> rw [] >> numLib.DECIDE_TAC
+QED
+
+Theorem list_size_take[simp]:
+  ∀l n. list_size f (TAKE n l) <= list_size f l
+Proof
+  Induct >> rw [] >> Cases_on ‘n’ >> rw[]
+QED
+
+Theorem list_size_drop[simp]:
+  ∀l n. list_size f (DROP n l) <= list_size f l
+Proof
+  Induct >> rw [] >> Cases_on ‘n’ >> rw[] >>
+  pop_assum (mp_tac o Q.SPEC ‘n'’) >> numLib.DECIDE_TAC
+QED
+
+val _ =
+ List.app TotalDefn.export_termsimp
+   ["list.list_size_append", "list.list_size_reverse",
+    "list.list_size_map", "list.list_size_snoc"];
 
 val _ = export_theory();

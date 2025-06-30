@@ -162,7 +162,7 @@ val TYPE_DEFINITION = def (#(FILE), #(LINE))
 
 open Portable;
 Overload "~" = “~”
-Overload "¬" = “~”                                                     (* UOK *)
+Overload "¬" = “~”
 val _ = add_rule {term_name   = "~",
                   fixity      = Prefix 900,
                   pp_elements = [TOK "~"],
@@ -1901,7 +1901,7 @@ val LEFT_EXISTS_IMP_THM = thm (#(FILE), #(LINE))("LEFT_EXISTS_IMP_THM",
         val imp1 = DISCH tm (CHOOSE(x,ASSUME tm)(DISCH allp thm1))
         val otm = rand(concl imp1)
         val thm2 = EXISTS(tm,x)(DISCH P (UNDISCH(ASSUME otm)))
-        val nex =  mk_exists(x,mk_neg P)
+        val nex = mk_exists(x,mk_neg P)
         val asm1 = EXISTS (nex, x) (ASSUME (mk_neg P))
         val th2 = CCONTR P (MP (ASSUME (mk_neg nex)) asm1)
         val th3 = CCONTR nex (MP (ASSUME (mk_neg allp)) (GEN x th2))
@@ -1970,7 +1970,7 @@ let val t1 = “A:bool” and t2 = “B:bool”
     val thm3 = SUBST [t2 |-> EQT_INTRO (ASSUME t2)] (concl asm1) asm1
     val thm4 = NOT_INTRO(DISCH t2 (MP thm3 (DISCH t1 (ADD_ASSUM t1 TRUTH))))
     val imp1 = DISCH (concl asm1) (CONJ thm2 thm4)
-    val conj =  ASSUME “^t1 /\ ~^t2”
+    val conj = ASSUME “^t1 /\ ~^t2”
     val (asm2,asm3) = (CONJUNCT1 conj, CONJUNCT2 conj)
     val asm4 = ASSUME “^t1 ==> ^t2”
     val thm5 = MP (SUBST [t2 |-> EQF_INTRO asm3] (concl asm4) asm4) asm2
@@ -2608,14 +2608,14 @@ val ABS_REP_THM = thm (#(FILE), #(LINE))("ABS_REP_THM",
          in IMP_ANTISYM_RULE (SPECL [“a:'b”,“a':'b”] asm1) th1
          end
        val ABS = “\r:'a. @a:'b. r = rep a”
-       val absd =  RIGHT_BETA (AP_THM (REFL ABS) “rep (a:'b):'a”)
+       val absd = RIGHT_BETA (AP_THM (REFL ABS) “rep (a:'b):'a”)
        val lem = SYM(SELECT_RULE(EXISTS (“?a':'b.a=a'”,“a:'b”)
                                         (REFL “a:'b”)))
        val TH1 = GEN “a:'b”
                      (TRANS(TRANS absd (SELECT_EQ “a':'b” rep_eq)) lem)
        val t1 = SELECT_RULE(EQ_MP (SPEC “r:'a” asm2)
                                   (ASSUME “(P:'a->bool) r”))
-       val absd2 =  RIGHT_BETA (AP_THM (REFL ABS) “r:'a”)
+       val absd2 = RIGHT_BETA (AP_THM (REFL ABS) “r:'a”)
        val v = mk_var("v",type_of(rhs (concl absd2)))
        val (t1l,t1r) = dest_eq (concl t1)
        (* val rep = fst(strip_comb t1r) *)
@@ -3534,11 +3534,85 @@ in
            COND_CLAUSES |> SPECL vs |> CONJUNCTS |> map (GENL vs) |> LIST_CONJ)
 end
 
+
+(*---------------------------------------------------------------------------
+    bool_case_eq =
+        |- (bool_case t1 t2 x = v) <=>
+        (x <=> T) /\ t1 = v \/ (x <=> F) /\ t2 = v
+ ---------------------------------------------------------------------------*)
+val bool_case_eq = thm (#(FILE), #(LINE))("bool_case_eq",
+let val x    = “x:bool”
+    val t1   = “t1:'a”
+    val t2   = “t2:'a”
+    val v    = “v:'a”
+    val eq = “$=”
+    val conj = “$/\”
+    val disj = “$\/”
+    val tm1 = “t1 = v”
+    val tm2 = “t2 = v”
+    val [COND1, COND2] = (CONJUNCTS (SPEC t2 (SPEC t1 COND_CLAUSES)))
+    and [OR1,OR2,OR3,OR4,_] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
+    and [AND1,AND2,AND3,AND4,_] = map GEN_ALL (CONJUNCTS(SPEC_ALL AND_CLAUSES))
+    val thmT1 = AP_THM (AP_TERM eq COND1) v
+    val thmF1 = AP_THM (AP_TERM eq COND2) v
+    val [TF,FT] = map EQF_INTRO (CONJUNCTS BOOL_EQ_DISTINCT)
+    val [TT,FF] = map (EQT_INTRO o REFL) [“T”,“F”]
+    val thmT2 =
+      let
+          val thml1 = AP_THM (AP_TERM conj TT) tm1
+          val thml2 = SPEC tm1 AND1
+          val thml = TRANS thml1 thml2
+          val thmr1 = AP_THM (AP_TERM conj TF) tm2
+          val thmr2 = SPEC tm2 AND3
+          val thmr = TRANS thmr1 thmr2
+          val thm1 = MK_COMB (AP_TERM disj thml, thmr)
+      in
+          TRANS thm1 (SPEC tm1 OR4)
+      end
+    val thmF2 =
+      let
+          val thmr1 = AP_THM (AP_TERM conj FF) tm2
+          val thmr2 = SPEC tm2 AND1
+          val thmr = TRANS thmr1 thmr2
+          val thml1 = AP_THM (AP_TERM conj FT) tm1
+          val thml2 = SPEC tm1 AND3
+          val thml = TRANS thml1 thml2
+          val thm1 = MK_COMB (AP_TERM disj thml, thmr)
+      in
+          TRANS thm1 (SPEC tm2 OR3)
+      end
+    val thmT3 = TRANS thmT1 (SYM thmT2)
+    val thmF3 = TRANS thmF1 (SYM thmF2)
+    val tm = “(if x then t1 else t2) = v <=> (((x <=> T) /\ t1 = v) \/ ((x <=> F) /\ t2 = v))”
+    val thT4 = SUBST_CONV [x |-> ASSUME “x = T”] tm tm
+    and thF4 = SUBST_CONV [x |-> ASSUME “x = F”] tm tm
+    val thmT = EQ_MP (SYM thT4) thmT3
+    val thmF = EQ_MP (SYM thF4) thmF3
+ in
+    DISJ_CASES (SPEC x BOOL_CASES_AX) thmT thmF
+ end);
+
 (* ------------------------------------------------------------------------- *)
-(*    bool_case_ID = |- !x b. bool_case x x b = x                            *)
+(*    bool_case_ID = |- !x. (x => T | F) = x                                 *)
+(* ------------------------------------------------------------------------- *)
+val bool_case_ID = thm (#(FILE), #(LINE))("bool_case_ID",
+let val x = “x:bool”
+    val (CONDT,CONDF) = INST_TYPE [alpha |-> bool] COND_CLAUSES
+                      |> SPECL [T,F]
+                      |> CONJ_PAIR
+    val tm = “(if x then T else F) = x”
+    val thT1 = SUBST_CONV [x |-> ASSUME “x = T”] tm tm
+    val thF1 = SUBST_CONV [x |-> ASSUME “x = F”] tm tm
+    val thmT = EQ_MP (SYM thT1) CONDT
+    val thmF = EQ_MP (SYM thF1) CONDF
+in
+   GEN x (DISJ_CASES (SPEC x BOOL_CASES_AX) thmT thmF)
+end);
+(* ------------------------------------------------------------------------- *)
+(*    bool_case_CONST = |- !x b. bool_case x x b = x                            *)
 (* ------------------------------------------------------------------------- *)
 
-val bool_case_ID = thm (#(FILE), #(LINE))("bool_case_ID", COND_ID)
+val bool_case_CONST = thm (#(FILE), #(LINE))("bool_case_CONST", COND_ID)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -3643,7 +3717,7 @@ in
     val lhs_thm = ASSUME lhs_t
     val lhs_eq = AP_THM EXISTS_UNIQUE_DEF subdisj_t
     val lhs_expanded = CONV_RULE BETA_CONV (EQ_MP lhs_eq lhs_thm)
-    val (expq0, univ) =  CONJ_PAIR lhs_expanded
+    val (expq0, univ) = CONJ_PAIR lhs_expanded
     val expq = EQ_MP (SPEC_ALL EXISTS_OR_THM) expq0
     val univ1 = SPEC_ALL univ
     val univ2 = CONV_RULE (LAND_CONV (LAND_CONV BETA_CONV)) univ1

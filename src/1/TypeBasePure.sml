@@ -398,10 +398,12 @@ fun gen_std_rewrs tyi =
   let
     val D  = case distinct_of tyi of NONE => [] | SOME x => CONJUNCTS x
     val inj = case one_one_of tyi of NONE => [] | SOME th => [th]
-    val c = D @ map GSYM D @ inj
+    val sizefn = case size_of tyi of NONE => [] | SOME (_,th) => [th]
+    val c = D @ map GSYM D @ inj @ sizefn
   in
     case_def_of tyi :: c handle HOL_ERR _ => c
   end
+
 fun add_std_simpls tyi = add_rewrs (gen_std_rewrs tyi) tyi
 
 fun mk_datatype_info rcd =

@@ -42,8 +42,8 @@ val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 (* ------------------------------------------------------------------------- *)
 
 (* first of these clashes with indicator_fn in extreal etc *)
-Overload "𝟙"[local] = “{()}”                                           (* UOK *)
-Overload "𝟚" = “{T;F}”                                                 (* UOK *)
+Overload "𝟙"[local] = “{()}”
+Overload "𝟚" = “{T;F}”
 
 val cardeq_def = Define`
   cardeq s1 s2 <=> ?f. BIJ f s1 s2
@@ -55,8 +55,8 @@ val _ = TeX_notation {hol = UTF8.chr 0x2248, TeX = ("\\ensuremath{\\approx}", 1)
 
 val _ = overload_on("=~", ``cardeq``)
 
-Overload "≉" = “λa b. ¬(a ≈ b)”                                        (* UOK *)
-val _ = set_fixity "≉" (Infix(NONASSOC, 450))                          (* UOK *)
+Overload "≉" = “λa b. ¬(a ≈ b)”
+val _ = set_fixity "≉" (Infix(NONASSOC, 450))
 
 val cardeq_REFL = store_thm(
   "cardeq_REFL",
@@ -1299,7 +1299,7 @@ Theorem disjoint_countable_decomposition2:
 Proof
   rpt strip_tac >>
 
-  (* Step 1: Establish cardinal equivalence |A| = |A × ℕ|                 UOK *)
+  (* Step 1: Establish cardinal equivalence |A| = |A × ℕ| *)
   ‘s =~ s CROSS univ(:num)’ by (
     irule cardleq_ANTISYM >> conj_tac >~
     [‘s <<= s CROSS univ(:num)’]
@@ -3178,13 +3178,13 @@ Proof
                  else if (!x. x IN s ==> ISR x) /\ IMAGE OUTR s IN As then
                    SOME (INR (THE (SND p (IMAGE OUTR s))))
                  else NONE’ >>
-  rw[] >> simp[AllCaseEqs(), PULL_EXISTS]
+  rw[] >> simp[PULL_EXISTS]
   >- (metis_tac[THE_DEF, MEMBER_NOT_EMPTY])
   >- (rename [‘s = {}’, ‘s <> IMAGE INL A’] >>
-      pop_assum mp_tac >> rw[]
+      rpt (IF_CASES_TAC >> fs[])
       >- (qpat_x_assum ‘s <> IMAGE INL _’ mp_tac >>
-          csimp[EXTENSION, PULL_EXISTS, sumTheory.INL]) >>
-      first_x_assum $ qspec_then ‘IMAGE OUTR s’ mp_tac >> simp[]) >>
+          rw[CONTRAPOS_THM] >> gvs[]) >>
+      fs[DISJ_EQ_IMP]) >>
   qexists_tac ‘λtup. (OUTL (THE (tup (IMAGE INL A))),
                       (λB. if B IN As then
                              SOME (OUTR (THE (tup (IMAGE INR B))))

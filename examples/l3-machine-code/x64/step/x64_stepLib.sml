@@ -10,7 +10,7 @@ open updateLib utilsLib x64Lib x64Theory x64_stepTheory
 
 val ambient_grammars = (type_grammar(), term_grammar())
 val _ = temp_set_grammars
-          (x64Theory.x64_grammars |> apsnd ParseExtras.grammar_loose_equality)
+          (valOf (grammarDB{thyname="x64"}) |> apsnd ParseExtras.grammar_loose_equality)
 
 val ERR = Feedback.mk_HOL_ERR "x64_stepLib"
 
@@ -118,7 +118,7 @@ local
            OpSize_rwt, rbp, x64Theory.readModRM_def, readModRM_not_4_or_5,
            readModRM_byte_not_4, readModRM_dword_not_4,
            RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T],
-          utilsLib.filter_inventory ["readPrefix"] x64Theory.inventory) cmp
+          utilsLib.filter_inventory ["readPrefix"] (Import.gen_inventory{thyname="x64"})) cmp
    val () = utilsLib.add_base_datatypes cmp
    val () = computeLib.add_conv
                (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV) cmp

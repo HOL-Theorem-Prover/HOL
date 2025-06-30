@@ -36,7 +36,7 @@ list_mk_abs([x, y],
 end
 structure Parse = struct
   open Parse
-  local val (rtyg, rtmg0) = realTheory.real_grammars
+  local val (rtyg, rtmg0) = valOf $ grammarDB {thyname = "real"}
         val rtmg = term_grammar.fupdate_overload_info
                      (Overload.add_overloading("DECIMAL", decimal_tm))
                      rtmg0
@@ -77,12 +77,6 @@ val _ = RealArith.verbose_level := 0;
 (* ------------------------------------------------------------------------- *)
 (* Syntax operations on integer constants of type “:real”.                   *)
 (* ------------------------------------------------------------------------- *)
-
-(* NOTE: HOL-Light's gcd_num function accepts negative numbers, but their gcd
-   is always positive. It looks like having abs first, then gcd. *)
-local open Arbint in
-fun gcd a b = fromNat (Arbnum.gcd (toNat (abs a), toNat (abs b)))
-end (* local *)
 
 type aint = Arbint.int
 
@@ -306,7 +300,7 @@ val REAL_RAT_ADD_CONV = let
     and x2n = dest_realintconst x2' and y2n = dest_realintconst y2';
     val x3n = x1n * y2n + x2n * y1n
     and y3n = y1n * y2n;
-    val d = gcd x3n y3n;
+    val d = gcd (x3n, y3n);
     val x3n' = quot (x3n,d) and y3n' = quot (y3n,d);
     val (x3n'',y3n'') = if y3n' > zero then (x3n',y3n') else (~x3n',~y3n');
     val x3' = mk_realintconst x3n'' and y3' = mk_realintconst y3n'';
@@ -367,8 +361,8 @@ val REAL_RAT_MUL_CONV = let
     and (x2',y2') = dest_div r2;
     val x1n = dest_realintconst x1' and y1n = dest_realintconst y1'
     and x2n = dest_realintconst x2' and y2n = dest_realintconst y2';
-    val d1n = gcd x1n y2n
-    and d2n = gcd x2n y1n;
+    val d1n = gcd (x1n, y2n)
+    and d2n = gcd (x2n, y1n);
   in
     if d1n = one andalso d2n = one then
       let val th0 = INST [x1 |-> x1', y1 |-> y1', x2 |-> x2', y2 |-> y2'] pth_nocancel;
