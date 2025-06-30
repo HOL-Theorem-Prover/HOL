@@ -436,7 +436,11 @@ structure ToSML = struct
       | BeginSimpleThm (p, head) => let
         val {isTriv, thmname, attrs, name_attrs, ...} = parseTheoremPfx head
         in
-          aux "val "; regular' (p, thmname); aux " = boolLib.save_thm(\"";
+          aux "val "; regular' (p, thmname);
+          if !filename = "" then aux " = boolLib.save_thm(\""
+          else app aux [" = boolLib.save_thm_at ",
+                        mk_mkloc_string (!filename, #1 (!line)),
+                        "(\""];
           doThmAttrs isTriv attrs name_attrs; aux "\","
         end
       | TheoremDecl {head = (p, head), quote, proof_tok, body, ...} => let
