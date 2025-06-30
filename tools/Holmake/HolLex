@@ -330,7 +330,9 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 <INITIAL>"#(LINE)" => (Decl (LinePragma yypos, NONE));
 <INITIAL>"#(LINE="[0-9]+(,[0-9]+)?")" => (Decl (LinePragmaWith (yypos, yytext), NONE));
 <INITIAL>"#(FILE)" => (Decl (FilePragma yypos, NONE));
-<INITIAL>"#(FILE="[-A-Za-z0-9/$()_.]+")" => (Decl (FilePragmaWith (yypos, yytext), NONE));
+<INITIAL>"#(FILE="([-A-Za-z0-9/$_.|]|"\\ "|"\\\\"|"\\("|"\\)")+")" => (
+  Decl (FilePragmaWith (yypos, yytext), NONE)
+);
 <INITIAL>"\"" => (
   YYBEGIN string;
   case continue() of
