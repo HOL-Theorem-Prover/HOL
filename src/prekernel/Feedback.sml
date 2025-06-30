@@ -354,11 +354,6 @@ fun traces () =
         (Binarymap.foldr foldthis [] (!trace_map))
    end
 
-val _ =
- let fun foo d a telt = pp_trace_elt telt
- in PolyML.addPrettyPrinter foo
- end
-
 fun set_trace nm newvalue =
    case find_record nm of
       SOME {value, maximum, ...} =>

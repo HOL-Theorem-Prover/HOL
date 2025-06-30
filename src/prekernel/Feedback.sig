@@ -49,6 +49,7 @@ sig
          {name : string, aliases : string list,
           trace_level : int, default : int, max : int}
 
+    val pp_trace_elt      : trace_elt -> HOLPP.pretty
     val traces            : unit -> trace_elt list
     val register_trace    : (string * int ref * int) -> unit
     val create_trace      : {name:string,initial:int,max:int} ->
