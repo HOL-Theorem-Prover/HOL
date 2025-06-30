@@ -1,9 +1,4 @@
 INCLUDES = \
-<<<<<<< HEAD
-  AES DES IDEA Keccak MARS RC6 Serpent/Bitslice Serpent/Reference SHA-1 TEA \
-  TWOFISH SHA-2
-=======
   AES DES IDEA Keccak MARS MD5 RC6 Serpent/Bitslice Serpent/Reference SHA-1 TEA \
-  TWOFISH
->>>>>>> origin/master
+  TWOFISH SHA-2
 CLINE_OPTIONS = -r
