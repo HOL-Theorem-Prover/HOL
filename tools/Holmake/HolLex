@@ -2,8 +2,13 @@
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
 
+datatype header_elem
+  = Ancestors of {tok: int, thys: (int * string) list, stop: int}
+  | Libs of {tok: int, thys: (int * string) list, stop: int}
+
 datatype decl
-  = DefinitionDecl of {
+  = TheoryDecl of {head: int * string, elems: header_elem list, stop: int}
+  | DefinitionDecl of {
       head: int * string, quote: qbody, termination: {tok: int, decls: decls} option,
       end_tok: int option, stop: int}
   | OpenDecl of {head: int, toks: (int * string) list, stop: int}
@@ -57,7 +62,9 @@ datatype token
   | FullQuoteEnd of int * string (* from quote, holcomment *)
   | QDecl of qdecl * token option (* from quote *)
   | OpenId of int * string (* from opens *)
-  | OpenEnd of int (* from opens *)
+  | OpenEnd of int (* from opens, header, headerthy *)
+  | Header of header_elem (* from header *)
+  | HeaderThy of int * string (* from headerthy *)
   | EOF of int (* from every state *)
 
 type lexresult = token
@@ -81,6 +88,14 @@ fun forceCloseComment (STATE {parseError, comdepth, comstart, ...}) stop buf =
     comdepth := 0; comstart := NONE;
     QuoteComment (#1 pos, stop) :: buf)
   | _ => buf
+
+fun startComment (STATE {parseError, comdepth, comstart, ...})
+    YYBEGIN from til continue yypos = (
+  comdepth := 1; YYBEGIN from;
+  case continue() of
+    Comment => (YYBEGIN til; continue())
+  | EOF p => (parseError (yypos, yypos + 2) "unterminated comment"; EOF p)
+  | _ => raise Unreachable)
 
 fun parseQuoteBody (arg as STATE {parseError, ...}) continue pos test = let
   fun go buf lookahead = let
@@ -128,6 +143,15 @@ fun parseDecls (STATE {parseError, pardepth, ...}) continue pos test = let
     end
   val n = !pardepth
   in pardepth := 0; go [] NONE before pardepth := n end
+
+fun parseHeaderThy continue = let
+  fun go tks =
+    case continue() of
+      HeaderThy tk => go (tk :: tks)
+    | OpenEnd p => (rev tks, p)
+    | EOF p => (rev tks, p)
+    | _ => raise Unreachable
+  in go [] end
 
 fun fullQuoteMatch "``" "``" = true
   | fullQuoteMatch "\226\128\156" "\226\128\157" = true
@@ -183,7 +207,7 @@ fun eof (_:state) = EOF
 
 %%
 %structure HolLex
-%s string stringlbrk comment holcomment quote holstrlit holstrlitlbrk ANTIQ opens;
+%s string stringlbrk comment holcomment quote holstrlit holstrlitlbrk ANTIQ opens header headerthy;
 %arg (UserDeclarations.STATE {pardepth, comdepth, comstart, parseError});
 %full
 %posarg
@@ -210,6 +234,7 @@ attr_symname = {nonspecial_symbol}+ ;
 defn_attribute =
   ({alphaMLid}|{attr_symname}){optallws} ("="{optallws}{attributeEqnRHS}{optallws})?;
 defn_attribute_list = {defn_attribute} (","({ws}|{newline})*{defn_attribute})*;
+id_with_attributes = {alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?;
 MLid =  {alphaMLid} | {symbolident};
 QUALMLid = {MLid} ("." {MLid})*;
 QUALalphaMLid = {alphaMLid} ("." {alphaMLid})*;
@@ -219,13 +244,13 @@ fullquotebegin = "``" | "\226\128\156";
 fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
-Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?;
+Theorempfx = ("Theorem"|"Triviality"){ws}+{id_with_attributes};
 Quote_eqnpfx = "Quote"{ws}+{alphaMLid}{ws}*"="{ws}*{QUALalphaMLid}{ws}*":";
 Quote_pfx = "Quote"{ws}+{QUALalphaMLid}{ws}*":";
 HOLconjunction = "/\092" | "\226\136\167";
 DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ | {HOLconjunction};
 DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]";
-Definitionpfx = "Definition"{ws}+{alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?{ws}*":";
+Definitionpfx = "Definition"{ws}+{id_with_attributes}{ws}*":";
 holstartkeyword = "Datatype"|"Type"|"Overload"|"Definition"|"Theorem"|"Triviality"|"Quote"|("Co")?"Inductive";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"type"|"abstype"|"datatype"|"exception"|"open"|"infix"[lr]?|"local"|"in";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
@@ -234,13 +259,18 @@ HOLSTRLITend = "\"" | "\226\128\186" | "\194\187";
 ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]")?;
 %%
 
-<INITIAL>"(*" => (
-  comdepth := 1; YYBEGIN comment;
-  case continue() of
-    Comment => (YYBEGIN INITIAL; continue())
-  | EOF p => (parseError (yypos, yyend) "unterminated comment"; EOF p)
-  | _ => raise Unreachable
-);
+<INITIAL>"(*" => (startComment yyarg YYBEGIN comment INITIAL continue yypos);
+<INITIAL>^"Theory"{ws}+{id_with_attributes} => (let
+  val _ = YYBEGIN header
+  fun finish elems p = (
+    YYBEGIN INITIAL;
+    Decl (TheoryDecl {head = (yypos, yytext), elems = rev elems, stop = p}, NONE))
+  fun go elems = case continue () of
+      Header elem => go (elem::elems)
+    | OpenEnd p => finish elems p
+    | EOF p => finish elems p
+    | _ => raise Unreachable
+  in go [] end);
 <INITIAL>"(" => (inc pardepth; continue());
 <INITIAL>")" => (if !pardepth < 1 then CloseParen yypos else (dec pardepth; continue()));
 <INITIAL>^"Datatype"{ws}*":" => (
@@ -439,24 +469,37 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   Antiq (BadAntiq yypos, NONE)
 );
 
-<opens>"(*" => (
-  comdepth := 1; YYBEGIN comment;
-  case continue() of
-    Comment => (YYBEGIN opens; continue())
-  | EOF p => (parseError (yypos, yyend) "unterminated comment"; EOF p)
-  | _ => raise Unreachable
-);
-<opens>({ws}|{newline})+ => (continue());
-<opens>^{holstartkeyword} => (
+<opens>"(*" => (startComment yyarg YYBEGIN comment opens continue yypos);
+<headerthy>"(*" => (startComment yyarg YYBEGIN comment headerthy continue yypos);
+<opens,headerthy>({ws}|{newline})+ => (continue());
+<opens,headerthy>^{holstartkeyword} => (
   yybufpos := !yybufpos - (yyend - yypos); (* unread token *)
   OpenEnd yypos
 );
-<opens>{declforms} => (
+<opens,headerthy>{declforms} => (
   yybufpos := !yybufpos - (yyend - yypos); (* unread token *)
   OpenEnd yypos
 );
 <opens>{QUALalphaMLid} => (OpenId (yypos, yytext));
-<opens>. => (
+<headerthy>{id_with_attributes} => (HeaderThy (yypos, yytext));
+<opens,headerthy>. => (
+  yybufpos := !yybufpos - 1; (* unread token *)
+  OpenEnd yypos
+);
+
+<header>"(*" => (startComment yyarg YYBEGIN comment header continue yypos);
+<header>({ws}|{newline})+ => (continue());
+<header>^"Ancestors" => (let
+  val _ = YYBEGIN headerthy
+  val (thys, stop) = parseHeaderThy continue
+  val _ = YYBEGIN header
+  in Header (Ancestors {tok = yypos, thys = thys, stop = stop}) end);
+<header>^"Libs" => (let
+  val _ = YYBEGIN headerthy
+  val (thys, stop) = parseHeaderThy continue
+  val _ = YYBEGIN header
+  in Header (Libs {tok = yypos, thys = thys, stop = stop}) end);
+<header>. => (
   yybufpos := !yybufpos - 1; (* unread token *)
   OpenEnd yypos
 );
