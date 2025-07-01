@@ -574,7 +574,7 @@ starts >%s%s<"
           ;; identifiers of form id.id.  When spotted such identifiers need
           ;; to have the first component of the name loaded.
           (let ((regexp
-                 (concat "`\\|“\\|‘\\|"
+                 (concat "`\\|“\\|‘\\|#(FILE=\\|"
                          hol-quoted-theorem-proof-re-begin "\\|"
                          hol-quoted-definition-re-begin "\\|"
                          hol-quoted-datatype-re-begin "\\|"
@@ -600,6 +600,17 @@ starts >%s%s<"
                      ((string= ms "‘")
                       (if (not (re-search-forward "’" nil t))
                           (error "Unbalanced ‘ in region")))
+                     ((string= ms "#(FILE=")
+                      (let (foundp abortedp)
+                        (while (and (not foundp)(not abortedp))
+                          (if (re-search-forward ")\\|\\\\" nil t)
+                              (let ((ms2 (match-string-no-properties 0)))
+                                (cond
+                                 ((string= ms2 ")") (setq foundp t))
+                                 (t (forward-char 1))))
+                            (setq abortedp t)))
+                        (if abortedp
+                            (error "Unterminated `#(FILE=..' directive in region"))))
                      ((and (or (string-prefix-p "Theorem" ms)
                                (string-prefix-p "Triviality" ms))
                            (char-equal (char-before) ?:))
