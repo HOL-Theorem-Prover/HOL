@@ -206,7 +206,7 @@ structure AstNew = struct
 
   withtype struct_kind = {colon: int * constraint, sigexp: sigexp}
 
-  and arm = {bar: int option, pat: exp, arrow: int, exp: exp}
+  and arm = {bar: int option, pats: exp delimited, arrow: int option, exp: exp}
 
   and fvalarm = {
     bar: int option, fname_args: fname_args,
@@ -473,7 +473,15 @@ fun parseSML body parseError = let
       (start, IntTk) => (start, ident start)
     | tk => (unread tk; parseIdentifier ())
 
-    fun parseArmList () = raise Todo
+    fun parseArmList acc = case (parseKeyword "|" NONE, acc) of
+      (NONE, _::_) => rev acc
+    | (bar, acc) => let
+      val (pats, arrow, _) = parseDelimitedClose [] [] {
+        elem = fn () => parseExp true,
+        delim = fn (s, IdentTk) => ident s = "|" | _ => false,
+        close = fn (s, IdentTk) => ident s = "=>" | _ => false }
+      val exp = parseExp false
+      in parseArmList ({bar = bar, pats = pats, arrow = arrow, exp = exp} :: acc) end
 
     fun parseAtomic pat force = case token () of
       (start, Symbol #"_") => Wild start
@@ -625,8 +633,8 @@ fun parseSML body parseError = let
         case_ = start,
         exp = parseExp false,
         of_ = parseKeyword "of" (SOME "expected keyword of"),
-        elems = parseArmList () }
-      | "fn" => Fn {fn_ = start, elems = parseArmList ()}
+        elems = parseArmList [] }
+      | "fn" => Fn {fn_ = start, elems = parseArmList []}
       | _ => (unread tk; parseExp1 false)
 
     fun parseAndAlso () =
@@ -645,7 +653,7 @@ fun parseSML body parseError = let
       if pat then parseExp1 true else
       case parseOrElse () of exp =>
       case parseKeyword "handle" NONE of
-        SOME handle_ => Handle {exp = exp, handle_ = handle_, elems = parseArmList ()}
+        SOME handle_ => Handle {exp = exp, handle_ = handle_, elems = parseArmList []}
       | NONE => exp
     end
 
