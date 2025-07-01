@@ -457,7 +457,15 @@ fun parseSML body parseError = let
     in rhs lhs end
   val parseTy = fn () => parseTy false
 
-  fun parseExp (pat: bool): exp = let
+  val infixes = (* FIXME *)
+    map (fn x => (x, 0, false)) ["++", "&&", "|->", "THEN", "THEN1",
+      "THENL", "THEN_LT", "THENC", "ORELSE", "ORELSE_LT", "ORELSEC", "THEN_TCL",
+      "ORELSE_TCL", "?>", "|>", "|>>", "||>", "||->",
+      ">>", ">-", ">|", "\\\\", ">>>", ">>-", "??", ">~", ">>~", ">>~-"] @
+    [("by", 8, false), ("suffices_by", 8, false), ("$", 1, true)]
+  type scope = (string * int * bool) list
+
+  fun parseExp sc (pat: bool): exp = let
     fun parseIdentifier () = let
       val tk = token ()
       (* In case of failure, record an error and return the empty string *)
@@ -477,10 +485,10 @@ fun parseSML body parseError = let
       (NONE, _::_) => rev acc
     | (bar, acc) => let
       val (pats, arrow, _) = parseDelimitedClose [] [] {
-        elem = fn () => parseExp true,
+        elem = fn () => parseExp sc true,
         delim = fn (s, IdentTk) => ident s = "|" | _ => false,
         close = fn (s, IdentTk) => ident s = "=>" | _ => false }
-      val exp = parseExp false
+      val exp = parseExp sc false
       in parseArmList ({bar = bar, pats = pats, arrow = arrow, exp = exp} :: acc) end
 
     fun parseAtomic pat force = case token () of
@@ -493,19 +501,19 @@ fun parseSML body parseError = let
     | (startOpen, Symbol #"(") => (case token () of
         (startClose, Symbol #")") => Unit {left = startOpen, right = startClose}
       | tk =>
-        case (unread tk; parseExp pat) of exp =>
+        case (unread tk; parseExp sc pat) of exp =>
         case token () of
           (startClose, Symbol #")") =>
           Parens {left = startOpen, exp = exp, right = SOME startClose, stop = startClose+1}
         | (startComma, Symbol #",") => let
           val (elems, right, stop) = parseDelimitedClose [exp] [startComma] {
-            elem = fn () => parseExp pat,
+            elem = fn () => parseExp sc pat,
             delim = fn (_, Symbol #",") => true | _ => false,
             close = fn (_, Symbol #")") => true | _ => false }
           in Tuple {left = startOpen, elems = elems, right = right, stop = stop} end
         | (startSemi, Symbol #";") => let
           val (elems, right, stop) = parseDelimitedClose [exp] [startSemi] {
-            elem = fn () => parseExp pat,
+            elem = fn () => parseExp sc pat,
             delim = fn (_, Symbol #";") => true | _ => false,
             close = fn (_, Symbol #")") => true | _ => false }
           in Sequence {left = startOpen, elems = elems, right = right, stop = stop} end
@@ -515,7 +523,7 @@ fun parseSML body parseError = let
           Parens {left = startOpen, exp = exp, right = NONE, stop = #1 tk}))
     | (start, Symbol #"[") => let
       val (elems, right, stop) = parseDelimitedClose [] [] {
-        elem = fn () => parseExp pat,
+        elem = fn () => parseExp sc pat,
         delim = fn (_, Symbol #",") => true | _ => false,
         close = fn (_, Symbol #"]") => true | _ => false }
       in List {left = start, elems = elems, right = right, stop = stop} end
@@ -525,11 +533,12 @@ fun parseSML body parseError = let
         case parseRecordLabel () of
           (start, "...") => DotDotDot start
         | id => case parseKeyword "=" NONE of
-            SOME eq => LabEq {lab = id, eq = eq, exp = parseExp pat}
+            SOME eq => LabEq {lab = id, eq = eq, exp = parseExp sc pat}
           | NONE => LabAs {
             id = id,
             ty = Option.map (fn c => {colon = c, ty = parseTy ()}) (parseKeyword ":" NONE),
-            aspat = Option.map (fn c => {as_ = c, exp = parseExp pat}) (parseKeyword "as" NONE) },
+            aspat = Option.map
+              (fn c => {as_ = c, exp = parseExp sc pat}) (parseKeyword "as" NONE) },
         delim = fn (_, Symbol #",") => true | _ => false,
         close = fn (_, Symbol #"}") => true | _ => false }
       in Record {left = start, elems = elems, right = right, stop = stop} end
@@ -537,10 +546,10 @@ fun parseSML body parseError = let
     | (start, IdentTk) => (case ident start of
         "let" => let
         val let_ = start
-        val dec = parseDec false []
+        val (sc', dec) = parseDec false sc []
         val in_ = parseKeyword "in" (SOME "expected keyword in")
         val (exps, end_, stop) = parseDelimitedClose [] [] {
-          elem = fn () => parseExp false,
+          elem = fn () => parseExp sc' false,
           delim = fn (_, Symbol #";") => true | _ => false,
           close = fn (start, IdentTk) => ident start = "end" | _ => false }
         in LetInEnd {let_ = let_, dec = dec, in_ = in_, exps = exps, end_ = end_, stop = stop} end
@@ -553,19 +562,12 @@ fun parseSML body parseError = let
 
     fun parseInfix pat = let
 
-      val infixes = (* FIXME *)
-        map (fn x => (x, 0, false)) ["++", "&&", "|->", "THEN", "THEN1",
-          "THENL", "THEN_LT", "THENC", "ORELSE", "ORELSE_LT", "ORELSEC", "THEN_TCL",
-          "ORELSE_TCL", "?>", "|>", "|>>", "||>", "||->",
-          ">>", ">-", ">|", "\\\\", ">>>", ">>-", "??", ">~", ">>~", ">>~-"] @
-        [("by", 8, false), ("suffices_by", 8, false), ("$", 1, true)]
-
       fun peekInfix () = let
         val (start, tk) = token ()
         val r = case tk of
           IdentTk => let
           val s = ident start
-          in List.find (fn x => #1 x = s) infixes end
+          in List.find (fn x => #1 x = s) sc end
         | _ => NONE
         in unread (start, tk); (start, r) end
 
@@ -603,7 +605,7 @@ fun parseSML body parseError = let
       fun finish {op_, id} ty = case parseKeyword "as" NONE of
           NONE => lhs
         | SOME as_ =>
-          Layered {op_ = op_, id = id, ty = ty, as_ = as_, pat = parseExp true}
+          Layered {op_ = op_, id = id, ty = ty, as_ = as_, pat = parseExp sc true}
       in
         case lhs of
           Ident id => finish id NONE
@@ -616,22 +618,22 @@ fun parseSML body parseError = let
     fun parseKwExp () =
       case token () of tk as (start, _) =>
       case case #2 tk of IdentTk => ident start | _ => "" of
-        "raise" => Raise {raise_ = start, exp = parseExp false}
+        "raise" => Raise {raise_ = start, exp = parseExp sc false}
       | "if" => IfThenElse {
         if_ = start,
-        exp1 = parseExp false,
+        exp1 = parseExp sc false,
         then_ = parseKeyword "then" (SOME "expected keyword then"),
-        exp2 = parseExp false,
+        exp2 = parseExp sc false,
         else_ = parseKeyword "else" (SOME "expected keyword else"),
-        exp3 = parseExp false }
+        exp3 = parseExp sc false }
       | "while" => While {
         while_ = start,
-        exp1 = parseExp false,
+        exp1 = parseExp sc false,
         do_ = parseKeyword "do" (SOME "expected keyword do"),
-        exp2 = parseExp false }
+        exp2 = parseExp sc false }
       | "case" => Case {
         case_ = start,
-        exp = parseExp false,
+        exp = parseExp sc false,
         of_ = parseKeyword "of" (SOME "expected keyword of"),
         elems = parseArmList [] }
       | "fn" => Fn {fn_ = start, elems = parseArmList []}
@@ -657,26 +659,26 @@ fun parseSML body parseError = let
       | NONE => exp
     end
 
-  and parseDec (inSig: bool) (acc: dec list): dec list =
+  and parseDec (inSig: bool) sc (acc: dec list): scope * dec list =
     case token () of
       (start, IdentTk) => (case ident start of
         "val" => let
-        val pat = parseExp true
+        val pat = parseExp sc true
         val tyvars = Empty
         in
           case parseKeyword "=" NONE of
             SOME eq => let
-            val exp = parseExp false
+            val exp = parseExp sc false
             val elem = ValBind {rec_ = NONE, pat = pat, eq = eq, exp = exp}
             val elems = {args = [elem], delims = []}
-            in parseDec inSig (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
+            in parseDec inSig sc (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
           | NONE => let
             val colon = parseKeyword ":" (SOME "expected a colon")
             val Ident {op_ = NONE, id} = pat
             val ty = parseTy ()
             val elem = ValSpec {vid = id, colon = colon, ty = ty}
             val elems = {args = [elem], delims = []}
-            in parseDec inSig (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
+            in parseDec inSig sc (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
         end
       | _ => raise Todo)
     | _ => raise Todo
