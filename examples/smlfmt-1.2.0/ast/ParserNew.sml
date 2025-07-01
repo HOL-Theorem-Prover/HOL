@@ -475,7 +475,7 @@ fun parseSML body parseError = let
 
     fun parseArmList () = raise Todo
 
-    fun parseAtomic pat = case token () of
+    fun parseAtomic pat force = case token () of
       (start, Symbol #"_") => Wild start
     | (start, IntTk) => IntegerConstant (start, ident start)
     | (start, WordTk) => WordConstant (start, ident start)
@@ -540,10 +540,51 @@ fun parseSML body parseError = let
         op_ = if id = "op" then SOME start else (unread (start, IdentTk); NONE),
         id = parseIdentifier () })
     | tk => (
-      parseError (#1 tk, #1 tk) "expected an expression";
+      if force then parseError (#1 tk, #1 tk) "expected an expression" else ();
       unread tk; BadExp {start = #1 tk, stop = #1 tk})
 
-    fun parseInfix pat = parseAtomic pat (* raise Todo *)
+    fun parseInfix pat = let
+
+      val infixes = (* FIXME *)
+        map (fn x => (x, 0, false)) ["++", "&&", "|->", "THEN", "THEN1",
+          "THENL", "THEN_LT", "THENC", "ORELSE", "ORELSE_LT", "ORELSEC", "THEN_TCL",
+          "ORELSE_TCL", "?>", "|>", "|>>", "||>", "||->",
+          ">>", ">-", ">|", "\\\\", ">>>", ">>-", "??", ">~", ">>~", ">>~-"] @
+        [("by", 8, false), ("suffices_by", 8, false), ("$", 1, true)]
+
+      fun peekInfix () = let
+        val (start, tk) = token ()
+        val r = case tk of
+          IdentTk => let
+          val s = ident start
+          in List.find (fn x => #1 x = s) infixes end
+        | _ => NONE
+        in unread (start, tk); (start, r) end
+
+      fun parseApp lhs =
+        case peekInfix () of
+          (_, SOME _) => lhs
+        | (_, NONE) => case parseAtomic pat false of
+            BadExp _ => lhs
+          | rhs => parseApp (App (lhs, rhs))
+      val parseApp = fn () => parseApp (parseAtomic pat true)
+
+      fun tail prec lhs =
+        case peekInfix () of
+          (start, SOME (opr, prec', _)) => if prec' < prec then lhs else let
+          val _ = token ()
+          val rhs = tail2 prec' (parseApp ())
+          in tail prec (Infix {left = lhs, id = (start, opr), right = rhs}) end
+        | _ => lhs
+      and tail2 prec rhs =
+        case peekInfix () of
+          (_, SOME (_, prec', rassoc)) =>
+          if prec' + (if rassoc then 1 else 0) > prec then
+            tail2 prec (tail (prec + (if prec' > prec then 1 else 0)) rhs)
+          else rhs
+        | _ => rhs
+
+      in tail 0 (parseApp ()) end
 
     fun parseTyped lhs =
       case parseKeyword ":" NONE of
