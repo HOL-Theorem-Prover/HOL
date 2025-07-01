@@ -351,16 +351,14 @@ in
       open Date
       val timestamp = fmt "%Y-%m-%dT%H%M" (fromTimeLocal (Time.now()))
       val newname0 = hostname^timestamp
-      val newname = (if buildok then "" else "bad-") ^ newname0
+      val newname = (if buildok then "hmlog-good-" else "hmlog-bad-") ^ newname0
     in
-      FileSys.rename {old = logfilename, new = newname};
-      buildok
+      FileSys.rename {old = logfilename, new = newname}
     end
-  else buildok
-end handle IO.Io _ => (warn "Had problems making permanent record of make log";
-                       buildok)
+  else ()
+end handle IO.Io _ => warn "Had problems making permanent record of make log"
 
-val _ = Process.atExit (fn () => ignore (finish_logging false))
+val _ = Process.atExit (fn () => finish_logging false)
 
 (* ----------------------------------------------------------------------
 
@@ -1223,7 +1221,7 @@ fun work() =
           info (HM_DepGraph.toJSONString depgraph);
           OS.Process.exit OS.Process.success
         ) else (* actually build default targets *)
-          postmortem outputfns (build_graph depgraph)
+          postmortem finish_logging outputfns (build_graph depgraph)
           handle e => die ("Exception: "^General.exnMessage e)
       end
     | xs => let
@@ -1308,7 +1306,7 @@ fun work() =
               (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
                OS.Process.success)
             else
-              postmortem outputfns (build_graph depgraph)
+              postmortem finish_logging outputfns (build_graph depgraph)
               handle e => die ("Exception: "^General.exnMessage e)
           end
       end

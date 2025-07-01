@@ -26,7 +26,8 @@ DIRNAMES = \
   gh1353 \
   ignore_errors/j1 \
   qfreadTheoremsyntax \
-  use-fnf
+  use-fnf \
+  time-logging
 
 ifdef POLY
 DIRNAMES += cheatspotting \
