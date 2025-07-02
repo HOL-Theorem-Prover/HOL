@@ -973,17 +973,14 @@ type `:bool`.
           Γ₁ ∪ Γ₂ |- t₂
 ```
 
-##skip
 
-\noindent
-{\small\verb+MP+} takes two theorems (in the order shown above) and returns
+`MP` takes two theorems (in the order shown above) and returns
 the result of applying Modus Ponens; it fails if the arguments are not of the
 right form.
-\index{inference rules, of HOL logic@inference rules, of HOL logic!primitive|)}
 
-\section{Oracles}
+### Oracles
 
-HOL extends the \LCF\ tradition by allowing the use of an
+HOL extends the LCF tradition by allowing the use of an
 *oracle* mechanism, enabling arbitrary formulas to become
 elements of the `thm` type. By use of this mechanism, HOL can
 utilize the results of arbitrary proof procedures. In spite of such
@@ -1001,64 +998,51 @@ proved solely by deductive steps in the HOL logic.
 
 A tagged theorem can be created via
 
-\begin{holboxed}
-\index{mk_oracle_thm@`mk_oracle_thm`!type of}
-\begin{verbatim}
-   mk_oracle_thm : string -> term list * term -> thm
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Thm" "mk_oracle_thm"
+```
 
-\noindent which directly creates the requested theorem and attaches the given
+which directly creates the requested theorem and attaches the given
 tag to it. The tag is created with a call to
 
-\begin{holboxed}
-\index{Tag.read@\ml{Tag.read}!making tags}
-\begin{verbatim}
-   Tag.read : string -> tag
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Tag" "read"
+```
 
 As well as providing principled access to the results of external
-reasoners, tags are used to implement some useful `system' operations
+reasoners, tags are used to implement some useful ‘system’ operations
 on theorems. For example, one can directly create a theorem via the
-function `mk_thm`. The tag \verb+MK_THM+ gets attached to each
+function `mk_thm`. The tag `MK_THM` gets attached to each
 theorem created with this call. This allows users to directly create
-useful theorems, \eg, to use as test data for derived rules of
-inference.  Another tag is used to implement so-called `validity
-checking' for tactics.
+useful theorems, *e.g.*, to use as test data for derived rules of
+inference.  Another tag is used to implement so-called ‘validity
+checking’ for tactics.
 
-The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
+The tags in a theorem can be viewed by setting `Globals.show_tags` to
 true.
 
-\setcounter{sessioncount}{0}
-\begin{session}
-\begin{alltt}
+```
 >> Globals.show_tags := true;
 
 >> mk_thm([], Term `F`);;
-\end{alltt}
-\end{session}\index{mk_thm@`mk_thm`}
+```
 
 There are three elements to the left of the turnstile in the fully printed
-representation of a theorem: the first two\footnote{Tags are also used for
-tracking the use of axioms in proofs.} comprise the tags component and the
+representation of a theorem: the first two[^tagfn] comprise the tags component and the
 third is the standard assumption list. The tag component of a theorem
 can be extracted by
 
-\begin{holboxed}
-\begin{verbatim}
-   Thm.tag : thm -> tag
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Thm" "tag"
+```
 
-\noindent and prettyprinted by
+and pretty-printed by
 
-\begin{holboxed}
-\begin{verbatim}
-   Tag.pp : ppstream -> tag -> unit.
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Tag" "pp_tag"
+```
 
+##skip
 
 \section{Theories}
 \label{theoryfns}
@@ -1890,6 +1874,7 @@ None of these functions saves anything in the current theory.
 
 [^prim-inf-hypotheses]: Note that ‘hypotheses’ and ‘conclusion’ are also used for the components of sequents.
 [^four-axioms-simplification]: This is a simplification: in fact the various axioms are an extension of the basic logic.
+[^tagfn]: Tags are also used for tracking the use of axioms in proofs.
 
 <!-- Local variables: -->
 <!-- mode: markdown -->
