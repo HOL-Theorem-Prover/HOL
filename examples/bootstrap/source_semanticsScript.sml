@@ -1,9 +1,7 @@
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory llistTheory pairTheory finite_mapTheory;
-open source_valuesTheory source_syntaxTheory stringTheory lprefix_lubTheory;
-
-val _ = new_theory "source_semantics";
+Theory source_semantics
+Ancestors
+  arithmetic list llist pair finite_map
+  source_values source_syntax string lprefix_lub
 
 
 (* types *)
@@ -341,5 +339,3 @@ Definition prog_diverges_def:
     (∀k. prog_timesout k input prog) ∧
     output = build_lprefix_lub { prog_output k input prog | k IN UNIV }
 End
-
-val _ = export_theory();

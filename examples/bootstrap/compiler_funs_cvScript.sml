@@ -1,9 +1,9 @@
-
-open HolKernel Parse boolLib bossLib term_tactic cv_transLib cv_stdTheory;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open wordsTheory wordsLib printingTheory codegenTheory;
-
-val _ = new_theory "compiler_funs_cv";
+Theory compiler_funs_cv
+Ancestors
+  arithmetic list pair finite_map string
+  words printing codegen cv cv_std
+Libs
+  term_tactic cv_transLib wordsLib
 
 (* prepare for fast in-logic evaluation *)
 
@@ -81,7 +81,7 @@ val _ = cv_trans printingTheory.dest_list_def;
 
 Theorem cv_dest_list_size:
   ∀v x y.
-    cv_dest_list v = Pair x y ⇒
+    cv_dest_list v = cv$Pair x y ⇒
     cv_size x <= cv_size v ∧
     cv_size y <= cv_size v
 Proof
@@ -146,7 +146,7 @@ Proof
 QED
 
 Triviality cv_EL_trivial:
-  ∀n m. cv_EL (Num n) (Num m) = Num 0
+  ∀n m. cv_EL (cv$Num n) (cv$Num m) = cv$Num 0
 Proof
   Induct >> rw[] >> simp[Once cv_EL_def]
 QED
@@ -188,17 +188,17 @@ QED
 
 Theorem cv_dest_case_tree_size[local]:
   ∀a b x y.
-    cv_dest_case_tree a b = Pair x y ⇒
+    cv_dest_case_tree a b = cv$Pair x y ⇒
     cv_size (cv_map_snd (cv_map_snd y)) < cv_size b
 Proof
   recInduct $ fetch "-" "cv_dest_case_tree_ind" >> rw[] >>
   pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_case_tree_def"] >>
   reverse $ rw[] >> gvs[]
   >- (
-    simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Num _)``] >>
+    simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (cv$Num _)``] >>
     Cases_on `cv_v` >> gvs[]
     ) >>
-  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Pair _ _)``] >>
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (cv$Pair _ _)``] >>
   unabbrev_all_tac >> cv_termination_tac >>
   drule cv_dest_case_lets_size >> simp[] >>
   rename1 `cv_dest_case_lets _ (cv_fst x)` >> Cases_on `x` >> gvs[]
@@ -206,14 +206,14 @@ QED
 
 Theorem cv_dest_case_enum_size[local]:
   ∀a b x y.
-    cv_dest_case_enum a b = Pair x y
+    cv_dest_case_enum a b = cv$Pair x y
   ⇒ cv_size (cv_map_snd y) < cv_size b
 Proof
   recInduct $ fetch "-" "cv_dest_case_enum_ind" >> rw[] >>
   pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_case_enum_def"] >>
   rw[] >> gvs[] >>
-  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Num _)``] >>
-  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (Pair _ _)``]
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (cv$Num _)``] >>
+  simp[SCONV [Once cv_map_snd_def] ``cv_map_snd (cv$Pair _ _)``]
   >- (cv_termination_tac >> rename1 `cv_fst x` >> Cases_on `x` >> gvs[])
   >- (Cases_on `cv_v` >> gvs[])
   >- (cv_termination_tac >> rename1 `cv_fst x` >> Cases_on `x` >> gvs[])
@@ -222,7 +222,7 @@ Proof
 QED
 
 Triviality cv_dest_cons_chain_size:
-  ∀a x y. cv_dest_cons_chain a = Pair x y ⇒ cv_size y < cv_size a
+  ∀a x y. cv_dest_cons_chain a = cv$Pair x y ⇒ cv_size y < cv_size a
 Proof
   recInduct $ fetch "-" "cv_dest_cons_chain_ind" >> rw[] >>
   pop_assum mp_tac >> simp[Once $ fetch "-" "cv_dest_cons_chain_def"] >>
@@ -309,5 +309,3 @@ val res = cv_auto_trans printingTheory.vs2str_def;
 val res = cv_auto_trans codegenTheory.codegen_def;
 val res = cv_auto_trans x64asm_syntaxTheory.asm2str_def;
 val res = cv_auto_trans printingTheory.prog2str_def;
-
-val _ = export_theory();
