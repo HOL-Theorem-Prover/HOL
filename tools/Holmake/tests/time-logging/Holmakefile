@@ -1,9 +1,11 @@
 
+HM = $(protect $(HOLDIR)/bin/Holmake)
+
 ifdef POLY
-CMD = Holmake --holstate=$(HOLDIR)/bin/hol.state0 --logging
+CMD = $(HM) --holstate=$(HOLDIR)/bin/hol.state0 --logging
 SMLCMD = poly -q
 else
-CMD = Holmake --logging
+CMD = $(HM) --logging
 SMLCMD = mosml -quietdec -P full
 endif
 
