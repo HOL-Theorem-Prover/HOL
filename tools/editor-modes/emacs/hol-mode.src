@@ -533,7 +533,8 @@ starts >%s%s<"
       (concat
        (mapconcat (lambda (s) (concat "^" s "\\>"))
                   '("Theorem" "Definition" "Inductive" "CoInductive"
-                    "Triviality" "Datatype" "Type" "Overload" "Quote")
+                    "Triviality" "Datatype" "Type" "Overload" "Quote"
+                    "Theory" "Ancestors" "Libs")
                   "\\|")
        "\\|;\\|"
        (regexp-opt

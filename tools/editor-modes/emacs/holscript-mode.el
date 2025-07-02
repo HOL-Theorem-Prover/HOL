@@ -880,7 +880,7 @@ class characters.")
 
 (defconst holscript-column0-keywords-regexp
   (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Type"
-                "Proof" "Quote"
+                "Proof" "Quote" "Theory" "Ancestors" "Libs"
                 "Termination" "End" "QED" "Inductive" "CoInductive"
                 "Overload")))
 (defconst holscript-column0-declbegin-keyword
