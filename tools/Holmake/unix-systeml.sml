@@ -101,6 +101,7 @@ val POLY_LDFLAGS_STATIC = []
 val CC = ""
 
 val DEPDIR = ".hol/make-deps"
+val LOGDIR = ".hol/logs"
 val GNUMAKE = ""
 val DYNLIB = ""
 val version = ""

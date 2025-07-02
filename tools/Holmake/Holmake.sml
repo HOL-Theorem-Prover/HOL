@@ -57,7 +57,7 @@ val originally_in_src = is_src_dir original_dir
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
 val DEPDIR = Systeml.DEPDIR
-val LOGDIR = ".hollogs";
+val LOGDIR = Systeml.LOGDIR
 
 local
   val sigobj = OS.Path.concat(HOLDIR0, "sigobj")

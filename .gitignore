@@ -9,7 +9,6 @@
 *.ui
 *.o
 .hol
-.hollogs
 .holobjs
 *.lex.sml
 *.grm.sig
