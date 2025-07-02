@@ -49,7 +49,6 @@ val pkgconfig_info =
 
 
 val CC:string       = "cc";       (* C compiler                       *)
-val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 
 fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
@@ -253,7 +252,6 @@ in
        "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
-   "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),

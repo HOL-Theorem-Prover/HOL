@@ -56,7 +56,7 @@ val originally_in_src = is_src_dir original_dir
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
-val DEPDIR = ".HOLMK";
+val DEPDIR = Systeml.DEPDIR
 val LOGDIR = ".hollogs";
 
 local

@@ -304,13 +304,34 @@ in
   traverse() before chDir start
 end
 
+fun createDirIfNecessary s =
+    if OS.FileSys.isDir s handle OS.SysErr _ => false then ()
+    else if OS.FileSys.access(s,[]) then
+      raise Fail ("createDirIfNecessary: path " ^ s ^
+                  " already exists but is not a directory")
+    else
+      let val {dir,file} = OS.Path.splitDirFile s
+      in
+        if dir = "" then (* happens if s is a relative path *)
+          if file = "" then ()
+          else OS.FileSys.mkDir file
+        else
+          let val _ = createDirIfNecessary dir
+          in
+            if file <> "" then OS.FileSys.mkDir s
+            else ()
+          end
+      end
+
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns
   val diag = diag "lastmadecheck"
   val mypath = find_my_path()
   val _ = diag (K ("running "^mypath))
+  val lastmakerfilename = OS.Path.concat (DEPDIR, "lastmaker")
   fun write_lastmaker_file () = let
-    val outstr = openOut ".HOLMK/lastmaker"
+    val _ = createDirIfNecessary DEPDIR
+    val outstr = openOut lastmakerfilename
   in
     output(outstr, mypath ^ "\n");
     closeOut outstr
@@ -318,10 +339,10 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
 
   fun lmfile() =
       if not no_lastmakercheck andalso
-         FileSys.access (".HOLMK/lastmaker", [FileSys.A_READ])
+         FileSys.access (lastmakerfilename, [FileSys.A_READ])
       then let
           val _ = diag (K "Found a lastmaker file to look at.")
-          val istrm = openIn ".HOLMK/lastmaker"
+          val istrm = openIn lastmakerfilename
         in
           case inputLine istrm of
             NONE => (warn "Empty Last Maker file";
@@ -688,17 +709,8 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
              (warn ("Holdep failed: "^s); raise HolDepFailed)
          | e => (warn ("Holdep exception: "^General.exnMessage e);
                  raise HolDepFailed)
-  fun myopen s =
-    if FileSys.access(DEPDIR, []) then
-      if FileSys.isDir DEPDIR then openOut s
-      else die_with ("Want to put dependency information in directory "^
-                     DEPDIR^", but it already exists as a file")
-    else
-     (chatty ("Trying to create directory "^DEPDIR^" for dependency files");
-      FileSys.mkDir DEPDIR;
-      openOut s
-     )
-  val outstr = myopen (normPath destination)
+  val _ = createDirIfNecessary DEPDIR
+  val outstr = openOut (normPath destination)
 in
   output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
   closeOut outstr
