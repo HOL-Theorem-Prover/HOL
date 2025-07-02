@@ -1,11 +1,11 @@
-
-open HolKernel Parse boolLib bossLib term_tactic;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open source_valuesTheory source_syntaxTheory source_semanticsTheory mp_then
-     source_propertiesTheory parsingTheory codegenTheory x64asm_syntaxTheory
-     wordsTheory wordsLib automation_lemmasTheory automationLib;
-
-val _ = new_theory "compiler_prog";
+Theory compiler_prog
+Ancestors
+  arithmetic list pair finite_map string
+  source_values source_syntax source_semantics
+  source_properties parsing codegen x64asm_syntax
+  words automation_lemmas printing parsing
+Libs
+  mp_then wordsLib automationLib
 
 val _ = show_assums := true;
 
@@ -822,5 +822,3 @@ Proof
   \\ goal_assum (first_x_assum o mp_then Any mp_tac)
   \\ simp [init_state_def]
 QED
-
-val _ = export_theory();

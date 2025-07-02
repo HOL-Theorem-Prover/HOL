@@ -1,9 +1,7 @@
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open source_valuesTheory printingTheory parsingTheory;
-
-val _ = new_theory "parsing_proofs";
+Theory parsing_proofs
+Ancestors
+  arithmetic list pair finite_map string
+  source_values printing parsing
 
 Definition dest_quote_def:
   dest_quote v =
@@ -804,5 +802,3 @@ Theorem parser_lexer_prog2str:
 Proof
   fs [parser_def,prog2str_def,parse_lexer_vs2str,list_v2list,vs2prog_prog2vs]
 QED
-
-val _ = export_theory();
