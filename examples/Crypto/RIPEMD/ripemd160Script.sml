@@ -4,6 +4,7 @@ open HolKernel boolLib bossLib Parse
      bitTheory wordsTheory
      numposrepTheory byteTheory wordsLib
      cv_stdTheory cv_transLib
+     intLib
 
 (* The RIPEMD-160 Specification: https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf *)
 (* See Appendix A for Pseudo-code for RIPEMD-160 *)
@@ -14,13 +15,12 @@ val _ = new_theory"ripemd160";
 Definition chg_end_acc_def:
   chg_end_acc acc [] = acc ∧
   chg_end_acc acc (b::bits) =
-    chg_end_acc (TAKE 8 (b::bits) ++ acc) (DROP 8 (b::bits))
+  chg_end_acc (TAKE 8 (b::bits) ++ acc) (DROP 8 (b::bits))
 Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
 End
 
-(* change bits in little-endian to that in big-endian or vice versa, padding 0s to the left of bits when
-   necessary to make the length of bits a multiple of 8 *)
+(* change bits in little-endian to that in big-endian or vice versa, padding 0s to the left of bits when necessary to make the length of bits a multiple of 8 *)
 Definition chg_end_def:
   chg_end (bits: num list) =
   let
@@ -30,8 +30,6 @@ Definition chg_end_def:
   in
     chg_end_acc [] $ (REPLICATE k 0 ++ bits)
 End
-
-val () = cv_auto_trans chg_end_def;
 
 Definition pad_message_def:
   pad_message bits =
@@ -52,8 +50,7 @@ Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
 End
 
-(* parse bits (assumed to have length that is a multiple of 512) into blocks, each of which is a schedule
-   consisting of 16 words of 32 bits *)
+(* parse bits (assumed to have length that is a multiple of 512) into blocks, each of which is a schedule consisting of 16 words of 32 bits *)
 Definition parse_message_def:
   parse_message acc bits =
   if NULL bits then REVERSE acc else
@@ -64,7 +61,7 @@ End
 
 val () = cv_auto_trans parse_message_def;
 
-(* dummy else-branch added to make f a total function *)
+(* dummy final else-branch added to make f well-defined in all cases *)
 Definition f_def:
   f (j: num) x y z: word32 =
   if 0 ≤ j ∧ j ≤ 15 then x ?? y ?? z
@@ -72,12 +69,13 @@ Definition f_def:
   else if 32 ≤ j ∧ j ≤ 47 then (x || ¬y) ?? z
   else if 48 ≤ j ∧ j ≤ 63 then (x && z) || (y && ¬z)
   else if 64 ≤ j ∧ j ≤ 79 then x ?? (y || ¬z)
-  else 0x0w
+  else 0w
 End
 
+(*type_of “ARB”*)
 val () = cv_auto_trans f_def;
 
-(* dummy else-branch added to make K a total function *)
+(* dummy final else-branch added to make K well-defined in all cases *)
 Definition K_def:
   K (j: num): word32 =
   if 0 ≤ j ∧ j ≤ 15 then 0x00000000w
@@ -85,12 +83,12 @@ Definition K_def:
   else if 32 ≤ j ∧ j ≤ 47 then 0x6ED9EBA1w
   else if 48 ≤ j ∧ j ≤ 63 then 0x8F1BBCDCw
   else if 64 ≤ j ∧ j ≤ 79 then 0xA953FD4Ew
-  else 0x0w
+  else 0w
 End
 
 val () = cv_auto_trans K_def;
 
-(* dummy else-branch added to make K' a total function *)
+(* dummy final else-branch added to make K' well-defined in all cases *)
 Definition K'_def:
   K' (j: num): word32 =
   if 0 ≤ j ∧ j ≤ 15 then 0x50A28BE6w
@@ -98,20 +96,76 @@ Definition K'_def:
   else if 32 ≤ j ∧ j ≤ 47 then 0x6D703EF3w
   else if 48 ≤ j ∧ j ≤ 63 then 0x7A6D76E9w
   else if 64 ≤ j ∧ j ≤ 79 then 0x00000000w
-  else 0x0w
+  else 0w
 End
 
 val () = cv_auto_trans K'_def;
 
-(* dummy case of NONE to make rho a total function *)
 Definition rho_def:
-  rho n: num =
-  case oEL n [7;4;13;1;10;6;15;3;12;0;9;5;2;14;11;8] of
-    SOME k => k
-  | NONE   => 16
+  rho n: num = EL n [7;4;13;1;10;6;15;3;12;0;9;5;2;14;11;8]
 End
 
-val () = cv_auto_trans rho_def;
+val rho_pre_def = cv_trans_pre rho_def;
+
+Theorem rho_pre[cv_pre]:
+  rho_pre n ⇔ n < 16
+Proof
+  simp[rho_pre_def]
+QED
+
+Definition rho_alt_def:
+  rho_alt n: num = if n < 16 then rho n else 0
+End
+
+val () = cv_trans rho_alt_def;
+
+Theorem rho_eq_rho_alt_le_16:
+  ∀n. n < 16 ⇒ rho n = rho_alt n
+Proof
+  rw[rho_def, rho_alt_def]
+QED
+
+(*CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM*)
+(*REWRITE_RULE [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM]*)
+
+Theorem rho_preserves_le_16:
+  ∀n. n < 16 ⇒ rho n < 16
+Proof
+  rw[rho_def]>>
+  pop_assum (
+    fn thm => (
+      strip_assume_tac (
+        SRULE
+          [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM] thm)))>>
+  fs[]
+QED
+
+Theorem funpow_rho_alt_preserves_le_16:
+  ∀n m. m < 16 ⇒ FUNPOW rho_alt n m < 16
+Proof
+  Induct
+  >-simp[]
+  >-(
+    rw[arithmeticTheory.FUNPOW_SUC]>>
+    last_x_assum (drule_then assume_tac)>>
+    rw[GSYM rho_eq_rho_alt_le_16, rho_preserves_le_16])
+QED
+
+Theorem rho_eq_rho_alt_le_16_funpow:
+  ∀n m. m < 16 ⇒ FUNPOW rho n m = FUNPOW rho_alt n m
+Proof
+  (* try redoing with this
+  rw[]>>
+  irule FUNPOW_CONG
+  *)
+  Induct
+    >-simp[]
+    >-(
+      rw[arithmeticTheory.FUNPOW_SUC]>>
+      assume_tac funpow_rho_alt_preserves_le_16>>
+      pop_assum $ drule_then assume_tac>>
+      rw[rho_eq_rho_alt_le_16])
+QED
 
 Definition pi_def:
   pi i = (9 * i + 5) MOD 16
@@ -119,69 +173,128 @@ End
 
 val () = cv_trans pi_def;
 
-(* dummy else-branch added to make r a total function *)
 Definition r_def:
   r j =
-  if 0 ≤ j ∧ j ≤ 79 then
-    let
-      qt = j DIV 16;
-      rm = j MOD 16
-    in
-      FUNPOW rho qt rm
-  else 16
+  let
+    qt = j DIV 16;
+    rm = j MOD 16
+  in
+    FUNPOW rho qt rm
 End
 
-val () = cv_auto_trans r_def;
+Theorem r_alt_cv:
+  r j =
+  let
+    qt = j DIV 16;
+    rm = j MOD 16
+  in
+    FUNPOW rho_alt qt rm
+Proof
+  simp[r_def, rho_def, rho_alt_def]>>
+  rw[rho_eq_rho_alt_le_16_funpow]
+QED
 
-(* dummy else-branch added to make r' a total function *)
+val () = cv_auto_trans r_alt_cv;
+
 Definition r'_def:
   r' j =
-  if 0 ≤ j ∧ j ≤ 79 then
-    let
-      qt = j DIV 16;
-      rm = pi (j MOD 16)
-    in
-      FUNPOW rho qt rm
-  else 16
+  let
+    qt = j DIV 16;
+    rm = pi (j MOD 16)
+  in
+    FUNPOW rho qt rm
 End
 
-val () = cv_auto_trans r'_def;
+Theorem r'_alt_cv:
+  r' j =
+  let
+    qt = j DIV 16;
+    rm = pi (j MOD 16)
+  in
+    FUNPOW rho_alt qt rm
+Proof
+  simp[r'_def, rho_def, rho_alt_def, pi_def]>>
+  rw[rho_eq_rho_alt_le_16_funpow]
+QED
+
+val () = cv_auto_trans r'_alt_cv;
 
 Definition shift_lookup_table_def:
-  shift_lookup_table: num list list =
-  [[11;14;15;12;5;8;7;9;11;13;14;15;6;7;9;8];
-   [12;13;11;15;6;9;9;7;12;15;11;13;7;8;7;7];
-   [13;15;14;11;7;7;6;8;13;14;13;12;5;5;6;9];
-   [14;11;12;14;8;6;5;5;15;12;15;14;9;9;8;6];
-   [15;12;13;13;9;5;8;6;14;11;12;11;8;6;5;5]]
+  shift_lookup_table: num list list = [
+    [11;14;15;12;5;8;7;9;11;13;14;15;6;7;9;8];
+    [12;13;11;15;6;9;9;7;12;15;11;13;7;8;7;7];
+    [13;15;14;11;7;7;6;8;13;14;13;12;5;5;6;9];
+    [14;11;12;14;8;6;5;5;15;12;15;14;9;9;8;6];
+    [15;12;13;13;9;5;8;6;14;11;12;11;8;6;5;5]]
 End
 
 val () = cv_trans_deep_embedding EVAL shift_lookup_table_def;
 
-(* dummy else-branch added to make s a total function *)
 Definition s_def:
   s j =
-  if 0 ≤ j ∧ j ≤ 79 then
-    let
-      row = j DIV 16;
-      col = r j
-    in
-      EL col (EL row shift_lookup_table)
-  else 16
+  let
+    row = j DIV 16;
+    col = r j
+  in
+    EL col (EL row shift_lookup_table)
 End
+
+val s_pre_def = cv_trans_pre s_def;
+
+Theorem s_pre[cv_pre]:
+  s_pre j ⇔ j < 80
+Proof
+  simp[s_pre_def]>>
+  iff_tac>>
+  strip_tac>>
+  ‘LENGTH shift_lookup_table = 5’ by EVAL_TAC>>
+  rw[]
+  >-intLib.ARITH_TAC
+  >-intLib.ARITH_TAC
+  >-(
+    last_x_assum (
+      fn thm => (
+        strip_assume_tac (
+          SRULE
+          [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM] thm)))>>
+    simp[]>>
+    EVAL_TAC)
+QED
 
 (*val res = cv_trans_pre s_def;*)
 
 Definition s'_def:
   s' j =
-  if 0 ≤ j ∧ j ≤ 79 then
-    let
-      row = j DIV 16;
-      col = r' j
-    in
-      EL col (EL row shift_lookup_table)
-  else 16
+  let
+    row = j DIV 16;
+    col = r' j
+  in
+    EL col (EL row shift_lookup_table)
 End
+
+val s'_pre_def = cv_trans_pre s'_def;
+
+Theorem s'_pre[cv_pre]:
+  s'_pre j ⇔ j < 80
+Proof
+  simp[s'_pre_def]>>
+  iff_tac>>
+  strip_tac>>
+  ‘LENGTH shift_lookup_table = 5’ by EVAL_TAC>>
+  rw[]
+  >-intLib.ARITH_TAC
+  >-intLib.ARITH_TAC
+  >-(
+    last_x_assum (
+      fn thm => (
+        strip_assume_tac (
+          SRULE
+          [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM] thm)))>>
+    simp[]>>
+    EVAL_TAC)
+QED
+
+(* HERE *)
 
 Definition initial_value_def:
   initial_value: word32 # word32 # word32 # word32 # word32 = (0x67452301w, 0xEFCDAB89w, 0x98BADCFEw, 0x10325476w, 0xC3D2E1F0w)
