@@ -1,4 +1,4 @@
-HOL = $(protect $(HOLDIR)/bin/hol.bare) --zero
+HOL = $(protect $(HOLDIR)/bin/hol.bare) --zero --noconfig
 INCLUDES = $(HOLDIR)/tools/cmp
 
 all: $(DEFAULT_TARGETS)
