@@ -83,10 +83,15 @@ structure AstNew = struct
       head: int * string, type_q: int option,
       quote: qbody, end_tok: (int * string) option, stop: int}
   | HOLQuote of {head: int * string, quote: qbody, end_tok: (int * string) option, stop: int}
-  | HOLLinePragma of int (* #(LINE) *)
-  (* | HOLLinePragmaWith of int * string *) (* #(LINE=3) this is BS *)
-  | HOLFilePragma of int (* #(FILE) *)
-  (* | HOLFilePragmaWith of int * string *) (* #(FILE=foo.sml) this is BS *)
+  | HOLLinePragma of {hash_: int, left: int, line_: int, right: int option, stop: int} (* #(LINE) *)
+  | HOLLinePragmaWith of {
+      hash_: int, left: int, line_: int, eq_: int,
+      line: int * string option, col: {comma_: int, col: int * string option} option,
+      right: int option, stop: int} (* #(LINE=3) this is BS *)
+  | HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int} (* #(FILE) *)
+  | HOLFilePragmaWith of {
+      hash_: int, left: int, file_: int, eq_: int,
+      file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
 
   | BadExp of {start: int, stop: int}
 
@@ -373,6 +378,13 @@ fun parseSML body parseError = let
         NONE => ()
       | SOME e => parseError (#1 tk, !pos) e; unread tk)
 
+  fun parseInt err = case token () of
+      (start, IntTk) => (start, SOME (ident start))
+    | tk => (makeError tk NONE err; (#1 tk, NONE))
+  fun parseIdent err = case token () of
+      (start, IdentTk) => (start, SOME (ident start))
+    | tk => (makeError tk NONE err; (#1 tk, NONE))
+
   fun parseSymbol s err = let
     val tk = token ()
     val r = case tk of (start, Symbol c) => if c = s then SOME start else NONE | _ => NONE
@@ -542,11 +554,60 @@ fun parseSML body parseError = let
         delim = fn (_, Symbol #",") => true | _ => false,
         close = fn (_, Symbol #"}") => true | _ => false }
       in Record {left = start, elems = elems, right = right, stop = stop} end
-    | (start, Symbol #"#") => Select {hash = start, label = parseRecordLabel ()}
+    | (start, Symbol #"#") => (case parseSymbol #"(" NONE of
+        SOME startParen => let
+        fun getRight () = let
+          val right = parseSymbol #")" (SOME "expected ')'")
+          val stop = case right of
+            SOME n => n+1
+          | NONE => (case token() of tk => (unread tk; #1 tk))
+          in (right, stop) end
+        val res = case token () of
+          (kw, IdentTk) => (case ident kw of
+            "LINE" => (case parseKeyword "=" NONE of
+              SOME eq_ => let
+              val line = parseInt (SOME "expected a number")
+              val col = Option.map
+                (fn comma_ => {comma_ = comma_, col = parseInt (SOME "expected a number")})
+                (parseSymbol #"," NONE)
+              val (right, stop) = getRight ()
+              in HOLLinePragmaWith {
+                hash_ = start, left = startParen, line_ = kw,
+                eq_ = eq_, line = line, col = col, right = right, stop = stop }
+              end
+            | NONE => let
+              val (right, stop) = getRight ()
+              in HOLLinePragma {
+                hash_ = start, left = startParen, line_ = kw,
+                right = right, stop = stop}
+              end)
+          | "FILE" => (case parseKeyword "=" NONE of
+              SOME eq_ => let
+              val file = parseIdent (SOME "expected an identifier")
+              val (right, stop) = getRight ()
+              in HOLFilePragmaWith {
+                hash_ = start, left = startParen, file_ = kw,
+                eq_ = eq_, file = file, right = right, stop = stop }
+              end
+            | NONE => let
+              val (right, stop) = getRight ()
+              in HOLFilePragma {
+                hash_ = start, left = startParen, file_ = kw,
+                right = right, stop = stop}
+              end)
+          | s => (
+            parseError (kw, !pos) ("unknown pragma '"^s^"'");
+            BadExp {start = start, stop = !pos}))
+        | tk => (
+          parseError (#1 tk, #1 tk) "expected pragma";
+          unread tk;
+          BadExp {start = start, stop = #1 tk})
+        in res end
+      | NONE => Select {hash = start, label = parseRecordLabel ()})
     | (start, IdentTk) => (case ident start of
         "let" => let
         val let_ = start
-        val (sc', dec) = parseDec false sc []
+        val (sc', dec) = parseDecs false sc []
         val in_ = parseKeyword "in" (SOME "expected keyword in")
         val (exps, end_, stop) = parseDelimitedClose [] [] {
           elem = fn () => parseExp sc' false,
@@ -659,7 +720,7 @@ fun parseSML body parseError = let
       | NONE => exp
     end
 
-  and parseDec (inSig: bool) sc (acc: dec list): scope * dec list =
+  and parseDecs (inSig: bool) sc (acc: dec list): scope * dec list =
     case token () of
       (start, IdentTk) => (case ident start of
         "val" => let
@@ -671,14 +732,14 @@ fun parseSML body parseError = let
             val exp = parseExp sc false
             val elem = ValBind {rec_ = NONE, pat = pat, eq = eq, exp = exp}
             val elems = {args = [elem], delims = []}
-            in parseDec inSig sc (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
+            in parseDecs inSig sc (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
           | NONE => let
             val colon = parseKeyword ":" (SOME "expected a colon")
             val Ident {op_ = NONE, id} = pat
             val ty = parseTy ()
             val elem = ValSpec {vid = id, colon = colon, ty = ty}
             val elems = {args = [elem], delims = []}
-            in parseDec inSig sc (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
+            in parseDecs inSig sc (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
         end
       | _ => raise Todo)
     | _ => raise Todo
