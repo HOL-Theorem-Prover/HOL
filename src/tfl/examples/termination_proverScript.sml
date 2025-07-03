@@ -308,9 +308,6 @@ Definition int_bits_bound_def:
   int_bits_bound i n ⇔ i < 2 ** PRE n
 End
 
-(* NB: the invocation of LIST_REL needs an eta-expanded has_type,
-   otherwise ugly failure. *)
-
 Definition has_type_def:
   has_type (Uint n)     (NumV v)    = (v < 2 ** n ∧ valid_int_bound n) ∧
   has_type (Int n)      (IntV i)    = (int_bits_bound i n ∧ valid_int_bound n) ∧
@@ -321,8 +318,26 @@ Definition has_type_def:
   has_type (Bytes b)    (BytesV bs) = (valid_bytes_bound b ∧ valid_length b bs) ∧
   has_type String       (BytesV bs) = T ∧
   has_type (Array b t)  (ListV vs)  = EVERY (has_type t) vs ∧
-  has_type (Tuple ts)   (ListV vs)  = LIST_REL (λty v. has_type ty v) ts vs ∧
+  has_type (Tuple ts)   (ListV vs)  = LIST_REL has_type ts vs ∧
   has_type  other         wise      = F
+End
+
+(*---------------------------------------------------------------------------*)
+(* Example from Halogen Truong                                               *)
+(*---------------------------------------------------------------------------*)
+
+Datatype:
+  based = Based | NotBased | Trusted | NotTrusted
+End
+
+Datatype:
+  shaped_based = WordB based | StructB (shaped_based list)
+End
+
+Definition sh_based_set_def:
+  sh_based_set (WordB b) b' = WordB b' /\
+  sh_based_set (StructB sbs) b' =
+     StructB $ MAP2 sh_based_set sbs (REPLICATE (LENGTH sbs) b')
 End
 
 val _ = export_theory();
