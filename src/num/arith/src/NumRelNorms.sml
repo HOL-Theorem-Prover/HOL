@@ -175,6 +175,7 @@ structure NumEQNorm = GenRelNorm (EQ_NREL);
 fun trySUC_ELIM c =
     TRY_CONV
       (PURE_REWRITE_CONV [arithmeticTheory.ADD1] THENC
+       BINOP_CONV ADDR_CANON_CONV THENC
        CHANGED_CONV c)
 
 val sum_leq_norm = trySUC_ELIM NumLEQNorm.gen_relnorm
