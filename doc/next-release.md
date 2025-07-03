@@ -46,6 +46,8 @@ New features:
     might be used from the root of your HOL development.
     Alternatively, use `Holmake -r cleanAll` with your old HOL version, and then switch.
 
+-   Under Poly/ML, the `hol` and `hol.bare` executables can be passed the `–-noconfig` command-line flag to stop them consulting user config files in the user’s home directory (these have names like `hol-config.sml`).
+    Under both Moscow ML and Poly/ML, configuration files are also ignored if there is a  `HOL_NOCONFIG` environment variable set.
 
 Bugs fixed:
 -----------
