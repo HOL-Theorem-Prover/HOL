@@ -3,7 +3,10 @@ struct
 
 
 exception DirNotFound
-val HOLOBJDIR = ".holobjs"
+val HOLOBJDIR = ".hol/objs"
+val HOLOBJDIR_arcs = ["objs", ".hol"]
+  (* yes, flipped, as they're inserted into a list that is then reversed;
+     see insert_before_last *)
 
 fun base_app {dirname} P action =
     let
@@ -21,9 +24,9 @@ fun base_app {dirname} P action =
 
 
 
-fun insert_before_last A e [] = raise Fail "HFS_NameMunge: insert_before_last"
-  | insert_before_last A e [last] = (List.rev (e::A), last)
-  | insert_before_last A e (h::t) = insert_before_last (h::A) e t
+fun insert_before_last A es [] = raise Fail "HFS_NameMunge: insert_before_last"
+  | insert_before_last A es [last] = (List.rev (es @ A), last)
+  | insert_before_last A es (h::t) = insert_before_last (h::A) es t
 
 fun isPSuffix sfx s =
     size sfx < size s andalso String.isSuffix sfx s
@@ -47,12 +50,12 @@ fun HOLtoFS nm =
               ("sigobj" :: _, _) => false
             | (_, SOME s) => s = "uo" orelse s = "ui" orelse
                              (isPSuffix "Theory" base andalso
-                              (s = "sml" orelse s = "dat"))
+                              (s = "sml" orelse s = "dat" orelse s = "sig"))
             | (_, NONE) => false
     in
       if changep then
         let
-          val (arcs', last) = insert_before_last [] HOLOBJDIR arcs
+          val (arcs', last) = insert_before_last [] HOLOBJDIR_arcs arcs
           val dir = OS.Path.toString {isAbs = isAbs, vol = vol, arcs = arcs'}
         in
           SOME {fullfile = OS.Path.concat(dir, last), dir = dir}
@@ -75,7 +78,7 @@ fun toFSfn writep f nm =
             else raise Fail ("HFS_NameMunge: " ^ dir ^ " exists but is not " ^
                              "accessible directory")
           else if writep then
-            (OS.FileSys.mkDir dir; f nm')
+            (HOLFS_dtype.createDirIfNecessary dir; f nm')
           else f nm'
     end
 
@@ -92,10 +95,10 @@ fun readDir (dirname, ds, r as ref subdsopt) =
         NONE => (case OS.FileSys.readDir ds of
                      NONE => NONE
                    | SOME s =>
-                     if s = HOLOBJDIR then
-                       let val p = OS.Path.concat(dirname, s)
+                     if s = ".hol" then
+                       let val p = OS.Path.concat(dirname, HOLOBJDIR)
                        in
-                         if OS.FileSys.isDir p then
+                         if OS.FileSys.isDir p handle OS.SysErr _ => false then
                            let val ds' = OS.FileSys.openDir p
                            in
                              case OS.FileSys.readDir ds' of
@@ -119,19 +122,21 @@ fun closeDir (_, ds, r as ref subdsopt) =
        | SOME ds' => (OS.FileSys.closeDir ds'; r := NONE))
 
 fun pushdir d f =
-    let val d0 = OS.FileSys.getDir()
-        val _ = OS.FileSys.chDir d
-        val res = f () handle e => (OS.FileSys.chDir d0; raise e)
-    in
-      OS.FileSys.chDir d0;
-      res
-    end
+    if OS.FileSys.isDir d handle OS.SysErr _ => false then
+      let val d0 = OS.FileSys.getDir()
+          val _ = OS.FileSys.chDir d
+          val res = f () handle e => (OS.FileSys.chDir d0; raise e)
+      in
+        OS.FileSys.chDir d0;
+        res
+      end
+    else ()
 
 fun read_files_with_objs {dirname} P action =
     base_app
       {dirname=dirname}
-      (fn s => s = HOLOBJDIR orelse P s)
-      (fn s => if s = HOLOBJDIR then
+      (fn s => s = ".hol" orelse P s)
+      (fn s => if s = ".hol" then
                  pushdir (OS.Path.concat(dirname, HOLOBJDIR))
                          (fn () => base_app {dirname="."} P action)
                else action s)

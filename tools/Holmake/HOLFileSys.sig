@@ -56,6 +56,7 @@ sig
   val openDir : string -> dirstream
   val readDir : dirstream -> string option
   val closeDir : dirstream -> unit
+  val createDirIfNecessary : string -> unit
 
   val read_files : {dirname: string} -> (string -> bool) -> (string -> unit) ->
                    unit

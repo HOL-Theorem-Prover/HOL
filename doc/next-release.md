@@ -24,7 +24,7 @@ New features:
     See the DESCRIPTION and REFERENCE manuals for details.
     ([GitHub issue](https://github.com/HOL-Theorem-Prover/HOL/issues/1220))
 
-- The automatic termination-finding technology behind `Definition`
+-   The automatic termination-finding technology behind `Definition`
     (and lower-level APIs) is now rather stronger, especially when
     dealing with higher order recursions using list operators.  This
     should reduce the number of times you need to introduce explicit
@@ -33,6 +33,18 @@ New features:
     relation guessing now have traces ("Definition.TC extraction" and
     "Definition.termination candidates") that can be examined for illumination.
     See `src/tfl/examples/termination_proverScript.sml` for examples.
+
+-   All of HOL’s internal files are now stored in/under one sub-directory of the source directory where user `*Script.sml` files are found.
+    Previously, HOL used `.HOLMK`, `.holobjs`, and `.hollogs`.
+    Now everything is stored in/under the sub-directory `.hol`.
+
+    To get rid of old directories, which are now just going to be useless clutter, shell command-lines such as
+
+           find . -path '*/.hollogs/*' -delete
+           find . -name '.hollogs' -delete
+
+    might be used from the root of your HOL development.
+    Alternatively, use `Holmake -r cleanAll` with your old HOL version, and then switch.
 
 
 Bugs fixed:

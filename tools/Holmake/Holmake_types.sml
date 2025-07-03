@@ -383,14 +383,15 @@ val base_environment0 = let
                "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
        ("HOLDIR", [LIT HOLDIR]),
        ("HOL_LNSIGOBJ",
-        [LIT "for i in `pwd`/",
+        [LIT "shopt -s nullglob ; for i in `pwd`/",
          VREF "HOLOBJDIR", LIT "/*.uo `pwd`/",
          VREF "HOLOBJDIR",
          LIT "/*.ui ; do b=`basename $i` ; \
              \if [ \"$b\" = \"selftest.uo\" -o \"$b\" = \"selftest.ui\" ] ; \
              \then : ; else ln -fs $i ",
          VREF "SIGOBJ",
-         LIT " ; fi ; done && for i in *.sig ; do ln -fs `pwd`/$i ",
+         LIT " ; fi ; done && for i in *.sig ",
+         VREF "HOLOBJDIR", LIT "/*.sig ; do ln -fs `pwd`/$i ",
          VREF "SIGOBJ",
          LIT " ; echo `pwd`/`basename $i .sig` >> ",
          VREF "SIGOBJ",
