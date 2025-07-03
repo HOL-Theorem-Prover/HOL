@@ -64,7 +64,7 @@ header-includes: |
   \DeclareUnicodeCharacter{29FA}{\ensuremath{{+}\!\!{+}}}
   \DeclareUnicodeCharacter{A673}{\ensuremath{\sp{*}}}
   \DeclareUnicodeCharacter{1D49F}{\ensuremath{{\cal D}}}
-
+  \DeclareUnicodeCharacter{1D4AF}{\ensuremath{{\cal T}}}
 ---
 
 
@@ -1042,208 +1042,136 @@ and pretty-printed by
 >>__ printNameAndType 4 "Tag" "pp_tag"
 ```
 
-##skip
+## Theories
 
-\section{Theories}
-\label{theoryfns}
+In §LOGIC a theory is described as a $4$-tuple
 
-\index{theories, in HOL logic@theories, in HOL logic!representation of|(}
-%
-In \LOGIC{} a theory is described as a $4$-tuple
+$$𝒯 = \langle \mathsf{Struc}_𝒯, \mathsf{Sig}_𝒯, \mathsf{Axioms}_𝒯, \mathsf{Theorems}_𝒯\rangle $$
 
-\[ {\cal T}\ =\ \langle{\sf Struc}_{\cal T},\
-                {\sf Sig}_{\cal T},\
-                {\sf Axioms}_{\cal T},\
-                {\sf Theorems}_{\cal T}\rangle \]
+where
 
-\noindent where
-\begin{myenumerate}
-\item ${\sf Struc}_{\cal T}$ is
-the type structure of ${\cal T}$;
-\item ${\sf Sig}_{\cal T}$ is
-the signature of ${\cal T}$;
-\item ${\sf Axioms}_{\cal T}$ is
-the set of axioms of ${\cal T}$;
-\item ${\sf Theorems}_{\cal T}$ is the set of
-theorems of ${\cal T}$.
-\end{myenumerate}
+1. $\mathsf{Struc}_𝒯$ is the type structure of 𝒯;
+2. $\mathsf{Sig}_𝒯$ is the signature of 𝒯;
+3. $\mathsf{Axioms}_𝒯$ is the set of axioms of 𝒯;
+4. $\mathsf{Theorems}_𝒯$ is the set of theorems of 𝒯.
 
-In the implementation of \HOL, theories are structured hierarchically
-to represent sequences of extensions called
-*segments*
-%
-\index{theory segments}
-%
-of an initial theory called `min`\index{min@`min`}. A theory
-segment is not really a logical concept, but rather a means of
-representating theories in the HOL system. Each segment records
-some types, constants, axioms and theorems, together with pointers to
-other segments called its *parents*.
-%
-\index{parents, of HOL theories@parents, of HOL theories}
-%
-The theory represented by a segment is obtained by taking the union of
-all the types, constants, axioms and theorems in the segment, together
-with the types, constants, axioms and theorems in all the segments
-reachable by following pointers to parents. This collection of
-reachable segments is called the *ancestry*
-%
-\index{ancestry, of HOL system theories@ancestry, of HOL system theories}%
-\index{theories, in HOL logic@theories, in HOL logic!hierarchies of}%
-%
-of the segment.
-
-\index{theories, in HOL logic@theories, in HOL logic!representation of|)}
+In the implementation of HOL, theories are structured hierarchically to represent sequences of extensions called *segments* of an initial theory called `min`.
+A theory segment is not really a logical concept, but rather a means of representing theories in the HOL system.
+Each segment records some types, constants, axioms and theorems, together with pointers to other segments called its *parents*.
+The theory represented by a segment is obtained by taking the union of all the types, constants, axioms and theorems in the segment, together with the types, constants, axioms and theorems in all the segments reachable by following pointers to parents.
+This collection of reachable segments is called the *ancestry* of the segment.
 
 ### ML functions for theory operations
-\label{theoryprims}
 
-A typical\index{HOL system@HOL system!typical work in} piece of work
-with the HOL system consists in a number of sessions\index{sessions
-with HOL system@sessions, with HOL system}.  In the first of these, a
-new theory, ${\cal T}$ say, is created by importing some existing theory
+A typical piece of work with the HOL system consists in a number of sessions.
+In the first of these, a new theory, 𝒯 say, is created by importing some existing theory
 segments, making a number of definitions, and perhaps proving and
-storing some theorems in the current segment. Then the current segment
-(named $name$ say) is exported. The concrete result will be an \ML\
-module $name$`Theory` whose contents is the current theory segment
+storing some theorems in the current segment.
+Then the current segment (named $\mathit{name}$ say) is exported.
+The concrete result will be an ML module $\mathsf{name}$`Theory` whose contents is the current theory segment
 created during the session and whose ancestry represents the desired
-logical theory ${\cal T}$. Subsequent work sessions can access the
-definitions and theorems of ${\cal T}$ by importing $name$`Theory`;
+logical theory 𝒯. Subsequent work sessions can access the
+definitions and theorems of 𝒯 by importing $name$`Theory`;
 this avoids having to load the tools and replay
 the proofs that created $name$`Theory` in the first place.
 
 The naming of data in theories is based on the names given to segments.
 Specifically an axiom, definition, specification or theorem is
-accessed\index{theories, in HOL logic@theories, in HOL logic!naming of}
-by an ML long identifier $thy${\small\verb+Theory.+}$name$, where
-$thy$ is the name of the theory segment current when the item was
-declared and $name$ is a specific name supplied by the user (see the
-functions `new_axiom`, `new_definition`, below). Different items
-can have the same specific name if the associated segment is different.
-Thus each theory segment provides a separate namespace of ML bindings of
-HOL items.
+accessed by an ML long identifier $\mathit{thy}$`Theory.`$\mathit{name}$, where
+$\mathit{thy}$ is the name of the theory segment current when the item was
+declared and $\mathit{name}$ is a specific name supplied by the user (see the
+functions `new_axiom`, `new_definition`, below).
+Different items can have the same specific name if the associated segment is different. Thus each theory segment provides a separate namespace of ML bindings of HOL items.
 
 Various additional pieces of information are stored in a theory
-segment, including the parsing status of the constants (\eg, whether
+segment, including the parsing status of the constants (*e.g.*, whether
 they are infixes or binders).
 
-\paragraph {Determining the context}
+#### Determining the Context
 
 There is always a \emph{current theory} which is the theory
 represented by the current theory segment together with its
-ancestry. The name of the current theory segment is returned by the \ML\
+ancestry. The name of the current theory segment is returned by the ML
 function:
 
-\begin{holboxed}\index{current_theory@`current_theory`|pin}
-\begin{verbatim}
-   current_theory : unit -> string
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Theory" "current_theory"
+```
 
-  When an interactive HOL session begins, some theories will
-  already be in the logical context. The exact set of theories in
-  context will vary.  If the executable used is \texttt{hol.bare},
-  then only \theoryimp{min} and \theoryimp{bool} will be loaded.  When
-  the \texttt{hol} executable is used, a richer context is loaded.
+When an interactive HOL session begins, some theories will already be in the logical context.
+The exact set of theories in context will vary.
+If the executable used is `hol.bare`, then only `min` and `bool` will be loaded.
+When the `hol` executable is used, a richer context is loaded.
 
-The exact set of theories loaded can be determined with the
-`ancestry` command.
-%
-\begin{holboxed}
-\index{ancestry@`ancestry`|pin}
-\begin{verbatim}
-  ancestry : string -> string list
-\end{verbatim}
-\end{holboxed}
+The exact set of theories loaded can be determined with the `ancestry` command.
+```
+>>__ printNameAndType 4 "Theory" "ancestry"
+```
 
 This function provides a general mechanism for examining the structure
 of the theory hierarchy.  The argument is the name of a theory (or
-\texttt{"-"} as an abbreviation for the current theory), to which
-\texttt{ancestry} will respond with a list of the argument's ancestors
+`"-"` as an abbreviation for the current theory), to which
+`ancestry` will respond with a list of the argument's ancestors
 in the theory hierarchy.
 
-\begin{session}
-\begin{alltt}
+```
 >> ancestry "-";
-\end{alltt}
-\end{session}
+```
 
 
-\paragraph{Creating a theory segment}
+#### Creating a Theory Segment
 
-\index{theories, in HOL logic@theories, in HOL logic!creation of|(}
-%
-New theory segment is created by a call to `new_theory`.
-%
-\begin{holboxed}
-\index{new_theory@`new_theory`|pin}
-\begin{verbatim}
-   new_theory : string -> unit
-\end{verbatim}
-\end{holboxed}
-%
-This allocates a new `area' where subsequent theory
-operations take effect. If the current theory ($thy_1$ say) at the time
-of a call to {\small\verb+new_theory +}$thy_2$ is non-empty, \ie, has
-had an axiom, definition, or theorem stored in it, then $thy_1$ is
-exported before $thy_2$ is allocated. Furthermore, $thy_2$ will obtain
-$thy_1$ as a parent. If {\small\verb+new_theory +}$thy$ is called when
-the current theory segment is already named $thy$, then that is
-interpreted as a request merely to clear the current theory segment
-(nothing will be exported).
+A new theory segment is created by a call to `new_theory`.
+```
+>>__ printNameAndType 4 "Theory" "new_theory"
+```
+This allocates a new ‘area’ where subsequent theory operations take effect.
 
-A call to \ml{new_theory "$\mathit{name}$"} fails if:
-\begin{itemize}
-\item $name$ is not an alphanumeric starting with a letter.
+A call to `new_theory "`$\mathit{name}$`"` fails if:
 
-\item there is a theory already named $name$ in the ancestry of the
+- $\mathit{name}$ is not an alphanumeric starting with a letter; or
+
+- there is a theory already named $\mathit{name}$ in the ancestry of the
 current segment.
-
-\item if it is necessary to export the current segment before creating
-the new theory and the export attempt fails.
-\end{itemize}
 
 On startup, the current theory segment of HOL is named `scratch`,
 which is an empty theory, having a useful collection of theories in
 its ancestry. Typically, a user would begin by loading whatever extra
 logical context is required for the work at hand.
 
-The current theory segment acts as a kind of scratchpad. Elements stored
-in the current segment may be overwritten by subsequent additions, or
-deleted outright. Any theory elements that were built from overwritten
-or deleted elements would then be held to be {\it out-of-date}, and would not
-be included in the theory when it is finally exported.  Out-of-date
-constants and types are detected by the HOL printer, which will print
-them surrounded by odd-looking syntax to alert the user.
+The current theory segment acts as a kind of scratchpad.
+Elements stored in the current segment may be overwritten by subsequent additions, or deleted outright.
+Any theory elements built from overwritten
+or deleted elements are held to be *out-of-date*, and will not
+be included in the theory when it is finally exported.
+Out-of-date constants and types are detected by the HOL printer, which will print them surrounded by odd-looking syntax to alert the user.
 
 In contrast to the current segment, (proper) ancestor segments may not
 be altered.
-%
-\index{theories, in HOL logic@theories, in HOL logic!creation of|)}
 
 
-\paragraph{Loading prebuilt theories}
+#### Loading Prebuilt Theories
 
-Since HOL theories are represented by ML modules, one imports an
-existing theory segment by simply importing the corresponding module.
+Since HOL theories are represented by ML modules, when one is working interactively, one can import an
+existing theory segment by importing the corresponding module.
 
-\begin{holboxed}
-\index{load (ML function)@`load` (ML function)|pin}
-\begin{verbatim}
-   load : string -> unit
-\end{verbatim}
-\end{holboxed}
+```
+    load : string -> unit
+```
 
 \noindent
-Executing {\small\verb+load +}$name${\small\verb+Theory+} imports the
-first file named $name${\small\verb+Theory.uo+} found along the
-{\small\verb+loadPath+} into the session. Any unloaded ancestors of
-$name$ will be loaded before loading of $name${\small\verb+Theory+}
-continues.  Note that {\small\verb+load+} can not be used in ML files
+Executing `load "`$\mathit{name}$`Theory"` imports the
+first occurrence of $\mathit{name}$`Theory` to be found along the
+`loadPath` into the session.
+Any unloaded ancestors of
+$\mathit{name}$ will be loaded before loading of $\mathit{name}$`Theory`
+continues.
+Note that `load` can not be used in ML files
 that are to be compiled; it can only be used in the interactive
 system.
 
-\paragraph{Adding to the current theory}
+
+#### Adding to the Current Theory
 
 The following ML functions add types and terms to the current
 theory segment. In typical usage, these functions will not be
@@ -1251,35 +1179,26 @@ needed since higher-level definition facilities will invoke these as
 necessary. However, these functions can be useful for those writing
 proof tools and derived definition principles.
 
-\begin{holboxed}
-\index{new_type@`new_type`|pin}
-\begin{verbatim}
-   new_type : int -> string -> unit
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Theory" "new_type";
+```
+Executing `new_type("`$\mathit{op}$`", `$n$`)` makes $\mathit{op}$
+a new $n$-ary type operator in the current theory.
+If $\mathit{op}$ is not an allowed name for a type, a warning will be issued.
 
 
-\noindent Executing `new_type`$\ n\ \ml{"\ty{op}"}$ makes \ty{op}
-a new $n$-ary type operator\index{type operators, in HOL logic@type
-operators, in HOL logic!declaration} in the current theory. If
-\ty{op} is not an allowed name for a type, a warning will be issued.
+```
+>>__ printNameAndType 4 "Theory" "new_constant";
+```
 
-
-\begin{holboxed}
-\index{new_constant@`new_constant`|pin}
-\begin{verbatim}
-   new_constant : (string * type) -> unit
-\end{verbatim}
-\end{holboxed}
-
-\noindent Executing {\small\verb+new_constant("+}$c${\small\verb+",+}$\sigma${\small\verb+)+} makes
-$c_{\sigma'}$ a new constant\index{constants, in HOL logic@constants, in HOL logic!declaration of} of the current theory,
+Executing `new_constant("`$c$`", `$\sigma$`)` makes
+$c_{\sigma'}$ a new constant of the current theory,
 for all $c_{\sigma'}$ where $\sigma'$ is an instance of $\sigma$.
 The type $\sigma$ is
-called the {\it generic type\/}\index{generic types, in HOL
-  logic@generic types, in HOL logic} of $c$.
+called the *generic type* of $c$.
 If $c$ is not an allowed name for a constant, a warning will be issued.
 
+##skip
 \begin{holboxed}
 \index{new_axiom@`new_axiom`|pin}
 \begin{verbatim}
@@ -1287,6 +1206,8 @@ If $c$ is not an allowed name for a constant, a warning will be issued.
 \end{verbatim}
 \end{holboxed}
 
+
+\noindent
 \noindent Executing \ml{new_axiom("}$name$\ml{",}$t$\ml{)} declares the
 sequent
 \ml{(\lb\rb{},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in HOL logic} of the current theory with name $name$.
