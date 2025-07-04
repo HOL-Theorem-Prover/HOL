@@ -27,14 +27,20 @@ structure AstNew = struct
   type tybind = {tyvars: ident seq, tycon: ident, bind: {eq: int, ty: ty} option}
 
   (** [op] vid [of ty] [| [op] vid [of ty] ...] *)
-  type conbind = {bar: ident option, op_: int option, id: ident, arg: {of_: int, ty: ty} option}
+  type conbind = {bar: int option, op_: int option, id: ident, arg: {of_: int, ty: ty} option}
+
+  datatype datval =
+    DatvalElems of conbind list
+    (** datatype tycon = conbind | conbind ... *)
+  | DatvalDatatype of {datatype_: int, id: ident}
+    (** datatype tycon = datatype x *)
 
   (** tyvarseq tycon = conbind [and tyvarseq tycon = conbind ...] *)
-  type datbind = {tyvars: ident seq, tycon: ident, eq: int, elems: conbind list}
+  type datbind = {tyvars: ident seq, tycon: ident, eq: int option, rhs: datval}
 
   datatype exbind =
     ExnNew of {op_: int option, id: ident, arg: {of_: int, ty: ty} option}
-  | ExnReplicate of {op_: int option, left_id: ident, eq: int, right_id: ident}
+  | ExnReplicate of {op_: int option, id: ident, eq: int, tgt: ident}
 
   datatype constraint = Colon | ColonGt
 
@@ -97,6 +103,7 @@ structure AstNew = struct
       hash_: int, left: int, file_: int, eq_: int,
       file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
 
+  | EmptyExp of int
   | BadExp of {start: int, stop: int}
 
   and row =
@@ -115,27 +122,25 @@ structure AstNew = struct
   | DecEqtype of {eqtype_: int, tybind: tybind delimited}
     (** eqtype tyvarseq tycon = ty [and tyvarseq tycon = ty ...] *)
   | DecDatatype of {
-      datatype_: int, datbind: datbind list delimited,
+      datatype_: int, datbind: datbind delimited,
       withtype_: {withtype_: int, tybind: tybind delimited} option }
     (** datatype datbind [withtype typbind] *)
-  | DecReplicateDatatype of {
-      left_datatype_: int, left_id: ident, eq: int,
-      right_datatype_: int, right_id: ident}
-    (** datatype tycon = datatype longtycon *)
   | DecAbstype of {
-      abstype_: int, datbind: datbind list delimited,
-      withtype_: {withtype_: int, typbind: tybind delimited} option,
-      with_: int, dec: dec list, end_: int}
+      abstype_: int, datbind: datbind delimited,
+      withtype_: {withtype_: int, tybind: tybind delimited} option,
+      with_: int option, dec: dec list, end_: int option, stop: int}
     (** abstype datbind [withtype typbind] with dec end *)
   | DecException of {exception_: int, elems: exbind delimited}
     (** exception exbind *)
-  | DecLocal of {local_: int, left_dec: dec list, in_: int, right_dec: dec list, end_: int}
+  | DecLocal of {
+      local_: int, dec1: dec list, in_: int option,
+      dec2: dec list, end_: int option, stop: int}
     (** local dec in dec end *)
   | DecOpen of {open_: int, elems: ident list}
     (** open longstrid [longstrid ...] *)
-  | DecInfix of {infix_: int, precedence: (int * string) option, elems: ident list}
+  | DecInfix of {infix_: int, prec: (int * string) option, elems: ident list}
     (** infix [d] vid [vid ...] *)
-  | DecInfixr of {infixr_: int, precedence: (int * string) option, elems: ident list}
+  | DecInfixr of {infixr_: int, prec: (int * string) option, elems: ident list}
     (** infixr [d] vid [vid ...] *)
   | DecNonfix of {nonfix_: int, elems: ident list} (** nonfix vid [vid ...] *)
   | DecStructure of {
@@ -175,10 +180,6 @@ structure AstNew = struct
       tac: exp, qed_: int option, stop: int}
     (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
 
-  and valbind =
-    ValBind of {rec_: int option, pat: exp, eq: int, exp: exp}
-  | ValSpec of {vid: ident, colon: int option, ty: ty}
-
   and funarg =
     ArgIdent of {strid: ident, colon: int, sigexp: sigexp}
   | ArgSpec of dec list
@@ -217,11 +218,11 @@ structure AstNew = struct
 
   withtype struct_kind = {colon: int * constraint, sigexp: sigexp}
 
+  and valbind = {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option}
+
   and arm = {bar: int option, pats: exp delimited, arrow: int option, exp: exp}
 
-  and fvalarm = {
-    bar: int option, fname_args: fname_args,
-    ty: {colon: int, ty: ty} option, eq: int, exp: exp}
+  and fvalarm = {bar: int option, pats: exp delimited, eq: int option, exp: exp}
 
   and qbody = {start: int, toks: qdecl list, stop: int}
 
@@ -406,8 +407,8 @@ fun parseSML body parseError = let
     val _ = makeError tk r err
     in r end
 
-  fun parseSymbolStop c err = let
-    val r = parseSymbol c (SOME err)
+  fun parseStop f err = let
+    val r = f (SOME err)
     val stop = case r of
       SOME n => n+1
     | NONE => (case token() of tk => (unread tk; #1 tk))
@@ -427,6 +428,8 @@ fun parseSML body parseError = let
     case (elem (), token ()) of (e, tk) =>
       if delim tk then parseDelimited (e :: args) (#1 tk :: delims) f
       else (unread tk; {args = rev (e :: args), delims = rev delims})
+
+  fun isKeyword kw = fn (s, IdentTk) => ident s = kw | _ => false
 
   fun parseTy (prec: bool): ty = let
     val lhs = case token () of
@@ -474,9 +477,8 @@ fun parseSML body parseError = let
     fun rhs lhs = case token () of
       tk as (start, IdentTk) => (case identKind start of
         ("*", _) => if prec then (unread tk; lhs) else
-          rhs (TyTuple (parseDelimited [lhs] [start] {
-            elem = fn () => parseTy true,
-            delim = fn (s, IdentTk) => ident s = "*" | _ => false }))
+          rhs (TyTuple (parseDelimited [lhs] [start]
+            {elem = fn () => parseTy true, delim = isKeyword "*"}))
       | ("->", _) => if prec then (unread tk; lhs) else
           rhs (TyArrow {from = lhs, arrow = start, to = parseTy false})
       | (id, Regular) => rhs (TyCon {args = One lhs, id = (#1 tk, id)})
@@ -485,16 +487,39 @@ fun parseSML body parseError = let
     in rhs lhs end
   val parseTy = fn () => parseTy false
 
-  fun parseIdentifier () = let
+  fun parseTyVars () = case token () of
+    (start, TyVarTk) => One (start, ident start)
+  | (start, Symbol #"(") => let
+    val (elems, right, stop) = parseDelimitedClose [] [] {
+      elem = fn () => case token () of
+          (start, TyVarTk) => (start, ident start)
+        | tk => (parseError (#1 tk, !pos) "expected type variable"; unread tk; (#1 tk, "")),
+      delim = fn (_, Symbol #",") => true | _ => false,
+      close = fn (_, Symbol #")") => true | _ => false }
+    in Many {left = start, elems = elems, right = right, stop = stop} end
+  | _ => Empty
+
+  fun parseIdentifier' f force = let
     val tk = token ()
     (* In case of failure, record an error and return the empty string *)
-    fun fail () = (parseError (#1 tk, !pos) "expected identifier"; unread tk; (#1 tk, ""))
+    fun fail () = (
+      if force then parseError (#1 tk, !pos) "expected identifier" else ();
+      unread tk; (#1 tk, ""))
     in
       case tk of
         (start, IdentTk) =>
-          (case identKind start of (id, Regular) => (start, id) | _ => fail ())
+          (case identKind start of
+              (id, Regular) => (start, id)
+            | (id, _) => if f id then (start, id) else fail ())
       | _ => fail ()
     end
+  val parseIdentifier = parseIdentifier' (fn _ => false)
+  val parseIdentifierOrEq = parseIdentifier' (fn s => s = "=")
+
+  fun parseTyBind (): tybind = {
+    tyvars = parseTyVars (),
+    tycon = parseIdentifier true,
+    bind = Option.map (fn eq => {eq = eq, ty = parseTy ()}) (parseKeyword "=" NONE) }
 
   val infixes = (* FIXME *)
     map (fn x => (x, 0, false)) ["++", "&&", "|->", "THEN", "THEN1",
@@ -502,21 +527,41 @@ fun parseSML body parseError = let
       "ORELSE_TCL", "?>", "|>", "|>>", "||>", "||->",
       ">>", ">-", ">|", "\\\\", ">>>", ">>-", "??", ">~", ">>~", ">>~-"] @
     [("by", 8, false), ("suffices_by", 8, false), ("$", 1, true)]
-  type scope = (string * int * bool) list
+  type scope = (string, int * bool) Binarymap.dict
 
-  fun parseExp sc (pat: bool): exp = let
+  fun updateScope sc = let
+    fun updateInfix right prec elems sc =
+      case case prec of SOME (_, prec) => Int.fromString prec | _ => NONE of
+        NONE => sc
+      | SOME prec => let
+        fun go [] sc = sc
+          | go ((_, "") :: rest) sc = go rest sc
+          | go ((_, id) :: rest) sc = go rest (Binarymap.insert (sc, id, (prec, right)))
+        in go elems sc end
+    fun updateNonfix [] sc = sc
+      | updateNonfix ((_, "") :: rest) sc = updateNonfix rest sc
+      | updateNonfix ((_, id) :: rest) sc = updateNonfix rest (#1 (Binarymap.remove (sc, id)))
+    in fn
+        DecInfix {prec, elems, ...} => updateInfix false prec elems sc
+      | DecInfixr {prec, elems, ...} => updateInfix true prec elems sc
+      | DecNonfix {elems, ...} => updateNonfix elems sc
+      | DecLocal {dec2, ...} => updateScopeDecs dec2 sc
+      | _ => sc
+    end
+  and updateScopeDecs [] sc = sc
+    | updateScopeDecs (d::ds) sc = updateScopeDecs ds (updateScope sc d)
 
+  fun parseExp sc pat = parseExp' sc pat true
+  and parseExp' sc pat force: exp = let
     fun parseRecordLabel () = case token () of
       (start, IntTk) => (start, ident start)
-    | tk => (unread tk; parseIdentifier ())
+    | tk => (unread tk; parseIdentifier true)
 
     fun parseArmList acc = case (parseKeyword "|" NONE, acc) of
       (NONE, _::_) => rev acc
     | (bar, acc) => let
-      val (pats, arrow, _) = parseDelimitedClose [] [] {
-        elem = fn () => parseExp sc true,
-        delim = fn (s, IdentTk) => ident s = "|" | _ => false,
-        close = fn (s, IdentTk) => ident s = "=>" | _ => false }
+      val (pats, arrow, _) = parseDelimitedClose [] []
+        { elem = fn () => parseExp sc true, delim = isKeyword "|", close = isKeyword "=>" }
       val exp = parseExp sc false
       in parseArmList ({bar = bar, pats = pats, arrow = arrow, exp = exp} :: acc) end
 
@@ -559,13 +604,13 @@ fun parseSML body parseError = let
               val col = Option.map
                 (fn comma_ => {comma_ = comma_, col = parseInt (SOME "expected a number")})
                 (parseSymbol #"," NONE)
-              val (right, stop) = parseSymbolStop #")" "expected ')'"
+              val (right, stop) = parseStop (parseSymbol #")") "expected ')'"
               in HOLLinePragmaWith {
                 hash_ = start, left = startParen, line_ = kw,
                 eq_ = eq_, line = line, col = col, right = right, stop = stop }
               end
             | NONE => let
-              val (right, stop) = parseSymbolStop #")" "expected ')'"
+              val (right, stop) = parseStop (parseSymbol #")") "expected ')'"
               in HOLLinePragma {
                 hash_ = start, left = startParen, line_ = kw,
                 right = right, stop = stop}
@@ -573,13 +618,13 @@ fun parseSML body parseError = let
           | "FILE" => (case parseKeyword "=" NONE of
               SOME eq_ => let
               val file = parseIdent (SOME "expected an identifier")
-              val (right, stop) = parseSymbolStop #")" "expected ')'"
+              val (right, stop) = parseStop (parseSymbol #")") "expected ')'"
               in HOLFilePragmaWith {
                 hash_ = start, left = startParen, file_ = kw,
                 eq_ = eq_, file = file, right = right, stop = stop }
               end
             | NONE => let
-              val (right, stop) = parseSymbolStop #")" "expected ')'"
+              val (right, stop) = parseStop (parseSymbol #")") "expected ')'"
               in HOLFilePragma {
                 hash_ = start, left = startParen, file_ = kw,
                 right = right, stop = stop}
@@ -595,17 +640,19 @@ fun parseSML body parseError = let
       | NONE => Select {hash = start, label = parseRecordLabel ()})
     | (start, IdentTk) => (case ident start of
         "let" => let
-        val let_ = start
         val (sc', dec) = parseDecs false sc []
         val in_ = parseKeyword "in" (SOME "expected keyword in")
         val (exps, end_, stop) = parseDelimitedClose [] [] {
           elem = fn () => parseExp sc' false,
           delim = fn (_, Symbol #";") => true | _ => false,
           close = fn (start, IdentTk) => ident start = "end" | _ => false }
-        in LetInEnd {let_ = let_, dec = dec, in_ = in_, exps = exps, end_ = end_, stop = stop} end
-      | id => Ident {
-        op_ = if id = "op" then SOME start else (unread (start, IdentTk); NONE),
-        id = parseIdentifier () })
+        in LetInEnd {let_ = start, dec = dec, in_ = in_, exps = exps, end_ = end_, stop = stop} end
+      | "op" => Ident {op_ = SOME start, id = parseIdentifier true}
+      | _ => (
+        unread (start, IdentTk);
+        case parseIdentifier force of
+          (start, "") => EmptyExp start
+        | id => Ident {op_ = NONE, id = id}))
     | (start, OpenQuoteTk) => let
       val open_ = ident start
       val (full, s) = case open_ of
@@ -634,16 +681,16 @@ fun parseSML body parseError = let
       in r end
     | tk => (
       if force then parseError (#1 tk, #1 tk) "expected an expression" else ();
-      unread tk; BadExp {start = #1 tk, stop = #1 tk})
+      unread tk; EmptyExp (#1 tk))
 
-    fun parseInfix pat = let
+    fun parseInfix pat force = let
 
       fun peekInfix () = let
         val (start, tk) = token ()
         val r = case tk of
           IdentTk => let
           val s = ident start
-          in List.find (fn x => #1 x = s) sc end
+          in Option.map (fn d => (s, d)) (Binarymap.peek (sc, s)) end
         | _ => NONE
         in unread (start, tk); (start, r) end
 
@@ -651,26 +698,28 @@ fun parseSML body parseError = let
         case peekInfix () of
           (_, SOME _) => lhs
         | (_, NONE) => case parseAtomic pat false of
-            BadExp _ => lhs
+            EmptyExp _ => lhs
           | rhs => parseApp (App (lhs, rhs))
-      val parseApp = fn () => parseApp (parseAtomic pat true)
+      val parseApp = fn force => parseApp (parseAtomic pat force)
 
       fun tail prec lhs =
         case peekInfix () of
-          (start, SOME (opr, prec', _)) => if prec' < prec then lhs else let
-          val _ = token ()
-          val rhs = tail2 prec' (parseApp ())
-          in tail prec (Infix {left = lhs, id = (start, opr), right = rhs}) end
+          (start, SOME (opr, (prec', _))) =>
+          (* = must not be parsed in pattern position *)
+          if prec' < prec orelse pat andalso opr = "=" then lhs else let
+            val _ = token ()
+            val rhs = tail2 prec' (parseApp true)
+            in tail prec (Infix {left = lhs, id = (start, opr), right = rhs}) end
         | _ => lhs
       and tail2 prec rhs =
         case peekInfix () of
-          (_, SOME (_, prec', rassoc)) =>
+          (_, SOME (_, (prec', rassoc))) =>
           if prec' + (if rassoc then 1 else 0) > prec then
             tail2 prec (tail (prec + (if prec' > prec then 1 else 0)) rhs)
           else rhs
         | _ => rhs
 
-      in tail 0 (parseApp ()) end
+      in tail 0 (parseApp force) end
 
     fun parseTyped lhs =
       case parseKeyword ":" NONE of
@@ -689,9 +738,9 @@ fun parseSML body parseError = let
         | _ => lhs
       end
 
-    fun parseExp1 pat = parseLayered pat (parseTyped (parseInfix pat))
+    fun parseExp1 pat force = parseLayered pat (parseTyped (parseInfix pat force))
 
-    fun parseKwExp () =
+    fun parseKwExp force =
       case token () of tk as (start, _) =>
       case case #2 tk of IdentTk => ident start | _ => "" of
         "raise" => Raise {raise_ = start, exp = parseExp sc false}
@@ -713,23 +762,23 @@ fun parseSML body parseError = let
         of_ = parseKeyword "of" (SOME "expected keyword of"),
         elems = parseArmList [] }
       | "fn" => Fn {fn_ = start, elems = parseArmList []}
-      | _ => (unread tk; parseExp1 false)
+      | _ => (unread tk; parseExp1 false force)
 
-    fun parseAndAlso () =
-      case parseKwExp () of left =>
+    fun parseAndAlso force =
+      case parseKwExp force of left =>
       case parseKeyword "andalso" NONE of
-        SOME andalso_ => AndAlso {left = left, andalso_ = andalso_, right = parseAndAlso ()}
+        SOME andalso_ => AndAlso {left = left, andalso_ = andalso_, right = parseAndAlso true}
       | NONE => left
 
-    fun parseOrElse () =
-      case parseAndAlso () of left =>
+    fun parseOrElse force =
+      case parseAndAlso force of left =>
       case parseKeyword "orelse" NONE of
-        SOME orelse_ => OrElse {left = left, orelse_ = orelse_, right = parseOrElse ()}
+        SOME orelse_ => OrElse {left = left, orelse_ = orelse_, right = parseOrElse true}
       | NONE => left
 
     in
-      if pat then parseExp1 true else
-      case parseOrElse () of exp =>
+      if pat then parseExp1 true force else
+      case parseOrElse force of exp =>
       case parseKeyword "handle" NONE of
         SOME handle_ => Handle {exp = exp, handle_ = handle_, elems = parseArmList []}
       | NONE => exp
@@ -874,12 +923,12 @@ fun parseSML body parseError = let
           NONE => NONE
         | SOME left => let
           val (ids, right, stop) = parseDelimitedClose [] [] {
-            elem = parseIdentifier,
+            elem = fn () => parseIdentifier true,
             delim = fn (_, Symbol #",") => true | _ => false,
             close = fn (_, Symbol #"]") => true | _ => false }
           in SOME {left = left, ids = ids, right = right, stop = stop} end
         val colon = parseKeyword ":" NONE
-        val (right, stop) = parseSymbolStop #"]" "expected ']'"
+        val (right, stop) = parseStop (parseSymbol #"]") "expected ']'"
         val _ = pos := stop
         val r = DefinitionLabel {
           left = p, label = label, args = args,
@@ -887,29 +936,142 @@ fun parseSML body parseError = let
         in go (r :: acc) end
     in go [] end
 
-  and parseDecs (inSig: bool) sc (acc: dec list): scope * dec list =
-    case token () of
-      (start, IdentTk) => (case ident start of
-        "val" => let
-        val pat = parseExp sc true
-        val tyvars = Empty
-        in
-          case parseKeyword "=" NONE of
-            SOME eq => let
-            val exp = parseExp sc false
-            val elem = ValBind {rec_ = NONE, pat = pat, eq = eq, exp = exp}
-            val elems = {args = [elem], delims = []}
-            in parseDecs inSig sc (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
-          | NONE => let
-            val colon = parseKeyword ":" (SOME "expected a colon")
-            val Ident {op_ = NONE, id} = pat
-            val ty = parseTy ()
-            val elem = ValSpec {vid = id, colon = colon, ty = ty}
-            val elems = {args = [elem], delims = []}
-            in parseDecs inSig sc (DecVal {val_ = start, tyvars = tyvars, elems = elems} :: acc) end
+  and parseDec (inSig: bool) sc: (scope * dec) option = let
+
+    fun parseInfixElems acc =
+      case parseIdentifierOrEq false of
+        (_, "") => rev acc
+      | id => parseInfixElems (id :: acc)
+
+    fun parseFValBinds acc = case (parseKeyword "|" NONE, acc) of
+      (NONE, _::_) => rev acc
+    | (bar, acc) => let
+      val arrow = ref false
+      val (pats, eq, _) = parseDelimitedClose [] [] {
+        elem = fn () => parseExp sc true,
+        delim = isKeyword "|",
+        close = fn tk =>
+          isKeyword "=" tk orelse isKeyword "=>" tk andalso (
+            arrow := true; parseError (#1 tk, !pos) "expected ="; true) }
+      val (eq, exp) = case (eq, !arrow) of
+        (NONE, _) => (NONE, EmptyExp (!pos))
+      | (SOME _, true) => (NONE, parseExp sc false)
+      | (SOME eq, false) => (SOME eq, parseExp sc false)
+      in parseFValBinds ({bar = bar, pats = pats, eq = eq, exp = exp} :: acc) end
+
+    fun parseDatBind () = (
+      parseDelimited [] [] {
+        elem = fn () => let
+          val tyvars = parseTyVars ()
+          val tycon = parseIdentifier true
+          val eq = parseKeyword "=" (SOME "expected '='")
+          fun go acc = case (parseKeyword "|" NONE, acc) of
+            (NONE, _::_) => rev acc
+          | (bar, acc) =>
+            go ({
+              bar = bar,
+              op_ = parseKeyword "op" NONE,
+              id = parseIdentifier true,
+              arg = Option.map (fn of_ => {of_ = of_, ty = parseTy ()}) (parseKeyword "of" NONE)
+            } :: acc)
+          val rhs = case eq of NONE => DatvalElems [] | _ =>
+            case parseKeyword "datatype" NONE of
+              SOME kw => DatvalDatatype {datatype_ = kw, id = parseIdentifier true}
+            | NONE => DatvalElems (go [])
+          in {tyvars = tyvars, tycon = tycon, eq = eq, rhs = rhs} end,
+        delim = isKeyword "and" },
+      Option.map (fn withtype_ => {
+          withtype_ = withtype_,
+          tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"}})
+        (parseKeyword "withtype" NONE))
+
+    val dec = case token () of
+      (start, Symbol #";") => SOME (sc, DecSemi start)
+    | (start, IdentTk) => (case identKind start of
+        ("val", _) => SOME (sc, DecVal {
+        val_ = start,
+        tyvars = parseTyVars (),
+        elems = parseDelimited [] [] {
+          elem = fn () => {
+            rec_ = parseKeyword "rec" NONE,
+            pat = parseExp sc true,
+            eq = Option.map (fn eq => {eq = eq, exp = parseExp sc false})
+              (parseKeyword "=" NONE) },
+          delim = isKeyword "and" } })
+      | ("type", _) => SOME (sc, DecType {
+        type_ = start,
+        tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"} })
+      | ("infix", _) => let
+        val prec = case parseInt NONE of (_, NONE) => NONE | (start, SOME n) => SOME (start, n)
+        val elems = parseInfixElems []
+        val dec = DecInfix {infix_ = start, prec = prec, elems = elems}
+        in SOME (updateScope sc dec, dec) end
+      | ("infixr", _) => let
+        val prec = case parseInt NONE of (_, NONE) => NONE | (start, SOME n) => SOME (start, n)
+        val elems = parseInfixElems []
+        val dec = DecInfixr {infixr_ = start, prec = prec, elems = elems}
+        in SOME (updateScope sc dec, dec) end
+      | ("nonfix", _) => let
+        val elems = parseInfixElems []
+        val dec = DecNonfix {nonfix_ = start, elems = elems}
+        in SOME (updateScope sc dec, dec) end
+      | ("fun", _) => SOME (sc, DecFun {
+        fun_ = start,
+        tyvars = parseTyVars (),
+        fvalbind = parseDelimited [] []
+          {elem = fn () => parseFValBinds [], delim = isKeyword "and"} })
+      | ("exception", _) => SOME (sc, DecException {
+        exception_ = start,
+        elems = parseDelimited [] [] {
+          elem = fn () => let
+            val op_ = parseKeyword "op" NONE
+            val id = parseIdentifier true
+            val r = case parseKeyword "=" NONE of
+              SOME eq => ExnReplicate {op_ = op_, id = id, eq = eq, tgt = parseIdentifier true}
+            | NONE => ExnNew {
+              op_ = op_, id = id,
+              arg = Option.map (fn of_ => {of_ = of_, ty = parseTy ()}) (parseKeyword "of" NONE) }
+            in r end,
+          delim = isKeyword "and" } })
+      | ("local", _) => let
+        val (sc1, dec1) = parseDecs inSig sc []
+        val in_ = parseKeyword "in" (SOME "expected keyword 'in'")
+        val (_, dec2) = parseDecs inSig sc1 []
+        val sc' = updateScopeDecs dec2 sc
+        val (end_, stop) = parseStop (parseKeyword "end") "expected keyword 'end'"
+        in SOME (sc', DecLocal {
+          local_ = start, dec1 = dec1, in_ = in_,
+          dec2 = dec2, end_ = end_, stop = stop})
         end
-      | _ => raise Todo)
-    | _ => raise Todo
+      | ("datatype", _) => let
+        val (datbind, wt) = parseDatBind ()
+        in SOME (sc, DecDatatype {datatype_ = start, datbind = datbind, withtype_ = wt}) end
+      | ("open", _) => let
+        fun go acc = case parseIdentifier false of
+          (_, "") => rev acc
+        | id => go (id :: acc)
+        in SOME (sc, DecOpen {open_ = start, elems = go []}) end
+      | ("abstype", _) => let
+        val (datbind, wt) = parseDatBind ()
+        val (with_, stop) = parseStop (parseKeyword "with") "expected keyword 'with'"
+        val (dec, (end_, stop)) = case with_ of NONE => ([], (NONE, stop)) | _ =>
+          (#2 (parseDecs inSig sc []), parseStop (parseKeyword "end") "expected keyword 'end'")
+        in SOME (sc, DecAbstype {
+          abstype_ = start, datbind = datbind, withtype_ = wt,
+          with_ = with_, dec = dec, end_ = end_, stop = stop})
+        end
+      | _ => (unread (start, IdentTk); NONE))
+    | tk => (unread tk; NONE)
+    in
+      case dec of SOME dec => SOME dec | _ =>
+      case parseExp' sc false false of EmptyExp _ => NONE | e => SOME (sc, DecExp e)
+    end
+
+  and parseDecs (inSig: bool) sc (acc: dec list): scope * dec list =
+    case parseDec inSig sc of
+      NONE => (sc, rev acc)
+    | SOME (sc, d) => parseDecs inSig sc (d :: acc)
+
   in () end
 
 end
