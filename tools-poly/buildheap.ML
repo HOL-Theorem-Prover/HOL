@@ -130,6 +130,8 @@ val cline_opts = [
    desc = setStringOpt "filename" #base_state},
   {help = "thread count", long = ["mt"], short = "",
    desc = OptArg (set_threadcount, "c")},
+  {help = "Don't use user config file in HOL repl", long = ["noconfig"], short = "",
+   desc = NoArg (fn () => fn r => r)}, (* checked for and acted on by HOL repl *)
   {help = "output heap/munger name", long = [], short = "o",
    desc = setStringOpt "filename" #output},
   {help = "use poly as base", long = ["poly"], short = "",
