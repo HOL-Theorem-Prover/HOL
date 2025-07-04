@@ -485,6 +485,17 @@ fun parseSML body parseError = let
     in rhs lhs end
   val parseTy = fn () => parseTy false
 
+  fun parseIdentifier () = let
+    val tk = token ()
+    (* In case of failure, record an error and return the empty string *)
+    fun fail () = (parseError (#1 tk, !pos) "expected identifier"; unread tk; (#1 tk, ""))
+    in
+      case tk of
+        (start, IdentTk) =>
+          (case identKind start of (id, Regular) => (start, id) | _ => fail ())
+      | _ => fail ()
+    end
+
   val infixes = (* FIXME *)
     map (fn x => (x, 0, false)) ["++", "&&", "|->", "THEN", "THEN1",
       "THENL", "THEN_LT", "THENC", "ORELSE", "ORELSE_LT", "ORELSEC", "THEN_TCL",
@@ -494,16 +505,6 @@ fun parseSML body parseError = let
   type scope = (string * int * bool) list
 
   fun parseExp sc (pat: bool): exp = let
-    fun parseIdentifier () = let
-      val tk = token ()
-      (* In case of failure, record an error and return the empty string *)
-      fun fail () = (parseError (#1 tk, !pos) "expected identifier"; unread tk; (#1 tk, ""))
-      in
-        case tk of
-          (start, IdentTk) =>
-            (case identKind start of (id, Regular) => (start, id) | _ => fail ())
-        | _ => fail ()
-      end
 
     fun parseRecordLabel () = case token () of
       (start, IntTk) => (start, ident start)
@@ -519,158 +520,6 @@ fun parseSML body parseError = let
       val exp = parseExp sc false
       in parseArmList ({bar = bar, pats = pats, arrow = arrow, exp = exp} :: acc) end
 
-    fun parseParen pat startOpen = (case token () of
-        (startClose, Symbol #")") => Unit {left = startOpen, right = startClose}
-      | tk =>
-        case (unread tk; parseExp sc pat) of exp =>
-        case token () of
-          (startClose, Symbol #")") =>
-          Parens {left = startOpen, exp = exp, right = SOME startClose, stop = startClose+1}
-        | (startComma, Symbol #",") => let
-          val (elems, right, stop) = parseDelimitedClose [exp] [startComma] {
-            elem = fn () => parseExp sc pat,
-            delim = fn (_, Symbol #",") => true | _ => false,
-            close = fn (_, Symbol #")") => true | _ => false }
-          in Tuple {left = startOpen, elems = elems, right = right, stop = stop} end
-        | (startSemi, Symbol #";") => let
-          val (elems, right, stop) = parseDelimitedClose [exp] [startSemi] {
-            elem = fn () => parseExp sc pat,
-            delim = fn (_, Symbol #";") => true | _ => false,
-            close = fn (_, Symbol #")") => true | _ => false }
-          in Sequence {left = startOpen, elems = elems, right = right, stop = stop} end
-        | tk => (
-          parseError (#1 tk, #1 tk) "expected closing parenthesis";
-          unread tk;
-          Parens {left = startOpen, exp = exp, right = NONE, stop = #1 tk}))
-
-    fun parseQuoteBody start s = let
-      datatype qtoken = EOF | EndTk | AntiqIdent | AntiqParen | OpenBrack
-      fun checkKW kw i =
-        case SOME (String.sub (kw, i)) handle Subscript => NONE of
-          SOME c => ahead i = c andalso checkKW kw (i+1)
-        | NONE => true
-
-      fun finishHOLString s p = case cur () of
-        #"\000" => parseError (p, !pos) "unclosed string literal"
-      | #"\"" => (next ();
-        if s = "\"" then () else parseError (!pos - 1, !pos) ("expected ["^s^"]"))
-      | #"\226" =>
-        if checkKW "\226\128\186" 1 then (nextn 3;
-          if s = "\226\128\186" then () else parseError (!pos - 3, !pos) ("expected ["^s^"]"))
-        else (next (); finishHOLString s p)
-      | #"\194" => if checkKW "\194\187" 1 then (nextn 2;
-          if s = "\194\187" then () else parseError (!pos - 2, !pos) ("expected ["^s^"]"))
-        else (next (); finishHOLString s p)
-      | #"\\" => (next ();
-        if Char.isSpace (cur ()) then
-          (next (); ws (); (case cur () of #"\\" => next () | _ => ()); finishHOLString s p)
-        else (next (); finishHOLString s p))
-      | _ => (next (); finishHOLString s p)
-
-      fun qtoken cm =
-        case cur () of
-          #"\000" => (!pos, EOF)
-        | #"(" =>
-          if ahead 1 = #"*" then (nextn 2; qtoken (cm + 1))
-          else (next (); qtoken cm)
-        | #"*" =>
-          if cm > 0 andalso ahead 1 = #")" then (nextn 2; qtoken (cm - 1))
-          else (next (); qtoken cm)
-        | #"[" =>
-          if cm = 0 andalso colZero (!pos) then (!pos, (next (); OpenBrack))
-          else (next (); qtoken cm)
-        | #"E" =>
-          if colZero (!pos) andalso checkKW "End" 1 then (!pos, (nextn 3; EndTk))
-          else (next (); qtoken cm)
-        | #"T" =>
-          if colZero (!pos) andalso checkKW "Termination" 1 then (!pos, (nextn 11; EndTk))
-          else (next (); qtoken cm)
-        | #"P" =>
-          if colZero (!pos) andalso checkKW "Proof" 1 then (!pos, (nextn 5; EndTk))
-          else (next (); qtoken cm)
-        | #"`" =>
-          if ahead 1 = #"`" then (!pos, (nextn 2; EndTk))
-          else (!pos, (next (); EndTk))
-        | #"\"" =>
-          if cm = 0 then (next (); finishHOLString "\"" (!pos - 1); qtoken cm) else
-          (next (); qtoken cm)
-        | #"\194" =>
-          if cm = 0 andalso checkKW "\194\171" 1 then
-            (nextn 2; finishHOLString "\194\187" (!pos - 2); qtoken cm)
-          else (next (); qtoken cm)
-        | #"\226" =>
-          if checkKW "\226\128\157" 1 then (!pos, (nextn 3; EndTk)) else
-          if checkKW "\226\128\153" 1 then (!pos, (nextn 3; EndTk)) else
-          if cm = 0 andalso checkKW "\226\128\185" 1 then
-            (nextn 3; finishHOLString "\226\128\186" (!pos - 3); qtoken cm)
-          else (next (); qtoken cm)
-        | #"^" => (next ();
-          if cm = 0 then
-            case cur () of
-              #"^" => let
-              fun go () = (next (); if cur () = #"^" then go () else ())
-              in go (); qtoken cm end
-            | #"(" => (!pos - 1, (next (); AntiqParen))
-            | c =>
-              if Char.isAlpha c then
-                (!pos - 1, (takeWhile isIdRest; finishId (); AntiqIdent))
-              else qtoken cm
-          else qtoken cm)
-        | _ => (next (); qtoken cm)
-
-      fun go acc =
-        case qtoken 0 of
-          (p, EOF) => (parseError (start, p) "unclosed quotation"; (rev acc, p))
-        | (p, EndTk) => (
-          if s = ident p then () else parseError (p, !pos) ("expected ["^s^"]");
-          (rev acc, p))
-        | (p, AntiqIdent) => let
-          val exp = case identKind (p + 1) of
-            (s, Regular) => Ident {op_ = NONE, id = (p+1, s)}
-          | _ => (parseError (p+1, !pos) "expected identifier"; BadExp {start = p+1, stop = !pos})
-          in go (QuoteAntiq {caret_ = p, exp = exp, stop = !pos} :: acc) end
-        | (p, AntiqParen) => let
-          val e = parseParen pat (p+1)
-          val stop = case e of
-            Unit {right, ...} => right+1
-          | Parens {stop, ...} => stop
-          | Tuple {stop, ...} => stop
-          | Sequence {stop, ...} => stop
-          | _ => raise Unreachable
-          in go (QuoteAntiq {caret_ = p, exp = e, stop = stop} :: acc) end
-        | (p, OpenBrack) => let
-          val _ = ws ()
-          val label =
-            if checkKW "/\\" 0 then
-              SOME (HOLConjLabel (!pos, (nextn 2; ident (!pos - 2))))
-            else if checkKW "\226\136\167" 0 then
-              SOME (HOLConjLabel (!pos, (nextn 3; ident (!pos - 3))))
-            else if cur () = #"~" andalso Char.isAlpha (ahead 1) then
-              case !pos + 1 of start => SOME (HOLLabel {
-                tilde_ = SOME (!pos),
-                id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
-            else if Char.isAlpha (cur ()) then
-              case !pos of start => SOME (HOLLabel {
-                tilde_ = NONE,
-                id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
-            else NONE
-          val args = case parseSymbol #"[" NONE of
-            NONE => NONE
-          | SOME left => let
-            val (ids, right, stop) = parseDelimitedClose [] [] {
-              elem = parseIdentifier,
-              delim = fn (_, Symbol #",") => true | _ => false,
-              close = fn (_, Symbol #"]") => true | _ => false }
-            in SOME {left = left, ids = ids, right = right, stop = stop} end
-          val colon = parseKeyword ":" NONE
-          val (right, stop) = parseSymbolStop #"]" "expected ']'"
-          val _ = pos := stop
-          val r = DefinitionLabel {
-            left = p, label = label, args = args,
-            colon = colon, right = right, stop = stop }
-          in go (r :: acc) end
-      in go [] end
-
     fun parseAtomic pat force = case token () of
       (start, Symbol #"_") => Wild start
     | (start, IntTk) => IntegerConstant (start, ident start)
@@ -678,7 +527,7 @@ fun parseSML body parseError = let
     | (start, StringTk) => StringConstant (start, ident start)
     | (start, CharTk) => CharConstant (start, ident start)
     | (start, RealTk) => RealConstant (start, ident start)
-    | (startOpen, Symbol #"(") => parseParen pat startOpen
+    | (startOpen, Symbol #"(") => parseParen sc pat startOpen
     | (start, Symbol #"[") => let
       val (elems, right, stop) = parseDelimitedClose [] [] {
         elem = fn () => parseExp sc pat,
@@ -773,7 +622,7 @@ fun parseSML body parseError = let
         | _ => NONE
       val left = !pos
       val type_q = if full then SOME (findColon 0) else NONE
-      val (toks, right) = parseQuoteBody start s
+      val (toks, right) = parseQuoteBody sc start s
       val quote = {start = left, toks = toks, stop = right}
       val end_tok = case ident right of
         "" => NONE
@@ -885,6 +734,158 @@ fun parseSML body parseError = let
         SOME handle_ => Handle {exp = exp, handle_ = handle_, elems = parseArmList []}
       | NONE => exp
     end
+
+  and parseParen sc pat startOpen = (case token () of
+      (startClose, Symbol #")") => Unit {left = startOpen, right = startClose}
+    | tk =>
+      case (unread tk; parseExp sc pat) of exp =>
+      case token () of
+        (startClose, Symbol #")") =>
+        Parens {left = startOpen, exp = exp, right = SOME startClose, stop = startClose+1}
+      | (startComma, Symbol #",") => let
+        val (elems, right, stop) = parseDelimitedClose [exp] [startComma] {
+          elem = fn () => parseExp sc pat,
+          delim = fn (_, Symbol #",") => true | _ => false,
+          close = fn (_, Symbol #")") => true | _ => false }
+        in Tuple {left = startOpen, elems = elems, right = right, stop = stop} end
+      | (startSemi, Symbol #";") => let
+        val (elems, right, stop) = parseDelimitedClose [exp] [startSemi] {
+          elem = fn () => parseExp sc pat,
+          delim = fn (_, Symbol #";") => true | _ => false,
+          close = fn (_, Symbol #")") => true | _ => false }
+        in Sequence {left = startOpen, elems = elems, right = right, stop = stop} end
+      | tk => (
+        parseError (#1 tk, #1 tk) "expected closing parenthesis";
+        unread tk;
+        Parens {left = startOpen, exp = exp, right = NONE, stop = #1 tk}))
+
+  and parseQuoteBody sc start s = let
+    datatype qtoken = EOF | EndTk | AntiqIdent | AntiqParen | OpenBrack
+    fun checkKW kw i =
+      case SOME (String.sub (kw, i)) handle Subscript => NONE of
+        SOME c => ahead i = c andalso checkKW kw (i+1)
+      | NONE => true
+
+    fun finishHOLString s p = case cur () of
+      #"\000" => parseError (p, !pos) "unclosed string literal"
+    | #"\"" => (next ();
+      if s = "\"" then () else parseError (!pos - 1, !pos) ("expected ["^s^"]"))
+    | #"\226" =>
+      if checkKW "\226\128\186" 1 then (nextn 3;
+        if s = "\226\128\186" then () else parseError (!pos - 3, !pos) ("expected ["^s^"]"))
+      else (next (); finishHOLString s p)
+    | #"\194" => if checkKW "\194\187" 1 then (nextn 2;
+        if s = "\194\187" then () else parseError (!pos - 2, !pos) ("expected ["^s^"]"))
+      else (next (); finishHOLString s p)
+    | #"\\" => (next ();
+      if Char.isSpace (cur ()) then
+        (next (); ws (); (case cur () of #"\\" => next () | _ => ()); finishHOLString s p)
+      else (next (); finishHOLString s p))
+    | _ => (next (); finishHOLString s p)
+
+    fun qtoken cm =
+      case cur () of
+        #"\000" => (!pos, EOF)
+      | #"(" =>
+        if ahead 1 = #"*" then (nextn 2; qtoken (cm + 1))
+        else (next (); qtoken cm)
+      | #"*" =>
+        if cm > 0 andalso ahead 1 = #")" then (nextn 2; qtoken (cm - 1))
+        else (next (); qtoken cm)
+      | #"[" =>
+        if cm = 0 andalso colZero (!pos) then (!pos, (next (); OpenBrack))
+        else (next (); qtoken cm)
+      | #"E" =>
+        if colZero (!pos) andalso checkKW "End" 1 then (!pos, (nextn 3; EndTk))
+        else (next (); qtoken cm)
+      | #"T" =>
+        if colZero (!pos) andalso checkKW "Termination" 1 then (!pos, (nextn 11; EndTk))
+        else (next (); qtoken cm)
+      | #"P" =>
+        if colZero (!pos) andalso checkKW "Proof" 1 then (!pos, (nextn 5; EndTk))
+        else (next (); qtoken cm)
+      | #"`" =>
+        if ahead 1 = #"`" then (!pos, (nextn 2; EndTk))
+        else (!pos, (next (); EndTk))
+      | #"\"" =>
+        if cm = 0 then (next (); finishHOLString "\"" (!pos - 1); qtoken cm) else
+        (next (); qtoken cm)
+      | #"\194" =>
+        if cm = 0 andalso checkKW "\194\171" 1 then
+          (nextn 2; finishHOLString "\194\187" (!pos - 2); qtoken cm)
+        else (next (); qtoken cm)
+      | #"\226" =>
+        if checkKW "\226\128\157" 1 then (!pos, (nextn 3; EndTk)) else
+        if checkKW "\226\128\153" 1 then (!pos, (nextn 3; EndTk)) else
+        if cm = 0 andalso checkKW "\226\128\185" 1 then
+          (nextn 3; finishHOLString "\226\128\186" (!pos - 3); qtoken cm)
+        else (next (); qtoken cm)
+      | #"^" => (next ();
+        if cm = 0 then
+          case cur () of
+            #"^" => let
+            fun go () = (next (); if cur () = #"^" then go () else ())
+            in go (); qtoken cm end
+          | #"(" => (!pos - 1, (next (); AntiqParen))
+          | c =>
+            if Char.isAlpha c then
+              (!pos - 1, (takeWhile isIdRest; finishId (); AntiqIdent))
+            else qtoken cm
+        else qtoken cm)
+      | _ => (next (); qtoken cm)
+
+    fun go acc =
+      case qtoken 0 of
+        (p, EOF) => (parseError (start, p) "unclosed quotation"; (rev acc, p))
+      | (p, EndTk) => (
+        if s = ident p then () else parseError (p, !pos) ("expected ["^s^"]");
+        (rev acc, p))
+      | (p, AntiqIdent) => let
+        val exp = case identKind (p + 1) of
+          (s, Regular) => Ident {op_ = NONE, id = (p+1, s)}
+        | _ => (parseError (p+1, !pos) "expected identifier"; BadExp {start = p+1, stop = !pos})
+        in go (QuoteAntiq {caret_ = p, exp = exp, stop = !pos} :: acc) end
+      | (p, AntiqParen) => let
+        val e = parseParen sc false (p+1)
+        val stop = case e of
+          Unit {right, ...} => right+1
+        | Parens {stop, ...} => stop
+        | Tuple {stop, ...} => stop
+        | Sequence {stop, ...} => stop
+        | _ => raise Unreachable
+        in go (QuoteAntiq {caret_ = p, exp = e, stop = stop} :: acc) end
+      | (p, OpenBrack) => let
+        val _ = ws ()
+        val label =
+          if checkKW "/\\" 0 then
+            SOME (HOLConjLabel (!pos, (nextn 2; ident (!pos - 2))))
+          else if checkKW "\226\136\167" 0 then
+            SOME (HOLConjLabel (!pos, (nextn 3; ident (!pos - 3))))
+          else if cur () = #"~" andalso Char.isAlpha (ahead 1) then
+            case !pos + 1 of start => SOME (HOLLabel {
+              tilde_ = SOME (!pos),
+              id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
+          else if Char.isAlpha (cur ()) then
+            case !pos of start => SOME (HOLLabel {
+              tilde_ = NONE,
+              id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
+          else NONE
+        val args = case parseSymbol #"[" NONE of
+          NONE => NONE
+        | SOME left => let
+          val (ids, right, stop) = parseDelimitedClose [] [] {
+            elem = parseIdentifier,
+            delim = fn (_, Symbol #",") => true | _ => false,
+            close = fn (_, Symbol #"]") => true | _ => false }
+          in SOME {left = left, ids = ids, right = right, stop = stop} end
+        val colon = parseKeyword ":" NONE
+        val (right, stop) = parseSymbolStop #"]" "expected ']'"
+        val _ = pos := stop
+        val r = DefinitionLabel {
+          left = p, label = label, args = args,
+          colon = colon, right = right, stop = stop }
+        in go (r :: acc) end
+    in go [] end
 
   and parseDecs (inSig: bool) sc (acc: dec list): scope * dec list =
     case token () of
