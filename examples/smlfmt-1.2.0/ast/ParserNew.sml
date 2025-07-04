@@ -58,6 +58,12 @@ structure AstNew = struct
     UnquotedId of ident
   | QuotedId of int * string
 
+  type header_elem = {id: ident, attrs: kvals attrs}
+
+  datatype header =
+    HOLAncestors of {ancestors_: int, elems: header_elem list}
+  | HOLLibs of {libs_: int, elems: header_elem list}
+
   datatype exp =
     Wild of int
   | IntegerConstant of int * string (* 123 *)
@@ -174,6 +180,8 @@ structure AstNew = struct
     (** functor id(funarg) [:> sigexp] = strexp [and ...] *)
   | DecExp of exp (** exp (only at top level) *)
 
+  | HOLTheory of {theory_: int, id: ident, attrs: kvals attrs, elems: header list}
+    (** Theory foo[attrs] [elems ...] *)
   | HOLDefinition of {
       definition_: int, id: ident, attrs: kvals attrs, colon: int option,
       quote: qbody, termination: {termination_: int, tac: exp} option,
@@ -386,6 +394,7 @@ fun parseSML body parseError = let
       | "Definition" => holKw () | "Theorem" => holKw () | "Triviality" => holKw ()
       | "Quote" => holKw () | "Inductive" => holKw () | "CoInductive" => holKw ()
       | "Proof" => holKw () | "QED" => holKw () | "Termination" => holKw () | "End" => holKw ()
+      | "Theory" => holKw () | "Ancestors" => holKw () | "Libs" => holKw ()
 
       | _ => Regular)
     end
@@ -1226,6 +1235,23 @@ fun parseSML body parseError = let
       | ("Overload", HolKeyword) => SOME (sc, parseHolType start true)
       | ("Theorem", HolKeyword) => SOME (sc, parseHolTheorem start false)
       | ("Triviality", HolKeyword) => SOME (sc, parseHolTheorem start true)
+      | ("Theory", HolKeyword) => SOME (sc, let
+        val id = parseIdentifier true
+        val attrs = parseAttrs parseKVals
+        fun parseHeader acc =
+          case parseIdentifier false of
+            (_, "") => rev acc
+          | id => parseHeader ({id = id, attrs = parseAttrs parseKVals} :: acc)
+        fun parseHeaders acc =
+          case token () of
+            tk as (start, IdentTk) => (case identKind start of
+              ("Ancestors", HolKeyword) =>
+              parseHeaders (HOLAncestors {ancestors_ = start, elems = parseHeader []} :: acc)
+            | ("Libs", HolKeyword) =>
+              parseHeaders (HOLLibs {libs_ = start, elems = parseHeader []} :: acc)
+            | _ => (unread tk; rev acc))
+          | tk => (unread tk; rev acc)
+        in HOLTheory {theory_ = start, id = id, attrs = attrs, elems = parseHeaders []} end)
       | _ => (unread (start, IdentTk); NONE))
     | tk => (unread tk; NONE)
     in
@@ -1314,6 +1340,12 @@ fun parseSML body parseError = let
     | NONE => lhs
     in rhs lhs end
 
-  in () end
+  fun go (sc: scope) = let
+    val sc = ref sc
+    val parseDec = fn () => case parseDec false (!sc) of
+        NONE => NONE
+      | SOME (sc', d) => (sc := sc'; SOME d)
+    in {parseDec = parseDec, getScope = fn () => !sc} end
+  in go end
 
 end
