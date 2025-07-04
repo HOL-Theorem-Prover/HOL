@@ -150,7 +150,7 @@ structure AstNew = struct
     (** structure strid : sigexp = strexp [and strid : sigep = strexp ...] *)
   | DecSignature of {signature_: int, elems: {ident: ident, eq: int, sigexp: sigexp} delimited}
     (** signature sigid = sigexp [and ...] *)
-  | IncludeIds of {include_: int, sigexps: sigexp list}
+  | DecInclude of {include_: int, sigexps: sigexp list}
     (** include sigid ... sigid *)
   | Sharing of {sharing_: int, type_: int option, elems: ident delimited}
     (** sharing [type] longstrid = ... = longstrid *)
@@ -938,6 +938,10 @@ fun parseSML body parseError = let
 
   and parseDec (inSig: bool) sc: (scope * dec) option = let
 
+    fun parseIdentifiers acc = case parseIdentifier false of
+      (_, "") => rev acc
+    | id => parseIdentifiers (id :: acc)
+
     fun parseInfixElems acc =
       case parseIdentifierOrEq false of
         (_, "") => rev acc
@@ -985,6 +989,13 @@ fun parseSML body parseError = let
           tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"}})
         (parseKeyword "withtype" NONE))
 
+    fun parseStructKind () =
+      case parseKeyword ":" NONE of
+        SOME colon => SOME {colon = (colon, Colon), sigexp = parseSigExp ()}
+      | NONE => case parseKeyword ":>" NONE of
+          SOME colongt => SOME {colon = (colongt, ColonGt), sigexp = parseSigExp ()}
+        | NONE => NONE
+
     val dec = case token () of
       (start, Symbol #";") => SOME (sc, DecSemi start)
     | (start, IdentTk) => (case identKind start of
@@ -1000,6 +1011,9 @@ fun parseSML body parseError = let
           delim = isKeyword "and" } })
       | ("type", _) => SOME (sc, DecType {
         type_ = start,
+        tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"} })
+      | ("eqtype", _) => SOME (sc, DecEqtype {
+        eqtype_ = start,
         tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"} })
       | ("infix", _) => let
         val prec = case parseInt NONE of (_, NONE) => NONE | (start, SOME n) => SOME (start, n)
@@ -1046,11 +1060,12 @@ fun parseSML body parseError = let
       | ("datatype", _) => let
         val (datbind, wt) = parseDatBind ()
         in SOME (sc, DecDatatype {datatype_ = start, datbind = datbind, withtype_ = wt}) end
-      | ("open", _) => let
-        fun go acc = case parseIdentifier false of
-          (_, "") => rev acc
-        | id => go (id :: acc)
-        in SOME (sc, DecOpen {open_ = start, elems = go []}) end
+      | ("open", _) => SOME (sc, DecOpen {open_ = start, elems = parseIdentifiers []})
+      | ("include", _) => SOME (sc, DecInclude {
+        include_ = start,
+        sigexps = case parseSigExp () of
+          SigIdent id => map SigIdent (parseIdentifiers [id])
+        | e => [e] })
       | ("abstype", _) => let
         val (datbind, wt) = parseDatBind ()
         val (with_, stop) = parseStop (parseKeyword "with") "expected keyword 'with'"
@@ -1060,6 +1075,21 @@ fun parseSML body parseError = let
           abstype_ = start, datbind = datbind, withtype_ = wt,
           with_ = with_, dec = dec, end_ = end_, stop = stop})
         end
+      | ("structure", _) => SOME (sc, DecStructure {
+        structure_ = start,
+        elems = parseDelimited [] [] {
+          elem = fn () => {
+            id = parseIdentifier true,
+            constraint = parseStructKind (),
+            bind = Option.map (fn eq => {eq = eq, strexp = parseStrExp ()})
+              (parseKeyword "=" NONE) },
+          delim = isKeyword "and" } })
+      | ("sharing", _) => SOME (sc, Sharing {
+        sharing_ = start,
+        type_ = parseKeyword "type" NONE,
+        elems = parseDelimited [] [] {
+          elem = fn () => parseIdentifier true,
+          delim = isKeyword "=" } })
       | _ => (unread (start, IdentTk); NONE))
     | tk => (unread tk; NONE)
     in
@@ -1071,6 +1101,9 @@ fun parseSML body parseError = let
     case parseDec inSig sc of
       NONE => (sc, rev acc)
     | SOME (sc, d) => parseDecs inSig sc (d :: acc)
+
+  and parseSigExp () = raise Todo
+  and parseStrExp () = raise Todo
 
   in () end
 
