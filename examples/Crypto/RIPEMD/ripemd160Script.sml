@@ -20,6 +20,13 @@ Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
 End
 
+Theorem chg_end_acc_sum_leng:
+  ∀acc bits. LENGTH $ chg_end_acc acc bits = LENGTH acc + LENGTH bits
+Proof
+  ho_match_mp_tac chg_end_acc_ind>>
+  rw[chg_end_acc_def, listTheory.LENGTH_TAKE_EQ]
+QED
+
 (* change bits in little-endian to that in big-endian or vice versa, padding 0s to the left of bits when necessary to make the length of bits a multiple of 8 *)
 Definition chg_end_def:
   chg_end (bits: num list) =
@@ -31,6 +38,25 @@ Definition chg_end_def:
     chg_end_acc [] $ (REPLICATE k 0 ++ bits)
 End
 
+Theorem chg_end_length_multiple:
+  divides 8 $ LENGTH (chg_end bits)
+Proof
+  simp[chg_end_def, chg_end_acc_sum_leng, dividesTheory.DIVIDES_MOD_0]>>
+  Cases_on ‘LENGTH bits MOD 8’
+  >-simp[Once $ GSYM MOD_PLUS]>>
+  simp[Once $ GSYM MOD_PLUS]>>
+  ‘SUC n < 8’ by (
+    pop_assum (SUBST1_TAC o GSYM)>>
+    simp[MOD_LESS])>>
+  simp[]
+QED
+
+Theorem chg_end_length:
+  LENGTH (chg_end bits) = LENGTH bits + (8 − LENGTH bits MOD 8) MOD 8
+Proof
+  rw[chg_end_def,chg_end_acc_sum_leng]
+QED
+
 Definition pad_message_def:
   pad_message bits =
   let
@@ -41,6 +67,29 @@ Definition pad_message_def:
   in
     bits ++ (1 :: REPLICATE k 0) ++ lb
 End
+
+val () = cv_auto_trans n2l_n2lA;
+val () = cv_auto_trans pad_message_def;
+
+Theorem pad_message_length_multiple:
+  LENGTH bits < 2 ** 64 ⇒ divides 512 $ LENGTH (pad_message bits)
+Proof
+  strip_tac>>
+  ‘LENGTH (n2l 2 (LENGTH bits)) ≤ 64’ by (
+    ‘LENGTH bits ≤ 2 ** 64 - 1’ by decide_tac>>
+    Cases_on ‘LENGTH bits’>>
+    simp[numposrepTheory.LENGTH_n2l]>>
+    ‘0 < SUC n’ by simp[]>>
+    drule_then assume_tac logrootTheory.LOG2_LE_MONO>>
+    pop_assum $ drule_then assume_tac>>
+    gvs[])>>
+  rw[pad_message_def]>>
+  gvs[]>>
+  simp[chg_end_length,bitstringTheory.length_pad_left,ADD1]>>
+  Cases_on ‘LENGTH (n2l 2 (LENGTH bits)) = 64’>>
+  simp[dividesTheory.DIVIDES_MOD_0]>>
+  intLib.ARITH_TAC
+QED
 
 Definition parse_block_def:
   parse_block acc bits =
@@ -61,6 +110,18 @@ End
 
 val () = cv_auto_trans parse_message_def;
 
+(*** BEGIN ***)
+EVAL “parse_message [] (pad_message [])”
+Theorem parse_message_block_size:
+  LENGTH m < 2 ** 64 ⇒ (∀b. MEM b (parse_message [] (pad_message m)) ⇒ LENGTH b = 16)
+Proof
+  strip_tac>>
+  drule_then assume_tac pad_message_length_multiple>>
+  rw[parse_message_def, parse_block_def]
+QED
+
+(*** END ***)
+
 (* dummy final else-branch added to make f well-defined in all cases *)
 Definition f_def:
   f (j: num) x y z: word32 =
@@ -72,7 +133,6 @@ Definition f_def:
   else 0w
 End
 
-(*type_of “ARB”*)
 val () = cv_auto_trans f_def;
 
 (* dummy final else-branch added to make K well-defined in all cases *)
@@ -108,7 +168,7 @@ End
 val rho_pre_def = cv_trans_pre rho_def;
 
 Theorem rho_pre[cv_pre]:
-  rho_pre n ⇔ n < 16
+  n < 16 ⇒ rho_pre n
 Proof
   simp[rho_pre_def]
 QED
@@ -117,54 +177,72 @@ Definition rho_alt_def:
   rho_alt n: num = if n < 16 then rho n else 0
 End
 
-val () = cv_trans rho_alt_def;
+val () = cv_auto_trans rho_alt_def;
+(*
+val rho_alt_pre_def = cv_trans_pre rho_alt_def;
 
-Theorem rho_eq_rho_alt_le_16:
-  ∀n. n < 16 ⇒ rho n = rho_alt n
+Theorem rho_alt_pre[cv_pre]:
+  rho_alt_pre n ⇔
+    n < 16 ⇒
+    n < LENGTH [7; 4; 13; 1; 10; 6; 15; 3; 12; 0; 9; 5; 2; 14; 11; 8]
+Proof
+  simp[rho_alt_pre_def]
+QED
+
+Definition rho_alt_def:
+  rho_alt n: num = if n < 16 then EL n [7;4;13;1;10;6;15;3;12;0;9;5;2;14;11;8] else 0
+End
+
+val rho_alt_pre_def = cv_trans_pre rho_alt_def;
+
+Theorem rho_alt_pre[cv_pre]:
+  rho_alt_pre n ⇔
+    n < 16 ⇒
+    n < LENGTH [7; 4; 13; 1; 10; 6; 15; 3; 12; 0; 9; 5; 2; 14; 11; 8]
+Proof
+  simp[rho_alt_pre_def]
+QED
+*)
+
+Theorem rho_eq_rho_alt_lt_16:
+  n < 16 ⇒ rho n = rho_alt n
 Proof
   rw[rho_def, rho_alt_def]
 QED
 
-(*CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM*)
-(*REWRITE_RULE [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM]*)
+Triviality suc_help = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
-Theorem rho_preserves_le_16:
-  ∀n. n < 16 ⇒ rho n < 16
+Theorem rho_preserves_lt_16:
+  n < 16 ⇒ rho n < 16
 Proof
   rw[rho_def]>>
   pop_assum (
     fn thm => (
       strip_assume_tac (
         SRULE
-          [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM] thm)))>>
+          [suc_help] thm)))>>
   fs[]
 QED
 
-Theorem funpow_rho_alt_preserves_le_16:
-  ∀n m. m < 16 ⇒ FUNPOW rho_alt n m < 16
+Theorem funpow_rho_preserves_lt_16:
+  ∀n m. m < 16 ⇒ FUNPOW rho n m < 16
 Proof
   Induct
   >-simp[]
   >-(
-    rw[arithmeticTheory.FUNPOW_SUC]>>
-    last_x_assum (drule_then assume_tac)>>
-    rw[GSYM rho_eq_rho_alt_le_16, rho_preserves_le_16])
+    rw[FUNPOW]>>
+    last_x_assum irule>>
+    simp[rho_preserves_lt_16])
 QED
 
-Theorem rho_eq_rho_alt_le_16_funpow:
-  ∀n m. m < 16 ⇒ FUNPOW rho n m = FUNPOW rho_alt n m
+Theorem rho_eq_rho_alt_lt_16_funpow:
+  m < 16 ⇒ FUNPOW rho n m = FUNPOW rho_alt n m
 Proof
-  (* try redoing with this
   rw[]>>
-  irule FUNPOW_CONG
-  *)
-  Induct
-    >-simp[]
-    >-(
-      rw[arithmeticTheory.FUNPOW_SUC]>>
-      assume_tac funpow_rho_alt_preserves_le_16>>
-      pop_assum $ drule_then assume_tac>>
-      rw[rho_eq_rho_alt_le_16])
+  irule FUNPOW_CONG>>
+  rw[]>>
+  irule rho_eq_rho_alt_lt_16>>
+  simp[funpow_rho_preserves_lt_16]
 QED
 
 Definition pi_def:
@@ -191,10 +269,18 @@ Theorem r_alt_cv:
     FUNPOW rho_alt qt rm
 Proof
   simp[r_def, rho_def, rho_alt_def]>>
-  rw[rho_eq_rho_alt_le_16_funpow]
+  rw[rho_eq_rho_alt_lt_16_funpow]
 QED
 
 val () = cv_auto_trans r_alt_cv;
+
+Theorem r_lt_16:
+  r j < 16
+Proof
+  simp[r_def]>>
+  irule funpow_rho_preserves_lt_16>>
+  intLib.ARITH_TAC
+QED
 
 Definition r'_def:
   r' j =
@@ -214,10 +300,18 @@ Theorem r'_alt_cv:
     FUNPOW rho_alt qt rm
 Proof
   simp[r'_def, rho_def, rho_alt_def, pi_def]>>
-  rw[rho_eq_rho_alt_le_16_funpow]
+  rw[rho_eq_rho_alt_lt_16_funpow]
 QED
 
 val () = cv_auto_trans r'_alt_cv;
+
+Theorem r'_lt_16:
+  r' j < 16
+Proof
+  simp[r'_def, pi_def]>>
+  irule funpow_rho_preserves_lt_16>>
+  intLib.ARITH_TAC
+QED
 
 Definition shift_lookup_table_def:
   shift_lookup_table: num list list = [
@@ -256,12 +350,10 @@ Proof
       fn thm => (
         strip_assume_tac (
           SRULE
-          [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM] thm)))>>
+          [suc_help] thm)))>>
     simp[]>>
     EVAL_TAC)
 QED
-
-(*val res = cv_trans_pre s_def;*)
 
 Definition s'_def:
   s' j =
@@ -289,12 +381,10 @@ Proof
       fn thm => (
         strip_assume_tac (
           SRULE
-          [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM] thm)))>>
+          [suc_help] thm)))>>
     simp[]>>
     EVAL_TAC)
 QED
-
-(* HERE *)
 
 Definition initial_value_def:
   initial_value: word32 # word32 # word32 # word32 # word32 = (0x67452301w, 0xEFCDAB89w, 0x98BADCFEw, 0x10325476w, 0xC3D2E1F0w)
@@ -306,6 +396,8 @@ Definition rol_def:
   rol n (x: 'a word) = (x << n) || (x >>> (dimindex(:'a) - n))
 End
 
+val () = cv_auto_trans (INST_TYPE[alpha |-> ``:32``] rol_def);
+
 Definition inner_for_loop_def:
   inner_for_loop block (j, (A, B, C, D, E), (A', B', C', D', E')) =
   let
@@ -315,6 +407,35 @@ Definition inner_for_loop_def:
     (SUC j, (E, T1, B, rol 10 C, D), (E', T2, B', rol 10 C', D'))
 End
 
+Definition inner_for_loop_alt_def:
+  inner_for_loop_alt block (j, (A, B, C, D, E), (A', B', C', D', E')) =
+  if j < 80 ∧ LENGTH block = 16 then
+    let
+      T1 = rol (s  j) (A  + f j        B  C  D  + EL (r  j) block + K  j) + E;
+      T2 = rol (s' j) (A' + f (79 - j) B' C' D' + EL (r' j) block + K' j) + E'
+    in
+      (SUC j, (E, T1, B, rol 10 C, D), (E', T2, B', rol 10 C', D'))
+  else
+    (0, (0w, 0w, 0w, 0w, 0w), (0w, 0w, 0w, 0w, 0w))
+End
+
+val inner_for_loop_alt_pre_def = cv_trans_pre inner_for_loop_alt_def;
+
+Theorem inner_for_loop_alt_pre[cv_pre]:
+  inner_for_loop_alt_pre block v
+Proof
+  simp[inner_for_loop_alt_pre_def]>>
+  rw[r_lt_16, r'_lt_16]
+QED
+
+Theorem inner_for_loop_eq_alt:
+  j < 80 ∧ LENGTH block = 16 ⇒
+  inner_for_loop block (j, v) = inner_for_loop_alt block (j, v)
+Proof
+  PairCases_on ‘v’>>
+  rw[inner_for_loop_def, inner_for_loop_alt_def]
+QED
+
 (* the body of the outer for-loop *)
 Definition process_block_def:
   process_block (h0, h1, h2, h3, h4) block =
@@ -323,17 +444,77 @@ Definition process_block_def:
   in
     case hs of
       (_, (A, B, C, D, E), (A', B', C', D', E')) =>
-          (h1 + C + D', h2 + D + E', h3 + E + A', h4 + A + B', h0 + B + C')
+        (h1 + C + D', h2 + D + E', h3 + E + A', h4 + A + B', h0 + B + C')
 End
+
+Definition process_block_alt_def:
+  process_block_alt (h0, h1, h2, h3, h4) block =
+  let
+    hs = FUNPOW (inner_for_loop_alt block) 80 (0, (h0, h1, h2, h3, h4), (h0, h1, h2, h3, h4))
+  in
+    case hs of
+      (_, (A, B, C, D, E), (A', B', C', D', E')) =>
+        (h1 + C + D', h2 + D + E', h3 + E + A', h4 + A + B', h0 + B + C')
+End
+
+val () = cv_auto_trans process_block_alt_def;
+
+Theorem FUNPOW_inner_for_loop_index:
+  ∀m v. FUNPOW (inner_for_loop block) m v = (x,y) ⇒ x = m + FST v
+Proof
+  Induct>>
+  simp[FUNPOW]>>
+  rw[]>>
+  last_x_assum drule>>
+  PairCases_on ‘v’>>
+  simp[inner_for_loop_def]
+QED
+
+Theorem process_block_eq_alt:
+  LENGTH block = 16 ⇒ process_block v block = process_block_alt v block
+Proof
+  PairCases_on ‘v’>>
+  rw[process_block_def, process_block_alt_def, inner_for_loop_eq_alt]>>
+  AP_THM_TAC>>
+  AP_TERM_TAC>>
+  irule FUNPOW_CONG>>
+  rw[]>>
+  qmatch_goalsub_abbrev_tac ‘(FUNPOW (inner_for_loop block) m vv)’>>
+  Cases_on ‘(FUNPOW (inner_for_loop block) m vv)’>>
+  irule inner_for_loop_eq_alt>>
+  simp[]>>
+  drule FUNPOW_inner_for_loop_index>>
+  simp[Abbr ‘vv’]
+QED
 
 Definition outer_for_loop_def:
   outer_for_loop blocks = FOLDL process_block initial_value blocks
 End
 
+Definition outer_for_loop_alt_def:
+  outer_for_loop_alt blocks = FOLDL process_block_alt initial_value blocks
+End
+
+val () = cv_auto_trans outer_for_loop_alt_def;
+
+Theorem outer_for_loop_alt_cv:
+  (∀b. MEM b blocks ⇒ LENGTH b = 16) ⇒
+  outer_for_loop blocks = outer_for_loop_alt blocks
+Proof
+  rw[outer_for_loop_def, outer_for_loop_alt_def]>>
+  irule FOLDL_CONG>>
+  rw[]>>
+  last_x_assum drule>>
+  simp[process_block_eq_alt]
+QED
+
 (* change w (a word of 32 bits) in little-endian to that in big-endian or vice versa *)
 Definition word32_chg_end_def:
-  word32_chg_end (w: word32): word32 = word_from_bin_list $ REVERSE $ chg_end $ REVERSE $ w2l 2 w
+  word32_chg_end (w: word32): word32 =
+  word_from_bin_list $ REVERSE $ chg_end $ REVERSE $ word_to_bin_list w
 End
+
+val () = cv_auto_trans word32_chg_end_def;
 
 Definition RIPEMD_160_def:
   RIPEMD_160 m: 160 word =
@@ -342,58 +523,44 @@ Definition RIPEMD_160_def:
     blocks = parse_message [] p
   in
     case outer_for_loop blocks of
-      (h0, h1, h2, h3, h4) => concat_word_list
-                              [(word32_chg_end h4);
-                               (word32_chg_end h3);
-                               (word32_chg_end h2);
-                               (word32_chg_end h1);
-                               (word32_chg_end h0)]
+      (h0, h1, h2, h3, h4) =>
+        concat_word_list [
+          (word32_chg_end h4);
+          (word32_chg_end h3);
+          (word32_chg_end h2);
+          (word32_chg_end h1);
+          (word32_chg_end h0)]
 End
 
-Theorem chg_end_acc_sum_leng:
-  ∀acc bits. LENGTH $ chg_end_acc acc bits = LENGTH acc + LENGTH bits
-Proof
-  ho_match_mp_tac chg_end_acc_ind>>
-  rw[chg_end_acc_def, listTheory.LENGTH_TAKE_EQ]
-QED
+Definition RIPEMD_160_alt_def:
+  RIPEMD_160_alt m: 160 word =
+  if LENGTH m < 2 ** 64
+  then
+    let
+      p      = pad_message m;
+      blocks = parse_message [] p
+    in
+      case outer_for_loop_alt blocks of
+        (h0, h1, h2, h3, h4) =>
+          concat_word_list [
+            (word32_chg_end h4);
+            (word32_chg_end h3);
+            (word32_chg_end h2);
+            (word32_chg_end h1);
+            (word32_chg_end h0)]
+  else 0w
+End
 
-Theorem chg_end_length_multiple:
-  divides 8 $ LENGTH (chg_end bits)
-Proof
-  simp[chg_end_def, chg_end_acc_sum_leng, dividesTheory.DIVIDES_MOD_0]>>
-  Cases_on ‘LENGTH bits MOD 8’
-  >-simp[Once $ GSYM MOD_PLUS]>>
-  simp[Once $ GSYM MOD_PLUS]>>
-  ‘SUC n < 8’ by (
-    pop_assum (SUBST1_TAC o GSYM)>>
-    simp[MOD_LESS])>>
-  simp[]
-QED
-
-Theorem chg_end_length:
-  LENGTH (chg_end bits) = LENGTH bits + (8 − LENGTH bits MOD 8) MOD 8
-Proof
-  rw[chg_end_def,chg_end_acc_sum_leng]
-QED
-
-Theorem pad_message_length_multiple:
-  LENGTH bits < 2 ** 64 ⇒ divides 512 $ LENGTH (pad_message bits)
+Theorem RIPEMD_160_eq_alt:
+  LENGTH m < 2 ** 64 ⇒ RIPEMD_160 m = RIPEMD_160_alt m
 Proof
   strip_tac>>
-  ‘LENGTH (n2l 2 (LENGTH bits)) ≤ 64’ by (
-    ‘LENGTH bits ≤ 2 ** 64 - 1’ by decide_tac>>
-    Cases_on ‘LENGTH bits’>>
-    simp[numposrepTheory.LENGTH_n2l]>>
-    ‘0 < SUC n’ by simp[]>>
-    drule_then assume_tac logrootTheory.LOG2_LE_MONO>>
-    pop_assum $ drule_then assume_tac>>
-    gvs[])>>
-  rw[pad_message_def]>>
-  gvs[]>>
-  simp[chg_end_length,bitstringTheory.length_pad_left,ADD1]>>
-  Cases_on ‘LENGTH (n2l 2 (LENGTH bits)) = 64’>>
-  simp[dividesTheory.DIVIDES_MOD_0]>>
-  intLib.ARITH_TAC
+  simp[RIPEMD_160_def, RIPEMD_160_alt_def]>>
+  drule_then assume_tac parse_message_block_size>>
+  drule_then assume_tac outer_for_loop_alt_cv>>
+  rw[]
 QED
+
+val () = cv_auto_trans RIPEMD_160_alt_def;
 
 val _ = export_theory();
