@@ -2,23 +2,26 @@ structure HFS_NameMunge :> HFS_NameMunge =
 struct
 
 
+infix ++
+val op++ = OS.Path.concat
 exception DirNotFound
 val HOLOBJDIR = ".hol/objs"
-val HOLOBJDIR_arcs = ["objs", ".hol"]
+val HOLOBJDIR_arcs = [".hol", "objs"]
+val HOLOBJDIR_arcs' = ["objs", ".hol"]
   (* yes, flipped, as they're inserted into a list that is then reversed;
      see insert_before_last *)
 
-fun base_app {dirname} P action =
+fun base_app {dirname} P action a0 =
     let
       open OS.FileSys
       val ds = openDir dirname handle OS.SysErr _ => raise DirNotFound
-      fun loop () =
+      fun loop a =
           case readDir ds of
-              NONE => closeDir ds
+              NONE => (closeDir ds; a)
             | SOME nextfile =>
-              (if P nextfile then action nextfile else (); loop())
+              loop (if P nextfile then action nextfile a else a)
     in
-      loop() handle e => (closeDir ds; raise e);
+      loop a0 handle e => (closeDir ds; raise e) before
       closeDir ds
     end
 
@@ -55,7 +58,7 @@ fun HOLtoFS nm =
     in
       if changep then
         let
-          val (arcs', last) = insert_before_last [] HOLOBJDIR_arcs arcs
+          val (arcs', last) = insert_before_last [] HOLOBJDIR_arcs' arcs
           val dir = OS.Path.toString {isAbs = isAbs, vol = vol, arcs = arcs'}
         in
           SOME {fullfile = OS.Path.concat(dir, last), dir = dir}
@@ -121,25 +124,33 @@ fun closeDir (_, ds, r as ref subdsopt) =
          NONE => ()
        | SOME ds' => (OS.FileSys.closeDir ds'; r := NONE))
 
-fun pushdir d f =
+fun pushdir d f a0 =
     if OS.FileSys.isDir d handle OS.SysErr _ => false then
       let val d0 = OS.FileSys.getDir()
           val _ = OS.FileSys.chDir d
-          val res = f () handle e => (OS.FileSys.chDir d0; raise e)
+          val res = f a0 handle e => (OS.FileSys.chDir d0; raise e)
       in
         OS.FileSys.chDir d0;
         res
       end
-    else ()
+    else a0
 
-fun read_files_with_objs {dirname} P action =
+
+fun read_files_with_objs {dirname} P action a0 =
     base_app
       {dirname=dirname}
       (fn s => s = ".hol" orelse P s)
-      (fn s => if s = ".hol" then
-                 pushdir (OS.Path.concat(dirname, HOLOBJDIR))
-                         (fn () => base_app {dirname="."} P action)
-               else action s)
+      (fn s => fn a =>
+          if s = ".hol" then
+            pushdir
+              (dirname ++ HOLOBJDIR)
+              (base_app
+                 {dirname="."} P
+                 (fn s =>
+                     action {fakearcs=HOLOBJDIR_arcs, base = s}))
+              a
+          else action {fakearcs=[],base=s} a)
+      a0
 
 fun clean_last () =
     OS.FileSys.rmDir HOLOBJDIR handle OS.SysErr _ => ()

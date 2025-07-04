@@ -61,7 +61,8 @@ sig
   val read_files : {dirname: string} -> (string -> bool) -> (string -> unit) ->
                    unit
   val read_files_with_objs :
-      {dirname: string} -> (string -> bool) -> (string -> unit) ->
-      unit
+      {dirname: string} -> (string -> bool) ->
+      ({fakearcs:string list,base:string} -> 'a -> 'a) ->
+      'a -> 'a
 
 end

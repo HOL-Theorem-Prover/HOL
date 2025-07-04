@@ -464,6 +464,13 @@ val _ = work_in_dir "genscriptdep"
                     (fn () => polyc_compile NONE "poly-genscriptdep.ML"
                                  (fullPath [HOLDIR, "bin", "genscriptdep"]))
 
+(* linkToSigobj *)
+val _ = work_in_dir
+          "linkToSigobj"
+          (fullPath [HOLDIR, "tools", "Holmake", "poly"])
+          (fn () => polyc_compile NONE "poly-linkToSigobj.ML"
+                                  (fullPath [HOLDIR, "bin", "linkToSigobj"]))
+
 end (* local *)
 
 (*---------------------------------------------------------------------------
