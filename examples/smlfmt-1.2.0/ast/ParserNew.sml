@@ -148,7 +148,9 @@ structure AstNew = struct
         id: ident, constraint: struct_kind option,
         bind: {eq: int, strexp: strexp} option} delimited}
     (** structure strid : sigexp = strexp [and strid : sigep = strexp ...] *)
-  | DecSignature of {signature_: int, elems: {ident: ident, eq: int, sigexp: sigexp} delimited}
+  | DecSignature of {
+      signature_: int,
+      elems: {id: ident, bind: {eq: int, sigexp: sigexp} option} delimited}
     (** signature sigid = sigexp [and ...] *)
   | DecInclude of {include_: int, sigexps: sigexp list}
     (** include sigid ... sigid *)
@@ -156,8 +158,9 @@ structure AstNew = struct
     (** sharing [type] longstrid = ... = longstrid *)
   | DecFunctor of {
       functor_: int, elems: {
-        id: ident, lparen: int, funarg: funarg, rparen: int,
-        constraint: struct_kind option, eq: int, strexp: strexp} delimited}
+        id: ident, lparen: int option, funarg: funarg, rparen: int option,
+        constraint: struct_kind option,
+        bind: {eq: int, strexp: strexp} option} delimited}
     (** functor id(funarg) [:> sigexp] = strexp [and ...] *)
   | DecExp of exp (** exp (only at top level) *)
 
@@ -181,7 +184,7 @@ structure AstNew = struct
     (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
 
   and funarg =
-    ArgIdent of {strid: ident, colon: int, sigexp: sigexp}
+    ArgIdent of {strid: ident, ty: {colon: int, sigexp: sigexp} option}
   | ArgSpec of dec list
 
   and sigexp =
@@ -1084,12 +1087,37 @@ fun parseSML body parseError = let
             bind = Option.map (fn eq => {eq = eq, strexp = parseStrExp ()})
               (parseKeyword "=" NONE) },
           delim = isKeyword "and" } })
+      | ("signature", _) => SOME (sc, DecSignature {
+        signature_ = start,
+        elems = parseDelimited [] [] {
+          elem = fn () => {
+            id = parseIdentifier true,
+            bind = Option.map (fn eq => {eq = eq, sigexp = parseSigExp ()})
+              (parseKeyword "=" (SOME "expected '='")) },
+          delim = isKeyword "and" } })
       | ("sharing", _) => SOME (sc, Sharing {
         sharing_ = start,
         type_ = parseKeyword "type" NONE,
         elems = parseDelimited [] [] {
           elem = fn () => parseIdentifier true,
           delim = isKeyword "=" } })
+      | ("functor", _) => SOME (sc, DecFunctor {
+        functor_ = start,
+        elems = parseDelimited [] [] {
+          elem = fn () => {
+            id = parseIdentifier true,
+            lparen = parseSymbol #"(" (SOME "expected '('"),
+            funarg = case parseIdentifier false of
+              (_, "") => ArgSpec (#2 (parseDecs true sc []))
+            | id => ArgIdent {
+              strid = id,
+              ty = Option.map (fn colon => {colon = colon, sigexp = parseSigExp ()})
+                (parseKeyword ":" (SOME "expected ':'")) },
+            rparen = parseSymbol #")" (SOME "expected ')'"),
+            constraint = parseStructKind (),
+            bind = Option.map (fn eq => {eq = eq, strexp = parseStrExp ()})
+              (parseKeyword "=" (SOME "expected '='")) },
+          delim = isKeyword "and" } })
       | _ => (unread (start, IdentTk); NONE))
     | tk => (unread tk; NONE)
     in
