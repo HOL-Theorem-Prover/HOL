@@ -189,28 +189,21 @@ structure AstNew = struct
 
   and sigexp =
     SigIdent of ident
-  | Spec of {sig_: int, spec: dec list, end_: int}
+  | Spec of {sig_: int, spec: dec list, end_: int option, stop: int}
     (** sig spec end *)
   | WhereType of {
-    sigexp: sigexp, elems: {
-      where_: int, type_: int, tyvars: ident seq,
-      tycon: ident, eq: int, ty: ty} list}
-    (** sigexp where type tyvarseq tycon = ty [where type ...] *)
+    sigexp: sigexp, where_: int,
+    elems: {type_: int option, tybind: tybind} delimited}
+    (** sigexp where type tyvarseq tycon = ty [and type ...] *)
 
   and strexp =
     StrIdent of ident
-  | StrStruct of {struct_: int, strdec: dec list, end_: int}
+  | StrStruct of {struct_: int, strdec: dec list, end_: int option, stop: int}
   | StrConstraint of {strexp: strexp, kind: struct_kind}
-  | FunAppExp of {funid: ident, lparen: int, strexp: strexp, rparen: int}
-  | FunAppDec of {funid: ident, lparen: int, strdec: dec list, rparen: int}
-  | StrLetInEnd of {let_: int, strdec: dec list, in_: int, strexp: strexp, end_: int}
-
-  and fname_args =
-    PrefixedFun of {op_: int option, id: ident, args: exp list} (** fun [op]name arg1 arg2 arg3 *)
-  | InfixedFun of {larg: exp, id: ident, rarg: exp} (** fun larg name rarg *)
-  | CurriedInfixedFun of
-    {lparen: int, larg: exp, id: int, rarg: exp, rparen: int, args: exp list}
-    (** fun (larg name rarg) arg1 arg2 *)
+  | FunAppExp of {funid: ident, lparen: int, strexp: strexp, rparen: int option, stop: int}
+  | FunAppDec of {funid: ident, lparen: int, strdec: dec list, rparen: int option, stop: int}
+  | StrLetInEnd of {
+      let_: int, strdec: dec list, in_: int option, strexp: strexp, end_: int option, stop: int}
 
   and qdecl =
     QuoteAntiq of {caret_: int, exp: exp, stop: int}
@@ -992,13 +985,6 @@ fun parseSML body parseError = let
           tybind = parseDelimited [] [] {elem = parseTyBind, delim = isKeyword "and"}})
         (parseKeyword "withtype" NONE))
 
-    fun parseStructKind () =
-      case parseKeyword ":" NONE of
-        SOME colon => SOME {colon = (colon, Colon), sigexp = parseSigExp ()}
-      | NONE => case parseKeyword ":>" NONE of
-          SOME colongt => SOME {colon = (colongt, ColonGt), sigexp = parseSigExp ()}
-        | NONE => NONE
-
     val dec = case token () of
       (start, Symbol #";") => SOME (sc, DecSemi start)
     | (start, IdentTk) => (case identKind start of
@@ -1066,7 +1052,7 @@ fun parseSML body parseError = let
       | ("open", _) => SOME (sc, DecOpen {open_ = start, elems = parseIdentifiers []})
       | ("include", _) => SOME (sc, DecInclude {
         include_ = start,
-        sigexps = case parseSigExp () of
+        sigexps = case parseSigExp sc of
           SigIdent id => map SigIdent (parseIdentifiers [id])
         | e => [e] })
       | ("abstype", _) => let
@@ -1083,8 +1069,8 @@ fun parseSML body parseError = let
         elems = parseDelimited [] [] {
           elem = fn () => {
             id = parseIdentifier true,
-            constraint = parseStructKind (),
-            bind = Option.map (fn eq => {eq = eq, strexp = parseStrExp ()})
+            constraint = parseStructKind sc,
+            bind = Option.map (fn eq => {eq = eq, strexp = parseStrExp sc})
               (parseKeyword "=" NONE) },
           delim = isKeyword "and" } })
       | ("signature", _) => SOME (sc, DecSignature {
@@ -1092,7 +1078,7 @@ fun parseSML body parseError = let
         elems = parseDelimited [] [] {
           elem = fn () => {
             id = parseIdentifier true,
-            bind = Option.map (fn eq => {eq = eq, sigexp = parseSigExp ()})
+            bind = Option.map (fn eq => {eq = eq, sigexp = parseSigExp sc})
               (parseKeyword "=" (SOME "expected '='")) },
           delim = isKeyword "and" } })
       | ("sharing", _) => SOME (sc, Sharing {
@@ -1111,11 +1097,11 @@ fun parseSML body parseError = let
               (_, "") => ArgSpec (#2 (parseDecs true sc []))
             | id => ArgIdent {
               strid = id,
-              ty = Option.map (fn colon => {colon = colon, sigexp = parseSigExp ()})
+              ty = Option.map (fn colon => {colon = colon, sigexp = parseSigExp sc})
                 (parseKeyword ":" (SOME "expected ':'")) },
             rparen = parseSymbol #")" (SOME "expected ')'"),
-            constraint = parseStructKind (),
-            bind = Option.map (fn eq => {eq = eq, strexp = parseStrExp ()})
+            constraint = parseStructKind sc,
+            bind = Option.map (fn eq => {eq = eq, strexp = parseStrExp sc})
               (parseKeyword "=" (SOME "expected '='")) },
           delim = isKeyword "and" } })
       | _ => (unread (start, IdentTk); NONE))
@@ -1130,8 +1116,77 @@ fun parseSML body parseError = let
       NONE => (sc, rev acc)
     | SOME (sc, d) => parseDecs inSig sc (d :: acc)
 
-  and parseSigExp () = raise Todo
-  and parseStrExp () = raise Todo
+  and parseStructKind sc =
+    case parseKeyword ":" NONE of
+      SOME colon => SOME {colon = (colon, Colon), sigexp = parseSigExp sc}
+    | NONE => case parseKeyword ":>" NONE of
+        SOME colongt => SOME {colon = (colongt, ColonGt), sigexp = parseSigExp sc}
+      | NONE => NONE
+
+  and parseSigExp sc = let
+    val lhs = case parseKeyword "sig" NONE of
+      SOME sig_ => let
+      val (end_, stop) = parseStop (parseKeyword "end") "expected keyword 'end'"
+      in Spec {sig_ = sig_, spec = #2 (parseDecs true sc []), end_ = end_, stop = stop} end
+    | NONE => SigIdent (parseIdentifier true)
+    fun rhs lhs =
+      case parseKeyword "where" NONE of
+        SOME where_ => let
+        val elems = parseDelimited [] [] {
+          elem = fn () => {
+            type_ = parseKeyword "type" (SOME "expected 'type'"),
+            tybind = parseTyBind () },
+          delim = isKeyword "and" }
+        in rhs (WhereType {sigexp = lhs, where_ = where_, elems = elems}) end
+      | NONE => lhs
+    in rhs lhs end
+
+  and parseStrExp sc = let
+    val lhs = case token () of
+      (start, IdentTk) => (case identKind start of
+        ("struct", _) => let
+        val (_, dec) = parseDecs true sc []
+        val (end_, stop) = parseStop (parseKeyword "end") "expected keyword 'end'"
+        in StrStruct {struct_ = start, strdec = dec, end_ = end_, stop = stop} end
+      | ("let", _) => let
+        val (_, dec) = parseDecs true sc []
+        val in_ = parseKeyword "in" (SOME "expected keyword in")
+        val strexp = parseStrExp sc
+        val (end_, stop) = parseStop (parseKeyword "end") "expected keyword 'end'"
+        in StrLetInEnd {
+          let_ = start, strdec = dec, in_ = in_,
+          strexp = strexp, end_ = end_, stop = stop} end
+      | (id, Regular) => (case parseKeyword "(" NONE of
+          NONE => StrIdent (start, id)
+        | SOME lparen =>
+          if
+            case case token () of tk => (unread tk; tk) of
+              (start, IdentTk) => (case identKind start of
+                ("let", _) => true
+              | ("struct", _) => true
+              | (_, Regular) => true
+              | _ => false)
+            | _ => false
+          then let
+            val strexp = parseStrExp sc
+            val (rparen, stop) = parseStop (parseSymbol #")") "expected ')'"
+            in FunAppExp {
+              funid = (start, id), lparen = lparen,
+              strexp = strexp, rparen = rparen, stop = stop}
+            end
+          else let
+            val (_, dec) = parseDecs true sc []
+            val (rparen, stop) = parseStop (parseSymbol #")") "expected ')'"
+            in FunAppDec {
+              funid = (start, id), lparen = lparen,
+              strdec = dec, rparen = rparen, stop = stop}
+            end)
+      | _ => raise Todo)
+    | _ => raise Todo
+    fun rhs lhs = case parseStructKind sc of
+      SOME kind => rhs (StrConstraint {strexp = lhs, kind = kind})
+    | NONE => lhs
+    in rhs lhs end
 
   in () end
 
