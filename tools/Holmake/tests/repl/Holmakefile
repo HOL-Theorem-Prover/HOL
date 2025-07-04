@@ -1,3 +1,6 @@
+ifdef POLY
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+
 HOL = $(protect $(HOLDIR)/bin/hol.bare) --zero --noconfig
 INCLUDES = $(HOLDIR)/tools/cmp
 
@@ -9,7 +12,6 @@ all: $(DEFAULT_TARGETS)
 # CMP = $(protect $(HOLDIR)/tools/cmp/cmp.exe)
 CMP = diff -a
 
-ifdef POLY
 DEPS = test1.out test2.out test3.out test4.out test5.out
 
 all: $(DEPS)
