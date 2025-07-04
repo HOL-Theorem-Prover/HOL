@@ -209,12 +209,29 @@ process in it."
       (concat (hol-interm-locpragma-of-position pos) s)
     s))
 
+(defun hol-string-escape (s)
+  "Escape argument so that special chars are escaped with backslash characters.
+The special characters are backslashes, left and right parentheses, and space."
+  (let (acc)
+    (seq-doseq (c s)
+      (let ((s1 (cond
+                 ((= c ?\s) "\\ ")
+                 ((= c ?\() "\\(")
+                 ((= c ?\\) "\\\\")
+                 ((= c ?\)) "\\)")
+                 (t (string c)))))
+        (setq acc (cons s1 acc))))
+    (string-join (reverse acc))))
+
 (defun hol-locpragma-of-position (pos)
   "Convert Elisp position into HOL location pragma.  Not for interactive use."
   (let ((rcposn (hol-get-rowcol-posn pos)))
     ;; send position of the line before and a newline so that text that
     ;; needs to be in column 0 is still in column 0
-    (format "#(LINE=%d,%d)\n" (- (car rcposn) 1) (cdr rcposn))))
+    (format "#(FILE=%s)#(LINE=%d,%d)\n"
+            (hol-string-escape (buffer-file-name))
+            (- (car rcposn) 1)
+            (cdr rcposn))))
 
 (defun hol-interm-locpragma-of-position (pos)
   (let ((rcposn (hol-get-rowcol-posn pos)))
@@ -533,7 +550,8 @@ starts >%s%s<"
       (concat
        (mapconcat (lambda (s) (concat "^" s "\\>"))
                   '("Theorem" "Definition" "Inductive" "CoInductive"
-                    "Triviality" "Datatype" "Type" "Overload" "Quote")
+                    "Triviality" "Datatype" "Type" "Overload" "Quote"
+                    "Theory" "Ancestors" "Libs")
                   "\\|")
        "\\|;\\|"
        (regexp-opt
@@ -557,7 +575,7 @@ starts >%s%s<"
           ;; identifiers of form id.id.  When spotted such identifiers need
           ;; to have the first component of the name loaded.
           (let ((regexp
-                 (concat "`\\|“\\|‘\\|"
+                 (concat "`\\|“\\|‘\\|#(FILE=\\|"
                          hol-quoted-theorem-proof-re-begin "\\|"
                          hol-quoted-definition-re-begin "\\|"
                          hol-quoted-datatype-re-begin "\\|"
@@ -583,6 +601,17 @@ starts >%s%s<"
                      ((string= ms "‘")
                       (if (not (re-search-forward "’" nil t))
                           (error "Unbalanced ‘ in region")))
+                     ((string= ms "#(FILE=")
+                      (let (foundp abortedp)
+                        (while (and (not foundp)(not abortedp))
+                          (if (re-search-forward ")\\|\\\\" nil t)
+                              (let ((ms2 (match-string-no-properties 0)))
+                                (cond
+                                 ((string= ms2 ")") (setq foundp t))
+                                 (t (forward-char 1))))
+                            (setq abortedp t)))
+                        (if abortedp
+                            (error "Unterminated `#(FILE=..' directive in region"))))
                      ((and (or (string-prefix-p "Theorem" ms)
                                (string-prefix-p "Triviality" ms))
                            (char-equal (char-before) ?:))

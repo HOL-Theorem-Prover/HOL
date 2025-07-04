@@ -27,7 +27,8 @@
    ====================================================================== *)
 
 val _ = HOL_Interactive.toggle_quietdec();
-
+val _ = Feedback.emit_WARNING := false;
+val _ = Feedback.emit_MESG := false;
 fun die s =
   (TextIO.output(TextIO.stdErr, s ^ "\n");
    TextIO.flushOut TextIO.stdErr;

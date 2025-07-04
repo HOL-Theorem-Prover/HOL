@@ -1568,12 +1568,13 @@ End
 
 (* Theorem: valueOf (snocM x ls) = SNOC x ls *)
 (* Proof: induction on ls, snocM_def, SNOC. *)
-val snocM_value = store_thm(
-  "snocM_value[simp]",
-  ``!x ls. valueOf (snocM x ls) = SNOC x ls``,
-  ho_match_mp_tac (theorem "snocM_ind") >>
+Theorem snocM_value:
+  !x ls. valueOf (snocM x ls) = SNOC x ls
+Proof
+  recInduct snocM_ind >>
   rw[] >>
-  (Cases_on `ls` >> rw[Once snocM_def]));
+  Cases_on `ls` >> rw[Once snocM_def, GSYM SNOC_APPEND]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

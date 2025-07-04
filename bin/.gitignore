@@ -13,3 +13,4 @@ heapname
 buildheap
 *.bat
 genscriptdep
+linkToSigobj

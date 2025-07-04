@@ -77,6 +77,7 @@ structure ToSML: sig
     doThmAttrs: bool -> substring -> substring -> unit,
     filename: string ref,
     full: string -> substring,
+    isTheory: bool ref,
     line: (int * int) ref,
     magicBind: string -> unit,
     parseError: int * int -> string -> unit,
@@ -93,7 +94,7 @@ structure ToSML: sig
   type ret = {
     doDecl: bool -> int -> Simple.decl -> int,
     feed: unit -> Simple.topdecl,
-    finishThmVal: unit -> unit,
+    finish: unit -> unit,
     regular: int * int -> unit
   }
 

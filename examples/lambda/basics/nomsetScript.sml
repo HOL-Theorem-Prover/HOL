@@ -732,6 +732,18 @@ val listpm_APPENDlist = store_thm(
   ``listpm pm pi (l1 ++ l2) = listpm pm pi l1 ++ listpm pm pi l2``,
   Induct_on `l1` THEN fsrw_tac [][]);
 
+Theorem listpm_MAPlist':
+  MAP (fnpm apm bpm pi f) (listpm apm pi l) = listpm bpm pi (MAP f l)
+Proof
+  Induct_on ‘l’ >> simp[fnpm_def]
+QED
+
+Theorem listpm_REVERSElist:
+  listpm apm pi (REVERSE l) = REVERSE (listpm apm pi l)
+Proof
+  Induct_on ‘l’ >> simp[listpm_APPENDlist]
+QED
+
 Theorem LENGTH_listpm[simp] :
     LENGTH (listpm pm pi l) = LENGTH l
 Proof
@@ -943,6 +955,14 @@ val supp_smallest = store_thm(
   `FINITE {b | ~(pmact pm [(a,b)] x = x)}` by METIS_TAC [SUBSET_FINITE] THEN
   FULL_SIMP_TAC (srw_ss()) [supp_def]);
 
+Theorem supp_EQ_EMPTY_I:
+  (∀a b. pmact pm [(a,b)] x = x) ⇒ supp pm x = {}
+Proof
+  strip_tac >>
+  ‘support pm x {}’ by simp[support_def] >>
+  drule supp_smallest >> simp[]
+QED
+
 val notinsupp_I = store_thm(
   "notinsupp_I",
   ``∀A apm e x. FINITE A ∧ support apm x A ∧ e ∉ A ==> e ∉ supp apm x``,
@@ -1023,6 +1043,24 @@ Proof
   SRW_TAC [][supp_def, GSPEC_OR, Excl "lift_disj_eq"]
 QED
 
+Theorem supp_FST[simp]:
+  supp (fn_pmact (pair_pmact pm1 pm2) pm1) FST = {}
+Proof
+  irule supp_EQ_EMPTY_I >> simp[fnpm_def, FUN_EQ_THM]
+QED
+
+Theorem supp_SND[simp]:
+  supp (fn_pmact (pair_pmact pm1 pm2) pm2) SND = {}
+Proof
+  irule supp_EQ_EMPTY_I >> simp[fnpm_def, FUN_EQ_THM]
+QED
+
+Theorem supp_comma[simp]:
+  supp (fn_pmact apm (fn_pmact bpm (pair_pmact apm bpm))) (,) = {}
+Proof
+  irule supp_EQ_EMPTY_I >> simp[FUN_EQ_THM, fnpm_def]
+QED
+
 (* lists *)
 Theorem supp_listpm[simp]:
     (supp (list_pmact apm) [] = {}) /\
@@ -1041,6 +1079,20 @@ Theorem listsupp_REVERSE[simp] :
     supp (list_pmact p) (REVERSE l) = supp (list_pmact p) l
 Proof
   Induct_on `l` THEN SRW_TAC [][UNION_COMM]
+QED
+
+Theorem supp_APPEND[simp]:
+  supp (fn_pmact (list_pmact apm) (fn_pmact (list_pmact apm) (list_pmact apm)))
+       APPEND =
+  {}
+Proof
+  irule supp_EQ_EMPTY_I >> simp[fnpm_def, FUN_EQ_THM, listpm_APPENDlist]
+QED
+
+Theorem supp_REVERSE[simp]:
+  supp (fn_pmact (list_pmact apm) (list_pmact apm)) REVERSE = {}
+Proof
+  irule supp_EQ_EMPTY_I >> simp[fnpm_def, FUN_EQ_THM, listpm_REVERSElist]
 QED
 
 val IN_supp_listpm = store_thm(

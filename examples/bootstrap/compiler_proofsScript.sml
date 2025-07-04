@@ -1,13 +1,12 @@
 (*
   Proves that the compiler in assembly form implements the compiler function.
 *)
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory;
-open source_valuesTheory source_syntaxTheory x64asm_syntaxTheory
-     parsingTheory codegenTheory wordsLib compiler_evalTheory
-     codegen_proofsTheory compiler_progTheory parsing_proofsTheory;
-
-val _ = new_theory "compiler_proofs";
+Theory compiler_proofs
+Ancestors
+  arithmetic list pair finite_map string
+  source_values source_syntax x64asm_syntax
+  parsing codegen compiler_eval
+  codegen_proofs compiler_prog parsing_proofs
 
 Theorem compiler_asm_correct:
   ∀input output.
@@ -30,5 +29,3 @@ Theorem compiler_asm_bootstrap:
 Proof
   metis_tac [compiler_asm_correct,compiler_compiler_str]
 QED
-
-val _ = export_theory();

@@ -1,9 +1,7 @@
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory listTheory pairTheory finite_mapTheory stringTheory llistTheory;
-open source_valuesTheory source_syntaxTheory source_semanticsTheory mp_then;
-
-val _ = new_theory "source_properties";
+Theory source_properties
+Ancestors
+  arithmetic list pair finite_map string llist
+  source_values source_syntax source_semantics
 
 
 (* In this file we prove that the big-step relational semantics (--->)
@@ -630,5 +628,3 @@ Proof
          take_branch_def,get_env_and_body_def]
   \\ rw [] \\ fs []
 QED
-
-val _ = export_theory();

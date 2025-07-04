@@ -29,6 +29,7 @@ sig
   val MOSMLDIR : string
   val OS : string
   val DEPDIR : string
+  val LOGDIR : string
   val GNUMAKE : string
   val DYNLIB : bool
   val ML_SYSNAME : string

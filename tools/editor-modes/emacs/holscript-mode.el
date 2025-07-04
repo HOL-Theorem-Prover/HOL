@@ -10,6 +10,9 @@ ignoring fact that it should really only occur at the beginning of the line.")
 (defconst holscript-font-lock-keywords
   (list '("^\\(Theorem\\|Triviality\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
           (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
+        '("^\\(Theory\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*"
+          (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
+        '("^\\(Ancestors\\|Libs\\)\\_>" . 'holscript-theorem-syntax)
         '("^\\(Proof\\|^QED\\)\\>" . 'holscript-theorem-syntax)
         '("^\\(Definition\\|\\(?:Co\\)?Inductive\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
           (1 'holscript-definition-syntax) (2 'holscript-thmname-syntax))
@@ -880,7 +883,7 @@ class characters.")
 
 (defconst holscript-column0-keywords-regexp
   (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Type"
-                "Proof" "Quote"
+                "Proof" "Quote" "Theory" "Ancestors" "Libs"
                 "Termination" "End" "QED" "Inductive" "CoInductive"
                 "Overload")))
 (defconst holscript-column0-declbegin-keyword

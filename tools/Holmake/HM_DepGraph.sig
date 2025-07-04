@@ -49,7 +49,9 @@ sig
   val toString : 'a t -> string
   val toJSONString : 'a t -> string
 
-  val postmortem : Holmake_tools.output_functions -> OS.Process.status * 'a t ->
+  (* first function is passed true iff build has been deemed successful *)
+  val postmortem : (bool -> unit) ->
+                   Holmake_tools.output_functions -> OS.Process.status * 'a t ->
                    OS.Process.status
 
 

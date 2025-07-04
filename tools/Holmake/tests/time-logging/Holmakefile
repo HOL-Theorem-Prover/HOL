@@ -1,0 +1,23 @@
+
+HM = $(protect $(HOLDIR)/bin/Holmake)
+
+ifdef POLY
+CMD = $(HM) --holstate=$(HOLDIR)/bin/hol.state0 --logging
+SMLCMD = poly -q
+else
+CMD = $(HM) --logging
+SMLCMD = mosml -quietdec -P full
+endif
+
+all: goodlog badlog
+.PHONY: all
+
+goodlog:
+	cd good ; $(CMD) ; $(SMLCMD) < ../checklogfile.sml && touch ../$@
+
+badlog:
+	cd bad ; $(CMD) ; $(SMLCMD) < ../checklogfile.sml && touch ../$@
+
+
+
+EXTRA_CLEANS = goodlog badlog

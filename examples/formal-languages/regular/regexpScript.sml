@@ -2,7 +2,7 @@
 (* Theory of regular expressions.                                            *)
 (*===========================================================================*)
 
-open HolKernel Parse boolLib bossLib BasicProvers;
+open HolKernel Parse boolLib bossLib BasicProvers TotalDefn;
 open arithmeticTheory listTheory optionTheory rich_listTheory
      pairTheory relationTheory sortingTheory stringTheory
      comparisonTheory bagTheory containerTheory pred_setTheory
@@ -62,29 +62,18 @@ Proof
  srw_tac [] [LIST_UNION_def,IN_DEF]
 QED
 
-Theorem ZIP_ind :
- !P.
-    (!l. P ([],l)) /\ (!v2 v3. P (v2::v3,[])) /\
-     (!x xs y ys. P (xs,ys) ==> P (x::xs,y::ys)) ==>
-     !v v1. P (v,v1)
-Proof
-  ntac 2 strip_tac
-  \\ Induct \\ ASM_REWRITE_TAC[]
-  \\ gen_tac \\ Cases \\ ASM_SIMP_TAC bool_ss []
-QED
-
 Theorem MEM_ZIP_IMP :
  !l1 l2 a b.
      MEM (a,b) (ZIP (l1,l2)) ==> MEM a l1 /\ MEM b l2
 Proof
- recInduct ZIP_ind \\ RW_TAC list_ss [ZIP_def] \\ METIS_TAC []
+ recInduct ZIP_ind_alt \\ RW_TAC list_ss [ZIP_def] \\ METIS_TAC []
 QED
 
 Theorem ZIP_eq_cons :
  !l1 l2 a b t.
     (ZIP (l1,l2) = (a,b)::t) ==> ?t1 t2. (l1 = a::t1) /\ (l2 = b::t2)
 Proof
- recInduct ZIP_ind >> RW_TAC list_ss [ZIP_def]
+ recInduct ZIP_ind_alt >> RW_TAC list_ss [ZIP_def]
 QED
 
 Triviality cons_eq_ZIP :
@@ -101,13 +90,13 @@ Theorem zip_append :
    ==>
     (ZIP (l1 ++ l3, l2 ++ l4) = ZIP (l1,l2) ++ ZIP (l3,l4))
 Proof
- recInduct ZIP_ind >> rw_tac list_ss [ZIP_def]
+ recInduct ZIP_ind_alt >> rw_tac list_ss [ZIP_def]
 QED
 
 Theorem ZIP_eq_nil :
  !l1 l2. (ZIP (l1,l2) = []) <=> ((l1=[]) \/ (l2=[]))
 Proof
- recInduct ZIP_ind THEN RW_TAC list_ss [ZIP_def]
+ recInduct ZIP_ind_alt THEN RW_TAC list_ss [ZIP_def]
 QED
 
 Triviality zip_map_lem :
@@ -183,51 +172,10 @@ End
 
 Definition rsize_def :
     (rsize (Chset a) = 1n) /\
-    (rsize (Cat r s) = 1 + (rsize r + rsize s)) /\
+    (rsize (Cat r s) = 3 + (rsize r + rsize s)) /\
     (rsize (Star a)  = 1 + rsize a) /\
-    (rsize (Or a)    = 1 + rsizel a) /\
+    (rsize (Or a)    = 1 + list_size rsize a) /\
     (rsize (Neg a)   = 1 + rsize a)
-    /\
-    (rsizel []       = 0n) /\
-    (rsizel (r::t)   = 1 + (rsize r + rsizel t))
-End
-
-
-Theorem rsize_or_lem :
- !l a. MEM a l ==> rsize a < rsize (Or l)
-Proof
- SIMP_TAC list_ss [rsize_def] THEN
- Induct THEN RW_TAC list_ss [rsize_def] THENL
- [DECIDE_TAC, RES_TAC THEN POP_ASSUM MP_TAC THEN DECIDE_TAC]
-QED
-
-Theorem rsizel_append :
- !l1 l2. rsizel (l1 ++ l2) = rsizel (l1) + rsizel (l2)
-Proof
- Induct THEN RW_TAC list_ss [rsize_def]
-QED
-
-(*---------------------------------------------------------------------------*)
-(* If we were going to translate rsize_def, it would currently fail. The     *)
-(* following would work. In fact, however, we only use regexp size defns to  *)
-(* show termination of other functions, so it need not be translated.        *)
-(*---------------------------------------------------------------------------*)
-
-Definition regexp_list_size_def :
-   (regexp_list_size [] (acc:num)     = acc) /\
-    (regexp_list_size (Chset _::t) acc = regexp_list_size t (acc+1)) /\
-    (regexp_list_size (Star r::t) acc  = regexp_list_size (r::t) (acc+1)) /\
-    (regexp_list_size (Neg r::t) acc   = regexp_list_size (r::t) (acc+1)) /\
-    (regexp_list_size (Cat r s::t) acc = regexp_list_size (r::s::t) (acc+1)) /\
-    (regexp_list_size (Or rl::t) acc = regexp_list_size (rl ++ t) (acc + LENGTH rl + 1))
-Termination
- WF_REL_TAC `inv_image (mlt_list (measure rsize)) FST` THEN RW_TAC list_ss []
- THENL
-  [METIS_TAC [rsize_or_lem],
-   `r::s::t = [r;s] ++ t` by METIS_TAC [APPEND]
-     THEN RW_TAC arith_ss [rsize_def,APPEND_11,MEM] THEN DECIDE_TAC,
-   RW_TAC list_ss [rsize_def],
-   RW_TAC list_ss [rsize_def]]
 End
 
 (*---------------------------------------------------------------------------*)
@@ -240,11 +188,6 @@ Definition regexp_lang_def :
   (regexp_lang (Star r)   = KSTAR (regexp_lang r)) /\
   (regexp_lang (Neg r)    = COMPL (regexp_lang r)) /\
   (regexp_lang (Or rlist) = LIST_UNION (MAP regexp_lang rlist))
-Termination
- WF_REL_TAC `measure rsize`
-  >> srw_tac [ARITH_ss] [rsize_or_lem]
-  >> rw [rsize_def]
-  >> decide_tac
 End
 
 Theorem regexp_lang_thm :
@@ -348,8 +291,6 @@ Definition len_cmp_def :
    (len_cmp (_::t1) (_::t2) = len_cmp t1 t2)
 End
 
-val len_cmp_ind = fetch "regexp" "len_cmp_ind";
-
 Theorem len_cmp_sym[local] :
  !l1 l2. (len_cmp l1 l2 = Equal) <=> (len_cmp l2 l1 = Equal)
 Proof
@@ -432,20 +373,19 @@ Theorem len_cmp_zip[local] :
  !l1 l2 l3 l4. (len_cmp l1 l2 = Equal) ==>
     (ZIP (l1,l2) ++ ZIP (l3,l4) = ZIP (l1++l3,l2++l4))
 Proof
-recInduct ZIP_ind THEN rw_tac list_ss [ZIP_def]
+recInduct ZIP_ind_alt THEN rw_tac list_ss [ZIP_def]
  >- (Cases_on `l` >> full_simp_tac list_ss [ZIP_def,len_cmp_def] >> rw_tac list_ss [])
  >- (full_simp_tac list_ss [ZIP_def,len_cmp_def] >> rw_tac list_ss [])
  >- (full_simp_tac list_ss [len_cmp_def])
 QED
 
-
 (*---------------------------------------------------------------------------*)
-(* Regexp comparison, in worklist style, to accomodate CakeML.               *)
+(* Regexp comparison, in worklist style                                      *)
 (*---------------------------------------------------------------------------*)
 
 Definition regexp_compareW_def :
-  (regexp_compareW [] = Equal) /\
-  (regexp_compareW (pair::t) =
+  regexp_compareW [] = Equal /\
+  regexp_compareW (pair::t) =
      case pair of
       | (Chset cs1, Chset cs2) =>
             (case charset_cmp cs1 cs2
@@ -468,19 +408,21 @@ Definition regexp_compareW_def :
              | verdict => verdict)
       | (Or _, __) => Less
       | (Neg r, Neg s) => regexp_compareW ((r,s)::t)
-      | (Neg _, __) => Greater)
+      | (Neg _, __) => Greater
 Termination
- WF_REL_TAC `mlt_list (RPROD (measure rsize) (measure rsize))`
- \\ RW_TAC list_ss [rsize_def]
-  >- (METIS_TAC [SIMP_RULE list_ss [rsize_def] rsize_or_lem,MEM_ZIP_IMP])
-  >- (METIS_TAC [SIMP_RULE list_ss [rsize_def] rsize_or_lem,MEM_ZIP_IMP])
-  >- (Q.EXISTS_TAC `[(r1,r3) ; (r2,r4)]` \\ NTAC 2 (RW_TAC list_ss [rsize_def]))
+  simp[] >>
+  WF_REL_TAC ‘measure (list_size (pair_size rsize rsize))’ >>
+  TC_SIMP_TAC (termination_ss() ++ boolSimps.ETA_ss) [rsize_def] >>
+  imp_res_tac len_cmp_length >>
+  rw [list_size_zip]
 End
+
+val regexp_compareW_ind_thm =
+    regexp_compareW_ind |> SIMP_RULE list_ss [FORALL_PROD];
 
 Definition regexp_compare_def :
    regexp_compare r s = regexp_compareW [(r,s)]
 End
-
 
 Definition regexp_leq_def :
  regexp_leq r1 r2 <=>
@@ -489,10 +431,6 @@ Definition regexp_leq_def :
     | Equal => T
     | Greater => F
 End
-
-
-val regexp_compareW_ind_thm =
-   fetch"-" "regexp_compareW_ind" |> SIMP_RULE list_ss [FORALL_PROD];
 
 Theorem regexp_compareW_thm[local] :
   (regexp_compareW [] = Equal) /\
@@ -553,7 +491,6 @@ Proof
   >- (pop_assum match_mp_tac >> rw[EVERY_APPEND] >> Induct_on `l` >> rw [])
   >- (pop_assum (mp_tac o Q.SPECL [`(r',r')::t'`, `L2`]) >> rw[])
 QED
-
 
 Theorem regexp_compareW_compute :
  !plist.
@@ -661,7 +598,6 @@ Proof
        >> rw[] >> fs [charset_cmp_eq])
 QED
 *)
-
 
 Theorem regexp_compareW_eq :
  !plist l1 l2.
@@ -951,21 +887,16 @@ QED
 
 Definition is_regexp_empty_def :
   (is_regexp_empty (Chset cs) = (cs = charset_empty)) /\
-   (is_regexp_empty (Cat r1 r2) = (is_regexp_empty r1 \/ is_regexp_empty r2)) /\
-   (is_regexp_empty (Star _) = F) /\
-   (is_regexp_empty (Or rs) = EVERY is_regexp_empty rs) /\
-   (is_regexp_empty (Neg r) = F)
-Termination
- WF_REL_TAC `measure rsize`
-  >> conj_tac
-  >- metis_tac [rsize_or_lem]
-  >- rw_tac arith_ss [rsize_def]
+  (is_regexp_empty (Cat r1 r2) = (is_regexp_empty r1 \/ is_regexp_empty r2)) /\
+  (is_regexp_empty (Star _) = F) /\
+  (is_regexp_empty (Or rs) = EVERY is_regexp_empty rs) /\
+  (is_regexp_empty (Neg r) = F)
 End
 
 Theorem regexp_empty_thm:
   !r.  is_regexp_empty r ==> !w. ~regexp_lang r w
 Proof
- recInduct (fetch "-" "is_regexp_empty_ind")
+ recInduct is_regexp_empty_ind
   >> rw [is_regexp_empty_def, regexp_lang_thm, EVERY_EL,charset_mem_empty]
   >> metis_tac[MEM_EL]
 QED
@@ -983,19 +914,16 @@ Definition nullableW_def :
   (nullableW (Star _ :: t)  = T) /\
   (nullableW (Neg r :: t)   = (~nullableW [r] \/ nullableW t)) /\
   (nullableW (Or rs :: t)   = nullableW (rs ++ t))
-Termination
- WF_REL_TAC `measure rsizel` >> RW_TAC list_ss [rsize_def,rsizel_append]
 End
 
 Definition nullable_def :
    nullable r = nullableW [r]
 End
 
-
 Theorem nullableW_thm :
- !rlist. nullableW rlist <=> EXISTS (\r. regexp_lang r "") rlist
+ ∀rlist. nullableW rlist <=> EXISTS (\r. regexp_lang r "") rlist
 Proof
-  recInduct (fetch "-" "nullableW_ind")
+  recInduct nullableW_ind
     >> rw_tac list_ss [nullableW_def, regexp_lang_thm]
     >> metis_tac [EVERY_DEF,FLAT]
 QED
@@ -1020,14 +948,6 @@ Definition deriv_def :
           then Or [cat; deriv c s]
           else cat) /\
   (deriv c (Or rs) = Or (MAP (deriv c) rs))
-Termination
- WF_REL_TAC `measure (\(x,y). rsize y)`
-  >> srw_tac [ARITH_ss] []
-     >- metis_tac [rsize_or_lem]
-     >- rw [rsize_def]
-     >- rw [rsize_def]
-     >- (rw [rsize_def] >> decide_tac)
-     >- (rw [rsize_def] >> decide_tac)
 End
 
 (*---------------------------------------------------------------------------*)
@@ -1107,7 +1027,8 @@ QED
 Theorem regexp_lang_deriv :
  !r s. regexp_lang r s = deriv_matches r s
 Proof
- Induct_on `s` >> rw [deriv_matches_def, nullable_thm] >> metis_tac [deriv_thm]
+ Induct_on `s` >>
+ rw [deriv_matches_def, nullable_thm] >> metis_tac [deriv_thm]
 QED
 
 Theorem regexp_lang_eqns :
@@ -1125,14 +1046,13 @@ Theorem regexp_lang_eqns :
       (!r' s. regexp_lang (Cat r r') s = regexp_lang r' s) /\
       (!s. regexp_lang (Star r) s = (s = "")))
 Proof
- rw [charset_mem_empty, regexp_lang_thm]
-   >| [metis_tac [APPEND_ASSOC],
-       rw [EQ_IMP_THM]
-       >| [match_mp_tac concat_empties >> Induct_on `ws` >> rw_tac list_ss [],
-           qexists_tac `[]` >> rw []],
-       rw [EQ_IMP_THM]
-       >| [match_mp_tac concat_empties >> Induct_on `ws` >> rw_tac list_ss [],
-          qexists_tac `[""]` >> rw []]]
+  rw [charset_mem_empty, regexp_lang_thm]
+  >- metis_tac [APPEND_ASSOC] >>
+  rw [EQ_IMP_THM]
+  >- (irule concat_empties >> Cases_on ‘ws’ >> gvs[])
+  >- (qexists_tac `[]` >> rw [])
+  >- (gvs [EVERY_MEM] >> metis_tac [FLAT_EQ_NIL'])
+  >- (qexists_tac `[""]` >> rw [])
 QED
 
 Theorem deriv_matches_eqns =
@@ -1149,7 +1069,7 @@ Theorem regexp_lang_ctxt_eqns :
                regexp_lang (Or (rs1++r2::rs2)) s) /\
   (!s. regexp_lang (Neg r1) s = regexp_lang (Neg r2) s)
 Proof
-rw [regexp_lang_thm] >> metis_tac [SET_EQ_THM]
+  rw [regexp_lang_thm] >> metis_tac [SET_EQ_THM]
 QED
 
 Theorem deriv_matches_ctxt_eqns =
@@ -1165,27 +1085,32 @@ Definition is_charset_def :
 End
 
 Definition build_char_set_def :
-    build_char_set cs = Chset cs
+   build_char_set cs = Chset cs
 End
 
+(*
+val defn = Hol_defn"foo"
+ ‘(merge_charsets (Chset cs1::Chset cs2::rs) =
+       merge_charsets (Chset (charset_union cs1 cs2)::rs)) /\
+  (merge_charsets rs = rs)’;
+
+Defn.tgoal defn;
+val guesses = guessR defn;
+*)
 
 Definition merge_charsets_def : (* requires all charsets to be adjacent *)
-  (merge_charsets (Chset cs1::Chset cs2::rs) =
+   (merge_charsets (Chset cs1::Chset cs2::rs) =
        merge_charsets (Chset (charset_union cs1 cs2)::rs)) /\
    (merge_charsets rs = rs)
 Termination
- WF_REL_TAC `measure LENGTH` THEN RW_TAC list_ss []
-End;
-
-val merge_charsets_ind = fetch "-" "merge_charsets_ind";
+  WF_REL_TAC `measure (list_size rsize)` >>
+  TC_SIMP_TAC (termination_ss()) [rsize_def]
+End
 
 Definition assoc_cat_def :
    (assoc_cat (Cat r1 r2) r3 = Cat r1 (assoc_cat r2 r3)) /\
    (assoc_cat r1 r2 = Cat r1 r2)
 End
-
-
-val assoc_cat_ind = fetch "-" "assoc_cat_ind";
 
 Definition build_cat_def :
    build_cat r1 r2 =
@@ -1413,14 +1338,7 @@ Definition smart_deriv_def :
    (smart_deriv c (Star r) = build_cat (smart_deriv c r) (build_star r)) /\
    (smart_deriv c (Or rs) = build_or (MAP (smart_deriv c) rs)) /\
    (smart_deriv c (Neg r) = build_neg (smart_deriv c r))
-Termination
- WF_REL_TAC `measure (rsize o SND)`
-  THEN RW_TAC list_ss [rsize_or_lem]
-  THEN RW_TAC list_ss [rsize_def]
 End
-
-val smart_deriv_ind = fetch "-" "smart_deriv_ind";
-
 
 Theorem smart_constructors_correct :
   (!r c s. regexp_lang (smart_deriv c r) s <=> regexp_lang (deriv c r) s) /\
@@ -1448,7 +1366,6 @@ Proof
   >- full_simp_tac list_ss [nullable_def,nullableW_def]
   >- rw_tac list_ss [build_cat_def,Empty_def, Epsilon_def]
   >- rw_tac list_ss [build_cat_def]
-
 QED
 
 Theorem smart_deriv_thm :
@@ -1495,19 +1412,12 @@ QED
 (*---------------------------------------------------------------------------*)
 
 Definition normalize_def :
-  (normalize (Chset cs) = build_char_set cs) /\
+   (normalize (Chset cs) = build_char_set cs) /\
    (normalize (Cat r1 r2) = build_cat (normalize r1) (normalize r2)) /\
    (normalize (Star r) = build_star (normalize r)) /\
    (normalize (Or rs) = build_or (MAP normalize rs)) /\
    (normalize (Neg r) = build_neg (normalize r))
-Termination
- WF_REL_TAC `measure rsize`
-  THEN RW_TAC list_ss [rsize_or_lem]
-  THEN RW_TAC list_ss [rsize_def]
 End
-
-val normalize_ind = fetch "-" "normalize_ind";
-
 
 (*---------------------------------------------------------------------------*)
 (* Language of a regexp does not change under normalization                  *)
@@ -1571,17 +1481,7 @@ Definition is_normalized_def :
      ~MEM (Neg (Chset charset_empty)) rs /\
      ~MEM (Chset charset_empty) rs) /\
   (is_normalized (Neg r) <=> is_normalized r /\ (case r of | Neg _ => F | _ => T))
-Termination
- WF_REL_TAC `measure rsize`
-  >> srw_tac [ARITH_ss] []
-     >- metis_tac [rsize_or_lem]
-     >- (rw [rsize_def] >> decide_tac)
-     >- (rw [rsize_def] >> decide_tac)
-     >- rw [rsize_def]
-     >- rw [rsize_def]
 End
-
-val is_normalized_ind = fetch "-" "is_normalized_ind";
 
 (*---------------------------------------------------------------------------*)
 (* Slightly more compact version.                                            *)
@@ -1803,7 +1703,6 @@ Proof
      Cases_on `rs1` >>
      fs [SORTED_DEF] >>
      metis_tac [charset_smallest])
-
 QED
 
 Theorem merge_charsets_no_charsets :
@@ -2152,7 +2051,6 @@ Proof
      AP_TERM_TAC THEN RW_TAC std_ss [MAP_EQ_f] THEN
      METIS_TAC [EVERY_MEM,MAP_EQ_f]]
 QED
-
 
 (*---------------------------------------------------------------------------*)
 (* We can use the following theorem as a quick regexp matcher in the         *)

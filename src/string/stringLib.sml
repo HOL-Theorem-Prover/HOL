@@ -155,7 +155,7 @@ in
             List.map (fn c => boolSyntax.mk_eq (Term.mk_comb (f, c), e2s c)) l
             |> boolSyntax.list_mk_conj
       in
-         Feedback.trace ("Define.storage_message", 0)
+         Feedback.trace ("Definition.storage_message", 0)
             TotalDefn.Define [HOLPP.ANTIQUOTE cs]
       end
 end

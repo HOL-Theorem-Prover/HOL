@@ -42,7 +42,6 @@ val OS :string      =
 
 
 val CC:string       = "cc";       (* C compiler                       *)
-val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 (*---------------------------------------------------------------------------
           END user-settable parameters
@@ -176,7 +175,6 @@ in
    "val MOSMLDIR =" --> ("val MOSMLDIR = "^quote mosmldir^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val CC ="       --> ("val CC = "^quote CC^"\n"),
-   "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),

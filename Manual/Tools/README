@@ -1,7 +1,8 @@
 # The `polyscripter` Tool
 
-The `polyscripter` tool is a Unix filter program that passes most input lines unchanged, but looks out for those lines beginning with `>>` characters.
-If it sees one such, it executes the Poly/ML compiler on that line, captures the result and then emits the input and the response to standard out.
+The `polyscripter` tool is a Unix filter program that passes most input lines unchanged, but looks out for those lines beginning with `>>` or `##` characters.
+If it sees `>>`, it executes the Poly/ML compiler on that line, captures the result and then emits the input and the response to standard out.
+There are many variations on this basic pattern, as well as some special commands that all have `##` as a prefix.
 
 ## Inline Options
 
@@ -29,9 +30,15 @@ All of the following inline commands must be the first non-whitespace on the lin
 
     will print `3 + 4` in the document and also silently check that it really does evaluate to 7.
 -   The `##linelen_limit` command takes a number as argument and forces truncation of all output lines whose length is larger than the provided limit.
--   The `##nolinelen_limit` turns off output line truncation
+-   The `##nolinelen_limit` command turns off output line truncation
+-   The `##poplinelen_limit` command restores the line-length limitation (whether a number, or “no limit”) to its previous value.
+-   The `##linecount_limit <dr> [<tk>]` command filters output by numbers of lines.
+    The `<dr>` number is the number of initial lines to drop, and, if present, the `<tk>` value is the number of lines to then “take” from the output.
+    If omitted, or given as special value `_` (a single underscore), all remaining lines are “taken”.
+    The initial value for this option is `0 _` (which prints all output).
+-   The `##poplinelen_limit` command restores the previous `linecount_limit` value.
 -   The `##parsetm` and `##parsety` commands get the compiler to parse the (multi-line) argument as a HOL term or type and print it back to the output.
-    The invocation is done by wrapping the input in ` `` ` delimiters and adding a colon in the case of `##parsety`.
+    The invocation is done by wrapping the input in `“`-`”` delimiters and adding a colon in the case of `##parsety`.
     These directives make it easy to include HOL terms and types in the input while also having them checked for syntactic validity.
     Note that if you want to check/print a type with its colon included, simply use the `parsetm` directive as wrapping that input in the backticks will give the desired effect.
 -   The `##thm` command passes the following expression to HOL (and follows it with a `:thm` annotation so that the compiler checks that it really denotes a theorem).
@@ -50,6 +57,7 @@ All of the following inline commands must be the first non-whitespace on the lin
 
 If the first non-whitespace characters are `>>>` or `###` then the first of these characters is dropped, and the rest of the line is passed unchanged.
 This allows for a form of escaping, just in case the input naturally wants to include `>>` or `##` at the start of a line.
+One exception is made to this escaping rule to support Markdown section commands: if there is no leading whitespace and the first character after the `#` characters is itself white-space, then the line is passed through unchanged.
 
 ## Command-line Options
 

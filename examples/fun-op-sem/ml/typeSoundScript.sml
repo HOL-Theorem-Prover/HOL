@@ -1706,7 +1706,7 @@ Proof
   (* Let *)
   conj_tac >- (
     rw[type_e_clauses,sem_def] >> pop_assum mp_tac >>
-    ntac 2 (BasicProvers.LEGACY_CASE_TAC >> fs[]) >> rw[] >>
+    ntac 2 (BasicProvers.CASE_TAC >> fs[]) >> rw[] >>
     first_x_assum(fn th => last_assum(mp_tac o MATCH_MP th)) >>
     disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >>
     simp[] >> strip_tac >>

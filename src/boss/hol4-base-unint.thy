@@ -257,6 +257,7 @@ list {
   import: pred-set
   import: combin
   import: quotient
+  import: basic-size
   article: "../list/src/list.ot.art"
 }
 rich-list {

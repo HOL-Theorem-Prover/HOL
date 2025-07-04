@@ -16,17 +16,19 @@ val openDir = OS.FileSys.openDir
 val readDir = OS.FileSys.readDir
 val closeDir = OS.FileSys.closeDir
 
-fun read_files_with_objs {dirname} P action =
+fun read_files_with_objs {dirname} P action a0 =
     let
       open OS.FileSys
       val ds = openDir dirname handle OS.SysErr _ => raise DirNotFound
-      fun loop () =
+      fun loop a0 =
           case readDir ds of
-              NONE => closeDir ds
+              NONE => (closeDir ds; a0)
             | SOME nextfile =>
-              (if P nextfile then action nextfile else (); loop())
+              loop (if P nextfile then
+                      action {fakearcs=[],base=nextfile} a0
+                    else a0)
     in
-      loop() handle e => (closeDir ds; raise e);
+      loop a0 handle e => (closeDir ds; raise e) before
       closeDir ds
     end
 

@@ -309,8 +309,10 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val diag = diag "lastmadecheck"
   val mypath = find_my_path()
   val _ = diag (K ("running "^mypath))
+  val lastmakerfilename = OS.Path.concat (DEPDIR, "lastmaker")
   fun write_lastmaker_file () = let
-    val outstr = openOut ".HOLMK/lastmaker"
+    val _ = createDirIfNecessary DEPDIR
+    val outstr = openOut lastmakerfilename
   in
     output(outstr, mypath ^ "\n");
     closeOut outstr
@@ -318,10 +320,10 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
 
   fun lmfile() =
       if not no_lastmakercheck andalso
-         FileSys.access (".HOLMK/lastmaker", [FileSys.A_READ])
+         FileSys.access (lastmakerfilename, [FileSys.A_READ])
       then let
           val _ = diag (K "Found a lastmaker file to look at.")
-          val istrm = openIn ".HOLMK/lastmaker"
+          val istrm = openIn lastmakerfilename
         in
           case inputLine istrm of
             NONE => (warn "Empty Last Maker file";
@@ -437,7 +439,10 @@ fun clean_dir ofns {extra_cleans} = let
       | _ => false
 in
   read_files_with_objs
-    {dirname = "."} to_delete (chatty_remove OS.FileSys.remove ofns);
+    {dirname = "."}
+    to_delete
+    (fn {base,...} => fn () => chatty_remove OS.FileSys.remove ofns base)
+    ();
   HFS_NameMunge.clean_last();
   app (clean1 ofns) extra_cleans
 end
@@ -688,17 +693,8 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
              (warn ("Holdep failed: "^s); raise HolDepFailed)
          | e => (warn ("Holdep exception: "^General.exnMessage e);
                  raise HolDepFailed)
-  fun myopen s =
-    if FileSys.access(DEPDIR, []) then
-      if FileSys.isDir DEPDIR then openOut s
-      else die_with ("Want to put dependency information in directory "^
-                     DEPDIR^", but it already exists as a file")
-    else
-     (chatty ("Trying to create directory "^DEPDIR^" for dependency files");
-      FileSys.mkDir DEPDIR;
-      openOut s
-     )
-  val outstr = myopen (normPath destination)
+  val _ = createDirIfNecessary DEPDIR
+  val outstr = openOut (normPath destination)
 in
   output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
   closeOut outstr

@@ -48,6 +48,7 @@ type derived_data = {
   path : string
 }
 
+fun getHash p = SHA1.sha1_file {filename=p}
 
 fun readThy p (g,links) =
     let
@@ -59,12 +60,14 @@ fun readThy p (g,links) =
       val {base, ext} = OS.Path.splitBaseExt file
       val _ = ext = SOME "dat" andalso base = name ^ "Theory" orelse
               (warn ("Theory.dat at " ^ p ^ " has name " ^ name); true)
-      val hash = SHA1.sha1_file {filename=p}
+      val hash = HFS_NameMunge.toFSfn false getHash p
       val key = ({thy=name, hash=hash},dir)
     in
       SOME (g |> TheoryGraph.new_node(key, {exports = exports, parents = parents}),
             (key, parents)::links)
     end handle Fail s => (warn s; NONE)
+             | e => die ("readThy \"" ^ String.toString p ^ "\": " ^
+                         General.exnMessage e)
 
 
 (* depth-first, preorder *)

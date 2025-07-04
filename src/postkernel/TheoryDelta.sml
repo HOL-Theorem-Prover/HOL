@@ -29,7 +29,9 @@ fun toString t =
     | NewTypeOp n => ksOp "NewTypeOp" n
     | DelConstant n => ksOp "DelConstant" n
     | DelTypeOp n => ksOp "DelTypeOp" n
-    | NewBinding (s,_) => sOp "NewBinding" s
+    | NewBinding (s,(_ (* th *), i)) =>
+        "NewBinding(\"" ^ String.toString s ^ "\", " ^
+        DB_dtype.thminfo_toString i ^ ")"
     | DelBinding s => sOp "DelBinding" s
     | UpdBinding (s, _) => sOp "UpdBinding" s
 end (* local *)

@@ -15,10 +15,67 @@ fun capitalise s = CharVector.tabulate (
 fun trans_secnm "DESCRIBE" = "Description"
   | trans_secnm s = capitalise s
 
-(* almost certainly wrong *)
-fun brkt_text s = s
+
+fun max_bticks s =
+    let fun doit prevbtcount mx i =
+            if i < 0 then Int.max(mx,prevbtcount)
+            else if String.sub(s, i) = #"`" then
+              doit (prevbtcount + 1) mx (i - 1)
+            else doit 0 (Int.max(prevbtcount, mx)) (i - 1)
+    in
+      doit 0 0 (size s - 1)
+    end
+
+fun brkt_text s =
+    let val btcount = max_bticks s
+        val btstring = CharVector.tabulate (btcount, fn _ => #"`")
+    in
+      if btcount = 0 then s
+      else
+        btstring ^ " " ^ s ^ " " ^ btstring
+    end
+
+val emph_text = String.translate (fn #"*" => "\\*" | c => str c)
+fun xmpl_text s = "    " ^ String.translate (fn #"\n" => "\n    " | c => str c) s
 
 fun html_linkify s = "[" ^ s ^ "](" ^ s ^ ".html)"
+
+fun text_encode ss = let
+  (* passes over a substring, replacing single apostrophes with &rsquo;
+     backquotes with &lsquo; and the "latex" encodings of nice double-quotes:
+     `` with &ldquo; and '' with &rdquo;
+     Also encodes the < > and & characters into HTML appropriate forms. *)
+  open Substring
+  datatype state = backquote | apostrophe | normal of int * substring
+  val lsquo = "\226\128\152"
+  val rsquo = "\226\128\153"
+  val ldquo = "\226\128\156"
+  val rdquo = "\226\128\157"
+  fun recurse acc s ss =
+      case (s, getc ss) of
+        (backquote, NONE) => (lsquo :: acc)
+      | (apostrophe, NONE) => (rsquo :: acc)
+      | (normal(n,ss0), NONE) => (string ss0 :: acc)
+      | (normal (n,ss0), SOME(#"'", ss')) =>
+          recurse (string (slice(ss0,0,SOME n)) :: acc) apostrophe ss'
+      | (normal(n,ss0), SOME(#"`", ss')) =>
+          recurse (string (slice(ss0,0,SOME n))::acc) backquote ss'
+      | (normal(n,ss0), SOME(c, ss')) => recurse acc (normal(n + 1, ss0)) ss'
+      | (apostrophe, SOME(#"'", ss')) =>
+          recurse (rdquo :: acc) (normal(0,ss')) ss'
+      | (apostrophe, SOME(#"`", ss')) =>
+          recurse (rsquo :: acc) backquote ss'
+      | (apostrophe, SOME _) =>
+          recurse (rsquo :: acc) (normal(0,ss)) ss
+      | (backquote, SOME(#"`", ss')) =>
+          recurse (ldquo :: acc) (normal(0,ss')) ss'
+      | (backquote, SOME(#"'", ss')) =>
+          recurse (lsquo :: acc) apostrophe ss'
+      | (backquote, SOME _) =>
+          recurse (lsquo :: acc) (normal(0,ss)) ss
+in
+  String.concat (List.rev (recurse [] (normal(0,ss)) ss))
+end
 
 fun markdown (name,sectionl) ostrm =
     let fun out s = TextIO.output(ostrm, s)
@@ -26,10 +83,10 @@ fun markdown (name,sectionl) ostrm =
         fun mdtext elem =
             case elem of
                 BRKT ss => out ("`" ^ brkt_text (Substring.string ss) ^ "`")
-              | EMPH ss => out ("*" ^ Substring.string ss ^ "*")
+              | EMPH ss => out ("*" ^ emph_text (Substring.string ss) ^ "*")
               | PARA => out "\n\n"
-              | TEXT ss => outss ss
-              | XMPL ss => out ("```" ^ Substring.string ss ^ "```\n")
+              | TEXT ss => out (text_encode ss)
+              | XMPL ss => out (xmpl_text (Substring.string ss))
 
         fun mdsection sec =
             case sec of
@@ -41,7 +98,7 @@ fun markdown (name,sectionl) ostrm =
                  out "\n\n")
               | TYPE ss =>
                 (out ("\n## Type\n\n```\n" ^ Substring.string ss ^ "\n```\n\n"))
-              | FIELD ("DOC", [TEXT ss]) => out ("# " ^ Substring.string ss ^ "\n\n")
+              | FIELD ("DOC", [TEXT ss]) => out ("# `" ^ brkt_text (Substring.string ss) ^ "`\n\n")
               | FIELD (secnm, textelems) =>
                 (out ("\n## " ^ trans_secnm secnm ^ "\n\n");
                  List.app mdtext textelems;

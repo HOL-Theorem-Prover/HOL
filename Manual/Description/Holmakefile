@@ -60,7 +60,7 @@ system.md: system.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 system.pdf: system.md
-	pandoc -o $@ $<
+	pandoc --top-level-division=chapter -o $@ $<
 
 system.html: system.md
 	pandoc -s -o $@ $<
@@ -74,7 +74,7 @@ figures:
 
 EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
-               system.tex conv.tex math.tex \
+               system.tex system.md conv.tex math.tex \
                description.pdf \
                $(patsubst %,%.aux,$(TEX_CORES)) \
 	       description.log description.out \

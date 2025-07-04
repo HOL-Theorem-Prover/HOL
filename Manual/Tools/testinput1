@@ -69,6 +69,14 @@ bar
 >> root2Theory.SQRT_2_IRRATIONAL
 
 ##thm AND_CLAUSES
+##skip
+this is junk that won't be seen
+##skip but skips nest
+or processed
+>> val foo = true + 1
+##endskip
+
+##endskip
 
 ##thm50 AND_CLAUSES
 
@@ -76,3 +84,7 @@ bar
       x < x + 1n
     Proof simp[]
     QED
+
+##linecount_limit 0 4
+>> term_grammar();
+##poplinecount_limit

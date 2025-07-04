@@ -303,7 +303,7 @@ fun toJSONString g =
       String.concat ss
     end
 
-fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
+fun postmortem logfinished (outs : Holmake_tools.output_functions) (status,g) =
   let
     val pr = tgt_toString
     val {diag,tgtfatal,...} = outs
@@ -318,7 +318,7 @@ fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
                                    else pending_or_failed ps fs rest
   in
     case pending_or_failed [] [] (listNodes g) of
-        ([],[]) => OS.Process.success
+        ([],[]) => (logfinished true; OS.Process.success)
       | (ps, fs) =>
         let
           fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString nI
@@ -332,7 +332,7 @@ fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
             tgtfatal ("Don't know how to build necessary target(s): " ^
                       concatWithf (tgt_toString o nI_target) ", " fs')
           else ();
-          OS.Process.failure
+          (logfinished false; OS.Process.failure)
         end
 
   end

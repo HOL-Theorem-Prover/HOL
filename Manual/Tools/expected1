@@ -113,3 +113,10 @@ AND_CLAUSES
          (t \(\land\) F \({\Leftrightarrow}\) F) \(\land\) (t \(\land\) t \({\Leftrightarrow}\) t)
 
 val foo = \(\!\!\!{\turn}\!\!\!\!\) x < x + 1: thm
+
+> term_grammar();
+val it =
+   (0)    TM  ::= "OLEAST" <..binders..> "." TM
+                | "LEAST" <..binders..> "." TM | "some" <..binders..> "." TM
+                | "?!!" <..binders..> "." TM | "\(\exists\)!" <..binders..> "." TM [?!]
+[...Output elided...]

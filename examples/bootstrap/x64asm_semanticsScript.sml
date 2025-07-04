@@ -1,9 +1,9 @@
-
-open HolKernel Parse boolLib bossLib;
-open wordsTheory wordsLib arithmeticTheory listTheory llistTheory pairTheory
-     finite_mapTheory x64asm_syntaxTheory alignmentTheory lprefix_lubTheory;
-
-val _ = new_theory "x64asm_semantics";
+Theory x64asm_semantics
+Ancestors
+  words arithmetic list llist pair
+  finite_map x64asm_syntax alignment lprefix_lub
+Libs
+  wordsLib
 
 
 (* semantics *)
@@ -247,5 +247,3 @@ Definition asm_diverges_def:
       (* the output is the least upper bound of all reachable output *)
       output = build_lprefix_lub { fromList t'.output | step꙳ (State t) (State t') }
 End
-
-val _ = export_theory();

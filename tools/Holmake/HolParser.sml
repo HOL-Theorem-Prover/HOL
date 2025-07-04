@@ -7,11 +7,27 @@ fun mlquote s = String.concat ["\"", String.toString s, "\""]
 fun K a _ = a
 fun I a = a
 
+(* replace \c pairs with just c *)
+fun unescape s =
+  let val limit = size s
+      fun doit escp i A =
+        if i = limit then String.implode (List.rev A)
+        else let
+          val c = String.sub(s,i)
+        in
+          if escp orelse c <> #"\\" then doit false (i + 1) (c::A)
+          else doit true (i + 1) A
+        end
+  in
+    doit false 0 []
+  end
+
 structure Simple = struct
 
 local
   structure H = HolLex.UserDeclarations
 in
+  datatype header_elem = datatype H.header_elem
   datatype decl = datatype H.decl
   datatype decls = datatype H.decls
   datatype antiq = datatype H.antiq
@@ -318,6 +334,7 @@ structure ToSML = struct
     filename: string ref,
     full: string -> substring,
     line: (int * int) ref,
+    isTheory: bool ref,
     magicBind: string -> unit,
     parseError: int * int -> string -> unit,
     quietOpen: bool,
@@ -330,27 +347,91 @@ structure ToSML = struct
 
   fun mkDoDecl
       ({regular, aux, strstr, parseError, quietOpen,
-       full, ss, cat, regular', strstr', filename, line,
+       full, ss, cat, regular', strstr', filename, line, isTheory,
        doQuote, doDecls, magicBind, doQuoteConj,
        doThmAttrs, readAt, countlines}: doDecl_args) = let
     open Simple
     fun doDecl d = case d of
-        OpenDecl {head = p, toks = _, stop} => (
-          (* two bools  :  interactively  "quiet"   "noisy-open"     verdict
-                                             T          _               T
-                                             F          T               F
-                                             F          F               T *)
-          if quietOpen then
-            aux "val _ = HOL_Interactive.start_open();"
-            (* semicolon is needed to make sure this is evaluated before the
-               open-s hit *)
-          else ();
-          regular (p, stop);
-          if quietOpen then
-            (* implicitly: opened structures can't define HOL_Interactive
-               structures of their own; or call HOL_Interactive.end_open! *)
-            aux " val _ = HOL_Interactive.end_open();"
-          else ())
+        TheoryDecl {head = (p, head), elems, stop} => let
+        val {name, attrs, ...} = destMLThmBinding (full head)
+        val bare = ref false
+        val _ = app (fn (arg, args) =>
+          case (ss arg, args) of
+            ("bare", []) => bare := true
+          | _ => parseError (fromSS (p, arg)) "unknown theory attribute"
+          ) (destAttrs attrs)
+        fun newlines start stop = let
+          val n = #1 (!line)
+          val _ = readAt start stop countlines
+          in aux (CharVector.tabulate (#1 (!line) - n, (fn _ => #"\n"))) end
+        val grammar = ref []
+        val opening = ref false
+        datatype in_command = Closed | Open | LocalOpen
+        val openState = ref Closed
+        fun setState s = if !openState = s then () else (
+          if s <> Closed andalso not (!opening) then (
+            opening := true;
+            if quietOpen then aux "val _ = HOL_Interactive.start_open();" else ()
+          ) else ();
+          if !openState = LocalOpen then aux " in end" else ();
+          case s of Closed => () | Open => aux " open" | LocalOpen => aux " local open";
+          openState := s)
+        fun process p [] = newlines p stop
+          | process p (Ancestors {thys, ...} :: ls) = processList p true thys ls
+          | process p (Libs {thys, ...} :: ls) = processList p false thys ls
+        and processList p _ [] ls = process p ls
+          | processList p isThy ((start, tk) :: thys) ls = let
+            val (name, attrs) = destNameAttrs (full tk)
+            val aliases = ref []
+            val qualified = ref false
+            val ignoreGrammar = ref false
+            val (p1, p2) = fromSS (start, name)
+            in
+              app (fn (arg, args) =>
+                case (ss arg, args, isThy) of
+                  ("alias", [tgt], _) => aliases := tgt :: !aliases
+                | ("qualified", [], _) => qualified := true
+                | ("ignore_grammar", [], true) => ignoreGrammar := true
+                | _ => parseError (fromSS (p, arg)) "unknown header attribute"
+                ) (destAttrs attrs);
+              setState (if !qualified then LocalOpen else Open);
+              newlines p p1; aux " "; regular (p1, p2);
+              if isThy then aux "Theory" else ();
+              if isThy andalso not (!ignoreGrammar) then grammar := name :: !grammar else ();
+              app (fn tgt => (
+                setState Closed;
+                app aux [" structure ", ss tgt, " = ", ss name];
+                if isThy then aux "Theory" else ())) (rev (!aliases));
+              processList p2 isThy thys ls
+            end
+        in
+          if !bare then () else (setState Open; aux " HolKernel boolLib bossLib Parse");
+          process p elems;
+          setState Closed;
+          app aux [" val _ = Theory.new_theory ", mlquote (ss name)];
+          isTheory := true;
+          if !bare then () else
+            app aux [" val _ = Parse.set_grammar_ancestry [",
+              String.concatWith "," (map (mlquote o ss) (rev (!grammar))), "]"];
+          if !opening andalso quietOpen then aux " val _ = HOL_Interactive.end_open()" else ();
+          aux ";"
+        end
+      | OpenDecl {head = p, toks = _, stop} => (
+        (* two bools  :  interactively  "quiet"   "noisy-open"     verdict
+                                           T          _               T
+                                           F          T               F
+                                           F          F               T *)
+        if quietOpen then
+          aux "val _ = HOL_Interactive.start_open();"
+          (* semicolon is needed to make sure this is evaluated before the
+             open-s hit *)
+        else ();
+        regular (p, stop);
+        if quietOpen then
+          (* implicitly: opened structures can't define HOL_Interactive
+             structures of their own; or call HOL_Interactive.end_open! *)
+          aux " val _ = HOL_Interactive.end_open();"
+        else ())
       | DefinitionDecl {head = (p, head), quote, termination, ...} => let
         val {name, attrs, name_attrs, ...} = parseDefinitionPfx head
         val attrs = destAttrs attrs
@@ -421,7 +502,11 @@ structure ToSML = struct
       | BeginSimpleThm (p, head) => let
         val {isTriv, thmname, attrs, name_attrs, ...} = parseTheoremPfx head
         in
-          aux "val "; regular' (p, thmname); aux " = boolLib.save_thm(\"";
+          aux "val "; regular' (p, thmname);
+          if !filename = "" then aux " = boolLib.save_thm(\""
+          else app aux [" = boolLib.save_thm_at ",
+                        mk_mkloc_string (!filename, #1 (!line)),
+                        "(\""];
           doThmAttrs isTriv attrs name_attrs; aux "\","
         end
       | TheoremDecl {head = (p, head), quote, proof_tok, body, ...} => let
@@ -473,15 +558,18 @@ structure ToSML = struct
           aux " "
         end
       | FilePragma _ => aux (mlquote (!filename))
-      | FilePragmaWith (_, text) => (
+      | FilePragmaWith (_, text0) =>
+        let val text = unescape text0
+        in
           filename := String.substring(text, 7, size text - 8);
-          aux " ")
+          aux " "
+        end
     in doDecl end
 
   type ret = {
     doDecl: bool -> int -> Simple.decl -> int,
     feed: unit -> Simple.topdecl,
-    finishThmVal: unit -> unit,
+    finish: unit -> unit,
     regular: int * int -> unit
   }
 
@@ -498,6 +586,7 @@ structure ToSML = struct
     val inThmVal = ref false
     fun finishThmVal () = if !inThmVal then (aux ");"; inThmVal := false) else ()
     val line = ref (0, 0)
+    val isTheory = ref false
     fun countlines (p, s) = let
       val lastline = Substring.dropr (fn c => c <> #"\n") s
       in
@@ -508,6 +597,7 @@ structure ToSML = struct
       end
     fun wrap f (start, stop) = if start = stop then () else
       readAt start stop (fn s => (countlines s; f s))
+    val aux = fn s => if s = "" then () else aux s
     val regular = wrap regular
     val strcode = wrap strcode0
     val strstr = wrap strstr
@@ -516,16 +606,16 @@ structure ToSML = struct
     fun locpragma pos = let
       val (line, start) = !line
       in
-        aux (concat [
-          " (*#loc ", Int.toString (line + 1), " ", Int.toString (pos - start + 1), "*)"])
+        app aux [
+          " (*#loc ", Int.toString (line + 1), " ", Int.toString (pos - start + 1), "*)"]
         (* NB: the initial space is critical, or else the comment might not be recognised
            when prepended by a paren or symbol char.  --KW
            See cvs log comment at rev 1.2 of src/parse/base_tokens.lex *)
       end
     fun quote (start, stop) = (locpragma start; strcode (start, stop))
     fun magicBind name =
-      aux (" " ^ Systeml.bindstr (concat ["val ", name, " = DB.fetch \"-\" \"", name,
-        "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"]) ^ ";")
+      app aux [" ", Systeml.bindstr (concat ["val ", name, " = DB.fetch \"-\" \"", name,
+        "\" handle Feedback.HOL_ERR _ => boolTheory.TRUTH;"]), ";"]
     fun doThmAttrs false _ name_attrs = aux (ss name_attrs)
       | doThmAttrs true attrs name_attrs =
         if Substring.isEmpty attrs then
@@ -575,12 +665,13 @@ structure ToSML = struct
       | doDecls start (d :: ds) stop = doDecls (doDecl false start d) ds stop
     and doDeclCore d: unit = mkDoDecl
       { regular = regular, aux = aux, strstr = strstr, parseError = parseError,
-        quietOpen = quietOpen,full = full, ss = ss, cat = cat, regular' = regular',
-        strstr' = strstr', filename = filename, line = line, doQuote = doQuote,
-        doDecls = doDecls, magicBind = magicBind, doQuoteConj = doQuoteConj,
+        quietOpen = quietOpen, full = full, ss = ss, cat = cat, regular' = regular',
+        strstr' = strstr', filename = filename, line = line, isTheory = isTheory,
+        doQuote = doQuote, doDecls = doDecls, magicBind = magicBind, doQuoteConj = doQuoteConj,
         doThmAttrs = doThmAttrs, readAt = readAt, countlines = countlines } d
     and doDecl eager pos d = case d of
         OpenDecl       {head = p,      stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | TheoryDecl     {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | DefinitionDecl {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | DatatypeDecl   {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | QuoteDecl      {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
@@ -610,23 +701,24 @@ structure ToSML = struct
       | FilePragma      p        => (regular (pos, p); doDeclCore d; p + 7)
       | LinePragmaWith (p, text) => (regular (pos, p); doDeclCore d; p + size text)
       | FilePragmaWith (p, text) => (regular (pos, p); doDeclCore d; p + size text)
+    fun finish () = (finishThmVal (); if !isTheory then aux " val _ = export_theory();\n" else ())
     in {
       feed = feed,
       regular = regular,
-      finishThmVal = finishThmVal,
-      doDecl = doDecl
+      doDecl = doDecl,
+      finish = finish
     } end
 
   val mkPushTranslatorCore = mkPushTranslatorCore' mkDoDecl
 
   fun mkPushTranslator args strcode = let
     open Simple
-    val {feed, regular, finishThmVal, doDecl, ...} = mkPushTranslatorCore args strcode
+    val {feed, regular, finish, doDecl, ...} = mkPushTranslatorCore args strcode
     val pos = ref 0
     in fn () =>
       case feed () of
         TopDecl d => (pos := doDecl true (!pos) d; false)
-      | Simple.EOF p => (regular (!pos, p); finishThmVal (); pos := p; true)
+      | Simple.EOF p => (regular (!pos, p); finish (); pos := p; true)
     end
 
   fun mkPullTranslator args = let

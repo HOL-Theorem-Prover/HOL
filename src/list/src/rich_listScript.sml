@@ -216,7 +216,7 @@ val LASTN = store_thm("LASTN",
 Theorem SNOC_LASTN :
     !l x n. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
 Proof
-    SNOC_INDUCT_TAC >> rw [LASTN]
+    SNOC_INDUCT_TAC >> REWRITE_TAC [LASTN]
 QED
 
 val BUTLASTN_def = zDefine `
@@ -2396,7 +2396,7 @@ Theorem LASTN_DROP_UNCOND:
   !n l. LASTN n l = DROP (LENGTH l - n) l
 Proof
   simp[LASTN_def] >> Induct >> simp[] >>
-  Cases using SNOC_CASES >> simp[DROP_APPEND, SNOC_APPEND] >>
+  Cases using SNOC_CASES >> simp[DROP_APPEND, SNOC_APPEND, ADD1] >>
   simp[ARITH_PROVE “a - (b :num) - a = 0”]
 QED
 

@@ -1226,11 +1226,11 @@ end
 fun new_def s x = Definition.new_definition (s ^ "_def", boolSyntax.mk_eq x)
 
 fun z_def def =
-   Feedback.trace ("Define.storage_message", 0)
+   Feedback.trace ("Definition.storage_message", 0)
    bossLib.zDefine [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)]
 
 fun t_def s def m tac =
-   Feedback.trace ("Define.storage_message", 0)
+   Feedback.trace ("Definition.storage_message", 0)
    (TotalDefn.qDefine (s ^ !Defn.def_suffix)
                       [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
    (SOME (MEASURE_TAC m THEN tac))

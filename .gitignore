@@ -8,9 +8,8 @@
 *.uo
 *.ui
 *.o
-.hollogs
+.hol
 .holobjs
-.HOLMK
 *.lex.sml
 *.grm.sig
 *.grm.sml
