@@ -110,7 +110,7 @@ QED
 (* Datatype of extended regular expressions                                  *)
 (*---------------------------------------------------------------------------*)
 
-Datatype
+val _ = Datatype
  `regexp
     = Chset charset
     | Cat regexp regexp
