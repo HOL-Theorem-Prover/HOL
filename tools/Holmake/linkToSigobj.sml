@@ -59,7 +59,7 @@ fun isInteresting s =
         | NONE => false
     end
 
-fun action {base,...} acc =
+fun action {base,fakearcs} acc =
     let
       val d = OS.FileSys.getDir()
       val {base=b,ext} = OS.Path.splitBaseExt base

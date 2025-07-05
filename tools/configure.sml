@@ -314,7 +314,12 @@ val _ =
     compile [] "HFS_NameMunge.sig";
     FileSys.chDir "mosml";
     compile ["-I", ".."] "HFS_NameMunge.sml";
+    compile ["-I", ".."] "LTSprimitives.sml";
     FileSys.chDir "..";
+    compile ["-I", "mosml"] "linkToSigobj.sml";
+    compile ["-I", "mosml"] "mosml_linkToSigobj.sml";
+    link {extras = ["-I", "mosml"], srcobj = "mosml_linkToSigobj.uo",
+          tgt = fullPath [holdir, "bin", "linkToSigobj"]};
     compile [] "HOLFileSys.sig";
     compile [] "HOLFileSys.sml";
     compile [] "Holdep_tokens.sig";
