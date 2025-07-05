@@ -111,13 +111,32 @@ End
 val () = cv_auto_trans parse_message_def;
 
 (*** BEGIN ***)
-EVAL “parse_message [] (pad_message [])”
+Theorem parse_block_size:
+  LENGTH bits = 32 * n ⇒ LENGTH $ parse_block [] bits = n
+Proof
+  cheat
+QED
+
+Theorem a:
+  ∀acc bits n. LENGTH bits = 512 * n ⇒
+             (∀k. k < n ⇒ LENGTH $ EL k $ parse_message acc bits = 16)
+Proof
+  ho_match_mp_tac parse_message_ind
+QED
+
+Theorem parse_message_size:
+  ∀bits. divides 512 $ LENGTH bits ⇒ (∀b. MEM b $ parse_message [] bits ⇒ LENGTH b = 16)
+Proof
+  ho_match_mp_tac parse_block_ind
+QED
+
 Theorem parse_message_block_size:
   LENGTH m < 2 ** 64 ⇒ (∀b. MEM b (parse_message [] (pad_message m)) ⇒ LENGTH b = 16)
 Proof
   strip_tac>>
   drule_then assume_tac pad_message_length_multiple>>
-  rw[parse_message_def, parse_block_def]
+  drule_then assume_tac parse_message_size>>
+  simp[]
 QED
 
 (*** END ***)
