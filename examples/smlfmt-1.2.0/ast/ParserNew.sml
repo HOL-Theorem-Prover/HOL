@@ -4,6 +4,8 @@ structure AstNew = struct
   (* (start, content) *)
   type ident = int * string
 
+  exception Unreachable
+
   type 'exp delimited = {args: 'exp list, delims: int option list}
 
   datatype 'a seq =
@@ -98,7 +100,8 @@ structure AstNew = struct
   | Handle of {exp: exp, handle_: int, elems: arm list}
     (** exp handle pat => exp [| pat => exp ...] *)
   | Raise of {raise_: int, exp: exp} (** raise exp *)
-  | IfThenElse of {if_: int, exp1: exp, then_: int option, exp2: exp, else_: int option, exp3: exp}
+  | IfThenElse of {
+      if_: int, exp1: exp, then_: int option, exp2: exp, else_: {else_: int, exp3: exp} option}
     (** if exp then exp else exp *)
   | While of {while_: int, exp1: exp, do_: int option, exp2: exp} (** while exp do exp *)
   | Case of {case_: int, exp: exp, of_: int option, elems: arm list}
@@ -107,14 +110,17 @@ structure AstNew = struct
 
   | HOLFullQuote of {
       head: int * string, type_q: int option,
-      quote: qbody, end_tok: (int * string) option, stop: int}
-  | HOLQuote of {head: int * string, quote: qbody, end_tok: (int * string) option, stop: int}
-  | HOLLinePragma of {hash_: int, left: int, line_: int, right: int option, stop: int} (* #(LINE) *)
+      quote: qdecl list, end_tok: (int * string) option, stop: int}
+  | HOLQuote of {head: int * string, quote: qdecl list, end_tok: (int * string) option, stop: int}
+  | HOLLinePragma of {
+      hash_: int, left: int, line_: int, right: int option, stop: int,
+      value: int} (* #(LINE) *)
   | HOLLinePragmaWith of {
       hash_: int, left: int, line_: int, eq_: int,
       line: int * string option, col: {comma_: int, col: int * string option} option,
       right: int option, stop: int} (* #(LINE=3) this is BS *)
-  | HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int} (* #(FILE) *)
+  | HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int,
+      value: string} (* #(FILE) *)
   | HOLFilePragmaWith of {
       hash_: int, left: int, file_: int, eq_: int,
       file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
@@ -184,19 +190,19 @@ structure AstNew = struct
     (** Theory foo[attrs] [elems ...] *)
   | HOLDefinition of {
       definition_: int, id: ident, attrs: kvals attrs, colon: int option,
-      quote: qbody, termination: {termination_: int, tac: exp} option,
+      quote: qdecl list, termination: {termination_: int, tac: exp} option,
       end_: int option, stop: int}
     (** Definition foo[attrs]: ... [Termination tac] End *)
   | HOLDatatype of {
-      datatype_: int, colon: int option, quote: qbody, end_: int option, stop: int}
+      datatype_: int, colon: int option, quote: qdecl list, end_: int option, stop: int}
     (** Datatype: ... End *)
   | HOLQuoteDecl of {
       quote_: int, id: ident, bind: {eq: int, exp: exp} option, colon: int option,
-      quote: qbody, end_: int option, stop: int}
+      quote: qdecl list, end_: int option, stop: int}
     (** Quote id [= foo]: ... End *)
   | HOLInductiveDecl of {
       co: bool, inductive_: int, id: ident, colon: int option,
-      quote: qbody, end_: int option, stop: int}
+      quote: qdecl list, end_: int option, stop: int}
     (** [Co]Inductive id: ... End *)
   | HOLType of {
       overload: bool, type_: int, id: maybe_quoted, attrs: ident attrs,
@@ -206,7 +212,7 @@ structure AstNew = struct
       bind: {eq: int, exp: exp} option} (** Theorem id[attrs] = exp *)
   | HOLTheoremDecl of {
       triv: bool, theorem_: int, id: ident, attrs: kvals attrs, colon: int,
-      quote: qbody, proof_: {proof_: int, attrs: kvals attrs} option,
+      quote: qdecl list, proof_: {proof_: int, attrs: kvals attrs} option,
       tac: exp, qed_: int option, stop: int}
     (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
 
@@ -233,7 +239,8 @@ structure AstNew = struct
       let_: int, strdec: dec list, in_: int option, strexp: strexp, end_: int option, stop: int}
 
   and qdecl =
-    QuoteAntiq of {caret_: int, exp: exp, stop: int}
+    QuoteLiteral of {line: int, col: int, value: substring}
+  | QuoteAntiq of {caret_: int, exp: exp}
   | DefinitionLabel of {left: int, label: defn_label_id option,
       args: {left: int, ids: (int * string) delimited, right: int option, stop: int} option,
       colon: int option, right: int option, stop: int}
@@ -243,11 +250,9 @@ structure AstNew = struct
 
   and valbind = {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option}
 
-  and arm = {bar: int option, pats: exp delimited, arrow: int option, exp: exp}
+  and arm = {bar: int option, pat: exp, arrow: int option, exp: exp}
 
-  and fvalarm = {bar: int option, pats: exp delimited, eq: int option, exp: exp}
-
-  and qbody = {start: int, toks: qdecl list, stop: int}
+  and fvalarm = {bar: int option, pat: exp, eq: int option, exp: exp}
 
 end
 
@@ -258,8 +263,9 @@ open AstNew
 exception Unreachable
 type scope = (string, int * bool) Binarymap.dict
 type result = {getScope: unit -> scope, parseDec: unit -> dec option}
-fun parseSML body parseError: scope -> result = let
+fun parseSML file body parseError: scope -> result = let
   val pos = ref 0
+  val fileRef = ref file
   fun cur () = String.sub (body, !pos) handle Subscript => #"\000"
   fun ahead i = String.sub (body, !pos + i) handle Subscript => #"\000"
   fun next () = pos := !pos + 1
@@ -271,12 +277,26 @@ fun parseSML body parseError: scope -> result = let
   fun colZero start = start = 0 orelse String.sub (body, start - 1) = #"\n"
   val _ = ws ()
 
+  val posLineCol = ref (0, 0, 0)
+  fun updatePosLineCol p = let
+    val (pos, line, col) = !posLineCol
+    fun countLines i line last =
+      if i = p then posLineCol := (p, line, p - last) else
+      if String.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
+      countLines (i+1) line last
+    fun firstLine i =
+      if i = p then posLineCol := (p, line, col + p - pos) else
+      if String.sub (body, i) = #"\n" then countLines (i+1) (line+1) (i+1) else
+      firstLine (i+1)
+    in firstLine pos end
+
   fun finishString p = case cur () of
     #"\000" => parseError (p, !pos) "unclosed string literal"
   | #"\"" => next ()
-  | #"\\" => (next (); case cur () of
-      #"\n" => (next (); ws (); (case cur () of #"\\" => next () | _ => ()); finishString p)
-    | _ => (next (); finishString p))
+  | #"\\" => (next ();
+    if Char.isSpace (cur ()) then
+      (next (); ws (); (case cur () of #"\\" => next () | _ => ()); finishString p)
+    else (next (); finishString p))
   | _ => (next (); finishString p)
 
   fun finishComment p = case cur () of
@@ -664,20 +684,30 @@ fun parseSML body parseError: scope -> result = let
                 (fn comma_ => {comma_ = comma_, col = parseInt (SOME "expected a number")})
                 (parseSymbol #"," NONE)
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
+              val _ = updatePosLineCol start
+              val _ = case case line of (_, SOME n) => Int.fromString n | _ => NONE of
+                SOME n => posLineCol := (fn (a,_,c) => (a,n,c)) (!posLineCol)
+              | _ => ()
+              val col' = case col of SOME {col = (_, SOME n), ...} => Int.fromString n | _ => NONE
+              val _ = case col' of
+                SOME n => posLineCol := (fn (a,b,_) => (a,b,n)) (!posLineCol)
+              | _ => ()
               in HOLLinePragmaWith {
                 hash_ = start, left = startParen, line_ = kw,
                 eq_ = eq_, line = line, col = col, right = right, stop = stop }
               end
             | NONE => let
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
+              val (_, line, _) = (updatePosLineCol start; !posLineCol)
               in HOLLinePragma {
                 hash_ = start, left = startParen, line_ = kw,
-                right = right, stop = stop}
+                right = right, stop = stop, value = line}
               end)
           | "FILE" => (case parseKeyword "=" NONE of
               SOME eq_ => let
               val file = parseIdent (SOME "expected an identifier")
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
+              val _ = case file of (_, SOME n) => fileRef := n | _ => ()
               in HOLFilePragmaWith {
                 hash_ = start, left = startParen, file_ = kw,
                 eq_ = eq_, file = file, right = right, stop = stop }
@@ -686,7 +716,7 @@ fun parseSML body parseError: scope -> result = let
               val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
               in HOLFilePragma {
                 hash_ = start, left = startParen, file_ = kw,
-                right = right, stop = stop}
+                right = right, stop = stop, value = !fileRef}
               end)
           | s => (
             parseError (kw, !pos) ("unknown pragma '"^s^"'");
@@ -727,7 +757,7 @@ fun parseSML body parseError: scope -> result = let
       | _ => NONE
     val left = !pos
     val type_q = if full then SOME (findColon 0) else NONE
-    val quote as {stop = right, ...} = parseQuoteBody sc start left false [s]
+    val (quote, right) = parseQuoteBody sc start left false [s]
     val end_tok = case ident right of
       "" => NONE
     | s => SOME (right, s)
@@ -745,10 +775,10 @@ fun parseSML body parseError: scope -> result = let
     fun parseArmList acc = case (parseKeyword "|" NONE, acc) of
       (NONE, _::_) => rev acc
     | (bar, acc) => let
-      val (pats, arrow, _) = parseDelimitedClose [] []
-        { elem = fn () => parseExp sc true, delim = isKeyword "|", close = isKeyword "=>" }
+      val pat = parseExp sc true
+      val arrow = parseKeyword "=>" (SOME "expected =>")
       val exp = parseExp sc false
-      in parseArmList ({bar = bar, pats = pats, arrow = arrow, exp = exp} :: acc) end
+      in parseArmList ({bar = bar, pat = pat, arrow = arrow, exp = exp} :: acc) end
 
     fun parseInfix pat force = let
 
@@ -795,8 +825,8 @@ fun parseSML body parseError: scope -> result = let
     fun parseLayered pat lhs = if not pat then lhs else let
       fun finish {op_, id} ty = case parseKeyword "as" NONE of
           NONE => lhs
-        | SOME as_ =>
-          Layered {op_ = op_, id = id, ty = ty, as_ = as_, pat = parseExp sc true}
+        | SOME as_ => parseLayered pat
+          (Layered {op_ = op_, id = id, ty = ty, as_ = as_, pat = parseExp sc true})
       in
         case lhs of
           Ident id => finish id NONE
@@ -805,6 +835,14 @@ fun parseSML body parseError: scope -> result = let
       end
 
     fun parseExp1 pat force = parseLayered pat (parseTyped (parseInfix pat force))
+
+    fun parseOrPat force =
+      case parseExp1 true force of lhs =>
+      case parseKeyword "|" NONE of
+        NONE => lhs
+      | SOME bar => Or (parseDelimited [lhs] [SOME bar] {
+        elem = fn () => parseExp1 true true,
+        delim = isKeyword "|" })
 
     fun parseKwExp force =
       case token () of tk as (start, _) =>
@@ -815,8 +853,8 @@ fun parseSML body parseError: scope -> result = let
         exp1 = parseExp sc false,
         then_ = parseKeyword "then" (SOME "expected keyword then"),
         exp2 = parseExp sc false,
-        else_ = parseKeyword "else" (SOME "expected keyword else"),
-        exp3 = parseExp sc false }
+        else_ = Option.map (fn else_ =>
+          {else_ = else_, exp3 = parseExp sc false}) (parseKeyword "else" NONE) }
       | "while" => While {
         while_ = start,
         exp1 = parseExp sc false,
@@ -843,7 +881,7 @@ fun parseSML body parseError: scope -> result = let
       | NONE => left
 
     in
-      if pat then parseExp1 true force else
+      if pat then parseOrPat force else
       case parseOrElse force of exp =>
       case parseKeyword "handle" NONE of
         SOME handle_ => Handle {exp = exp, handle_ = handle_, elems = parseArmList []}
@@ -951,18 +989,23 @@ fun parseSML body parseError: scope -> result = let
 
     fun expected () = "expected [" ^ String.concatWith ", " s ^ "]"
 
-    fun go acc =
+    fun push i p acc = if i = p then acc else let
+      val (_, line, col) = (updatePosLineCol start; !posLineCol)
+      val value = Substring.substring (body, i, p - i)
+      in QuoteLiteral {line = line, col = col, value = value} :: acc end
+
+    fun go i acc =
       case qtoken 0 of
-        (p, EOF) => (parseError (start, p) "unclosed quotation"; (rev acc, p))
+        (p, EOF) => (parseError (start, p) "unclosed quotation"; (rev (push i p acc), p))
       | (p, StrongEndTk) => (
         if mem (ident p) s then () else parseError (start, p) (expected ());
         (rev acc, p))
-      | (p, EndTk) => if mem (ident p) s then (rev acc, p) else go acc
+      | (p, EndTk) => if mem (ident p) s then (rev acc, p) else go i acc
       | (p, AntiqIdent) => let
         val exp = case identKind (p + 1) of
           (s, Regular) => Ident {op_ = NONE, id = (p+1, s)}
         | _ => (parseError (p+1, !pos) "expected identifier"; BadExp {start = p+1, stop = !pos})
-        in go (QuoteAntiq {caret_ = p, exp = exp, stop = !pos} :: acc) end
+        in go (!pos) (QuoteAntiq {caret_ = p, exp = exp} :: push i p acc) end
       | (p, AntiqParen) => let
         val e = parseParen sc false (p+1)
         val stop = case e of
@@ -971,7 +1014,7 @@ fun parseSML body parseError: scope -> result = let
         | Tuple {stop, ...} => stop
         | Sequence {stop, ...} => stop
         | _ => raise Unreachable
-        in go (QuoteAntiq {caret_ = p, exp = e, stop = stop} :: acc) end
+        in go stop (QuoteAntiq {caret_ = p, exp = e} :: push i p acc) end
       | (p, OpenBrack) => let
         val _ = ws ()
         val label =
@@ -1002,9 +1045,8 @@ fun parseSML body parseError: scope -> result = let
         val r = DefinitionLabel {
           left = p, label = label, args = args,
           colon = colon, right = right, stop = stop }
-        in go (r :: acc) end
-    val (toks, stop) = go []
-    in {start = qstart, toks = toks, stop = stop} end
+        in go stop (r :: push i p acc) end
+    in go qstart [] end
 
   and parseDec (inSig: bool) sc: (scope * dec) option = let
 
@@ -1016,15 +1058,10 @@ fun parseSML body parseError: scope -> result = let
     fun parseFValBinds acc = case (parseKeyword "|" NONE, acc) of
       (NONE, _::_) => rev acc
     | (bar, acc) => let
-      val (pats, eq, _) = parseDelimitedClose [] [] {
-        elem = fn () => parseExp sc true,
-        delim = isKeyword "|",
-        close = fn tk => case isKeyword "=" tk of
-            SOME true => SOME true
-          | _ => case isKeyword "=>" tk of
-              SOME _ => SOME false
-            | NONE => NONE }
-      in parseFValBinds ({bar = bar, pats = pats, eq = eq, exp = parseExp sc false} :: acc) end
+      val pat = parseExp sc true
+      val eq = parseKeyword "=" (SOME "expected =")
+      val _ = case eq of NONE => parseKeyword "=>" NONE | _ => NONE
+      in parseFValBinds ({bar = bar, pat = pat, eq = eq, exp = parseExp sc false} :: acc) end
 
     fun parseDatBind () = (
       parseDelimited [] [] {
@@ -1055,7 +1092,7 @@ fun parseSML body parseError: scope -> result = let
     fun parseInductive start co = let
       val id = parseIdentifierOrKw true
       val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-      val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart true ["End"]
+      val (qbody, right) = parseQuoteBody sc qstart qstart true ["End"]
       val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
       in HOLInductiveDecl {
         co = co, inductive_ = start, id = id, colon = colon,
@@ -1077,7 +1114,7 @@ fun parseSML body parseError: scope -> result = let
       val r = case parseKeyword ":" NONE of
         SOME colon => let
         val qstart = colon+1
-        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart false ["Proof"]
+        val (qbody, right) = parseQuoteBody sc qstart qstart false ["Proof"]
         val proof_ = if ident right <> "Proof" then NONE else
           SOME {proof_ = right, attrs = parseAttrs parseKVals}
         val tac = parseExp sc false
@@ -1215,8 +1252,7 @@ fun parseSML body parseError: scope -> result = let
         val id = parseIdentifier true
         val attrs = parseAttrs parseKVals
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val qbody as {stop = right, ...} =
-          parseQuoteBody sc qstart qstart false ["End", "Termination"]
+        val (qbody, right) = parseQuoteBody sc qstart qstart false ["End", "Termination"]
         val (term, (end_, stop)) = if ident right = "Termination" then
           (SOME {termination_ = right, tac = parseExp sc false},
            (parseStop (parseHolKeyword "End") 3 "expected 'End'"))
@@ -1228,7 +1264,7 @@ fun parseSML body parseError: scope -> result = let
         end)
       | ("Datatype", HolKeyword) => SOME (sc, let
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart true ["End"]
+        val (qbody, right) = parseQuoteBody sc qstart qstart true ["End"]
         val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
         val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLDatatype {
@@ -1240,7 +1276,7 @@ fun parseSML body parseError: scope -> result = let
         val bind = Option.map (fn eq => {eq = eq, exp = parseAtomic sc false true})
           (parseKeyword "=" NONE)
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart false ["End"]
+        val (qbody, right) = parseQuoteBody sc qstart qstart false ["End"]
         val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
         val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLQuoteDecl {
@@ -1392,7 +1428,7 @@ fun go file = let
   val sc = foldl
     (fn ((k, n, r), b) => Binarymap.insert (b, k, (n, r)))
     (Binarymap.mkDict String.compare) infixes
-  val {parseDec, ...} = ParserNew.parseSML body
+  val {parseDec, ...} = ParserNew.parseSML file body
     (fn (start, stop) => fn err =>
       (print (concat ["error ", Int.toString start, "-",
         Int.toString stop, ": ", err, "\n"])
@@ -1423,3 +1459,359 @@ val _ = go "../../../tools/Holmake/tests/gh1371/bugScript.sml";
 val _ = go "test.sml";
 val _ = testall ();
 *)
+
+structure SMLPrinterNew = struct
+open AstNew
+
+fun ident s = Ident {op_ = NONE, id = s}
+
+local
+  fun toEnd s p = case String.sub (s, p) of
+    #"\\" => p+1
+  | c => if Char.isSpace c then toEnd s (p+1) else raise Unreachable
+
+  (* fun parseHex s p n res =
+    if n = 0 then if res > 255 then NONE else SOME (chr res) else
+    case String.sub (s, p) handle Subscript => #"\000" of c =>
+    if #"0" <= c andalso c <= #"9" then
+      parseHex s (p+1) (n-1) (res * 16 + ord c - ord #"0")
+    else if #"a" <= c andalso c <= #"f" then
+      parseHex s (p+1) (n-1) (res * 16 + ord c - ord #"a" + 10)
+    else if #"A" <= c andalso c <= #"F" then
+      parseHex s (p+1) (n-1) (res * 16 + ord c - ord #"A" + 10)
+    else NONE *)
+
+  fun parseDec s p n res =
+    if n = 0 then if res > 255 then NONE else SOME (chr res) else
+    case String.sub (s, p) handle Subscript => #"\000" of c =>
+    if #"0" <= c andalso c <= #"9" then
+      parseDec s (p+1) (n-1) (res * 10 + ord c - ord #"0")
+    else NONE
+in
+fun decodeStr s start stop = let
+  fun push start p acc =
+    if start = p then acc else String.substring (s, start, p - start) :: acc
+  fun loop start p acc =
+    if p = stop then push start p acc else
+    case String.sub (s, p) of
+      #"\\" => (
+      case String.sub (s, p+1) of
+        #"a" => loop (p+2) (p+2) ("\a" :: push start p acc)
+      | #"b" => loop (p+2) (p+2) ("\b" :: push start p acc)
+      | #"t" => loop (p+2) (p+2) ("\t" :: push start p acc)
+      | #"n" => loop (p+2) (p+2) ("\n" :: push start p acc)
+      | #"v" => loop (p+2) (p+2) ("\v" :: push start p acc)
+      | #"f" => loop (p+2) (p+2) ("\f" :: push start p acc)
+      | #"r" => loop (p+2) (p+2) ("\r" :: push start p acc)
+      | #"\\" => loop (p+2) (p+2) ("\\" :: push start p acc)
+      | #"\"" => loop (p+2) (p+2) ("\"" :: push start p acc)
+      | #"^" => (
+        case ord (String.sub (s, p+2)) handle Subscript => 0 of c =>
+        if 64 <= c andalso c <= 95 then
+          loop (p+3) (p+3) (String.str (chr (c - 64)) :: push start p acc)
+        else loop start (p+2) acc)
+      | #"u" => raise Fail "unicode escapes are not supported"
+      | c =>
+        if Char.isSpace c then
+          case push start p acc of acc =>
+          case toEnd s (p+2) of q => loop q q acc
+        else if #"0" <= c andalso c <= #"2" then
+          case parseDec s (p+1) 3 0 of
+            NONE => loop start (p+2) acc
+          | SOME c => loop (p+4) (p+4) (String.str c :: push start p acc)
+        else loop start (p+2) acc)
+    | _ => loop start (p+1) acc
+  in String.concat (rev (loop start start [])) end
+end
+
+fun encodeStr ss bef aft = let
+  val (s, start, len) = Substring.base ss
+  val stop = start + len
+  fun push start p acc =
+    if start = p then acc else String.substring (s, start, p - start) :: acc
+  fun loop start p acc =
+    if p = stop then push start p acc else
+      case String.sub (s, p) of c =>
+      if chr 32 <= c andalso c <= chr 126 then
+        case c of
+          #"\\" => loop (p+1) (p+1) ("\\\\" :: push start p acc)
+        | #"\"" => loop (p+1) (p+1) ("\\\"" :: push start p acc)
+        | _ => loop start (p+1) acc
+      else case c of
+        #"\a" => loop (p+1) (p+1) ("\\a" :: push start p acc)
+      | #"\b" => loop (p+1) (p+1) ("\\b" :: push start p acc)
+      | #"\t" => loop (p+1) (p+1) ("\\t" :: push start p acc)
+      | #"\n" => loop (p+1) (p+1) ("\\n" :: push start p acc)
+      | #"\v" => loop (p+1) (p+1) ("\\v" :: push start p acc)
+      | #"\f" => loop (p+1) (p+1) ("\\f" :: push start p acc)
+      | #"\r" => loop (p+1) (p+1) ("\\r" :: push start p acc)
+      | #"\\" => loop (p+1) (p+1) ("\\\\" :: push start p acc)
+      | #"\"" => loop (p+1) (p+1) ("\\\"" :: push start p acc)
+      | c => let
+        val n = ord c
+        val a = chr (n div 100 + ord #"0")
+        val b = chr ((n div 10) mod 10 + ord #"0")
+        val c = chr (n mod 10 + ord #"0")
+        in loop (p+1) (p+1) (implode [#"\\", a, b, c] :: push start p acc) end
+  in String.concat (rev (bef :: loop start start [aft])) end
+
+(* fun delimited left {args, ...} f delim right =
+  append left (fn () =>
+    append (flatmap (fn e => append (f e) (fn () => delim)) args) right) *)
+
+  (* datatype exp =
+  | List of {left: int, elems: exp delimited, right: int option, stop: int}
+    (** [ exp, ..., exp ] *)
+  | Tuple of {left: int, elems: exp delimited, right: int option, stop: int}
+    (** ( exp, ..., exp ) *)
+  | Record of {left: int, elems: row delimited, right: int option, stop: int}
+    (** { lab = exp, ..., lab = exp } *)
+  | Parens of {left: int, exp: exp, right: int option, stop: int} (** ( exp ) *)
+  | Typed of {exp: exp, colon: int, ty: ty} (** exp : ty *)
+  | Layered of
+    {op_: int option, id: ident, ty: {colon: int, ty: ty} option, as_: int, pat: exp}
+    (** [op] vid [:ty] as pat *)
+  | Or of exp delimited (** SuccessorML "or patterns": pat | pat | ... | pat *)
+  | App of exp * exp (** exp exp *)
+ *)
+
+fun expandRecord f pat {left, elems = {args, delims}, right, stop} = let
+  fun reord [] NONE acc = rev acc
+    | reord [] (SOME p) acc = rev (DotDotDot p :: acc)
+    | reord (DotDotDot p :: ls) _ acc = reord ls (SOME p) acc
+    | reord (LabEq {lab, eq, exp} :: ls) dot acc =
+      reord ls dot (LabEq {lab = lab, eq = eq, exp = f exp} :: acc)
+    | reord (LabAs {id, ty, aspat} :: ls) dot acc = let
+      val aspat = Option.map (fn {as_, exp} => {as_ = as_, exp = f exp}) aspat
+      fun typed exp NONE = exp
+        | typed exp (SOME {colon, ty}) = Typed {exp = exp, colon = colon, ty = ty}
+      val lab = if pat then LabAs {id = id, ty = ty, aspat = aspat} else
+        case aspat of
+          NONE => LabEq {lab = id, eq = #1 id, exp = typed (ident id) ty}
+        | SOME {as_, exp} => LabEq {lab = id, eq = as_, exp = typed exp ty}
+      in reord ls dot (lab :: acc) end
+  val elems = {args = reord args NONE [], delims = delims}
+  in {left = left, elems = elems, right = right, stop = stop} end
+
+fun mkLocPragma line col s =
+  concat [" (*#loc ", Int.toString (line + 1), " ", Int.toString (col + 1), "*)", s]
+
+exception HasOrPat
+fun mapDelim f {args, delims} = {args = map f args, delims = delims}
+fun expandExp true (e as Wild _) = e
+  | expandExp false (Wild p) =
+    Raise {raise_ = p, exp = App (ident (p, "Fail"), StringConstant (p, "\"_\""))}
+  | expandExp _ (e as IntegerConstant _) = e
+  | expandExp _ (e as WordConstant _) = e
+  | expandExp _ (StringConstant (p, s)) = let
+    val s = decodeStr s 1 (size s - 1)
+    in StringConstant (p, encodeStr (Substring.full s) "\"" "\"") end
+  | expandExp _ (CharConstant (p, s)) = let
+    val s = decodeStr s 2 (size s - 1)
+    in CharConstant (p, encodeStr (Substring.full s) "#\"" "\"") end
+  | expandExp _ (e as RealConstant _) = e
+  | expandExp _ (e as Unit _) = e
+  | expandExp _ (e as Ident _) = e
+  | expandExp pat (List {left, elems, right, stop}) =
+    List {left = left, elems = mapDelim (expandExp pat) elems, right = right, stop = stop}
+  | expandExp pat (Tuple {left, elems, right, stop}) =
+    Tuple {left = left, elems = mapDelim (expandExp pat) elems, right = right, stop = stop}
+  | expandExp pat (Record r) = Record (expandRecord (expandExp pat) pat r)
+  | expandExp pat (Parens {left, exp, right, stop}) =
+    Parens {left = left, exp = expandExp pat exp, right = right, stop = stop}
+  | expandExp pat (Infix {left, id, right}) =
+    Infix {left = expandExp pat left, id = id, right = expandExp pat right}
+  | expandExp pat (Typed {exp, colon, ty}) = Typed {exp = expandExp pat exp, colon = colon, ty = ty}
+  | expandExp pat' (Layered {op_, id, ty, as_, pat}) =
+    Layered {op_ = op_, id = id, ty = ty, as_ = as_, pat = expandExp pat' pat}
+  | expandExp _ (Or _) = raise HasOrPat
+  | expandExp _ (e as Select _) = e
+  | expandExp pat (Sequence {left, elems, right, stop}) =
+    Sequence {left = left, elems = mapDelim (expandExp pat) elems, right = right, stop = stop}
+  | expandExp _ (LetInEnd {let_, dec, in_, exps, end_, stop}) =
+    LetInEnd {let_ = let_, dec = map expandDec dec, in_ = in_,
+      exps = mapDelim (expandExp false) exps, end_ = end_, stop = stop}
+  | expandExp pat (App (e1, e2)) = App (expandExp pat e1, expandExp pat e2)
+  | expandExp _ (AndAlso {left, andalso_, right}) =
+    AndAlso {left = expandExp false left, andalso_ = andalso_, right = expandExp false right}
+  | expandExp _ (OrElse {left, orelse_, right}) =
+    OrElse {left = expandExp false left, orelse_ = orelse_, right = expandExp false right}
+  | expandExp _ (Handle {exp, handle_, elems}) =
+    Handle {exp = expandExp false exp, handle_ = handle_, elems = expandArms elems}
+  | expandExp _ (Raise {raise_, exp}) = Raise {raise_ = raise_, exp = expandExp false exp}
+  | expandExp _ (IfThenElse {if_, exp1, then_, exp2, else_}) = let
+    val exp1 = expandExp false exp1
+    val exp2 = expandExp false exp2
+    val else_ = case else_ of
+      NONE => SOME {else_ = if_, exp3 = Unit {left = if_, right = if_}}
+    | SOME {else_, exp3} => SOME {else_ = else_, exp3 = expandExp false exp3}
+    in IfThenElse {if_ = if_, exp1 = exp1, then_ = then_, exp2 = exp2, else_ = else_} end
+  | expandExp _ (While {while_, exp1, do_, exp2}) =
+    While {while_ = while_, exp1 = expandExp false exp1, do_ = do_, exp2 = expandExp false exp2}
+  | expandExp _ (Case {case_, exp, of_, elems}) =
+    Case {case_ = case_, exp = expandExp false exp, of_ = of_, elems = expandArms elems}
+  | expandExp _ (Fn {fn_, elems}) = Fn {fn_ = fn_, elems = expandArms elems}
+
+  | expandExp _ (HOLFullQuote {head, type_q, quote, stop, ...}) = let
+    val id = (#1 head, case type_q of NONE => "Parse.Term" | SOME _ => "Parse.Type")
+    in App (ident id, expandQuote (#1 head) stop quote) end
+  | expandExp _ (HOLQuote {head, quote, stop, ...}) = expandQuote (#1 head) stop quote
+  | expandExp _ (HOLLinePragma {hash_, value, ...}) = IntegerConstant (hash_, Int.toString value)
+  | expandExp _ (HOLFilePragma {hash_, value, ...}) =
+    StringConstant (hash_, encodeStr (Substring.full value) "\"" "\"")
+  | expandExp _ (HOLLinePragmaWith {hash_, ...}) = Unit {left = hash_, right = hash_}
+  | expandExp _ (HOLFilePragmaWith {hash_, ...}) = Unit {left = hash_, right = hash_}
+  | expandExp _ (EmptyExp p) = Unit {left = p, right = p}
+  | expandExp _ (BadExp {start = p, ...}) =
+    Raise {raise_ = p, exp = App (ident (p, "Fail"), StringConstant (p, "\"malformed\""))}
+
+and expandArms elems =
+  map (fn {bar, pat, arrow, exp} =>
+    {bar = bar, pat = expandExp true pat, arrow = arrow, exp = expandExp false exp}) elems
+  handle HasOrPat => let
+    fun list [] _ f = f []
+      | list (x :: xs) g f =
+        g x (fn x => list xs g (fn xs => f (x :: xs)))
+
+    fun delims {args, delims} g f =
+      list args g (fn args => f {args = args, delims = delims})
+
+    fun onPat (List {left, elems, right, stop}) f =
+        delims elems onPat
+          (fn elems => f (List {left = left, elems = elems, right = right, stop = stop}))
+      | onPat (Tuple {left, elems, right, stop}) f =
+        delims elems onPat
+          (fn elems => f (Tuple {left = left, elems = elems, right = right, stop = stop}))
+      | onPat (Record r) f = let
+        val {left, elems, right, stop} = expandRecord (fn x => x) true r
+        in delims elems onRow (fn elems =>
+          f (Record {left = left, elems = elems, right = right, stop = stop}))
+        end
+      | onPat (Parens {left, exp, right, stop}) f =
+        onPat exp (fn exp => f (Parens {left = left, exp = exp, right = right, stop = stop}))
+      | onPat (Typed {exp, colon, ty}) f =
+        onPat exp (fn exp => f (Typed {exp = exp, colon = colon, ty = ty}))
+      | onPat (Layered {op_, id, ty, as_, pat}) f =
+        onPat pat (fn pat => f (Layered {op_ = op_, id = id, ty = ty, as_ = as_, pat = pat}))
+      | onPat (App (e1, e2)) f = onPat e1 (fn e1 => onPat e2 (fn e2 => f (App (e1, e2))))
+      | onPat (Or {args, ...}) f = orList args f
+      | onPat e f = f (expandExp true e)
+
+    and onRow (LabEq {lab, eq, exp}) f =
+        onPat exp (fn exp => f (LabEq {lab = lab, eq = eq, exp = exp}))
+      | onRow (LabAs {id, ty, aspat = SOME {as_, exp}}) f =
+        onPat exp (fn exp => f (LabAs {id = id, ty = ty, aspat = SOME {as_ = as_, exp = exp}}))
+      | onRow e f = f e
+
+    and orList [] _ = (fn x => x)
+      | orList (e :: es) f = onPat e f o orList es f
+
+    fun arms [] = (fn x => x)
+      | arms ({bar, pat, arrow, exp} :: ls) =
+        onPat pat (fn pat => fn l => {bar = bar, pat = pat, arrow = arrow, exp = exp} :: l)
+          o arms ls
+    in arms elems [] end
+
+and expandQuote start stop toks = let
+  fun go [] acc = rev acc
+    | go (QuoteLiteral {line, col, value} :: rest) acc = let
+      val s = encodeStr (Substring.full (mkLocPragma line col (Substring.string value))) "\"" "\""
+      in go rest (App (ident (start, "QUOTE"), StringConstant (start, s)) :: acc) end
+    | go (QuoteAntiq {exp, ...} :: rest) acc =
+      go rest (App (ident (start, "ANTIQUOTE"), expandExp false exp) :: acc)
+    | go (DefinitionLabel _ :: _) _ = raise Unreachable
+  in List {left = start, elems = {args = go toks [], delims = []}, right = NONE, stop = stop} end
+
+and expandDec dec = dec
+
+datatype lazyseq =
+    Nil
+  | String of string * (unit -> lazyseq)
+
+fun str s = String (s, fn () => Nil)
+fun ch c = str (String.str c)
+
+fun append Nil y = y ()
+  | append (String (s, x)) y = String (s, fn () => append (x ()) y)
+
+fun flatmap _ [] = Nil
+  | flatmap f (x :: xs) = append (f x) (fn () => flatmap f xs)
+
+fun token s = String (s, fn () => str " ")
+
+fun otoken NONE _ = Nil
+  | otoken (SOME _) s = token s
+
+(* fun fromRow r = () *)
+
+(* fun fromExp _ (Wild _) = str "raise Fail \"_\" "
+fun fromExp _ (IntegerConstant (_, s)) = token s
+  | fromExp _ (WordConstant (_, s)) = token s
+  | fromExp _ (StringConstant (_, s)) = let
+    val s = decodeStr s 1 (size s - 1)
+    in token (encodeStr s "\"" "\"") end
+  | fromExp _ (CharConstant (_, s)) = let
+    val s = decodeStr s 2 (size s - 1)
+    in token (encodeStr s "#\"" "\"") end
+  | fromExp _ (RealConstant (_, s)) = token s
+  | fromExp _ (Unit _) = token "()"
+  | fromExp _ (Ident {op_, id}) = append (otoken op_ "op") (fn () => token (#2 id))
+  | fromExp pat (List {elems, ...}) =
+    delimited (token "[") elems fromExp pat (token ",") (fn () => token "]")
+  | fromExp pat (Tuple {elems, ...}) =
+    delimited (token "(") elems fromExp pat (token ",") (fn () => token ")")
+  | fromExp pat (Record {elems, ...}) =
+    delimited (token "{") elems (fromRow pat) (token ",") (fn () => token "}") *)
+
+     (* (fn () => token (#2 id)) *)
+
+
+  (* datatype exp =
+  | Tuple of {left: int, elems: exp delimited, right: int option, stop: int}
+    (** ( exp, ..., exp ) *)
+  | Record of {left: int, elems: row delimited, right: int option, stop: int}
+    (** { lab = exp, ..., lab = exp } *)
+  | Parens of {left: int, exp: exp, right: int option, stop: int} (** ( exp ) *)
+  | Infix of {left: exp, id: ident, right: exp} (** exp vid exp *)
+  | Typed of {exp: exp, colon: int, ty: ty} (** exp : ty *)
+  | Layered of
+    {op_: int option, id: ident, ty: {colon: int, ty: ty} option, as_: int, pat: exp}
+    (** [op] vid [:ty] as pat *)
+  | Or of exp delimited (** SuccessorML "or patterns": pat | pat | ... | pat *)
+  | Select of {hash: int, label: ident} (** # label *)
+  | Sequence of {left: int, elems: exp delimited, right: int option, stop: int}
+    (** (exp; ...; exp) *) (* TODO: this is stupid *)
+  | LetInEnd of
+    {let_: int, dec: dec list, in_: int option, exps: exp delimited, end_: int option, stop: int}
+    (** let dec in exp [; exp ...] end *)
+  | App of exp * exp (** exp exp *)
+  | AndAlso of {left: exp, andalso_: int, right: exp} (** exp andalso exp *)
+  | OrElse of {left: exp, orelse_: int, right: exp} (** exp orelse exp *)
+  | Handle of {exp: exp, handle_: int, elems: arm list}
+    (** exp handle pat => exp [| pat => exp ...] *)
+  | Raise of {raise_: int, exp: exp} (** raise exp *)
+  | IfThenElse of {if_: int, exp1: exp, then_: int option, exp2: exp, else_: int option, exp3: exp}
+    (** if exp then exp else exp *)
+  | While of {while_: int, exp1: exp, do_: int option, exp2: exp} (** while exp do exp *)
+  | Case of {case_: int, exp: exp, of_: int option, elems: arm list}
+    (** case exp of pat => exp [| pat => exp ...] *)
+  | Fn of {fn_: int, elems: arm list} (** fn pat => exp [| pat => exp ...] *)
+
+  | HOLFullQuote of {
+      head: int * string, type_q: int option,
+      quote: qbody, end_tok: (int * string) option, stop: int}
+  | HOLQuote of {head: int * string, quote: qbody, end_tok: (int * string) option, stop: int}
+  | HOLLinePragma of {hash_: int, left: int, line_: int, right: int option, stop: int} (* #(LINE) *)
+  | HOLLinePragmaWith of {
+      hash_: int, left: int, line_: int, eq_: int,
+      line: int * string option, col: {comma_: int, col: int * string option} option,
+      right: int option, stop: int} (* #(LINE=3) this is BS *)
+  | HOLFilePragma of {hash_: int, left: int, file_: int, right: int option, stop: int} (* #(FILE) *)
+  | HOLFilePragmaWith of {
+      hash_: int, left: int, file_: int, eq_: int,
+      file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
+
+  | EmptyExp of int
+  | BadExp of {start: int, stop: int} *)
+
+end;
