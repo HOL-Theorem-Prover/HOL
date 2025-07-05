@@ -198,7 +198,7 @@ val idx_tydef as
                termP_term_REP, ...} =
   newtypeTools.rich_new_type{
   tyname = "idx",
-  prove(“∃i : (α,β) alg. alg i”,
+  exthm = prove(“∃i : (α,β) alg. alg i”,
         simp[EXISTS_PROD] >> qexists_tac ‘UNIV’ >>
         simp[alg_def]),
   ABS = "mkIx",

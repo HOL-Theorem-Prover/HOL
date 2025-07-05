@@ -81,6 +81,9 @@ fun handleArgs slist =
 
 fun main() =
     let val cline = CommandLine.arguments()
-        val
+        val _ = ()
     in
       case cline of
+        _ => ()
+    end
+end
