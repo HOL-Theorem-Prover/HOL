@@ -4,7 +4,7 @@ structure AstNew = struct
   (* (start, content) *)
   type ident = int * string
 
-  type 'exp delimited = {args: 'exp list, delims: int list}
+  type 'exp delimited = {args: 'exp list, delims: int option list}
 
   datatype 'a seq =
     Empty
@@ -256,7 +256,9 @@ structure ParserNew = struct
 open AstNew
 
 exception Unreachable
-fun parseSML body parseError = let
+type scope = (string, int * bool) Binarymap.dict
+type result = {getScope: unit -> scope, parseDec: unit -> dec option}
+fun parseSML body parseError: scope -> result = let
   val pos = ref 0
   fun cur () = String.sub (body, !pos) handle Subscript => #"\000"
   fun ahead i = String.sub (body, !pos + i) handle Subscript => #"\000"
@@ -265,8 +267,8 @@ fun parseSML body parseError = let
   fun takeWhile f = if f (cur ()) then (next (); takeWhile f) else ()
   fun ws () = takeWhile Char.isSpace
   fun isIdRest c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
-  val isIdSym = Char.contains "'_!%&$#+-/:<=>?@\\~`^|*"
-  fun colZero start = start = 0 orelse String.sub (body, start) = #"\n"
+  val isIdSym = Char.contains "!%&$#+-/:<=>?@\\~^|*"
+  fun colZero start = start = 0 orelse String.sub (body, start - 1) = #"\n"
   val _ = ws ()
 
   fun finishString p = case cur () of
@@ -365,7 +367,7 @@ fun parseSML body parseError = let
   | c => (!pos, (next ();
     if Char.contains ")[]{},;_" c then Symbol c else
     if isIdSym c then (takeWhile isIdSym; finishId (); IdentTk) else
-    if Char.isDigit c then (next (); finishInt ()) else
+    if Char.isDigit c then finishInt () else
     if Char.isAlpha c then (takeWhile isIdRest; finishId (); IdentTk) else
     (next (); ErrorTk))))
 
@@ -399,11 +401,11 @@ fun parseSML body parseError = let
       | _ => Regular)
     end
 
-  val lookahead = ref NONE
+  val lookahead = ref []
   val token = fn () => case !lookahead of
-    NONE => token ()
-  | SOME tk => (lookahead := NONE; tk)
-  fun unread tk = lookahead := SOME tk
+    [] => token ()
+  | tk :: l => (lookahead := l; tk)
+  fun unread tk = lookahead := tk :: !lookahead
 
   fun makeError tk r err =
     case r of
@@ -446,22 +448,40 @@ fun parseSML body parseError = let
     | NONE => (case token () of tk => (unread tk; #1 tk))
     in (r, stop) end
 
-  fun parseDelimitedClose args delims (f as {elem, delim, close}) =
+  fun parseDelimitedClose args delims (f as {elem, close, ...}) =
     case token () of tk =>
-      if close tk then ({args = rev args, delims = rev delims}, SOME (#1 tk), !pos)
-      else case ((unread tk; elem ()), token ()) of (e, tk) =>
-        if close tk then ({args = rev (e :: args), delims = rev delims}, SOME (#1 tk), !pos)
-        else if delim tk then parseDelimitedClose (e :: args) (#1 tk :: delims) f
-        else (
+      case close tk of
+        SOME true => ({args = rev args, delims = rev delims}, SOME (#1 tk), !pos)
+      | SOME false => (
+        parseError (#1 tk, !pos) "unexpected close token";
+        ({args = rev args, delims = rev delims}, NONE, !pos))
+      | NONE => (unread tk; case elem () of e => parseDelimitedClose2 (e :: args) delims f)
+  and parseDelimitedClose2 args delims (f as {delim, close, ...}) =
+    case token () of tk =>
+      case close tk of
+        SOME true => ({args = rev args, delims = rev delims}, SOME (#1 tk), !pos)
+      | SOME false => (
+        parseError (#1 tk, !pos) "unexpected close token";
+        ({args = rev args, delims = rev delims}, NONE, !pos))
+      | NONE => case delim tk of
+          SOME true => parseDelimitedClose args (SOME (#1 tk) :: delims) f
+        | SOME false => (
+          parseError (#1 tk, !pos) "unexpected delimiter";
+          parseDelimitedClose args (NONE :: delims) f)
+        | NONE => (
           parseError (#1 tk, !pos) "expected close delimiter";
-          unread tk; ({args = rev (e :: args), delims = rev delims}, NONE, #1 tk))
+          unread tk; ({args = rev args, delims = rev delims}, NONE, #1 tk))
 
   fun parseDelimited args delims (f as {elem, delim}) =
     case (elem (), token ()) of (e, tk) =>
-      if delim tk then parseDelimited (e :: args) (#1 tk :: delims) f
-      else (unread tk; {args = rev (e :: args), delims = rev delims})
+      case delim tk of
+        SOME true => parseDelimited (e :: args) (SOME (#1 tk) :: delims) f
+      | SOME false => (
+        parseError (#1 tk, !pos) "unexpected delimiter";
+        parseDelimited (e :: args) (NONE :: delims) f)
+      | NONE => (unread tk; {args = rev (e :: args), delims = rev delims})
 
-  fun isKeyword kw = fn (s, IdentTk) => ident s = kw | _ => false
+  fun isKeyword kw = fn (s, IdentTk) => if ident s = kw then SOME true else NONE | _ => NONE
 
   fun parseIdentifier' f force = let
     val tk = token ()
@@ -478,15 +498,18 @@ fun parseSML body parseError = let
       | _ => fail ()
     end
   val parseIdentifier = parseIdentifier' (fn _ => false)
+  val parseIdentifierOrKw = parseIdentifier' (fn _ => true)
   val parseIdentifierOrEq = parseIdentifier' (fn s => s = "=")
 
-  fun parseIdentifiers acc = case parseIdentifier false of
+  fun parseIdentifiers' f acc = case parseIdentifier' f false of
     (_, "") => rev acc
-  | id => parseIdentifiers (id :: acc)
+  | id => parseIdentifiers' f (id :: acc)
+  val parseIdentifiers = parseIdentifiers' (fn _ => false)
+  val parseIdentifiersOrKws = parseIdentifiers' (fn _ => true)
 
   fun parseKVals (): kvals = {
-    key = parseIdentifier true,
-    bind = Option.map (fn eq_ => {eq_ = eq_, vals = parseIdentifiers []})
+    key = parseIdentifierOrKw true,
+    bind = Option.map (fn eq_ => {eq_ = eq_, vals = parseIdentifiersOrKws []})
       (parseKeyword "=" NONE) }
 
   fun parseAttrs f: 'a attrs = case parseSymbol #"[" NONE of
@@ -494,8 +517,8 @@ fun parseSML body parseError = let
   | SOME left => let
     val (attrs, right, stop) = parseDelimitedClose [] [] {
       elem = f,
-      delim = fn (_, Symbol #",") => true | _ => false,
-      close = fn (_, Symbol #"]") => true | _ => false }
+      delim = fn (_, Symbol #",") => SOME true | _ => NONE,
+      close = fn (_, Symbol #"]") => SOME true | _ => NONE }
     in SOME {left = left, attrs = attrs, right = right, stop = stop} end
 
   fun parseTy (prec: bool): ty = let
@@ -504,8 +527,8 @@ fun parseSML body parseError = let
     | (start, Symbol #"(") => let
       val (elems, right, stop) = parseDelimitedClose [] [] {
         elem = fn () => parseTy false,
-        delim = fn (_, Symbol #",") => true | _ => false,
-        close = fn (_, Symbol #")") => true | _ => false }
+        delim = fn (_, Symbol #",") => SOME true | _ => NONE,
+        close = fn (_, Symbol #")") => SOME true | _ => NONE }
       in
         case elems of
           {args = [ty], delims = []} =>
@@ -532,8 +555,8 @@ fun parseSML body parseError = let
             (parseError (#1 tk, !pos) "expected an identifier"; unread tk)
           val colon = parseKeyword ":" (SOME "expected a colon")
           in {lab = lab, colon = colon, ty = parseTy false} end,
-        delim = fn (_, Symbol #",") => true | _ => false,
-        close = fn (_, Symbol #"}") => true | _ => false }
+        delim = fn (_, Symbol #",") => SOME true | (_, Symbol #";") => SOME false | _ => NONE,
+        close = fn (_, Symbol #"}") => SOME true | _ => NONE }
       in TyRecord {left = start, elems = elems, right = right, stop = stop} end
     | tk =>
       case case tk of (start, IdentTk) => SOME (identKind start) | _ => NONE of
@@ -544,7 +567,7 @@ fun parseSML body parseError = let
     fun rhs lhs = case token () of
       tk as (start, IdentTk) => (case identKind start of
         ("*", _) => if prec then (unread tk; lhs) else
-          rhs (TyTuple (parseDelimited [lhs] [start]
+          rhs (TyTuple (parseDelimited [lhs] [SOME start]
             {elem = fn () => parseTy true, delim = isKeyword "*"}))
       | ("->", _) => if prec then (unread tk; lhs) else
           rhs (TyArrow {from = lhs, arrow = start, to = parseTy false})
@@ -556,28 +579,22 @@ fun parseSML body parseError = let
 
   fun parseTyVars () = case token () of
     (start, TyVarTk) => One (start, ident start)
-  | (start, Symbol #"(") => let
-    val (elems, right, stop) = parseDelimitedClose [] [] {
-      elem = fn () => case token () of
-          (start, TyVarTk) => (start, ident start)
-        | tk => (parseError (#1 tk, !pos) "expected type variable"; unread tk; (#1 tk, "")),
-      delim = fn (_, Symbol #",") => true | _ => false,
-      close = fn (_, Symbol #")") => true | _ => false }
-    in Many {left = start, elems = elems, right = right, stop = stop} end
-  | _ => Empty
+  | tk as (start, Symbol #"(") => (case token () of
+      (v, TyVarTk) => let
+      val (elems, right, stop) = parseDelimitedClose2 [(v, ident v)] [] {
+        elem = fn () => case token () of
+            (start, TyVarTk) => (start, ident start)
+          | tk => (parseError (#1 tk, !pos) "expected type variable"; unread tk; (#1 tk, "")),
+        delim = fn (_, Symbol #",") => SOME true | (_, Symbol #";") => SOME false | _ => NONE,
+        close = fn (_, Symbol #")") => SOME true | _ => NONE }
+      in Many {left = start, elems = elems, right = right, stop = stop} end
+    | tk2 => (unread tk2; unread tk; Empty))
+  | tk => (unread tk; Empty)
 
   fun parseTyBind (): tybind = {
     tyvars = parseTyVars (),
     tycon = parseIdentifier true,
     bind = Option.map (fn eq => {eq = eq, ty = parseTy ()}) (parseKeyword "=" NONE) }
-
-  val infixes = (* FIXME *)
-    map (fn x => (x, 0, false)) ["++", "&&", "|->", "THEN", "THEN1",
-      "THENL", "THEN_LT", "THENC", "ORELSE", "ORELSE_LT", "ORELSEC", "THEN_TCL",
-      "ORELSE_TCL", "?>", "|>", "|>>", "||>", "||->",
-      ">>", ">-", ">|", "\\\\", ">>>", ">>-", "??", ">~", ">>~", ">>~-"] @
-    [("by", 8, false), ("suffices_by", 8, false), ("$", 1, true)]
-  type scope = (string, int * bool) Binarymap.dict
 
   fun updateScope sc = let
     fun updateInfix right prec elems sc =
@@ -590,7 +607,8 @@ fun parseSML body parseError = let
         in go elems sc end
     fun updateNonfix [] sc = sc
       | updateNonfix ((_, "") :: rest) sc = updateNonfix rest sc
-      | updateNonfix ((_, id) :: rest) sc = updateNonfix rest (#1 (Binarymap.remove (sc, id)))
+      | updateNonfix ((_, id) :: rest) sc =
+        updateNonfix rest (#1 (Binarymap.remove (sc, id)) handle Binarymap.NotFound => sc)
     in fn
         DecInfix {prec, elems, ...} => updateInfix false prec elems sc
       | DecInfixr {prec, elems, ...} => updateInfix true prec elems sc
@@ -616,8 +634,8 @@ fun parseSML body parseError = let
   | (start, Symbol #"[") => let
     val (elems, right, stop) = parseDelimitedClose [] [] {
       elem = fn () => parseExp sc pat,
-      delim = fn (_, Symbol #",") => true | _ => false,
-      close = fn (_, Symbol #"]") => true | _ => false }
+      delim = fn (_, Symbol #",") => SOME true | (_, Symbol #";") => SOME false | _ => NONE,
+      close = fn (_, Symbol #"]") => SOME true | _ => NONE }
     in List {left = start, elems = elems, right = right, stop = stop} end
   | (start, Symbol #"{") => let
     val (elems, right, stop) = parseDelimitedClose [] [] {
@@ -631,66 +649,66 @@ fun parseSML body parseError = let
           ty = Option.map (fn c => {colon = c, ty = parseTy ()}) (parseKeyword ":" NONE),
           aspat = Option.map
             (fn c => {as_ = c, exp = parseExp sc pat}) (parseKeyword "as" NONE) },
-      delim = fn (_, Symbol #",") => true | _ => false,
-      close = fn (_, Symbol #"}") => true | _ => false }
+      delim = fn (_, Symbol #",") => SOME true | (_, Symbol #";") => SOME false | _ => NONE,
+      close = fn (_, Symbol #"}") => SOME true | _ => NONE }
     in Record {left = start, elems = elems, right = right, stop = stop} end
-  | (start, Symbol #"#") => (case parseSymbol #"(" NONE of
-      SOME startParen => let
-      val res = case token () of
-        (kw, IdentTk) => (case ident kw of
-          "LINE" => (case parseKeyword "=" NONE of
-            SOME eq_ => let
-            val line = parseInt (SOME "expected a number")
-            val col = Option.map
-              (fn comma_ => {comma_ = comma_, col = parseInt (SOME "expected a number")})
-              (parseSymbol #"," NONE)
-            val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-            in HOLLinePragmaWith {
-              hash_ = start, left = startParen, line_ = kw,
-              eq_ = eq_, line = line, col = col, right = right, stop = stop }
-            end
-          | NONE => let
-            val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-            in HOLLinePragma {
-              hash_ = start, left = startParen, line_ = kw,
-              right = right, stop = stop}
-            end)
-        | "FILE" => (case parseKeyword "=" NONE of
-            SOME eq_ => let
-            val file = parseIdent (SOME "expected an identifier")
-            val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-            in HOLFilePragmaWith {
-              hash_ = start, left = startParen, file_ = kw,
-              eq_ = eq_, file = file, right = right, stop = stop }
-            end
-          | NONE => let
-            val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
-            in HOLFilePragma {
-              hash_ = start, left = startParen, file_ = kw,
-              right = right, stop = stop}
-            end)
-        | s => (
-          parseError (kw, !pos) ("unknown pragma '"^s^"'");
-          BadExp {start = start, stop = !pos}))
-      | tk => (
-        parseError (#1 tk, #1 tk) "expected pragma";
-        unread tk;
-        BadExp {start = start, stop = #1 tk})
-      in res end
-    | NONE => Select {hash = start, label = parseRecordLabel ()})
   | (start, IdentTk) => (case ident start of
-      "let" => let
+      "#" => (case parseSymbol #"(" NONE of
+        SOME startParen => let
+        val res = case token () of
+          (kw, IdentTk) => (case ident kw of
+            "LINE" => (case parseKeyword "=" NONE of
+              SOME eq_ => let
+              val line = parseInt (SOME "expected a number")
+              val col = Option.map
+                (fn comma_ => {comma_ = comma_, col = parseInt (SOME "expected a number")})
+                (parseSymbol #"," NONE)
+              val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
+              in HOLLinePragmaWith {
+                hash_ = start, left = startParen, line_ = kw,
+                eq_ = eq_, line = line, col = col, right = right, stop = stop }
+              end
+            | NONE => let
+              val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
+              in HOLLinePragma {
+                hash_ = start, left = startParen, line_ = kw,
+                right = right, stop = stop}
+              end)
+          | "FILE" => (case parseKeyword "=" NONE of
+              SOME eq_ => let
+              val file = parseIdent (SOME "expected an identifier")
+              val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
+              in HOLFilePragmaWith {
+                hash_ = start, left = startParen, file_ = kw,
+                eq_ = eq_, file = file, right = right, stop = stop }
+              end
+            | NONE => let
+              val (right, stop) = parseStop (parseSymbol #")") 1 "expected ')'"
+              in HOLFilePragma {
+                hash_ = start, left = startParen, file_ = kw,
+                right = right, stop = stop}
+              end)
+          | s => (
+            parseError (kw, !pos) ("unknown pragma '"^s^"'");
+            BadExp {start = start, stop = !pos}))
+        | tk => (
+          parseError (#1 tk, #1 tk) "expected pragma";
+          unread tk;
+          BadExp {start = start, stop = #1 tk})
+        in res end
+      | NONE => Select {hash = start, label = parseRecordLabel ()})
+    | "let" => let
       val (sc', dec) = parseDecs false sc []
       val in_ = parseKeyword "in" (SOME "expected keyword in")
       val (exps, end_, stop) = parseDelimitedClose [] [] {
         elem = fn () => parseExp sc' false,
-        delim = fn (_, Symbol #";") => true | _ => false,
-        close = fn (start, IdentTk) => ident start = "end" | _ => false }
+        delim = fn (_, Symbol #";") => SOME true | _ => NONE,
+        close = isKeyword "end" }
       in LetInEnd {let_ = start, dec = dec, in_ = in_, exps = exps, end_ = end_, stop = stop} end
-    | "op" => Ident {op_ = SOME start, id = parseIdentifier true}
+    | "op" => Ident {op_ = SOME start, id = parseIdentifierOrEq true}
     | _ => (
       unread (start, IdentTk);
-      case parseIdentifier force of
+      case parseIdentifierOrEq force of
         (start, "") => EmptyExp start
       | id => Ident {op_ = NONE, id = id}))
   | (start, OpenQuoteTk) => let
@@ -709,7 +727,7 @@ fun parseSML body parseError = let
       | _ => NONE
     val left = !pos
     val type_q = if full then SOME (findColon 0) else NONE
-    val quote as {stop = right, ...} = parseQuoteBody sc start left [s]
+    val quote as {stop = right, ...} = parseQuoteBody sc start left false [s]
     val end_tok = case ident right of
       "" => NONE
     | s => SOME (right, s)
@@ -762,10 +780,9 @@ fun parseSML body parseError = let
         | _ => lhs
       and tail2 prec rhs =
         case peekInfix () of
-          (_, SOME (_, (prec', rassoc))) =>
-          if prec' + (if rassoc then 1 else 0) > prec then
+          (_, SOME (opr, (prec', rassoc))) =>
+          if prec' + (if rassoc then 1 else 0) <= prec orelse pat andalso opr = "=" then rhs else
             tail2 prec (tail (prec + (if prec' > prec then 1 else 0)) rhs)
-          else rhs
         | _ => rhs
 
       in tail 0 (parseApp force) end
@@ -841,24 +858,24 @@ fun parseSML body parseError = let
         (startClose, Symbol #")") =>
         Parens {left = startOpen, exp = exp, right = SOME startClose, stop = startClose+1}
       | (startComma, Symbol #",") => let
-        val (elems, right, stop) = parseDelimitedClose [exp] [startComma] {
+        val (elems, right, stop) = parseDelimitedClose [exp] [SOME startComma] {
           elem = fn () => parseExp sc pat,
-          delim = fn (_, Symbol #",") => true | _ => false,
-          close = fn (_, Symbol #")") => true | _ => false }
+          delim = fn (_, Symbol #",") => SOME true | _ => NONE,
+          close = fn (_, Symbol #")") => SOME true | _ => NONE }
         in Tuple {left = startOpen, elems = elems, right = right, stop = stop} end
       | (startSemi, Symbol #";") => let
-        val (elems, right, stop) = parseDelimitedClose [exp] [startSemi] {
+        val (elems, right, stop) = parseDelimitedClose [exp] [SOME startSemi] {
           elem = fn () => parseExp sc pat,
-          delim = fn (_, Symbol #";") => true | _ => false,
-          close = fn (_, Symbol #")") => true | _ => false }
+          delim = fn (_, Symbol #";") => SOME true | _ => NONE,
+          close = fn (_, Symbol #")") => SOME true | _ => NONE }
         in Sequence {left = startOpen, elems = elems, right = right, stop = stop} end
       | tk => (
         parseError (#1 tk, #1 tk) "expected closing parenthesis";
         unread tk;
         Parens {left = startOpen, exp = exp, right = NONE, stop = #1 tk}))
 
-  and parseQuoteBody sc start qstart (s:string list) = let
-    datatype qtoken = EOF | EndTk | AntiqIdent | AntiqParen | OpenBrack
+  and parseQuoteBody sc start qstart brack (s:string list) = let
+    datatype qtoken = EOF | EndTk | StrongEndTk | AntiqIdent | AntiqParen | OpenBrack
     fun checkKW kw i =
       case SOME (String.sub (kw, i)) handle Subscript => NONE of
         SOME c => ahead i = c andalso checkKW kw (i+1)
@@ -891,16 +908,16 @@ fun parseSML body parseError = let
         if cm > 0 andalso ahead 1 = #")" then (nextn 2; qtoken (cm - 1))
         else (next (); qtoken cm)
       | #"[" =>
-        if cm = 0 andalso colZero (!pos) then (!pos, (next (); OpenBrack))
+        if cm = 0 andalso brack andalso colZero (!pos) then (!pos, (next (); OpenBrack))
         else (next (); qtoken cm)
       | #"E" =>
-        if colZero (!pos) andalso checkKW "End" 1 then (!pos, (nextn 3; EndTk))
+        if colZero (!pos) andalso checkKW "End" 1 then (!pos, (nextn 3; StrongEndTk))
         else (next (); qtoken cm)
       | #"T" =>
-        if colZero (!pos) andalso checkKW "Termination" 1 then (!pos, (nextn 11; EndTk))
+        if colZero (!pos) andalso checkKW "Termination" 1 then (!pos, (nextn 11; StrongEndTk))
         else (next (); qtoken cm)
       | #"P" =>
-        if colZero (!pos) andalso checkKW "Proof" 1 then (!pos, (nextn 5; EndTk))
+        if colZero (!pos) andalso checkKW "Proof" 1 then (!pos, (nextn 5; StrongEndTk))
         else (next (); qtoken cm)
       | #"`" =>
         if ahead 1 = #"`" then (!pos, (nextn 2; EndTk))
@@ -937,9 +954,10 @@ fun parseSML body parseError = let
     fun go acc =
       case qtoken 0 of
         (p, EOF) => (parseError (start, p) "unclosed quotation"; (rev acc, p))
-      | (p, EndTk) => (
-        if mem (ident p) s then () else parseError (p, !pos) (expected ());
+      | (p, StrongEndTk) => (
+        if mem (ident p) s then () else parseError (start, p) (expected ());
         (rev acc, p))
+      | (p, EndTk) => if mem (ident p) s then (rev acc, p) else go acc
       | (p, AntiqIdent) => let
         val exp = case identKind (p + 1) of
           (s, Regular) => Ident {op_ = NONE, id = (p+1, s)}
@@ -961,7 +979,7 @@ fun parseSML body parseError = let
             SOME (HOLConjLabel (!pos, (nextn 2; ident (!pos - 2))))
           else if checkKW "\226\136\167" 0 then
             SOME (HOLConjLabel (!pos, (nextn 3; ident (!pos - 3))))
-          else if cur () = #"~" andalso Char.isAlpha (ahead 1) then
+          else if cur () = #"~" andalso isIdRest (ahead 1) then
             case !pos + 1 of start => SOME (HOLLabel {
               tilde_ = SOME (!pos),
               id = (start, (nextn 2; takeWhile isIdRest; ident start)) })
@@ -974,9 +992,9 @@ fun parseSML body parseError = let
           NONE => NONE
         | SOME left => let
           val (ids, right, stop) = parseDelimitedClose [] [] {
-            elem = fn () => parseIdentifier true,
-            delim = fn (_, Symbol #",") => true | _ => false,
-            close = fn (_, Symbol #"]") => true | _ => false }
+            elem = fn () => parseIdentifier false,
+            delim = fn (_, Symbol #",") => SOME true | _ => NONE,
+            close = fn (_, Symbol #"]") => SOME true | _ => NONE }
           in SOME {left = left, ids = ids, right = right, stop = stop} end
         val colon = parseKeyword ":" NONE
         val (right, stop) = parseStop (parseSymbol #"]") 1 "expected ']'"
@@ -998,18 +1016,15 @@ fun parseSML body parseError = let
     fun parseFValBinds acc = case (parseKeyword "|" NONE, acc) of
       (NONE, _::_) => rev acc
     | (bar, acc) => let
-      val arrow = ref false
       val (pats, eq, _) = parseDelimitedClose [] [] {
         elem = fn () => parseExp sc true,
         delim = isKeyword "|",
-        close = fn tk =>
-          isKeyword "=" tk orelse isKeyword "=>" tk andalso (
-            arrow := true; parseError (#1 tk, !pos) "expected ="; true) }
-      val (eq, exp) = case (eq, !arrow) of
-        (NONE, _) => (NONE, EmptyExp (!pos))
-      | (SOME _, true) => (NONE, parseExp sc false)
-      | (SOME eq, false) => (SOME eq, parseExp sc false)
-      in parseFValBinds ({bar = bar, pats = pats, eq = eq, exp = exp} :: acc) end
+        close = fn tk => case isKeyword "=" tk of
+            SOME true => SOME true
+          | _ => case isKeyword "=>" tk of
+              SOME _ => SOME false
+            | NONE => NONE }
+      in parseFValBinds ({bar = bar, pats = pats, eq = eq, exp = parseExp sc false} :: acc) end
 
     fun parseDatBind () = (
       parseDelimited [] [] {
@@ -1038,9 +1053,9 @@ fun parseSML body parseError = let
         (parseKeyword "withtype" NONE))
 
     fun parseInductive start co = let
-      val id = parseIdentifier true
+      val id = parseIdentifierOrKw true
       val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-      val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart ["End"]
+      val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart true ["End"]
       val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
       in HOLInductiveDecl {
         co = co, inductive_ = start, id = id, colon = colon,
@@ -1050,8 +1065,8 @@ fun parseSML body parseError = let
     fun parseHolType start overload = let
       val id = case token () of
         (start, StringTk) => QuotedId (start, ident start)
-      | tk => (unread tk; UnquotedId (parseIdentifier true))
-      val attrs = parseAttrs (fn () => parseIdentifier true)
+      | tk => (unread tk; UnquotedId (parseIdentifierOrKw true))
+      val attrs = parseAttrs (fn () => parseIdentifierOrKw true)
       val bind = Option.map (fn eq => {eq = eq, exp = parseExp sc false})
         (parseKeyword "=" NONE)
       in HOLType {overload = overload, type_ = start, id = id, attrs = attrs, bind = bind} end
@@ -1062,16 +1077,15 @@ fun parseSML body parseError = let
       val r = case parseKeyword ":" NONE of
         SOME colon => let
         val qstart = colon+1
-        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart ["Proof"]
+        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart false ["Proof"]
         val proof_ = if ident right <> "Proof" then NONE else
           SOME {proof_ = right, attrs = parseAttrs parseKVals}
+        val tac = parseExp sc false
         val (qed_, stop) = parseStop (parseHolKeyword "QED") 3 "expected 'QED'"
+        val _ = case qed_ of NONE => parseHolKeyword "End" NONE | _ => NONE
         in HOLTheoremDecl {
           triv = triv, theorem_ = start, id = id, attrs = attrs, colon = colon,
-          quote = qbody,
-          proof_ = proof_,
-          tac = parseExp sc false,
-          qed_ = qed_, stop = stop }
+          quote = qbody, proof_ = proof_, tac = tac, qed_ = qed_, stop = stop }
         end
       | NONE => HOLSimpleThm {
         triv = triv, theorem_ = start, id = id, attrs = attrs,
@@ -1201,19 +1215,22 @@ fun parseSML body parseError = let
         val id = parseIdentifier true
         val attrs = parseAttrs parseKVals
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart ["End", "Termination"]
+        val qbody as {stop = right, ...} =
+          parseQuoteBody sc qstart qstart false ["End", "Termination"]
         val (term, (end_, stop)) = if ident right = "Termination" then
           (SOME {termination_ = right, tac = parseExp sc false},
            (parseStop (parseHolKeyword "End") 3 "expected 'End'"))
         else (NONE, if ident right = "End" then (SOME right, right+3) else (NONE, right))
+        val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLDefinition {
           definition_ = start, id = id, attrs = attrs, colon = colon,
           quote = qbody, termination = term, end_ = end_, stop = stop }
         end)
       | ("Datatype", HolKeyword) => SOME (sc, let
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart ["End"]
+        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart true ["End"]
         val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
+        val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLDatatype {
           datatype_ = start, colon = colon,
           quote = qbody, end_ = end_, stop = stop }
@@ -1223,8 +1240,9 @@ fun parseSML body parseError = let
         val bind = Option.map (fn eq => {eq = eq, exp = parseAtomic sc false true})
           (parseKeyword "=" NONE)
         val (colon, qstart) = parseStop (parseKeyword ":") 1 "expected ':'"
-        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart ["End"]
+        val qbody as {stop = right, ...} = parseQuoteBody sc qstart qstart false ["End"]
         val (end_, stop) = if ident right = "End" then (SOME right, right+3) else (NONE, right)
+        val _ = case end_ of NONE => parseHolKeyword "QED" NONE | _ => NONE
         in HOLQuoteDecl {
           quote_ = start, id = id, bind = bind, colon = colon,
           quote = qbody, end_ = end_, stop = stop }
@@ -1274,8 +1292,9 @@ fun parseSML body parseError = let
   and parseSigExp sc = let
     val lhs = case parseKeyword "sig" NONE of
       SOME sig_ => let
+      val (_, spec) = parseDecs true sc []
       val (end_, stop) = parseStop (parseKeyword "end") 3 "expected keyword 'end'"
-      in Spec {sig_ = sig_, spec = #2 (parseDecs true sc []), end_ = end_, stop = stop} end
+      in Spec {sig_ = sig_, spec = spec, end_ = end_, stop = stop} end
     | NONE => SigIdent (parseIdentifier true)
     fun rhs lhs =
       case parseKeyword "where" NONE of
@@ -1304,7 +1323,7 @@ fun parseSML body parseError = let
         in StrLetInEnd {
           let_ = start, strdec = dec, in_ = in_,
           strexp = strexp, end_ = end_, stop = stop} end
-      | (id, Regular) => (case parseKeyword "(" NONE of
+      | (id, Regular) => (case parseSymbol #"(" NONE of
           NONE => StrIdent (start, id)
         | SOME lparen =>
           if
@@ -1349,3 +1368,58 @@ fun parseSML body parseError = let
   in go end
 
 end
+
+fun go file = let
+  val s = TextIO.openIn file
+  (* val s = TextIO.openIn "test.sml" *)
+  fun readFile acc = case TextIO.inputLine s of
+    SOME line => readFile (line :: acc)
+  | NONE => (TextIO.closeIn s; concat (rev acc))
+  val body = readFile []
+  val infixes =
+    map (fn x => (x, 0, false)) ["++", "&&", "|->", "THEN", "THEN1",
+      "THENL", "THEN_LT", "THENC", "ORELSE", "ORELSE_LT", "ORELSEC", "THEN_TCL",
+      "ORELSE_TCL", "?>", "|>", "|>>", "||>", "||->",
+      ">>", ">-", ">|", "\\\\", ">>>", ">>-", "??", ">~", ">>~", ">>~-"] @
+    [("by", 8, false), ("suffices_by", 8, false), ("$", 1, true)] @
+    List.concat (map (fn ((b, a), l) => map (fn x => (x, a, b)) l) [
+      ((false, 7), ["*", "/", "div", "mod"]),
+      ((false, 6), ["+", "-", "^"]),
+      ((true, 5), ["::", "@"]),
+      ((false, 4), ["=", "<>", ">", ">=", "<", "<="]),
+      ((false, 3), [":=", "o"]),
+      ((false, 0), ["before"])])
+  val sc = foldl
+    (fn ((k, n, r), b) => Binarymap.insert (b, k, (n, r)))
+    (Binarymap.mkDict String.compare) infixes
+  val {parseDec, ...} = ParserNew.parseSML body
+    (fn (start, stop) => fn err =>
+      (print (concat ["error ", Int.toString start, "-",
+        Int.toString stop, ": ", err, "\n"])
+        ; raise Bind
+        ))
+    sc
+  fun pull () = case parseDec () of
+    SOME dec => (
+      (* PolyML.print dec; *)
+       pull ())
+  | NONE => ()
+  in pull () end;
+
+fun testall () = let
+  val s = TextIO.openIn "../../../out.log"
+  fun readFile acc = case TextIO.inputLine s of
+    SOME line => readFile (String.extract(line, 0, SOME (size line - 1)) :: acc)
+  | NONE => (TextIO.closeIn s; rev acc)
+
+  fun f file = let
+    val _ = print (file ^ "\n")
+    val _ = go ("../../../" ^ file)
+    in () end
+  in app f (readFile []) end
+
+(*
+val _ = go "../../../tools/Holmake/tests/gh1371/bugScript.sml";
+val _ = go "test.sml";
+val _ = testall ();
+*)
