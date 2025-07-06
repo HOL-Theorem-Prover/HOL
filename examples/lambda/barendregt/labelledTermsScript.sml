@@ -385,7 +385,7 @@ val subst_exists =
                                  pmact_sing_inv, pairTheory.FORALL_PROD,
                                  reordering]
         |> elim_unnecessary_atoms {finite_fv = FINITE_FV} []
-        |> prove_alpha_fcbhyp {ppm = “pair_pmact string_pmact ^t_pmact_t”,
+        |> prove_alpha_fcbhyp {ppms = [“pair_pmact string_pmact ^t_pmact_t”],
                                alphas = [ltpm_ALPHA, ltpm_ALPHAi],
                                rwts = []}
         |> CONV_RULE (DEPTH_CONV

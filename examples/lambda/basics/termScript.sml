@@ -451,7 +451,7 @@ val subst_exists =
                                  basic_swapTheory.swapstr_eq_left]
         |> SIMP_RULE (srw_ss()) [rewrite_pairing, FORALL_PROD]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p_1", "u"), ("p_2", "N")]))
-        |> prove_alpha_fcbhyp {ppm = ``pair_pmact string_pmact ^t_pmact_t``,
+        |> prove_alpha_fcbhyp {ppms = [``pair_pmact string_pmact ^t_pmact_t``],
                                rwts = [],
                                alphas = [tpm_ALPHA]}
 
@@ -663,6 +663,27 @@ Proof
          SRW_TAC [][]) THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   SRW_TAC [][pmact_flip_args]
+QED
+
+(* from Isabelle/HOL [3] *)
+Theorem fresh_fact[local] :
+    !z N y L. z # N /\ z # L ==> z # [L/y] N
+Proof
+    rw [FV_SUB]
+QED
+
+(* Lemma 2.1.16 (Substitution Lemma) [1, p.27] *)
+Theorem substitution_lemma :
+    !x N y L M. x <> y /\ x # L ==> [L/y] ([N/x] M) = [[L/y] N/x]([L/y] M)
+Proof
+    NTAC 4 GEN_TAC
+ >> HO_MATCH_MP_TAC nc_INDUCTION2
+ >> Q.EXISTS_TAC ‘{x; y} UNION FV N UNION FV L’
+ >> rw [fresh_fact]
+ (* NOTE: only one case (M = VAR s) is left *)
+ >> Cases_on ‘s = x’ >- rw []
+ >> Cases_on ‘s = y’ >- rw [Once EQ_SYM_EQ, lemma14b]
+ >> simp []
 QED
 
 (* ----------------------------------------------------------------------
@@ -1143,7 +1164,7 @@ val ssub_exists =
                                  fmpm_FDOM, notin_frange]
         |> SIMP_RULE (srw_ss()) [Once ordering]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p", "fm")]))
-        |> prove_alpha_fcbhyp {ppm = ``fm_pmact string_pmact ^t_pmact_t``,
+        |> prove_alpha_fcbhyp {ppms = [``fm_pmact string_pmact ^t_pmact_t``],
                                rwts = [notin_frange, strterm_fmap_supp],
                                alphas = [tpm_ALPHA]}
 
@@ -2069,4 +2090,6 @@ val _ = html_theory "term";
      College Publications, London (1984).
  [2] Hindley, J.R., Seldin, J.P.: Lambda-calculus and combinators, an introduction.
      Second Edition. Cambridge University Press, Cambridge (2008).
+ [3] Urban, C.: Nominal Techniques in Isabelle/HOL. J. Autom. Reason. 40,
+     327–356 (2008).
  *)

@@ -721,6 +721,7 @@ val ordering = prove(
     SRW_TAC [ETA_ss][],
     METIS_TAC []
   ]) ;
+
 val nlabel_exists =
     parameter_tm_recursion
         |> INST_TYPE [alpha |-> ``:lterm``, ``:ρ`` |-> ``:num # posn set``]
@@ -740,7 +741,7 @@ val nlabel_exists =
                                      {p | In::p IN ps} INTER redex_posns t))`]
             |> SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD, fnpm_def,
                                      ltpm_if, ordering]
-            |> prove_alpha_fcbhyp {ppm = ``discrete_pmact : (num # posn set) pmact``,
+            |> prove_alpha_fcbhyp {ppms = [``discrete_pmact :(num # posn set) pmact``],
                                    alphas = [ltpm_ALPHA],
                                    rwts = []}
             |> CONV_RULE (DEPTH_CONV

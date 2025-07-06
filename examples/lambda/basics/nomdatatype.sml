@@ -239,17 +239,22 @@ in
   | SOME v' => RENAME_VARS_CONV [v']
 end t
 
-fun prove_alpha_fcbhyp {ppm, alphas, rwts} th = let
+fun gen_tactics rwts [] : tactic = ALL_TAC
+  | gen_tactics rwts (ppm::xs) =
+    match_mp_tac (GEN_ALL notinsupp_fnapp) \\
+    EXISTS_TAC ppm \\
+    srw_tac [] rwts \\
+    gen_tactics rwts xs;
+
+fun prove_alpha_fcbhyp {ppms, alphas, rwts} th = let
   open nomsetTheory
   val th = rpt_hyp_dest_conj (UNDISCH th)
+  val tac = gen_tactics rwts ppms
   fun foldthis (h,th) = let
     val h_th =
       TAC_PROOF(([], h),
                 rpt gen_tac >> strip_tac >>
-                FIRST (map (match_mp_tac o GSYM) alphas) >>
-                match_mp_tac (GEN_ALL notinsupp_fnapp) >>
-                EXISTS_TAC ppm >>
-                srw_tac [] rwts)
+                FIRST (map (match_mp_tac o GSYM) alphas) >> tac)
   in
     PROVE_HYP h_th th
   end
