@@ -425,7 +425,7 @@ val subst_exists =
                                  basic_swapTheory.swapstr_eq_left]
         |> SIMP_RULE (srw_ss()) [rewrite_pairing, pairTheory.FORALL_PROD]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p_1", "u"), ("p_2", "N")]))
-        |> prove_alpha_fcbhyp {ppm = ``pair_pmact string_pmact ^t_pmact_t``,
+        |> prove_alpha_fcbhyp {ppms = [``pair_pmact string_pmact ^t_pmact_t``],
                                rwts = [],
                                alphas = [ctpm_ALPHA]}
 
@@ -861,7 +861,7 @@ val ssub_exists =
                   fmpm_FDOM, notin_frange]
         |> SIMP_RULE (srw_ss()) [Once ordering]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p", "fm")]))
-        |> prove_alpha_fcbhyp {ppm = ``fm_pmact string_pmact ^t_pmact_t``,
+        |> prove_alpha_fcbhyp {ppms = [``fm_pmact string_pmact ^t_pmact_t``],
                                rwts = [notin_frange, strterm_fmap_supp],
                                alphas = [ctpm_ALPHA]}
 
