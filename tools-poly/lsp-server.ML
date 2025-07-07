@@ -315,8 +315,9 @@ type range = int * int
 
 fun encPosLC lines = encPosition o getLineCol lines
 val encRangeLC = encRange o encPosLC
-(* fun encLocLC lines ({startPosition,endPosition,...}:PolyML.location) =
-  encRangeLC lines (startPosition, endPosition) *)
+fun locToRange ({startPosition,endPosition,...}:PolyML.location) =
+  (FixedInt.toInt startPosition, FixedInt.toInt endPosition)
+(* fun encLocLC lines = encRangeLC lines o locToRange *)
 
 fun encPretty textWidth pp print = let
   fun print' s = encStringContents s print
@@ -427,12 +428,12 @@ fun start {diag} = let
         compilerOut = fn s => report (CompilerOut [s]),
         toplevelOut = fn s => report (ToplevelOut [s]),
         progress = fn i => (lastPos := i; report (Progress i)),
-        error = fn {hard, location = {startPosition = p1, endPosition = p2, ...}, message, ...} =>
-          report (Error {hard = hard, pos = (p1, p2), msg = encPretty textWidth message}),
+        error = fn {hard, location, message, ...} => report (Error {
+          hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
         runtimeExn = fn e => report (Error {hard = true,
           pos = case PolyML.Exception.exceptionLocation e of
             NONE => (case !lastPos of i => (i, i))
-          | SOME {startPosition, endPosition, ...} => (startPosition, endPosition),
+          | SOME l => locToRange l,
           msg = encPretty textWidth (exceptionMessage e)}),
         mlParseTree = fn _ => (),
         holParseTree = fn _ => () };
