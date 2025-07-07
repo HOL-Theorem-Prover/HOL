@@ -97,7 +97,7 @@ fun mkResponse id r = Response {id = id, result = r}
 fun mkErr code message = Err {code = code, message = message, data = NONE}
 
 (* val ParseError = ~32700 *)
-(* val InvalidRequest = ~32600 *)
+val InvalidRequest = ~32600
 (* val MethodNotFound = ~32601 *)
 val InvalidParams = ~32602
 val InternalError = ~32603
@@ -137,6 +137,7 @@ val textDocumentPositionParams =
   map2 (fn (uri, pos) => {uri = uri, pos = pos})
     (field "textDocument" (field "uri" string), field "position" position)
 
+val cancelParams = field "id" req_id
 val evalParams = field "code" string
 end
 
@@ -161,33 +162,49 @@ fun encMessage (Request {id, method, params: encode}) print = (
     print "{\"jsonrpc\":\"2.0\",\"method\":"; encString method print;
     print ",\"params\":"; params print; print "}")
 
+exception Disconnected
 structure Channel: sig
 type 'a sender
 type 'a receiver
 val channel: unit -> 'a sender * 'a receiver
 val send: 'a sender -> 'a -> unit
+val closeSender: 'a sender -> exn option -> unit
 val recv: 'a receiver -> 'a
 end = struct
 
-type 'a sender = ConditionVar.conditionVar * Mutex.mutex * 'a option ref
+datatype 'a slot = Empty | Full of 'a | Disconn of exn option
+type 'a sender = ConditionVar.conditionVar * Mutex.mutex * 'a slot ref
 type 'a receiver = 'a sender
 
 fun channel () = let
-  val x = (ConditionVar.conditionVar (), Mutex.mutex (), ref NONE)
+  val x = (ConditionVar.conditionVar (), Mutex.mutex (), ref Empty)
   in (x, x) end
 
 fun send (cvar, mutex, r) v = let
   fun loop () =
     case !r of
-      NONE => (r := SOME v; Mutex.unlock mutex; ConditionVar.signal cvar)
-    | SOME _ => (ConditionVar.wait (cvar, mutex); loop ())
+      Disconn (SOME e) => PolyML.Exception.reraise e
+    | Disconn NONE => raise Disconnected
+    | Empty => (r := Full v; Mutex.unlock mutex; ConditionVar.signal cvar)
+    | Full _ => (ConditionVar.wait (cvar, mutex); loop ())
+  in Mutex.lock mutex; loop () end
+
+fun closeSender (cvar, mutex, r) e = let
+  fun loop () =
+    case !r of
+      Disconn (SOME e) => PolyML.Exception.reraise e
+    | Disconn NONE => raise Disconnected
+    | Full _ => (ConditionVar.wait (cvar, mutex); loop ())
+    | _ => (r := Disconn e; Mutex.unlock mutex; ConditionVar.signal cvar)
   in Mutex.lock mutex; loop () end
 
 fun recv (cvar, mutex, r) = let
   fun loop () =
     case !r of
-      SOME v => (r := NONE; Mutex.unlock mutex; ConditionVar.signal cvar; v)
-    | NONE => (ConditionVar.wait (cvar, mutex); loop ())
+      Disconn (SOME e) => PolyML.Exception.reraise e
+    | Disconn NONE => raise Disconnected
+    | Full v => (r := Empty; Mutex.unlock mutex; ConditionVar.signal cvar; v)
+    | Empty => (ConditionVar.wait (cvar, mutex); loop ())
   in Mutex.lock mutex; loop () end
 
 end
@@ -196,21 +213,30 @@ type connection = {recv: unit -> JSON.value message, send: encode message -> uni
 fun stdioConnection (): connection = let
   val recv = let
     val (send, recv) = Channel.channel ()
-    fun readerThread () =
+    fun readHeaders sz =
       case TextIO.inputLine TextIO.stdIn of
-        NONE => ()
-      | SOME line => let
-        val size =
-          if String.substring (line, size line - 2, size line) = "\r\n" andalso
-            String.substring (line, 0, 16) = "Content-Length: " then
-            case Int.fromString (String.substring (line, 16, size line - 2)) of
-              SOME n => n
+        NONE => NONE
+      | SOME line =>
+        case String.fields (fn x => x = #":") line of
+          ["\r\n"] => (case sz of SOME n => SOME n | NONE => raise MalformedData)
+        | ["Content-Length", n] => ((
+          if String.sub(n, 0) = #" " andalso String.substring(n, size n - 2, 2) = "\r\n" then
+            case Int.fromString (String.substring (n, 1, size n - 3)) of
+              SOME n => readHeaders (SOME n)
             | NONE => raise MalformedData
-          else raise MalformedData
-          handle Subscript => raise MalformedData
+          else raise MalformedData)
+          handle Subscript => raise MalformedData)
+        | _ => readHeaders sz
+    fun loop () =
+      case readHeaders NONE of
+        NONE => ()
+      | SOME size => let
         val inp = TextIO.inputN (TextIO.stdIn, size)
         val msg = JSONDecode.decodeString decMessage inp
-        in Channel.send send msg; readerThread () end
+        in Channel.send send msg; loop () end
+    fun readerThread () =
+      (loop (); Channel.closeSender send NONE)
+      handle e => (Channel.closeSender send (SOME e); PolyML.Exception.reraise e)
     val _ = Thread.fork (readerThread, [])
     in fn () => Channel.recv recv end
 
@@ -223,7 +249,7 @@ fun stdioConnection (): connection = let
       fun write (n, a :: buf, acc) = write (n + size a, buf, a :: acc)
         | write (n, [], acc) =
           TextIO.output (TextIO.stdOut,
-            String.concat ("Content-Length: " :: Int.toString n :: "\r\n" :: acc))
+            String.concat ("Content-Length: " :: Int.toString n :: "\r\n\r\n" :: acc))
       in write (0, !buf, []); writerThread () end
     val _ = Thread.fork (writerThread, [])
     in Channel.send send end
@@ -251,6 +277,7 @@ fun initialize ({send, recv}:connection) capabilities = let
 
 exception Todo
 fun start {diag} = let
+  val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
   val _ (*clientCapabilities*) = initialize conn (concat [
     "{\"textDocumentSync\":1", (* 1 = Full *)
@@ -262,7 +289,8 @@ fun start {diag} = let
     send (Notification {
       method = "window/logMessage",
       params = fn print => (
-        print "{\"typ\":4,\"message\":"; encString str print; print "}")})
+        print "{\"type\":4,\"message\":"; encString str print; print "}")})
+  val _ = diag "started"
   val _ = logMessage "started"
 
   val jobs = let
@@ -303,27 +331,37 @@ fun start {diag} = let
     val jobThread = Thread.fork (job, [])
     in jobs (fn js => (id, jobThread) :: js); () end
 
-  fun main () =
+  fun recvExit () =
+    case recv () of
+      Notification {method = "exit", ...} => ()
+    | _ => (diag "ignoring message after shutdown"; recvExit ())
+
+  exception Shutdown
+  fun main () = (
     case recv () of
       Request {method = "shutdown", id, ...} => (
-      send (mkResponse id (Ok encNull));
-      case recv () of
-        Notification {method = "exit", ...} => ()
-      | _ => raise ProtocolError)
+        diag "received shutdown request";
+        send (mkResponse id (Ok encNull));
+        recvExit ();
+        raise Shutdown)
     | Request {method = "textDocument/hover", id, params} =>
-      (spawnJob id params textDocumentPositionParams hover; main ())
+      spawnJob id params textDocumentPositionParams hover
     | Request {method = "textDocument/definition", id, params} =>
-      (spawnJob id params textDocumentPositionParams gotoDefinition; main ())
-    | Response _ => diag "response to unknown request"
-    | Notification {method = "$/cancelRequest", params} => let
-      open JSONDecode
-      val id = decode (field "id" req_id) params
-      val _ = app (fn (j,th) => if j = id then Thread.interrupt th else ()) (jobs I)
-      in main () end
+      spawnJob id params textDocumentPositionParams gotoDefinition
     | Request {method = "$/eval", id, params} =>
-      (spawnJob id params evalParams eval; main ())
-    | _ => main ()
-
-  in main () end
+      spawnJob id params evalParams eval
+    | Request {method, id, ...} =>
+      send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))
+    | Notification {method = "$/cancelRequest", params} => let
+      val id = JSONDecode.decode cancelParams params
+      in app (fn (j,th) => if j = id then Thread.interrupt th else ()) (jobs I) end
+    | Response _ => diag "response to unknown request"
+    | Notification {method, ...} => diag ("unknown method: " ^ method);
+    main ())
+  in
+    main () handle
+      Shutdown => ()
+    | Disconnected => diag "early abort"
+  end
 
 end (* struct *)
