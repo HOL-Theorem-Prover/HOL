@@ -938,6 +938,17 @@ Proof
   metis_tac[strip_tau_cases, itree_wbisim_cases]
 QED
 
+Theorem itree_wbisim_vis_vis:
+  itree_wbisim (Vis a g) (Vis a' g') <=>
+  a = a' /\ !r. itree_wbisim (g r) (g' r)
+Proof
+  iff_tac
+  >- (disch_tac
+      \\ drule $ iffLR itree_wbisim_cases \\ gvs[]
+     )
+  \\ gvs[itree_wbisim_vis]
+QED
+
 Theorem itree_wbisim_tau:
   !t t'. itree_wbisim (Tau t) t' ==> itree_wbisim t t'
 Proof
@@ -1219,6 +1230,31 @@ Proof
       fs[Once itree_wbisim_cases] >> fs[GSYM $ Once itree_wbisim_cases] >>
       metis_tac[]))
   >- (qexistsl_tac [‘k1 t’, ‘k2 t’] >> rw[itree_iter_thm])
+QED
+
+Theorem itree_iter_seed_wbisim:
+  !body seed seed'. (itree_wbisim seed seed') /\
+                    (itree_wbisim (body seed) (body seed')) ==>
+                    itree_wbisim (itree_iter body seed) (itree_iter body seed')
+Proof
+  rpt strip_tac
+  \\ PURE_ONCE_REWRITE_TAC[itree_iter_thm]
+  \\ irule itree_bind_resp_wbisim
+  \\ rw[itree_wbisim_refl]
+QED
+
+Theorem itree_iter_body_seed_wbisim:
+  !body body' seed seed'. (itree_wbisim seed seed') /\
+                          (!seed seed'. itree_wbisim (body seed) (body' seed')) ==>
+                          itree_wbisim (itree_iter body seed) (itree_iter body' seed')
+Proof
+  rpt strip_tac
+  \\ PURE_ONCE_REWRITE_TAC[itree_iter_thm]
+  \\ irule itree_bind_resp_wbisim
+  \\ rw[]
+  \\ Cases_on ‘r’ \\ rw[itree_wbisim_refl]
+  \\ irule itree_iter_resp_wbisim
+  \\ metis_tac[]
 QED
 
 (* coinduction upto stripping finite taus, useful for iter and friends *)
