@@ -28,6 +28,8 @@ sig
     val decodeString : 'a decoder -> string -> 'a
     val decodeFile : 'a decoder -> string -> 'a
 
+    val ofRaw : (JSON.value -> 'a) -> 'a decoder
+
     val bool : bool decoder
     val int : int decoder
     val intInf : IntInf.int decoder
