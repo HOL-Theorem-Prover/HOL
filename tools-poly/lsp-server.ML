@@ -383,8 +383,8 @@ fun start {diag} = let
 
     datatype report =
       Error of {hard: bool, pos: range, msg: encode}
-    | CompilerOut of string
-    | ToplevelOut of string
+    | CompilerOut of string list
+    | ToplevelOut of string list
     | Progress of int
     | Completed
     | Interrupted
@@ -397,11 +397,11 @@ fun start {diag} = let
         print "}")
       | encReport (CompilerOut s) print = (
         print "{\"kind\":\"compilerOut\"";
-        print ",\"body\":"; encString s print;
+        print ",\"body\":"; encString (concat (rev s)) print;
         print "}")
       | encReport (ToplevelOut s) print = (
         print "{\"kind\":\"toplevelOut\"";
-        print ",\"body\":"; encString s print;
+        print ",\"body\":"; encString (concat (rev s)) print;
         print "}")
       | encReport (Progress i) print = (
         print "{\"kind\":\"compileProgress\"";
@@ -424,8 +424,8 @@ fun start {diag} = let
         text = code,
         filename = uri,
         parseError = fn pos => fn s => report (Error {hard = true, pos = pos, msg = encString s}),
-        compilerOut = report o CompilerOut,
-        toplevelOut = report o ToplevelOut,
+        compilerOut = fn s => report (CompilerOut [s]),
+        toplevelOut = fn s => report (ToplevelOut [s]),
         progress = fn i => (lastPos := i; report (Progress i)),
         error = fn {hard, location = {startPosition = p1, endPosition = p2, ...}, message, ...} =>
           report (Error {hard = hard, pos = (p1, p2), msg = encPretty textWidth message}),
@@ -438,11 +438,16 @@ fun start {diag} = let
         holParseTree = fn _ => () };
       lastPos := size code)
 
+    fun mergeInto msg buf =
+      buf := (case (msg, !buf) of
+        (CompilerOut [s], CompilerOut ss :: rest) => CompilerOut (s :: ss) :: rest
+      | (ToplevelOut [s], ToplevelOut ss :: rest) => ToplevelOut (s :: ss) :: rest
+      | (msg, buf) => msg :: buf)
     in
       case incr of
         IncrNone => let
         val buf = ref []
-        val _ = compile (fn Progress _ => () | msg => buf := msg :: !buf) handle
+        val _ = compile (fn Progress _ => () | msg => mergeInto msg buf) handle
           Thread.Interrupt => buf := Interrupted :: !buf
         in Ok (encArray encReport (rev (!buf))) end
       | IncrChunk => (
@@ -457,7 +462,7 @@ fun start {diag} = let
               print ",\"out\":"; encArray encReport buf print;
               if complete then print ",\"complete\":true" else (); print "}")
             in send (mkNotif "$/eval/P" params) end
-          val _ = compile (fn Progress _ => clearBuf false | msg => buf := msg :: !buf) handle
+          val _ = compile (fn Progress _ => clearBuf false | msg => mergeInto msg buf) handle
             Thread.Interrupt => buf := Interrupted :: !buf
           in lastPos := size code; clearBuf true end);
         Ok encNull)
