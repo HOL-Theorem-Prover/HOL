@@ -23,9 +23,9 @@ val moveUp: subtree -> subtree
 val moveDown: subtree -> subtree
 val moveLeft: subtree -> subtree
 val moveRight: subtree -> subtree
-val printTree: int -> subtree -> PolyML.pretty option
-val navigateTo: subtree -> {startOffset: int, endOffset: int} -> subtree
-val navigateTo': trees -> {startOffset: int, endOffset: int} -> subtree
+val printTree: FixedInt.int -> subtree -> PolyML.pretty option
+val navigateTo: subtree -> {startOffset: FixedInt.int, endOffset: FixedInt.int} -> subtree
+val navigateTo': trees -> {startOffset: FixedInt.int, endOffset: FixedInt.int} -> subtree
 
 end =
 struct
