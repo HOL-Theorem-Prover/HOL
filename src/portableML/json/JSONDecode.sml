@@ -17,6 +17,7 @@ datatype value = datatype JSON.value
 datatype 'a decoder = D of value -> 'a
 
 fun decode (D d) jv = d jv
+val ofRaw = D
 
 fun decodeString decoder s =
     (decode decoder (JSONParser.parse(JSONParser.openString s)))

@@ -12,33 +12,45 @@ val _ = use "../tools/Holmake/FunctionalRecordUpdate.sml";
 val _ = use "holrepl.ML";
 val _ = use "execompile.ML";
 
+val _ = use "../src/portableML/json/JSON.sml";
+val _ = use "../src/portableML/json/JSONErrors.sig";
+val _ = use "../src/portableML/json/JSONErrors.sml";
+val _ = use "../src/portableML/json/JSONUtil.sig";
+val _ = use "../src/portableML/json/JSONUtil.sml";
+val _ = use "../src/portableML/json/JSONSource.sml";
+val _ = use "../src/portableML/json/JSONParser.sig";
+val _ = use "../src/portableML/json/JSONParser.sml";
+val _ = use "../src/portableML/json/JSONDecode.sig";
+val _ = use "../src/portableML/json/JSONDecode.sml";
+val _ = use "lsp-server.ML";
+
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate15 z
+  fun makeUpdateT z = makeUpdate16 z
 in
 fun updateT z = let
   fun from all_forced base_state checkerr checkfors debug defaultout exe
-           extra_data forced_objs help multithread output quietp repl z_repl =
+           extra_data forced_objs help lsp multithread output quietp repl z_repl =
     {all_forced = all_forced, base_state = base_state,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
-     multithread = multithread,
+     lsp = lsp, multithread = multithread,
      output = output, quietp = quietp, repl = repl, z_repl = z_repl}
-  fun from' z_repl repl quietp output multithread help forced_objs extra_data exe
+  fun from' z_repl repl quietp output multithread lsp help forced_objs extra_data exe
             defaultout debug checkfors checkerr base_state all_forced =
     {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
      checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
-     multithread = multithread,
+     lsp = lsp, multithread = multithread,
      output = output, quietp = quietp, repl = repl, z_repl = z_repl}
   fun to f {all_forced, base_state, checkerr, checkfors, debug, defaultout, exe,
             extra_data,
-            forced_objs, help, multithread, output, quietp, repl, z_repl} =
+            forced_objs, help, lsp, multithread, output, quietp, repl, z_repl} =
     f all_forced base_state checkerr checkfors debug defaultout exe extra_data
-      forced_objs help multithread
+      forced_objs help lsp multithread
       output quietp repl z_repl
 in
   makeUpdateT (from, from', to)
@@ -63,6 +75,7 @@ datatype option_record = OR of {
   extra_data : string option,
   forced_objs : string list,
   help : bool,
+  lsp : bool,
   multithread : int option,
   output : string option,
   quietp : bool,
@@ -128,6 +141,8 @@ val cline_opts = [
    desc = mkBoolT #help},
   {help = "load holstate as base", long = ["holstate"], short = "b",
    desc = setStringOpt "filename" #base_state},
+  {help = "start an LSP server", long = ["lsp"], short = "",
+   desc = mkBoolT #lsp},
   {help = "thread count", long = ["mt"], short = "",
    desc = OptArg (set_threadcount, "c")},
   {help = "Don't use user config file in HOL repl", long = ["noconfig"], short = "",
@@ -153,6 +168,7 @@ val initial_cline = OR {all_forced = false,
                         extra_data = NONE,
                         forced_objs = [],
                         help = false,
+                        lsp = false,
                         multithread = NONE,
                         output = NONE,
                         quietp = false,
@@ -160,7 +176,7 @@ val initial_cline = OR {all_forced = false,
                         z_repl = false}
 end
 
-fun member s [] = false
+fun member _ [] = false
   | member s (h::t) = s = h orelse member s t
 
 fun fullPath ps = List.foldl (fn (p,acc) => OS.Path.concat(acc,p))
@@ -206,7 +222,7 @@ fun fix s =
 
 fun create_heap diag qp findMod (objs, outputheap) = let
   open Systeml TextIO
-  val p = if qp then fn s => () else fn s => print (s ^ "\n")
+  val p = if qp then fn _ => () else fn s => print (s ^ "\n")
   fun hload obj = (p ("Loading "^obj); load (fix obj))
                   handle e => die ("Loading "^obj^": "^General.exnMessage e)
 in
@@ -298,13 +314,13 @@ fun main() = let
                      errFn = die}
                     (CommandLine.arguments())
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
-  val {quietp = qp, output, base_state, all_forced, forced_objs,
+  val {quietp = qp, output, base_state, all_forced, forced_objs, lsp,
        repl, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
-  val diag = if debug then (fn s => warn ("DIAG: "^s)) else (fn s => ())
+  val diag = if debug then (fn s => warn ("DIAG: "^s)) else (fn _ => ())
   val _ = not help orelse (print usage; OS.Process.exit OS.Process.success)
   val outrepl_error = "Can't simultaneously dump output and start REPL"
   val _ =
-      case (repl, output, defaultout) of
+      case (lsp orelse repl, output, defaultout) of
           (true, SOME _, _) => die outrepl_error
         | (true, _, SOME _) => die outrepl_error
         | _ => ()
@@ -314,7 +330,7 @@ fun main() = let
   val objs = if all_forced then forced_objs @ map force objs0
              else forced_objs @ map unforce objs0
   val _ = diag ("#objs = "^Int.toString (length objs))
-  val warn = if qp then (fn s => ()) else warn
+  val warn = if qp then (fn _ => ()) else warn
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
   val allincs = ReadHMF.find_includes (OS.FileSys.getDir())
@@ -378,7 +394,9 @@ in
                 NONE => []
               | SOME _ => [("poly_decide_threadcount.uo", false)]) @
            objs);
-        if repl then
+        if lsp then
+          LSPServer.start {diag = diag}
+        else if repl then
           (diag "Starting REPL";
            PolyML.print_depth 100;
            HOL_REPL.sigint_handler();
