@@ -111,27 +111,51 @@ End
 val () = cv_auto_trans parse_message_def;
 
 (*** BEGIN ***)
+(*listTheory.LENGTH_NIL (THEOREM)*)
+
+(*listTheory.LENGTH_NIL_SYM (THEOREM)*)
+
 Theorem parse_block_size:
-  LENGTH bits = 32 * n ⇒ LENGTH $ parse_block [] bits = n
+  ∀n acc bits. LENGTH bits = 32 * n ⇒ LENGTH $ parse_block acc bits = LENGTH acc + n
 Proof
-  cheat
+  Induct
+  >-(
+    rw[]>>
+    rw[Once parse_block_def])
+  >-(
+    rw[ADD1]>>
+    (* listTheory.LENGTH_CONS listTheory.LENGTH_EQ_0 listTheory.LENGTH_NON_NIL listTheory.NULL_LENGTH *)
+    ‘¬NULL bits’ by cheat>>
+    simp[Once parse_block_def]
+  )
 QED
 
-Theorem a:
-  ∀acc bits n. LENGTH bits = 512 * n ⇒
-             (∀k. k < n ⇒ LENGTH $ EL k $ parse_message acc bits = 16)
-Proof
-  ho_match_mp_tac parse_message_ind
-QED
-
+(* Need to simplify proof *)
 Theorem parse_message_size:
-  ∀bits. divides 512 $ LENGTH bits ⇒ (∀b. MEM b $ parse_message [] bits ⇒ LENGTH b = 16)
+  ∀acc bits.
+    divides 512 $ LENGTH bits ∧ EVERY (λe. LENGTH e = 16) acc ⇒
+    EVERY (λe. LENGTH e = 16) $ parse_message acc bits
 Proof
-  ho_match_mp_tac parse_block_ind
+  ho_match_mp_tac parse_message_ind>>
+  rw[]>>
+  rw[Once parse_message_def]>>
+  gvs[]>>
+  last_x_assum irule>>
+  CONJ_TAC>>
+  fs[dividesTheory.divides_def]
+  >-(
+    ‘LENGTH $ TAKE 512 bits = 32 * 16’ by cheat>>
+    drule parse_block_size>>
+    simp[]
+  )
+  >-(
+    fs[listTheory.NULL_LENGTH]>>
+    fs[GSYM listTheory.LENGTH_NON_NIL]>>
+    intLib.ARITH_TAC)
 QED
 
 Theorem parse_message_block_size:
-  LENGTH m < 2 ** 64 ⇒ (∀b. MEM b (parse_message [] (pad_message m)) ⇒ LENGTH b = 16)
+  LENGTH m < 2 ** 64 ⇒ EVERY (λe. LENGTH e = 16) $ parse_message [] $ pad_message m
 Proof
   strip_tac>>
   drule_then assume_tac pad_message_length_multiple>>
@@ -517,13 +541,14 @@ End
 val () = cv_auto_trans outer_for_loop_alt_def;
 
 Theorem outer_for_loop_alt_cv:
-  (∀b. MEM b blocks ⇒ LENGTH b = 16) ⇒
+  EVERY (λe. LENGTH e = 16) blocks ⇒
   outer_for_loop blocks = outer_for_loop_alt blocks
 Proof
   rw[outer_for_loop_def, outer_for_loop_alt_def]>>
   irule FOLDL_CONG>>
   rw[]>>
-  last_x_assum drule>>
+  imp_res_tac EVERY_MEM>>
+  fs[]>>
   simp[process_block_eq_alt]
 QED
 
@@ -535,22 +560,54 @@ End
 
 val () = cv_auto_trans word32_chg_end_def;
 
+(* dummy value added for length of input message m exceeding 2 ** 64 *)
 Definition RIPEMD_160_def:
   RIPEMD_160 m: 160 word =
-  let
-    p      = pad_message m;
-    blocks = parse_message [] p
-  in
-    case outer_for_loop blocks of
-      (h0, h1, h2, h3, h4) =>
-        concat_word_list [
-          (word32_chg_end h4);
-          (word32_chg_end h3);
-          (word32_chg_end h2);
-          (word32_chg_end h1);
-          (word32_chg_end h0)]
+  if LENGTH m < 2 ** 64
+  then
+    let
+      p      = pad_message m;
+      blocks = parse_message [] p
+    in
+      case outer_for_loop blocks of
+        (h0, h1, h2, h3, h4) =>
+          concat_word_list [
+            (word32_chg_end h4);
+            (word32_chg_end h3);
+            (word32_chg_end h2);
+            (word32_chg_end h1);
+            (word32_chg_end h0)]
+  else 0w
 End
 
+Theorem RIPEMD_160_alt_cv:
+  RIPEMD_160 m =
+  if LENGTH m < 2 ** 64
+  then
+    let
+      p      = pad_message m;
+      blocks = parse_message [] p
+    in
+      case outer_for_loop_alt blocks of
+        (h0, h1, h2, h3, h4) =>
+          concat_word_list [
+            (word32_chg_end h4);
+            (word32_chg_end h3);
+            (word32_chg_end h2);
+            (word32_chg_end h1);
+            (word32_chg_end h0)]
+  else 0w
+Proof
+  rw[RIPEMD_160_def]>>
+  assume_tac parse_message_block_size>>
+  rfs[]>>
+  drule_then assume_tac outer_for_loop_alt_cv>>
+  rw[]
+QED
+
+val () = cv_auto_trans RIPEMD_160_alt_cv;
+
+(*
 Definition RIPEMD_160_alt_def:
   RIPEMD_160_alt m: 160 word =
   if LENGTH m < 2 ** 64
@@ -581,5 +638,6 @@ Proof
 QED
 
 val () = cv_auto_trans RIPEMD_160_alt_def;
+*)
 
 val _ = export_theory();
