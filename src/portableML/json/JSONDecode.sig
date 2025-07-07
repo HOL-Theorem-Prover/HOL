@@ -41,10 +41,10 @@ sig
     (* returns the raw JSON value without further decoding *)
     val raw : JSON.value decoder
 
-    (* decides a JSON OBJECT into a list of labeled JSON values *)
+    (* decodes a JSON OBJECT into a list of labeled JSON values *)
     val rawObject : (string * JSON.value) list decoder
 
-    (* decides a JSON ARRAY into a vector of JSON values *)
+    (* decodes a JSON ARRAY into a vector of JSON values *)
     val rawArray : JSON.value vector decoder
 
     (* returns a decoder that maps the JSON `null` value to `NONE` and otherwise
@@ -69,6 +69,12 @@ sig
      * using the decoder `d`.
      *)
     val field : string -> 'a decoder -> 'a decoder
+
+    (* decode an optional field *)
+    val fieldO : string -> 'a decoder -> 'a option decoder
+
+    (* decode an optional field that has a default value *)
+    val fieldD : string -> 'a decoder -> 'a -> 'a decoder
 
     (* decode a required field *)
     val reqField : string -> 'a decoder -> ('a -> 'b) decoder -> 'b decoder
@@ -103,7 +109,7 @@ sig
      *)
     val fail : string -> 'a decoder
 
-    val andThen : ('a -> 'b decoder) -> 'a decoder -> 'b decoder
+    val andThen : 'a decoder -> ('a -> 'b decoder) -> 'b decoder
 
     (* `orElse (d1, d2)` returns a decoder that first trys `d1` and returns its
        result if it succeeds.  If `d1` fails, then it returns the result of
