@@ -382,13 +382,7 @@ in
           (diag "Starting REPL";
            PolyML.print_depth 100;
            HOL_REPL.sigint_handler();
-           HOL_REPL.topLevel diag {startExec = fn () => (),
-                                   endExec = fn () => (),
-                                   exitLoop = fn () => false,
-                                   exitOnError = false,
-                                   isInteractive = true,
-                                   zeroTerm = z_repl,
-                                   nameSpace = PolyML.globalNameSpace} )
+           HOL_REPL.topLevel {diag = diag, zeroTerm = z_repl} )
         else
           case exe of
               SOME f => BuildHeap_EXE_Compile.exe_compile
