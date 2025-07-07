@@ -1125,12 +1125,14 @@ fun clean_deps() =
 fun do_clean_target x = let
   fun clean_action () =
       Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans()}
+  fun cleanAll () =
+      Holmake_tools.clean_dir outputfns {extra_cleans = extra_cleans() @ [".hol/"]}
 in
   if originally_in_src orelse not (in_src()) then
     case x of
         "clean" => clean_action()
       | "cleanDeps" => ignore (clean_deps())
-      | "cleanAll" => (clean_action(); ignore (clean_deps()))
+      | "cleanAll" => cleanAll()
     | _ => die ("Bad clean target " ^ x)
   else ()
 end
