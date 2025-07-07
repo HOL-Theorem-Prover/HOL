@@ -11,9 +11,7 @@ struct
 
 open Arbint HolKernel boolLib Rsyntax
      Arith_cons Solve Exists_arith
-     Sub_and_cond Prenex Instance RJBConv;
-
-infix THENC;
+     Sub_and_cond Prenex Instance;
 
 val REWRITE_CONV = Rewrite.REWRITE_CONV;
 
