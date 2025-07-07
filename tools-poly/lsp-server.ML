@@ -74,14 +74,14 @@ fun encPosition (line, col) print = (
   print ",\"character\":"; encInt col print;
   print "}")
 
-fun encRange (start, stop) print = (
-  print "{\"start\":"; encPosition start print;
-  print ",\"end\":"; encPosition stop print;
+fun encRange encPos (start, stop) print = (
+  print "{\"start\":"; encPos start print;
+  print ",\"end\":"; encPos stop print;
   print "}")
 
 fun encLocation {uri, range} print = (
   print "{\"uri\":"; encString uri print;
-  print ",\"range\":"; encRange range print;
+  print ",\"range\":"; encRange encPosition range print;
   print "}")
 
 exception MalformedData
@@ -94,6 +94,7 @@ datatype 'v message =
 | Notification of {method: string, params: 'v}
 
 fun mkResponse id r = Response {id = id, result = r}
+fun mkNotif method params = Notification {method = method, params = params}
 fun mkErr code message = Err {code = code, message = message, data = NONE}
 
 (* val ParseError = ~32700 *)
@@ -110,26 +111,32 @@ val ServerNotInitialized = ~32002
 (* val ServerCancelled = ~32802 *)
 (* val RequestFailed = ~32803 *)
 
+datatype incremental = IncrNone | IncrChunk | IncrStream
 
 local
   open JSONDecode JSON
-  val error = reqField "code" int (reqField "message" string (optField "data" raw
-    (succeed (fn data => fn message => fn code => {code = code, message = message, data = data}))))
+  val error = map3 (fn (code, message, data) => {code = code, message = message, data = data})
+    (field "code" int, field "message" string, fieldO "data" raw)
+  exception NotIncr
+  val incr = ofRaw (fn jv =>
+    case decode int jv of
+      0 => IncrNone | 1 => IncrChunk | 2 => IncrStream
+    | _ => raise JSONError (NotIncr, jv))
 in
 val req_id = orElse (map Id int, map Str string)
 val decMessage: JSON.value message decoder = ofRaw (fn jv =>
-  case decode (optField "id" req_id (succeed I)) jv of
+  case decode (fieldO "id" req_id) jv of
     NONE => Notification {
-      method = decode (reqField "method" string (succeed I)) jv,
-      params = decode (dfltField "params" raw NULL (succeed I)) jv}
-  | SOME id => case decode (optField "method" string (succeed I)) jv of
+      method = decode (field "method" string) jv,
+      params = decode (fieldD "params" raw NULL) jv}
+  | SOME id => case decode (fieldO "method" string) jv of
     SOME method => Request {
       id = id, method = method,
-      params = decode (dfltField "params" raw NULL (succeed I)) jv}
+      params = decode (fieldD "params" raw NULL) jv}
   | NONE => let
-    val result = case decode (optField "error" error (succeed I)) jv of
+    val result = case decode (fieldO "error" error) jv of
       SOME e => Err e
-    | NONE => Ok (decode (reqField "result" raw (succeed I)) jv )
+    | NONE => Ok (decode (field "result" raw) jv )
     in Response {id = id, result = result} end)
 
 val position = tuple2 (field "line" int, field "character" int)
@@ -138,7 +145,8 @@ val textDocumentPositionParams =
     (field "textDocument" (field "uri" string), field "position" position)
 
 val cancelParams = field "id" req_id
-val evalParams = field "code" string
+val evalParams = map3 (fn (uri, code, incr) => {uri = uri, code = code, incr = incr})
+  (field "uri" string, field "code" string, fieldD "incr" incr IncrNone)
 end
 
 fun encReqId (Id id) = encInt id
@@ -275,6 +283,45 @@ fun initialize ({send, recv}:connection) capabilities = let
   | _ => raise ProtocolError
   in params end
 
+fun mkLineCounter str = let
+  fun loop i ls =
+    if i >= String.size str then Vector.fromList (List.rev ls)
+    else
+      let val c = String.sub (str, i)
+      in loop (i+1) (if c = #"\n" then i+1::ls else ls) end
+  in loop 0 [] end
+
+fun partitionPoint len pred = let
+  fun loop start len =
+    if len = 0 then start
+    else let
+      val half = len div 2
+      val middle = start + half
+      in
+        if pred middle
+        then loop (middle + 1) (len - (half + 1))
+        else loop start half
+      end
+  in loop 0 len end
+
+fun getLineCol lines index = let
+  val line = partitionPoint (Vector.length lines) (fn i => Vector.sub (lines, i) <= index)
+  in (line, index - (if line = 0 then 0 else Vector.sub (lines, line - 1))) end
+
+(* fun fromLineCol lines (line, col) =
+  if line = 0 then col else Vector.sub (lines, line - 1) + col *)
+
+type range = int * int
+
+fun encPosLC lines = encPosition o getLineCol lines
+val encRangeLC = encRange o encPosLC
+(* fun encLocLC lines ({startPosition,endPosition,...}:PolyML.location) =
+  encRangeLC lines (startPosition, endPosition) *)
+
+fun encPretty textWidth pp print = let
+  fun print' s = encStringContents s print
+  in print "\""; PolyML.prettyPrint (print', textWidth) pp; print "\"" end
+
 exception Todo
 fun start {diag} = let
   val _ = PolyML.print_depth 100
@@ -293,6 +340,9 @@ fun start {diag} = let
   val _ = diag "started"
   val _ = logMessage "started"
 
+  val textWidth = 100 (* configure? *)
+  val printDepth = 100
+
   val jobs = let
     val mutex = Mutex.mutex ()
     val jobs = ref []
@@ -304,6 +354,21 @@ fun start {diag} = let
       in j end
     in modify end
 
+  fun spawnJobCore id job = let
+    val jobThread = Thread.fork (job, [])
+    in jobs (fn js => (id, jobThread) :: js); () end
+
+  fun spawnJob id params decode f = spawnJobCore id (fn () => let
+    val result = f (JSONDecode.decode decode params) handle
+      JSONErrors.JSONError _ => mkErr InvalidParams "json decode failed"
+    | e => mkErr InternalError (exnMessage e)
+    val _ = send (mkResponse id result)
+    val _ = jobs (fn js => let
+      fun go (_, []) = js
+        | go (acc, j::js) = if #1 j = id then List.revAppend (acc, js) else go (j::acc, js)
+      in go ([], js) end)
+    in () end)
+
   fun hover {uri, pos} = let
     (* TODO *)
     in Ok encNull end
@@ -313,23 +378,99 @@ fun start {diag} = let
     val ls = []
     in Ok (encArray encLocation ls) end
 
-  fun eval code = let
-    (* TODO *)
-    in Ok (encString "val it = ()") end
+  fun eval id {uri, code, incr} = let
+    val lines = mkLineCounter code
 
-  fun spawnJob id params decode f = let
-    fun job () = let
-      val result = f (JSONDecode.decode decode params) handle
-        JSONErrors.JSONError _ => mkErr InvalidParams "json decode failed"
-      | e => mkErr InternalError (exnMessage e)
-      val _ = send (mkResponse id result)
-      val _ = jobs (fn js => let
-        fun go (_, []) = js
-          | go (acc, j::js) = if #1 j = id then List.revAppend (acc, js) else go (j::acc, js)
-        in go ([], js) end)
-      in () end
-    val jobThread = Thread.fork (job, [])
-    in jobs (fn js => (id, jobThread) :: js); () end
+    datatype report =
+      Error of {hard: bool, pos: range, msg: encode}
+    | CompilerOut of string
+    | ToplevelOut of string
+    | Progress of int
+    | Completed
+    | Interrupted
+
+    fun encReport (Error {hard, pos, msg}) print = (
+        print "{\"kind\":\"error\"";
+        print ",\"hard\":"; print (if hard then "true" else "false");
+        print ",\"pos\":"; encRangeLC lines pos print;
+        print ",\"msg\":"; msg print;
+        print "}")
+      | encReport (CompilerOut s) print = (
+        print "{\"kind\":\"compilerOut\"";
+        print ",\"body\":"; encString s print;
+        print "}")
+      | encReport (ToplevelOut s) print = (
+        print "{\"kind\":\"toplevelOut\"";
+        print ",\"body\":"; encString s print;
+        print "}")
+      | encReport (Progress i) print = (
+        print "{\"kind\":\"compileProgress\"";
+        print ",\"pos\":"; encPosLC lines i print;
+        print "}")
+      | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
+      | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
+
+    fun exceptionMessage (exn: exn) =
+      PolyML.PrettyBlock(0, false, [], [
+        PolyML.PrettyBlock(0, false, [], [PolyML.PrettyString "Exception"]),
+        PolyML.PrettyBreak(1, 3),
+        PolyML.prettyRepresentation(exn, printDepth),
+        PolyML.PrettyBreak(1, 3),
+        PolyML.PrettyString "raised"])
+
+    val lastPos = ref 0
+    fun compile report = (
+      HOL_IDE.initialize {
+        text = code,
+        filename = uri,
+        parseError = fn pos => fn s => report (Error {hard = true, pos = pos, msg = encString s}),
+        compilerOut = report o CompilerOut,
+        toplevelOut = report o ToplevelOut,
+        progress = fn i => (lastPos := i; report (Progress i)),
+        error = fn {hard, location = {startPosition = p1, endPosition = p2, ...}, message, ...} =>
+          report (Error {hard = hard, pos = (p1, p2), msg = encPretty textWidth message}),
+        runtimeExn = fn e => report (Error {hard = true,
+          pos = case PolyML.Exception.exceptionLocation e of
+            NONE => (case !lastPos of i => (i, i))
+          | SOME {startPosition, endPosition, ...} => (startPosition, endPosition),
+          msg = encPretty textWidth (exceptionMessage e)}),
+        mlParseTree = fn _ => (),
+        holParseTree = fn _ => () };
+      lastPos := size code)
+
+    in
+      case incr of
+        IncrNone => let
+        val buf = ref []
+        val _ = compile (fn Progress _ => () | msg => buf := msg :: !buf) handle
+          Thread.Interrupt => buf := Interrupted :: !buf
+        in Ok (encArray encReport (rev (!buf))) end
+      | IncrChunk => (
+        spawnJobCore id (fn () => let
+          val buf = ref []
+          val prev = ref 0
+          fun clearBuf complete = let
+            val buf = rev (!buf before buf := [])
+            fun params print = (
+              print "{\"id\":"; encReqId id print;
+              print ",\"pos\":"; encRangeLC lines (!prev before prev := !lastPos, !lastPos) print;
+              print ",\"out\":"; encArray encReport buf print;
+              if complete then print ",\"complete\":true" else (); print "}")
+            in send (mkNotif "$/eval/P" params) end
+          val _ = compile (fn Progress _ => clearBuf false | msg => buf := msg :: !buf) handle
+            Thread.Interrupt => buf := Interrupted :: !buf
+          in lastPos := size code; clearBuf true end);
+        Ok encNull)
+      | IncrStream => (
+        spawnJobCore id (fn () => let
+          fun sendMsg msg = send (mkNotif "$/eval/1" (fn print => (
+            print "{\"id\":"; encReqId id print;
+            print ",\"out\":"; encReport msg print; print "}")))
+          val ok = (compile sendMsg; true) handle
+            Thread.Interrupt => (sendMsg Interrupted; false)
+          in if ok then sendMsg Completed else () end);
+        Ok encNull)
+    end
 
   fun recvExit () =
     case recv () of
@@ -349,7 +490,7 @@ fun start {diag} = let
     | Request {method = "textDocument/definition", id, params} =>
       spawnJob id params textDocumentPositionParams gotoDefinition
     | Request {method = "$/eval", id, params} =>
-      spawnJob id params evalParams eval
+      spawnJob id params evalParams (eval id)
     | Request {method, id, ...} =>
       send (mkResponse id (mkErr InvalidRequest ("unknown method: " ^ method)))
     | Notification {method = "$/cancelRequest", params} => let
