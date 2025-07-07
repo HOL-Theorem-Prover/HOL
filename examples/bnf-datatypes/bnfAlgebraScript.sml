@@ -433,6 +433,8 @@ Proof
   simp[setB_map, EXTENSION] >> gs[GSYM MEMBER_NOT_EMPTY] >> metis_tac[]
 QED
 
+Overload "𝟙" = “{()}”
+
 (* see Lemma 33 in ITP2014's
      "Cardinals in Isabelle/HOL" by Blanchette, Popescu and Traytel
  *)
@@ -463,7 +465,7 @@ Proof
         first_x_assum $ C (resolve_then (Pos hd) irule) cardleq_TRANS >>
         simp[]) >>
   first_assum $ C (resolve_then (Pos last) irule) cardleq_TRANS >>
-  qabbrev_tac ‘d = λ(y:('a,'c ordinal)F ,f). mapF I (THE o f) y’ >>
+  qabbrev_tac ‘d = λ(y:('a,'c ordinal)F,f). mapF I f y’ >>
   simp[cardleq_def] >>
   irule_at Any (SRULE [PULL_EXISTS] SURJ_IMP_INJ) >> qexists_tac ‘d’ >>
   simp[SURJ_DEF] >> conj_tac
@@ -485,7 +487,7 @@ Proof
         >- (gs[INJ_IFF, SF CONJ_ss] >> csimp[]) >>
         DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
         gs[SUBSET_DEF]) >>
-  qexists_tac ‘(y, λbp. if bp ∈ preds bd then SOME $ f bp else NONE)’ >>
+  qexists_tac ‘(y, λbp. if bp ∈ preds bd then f bp else ARB)’ >>
   conj_tac
   >- (simp[Abbr‘kA’, Fin_def, Abbr‘y’, setB_map] >> conj_tac
       >- gs[INJ_IFF, SUBSET_DEF, PULL_EXISTS] >>
@@ -781,7 +783,9 @@ Proof
   pop_assum mp_tac >> simp[Once FUN_EQ_THM, arbify_def] >> metis_tac[]
 QED
 
-val itype = newtypeTools.rich_new_type("nty", inhabited)
+val itype = newtypeTools.rich_new_type{
+  tyname = "nty", exthm = inhabited, ABS = "nty_ABS", REP = "nty_REP"
+  }
 
 Definition NCONS_def:
   NCONS (x : (α, α nty)F) = nty_ABS $ Cons $ mapF I nty_REP x
