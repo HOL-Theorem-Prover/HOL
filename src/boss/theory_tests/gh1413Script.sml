@@ -1,6 +1,7 @@
-open HolKernel boolLib bossLib
+open HolKernel Parse boolLib bossLib
 
-val () = new_theory "bug";
+
+val () = new_theory "gh1413";
 
 Definition apply_def:
   apply f x = f x
@@ -18,6 +19,6 @@ QED
 
 val n2 = List.length $ DefnBase.read_congs();
 
-val 1 = n2 - n1;
+val _ = assert (fn n => n = 1) (n2 - n1);
 
 val () = export_theory();
