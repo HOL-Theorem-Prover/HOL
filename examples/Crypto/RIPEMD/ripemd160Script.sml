@@ -110,27 +110,23 @@ End
 
 val () = cv_auto_trans parse_message_def;
 
-(*** BEGIN ***)
-(*listTheory.LENGTH_NIL (THEOREM)*)
 
-(*listTheory.LENGTH_NIL_SYM (THEOREM)*)
+
+
+(*** BEGIN ***)
 
 Theorem parse_block_size:
   ∀n acc bits. LENGTH bits = 32 * n ⇒ LENGTH $ parse_block acc bits = LENGTH acc + n
 Proof
   Induct
-  >-(
-    rw[]>>
-    rw[Once parse_block_def])
+  >-rw[Once parse_block_def]
   >-(
     rw[ADD1]>>
-    (* listTheory.LENGTH_CONS listTheory.LENGTH_EQ_0 listTheory.LENGTH_NON_NIL listTheory.NULL_LENGTH *)
-    ‘¬NULL bits’ by cheat>>
-    simp[Once parse_block_def]
-  )
+    Cases_on ‘NULL bits’ (* to revise *)
+    >-fs[listTheory.NULL_LENGTH]
+    >-simp[Once parse_block_def])
 QED
 
-(* Need to simplify proof *)
 Theorem parse_message_size:
   ∀acc bits.
     divides 512 $ LENGTH bits ∧ EVERY (λe. LENGTH e = 16) acc ⇒
@@ -144,7 +140,11 @@ Proof
   CONJ_TAC>>
   fs[dividesTheory.divides_def]
   >-(
-    ‘LENGTH $ TAKE 512 bits = 32 * 16’ by cheat>>
+    fs[listTheory.NULL_LENGTH]>>(* to revise; start *)
+    fs[GSYM listTheory.LENGTH_NON_NIL]>>
+    ‘512 ≤ LENGTH bits’ by simp[]>>
+    drule_then assume_tac listTheory.LENGTH_TAKE>>
+    ‘LENGTH $ TAKE 512 bits = 32 * 16’ by simp[]>>(* to revise; end *)
     drule parse_block_size>>
     simp[]
   )
@@ -164,6 +164,9 @@ Proof
 QED
 
 (*** END ***)
+
+
+
 
 (* dummy final else-branch added to make f well-defined in all cases *)
 Definition f_def:
