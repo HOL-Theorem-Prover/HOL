@@ -563,4 +563,167 @@ fun LIST_HALF_MK_ABS th =
     List.foldr (fn (v,th) => EXT (GEN v th)) app_eq_lam vars
   end
 
+(* ----------------------------------------------------------------------
+    Adds the hook for go-to-definition lookups in LSP
+   ---------------------------------------------------------------------- *)
+
+local
+fun get_locn (locn.Loc_Near loc) = get_locn loc
+  | get_locn (locn.Loc (locn.LocA start, locn.LocA (l,c))) = SOME (start, (l,c+1))
+  | get_locn _ = NONE
+
+datatype preterm_or_pretype = PTM of Preterm.preterm list * Preterm.preterm | PTY of Pretype.pretype
+
+fun leLC (l,c) (l',c') = l <= l' andalso (l <> l' orelse c <= c')
+fun fixup a NONE = a
+  | fixup a (SOME b) = if #1 a = #1 b then a else b
+fun navigateTo lines startTarget endTarget = let
+  val startTargetLC = LSPExtension.getLineCol lines startTarget
+  val endTargetLC = LSPExtension.getLineCol lines endTarget
+  fun navigateToTy ty fail =
+    case get_locn locn.Loc_Unknown of (* FIXME Pretype.locn ty *)
+      SOME (start, stop) =>
+      if leLC start startTargetLC andalso leLC endTargetLC stop then
+        SOME (navigateToTyCore (start, stop) ty)
+      else fail ()
+    | _ => fail ()
+  and navigateToTys [] fail = fail ()
+    | navigateToTys (ty::tys) fail = navigateToTy ty (fn () => navigateToTys tys fail)
+  and navigateToTyCore pos ty =
+    fixup (pos, PTY ty) (case ty of
+      Pretype.Tyop {Args,...} => navigateToTys Args (fn () => NONE)
+    | _ => NONE)
+  fun navigateTo ls a fail =
+    case get_locn (Preterm.locn a) of
+      SOME (start, stop) =>
+      if leLC start startTargetLC andalso leLC endTargetLC stop then
+        SOME (navigateToCore (start, stop) ls a)
+      else fail ()
+    | _ => fail ()
+  and navigateToCore pos ls a =
+    fixup (pos, PTM (ls, a)) (case a of
+      Preterm.Var {Ty, ...} => navigateToTy Ty (fn () => NONE)
+    | Preterm.Const {Ty, ...} => navigateToTy Ty (fn () => NONE)
+    | Preterm.Overloaded {Ty, ...} => navigateToTy Ty (fn () => NONE)
+    | Preterm.Comb {Rand, Rator, ...} =>
+      navigateTo ls Rand (fn () => navigateTo ls Rator (fn () => NONE))
+    | Preterm.Abs {Bvar, Body, ...} =>
+      navigateTo ls Bvar (fn () => navigateTo (Bvar::ls) Body (fn () => NONE))
+    | Preterm.Constrained {Ptm, Ty, ...} =>
+      navigateTo ls Ptm (fn () => navigateToTy Ty (fn () => NONE))
+    | Preterm.Antiq _ => NONE
+    | Preterm.Pattern {Ptm, ...} => navigateTo ls Ptm (fn () => NONE))
+  fun navigateToL [] = NONE
+    | navigateToL ((start, stop, ptm, env) :: ds) =
+      if leLC start startTargetLC andalso leLC endTargetLC stop then
+        SOME (navigateToCore (start, stop) [] ptm, env)
+      else navigateToL ds
+  fun navigateToLL [] = NONE
+    | navigateToLL (((start, stop), l) :: ds) =
+      if start <= startTarget andalso endTarget <= stop then
+        navigateToL l
+      else navigateToLL ds
+  in navigateToLL end
+
+fun getBinding s = let
+  exception Ret of thminfo
+  in
+    (Theory.upd_binding s (fn i => raise Ret i); NONE)
+    handle Ret i => SOME i | HOL_ERR _ => NONE
+  end
+
+fun lookupThmInfo kn =
+  if #Thy kn = Theory.current_theory () then
+    case getBinding (#Name kn) of
+      SOME i => SOME i
+    | NONE => Option.map snd (DB.lookup kn)
+  else Option.map snd (DB.lookup kn)
+
+val checkLog = Universal.tag ()
+
+fun lspTypecheckListener (ptm, env) =
+  case Thread.getLocal checkLog of NONE => () | SOME qs =>
+  case get_locn (Preterm.locn ptm) of NONE => () | SOME (start, stop) =>
+  Thread.setLocal (checkLog, (start, stop, ptm, env) :: qs)
+
+fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
+  val ds = case LSPExtension.getPluginData (plugins, tag) of
+    NONE => raise Empty
+  | SOME ds => ds
+  val out = case navigateTo lines target target ds of
+    SOME ((loc, PTY ty), env) => let
+    val ty = case Pretype.toTypeM ty env of errormonad.Some (_, ty) => ty | _ => raise Empty
+    val {Thy, Tyop, ...} = Type.dest_thy_type ty
+    (* TODO *)
+    val _ = (loc, Thy, Tyop)
+    in raise Empty end
+  | SOME ((loc, PTM (bvs, tm)), env) => let
+    val tm = case Preterm.typecheck NONE tm env of
+      errormonad.Some (_, tm) => tm | _ => raise Empty
+    val (hd, _) = strip_comb tm
+    fun findVar [] = []
+      | findVar (bv::bvs) =
+        case Preterm.typecheck NONE bv env of
+          errormonad.Some (_, tm) =>
+          if term_eq tm hd then
+            case get_locn (Preterm.locn bv) of
+              SOME tgt => [{uri = NONE, origin = SOME loc, range = tgt, selRange = tgt}]
+            | _ => []
+          else findVar bvs
+        | _ => findVar bvs
+    in
+      if is_var hd then
+        findVar bvs
+      else if is_const hd then
+        case lookup_userdef hd of
+          SOME {thmname, ...} =>
+          (case lookupThmInfo thmname of
+            SOME {loc = DB.Located {scriptpath, linenum, ...}, ...} =>
+            [fromFileLine {origin = SOME loc,
+              file = holpathdb.subst_pathvars scriptpath,
+              line = linenum - 1}]
+          | _ => [])
+        | NONE => []
+      else []
+    end
+  | _ => raise Empty
+  in out end
+  handle HOL_ERR _ => [] | Empty => []
+
+fun lastIndexOf' c s i =
+  if i = 0 then ~1 else let
+    val i' = i - 1
+    in if c = String.sub (s, i') then i' else lastIndexOf' c s i' end
+
+fun lastIndexOf c s = lastIndexOf' c s (String.size s)
+
+val _ = LSPExtension.fixupTheoremLink := (fn {uri, text, start, stop} => let
+  val id = String.substring (text, start, stop - start)
+  val basename = String.extract (uri, lastIndexOf #"/" uri + 1, NONE)
+  val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
+  in
+    if 6 <= size stem andalso String.extract (stem, size stem - 6, NONE) = "Theory" then
+      case lookupThmInfo {Name = id, Thy = String.extract (stem, 0, SOME (size stem - 6))} of
+        SOME {loc = DB.Located {scriptpath, linenum, ...}, ...} =>
+        SOME {file = holpathdb.subst_pathvars scriptpath, line = linenum - 1}
+      | _ => NONE
+    else NONE
+  end)
+
+in
+val _ = LSPExtension.registerPlugin true {
+  name = "DefnBase",
+  init = fn tag => (
+    Listener.add_listener Preterm.typecheck_listener ("LSP", lspTypecheckListener)
+    handle HOL_ERR _ => !WARNING_outstream "<<warning: failed to add typecheck listener>>\n";
+    LSPExtension.gotoDefinition := gotoDefinition tag),
+  beforeCompile = fn () => Thread.setLocal (checkLog, []),
+  afterCompile = fn (r, x) =>
+    case Thread.getLocal checkLog of
+      SOME (l as _::_) => let
+      val x = case x of SOME x => x | NONE => []
+      in SOME ((r, l) :: x) end
+    | _ => x }
+end
+
 end

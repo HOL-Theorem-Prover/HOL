@@ -9,7 +9,7 @@ structure LSPServer :> LSPServer =
 struct
 
 (* structure Thread = PolyThread; *)
-open Thread
+open Thread LSPExtension
 
 fun I x = x
 
@@ -79,9 +79,17 @@ fun encRange encPos (start, stop) print = (
   print ",\"end\":"; encPos stop print;
   print "}")
 
-fun encLocation {uri, range} print = (
-  print "{\"uri\":"; encString uri print;
-  print ",\"range\":"; encRange encPosition range print;
+type location_link = {
+  origin: rangeLC option,
+  range: rangeLC, selRange: rangeLC, uri: string option}
+
+fun encLocationLink uri0 {origin, uri, range, selRange} print = (
+  print "{\"targetUri\":"; encString (Option.getOpt (uri, uri0)) print;
+  print ",\"targetRange\":"; encRange encPosition range print;
+  print ",\"targetSelectionRange\":"; encRange encPosition selRange print;
+  case origin of
+    NONE => ()
+  | SOME origin => (print ",\"originSelectionRange\":"; encRange encPosition origin print);
   print "}")
 
 exception MalformedData
@@ -203,16 +211,17 @@ fun encMessage (Request {id, method, params: encode}) print = (
     print "{\"jsonrpc\":\"2.0\",\"method\":"; encString method print;
     print ",\"params\":"; params print; print "}")
 
-exception Disconnected
 structure Channel: sig
 type 'a sender
 type 'a receiver
+exception Disconnected
 val channel: unit -> 'a sender * 'a receiver
 val send: 'a sender -> 'a -> unit
 val closeSender: 'a sender -> exn option -> unit
 val recv: 'a receiver -> 'a
 end = struct
 
+exception Disconnected
 datatype 'a slot = Empty | Full of 'a | Disconn of exn option
 type 'a sender = ConditionVar.conditionVar * Mutex.mutex * 'a slot ref
 type 'a receiver = 'a sender
@@ -316,36 +325,6 @@ fun initialize ({send, recv}:connection) capabilities = let
   | _ => raise ProtocolError
   in params end
 
-fun mkLineCounter str = let
-  fun loop i ls =
-    if i >= String.size str then Vector.fromList (List.rev ls)
-    else
-      let val c = String.sub (str, i)
-      in loop (i+1) (if c = #"\n" then i+1::ls else ls) end
-  in loop 0 [] end
-
-fun partitionPoint len pred = let
-  fun loop start len =
-    if len = 0 then start
-    else let
-      val half = len div 2
-      val middle = start + half
-      in
-        if pred middle
-        then loop (middle + 1) (len - (half + 1))
-        else loop start half
-      end
-  in loop 0 len end
-
-fun getLineCol lines index = let
-  val line = partitionPoint (Vector.length lines) (fn i => Vector.sub (lines, i) <= index)
-  in (line, index - (if line = 0 then 0 else Vector.sub (lines, line - 1))) end
-
-fun fromLineCol lines (line, col) =
-  if line = 0 then col else Vector.sub (lines, line - 1) + col
-
-type range = int * int
-
 fun encPosLC lines = encPosition o getLineCol lines
 val encRangeLC = encRange o encPosLC
 fun locToRange ({startPosition,endPosition,...}:PolyML.location) =
@@ -443,6 +422,7 @@ fun start {diag} = let
         print "{\"type\":4,\"message\":"; encString str print; print "}")})
   val _ = diag "started"
   val _ = logMessage "started"
+  val _ = markServerStarted ()
 
   val textWidth = 100 (* configure? *)
   val printDepth = 100
@@ -488,18 +468,20 @@ fun start {diag} = let
     pos: int,
     mlParseTrees: PolyML.parseTree list,
     diags: report DArray.darray,
-    plugins: (string, Universal.universal) Binarymap.dict}
+    plugins: plugin_data}
   fun emptyParseData n: parse_data = {
     done = false, pos = 0, mlParseTrees = [], diags = DArray.new (n, Completed),
-    plugins = Binarymap.mkDict String.compare }
+    plugins = emptyPluginData }
   fun addParseTree t {done, pos, mlParseTrees, diags, plugins} =
     {done = done, pos = pos, mlParseTrees = t :: mlParseTrees, diags = diags, plugins = plugins}
   fun setParsePos pos {done, pos = _, mlParseTrees, diags, plugins} =
     {done = done, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
   fun setParseDone pos {done = _, pos = _, mlParseTrees, diags, plugins} =
     {done = true, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
+  fun setPlugins plugins {done, pos, mlParseTrees, diags, plugins = _} =
+    {done = done, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
 
-  type text_data = {text: string, version: int, lines: int vector}
+  type text_data = {text: string, version: int, lines: lines}
   type compile_data = {parse: parse_data ref, text: text_data, thread: Thread.thread}
   type file_data = {
     compile: compile_data option ref,
@@ -586,7 +568,14 @@ fun start {diag} = let
     val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees
     val trees = ref (emptyParseData 8)
     fun compileThread () = ((let
-      val lastPos = ref 0
+      fun beforeCompile () = let
+        val ls = getPlugins ()
+        in app (fn t => #beforeCompile t ()) ls; ls end
+      fun afterCompile r ls = let
+        val t = !trees
+        fun f (t, map) = #afterCompile t (r, map)
+        in trees := setPlugins (foldl f (#plugins t) ls) t; ls end
+
       fun updateDiags pos = let
         val {diags, ...} = !trees
         val n = DArray.size oldDiags
@@ -610,13 +599,18 @@ fun start {diag} = let
           print ",\"diagnostics\":"; encDArray encDiag oldDiags print;
           print "}")))
 
+      val ls = ref (beforeCompile ())
+      val lastPos = ref 0
       fun process (Progress i) = (
           trees := setParsePos i (!trees);
+          afterCompile (!lastPos before lastPos := i, i) (!ls);
           send (mkNotif "$/compileProgress" (fn print => (
             print "{\"uri\":"; encString uri print;
             print ",\"pos\":"; encPosLC lines i print;
             print "}")));
-          updateDiags i; sendDiags ())
+          updateDiags i;
+          sendDiags ();
+          ls := beforeCompile ())
         | process (CompilerOut (_, ss)) = logMessage (concat (rev ss))
         | process (ToplevelOut (_, ss)) = logMessage (concat (rev ss))
         | process Completed = raise Bind
@@ -625,6 +619,7 @@ fun start {diag} = let
       fun processTree t = trees := addParseTree t (!trees)
       in
         compileForReport uri (#text text) lastPos processTree process;
+        afterCompile (!lastPos, size (#text text)) (!ls);
         send (mkNotif "$/compileCompleted" (fn print => (
           print "{\"uri\":"; encString uri print; print "}")));
         lastTrees := {text = text, parse = setParseDone (size (#text text)) (!trees)}
@@ -640,10 +635,58 @@ fun start {diag} = let
     (* TODO *)
     in Ok encNull end
 
-  fun gotoDefinition {uri, pos} = let
-    (* TODO *)
-    val ls = []
-    in Ok (encArray encLocation ls) end
+  fun gotoDefinition uri {compile, lastTrees} target = let
+    fun getIfValid {parse as {pos, ...}, text} =
+      if pos > 0 then let
+        val offset = fromLineCol (#lines text) target
+        in if offset <= pos then SOME (parse, text, offset) else NONE end
+      else NONE
+    val state = case !compile of
+      SOME {parse, text, ...} => getIfValid {parse = !parse, text = text}
+    | NONE => NONE
+    val state = case state of NONE => getIfValid (!lastTrees) | state => state
+    fun fromFileLine {origin, file, line} = let
+      val range = ((line, 0), (line+1, 0))
+      in {origin = origin, uri = SOME file, range = range, selRange = range} end
+    val ({plugins, mlParseTrees, ...}, text, offset) =
+      case state of NONE => raise Empty | SOME s => s
+    val ctx = {uri = uri, lines = #lines text, plugins = plugins, fromFileLine = fromFileLine}
+    fun fromProps [] r = r
+      | fromProps (PolyML.PTdeclaredAt loc :: _) (file, ty, _) = (file, ty, SOME loc)
+      | fromProps (PolyML.PTstructureAt {file,...} :: props) (_, ty, df) =
+        fromProps props (SOME file, ty, df)
+      | fromProps (PolyML.PTtype ty :: props) (file, _, df) = fromProps props (file, SOME ty, df)
+      | fromProps (_ :: props) r = fromProps props r
+    val out = !LSPExtension.gotoDefinition (ctx, offset)
+    val out = case out of
+      [] => let
+      val offset' = {startOffset = FixedInt.fromInt offset, endOffset = FixedInt.fromInt offset}
+      val ({startPosition, endPosition, ...}, props) =
+        case HOL_IDE.navigateTo' mlParseTrees offset' of NONE => raise Empty | SOME pt => pt
+      val start = FixedInt.toInt startPosition
+      val stop = FixedInt.toInt endPosition
+      val origin = SOME (getLineCol (#lines text) start, getLineCol (#lines text) stop)
+      val (file, ty, loc) = case fromProps props (NONE, NONE, NONE) of
+        (_, _, NONE) => raise Empty
+      | (file, ty, SOME loc) => (file, ty, loc)
+      fun fromPolyLoc {file, startLine, startPosition, endPosition, ...} =
+        if file = "" then let
+          val start = FixedInt.toInt startPosition
+          val stop = FixedInt.toInt endPosition
+          val range = (getLineCol (#lines text) start, getLineCol (#lines text) stop)
+          in {origin = origin, uri = NONE, range = range, selRange = range} end
+        else fromFileLine {origin = origin, file = file, line = FixedInt.toInt startLine - 1}
+      val newLoc = case (file, ty) of
+        (SOME file, SOME _) =>
+        !LSPExtension.fixupTheoremLink {uri = file, text = #text text, start = start, stop = stop}
+      | _ => NONE
+      val newLoc = case newLoc of
+        NONE => fromPolyLoc loc
+      | SOME {file, line} => fromFileLine {origin = origin, file = file, line = line}
+      in [newLoc] end
+    | _ => out
+    in out end
+    handle Empty => []
 
   fun eval id {uri, code, incr} = let
     val lines = mkLineCounter code
@@ -721,7 +764,11 @@ fun start {diag} = let
     | Request {method = "textDocument/hover", id, params} =>
       spawnJob id params textDocumentPositionParams hover
     | Request {method = "textDocument/definition", id, params} =>
-      spawnJob id params textDocumentPositionParams gotoDefinition
+      spawnJob id params textDocumentPositionParams (fn {uri, pos} => let
+        val ls = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
+          NONE => []
+        | SOME v => gotoDefinition uri v pos
+        in Ok (encArray (encLocationLink uri) ls) end)
     | Request {method = "$/setConfig", id, params} => ((
       case JSONDecode.decode (JSONDecode.fieldO "elabOn" elabOn) params of
         NONE => ()
@@ -775,7 +822,7 @@ fun start {diag} = let
   in
     main () handle
       Shutdown => ()
-    | Disconnected => diag "early abort"
+    | Channel.Disconnected => diag "early abort"
   end
 
 end (* struct *)
