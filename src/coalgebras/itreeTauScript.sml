@@ -1600,6 +1600,110 @@ Proof
   irule itree_wbisim_refl
 QED
 
+(* return or eventually reach another tree *)
+CoInductive ret_or_reach:
+  (ret_or_reach t' (Ret x)) /\
+  ((!l. ret_or_reach t' (k l) \/ k l = t') ==> ret_or_reach t' (Vis e k)) /\
+  (ret_or_reach t' (Tau t')) /\
+  (ret_or_reach t' t ==> ret_or_reach t' (Tau t))
+End
+
+Theorem ret_or_reach_suc_self:
+  ret_or_reach t (FUNPOW Tau (SUC n) t)
+Proof
+  Induct_on ‘n’
+  \\ gvs[ret_or_reach_rules, FUNPOW_SUC]
+QED
+
+Theorem itree_bind_ret_or_reach_preserve:
+  ret_or_reach t t ∧ (!l. ret_or_reach t (k l)) ==> ret_or_reach t (itree_bind t k)
+Proof
+  rpt strip_tac
+  \\ irule ret_or_reach_coind
+  \\ qexists ‘\t''. (?t'. itree_bind t' k = t'' /\ ret_or_reach t t') \/ ret_or_reach t t''’
+  \\ rw[]
+  >- metis_tac[]
+  \\ first_assum $ assume_tac o SRULE[Once ret_or_reach_cases] \\ gvs[]
+  >- (first_x_assum $ qspec_then ‘x’ assume_tac \\ gvs[]
+      \\ first_assum $ assume_tac o SRULE[Once ret_or_reach_cases] \\ gvs[]
+      \\ metis_tac[]
+     )
+  \\ metis_tac[]
+QED
+
+Theorem ret_or_reach_tau:
+  ret_or_reach t'' (Tau t) ==> ret_or_reach t'' t \/ t'' = t
+Proof
+  strip_tac
+  \\ drule $ iffLR ret_or_reach_cases
+  \\ rpt strip_tac
+  \\ gvs[]
+QED
+
+Theorem ret_or_reach_vis:
+  ret_or_reach t (Vis e k) ==> !l. ret_or_reach t (k l) \/ t = k l
+Proof
+  rpt strip_tac
+  \\ drule $ iffLR ret_or_reach_cases
+  \\ rw[]
+  \\ metis_tac[]
+QED
+
+Theorem ret_or_reach_funpow_vis:
+  ret_or_reach t (FUNPOW Tau n (Vis e k)) ==> (!l. ret_or_reach t (k l) \/ t = k l)
+                                              \/ strip_tau t (Vis e k)
+Proof
+  Induct_on ‘n’ \\ gvs[]
+  >- (rpt strip_tac
+      \\ drule $ iffLR ret_or_reach_cases
+      \\ gvs[]
+      \\ metis_tac[]
+     )
+  \\ rpt strip_tac
+  \\ gvs[FUNPOW_SUC]
+  \\ drule $ iffLR ret_or_reach_cases
+  \\ gvs[]
+  \\ rpt strip_tac
+  >- (disj2_tac
+      \\ pop_assum $ assume_tac o GSYM
+      \\ gvs[]
+      \\ irule strip_tau_FUNPOW_cancel
+      \\ rw[]
+     )
+  \\ metis_tac[]
+QED
+
+(* strong bisimulation from some point up to the full tree *)
+CoInductive strong_bisim_upfrom:
+  (strong_bisim_upfrom t t' (Ret x) (Ret x)) /\
+  (strong_bisim_upfrom t t' (Tau t) (Tau t')) /\
+  ((strong_bisim_upfrom t t' t'' t''') ==> (strong_bisim_upfrom t t' (Tau t'') (Tau t'''))) /\
+  ((!l. strong_bisim_upfrom t t' (k l) (k' l) \/ (k l = t /\ k' l = t')) ==> (strong_bisim_upfrom t t' (Vis e k) (Vis e k')))
+End
+
+Theorem cyclic_strong_bisim_upfrom:
+  ret_or_reach t t /\ ret_or_reach t' t' /\ strong_bisim_upfrom t t' t t' ==> t = t'
+Proof
+  rpt strip_tac
+  \\ irule $ iffRL itree_strong_bisimulation
+  \\ qexists ‘CURRY {(t'', t''') | t'', t''' | ret_or_reach t t'' /\
+                                               ret_or_reach t' t''' /\
+                                               strong_bisim_upfrom t t' t'' t'''}’ \\ rw[UNCURRY]
+  >- (drule $ iffLR strong_bisim_upfrom_cases
+      \\ gvs[]
+     )
+  >- (drule $ iffLR strong_bisim_upfrom_cases
+      \\ rw[]
+      \\ imp_res_tac $ ret_or_reach_tau \\ gvs[]
+     )
+  \\ drule $ iffLR strong_bisim_upfrom_cases
+  \\ rw[]
+  \\ strip_tac
+  \\ pop_assum $ qspec_then ‘s’ assume_tac \\ gvs[]
+  \\ imp_res_tac ret_or_reach_vis \\ metis_tac[]
+QED
+
+
 (* tidy up theory exports *)
 
 val _ = List.app Theory.delete_binding
