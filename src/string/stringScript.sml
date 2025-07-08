@@ -342,39 +342,59 @@ Proof
   \\ BasicProvers.EVERY_CASE_TAC \\ fs[] \\ rw[]
 QED
 
+Theorem MEM_LAST:
+  l ≠ [] ⇒ MEM (LAST l) l
+Proof
+  Induct_on ‘l’ >> simp[] >> Cases_on ‘l’ >> gvs[]
+QED
+
+Theorem SPLITP_LAST:
+  ∀xs p s. SPLITP P xs = (p,s) ∧ s ≠ [] ⇒ LAST s = LAST xs
+Proof
+  Induct_on ‘xs’ >> simp[SPLITP, AllCaseEqs()] >> rw[] >>
+  Cases_on ‘SPLITP P xs’ >> gvs[] >> Cases_on ‘xs’ >> gvs[SPLITP]
+QED
+
+Theorem SPLITP_FRONT:
+  ∀xs p s. SPLITP P xs = (p,s) ∧ s ≠ [] ∧ P (LAST xs) ⇒
+           SPLITP P (FRONT xs) = (p, FRONT s)
+Proof
+  Induct_on ‘xs’ >> simp[SPLITP, AllCaseEqs()] >> rw[]
+  >- (Cases_on ‘xs’ >> gvs[SPLITP]) >>
+  Cases_on ‘xs = []’ >> gvs[] >>
+  ‘FRONT (h::xs) = h::FRONT xs ∧ LAST (h::xs) = LAST xs’
+    by (Cases_on ‘xs’ >> gvs[]) >>
+  gvs[] >> simp[SPLITP] >>
+  Cases_on ‘SPLITP P xs’ >> gvs[]
+QED
+
 Theorem TOKENS_FRONT:
   ~NULL ls /\ P (LAST ls) ==>
     (TOKENS P (FRONT ls) = TOKENS P ls)
 Proof
-  Induct_on`ls` \\ rw[]
-  \\ Cases_on`ls` \\ fs[]
-  >- rw[TOKENS_def,SPLITP]
-  \\ rw[TOKENS_def]
-  \\ pairarg_tac
-  \\ simp[Once SPLITP]
-  \\ CASE_TAC \\ fs[NULL_EQ]
-  >- (
-    imp_res_tac SPLITP_NIL_FST_IMP
-    \\ imp_res_tac SPLITP_IMP
-    \\ rfs[] )
-  \\ imp_res_tac SPLITP_JOIN
-  \\ Cases_on`l` \\ fs[] \\ rpt BasicProvers.VAR_EQ_TAC
-  \\ imp_res_tac SPLITP_IMP
-  \\ CASE_TAC \\ fs[]
-  \\ qmatch_goalsub_rename_tac`SPLITP P (x::xs)`
-  \\ `?y ys. x::xs = SNOC y ys` by metis_tac[SNOC_CASES,list_distinct]
-  \\ full_simp_tac std_ss [FRONT_SNOC,LAST_SNOC] \\ rpt BasicProvers.VAR_EQ_TAC
-  \\ qmatch_goalsub_rename_tac`SPLITP P (SNOC y (w ++ z))`
-  \\ Cases_on`NULL z` \\ fs[NULL_EQ, SNOC_APPEND]
-  >- (
-    simp[SPLITP_APPEND]
-    \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
-    \\ simp[SPLITP,TOKENS_def] )
-  \\ Cases_on`z` \\ fs[]
-  \\ simp[SPLITP_APPEND]
-  \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
-  \\ simp[SPLITP,TOKENS_def]
-  \\ simp[TOKENS_APPEND,TOKENS_NIL]
+  map_every qid_spec_tac [‘ls’, ‘P’] >>
+  recInduct TOKENS_ind >> rw[] >>
+  Cases_on ‘SPLITP P (STRING h t)’ >> gvs[] >>
+  rename [‘SPLITP P (STRING h t) = (l,r)’] >>
+  gvs[NULL_EQ_NIL] >> Cases_on ‘t’
+  >- (gvs[SPLITP] >> ONCE_REWRITE_TAC [TOKENS_def] >>
+      simp[SPLITP, TOKENS_def]) >>
+  simp[] >> rename [‘STRING h (STRING h2 rest)’] >>
+  qabbrev_tac ‘str = STRING h2 rest’ >>
+  ONCE_REWRITE_TAC[TOKENS_def] >>
+  simp[SPLITP, pairTheory.UNCURRY_EQ, AllCaseEqs(), NULL_EQ_NIL] >>
+  gvs[SPLITP, AllCaseEqs()]
+  >- gvs[Abbr‘str’] >>
+  Cases_on ‘SPLITP P str’ >> gvs[] >>
+  ‘LAST (STRING h str) = LAST str’ by gvs[Abbr‘str’] >> gvs[] >>
+  rename [‘SPLITP P str = (l,r)’] >>
+  Cases_on ‘r = []’
+  >- (gvs[SPLITP_NIL_SND_EVERY, EVERY_MEM] >>
+      first_x_assum $ drule_at Concl >> impl_tac
+      >- (irule LAST_MEM >> UNABBREV_ALL_TAC >> simp[]) >>
+      simp[]) >>
+  gvs[] >> drule_all_then strip_assume_tac SPLITP_LAST >> gvs[] >>
+  drule_all_then strip_assume_tac SPLITP_FRONT >> simp[]
 QED
 
 (*---------------------------------------------------------------------------
