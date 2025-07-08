@@ -172,6 +172,8 @@ fun HOL_WARNINGloc s1 s2 locn s3 =
  * Traces, numeric flags; the higher setting, the more verbose the output.   *
  *---------------------------------------------------------------------------*)
 
+local open HOLPP in end
+
 datatype tracefns = TRFP of {get: unit -> int, set: int -> unit}
 fun trfp_set (TRFP {set, ...}) = set
 fun trfp_get (TRFP {get, ...}) = get ()
@@ -197,6 +199,7 @@ fun find_record n =
     | SOME (ALIAS a) => find_record a
 
 val WARN = HOL_WARNING "Feedback"
+
 local
    fun err f l = raise ERR f (String.concat l)
 in
@@ -313,6 +316,29 @@ fun create_btrace (nm, initb) =
       register_btrace0 "create_btrace" (nm, r)
     end
 
+datatype trace_elt =  (* for prettyprinting *)
+  TraceElt of
+    {name : string, aliases : string list,
+     trace_level : int, default : int, max : int}
+
+fun pp_trace_elt (TraceElt{name,aliases,trace_level,default,max}) =
+    let open HOLPP
+        val comma_space = [add_string",",add_break(1,0)]
+        fun interval a b =
+            map add_string ["[", Int.toString a, "..", Int.toString b, "]"]
+        val alias_list = pr_list add_string comma_space aliases
+        val name_plus_aliases =
+            if null aliases then
+               add_string name
+            else block CONSISTENT 2
+                   ([add_string name, add_break(0,0), add_string "["]
+                    @ alias_list @ [add_string "]"])
+    in block INCONSISTENT 2
+         [name_plus_aliases, add_string ":", add_break(1,0),
+          add_string (Int.toString trace_level), add_break(1,0),
+          block CONSISTENT 0 (interval default max)]
+    end
+
 fun traces () =
    let
       fun foldthis (n, ti, acc) =
@@ -324,7 +350,8 @@ fun traces () =
              default = d,
              max = maximum} :: acc
    in
-      Binarymap.foldr foldthis [] (!trace_map)
+     List.map TraceElt
+        (Binarymap.foldr foldthis [] (!trace_map))
    end
 
 fun set_trace nm newvalue =

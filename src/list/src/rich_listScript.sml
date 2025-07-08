@@ -223,7 +223,7 @@ val LASTN = store_thm("LASTN",
 Theorem SNOC_LASTN :
     !l x n. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l)
 Proof
-    SNOC_INDUCT_TAC >> rw [LASTN]
+    SNOC_INDUCT_TAC >> REWRITE_TAC [LASTN]
 QED
 
 val BUTLASTN_def = zDefine `

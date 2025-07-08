@@ -147,6 +147,9 @@ Under both Moscow&nbsp;ML and Poly/ML the following are created:
 `Holmake`
 : the Holmake tool, again designed for every user.
 
+`linkToSigobj`
+: When the multi-directory, potentially parallel, build begins, this special-purpose tool is run in every directory after that directory’s build completes. It is responsible for linking to relevant `src` files in the `sigobj` directory, allowing HOL users to see/find those files without needing to explicitly mention the original `src` directory in an `INCLUDES`-directive.
+
 `mkmunge.exe`
 : This tool creates LaTeX mungers, as described in the *DESCRIPTION* manual.
 

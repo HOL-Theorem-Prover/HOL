@@ -353,6 +353,8 @@ val lp =
      n = 0 /\ lfvs = 0 ∧ d = crec /\ tns = [0] /\ uns = []        (* 6. rec *)
     )”;
 
+Overload LP = “lp”
+
 val {term_ABS_pseudo11, term_REP_11, genind_term_REP, genind_exists,
      termP, absrep_id, repabs_pseudo_id, term_REP_t, term_ABS_t, newty, ...} =
     new_type_step1 tyname 0 [] {lp = lp};
@@ -740,6 +742,12 @@ val termP0 = prove(
    restr:  “trf :('q -> 'r) -> ('a Label -> bool) -> 'a CCS -> 'q -> 'r”
    relab:  “tlf :('q -> 'r) -> 'a CCS -> 'a Relabeling -> 'q -> 'r”
    rec:    “tcf :('q -> 'r) -> string -> 'a CCS -> 'q -> 'r”
+
+   NOTE: ds2 is the list of recursive parameters as functions ('q -> 'r).
+         ts2 is the list of actual arguments in the same position.
+         non-recursive parameters are taken from the corresponding position of u (rep_t).
+         The "if condition" identifies the constructor.
+         v is the only binding variable.
  *)
 val u_tm = mk_var("u", rep_t);
 val tlf =
@@ -760,8 +768,7 @@ val tlf =
 Theorem parameter_tm_recursion =
   parameter_gtm_recursion
       |> INST_TYPE [alpha |-> rep_t, gamma |-> “:'r”]
-      |> Q.INST [‘lf’ |-> ‘^tlf’,
-                 ‘lp’ |-> ‘^lp’, ‘n’ |-> ‘0’]
+      |> Q.INST [‘lf’ |-> ‘^tlf’, ‘lp’ |-> ‘^lp’]
       |> SIMP_RULE (srw_ss()) [sumTheory.FORALL_SUM, FORALL_AND_THM,
                                GSYM RIGHT_FORALL_IMP_THM, IMP_CONJ_THM,
                                GSYM RIGHT_EXISTS_AND_THM,
@@ -1005,7 +1012,7 @@ val subst_exists =
                                  basic_swapTheory.swapstr_eq_left]
         |> SIMP_RULE (srw_ss()) [rewrite_pairing, pairTheory.FORALL_PROD]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p_1", "u"), ("p_2", "E")]))
-        |> prove_alpha_fcbhyp {ppm = ``pair_pmact string_pmact ^t_pmact_t``,
+        |> prove_alpha_fcbhyp {ppms = [``pair_pmact string_pmact ^t_pmact_t``],
                                rwts = [],
                                alphas = [tpm_ALPHA]};
 
@@ -1595,7 +1602,7 @@ val ssub_exists =
                                  fmpm_FDOM, notin_frange]
         |> SIMP_RULE (srw_ss()) [Once ordering]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p", "fm")]))
-        |> prove_alpha_fcbhyp {ppm = “fm_pmact string_pmact ^t_pmact_t”,
+        |> prove_alpha_fcbhyp {ppms = [“fm_pmact string_pmact ^t_pmact_t”],
                                rwts = [notin_frange, strterm_fmap_supp],
                                alphas = [tpm_ALPHA]};
 

@@ -1,1 +1,1 @@
-INCLUDES = $(dprot $(HOLDIR)/src/pred_set/src/more_theories)
+INCLUDES = $(dprot $(HOLDIR)/src/pred_set/src/more_theories) $(dprot $(HOLDIR)/src/finite_maps)

@@ -130,6 +130,8 @@ val cline_opts = [
    desc = setStringOpt "filename" #base_state},
   {help = "thread count", long = ["mt"], short = "",
    desc = OptArg (set_threadcount, "c")},
+  {help = "Don't use user config file in HOL repl", long = ["noconfig"], short = "",
+   desc = NoArg (fn () => fn r => r)}, (* checked for and acted on by HOL repl *)
   {help = "output heap/munger name", long = [], short = "o",
    desc = setStringOpt "filename" #output},
   {help = "use poly as base", long = ["poly"], short = "",
@@ -380,13 +382,7 @@ in
           (diag "Starting REPL";
            PolyML.print_depth 100;
            HOL_REPL.sigint_handler();
-           HOL_REPL.topLevel diag {startExec = fn () => (),
-                                   endExec = fn () => (),
-                                   exitLoop = fn () => false,
-                                   exitOnError = false,
-                                   isInteractive = true,
-                                   zeroTerm = z_repl,
-                                   nameSpace = PolyML.globalNameSpace} )
+           HOL_REPL.topLevel {diag = diag, zeroTerm = z_repl} )
         else
           case exe of
               SOME f => BuildHeap_EXE_Compile.exe_compile

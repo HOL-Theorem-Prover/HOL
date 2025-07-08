@@ -27,16 +27,14 @@ fun drop [] x = x
   | drop _ _ = raise ERR "drop" "";
 
 fun variants FV vlist =
-  fst
-    (rev_itlist
-       (fn v => fn (V,W) =>
-           let val v' = variant W v in (v'::V, v'::W) end) vlist ([],FV));
+  rev $ fst $
+  rev_itlist (fn v => fn (V,W) =>
+     let val v' = variant W v in (v'::V, v'::W) end) vlist ([],FV);
 
 fun numvariants FV vlist =
-  fst
-    (rev_itlist
-       (fn v => fn (V,W) =>
-           let val v' = numvariant W v in (v'::V, v'::W) end) vlist ([],FV));
+  rev $ fst $
+  rev_itlist (fn v => fn (V,W) =>
+     let val v' = numvariant W v in (v'::V, v'::W) end) vlist ([],FV);
 
 fun make_definition thry s tm = (new_definition(s,tm), thry)
 
@@ -453,7 +451,7 @@ val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 
 local
   val chatting = ref true
-  val _ = Feedback.register_btrace("Define.storage_message", chatting)
+  val _ = Feedback.register_btrace("Definition.storage_message", chatting)
 in
 fun been_stored (s,thm) =
   (add_defs_to_EVAL [(s,thm)];
@@ -463,8 +461,7 @@ fun been_stored (s,thm) =
            else
              Theory.format_name_message {pfx = "Saved definition", name = s})
    else ()
-   )
-
+  )
 
 (* can fiddle with indSuffix to get "neat" effects; if it is a string
    starting with a space, then that the string without the space is the name
@@ -844,41 +841,36 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      aux_rules = map UNDISCH_ALL disch'dl_1,
      aux_ind = aux_ind
     }
- end;
-
+ end
 
 (*---------------------------------------------------------------------------
       Performs tupling and also eta-expansion.
  ---------------------------------------------------------------------------*)
 
 fun tuple_args alist =
- let
-   val find = Lib.C (op_assoc1 aconv) alist
-   fun tupelo tm =
-     case dest_term tm of
-        LAMB (Bvar, Body) => mk_abs (Bvar, tupelo Body)
-      | _ =>
-         let
-           val (g, args) = strip_comb tm
-           val args' = map tupelo args
-         in
-           case find g of
-              NONE => list_mk_comb (g, args')
-            | SOME (stem', argtys) =>
-               if length args < length argtys  (* partial application *)
-                 then
-                   let
-                     val nvs = map (curry mk_var "a") (drop args argtys)
-                     val nvs' = variants (free_varsl args') nvs
-                     val comb' = mk_comb(stem', list_mk_pair(args' @nvs'))
-                   in
-                     list_mk_abs(nvs', comb')
-                   end
-               else mk_comb(stem', list_mk_pair args')
-         end
+ let val find = Lib.C (op_assoc1 aconv) alist
+     fun tupelo tm =
+      case dest_term tm
+       of LAMB (Bvar, Body) => mk_abs (Bvar, tupelo Body)
+        | _ =>
+        let val (g, args) = strip_comb tm
+            val args' = map tupelo args
+        in
+        case find g
+         of NONE => list_mk_comb (g, args')
+          | SOME (stem', argtys) =>
+          if length args < length argtys then (* partial application *)
+             let val nvs = map (curry mk_var "a") (drop args argtys)
+                 val nvs' = variants (free_varsl args') nvs
+                 val comb' = mk_comb(stem', list_mk_pair(args' @ nvs'))
+             in
+               list_mk_abs(nvs', comb')
+             end
+          else mk_comb(stem', list_mk_pair args')
+        end
  in
    tupelo
- end;
+ end
 
 (*---------------------------------------------------------------------------
      Mutual recursion. This is reduced to an ordinary definition by
@@ -991,9 +983,7 @@ fun mutrec thy bindstem eqns =
          let val inbar  = op_assoc aconv ftupvar injmap
              val outbar = op_assoc aconv ftupvar RNG_OUTS
              val (fvarname,_) = dest_atom fvar
-             val defvars = rev
-                             (numvariants [fvar]
-                                          (map (curry mk_var "x") argtys))
+             val defvars = numvariants [fvar] (map (curry mk_var "x") argtys)
              val tup_defvars = list_mk_pair defvars
              val newty = itlist (curry (op-->)) (map type_of params@argtys) rng
              val fvar' = mk_var(fvarname,newty)
@@ -1097,13 +1087,13 @@ fun pairf (stem, eqs0) =
  let
    val ((f, args), rhs) = dest_hd_eqn eqs0
    val argslen = length args
+   val argtys = map type_of args
  in
    if argslen = 1   (* not curried ... do eta-expansion *)
-     then (tuple_args [(f, (f, map type_of args))] eqs0, stem, I)
+     then (tuple_args [(f, (f, argtys))] eqs0, stem, I)
    else
      let
        val stem'name = stem ^ "_tupled"
-       val argtys = map type_of args
        val rng_ty = type_of rhs
        val tuple_dom = list_mk_prod_type argtys
        val stem' = mk_var (stem'name, tuple_dom --> rng_ty)
@@ -1113,8 +1103,7 @@ fun pairf (stem, eqs0) =
            val (lhs, rhs) = dest_eq (snd (strip_forall eq1))
            val (tuplec, args) = strip_comb lhs
            val (SV, p) = front_last args
-           val defvars = rev (numvariants (f :: SV)
-                                          (map (curry mk_var "x") argtys))
+           val defvars = numvariants (f::SV) (map (curry mk_var "x") argtys)
            val tuplecSV = list_mk_comb (tuplec, SV)
            val def_args = SV @ defvars
            val fvar =

@@ -887,13 +887,7 @@ local
                       of NONE => x
                        | SOME {fullfile,...} => fullfile
 in
-fun export_theory_return_hash () =
-  if !Globals.interactive then let
-    val holdatfile = String.concat["./",current_theory(),".dat"]
-    val datfile = fromHOLFS holdatfile
-  in
-    SHA1.sha1_file {filename=datfile}
-  end else let
+fun export_theory_return_hash () = let
   val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
   val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
   val all_thms = Symtab.fold(fn (s,(th,i)) => fn A => (s,th,i)::A) facts []
@@ -908,10 +902,9 @@ fun export_theory_return_hash () =
           Loaded t =>
           let
             val {write,terms,strings,...} =
-                Binarymap.find(!LoadableThyData.dataops, k)
-                handle NotFound => raise ERR "export_theory"
-                                         ("Couldn't find thydata ops for "^k)
-
+              Binarymap.find(!LoadableThyData.dataops, k)
+              handle Binarymap.NotFound =>
+                raise ERR "export_theory" ("Couldn't find thydata ops for "^k)
           in
             (strings t @ strlist,
              terms t @ tmlist,
@@ -966,7 +959,8 @@ fun export_theory_return_hash () =
             "   Use `set_MLname <bad> <good>' to change each name."]);
         raise ERR "export_theory" "bad binding names")
 end
-val export_theory = ignore o export_theory_return_hash
+fun export_theory () =
+  if !Globals.interactive then () else ignore (export_theory_return_hash ())
 end;
 
 

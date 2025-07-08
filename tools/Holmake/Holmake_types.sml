@@ -382,19 +382,7 @@ val base_environment0 = let
         [VREF ("patsubst %.sml,%.uo,$(patsubst %Theory.sml,,"^
                "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
        ("HOLDIR", [LIT HOLDIR]),
-       ("HOL_LNSIGOBJ",
-        [LIT "for i in `pwd`/",
-         VREF "HOLOBJDIR", LIT "/*.uo `pwd`/",
-         VREF "HOLOBJDIR",
-         LIT "/*.ui ; do b=`basename $i` ; \
-             \if [ \"$b\" = \"selftest.uo\" -o \"$b\" = \"selftest.ui\" ] ; \
-             \then : ; else ln -fs $i ",
-         VREF "SIGOBJ",
-         LIT " ; fi ; done && for i in *.sig ; do ln -fs `pwd`/$i ",
-         VREF "SIGOBJ",
-         LIT " ; echo `pwd`/`basename $i .sig` >> ",
-         VREF "SIGOBJ",
-         LIT "/SRCFILES ; done"]),
+       ("HOL_LNSIGOBJ", [LIT (HOLDIR ^ "/bin/" ^ "linkToSigobj")]),
        ("HOLOBJDIR", [LIT HFS_NameMunge.HOLOBJDIR]),
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
        ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),

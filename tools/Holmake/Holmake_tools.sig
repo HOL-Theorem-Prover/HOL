@@ -114,6 +114,7 @@ sig
   val exists_readable : string -> bool
   val extract_theory : string list -> string option
 
+  val createDirIfNecessary : string -> unit
   val clean_dir : output_functions -> {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
   val clean_forReloc : {holheap : string option} -> unit

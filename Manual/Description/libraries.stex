@@ -1998,8 +1998,8 @@ The following example is taken from the \ml{cv\_computeLib} examples, available 
    End
 
 ##linelen_limit 75
->> time (cv_computeLib.cv_compute [fact_def]) ``fact (cv$Num 1234)``;
-##nolinelen_limit
+>> time (cv_computeLib.cv_compute [fact_def]) “fact (cv$Num 1234)”;
+##poplinelen_limit
 \end{alltt}
 \end{session}
 On a modern machine, the call to \holtxt{cv\_compute} finishes in less than two tenths of a second.
@@ -2097,7 +2097,7 @@ The following example mirrors those in Section \ref{ssec:cv-exprs}, but it uses 
 
 ##linelen_limit 75
 >> time cv_transLib.cv_eval ``FACT 1234``;
-##nolinelen_limit
+##poplinelen_limit
 \end{alltt}
 \end{session}
 

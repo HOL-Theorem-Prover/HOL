@@ -80,6 +80,7 @@ in
   val _ = installPP (mosmlpp Arbrat.pp_rat)
   val _ = installPP (mosmlpp timepp)
   val _ = installPP (mosmlpp locpp)
+  val _ = installPP (mosmlpp Feedback.pp_trace_elt)
 end;
 
 

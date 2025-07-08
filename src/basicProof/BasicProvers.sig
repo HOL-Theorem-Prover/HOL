@@ -108,14 +108,9 @@ sig
   val TOP_CASE_TAC      : tactic   (* PURE_TOP_CASE_TAC then simplification *)
   val FULL_CASE_TAC     : tactic   (* PURE_FULL_CASE_TAC then simplification *)
   val EVERY_CASE_TAC    : tactic   (* Repeat FULL_CASE_TAC *)
+  val case_tac          : tactic
+  val top_case_tac      : tactic
   val full_case_tac     : tactic
   val every_case_tac    : tactic
 
-  (* Backwards compatibility *)
-  val LEGACY_CASE_TAC       : tactic
-  val LEGACY_TOP_CASE_TAC   : tactic
-  val LEGACY_FULL_CASE_TAC  : tactic
-  val LEGACY_EVERY_CASE_TAC : tactic
-  val legacy_full_case_tac  : tactic
-  val legacy_every_case_tac : tactic
 end

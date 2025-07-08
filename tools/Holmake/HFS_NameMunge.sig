@@ -13,8 +13,15 @@ sig
   val openDir : string -> dirstream
   val readDir : dirstream -> string option
   val closeDir : dirstream -> unit
+
   val read_files_with_objs :
-      {dirname: string} -> (string -> bool) -> (string -> unit) ->
-      unit
+      {dirname: string} -> (string -> bool) ->
+      ({fakearcs:string list,base:string} -> 'a -> 'a) ->
+      'a ->
+      'a
+  (* test is on bare name; action/reducer can take side effects and is
+     passed base name (which matches the predicate) as well as
+     a list of possible fake arcs that should be appended to the
+     dirname in order to generate genuine path *)
 
 end
