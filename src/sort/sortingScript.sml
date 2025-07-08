@@ -281,23 +281,28 @@ val perm_PERM = UNDISCH perm_PERM
 
 val _ = print "Proving perm has primitive recursive characterisation\n"
 
-val perm_cons_append' = Q.prove
-  (‘^perm_t ==> !M. perm (h::M ++ N) (M ++ [h] ++ N)’,
+Theorem perm_cons_append'[local]:
+  ^perm_t ==> !M. perm (h::M ++ N) (M ++ h :: N)
+Proof
   STRIP_TAC >> ASSUME_TAC perm_rules >> ASSUME_TAC perm_refl >>
     RULE_L_ASSUM_TAC CONJUNCTS >>
     Induct >> ASM_SIMP_TAC list_ss [] >> GEN_TAC >>
     MATCH_MP_TAC perm_trans >> Q.EXISTS_TAC ‘h'::h::(M ++ N)’ >>
-    RES_TAC >> ASM_SIMP_TAC list_ss []) ;
+    RES_TAC >> ASM_SIMP_TAC list_ss []
+QED
 
-val perm_cons_append = prove(
-  “^perm_t ==> !l1 l2. perm l1 l2 ==>
-                        !M N. (l2 = M ++ N) ==>
-                              !h. perm (h::l1) (M ++ [h] ++ N)”,
+Theorem perm_cons_append[local]:
+  ^perm_t ==>
+  !l1 l2. perm l1 l2 ==>
+          !M N. (l2 = M ++ N) ==>
+                !h. perm (h::l1) (M ++ h::N)
+Proof
   REPEAT STRIP_TAC >> MATCH_MP_TAC perm_trans >>
     Q.EXISTS_TAC ‘h :: l2’ >> CONJ_TAC
   THENL [ ASSUME_TAC perm_rules >> ASM_SIMP_TAC list_ss [],
     BasicProvers.VAR_EQ_TAC >>
-    MATCH_ACCEPT_TAC (REWRITE_RULE [APPEND] (UNDISCH perm_cons_append')) ]) ;
+    MATCH_ACCEPT_TAC (REWRITE_RULE [APPEND] (UNDISCH perm_cons_append')) ]
+QED
 
 val perm_cons_append =
     SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [] (UNDISCH perm_cons_append)
@@ -323,7 +328,7 @@ in
             (GEN “perm : 'a list -> 'a list -> bool” th0)
 end
 
-val PERM_IND = save_thm("PERM_IND", remove_eq_asm perm_ind)
+Theorem PERM_IND = remove_eq_asm perm_ind
 
 val PERM_MONO' = PERM_MONO |> SPEC_ALL |> Q.GENL [‘x’, ‘l1’, ‘l2’]
 
@@ -426,6 +431,7 @@ Theorem PERM_BIJ_IFF:
   ?p. p PERMUTES count (LENGTH l1) /\
       l2 = GENLIST (\i. EL (p i) l1) (LENGTH l1)
 Proof
+
   eq_tac
   >- metis_tac[PERM_BIJ]
   \\ rw[] \\ fs[]
@@ -453,8 +459,14 @@ Proof
       \\ Cases_on‘g 0’ \\ gs[]
       \\ metis_tac[prim_recTheory.LESS_REFL] )
     \\ Cases_on‘x = g 0’ \\ gs[]
+    \\ ‘g 0 < x’ by simp[]
+    \\ gs[]
     \\ Cases_on‘p x’ \\ gs[]
-    \\ metis_tac[prim_recTheory.LESS_0])
+    >- metis_tac[prim_recTheory.LESS_REFL]
+    \\ ‘∃y. x - g 0 = SUC y’ by (Cases_on ‘x - g 0’ >> simp[])
+    \\ simp[]
+    \\ ‘y + (g 0 + 1) = x’ by simp[]
+    \\ simp[])
   \\ qspecl_then[‘\i. EL (p (if i < g 0 then i else i + 1) - 1) l1’,
                  ‘LENGTH l1 - g 0’, ‘g 0’] (mp_tac o SYM) GENLIST_APPEND
   \\ simp[]
@@ -797,17 +809,17 @@ val QSORT_SORTS = Q.store_thm
   PROVE_TAC [SORTS_DEF, QSORT_PERM, QSORT_SORTED]);
 
 
-(*---------------------------------------------------------------------------
- * Theorems about Permutations. Added by Thomas Tuerk. 19 March 2009
- *---------------------------------------------------------------------------*)
+Theorem PERM_APPEND_IFF[simp]:
+  (!l:'a list l1 l2. PERM (l++l1) (l++l2) = PERM l1 l2) /\
+  (!l:'a list l1 l2. PERM (l1++l) (l2++l) = PERM l1 l2)
+Proof
+  SIMP_TAC list_ss [PERM_alt, FILTER_APPEND_DISTRIB]
+QED
 
-val PERM_APPEND_IFF = store_thm ("PERM_APPEND_IFF",
-“(!l:'a list l1 l2. PERM (l++l1) (l++l2) = PERM l1 l2) /\
-  (!l:'a list l1 l2. PERM (l1++l) (l2++l) = PERM l1 l2)”,
-  SIMP_TAC list_ss [PERM_alt, FILTER_APPEND_DISTRIB]) ;
-
-val PERM_SINGLE_SWAP_DEF = Define ‘PERM_SINGLE_SWAP l1 l2 =
-    ?x1 x2 x3. (l1 = x1 ++ x2 ++ x3) /\ (l2 = x1 ++ x3 ++ x2)’;
+Definition PERM_SINGLE_SWAP_DEF:
+  PERM_SINGLE_SWAP l1 l2 =
+  ?x1 x2 x3. (l1 = x1 ++ x2 ++ x3) /\ (l2 = x1 ++ x3 ++ x2)
+End
 
 val PERM_SINGLE_SWAP_SYM = store_thm ("PERM_SINGLE_SWAP_SYM",
 “!l1 l2. PERM_SINGLE_SWAP l1 l2 = PERM_SINGLE_SWAP l2 l1”,
@@ -1302,46 +1314,43 @@ val PERM_REWR = store_thm (
 PROVE_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]);
 
 
-val PERM_CENTRE1 = prove (
-“(PERM (xs ++ l) (r1 ++ xs ++ r2) = PERM l (r1 ++ r2))”,
-METIS_TAC [APPEND_ASSOC, PERM_APPEND_IFF,
-    PERM_APPEND, PERM_EQUIVALENCE_ALT_DEF]);
-val PERM_CENTRE2 = PERM_CENTRE1 |> Q.GEN ‘xs’ |> Q.SPEC ‘[x]’
-  |> SIMP_RULE bool_ss [APPEND, GSYM APPEND_ASSOC]
+Theorem PERM_CENTRE1[local]:
+  (PERM (xs ++ l) (r1 ++ xs ++ r2) = PERM l (r1 ++ r2))
+Proof
+  METIS_TAC [APPEND_ASSOC, PERM_APPEND_IFF,
+             PERM_APPEND, PERM_EQUIVALENCE_ALT_DEF]
+QED
+Theorem PERM_CENTRE2 =
+        PERM_CENTRE1 |> Q.GEN ‘xs’
+                     |> Q.SPEC ‘[x]’
+                     |> SIMP_RULE bool_ss [APPEND, GSYM APPEND_ASSOC]
 
-val PERM_TO_APPEND_SIMPS = store_thm (
-"PERM_TO_APPEND_SIMPS",
-“(PERM (x::l) ((x::r1) ++ r2) = PERM l (r1 ++ r2)) /\
-(PERM (x::l) (r1 ++ (x::r2)) = PERM l (r1 ++ r2)) /\
-(PERM ((xs ++ ys) ++ zs) r = PERM (xs ++ (ys ++ zs)) r) /\
-(PERM ((x :: ys) ++ zs) r = PERM (x :: (ys ++ zs)) r) /\
-(PERM ([] ++ l) r = PERM l r) /\
-(PERM (xs ++ l) ((xs ++ r1) ++ r2) = PERM l (r1 ++ r2)) /\
-(PERM (xs ++ l) (r1 ++ (xs ++ r2)) = PERM l (r1 ++ r2)) /\
-(PERM [] ([] ++ []) = T) /\
-(PERM xs ((xs ++ []) ++ []) = T) /\
-(PERM xs ([] ++ (xs ++ [])) = T)”,
-SIMP_TAC list_ss [PERM_REFL, PERM_CONS_IFF, PERM_CENTRE1, PERM_CENTRE2]
-  \\ SIMP_TAC bool_ss [GSYM APPEND_ASSOC, PERM_APPEND_IFF]);
+Theorem PERM_TO_APPEND_SIMPS:
+  (PERM (x::l) ((x::r1) ++ r2) = PERM l (r1 ++ r2)) /\
+  (PERM (x::l) (r1 ++ (x::r2)) = PERM l (r1 ++ r2)) /\
+  (PERM ((xs ++ ys) ++ zs) r = PERM (xs ++ (ys ++ zs)) r) /\
+  (PERM ((x :: ys) ++ zs) r = PERM (x :: (ys ++ zs)) r) /\
+  (PERM ([] ++ l) r = PERM l r) /\
+  (PERM (xs ++ l) ((xs ++ r1) ++ r2) = PERM l (r1 ++ r2)) /\
+  (PERM (xs ++ l) (r1 ++ (xs ++ r2)) = PERM l (r1 ++ r2)) /\
+  (PERM [] ([] ++ []) = T) /\
+  (PERM xs ((xs ++ []) ++ []) = T) /\
+  (PERM xs ([] ++ (xs ++ [])) = T)
+Proof
+  rw[PERM_CENTRE2] >> metis_tac[APPEND_ASSOC, PERM_CENTRE1]
+QED
 
 Theorem PERM_FLAT:
   !l1 l2. PERM l1 l2 ==> PERM (FLAT l1) (FLAT l2)
 Proof
-  ho_match_mp_tac PERM_IND
-  \\ rw[PERM_APPEND_IFF, PERM_SWAP_L_AT_FRONT]
-  \\ metis_tac[PERM_TRANS]
+  Induct_on ‘PERM’ >> simp[PERM_TO_APPEND_SIMPS] >>
+  metis_tac[PERM_TRANS]
 QED
 
 Theorem PERM_FLAT_MAP_CONS:
   !h t ls. PERM (FLAT (MAP (\x. h x :: t x) ls)) (MAP h ls ++ FLAT (MAP t ls))
 Proof
-  ntac 2 gen_tac
-  \\ Induct
-  \\ rw[]
-  \\ irule PERM_TRANS
-  \\ qmatch_goalsub_abbrev_tac`PERM _ (a ++ b ++ c)`
-  \\ qexists_tac`b ++ (a ++ c)`
-  \\ simp[PERM_APPEND_IFF, PERM_APPEND]
+  ntac 2 gen_tac >> Induct >> rw[PERM_TO_APPEND_SIMPS]
 QED
 
 Theorem PERM_FLAT_MAP_SWAP:
@@ -1425,7 +1434,7 @@ Theorem LIST_REL_PERM:
 Proof
   Induct_on ‘LIST_REL’
   \\ rw[PERM_CONS_EQ_APPEND, PULL_EXISTS]
-  \\ ntac 2 (irule_at Any listTheory.LIST_REL_APPEND_suff)
+  \\ irule_at Any listTheory.LIST_REL_APPEND_suff
   \\ simp[]
   \\ first_x_assum $ drule_then strip_assume_tac
   \\ gs[LIST_REL_SPLIT2, SF SFY_ss]
