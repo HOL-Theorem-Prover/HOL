@@ -111,18 +111,27 @@ val ServerNotInitialized = ~32002
 (* val ServerCancelled = ~32802 *)
 (* val RequestFailed = ~32803 *)
 
+val ErrorSeverity = 1
+val WarnSeverity = 2
+(* val InfoSeverity = 3 *)
+(* val HintSeverity = 4 *)
+
 datatype incremental = IncrNone | IncrChunk | IncrStream
+datatype elab_on = ElabOnNone | ElabOnChange | ElabOnSave
 
 local
   open JSONDecode JSON
-  val error = map3 (fn (code, message, data) => {code = code, message = message, data = data})
-    (field "code" int, field "message" string, fieldO "data" raw)
-  exception NotIncr
-  val incr = ofRaw (fn jv =>
-    case decode int jv of
-      0 => IncrNone | 1 => IncrChunk | 2 => IncrStream
-    | _ => raise JSONError (NotIncr, jv))
+  exception Invalid
 in
+
+val error = map3 (fn (code, message, data) => {code = code, message = message, data = data})
+  (field "code" int, field "message" string, fieldO "data" raw)
+
+val incr = ofRaw (fn jv =>
+  case decode int jv of
+    0 => IncrNone | 1 => IncrChunk | 2 => IncrStream
+  | _ => raise JSONError (Invalid, jv))
+
 val req_id = orElse (map Id int, map Str string)
 val decMessage: JSON.value message decoder = ofRaw (fn jv =>
   case decode (fieldO "id" req_id) jv of
@@ -139,14 +148,38 @@ val decMessage: JSON.value message decoder = ofRaw (fn jv =>
     | NONE => Ok (decode (field "result" raw) jv )
     in Response {id = id, result = result} end)
 
+val elabOn = ofRaw (fn jv =>
+  case decode int jv of
+    0 => ElabOnNone | 1 => ElabOnChange | 2 => ElabOnSave
+  | _ => raise JSONError (Invalid, jv))
+
 val position = tuple2 (field "line" int, field "character" int)
+val range = tuple2 (field "start" position, field "end" position)
+
 val textDocumentPositionParams =
   map2 (fn (uri, pos) => {uri = uri, pos = pos})
     (field "textDocument" (field "uri" string), field "position" position)
 
 val cancelParams = field "id" req_id
+
 val evalParams = map3 (fn (uri, code, incr) => {uri = uri, code = code, incr = incr})
   (field "uri" string, field "code" string, fieldD "incr" incr IncrNone)
+
+val textDocumentParams = field "textDocument" (
+  map3 (fn (uri, version, text) => {uri = uri, version = version, text = text})
+    (field "uri" string, field "version" int, field "text" string))
+
+val versionedTextId = tuple2 (field "uri" string, field "version" int)
+
+val changeEvent = map2 (fn (range, text) => {range = range, text = text})
+  (fieldO "range" range, field "text" string)
+
+val didChangeParams =
+  map2 (fn ((uri, version), changes) => {uri = uri, version = version, changes = changes})
+    (field "textDocument" versionedTextId, field "contentChanges" (array changeEvent))
+
+val textDocumentId = field "textDocument" (field "uri" string)
+
 end
 
 fun encReqId (Id id) = encInt id
@@ -308,8 +341,8 @@ fun getLineCol lines index = let
   val line = partitionPoint (Vector.length lines) (fn i => Vector.sub (lines, i) <= index)
   in (line, index - (if line = 0 then 0 else Vector.sub (lines, line - 1))) end
 
-(* fun fromLineCol lines (line, col) =
-  if line = 0 then col else Vector.sub (lines, line - 1) + col *)
+fun fromLineCol lines (line, col) =
+  if line = 0 then col else Vector.sub (lines, line - 1) + col
 
 type range = int * int
 
@@ -322,6 +355,76 @@ fun locToRange ({startPosition,endPosition,...}:PolyML.location) =
 fun encPretty textWidth pp print = let
   fun print' s = encStringContents s print
   in print "\""; PolyML.prettyPrint (print', textWidth) pp; print "\"" end
+
+structure DArray: sig
+
+type 'a darray
+val new: int * 'a -> 'a darray
+val clear: 'a darray -> unit
+val sub: 'a darray * int -> 'a
+val update: 'a darray * int * 'a -> unit
+val clone: 'a darray * int -> 'a darray
+val push: 'a darray * 'a -> unit
+val size: 'a darray -> int
+val last: 'a darray -> 'a option
+val setLast: 'a darray * 'a -> unit
+val app: ('a -> unit) -> 'a darray -> unit
+type 'a slice = 'a ArraySlice.slice
+val slice: 'a darray * int * int option -> 'a slice
+val copy: {src: 'a slice, dst: 'a darray, di: int} -> unit
+val append: 'a darray * 'a slice -> unit
+val replace: 'a darray * 'a darray -> unit
+
+end = struct
+
+type 'a darray = ('a array * int * 'a) ref
+fun new (cap, v) = ref (Array.array (cap, v), 0, v)
+fun clear (r as ref (a, _, dflt)) = r := (a, 0, dflt)
+fun sub (ref (a, sz, _), i) = if i < sz then Array.sub (a, i) else raise Subscript
+fun update (ref (a, sz, _), i, v) = if i < sz then Array.update (a, i, v) else raise Subscript
+fun cloneCore ((a, sz, dflt), cap) = let
+  val a' = Array.array (cap, dflt)
+  val _ = ArraySlice.copy {src = ArraySlice.slice (a, 0, SOME sz), dst = a', di = 0}
+  in (a', sz, dflt) end
+fun clone (ref a, cap) = ref (cloneCore (a, cap))
+fun ensureCapacity (r as (a, _, _), cap) =
+  if cap <= Array.length a then r else cloneCore (r, Int.max (cap, Array.length a * 3 div 2))
+fun push (r as ref (a as (_, sz, _:'a)), v) = let
+  val (a, sz, dflt) = ensureCapacity (a, sz + 1)
+  val _ = Array.update (a, sz, v)
+  in r := (a, sz+1, dflt) end
+fun size (ref (_, sz, _)) = sz
+fun last a = case size a of 0 => NONE | sz => SOME (sub (a, sz-1))
+fun setLast (a, v) = update (a, size a - 1, v)
+fun app f a = let
+  val n = size a
+  fun go i = if i < n then (f (sub (a, i)); go (i+1)) else ()
+  in go 0 end
+
+type 'a slice = 'a ArraySlice.slice
+fun slice (ref (a, sz, _), i, SOME len) =
+    if i+len <= sz then ArraySlice.slice (a, i, SOME len) else raise Subscript
+  | slice (ref (a, sz, _), i, NONE) =
+    if i <= sz then ArraySlice.slice (a, i, SOME (sz - i)) else raise Subscript
+
+fun copy {src, dst = ref (a, sz, _), di} =
+  if di + ArraySlice.length src > sz then raise Subscript
+  else ArraySlice.copy {src = src, dst = a, di = di}
+
+fun append (r as ref (a as (_, sz, _)), v) = (
+  r := ensureCapacity (a, sz + ArraySlice.length v);
+  ArraySlice.copy {src = v, dst = #1 (!r), di = sz})
+fun replace (r, ref a) = r := a
+
+end
+
+fun encDArray encode ls print = case DArray.size ls of
+    0 => print "[]"
+  | n => let
+    fun inner i = if i < n then
+      (print ","; encode (DArray.sub (ls, i)) print; inner (i+1))
+    else print "]"
+    in print "["; encode (DArray.sub (ls, 0)) print; inner 1 end
 
 exception Todo
 fun start {diag} = let
@@ -370,6 +473,169 @@ fun start {diag} = let
       in go ([], js) end)
     in () end)
 
+  val elabOnRef = ref ElabOnChange
+
+  datatype report =
+    Error of {hard: bool, pos: range, msg: encode}
+  | CompilerOut of int * string list
+  | ToplevelOut of int * string list
+  | Progress of int
+  | Completed
+  | Interrupted
+
+  type parse_data = {
+    done: bool,
+    pos: int,
+    mlParseTrees: PolyML.parseTree list,
+    diags: report DArray.darray,
+    plugins: (string, Universal.universal) Binarymap.dict}
+  fun emptyParseData n: parse_data = {
+    done = false, pos = 0, mlParseTrees = [], diags = DArray.new (n, Completed),
+    plugins = Binarymap.mkDict String.compare }
+  fun addParseTree t {done, pos, mlParseTrees, diags, plugins} =
+    {done = done, pos = pos, mlParseTrees = t :: mlParseTrees, diags = diags, plugins = plugins}
+  fun setParsePos pos {done, pos = _, mlParseTrees, diags, plugins} =
+    {done = done, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
+  fun setParseDone pos {done = _, pos = _, mlParseTrees, diags, plugins} =
+    {done = true, pos = pos, mlParseTrees = mlParseTrees, diags = diags, plugins = plugins}
+
+  type text_data = {text: string, version: int, lines: int vector}
+  type compile_data = {parse: parse_data ref, text: text_data, thread: Thread.thread}
+  type file_data = {
+    compile: compile_data option ref,
+    lastTrees: {parse: parse_data, text: text_data} ref}
+  local
+    val mutex = Mutex.mutex ()
+    val fileInfo = ref (Binarymap.mkDict String.compare: (string, file_data) Binarymap.dict)
+  in
+    fun withFileInfo f = (Mutex.lock mutex; let
+      val (v, r) = f (!fileInfo)
+      val _ = fileInfo := v
+      val _ = Mutex.unlock mutex
+      in r end
+      handle e => (Mutex.unlock mutex; PolyML.Exception.reraise e))
+  end
+
+  fun newFile text version = let
+    val text = {text = text, version = version, lines = mkLineCounter text}
+    in {compile = ref NONE, lastTrees = ref {parse = emptyParseData 0, text = text}} end
+
+  fun stopCompile r = case !r of
+    NONE => ()
+  | SOME {thread, ...} => (r := NONE; Thread.interrupt thread)
+
+  fun applyEdit ({compile, lastTrees}:file_data) version changes = let
+    val _ = stopCompile compile
+    fun getLines text NONE = mkLineCounter text
+      | getLines _ (SOME lines) = lines
+    fun applyText [] data = data
+      | applyText ({range = NONE, text}::cs) _ = applyText cs (emptyParseData 0, text, NONE)
+      | applyText ({range = SOME (from, to), text}::cs) (_, base, lines) = let
+        val lines = getLines base lines
+        val (from, to) = (fromLineCol lines from, fromLineCol lines to)
+        val text = Substring.concat [
+          Substring.substring (base, 0, from),
+          Substring.full text,
+          Substring.substring (base, to, size base - to)]
+        in applyText cs (emptyParseData 0, text, NONE) end
+    val {parse, text = {text, lines, version = _}} = !lastTrees
+    val (parse, text, lines) = applyText changes (parse, text, SOME lines)
+    val text = {text = text, lines = getLines text lines, version = version}
+    in lastTrees := {parse = parse, text = text} end
+
+  fun exceptionMessage (exn: exn) =
+    PolyML.PrettyBlock(0, false, [], [
+      PolyML.PrettyBlock(0, false, [], [PolyML.PrettyString "Exception"]),
+      PolyML.PrettyBreak(1, 3),
+      PolyML.prettyRepresentation(exn, printDepth),
+      PolyML.PrettyBreak(1, 3),
+      PolyML.PrettyString "raised"])
+
+  fun mergeInto msg buf =
+    case (msg, DArray.last buf) of
+      (CompilerOut (pos', [s]), SOME (CompilerOut (pos, ss))) =>
+      if pos = pos' then DArray.setLast (buf, CompilerOut (pos, s :: ss))
+      else DArray.push (buf, msg)
+    | (ToplevelOut (pos', [s]), SOME (ToplevelOut (pos, ss))) =>
+      if pos = pos' then DArray.setLast (buf, ToplevelOut (pos, s :: ss))
+      else DArray.push (buf, msg)
+    | _ => DArray.push (buf, msg)
+
+  fun compileForReport uri code lastPos mlParseTree report = let
+    val _ = HOL_IDE.initialize {
+      text = code,
+      filename = uri,
+      parseError = fn pos => fn s => report (Error {hard = true, pos = pos, msg = encString s}),
+      compilerOut = fn s => report (CompilerOut (!lastPos, [s])),
+      toplevelOut = fn s => report (ToplevelOut (!lastPos, [s])),
+      progress = fn i => (lastPos := i; report (Progress i)),
+      error = fn {hard, location, message, ...} => report (Error {
+        hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
+      runtimeExn = fn e => report (Error {hard = true,
+        pos = case PolyML.Exception.exceptionLocation e of
+          NONE => (case !lastPos of i => (i, i))
+        | SOME l => locToRange l,
+        msg = encPretty textWidth (exceptionMessage e)}),
+      mlParseTree = mlParseTree,
+      holParseTree = fn _ => () }
+    in lastPos := size code end
+
+  fun startCompile uri ({compile, lastTrees}:file_data) =
+    if #done (#parse (!lastTrees)) then () else let
+    val _ = stopCompile compile
+    val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees
+    val trees = ref (emptyParseData 8)
+    fun compileThread () = ((let
+      val lastPos = ref 0
+      fun updateDiags pos = let
+        val {diags, ...} = !trees
+        val n = DArray.size oldDiags
+        val newDiags = DArray.clone (diags, DArray.size diags + n)
+        fun loop i = if i >= n then () else let
+          val x = DArray.sub (diags, i)
+          val keep = case x of Error {pos = (start, _), ...} => start >= pos | _ => true
+          in if keep then DArray.push (newDiags, x) else (); loop (i+1) end
+        in loop 0; DArray.replace (oldDiags, newDiags) end
+
+      fun encDiag (Error {hard, pos, msg}) print = (
+          print "{\"range\":"; encRangeLC lines pos print;
+          print ",\"severity\":"; encInt (if hard then ErrorSeverity else WarnSeverity) print;
+          print ",\"message\":"; msg print; print "}")
+        | encDiag _ _ = raise Fail "unexpected report kind"
+
+      fun sendDiags () =
+        send (mkNotif "textDocument/publishDiagnostics" (fn print => (
+          print "{\"uri\":"; encString uri print;
+          print ",\"version\":"; encInt (#version text) print;
+          print ",\"diagnostics\":"; encDArray encDiag oldDiags print;
+          print "}")))
+
+      fun process (Progress i) = (
+          trees := setParsePos i (!trees);
+          send (mkNotif "$/compileProgress" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            print ",\"pos\":"; encPosLC lines i print;
+            print "}")));
+          updateDiags i; sendDiags ())
+        | process (CompilerOut (_, ss)) = logMessage (concat (rev ss))
+        | process (ToplevelOut (_, ss)) = logMessage (concat (rev ss))
+        | process Completed = raise Bind
+        | process Interrupted = raise Bind
+        | process (msg as Error _) = DArray.push (#diags (!trees), msg)
+      fun processTree t = trees := addParseTree t (!trees)
+      in
+        compileForReport uri (#text text) lastPos processTree process;
+        send (mkNotif "$/compileCompleted" (fn print => (
+          print "{\"uri\":"; encString uri print; print "}")));
+        lastTrees := {text = text, parse = setParseDone (size (#text text)) (!trees)}
+      end
+      handle Thread.Interrupt =>
+        send (mkNotif "$/compileInterrupted" (fn print => (
+          print "{\"uri\":"; encString uri print; print "}"))));
+      compile := NONE)
+    val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
+    in compile := SOME {parse = trees, text = text, thread = thread} end
+
   fun hover {uri, pos} = let
     (* TODO *)
     in Ok encNull end
@@ -382,26 +648,20 @@ fun start {diag} = let
   fun eval id {uri, code, incr} = let
     val lines = mkLineCounter code
 
-    datatype report =
-      Error of {hard: bool, pos: range, msg: encode}
-    | CompilerOut of string list
-    | ToplevelOut of string list
-    | Progress of int
-    | Completed
-    | Interrupted
-
     fun encReport (Error {hard, pos, msg}) print = (
         print "{\"kind\":\"error\"";
         print ",\"hard\":"; print (if hard then "true" else "false");
         print ",\"pos\":"; encRangeLC lines pos print;
         print ",\"msg\":"; msg print;
         print "}")
-      | encReport (CompilerOut s) print = (
+      | encReport (CompilerOut (pos, s)) print = (
         print "{\"kind\":\"compilerOut\"";
+        print ",\"pos\":"; encPosLC lines pos print;
         print ",\"body\":"; encString (concat (rev s)) print;
         print "}")
-      | encReport (ToplevelOut s) print = (
+      | encReport (ToplevelOut (pos, s)) print = (
         print "{\"kind\":\"toplevelOut\"";
+        print ",\"pos\":"; encPosLC lines pos print;
         print ",\"body\":"; encString (concat (rev s)) print;
         print "}")
       | encReport (Progress i) print = (
@@ -411,61 +671,28 @@ fun start {diag} = let
       | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
-    fun exceptionMessage (exn: exn) =
-      PolyML.PrettyBlock(0, false, [], [
-        PolyML.PrettyBlock(0, false, [], [PolyML.PrettyString "Exception"]),
-        PolyML.PrettyBreak(1, 3),
-        PolyML.prettyRepresentation(exn, printDepth),
-        PolyML.PrettyBreak(1, 3),
-        PolyML.PrettyString "raised"])
-
-    val lastPos = ref 0
-    fun compile report = (
-      HOL_IDE.initialize {
-        text = code,
-        filename = uri,
-        parseError = fn pos => fn s => report (Error {hard = true, pos = pos, msg = encString s}),
-        compilerOut = fn s => report (CompilerOut [s]),
-        toplevelOut = fn s => report (ToplevelOut [s]),
-        progress = fn i => (lastPos := i; report (Progress i)),
-        error = fn {hard, location, message, ...} => report (Error {
-          hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
-        runtimeExn = fn e => report (Error {hard = true,
-          pos = case PolyML.Exception.exceptionLocation e of
-            NONE => (case !lastPos of i => (i, i))
-          | SOME l => locToRange l,
-          msg = encPretty textWidth (exceptionMessage e)}),
-        mlParseTree = fn _ => (),
-        holParseTree = fn _ => () };
-      lastPos := size code)
-
-    fun mergeInto msg buf =
-      buf := (case (msg, !buf) of
-        (CompilerOut [s], CompilerOut ss :: rest) => CompilerOut (s :: ss) :: rest
-      | (ToplevelOut [s], ToplevelOut ss :: rest) => ToplevelOut (s :: ss) :: rest
-      | (msg, buf) => msg :: buf)
+    val compile = compileForReport uri code (ref 0) (fn _ => ())
     in
       case incr of
         IncrNone => let
-        val buf = ref []
+        val buf = DArray.new (8, Completed)
         val _ = compile (fn Progress _ => () | msg => mergeInto msg buf) handle
-          Thread.Interrupt => buf := Interrupted :: !buf
-        in Ok (encArray encReport (rev (!buf))) end
+          Thread.Interrupt => DArray.push (buf, Interrupted)
+        in Ok (encDArray encReport buf) end
       | IncrChunk => (
         spawnJobCore id (fn () => let
-          val buf = ref []
+          val buf = DArray.new (8, Completed)
           val prev = ref 0
-          fun clearBuf complete = let
-            val buf = rev (!buf before buf := [])
+          fun clearBuf complete i = let
             fun params print = (
               print "{\"id\":"; encReqId id print;
-              print ",\"pos\":"; encRangeLC lines (!prev before prev := !lastPos, !lastPos) print;
-              print ",\"out\":"; encArray encReport buf print;
+              print ",\"pos\":"; encRangeLC lines (!prev before prev := i, i) print;
+              print ",\"out\":"; encDArray encReport buf print;
               if complete then print ",\"complete\":true" else (); print "}")
-            in send (mkNotif "$/eval/P" params) end
-          val _ = compile (fn Progress _ => clearBuf false | msg => mergeInto msg buf) handle
-            Thread.Interrupt => buf := Interrupted :: !buf
-          in lastPos := size code; clearBuf true end);
+            in send (mkNotif "$/eval/P" params); DArray.clear buf end
+          val _ = compile (fn Progress i => clearBuf false i | msg => mergeInto msg buf)
+            handle Thread.Interrupt => DArray.push (buf, Interrupted)
+          in clearBuf true (size code) end);
         Ok encNull)
       | IncrStream => (
         spawnJobCore id (fn () => let
@@ -485,7 +712,7 @@ fun start {diag} = let
 
   exception Shutdown
   fun main () = (
-    case recv () of
+    (case recv () of
       Request {method = "shutdown", id, ...} => (
         diag "received shutdown request";
         send (mkResponse id (Ok encNull));
@@ -495,6 +722,13 @@ fun start {diag} = let
       spawnJob id params textDocumentPositionParams hover
     | Request {method = "textDocument/definition", id, params} =>
       spawnJob id params textDocumentPositionParams gotoDefinition
+    | Request {method = "$/setConfig", id, params} => ((
+      case JSONDecode.decode (JSONDecode.fieldO "elabOn" elabOn) params of
+        NONE => ()
+      | SOME v => elabOnRef := v;
+      send (mkResponse id (Ok encNull)))
+      handle JSONDecode.JSONError _ =>
+        send (mkResponse id (mkErr InvalidParams "json decode failed")))
     | Request {method = "$/eval", id, params} =>
       spawnJob id params evalParams (eval id)
     | Request {method, id, ...} =>
@@ -502,8 +736,41 @@ fun start {diag} = let
     | Notification {method = "$/cancelRequest", params} => let
       val id = JSONDecode.decode cancelParams params
       in app (fn (j,th) => if j = id then Thread.interrupt th else ()) (jobs I) end
+    | Notification {method = "textDocument/didOpen", params} => let
+      val {uri, text, version} = JSONDecode.decode textDocumentParams params
+      val v = withFileInfo (fn fileInfo =>
+        case Binarymap.peek (fileInfo, uri) of
+          SOME v => (fileInfo, SOME v)
+        | NONE => (Binarymap.insert (fileInfo, uri, newFile text version), NONE))
+      in case v of NONE => () | SOME v => applyEdit v version [{range = NONE, text = text}] end
+    | Notification {method = "textDocument/didChange", params} => let
+      val {uri, version, changes} = JSONDecode.decode didChangeParams params
+      val _ = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
+        NONE => ()
+      | SOME v => (
+        applyEdit v version changes;
+        if !elabOnRef = ElabOnChange then startCompile uri v else ())
+      in () end
+    | Notification {method = "textDocument/didClose", params} => let
+      val uri = JSONDecode.decode textDocumentId params
+      val _ = withFileInfo (fn fileInfo => (
+        case Binarymap.peek (fileInfo, uri) of
+          NONE => (fileInfo, ())
+        | SOME {compile, ...} =>
+          (stopCompile compile; (#1 (Binarymap.remove (fileInfo, uri)), ()))))
+      in () end
+    | Notification {method = "textDocument/didSave", params} =>
+      if !elabOnRef <> ElabOnSave then () else let
+        val uri = JSONDecode.decode textDocumentId params
+        val _ = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
+          NONE => ()
+        | SOME v => startCompile uri v
+        in () end
     | Response _ => diag "response to unknown request"
-    | Notification {method, ...} => diag ("unknown method: " ^ method);
+    | Notification {method, ...} => diag ("unknown method: " ^ method))
+    handle
+      e as Shutdown => PolyML.Exception.reraise e
+    | e => logMessage ("ignored exception " ^ exnMessage e);
     main ())
   in
     main () handle
