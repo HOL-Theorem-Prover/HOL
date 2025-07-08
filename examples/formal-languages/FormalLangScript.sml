@@ -1,4 +1,4 @@
-(*===========================================================================*)
+g(*===========================================================================*)
 (* Formal Language Theory                                                    *)
 (*                                                                           *)
 (* A formal language is a set of strings over an alphabet. The type 'a list  *)
@@ -947,6 +947,34 @@ Proof
           metis_tac[FINITE_PREFIXES])
       >- (irule finite_image_const >> rw[] >>
           metis_tac [LEFT_QUOTIENT_PREFIXES]))
+QED
+
+
+(*---------------------------------------------------------------------------*)
+(* Inductive definition of regular sets                                      *)
+(*---------------------------------------------------------------------------*)
+
+Inductive REG:
+[~empty:]
+  (∀A. FINITE A ⇒ REG ({},A))
+[~alphabet:]
+  (∀A a. FINITE A ∧ a ∈ A ⇒ REG ({[a]}, A))
+[~union:]
+  (∀L1 L2 A. REG (L1,A) ∧ REG (L2,A) ⇒ REG (L1 ∪ L2, A))
+[~dot:]
+  (∀L1 L2 A. REG (L1,A) ∧ REG (L2,A) ⇒ REG (L1 dot L2, A))
+[~star:]
+  (∀L A. REG (L,A) ⇒ REG (KSTAR L, A))
+End
+
+(* maybe better in regular/regularScript.sml *)
+Theorem REG_IMP_FINITE_STATE:
+ REG ⊆ FINITE_STATE
+Proof
+ simp [SUBSET_DEF,IN_DEF] >>
+ ho_match_mp_tac REG_ind >> rw[]
+ >- metis_tac [FINITE_STATE_EMPTYSET]
+ >> cheat
 QED
 
 (*
