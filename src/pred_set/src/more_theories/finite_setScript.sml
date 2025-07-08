@@ -418,6 +418,15 @@ Definition fCARD_def:
   fCARD = (fset_REP ---> I) (LENGTH o nub)
 End
 
+Theorem MEM_nub_split:
+  MEM e (nub l) ⇔ ∃p s. nub l = p ++ e::s ∧ ¬MEM e p ∧ ¬MEM e s
+Proof
+  simp[Once MEM_SPLIT_APPEND_first, SimpLHS] >> rw[EQ_IMP_THM] >>
+  simp[] >> irule_at Any EQ_REFL >> simp[] >>
+  ‘ALL_DISTINCT (nub l)’ by simp[] >>
+  qpat_x_assum ‘nub l = _’ SUBST_ALL_TAC >> gvs[ALL_DISTINCT_APPEND]
+QED
+
 Theorem fCARD_relates[transfer_rule]:
   (FSET0 |==> $=) (LENGTH o nub) fCARD
 Proof
@@ -427,16 +436,26 @@ Proof
   Induct>> rw[nub_def]
   >- metis_tac[pred_setTheory.ABSORPTION_RWT] >>
   ‘MEM h b’ by metis_tac[pred_setTheory.IN_INSERT] >>
-  pop_assum (strip_assume_tac o
-             SIMP_RULE (srw_ss()) [Once MEM_SPLIT_APPEND_first]) >>
-  rw[length_nub_append, nub_def] >>
-  qabbrev_tac ‘b' = pfx ++ FILTER (\x. ~MEM x pfx /\ x <> h) sfx’ >>
-  ‘set a = set b'’
-    by (simp[Abbr‘b'’, LIST_TO_SET_FILTER, psEXTENSION]>>
-        fs[psEXTENSION] >> metis_tac[]) >>
-  ‘LENGTH (nub b') = LENGTH (nub a)’ by metis_tac[] >>
-  fs[Abbr‘b'’, length_nub_append, rich_listTheory.FILTER_FILTER] >>
-  pop_assum mp_tac >> csimp[]
+  ‘MEM h (nub b)’ by simp[] >>
+  drule_then strip_assume_tac (iffLR MEM_nub_split) >>
+  gvs[length_nub_append, nub_def, MEM_FILTER] >>
+  rename [‘nub b = pfx ++ e::sfx’] >>
+  ‘nub (pfx ++ sfx) = pfx ++ sfx’
+    by (irule all_distinct_nub_id >>
+        ‘ALL_DISTINCT (nub b)’ by simp[] >>
+        qpat_x_assum ‘nub b = _’ SUBST_ALL_TAC >> gvs[ALL_DISTINCT_APPEND]) >>
+  ‘set a = set (pfx ++ sfx)’
+    suffices_by (strip_tac >> first_x_assum drule >> simp[]) >>
+  qpat_x_assum ‘e INSERT _ = set _’ mp_tac >>
+  simp[psEXTENSION] >>
+  ‘∀x. MEM x b ⇔ MEM x pfx ∨ x = e ∨ MEM x sfx’ suffices_by metis_tac[]>>
+  metis_tac[MEM_nub, MEM_APPEND, MEM]
+QED
+
+Theorem FILTER_nub:
+  FILTER P (nub l) = nub (FILTER P l)
+Proof
+  Induct_on ‘l’ >> simp[nub_def] >> rw[nub_def] >> gvs[MEM_FILTER]
 QED
 
 Theorem fCARD_THM[simp]:
@@ -445,15 +464,11 @@ Theorem fCARD_THM[simp]:
 Proof
   xfer_back_tac [] >> simp[nub_def] >> rpt strip_tac >>
   rename [‘MEM h t’] >> rw[]
-  >- (fs[Once MEM_SPLIT_APPEND_first] >>
-      csimp[length_nub_append, nub_def, FILTER_APPEND_DISTRIB,
-            MEM_FILTER, rich_listTheory.FILTER_FILTER] >>
-      rename [‘~MEM h pfx’] >>
-      ‘FILTER ($~ o $= h) pfx = pfx’ suffices_by (simp[] >> simp[EQ_SYM_EQ]) >>
-      rw[] >> pop_assum mp_tac >> Induct_on ‘pfx’ >> simp[]) >>
-  rename [‘~MEM h list’] >>
-  ‘FILTER ($~ o $= h) list = list’ suffices_by (simp[] >> simp[EQ_SYM_EQ]) >>
-  rw[] >> pop_assum mp_tac >> Induct_on ‘list’ >> simp[]
+  >- (‘MEM h (nub t)’ by simp[] >>
+      drule_then strip_assume_tac (iffLR MEM_nub_split) >> simp[] >>
+      simp[GSYM FILTER_nub, FILTER_APPEND_DISTRIB] >>
+      simp[iffRL FILTER_EQ_ID, EVERY_MEM]) >>
+  simp[iffRL FILTER_EQ_ID, EVERY_MEM]
 QED
 
 Theorem fCARD_EQ0[simp]:
