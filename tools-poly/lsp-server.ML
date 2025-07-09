@@ -335,68 +335,6 @@ fun encPretty textWidth pp print = let
   fun print' s = encStringContents s print
   in print "\""; PolyML.prettyPrint (print', textWidth) pp; print "\"" end
 
-structure DArray: sig
-
-type 'a darray
-val new: int * 'a -> 'a darray
-val clear: 'a darray -> unit
-val sub: 'a darray * int -> 'a
-val update: 'a darray * int * 'a -> unit
-val clone: 'a darray * int -> 'a darray
-val push: 'a darray * 'a -> unit
-val size: 'a darray -> int
-val last: 'a darray -> 'a option
-val setLast: 'a darray * 'a -> unit
-val app: ('a -> unit) -> 'a darray -> unit
-type 'a slice = 'a ArraySlice.slice
-val slice: 'a darray * int * int option -> 'a slice
-val copy: {src: 'a slice, dst: 'a darray, di: int} -> unit
-val append: 'a darray * 'a slice -> unit
-val replace: 'a darray * 'a darray -> unit
-
-end = struct
-
-type 'a darray = ('a array * int * 'a) ref
-fun new (cap, v) = ref (Array.array (cap, v), 0, v)
-fun clear (r as ref (a, _, dflt)) = r := (a, 0, dflt)
-fun sub (ref (a, sz, _), i) = if i < sz then Array.sub (a, i) else raise Subscript
-fun update (ref (a, sz, _), i, v) = if i < sz then Array.update (a, i, v) else raise Subscript
-fun cloneCore ((a, sz, dflt), cap) = let
-  val a' = Array.array (cap, dflt)
-  val _ = ArraySlice.copy {src = ArraySlice.slice (a, 0, SOME sz), dst = a', di = 0}
-  in (a', sz, dflt) end
-fun clone (ref a, cap) = ref (cloneCore (a, cap))
-fun ensureCapacity (r as (a, _, _), cap) =
-  if cap <= Array.length a then r else cloneCore (r, Int.max (cap, Array.length a * 3 div 2))
-fun push (r as ref (a as (_, sz, _:'a)), v) = let
-  val (a, sz, dflt) = ensureCapacity (a, sz + 1)
-  val _ = Array.update (a, sz, v)
-  in r := (a, sz+1, dflt) end
-fun size (ref (_, sz, _)) = sz
-fun last a = case size a of 0 => NONE | sz => SOME (sub (a, sz-1))
-fun setLast (a, v) = update (a, size a - 1, v)
-fun app f a = let
-  val n = size a
-  fun go i = if i < n then (f (sub (a, i)); go (i+1)) else ()
-  in go 0 end
-
-type 'a slice = 'a ArraySlice.slice
-fun slice (ref (a, sz, _), i, SOME len) =
-    if i+len <= sz then ArraySlice.slice (a, i, SOME len) else raise Subscript
-  | slice (ref (a, sz, _), i, NONE) =
-    if i <= sz then ArraySlice.slice (a, i, SOME (sz - i)) else raise Subscript
-
-fun copy {src, dst = ref (a, sz, _), di} =
-  if di + ArraySlice.length src > sz then raise Subscript
-  else ArraySlice.copy {src = src, dst = a, di = di}
-
-fun append (r as ref (a as (_, sz, _)), v) = (
-  r := ensureCapacity (a, sz + ArraySlice.length v);
-  ArraySlice.copy {src = v, dst = #1 (!r), di = sz})
-fun replace (r, ref a) = r := a
-
-end
-
 fun encDArray encode ls print = case DArray.size ls of
     0 => print "[]"
   | n => let
