@@ -100,7 +100,7 @@ fun findUo modPath [] = NONE
 
 val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
-fun loadUo ps uo =
+fun loadUo ps use uo =
   let
     val i = HFS.openIn uo
     val files =
@@ -109,9 +109,9 @@ fun loadUo ps uo =
     fun str f = ">" ^ f ^ "< -- " ^ String.concatWith " -- " ps
     fun loadOne f =
       (case OS.Path.ext f of
-         SOME "sml" => myuse (holpathdb.subst_pathvars f)
-       | SOME "sig" => myuse (holpathdb.subst_pathvars f)
-       | _ => load (uo::ps) f)
+         SOME "sml" => use f
+       | SOME "sig" => use f
+       | _ => load (uo::ps) use f)
       handle
         OS.Path.InvalidArc => die ("Invalid arc exception in loading "^str f)
       | OS.Path.Path => die ("Path exception in loading "^str f)
@@ -119,7 +119,7 @@ fun loadUo ps uo =
   in
     List.app loadOne files
   end
-and load ps modPath =
+and load ps use modPath =
   let
     val _ = MDBG (fn _ => "Call load " ^ modPath)
     val modPath = holpathdb.subst_pathvars modPath
@@ -127,7 +127,7 @@ and load ps modPath =
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of
           NONE => die ("Cannot find file " ^ modPath ^ ext)
-        | SOME uo => loadUo ps uo
+        | SOME uo => loadUo ps use uo
   in
     if Binaryset.member (!loadedMods, modName) then
       ()
@@ -145,7 +145,9 @@ in
   structure Meta = struct
     val meta_debug = meta_debug
     val quiet_load = quiet_load
-    val load = load []
+    val loadPlan = load []
+    val qquse = myuse o holpathdb.subst_pathvars
+    val load = loadPlan qquse
     fun qload s = let
       val x = !quiet_load
       in quiet_load := true; load s; quiet_load := x end
