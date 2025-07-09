@@ -37,15 +37,14 @@ fun getLineCol lines index = let
 fun fromLineCol lines (line, col) =
   if line = 0 then col else Vector.sub (lines, line - 1) + col
 
-type plugin_data = (string, Universal.universal) Binarymap.dict
+type plugin_data = (string, UniversalType.t) Binarymap.dict
 val emptyPluginData = Binarymap.mkDict String.compare
 
-open Universal
-type 'a tag = string * 'a tag
+type 'a tag = string * ('a -> UniversalType.t) * (UniversalType.t -> 'a)
 
-fun getPluginData (map, (name, tag)) = Option.map (tagProject tag) (Binarymap.peek (map, name))
-fun setPluginData (map, (name, tag), SOME v) = Binarymap.insert (map, name, tagInject tag v)
-  | setPluginData (map, (name, _), NONE) = #1 (Binarymap.remove (map, name))
+fun getPluginData (map, (name, _, proj)) = Option.map proj (Binarymap.peek (map, name))
+fun setPluginData (map, (name, inj, _), SOME v) = Binarymap.insert (map, name, inj v)
+  | setPluginData (map, (name, _, _), NONE) = #1 (Binarymap.remove (map, name))
 
 type 'a plugin = {
   name: string,
@@ -61,23 +60,25 @@ type uplugin = {
 
 val plugins = ref []
 
-fun inject tag {name, init, beforeCompile, afterCompile} = {
-  name = name, init = fn () => init (name, tag),
+fun inject (proj, inj) {name, init, beforeCompile, afterCompile} = {
+  name = name, init = fn () => init (name, proj, inj),
   beforeCompile = beforeCompile,
   afterCompile = fn (r, map) =>
-    setPluginData (map, (name, tag), afterCompile (r, getPluginData (map, (name, tag)))) }
+    setPluginData (map, (name, proj, inj),
+      afterCompile (r, getPluginData (map, (name, proj, inj)))) }
 
 exception DuplicatePlugin
 fun registerPlugin quiet (p as {name, init, ...}) = let
   val ps = !plugins
-  val tag = tag ()
+  val (proj, inj) = UniversalType.embed ()
+  val inj = Option.valOf o inj
   val _ = if List.exists (fn p' => #name p' = #name p) ps then
     if quiet then
-      plugins := inject tag p :: List.filter (fn p' => #name p' <> name) ps
+      plugins := inject (proj, inj) p :: List.filter (fn p' => #name p' <> name) ps
     else raise DuplicatePlugin
-  else plugins := inject tag p :: ps
-  val _ = if serverRunning () then init (name, tag) else ()
-  in (name, tag) end
+  else plugins := inject (proj, inj) p :: ps
+  val _ = if serverRunning () then init (name, proj, inj) else ()
+  in (name, proj, inj) end
 
 fun markServerStarted () = (running := true; app (fn {init, ...} => init ()) (!plugins))
 
