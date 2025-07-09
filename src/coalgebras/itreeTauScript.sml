@@ -1600,6 +1600,18 @@ Proof
   irule itree_wbisim_refl
 QED
 
+Theorem strip_tau_FUNPOW_strip_tau:
+  !t t' n. strip_tau t t' ==> strip_tau (FUNPOW Tau n t) t'
+Proof
+  rpt strip_tac
+  \\ drule strip_tau_FUNPOW
+  \\ rpt strip_tac
+  \\ gvs[GSYM FUNPOW_ADD]
+  \\ Cases_on ‘t'’ \\ gvs[]
+  \\ irule strip_tau_FUNPOW_cancel
+  \\ gvs[]
+QED
+
 (* return or eventually reach another tree *)
 CoInductive ret_or_reach:
   (ret_or_reach t' (Ret x)) /\
@@ -1607,6 +1619,15 @@ CoInductive ret_or_reach:
   (ret_or_reach t' (Tau t')) /\
   (ret_or_reach t' t ==> ret_or_reach t' (Tau t))
 End
+
+Theorem ret_or_reach_spin:
+  ret_or_reach t spin
+Proof
+  irule ret_or_reach_coind
+  \\ qexists ‘($=) spin’
+  \\ PURE_ONCE_REWRITE_TAC[spin]
+  \\ gvs[spin]
+QED
 
 Theorem ret_or_reach_suc_self:
   ret_or_reach t (FUNPOW Tau (SUC n) t)
@@ -1651,7 +1672,7 @@ QED
 
 Theorem ret_or_reach_funpow_vis:
   ret_or_reach t (FUNPOW Tau n (Vis e k)) ==> (!l. ret_or_reach t (k l) \/ t = k l)
-                                              \/ strip_tau t (Vis e k)
+                                              \/ (?n'. FUNPOW Tau n (Vis e k) = FUNPOW Tau (SUC n') t)
 Proof
   Induct_on ‘n’ \\ gvs[]
   >- (rpt strip_tac
@@ -1664,13 +1685,7 @@ Proof
   \\ drule $ iffLR ret_or_reach_cases
   \\ gvs[]
   \\ rpt strip_tac
-  >- (disj2_tac
-      \\ pop_assum $ assume_tac o GSYM
-      \\ gvs[]
-      \\ irule strip_tau_FUNPOW_cancel
-      \\ rw[]
-     )
-  \\ metis_tac[]
+  \\ metis_tac[FUNPOW, GSYM FUNPOW_SUC]
 QED
 
 (* strong bisimulation from some point up to the full tree *)
@@ -1680,6 +1695,42 @@ CoInductive strong_bisim_upfrom:
   ((strong_bisim_upfrom t t' t'' t''') ==> (strong_bisim_upfrom t t' (Tau t'') (Tau t'''))) /\
   ((!l. strong_bisim_upfrom t t' (k l) (k' l) \/ (k l = t /\ k' l = t')) ==> (strong_bisim_upfrom t t' (Vis e k) (Vis e k')))
 End
+
+Theorem strong_bisim_upfrom_strong:
+  strong_bisim_upfrom t t t' t'' <=> t' = t''
+Proof
+  iff_tac
+  >- (strip_tac
+      \\ irule $ iffRL itree_strong_bisimulation
+      \\ qexists ‘CURRY {(t', t'') | t', t'' | strong_bisim_upfrom t t t' t''}’ \\ rw[]
+      >- (qexists ‘(t', t'')’
+          \\ rw[]
+         )
+      >- (Cases_on ‘x'’ \\ gvs[]
+          \\ drule $ iffLR strong_bisim_upfrom_cases
+          \\ gvs[]
+         )
+      >- (Cases_on ‘x’ \\ gvs[]
+          \\ drule $ iffLR strong_bisim_upfrom_cases
+          \\ rw[]
+          \\ disj1_tac
+          \\ qexists ‘(u, t'''')’ \\ rw[]
+         )
+      \\ Cases_on ‘x’ \\ gvs[]
+      \\ drule $ iffLR strong_bisim_upfrom_cases
+      \\ rw[]
+      \\ strip_tac
+      \\ pop_assum $ qspec_then ‘s’ assume_tac
+      \\ gvs[]
+      \\ disj1_tac
+      \\ qexists ‘(f s, k' s)’ \\ rw[]
+     )
+  \\ rw[]
+  \\ irule strong_bisim_upfrom_coind
+  \\ qexists ‘CURRY ({(t, t) | t | T })’
+  \\ rw[]
+  \\ Cases_on ‘a0’ \\ rw[]
+QED
 
 Theorem cyclic_strong_bisim_upfrom:
   ret_or_reach t t /\ ret_or_reach t' t' /\ strong_bisim_upfrom t t' t t' ==> t = t'
@@ -1701,6 +1752,223 @@ Proof
   \\ strip_tac
   \\ pop_assum $ qspec_then ‘s’ assume_tac \\ gvs[]
   \\ imp_res_tac ret_or_reach_vis \\ metis_tac[]
+QED
+
+
+(* weak bisimulation from some point up to the full tree *)
+CoInductive weak_bisim_upfrom:
+  (strip_tau t'' (Ret x) /\ strip_tau t''' (Ret x) ==> weak_bisim_upfrom t t' t'' t''') /\
+  (weak_bisim_upfrom t t' (FUNPOW Tau (SUC n) t) (FUNPOW Tau (SUC n') t')) /\
+  ((weak_bisim_upfrom t t' t'' t''') ==> (weak_bisim_upfrom t t' (FUNPOW Tau (SUC n) t'') (FUNPOW Tau (SUC n') t'''))) /\
+  (strip_tau t'' (Vis e k) /\ strip_tau t''' (Vis e k') /\
+   (!l. weak_bisim_upfrom t t' (k l) (k' l) \/ (k l = t /\ k' l = FUNPOW Tau n t') \/ (k l = FUNPOW Tau n t /\ k' l = t')) ==>
+   (weak_bisim_upfrom t t' t'' t'''))
+End
+
+
+
+Theorem itree_wbisim_weak_upfrom:
+  itree_wbisim t' t'' ==> weak_bisim_upfrom t t t' t''
+Proof
+  disch_tac
+  \\ irule weak_bisim_upfrom_coind
+  \\ qexists ‘CURRY ({(t', t'') | itree_wbisim t' t'' })’
+  \\ rw[UNCURRY]
+  \\ reverse $ Cases_on ‘?x. strip_tau a0 x’ \\ gvs[]
+  >- (drule strip_tau_spin \\ rw[]
+      \\ ‘a1 = spin’ by metis_tac[wbisim_spin_eq, itree_wbisim_sym]
+      \\ metis_tac[spin_FUNPOW_Tau]
+     )
+  \\ Cases_on ‘x’ \\ gvs[]
+  >- (subgoal ‘strip_tau a1 (Ret x')’
+      >- (irule itree_wbisim_strip_tau_Ret
+          \\ metis_tac[]
+         )
+      \\ metis_tac[]
+     )
+  \\ qspecl_then [‘a0’, ‘a1’, ‘a’, ‘g’] assume_tac itree_wbisim_strip_tau_Vis
+  \\ gvs[]
+  \\ metis_tac[]
+QED
+
+Theorem weak_bisim_upfrom_weak:
+  weak_bisim_upfrom t t t' t'' <=> itree_wbisim t' t''
+Proof
+  reverse $ iff_tac
+  >- rw[itree_wbisim_weak_upfrom]
+  \\ strip_tac
+  \\ irule itree_wbisim_strong_coind
+  \\ qexists ‘CURRY {(t', t'') | t', t'' | weak_bisim_upfrom t t t' t''}’ \\ reverse $ rw[UNCURRY]
+  \\ drule $ iffLR weak_bisim_upfrom_cases
+  \\ rw[]
+  \\ rpt strip_tac
+  >- (ntac 2 disj2_tac
+      \\ qexists ‘x’ \\ gvs[strip_tau_FUNPOW_cancel]
+     )
+  >- (gvs[FUNPOW_SUC]
+      \\ metis_tac[FUNPOW_Tau_wbisim_intro, itree_wbisim_refl]
+     )
+  >- (gvs[FUNPOW_SUC]
+      \\ Cases_on ‘n’ \\ gvs[]
+      >- (Cases_on ‘n'’ \\ gvs[]
+          \\ drule $ iffLR weak_bisim_upfrom_cases \\ rw[]
+          \\ rw[GSYM FUNPOW_SUC, GSYM FUNPOW_ADD]
+          >- (ntac 2 disj2_tac
+              \\ qexists ‘x’ \\ gvs[strip_tau_FUNPOW_cancel, strip_tau_FUNPOW_strip_tau]
+             )
+          >- metis_tac[FUNPOW_Tau_wbisim_intro, itree_wbisim_refl]
+          >- rw[GSYM SUC_ADD_SYM, weak_bisim_upfrom_rules]
+          \\ disj2_tac
+          \\ disj1_tac
+          \\ qexistsl [‘e’, ‘k’, ‘k'’] \\ rw[strip_tau_FUNPOW_cancel, strip_tau_FUNPOW_strip_tau]
+          \\ pop_assum $ qspec_then ‘r’ assume_tac \\ rw[]
+          \\ rw[FUNPOW_Tau_wbisim, itree_wbisim_sym, strip_tau_FUNPOW_strip_tau]
+         )
+      \\ Cases_on ‘n'’ \\ gvs[]
+      >-  (drule $ iffLR weak_bisim_upfrom_cases \\ rw[]
+           \\ rw[GSYM FUNPOW_SUC, GSYM FUNPOW_ADD]
+           >- (ntac 2 disj2_tac
+               \\ qexists ‘x’ \\ gvs[strip_tau_FUNPOW_cancel, strip_tau_FUNPOW_strip_tau]
+              )
+           >- metis_tac[FUNPOW_Tau_wbisim_intro, itree_wbisim_refl]
+           >- rw[GSYM SUC_ADD_SYM, weak_bisim_upfrom_rules]
+           \\ disj2_tac
+           \\ disj1_tac
+           \\ qexistsl [‘e’, ‘k’, ‘k'’] \\ rw[strip_tau_FUNPOW_cancel, strip_tau_FUNPOW_strip_tau]
+           \\ pop_assum $ qspec_then ‘r’ assume_tac \\ rw[]
+           \\ rw[FUNPOW_Tau_wbisim, itree_wbisim_sym, strip_tau_FUNPOW_strip_tau]
+          )
+      \\ metis_tac[weak_bisim_upfrom_rules]
+     )
+  \\ disj2_tac
+  \\ disj1_tac
+  \\ qexistsl [‘e’, ‘k’, ‘k'’] \\ rw[strip_tau_FUNPOW_cancel]
+  \\ pop_assum $ qspec_then ‘r’ assume_tac \\ rw[]
+  \\ rw[FUNPOW_Tau_wbisim, itree_wbisim_sym]
+QED
+
+Theorem weak_bisim_upfrom_cyclic_one_side_Tau:
+  weak_bisim_upfrom t t' t'' t''' ==>
+  weak_bisim_upfrom t t' (Tau t'') t''' /\ weak_bisim_upfrom t t' t'' (Tau t''')
+Proof
+  rpt strip_tac
+  >- (drule $ iffLR weak_bisim_upfrom_cases
+      \\ rw[]
+      >- (irule $ cj 1 weak_bisim_upfrom_rules
+          \\ metis_tac[strip_tau_simps]
+         )
+      >- gvs[GSYM FUNPOW_SUC, weak_bisim_upfrom_rules]
+      >- gvs[GSYM FUNPOW_SUC, weak_bisim_upfrom_rules]
+      \\ irule $ cj 4 weak_bisim_upfrom_rules
+      \\ metis_tac[strip_tau_simps]
+     )
+  \\ drule $ iffLR weak_bisim_upfrom_cases
+  \\ rw[]
+  >- (irule $ cj 1 weak_bisim_upfrom_rules
+      \\ metis_tac[strip_tau_simps]
+     )
+  >- gvs[GSYM FUNPOW_SUC, weak_bisim_upfrom_rules]
+  >- gvs[GSYM FUNPOW_SUC, weak_bisim_upfrom_rules]
+  \\ irule $ cj 4 weak_bisim_upfrom_rules
+  \\ metis_tac[strip_tau_simps]
+QED
+
+Theorem weak_bisim_upfrom_cyclic_FUNPOW_Tau:
+  weak_bisim_upfrom t t' t'' t''' ==>
+  weak_bisim_upfrom t t' (FUNPOW Tau n t'') (FUNPOW Tau n' t''')
+Proof
+  rpt strip_tac
+  \\ drule $ iffLR weak_bisim_upfrom_cases
+  \\ rw[]
+  >- (irule $ cj 1 weak_bisim_upfrom_rules
+      \\ metis_tac[strip_tau_FUNPOW_strip_tau]
+     )
+  >- gvs[GSYM FUNPOW_SUC, GSYM FUNPOW_ADD, GSYM ADD_SUC, weak_bisim_upfrom_rules]
+  >- gvs[GSYM FUNPOW_SUC, GSYM FUNPOW_ADD, GSYM ADD_SUC, weak_bisim_upfrom_rules]
+  \\ irule $ cj 4 weak_bisim_upfrom_rules
+  \\ metis_tac[strip_tau_simps, strip_tau_FUNPOW_strip_tau]
+QED
+
+Theorem ret_or_reach_cyclic_vis:
+  ret_or_reach t t /\ ret_or_reach t t'' /\ strip_tau t'' (Vis e k) ==> ret_or_reach t (k r)
+Proof
+  rpt strip_tac
+  \\ drule strip_tau_FUNPOW \\ rw[]
+  \\ drule ret_or_reach_funpow_vis
+  \\ rpt strip_tac
+  >- (pop_assum $ qspec_then ‘r’ assume_tac
+      \\ gvs[]
+     )
+  \\ reverse $ Cases_on ‘∃t'. strip_tau t t'’ \\ gvs[]
+  >- (drule strip_tau_spin
+      \\ rw[]
+      \\ gvs[GSYM spin_FUNPOW_Tau]
+     )
+  \\ Cases_on ‘t'’ \\ gvs[]
+  >- (imp_res_tac strip_tau_FUNPOW
+      \\ gvs[GSYM FUNPOW_SUC, GSYM FUNPOW_ADD, GSYM ADD_SUC]
+     )
+  \\ imp_res_tac strip_tau_FUNPOW
+  \\ gvs[GSYM FUNPOW_SUC, GSYM FUNPOW_ADD, GSYM ADD_SUC]
+  \\ drule FUNPOW_Tau_Vis_eq
+  \\ rw[]
+  \\ ntac 4 $ pop_assum kall_tac
+  \\ drule ret_or_reach_funpow_vis
+  \\ reverse $ rw[]
+  >- (gvs[GSYM FUNPOW_SUC, GSYM FUNPOW_ADD, GSYM ADD_SUC]
+      \\ drule FUNPOW_Tau_Vis_eq
+      \\ rw[]
+     )
+  \\ pop_assum $ qspec_then ‘r’ assume_tac \\ gvs[]
+QED
+
+Theorem cyclic_weak_bisim_upfrom:
+  ret_or_reach t t /\ ret_or_reach t' t' /\ weak_bisim_upfrom t t' t t' ==> itree_wbisim t t'
+Proof
+  rpt strip_tac
+  \\ irule itree_wbisim_coind_upto
+  \\ qexists ‘CURRY ({(t'', t''') | t'', t''' | ret_or_reach t t'' /\
+                                                ret_or_reach t' t''' /\
+                                                (weak_bisim_upfrom t t' t'' t''')})’ \\ rw[UNCURRY]
+  \\ drule $ iffLR weak_bisim_upfrom_cases
+  \\ rw[]
+  \\ rpt strip_tac
+  >- metis_tac[]
+  >- (gvs[FUNPOW_SUC]
+      \\ disj1_tac
+      \\ disj1_tac
+      \\ rpt conj_tac
+      >- (Cases_on ‘n’ \\ gvs[ret_or_reach_suc_self]
+         )
+      >- (Cases_on ‘n'’ \\ gvs[ret_or_reach_suc_self]
+         )
+      \\ metis_tac[weak_bisim_upfrom_cyclic_FUNPOW_Tau]
+     )
+  >- (gvs[FUNPOW_SUC]
+      \\ imp_res_tac $ ret_or_reach_tau \\ gvs[]
+      \\ disj1_tac
+      \\ disj1_tac
+      \\ rw[weak_bisim_upfrom_cyclic_FUNPOW_Tau]
+     )
+  \\ disj2_tac
+  \\ disj1_tac
+  \\ qexistsl [‘e’, ‘k’, ‘k'’] \\ rw[]
+  \\ pop_assum $ qspec_then ‘r’ assume_tac \\ reverse $ rw[]
+  >- (disj1_tac
+      \\ rw[]
+      >- (Cases_on ‘n’ \\ gvs[ret_or_reach_suc_self]
+         )
+      \\ ‘weak_bisim_upfrom t (k' r) (FUNPOW Tau n t) (FUNPOW Tau 0 (k' r))’ suffices_by rw[]
+      \\ rw[weak_bisim_upfrom_cyclic_FUNPOW_Tau]
+     )
+  >- (disj1_tac
+      \\ rw[]
+      >- (Cases_on ‘n’ \\ gvs[ret_or_reach_suc_self]
+         )
+      \\ ‘weak_bisim_upfrom (k r) t' (FUNPOW Tau 0 (k r)) (FUNPOW Tau n t')’ suffices_by rw[]
+      \\ rw[weak_bisim_upfrom_cyclic_FUNPOW_Tau]
+     )
+  \\ imp_res_tac ret_or_reach_cyclic_vis \\ gvs[]
 QED
 
 
