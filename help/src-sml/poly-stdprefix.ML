@@ -18,3 +18,5 @@ val _ = use "../../src/portableML/Arbint.sig"
 val _ = use "../../src/portableML/Arbint.sml"
 val _ = use "../../src/portableML/UC_ASCII_Encode.sig";
 val _ = use "../../src/portableML/UC_ASCII_Encode.sml";
+val _ = use "../../src/portableML/ParseDoc.sig";
+val _ = use "../../src/portableML/ParseDoc.sml";

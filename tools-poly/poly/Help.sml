@@ -312,4 +312,141 @@ val browser = ref defaultBrowser
 fun help s = !browser s
 
 end
+
+local
+val toLower = String.implode o map Char.toLower o String.explode
+
+fun endsWith suff haystack = let
+  val m = String.size suff
+  val n = String.size haystack
+  in m <= n andalso String.extract (haystack, n - m, NONE) = suff end
+
+fun splitOn c s = let
+  fun loop i j out =
+    if i = 0 then String.substring (s, i, j - i) :: out
+    else case i - 1 of i' =>
+      if c = String.sub (s, i')
+      then loop i' i' (String.substring (s, i, j - i) :: out)
+      else loop i' j out
+  in case String.size s of sz => loop sz sz [] end
+
+datatype doc
+  = DocText of string
+  | DocDoc of ParseDoc.section list
+
+fun docToMarkdown (DocText s) = "```plaintext\n"^s^"\n```\n"
+  | docToMarkdown (DocDoc secs) = let
+    open ParseDoc
+    fun getSec x = let
+      fun go [] = NONE
+        | go (FIELD (s, md) :: ss) =
+          if x = s then case md of [TEXT s] => SOME s | _ => NONE else go ss
+        | go (_::ss) = go ss
+      in go secs end
+    val mds = DArray.new (8, Substring.full "")
+    fun push x = DArray.push (mds, x)
+    val pushS = push o Substring.full
+    val trim = Substring.dropl Char.isSpace o Substring.dropr Char.isSpace
+    fun escapeText ss = let
+      val (s, lo, len) = Substring.base ss
+      val stop = lo + len
+      fun push1 start p = if start = p then () else
+        push (Substring.extract (s, start, SOME (p - start)))
+      fun go start p = if p = stop then push1 start p else
+        if Char.contains "\\`*_{}[]()#+-!~>" (String.sub (s, p)) then
+          (push1 start p; pushS "\\"; go p (p+1))
+        else go start (p+1)
+      in go lo lo end
+    fun field PARA = pushS "\n\n"
+      | field (TEXT s) = escapeText s
+      | field (BRKT s) = (pushS "```"; push s; pushS "```")
+      | field (XMPL s) = (pushS "```hol4\n"; push s; pushS "```\n")
+      | field (EMPH s) = (pushS "*"; escapeText s; pushS "*")
+    fun sec (TYPE s) = (
+        pushS "```hol4\n";
+        case case getSec "STRUCTURE" of NONE => getSec "LIBRARY" | s => s of
+          NONE => push s
+        | SOME ss => (push (trim ss); pushS "."; push s);
+        pushS "\n```\n\n---\n\n")
+      | sec (FIELD ("DOC", _)) = ()
+      | sec (FIELD ("STRUCTURE", _)) = ()
+      | sec (FIELD ("LIBRARY", _)) = ()
+      | sec (FIELD ("KEYWORDS", _)) = ()
+      | sec (FIELD ("COMMENTS", m)) = (pushS "### Comments\n\n"; app field m; pushS "\n\n")
+      | sec (FIELD ("USES", m)) = (pushS "### Uses\n\n"; app field m; pushS "\n\n")
+      | sec (FIELD ("FAILURE", m)) = (pushS "### Failure\n\n"; app field m; pushS "\n\n")
+      | sec (FIELD ("EXAMPLE", m)) = (pushS "### Example\n\n"; app field m; pushS "\n\n")
+      | sec (FIELD (_, m)) = (app field m; pushS "\n\n")
+      | sec (SEEALSO []) = ()
+      | sec (SEEALSO (m::ms)) = (
+        pushS "### See Also\n`"; push (trim m);
+        app (fn s => (pushS "`, `"; push s)) ms;
+        pushS "`\n\n")
+    in app sec secs; Substring.concat (DArray.toList mds) end
+
+fun joinDirFile dir file =
+  if dir <> "" andalso String.sub(dir, String.size dir - 1) = #"/" then dir ^ file
+  else dir ^ "/" ^ file
+
+fun readToString file = let
+  val istr = TextIO.openIn file
+  in TextIO.inputAll istr before TextIO.closeIn istr end
+
+fun getDoc file = let
+  val docfile = if endsWith ".txt" file then
+    SOME (String.substring (file, 0, String.size file - 4) ^ ".doc")
+  else NONE
+  fun get dir = let
+    val doc = case docfile of
+        NONE => NONE
+      | SOME doc => (SOME $ DocDoc $ ParseDoc.parse_file $ joinDirFile dir doc handle _ => NONE)
+    val doc = case doc of
+        NONE => (SOME $ DocText $ readToString $ joinDirFile dir file handle _ => NONE)
+      | doc => doc
+    in doc end
+  fun loop [] = NONE
+    | loop (dir::ds) = case get dir handle _ => NONE of NONE => loop ds | doc => doc
+  in loop (!helpdirs) end
+
+fun init () = let
+  val helpDbs = ref []
+  val mutex = Mutex.mutex ()
+
+  fun rebuildHelp () = (
+    Mutex.lock mutex;
+    helpDbs := map (fn x => (x, Database.readbase x)) (!indexfiles);
+    Mutex.unlock mutex)
+
+  val _ = Thread.fork (rebuildHelp, [])
+
+  fun helpLookup (id, validate) = let
+    val sought = toLower id
+    fun build1 [] out = out
+      | build1 ({comp = Database.Term (fullName, SOME "HOL"), file, ...} :: es) out =
+        (case splitOn #"." fullName of
+          [] => build1 es out
+        | hd :: tl => let
+          val ok = case tl of [] => hd = id | _ => last tl = id andalso validate hd
+          val doc = if ok then getDoc file else NONE
+          val out = case doc of NONE => out | SOME doc => docToMarkdown doc :: out
+          in build1 es out end)
+      | build1 ((_:Database.entry) :: es) out = build1 es out
+    exception Rebuild
+    fun build [] [] out = out
+      | build ((x,db)::xs) (y::ys) out =
+        if x = y then build xs ys (build1 (Database.lookup (db, sought)) out) else raise Rebuild
+      | build _ _ _ = raise Rebuild
+    fun loop snd =
+      rev (build (!helpDbs) (!indexfiles) [])
+      handle Rebuild => (
+        if snd then rebuildHelp () else (Mutex.lock mutex; Mutex.unlock mutex);
+        loop true)
+    in loop false end
+
+  in LSPExtension.helpLookup := helpLookup end
+
+in
+val _ = LSPExtension.registerInit true "Help" init
+end
+
 end

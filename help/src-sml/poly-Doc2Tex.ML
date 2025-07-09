@@ -14,7 +14,6 @@ fun useB f =
    use (f ^ ".sml"));
 
 val _ = useB "Flash";
-val _ = useB "ParseDoc";
 val _ = use "Doc2Tex.sml";
 
 val main = Doc2Tex.main;

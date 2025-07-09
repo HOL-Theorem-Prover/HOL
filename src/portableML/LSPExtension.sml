@@ -72,13 +72,23 @@ fun registerPlugin quiet (p as {name, init, ...}) = let
   val ps = !plugins
   val (proj, inj) = UniversalType.embed ()
   val inj = Option.valOf o inj
-  val _ = if List.exists (fn p' => #name p' = #name p) ps then
-    if quiet then
-      plugins := inject (proj, inj) p :: List.filter (fn p' => #name p' <> name) ps
+  val ps = if List.exists (fn p' => #name p' = name) ps then
+    if quiet then List.filter (fn p' => #name p' <> name) ps
     else raise DuplicatePlugin
-  else plugins := inject (proj, inj) p :: ps
+  else ps
+  val _ = plugins := inject (proj, inj) p :: ps
   val _ = if serverRunning () then init (name, proj, inj) else ()
   in (name, proj, inj) end
+
+fun registerInit quiet name init = let
+  val ps = !plugins
+  val ps = if List.exists (fn p' => #name p' = name) ps then
+    if quiet then List.filter (fn p' => #name p' <> name) ps
+    else raise DuplicatePlugin
+  else ps
+  val p = {name = name, init = init, beforeCompile = fn () => (), afterCompile = #2}
+  val _ = plugins := p :: ps
+  in if serverRunning () then init () else () end
 
 fun markServerStarted () = (running := true; app (fn {init, ...} => init ()) (!plugins))
 
@@ -90,13 +100,19 @@ type location_link = {
   selRange: rangeLC,
   uri: string option}
 
-type server_context = {
-  uri: string,
-  lines: int vector,
-  plugins: plugin_data,
+type goto_def_context = {
+  uri: string, lines: lines, plugins: plugin_data,
   fromFileLine: {file: string, line: int, origin: rangeLC option} -> location_link }
 
+type hover = {markdown: string, range: rangeLC option}
+
+type hover_context = {
+  uri: string, lines: lines, plugins: plugin_data,
+  ppToString: PolyML.pretty -> string }
+
 val gotoDefinition = ref (fn _ => [])
+val hover = ref (fn _ => [])
 val fixupTheoremLink = ref (fn _ => NONE)
+val helpLookup = ref (fn _ => [])
 
 end

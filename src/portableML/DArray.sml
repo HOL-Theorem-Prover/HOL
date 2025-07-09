@@ -92,4 +92,6 @@ fun modify f a = ArraySlice.modify f (full a)
 fun modifyi f a = ArraySlice.modifyi f (full a)
 fun vector a = ArraySlice.vector (full a)
 
+fun toList a = foldr op:: [] a
+
 end

@@ -12,6 +12,7 @@ struct
 open Thread LSPExtension
 
 fun I x = x
+fun leLC (l,c) (l',c') = l <= l' andalso (l <> l' orelse c <= c')
 
 type encode = (string -> unit) -> unit
 fun encOut str: encode = fn print => print str
@@ -60,6 +61,9 @@ fun encString str print = (print "\""; encStringContents str print; print "\"")
 
 (* fun encSubstring str print = (print "\""; encSubstringContents str print; print "\"") *)
 
+fun encOrNull _ NONE = encNull
+  | encOrNull encode (SOME a) = encode a
+
 fun encArray encode ls print = case ls of
     [] => print "[]"
   | a :: ls => let
@@ -83,13 +87,21 @@ type location_link = {
   origin: rangeLC option,
   range: rangeLC, selRange: rangeLC, uri: string option}
 
-fun encLocationLink uri0 {origin, uri, range, selRange} print = (
+fun encLocationLink uri0 ({origin, uri, range, selRange}: location_link) print = (
   print "{\"targetUri\":"; encString (Option.getOpt (uri, uri0)) print;
   print ",\"targetRange\":"; encRange encPosition range print;
   print ",\"targetSelectionRange\":"; encRange encPosition selRange print;
   case origin of
     NONE => ()
   | SOME origin => (print ",\"originSelectionRange\":"; encRange encPosition origin print);
+  print "}")
+
+fun encHover ({markdown, range}: hover) print = (
+  print "{\"contents\":{\"kind\":\"markdown\",\"value\":";
+    encString markdown print; print "}";
+  case range of
+    NONE => ()
+  | SOME range => (print ",\"range\":"; encRange encPosition range print);
   print "}")
 
 exception MalformedData
@@ -351,7 +363,20 @@ fun encDArray encode ls print = case DArray.size ls of
     else print "]"
     in print "["; encode (DArray.sub (ls, 0)) print; inner 1 end
 
-exception Todo
+fun lastIndexOf c s = let
+  fun go i = if i = 0 then ~1 else case i - 1 of i' =>
+    if c = String.sub (s, i') then i' else go i'
+  in go (String.size s) end
+
+fun splitOn c s = let
+  fun loop i j out =
+    if i = 0 then String.substring (s, i, j - i) :: out
+    else case i - 1 of i' =>
+      if c = String.sub (s, i')
+      then loop i' i' (String.substring (s, i, j - i) :: out)
+      else loop i' j out
+  in case String.size s of sz => loop sz sz [] end
+
 fun start {diag} = let
   val _ = PolyML.print_depth 100
   val conn as {send, recv} = stdioConnection ()
@@ -513,11 +538,7 @@ fun start {diag} = let
       progress = fn i => (lastPos := i; report (Progress i)),
       error = fn {hard, location, message, ...} => report (Error {
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
-      runtimeExn = fn e => report (Error {hard = true,
-        pos = case PolyML.Exception.exceptionLocation e of
-          NONE => (case !lastPos of i => (i, i))
-        | SOME l => locToRange l,
-        msg = encPretty textWidth (exceptionMessage e)}),
+      runtimeExn = fn e => report (exnToReport (!lastPos) e),
       mlParseTree = mlParseTree,
       holParseTree = fn _ => () }
     in lastPos := size code end
@@ -580,12 +601,6 @@ fun start {diag} = let
           in if keep then DArray.push (newDiags, x) else (); loop (i+1) end
         in loop 0; DArray.replace (oldDiags, newDiags) end
 
-      fun encDiag (Error {hard, pos, msg}) print = (
-          print "{\"range\":"; encRangeLC lines pos print;
-          print ",\"severity\":"; encInt (if hard then ErrorSeverity else WarnSeverity) print;
-          print ",\"message\":"; msg print; print "}")
-        | encDiag _ _ = raise Fail "unexpected report kind"
-
       fun sendDiags () =
         send (mkNotif "textDocument/publishDiagnostics" (fn print => (
           print "{\"uri\":"; encString uri print;
@@ -625,35 +640,140 @@ fun start {diag} = let
     val thread = Thread.fork (compileThread, [Thread.InterruptState Thread.InterruptDefer])
     in compile := SOME {parse = trees, text = text, thread = thread} end
 
-  fun hover {uri, pos} = let
-    (* TODO *)
-    in Ok encNull end
-
-  fun gotoDefinition uri {compile, lastTrees} target = let
+  fun getState {compile, lastTrees} endTarget = let
     fun getIfValid {parse as {pos, ...}, text} =
       if pos > 0 then let
-        val offset = fromLineCol (#lines text) target
+        val offset = fromLineCol (#lines text) endTarget
         in if offset <= pos then SOME (parse, text, offset) else NONE end
       else NONE
     val state = case !compile of
       SOME {parse, text, ...} => getIfValid {parse = !parse, text = text}
     | NONE => NONE
-    val state = case state of NONE => getIfValid (!lastTrees) | state => state
+    in case state of NONE => getIfValid (!lastTrees) | state => state end
+
+  fun hover uri v (startTarget, endTarget) = let
+    val ({plugins, mlParseTrees, ...}, text, endOffset) =
+      case getState v endTarget of NONE => raise Empty | SOME s => s
+    val startOffset = fromLineCol (#lines text) startTarget
+    fun ppToString pp = let
+      val mds = DArray.new (8, "")
+      val _ = PolyML.prettyPrint (fn s => DArray.push (mds, s), textWidth) pp
+      in concat (DArray.toList mds) end
+    val ctx = {uri = uri, lines = #lines text, plugins = plugins, ppToString = ppToString}
+    val out = !LSPExtension.hover (ctx, (startOffset, endOffset))
+    fun locToRange {startPosition, endPosition, ...} = (
+      getLineCol (#lines text) (FixedInt.toInt startPosition),
+      getLineCol (#lines text) (FixedInt.toInt endPosition))
+    fun typeHover (loc, pp) = {range = SOME (locToRange loc), markdown = ppToString pp}
+    fun process loc props = let
+      fun fromProps [] out = out
+        | fromProps (PolyML.PTtype ty :: props) (isId, _) = fromProps props (isId, SOME ty)
+        | fromProps (PolyML.PTrefId i :: props) (_, ty) = fromProps props (SOME i, ty)
+        | fromProps (PolyML.PTdefId i :: props) (_, ty) = fromProps props (SOME i, ty)
+        | fromProps (_ :: props) out = fromProps props out
+      val (isId, ty) = fromProps props (NONE, NONE)
+      val (id, value, help) = case isId of
+        NONE => (NONE, NONE, [])
+      | SOME i => let
+        val {startPosition, endPosition, ...} = loc
+        val startPos = FixedInt.toInt startPosition
+        val endPos = FixedInt.toInt endPosition
+        val id = String.substring (#text text, startPos, endPos - startPos)
+        val help =
+          if lastIndexOf #"." id < 0 then let
+            fun validate str = let
+              fun look [] = false
+                | look (PolyML.PTstructureAt {file, ...} :: props) = let
+                  val basename = String.extract (file, lastIndexOf #"/" file + 1, NONE)
+                  val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
+                  in str = stem orelse look props end
+                | look (_ :: props) = look props
+              in look props end
+            in !LSPExtension.helpLookup (id, validate) end
+          else let
+            val components = splitOn #"." id
+            val fst = List.hd components
+            in !LSPExtension.helpLookup (List.last components, fn s => s = fst) end
+          handle _ => []
+        val range = SOME (getLineCol (#lines text) startPos, getLineCol (#lines text) endPos)
+        val help = map (fn d => {range = range, markdown = d}) help
+        val isGlobalId = i = 0 orelse let
+          fun look [] = NONE
+            | look (PolyML.PTdeclaredAt loc :: _) = SOME loc
+            | look (_ :: props) = look props
+          fun lookRefs [] = false
+            | lookRefs (PolyML.PTreferences (exp, _) :: _) = exp
+            | lookRefs (_ :: props) = lookRefs props
+          in
+            case look props of
+              NONE => false
+            | SOME {startPosition, endPosition, ...} =>
+              case HOL_IDE.navigateTo' mlParseTrees
+                  {startOffset = startPosition, endOffset = endPosition} of
+                NONE => false
+              | SOME (_, props) => lookRefs props
+          end
+        val value = if isGlobalId then #lookupVal PolyML.globalNameSpace id else NONE
+        in (SOME id, value, help) end
+      open PolyML
+      val ty = Option.map (fn ty =>
+        NameSpace.Values.printType (ty, printDepth, SOME globalNameSpace)) ty
+      val value = case value of
+          NONE => NONE
+        | SOME value =>
+          case NameSpace.Values.print (value, printDepth) of
+            PrettyString "" => NONE
+          | otherwise => SOME otherwise
+      val out = case (id, ty, value) of
+          (_, NONE, NONE) => []
+        | (NONE, SOME ty, NONE) => [typeHover (loc, ty)]
+        | (SOME id, SOME ty, NONE) =>
+          [typeHover (loc, PrettyBlock(0, true, [],
+            [PrettyString ("val " ^ id ^ ":"), PrettyBreak(1, 2), ty]))]
+        | (id, ty, SOME value) =>
+          [typeHover (loc, PrettyBlock(2, true, [], [
+            PrettyBlock(0, false, [],
+              (case ty of
+                 NONE => [PrettyString ("val " ^ Option.getOpt (id, "_"))]
+                | SOME ty => [
+                  PrettyString ("val " ^ Option.getOpt (id, "_") ^ ":"),
+                  PrettyBreak(1, 2), ty])
+              @ [PrettyBreak(1, 2), PrettyString "="]),
+             PrettyBreak(1, 0), value]))]
+      in help @ out end
+    fun fromTree NONE = []
+      | fromTree (pt as (SOME (loc, props))) =
+        case process loc props of
+          [] => fromTree (HOL_IDE.moveUp pt)
+        | out => out
+    fun f () = let
+      val offset' = {startOffset = FixedInt.fromInt startOffset, endOffset = FixedInt.fromInt endOffset}
+      in fromTree (HOL_IDE.navigateTo' mlParseTrees offset') end
+    val out = case out of [] => f () | _ => out
+    val _ = case out of [] => raise Empty | _ => ()
+    fun merge ({range = NONE, ...}, a) = a
+      | merge ({range = a, ...}, NONE) = a
+      | merge ({range = SOME (lo1, hi1), ...}, SOME (lo2, hi2)) =
+        SOME (if leLC lo1 lo2 then lo1 else lo2, if leLC hi1 hi2 then hi2 else hi1)
+    val markdown = String.concatWith "\n\n---\n\n" (map #markdown out)
+    in SOME {markdown = markdown, range = foldl merge NONE out} end
+    handle Empty => NONE
+
+  fun gotoDefinition uri v target = let
     fun fromFileLine {origin, file, line} = let
       val range = ((line, 0), (line+1, 0))
       in {origin = origin, uri = SOME file, range = range, selRange = range} end
     val ({plugins, mlParseTrees, ...}, text, offset) =
-      case state of NONE => raise Empty | SOME s => s
+      case getState v target of NONE => raise Empty | SOME s => s
     val ctx = {uri = uri, lines = #lines text, plugins = plugins, fromFileLine = fromFileLine}
-    fun fromProps [] r = r
-      | fromProps (PolyML.PTdeclaredAt loc :: _) (file, ty, _) = (file, ty, SOME loc)
-      | fromProps (PolyML.PTstructureAt {file,...} :: props) (_, ty, df) =
-        fromProps props (SOME file, ty, df)
-      | fromProps (PolyML.PTtype ty :: props) (file, _, df) = fromProps props (file, SOME ty, df)
-      | fromProps (_ :: props) r = fromProps props r
     val out = !LSPExtension.gotoDefinition (ctx, offset)
-    val out = case out of
-      [] => let
+    fun f () = let
+      fun fromProps [] r = r
+        | fromProps (PolyML.PTdeclaredAt loc :: _) (file, ty, _) = (file, ty, SOME loc)
+        | fromProps (PolyML.PTstructureAt {file,...} :: props) (_, ty, df) =
+          fromProps props (SOME file, ty, df)
+        | fromProps (PolyML.PTtype ty :: props) (file, _, df) = fromProps props (file, SOME ty, df)
+        | fromProps (_ :: props) r = fromProps props r
       val offset' = {startOffset = FixedInt.fromInt offset, endOffset = FixedInt.fromInt offset}
       val ({startPosition, endPosition, ...}, props) =
         case HOL_IDE.navigateTo' mlParseTrees offset' of NONE => raise Empty | SOME pt => pt
@@ -678,8 +798,7 @@ fun start {diag} = let
         NONE => fromPolyLoc loc
       | SOME {file, line} => fromFileLine {origin = origin, file = file, line = line}
       in [newLoc] end
-    | _ => out
-    in out end
+    in case out of [] => f () | _ => out end
     handle Empty => []
 
   fun eval id {uri, code, incr, holdep} = let
@@ -771,7 +890,11 @@ fun start {diag} = let
         recvExit ();
         raise Shutdown)
     | Request {method = "textDocument/hover", id, params} =>
-      spawnJob id params textDocumentPositionParams hover
+      spawnJob id params textDocumentPositionParams (fn {uri, pos} => let
+        val hov = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
+          NONE => NONE
+        | SOME v => hover uri v (pos, pos)
+        in Ok (encOrNull encHover hov) end)
     | Request {method = "textDocument/definition", id, params} =>
       spawnJob id params textDocumentPositionParams (fn {uri, pos} => let
         val ls = case withFileInfo (fn fileInfo => (fileInfo, Binarymap.peek (fileInfo, uri))) of
