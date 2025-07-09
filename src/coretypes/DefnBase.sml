@@ -639,12 +639,12 @@ fun lookupThmInfo kn =
     | NONE => Option.map snd (DB.lookup kn)
   else Option.map snd (DB.lookup kn)
 
-val checkLog = Universal.tag ()
+val checkLog = ThreadLocal.new ()
 
 fun lspTypecheckListener (ptm, env) =
-  case Thread.getLocal checkLog of NONE => () | SOME qs =>
+  case ThreadLocal.get checkLog of NONE => () | SOME qs =>
   case get_locn (Preterm.locn ptm) of NONE => () | SOME (start, stop) =>
-  Thread.setLocal (checkLog, (start, stop, ptm, env) :: qs)
+  ThreadLocal.set (checkLog, (start, stop, ptm, env) :: qs)
 
 fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
   val ds = case LSPExtension.getPluginData (plugins, tag) of
@@ -717,9 +717,9 @@ val _ = LSPExtension.registerPlugin true {
     Listener.add_listener Preterm.typecheck_listener ("LSP", lspTypecheckListener)
     handle HOL_ERR _ => !WARNING_outstream "<<warning: failed to add typecheck listener>>\n";
     LSPExtension.gotoDefinition := gotoDefinition tag),
-  beforeCompile = fn () => Thread.setLocal (checkLog, []),
+  beforeCompile = fn () => ThreadLocal.set (checkLog, []),
   afterCompile = fn (r, x) =>
-    case Thread.getLocal checkLog of
+    case ThreadLocal.get checkLog of
       SOME (l as _::_) => let
       val x = case x of SOME x => x | NONE => []
       in SOME ((r, l) :: x) end
