@@ -1612,28 +1612,39 @@ Proof
   \\ gvs[]
 QED
 
+Theorem FUNPOW_SUC_cyclic_spin:
+  t = FUNPOW Tau (SUC n) t <=> t = spin
+Proof
+  iff_tac
+  >- (rpt strip_tac
+      \\ Cases_on ‘?t'. strip_tau t t'’ \\ gvs[]
+      >- (Cases_on ‘t'’ \\ gvs[]
+          \\ imp_res_tac strip_tau_FUNPOW
+          \\ gvs[GSYM FUNPOW_ADD]
+          >- (drule FUNPOW_Tau_Ret_eq
+              \\ gvs[]
+             )
+          \\ drule FUNPOW_Tau_Vis_eq
+          \\ gvs[]
+         )
+      \\ rw[strip_tau_spin]
+     )
+  \\ rw[spin_FUNPOW_Tau]
+QED
+
 (* return or eventually reach another tree *)
 CoInductive ret_or_reach:
-  (ret_or_reach t' (Ret x)) /\
-  ((!l. ret_or_reach t' (k l) \/ k l = t') ==> ret_or_reach t' (Vis e k)) /\
-  (ret_or_reach t' (Tau t')) /\
-  (ret_or_reach t' t ==> ret_or_reach t' (Tau t))
+  (strip_tau t (Ret x) ==> ret_or_reach t' t) /\
+  (strip_tau t (Vis e k) /\ (!l. ret_or_reach t' (k l) \/ k l = t') ==> ret_or_reach t' t) /\
+  (ret_or_reach t' (FUNPOW Tau (SUC n) t'))
 End
 
 Theorem ret_or_reach_spin:
-  ret_or_reach t spin
+  ret_or_reach spin spin
 Proof
   irule ret_or_reach_coind
   \\ qexists ‘($=) spin’
-  \\ PURE_ONCE_REWRITE_TAC[spin]
-  \\ gvs[spin]
-QED
-
-Theorem ret_or_reach_suc_self:
-  ret_or_reach t (FUNPOW Tau (SUC n) t)
-Proof
-  Induct_on ‘n’
-  \\ gvs[ret_or_reach_rules, FUNPOW_SUC]
+  \\ rw[spin_FUNPOW_Tau]
 QED
 
 Theorem itree_bind_ret_or_reach_preserve:
@@ -1641,15 +1652,53 @@ Theorem itree_bind_ret_or_reach_preserve:
 Proof
   rpt strip_tac
   \\ irule ret_or_reach_coind
-  \\ qexists ‘\t''. (?t'. itree_bind t' k = t'' /\ ret_or_reach t t') \/ ret_or_reach t t''’
+  \\ qexists ‘\t''. ret_or_reach t t'' \/ (?t'. itree_bind t' k = t'' /\ ret_or_reach t t')’
   \\ rw[]
   >- metis_tac[]
   \\ first_assum $ assume_tac o SRULE[Once ret_or_reach_cases] \\ gvs[]
-  >- (first_x_assum $ qspec_then ‘x’ assume_tac \\ gvs[]
-      \\ first_assum $ assume_tac o SRULE[Once ret_or_reach_cases] \\ gvs[]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- metis_tac[]
+  >- (imp_res_tac strip_tau_FUNPOW
+      \\ gvs[FUNPOW_Tau_bind]
+      \\ last_x_assum $ qspec_then ‘x’ assume_tac
+      \\ first_assum $ assume_tac o SRULE[Once ret_or_reach_cases]
+      \\ gvs[GSYM FUNPOW_ADD, GSYM ADD_SUC]
+      \\ metis_tac[strip_tau_FUNPOW_strip_tau]
+     )
+  >- (imp_res_tac strip_tau_FUNPOW
+      \\ gvs[FUNPOW_Tau_bind]
+      \\ disj2_tac
+      \\ disj1_tac
+      \\ qexistsl [‘e’, ‘(λx. itree_bind (k' x) k)’] \\ rw[strip_tau_FUNPOW_strip_tau]
       \\ metis_tac[]
      )
-  \\ metis_tac[]
+  \\ last_assum $ assume_tac o SRULE[Once ret_or_reach_cases]
+  \\ gvs[]
+  >- (imp_res_tac strip_tau_FUNPOW
+      \\ gvs[FUNPOW_Tau_bind, GSYM FUNPOW_ADD, GSYM ADD_SUC]
+      \\ last_x_assum $ qspec_then ‘x’ assume_tac
+      \\ first_assum $ assume_tac o SRULE[Once ret_or_reach_cases]
+      \\ gvs[GSYM FUNPOW_ADD, GSYM ADD_SUC]
+      >- (drule strip_tau_FUNPOW
+          \\ strip_tac
+          \\ gvs[GSYM FUNPOW_ADD, GSYM ADD_SUC]
+          \\ disj1_tac
+          \\ qexists ‘x'’ \\ rw[strip_tau_FUNPOW_strip_tau]
+         )
+      >- metis_tac[strip_tau_FUNPOW_strip_tau]
+      \\ disj1_tac
+      \\ qexists ‘x’ \\ rw[strip_tau_FUNPOW_strip_tau]
+     )
+  >- (imp_res_tac strip_tau_FUNPOW
+      \\ gvs[FUNPOW_Tau_bind, GSYM FUNPOW_ADD, GSYM ADD_SUC]
+      \\ disj2_tac
+      \\ disj1_tac
+      \\ qexistsl [‘e’, ‘(λx. itree_bind (k' x) k)’] \\ rw[strip_tau_FUNPOW_strip_tau]
+      \\ metis_tac[]
+     )
+  \\ drule $ iffLR FUNPOW_SUC_cyclic_spin
+  \\ metis_tac[spin_bind, spin_FUNPOW_Tau]
 QED
 
 Theorem ret_or_reach_tau:
@@ -1658,7 +1707,21 @@ Proof
   strip_tac
   \\ drule $ iffLR ret_or_reach_cases
   \\ rpt strip_tac
-  \\ gvs[]
+  >- (gvs[strip_tau_rules]
+      \\ disj1_tac
+      \\ irule $ iffRL ret_or_reach_cases
+      \\ metis_tac[]
+     )
+  >- (gvs[strip_tau_rules]
+      \\ disj1_tac
+      \\ irule $ iffRL ret_or_reach_cases
+      \\ metis_tac[]
+     )
+  \\ gvs[FUNPOW_SUC]
+  \\ Cases_on ‘n’ \\ gvs[FUNPOW]
+  \\ disj1_tac
+  \\ irule $ iffRL ret_or_reach_cases
+  \\ metis_tac[GSYM FUNPOW]
 QED
 
 Theorem ret_or_reach_vis:
@@ -1666,7 +1729,7 @@ Theorem ret_or_reach_vis:
 Proof
   rpt strip_tac
   \\ drule $ iffLR ret_or_reach_cases
-  \\ rw[]
+  \\ gvs[strip_tau_rules, FUNPOW_SUC]
   \\ metis_tac[]
 QED
 
@@ -1674,18 +1737,18 @@ Theorem ret_or_reach_funpow_vis:
   ret_or_reach t (FUNPOW Tau n (Vis e k)) ==> (!l. ret_or_reach t (k l) \/ t = k l)
                                               \/ (?n'. FUNPOW Tau n (Vis e k) = FUNPOW Tau (SUC n') t)
 Proof
-  Induct_on ‘n’ \\ gvs[]
-  >- (rpt strip_tac
-      \\ drule $ iffLR ret_or_reach_cases
-      \\ gvs[]
+  rpt strip_tac
+  \\ drule $ iffLR ret_or_reach_cases
+  \\ rw[]
+  >- (imp_res_tac strip_tau_FUNPOW
+      \\ gvs[FUNPOW_Tau_neq2]
+     )
+  >- (imp_res_tac strip_tau_FUNPOW
+      \\ imp_res_tac FUNPOW_Tau_Vis_eq
       \\ metis_tac[]
      )
-  \\ rpt strip_tac
   \\ gvs[FUNPOW_SUC]
-  \\ drule $ iffLR ret_or_reach_cases
-  \\ gvs[]
-  \\ rpt strip_tac
-  \\ metis_tac[FUNPOW, GSYM FUNPOW_SUC]
+  \\ metis_tac[]
 QED
 
 (* strong bisimulation from some point up to the full tree *)
@@ -1754,7 +1817,6 @@ Proof
   \\ imp_res_tac ret_or_reach_vis \\ metis_tac[]
 QED
 
-
 (* weak bisimulation from some point up to the full tree *)
 CoInductive weak_bisim_upfrom:
   (strip_tau t'' (Ret x) /\ strip_tau t''' (Ret x) ==> weak_bisim_upfrom t t' t'' t''') /\
@@ -1764,8 +1826,6 @@ CoInductive weak_bisim_upfrom:
    (!l. weak_bisim_upfrom t t' (k l) (k' l) \/ (k l = t /\ k' l = FUNPOW Tau n t') \/ (k l = FUNPOW Tau n t /\ k' l = t')) ==>
    (weak_bisim_upfrom t t' t'' t'''))
 End
-
-
 
 Theorem itree_wbisim_weak_upfrom:
   itree_wbisim t' t'' ==> weak_bisim_upfrom t t t' t''
@@ -1970,7 +2030,6 @@ Proof
      )
   \\ imp_res_tac ret_or_reach_cyclic_vis \\ gvs[]
 QED
-
 
 (* tidy up theory exports *)
 
