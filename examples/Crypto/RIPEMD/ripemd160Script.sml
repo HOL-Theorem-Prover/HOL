@@ -19,33 +19,14 @@ Termination
   WF_REL_TAC`measure (LENGTH o SND)` \\ Cases \\ rw[]
 End
 
-Theorem chg_end_acc_sum_leng:
+Theorem chg_end_acc_sum_length:
   ∀acc bits. LENGTH $ chg_end_acc acc bits = LENGTH acc + LENGTH bits
 Proof
-  Induct_on ‘LENGTH bits DIV 8’>>
-  rw[ADD1]
-  >-(
-    fs[dividesTheory.DIV_EQUAL_0]>>
-    Cases_on ‘NULL bits’>>
-    rw[Once chg_end_acc_def]
-    >-fs[NULL_LENGTH]
-    >-rw[DROP_LENGTH_TOO_LONG,Once chg_end_acc_def,LENGTH_TAKE_EQ])
-  >-(
-    Cases_on ‘NULL bits’
-    >-fs[NULL_LENGTH]
-    >-(
-      rw[Once chg_end_acc_def]>>
-      pop_assum kall_tac>>
-      last_x_assum $ qspec_then ‘DROP 8 bits’ assume_tac>>
-      ‘v = LENGTH (DROP 8 bits) DIV 8’ by (
-        simp[LENGTH_DROP]>>
-        ‘8 ≤ LENGTH bits’ by (
-          ‘LENGTH bits DIV 8 ≠ 0’ by simp[]>>
-          ‘0 < 8’ by simp[]>>
-          gvs[dividesTheory.DIV_EQUAL_0])>>
-        simp[dividesTheory.SUB_DIV])>>
-      fs[]>>
-      simp[LENGTH_TAKE_EQ]))
+  ho_match_mp_tac chg_end_acc_ind>>
+  rw[]>>
+  rw[Once chg_end_acc_def]>>
+  fs[NULL_EQ]>>
+  simp[LENGTH_TAKE_EQ]
 QED
 
 (* change bits in little-endian to that in big-endian or vice versa, padding 0s to the left of bits when necessary to make the length of bits a multiple of 8 *)
@@ -62,16 +43,17 @@ End
 Theorem chg_end_length_multiple:
   divides 8 $ LENGTH (chg_end bits)
 Proof
-  simp[chg_end_def,chg_end_acc_sum_leng,dividesTheory.DIVIDES_MOD_0]>>
+  simp[chg_end_def,chg_end_acc_sum_length,dividesTheory.DIVIDES_MOD_0]>>
   Cases_on ‘LENGTH bits MOD 8’>>
   simp[Once $ GSYM MOD_PLUS]>>
   intLib.ARITH_TAC
 QED
 
+(* if the length of bits is a multiple of 8, then chg_end bits has the same length; otherwise, chg_end is (8 - LENGTH bits MOD 8) bits longer than bits *)
 Theorem chg_end_length:
   LENGTH (chg_end bits) = LENGTH bits + (8 − LENGTH bits MOD 8) MOD 8
 Proof
-  rw[chg_end_def,chg_end_acc_sum_leng]
+  rw[chg_end_def,chg_end_acc_sum_length]
 QED
 
 Definition pad_message_def:
@@ -97,7 +79,7 @@ Proof
     Cases_on ‘LENGTH bits’>>
     simp[LENGTH_n2l]>>
     ‘0 < SUC n’ by simp[]>>
-    drule_then assume_tac logrootTheory.LOG2_LE_MONO>> (*why not bitTheory?*)
+    drule_then assume_tac logrootTheory.LOG2_LE_MONO>>
     pop_assum $ drule_then assume_tac>>
     gvs[])>>
   rw[pad_message_def]>>
@@ -225,35 +207,18 @@ Proof
 QED
 
 Definition rho_alt_def:
-  rho_alt n: num = if n < 16 then rho n else 0
-End
-
-val () = cv_auto_trans rho_alt_def;
-(*
-val rho_alt_pre_def = cv_trans_pre rho_alt_def;
-
-Theorem rho_alt_pre[cv_pre]:
-  rho_alt_pre n ⇔
-    n < 16 ⇒
-    n < LENGTH [7; 4; 13; 1; 10; 6; 15; 3; 12; 0; 9; 5; 2; 14; 11; 8]
-Proof
-  simp[rho_alt_pre_def]
-QED
-
-Definition rho_alt_def:
-  rho_alt n: num = if n < 16 then EL n [7;4;13;1;10;6;15;3;12;0;9;5;2;14;11;8] else 0
+  rho_alt n: num =
+  if n < 16 then EL n [7;4;13;1;10;6;15;3;12;0;9;5;2;14;11;8]
+  else 0
 End
 
 val rho_alt_pre_def = cv_trans_pre rho_alt_def;
 
 Theorem rho_alt_pre[cv_pre]:
-  rho_alt_pre n ⇔
-    n < 16 ⇒
-    n < LENGTH [7; 4; 13; 1; 10; 6; 15; 3; 12; 0; 9; 5; 2; 14; 11; 8]
+  rho_alt_pre n
 Proof
   simp[rho_alt_pre_def]
 QED
-*)
 
 Theorem rho_eq_rho_alt_lt_16:
   n < 16 ⇒ rho n = rho_alt n
@@ -553,9 +518,8 @@ End
 
 val () = cv_auto_trans word32_chg_end_def;
 
-(* dummy value added for length of input message m exceeding 2 ** 64 *)
 Definition RIPEMD_160_def:
-  RIPEMD_160 m: 160 word =
+  RIPEMD_160 m: 160 word option =
   if LENGTH m < 2 ** 64 then
     let
       p      = pad_message m;
@@ -563,13 +527,13 @@ Definition RIPEMD_160_def:
     in
       case outer_for_loop blocks of
         (h0,h1,h2,h3,h4) =>
-          concat_word_list [
-            (word32_chg_end h4);
-            (word32_chg_end h3);
-            (word32_chg_end h2);
-            (word32_chg_end h1);
-            (word32_chg_end h0)]
-  else 0w
+          SOME $ concat_word_list [
+              (word32_chg_end h4);
+              (word32_chg_end h3);
+              (word32_chg_end h2);
+              (word32_chg_end h1);
+              (word32_chg_end h0)]
+  else NONE
 End
 
 Theorem RIPEMD_160_alt_cv:
@@ -581,13 +545,13 @@ Theorem RIPEMD_160_alt_cv:
     in
       case outer_for_loop_alt blocks of
         (h0,h1,h2,h3,h4) =>
-          concat_word_list [
-            (word32_chg_end h4);
-            (word32_chg_end h3);
-            (word32_chg_end h2);
-            (word32_chg_end h1);
-            (word32_chg_end h0)]
-  else 0w
+          SOME $ concat_word_list [
+              (word32_chg_end h4);
+              (word32_chg_end h3);
+              (word32_chg_end h2);
+              (word32_chg_end h1);
+              (word32_chg_end h0)]
+  else NONE
 Proof
   rw[RIPEMD_160_def]>>
   assume_tac parse_message_block_size>>
@@ -598,37 +562,29 @@ QED
 
 val () = cv_auto_trans RIPEMD_160_alt_cv;
 
-(*
-Definition RIPEMD_160_alt_def:
-  RIPEMD_160_alt m: 160 word =
-  if LENGTH m < 2 ** 64
-  then
-    let
-      p      = pad_message m;
-      blocks = parse_message [] p
-    in
-      case outer_for_loop_alt blocks of
-        (h0,h1,h2,h3,h4) =>
-          concat_word_list [
-            (word32_chg_end h4);
-            (word32_chg_end h3);
-            (word32_chg_end h2);
-            (word32_chg_end h1);
-            (word32_chg_end h0)]
-  else 0w
+Definition RIPEMD_160_bytes_def:
+  RIPEMD_160_bytes (bs: word8 list) =
+  RIPEMD_160 $ FLAT $
+    MAP (REVERSE o PAD_RIGHT 0 8 o word_to_bin_list) bs
 End
 
-Theorem RIPEMD_160_eq_alt:
-  LENGTH m < 2 ** 64 ⇒ RIPEMD_160 m = RIPEMD_160_alt m
+val () = cv_auto_trans RIPEMD_160_bytes_def;
+
+Theorem RIPEMD_160_bytes_abc:
+  RIPEMD_160_bytes (MAP (n2w o ORD) "abc") =
+  SOME 0x8EB208F7E05D987A9B044A8E98C6B087F15A0BFCw
 Proof
-  strip_tac>>
-  simp[RIPEMD_160_def,RIPEMD_160_alt_def]>>
-  drule_then assume_tac parse_message_block_size>>
-  drule_then assume_tac outer_for_loop_alt_cv>>
-  rw[]
+  CONV_TAC(PATH_CONV"lrr"EVAL)>>
+  (fn g => (g |> #2 |> lhs |> cv_eval |> assume_tac>>simp[]) g)
 QED
 
-val () = cv_auto_trans RIPEMD_160_alt_def;
-*)
+Theorem RIPEMD_160_bytes_two_blocks:
+  RIPEMD_160_bytes (MAP (n2w o ORD)
+    "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") =
+  SOME 0x12A053384A9C0C88E405A06C27DCF49ADA62EB2Bw
+Proof
+  CONV_TAC(PATH_CONV"lrr"EVAL)>>
+  (fn g => (g |> #2 |> lhs |> cv_eval |> assume_tac>>simp[]) g)
+QED
 
 val _ = export_theory();
