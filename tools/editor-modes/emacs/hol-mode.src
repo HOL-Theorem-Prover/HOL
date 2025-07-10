@@ -581,7 +581,9 @@ starts >%s%s<"
                          hol-quoted-datatype-re-begin "\\|"
                          hol-quoted-Quote-re-begin "\\|"
                          "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
-                         "\\_<open\\_>")))
+                         "\\_<open\\_>" "\\|"
+                         "^Libs\\_>" "\\|"
+                         "^Ancestors\\_>")))
             (while (re-search-forward regexp (point-max) t)
               (let ((pp (syntax-ppss))
                     (ms (match-string-no-properties 0)))
@@ -629,13 +631,16 @@ starts >%s%s<"
                            (char-equal (char-before) ?:))
                       (if (not (re-search-forward "^End" nil t))
                           (error "Unbalanced [Co]Inductive/Quote in region")))
-                     ((string= ms "open")
-                      ;; point now after an open, now search forward
+                     ((or (string= ms "open")
+                          (string= ms "Libs")
+                          (string= ms "Ancestors"))
+                      ;; point now after an open/Libs, now search forward
                       ;; to end of buffer or a semi-colon, or an infix
                       ;; declaration or a val or a fun or another open
                       ;; or whatever, (as per the regexp defined just
                       ;; before this function definition)
-                      (let ((open-start (match-beginning 0))
+                      (let ((ancp (string= ms "Ancestors"))
+                            (open-start (match-beginning 0))
                             (start (point))
                             (end
                              (save-excursion
@@ -660,7 +665,7 @@ starts >%s%s<"
                             (endm (make-marker)))
                         ; (message "Handling an open")
                         (if hol-auto-load-p
-                            (hol-load-modules-in-region start end))))
+                            (hol-load-modules-in-region ancp start end))))
                      (t
                       ; (message "Saw \"%s\"; position = %d; loading: %s"
                       ;           ms (point) (match-string 6))
@@ -864,15 +869,18 @@ containing the HOL window, but keep the current frame uppermost."
                   "\\n\"; " "Meta.load \"" mys "\");\n")))
     (comint-send-string buf commandstring)))
 
-(defun hol-load-modules-in-region (start end)
-  "Attempts to load all of the words in the region as modules."
-  (interactive "rP")
+(defun hol-load-modules-in-region (ancp start end)
+  "Attempts to load all of the words in the region as modules; with prefix arg
+appends \"Theory\" to the names."
+  (interactive "P\nr")
   (save-excursion
     (goto-char start)
     (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
       (let ((ppss (syntax-ppss)))
         (if (and (not (nth 4 ppss)) (not (nth 3 ppss)))
-            (hol-load-string (match-string 0)))))))
+            (hol-load-string (concat (match-string 0)
+                                     (if ancp "Theory" ""))))))))
+
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
@@ -889,7 +897,7 @@ region instead. With prefix ARG prompt for a file-name to load."
           ((and (is-region-active)
                 (string-match (concat "^\\(\\s-*" sml-struct-id-regexp
                                       "\\)+\\s-*$") txt))
-           (hol-load-modules-in-region (region-beginning) (region-end)))
+           (hol-load-modules-in-region nil (region-beginning) (region-end)))
           ((and wap (string-match "^\\w+$" wap)) (hol-load-string wap))
           (t (hol-load-string (read-string "Library to load: "))))))
 
