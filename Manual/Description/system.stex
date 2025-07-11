@@ -590,7 +590,7 @@ illustrated in the following session.
 \begin{alltt}
 ##linelen_limit 75
 >>+ ``x = (x = 1)``;
-##nolinelen_limit
+##poplinelen_limit
 \end{alltt}
 \end{session}
 

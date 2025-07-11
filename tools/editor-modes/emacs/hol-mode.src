@@ -209,12 +209,29 @@ process in it."
       (concat (hol-interm-locpragma-of-position pos) s)
     s))
 
+(defun hol-string-escape (s)
+  "Escape argument so that special chars are escaped with backslash characters.
+The special characters are backslashes, left and right parentheses, and space."
+  (let (acc)
+    (seq-doseq (c s)
+      (let ((s1 (cond
+                 ((= c ?\s) "\\ ")
+                 ((= c ?\() "\\(")
+                 ((= c ?\\) "\\\\")
+                 ((= c ?\)) "\\)")
+                 (t (string c)))))
+        (setq acc (cons s1 acc))))
+    (string-join (reverse acc))))
+
 (defun hol-locpragma-of-position (pos)
   "Convert Elisp position into HOL location pragma.  Not for interactive use."
   (let ((rcposn (hol-get-rowcol-posn pos)))
     ;; send position of the line before and a newline so that text that
     ;; needs to be in column 0 is still in column 0
-    (format "#(LINE=%d,%d)\n" (- (car rcposn) 1) (cdr rcposn))))
+    (format "#(FILE=%s)#(LINE=%d,%d)\n"
+            (hol-string-escape (buffer-file-name))
+            (- (car rcposn) 1)
+            (cdr rcposn))))
 
 (defun hol-interm-locpragma-of-position (pos)
   (let ((rcposn (hol-get-rowcol-posn pos)))

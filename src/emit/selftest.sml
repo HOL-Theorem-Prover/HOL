@@ -19,4 +19,4 @@ in
          else OK()
 end
 
-val _ = trace ("Define.storage_message", 0) gh157 ()
+val _ = trace ("Definition.storage_message", 0) gh157 ()

@@ -31,7 +31,7 @@ val _ = new_theory "fcp";
 (*  to some FCP-related theorems.       -- Chun Tian (binghe), May 12, 2022  *)
 (* ------------------------------------------------------------------------- *)
 
-val qDefine = Feedback.trace ("Define.storage_message", 0) zDefine
+val qDefine = Feedback.trace ("Definition.storage_message", 0) zDefine
 
 (* ------------------------------------------------------------------------- *
  * An isomorphic image of any finite type, 1-element for infinite ones.      *

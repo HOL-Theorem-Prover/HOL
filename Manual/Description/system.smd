@@ -23,18 +23,46 @@ header-includes: |
   \DeclareUnicodeCharacter{3B1}{$\alpha$}
   \DeclareUnicodeCharacter{3B2}{$\beta$}
   \DeclareUnicodeCharacter{3BB}{$\lambda$}
+  \DeclareUnicodeCharacter{3C3}{\ensuremath{\sigma}}
+  \DeclareUnicodeCharacter{3C4}{\ensuremath{\tau}}
+  \DeclareUnicodeCharacter{1D40}{\ensuremath{{}\sp{\top}}}
+  \DeclareUnicodeCharacter{1D62}{\ensuremath{{}\sb{i}}}
+  \DeclareUnicodeCharacter{1D63}{\ensuremath{{}\sb{r}}}
   \DeclareUnicodeCharacter{201C}{\mbox{\textrm{\textquotedblleft}}}
   \DeclareUnicodeCharacter{201D}{\mbox{\textrm{\textquotedblright}}}
+  \DeclareUnicodeCharacter{207A}{\ensuremath{{}\sp{+}}}
+  \DeclareUnicodeCharacter{2081}{\ensuremath{{}\sb{1}}}
+  \DeclareUnicodeCharacter{2082}{\ensuremath{{}\sb{2}}}
+  \DeclareUnicodeCharacter{2099}{\ensuremath{{}\sb{n}}}
+  \DeclareUnicodeCharacter{21A6}{$\mapsto$}
+  \DeclareUnicodeCharacter{21CE}{\ensuremath{\not\Leftrightarrow}}
   \DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
   \DeclareUnicodeCharacter{21D4}{$\Leftrightarrow$}
   \DeclareUnicodeCharacter{2200}{$\forall$}
   \DeclareUnicodeCharacter{2203}{$\exists$}
+  \DeclareUnicodeCharacter{2208}{\ensuremath{\in}}
+  \DeclareUnicodeCharacter{2209}{\ensuremath{\not\in}}
+  \DeclareUnicodeCharacter{2212}{\ensuremath{{-}}}
+  \DeclareUnicodeCharacter{2218}{\ensuremath{\circ}}
   \DeclareUnicodeCharacter{2227}{$\land$}
   \DeclareUnicodeCharacter{2228}{$\lor$}
+  \DeclareUnicodeCharacter{2229}{\ensuremath{\cap}}
+  \DeclareUnicodeCharacter{222A}{\ensuremath{\cup}}
+  \DeclareUnicodeCharacter{2260}{\ensuremath{\ne}}
+  \DeclareUnicodeCharacter{2264}{\ensuremath{\le}}
+  \DeclareUnicodeCharacter{2265}{\ensuremath{\ge}}
+  \DeclareUnicodeCharacter{227C}{\ensuremath{\preceq}}
+  \DeclareUnicodeCharacter{2282}{\ensuremath{\subset}}
   \DeclareUnicodeCharacter{2286}{$\subseteq$}
+  \DeclareUnicodeCharacter{2294}{\ensuremath{\sqcup}}
+  \DeclareUnicodeCharacter{2297}{\ensuremath{\otimes}}
   \DeclareUnicodeCharacter{22A2}{$\vdash$}
   \DeclareUnicodeCharacter{2983}{$\llbrace$}
   \DeclareUnicodeCharacter{2984}{$\rrbrace$}
+  \DeclareUnicodeCharacter{2987}{\ensuremath{\llparenthesis}}
+  \DeclareUnicodeCharacter{2988}{\ensuremath{\rrparenthesis}}
+  \DeclareUnicodeCharacter{29FA}{\ensuremath{{+}\!\!{+}}}
+  \DeclareUnicodeCharacter{A673}{\ensuremath{\sp{*}}}
   \DeclareUnicodeCharacter{1D49F}{\ensuremath{{\cal D}}}
 
 ---
@@ -43,19 +71,31 @@ header-includes: |
 <!-- PolyML code for extracting stuff from structures and printing types etc -->
 >>__ structure PNV = PolyML.NameSpace.Values
 >>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
->>__ fun printNameAndType indent str nm =
+>>__ fun printNameAndType0 qp indent str nm =
        let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
                        handle Option => raise Fail ("Structure " ^ str ^ " not found")
            val snames = PolyML.NameSpace.Structures.contents sinfo
            val sval = valOf (#lookupVal snames nm)
                        handle Option => raise Fail ("Name " ^ nm ^ " not found in structure " ^ str)
-           val typ_p = PNV.printType(PNV.typeof sval, 100, SOME snames)
+           val ctxt = if qp then NONE else SOME snames
+           val typ_p = PNV.printType(PNV.typeof sval, 100, ctxt)
            val spaces = CharVector.tabulate(indent, fn _ => #" ")
            open PolyML
        in
            PP.prettyPrint(TextIO.print, 70-indent)
             (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
        end
+>>__ val printNameAndType = printNameAndType0 false
+>>__ val (pushLineWidth,popLineWidth) = let
+     val lwstk = ref [65]
+     val _ = linewidth := 65
+   in
+     ((fn i => (linewidth := i; lwstk := i :: !lwstk)),
+      (fn () => case !lwstk of [_] => () 
+                  | i::is => (linewidth := i; lwstk := is))
+     )
+   end
+
 
 # The HOL Logic in ML
 
@@ -124,7 +164,8 @@ fails if
 
 1.  $\mathit{name}$ is not a type operator of theory $\mathit{thyname}$;
 2.  $\mathit{name}$ is a type operator of theory $\mathit{thyname}$,
-but its arity is not $n$.
+but its arity is not $n$;
+3.  $\mathit{thyname}$ is not the name of a theory in the current context.
 
 For example, `mk_thy_type{Tyop="bool", Thy="min", Args=[]}`
 evaluates to an ML value of type `hol_type` representing the type
@@ -192,9 +233,9 @@ see [§Theories](#theories)).
 `mk_comb(`$t_1$`,`$t_2$`)` evaluates to a term representing the combination $t_1\ t_2$.
 It fails if:
 
-1. the type of $t_1$ does not have the form $\sigma'\to\sigma$;
-2. the type of $t_1$ has the form $\sigma'\to\sigma$, but the
-type of $t_2$ is not equal to $\sigma'$.
+1. the type of $t_1$ does not have the form $\sigma_1\to\sigma_2$;
+2. the type of $t_1$ has the form $\sigma_1\to\sigma_2$, but the
+type of $t_2$ is not equal to $\sigma_1$.
 
 ```
 >>__ printNameAndType 4 "Term" "mk_abs"
@@ -369,8 +410,8 @@ a HOL identifier can be of two forms:
       $\lceil$        `U+2308`      $\rangle$         `U+27E9`
       $\rceil$        `U+2309`      ⦃                 `U+2983`
       $\lfloor$       `U+230A`      ⦄                 `U+2984`
-      $\rfloor$       `U+230B`      $\llparenthesis$  `U+2987`
-      $\llbracket$    `U+27E6`      $\rrparenthesis$  `U+2988`
+      $\rfloor$       `U+230B`      ⦇                 `U+2987`
+      $\llbracket$    `U+27E6`      ⦈                 `U+2988`
       $\rrbracket$    `U+27E7`
 
     Table: Non-aggregating Unicode characters
@@ -432,7 +473,7 @@ To repeat that definition:
 >> val parsed = ``\x. x + 1``;
 ```
 The backslash can be used instead of $\lambda$, and the ` `` ` symbol can be used instead of both the “ and ” symbols.
-Similarly, the logical connectives have both ASCII and Unicode forms, and either can be used (even within the same term), except that the begin- and end-delimiters must be of the same type.
+Similarly, the logical connectives have both ASCII and Unicode forms (see [§Grammar](#viewing-the-grammar) below), and either can be used (even within the same term), except that the begin- and end-delimiters must be of the same type.
 Usually the system prefers to print its output with the Unicode symbols.
 Thus:
 ```
@@ -462,9 +503,9 @@ variables in a term with the same name have the same type.
 This is illustrated in the following session.
 
 ```
-##linelen_limit 75
+##linelen_limit 65
 >>+ ``x = (x = 1)``;
-##nolinelen_limit
+##poplinelen_limit
 ```
 
 The desired value can be directly constructed by the primitive constructor
@@ -520,64 +561,26 @@ the parser with the functions `type_grammar` and
 For example, in the following session, we see that the type grammar used in the startup context of HOL has the type operators `fun`, `sum`, `prod`, `list`, `recspace`, `num`, `option`, `one`, `cv`, `ind`, and `bool`:
 
 ```
->>__ val stash = !linewidth; linewidth := 65;
+>>__ pushLineWidth 65;
 >> type_grammar();
->>__ linewidth := stash
+>>__ popLineWidth();
 ```
 
 Also, `fun`, `sum`, and `prod` have infix notation (`->`), (`+`), and (`#`), respectively, with different binding strengths: `#` (with 70) binds stronger than `+` (60), which  binds stronger than `->` (50).
 All postfix type operators bind more strongly than the infixes.
 
 The next session shows the (abbreviated) output from invoking the `term_grammar` function in the startup HOL environment.
-The deleted output includes a listing of all constants known to the system, including prefix operators, along with all overloadings currrently in force.
-The portrayed grammar ranges from binding operators at very low (0) binding strength, through to function application (2000) and record selection (2500), which bind very tightly.
+The deleted output includes more rules, a listing of all constants known to the system, including prefix operators, and a list of all overloadings currrently in force.
+The grammar rules shown include precedence levels, concrete syntax, and how various forms map to actual names (*e.g.*, `if`-`then`-`else` maps to the name `COND`, and `⇒` maps to actual name `==>`). 
 
 ```
-> term_grammar();
-val it =
-    (0)    TM  ::=  "LEAST" <..binders..>  "." TM |
-                    "?!" <..binders..>  "." TM | "?" <..binders..>  "." TM |
-                    "!" <..binders..>  "." TM | "@" <..binders..>  "." TM |
-                    "\" <..binders..>  "." TM
-    (2)    TM  ::=  "let" TM "in" TM  [let]
-    (4)    TM  ::=  TM "::" TM (restricted quantification operator)
-    (5)    TM  ::=  TM TM  (binder argument concatenation)
-    (7)    TM  ::=  "case" TM "of" TM  [case__magic]
-    (8)    TM  ::=  TM "|" TM  [case_split__magic]   (R-associative)
-    (9)    TM  ::=  TM "and" TM   (L-associative)
-    (10)   TM  ::=  TM "=>" TM  [case_arrow__magic]   (R-associative)
-    (50)   TM  ::=  TM "##" TM | TM "," TM   (R-associative)
-    (70)   TM  ::=  "if" TM "then" TM "else" TM  [COND]
-    (80)   TM  ::=  TM ":-" TM   (non-associative)
-    (100)  TM  ::=  TM "=" TM   (non-associative)
-    (200)  TM  ::=  TM "==>" TM   (R-associative)
-    (300)  TM  ::=  TM "\/" TM   (R-associative)
-    (400)  TM  ::=  TM "/\" TM   (R-associative)
-    (425)  TM  ::=  TM "IN" TM   (non-associative)
-    (440)  TM  ::=  TM "++" TM   (L-associative)
-    (450)  TM  ::=  TM "::" TM  [CONS] | TM ">=;" TM | TM "<=" TM |
-                    TM ">" TM | TM "<;" TM | TM ">=" TM | TM "<=" TM |
-                    TM ">" TM | TM "<" TM | TM "LEX" TM | TM "RSUBSET" TM |
-                    TM ":=" TM  [record field update] |
-                    TM "updated_by" TM  [functional record update] |
-                    TM "with" TM  [record update]
-                    (R-associative)
-    (500)  TM  ::=  TM "-" TM | TM "+" TM | TM "RUNION" TM   (L-associative)
-    (600)  TM  ::=  TM "DIV" TM | TM "*" TM | TM "RINTER" TM
-                    (L-associative)
-    (650)  TM  ::=  TM "MOD" TM   (L-associative)
-    (700)  TM  ::=  TM "**" TM | TM "EXP" TM   (R-associative)
-    (800)  TM  ::=  TM "O" TM | TM "o" TM   (R-associative)
-    (900)  TM  ::=  "~" TM
-    (1000) TM  ::=  TM ":" TY  (type annotation)
-    (2000) TM  ::=  TM TM  (function application) |    (L-associative)
-    (2500) TM  ::=  TM "." TM  [record field selection]   (L-associative)
-           TM  ::=  "[" ... "]"  (separator = ";") |
-                    "<|" ... "|>"  (separator = ";")
-           TM  ::=  "(" ")"  [one] |
-                    "(" TM ")"  [just parentheses, no term produced]
-    ... <further output omitted>
-  : grammar
+##linecount_limit 25 25
+##linelen_limit 70
+>>__ pushLineWidth 70;
+>> term_grammar();
+##poplinelen_limit
+##poplinecount_limit
+>>__ popLineWidth();
 ```
 
 
@@ -590,7 +593,7 @@ In that case, the notation $\mathit{thy}$`$`$\mathit{const}$ may be used in the 
 In the following example, the less-than operator is explicitly specified.
 
 ```
->> “prim_rec$< x y”
+>> “prim_rec$< x y”;
 ```
 Note how the `<` symbol is not treated as an infix by the
 parser when given in “fully-qualified” form.  Syntactically, such
@@ -749,305 +752,228 @@ These points are illustrated with a theorem inferred, for example purposes, from
 >> show_assums := true;
 
 >> th;
+>>__ show_assums := false;
 ```
-##skip
 
-## Primitive Rules of Inference of the HOL Logic
-\label{rules}
+### Primitive Rules of Inference of the HOL Logic
 
-\index{inference rules, of HOL logic@inference rules, of HOL logic!primitive|(}
-%
-The primitive rules of inference of the logic were described
-abstractly in \LOGIC. The descriptions relied on meta-variables $t$,
-$t_1$, $t_2$, and so on.  In the HOL logic, infinite families of
-primitive inferences are grouped together and thought of as single
-primitive inference schemes. %
-%
-\index{families of inferences, in HOL logic@families of inferences, in HOL logic}
-%
-Each family contains all the concrete instances of one particular
-inference `pattern'. These can be produced, in abstract form, by
-instantiating the meta-variables in \LOGIC{}'s rules to concrete
-terms.
+The primitive rules of inference of the logic were described abstractly in §LOGIC.
+The descriptions relied on meta-variables $t$, $t_1$, $t_2$, and so on.
+In the HOL logic, infinite families of primitive inferences are grouped together and thought of as single primitive inference schemes.
+Each family contains all the concrete instances of one particular inference ‘pattern’.
+These can be produced, in abstract form, by instantiating the meta-variables in LOGIC’s rules to concrete terms.
 
-In \HOL, primitive inference schemes are represented by ML functions
-that return theorems as values.  That is, for particular HOL terms,
-the ML functions return the instance of the theorem at those terms.
-The ML functions are part of the ML abstract type
-`thm`:
-%
-\index{thm (ML type)@`thm` (ML type)}
-%
-although `thm` has no primitive constructors, it has (eight)
-operations which return theorems as values: `ASSUME`, `REFL`,
-`BETA_CONV`, `SUBST`, `ABS`, `INST_TYPE`, `DISCH` and
+In HOL, primitive inference schemes are represented by ML functions that return theorems as values.
+That is, for particular HOL terms, the ML functions return the instance of the theorem at those terms.
+The ML functions are part of the ML abstract type `thm`: although `thm` has no primitive constructors, it has (eight) operations which return theorems as values: `ASSUME`,
+`REFL`,
+`BETA_CONV`,
+`SUBST`,
+`ABS`,
+`INST_TYPE`,
+`DISCH` and
 `MP`.
-%
-\index{inference schemes, in HOL logic@inference schemes, in HOL logic}
 
 The ML functions that implement the primitive inference schemes in the
-HOL system are described below.  The same notation
-%
-\index{inferences, in HOL logic@inferences, in HOL logic!notation for}
-%
-is used here as in \LOGIC: hypotheses above a horizontal line and
-conclusion
-%
-\index{conclusions!of inference rules} beneath. The machine-readable
-{\small ASCII} notation is used for the logical constants.
+HOL system are described below.
+The same notation is used here as in §LOGIC: hypotheses above a horizontal line and conclusion beneath.
+The machine-readable ASCII notation is used for the logical constants.
 
-### Assumption introduction}
-%
-\index{assumption introduction, in HOL logic@assumption introduction, in HOL logic!ML function for@ML function for}
 
-\begin{holboxed}
-\index{ASSUME@`ASSUME`|pin}
-\begin{verbatim}
-   ASSUME : term -> thm
-\end{verbatim}\end{holboxed}
 
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-$t${\small\verb+ |- +}$t$ \\
-\end{tabular}
-\end{center}
+#### Assumption Introduction
 
-\noindent
-{\small\verb+ASSUME +}$t$ evaluates to $t${\small\verb+ |- +}$t$.
+```
+>>__ printNameAndType 4 "Thm" "ASSUME";
+```
+
+```
+    ------------
+       t |- t
+```
+
+
+`ASSUME` `“`$t$`”` evaluates to $t$ `|-` $t$.
 Failure occurs if $t$ is not of type `bool`.
 
-\bigskip
 
-### Reflexivity}\index{reflexivity, in HOL logic@reflexivity, in HOL logic!ML function for@ML function for}
+#### Reflexivity
 
-\begin{holboxed}\index{REFL@`REFL`|pin}
-\begin{verbatim}
-   REFL : term -> thm
-\end{verbatim}
-\end{holboxed}
+```
+>>__ printNameAndType 4 "Thm" "REFL";
+```
 
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-{\small\verb+ |- +}$t${\small\verb+ = +}$t$ \\
-\end{tabular}
-\end{center}
+```
+    --------------
+       |- t = t
+```
 
-\noindent {\small\verb+REFL +}$t${\small\verb++} evaluates to
-{\small\verb+|- +}$t${\small\verb+ = +}$t$. A call to `REFL` never fails.
+`REFL` `“`$t$`”` evaluates to `|-` $t = t$. A call to `REFL` never fails.
 
-\bigskip
+#### Beta-Conversion
 
-### Beta-conversion}
-\index{beta-conversion, in HOL logic@beta-conversion, in HOL logic!ML function for@ML function for}
+```
+>>__ printNameAndType 4 "Thm" "BETA_CONV";
+```
 
-\begin{holboxed}\index{BETA_CONV@`BETA_CONV`|pin}
-\begin{verbatim}
-   BETA_CONV : term -> thm
-\end{verbatim}
-\end{holboxed}
+```
+    -----------------------------
+       |- (λx. t₁)t₂ = t₁[t₂/x]
+```
 
-\begin{center}
-\begin{tabular}{c}
-  \\ \hline
-\holtxt{ |- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}
-\end{tabular}
-\end{center}
+-  where $t_1$`[`$t_2$`/`$x$`]` denotes the result of substituting $t_2$ for $x$
+   in $t_1$, with suitable renaming of variables to prevent free variables
+   in $t_2$ becoming bound after substitution.
+   The substitution $t_1[t_2/x]$ is always defined.
 
-\begin{itemize}
-\item where $t_1[t_2/x]$ denotes the result of substituting $t_2$ for $x$
-in $t_1$, with suitable renaming of variables to prevent free variables
-in $t_2$ becoming bound after substitution. The substitution
- $t_1[t_2/x]$ is always defined.
-\end{itemize}
 
-%'' below makes latex font-locking cope with the "unbalanced" double
-%back-tick quotations.
-\noindent \ml{BETA_CONV ``(\bs$x$.$t_1$)$t_2$``} %''
-evaluates to the theorem \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
+`BETA_CONV` `“`$(\lambda x.\;t_1)t_2$`”`
+evaluates to the theorem `|-` $(\lambda x.\;t_1)t_2 = t_1[t_2/x]$.
 Failure occurs if the argument to `BETA_CONV` is not a $\beta$-redex
-(\ie, is not of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
+(*i.e.*, is not of the form $(\lambda x.\;t_1)t_2$).
 
-\bigskip
 
-### Substitution}\index{substitution rule, in HOL logic@substitution rule, in HOL logic!ML function for@ML function for|(}\index{SUBST@`SUBST`|(}
+#### Substitution
 
-\begin{holboxed}
-\begin{verbatim}
-   SUBST : (thm * term) list -> term -> thm -> thm
-\end{verbatim}
-\end{holboxed}
+<!-- if you attempt to use printNameAndType, polyml reports the first type below as Thm.Lib.subst -->
+```
+    SUBST : (term,thm)Lib.subst -> term -> thm -> thm
+```
 
-\begin{center}
-\begin{tabular}{c}
-$\Gamma_1${\small\verb+ |- +} $t_1${\small\verb+=+}$t'_1$ {\small\verb+  +} $\cdots$ {\small\verb+  +}
-$\Gamma_n${\small\verb+ |- +} $t_n${\small\verb+=+}$t'_n$ {\small\verb+  +}
-$\Gamma${\small\verb+ |- +} $t[t_1,\ldots,t_n]$ \\ \hline
-$\Gamma_1 \cup \cdots
-\cup \Gamma_n \cup \Gamma${\small\verb+ |- +} $t[t'_1,\ldots,t'_n]$ \\
-\end{tabular}
-\end{center}
+```
+       Γ₁ |- t1 = t1'   ...  Γₙ |- tn = tn'   Γ |- t[t1,...,tn]
+    --------------------------------------------------------------
+                Γ₁ ∪ ... ∪ Γₙ ∪ Γ |- t[t1',...tn']
+```
 
-\bigskip
+-  where $t[t_1,\ldots,t_n]$ denotes a term $t$ with some free
+   occurrences of the terms $t_1$, $\dots$, $t_n$ singled out and
+   $t[t'_1,\ldots,t'_n]$ denotes the result of simultaneously replacing each
+   such occurrences of $t_i$ by $t'_i$ (for $1{\leq}i {\leq} n$),
+   with suitable renaming of variables to prevent free variables
+   in $t_i'$ becoming bound after substitution.
 
-\begin{itemize}
-\item where $t[t_1,\ldots,t_n]$ denotes a term $t$ with some free
-occurrences of the terms $t_1$, $\dots$, $t_n$ singled out and
-$t[t'_1,\ldots,t'_n]$ denotes the result of simultaneously replacing each
-such occurrences of $t_i$ by $t'_i$ (for $1{\leq}i {\leq} n$),
-with suitable renaming of variables to prevent free variables
-in $t_i'$ becoming bound after substitution.
-\end{itemize}
-
-\noindent
-The first argument to {\small\verb+SUBST+} is a list
-{\small\verb+[(|-+}$t_1${\small\verb+=+}$t'_1${\small\verb+, +}$x_1${\small\verb+);+}$\:\ldots\:${\small\verb+;(|-+}$t_n${\small\verb+=+}
-$t'_n${\small\verb+, +}$x_n${\small\verb+)]+}.  The second argument is a
-template term $t[x_1,\ldots,x_n]$ in which occurrences of the variable
-$x_i$ (where $1 \leq i\leq n$) are used to mark the places where
-substitutions with {\small\verb+|- +}$t_i${\small\verb+=+}$t'_i$ are to be
+The first argument to `SUBST` is a list of what are effectively pairs in the widely used `(τ₁,τ₂)Lib.subst` ML type.
+Each element in these lists is a record of type `{redex:τ₁,residue:τ₂}` with the intention that the `redex` value is to be replaced by the `residue` value.
+Such values can be constructed with the infix arrow `|->`, so that, for example:
+```
+>> 3 |-> "foo";
+```
+In `SUBST`, the `redex` values are variables $x_i$ and the theorems are $\Gamma_i\vdash t_i = t'_i$.
+The second argument is a template term $t[x_1,\ldots,x_n]$ in which occurrences of the variable $x_i$ (where $1 \leq i\leq n$) are used to mark the places where
+substitutions with $\Gamma_i \vdash t_i = t'_i$ are to be
 done. Thus
 
-\bigskip
-
-{\small\verb+SUBST [(|-+}$t_1${\small\verb+=+}$t'_1${\small\verb+, +}$x_1${\small\verb+);+}$\ldots${\small\verb+;(|-+}$t_n${\small\verb+=+}
-$t'_n${\small\verb+, +}$x_n${\small\verb+)]  +}$t[x_1,\ldots,x_n]${\small\verb+  +}
-$\Gamma${\small\verb+ |- +}$t[t_1,\ldots,t_n]$
-
-\bigskip
-
-\noindent returns $\Gamma${\small\verb+ |- +}$t[t'_1,\ldots,t'_n]$.
+```
+  SUBST [“x1” |-> (Γ₁ |- t1 = t1'), ..., “xn” |-> (Γₙ |- tn = tn')]
+        t[x1,...xn]
+        (Γ |- t[t1,...tn])
+```
+returns `∪ᵢΓᵢ ∪ Γ|- t[t1',...,tn']`.
 Failure occurs if:
-\begin{myenumerate}
-\item any of the arguments are of the wrong form;
-\item the type of $x_i$ is not equal to the type of $t_i$ for some
-$1\leq i\leq n$.
-\end{myenumerate}\index{SUBST@`SUBST`|)}\index{substitution rule, in HOL logic@substitution rule, in HOL logic!ML function for@ML function for|)}
 
-### Abstraction}\index{abstraction rule, in HOL logic@abstraction rule, in HOL logic!ML function for@ML function for}
-\index{function abstraction, in HOL logic@function abstraction, in HOL logic!inference rules for}
+1. any of the arguments are of the wrong form;
+2. the type of $x_i$ is not equal to the type of $t_i$ for some $1\leq i\leq n$.
+
+The following is a somewhat contrived example of using `SUBST`:
+
+```
+>> val th1 = EVAL “1 + 1”;
+>> val th2 = EVAL “2 * 3”;
+
+>> val template = “x + y + x = 10”;
+
+>> val th = EVAL “(1 + 1) + (2 * 3) + (1 + 1)”
+
+>> val result = SUBST [“x:num” |-> th1, “y:num” |-> th2] template th
+```
+
+#### Abstraction
+
+```
+>>__ printNameAndType 4 "Thm" "ABS";
+```
+
+```
+          Γ |- t1 = t2
+    --------------------------
+      Γ |- (λx. t1) = (λx. t2)
+```
+
+- where `x` is not free in `Γ`.
+
+`ABS “x” (Γ |- t1 = t2)` returns the theorem `Γ |- (λx. t1) = (λx. t2)`.
+Failure occurs if `x` is not a variable, or `x` occurs free in any assumption in `Γ`.
 
 
-\begin{holboxed}\index{ABS@`ABS`|pin}
-\begin{verbatim}
-   ABS : term -> thm -> thm
-\end{verbatim}
-\end{holboxed}
+#### Type Instantiation
 
+```
+    INST_TYPE : (hol_type, hol_type) Lib.subst -> thm -> thm
+```
 
-\begin{center}
-\begin{tabular}{c}
-$\Gamma${\small\verb+ |- +}$t_1${\small\verb+ = +}$t_2$ \\ \hline
-$\Gamma${\small\verb+ |- (\+}$x${\small\verb+.+}$t_1${\small\verb+) = (\+}$x${\small\verb+.+}$t_2${\small\verb+)+} \\
-\end{tabular}
-\end{center}
+```
 
-\begin{itemize}
-\item where $x$ is not free in $\Gamma$.
-\end{itemize}
+                          Γ |- t
+    ---------------------------------------------------
+      Γ[σ₁,...,σₙ/α₁,...,αₙ] |- t[σ₁,...,σₙ/α₁,...,αₙ]
+```
 
-\noindent
-{\small\verb+ABS +}$x${\small\verb+ +}$\Gamma${\small\verb+ |- +}$t_1${\small\verb+=+}$t_2$ returns the theorem
-$\Gamma${\small\verb+ |- (\+}$x${\small\verb+.+}$t_1${\small\verb+) = (\+}$x${\small\verb+.+}$t_2${\small\verb+)+}.
-Failure occurs if $x$ is not a variable, or $x$
- occurs free in any assumption in $\Gamma$.
-
-
-\bigskip
-
-### Type instantiation}
-\index{type instantiation, in HOL logic@type instantiation, in HOL logic!ML function for@ML function for}
-\index{types, in HOL logic@types, in HOL logic!instantiation of}
-
-\begin{holboxed}\index{INST_TYPE@`INST_TYPE`|pin}
-\begin{verbatim}
-   INST_TYPE : {redex : hol_type, residue : hol_type} list -> thm -> thm
-\end{verbatim}
-\end{holboxed}
-
-\begin{center}
-\begin{tabular}{c}
-$\Gamma${\small\verb+ |- +}$t$ \\ \hline
-$\Gamma[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]${\small\verb+ |- +}$t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
-\end{tabular}
-\end{center}
-
-\bigskip
-
-\begin{itemize}
-\item where $t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
-denotes the result of substituting (in parallel) the types $\sigma_1$,
-$\ldots$\ , $\sigma_n$ for the type variables $\alpha_1$, $\ldots$\ ,
-$\alpha_n$ in the term $t$.  Similarly, $\Gamma[\sigma_1,\ \ldots\
-,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$ denotes the result of
+- where $t[\sigma_1,\dots,\sigma_n/\alpha_1,\dots,\alpha_n]$
+denotes the result of substituting (in parallel) the types $\sigma_1$ to $\sigma_n$
+for the type variables $\alpha_1$ to $\alpha_n$ in term $t$.
+Similarly, $\Gamma[\sigma_1,\dots,\sigma_n/\alpha_1,\dots,\alpha_n]$ denotes the result of
 performing the same substitution to all of the hypotheses in the set
 $\Gamma$.
-\end{itemize}
 
-\noindent
-\ml{INST_TYPE[$\alpha_1$~|->~$\sigma_1$%
-  ,$\ldots$,$\alpha_n$~|->~$\sigma_n$]~$th$} returns the result of
-instantiating each occurrence of $\alpha_i$ in the theorem $th$ to
-$\sigma_i$ (for $1 \leq i \leq n$). Failure occurs if an $\alpha_i$ is
+`INST_TYPE[α₁ |-> σ₁,...,αₙ |-> σₙ] th` returns the result of
+instantiating each occurrence of `αᵢ` in the theorem `th` to
+`σᵢ` (for $1 \leq \mathtt{i} \leq n$). Failure occurs if an `αᵢ` is
 not a type variable.
 
-The polymorphic ML infix function {\small\verb+|->+} is used to
-construct values of the record type \ml{redex-residue}.  It is defined
-\begin{verbatim}
-   fun ((x:'a) |-> (y:'b)) = {redex = x, residue = y}
-\end{verbatim}
-
-\bigskip
-
-### Discharging an assumption}\index{discharging assumptions, in HOL logic@discharging assumptions, in HOL logic!ML function for@ML function for}
+For example:
+```
+>> show_types := true;
+>> INST_TYPE [“:α” |-> “:num”] listTheory.LENGTH;
+>>__ show_types := false;
+```
 
 
-\begin{holboxed}\index{DISCH@`DISCH`|pin}
-\begin{verbatim}
-   DISCH : term -> thm -> thm
-\end{verbatim}
-\end{holboxed}
+#### Discharging an Assumption
 
-\begin{center}
-\begin{tabular}{c}
-$\Gamma${\small\verb+ |- +} $t_2$ \\ \hline
-$\Gamma{-}\{t_1\}${\small\verb+ |- +} $t_1${\small\verb+ ==> +}$t_2$
-\end{tabular}
-\end{center}
+```
+>>__ printNameAndType 4 "Thm" "DISCH";
+```
 
-\begin{itemize}
-\item  $\Gamma{-}\{t_1\}$ denotes the set obtained by removing $t_1$
-from $\Gamma$ (note that $t_1$ need not occur in $\Gamma$; in this case
-$\Gamma{-}\{t_1\} = \Gamma$).
-\end{itemize}
+```
+          Γ |- t₂
+    ------------------------
+      Γ - {t₁} |- t₁ ⇒ t₂
+```
 
-\noindent
-{\small\verb+DISCH +}$t_1${\small\verb+ +}$\Gamma${\small\verb+ |- +}$t_2$
-evaluates to the theorem
-$\Gamma{-}\{t_1\}${\small\verb+ |- +}$t_1${\small\verb+ ==> +}$t_2$.
+-  `Γ - {t₁}` denotes the set obtained by removing `t₁` from `Γ`
+   (note that `t₁` need not occur in `Γ`; in this case `Γ - t₁ = Γ`).
+
+`DISCH t₁ (Γ |- t₂)` evaluates to the theorem `Γ - {t₁} |- t₁ ⇒ t₂`.
 `DISCH` fails if the term given as its first argument is not of
-type `bool`.
+type `:bool`.
 
 
 
-\bigskip
-
-### Modus Ponens}\index{Modus Ponens, in HOL logic@Modus Ponens, in HOL logic!ML function for@ML function for}
+#### Modus Ponens
 
 
-\begin{holboxed}\index{MP@`MP`|pin}
-\begin{verbatim}
-   MP : thm -> thm -> thm
-\end{verbatim}\end{holboxed}
+```
+>>__ printNameAndType 4 "Thm" "MP";
+```
 
-\begin{center}
-\begin{tabular}{c}
-$\Gamma_1${\small\verb+ |- +}$t_1${\small\verb+ ==> +}$t_2$ {\small\verb+     +} $\Gamma_2${\small\verb+ |- +}$t_1$ \\
-\hline
-$\Gamma_1 \cup \Gamma_2${\small\verb+ |- +}$t_2$ \\
-\end{tabular}
-\end{center}
+```
+       Γ₁ |- t₁ ⇒ t₂       Γ₂ |- t₁
+    ---------------------------------
+          Γ₁ ∪ Γ₂ |- t₂
+```
+
+##skip
 
 \noindent
 {\small\verb+MP+} takes two theorems (in the order shown above) and returns
@@ -1968,4 +1894,3 @@ None of these functions saves anything in the current theory.
 <!-- Local variables: -->
 <!-- mode: markdown -->
 <!-- End: -->
-

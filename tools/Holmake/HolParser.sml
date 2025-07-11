@@ -7,6 +7,21 @@ fun mlquote s = String.concat ["\"", String.toString s, "\""]
 fun K a _ = a
 fun I a = a
 
+(* replace \c pairs with just c *)
+fun unescape s =
+  let val limit = size s
+      fun doit escp i A =
+        if i = limit then String.implode (List.rev A)
+        else let
+          val c = String.sub(s,i)
+        in
+          if escp orelse c <> #"\\" then doit false (i + 1) (c::A)
+          else doit true (i + 1) A
+        end
+  in
+    doit false 0 []
+  end
+
 structure Simple = struct
 
 local
@@ -421,7 +436,11 @@ structure ToSML = struct
       | BeginSimpleThm (p, head) => let
         val {isTriv, thmname, attrs, name_attrs, ...} = parseTheoremPfx head
         in
-          aux "val "; regular' (p, thmname); aux " = boolLib.save_thm(\"";
+          aux "val "; regular' (p, thmname);
+          if !filename = "" then aux " = boolLib.save_thm(\""
+          else app aux [" = boolLib.save_thm_at ",
+                        mk_mkloc_string (!filename, #1 (!line)),
+                        "(\""];
           doThmAttrs isTriv attrs name_attrs; aux "\","
         end
       | TheoremDecl {head = (p, head), quote, proof_tok, body, ...} => let
@@ -473,9 +492,12 @@ structure ToSML = struct
           aux " "
         end
       | FilePragma _ => aux (mlquote (!filename))
-      | FilePragmaWith (_, text) => (
+      | FilePragmaWith (_, text0) =>
+        let val text = unescape text0
+        in
           filename := String.substring(text, 7, size text - 8);
-          aux " ")
+          aux " "
+        end
     in doDecl end
 
   type ret = {
