@@ -13,8 +13,7 @@ PS_NOUMAP = $(PS_ROOT) < $< > $@
 
 .PHONY: all
 
-all: system.pdf system.html description.pdf
-
+all: system.pdf system.html drules.pdf drules.html description.pdf
 
 description.pdf: $(TEX_SOURCES)
 	latexmk -pdf description
@@ -27,6 +26,15 @@ conv.tex: conv.stex $(PS_STUFF)
 
 drules.tex: drules.stex $(PS_STUFF)
 	$(PS_COMMAND)
+
+drules.md: drules.smd $(PS_STUFF)
+	$(PS_NOUMAP)
+
+drules.pdf: drules.md
+	pandoc --top-level-division=chapter -o $@ $<
+
+drules.html: drules.md
+	pandoc -s -o $@ $<
 
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
@@ -55,7 +63,6 @@ libraries.tex: libraries.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
 system.tex: system.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-
 system.md: system.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
@@ -74,7 +81,7 @@ figures:
 
 EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
                PatternMatchesLib.tex HolSat.tex definitions.tex \
-               system.tex system.md conv.tex math.tex \
+               system.tex system.md drules.md conv.tex math.tex \
                description.pdf \
                $(patsubst %,%.aux,$(TEX_CORES)) \
 	       description.log description.out \
