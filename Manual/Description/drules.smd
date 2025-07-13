@@ -169,11 +169,11 @@ function to see the count of all three inference steps in the second
 interaction:
 
 ```
->> Count.apply (MP (ASSUME ``t1 ==> t2``)) (ASSUME ``t1:bool``);
+>> Count.inferences (MP (ASSUME ``t1 ==> t2``)) (ASSUME ``t1:bool``);
 
 >> fun f () = MP (ASSUME ``t1 ==> t2``) (ASSUME ``t1:bool``);
 
->> Count.apply f ();
+>> Count.inferences f ();
 ```
 
 Each of the three inference steps of the abstract proof corresponds to
@@ -229,33 +229,21 @@ of the derived rule on a consequence of the axiom
 printing of theorems has been adjusted as above and `th` is bound as
 shown below:
 
-##skip
 ```
-> th;
-val it =  [] \(\!\!\!{\turn}\!\!\!\!\) (t1 \(\Rightarrow\) t2) \(\Rightarrow\) (t2 \(\Rightarrow\) t1) \(\Rightarrow\) (t1 \({\Leftrightarrow}\) t2): thm
+>> val th = SPEC ``t2:bool`` $ SPEC ``t1:bool`` IMP_ANTISYM_AX;
 
-> Count.apply UNDISCH th;
-runtime: 0.00000s,    gctime: 0.00000s,     systime: 0.00000s.
-Axioms: 0, Defs: 0, Disk: 0, Orcl: 0, Prims: 2; Total: 2
-val it =  [t1 \(\Rightarrow\) t2] \(\!\!\!{\turn}\!\!\!\!\) (t2 \(\Rightarrow\) t1) \(\Rightarrow\) (t1 \({\Leftrightarrow}\) t2): thm
+>> Count.inferences UNDISCH th;
 
-> Count.apply UNDISCH it;
-runtime: 0.00000s,    gctime: 0.00000s,     systime: 0.00000s.
-Axioms: 0, Defs: 0, Disk: 0, Orcl: 0, Prims: 2; Total: 2
-val it =  [t1 \(\Rightarrow\) t2, t2 \(\Rightarrow\) t1] \(\!\!\!{\turn}\!\!\!\!\) t1 \({\Leftrightarrow}\) t2: thm
-\end{alltt}
-\end{session}
+>> Count.inferences UNDISCH it;
+```
 
-\noindent Each successful application of {\small\verb%UNDISCH%}
-to a theorem invokes an application
-of {\small\verb%ASSUME%}, followed by an application of {\small\verb%MP%};
-\ml{UNDISCH} constructs the
-2-step proof for any given theorem (of appropriate form).
-As can be
-seen, it relies on the class of ML functions that access HOL syntax:
-in particular, \ml{concl} to produce the conclusion
-of the theorem, \ml{dest\_imp} to separate the implication, and the
-selector \ml{fst} to choose the antecedent.
+Each successful application of `UNDISCH` to a theorem invokes an
+application of `ASSUME`, followed by an application of `MP`; `UNDISCH`
+constructs the 2-step proof for any given theorem of the appropriate
+form. As can be seen, it relies on the class of ML functions that
+access HOL syntax: in particular, `concl` to produce the conclusion
+of the theorem, `dest_imp` to separate the implication, and the
+selector `fst` to choose the antecedent.
 
 This particular example is very simple, but a derived inference rule
 can perform proofs of arbitrary length.  It can also make use of
@@ -264,8 +252,8 @@ can be developed much more quickly and easily; transitivity,
 generalization, and so on, support the familiar patterns of inference.
 
 A number of derived inference rules are pre-defined when the HOL
-system is entered (of which \ml{UNDISCH} is one of the first).  In
-Section~\ref{sec:standard-rule-derivation}, the abstract derivations are given for
+system is entered (`UNDISCH` is one of the first).  In
+[Section](standard-rule-derivation), the abstract derivations are given for
 the pre-defined rules that reflect the more usual inference patterns
 of the predicate (and lambda) calculi.  Like those shown, some of the
 pre-defined derived rules in HOL generate relatively short proofs.
@@ -274,145 +262,93 @@ great deal of effort. Furthermore, rules can be defined by the user to
 make still larger steps, or to implement more specialized patterns.
 
 All of the pre-defined derived rules in HOL are described
-in \REFERENCE.
+in §REFERENCE.
 
 ## Rewriting
-\label{sec:rewriting}
 
-\index{rewriting!rules for|(}
-\index{REWRITE_RULE@\ml{REWRITE\_RULE}|(}
-Included in the set of derived inferences that are pre-defined in
-HOL is a group of rules with complex definitions that do a limited
-amount of `automatic' theorem-proving in the form of rewriting.  The
-ideas and implementation were originally developed by
-Milner\index{Milner, R.}  and Wadsworth\index{Wadsworth, C.} for
-Edinburgh \LCF,\index{LCF@\LCF!Edinburgh} and were later implemented
-more flexibly and efficiently by Paulson\index{Paulson, L.} and
-Huet\index{Huet, G.} for Cambridge \LCF.\index{LCF@\LCF!Cambridge}
-They appear in \HOL in the Cambridge form. The basic rewriting rule
-is \ml{REWRITE\_RULE}.  All of the rewriting rules are described in
-detail in \REFERENCE.
+Included in the set of derived inferences that are pre-defined in HOL
+is a group of rules with complex definitions that do a limited amount
+of "automatic" theorem-proving in the form of rewriting.  The ideas
+and implementation were originally developed by Milner and Wadsworth
+for Edinburgh LCF, and were later implemented more flexibly and
+efficiently by Paulson and Huet for Cambridge LCF.  They appear in HOL
+in the Cambridge form. One basic rewriting rule is `REWRITE_RULE` is
+illustraated here, although there are more elaborate rewriters in HOL,
+such as `SIMP_RULE`, documented in [Section](??).
 
-\ml{REWRITE\_RULE} uses a list of equational theorems
-\index{equational theorems, in HOL logic@equational theorems, in \HOL logic!use of in rewriting}%
-\index{theorems, in HOL logic@theorems, in \HOL logic!equational}%
-(theorems whose conclusions can be regarded as having the form
-$t_1${\small\verb% = %}$t_2$) to replace
-any subterms of an object theorem that `match' $t_1$ by the
-corresponding instance of $t_2$. The rule matches recursively and to any depth,
-until no more replacements can be made,
-using internally defined search, matching and
-instantiation\index{type instantiation, in HOL logic@type instantiation, in \HOL logic!in rewriting rule} algorithms.  The validity
- of \ml{REWRITE\_RULE} rests
-ultimately on the primitive rules \ml{SUBST} (for making the substitutions);
-\ml{INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}} (for instantiating types); and the derived rules for
-generalization and specialization (see Sections~\ref{sec:gen}
-and \ref{sec:spec}) for instantiating terms.  The definition
-of \ml{REWRITE\_RULE} in ML
-also relies on a large number of general and \HOL-oriented
-ML functions.
-The implementation is partly described in Chapter~\ref{avra-conv}.
+`REWRITE_RULE` uses a list of equational theorems (theorems whose
+conclusions can be regarded as having the form $t_1 = t_2$) to replace
+any subterms of an object theorem that "match" $t_1$ by the
+corresponding instance of $t_2$. The rule matches recursively and to
+any depth, until no more replacements can be made, using internally
+defined search, matching and instantiation algorithms.  The validity
+of `REWRITE_RULE` rests ultimately on the primitive rules `SUBST` (for
+making the substitutions); `INST_TYPE` (for instantiating types); and
+the derived rules for generalization and specialization (see
+[Section](sec:gen) and [Section](sec:spec) for instantiating terms.
+The definition of `REWRITE_RULE` in ML also relies on a large number
+of general and HOL-oriented SML functions. The implementation is
+partly described in [Chapter](avra-conv).
 
-In practice, the derived rule \ml{REWRITE\_RULE} plays a central role
-in proofs, because it takes over a very large number of inferences
-which may happen in a complex and unpredictable order. It is unlike
-any other primitive or pre-defined rule, first because of the number
-of inferences it generates\footnote{The number of inferences performed
-  by this rule is generally `inflated'; \ie, is generally greater than
-  the length of the proof itself, if the proof could be `seen'.  This
-  is because, in the current implementation, some inference is done
-  during the search phase that is not necessarily in support of
-  successful replacements.}; and second because its outcome is often
-unexpected. Its power is increased by the fact that any existing
-equational theorem can be supplied as a `rewrite rule', including a
-standard HOL set of pre-proved tautologies; and these rewrite rules
-can interact with each other in the rewriting process to transform the
-original theorem.
+In practice, derived rules like `REWRITE_RULE` can play a central role
+in proofs, because they can perform a very large number of inferences
+which may happen in a complex and unpredictable order.  This power is
+increased by the fact that any existing equational theorem can be
+supplied as a `rewrite rule', including a standard HOL set of
+pre-proved tautologies; and these rewrite rules can interact with each
+other in the rewriting process to transform the original theorem.
 
-The application of \ml{REWRITE\_RULE}, in the session below,
-illustrates that replacements are made at all levels of the
-structure of a term.
-The example is numerical;
-the infixes {\small\verb%>%} and {\small\verb%<%} are
-the usual `greater than'  and `less than' relations, respectively,
-and \ml{"SUC"}, the
-usual successor function.
-Use is made of the pre-existing definition of {\small\verb%>%}:
-\ml{GREATER\_DEF} (see \REFERENCE).
-The timing\index{counting inferences, in HOL proofs@counting inferences, in \HOL proofs} facility is used again, for interest, and the printing
-of theorems is adjusted as above.
+The application of `REWRITE_RULE`, in the session below, illustrates
+that replacements are made at all levels of the structure of a term.
+The example is numerical; the infixes `>` and `<` are the usual
+"greater than" and "less than" relations, respectively, and `SUC`
+names the usual successor function on natural numbers.  Use is made of
+the pre-existing definition of `>`, bound to
+`arithmeticTheory.GREATER_DEF` in SML (see §REFERENCE).  The inference
+counting facility is used again, and the printing of theorems is
+adjusted as above.
 
+```
+>> Count.inferences
+     (REWRITE_RULE [arithmeticTheory.GREATER_DEF])
+     (ASSUME ``SUC 3 > 0 /\ SUC 2 > 0 /\ SUC 1 > 0 /\ SUC 0 > 0``);
+```
 
-\setcounter{sessioncount}{0}
-\begin{session}
-\begin{alltt}
-> Count.apply (REWRITE_RULE [arithmeticTheory.GREATER_DEF])
-    (ASSUME \mbox{\textrm{\textquotedblleft}}SUC 4 > 0 /\bs{} SUC 3 > 0 /\bs{} SUC 2 > 0 /\bs{} SUC 1 > 0 /\bs{}
-             SUC 0 > 0\mbox{\textrm{\textquotedblright}});
-runtime: 0.00005s,    gctime: 0.00000s,     systime: 0.00001s.
-Axioms: 0, Defs: 0, Disk: 0, Orcl: 0, Prims: 14; Total: 14
-val it =
-    [SUC 4 > 0 \(\land\) SUC 3 > 0 \(\land\) SUC 2 > 0 \(\land\) SUC 1 > 0 \(\land\) SUC 0 > 0]
-   \(\!\!\!{\turn}\!\!\!\!\) 0 < SUC 4 \(\land\) 0 < SUC 3 \(\land\) 0 < SUC 2 \(\land\) 0 < SUC 1 \(\land\) 0 < SUC 0: thm
-\end{alltt}
-\end{session}
-
-\noindent Notice that rewriting
-equations can be extracted from
-universally quantified theorems.
-To construct the
-proof step-wise, with all of the instantiations,
-substitutions, uses of transitivity, \etc,
-would be a lengthy process. The rewriting rules make it easy,
-and do so whilst still generating the entire chain of inferences.
-\index{REWRITE_RULE@\ml{REWRITE\_RULE}|)}
-\index{rewriting!rules for|)}
+Notice that rewriting equations can be extracted from universally
+quantified theorems.To construct the proof step-wise, with all of the
+instantiations, substitutions, uses of transitivity, *etc*, would be a
+lengthy process. The rewriting rules make it easy, and do so whilst
+still generating the entire chain of inferences.
 
 ## Derivation of the Standard Rules
-\label{sec:standard-rule-derivation}
 
-\index{derived rules, in HOL logic@derived rules, in \HOL logic!pre-defined|(}
-%
-The \HOL system provides all the standard introduction and
-elimination rules of the predicate calculus pre-defined as derived
-inferences.  It is these derived rules, rather than the primitive
-rules, that one normally uses in practice.  In this section, the
-derivations of some of the standard rules are given, in sequence.
-These derivations only use the axioms and definitions in the theory
-\theoryimp{bool} (see Section~\ref{boolfull}), the eight primitive
-inferences of the HOL logic, and inferences defined earlier in the
-sequence.
+The HOL system provides all the standard introduction and elimination
+rules of the predicate calculus pre-defined as derived inferences.  It
+is these derived rules, rather than the primitive rules, that one
+normally uses in practice.  In this section, the derivations of some
+of the standard rules are given, in sequence.  These derivations only
+use the axioms and definitions in the theory `bool` (see
+[Section](boolfull), the eight primitive inferences of the HOL logic,
+and inferences defined earlier in the sequence.
 
-Theorems,
-%
-\index{theorems, in HOL logic@theorems, in \HOL logic!as inference rules}%
-%
-in accordance with the definition given at the beginning of this
-chapter, are treated as rules without hypotheses; thus the derivation
-of a theorem resembles the derivation of a rule except in not having
-hypotheses. (The derivation of \ml{TRUTH}, Section~\ref{sec:T}, is
-the only example given of this, but there are several others in \HOL.)
-There are also some rules that are intrinsically more general than
-theorems.  For example, for any two terms $t_1$ and $t_2$, the theorem
-$\vdash(\lquant{x}t_1)t_2 = t_1[t_2/x]$ follows by the primitive rule
-\rul{BETA\_CONV}. The rule \ml{BETA\_CONV} returns a theorem for each
-pair of terms $t_1$ and $t_2$, and is therefore equivalent to an
-infinite family
-%
-\index{families of inferences, in HOL logic@families of inferences, in \HOL logic}%
-%
-of theorems. No single theorem can be expressed in the \HOL logic
-that is equivalent to \rul{BETA\_CONV}.%
-\index{theorems, in HOL logic@theorems, in \HOL logic!rules inexpressible as}
-\index{beta-conversion, in HOL logic@beta-conversion, in \HOL logic!not expressible as a theorem}%
-%
-(See Chapter~\ref{avra-conv} for further discussion of this point.)
-(\ml{UNDISCH} is not a rule of this sort, as it can, in fact, be
-expressed as a theorem.)
+Theorems, in accordance with the definition given at the beginning of
+this chapter, are treated as rules without hypotheses; thus the
+derivation of a theorem resembles the derivation of a rule except in
+not having hypotheses. (The derivation of `TRUTH`, [Section](sec:T),
+is the only example given of this, but there are several others in
+HOL.)  There are also some rules that are intrinsically more general
+than theorems.  For example, for any two terms $t_1$ and $t_2$, the
+theorem $\vdash(\lambda{x}.t_1)t_2 = t_1[t_2/x]$ follows by the
+primitive rule `BETA_CONV`. The rule `BETA_CONV` returns a theorem for
+each pair of terms $t_1$ and $t_2$, and is therefore equivalent to an
+infinite family of theorems. No single theorem can be expressed in the
+HOL logic that is equivalent to `BETA_CONV`.See [Chapter](avra-conv)
+for further discussion of this point.  Note that `UNDISCH` is not a
+rule of this sort, as it can, in fact, be expressed as a theorem.
 
 For each derivation given below, there is an ML function definition
 in the HOL system that implements the derived rule as a procedure in
-\ML. The actual implementation in the HOL system differs in some
+ML. The actual implementation in the HOL system differs in some
 cases from the derivations given here, since the system code has been
 optimised for improved performance.
 
@@ -420,32 +356,25 @@ In addition, for reasons that are mostly historical, not all the
 inferences that are derived in terms of the abstract logic are
 actually derived in the current version of the HOL system.  That is,
 there are currently a number of rules that are installed in the system
-on an `axiomatic' basis, all of which should be derived by explicit
-inference.
-These rules' status does not actually compromise the consistency of the logic.
-In effect, the existing HOL system has a deductive system more comprehensive than the one presented abstractly, but the model outlined in §LOGIC{} would easily extend to cover it.%
-%
-\index{derived rules, in HOL logic@derived rules, in \HOL logic!pre-defined|)}
-
-\index{inference rules, of HOL logic@inference rules, of \HOL logic!derived|(}
+on an "axiomatic" basis, all of which should be derived by explicit
+inference.  These rules' status does not actually compromise the
+consistency of the logic.  In effect, the existing HOL system has a
+deductive system more comprehensive than the one presented abstractly,
+but the model outlined in §LOGIC would easily extend to cover it.
 The derivations that follow consist of sequences of numbered steps each of
 which
-\begin{enumerate}
-\item is an axiom, or
-\item is a hypothesis of the rule being derived, or
-\item follows from preceding steps by a rule of inference (either primitive
-or previously derived).
-\end{enumerate}
 
-\noindent Note that the abbreviation \ml{conv} (standing for
-`conversion') is used for the ML type \ml{term ->
-  thm}.%
-\footnote{This stands for `conversion', as explained in
-Chapter~\ref{avra-conv}.}
+1. is an axiom, or
+2. is a hypothesis of the rule being derived, or
+3.  follows from preceding steps by a rule of inference (either primitive
+or previously derived).
+
+Note that the abbreviation `conv` (standing for "conversion") is used for the ML type
+`term -> thm`.
 
 ### Adding an assumption
-\index{derived rules, in HOL logic@derived rules, in \HOL logic!list and derivations of some|(}
 
+##skip
 \begin{holboxed}
 \index{ADD_ASSUM@\ml{ADD\_ASSUM}|pin}
 \begin{verbatim}
