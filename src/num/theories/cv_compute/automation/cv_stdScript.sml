@@ -452,6 +452,29 @@ Proof
   \\ rw []
 QED
 
+val FUPDATE_LIST_pre_def = finite_mapTheory.FUPDATE_LIST_THM
+ |> SRULE [FORALL_PROD]
+ |> INST_TYPE [alpha |-> “:num”]
+ |> cv_auto_trans_pre;
+
+Theorem FUPDATE_LIST_pre[cv_pre]:
+  ∀f ls. FUPDATE_LIST_pre f ls
+Proof
+  Induct_on`ls`
+  \\ rw[Once FUPDATE_LIST_pre_def]
+QED
+
+Theorem cv_rep_DOMSUB[cv_rep]:
+  from_fmap f (m \\ k) = cv_delete (Num k) (from_fmap f m)
+Proof
+  rw[from_fmap_def, GSYM (theorem "cv_delete_thm")]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[sptreeTheory.spt_eq_thm]
+  \\ rw[sptreeTheory.wf_fromAList, sptreeTheory.wf_delete]
+  \\ rw[sptreeTheory.lookup_delete, sptreeTheory.lookup_fromAList]
+  \\ rw[finite_mapTheory.DOMSUB_FLOOKUP_THM]
+QED
+
 (*----------------------------------------------------------*
    num fset
  *----------------------------------------------------------*)
