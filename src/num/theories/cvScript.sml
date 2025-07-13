@@ -584,6 +584,12 @@ QED
 
 (* Properties that can help with manual termination proofs *)
 
+Theorem cv_ispair_cv_add[simp]:
+  cv_ispair (cv_add x y) = Num 0
+Proof
+  Cases_on`x` \\ Cases_on`y` \\ simp[]
+QED
+
 Theorem c2n_cv_add[simp]:
   c2n (cv_add v1 v2) = c2n v1 + c2n v2
 Proof
