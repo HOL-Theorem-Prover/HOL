@@ -567,4 +567,46 @@ QED
 
 val _ = cv_trans v2n_custom_def;
 
+(*----------------------------------------------------------*
+   Help for manual termination proofs
+ *----------------------------------------------------------*)
+
+val cv_size'_def = theorem "cv_size'_def";
+val cv_mk_BN_def = definition "cv_mk_BN_def";
+val cv_mk_BS_def = definition "cv_mk_BS_def";
+
+Theorem cv_size'_Num[simp]:
+  cv_size' (Num m) = Num 0
+Proof
+  rw[Once cv_size'_def]
+QED
+
+Theorem cv_size'_cv_mk_BN[simp]:
+  cv_size' (cv_mk_BN x y) =
+  cv_add (cv_size' x) (cv_size' y)
+Proof
+  rw[cv_mk_BN_def]
+  \\ TRY (
+    rw[Once cv_size'_def]
+    \\ rw[Once cv_size'_def]
+    \\ Cases_on`x` \\ gs[]
+    \\ rw[Once cv_size'_def, SimpRHS]
+    \\ NO_TAC)
+  \\ rw[Once cv_size'_def]
+  \\ rw[Once cv_size'_def]
+  \\ Cases_on`y` \\ gs[]
+  \\ rw[Once cv_size'_def]
+  \\ rw[Once cv_size'_def]
+QED
+
+Theorem cv_size'_cv_mk_BS[simp]:
+  cv_size' (cv_mk_BS x y z) =
+  cv_add (cv_add (cv_size' x) (cv_size' z)) (Num 1)
+Proof
+  rw[cv_mk_BS_def]
+  \\ rw[Q.SPEC`Pair x y`cv_size'_def]
+  \\ Cases_on`x` \\ Cases_on`z` \\ gvs[]
+  \\ gvs[Q.SPEC`Pair x y`cv_size'_def]
+QED
+
 val _ = export_theory();
