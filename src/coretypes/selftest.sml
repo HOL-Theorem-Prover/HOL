@@ -336,12 +336,12 @@ val hoelim = require_msg
                (concl o TypeBase.case_pred_disj_of) “:'b # 'c”
 
 val _ = let
-  val rec1_def = new_definition("rec1_def",“rec1 x = 5:num”);
-  val rec2_def = new_definition("rec2_def",“rec2 x = 5:num”);
+  val rec1_def = new_definition("rec1_def",“rec1 (x:num) = 5:num”);
+  val rec2_def = new_definition("rec2_def",“rec2 (x:num) = 5:num”);
   val rec12_thm = prove(
     “(!m. rec1 (SUC m) = if m = 0 then 5 else rec2 m) /\
      (!n. rec2 n = if n > 80 then rec1 (n-1) else 5)”,
-    rw [rec1_def,rec2_def])
+    rewrite_tac [rec1_def,rec2_def,boolTheory.COND_ID])
   val thms = DefnBase.one_line_ify_mutrec NONE rec12_thm
   val _ = length thms
           orelse sdie "wrong length of output from DefnBase.one_line_ify_mutrec"
