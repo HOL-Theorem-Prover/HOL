@@ -377,23 +377,24 @@ structure ToSML = struct
           case s of Closed => () | Open => aux " open" | LocalOpen => aux " local open";
           openState := s)
         fun process p [] = newlines p stop
-          | process p (Ancestors {thys, ...} :: ls) = processList p true thys ls
-          | process p (Libs {thys, ...} :: ls) = processList p false thys ls
-        and processList p _ [] ls = process p ls
-          | processList p isThy ((start, tk) :: thys) ls = let
+          | process p ({isThy, head = (_, head), thys, ...} :: ls) = let
+            val (_, attrs) = destNameAttrs (full head)
+            in processList p isThy (destAttrs attrs) thys ls end
+        and processList p _ _ [] ls = process p ls
+          | processList p isThy hAttrs ((start, tk) :: thys) ls = let
             val (name, attrs) = destNameAttrs (full tk)
             val aliases = ref []
             val qualified = ref false
             val ignoreGrammar = ref false
             val (p1, p2) = fromSS (start, name)
+            fun addAttr (arg, args) =
+              case (ss arg, args, isThy) of
+                ("alias", [tgt], _) => aliases := tgt :: !aliases
+              | ("qualified", [], _) => qualified := true
+              | ("ignore_grammar", [], true) => ignoreGrammar := true
+              | _ => parseError (fromSS (p, arg)) "unknown header attribute"
             in
-              app (fn (arg, args) =>
-                case (ss arg, args, isThy) of
-                  ("alias", [tgt], _) => aliases := tgt :: !aliases
-                | ("qualified", [], _) => qualified := true
-                | ("ignore_grammar", [], true) => ignoreGrammar := true
-                | _ => parseError (fromSS (p, arg)) "unknown header attribute"
-                ) (destAttrs attrs);
+              app addAttr hAttrs; app addAttr (destAttrs attrs);
               setState (if !qualified then LocalOpen else Open);
               newlines p p1; aux " "; regular (p1, p2);
               if isThy then aux "Theory" else ();
@@ -402,7 +403,7 @@ structure ToSML = struct
                 setState Closed;
                 app aux [" structure ", ss tgt, " = ", ss name];
                 if isThy then aux "Theory" else ())) (rev (!aliases));
-              processList p2 isThy thys ls
+              processList p2 isThy hAttrs thys ls
             end
         in
           if !bare then () else (setState Open; aux " HolKernel boolLib bossLib Parse");
