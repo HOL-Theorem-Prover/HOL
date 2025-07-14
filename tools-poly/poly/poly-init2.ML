@@ -17,6 +17,10 @@ val _ = use "../tools/Holmake/HOLFileSys.sig";
 val _ = use "../tools/Holmake/HOLFileSys.sml";
 val _ = use "../tools/Holmake/HolParser.sig";
 val _ = use "../tools/Holmake/HolParser.sml";
+val _ = use "../src/portableML/UniversalType.sig";
+val _ = use "../src/portableML/UniversalType.sml";
+val _ = use "../src/portableML/LSPExtension.sig";
+val _ = use "../src/portableML/LSPExtension.sml";
 val _ = use "poly/quse.sig";
 val _ = use "poly/quse.sml";
 
@@ -78,7 +82,7 @@ val loadedMods = ref (Binaryset.empty String.compare);
 val _ =
     loadedMods := Binaryset.addList (!loadedMods,
               ["Real", "Int", "List", "Binaryset", "Binarymap", "Listsort",
-               "Array", "Array2", "Vector"])
+               "Array", "Array2", "Vector", "LSPExtension"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
