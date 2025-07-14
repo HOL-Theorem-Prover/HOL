@@ -163,7 +163,7 @@ val CasePred          = TypeBase.CasePred
 val CasePreds         = TypeBase.CasePreds
 val AllCasePreds      = TypeBase.AllCasePreds
 
-val oneline           = DefnBase.one_line_ify NONE
+val oneline           = LIST_CONJ o map DISCH_ALL o DefnBase.one_line_ify_mutrec NONE
 val lambdify          = DefnBase.LIST_HALF_MK_ABS
 
 val completeInduct_on = numLib.completeInduct_on

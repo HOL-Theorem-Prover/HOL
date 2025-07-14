@@ -243,16 +243,6 @@ fun specl_res ex_cv_rep th = let
   val args = c |> rator |> rand |> rand |> strip_comb |> snd
   in SPECL args th end;
 
-fun oneline_ify_all def = let
-  val usu = UNDISCH_ALL o SPEC_ALL o UNDISCH_ALL
-  val defs = def |> usu |> CONJUNCTS |> map usu
-  fun term_nub [] = []
-    | term_nub (tm::tms) = tm :: term_nub (filter (not o aconv tm) tms)
-  fun get_const def = def |> concl |> dest_eq |> fst |> strip_comb |> fst
-  val cs = defs |> map get_const |> term_nub
-  val groups = map (fn c => filter (aconv c o get_const) defs) cs
-  in map (DefnBase.one_line_ify NONE o LIST_CONJ) groups end
-
 fun fix_missed_args th = let
   fun rhs_imp tm = if is_imp tm then snd (dest_imp tm) else tm
   val (l,r) = th |> concl |> rhs_imp |> dest_eq
@@ -387,7 +377,8 @@ fun preprocess_def def = let
   val mes = get_measures eqs
   val def = eqs |> map (CONV_RULE (RATOR_CONV (REWRITE_CONV [combinTheory.I_THM])))
                 |> LIST_CONJ
-  val defs = def |> oneline_ify_all |> map (SPEC_ALL o UNDISCH_ALL o SPEC_ALL)
+  val defs = def |> DefnBase.one_line_ify_mutrec NONE
+                 |> map (SPEC_ALL o UNDISCH_ALL o SPEC_ALL)
   (* val th = hd defs *)
   fun adjust_def th =
     let val (l,r) = th |> concl |> dest_eq

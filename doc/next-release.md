@@ -14,7 +14,7 @@ Contents
 -   [Bugs fixed](#bugs-fixed)
 -   [New theories](#new-theories)
 -   [New tools](#new-tools)
--   [New Examples](#new-examples)
+-   [New examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
 
 New features:
@@ -49,10 +49,13 @@ New features:
 -   Under Poly/ML, the `hol` and `hol.bare` executables can be passed the `–-noconfig` command-line flag to stop them consulting user config files in the user’s home directory (these have names like `hol-config.sml`).
     Under both Moscow ML and Poly/ML, configuration files are also ignored if there is a  `HOL_NOCONFIG` environment variable set.
 
+-   `oneline` from `bossLib` now supports one-line-ification of mutually recrusive functions.
+    Each function becomes an equation of its own in the theorem returned by `oneline`.
+
 Bugs fixed:
 -----------
 
-- EVERY_CASE_TAC would loop if the "split-upon" subterm was already an assumption, but no longer.
+- `EVERY_CASE_TAC` would loop if the "split-upon" subterm was already an assumption, but no longer.
 
 
 New theories:
