@@ -452,6 +452,29 @@ Proof
   \\ rw []
 QED
 
+val FUPDATE_LIST_pre_def = finite_mapTheory.FUPDATE_LIST_THM
+ |> SRULE [FORALL_PROD]
+ |> INST_TYPE [alpha |-> “:num”]
+ |> cv_auto_trans_pre;
+
+Theorem FUPDATE_LIST_pre[cv_pre]:
+  ∀f ls. FUPDATE_LIST_pre f ls
+Proof
+  Induct_on`ls`
+  \\ rw[Once FUPDATE_LIST_pre_def]
+QED
+
+Theorem cv_rep_DOMSUB[cv_rep]:
+  from_fmap f (m \\ k) = cv_delete (Num k) (from_fmap f m)
+Proof
+  rw[from_fmap_def, GSYM (theorem "cv_delete_thm")]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[sptreeTheory.spt_eq_thm]
+  \\ rw[sptreeTheory.wf_fromAList, sptreeTheory.wf_delete]
+  \\ rw[sptreeTheory.lookup_delete, sptreeTheory.lookup_fromAList]
+  \\ rw[finite_mapTheory.DOMSUB_FLOOKUP_THM]
+QED
+
 (*----------------------------------------------------------*
    num fset
  *----------------------------------------------------------*)
@@ -543,5 +566,47 @@ QED
  *----------------------------------------------------------*)
 
 val _ = cv_trans v2n_custom_def;
+
+(*----------------------------------------------------------*
+   Help for manual termination proofs
+ *----------------------------------------------------------*)
+
+val cv_size'_def = theorem "cv_size'_def";
+val cv_mk_BN_def = definition "cv_mk_BN_def";
+val cv_mk_BS_def = definition "cv_mk_BS_def";
+
+Theorem cv_size'_Num[simp]:
+  cv_size' (Num m) = Num 0
+Proof
+  rw[Once cv_size'_def]
+QED
+
+Theorem cv_size'_cv_mk_BN[simp]:
+  cv_size' (cv_mk_BN x y) =
+  cv_add (cv_size' x) (cv_size' y)
+Proof
+  rw[cv_mk_BN_def]
+  \\ TRY (
+    rw[Once cv_size'_def]
+    \\ rw[Once cv_size'_def]
+    \\ Cases_on`x` \\ gs[]
+    \\ rw[Once cv_size'_def, SimpRHS]
+    \\ NO_TAC)
+  \\ rw[Once cv_size'_def]
+  \\ rw[Once cv_size'_def]
+  \\ Cases_on`y` \\ gs[]
+  \\ rw[Once cv_size'_def]
+  \\ rw[Once cv_size'_def]
+QED
+
+Theorem cv_size'_cv_mk_BS[simp]:
+  cv_size' (cv_mk_BS x y z) =
+  cv_add (cv_add (cv_size' x) (cv_size' z)) (Num 1)
+Proof
+  rw[cv_mk_BS_def]
+  \\ rw[Q.SPEC`Pair x y`cv_size'_def]
+  \\ Cases_on`x` \\ Cases_on`z` \\ gvs[]
+  \\ gvs[Q.SPEC`Pair x y`cv_size'_def]
+QED
 
 val _ = export_theory();

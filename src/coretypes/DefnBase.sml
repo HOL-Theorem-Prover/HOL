@@ -625,20 +625,6 @@ fun navigateTo lines startTarget endTarget = let
       else navigateToLL ds
   in navigateToLL end
 
-fun getBinding s = let
-  exception Ret of thminfo
-  in
-    (Theory.upd_binding s (fn i => raise Ret i); NONE)
-    handle Ret i => SOME i | HOL_ERR _ => NONE
-  end
-
-fun lookupThmInfo kn =
-  if #Thy kn = Theory.current_theory () then
-    case getBinding (#Name kn) of
-      SOME i => SOME i
-    | NONE => Option.map snd (DB.lookup kn)
-  else Option.map snd (DB.lookup kn)
-
 val checkLog = ThreadLocal.new ()
 
 fun lspTypecheckListener (ptm, env) =
@@ -677,8 +663,8 @@ fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
       else if is_const hd then
         case lookup_userdef hd of
           SOME {thmname, ...} =>
-          (case lookupThmInfo thmname of
-            SOME {loc = DB.Located {scriptpath, linenum, ...}, ...} =>
+          (case DB.lookup thmname of
+            SOME (_, {loc = DB.Located {scriptpath, linenum, ...}, ...}) =>
             [fromFileLine {origin = SOME loc,
               file = holpathdb.subst_pathvars scriptpath,
               line = linenum - 1}]
@@ -697,20 +683,21 @@ fun lastIndexOf' c s i =
 
 fun lastIndexOf c s = lastIndexOf' c s (String.size s)
 
+in
+
 val _ = LSPExtension.fixupTheoremLink := (fn {uri, text, start, stop} => let
   val id = String.substring (text, start, stop - start)
   val basename = String.extract (uri, lastIndexOf #"/" uri + 1, NONE)
   val stem = String.extract (basename, 0, SOME (lastIndexOf #"." basename))
   in
     if 6 <= size stem andalso String.extract (stem, size stem - 6, NONE) = "Theory" then
-      case lookupThmInfo {Name = id, Thy = String.extract (stem, 0, SOME (size stem - 6))} of
-        SOME {loc = DB.Located {scriptpath, linenum, ...}, ...} =>
+      case DB.lookup {Name = id, Thy = String.extract (stem, 0, SOME (size stem - 6))} of
+        SOME (_, {loc = DB.Located {scriptpath, linenum, ...}, ...}) =>
         SOME {file = holpathdb.subst_pathvars scriptpath, line = linenum - 1}
       | _ => NONE
     else NONE
   end)
 
-in
 val _ = LSPExtension.registerPlugin true {
   name = "DefnBase",
   init = fn tag => (

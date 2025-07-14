@@ -2,9 +2,8 @@
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
 
-datatype header_elem
-  = Ancestors of {tok: int, thys: (int * string) list, stop: int}
-  | Libs of {tok: int, thys: (int * string) list, stop: int}
+type header_elem =
+  {isThy: bool, head: int * string, thys: (int * string) list, stop: int}
 
 datatype decl
   = TheoryDecl of {head: int * string, elems: header_elem list, stop: int}
@@ -489,16 +488,16 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 
 <header>"(*" => (startComment yyarg YYBEGIN comment header continue yypos);
 <header>({ws}|{newline})+ => (continue());
-<header>^"Ancestors" => (let
+<header>^"Ancestors"{ws}+{id_with_attributes} => (let
   val _ = YYBEGIN headerthy
   val (thys, stop) = parseHeaderThy continue
   val _ = YYBEGIN header
-  in Header (Ancestors {tok = yypos, thys = thys, stop = stop}) end);
-<header>^"Libs" => (let
+  in Header {isThy = true, head = (yypos, yytext), thys = thys, stop = stop} end);
+<header>^"Libs"{ws}+{id_with_attributes} => (let
   val _ = YYBEGIN headerthy
   val (thys, stop) = parseHeaderThy continue
   val _ = YYBEGIN header
-  in Header (Libs {tok = yypos, thys = thys, stop = stop}) end);
+  in Header {isThy = false, head = (yypos, yytext), thys = thys, stop = stop} end);
 <header>. => (
   yybufpos := !yybufpos - 1; (* unread token *)
   OpenEnd yypos

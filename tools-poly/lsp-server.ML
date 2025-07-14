@@ -513,7 +513,11 @@ fun start {diag} = let
       progress = fn i => (lastPos := i; report (Progress i)),
       error = fn {hard, location, message, ...} => report (Error {
         hard = hard, pos = locToRange location, msg = encPretty textWidth message}),
-      runtimeExn = fn e => report (exnToReport (!lastPos) e),
+      runtimeExn = fn e => report (Error {hard = true,
+        pos = case PolyML.Exception.exceptionLocation e of
+          NONE => (case !lastPos of i => (i, i))
+        | SOME l => locToRange l,
+        msg = encPretty textWidth (exceptionMessage e)}),
       mlParseTree = mlParseTree,
       holParseTree = fn _ => () }
     in lastPos := size code end
@@ -575,6 +579,12 @@ fun start {diag} = let
           val keep = case x of Error {pos = (start, _), ...} => start >= pos | _ => true
           in if keep then DArray.push (newDiags, x) else (); loop (i+1) end
         in loop 0; DArray.replace (oldDiags, newDiags) end
+
+      fun encDiag (Error {hard, pos, msg}) print = (
+          print "{\"range\":"; encRangeLC lines pos print;
+          print ",\"severity\":"; encInt (if hard then ErrorSeverity else WarnSeverity) print;
+          print ",\"message\":"; msg print; print "}")
+        | encDiag _ _ = raise Fail "unexpected report kind"
 
       fun sendDiags () =
         send (mkNotif "textDocument/publishDiagnostics" (fn print => (
