@@ -455,7 +455,7 @@ QED
 val FUPDATE_LIST_pre_def = finite_mapTheory.FUPDATE_LIST_THM
  |> SRULE [FORALL_PROD]
  |> INST_TYPE [alpha |-> “:num”]
- |> cv_auto_trans_pre;
+ |> cv_auto_trans_pre "FUPDATE_LIST_pre";
 
 Theorem FUPDATE_LIST_pre[cv_pre]:
   ∀f ls. FUPDATE_LIST_pre f ls
