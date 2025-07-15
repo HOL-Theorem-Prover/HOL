@@ -1601,7 +1601,7 @@ Proof
   irule (GSYM spin)
 QED
 
-Theorem itree_wbisim_spin_eq:
+Theorem wbisim_spin_eq:
   itree_wbisim t spin <=> t = spin
 Proof
   rw[EQ_IMP_THM]
@@ -1692,7 +1692,7 @@ Theorem FUNPOW_Tau_abs_cyclic_spin:
 Proof
   iff_tac
   >- (rpt strip_tac
-      \\ irule $ iffLR itree_wbisim_spin_eq
+      \\ irule $ iffLR wbisim_spin_eq
       \\ irule itree_wbisim_coind_upto
       \\ qexists ‘CURRY {(FUNPOW Tau n (abs r), spin) | (n, r) | T }’
       \\ reverse $ rw[UNCURRY]
@@ -1723,7 +1723,7 @@ Proof
   >- (strip_tac
       \\ reverse $ Cases_on ‘?t''. strip_tau t t''’ \\ gvs[]
       >- (drule strip_tau_spin
-          \\ metis_tac[itree_wbisim_spin_eq, itree_wbisim_sym]
+          \\ metis_tac[wbisim_spin_eq, itree_wbisim_sym]
          )
       \\ Cases_on ‘t''’ \\ gvs[]
       >- (drule_all itree_wbisim_strip_tau_Ret
@@ -1733,7 +1733,7 @@ Proof
       \\ metis_tac[]
      )
   \\ rpt strip_tac
-  >- rw[itree_wbisim_spin_eq]
+  >- rw[wbisim_spin_eq]
   \\ metis_tac[itree_wbisim_rules]
 QED
 
@@ -1774,7 +1774,7 @@ Proof
   qid_spec_tac ‘t'’
   \\ qid_spec_tac ‘t’
   \\ ho_match_mp_tac after_taus_strongind
-  \\ gvs[spin, GSYM spin, itree_wbisim_spin_eq]
+  \\ gvs[spin, GSYM spin, wbisim_spin_eq]
   \\ rpt strip_tac
   \\ ‘Tau t' = Tau spin’ by metis_tac[spin]
   \\ gvs[]
@@ -1793,7 +1793,7 @@ Proof
       >- (reverse $ Cases_on ‘?x. strip_tau t x’ \\ gvs[]
           >- (dxrule strip_tau_spin
               \\ rw[]
-              \\ irule $ iffLR itree_wbisim_spin_eq
+              \\ irule $ iffLR wbisim_spin_eq
               \\ rw[itree_wbisim_sym]
              )
           \\ Cases_on ‘x’ \\ gvs[]
@@ -2268,7 +2268,7 @@ Proof
   \\ rw[UNCURRY]
   \\ reverse $ Cases_on ‘?x. strip_tau a0 x’ \\ gvs[]
   >- (drule strip_tau_spin \\ rw[]
-      \\ ‘a1 = spin’ by metis_tac[itree_wbisim_spin_eq, itree_wbisim_sym]
+      \\ ‘a1 = spin’ by metis_tac[wbisim_spin_eq, itree_wbisim_sym]
       \\ metis_tac[spin_FUNPOW_Tau]
      )
   \\ Cases_on ‘x’ \\ gvs[]
@@ -2424,7 +2424,7 @@ Proof
      )
   \\ drule $ iffLR itree_wbisim_strip_tau_cases
   \\ rpt strip_tac
-  \\ metis_tac[spin, itree_wbisim_spin_eq]
+  \\ metis_tac[spin, wbisim_spin_eq]
 QED
 
 (* strong bisimulation from an instance up to full tree of an abstraction *)
@@ -2518,7 +2518,7 @@ Proof
   \\ reverse $ Cases_on ‘?t. strip_tau t''' t’ \\ gvs[]
   >- (drule strip_tau_spin
       \\ rw[]
-      \\ drule $ iffLR $ itree_wbisim_spin_eq
+      \\ drule $ iffLR $ wbisim_spin_eq
       \\ rw[spin_bind, spin, spin_FUNPOW_Tau]
       \\ metis_tac[weak_bisim_upfrom_abs_spin, spin_bind, GSYM spin_FUNPOW_Tau, spin]
      )
@@ -2556,7 +2556,7 @@ Proof
   \\ rw[UNCURRY]
   \\ reverse $ Cases_on ‘?x. strip_tau a0 x’ \\ gvs[]
   >- (drule strip_tau_spin \\ rw[]
-      \\ ‘a1 = spin’ by metis_tac[itree_wbisim_spin_eq, itree_wbisim_sym]
+      \\ ‘a1 = spin’ by metis_tac[wbisim_spin_eq, itree_wbisim_sym]
       \\ metis_tac[spin_FUNPOW_Tau]
      )
   \\ Cases_on ‘x’ \\ gvs[]
