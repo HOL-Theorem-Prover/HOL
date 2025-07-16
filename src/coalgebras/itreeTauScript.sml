@@ -1678,15 +1678,6 @@ Proof
   \\ rw[spin_FUNPOW_Tau]
 QED
 
-Theorem itree_wbisim_FUNPOW_Tau_eqn:
-  (itree_wbisim (FUNPOW Tau n t) t' <=> itree_wbisim t t') /\
-  (itree_wbisim t (FUNPOW Tau n t') <=> itree_wbisim t t')
-Proof
-  conj_tac
-  \\ Induct_on ‘n’ \\ gvs[]
-  \\ rw[FUNPOW_SUC, itree_wbisim_tau_eqn]
-QED
-
 Theorem FUNPOW_Tau_abs_cyclic_spin:
   (!r. ?n r'. abs r = FUNPOW Tau (SUC n) (abs r')) <=> (!r. abs r = spin)
 Proof
