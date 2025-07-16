@@ -1,6 +1,6 @@
 \DOC cv_trans_pre
 
-\TYPE {cv_trans_pre : thm -> thm}
+\TYPE {cv_trans_pre : string -> thm -> thm}
 
 \SYNOPSIS
 Translates functional definitions to the {cv_compute} subset of HOL.
@@ -24,7 +24,7 @@ translator-defined {:cv} function.
 \EXAMPLE
 
 {
-> cv_trans_pre listTheory.HD;
+> cv_trans_pre "HD_pre" listTheory.HD;
 Finished translating HD, stored in cv_HD_thm
 
 WARNING: definition of cv_HD has a precondition.

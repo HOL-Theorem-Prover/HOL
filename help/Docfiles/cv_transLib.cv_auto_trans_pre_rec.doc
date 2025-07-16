@@ -1,6 +1,6 @@
 \DOC cv_auto_trans_pre_rec
 
-\TYPE {cv_auto_trans_pre_rec : thm -> tactic -> thm}
+\TYPE {cv_auto_trans_pre_rec : string -> thm -> tactic -> thm}
 
 \SYNOPSIS
 Translates functional definitions to the {cv_compute} subset of HOL.
