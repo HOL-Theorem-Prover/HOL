@@ -534,6 +534,16 @@ fun one_line_ify heuristic def =
           end
     end handle FastExit th => th
 
+fun one_line_ify_mutrec heuristic def = let
+  val usu = UNDISCH_ALL o SPEC_ALL o UNDISCH_ALL
+  val defs = def |> usu |> CONJUNCTS |> map usu
+  fun term_nub [] = []
+    | term_nub (tm::tms) = tm :: term_nub (filter (not o aconv tm) tms)
+  fun get_const def = def |> concl |> dest_eq |> fst |> strip_comb |> fst
+  val defs_consts = defs |> map (fn d => (d, get_const d))
+  val cs = defs_consts |> map snd |> term_nub
+  val groups = map (fn c => filter (aconv c o snd) defs_consts) cs
+  in map (one_line_ify heuristic o LIST_CONJ o map fst) groups end
 
 
 (* ----------------------------------------------------------------------
