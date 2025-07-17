@@ -10,7 +10,7 @@ Libs
 val res = cv_auto_trans codegenTheory.even_len_def;
 val res = cv_auto_trans codegenTheory.c_pops_def;
 
-val res = cv_auto_trans_pre_rec codegenTheory.c_exp_def
+val res = cv_auto_trans_pre_rec "c_exp_pre c_exps_pre" codegenTheory.c_exp_def
  (WF_REL_TAC ‘inv_image (measure I LEX measure I)
     (λx. case x of INL (t,l,vs,fs,x) => (cv_size x, cv$c2n t)
                  | INR (l,vs,fs,xs) => (cv_size xs, 0))’
@@ -26,14 +26,14 @@ Proof
   ho_match_mp_tac codegenTheory.c_exp_ind \\ rw [] \\ simp [Once res]
 QED
 
-val res = cv_auto_trans_pre printingTheory.is_comment_def;
+val res = cv_auto_trans_pre "is_comment_pre" printingTheory.is_comment_def;
 Theorem is_comment_pre[cv_pre]:
   ∀v. is_comment_pre v
 Proof
   ho_match_mp_tac printingTheory.is_comment_ind \\ rw [] \\ simp [Once res]
 QED
 
-val pre = cv_trans_pre_rec printingTheory.num2str_def
+val pre = cv_trans_pre_rec "num2str_pre" printingTheory.num2str_def
   (WF_REL_TAC ‘measure cv_size’ \\ Cases \\ gvs [] \\ rw [] \\ gvs []);
 
 Theorem num2str_pre[cv_pre]:
@@ -43,14 +43,14 @@ Proof
   \\ ‘n MOD 10 < 10’ by fs [] \\ decide_tac
 QED
 
-val pre = cv_trans_pre printingTheory.num2ascii_def
+val pre = cv_trans_pre "num2ascii_pre" printingTheory.num2ascii_def
 Theorem num2ascii_pre[cv_pre]:
   ∀n. num2ascii_pre n
 Proof
   ho_match_mp_tac printingTheory.num2ascii_ind \\ rw [] \\ simp [Once pre]
 QED
 
-val pre = cv_trans_pre printingTheory.ascii_name_def
+val pre = cv_trans_pre "ascii_name_pre" printingTheory.ascii_name_def
 Theorem ascii_name_pre[cv_pre]:
   ∀n. ascii_name_pre n
 Proof
@@ -58,7 +58,7 @@ Proof
   \\ gvs [AllCaseEqs()]
 QED
 
-val pre = cv_trans_pre x64asm_syntaxTheory.num_def;
+val pre = cv_trans_pre "num_pre" x64asm_syntaxTheory.num_def;
 Theorem num_pre[cv_pre]:
   ∀n s. num_pre n s
 Proof
@@ -96,7 +96,7 @@ QED
 val v2pretty_eq =
   CONJ (printingTheory.v2pretty_def |> SRULE [GSYM vs2pretty_def]) vs2pretty_thm;
 
-val pre = cv_auto_trans_pre_rec v2pretty_eq
+val pre = cv_auto_trans_pre_rec "" v2pretty_eq
   (WF_REL_TAC ‘measure $ λx. case x of INL v => cv_size v
                                      | INR v => cv_size v’
    \\ rw [] \\ cv_termination_tac
@@ -229,7 +229,7 @@ Proof
   rw[AllCaseEqs()] >> gvs[] >> cv_termination_tac
 QED
 
-val pre = cv_auto_trans_pre_rec exp2v_def
+val pre = cv_auto_trans_pre_rec "" exp2v_def
   (
     WF_REL_TAC ‘measure $ λx. case x of
                                | INL v => cv_size v + 3

@@ -66,7 +66,8 @@ Termination
   WF_REL_TAC`measure (λx. 64 - SND x)`
 End
 
-val initial_schedule_loop_pre_def = cv_auto_trans_pre initial_schedule_loop_def;
+val initial_schedule_loop_pre_def =
+  cv_auto_trans_pre "initial_schedule_loop_pre" initial_schedule_loop_def;
 
 Theorem initial_schedule_loop_pre[cv_pre]:
   ∀Ws t. initial_schedule_loop_pre Ws t
@@ -127,7 +128,7 @@ Definition step3_def:
   (SUC t, (a, b, c, d, e, f, g, h))
 End
 
-val step3_pre_def = cv_auto_trans_pre step3_def;
+val step3_pre_def = cv_auto_trans_pre "step3_pre" step3_def;
 
 Theorem step3_pre[cv_pre]:
   step3_pre Ws v

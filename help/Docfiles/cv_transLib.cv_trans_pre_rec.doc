@@ -1,6 +1,6 @@
 \DOC cv_trans_pre_rec
 
-\TYPE {cv_trans_pre_rec : thm -> tactic -> thm}
+\TYPE {cv_trans_pre_rec : string -> thm -> tactic -> thm}
 
 \SYNOPSIS
 Translates functional definitions to the {cv_compute} subset of HOL.
@@ -30,7 +30,7 @@ Equations stored under "count_up_def".
 Induction stored under "count_up_ind".
 val count_up_def =
    ⊢ ∀m k. count_up m k = if m < k then 1 + count_up (m + 1) k else 0: thm
-> val cv_count_up_pre = cv_trans_pre_rec count_up_def
+> val cv_count_up_pre = cv_trans_pre_rec "count_pre" count_up_def
     (WF_REL_TAC ‘measure $ λ(m,k). cv$c2n k - cv$c2n m’
      \\ Cases \\ Cases \\ gvs [] \\ rw [] \\ gvs []);
 Equations stored under "cv_count_up_def".

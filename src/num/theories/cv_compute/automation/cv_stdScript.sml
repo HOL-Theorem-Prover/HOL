@@ -58,7 +58,7 @@ QED
 val res = cv_trans ISL;
 val res = cv_trans ISR;
 
-val res = cv_trans_pre OUTL;
+val res = cv_trans_pre "OUTL_pre" OUTL;
 
 Theorem OUTL_pre[cv_pre]:
   OUTL_pre x <=> ISL x
@@ -66,7 +66,7 @@ Proof
   Cases_on ‘x’ \\ fs [res]
 QED
 
-val res = cv_trans_pre OUTR;
+val res = cv_trans_pre "OUTR_pre" OUTR;
 
 Theorem OUTR_pre[cv_pre]:
   OUTR_pre x <=> ISR x
@@ -103,7 +103,7 @@ val res = cv_trans TAKE_def;
 
 val res = cv_trans DROP_def;
 
-val res = cv_trans_pre EL_def;
+val res = cv_trans_pre "EL_pre" EL_def;
 
 Theorem EL_pre[cv_pre]:
   !n xs. EL_pre n xs <=> n < LENGTH xs
@@ -126,7 +126,7 @@ Proof
   Cases_on ‘xs’ \\ gvs [FRONT_DEF]
 QED
 
-val res = cv_trans_pre FRONT;
+val res = cv_trans_pre "FRONT_pre" FRONT;
 
 Theorem FRONT_pre[cv_pre]:
   !xs. FRONT_pre xs <=> xs <> []
@@ -142,7 +142,7 @@ Proof
   Cases_on ‘xs’ \\ gvs [LAST_DEF]
 QED
 
-val res = cv_trans_pre LAST;
+val res = cv_trans_pre "LAST_pre" LAST;
 
 Theorem LAST_pre[cv_pre]:
   !xs. LAST_pre xs <=> xs <> []
@@ -209,7 +209,7 @@ Proof
   \\ rename [‘_ = SOME y’] \\ PairCases_on ‘y’ \\ gvs []
 QED
 
-val res = cv_trans_pre index_of;
+val res = cv_trans_pre "INDEX_OF_pre" index_of;
 
 Theorem INDEX_OF_pre[cv_pre]:
   ∀x y. INDEX_OF_pre x y
@@ -384,7 +384,7 @@ val toAList_foldi_eq = sptreeTheory.foldi_def
                   |> LIST_CONJ |> REWRITE_RULE [GSYM toAList_foldi_def]
                   |> SIMP_RULE std_ss [];
 
-val res = cv_trans_pre toAList_foldi_eq;
+val res = cv_trans_pre "toAList_foldi_pre" toAList_foldi_eq;
 
 Theorem toAList_foldi_pre[cv_pre]:
   !a0 a1 a2. toAList_foldi_pre a0 a1 a2
@@ -455,7 +455,7 @@ QED
 val FUPDATE_LIST_pre_def = finite_mapTheory.FUPDATE_LIST_THM
  |> SRULE [FORALL_PROD]
  |> INST_TYPE [alpha |-> “:num”]
- |> cv_auto_trans_pre;
+ |> cv_auto_trans_pre "FUPDATE_LIST_pre";
 
 Theorem FUPDATE_LIST_pre[cv_pre]:
   ∀f ls. FUPDATE_LIST_pre f ls
