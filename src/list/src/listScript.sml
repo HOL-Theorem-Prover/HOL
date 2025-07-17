@@ -1315,19 +1315,18 @@ REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
     Lifts a relation point-wise to two lists
    ---------------------------------------------------------------------- *)
 
-val (LIST_REL_rules, LIST_REL_ind, LIST_REL_cases) = IndDefLib.Hol_reln‘
-  (LIST_REL R [] []) /\
-  (!h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==> LIST_REL R (h1::t1) (h2::t2))
-’;
+Inductive LIST_REL:
+[~nil_rule:]
+  LIST_REL R [] []
+[~cons_I:]
+  !h1 h2 t1 t2. R h1 h2 /\ LIST_REL R t1 t2 ==> LIST_REL R (h1::t1) (h2::t2)
+End
 
-val _ = overload_on ("listRel", “LIST_REL”)
-val _ = overload_on ("LIST_REL", “LIST_REL”)
-
-val LIST_REL_EL_EQN = store_thm(
-  "LIST_REL_EL_EQN",
-  “!R l1 l2. LIST_REL R l1 l2 <=>
-              (LENGTH l1 = LENGTH l2) /\
-              !n. n < LENGTH l1 ==> R (EL n l1) (EL n l2)”,
+Theorem LIST_REL_EL_EQN:
+  !R l1 l2. LIST_REL R l1 l2 <=>
+            (LENGTH l1 = LENGTH l2) /\
+            !n. n < LENGTH l1 ==> R (EL n l1) (EL n l2)
+Proof
   GEN_TAC THEN SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN
   CONJ_TAC THENL [
     Induct_on ‘LIST_REL’ THEN SRW_TAC [] [] THEN
@@ -1336,16 +1335,16 @@ val LIST_REL_EL_EQN = store_thm(
     POP_ASSUM (fn th => Q.SPEC_THEN ‘0’ MP_TAC th THEN
                         Q.SPEC_THEN ‘SUC m’ (MP_TAC o Q.GEN ‘m’) th) THEN
     SRW_TAC [] [LIST_REL_rules]
-  ]);
+  ]
+QED
 
-val LIST_REL_def = store_thm(
-  "LIST_REL_def",
-  “(LIST_REL R [][] <=> T) /\
-    (LIST_REL R (a::as) [] <=> F) /\
-    (LIST_REL R [] (b::bs) <=> F) /\
-    (LIST_REL R (a::as) (b::bs) <=> R a b /\ LIST_REL R as bs)”,
-  REPEAT CONJ_TAC THEN SRW_TAC [] [Once LIST_REL_cases, SimpLHS]);
-val _ = export_rewrites ["LIST_REL_def"]
+Theorem LIST_REL_def[simp,compute]:
+  (LIST_REL R []      []      <=> T) /\
+  (LIST_REL R (a::as) []      <=> F) /\
+  (LIST_REL R []      (b::bs) <=> F) /\
+  (LIST_REL R (a::as) (b::bs) <=> R a b /\ LIST_REL R as bs)
+Proof REPEAT CONJ_TAC THEN SRW_TAC [] [Once LIST_REL_cases, SimpLHS]
+QED
 
 val LIST_REL_mono = store_thm(
   "LIST_REL_mono",
