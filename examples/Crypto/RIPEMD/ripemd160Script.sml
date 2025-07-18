@@ -198,7 +198,7 @@ Definition rho_def:
   rho n: num = EL n [7;4;13;1;10;6;15;3;12;0;9;5;2;14;11;8]
 End
 
-val rho_pre_def = cv_trans_pre rho_def;
+val rho_pre_def = cv_trans_pre "rho_pre" rho_def;
 
 Theorem rho_pre[cv_pre]:
   n < 16 ⇒ rho_pre n
@@ -212,7 +212,7 @@ Definition rho_alt_def:
   else 0
 End
 
-val rho_alt_pre_def = cv_trans_pre rho_alt_def;
+val rho_alt_pre_def = cv_trans_pre "rho_alt_pre" rho_alt_def;
 
 Theorem rho_alt_pre[cv_pre]:
   rho_alt_pre n
@@ -341,7 +341,7 @@ Definition s_def:
     EL col (EL row shift_lookup_table)
 End
 
-val s_pre_def = cv_trans_pre s_def;
+val s_pre_def = cv_trans_pre "s_pre" s_def;
 
 Theorem s_pre[cv_pre]:
   s_pre j ⇔ j < 80
@@ -368,7 +368,7 @@ Definition s'_def:
     EL col (EL row shift_lookup_table)
 End
 
-val s'_pre_def = cv_trans_pre s'_def;
+val s'_pre_def = cv_trans_pre "s'_pre" s'_def;
 
 Theorem s'_pre[cv_pre]:
   s'_pre j ⇔ j < 80
@@ -420,7 +420,8 @@ Definition inner_for_loop_alt_def:
     (0,(0w,0w,0w,0w,0w),(0w,0w,0w,0w,0w))
 End
 
-val inner_for_loop_alt_pre_def = cv_trans_pre inner_for_loop_alt_def;
+val inner_for_loop_alt_pre_def = cv_trans_pre "inner_for_loop_alt_pre"
+                                              inner_for_loop_alt_def;
 
 Theorem inner_for_loop_alt_pre[cv_pre]:
   inner_for_loop_alt_pre block v

@@ -3693,7 +3693,8 @@ val () = cv_trans_deep_embedding EVAL eight_zeros_w64_def;
 val () = cv_auto_trans chunks_tr_aux_def;
 val () = cv_auto_trans chunks_tr_def;
 
-val pad_pre_def = cv_auto_trans_pre (REWRITE_RULE[GSYM chunks_tr_thm]pad10s1_136_w64_def);
+val pad_pre_def = cv_auto_trans_pre "pad10s1_136_w64_pre"
+                    (REWRITE_RULE[GSYM chunks_tr_thm]pad10s1_136_w64_def);
 
 Theorem pad10s1_136_w64_pre[cv_pre]:
   !zs m a. pad10s1_136_w64_pre zs m a
@@ -3743,7 +3744,7 @@ Proof
   \\ gvs[Abbr`t`]
 QED
 
-val theta_w64_pre_def = cv_auto_trans_pre (UNDISCH theta_w64_inlined);
+val theta_w64_pre_def = cv_auto_trans_pre "theta_w64_pre" (UNDISCH theta_w64_inlined);
 
 Theorem theta_w64_pre:
   LENGTH s = 25 ==> theta_w64_pre s
@@ -3752,7 +3753,7 @@ Proof
   \\ strip_tac \\ fs[]
 QED
 
-val rho_w64_pre_def = cv_auto_trans_pre (UNDISCH rho_w64_MAP2);
+val rho_w64_pre_def = cv_auto_trans_pre "rho_w64_pre" (UNDISCH rho_w64_MAP2);
 
 Theorem rho_w64_pre:
   LENGTH s = 25 ==> rho_w64_pre s
@@ -3762,7 +3763,7 @@ QED
 
 Theorem pi_w64_inlined = SIMP_RULE std_ss [pi_w64_indices_eq, MAP] pi_w64_def;
 
-val pi_w64_pre_def = cv_auto_trans_pre pi_w64_inlined;
+val pi_w64_pre_def = cv_auto_trans_pre "pi_w64_pre" pi_w64_inlined;
 
 Theorem pi_w64_pre:
   LENGTH s = 25 ==> pi_w64_pre s
@@ -3796,7 +3797,7 @@ Proof
   \\ rw[]
 QED
 
-val chi_w64_pre_def = cv_auto_trans_pre (UNDISCH chi_w64_inlined);
+val chi_w64_pre_def = cv_auto_trans_pre "chi_w64_pre" (UNDISCH chi_w64_inlined);
 
 Theorem chi_w64_pre:
   LENGTH s = 25 ==> chi_w64_pre s
@@ -3807,7 +3808,7 @@ QED
 
 val () = cv_auto_trans iota_w64_def;
 
-val Rnd_w64_pre_def = cv_auto_trans_pre Rnd_w64_def;
+val Rnd_w64_pre_def = cv_auto_trans_pre "Rnd_w64_pre" Rnd_w64_def;
 
 Theorem Rnd_w64_pre:
   LENGTH s = 25 ==> Rnd_w64_pre s w
@@ -3827,7 +3828,7 @@ QED
 Theorem Keccak_p_24_w64_inlined =
   Keccak_p_24_w64_def |> SIMP_RULE std_ss [iota_w64_RCz_def, MAP, FOLDL];
 
-val Keccak_p_24_w64_pre_def = cv_auto_trans_pre Keccak_p_24_w64_inlined;
+val Keccak_p_24_w64_pre_def = cv_auto_trans_pre "" Keccak_p_24_w64_inlined;
 
 Definition absorb_w64_rec_def:
   absorb_w64_rec s [] = s ∧
@@ -3845,7 +3846,7 @@ Proof
   \\ rw[absorb_w64_rec_def]
 QED
 
-val absorb_w64_rec_pre_def = cv_auto_trans_pre absorb_w64_rec_def;
+val absorb_w64_rec_pre_def = cv_auto_trans_pre "" absorb_w64_rec_def;
 
 Theorem LENGTH_Rnd_w64:
   LENGTH s = 25 ==>
@@ -3886,7 +3887,7 @@ Proof
   \\ simp[]
 QED
 
-val Keccak_256_w64_pre_def = cv_auto_trans_pre $
+val Keccak_256_w64_pre_def = cv_auto_trans_pre "Keccak_256_w64_pre" $
   (Keccak_256_w64_def |> SIMP_RULE std_ss [C_DEF, absorb_w64_rec_thm]);
 
 Theorem Keccak_256_w64_pre[cv_pre]:
@@ -4003,7 +4004,7 @@ val _ = cv_trans spt_to_string_def;
 
 val _ = cv_trans b2w_def;
 
-val pre = rc_step_def |> SRULE [LET_THM] |> cv_trans_pre;
+val pre = rc_step_def |> SRULE [LET_THM] |> cv_trans_pre "rc_step_pre";
 Theorem rc_step_pre[cv_pre]:
   ∀r. rc_step_pre r ⇔ 8 ≤ LENGTH r
 Proof
@@ -4016,7 +4017,7 @@ Definition rc_steps_def:
       rc_steps (n-1) (rc_step r)
 End
 
-val pre = cv_trans_pre rc_steps_def;
+val pre = cv_trans_pre "rc_steps_pre" rc_steps_def;
 Theorem rc_steps_pre[cv_pre]:
   ∀n r. rc_steps_pre n r = if n = 0 then r ≠ [] else 8 ≤ LENGTH r
 Proof
@@ -4039,7 +4040,7 @@ Proof
   \\ gvs []
 QED
 
-val pre = cv_trans_pre rc_eq;
+val pre = cv_trans_pre "rc_pre" rc_eq;
 Theorem rc_pre[cv_pre]:
   ∀t. rc_pre t
 Proof
@@ -4267,7 +4268,7 @@ Proof
        \\ Cases_on ‘n'’ \\ gvs [ASCIInumbersTheory.HEX_def,ADD1])
 QED
 
-val pre = cv_trans_pre HEX_eq
+val pre = cv_trans_pre "HEX_pre" HEX_eq
 Theorem HEX_pre[cv_pre]:
   ∀n. HEX_pre n ⇔ n < 16
 Proof
@@ -4280,7 +4281,7 @@ Definition hex_string_def:
       hex_string (n DIV 16) (HEX (n MOD 16) :: acc)
 End
 
-val pre = cv_trans_pre hex_string_def;
+val pre = cv_trans_pre "hex_string_pre" hex_string_def;
 Theorem hex_string_pre[cv_pre]:
   ∀n acc. hex_string_pre n acc
 Proof
