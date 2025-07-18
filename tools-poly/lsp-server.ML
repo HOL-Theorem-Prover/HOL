@@ -125,6 +125,7 @@ val WarnSeverity = 2
 (* val HintSeverity = 4 *)
 
 datatype incremental = IncrNone | IncrChunk | IncrStream
+datatype holdep_kind = HoldepNone | HoldepQuiet | HoldepList
 datatype elab_on = ElabOnNone | ElabOnChange | ElabOnSave
 
 local
@@ -138,6 +139,11 @@ val error = map3 (fn (code, message, data) => {code = code, message = message, d
 val incr = ofRaw (fn jv =>
   case decode int jv of
     0 => IncrNone | 1 => IncrChunk | 2 => IncrStream
+  | _ => raise JSONError (Invalid, jv))
+
+val holdepKind = ofRaw (fn jv =>
+  case decode int jv of
+    0 => HoldepNone | 1 => HoldepQuiet | 2 => HoldepList
   | _ => raise JSONError (Invalid, jv))
 
 val req_id = orElse (map Id int, map Str string)
@@ -170,8 +176,10 @@ val textDocumentPositionParams =
 
 val cancelParams = field "id" req_id
 
-val evalParams = map3 (fn (uri, code, incr) => {uri = uri, code = code, incr = incr})
-  (field "uri" string, field "code" string, fieldD "incr" incr IncrNone)
+val evalParams = map4 (fn (uri, code, incr, holdep) =>
+    {uri = uri, code = code, incr = incr, holdep = holdep})
+  (field "uri" string, field "code" string, fieldD "incr" incr IncrNone,
+    fieldD "holdep" holdepKind HoldepQuiet)
 
 val textDocumentParams = field "textDocument" (
   map3 (fn (uri, version, text) => {uri = uri, version = version, text = text})
@@ -392,6 +400,7 @@ fun start {diag} = let
     in () end)
 
   val elabOnRef = ref ElabOnChange
+  val holdepMode = ref HoldepQuiet
 
   datatype report =
     Error of {hard: bool, pos: range, msg: encode}
@@ -471,6 +480,12 @@ fun start {diag} = let
       PolyML.PrettyBreak(1, 3),
       PolyML.PrettyString "raised"])
 
+  fun exnToReport i e = Error {hard = true,
+    pos = case PolyML.Exception.exceptionLocation e of
+      NONE => (i, i)
+    | SOME l => locToRange l,
+    msg = encPretty textWidth (exceptionMessage e)}
+
   fun mergeInto msg buf =
     case (msg, DArray.last buf) of
       (CompilerOut (pos', [s]), SOME (CompilerOut (pos, ss))) =>
@@ -480,6 +495,13 @@ fun start {diag} = let
       if pos = pos' then DArray.setLast (buf, ToplevelOut (pos, s :: ss))
       else DArray.push (buf, msg)
     | _ => DArray.push (buf, msg)
+
+  fun getHoldep text = let
+    val {read, ...} = HolParser.stringToReader {quietOpen = false} text
+    in
+      Binarymap.foldr (fn (a, _, r) => a :: r) [] (Holdep_tokens.reader_deps ("", read))
+      handle _ => []
+    end
 
   fun compileForReport uri code lastPos mlParseTree report = let
     val _ = HOL_IDE.initialize {
@@ -505,7 +527,41 @@ fun start {diag} = let
     val _ = stopCompile compile
     val {text as {lines, ...}, parse = {diags = oldDiags, ...}} = !lastTrees
     val trees = ref (emptyParseData 8)
+
     fun compileThread () = ((let
+      fun encDiag (Error {hard, pos, msg}) print = (
+          print "{\"range\":"; encRangeLC lines pos print;
+          print ",\"severity\":"; encInt (if hard then ErrorSeverity else WarnSeverity) print;
+          print ",\"message\":"; msg print; print "}")
+        | encDiag _ _ = raise Fail "unexpected report kind"
+
+      val holdepMode = !holdepMode
+      val mods = case holdepMode of HoldepNone => [] | _ => getHoldep (#text text)
+      val files = DArray.new (8, "")
+      val errors = DArray.new (1, Bind)
+      val _ = app (fn m =>
+        loadPlan (fn f => DArray.push (files, f)) m handle e => DArray.push (errors, e)) mods
+      val _ = if DArray.isEmpty files andalso DArray.isEmpty errors then () else (
+        case holdepMode of
+          HoldepList => send (mkNotif "$/holdep" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            print ",\"version\":"; encInt (#version text) print;
+            print ",\"files\":"; encDArray encString files print;
+            if DArray.isEmpty errors then () else (
+              print ",\"errors\":"; encDArray (encDiag o exnToReport 0) errors print;
+              DArray.clear errors);
+            print "}")))
+        | _ => ();
+        DArray.app (fn f => qquse f handle e => DArray.push (errors, e)) files;
+        case holdepMode of
+          HoldepList => send (mkNotif "$/holdepCompleted" (fn print => (
+            print "{\"uri\":"; encString uri print;
+            print ",\"version\":"; encInt (#version text) print;
+            if DArray.isEmpty errors then () else (
+              print ",\"errors\":"; encDArray (encDiag o exnToReport 0) errors print);
+            print "}")))
+        | _ => ())
+
       fun beforeCompile () = let
         val ls = getPlugins ()
         in app (fn t => #beforeCompile t ()) ls; ls end
@@ -626,29 +682,44 @@ fun start {diag} = let
     in out end
     handle Empty => []
 
-  fun eval id {uri, code, incr} = let
+  fun eval id {uri, code, incr, holdep} = let
     val lines = mkLineCounter code
+
+    val mods = case holdep of HoldepNone => [] | _ => getHoldep code
+    val files = DArray.new (8, "")
+    val _ = app (fn m =>
+      loadPlan (fn f => DArray.push (files, f)) m
+      handle e => logMessage ("ignoring load error: " ^ exnMessage e)) mods
+    val _ = case holdep of
+      HoldepList => send (mkNotif "$/eval/holdep" (fn print => (
+        print "{\"uri\":"; encString uri print;
+        print ",\"id\":"; encReqId id print;
+        print ",\"files\":"; encDArray encString files print; print "}")))
+    | _ => ()
+    val _ = DArray.app (fn f =>
+      qquse f handle e => logMessage ("ignoring load error: " ^ exnMessage e)) files
+    val _ = case holdep of
+      HoldepList => send (mkNotif "$/eval/holdepCompleted" (fn print => (
+        print "{\"uri\":"; encString uri print;
+        print ",\"id\":"; encReqId id print; print "}")))
+    | _ => ()
 
     fun encReport (Error {hard, pos, msg}) print = (
         print "{\"kind\":\"error\"";
         print ",\"hard\":"; print (if hard then "true" else "false");
         print ",\"pos\":"; encRangeLC lines pos print;
-        print ",\"msg\":"; msg print;
-        print "}")
+        print ",\"msg\":"; msg print; print "}")
       | encReport (CompilerOut (pos, s)) print = (
         print "{\"kind\":\"compilerOut\"";
         print ",\"pos\":"; encPosLC lines pos print;
-        print ",\"body\":"; encString (concat (rev s)) print;
-        print "}")
+        print ",\"body\":"; encString (concat (rev s)) print; print "}")
       | encReport (ToplevelOut (pos, s)) print = (
         print "{\"kind\":\"toplevelOut\"";
         print ",\"pos\":"; encPosLC lines pos print;
-        print ",\"body\":"; encString (concat (rev s)) print;
-        print "}")
+        print ",\"body\":"; encString (concat (rev s)) print; print "}")
       | encReport (Progress i) print = (
         print "{\"kind\":\"compileProgress\"";
-        print ",\"pos\":"; encPosLC lines i print;
-        print "}")
+        print ",\"pos\":"; encPosLC lines i print; print "}")
       | encReport Completed print = print "{\"kind\":\"compileCompleted\"}"
       | encReport Interrupted print = print "{\"kind\":\"interrupted\"}"
 
