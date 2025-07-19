@@ -2054,6 +2054,22 @@ val bit_field_insert = Q.store_thm("bit_field_insert",
          WORD_NEG_1_T]
   \\ SRW_TAC [ARITH_ss] [])
 
+Theorem bit_field_insert_w2w:
+  h + 1 - l <= dimindex (:'a) /\ h + 1 - l <= dimindex (:'b) ==>
+  bit_field_insert h l (w2w a: 'b word) b = bit_field_insert h l (a: 'a word) b
+Proof
+  asm_simp_tac (boss_ss () ++ FCP_ss) [bit_field_insert_def, word_modify_def, w2w]
+QED
+
+Theorem bit_field_insert_transpose:
+  h1 < l2 \/ h2 < l1 ==> bit_field_insert h1 l1 a1 (bit_field_insert h2 l2 a2 b) = bit_field_insert h2 l2 a2 (bit_field_insert h1 l1 a1 b)
+Proof
+  asm_simp_tac (boss_ss () ++ FCP_ss) [bit_field_insert_def, word_modify_def]
+  >> rpt strip_tac
+  >> IF_CASES_TAC
+  >> simp []
+QED
+
 Theorem word_join_index:
   !i (a:'a word) (b:'b word).
         FINITE univ(:'a) /\ FINITE univ(:'b) /\ i < dimindex(:'a + 'b) ==>
@@ -4363,6 +4379,12 @@ val w2n_add = Q.store_thm("w2n_add",
        INT_MIN_def, WORD_MSB_INT_MIN_LS, DIMINDEX_GT_0]
   \\ FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL]
   \\ METIS_TAC [lem, DECIDE ``0n < n ==> ((n - 1) + 1 = n)``, DIMINDEX_GT_0])
+
+Theorem w2n_add_2:
+  w2n (a: 'a word) + w2n b < dimword (:'a) ==> w2n (a + b) = w2n a + w2n b
+Proof
+  simp [word_add_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
