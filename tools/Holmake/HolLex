@@ -251,7 +251,7 @@ HOLconjunction = "/\092" | "\226\136\167";
 DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ | {HOLconjunction};
 DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]";
 Definitionpfx = "Definition"{ws}+{id_with_attributes}{ws}*":";
-holstartkeyword = "Datatype"|"Type"|"Overload"|"Definition"|"Theorem"|"Triviality"|"Quote"|("Co")?"Inductive"|("Ancestors"({ws}*{attributes})?)|("Libs"({ws}*{attributes})?)|"Theory";
+holstartkeyword = "Datatype"|"Type"|"Overload"|"Definition"|"Theorem"|"Triviality"|"Quote"|("Co")?"Inductive"|"Ancestors"|"Libs"|"Theory";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"type"|"abstype"|"datatype"|"exception"|"open"|"infix"[lr]?|"local"|"in";
 Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 HOLSTRLITstart = "\"" | "\226\128\185" | "\194\171";
@@ -472,7 +472,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 <opens>"(*" => (startComment yyarg YYBEGIN comment opens continue yypos);
 <headerthy>"(*" => (startComment yyarg YYBEGIN comment headerthy continue yypos);
 <opens,headerthy>({ws}|{newline})+ => (continue());
-<opens,headerthy>^{holstartkeyword} => (
+<opens,headerthy>^{holstartkeyword}({ws}*{attributes})? => (
   yybufpos := !yybufpos - (yyend - yypos); (* unread token *)
   OpenEnd yypos
 );
