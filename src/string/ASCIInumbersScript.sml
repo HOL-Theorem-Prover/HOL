@@ -1,16 +1,13 @@
 (* =========================================================================
    String-to-from-Number maps
    ========================================================================= *)
+Theory ASCIInumbers
+Ancestors
+  string numposrep arithmetic list combin pair num rich_list
+  logroot bit
+Libs
+  metisLib simpLib listSimps stringLib listSimps
 
-open HolKernel Parse boolLib bossLib
-open metisLib simpLib listSimps
-
-open arithmeticTheory listTheory combinTheory pairTheory
-     numTheory stringTheory stringLib rich_listTheory listSimps numposrepTheory
-     logrootTheory bitTheory
-
-val _ = new_theory "ASCIInumbers";
-val _ = set_grammar_ancestry ["string", "numposrep"]
 
 (* ------------------------------------------------------------------------- *)
 
@@ -381,6 +378,3 @@ Theorem LENGTH_num_to_oct_string:
 Proof
   simp[num_to_oct_string_def, n2s_def, LENGTH_n2l]
 QED
-
-
-val _ = export_theory ();
