@@ -9,7 +9,6 @@
 Theory string
 Ancestors
   rich_list ternaryComparisons
-Ancestors[ignore_grammar]
   list arithmetic pred_set relation
 Libs
   numLib numSyntax
