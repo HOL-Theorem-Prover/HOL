@@ -1,7 +1,8 @@
-open HolKernel boolLib Parse bossLib stringTheory arithmeticTheory markerLib;
-
-val _ = new_theory "string_num"
-val _ = set_grammar_ancestry ["string"]
+Theory string_num
+Ancestors
+  string arithmetic
+Libs
+  markerLib
 
 Definition n2s_def:
   n2s n = if n = 0 then ""
@@ -164,6 +165,3 @@ val ssum2s_s2ssum = store_thm(
   "ssum2s_s2ssum[simp]",
   ``ssum2s (s2ssum s) = s``,
   simp[s2ssum_def, ssum2s_def, sumpp_compose, combinTheory.o_DEF, sumpp_I]);
-
-
-val _ = export_theory()
