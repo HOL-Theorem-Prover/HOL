@@ -699,7 +699,7 @@ fun hover tag ({lines, plugins, ppToString, ...}, (start, stop)) = let
   fun f () = let
     val typp = Parse.pp_type_without_colon (type_of tm)
     val tmpp = with_flag (Globals.max_print_depth, 4) Parse.pp_term tm
-    open PolyML
+    open HOLPP
     in PrettyBlock(0, true, [], [tmpp, PrettyString ":", PrettyBreak(1, 2), typp]) end
   val s = with_flag (Parse.current_backend, PPBackEnd.raw_terminal) (ppToString o f) ()
   in [{range = SOME range, markdown = s}] end

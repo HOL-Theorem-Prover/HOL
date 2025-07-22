@@ -108,7 +108,7 @@ type hover = {markdown: string, range: rangeLC option}
 
 type hover_context = {
   uri: string, lines: lines, plugins: plugin_data,
-  ppToString: PolyML.pretty -> string }
+  ppToString: PrettyImpl.pretty -> string }
 
 val gotoDefinition = ref (fn _ => [])
 val hover = ref (fn _ => [])
