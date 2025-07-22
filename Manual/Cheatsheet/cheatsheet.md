@@ -277,6 +277,10 @@ It is often useful to perform case splits over the course of a proof.
 : Given a variable `p` of a pair type, instantiates `p` to `(p0,p1,...,pn)`.
   This provides better naming than `Cases_on`, and requires fewer case splits for `n`-tuples where `n` is greater than 2.
 
+<code>... using <i>theorem</i></code>
+: Used as as suffix to `Cases`, <code>Cases_on ‘<i>term</i>’</code> and similar to specify a particular case theorem to use.
+  For example, `Cases_on ‘l’ using SNOC_CASES` splits the list `l` from the tail, rather than the head (`SNOC` is the reverse of `CONS`).
+
 `pairarg_tac`
 : Searches the goal and assumptions for `(λ(x,y,...). body) arg`, and introduces the assumption `arg = (x,y,...)`.
   This can often provide better naming than `PairCases_on`.
