@@ -1,10 +1,9 @@
-open HolKernel Parse boolLib
-
-open vartypeAbbrev1Theory
-
-val _ = new_theory "vartypeAbbrev2";
+Theory vartypeAbbrev2[bare]
+Ancestors
+  vartypeAbbrev1
+Libs
+  HolKernel Parse boolLib
 
 val _ = save_thm("T", TRUTH)
 
 
-val _ = export_theory();

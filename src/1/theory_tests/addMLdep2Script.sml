@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib
-open addMLdep1Theory
-
-val _ = new_theory "addMLdep2";
+Theory addMLdep2[bare]
+Ancestors
+  addMLdep1
+Libs
+  HolKernel Parse boolLib
 
 fun grep s fname =
   let
@@ -18,5 +19,3 @@ val _ = if grep "MLdepLib" "addMLdep1Theory.sml" then ()
         else OS.Process.exit OS.Process.failure
 
 val _ = save_thm("thm2", TRUTH);
-
-val _ = export_theory();

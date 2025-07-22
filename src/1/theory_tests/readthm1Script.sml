@@ -1,8 +1,7 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "readthm1";
+Theory readthm1[bare]
+Libs
+  HolKernel Parse boolLib
 
 val read = save_thm("read", TRUTH);
 
 
-val _ = export_theory();

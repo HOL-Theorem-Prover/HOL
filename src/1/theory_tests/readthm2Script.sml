@@ -1,10 +1,9 @@
-open HolKernel Parse boolLib
-
-open readthm1Theory
-
-val _ = new_theory "readthm2";
+Theory readthm2[bare]
+Ancestors
+  readthm1
+Libs
+  HolKernel Parse boolLib
 
 val next_thm = save_thm("next_thm", CONJ read read)
 
 
-val _ = export_theory();
