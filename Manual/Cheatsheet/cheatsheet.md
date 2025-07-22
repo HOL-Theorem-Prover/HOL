@@ -127,6 +127,10 @@ These are used when rewriting: they modify the rewrite behaviour of the theorem 
 <code>Ntimes <i>theorem int</i></code>
 : Uses the supplied theorem at most the given number of times when rewriting.
 
+<code>AC <i>theorem</i> <i>theorem</i></code>
+: Combines an associativity and commutativity theorem, which the simplifier can use to perform AC-normalisation.
+  Example usage: `simp[AC UNION_COMM UNION_ASSOC]`.
+
 <code>Excl "<i>theorem_name</i>"</code><br><code>Excl "<i>conversion_name</i>"</code>
 : Do not use the supplied theorem/conversion when rewriting.
   This allows temporary exclusion of theorems/conversions from the stateful simpset.
