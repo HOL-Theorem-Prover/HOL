@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "mergeGrammarsA1";
+Theory mergeGrammarsA1[bare]
+Libs
+  HolKernel Parse boolLib
 
 (* demonstrating what should happen when a theory ancestry graph looks like
 
@@ -47,4 +47,3 @@ val a_theorem = store_thm(
   ``x:bool = x /\ y = y``,
   REWRITE_TAC[]);
 
-val _ = export_theory();
