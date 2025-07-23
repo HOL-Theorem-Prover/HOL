@@ -1,6 +1,9 @@
 (* Copyright (c) 2009-2010 Tjark Weber. All rights reserved. *)
 
 (* Various theorems for HolSmtLib *)
+Theory HolSmt
+Ancestors[qualified]
+  bool realax real intreal combin words
 
   val op >> = Tactical.>>
 
@@ -31,7 +34,6 @@
 
   val s = Theory.save_thm
 
-  val _ = Theory.new_theory "HolSmt"
   val _ = ParseExtras.temp_loose_equality()
 
   (* constants used by Z3 *)
@@ -568,5 +570,3 @@
   val _ = s ("p007", S ``FINITE univ(:30)``)
   val _ = s ("p008", S ``FINITE univ(:31)``)
   val _ = s ("p009", S ``dimindex (:8) <= dimindex (:32)``)
-
-  val _ = Theory.export_theory ()
