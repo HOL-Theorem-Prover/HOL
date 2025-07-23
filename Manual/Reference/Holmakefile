@@ -13,6 +13,12 @@ OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
 reference.pdf: reference.tex entries.tex entries-intro.tex $(OTHER)
 	latexmk -pdf reference
 
+mdref.pdf: prolog.md entries.md
+	cat prolog.md entries.md | pandoc -V documentclass=book -o $@
+
+entries.md: $(Helpd)/src-sml/Md2TeX.exe $(wildcard $(Helpd)/markdown/*.md)
+	$(Helpd)/src-sml/Md2TeX.exe ../../help/markdown > $@
+
 entries.tex: $(Helpd)/src-sml/Doc2Tex.exe docfiles $(wildcard $(Helpd)/Docfiles/*.doc)
 	$(Helpd)/src-sml/Doc2Tex.exe ${Helpd}/Docfiles entries.tex
 

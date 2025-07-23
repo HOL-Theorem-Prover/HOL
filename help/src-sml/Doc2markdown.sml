@@ -91,18 +91,20 @@ fun markdown (name,sectionl) ostrm =
         fun mdsection sec =
             case sec of
                 SEEALSO sslist =>
-                (out "\n## See Also\n\n";
+                (out "\n### See also\n\n";
                  out (String.concatWith
                         ", "
                         (map (html_linkify o Substring.string) sslist));
                  out "\n\n")
-              | TYPE ss =>
-                (out ("\n## Type\n\n```\n" ^ Substring.string ss ^ "\n```\n\n"))
-              | FIELD ("DOC", [TEXT ss]) => out ("# `" ^ brkt_text (Substring.string ss) ^ "`\n\n")
+              | TYPE ss => out ("\n```\n" ^ Substring.string ss ^ "\n```\n\n")
+              | FIELD ("DOC", [TEXT ss]) => out ("## `" ^ brkt_text (Substring.string ss) ^ "`\n\n")
               | FIELD (secnm, textelems) =>
-                (out ("\n## " ^ trans_secnm secnm ^ "\n\n");
-                 List.app mdtext textelems;
-                 out "\n")
+                case secnm of
+                    "STRUCTURE" => ()
+                  | "KEYWORDS" => ()
+                  | _ => (out ("\n### " ^ trans_secnm secnm ^ "\n\n");
+                          List.app mdtext textelems;
+                          out "\n")
 
     in
       List.app mdsection sectionl
