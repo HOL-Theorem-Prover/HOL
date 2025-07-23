@@ -411,7 +411,7 @@ structure ToSML = struct
           setState Closed;
           app aux [" val _ = Theory.new_theory ", mlquote (ss name)];
           isTheory := true;
-          if !bare then () else
+          if !bare orelse List.null (!grammar) then () else
             app aux [" val _ = Parse.set_grammar_ancestry [",
               String.concatWith "," (map (mlquote o ss) (rev (!grammar))), "]"];
           if !opening andalso quietOpen then aux " val _ = HOL_Interactive.end_open()" else ();
