@@ -2,11 +2,13 @@
 app load
 ["bossLib", "CoderTheory"];
 *)
+Theory EncodeVar
+Ancestors
+  list Encode Decode Coder
+Libs
+  simpLib
 
-open HolKernel boolLib Parse bossLib simpLib listTheory
-     EncodeTheory DecodeTheory CoderTheory;
 
-val _ = new_theory "EncodeVar";
 val _ = ParseExtras.temp_loose_equality()
 
 val Suff = Q_TAC SUFF_TAC;
@@ -158,4 +160,3 @@ val fixed_width_bnum = store_thm
    RW_TAC std_ss
    [fixed_width_def, encode_bnum_length, bnum_coder_def, encoder_def]);
 
-val _ = export_theory ();

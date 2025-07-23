@@ -1,9 +1,10 @@
-open HolKernel boolLib Parse bossLib pairTheory pairTools combinTheory
-     arithmeticTheory listTheory rich_listTheory optionTheory metisLib;
+Theory Encode
+Ancestors
+  pair combin arithmetic list rich_list option
+Libs
+  pairTools metisLib
 
 val arith_ss = old_arith_ss
-
-val _ = new_theory "Encode";
 
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
@@ -583,4 +584,3 @@ val wf_encode_tree = store_thm
    (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO]) >>
    PROVE_TAC [MEM, biprefix_appends]);
 
-val _ = export_theory ();
