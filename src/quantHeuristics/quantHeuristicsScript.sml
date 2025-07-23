@@ -1,8 +1,9 @@
-open HolKernel Parse boolLib Drule BasicProvers
-     pairTheory listTheory optionTheory metisLib simpLib
-     boolSimps pureSimps TotalDefn numLib ConseqConv
-
-val _ = new_theory "quantHeuristics";
+Theory quantHeuristics[bare]
+Ancestors
+  pair list option
+Libs
+  HolKernel Parse boolLib Drule BasicProvers metisLib simpLib
+  boolSimps pureSimps TotalDefn numLib ConseqConv
 
 (*
 quietdec := false;
