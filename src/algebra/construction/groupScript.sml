@@ -32,24 +32,18 @@ http://www.gilith.com/research/papers/elliptic.pdf
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
+Theory group
+Ancestors
+  pred_set prim_rec arithmetic divides gcd gcdset list number
+  combinatorics prime
+  monoid (* for G*, monoid_invertibles_is_monoid *)
+Libs
+  jcLib
 
-(* declare new theory at start *)
-val _ = new_theory "group";
-
-(* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
 
-(* open dependent theories *)
-open pred_setTheory prim_recTheory arithmeticTheory dividesTheory gcdTheory
-     gcdsetTheory listTheory;
 
-open numberTheory combinatoricsTheory primeTheory;
-
-open monoidTheory; (* for G*, monoid_invertibles_is_monoid *)
 
 (* ------------------------------------------------------------------------- *)
 (* Group Documentation                                                       *)
@@ -15069,8 +15063,3 @@ val mult_mod_inverse_compute = store_thm(
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
-(*===========================================================================*)

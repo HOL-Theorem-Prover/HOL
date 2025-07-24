@@ -7,14 +7,11 @@
 (* ------------------------------------------------------------------------- *)
 (* Author: (Joseph) Hing-Lun Chan (Australian National University, 2019)     *)
 (* ------------------------------------------------------------------------- *)
+Theory prime
+Ancestors
+  arithmetic pred_set divides gcd logroot list rich_list
+  listRange gcdset option number combinatorics prim_rec
 
-open HolKernel boolLib bossLib Parse;
-
-open arithmeticTheory pred_setTheory dividesTheory gcdTheory logrootTheory
-     listTheory rich_listTheory listRangeTheory gcdsetTheory optionTheory
-     numberTheory combinatoricsTheory prim_recTheory;
-
-val _ = new_theory "prime";
 
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
@@ -10918,8 +10915,3 @@ val sigma_eq_perfect_power_bounds_2 = store_thm(
 (* This is a milestone theorem. *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
-(*===========================================================================*)

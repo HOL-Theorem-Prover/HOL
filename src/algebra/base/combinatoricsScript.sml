@@ -35,14 +35,11 @@ So, N = S UNION M, where M = multicoloured necklaces (i.e. more than one color).
 Since S and M are disjoint, CARD M = CARD N - CARD S = a^n - a.
 
 *)
+Theory combinatorics
+Ancestors
+  prim_rec arithmetic divides gcd gcdset logroot pred_set list
+  rich_list number listRange indexedLists relation
 
-open HolKernel boolLib Parse bossLib;
-
-open prim_recTheory arithmeticTheory dividesTheory gcdTheory gcdsetTheory
-     logrootTheory pred_setTheory listTheory rich_listTheory numberTheory
-     listRangeTheory  indexedListsTheory relationTheory;
-
-val _ = new_theory "combinatorics";
 
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
@@ -16266,4 +16263,3 @@ using Pascal argument
 
 *)
 
-val _ = export_theory ();
