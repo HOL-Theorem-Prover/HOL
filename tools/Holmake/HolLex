@@ -238,6 +238,7 @@ id_with_attributes = {alphaMLid}({ws}*{attributes})?;
 MLid =  {alphaMLid} | {symbolident};
 QUALMLid = {MLid} ("." {MLid})*;
 QUALalphaMLid = {alphaMLid} ("." {alphaMLid})*;
+qid_with_attributes = {QUALalphaMLid}({ws}*{attributes})?;
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 lowergreek = "\206" [\177-\191] | "\207" [\128-\137];
 fullquotebegin = "``" | "\226\128\156";
@@ -481,7 +482,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
   OpenEnd yypos
 );
 <opens>{QUALalphaMLid} => (OpenId (yypos, yytext));
-<headerthy>{id_with_attributes} => (HeaderThy (yypos, yytext));
+<headerthy>{qid_with_attributes} => (HeaderThy (yypos, yytext));
 <opens,headerthy>. => (
   yybufpos := !yybufpos - 1; (* unread token *)
   OpenEnd yypos
