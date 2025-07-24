@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "proj1A";
+Theory proj1A
 
 val foo_def = Define`foo x = x * 2 + 1`;
 
@@ -12,4 +10,3 @@ val Athm = Q.store_thm(
 
 
 
-val _ = export_theory();
