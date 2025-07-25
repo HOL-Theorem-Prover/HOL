@@ -9,6 +9,8 @@ sig
   val CCONTR_TAC            : tactic
   val ASSUME_TAC            : thm_tactic
   val assume_tac            : thm_tactic
+  val LAST_ASSUME_TAC       : thm_tactic
+  val last_assume_tac       : thm_tactic
   val FREEZE_THEN           : thm_tactical
   val CONJ_TAC              : tactic
   val conj_tac              : tactic

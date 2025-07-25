@@ -108,6 +108,11 @@ val ASSUME_TAC: thm_tactic =
 
 val assume_tac = ASSUME_TAC
 
+fun LAST_ASSUME_TAC th (g as (asl,w:term)) =
+  ([(asl @ [concl th], w)], (fn resths => PROVE_HYP th (hd resths)))
+
+val last_assume_tac = LAST_ASSUME_TAC
+
 (*---------------------------------------------------------------------------*
  * "Freeze" a theorem to prevent instantiation                               *
  *                                                                           *
