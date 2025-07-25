@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open delsimps1Theory
-
-val _ = new_theory "delsimps2";
+Theory delsimps2
+Ancestors
+  delsimps1
 
 Theorem silly:
   ~(0 < foo x) ==> (x ** 2 = y ** 2)
@@ -25,4 +23,3 @@ val _ =
       | Exn.Exn Conv.UNCHANGED => ()
       | Exn.Exn e => raise Fail ("Unexpected exception: "^General.exnMessage e)
 
-val _ = export_theory();

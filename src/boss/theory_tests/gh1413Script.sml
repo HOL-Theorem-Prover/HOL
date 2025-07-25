@@ -1,7 +1,4 @@
-open HolKernel Parse boolLib bossLib
-
-
-val () = new_theory "gh1413";
+Theory gh1413
 
 Definition apply_def:
   apply f x = f x
@@ -21,4 +18,3 @@ val n2 = List.length $ DefnBase.read_congs();
 
 val _ = assert (fn n => n = 1) (n2 - n1);
 
-val () = export_theory();

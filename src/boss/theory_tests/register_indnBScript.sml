@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open register_indnATheory
-
-val _ = new_theory "register_indnB";
+Theory register_indnB
+Ancestors
+  register_indnA
 
 Theorem foo_ind =
         case DefnBase.lookup_indn “register_indnA$foo” of
@@ -23,4 +21,3 @@ Theorem baz_ind =
                            "Ind'n incorrectly stored for baz"
 
 
-val _ = export_theory();

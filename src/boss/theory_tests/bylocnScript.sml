@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib bossLib;
+Theory bylocn
 
-val _ = new_theory "bylocn";
+
 
 val c = ref 0
 
@@ -31,6 +31,3 @@ val t = concl TRUTH
 
 val _ = test 32 false `^t`;
 val _ = test 33 true `^t`;
-
-
-val _ = export_theory();
