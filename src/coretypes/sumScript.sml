@@ -28,15 +28,13 @@
 (* DATE          : September 15, 1991                                    *)
 (* ===================================================================== *)
 
-
-open HolKernel Parse boolLib BasicProvers;
-open quotientLib boolSimps simpLib
-
-(* done to keep Holmake happy - satTheory is an ancestor of BasicProvers *)
-local open satTheory in end
-
-local open DefnBase in end
-val _ = new_theory "sum";
+Theory sum[bare]
+Ancestors[qualified]
+  (* done to keep Holmake happy - satTheory is an ancestor of BasicProvers *)
+  sat
+Libs
+  HolKernel Parse boolLib BasicProvers quotientLib boolSimps
+  simpLib DefnBase[qualified] OpenTheoryMap[qualified]
 
 fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta reduce *)
 
@@ -240,8 +238,6 @@ Proof
   EQ_TAC THENL [DISCH_TAC THEN ASM_REWRITE_TAC [],
                 MATCH_ACCEPT_TAC sum_INDUCT]
 QED
-
-open simpLib
 
 (* !P. (?s. P s) <=> (?x. P (INL x)) \/ (?y. P (INR y)) *)
 val EXISTS_SUM = save_thm(
@@ -554,10 +550,10 @@ val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
                                         "sum_distinct", "sum_distinct1",
                                         "SUM_ALL_def"]
 
-local open OpenTheoryMap
+local
 val ns = ["Data","Sum"]
-fun add x y = OpenTheory_const_name{const={Thy="sum",Name=x},name=(ns,y)} in
-val _ = OpenTheory_tyop_name{tyop={Thy="sum",Tyop="sum"},name=(ns,"+")}
+fun add x y = OpenTheoryMap.OpenTheory_const_name{const={Thy="sum",Name=x},name=(ns,y)} in
+val _ = OpenTheoryMap.OpenTheory_tyop_name{tyop={Thy="sum",Tyop="sum"},name=(ns,"+")}
 val _ = add "INR" "right"
 val _ = add "INL" "left"
 val _ = add "OUTR" "destRight"
@@ -699,5 +695,3 @@ Proof
 QED
 
 val _ = temp_remove_termtok {term_name = "SUM_MAP", tok = "++"}
-
-val _ = export_theory();
