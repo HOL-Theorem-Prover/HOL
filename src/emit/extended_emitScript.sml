@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse;
-open EmitML bagTheory gcdTheory llistTheory patriciaTheory patricia_castsTheory;
-open state_transformerTheory basis_emitTheory;
-
-val _ = new_theory "extended_emit";
+Theory extended_emit
+Ancestors
+  bag gcd llist patricia patricia_casts state_transformer
+  basis_emit
+Libs
+  EmitML
 
 (* == Bags ================================================================= *)
 
@@ -384,5 +385,3 @@ val defs = map DEFN [UNIT_DEF, BIND_DEF, IGNORE_BIND_DEF, MMAP_DEF, JOIN_DEF,
 
 val _ = eSML "state_transformer" defs
 val _ = eCAML "state_transformer" defs;
-
-val _ = export_theory ();
