@@ -44,22 +44,22 @@ supposed to be abbreviating.
 \EXAMPLE
 Substitution in the goal:
 {
-   - Q.ABBREV_TAC `n = 10` ([], ``10 < 9 * 10``);
-   > val it = ([([``Abbrev(n = 10)``], ``n < 9 * n``)], fn) :
+   > Q.ABBREV_TAC ‘n = 10’ ([], “10 < 9 * 10”);
+   val it = ([([“Abbrev(n = 10)”], “n < 9 * n”)], fn) :
      (term list * term) list * (thm list -> thm)
 }
 and the assumptions:
 {
-   - Q.ABBREV_TAC `m = n + 2` ([``f (n + 2) < 6``], ``n < 7``);
-   > val it = ([([``Abbrev(m = n + 2)``, ``f m < 6``], ``n < 7``)], fn) :
+   > Q.ABBREV_TAC ‘m = n + 2’ ([“f (n + 2) < 6”], “n < 7”);
+   val it = ([([“Abbrev(m = n + 2)”, “f m < 6”], “n < 7”)], fn) :
      (term list * term) list * (thm list -> thm)
 }
 and both
 {
-   - Q.ABBREV_TAC `u = x ** 32` ([``x ** 32 = f z``],
-                                  ``g (x ** 32 + 6) - 10 < 65``);
-   > val it =
-       ([([``Abbrev(u = x ** 32)``, ``u = f z``], ``g (u + 6) - 10 < 65``)],
+   > Q.ABBREV_TAC ‘u = x ** 32’ ([“x ** 32 = f z”],
+                                  “g (x ** 32 + 6) - 10 < 65”);
+   val it =
+       ([([“Abbrev(u = x ** 32)”, “u = f z”], “g (u + 6) - 10 < 65”)],
         fn) :
        (term list * term) list * (thm list -> thm)
 }
@@ -68,20 +68,20 @@ and both
 The {bossLib} library provides {qabbrev_tac} as a synonym for {Q.ABBREV_TAC}.
 
 It is possible to abbreviate functions, using quotations such as
-{`f = \n. n + 3`}. When this is done {ABBREV_TAC} will not itself do
+{‘f = \n. n + 3’}. When this is done {ABBREV_TAC} will not itself do
 anything more than replace exact copies of the abstraction, but the
 simplifier will subsequently see occurrences of the pattern and
 replace them.
 
 Thus:
 {
-   > (qabbrev_tac `f = \x. x + 1` >> asm_simp_tac bool_ss [])
-        ([], ``3 + 1 = 4 + 1``);
+   > (qabbrev_tac ‘f = \x. x + 1’ >> asm_simp_tac bool_ss [])
+        ([], “3 + 1 = 4 + 1”);
    val it =
-      ([([``Abbrev (f = (\x. x + 1))``], ``f 3 = f 4``)], fn):
+      ([([“Abbrev (f = (\x. x + 1))”], “f 3 = f 4”)], fn):
       goal list * (thm list -> thm)
 }
-where the simplifier has seen occurrences of the ``{x+1}'' pattern and
+where the simplifier has seen occurrences of the {x+1} pattern and
 replaced it with calls to the {f}-abbreviation.
 
 \SEEALSO

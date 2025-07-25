@@ -39,10 +39,10 @@ Never fails.
 
 \EXAMPLE
 {
-#UNWIND_ONCE_CONV (\tm. mem (line_name tm) [`l1`;`l2`])
-# "(!(x:num). l1 x = (l2 x) - 1) /\
-#  (!x. f x = (l2 (x+1)) + (l1 (x+2))) /\
-#  (!x. l2 x = 7)";;
+> UNWIND_ONCE_CONV (fn tm => mem (line_name tm) [`l1`,`l2`])
+   “(!(x:num). l1 x = (l2 x) - 1) /\
+    (!x. f x = (l2 (x+1)) + (l1 (x+2))) /\
+    (!x. l2 x = 7)”;
 |- (!x. l1 x = (l2 x) - 1) /\
    (!x. f x = (l2(x + 1)) + (l1(x + 2))) /\
    (!x. l2 x = 7) =

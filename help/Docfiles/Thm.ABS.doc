@@ -22,12 +22,12 @@ assumptions {A}.
 
 \EXAMPLE
 {
-- let val m = Term `m:bool`
+> let val m = “m:bool”
   in
       ABS m (REFL m)
   end;
 
-> val it = |- (\m. m) = (\m. m) : thm
+val it = |- (λm. m) = (λm. m) : thm
 }
 
 \SEEALSO
