@@ -361,7 +361,7 @@ val DEST_LABELS_TAC = CONV_TAC DEST_LABELS_CONV THEN RULE_ASSUM_TAC DEST_LABELS
 
 fun MK_LABEL(s, th) = EQ_MP (SYM (SPECL [mk_label_var s, concl th] label_def)) th
 
-fun ASSUME_NAMED_TAC s bth : tactic = ASSUME_TAC (MK_LABEL(s, bth))
+fun ASSUME_NAMED_TAC s bth : tactic = LAST_ASSUME_TAC (MK_LABEL(s, bth))
 
 (*---------------------------------------------------------------------------*)
 (* Given an LB encoded label reference, finds a corresponding term in the    *)
