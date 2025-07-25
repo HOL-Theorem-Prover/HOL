@@ -2,19 +2,18 @@
 (* tree-based finite function representation; name a homage to numeralTheory *)
 (* Uses bt, bl basics from enumeralScript, puts 'a#'b in place of 'a. *)
 (* Revised 13 Dec. 2013 for HOL_Kananaskis 9. *)
+Theory fmapal
+Ancestors
+  pred_set relation res_quan pair option finite_map toto list
+  enumeral
+Libs
+  pred_setLib res_quanLib PairRules
 
-open HolKernel boolLib Parse;
 
 (* app load ["totoTheory", "res_quanLib", "enumeralTheory",
              "finite_mapTheory", "combinTheory"]; *)
 (* comment out above load when Holmaking *)
 val _ = set_trace "Unicode" 0;
-open pred_setLib pred_setTheory relationTheory res_quanTheory res_quanLib;
-open pairTheory PairRules optionTheory finite_mapTheory;
-open totoTheory bossLib listTheory enumeralTheory;
-
-val _ = new_theory "fmapal";
-
 val _ = ParseExtras.temp_loose_equality()
 val cpn_case_def = TypeBase.case_def_of ``:ordering``
 val cpn_distinct = TypeBase.distinct_of ``:ordering``
@@ -2546,4 +2545,3 @@ Proof
   REWRITE_TAC [GSYM bt_distinct]
 QED
 
-val _ = export_theory ();

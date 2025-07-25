@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory listTheory rich_listTheory pred_setTheory sortingTheory
-open pairTheory boolSimps relationTheory
-
-val _ = new_theory "alist";
+Theory alist
+Ancestors
+  finite_map list rich_list pred_set sorting pair relation
+Libs
+  boolSimps
 
 val _ = diminish_srw_ss ["NORMEQ"]
 
@@ -764,5 +765,3 @@ Proof
   \\ fs [FLOOKUP_UPDATE] \\ rw [] \\ fs []
   \\ Cases_on ‘ALOOKUP (REVERSE xs) k’ \\ fs []
 QED
-
-val _ = export_theory ();

@@ -1,12 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory
-open logrootTheory
-open listTheory
-open alistTheory
-open pred_setTheory
-open dep_rewrite
-
-val _ = new_theory "sptree";
+Theory sptree
+Ancestors
+  arithmetic logroot list alist pred_set rich_list[qualified]
+Libs
+  dep_rewrite sptreepp[qualified]
 
 (* A log-time random-access, extensible array implementation with union.
 
@@ -1013,12 +1009,13 @@ val toListA_def = Define`
   (toListA acc (BS t1 a t2) = toListA (a :: toListA acc t2) t1)
 `;
 
-local open listTheory rich_listTheory in
 val toListA_append = store_thm("toListA_append",
   ``!t acc. toListA acc t = toListA [] t ++ acc``,
   Induct >> REWRITE_TAC[toListA_def]
-  >> metis_tac[APPEND_ASSOC,CONS_APPEND,APPEND])
-end
+  >> metis_tac[listTheory.APPEND_ASSOC,
+               rich_listTheory.CONS_APPEND,
+               listTheory.APPEND])
+
 
 val isEmpty_toListA = store_thm("isEmpty_toListA",
   ``!t acc. wf t ==> ((t = LN) <=> (toListA acc t = acc))``,
@@ -2595,11 +2592,5 @@ Proof
   rw[size_domain, domain_fromList]
 QED
 
-val _ = let
-  open sptreepp
-in
-  add_ML_dependency "sptreepp";
-  add_user_printer ("sptreepp.sptreepp", “x : 'a spt”)
-end
-
-val _ = export_theory();
+val _ = (add_ML_dependency "sptreepp";
+         add_user_printer ("sptreepp.sptreepp", “x : 'a spt”))

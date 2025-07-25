@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib BasicProvers;
-open optionTheory pairTheory stringTheory listTheory arithmeticTheory totoTheory;
-
-val _ = new_theory "comparison";
+Theory comparison
+Ancestors
+  option pair string list arithmetic toto
+Libs
+  BasicProvers
 
 val _ = temp_tight_equality ();
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
@@ -386,5 +387,3 @@ val TO_of_LinearOrder_LLEX = store_thm("TO_of_LinearOrder_LLEX",
   simp[list_cmp_def,TO_of_LinearOrder] >>
   pop_assum(assume_tac o GSYM) >> simp[] >>
   srw_tac[][TO_of_LinearOrder] >> full_simp_tac(srw_ss())[] >> rev_full_simp_tac(srw_ss())[])
-
-val _ = export_theory ();

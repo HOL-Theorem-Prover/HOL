@@ -26,12 +26,13 @@
 
    ===================================================================== *)
 
-open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
-     sumTheory pairTheory BasicProvers bossLib metisLib simpLib;
-open relationTheory
-local open pred_setLib listTheory rich_listTheory in end
-
-val _ = new_theory "finite_map";
+Theory finite_map
+Ancestors
+  pred_set sum pair relation list[qualified] rich_list[qualified]
+  option[qualified] sorting[qualified]
+Libs
+  IndDefLib numLib metisLib simpLib BasicProvers
+  pred_setLib[qualified] boolSimps[qualified]
 
 (*---------------------------------------------------------------------------*)
 (* Special notation. fmap application is set at the same level as function   *)
@@ -3605,9 +3606,3 @@ val _ = TypeBase.export [
        nchotomy = SOME fmap_CASES}
       )
   ]
-
-(* ----------------------------------------------------------------------
-    to close...
-   ---------------------------------------------------------------------- *)
-
-val _ = export_theory();

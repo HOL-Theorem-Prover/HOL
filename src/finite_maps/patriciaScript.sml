@@ -8,14 +8,13 @@
 (* interactive use:
   app load ["wordsLib", "bitSyntax", "sortingTheory", "pred_setSyntax"];
 *)
+Theory patricia
+Ancestors
+  arithmetic numeral bit numeral_bit list rich_list sorting
+Libs
+  Q
 
-open HolKernel Parse boolLib bossLib Q
-     arithmeticTheory numeralTheory bitTheory numeral_bitTheory
-     listTheory rich_listTheory sortingTheory;
 
-val _ = new_theory "patricia";
-
-val _ = wordsLib.deprecate_word();
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["NORMEQ"]
 
@@ -1063,5 +1062,3 @@ val _ = computeLib.add_persistent_funs
    "PTREE_OF_NUMSET_EMPTY"];
 
 (* ------------------------------------------------------------------------- *)
-
-val _ = export_theory();
