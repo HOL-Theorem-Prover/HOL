@@ -15,6 +15,9 @@ Doc2markdown.exe: poly-Doc2Md.ML Doc2markdown.uo ParseDoc.uo Flash.uo
 Doc2Tex.exe: poly-Doc2Tex.ML Doc2Tex.uo ParseDoc.uo Flash.uo
 	polyc -o $@ $<
 
+Doc2Html.exe: poly-Doc2Html.ML Doc2Html.uo Flash.uo
+	polyc -o $@ $<
+
 else
 Doc2markdown.exe: runDoc2Md.uo Doc2markdown.uo ParseDoc.uo Flash.uo
 	$(HOLMOSMLC) -o $@ $<
@@ -22,10 +25,10 @@ Doc2markdown.exe: runDoc2Md.uo Doc2markdown.uo ParseDoc.uo Flash.uo
 Doc2Tex.exe : runDoc2Tex.uo Doc2Tex.uo ParseDoc.uo Flash.uo
 	$(HOLMOSMLC) -o Doc2Tex.exe runDoc2Tex.uo
 
-endif
-
 Doc2Html.exe : runDoc2Html.uo Doc2Html.uo ParseDoc.uo Flash.uo
 	$(HOLMOSMLC) -o Doc2Html.exe runDoc2Html.uo
+
+endif
 
 Doc2Txt.exe: runDoc2Txt.uo Doc2Txt.uo ParseDoc.uo Flash.uo
 	$(HOLMOSMLC) -o Doc2Txt.exe runDoc2Txt.uo
