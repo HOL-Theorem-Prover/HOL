@@ -38,7 +38,7 @@ fun brkt_text s =
 val emph_text = String.translate (fn #"*" => "\\*" | c => str c)
 fun xmpl_text s = "    " ^ String.translate (fn #"\n" => "\n    " | c => str c) s
 
-fun html_linkify s = "[" ^ s ^ "](" ^ s ^ ".html)"
+fun html_linkify s = "[`" ^ brkt_text s ^ "`](#" ^ encode_stem s ^ ")"
 
 fun text_encode ss = let
   (* passes over a substring, replacing single apostrophes with &rsquo;
@@ -78,6 +78,7 @@ in
 end
 
 fun markdown (name,sectionl) ostrm =
+    (* name is a decoded "stem", e.g., Type.--> *)
     let fun out s = TextIO.output(ostrm, s)
         fun outss ss = out (Substring.string ss)
         fun mdtext elem =
@@ -97,14 +98,23 @@ fun markdown (name,sectionl) ostrm =
                         (map (html_linkify o Substring.string) sslist));
                  out "\n\n")
               | TYPE ss => out ("\n```\n" ^ Substring.string ss ^ "\n```\n\n")
-              | FIELD ("DOC", [TEXT ss]) => out ("## `" ^ brkt_text (Substring.string ss) ^ "`\n\n")
+              | FIELD ("DOC", [TEXT ss]) =>
+                out (
+                  "## `" ^ brkt_text (Substring.string ss) ^
+                  "` {#" ^ encode_stem name ^ "}\n\n"
+                )
               | FIELD (secnm, textelems) =>
                 case secnm of
                     "STRUCTURE" => ()
                   | "KEYWORDS" => ()
-                  | _ => (out ("\n### " ^ trans_secnm secnm ^ "\n\n");
-                          List.app mdtext textelems;
-                          out "\n")
+                  | "LIBRARY" => ()
+                  | _ => if secnm = "FAILURE" orelse secnm = "SEEALSO" orelse
+                            secnm = "COMMENTS" orelse secnm = "EXAMPLE"
+                         then
+                           (out ("\n### " ^ trans_secnm secnm ^ "\n\n");
+                            List.app mdtext textelems;
+                            out "\n")
+                         else (out "\n\n"; List.app mdtext textelems; out "\n")
 
     in
       List.app mdsection sectionl
