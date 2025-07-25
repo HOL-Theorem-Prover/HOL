@@ -2,11 +2,9 @@
   This development is based on Damien Pous' "Coinduction All the Way Up,
   including the derivation of parameterized coinduction
 *)
-open HolKernel Parse boolLib bossLib;
-open pred_setTheory fixedPointTheory;
-open posetTheory;
-
-val _ = new_theory "companion";
+Theory companion
+Ancestors
+  pred_set fixedPoint poset
 
 Theorem lub_is_gfp:
   poset (s,r) /\ function s s f /\ monotonic (s,r) f /\
@@ -903,4 +901,3 @@ Proof
    (rw[lub_def] >> rw[SUBSET_UNION])
 QED
 
-val _ = export_theory();

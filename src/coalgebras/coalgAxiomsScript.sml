@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open relationTheory pairTheory pred_setTheory combinTheory
-open cardinalTheory simpleSetCatTheory
+Theory coalgAxioms
+Ancestors
+  relation pair pred_set combin cardinal simpleSetCat
 
 (* Abstract development of existence of final co-algebras, using new_type,
    new_constant and axioms to emulate a locale. If this can be carried out
@@ -15,8 +14,6 @@ open cardinalTheory simpleSetCatTheory
    Blanchette et al (ITP, 2014):
       "Truly Modular (Co)datatypes for Isabelle/HOL"
  *)
-
-val _ = new_theory "coalgAxioms";
 
 val _ = app (ignore o hide) ["S", "W"]
 
@@ -1055,4 +1052,3 @@ QED
 
 
 
-val _ = export_theory();
