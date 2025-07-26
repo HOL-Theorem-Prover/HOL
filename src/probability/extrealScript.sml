@@ -6,18 +6,15 @@
 (* ------------------------------------------------------------------------- *)
 (* Updated and further enriched by Chun Tian (2018 - 2025)                   *)
 (* ------------------------------------------------------------------------- *)
+Theory extreal
+Ancestors
+  combin pred_set pair prim_rec arithmetic topology real
+  real_sigma iterate real_topology seq lim transc metric list
+  rich_list cardinal nets extreal_base real_of_rat
+Libs
+  metisLib res_quanTools jrhUtils numLib tautLib pred_setLib
+  hurdUtils realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open metisLib combinTheory pred_setTheory res_quanTools pairTheory jrhUtils
-     prim_recTheory arithmeticTheory numLib tautLib pred_setLib hurdUtils
-     topologyTheory;
-
-open realTheory realLib real_sigmaTheory iterateTheory real_topologyTheory
-     seqTheory limTheory transcTheory metricTheory listTheory rich_listTheory
-     cardinalTheory netsTheory extreal_baseTheory real_of_ratTheory;
-
-val _ = new_theory "extreal";
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 val set_ss = std_ss ++ PRED_SET_ss;
@@ -8268,8 +8265,6 @@ val _ = map (fn name => save_thm (name, DB.fetch "extreal_base" name))
        "x_half_half",
        "zero_div",
        "zero_pow"];
-
-val _ = export_theory();
 
 (* References:
 
