@@ -1,17 +1,17 @@
 (*---------------------------------------------------------------------------*)
 (* Depth first traversal of directed graphs that can contain cycles.         *)
 (*---------------------------------------------------------------------------*)
+Theory dft
+Ancestors
+  pred_set relation list dirGraph
+Libs
+  pred_setLib
 
-open HolKernel boolLib bossLib
-     pred_setTheory pred_setLib relationTheory listTheory
-     dirGraphTheory;
 
 val set_ss = list_ss ++ PRED_SET_ss;
 val dnf_ss = bool_ss ++ boolSimps.DNF_ss ++ rewrites [AND_IMP_INTRO];
 
 val _ = numLib.temp_prefer_num();
-
-val _ = new_theory "dft";
 
 (*---------------------------------------------------------------------------*)
 (* DFT :('a -> 'a list) ->   (* graph *)                                     *)
@@ -231,4 +231,3 @@ Proof
  METIS_TAC[LIST_TO_SET_DEF]
 QED
 
-val _ = export_theory();
