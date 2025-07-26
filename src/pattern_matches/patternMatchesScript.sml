@@ -1,11 +1,9 @@
-open HolKernel Parse boolLib Drule BasicProvers
-open simpLib TotalDefn ConseqConv numLib
-open quantHeuristicsLib
-open optionTheory
-open listTheory
-open metisLib
-
-val _ = new_theory "patternMatches"
+Theory patternMatches[bare]
+Ancestors
+  option list
+Libs
+  HolKernel Parse boolLib Drule BasicProvers simpLib TotalDefn
+  ConseqConv numLib quantHeuristicsLib metisLib
 
 val std_ss = numLib.std_ss
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
@@ -1478,6 +1476,3 @@ val PMATCH_IS_EXHAUSTIVE_LIFT = store_thm ("PMATCH_IS_EXHAUSTIVE_LIFT",
 
 SIMP_TAC list_ss [PMATCH_IS_EXHAUSTIVE_def, EXISTS_MAP, PMATCH_ROW_LIFT_def,
   IS_SOME_MAP]);
-
-
-val _ = export_theory();
