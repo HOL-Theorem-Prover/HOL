@@ -999,11 +999,17 @@ Proof
   rw[BAG_IN,BAG_INN,IN_DEF] >> fs[]
 QED
 
-val SET_OF_EMPTY = store_thm (
-  "SET_OF_EMPTY",
-  ``BAG_OF_SET (EMPTY:'a->bool) = EMPTY_BAG``,
-  SIMP_TAC (srw_ss()) [BAG_OF_SET, EMPTY_BAG, FUN_EQ_THM])
-val _ = export_rewrites ["SET_OF_EMPTY"];
+Theorem SET_OF_EMPTY[simp]:
+  BAG_OF_SET (EMPTY:'a->bool) = EMPTY_BAG
+Proof
+  SIMP_TAC (srw_ss()) [BAG_OF_SET, EMPTY_BAG, FUN_EQ_THM]
+QED
+
+Theorem BAG_OF_SET_EQ_EMPTY_BAG[simp]:
+  BAG_OF_SET s = {||} ⇔ s = ∅
+Proof
+  simp[EXTENSION] >> simp[FUN_EQ_THM, EMPTY_BAG, BAG_OF_SET, AllCaseEqs()]
+QED
 
 Theorem SET_OF_SINGLETON_BAG[simp]:
   !e. SET_OF_BAG {|e|} = {e}
