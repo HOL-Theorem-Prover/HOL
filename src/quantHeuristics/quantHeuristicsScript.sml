@@ -1278,6 +1278,3 @@ Cases THEN SIMP_TAC std_ss [])
 val SND_PAIR_EQ_SYM = store_thm ("SND_PAIR_EQ_SYM",
 ``!p p1. (p = (p1, SND p)) <=> (FST p = p1)``,
 Cases THEN SIMP_TAC std_ss [])
-
-
-val _ = export_theory();
