@@ -1,14 +1,13 @@
 (* Fixed-points over sets ordered by subset.  Basically, a set-specific
    instantiation of the general theory in posetTheory
 *)
+Theory fixedPoint[bare]
+Ancestors
+  poset pred_set
+Libs
+  HolKernel Parse boolLib BasicProvers simpLib boolSimps
+  pred_setLib
 
-open HolKernel Parse boolLib
-
-open BasicProvers simpLib boolSimps posetTheory
-
-val _ = new_theory "fixedPoint";
-
-open pred_setTheory pred_setLib
 
 val monotone_def = new_definition(
   "monotone_def",
@@ -236,4 +235,3 @@ val lfp_empty = store_thm(
   “!f x. monotone f /\ x IN f {} ==> x IN lfp f”,
   PROVE_TAC [EMPTY_SUBSET, lfp_rule_applied]);
 
-val _ = export_theory();

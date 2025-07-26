@@ -9,15 +9,16 @@
 (* REVISED: Tom Melham (extensively revised and extended)               *)
 (* DATE:    January 1992                                                *)
 (* =====================================================================*)
+Theory pred_set[bare]
+Ancestors
+  numpair pair num prim_rec arithmetic while divides combin
+  relation option
+Libs
+  HolKernel Parse boolLib BasicProvers Prim_rec pairLib numLib
+  hurdUtils tautLib pureSimps metisLib mesonLib simpLib boolSimps
+  TotalDefn pred_setpp[qualified]
 
-open HolKernel Parse boolLib BasicProvers;
-
-open Prim_rec pairLib numLib numpairTheory hurdUtils tautLib pureSimps
-     pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
-     metisLib mesonLib simpLib boolSimps dividesTheory
-     combinTheory relationTheory optionTheory TotalDefn;
-
-local open pred_setpp in end
+open Unicode
 
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
@@ -76,12 +77,6 @@ structure Q = struct
       foo loc (n,t,tac)
     end
 end
-
-(* ---------------------------------------------------------------------*)
-(* Create the new theory.                                               *)
-(* ---------------------------------------------------------------------*)
-
-val _ = new_theory "pred_set";
 
 Type set = “:'a -> bool”;
 
@@ -309,7 +304,6 @@ QED
 
 val EMPTY_DEF = new_definition
     ("EMPTY_DEF", (“EMPTY = (\x:'a.F)”));
-open Unicode
 val _ = overload_on (UChar.emptyset, ``pred_set$EMPTY``)
 val _ = TeX_notation {hol = UChar.emptyset, TeX = ("\\HOLTokenEmpty{}", 1)}
 val _ = ot0 "EMPTY" "{}"
@@ -9114,5 +9108,3 @@ Proof
   FIRST_ASSUM $ Q.SPEC_THEN ‘n’ ASSUME_TAC>>
   IMP_RES_TAC (iffLR FUNPOW_eq_elim)
 QED
-
-val _ = export_theory();

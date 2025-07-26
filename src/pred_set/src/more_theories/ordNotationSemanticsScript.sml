@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib bossLib
-
-open ordinalTheory cardinalTheory ordinalNotationTheory
-
-
-val _ = new_theory "ordNotationSemantics"
+Theory ordNotationSemantics
+Ancestors
+  ordinal cardinal ordinalNotation
 
 val _ = export_rewrites ["ordinalNotation.finp_def", "ordinalNotation.tail_def",
                          "ordinalNotation.is_ord_equations",
@@ -610,4 +607,3 @@ val mvjar_theorem10 = store_thm(
   simp[Abbr`LHS`, Once better_ord_mult_def, ord_add_correct] >>
   simp[ord_mult_correct, ord_add_correct, is_ord_expt]);
 
-val _ = export_theory()

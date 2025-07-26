@@ -15,14 +15,13 @@
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
 (* ========================================================================= *)
+Theory cardinal
+Ancestors
+  pred_set set_relation permutes prim_rec arithmetic num pair
+  option sum ind_type wellorder
+Libs
+  boolSimps tautLib numLib mesonLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps pred_setTheory set_relationTheory tautLib permutesTheory
-     prim_recTheory arithmeticTheory numTheory numLib pairTheory mesonLib
-     optionTheory sumTheory ind_typeTheory wellorderTheory hurdUtils;
-
-val _ = new_theory "cardinal";
 
 (* ----------------------------------------------------------------------
     K_TAC, METIS, DISC_RW_KILL, ASM_ARITH_TAC
@@ -3312,4 +3311,3 @@ Proof
   MESON_TAC[]
 QED
 
-val _ = export_theory()

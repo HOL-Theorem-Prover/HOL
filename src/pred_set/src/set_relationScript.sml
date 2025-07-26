@@ -1,9 +1,9 @@
-open HolKernel boolLib BasicProvers;
-
-open simpLib numLib metisLib markerLib pred_setTheory pred_setSimps pairTheory
-     arithmeticTheory optionTheory relationTheory hurdUtils TotalDefn;
-
-val _ = new_theory "set_relation";
+Theory set_relation[bare]
+Ancestors
+  pred_set pair arithmetic option relation
+Libs
+  HolKernel boolLib BasicProvers simpLib numLib metisLib
+  markerLib pred_setSimps hurdUtils TotalDefn
 
 local
   open OpenTheoryMap
@@ -2662,4 +2662,3 @@ val _ = List.app Theory.delete_binding
    "transitive_closure_strongind",
    "transitive_closure_cases"];
 
-val _ = export_theory ();
