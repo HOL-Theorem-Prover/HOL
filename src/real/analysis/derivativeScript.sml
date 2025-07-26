@@ -14,17 +14,15 @@
 (*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
 (* ========================================================================= *)
+Theory derivative
+Ancestors
+  num prim_rec pair combin quotient arithmetic pred_set list
+  option iterate real topology cardinal metric nets real_sigma
+  real_topology
+Libs
+  numLib unwindLib tautLib Arith hurdUtils jrhUtils mesonLib
+  pred_setLib realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
-     combinTheory quotientTheory arithmeticTheory pred_setTheory hurdUtils
-     jrhUtils listTheory mesonLib optionTheory pred_setLib iterateTheory;
-
-open realTheory realLib topologyTheory cardinalTheory metricTheory netsTheory
-     real_sigmaTheory real_topologyTheory;
-
-val _ = new_theory "derivative";
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
@@ -2044,4 +2042,3 @@ val CONTINUOUS_ON_EXP = store_thm ("CONTINUOUS_ON_EXP",
  ``!s. exp continuous_on s``,
   METIS_TAC[CONTINUOUS_AT_IMP_CONTINUOUS_ON, CONTINUOUS_AT_EXP]);
 
-val _ = export_theory();

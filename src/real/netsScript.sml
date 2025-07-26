@@ -1,14 +1,14 @@
 (*===========================================================================*)
 (* Theory of Moore-Smith convergence nets, and special cases like sequences  *)
 (*===========================================================================*)
+Theory nets
+Ancestors
+  pred_set pair arithmetic num prim_rec relation real topology
+  metric
+Libs
+  numLib reduceLib pairLib mesonLib RealArith hurdUtils jrhUtils
+  tautLib
 
-open HolKernel Parse boolLib bossLib;
-
-open numLib reduceLib pairLib pred_setTheory mesonLib RealArith hurdUtils
-     pairTheory arithmeticTheory numTheory prim_recTheory relationTheory
-     jrhUtils realTheory topologyTheory metricTheory tautLib;
-
-val _ = new_theory "nets";
 
 val _ = Parse.reveal "B";
 
@@ -1057,8 +1057,6 @@ Proof
  >> ‘f m IN P’ by rw [IN_APP]
  >> ‘f m IN N’ by PROVE_TAC [SUBSET_DEF] >> fs [IN_APP]
 QED
-
-val _ = export_theory ();
 
 (* References:
 

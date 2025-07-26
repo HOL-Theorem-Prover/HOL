@@ -1,16 +1,14 @@
 (* ************************************************************************* *)
 (* Sum of a real-valued function on a set: SIGMA f s                         *)
 (* ************************************************************************* *)
+Theory real_sigma
+Ancestors
+  arithmetic combin pair pred_set cardinal prim_rec permutes real
+  iterate
+Libs
+  res_quanTools hurdUtils numLib tautLib mesonLib jrhUtils
+  pred_setLib RealArith realSimps
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory combinTheory res_quanTools pairTheory pred_setTheory
-     hurdUtils numLib tautLib cardinalTheory mesonLib jrhUtils prim_recTheory
-     permutesTheory pred_setLib;
-
-open realTheory RealArith realSimps iterateTheory;
-
-val _ = new_theory "real_sigma";
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
@@ -3920,4 +3918,3 @@ val jensen_pos_concave_SIGMA = store_thm
    >> Q.UNABBREV_TAC `f'`
    >> FULL_SIMP_TAC std_ss [pos_concave_fn, GSPECIFICATION]);
 
-val _ = export_theory ();
