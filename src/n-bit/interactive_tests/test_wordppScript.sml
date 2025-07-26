@@ -1,7 +1,6 @@
-open HolKernel boolLib Parse wordsLib testutils
-
-val _ = new_theory "test_wordpp";
-
+Theory test_wordpp
+Libs
+  wordsLib testutils
 
 (********** Helper functions **********)
 
@@ -133,6 +132,4 @@ val _ = run_tests tys_neg hex_neg tests;
 
 val _ = output_words_as_padded_hex();
 val _ = run_tests tys_neg padded_hex_neg tests;
-
-val _ = export_theory();
 

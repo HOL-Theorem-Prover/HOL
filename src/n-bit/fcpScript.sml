@@ -4,13 +4,12 @@
 (*                 finite Cartesian products (TPHOLs 2005)                   *)
 (* DATE          : 2005                                                      *)
 (* ========================================================================= *)
+Theory fcp
+Ancestors
+  arithmetic pred_set list iterate
+Libs
+  numLib hurdUtils mesonLib
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory numLib pred_setTheory listTheory iterateTheory hurdUtils
-     mesonLib;
-
-val _ = new_theory "fcp";
 
 (* ------------------------------------------------------------------------- *)
 (*  NOTES for HOL-Light users (or HOL4 porters of HOL-Light theories)        *)
@@ -963,4 +962,3 @@ Proof
   MESON_TAC[HAS_SIZE_CART_UNIV, HAS_SIZE]
 QED
 
-val _ = export_theory ();

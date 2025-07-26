@@ -4,15 +4,13 @@
 (*                 treatment of finite Cartesian products (TPHOLs 2005)      *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* ========================================================================= *)
-
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory pred_setTheory
-open bitTheory sum_numTheory fcpTheory fcpLib
-open numposrepTheory ASCIInumbersTheory
-open dividesTheory dep_rewrite
-
-val () = new_theory "words"
-val _ = set_grammar_ancestry ["ASCIInumbers", "numeral_bit", "fcp", "sum_num"]
+Theory words
+Ancestors
+  ASCIInumbers numeral_bit fcp sum_num arithmetic pred_set
+  bit sum_num fcp numposrep ASCIInumbers divides
+Libs
+  dep_rewrite fcpLib wordspp[qualified] Lib[qualified]
+  boolSyntax[qualified] numSyntax[qualified] Drule[qualified]
 
 val ERR = mk_HOL_ERR "wordsScript"
 
@@ -51,7 +49,6 @@ val w2n_def = zDefine`
 val n2w_def = zDefine`
   (n2w:num->'a word) n = FCP i. BIT i n`
 
-local open wordspp in end
 val _ = add_ML_dependency "wordspp"
 val _ = Parse.add_user_printer ("wordspp.words_printer", ``words$n2w x : 'a word``)
 
@@ -5362,5 +5359,3 @@ val _ =
 (* ------------------------------------------------------------------------- *)
 
 val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n): 'a word`
-
-val _ = export_theory()

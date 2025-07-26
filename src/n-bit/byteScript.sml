@@ -1,13 +1,13 @@
 (*
   A theory about byte-level manipulation of machine words.
 *)
+Theory byte
+Ancestors
+  arithmetic list[qualified] words rich_list
+Libs
+  dep_rewrite
 
-open HolKernel boolLib bossLib dep_rewrite Parse
-     arithmeticTheory rich_listTheory wordsTheory
 
-val _ = new_theory "byte";
-
-val _ = set_grammar_ancestry ["arithmetic", "list", "words"];
 val _ = temp_tight_equality();
 
 (* Get and set bytes in a word *)
@@ -911,4 +911,3 @@ QED
 Theorem word_to_bytes_word_of_bytes_32 = word_of_bytes_word_to_bytes |> INST_TYPE [``:'a`` |-> ``:32``] |> SRULE [dividesTheory.compute_divides]
 Theorem word_to_bytes_word_of_bytes_64 = word_of_bytes_word_to_bytes |> INST_TYPE [``:'a`` |-> ``:64``] |> SRULE [dividesTheory.compute_divides]
 
-val _ = export_theory();
