@@ -10,13 +10,13 @@
 (* DATE          : September 15, 1991                                    *)
 (* ADDITIONS     : December 22, 1992                                     *)
 (* ===================================================================== *)
+Theory arithmetic[bare]
+Ancestors
+  num prim_rec combin relation
+Libs
+  HolKernel boolLib Parse BasicProvers simpLib boolSimps mesonLib
+  metisLib SatisfySimps[qualified] DefnBase[qualified]
 
-open HolKernel boolLib Parse BasicProvers;
-
-open simpLib boolSimps mesonLib metisLib numTheory prim_recTheory
-     combinTheory relationTheory;
-
-local open SatisfySimps DefnBase in end
 
 local
   open OpenTheoryMap
@@ -29,8 +29,6 @@ in
                        {const = {Thy = "arithmetic", Name = x},
                         name = (["Unwanted"], "id")}
 end
-
-val _ = new_theory "arithmetic";
 
 val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 
@@ -5075,4 +5073,3 @@ Proof
   \\ rw[ONE, TWO, LESS_MONO, LESS_0]
 QED
 
-val _ = export_theory()

@@ -1,8 +1,9 @@
-open HolKernel boolLib Parse BasicProvers;
-
-open metisLib simpLib arithmeticTheory pairTheory combinTheory computeLib;
-
-val _ = new_theory "logroot";
+Theory logroot[bare]
+Ancestors
+  arithmetic pair combin
+Libs
+  HolKernel boolLib Parse BasicProvers metisLib simpLib
+  computeLib
 
 (* ----------------------------------------------------------------------- *)
 
@@ -1744,4 +1745,3 @@ val LOG2_TWICE = store_thm(
 
 (* ----------------------------------------------------------------------- *)
 
-val _ = export_theory()

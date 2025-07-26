@@ -1,13 +1,15 @@
 (*
   Apply cv translator to standard theories list, pair, sptree, etc.
 *)
-open HolKernel Parse boolLib bossLib dep_rewrite;
-open cv_typeTheory cvTheory cv_typeLib cv_repLib;
-open arithmeticTheory wordsTheory cv_repTheory cv_primTheory cv_transLib;
-open pairTheory listTheory optionTheory sumTheory alistTheory indexedListsTheory;
-open rich_listTheory sptreeTheory finite_setTheory;
+Theory cv_std
+Ancestors
+  cv cv_type arithmetic words cv_rep cv_prim pair list option sum
+  alist indexedLists rich_list sptree finite_set
+Libs
+  dep_rewrite cv_typeLib cv_repLib cv_transLib
 
-val _ = new_theory "cv_std";
+Overload Num[local] = “cv$Num”
+Overload Pair[local] = “cv$Pair”
 
 (*----------------------------------------------------------*
    pair
@@ -608,5 +610,3 @@ Proof
   \\ Cases_on`x` \\ Cases_on`z` \\ gvs[]
   \\ gvs[Q.SPEC`Pair x y`cv_size'_def]
 QED
-
-val _ = export_theory();

@@ -2,13 +2,13 @@
 (* Define WHILE loops, give Hoare rules, and define LEAST operator as a      *)
 (* binder.                                                                   *)
 (*===========================================================================*)
+Theory while[bare]
+Ancestors
+  combin option sum prim_rec arithmetic relation
+Libs
+  HolKernel boolLib Parse BasicProvers Prim_rec simpLib boolSimps
+  metisLib
 
-open HolKernel boolLib Parse BasicProvers;
-
-open Prim_rec simpLib boolSimps metisLib combinTheory optionTheory sumTheory
-     prim_recTheory arithmeticTheory relationTheory;
-
-val _ = new_theory "while";
 
 local open OpenTheoryMap
   val ns = ["While"]
@@ -523,4 +523,3 @@ val _ =
    ,"LEAST_DEF"
    ,"TAILREC"];
 
-val _ = export_theory();
