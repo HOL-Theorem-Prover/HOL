@@ -6,19 +6,20 @@
 (*---------------------------------------------------------------------------*
  * First, make standard environment available.                               *
  *---------------------------------------------------------------------------*)
-open HolKernel Parse boolLib;
+Theory ieee
+Ancestors
+  real pred_set arithmetic
+Libs
+  Num_conv
 
 (*---------------------------------------------------------------------------*
  * Next, bring in extra tools used.                                          *
  *---------------------------------------------------------------------------*)
 
-open realTheory bossLib pred_setTheory arithmeticTheory Num_conv;
-
 (*---------------------------------------------------------------------------*
  * Create the theory.                                                        *
  *---------------------------------------------------------------------------*)
 
-val _ = new_theory "ieee";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -587,4 +588,3 @@ val float_abs = new_definition (
  * Write the theory to disk.                                                 *
  *---------------------------------------------------------------------------*)
 
-val _ = export_theory();
