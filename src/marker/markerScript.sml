@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "marker";
+Theory marker[bare]
+Libs
+  HolKernel Parse boolLib
 
 (* ----------------------------------------------------------------------
     stmarker
@@ -195,4 +195,3 @@ val _ = List.app permahide [“hide”, “AC”, “Req0”, “ReqD”]
 
 
 
-val _ = export_theory();
