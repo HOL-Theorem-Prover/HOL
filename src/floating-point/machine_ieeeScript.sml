@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open machine_ieeeLib;
-
-val () = new_theory "machine_ieee";
+Theory machine_ieee
+Ancestors
+  binary_ieee
+Libs
+  machine_ieeeLib
 
 (* ------------------------------------------------------------------------
    Bit-vector Encodings
@@ -70,7 +71,3 @@ val fp32_to_fp64_def = Define `fp32_to_fp64 = SND o fp32_to_fp64_with_flags`
 val fp64_to_fp32_def = Define `fp64_to_fp32 m = SND o fp64_to_fp32_with_flags m`
 val fp64_to_fp16_def = Define `fp64_to_fp16 m = SND o fp64_to_fp16_with_flags m`
 val fp32_to_fp16_def = Define `fp32_to_fp16 m = SND o fp32_to_fp16_with_flags m`
-
-
-
-val () = export_theory ()

@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open machine_ieeeTheory lift_ieeeTheory wordsLib;
-
-val () = new_theory "lift_machine_ieee";
+Theory lift_machine_ieee
+Ancestors
+  machine_ieee lift_ieee
+Libs
+  wordsLib
 
 (* --------------------------------------------------------------------- *)
 
@@ -381,5 +382,3 @@ val fp64_float_sqrt_relative = save_thm("fp64_float_sqrt_relative",
   rule fp64_float_sqrt_relative)
 
 (* --------------------------------------------------------------------- *)
-
-val () = export_theory ()
