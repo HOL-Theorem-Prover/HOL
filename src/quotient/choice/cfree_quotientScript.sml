@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib;
+Theory cfree_quotient
+Ancestors
+  prim_rec combin pair sum list rich_list option pred_set
+  res_quan
+Libs
+  pairLib listLib res_quanLib dep_rewrite
 
 (* --------------------------------------------------------------------- *)
 (* Definitions and theorems for higher order quotients package.          *)
@@ -9,27 +14,9 @@ open HolKernel Parse boolLib;
 (* --------------------------------------------------------------------- *)
 
 
-val _ = new_theory "cfree_quotient";
-
 (*
 load "dep_rewrite";
 *)
-
-open prim_recTheory;
-open combinTheory;
-open pairTheory;
-open pairLib;
-open sumTheory;
-open listTheory;
-open rich_listTheory;
-open optionTheory;
-open listLib;
-open pred_setTheory;
-open bossLib;
-open res_quanTheory;
-open res_quanLib;
-open dep_rewrite;
-
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
 val ONCE_REWRITE_THM = fn th => ONCE_REWRITE_TAC[th];
@@ -1153,8 +1140,6 @@ end;
 
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "cfree_quotient.lst";
 

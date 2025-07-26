@@ -1,4 +1,9 @@
-open HolKernel Parse boolLib;
+Theory object
+Ancestors
+  combin list arithmetic num prim_rec pair pred_set more_list
+  more_set variable
+Libs
+  pairLib dep_rewrite Mutual tactics
 
 (* --------------------------------------------------------------------- *)
 (* Embedding objects as a foundational layer, according to               *)
@@ -6,7 +11,6 @@ open HolKernel Parse boolLib;
 (* --------------------------------------------------------------------- *)
 
 
-val _ = new_theory "object";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -20,22 +24,6 @@ app load ["combinTheory", "listTheory",
           "bossLib", "MutualIndThen"];
 
 *)
-
-open combinTheory;
-open listTheory;
-open arithmeticTheory numTheory prim_recTheory;
-open pairTheory pairLib pred_setTheory;
-open dep_rewrite;
-open more_listTheory;
-open more_setTheory;
-open variableTheory;
-open bossLib;
-open Mutual;
-
-
-open tactics;
-
-
 
 (* --------------------------------------------------------------------- *)
 (* Create datatypes for objects, methods, and method dictionaries.       *)
@@ -970,8 +958,6 @@ val update1 = store_thm
    );
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "object.lst";
 
