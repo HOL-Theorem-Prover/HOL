@@ -1701,12 +1701,8 @@ Proof
     >- (`!c. FINITE_BAG c ==> !s. (c = BAG_OF_SET s) ==> FINITE s`
         suffices_by metis_tac[] >>
       HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT >>
-      rw[]
-        >- (Cases_on `s={}` >- rw[] >>
-            `?e. e IN s` by simp[MEMBER_NOT_EMPTY] >>
-            fs[BAG_OF_SET,EMPTY_BAG_alt,FUN_EQ_THM] >>
-            first_x_assum (qspec_then `e` mp_tac) >>
-            rw[])
+      rpt strip_tac
+        >- fs[]
         >- (`e IN s`
               by metis_tac[BAG_IN_BAG_OF_SET,
                            BAG_DECOMPOSE,BAG_IN_BAG_INSERT] >>
