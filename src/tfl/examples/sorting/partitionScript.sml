@@ -4,10 +4,12 @@
 (* interactive use:
 app load ["bossLib", "numLib"];
 *)
+Theory partition
+Ancestors
+  list
+Libs
+  numLib
 
-open HolKernel Parse boolLib numLib bossLib listTheory;
-
-val _ = new_theory "partition";
 
 (*---------------------------------------------------------------------------
                  Partition a list by a predicate.
@@ -100,4 +102,3 @@ Induct_on `L`
           MAP_EVERY Q.EXISTS_TAC [`l1`, `h::l2`]]
   THEN RW_TAC list_ss [MEM] THEN RW_TAC bool_ss []]);
 
-val _ = export_theory();
