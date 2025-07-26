@@ -1,11 +1,11 @@
-open HolKernel boolLib Parse BasicProvers
-
-open simpLib boolSimps numLib TotalDefn metisLib
-open listTheory rich_listTheory logrootTheory arithmeticTheory bitTheory
+Theory numposrep[bare]
+Ancestors
+  list rich_list logroot arithmetic bit
+Libs
+  HolKernel boolLib Parse BasicProvers simpLib boolSimps numLib
+  TotalDefn metisLib
 
 val ARITH_ss = numSimps.ARITH_ss
-
-val _ = new_theory "numposrep"
 
 val simp = ASM_SIMP_TAC (srw_ss()++ARITH_ss)
 val fs = FULL_SIMP_TAC (srw_ss()++ARITH_ss)
@@ -506,4 +506,3 @@ Proof
   \\ fs[l2n_eq_0, EVERY_GENLIST]
 QED
 
-val _ = export_theory()

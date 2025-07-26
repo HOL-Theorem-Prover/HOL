@@ -15,15 +15,13 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* DATE          : September 15, 1991                                    *)
 (* ===================================================================== *)
-
-open HolKernel Parse boolLib BasicProvers;
-
-open Num_conv mesonLib arithmeticTheory
-     simpLib boolSimps pairTheory pred_setTheory pred_setLib
-     TotalDefn metisLib relationTheory combinTheory quotientLib
-
-local open pairTheory pred_setTheory Datatype OpenTheoryMap basicSizeTheory
-in end;
+Theory list[bare]
+Ancestors
+  arithmetic pair pred_set relation combin basicSize[qualified]
+Libs
+  HolKernel Parse boolLib BasicProvers Num_conv mesonLib simpLib
+  boolSimps pred_setLib TotalDefn metisLib quotientLib
+  Datatype[qualified] OpenTheoryMap[qualified]
 
 val ERR = mk_HOL_ERR "listScript"
 
@@ -46,8 +44,6 @@ val qx_gen_tac = Q.X_GEN_TAC;
 val qxch = Q.X_CHOOSE_THEN;
 fun qxchl [] ttac = ttac
   | qxchl (q::qs) ttac = qxch q (qxchl qs ttac);
-
-val _ = new_theory "list";
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
@@ -5438,5 +5434,3 @@ val _ =
  List.app TotalDefn.export_termsimp
    ["list.list_size_append", "list.list_size_reverse",
     "list.list_size_map", "list.list_size_snoc", "list.list_size_zip"];
-
-val _ = export_theory();

@@ -1,8 +1,11 @@
-open HolKernel Parse boolLib BasicProvers;
+Theory indexedLists[bare]
+Ancestors
+  list rich_list
+Libs
+  HolKernel Parse boolLib BasicProvers TotalDefn simpLib numLib
+  IndDefLib
 
 (* bossLib approximation *)
-open TotalDefn simpLib numLib IndDefLib listTheory rich_listTheory;
-
 fun simp thl = ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
 fun dsimp thl =
   ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss ++ boolSimps.DNF_ss) thl
@@ -16,8 +19,6 @@ fun fs thl = full_simp_tac (srw_ss() ++ numSimps.ARITH_ss) thl;
 val rename1 = Q.RENAME1_TAC
 val qspec_then = Q.SPEC_THEN
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
-
-val _ = new_theory "indexedLists";
 
 Definition MAPi_def[simp,nocompute]:
   (MAPi f [] = []) /\
@@ -414,4 +415,3 @@ val MAP2i_compute = Q.store_thm(
 val _ = computeLib.add_persistent_funs ["MAP2i_compute"]
 val _ = remove_ovl_mapping "MAP2ia" {Name = "MAP2ia", Thy = "indexedLists"}
 
-val _ = export_theory();
