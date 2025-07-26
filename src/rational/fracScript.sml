@@ -5,13 +5,13 @@
  *  Jens Brandt, November 2005
  *
  ***************************************************************************)
+Theory frac
+Ancestors
+  pair arithmetic integer intExtension
+Libs
+  pairSyntax schneiderUtils intLib intSyntax intExtensionLib
 
-open HolKernel boolLib Parse bossLib;
 
-open pairTheory pairSyntax schneiderUtils arithmeticTheory integerTheory
-     intLib intSyntax intExtensionTheory intExtensionLib;
-
-val _ = new_theory "frac";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -1003,4 +1003,3 @@ val FRAC_MUL_SAVE = store_thm(
  * end of theory
  *==========================================================================*)
 
-val _ = export_theory();
