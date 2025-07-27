@@ -4,6 +4,11 @@ hook global BufCreate .*Script\.sml %{
 
 hook global WinSetOption filetype=holscript %{
     require-module hol
+    set buffer indentwidth 2
+
+    hook window ModeChange pop:insert:.* -group hol-trim-indent hol-trim-indent
+    hook window InsertChar .* -group hol-indent hol-indent-on-char
+    hook window InsertChar \n -group hol-indent hol-indent-on-new-line
 }
 
 hook -group holscript-highlight global WinSetOption filetype=holscript %{
@@ -11,7 +16,11 @@ hook -group holscript-highlight global WinSetOption filetype=holscript %{
     hook -once -always window WinSetOption filetype=.* %{ remove-highlighter window/holscript }
 }
 
+
 provide-module hol %{
+
+
+require-module sml
 
 declare-option str holfifo
 
@@ -26,6 +35,7 @@ hol-start: start HOL instance in new terminal window, from HOLDIR' %{
     terminal sh -i -c %sh{
         printf "%s\n\n" "cat > $kak_opt_holfifo & $HOLDIR/bin/hol --zero < $kak_opt_holfifo"
     }
+
     hol-load-deps-all
 }
 
@@ -89,5 +99,80 @@ hol-load-deps-for: load dependencies for all open HOL files' %{
 
 define-command hol-load-deps-current -docstring '
 hol-load-deps-current: load dependencies for current buffer HOL file' %{hol-load-deps-for %val{buffile}}
+
+
+set-face global cheat red,default,red+u
+set-face global binders bright-blue,default,default
+set-face global indrules bright-blue,default,bright-blue+u
+set-face global listsep white,default,default
+
+add-highlighter shared/holsyntax group
+add-highlighter shared/holsyntax/ ref sml
+# custom regex hightlighting must come after ref to override
+add-highlighter shared/holsyntax/ regex '\b(Definition|(Co)?Inductive|Datatype|Theorem|Triviality|End|Termination|Proof|QED|Type|Overload)\b' 0:keyword
+add-highlighter shared/holsyntax/ regex '^\[(~?\w+):\]' 1:indrules
+add-highlighter shared/holsyntax/ regex '\bcheat\b' 0:cheat
+
+add-highlighter shared/newholsyntax regions
+add-highlighter shared/newholsyntax/ region '^(Definition|(Co)?Inductive|Datatype|Theorem|Triviality)' ':\W*$' ref holsyntax
+add-highlighter shared/newholsyntax/ region '^(End|Termination|Proof)' '.' ref holsyntax
+add-highlighter shared/newholsyntax/ region '^\[~?\w+:\]' '.' ref holsyntax
+add-highlighter shared/newholsyntax/ default-region ref quotedhol
+
+add-highlighter shared/quotedhol regions
+# must specify strings and comments before regions to prevent binders escaping
+add-highlighter shared/quotedhol/comment region -recurse '\(\*' '\(\*' '\*\)' fill comment
+add-highlighter shared/quotedhol/string region '"' '"' fill string
+add-highlighter shared/quotedhol/bind region '!|∀|\?|∃|(?<!\\)(?<!/)\\(?!\\)(?!/)|λ' '\.' regions
+add-highlighter shared/quotedhol/bind/ region -recurse '\(\*' '\(\*' '\*\)' fill comment
+add-highlighter shared/quotedhol/bind/code default-region group
+add-highlighter shared/quotedhol/bind/code/ fill binders
+add-highlighter shared/quotedhol/bind/code/ regex '!|∀|\?|∃|\\|λ|\.' 0:operator
+add-highlighter shared/quotedhol/terms default-region group
+add-highlighter shared/quotedhol/terms/ ref sml
+# custom regex hightlighting must come after ref to override
+add-highlighter shared/quotedhol/terms/ regex '`(?!`)|‘|’|``(?!`)|“|”' 0:meta
+add-highlighter shared/quotedhol/terms/ regex '∧|∨|¬|⇒|≤|≥|⇔|≠|∈|∉|∩|∪|⊆|⊂|\b(IN|NOTIN|INTER|UNION|DIFF|SUBSET|PSUBSET|EMPTY)\b' 0:operator
+add-highlighter shared/quotedhol/terms/ regex ';' 0:listsep
+
+add-highlighter shared/holscript regions
+add-highlighter shared/holscript/ region '^Definition.*:\W*$' '^(End|Termination)\W*$' ref newholsyntax
+add-highlighter shared/holscript/ region '^(Datatype|(Co)?Inductive).*:\W*$' '^End\W*$' ref newholsyntax
+add-highlighter shared/holscript/ region '^(Theorem|Triviality).*:\W*$' '^Proof\W*$' ref newholsyntax
+add-highlighter shared/holscript/ region '`(?!`)' '`' ref quotedhol
+add-highlighter shared/holscript/ region '‘' '’' ref quotedhol
+add-highlighter shared/holscript/ region '``(?!`)' '``' ref quotedhol
+add-highlighter shared/holscript/ region '“' '”' ref quotedhol
+add-highlighter shared/holscript/comment region -recurse '\(\*' '\(\*' '\*\)' fill comment
+add-highlighter shared/holscript/code default-region ref holsyntax
+
+
+define-command -hidden hol-trim-indent %{
+    # remove trailing white spaces
+    try %{ execute-keys -draft -itersel x s \h+$ <ret> d }
+}
+
+define-command -hidden hol-indent-on-char %{
+    evaluate-commands -draft -itersel %{
+        # align closer token to its opener when alone on a line
+        try %{ execute-keys -draft <a-h> <a-k> ^\h+[\]\)]$ <ret> m s \A|.\z <ret> 1<a-&> }
+        # align HOL syntax to start
+        try %{ execute-keys -draft <a-h> <a-k> ^\h+(Proof|Termination|QED|End) <ret> x s ^\h+ <ret> d }
+    }
+}
+
+define-command -hidden hol-indent-on-new-line %{
+    evaluate-commands -draft -itersel %{
+        # preserve previous line indent
+        try %{ execute-keys -draft <semicolon> K <a-&> }
+        # filter previous line
+        try %{ execute-keys -draft k : hol-trim-indent <ret> }
+        # indent after lines beginning / ending with opener token
+        try %{ execute-keys -draft k x <a-k> [[\(]\h*$|^(Definition|(Co)?Inductive|Datatype|Theorem|Triviality).*:\W*$|^(Proof|Termination).*$|^\[~?\w+:\].*$ <ret> j <a-gt> }
+        # deindent closer token(s) when after cursor
+        try %{ execute-keys -draft x <a-k> ^\h*[\]\)] <ret> gh / [\]\)] <ret> m <a-S> 1<a-&> }
+    }
+}
+
 
 }
