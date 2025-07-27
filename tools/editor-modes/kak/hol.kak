@@ -1,8 +1,23 @@
+hook global BufCreate .*Script\.sml %{
+    set-option buffer filetype holscript
+}
+
+hook global WinSetOption filetype=holscript %{
+    require-module hol
+}
+
+hook -group holscript-highlight global WinSetOption filetype=holscript %{
+    add-highlighter window/ini ref holscript
+    hook -once -always window WinSetOption filetype=.* %{ remove-highlighter window/holscript }
+}
+
+provide-module hol %{
+
 declare-option str holfifo
 
 define-command hol-start -docstring '
 hol-start: start HOL instance in new terminal window, from HOLDIR' %{
-    hook global BufOpenFile .*\.sml hol-load-deps-current
+    hook global BufOpenFile .*Script\.sml hol-load-deps-current
     evaluate-commands %sh{
         holfifo=$(mktemp -d /tmp/kak-fifo.XXXXXXXX)/fifo
         mkfifo $holfifo
@@ -11,6 +26,7 @@ hol-start: start HOL instance in new terminal window, from HOLDIR' %{
     terminal sh -i -c %sh{
         printf "%s\n\n" "cat > $kak_opt_holfifo & $HOLDIR/bin/hol --zero < $kak_opt_holfifo"
     }
+    hol-load-deps-all
 }
 
 define-command hol-send -docstring '
@@ -60,5 +76,18 @@ hol-load-deps-for: load dependencies for a HOL file' -params 1 %{
     }
 }
 
+define-command hol-load-deps-all -docstring '
+hol-load-deps-for: load dependencies for all open HOL files' %{
+    nop %sh{
+        eval set -- "$kak_quoted_buflist"
+        while [ $# -gt 0 ]; do
+            $HOLDIR/bin/holdeptool.exe $1 | sed 's/.*/qload "&" handle _ => (); /' > "$kak_opt_holfifo"
+            shift
+        done
+    }
+}
+
 define-command hol-load-deps-current -docstring '
 hol-load-deps-current: load dependencies for current buffer HOL file' %{hol-load-deps-for %val{buffile}}
+
+}
