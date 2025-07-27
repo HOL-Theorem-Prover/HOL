@@ -81,6 +81,9 @@ New tools:
   decision procedures for equations of multivariate polynomials of integers, and
   simple equations about divisibility of integers.
 
+- `last_assume_tac` has been added. It is the same as `assume_tac` except it adds
+  the new assumption to the top of the list of assumptions instead of the bottom.
+
 New examples:
 -------------
 
@@ -130,6 +133,9 @@ Incompatibilities:
            valOf $ Parse.grammarDB {thyname="foo"}
 
     where the call may fail if the theory is not present in the hierarchy.
+
+-   `ASSUME_NAMED_TAC` now puts the new named assumption at the top of the assumption list, but below the other named assumptions.
+    Previously, named assumptions were added to the bottom of the assumption list (where they might get in the way).
 
 * * * * *
 

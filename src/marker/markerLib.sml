@@ -361,7 +361,27 @@ val DEST_LABELS_TAC = CONV_TAC DEST_LABELS_CONV THEN RULE_ASSUM_TAC DEST_LABELS
 
 fun MK_LABEL(s, th) = EQ_MP (SYM (SPECL [mk_label_var s, concl th] label_def)) th
 
-fun ASSUME_NAMED_TAC s bth : tactic = ASSUME_TAC (MK_LABEL(s, bth))
+local
+fun splitp p [] = ([], [])
+  | splitp p (x::xs) =
+    if p x then
+      ([], x::xs)
+    else
+      let
+        val (ys, zs) = splitp p xs
+      in
+        (x::ys, zs)
+      end
+in
+fun ASSUME_NAMED_TAC s bth (g as (asl,w)) =
+  let
+    val label_thm = MK_LABEL(s, bth)
+    val (xs,ys) = splitp (not o is_label) (List.rev (asl))
+    val asl' = List.revAppend (ys,(concl label_thm::(List.rev xs)))
+  in
+   ([(asl',w)],(fn resths => PROVE_HYP label_thm (hd resths)))
+  end
+end;
 
 (*---------------------------------------------------------------------------*)
 (* Given an LB encoded label reference, finds a corresponding term in the    *)
