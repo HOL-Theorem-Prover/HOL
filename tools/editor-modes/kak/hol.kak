@@ -33,7 +33,7 @@ hol-start: start HOL instance in new terminal window, from HOLDIR' %{
         printf "set-option current holfifo '%s'" "$holfifo"
     }
     terminal sh -i -c %sh{
-        printf "%s\n\n" "cat > $kak_opt_holfifo & $HOLDIR/bin/hol --zero < $kak_opt_holfifo"
+        printf "%s\n\n" "cat > $kak_opt_holfifo & (tee -i >($HOLDIR/bin/hol --zero)) < $kak_opt_holfifo"
     }
 
     hol-load-deps-all
