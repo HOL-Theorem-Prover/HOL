@@ -406,14 +406,15 @@ structure ToSML = struct
               processList p2 isThy hAttrs thys ls
             end
         in
-          if !bare then () else (setState Open; aux " HolKernel boolLib bossLib Parse");
+          if !bare then () else (setState Open; aux " HolKernel boolLib bossLib Parse holTheory");
           process p elems;
           setState Closed;
           app aux [" val _ = Theory.new_theory ", mlquote (ss name)];
           isTheory := true;
-          if !bare orelse List.null (!grammar) then () else
-            app aux [" val _ = Parse.set_grammar_ancestry [",
-              String.concatWith "," (map (mlquote o ss) (rev (!grammar))), "]"];
+          if !bare then () else let
+            val grammarNames = "hol"::(map ss (rev (!grammar)))
+            in app aux [" val _ = Parse.set_grammar_ancestry [",
+                        String.concatWith "," (map mlquote grammarNames), "]"] end;
           if !opening andalso quietOpen then aux " val _ = HOL_Interactive.end_open()" else ();
           aux ";"
         end
