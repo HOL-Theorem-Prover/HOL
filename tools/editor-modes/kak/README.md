@@ -6,9 +6,9 @@ The plugin only supplies commands with the prefix `hol-`; there are no default k
 
 Before starting a session, you should make sure that `$HOLDIR` is set. You may start a HOL session by running `hol-start`, which will open a new terminal window which `hol.kak` will interface with through its other commands.
 
-Starting a session sets up a hook to load theory dependencies on opening a new file, but does not load dependencies for files you already have open. You can force a load by running `hol-load-deps-current` on your open file.
-
 There is no sanitisation of tactics yet, so sending tactics with dangling infix operators (e.g. `>>`) or mismatched brackets will fail.
+
+Note that you may interrupt HOL with a `SIGINT` by pressing Ctrl+C directly in the terminal in which it is running, rather than through kak.
 
 ## Nix-specific
 
