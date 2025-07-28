@@ -1,4 +1,4 @@
-## `Lib.doc` {#Lib}
+## `Lib` {#Lib}
 
 
 ```
