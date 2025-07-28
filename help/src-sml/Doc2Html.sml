@@ -21,6 +21,32 @@ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
 
 *)
 
+fun get_first f [] = NONE
+  | get_first f (h::t) = case f h of NONE => get_first f t | x => x
+
+fun which arg =
+  let
+    open OS.FileSys Systeml
+    val sepc = if isUnix then #":" else #";"
+    fun check p =
+      let
+        val fname = OS.Path.concat(p, arg)
+      in
+        if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE
+      end
+    fun smash NONE = "" | smash (SOME s) = s
+  in
+    case OS.Process.getEnv "PATH" of
+        SOME path =>
+        let
+          val paths = (if isUnix then [] else ["."]) @
+                      String.fields (fn c => c = sepc) path
+        in
+          smash (get_first check paths)
+        end
+    | NONE => if isUnix then "" else smash (check ".")
+  end
+
 
 fun trans pdexe htmldir docdir docfile = let
   val docbase = OS.Path.base docfile
@@ -50,24 +76,55 @@ in
   loop []
 end
 
-fun docdir_to_htmldir pdexe docdir htmldir =
- let open OS.FileSys
-     val docfiles = find_mdfiles docdir
-     val (tick, finish) = Flash.initialise ("Directory "^docdir^": ",
-                                            length docfiles)
- in
-   List.app (fn fname => (trans pdexe htmldir docdir fname; tick())) docfiles;
-   finish();
-   OS.Process.exit OS.Process.success
- end
+fun docdir_to_htmldir pdexe docdir htmldir = let
+  open OS.FileSys
+  val docfiles = find_mdfiles docdir
+in
+  case which "parallel" of
+      "" =>
+      let
+        val (tick, finish) = Flash.initialise ("Directory "^docdir^": ",
+                                               length docfiles)
+      in
+        List.app (fn fname => (trans pdexe htmldir docdir fname; tick()))
+                 docfiles;
+        finish();
+        OS.Process.exit OS.Process.success
+      end
+    | s =>
+      let
+        val tmp = OS.FileSys.tmpName ()
+        val ostrm = TextIO.openOut tmp
+        fun loop lines =
+            case lines of
+                [] => TextIO.closeOut ostrm
+              | h::t => (TextIO.output(ostrm, (docdir ++ h) ^ "\n"); loop t)
+        val _ = loop docfiles
+        val command =
+          "parallel --halt now,fail=1 --eta --arg-file " ^ tmp ^
+          " pandoc {} -s -o " ^ htmldir ^ "/{/.}.html --lua-filter=" ^
+          (HOLDIR ++ "help/src-sml/internal-to-external.lua")
+      in
+        print (command ^ "\n");
+        OS.Process.exit (OS.Process.system command)
+      end
+end
 
-fun main () =
-  case CommandLine.arguments ()
-     of [pandoc_exe,docdir,htmldir] =>
-        docdir_to_htmldir pandoc_exe docdir htmldir
-      | otherwise =>
-        print ("Usage:\n  " ^
-               CommandLine.name() ^
-               " <path-to-pandoc-executable> <docdir> <htmldir>\n")
+fun main () = let
+  val pdexe =
+      case which "pandoc" of
+          "" => (TextIO.output(TextIO.stdErr,
+                               "Can't find pandoc in PATH; doing nothing\n");
+                 OS.Process.exit OS.Process.success)
+        | s => s
+in
+  case CommandLine.arguments () of
+      [docdir,htmldir] =>
+        (docdir_to_htmldir pdexe docdir htmldir
+          handle e => die ("docdir exception: " ^ General.exnMessage e))
+    | otherwise =>
+      print ("Usage:\n  " ^
+             CommandLine.name() ^ " <docdir> <htmldir>\n")
+end
 
 end;

@@ -10,17 +10,11 @@ Helpd=../../help
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
         ../LaTeX/ref-macros.tex
 
-reference.pdf: reference.tex entries.tex entries-intro.tex $(OTHER)
-	latexmk -pdf reference
-
-mdref.pdf: prolog.md entries.md $(OTHER)
+reference.pdf: prolog.md entries.md $(OTHER)
 	cat prolog.md entries.md | pandoc -V documentclass=book -o $@
 
-entries.md: $(Helpd)/src-sml/Md2TeX.exe $(wildcard $(Helpd)/markdown/*.md)
-	$(Helpd)/src-sml/Md2TeX.exe ../../help/markdown > $@
-
-entries.tex: $(Helpd)/src-sml/Doc2Tex.exe $(wildcard $(Helpd)/Docfiles/*.doc)
-	$(Helpd)/src-sml/Doc2Tex.exe ${Helpd}/Docfiles entries.tex
+entries.md: $(Helpd)/src-sml/Md2TeX.exe $(wildcard $(Helpd)/Docfiles/*.md)
+	$(Helpd)/src-sml/Md2TeX.exe ../../help/Docfiles > $@
 
 EXTRA_CLEANS = $(patsubst %,reference.%,aux fdb_latexmk fls idx ilg ind log out pdf toc) title.aux entries.aux preface.aux docfiles docfiles0
 

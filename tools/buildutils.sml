@@ -794,7 +794,10 @@ val ML_SYSNAME = Systeml.ML_SYSNAME
 
 fun mosml_compilehelp () = ignore (SYSTEML [HOLMAKE, "all"])
 
-fun build_adoc_files () = let
+fun build_adoc_files () = true
+  (* for the moment, use markdown files as our "ASCII" documentation *)
+
+(* old code: let
   val docdirs = let
     val instr = TextIO.openIn(fullPath [HOLDIR, "tools",
                                         "documentation-directories"])
@@ -814,7 +817,7 @@ fun build_adoc_files () = let
   end
 in
   List.all make_adocs docdirs
-end
+end *)
 
 fun build_help graph =
  let val dir = OS.Path.concat(OS.Path.concat (HOLDIR,"help"),"src-sml")

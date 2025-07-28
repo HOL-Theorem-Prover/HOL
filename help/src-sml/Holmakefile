@@ -6,8 +6,6 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 all: makebase.exe Doc2Html.exe Doc2Tex.exe Doc2Txt.exe Doc2markdown.exe
 
-makebase.exe : runmakebase.uo MyDatabase.uo Htmlsigs.uo Parser.grm.uo Parsspec.uo Printbase.uo makebase.uo
-	$(HOLMOSMLC) -I $(MLYACCLIB) $(MLYACCLIB_UIS) -o makebase.exe MyDatabase.uo runmakebase.uo
 ifdef POLY
 Doc2markdown.exe: poly-Doc2Md.ML Doc2markdown.uo ParseDoc.uo Flash.uo
 	polyc -o $@ $<
@@ -18,7 +16,16 @@ Doc2Tex.exe: poly-Doc2Tex.ML Doc2Tex.uo ParseDoc.uo Flash.uo
 Doc2Html.exe: poly-Doc2Html.ML Doc2Html.uo Flash.uo
 	polyc -o $@ $<
 
+makebase.exe: poly-makebase.ML makebase.sml
+	polyc -o $@ $<
+
 else
+makebase.uo: makebase.sml MyDatabase.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo
+	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -c MyDatabase.ui $<
+
+makebase.exe : runmakebase.uo MyDatabase.uo Htmlsigs.uo Parser.grm.uo Parsspec.uo Printbase.uo makebase.uo
+	$(HOLMOSMLC) -I $(MLYACCLIB) $(MLYACCLIB_UIS) -o makebase.exe MyDatabase.uo runmakebase.uo
+
 Doc2markdown.exe: runDoc2Md.uo Doc2markdown.uo ParseDoc.uo Flash.uo
 	$(HOLMOSMLC) -o $@ $<
 
@@ -72,9 +79,6 @@ Parser.grm.uo: Parser.grm.sml Parser.grm-sig.ui
 
 Lexer.lex.ui Lexer.lex.uo: Lexer.lex.sml Parser.grm-sig.ui
 	$(HOLMOSMLC) -toplevel -c Parser.grm-sig.ui $<
-
-makebase.uo: makebase.sml MyDatabase.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo
-	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -c MyDatabase.ui $<
 
 Printbase.ui: Printbase.sig MyDatabase.ui
 	$(MOSMLC) -c MyDatabase.ui $<
