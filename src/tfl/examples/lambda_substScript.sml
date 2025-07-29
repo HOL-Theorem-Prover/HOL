@@ -3,7 +3,7 @@
 (*===========================================================================*)
 Theory lambda_subst
 Ancestors
-  prim_rec arithmetic pred_set
+  string prim_rec arithmetic pred_set
 Libs
   stringLib pred_setLib pairLib
 
@@ -185,4 +185,3 @@ Theorem subst_ind = ind;
 val th =
   EVAL “["z" |-> Var"a"]
         (Abs "a'" (Abs "a" (Comb (Var "a'") (Var "z"))))”;
-

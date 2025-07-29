@@ -3,7 +3,7 @@
 (*===========================================================================*)
 Theory termination_prover
 Ancestors
-  list arithmetic numpair[qualified] nlist[qualified]
+  words list arithmetic numpair[qualified] nlist[qualified]
   bit[qualified] comparison[qualified]
 Libs
   Defn TotalDefn stringLib[qualified] wordsLib[qualified]
@@ -330,4 +330,3 @@ Definition sh_based_set_def:
   sh_based_set (StructB sbs) b' =
      StructB $ MAP2 sh_based_set sbs (REPLICATE (LENGTH sbs) b')
 End
-
