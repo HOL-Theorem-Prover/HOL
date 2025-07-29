@@ -1,14 +1,12 @@
-## `PURE_CASE_TAC` {#BasicProvers.PURE_CASE_TAC}
+## `PURE_CASE_TAC`
 
-
+``` hol4
+BasicProvers.PURE_CASE_TAC : tactic
 ```
-PURE_CASE_TAC : tactic
-```
 
-
+------------------------------------------------------------------------
 
 Case splits on a term `t` that features in the goal as `case t of ...`.
-
 
 `BasicProvers.PURE_CASE_TAC` searches the goal for an instance of
 `case t of ...`, and performs a `` BasicProvers.Cases_on `t` ``.
@@ -22,4 +20,3 @@ the typebase and all the free variables of `t` are free in the goal.
 ### See also
 
 [`BasicProvers.CASE_TAC`](#BasicProvers.CASE_TAC)
-

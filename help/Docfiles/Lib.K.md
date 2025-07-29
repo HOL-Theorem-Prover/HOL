@@ -1,11 +1,10 @@
-## `K` {#Lib.K}
+## `K`
 
-
+``` hol4
+Lib.K : 'a -> 'b -> 'a
 ```
-K : 'a -> 'b -> 'a
-```
 
-
+------------------------------------------------------------------------
 
 Forms a constant function: `K x y` = `x`.
 
@@ -15,5 +14,5 @@ Never fails.
 
 ### See also
 
-[`Lib.##`](#Lib..IAD), [`Lib.C`](#Lib.C), [`Lib.I`](#Lib.I), [`Lib.S`](#Lib.S), [`Lib.W`](#Lib.W)
-
+[`Lib.##`](#Lib..IAD), [`Lib.C`](#Lib.C), [`Lib.I`](#Lib.I),
+[`Lib.S`](#Lib.S), [`Lib.W`](#Lib.W)

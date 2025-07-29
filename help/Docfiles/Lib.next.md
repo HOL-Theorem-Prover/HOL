@@ -1,14 +1,12 @@
-## `next` {#Lib.next}
+## `next`
 
-
+``` hol4
+Lib.next : ('a,'b) istream -> ('a,'b) istream
 ```
-next : ('a,'b) istream -> ('a,'b) istream
-```
 
-
+------------------------------------------------------------------------
 
 Move to the next element in the stream.
-
 
 An application `next istrm` moves to the next element in the stream.
 
@@ -19,15 +17,13 @@ the current state.
 
 ### Example
 
-    
-    - val istrm = mk_istream (fn x => x+1) 0 (concat "gsym" o int_to_string);
-    > val it = <istream> : (int, string) istream
-    
-    - next istrm;
-    > val it = <istream> : (int, string) istream
-    
+``` hol4
+- val istrm = mk_istream (fn x => x+1) 0 (concat "gsym" o int_to_string);
+> val it = <istream> : (int, string) istream
 
-
+- next istrm;
+> val it = <istream> : (int, string) istream
+```
 
 ### Comments
 
@@ -35,5 +31,5 @@ Perhaps the type of `next` should be `('a,'b) istream -> unit`.
 
 ### See also
 
-[`Lib.mk_istream`](#Lib.mk_istream), [`Lib.state`](#Lib.state), [`Lib.reset`](#Lib.reset)
-
+[`Lib.mk_istream`](#Lib.mk_istream), [`Lib.state`](#Lib.state),
+[`Lib.reset`](#Lib.reset)

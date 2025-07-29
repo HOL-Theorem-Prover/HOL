@@ -1,14 +1,12 @@
-## `commafy` {#Lib.commafy}
+## `commafy`
 
-
+``` hol4
+Lib.commafy : string list -> string list
 ```
-commafy : string list -> string list
-```
 
-
+------------------------------------------------------------------------
 
 Add commas into a list of strings.
-
 
 An application `commafy [s1,...,sn]` yields `[s1, ",", ..., ",", sn]`.
 
@@ -18,18 +16,16 @@ Never fails.
 
 ### Example
 
-    
-    - commafy ["donkey", "mule", "horse", "camel", "llama"];
-    > val it =
-        ["donkey", ", ", "mule", ", ", "horse", ", ", "camel", ", ", "llama"] :
-      string list
-    
-    - print (String.concat it ^ "\n");
-    donkey, mule, horse, camel, llama
-    > val it = () : unit
-    
-    - commafy ["foo"];
-    > val it = ["foo"] : string list
-    
+``` hol4
+- commafy ["donkey", "mule", "horse", "camel", "llama"];
+> val it =
+    ["donkey", ", ", "mule", ", ", "horse", ", ", "camel", ", ", "llama"] :
+  string list
 
+- print (String.concat it ^ "\n");
+donkey, mule, horse, camel, llama
+> val it = () : unit
 
+- commafy ["foo"];
+> val it = ["foo"] : string list
+```

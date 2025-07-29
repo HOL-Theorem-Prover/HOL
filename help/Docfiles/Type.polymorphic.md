@@ -1,14 +1,12 @@
-## `polymorphic` {#Type.polymorphic}
+## `polymorphic`
 
-
+``` hol4
+Type.polymorphic : hol_type -> bool
 ```
-polymorphic : hol_type -> bool
-```
 
-
+------------------------------------------------------------------------
 
 Checks if there is a type variable in a type.
-
 
 An invocation `polymorphic ty` checks to see if `ty` has an occurrence
 of any type variable. It is equivalent in functionality to
@@ -21,18 +19,18 @@ Never fails.
 
 ### Example
 
-    
-    - polymorphic (bool --> alpha --> ind);
-    > val it = true : bool
-    
-
-
+``` hol4
+- polymorphic (bool --> alpha --> ind);
+> val it = true : bool
+```
 
 ### Comments
 
-`polymorphic` is also equivalent to `exists_tyvar (K true)`, and no faster.
+`polymorphic` is also equivalent to `exists_tyvar (K true)`, and no
+faster.
 
 ### See also
 
-[`Type.type_vars`](#Type.type_vars), [`Type.type_var_in`](#Type.type_var_in), [`Type.exists_tyvar`](#Type.exists_tyvar)
-
+[`Type.type_vars`](#Type.type_vars),
+[`Type.type_var_in`](#Type.type_var_in),
+[`Type.exists_tyvar`](#Type.exists_tyvar)

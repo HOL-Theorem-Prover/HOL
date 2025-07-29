@@ -1,22 +1,19 @@
-## `UNCURRY_CONV` {#PairRules.UNCURRY_CONV}
+## `UNCURRY_CONV`
 
-
+``` hol4
+PairRules.UNCURRY_CONV : conv
 ```
-UNCURRY_CONV : conv
-```
 
-
+------------------------------------------------------------------------
 
 Uncurrys an application of an abstraction.
 
 ### Example
 
-    
-    - UNCURRY_CONV (Term `(\x y. x + y) 1 2`);
-    > val it = |- (\x y. x + y) 1 2 = (\(x,y). x + y) (1,2) : thm
-    
-
-
+``` hol4
+- UNCURRY_CONV (Term `(\x y. x + y) 1 2`);
+> val it = |- (\x y. x + y) 1 2 = (\(x,y). x + y) (1,2) : thm
+```
 
 ### Failure
 
@@ -26,4 +23,3 @@ arguments
 ### See also
 
 [`PairRules.CURRY_CONV`](#PairRules.CURRY_CONV)
-

@@ -1,17 +1,15 @@
-## `QCONV` {#Conv.QCONV}
+## `QCONV`
 
-
+``` hol4
+Conv.QCONV : conv -> conv
 ```
-QCONV : conv -> conv
-```
 
-
+------------------------------------------------------------------------
 
 Stops a conversion raising the `UNCHANGED` exception.
 
-
-If conversion `c` applied to term `t` raises the `UNCHANGED`
-exception, then `QCONV c t` instead returns the theorem `|- t = t`.
+If conversion `c` applied to term `t` raises the `UNCHANGED` exception,
+then `QCONV c t` instead returns the theorem `|- t = t`.
 
 ### Failure
 
@@ -19,5 +17,6 @@ exception, then `QCONV c t` instead returns the theorem `|- t = t`.
 
 ### See also
 
-[`Conv.UNCHANGED`](#Conv.UNCHANGED), [`Conv.CHANGED_CONV`](#Conv.CHANGED_CONV), [`Conv.QCHANGED_CONV`](#Conv.QCHANGED_CONV)
-
+[`Conv.UNCHANGED`](#Conv.UNCHANGED),
+[`Conv.CHANGED_CONV`](#Conv.CHANGED_CONV),
+[`Conv.QCHANGED_CONV`](#Conv.QCHANGED_CONV)

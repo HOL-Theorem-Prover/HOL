@@ -1,14 +1,12 @@
-## `zip` {#Lib.zip}
+## `zip`
 
-
+``` hol4
+Lib.zip : 'a list -> 'b list -> ('a * 'b) list
 ```
-zip : 'a list -> 'b list -> ('a * 'b) list
-```
 
-
+------------------------------------------------------------------------
 
 Transforms a pair of lists into a list of pairs.
-
 
 `zip [x1,...,xn] [y1,...,yn]` returns `[(x1,y1),...,(xn,yn)]`.
 
@@ -24,5 +22,5 @@ curried version of `combine`
 
 ### See also
 
-[`Lib.combine`](#Lib.combine), [`Lib.unzip`](#Lib.unzip), [`Lib.split`](#Lib.split)
-
+[`Lib.combine`](#Lib.combine), [`Lib.unzip`](#Lib.unzip),
+[`Lib.split`](#Lib.split)

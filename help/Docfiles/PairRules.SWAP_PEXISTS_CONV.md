@@ -1,22 +1,19 @@
-## `SWAP_PEXISTS_CONV` {#PairRules.SWAP_PEXISTS_CONV}
+## `SWAP_PEXISTS_CONV`
 
-
+``` hol4
+PairRules.SWAP_PEXISTS_CONV : conv
 ```
-SWAP_PEXISTS_CONV : conv
-```
 
-
+------------------------------------------------------------------------
 
 Interchanges the order of two existentially quantified pairs.
 
-
 When applied to a term argument of the form `?p q. t`, the conversion
 `SWAP_PEXISTS_CONV` returns the theorem:
-    
-       |- (?p q. t) = (?q t. t)
-    
 
-
+``` hol4
+   |- (?p q. t) = (?q t. t)
+```
 
 ### Failure
 
@@ -25,5 +22,5 @@ When applied to a term argument of the form `?p q. t`, the conversion
 
 ### See also
 
-[`Conv.SWAP_EXISTS_CONV`](#Conv.SWAP_EXISTS_CONV), [`PairRules.SWAP_PFORALL_CONV`](#PairRules.SWAP_PFORALL_CONV)
-
+[`Conv.SWAP_EXISTS_CONV`](#Conv.SWAP_EXISTS_CONV),
+[`PairRules.SWAP_PFORALL_CONV`](#PairRules.SWAP_PFORALL_CONV)

@@ -1,14 +1,12 @@
-## `say` {#Lib.say}
+## `say`
 
-
+``` hol4
+Lib.say : string -> unit
 ```
-say : string -> unit
-```
 
-
+------------------------------------------------------------------------
 
 Print a string.
-
 
 An application `say s` prints the string `s` on the standard output.
 
@@ -18,5 +16,5 @@ Never fails.
 
 ### Comments
 
-The Standard ML Basis Library structure `TextIO` offers
-related functions.
+The Standard ML Basis Library structure `TextIO` offers related
+functions.

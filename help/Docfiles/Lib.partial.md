@@ -1,14 +1,12 @@
-## `partial` {#Lib.partial}
+## `partial`
 
-
+``` hol4
+Lib.partial : exn -> ('a -> 'b option) -> 'a -> 'b
 ```
-partial : exn -> ('a -> 'b option) -> 'a -> 'b
-```
 
-
+------------------------------------------------------------------------
 
 Converts a total function to a partial function.
-
 
 In ML, there are two main ways for a function to signal that it has been
 called on an element outside of its intended domain of application:
@@ -25,25 +23,23 @@ to `f`.
 
 ### Failure
 
-When application of the second argument to the third argument returns `NONE`.
+When application of the second argument to the third argument returns
+`NONE`.
 
 ### Example
 
-    
-    - Int.fromString "foo";
-    > val it = NONE : int option
-    
-    - partial (Fail "not convertable") Int.fromString "foo";
-    ! Uncaught exception:
-    ! Fail  "not convertable"
-    
-    - (total o partial (Fail "not convertable")) Int.fromString "foo";
-    > val it = NONE : int option
-    
+``` hol4
+- Int.fromString "foo";
+> val it = NONE : int option
 
+- partial (Fail "not convertable") Int.fromString "foo";
+! Uncaught exception:
+! Fail  "not convertable"
 
+- (total o partial (Fail "not convertable")) Int.fromString "foo";
+> val it = NONE : int option
+```
 
 ### See also
 
 [`Lib.total`](#Lib.total)
-

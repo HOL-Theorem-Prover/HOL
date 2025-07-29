@@ -1,14 +1,12 @@
-## `FULL_GEN_TYVARIFY` {#Drule.FULL_GEN_TYVARIFY}
+## `FULL_GEN_TYVARIFY`
 
-
+``` hol4
+Drule.FULL_GEN_TYVARIFY : thm -> thm
 ```
-FULL_GEN_TYVARIFY : thm -> thm
-```
 
+------------------------------------------------------------------------
 
-
-Replace a theorem’s type variables with fresh versions
-
+Replace a theorem's type variables with fresh versions
 
 A call to `FULL_GEN_TYVARIFTY th` replaces (with `INST_TYPE`) the type
 variables occurring in theorem `th`. The new type variables are
@@ -23,10 +21,10 @@ Never fails.
 
 The derived rule `GEN_TYVARIFY` will only instantiate those type
 variables that are exclusively found in the conclusion. This is
-reasonable when handling theorems derived from a tactic goal’s
+reasonable when handling theorems derived from a tactic goal's
 assumptions.
 
 ### See also
 
-[`Drule.GEN_TYVARIFY`](#Drule.GEN_TYVARIFY), [`Thm.INST_TYPE`](#Thm.INST_TYPE)
-
+[`Drule.GEN_TYVARIFY`](#Drule.GEN_TYVARIFY),
+[`Thm.INST_TYPE`](#Thm.INST_TYPE)

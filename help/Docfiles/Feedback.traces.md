@@ -1,15 +1,13 @@
-## `traces` {#Feedback.traces}
+## `traces`
 
-
-```
-traces : unit -> {name : string, max : int, aliases : string list,
+``` hol4
+Feedback.traces : unit -> {name : string, max : int, aliases : string list,
                   trace_level : int, default : int} list
 ```
 
-
+------------------------------------------------------------------------
 
 Returns a list of registered tracing variables.
-
 
 The function `traces` is part of the interface to a collection of
 variables that control the verboseness of various tools within the
@@ -23,5 +21,8 @@ Never fails.
 
 ### See also
 
-[`Feedback.register_trace`](#Feedback.register_trace), [`Feedback.set_trace`](#Feedback.set_trace), [`Feedback.reset_trace`](#Feedback.reset_trace), [`Feedback.reset_traces`](#Feedback.reset_traces), [`Feedback.trace`](#Feedback.trace)
-
+[`Feedback.register_trace`](#Feedback.register_trace),
+[`Feedback.set_trace`](#Feedback.set_trace),
+[`Feedback.reset_trace`](#Feedback.reset_trace),
+[`Feedback.reset_traces`](#Feedback.reset_traces),
+[`Feedback.trace`](#Feedback.trace)

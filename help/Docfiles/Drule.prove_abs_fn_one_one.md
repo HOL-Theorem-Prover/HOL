@@ -1,28 +1,27 @@
-## `prove_abs_fn_one_one` {#Drule.prove_abs_fn_one_one}
+## `prove_abs_fn_one_one`
 
-
+``` hol4
+Drule.prove_abs_fn_one_one : thm -> thm
 ```
-prove_abs_fn_one_one : thm -> thm
-```
 
-
+------------------------------------------------------------------------
 
 Proves that a type abstraction function is one-to-one (injective).
 
-
 If `th` is a theorem of the form returned by the function
 `define_new_type_bijections`:
-    
-       |- (!a. abs(rep a) = a) /\ (!r. P r = (rep(abs r) = r))
-    
+
+``` hol4
+   |- (!a. abs(rep a) = a) /\ (!r. P r = (rep(abs r) = r))
+```
+
 then `prove_abs_fn_one_one th` proves from this theorem that the
 function `abs` is one-to-one for values that satisfy `P`, returning the
 theorem:
-    
-       |- !r r'. P r ==> P r' ==> ((abs r = abs r') = (r = r'))
-    
 
-
+``` hol4
+   |- !r r'. P r ==> P r' ==> ((abs r = abs r') = (r = r'))
+```
 
 ### Failure
 
@@ -30,5 +29,8 @@ Fails if applied to a theorem not of the form shown above.
 
 ### See also
 
-[`Definition.new_type_definition`](#Definition.new_type_definition), [`Drule.define_new_type_bijections`](#Drule.define_new_type_bijections), [`Drule.prove_abs_fn_onto`](#Drule.prove_abs_fn_onto), [`Drule.prove_rep_fn_one_one`](#Drule.prove_rep_fn_one_one), [`Drule.prove_rep_fn_onto`](#Drule.prove_rep_fn_onto)
-
+[`Definition.new_type_definition`](#Definition.new_type_definition),
+[`Drule.define_new_type_bijections`](#Drule.define_new_type_bijections),
+[`Drule.prove_abs_fn_onto`](#Drule.prove_abs_fn_onto),
+[`Drule.prove_rep_fn_one_one`](#Drule.prove_rep_fn_one_one),
+[`Drule.prove_rep_fn_onto`](#Drule.prove_rep_fn_onto)

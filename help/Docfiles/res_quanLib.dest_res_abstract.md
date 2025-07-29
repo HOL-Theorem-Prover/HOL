@@ -1,20 +1,20 @@
-## `dest_res_abstract` {#res_quanLib.dest_res_abstract}
+## `dest_res_abstract`
 
-
+``` hol4
+res_quanLib.dest_res_abstract : term -> (term # term # term)
 ```
-dest_res_abstract : term -> (term # term # term)
-```
 
+------------------------------------------------------------------------
 
-
-Breaks apart a restricted abstract term into
-the quantified variable, predicate and body.
-
+Breaks apart a restricted abstract term into the quantified variable,
+predicate and body.
 
 `dest_res_abstract` is a term destructor for restricted abstraction:
-    
-       dest_res_abstract "\var::P. t"
-    
+
+``` hol4
+   dest_res_abstract "\var::P. t"
+```
+
 returns `("var","P","t")`.
 
 ### Failure
@@ -24,5 +24,5 @@ abstraction.
 
 ### See also
 
-[`res_quanLib.mk_res_abstract`](#res_quanLib.mk_res_abstract), [`res_quanLib.is_res_abstract`](#res_quanLib.is_res_abstract)
-
+[`res_quanLib.mk_res_abstract`](#res_quanLib.mk_res_abstract),
+[`res_quanLib.is_res_abstract`](#res_quanLib.is_res_abstract)

@@ -1,14 +1,12 @@
-## `set_trace` {#Feedback.set_trace}
+## `set_trace`
 
-
+``` hol4
+Feedback.set_trace : string -> int -> unit
 ```
-set_trace : string -> int -> unit
-```
 
-
+------------------------------------------------------------------------
 
 Set a tracing level for a registered trace.
-
 
 Invoking `set_trace n i` sets the level of the tracing mechanism
 registered under `n` to be `i`. These settings control the verboseness
@@ -23,25 +21,27 @@ in its own way.
 ### Failure
 
 A call to `set_trace n i` fails if `n` has not previously been
-registered via `register_trace`.  It also fails if `i` is less than
-zero, or if it is greater than the trace’s specified maximum value.
+registered via `register_trace`. It also fails if `i` is less than zero,
+or if it is greater than the trace's specified maximum value.
 
 ### Example
 
-    
-       - set_trace "Rewrite" 1;
-    
-       - PURE_REWRITE_CONV [AND_CLAUSES] (Term `x /\ T /\ y`);
-    
-       <<HOL message: Rewrite:
-       |- T /\ y = y.>>
-    
-       > val it = |- x /\ T /\ y = x /\ y : thm
-    
+``` hol4
+   - set_trace "Rewrite" 1;
 
+   - PURE_REWRITE_CONV [AND_CLAUSES] (Term `x /\ T /\ y`);
 
+   <<HOL message: Rewrite:
+   |- T /\ y = y.>>
+
+   > val it = |- x /\ T /\ y = x /\ y : thm
+```
 
 ### See also
 
-[`Feedback`](#Feedback), [`Feedback.register_trace`](#Feedback.register_trace), [`Feedback.reset_trace`](#Feedback.reset_trace), [`Feedback.reset_traces`](#Feedback.reset_traces), [`Feedback.trace`](#Feedback.trace), [`Feedback.traces`](#Feedback.traces)
-
+[`Feedback`](#Feedback),
+[`Feedback.register_trace`](#Feedback.register_trace),
+[`Feedback.reset_trace`](#Feedback.reset_trace),
+[`Feedback.reset_traces`](#Feedback.reset_traces),
+[`Feedback.trace`](#Feedback.trace),
+[`Feedback.traces`](#Feedback.traces)

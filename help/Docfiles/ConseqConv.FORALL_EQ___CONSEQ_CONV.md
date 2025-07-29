@@ -1,11 +1,10 @@
-## `FORALL_EQ___CONSEQ_CONV` {#ConseqConv.FORALL_EQ___CONSEQ_CONV}
+## `FORALL_EQ___CONSEQ_CONV`
 
-
+``` hol4
+ConseqConv.FORALL_EQ___CONSEQ_CONV : conseq_conv
 ```
-FORALL_EQ___CONSEQ_CONV : conseq_conv
-```
 
-
+------------------------------------------------------------------------
 
 Given a term of the form `(!x. P x) = (!x. Q x)` this consequence
 conversion returns the theorem
@@ -14,4 +13,3 @@ conversion returns the theorem
 ### See also
 
 [`ConseqConv.conseq_conv`](#ConseqConv.conseq_conv)
-

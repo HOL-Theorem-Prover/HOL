@@ -1,17 +1,15 @@
-## `define_abbreviation` {#ThmAttribute.define_abbreviation}
+## `define_abbreviation`
 
-
-```
-define_abbreviation : {
+``` hol4
+ThmAttribute.define_abbreviation : {
   abbrev : string,
   expansion : (string * string list) list
 } -> unit
 ```
 
-
+------------------------------------------------------------------------
 
 Defines an abbreviation expanding to multiple attributes
-
 
 A call to `define_abbreviation{abbrev=a,expansion=e}` modifies the
 handling of theorem attributes so that when attributes attached to
@@ -32,4 +30,3 @@ convenience.
 ### See also
 
 [`ThmAttribute.register_attribute`](#ThmAttribute.register_attribute)
-

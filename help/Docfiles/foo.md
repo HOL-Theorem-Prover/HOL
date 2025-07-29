@@ -1,3 +1,5 @@
-## Section with funky label {#sec:..foo}
+## Section with funky label
 
 See also this [documentation](#sec:..foo).
+
+------------------------------------------------------------------------

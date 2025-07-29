@@ -1,11 +1,10 @@
-## `strcat` {#Lib.strcat}
+## `strcat`
 
-
+``` hol4
+Lib.strcat : string -> string -> string
 ```
-strcat : string -> string -> string
-```
 
-
+------------------------------------------------------------------------
 
 Concatenates two ML strings.
 
@@ -15,13 +14,13 @@ Never fails.
 
 ### Example
 
-    
-    - strcat "1" "";
-    > val it = "1" : string
-    
-    - strcat "hello" "world";
-    > val it = "helloworld" : string
-    
-    - strcat "hello" (strcat " " "world");
-    > val it = "hello world" : string
-    
+``` hol4
+- strcat "1" "";
+> val it = "1" : string
+
+- strcat "hello" "world";
+> val it = "helloworld" : string
+
+- strcat "hello" (strcat " " "world");
+> val it = "hello world" : string
+```

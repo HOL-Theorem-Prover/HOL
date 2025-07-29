@@ -1,14 +1,12 @@
-## `dest_imp` {#boolSyntax.dest_imp}
+## `dest_imp`
 
-
+``` hol4
+boolSyntax.dest_imp : term -> term * term
 ```
-dest_imp : term -> term * term
-```
 
-
+------------------------------------------------------------------------
 
 Breaks an implication or negation into antecedent and consequent.
-
 
 `dest_imp` is a term destructor for implications. It treats negations as
 implications with consequent `F`. Thus, if `M` is a term with the form
@@ -27,5 +25,9 @@ then use `dest_imp_only`.
 
 ### See also
 
-[`boolSyntax.mk_imp`](#boolSyntax.mk_imp), [`boolSyntax.dest_imp_only`](#boolSyntax.dest_imp_only), [`boolSyntax.is_imp`](#boolSyntax.is_imp), [`boolSyntax.is_imp_only`](#boolSyntax.is_imp_only), [`boolSyntax.strip_imp`](#boolSyntax.strip_imp), [`boolSyntax.list_mk_imp`](#boolSyntax.list_mk_imp)
-
+[`boolSyntax.mk_imp`](#boolSyntax.mk_imp),
+[`boolSyntax.dest_imp_only`](#boolSyntax.dest_imp_only),
+[`boolSyntax.is_imp`](#boolSyntax.is_imp),
+[`boolSyntax.is_imp_only`](#boolSyntax.is_imp_only),
+[`boolSyntax.strip_imp`](#boolSyntax.strip_imp),
+[`boolSyntax.list_mk_imp`](#boolSyntax.list_mk_imp)

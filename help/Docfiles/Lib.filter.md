@@ -1,17 +1,15 @@
-## `filter` {#Lib.filter}
+## `filter`
 
-
+``` hol4
+Lib.filter : ('a -> bool) -> 'a list -> 'a list
 ```
-filter : ('a -> bool) -> 'a list -> 'a list
-```
 
-
+------------------------------------------------------------------------
 
 Filters a list to the sublist of elements satisfying a predicate.
 
-
-`filter P l` applies `P` to every element of `l`, returning a list of those
-that satisfy `P`, in the order they appeared in the original list.
+`filter P l` applies `P` to every element of `l`, returning a list of
+those that satisfy `P`, in the order they appeared in the original list.
 
 ### Failure
 
@@ -24,4 +22,3 @@ Identical to `List.filter` from the Standard ML Basis Library.
 ### See also
 
 [`Lib.mapfilter`](#Lib.mapfilter), [`Lib.partition`](#Lib.partition)
-

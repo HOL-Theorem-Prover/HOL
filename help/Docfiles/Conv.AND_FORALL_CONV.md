@@ -1,22 +1,19 @@
-## `AND_FORALL_CONV` {#Conv.AND_FORALL_CONV}
+## `AND_FORALL_CONV`
 
-
+``` hol4
+Conv.AND_FORALL_CONV : conv
 ```
-AND_FORALL_CONV : conv
-```
 
-
+------------------------------------------------------------------------
 
 Moves a universal quantification outwards through a conjunction.
 
-
 When applied to a term of the form `(!x.P) /\ (!x.Q)`, the conversion
 `AND_FORALL_CONV` returns the theorem:
-    
-       |- (!x.P) /\ (!x.Q) = (!x. P /\ Q)
-    
 
-
+``` hol4
+   |- (!x.P) /\ (!x.Q) = (!x. P /\ Q)
+```
 
 ### Failure
 
@@ -28,5 +25,6 @@ It may be easier to use higher order rewriting with `FORALL_AND_THM`.
 
 ### See also
 
-[`Conv.FORALL_AND_CONV`](#Conv.FORALL_AND_CONV), [`Conv.LEFT_AND_FORALL_CONV`](#Conv.LEFT_AND_FORALL_CONV), [`Conv.RIGHT_AND_FORALL_CONV`](#Conv.RIGHT_AND_FORALL_CONV)
-
+[`Conv.FORALL_AND_CONV`](#Conv.FORALL_AND_CONV),
+[`Conv.LEFT_AND_FORALL_CONV`](#Conv.LEFT_AND_FORALL_CONV),
+[`Conv.RIGHT_AND_FORALL_CONV`](#Conv.RIGHT_AND_FORALL_CONV)

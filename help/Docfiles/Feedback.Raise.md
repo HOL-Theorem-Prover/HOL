@@ -1,14 +1,12 @@
-## `Raise` {#Feedback.Raise}
+## `Raise`
 
-
+``` hol4
+Feedback.Raise : exn -> 'a
 ```
-Raise : exn -> 'a
-```
 
-
+------------------------------------------------------------------------
 
 Print an exception before re-raising it.
-
 
 The `Raise` function prints out information about its argument exception
 before re-raising it. It uses the value of `ERR_to_string` to format the
@@ -21,18 +19,18 @@ Never fails, since it always succeeds in raising the supplied exception.
 
 ### Example
 
-    
-    - Raise (mk_HOL_ERR "Foo" "bar" "incomprehensible input");
-    
-    Exception raised at Foo.bar:
-    incomprehensible input
-    ! Uncaught exception:
-    ! HOL_ERR
-    
+``` hol4
+- Raise (mk_HOL_ERR "Foo" "bar" "incomprehensible input");
 
-
+Exception raised at Foo.bar:
+incomprehensible input
+! Uncaught exception:
+! HOL_ERR
+```
 
 ### See also
 
-[`Feedback`](#Feedback), [`Feedback.ERR_to_string`](#Feedback.ERR_to_string), [`Feedback.ERR_outstream`](#Feedback.ERR_outstream), [`Lib.try`](#Lib.try), [`Lib.trye`](#Lib.trye)
-
+[`Feedback`](#Feedback),
+[`Feedback.ERR_to_string`](#Feedback.ERR_to_string),
+[`Feedback.ERR_outstream`](#Feedback.ERR_outstream),
+[`Lib.try`](#Lib.try), [`Lib.trye`](#Lib.trye)

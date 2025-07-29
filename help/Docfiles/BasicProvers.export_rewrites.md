@@ -1,14 +1,13 @@
-## `export_rewrites` {#BasicProvers.export_rewrites}
+## `export_rewrites`
 
-
+``` hol4
+BasicProvers.export_rewrites : string list -> unit
 ```
-export_rewrites : string list -> unit
-```
 
+------------------------------------------------------------------------
 
-
-Exports theorems so that they merge with the “stateful” rewriter’s `simpset`.
-
+Exports theorems so that they merge with the "stateful" rewriter's
+`simpset`.
 
 A call to `export_rewrites strlist` causes the theorems named by the
 strings in `strlist` to be merged into the `simpset` value maintained
@@ -36,13 +35,15 @@ current context.
 ### Comments
 
 This function is useful for ensuring that the stateful rewriter is
-augmented as theories are loaded.  This in turn means that users of
-these theories don’t need to learn the names of their “obvious”
-theorems.  Because theorems can not be removed from the stateful
-rewriter’s underlying `simpset`, choice of “obvious” theorems needs
-to be done with care.
+augmented as theories are loaded. This in turn means that users of these
+theories don't need to learn the names of their "obvious" theorems.
+Because theorems can not be removed from the stateful rewriter's
+underlying `simpset`, choice of "obvious" theorems needs to be done with
+care.
 
 ### See also
 
-[`bossLib.augment_srw_ss`](#bossLib.augment_srw_ss), [`bossLib.srw_ss`](#bossLib.srw_ss), [`bossLib.SRW_TAC`](#bossLib.SRW_TAC), [`BasicProvers.thy_ssfrag`](#BasicProvers.thy_ssfrag)
-
+[`bossLib.augment_srw_ss`](#bossLib.augment_srw_ss),
+[`bossLib.srw_ss`](#bossLib.srw_ss),
+[`bossLib.SRW_TAC`](#bossLib.SRW_TAC),
+[`BasicProvers.thy_ssfrag`](#BasicProvers.thy_ssfrag)

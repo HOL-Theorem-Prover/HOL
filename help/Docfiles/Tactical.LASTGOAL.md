@@ -1,25 +1,22 @@
-## `LASTGOAL` {#Tactical.LASTGOAL}
+## `LASTGOAL`
 
-
+``` hol4
+Tactical.LASTGOAL : tactic -> list_tactic
 ```
-LASTGOAL : tactic -> list_tactic
-```
 
+------------------------------------------------------------------------
 
+The list-tactic which applies a tactic to the last member of a list of
+goals.
 
-The list-tactic which applies a tactic to the last member of a list of goals.
-
-
-If `tac` is a tactic, `LASTGOAL tac` is a
-list-tactic which applies the tactic `tac` to the
-last member of a list of goals.
+If `tac` is a tactic, `LASTGOAL tac` is a list-tactic which applies the
+tactic `tac` to the last member of a list of goals.
 
 ### Failure
 
-The application of `LASTGOAL` to a tactic never fails.
-The resulting list-tactic fails the goal list is empty or
-or finally if `tac` fails when applied to the last member of the goal list.
-
+The application of `LASTGOAL` to a tactic never fails. The resulting
+list-tactic fails the goal list is empty or or finally if `tac` fails
+when applied to the last member of the goal list.
 
 Applying a tactic to the last subgoal.
 
@@ -31,5 +28,6 @@ subgoal.
 
 ### See also
 
-[`Tactical.THEN_LT`](#Tactical.THEN_LT), [`Tactical.NTH_GOAL`](#Tactical.NTH_GOAL), [`Tactical.HEADGOAL`](#Tactical.HEADGOAL)
-
+[`Tactical.THEN_LT`](#Tactical.THEN_LT),
+[`Tactical.NTH_GOAL`](#Tactical.NTH_GOAL),
+[`Tactical.HEADGOAL`](#Tactical.HEADGOAL)

@@ -1,14 +1,12 @@
-## `hol_type` {#Type.hol_type}
+## `hol_type`
 
-
+``` hol4
+Type.eqtype hol_type
 ```
-eqtype hol_type
-```
 
-
+------------------------------------------------------------------------
 
 Type of HOL types.
-
 
 The ML type `hol_type` represents the type of HOL types.
 
@@ -20,4 +18,3 @@ can be tested for equality by `ty1 = ty2`.
 ### See also
 
 [`Term.term`](#Term.term)
-

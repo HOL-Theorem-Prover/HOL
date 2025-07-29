@@ -1,11 +1,10 @@
-## `current_trace` {#Feedback.current_trace}
+## `current_trace`
 
-
+``` hol4
+Feedback.current_trace : string -> int
 ```
-current_trace : string -> int
-```
 
-
+------------------------------------------------------------------------
 
 Returns the current value of the tracing variable specified.
 
@@ -16,5 +15,8 @@ variable.
 
 ### See also
 
-[`Feedback.register_trace`](#Feedback.register_trace), [`Feedback.reset_trace`](#Feedback.reset_trace), [`Feedback.reset_traces`](#Feedback.reset_traces), [`Feedback.trace`](#Feedback.trace), [`Feedback.traces`](#Feedback.traces)
-
+[`Feedback.register_trace`](#Feedback.register_trace),
+[`Feedback.reset_trace`](#Feedback.reset_trace),
+[`Feedback.reset_traces`](#Feedback.reset_traces),
+[`Feedback.trace`](#Feedback.trace),
+[`Feedback.traces`](#Feedback.traces)

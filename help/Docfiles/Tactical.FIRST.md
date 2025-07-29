@@ -1,24 +1,21 @@
-## `FIRST` {#Tactical.FIRST}
+## `FIRST`
 
-
+``` hol4
+Tactical.FIRST : (tactic list -> tactic)
 ```
-FIRST : (tactic list -> tactic)
-```
 
-
+------------------------------------------------------------------------
 
 Applies the first tactic in a tactic list which succeeds.
 
+When applied to a list of tactics `[T1;...;Tn]`, and a goal `g`, the
+tactical `FIRST` tries applying the tactics to the goal until one
+succeeds. If the first tactic which succeeds is `Tm`, then the effect is
+the same as just `Tm`. Thus `FIRST` effectively behaves as follows:
 
-When applied to a list of tactics `[T1;...;Tn]`, and a goal `g`, the tactical
-`FIRST` tries applying the tactics to the goal until one succeeds. If the
-first tactic which succeeds is `Tm`, then the effect is the same as just `Tm`.
-Thus `FIRST` effectively behaves as follows:
-    
-       FIRST [T1;...;Tn] = T1 ORELSE ... ORELSE Tn
-    
-
-
+``` hol4
+   FIRST [T1;...;Tn] = T1 ORELSE ... ORELSE Tn
+```
 
 ### Failure
 
@@ -28,5 +25,5 @@ or if the tactic list is empty.
 
 ### See also
 
-[`Tactical.EVERY`](#Tactical.EVERY), [`Tactical.ORELSE`](#Tactical.ORELSE)
-
+[`Tactical.EVERY`](#Tactical.EVERY),
+[`Tactical.ORELSE`](#Tactical.ORELSE)

@@ -1,17 +1,15 @@
-## `FAIL_TAC` {#Tactical.FAIL_TAC}
+## `FAIL_TAC`
 
-
+``` hol4
+Tactical.FAIL_TAC : string -> tactic
 ```
-FAIL_TAC : string -> tactic
-```
 
-
+------------------------------------------------------------------------
 
 Tactic which always fails, with the supplied string.
 
-
-Whatever goal it is applied to, `FAIL_TAC s` always fails
-with the string `s`.
+Whatever goal it is applied to, `FAIL_TAC s` always fails with the
+string `s`.
 
 ### Failure
 
@@ -20,25 +18,31 @@ tactic always fails.
 
 ### Example
 
-The following example uses the fact that if a tactic `t1` solves
-a goal, then the tactic `t1 THEN t2` never results in the application
-of `t2` to anything, because `t1` produces no subgoals. In attempting
-to solve the following goal:
-    
-       ?- if x then T else T
-    
+The following example uses the fact that if a tactic `t1` solves a goal,
+then the tactic `t1 THEN t2` never results in the application of `t2` to
+anything, because `t1` produces no subgoals. In attempting to solve the
+following goal:
+
+``` hol4
+   ?- if x then T else T
+```
+
 the tactic
-    
-       REWRITE_TAC[] THEN FAIL_TAC "Simple rewriting failed to solve goal"
-    
+
+``` hol4
+   REWRITE_TAC[] THEN FAIL_TAC "Simple rewriting failed to solve goal"
+```
+
 will fail with the message provided, whereas:
-    
-       CONV_TAC COND_CONV THEN FAIL_TAC "Using COND_CONV failed to solve goal"
-    
-will silently solve the goal because `COND_CONV` reduces it to
-just `?- T`.
+
+``` hol4
+   CONV_TAC COND_CONV THEN FAIL_TAC "Using COND_CONV failed to solve goal"
+```
+
+will silently solve the goal because `COND_CONV` reduces it to just
+`?- T`.
 
 ### See also
 
-[`Tactical.ALL_TAC`](#Tactical.ALL_TAC), [`Tactical.NO_TAC`](#Tactical.NO_TAC)
-
+[`Tactical.ALL_TAC`](#Tactical.ALL_TAC),
+[`Tactical.NO_TAC`](#Tactical.NO_TAC)

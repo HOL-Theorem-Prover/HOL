@@ -1,22 +1,18 @@
-## `ABS` {#Thm.ABS}
+## `ABS`
 
-
+``` hol4
+Thm.ABS : term -> thm -> thm
 ```
-ABS : term -> thm -> thm
-```
 
-
+------------------------------------------------------------------------
 
 Abstracts both sides of an equation.
 
-
-    
-             A |- t1 = t2
-       ------------------------  ABS x            [Where x is not free in A]
-        A |- (\x.t1) = (\x.t2)
-    
-
-
+``` hol4
+         A |- t1 = t2
+   ------------------------  ABS x            [Where x is not free in A]
+    A |- (\x.t1) = (\x.t2)
+```
 
 ### Failure
 
@@ -25,16 +21,16 @@ assumptions `A`.
 
 ### Example
 
-    
-    > let val m = “m:bool”
-      in
-          ABS m (REFL m)
-      end;
-    
-    val it = |- (λm. m) = (λm. m) : thm
-    
+``` hol4
+> let val m = “m:bool”
+  in
+      ABS m (REFL m)
+  end;
+
+val it = |- (λm. m) = (λm. m) : thm
+```
 
 ### See also
 
-[`Drule.ETA_CONV`](#Drule.ETA_CONV), [`Drule.EXT`](#Drule.EXT), [`Drule.MK_ABS`](#Drule.MK_ABS)
-
+[`Drule.ETA_CONV`](#Drule.ETA_CONV), [`Drule.EXT`](#Drule.EXT),
+[`Drule.MK_ABS`](#Drule.MK_ABS)

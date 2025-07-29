@@ -1,11 +1,10 @@
-## `NO_CONV` {#Conv.NO_CONV}
+## `NO_CONV`
 
-
+``` hol4
+Conv.NO_CONV : conv
 ```
-NO_CONV : conv
-```
 
-
+------------------------------------------------------------------------
 
 Conversion that always fails.
 
@@ -16,4 +15,3 @@ Conversion that always fails.
 ### See also
 
 [`Conv.ALL_CONV`](#Conv.ALL_CONV)
-

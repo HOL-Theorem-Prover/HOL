@@ -1,17 +1,15 @@
-## `FAIL_LT` {#Tactical.FAIL_LT}
+## `FAIL_LT`
 
-
+``` hol4
+Tactical.FAIL_LT : string -> list_tactic
 ```
-FAIL_LT : string -> list_tactic
-```
 
-
+------------------------------------------------------------------------
 
 List-tactic which always fails, with the supplied string.
 
-
-Whatever goal list it is applied to, `FAIL_LT s` always fails
-with the string `s`.
+Whatever goal list it is applied to, `FAIL_LT s` always fails with the
+string `s`.
 
 ### Failure
 
@@ -20,5 +18,6 @@ list-tactic always fails.
 
 ### See also
 
-[`Tactical.FAIL_TAC`](#Tactical.FAIL_TAC), [`Tactical.ALL_LT`](#Tactical.ALL_LT), [`Tactical.NO_LT`](#Tactical.NO_LT)
-
+[`Tactical.FAIL_TAC`](#Tactical.FAIL_TAC),
+[`Tactical.ALL_LT`](#Tactical.ALL_LT),
+[`Tactical.NO_LT`](#Tactical.NO_LT)

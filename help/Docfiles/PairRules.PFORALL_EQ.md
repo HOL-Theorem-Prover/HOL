@@ -1,39 +1,38 @@
-## `PFORALL_EQ` {#PairRules.PFORALL_EQ}
+## `PFORALL_EQ`
 
-
+``` hol4
+PairRules.PFORALL_EQ : (term -> thm -> thm)
 ```
-PFORALL_EQ : (term -> thm -> thm)
-```
 
-
+------------------------------------------------------------------------
 
 Universally quantifies both sides of an equational theorem.
 
+When applied to a paired structure of variables `p` and a theorem
 
-When applied to a paired structure of variables `p`
-and a theorem
-    
-        A |- t1 = t2
-    
+``` hol4
+    A |- t1 = t2
+```
 
 whose conclusion is an equation between boolean terms:
-    
-        PFORALL_EQ
-    
+
+``` hol4
+    PFORALL_EQ
+```
 
 returns the theorem:
-    
-        A |- (!p. t1) = (!p. t2)
-    
+
+``` hol4
+    A |- (!p. t1) = (!p. t2)
+```
 
 unless any of the variables in `p` is free in any of the assumptions.
-    
-              A |- t1 = t2
-       --------------------------  PFORALL_EQ "p"      [where p is not free in A]
-        A |- (!p. t1) = (!p. t2)
-    
 
-
+``` hol4
+          A |- t1 = t2
+   --------------------------  PFORALL_EQ "p"      [where p is not free in A]
+    A |- (!p. t1) = (!p. t2)
+```
 
 ### Failure
 
@@ -43,5 +42,6 @@ variables in the supplied pair is free in any of the assumptions.
 
 ### See also
 
-[`Drule.FORALL_EQ`](#Drule.FORALL_EQ), [`PairRules.PEXISTS_EQ`](#PairRules.PEXISTS_EQ), [`PairRules.PSELECT_EQ`](#PairRules.PSELECT_EQ)
-
+[`Drule.FORALL_EQ`](#Drule.FORALL_EQ),
+[`PairRules.PEXISTS_EQ`](#PairRules.PEXISTS_EQ),
+[`PairRules.PSELECT_EQ`](#PairRules.PSELECT_EQ)

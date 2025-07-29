@@ -1,14 +1,12 @@
-## `DECIDE_TAC` {#bossLib.DECIDE_TAC}
+## `DECIDE_TAC`
 
-
+``` hol4
+bossLib.DECIDE_TAC : tactic
 ```
-DECIDE_TAC : tactic
-```
 
-
+------------------------------------------------------------------------
 
 Invoke decision procedure(s).
-
 
 `DECIDE_TAC` is the tactical version of `DECIDE`.
 
@@ -19,4 +17,3 @@ As for `DECIDE`
 ### See also
 
 [`bossLib.DECIDE`](#bossLib.DECIDE)
-

@@ -1,26 +1,25 @@
-## `SEG_CONV` {#listLib.SEG_CONV}
+## `SEG_CONV`
 
-
+``` hol4
+listLib.SEG_CONV : conv
 ```
-SEG_CONV : conv
-```
 
-
+------------------------------------------------------------------------
 
 Computes by inference the result of taking a segment of a list.
 
+For any object language list of the form `“[x0;...x(n-1)]”` , the result
+of evaluating
 
-For any object language list of the form `“[x0;...x(n-1)]”` ,
-the result of evaluating
-    
-       SEG_CONV “SEG m k [x0;...;x(n-1)]”
-    
+``` hol4
+   SEG_CONV “SEG m k [x0;...;x(n-1)]”
+```
+
 is the theorem
-    
-       |- SEG m k [x0;...;x(n-1)] = [xk;...;x(m+k-1)]
-    
 
-
+``` hol4
+   |- SEG m k [x0;...;x(n-1)] = [xk;...;x(m+k-1)]
+```
 
 ### Failure
 
@@ -30,15 +29,22 @@ indexes `m` and `k` are not in the correct range, i.e., `m + k <= n`.
 ### Example
 
 Evaluating the expression
-    
-       SEG_CONV “SEG 2 3[0;1;2;3;4;5]”;
-    
+
+``` hol4
+   SEG_CONV “SEG 2 3[0;1;2;3;4;5]”;
+```
+
 returns the following theorem
-    
-       |- SEG 2 3[0;1;2;3;4;5] = [3;4]
-    
+
+``` hol4
+   |- SEG 2 3[0;1;2;3;4;5] = [3;4]
+```
 
 ### See also
 
-[`listLib.FIRSTN_CONV`](#listLib.FIRSTN_CONV), [`listLib.LASTN_CONV`](#listLib.LASTN_CONV), [`listLib.BUTFIRSTN_CONV`](#listLib.BUTFIRSTN_CONV), [`listLib.BUTLASTN_CONV`](#listLib.BUTLASTN_CONV), [`listLib.LAST_CONV`](#listLib.LAST_CONV), [`listLib.BUTLAST_CONV`](#listLib.BUTLAST_CONV)
-
+[`listLib.FIRSTN_CONV`](#listLib.FIRSTN_CONV),
+[`listLib.LASTN_CONV`](#listLib.LASTN_CONV),
+[`listLib.BUTFIRSTN_CONV`](#listLib.BUTFIRSTN_CONV),
+[`listLib.BUTLASTN_CONV`](#listLib.BUTLASTN_CONV),
+[`listLib.LAST_CONV`](#listLib.LAST_CONV),
+[`listLib.BUTLAST_CONV`](#listLib.BUTLAST_CONV)

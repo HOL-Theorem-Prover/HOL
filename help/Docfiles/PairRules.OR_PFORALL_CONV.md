@@ -1,22 +1,20 @@
-## `OR_PFORALL_CONV` {#PairRules.OR_PFORALL_CONV}
+## `OR_PFORALL_CONV`
 
-
+``` hol4
+PairRules.OR_PFORALL_CONV : conv
 ```
-OR_PFORALL_CONV : conv
-```
 
-
+------------------------------------------------------------------------
 
 Moves a paired universal quantification outwards through a disjunction.
 
+When applied to a term of the form `(!p. t) \/ (!p. u)`, where no
+variables from `p` are free in either `t` nor `u`, `OR_PFORALL_CONV`
+returns the theorem:
 
-When applied to a term of the form `(!p. t) \/ (!p. u)`, where no variables
-from `p` are free in either `t` nor `u`, `OR_PFORALL_CONV` returns the theorem:
-    
-       |- (!p. t) \/ (!p. u) = (!p. t \/ u)
-    
-
-
+``` hol4
+   |- (!p. t) \/ (!p. u) = (!p. t \/ u)
+```
 
 ### Failure
 
@@ -26,5 +24,7 @@ in which the variables from `p` are free in either `t` or `u`.
 
 ### See also
 
-[`Conv.OR_FORALL_CONV`](#Conv.OR_FORALL_CONV), [`PairRules.PFORALL_OR_CONV`](#PairRules.PFORALL_OR_CONV), [`PairRules.LEFT_OR_PFORALL_CONV`](#PairRules.LEFT_OR_PFORALL_CONV), [`PairRules.RIGHT_OR_PFORALL_CONV`](#PairRules.RIGHT_OR_PFORALL_CONV)
-
+[`Conv.OR_FORALL_CONV`](#Conv.OR_FORALL_CONV),
+[`PairRules.PFORALL_OR_CONV`](#PairRules.PFORALL_OR_CONV),
+[`PairRules.LEFT_OR_PFORALL_CONV`](#PairRules.LEFT_OR_PFORALL_CONV),
+[`PairRules.RIGHT_OR_PFORALL_CONV`](#PairRules.RIGHT_OR_PFORALL_CONV)

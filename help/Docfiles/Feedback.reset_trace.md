@@ -1,14 +1,12 @@
-## `reset_trace` {#Feedback.reset_trace}
+## `reset_trace`
 
-
+``` hol4
+Feedback.reset_trace : string -> unit
 ```
-reset_trace : string -> unit
-```
 
-
+------------------------------------------------------------------------
 
 Resets a tracing variable to its default value.
-
 
 A call to `reset_trace n` resets the tracing variable associated with
 the name `n` to its default value, i.e., the value of the expression
@@ -22,5 +20,9 @@ variable, or if a `set` function associated with a "functional" trace
 
 ### See also
 
-[`Feedback`](#Feedback), [`Feedback.register_trace`](#Feedback.register_trace), [`Feedback.set_trace`](#Feedback.set_trace), [`Feedback.reset_traces`](#Feedback.reset_traces), [`Feedback.trace`](#Feedback.trace), [`Feedback.traces`](#Feedback.traces)
-
+[`Feedback`](#Feedback),
+[`Feedback.register_trace`](#Feedback.register_trace),
+[`Feedback.set_trace`](#Feedback.set_trace),
+[`Feedback.reset_traces`](#Feedback.reset_traces),
+[`Feedback.trace`](#Feedback.trace),
+[`Feedback.traces`](#Feedback.traces)

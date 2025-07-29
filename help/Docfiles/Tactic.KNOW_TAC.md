@@ -1,16 +1,15 @@
-## `KNOW_TAC` {#Tactic.KNOW_TAC}
+## `KNOW_TAC`
 
-
+``` hol4
+Tactic.KNOW_TAC : term -> tactic
 ```
-KNOW_TAC : term -> tactic
-```
 
-
+------------------------------------------------------------------------
 
 A shorthand form of `SUBGOAL_THEN`.
 
-
-A call to `KNOW_TAC t` is equivalent to a call to `SUBGOAL_THEN t MP_TAC`.
+A call to `KNOW_TAC t` is equivalent to a call to
+`SUBGOAL_THEN t MP_TAC`.
 
 ### Failure
 
@@ -31,5 +30,7 @@ modus ponens backwards.
 
 ### See also
 
-[`bossLib.by`](#bossLib.by), [`Tactical.Q_TAC`](#Tactical.Q_TAC), [`Tactic.SUBGOAL_THEN`](#Tactic.SUBGOAL_THEN), [`Tactic.SUFF_TAC`](#Tactic.SUFF_TAC), [`bossLib.suffices_by`](#bossLib.suffices_by)
-
+[`bossLib.by`](#bossLib.by), [`Tactical.Q_TAC`](#Tactical.Q_TAC),
+[`Tactic.SUBGOAL_THEN`](#Tactic.SUBGOAL_THEN),
+[`Tactic.SUFF_TAC`](#Tactic.SUFF_TAC),
+[`bossLib.suffices_by`](#bossLib.suffices_by)

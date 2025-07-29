@@ -1,24 +1,21 @@
-## `CONTR` {#Drule.CONTR}
+## `CONTR`
 
-
+``` hol4
+Drule.CONTR : term -> thm -> thm
 ```
-CONTR : term -> thm -> thm
-```
 
-
+------------------------------------------------------------------------
 
 Implements the intuitionistic contradiction rule.
 
+When applied to a term `t` and a theorem `A |- F`, the inference rule
+`CONTR` returns the theorem `A |- t`.
 
-When applied to a term `t` and a theorem `A |- F`, the inference rule `CONTR`
-returns the theorem `A |- t`.
-    
-        A |- F
-       --------  CONTR t
-        A |- t
-    
-
-
+``` hol4
+    A |- F
+   --------  CONTR t
+    A |- t
+```
 
 ### Failure
 
@@ -27,5 +24,5 @@ conclusion.
 
 ### See also
 
-[`Thm.CCONTR`](#Thm.CCONTR), [`Drule.CONTRAPOS`](#Drule.CONTRAPOS), [`Tactic.CONTR_TAC`](#Tactic.CONTR_TAC), [`Thm.NOT_ELIM`](#Thm.NOT_ELIM)
-
+[`Thm.CCONTR`](#Thm.CCONTR), [`Drule.CONTRAPOS`](#Drule.CONTRAPOS),
+[`Tactic.CONTR_TAC`](#Tactic.CONTR_TAC), [`Thm.NOT_ELIM`](#Thm.NOT_ELIM)

@@ -1,8 +1,7 @@
-## `thm_count` {#Count.thm_count}
+## `thm_count`
 
-
-```
-thm_count :
+``` hol4
+Count.thm_count :
      unit ->
      {ASSUME : int, REFL : int, BETA_CONV : int, SUBST : int,
       ABS : int, DISCH : int, MP : int, INST_TYPE : int,
@@ -16,16 +15,15 @@ thm_count :
       total :int }
 ```
 
-
+------------------------------------------------------------------------
 
 Returns the current value of the theorem counter.
-
 
 If enabled, HOL maintains a counter which is incremented every time a
 primitive inference is performed (or an axiom or definition set up). A
 call to `thm_count()` returns the current value of this counter.
 Inference counting needs to be enabled with the call
-`Count.counting_thms true`.  Counting can be turned off by calling
+`Count.counting_thms true`. Counting can be turned off by calling
 `counting_thms false`.
 
 The default is for inference counting not to be enabled.
@@ -37,4 +35,3 @@ Never fails.
 ### See also
 
 [`Count.apply`](#Count.apply)
-

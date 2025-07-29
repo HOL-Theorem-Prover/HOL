@@ -1,14 +1,12 @@
-## `trye` {#Lib.trye}
+## `trye`
 
-
+``` hol4
+Lib.trye : ('a -> 'b) -> 'a -> 'b
 ```
-trye : ('a -> 'b) -> 'a -> 'b
-```
 
-
+------------------------------------------------------------------------
 
 Maps exceptions into `HOL_ERR`
-
 
 The standard exception for HOL applications to raise is `HOL_ERR`. The
 use of a single exception simplifies the writing of exception handlers
@@ -30,22 +28,20 @@ Fails if the function application fails.
 
 ### Example
 
-    
-    - hd [];
-    ! Uncaught exception:
-    ! Empty
-    
-    - trye hd [];
-    ! Uncaught exception:
-    ! HOL_ERR
-    
-    - trye (fn _ => raise Interrupt) 1;
-    > Interrupted
-    
+``` hol4
+- hd [];
+! Uncaught exception:
+! Empty
 
+- trye hd [];
+! Uncaught exception:
+! HOL_ERR
 
+- trye (fn _ => raise Interrupt) 1;
+> Interrupted
+```
 
 ### See also
 
-[`Lib`](#Lib), [`Feedback.Raise`](#Feedback.Raise), [`Lib.try`](#Lib.try)
-
+[`Lib`](#Lib), [`Feedback.Raise`](#Feedback.Raise),
+[`Lib.try`](#Lib.try)

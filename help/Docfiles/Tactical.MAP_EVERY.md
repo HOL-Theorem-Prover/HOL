@@ -1,23 +1,24 @@
-## `MAP_EVERY` {#Tactical.MAP_EVERY}
+## `MAP_EVERY`
 
-
+``` hol4
+Tactical.MAP_EVERY : (('a -> tactic) -> 'a list -> tactic)
 ```
-MAP_EVERY : (('a -> tactic) -> 'a list -> tactic)
-```
 
+------------------------------------------------------------------------
 
-
-Sequentially applies all tactics given by mapping a function over a list.
-
+Sequentially applies all tactics given by mapping a function over a
+list.
 
 When applied to a tactic-producing function `f` and an operand list
-`[x1;...;xn]`, the elements of which have the same type as `f`’s domain type,
-`MAP_EVERY` maps the function `f` over the list, producing a list of
-tactics, then applies these tactics in sequence as in the case of `EVERY`.
-The effect is:
-    
-       MAP_EVERY f [x1;...;xn] = (f x1) THEN ... THEN (f xn)
-    
+`[x1;...;xn]`, the elements of which have the same type as `f`'s domain
+type, `MAP_EVERY` maps the function `f` over the list, producing a list
+of tactics, then applies these tactics in sequence as in the case of
+`EVERY`. The effect is:
+
+``` hol4
+   MAP_EVERY f [x1;...;xn] = (f x1) THEN ... THEN (f xn)
+```
+
 If the operand list is empty, then `MAP_EVERY` has no effect.
 
 ### Failure
@@ -28,14 +29,16 @@ resulting tactic fails iff any of the resulting tactics fails.
 
 ### Example
 
-A convenient way of doing case analysis over several boolean variables is:
-    
-       MAP_EVERY BOOL_CASES_TAC ["var1:bool";...;"varn:bool"]
-    
+A convenient way of doing case analysis over several boolean variables
+is:
 
-
+``` hol4
+   MAP_EVERY BOOL_CASES_TAC ["var1:bool";...;"varn:bool"]
+```
 
 ### See also
 
-[`Tactical.EVERY`](#Tactical.EVERY), [`Tactical.FIRST`](#Tactical.FIRST), [`Tactical.MAP_FIRST`](#Tactical.MAP_FIRST), [`Tactical.THEN`](#Tactical.THEN)
-
+[`Tactical.EVERY`](#Tactical.EVERY),
+[`Tactical.FIRST`](#Tactical.FIRST),
+[`Tactical.MAP_FIRST`](#Tactical.MAP_FIRST),
+[`Tactical.THEN`](#Tactical.THEN)

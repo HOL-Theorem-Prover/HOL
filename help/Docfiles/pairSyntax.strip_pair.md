@@ -1,22 +1,19 @@
-## `strip_pair` {#pairSyntax.strip_pair}
+## `strip_pair`
 
-
+``` hol4
+pairSyntax.strip_pair : term -> term list
 ```
-strip_pair : term -> term list
-```
 
-
+------------------------------------------------------------------------
 
 Recursively breaks a paired structure into its constituent pieces.
 
 ### Example
 
-    
-    - strip_pair (Term `((1,2),(3,4))`);
-    > val it = [`1`, `2`, `3`, `4`] : term list
-    
-
-
+``` hol4
+- strip_pair (Term `((1,2),(3,4))`);
+> val it = [`1`, `2`, `3`, `4`] : term list
+```
 
 ### Comments
 
@@ -30,4 +27,3 @@ Never fails.
 ### See also
 
 [`pairSyntax.spine_pair`](#pairSyntax.spine_pair)
-
