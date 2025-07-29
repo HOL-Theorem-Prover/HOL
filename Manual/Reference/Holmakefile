@@ -7,6 +7,8 @@
 # ---------------------------------------------------------------------
 Helpd=../../help
 
+INCLUDES = $(Helpd)/src-sml
+
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
         ../LaTeX/ref-macros.tex
 

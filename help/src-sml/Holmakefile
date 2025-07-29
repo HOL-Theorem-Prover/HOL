@@ -19,6 +19,9 @@ Doc2Html.exe: poly-Doc2Html.ML Doc2Html.uo Flash.uo
 makebase.exe: poly-makebase.ML makebase.sml
 	polyc -o $@ $<
 
+Md2TeX.exe: poly-Md2TeX.ML Md2TeX.uo
+	polyc -o $@ $<
+
 else
 makebase.uo: makebase.sml MyDatabase.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo
 	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -c MyDatabase.ui $<
@@ -34,6 +37,9 @@ Doc2Tex.exe : runDoc2Tex.uo Doc2Tex.uo ParseDoc.uo Flash.uo
 
 Doc2Html.exe : runDoc2Html.uo Doc2Html.uo ParseDoc.uo Flash.uo
 	$(HOLMOSMLC) -o Doc2Html.exe runDoc2Html.uo
+
+Md2TeX.exe: runMd2TeX.uo Md2TeX.uo
+	$(HOLMOSMLC) -o $@ $<
 
 endif
 
