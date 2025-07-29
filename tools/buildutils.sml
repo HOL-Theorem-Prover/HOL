@@ -518,7 +518,7 @@ fun cleanForReloc0 HOLDIR =
 fun maybe_gmakeclean dirname owise () =
     if OS <> "winNT" then
       let
-        val gnumake = 
+        val gnumake =
             case List.rev (#arcs (OS.Path.fromString dirname)) of
               "minisat" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
             | "zc2hs" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
@@ -786,7 +786,8 @@ in
   system_ps (POLYC ^ " poly-Doc2Html.ML -o Doc2Html.exe");
   system_ps (POLYC ^ " poly-Doc2Txt.ML -o Doc2Txt.exe");
   system_ps (POLYC ^ " poly-Doc2Tex.ML -o Doc2Tex.exe");
-  system_ps (POLYC ^ " poly-Doc2Md.ML -o Doc2markdown.exe")
+  system_ps (POLYC ^ " poly-Doc2Md.ML -o Doc2markdown.exe");
+  system_ps (POLYC ^ " poly-Doc2Md2.ML -o Doc2markdown2.exe")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
