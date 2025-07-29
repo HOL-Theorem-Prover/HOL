@@ -146,7 +146,6 @@ in
   val lpsize0 = length (!loadPath)
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"
-    ; Meta.load "ParseDoc"
     ; hol_use ("tools-poly" ++ "poly") "Help"
     ; ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath}
     ; if length (!loadPath) <> lpsize0 then

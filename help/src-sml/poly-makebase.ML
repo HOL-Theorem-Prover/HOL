@@ -7,6 +7,7 @@ fun useB f =
 val _ = useB "Database";
 val _ = use "HOLPage.sml";
 val _ = useB "Htmlsigs";
+val _ = useB "ParseDoc";
 val _ = use "Keepers.sml";
 val _ = use "Asynt.sml";
 

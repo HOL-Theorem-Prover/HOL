@@ -8,6 +8,7 @@ fun useB f =
    use (f ^ ".sml"));
 
 val _ = useB "Flash";
+val _ = useB "ParseDoc";
 val _ = useB "../../sigobj/Systeml";
 val _ = use "Doc2Txt.sml";
 
