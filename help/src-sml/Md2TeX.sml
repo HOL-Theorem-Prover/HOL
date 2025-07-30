@@ -10,8 +10,13 @@ struct
 
 *)
 
-fun die s = (
+fun warn s = (
   TextIO.output(TextIO.stdErr, s ^ "\n");
+  TextIO.flushOut TextIO.stdErr
+);
+
+fun die s = (
+  warn s;
   OS.Process.exit OS.Process.failure
 );
 
@@ -95,13 +100,27 @@ fun identCmp ((s1,_),(s2,_)) =
 
 fun catAFile fname =
     let val istrm = TextIO.openIn fname
+        val firstline =
+            case TextIO.inputLine istrm of
+                NONE => TextIO.closeIn istrm (* file empty ? *)
+              | SOME s =>
+                if size s <> 0 andalso String.sub(s,0) <> #"#" then
+                  (warn (fname ^ " does not header on first line");
+                   print s)
+                else
+                  let
+                    val s1 = String.substring(s, 0, size s - 1) (* drop NL *)
+                    val base = OS.Path.base (OS.Path.file fname)
+                  in
+                    print (s1 ^ " {#" ^ base ^ "}\n")
+                  end
         fun loop () = case TextIO.inputLine istrm of
                           SOME s => (print s ; loop())
                         | NONE => TextIO.closeIn istrm
     in
       loop()
-    end handle e => die ("catAFile " ^ fname ^ ": exception raised " ^ General.exnMessage e)
-
+    end handle e =>
+        die ("catAFile " ^ fname ^ ": exception raised " ^ General.exnMessage e)
 
 fun output1 (fname,orig) =
     let val str_name = case dotfields fname of
