@@ -956,6 +956,23 @@ fun cv_eval_pat pat tm = let
   val cv_eqs = cv_time cv_eqs_for cv_tm
   val _ = cv_print Verbose ("Found " ^ int_to_string (length cv_eqs) ^ " cv code equations to use.\n")
   val cv_conv = cv_computeLib.cv_compute cv_eqs
+  fun simple_raw () = let
+    val th1 = MATCH_MP cv_rep_eval th
+    val th2 = MATCH_MP th1 from_to_thm
+    val th3 = th2 |> UNDISCH_ALL
+    val _ = cv_print Verbose "Calling cv_compute.\n"
+    val th4 = cv_time (CONV_RULE (RAND_CONV (RAND_CONV cv_conv))) th3
+    val th5 = remove_T_IMP (DISCH_ALL th4)
+    in th5 end
+  in case pat of
+    Raw => simple_raw ()
+  | Eval eval_conv => let
+      val th = simple_raw ()
+      val _ = cv_print Verbose "Using EVAL to convert from cv to original types.\n"
+      val th = cv_time (CONV_RULE (RAND_CONV eval_conv)) (UNDISCH_ALL th)
+      val th = th |> DISCH_ALL |> remove_T_IMP
+      in th end
+  | _ => let
   val _ = cv_print Verbose "Calling cv_compute.\n"
   val th0 = th |> CONV_RULE ((RATOR_CONV o RATOR_CONV o RAND_CONV) cv_conv)
                |> CONV_RULE (REWR_CONV cv_rep_def) |> UNDISCH
@@ -994,7 +1011,9 @@ fun cv_eval_pat pat tm = let
   val th1 = make_abbrevs pat th0
   val th2 = CONV_RULE (REWR_CONV (GSYM cv_rep_def)) (DISCH T th1)
   val th3 = MATCH_MP cv_rep_eval th2
-  val th4 = MATCH_MP (MATCH_MP th3 from_to_thm) TRUTH
+  val t = th3 |> concl |> dest_imp |> fst |> rand
+  val new_t = from_to_thm |> concl |> rand
+  val th4 = MP (MP (th3 |> INST [t|->new_t]) from_to_thm) TRUTH (* very slow? *)
   fun use_abbrevs Raw th = th
     | use_abbrevs (Eval conv) th =
         CONV_RULE (RAND_CONV (QCONV conv)) th
@@ -1013,7 +1032,7 @@ fun cv_eval_pat pat tm = let
         val th2 = CONJUNCT2 th0
         in MATCH_MP IMP_to_option (CONJ th1 th2) end
   val th5 = use_abbrevs pat th4
-  in DISCH_ALL th5 end;
+  in DISCH_ALL th5 end end;
 
 fun cv_eval_raw tm = cv_eval_pat Raw tm;
 
