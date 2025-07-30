@@ -19,6 +19,7 @@ val _ = use "../tools/Holmake/HolParser.sig";
 val _ = use "../tools/Holmake/HolParser.sml";
 val _ = use "../src/portableML/UniversalType.sig";
 val _ = use "../src/portableML/UniversalType.sml";
+val _ = use "../src/portableML/poly/PrettyImpl.sml";
 val _ = use "../src/portableML/LSPExtension.sig";
 val _ = use "../src/portableML/LSPExtension.sml";
 val _ = use "poly/quse.sig";

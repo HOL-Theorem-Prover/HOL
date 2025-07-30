@@ -115,6 +115,9 @@ val fromList: 'a list * 'a -> 'a darray
 (* Constructs a darray from a nonempty list *)
 val fromList1: 'a list -> 'a darray
 
+(* Make a list from a darray *)
+val toList: 'a darray -> 'a list
+
 (* Constructs a darray of length `n` with `a[i] = f i` (with given default element) *)
 val tabulate: 'a * int * (int -> 'a) -> 'a darray
 

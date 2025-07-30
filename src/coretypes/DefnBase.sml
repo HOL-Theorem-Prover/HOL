@@ -686,12 +686,29 @@ fun gotoDefinition tag ({lines, plugins, fromFileLine, ...}, target) = let
   in out end
   handle HOL_ERR _ => [] | Empty => []
 
-fun lastIndexOf' c s i =
-  if i = 0 then ~1 else let
-    val i' = i - 1
-    in if c = String.sub (s, i') then i' else lastIndexOf' c s i' end
+fun hover tag ({lines, plugins, ppToString, ...}, (start, stop)) = let
+  val ds = case LSPExtension.getPluginData (plugins, tag) of
+    NONE => raise Empty
+  | SOME ds => ds
+  val (range, tm, env) = case navigateTo lines start stop ds of
+    SOME ((range, PTM (_, tm)), env) => (range, tm, env)
+  | _ => raise Empty
+  val (range, tm) = case Preterm.typecheck NONE tm env of
+    errormonad.Some (_, tm) => (range, tm)
+  | _ => raise Empty
+  fun f () = let
+    val typp = Parse.pp_type_without_colon (type_of tm)
+    val tmpp = with_flag (Globals.max_print_depth, 4) Parse.pp_term tm
+    open HOLPP
+    in PrettyBlock(0, true, [], [tmpp, PrettyString ":", PrettyBreak(1, 2), typp]) end
+  val s = with_flag (Parse.current_backend, PPBackEnd.raw_terminal) (ppToString o f) ()
+  in [{range = SOME range, markdown = s}] end
+  handle HOL_ERR _ => [] | Empty => []
 
-fun lastIndexOf c s = lastIndexOf' c s (String.size s)
+fun lastIndexOf c s = let
+  fun go i = if i = 0 then ~1 else case i - 1 of i' =>
+    if c = String.sub (s, i') then i' else go i'
+  in go (String.size s) end
 
 in
 
@@ -713,7 +730,8 @@ val _ = LSPExtension.registerPlugin true {
   init = fn tag => (
     Listener.add_listener Preterm.typecheck_listener ("LSP", lspTypecheckListener)
     handle HOL_ERR _ => !WARNING_outstream "<<warning: failed to add typecheck listener>>\n";
-    LSPExtension.gotoDefinition := gotoDefinition tag),
+    LSPExtension.gotoDefinition := gotoDefinition tag;
+    LSPExtension.hover := hover tag),
   beforeCompile = fn () => ThreadLocal.set (checkLog, []),
   afterCompile = fn (r, x) =>
     case ThreadLocal.get checkLog of
