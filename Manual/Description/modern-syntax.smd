@@ -1,0 +1,119 @@
+# HOL Source File Syntax
+
+Files written by HOL users are of the same form as those written by HOL developers.
+In this way, HOL aims to be easy to extend, and this chapter’s description of HOL source files should be useful for users and developers both.
+
+HOL organises its files into two categories:
+
+- “script” files that specify a theory segment: where definitions are made, types defined and theorems proved; and
+
+- “library” files that provide SML implementations of important theorem-proving infrastructure, typically providing SML functions to support those actions done in script files (definitions, types, proofs).
+
+Library files are written in SML, using the HOL API that is described both in this manual, but also in the REFERENCE.
+Script files have their own rather special syntax that is a superset of SML.
+Script files will be the bulk of what most users write.
+Both flavours of file should observe the conventions documented in this chapter.
+
+## Library Files
+
+A library is typically implemented in two SML files, `Libname.sig` and `Libname.sml`, where `Libname.sig` defines the SML signature for the library, and the corresponding `.sml` file provides the implementation.
+Conventionally, the stem of the file-name is also the name of both the signature and the structure.
+If our library is called “foo”, then `foo.sig` would have content:
+
+```
+   signature foo =
+   sig
+    …
+   end
+```
+and `foo.sml` would contain
+
+```
+   structure foo :> foo =
+   struct
+    …
+   end
+```
+Because of the link between the file-name and the SML structure’s name, the stem of the file-name will always be a valid SML identifier (ruling out hyphens, for example).
+It is permitted to omit the signature and to have no ascription in the `.sml` file.
+To support Moscow ML, when there is a signature, it is recommended to always use opaque ascription with the `:>` token.
+
+By convention, a library written to support work with respect to a particular concept or type will often be called *concept*`Lib`.
+Thus, `wordsLib` supports work with the type of fixed-width words.
+Another common flavour of library is the so-called “syntax” library, designed to support working with terms and types related to these common syntaxes.
+Thus, HOL provides the library `optionSyntax`, where the SML function `mk_some` of type `term -> term`, builds a HOL term with the HOL constant `SOME` applied to the provided argument.
+Occasionally, a *concept*`Lib` library will import and re-export the contents of a linked *concept*`Syntax` library.
+
+Generally, library implementations should only provide entry-points to effect changes to the global state of the system; they should *not* directly make changes themselves.
+Logical content (definitions of constants, proofs of theorems, *etc.*) should always be prompted by user‐written function calls in script files.
+Changes to other aspects of the global state (*e.g.*, the state of the grammar) should also only happen in the body of functions provided by the library, not as a side effect of the library being loaded.
+
+## Script Files
+
+When writing a theory called `name`, the user must write a file with name `nameScript.sml`.
+This will ultimately generate an SML structure that users will be able to refer to as `nameTheory`.
+That generated structure will contain bindings for the user’s definitions and theorems.
+For example, HOL comes with a `dividesScript.sml` that when built allows:
+```
+>>__ load "dividesTheory";
+>> dividesTheory.prime_def;
+```
+The recommended syntax for a script file begins
+
+```
+   Theory <thyname>
+   Ancestors <thy1> <thy2> ..
+   Libs <lib1> <lib2> ..
+
+   <Script Declarations>
+```
+
+The three keywords (`Theory`, `Ancestors` and `Libs`) must all appear in column 0 of the input file.
+The `Ancestors` and `Libs` components may be omitted.
+The name following the `Theory` keyword must match the name that precedes the `Script.sml` of the file-name, and must be a valid SML structure identifier.
+
+\index{Ancestors keyword@\ml{Ancestors} keyword}
+If present, the names following `Ancestors` identify theories that this theory builds upon.
+These names should be “bare”, they cannot include the `Theory` suffix.
+By default, all of the SML identifiers within the exported theories mentioned in this section are available without qualification.
+Thus, if `list` is one of the names following `Ancestors`, one need not write `listTheory.MAP` in the rest of the file to refer to its theorem `MAP`, but can instead write simply `MAP`.
+If two ancestor theories use the same names for their exported theories, the names belonging to the theory whose name occurs later in the list following the `Ancestors` keyword will shadow earlier occurrences.
+
+It is reasonable and permitted to list a theory as an ancestor solely to be able to write its names without qualification.
+For example, one need not explicitly write `pred_set` as an ancestor because `pred_setTheory` is always included in HOL’s standard logical context.
+Nonetheless, one might mention it in order to be able to write `IN_INSERT` instead of `pred_setTheory.IN_INSERT`.
+
+Finally, one might want a theory as an ancestor, but not to have its names available at the top-level.
+This effect is achieved by following the theory name with the `[qualified]` annotation.
+
+\begin{figure}
+
+\[
+\newcommand{\nt}[1]{\langle\mbox{\textit{#1}}\rangle}
+\begin{array}{lcl}
+\nt{theory} & ::= & \mathtt{Theory}\;\nt{thyname}\\
+                & & \nt{ancestors}^*\\
+                & & \nt{libraries}^*\\
+                & & \nt{thydecl}^* \\
+\nt{ancestors} & ::= &
+  \mathtt{Ancestors}\;\nt{thy-modifier}^?\;\nt{ancestor-spec}^*\\
+\nt{libraries} & ::= &
+  \mathtt{Libs}\;\nt{lib-modifier}^?\;\nt{lib-spec}^*\\
+\nt{ancestor-spec} & ::= & \nt{thyname}\;\nt{thy-modifier}^?\\
+\nt{lib-spec} & ::= & \nt{libname}\nt{lib-modifier}^?\\
+\nt{thy-modifier} & ::= &
+  \mathtt{[}\nt{thy-attr}(\mathtt{,}\nt{thy-attr})^*\mathtt{]}\\
+\nt{lib-modifier} & ::= &
+  \mathtt{[}\nt{module-attr}(\mathtt{,}\nt{module-attr})^*\mathtt{]}\\
+\nt{thy-attr} & ::= &   \nt{module-attr}
+         \quad  | \quad \mathtt{ignore\_grammar}\\
+\nt{module-attr} & ::= &     \mathtt{qualified}
+             \quad  | \quad  \mathtt{alias}\;\mathtt{=}\;\nt{ident}\\
+\end{array}
+\]
+
+\caption{Script File Syntax.
+The \texttt{alias=}$\mathit{ident}$ modifier does not make sense immediately after the \texttt{Ancestors} and \texttt{Libs} keywords;
+it should only be used after individual theory or library names to establish aliases for just those names.
+}
+\end{figure}
