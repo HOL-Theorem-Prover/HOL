@@ -54,12 +54,12 @@
  *
  * After proving this we prove some standard properties of <.
  *---------------------------------------------------------------------------*)
+Theory prim_rec[bare]
+Libs
+  HolKernel boolLib Prim_rec Parse simpLib boolSimps
 
-open HolKernel boolLib Prim_rec Parse
 
 type thm = Thm.thm
-
-val _ = new_theory "prim_rec";
 
 val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 
@@ -374,7 +374,6 @@ val SIMP_REC_REL_UNIQUE = store_thm(
   DISCH_THEN (CONJUNCTS_THEN (ASSUME_TAC o MATCH_MP SUC_LESS)) THEN
   RES_TAC THEN ASM_REWRITE_TAC []);
 
-open simpLib boolSimps
 val SIMP_REC_REL_UNIQUE_RESULT = store_thm(
   "SIMP_REC_REL_UNIQUE_RESULT",
   Term`!x f n.
@@ -651,4 +650,3 @@ Proof
  REWRITE_TAC []
 QED
 
-val _ = export_theory() ;

@@ -1,9 +1,9 @@
 (*---------------------------------------------------------------------------
           Theory of list permutations
  ---------------------------------------------------------------------------*)
-open HolKernel Parse boolLib bossLib listTheory;
-
-val _ = new_theory "perm";
+Theory perm
+Ancestors
+  list
 
 (*---------------------------------------------------------------------------*
  * What's a permutation? This definition uses universal quantification to    *
@@ -170,4 +170,3 @@ Induct
   THEN `PERM l1 u` by PROVE_TAC [PERM_trans1,PERM_CONS_iff]
   THEN RW_TAC list_ss []);
 
-val _ = export_theory();

@@ -18,14 +18,12 @@
     |  Vis 'e ('a -> ('a,'e,'r) itree)  --  visible event 'e with answer 'a,
                                             then continue based on answer
 *)
-open HolKernel Parse boolLib bossLib term_tactic;
-open arithmeticTheory listTheory llistTheory alistTheory optionTheory;
-open mp_then pred_setTheory relationTheory pairTheory combinTheory;
-open itreeTheory;
-open companionTheory fixedPointTheory set_relationTheory;
-
-val _ = new_theory "itreeTau";
-
+Theory itreeTau
+Ancestors
+  arithmetic list llist alist option pred_set relation pair
+  combin itree companion fixedPoint set_relation
+Libs
+  term_tactic mp_then
 
 (* make type definition *)
 
@@ -1574,4 +1572,3 @@ val _ = List.app Theory.delete_binding
    "itree_unfold_path_def", "itree_unfold_path_ind",
    "itree_el_TY_DEF", "itree_absrep", "itree_next_TY_DEF"];
 
-val _ = export_theory();

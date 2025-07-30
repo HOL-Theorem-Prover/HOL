@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory
-open cvTheory transferTheory transferLib cvxferTheory
-
-val _ = new_theory "cvxferExamples";
+Theory cvxferExamples
+Ancestors
+  arithmetic cv transfer cvxfer
+Libs
+  transferLib
 
 Overload Num = “cv$Num”
 Overload Pair = “cv$Pair”
@@ -230,4 +229,3 @@ QED
 val th = xfer (GEN_ALL addl_oneline)
 
 
-val _ = export_theory()

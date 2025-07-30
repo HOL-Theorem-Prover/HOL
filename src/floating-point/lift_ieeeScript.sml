@@ -1,12 +1,12 @@
 (* ------------------------------------------------------------------------
    Some basic properties of IEEE-754 (base 2) floating-point arithmetic
    ------------------------------------------------------------------------ *)
+Theory lift_ieee
+Ancestors
+  binary_ieee real
+Libs
+  wordsLib realLib realSimps
 
-open HolKernel boolLib bossLib
-open binary_ieeeTheory realTheory wordsLib realLib
-open realSimps
-
-val _ = new_theory "lift_ieee";
 
 val _ = ParseExtras.temp_loose_equality()
 val _ = diminish_srw_ss ["RMULCANON","RMULRELNORM"]
@@ -1735,4 +1735,3 @@ val non_representable_float_is_zero = store_thm (
   \\ fs [round_roundTiesToEven_is_plus_zero,
          round_roundTiesToEven_is_minus_zero, zero_to_real]);
 
-val () = export_theory ()

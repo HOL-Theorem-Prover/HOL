@@ -1,9 +1,10 @@
-open HolKernel boolSyntax Opentheory
-open OpenTheoryReader
+Theory OpenTheoryRelation
+Libs
+  boolSyntax Opentheory OpenTheoryReader
 
 val Thy = "OpenTheoryRelation"
 val pkg = "relation-1.61"
-val _ = new_theory Thy
+
 val file = pkg^".art"
 
 val ERR=mk_HOL_ERR Thy
@@ -41,5 +42,3 @@ val (reader:reader) = {
 };
 val thms = read_article file reader;
 val _ = Net.itnet (fn th => fn n => (save_thm("th"^Int.toString(n),th); n+1)) thms 0;
-
-val _ = export_theory()

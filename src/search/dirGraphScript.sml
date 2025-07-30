@@ -1,13 +1,14 @@
 (*---------------------------------------------------------------------------*)
 (* Depth first traversal of directed graphs that can contain cycles.         *)
 (*---------------------------------------------------------------------------*)
+Theory dirGraph
+Ancestors
+  pred_set relation list
+Libs
+  pred_setLib
 
-open HolKernel boolLib bossLib
-     pred_setTheory pred_setLib relationTheory listTheory;
 
 val set_ss = list_ss ++ PRED_SET_ss;
-
-val _ = new_theory "dirGraph";
 
 (*---------------------------------------------------------------------------*)
 (* A graph G is a function of type 'a -> 'a list.                            *)
@@ -94,4 +95,3 @@ val REACH_LEM2 = Q.store_thm
  POP_ASSUM (MP_TAC o Q.SPEC `x'`) THEN RW_TAC set_ss [] THEN
  RW_TAC set_ss [Once RTC_CASES2] THEN METIS_TAC [RTC_RULES]);
 
-val _ = export_theory();

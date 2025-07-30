@@ -2,14 +2,16 @@
 (* Create "posetTheory" for reasoning about arbitrary partial orders.        *)
 (* Originally created by Joe Hurd to support the pGCL formalization.         *)
 (* ========================================================================= *)
+Theory poset[bare]
+Ancestors
+  pair
+Libs
+  HolKernel Parse boolLib pairLib BasicProvers metisLib simpLib
 
-open HolKernel Parse boolLib pairLib BasicProvers metisLib simpLib pairTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "poset"                                         *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "poset";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -436,5 +438,3 @@ val knaster_tarski = store_thm
        poset p /\ complete p /\ function (carrier p) (carrier p) f /\
        monotonic p f ==> (?x. lfp p f x) /\ (?x. gfp p f x)``,
    PROVE_TAC [knaster_tarski_lfp, knaster_tarski_gfp]);
-
-val _ = export_theory();

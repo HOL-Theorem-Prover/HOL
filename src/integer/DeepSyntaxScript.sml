@@ -1,8 +1,9 @@
-open HolKernel Parse boolLib
+Theory DeepSyntax
+Ancestors
+  integer int_arith pred_set
+Libs
+  Datatype simpLib
 
-open Datatype integerTheory bossLib int_arithTheory simpLib pred_setTheory
-
-val _ = new_theory "DeepSyntax";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Hol_datatype `deep_form = Conjn of deep_form => deep_form
@@ -414,4 +415,3 @@ val in_aset = store_thm(
 
 
 
-val _ = export_theory();

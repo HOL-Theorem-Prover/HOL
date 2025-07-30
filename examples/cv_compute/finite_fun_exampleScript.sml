@@ -6,6 +6,9 @@ val _ = new_theory "finite_fun_example";
 
 (* --- setup --- *)
 
+Overload Num[local] = “cv$Num”
+Overload Pair[local] = “cv$Pair”
+
 Type mem = “:256 word -> num”;
 
 Definition to_mem_def:

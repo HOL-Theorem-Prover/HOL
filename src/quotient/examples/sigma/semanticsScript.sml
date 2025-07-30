@@ -1,33 +1,14 @@
-open HolKernel Parse boolLib;
+Theory semantics
+Ancestors
+  pair list combin pred_set arithmetic more_set object alpha lift
+  relation reduction
+Libs
+  numLib Mutual ind_rel dep_rewrite barendregt tactics
 
 (* --------------------------------------------------------------------- *)
 (* Embedding the semantaics of objects as a foundational layer,          *)
 (* according to Abadi and Cardelli, "A Theory of Objects."               *)
 (* --------------------------------------------------------------------- *)
-
-
-val _ = new_theory "semantics";
-
-
-open pairTheory listTheory;
-open combinTheory;
-open pred_setTheory;
-open numLib;
-open arithmeticTheory;
-open bossLib;
-open Mutual;
-open ind_rel;
-open dep_rewrite;
-open more_setTheory;
-open objectTheory;
-open alphaTheory;
-open liftTheory;
-open barendregt;
-open relationTheory;
-open reductionTheory;
-
-open tactics;
-
 
 
 val vars   =  ty_antiq( ==`:var list`== );
@@ -2196,8 +2177,6 @@ val SIGMA_R_NORMAL_FORM_UNIQUE = store_thm
     THEN REWRITE_TAC[SIGMA_R_CHURCH_ROSSER]
    );
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "semantics.lst";
 

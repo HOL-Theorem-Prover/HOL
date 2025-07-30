@@ -1,4 +1,8 @@
-open HolKernel Parse boolLib;
+Theory finite_set
+Ancestors
+  list pred_set
+Libs
+  ind_rel quotientLib
 
 (* ------------------------------------------------------------------------ *)
 (* Representing finite sets as a new datatype in the HOL logic.             *)
@@ -6,9 +10,6 @@ open HolKernel Parse boolLib;
 (* This is a demonstration of how to use the higher order quotient package  *)
 (* to construct the type of finite sets, modeled as a quotient of lists.    *)
 (* ------------------------------------------------------------------------ *)
-
-
-val _ = new_theory "finite_set";
 
 
 (* In interactive sessions, do:
@@ -20,14 +21,6 @@ app load ["listTheory",
           "quotientLib"];
 
 *)
-
-open listTheory;
-open pred_setTheory;
-open ind_rel;
-open bossLib;
-
-open quotientLib;
-
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
 
@@ -720,8 +713,6 @@ val set2fset_fset2set = store_thm
 
 
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "finite_set.lst";
 

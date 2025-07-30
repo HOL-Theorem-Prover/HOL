@@ -3,12 +3,12 @@
     Michael Norrish, November 2001
    ---------------------------------------------------------------------- *)
 
-open HolKernel boolLib integerTheory
-open simpLib boolSimps BasicProvers TotalDefn
+Theory Omega
+Ancestors
+  integer list[qualified] int_arith[qualified]
+Libs
+  simpLib boolSimps BasicProvers TotalDefn CooperMath
 
-local open listTheory int_arithTheory CooperMath in end;
-
-val _ = new_theory "Omega";
 val _ = ParseExtras.temp_loose_equality()
 
 val ARITH_ss = numSimps.ARITH_ss
@@ -1229,5 +1229,3 @@ Proof
     ASM_REWRITE_TAC [INT_LE_ADDR] THEN CONV_TAC CooperMath.REDUCE_CONV
   ]
 QED
-
-val _ = export_theory();

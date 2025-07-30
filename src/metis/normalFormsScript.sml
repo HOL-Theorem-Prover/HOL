@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib;
-
-val _ = new_theory "normalForms";
+Theory normalForms[bare]
+Libs
+  HolKernel Parse boolLib
 
 (* ------------------------------------------------------------------------- *)
 (* EXT_POINT                                                                 *)
@@ -93,4 +93,3 @@ val UNIV_POINT = store_thm
    [MATCH_ACCEPT_TAC UNIV_POINT_DEF,
     DISCH_THEN MATCH_ACCEPT_TAC]);
 
-val _ = export_theory ();

@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib pairTheory pairSyntax combinTheory listTheory;
-
-val _ = new_theory "state_transformer"
+Theory state_transformer
+Ancestors
+  pair combin list
+Libs
+  pairSyntax simpLib BasicProvers boolSimps metisLib
 
 val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 
@@ -70,8 +72,6 @@ val sequence_def = TotalDefn.Define`
 
 val mapM_def = TotalDefn.Define`
    mapM f = sequence o MAP f`
-
-open simpLib BasicProvers boolSimps metisLib
 
 val mwhile_exists = prove(
   ``!g b. ?f.
@@ -361,4 +361,3 @@ val _ = TotalDefn.export_termsimp "UNIT_DEF"
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory ();

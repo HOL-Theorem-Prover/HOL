@@ -1,7 +1,6 @@
-open HolKernel boolLib
-open integerTheory int_arithTheory
-
-val _ = new_theory "cooper";
+Theory cooper
+Ancestors
+  integer int_arith
 
 Theorem elim_le[unlisted] = GSYM INT_NOT_LT;
 
@@ -135,5 +134,3 @@ Theorem NOT_NOT[unlisted] = tautLib.TAUT_PROVE ``~~p:bool = p``;
 
 Theorem K_THM'[unlisted] =
   INST_TYPE [(alpha |-> bool), (beta |-> ``:int``)] combinTheory.K_THM;
-
-val _ = export_theory ();

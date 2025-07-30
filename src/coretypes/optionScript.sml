@@ -12,20 +12,12 @@
 (*                Dec.1998, in order to fit in with Datatype scheme       *)
 (* =======================================================================*)
 
-open HolKernel Parse boolLib metisLib;
-
-(*---------------------------------------------------------------------------
-     Make sure that sumTheory and oneTheory is loaded.
- ---------------------------------------------------------------------------*)
-
-local open sumTheory oneTheory relationTheory DefnBase in end;
-open simpLib BasicProvers
-
-(* ---------------------------------------------------------------------*)
-(* Create the new theory                                                *)
-(* ---------------------------------------------------------------------*)
-
-val _ = new_theory "option";
+Theory option[bare]
+Ancestors[qualified]
+  sum one relation
+Libs
+  HolKernel Parse boolLib metisLib DefnBase[qualified] simpLib
+  BasicProvers OpenTheoryMap[qualified]
 
 (*---------------------------------------------------------------------------*
  * Define the new type. The representing type is 'a + one. The development   *
@@ -40,11 +32,10 @@ val option_TY_DEF =
           BETA_TAC THEN EXISTS_TAC“x:'a + one” THEN ACCEPT_TAC TRUTH));
 
 local
-  open OpenTheoryMap
   val ns = ["Data","Option"]
-  val _ = OpenTheory_tyop_name{tyop={Thy="option",Tyop="option"},name=(ns,"option")}
+  val _ = OpenTheoryMap.OpenTheory_tyop_name{tyop={Thy="option",Tyop="option"},name=(ns,"option")}
 in
-  fun ot0 x y = OpenTheory_const_name{const={Thy="option",Name=x},name=(ns,y)}
+  fun ot0 x y = OpenTheoryMap.OpenTheory_const_name{const={Thy="option",Name=x},name=(ns,y)}
   fun ot x = ot0 x x
 end
 
@@ -861,5 +852,3 @@ val datatype_option = store_thm(
   "datatype_option",
   ``DATATYPE (option (NONE:'a option) (SOME:'a -> 'a option))``,
   REWRITE_TAC [DATATYPE_TAG_THM])
-
-val _ = export_theory();

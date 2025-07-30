@@ -17,22 +17,15 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
+Theory monoid
+Ancestors
+  pred_set arithmetic divides gcd logroot list rich_list bag
+  gcdset number combinatorics prime
+Libs
+  jcLib dep_rewrite
 
-(* declare new theory at start *)
-val _ = new_theory "monoid";
-
-(* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory logrootTheory
-     listTheory rich_listTheory bagTheory gcdsetTheory dep_rewrite;
-
-open numberTheory combinatoricsTheory primeTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Monoid Documentation                                                      *)
@@ -5169,8 +5162,3 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
-(*===========================================================================*)

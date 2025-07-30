@@ -1,18 +1,15 @@
 (*---------------------------------------------------------------------------*)
 (* Develop the theory of reals                                               *)
 (*---------------------------------------------------------------------------*)
+Theory real
+Ancestors
+  arithmetic num prim_rec while pred_set realax
+  marker[qualified] (* for unint *)
+Libs
+  numLib reduceLib pairLib mesonLib tautLib simpLib Arithconv
+  jrhUtils Canon_Port BasicProvers TotalDefn metisLib hurdUtils
+  RealArith
 
-open HolKernel Parse boolLib bossLib;
-
-open numLib reduceLib pairLib arithmeticTheory numTheory prim_recTheory
-     whileTheory mesonLib tautLib simpLib Arithconv jrhUtils Canon_Port
-     BasicProvers TotalDefn metisLib hurdUtils pred_setTheory;
-
-open realaxTheory RealArith;
-
-local open markerTheory in end; (* for unint *)
-
-val _ = new_theory "real";
 
 val TAUT_CONV   = jrhUtils.TAUT_CONV; (* conflict with tautLib.TAUT_CONV *)
 val GEN_ALL     = hol88Lib.GEN_ALL;   (* it has old reverted variable order *)
@@ -5455,5 +5452,3 @@ Proof
  >> irule_at Any REAL_MUL_RINV
  >> ASM_REWRITE_TAC [REAL_SUB_0]
 QED
-
-val _ = export_theory();

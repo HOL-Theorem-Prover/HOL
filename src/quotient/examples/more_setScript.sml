@@ -1,14 +1,11 @@
 (* --------------------------------------------------------------------- *)
 (* Boilerplate.                                                          *)
 (* --------------------------------------------------------------------- *)
-open HolKernel Parse boolLib;
-
-
-(* --------------------------------------------------------------------- *)
-(* Create the theory.                                                    *)
-(* --------------------------------------------------------------------- *)
-val _ = new_theory "more_set";
-
+Theory more_set
+Ancestors
+  prim_rec combin pair list arithmetic pred_set
+Libs
+  numLib listLib pred_setLib tactics
 
 (*
 app load ["pairTheory", "listTheory",
@@ -16,31 +13,8 @@ app load ["pairTheory", "listTheory",
           "Num_induct", "listLib", "pred_setLib"];
 *)
 
-(* --------------------------------------------------------------------- *)
-(* Autoload definitions and theorems from ancestor theories.             *)
-(* --------------------------------------------------------------------- *)
-open prim_recTheory;
-open combinTheory;
-open pairTheory;
-open listTheory;
-open arithmeticTheory;
-open pred_setTheory;
-
-
-(* --------------------------------------------------------------------- *)
-(* Need the induction, list, and pred_set libraries.                     *)
-(* --------------------------------------------------------------------- *)
-open numLib;
-open listLib;
-open pred_setLib;
-
-
 (* For errors try     <exp> handle e => Raise e;
 *)
-
-
-open tactics;
-
 
 
 val IN_NOT_IN = store_thm
@@ -755,8 +729,6 @@ val GSPEC_EMPTY_LEMMA =
       ]
   );
 
-
-val _ = export_theory();
 
 val _ = print_theory_to_file "-" "more_set.lst";
 

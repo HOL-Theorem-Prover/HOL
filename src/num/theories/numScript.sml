@@ -1,8 +1,10 @@
-open HolKernel Parse boolLib boolTheory;
+Theory num[bare]
+Ancestors
+  bool
+Libs
+  HolKernel Parse boolLib
 
 infix THEN THENL;
-
-val _ = new_theory "num";
 
 val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 
@@ -203,4 +205,3 @@ val INDUCTION = store_thm("INDUCTION",
       DISCH_THEN (STRIP_THM_THEN SUBST1_TAC) THEN
       ASM_REWRITE_TAC [num_ISO_DEF,SYM (SPEC_ALL SUC_DEF)]]);
 
-val _ = export_theory();

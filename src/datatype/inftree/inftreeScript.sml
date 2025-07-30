@@ -1,9 +1,9 @@
-open HolKernel boolLib Parse BasicProvers
-open boolSimps simpLib
-
-open arithmeticTheory IndDefLib listTheory metisLib BasicProvers
-
-val _ = new_theory "inftree"
+Theory inftree[bare]
+Ancestors
+  arithmetic list
+Libs
+  HolKernel boolLib Parse BasicProvers boolSimps simpLib
+  IndDefLib metisLib BasicProvers TypeBasePure[qualified]
 
 (* ----------------------------------------------------------------------
     establish type of (possibly infinitely) branching tree
@@ -191,16 +191,10 @@ val inftree_nchotomy = store_thm(
   ``!t. (?a. t = iLf a) \/ (?b d. t = iNd b d)``,
   HO_MATCH_MP_TAC inftree_ind THEN SRW_TAC [][]);
 
-val _ = let
-  open TypeBasePure
-in
-  TypeBase.export (
-    gen_datatype_info {
-      ax = inftree_Axiom,
-      ind = inftree_ind,
-      case_defs = [inftree_case_def]
-    }
-  )
-end
-
-val _ = export_theory()
+val _ = TypeBase.export (
+  TypeBasePure.gen_datatype_info {
+    ax = inftree_Axiom,
+    ind = inftree_ind,
+    case_defs = [inftree_case_def]
+  }
+)

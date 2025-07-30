@@ -1,12 +1,10 @@
 (* Tests of datatypes with indirect recursion, especially involving basic
    types. Some of these were moved here from selftest to ensure that
    basicSize is loaded and the tests make sense. *)
-
-open HolKernel Parse Datatype boolSyntax
-
-               local open testutils basicSize in end
-
-val _ = new_theory "with_basic_sizes" ;
+Theory with_basic_sizes[bare]
+Libs
+  HolKernel Parse Datatype boolSyntax
+  testutils[qualified] basicSize[qualified]
 
 val ERR = mk_HOL_ERR "with_basic_sizes"
 
@@ -96,5 +94,3 @@ val _ = check_size_eq ``: v_rec`` ["full_sum_size"];
 val _ = Datatype`a_rec = A ((a_rec # unit # num option # (unit + num)) list) | B unit`
 
 val _ = check_size_eq ``: a_rec`` ["option_size", "list_size", "one_size"];
-
-val _ = export_theory ();

@@ -18,17 +18,15 @@
     College of Information Engineering, Capital Normal University (CNU)
                         Beijing, China
    ===================================================================== *)
+Theory integral
+Ancestors
+  bool powser lim real_sigma pair arithmetic num prim_rec real
+  metric nets seq pred_set relation topology iterate
+  real_topology integration
+Libs
+  PairedLambda Diff mesonLib tautLib numLib reduceLib pairLib
+  jrhUtils realLib
 
-open HolKernel Parse bossLib boolLib;
-
-open boolTheory powserTheory PairedLambda Diff mesonLib tautLib
-     limTheory numLib reduceLib pairLib real_sigmaTheory
-     pairTheory arithmeticTheory numTheory prim_recTheory jrhUtils realTheory
-     realLib metricTheory netsTheory seqTheory pred_setTheory relationTheory;
-
-open topologyTheory iterateTheory real_topologyTheory integrationTheory;
-
-val _ = new_theory "integral";
 
 local
   val ss = ["lift_disj_eq", "lift_imp_disj"];
@@ -3810,8 +3808,6 @@ Proof
  >> MATCH_MP_TAC integral_old_to_new >> art []
  >> rw [integrable_eq_integrable_on]
 QED
-
-val _ = export_theory();
 
 (* References:
 

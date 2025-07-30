@@ -3,11 +3,10 @@
 (* DESCRIPTION   : Function update with lists                                *)
 (* DATE          : 2011                                                      *)
 (* ========================================================================= *)
+Theory update
+Ancestors
+  rich_list sorting
 
-open HolKernel Parse boolLib bossLib;
-open rich_listTheory sortingTheory;
-
-val _ = new_theory "update";
 
 (* ------------------------------------------------------------------------
    Definitions
@@ -190,4 +189,3 @@ val _ = List.map Theory.save_thm
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = export_theory();

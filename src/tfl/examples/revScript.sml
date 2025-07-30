@@ -2,11 +2,10 @@
 (* Tricky recursive definition of list reversal. Doesn't use any other       *)
 (* functions, nor extra arguments. From Joe Hurd.                            *)
 (*===========================================================================*)
+Theory rev
+Ancestors
+  prim_rec list
 
-open HolKernel Parse boolLib bossLib
-     prim_recTheory listTheory;
-
-val _ = new_theory "rev";
 
 (*---------------------------------------------------------------------------
      The definition
@@ -82,4 +81,3 @@ Proof
   CASE_TAC >> simp[]
 QED
 
-val _ = export_theory();

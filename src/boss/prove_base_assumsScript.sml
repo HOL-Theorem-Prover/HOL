@@ -6,8 +6,9 @@
 (* ===================================================================== *)
 (* NOTE: To replay this script, use "hol.bare" *)
 
-open HolKernel boolLib bossLib BasicProvers;
-open OpenTheoryReader;
+Theory prove_base_assums[bare]
+Libs
+  HolKernel boolLib bossLib BasicProvers OpenTheoryReader
 
 (* NOTE: currently there are 96 "assumptions" (stored in the variable 'goals'),
    each represents a theorem defined in boolTheory and used by theories in hol-
@@ -23,8 +24,6 @@ open OpenTheoryReader;
  *)
 
 val Thy = "prove_base_assums";
-
-val _ = new_theory Thy;
 
 val ERR = mk_HOL_ERR Thy;
 
@@ -1965,5 +1964,3 @@ let val t1 = “t1:bool” and t2 = “t2:bool”
  in
    GENL [t1,t2] (DISJ_CASES (SPEC t1 BOOL_CASES_AX) thT3 thF3)
  end);
-
-val _ = export_theory ();

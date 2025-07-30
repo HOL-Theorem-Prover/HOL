@@ -2,19 +2,15 @@
 (* The Theory of Martingales for Sigma-Finite Measure Spaces                 *)
 (* (Lebesgue Integration Extras, Product Measure and Fubini-Tonelli Theorem) *)
 (* ------------------------------------------------------------------------- *)
+Theory martingale
+Ancestors
+  pair relation prim_rec arithmetic pred_set combin fcp real seq
+  transc iterate real_sigma topology real_topology metric nets
+  extreal_base extreal sigma_algebra measure real_borel borel
+  lebesgue
+Libs
+  hurdUtils jrhUtils tautLib realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open pairTheory relationTheory prim_recTheory arithmeticTheory pred_setTheory
-     combinTheory fcpTheory hurdUtils jrhUtils tautLib;
-
-open realTheory realLib seqTheory transcTheory iterateTheory real_sigmaTheory
-     topologyTheory real_topologyTheory metricTheory netsTheory;
-
-open extreal_baseTheory extrealTheory sigma_algebraTheory measureTheory
-     real_borelTheory borelTheory lebesgueTheory;
-
-val _ = new_theory "martingale";
 
 val _ = hide "S";
 
@@ -9040,7 +9036,6 @@ Proof
 QED
 
 (* END *)
-val _ = export_theory ();
 
 (* References:
 

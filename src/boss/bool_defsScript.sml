@@ -1,6 +1,6 @@
-open HolKernel boolLib BasicProvers
-
-val _ = new_theory "bool_defs";
+Theory bool_defs[bare]
+Libs
+  HolKernel boolLib BasicProvers BasicProvers
 
 val LET_def = new_definition
   ("LET_def", mk_eq(mk_var("LET",type_of(lhs(concl LET_DEF))),rhs(concl LET_DEF)));
@@ -70,5 +70,3 @@ val TYPE_DEFINITION_thm = store_thm
 val _ = Parse.hide "ARB";
 val ARB_def = gen_new_specification("ARB_def",ADD_ASSUM``ARB = @x. F`` TRUTH);
 val ARB_thm = save_thm("ARB_thm",REFL``bool_defs$ARB``);
-
-val _ = export_theory();

@@ -2,11 +2,12 @@
 (* FILE          : alignmentScript.sml                                       *)
 (* DESCRIPTION   : Theory for address alignment.                             *)
 (* ========================================================================= *)
+Theory alignment
+Ancestors
+  words
+Libs
+  Q dep_rewrite wordsLib
 
-open HolKernel Parse boolLib bossLib Q dep_rewrite
-open wordsLib
-
-val () = new_theory "alignment";
 
 val ERR = mk_HOL_ERR "alignmentScript"
 
@@ -573,5 +574,3 @@ val aligned_numeric = Q.store_thm("aligned_numeric",
    )
 
 (* ------------------------------------------------------------------------- *)
-
-val () = export_theory ()

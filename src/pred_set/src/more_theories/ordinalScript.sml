@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib
-
-open boolSimps optionTheory set_relationTheory pred_setTheory;
-
-open wellorderTheory cardinalTheory topologyTheory;
-
-val _ = new_theory "ordinal"
+Theory ordinal
+Ancestors
+  option set_relation pred_set wellorder cardinal topology
+Libs
+  boolSimps
 
 (* perform quotient, creating a type of "ordinals". *)
 fun mk_def(s,t) =
@@ -2960,4 +2958,3 @@ Proof
 QED
 
 
-val _ = export_theory()

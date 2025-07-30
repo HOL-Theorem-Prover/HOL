@@ -2,11 +2,11 @@
   Definitions and theorems that support automation (the Lib file) for
   fast insertion and lookup into association lists (alists).
 *)
-open HolKernel bossLib boolLib boolSimps rich_listTheory
-
-local open alistTheory in end
-
-val _ = new_theory "alist_tree";
+Theory alist_tree
+Ancestors
+  rich_list alist[qualified]
+Libs
+  boolSimps
 
 (* key property: a partial function f can be represented by an assoc list
    al which is known to be sorted according to R *)
@@ -367,4 +367,3 @@ Proof
   fs [is_lookup_def]
 QED
 
-val _ = export_theory ();

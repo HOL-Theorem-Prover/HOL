@@ -1,13 +1,14 @@
 (*===========================================================================*)
 (* Construct reals from positive reals                                       *)
 (*===========================================================================*)
+Theory realax
+Ancestors
+  pair arithmetic num normalizer prim_rec hreal
+Libs
+  numLib reduceLib pairLib jrhUtils mesonLib tautLib
+  realPP[qualified]
 
-open HolKernel Parse boolLib bossLib;
 
-open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory
-     normalizerTheory prim_recTheory jrhUtils hrealTheory mesonLib tautLib;
-
-val _ = new_theory "realax";
 val _ = ParseExtras.temp_loose_equality()
 
 val TAUT_CONV = jrhUtils.TAUT_CONV; (* conflict with tautLib.TAUT_CONV *)
@@ -241,7 +242,6 @@ val _ = set_fixity "/" (Infixl 600);
 val _ = overload_on(GrammarSpecials.decimal_fraction_special, “$/”);
 val _ = overload_on("/", “$/”);
 
-local open realPP in end
 val _ = add_ML_dependency "realPP"
 val _ = add_user_printer ("real.decimalfractions",
                           “&(NUMERAL x) : real / &(NUMERAL y)”);
@@ -1272,4 +1272,3 @@ Proof
   COND_CASES_TAC THEN ASM_REWRITE_TAC[real_lt]
 QED
 
-val _ = export_theory();

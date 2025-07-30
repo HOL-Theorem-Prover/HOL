@@ -1,13 +1,10 @@
-open HolKernel Parse boolLib boolSimps bossLib
-     numLib Prim_rec pred_setTheory BasicProvers
-     metisLib dividesTheory arithmeticTheory
-     combinTheory
+Theory bag
+Ancestors
+  list[qualified] divides pred_set arithmetic combin
+Libs
+  boolSimps numLib Prim_rec BasicProvers metisLib mesonLib
 
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
-
-val _ = new_theory "bag";
-
-val _ = set_grammar_ancestry ["list", "divides"]
 
 val _ = type_abbrev("bag", “:'a -> num”)
 val _ = type_abbrev("multiset", “:'a -> num”)
@@ -390,8 +387,6 @@ val BAG_IN_BAG_DELETE = store_thm(
 
 val ELIM_TAC = BasicProvers.VAR_EQ_TAC
 val ARWT = SRW_TAC [ARITH_ss][]
-open mesonLib
-
 val BAG_DELETE_INSERT = Q.store_thm(
   "BAG_DELETE_INSERT",
   `!x y b1 b2.
@@ -3399,4 +3394,3 @@ val _ = TypeBase.export [
           encode=NONE})
     ]
 
-val _ = export_theory();

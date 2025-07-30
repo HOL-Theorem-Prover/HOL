@@ -17,18 +17,14 @@
 (* originally proved by Joe Hurd [4] under algebra and [0, +inf) measure.    *)
 (* The theorem is now reproved under semiring and [0, +inf] measure.         *)
 (* ------------------------------------------------------------------------- *)
+Theory measure
+Ancestors
+  prim_rec arithmetic option pair combin pred_set topology
+  iterate real metric seq transc real_sigma real_topology extreal
+  sigma_algebra
+Libs
+  pred_setLib jrhUtils numLib realLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open prim_recTheory arithmeticTheory optionTheory pairTheory combinTheory
-     pred_setTheory pred_setLib topologyTheory jrhUtils iterateTheory numLib;
-
-open realTheory realLib metricTheory seqTheory transcTheory real_sigmaTheory
-     real_topologyTheory;
-
-open hurdUtils extrealTheory sigma_algebraTheory;
-
-val _ = new_theory "measure";
 
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 val SET_SPEC_TAC = SIMP_TAC (std_ss ++ pred_setSimps.SET_SPEC_ss);
@@ -6808,8 +6804,6 @@ Proof
   ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [] THEN
   SIMP_TAC arith_ss [count_def, GSPECIFICATION]
 QED
-
-val _ = export_theory ();
 
 (* References:
 

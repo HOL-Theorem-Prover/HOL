@@ -1,7 +1,9 @@
-open HolKernel Parse boolLib BasicProvers;
-
-open simpLib computeLib prim_recTheory arithmeticTheory boolSimps
-     metisLib numLib TotalDefn;
+Theory divides[bare]
+Ancestors
+  prim_rec arithmetic numeral[qualified]
+Libs
+  HolKernel Parse boolLib BasicProvers simpLib computeLib
+  boolSimps metisLib numLib TotalDefn
 
 val CALC = EQT_ELIM o reduceLib.REDUCE_CONV;
 val ARITH_TAC = CONV_TAC Arith.ARITH_CONV;
@@ -29,12 +31,6 @@ fun fs l = FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) l;
 val op >~ = Q.>~
 
 val ARW = RW_TAC arith_ss;
-
-local open numeralTheory in end;
-  (* concession to Holmake's flawed dependency analysis, which doesn't
-     spot this problem *)
-
-val _ = new_theory "divides";
 
 val divides_def = Q.new_definition
   ("divides_def",
@@ -1089,5 +1085,3 @@ val FACT_DIV = store_thm(
   `FACT n = n * FACT (n-1)` by metis_tac[FACT] >>
   `_ = FACT (n-1) * n + 0` by rw[MULT_COMM] >>
   metis_tac[DIV_UNIQUE]);
-
-val _ = export_theory();

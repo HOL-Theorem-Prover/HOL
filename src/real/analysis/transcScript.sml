@@ -17,28 +17,14 @@
        National University of Sciences and Technology (NUST)
        Ialamabad,Pakistan
     ---------------------------------------------------------------------- *)
+Theory transc
+Ancestors
+  pair num prim_rec arithmetic real metric nets real_sigma
+  pred_set iterate real_topology derivative seq lim powser
+Libs
+  reduceLib realLib numLib jrhUtils Diff mesonLib hurdUtils
 
-open HolKernel Parse bossLib boolLib;
 
-open reduceLib
-     pairTheory
-     numTheory
-     prim_recTheory
-     arithmeticTheory
-     realTheory realLib
-     metricTheory
-     netsTheory
-     real_sigmaTheory
-     numLib
-     jrhUtils
-     Diff
-     pred_setTheory
-     mesonLib hurdUtils;
-
-open iterateTheory real_topologyTheory derivativeTheory;
-open seqTheory limTheory powserTheory;
-
-val _ = new_theory "transc";
 val _ = Parse.reveal "B";
 
 val MVT            = limTheory.MVT;
@@ -3872,4 +3858,3 @@ Proof
                    NOT_IN_EMPTY, GSPECIFICATION]
 QED
 
-val _ = export_theory();

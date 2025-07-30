@@ -1,13 +1,13 @@
 (* ------------------------------------------------------------------------- *)
 (* List of Range of Numbers                                                  *)
 (* ------------------------------------------------------------------------- *)
+Theory listRange[bare]
+Ancestors
+  arithmetic list pred_set divides
+Libs
+  HolKernel Parse boolLib BasicProvers TotalDefn simpLib numSimps
+  numLib metisLib pred_setSimps listSimps
 
-open HolKernel Parse boolLib BasicProvers;
-
-open arithmeticTheory TotalDefn simpLib numSimps numLib listTheory metisLib
-     pred_setTheory pred_setSimps listSimps dividesTheory;
-
-val _ = new_theory "listRange";
 
 val decide_tac = DECIDE_TAC;
 val metis_tac = METIS_TAC;
@@ -1169,4 +1169,3 @@ Proof
  >> rw []
 QED
 
-val _ = export_theory();

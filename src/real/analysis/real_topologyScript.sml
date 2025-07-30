@@ -14,18 +14,15 @@
 (*                                                                           *)
 (*    Note: This theory was ported from HOL Light                            *)
 (* ========================================================================= *)
+Theory real_topology
+Ancestors
+  num prim_rec combin quotient arithmetic real real_sigma pair
+  bool pred_set option sum list topology metric nets wellorder
+  cardinal permutes iterate
+Libs
+  numLib unwindLib tautLib jrhUtils InductiveDefinition mesonLib
+  realLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open numTheory numLib unwindLib tautLib prim_recTheory
-     combinTheory quotientTheory arithmeticTheory realTheory real_sigmaTheory
-     jrhUtils pairTheory boolTheory pred_setTheory optionTheory
-     sumTheory InductiveDefinition listTheory mesonLib
-     realLib topologyTheory metricTheory netsTheory;
-
-open wellorderTheory cardinalTheory permutesTheory iterateTheory hurdUtils;
-
-val _ = new_theory "real_topology";
 
 val std_ss' = std_ss -* ["lift_disj_eq", "lift_imp_disj"];
 
@@ -21783,8 +21780,6 @@ Proof
       ASM_SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_LOWERBOUND] \\
       REWRITE_TAC [CONTENT_EQ_0] >> ASM_REAL_ARITH_TAC ]
 QED
-
-val _ = export_theory();
 
 (* References:
 

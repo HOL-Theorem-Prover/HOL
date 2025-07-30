@@ -1,12 +1,10 @@
-open HolKernel boolLib bossLib Parse;
-open EmitML combinTheory pairTheory numeralTheory whileTheory arithmeticTheory;
-open pred_setTheory optionTheory basicSizeTheory listTheory rich_listTheory;
-open stringTheory sumTheory finite_mapTheory sortingTheory;
-open bitTheory numeral_bitTheory fcpTheory fcpLib wordsTheory
-open integerTheory integer_wordTheory intSyntax;
-open numposrepTheory ASCIInumbersTheory pre_emitTheory
-
-val _ = new_theory "basis_emit";
+Theory basis_emit
+Ancestors
+  combin pair numeral while arithmetic pred_set option basicSize
+  list rich_list string sum finite_map sorting bit numeral_bit
+  fcp words integer integer_word numposrep ASCIInumbers pre_emit
+Libs
+  EmitML fcpLib intSyntax
 
 (* == Combin ============================================================== *)
 
@@ -1392,5 +1390,3 @@ val _ = eCAML "sorting" defs;
 
 (* restore "standard" set type abbreviation to have pride of place *)
 val _ = type_abbrev("set", alpha --> bool)
-
-val _ = export_theory ();

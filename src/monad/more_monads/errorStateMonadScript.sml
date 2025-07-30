@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib pairTheory pairSyntax combinTheory
-     optionTheory listTheory;
-
-val _ = new_theory "errorStateMonad"
+Theory errorStateMonad
+Ancestors
+  pair combin option list
+Libs
+  pairSyntax simpLib BasicProvers boolSimps metisLib BasicProvers
 
 val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 
@@ -72,8 +73,6 @@ val sequence_def = TotalDefn.Define`
 
 val mapM_def = TotalDefn.Define`
    mapM f = sequence o MAP f`
-
-open simpLib BasicProvers boolSimps metisLib
 
 Definition mwhile_step_def:
   mwhile_step P g x 0 s = BIND (P x) (\b. UNIT (b,x)) s /\
@@ -238,7 +237,6 @@ val MWHILE_UNIT_DEF = new_specification(
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-open BasicProvers
 val BIND_LEFT_UNIT = store_thm
   ("BIND_LEFT_UNIT[simp]",
    ``!k x. BIND (UNIT x) k = k x``,
@@ -442,4 +440,3 @@ val ES_LIFT2_DEF = DEF`
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory ()

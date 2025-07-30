@@ -4,11 +4,13 @@
 (*                                                                           *)
 (* Author: (Joseph) Hing-Lun Chan (Australian National University, 2019)     *)
 (* ------------------------------------------------------------------------- *)
+Theory gcd[bare]
+Ancestors
+  prim_rec arithmetic divides
+Libs
+  HolKernel Parse boolLib BasicProvers simpLib boolSimps
+  Induction TotalDefn numSimps metisLib
 
-open HolKernel Parse boolLib BasicProvers
-
-open prim_recTheory arithmeticTheory dividesTheory simpLib boolSimps
-     Induction TotalDefn numSimps metisLib;
 
 val arith_ss = srw_ss() ++ ARITH_ss;
 val std_ss = arith_ss;
@@ -27,8 +29,6 @@ val rw = SRW_TAC [ARITH_ss];
 val qabbrev_tac = Q.ABBREV_TAC;
 fun simp l = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 fun fs l = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
-
-val _ = new_theory "gcd";
 
 val is_gcd_def = Q.new_definition
  ("is_gcd_def",
@@ -1779,4 +1779,3 @@ Proof
   metis_tac[EUCLID_LEMMA]
 QED
 
-val _ = export_theory();

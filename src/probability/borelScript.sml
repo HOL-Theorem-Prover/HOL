@@ -11,19 +11,14 @@
 (* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2019 - 2021)          *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
+Theory borel
+Ancestors
+  prim_rec arithmetic combin res_quan pair pred_set relation real
+  seq transc real_sigma real_topology list metric extreal
+  sigma_algebra iterate real_borel measure
+Libs
+  numLib res_quanTools pred_setLib realLib RealArith hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open prim_recTheory arithmeticTheory numLib combinTheory res_quanTheory
-     res_quanTools pairTheory pred_setTheory pred_setLib relationTheory;
-
-open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith
-     real_topologyTheory listTheory metricTheory;
-
-open extrealTheory sigma_algebraTheory iterateTheory real_borelTheory
-     measureTheory hurdUtils;
-
-val _ = new_theory "borel";
 
 val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
@@ -8381,8 +8376,6 @@ Proof
         (irule o SIMP_RULE (srw_ss ()) []) AE_subset
  >> rw[] >> irule EXTREAL_SUM_IMAGE_EQ' >> rw[combinTheory.C_DEF]
 QED
-
-val _ = export_theory ();
 
 (* References:
 

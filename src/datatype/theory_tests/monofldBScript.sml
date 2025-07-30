@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib
-
-open monofldATheory
-
-val _ = new_theory "monofldB";
+Theory monofldB[bare]
+Ancestors
+  monofldA
+Libs
+  HolKernel Parse boolLib
 
 val (write, read) = let
   val buf = ref ([] : string list)
@@ -31,4 +31,3 @@ val _ = if msg = "" then print "No message\n"
 val _ = save_thm("MFB", TRUTH)
 
 val _ = Globals.interactive := false
-val _ = export_theory();

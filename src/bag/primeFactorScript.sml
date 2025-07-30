@@ -1,12 +1,12 @@
 (*---------------------------------------------------------------------------*)
 (* Fundamental theorem of arithmetic for num.                                *)
 (*---------------------------------------------------------------------------*)
+Theory primeFactor
+Ancestors
+  bag divides arithmetic
+Libs
+  simpLib BasicProvers metisLib
 
-open HolKernel Parse boolLib bossLib;
-
-open simpLib BasicProvers metisLib bagTheory dividesTheory arithmeticTheory;
-
-val _ = new_theory "primeFactor";
 
 val std_ss =
      (boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ optionSimps.OPTION_ss ++
@@ -248,4 +248,3 @@ Proof
   \\ gs[BAG_GEN_PROD_def]
 QED
 
-val _ = export_theory();

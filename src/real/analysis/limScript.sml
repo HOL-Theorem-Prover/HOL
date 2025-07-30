@@ -1,16 +1,14 @@
 (*===========================================================================*)
 (* Theory of limits, continuity and differentiation of real->real functions  *)
 (*===========================================================================*)
+Theory lim
+Ancestors
+  pair arithmetic num prim_rec real metric nets combin pred_set
+  topology real_topology derivative seq
+Libs
+  numLib reduceLib pairLib jrhUtils realLib mesonLib hurdUtils
 
-open HolKernel Parse bossLib boolLib;
 
-open numLib reduceLib pairLib pairTheory arithmeticTheory numTheory jrhUtils
-     prim_recTheory realTheory realLib metricTheory netsTheory combinTheory
-     pred_setTheory mesonLib hurdUtils;
-
-open topologyTheory real_topologyTheory derivativeTheory seqTheory;
-
-val _ = new_theory "lim";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
@@ -1732,4 +1730,3 @@ Proof
   ASM_SIMP_TAC std_ss [DIFF_NEG]
 QED
 
-val _ = export_theory();

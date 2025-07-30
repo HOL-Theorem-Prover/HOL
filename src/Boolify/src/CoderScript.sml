@@ -7,12 +7,12 @@ app load
 ["bossLib", "rich_listTheory", "EncodeTheory", "DecodeTheory", "normalForms",
  "metisLib"];
 *)
+Theory Coder
+Ancestors
+  pair arithmetic list rich_list Encode Decode option combin
+Libs
+  pairTools metisLib normalForms
 
-open HolKernel boolLib Parse bossLib pairTheory pairTools
-     arithmeticTheory listTheory rich_listTheory EncodeTheory DecodeTheory
-     metisLib optionTheory normalForms combinTheory;
-
-val _ = new_theory "Coder";
 
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
@@ -315,4 +315,3 @@ val wf_coder_tree = store_thm
    >> Induct_on `ts`
    >> RW_TAC std_ss [encode_list_def, EVERY_DEF, dec2enc_enc2dec, MEM]);
 
-val _ = export_theory ();
