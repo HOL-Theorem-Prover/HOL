@@ -10,6 +10,9 @@ open cv_transLib cvTheory cv_stdTheory;
 
 val _ = new_theory "keccak";
 
+Overload Num[local] = “cv$Num”
+Overload Pair[local] = “cv$Pair”
+
 val _ = numLib.temp_prefer_num();
 
 Theorem LENGTH_PAD_RIGHT_0_8_word_to_bin_list[simp]:
