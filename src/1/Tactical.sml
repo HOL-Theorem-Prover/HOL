@@ -745,6 +745,8 @@ fun FIRST_PROVE tacl =
 
 val EVERY_ASSUM = ASSUM_LIST o MAP_EVERY
 
+val every_assum = EVERY_ASSUM
+
 (*---------------------------------------------------------------------------
  * Call a thm-tactic for the first assumption at which it succeeds.
  *---------------------------------------------------------------------------*)
