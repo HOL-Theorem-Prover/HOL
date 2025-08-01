@@ -15,13 +15,16 @@ OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex \
 all: reference.pdf reference.html
 .PHONY: all
 
-reference.pdf: prolog.md entries.md $(OTHER)
-	cat prolog.md entries.md | pandoc -V documentclass=book -o $@
+reference.pdf: reference.tex entries.tex $(OTHER)
+	latexmk -pdf reference
 
 reference.html: entries.md
 	pandoc -s -o $@ $<
 
 entries.md: $(Helpd)/src-sml/Md2TeX.exe $(wildcard $(Helpd)/Docfiles/*.md)
 	$(Helpd)/src-sml/Md2TeX.exe ../../help/Docfiles > $@
+
+entries.tex: entries.md
+	pandoc -V documentclass=book --number-sections=false -o $@ $<
 
 EXTRA_CLEANS = reference.html reference.pdf entries.md
