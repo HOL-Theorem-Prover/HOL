@@ -577,6 +577,7 @@ end;
  *    Replace arbitrary subterms in a term. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 
+(*
 val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
 local
   open Binarymap
@@ -589,7 +590,7 @@ local
 in
 fun subst [] = I
   | subst theta =
-    let val (fmap,b) = addb theta (emptysubst, true)
+    let val (fmap,) = addb theta (emptysubst, true)
         fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
           | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
@@ -608,6 +609,53 @@ fun subst [] = I
       (if b then vsubs else subs)
     end
 end
+*)
+
+local
+  open Binarymap
+  val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
+  fun addb [] A = A
+    | addb ({redex,residue}::t) (A,b) =
+      addb t (if type_of redex = type_of residue
+              then (insert(A,redex,residue),
+                    is_var redex andalso b)
+              else raise ERR "subst" "redex has different type than residue")
+ (* Check for aconv redex residue? *)
+ fun rebuild_abs _ SAME = SAME
+   | rebuild_abs v (DIFF M) = DIFF (Abs(v,M))
+ fun rebuild_comb _ _ SAME SAME = SAME
+   | rebuild_comb M _ SAME (DIFF N') = DIFF (Comb(M,N'))
+   | rebuild_comb _ N (DIFF M') SAME = DIFF (Comb(M',N))
+   | rebuild_comb _ _ (DIFF M') (DIFF N') = DIFF (Comb(M',N'))
+in
+fun subst [] = I
+  | subst theta =
+    let val (fmap,var_only_dom) = addb theta (emptysubst, true)
+        fun vsubs (v as Fv _) =
+             (case peek(fmap,v)
+               of NONE => SAME
+                | SOME y => DIFF y)
+          | vsubs (Comb(M,N)) = rebuild_comb M N (vsubs M) (vsubs N)
+          | vsubs (Abs(v,M)) = rebuild_abs v (vsubs M)
+          | vsubs (c as Clos _) = vsubs (push_clos c)
+          | vsubs tm = SAME
+        fun subs tm =
+          case peek(fmap,tm)
+           of SOME residue => DIFF residue
+            | NONE =>
+              (case tm
+                of Comb(M,N) => rebuild_comb M N (subs M) (subs N)
+                 | Abs(v,M) => rebuild_abs v (subs M)
+                 | Clos _  => subs(push_clos tm)
+                 |   _     => SAME)
+    in
+      if var_only_dom then
+         (fn tm => case vsubs tm of SAME => tm | DIFF tm' => tm')
+      else
+         (fn tm => case subs tm of SAME => tm | DIFF tm' => tm')
+    end
+end
+
 
 (*---------------------------------------------------------------------------*
  *     Instantiate type variables in a term                                  *
