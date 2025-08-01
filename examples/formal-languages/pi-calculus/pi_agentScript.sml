@@ -7,7 +7,7 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory listTheory listLib alistTheory;
+open pairTheory pred_setTheory listTheory listLib hurdUtils;
 
 open basic_swapTheory generic_termsTheory binderLib nomsetTheory nomdatatype;
 
@@ -1362,6 +1362,26 @@ val th2s = map (underAIs (SRULE [GSYM residual_sub_def, GSYM pi_sub_def] o
 
 Theorem pi_sub_thm[simp]       = LIST_CONJ th1s
 Theorem residual_sub_thm[simp] = LIST_CONJ th2s
+
+Theorem tpm_subst :
+    !pi E u t. tpm pi ([E/u] t) = [lswapstr pi E/lswapstr pi u] (tpm pi t)
+Proof
+    Induct_on ‘pi’
+ >> simp [FORALL_PROD, Once tpm_CONS]
+ >> rpt STRIP_TAC
+ >> Suff ‘tpm ((p_1,p_2)::pi) t = tpm [(p_1,p_2)] (tpm pi t)’ >- rw []
+ >> simp [Once tpm_CONS]
+QED
+
+Theorem rpm_subst :
+    !pi E u t. rpm pi ([E/u] t) = [lswapstr pi E/lswapstr pi u] (rpm pi t)
+Proof
+    Induct_on ‘pi’
+ >> simp [FORALL_PROD, Once rpm_CONS]
+ >> rpt STRIP_TAC
+ >> Suff ‘rpm ((p_1,p_2)::pi) t = rpm [(p_1,p_2)] (rpm pi t)’ >- rw []
+ >> simp [Once rpm_CONS]
+QED
 
 val _ = export_theory ();
 val _ = html_theory "pi_agent";
