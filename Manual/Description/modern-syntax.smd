@@ -86,34 +86,21 @@ Nonetheless, one might mention it in order to be able to write `IN_INSERT` inste
 Finally, one might want a theory as an ancestor, but not to have its names available at the top-level.
 This effect is achieved by following the theory name with the `[qualified]` annotation.
 
-\begin{figure}
+--------------    -----  ---------------------
+⟨*theory*⟩         ::=   `Theory` ⟨*thyname*⟩
+                         ⟨*ancestors*⟩^\*^
+                         ⟨*libraries*⟩^\*^
+                         ⟨*thydecl*⟩^\*^
+⟨*ancestors*⟩      ::=   `Ancestors` ⟨*thy-modifier*⟩^?^ ⟨*ancestor-spec*⟩^\*^
+⟨*libraries*⟩      ::=   `Libs` ⟨*lib-modifier*⟩^?^ ⟨*lib-spec*⟩^\*^
+⟨*ancestor-spec*⟩  ::=   ⟨*thyname*⟩ ⟨*thy-modifier*⟩^?^
+⟨*lib-spec*⟩       ::=   ⟨*thyname*⟩ ⟨*lib-modifier*⟩^?^
+⟨*thy-modifier*⟩   ::=   `[`⟨*thy-attr*⟩(`,`⟨*thy-attr*⟩)^\*^`]`
+⟨*lib-modifier*⟩   ::=   `[`⟨*module-attr*⟩(`,`⟨*module-attr*⟩)^\*^`]`
+⟨*thy-attr*⟩       ::=   ⟨*module-attr*⟩     |     `ignore_grammar`
+⟨*module-attr*⟩    ::=   `qualified`     |     `alias=` ⟨*ident*⟩
+--------------    -----  ---------------------
 
-\[
-\newcommand{\nt}[1]{\langle\mbox{\textit{#1}}\rangle}
-\begin{array}{lcl}
-\nt{theory} & ::= & \mathtt{Theory}\;\nt{thyname}\\
-                & & \nt{ancestors}^*\\
-                & & \nt{libraries}^*\\
-                & & \nt{thydecl}^* \\
-\nt{ancestors} & ::= &
-  \mathtt{Ancestors}\;\nt{thy-modifier}^?\;\nt{ancestor-spec}^*\\
-\nt{libraries} & ::= &
-  \mathtt{Libs}\;\nt{lib-modifier}^?\;\nt{lib-spec}^*\\
-\nt{ancestor-spec} & ::= & \nt{thyname}\;\nt{thy-modifier}^?\\
-\nt{lib-spec} & ::= & \nt{libname}\nt{lib-modifier}^?\\
-\nt{thy-modifier} & ::= &
-  \mathtt{[}\nt{thy-attr}(\mathtt{,}\nt{thy-attr})^*\mathtt{]}\\
-\nt{lib-modifier} & ::= &
-  \mathtt{[}\nt{module-attr}(\mathtt{,}\nt{module-attr})^*\mathtt{]}\\
-\nt{thy-attr} & ::= &   \nt{module-attr}
-         \quad  | \quad \mathtt{ignore\_grammar}\\
-\nt{module-attr} & ::= &     \mathtt{qualified}
-             \quad  | \quad  \mathtt{alias}\;\mathtt{=}\;\nt{ident}\\
-\end{array}
-\]
-
-\caption{Script File Syntax.
-The \texttt{alias=}$\mathit{ident}$ modifier does not make sense immediately after the \texttt{Ancestors} and \texttt{Libs} keywords;
+Table: Script File Syntax.
+The `alias=`*ident* modifier does not make sense immediately after the `Ancestors` and `Libs` keywords;
 it should only be used after individual theory or library names to establish aliases for just those names.
-}
-\end{figure}
