@@ -25,6 +25,6 @@ entries.md: $(Helpd)/src-sml/Md2TeX.exe $(wildcard $(Helpd)/Docfiles/*.md)
 	$(Helpd)/src-sml/Md2TeX.exe ../../help/Docfiles > $@
 
 entries.tex: entries.md
-	pandoc -V documentclass=book --number-sections=false -o $@ $<
+	pandoc -V documentclass=book -o $@ $<
 
 EXTRA_CLEANS = reference.html reference.pdf entries.md
