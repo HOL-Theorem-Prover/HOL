@@ -120,21 +120,25 @@ sig
   val dxrule               : thm_tactic
   val rev_drule            : thm_tactic
   val rev_dxrule           : thm_tactic
+  val every_drule          : thm_tactic
 
   val drule_at             : match_position -> thm_tactic
   val dxrule_at            : match_position -> thm_tactic
   val rev_drule_at         : match_position -> thm_tactic
   val rev_dxrule_at        : match_position -> thm_tactic
+  val every_drule_at       : match_position -> thm_tactic
 
   val drule_then           : thm_tactic -> thm_tactic
   val dxrule_then          : thm_tactic -> thm_tactic
   val rev_drule_then       : thm_tactic -> thm_tactic
   val rev_dxrule_then      : thm_tactic -> thm_tactic
+  val every_drule_then     : thm_tactic -> thm_tactic
 
   val drule_at_then        : match_position -> thm_tactic -> thm_tactic
   val dxrule_at_then       : match_position -> thm_tactic -> thm_tactic
   val rev_drule_at_then    : match_position -> thm_tactic -> thm_tactic
   val rev_dxrule_at_then   : match_position -> thm_tactic -> thm_tactic
+  val every_drule_at_then  : match_position -> thm_tactic -> thm_tactic
 
 
   val drule_all            : thm_tactic
