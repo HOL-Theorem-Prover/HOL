@@ -1057,7 +1057,7 @@ fun gparents {thyname} =
     | thys => thys
 
 val {merge = merge_grammars0, set_parents = set_grammar_ancestry0,
-     DB = grammarDB0, parents = gparents} =
+     DB = grammarDB0, parents = grammar_ancestry0} =
     let
       open GrammarDeltas
       fun apply (TYD tyd) (tyG, tmG) = (type_grammar.apply_delta tyd tyG, tmG)
@@ -1101,6 +1101,8 @@ fun set_grammar_ancestry slist =
       type_grammar_changed := true;
       term_grammar_changed := true
     end
+
+fun grammar_ancestry thyname = grammar_ancestry0 {thyname = thyname}
 
 val _ = let
   val rawpp_thm =
