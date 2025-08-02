@@ -163,7 +163,18 @@ val CasePred          = TypeBase.CasePred
 val CasePreds         = TypeBase.CasePreds
 val AllCasePreds      = TypeBase.AllCasePreds
 
-val oneline           = LIST_CONJ o map DISCH_ALL o DefnBase.one_line_ify_mutrec NONE
+fun dischallbut hs th =
+    let fun foldthis (t, th) = if HOLset.member(hs, t) then th
+                               else DISCH t th
+    in
+      HOLset.foldl foldthis th (hypset th)
+    end
+
+fun oneline th =
+  let val hs = hypset th
+  in
+    LIST_CONJ $ map (dischallbut hs) $ DefnBase.one_line_ify_mutrec NONE th
+  end
 val lambdify          = DefnBase.LIST_HALF_MK_ABS
 
 val completeInduct_on = numLib.completeInduct_on
