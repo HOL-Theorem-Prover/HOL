@@ -1,0 +1,379 @@
+bash-5.2$ bin/build
+*** Using kernel spec --stdknl from earlier build command;
+    use one of --expk, --stdknl, --otknl to override
+Cleaning out /Users/konradslind/Projects/HOL/sigobj
+/Users/konradslind/Projects/HOL/sigobj cleaned
+Building directory tools/check-builds [01 Aug, 22:49:50]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory tools/set_mtime [01 Aug, 22:49:50]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory tools/mlyacc/mlyacclib [01 Aug, 22:49:50]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/portableML/poly [01 Aug, 22:49:50]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/portableML [01 Aug, 22:49:50]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/portableML/monads [01 Aug, 22:49:50]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/portableML/rawtheory [01 Aug, 22:49:50]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/portableML/json [01 Aug, 22:49:50]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/portableML/poly/concurrent [01 Aug, 22:49:51]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/prekernel [01 Aug, 22:49:51]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/0 [01 Aug, 22:49:51]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/thm [01 Aug, 22:49:51]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/postkernel [01 Aug, 22:49:51]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/parse [01 Aug, 22:49:51]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/opentheory [01 Aug, 22:49:51]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/bool [01 Aug, 22:49:52]
+boolTheory                                                                                                                                                                                                             (3s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/1 [01 Aug, 22:49:55]
+ConseqConvTheory                                                                                                                                                                                                       (4s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/proofman [01 Aug, 22:50:00]
+/Users/konradslind/Projects/HOL/bin/hol.state0                                                                                                                                                                         (5s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/compute/src [01 Aug, 22:50:05]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/HolSat/sat_solvers/minisat [01 Aug, 22:50:05]
+Building minisat (release)
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/HolSat/sat_solvers/zc2hs [01 Aug, 22:50:05]
+make: Nothing to be done for `all'.
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/HolSat [01 Aug, 22:50:05]
+satTheory                                                                                                                                                                                                              (0s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/taut [01 Aug, 22:50:06]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/marker [01 Aug, 22:50:06]
+markerTheory                                                                                                                                                                                                           (0s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/q [01 Aug, 22:50:06]
+HOLMOSMLC -o selftest.exe selftest.uo
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/combin [01 Aug, 22:50:06]
+combinTheory                                                                                                                                                                                                           (0s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/lite [01 Aug, 22:50:07]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/refute [01 Aug, 22:50:07]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/simp/src [01 Aug, 22:50:08]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/metis [01 Aug, 22:50:08]
+normalFormsTheory                                                                                                                                                                                                      (0s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/meson/src [01 Aug, 22:50:08]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/IndDef [01 Aug, 22:50:08]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/basicProof [01 Aug, 22:50:08]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/relation [01 Aug, 22:50:09]
+relationTheory                                                                                                                                                                                                         (4s)     OK
+bisimulationTheory                                                                                                                                                                                                     (4s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/quotient/src [01 Aug, 22:50:27]
+quotientTheory                                                                                                                                                                                                         (4s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/coretypes [01 Aug, 22:50:36]
+oneTheory                                                                                                                                                                                                              (2s)     OK
+pairTheory                                                                                                                                                                                                             (4s)     OK
+sumTheory                                                                                                                                                                                                              (3s)     OK
+posetTheory                                                                                                                                                                                                            (4s)     OK
+optionTheory                                                                                                                                                                                                           (4s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/tfl/src [01 Aug, 22:51:01]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/num/theories [01 Aug, 22:51:01]
+numTheory                                                                                                                                                                                                              (0s)     OK
+prim_recTheory                                                                                                                                                                                                         (2s)     OK
+arithmeticTheory                                                                                                                                                                                                       (5s)     OK
+whileTheory                                                                                                                                                                                                            (4s)     OK
+numeralTheory                                                                                                                                                                                                          (4s)     OK
+basicSizeTheory                                                                                                                                                                                                        (3s)     OK
+cvTheory                                                                                                                                                                                                               (5s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/num/theories/cv_compute [01 Aug, 22:51:37]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/num/reduce/conv [01 Aug, 22:51:37]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/num/reduce/src [01 Aug, 22:51:37]
+reduceTheory                                                                                                                                                                                                           (0s)     OK
+normalizerTheory                                                                                                                                                                                                       (2s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/num/arith/src [01 Aug, 22:51:44]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/num [01 Aug, 22:51:44]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/num/termination [01 Aug, 22:51:44]
+numheap                                                                                                                                                                                                                (7s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/num/extra_theories [01 Aug, 22:51:54]
+numpairTheory                                                                                                                                                                                                          (0s)     OK
+dividesTheory                                                                                                                                                                                                          (1s)     OK
+logrootTheory                                                                                                                                                                                                          (1s)     OK
+gcdTheory                                                                                                                                                                                                              (1s)     OK
+bitTheory                                                                                                                                                                                                              (1s)     OK
+numeral_bitTheory                                                                                                                                                                                                      (0s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/unwind [01 Aug, 22:51:59]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/pred_set/src [01 Aug, 22:51:59]
+pred_setTheory                                                                                                                                                                                                         (8s)     OK
+fixedPointTheory                                                                                                                                                                                                       (1s)     OK
+gcdsetTheory                                                                                                                                                                                                           (1s)     OK
+permutesTheory                                                                                                                                                                                                         (5s)     OK
+set_relationTheory                                                                                                                                                                                                     (6s)     OK
+iterateTheory                                                                                                                                                                                                          (3s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/datatype/record [01 Aug, 22:52:18]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/datatype [01 Aug, 22:52:18]
+ind_typeTheory                                                                                                                                                                                                         (0s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/monad [01 Aug, 22:52:19]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/list/src [01 Aug, 22:52:19]
+listTheory                                                                                                                                                                                                             (7s)     OK
+listRangeTheory                                                                                                                                                                                                        (2s)     OK
+rich_listTheory                                                                                                                                                                                                        (5s)     OK
+indexedListsTheory                                                                                                                                                                                                     (2s)     OK
+nlistTheory                                                                                                                                                                                                            (2s)     OK
+numposrepTheory                                                                                                                                                                                                        (2s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/quantHeuristics [01 Aug, 22:52:37]
+quantHeuristicsTheory                                                                                                                                                                                                  (3s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/pattern_matches [01 Aug, 22:52:41]
+patternMatchesTheory                                                                                                                                                                                                   (4s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/HolSat/vector_def_CNF [01 Aug, 22:52:45]
+defCNFTheory                                                                                                                                                                                                           (2s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/boss/ml_evaluation [01 Aug, 22:52:48]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/opentheory/reader [01 Aug, 22:52:48]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/boss [01 Aug, 22:52:48]
+holTheory                                                                                                                                                                                                              (4s)     OK
+/Users/konradslind/Projects/HOL/bin/hol.state                                                                                                                                                                          (5s)     OK
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/AI [01 Aug, 22:52:57]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/AI/sml_inspection [01 Aug, 22:52:57]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/AI/proof_search [01 Aug, 22:52:58]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/AI/machine_learning [01 Aug, 22:52:58]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/tactictoe/src [01 Aug, 22:52:58]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/tactictoe/selftest [01 Aug, 22:52:58]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/holyhammer [01 Aug, 22:52:58]
+Uploading files to /Users/konradslind/Projects/HOL/sigobj
+Building directory src/parallel_builds/core [01 Aug, 22:52:58]
+Scanned 32 directories
+Finished $(HOLDIR)/src/HolQbf                                                                                                                                                                                            (0.000s) 
+link-to-sigobj                                                                                                                                                                                              src/hol88  (0s)     OK
+Finished $(HOLDIR)/src/hol88                                                                                                                                                                                             (0.006s) 
+holindex.grm-sig                                                                                                                                                                                              src/TeX  (0s)     OK
+holindex.grm-sig                                                                                                                                                                                              src/TeX  (0s)     OK
+holindex.lex                                                                                                                                                                                                  src/TeX  (0s)     OK
+link-to-sigobj                                                                                                                                                                                                src/TeX  (0s)     OK
+ternaryComparisonsTheory                                                                                                                                                                                     src/sort  (0s)     OK
+EncodeTheory                                                                                                                                                                                          src/Boolify/src  (1s)     OK
+DecodeTheory                                                                                                                                                                                          src/Boolify/src  (1s)     OK
+sortingTheory                                                                                                                                                                                                src/sort  (3s)     OK
+stringTheory                                                                                                                                                                                               src/string  (3s)     OK
+CoderTheory                                                                                                                                                                                           src/Boolify/src  (1s)     OK
+bagTheory                                                                                                                                                                                                     src/bag  (5s)     OK
+EncodeVarTheory                                                                                                                                                                                       src/Boolify/src  (0s)     OK
+link-to-sigobj                                                                                                                                                                                        src/Boolify/src  (0s)     OK
+Finished $(HOLDIR)/src/Boolify/src [#theories: 4]                                                                                                                                                                        (5.152s) 
+mergesortTheory                                                                                                                                                                                              src/sort  (2s)     OK
+link-to-sigobj                                                                                                                                                                                               src/sort  (0s)     OK
+Finished $(HOLDIR)/src/sort [#theories: 3]                                                                                                                                                                               (6.117s) 
+primeFactorTheory                                                                                                                                                                                             src/bag  (0s)     OK
+link-to-sigobj                                                                                                                                                                                                src/bag  (0s)     OK
+Finished $(HOLDIR)/src/bag [#theories: 2]                                                                                                                                                                                (5.748s) 
+string_numTheory                                                                                                                                                                                           src/string  (0s)     OK
+ASCIInumbersTheory                                                                                                                                                                                         src/string  (1s)     OK
+sum_numTheory                                                                                                                                                                                               src/n-bit  (0s)     OK
+string_encodingTheory                                                                                                                                                                                      src/string  (0s)     OK
+link-to-sigobj                                                                                                                                                                                             src/string  (0s)     OK
+Finished $(HOLDIR)/src/string [#theories: 4]                                                                                                                                                                             (6.851s) 
+fcpTheory                                                                                                                                                                                                   src/n-bit  (2s)     OK
+totoTheory                                                                                                                                                                                            src/finite_maps  (2s)     OK
+res_quanTheory                                                                                                                                                                                       src/res_quan/src  (4s)     OK
+link-to-sigobj                                                                                                                                                                                       src/res_quan/src  (0s)     OK
+Finished $(HOLDIR)/src/res_quan/src [#theories: 1]                                                                                                                                                                       (4.902s) 
+finite_mapTheory                                                                                                                                                                                      src/finite_maps  (4s)     OK
+alistTheory                                                                                                                                                                                           src/finite_maps  (1s)     OK
+comparisonTheory                                                                                                                                                                                      src/finite_maps  (4s)     OK
+alist_treeTheory                                                                                                                                                                                      src/finite_maps  (1s)     OK
+fmaptreeTheory                                                                                                                                                                                        src/finite_maps  (1s)     OK
+enumeralTheory                                                                                                                                                                                        src/finite_maps  (4s)     OK
+containerTheory                                                                                                                                                                                       src/finite_maps  (1s)     OK
+patriciaTheory                                                                                                                                                                                        src/finite_maps  (3s)     OK
+tcTheory                                                                                                                                                                                              src/finite_maps  (1s)     OK
+fmapalTheory                                                                                                                                                                                          src/finite_maps  (5s)     OK
+transferTheory                                                                                                                                                                                           src/transfer  (0s)     OK
+liftingTheory                                                                                                                                                                                            src/transfer  (0s)     OK
+link-to-sigobj                                                                                                                                                                                           src/transfer  (0s)     OK
+Finished $(HOLDIR)/src/transfer [#theories: 2]                                                                                                                                                                           (1.410s) 
+wordsTheory                                                                                                                                                                                                 src/n-bit (16s)     OK
+integerTheory                                                                                                                                                                                             src/integer  (4s)     OK
+sptreeTheory                                                                                                                                                                                          src/finite_maps (11s)     OK
+wellorderTheory                                                                                                                                                                        src/pred_set/src/more_theories  (5s)     OK
+alignmentTheory                                                                                                                                                                                             src/n-bit  (3s)     OK
+blastTheory                                                                                                                                                                                                 src/n-bit  (3s)     OK
+int_arithTheory                                                                                                                                                                                           src/integer  (1s)     OK
+intReduceTheory                                                                                                                                                                                           src/integer  (0s)     OK
+cooperTheory                                                                                                                                                                                              src/integer  (0s)     OK
+DeepSyntaxTheory                                                                                                                                                                                          src/integer  (1s)     OK
+OmegaTheory                                                                                                                                                                                               src/integer  (2s)     OK
+bitstringTheory                                                                                                                                                                                             src/n-bit  (8s)     OK
+patricia_castsTheory                                                                                                                                                                                  src/finite_maps  (7s)     OK
+link-to-sigobj                                                                                                                                                                                        src/finite_maps  (0s)     OK
+Finished $(HOLDIR)/src/finite_maps [#theories: 13]                                                                                                                                                                      (51.218s) 
+int_bitwiseTheory                                                                                                                                                                                         src/integer  (4s)     OK
+byteTheory                                                                                                                                                                                                  src/n-bit  (6s)     OK
+link-to-sigobj                                                                                                                                                                                              src/n-bit  (0s)     OK
+Finished $(HOLDIR)/src/n-bit [#theories: 7]                                                                                                                                                                             (40.633s) 
+cardinalTheory                                                                                                                                                                         src/pred_set/src/more_theories  (8s)     OK
+inttoTheory                                                                                                                                                                                               src/integer  (3s)     OK
+countable_typesTheory                                                                                                                                                                  src/pred_set/src/more_theories  (0s)     OK
+intExtensionTheory                                                                                                                                                                                       src/rational  (3s)     OK
+integer_wordTheory                                                                                                                                                                                        src/integer  (9s)     OK
+link-to-sigobj                                                                                                                                                                                            src/integer  (0s)     OK
+Finished $(HOLDIR)/src/integer [#theories: 9]                                                                                                                                                                           (28.875s) 
+ordinalNotationTheory                                                                                                                                                                  src/pred_set/src/more_theories  (2s)     OK
+finite_setTheory                                                                                                                                                                       src/pred_set/src/more_theories  (2s)     OK
+simpleSetCatTheory                                                                                                                                                                     src/pred_set/src/more_theories  (2s)     OK
+fracTheory                                                                                                                                                                                               src/rational  (4s)     OK
+hratTheory                                                                                                                                                                                                   src/real  (1s)     OK
+topologyTheory                                                                                                                                                                         src/pred_set/src/more_theories  (3s)     OK
+hrealTheory                                                                                                                                                                                                  src/real  (1s)     OK
+numberTheory                                                                                                                                                                                         src/algebra/base  (8s)     OK
+realaxTheory                                                                                                                                                                                                 src/real  (2s)     OK
+ratTheory                                                                                                                                                                                                src/rational  (7s)     OK
+link-to-sigobj                                                                                                                                                                                           src/rational  (0s)     OK
+Finished $(HOLDIR)/src/rational [#theories: 3]                                                                                                                                                                          (14.949s) 
+ordinalTheory                                                                                                                                                                          src/pred_set/src/more_theories  (8s)     OK
+real_arithTheory                                                                                                                                                                                             src/real  (4s)     OK
+veblenTheory                                                                                                                                                                           src/pred_set/src/more_theories  (1s)     OK
+ordNotationSemanticsTheory                                                                                                                                                             src/pred_set/src/more_theories  (1s)     OK
+link-to-sigobj                                                                                                                                                                         src/pred_set/src/more_theories  (0s)     OK
+Finished $(HOLDIR)/src/pred_set/src/more_theories [#theories: 10]                                                                                                                                                       (38.041s) 
+coalgAxiomsTheory                                                                                                                                                                                      src/coalgebras  (5s)     OK
+combinatoricsTheory                                                                                                                                                                                  src/algebra/base  (9s)     OK
+itreeTheory                                                                                                                                                                                            src/coalgebras  (2s)     OK
+companionTheory                                                                                                                                                                                        src/coalgebras  (5s)     OK
+inftreeTheory                                                                                                                                                                                    src/datatype/inftree  (0s)     OK
+link-to-sigobj                                                                                                                                                                                   src/datatype/inftree  (0s)     OK
+Finished $(HOLDIR)/src/datatype/inftree [#theories: 1]                                                                                                                                                                   (0.652s) 
+errorMonadTheory                                                                                                                                                                                src/monad/more_monads  (0s)     OK
+errorLogMonadTheory                                                                                                                                                                             src/monad/more_monads  (0s)     OK
+llistTheory                                                                                                                                                                                            src/coalgebras  (4s)     OK
+realTheory                                                                                                                                                                                                   src/real  (7s)     OK
+errorStateMonadTheory                                                                                                                                                                           src/monad/more_monads  (2s)     OK
+bitArithTheory                                                                                                                                                                                               src/real  (2s)     OK
+primeTheory                                                                                                                                                                                          src/algebra/base (10s)     OK
+link-to-sigobj                                                                                                                                                                                       src/algebra/base  (0s)     OK
+Finished $(HOLDIR)/src/algebra/base [#theories: 3]                                                                                                                                                                      (28.463s) 
+itreeTauTheory                                                                                                                                                                                         src/coalgebras  (5s)     OK
+lbtreeTheory                                                                                                                                                                                           src/coalgebras  (2s)     OK
+intrealTheory                                                                                                                                                                                                src/real  (5s)     OK
+ltreeTheory                                                                                                                                                                                            src/coalgebras  (5s)     OK
+real_of_ratTheory                                                                                                                                                                                            src/real  (4s)     OK
+readerMonadTheory                                                                                                                                                                               src/monad/more_monads  (0s)     OK
+monoidTheory                                                                                                                                                                                 src/algebra/construction (11s)     OK
+state_transformerTheory                                                                                                                                                                         src/monad/more_monads  (1s)     OK
+link-to-sigobj                                                                                                                                                                                  src/monad/more_monads  (0s)     OK
+Finished $(HOLDIR)/src/monad/more_monads [#theories: 5]                                                                                                                                                                  (5.422s) 
+pathTheory                                                                                                                                                                                             src/coalgebras  (3s)     OK
+link-to-sigobj                                                                                                                                                                                         src/coalgebras  (0s)     OK
+Finished $(HOLDIR)/src/coalgebras [#theories: 8]                                                                                                                                                                        (33.948s) 
+pre_emitTheory                                                                                                                                                                                               src/emit  (1s)     OK
+real_sigmaTheory                                                                                                                                                                                             src/real (16s)     OK
+ieeeTheory                                                                                                                                                                                                  src/float  (4s)     OK
+basis_emitTheory                                                                                                                                                                                             src/emit  (3s)     OK
+emitOrdinalTheory                                                                                                                                                                                            src/emit  (1s)     OK
+extreal_baseTheory                                                                                                                                                                                           src/real  (7s)     OK
+extended_emitTheory                                                                                                                                                                                          src/emit  (2s)     OK
+link-to-sigobj                                                                                                                                                                                               src/emit  (0s)     OK
+Finished $(HOLDIR)/src/emit [#theories: 4]                                                                                                                                                                               (9.987s) 
+metricTheory                                                                                                                                                                                                 src/real  (6s)     OK
+floatTheory                                                                                                                                                                                                 src/float  (5s)     OK
+link-to-sigobj                                                                                                                                                                                              src/float  (0s)     OK
+Finished $(HOLDIR)/src/float [#theories: 2]                                                                                                                                                                              (9.815s) 
+netsTheory                                                                                                                                                                                                   src/real  (3s)     OK
+groupTheory                                                                                                                                                                                  src/algebra/construction (17s)     OK
+cv_typeTheory                                                                                                                                                                  src/num/theories/cv_compute/automation  (3s)     OK
+realheap                                                                                                                                                                                            src/real/analysis  (4s)     OK
+cv_repTheory                                                                                                                                                                   src/num/theories/cv_compute/automation  (1s)     OK
+smtheap                                                                                                                                                                                                    src/HolSmt  (6s)     OK
+binary_ieeeTheory                                                                                                                                                                                  src/floating-point (17s)     OK
+HolSmtTheory                                                                                                                                                                                               src/HolSmt  (4s)     OK
+link-to-sigobj                                                                                                                                                                                             src/HolSmt  (0s)     OK
+Finished $(HOLDIR)/src/HolSmt [#theories: 1]                                                                                                                                                                            (10.449s) 
+ringTheory                                                                                                                                                                                   src/algebra/construction (24s)     OK
+link-to-sigobj                                                                                                                                                                               src/algebra/construction  (0s)     OK
+Finished $(HOLDIR)/src/algebra/construction [#theories: 3]                                                                                                                                                              (53.310s) 
+machine_ieeeTheory                                                                                                                                                                                 src/floating-point  (9s)     OK
+link-to-sigobj                                                                                                                                                                              src/floating-point/native  (0s)     OK
+Finished $(HOLDIR)/src/floating-point/native                                                                                                                                                                             (0.006s) 
+lift_ieeeTheory                                                                                                                                                                                    src/floating-point  (8s)     OK
+real_algebraTheory                                                                                                                                                                                           src/real  (3s)     OK
+link-to-sigobj                                                                                                                                                                                               src/real  (0s)     OK
+Finished $(HOLDIR)/src/real [#theories: 13]                                                                                                                                                                             (67.459s) 
+cv_primTheory                                                                                                                                                                  src/num/theories/cv_compute/automation  (5s)     OK
+lift_machine_ieeeTheory                                                                                                                                                                            src/floating-point  (5s)     OK
+link-to-sigobj                                                                                                                                                                                     src/floating-point  (0s)     OK
+Finished $(HOLDIR)/src/floating-point [#theories: 4]                                                                                                                                                                    (41.766s) 
+dirGraphTheory                                                                                                                                                                                             src/search  (0s)     OK
+bftTheory                                                                                                                                                                                                  src/search  (0s)     OK
+dftTheory                                                                                                                                                                                                  src/search  (0s)     OK
+link-to-sigobj                                                                                                                                                                                             src/search  (0s)     OK
+Finished $(HOLDIR)/src/search [#theories: 3]                                                                                                                                                                             (1.995s) 
+sigma_algebraTheory                                                                                                                                                                                   src/probability  (7s)     OK
+updateTheory                                                                                                                                                                                               src/update  (0s)     OK
+link-to-sigobj                                                                                                                                                                                             src/update  (0s)     OK
+Finished $(HOLDIR)/src/update [#theories: 1]                                                                                                                                                                             (0.428s) 
+cv_stdTheory                                                                                                                                                                   src/num/theories/cv_compute/automation (10s)     OK
+link-to-sigobj                                                                                                                                                                 src/num/theories/cv_compute/automation  (0s)     OK
+Finished $(HOLDIR)/src/num/theories/cv_compute/automation [#theories: 4]                                                                                                                                                (21.771s) 
+real_topologyTheory                                                                                                                                                                                 src/real/analysis (56s)     OK
+derivativeTheory                                                                                                                                                                                    src/real/analysis  (5s)     OK
+seqTheory                                                                                                                                                                                           src/real/analysis  (5s)     OK
+limTheory                                                                                                                                                                                           src/real/analysis  (4s)     OK
+powserTheory                                                                                                                                                                                        src/real/analysis  (3s)     OK
+polyTheory                                                                                                                                                                                          src/real/analysis  (4s)     OK
+transcTheory                                                                                                                                                                                        src/real/analysis  (5s)     OK
+complexTheory                                                                                                                                                                                       src/real/analysis  (5s)     OK
+integrationTheory                                                                                                                                                                                   src/real/analysis (22s)     OK
+real_borelTheory                                                                                                                                                                                      src/probability (13s)     OK
+extrealTheory                                                                                                                                                                                         src/probability (19s)     OK
+integralTheory                                                                                                                                                                                      src/real/analysis  (8s)     OK
+link-to-sigobj                                                                                                                                                                                      src/real/analysis  (0s)     OK
+Finished $(HOLDIR)/src/real/analysis [#theories: 10]                                                                                                                                                                   (125.422s) 
+measureTheory                                                                                                                                                                                         src/probability (19s)     OK
+borelTheory                                                                                                                                                                                           src/probability (17s)     OK
+lebesgueTheory                                                                                                                                                                                        src/probability (23s)     OK
+martingaleTheory                                                                                                                                                                                      src/probability (19s)     OK
+probabilityTheory                                                                                                                                                                                     src/probability (20s)     OK
+link-to-sigobj                                                                                                                                                                                        src/probability  (0s)     OK
+Finished $(HOLDIR)/src/probability [#theories: 8]                                                                                                                                                                      (140.647s) 
+Uploading files to /Users/konradslind/Projects/HOL/sigobj

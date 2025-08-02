@@ -577,10 +577,10 @@ end;
  *    Replace arbitrary subterms in a term. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 
-(*
-val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
+(*  Vanilla version, term is rebuilt even when no change *)
 local
   open Binarymap
+  val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
   fun addb [] A = A
     | addb ({redex,residue}::t) (A,b) =
       addb t (if type_of redex = type_of residue
@@ -590,7 +590,7 @@ local
 in
 fun subst [] = I
   | subst theta =
-    let val (fmap,) = addb theta (emptysubst, true)
+    let val (fmap,b) = addb theta (emptysubst, true)
         fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
           | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
@@ -609,8 +609,8 @@ fun subst [] = I
       (if b then vsubs else subs)
     end
 end
-*)
 
+(* Space saving version via propagation of SAME/DIFF constructors *)
 local
   open Binarymap
   val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
@@ -656,6 +656,50 @@ fun subst [] = I
     end
 end
 
+(* Space saving version via propagation of UNCHANGED exception *)
+
+local
+  open Binarymap
+  val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
+  fun addb [] A = A
+    | addb ({redex,residue}::t) (A,b) =
+      addb t (if type_of redex = type_of residue
+              then (insert(A,redex,residue),
+                    is_var redex andalso b)
+              else raise ERR "subst" "redex has different type than residue")
+  exception UNCHANGED
+in
+fun subst [] = I
+  | subst theta =
+    let val (fmap,var_only_dom) = addb theta (emptysubst, true)
+        fun vsubs (v as Fv _) =
+              (find(fmap,v) handle NotFound => raise UNCHANGED)
+          | vsubs (Comb(M,N)) =
+              (let val M' = vsubs M
+                   val N' = (vsubs N handle UNCHANGED => N)
+               in Comb(M',N')
+               end handle UNCHANGED => Comb (M,vsubs N))
+          | vsubs (Abs(v,M)) = Abs(v,vsubs M)
+          | vsubs (c as Clos _) = vsubs (push_clos c)
+          | vsubs tm = raise UNCHANGED
+        fun subs tm =
+            find (fmap,tm) handle NotFound
+            => (case tm
+                 of Comb(M,N) =>
+                    (let val M' = subs M
+                         val N' = (subs N handle UNCHANGED => N)
+                     in Comb(M',N')
+                     end handle UNCHANGED => Comb (M,subs N))
+                  | Abs(v,M) => Abs(v,subs M)
+                  | Clos _  => subs(push_clos tm)
+                  |   _    => raise UNCHANGED)
+    in
+      if var_only_dom then
+         (fn tm => vsubs tm handle UNCHANGED => tm)
+      else
+         (fn tm => subs tm handle UNCHANGED => tm)
+    end
+end
 
 (*---------------------------------------------------------------------------*
  *     Instantiate type variables in a term                                  *
