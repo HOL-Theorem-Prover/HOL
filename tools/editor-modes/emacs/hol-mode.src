@@ -639,8 +639,10 @@ starts >%s%s<"
                       ;; declaration or a val or a fun or another open
                       ;; or whatever, (as per the regexp defined just
                       ;; before this function definition)
+                      (if (or (string= ms "Libs") (string= ms "Ancestors"))
+                          (if (looking-at hol-module-qualification-regexp)
+                              (goto-char (match-end 0))))
                       (let ((ancp (string= ms "Ancestors"))
-                            (open-start (match-beginning 0))
                             (start (point))
                             (end
                              (save-excursion
@@ -661,8 +663,7 @@ starts >%s%s<"
                                      (setq abortedp t)))
                                  (if foundp
                                      (- (point) (length (match-string 0)))
-                                   (point-max)))))
-                            (endm (make-marker)))
+                                   (point-max))))))
                         ; (message "Handling an open")
                         (if hol-auto-load-p
                             (hol-load-modules-in-region ancp start end))))
@@ -869,17 +870,25 @@ containing the HOL window, but keep the current frame uppermost."
                   "\\n\"; " "Meta.load \"" mys "\");\n")))
     (comint-send-string buf commandstring)))
 
+(defvar hol-module-qualification-regexp
+          "[[:space:]]*\\[[A-Za-z0-9=, \t\n]*\\]")
+
 (defun hol-load-modules-in-region (ancp start end)
   "Attempts to load all of the words in the region as modules; with prefix arg
-appends \"Theory\" to the names."
+appends \"Theory\" to the names. Skips over (ignores) module attributes given
+in square brackets after the names."
   (interactive "P\nr")
   (save-excursion
     (goto-char start)
-    (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
+    (while (re-search-forward
+            (concat "\\b" sml-struct-id-regexp "\\b") end t)
       (let ((ppss (syntax-ppss)))
         (if (and (not (nth 4 ppss)) (not (nth 3 ppss)))
-            (hol-load-string (concat (match-string 0)
-                                     (if ancp "Theory" ""))))))))
+            (progn
+              (hol-load-string (concat (match-string 0)
+                                       (if ancp "Theory" "")))
+              (if (looking-at hol-module-qualification-regexp)
+                  (goto-char (match-end 0)))))))))
 
 
 (defun hol-load-file (arg)
