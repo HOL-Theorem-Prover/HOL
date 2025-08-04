@@ -1,3 +1,4 @@
+\index{special syntactic forms for scripts|(}
 Files written by HOL users are of the same form as those written by HOL developers.
 In this way, HOL aims to be easy to extend, and this chapter’s description of HOL source files should be useful for users and developers both.
 
@@ -7,7 +8,7 @@ HOL organises its files into two categories:
 
 - “library” files that provide SML implementations of important theorem-proving infrastructure, typically providing SML functions to support those actions done in script files (definitions, types, proofs).
 
-Library files are written in SML, using the HOL API that is described both in this manual, but also in the REFERENCE.
+Library files are written in SML, using the HOL API that is described both in this manual, but also in REFERENCE.
 Script files have their own rather special syntax that is a superset of SML.
 Script files will be the bulk of what most users write.
 Both flavours of file should observe the conventions documented in this chapter.
@@ -65,24 +66,44 @@ The recommended syntax for a script file begins
 
    <Script Declarations>
 ```
+```{=latex}
+See also Table~\ref{tab:script-file-syntax}.
+```
 
 The three keywords (`Theory`, `Ancestors` and `Libs`) must all appear in column 0 of the input file.
 The `Ancestors` and `Libs` components may be omitted.
 The name following the `Theory` keyword must match the name that precedes the `Script.sml` of the file-name, and must be a valid SML structure identifier.
 
 \index{Ancestors keyword@\ml{Ancestors} keyword}
+\index{special syntactic forms for scripts!Ancestors@\ml{Ancestors}}
 If present, the names following `Ancestors` identify theories that this theory builds upon.
 These names should be “bare”: they cannot include the `Theory` suffix.
 By default, all of the SML identifiers within the exported theories mentioned in this section are available without qualification.
 Thus, if `list` is one of the names following `Ancestors`, one need not write `listTheory.MAP` in the rest of the file to refer to its theorem `MAP`, but can instead write simply `MAP`.
 If two ancestor theories use the same names for their exported theories, the names belonging to the theory whose name occurs later in the `Ancestors` list will shadow earlier occurrences.
 
+\index{qualified keyword@\ml{qualified} keyword}
+\index{special syntactic forms for scripts!qualified@\ml{qualified}}
 It is reasonable and permitted to list a theory as an ancestor solely to be able to write its names without qualification.
 For example, one need not explicitly write `pred_set` as an ancestor because `pred_setTheory` is always included in HOL’s standard logical context.
 Nonetheless, one might mention it in order to be able to write `IN_INSERT` instead of `pred_setTheory.IN_INSERT`.
-
-Finally, one might want a theory as an ancestor, but not to have its SML names available at the top-level.
+Conversely, one might want a theory as an ancestor, but not to have its SML names available at the top-level.
 This effect is achieved by following the theory name with the `[qualified]` annotation.
+
+In some situations, one wants to have a theory as an ancestor, but not to use its notations and other grammar changes.
+To achieve this, the `ignore_grammar` attribute can be used.
+
+\index{Libs (special syntactic form)@\ml{Libs} (special syntactic form)}
+\index{special syntactic forms for scripts!Libs@\ml{Libs}}
+The names following the `Libs` keyword are the names of HOL libraries that the script-file depends on.
+These can also be imported in `qualified` fashion.
+
+Finally, both ancestors and libraries can be given aliases for easy (qualified) access with the `alias` modifier.
+For example, if one writes `Libs fooLib[alias=F]`, then `fooLib`'s bindings are available in the SML structure `F`, allowing one to write `F.entrypoint`. Aliases can be used with or without the `qualified` option.
+
+For convenience, the `qualified` and `ignore_grammar` options can be given “all at once” to a number of theory or library dependencies by attaching these attributes (again in square brackets) to the relevant `Ancestors` or `Libs` keyword directly.
+Not that the `alias=`*ident* modifier does not make sense immediately after the `Ancestors` and `Libs` keywords;
+it should only be used after individual theory or library names to establish aliases for just those names.
 
 --------------    -----  ---------------------
 ⟨*theory*⟩         ::=   `Theory` ⟨*thyname*⟩
@@ -99,14 +120,13 @@ This effect is achieved by following the theory name with the `[qualified]` anno
 --------------    -----  ---------------------
 
 Table: Script File Syntax.
-Square brackets in the table are input characters; they are *not* meta-characters (unlike the parentheses, pipe symbols and superscripts). 
+Square brackets in the table are input characters; they are *not* meta-characters (unlike the parentheses, pipe symbols and superscripts).
 All keywords beginning with capital letters (`Theory`, `Ancestors`, `Libs`, ...) must occur in column 0 of the input file.
-The `alias=`*ident* modifier does not make sense immediately after the `Ancestors` and `Libs` keywords;
-it should only be used after individual theory or library names to establish aliases for just those names.
+\label{tab:script-file-syntax}
 
 --------------    -----  ---------------------
-⟨*thydecl*⟩        ::=   ⟨*SML-declaration*⟩
-                    |    ⟨*theorem-decl*⟩    |    ⟨*definition-decl*⟩    |    ⟨*parsing-decl*⟩
+⟨*thydecl*⟩        ::=   ⟨*SML-declaration*⟩    |    ⟨*theorem-decl*⟩    |    ⟨*definition-decl*⟩
+                    |    ⟨*parsing-decl*⟩    |    ⟨*quotation-decl*⟩
 ⟨*theorem-decl*⟩   ::=   ⟨*thm-eqn*⟩    |    ⟨*thm-proof*⟩
 ⟨*thm-eqn*⟩        ::=   ⟨*thm-keyword*⟩ ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩
 ⟨*thm-proof*⟩      ::=   ⟨*thm-keyword*⟩ ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩
@@ -114,15 +134,16 @@ it should only be used after individual theory or library names to establish ali
                          `QED`
 ⟨*thm-keyword*⟩    ::=   `Theorem`    |    `Triviality`
 ⟨*defn-decl*⟩      ::=   ⟨*datatype-decl*⟩    |    ⟨*function-decl*⟩    |    ⟨*relation-decl*⟩
-⟨*datatype-decl*⟩  ::=   `Datatype:`⟨*datatype-spec*⟩
-                         `End`
-⟨*relation-decl*⟩  ::=   (`Inductive`|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩
-                         `End`
+⟨*datatype-decl*⟩  ::=   `Datatype:`⟨*datatype-spec*⟩ `End`
+⟨*relation-decl*⟩  ::=   (`Inductive`|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩ `End`
 ⟨*function-decl*⟩  ::=   `Definition` ⟨*ident*⟩⟨*defn-attrs*⟩ `:`
                          ⟨*function-spec*⟩
-                         ⟨*function-close*⟩
-⟨*function-close*⟩ ::=   (`Termination` ⟨*tactic*⟩)^?^ 
-                         `End`
+                         (`Termination` ⟨*tactic*⟩)^?^ `End`
+⟨*parsing-decl*⟩   ::=   `Overload` ⟨*quoted-ident*⟩⟨*overload-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
+                    |    `Type` ⟨*quoted-ident*⟩⟨*type-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
+⟨*quotation-decl*⟩ ::=   `Quote` (⟨*ident*⟩ `=`)^?^ ⟨*ident*⟩ `:` ⟨*quoted-material*⟩ `End`
 --------------    -----  ---------------------
 
-Table: Syntax for expressing theorem proofs, definitions and other theory changes. 
+Table: Syntax for expressing theorem proofs, definitions and other theory changes. Again, upper-case keywords (`End` in particular, despite the table layout), must occur in column 0.
+
+\index{special syntactic forms for scripts|)}
