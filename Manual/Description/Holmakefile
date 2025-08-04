@@ -79,7 +79,10 @@ modern-syntax.md: modern-syntax.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
-	pandoc --top-level-division=chapter --lua-filter=pdf-macros.lua -o $@ $<
+	(printf '\\chapter{\\texorpdfstring{\\HOL{} Source File Syntax}{HOL Source File Syntax}}\\label{chap:modern-syntax}\n' ; pandoc --top-level-division=chapter --lua-filter=pdf-macros.lua -t latex $<) > $@
+
+foo:
+	(echo hello ; echo world) > $@
 
 # This builds figs/0.mps, figs/1.mps, ...
 figures:
@@ -93,4 +96,4 @@ EXTRA_CLEANS = drules.tex tactics.tex theories.tex libraries.tex \
 	       description.log description.out \
                description.toc description.fls description.idx description.ilg \
                description.ind description.blg description.bbl \
-	       description.fdb_latexmk
+	       description.fdb_latexmk modern-syntax.md modern-syntax-chapter.tex
