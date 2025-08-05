@@ -656,8 +656,10 @@ fun subst [] = I
     end
 end
 
-(* Space saving version via propagation of UNCHANGED exception *)
+fun rebuild_abs _ SAME = SAME
+  | rebuild_abs v (DIFF M) = DIFF (Abs(v,M))
 
+(* Space saving version via propagation of UNCHANGED exception *)
 local
   open Binarymap
   val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
@@ -722,6 +724,70 @@ fun inst [] tm = tm
     in
       inst1 tm
     end;
+
+(* Space saving version via propagation of SAME/DIFF constructors *)
+fun rebuild_pair f _ _ SAME SAME = SAME
+  | rebuild_pair f M _ SAME (DIFF N') = DIFF (f(M,N'))
+  | rebuild_pair f _ N (DIFF M') SAME = DIFF (f(M',N))
+  | rebuild_pair f _ _ (DIFF M') (DIFF N') = DIFF(f(M',N'))
+
+val rebuild_comb = rebuild_pair Comb;
+val rebuild_abs = rebuild_pair Abs;
+
+fun inst [] = I
+  | inst theta  =
+    let fun
+        inst1 (bv as Bv _) = SAME
+      | inst1 (c as Const(_, GRND _)) = SAME
+      | inst1 (c as Const(r, POLY Ty)) =
+        (case Type.ty_sub theta Ty
+          of SAME => SAME
+           | DIFF ty =>
+             DIFF (Const(r,
+                    (if Type.polymorphic ty then POLY else GRND)ty)))
+      | inst1 (v as Fv(Name,Ty)) =
+         (case Type.ty_sub theta Ty
+           of SAME => SAME
+            | DIFF ty => DIFF (Fv(Name, ty)))
+      | inst1 (Comb(M,N)) = rebuild_comb M N (inst1 M) (inst1 N)
+      | inst1 (Abs(v,M)) = rebuild_abs v M (inst1 v) (inst1 M)
+      | inst1 (t as Clos _) = inst1(push_clos t)
+    in
+      fn tm => case inst1 tm of SAME => tm | DIFF tm' => tm'
+    end;
+
+(* Space saving version via propagation of UNCHANGED exception *)
+local exception UNCHANGED
+in
+fun inst [] = I
+  | inst theta  =
+    let fun
+        inst1 (bv as Bv _) = raise UNCHANGED
+      | inst1 (c as Const(_, GRND _)) = raise UNCHANGED
+      | inst1 (c as Const(r, POLY Ty)) =
+        (case Type.ty_sub theta Ty
+          of SAME => raise UNCHANGED
+           | DIFF ty =>
+             Const(r, (if Type.polymorphic ty then POLY else GRND) ty))
+      | inst1 (Fv(Name,Ty)) =
+         (case Type.ty_sub theta Ty
+           of SAME => raise UNCHANGED
+            | DIFF ty => Fv(Name, ty))
+      | inst1 (Comb(M,N)) =
+          (let val M' = inst1 M
+               val N' = (inst1 N handle UNCHANGED => N)
+               in Comb(M',N')
+               end handle UNCHANGED => Comb (M,inst1 N))
+      | inst1 (Abs(v,M)) =
+          (let val v' = inst1 v
+               val M' = (inst1 M handle UNCHANGED => M)
+               in Abs(v',M')
+               end handle UNCHANGED => Abs(v,inst1 M))
+      | inst1 (t as Clos _) = inst1(push_clos t)
+    in
+      fn tm => inst1 tm handle UNCHANGED => tm
+    end
+end
 
 fun dest_comb (Comb r) = r
   | dest_comb (t as Clos _) = dest_comb (push_clos t)
