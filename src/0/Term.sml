@@ -656,9 +656,6 @@ fun subst [] = I
     end
 end
 
-fun rebuild_abs _ SAME = SAME
-  | rebuild_abs v (DIFF M) = DIFF (Abs(v,M))
-
 (* Space saving version via propagation of UNCHANGED exception *)
 local
   open Binarymap
@@ -756,6 +753,8 @@ fun inst [] = I
       fn tm => case inst1 tm of SAME => tm | DIFF tm' => tm'
     end;
 
+fun tag_type ty = if Type.polymorphic ty then POLY ty else GRND ty;
+
 (* Space saving version via propagation of UNCHANGED exception *)
 local exception UNCHANGED
 in
@@ -767,8 +766,7 @@ fun inst [] = I
       | inst1 (c as Const(r, POLY Ty)) =
         (case Type.ty_sub theta Ty
           of SAME => raise UNCHANGED
-           | DIFF ty =>
-             Const(r, (if Type.polymorphic ty then POLY else GRND) ty))
+           | DIFF ty => Const(r, tag_type ty))
       | inst1 (Fv(Name,Ty)) =
          (case Type.ty_sub theta Ty
            of SAME => raise UNCHANGED
@@ -787,6 +785,53 @@ fun inst [] = I
     in
       fn tm => inst1 tm handle UNCHANGED => tm
     end
+end
+
+(* inst_ty_tm = subst theta o inst tytheta.
+   NB: Ignores bindings in theta where redex is not a variable.
+*)
+
+local
+  open Binarymap
+  val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
+  fun addb [] A = A
+    | addb ({redex,residue}::t) A = addb t (insert(A,redex,residue))
+  exception UNCHANGED
+in
+fun inst_ty_tm theta tytheta =
+  let val tmap = addb theta emptysubst
+      fun trymap t = find(tmap,t) handle NotFound => raise UNCHANGED
+      fun trymap_total t = find(tmap,t) handle NotFound => t
+      fun isubst tm =
+       case tm
+        of Bv _ => raise UNCHANGED
+         | Fv(s,ty) =>
+             (case Type.ty_sub tytheta ty
+               of SAME => trymap tm
+                | DIFF ty' => trymap_total (Fv(s,ty')))
+         | Const(_, GRND _) => raise UNCHANGED
+         | Const(r, POLY ty) =>
+            (case Type.ty_sub tytheta ty
+              of SAME => raise UNCHANGED
+               | DIFF ty' => Const(r, tag_type ty'))
+         | Comb(M,N) =>
+           (let val M' = isubst M
+                val N' = (isubst N handle UNCHANGED => N)
+            in Comb(M',N')
+            end handle UNCHANGED => Comb (M,isubst N))
+         | Abs(v,M) =>
+           (let val (s,ty) = dest_var v
+                val v' =
+                    (case Type.ty_sub tytheta ty
+                      of SAME => raise UNCHANGED
+                       | DIFF ty' => Fv(s,ty'))
+                val M' = (isubst M handle UNCHANGED => M)
+            in Abs(v',M')
+            end handle UNCHANGED => Abs(v,isubst M))
+         | Clos _ => isubst(push_clos tm)
+  in
+    fn tm => isubst tm handle UNCHANGED => tm
+  end
 end
 
 fun dest_comb (Comb r) = r
