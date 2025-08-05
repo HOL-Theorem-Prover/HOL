@@ -18,95 +18,95 @@ val _ = set_trace "Goalstack.print_goal_at_top" 0;
 
 (* The original open transition relation *)
 Inductive TRANS :
-[TAU]
+[TAU:]
     !P. TRANS (Tau P) (TauR P)
-[INPUT]
+[INPUT:]
     !a x P. x <> a ==> TRANS (Input a x P) (InputS a x P)
-[OUTPUT]
+[OUTPUT:]
     !a b P. TRANS (Output a b P) (FreeOutput a b P)
-[MATCH]
+[MATCH:]
     !P Rs b. TRANS P Rs ==> TRANS (Match b b P) Rs
-[MISMACH]
+[MISMACH:]
     !P Rs a b. TRANS P Rs /\ a <> b ==> TRANS (Mismatch a b P) Rs
 
-[OPEN]
+[OPEN:]
     !P P' a b. TRANS P (FreeOutput a b P') /\ a <> b ==>
                TRANS (Res b P) (BoundOutput a b P')
-[SUM1]
+[SUM1:]
     !P Q Rs. TRANS P Rs ==> TRANS (Sum P Q) Rs
-[SUM2]
+[SUM2:]
     !P Q Rs. TRANS Q Rs ==> TRANS (Sum P Q) Rs
 
-[PAR1_I]
+[PAR1_I:]
     !P P' Q a x.
        TRANS P (InputS a x P') /\ x # P /\ x # Q /\ x <> a ==>
        TRANS (Par P Q) (InputS a x (Par P' Q))
-[PAR1_BO]
+[PAR1_BO:]
     !P P' Q a x.
        TRANS P (BoundOutput a x P') /\ x # P /\ x # Q /\ x <> a ==>
        TRANS (Par P Q) (BoundOutput a x (Par P' Q))
-[PAR1_FO]
+[PAR1_FO:]
     !P P' Q a b.
        TRANS P (FreeOutput a b P') ==>
        TRANS (Par P Q) (FreeOutput a b (Par P' Q))
-[PAR1_T]
+[PAR1_T:]
     !P P' Q. TRANS P (TauR P') ==> TRANS (Par P Q) (TauR (Par P' Q))
 
-[PAR2_I]
+[PAR2_I:]
     !P Q Q' a x.
        TRANS Q (InputS a x Q') /\ x # Q /\ x # P /\ x <> a ==>
        TRANS (Par P Q) (InputS a x (Par P Q'))
-[PAR2_BO]
+[PAR2_BO:]
     !P Q Q' a x.
        TRANS Q (BoundOutput a x Q') /\ x # Q /\ x # P /\ x <> a ==>
        TRANS (Par P Q) (BoundOutput a x (Par P Q'))
-[PAR2_FO]
+[PAR2_FO:]
     !P Q Q' a b.
        TRANS Q (FreeOutput a b Q') ==>
        TRANS (Par P Q) (FreeOutput a b (Par P Q'))
-[PAR2_T]
+[PAR2_T:]
     !P Q Q'. TRANS Q (TauR Q') ==> TRANS (Par P Q) (TauR (Par P Q'))
 
-[COMM1] (* TODO: tpm should change to SUB *)
+[COMM1:] (* TODO: tpm should change to SUB *)
     !P P' Q Q' a b x.
        TRANS P (InputS a x P') /\ TRANS Q (FreeOutput a b Q') /\
        x # P /\ x # Q /\ x <> a /\ x <> b /\ x # Q' ==>
        TRANS (Par P Q) (TauR (Par (tpm [(x,b)] P') Q'))
-[COMM2] (* TODO: tpm should change to SUB *)
+[COMM2:] (* TODO: tpm should change to SUB *)
     !P P' Q Q' a b x.
        TRANS P (FreeOutput a b P') /\ TRANS Q (InputS a x Q') /\
        x # Q /\ x # P /\ x <> a /\ x <> b /\ x # P' ==>
        TRANS (Par P Q) (TauR (Par P' (tpm [(x,b)] Q')))
-[CLOSE1] (* TODO: tpm should change to SUB *)
+[CLOSE1:] (* TODO: tpm should change to SUB *)
     !P P' Q Q' a x y.
        TRANS P (InputS a x P') /\
        TRANS Q (BoundOutput a y Q') /\
        x # P /\ x # Q /\ y # P /\ y # Q /\
        x <> a /\ x # Q' /\ y <> a /\ y # P' /\ x <> y ==>
        TRANS (Par P Q) (TauR (Res y (Par (tpm [(x,y)] P') Q')))
-[CLOSE2] (* TODO: tpm should change to SUB *)
+[CLOSE2:] (* TODO: tpm should change to SUB *)
     !P P' Q Q' a x y.
        TRANS P (BoundOutput a y P') /\
        TRANS Q (InputS a x Q') /\
        x # P /\ x # Q /\ y # P /\ y # Q /\
        x <> a /\ x # P' /\ y <> a /\ y # Q' /\ x <> y ==>
        TRANS (Par P Q) (TauR (Res y (Par P' (tpm [(x,y)] Q'))))
-[RES_I]
+[RES_I:]
     !P P' a x y.
        TRANS P (InputS a x P') /\
        y <> a /\ y <> x /\ x # P /\ x <> a ==>
        TRANS (Res y P) (InputS a x (Res y P'))
-[RES_BO]
+[RES_BO:]
     !P P' a x y.
        TRANS P (BoundOutput a x P') /\
        y <> a /\ y <> x /\ x # P /\ x <> a ==>
        TRANS (Res y P) (BoundOutput a x (Res y P'))
-[RES_FO]
+[RES_FO:]
     !P P' a b y.
        TRANS P (FreeOutput a b P') /\
        y <> a /\ y <> b ==>
        TRANS (Res y P) (FreeOutput a b (Res y P'))
-[RES_T]
+[RES_T:]
     !P P' y.
        TRANS P (TauR P') ==> TRANS (Res y P) (TauR (Res y P'))
 End
