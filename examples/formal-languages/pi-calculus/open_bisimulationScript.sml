@@ -215,30 +215,30 @@ val CLOSE1_rule   = mk_ind_rule TRANS_CLOSE1_def
 val CLOSE2_rule   = mk_ind_rule TRANS_CLOSE2_def
 
 Inductive TRANS :
-[TAU]      ^TAU_rule
-[INPUT]    ^INPUT_rule
-[OUTPUT]   ^OUTPUT_rule
-[MATCH]    ^MATCH_rule
-[MISMATCH] ^MISMATCH_rule
-[OPEN]     ^OPEN_rule
-[SUM1]     ^SUM1_rule
-[SUM2]     ^SUM2_rule
-[PAR1_I]   ^PAR1_I_rule
-[PAR1_BO]  ^PAR1_BO_rule
-[PAR1_FO]  ^PAR1_FO_rule
-[PAR1_T]   ^PAR1_T_rule
-[PAR2_I]   ^PAR2_I_rule
-[PAR2_BO]  ^PAR2_BO_rule
-[PAR2_FO]  ^PAR2_FO_rule
-[PAR2_T]   ^PAR2_T_rule
-[RES_I]    ^RES_I_rule
-[RES_BO]   ^RES_BO_rule
-[RES_FO]   ^RES_FO_rule
-[RES_T]    ^RES_T_rule
-[COMM1]    ^COMM1_rule
-[COMM2]    ^COMM2_rule
-[CLOSE1]   ^CLOSE1_rule
-[CLOSE2]   ^CLOSE2_rule
+[TAU:]      ^TAU_rule
+[INPUT:]    ^INPUT_rule
+[OUTPUT:]   ^OUTPUT_rule
+[MATCH:]    ^MATCH_rule
+[MISMATCH:] ^MISMATCH_rule
+[OPEN:]     ^OPEN_rule
+[SUM1:]     ^SUM1_rule
+[SUM2:]     ^SUM2_rule
+[PAR1_I:]   ^PAR1_I_rule
+[PAR1_BO:]  ^PAR1_BO_rule
+[PAR1_FO:]  ^PAR1_FO_rule
+[PAR1_T:]   ^PAR1_T_rule
+[PAR2_I:]   ^PAR2_I_rule
+[PAR2_BO:]  ^PAR2_BO_rule
+[PAR2_FO:]  ^PAR2_FO_rule
+[PAR2_T:]   ^PAR2_T_rule
+[RES_I:]    ^RES_I_rule
+[RES_BO:]   ^RES_BO_rule
+[RES_FO:]   ^RES_FO_rule
+[RES_T:]    ^RES_T_rule
+[COMM1:]    ^COMM1_rule
+[COMM2:]    ^COMM2_rule
+[CLOSE1:]   ^CLOSE1_rule
+[CLOSE2:]   ^CLOSE2_rule
 End
 
 (* NOTE: No way to simplify TRANS_cases in the same manner *)
