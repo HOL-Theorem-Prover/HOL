@@ -64,6 +64,7 @@ sig
   val eta_conv      : term -> term
   val subst         : (term,term) subst -> term -> term
   val inst          : (hol_type,hol_type) subst -> term -> term
+  val inst_ty_tm    : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
 
   val raw_match     : hol_type list -> term set
                       -> term -> term

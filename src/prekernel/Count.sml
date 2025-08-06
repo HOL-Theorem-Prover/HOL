@@ -38,6 +38,7 @@ datatype rule =
  | GenAbs
  | Inst
  | InstType
+ | InstTyTerm
  | MkComb
  | Mp
  | NotElim
@@ -76,6 +77,7 @@ val count =
     GEN_ABS = ref 0,
     INST = ref 0,
     INST_TYPE = ref 0,
+    INST_TY_TERM = ref 0,
     MK_COMB = ref 0,
     MP = ref 0,
     NOT_ELIM = ref 0,
@@ -117,6 +119,7 @@ fun inc_count R =
              | GenAbs     => #GEN_ABS
              | Inst       => #INST
              | InstType   => #INST_TYPE
+             | InstTyTerm => #INST_TY_TERM
              | MkComb     => #MK_COMB
              | Mp         => #MP
              | NotElim    => #NOT_ELIM
@@ -133,8 +136,8 @@ local
    val l = [#ABS, #ALPHA, #AP_TERM, #AP_THM, #ASSUME, #BETA_CONV, #CCONTR,
             #CHOOSE, #COMPUTE, #CONJ, #CONJUNCT1, #CONJUNCT2, #DISCH, #DISJ1,
             #DISJ2, #DISJ_CASES, #EQ_IMP_RULE, #EQ_MP, #EXISTS, #GEN, #GEN_ABS,
-            #INST, #INST_TYPE, #MK_COMB, #MP, #NOT_ELIM, #NOT_INTRO, #REFL,
-            #SPEC, #SUBST, #SYM, #TRANS]
+            #INST, #INST_TYPE, #INST_TY_TERM,#MK_COMB, #MP, #NOT_ELIM, #NOT_INTRO,
+            #REFL, #SPEC, #SUBST, #SYM, #TRANS]
 in
    fun reset_thm_count () =
       List.app (fn f => f count := 0)
@@ -173,6 +176,7 @@ fun thm_count () =
     GEN_ABS     = !(#GEN_ABS count),
     INST        = !(#INST count),
     INST_TYPE   = !(#INST_TYPE count),
+    INST_TY_TERM = !(#INST_TY_TERM count),
     MK_COMB     = !(#MK_COMB count),
     MP          = !(#MP count),
     NOT_ELIM    = !(#NOT_ELIM count),

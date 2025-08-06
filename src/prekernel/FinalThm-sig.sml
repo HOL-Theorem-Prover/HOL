@@ -55,6 +55,7 @@ sig
   (* Free variable instantiation *)
 
   val INST          : (term,term)Lib.subst -> thm -> thm
+  val INST_TY_TERM  : (term,term)Lib.subst * (hol_type,hol_type)Lib.subst -> thm -> thm
 
 
   (* Universal quantification *)
@@ -135,4 +136,3 @@ sig
     -> term -> thm
 
 end;
-

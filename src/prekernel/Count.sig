@@ -36,6 +36,7 @@ sig
    | GenAbs
    | Inst
    | InstType
+   | InstTyTerm
    | MkComb
    | Mp
    | NotElim
@@ -75,6 +76,7 @@ sig
               GEN_ABS: int,
               INST: int,
               INST_TYPE: int,
+              INST_TY_TERM: int,
               MK_COMB: int,
               MP: int,
               NOT_ELIM: int,
