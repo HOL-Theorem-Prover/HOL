@@ -20,6 +20,17 @@ Contents
 New features:
 -------------
 
+-   We now support (and recommend) a new header syntax for `Script.sml` files.
+    Instead of the existing boilerplate (`open HolKernel … val _ = new_theory…`), users write something like
+
+           Theory foo
+           Ancestors real_topology …
+           Libs realLib
+
+    to begin their files.
+    This syntax and its options are documented in a new chapter of the DESCRIPTION manual.
+    Thanks to Mario Carneiro for much of the work done to implement this.
+
 -   The simplifier now supports `NoAsms` and `IgnAsm` special forms that allow all assumptions (or those matching the provided pattern, in the case of `IgnAsm`) to be excluded.
     See the DESCRIPTION and REFERENCE manuals for details.
     ([GitHub issue](https://github.com/HOL-Theorem-Prover/HOL/issues/1220))
