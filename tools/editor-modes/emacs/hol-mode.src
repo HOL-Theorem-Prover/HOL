@@ -961,13 +961,14 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
-        (original-name (expand-file-name original-name0)))
+        (original-name (expand-file-name original-name0))
+        (lastmaker-path ".hol/make-deps/lastmaker"))
     ;; check for lastmaker file
     (if-let*
-        (((file-readable-p ".HOLMK/lastmaker"))
-         ((> 500 (file-attribute-size (file-attributes ".HOLMK/lastmaker"))))
+        (((file-readable-p lastmaker-path))
+         ((> 500 (file-attribute-size (file-attributes lastmaker-path))))
          (lines (with-temp-buffer
-                  (insert-file-contents-literally ".HOLMK/lastmaker")
+                  (insert-file-contents-literally lastmaker-path)
                   (split-string (buffer-string) "\n" t)))
          ((not (null lines)))
          (dir1 (file-name-directory (car lines)))
