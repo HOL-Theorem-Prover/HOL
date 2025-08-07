@@ -752,17 +752,14 @@ datatype 'a delta = SAME | DIFF of 'a
 fun delta_apply f x = case f x of SAME => x | DIFF y => y
 
 fun delta_map f =
-   let
-      fun map [] = SAME
-        | map (h :: t) =
-            case (f h, map t) of
-               (SAME, SAME) => SAME
-             | (SAME, DIFF t') => DIFF (h  :: t')
-             | (DIFF h', SAME) => DIFF (h' :: t)
-             | (DIFF h', DIFF t') => DIFF (h' :: t')
-   in
-      map
-   end
+  let fun itFn h (A,b) =
+          case f h
+           of SAME => (h::A, b andalso true)
+            | DIFF h' => (h'::A, false)
+  in fn list =>
+     let val (A,b) = rev_itlist itFn list ([],true)
+     in if b then SAME else DIFF (List.rev A) end
+  end
 
 fun delta_pair f g (x, y) =
   case (f x, g y) of
