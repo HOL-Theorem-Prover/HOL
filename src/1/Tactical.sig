@@ -75,6 +75,7 @@ sig
   val IF             : tactic -> tactic -> tactic -> tactic
   val FIRST_PROVE    : tactic list -> tactic
   val EVERY_ASSUM    : thm_tactic -> tactic
+  val every_assum    : thm_tactic -> tactic
   val FIRST_ASSUM    : thm_tactic -> tactic
   val first_assum    : thm_tactic -> tactic
   val FIRST_X_ASSUM  : thm_tactic -> tactic
