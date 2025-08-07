@@ -90,7 +90,7 @@ else
   (git clone -q ./ /tmp/localhol && echo "done" || die "failed")
 fi
 
-if [ ${copylconfig} -eq 1 ]
+if [ "${copylconfig}" ]
 then
     if [ $MLbase = mosml ]
     then
@@ -120,7 +120,7 @@ localholdir=/tmp/localhol
 
 echo -n "Switching to ${gitref} - "
 (git checkout -f -q ${gitref} && echo "done" || die "failed")
-if [ ${reusecommit} -eq 1 -a -f ${localholdir}/bin/hol.state ]
+if [ "${reusecommit}" -eq 1 -a -f "${localholdir}/bin/hol.state" ]
 then
     :
 else
@@ -195,16 +195,13 @@ then
     fi
 fi
 
-
-echo ; echo Building Doc2Tex
-cd $localholdir/help/src-sml
-# ../../bin/Holmake Doc2Tex
-if [ $ML = "mosml" ]
-then
-    ../../bin/Holmake Doc2Tex.exe
-else
-    ${ML}c  poly-Doc2Tex.ML -o Doc2Tex.exe
-fi
+echo "Copying help/Docfiles/{*.txt,mdhash,HTML/*.html}"
+/bin/cp $localholdir/help/Docfiles/*.txt $archive/help/Docfiles ||
+  die "Couldn't copy *.txt"
+/bin/cp $localholdir/help/Docfiles/mdhash $archive/help/Docfiles ||
+  die "Couldn't copy mdhash"
+/bin/cp $localholdir/help/Docfiles/HTML/*.html $archive/help/Docfiles/HTML ||
+  die "Couldn't copy HTML/*.html"
 
 echo ; echo Building documentation
 for man_name in Description Developers Interaction-emacs Logic Quick Reference Tutorial
