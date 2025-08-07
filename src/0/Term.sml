@@ -193,6 +193,18 @@ fun var_compare (Fv(s1,ty1), Fv(s2,ty2)) =
   | var_compare _ = raise ERR "var_compare" "variables required";
 
 val empty_varset = HOLset.empty var_compare
+val empty_varmap = HOLdict.mkDict var_compare
+
+fun var_map_of theta =
+  let fun itFn {redex,residue} fmap =
+        if type_of redex <> type_of residue then
+	   raise ERR "var_map_of" "type mismatch in element of input subst"
+        else
+           HOLdict.insert(fmap,redex,residue) handle HOL_ERR _
+           => raise ERR "var_map_of" "redex fields must be variables"
+  in rev_itlist itFn theta empty_varmap
+  end
+
 
 (* ----------------------------------------------------------------------
     A total ordering on terms that respects alpha equivalence.
@@ -230,8 +242,20 @@ fun compare (p as (t1,t2)) =
                                    | x => x)
     | (Abs _, _)             => GREATER;
 
-val empty_tmset = HOLset.empty compare
 fun term_eq t1 t2 = compare(t1,t2) = EQUAL
+
+val empty_tmset = HOLset.empty compare
+val empty_term_map = HOLdict.mkDict compare
+
+fun term_map_of theta =
+  let fun itFn {redex,residue} (fmap,vardom) =
+        if type_of redex <> type_of residue then
+           raise ERR "term_map_of" "type mismatch in element of input subst"
+        else
+           (HOLdict.insert(fmap,redex,residue), is_var redex andalso vardom)
+  in
+     rev_itlist itFn theta (empty_term_map,true)
+  end
 
 (* ----------------------------------------------------------------------
     All "atoms" (variables (bound or free) and constants).
@@ -304,6 +328,9 @@ fun var_occurs M =
 
 val mk_var = Fv
 
+fun dest_var (Fv v) = v
+  | dest_var _ = raise ERR "dest_var" "not a var"
+
 fun inST s = not(null(KernelSig.listName termsig s))
 
 (*---------------------------------------------------------------------------*
@@ -335,7 +362,6 @@ end;
  * needlessly confusing formulas occasionally being displayed in interactive *
  * sessions.                                                                 *
  *---------------------------------------------------------------------------*)
-
 
 fun gen_variant P caller =
   let fun var_name _ (Fv(Name,_)) = Name
@@ -424,21 +450,19 @@ fun mk_thy_const {Thy,Name,Ty} = let
   open KernelSig
 in
   case peek(termsig, knm) of
-      Failure(NoSuchThy _) =>raise ERR "mk_thy_const" ("No such theory: " ^ Thy)
+      Failure(NoSuchThy _) => raise ERR "mk_thy_const" ("No such theory: " ^ Thy)
     | Success c => create_const "mk_thy_const" c Ty
     | _ => raise ERR "mk_thy_const" (KernelSig.name_toString knm^" not found")
 end
 
 fun first_decl fname Name =
   case KernelSig.listName termsig Name
-   of []             => raise ERR fname (Name^" not found")
-    | [(_, const)]  => const
-    | (_, const) :: _ =>
-        (WARN fname (Lib.quote Name^": more than one possibility");
-         const)
+   of [] => raise ERR fname (Name^" not found")
+    | [(_, c)] => c
+    | (_, c) :: _ =>
+       (WARN fname (Lib.quote Name^": more than one possibility"); c)
 
-val current_const = first_decl "current_const";
-fun mk_const(Name,Ty) = create_const"mk_const" (first_decl"mk_const" Name) Ty;
+fun mk_const(Name,Ty) = create_const "mk_const" (first_decl "mk_const" Name) Ty;
 
 fun all_consts() =
     let
@@ -447,6 +471,7 @@ fun all_consts() =
     in
       KernelSig.foldl buildAll [] termsig
     end
+
 fun thy_consts s =
     let
       fun buildthy ({Thy,...}, cinfo as (_, v), A) =
@@ -487,10 +512,9 @@ fun mk_comb(r as (Abs(Fv(_,Ty),_), Rand)) =
 val list_mk_comb = lmk_comb (INCOMPAT_TYPES "list_mk_comb")
 end;
 
-
-fun dest_var (Fv v) = v
-  | dest_var _ = raise ERR "dest_var" "not a var"
-
+fun dest_comb (Comb r) = r
+  | dest_comb (t as Clos _) = dest_comb (push_clos t)
+  | dest_comb _ = raise ERR "dest_comb" "not a comb"
 
 (*---------------------------------------------------------------------------*
  *                  Alpha conversion                                         *
@@ -578,26 +602,17 @@ end;
  *---------------------------------------------------------------------------*)
 
 (*  Vanilla version, term is rebuilt even when no change *)
-local
-  open Binarymap
-  val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
-  fun addb [] A = A
-    | addb ({redex,residue}::t) (A,b) =
-      addb t (if type_of redex = type_of residue
-              then (insert(A,redex,residue),
-                    is_var redex andalso b)
-              else raise ERR "subst" "redex has different type than residue")
-in
 fun subst [] = I
   | subst theta =
-    let val (fmap,b) = addb theta (emptysubst, true)
-        fun vsubs (v as Fv _) = (case peek(fmap,v) of NONE => v | SOME y => y)
+    let val (fmap,b) = term_map_of theta
+        fun vsubs (v as Fv _) =
+             (case HOLdict.peek(fmap,v) of NONE => v | SOME y => y)
           | vsubs (Comb(Rator,Rand)) = Comb(vsubs Rator, vsubs Rand)
           | vsubs (Abs(Bvar,Body)) = Abs(Bvar,vsubs Body)
           | vsubs (c as Clos _) = vsubs (push_clos c)
           | vsubs tm = tm
         fun subs tm =
-          case peek(fmap,tm)
+          case HOLdict.peek(fmap,tm)
            of SOME residue => residue
             | NONE =>
               (case tm
@@ -608,19 +623,9 @@ fun subst [] = I
     in
       (if b then vsubs else subs)
     end
-end
 
 (* Space saving version via propagation of SAME/DIFF constructors *)
 local
-  open Binarymap
-  val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
-  fun addb [] A = A
-    | addb ({redex,residue}::t) (A,b) =
-      addb t (if type_of redex = type_of residue
-              then (insert(A,redex,residue),
-                    is_var redex andalso b)
-              else raise ERR "subst" "redex has different type than residue")
- (* Check for aconv redex residue? *)
  fun rebuild_abs _ SAME = SAME
    | rebuild_abs v (DIFF M) = DIFF (Abs(v,M))
  fun rebuild_comb _ _ SAME SAME = SAME
@@ -630,9 +635,9 @@ local
 in
 fun subst [] = I
   | subst theta =
-    let val (fmap,var_only_dom) = addb theta (emptysubst, true)
+    let val (fmap,var_only_dom) = term_map_of theta
         fun vsubs (v as Fv _) =
-             (case peek(fmap,v)
+             (case HOLdict.peek(fmap,v)
                of NONE => SAME
                 | SOME y => DIFF y)
           | vsubs (Comb(M,N)) = rebuild_comb M N (vsubs M) (vsubs N)
@@ -640,65 +645,55 @@ fun subst [] = I
           | vsubs (c as Clos _) = vsubs (push_clos c)
           | vsubs tm = SAME
         fun subs tm =
-          case peek(fmap,tm)
+          case HOLdict.peek(fmap,tm)
            of SOME residue => DIFF residue
             | NONE =>
               (case tm
                 of Comb(M,N) => rebuild_comb M N (subs M) (subs N)
                  | Abs(v,M) => rebuild_abs v (subs M)
                  | Clos _  => subs(push_clos tm)
-                 |   _     => SAME)
+                 |   _    => SAME)
     in
-      if var_only_dom then
-         (fn tm => case vsubs tm of SAME => tm | DIFF tm' => tm')
-      else
-         (fn tm => case subs tm of SAME => tm | DIFF tm' => tm')
+      Lib.delta_apply (if var_only_dom then vsubs else subs)
     end
 end
 
+(* Use exceptions to avoid rebuilding terms if possible *)
+
+exception UNCHANGED
+fun unchanged() = raise UNCHANGED
+fun totally f x = f x handle UNCHANGED => x
+
 (* Space saving version via propagation of UNCHANGED exception *)
-local
-  open Binarymap
-  val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
-  fun addb [] A = A
-    | addb ({redex,residue}::t) (A,b) =
-      addb t (if type_of redex = type_of residue
-              then (insert(A,redex,residue),
-                    is_var redex andalso b)
-              else raise ERR "subst" "redex has different type than residue")
-  exception UNCHANGED
-in
 fun subst [] = I
   | subst theta =
-    let val (fmap,var_only_dom) = addb theta (emptysubst, true)
+    let val (fmap,var_only_dom) = term_map_of theta
         fun vsubs (v as Fv _) =
-              (find(fmap,v) handle NotFound => raise UNCHANGED)
+              (HOLdict.find(fmap,v) handle NotFound => unchanged())
           | vsubs (Comb(M,N)) =
               (let val M' = vsubs M
-                   val N' = (vsubs N handle UNCHANGED => N)
+                   val N' = totally vsubs N
                in Comb(M',N')
                end handle UNCHANGED => Comb (M,vsubs N))
           | vsubs (Abs(v,M)) = Abs(v,vsubs M)
           | vsubs (c as Clos _) = vsubs (push_clos c)
-          | vsubs tm = raise UNCHANGED
+          | vsubs tm = unchanged()
         fun subs tm =
-            find (fmap,tm) handle NotFound
+            HOLdict.find (fmap,tm) handle NotFound
             => (case tm
                  of Comb(M,N) =>
                     (let val M' = subs M
-                         val N' = (subs N handle UNCHANGED => N)
+                         val N' = totally subs N
                      in Comb(M',N')
                      end handle UNCHANGED => Comb (M,subs N))
                   | Abs(v,M) => Abs(v,subs M)
                   | Clos _  => subs(push_clos tm)
-                  |   _    => raise UNCHANGED)
+                  |   _    => unchanged())
     in
-      if var_only_dom then
-         (fn tm => vsubs tm handle UNCHANGED => tm)
-      else
-         (fn tm => subs tm handle UNCHANGED => tm)
+      totally (if var_only_dom then vsubs else subs)
     end
-end
+
+fun tag_type ty = if Type.polymorphic ty then POLY ty else GRND ty;
 
 (*---------------------------------------------------------------------------*
  *     Instantiate type variables in a term                                  *
@@ -709,135 +704,117 @@ fun inst [] tm = tm
     let fun
        inst1 (bv as Bv _) = bv
      | inst1 (c as Const(_, GRND _)) = c
-     | inst1 (c as Const(r, POLY Ty)) =
-       (case Type.ty_sub theta Ty
+     | inst1 (c as Const(r, POLY ty)) =
+       (case Type.ty_sub theta ty
          of SAME => c
-          | DIFF ty => Const(r,(if Type.polymorphic ty then POLY else GRND)ty))
-     | inst1 (v as Fv(Name,Ty)) =
-         (case Type.ty_sub theta Ty of SAME => v | DIFF ty => Fv(Name, ty))
+          | DIFF ty' => Const(r,tag_type ty'))
+     | inst1 (v as Fv(Name,ty)) =
+         (case Type.ty_sub theta ty
+           of SAME => v
+            | DIFF ty' => Fv(Name, ty'))
      | inst1 (Comb(Rator,Rand)) = Comb(inst1 Rator, inst1 Rand)
-     | inst1 (Abs(Bvar,Body))   = Abs(inst1 Bvar, inst1 Body)
-     | inst1 (t as Clos _)      = inst1(push_clos t)
+     | inst1 (Abs(Bvar,Body)) = Abs(inst1 Bvar, inst1 Body)
+     | inst1 (t as Clos _)  = inst1(push_clos t)
     in
       inst1 tm
     end;
 
 (* Space saving version via propagation of SAME/DIFF constructors *)
-fun rebuild_pair f _ _ SAME SAME = SAME
-  | rebuild_pair f M _ SAME (DIFF N') = DIFF (f(M,N'))
-  | rebuild_pair f _ N (DIFF M') SAME = DIFF (f(M',N))
-  | rebuild_pair f _ _ (DIFF M') (DIFF N') = DIFF(f(M',N'))
-
-val rebuild_comb = rebuild_pair Comb;
-val rebuild_abs = rebuild_pair Abs;
+local
+  fun rebuild_pair f _ _ SAME SAME = SAME
+    | rebuild_pair f M _ SAME (DIFF N') = DIFF (f(M,N'))
+    | rebuild_pair f _ N (DIFF M') SAME = DIFF (f(M',N))
+    | rebuild_pair f _ _ (DIFF M') (DIFF N') = DIFF(f(M',N'))
+in
+val rebuild_comb = rebuild_pair Comb
+val rebuild_abs = rebuild_pair Abs
+end
 
 fun inst [] = I
-  | inst theta  =
+  | inst theta =
     let fun
-        inst1 (bv as Bv _) = SAME
-      | inst1 (c as Const(_, GRND _)) = SAME
-      | inst1 (c as Const(r, POLY Ty)) =
-        (case Type.ty_sub theta Ty
+        inst1 (Bv _) = SAME
+      | inst1 (Const(_, GRND _)) = SAME
+      | inst1 (Const(r, POLY ty)) =
+        (case Type.ty_sub theta ty
           of SAME => SAME
-           | DIFF ty =>
-             DIFF (Const(r,
-                    (if Type.polymorphic ty then POLY else GRND)ty)))
-      | inst1 (v as Fv(Name,Ty)) =
-         (case Type.ty_sub theta Ty
+           | DIFF ty' => DIFF (Const(r, tag_type ty')))
+      | inst1 (Fv(Name,ty)) =
+         (case Type.ty_sub theta ty
            of SAME => SAME
-            | DIFF ty => DIFF (Fv(Name, ty)))
+            | DIFF ty' => DIFF (Fv(Name, ty')))
       | inst1 (Comb(M,N)) = rebuild_comb M N (inst1 M) (inst1 N)
       | inst1 (Abs(v,M)) = rebuild_abs v M (inst1 v) (inst1 M)
       | inst1 (t as Clos _) = inst1(push_clos t)
     in
-      fn tm => case inst1 tm of SAME => tm | DIFF tm' => tm'
+      Lib.delta_apply inst1
     end;
 
-fun tag_type ty = if Type.polymorphic ty then POLY ty else GRND ty;
-
 (* Space saving version via propagation of UNCHANGED exception *)
-local exception UNCHANGED
-in
 fun inst [] = I
   | inst theta  =
     let fun
-        inst1 (bv as Bv _) = raise UNCHANGED
-      | inst1 (c as Const(_, GRND _)) = raise UNCHANGED
-      | inst1 (c as Const(r, POLY Ty)) =
-        (case Type.ty_sub theta Ty
-          of SAME => raise UNCHANGED
-           | DIFF ty => Const(r, tag_type ty))
-      | inst1 (Fv(Name,Ty)) =
-         (case Type.ty_sub theta Ty
-           of SAME => raise UNCHANGED
-            | DIFF ty => Fv(Name, ty))
+        inst1 (Bv _) = unchanged()
+      | inst1 (Const(_, GRND _)) = unchanged()
+      | inst1 (Const(r, POLY ty)) =
+        (case Type.ty_sub theta ty
+          of SAME => unchanged()
+           | DIFF ty' => Const(r, tag_type ty'))
+      | inst1 (Fv(Name,ty)) =
+         (case Type.ty_sub theta ty
+           of SAME => unchanged()
+            | DIFF ty' => Fv(Name, ty'))
       | inst1 (Comb(M,N)) =
           (let val M' = inst1 M
-               val N' = (inst1 N handle UNCHANGED => N)
+               val N' = totally inst1 N
                in Comb(M',N')
                end handle UNCHANGED => Comb (M,inst1 N))
       | inst1 (Abs(v,M)) =
           (let val v' = inst1 v
-               val M' = (inst1 M handle UNCHANGED => M)
+               val M' = totally inst1 M
                in Abs(v',M')
                end handle UNCHANGED => Abs(v,inst1 M))
       | inst1 (t as Clos _) = inst1(push_clos t)
     in
-      fn tm => inst1 tm handle UNCHANGED => tm
+       totally inst1
     end
-end
 
-(* inst_ty_tm = subst theta o inst tytheta.
-   NB: Ignores bindings in theta where redex is not a variable.
-*)
+(* inst_ty_tm = subst theta o inst tytheta. *)
 
-local
-  open Binarymap
-  val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
-  fun addb [] A = A
-    | addb ({redex,residue}::t) A = addb t (insert(A,redex,residue))
-  exception UNCHANGED
-in
 fun inst_ty_tm theta tytheta =
-  let val tmap = addb theta emptysubst
-      fun trymap t = find(tmap,t) handle NotFound => raise UNCHANGED
-      fun trymap_total t = find(tmap,t) handle NotFound => t
+  let val vmap = var_map_of theta
+      fun trymap t = HOLdict.find(vmap,t) handle NotFound => unchanged()
+      fun trymap_total t = HOLdict.find(vmap,t) handle NotFound => t
       fun isubst tm =
        case tm
-        of Bv _ => raise UNCHANGED
+        of Bv _ => unchanged()
          | Fv(s,ty) =>
              (case Type.ty_sub tytheta ty
                of SAME => trymap tm
                 | DIFF ty' => trymap_total (Fv(s,ty')))
-         | Const(_, GRND _) => raise UNCHANGED
+         | Const(_, GRND _) => unchanged()
          | Const(r, POLY ty) =>
             (case Type.ty_sub tytheta ty
-              of SAME => raise UNCHANGED
+              of SAME => unchanged()
                | DIFF ty' => Const(r, tag_type ty'))
          | Comb(M,N) =>
            (let val M' = isubst M
-                val N' = (isubst N handle UNCHANGED => N)
+                val N' = totally isubst N
             in Comb(M',N')
             end handle UNCHANGED => Comb (M,isubst N))
          | Abs(v,M) =>
            (let val (s,ty) = dest_var v
                 val v' =
                     (case Type.ty_sub tytheta ty
-                      of SAME => raise UNCHANGED
+                      of SAME => unchanged()
                        | DIFF ty' => Fv(s,ty'))
-                val M' = (isubst M handle UNCHANGED => M)
+                val M' = totally isubst M
             in Abs(v',M')
             end handle UNCHANGED => Abs(v,isubst M))
          | Clos _ => isubst(push_clos tm)
   in
-    fn tm => isubst tm handle UNCHANGED => tm
+    totally isubst
   end
-end
-
-fun dest_comb (Comb r) = r
-  | dest_comb (t as Clos _) = dest_comb (push_clos t)
-  | dest_comb _ = raise ERR "dest_comb" "not a comb"
-
 
 (*---------------------------------------------------------------------------
        Making abstractions. list_mk_binder is a relatively
