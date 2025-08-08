@@ -1859,7 +1859,7 @@ Proof
 QED
 
 Theorem DIFF_POS_MONO_LT_CC:
-    ∀f a b. f contl a ∧ f contl b ∧ 
+    ∀f a b. f contl a ∧ f contl b ∧
         (∀z. a < z ∧ z < b ⇒ ∃l. 0 < l ∧ (f diffl l) z) ⇒
         ∀x y. a ≤ x ∧ y ≤ b ∧ x < y ⇒ f x < f y
 Proof
@@ -1952,7 +1952,7 @@ Proof
 QED
 
 Theorem DIFF_NEG_ANTIMONO_LT_CC:
-    ∀f a b. f contl a ∧ f contl b ∧ 
+    ∀f a b. f contl a ∧ f contl b ∧
         (∀z. a < z ∧ z < b ⇒ ∃l. l < 0 ∧ (f diffl l) z) ⇒
         ∀x y. a ≤ x ∧ y ≤ b ∧ x < y ⇒ f y < f x
 Proof
