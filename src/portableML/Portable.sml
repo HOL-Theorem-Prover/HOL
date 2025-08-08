@@ -754,7 +754,7 @@ fun delta_apply f x = case f x of SAME => x | DIFF y => y
 fun delta_map f =
   let fun itFn h (A,b) =
           case f h
-           of SAME => (h::A, b andalso true)
+           of SAME => (h::A, b)
             | DIFF h' => (h'::A, false)
   in fn list =>
      let val (A,b) = rev_itlist itFn list ([],true)
