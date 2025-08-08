@@ -1473,6 +1473,20 @@ val SELECT_UNIQUE = thm (#(FILE), #(LINE))("SELECT_UNIQUE",
        (DISCH “!y:'a. P y = (y = x)” th6)
   end);
 
+(*---------------------------------------------------------------------------*)
+(* SELECT_UNIQUE_ALT = |- !P x. P x /\ (!y. P y ==> (y = x)) ==> ($@ P = x)  *)
+(*---------------------------------------------------------------------------*)
+
+val SELECT_UNIQUE_ALT = let
+    val asm = ASSUME “P x /\ !y: 'a. P y ==> y = x”
+    val (witness_th, equiv_th) = CONJ_PAIR asm
+    val sel_sat_th = MP (SPEC_ALL SELECT_AX) witness_th
+    val sel_x_th = MP (SPEC “$@ (P: 'a -> bool)” equiv_th) sel_sat_th
+    val final_th = GENL [“P: 'a -> bool”, “x: 'a”] $ DISCH_ALL sel_x_th
+in
+    thm (#(FILE), #(LINE)) ("SELECT_UNIQUE_ALT", final_th)
+end
+
 (* ----------------------------------------------------------------------
     SELECT_ELIM_THM = |- !P Q. (?x. P x) /\ (!x. P x ==> Q x) ==> Q ($@ P)
    ---------------------------------------------------------------------- *)
