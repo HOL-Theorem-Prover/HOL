@@ -98,6 +98,24 @@ fun identCmp ((s1,_),(s2,_)) =
       | r => r
     end
 
+fun ignoringWSIsPrefix p s =
+    let val ss = Substring.full s
+        val (ws,rest) = Substring.splitl Char.isSpace ss
+    in
+      if Substring.isPrefix p rest then
+        SOME (Substring.string ws, Substring.string rest)
+      else NONE
+    end
+
+fun fenceMunge s =
+    case ignoringWSIsPrefix "```" s of
+        NONE => s
+      | SOME (ws1, rest) => (
+        case String.tokens Char.isSpace (String.extract(rest,3,NONE)) of
+            [_] => ws1 ^ "```\n"
+          | _ => s
+        )
+
 fun catAFile fname =
     let val istrm = TextIO.openIn fname
         val firstline =
@@ -114,9 +132,10 @@ fun catAFile fname =
                   in
                     print (s1 ^ " {#" ^ base ^ "}\n")
                   end
-        fun loop () = case TextIO.inputLine istrm of
-                          SOME s => (print s ; loop())
-                        | NONE => TextIO.closeIn istrm
+        fun loop () =
+            case TextIO.inputLine istrm of
+                SOME s => (print (fenceMunge s) ; loop())
+              | NONE => TextIO.closeIn istrm
     in
       loop()
     end handle e =>

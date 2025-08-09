@@ -25,6 +25,20 @@
 \usepackage{fancyvrb}
 \usepackage[format=hang,justification=raggedright]{caption}  % multi-line figure caption
 \usepackage{desc-unicode}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{etoolbox} % For patchcmd
+
+% Remove top and bottom horizontal lines from tables:
+\newlength{\toprulewidth}
+\setlength{\toprulewidth}{0.ex}
+\patchcmd{\toprule}{\heavyrulewidth}{\toprulewidth}{}{}
+
+\newlength{\bottomrulewidth}
+\setlength{\bottomrulewidth}{0.ex}
+\patchcmd{\bottomrule}{\heavyrulewidth}{\bottomrulewidth}{}{}
+
+
 
 \hyphenation{docu-ments}
 

@@ -185,7 +185,10 @@ fun parseQuoteEqnPfx text = let
   val name = Substring.slice(right, 1, NONE) |> Substring.dropl Char.isSpace
   in {keyword = Substring.substring(text, 0, 5), bind = bind, name = name} end
 
-(* DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]"; *)
+(* DefinitionLabel =
+     "[" {ws}*{DefinitionLabelID}("["{alphaMLid_list}"]")?{ws}*":"{ws}*"]" |
+     "[" {ws}*{HOLconjunction}?{ws}* "]"
+; *)
 fun parseDefnLabel text = let
   val ss = Substring.full text
     |> Substring.dropr Char.isSpace
