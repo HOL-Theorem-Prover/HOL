@@ -3858,6 +3858,30 @@ Proof
                    NOT_IN_EMPTY, GSPECIFICATION]
 QED
 
+(*---------------------------------------------------------------------------*)
+(* SELECT_UNIQUE_ALT = |- !P x. P x /\ (!y. P y ==> (y = x)) ==> ($@ P = x)  *)
+(*---------------------------------------------------------------------------*)
+
+Theorem SELECT_UNIQUE_ALT[local]:
+    ∀P x. P x ∧ (∀y. P y ⇒ y = x) ⇒ $@ P = x
+Proof
+    metis_tac[SELECT_UNIQUE]
+QED
+
+(* boolScript compatible proof *)
+
+(*
+val SELECT_UNIQUE_ALT = let
+    val asm = ASSUME “P x /\ !y: 'a. P y ==> y = x”
+    val (witness_th, equiv_th) = CONJ_PAIR asm
+    val sel_sat_th = MP (SPEC_ALL SELECT_AX) witness_th
+    val sel_x_th = MP (SPEC “$@ (P: 'a -> bool)” equiv_th) sel_sat_th
+    val final_th = GENL [“P: 'a -> bool”, “x: 'a”] $ DISCH_ALL sel_x_th
+in
+    thm (#(FILE), #(LINE)) ("SELECT_UNIQUE_ALT", final_th)
+end
+*)
+
 (* ------------------------------------------------------------------------- *)
 (*  Hyperbolic Trigonometry (plus some other stuff)                          *)
 (* ------------------------------------------------------------------------- *)
