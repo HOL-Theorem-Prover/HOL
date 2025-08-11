@@ -257,7 +257,7 @@ fi
 cd /tmp
 
 # catch and replace release date placeholder
-date=$(date '%d %B %Y')
+date=$(date '+%d %B %Y')
 perl -i -pe "s/xxxxxx/$date/" $archive/doc/$releasename.release.md
 
 echo "Creating tar file"
