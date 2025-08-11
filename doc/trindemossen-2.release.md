@@ -1,11 +1,11 @@
-% Release notes for HOL4, ??????
+% Release notes for HOL4, Trindemossen-2
 
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
 (Released: xxxxxx)
 
-We are pleased to announce the ????? release of HOL4.
+We are pleased to announce the Trindemossen-2 release of HOL4.
 
 Contents
 --------
@@ -151,7 +151,7 @@ Incompatibilities:
 * * * * *
 
 <div class="footer">
-*[HOL4, ?????](http://hol-theorem-prover.org)*
+*[HOL4, Trindemossen-2](http://hol-theorem-prover.org)*
 
 [Release notes for the previous version](trindemossen-1.release.html)
 
