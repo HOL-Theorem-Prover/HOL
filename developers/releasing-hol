@@ -225,7 +225,7 @@ done
 
 echo ; echo Cleaning up
 cd $archive
-while read line 
+while read line
 do
   case "$line" in
       \#* ) : ;;
