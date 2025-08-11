@@ -151,6 +151,8 @@ Incompatibilities:
 -   `ASSUME_NAMED_TAC` now puts the new named assumption at the top of the assumption list, but below the other named assumptions.
     Previously, named assumptions were added to the bottom of the assumption list (where they might get in the way).
 
+-   Selecting numbered options in the Moscow ML HOL help system now requires the number choice to be followed by semicolon-newline instead of just a newline character.
+
 * * * * *
 
 <div class="footer">
