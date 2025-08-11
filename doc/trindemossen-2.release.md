@@ -17,7 +17,7 @@ Contents
 -   [New examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
 
-New features:
+New features
 -------------
 
 -   We now support (and recommend) a new header syntax for `Script.sml` files.
@@ -66,13 +66,13 @@ New features:
 -   The Poly/ML implementation now offers a `-z` (or `--zero`) command-line option to make the NUL byte be the end-marker for strings being sent to the compiler.
     Otherwise, the compiler makes a best effort guess about when it should interact based on the presence of semi-colons.
 
-Bugs fixed:
+Bugs fixed
 -----------
 
 - `EVERY_CASE_TAC` would loop if the "split-upon" subterm was already an assumption, but no longer.
 
 
-New theories:
+New theories
 -------------
 
 - `number`, `combinatorics` and `prime`: These theories combine material
@@ -85,7 +85,7 @@ New theories:
    A group is an algebraic structure: a monoid with all its elements invertible.
    A ring takes into account the interplay between its additive group and multiplicative monoid.
 
-New tools:
+New tools
 ----------
 
 - `Tactic.TRANS_TAC` (ported from HOL-Light) applies transitivity theorem to goal
@@ -98,12 +98,12 @@ New tools:
 - `last_assume_tac` has been added. It is the same as `assume_tac` except it adds
   the new assumption to the top of the list of assumptions instead of the bottom.
 
-New examples:
+New examples
 -------------
 
 - Dijkstra's algorithm for computing shortest paths: `examples/algorithms/dijkstraScript.sml`
 
-Incompatibilities:
+Incompatibilities
 ------------------
 
 -   `numLib.prefer_num` has been renamed to `numLib.temp_prefer_num`, which name better describes its semantics.
