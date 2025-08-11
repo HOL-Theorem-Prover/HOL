@@ -29,7 +29,7 @@ New features:
 
     to begin their files.
     This syntax and its options are documented in a new chapter of the DESCRIPTION manual.
-    Thanks to Mario Carneiro for much of the work done to implement this.
+    Thanks to Mario Carneiro and Daniel Nezamabadi for the work done implementing this, and then converting all the script files in `src` to use this syntax.
 
 -   The simplifier now supports `NoAsms` and `IgnAsm` special forms that allow all assumptions (or those matching the provided pattern, in the case of `IgnAsm`) to be excluded.
     See the DESCRIPTION and REFERENCE manuals for details.
@@ -62,6 +62,9 @@ New features:
 
 -   `oneline` from `bossLib` now supports one-line-ification of mutually recrusive functions.
     Each function becomes an equation of its own in the theorem returned by `oneline`.
+
+-   The Poly/ML implementation now offers a `-z` (or `--zero`) command-line option to make the NUL byte be the end-marker for strings being sent to the compiler.
+    Otherwise, the compiler makes a best effort guess about when it should interact based on the presence of semi-colons.
 
 Bugs fixed:
 -----------
