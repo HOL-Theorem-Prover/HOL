@@ -464,7 +464,7 @@ before and after the region is sent."
                  (concat "(" buffer-string ") handle e => Raise e"))
                 ((= pnv 16)
                  (concat buffer-string
-                         ";Globals.interactive := not (!Globals.interactive);"))
+                         ";Globals.interactive := true;"))
                 (t buffer-string)))
          (loud-opens (if (= pnv 16) t loud-opens0))
          (sender (if hol-emit-time-elapsed-p
@@ -473,7 +473,7 @@ before and after the region is sent."
     (if (= pnv 16)
         (progn
           (hol-toggle-quietdec)
-          (hol-toggle-var-quiet "Globals.interactive")))
+          (send-string-to-hol "val _ = Globals.interactive := false;")))
     (unwind-protect
         (progn
           (funcall sender send-string hol-echo-commands-p loud-opens)
@@ -481,7 +481,9 @@ before and after the region is sent."
               (send-string-to-hol
                (concat "val _ = print \"\\n*** Emacs/HOL command completed "
                        "***\\n\\n\""))))
-      (if (= pnv 16) (hol-toggle-quietdec)))))
+      (if (= pnv 16) (hol-toggle-quietdec))
+      ;; necessary just in case exception was raised in send-string
+      (send-string-to-hol "val _ = Globals.interactive := true"))))
 
 
 
