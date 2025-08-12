@@ -458,15 +458,22 @@ before and after the region is sent."
   (interactive "r\np")
   (let* ((buffer-string
             (with-hol-locpragma start (buffer-substring start end)))
+         (pnv (prefix-numeric-value arg))
          (send-string
-          (if (= arg 4)
-              (concat "(" buffer-string ") handle e => Raise e")
-            buffer-string))
-         (loud-opens (if (= arg 16) t loud-opens0))
+          (cond ((= pnv 4)
+                 (concat "(" buffer-string ") handle e => Raise e"))
+                ((= pnv 16)
+                 (concat buffer-string
+                         ";Globals.interactive := not (!Globals.interactive);"))
+                (t buffer-string)))
+         (loud-opens (if (= pnv 16) t loud-opens0))
          (sender (if hol-emit-time-elapsed-p
                      'send-timed-string-to-hol
                    'send-string-to-hol)))
-    (if (= arg 16) (hol-toggle-quietdec))
+    (if (= pnv 16)
+        (progn
+          (hol-toggle-quietdec)
+          (hol-toggle-var-quiet "Globals.interactive")))
     (unwind-protect
         (progn
           (funcall sender send-string hol-echo-commands-p loud-opens)
@@ -474,7 +481,7 @@ before and after the region is sent."
               (send-string-to-hol
                (concat "val _ = print \"\\n*** Emacs/HOL command completed "
                        "***\\n\\n\""))))
-      (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec)))))
+      (if (= pnv 16) (hol-toggle-quietdec)))))
 
 
 
@@ -1272,8 +1279,7 @@ argument N, sets the trace to that value in particular."
    (concat
     "val _ = print (\"*** 'Quiet declaration' now \" ^"
     "Bool.toString (HOL_Interactive.toggle_quietdec()) ^ \" ***\\n\")")
-   nil)
-  (hol-toggle-var "Globals.interactive"))
+   nil))
 
 (defun hol-toggle-quiet-quietdec ()
   "Toggles quiet declarations in the interactive system."
