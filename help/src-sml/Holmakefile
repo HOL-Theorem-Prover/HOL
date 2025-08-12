@@ -8,19 +8,19 @@ all: makebase.exe Doc2Html.exe Doc2Tex.exe Doc2Txt.exe Doc2markdown.exe
 
 ifdef POLY
 Doc2markdown.exe: poly-Doc2Md.ML Doc2markdown.uo ParseDoc.uo Flash.uo
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 
 Doc2Tex.exe: poly-Doc2Tex.ML Doc2Tex.uo ParseDoc.uo Flash.uo
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 
 Doc2Html.exe: poly-Doc2Html.ML Doc2Html.uo Flash.uo
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 
 makebase.exe: poly-makebase.ML makebase.sml
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 
 Md2TeX.exe: poly-Md2TeX.ML Md2TeX.uo
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 
 else
 makebase.uo: makebase.sml MyDatabase.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo
