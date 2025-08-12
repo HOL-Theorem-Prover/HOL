@@ -464,7 +464,7 @@ before and after the region is sent."
                  (concat "(" buffer-string ") handle e => Raise e"))
                 ((= pnv 16)
                  (concat buffer-string
-                         ";Globals.interactive := true;"))
+                         ";val _ = Globals.interactive := true;"))
                 (t buffer-string)))
          (loud-opens (if (= pnv 16) t loud-opens0))
          (sender (if hol-emit-time-elapsed-p
