@@ -152,10 +152,10 @@ fun hash_files dir flist = let
     case flist of
         [] => (TextIO.closeOut ostrm;
                OS.FileSys.chDir old;
-               SHA1_ML.sha1_file0{filename=temp})
+               SHA1_ML.sha1_file{filename=temp})
       | f::fs =>
         let
-          val h = SHA1_ML.sha1_file0 {filename=f}
+          val h = SHA1_ML.sha1_file {filename=f}
         in
           TextIO.output(ostrm, f ^ " " ^ h ^ "\n");
           recurse fs
