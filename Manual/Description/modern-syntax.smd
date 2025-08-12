@@ -1,3 +1,4 @@
+\index{special syntactic forms for scripts|(}
 Files written by HOL users are of the same form as those written by HOL developers.
 In this way, HOL aims to be easy to extend, and this chapter’s description of HOL source files should be useful for users and developers both.
 
@@ -7,7 +8,7 @@ HOL organises its files into two categories:
 
 - “library” files that provide SML implementations of important theorem-proving infrastructure, typically providing SML functions to support those actions done in script files (definitions, types, proofs).
 
-Library files are written in SML, using the HOL API that is described both in this manual, but also in the REFERENCE.
+Library files are written in SML, using the HOL API that is described both in this manual, but also in REFERENCE.
 Script files have their own rather special syntax that is a superset of SML.
 Script files will be the bulk of what most users write.
 Both flavours of file should observe the conventions documented in this chapter.
@@ -65,24 +66,44 @@ The recommended syntax for a script file begins
 
    <Script Declarations>
 ```
+```{=latex}
+See also Table~\ref{tab:script-file-syntax}.
+```
 
 The three keywords (`Theory`, `Ancestors` and `Libs`) must all appear in column 0 of the input file.
 The `Ancestors` and `Libs` components may be omitted.
 The name following the `Theory` keyword must match the name that precedes the `Script.sml` of the file-name, and must be a valid SML structure identifier.
 
 \index{Ancestors keyword@\ml{Ancestors} keyword}
+\index{special syntactic forms for scripts!Ancestors@\ml{Ancestors}}
 If present, the names following `Ancestors` identify theories that this theory builds upon.
 These names should be “bare”: they cannot include the `Theory` suffix.
 By default, all of the SML identifiers within the exported theories mentioned in this section are available without qualification.
 Thus, if `list` is one of the names following `Ancestors`, one need not write `listTheory.MAP` in the rest of the file to refer to its theorem `MAP`, but can instead write simply `MAP`.
 If two ancestor theories use the same names for their exported theories, the names belonging to the theory whose name occurs later in the `Ancestors` list will shadow earlier occurrences.
 
+\index{qualified keyword@\ml{qualified} keyword}
+\index{special syntactic forms for scripts!qualified@\ml{qualified}}
 It is reasonable and permitted to list a theory as an ancestor solely to be able to write its names without qualification.
 For example, one need not explicitly write `pred_set` as an ancestor because `pred_setTheory` is always included in HOL’s standard logical context.
 Nonetheless, one might mention it in order to be able to write `IN_INSERT` instead of `pred_setTheory.IN_INSERT`.
-
-Finally, one might want a theory as an ancestor, but not to have its SML names available at the top-level.
+Conversely, one might want a theory as an ancestor, but not to have its SML names available at the top-level.
 This effect is achieved by following the theory name with the `[qualified]` annotation.
+
+In some situations, one wants to have a theory as an ancestor, but not to use its notations and other grammar changes.
+To achieve this, the `ignore_grammar` attribute can be used.
+
+\index{Libs (special syntactic form)@\ml{Libs} (special syntactic form)}
+\index{special syntactic forms for scripts!Libs@\ml{Libs}}
+The names following the `Libs` keyword are the names of HOL libraries that the script-file depends on.
+These can also be imported in `qualified` fashion.
+
+Finally, both ancestors and libraries can be given aliases for easy (qualified) access with the `alias` modifier.
+For example, if one writes `Libs fooLib[alias=F]`, then `fooLib`'s bindings are available in the SML structure `F`, allowing one to write `F.entrypoint`. Aliases can be used with or without the `qualified` option.
+
+For convenience, the `qualified` and `ignore_grammar` options can be given “all at once” to a number of theory or library dependencies by attaching these attributes (again in square brackets) to the relevant `Ancestors` or `Libs` keyword directly.
+The `alias=`*ident* modifier does not make sense immediately after the `Ancestors` and `Libs` keywords;
+it should only be used after individual theory or library names to establish aliases for just those names.
 
 --------------    -----  ---------------------
 ⟨*theory*⟩         ::=   `Theory` ⟨*thyname*⟩
@@ -99,14 +120,13 @@ This effect is achieved by following the theory name with the `[qualified]` anno
 --------------    -----  ---------------------
 
 Table: Script File Syntax.
-Square brackets in the table are input characters; they are *not* meta-characters (unlike the parentheses, pipe symbols and superscripts). 
+Square brackets in the table are input characters; they are *not* meta-characters (unlike the parentheses, pipe symbols and superscripts).
 All keywords beginning with capital letters (`Theory`, `Ancestors`, `Libs`, ...) must occur in column 0 of the input file.
-The `alias=`*ident* modifier does not make sense immediately after the `Ancestors` and `Libs` keywords;
-it should only be used after individual theory or library names to establish aliases for just those names.
+\label{tab:script-file-syntax}
 
 --------------    -----  ---------------------
-⟨*thydecl*⟩        ::=   ⟨*SML-declaration*⟩
-                    |    ⟨*theorem-decl*⟩    |    ⟨*definition-decl*⟩    |    ⟨*parsing-decl*⟩
+⟨*thydecl*⟩        ::=   ⟨*SML-declaration*⟩    |    ⟨*theorem-decl*⟩    |    ⟨*definition-decl*⟩
+                    |    ⟨*parsing-decl*⟩    |    ⟨*quotation-decl*⟩
 ⟨*theorem-decl*⟩   ::=   ⟨*thm-eqn*⟩    |    ⟨*thm-proof*⟩
 ⟨*thm-eqn*⟩        ::=   ⟨*thm-keyword*⟩ ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩
 ⟨*thm-proof*⟩      ::=   ⟨*thm-keyword*⟩ ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩
@@ -114,15 +134,147 @@ it should only be used after individual theory or library names to establish ali
                          `QED`
 ⟨*thm-keyword*⟩    ::=   `Theorem`    |    `Triviality`
 ⟨*defn-decl*⟩      ::=   ⟨*datatype-decl*⟩    |    ⟨*function-decl*⟩    |    ⟨*relation-decl*⟩
-⟨*datatype-decl*⟩  ::=   `Datatype:`⟨*datatype-spec*⟩
-                         `End`
-⟨*relation-decl*⟩  ::=   (`Inductive`|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩
-                         `End`
+⟨*datatype-decl*⟩  ::=   `Datatype:`⟨*datatype-spec*⟩ `End`
+⟨*relation-decl*⟩  ::=   (`Inductive`|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩ `End`
 ⟨*function-decl*⟩  ::=   `Definition` ⟨*ident*⟩⟨*defn-attrs*⟩ `:`
                          ⟨*function-spec*⟩
-                         ⟨*function-close*⟩
-⟨*function-close*⟩ ::=   (`Termination` ⟨*tactic*⟩)^?^ 
-                         `End`
+                         (`Termination` ⟨*tactic*⟩)^?^ `End`
+⟨*parsing-decl*⟩   ::=   `Overload` ⟨*quoted-ident*⟩⟨*overload-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
+                    |    `Type` ⟨*quoted-ident*⟩⟨*type-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
+⟨*quotation-decl*⟩ ::=   `Quote` (⟨*ident*⟩ `=`)^?^ ⟨*ident*⟩ `:` ⟨*quoted-material*⟩ `End`
 --------------    -----  ---------------------
 
-Table: Syntax for expressing theorem proofs, definitions and other theory changes. 
+Table: Syntax for expressing theorem proofs, definitions and other theory changes. Again, upper-case keywords (`End` in particular, despite the table layout), must occur in column 0.
+
+
+### Attributes
+
+\index{theorem attributes|(}
+Many commands take a variety of attributes to modify or tweak the behaviour of the command.
+Attribute specifications are added to commands, usually after user-provided identifiers, within square brackets using a common syntax:
+
+--------------  -----  -------------
+⟨*attr-spec*⟩    ::=   `[` ⟨*attribute*⟩ (`,`⟨*attribute*⟩)^\*^ `]`
+⟨*attribute*⟩    ::=   ⟨*ident*⟩ (`=` ⟨*ident*⟩^+^)^?^
+--------------  -----  -------------
+
+If multiple identifiers appear to the right of an equals-sign in the above syntax, they are separated by whitespace.
+Libraries can enable more attributes than this core set for theorems and definitions; this allows theorem values to be stored in custom data-sets for later retrieval by customisable tools.
+
+Keyword          (Commonly used) Possible attributes
+--------------   ----------------------
+`Definition`     `ind=`..., `nocompute`, `schematic`, `simp`
+`Overload`       `by_nametype`, `inferior`, `local`
+`Proof`          `exclude_frags`, `exclude_simps`
+`Theorem`        `compute`, `cong`, `local`, `mono`, `rule_induction`, `simp`
+`Type`           `local`, `pp`
+--------------   ----------------------
+
+The following describes the attributes listed above:
+
+`by_nametype`
+
+:   Used with `Overload`.
+    This requires the SML-expression that appears after the `=`-sign in the syntax to be of type `{Thy : string, Name : string}` (normally this argument is a term), and maps to the underlying `overload_on_by_nametype` or `temp_overload_on_by_nametype` SML calls.
+
+`compute`
+
+:   Used with `Theorem` and `Triviality` forms.
+    This causes the theorem value to be added to the global "computation set" that is used by `EVAL`.
+\index{theorem attributes!compute@\ml{compute}}
+
+`cong`
+
+:   Used with `Theorem` and `Triviality` forms.
+    This adds the corresponding theorem to the set of congruence rules used by the termination analysis behind function definition.
+\index{theorem attributes!cong@\ml{cong}}
+
+    ```{=latex}
+    See Section~\ref{TFL} for more on how these congruence theorems are used.
+    ```
+
+`exclude_frags`=...
+
+:   Used with `Proof`.
+    The list of fragment names following is removed from the global simpset for the duration of the given proof, affecting all simplifier tactics that refer to the global simpset.
+
+`exclude_simps`=...
+
+:   Used with `Proof`.
+    The list of theorem names following is removed from the global simpset for the duration of the given proof.
+    Names are not SML identifiers, but rather references to the names used internally by the simpset (visible by examining it with a call to `srw_ss()`), and can be given without theory-qualification.
+    For example, with or without `sumTheory`’s identifiers visible to SML, one can use `exclude_simps=ISR` to stop the `ISR` rewrite from being used.
+
+`ind=`⟨*ident*⟩
+
+:   Used with `Definition`.
+    Specifies the name for a recursive function's induction theorem.
+
+    ```{=latex}
+    See Section~\ref{sec:inductive-relations} for more on how monotonicity results are used.
+    ```
+
+`inferior`
+
+:   Used with `Overload`.
+    Makes the chosen overload "least liked" by the parsing and printing machinery.
+    It will be chosen last when resolving ambiguous parses, and will only be used when printing if no other overload matches.
+
+`local`
+
+:   Used with `Overload`, `Theorem`, and `Type`.
+    Makes the "effect" of the corresponding keyword local to the script file, meaning it will not persist into descendent theories.
+    In the case of `Theorem`, this means the theorem will not be exported, and so it will not be possible to refer to it as `fooTheory.ident` in descendents.
+    For the parsing directives, the changes to the grammar are not exported.
+
+`mono`
+
+:   Used with `Theorem` and `Triviality`.
+    Adds the theorem to the list of monotonicity results used by the inductive/coinductive definitions package.
+    \index{theorem attributes!mono@\ml{mono}}
+
+    ```{=latex}
+    See Section~\ref{sec:inductive-relations} for more on how monotonicity results are used.
+    ```
+
+`nocompute`
+
+:   Used with `Definition`.
+    This stops the definition theorem from being added to `EVAL`’s global "computation set", which otherwise happens by default.
+
+`pp`
+
+:   Used with `Type`.
+    Causes the new type abbreviation to be used when types are printed; by default, abbreviations are used only for parsing strings into types.
+
+`rule_induction`
+
+:   Used with `Theorem` and `Triviality`.
+    Makes the provided theorem available for use as a rule induction principle when using the `Induct_on` tactic.
+    \index{theorem attributes!rule_induction@\ml{rule_induction}}
+
+    ```{=latex}
+    See Section~\ref{sec:proofs-with-inductive-relations} for more on \ml{Induct\_on}.
+    ```
+
+`schematic`
+
+:   Used with `Definition`. Allows schematic definitions.
+
+    ```{=latex}
+    See Section~\ref{ss:recursionSchemas} for more on schematic definitions.
+    ```
+
+`simp`
+
+:   Used with `Theorem`, `Triviality` and `Definition`.
+    Adds the corresponding theorem to the global simpset. This effect will not persist beyond the current script file where it occurs if used with `Triviality` or a `local` attribute.
+    \index{theorem attributes!simp@\ml{simp}}
+
+    ```{=latex}
+    See Section~\ref{sec:srw-ss} for more on the global simpset.
+    ```
+
+
+\index{theorem attributes|)}
+\index{special syntactic forms for scripts|)}

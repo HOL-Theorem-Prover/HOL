@@ -156,7 +156,7 @@ fun mk_HOLdocfile_entry (dir,s) =
      file=normPath[dir,s], line=0}
  end
 
-local fun is_adocfile s = OS.Path.ext s = SOME "md"
+local fun is_adocfile s = OS.Path.ext s = SOME "txt"
 in
 fun docdir_to_entries path (endpath, entries) =
   let val L1 = List.filter is_adocfile

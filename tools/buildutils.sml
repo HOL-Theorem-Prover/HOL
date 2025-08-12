@@ -783,10 +783,7 @@ in
   system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
   system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
   system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
-  system_ps (POLYC ^ " poly-Doc2Html.ML -o Doc2Html.exe");
-  system_ps (POLYC ^ " poly-Doc2Txt.ML -o Doc2Txt.exe");
-  system_ps (POLYC ^ " poly-Doc2Tex.ML -o Doc2Tex.exe");
-  system_ps (POLYC ^ " poly-Doc2Md.ML -o Doc2markdown.exe")
+  system_ps (POLYC ^ " poly-Doc2Html.ML -o gen_extra_docfiles")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -828,7 +825,7 @@ fun build_help graph =
              else if ML_SYSNAME = "mosml" then mosml_compilehelp()
              else raise Fail "Bogus ML_SYSNAME"
 
-     val doc2html = fullPath [dir,"Doc2Html.exe"]
+     val doc2html = fullPath [dir,"gen_extra_docfiles"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
      val htmlpath = fullPath [docpath, "HTML"]
      val _        = if (HOLFileSys.isDir htmlpath handle _ => false) then ()
@@ -836,14 +833,12 @@ fun build_help graph =
                           HOLFileSys.mkDir htmlpath)
      val cmd1     = [doc2html, docpath, htmlpath]
      val cmd2     = [fullPath [dir,"makebase.exe"]]
-     val _ = print "Generating ASCII versions of Docfiles...\n"
-     val _ = if build_adoc_files () then print "...ASCII Docfiles done\n"
-             else ()
  in
-   print "Generating HTML versions of Docfiles...\n"
- ;
-   if SYSTEML cmd1 then print "...HTML Docfiles done\n"
-   else die "Couldn't make html versions of Docfiles"
+   if ML_SYSNAME <> "mosml" then (
+     print "Generating HTML and plain text versions of Docfiles...\n" ;
+     if SYSTEML cmd1 then print "...docfile translation done\n"
+     else die "Couldn't translate Docfiles"
+   ) else ()
  ;
    if (print "Building Help DB\n"; SYSTEML cmd2) then ()
    else die "Couldn't make help database"

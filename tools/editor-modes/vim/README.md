@@ -77,8 +77,7 @@ Command  | Description
 :------- | :------------------------------------
 `hs`     | Send region to HOL.
 `hu`     | Send region to HOL in quiet mode.
-`hL`     | Send region to be split into words and each word `load`ed.
-`hl`     | Same as above, but also send the region as a command afterwards.
+`hl`     | Process `load`s for the selected region (e.g. a script file header), as determined by `holdep`.
 `hg`     | Send region (should be a quotation) to `g`, to start a new proof.
 `hG`     | Send region to `new_goalstack` after quoting it, to start a new proof. Any trailing `Proof[...]` modifiers are passed to HOL too.
 `he`     | Send region (should be a tactic) to `e`, to expand a tactic.
@@ -123,8 +122,6 @@ The terminal buffer that is hosting the HOL repl can be navigated as usual (if i
 In vim, to leave insert mode of a terminal buffer and return to Terminal-Normal mode press `CTRL-\ CTRL-N`, as documented in [`:help terminal-typing`](https://vimhelp.org/terminal.txt.html#terminal-typing).
 
 ## Automatic stripping
-
-`hL` and `hl` don't `load` these words: `local` `open` `in` `end.`
 
 `hg` strips commas from the end of the region.
 

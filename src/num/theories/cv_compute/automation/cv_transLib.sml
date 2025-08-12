@@ -220,7 +220,7 @@ fun mk_pre_vars NONE defs = map mk_pre_var defs
                     Int.toString (length defs),
                     ") does not match the number of precondition names (",
                     Int.toString (length names),"). ",
-                    "Use space-separated names for mutually recrusive functions, e.g., ",
+                    "Use space-separated names for mutually recursive functions, e.g., ",
                     "if the function is foo and foo_list, then give precondition names as ",
                     "\"foo_pre foo_list_pre\"."])
         val def_names = zip defs names
