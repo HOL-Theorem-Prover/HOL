@@ -3,7 +3,7 @@
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-(Released: xxxxxx)
+(Released: 12 August 2025)
 
 We are pleased to announce the Trindemossen-2 release of HOL4.
 
