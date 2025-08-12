@@ -1,39 +1,33 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = Doc2Html.exe Doc2Tex.exe Doc2Txt.exe Doc2markdown.exe makebase.exe \
-               Lexer.lex.sml Parser.grm-sig.sml Parser.grm.sml
+EXTRA_CLEANS = Md2TeX.exe gen_extra_docfiles makebase.exe \
+               Lexer.lex.sml Parser.grm-sig.sml Parser.grm.sml \
+               Parser.grm.sig
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
-all: makebase.exe Doc2Html.exe Doc2Tex.exe Doc2Txt.exe Doc2markdown.exe
+all: makebase.exe
 
 ifdef POLY
-Doc2markdown.exe: poly-Doc2Md.ML Doc2markdown.uo ParseDoc.uo Flash.uo
+all:  gen_extra_docfiles
+
+gen_extra_docfiles: poly-Doc2Html.ML Doc2Html.uo Flash.uo SHA1_MLshim.sig $(dprot $(HOLDIR)/src/portableML/poly/SHA1_ML.sml)
 	$(POLYC) -o $@ $<
 
-Doc2Tex.exe: poly-Doc2Tex.ML Doc2Tex.uo ParseDoc.uo Flash.uo
-	$(POLYC) -o $@ $<
-
-Doc2Html.exe: poly-Doc2Html.ML Doc2Html.uo Flash.uo
-	$(POLYC) -o $@ $<
-
-makebase.exe: poly-makebase.ML makebase.sml
+makebase.exe: poly-makebase.ML makebase.sml Parser.grm.sml Parser.grm.sig Lexer.lex.sml
 	$(POLYC) -o $@ $<
 
 Md2TeX.exe: poly-Md2TeX.ML Md2TeX.uo
 	$(POLYC) -o $@ $<
 
+Parser.grm.sig Parser.grm.sml: Parser.grm
+	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
+
 else
-makebase.uo: makebase.sml MyDatabase.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo
+makebase.uo: makebase.sml MyDatabase.ui Htmlsigs.ui Parsspec.uo Keepers.uo Printbase.uo HOLPage.uo ParseDoc.uo
 	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -c MyDatabase.ui $<
 
 makebase.exe : runmakebase.uo MyDatabase.uo Htmlsigs.uo Parser.grm.uo Parsspec.uo Printbase.uo makebase.uo
 	$(HOLMOSMLC) -I $(MLYACCLIB) $(MLYACCLIB_UIS) -o makebase.exe MyDatabase.uo runmakebase.uo
-
-Doc2markdown.exe: runDoc2Md.uo Doc2markdown.uo ParseDoc.uo Flash.uo
-	$(HOLMOSMLC) -o $@ $<
-
-Doc2Tex.exe : runDoc2Tex.uo Doc2Tex.uo ParseDoc.uo Flash.uo
-	$(HOLMOSMLC) -o Doc2Tex.exe runDoc2Tex.uo
 
 Doc2Html.exe : runDoc2Html.uo Doc2Html.uo ParseDoc.uo Flash.uo
 	$(HOLMOSMLC) -o Doc2Html.exe runDoc2Html.uo
@@ -41,17 +35,14 @@ Doc2Html.exe : runDoc2Html.uo Doc2Html.uo ParseDoc.uo Flash.uo
 Md2TeX.exe: runMd2TeX.uo Md2TeX.uo
 	$(HOLMOSMLC) -o $@ $<
 
-endif
-
-Doc2Txt.exe: runDoc2Txt.uo Doc2Txt.uo ParseDoc.uo Flash.uo
-	$(HOLMOSMLC) -o Doc2Txt.exe runDoc2Txt.uo
-
-Lexer.lex.sml: Lexer.lex
-	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
-
 Parser.grm-sig.sml Parser.grm.sml: Parser.grm
 	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
 	$(MV) Parser.grm.sig Parser.grm-sig.sml
+
+endif
+
+Lexer.lex.sml: Lexer.lex
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
 
 MyWord32.uo MyWord32.ui: MyWord32.sml
 	$(MOSMLC) -c -toplevel $<

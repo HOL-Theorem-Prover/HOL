@@ -79,7 +79,7 @@ modern-syntax.md: modern-syntax.smd $(PS_STUFF)
 	$(PS_NOUMAP)
 
 modern-syntax-chapter.tex: modern-syntax.md pdf-macros.lua
-	(printf '\\chapter{\\texorpdfstring{\\HOL{} Source File Syntax}{HOL Source File Syntax}}\\label{chap:modern-syntax}\n' ; pandoc --top-level-division=chapter --lua-filter=pdf-macros.lua -t latex $<) > $@
+	(printf '\\chapter{\\texorpdfstring{\\HOL{} Source File Syntax}{HOL Source File Syntax}}\\label{chap:modern-syntax}\n' ; pandoc --top-level-division=chapter --table-caption-position=below --lua-filter=pdf-macros.lua -t latex $<) > $@
 
 foo:
 	(echo hello ; echo world) > $@
