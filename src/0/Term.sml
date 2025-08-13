@@ -720,81 +720,140 @@ fun inst [] tm = tm
     end;
 
 (* Space saving version via propagation of SAME/DIFF constructors *)
+
+fun delta_monop f SAME = SAME
+  | delta_monop f (DIFF x) = DIFF (f x)
+
 local
-  fun rebuild_pair f _ _ SAME SAME = SAME
-    | rebuild_pair f M _ SAME (DIFF N') = DIFF (f(M,N'))
-    | rebuild_pair f _ N (DIFF M') SAME = DIFF (f(M',N))
-    | rebuild_pair f _ _ (DIFF M') (DIFF N') = DIFF(f(M',N'))
+  fun delta_binop f (_,SAME) (_,SAME) = SAME
+    | delta_binop f (M,SAME) (N,DIFF N') = DIFF (f(M,N'))
+    | delta_binop f (M,DIFF M') (N,SAME) = DIFF (f(M',N))
+    | delta_binop f (M,DIFF M') (N,DIFF N') = DIFF(f(M',N'))
 in
-val rebuild_comb = rebuild_pair Comb
-val rebuild_abs = rebuild_pair Abs
+val delta_fv    = delta_binop Fv
+val delta_const = delta_binop Const
+val delta_comb  = delta_binop Comb
+val delta_abs   = delta_binop Abs
 end
+
+fun from_delta x SAME = x
+  | from_delta x (DIFF y) = y
+
+val retag = delta_monop tag_type;
 
 fun inst [] = I
   | inst theta =
-    let fun
-        inst1 (Bv _) = SAME
-      | inst1 (Const(_, GRND _)) = SAME
-      | inst1 (Const(r, POLY ty)) =
-        (case Type.ty_sub theta ty
-          of SAME => SAME
-           | DIFF ty' => DIFF (Const(r, tag_type ty')))
-      | inst1 (Fv(Name,ty)) =
-         (case Type.ty_sub theta ty
-           of SAME => SAME
-            | DIFF ty' => DIFF (Fv(Name, ty')))
-      | inst1 (Comb(M,N)) = rebuild_comb M N (inst1 M) (inst1 N)
-      | inst1 (Abs(v,M)) = rebuild_abs v M (inst1 v) (inst1 M)
-      | inst1 (t as Clos _) = inst1(push_clos t)
-    in
+    let val tysubst = Type.ty_sub theta
+        fun inst1 (Bv _) = SAME
+          | inst1 (Const(_, GRND _)) = SAME
+          | inst1 (Const(r, tag as POLY ty)) =
+              delta_const (r,SAME) (tag, retag (tysubst ty))
+          | inst1 (Fv(s,ty)) = delta_fv (s,SAME) (ty,tysubst ty)
+          | inst1 (Comb(M,N)) = delta_comb (M,inst1 M) (N,inst1 N)
+          | inst1 (Abs(v,M)) = delta_abs (v,inst1 v) (M,inst1 M)
+          | inst1 (t as Clos _) = inst1(push_clos t)
+   in
       Lib.delta_apply inst1
-    end;
+   end
 
 (* Space saving version via propagation of UNCHANGED exception *)
 fun inst [] = I
   | inst theta  =
-    let fun
-        inst1 (Bv _) = unchanged()
-      | inst1 (Const(_, GRND _)) = unchanged()
-      | inst1 (Const(r, POLY ty)) =
-        (case Type.ty_sub theta ty
-          of SAME => unchanged()
-           | DIFF ty' => Const(r, tag_type ty'))
-      | inst1 (Fv(Name,ty)) =
-         (case Type.ty_sub theta ty
-           of SAME => unchanged()
-            | DIFF ty' => Fv(Name, ty'))
-      | inst1 (Comb(M,N)) =
-          (let val M' = inst1 M
-               val N' = totally inst1 N
-               in Comb(M',N')
-               end handle UNCHANGED => Comb (M,inst1 N))
-      | inst1 (Abs(v,M)) =
-          (let val v' = inst1 v
-               val M' = totally inst1 M
-               in Abs(v',M')
-               end handle UNCHANGED => Abs(v,inst1 M))
-      | inst1 (t as Clos _) = inst1(push_clos t)
+    let val tysubst = Type.ty_sub theta
+        fun inst1 (Bv _) = unchanged()
+          | inst1 (Const(_, GRND _)) = unchanged()
+          | inst1 (Const(r, POLY ty)) =
+            (case tysubst ty
+              of SAME => unchanged()
+               | DIFF ty' => Const(r, tag_type ty'))
+          | inst1 (Fv(Name,ty)) =
+             (case tysubst ty
+               of SAME => unchanged()
+                | DIFF ty' => Fv(Name, ty'))
+          | inst1 (Comb(M,N)) =
+              (let val M' = inst1 M
+                   val N' = totally inst1 N
+                   in Comb(M',N')
+                   end handle UNCHANGED => Comb (M,inst1 N))
+          | inst1 (Abs(v,M)) =
+              (let val v' = inst1 v
+                   val M' = totally inst1 M
+                   in Abs(v',M')
+                   end handle UNCHANGED => Abs(v,inst1 M))
+          | inst1 (t as Clos _) = inst1(push_clos t)
     in
        totally inst1
     end
 
-(* inst_ty_tm = subst theta o inst tytheta. *)
+(* Instantiate tyvars in a term, then instantiate term vars. In other words
 
-fun inst_ty_tm theta tytheta =
+     inst_ty_tm = subst theta o inst tytheta.
+*)
+
+fun inst_ty_tm_1 theta tytheta =
   let val vmap = var_map_of theta
-      fun trymap t = HOLdict.find(vmap,t) handle NotFound => unchanged()
-      fun trymap_total t = HOLdict.find(vmap,t) handle NotFound => t
+      fun vsubst t = HOLdict.find(vmap,t) handle NotFound => t
+      val tysubst = Type.ty_sub tytheta
+      fun isubst tm =
+       case tm
+        of Bv _ => tm
+         | v as Fv(s,ty) =>
+            vsubst (from_delta v (delta_fv (s,SAME) (ty, tysubst ty)))
+         | Const(_, GRND _) => tm
+         | Const(r, tag as POLY ty) =>
+            from_delta tm (delta_const (r,SAME) (tag,retag (tysubst ty)))
+         | Comb(M,N) => Comb(isubst M,isubst N)
+         | Abs(v,M) =>
+             let val (s,ty) = dest_var v
+                 val v' = from_delta v (delta_fv (s,SAME) (ty, tysubst ty))
+             in Abs(v', isubst M) end
+         | Clos _ => isubst(push_clos tm)
+  in
+    isubst
+  end;
+
+fun inst_ty_tm_2 theta tytheta =
+  let val vmap = var_map_of theta
+      val tysubst = Type.ty_sub tytheta
+      fun isubst tm =
+       case tm
+        of Bv _ => SAME
+         | v as Fv(s,ty) =>
+	    let val vdelta = delta_fv (s,SAME) (ty,tysubst ty)
+                val v' = from_delta v vdelta
+            in
+              DIFF(HOLdict.find(vmap,v')) handle NotFound => vdelta
+            end
+         | Const(_, GRND _) => SAME
+         | Const(r, tag as POLY ty) =>
+             delta_const (r,SAME) (tag, retag (tysubst ty))
+         | Comb(M,N) => delta_comb (M,isubst M) (N,isubst N)
+         | Abs(v,M) =>
+             let val (s,ty) = dest_var v
+                 val vdelta = delta_fv (s,SAME) (ty,tysubst ty)
+	     in
+               delta_abs (v,vdelta) (M,isubst M)
+             end
+         | Clos _ => isubst(push_clos tm)
+  in
+    delta_apply isubst
+  end;
+
+fun inst_ty_tm_3 theta tytheta =
+  let val vmap = var_map_of theta
+      fun vsubst t = HOLdict.find(vmap,t) handle NotFound => unchanged()
+      fun vsubst_total t = HOLdict.find(vmap,t) handle NotFound => t
+      val tysubst = Type.ty_sub tytheta
       fun isubst tm =
        case tm
         of Bv _ => unchanged()
          | Fv(s,ty) =>
-             (case Type.ty_sub tytheta ty
-               of SAME => trymap tm
-                | DIFF ty' => trymap_total (Fv(s,ty')))
+             (case tysubst ty
+               of SAME => vsubst tm
+                | DIFF ty' => vsubst_total (Fv(s,ty')))
          | Const(_, GRND _) => unchanged()
          | Const(r, POLY ty) =>
-            (case Type.ty_sub tytheta ty
+            (case tysubst ty
               of SAME => unchanged()
                | DIFF ty' => Const(r, tag_type ty'))
          | Comb(M,N) =>
@@ -805,7 +864,7 @@ fun inst_ty_tm theta tytheta =
          | Abs(v,M) =>
            (let val (s,ty) = dest_var v
                 val v' =
-                    (case Type.ty_sub tytheta ty
+                    (case tysubst ty
                       of SAME => unchanged()
                        | DIFF ty' => Fv(s,ty'))
                 val M' = totally isubst M
@@ -815,6 +874,10 @@ fun inst_ty_tm theta tytheta =
   in
     totally isubst
   end
+
+val iref = ref inst_ty_tm_2;
+
+fun inst_ty_tm x y = !iref x y;
 
 (*---------------------------------------------------------------------------
        Making abstractions. list_mk_binder is a relatively

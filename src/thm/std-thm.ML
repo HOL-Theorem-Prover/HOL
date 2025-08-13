@@ -264,12 +264,33 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
  end
 
 (*---------------------------------------------------------------------------
+ *           A |- M
+ *  ---------------------------------------  INST_TY_TERM (theta,tytheta)
+ *  theta(tytheta (A)) |- theta(tytheta(M))
+ *
+ *---------------------------------------------------------------------------*)
+
+fun INST_TY_TERM (theta,tytheta) =
+    let val _ = Count.inc_count Count.InstTyTerm
+    in
+      if null theta andalso null tytheta then
+         I
+      else
+         let val instantiate = inst_ty_tm theta tytheta
+         in fn (THM(ocl,asl,c)) =>
+                THM (ocl, hypset_map instantiate asl, instantiate c) end
+    end
+
+fun INST theta = INST_TY_TERM(theta,[])
+fun INST_TYPE tytheta = INST_TY_TERM([],tytheta)
+
+(*---------------------------------------------------------------------------
  *         A |- M
  *  --------------------  INST_TYPE theta
  *  theta(A) |- theta(M)
  *
  *---------------------------------------------------------------------------*)
-
+(*
 fun INST_TYPE tytheta (th as THM(ocl,asl,c)) =
     let val _ = Count.inc_count Count.InstType
     in if null tytheta then
@@ -278,17 +299,7 @@ fun INST_TYPE tytheta (th as THM(ocl,asl,c)) =
          let val inst = Term.inst_ty_tm [] tytheta
          in THM (ocl, hypset_map inst asl, inst c) end
     end
-
-fun INST_TY_TERM (theta,tytheta) (th as THM(ocl,asl,c)) =
-    let val _ = Count.inc_count Count.InstTyTerm
-    in
-      if null theta andalso null tytheta then
-         th
-      else
-        let val instantiate = inst_ty_tm theta tytheta
-        in THM (ocl, hypset_map instantiate asl, instantiate c)
-        end
-    end
+*)
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -960,7 +971,7 @@ fun CCONTR w fth =
 (*---------------------------------------------------------------------------*
  * Instantiate free variables in hypotheses and conclusion of thm            *
  *---------------------------------------------------------------------------*)
-
+(*
 fun INST theta th =
     let val _ = Count.inc_count Count.Inst
     in
@@ -970,7 +981,7 @@ fun INST theta th =
          let val subst = inst_ty_tm theta []
          in THM (tag th, hypset_map subst (hypset th), subst (concl th)) end
     end
-
+*)
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *
  * of useless type-checking, using pointer equality and delayed              *
