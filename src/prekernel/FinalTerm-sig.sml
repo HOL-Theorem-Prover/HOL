@@ -4,7 +4,8 @@ sig
   type term
   eqtype hol_type
   type ('a,'b)subst = ('a,'b)Lib.subst
-  type 'a set       = 'a HOLset.set
+  type ('a,'b)fmap = ('a,'b) HOLdict.dict
+  type 'a set      = 'a HOLset.set
 
   val equality      : term
 
@@ -69,7 +70,6 @@ sig
   val inst_ty_tm_2    : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
   val inst_ty_tm_3    : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
   val inst_ty_tm      : (term,term) subst -> (hol_type,hol_type) subst -> term -> term
-  val iref : ((term,term) subst -> (hol_type,hol_type) subst -> term -> term) ref
 
   val raw_match     : hol_type list -> term set
                       -> term -> term
@@ -88,8 +88,14 @@ sig
   val term_eq       : term -> term -> bool
   val fast_term_eq  : term -> term -> bool
 
-  val empty_tmset   : term set
-  val empty_varset  : term set
+  val empty_var_set : term set
+  val empty_var_map : (term,term) fmap
+
+  val empty_term_set : term set
+  val empty_term_map : (term,term) fmap
+
+  val var_map_of    : (term,term) Lib.subst -> (term,term) fmap
+  val term_map_of   : (term,term) Lib.subst -> (term,term) fmap * bool
 
   val term_size     : term -> int
 

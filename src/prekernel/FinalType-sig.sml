@@ -24,6 +24,7 @@ sig
  val exists_tyvar  : (hol_type -> bool) -> hol_type -> bool
  val polymorphic   : hol_type -> bool
  val compare       : hol_type * hol_type -> order
+ val ty_map_of     : (hol_type,hol_type) Lib.subst -> (hol_type,hol_type) HOLdict.dict
 
  val -->           : hol_type * hol_type -> hol_type  (* infixr 3 --> *)
  val dom_rng       : hol_type -> hol_type * hol_type  (* inverts -->  *)
@@ -35,8 +36,6 @@ sig
  val delta         : hol_type
  val etyvar        : hol_type
  val ftyvar        : hol_type
-
- val type_subst    : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
 
  val match_type    : hol_type -> hol_type -> (hol_type,hol_type) Lib.subst
 
@@ -50,10 +49,10 @@ sig
                       -> (hol_type,hol_type) Lib.subst * hol_type list
                       -> (hol_type,hol_type) Lib.subst * hol_type list
 
- val type_size : hol_type -> int
+ val ty_sub : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type Lib.delta
+ val type_subst : (hol_type,hol_type) Lib.subst -> hol_type -> hol_type
 
- val ty_sub        : (hol_type,hol_type) Lib.subst -> hol_type ->
-                      hol_type Lib.delta
+ val type_size : hol_type -> int
 
 
  (* accessing and manipulating theory information for types *)
