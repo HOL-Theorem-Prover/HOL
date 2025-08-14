@@ -11,13 +11,13 @@ ifdef POLY
 all:  gen_extra_docfiles
 
 gen_extra_docfiles: poly-Doc2Html.ML Doc2Html.uo Flash.uo SHA1_MLshim.sig $(dprot $(HOLDIR)/src/portableML/poly/SHA1_ML.sml)
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 
 makebase.exe: poly-makebase.ML makebase.sml Parser.grm.sml Parser.grm.sig Lexer.lex.sml
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 
 Md2TeX.exe: poly-Md2TeX.ML Md2TeX.uo
-	polyc -o $@ $<
+	$(POLYC) -o $@ $<
 
 Parser.grm.sig Parser.grm.sml: Parser.grm
 	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
