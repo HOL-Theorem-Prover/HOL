@@ -2448,7 +2448,7 @@ Proof
      )
   >> Q.ABBREV_TAC ‘pb'ab = p ++ [a] ++ [b]’
   >> Q.EXISTS_TAC ‘pb'ab’
-  >> reverse $ rw [augmenting_path_def, unmatched, Abbr ‘pb'ab’] (* TODO: fix unmatched *)
+  >> reverse $ rw [augmenting_path_def, unmatched, Abbr ‘pb'ab’]
   >> irule alternating_path_append_B >> rw []
   >- (gvs [Abbr ‘b’]
       >> Q.PAT_X_ASSUM ‘Aend e = _’ (fn t => ONCE_REWRITE_TAC [GSYM t])
