@@ -65,7 +65,7 @@ end handle e => die ("Exception raised: " ^ General.exnMessage e)
 fun transTXT pdexe docdir docfile = let
   val docbase = OS.Path.base docfile
   val docpath = docdir ++ docfile
-  val outfile = OS.Path.joinBaseExt{base = docpath, ext = SOME "txt"}
+  val outfile = OS.Path.joinBaseExt{base = docdir ++ docbase, ext = SOME "txt"}
   val res = Systeml.systeml [pdexe, docpath, "-o", outfile]
 in
   if OS.Process.isSuccess res then ()
